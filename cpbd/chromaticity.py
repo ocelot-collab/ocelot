@@ -21,6 +21,7 @@ def edge_chromaticity_old(lattice, tws_0):
             ksi_y_edge += (tw_start.beta_y + tw_end.beta_y)*tan(-element.angle/2)/r
     return (ksi_x_edge, ksi_y_edge)
 
+
 def edge_chromaticity(lattice, tws_0):
     # not tested!
     ksi_x_edge = 0.

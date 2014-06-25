@@ -1,0 +1,16 @@
+'''
+run control parameters
+'''
+
+
+class SRRunParameters:
+    def __init__(self):
+
+        self.polarization = "POLARIZATION_TOTAL"
+        self.method = 1
+        self.methods = {"MANUAL":0, "AUTO_UNDULATOR":1, "AUTO_WIGGLER":2}
+        self.nruns  = "1"
+        self.nTrajectoryPoints = 1000000
+        self.ctEnd = 200.0
+        self.precision = 1.e-5
+    

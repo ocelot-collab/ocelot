@@ -180,7 +180,6 @@ class ParticleArray:
         return p_idxs
 
 
-
     def __getitem__(self, idx):
         return Particle(x = self.particles[idx*6], px=self.particles[idx*6 + 1],
                          y=self.particles[idx*6+2], py = self.particles[idx*6+3],

@@ -1,9 +1,9 @@
 __author__ = 'Sergey Tomin'
 
-from xframework.cpbd.beam import Particle, Twiss
-from xframework.cpbd.errors import *
-from xframework.cpbd.matching import closed_orbit
-from xframework.cpbd.optics import *
+from ocelot.cpbd.beam import Particle, Twiss
+from ocelot.cpbd.errors import *
+from ocelot.cpbd.matching import closed_orbit
+from ocelot.cpbd.optics import *
 import copy
 import matplotlib.pyplot as plt
 from scipy.interpolate import splrep, splev

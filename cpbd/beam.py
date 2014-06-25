@@ -10,7 +10,6 @@ Note:
 
 from numpy import zeros, array, append, sqrt, abs, argwhere, unique, delete
 
-
 class Twiss:
     def __init__(self, beam = None):
         if beam == None:

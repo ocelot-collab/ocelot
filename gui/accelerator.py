@@ -11,6 +11,16 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.collections import PatchCollection
 import matplotlib.patches as mpatches
 import matplotlib.path as mpath
+import matplotlib.pyplot as plt
+from ocelot.cpbd.optics import *
+import numpy as np
+
+
+import matplotlib.font_manager as font_manager
+font = {
+        'size'   : 20}
+matplotlib.rc('font', **font)
+
 
 '''
 try:
@@ -22,8 +32,6 @@ except:
     print 'WARNING: Qt not installed, some graphics may not work properly'
 '''
 
-from ocelot.cpbd.optics import *
-import numpy as np
 
 
 def plot_lattice(lat, axis, alpha=1.0, params={'kmax':2.0, 'ang_max':0.5e-2}):

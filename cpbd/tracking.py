@@ -1,9 +1,9 @@
 __author__ = 'Sergey Tomin'
-from xframework.cpbd.optics import *
+from ocelot.cpbd.optics import *
 #from mpi4py import MPI
-from numpy import delete, append, array
-from xframework.cpbd.errors import *
-from xframework.cpbd.elements import *
+from numpy import delete, append, array, linspace
+from ocelot.cpbd.errors import *
+from ocelot.cpbd.elements import *
 from matplotlib import pyplot as plt
 import scipy
 from copy import copy

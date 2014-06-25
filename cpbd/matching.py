@@ -1,4 +1,4 @@
-from xframework.cpbd.optics import *
+from ocelot.cpbd.optics import *
 
 def closed_orbit(lattice, eps_xy = 1.e-7, eps_angle = 1.e-7):
     __author__ = 'Sergey Tomin'

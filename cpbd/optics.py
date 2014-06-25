@@ -2,8 +2,8 @@ __author__ = 'Sergey'
 
 from numpy import sqrt, matrix, cos, sin, log, tan, eye, zeros, pi, array, linspace, dot, abs, random, arctan, sign
 import numpy as np
-from xframework.cpbd.beam import Beam, Particle, Twiss, ParticleArray
-from xframework.common.globals import *
+from ocelot.cpbd.beam import Beam, Particle, Twiss, ParticleArray
+from ocelot.common.globals import *
 from numpy.linalg import inv
 from scipy.integrate import simps, trapz
 from copy import copy

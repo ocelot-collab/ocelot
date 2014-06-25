@@ -3,9 +3,9 @@ definition of magnetic lattice
 linear dimensions in [m]
 '''
 
-from xframework.cpbd.field_map import FieldMap
-from xframework.cpbd.optics import create_transfer_map
-from xframework.common.globals import *
+from ocelot.cpbd.field_map import FieldMap
+from ocelot.cpbd.optics import create_transfer_map
+from ocelot.common.globals import *
 
 flatten = lambda *n: (e for a in n
                             for e in (flatten(*a) if isinstance(a, (tuple, list)) else (a,)))

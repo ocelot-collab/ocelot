@@ -2,7 +2,7 @@ __author__ = 'Sergey'
 
 from numpy import linspace, array, sqrt, pi
 from scipy.integrate import simps
-from xframework.common.globals import *
+from ocelot.common.globals import *
 def radiation_integral(lattice, twiss_0, nsuperperiod = 1):
 
     tws_elem = twiss_0

@@ -1,6 +1,6 @@
 __author__ = 'Sergey Tomin'
 
-from ocelot.cpbd.elements import Drift
+from xframework.cpbd.elements import Drift
 
 class MadObj:
 
@@ -26,18 +26,20 @@ def line_transform(file):
     lines = []
     multiline = ''
     for line in file:
+        #print line
         line = line.replace(':=', '=')
         line = line.replace('!', '#')
         multiline += line
         if multiline.find(";")<0 and multiline[0] != "#":
             ind = line.find("#")
-            multy_line = multiline[:ind]
+            multiline = multiline[:ind]
             continue
         else:
             line = multiline
             multiline = ''
         line = line.replace(';', '')
         line = line.lower()
+        #print line
         lines.append(line)
     return lines
 
@@ -193,6 +195,7 @@ def mad2xcode(name_file):
     part_name[0] += ".inp"
     f_new = open(part_name[0], "w")
     for line in lines:
+        #print line
         f_new.write(line+"\n")
     f_new.close()
 

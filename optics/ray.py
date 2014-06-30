@@ -8,7 +8,7 @@ from elements import *
 import numpy as np
 
 
-intersection_tol = 1.e-6
+intersection_tol = 1.e-12
 
 class Ray(object):
     def __init__(self,r0=[0,0,0], k=[0,0,1], lamb = 2.0):
@@ -37,35 +37,90 @@ def find_intersections(ray, geo):
     s = np.inf
     obj = None
     r_loc = np.array([0,0])
+    no = None
     for o in geo():
-        print 'determining intersection with', o, o.r, o.no
+        debug('checking intersection:', o.id, o.r, o.no)
         nk = np.dot(o.no, ray.k[-1])
         nr = np.dot(o.no, o.r - ray.r0[-1])
+                
         #print nr, nk
         if nr*nk > 0:
             #TODO: check that intersection is on aperture
             s_int= nr/nk #nr/nk is path length to intersection along the ray
             if s_int < s and s_int > intersection_tol: 
-                
+                no = o.no
                 
                 r_int = ray.r0[-1] + s_int * ray.k[-1]
-                
-                # check intersection with elliptic 'aperture'
-                
+                                
+                # check intersection with elliptic 'aperture'                
                 r_loc = r_int - o.r
                 phi = np.arccos(o.no[2]/ np.linalg.norm(o.no))
-                r_loc[1] = r_loc[1] * cos(phi)
-                r_loc[2] = r_loc[2] * sin(phi)
-                print 'r_loc=', r_loc, 'size=',o.size
+                r_loc[1] = r_loc[1] * cos(phi) + r_loc[2] * cos(phi) 
+                r_loc[2] = r_loc[2] * sin(phi) - r_loc[1] * sin(phi)
+                debug('r_loc=', r_loc, 'size=',o.size)
+                
+                # correct intersection for curved elements
+                if o.__class__ == EllipticMirror:
+                    # note that a[0] is the majot axis
+                    
+                    kz = ray.k[-1][2]
+                    ky = ray.k[-1][1]
+                    rz = r_int[2]
+                    ry = r_int[1] - o.a[1]
+                    az = o.a[0]
+                    ay = o.a[1]
+                    
+                    
+                    #debug('angle=', np.arctan(ry/rz) / pi)
+                    
+                    a_ = kz**2/ az**2 + ky**2/ ay**2
+                    b_ = -2*(kz*rz / az**2 + ky*ry / ay**2)
+                    c_ = rz **2/ az**2 + ry**2/ ay**2 - 1.
+                    d_ = b_**2 - 4*a_*c_
+               
+                    s1 = (- b_ + np.sqrt(d_) ) / (2.*a_)
+                    s2 = (- b_ - np.sqrt(d_) ) / (2.*a_)
+                    
+                    s_cor = np.min([s1,s2])
+                    
+                    #debug('D=', d_, 's12=',s1,s2, s_cor)
+                    #debug( (rz - s_cor*kz)**2 / az**2 + (ry - s_cor*ky)**2 / ay**2 )
+                    #debug( (rz )**2 / az**2 + (ry )**2 / ay**2 )
+                    
+                    debug('s_old=', s_int)
+                    s_int = s_int - s_cor
+                    debug('s_new=', s_int)
+                    
+                    r_int = r_int - s_cor * ray.k[-1]
+                    
+                    r_loc = r_int - o.r
+                    #r_loc[1] = r_loc[1] * cos(phi)
+                    #r_loc[2] = r_loc[2] * sin(phi)
+                    debug('r_loc_new=', r_int, r_loc)
+     
+                    ang = arctan2(1./az*r_loc[2], 1./ay*(-r_loc[1] + ay))
+                    
+                    #debug(r_loc[2], r_loc[1] - ay)
+                    debug('ellipse angle=', ang)
+                    
+                    debug('local coord:', az*sin(ang), -ay*cos(ang) + ay)
+                    
+                    no = np.array([0, cos(ang),-ay/az*sin(ang)]) / np.sqrt(ay**2/az**2*sin(ang)**2 + cos(ang)**2 ) 
+            
+                    debug('no=',no)
+                    debug(o.no)
+     
+                
+                
                 if (r_loc[0]/o.size[0])**2 + (r_loc[1]/o.size[1])**2 <= 1:
                     s = s_int
                     obj = o
-                    print 'fits aperture'
+                    debug('fits aperture')
                 else:
-                    print 'fits aperture not'
+                    debug('fits aperture not')
                 
     
-    return s, obj, r_loc
+    return s, obj, r_loc, no
 
 def trace(ray, geo):
     """
@@ -77,11 +132,11 @@ def trace(ray, geo):
     
     while n_reflect < n_reflect_max:
         
-        debug('current ray at: ', ray.r0[-1])
+        debug('ray at: ', ray.r0[-1])
         
         # ray length to intersection
-        s, obj, r_loc = find_intersections(ray, geo)
-        debug('found intersection', s, obj)
+        s, obj, r_loc, no = find_intersections(ray, geo)
+        debug('intersection', s, obj, no)
         
         if s == np.inf:
             info('ray leaves geometry, terminating')
@@ -96,6 +151,7 @@ def trace(ray, geo):
             
             debug('reflecting off', obj.id)
             debug(np.dot(obj.no, ray.k[-1]) / ( np.linalg.norm(obj.no) * np.linalg.norm(ray.k[-1]) ))
+            
             phi = np.arccos( np.dot(obj.no, ray.k[-1]) / ( np.linalg.norm(obj.no) * np.linalg.norm(ray.k[-1]) ) )
             
             
@@ -120,7 +176,60 @@ def trace(ray, geo):
             #k_new = rotate_pi(ray.k[-1], obj.no )
             
             #k_new - 
-            debug('k_new--->',k_new)
+            debug(ray.k[-1], '--->', k_new)
+            s_new = 1
+            ray.r0.append(r0_new)
+            ray.k.append(k_new)
+            ray.s.append(s_new)
+            
+            n_reflect += 1
+
+        elif obj.__class__ == EllipticMirror:
+            
+            debug('reflecting off', obj.id)
+            debug(no)
+            
+            #no = obj.no
+            
+            debug('no=',no,'k=',ray.k[-1])
+            cs = np.dot(no, ray.k[-1]) / ( np.linalg.norm(no) * np.linalg.norm(ray.k[-1]) )
+            debug('cos=',cs)
+            
+            if np.abs(cs) > 1:
+                print 'warning, reflection angle andustment by ', cs + 1.0
+                if cs > 1: cs = 1.0
+                else: cs = -1.0
+            
+            phi = np.arccos( cs )
+            
+            
+            debug('ray/normal angle', phi / pi ,'pi')
+            
+            
+            sgn = np.dot([1,0,0],np.cross(no, ray.k[-1]))
+            if np.linalg.norm(sgn) < 1.e-9: 
+                sgn = sgn / np.linalg.norm(sgn)
+            else:
+                sgn = 1.0
+            
+            debug('sgn=',sgn)
+            
+            phi = (2*phi - pi) * sgn
+            
+            
+            debug('e:rotating by:', phi / pi, 'pi')
+            
+        
+            M = np.matrix([[1, 0, 0],
+                           [0, cos(phi), sin(phi)],
+                           [0, -sin(phi), cos(phi)]])
+
+            k_new = np.asarray(np.dot(M, ray.k[-1]))[0]
+            
+            #print '###',ray.k[-1].shape, '###',obj.no
+            #k_new = rotate_pi(ray.k[-1], obj.no )
+            
+            debug(ray.k[-1], '--->', k_new)
             s_new = 1
             ray.r0.append(r0_new)
             ray.k.append(k_new)

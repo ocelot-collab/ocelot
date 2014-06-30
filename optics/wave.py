@@ -153,16 +153,16 @@ class ParaxialFieldSlice():
         self.mesh[idx] = val
 
 def rescale(of, scale=2.0):
-    self.size_x /= scale
-    self.size_y /= scale
+    of.size_x /= scale
+    of.size_y /= scale
         
-    self.x /= scale
-    self.y /= scale
+    of.x /= scale
+    of.y /= scale
 
-    self.mesh.x /= scale
-    self.mesh.y /= scale
+    of.mesh.x /= scale
+    of.mesh.y /= scale
 
-    of_old = np.copy(self.mesh.points)
+    of_old = np.copy(of.mesh.points)
     for i in xrange(of.nx):
         for j in xrange(of.ny):
             i_new = int(i*scale)

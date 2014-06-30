@@ -74,10 +74,12 @@ class Mirror:
 
 
 class EllipticMirror:
-    def __init__(self, r=[0,0,0], no=[0,0,1], size=[1.0,1.0,0.1]):
-        self.r = r
-        self.no = no    # outwards (from mirror surface) looking normal 
+    def __init__(self, r=[0,0,0], no=[0,0,1], size=[1.0,1.0,0.2], a=[1,1], id=""):
+        self.r = np.array(r)
+        self.no = np.array(no)    # outwards (from mirror surface) looking normal 
         self.size = size
+        self.id = id
+        self.a = np.array(a) # major/minor axis of the ellipse
 
 
 class ParabolicMirror:

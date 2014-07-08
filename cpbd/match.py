@@ -101,7 +101,22 @@ def match(lat, constr, vars, tw):
                 #print tw_loc.Dx
                 #print constr[e.id]['Dx']
                 for k in constr[e.id].keys():
-                    err = err + weights(k) * (constr[e.id][k] - tw_loc.__dict__[k])**2
+                    if constr[e.id][k].__class__ == list:
+                        print 'list'   
+                        v1 = constr[e.id][k][1]
+                        if constr[e.id][k][0] == '<':
+                            print '< constr'                             
+                            if tw_loc.__dict__[k] > v1:
+                                err = err + (tw_loc.__dict__[k] - v1)**2
+                        if constr[e.id][k] == '>':
+                            if tw_loc.__dict__[k] < v1:
+                                err = err + (tw_loc.__dict__[k] - v1)**2
+
+                        if tw_loc.__dict__[k] < 0:
+                            err += (tw_loc.__dict__[k] - v1)**2
+                            
+                    else:
+                        err = err + weights(k) * (constr[e.id][k] - tw_loc.__dict__[k])**2
         print err
         return err
 

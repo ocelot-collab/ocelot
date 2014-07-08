@@ -10,7 +10,7 @@ import sys
 import numpy as np
 import copy
 
-from ocelot.cpbd.optics_old import *
+from ocelot.cpbd.optics import *
 from ocelot.cpbd.beam import *
 from ocelot.cpbd.elements import *
 from ocelot.rad.sr import UndulatorParameters

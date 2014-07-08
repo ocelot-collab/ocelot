@@ -8,7 +8,7 @@ from elements import *
 import numpy as np
 
 
-intersection_tol = 1.e-12
+intersection_tol = 1.e-6
 
 class Ray(object):
     def __init__(self,r0=[0,0,0], k=[0,0,1], lamb = 2.0):
@@ -285,6 +285,15 @@ def trace(ray, geo):
                 ray.r0.append(r0_new)
                 ray.k.append(k_new)
                 ray.s.append(s_new)
+        
+        elif obj.__class__ == Crystal:
+            r0_new = r0_new  +  ray.k[-1]*intersection_tol * 2
+            k_new = ray.k[-1]
+            s_new = ray.s[-1]
+            n_reflect += 1
+            ray.r0.append(r0_new)
+            ray.k.append(k_new)
+            ray.s.append(s_new)
         elif obj.__class__ == Lense:
             debug('tracing thru lense, f=',obj.f, ' [m]')
             r0_new = r0_new  +  ray.k[-1]*intersection_tol * 2

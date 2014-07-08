@@ -53,9 +53,9 @@ def clean_folder(dir_path):
 home_path = path[0]
 #print "compile ", home_path
 
-indx = path[0].find("xcode")
+indx = path[0].find("siberia-2")
 xcode_path = home_path[:indx]
-gen_path = xcode_path + "xcode/codes/genera/"
+gen_path = xcode_path + "ocelot/lib/genera/"
 
 libs_path = gen_path + "build/genera_libs"
 

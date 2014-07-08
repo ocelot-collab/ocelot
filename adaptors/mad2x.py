@@ -1,6 +1,6 @@
 __author__ = 'Sergey Tomin'
 
-from xframework.cpbd.elements import Drift
+from ocelot.cpbd.elements import Drift
 
 class MadObj:
 
@@ -123,7 +123,9 @@ def translate(lines):
         line = line.replace('sequence', "Sequence")
         line = line.replace('return', "#return")
         line = line.replace('->', ".")
+        line = line.replace('//', "!")
         line = line.replace('centre', "'centre'")
+        line = line.replace('at =', "at=")
         lines2.append(line)
         #print line
     return lines2
@@ -151,7 +153,8 @@ def collect_sequence(lines):
     lines2 = []
     for line in lines:
         if line.find("at=")>0:
-            
+            if line[0] == "#":
+                continue
             parts = line.split("at=")
             name = parts[0].replace(",", "")
             name = name.split()[0]
@@ -182,6 +185,7 @@ def mad2xcode(name_file):
     f = open(name_file,"r")
     lines = line_transform(f)
     mad_objs = find_objects(lines)
+
     mad_objs = subs_objects(mad_objs)
     mo = parse_obj(mad_objs)
     new_lines = replace_objects(lines, mo)
@@ -207,6 +211,7 @@ def mad_list2xcod_seq(list_elem_pos, tot_length, exclude_elems = []):
         if term[1] in exclude_elems:
             continue
         element = term[0]
+        #print element
         element.id = term[1]
         pos = term[2]
         drift = Drift(l = pos - element.l/2. - azimuth, id = "drift_" + str(i))

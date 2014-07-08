@@ -4,7 +4,7 @@ from numpy import sqrt, reshape, shape, pi, exp, zeros, array, meshgrid
 from matplotlib import cm
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-from codes.genera.src.python.convolution.convolution_gauss import convolution_1D_cpp,  convolution_2D_cpp
+from ocelot.lib.genera.src.python.convolution.convolution_gauss import convolution_1D_cpp,  convolution_2D_cpp
 
 
 def plot3D_data(data, x, y):

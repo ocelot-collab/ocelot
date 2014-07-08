@@ -174,6 +174,7 @@ def elem_cord(lat):
     corr = np.array([[0,0]])
     mons = np.array([[0,0]])
     cav = np.array([[0,0]])
+    mat = np.array([[0,0]])
     L = 0
     #for elem in lat.sequence:
     #if elem.type == "drift" and elem.l == 0:
@@ -197,13 +198,20 @@ def elem_cord(lat):
             quad = np.append(quad, [[L+elem.l, k1]],axis=0)
             quad = np.append(quad, [[L+elem.l, 0]],axis=0)
         
-        if elem.type == "cavity":
+        elif elem.type == "cavity":
             k1 = 1.
             cav = np.append(cav, [[L, 0]], axis=0)
             cav = np.append(cav, [[L, k1]], axis=0)
             cav = np.append(cav, [[L+elem.l, k1]],axis=0)
             cav = np.append(cav, [[L+elem.l, 0]],axis=0)
-        
+
+        elif elem.type == "matrix":
+            k1 = 1.
+            mat = np.append(mat, [[L, 0]], axis=0)
+            mat = np.append(mat, [[L, k1]], axis=0)
+            mat = np.append(mat, [[L+elem.l, k1]],axis=0)
+            mat = np.append(mat, [[L+elem.l, 0]],axis=0)
+
         elif elem.type in ["sbend", "bend", "rbend"]:
             if elem.l == 0:
                 h = 0
@@ -236,11 +244,11 @@ def elem_cord(lat):
         corr[:,1] = corr[:,1]/max(corr[:,1])
     #if len(corr) != 1 and max(mons[:,1] != 0):
     #mons[:,1] = mons[:,1]/max(mons[:,1])
-    return quad, bend, sext, corr, mons, cav
+    return quad, bend, sext, corr, mons, cav, mat
 
 
 def plot_elems(ax, lat,nturns = 1, y_lim = None,y_scale = 1, legend = True):
-    quad, bend, sext, corr, mons, cav = elem_cord(lat)
+    quad, bend, sext, corr, mons, cav, mat = elem_cord(lat)
     #print len(quad), len(bend), len(sext), len(corr ),len( mons), len( cav)
     #print mons
     alpha = 1
@@ -268,7 +276,9 @@ def plot_elems(ax, lat,nturns = 1, y_lim = None,y_scale = 1, legend = True):
         if len(cav)>1:
             ax.fill(cav[:,0]+i*lat.totalLen, cav[:,1]*y_scale*0.7, "orange", edgecolor = "lightgreen", alpha = alpha, label = "cav")
             n += 1
-    
+        if len(mat)>1:
+            ax.fill(mat[:,0]+i*lat.totalLen, mat[:,1]*y_scale*0.7, "pink", edgecolor = "lightgreen", alpha = alpha, label = "mat")
+            n += 1
     #ax.broken_barh(s , (y0, yw*1.3), facecolors='green', edgecolor = "green", alpha = alpha, label = "Sext")
     #ax.broken_barh(c , (y0, yw), facecolors='b',edgecolor = "b", alpha = alpha)
     if legend:

@@ -4,7 +4,7 @@ __author__ = 'Sergey Tomin'
 #import convolution as conv
 from ctypes import c_double
 from numpy import zeros, empty_like, linspace, array, sin, cos
-from xframework.common.screen import Screen
+from ocelot.common.screen import Screen
 
 def Py2C(array):
     arr_type =  c_double*len(array)

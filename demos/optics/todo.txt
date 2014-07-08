@@ -1,0 +1,21 @@
+ray tracing(rt)
+wave propagator(w)
+hybrid?
+
+mirror -- plain rt+(ex1) w- 
+          elliptical (ex2) 
+          parabolic (ex3)
+
+grating rt (ex4)
+
+lenses and apertures -- diffraction effects (ex5)
+
+free space (ex6) -- finding waist and divergence
+
+grating monochromator
+
+crystal (ex7)
+
+Fresnel zone plate?
+
+CRL ?

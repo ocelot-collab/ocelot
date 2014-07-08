@@ -321,7 +321,7 @@ def plot_xy(ax, S, X, Y, font_size):
 def plot_opt_func(lat, tws, legend = True):
     beta_x = map(lambda p:p.beta_x, tws)
     beta_y = map(lambda p:p.beta_y, tws)
-    Dx = map(lambda p:p.Dx, tws)
+    Dx = map(lambda p:p.E, tws)
     S = map(lambda p:p.s, tws)
     
     font_size = 16
@@ -361,8 +361,6 @@ def plot_opt_func(lat, tws, legend = True):
     plot_betas(ax_b, S, beta_x, beta_y, font_size)
     plot_elems(ax_el, lat, legend = legend, y_scale=0.8) # plot elements
     
-    plt.show()
-
 def body_trajectory(fig, ax_xy, ax_el, lat, list_particles):
     X = map(lambda p:p.x, list_particles)
     Y = map(lambda p:p.y, list_particles)

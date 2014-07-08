@@ -60,7 +60,7 @@ class Lense:
 
 class Mirror:
     """
-    plain mirror
+    plane mirror
     """
     def __init__(self, r=[0,0,0], no=[0,0,1], size=[1.0,1.0,0.1], id=""):
         self.r = np.array(r)
@@ -97,6 +97,18 @@ class Grating:
         self.size=size
         self.d = d
         self.id = id
+
+
+class Crystal:
+    def __init__(self, r=[0,0,0], no = [0,0,1], size=[1,1,0.1], id=""): 
+        self.r = r
+        self.no = no
+        self.size = size
+        self.id = id
+    
+    def slit(self,x,y):
+        pass
+
 
 class Drift:
     '''

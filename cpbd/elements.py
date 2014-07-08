@@ -233,7 +233,7 @@ class Cavity(Element):
     v - voltage [V/m]
     f - frequency [GHz]
     '''
-    def __init__(self, l, delta_e = 0.0, freq=0.0, phi=0.0, id = None, volt = None, volterr = None):
+    def __init__(self, l, delta_e = 0.0, freq=0.0, phi=0.0, id = None, volt = 0., volterr = 0.):
         Element.__init__(self, id)
         self.type = "cavity"
         self.l = l

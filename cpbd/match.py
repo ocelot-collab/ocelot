@@ -55,18 +55,17 @@ def weights(val):
     return 0.0001
 
 def match(lat, constr, vars, tw):
-    #print "constr = ", constr
-    #print "vars = ", vars
+    
     #tw = deepcopy(tw0)
     
     def errf(x):
+        
         #print 'iteration'
         tw_loc = deepcopy(tw)
 
         for i in xrange(len(vars)):
             if vars[i].__class__ == Quadrupole:
                 vars[i].k1 = x[i]
-                #print "Q = ", x[i]
                 vars[i].transfer_map = create_transfer_map(vars[i], energy = tw.E)
             if vars[i].__class__ == list:
                 if vars[i][0].__class__ == Twiss and  vars[i][1].__class__ == str:
@@ -87,8 +86,22 @@ def match(lat, constr, vars, tw):
                 #print tw_loc.Dx
                 #print constr[e.id]['Dx']
                 for k in constr[e.id].keys():
-                    #print " constrin = ", k, tw_loc.__dict__[k]
-                    err = err + weights(k) * (constr[e.id][k] - tw_loc.__dict__[k])**2
+                    if constr[e.id][k].__class__ == list:
+                        print 'list'   
+                        v1 = constr[e.id][k][1]
+                        if constr[e.id][k][0] == '<':
+                            print '< constr'                             
+                            if tw_loc.__dict__[k] > v1:
+                                err = err + (tw_loc.__dict__[k] - v1)**2
+                        if constr[e.id][k] == '>':
+                            if tw_loc.__dict__[k] < v1:
+                                err = err + (tw_loc.__dict__[k] - v1)**2
+
+                        if tw_loc.__dict__[k] < 0:
+                            err += (tw_loc.__dict__[k] - v1)**2
+                            
+                    else:
+                        err = err + weights(k) * (constr[e.id][k] - tw_loc.__dict__[k])**2
         print err
         return err
 
@@ -111,6 +124,5 @@ def match(lat, constr, vars, tw):
             if vars[i][0].__class__ == Twiss and  vars[i][1].__class__ == str:
                 k = vars[i][1]
                 tw.__dict__[k] = res[i]
-
     
     #print res

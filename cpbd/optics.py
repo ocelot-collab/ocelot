@@ -105,7 +105,8 @@ class TransferMap:
             return tws
 
         else:
-            exit("unknow object in multiply transfer map")
+            print m.__class__
+            exit("unknow object in transfer map multiplication (TransferMap.__mul__)")
             
     def apply(self, prcl_series):
         M = self.R
@@ -392,12 +393,12 @@ def create_transfer_map(element, order=1, energy = 0):
 
     elif element.type == "cavity":
                 
-        def cavity_R_z(z, v, f, E):
+        def cavity_R_z(z, de, f, E):
             eta = 1.0
             phi = 0
             
-            Ep = v * cos(phi)
-            Ef = E + v * z 
+            Ep = de * cos(phi) / (z * 0.000511)
+            Ef = E + de 
             
             alpha = sqrt(eta / 8.) / cos(phi) * log(Ef/E)
             
@@ -418,13 +419,15 @@ def create_transfer_map(element, order=1, energy = 0):
                                 [0., 0., 0., 0. ,0. ,1. ]]).real
     
             return cav_matrix
-        
-        if element.E == 0 or element.v < 1.e-10:
+                
+        if element.E == 0 or (element.v < 1.e-10 and element.delta_e < 1.e-10 ):
+            print 'Unit CAVITY MAP:', element.E, 'GeV'
             transfer_map.R_z = lambda z: uni_matrix(z, 0, hx = 0, sum_tilts = element.dtilt + element.tilt)
             transfer_map.R = transfer_map.R_z(element.l)
         else:
             print 'CAVITY MAP:', element.E, 'GeV'
-            transfer_map.R_z = lambda z: cavity_R_z(z, v = element.v, f=element.f, E=element.E)
+            print element.E, element.v, element.delta_e 
+            transfer_map.R_z = lambda z: cavity_R_z(z, de = element.delta_e * z / element.l, f=element.f, E=element.E)
             transfer_map.R = transfer_map.R_z(element.l)
         
 
@@ -535,9 +538,20 @@ def trace_obj(lattice, obj, nPoints = None):
         obj must be Twiss or Particle """
     if nPoints == None:
         obj_list = [obj]
+        
+        E0 = obj.E
+        
         for e in lattice.sequence:
             #print e.type, e.id
+            
             obj = e.transfer_map*obj
+            
+            if e.type == "cavity":
+                E0 += e.delta_e
+            
+            obj.E = E0
+            e.E = E0
+            
             obj_list.append(obj)
     else:
         z_array = linspace(0, lattice.totalLen, nPoints, endpoint=True)

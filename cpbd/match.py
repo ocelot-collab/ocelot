@@ -34,33 +34,18 @@ def closed_orbit(lattice, eps_xy = 1.e-7, eps_angle = 1.e-7):
     ME = eye(4) - R
     P = dot(inv(ME), tm0.B[:4])
 
-    p0 = Particle(x = P[0], px = P[1], y = P[2], py = P[3])
+    def errf(x):
 
-    for i in xrange(100):
-
-        p = p0
+        p = Particle(x = x[0], px = x[1], y = x[2], py = x[3])
         for tm in t_maps:
             p = tm*p
-        d_x = p.x - p0.x
-        d_y = p.y - p0.y
+        err = 1000.*(p.x - x[0])**2 + 1000.*(p.px - x[1])**2 + 1000.*(p.y - x[2])**2 + 1000.*(p.py - x[3])**2
 
-        d_angle_x = p.px - p0.px
-        d_angle_y = p.py - p0.py
-        if (abs(d_angle_x) <= eps_angle and
-            abs(d_angle_y) <= eps_angle and
-            abs(d_x) <= eps_xy and
-            abs(d_y) <= eps_xy):
+        return err
 
-            print "closed orbit is found! Number iterations = ", i
-            return p0
-        n = 2.
-        p0.px += d_angle_x/n
-        p0.py += d_angle_y/n
-        p0.x += d_x/n
-        p0.y += d_y/n
-    print "closed orbit is not found!"
+    res = fmin(errf,P,xtol=1e-8, maxiter=2.e3, maxfun=2.e3)
 
-    return p0
+    return Particle(x = res[0], px = res[1], y = res[2], py = res[3])
 
 
 def weights(val):

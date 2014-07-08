@@ -1,11 +1,11 @@
 __author__ = 'Sergey Tomin'
 
 from em_screen import EMScreen, show_flux
-from xframework.common.globals import *
+from ocelot.common.globals import *
 #from codes.genera.src.python.trajectory.tr_solver import trajectory_body
-from codes.genera.src.python.trajectory.lat_trajectory import trace4radiation
+from ocelot.lib.genera.src.python.trajectory.lat_trajectory import trace4radiation
 from emitt_spread import  change_sizes_screen, convolution_all
-from xframework.cpbd.beam import *
+from ocelot.cpbd.beam import *
 from ctypes import CDLL, c_double, c_int, POINTER
 from numpy import array, zeros, abs
 from sys import path
@@ -27,14 +27,14 @@ else:
         tail = "codes/genera/build/mac/radiation.so"
 """
 
-tail = "codes/genera/build/genera_libs/radiation.so"
+tail = "ocelot/lib/genera/build/genera_libs/radiation.so"
 home_dir = path[0]
-index =  path[0].find("scripts")
+index =  path[0].find("siberia-2")
 pathToDll = path[0][:index]+ tail
 try:
     my_rad = CDLL(pathToDll)
 except:
-    exec(open(path[0][:index]+ "codes/genera/src/cpp/compile.py"))
+    exec(open(path[0][:index]+ "ocelot/lib/genera/src/cpp/compile.py"))
     os.chdir(home_dir)
     my_rad = CDLL(pathToDll)
 

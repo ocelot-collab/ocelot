@@ -125,11 +125,11 @@ def freq_analysis(track_list, lat, nturns, harm = True, diap = 0.10, nearest = F
         tws = twiss(lat, Twiss())
         nux = tws[-1].mux/2./pi*nsuperperiods
         nuy = tws[-1].muy/2./pi*nsuperperiods
-        print nux, nuy
+        print "freq. analysis: Qx = ",nux, " Qy = ", nuy
         nux = abs(int(nux+0.5) - nux)
         nuy = abs(int(nuy+0.5) - nuy)
-        print "nux = ", nux
-        print "nuy = ", nuy
+        print "freq. analysis: nux = ", nux
+        print "freq. analysis: nuy = ", nuy
         return nux, nuy
 
     nux, nuy = None, None

@@ -5,8 +5,8 @@ from numpy import pi, array, hstack, zeros, linspace
 from sys import exit, path
 from os import name as os_name
 import os
-from xframework.common.globals import *
-from xframework.cpbd.beam import Particle
+from ocelot.common.globals import *
+from ocelot.cpbd.beam import Particle
 from motion import Motion
 und_type = "undulator"
 import socket
@@ -24,14 +24,14 @@ else:
         tail_u = "codes/genera/build/mac/undulator.so"
 """
 
-tail = "codes/genera/build/genera_libs/undulator.so"
+tail = "ocelot/lib/genera/build/genera_libs/undulator.so"
 home_dir = path[0]
-index =  path[0].find("scripts")
+index =  path[0].find("siberia-2")
 pathToDll = path[0][:index]+ tail
 try:
     cundul= CDLL(pathToDll)
 except:
-    exec(open(path[0][:index]+ "codes/genera/src/cpp/compile.py"))
+    exec(open(path[0][:index]+ "ocelot/lib/genera/src/cpp/compile.py"))
     os.chdir(home_dir)
     cundul= CDLL(pathToDll)
 

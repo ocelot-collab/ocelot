@@ -1,9 +1,9 @@
 __author__ = 'Sergey Tomin'
 from undulator import und_trace
-from xframework.cpbd.optics import track
+from ocelot.cpbd.optics import track
 from numpy import linspace, arange, array, append
-from xframework.cpbd.optics import *
-from xframework.cpbd.elements import *
+from ocelot.cpbd.optics import *
+from ocelot.cpbd.elements import *
 from motion import Motion
 from scipy.interpolate import splrep, splev
 from matplotlib import pyplot as plt

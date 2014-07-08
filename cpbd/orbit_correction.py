@@ -2,7 +2,7 @@ __author__ = 'Sergey Tomin'
 
 from ocelot.cpbd.beam import Particle, Twiss
 from ocelot.cpbd.errors import *
-from ocelot.cpbd.matching import closed_orbit
+from ocelot.cpbd.match import closed_orbit
 from ocelot.cpbd.optics import *
 import copy
 import matplotlib.pyplot as plt

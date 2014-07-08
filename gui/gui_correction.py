@@ -10,8 +10,8 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
 from matplotlib.figure import Figure
 from numpy import linspace, sin, random
-from xframework.cpbd.orbit_correction import *
-from xframework.cpbd.elements import *
+from ocelot.cpbd.orbit_correction import *
+from ocelot.cpbd.elements import *
 import numpy as np
 import cPickle
 

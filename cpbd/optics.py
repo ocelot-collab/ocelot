@@ -30,11 +30,10 @@ class TransferMap:
         m = tws0
         tws = Twiss(tws0)
         tws.p = m.p
-    
         tws.beta_x = M[0,0]*M[0,0]*m.beta_x - 2*M[0,1]*M[0,0]*m.alpha_x + M[0,1]*M[0,1]*m.gamma_x
         #tws.beta_x = ((M[0,0]*tws.beta_x - M[0,1]*m.alpha_x)**2 + M[0,1]*M[0,1])/m.beta_x
         tws.beta_y = M[2,2]*M[2,2]*m.beta_y - 2*M[2,3]*M[2,2]*m.alpha_y + M[2,3]*M[2,3]*m.gamma_y
-    
+        #tws.beta_y = ((M[2,2]*tws.beta_y - M[2,3]*m.alpha_y)**2 + M[2,3]*M[2,3])/m.beta_y
         tws.alpha_x = -M[0,0]*M[1,0]*m.beta_x + (M[0,1]*M[1,0]+M[1,1]*M[0,0])*m.alpha_x - M[0,1]*M[1,1]*m.gamma_x
         tws.alpha_y = -M[2,2]*M[3,2]*m.beta_y + (M[2,3]*M[3,2]+M[3,3]*M[2,2])*m.alpha_y - M[2,3]*M[3,3]*m.gamma_y
     
@@ -411,12 +410,12 @@ def create_transfer_map(element, order=1, energy = 0):
             
             print r11, r12, r21, r22
             
-            cav_matrix = array([[ r11,  r12, 0. ,0. ,0.,  0. ],
-                                [ r21,  r22, 0. ,0. ,0., 0. ],
-                                [0., 0., r11, r12,  0., 0. ],
+            cav_matrix = array([[r11, r12, 0. ,0. ,0., 0.],
+                                [r21, r22, 0. ,0. ,0., 0.],
+                                [0., 0., r11, r12, 0., 0.],
                                 [0., 0., r21, r22, 0., 0.],
-                                [0., 0., 0., 0. ,1. ,0. ],
-                                [0., 0., 0., 0. ,0. ,1. ]]).real
+                                [0., 0., 0., 0. ,1. ,0.],
+                                [0., 0., 0., 0. ,0. ,1.]]).real
     
             return cav_matrix
                 
@@ -510,18 +509,23 @@ def lattice_transfer_map(lattice):
     return lat_transfer_map
 
 
-def trace_z(lattice,obj0, z_array):
+def trace_z(lattice, obj0, z_array):
     """ tracer depend on Z (twiss(z) and particle(z))
         moreover I use it following way, for example, twiss = twiss_Z(lattice,twiss_0, [1.23]) ,
          it means I will found twiss params at 1.23 m
     """
     obj_list = []
+    E0 = obj0.E
     i = 0
     elem = lattice.sequence[i]
     L = elem.l
     obj_elem = obj0
     for z in z_array:
         while z > L:
+            if elem.type == "cavity":
+                E0 += elem.delta_e
+            obj_elem.E = E0
+            elem.E = E0
             obj_elem = lattice.sequence[i].transfer_map*obj_elem
             i += 1
             elem = lattice.sequence[i]
@@ -566,6 +570,9 @@ def twiss(lattice, tws0, nPoints = None):
             tws0 = periodic_solution(tws0, lattice_transfer_map(lattice).R)
             if tws0 == None:
                 return None
+        else:
+            tws0.gamma_x = (1. + tws0.alpha_x**2)/tws0.beta_x
+            tws0.gamma_y = (1. + tws0.alpha_y**2)/tws0.beta_y
         twiss_list = trace_obj(lattice, tws0, nPoints)
     else:
         exit("unknown object tws0")

@@ -396,7 +396,8 @@ def create_transfer_map(element, order=1, energy = 0):
             eta = 1.0
             phi = 0
             
-            Ep = de * cos(phi) / (z * 0.000511)
+            #Ep = de * cos(phi) / (z * 0.000511) # energy derivative
+            Ep = de * cos(phi) / (z) # energy derivative
             Ef = E + de 
             
             alpha = sqrt(eta / 8.) / cos(phi) * log(Ef/E)
@@ -428,7 +429,31 @@ def create_transfer_map(element, order=1, energy = 0):
             print element.E, element.v, element.delta_e 
             transfer_map.R_z = lambda z: cavity_R_z(z, de = element.delta_e * z / element.l, f=element.f, E=element.E)
             transfer_map.R = transfer_map.R_z(element.l)
-        
+
+    elif element.type == "solenoid":
+        def sol(l, k):
+            """
+            :param l: efective length of solenoid
+            :param k: B0/(2*Brho), B0 is field inside the solenoid, Brho is momentum of central trajectory
+            :return: matrix
+            """
+            c = cos(l*k)
+            s = sin(l*k)
+            if k == 0:
+                s_k = l
+            else:
+                s_k = s/k
+
+            sol_matrix = array([[c*c, c*s_k, s*c ,s*s_k ,0., 0.],
+                                [-k*s*c, c*c, -k*s*s ,s*c ,0., 0.],
+                                [-s*c, -s*s_k, c*c, c*s_k, 0., 0.],
+                                [k*s*s, -s*c, -k*s*c, c*c, 0., 0.],
+                                [0., 0., 0., 0. ,1. ,0.],
+                                [0., 0., 0., 0. ,0. ,1.]]).real
+            return sol_matrix
+
+        transfer_map.R_z = lambda z: sol(z, k = element.k)
+        transfer_map.R = transfer_map.R_z(element.l)
 
     elif element.type == "matrix":
         Rm = eye(6)

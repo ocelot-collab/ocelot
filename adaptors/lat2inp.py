@@ -33,6 +33,7 @@ def lat2input(lat):
     quads = find_objects(lat, types = ["quadrupole"])
     sexts = find_objects(lat, types = ["sextupole"])
     cavs = find_objects(lat, types = ["cavity"])
+    sols = find_objects(lat, types = ["solenoid"])
     matrices = find_objects(lat, types = ["matrix"])
     bends = find_objects(lat, types = ["bend","rbend", "sbend"])
     #end find objects
@@ -80,6 +81,12 @@ def lat2input(lat):
                ", rm13 = "+ str(mat.rm13) +", rm21 = "+ str(mat.rm21) + ", rm22 = "+ str(mat.rm22) +", rm33 = "+ str(mat.rm33) +\
                ", rm34 = "+ str(mat.rm34) +", rm43 = "+ str(mat.rm43) + ", rm44 = "+ str(mat.rm44) +\
                ", id = '"+ mat.id+ "')\n"
+        lines.append(line)
+
+    lines.append("\n# Solenoids \n")
+
+    for sol in sols:
+        line = sol.id + " = Solenoid(l = " + str(sol.l) +", k = "+ str(sol.k) +", id = '"+ sol.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# lattice \n")

@@ -245,6 +245,16 @@ class Cavity(Element):
         self.volterr = volterr
 
 
+class Solenoid(Element):
+    '''
+    Solenoid
+    '''
+    def __init__(self, l, k = 0., id = None):
+        Element.__init__(self, id)
+        self.type = "solenoid"
+        self.k = k # B0/(2B*rho)
+        self.l = l
+
 
 
 class Matrix(Element):

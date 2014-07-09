@@ -26,7 +26,7 @@ else:
 
 tail = "ocelot/lib/genera/build/genera_libs/undulator.so"
 home_dir = path[0]
-index =  path[0].find("siberia-2")
+index =  path[0].find("siberia2")
 pathToDll = path[0][:index]+ tail
 try:
     cundul= CDLL(pathToDll)

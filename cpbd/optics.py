@@ -331,6 +331,83 @@ def create_transfer_map(element, order=1, energy = 0):
         transfer_map.R_z = lambda z: uni_matrix(z, 0, hx = 0)
         transfer_map.R = transfer_map.R_z(element.l)
 
+    elif element.type == "octupole":
+
+        def nonl_kick( u):
+
+            x = u[0] - transfer_map.dx + u[1]*transfer_map.length/2.
+            y = u[2] - transfer_map.dy + u[3]*transfer_map.length/2.
+
+            u[1] += -transfer_map.moct*(x*x*x - 3.*y*y*x)
+            u[3] += transfer_map.moct*(3.*y*x*x - y*y*y)
+
+            u[0] = x + transfer_map.dx + u[1]*transfer_map.length/2.
+            u[2] = y + transfer_map.dy + u[3]*transfer_map.length/2.
+
+            # experimental
+            #v = np.array([transfer_map.dx, transfer_map.dy, transfer_map.length, transfer_map.ms])
+            code = """
+            double x, y, dx,dy,length, moct;
+            dx = V1(0);
+            dy = V1(1);
+
+            length = V1(2);
+            moct = V1(3);
+            x = U1(0) - dx + U1(1)*length/2.;
+            y = U1(2) - dy + U1(3)*length/2.;
+            U1(1) = U1(1) - moct*(x*x*x - 3.*y*y*x);
+            U1(3) = U1(3) + moct*(3.*y*x*x - y*y*y);
+
+            U1(0) = x + dx + U1(1)*length/2.;
+            U1(2) = y + dy + U1(3)*length/2.;
+            """
+            #weave.inline(code, ["u", "v"])
+
+            return u
+
+        def nonl_kick_array(u):
+            v = np.array([transfer_map.dx, transfer_map.dy, transfer_map.length, transfer_map.moct])
+            L = transfer_map.length
+            dx = transfer_map.dx
+            dy = transfer_map.dy
+            moct = transfer_map.moct # moct = K3*L
+            code = """
+            double x, y;
+            double dx = V1(0);
+            double dy = V1(1);
+            double L = V1(2);
+            double moct = V1(3);
+            int i;
+
+            for(i = 0;i<Nu[0]/6;i++ ){
+                // symplectic map for sextupole
+                // The Stoermer-Verlet schemes
+                x = U1(0+i*6) + U1(1+i*6)*L/2. - dx;
+                y = U1(2+i*6) + U1(3+i*6)*L/2. - dy;
+                U1(1+i*6) -= ms/2.*(x*x*x - 3.*y*y*x);
+                U1(3+i*6) += ms*(3.*y*x*x - y*y*y);
+                U1(0+i*6) = x + U1(1+i*6)*L/2. + dx;
+                U1(2+i*6) = y + U1(3+i*6)*L/2. + dy;
+
+            }
+            """
+            #print "U = ", u[:12]
+            #print "V = ", v
+            weave.inline(code, ["u","v"])
+            #print "U = ", u[:12]
+            return u
+
+        if element.moct == None:
+            element.moct = element.k3*element.l
+        transfer_map.order = 3
+
+        transfer_map.nonl_kick = nonl_kick #lambda V: nonl_kick(transfer_map, V)
+        transfer_map.nonl_kick_array = nonl_kick_array
+        transfer_map.moct = element.moct
+        #print "transfer_map.ms = ",transfer_map.ms
+        transfer_map.R_z = lambda z: uni_matrix(z, 0, hx = 0)
+        transfer_map.R = transfer_map.R_z(element.l)
+
     elif element.type == "drift":
 
         transfer_map.R_z = lambda z: uni_matrix(z, 0, hx = 0)
@@ -393,6 +470,13 @@ def create_transfer_map(element, order=1, energy = 0):
     elif element.type == "cavity":
                 
         def cavity_R_z(z, de, f, E):
+            """
+            :param z: length
+            :param de: delta E
+            :param f: frequency
+            :param E: initial energy
+            :return: matrix
+            """
             eta = 1.0
             phi = 0
             
@@ -433,6 +517,7 @@ def create_transfer_map(element, order=1, energy = 0):
     elif element.type == "solenoid":
         def sol(l, k):
             """
+            K.Brown, A.Chao.
             :param l: efective length of solenoid
             :param k: B0/(2*Brho), B0 is field inside the solenoid, Brho is momentum of central trajectory
             :return: matrix

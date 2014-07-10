@@ -70,22 +70,22 @@ class Sextupole(Element):
         self.ms = ms
         self.tilt = tilt
 
-#class Octupole(Element):
-#    """
-#    m - strength of sextupole lens in [1/m^3],
-#    l - length of lens in [m].
-#    """
-#    def __init__(self, l=0, k3=None, mc = None, id = None, tilt = 0):
-#        """
-#        k2 is sextupole strength
-#        ms = k2*l
-#        """
-#        Element.__init__(self, id)
-#        self.type = "octupole"
-#        self.l = l
-#        self.k3 = k3
-#        self.mc = mc
-#        self.tilt = tilt
+class Octupole(Element):
+    """
+    m - strength of sextupole lens in [1/m^3],
+    l - length of lens in [m].
+    """
+    def __init__(self, l=0, k3=None, id = None, tilt = 0):
+        """
+        k2 is sextupole strength
+        moct = k3*l
+        """
+        Element.__init__(self, id)
+        self.type = "octupole"
+        self.l = l
+        self.k3 = k3
+        self.tilt = tilt
+        self.moct = None
 
 class Drift(Element):
     """
@@ -95,9 +95,10 @@ class Drift(Element):
         Element.__init__(self, id)
         self.type = "drift"
         self.l = l
+        self.tilt = 0.
 
 class Bend(Element):
-    def __init__(self, l, angle=0,tilt=0.0, e1 = 0, e2 = 0, k1 = 0, id = None):
+    def __init__(self, l, angle=0, tilt=0.0, e1 = 0, e2 = 0, k1 = 0, id = None):
         Element.__init__(self, id)
         self.type = "bend"
         self.l = l
@@ -105,6 +106,7 @@ class Bend(Element):
         self.k1 = k1
         self.e1 = e1
         self.e2 = e2
+        self.tilt = tilt
 
 class Edge(Bend):
     def __init__(self, l=0, angle=0.0, edge = 0., tilt=0.0, dtilt = 0.0, dx = 0.0, dy = 0.0, id = None):
@@ -142,6 +144,7 @@ class SBend(Bend):
         self.l = l
         self.angle = angle
         self.k1 = k1
+        self.tilt = tilt
 
         # for future
 

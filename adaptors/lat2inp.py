@@ -60,7 +60,7 @@ def lat2input(lat):
             k = ''
         else:
             k = ", k1 = "+ str(bend.k1)
-        line = bend.id + type + str(bend.l) + k + ", angle = "+ str(bend.angle)+ ", e1 = " + str(bend.e1) + ", e2 = " + str(bend.e2) +", id = '"+ bend.id+ "')\n"
+        line = bend.id + type + str(bend.l) + k + ", angle = "+ str(bend.angle)+ ", e1 = " + str(bend.e1) + ", e2 = " + str(bend.e2) + ", tilt = " + str(bend.tilt) +", id = '"+ bend.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# sextupoles \n")

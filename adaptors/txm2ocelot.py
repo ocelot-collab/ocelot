@@ -1,6 +1,6 @@
 __author__ = 'Sergey Tomin'
 
-
+import numpy as np
 def translate(lines):
     lines2 = []
     for line in lines:
@@ -16,7 +16,7 @@ def translate(lines):
         line = line.replace('rbend', "RBend")
         line = line.replace('bend', "Bend")
         line = line.replace('ecol', "Scavenger")
-
+        line = line.replace('title', "#title")
 
         line = line.replace('octupole', "Scavenger")
         line = line.replace('monitor', "Monitor")
@@ -181,12 +181,17 @@ def xfel_line_transform(file):
             part = part.replace(".", "_")
             line = part+line[ind:]
         #print line
-        for name in name_budget:
-            ind = line.find(name)
-            if ind>0:
-                #print name, line, ind
-                name_ = name.replace(".", "_")
-                line = line[:ind]+name_+line[ind+len(name):]
+        names = np.array(name_budget)
+        names = names[np.argsort(map(len, names))][::-1]
+        #print names
+        for name in names:
+            name_ = name.replace(".", "_")
+            line = line.replace(name, name_)
+            #ind = line.find(name)
+            #if ind>0:
+            #    #print name, line, ind
+            #    name_ = name.replace(".", "_")
+            #    line = line[:ind]+name_+line[ind+len(name):]
 
         line = line.replace(';', '')
         line = line.lower()

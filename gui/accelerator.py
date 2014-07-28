@@ -284,22 +284,32 @@ def plot_elems(ax, lat,nturns = 1, y_lim = None,y_scale = 1, legend = True):
     if legend:
         ax.legend(loc='upper center', ncol=n, shadow=False, prop=font_manager.FontProperties(size=15))
 
-def plot_disp(ax, S, Dx, font_size, ylabel, lable, y_lim = None):
-    
-    if y_lim == None:
-        d_Dx = max(Dx) - min(Dx)
-        if d_Dx == 0:
-            d_Dx = 1
-        ax.set_ylim(( min(Dx)-d_Dx*0.1, max(Dx)+d_Dx*0.1))
-    else:
-        ax.set_ylim(y_lim)
-    
+def plot_disp(ax,tws, top_plot, font_size):
+    S = map(lambda p:p.s, tws)
+    d_Ftop = []
+    Fmin = []
+    Fmax = []
+    for elem in top_plot:
+        Ftop = map(lambda p:p.__dict__[elem], tws)
+        Fmin.append(min(Ftop))
+        Fmax.append(max(Ftop))
+        top_label = r"$"+elem+"$"
+        ax.plot(S, Ftop, lw = 2, label=top_label)
+        d_Ftop.append( max(Ftop) - min(Ftop))
+
+    d_F = max(d_Ftop)
+    if d_F == 0:
+        d_Dx = 1
+        ax.set_ylim(( min(Fmin)-d_Dx*0.1, max(Fmax)+d_Dx*0.1))
+
+    top_ylabel = r"$"+"/".join(top_plot) +"$"+ ", m"
+
     yticks = ax.get_yticks()
     yticks = yticks[2::2]
     ax.set_yticks(yticks)
-    ax.set_ylabel(ylabel)
+    ax.set_ylabel(top_ylabel)
     
-    ax.plot(S, Dx,'black', lw = 2, label=lable)
+    #ax.plot(S, Dx,'black', lw = 2, label=lable)
     leg2 = ax.legend(loc='upper right', shadow=True, fancybox=True,prop=font_manager.FontProperties(size=font_size))
     leg2.get_frame().set_alpha(0.5)
 
@@ -320,9 +330,12 @@ def plot_xy(ax, S, X, Y, font_size):
     leg.get_frame().set_alpha(0.5)
 
 
-def plot_opt_func(lat, tws, top_plot = "Dx", legend = True):
+def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, name = None):
     font_size = 16
-    fig = plt.figure()
+    if name == None:
+        fig = plt.figure()
+    else:
+       fig = plt.figure(name)
     plt.rc('axes', grid=True)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
     left, width = 0.1, 0.85
@@ -348,41 +361,11 @@ def plot_opt_func(lat, tws, top_plot = "Dx", legend = True):
     fig.subplots_adjust(hspace=0)
     beta_x = map(lambda p:p.beta_x, tws)
     beta_y = map(lambda p:p.beta_y, tws)
-
-    if top_plot == "Dy":
-        Ftop = map(lambda p:p.Dy, tws)
-        top_ylabel = r"$\eta_{y}$, m"
-        top_lable = r"$\eta_{y}$"
-    elif top_plot == "E":
-        Ftop = map(lambda p:p.E, tws)
-        top_ylabel = r"$E$, GeV"
-        top_lable = r"$E$"
-    elif top_plot == "alpha_x":
-        Ftop = map(lambda p:p.alpha_x, tws)
-        top_ylabel = r"$\alpha_x$"
-        top_lable = r"$\alpha_x$"
-    elif top_plot == "alpha_y":
-        Ftop = map(lambda p:p.alpha_y, tws)
-        top_ylabel = r"$\alpha_y$"
-        top_lable = r"$\alpha_y$"
-    elif top_plot == "x":
-        Ftop = map(lambda p:p.x, tws)
-        top_ylabel = r"$x$, m"
-        top_lable = r"$x$"
-    elif top_plot == "y":
-        Ftop = map(lambda p:p.y, tws)
-        top_ylabel = r"$y$, m"
-        top_lable = r"$y$"
-    else:
-        Ftop = map(lambda p:p.Dx, tws)
-        top_ylabel = r"$\eta_{x}$, m"
-        top_lable = r"$\eta_{x}$"
     S = map(lambda p:p.s, tws)
 
     plt.xlim(S[0], S[-1])
 
-
-    plot_disp(ax_top, S, Ftop, font_size, top_ylabel, top_lable)
+    plot_disp(ax_top,tws, top_plot, font_size)
     plot_betas(ax_b, S, beta_x, beta_y, font_size)
     plot_elems(ax_el, lat, legend = legend, y_scale=0.8) # plot elements
     

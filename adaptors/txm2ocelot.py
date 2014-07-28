@@ -12,6 +12,8 @@ def translate(lines):
         line = line.replace('solenoid', "Solenoid")
         line = line.replace('drift', "Drift")
         line = line.replace('quadrupole', "Quadrupole")
+        line = line.replace('quad', "Quadrupole")
+        line = line.replace('csrcsbend', "SBend")
         line = line.replace('sbend', "Bend")
         line = line.replace('rbend', "RBend")
         line = line.replace('bend', "Bend")

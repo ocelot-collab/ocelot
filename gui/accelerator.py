@@ -307,6 +307,9 @@ def plot_disp(ax,tws, top_plot, font_size):
     yticks = ax.get_yticks()
     yticks = yticks[2::2]
     ax.set_yticks(yticks)
+    #for i, label in enumerate(ax.get_yticklabels()):
+    #    if i == 0 or i == 1:
+    #        label.set_visible(False)
     ax.set_ylabel(top_ylabel)
     
     #ax.plot(S, Dx,'black', lw = 2, label=lable)
@@ -354,6 +357,7 @@ def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, name = None):
                 label.set_visible(False)
     
     ax_b.grid(True)
+    ax_top.grid(True)
     ax_el.set_yticks([])
     ax_el.grid(True)
 

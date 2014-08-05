@@ -32,6 +32,7 @@ def lat2input(lat):
     drifts = find_objects(lat, types = ["drift"])
     quads = find_objects(lat, types = ["quadrupole"])
     sexts = find_objects(lat, types = ["sextupole"])
+    octs = find_objects(lat, types = ["octupole"])
     cavs = find_objects(lat, types = ["cavity"])
     sols = find_objects(lat, types = ["solenoid"])
     matrices = find_objects(lat, types = ["matrix"])
@@ -66,6 +67,11 @@ def lat2input(lat):
     lines.append("\n# sextupoles \n")
     for sext in sexts:
         line = sext.id + " = Sextupole(l = " + str(sext.l) +", k2 = "+ str(sext.k2) +", tilt = "+ str(sext.tilt) +", id = '"+ sext.id+ "')\n"
+        lines.append(line)
+
+    lines.append("\n# octupole \n")
+    for oct in octs:
+        line = oct.id + " = Octupole(l = " + str(oct.l) +", k3 = "+ str(oct.k3) +", tilt = "+ str(oct.tilt) +", id = '"+ oct.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# cavity \n")
@@ -104,3 +110,11 @@ def lat2input(lat):
     line = "lattice = (" + ", ".join(new_names) +")"
     lines.append(line)
     return lines
+
+
+def write_lattice(lattice, file_name = "lattice.inp"):
+    lines = lat2input(lattice)
+
+    f = open(file_name, 'w')
+    f.writelines(lines)
+    f.close()

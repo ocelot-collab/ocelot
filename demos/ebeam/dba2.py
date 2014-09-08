@@ -1,4 +1,4 @@
-# need to remember
+# need to rememberr
 
 from ocelot.gui.accelerator import plot_lattice
 from ocelot.cpbd.elements import *

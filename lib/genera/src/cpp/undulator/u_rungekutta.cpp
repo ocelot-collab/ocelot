@@ -113,8 +113,11 @@ int rkgauss( const int NstepMotion,
             by2 = by*by;
             //sq = 1 + (bx2 + by2)/2.;
             sq = sqrt(1 + bx2 + by2);
-            mx1 = sq*((by*Bz - By)*(1+bx2) + bx*by*(Bx - bx*Bz))*dzk;
-            my1 = sq*((Bx - bx*Bz)*(1+by2) + bx*by*(by*Bz - By))*dzk;
+            //mx1 = sq*((by*Bz - By)*(1+bx2) + bx*by*(Bx - bx*Bz))*dzk;
+            //my1 = sq*((Bx - bx*Bz)*(1+by2) + bx*by*(by*Bz - By))*dzk;
+            // the same but shorter exp.
+            mx1 = sq*(by*Bz - By*(1+bx2) + bx*by*Bx)*dzk;
+            my1 = -sq*(bx*Bz - Bx*(1+by2) + bx*by*By)*dzk;
             //K2
 
             err = B3D(field, X + kx1/2., Y + ky1/2., Z + dz/2. + Zshift, pBx, pBy, pBz);
@@ -129,8 +132,8 @@ int rkgauss( const int NstepMotion,
             by2 = by*by;
             //sq = 1 + (bx2 + by2)/2.;
             sq = sqrt(1 + bx*bx + by*by);
-            mx2 = sq*((by*Bz - By)*(1+bx2) + bx*by*(Bx - bx*Bz))*dzk;
-            my2 = sq*((Bx - bx*Bz)*(1+by2) + bx*by*(by*Bz - By))*dzk;
+            mx2 = sq*(by*Bz - By*(1+bx2) + bx*by*Bx)*dzk;
+            my2 = -sq*(bx*Bz - Bx*(1+by2) + bx*by*By)*dzk;
             // K3
 
             err = B3D(field, X + kx2/2., Y + ky2/2., Z + dz/2. + Zshift, pBx, pBy, pBz);
@@ -145,8 +148,8 @@ int rkgauss( const int NstepMotion,
             by2 = by*by;
             //sq = 1 + (bx2 + by2)/2.;
             sq = sqrt(1 + bx*bx + by*by);
-            mx3 = sq*((by*Bz - By)*(1+bx2) + bx*by*(Bx-bx*Bz))*dzk;
-            my3 = sq*((Bx - bx*Bz)*(1+by2) + bx*by*(by*Bz-By))*dzk;
+            mx3 = sq*(by*Bz - By*(1+bx2) + bx*by*Bx)*dzk;
+            my3 = -sq*(bx*Bz - Bx*(1+by2) + bx*by*By)*dzk;
 
             //K4
             err = B3D(field, X + kx3, Y + ky3, Z + dz + Zshift,pBx, pBy, pBz);
@@ -162,8 +165,8 @@ int rkgauss( const int NstepMotion,
             by2 = by*by;
             //sq = 1 + (bx2 + by2)/2.;
             sq = sqrt(1 + bx*bx + by*by);
-            mx4 = sq*((by*Bz - By)*(1+bx2) + bx*by*(Bx-bx*Bz))*dzk;
-            my4 = sq*((Bx - bx*Bz)*(1+by2) + bx*by*(by*Bz-By))*dzk;
+            mx4 = sq*(by*Bz - By*(1+bx2) + bx*by*Bx)*dzk;
+            my4 = -sq*(bx*Bz - Bx*(1+by2) + bx*by*By)*dzk;
             //            if( n == 0)
             //            {
             //                mexPrintf("SPIRAL UNULATOR, %g.\n", motion->Zbeta[0]);

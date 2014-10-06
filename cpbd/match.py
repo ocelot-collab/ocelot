@@ -54,7 +54,7 @@ def weights(val):
     
     return 0.0001
 
-def match(lat, constr, vars, tw):
+def match(lat, constr, vars, tw, print_proc = 1):
     
     #tw = deepcopy(tw0)
     
@@ -62,7 +62,6 @@ def match(lat, constr, vars, tw):
         
         #print 'iteration'
         tw_loc = deepcopy(tw)
-
         for i in xrange(len(vars)):
             if vars[i].__class__ == Quadrupole:
                 vars[i].k1 = x[i]
@@ -73,14 +72,18 @@ def match(lat, constr, vars, tw):
                     tw_loc.__dict__[k] = x[i]
         
         err = 0.0
-
+        if "periodic" in constr.keys():
+            tw_loc = periodic_solution(tw_loc, lattice_transfer_map(lat).R)
+            if tw_loc == None:
+                return 1
+        #print "after: ", tw_loc.beta_x
         for e in lat.sequence:
             #print e.id
             #print e.transfer_map
             #print tw
             #print 'k', e.transfer_map*tw
             tw_loc = e.transfer_map*tw_loc
-    
+            #print "ttt: ", tw_loc.mux, tw_loc.beta_x, tw_loc.beta_y
             if e.id in constr.keys():
                 #print e.id
                 #print tw_loc.Dx
@@ -101,8 +104,11 @@ def match(lat, constr, vars, tw):
                             err += (tw_loc.__dict__[k] - v1)**2
                             
                     else:
+                        #print "safaf", constr[e.id][k] , tw_loc.__dict__[k], k,tw_loc.mux
                         err = err + weights(k) * (constr[e.id][k] - tw_loc.__dict__[k])**2
-        print err
+
+        if print_proc == 1:
+            print err
         return err
 
     
@@ -115,8 +121,9 @@ def match(lat, constr, vars, tw):
                     x[i] = 10.0
                 else:
                     x[i] = 0.0
-
-    
+        if vars[i].__class__ == Quadrupole:
+            x[i] = vars[i].k1
+    #print "x = ", x
     res = fmin(errf,x,xtol=1e-8, maxiter=2.e3, maxfun=2.e3)
 
     for i in xrange(len(vars)):
@@ -126,3 +133,27 @@ def match(lat, constr, vars, tw):
                 tw.__dict__[k] = res[i]
     
     #print res
+
+def math_tunes(lat, tw0, quads,  nu_x, nu_y, ncells= 1, print_proc = 0):
+    print "matching start .... "
+    end = Monitor(id = "end")
+    lat = MagneticLattice(lat.sequence + [end], energy = lat.energy)
+    tws=twiss(lat, tw0,nPoints=None)
+
+    nu_x_old = tws[-1].mux/2/pi * ncells
+    nu_y_old = tws[-1].muy/2/pi * ncells
+
+    strengths1 = map(lambda p: p.k1, quads)
+
+    constr = {'end':{'mux':2*pi*nu_x/ncells, 'muy':2.*pi*nu_y/ncells},'periodic':{"y"}}
+    vars = quads
+
+    match(lat, constr, vars, tws[0], print_proc = print_proc)
+    for i, q in enumerate(quads):
+        print q.id, ".k1: before: ",strengths1[i], "  after: ", q.k1
+    lat = MagneticLattice(lat.sequence[:-1], energy = lat.energy)
+    tws=twiss(lat, tw0,nPoints=None)
+    print "nu_x: before: ", nu_x_old, "after: ", tws[-1].mux/2/pi * ncells
+    print "nu_y: before: ", nu_y_old, "after: ", tws[-1].muy/2/pi * ncells
+    print "matching end."
+    return lat

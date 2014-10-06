@@ -295,15 +295,13 @@ class MagneticLattice:
         #self.transferMaps = {}
         # create transfer map and calculate lattice length
         self.totalLen = 0
-        if self.checking_edges() == -1:
+        if not self.check_edges():
             self.add_edges()
         self.update_transfer_maps()
 
-    def checking_edges(self):
+    def check_edges(self):
         """
-        if there is already edges on the ends of dipoles
-        if yes return 1
-        if not return -1
+        if there are edges on the ends of dipoles return True, else False
         """
         for i in xrange(len(self.sequence)-2):
             prob_edge1 = self.sequence[i]
@@ -312,14 +310,15 @@ class MagneticLattice:
             if elem.type in ["bend", "rbend", "hcor", "vcor"]:
                 if prob_edge1.type != "edge" and prob_edge2 != "edge":
                     #print elem.type, prob_edge1.type, prob_edge2.type
-                    return -1
-        return 1
+                    return False
+        return True
 
     def add_edges(self):
         n = 0
         for i in xrange(len(self.sequence)):
             elem = self.sequence[n]
-            if elem.type in ["bend", "rbend", "hcor", "vcor"]:
+            if elem.type in ["bend", "rbend", "hcor", "vcor"] and elem.l != 0.:
+
 
                 e_name = elem.id
 

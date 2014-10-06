@@ -199,7 +199,7 @@ def particle2c_array(particle):
 """
 
 
-def da_undul_list(undulator, list_particle, bRough):
+def da_undul_list(undulator, list_particle, bRough = 1):
     #print undulator.type
     # energy in [GeV]
     n_trajectory_points = define_points_undul(undulator, accuracy = 1)

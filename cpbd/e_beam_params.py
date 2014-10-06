@@ -49,10 +49,10 @@ class EbeamParams:
         self.Je = 2 + I4/I2
         self.Jx = 1 - I4/I2
         self.Jy = 1
-        self.gamma = twiss_0.E/m_e_GeV
+        self.gamma = lattice.energy/m_e_GeV
         self.sigma_e = self.gamma*sqrt(Cq*I3/(self.Je*I2))
         self.emittance = Cq*self.gamma*self.gamma*I5/(self.Jx*I2)
-        self.U0 = Cgamma*(twiss_0.E*1000)**4*I2/(2*pi)
+        self.U0 = Cgamma*(lattice.energy*1000)**4*I2/(2*pi)
         #print "*********  ", twiss_0.Energy
         self.Tperiod = nsuperperiod*lattice.totalLen/speed_of_light
 

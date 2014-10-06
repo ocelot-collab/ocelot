@@ -385,10 +385,13 @@ def show_da(out_da, x_array, y_array):
     #plt.savefig('da_error_'+str(int(np.random.rand()*100))+'.png')
     plt.show()
 
-def show_mu(contour_da, mux, muy, x_array, y_array):
+def show_mu(contour_da, mux, muy, x_array, y_array, zones = None ):
     from matplotlib import pyplot as plt
+    x_zone = zones[0]
+    y_zone = zones[1]
     nx = len(x_array)
     ny = len(y_array)
+    t= linspace(0,3.14, num = 100)
     contour_da = contour_da.reshape(ny,nx)
     mux = mux.reshape(ny,nx)
     muy = muy.reshape(ny,nx)
@@ -403,6 +406,11 @@ def show_mu(contour_da, mux, muy, x_array, y_array):
     fig1 = plt.contourf(mux,40, cmap=my_cmap, extent = extent)#, colors = 'r')
     cb = plt.colorbar(cmap=my_cmap)
     fig1 = plt.contourf(mux,10, levels=[-1,-.0001], colors='w',extent = extent)
+    if zones != None:
+        plt.plot(x_zone*cos(t), y_zone*sin(t), "g", lw = 2)
+        plt.plot(2*x_zone*cos(t), 2*y_zone*sin(t), "b", lw = 2)
+        plt.plot(3*x_zone*cos(t), 3*y_zone*sin(t), "r", lw = 2)
+        plt.plot(4*x_zone*cos(t), 4*y_zone*sin(t), "y", lw = 2)
     plt.grid(True)
     #plt.figure(figsize=(10, 7))
     plt.xlabel("X, m")
@@ -412,6 +420,11 @@ def show_mu(contour_da, mux, muy, x_array, y_array):
 
     fig1 = plt.contour(contour_da, 1,extent = extent, linewidths=2,colors='k')#, colors = 'r')
     fig1 = plt.contourf(muy,40, cmap=my_cmap, extent = extent)#, colors = 'r')
+    if zones != None:
+        plt.plot(x_zone*cos(t), y_zone*sin(t), "g", lw = 2)
+        plt.plot(2*x_zone*cos(t), 2*y_zone*sin(t), "b", lw = 2)
+        plt.plot(3*x_zone*cos(t), 3*y_zone*sin(t), "r", lw = 2)
+        plt.plot(4*x_zone*cos(t), 4*y_zone*sin(t), "y", lw = 2)
     #x = np.linspace(-, 0.01, 0.0001)
     #plt.plot()
     cb = plt.colorbar(cmap=my_cmap)

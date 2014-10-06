@@ -11,7 +11,7 @@ class Errors:
         self.sigma_x = 100e-6
         self.sigma_y = 100e-6
 
-def tgauss(mu = 0, sigma = 1, trunc = 3):
+def tgauss(mu = 0, sigma = 1, trunc = 2):
     if sigma == 0:
         return mu
     err = normal(mu, sigma, size = 50)
@@ -43,24 +43,48 @@ def errors_seed(lattice, er_list):
     dx = []
     dy = []
     dtilt = []
+    the_same = 0
+    elem_dx = 0.
+    elem_dy = 0.
+    elem_dtilt = 0.
     for elem in lattice.sequence:
         elem.dx = 0
         elem.dy = 0
         elem.dtilt = 0
         if elem.type == "quadrupole":
-
             elem.dx = tgauss(sigma = er_list[elem.type]["offset"])
             elem.dy = tgauss(sigma = er_list[elem.type]["offset"])
             elem.dtilt = tgauss(sigma = er_list[elem.type]["dtilt"])
+            if the_same == 1:
+                elem.dx = elem_dx
+                elem.dy = elem_dy
+                elem.dtilt = elem_dtilt
+                the_same = 0
+
+            elem_dx = elem.dx
+            elem_dy = elem.dy
+            elem_dtilt = elem.dtilt
 
         elif elem.type == "sbend" or elem.type == "rbend" or elem.type == "bend":
             elem.dx = 0
             elem.dy = 0
-            elem.dtilt = tgauss(sigma = er_list[elem.type]["dtilt"])
+            if the_same == 1:
+                elem.dtilt = elem_dtilt
+                the_same = 0
+            else:
+                elem.dtilt = tgauss(sigma = er_list[elem.type]["dtilt"])
+
+        #elem_dx = elem.dx
+        #elem_dy = elem.dy
+        #elem_dtilt = elem.dtilt
 
         dx = append(dx, elem.dx)
         dy = append(dy, elem.dy)
         dtilt = append(dtilt, elem.dtilt)
+        if elem.l == 0:
+            the_same = 1
+        else:
+            the_same = 0
 
     return lattice.update_transfer_maps(), (dx, dy, dtilt)
 

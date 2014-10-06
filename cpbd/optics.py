@@ -8,6 +8,9 @@ from numpy.linalg import inv
 from scipy.integrate import simps, trapz
 from copy import copy
 from scipy import weave
+from und_weave import track_und_RK, track_und_mag, track_und_sym
+
+
 
 class TransferMap:
 
@@ -431,6 +434,56 @@ def create_transfer_map(element, order=1, energy = 0):
             R[3,3] = cos(omega_x * z )
             return R
 
+        kz = 2.*pi/element.lperiod
+        if element.ax == -1:
+            kx = 0
+        else:
+            kx = 2.*pi/element.ax
+        gamma = energy*1949
+        #rho = gamma/element.Kx/kz
+        #c = 299792458
+        #m0 = 0.510998928*1e+6
+        #B0 = element.Kx*m0*kz/c
+        #print "rho = ", rho
+        #print "kz = ", kz
+        #print "kx = ", kx
+        #print "ax = ", element.ax
+
+
+        def nonl_kick_rk( u):
+
+            z = np.linspace(0, element.l, 10000)
+            #x, px,y, py = track_in_undul(u[:4], z, kz, kx, rho)
+            x, px,y, py, z, pz = track_und_RK(u, z, kz, kx ,element.Kx, energy)
+            u[0] = x[-1]
+            u[1] = px[-1]
+            u[2] = y[-1]
+            u[3] = py[-1]
+            return u
+
+        def nonl_kick(u):
+
+            z = np.linspace(0, element.l, 20)
+            x, px,y, py, tau = track_und_sym(u, z, kz, kx, element.Kx, energy)
+            #print u[0], x, u[1], px, u[5]
+            #print u[2], y, u[3], py
+            u[0] = x
+            u[1] = px
+            u[2] = y
+            u[3] = py
+            u[4] = tau
+            return u
+
+        def nonl_kick_array(u):
+            for i in xrange(len(u)/6):
+                V = u[i*6:i*6+6]
+                u[i*6:i*6+6] = nonl_kick(V)
+            return u
+
+        transfer_map.order = 2
+
+        transfer_map.nonl_kick = nonl_kick #lambda V: nonl_kick(transfer_map, V)
+        transfer_map.nonl_kick_array = nonl_kick_array
         if energy == 0:
             transfer_map.R_z = lambda z: uni_matrix(z, 0, hx = 0, sum_tilts = element.dtilt + element.tilt)
             transfer_map.R = transfer_map.R_z(element.l)
@@ -582,7 +635,7 @@ def periodic_solution(tws, transfer_matrix):
     #print cosmx, cosmy
 
     if abs(cosmx) >= 1 or abs(cosmy) >= 1:
-        print "************ periodic solution does not exist ***********"
+        print "************ periodic solution does not exist. return None ***********"
         return None
     sinmx = sqrt(1.-cosmx*cosmx)
     sinmy = sqrt(1.-cosmy*cosmy)
@@ -625,7 +678,10 @@ def trace_z(lattice, obj0, z_array):
          it means I will found twiss params at 1.23 m
     """
     obj_list = []
-    E0 = obj0.E
+    try:
+        E0 = obj0.E
+    except:
+        E0 = 0
     i = 0
     elem = lattice.sequence[i]
     L = elem.l

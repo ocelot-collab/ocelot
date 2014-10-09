@@ -220,7 +220,7 @@ def create_track_list(x_array, y_array):
     return track_list
 
 def ellipse_track_list(beam, n_t_sigma = 3, num = 1000, type = "contour"):
-    beam.beam_sizes()
+    beam.sizes()
     #sigma_x = sqrt((sigma_e*tws0.Dx)**2 + emit*tws0.beta_x)
     #sigma_xp = sqrt((sigma_e*tws0.Dxp)**2 + emit*tws0.gamma_x)
     if type == "contour":

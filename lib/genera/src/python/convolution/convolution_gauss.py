@@ -26,7 +26,7 @@ environ['PATH'] = environ['PATH'] + ";"+pathToDll
 
 tail = "ocelot/lib/genera/build/genera_libs/convolution.so"
 home_dir = path[0]
-index =  path[0].find("siberia-2")
+index =  path[0].find("siberia2")
 pathToDll = path[0][:index]+ tail
 try:
     my_conv= CDLL(pathToDll)

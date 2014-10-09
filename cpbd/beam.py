@@ -109,14 +109,22 @@ class Beam:
         self.Dxp = 0.0
         self.Dyp = 0.0
 
-    def beam_sizes(self):
+    def sizes(self):
         self.gamma_x = (1. + self.alpha_x**2)/self.beta_x
         self.gamma_y = (1. + self.alpha_y**2)/self.beta_y
         self.sigma_x = sqrt((self.sigma_E*self.Dx)**2 + self.emit_x*self.beta_x)
         self.sigma_y = sqrt((self.sigma_E*self.Dy)**2 + self.emit_y*self.beta_y)
         self.sigma_xp = sqrt((self.sigma_E*self.Dxp)**2 + self.emit_x*self.gamma_x)
         self.sigma_yp = sqrt((self.sigma_E*self.Dyp)**2 + self.emit_y*self.gamma_y)
-        
+
+    def print_sizes(self):
+        self.sizes()
+        print "sigma_E and Dx/Dy : ", self.sigma_E, "  and ", self.Dx, "/",self.Dy, " m"
+        print "emit_x/emit_y     : ",  self.emit_x*1e9, "/",self.emit_y*1e9, " nm-rad"
+        print "sigma_x/y         : ", self.sigma_x*1e6, "/", self.sigma_y*1e6, " um"
+        print "sigma_xp/yp       : ", self.sigma_xp*1e6, "/", self.sigma_yp*1e6, " urad"
+
+
 class Trajectory:
     def __init__(self):
         self.ct = []

@@ -33,7 +33,7 @@ def beam_sizes_on_screen(beam, screen):
     if beam.beta_x and beam.beta_y:
 
 
-        beam.beam_sizes()
+        beam.sizes()
         #print beam.sigma_x, beam.sigma_xp
         #print beam.sigma_y, beam.sigma_yp
         #print "Distance = ", screen.Distance, " mm"

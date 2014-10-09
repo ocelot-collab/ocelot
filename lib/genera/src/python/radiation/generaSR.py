@@ -10,6 +10,8 @@ from ctypes import CDLL, c_double, c_int, POINTER
 from numpy import array, zeros, abs
 from sys import path
 import os
+from scipy.special import *
+from ocelot.common.globals import *
 from os import name as os_name
 from sys import platform
 import socket
@@ -29,7 +31,7 @@ else:
 
 tail = "ocelot/lib/genera/build/genera_libs/radiation.so"
 home_dir = path[0]
-index =  path[0].find("siberia-2")
+index =  path[0].find("siberia2")
 pathToDll = path[0][:index]+ tail
 try:
     my_rad = CDLL(pathToDll)
@@ -245,6 +247,68 @@ def calculateSR_py(lat, beam, screen, runParameters = None):
     return trj, em_screen
 """
 
+def print_rad_props(beam, K, lu, L, E, distance):
+    print "********* e beam ***********"
+    beam.print_sizes()
+
+
+    def F_n(n, Ku):
+        v1 = ((n-1)/2.)
+        v2 = ((n+1)/2.)
+        x = n*Ku*Ku/(4.+2.*Ku*Ku)
+        return n*n*Ku*Ku/((1+Ku*Ku/2.)**2)*(jn(v1,x) - jn(v2,x))**2
+
+    def flux(I, K, m):
+        alpha = 1/137.036
+        gm = E/m_e_GeV
+        Nu = L/lu
+        e = 1.602e-19
+        BW = 0.001 # band width 0.1%
+        k_rad_mrad = 1e-6 # coef to converse rad to mrad
+        F = alpha*gm*gm*I/e*Nu*Nu*F_n(m, K)*BW*k_rad_mrad
+        return F
+    gamma = E/m_e_GeV
+    Lambda = K2Lambda(K, lu, E)
+    sigma_r = sqrt(Lambda*L/(2*4.*pi*pi))
+    sigma_r1 = sqrt(Lambda/L/2.)
+    Sigma_x = sqrt(beam.sigma_x**2 + sigma_r**2)
+    Sigma_y = sqrt(beam.sigma_y**2 + sigma_r**2)
+    Sigma_x1 = sqrt(beam.sigma_xp**2 + sigma_r1**2)
+    Sigma_y1 = sqrt(beam.sigma_yp**2 + sigma_r1**2)
+    size_x = sqrt(Sigma_x**2 + (Sigma_x1*distance)**2)
+    size_y = sqrt(Sigma_y**2 + (Sigma_y1*distance)**2)
+    B = K2field(K, lu = lu)
+    F = flux(beam.I, K, m = 1)
+    N = L/lu
+    flux_tot = 1.431e14*beam.I*N*F_n(1, K)*(1.+K*K/2.)/1./2.
+
+    brightness = flux_tot/(4*pi*pi*Sigma_x*Sigma_y*Sigma_x1*Sigma_y1)*1e-12
+
+    print "********* ph beam ***********"
+    print "Ebeam        : ", E
+    print "K            : ", K
+    print "B            : ", B, " T"
+    print "lambda       : ", Lambda, " m "
+    print "Eph          : ", K2Ephoton(K, lu, E), " eV"
+    print "1/gamma      : ", 1./gamma *1e6, " um"
+    print "sigma_r      : ", sigma_r*1e6, " um"
+    print "sigma_r'     : ", sigma_r1*1e6, " urad"
+    print "Sigma_x      : ", Sigma_x *1e6, " um"
+    print "Sigma_y      : ", Sigma_y *1e6, " um"
+    print "Sigma_x'     : ", Sigma_x1*1e6, "urad"
+    print "Sigma_y'     : ", Sigma_y1*1e6, "urad"
+    print "H. spot size : ", size_x*1000., "/", size_x/distance*1000., " mm/mrad"
+    print "V. spot size : ", size_y*1000., "/", size_y/distance*1000., " mm/mrad"
+    print "I            : ", beam.I, " A"
+    print "Nperiods     : ", L/lu
+    print "distance     : ", distance, " m"
+    print "flux tot     : ", flux_tot, " ph/sec"
+    print "flux density : ", F, " ph/sec/mrad^2;   ", F/distance/distance, " ph/sec/mm^2"
+    #print "flux density : ", F/distance/distance, " ph/sec/mm^2"
+    print "brilliance   : ", brightness, " ph/sec/mrad^2/mm^2"
+
+
+
 def calculateSR_py(lat, beam, screen, runParameters = None):
     """
     1. find trajectory and mag field on the trajectory. system of unit is [mm,rad]
@@ -262,12 +326,13 @@ def calculateSR_py(lat, beam, screen, runParameters = None):
     #print "in calculator ", screen.size_x, screen.x
     for elem in lat.sequence:
         if elem.type == "undulator":
+            print_rad_props(beam, elem.Kx, elem.lperiod, elem.l, lat.energy, screen.z)
             undulator = elem
             undulator.status = 0
     beam.gamma = beam.E/m_e_GeV
     particle0 = Particle(x=beam.x, y=beam.y, px=beam.xp, py=beam.xp, s=0.0, p=0,  tau=0)
     list_motions = trace4radiation(lat,particle0, accuracy = accuracy)
-
+    #TODO: include in process checking_step
     checking_step(lat, screen, beam, list_motions)
 
     trj = motion_to_trj(list_motions)

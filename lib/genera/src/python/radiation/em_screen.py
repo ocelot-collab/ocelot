@@ -47,7 +47,7 @@ class EMScreen():
 
         self.Zstart = 0. # this parameter is needed to calculation radiation
         # it is initial position in longitudinal direction for chain of undulators
-
+        self.z = screen.z
         self.Distance = screen.z*1000. # Please note this parameter is just distance from ZERO to screen!!!
 
         Nscr = self.ne*self.nx*self.ny
@@ -179,6 +179,8 @@ class EMScreen():
         self.arReEy = self.memory_screen[2*Nscr:3*Nscr]
         self.arImEy = self.memory_screen[3*Nscr:4*Nscr]
         self.arPhase = self.memory_screen[4*Nscr:5*Nscr]
+
+
 
 
 def sum_screens(screen_down, screen_up):

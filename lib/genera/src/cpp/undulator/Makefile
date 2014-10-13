@@ -7,7 +7,7 @@ all: $(TO_BUILD)
 COMPILER = g++
 #sCOMPILER = g++-4.8
 
-CFLAGS = -Wall -fopenmp
+CFLAGS = -Wall -fPIC -fopenmp
 
 SOURCE = integral.cpp spline.cpp motion.cpp u_field.cpp u_magfield.cpp u_rungekutta.cpp u_traject.cpp u_spline2d.cpp 
 

@@ -354,6 +354,7 @@ def calculateSR_py(lat, beam, screen, runParameters = None):
     em_screen = radiation(em_screen, list_motions, beam.gamma, beam_current, undulator, mode_proc = "CPU")
     print "radiation solver: ", time() - start, " sec"
     start = time()
+
     convolution_all(em_screen)
     print "convolution solver: ", time() - start, " sec"
     #intens = data_format(em_screen)

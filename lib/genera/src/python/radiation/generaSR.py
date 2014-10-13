@@ -12,6 +12,7 @@ from sys import path
 import os
 from scipy.special import *
 from ocelot.common.globals import *
+from time import time
 from os import name as os_name
 from sys import platform
 import socket
@@ -328,7 +329,7 @@ def calculateSR_py(lat, beam, screen, runParameters = None):
         if elem.type == "undulator":
             print_rad_props(beam, elem.Kx, elem.lperiod, elem.l, lat.energy, screen.z)
             undulator = elem
-            undulator.status = 0
+            undulator.status = 13
     beam.gamma = beam.E/m_e_GeV
     particle0 = Particle(x=beam.x, y=beam.y, px=beam.xp, py=beam.xp, s=0.0, p=0,  tau=0)
     list_motions = trace4radiation(lat,particle0, accuracy = accuracy)
@@ -342,17 +343,19 @@ def calculateSR_py(lat, beam, screen, runParameters = None):
 
     beam_current = beam.I*1000
 
-    #print "before x:", em_screen.nx, em_screen.x_start, em_screen.x_step
-    #print "before y:", em_screen.ny, em_screen.y_start, em_screen.y_step
-    #print "before e:", em_screen.ne, em_screen.e_start, em_screen.e_step
+    print "before x:", em_screen.nx, em_screen.x_start, em_screen.x_step
+    print "before y:", em_screen.ny, em_screen.y_start, em_screen.y_step
+    print "before e:", em_screen.ne, em_screen.e_start, em_screen.e_step
     change_sizes_screen(em_screen, beam)
-    #print "after x:", em_screen.nx, em_screen.x_start, em_screen.x_step, em_screen.nx_add
-    #print "after y:", em_screen.ny, em_screen.y_start, em_screen.y_step, em_screen.ny_add
-    #print "after e:", em_screen.ne, em_screen.e_start, em_screen.e_step, em_screen.ne_add
-
+    print "after x:", em_screen.nx, em_screen.x_start, em_screen.x_step, em_screen.nx_add
+    print "after y:", em_screen.ny, em_screen.y_start, em_screen.y_step, em_screen.ny_add
+    print "after e:", em_screen.ne, em_screen.e_start, em_screen.e_step, em_screen.ne_add
+    start = time()
     em_screen = radiation(em_screen, list_motions, beam.gamma, beam_current, undulator, mode_proc = "CPU")
-
+    print "radiation solver: ", time() - start, " sec"
+    start = time()
     convolution_all(em_screen)
+    print "convolution solver: ", time() - start, " sec"
     #intens = data_format(em_screen)
     #show_flux(em_screen)
     return trj, em_screen

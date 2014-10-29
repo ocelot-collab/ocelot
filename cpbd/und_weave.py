@@ -5,8 +5,12 @@ from numpy import sqrt, matrix, cos, sin, log, tan, eye, zeros, pi, array, linsp
 from scipy import weave
 
 def track_und_sym(y0, z, kz, kx, Kx, energy):
-    gamma = energy*1949
-    rho = gamma/Kx/kz
+    gamma = energy*1949.
+    #if energy == 0:
+    #    h0 = 0.
+    #else:
+    h0 = 1./(gamma/Kx/kz)
+
     #c = 299792458
     #m0 = 0.510998928*1e+6
     #B0 = Kx*m0*kz/c
@@ -17,7 +21,7 @@ def track_und_sym(y0, z, kz, kx, Kx, energy):
     N = len(z)
     #Ax =  1/kz * np.cos(kx*y0[0])*np.cosh(ky*y0[2])*np.sin(kz*z[0])
     #Ay =  kx/(ky*kz) * np.sin(kx*y0[0])*np.sinh(ky*y0[2])*np.sin(kz*z[0])
-    q = array([y0[0],y0[1] ,y0[2],y0[3], y0[4], y0[5], kx, ky, kz, h, N, rho])
+    q = array([y0[0],y0[1] ,y0[2],y0[3], y0[4], y0[5], kx, ky, kz, h, N, h0])
     #print N
     u = zeros(6)
 
@@ -36,14 +40,14 @@ def track_und_sym(y0, z, kz, kx, Kx, energy):
 
     double h = Q1(9);
     int N = Q1(10);
-    double rho = Q1(11);
+    double h0 = Q1(11); //rho = Q1(11);
 
     int i;
     double kx2 = kx*kx;
     double ky2 = ky*ky;
     double kz2 = kz*kz;
-    double Kx = kx2/(kz2 * rho*rho);
-    double Ky = ky2/(kz2 * rho*rho);
+    double Kx = kx2/kz2*h0*h0;
+    double Ky = ky2/kz2*h0*h0;
     for ( i = 0; i<N-1; i++){
         px = px - h*Kx/(1+delta)*(x/2. + kx2*x*x*x/3. + kz2*x*y*y);
         py = py - h*Ky/(1+delta)*(y/2. + ky2*y*y*y/3. + kz2*kx2*x*x*y/ky2);

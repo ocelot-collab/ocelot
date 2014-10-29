@@ -69,7 +69,7 @@ class TransferMap:
             p.x, p.px, p.y, p.py, p.tau, p.p = V[0], V[1], V[2], V[3], V[4], V[5]
         elif self.order == 2:
             V = array([m.x, m.px, m.y, m.py, m.tau, m.p])
-
+            #print V
             p.x, p.px, p.y, p.py, p.tau, p.p = self.nonl_kick(V)
         p.s = m.s + self.length
         return p
@@ -419,6 +419,7 @@ def create_transfer_map(element, order=1, energy = 0):
     elif element.type == "undulator":
 
         def undulator_R_z(z, lperiod, Kx, Ky, energy):
+            #print energy
             gamma = energy / m_e_GeV
 
             beta = 1 / sqrt(1.0-1.0/(gamma*gamma))
@@ -433,21 +434,6 @@ def create_transfer_map(element, order=1, energy = 0):
             R[3,2] = -sin(omega_x * z ) * omega_x
             R[3,3] = cos(omega_x * z )
             return R
-
-        kz = 2.*pi/element.lperiod
-        if element.ax == -1:
-            kx = 0
-        else:
-            kx = 2.*pi/element.ax
-        gamma = energy*1949
-        #rho = gamma/element.Kx/kz
-        #c = 299792458
-        #m0 = 0.510998928*1e+6
-        #B0 = element.Kx*m0*kz/c
-        #print "rho = ", rho
-        #print "kz = ", kz
-        #print "kx = ", kx
-        #print "ax = ", element.ax
 
 
         def nonl_kick_rk( u):
@@ -480,16 +466,27 @@ def create_transfer_map(element, order=1, energy = 0):
                 u[i*6:i*6+6] = nonl_kick(V)
             return u
 
-        transfer_map.order = 2
 
-        transfer_map.nonl_kick = nonl_kick #lambda V: nonl_kick(transfer_map, V)
-        transfer_map.nonl_kick_array = nonl_kick_array
-        if energy == 0:
+        if energy == 0 or element.lperiod == 0:
+
+            transfer_map.order = 1
             transfer_map.R_z = lambda z: uni_matrix(z, 0, hx = 0, sum_tilts = element.dtilt + element.tilt)
             transfer_map.R = transfer_map.R_z(element.l)
+
         else:
+            transfer_map.order = 2
+
             transfer_map.R_z = lambda z: undulator_R_z(z, lperiod = element.lperiod, Kx = element.Kx, Ky = element.Ky, energy =energy)
             transfer_map.R = transfer_map.R_z(element.l)
+
+
+            kz = 2.*pi/element.lperiod
+            if element.ax == -1:
+                kx = 0
+            else:
+                kx = 2.*pi/element.ax
+            transfer_map.nonl_kick = nonl_kick #lambda V: nonl_kick(transfer_map, V)
+            transfer_map.nonl_kick_array = nonl_kick_array
 
     elif element.type == "monitor":
         

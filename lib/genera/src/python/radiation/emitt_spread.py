@@ -13,60 +13,76 @@ def plot3D_data(data, x, y):
     ax = Axes3D(fig)
     #ax = fig.add_subplot(111, projection = "3d")
     ax.plot_surface(X, Y, data, rstride=1, cstride=1, cmap=cm.jet)
-def conditions_emitt_spread(screen):
-    if screen.ne ==1 and (screen.nx and screen.ny):
-        effect = 1
-    elif screen.ne ==1 and (screen.nx==1 and screen.ny):
-        effect = 2
-    elif screen.ne ==1 and (screen.nx and screen.ny == 1):
-        effect = 3
-    elif screen.ne >1 and (screen.nx == 1 and screen.ny == 1):
-        effect = 4
-    else:
-        effect = 0
-    return effect
+
+#def conditions_emitt_spread(screen):
+#    if screen.ne ==1 and (screen.nx and screen.ny):
+#        effect = 1
+#    elif screen.ne ==1 and (screen.nx==1 and screen.ny):
+#        effect = 2
+#    elif screen.ne ==1 and (screen.nx and screen.ny == 1):
+#        effect = 3
+#    elif screen.ne >1 and (screen.nx == 1 and screen.ny == 1):
+#        effect = 4
+#    else:
+#        effect = 0
+#    return effect
 
 def beam_sizes_on_screen(beam, screen):
-    if not beam.emit_x or not beam.emit_y:
-        print "Emittance switched off. One of emittances are zero"
-        return 0
-    if beam.beta_x and beam.beta_y:
+    if beam.emit_x == 0 or beam.emit_y == 0:
+        print "Emittance switched off. One of emittances is zero"
+        return False
+    beam.sizes()
+    screen.beam_size_x = sqrt(beam.sigma_x*beam.sigma_x*1e6 + (beam.sigma_xp*screen.Distance)**2) # mm
+    screen.beam_size_y = sqrt(beam.sigma_y*beam.sigma_y*1e6 + (beam.sigma_yp*screen.Distance)**2) # mm
 
+    if screen.beam_size_x == 0:
+        print "Emittance switched off. Hor. e-beam size projection on screen is zero"
+        return False
 
-        beam.sizes()
-        #print beam.sigma_x, beam.sigma_xp
-        #print beam.sigma_y, beam.sigma_yp
-        #print "Distance = ", screen.Distance, " mm"
-        screen.beam_size_x = sqrt(beam.sigma_x*beam.sigma_x*1e6 + (beam.sigma_xp*screen.Distance)**2)
-        screen.beam_size_y = sqrt(beam.sigma_y*beam.sigma_y*1e6 + (beam.sigma_yp*screen.Distance)**2)
-        print "Hor. beam size on screen = ", screen.beam_size_x, " mm"
-        print "Ver. beam size on screen = ", screen.beam_size_y, " mm"
-        return 1
-    elif not beam.beta_x or not beam.beta_y:
-        print "Emittance switched off: one of the beta functions are zero size "
-        return 0
-    else:
-        print "Emittance switched off: beam dimensions are zero size "
-    return 0
+    if screen.beam_size_y == 0:
+        print "Emittance switched off. Ver. e-beam size projection on screen is zero"
+        return False
+    print "Hor. e-beam size projection on screen: ", screen.beam_size_x, " mm"
+    print "Ver. e-beam size projection on screen: ", screen.beam_size_y, " mm"
 
-def change_size(n, step, start, beam_size):
+    #if beam.beta_x and beam.beta_y:
+    #
+    #    beam.sizes()
+    #    #print beam.sigma_x, beam.sigma_xp
+    #    #print beam.sigma_y, beam.sigma_yp
+    #    #print "Distance = ", screen.Distance, " mm"
+    #    screen.beam_size_x = sqrt(beam.sigma_x*beam.sigma_x*1e6 + (beam.sigma_xp*screen.Distance)**2)
+    #    screen.beam_size_y = sqrt(beam.sigma_y*beam.sigma_y*1e6 + (beam.sigma_yp*screen.Distance)**2)
+    #    print "Hor. e-beam size projection on screen: ", screen.beam_size_x, " mm"
+    #    print "Ver. e-beam size projection on screen: ", screen.beam_size_y, " mm"
+    #    return True
+    #
+    #elif not beam.beta_x or not beam.beta_y:
+    #
+    #    print "Emittance switched off: one of the beta functions is zero "
+    #    return False
+    #
+    #else:
+    #    print "Emittance switched off: beam dimensions are zero size "
+    return True
+
+def change_size(n, step, start, half_size, acc = 5):
     n_add = 0
-    accuracy = 3
-    if beam_size:
-        if not step:
-            step = beam_size/accuracy
-            n = 6*accuracy + 1
-            start -= 3.*beam_size
+    accuracy = acc
+    if half_size != 0:
+        if step == 0:
             n_add = 3*accuracy
-            #print "n_add 1 = ", n_add, step
+            n = 2*n_add + 1
+            start -= half_size
+            step = half_size/n_add
         else:
-            n_add = (int(beam_size*3./step)+1)
+            n_add = (int(half_size/step)+1)
             n += 2*n_add
             start -= n_add*step
-    #print "n_add = ", n_add, step
     return n,step,start, n_add
 
 def change_sizes_screen(screen, beam):
+    # all sizes in mm and mrad!!!
 
     ## energy spread is not correct
     # screen.fund_harm_eV -> screen.start_energy
@@ -75,22 +91,30 @@ def change_sizes_screen(screen, beam):
     screen.nx_add = 0
     screen.ny_add = 0
     screen.ne_add = 0
-    if beam_sizes_on_screen(beam, screen) :
+
+    if beam_sizes_on_screen(beam, screen):
+
         if screen.ne == 1:
-            screen.nx, screen.x_step, screen.x_start, screen.nx_add = change_size(screen.nx, screen.x_step, screen.x_start, screen.beam_size_x) # emittance X
-            screen.ny, screen.y_step, screen.y_start, screen.ny_add = change_size(screen.ny, screen.y_step, screen.y_start, screen.beam_size_y) # emittance Y
-            screen.ne, screen.e_step, screen.e_start, screen.ne_add = change_size(screen.ne, screen.e_step, screen.e_start, screen.sigma_e) # energy spread
+            screen.nx, screen.x_step, screen.x_start, screen.nx_add = change_size(screen.nx, screen.x_step, screen.x_start, screen.beam_size_x*3.) # emittance X
+            screen.ny, screen.y_step, screen.y_start, screen.ny_add = change_size(screen.ny, screen.y_step, screen.y_start, screen.beam_size_y*3.) # emittance Y
+            screen.ne, screen.e_step, screen.e_start, screen.ne_add = change_size(screen.ne, screen.e_step, screen.e_start, screen.sigma_e*3.) # energy spread
+
         elif screen.nx ==1 and screen.ny ==1:
-            screen.nx, screen.x_step, screen.x_start, screen.nx_add = change_size(screen.nx, screen.x_step, screen.x_start, screen.beam_size_x) # emittance X
-            screen.ny, screen.y_step, screen.y_start, screen.ny_add = change_size(screen.ny, screen.y_step, screen.y_start, screen.beam_size_y) # emittance Y
-            screen.ne, screen.e_step, screen.e_start, screen.ne_add = change_size(screen.ne, screen.e_step, screen.e_start, screen.sigma_e) # energy spread
+            if screen.theta_x !=0 and screen.theta_y != 0:
+                screen.nx, screen.x_step, screen.x_start, screen.nx_add = change_size(screen.nx, screen.x_step, screen.x_start, screen.theta_x*screen.Distance) # emittance X
+                screen.ny, screen.y_step, screen.y_start, screen.ny_add = change_size(screen.ny, screen.y_step, screen.y_start, screen.theta_y*screen.Distance) # emittance Y
+                screen.ne, screen.e_step, screen.e_start, screen.ne_add = change_size(screen.ne, screen.e_step, screen.e_start, screen.sigma_e*3.) # energy spread
+            else:
+                screen.nx, screen.x_step, screen.x_start, screen.nx_add = change_size(screen.nx, screen.x_step, screen.x_start, screen.beam_size_x) # emittance X
+                screen.ny, screen.y_step, screen.y_start, screen.ny_add = change_size(screen.ny, screen.y_step, screen.y_start, screen.beam_size_y) # emittance Y
+                screen.ne, screen.e_step, screen.e_start, screen.ne_add = change_size(screen.ne, screen.e_step, screen.e_start, screen.sigma_e*3.) # energy spread
         else:
             print "Emittance switched off. Screen sizes are wrong. ne >1 and (nx or ny) >1"
 
     elif screen.nx ==1 and screen.ny ==1:
-        screen.ne, screen.e_step, screen.e_start, screen.ne_add = change_size(screen.ne, screen.e_step, screen.e_start, screen.sigma_e) # energy spread
+        screen.ne, screen.e_step, screen.e_start, screen.ne_add = change_size(screen.ne, screen.e_step, screen.e_start, screen.sigma_e*3.) # energy spread
     elif screen.ne == 1:
-        screen.ne, screen.e_step, screen.e_start, screen.ne_add = change_size(screen.ne, screen.e_step, screen.e_start, screen.sigma_e) # energy spread
+        screen.ne, screen.e_step, screen.e_start, screen.ne_add = change_size(screen.ne, screen.e_step, screen.e_start, screen.sigma_e*3.) # energy spread
     else:
         print "1_ Emittance switched off. Screen sizes are wrong. ne >1 and (nx or ny) >1"
 
@@ -110,6 +134,11 @@ def emittance_on(screen):
         #print shape(data_pi), shape(data_sigma)
         data_pi = convolution_2D_cpp(data_pi,screen.Xph,screen.Yph,screen.nx_add, screen.ny_add, screen.beam_size_x ,screen.beam_size_y )
         data_sigma = convolution_2D_cpp(data_sigma,screen.Xph,screen.Yph, screen.nx_add, screen.ny_add, screen.beam_size_x ,screen.beam_size_y )
+
+        #mean_pi = sum(data_pi)/len(data_pi)
+        #data_pi[:] = mean_pi
+        #mean_sigma = sum(data_sigma)/len(data_sigma)
+        #data_sigma[:] = mean_sigma
 
         data_pi = reshape(data_pi, (screen.ny , screen.nx ))
         data_sigma = reshape(data_sigma, (screen.ny , screen.nx ))

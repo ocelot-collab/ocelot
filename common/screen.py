@@ -19,3 +19,7 @@ class Screen:
         self.start_energy = 100.0
         self.end_energy = 10000.0
         self.num_energy = 1000
+
+        # half of angle aperture.  Angle relative to undulator axis for emittance influence on spectrum
+        self.theta_x = 0 # rad
+        self.theta_y = 0 # rad

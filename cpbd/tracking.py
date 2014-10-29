@@ -387,8 +387,7 @@ def show_da(out_da, x_array, y_array):
 
 def show_mu(contour_da, mux, muy, x_array, y_array, zones = None ):
     from matplotlib import pyplot as plt
-    x_zone = zones[0]
-    y_zone = zones[1]
+
     nx = len(x_array)
     ny = len(y_array)
     t= linspace(0,3.14, num = 100)
@@ -407,6 +406,8 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones = None ):
     cb = plt.colorbar(cmap=my_cmap)
     fig1 = plt.contourf(mux,10, levels=[-1,-.0001], colors='w',extent = extent)
     if zones != None:
+        x_zone = zones[0]
+        y_zone = zones[1]
         plt.plot(x_zone*cos(t), y_zone*sin(t), "g", lw = 2)
         plt.plot(2*x_zone*cos(t), 2*y_zone*sin(t), "b", lw = 2)
         plt.plot(3*x_zone*cos(t), 3*y_zone*sin(t), "r", lw = 2)
@@ -421,6 +422,8 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones = None ):
     fig1 = plt.contour(contour_da, 1,extent = extent, linewidths=2,colors='k')#, colors = 'r')
     fig1 = plt.contourf(muy,40, cmap=my_cmap, extent = extent)#, colors = 'r')
     if zones != None:
+        x_zone = zones[0]
+        y_zone = zones[1]
         plt.plot(x_zone*cos(t), y_zone*sin(t), "g", lw = 2)
         plt.plot(2*x_zone*cos(t), 2*y_zone*sin(t), "b", lw = 2)
         plt.plot(3*x_zone*cos(t), 3*y_zone*sin(t), "r", lw = 2)

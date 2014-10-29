@@ -3,37 +3,60 @@ __author__ = 'Sergey'
 from numpy import linspace, array, sqrt, pi
 from scipy.integrate import simps
 from ocelot.common.globals import *
-def radiation_integral(lattice, twiss_0, nsuperperiod = 1):
+from ocelot.cpbd.optics import trace_z
+def I2_ID(L, h0):
+    return L/2.*h0*h0
 
+
+def I3_ID(L, h0):
+    return 4.*L/(3*pi)*h0**3
+
+
+def I4_ID(L, h0, lu):
+    return -3.*L*lu*lu*h0**4/(32*pi)
+
+
+def I5_ID(L, h0, lu, beta_xc, Dx0, Dxp0):
+    # it is the same as I5_exact and I5_exact2
+    # beta_c - beta_x at the center of ID
+    # Dx0, Dxp0 - Dx and Dxp at the beginning of ID
+    nn = int(L/lu)
+    I = ((h0**3 *L)/(108000 *pi**5 *beta_xc) *(144000* pi**4* (Dx0**2 + beta_xc**2 *Dxp0**2) +
+        13500* (-1)**nn* h0* pi**3* Dx0* lu**2 + 15656 *h0**2* lu**4 +
+        15* (-76 + 225* (-1)**nn) *h0**2 *pi* lu**4 +
+        150 *h0* pi**2* lu**2* (480* Dx0 + h0* (4* L**2 + 48 *beta_xc**2 - lu**2))))
+    return I
+
+def radiation_integral(lattice, twiss_0, nsuperperiod = 1):
+    #TODO: add I4 for rectangular magnets I4 = Integrate(2 Dx(z)*k(z)*h(z), Z)
     tws_elem = twiss_0
     (I1, I2, I3,I4, I5) = (0., 0., 0., 0., 0.)
-
+    h = 0.
     for elem in lattice.sequence:
         if elem.type == "rbend" or elem.type == "sbend" or elem.type == "bend" or elem.type == "quadrupole":
             Dx = []
             Hinvariant = []
-            k = []
-            h = []
             Z = []
-            for z in linspace(0, elem.l,num = 10, endpoint=True):
+            if  elem.type != "quadrupole" or elem.l == 0:
+                h = elem.angle/elem.l
+            else:
+                h = 0.
+
+            for z in linspace(0, elem.l,num = 30, endpoint=True):
                 tws_z = elem.transfer_map(z)*tws_elem
                 Dx.append(tws_z.Dx)
-                k.append(elem.k1)
-                if  elem.type != "quadrupole" or elem.l == 0:
-                    h.append(elem.angle/elem.l)
-                else:
-                    h.append(0.)
                 Z.append(z)
-                Hinvariant.append(tws_z.gamma_x*tws_z.Dx*tws_z.Dx + 2.*tws_z.alpha_x*tws_z.Dxp*tws_z.Dx
+                Hx = (tws_z.gamma_x*tws_z.Dx*tws_z.Dx + 2.*tws_z.alpha_x*tws_z.Dxp*tws_z.Dx
                                         + tws_z.beta_x*tws_z.Dxp*tws_z.Dxp)
-            H = array(h)
-            H2 = H*H
-            H3 = abs(H*H*H)
-            I1 += simps(array(Dx)*H, Z)*nsuperperiod
-            I2 += simps(H2, Z)*nsuperperiod
-            I3 += simps(H3, Z)*nsuperperiod
-            I4 += simps(array(Dx)*H*(2*array(k)+H2), Z)*nsuperperiod
-            I5 += simps(array(Hinvariant)*H3, Z)*nsuperperiod
+                Hinvariant.append(Hx)
+            #H = array(h)
+            H2 = h*h
+            H3 = abs(h*h*h)
+            I1 += h*elem.l   #simps(array(Dx), Z)*nsuperperiod
+            I2 += H2*elem.l  #simps(H2, Z)*nsuperperiod
+            I3 += H3*elem.l  #simps(H3, Z)*nsuperperiod
+            I4 += h*(2*elem.k1 + H2)*simps(array(Dx), Z)*nsuperperiod
+            I5 += H3*simps(array(Hinvariant), Z)*nsuperperiod
         tws_elem = elem.transfer_map*tws_elem
 
     return (I1,I2,I3, I4, I5)
@@ -41,7 +64,13 @@ def radiation_integral(lattice, twiss_0, nsuperperiod = 1):
 class EbeamParams:
     def __init__(self, lattice, twiss_0, coupling = 0.01, nsuperperiod = 1):
         self.tws0 = twiss_0
+        self.lat = lattice
         (I1,I2,I3, I4, I5) = radiation_integral(lattice, twiss_0, nsuperperiod)
+        self.I1 = I1
+        self.I2 = I2
+        self.I3 = I3
+        self.I4 = I4
+        self.I5 = I5
         print "I2 = ", I2
         print "I3 = ", I3
         print "I4 = ", I4
@@ -55,7 +84,7 @@ class EbeamParams:
         self.U0 = Cgamma*(lattice.energy*1000)**4*I2/(2*pi)
         #print "*********  ", twiss_0.Energy
         self.Tperiod = nsuperperiod*lattice.totalLen/speed_of_light
-
+        self.Length = nsuperperiod*lattice.totalLen
         self.tau0 = 2*twiss_0.E*1000*self.Tperiod/self.U0
         self.tau_e = self.tau0/self.Je
         self.tau_x = self.tau0/self.Jx
@@ -70,6 +99,38 @@ class EbeamParams:
         self.sigma_yp = sqrt((self.sigma_e*self.tws0.Dyp)**2 + self.emitt_y*self.tws0.gamma_y)
 
 
+    def integrals_id(self):
+        L = 0.
+        self.I2_IDs = 0.
+        self.I3_IDs = 0.
+        self.I4_IDs = 0.
+        self.I5_IDs = 0.
+        for elem in self.lat.sequence:
+            if elem.type == "undulator":
+                B = K2field(elem.Kx, lu = elem.lperiod)
+                h0 = B*speed_of_light/self.lat.energy*1e-9
+                #print h0, B
+                tws = trace_z(self.lat, self.tws0, [L, L + elem.l/2.])
+                i2 = I2_ID(elem.l,h0)
+                i3 = I3_ID(elem.l,h0)
+                i4 = I4_ID(elem.l,h0,elem.lperiod)
+                i5 = I5_ID(elem.l,h0,elem.lperiod,tws[1].beta_x,tws[0].Dx, tws[0].Dxp)
+                self.I2_IDs += i2
+                self.I3_IDs += i3
+                self.I4_IDs += i4
+                self.I5_IDs += i5
+                print elem.type, elem.id, "beta_x center: ", tws[1].beta_x
+                print elem.type, elem.id, "Dx0 / Dxp0:    ", tws[0].Dx, "/", tws[0].Dxp
+                print elem.type, elem.id, "I2_ID = ", i2
+                print elem.type, elem.id, "I3_ID = ", i3
+                print elem.type, elem.id, "I4_ID = ", i4
+                print elem.type, elem.id, "I5_ID = ", i5
+            L += elem.l
+        self.emit_ID = self.emittance * (1.+self.I5_IDs/self.I5)/(1+(self.I2_IDs  - self.I4_IDs)/(self.I2 - self.I4))
+        self.sigma_e_ID = self.sigma_e * sqrt((1.+ self.I3_IDs / self.I3)/(1 + (2*self.I2_IDs + self.I4_IDs)/(2.*self.I2 + self.I4) ) )
+        print "emittance with IDs = ", self.emit_ID*1e9, " nm*rad"
+        print "sigma_e with IDs =   ", self.sigma_e_ID
+
     def print_params(self):
         print "Je =        ", self.Je
         print "Jx =        ", self.Jx
@@ -77,6 +138,7 @@ class EbeamParams:
         print "gamma =     ", self.gamma
         print "sigma_e =   ", self.sigma_e
         print "emittance = ", self.emittance*1e9, " nm*rad"
+        print "Length =    ", self.Length, " m"
         print "U0 =        ", self.U0, "  MeV"
         print "Tperiod =   ", self.Tperiod*1e9, " nsec"
         print "alpha =     ", self.alpha

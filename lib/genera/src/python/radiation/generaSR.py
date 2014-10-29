@@ -329,7 +329,7 @@ def calculateSR_py(lat, beam, screen, runParameters = None):
         if elem.type == "undulator":
             print_rad_props(beam, elem.Kx, elem.lperiod, elem.l, lat.energy, screen.z)
             undulator = elem
-            undulator.status = 13
+            undulator.status = 0
     beam.gamma = beam.E/m_e_GeV
     particle0 = Particle(x=beam.x, y=beam.y, px=beam.xp, py=beam.xp, s=0.0, p=0,  tau=0)
     list_motions = trace4radiation(lat,particle0, accuracy = accuracy)

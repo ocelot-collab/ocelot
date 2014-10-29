@@ -152,6 +152,8 @@ def calculate_sex_strength(lattice, tws_0, ksi, ksi_comp, nsuperperiod):
 def compensate_chromaticity(lattice, tws_0, ksi_x_comp = 0, ksi_y_comp = 0,  nsuperperiod = 1):
     ksi_comp = (ksi_x_comp, ksi_y_comp)
     ksi = chromaticity(lattice, tws_0, nsuperperiod)
+    print "ksi_x = ", ksi[0]
+    print "ksi_y = ", ksi[1]
     sex_dict_stg = calculate_sex_strength(lattice, tws_0, ksi, ksi_comp, nsuperperiod)
     print "Chromatism compensate: After:  ", sex_dict_stg
     #print sex_dict_stg

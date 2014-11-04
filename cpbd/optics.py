@@ -479,7 +479,6 @@ def create_transfer_map(element, order=1, energy = 0):
             transfer_map.R_z = lambda z: undulator_R_z(z, lperiod = element.lperiod, Kx = element.Kx, Ky = element.Ky, energy =energy)
             transfer_map.R = transfer_map.R_z(element.l)
 
-
             kz = 2.*pi/element.lperiod
             if element.ax == -1:
                 kx = 0

@@ -570,9 +570,12 @@ def resonans_diag(Qx, Qy, order):
         else:# order == 5:
             color = "c"
             lw = 0.3
-        plt.plot(X[i], Y[i], color, lw = lw, picker=True)
-        plt.xlim(0,1)
-        plt.ylim(0,1)
+        #print array(X[i])+Qx
+        #print array([i])+Qy
+        plt.plot(array(X[i])+Qx, array(Y[i])+Qy, color, lw = lw, picker=True)
+        plt.xlim(Qx,Qx+1)
+        plt.ylim(Qy,Qy+1)
+        #plt.xticks(x, labels, rotation='vertical')
 
 #plot([0,1], [0,2])
 #plt.plot(Qx,Qy, "mo", lw = 3)

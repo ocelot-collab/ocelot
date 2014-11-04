@@ -58,7 +58,9 @@ def radiation_integral(lattice, twiss_0, nsuperperiod = 1):
             I4 += h*(2*elem.k1 + H2)*simps(array(Dx), Z)*nsuperperiod
             I5 += H3*simps(array(Hinvariant), Z)*nsuperperiod
         tws_elem = elem.transfer_map*tws_elem
-
+    if abs(tws_elem.beta_x - twiss_0.beta_x)>1e-7 or abs(tws_elem.beta_y - twiss_0.beta_y)>1e-7:
+        print "beta functions are not matching!, ruturn None"
+        return None
     return (I1,I2,I3, I4, I5)
 
 class EbeamParams:
@@ -71,10 +73,10 @@ class EbeamParams:
         self.I3 = I3
         self.I4 = I4
         self.I5 = I5
-        print "I2 = ", I2
-        print "I3 = ", I3
-        print "I4 = ", I4
-        print "I5 = ", I5
+        #print "I2 = ", I2
+        #print "I3 = ", I3
+        #print "I4 = ", I4
+        #print "I5 = ", I5
         self.Je = 2 + I4/I2
         self.Jx = 1 - I4/I2
         self.Jy = 1
@@ -119,8 +121,11 @@ class EbeamParams:
                 self.I3_IDs += i3
                 self.I4_IDs += i4
                 self.I5_IDs += i5
-                print elem.type, elem.id, "beta_x center: ", tws[1].beta_x
-                print elem.type, elem.id, "Dx0 / Dxp0:    ", tws[0].Dx, "/", tws[0].Dxp
+                print elem.type, elem.id, "B0 =  ", B, " T"
+                print elem.type, elem.id, "rho = ", 1./h0, " m"
+                print elem.type, elem.id, "L =   ", elem.l, " m"
+                print elem.type, elem.id, "beta_x cntr: ", tws[1].beta_x
+                print elem.type, elem.id, "Dx0 / Dxp0:  ", tws[0].Dx, "/", tws[0].Dxp
                 print elem.type, elem.id, "I2_ID = ", i2
                 print elem.type, elem.id, "I3_ID = ", i3
                 print elem.type, elem.id, "I4_ID = ", i4
@@ -128,10 +133,16 @@ class EbeamParams:
             L += elem.l
         self.emit_ID = self.emittance * (1.+self.I5_IDs/self.I5)/(1+(self.I2_IDs  - self.I4_IDs)/(self.I2 - self.I4))
         self.sigma_e_ID = self.sigma_e * sqrt((1.+ self.I3_IDs / self.I3)/(1 + (2*self.I2_IDs + self.I4_IDs)/(2.*self.I2 + self.I4) ) )
+        self.U0_ID = Cgamma*(self.lat.energy*1000)**4.*self.I2_IDs/(2.*pi)
         print "emittance with IDs = ", self.emit_ID*1e9, " nm*rad"
         print "sigma_e with IDs =   ", self.sigma_e_ID
+        print "U0 from IDs =        ", self.U0_ID,  "  MeV"
 
     def print_params(self):
+        print "I2 =        ", self.I2
+        print "I3 =        ", self.I3
+        print "I4 =        ", self.I4
+        print "I5 =        ", self.I5
         print "Je =        ", self.Je
         print "Jx =        ", self.Jx
         print "Jy =        ", self.Jy

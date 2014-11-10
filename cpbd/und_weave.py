@@ -84,7 +84,7 @@ def track_und_mag(y0, z, kz, kx, Kx, energy):
     N = len(z)
     #Ax =  1/kz * np.cos(kx*y0[0])*np.cosh(ky*y0[2])*np.sin(kz*z[0])
     #Ay =  kx/(ky*kz) * np.sin(kx*y0[0])*np.sinh(ky*y0[2])*np.sin(kz*z[0])
-    q = np.array([y0[0],y0[1] ,y0[2],y0[3], y0[4], y0[5], kx, ky, kz, h, N, rho])
+    q = array([y0[0],y0[1] ,y0[2],y0[3], y0[4], y0[5], kx, ky, kz, h, N, rho])
     #print N
     u = zeros(6)
 
@@ -115,7 +115,8 @@ def track_und_mag(y0, z, kz, kx, Kx, energy):
         x = x + h*px;
         y = y + h*py;
         px = px + K* kz2*x*y*y/2.;
-        py = py - K*(y + kz2*y*y*y/6.);
+        //py = py - K*(y + kz2*y*y*y/6.);
+        py = py - K*(y - kz2*y*y*y/6.);
     }
     U1(0) = x;
     U1(1) = px;

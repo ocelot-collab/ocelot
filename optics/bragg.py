@@ -357,9 +357,7 @@ def transmissivity_reflectivity(klist, cryst):
     r  = np.zeros(len(klist),'complex')
     for i in range(len(klist)):
         t[i], r[i] = D0_Dh( -(cryst.kb - klist[i]) / ( cryst.kb * (1/np.tan(cryst.thetaB)) ) , cryst) 
-    return np.conj(t), r
-
-
+    return t, r
 
 
 def get_crystal_filter(cryst, ray, nk=10, ref_idx = None, k = None):

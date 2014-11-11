@@ -1,115 +1,73 @@
 '''
-example07 -- crystal
+example07 -- crystal -- dynamical diffraction (ocelot.optics.bragg)
 '''
 
-from ocelot.optics.elements import *
-from ocelot.optics.wave import *
-from ocelot.optics.ray import Ray, trace as trace_ray
-from ocelot.gui.optics import *
+from ocelot.optics.utils import *
 
-from numpy import *
-import sys
+def save_filter(filt, f_name):
+    f= open(f_name,'w')
+    for i in xrange( len(filt.ev)):
+        f.write(str(filt.ev[i]) + '\t' + str(np.abs(filt.tr[i])**2) + '\t' +  str(np.abs(filt.ref[i])**2) + '\n')
 
-
-m = 1.0
-cm = 1.e-2
-mm = 1.e-3
-mum = 1.e-6
+E_ev = 10000
+ref_idx = (2,2,0)
+thickness = 5 * mum
 
 
-
-def init_geometry():
-    global dt, t, wf, n
-
-    g1 = Crystal(r=[0,0,0*cm], size=[13*cm,20*cm,10*cm], no=[0,0,-1], id="cr1")
-    g2 = Crystal(r=[0,0,70*cm], size=[13*cm,20*cm,10*cm], no=[0,0,-1], id="cr2")
-    g1.bw = 3.e-2
-    g2.bw = 3.e-2
-
-    geo = Geometry([g1,g2])
-
-    return geo
+cr1 = Crystal(r=[0,0,0*cm], size=[5*cm,5*cm,thickness], no=[0,0,-1], id="cr1")
+cr1.lattice =  CrystalLattice('Si')
+#cr1.lattice =  CrystalLattice('Si')
+#cr1.psi_n = -(pi/2. - 54.7356*(pi/180.0)) #input angle psi_n according to Authier 
+cr1.psi_n = -pi/2. #input angle psi_n according to Authier (symmetric reflection, Si)
 
 
-geo = init_geometry()
-scene = init_plots(['geometry:x'], geo)
+r = Ray(r0=[0,0.0,-0.5], k=[0,0.0,1]) 
+r.lamb = 2 * pi * hbar * c / E_ev
+print 'wavelength', r.lamb
 
-r = Ray(r0=[0,0.0,-0.5], k=[0,0.0,1])
-trace_ray(r, geo)
-plot_rays(scene.ax[0], [r], proj='x')
-
-
-
-class Signal(object):
-    def __init__(self, n=100):
-        self.t = np.linspace(-1,1, n)
-        self.f = np.zeros_like(self.t, dtype=np.complex)
-        self.n = n
-        
-
-w1 = Signal(n=1000)
-
-v = 20 * 2 * pi
-dt = 0.05
-w1.f = np.exp(-1j*v*w1.t - (w1.t)**2 / (2*dt)**2) 
-
+w1 = read_signal(file_name='data/pulse_9kev_20fs.txt', npad =10, E_ref = E_ev)
 plt.figure()
-plt.grid(True)
+plot_signal(w1)
 
-plt.plot(w1.t, np.real(w1.f))
-plt.plot(w1.t, np.imag(w1.f))
+#plt.figure()
+f_test = get_crystal_filter(cryst=cr1, ray=r, nk=3000, ref_idx = ref_idx)
+filt = get_crystal_filter(cr1, r, ref_idx = ref_idx, k = w1.freq_k)
 
-w1.sp = np.fft.fft(w1.f)
+#save_filter(f_test, 'C400_8000ev_filter.txt')
 
-plt.figure()
-plt.grid(True)
-w1.w = np.fft.fftfreq(w1.n, (w1.t[1] - w1.t[0]) )
-plt.plot(w1.w, np.abs(w1.sp))
+plot_filters(filt, f_test)
+plot_filters(filt, f_test, param='ref')
 
+fig=plt.figure()
 
-# filter
+plot_spec_filt(w1, filt, ax=fig.add_subplot(111))
+
+cr1.filter = filt
+
+i1=np.sum(w1.sp*np.conj(w1.sp))*(w1.freq_ev[1] - w1.freq_ev[0])
+
 def transform_field(cr, wave):
-    w0 = wave.w[np.argmax(np.abs(wave.sp))]
-    bw = abs(cr.bw * w0)
+    print 'transforming field'
+    wave.sp = wave.sp * cr.filter.tr
+    wave.sp_ref = wave.sp * cr.filter.ref
+    wave.f = np.fft.ifft(wave.sp)
 
-    for i in xrange(wave.n):
-        #print w1.w[i] , w0
-        #print np.abs(w1.w[i] - w0), bw
-        fact = np.exp(-(wave.w[i] - w0)**2/(2*bw)**2)
-        #print fact
-        #print w1.sp[i]
-        wave.sp[i] = wave.sp[i] * fact
-        #print w1.sp[i]
-
-
-for i in xrange(len(r.r0)):
-    print 'propagating thru', r.obj[i], r.s[i]
-    
-    if r.obj[i].__class__ == Drift:
-        r.obj[i].l = r.s[i]
-        print r.obj[i].__dict__
-        w1.t += r.s[i]
-     
-    if r.obj[i].__class__ == Crystal:
-        print 'applying crystal filter'
-        
-        transform_field(r.obj[i], w1)
-            
-        w1.t += r.s[i]
-    
-
-plt.plot(w1.w, np.abs(w1.sp))
-
-
-w1.f = np.fft.ifft(w1.sp)
-
-plt.figure()
+fig = plt.figure()
 plt.grid(True)
+ax = fig.add_subplot(111)
+plt.plot(w1.t, np.abs(w1.f))
+transform_field(cr1, w1)
 
+i2 = np.sum(w1.sp*np.conj(w1.sp))*(w1.freq_ev[1] - w1.freq_ev[0])
+i3 = np.sum(w1.sp_ref*np.conj(w1.sp_ref))*(w1.freq_ev[1] - w1.freq_ev[0])
 
-plt.plot(w1.t, np.real(w1.f))
-plt.plot(w1.t, np.imag(w1.f))
+print 'transmission (%)', 100*np.real(i2/i1), 'reflection (%)', 100*np.real(i3/i1)
 
+plt.plot(w1.t, np.abs(w1.f))
+ax.set_yscale('log')    
+    
+plt.figure(), plt.grid(True)
+plt.plot(w1.freq_ev, np.abs(w1.sp))
 
 
 plt.show()

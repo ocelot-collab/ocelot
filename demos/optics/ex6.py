@@ -1,5 +1,6 @@
 '''
-free space propagation 
+free space propagation -- wave 
+UNDER DEVELOPMENT!
 '''
 
 

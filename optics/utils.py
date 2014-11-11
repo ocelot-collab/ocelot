@@ -51,7 +51,7 @@ def read_signal(file_name, E_ref, npad = 10):
     dt = (s.t[1] - s.t[0]) * 1.e-15
     k0 = E_ref / (hbar * c)  
     s.freq_k = 2*pi*(fftfreq(len(spec), d=dt) / c )
-    s.freq_k = np.roll(s.freq_k, len(spec)/2) + k0
+    s.freq_k = -np.roll(s.freq_k, len(spec)/2) + k0 # take into account s/t
     s.freq_ev = s.freq_k * hbar * c
     s.sp = np.roll(spec, len(spec)/2)
     

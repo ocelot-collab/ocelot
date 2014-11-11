@@ -753,8 +753,8 @@ def trace_particle(lattice, p0, nPoints = None):
 
 
 class Navigator:
-    def __init__(self, lattice=None):
-        self.lattice = lattice
+    def __init__(self, lattice):
+        self.lat = lattice
         
     z0 = 0
     n_elem = 0
@@ -762,10 +762,10 @@ class Navigator:
 
     def check(self, dz):
         '''
-        check what???
+        check if next step exceed the bounds of lattice
         '''
-        if self.z0+dz>self.lattice.totalLen:
-            dz = self.lattice.totalLen - self.z0
+        if self.z0+dz>self.lat.totalLen:
+            dz = self.lat.totalLen - self.z0
         return dz
 
 def get_map(lattice, dz, navi):

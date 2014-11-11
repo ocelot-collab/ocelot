@@ -1,9 +1,10 @@
 __author__ = 'Sergey Tomin'
 
 from numpy import tan, linspace, array, pi, matrix
-from optics import trace_z
+from optics import trace_z, twiss
 from scipy.integrate import simps
 from numpy.linalg import inv
+from ocelot.cpbd.beam import *
 
 def edge_chromaticity_old(lattice, tws_0):
     #tested !
@@ -149,7 +150,9 @@ def calculate_sex_strength(lattice, tws_0, ksi, ksi_comp, nsuperperiod):
     return sex_dict_stg
 
 
-def compensate_chromaticity(lattice, tws_0, ksi_x_comp = 0, ksi_y_comp = 0,  nsuperperiod = 1):
+def compensate_chromaticity(lattice, ksi_x_comp = 0, ksi_y_comp = 0,  nsuperperiod = 1):
+    tws = twiss(lattice, Twiss())
+    tws_0 = tws[0]
     ksi_comp = (ksi_x_comp, ksi_y_comp)
     ksi = chromaticity(lattice, tws_0, nsuperperiod)
     print "ksi_x = ", ksi[0]

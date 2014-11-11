@@ -32,7 +32,7 @@ tw0 = Twiss()
 tws=twiss(lat, tw0, nPoints=1000)
 
 plot_opt_func(lat, tws)
-plt.show()
+#plt.show()
 
 
 

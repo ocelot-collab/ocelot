@@ -73,9 +73,10 @@ def match(lat, constr, vars, tw, print_proc = 1):
         
         err = 0.0
         if "periodic" in constr.keys():
-            tw_loc = periodic_solution(tw_loc, lattice_transfer_map(lat).R)
-            if tw_loc == None:
-                return 1
+            if constr["periodic"] == True:
+                tw_loc = periodic_solution(tw_loc, lattice_transfer_map(lat).R)
+                if tw_loc == None:
+                    return 1.0
         #print "after: ", tw_loc.beta_x
         for e in lat.sequence:
             #print e.id

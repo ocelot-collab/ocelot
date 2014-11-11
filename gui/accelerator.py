@@ -336,9 +336,10 @@ def plot_xy(ax, S, X, Y, font_size):
 def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, name = None):
     font_size = 16
     if name == None:
-        fig = plt.figure("lattice")
+        fig = plt.figure()
     else:
-       fig = plt.figure(name)
+        fig = plt.figure(name)
+        
     plt.rc('axes', grid=True)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
     left, width = 0.1, 0.85

@@ -40,7 +40,7 @@ plt.show()
 
 p1 = Particle(x = 0.1, y = 0.2)
 
-navi = Navigator(lat)
+navi = Navigator()
 dz = 0.01
 P1 = []
 for i in xrange(int(lat.totalLen/dz)):
@@ -68,7 +68,7 @@ plt.show()
 p1 = Particle(p = -0.001)
 p2 = Particle(p = 0.001)
 
-navi = Navigator(lat)
+navi = Navigator()
 dz = 0.01
 P1 = []
 P2 = []

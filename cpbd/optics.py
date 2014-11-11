@@ -306,7 +306,7 @@ def create_transfer_map(element, order=1, energy = 0):
             int i;
 
             for(i = 0;i<Nu[0]/6;i++ ){
-                // symplectic map for sextupole
+                // symplectic map for sextupol
                 // The Stoermer-Verlet schemes
                 x = U1(0+i*6) + U1(1+i*6)*L/2. - dx;
                 y = U1(2+i*6) + U1(3+i*6)*L/2. - dy;

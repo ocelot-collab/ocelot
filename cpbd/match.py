@@ -145,7 +145,7 @@ def math_tunes(lat, tw0, quads,  nu_x, nu_y, ncells= 1, print_proc = 0):
 
     strengths1 = map(lambda p: p.k1, quads)
 
-    constr = {'end':{'mux':2*pi*nu_x/ncells, 'muy':2.*pi*nu_y/ncells},'periodic':{"y"}}
+    constr = {'end':{'mux':2*pi*nu_x/ncells, 'muy':2.*pi*nu_y/ncells},'periodic':True}
     vars = quads
 
     match(lat, constr, vars, tws[0], print_proc = print_proc)

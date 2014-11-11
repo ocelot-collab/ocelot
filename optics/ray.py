@@ -17,7 +17,7 @@ class Ray(object):
         self.lamb = lamb
         self.s = [1]
         self.c = 3.e8
-        self.obj = [Drift()]
+        self.obj = [OptDrift()]
         
     @property
     def w(self):

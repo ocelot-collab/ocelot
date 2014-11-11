@@ -110,7 +110,7 @@ class Crystal:
         pass
 
 
-class Drift:
+class OptDrift:
     '''
     Free space
     '''

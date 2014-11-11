@@ -3,7 +3,10 @@ __author__ = 'Sergey'
 from numpy import linspace, array, sqrt, pi
 from scipy.integrate import simps
 from ocelot.common.globals import *
-from ocelot.cpbd.optics import trace_z
+from ocelot.cpbd.optics import trace_z, twiss
+from ocelot.cpbd.beam import *
+
+
 def I2_ID(L, h0):
     return L/2.*h0*h0
 
@@ -55,19 +58,23 @@ def radiation_integral(lattice, twiss_0, nsuperperiod = 1):
             I1 += h*elem.l   #simps(array(Dx), Z)*nsuperperiod
             I2 += H2*elem.l  #simps(H2, Z)*nsuperperiod
             I3 += H3*elem.l  #simps(H3, Z)*nsuperperiod
-            I4 += h*(2*elem.k1 + H2)*simps(array(Dx), Z)*nsuperperiod
-            I5 += H3*simps(array(Hinvariant), Z)*nsuperperiod
+            I4 += h*(2*elem.k1 + H2)*simps(array(Dx), Z)
+            I5 += H3*simps(array(Hinvariant), Z)
         tws_elem = elem.transfer_map*tws_elem
     if abs(tws_elem.beta_x - twiss_0.beta_x)>1e-7 or abs(tws_elem.beta_y - twiss_0.beta_y)>1e-7:
         print "beta functions are not matching!, ruturn None"
         return None
-    return (I1,I2,I3, I4, I5)
+    return (I1*nsuperperiod,I2*nsuperperiod,I3*nsuperperiod, I4*nsuperperiod, I5*nsuperperiod)
 
 class EbeamParams:
-    def __init__(self, lattice, twiss_0, coupling = 0.01, nsuperperiod = 1):
-        self.tws0 = twiss_0
+    def __init__(self, lattice,beam,  coupling = 0.01, nsuperperiod = 1):
+        if beam.E  == 0:
+            exit("beam.E must be non zero!")
+        self.E = beam.E
+        tws = twiss(lattice, Twiss())
+        self.tws0 = tws[0]
         self.lat = lattice
-        (I1,I2,I3, I4, I5) = radiation_integral(lattice, twiss_0, nsuperperiod)
+        (I1,I2,I3, I4, I5) = radiation_integral(lattice, self.tws0 , nsuperperiod)
         self.I1 = I1
         self.I2 = I2
         self.I3 = I3
@@ -80,18 +87,18 @@ class EbeamParams:
         self.Je = 2 + I4/I2
         self.Jx = 1 - I4/I2
         self.Jy = 1
-        self.gamma = lattice.energy/m_e_GeV
-        self.sigma_e = self.gamma*sqrt(Cq*I3/(self.Je*I2))
-        self.emittance = Cq*self.gamma*self.gamma*I5/(self.Jx*I2)
-        self.U0 = Cgamma*(lattice.energy*1000)**4*I2/(2*pi)
+        self.gamma = self.E/m_e_GeV
+        self.sigma_e = self.gamma*sqrt(Cq * self.I3/(self.Je*I2))
+        self.emittance = Cq*self.gamma*self.gamma * self.I5/(self.Jx* self.I2)
+        self.U0 = Cgamma*(beam.E*1000)**4*self.I2/(2*pi)
         #print "*********  ", twiss_0.Energy
         self.Tperiod = nsuperperiod*lattice.totalLen/speed_of_light
         self.Length = nsuperperiod*lattice.totalLen
-        self.tau0 = 2*twiss_0.E*1000*self.Tperiod/self.U0
+        self.tau0 = 2*self.E*1000*self.Tperiod/self.U0
         self.tau_e = self.tau0/self.Je
         self.tau_x = self.tau0/self.Jx
         self.tau_y = self.tau0/self.Jy
-        self.alpha = I1/(speed_of_light*self.Tperiod)
+        self.alpha = self.I1/(speed_of_light*self.Tperiod)
         self.coupl = coupling
         self.emitt_x = self.emittance/(1 + self.coupl)
         self.emitt_y = self.emittance*self.coupl/(1 + self.coupl)
@@ -146,6 +153,7 @@ class EbeamParams:
         print "Je =        ", self.Je
         print "Jx =        ", self.Jx
         print "Jy =        ", self.Jy
+        print "energy =    ", self.E, "GeV"
         print "gamma =     ", self.gamma
         print "sigma_e =   ", self.sigma_e
         print "emittance = ", self.emittance*1e9, " nm*rad"
@@ -165,5 +173,5 @@ class EbeamParams:
         print "Dy =        ", self.tws0.Dy, " m"
         print "sigma_x =   ", self.sigma_x*1e6, " um"
         print "sigma_y =   ", self.sigma_y*1e6, " um"
-        print "sigma_x' =   ", self.sigma_xp*1e6, " urad"
-        print "sigma_y' =   ", self.sigma_yp*1e6, " urad"
+        print "sigma_x' =  ", self.sigma_xp*1e6, " urad"
+        print "sigma_y' =  ", self.sigma_yp*1e6, " urad"

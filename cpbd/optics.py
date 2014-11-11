@@ -753,20 +753,20 @@ def trace_particle(lattice, p0, nPoints = None):
 
 
 class Navigator:
-    def __init__(self, lattice=None):
-        self.lattice = lattice
+    #def __init__(self, lattice):
+    #    self.lat = lattice
         
     z0 = 0
     n_elem = 0
     sum_lengths = 0
 
-    def check(self, dz):
-        '''
-        check what???
-        '''
-        if self.z0+dz>self.lattice.totalLen:
-            dz = self.lattice.totalLen - self.z0
-        return dz
+    #def check(self, dz):
+    #    '''
+    #    check if next step exceed the bounds of lattice
+    #    '''
+    #    if self.z0+dz>self.lat.totalLen:
+    #        dz = self.lat.totalLen - self.z0
+    #    return dz
 
 def get_map(lattice, dz, navi):
     types = ["sextupole", "undulator"]
@@ -811,16 +811,13 @@ def get_map(lattice, dz, navi):
     TM.append(tm)
     return TM
 
-def single_track(lat, particle, dz, navi):
-    dz = navi.check(dz)
-    t_maps = get_map(lat, dz, navi)
-    for tm in t_maps:
-        particle = tm*particle
-    return particle
+
 
 def track(lat, particle_list, dz, navi):
 
-    dz = navi.check(dz)
+    if navi.z0+dz>lat.totalLen:
+        dz = lat.totalLen - navi.z0
+
     t_maps = get_map(lat, dz, navi)
     
     for tm in t_maps:
@@ -828,6 +825,12 @@ def track(lat, particle_list, dz, navi):
         #tm.apply(plist)
 
     return
+
+def single_track(lat, particle, dz, navi):
+
+    track(lat, [particle], dz, navi)
+
+    return particle
 
 def gaussFromTwiss(emit, beta, alpha):
     phi = 2*pi * random.rand()

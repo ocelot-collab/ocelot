@@ -125,7 +125,7 @@ def match(lat, constr, vars, tw, print_proc = 1):
             x[i] = vars[i].k1
     #print "x = ", x
     res = fmin(errf,x,xtol=1e-8, maxiter=2.e3, maxfun=2.e3)
-
+    #print res
     for i in xrange(len(vars)):
         if vars[i].__class__ == list:
             if vars[i][0].__class__ == Twiss and  vars[i][1].__class__ == str:

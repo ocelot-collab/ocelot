@@ -1,5 +1,6 @@
 '''
 example02 -- elliptical mirror (KB) -- ray tracing
+UNDER DEVELOPMENT!
 '''
 
 from ocelot.optics.elements import *

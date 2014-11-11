@@ -1,5 +1,6 @@
 '''
-diffraction effects on aperture
+diffraction effects on aperture -- wave
+UNDER DEVELOPMENT!
 '''
 
 import matplotlib.pyplot as plt

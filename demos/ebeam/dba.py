@@ -37,7 +37,7 @@ plt.show()
 
 
 
-constr = {'D1':{'Dx':0.0, 'Dxp':0.0}, 'periodic':{"y"}}
+constr = {'D1':{'Dx':0.0, 'Dxp':0.0}, 'periodic':True}
 
 vars = [Q4]
 

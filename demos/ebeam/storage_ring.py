@@ -38,25 +38,6 @@ tws = twiss(lat,tw0, nPoints=1000)
 plot_opt_func(lat, tws)
 plt.show()
 
+
 eb = EbeamParams(lat, beam, nsuperperiod=8)
 eb.print_params()
-
-
-
-
-from ocelot.cpbd.chromaticity import *
-compensate_chromaticity(lat, ksi_x_comp = 0, ksi_y_comp = 0,  nsuperperiod = 8)
-
-nturns = 1024
-
-
-nx = 130
-ny = 70
-
-x_array = linspace(-0.03, 0.03, nx)
-#print x_array
-#y_array = linspace(0, 0.050, ny)
-y_array = linspace(0.0001, 0.03, ny)
-
-pxy_list = create_track_list(x_array, y_array)
-pxy_list = tracking_mpi(mpi_comm, lat, nturns, pxy_list, errors = err_list, nsuperperiods = 6)

@@ -24,14 +24,18 @@ environ['PATH'] = environ['PATH'] + ";"+pathToDll
 """
 
 
-tail = "ocelot/lib/genera/build/genera_libs/convolution.so"
+tail = "/lib/genera/build/genera_libs/convolution.so"
 home_dir = path[0]
-index =  path[0].find("siberia2")
-pathToDll = path[0][:index]+ tail
+#index =  path[0].find("siberia2")
+import ocelot
+#print ocelot.__file__
+import os
+path_to_ocelot = os.path.dirname(ocelot.__file__)
+pathToDll = path_to_ocelot+ tail
 try:
     my_conv= CDLL(pathToDll)
 except:
-    exec(open(path[0][:index]+ "ocelot/lib/genera/src/cpp/compile.py"))
+    exec(open(path_to_ocelot+  "/lib/genera/src/cpp/compile.py"))
     #exec(open("ocelot/lib/codes/genera/src/cpp/compile.py"))
     os.chdir(home_dir)
     my_conv= CDLL(pathToDll)

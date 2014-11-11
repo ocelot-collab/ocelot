@@ -250,7 +250,7 @@ def elem_cord(lat):
 def plot_elems(ax, lat,nturns = 1, y_lim = None,y_scale = 1, legend = True):
     quad, bend, sext, corr, mons, cav, mat = elem_cord(lat)
     #print len(quad), len(bend), len(sext), len(corr ),len( mons), len( cav)
-    #print mons
+    #print sext
     alpha = 1
     ax.set_ylim((-0,1.2))
     if y_lim != None:
@@ -336,7 +336,7 @@ def plot_xy(ax, S, X, Y, font_size):
 def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, name = None):
     font_size = 16
     if name == None:
-        fig = plt.figure()
+        fig = plt.figure("lattice")
     else:
        fig = plt.figure(name)
     plt.rc('axes', grid=True)

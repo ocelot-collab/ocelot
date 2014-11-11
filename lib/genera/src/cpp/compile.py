@@ -52,10 +52,16 @@ def clean_folder(dir_path):
 # move lib to genera_libs
 home_path = path[0]
 #print "compile ", home_path
+import ocelot
+#print ocelot.__file__
+import os
+path_to_ocelot = os.path.dirname(ocelot.__file__)
 
-indx = path[0].find("siberia2")
-xcode_path = home_path[:indx]
-gen_path = xcode_path + "ocelot/lib/genera/"
+
+#indx = path[0].find("siberia2")
+
+#xcode_path = home_path[:indx]
+gen_path = path_to_ocelot + "/lib/genera/"
 
 libs_path = gen_path + "build/genera_libs"
 

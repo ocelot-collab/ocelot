@@ -23,15 +23,21 @@ else:
     if platform == "darwin":
         tail_u = "codes/genera/build/mac/undulator.so"
 """
-
-tail = "ocelot/lib/genera/build/genera_libs/undulator.so"
+import ocelot
+#print ocelot.__file__
+import os
+path_to_ocelot = os.path.dirname(ocelot.__file__)
+#print path
+#tail = "ocelot/lib/genera/build/genera_libs/undulator.so"
 home_dir = path[0]
-index =  path[0].find("siberia2")
-pathToDll = path[0][:index]+ tail
+#index =  path[0].find("siberia2")
+#pathToDll = path[0][:index]+ tail
+pathToDll = path_to_ocelot + "/lib/genera/build/genera_libs/undulator.so"
+print pathToDll
 try:
     cundul= CDLL(pathToDll)
 except:
-    exec(open(path[0][:index]+ "ocelot/lib/genera/src/cpp/compile.py"))
+    exec(open(path_to_ocelot + "/lib/genera/src/cpp/compile.py"))
     os.chdir(home_dir)
     cundul= CDLL(pathToDll)
 

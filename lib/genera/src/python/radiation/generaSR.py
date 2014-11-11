@@ -29,15 +29,18 @@ else:
     if platform == "darwin":
         tail = "codes/genera/build/mac/radiation.so"
 """
+import ocelot
+import os
+path_to_ocelot = os.path.dirname(ocelot.__file__)
 
-tail = "ocelot/lib/genera/build/genera_libs/radiation.so"
+tail = "/lib/genera/build/genera_libs/radiation.so"
 home_dir = path[0]
-index =  path[0].find("siberia2")
-pathToDll = path[0][:index]+ tail
+#index =  path[0].find("siberia2")
+pathToDll = path_to_ocelot + tail
 try:
     my_rad = CDLL(pathToDll)
 except:
-    exec(open(path[0][:index]+ "ocelot/lib/genera/src/cpp/compile.py"))
+    exec(open(path_to_ocelot+ "ocelot/lib/genera/src/cpp/compile.py"))
     os.chdir(home_dir)
     my_rad = CDLL(pathToDll)
 

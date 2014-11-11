@@ -228,18 +228,21 @@ def show_flux(screen, show = 'Total', xlim = (0,0), ylim = (0,0),  file_name = N
         if screen.nx == 1 and screen.ny == 1:
             X = screen.Eph
             xlabel = r'$E_{ph}$, $eV$'
+            status = "spectrum"
         elif screen.nx == 1:
             X = screen.Yph
             xlabel = r'$Y$, $mm$'
             if unit == "mrad":
                 xlabel = r'$Y$, $mrad$'
+            status = "spatial"
         else:
             X = screen.Xph
             xlabel = r'$X$, $mm$'
             if unit == "mrad":
                 xlabel = r'$X$, $mrad$'
+            status = "spatial"
 
-        D1(data, X, distance =  screen.Distance, xlabel = xlabel, xlim = xlim, ylim = ylim,  file_name = file_name, unit = unit)
+        D1(data, X, distance =  screen.Distance, xlabel = xlabel, xlim = xlim, ylim = ylim,  file_name = file_name, unit = unit, status = status)
     else:
         if screen.ne!=1:
             print " ******** ERROR into show.screen ! *********** "
@@ -247,10 +250,11 @@ def show_flux(screen, show = 'Total', xlim = (0,0), ylim = (0,0),  file_name = N
         D3(screen, data, distance =  screen.Distance, file_name = file_name, unit = unit)
 
 
-def D1(data, X, distance, xlabel = "Eph", xlim = (0,0), ylim = (0,0),  file_name = None, unit = "mm"):
+def D1(data, X, distance, xlabel, xlim, ylim,  file_name, unit, status ):
     # distance in [mm]
     if unit == "mrad":
         data = data*distance*distance*1e-6
+    if unit == "mrad" and status == "spatial":
         X = X/distance*1e3
 
     maxS = max(data)

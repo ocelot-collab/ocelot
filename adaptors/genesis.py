@@ -132,6 +132,7 @@ inputTemplate = "\
  offsetradf =    0\n\
  multconv =    0\n\
 __BEAMFILE__\n\
+__FIELDFILE__\n\
 __MAGFILE__\n\
  outputfile ='run.__RUNID__.gout'\n\
  filetype ='ORIGINAL'\n\
@@ -207,6 +208,7 @@ class GenesisInput:
 
         #self.useBeamFile = False
         self.beamfile = None
+        self.fieldfile = None
 
     def input(self):
         input = inputTemplate
@@ -223,6 +225,12 @@ class GenesisInput:
             input = input.replace("__BEAMFILE__", " beamfile  =  '"+ str(self.beamfile)+ "'")
         else:
             input = input.replace("__BEAMFILE__\n", "")
+
+        if self.fieldfile != None:
+            input = input.replace("__FIELDFILE__", " fieldfile  =  '"+ str(self.fieldfile)+ "'")
+        else:
+            input = input.replace("__FIELDFILE__\n", "")
+
         
         if self.magin == 0:
             input = input.replace("__MAGFILE__\n", "")

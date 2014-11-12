@@ -1,8 +1,6 @@
 __author__ = 'Sergey Tomin'
 
 from ocelot.cpbd.match import *
-#from ocelot.gui.accelerator import *
-#import matplotlib.pyplot as plt
 from pylab import *
 
 Q1 = Quadrupole(l= 0.4, k1=-1.3, id = "Q1")
@@ -34,6 +32,7 @@ x, xp = 0.1*cos(t), 0.1*sin(t)
 plist = []
 for xi, xpi in zip(x,xp):
     plist.append(Particle(x = xi, px= xpi))
+
 
 plot(x, xp)
 navi = Navigator()

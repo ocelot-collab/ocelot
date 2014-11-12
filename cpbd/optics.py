@@ -176,6 +176,8 @@ class TransferMap:
         m = copy(self)
         m.length = s
         m.R = m.R_z(s)
+        m.nonl_kick = lambda u: m.nonl_kick_z(u, s)
+        m.nonl_kick_array = lambda u: m.nonl_kick_array_z(u, s)
         return m
 
 
@@ -259,16 +261,16 @@ def create_transfer_map(element, order=1, energy = 0):
 
     elif element.type == "sextupole":
 
-        def nonl_kick( u):
+        def nonl_kick_z(u, z, ms):
+            #ms = k2*z
+            x = u[0] - transfer_map.dx + u[1]*z/2.
+            y = u[2] - transfer_map.dy + u[3]*z/2.
 
-            x = u[0] - transfer_map.dx + u[1]*transfer_map.length/2.
-            y = u[2] - transfer_map.dy + u[3]*transfer_map.length/2.
+            u[1] += -ms/2.*(x*x - y*y)
+            u[3] += x*y*ms
 
-            u[1] += -transfer_map.ms/2.*(x*x - y*y)
-            u[3] += x*y*transfer_map.ms
-
-            u[0] = x + transfer_map.dx + u[1]*transfer_map.length/2.
-            u[2] = y + transfer_map.dy + u[3]*transfer_map.length/2.
+            u[0] = x + transfer_map.dx + u[1]*z/2.
+            u[2] = y + transfer_map.dy + u[3]*z/2.
 
             # experimental
             #v = np.array([transfer_map.dx, transfer_map.dy, transfer_map.length, transfer_map.ms])
@@ -291,12 +293,12 @@ def create_transfer_map(element, order=1, energy = 0):
 
             return u
 
-        def nonl_kick_array(u):
-            v = np.array([transfer_map.dx, transfer_map.dy, transfer_map.length, transfer_map.ms])
-            L = transfer_map.length
-            dx = transfer_map.dx
-            dy = transfer_map.dy
-            ms = transfer_map.ms # ms = K2*L
+        def nonl_kick_array_z(u, z, ms):
+            v = np.array([transfer_map.dx, transfer_map.dy, z, ms])
+            #L = transfer_map.length
+            #dx = transfer_map.dx
+            #dy = transfer_map.dy
+            #ms = transfer_map.ms # ms = K2*L
             code = """
             double x, y;
             double dx = V1(0);
@@ -327,53 +329,43 @@ def create_transfer_map(element, order=1, energy = 0):
             element.ms = element.k2*element.l
         transfer_map.order = 2
 
-        transfer_map.nonl_kick = nonl_kick #lambda V: nonl_kick(transfer_map, V)
-        transfer_map.nonl_kick_array = nonl_kick_array
-        transfer_map.ms = element.ms
+        #transfer_map.nonl_kick = nonl_kick #lambda V: nonl_kick(transfer_map, V)
+        #transfer_map.nonl_kick_array = nonl_kick_array
+        if element.l == 0:
+            transfer_map.nonl_kick_z = lambda u, z: nonl_kick_z(u, z, element.ms)
+            transfer_map.nonl_kick = lambda u: nonl_kick_z(u, element.l, element.ms)
+            transfer_map.nonl_kick_array_z = lambda u, z: nonl_kick_array_z(u, z, element.ms)
+            transfer_map.nonl_kick_array = lambda u: nonl_kick_array_z(u, element.l, element.ms)
+            transfer_map.ms = element.ms
+        else:
+
+            transfer_map.nonl_kick_z = lambda u, z: nonl_kick_z(u, z, element.k2*z)
+            transfer_map.nonl_kick = lambda u: nonl_kick_z(u, element.l, element.ms)
+            transfer_map.nonl_kick_array_z = lambda u, z: nonl_kick_array_z(u, z, element.k2*z)
+            transfer_map.nonl_kick_array = lambda u: nonl_kick_array_z(u, element.l, element.ms)
+            #transfer_map.ms = element.ms
         #print "transfer_map.ms = ",transfer_map.ms
         transfer_map.R_z = lambda z: uni_matrix(z, 0, hx = 0)
         transfer_map.R = transfer_map.R_z(element.l)
 
     elif element.type == "octupole":
 
-        def nonl_kick( u):
+        def nonl_kick_z( u, z, moct):
 
-            x = u[0] - transfer_map.dx + u[1]*transfer_map.length/2.
-            y = u[2] - transfer_map.dy + u[3]*transfer_map.length/2.
+            x = u[0] - transfer_map.dx + u[1]*z/2.
+            y = u[2] - transfer_map.dy + u[3]*z/2.
 
-            u[1] += -transfer_map.moct*(x*x*x - 3.*y*y*x)
-            u[3] += transfer_map.moct*(3.*y*x*x - y*y*y)
+            u[1] += -moct*(x*x*x - 3.*y*y*x)
+            u[3] += moct*(3.*y*x*x - y*y*y)
 
-            u[0] = x + transfer_map.dx + u[1]*transfer_map.length/2.
-            u[2] = y + transfer_map.dy + u[3]*transfer_map.length/2.
-
-            # experimental
-            #v = np.array([transfer_map.dx, transfer_map.dy, transfer_map.length, transfer_map.ms])
-            code = """
-            double x, y, dx,dy,length, moct;
-            dx = V1(0);
-            dy = V1(1);
-
-            length = V1(2);
-            moct = V1(3);
-            x = U1(0) - dx + U1(1)*length/2.;
-            y = U1(2) - dy + U1(3)*length/2.;
-            U1(1) = U1(1) - moct*(x*x*x - 3.*y*y*x);
-            U1(3) = U1(3) + moct*(3.*y*x*x - y*y*y);
-
-            U1(0) = x + dx + U1(1)*length/2.;
-            U1(2) = y + dy + U1(3)*length/2.;
-            """
-            #weave.inline(code, ["u", "v"])
+            u[0] = x + transfer_map.dx + u[1]*z/2.
+            u[2] = y + transfer_map.dy + u[3]*z/2.
 
             return u
 
-        def nonl_kick_array(u):
-            v = np.array([transfer_map.dx, transfer_map.dy, transfer_map.length, transfer_map.moct])
-            L = transfer_map.length
-            dx = transfer_map.dx
-            dy = transfer_map.dy
-            moct = transfer_map.moct # moct = K3*L
+        def nonl_kick_array_z(u, z, moct):
+            v = np.array([transfer_map.dx, transfer_map.dy, z, moct])
+
             code = """
             double x, y;
             double dx = V1(0);
@@ -394,20 +386,27 @@ def create_transfer_map(element, order=1, energy = 0):
 
             }
             """
-            #print "U = ", u[:12]
-            #print "V = ", v
             weave.inline(code, ["u","v"])
-            #print "U = ", u[:12]
             return u
 
         if element.moct == None:
             element.moct = element.k3*element.l
         transfer_map.order = 3
 
-        transfer_map.nonl_kick = nonl_kick #lambda V: nonl_kick(transfer_map, V)
-        transfer_map.nonl_kick_array = nonl_kick_array
-        transfer_map.moct = element.moct
-        #print "transfer_map.ms = ",transfer_map.ms
+        if element.l == 0:
+            transfer_map.nonl_kick_z = lambda u, z: nonl_kick_z(u, z, element.moct)
+            transfer_map.nonl_kick = lambda u: nonl_kick_z(u, element.l, element.moct)
+            transfer_map.nonl_kick_array_z = lambda u, z: nonl_kick_array_z(u, z, element.moct)
+            transfer_map.nonl_kick_array = lambda u: nonl_kick_array_z(u, element.l, element.moct)
+            transfer_map.moct = element.moct
+        else:
+
+            transfer_map.nonl_kick_z = lambda u, z: nonl_kick_z(u, z, element.k3*z)
+            transfer_map.nonl_kick = lambda u: nonl_kick_z(u, element.l, element.moct)
+            transfer_map.nonl_kick_array_z = lambda u, z: nonl_kick_array_z(u, z, element.k3*z)
+            transfer_map.nonl_kick_array = lambda u: nonl_kick_array_z(u, element.l, element.moct)
+
+
         transfer_map.R_z = lambda z: uni_matrix(z, 0, hx = 0)
         transfer_map.R = transfer_map.R_z(element.l)
 
@@ -447,10 +446,10 @@ def create_transfer_map(element, order=1, energy = 0):
             u[3] = py[-1]
             return u
 
-        def nonl_kick(u):
+        def nonl_kick_z(u, z, ndiv):
 
-            z = np.linspace(0, element.l, 20)
-            x, px,y, py, tau = track_und_sym(u, z, kz, kx, element.Kx, energy)
+            zi = np.linspace(0., z, ndiv)
+            x, px,y, py, tau = track_und_sym(u, zi, kz, kx, element.Kx, energy)
             #print u[0], x, u[1], px, u[5]
             #print u[2], y, u[3], py
             u[0] = x
@@ -460,14 +459,14 @@ def create_transfer_map(element, order=1, energy = 0):
             u[4] = tau
             return u
 
-        def nonl_kick_array(u):
+        def nonl_kick_array_z(u, z, ndiv):
             for i in xrange(len(u)/6):
                 V = u[i*6:i*6+6]
-                u[i*6:i*6+6] = nonl_kick(V)
+                u[i*6:i*6+6] = nonl_kick_z(V, z, ndiv)
             return u
 
 
-        if energy == 0 or element.lperiod == 0:
+        if energy == 0 or element.lperiod == 0 or element.Kx == 0:
 
             transfer_map.order = 1
             transfer_map.R_z = lambda z: uni_matrix(z, 0, hx = 0, sum_tilts = element.dtilt + element.tilt)
@@ -484,8 +483,10 @@ def create_transfer_map(element, order=1, energy = 0):
                 kx = 0
             else:
                 kx = 2.*pi/element.ax
-            transfer_map.nonl_kick = nonl_kick #lambda V: nonl_kick(transfer_map, V)
-            transfer_map.nonl_kick_array = nonl_kick_array
+            transfer_map.nonl_kick = lambda u: nonl_kick_z(u, element.l, ndiv = 20) #lambda V: nonl_kick(transfer_map, V)
+            transfer_map.nonl_kick_array = lambda u: nonl_kick_array_z(u, element.l, ndiv = 20)
+            transfer_map.nonl_kick_array_z = lambda u, z: nonl_kick_array_z(u, z, ndiv = 2)
+            transfer_map.nonl_kick_z = lambda u, z: nonl_kick_z(u, z, ndiv = 2)
 
     elif element.type == "monitor":
         
@@ -769,7 +770,6 @@ class Navigator:
     #    return dz
 
 def get_map(lattice, dz, navi):
-    types = ["sextupole", "undulator"]
     TM = []
     tm = TransferMap()
     i = navi.n_elem
@@ -777,34 +777,25 @@ def get_map(lattice, dz, navi):
     elem = lattice.sequence[i]
     L = navi.sum_lengths + elem.l
 
-    if elem.type in types:
-
-        TM.append(elem.transfer_map)
-        i += 1
-        navi.z0 += elem.l
-        elem = lattice.sequence[i]
-        L += elem.l
-
     while z1 > L:
         dl = L - navi.z0
-        tm = elem.transfer_map(dl)*tm
+        #print dl, L, navi.z0, elem.l
+        if elem.transfer_map.order >1:
+            TM.append(tm)
+            TM.append(elem.transfer_map(dl))
+            tm = TransferMap()
+        else:
+            tm = elem.transfer_map(dl)*tm
         navi.z0 = L
         dz -= dl
         i += 1
         elem = lattice.sequence[i]
-
-        if elem.type in types:
-            TM.append(tm)
-            TM.append(elem.transfer_map)
-            tm = TransferMap()
-            L += elem.l
-            navi.z0 = L
-            dz -= elem.l
-            i += 1
-            elem = lattice.sequence[i]
         L += elem.l
 
-    tm = elem.transfer_map(dz)*tm
+    if elem.transfer_map.order > 1:
+        TM.append(elem.transfer_map(dz))
+    else:
+        tm = elem.transfer_map(dz)*tm
     navi.z0 += dz
     navi.sum_lengths = L - elem.l
     navi.n_elem = i
@@ -813,14 +804,80 @@ def get_map(lattice, dz, navi):
 
 
 
-def track(lat, particle_list, dz, navi):
 
-    if navi.z0+dz>lat.totalLen:
+
+#def get_map(lattice, dz, navi):
+#    #types = ["sextupole", "undulator"]
+#    TM = []
+#    tm = TransferMap()
+#    i = navi.n_elem
+#    z1 = navi.z0 + dz
+#    elem = lattice.sequence[i]
+#    L = navi.sum_lengths + elem.l
+#
+#    if elem.transfer_map.order >1:#elem.type in types:
+#
+#        TM.append(elem.transfer_map)
+#        i += 1
+#        navi.z0 += elem.l
+#        #if len(lattice.sequence)<i:
+#        elem = lattice.sequence[i]
+#        L += elem.l
+#
+#    while z1 > L:
+#        dl = L - navi.z0
+#        tm = elem.transfer_map(dl)*tm
+#        navi.z0 = L
+#        dz -= dl
+#        i += 1
+#        elem = lattice.sequence[i]
+#        #print "lin: dz", dz, " dl = ", dl, "L = ", L , " z1 = ", z1, " navi.z0 = ", navi.z0
+#        if elem.transfer_map.order >1:#elem.type in types:
+#
+#            TM.append(tm)
+#            #print "1:", TM[-1].length
+#            if elem.type == "sextupole":
+#                TM.append(elem.transfer_map)
+#                #print "2:", TM[-1].length
+#                tm = TransferMap()
+#                L += elem.l
+#                navi.z0 = L
+#                dz -= elem.l
+#                i += 1
+#                elem = lattice.sequence[i]
+#            else:
+#                dl = L - navi.z0
+#                TM.append(elem.transfer_map(dl))
+#                navi.z0 = L
+#                dz -= dl
+#                #i += 1
+#                #elem = lattice.sequence[i]
+#            #print "und: dz", dz, " dl = ", dl, "L = ", L , " z1 = ", z1, " navi.z0 = ", navi.z0
+#        L += elem.l
+#    #print "3:", tm.length, tm.order
+#    if elem.type == "undulator":
+#        TM.append(elem.transfer_map(dz))
+#    else:
+#        tm = elem.transfer_map(dz)*tm
+#    #print "4:", tm.length, tm.order
+#    navi.z0 += dz
+#    navi.sum_lengths = L - elem.l
+#    navi.n_elem = i
+#    TM.append(tm)
+#    #print elem.type, ": dz", dz,  "L = ", L , " z1 = ", z1, " navi.z0 = ", navi.z0, "navi.sum_lengths = ", navi.sum_lengths
+#    return TM
+
+
+
+def track(lat, particle_list, dz, navi):
+    #print navi.z0 + dz , lat.totalLen
+    if navi.z0 + dz > lat.totalLen:
         dz = lat.totalLen - navi.z0
 
     t_maps = get_map(lat, dz, navi)
-    
+
     for tm in t_maps:
+        #print "tm :",  tm.length
         tm.apply(particle_list)
         #tm.apply(plist)
 

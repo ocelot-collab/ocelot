@@ -44,10 +44,10 @@ show_flux(em_screen, unit="mrad")
 
 screen = Screen()
 screen.z = 100.0
-screen.size_x = 0.005
-screen.size_y = 0.0
-screen.nx = 100
-screen.ny = 100
+screen.size_x = 0.002 # m
+screen.size_y = 0.002 # m
+screen.nx = 30
+screen.ny = 30
 
 
 screen.start_energy = 7761.2 #eV

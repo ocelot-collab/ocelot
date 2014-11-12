@@ -1052,7 +1052,7 @@ def plot_beam(fig, beam):
 
 
 
-def transform_beam_file(beam_file = None, out_file='tmp.beam', transform = [ [25.0,0.1], [21.0, -0.1] ], energy_scale=1):
+def transform_beam_file(beam_file = None, out_file='tmp.beam', transform = [ [25.0,0.1], [21.0, -0.1] ], energy_scale=1, n_interp = None):
     
     beam = read_beam_file(beam_file)
         
@@ -1141,27 +1141,57 @@ def transform_beam_file(beam_file = None, out_file='tmp.beam', transform = [ [25
         beam_new = Beam()
         beam_new.column_values = beam.column_values
         beam_new.columns = beam.columns
-        beam_new.idx_max = idx
-        beam_new.ex = beam.ex
-        beam_new.ey = beam.ey
-        beam_new.zsep = beam.zsep
-        beam_new.z = beam.z
-        beam_new.I = beam.I
-        beam_new.g0 = np.array(beam.g0) * energy_scale
-        beam_new.dg = np.array(beam.dg)
         
-        beam_new.eloss = beam.eloss
-
-        beam_new.betax = betax_new
-        beam_new.betay = betay_new
-        beam_new.alphax = alphax_new
-        beam_new.alphay = alphay_new
-
-        beam_new.x = np.array(beam.x) * 0
-        beam_new.px = np.array(beam.px) * 0
-        beam_new.y = np.array(beam.y) * 0
-        beam_new.py = np.array(beam.py) * 0
+        if n_interp == None:
         
+            beam_new.idx_max = idx
+            beam_new.ex = beam.ex
+            beam_new.ey = beam.ey
+            beam_new.zsep = beam.zsep
+            beam_new.z = beam.z
+            beam_new.I = beam.I
+            beam_new.g0 = np.array(beam.g0) * energy_scale
+            beam_new.dg = np.array(beam.dg)
+            
+            beam_new.eloss = beam.eloss
+    
+            beam_new.betax = betax_new
+            beam_new.betay = betay_new
+            beam_new.alphax = alphax_new
+            beam_new.alphay = alphay_new
+    
+            beam_new.x = np.array(beam.x) * 0
+            beam_new.px = np.array(beam.px) * 0
+            beam_new.y = np.array(beam.y) * 0
+            beam_new.py = np.array(beam.py) * 0
+        else:
+            
+            
+            beam_new.z = np.linspace(beam.z[0], beam.z[-1], n_interp) 
+            beam_new.I = np.interp(beam_new.z, beam.z, beam.I)
+            
+            zmax, Imax = peaks(beam_new.z, beam_new.I, n=1)
+            beam_new.idx_max = np.where(beam_new.z == zmax)[0][0]
+            
+            beam_new.ex = np.interp(beam_new.z, beam.z, beam.ex)
+            beam_new.ey = np.interp(beam_new.z, beam.z, beam.ey)
+            beam_new.zsep = beam.zsep * len(beam.z) / len(beam_new.z)
+            beam_new.g0 = np.interp(beam_new.z, beam.z, beam.g0) * energy_scale
+            beam_new.dg = np.interp(beam_new.z, beam.z, beam.dg)
+            
+            beam_new.eloss = np.interp(beam_new.z, beam.z, beam.eloss)
+    
+            beam_new.betax = np.interp(beam_new.z, beam.z, betax_new)
+            beam_new.betay = np.interp(beam_new.z, beam.z, betay_new)
+            beam_new.alphax = np.interp(beam_new.z, beam.z, alphax_new)
+            beam_new.alphay = np.interp(beam_new.z, beam.z, alphay_new)
+    
+            beam_new.x = np.interp(beam_new.z, beam.z, beam.x) 
+            beam_new.px = np.interp(beam_new.z, beam.z, beam.px) 
+            beam_new.y = np.interp(beam_new.z, beam.z, beam.y)
+            beam_new.py = np.interp(beam_new.z, beam.z, beam.py)
+
+
         
         #if plot: 
         #    plot_beam(plt.figure(), beam_new)    

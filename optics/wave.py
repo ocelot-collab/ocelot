@@ -8,7 +8,7 @@ import numpy as np
 import numpy.fft as fft
 import matplotlib.pyplot as plt
 import scipy.integrate as integrate
-import matplotlib.animation as animation
+#import matplotlib.animation as animation
 
 from elements import *
 

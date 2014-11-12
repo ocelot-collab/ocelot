@@ -7,10 +7,10 @@ from numpy.linalg import norm
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.integrate as integrate
-import matplotlib.animation as animation
+#import matplotlib.animation as animation
 
 from ocelot.optics.elements import *
-from ocelot.optics.wavefront import *
+from ocelot.optics.wave import *
 
 def init_plots(views, geo):
     scene = Scene()

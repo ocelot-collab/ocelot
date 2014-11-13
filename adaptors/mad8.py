@@ -247,7 +247,7 @@ def find_multiline(lines):
 #     return mad_objs
 
 
-def xfel2ocelot(name_file):
+def lattice_str_from_mad8(name_file):
     f = open(name_file,"r")
     lines = xfel_line_transform(f)
     new_lines = find_multiline(lines)
@@ -261,19 +261,13 @@ def xfel2ocelot(name_file):
     lines = find_line(lines)
     lines = find_subroutine(lines)
     lines = translate(lines)
-    #mad_objs = xfel_find_objects(lines)
-    #mad_objs = subs_objects(mad_objs)
-    #mo = parse_obj(mad_objs)
-    #new_lines = replace_objects(lines, mo)
-    #lines = translate(new_lines)
-    #lines = c2py(lines)
-    #lines = collect_sequence(lines)
-    #for line in lines:
-        #print line
     f.close()
-    part_name = name_file.split(".")
-    part_name[0] += ".inp"
-    f_new = open(part_name[0], "w")
+    return lines
+
+def save_lattice_str(lines, name_file):
+    #part_name = name_file.split(".")
+    #part_name[0] += ".inp"
+    f_new = open(name_file, "w")
     for line in lines:
         #print line
         f_new.write(line+"\n")

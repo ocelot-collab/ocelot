@@ -253,15 +253,6 @@ class Cavity(Element):
         self.E = 0
         self.volterr = volterr
 
-class RFcavity(Element):
-    def __init__(self, l, volt = 0., lag = 0., harmon = 3840, id = None):
-        Element.__init__(self, id)
-        self.type = "rfcavity"
-        self.l = l
-        self.volt = volt
-        self.lag = lag
-        self.harmon = harmon
-
 
 class Solenoid(Element):
     '''

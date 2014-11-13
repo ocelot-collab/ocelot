@@ -1,4 +1,9 @@
 __author__ = 'Sergey Tomin'
+'''
+I/O of magnetic lattice
+'''
+
+
 
 from numpy import around
 

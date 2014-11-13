@@ -175,6 +175,7 @@ def elem_cord(lat):
     mons = np.array([[0,0]])
     cav = np.array([[0,0]])
     mat = np.array([[0,0]])
+    und = np.array([[0,0]])
     L = 0
     #for elem in lat.sequence:
     #if elem.type == "drift" and elem.l == 0:
@@ -212,6 +213,13 @@ def elem_cord(lat):
             mat = np.append(mat, [[L+elem.l, k1]],axis=0)
             mat = np.append(mat, [[L+elem.l, 0]],axis=0)
 
+        elif elem.type == "undulator":
+            k1 = 1.
+            und = np.append(und, [[L, 0]], axis=0)
+            und = np.append(und, [[L, k1]], axis=0)
+            und = np.append(und, [[L+elem.l, k1]],axis=0)
+            und = np.append(und, [[L+elem.l, 0]],axis=0)
+
         elif elem.type in ["sbend", "bend", "rbend"]:
             if elem.l == 0:
                 h = 0
@@ -244,13 +252,13 @@ def elem_cord(lat):
         corr[:,1] = corr[:,1]/max(corr[:,1])
     #if len(corr) != 1 and max(mons[:,1] != 0):
     #mons[:,1] = mons[:,1]/max(mons[:,1])
-    return quad, bend, sext, corr, mons, cav, mat
+    return quad, bend, sext, corr, mons, cav, mat, und
 
 
-def plot_elems(ax, lat,nturns = 1, y_lim = None,y_scale = 1, legend = True):
-    quad, bend, sext, corr, mons, cav, mat = elem_cord(lat)
+def plot_elems(ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legend = True):
+    quad, bend, sext, corr, mons, cav, mat, und = elem_cord(lat)
     #print len(quad), len(bend), len(sext), len(corr ),len( mons), len( cav)
-    #print sext
+    #print cav
     alpha = 1
     ax.set_ylim((-0,1.2))
     if y_lim != None:
@@ -259,25 +267,29 @@ def plot_elems(ax, lat,nturns = 1, y_lim = None,y_scale = 1, legend = True):
     for i in xrange(nturns):
         n = 0
         if len(quad)>1:
-            ax.fill(quad[:,0]+i*lat.totalLen, quad[:,1]*y_scale*0.8, "r", alpha = alpha, label = "quad")
+            ax.fill(quad[:,0]+i*lat.totalLen + s_point, quad[:,1]*y_scale*0.8, "r", alpha = alpha, label = "quad")
             n += 1
         if len(bend)>1:
-            ax.fill(bend[:,0]+i*lat.totalLen, bend[:,1]*y_scale*0.7, "lightskyblue", alpha = alpha, label = "bend")
+            ax.fill(bend[:,0]+i*lat.totalLen + s_point, bend[:,1]*y_scale*0.7, "lightskyblue", alpha = alpha, label = "bend")
             n += 1
         if len(sext)>1:
-            ax.fill(sext[:,0]+i*lat.totalLen, sext[:,1]*y_scale*0.8, "green",  edgecolor = "green", alpha = alpha, label = "sext")
+            ax.fill(sext[:,0]+i*lat.totalLen + s_point, sext[:,1]*y_scale*0.8, "green",  edgecolor = "green", alpha = alpha, label = "sext")
             n += 1
         if len(corr)>1:
-            ax.fill(corr[:,0]+i*lat.totalLen, corr[:,1]*y_scale*0.7, "b", edgecolor = "b", alpha = alpha, label = "corr")
+            ax.fill(corr[:,0]+i*lat.totalLen + s_point, corr[:,1]*y_scale*0.7, "b", edgecolor = "b", alpha = alpha, label = "corr")
             n += 1
         if len(mons)>1:
-            ax.fill(mons[:,0]+i*lat.totalLen, mons[:,1]*y_scale*0.7, "orange", edgecolor = "orange", alpha = alpha, label = "bpm")
+            ax.fill(mons[:,0]+i*lat.totalLen + s_point, mons[:,1]*y_scale*0.7, "orange", edgecolor = "orange", alpha = alpha, label = "bpm")
             n += 1
         if len(cav)>1:
-            ax.fill(cav[:,0]+i*lat.totalLen, cav[:,1]*y_scale*0.7, "orange", edgecolor = "lightgreen", alpha = alpha, label = "cav")
+            ax.fill(cav[:,0]+i*lat.totalLen + s_point, cav[:,1]*y_scale*0.7, "orange", edgecolor = "lightgreen", alpha = alpha, label = "cav")
+            #print cav[:,0]+i*lat.totalLen, cav[:,1]*y_scale*0.7, i*lat.totalLen
             n += 1
         if len(mat)>1:
-            ax.fill(mat[:,0]+i*lat.totalLen, mat[:,1]*y_scale*0.7, "pink", edgecolor = "lightgreen", alpha = alpha, label = "mat")
+            ax.fill(mat[:,0]+i*lat.totalLen + s_point, mat[:,1]*y_scale*0.7, "pink", edgecolor = "lightgreen", alpha = alpha, label = "mat")
+            n += 1
+        if len(und)>1:
+            ax.fill(und[:,0]+i*lat.totalLen + s_point, und[:,1]*y_scale*0.7, "pink", edgecolor = "lightgreen", alpha = alpha, label = "und")
             n += 1
     #ax.broken_barh(s , (y0, yw*1.3), facecolors='green', edgecolor = "green", alpha = alpha, label = "Sext")
     #ax.broken_barh(c , (y0, yw), facecolors='b',edgecolor = "b", alpha = alpha)
@@ -372,7 +384,7 @@ def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, name = None):
 
     plot_disp(ax_top,tws, top_plot, font_size)
     plot_betas(ax_b, S, beta_x, beta_y, font_size)
-    plot_elems(ax_el, lat, legend = legend, y_scale=0.8) # plot elements
+    plot_elems(ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8) # plot elements
     
 def body_trajectory(fig, ax_xy, ax_el, lat, list_particles):
     X = map(lambda p:p.x, list_particles)
@@ -394,6 +406,7 @@ def body_trajectory(fig, ax_xy, ax_el, lat, list_particles):
     fig.subplots_adjust(hspace=0)
     
     plot_xy(ax_xy, S, X, Y, font_size)
+
     plot_elems(ax_el, lat, nturns = int(S[-1]/lat.totalLen), legend = False) # plot elements
 
 

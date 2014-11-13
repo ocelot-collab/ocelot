@@ -27,9 +27,16 @@ def line_transform(file):
     multiline = ''
     for line in file:
         #print line
+        #print line
+        line  = line.lstrip()
+        if len(line) == 0:
+            continue
+        #print line
         line = line.replace(':=', '=')
         line = line.replace('!', '#')
+        #print line
         multiline += line
+        #print  len(multiline), multiline[0]
         if multiline.find(";")<0 and multiline[0] != "#":
             ind = line.find("#")
             multiline = multiline[:ind]
@@ -123,7 +130,7 @@ def translate(lines):
         line = line.replace('sequence', "Sequence")
         line = line.replace('return', "#return")
         line = line.replace('->', ".")
-        line = line.replace('//', "!")
+        line = line.replace('//', "#")
         line = line.replace('centre', "'centre'")
         line = line.replace('at =', "at=")
         lines2.append(line)
@@ -132,17 +139,34 @@ def translate(lines):
 
 def c2py(lines):
     lines2 = []
+    c_block = False
     for line in lines:
         #remove spases
-        for i in range(8,2,-1):
-            line = line.replace(' '*i, "\t")
-        line = line.replace('\t', " "*4)
-
+        #print line
+        #line  = line.lstrip()
+        #if len(line) == 0:
+        #    continue
+        #print line
+        #for i in range(8,2,-1):
+        #    line = line.replace(' '*i, "\t")
+        if line[0] != "#" and "{" in line :
+            c_block = True
+            line = line.replace('{', ": # start operator")
+            lines2.append(line)
+            continue
+        if c_block:
+            #line = line.replace('\t', " "*4)
+            line = "    " + line
+        if line[0] != "#" and "}" in line :
+            c_block = False
+            line = line.replace('}', "#end operator")
+            lines2.append(line)
+            continue
         # make operator body of "for" or "if" li
-        line = line.replace('{', ": # start operator")
-        line = line.replace('}', "#end operator")
-        line = line.replace('print, text=', "print ")
-        line = line.replace('print, text =', "print ")
+        #line = line.replace('{', ": # start operator")
+        #line = line.replace('}', "#end operator")
+        #line = line.replace('print, text=', "print ")
+        #line = line.replace('print, text =', "print ")
         lines2.append(line)
     return lines2
 

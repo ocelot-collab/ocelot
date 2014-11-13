@@ -112,7 +112,7 @@ def translate(lines):
         #line = line.replace('bend', "Bend")
         line = line.replace('monitor', "Monitor")
         line = line.replace('matrix', "Matrix")
-        line = line.replace('rfcavity', "Scavenger")
+        line = line.replace('rfcavity', "RFcavity")
         line = line.replace('sextupole', "Sextupole")
         line = line.replace('marker', "Marker")
         line = line.replace('instrument', "Scavenger")

@@ -569,6 +569,11 @@ def create_transfer_map(element, order=1, energy = 0):
             transfer_map.R_z = lambda z: cavity_R_z(z, de = element.delta_e * z / element.l, f=element.f, E=element.E)
             transfer_map.R = transfer_map.R_z(element.l)
 
+    elif element.type == "rfcavity":
+        transfer_map.R_z = lambda z: uni_matrix(z, 0., hx = 0.)
+        transfer_map.R = transfer_map.R_z(element.l)
+
+
     elif element.type == "solenoid":
         def sol(l, k):
             """

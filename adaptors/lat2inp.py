@@ -34,9 +34,11 @@ def lat2input(lat):
     sexts = find_objects(lat, types = ["sextupole"])
     octs = find_objects(lat, types = ["octupole"])
     cavs = find_objects(lat, types = ["cavity"])
+    rfcavs = find_objects(lat, types = ["rfcavity"])
     sols = find_objects(lat, types = ["solenoid"])
     matrices = find_objects(lat, types = ["matrix"])
     marks = find_objects(lat, types = ["marker"])
+    mons = find_objects(lat, types = ["monitor"])
     bends = find_objects(lat, types = ["bend","rbend", "sbend"])
     #end find objects
 
@@ -70,6 +72,11 @@ def lat2input(lat):
         line = mark.id + " = Marker(id = '"+ mark.id+ "')\n"
         lines.append(line)
 
+    lines.append("\n# monitor \n")
+    for mon in mons:
+        line = mon.id + " = Monitor(id = '"+ mon.id+ "')\n"
+        lines.append(line)
+
     lines.append("\n# sextupoles \n")
     for sext in sexts:
         line = sext.id + " = Sextupole(l = " + str(sext.l) +", k2 = "+ str(sext.k2) +", tilt = "+ str(sext.tilt) +", id = '"+ sext.id+ "')\n"
@@ -84,6 +91,12 @@ def lat2input(lat):
     for cav in cavs:
         line = cav.id + " = Cavity(l = " + str(cav.l) +", volt = "+ str(cav.v) +", delta_e = "+ str(cav.delta_e)+\
                ", freq = "+ str(cav.f) +", volterr = "+ str(cav.volterr) +", id = '"+ cav.id+ "')\n"
+        lines.append(line)
+
+    lines.append("\n# rfcavity \n")
+    for rfcav in rfcavs:
+        line = rfcav.id + " = RFcavity(l = " + str(rfcav.l) +", volt = "+ str(rfcav.volt) +", lag = "+ str(rfcav.lag)+\
+               ", harmon = "+ str(rfcav.harmon) +", id = '"+ rfcav.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# Matrices \n")
@@ -104,6 +117,7 @@ def lat2input(lat):
     lines.append("\n# lattice \n")
     names = []
     for elem in lat.sequence:
+        #print elem.id, elem.type
         if elem.type != "edge":
             names.append(elem.id)
     #names = map(lambda p: p.id, lat.sequence)

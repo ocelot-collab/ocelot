@@ -412,7 +412,7 @@ def create_transfer_map(element, order=1, energy = 0):
 
     elif element.type == "drift":
 
-        transfer_map.R_z = lambda z: uni_matrix(z, 0, hx = 0)
+        transfer_map.R_z = lambda z: uni_matrix(z, 0., hx = 0.)
         transfer_map.R = transfer_map.R_z(element.l)
 
     elif element.type == "undulator":
@@ -490,6 +490,11 @@ def create_transfer_map(element, order=1, energy = 0):
 
     elif element.type == "monitor":
         
+        transfer_map.R_z = lambda z: uni_matrix(z, 0., hx = 0.)
+        transfer_map.R = transfer_map.R_z(element.l)
+
+    elif element.type == "marker":
+
         transfer_map.R_z = lambda z: eye(6)
         transfer_map.R = transfer_map.R_z(element.l)
 

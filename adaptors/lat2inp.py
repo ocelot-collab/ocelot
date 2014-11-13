@@ -36,6 +36,7 @@ def lat2input(lat):
     cavs = find_objects(lat, types = ["cavity"])
     sols = find_objects(lat, types = ["solenoid"])
     matrices = find_objects(lat, types = ["matrix"])
+    marks = find_objects(lat, types = ["marker"])
     bends = find_objects(lat, types = ["bend","rbend", "sbend"])
     #end find objects
 
@@ -62,6 +63,11 @@ def lat2input(lat):
         else:
             k = ", k1 = "+ str(bend.k1)
         line = bend.id + type + str(bend.l) + k + ", angle = "+ str(bend.angle)+ ", e1 = " + str(bend.e1) + ", e2 = " + str(bend.e2) + ", tilt = " + str(bend.tilt) +", id = '"+ bend.id+ "')\n"
+        lines.append(line)
+
+    lines.append("\n# markers \n")
+    for mark in marks:
+        line = mark.id + " = Marker(id = '"+ mark.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# sextupoles \n")

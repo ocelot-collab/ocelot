@@ -41,6 +41,12 @@ class Monitor(Element):
         self.type = "monitor"
         self.l = l
 
+class Marker(Element):
+    def __init__(self, id = None):
+        Element.__init__(self, id)
+        self.type = "marker"
+        self.l = 0.
+
 class Quadrupole(Element):
     """
     k1 - strength of quadrupole lens in [1/m^2],

@@ -114,7 +114,7 @@ def translate(lines):
         line = line.replace('matrix', "Matrix")
         line = line.replace('rfcavity', "Scavenger")
         line = line.replace('sextupole', "Sextupole")
-        line = line.replace('marker', "Scavenger")
+        line = line.replace('marker', "Marker")
         line = line.replace('instrument', "Scavenger")
         line = line.replace('rcollimator', "Scavenger")
         line = line.replace('ecollimator', "Scavenger")

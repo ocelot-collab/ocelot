@@ -676,9 +676,9 @@ def lattice_transfer_map(lattice):
 
 
 def trace_z(lattice, obj0, z_array):
-    """ tracer depend on Z (twiss(z) and particle(z))
-        moreover I use it following way, for example, twiss = twiss_Z(lattice,twiss_0, [1.23]) ,
-         it means I will found twiss params at 1.23 m
+    """ Z-dependent tracer (twiss(z) and particle(z))
+        usage: twiss = trace_z(lattice,twiss_0, [1.23, 2.56, ...]) ,
+        to calculate Twiss params at 1.23m, 2.56m etc.
     """
     obj_list = []
     try:
@@ -809,73 +809,10 @@ def get_map(lattice, dz, navi):
     return TM
 
 
-
-
-
-#def get_map(lattice, dz, navi):
-#    #types = ["sextupole", "undulator"]
-#    TM = []
-#    tm = TransferMap()
-#    i = navi.n_elem
-#    z1 = navi.z0 + dz
-#    elem = lattice.sequence[i]
-#    L = navi.sum_lengths + elem.l
-#
-#    if elem.transfer_map.order >1:#elem.type in types:
-#
-#        TM.append(elem.transfer_map)
-#        i += 1
-#        navi.z0 += elem.l
-#        #if len(lattice.sequence)<i:
-#        elem = lattice.sequence[i]
-#        L += elem.l
-#
-#    while z1 > L:
-#        dl = L - navi.z0
-#        tm = elem.transfer_map(dl)*tm
-#        navi.z0 = L
-#        dz -= dl
-#        i += 1
-#        elem = lattice.sequence[i]
-#        #print "lin: dz", dz, " dl = ", dl, "L = ", L , " z1 = ", z1, " navi.z0 = ", navi.z0
-#        if elem.transfer_map.order >1:#elem.type in types:
-#
-#            TM.append(tm)
-#            #print "1:", TM[-1].length
-#            if elem.type == "sextupole":
-#                TM.append(elem.transfer_map)
-#                #print "2:", TM[-1].length
-#                tm = TransferMap()
-#                L += elem.l
-#                navi.z0 = L
-#                dz -= elem.l
-#                i += 1
-#                elem = lattice.sequence[i]
-#            else:
-#                dl = L - navi.z0
-#                TM.append(elem.transfer_map(dl))
-#                navi.z0 = L
-#                dz -= dl
-#                #i += 1
-#                #elem = lattice.sequence[i]
-#            #print "und: dz", dz, " dl = ", dl, "L = ", L , " z1 = ", z1, " navi.z0 = ", navi.z0
-#        L += elem.l
-#    #print "3:", tm.length, tm.order
-#    if elem.type == "undulator":
-#        TM.append(elem.transfer_map(dz))
-#    else:
-#        tm = elem.transfer_map(dz)*tm
-#    #print "4:", tm.length, tm.order
-#    navi.z0 += dz
-#    navi.sum_lengths = L - elem.l
-#    navi.n_elem = i
-#    TM.append(tm)
-#    #print elem.type, ": dz", dz,  "L = ", L , " z1 = ", z1, " navi.z0 = ", navi.z0, "navi.sum_lengths = ", navi.sum_lengths
-#    return TM
-
-
-
 def track(lat, particle_list, dz, navi):
+    '''
+    tracking for a fixed step dz
+    '''
     #print navi.z0 + dz , lat.totalLen
     if navi.z0 + dz > lat.totalLen:
         dz = lat.totalLen - navi.z0
@@ -888,12 +825,6 @@ def track(lat, particle_list, dz, navi):
         #tm.apply(plist)
 
     return
-
-def single_track(lat, particle, dz, navi):
-
-    track(lat, [particle], dz, navi)
-
-    return particle
 
 def gaussFromTwiss(emit, beta, alpha):
     phi = 2*pi * random.rand()

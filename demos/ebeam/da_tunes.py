@@ -1,5 +1,7 @@
 __author__ = 'Sergey Tomin'
-
+import sys
+ind = sys.path[0].find("ocelot")
+sys.path.append(sys.path[0][:ind])
 #from ocelot.cpbd.match import *
 from ocelot.gui.accelerator import *
 from ocelot.cpbd.elements import *
@@ -7,6 +9,13 @@ from ocelot.cpbd.optics import *
 from ocelot.cpbd.e_beam_params import *
 from ocelot.cpbd.chromaticity import *
 from ocelot.cpbd.tracking import *
+from mpi4py import MPI
+
+
+mpi_comm = MPI.COMM_WORLD
+size = mpi_comm.Get_size()
+rank = mpi_comm.Get_rank()
+
 
 Q1 = Quadrupole(l= 0.4, k1=-1.3, id = "Q1")
 Q2 = Quadrupole(l= 0.8, k1=1.4, id = "Q2")
@@ -35,14 +44,23 @@ lat = MagneticLattice(ring)
 
 compensate_chromaticity(lat, ksi_x_comp = 0, ksi_y_comp = 0,  nsuperperiod = 8)
 
-nturns = 1024
-nx = 130
-ny = 70
+nturns = 2048
+nx = 200
+ny = 100
 
 x_array = linspace(-0.03, 0.03, nx)
 y_array = linspace(0.0001, 0.03, ny)
-
+start = time()
 pxy_list = create_track_list(x_array, y_array)
-pxy_list = tracking( lat, nturns, pxy_list,  nsuperperiods = 8, save_track=False)
-da = array(map(lambda pxy: pxy.turn, pxy_list))
-show_da(da, x_array, y_array)
+pxy_list = tracking_mpi( mpi_comm,lat, nturns, pxy_list,  nsuperperiods = 8, save_track=True)
+if rank == 0:
+    print time() - start
+    da = array(map(lambda pxy: pxy.turn, pxy_list))
+    show_da(da, x_array, y_array)
+
+
+    da_contr = contour_da(pxy_list, nturns)
+    pxy_list = freq_analysis(pxy_list, lat, nturns, harm = True)
+    da_mux = array(map(lambda pxy: pxy.mux, pxy_list))
+    da_muy = array(map(lambda pxy: pxy.muy, pxy_list))
+    show_mu(da_contr, da_mux, da_muy, x_array, y_array)

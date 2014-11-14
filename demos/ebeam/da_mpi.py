@@ -44,15 +44,16 @@ lat = MagneticLattice(ring)
 
 compensate_chromaticity(lat, ksi_x_comp = 0, ksi_y_comp = 0,  nsuperperiod = 8)
 
-nturns = 1024
-nx = 130
-ny = 70
+nturns = 2048
+nx = 200
+ny = 100
 
 x_array = linspace(-0.03, 0.03, nx)
 y_array = linspace(0.0001, 0.03, ny)
-
+start = time()
 pxy_list = create_track_list(x_array, y_array)
-pxy_list = tracking_mpi( mpi_comm,lat, nturns, pxy_list,  nsuperperiods = 8)
+pxy_list = tracking_mpi( mpi_comm,lat, nturns, pxy_list,  nsuperperiods = 8, save_track=False)
 if rank == 0:
+    print time() - start
     da = array(map(lambda pxy: pxy.turn, pxy_list))
     show_da(da, x_array, y_array)

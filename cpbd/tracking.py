@@ -138,6 +138,9 @@ def freq_analysis(track_list, lat, nturns, harm = True, diap = 0.10, nearest = F
     #fma(pxy_list, nux = nux, nuy = nuy)
     for n, pxy in enumerate(track_list):
         if pxy.turn == nturns-1:
+            if len(pxy.p_list) == 1:
+                print "For frequency analysis coordinates are needed for each turns. Check tracking option 'save_track' must be True "
+                return track_list
             x = map(lambda p: p[0], pxy.p_list)
             y = map(lambda p: p[2], pxy.p_list)
             pxy.mux = harmonic_position(x, nux, diap, nearest)
@@ -241,8 +244,8 @@ def ellipse_track_list(beam, n_t_sigma = 3, num = 1000, type = "contour"):
     return track_list
 
 
-def tracking(lat, nturns, track_list, nsuperperiods):
-
+def tracking(lat, nturns, track_list, nsuperperiods, save_track = True):
+    #save_track = False
     xlim, ylim, px_lim, py_lim = aperture_limit(lat, xlim = 1, ylim = 1)
     navi = Navigator()
     t_maps = get_map(lat, lat.totalLen, navi)
@@ -264,11 +267,12 @@ def tracking(lat, nturns, track_list, nsuperperiods):
         for n, pxy in enumerate(track_list):
             pxy.turn = i
             #pxy.p_list = append(pxy.p_list, p_array.particles[n*6:n*6+6])
-            pxy.p_list.append(p_array.particles[n*6:n*6+6])
+            if save_track:
+                pxy.p_list.append(p_array.particles[n*6:n*6+6])
     return np.array(track_list_const)
 
 
-def tracking_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods = 1):
+def tracking_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods = 1, save_track = True):
     size = mpi_comm.Get_size()
     rank = mpi_comm.Get_rank()
     lat_copy = create_copy(lat, nsuperperiods = nsuperperiods)
@@ -303,13 +307,13 @@ def tracking_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods
         # but for nturns = 1000 program crashes with error in mpi_comm.gather()
         # the same situation if treads not so much - solution increase number of treads.
         print "nsuperperiods = ", nsuperperiods
-        track_list = tracking(lat, nturns, track_list, nsuperperiods)
+        track_list = tracking(lat, nturns, track_list, nsuperperiods, save_track = save_track)
         return track_list
     start = time()
     track_list = mpi_comm.scatter(chunks_track_list, root=0)
     print " scatter time = ", time() - start, " sec, rank = ", rank, "  len(pxy_list) = ", len(track_list)
     start = time()
-    track_list = tracking(lat, nturns, track_list, nsuperperiods)
+    track_list = tracking(lat, nturns, track_list, nsuperperiods, save_track = save_track)
     print " scanning time = ", time() - start, " sec, rank = ", rank
     start = time()
     out_track_list = mpi_comm.gather(track_list, root=0)

@@ -139,6 +139,7 @@ def freq_analysis(track_list, lat, nturns, harm = True, diap = 0.10, nearest = F
     for n, pxy in enumerate(track_list):
         if pxy.turn == nturns-1:
             if len(pxy.p_list) == 1:
+                #print len(pxy.p_list)
                 print "For frequency analysis coordinates are needed for each turns. Check tracking option 'save_track' must be True "
                 return track_list
             x = map(lambda p: p[0], pxy.p_list)
@@ -245,7 +246,6 @@ def ellipse_track_list(beam, n_t_sigma = 3, num = 1000, type = "contour"):
 
 
 def tracking(lat, nturns, track_list, nsuperperiods, save_track = True):
-    #save_track = False
     xlim, ylim, px_lim, py_lim = aperture_limit(lat, xlim = 1, ylim = 1)
     navi = Navigator()
     t_maps = get_map(lat, lat.totalLen, navi)
@@ -255,19 +255,21 @@ def tracking(lat, nturns, track_list, nsuperperiods, save_track = True):
     for i, pxy in enumerate(track_list):
         p_array[i] = pxy.p
 
-    for i in xrange(nsuperperiods*nturns):
+    for i in xrange(nturns):
         print i
+        for n in xrange(nsuperperiods):
 
-        for tm in t_maps:
-            tm.apply(p_array)
 
-        p_indx = p_array.rm_tails(xlim, ylim, px_lim, py_lim)
+            for tm in t_maps:
+                tm.apply(p_array)
 
-        track_list = delete(track_list, p_indx)
+            p_indx = p_array.rm_tails(xlim, ylim, px_lim, py_lim)
+
+            track_list = delete(track_list, p_indx)
         for n, pxy in enumerate(track_list):
             pxy.turn = i
             #pxy.p_list = append(pxy.p_list, p_array.particles[n*6:n*6+6])
-            if save_track:
+            if  save_track:
                 pxy.p_list.append(p_array.particles[n*6:n*6+6])
     return np.array(track_list_const)
 

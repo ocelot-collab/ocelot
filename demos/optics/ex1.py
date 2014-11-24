@@ -24,7 +24,7 @@ def init_geometry():
     m1 = Mirror(r=[0,0,-20*cm], size=[10*cm,10*cm,20*mm], no=[0.0,-1,-1], id="m1")
     m2 = Mirror(r=[0,-50*cm,-20*cm], size=[10*cm,5*cm,20*mm], no=[0.0,1,1], id="m2")
     m3 = Mirror(r=[0,-50*cm,20*cm], size=[10*cm,10*cm,1*mm], no=[0.0,1,-1], id="m3")
-    m4 = Mirror(r=[0,0,20*cm], size=[10*cm,8*cm,10*mm], no=[0.0,-1,0.8], id="m4")
+    m4 = Mirror(r=[0,0,20*cm], size=[10*cm,8*cm,10*mm], no=[0.0,-1,1.0], id="m4")
 
     geo = Geometry([m1,m2,m3,m4])
 
@@ -32,17 +32,17 @@ def init_geometry():
 
 
 geo = init_geometry()
-scene = init_plots(['geometry:x'], geo)
+scene = init_plots(['geometry:y'], geo)
 
 rays = []
 
-sigma_y = 1.e-1 # rad
+sigma_y = 0.1e-1 # rad
 
-for i in xrange(20):
+for i in xrange(100):
     r = Ray(r0=[0,0,-0.3], k=[0,np.random.randn()*sigma_y,1])
     trace_ray(r, geo)
     rays.append(r)
 
-plot_rays(scene.ax[0], rays)
+plot_rays(scene.ax[0], rays, proj='y')
 
 plt.show()

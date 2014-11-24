@@ -49,12 +49,13 @@ def closed_orbit(lattice, eps_xy = 1.e-7, eps_angle = 1.e-7):
 
 
 def weights(val):
-    if val == 'Dx': return 10.0
-    if val == 'Dxp': return 10.0
+    if val == 'Dx': return 100.0
+    if val == 'Dxp': return 100.0
+    if val == 'tau': return 10000000.0
     
     return 0.0001
 
-def match(lat, constr, vars, tw, print_proc = 1):
+def match(lat, constr, vars, tw, print_proc = 1, max_iter=1000):
     
     #tw = deepcopy(tw0)
     
@@ -65,6 +66,9 @@ def match(lat, constr, vars, tw, print_proc = 1):
         for i in xrange(len(vars)):
             if vars[i].__class__ == Quadrupole:
                 vars[i].k1 = x[i]
+                vars[i].transfer_map = create_transfer_map(vars[i], energy = tw.E)
+            if vars[i].__class__ in [RBend, SBend, Bend]:
+                vars[i].angle = x[i]
                 vars[i].transfer_map = create_transfer_map(vars[i], energy = tw.E)
             if vars[i].__class__ == list:
                 if vars[i][0].__class__ == Twiss and  vars[i][1].__class__ == str:
@@ -77,39 +81,93 @@ def match(lat, constr, vars, tw, print_proc = 1):
                 tw_loc = periodic_solution(tw_loc, lattice_transfer_map(lat).R)
                 if tw_loc == None:
                     return 1.0
+        
+        # save reference points where equality is asked   
+        
+        ref_hsh = {} # penalties on two-point inequalities
+             
+        for e in constr.keys():
+            for k in constr[e].keys():
+                if constr[e][k].__class__ == list:
+                    if constr[e][k][0] == '->':
+                        #print 'creating reference to', constr[e][k][1].id
+                        ref_hsh[constr[e][k][1]] = {k:0.0}
+                
+        #print 'references:', ref_hsh.keys()
+                
         #print "after: ", tw_loc.beta_x
         for e in lat.sequence:
-            #print e.id
-            #print e.transfer_map
-            #print tw
-            #print 'k', e.transfer_map*tw
+            #print e.id, constr.keys()
             tw_loc = e.transfer_map*tw_loc
-            #print "ttt: ", tw_loc.mux, tw_loc.beta_x, tw_loc.beta_y
-            if e.id in constr.keys():
-                #print e.id
+            
+            if 'global' in constr.keys():
+                #print 'there is a global constraint', constr['global'].keys()  
+                for c in constr['global'].keys():
+                    if constr['global'][c].__class__ == list:
+                        #print 'list'   
+                        v1 = constr['global'][c][1]
+                        if constr['global'][c][0] == '<':
+                            #print '< constr'                             
+                            if tw_loc.__dict__[c] > v1:
+                                err = err + (tw_loc.__dict__[c] - v1)**2
+                        if constr['global'][c][0] == '>':
+                            #print '> constr' 
+                            if tw_loc.__dict__[c] < v1:
+                                err = err + (tw_loc.__dict__[c] - v1)**2
+
+            
+            if e in ref_hsh.keys():
+                #print 'saving twiss for', e.id 
+                ref_hsh[e] = deepcopy(tw_loc)
+            
+            if e in constr.keys():
+                #print 'match point', e.id
                 #print tw_loc.Dx
                 #print constr[e.id]['Dx']
-                for k in constr[e.id].keys():
-                    if constr[e.id][k].__class__ == list:
-                        print 'list'   
-                        v1 = constr[e.id][k][1]
-                        if constr[e.id][k][0] == '<':
-                            print '< constr'                             
+                                
+                for k in constr[e].keys():
+                    #print 'evaluation debug: constr ', e.id, k
+                                        
+                    if constr[e][k].__class__ == list:
+                        #print 'list'   
+                        v1 = constr[e][k][1]
+                        if constr[e][k][0] == '<':
+                            #print '< constr'                             
                             if tw_loc.__dict__[k] > v1:
                                 err = err + (tw_loc.__dict__[k] - v1)**2
-                        if constr[e.id][k] == '>':
+                        if constr[e][k][0] == '>':
+                            #print '> constr' 
                             if tw_loc.__dict__[k] < v1:
                                 err = err + (tw_loc.__dict__[k] - v1)**2
 
+                        if constr[e][k][0] == '->':
+                            #print '-> constr'
+                            try:
+                                #print 'ref constraint:'
+                                #print k
+                                #print v1 
+                                #print ref_hsh[v1]
+                                #print ref_hsh[v1].__dict__.keys()
+                                #print ref_hsh[v1].__dict__[k], tw_loc.__dict__[k]
+
+                                err += (tw_loc.__dict__[k] - ref_hsh[v1].__dict__[k])**2
+
+                                if tw_loc.__dict__[k] < v1:
+                                    err = err + (tw_loc.__dict__[k] - v1)**2
+                            except:
+                                print 'constraint error: rval should precede lval in lattice'
+
                         if tw_loc.__dict__[k] < 0:
+                            #print 'negative constr (???)'
                             err += (tw_loc.__dict__[k] - v1)**2
                             
                     else:
-                        #print "safaf", constr[e.id][k] , tw_loc.__dict__[k], k,tw_loc.mux
-                        err = err + weights(k) * (constr[e.id][k] - tw_loc.__dict__[k])**2
+                        #print "safaf", constr[e.id][k] , tw_loc.__dict__[k], k
+                        err = err + weights(k) * (constr[e][k] - tw_loc.__dict__[k])**2
+                        #print err
 
         if print_proc == 1:
-            print err
+            print 'iteration error:', err
         return err
 
     
@@ -124,14 +182,18 @@ def match(lat, constr, vars, tw, print_proc = 1):
                     x[i] = 0.0
         if vars[i].__class__ == Quadrupole:
             x[i] = vars[i].k1
-    #print "x = ", x
-    res = fmin(errf,x,xtol=1e-8, maxiter=2.e3, maxfun=2.e3)
+        if vars[i].__class__ in [RBend, SBend, Bend] :
+            x[i] = vars[i].angle
+
+    print "initial value: x = ", x
+    res  = fmin(errf,x,xtol=1e-8, maxiter=max_iter, maxfun=max_iter)
     #print res
     for i in xrange(len(vars)):
         if vars[i].__class__ == list:
             if vars[i][0].__class__ == Twiss and  vars[i][1].__class__ == str:
                 k = vars[i][1]
                 tw.__dict__[k] = res[i]
+    return res
     
     #print res
 

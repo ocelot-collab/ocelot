@@ -31,11 +31,7 @@ def init_plots(views, geo):
             plot_geometry(scene.ax[iview], geo)
             scene.ax[iview].grid()
             projection_name = views[iview].split(':')[1]
-            scene.ax[iview].text(0.15, 0.85, projection_name,
-                                 horizontalalignment='left',
-                                 verticalalignment='top',
-                                 transform=scene.ax[iview].transAxes)
-            #scene.time_text = scene.ax[iview].text(0.05, 0.9, '', transform=scene.ax[iview].transAxes)
+            scene.ax[iview].set_title(projection_name)
 
         if views[iview].startswith('detectors'):
             if views[iview].startswith('detectors:'):
@@ -51,6 +47,8 @@ def init_plots(views, geo):
 
 
 def plot_geometry(ax, geo, scales = [1,1,1]):
+
+    debug("plotting geometry")
     
     for o in geo():
         if o.__class__ == Mirror:
@@ -135,6 +133,7 @@ def plot_geometry(ax, geo, scales = [1,1,1]):
             li, = ax.plot([o.r[2],o.r[2]], [o.r[1] - o.size[1], o.r[1] + o.size[1]], color='#999999', lw=3)
             
         if o.__class__ == Grating:
+            debug("plotting grating")
             #TODO; replace with generic rotation
             ang = - np.arctan2(o.no[1] , o.no[2]) - pi
             #print 'ang=', ang

@@ -195,7 +195,7 @@ for i in xrange(len(r.s)):
     print 'propagating thru', r.obj[i], r.s[i] 
     propagate_fourier(of, obj=r.obj[i], dz=r.s[i])
     plot_field(of, title=r.obj[i].id + ".left")
-    if r.obj[i] != None and r.obj[i].__class__ != Drift:
+    if r.obj[i] != None and r.obj[i].__class__ != OptDrift:
         propagate_fourier(of, obj=None, dz=r.s[i])
         plot_field(of, title= r.obj[i].id + ".right")
 

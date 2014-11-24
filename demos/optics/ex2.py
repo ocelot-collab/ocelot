@@ -59,8 +59,8 @@ rays.append(r)
 scene.ax[0].plot( [-f,f],[a[1],a[1]],color='red', lw=1)
 '''
 
-plot_rays(scene.ax[0], rays)
-
+plot_rays(scene.ax[0], rays, proj='x')
+plot_rays(scene.ax[1], rays, proj='y')
 
 
 plt.show()

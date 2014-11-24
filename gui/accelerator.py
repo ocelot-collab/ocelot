@@ -44,6 +44,9 @@ def plot_lattice(lat, axis, alpha=1.0, params={'kmax':2.0, 'ang_max':0.5e-2}):
     ang_max = params['ang_max']           # max dipole strength in lattice
     min_dipole_height = 0.1  # dipole of any strength will show at least this strength 
 
+    min_solenoid_height = 0.1
+    sol_max = 0.1
+
     kmax = params['kmax']
     min_quad_height = 0.1
 
@@ -55,7 +58,7 @@ def plot_lattice(lat, axis, alpha=1.0, params={'kmax':2.0, 'ang_max':0.5e-2}):
     
     for e in lat.sequence:
         
-        if e.type in ['bend','sbend', 'rbend', 'quadrupole', 'undulator', 'drift', 'monitor','hcor','vcor', 'cavity','edge']:
+        if e.type in ['bend','sbend', 'rbend', 'quadrupole', 'undulator', 'drift', 'monitor','hcor','vcor', 'cavity','edge', 'solenoid']:
             e.s = total_len
             rendered_seq.append(e)
             rendered_len += e.l
@@ -68,6 +71,12 @@ def plot_lattice(lat, axis, alpha=1.0, params={'kmax':2.0, 'ang_max':0.5e-2}):
             axis.add_patch( mpatches.Rectangle(offs+np.array([pos, 0.0]), dx, 
                                                np.sign(-e.angle) * min_dipole_height - e.angle / ang_max * (1- min_dipole_height), 
                                                color='#0099FF', alpha = alpha))
+
+        if e.type in ['solenoid']:
+            axis.add_patch( mpatches.Rectangle(offs+np.array([pos, 0.0]), dx, 
+                                               np.sign(-e.k) * min_solenoid_height - e.k / sol_max * (1- min_solenoid_height), 
+                                               color='#FF99FF', alpha = alpha))
+
 
         if e.type in ['quadrupole']:
                         

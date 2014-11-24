@@ -51,12 +51,13 @@ def find_intersections(ray, geo):
                 no = o.no
                 
                 r_int = ray.r0[-1] + s_int * ray.k[-1]
-                                
+                debug('r_int=', r_int)                                
                 # check intersection with elliptic 'aperture'                
                 r_loc = r_int - o.r
+                debug('r_loc unrotated=', r_loc)
                 phi = np.arccos(o.no[2]/ np.linalg.norm(o.no))
-                r_loc[1] = r_loc[1] * cos(phi) + r_loc[2] * cos(phi) 
-                r_loc[2] = r_loc[2] * sin(phi) - r_loc[1] * sin(phi)
+                r_loc[1] = r_loc[1] * cos(phi) + r_loc[2] * sin(phi) 
+                r_loc[2] = r_loc[2] * cos(phi) - r_loc[1] * sin(phi)
                 debug('r_loc=', r_loc, 'size=',o.size)
                 
                 # correct intersection for curved elements
@@ -136,12 +137,14 @@ def trace(ray, geo):
         
         # ray length to intersection
         s, obj, r_loc, no = find_intersections(ray, geo)
-        debug('intersection', s, obj, no)
         
         if s == np.inf:
             info('ray leaves geometry, terminating')
             break
+
         
+        debug('intersection: s=', s, 'obj:',  obj.id, 'normal',  no)
+                
         #propagate to boundary
         ray.s[-1] = s 
         r0_new = ray.r0[-1] + ray.k[-1] * ray.s[-1]
@@ -150,15 +153,13 @@ def trace(ray, geo):
         if obj.__class__ == Mirror:
             
             debug('reflecting off', obj.id)
-            debug(np.dot(obj.no, ray.k[-1]) / ( np.linalg.norm(obj.no) * np.linalg.norm(ray.k[-1]) ))
+            debug('cos(angle):', np.dot(obj.no, ray.k[-1]) / ( np.linalg.norm(obj.no) * np.linalg.norm(ray.k[-1]) ))
             
             phi = np.arccos( np.dot(obj.no, ray.k[-1]) / ( np.linalg.norm(obj.no) * np.linalg.norm(ray.k[-1]) ) )
             
+            sgn = np.sign( np.dot([1,0,0],np.cross(obj.no, ray.k[-1])) ) 
             
-            debug('ray/normal angle', phi / pi ,'pi')
-            
-            
-            sgn = np.dot([1,0,0],np.cross(obj.no, ray.k[-1]))
+            debug('ray/normal angle', phi / pi ,'pi', ' sign', sgn)
             
             phi = (2*phi - pi) * sgn
             

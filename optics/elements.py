@@ -2,7 +2,7 @@
 optics elements
 '''
 
-#from numpy import sin, cos, pi, sqrt, log, array, random, sign
+from numpy import sin, cos, pi, sqrt, log, array, random, sign
 #from numpy.linalg import norm
 import numpy as np
 
@@ -17,12 +17,83 @@ def info(*args):
     print ' '.join( map(str, args) )
 
 
+class OptElement:
+    
+    ''' OptElement is an optics building element with an arbitrary set of parameters attached '''
+    
+    def __init__(self, r, roll_ang, pitch_ang, yaw_ang, size, id):
+        self.id = id
+        if id == None:
+            #print 'setting automatic id'
+            self.id = "ID_{0}_".format(np.random.randint(100000000))
+        self.type = "none"
+        self.r = np.array(r)
+        self.size = size
+
+        # outwards (from mirror surface) looking normal
+        # default -- in y direction (elements in xz plane)
+        no = np.matrix([[0., 1., 0.]]).T
+        
+        z_ax = np.matrix([[0., 0., 1.]]).T
+        
+        self.pitch_ang = pitch_ang
+        M1 = np.matrix([[1., 0., 0.],
+                        [0., cos(pitch_ang), sin(pitch_ang)],
+                        [0., -sin(pitch_ang), cos(pitch_ang)]])
+        #if pitch_ang 
+        
+        no = M1 * no
+        z_ax = M1 * z_ax
+
+
+        self.yaw_ang = yaw_ang
+        M2 = np.matrix([[cos(yaw_ang), 0.,  sin(yaw_ang)],
+                        [0.,           1.,  0.],
+                        [-sin(yaw_ang),0.,  cos(yaw_ang)]])
+        #if pitch_ang 
+        
+        no = M2 * no
+        z_ax = M2 * z_ax
+
+
+        
+        self.roll_ang = roll_ang
+
+        c = cos(roll_ang)
+        s = sin(roll_ang)
+        x, y, z = np.array(z_ax.T).reshape(-1) #no[0][0], no[0][1], no[0][2]
+        #print x, y, z
+        #print no
+        
+        M3 = np.matrix([[c + x**2*(1. - c), x*y*(1.-c) - z*s, x*z*(1.-c) + y*s],
+                        [y*x*(1.-c) + z*s, c + y**2*(1.-c), y*z*(1.-c) - x*s],
+                        [z*x*(1.-c) - y*s, z*y*(1.-c) + x*s , c + z**2*(1. - c)]])
+        
+        
+        #print M3
+        
+        no = M3 * no
+        
+        self.no = np.array(no.T).reshape(-1)     
+
+
+            
+    def __hash__(self):
+        return hash( (self.id, self.type) )
+
+    def __eq__(self, other):
+        try:
+            return (self.id, type) == (other.id, type)
+        except:
+            return False
+
+
 class Aperture:
     """
     all optical element sizes are for circular aperture
     add Aperture element in front to model more complex shapes/apertures
     """
-    def __init__(self, r=[0,0,0], d=[0,0], no = [0,0,1], size=[1,1,0.1], id="",type = "circular"): 
+    def __init__(self, r=[0,0,0], d=[0,0], no = [0,0,1], size=[1,1,0.1], id=None, type = "circular"): 
         self.r = r
         self.no = no
         self.d = d
@@ -58,27 +129,17 @@ class Lense:
             return c
 
 
-class Mirror:
+class Mirror(OptElement):
     """
     plane mirror
     """
-    def __init__(self, r=[0,0,0], no=[0,0,1], size=[1.0,1.0,0.1], id=""):
-        self.r = np.array(r)
-        self.no = np.array(no)    # outwards (from mirror surface) looking normal 
-        self.size = size
-        self.id = id
+    def __init__(self, r=[0,0,0], roll_ang=0.0, pitch_ang=0.0, yaw_ang=0.0, size=[1.0,1.0,0.1], id=None):
+        OptElement.__init__(self, r, roll_ang, pitch_ang, yaw_ang, size, id)
         
-        def x_fun(self,r):
-            # determine crossing
-            pass
 
-
-class EllipticMirror:
-    def __init__(self, r=[0,0,0], no=[0,0,1], size=[1.0,1.0,0.2], a=[1,1], id=""):
-        self.r = np.array(r)
-        self.no = np.array(no)    # outwards (from mirror surface) looking normal 
-        self.size = size
-        self.id = id
+class EllipticMirror(OptElement):
+    def __init__(self, r=[0,0,0], roll_ang=0.0, pitch_ang=0.0, yaw_ang=0.0, size=[1.0,1.0,0.2], a=[1,1], id=""):
+        OptElement.__init__(self, r, roll_ang, pitch_ang, yaw_ang, size, id)
         self.a = np.array(a) # major/minor axis of the ellipse
 
 

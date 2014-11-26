@@ -27,10 +27,9 @@ def init_plots(views, geo):
         scene.ax[iview] = scene.fig.add_subplot(view_id, autoscale_on=True)
 
         if views[iview] == 'geometry:x' or views[iview] == 'geometry:y':
-            #scene.line_wf, = scene.ax[iview].plot([], [], '.', lw=2)
-            plot_geometry(scene.ax[iview], geo)
-            scene.ax[iview].grid()
             projection_name = views[iview].split(':')[1]
+            plot_geometry(scene.ax[iview], geo, projection_name)
+            scene.ax[iview].grid()
             scene.ax[iview].set_title(projection_name)
 
         if views[iview].startswith('detectors'):
@@ -46,22 +45,24 @@ def init_plots(views, geo):
     return scene
 
 
-def plot_geometry(ax, geo, scales = [1,1,1]):
+def plot_geometry(ax, geo, proj='y'):
 
-    debug("plotting geometry")
+    debug("plotting geometry ", proj)
+
+            
+    if proj == 'y': idx = 1
+    if proj == 'x': idx = 0
     
     for o in geo():
-        if o.__class__ == Mirror:
-            
-            #TODO; replace with generic rotation
-            ang = - np.arctan2(o.no[1] , o.no[2]) - pi
+        if o.__class__ == Mirror: 
+            ang = - np.arctan2(o.no[idx] , o.no[2]) - pi
             #print 'ang=', ang
-            z1 = o.r[2] - o.size[1] * sin(ang)
+            z1 = o.r[2] - o.size[idx] * sin(ang)
             z2 = o.r[2]
-            z3 = o.r[2] + o.size[1] * sin(ang)
-            y1 = -o.size[1] + o.r[1] + o.size[1]*(1-cos(ang))
-            y2 = o.r[1]
-            y3 = o.size[1] + o.r[1] - o.size[1]*(1-cos(ang))
+            z3 = o.r[2] + o.size[idx] * sin(ang)
+            y1 = -o.size[idx] + o.r[idx] + o.size[idx]*(1-cos(ang))
+            y2 = o.r[idx]
+            y3 = o.size[idx] + o.r[idx] - o.size[idx]*(1-cos(ang))
             li, = ax.plot([z1,z2,z3], [y1,y2,y3], 'b-', lw=3)
 
             y_bnd = np.linspace(y1,y3, 100)
@@ -74,17 +75,17 @@ def plot_geometry(ax, geo, scales = [1,1,1]):
         if o.__class__ == EllipticMirror:
             
             #TODO; replace with generic rotation
-            ang = - np.arctan2(o.no[1] , o.no[2]) - pi
+            ang = - np.arctan2(o.no[idx] , o.no[2]) - pi
             #print 'ang=', ang
-            z1 = o.r[2] - o.size[1] * sin(ang)
+            z1 = o.r[2] - o.size[idx] * sin(ang)
             z2 = o.r[2]
-            z3 = o.r[2] + o.size[1] * sin(ang)
-            y1 = -o.size[1] + o.r[1] + o.size[1]*(1-cos(ang))
-            y2 = o.r[1]
-            y3 = o.size[1] + o.r[1] - o.size[1]*(1-cos(ang))
+            z3 = o.r[2] + o.size[idx] * sin(ang)
+            y1 = -o.size[idx] + o.r[idx] + o.size[idx]*(1-cos(ang))
+            y2 = o.r[idx]
+            y3 = o.size[idx] + o.r[idx] - o.size[idx]*(1-cos(ang))
             #li, = ax.plot([z1,z2,z3], [y1,y2,y3], color="#aa00ff", lw=3)
 
-            phi_max = np.arcsin(o.size[1]/o.a[0])
+            phi_max = np.arcsin(o.size[idx]/o.a[0])
 
             #y_bnd = np.linspace(y1,y3, 100)
             phi_bnd = np.linspace(-phi_max, phi_max, 100)
@@ -93,7 +94,7 @@ def plot_geometry(ax, geo, scales = [1,1,1]):
 
             for i in xrange( len(phi_bnd) ):
                 z_bnd[i] = o.r[2] + o.a[0]*sin(phi_bnd[i]) 
-                y_bnd[i] = o.r[1] + o.a[1] - o.a[1]*cos(phi_bnd[i])
+                y_bnd[i] = o.r[idx] + o.a[1] - o.a[1]*cos(phi_bnd[i])
 
             #for z,y in zip(z_bnd[5:-10:10],y_bnd[5:-10:10]):
             n_step = 2
@@ -105,7 +106,7 @@ def plot_geometry(ax, geo, scales = [1,1,1]):
 
         if o.__class__ == ParabolicMirror:
             
-            y_bnd = np.linspace(-o.size[1], o.size[1], 100)
+            y_bnd = np.linspace(-o.size[idx], o.size[idx], 100)
             z_bnd = o.r[2] - o.a[1] * y_bnd**2
 
             #print y_bnd, z_bnd
@@ -125,24 +126,24 @@ def plot_geometry(ax, geo, scales = [1,1,1]):
 
         if o.__class__ == Aperture:
             
-            li, = ax.plot([o.r[2],o.r[2]], [o.r[1] + o.d[1],o.r[1] + o.size[1]], color='#000000', lw=3)
-            li, = ax.plot([o.r[2],o.r[2]], [o.r[1] -o.d[1],o.r[1] - o.size[1]], color='#000000', lw=3)
+            li, = ax.plot([o.r[2],o.r[2]], [o.r[idx] + o.d[idx],o.r[idx] + o.size[idx]], color='#000000', lw=3)
+            li, = ax.plot([o.r[2],o.r[2]], [o.r[idx] -o.d[idx],o.r[idx] - o.size[idx]], color='#000000', lw=3)
 
         if o.__class__ == Crystal:
             
-            li, = ax.plot([o.r[2],o.r[2]], [o.r[1] - o.size[1], o.r[1] + o.size[1]], color='#999999', lw=3)
+            li, = ax.plot([o.r[2],o.r[2]], [o.r[idx] - o.size[idx], o.r[idx] + o.size[idx]], color='#999999', lw=3)
             
         if o.__class__ == Grating:
             debug("plotting grating")
             #TODO; replace with generic rotation
-            ang = - np.arctan2(o.no[1] , o.no[2]) - pi
+            ang = - np.arctan2(o.no[idx] , o.no[2]) - pi
             #print 'ang=', ang
-            z1 = o.r[2] - o.size[1] * sin(ang)
+            z1 = o.r[2] - o.size[idx] * sin(ang)
             z2 = o.r[2]
-            z3 = o.r[2] + o.size[1] * sin(ang)
-            y1 = -o.size[1] + o.r[1] + o.size[1]*(1-cos(ang))
-            y2 = o.r[1]
-            y3 = o.size[1] + o.r[1] - o.size[1]*(1-cos(ang))
+            z3 = o.r[2] + o.size[idx] * sin(ang)
+            y1 = -o.size[idx] + o.r[idx] + o.size[idx]*(1-cos(ang))
+            y2 = o.r[idx]
+            y3 = o.size[idx] + o.r[idx] - o.size[idx]*(1-cos(ang))
             li, = ax.plot([z1,z2,z3], [y1,y2,y3], color="#AA3377", lw=3)
 
             y_bnd = np.linspace(y1,y3, 100)
@@ -173,14 +174,14 @@ def plot_geometry(ax, geo, scales = [1,1,1]):
 
 
 
-def plot_rays(ax, rays, proj='x'):
+def plot_rays(ax, rays, proj='x', alpha=0.4):
     
     for r in rays:
         debug('plotting ray!', r.r0[0], r.k[0], r.s[0])
         for i in xrange(len(r.r0)):
             debug('-->', r.r0[i], r.k[i], r.s[i])
             if proj == 'x':
-                ax.plot([r.r0[i][2], r.r0[i][2] + r.k[i][2]*r.s[i] ], [r.r0[i][0], r.r0[i][0] + r.k[i][0]*r.s[i] ], color='#006600', lw=1, alpha=0.4 )
+                ax.plot([r.r0[i][2], r.r0[i][2] + r.k[i][2]*r.s[i] ], [r.r0[i][0], r.r0[i][0] + r.k[i][0]*r.s[i] ], color='#006600', lw=1, alpha=alpha )
             if proj == 'y':
-                ax.plot([r.r0[i][2], r.r0[i][2] + r.k[i][2]*r.s[i] ], [r.r0[i][1], r.r0[i][1] + r.k[i][1]*r.s[i] ], color='#006600', lw=1, alpha=0.4 )
+                ax.plot([r.r0[i][2], r.r0[i][2] + r.k[i][2]*r.s[i] ], [r.r0[i][1], r.r0[i][1] + r.k[i][1]*r.s[i] ], color='#006600', lw=1, alpha=alpha )
     

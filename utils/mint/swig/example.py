@@ -1,5 +1,6 @@
+import ocelot.utils.mint.mint as mint
+import ocelot.utils.mint.swig.dcs as dcs
 import os, sys
-import dcs
 
 from pylab import *
 
@@ -7,12 +8,6 @@ print 'testing info...'
 print dcs.cvar.pi
 print dcs.info()
 
-
-print 'testing beam info...'
-b = dcs.Beam(14)
-print b.i
-b.foo()
-print b.i
 
 print 'testing 1d functions...'
 f = dcs.Func_1d(400)
@@ -36,19 +31,39 @@ print 'sum', f.sum()
 print 'addition', f + g
 
 
-print 'devce getter test:'
+h = dcs.test_func_1d_2(300)
+plt.plot(h)
+
+print "parameter getter test..."
+p = dcs.get_parameters();
+print p.energy
+
+print 'device getter test:'
 
 print dcs.get_device_val("bbb")
 
-p = dcs.Parameters()
-p.x = 37.6
 
-'''
-dcs.track(f, p)
-print f
+print 'device setter test:'
 
-dcs.track(f, p)
-print f
-'''
+print 'bpm test ...'
+bpm = dcs.BPM("bpm_id")
+
+print bpm.id, bpm.x, bpm.y
+
+dcs.get_bpm_val(bpm)
+
+print bpm.id, bpm.x, bpm.y
+
+
+print 'orbit test ...'
+
+orb = dcs.get_orbit()
+print orb[0].id, orb[0].x, orb[0].y
+print orb[1].id, orb[1].x, orb[1].y
+
+print orb.get("bpm1").id, orb.get("bpm1").x, orb.get("bpm1").y
+print orb.get("bpm2").id, orb.get("bpm2").x, orb.get("bpm2").y
+print orb.get("bpm48").id
+
 
 plt.show()

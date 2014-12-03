@@ -1,6 +1,7 @@
-/* File: example.c */
+/* simple c++ interface to doocs for python binding */
 
 #include "dcs.hh"
+#include <eq_client.h>
 
 double pi = 3.14;
 
@@ -9,7 +10,35 @@ char* info() { return "info"; }
 
 MParameters::MParameters(char* desc) { this->energy = 0.0; }
 
-BPM::BPM(char* id) {this->id = id; this->x = 0.0; this->y = 0.0;}
+BPM::BPM(char* id) {
+	this->id = (char*) malloc(strlen(id) + 1); 
+	memcpy(this->id, id, strlen(id));
+	this->channel_x = (char*) malloc( strlen(id) + strlen("/X.FLASH1") + 1);
+	memcpy(this->channel_x, id, strlen(id));
+	memcpy(this->channel_x + strlen(id), "/X.FLASH1", strlen("/X.FLASH1") + 1);//+1 to copy the null-terminator
+	this->channel_y = (char*) malloc( strlen(id) + strlen("/Y.FLASH1") + 1);
+	memcpy(this->channel_y, id, strlen(id));
+	memcpy(this->channel_y + strlen(id), "/Y.FLASH1", strlen("/Y.FLASH1") + 1);//+1 to copy the null-terminator
+	this->channel_z = (char*) malloc( strlen(id) + strlen("/Z_POS") + 1);
+	memcpy(this->channel_z, id, strlen(id));
+	memcpy(this->channel_z + strlen(id), "/Z_POS", strlen("/Z_POS") + 1);//+1 to copy the null-terminator
+
+	this->x = 0.0; 
+	this->y = 0.0;
+	this->z_pos = 0.0;
+}
+
+Device::Device(char* id) {
+	this->id = (char*) malloc(strlen(id) + 1); 
+	memcpy(this->id, id, strlen(id));
+	this->channel_z = (char*) malloc( strlen(id) + strlen("/Z_POS") + 1);
+	memcpy(this->channel_z, id, strlen(id));
+	memcpy(this->channel_z + strlen(id), "/Z_POS", strlen("/Z_POS") + 1);//+1 to copy the null-terminator
+
+	this->z_pos = 0.0;
+}
+
+
 char* BPM::info() { return id;}
 
 Orbit::Orbit() {}
@@ -45,6 +74,39 @@ Func_1d test_func_1d_2(int n){
 	return f2;
 }
 
+Func_1d get_device_td(char* device_name) {
+
+	char buf[STRING_LENGTH]; 
+	int rc;
+    EqAdr  ea; 
+    EqData src;
+    EqData dst; 
+    EqCall eq;
+    
+    char* addr; addr = device_name;
+    ea.adr(addr); 
+
+    printf(addr);
+    rc = eq.get(&ea, &src, &dst); 
+
+    if (rc) {
+        printf("\nRead error %d\n", dst.error());
+	}
+    else {   
+        printf("\nData type %s (%d)\n", dst.type_string(), dst.type());
+	printf("Length %d %d\n", dst.length(), dst.array_length());
+        printf("\nData is %s\n", dst.get_string(buf, sizeof(buf)));        
+    }
+    
+	int n = dst.length();
+	Func_1d f2(n);
+	for (int i=0; i<n;i++) f2.f[i] = dst.get_double(i);
+	return f2;
+        
+    
+
+}
+
 MParameters get_parameters() {
 	MParameters p("flash");
 	p.energy = 678;
@@ -52,13 +114,86 @@ MParameters get_parameters() {
 }
 
 double get_device_val(char* device_name) {
+
 	cout << "debug: getting device value for " << device_name << endl;
-	return -12.0;
+
+
+	char buf[STRING_LENGTH]; 
+	int rc;
+    EqAdr  ea; 
+    EqData src;
+    EqData dst; 
+    EqCall eq;
+    
+    char* addr; addr = device_name;
+    ea.adr(addr); 
+
+    rc = eq.get(&ea, &src, &dst); 
+
+    if (rc) {
+        printf("\nRead error %d\n", dst.error());
+	return 0.0;
+	}
+    else {  return dst.get_double();     }
+    
+}
+
+int set_device_val(char* device_name, double val) {
+	return 0;
 }
 
 int get_bpm_val(BPM* b) {
-	b->x = rand() % 100;
-	b->y = rand() % 100;
+	cout << "debug: getting bpm reading for " << b->id << endl;
+	char   buf[STRING_LENGTH]; 
+	int    rc;
+	EqAdr  ea; 
+	EqData src;
+	EqData dst; 
+	EqCall eq;
+    
+  	char* addr; 
+	
+	addr = b->channel_x;
+	ea.adr(addr); 
+	cout << "device address : " << addr << endl;
+  	rc = eq.get(&ea, &src, &dst); 
+	if (rc) { printf("\nRead error %d\n", dst.error()); }
+	else {  b->x = dst.get_double(); }
+
+	addr = b->channel_y;
+	ea.adr(addr); 
+	cout << "device address : " << addr << endl;
+  	rc = eq.get(&ea, &src, &dst); 
+	if (rc) { printf("\nRead error %d\n", dst.error()); }
+	else {  b->y = dst.get_double(); }
+
+	addr = b->channel_z;
+	ea.adr(addr); 
+	cout << "device address : " << addr << endl;
+  	rc = eq.get(&ea, &src, &dst); 
+	if (rc) { printf("\nRead error %d\n", dst.error()); }
+	else {  b->z_pos = dst.get_double(); }
+
+	
+}
+
+int get_device_info(Device* d) {
+	cout << "debug: getting device info for " << d->id << endl;
+	char   buf[STRING_LENGTH]; 
+	int    rc;
+	EqAdr  ea; 
+	EqData src;
+	EqData dst; 
+	EqCall eq;
+    
+  	char* addr; 	
+	addr = d->channel_z;
+	ea.adr(addr); 
+	cout << "device address : " << addr << endl;
+  	rc = eq.get(&ea, &src, &dst); 
+	if (rc) { printf("\nRead error %d\n", dst.error()); }
+	else {  d->z_pos = dst.get_double(); }
+
 }
 
 Orbit get_orbit() {
@@ -72,5 +207,3 @@ Orbit get_orbit() {
 
 	return orb;
 }
-
-//int track(Field *f, Parameters p) { f->f[0] += p.x; }

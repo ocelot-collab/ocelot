@@ -23,16 +23,29 @@ public:
 };
 
 
+class Device {
+public:
+	char* id;
+	char* channel_z;
+	double z_pos;
+public:
+	Device(char*);
+};
+
 class BPM {
 public:
 	char* id;
+	char* channel_x;
+	char* channel_y;
+	char* channel_z;
 	double x;
 	double y;
-	double s_pos;
+	double z_pos;
 public:
 	BPM(char*);
 	char* info();
 };
+
 
 class Orbit {
 public:
@@ -54,11 +67,18 @@ public:
 };
 
 
+int get_device_info(Device*);
+
 double get_device_val(char* device_name);
+int set_device_val(char* device_name, double val);
+
+Func_1d get_device_td(char* device_name);
 
 int test_func_1d(Func_1d* f, int n);
 
 Func_1d test_func_1d_2(int n);
+
+
 
 MParameters get_parameters();
 

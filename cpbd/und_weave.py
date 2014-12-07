@@ -3,9 +3,11 @@ __author__ = 'Sergey Tomin'
 #import numpy as np
 from numpy import sqrt, matrix, cos, sin, log, tan, eye, zeros, pi, array, linspace, dot, abs, random, arctan, sign
 from scipy import weave
-
+#import os
+#os.environ["CC"] = "gcc-4.8"
+#os.environ["CXX"] = "gcc-4.8"
 def track_und_sym(y0, z, kz, kx, Kx, energy):
-    gamma = energy*1949.
+    gamma = energy*1957.
     #if energy == 0:
     #    h0 = 0.
     #else:
@@ -41,20 +43,27 @@ def track_und_sym(y0, z, kz, kx, Kx, energy):
     double h = Q1(9);
     int N = Q1(10);
     double h0 = Q1(11); //rho = Q1(11);
-
+    double h02 = h0*h0;
     int i;
     double kx2 = kx*kx;
     double ky2 = ky*ky;
     double kz2 = kz*kz;
-    double Kx = kx2/kz2*h0*h0;
-    double Ky = ky2/kz2*h0*h0;
+    double Kx = kx2/kz2*h02;
+    double Ky = ky2/kz2*h02;
+    double x2, y2, x4, y4;
+    h = h/(1. + delta);
     for ( i = 0; i<N-1; i++){
-        px = px - h*Kx/(1+delta)*(x/2. + kx2*x*x*x/3. + kz2*x*y*y);
-        py = py - h*Ky/(1+delta)*(y/2. + ky2*y*y*y/3. + kz2*kx2*x*x*y/ky2);
-        tau = tau - h/(1+delta)/(1+delta) *((px*px+py*py)/2. +Kx*x*x/4. + Ky*y*y/4.
-                                + Kx*kx2*x*x*x*x/12. + Ky*ky2*y*y*y*y/12. + Kx*kz2*x*x*y*y/4.);
-        x = x + h*px/(1+delta);
-        y = y + h*py/(1+delta);
+        x2 = x*x;
+        y2 = y*y;
+        x4 = x2*x2;
+        y4 = y2*y2;
+        px = px - h*Kx*(x/2. + kx2*x2*x/3. + kz2*x*y2 + (kx2*kx2* x4*x)/15. + (kx2* kz2* x2*x *y2)/3. + (kz2*ky2*x*y4)/6. );
+        py = py - h*Ky*(y/2. + ky2*y2*y/3. + kz2*kx2*x2*y/ky2 + (kx2 *kz2* x2* y2*y)/3. + (kx2*kx2* kz2* x4*y)/(6.*ky2)  + (ky2*ky2* y4*y)/15. );
+        tau = tau - h/(1.+delta) *((px*px + py*py)/2. + Kx*x2/4. + Ky*y2/4.
+                                + Kx*kx2*x4/12. + Ky*ky2*y4/12.  + Kx*kx2*kx2/90.*x4*x2 + Ky*ky2*ky2/90.*y4*y2
+                                + h02*(kx2*ky2/12.*x2*y4 + kx2*kx2/12.*x4*y2 + kx2*x2*y2/4.) );
+        x = x + h*px;
+        y = y + h*py;
     }
     U1(0) = x;
     U1(1) = px;
@@ -71,7 +80,7 @@ def track_und_sym(y0, z, kz, kx, Kx, energy):
     return x, px,y, py, tau
 
 def track_und_mag(y0, z, kz, kx, Kx, energy):
-    gamma = energy*1949
+    gamma = energy*1957.
     rho = gamma/Kx/kz
     #c = 299792458
     #m0 = 0.510998928*1e+6
@@ -109,14 +118,14 @@ def track_und_mag(y0, z, kz, kx, Kx, energy):
     double kx2 = kx*kx;
     double ky2 = ky*ky;
     double kz2 = kz*kz;
-    double K = h/(2.*rho*rho);
+    double K = h/(2.*rho*rho*kz2);
     for ( i = 0; i<N-1; i++){
 
         x = x + h*px;
         y = y + h*py;
-        px = px + K* kz2*x*y*y/2.;
+        px = px - K* (kx2*x - ky2*ky2/2.*x*y*y + (1./(8.*rho*rho) - kx2/2.)*kz2*x*x*x);
         //py = py - K*(y + kz2*y*y*y/6.);
-        py = py - K*(y - kz2*y*y*y/6.);
+        py = py - K* (ky2*y + ky2*ky2/6.*y*y*y - (3./(8.*rho*rho) - 3.*kx2/2.)*kz2*x*x*y);
     }
     U1(0) = x;
     U1(1) = px;
@@ -134,7 +143,7 @@ def track_und_mag(y0, z, kz, kx, Kx, energy):
 
 
 def track_und_RK(y0, z, kz, kx ,Kx, energy):
-    gamma = energy*1949
+    gamma = energy*1957.
     #rho = gamma/Kx/kz
     c = 299792458
     m0 = 0.510998928*1e+6
@@ -337,6 +346,181 @@ def track_und_RK(y0, z, kz, kx ,Kx, energy):
     z = u[4::6]
     pz = u[5::6]
     return x, px,y, py, z, pz
+
+
+def track_und_openmp(u, l, N, kz, kx ,Kx, energy):
+    gamma = energy*1957.
+    #rho = gamma/Kx/kz
+    c = 299792458
+    m0 = 0.510998928*1e+6
+    B0 = Kx*m0*kz/c
+
+    ky = sqrt(kz*kz - kx*kx)
+    z = linspace(0, l, num=N)
+    h = z[1]-z[0]
+    N = len(z)
+
+    nparticles = len(u)/6
+    q = array([ kx, ky, kz, h, N, B0, gamma, nparticles])
+    code = """
+    double charge = 1;
+    double mass = 1; //in electron mass
+
+    double cmm = 299792458;
+
+    double massElectron = 0.510998910e+6; // rest mass of electron
+
+    double kx = Q1(0);
+    double ky = Q1(1);
+    double kz = Q1(2);
+
+    double dz = Q1(3);
+    int N = Q1(4);
+    double B0 = Q1(5);
+
+    int npart = Q1(7);
+
+    double sq;
+    #pragma omp parallel for
+    for(int n = 0; n < npart; n++)
+    {
+        double kx1, ky1;
+        double kx2, ky2;
+        double kx3, ky3;
+        double kx4, ky4;
+        double mx1, my1;
+        double mx2, my2;
+        double mx3, my3;
+        double mx4, my4;
+        double bx2;
+        double by2;
+        double gamma = Q1(6);//*(1+U1(n*6 + 5));
+        double dGamma2 = 1. - 0.5/(gamma*gamma);
+        double k = charge*cmm/(massElectron*mass*gamma);
+
+        double X = U1(n*6 + 0);
+        double bxconst = U1(n*6 + 1);
+        double Y = U1(n*6 + 2);
+        double byconst = U1(n*6 + 3);
+        double Bx;
+        double By;
+        double Bz;
+        //double pz = dGamma2 - (bxconst*bxconst + byconst*byconst)/2.;
+        //bz = pz;
+        double dzk = dz*k;
+        double Z = 0.;
+
+        for(int i = 0; i < N-1; i++)
+        {
+            double x = X;
+            double y = Y;
+            double z = Z;
+            double bx = bxconst;
+            double by = byconst;
+
+            Bx = -B0*kx/ky*sin(kx*x)*sinh(ky*y)*cos(kz*z); // here kx is only real
+            By = B0*cos(kx*x)*cosh(ky*y)*cos(kz*z);
+            Bz = -B0*kz/ky*cos(kx*x)*sinh(ky*y)*sin(kz*z);
+
+            //motion->XbetaI2[i] = motion->By[i];
+            kx1 = bx*dz;
+            ky1 = by*dz;
+            bx2 = bx*bx;
+            by2 = by*by;
+            //sq = 1 + (bx2 + by2)/2.;
+            sq = sqrt(1 + bx2 + by2);
+
+            mx1 = sq*(by*Bz - By*(1+bx2) + bx*by*Bx)*dzk;
+            my1 = -sq*(bx*Bz - Bx*(1+by2) + bx*by*By)*dzk;
+            //K2
+            //err = B3D(field, X + kx1/2., Y + ky1/2., Z + dz/2. + Zshift, pBx, pBy, pBz);
+            x = X + kx1/2.;
+            y = Y + ky1/2.;
+            z = Z + dz/2.;
+            Bx = -B0*kx/ky*sin(kx*x)*sinh(ky*y)*cos(kz*z); // here kx is only real
+            By = B0*cos(kx*x)*cosh(ky*y)*cos(kz*z);
+            Bz = -B0*kz/ky*cos(kx*x)*sinh(ky*y)*sin(kz*z);
+
+            bx = bxconst + mx1/2.;
+            by = byconst + my1/2.;
+
+            kx2 = bx*dz;
+            ky2 = by*dz;
+            bx2 = bx*bx;
+            by2 = by*by;
+            //sq = 1 + (bx2 + by2)/2.;
+            sq = sqrt(1 + bx*bx + by*by);
+            mx2 = sq*(by*Bz - By*(1+bx2) + bx*by*Bx)*dzk;
+            my2 = -sq*(bx*Bz - Bx*(1+by2) + bx*by*By)*dzk;
+            // K3
+            //err = B3D(field, X + kx2/2., Y + ky2/2., Z + dz/2. + Zshift, pBx, pBy, pBz);
+
+            x = X + kx2/2.;
+            y = Y + ky2/2.;
+            z = Z + dz/2.;
+            Bx = -B0*kx/ky*sin(kx*x)*sinh(ky*y)*cos(kz*z); // here kx is only real
+            By = B0*cos(kx*x)*cosh(ky*y)*cos(kz*z);
+            Bz = -B0*kz/ky*cos(kx*x)*sinh(ky*y)*sin(kz*z);
+
+            bx = bxconst + mx2/2.;
+            by = byconst + my2/2.;
+
+            kx3 = bx*dz;
+            ky3 = by*dz;
+            bx2 = bx*bx;
+            by2 = by*by;
+            //sq = 1 + (bx2 + by2)/2.;
+            sq = sqrt(1 + bx*bx + by*by);
+            mx3 = sq*(by*Bz - By*(1+bx2) + bx*by*Bx)*dzk;
+            my3 = -sq*(bx*Bz - Bx*(1+by2) + bx*by*By)*dzk;
+
+            //K4
+            //err = B3D(field, X + kx3, Y + ky3, Z + dz + Zshift,pBx, pBy, pBz);
+
+            x = X + kx3;
+            y = Y + ky3;
+            z = Z + dz;
+            Bx = -B0*kx/ky*sin(kx*x)*sinh(ky*y)*cos(kz*z); // here kx is only real
+            By = B0*cos(kx*x)*cosh(ky*y)*cos(kz*z);
+            Bz = -B0*kz/ky*cos(kx*x)*sinh(ky*y)*sin(kz*z);
+
+            bx = bxconst + mx3;
+            by = byconst + my3;
+
+
+            kx4 = bx*dz;
+            ky4 = by*dz;
+            bx2 = bx*bx;
+            by2 = by*by;
+            //sq = 1 + (bx2 + by2)/2.;
+            sq = sqrt(1 + bx*bx + by*by);
+            mx4 = sq*(by*Bz - By*(1+bx2) + bx*by*Bx)*dzk;
+            my4 = -sq*(bx*Bz - Bx*(1+by2) + bx*by*By)*dzk;
+
+            X = X + 1/6.*(kx1 + 2.*kx2 + 2.*kx3 + kx4);
+            bxconst = bxconst + 1/6.*(mx1 + 2.*mx2 + 2.*mx3 + mx4); // conversion in mrad
+            Y= Y + 1/6.*(ky1 + 2.*ky2 + 2.*ky3 + ky4);
+            byconst = byconst + 1/6.*(my1 + 2.*my2 + 2.*my3 + my4);
+
+            Z = Z + dz;
+            //bz = dGamma2 - (bxconst*bxconst +byconst*byconst)/2.; //bz;
+        }
+        U1(n*6 + 0) = X;
+        U1(n*6 + 1) = bxconst;
+        U1(n*6 + 2) = Y;
+        U1(n*6 + 3) = byconst;
+    }
+
+
+
+    """
+    weave.inline(code, ['u',"q"],
+    extra_compile_args =['-O3 -fopenmp'],
+    compiler = 'gcc',
+    libraries=['gomp'],
+    headers=['<omp.h>']
+    )
+    return u
 
 
 

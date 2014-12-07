@@ -62,8 +62,8 @@ def radiation_integral(lattice, twiss_0, nsuperperiod = 1):
             I5 += H3*simps(array(Hinvariant), Z)
         tws_elem = elem.transfer_map*tws_elem
     if abs(tws_elem.beta_x - twiss_0.beta_x)>1e-7 or abs(tws_elem.beta_y - twiss_0.beta_y)>1e-7:
-        print "beta functions are not matching!, ruturn None"
-        return None
+        print "WARNING! Results may be wrong! radiation_integral() -> beta functions are not matching. "
+        #return None
     return (I1*nsuperperiod,I2*nsuperperiod,I3*nsuperperiod, I4*nsuperperiod, I5*nsuperperiod)
 
 class EbeamParams:

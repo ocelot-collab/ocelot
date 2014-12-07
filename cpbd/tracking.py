@@ -332,6 +332,7 @@ def tracking_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods
         return track_list
 
 
+
 def fma(lat, nturns, x_array, y_array, nsuperperiods = 1):
     from mpi4py import MPI
     mpi_comm = MPI.COMM_WORLD
@@ -355,7 +356,7 @@ def da_mpi(lat, nturns, x_array, y_array, errors = None, nsuperperiods = 1):
     rank = mpi_comm.Get_rank()
 
     track_list = create_track_list(x_array, y_array)
-    track_list = tracking_mpi(mpi_comm, lat, nturns, track_list, errors = errors, nsuperperiods = nsuperperiods)
+    track_list = tracking_mpi(mpi_comm, lat, nturns, track_list, errors = errors, nsuperperiods = nsuperperiods, save_track=False)
 
     if rank == 0:
         da = array(map(lambda track: track.turn, track_list))#.reshape((len(y_array), len(x_array)))

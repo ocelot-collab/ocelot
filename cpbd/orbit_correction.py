@@ -136,12 +136,13 @@ class Orbit:
         X = []
         Y = []
         self.particle0 = closed_orbit(lattice)
-        p = self.particle0
-        navi = Navigator(lattice)
+        #print "particle2 = ", self.particle0.s, self.particle0.x
+        p = copy.copy(self.particle0)
+        navi = Navigator()
         L = 0.
         for bpm in self.bpms:
             dz = bpm.s - L
-            p = single_track(lattice, p, dz, navi)
+            track(lattice, [p], dz, navi)
             bpm.x = p.x
             bpm.y = p.y
             L = bpm.s

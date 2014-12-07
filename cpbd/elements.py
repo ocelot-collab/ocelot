@@ -6,6 +6,8 @@ linear dimensions in [m]
 from ocelot.cpbd.field_map import FieldMap
 from ocelot.cpbd.optics import create_transfer_map
 from ocelot.common.globals import *
+import numpy as np
+
 
 flatten = lambda *n: (e for a in n
                             for e in (flatten(*a) if isinstance(a, (tuple, list)) else (a,)))
@@ -20,7 +22,8 @@ class Element:
     def __init__(self, id = None):
         self.id = id
         if id == None:
-            id = ""
+            #print 'setting automatic id'
+            self.id = "ID_{0}_".format(np.random.randint(100000000))
         self.type = "none"
         self.tilt = 0        # TILT: The roll angle about the longitudinal axis
                              # (default: 0 rad, i.e. a normal quadrupole).
@@ -32,6 +35,17 @@ class Element:
         self.dtilt = 0
         
         self.params = {}
+        
+    
+    def __hash__(self):
+        return hash( (self.id, self.type) )
+
+    def __eq__(self, other):
+        try:
+            return (self.id, type) == (other.id, type)
+        except:
+            return False
+    
 
 # to mark locations of bpms and other diagnostics
 class Monitor(Element):
@@ -304,6 +318,22 @@ class MagneticLattice:
         if not self.check_edges():
             self.add_edges()
         self.update_transfer_maps()
+        
+        
+        self.__hash__ = {}
+        #print 'creating hash'
+        for e in self.sequence:
+            #print e
+            self.__hash__[e] = e
+        
+
+    
+    def __getitem__(self, el):
+        try:
+            return self.__hash__[el]
+        except:
+            return None
+    
 
     def check_edges(self):
         """

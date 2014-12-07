@@ -1,0 +1,1 @@
+DOOCSROOT := $(shell (cd ${DOOCSROOT} ; /bin/pwd))

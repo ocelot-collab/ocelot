@@ -51,22 +51,34 @@ def find_intersections(ray, geo):
                 no = o.no
                 
                 r_int = ray.r0[-1] + s_int * ray.k[-1]
-                                
+                debug('r_int=', r_int)                                
                 # check intersection with elliptic 'aperture'                
                 r_loc = r_int - o.r
+                debug('r_loc unrotated=', r_loc)
+                
+                
                 phi = np.arccos(o.no[2]/ np.linalg.norm(o.no))
-                r_loc[1] = r_loc[1] * cos(phi) + r_loc[2] * cos(phi) 
-                r_loc[2] = r_loc[2] * sin(phi) - r_loc[1] * sin(phi)
+                r_loc[1] = r_loc[1] * cos(phi) + r_loc[2] * sin(phi) 
+                r_loc[2] = r_loc[2] * cos(phi) - r_loc[1] * sin(phi)
+                                
                 debug('r_loc=', r_loc, 'size=',o.size)
                 
                 # correct intersection for curved elements
                 if o.__class__ == EllipticMirror:
-                    # note that a[0] is the majot axis
+                    # note that a[0] is the major axis
                     
-                    kz = ray.k[-1][2]
+                    #r_loc[0] = r_loc[0] * cos(o.roll) + r_loc[1] * sin(o.roll) 
+                    #r_loc[1] = r_loc[1] * cos(o.roll) - r_loc[0] * sin(o.roll)
+
+                    debug('r_loc=', r_loc, 'size=',o.size)
+
+                    kz = ray.k[-1][2]                    
                     ky = ray.k[-1][1]
+
                     rz = r_int[2]
                     ry = r_int[1] - o.a[1]
+                    
+                    
                     az = o.a[0]
                     ay = o.a[1]
                     
@@ -101,8 +113,7 @@ def find_intersections(ray, geo):
                     ang = arctan2(1./az*r_loc[2], 1./ay*(-r_loc[1] + ay))
                     
                     #debug(r_loc[2], r_loc[1] - ay)
-                    debug('ellipse angle=', ang)
-                    
+                    debug('ellipse angle=', ang)                    
                     debug('local coord:', az*sin(ang), -ay*cos(ang) + ay)
                     
                     no = np.array([0, cos(ang),-ay/az*sin(ang)]) / np.sqrt(ay**2/az**2*sin(ang)**2 + cos(ang)**2 ) 
@@ -122,6 +133,15 @@ def find_intersections(ray, geo):
     
     return s, obj, r_loc, no
 
+
+def refl_matrix(no):
+    x, y, z = no
+    M = np.matrix([[-1. + 2.*x**2, 2.*x*y, 2.*x*z],
+                   [2.*y*x, -1. + y**2*(1.+1), y*z*(1.+1)],
+                   [2.*z*x, 2.*z*y , -1. + 2.*z**2]])
+    return M
+
+
 def trace(ray, geo):
     """
     tracing the ray, starting from last segment
@@ -136,12 +156,14 @@ def trace(ray, geo):
         
         # ray length to intersection
         s, obj, r_loc, no = find_intersections(ray, geo)
-        debug('intersection', s, obj, no)
         
         if s == np.inf:
             info('ray leaves geometry, terminating')
             break
+
         
+        debug('intersection: s=', s, 'obj:',  obj.id, 'normal',  no)
+                
         #propagate to boundary
         ray.s[-1] = s 
         r0_new = ray.r0[-1] + ray.k[-1] * ray.s[-1]
@@ -150,32 +172,15 @@ def trace(ray, geo):
         if obj.__class__ == Mirror:
             
             debug('reflecting off', obj.id)
-            debug(np.dot(obj.no, ray.k[-1]) / ( np.linalg.norm(obj.no) * np.linalg.norm(ray.k[-1]) ))
-            
-            phi = np.arccos( np.dot(obj.no, ray.k[-1]) / ( np.linalg.norm(obj.no) * np.linalg.norm(ray.k[-1]) ) )
-            
-            
-            debug('ray/normal angle', phi / pi ,'pi')
-            
-            
-            sgn = np.dot([1,0,0],np.cross(obj.no, ray.k[-1]))
-            
-            phi = (2*phi - pi) * sgn
-            
-            
-            debug('rotating by:', phi / pi, 'pi')
-            
+            '''
+            x, y, z = obj.no #no[0][0], no[0][1], no[0][2]
         
-            M = np.matrix([[1, 0, 0],
-                           [0, cos(phi), sin(phi)],
-                           [0, -sin(phi), cos(phi)]])
-
-            k_new = np.asarray(np.dot(M, ray.k[-1]))[0]
+            M3 = np.matrix([[-1. + 2.*x**2, 2.*x*y, 2.*x*z],
+                            [2.*y*x, -1. + y**2*(1.+1), y*z*(1.+1)],
+                            [2.*z*x, 2.*z*y , -1. + 2.*z**2]])
+            '''
+            k_new = np.asarray(np.dot( refl_matrix(obj.no), -ray.k[-1]))[0]
             
-            #print '###',ray.k[-1].shape, '###',obj.no
-            #k_new = rotate_pi(ray.k[-1], obj.no )
-            
-            #k_new - 
             debug(ray.k[-1], '--->', k_new)
             s_new = 1
             ray.r0.append(r0_new)
@@ -196,7 +201,7 @@ def trace(ray, geo):
             debug('cos=',cs)
             
             if np.abs(cs) > 1:
-                print 'warning, reflection angle andustment by ', cs + 1.0
+                print 'warning, reflection angle adjustment by ', cs + 1.0
                 if cs > 1: cs = 1.0
                 else: cs = -1.0
             

@@ -200,7 +200,7 @@ def propagate_fourier(of, dz, obj=None, scale=1.0):
     wave propagator
     '''
     
-    if obj == None or obj.__class__ == Drift:
+    if obj == None or obj.__class__ == OptDrift:
         debug('wave propagator: drift')
         spec = fft.fft2(of[:,:])
         

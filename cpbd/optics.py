@@ -572,14 +572,14 @@ def create_transfer_map(element, order=1, energy = 0):
             
             alpha = sqrt(eta / 8.) / cos(phi) * log(Ef/E)
             
-            print 'cavity map Ei=',E, 'Ef=', Ef, 'alpha=', alpha
+            #print 'cavity map Ei=',E, 'Ef=', Ef, 'alpha=', alpha
             
             r11 = cos(alpha) - sqrt(2./eta) * cos(phi) * sin(alpha)
             r12 = sqrt(8./eta) * Ef / Ep * cos(phi) * sin(alpha)
             r21 = -Ep/E * (cos(phi)/ sqrt(2*eta) + sqrt(eta/8.) / cos(phi) ) * sin(alpha)
             r22 = E/Ef * ( cos(alpha) + sqrt(2./eta) * cos(phi) * sin(alpha) )
             
-            print r11, r12, r21, r22
+            #print r11, r12, r21, r22
             
             cav_matrix = array([[r11, r12, 0. ,0. ,0., 0.],
                                 [r21, r22, 0. ,0. ,0., 0.],
@@ -591,12 +591,12 @@ def create_transfer_map(element, order=1, energy = 0):
             return cav_matrix
                 
         if element.E == 0 or (element.v < 1.e-10 and element.delta_e < 1.e-10 ):
-            print 'Unit CAVITY MAP:', element.E, 'GeV'
+            #print 'Unit CAVITY MAP:', element.E, 'GeV'
             transfer_map.R_z = lambda z: uni_matrix(z, 0, hx = 0, sum_tilts = element.dtilt + element.tilt)
             transfer_map.R = transfer_map.R_z(element.l)
         else:
-            print 'CAVITY MAP:', element.E, 'GeV'
-            print element.E, element.v, element.delta_e 
+            #print 'CAVITY MAP:', element.E, 'GeV'
+            #print element.E, element.v, element.delta_e 
             transfer_map.R_z = lambda z: cavity_R_z(z, de = element.delta_e * z / element.l, f=element.f, E=element.E)
             transfer_map.R = transfer_map.R_z(element.l)
 

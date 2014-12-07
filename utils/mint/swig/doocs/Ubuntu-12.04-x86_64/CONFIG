@@ -1,0 +1,761 @@
+#
+# File:         CONFIG
+#
+#		Configuration file for compiling DOOCS source code 
+#		for Linux nodes assuming 64 bit architecture.
+#
+# $Date: 2013-02-01 13:28:38 $
+#
+# $Source: /doocs/doocssvr1/cvsroot/Ubuntu-10.04-x86_64/CONFIG,v $
+#
+#
+#
+# Author:       Gerhard Grygiel <grygiel@desy.de>
+#               Copyright 1995
+#
+#               This program is free software; you can redistribute it
+#               and/or  modify it under  the terms of  the GNU General
+#               Public  License as  published  by  the  Free  Software
+#               Foundation;  either  version 2 of the License, or  (at
+#               your option) any later version.
+#
+#
+# $Log: CONFIG,v $
+# Revision 1.42  2013-02-01 13:28:38  wilksen
+# Fix nightly build path after removing version number
+#
+# Revision 1.41  2012/08/06 13:40:32  arthura
+# *** empty log message ***
+#
+# Revision 1.40  2012/07/19 11:51:00  ohensler
+# added zmq to LDLIBS
+#
+# Revision 1.39  2012-07-13 12:06:31  wilksen
+# Put back DMSG flag for 0MQ support
+#
+# Revision 1.38  2012/07/10 12:08:30  wilksen
+# Make make DEV=true work now with newest development builds
+#
+# Revision 1.37  2012/07/09 16:24:14  wilksen
+# Fix OSVERSION again
+#
+# Revision 1.36  2012/07/09 16:07:21  wilksen
+# Major revamp and reshuffle of include and lib directory order: now local /doocs/doocssvr1/Darwin-i386 takes precedence over /local/Darwin-i386 which takes precedence over /doocs/doocssvr1/Darwin-i386. The first one depends on your own local setup and requires using the make localinstall target to go into effect. The /local can be changed through the MDOOCS variable, the fallback and central location /doocs/doocssvr1 can be modified via the DOOCS variable.
+#
+# Revision 1.35  2012/07/09 11:34:18  wilksen
+# More changes do base root directories denoted by DOOCS, MDOOCS and DOOCSROOT
+#
+# Revision 1.34  2012/07/06 07:41:14  wilksen
+# Added dl library for runtime loading of 0MQ libs
+#
+# Revision 1.33  2012/06/29 08:59:18  wilksen
+# Update to develepment build usage
+#
+# Revision 1.32  2012/06/28 08:25:23  wilksen
+# Resync CONFIG files
+#
+# Revision 1.31  2012/06/13 17:30:19  arthura
+# *** empty log message ***
+#
+# Revision 1.30  2012/06/12 11:22:46  arthura
+# *** empty log message ***
+#
+# Revision 1.29  2012/06/12 09:11:08  grygiel
+# remove unused var -L$(ZMQLIB)
+#
+# Revision 1.28  2012-06-12 08:59:41  grygiel
+# change OSVERSION to DOOCSARCH
+#
+# Revision 1.27  2012-06-12 08:52:42  grygiel
+# fix undefined reference to clock_gettime: add -lrt to the list of watchdog libraries
+#
+# Revision 1.26  2012-06-12 07:26:51  arthura
+# *** empty log message ***
+#
+# Revision 1.25  2012/06/11 12:10:41  arthura
+# *** empty log message ***
+#
+# Revision 1.24  2012/05/23 15:49:57  wilksen
+# Add development target switch for used libraries
+#
+# Revision 1.23  2012/05/23 15:48:21  wilksen
+# Add development target switch for used libraries
+#
+# Revision 1.22  2012/04/25 07:32:38  wilksen
+# Clean up
+#
+# Revision 1.21  2012/04/25 07:30:01  wilksen
+# Clean up
+#
+# Revision 1.20  2012/02/10 12:45:08  wilksen
+# Updated CONFIG file
+#
+# Revision 1.19  2012/01/24 12:22:00  wilksen
+# Adjusted include paths
+#
+# Revision 1.18  2011/08/17 08:28:57  ohensler
+# added value for NINE_MHZ
+#
+# Revision 1.17  2011/07/29 15:10:17  wilksen
+# C Compiler needs to know also flags for sampling rate
+#
+# Revision 1.16  2011-06-27 10:53:40  ohensler
+# added -lIOBUS
+#
+# Revision 1.15  2011-06-22 12:58:39  ohensler
+# added SAMPLING_RATE
+#
+# Revision 1.14  2011/06/16 08:57:40  wilksen
+# Clean-up, synch and added support for Octave compilation
+#
+# Revision 1.13  2011/05/05 10:29:27  ohensler
+# added IO_BUSLIBS
+#
+# Revision 1.12  2011/05/04 09:11:41  ohensler
+# added IO_BUS
+#
+# Revision 1.11  2011/03/07 07:45:07  wilksen
+# New OPTIMIZED and ARCHITECTURE flag to separate minimal set of flags for given platform and flags for optimizing code. Can be overwritten by environment variable.
+#
+# Revision 1.10  2011/03/03 07:59:40  ohensler
+# added USER and HOST defines
+#
+# Revision 1.9  2011-02-18 16:23:11  wilksen
+# Streamline and synchronize MATLAB flags across versions and platforms
+#
+# Revision 1.8  2011/02/18 13:14:02  wilksen
+# MATLAB adjustments
+#
+# Revision 1.7  2011/02/11 14:26:25  wilksen
+# Clean up and synch with Solaris platforms
+#
+# Revision 1.6  2011/01/24 16:19:28  grygiel
+# correct Matlab path
+#
+# Revision 1.5  2011-01-14 10:27:01  rybnikov
+# -D__LINUX__ added
+#
+# Revision 1.4  2010-11-25 16:30:58  grygiel
+# correct MEX_EXT
+#
+# Revision 1.3  2010-11-24 09:27:04  grygiel
+# gff is replaced by f77
+#
+# Revision 1.2  2010-11-18 14:17:06  wilksen
+# 64-bit compiler requires PIC setting also for FORTRAN flags
+#
+# Revision 1.1  2010-10-26 12:04:45  grygiel
+# new platform Ubuntu 10.04 64 Bit
+#
+# Revision 1.1  2009/11/05 17:12:17  grygiel
+# add Debian-4.0-x86_64 as independent architecture
+#
+# Revision 1.2  2009/11/05 13:22:36  grygiel
+# add common Path to install the libraries and the binaries
+#
+# Revision 1.1  2009/11/05 13:12:59  grygiel
+# add Debian-3.1-i686 as independent architecture
+#
+# Revision 1.98  2009/07/02 12:28:08  arthura
+# *** empty log message ***
+#
+# Revision 1.97  2009/04/21 14:31:24  arthura
+# *** empty log message ***
+#
+# Revision 1.95  2008/10/31 09:00:08  grygiel
+# use localhost
+#
+# Revision 1.94  2008-01-14 13:59:24  grygiel
+# polishing
+#
+# Revision 1.93  2007/10/31 15:09:26  grygiel
+# add var CRYPT
+#
+# Revision 1.92  2007-09-07 09:10:47  vahan
+# remove crypt, it's not needed to do it here
+#
+# Revision 1.91  2007-07-09 13:01:17  grygiel
+# remove MKVSTRINGCCFLAGS
+#
+# Revision 1.90  2007-05-09 09:04:28  grygiel
+# bugfix for DEB_BUILD_ARCH
+#
+# Revision 1.89  2007-04-24 08:40:31  grygiel
+# add cxx
+#
+# Revision 1.88  2007/02/27 08:26:52  grygiel
+# add ROOT definitions
+#
+# Revision 1.87  2007/01/05 13:58:51  grygiel
+# add LABVIEW var to avoid warnings
+#
+# Revision 1.86  2006/11/08 16:36:53  tbruns
+# *** empty log message ***
+#
+# Revision 1.85  2006/11/08 16:36:14  tbruns
+# *** empty log message ***
+#
+# Revision 1.84  2006/07/03 15:17:30  grygiel
+# switch back to matlab6p5, license reasons
+#
+# Revision 1.83  2006/03/20 09:39:06  grygiel
+# -mcpu= is deprecated on gcc 4.0.
+#
+# Revision 1.82  2006-03-03 13:14:29  grygiel
+# remove debian specifics
+#
+# Revision 1.81  2005/08/04 06:54:23  grygiel
+# remove CCDEP_SERVER
+#
+# Revision 1.80  2005/07/27 16:21:19  grygiel
+# changes for f77 linking
+#
+# Revision 1.79  2005/07/26 12:51:08  grygiel
+# epics now shared libs and epics libs now in debian package epics-base
+#
+# Revision 1.78  2005/06/24 08:09:20  grygiel
+# update LDLIBS
+#
+# Revision 1.77  2005/06/22 08:30:44  grygiel
+# fix typo
+#
+# Revision 1.76  2005/06/22 08:27:51  grygiel
+# changes for epics version 3.14.6
+#
+# Revision 1.75  2005/06/13 11:01:13  grygiel
+# add DEB_BUILD_ARCH to DEBIANVERSIONNAME
+#
+# Revision 1.74  2004/11/01 16:27:45  grygiel
+# BugFix SVR_VER
+#
+# Revision 1.73  2004/10/28 16:55:09  grygiel
+# change to matlab R14 SP1
+#
+# Revision 1.72  2004/10/15 15:27:40  grygiel
+# change SVR_VER extraction
+#
+# Revision 1.71  2004/10/14 16:10:52  grygiel
+# BugFix: ACPPFLAGS
+#
+# Revision 1.70  2004/10/14 13:09:59  grygiel
+# implement DEB_BUILD_ARCH and sarge
+#
+# Revision 1.69  2004/06/15 11:46:04  grygiel
+# change LDLIBS to +LDLIBS
+#
+# Revision 1.68  2004/03/24 07:42:48  grygiel
+# add converters
+#
+# Revision 1.67  2004/02/05 09:09:28  grygiel
+# add -O2
+#
+# Revision 1.66  2003/12/18 09:54:34  grygiel
+# change g77 to g77-3.0
+
+# Revision 1.65  2003/12/09 08:46:05  grygiel
+# add xalan and xercesc
+#
+# Revision 1.64  2003/11/27 16:37:15  grygiel
+# add CCDEP_SERVER
+#
+# Revision 1.63  2003/11/18 16:40:00  grygiel
+# add OPTIMIZING flag
+#
+# Revision 1.62  2003/10/28 08:34:38  grygiel
+# add the next debian major release
+#
+# Revision 1.61  2003/10/28 08:09:13  grygiel
+# add AList support for gcc-3.0
+#
+# Revision 1.60  2003/10/13 12:28:43  grygiel
+# new var OPT
+#
+# Revision 1.59  2003/08/13 15:14:29  grygiel
+# changes for new libs
+#
+# Revision 1.58  2003/03/18 12:47:11  grygiel
+# change matlab link flags
+#
+# Revision 1.57  2002/11/15 13:26:41  grygiel
+# add makefile assistance for matlab external functions
+#
+# Revision 1.56  2002/08/01 12:01:20  grygiel
+# add -lmwm_parser for Matlab
+#
+# Revision 1.55  2002/07/31 14:42:50  grygiel
+# change EPICS for DOOCS from Version 3.12 to 3.13.1
+#
+# Revision 1.54  2002/05/28 08:46:40  grygiel
+# change paths from ttfsvr2 to doocssvr1
+#
+# Revision 1.53  2002/01/14 13:25:41  grygiel
+# correct old paths
+#
+# Revision 1.52  2002/01/14 13:09:15  grygiel
+# add -D_REENTRANT to CPPFLAGS
+#
+# Revision 1.51  2002/01/09 08:37:10  grygiel
+#  add -lpthread
+#
+# Revision 1.50  2001/08/16 14:39:12  grygiel
+# add debian PKG version to SVR_VER
+#
+# Revision 1.49  2001/08/13 09:05:53  grygiel
+# add DOOCSVERSIONS
+#
+# Revision 1.48  2001/08/13 08:49:59  grygiel
+# add var PKGDIR
+#
+# Revision 1.47  2001/08/01 13:06:39  grygiel
+#  add default SVR_VER
+#
+# Revision 1.46  2001/07/31 13:23:35  anna
+# change Matlab defines
+#
+# Revision 1.45  2001/07/31 12:35:28  anna
+# Add Matlab paths for linking
+#
+# Revision 1.44  2001/05/18 13:52:30  grygiel
+# Test
+#
+# Revision 1.43  2001/04/25 13:04:24  grygiel
+# TEST
+#
+# Revision 1.38  2001/04/24 11:00:44  grygiel
+# add SVR_VER VAR to eq_rpc_server.o tag
+#
+# Revision 1.37  2001/04/18 12:19:21  grygiel
+# for Linux the same as LINK.so: LINKapi.so needed by the api
+#
+# Revision 1.36  2001/03/02 15:21:00  grygiel
+# Test
+#
+# Revision 1.35  2001/03/02 15:20:01  grygiel
+# test
+#
+# Revision 1.34  2000/10/24 11:46:18  grygiel
+# change $(OS) to $(shell uname)
+#
+# Revision 1.33  2000/09/01 11:15:28  grygiel
+# minor changes
+#
+# Revision 1.32  2000/08/24 13:54:50  grygiel
+# change debian dir structure
+#
+# Revision 1.31  2000/07/06 14:11:06  grygiel
+# add pktrclientlib compilation
+#
+# Revision 1.30  2000/06/27 14:14:28  grygiel
+# change lib creation to the g++ compiler
+#
+# Revision 1.29  2000/05/11 13:25:40  duval
+# changes for doocs2tine
+#
+# Revision 1.28  2000/03/03 14:50:19  grygiel
+# add TINE
+#
+# Revision 1.27  2000/02/28 11:37:20  grygiel
+# add var POSINDEPCODE: the linker flag -fPIC for positionindependent code,
+# suitable  for  dynamic linking, even if branches need large displacements.
+#
+# Revision 1.26  1999/10/20 16:25:13  grygiel
+# change structure
+#
+# Revision 1.25  1999/10/15 11:56:43  grygiel
+# add var DEBIANUPLOAD
+#
+# Revision 1.24  1999/10/08 13:56:14  grygiel
+# add entry for eq_dummy_server
+#
+# Revision 1.23  1999/08/02 18:42:58  grygiel
+# changes for libc6 - GNU C Library
+#
+# Revision 1.22  1998/06/26 07:50:53  cobraadm
+# add WDOGBINDIRS
+#
+# Revision 1.21  1997/12/19 12:37:50  cobraadm
+# add define -DLINUX
+#
+# Revision 1.20  1997/11/25 16:06:27  cobraadm
+# add INSTLIBDIRSCLIENT
+#
+# Revision 1.19  1997/02/19 12:37:02  cobraadm
+# change develoopment structure
+#
+# Revision 1.18  1997/01/02 18:37:38  cobraadm
+# add ttfcryme
+#
+# Revision 1.17  1996/11/18 17:54:17  cobraadm
+# change %.o rule
+#
+# Revision 1.16  1996/10/08 20:02:07  cobraadm
+# changes for new system libs, new gnu compilers, and ddd
+#
+# Revision 1.15  1996/09/17 15:44:18  cobraadm
+# del COBRA libs
+#
+# Revision 1.14  1996/09/12 19:06:43  cobraadm
+# add statement to compile *.f files
+#
+# Revision 1.13  1996/07/25 16:02:17  cobraadm
+# repair all stupid changes
+#
+# Revision 1.12  1996/07/25 15:57:30  grygiel
+# Dies ist auch nur ein Test
+#
+# Revision 1.11  1996/07/25 15:54:14  cobraadm
+# Dies ist nur ein Test
+#
+# Revision 1.10  1996/07/12 09:55:07  cobraadm
+# only PATH for hesp05 change
+#
+# Revision 1.9  1996/03/27 13:58:06  cobraadm
+# define CDEP statement
+#
+# Revision 1.8  1996/01/31 16:56:44  cobraadm
+# add an entry to INSTBINDIRS
+#
+# Revision 1.7  1996/01/31 16:54:05  cobraadm
+# add an entry to INSTLIBDIRS
+#
+# Revision 1.6  1995/12/28 15:16:00  cobraadm
+# add hesp05 to INSTLIBDIRS and INSTBINDIRS
+#
+# Revision 1.5  1995/12/15 12:48:05  cobraadm
+# change from doocstest do doocs
+#
+# Revision 1.4  1995/11/28 13:01:42  cobraadm
+# changes for Linux 1.2.13 ELF with gcc 2.7.0
+#
+# Revision 1.3  1995/11/20 15:28:42  cobraadm
+# change INSTLIBDIRS
+#
+# Revision 1.2  1995/11/12  18:28:19  cobraadm
+# backward change to old gnu compiler
+#
+# Revision 1.6  1995/11/11 15:49:16  grygiel
+# Meine aenderungen sind die Richtigen Guido !!!
+#
+# Revision 1.5  1995/11/11 15:44:29  ggrygiel
+# Test L
+#
+# Revision 1.4  1995/11/11 15:41:00  grygiel
+# tests
+#
+# Revision 1.3  1995/11/11 15:37:41  ggrygiel
+# Auch nur cvs tests
+#
+# Revision 1.2  1995/11/11 15:35:17  grygiel
+# nur ein test des cvs Systems
+#
+# Revision 1.1.1.1  1995/11/07 16:09:37  grygiel
+# DOOCS sources
+#
+# Revision 1.4  1995/10/30  10:00:10  xgrygiel
+# *** empty log message ***
+#
+# Revision 1.3  1995/10/24  11:40:58  grygiel
+# add PHONY
+#
+# Revision 1.2  1995/10/23 14:39:19  grygiel
+# add INSTLIBDIRS and INSTBINDIRS
+#
+# Revision 1.1  1995/10/11  20:31:57  xgrygiel
+# Initial revision
+#
+# Revision 1.1  1995/10/06  14:57:02  grygiel
+# Initial revision
+#
+#
+
+# Detect operating system version
+OSVERSION = $(DOOCSARCH)
+
+ifneq  '$(shell uname)' 'Linux'
+*: .NOLINUX
+endif
+
+.NOLINUX:
+	@echo 
+	@echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" 
+	@echo "!!! YOU ARE TRYING TO COMPILE FOR LINUX ON A NONE LINUX MACHINE !!!!!!"
+	@echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+	@echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!  ABORT  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+	@echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+	@echo 
+	@exit 2
+
+DEBIAN_VERSION 	= $(shell if [ -f /etc/debian_version ] ; then \
+             	cat /etc/debian_version ;\
+		fi )
+
+DEB_BUILD_ARCH  = $(shell if [ -x /usr/bin/dpkg-architecture ] ; then \
+		dpkg-architecture | grep DEB_BUILD_ARCH \
+		| sed -e 's/DEB_BUILD_ARCH=//g' | grep -v DEB_BUILD_ARCH ;\
+		fi )
+
+SUSE_ARCH = $(shell if [ -f /etc/SuSE-release ] ; then \
+		cat /etc/SuSE-release | grep "SuSE Linux" \
+		| sed -e 's/SuSE Linux .*(//' | sed -e 's/)//' ;\
+		fi )
+
+SUSE_VERSION = $(shell if [ -f /etc/SuSE-release ] ; then \
+		cat /etc/SuSE-release | grep "VERSION" \
+		| sed -e 's/VERSION = //' ;\
+		fi )
+
+NODENAME		= `uname -n`
+USERNAME		= `whoami`
+
+PKGDIR := $(shell basename `pwd`)
+
+# Set DOOCS environment
+DOOCS			= /doocs/doocssvr1
+DOOCSVERSIONS	= $(DOOCS)/doocs-versions/build
+DOOCSWEB		= /web/tesla/Apache/htdocs/doocs
+
+# Check on development build usage
+DEV	= false
+MDOOCS := $(shell if [ $(DEV) = "true" ] ; then \
+				echo "$(DOOCS)/nightly_builds/dev_build/$(DOOCSARCH)"; \
+			else \
+				echo "/local"; \
+			fi )
+
+MDOOCSLIBS		= $(MDOOCS)/lib
+MDOOCSINC		= $(MDOOCS)/lib/include
+DOOCSLIBS		= $(DOOCSROOT)/$(DOOCSARCH)/lib
+DOOCSINC		= $(DOOCSROOT)/$(DOOCSARCH)/lib/include
+
+# Optional directory uses /opt on Linux
+OPT				= /opt
+
+LABVIEW			= $(OPT)/lv51
+
+# EPICS installation
+EPICS			= /usr
+EPICSLIB		= $(EPICS)/lib/libca.so $(EPICS)/lib/libCom.so
+EPICSINC		= $(EPICS)/include/epics
+EPICS_CFLAGS	=  -ansi -D_X86_ -DUNIX -w 
+
+# ROOT installation 
+ROOTLIBS		= $(shell root-config --libs)
+ROOTINC			=
+ROOTCFLAGS		= -I$(shell root-config --incdir)
+ROOTCINT		= $(shell root-config --prefix)/bin/rootcint
+
+# Define shared library extension
+EXT 			= so.$(LIBNO)
+
+# Path to install the libraries and the binaries
+INSTLIBDIRSDEV		= $(DOOCS)/$(DOOCSARCH)/lib
+INSTINCDIRSDEV		= $(DOOCS)/$(DOOCSARCH)/lib/include
+INSTLIBDIRSCLIENT	= $(DOOCS)/$(DOOCSARCH)/lib
+INSTBINDIRS			= doocssvr1:$(DOOCS)/$(DOOCSARCH)/bin
+
+# Compiler programs
+COMPILER		= /usr/bin
+
+
+CC				= g++ 
+cc				= gcc 
+ACC				= gcc
+F77				= f77
+
+# Linker programs and directives
+LINK.a			= ar $(ARFLAGS) $@ $% 
+LINK.so			= $(CC) -shared -Wl,-soname,`basename $@` -o $@ $% 
+#LINK.so		= touch $@; echo
+LINKapi.so		= $(CC) -shared -Wl,-soname,`basename $@` -o $@ $% 
+LINK.cc			= $(CC) $(CCFLAGS) $(CPPFLAGS) -L/usr/X11/lib $(LDFLAGS)
+LINK.f77		= $(F77) $(CCFLAGS) $(CPPFLAGS) -L/usr/X11/lib $(LDFLAGS)
+LINK.cc.static	= $(CC) $(CCFLAGS) $(CPPFLAGS) -L/usr/X11/lib $(LDFLAGS) -static
+
+# Debugger program
+DEBUGGER		= gdb
+
+# Dependencies and preprocessor flags
+POSINDEPCODE	= -fPIC
+DEBUG			= -g
+# CPU dependent optimization, here standard GNU optimization level
+OPTIMIZED		= -O2
+
+
+ARCHITECTURE	=
+IO_BUS			= -DPCIEBUS
+SAMPLING_RATE	= -DNINE_MHZ=9.02778
+CCDEP			= $(CC) $(CPPFLAGS) -M
+CCDEP_SERVER	= $(CCDEP) $(DOOCSVERSIONS)/source/serverlib/eq_rpc_server.cc
+CDEP			= $(ACC) $(CPPFLAGS) -M
+MCPPFLAGS		= -DLINUX -D__LINUX__ -DDMSG -I$(SRCDIR) -I$(OBJDIR) -I$(DOOCSINC) -I$(MDOOCSINC) -I$(DOOCS)/$(DOOCSARCH)/lib/include -I$(EPICSINC) -I$(EPICSINC)/os/Linux
+CPPFLAGS		+= $(MCPPFLAGS) -I$(XALAN) -I$(XERCES)
+CPPFLAGS 		+= -DHOST=\"$(NODENAME)\" -DUSER=\"$(USERNAME)\"
+CPPFLAGS		+= $(IO_BUS) $(SAMPLING_RATE)
+CPPFLAGS_DDD	=
+ACPPFLAGS		+= $(MCPPFLAGS)
+ACPPFLAGS		+= $(IO_BUS) $(SAMPLING_RATE)
+XALAN			= /usr/include/xalan
+XERCES			= /usr/include/xercesc
+
+# C++ compiler flags
+CCFLAGS			+= $(ARCHITECTURE) -DDMSG -D_REENTRANT -Wall -Wno-write-strings -Wno-unused-result 
+CCFLAGS			+= $(OPTIMIZED) $(DEBUG) $(POSINDEPCODE)
+
+
+
+# C compiler flags
+CFLAGS			+= $(ARCHITECTURE) -DDMSG -D_REENTRANT -Wall -Wno-write-strings -Wno-unused-result
+CFLAGS			+= $(OPTIMIZED) $(DEBUG) $(POSINDEPCODE)
+CFLAGS_DDD		=
+
+# FORTRAN compiler flags
+FFLAGS			+= $(DEBUG) $(POSINDEPCODE)
+
+# Linker flags
+LDFLAGS			+= $(MLDFLAGS)
+
+LDFLAGS_DDD		=
+MLDFLAGS		= -L$(DOOCSLIBS) -L$(MDOOCSLIBS)
+LDLIBS			+= -lnsl -ldl -lpthread -lm -lrt
+IO_BUSLIBS 		= -lIOBUS
+
+# MATLAB support for external functions
+MATLAB_VERSION	= matlab_R2009b
+MATLAB			= /opt/${MATLAB_VERSION}
+MEX_EXT			= mexa64
+MEX				= $(MATLAB)/bin/mex -f $(MATLAB)/bin/mexopts.sh $(MCPPFLAGS) $(MLDFLAGS)
+CPPFLAGS_MATLAB	= -I$(MATLAB)/extern/include -DUSE_MATLAB $(POSINDEPCODE) $(OPTIMIZED) -ansi -D_GNU_SOURCE -DUNIX -DX11 -pthread
+LDFLAGS_MATLAB	= -L$(MATLAB)/extern/lib/glnxa64 -L$(MATLAB)/bin/glnxa64 -L$(MATLAB)/runtime/glnxa64
+LIBS_MATLAB		= -lmwmclmcrrt -lm
+
+
+# Octave Support
+OCT_EXT 		= mex
+OCT 			= /usr/bin/mkoctfile --mex -Wp,-DLINUX -Wp,-I$(DOOCSINC) -Wp,-I$(MDOOCSINC)
+
+WDOGLIBS		= -lpthread -lproc -ldl -lrt
+
+
+
+
+%/eq_dummy_server.o: $(MDOOCSINC)/eq_dummy_server.cc
+	@echo ---------- compiling $(MDOOCSINC)/eq_dummy_server.cc  ---
+	$(CC) $(CCFLAGS) $(CPPFLAGS) \
+	      -c -o $(OBJDIR)/eq_dummy_server.o $(MDOOCSINC)/eq_dummy_server.cc
+	@chmod g+w $(OBJDIR)/eq_dummy_server.o
+
+# special for AList
+%/AList.o:
+	@if [ -f $(SRCDIR)/tools/AList.cc ] ; then \
+	 echo ---------- compiling $(SRCDIR)/tools/AList.cc ------ ; \
+	 $(CC) $(CPPFLAGS) -fexternal-templates $(CCFLAGS) -c -o ${OBJDIR}/tools/AList.o $(SRCDIR)/tools/AList.cc ; \
+	 chmod g+w ${OBJDIR}/tools/AList.o ; \
+	elif [ -f $(SRCDIR)/AList.cc ] ; then \
+	 echo ---------- compiling $(SRCDIR)/AList.cc ------ ; \
+	 $(CC) $(CPPFLAGS) -fexternal-templates $(CCFLAGS) -c -o ${OBJDIR}/AList.o $(SRCDIR)/AList.cc ; \
+	 chmod g+w ${OBJDIR}/AList.o ; \
+	else \
+	 exit 2 ; \
+	fi
+
+%.o:
+	 @if [ -f $(SRCDIR)/tools/$(*F).cc ] ; then \
+	  echo ---------- compiling $(SRCDIR)/tools/$(*F).cc ------ ; \
+	  $(CC) $(CPPFLAGS) $(CCFLAGS) -c -o ${OBJDIR}/tools/$(*F).o $(SRCDIR)/tools/$(*F).cc ; \
+	  chmod g+w ${OBJDIR}/tools/$(*F).o ; \
+	 elif [ -f $(SRCDIR)/shape/$(*F).cc ] ; then \
+	  echo ---------- compiling $(SRCDIR)/shape/$(*F).cc ------ ; \
+	  $(CC) $(CPPFLAGS) $(CCFLAGS) -c -o ${OBJDIR}/shape/$(*F).o $(SRCDIR)/shape/$(*F).cc ; \
+	  chmod g+w ${OBJDIR}/shape/$(*F).o ; \
+	 elif [ -f $(SRCDIR)/fsm_designer/$(*F).cc ] ; then \
+	  echo ---------- compiling $(SRCDIR)/fsm_designer/$(*F).cc ------ ; \
+	  $(CC) $(CPPFLAGS) $(CCFLAGS) -c -o ${OBJDIR}/fsm_designer/$(*F).o $(SRCDIR)/fsm_designer/$(*F).cc ; \
+	  chmod g+w ${OBJDIR}/fsm_designer/$(*F).o ; \
+	 elif [ -f $(SRCDIR)/plot/$(*F).cc ] ; then \
+	  echo ---------- compiling $(SRCDIR)/plot/$(*F).cc ------ ; \
+	  $(CC) $(CPPFLAGS) $(CCFLAGS) -c -o ${OBJDIR}/plot/$(*F).o $(SRCDIR)/plot/$(*F).cc ; \
+	  chmod g+w ${OBJDIR}/plot/$(*F).o ; \
+	 elif [ -f $(SRCDIR)/panels/$(*F).cc ] ; then \
+	  echo ---------- compiling $(SRCDIR)/panels/$(*F).cc ------ ; \
+	  $(CC) $(CPPFLAGS) $(CCFLAGS) -c -o ${OBJDIR}/panels/$(*F).o $(SRCDIR)/panels/$(*F).cc ; \
+	  chmod g+w ${OBJDIR}/panels/$(*F).o ; \
+	 elif [ -f $(SRCDIR)/fsm_designer/$(*F).cc ] ; then \
+	  echo ---------- compiling $(SRCDIR)/fsm_designer/$(*F).cc ------ ; \
+	  $(CC) $(CPPFLAGS) $(CCFLAGS) -c -o ${OBJDIR}/fsm_designer/$(*F).o $(SRCDIR)/fsm_designer/$(*F).cc ; \
+	  chmod g+w ${OBJDIR}/fsm_designer/$(*F).o ; \
+	 elif [ -f $(SRCDIR)/converters/$(*F).c ] ; then \
+	  echo ---------- compiling $(SRCDIR)/converters/$(*F).c ------------ ; \
+	  $(ACC) $(CFLAGS) $(ACPPFLAGS) -c -o ${OBJDIR}/converters/$(*F).o $(SRCDIR)/converters/$(*F).c ; \
+	  chmod g+w ${OBJDIR}/converters/$(*F).o ; \
+	 elif [ -f $(SRCDIR)/$(*F).c ] ; then \
+	  echo ---------- compiling $(SRCDIR)/$(*F).c ------------ ; \
+	  $(ACC) $(CFLAGS) $(ACPPFLAGS) -c -o ${OBJDIR}/$(*F).o $(SRCDIR)/$(*F).c ; \
+	  chmod g+w ${OBJDIR}/$(*F).o ; \
+	 elif [ -f $(SRCDIR)/$(*F).f ] ; then \
+	  echo ---------- compiling $(SRCDIR)/$(*F).f ------------ ; \
+	  $(F77) $(FFLAGS) -c -o ${OBJDIR}/$(*F).o $(SRCDIR)/$(*F).f ; \
+	  chmod g+w ${OBJDIR}/$(*F).o ; \
+	 elif [ -f $(SRCDIR)/pktrclntlib/$(*F).c ] ; then \
+	  echo ---------- compiling $(SRCDIR)/pktrclntlib/$(*F).c ------------  ; \
+	  $(ACC) $(CFLAGS) $(ACPPFLAGS) -c -o ${OBJDIR}/pktrclntlib/$(*F).o $(SRCDIR)/pktrclntlib/$(*F).c ; \
+	  chmod g+w ${OBJDIR}/pktrclntlib/$(*F).o ; \
+	 elif [ -f $(SRCDIR)/$(*F).cc ] ; then \
+	  echo ---------- compiling $(SRCDIR)/$(*F).cc ------------ ; \
+	  $(CC) $(CPPFLAGS) $(CCFLAGS) -c -o ${OBJDIR}/$(*F).o $(SRCDIR)/$(*F).cc ; \
+	  chmod g+w ${OBJDIR}/$(*F).o ; \
+	 elif [ -f $(SRCDIR)/$(*F).cxx ] ; then \
+	  echo ---------- compiling $(SRCDIR)/$(*F).cxx ------------ ; \
+	  $(CC) $(CPPFLAGS) $(CCFLAGS) -c -o ${OBJDIR}/$(*F).o $(SRCDIR)/$(*F).cxx ; \
+	  chmod g+w ${OBJDIR}/$(*F).o ; \
+	 else \
+	  exit 2 ; \
+	 fi
+
+%.ps:
+	@if [ -f $(SRCDIR)/$(*F) ] ; then \
+	 echo ---------- htops $(SRCDIR)/$(*F) ---------- ; \
+	 htops $(SRCDIR)/$(*F) ; \
+	elif [ -f $(SRCDIR)/tools/$(*F) ] ; then \
+	 echo ---------- htops $(SRCDIR)/tools/$(*F) ---------- ; \
+	 htops $(SRCDIR)/tools/$(*F) ; \
+	elif [ -f $(SRCDIR)/shape/$(*F) ] ; then \
+	 echo ---------- htops $(SRCDIR)/shape/$(*F) ---------- ; \
+	 htops $(SRCDIR)/shape/$(*F) ; \
+	elif [ -f $(SRCDIR)/plot/$(*F) ] ; then \
+	 echo ---------- htops $(SRCDIR)/plot/$(*F) ---------- ; \
+	 htops $(SRCDIR)/plot/$(*F) ; \
+	elif [ -f $(SRCDIR)/panels/$(*F) ] ; then \
+	 echo ---------- htops $(SRCDIR)/panels/$(*F) ---------- ; \
+	 htops $(SRCDIR)/panels/$(*F) ; \
+	elif [ -f $(SRCDIR)/pktrclntlib/$(*F) ] ; then \
+	 echo ---------- htops $(SRCDIR)/pktrclntlib/$(*F) ---------- ; \
+	 htops $(SRCDIR)/pktrclntlib/$(*F) ; \
+	else \
+	 exit 2 ; \
+	fi
+
+%.html:
+	@if [ -f $(SRCDIR)/$(*F) ] ; then \
+	 echo ---------- h2www $(SRCDIR)/$(*F) ---------- ; \
+	 h2www $(SRCDIR)/$(*F) ; \
+	elif [ -f $(SRCDIR)/tools/$(*F) ] ; then \
+	 echo ---------- h2www $(SRCDIR)/tools/$(*F) ---------- ; \
+	 h2www $(SRCDIR)/tools/$(*F) ; \
+	elif [ -f $(SRCDIR)/shape/$(*F) ] ; then \
+	 echo ---------- h2www $(SRCDIR)/shape/$(*F) ---------- ; \
+	 h2www $(SRCDIR)/shape/$(*F) ; \
+	elif [ -f $(SRCDIR)/plot/$(*F) ] ; then \
+	 echo ---------- h2www $(SRCDIR)/plot/$(*F) ---------- ; \
+	 h2www $(SRCDIR)/plot/$(*F) ; \
+	elif [ -f $(SRCDIR)/panels/$(*F) ] ; then \
+	 echo ---------- h2www $(SRCDIR)/panels/$(*F) ---------- ; \
+	 h2www $(SRCDIR)/panels/$(*F) ; \
+	elif [ -f $(SRCDIR)/pktrclntlib/$(*F) ] ; then \
+	 echo ---------- h2www $(SRCDIR)/pktrclntlib/$(*F) ---------- ; \
+	 h2www $(SRCDIR)/pktrclntlib/$(*F) ; \
+	else \
+	 exit 2 ; \
+	fi
+
+
+.PHONY : ddd ddd_run all static progs localinstall remoteinstall developmentinstall libinstall dddinstall install depend clean checkin checkout checkinout

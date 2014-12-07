@@ -44,6 +44,7 @@ def lat2input(lat):
     matrices = find_objects(lat, types = ["matrix"])
     marks = find_objects(lat, types = ["marker"])
     mons = find_objects(lat, types = ["monitor"])
+    unds = find_objects(lat, types = ["undulator"])
     bends = find_objects(lat, types = ["bend","rbend", "sbend"])
     #end find objects
 
@@ -90,6 +91,11 @@ def lat2input(lat):
     lines.append("\n# octupole \n")
     for oct in octs:
         line = oct.id + " = Octupole(l = " + str(oct.l) +", k3 = "+ str(oct.k3) +", tilt = "+ str(oct.tilt) +", id = '"+ oct.id+ "')\n"
+        lines.append(line)
+
+    lines.append("\n# undulator \n")
+    for und in unds:
+        line = und.id + " = Undulator(lperiod = " + str(und.lperiod) +", nperiods = "+ str(und.nperiods) +", Kx = "+ str(und.Kx) +", Ky = "+ str(und.Ky) +", id = '"+ und.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# cavity \n")

@@ -250,6 +250,8 @@ def calculateSR_py(lat, beam, screen, runParameters = None):
     intens = data_format(em_screen)
     return trj, em_screen
 """
+
+
 class ID_radiation:
     def __init__(self, beam, undulator):
         if beam.E == 0:
@@ -427,3 +429,50 @@ def calculateSR_py(lat, beam, screen, runParameters = None):
     #intens = data_format(em_screen)
     #show_flux(em_screen)
     return trj, em_screen
+
+
+from  scipy.special import kv
+from scipy.integrate import simps
+from numpy import linspace
+
+class Bend_radiation:
+    def __init__(self, B0, energy, I):
+        """
+
+        :param B0: field in T
+        :param energy: beam energy in GeV
+        :param I: beam current in A
+        :return:
+        """
+        h_bar = 6.58211928e-16 #eV*sec
+        self.B0 = B0            #T
+        self.energy = energy # GeV
+        self.I = I  #A
+        self.eph_c = 0.665 * self.energy  * self.energy  * self.B0*1000. # eV
+        self.w_c = self.eph_c/h_bar
+        self.gamma = energy*1957.
+        #print self.eph_c, self.w_c, self.gamma
+
+    def flux_distrib(self):
+        """
+
+        :return: flux in ph/sec/mrad**2/0.1%BW
+        """
+        C_om = 1.3255e22 #ph/(sec * rad**2 * GeV**2 * A)
+        g = self.gamma
+        #self.eph_c = 1.
+        ksi = lambda w,t: 1./2.*w * (1. + g*g*t*t)**(3./2.)
+        F = lambda w, t: (1.+g*g*t*t)**2  * (1.+
+                         g*g*t*t/(1.+g*g*t*t) * (kv(1./3.,ksi(w, t))/kv(2./3.,ksi(w, t)))**2)
+
+        dw_over_w = 0.001  # 0.1% BW
+        mrad2 = 1e-6 # transform rad to mrad
+        I = lambda eph, theta: mrad2*C_om * self.energy**2*self.I* dw_over_w* (eph/self.eph_c)**2 * kv(2./3.,ksi(eph/self.eph_c,theta))**2 * F(eph/self.eph_c, theta)
+        return I
+
+    def flux_total(self):
+        C_fi = 3.9614e19 #ph/(sec * rad * GeV * A)
+        mrad = 1e-3 # transform rad to mrad
+        S = lambda w: 9.*sqrt(3)/8./pi*w*simps(kv(5./3.,linspace(w, 20, num=200)))
+        F = lambda eph: mrad*C_fi*self.energy*self.I*eph/self.eph_c*S(eph/self.eph_c)
+        return F

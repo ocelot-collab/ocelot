@@ -101,7 +101,7 @@ def lat2input(lat):
     lines.append("\n# cavity \n")
     for cav in cavs:
         line = cav.id + " = Cavity(l = " + str(cav.l) +", volt = "+ str(cav.v) +", delta_e = "+ str(cav.delta_e)+\
-               ", freq = "+ str(cav.f) +", volterr = "+ str(cav.volterr) +", id = '"+ cav.id+ "')\n"
+               ", freq = "+ str(cav.f) +", phi = "+ str(cav.phi) +", volterr = "+ str(cav.volterr) +", id = '"+ cav.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# rfcavity \n")

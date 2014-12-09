@@ -45,6 +45,7 @@ def lat2input(lat):
     marks = find_objects(lat, types = ["marker"])
     mons = find_objects(lat, types = ["monitor"])
     unds = find_objects(lat, types = ["undulator"])
+    cors = find_objects(lat, types = ["hcor", "vcor"])
     bends = find_objects(lat, types = ["bend","rbend", "sbend"])
     #end find objects
 
@@ -71,6 +72,15 @@ def lat2input(lat):
         else:
             k = ", k1 = "+ str(bend.k1)
         line = bend.id + type + str(bend.l) + k + ", angle = "+ str(bend.angle)+ ", e1 = " + str(bend.e1) + ", e2 = " + str(bend.e2) + ", tilt = " + str(bend.tilt) +", id = '"+ bend.id+ "')\n"
+        lines.append(line)
+
+    lines.append("\n# correctors \n")
+    for cor in cors:
+        if cor.type == "hcor":
+            type = " = Hcor(l = "
+        else:
+            type = " = Vcor(l = "
+        line = cor.id + type + str(cor.l) + ", angle = "+ str(cor.angle) +", id = '"+ cor.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# markers \n")

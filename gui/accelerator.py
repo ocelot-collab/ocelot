@@ -34,11 +34,11 @@ except:
 
 
 
-def plot_lattice(lat, axis, alpha=1.0, params={'kmax':2.0, 'ang_max':0.5e-2}):
+def plot_lattice(lat, axis, alpha=1.0, params={'kmax':2.0, 'ang_max':0.5e-2}, s_start = 0.0):
     axis.grid(True)
     
 
-    pos = 0.0
+    pos = s_start
     offs = np.array([0,0.0])
      
     ang_max = params['ang_max']           # max dipole strength in lattice
@@ -52,8 +52,8 @@ def plot_lattice(lat, axis, alpha=1.0, params={'kmax':2.0, 'ang_max':0.5e-2}):
 
 
     rendered_seq = []
-    rendered_len = 0
-    total_len = 0
+    rendered_len = 0.0
+    total_len = 0.0
     
     
     for e in lat.sequence:

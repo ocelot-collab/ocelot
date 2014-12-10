@@ -762,12 +762,13 @@ def trace_obj(lattice, obj, nPoints = None):
             #print e.type, e.id
             
             obj = e.transfer_map*obj
-            
-            obj.E = E0
-            e.E = E0
-            
+                        
             if e.type == "cavity":
                 E0 += e.delta_e
+                
+            obj.E = E0
+            e.E = E0
+
                         
             obj_list.append(obj)
     else:

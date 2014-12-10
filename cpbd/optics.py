@@ -567,17 +567,30 @@ def create_transfer_map(element, order=1, energy = 0):
             phi = 0
             
             #Ep = de * cos(phi) / (z * 0.000511) # energy derivative
-            Ep = de * cos(phi) / (z) # energy derivative
-            Ef = E + de 
+            de=de;
+            Ep = de / (z) # energy derivative
+            #Ep = de  # energy derivative
+            #Ef = E + de
+            #Ei = E
+            Ei = E - de
+            Ef = E 
             
-            alpha = sqrt(eta / 8.) / cos(phi) * log(Ef/E)
+            print Ei,Ef,Ep, z, de
+            
+            alpha = sqrt(eta / 8.) / cos(phi) * log(Ef/Ei)
             
             #print 'cavity map Ei=',E, 'Ef=', Ef, 'alpha=', alpha
             
             r11 = cos(alpha) - sqrt(2./eta) * cos(phi) * sin(alpha)
-            r12 = sqrt(8./eta) * Ef / Ep * cos(phi) * sin(alpha)
-            r21 = -Ep/E * (cos(phi)/ sqrt(2*eta) + sqrt(eta/8.) / cos(phi) ) * sin(alpha)
-            r22 = E/Ef * ( cos(alpha) + sqrt(2./eta) * cos(phi) * sin(alpha) )
+            r12 = sqrt(8./eta) * Ei / Ep * cos(phi) * sin(alpha)
+            r21 = -Ep/Ei * (cos(phi)/ sqrt(2.*eta) + sqrt(eta/8.) / cos(phi) ) * sin(alpha)
+            r22 = Ei/Ef * ( cos(alpha) + sqrt(2./eta) * cos(phi) * sin(alpha) )
+            
+            r11=r11*sqrt(Ef/Ei);
+            r12=r12*sqrt(Ef/Ei);
+            r21=r21*sqrt(Ef/Ei);
+            r22=r22*sqrt(Ef/Ei);
+            
             
             #print r11, r12, r21, r22
             

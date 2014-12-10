@@ -1,6 +1,6 @@
 __author__ = 'Sergey'
 
-from numpy import sqrt, matrix, cos, sin, log, tan, eye, zeros, pi, array, linspace, dot, abs, random, arctan, sign
+from numpy import sqrt, matrix, cos, sin, log, tan, eye, zeros, pi, array, linspace, dot, abs, random, arctan, sign, cosh, sinh
 import numpy as np
 from ocelot.cpbd.beam import Beam, Particle, Twiss, ParticleArray
 from ocelot.common.globals import *
@@ -462,18 +462,29 @@ def create_transfer_map(element, order=1, energy = 0):
             return u
 
         def nonl_kick_z(u, z, ndiv):
+            ky2 = kz*kz + kx*kx
+            ky = sqrt(ky2)
             if element.solver == "rk":
                 track_und_openmp(u, z, ndiv*50, kz, kx ,element.Kx, energy)
             else:
                 zi = np.linspace(0., z, ndiv)
-                x, px,y, py, tau = track_und_sym(u, zi, kz, kx, element.Kx, energy)
-                #print u[0], x, u[1], px, u[5]
-                #print u[2], y, u[3], py
-                u[0] = x
-                u[1] = px
-                u[2] = y
-                u[3] = py
-                u[4] = tau
+                h = (zi[1] - zi[0])/(1+u[5])
+                gamma = energy*1957.
+                h0 = 1./(gamma/element.Kx/kz)
+                h02 = h0*h0
+                kx2 = kx*kx
+                kz2 = kz*kz
+                #x, px,y, py, tau = track_und_sym(u, zi, kz, kx, element.Kx, energy)
+                for z in range(len(zi)-1):
+                    chx = cosh(kx*u[0])
+                    chy = cosh(ky*u[2])
+                    shx = sinh(kx*u[0])
+                    shy = sinh(ky*u[2])
+                    u[1] -= h/2.*chx*shx*(kx*ky2*chy*chy + kx2*kx*shy*shy)/(ky2*kz2)*h02
+                    u[3] -= h/2.*chy*shy*(ky2*chx*chx + kx2*shx*shx)/(ky*kz2)*h02
+                    u[4] -= h/2./(1.+u[5]) * ((u[1]*u[1] + u[3]*u[3]) + chx*chx*chy*chy/(2.*kz2)*h02 + shx*shx*shy*shy*kx2/(2.*ky2*kz2)*h02)
+                    u[0] += h*u[1]
+                    u[2] += h*u[3]
             return u
 
         def nonl_kick_array_z(u, z, ndiv):
@@ -481,10 +492,32 @@ def create_transfer_map(element, order=1, energy = 0):
 
                 track_und_openmp(u, z, 5000, kz, kx ,element.Kx, energy)
             else:
-                for i in xrange(len(u)/6):
-                    V = u[i*6:i*6+6]
-                    u[i*6:i*6+6] = nonl_kick_z(V, z, ndiv)
-                    #u[i*6:i*6+6] = nonl_kick_rk(V)
+                #for i in xrange(len(u)/6):
+                #    V = u[i*6:i*6+6]
+                #    #u[i*6:i*6+6] = nonl_kick_z(V, z, ndiv)
+                zi = linspace(0., z, num=ndiv)
+                h = zi[1] - zi[0]
+                kx2 = kx*kx
+                kz2 = kz*kz
+                ky2 = kz*kz + kx*kx
+                ky = sqrt(ky2)
+                gamma = energy*1957.
+                h0 = 1./(gamma/element.Kx/kz)
+                h02 = h0*h0
+                h = h/(1.+ u[5::6])
+                x = u[::6]
+                y = u[2::6]
+                for z in range(len(zi)-1):
+                    chx = cosh(kx*x)
+                    chy = cosh(ky*y)
+                    shx = sinh(kx*x)
+                    shy = sinh(ky*y)
+                    u[1::6] -= h/2.*chx*shx*(kx*ky2*chy*chy + kx2*kx*shy*shy)/(ky2*kz2)*h02
+                    u[3::6] -= h/2.*chy*shy*(ky2*chx*chx + kx2*shx*shx)/(ky*kz2)*h02
+                    u[4::6] -= h/2./(1.+u[5::6]) * ((u[1::6]*u[1::6] + u[3::6]*u[3::6]) + chx*chx*chy*chy/(2.*kz2)*h02 + shx*shx*shy*shy*kx2/(2.*ky2*kz2)*h02)
+                    u[::6] = x + h*u[1::6]
+                    u[2::6] = y + h*u[3::6]
+
             return u
 
         #def nonl_kick_array_z(u, z, ndiv):

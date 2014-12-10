@@ -385,8 +385,10 @@ class MagneticLattice:
                     if element.field_map.units =="mm":
                         element.l = element.l*0.001
             self.totalLen += element.l
-            #print element.id
-            element.transfer_map = create_transfer_map(element, energy = self.energy)
+            try:
+                element.transfer_map = create_transfer_map(element, energy = element.E)
+            except:
+                element.transfer_map = create_transfer_map(element, energy = self.energy)
         return self
 
     def printElements(self):

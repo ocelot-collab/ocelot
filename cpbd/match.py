@@ -16,7 +16,7 @@ def closed_orbit(lattice, eps_xy = 1.e-7, eps_angle = 1.e-7):
     :param eps_angle: tolerance on the angles of beam in the start and end of lattice
     :return: class Particle
     """
-    navi = Navigator(lattice)
+    navi = Navigator()
     t_maps = get_map(lattice, lattice.totalLen, navi)
 
     tm0 = TransferMap()
@@ -87,6 +87,8 @@ def match(lat, constr, vars, tw, print_proc = 1, max_iter=1000):
         ref_hsh = {} # penalties on two-point inequalities
              
         for e in constr.keys():
+            if e == "periodic":
+                continue
             for k in constr[e].keys():
                 if constr[e][k].__class__ == list:
                     if constr[e][k][0] == '->':

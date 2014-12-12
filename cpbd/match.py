@@ -87,12 +87,7 @@ def match(lat, constr, vars, tw, print_proc = 1, max_iter=1000):
         ref_hsh = {} # penalties on two-point inequalities
              
         for e in constr.keys():
-<<<<<<< HEAD
             if e == 'periodic': continue
-=======
-            if e == "periodic":
-                continue
->>>>>>> branch 'master' of https://iagapov@github.com/iagapov/ocelot.git
             for k in constr[e].keys():
                 if constr[e][k].__class__ == list:
                     if constr[e][k][0] == '->':

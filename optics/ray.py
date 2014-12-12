@@ -172,13 +172,7 @@ def trace(ray, geo):
         if obj.__class__ == Mirror:
             
             debug('reflecting off', obj.id)
-            '''
-            x, y, z = obj.no #no[0][0], no[0][1], no[0][2]
-        
-            M3 = np.matrix([[-1. + 2.*x**2, 2.*x*y, 2.*x*z],
-                            [2.*y*x, -1. + y**2*(1.+1), y*z*(1.+1)],
-                            [2.*z*x, 2.*z*y , -1. + 2.*z**2]])
-            '''
+
             k_new = np.asarray(np.dot( refl_matrix(obj.no), -ray.k[-1]))[0]
             
             debug(ray.k[-1], '--->', k_new)
@@ -191,12 +185,10 @@ def trace(ray, geo):
 
         elif obj.__class__ == EllipticMirror:
             
-            debug('reflecting off', obj.id)
-            debug(no)
-            
-            #no = obj.no
-            
+            debug('reflecting off', obj.id)                        
             debug('no=',no,'k=',ray.k[-1])
+            
+            '''
             cs = np.dot(no, ray.k[-1]) / ( np.linalg.norm(no) * np.linalg.norm(ray.k[-1]) )
             debug('cos=',cs)
             
@@ -230,10 +222,10 @@ def trace(ray, geo):
                            [0, -sin(phi), cos(phi)]])
 
             k_new = np.asarray(np.dot(M, ray.k[-1]))[0]
+            '''
             
-            #print '###',ray.k[-1].shape, '###',obj.no
-            #k_new = rotate_pi(ray.k[-1], obj.no )
-            
+            k_new = np.asarray(np.dot( refl_matrix(no), -ray.k[-1]))[0]
+                        
             debug(ray.k[-1], '--->', k_new)
             s_new = 1
             ray.r0.append(r0_new)

@@ -21,6 +21,7 @@ def track_und_sym(y0, z, kz, kx, Kx, energy):
 
     h = z[1]-z[0]
     N = len(z)
+    #print kx, ky, kz, N, 1./h0, h
     #Ax =  1/kz * np.cos(kx*y0[0])*np.cosh(ky*y0[2])*np.sin(kz*z[0])
     #Ay =  kx/(ky*kz) * np.sin(kx*y0[0])*np.sinh(ky*y0[2])*np.sin(kz*z[0])
     q = array([y0[0],y0[1] ,y0[2],y0[3], y0[4], y0[5], kx, ky, kz, h, N, h0])
@@ -48,22 +49,30 @@ def track_und_sym(y0, z, kz, kx, Kx, energy):
     double kx2 = kx*kx;
     double ky2 = ky*ky;
     double kz2 = kz*kz;
-    double Kx = kx2/kz2*h02;
-    double Ky = ky2/kz2*h02;
-    double x2, y2, x4, y4;
+    //double Kx = kx2/kz2*h02;
+    //double Ky = ky2/kz2*h02;
+    //double x2, y2, x4, y4;
     h = h/(1. + delta);
     for ( i = 0; i<N-1; i++){
-        x2 = x*x;
-        y2 = y*y;
-        x4 = x2*x2;
-        y4 = y2*y2;
-        px = px - h*Kx*(x/2. + kx2*x2*x/3. + kz2*x*y2 + (kx2*kx2* x4*x)/15. + (kx2* kz2* x2*x *y2)/3. + (kz2*ky2*x*y4)/6. );
-        py = py - h*Ky*(y/2. + ky2*y2*y/3. + kz2*kx2*x2*y/ky2 + (kx2 *kz2* x2* y2*y)/3. + (kx2*kx2* kz2* x4*y)/(6.*ky2)  + (ky2*ky2* y4*y)/15. );
-        tau = tau - h/(1.+delta) *((px*px + py*py)/2. + Kx*x2/4. + Ky*y2/4.
-                                + Kx*kx2*x4/12. + Ky*ky2*y4/12.  + Kx*kx2*kx2/90.*x4*x2 + Ky*ky2*ky2/90.*y4*y2
-                                + h02*(kx2*ky2/12.*x2*y4 + kx2*kx2/12.*x4*y2 + kx2*x2*y2/4.) );
+        //x2 = x*x;
+        //y2 = y*y;
+        //x4 = x2*x2;
+        //y4 = y2*y2;
+        double chx = cosh(kx*x);
+        double chy = cosh(ky*y);
+        double shx = sinh(kx*x);
+        double shy = sinh(ky*y);
+        px = px - h/2.*chx*shx*(kx*ky2*chy*chy + kx2*kx*shy*shy)/(ky2*kz2)*h02;
+        py = py - h/2.*chy*shy*(ky2*chx*chx + kx2*shx*shx)/(ky*kz2)*h02;
+        //px = px - h*Kx*(x/2. + kx2*x2*x/3. + kz2*x*y2 + (kx2*kx2* x4*x)/15. + (kx2* kz2* x2*x *y2)/3. + (kz2*ky2*x*y4)/6. );
+        //py = py - h*Ky*(y/2. + ky2*y2*y/3. + kz2*kx2*x2*y/ky2 + (kx2 *kz2* x2* y2*y)/3. + (kx2*kx2* kz2* x4*y)/(6.*ky2)  + (ky2*ky2* y4*y)/15. );
+        //tau = tau - h/(1.+delta) *((px*px + py*py)/2. + Kx*x2/4. + Ky*y2/4.
+        //                        + Kx*kx2*x4/12. + Ky*ky2*y4/12.  + Kx*kx2*kx2/90.*x4*x2 + Ky*ky2*ky2/90.*y4*y2
+        //                        + h02*(kx2*ky2/12.*x2*y4 + kx2*kx2/12.*x4*y2 + kx2*x2*y2/4.) );
+        tau = tau - h/2./(1.+delta) * ((px*px + py*py) + chx*chx*chy*chy/(2.*kz2)*h02 + shx*shx*shy*shy*kx2/(2.*ky2*kz2)*h02);
         x = x + h*px;
         y = y + h*py;
+
     }
     U1(0) = x;
     U1(1) = px;

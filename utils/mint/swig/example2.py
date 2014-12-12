@@ -28,7 +28,6 @@ for blm_name in blm_names:
 
 gmd_channel = 'TTF2.DAQ/PHFLUX/OUT33/VAL'
 mag_channel = 'TTF2.MAGNETS/STEERER/H3UND1/PS.RBV'
-
 blm_channel = 'TTF2.DIAG/BLM/1R.UND1/CH00.TD'
 
 h = np.array(dcs.get_device_td(blm_channel))

@@ -22,6 +22,12 @@ class OptElement:
     ''' OptElement is an optics building element with an arbitrary set of parameters attached '''
     
     def __init__(self, r, roll_ang, pitch_ang, yaw_ang, size, id):
+        '''
+        the roll pitch and yaw angles are not the standard aircraft notation
+        yaw axis is always Y
+        alternatively, one can specify the normal and z_ax explicitly after element is initialized
+        see code for definition.
+        '''
         self.id = id
         if id == None:
             #print 'setting automatic id'
@@ -73,8 +79,10 @@ class OptElement:
         #print M3
         
         no = M3 * no
+        z_ax = M3 * z_ax
         
-        self.no = np.array(no.T).reshape(-1)     
+        self.no = np.array(no.T).reshape(-1)
+        self.z_ax = z_ax     
 
 
             

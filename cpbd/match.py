@@ -87,6 +87,7 @@ def match(lat, constr, vars, tw, print_proc = 1, max_iter=1000):
         ref_hsh = {} # penalties on two-point inequalities
              
         for e in constr.keys():
+            if e == 'periodic': continue
             for k in constr[e].keys():
                 if constr[e][k].__class__ == list:
                     if constr[e][k][0] == '->':
@@ -197,7 +198,7 @@ def match(lat, constr, vars, tw, print_proc = 1, max_iter=1000):
     
     #print res
 
-def math_tunes(lat, tw0, quads,  nu_x, nu_y, ncells= 1, print_proc = 0):
+def match_tunes(lat, tw0, quads,  nu_x, nu_y, ncells= 1, print_proc = 0):
     print "matching start .... "
     end = Monitor(id = "end")
     lat = MagneticLattice(lat.sequence + [end], energy = lat.energy)
@@ -208,7 +209,7 @@ def math_tunes(lat, tw0, quads,  nu_x, nu_y, ncells= 1, print_proc = 0):
 
     strengths1 = map(lambda p: p.k1, quads)
 
-    constr = {'end':{'mux':2*pi*nu_x/ncells, 'muy':2.*pi*nu_y/ncells},'periodic':True}
+    constr = {end:{'mux':2*pi*nu_x/ncells, 'muy':2.*pi*nu_y/ncells},'periodic':True}
     vars = quads
 
     match(lat, constr, vars, tws[0], print_proc = print_proc)

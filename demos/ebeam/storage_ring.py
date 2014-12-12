@@ -4,6 +4,7 @@ __author__ = 'Sergey Tomin'
 from ocelot.gui.accelerator import *
 from ocelot.cpbd.elements import *
 from ocelot.cpbd.optics import *
+from ocelot.cpbd.match import *
 from ocelot.cpbd.e_beam_params import *
 
 
@@ -34,7 +35,14 @@ beam = Beam()
 beam.E = 2.5 #GeV
 beam.I = 0.1 #A
 tw0 = Twiss(beam)
+
 tws = twiss(lat,tw0, nPoints=1000)
+print "Qx = ", tws[-1].mux/2/pi, "  Qy = ", tws[-1].muy/2/pi
+match_tunes(lat, tws[-1], [Q1,Q2,Q3,Q4],  1.2, 0.91, ncells= 1, print_proc = 0)
+tws = twiss(lat,tw0, nPoints=1000)
+print "Qx = ", tws[-1].mux/2/pi, "  Qy = ", tws[-1].muy/2/pi
+
+
 plot_opt_func(lat, tws)
 plt.show()
 

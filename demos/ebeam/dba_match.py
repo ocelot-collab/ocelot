@@ -48,7 +48,7 @@ tws=twiss(lat, tw0, nPoints = 1000)
 
 
 
-constr = {'end':{'Dx':0.0, 'Dxp':0.0, 'beta_x':55.0, 'beta_y':90.0}, 'start':{'beta_x':15.0, 'beta_y':30.0}}
+constr = {m1:{'Dx':0.0, 'Dxp':0.0, 'beta_x':55.0, 'beta_y':90.0}, m2:{'beta_x':15.0, 'beta_y':30.0}}
 #constr = {'end':{'Dx':0.0, 'Dxp':0.0}, 'start':{'beta_x':15.0, 'beta_y':30.0}}
 #constr = {'end':{'Dx':0.0, 'Dxp':0.0}}
 

@@ -24,7 +24,13 @@ for blm_name in blm_names:
 	blm_channel = blm.id + '/CH00.TD'
 	print 'blm info:', blm.id, bpm.z_pos
 	h = np.array(dcs.get_device_td(blm_channel))
-	print 'sum:', np.sum(h)
+	print 'max:', np.max(h)
+	
+	blm_alarm_ch = "TTF2.DIAG/BLM.ALARM/" + blm_name + '/THRFHI'
+	val = dcs.get_device_val(blm_alarm_ch)
+	print 'alarm:', val * 1.25e-3
+	
+
 
 gmd_channel = 'TTF2.DAQ/PHFLUX/OUT33/VAL'
 mag_channel = 'TTF2.MAGNETS/STEERER/H3UND1/PS.RBV'
@@ -40,3 +46,13 @@ print 'gmd:', val
 
 val = dcs.get_device_val(mag_channel)
 print 'steerer:', val
+
+
+rf_channel = 'FLASH.RF/LLRF.DAQ/VS.ACC67/AMPL.TD'
+val = dcs.get_device_val(rf_channel)
+print 'rf:', val
+h = np.array(dcs.get_device_td(rf_channel))
+print np.max( np.abs(h) ), len(h)
+
+plt.plot(h)
+plt.show()

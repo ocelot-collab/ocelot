@@ -3,6 +3,8 @@
 #include "dcs.hh"
 #include <eq_client.h>
 
+bool debug = false;
+
 double pi = 3.14;
 
 string version() { return "0.0"; }
@@ -86,16 +88,16 @@ Func_1d get_device_td(char* device_name) {
     char* addr; addr = device_name;
     ea.adr(addr); 
 
-    printf(addr);
+    if (debug) printf(addr);
     rc = eq.get(&ea, &src, &dst); 
 
     if (rc) {
-        printf("\nRead error %d\n", dst.error());
+      printf("\nRead error %d\n", dst.error());
 	}
     else {   
-        printf("\nData type %s (%d)\n", dst.type_string(), dst.type());
-	printf("Length %d %d\n", dst.length(), dst.array_length());
-        printf("\nData is %s\n", dst.get_string(buf, sizeof(buf)));        
+        if (debug) printf("\nData type %s (%d)\n", dst.type_string(), dst.type());
+	if (debug) printf("Length %d %d\n", dst.length(), dst.array_length());
+	if (debug)  printf("\nData is %s\n", dst.get_string(buf, sizeof(buf)));        
     }
     
 	int n = dst.length();
@@ -114,85 +116,110 @@ MParameters get_parameters() {
 }
 
 double get_device_val(char* device_name) {
+  if (debug) cout << "debug: getting device value for " << device_name << endl;
 
-	cout << "debug: getting device value for " << device_name << endl;
 
+  char buf[STRING_LENGTH]; 
+  int rc;
+  EqAdr  ea; 
+  EqData src;
+  EqData dst; 
+  EqCall eq;
+  
+  char* addr; addr = device_name;
+  ea.adr(addr); 
+  
+  rc = eq.get(&ea, &src, &dst); 
 
-	char buf[STRING_LENGTH]; 
-	int rc;
-    EqAdr  ea; 
-    EqData src;
-    EqData dst; 
-    EqCall eq;
-    
-    char* addr; addr = device_name;
-    ea.adr(addr); 
-
-    rc = eq.get(&ea, &src, &dst); 
-
-    if (rc) {
-        printf("\nRead error %d\n", dst.error());
-	return 0.0;
-	}
-    else {  return dst.get_double();     }
+  if (rc) {
+    printf("\nRead error %d\n", dst.error());
+    return 0.0;
+  }
+  else {  return dst.get_double();     }
     
 }
 
 int set_device_val(char* device_name, double val) {
-	return 0;
+
+  EqData  src;
+  int    rc;
+  EqAdr  ea; 
+  
+  rc = src.set(val);
+
+  if (debug) cout << "debug: set_device_val " << device_name << " : " << rc << endl;
+
+  cout << src.get_double() << endl;
+  cout<< src.type_string() << endl;
+
+  EqData dst; 
+  EqCall eq;
+    
+  char* addr; addr = device_name;
+  printf(addr);
+  ea.adr(addr); 
+  //rc = eq.get(&ea, &src, &dst); 
+  rc = eq.set(&ea, &src, &dst); 
+  
+  if (rc) {
+    printf("\nWrite error %d\n", dst.error());
+    return 1;
+  }
+  
+  return 0;
 }
 
 int get_bpm_val(BPM* b) {
-	cout << "debug: getting bpm reading for " << b->id << endl;
-	char   buf[STRING_LENGTH]; 
-	int    rc;
-	EqAdr  ea; 
-	EqData src;
-	EqData dst; 
-	EqCall eq;
-    
-  	char* addr; 
-	
-	addr = b->channel_x;
-	ea.adr(addr); 
-	cout << "device address : " << addr << endl;
-  	rc = eq.get(&ea, &src, &dst); 
-	if (rc) { printf("\nRead error %d\n", dst.error()); }
-	else {  b->x = dst.get_double(); }
-
-	addr = b->channel_y;
-	ea.adr(addr); 
-	cout << "device address : " << addr << endl;
-  	rc = eq.get(&ea, &src, &dst); 
-	if (rc) { printf("\nRead error %d\n", dst.error()); }
-	else {  b->y = dst.get_double(); }
-
-	addr = b->channel_z;
-	ea.adr(addr); 
-	cout << "device address : " << addr << endl;
-  	rc = eq.get(&ea, &src, &dst); 
-	if (rc) { printf("\nRead error %d\n", dst.error()); }
-	else {  b->z_pos = dst.get_double(); }
-
+  if (debug) cout << "debug: getting bpm reading for " << b->id << endl;
+  char   buf[STRING_LENGTH]; 
+  int    rc;
+  EqAdr  ea; 
+  EqData src;
+  EqData dst; 
+  EqCall eq;
+  
+  char* addr; 
+  
+  addr = b->channel_x;
+  ea.adr(addr); 
+  if (debug) cout << "device address : " << addr << endl;
+  rc = eq.get(&ea, &src, &dst); 
+  if (rc) { printf("\nRead error %d\n", dst.error()); }
+  else {  b->x = dst.get_double(); }
+  
+  addr = b->channel_y;
+  ea.adr(addr); 
+  if (debug) cout << "device address : " << addr << endl;
+  rc = eq.get(&ea, &src, &dst); 
+  if (rc) { printf("\nRead error %d\n", dst.error()); }
+  else {  b->y = dst.get_double(); }
+  
+  addr = b->channel_z;
+  ea.adr(addr); 
+  if (debug) cout << "device address : " << addr << endl;
+  rc = eq.get(&ea, &src, &dst); 
+  if (rc) { printf("\nRead error %d\n", dst.error()); }
+  else {  b->z_pos = dst.get_double(); }
+  
 	
 }
 
 int get_device_info(Device* d) {
-	cout << "debug: getting device info for " << d->id << endl;
-	char   buf[STRING_LENGTH]; 
-	int    rc;
-	EqAdr  ea; 
-	EqData src;
-	EqData dst; 
-	EqCall eq;
-    
-  	char* addr; 	
-	addr = d->channel_z;
-	ea.adr(addr); 
-	cout << "device address : " << addr << endl;
-  	rc = eq.get(&ea, &src, &dst); 
-	if (rc) { printf("\nRead error %d\n", dst.error()); }
-	else {  d->z_pos = dst.get_double(); }
+  if (debug) cout << "debug: getting device info for " << d->id << endl;
+  char   buf[STRING_LENGTH]; 
+  int    rc;
+  EqAdr  ea; 
+  EqData src;
+  EqData dst; 
+  EqCall eq;
+  
+  char* addr; 	
+  addr = d->channel_z;
+  ea.adr(addr); 
+  if (debug) cout << "device address : " << addr << endl;
+  rc = eq.get(&ea, &src, &dst); 
+  if (rc) { printf("\nRead error %d\n", dst.error()); }
+  else {  d->z_pos = dst.get_double(); }
 
 }
 

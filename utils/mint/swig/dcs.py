@@ -212,6 +212,10 @@ def get_device_val(*args):
   return _dcs.get_device_val(*args)
 get_device_val = _dcs.get_device_val
 
+def set_device_val(*args):
+  return _dcs.set_device_val(*args)
+set_device_val = _dcs.set_device_val
+
 def get_device_td(*args):
   return _dcs.get_device_td(*args)
 get_device_td = _dcs.get_device_td

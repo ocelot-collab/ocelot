@@ -1060,7 +1060,7 @@ def plot_beam(fig, beam):
 
 
 
-def transform_beam_file(beam_file = None, out_file='tmp.beam', transform = [ [25.0,0.1], [21.0, -0.1] ], energy_scale=1, n_interp = None):
+def transform_beam_file(beam_file = None, out_file='tmp.beam', transform = [ [25.0,0.1], [21.0, -0.1] ], energy_scale=1, emit_scale = 1, n_interp = None):
     
     beam = read_beam_file(beam_file)
         
@@ -1153,8 +1153,8 @@ def transform_beam_file(beam_file = None, out_file='tmp.beam', transform = [ [25
         if n_interp == None:
         
             beam_new.idx_max = idx
-            beam_new.ex = beam.ex
-            beam_new.ey = beam.ey
+            beam_new.ex = beam.ex * emit_scale
+            beam_new.ey = beam.ey * emit_scale
             beam_new.zsep = beam.zsep
             beam_new.z = beam.z
             beam_new.I = beam.I
@@ -1181,8 +1181,8 @@ def transform_beam_file(beam_file = None, out_file='tmp.beam', transform = [ [25
             zmax, Imax = peaks(beam_new.z, beam_new.I, n=1)
             beam_new.idx_max = np.where(beam_new.z == zmax)[0][0]
             
-            beam_new.ex = np.interp(beam_new.z, beam.z, beam.ex)
-            beam_new.ey = np.interp(beam_new.z, beam.z, beam.ey)
+            beam_new.ex = np.interp(beam_new.z, beam.z, beam.ex) * emit_scale
+            beam_new.ey = np.interp(beam_new.z, beam.z, beam.ey) * emit_scale
             beam_new.zsep = beam.zsep * len(beam.z) / len(beam_new.z)
             beam_new.g0 = np.interp(beam_new.z, beam.z, beam.g0) * energy_scale
             beam_new.dg = np.interp(beam_new.z, beam.z, beam.dg)

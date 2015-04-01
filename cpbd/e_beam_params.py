@@ -45,7 +45,7 @@ def radiation_integral(lattice, twiss_0, nsuperperiod = 1):
             else:
                 h = 0.
 
-            for z in linspace(0, elem.l,num = 30, endpoint=True):
+            for z in linspace(0, elem.l,num = 50, endpoint=True):
                 tws_z = elem.transfer_map(z)*tws_elem
                 Dx.append(tws_z.Dx)
                 Z.append(z)
@@ -62,17 +62,23 @@ def radiation_integral(lattice, twiss_0, nsuperperiod = 1):
             I5 += H3*simps(array(Hinvariant), Z)
         tws_elem = elem.transfer_map*tws_elem
     if abs(tws_elem.beta_x - twiss_0.beta_x)>1e-7 or abs(tws_elem.beta_y - twiss_0.beta_y)>1e-7:
-        print "WARNING! Results may be wrong! radiation_integral() -> beta functions are not matching. "
+        #print "WARNING! Results may be wrong! radiation_integral() -> beta functions are not matching. "
+        pass
         #return None
     return (I1*nsuperperiod,I2*nsuperperiod,I3*nsuperperiod, I4*nsuperperiod, I5*nsuperperiod)
 
 class EbeamParams:
-    def __init__(self, lattice,beam,  coupling = 0.01, nsuperperiod = 1):
+    def __init__(self, lattice,beam,  coupling = 0.01, nsuperperiod = 1, tws0 = None):
         if beam.E  == 0:
             exit("beam.E must be non zero!")
         self.E = beam.E
-        tws = twiss(lattice, Twiss())
-        self.tws0 = tws[0]
+        if tws0 == None: 
+            tws = twiss(lattice, Twiss())
+            self.tws0 = tws[0]
+        else:
+            self.tws0 = tws0 
+            tws = twiss(lattice, tws0)
+            
         self.lat = lattice
         (I1,I2,I3, I4, I5) = radiation_integral(lattice, self.tws0 , nsuperperiod)
         self.I1 = I1

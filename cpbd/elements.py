@@ -375,7 +375,7 @@ class MagneticLattice:
 
 
 
-    def update_transfer_maps(self):
+    def update_transfer_maps(self, track_acceleration = False):
 
         self.totalLen = 0
         for element in self.sequence:
@@ -386,9 +386,9 @@ class MagneticLattice:
                         element.l = element.l*0.001
             self.totalLen += element.l
             try:
-                element.transfer_map = create_transfer_map(element, energy = element.E)
+                element.transfer_map = create_transfer_map(element, energy = element.E, track_acceleration = track_acceleration)
             except:
-                element.transfer_map = create_transfer_map(element, energy = self.energy)
+                element.transfer_map = create_transfer_map(element, energy = self.energy, track_acceleration = track_acceleration)
         return self
 
     def printElements(self):

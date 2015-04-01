@@ -185,7 +185,7 @@ class TransferMap:
         return m
 
 
-def create_transfer_map(element, order=1, energy = 0):
+def create_transfer_map(element, order=1, energy = 0, track_acceleration = False):
     #print 'creating TM', element.id
     transfer_map = TransferMap()
     transfer_map.length = element.l
@@ -588,7 +588,7 @@ def create_transfer_map(element, order=1, energy = 0):
 
     elif element.type == "cavity":
                 
-        def cavity_R_z(z, de, f, E):
+        def cavity_R_z(z, de, f, E, track_acceleration):
             """
             :param z: length
             :param de: delta E
@@ -608,7 +608,7 @@ def create_transfer_map(element, order=1, energy = 0):
             Ei = E - de
             Ef = E 
             
-            print Ei,Ef,Ep, z, de
+            #print Ei,Ef,Ep, z, de
             
             alpha = sqrt(eta / 8.) / cos(phi) * log(Ef/Ei)
             
@@ -619,11 +619,12 @@ def create_transfer_map(element, order=1, energy = 0):
             r21 = -Ep/Ei * (cos(phi)/ sqrt(2.*eta) + sqrt(eta/8.) / cos(phi) ) * sin(alpha)
             r22 = Ei/Ef * ( cos(alpha) + sqrt(2./eta) * cos(phi) * sin(alpha) )
             
-            r11=r11*sqrt(Ef/Ei);
-            r12=r12*sqrt(Ef/Ei);
-            r21=r21*sqrt(Ef/Ei);
-            r22=r22*sqrt(Ef/Ei);
-            
+            # for twiss parameters
+            if not track_acceleration:
+                r11=r11*sqrt(Ef/Ei);
+                r12=r12*sqrt(Ef/Ei);
+                r21=r21*sqrt(Ef/Ei);
+                r22=r22*sqrt(Ef/Ei);
             
             #print r11, r12, r21, r22
             
@@ -643,7 +644,7 @@ def create_transfer_map(element, order=1, energy = 0):
         else:
             #print 'CAVITY MAP:', element.E, 'GeV'
             #print element.E, element.v, element.delta_e 
-            transfer_map.R_z = lambda z: cavity_R_z(z, de = element.delta_e * z / element.l, f=element.f, E=element.E)
+            transfer_map.R_z = lambda z: cavity_R_z(z, de = element.delta_e * z / element.l, f=element.f, E=element.E, track_acceleration = track_acceleration)
             transfer_map.R = transfer_map.R_z(element.l)
 
 
@@ -801,6 +802,7 @@ def trace_obj(lattice, obj, nPoints = None):
                 
             obj.E = E0
             e.E = E0
+            obj.id = e.id
 
                         
             obj_list.append(obj)
@@ -838,8 +840,9 @@ def trace_particle(lattice, p0, nPoints = None):
 
 
 class Navigator:
-    #def __init__(self, lattice):
-    #    self.lat = lattice
+    def __init__(self, lattice = None):
+        if lattice != None:
+            self.lat = lattice
         
     z0 = 0
     n_elem = 0
@@ -860,6 +863,8 @@ def get_map(lattice, dz, navi):
     z1 = navi.z0 + dz
     elem = lattice.sequence[i]
     L = navi.sum_lengths + elem.l
+    
+    delta_e = 0.0
 
     while z1 > L:
         dl = L - navi.z0
@@ -870,6 +875,9 @@ def get_map(lattice, dz, navi):
             tm = TransferMap()
         else:
             tm = elem.transfer_map(dl)*tm
+            if elem.type == "cavity":
+                delta_e += elem.delta_e * dl / elem.l
+
         navi.z0 = L
         dz -= dl
         i += 1
@@ -880,11 +888,14 @@ def get_map(lattice, dz, navi):
         TM.append(elem.transfer_map(dz))
     else:
         tm = elem.transfer_map(dz)*tm
+        if elem.type == "cavity":
+            delta_e += elem.delta_e * dz / elem.l
+
     navi.z0 += dz
     navi.sum_lengths = L - elem.l
     navi.n_elem = i
     TM.append(tm)
-    return TM
+    return TM, delta_e
 
 
 def track(lat, particle_list, dz, navi):
@@ -895,11 +906,14 @@ def track(lat, particle_list, dz, navi):
     if navi.z0 + dz > lat.totalLen:
         dz = lat.totalLen - navi.z0
 
-    t_maps = get_map(lat, dz, navi)
+    t_maps, de = get_map(lat, dz, navi)
+    #print 'getting map, de=', de
 
     for tm in t_maps:
         #print "tm :",  tm.length
         tm.apply(particle_list)
+        particle_list.E += de
+        particle_list.de = de
         #tm.apply(plist)
 
     return
@@ -907,7 +921,7 @@ def track(lat, particle_list, dz, navi):
 def gaussFromTwiss(emit, beta, alpha):
     phi = 2*pi * random.rand()
     u = random.rand()
-    a = sqrt(-log( (1-u)) * emit)
+    a = sqrt(-2*log( (1-u)) * emit)
     x = a * sqrt(beta) * cos(phi)
     xp = -a / sqrt(beta) * ( sin(phi) + alpha * cos(phi) );
     return (x,xp)

@@ -49,10 +49,11 @@ def closed_orbit(lattice, eps_xy = 1.e-7, eps_angle = 1.e-7):
 
 
 def weights(val):
-    if val == 'Dx': return 100.0
-    if val == 'Dxp': return 100.0
+    if val == 'Dx': return 10000000.0
+    if val == 'Dxp': return 10000000.0
     if val == 'tau': return 10000000.0
-    
+    if val in ['alpha_x', 'alpha_y']: return 100.0
+    if val in ['beta_x', 'beta_y']: return 1.0
     return 0.0001
 
 def match(lat, constr, vars, tw, print_proc = 1, max_iter=1000):
@@ -108,7 +109,8 @@ def match(lat, constr, vars, tw, print_proc = 1, max_iter=1000):
                         #print 'list'   
                         v1 = constr['global'][c][1]
                         if constr['global'][c][0] == '<':
-                            #print '< constr'                             
+                            #print '< constr', c, v1    
+                            #print tw_loc.__dict__[c]                         
                             if tw_loc.__dict__[c] > v1:
                                 err = err + (tw_loc.__dict__[c] - v1)**2
                         if constr['global'][c][0] == '>':

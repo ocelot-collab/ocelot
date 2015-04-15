@@ -7,6 +7,7 @@ from ocelot.cpbd.field_map import FieldMap
 from ocelot.cpbd.optics import create_transfer_map
 from ocelot.common.globals import *
 import numpy as np
+from numpy import cos, sin
 
 
 flatten = lambda *n: (e for a in n
@@ -395,6 +396,19 @@ class MagneticLattice:
         print '\nLattice\n'
         for e in self.sequence:
             print '-->',  e.id, '[', e.l, ']'
+
+
+def survey(lat, ang = 0.0, x0=0, z0=0):
+    x = []
+    z = []
+    for e in lat.sequence:
+        x.append(x0)
+        z.append(z0)
+        if e.__class__ in [Bend, SBend, RBend]:
+            ang += e.angle
+        x0 += e.l*cos(ang)  
+        z0 += e.l*sin(ang)
+    return x, z
 
 
 

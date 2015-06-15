@@ -46,7 +46,7 @@ def plot_field(of, title=None):
     y = np.linspace(-of.size_y, of.size_y, of.ny) / 1.e-3
     #mu1, mu2, sig1, sig2, _ = fit_gauss_2d(x,y, np.abs(of.mesh.points))
     s2 = fwhm(x,np.abs(of.mesh.points[:,of.ny/2]))
-    print 'beam size:', s2, ' mm [fwhm]'
+    print('beam size:', s2, ' mm [fwhm]')
 
     
     fig = plt.figure(title)
@@ -149,9 +149,9 @@ sigma_yp = 10.e-16 # rad
 
 
 
-for i in xrange(1):
+for i in range(1):
     r = Ray(r0=[np.random.randn()*sigma_x,np.random.randn()*sigma_y,-145*m], k=[np.random.randn()*sigma_xp,np.random.randn()*sigma_yp,1])
-    print 'tracing ray...'
+    print('tracing ray...')
     trace_ray(r, geo)
     rays.append(r)
 
@@ -170,29 +170,29 @@ except:
     pass
 
 
-print 'tracing nominal ray'
+print('tracing nominal ray')
 r = Ray(r0=[0,0,-145*m], k=[0,0,1])
 trace_ray(r, geo)
 
 
-print 'initializing field...'
+print('initializing field...')
 of = ParaxialFieldSlice(lam=4e-10*m, nx=251, ny=251, size_x=0.19*mm, size_y =0.19*mm)
 of.init_field(f1)
 x = np.linspace(-of.size_x, of.size_x, of.nx)
 s2 = fwhm(x,np.abs(of.mesh.points[:,of.ny/2]))
 
 
-print 'w=', of.w , ' s^-1'
-print 'k=', of.k
-print 'lam=', of.lam , ' m'
-print 'size=',s2 / 1.e-3, ' mm [fwhm]'
-print 'div~=',of.lam / s2 / 1.e-3, ' mrad [fwhm]'
+print('w=', of.w , ' s^-1')
+print('k=', of.k)
+print('lam=', of.lam , ' m')
+print('size=',s2 / 1.e-3, ' mm [fwhm]')
+print('div~=',of.lam / s2 / 1.e-3, ' mrad [fwhm]')
 
 plot_field(of, title="start")
 
 
-for i in xrange(len(r.s)):
-    print 'propagating thru', r.obj[i], r.s[i] 
+for i in range(len(r.s)):
+    print('propagating thru', r.obj[i], r.s[i] )
     propagate_fourier(of, obj=r.obj[i], dz=r.s[i])
     plot_field(of, title=r.obj[i].id + ".left")
     if r.obj[i] != None and r.obj[i].__class__ != OptDrift:

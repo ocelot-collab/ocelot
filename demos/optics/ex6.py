@@ -33,7 +33,7 @@ def plot_field(of, title=None):
     y = np.linspace(-of.size_y, of.size_y, of.ny) / 1.e-3
     #mu1, mu2, sig1, sig2, _ = fit_gauss_2d(x,y, np.abs(of.mesh.points))
     s2 = fwhm(x,np.abs(of.mesh.points[:,of.ny/2]))
-    print 'beam size:', s2, ' mm [fwhm]'
+    print ('beam size:', s2, ' mm [fwhm]')
 
     
     fig = plt.figure(title)
@@ -66,25 +66,25 @@ def f1(x,y):
         
 
 
-print 'initializing field...'
+print('initializing field...')
 of = ParaxialFieldSlice(lam=5e-9*m, nx=151, ny=151, size_x=0.15*mm, size_y =0.15*mm)
 of.init_field(f1)
 x = np.linspace(-of.size_x, of.size_x, of.nx)
 s2 = fwhm(x,np.abs(of.mesh.points[:,of.ny/2]))
 
 
-print 'w=', of.w , ' s^-1'
-print 'k=', of.k
-print 'lam=', of.lam , ' m'
-print 'size=',s2 / 1.e-3, ' mm [fwhm]'
-print 'div~=',of.lam / s2 / 1.e-3, ' mrad [fwhm]'
+print('w=', of.w , ' s^-1')
+print('k=', of.k)
+print('lam=', of.lam , ' m')
+print('size=',s2 / 1.e-3, ' mm [fwhm]')
+print('div~=',of.lam / s2 / 1.e-3, ' mrad [fwhm]')
 
 plot_field(of, title="start")
 
 s = []
 z = []
 
-for i in xrange(10): 
+for i in range(10):
     dz = 1.0 * m
     propagate_fourier(of, obj=None, dz=dz)
     x = np.linspace(-of.size_x, of.size_x, of.nx) 
@@ -92,10 +92,10 @@ for i in xrange(10):
     s2 = fwhm(x,np.abs(of.mesh.points[:,of.ny/2]))
     z.append(dz*i)
     s.append(s2)
-    print 'beam size:', s2 / 1.e-3, ' mm [fwhm]'
+    print('beam size:', s2 / 1.e-3, ' mm [fwhm]')
     
     if s2>of.size_x: 
-        print 'warning: need rescaling', s2, of.size_x
+        print ('warning: need rescaling', s2, of.size_x)
         rescale(of)
 
     #plot_field(of, title=str(i*dz) + 'm')

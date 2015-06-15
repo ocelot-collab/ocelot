@@ -23,7 +23,7 @@ cr1.psi_n = -pi/2. #input angle psi_n according to Authier (symmetric reflection
 
 r = Ray(r0=[0,0.0,-0.5], k=[0,0.0,1]) 
 r.lamb = 2 * pi * hbar * c / E_ev
-print 'wavelength', r.lamb
+print('wavelength', r.lamb)
 
 w1 = read_signal(file_name='data/pulse_9kev_20fs.txt', npad =10, E_ref = E_ev)
 plt.figure()
@@ -47,7 +47,7 @@ cr1.filter = filt
 i1=np.sum(w1.sp*np.conj(w1.sp))*(w1.freq_ev[1] - w1.freq_ev[0])
 
 def transform_field(cr, wave):
-    print 'transforming field'
+    print('transforming field')
     wave.sp = wave.sp * cr.filter.tr
     wave.sp_ref = wave.sp * cr.filter.ref
     wave.f = np.fft.ifft(wave.sp)
@@ -61,7 +61,7 @@ transform_field(cr1, w1)
 i2 = np.sum(w1.sp*np.conj(w1.sp))*(w1.freq_ev[1] - w1.freq_ev[0])
 i3 = np.sum(w1.sp_ref*np.conj(w1.sp_ref))*(w1.freq_ev[1] - w1.freq_ev[0])
 
-print 'transmission (%)', 100*np.real(i2/i1), 'reflection (%)', 100*np.real(i3/i1)
+print('transmission (%)', 100*np.real(i2/i1), 'reflection (%)', 100*np.real(i3/i1))
 
 plt.plot(w1.t, np.abs(w1.f))
 ax.set_yscale('log')    

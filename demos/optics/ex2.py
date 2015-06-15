@@ -40,7 +40,7 @@ rays = []
 a = geo.find("m2").a
 
 
-for i in xrange(40):
+for i in range(40):
     
     r = Ray(r0=[0.01,a[1],-sqrt(a[0]**2 - a[1]**2)], k=[0,-a[1]/a[0] * (1+ np.random.randn()*0.1) ,1])
     #test 1 -0.0359695

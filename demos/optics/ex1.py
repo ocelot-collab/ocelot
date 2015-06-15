@@ -36,7 +36,7 @@ rays = []
 
 sigma_y = 0.1e-1 # rad
 
-for i in xrange(100):
+for i in range(100):
     r = Ray(r0=[0,0,-0.3], k=[0,np.random.randn()*sigma_y,1])
     trace_ray(r, geo)
     rays.append(r)

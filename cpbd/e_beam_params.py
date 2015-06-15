@@ -62,16 +62,18 @@ def radiation_integral(lattice, twiss_0, nsuperperiod = 1):
             I5 += H3*simps(array(Hinvariant), Z)
         tws_elem = elem.transfer_map*tws_elem
     if abs(tws_elem.beta_x - twiss_0.beta_x)>1e-7 or abs(tws_elem.beta_y - twiss_0.beta_y)>1e-7:
-        print "WARNING! Results may be wrong! radiation_integral() -> beta functions are not matching. "
+        print( "WARNING! Results may be wrong! radiation_integral() -> beta functions are not matching. ")
         #return None
     return (I1*nsuperperiod,I2*nsuperperiod,I3*nsuperperiod, I4*nsuperperiod, I5*nsuperperiod)
 
 class EbeamParams:
-    def __init__(self, lattice,beam,  coupling = 0.01, nsuperperiod = 1):
+    def __init__(self, lattice, beam,  coupling = 0.01, nsuperperiod = 1):
         if beam.E  == 0:
             exit("beam.E must be non zero!")
         self.E = beam.E
-        tws = twiss(lattice, Twiss())
+        tws0 = Twiss()
+        tws0.E = lattice.energy
+        tws = twiss(lattice, tws0)
         self.tws0 = tws[0]
         self.lat = lattice
         (I1,I2,I3, I4, I5) = radiation_integral(lattice, self.tws0 , nsuperperiod)
@@ -128,50 +130,50 @@ class EbeamParams:
                 self.I3_IDs += i3
                 self.I4_IDs += i4
                 self.I5_IDs += i5
-                print elem.type, elem.id, "B0 =  ", B, " T"
-                print elem.type, elem.id, "rho = ", 1./h0, " m"
-                print elem.type, elem.id, "L =   ", elem.l, " m"
-                print elem.type, elem.id, "beta_x cntr: ", tws[1].beta_x
-                print elem.type, elem.id, "Dx0 / Dxp0:  ", tws[0].Dx, "/", tws[0].Dxp
-                print elem.type, elem.id, "I2_ID = ", i2
-                print elem.type, elem.id, "I3_ID = ", i3
-                print elem.type, elem.id, "I4_ID = ", i4
-                print elem.type, elem.id, "I5_ID = ", i5
+                #print elem.type, elem.id, "B0 =  ", B, " T"
+                #print elem.type, elem.id, "rho = ", 1./h0, " m"
+                #print elem.type, elem.id, "L =   ", elem.l, " m"
+                #print elem.type, elem.id, "beta_x cntr: ", tws[1].beta_x
+                #print elem.type, elem.id, "Dx0 / Dxp0:  ", tws[0].Dx, "/", tws[0].Dxp
+                #print elem.type, elem.id, "I2_ID = ", i2
+                #print elem.type, elem.id, "I3_ID = ", i3
+                #print elem.type, elem.id, "I4_ID = ", i4
+                #print elem.type, elem.id, "I5_ID = ", i5
             L += elem.l
         self.emit_ID = self.emittance * (1.+self.I5_IDs/self.I5)/(1+(self.I2_IDs  - self.I4_IDs)/(self.I2 - self.I4))
         self.sigma_e_ID = self.sigma_e * sqrt((1.+ self.I3_IDs / self.I3)/(1 + (2*self.I2_IDs + self.I4_IDs)/(2.*self.I2 + self.I4) ) )
         self.U0_ID = Cgamma*(self.lat.energy*1000)**4.*self.I2_IDs/(2.*pi)
-        print "emittance with IDs = ", self.emit_ID*1e9, " nm*rad"
-        print "sigma_e with IDs =   ", self.sigma_e_ID
-        print "U0 from IDs =        ", self.U0_ID,  "  MeV"
+        print("emittance with IDs = ", self.emit_ID*1e9, " nm*rad")
+        print("sigma_e with IDs =   ", self.sigma_e_ID)
+        print("U0 from IDs =        ", self.U0_ID,  "  MeV")
 
     def print_params(self):
-        print "I2 =        ", self.I2
-        print "I3 =        ", self.I3
-        print "I4 =        ", self.I4
-        print "I5 =        ", self.I5
-        print "Je =        ", self.Je
-        print "Jx =        ", self.Jx
-        print "Jy =        ", self.Jy
-        print "energy =    ", self.E, "GeV"
-        print "gamma =     ", self.gamma
-        print "sigma_e =   ", self.sigma_e
-        print "emittance = ", self.emittance*1e9, " nm*rad"
-        print "Length =    ", self.Length, " m"
-        print "U0 =        ", self.U0, "  MeV"
-        print "Tperiod =   ", self.Tperiod*1e9, " nsec"
-        print "alpha =     ", self.alpha
-        print "tau0 =      ", self.tau0*1e3, " msec"
-        print "tau_e =     ", self.tau_e*1e3, " msec"
-        print "tau_x =     ", self.tau_x*1e3, " msec"
-        print "tau_y =     ", self.tau_y*1e3, " msec"
-        print "beta_x =    ", self.tws0.beta_x, " m"
-        print "beta_y =    ", self.tws0.beta_y, " m"
-        print "alpha_x =   ", self.tws0.alpha_x
-        print "alpha_y =   ", self.tws0.alpha_y
-        print "Dx =        ", self.tws0.Dx, " m"
-        print "Dy =        ", self.tws0.Dy, " m"
-        print "sigma_x =   ", self.sigma_x*1e6, " um"
-        print "sigma_y =   ", self.sigma_y*1e6, " um"
-        print "sigma_x' =  ", self.sigma_xp*1e6, " urad"
-        print "sigma_y' =  ", self.sigma_yp*1e6, " urad"
+        print("I2 =        ", self.I2)
+        print( "I3 =        ", self.I3)
+        print( "I4 =        ", self.I4)
+        print( "I5 =        ", self.I5)
+        print( "Je =        ", self.Je)
+        print( "Jx =        ", self.Jx)
+        print( "Jy =        ", self.Jy)
+        print( "energy =    ", self.E, "GeV")
+        print( "gamma =     ", self.gamma)
+        print( "sigma_e =   ", self.sigma_e)
+        print( "emittance = ", self.emittance*1e9, " nm*rad")
+        print( "Length =    ", self.Length, " m")
+        print( "U0 =        ", self.U0, "  MeV")
+        print( "Tperiod =   ", self.Tperiod*1e9, " nsec")
+        print( "alpha =     ", self.alpha)
+        print( "tau0 =      ", self.tau0*1e3, " msec")
+        print( "tau_e =     ", self.tau_e*1e3, " msec")
+        print( "tau_x =     ", self.tau_x*1e3, " msec")
+        print( "tau_y =     ", self.tau_y*1e3, " msec")
+        print( "beta_x =    ", self.tws0.beta_x, " m")
+        print( "beta_y =    ", self.tws0.beta_y, " m")
+        print( "alpha_x =   ", self.tws0.alpha_x)
+        print( "alpha_y =   ", self.tws0.alpha_y)
+        print( "Dx =        ", self.tws0.Dx, " m")
+        print( "Dy =        ", self.tws0.Dy, " m")
+        print( "sigma_x =   ", self.sigma_x*1e6, " um")
+        print( "sigma_y =   ", self.sigma_y*1e6, " um")
+        print( "sigma_x' =  ", self.sigma_xp*1e6, " urad")
+        print( "sigma_y' =  ", self.sigma_yp*1e6, " urad")

@@ -110,8 +110,16 @@ class Beam:
         self.Dyp = 0.0
 
     def sizes(self):
-        self.gamma_x = (1. + self.alpha_x**2)/self.beta_x
-        self.gamma_y = (1. + self.alpha_y**2)/self.beta_y
+        if self.beta_x != 0:
+            self.gamma_x = (1. + self.alpha_x**2)/self.beta_x
+        else:
+            self.gamma_x = 0.
+
+        if self.beta_y != 0:
+            self.gamma_y = (1. + self.alpha_y**2)/self.beta_y
+        else:
+            self.gamma_y = 0.
+
         self.sigma_x = sqrt((self.sigma_E/self.E*self.Dx)**2 + self.emit_x*self.beta_x)
         self.sigma_y = sqrt((self.sigma_E/self.E*self.Dy)**2 + self.emit_y*self.beta_y)
         self.sigma_xp = sqrt((self.sigma_E/self.E*self.Dxp)**2 + self.emit_x*self.gamma_x)
@@ -119,10 +127,10 @@ class Beam:
 
     def print_sizes(self):
         self.sizes()
-        print "sigma_E/E and Dx/Dy : ", self.sigma_E/self.E, "  and ", self.Dx, "/",self.Dy, " m"
-        print "emit_x/emit_y     : ",  self.emit_x*1e9, "/",self.emit_y*1e9, " nm-rad"
-        print "sigma_x/y         : ", self.sigma_x*1e6, "/", self.sigma_y*1e6, " um"
-        print "sigma_xp/yp       : ", self.sigma_xp*1e6, "/", self.sigma_yp*1e6, " urad"
+        print ("sigma_E/E and Dx/Dy : ", self.sigma_E/self.E, "  and ", self.Dx, "/",self.Dy, " m")
+        print ("emit_x/emit_y     : ",  self.emit_x*1e9, "/",self.emit_y*1e9, " nm-rad")
+        print ("sigma_x/y         : ", self.sigma_x*1e6, "/", self.sigma_y*1e6, " um")
+        print ("sigma_xp/yp       : ", self.sigma_xp*1e6, "/", self.sigma_yp*1e6, " urad")
 
 
 class Trajectory:
@@ -182,8 +190,8 @@ class ParticleArray:
         ind_angles = append(argwhere(px > px_lim), argwhere(py > py_lim))
         p_idxs = unique(append(argwhere(x > xlim), append(argwhere(y > ylim), append(argwhere(x != x), append(argwhere(y!= y), ind_angles)) )))
         #if len(p_idxs) != 0:
-        e_idxs = map(lambda x: append(array([]), x), array([6*p_idxs, 6*p_idxs+1, 6*p_idxs+2, 6*p_idxs+3, 6*p_idxs+4, 6*p_idxs+5]))
-
+        #e_idxs = map(lambda x: append(array([]), x), array([6*p_idxs, 6*p_idxs+1, 6*p_idxs+2, 6*p_idxs+3, 6*p_idxs+4, 6*p_idxs+5]))
+        e_idxs = [append([], x) for x in array([6*p_idxs, 6*p_idxs+1, 6*p_idxs+2, 6*p_idxs+3, 6*p_idxs+4, 6*p_idxs+5])]
         self.particles = delete(self.particles, e_idxs)
         return p_idxs
 

@@ -89,7 +89,7 @@ def errors_seed(lattice, er_list):
     return lattice.update_transfer_maps(), (dx, dy, dtilt)
 
 if __name__ == "__main__":
-    for i in xrange(1):
+    for i in range(1):
         rv = tgauss()
         if abs(rv)>2.99:
-            print rv
+            print (rv)

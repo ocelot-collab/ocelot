@@ -339,7 +339,7 @@ class MagneticLattice:
         """
         if there are edges on the ends of dipoles return True, else False
         """
-        for i in xrange(len(self.sequence)-2):
+        for i in range(len(self.sequence)-2):
             prob_edge1 = self.sequence[i]
             elem = self.sequence[i+1]
             prob_edge2 = self.sequence[i+2]
@@ -351,7 +351,7 @@ class MagneticLattice:
 
     def add_edges(self):
         n = 0
-        for i in xrange(len(self.sequence)):
+        for i in range(len(self.sequence)):
             elem = self.sequence[n]
             if elem.type in ["bend", "rbend", "hcor", "vcor"] and elem.l != 0.:
 
@@ -392,9 +392,9 @@ class MagneticLattice:
         return self
 
     def printElements(self):
-        print '\nLattice\n'
+        print( '\nLattice\n')
         for e in self.sequence:
-            print '-->',  e.id, '[', e.l, ']'
+            print( '-->',  e.id, '[', e.l, ']' )
 
 
 
@@ -402,5 +402,5 @@ if __name__ == "__main__":
 
     fm1 = FieldMap(field_file="center.dat", format = "tabular")
     fm2 = FieldMap(field_file="epu49cen.dat", format = "flat")
-    print fm1.z_arr
-    print fm2.z_arr
+    print( fm1.z_arr)
+    print(fm2.z_arr )

@@ -49,7 +49,7 @@ def read_tabular_file(field_file):
     try:
         field_data = loadtxt(field_file, delimiter=' ', unpack = True)
     except:
-        print "read_map: try to use delimiter = ','"
+        print( "read_map: try to use delimiter = ','")
         field_data = loadtxt(field_file, delimiter=',', unpack = True)
 
     ncols = shape(field_data)[0]
@@ -92,7 +92,7 @@ def read_tabular_file(field_file):
             ny = len(y_array)
             z_array = z_array[:nz_t:ny*nx_t]
         else:
-            print "wrong coordinates order in the field file (magnetic_lattice.py)"
+            print("wrong coordinates order in the field file (magnetic_lattice.py)")
     return x_array, y_array, z_array, Bx_array, By_array, Bz_array
 
 

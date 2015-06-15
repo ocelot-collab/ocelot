@@ -1,7 +1,7 @@
 __author__ = 'Sergey Tomin'
 
 from numpy import tan, linspace, array, pi, matrix
-from optics import trace_z, twiss
+from ocelot.cpbd.optics import trace_z, twiss
 from scipy.integrate import simps
 from numpy.linalg import inv
 from ocelot.cpbd.beam import *
@@ -124,8 +124,8 @@ def calculate_sex_strength(lattice, tws_0, ksi, ksi_comp, nsuperperiod):
     ksi_x, ksi_y = ksi
     ksi_x_comp, ksi_y_comp = ksi_comp
     sex = sextupole_id(lattice)
-    sex_name = sex.keys()
-    print "Chromatism compensate: Before: ", sex
+    sex_name = list(sex.keys())
+    print("Chromatism compensate: Before: ", sex)
     m1x = 0.
     m1y = 0.
     m2x = 0.
@@ -151,16 +151,18 @@ def calculate_sex_strength(lattice, tws_0, ksi, ksi_comp, nsuperperiod):
 
 
 def compensate_chromaticity(lattice, ksi_x_comp = 0, ksi_y_comp = 0,  nsuperperiod = 1):
-    tws = twiss(lattice, Twiss())
+    tws = Twiss()
+    tws.E = lattice.energy
+    tws = twiss(lattice, tws)
     tws_0 = tws[0]
     ksi_comp = (ksi_x_comp, ksi_y_comp)
     ksi = chromaticity(lattice, tws_0, nsuperperiod)
-    print "ksi_x = ", ksi[0]
-    print "ksi_y = ", ksi[1]
+    print("ksi_x = ", ksi[0])
+    print("ksi_y = ", ksi[1])
     sex_dict_stg = calculate_sex_strength(lattice, tws_0, ksi, ksi_comp, nsuperperiod)
-    print "Chromatism compensate: After:  ", sex_dict_stg
+    print("Chromatism compensate: After:  ", sex_dict_stg)
     #print sex_dict_stg
-    sex_name = sex_dict_stg.keys()
+    sex_name = list(sex_dict_stg.keys())
     for element in lattice.sequence:
         if element.type == "sextupole":
             if element.id == sex_name[0]:

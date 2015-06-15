@@ -101,7 +101,7 @@ def radiation(em_screen, list_motion, gamma, beam_current,undulator, mode_proc):
             em_screen.memory_screen.ctypes.data_as(dPtr))
 
     if ret != 1:
-        print "radiation return = ", ret
+        print("radiation return = ", ret)
 
     em_screen.distPhoton(gamma, current = beam_current)
     return em_screen
@@ -318,7 +318,7 @@ class ID_radiation:
         return brightness
 
 def print_rad_props(beam, K, lu, L, E, distance):
-    print "********* e beam ***********"
+    print("********* e beam ***********")
     beam.print_sizes()
 
 
@@ -354,28 +354,28 @@ def print_rad_props(beam, K, lu, L, E, distance):
 
     brightness = flux_tot/(4*pi*pi*Sigma_x*Sigma_y*Sigma_x1*Sigma_y1)*1e-12
 
-    print "********* ph beam ***********"
-    print "Ebeam        : ", E
-    print "K            : ", K
-    print "B            : ", B, " T"
-    print "lambda       : ", Lambda, " m "
-    print "Eph          : ", K2Ephoton(K, lu, E), " eV"
-    print "1/gamma      : ", 1./gamma *1e6, " um"
-    print "sigma_r      : ", sigma_r*1e6, " um"
-    print "sigma_r'     : ", sigma_r1*1e6, " urad"
-    print "Sigma_x      : ", Sigma_x *1e6, " um"
-    print "Sigma_y      : ", Sigma_y *1e6, " um"
-    print "Sigma_x'     : ", Sigma_x1*1e6, "urad"
-    print "Sigma_y'     : ", Sigma_y1*1e6, "urad"
-    print "H. spot size : ", size_x*1000., "/", size_x/distance*1000., " mm/mrad"
-    print "V. spot size : ", size_y*1000., "/", size_y/distance*1000., " mm/mrad"
-    print "I            : ", beam.I, " A"
-    print "Nperiods     : ", L/lu
-    print "distance     : ", distance, " m"
-    print "flux tot     : ", flux_tot, " ph/sec"
-    print "flux density : ", F, " ph/sec/mrad^2;   ", F/distance/distance, " ph/sec/mm^2"
+    print ("********* ph beam ***********")
+    print ("Ebeam        : ", E)
+    print ("K            : ", K)
+    print ("B            : ", B, " T")
+    print ("lambda       : ", Lambda, " m ")
+    print ("Eph          : ", K2Ephoton(K, lu, E), " eV")
+    print ("1/gamma      : ", 1./gamma *1e6, " um")
+    print ("sigma_r      : ", sigma_r*1e6, " um")
+    print ("sigma_r'     : ", sigma_r1*1e6, " urad")
+    print ("Sigma_x      : ", Sigma_x *1e6, " um")
+    print ("Sigma_y      : ", Sigma_y *1e6, " um")
+    print ("Sigma_x'     : ", Sigma_x1*1e6, "urad")
+    print ("Sigma_y'     : ", Sigma_y1*1e6, "urad")
+    print ("H. spot size : ", size_x*1000., "/", size_x/distance*1000., " mm/mrad")
+    print ("V. spot size : ", size_y*1000., "/", size_y/distance*1000., " mm/mrad")
+    print ("I            : ", beam.I, " A")
+    print ("Nperiods     : ", L/lu)
+    print ("distance     : ", distance, " m")
+    print ("flux tot     : ", flux_tot, " ph/sec")
+    print ("flux density : ", F, " ph/sec/mrad^2;   ", F/distance/distance, " ph/sec/mm^2")
     #print "flux density : ", F/distance/distance, " ph/sec/mm^2"
-    print "brilliance   : ", brightness, " ph/sec/mrad^2/mm^2"
+    print ("brilliance   : ", brightness, " ph/sec/mrad^2/mm^2")
 
 
 
@@ -412,20 +412,20 @@ def calculateSR_py(lat, beam, screen, runParameters = None):
 
     beam_current = beam.I*1000
 
-    print "before x:", em_screen.nx, em_screen.x_start, em_screen.x_step
-    print "before y:", em_screen.ny, em_screen.y_start, em_screen.y_step
-    print "before e:", em_screen.ne, em_screen.e_start, em_screen.e_step
+    print ("before x:", em_screen.nx, em_screen.x_start, em_screen.x_step)
+    print ("before y:", em_screen.ny, em_screen.y_start, em_screen.y_step)
+    print ("before e:", em_screen.ne, em_screen.e_start, em_screen.e_step)
     change_sizes_screen(em_screen, beam)
-    print "after x:", em_screen.nx, em_screen.x_start, em_screen.x_step, em_screen.nx_add
-    print "after y:", em_screen.ny, em_screen.y_start, em_screen.y_step, em_screen.ny_add
-    print "after e:", em_screen.ne, em_screen.e_start, em_screen.e_step, em_screen.ne_add
+    print ("after x:", em_screen.nx, em_screen.x_start, em_screen.x_step, em_screen.nx_add)
+    print ("after y:", em_screen.ny, em_screen.y_start, em_screen.y_step, em_screen.ny_add)
+    print ("after e:", em_screen.ne, em_screen.e_start, em_screen.e_step, em_screen.ne_add)
     start = time()
     em_screen = radiation(em_screen, list_motions, beam.gamma, beam_current, undulator, mode_proc = "CPU")
-    print "radiation solver: ", time() - start, " sec"
+    print ("radiation solver: ", time() - start, " sec")
     start = time()
 
     convolution_all(em_screen)
-    print "convolution solver: ", time() - start, " sec"
+    print ("convolution solver: ", time() - start, " sec")
     #intens = data_format(em_screen)
     #show_flux(em_screen)
     return trj, em_screen

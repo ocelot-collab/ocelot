@@ -45,7 +45,7 @@ def particles2motion(part_list):
     return motion
 
 
-def choise_dz(lat):
+def choice_dz(lat):
     return lat.totalLen/10000.
 
 

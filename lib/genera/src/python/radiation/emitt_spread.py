@@ -66,7 +66,7 @@ def beam_sizes_on_screen(beam, screen):
     #    print "Emittance switched off: beam dimensions are zero size "
     return True
 
-def change_size(n, step, start, half_size, acc = 5):
+def change_size(n, step, start, half_size, acc = 3):
     n_add = 0
     accuracy = acc
     if half_size != 0:
@@ -95,8 +95,8 @@ def change_sizes_screen(screen, beam):
     if beam_sizes_on_screen(beam, screen):
 
         if screen.ne == 1:
-            screen.nx, screen.x_step, screen.x_start, screen.nx_add = change_size(screen.nx, screen.x_step, screen.x_start, screen.beam_size_x*3.) # emittance X
-            screen.ny, screen.y_step, screen.y_start, screen.ny_add = change_size(screen.ny, screen.y_step, screen.y_start, screen.beam_size_y*3.) # emittance Y
+            screen.nx, screen.x_step, screen.x_start, screen.nx_add = change_size(screen.nx, screen.x_step, screen.x_start, screen.beam_size_x*1.) # emittance X
+            screen.ny, screen.y_step, screen.y_start, screen.ny_add = change_size(screen.ny, screen.y_step, screen.y_start, screen.beam_size_y*1.) # emittance Y
             screen.ne, screen.e_step, screen.e_start, screen.ne_add = change_size(screen.ne, screen.e_step, screen.e_start, screen.sigma_e*3.) # energy spread
 
         elif screen.nx ==1 and screen.ny ==1:

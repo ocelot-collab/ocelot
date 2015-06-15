@@ -99,6 +99,16 @@ class EMScreen():
         self.arImEy = self.memory_screen[3*Nscr:4*Nscr]
         self.arPhase = self.memory_screen[4*Nscr:5*Nscr]
 
+    def nullify(self):
+        Nscr = self.ne*self.nx*self.ny
+        #self.current = 1
+        self.memory_screen = zeros(Nscr*5)
+        self.arReEx = self.memory_screen[0:Nscr]
+        self.arImEx = self.memory_screen[Nscr:2*Nscr]
+        self.arReEy = self.memory_screen[2*Nscr:3*Nscr]
+        self.arImEy = self.memory_screen[3*Nscr:4*Nscr]
+        self.arPhase = self.memory_screen[4*Nscr:5*Nscr]
+
     def create_like(self, em_screen):
         self.x_step = em_screen.x_step
         self.x_start = em_screen.x_start
@@ -341,6 +351,7 @@ def plot3D_data(data, x = None, y = None):
     if x != None and y != None:
         X,Y = np.meshgrid(x,y)
     else:
+        print np.shape(data)
         X,Y = np.meshgrid(np.arange(np.shape(data)[1]), np.arange(np.shape(data)[0]))
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')

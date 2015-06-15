@@ -20,7 +20,7 @@ beam.beta_x = 12.84
 beam.beta_y = 6.11
 beam.Dx = 0.526
 
-und = Undulator (Kx = 0.43, nperiods = 280, lperiod=0.007, id = "und")
+und = Undulator (Kx = 0.43, nperiods = 500, lperiod=0.007, id = "und")
 
 lat = MagneticLattice((und), energy = beam.E)
 
@@ -46,13 +46,13 @@ screen = Screen()
 screen.z = 100.0
 screen.size_x = 0.002 # m
 screen.size_y = 0.002 # m
-screen.nx = 30
-screen.ny = 30
+screen.nx = 1
+screen.ny = 1
 
 
-screen.start_energy = 7761.2 #eV
-screen.end_energy = 7900 #eV
-screen.num_energy = 1
+screen.start_energy = 7700 #eV
+screen.end_energy = 7800 #eV
+screen.num_energy = 100
 
 traj, em_screen = generaSR.calculateSR_py(lat, beam, screen, runParameters = None)
 

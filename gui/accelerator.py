@@ -273,7 +273,7 @@ def plot_elems(ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legen
     if y_lim != None:
         ax.set_ylim(y_lim)
     n = 0
-    for i in xrange(nturns):
+    for i in range(nturns):
         n = 0
         if len(quad)>1:
             ax.fill(quad[:,0]+i*lat.totalLen + s_point, quad[:,1]*y_scale*0.8, "r", alpha = alpha, label = "quad")
@@ -306,18 +306,20 @@ def plot_elems(ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legen
         ax.legend(loc='upper center', ncol=n, shadow=False, prop=font_manager.FontProperties(size=15))
 
 def plot_disp(ax,tws, top_plot, font_size):
-    S = map(lambda p:p.s, tws)
+    S = [p.s for p in tws]#map(lambda p:p.s, tws)
     d_Ftop = []
     Fmin = []
     Fmax = []
     for elem in top_plot:
-        Ftop = map(lambda p:p.__dict__[elem], tws)
+        Ftop = [p.__dict__[elem] for p in tws]# map(lambda p:p.__dict__[elem], tws)
+        #for f in Ftop:
+        #    print(f)
+        #print (max(Ftop))
         Fmin.append(min(Ftop))
         Fmax.append(max(Ftop))
         top_label = r"$"+elem+"$"
         ax.plot(S, Ftop, lw = 2, label=top_label)
         d_Ftop.append( max(Ftop) - min(Ftop))
-
     d_F = max(d_Ftop)
     if d_F == 0:
         d_Dx = 1
@@ -338,6 +340,8 @@ def plot_disp(ax,tws, top_plot, font_size):
     leg2.get_frame().set_alpha(0.5)
 
 
+
+
 def plot_betas(ax, S, beta_x, beta_y, font_size):
     ax.set_ylabel(r"$\beta_{x,y}$, m")
     ax.plot(S, beta_x,'r', lw = 2, label=r"$\beta_{x}$")
@@ -355,6 +359,7 @@ def plot_xy(ax, S, X, Y, font_size):
 
 
 def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, name = None):
+
     font_size = 16
     if name == None:
         fig = plt.figure()
@@ -385,16 +390,20 @@ def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, name = None):
 
     
     fig.subplots_adjust(hspace=0)
-    beta_x = map(lambda p:p.beta_x, tws)
-    beta_y = map(lambda p:p.beta_y, tws)
-    S = map(lambda p:p.s, tws)
+    beta_x = [p.beta_x for p in tws] # list(map(lambda p:p.beta_x, tws))
+    beta_y = [p.beta_y for p in tws] #list(map(lambda p:p.beta_y, tws))
+    S = [p.s for p in tws] #list(map(lambda p:p.s, tws))
+    #plt.plot(S, beta_x)
 
     plt.xlim(S[0], S[-1])
 
     plot_disp(ax_top,tws, top_plot, font_size)
+
     plot_betas(ax_b, S, beta_x, beta_y, font_size)
+
     plot_elems(ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8) # plot elements
-    
+
+
 def body_trajectory(fig, ax_xy, ax_el, lat, list_particles):
     X = map(lambda p:p.x, list_particles)
     Y = map(lambda p:p.y, list_particles)

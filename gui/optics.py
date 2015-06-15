@@ -22,7 +22,7 @@ def init_plots(views, geo):
     scene.ax = ['']*nviews
     scene.profile_im = {}
     
-    for iview in xrange(nviews):
+    for iview in range(nviews):
         view_id = nviews*100 + 10 + iview + 1
         scene.ax[iview] = scene.fig.add_subplot(view_id, autoscale_on=True)
 
@@ -37,7 +37,7 @@ def init_plots(views, geo):
                 id = views[iview].split(':')[1]
                 for obj in geo():
                     if obj.__class__ == Detector:
-                        print 'adding view for detector: ', obj.id
+                        print('adding view for detector: ', obj.id)
                         scene.ax[iview].set_title('detector:' + id)
                         scene.profile_im[id] = scene.ax[iview] 
                         #scene.profile_im[id] = scene.ax[iview].imshow(obj.matrix.transpose(), cmap='gist_heat',interpolation='none',extent=[0,1,0,1], vmin=0, vmax=10)
@@ -92,7 +92,7 @@ def plot_geometry(ax, geo, proj='y'):
             z_bnd = np.zeros_like(phi_bnd)
             y_bnd = np.zeros_like(phi_bnd)
 
-            for i in xrange( len(phi_bnd) ):
+            for i in range( len(phi_bnd) ):
                 z_bnd[i] = o.r[2] + o.a[0]*sin(phi_bnd[i]) 
                 y_bnd[i] = o.r[idx] + o.a[1] - o.a[1]*cos(phi_bnd[i])
 
@@ -158,11 +158,11 @@ def plot_geometry(ax, geo, proj='y'):
 
 
             
-        zmax = np.max( map(lambda x: x.r[2] + x.size[2],geo))
-        zmin = np.min( map(lambda x: x.r[2] - x.size[2],geo))
+        zmax = np.max([ x.r[2] + x.size[2] for x in geo])
+        zmin = np.min([x.r[2] - x.size[2] for x in geo])
 
-        ymax = np.max( map(lambda x: x.r[1] + x.size[1],geo))
-        ymin = np.min( map(lambda x: x.r[1] - x.size[1],geo))
+        ymax = np.max( [x.r[1] + x.size[1] for x in geo])
+        ymin = np.min( [ x.r[1] - x.size[1] for x in geo])
 
         z_margin = (zmax - zmin)*0.1
         y_margin = (ymax - ymin)*0.1
@@ -178,7 +178,7 @@ def plot_rays(ax, rays, proj='x', alpha=0.4):
     
     for r in rays:
         debug('plotting ray!', r.r0[0], r.k[0], r.s[0])
-        for i in xrange(len(r.r0)):
+        for i in range(len(r.r0)):
             debug('-->', r.r0[i], r.k[i], r.s[i])
             if proj == 'x':
                 ax.plot([r.r0[i][2], r.r0[i][2] + r.k[i][2]*r.s[i] ], [r.r0[i][0], r.r0[i][0] + r.k[i][0]*r.s[i] ], color='#006600', lw=1, alpha=alpha )

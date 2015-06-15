@@ -69,25 +69,25 @@ def fit_gauss_2d(x,y,F):
     mu1 = 0
     mu2 = 0
     
-    for i in xrange( n1 ): mu1 += x[i]*sum(F[i,:])
-    for i in xrange( n2 ): mu2 += y[i]*sum(F[:,i])
+    for i in range( n1 ): mu1 += x[i]*sum(F[i,:])
+    for i in range( n2 ): mu2 += y[i]*sum(F[:,i])
     mu2 /= sum(F[:,:])
     mu1 /= sum(F[:,:])
     
     sig1 = 0
     
-    for i in xrange( n1 ): sig1 += (x[i]-mu1)**2*sum(F[i,:])
+    for i in range( n1 ): sig1 += (x[i]-mu1)**2*sum(F[i,:])
     sig1 /= sum(F[:,:])
     
     sig2 = 0
     
-    for i in xrange( n2 ): sig2 += (y[i]-mu2)**2*sum(F[:,i])
+    for i in range( n2 ): sig2 += (y[i]-mu2)**2*sum(F[:,i])
     sig2 /= sum(F[:,:])
 
     sig12 = 0
 
-    for i in xrange( n1 ):
-        for j in xrange( n2 ): 
+    for i in range( n1 ):
+        for j in range( n2 ):
             sig12 += (x[i]-mu1)*(y[j]-mu2)*F[i,j]
     
     sig12 /= sum(F[:,:])
@@ -102,12 +102,12 @@ def fit_gauss_1d(x,F):
     
     mu1 = 0
     
-    for i in xrange( n1 ): mu1 += x[i]*F[i]
+    for i in range( n1 ): mu1 += x[i]*F[i]
     mu1 /= sum(F[:])
     
     sig1 = 0
     
-    for i in xrange( n1 ): sig1 += (x[i]-mu1)**2*F[i]
+    for i in range( n1 ): sig1 += (x[i]-mu1)**2*F[i]
     sig1 /= sum(F[:])
     
     return mu1, sqrt(sig1)
@@ -116,7 +116,7 @@ def fwhm(x,F):
     m = np.max(F) / 2.0
     ups = []
     downs = []
-    for i in xrange(len(x)-1):
+    for i in range(len(x)-1):
         if F[i] <  m and F[i+1] > m:
             ups.append(i)
         if F[i] >=  m and F[i+1] < m:
@@ -169,7 +169,7 @@ def find_saturation(power, z, n_smooth=5):
     
     ii = 0
     
-    for i in xrange(len(u)):
+    for i in range(len(u)):
         if u[i] < 0.0 * um and z[i] > 10: 
             ii = i
             break

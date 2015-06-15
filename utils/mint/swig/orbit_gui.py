@@ -14,15 +14,65 @@ import os, sys
 
 progname = os.path.basename(sys.argv[0])
 
-class MyData:
-    def __init__(self):
-        self.i = 0
+
+bpm_names = ['BPM1TCOL',
+             'BPM6TCOL',
+             'BPM8TCOL',
+             'BPM3ECOL',
+             'BPM5ECOL',
+             'BPM2ORS',
+             'BPM7ORS',
+             'BPM9ORS',
+             'BPM12ORS',
+             'BPM1SFUND2',
+             'BPM1SFUND3',
+             'BPM1SFUND4',
+             'BPM1SFELC',
+             'BPM1SMATCH',
+             'BPM6SMATCH',
+             'BPM13SMATCH',
+             'BPM14SMATCH',
+             'BPM2UND1',
+             'BPM4UND1',
+             'BPM5UND1',
+             'BPM2UND2',
+             'BPM4UND2',
+             'BPM5UND2',
+             'BPM2UND3',
+             'BPM4UND3',
+             'BPM5UND3',
+             'BPM2UND4',
+             'BPM4UND4',
+             'BPM5UND4',
+             'BPM2UND5',
+             'BPM4UND5',
+             'BPM5UND5',
+             'BPM2UND6',
+             'BPM4UND6',
+             'BPM5UND6']
+
+for i in xrange(len(bpm_names)):
+    bpm_names[i] = bpm_names[i].replace('BPM','')
 
 
-bpm_names = ['2UND1', '2UND2', '2UND4', '2UND5', '2UND6']
-blm_names = ['1L.UND1','1R.UND1', '1L.UND2', '1R.UND2', '1R.UND3', '1R.UND4', '1R.UND5']
+blm_names = ['1L.UND1',
+             '1R.UND1',
+             '1L.UND2', 
+             '1R.UND2', 
+             '1L.UND3', 
+             '1R.UND3', 
+             '1L.UND4',
+             '1R.UND4',
+             '1L.UND5',
+             '1R.UND5',
+             '1L.UND6',
+             '1R.UND6']
 
-gmd_channel = 'TTF2.DAQ/PHFLUX/OUT33/VAL' # ??
+
+#blm_names = ['1L.UND1']
+
+
+gmd_channel = 'TTF2.DAQ/PHFLUX/OUT33/VAL' 
 
 
 bpms = []
@@ -37,8 +87,9 @@ blms = []
 		
 for blm_name in blm_names:
 	blm = dcs.Device("TTF2.DIAG/BLM/" + blm_name)
+        #alarm_ch = "TTF2.DIAG/BLM.ALARM/" + blm_name + '/THRFHI'
 	dcs.get_device_info(blm)
-	blm_channel = blm.id + '/CH00.TD'
+	#blm_channel = blm.id + '/CH00.TD'
 	print 'blm info:', blm.id, bpm.z_pos
 	blms.append(blm)
 
@@ -128,15 +179,22 @@ class BLMCanvas(MyMplCanvas):
 		blm_channel = blm.id + '/CH00.TD'
 		print 'blm info:', blm.id, blm.z_pos
 		h = array(dcs.get_device_td(blm_channel))
-		loss[blm] = abs( sum(h) )
+		loss[blm] = max( abs(h) )
 		print 'blm read:', blm.id, loss[blm]
+
+                #blm_alarm_ch = "TTF2.DIAG/BLM.ALARM/" + blm.id + '/THRFHI'
+                blm_alarm_ch  = blm.id.replace('BLM', 'BLM.ALARM') + '/THRFHI'
+                alarm_val = dcs.get_device_val(blm_alarm_ch) * 1.25e-3 # alarm thr. in Volts
+                print 'alarm:', alarm_val
+                loss[blm] /= alarm_val 
+
 		
         y = [loss[blm] for blm in blms]
 
 	
 	self.axes.bar(z, y, width=0.2, color='b')
             
-        self.axes.set_title('Beam loss')
+        self.axes.set_title('Beam loss (threshold perc.)')
         self.draw()
 
 

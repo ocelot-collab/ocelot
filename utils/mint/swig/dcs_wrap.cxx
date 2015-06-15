@@ -4615,6 +4615,40 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_set_device_val(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  char *arg1 = (char *) 0 ;
+  double arg2 ;
+  int res1 ;
+  char *buf1 = 0 ;
+  int alloc1 = 0 ;
+  double val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  int result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:set_device_val",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_AsCharPtrAndSize(obj0, &buf1, NULL, &alloc1);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "set_device_val" "', argument " "1"" of type '" "char *""'");
+  }
+  arg1 = reinterpret_cast< char * >(buf1);
+  ecode2 = SWIG_AsVal_double(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "set_device_val" "', argument " "2"" of type '" "double""'");
+  } 
+  arg2 = static_cast< double >(val2);
+  result = (int)set_device_val(arg1,arg2);
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  if (alloc1 == SWIG_NEWOBJ) delete[] buf1;
+  return resultobj;
+fail:
+  if (alloc1 == SWIG_NEWOBJ) delete[] buf1;
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_get_device_td(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   char *arg1 = (char *) 0 ;
@@ -4801,6 +4835,7 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"Func_1d_swigregister", Func_1d_swigregister, METH_VARARGS, NULL},
 	 { (char *)"get_device_info", _wrap_get_device_info, METH_VARARGS, NULL},
 	 { (char *)"get_device_val", _wrap_get_device_val, METH_VARARGS, NULL},
+	 { (char *)"set_device_val", _wrap_set_device_val, METH_VARARGS, NULL},
 	 { (char *)"get_device_td", _wrap_get_device_td, METH_VARARGS, NULL},
 	 { (char *)"test_func_1d", _wrap_test_func_1d, METH_VARARGS, NULL},
 	 { (char *)"test_func_1d_2", _wrap_test_func_1d_2, METH_VARARGS, NULL},

@@ -177,6 +177,7 @@ class ParticleArray:
     def __init__(self, n):
         self.particles = zeros(n*6)
         self.s = 0
+        self.E = 0
 
     def rm_tails(self, xlim, ylim, px_lim, py_lim):
         '''

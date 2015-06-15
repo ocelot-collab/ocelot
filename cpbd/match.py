@@ -63,7 +63,7 @@ def match(lat, constr, vars, tw, print_proc = 1, max_iter=1000):
         
         #print 'iteration'
         tw_loc = deepcopy(tw)
-        for i in xrange(len(vars)):
+        for i in range(len(vars)):
             if vars[i].__class__ == Quadrupole:
                 vars[i].k1 = x[i]
                 vars[i].transfer_map = create_transfer_map(vars[i], energy = tw.E)
@@ -127,11 +127,12 @@ def match(lat, constr, vars, tw, print_proc = 1, max_iter=1000):
                 #print constr[e.id]['Dx']
                                 
                 for k in constr[e].keys():
-                    #print 'evaluation debug: constr ', e.id, k
+                    #print 'evaluation debug: constr ', e.id, k,constr[e][k]
                                         
                     if constr[e][k].__class__ == list:
                         #print 'list'   
                         v1 = constr[e][k][1]
+
                         if constr[e][k][0] == '<':
                             #print '< constr'                             
                             if tw_loc.__dict__[k] > v1:
@@ -156,24 +157,24 @@ def match(lat, constr, vars, tw, print_proc = 1, max_iter=1000):
                                 if tw_loc.__dict__[k] < v1:
                                     err = err + (tw_loc.__dict__[k] - v1)**2
                             except:
-                                print 'constraint error: rval should precede lval in lattice'
+                                print ('constraint error: rval should precede lval in lattice')
 
                         if tw_loc.__dict__[k] < 0:
                             #print 'negative constr (???)'
                             err += (tw_loc.__dict__[k] - v1)**2
                             
                     else:
-                        #print "safaf", constr[e.id][k] , tw_loc.__dict__[k], k
+                        #print "safaf", constr[e][k] , tw_loc.__dict__[k], k
                         err = err + weights(k) * (constr[e][k] - tw_loc.__dict__[k])**2
                         #print err
 
         if print_proc == 1:
-            print 'iteration error:', err
+            print('iteration error:', err)
         return err
 
     
     x = [0.0]*len(vars)
-    for i in xrange(len(vars)):
+    for i in range(len(vars)):
         if vars[i].__class__ == list:
             if vars[i][0].__class__ == Twiss and  vars[i][1].__class__ == str:
                 k = vars[i][1]
@@ -186,10 +187,10 @@ def match(lat, constr, vars, tw, print_proc = 1, max_iter=1000):
         if vars[i].__class__ in [RBend, SBend, Bend] :
             x[i] = vars[i].angle
 
-    print "initial value: x = ", x
+    print ("initial value: x = ", x )
     res  = fmin(errf,x,xtol=1e-8, maxiter=max_iter, maxfun=max_iter)
     #print res
-    for i in xrange(len(vars)):
+    for i in range(len(vars)):
         if vars[i].__class__ == list:
             if vars[i][0].__class__ == Twiss and  vars[i][1].__class__ == str:
                 k = vars[i][1]
@@ -199,25 +200,27 @@ def match(lat, constr, vars, tw, print_proc = 1, max_iter=1000):
     #print res
 
 def match_tunes(lat, tw0, quads,  nu_x, nu_y, ncells= 1, print_proc = 0):
-    print "matching start .... "
+    print ("matching start .... ")
     end = Monitor(id = "end")
     lat = MagneticLattice(lat.sequence + [end], energy = lat.energy)
-    tws=twiss(lat, tw0,nPoints=None)
+    tw0.E = lat.energy
+    tws=twiss(lat, tw0, nPoints=None)
 
     nu_x_old = tws[-1].mux/2/pi * ncells
     nu_y_old = tws[-1].muy/2/pi * ncells
-
-    strengths1 = map(lambda p: p.k1, quads)
+    #print nu_y, nu_y_old
+    strengths1 = [p.k1 for p in quads]
 
     constr = {end:{'mux':2*pi*nu_x/ncells, 'muy':2.*pi*nu_y/ncells},'periodic':True}
+    #print constr
     vars = quads
 
     match(lat, constr, vars, tws[0], print_proc = print_proc)
     for i, q in enumerate(quads):
-        print q.id, ".k1: before: ",strengths1[i], "  after: ", q.k1
+        print( q.id, ".k1: before: ",strengths1[i], "  after: ", q.k1)
     lat = MagneticLattice(lat.sequence[:-1], energy = lat.energy)
     tws=twiss(lat, tw0,nPoints=None)
-    print "nu_x: before: ", nu_x_old, "after: ", tws[-1].mux/2/pi * ncells
-    print "nu_y: before: ", nu_y_old, "after: ", tws[-1].muy/2/pi * ncells
-    print "matching end."
+    print ("nu_x: before: ", nu_x_old, "after: ", tws[-1].mux/2/pi * ncells )
+    print ("nu_y: before: ", nu_y_old, "after: ", tws[-1].muy/2/pi * ncells )
+    print ("matching end." )
     return lat

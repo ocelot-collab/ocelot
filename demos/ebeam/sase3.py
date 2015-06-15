@@ -51,8 +51,8 @@ sase = sase3
 
 
 # self-seeding setup
-und2 = Undulator(nperiods=73, lperiod=0.068, Kx=1.e-9, id = "und2")
-sase3_ss_1 = (und2, d2, qd, psu, und2, d2, qf, psu, und2)
+und2 = Undulator(nperiods=73, lperiod=0.068, Kx=0.0, id = "und2")
+sase3_ss_1 = (und2, d2, qd, psu, und2, d2, qf, psu, und2,d2, qd, psu, und2, d2, qf, psu, und2)
 
 sase3_ss_2 = (d2, qd, psu, und, d2, qf, psu)
 
@@ -70,10 +70,10 @@ d3_c = Drift (l=(lcm - 2*d1_c.l - 2*b1_c.l - 2*b2_c.l)/3., id = "d3_c")
 chic = (d2, qd, d1_c, b1_c, d2_c, b2_c, d3_c, b2_c, d2_c, b1_c, d1_c, qf, psu)
 sase3_ss_2m = chic
 
-sase3_ss_3 = (und, d2, qd, psu) + 2*cell_ps
+sase3_ss_3 = (und, d2, qd, psu) + 3*cell_ps
 
 
-sase3_ss = sase3_ss_1 + sase3_ss_2m + sase3_ss_3
+sase3_ss = sase3_ss_1 + sase3_ss_2m + sase3_ss_3 + (d1_c, b1_c, d2_c, b2_c, d3_c, b2_c, d2_c, b1_c, d1_c, qf, psu) + sase3_ss_3 
 
 
 # for matching

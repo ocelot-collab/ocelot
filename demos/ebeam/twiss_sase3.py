@@ -57,7 +57,11 @@ from sase3 import *
 #lat = MagneticLattice(sase3_segment(n=7), energy=17.5)
 lat = MagneticLattice(sase3_ss, energy=17.5)
 
-rematch(29.0, l_fodo, qdh, lat, extra_fodo, beam, qf, qd) # jeez...
+rematch(19.0, l_fodo, qdh, lat, extra_fodo, beam, qf, qd) # jeez...
+
+
+
+lat.update_transfer_maps()
 
 tw0 = Twiss(beam)
 print tw0

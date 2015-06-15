@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import scipy.integrate as integrate
 #import matplotlib.animation as animation
 
-from elements import *
+from ocelot.optics.elements import *
 
 
 class TransferFunction(object):
@@ -117,8 +117,8 @@ class Mesh:
         
         x=0; y=0
         
-        for i1 in xrange(self.nx):
-            for i2 in xrange(self.ny):
+        for i1 in range(self.nx):
+            for i2 in range(self.ny):
                 x = self.x + self.dx * i1
                 y = self.y + self.dy * i2
                 self[i1,i2] = f(x,y)
@@ -157,8 +157,8 @@ class ParaxialFieldSlice():
         
         x=0; y=0
         
-        for i1 in xrange(self.mesh.nx):
-            for i2 in xrange(self.mesh.ny):
+        for i1 in range(self.mesh.nx):
+            for i2 in range(self.mesh.ny):
                 x = self.mesh.x + self.mesh.dx * i1
                 y = self.mesh.y + self.mesh.dy * i2
                 self.mesh[i1,i2] = f(x,y)
@@ -184,8 +184,8 @@ def rescale(of, scale=2.0):
     of.mesh.y /= scale
 
     of_old = np.copy(of.mesh.points)
-    for i in xrange(of.nx):
-        for j in xrange(of.ny):
+    for i in range(of.nx):
+        for j in range(of.ny):
             i_new = int(i*scale)
             j_new = int(j*scale)
             try:
@@ -207,8 +207,8 @@ def propagate_fourier(of, dz, obj=None, scale=1.0):
         kx = np.fft.fftfreq(of.nx, d=2*of.size_x/of.nx)
         ky = np.fft.fftfreq(of.ny, d=2*of.size_y/of.ny)
         
-        for i in xrange(of.nx):
-            for j in xrange(of.ny):
+        for i in range(of.nx):
+            for j in range(of.ny):
                 k = 2*pi / of.lam #of.w / c
                 #print (kx[i]/k), (ky[j]/k)
                 #phi = k * sqrt(1 - (kx[i]/k)**2 - (ky[j]/k)**2)
@@ -220,16 +220,16 @@ def propagate_fourier(of, dz, obj=None, scale=1.0):
         
     if obj.__class__ == Aperture:
         debug('wave propagator: aperture', obj.d)
-        for i in xrange(of.nx):
-            for j in xrange(of.ny):
+        for i in range(of.nx):
+            for j in range(of.ny):
                 #print of.x[i], obj.d[0]
                 if (of.x[i]/obj.d[0])**2 + (of.y[j]/obj.d[1])**2 >1:
                     of[i,j] = 0 
 
     if obj.__class__ == Lense:
         debug('wave propagator: lense, f=', obj.f, " [m]")
-        for i in xrange(of.nx):
-            for j in xrange(of.ny):
+        for i in range(of.nx):
+            for j in range(of.ny):
                 phi = pi*( (of.x[i]/sqrt(of.lam*obj.f))**2 + (of.y[j]/sqrt(of.lam*obj.f))**2 )
                 of[i,j] *= np.exp(-1j*phi) 
                 #of[i,j] *= i
@@ -243,16 +243,16 @@ def propagate_fresnel(of, dz, scale=1.0):
 
     #of_old = np.copy(of.mesh.points)
 
-    for i in xrange(of.nx):
-        for j in xrange(of.ny):
+    for i in range(of.nx):
+        for j in range(of.ny):
             tmp = 0.0 + 0.0j
-            print i,j
-            for i1 in xrange(of.nx):
-                for j1 in xrange(of.ny):
+            print(i,j)
+            for i1 in range(of.nx):
+                for j1 in range(of.ny):
                     phi = 1j * k * ( (of.x[i1] - of.x[i])**2 + (of.y[j1] - of.y[j])**2 ) / (2.0 * dz)
                     #print phi
                     tmp = tmp +  of[i1,j1] * exp(phi) / (of.nx * of.ny)
             of[i,j] = tmp * exp(1j*k*dz) / (1j * of.lam * dz)
-            print of[i,j]
+            print(of[i,j])
         
     

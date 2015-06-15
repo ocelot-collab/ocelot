@@ -100,6 +100,6 @@ def plot_spec_filt(s, filt, ax):
     tr_mod  = np.real(np.sqrt(tr_r*tr_r + tr_i*tr_i)) #modulus of T
         
     ax.plot(filt.ev, tr_mod / np.max(tr_mod) * np.max(np.abs(s.sp)), 'r.--')
-    print s.freq_k
+    print(s.freq_k)
 
     

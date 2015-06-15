@@ -8,13 +8,13 @@ import numpy as np
 
 
 def debug(*args):
-    print ' '.join( map(str, args) )
+    print(' '.join( map(str, args) ))
 
 def warn(*args):
-    print ' '.join( map(str, args) )
+    print(' '.join( map(str, args) ))
 
 def info(*args):
-    print ' '.join( map(str, args) )
+    print(' '.join( map(str, args) ))
 
 
 class OptElement:
@@ -217,7 +217,7 @@ class Geometry():
         for o in geo:
             
             inserted = False
-            for i in xrange(len(self.geo)):
+            for i in range(len(self.geo)):
                 if o.r[2] < self.geo[i].r[2]:
                     self.geo.insert(i, o)
                     inserted = True
@@ -262,16 +262,16 @@ class Geometry():
             self.c_table.append([z_min, z_max, c_fun])
             
         for o in self.c_table:
-            print 'lookup table', o
+            print('lookup table', o)
             
     def get_c(self, r):
-        for i in xrange( len(self.c_table) ):
+        for i in range( len(self.c_table) ):
             
             if r[2] >= self.c_table[i][0] and r[2] <= self.c_table[i][1]:
                 #print r[2], self.c_table[i], self.c_table[i][2](r)
                 return  self.c_table[i][2](r)
             
-        print 'warning: outside of geometry. Defaulting to c=1 ', r
+        print('warning: outside of geometry. Defaulting to c=1 ', r)
         return 1.0
     
     

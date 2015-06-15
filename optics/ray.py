@@ -3,7 +3,7 @@ ray optics
 '''
 
 from numpy import *
-from elements import *
+from ocelot.optics.elements import *
 
 import numpy as np
 
@@ -22,12 +22,12 @@ class Ray(object):
     @property
     def w(self):
         """I'm the 'x' property."""
-        print "getter of w called"
+        print("getter of w called")
         return (2.*pi * self.c) / self.lamb
 
     @w.setter
     def w(self, value):
-        print "setter of w called" 
+        print("setter of w called" )
         self.lamb = (2.*pi*self.c) / self.value
 
 def find_intersections(ray, geo):

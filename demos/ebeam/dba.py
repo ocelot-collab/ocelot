@@ -2,7 +2,9 @@ __author__ = 'Sergey Tomin'
 
 from ocelot.gui.accelerator import *
 from ocelot.cpbd.match import *
-
+#from matplotlib import pylab as plt
+#plt.plot(range(10))
+#plt.show()
 
 Q1 = Quadrupole(l= 0.4, k1=-1.3, id = "Q1")
 Q2 = Quadrupole(l= 0.8, k1=1.4, id = "Q2")
@@ -30,14 +32,13 @@ lat = MagneticLattice(cell)
 tw0 = Twiss()
 
 tws=twiss(lat, tw0, nPoints=1000)
-
 plot_opt_func(lat, tws)
-#plt.show()
+
+plt.show()
 
 
 
-
-constr = {'D1':{'Dx':0.0, 'Dxp':0.0}, 'periodic':True}
+constr = {D1:{'Dx':0.0, 'Dxp':0.0}, 'periodic':True}
 
 vars = [Q4]
 
@@ -45,7 +46,7 @@ match(lat, constr, vars, tw0)
 
 for element in lat.sequence:
     if element.id == "Q4":
-        print "new quadrupole strength: Q4.k1 = ", Q4.k1
+        print( "new quadrupole strength: Q4.k1 = ", Q4.k1)
 
 tws=twiss(lat, tw0, nPoints = 1000)
 plot_opt_func(lat, tws)

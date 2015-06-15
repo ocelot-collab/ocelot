@@ -27,23 +27,23 @@ plot_opt_func(lat, tws)
 
 plt.show()
 
-p1 = Particle(x = 0.01, y = 0.01)
+p1 = Particle(x = 0.001, y = 0.001)
 
 navi = Navigator()
 dz = 0.01
 P1 = []
-for i in xrange(int(lat.totalLen/dz)):
+for i in range(int(lat.totalLen/dz)):
     track(lat, [p1], dz = dz, navi = navi)
     P1.append(copy(p1))
 
-s = map(lambda f: f.s, P1)
-x = map(lambda f: f.x, P1)
-y = map(lambda f: f.y, P1)
+s = [f.s for f in P1]
+x = [f.x for f in P1]
+y = [f.y for f in P1]
 
 
 plt.plot(s, x, "r", label = "X")
 plt.plot(s, y, "b", label = "Y")
-
+#plt.plot(s, [f.px for f in P1], "b", label = "Y")
 plt.title("Energy is not zero. Nonlinear transfer map")
 plt.legend()
 plt.xlabel("S, m")
@@ -55,23 +55,22 @@ plt.show()
 lat = MagneticLattice(line, energy = 0)
 
 
-p1 = Particle(x = 0.01, y = 0.01)
+p1 = Particle(x = 0.001, y = 0.001)
 
 navi = Navigator()
 dz = 0.01
 P1 = []
-for i in xrange(int(lat.totalLen/dz)):
+for i in range(int(lat.totalLen/dz)):
     track(lat, [p1], dz = dz, navi = navi)
     P1.append(copy(p1))
 
-s = map(lambda f: f.s, P1)
-x = map(lambda f: f.x, P1)
-y = map(lambda f: f.y, P1)
+s = [f.s for f in P1]
+x = [f.x for f in P1]
+y = [f.y for f in P1]
 
 
 plt.plot(s, x, "r", label = "X")
 plt.plot(s, y, "b", label = "Y")
-
 plt.title("Beam energy is zero")
 plt.legend()
 plt.xlabel("S, m")

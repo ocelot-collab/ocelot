@@ -31,8 +31,8 @@ tw0 = Twiss()
 tw0.x = 0.1
 tw0.y = 0.2
 tws=twiss(lat, tw0, nPoints=1000)
-print "start: Dx = ", tws[0].Dx, " Dxp = ", tws[0].Dxp
-print "end:   Dx = ", tws[-1].Dx, " Dxp = ", tws[-1].Dxp
+print( "start: Dx = ", tws[0].Dx, " Dxp = ", tws[0].Dxp)
+print("end:   Dx = ", tws[-1].Dx, " Dxp = ", tws[-1].Dxp)
 plot_opt_func(lat, tws,top_plot = ["x", "y"])
 plt.show()
 
@@ -43,13 +43,13 @@ p1 = Particle(x = 0.1, y = 0.2)
 navi = Navigator()
 dz = 0.01
 P1 = []
-for i in xrange(int(lat.totalLen/dz)):
+for i in range(int(lat.totalLen/dz)):
     track(lat, [p1], dz = dz, navi = navi)
     P1.append(copy(p1))
 
-s = map(lambda f: f.s, P1)
-x = map(lambda f: f.x, P1)
-y = map(lambda f: f.y, P1)
+s = [f.s for f in P1]#map(lambda f: f.s, P1)
+x = [f.x for f in P1]#map(lambda f: f.x, P1)
+y = [f.y for f in P1] #map(lambda f: f.y, P1)
 
 font = {'size'   : 10}
 matplotlib.rc('font', **font)
@@ -72,19 +72,19 @@ navi = Navigator()
 dz = 0.01
 P1 = []
 P2 = []
-for i in xrange(int(lat.totalLen/dz)):
+for i in range(int(lat.totalLen/dz)):
     track(lat, [p1, p2], dz = dz, navi = navi)
     P1.append(copy(p1))
     P2.append(copy(p2))
 
-s = map(lambda f: f.s, P1)
-x = map(lambda f: f.x, P1)
-y = map(lambda f: f.y, P1)
-tau = map(lambda f: f.tau, P1)
+s = [f.s for f in P1]#map(lambda f: f.s, P1)
+x = [f.x for f in P1]#map(lambda f: f.x, P1)
+y = [f.y for f in P1]#map(lambda f: f.y, P1)
+tau = [f.tau for f in P1]# map(lambda f: f.tau, P1)
 #s = map(lambda f: f.s, P1)
-x2 = map(lambda f: f.x, P2)
-y2 = map(lambda f: f.y, P2)
-tau2 = map(lambda f: f.tau, P1)
+x2 = [f.x for f in P2]#map(lambda f: f.x, P2)
+y2 = [f.y for f in P2]#map(lambda f: f.y, P2)
+tau2 = [f.tau for f in P2]#map(lambda f: f.tau, P1)
 
 
 

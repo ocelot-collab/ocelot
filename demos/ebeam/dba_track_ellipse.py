@@ -40,8 +40,8 @@ dz = 10.
 track(lat, plist, dz = dz, navi = navi)
 
 
-x2 = map(lambda f: f.x, plist)
-xp2 = map(lambda f: f.px, plist)
+x2 = [f.x for f in plist] #map(lambda f: f.x, plist)
+xp2 = [f.px for f in plist] #map(lambda f: f.px, plist)
 suptitle("Tracking with sextupoles")
 subplot(121)
 plt.title("S = 0 m")
@@ -76,9 +76,9 @@ navi = Navigator()
 dz = 10.
 track(lat, plist, dz = dz, navi = navi)
 
+x2 = [f.x for f in plist] #map(lambda f: f.x, plist)
+xp2 = [f.px for f in plist] #map(lambda f: f.px, plist)
 
-x2 = map(lambda f: f.x, plist)
-xp2 = map(lambda f: f.px, plist)
 plt.plot(x, xp, "r.-", label = "X")
 
 

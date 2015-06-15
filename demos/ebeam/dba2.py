@@ -70,10 +70,10 @@ beam.alpha_y = 0.
 lat = MagneticLattice(dba, energy=3.0)
 tw0 = Twiss(beam)
 tws=twiss(lat, Twiss(), nPoints = 1000)
-print tws[0].beta_x
-print tws[0].beta_y
-print tws[0].alpha_x
-print tws[0].alpha_y
+print( tws[0].beta_x)
+print( tws[0].beta_y)
+print( tws[0].alpha_x)
+print( tws[0].alpha_y)
 constr = {'end':{'Dx':0.0, 'Dxp':0.0}, 'D1':{'Dx':0.55, 'Dxp':0.}}
 #constr = {'end':{'Dx':0.0, 'Dxp':0.0}, 'start':{'beta_x':15.0, 'beta_y':30.0}}
 #constr = {'end':{'Dx':0.0, 'Dxp':0.0}}
@@ -88,18 +88,18 @@ match(lat, constr, vars, tw0)
 
 #tws=twiss(lat, tw0, nPoints = 1000)
 tws=twiss(lat, Twiss(), nPoints = 1000)
-
+s = [p.s for p in tws]
 f=plt.figure()
 ax = f.add_subplot(211)
 ax.set_xlim(0, lat.totalLen)
 
 f.canvas.set_window_title('Betas [m]') 
-p1, = plt.plot(map(lambda p: p.s, tws), map(lambda p: p.beta_x, tws), lw=2.0)
-p2, = plt.plot(map(lambda p: p.s, tws), map(lambda p: p.beta_y, tws), lw=2.0)
+p1, = plt.plot(s, [p.beta_x for p in tws], lw=2.0)
+p2, = plt.plot(s, [p.beta_y for p in tws], lw=2.0)
 plt.grid(True)
 
 ax.twinx()
-p3,=plt.plot(map(lambda p: p.s, tws), map(lambda p: p.Dx, tws), 'r',lw=2.0)
+p3,=plt.plot(s, [p.Dx for p in tws], 'r',lw=2.0)
 
 plt.legend([p1,p2,p3], [r'$\beta_x$',r'$\beta_y$', r'$D_x$'])
 
@@ -108,15 +108,16 @@ plot_lattice(lat, ax2, alpha=0.5)
 
 # add beam size (arbitrary scale)
 
-s = np.array(map(lambda p: p.s, tws))
+
 
 scale = 1000
+#[np.sqrt(p.beta_x*beam.emit_x + (p.Dx*beam.sigma_E)**2) for p in tws]
+#[np.sqrt(p.beta_y*beam.emit_y) for p in tws]
+sig_x = scale * np.array([np.sqrt(p.beta_x*beam.emit_x + (p.Dx*beam.sigma_E)**2) for p in tws]) # 0.03 is for plotting same scale
+sig_y = scale * np.array([np.sqrt(p.beta_y*beam.emit_y) for p in tws])
 
-sig_x = scale * np.array(map(lambda p: np.sqrt(p.beta_x*beam.emit_x + (p.Dx*beam.sigma_E)**2), tws)) # 0.03 is for plotting same scale
-sig_y = scale * np.array(map(lambda p: np.sqrt(p.beta_y*beam.emit_y), tws))
-
-x = scale * np.array(map(lambda p: p.x, tws))
-y = scale * np.array(map(lambda p: p.y, tws))
+x = scale * np.array([p.x for p in tws])
+y = scale * np.array([p.y for p in tws])
 
 
 plt.plot(s, x + sig_x, color='#0000AA', lw=2.0)

@@ -310,9 +310,22 @@ class Sequence:
         self.l = l
 
 class MagneticLattice:
-    def __init__(self, sequence, energy = 0):
+    def __init__(self, sequence, start=None, stop=None, energy = 0):
         self.energy = energy
         self.sequence = list(flatten(sequence))
+
+        try:
+            if start != None: id1 = self.sequence.index(start)
+            else: id1 = 0
+            if stop != None:
+                id2 = self.sequence.index(stop) + 1
+                self.sequence = self.sequence[id1:id2]
+            else:
+                self.sequence = self.sequence[id1:]
+        except:
+            print 'cannot construct sequence, element not found'
+            raise
+
         #self.transferMaps = {}
         # create transfer map and calculate lattice length
         self.totalLen = 0

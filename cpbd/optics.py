@@ -7,8 +7,8 @@ from ocelot.common.globals import *
 from numpy.linalg import inv
 from scipy.integrate import simps, trapz
 from copy import copy
-from scipy import weave
-from und_weave import track_und_RK, track_und_mag, track_und_sym, track_und_openmp
+#from scipy import weave
+from und_weave import *
 
 
 
@@ -107,7 +107,7 @@ class TransferMap:
             return tws
 
         else:
-            print m.__class__
+            print(m.__class__)
             exit("unknow object in transfer map multiplication (TransferMap.__mul__)")
             
     def apply(self, prcl_series):
@@ -120,13 +120,13 @@ class TransferMap:
             n = len(prcl_series)
             if self.order == 1:
                 B = self.B + dB
-                for i in xrange(n):
+                for i in range(n):
                     p = prcl_series[i]
                     V = array([p.x, p.px, p.y, p.py, p.tau, p.p])
                     p.x, p.px, p.y, p.py, p.tau, p.p = dot(self.R, V) + B
                     p.s = p.s + self.length
             else:
-                for i in xrange(n):
+                for i in range(n):
                     p = prcl_series[i]
                     V = array([p.x, p.px, p.y, p.py, p.tau, p.p])
                     p.x, p.px, p.y, p.py, p.tau, p.p = self.nonl_kick(V)
@@ -265,17 +265,17 @@ def create_transfer_map(element, order=1, energy = 0):
 
     elif element.type == "sextupole":
 
-        def nonl_kick_z(u, z, ms):
-            #ms = k2*z
-            z1 = z/2.
-            x = u[0] - transfer_map.dx + u[1]*z1
-            y = u[2] - transfer_map.dy + u[3]*z1
-
-            u[1] += -ms/2.*(x*x - y*y)
-            u[3] += x*y*ms
-
-            u[0] = x + transfer_map.dx + u[1]*z1
-            u[2] = y + transfer_map.dy + u[3]*z1
+        #def nonl_kick_z(u, z, ms):
+        #    #ms = k2*z
+        #    z1 = z/2.
+        #    x = u[0] - transfer_map.dx + u[1]*z1
+        #    y = u[2] - transfer_map.dy + u[3]*z1
+        #
+        #    u[1] += -ms/2.*(x*x - y*y)
+        #    u[3] += x*y*ms
+        #
+        #    u[0] = x + transfer_map.dx + u[1]*z1
+        #    u[2] = y + transfer_map.dy + u[3]*z1
 
             # experimental
             #v = np.array([transfer_map.dx, transfer_map.dy, transfer_map.length, transfer_map.ms])
@@ -296,7 +296,7 @@ def create_transfer_map(element, order=1, energy = 0):
             #"""
             #weave.inline(code, ["u", "v"])
 
-            return u
+        #    return u
 
         def nonl_kick_array_z(u, z, ms):
             #v = np.array([transfer_map.dx, transfer_map.dy, z, ms])
@@ -341,20 +341,21 @@ def create_transfer_map(element, order=1, energy = 0):
 
         if element.ms == None:
             element.ms = element.k2*element.l
+        if element.k2 == None and element.l != 0:
+            element.k2 = element.ms/element.l
         transfer_map.order = 2
 
         #transfer_map.nonl_kick = nonl_kick #lambda V: nonl_kick(transfer_map, V)
         #transfer_map.nonl_kick_array = nonl_kick_array
         if element.l == 0:
-            transfer_map.nonl_kick_z = lambda u, z: nonl_kick_z(u, z, element.ms)
-            transfer_map.nonl_kick = lambda u: nonl_kick_z(u, element.l, element.ms)
+            transfer_map.nonl_kick_z = lambda u, z: nonl_kick_array_z(u, z, element.ms)
+            transfer_map.nonl_kick = lambda u: nonl_kick_array_z(u, element.l, element.ms)
             transfer_map.nonl_kick_array_z = lambda u, z: nonl_kick_array_z(u, z, element.ms)
             transfer_map.nonl_kick_array = lambda u: nonl_kick_array_z(u, element.l, element.ms)
             transfer_map.ms = element.ms
         else:
-
-            transfer_map.nonl_kick_z = lambda u, z: nonl_kick_z(u, z, element.k2*z)
-            transfer_map.nonl_kick = lambda u: nonl_kick_z(u, element.l, element.ms)
+            transfer_map.nonl_kick_z = lambda u, z: nonl_kick_array_z(u, z, element.k2*z)
+            transfer_map.nonl_kick = lambda u: nonl_kick_array_z(u, element.l, element.ms)
             transfer_map.nonl_kick_array_z = lambda u, z: nonl_kick_array_z(u, z, element.k2*z)
             transfer_map.nonl_kick_array = lambda u: nonl_kick_array_z(u, element.l, element.ms)
             #transfer_map.ms = element.ms
@@ -364,44 +365,53 @@ def create_transfer_map(element, order=1, energy = 0):
 
     elif element.type == "octupole":
 
-        def nonl_kick_z( u, z, moct):
-
-            x = u[0] - transfer_map.dx + u[1]*z/2.
-            y = u[2] - transfer_map.dy + u[3]*z/2.
-
-            u[1] += -moct*(x*x*x - 3.*y*y*x)
-            u[3] += moct*(3.*y*x*x - y*y*y)
-
-            u[0] = x + transfer_map.dx + u[1]*z/2.
-            u[2] = y + transfer_map.dy + u[3]*z/2.
-
-            return u
+        #def nonl_kick_z( u, z, moct):
+        #
+        #    x = u[0] - transfer_map.dx + u[1]*z/2.
+        #    y = u[2] - transfer_map.dy + u[3]*z/2.
+        #
+        #    u[1] += -moct*(x*x*x - 3.*y*y*x)
+        #    u[3] += moct*(3.*y*x*x - y*y*y)
+        #
+        #    u[0] = x + transfer_map.dx + u[1]*z/2.
+        #    u[2] = y + transfer_map.dy + u[3]*z/2.
+        #
+        #    return u
 
         def nonl_kick_array_z(u, z, moct):
             #TODO: check expressions
-            v = np.array([transfer_map.dx, transfer_map.dy, z, moct])
+            #v = np.array([transfer_map.dx, transfer_map.dy, z, moct])
+            #
+            #code = """
+            #double x, y;
+            #double dx = V1(0);
+            #double dy = V1(1);
+            #double L = V1(2);
+            #double moct = V1(3);
+            #int i;
+            #
+            #for(i = 0;i<Nu[0]/6;i++ ){
+            #    // symplectic map for sextupole
+            #    // The Stoermer-Verlet schemes
+            #    x = U1(0+i*6) + U1(1+i*6)*L/2. - dx;
+            #    y = U1(2+i*6) + U1(3+i*6)*L/2. - dy;
+            #    U1(1+i*6) -= moct/2.*(x*x*x - 3.*y*y*x);
+            #    U1(3+i*6) += moct*(3.*y*x*x - y*y*y);
+            #    U1(0+i*6) = x + U1(1+i*6)*L/2. + dx;
+            #    U1(2+i*6) = y + U1(3+i*6)*L/2. + dy;
+            #
+            #}
+            #"""
+            #weave.inline(code, ["u","v"])
+            z1 = z/2.
+            x = u[0::6] + u[1::6]*z1 - transfer_map.dx
+            y = u[2::6] + u[3::6]*z1 - transfer_map.dy
 
-            code = """
-            double x, y;
-            double dx = V1(0);
-            double dy = V1(1);
-            double L = V1(2);
-            double moct = V1(3);
-            int i;
+            u[1::6] += -moct/2.*(x*x*x - 3.*y*y*x)
+            u[3::6] += moct*(3.*y*x*x-y*y*y)
 
-            for(i = 0;i<Nu[0]/6;i++ ){
-                // symplectic map for sextupole
-                // The Stoermer-Verlet schemes
-                x = U1(0+i*6) + U1(1+i*6)*L/2. - dx;
-                y = U1(2+i*6) + U1(3+i*6)*L/2. - dy;
-                U1(1+i*6) -= moct/2.*(x*x*x - 3.*y*y*x);
-                U1(3+i*6) += moct*(3.*y*x*x - y*y*y);
-                U1(0+i*6) = x + U1(1+i*6)*L/2. + dx;
-                U1(2+i*6) = y + U1(3+i*6)*L/2. + dy;
-
-            }
-            """
-            weave.inline(code, ["u","v"])
+            u[0::6] = x + u[1::6]*z1 + transfer_map.dx
+            u[2::6] = y + u[3::6]*z1 + transfer_map.dy
             return u
 
         if element.moct == None:
@@ -409,15 +419,15 @@ def create_transfer_map(element, order=1, energy = 0):
         transfer_map.order = 3
 
         if element.l == 0:
-            transfer_map.nonl_kick_z = lambda u, z: nonl_kick_z(u, z, element.moct)
-            transfer_map.nonl_kick = lambda u: nonl_kick_z(u, element.l, element.moct)
+            transfer_map.nonl_kick_z = lambda u, z: nonl_kick_array_z(u, z, element.moct)
+            transfer_map.nonl_kick = lambda u: nonl_kick_array_z(u, element.l, element.moct)
             transfer_map.nonl_kick_array_z = lambda u, z: nonl_kick_array_z(u, z, element.moct)
             transfer_map.nonl_kick_array = lambda u: nonl_kick_array_z(u, element.l, element.moct)
             transfer_map.moct = element.moct
         else:
 
-            transfer_map.nonl_kick_z = lambda u, z: nonl_kick_z(u, z, element.k3*z)
-            transfer_map.nonl_kick = lambda u: nonl_kick_z(u, element.l, element.moct)
+            transfer_map.nonl_kick_z = lambda u, z: nonl_kick_array_z(u, z, element.k3*z)
+            transfer_map.nonl_kick = lambda u: nonl_kick_array_z(u, element.l, element.moct)
             transfer_map.nonl_kick_array_z = lambda u, z: nonl_kick_array_z(u, z, element.k3*z)
             transfer_map.nonl_kick_array = lambda u: nonl_kick_array_z(u, element.l, element.moct)
 
@@ -461,36 +471,38 @@ def create_transfer_map(element, order=1, energy = 0):
             u[3] = py[-1]
             return u
 
-        def nonl_kick_z(u, z, ndiv):
-            ky2 = kz*kz + kx*kx
-            ky = sqrt(ky2)
-            if element.solver == "rk":
-                track_und_openmp(u, z, ndiv*50, kz, kx ,element.Kx, energy)
-            else:
-                zi = np.linspace(0., z, ndiv)
-                h = (zi[1] - zi[0])/(1+u[5])
-                gamma = energy*1957.
-                h0 = 1./(gamma/element.Kx/kz)
-                h02 = h0*h0
-                kx2 = kx*kx
-                kz2 = kz*kz
-                #x, px,y, py, tau = track_und_sym(u, zi, kz, kx, element.Kx, energy)
-                for z in range(len(zi)-1):
-                    chx = cosh(kx*u[0])
-                    chy = cosh(ky*u[2])
-                    shx = sinh(kx*u[0])
-                    shy = sinh(ky*u[2])
-                    u[1] -= h/2.*chx*shx*(kx*ky2*chy*chy + kx2*kx*shy*shy)/(ky2*kz2)*h02
-                    u[3] -= h/2.*chy*shy*(ky2*chx*chx + kx2*shx*shx)/(ky*kz2)*h02
-                    u[4] -= h/2./(1.+u[5]) * ((u[1]*u[1] + u[3]*u[3]) + chx*chx*chy*chy/(2.*kz2)*h02 + shx*shx*shy*shy*kx2/(2.*ky2*kz2)*h02)
-                    u[0] += h*u[1]
-                    u[2] += h*u[3]
-            return u
+        #def nonl_kick_z(u, z, ndiv):
+        #    ky2 = kz*kz + kx*kx
+        #    ky = sqrt(ky2)
+        #    if element.solver == "rk":
+        #        track_und_openmp(u, z, ndiv*50, kz, kx ,element.Kx, energy)
+        #    else:
+        #        zi = np.linspace(0., z, ndiv)
+        #        h = (zi[1] - zi[0])/(1+u[5])
+        #        gamma = energy*1957.
+        #        h0 = 1./(gamma/element.Kx/kz)
+        #        h02 = h0*h0
+        #        kx2 = kx*kx
+        #        kz2 = kz*kz
+        #        #x, px,y, py, tau = track_und_sym(u, zi, kz, kx, element.Kx, energy)
+        #        for z in range(len(zi)-1):
+        #            chx = cosh(kx*u[0])
+        #            chy = cosh(ky*u[2])
+        #            shx = sinh(kx*u[0])
+        #            shy = sinh(ky*u[2])
+        #            u[1] -= h/2.*chx*shx*(kx*ky2*chy*chy + kx2*kx*shy*shy)/(ky2*kz2)*h02
+        #            u[3] -= h/2.*chy*shy*(ky2*chx*chx + kx2*shx*shx)/(ky*kz2)*h02
+        #            u[4] -= h/2./(1.+u[5]) * ((u[1]*u[1] + u[3]*u[3]) + chx*chx*chy*chy/(2.*kz2)*h02 + shx*shx*shy*shy*kx2/(2.*ky2*kz2)*h02)
+        #            u[0] += h*u[1]
+        #            u[2] += h*u[3]
+        #    return u
 
         def nonl_kick_array_z(u, z, ndiv):
-            if element.solver == "rk":
 
+            if element.solver == "rk":
                 track_und_openmp(u, z, 5000, kz, kx ,element.Kx, energy)
+            elif element.solver == "rk_func":
+                rk_field(u, z, 5000, energy, element.mag_field)
             else:
                 #for i in xrange(len(u)/6):
                 #    V = u[i*6:i*6+6]
@@ -546,11 +558,11 @@ def create_transfer_map(element, order=1, energy = 0):
                 kx = 0
             else:
                 kx = 2.*pi/element.ax
-            transfer_map.nonl_kick = lambda u: nonl_kick_z(u, element.l, ndiv = 20)
+            transfer_map.nonl_kick = lambda u: nonl_kick_array_z(u, element.l, ndiv = 20)
             #transfer_map.nonl_kick = lambda u: nonl_kick_rk(u)
             transfer_map.nonl_kick_array = lambda u: nonl_kick_array_z(u, element.l, ndiv = 20)
             transfer_map.nonl_kick_array_z = lambda u, z: nonl_kick_array_z(u, z, ndiv = 5)
-            transfer_map.nonl_kick_z = lambda u, z: nonl_kick_z(u, z, ndiv = 5)
+            transfer_map.nonl_kick_z = lambda u, z: nonl_kick_array_z(u, z, ndiv = 5)
 
     elif element.type == "monitor":
         
@@ -608,7 +620,7 @@ def create_transfer_map(element, order=1, energy = 0):
             Ei = E - de
             Ef = E 
             
-            print Ei,Ef,Ep, z, de
+            print( Ei,Ef,Ep, z, de)
             
             alpha = sqrt(eta / 8.) / cos(phi) * log(Ef/Ei)
             
@@ -695,7 +707,7 @@ def create_transfer_map(element, order=1, energy = 0):
 
     else:
 
-        print element.type , " : unknown type of magnetic element. Cannot create transfer map "
+        print (element.type , " : unknown type of magnetic element. Cannot create transfer map ")
 
     return transfer_map
 
@@ -715,7 +727,7 @@ def periodic_solution(tws, transfer_matrix):
     #print cosmx, cosmy
 
     if abs(cosmx) >= 1 or abs(cosmy) >= 1:
-        print "************ periodic solution does not exist. return None ***********"
+        print( "************ periodic solution does not exist. return None ***********")
         return None
     sinmx = sqrt(1.-cosmx*cosmx)
     sinmy = sqrt(1.-cosmy*cosmy)
@@ -802,7 +814,7 @@ def trace_obj(lattice, obj, nPoints = None):
             obj.E = E0
             e.E = E0
 
-                        
+
             obj_list.append(obj)
     else:
         z_array = linspace(0, lattice.totalLen, nPoints, endpoint=True)
@@ -820,6 +832,7 @@ def twiss(lattice, tws0, nPoints = None):
         else:
             tws0.gamma_x = (1. + tws0.alpha_x**2)/tws0.beta_x
             tws0.gamma_y = (1. + tws0.alpha_y**2)/tws0.beta_y
+
         twiss_list = trace_obj(lattice, tws0, nPoints)
     else:
         exit("unknown object tws0")
@@ -934,15 +947,15 @@ def fodo_parameters(betaXmean = 36.0, L=10.0, verbose = False):
     k = np.array((1.0 / (lquad * L * kap1), 1.0 / (lquad * L * kap2) ))
     
     if verbose:
-        print '********* calculating fodo parameters *********'
-        print 'fodo parameters:'
-        print 'k*l=', k*lquad
-        print 'f=', L * kap1, L*kap2
-        print 'kap1=', kap1
-        print 'kap2=', kap2
-        print 'betaMax=', betaMax
-        print 'betaMin=', betaMin
-        print 'betaMean=', betaMean
-        print '*********                             *********'
+        print ('********* calculating fodo parameters *********')
+        print ('fodo parameters:')
+        print ('k*l=', k*lquad)
+        print ('f=', L * kap1, L*kap2)
+        print ('kap1=', kap1)
+        print ('kap2=', kap2)
+        print ('betaMax=', betaMax)
+        print ('betaMin=', betaMin)
+        print ('betaMean=', betaMean)
+        print ('*********                             *********')
     
     return k*lquad, betaMin, betaMax, betaMean

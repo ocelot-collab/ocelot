@@ -125,11 +125,11 @@ def freq_analysis(track_list, lat, nturns, harm = True, diap = 0.10, nearest = F
         tws = twiss(lat, Twiss())
         nux = tws[-1].mux/2./pi*nsuperperiods
         nuy = tws[-1].muy/2./pi*nsuperperiods
-        print "freq. analysis: Qx = ",nux, " Qy = ", nuy
+        print ("freq. analysis: Qx = ",nux, " Qy = ", nuy)
         nux = abs(int(nux+0.5) - nux)
         nuy = abs(int(nuy+0.5) - nuy)
-        print "freq. analysis: nux = ", nux
-        print "freq. analysis: nuy = ", nuy
+        print ("freq. analysis: nux = ", nux)
+        print ("freq. analysis: nuy = ", nuy)
         return nux, nuy
 
     nux, nuy = None, None
@@ -140,10 +140,10 @@ def freq_analysis(track_list, lat, nturns, harm = True, diap = 0.10, nearest = F
         if pxy.turn == nturns-1:
             if len(pxy.p_list) == 1:
                 #print len(pxy.p_list)
-                print "For frequency analysis coordinates are needed for each turns. Check tracking option 'save_track' must be True "
+                print ("For frequency analysis coordinates are needed for each turns. Check tracking option 'save_track' must be True ")
                 return track_list
-            x = map(lambda p: p[0], pxy.p_list)
-            y = map(lambda p: p[2], pxy.p_list)
+            x = [p[0] for p in pxy.p_list]
+            y = [p[2] for p in pxy.p_list]
             pxy.mux = harmonic_position(x, nux, diap, nearest)
             pxy.muy = harmonic_position(y, nuy, diap, nearest)
 
@@ -255,9 +255,9 @@ def tracking(lat, nturns, track_list, nsuperperiods, save_track = True):
     for i, pxy in enumerate(track_list):
         p_array[i] = pxy.p
 
-    for i in xrange(nturns):
-        print i
-        for n in xrange(nsuperperiods):
+    for i in range(nturns):
+        print(i)
+        for n in range(nsuperperiods):
 
 
             for tm in t_maps:
@@ -308,18 +308,18 @@ def tracking_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods
         # for instance, for case nturns = 500 is all ok
         # but for nturns = 1000 program crashes with error in mpi_comm.gather()
         # the same situation if treads not so much - solution increase number of treads.
-        print "nsuperperiods = ", nsuperperiods
+        print("nsuperperiods = ", nsuperperiods)
         track_list = tracking(lat, nturns, track_list, nsuperperiods, save_track = save_track)
         return track_list
     start = time()
     track_list = mpi_comm.scatter(chunks_track_list, root=0)
-    print " scatter time = ", time() - start, " sec, rank = ", rank, "  len(pxy_list) = ", len(track_list)
+    print(" scatter time = ", time() - start, " sec, rank = ", rank, "  len(pxy_list) = ", len(track_list) )
     start = time()
     track_list = tracking(lat, nturns, track_list, nsuperperiods, save_track = save_track)
-    print " scanning time = ", time() - start, " sec, rank = ", rank
+    print( " scanning time = ", time() - start, " sec, rank = ", rank)
     start = time()
     out_track_list = mpi_comm.gather(track_list, root=0)
-    print " gather time = ", time() - start, " sec, rank = ", rank
+    print(" gather time = ", time() - start, " sec, rank = ", rank)
 
 
     if rank == 0:
@@ -328,7 +328,7 @@ def tracking_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods
         for i, chank in enumerate(out_track_list):
             for pxy in chank:
                 track_list.append(pxy)
-        print " time exec = ", time() - start
+        print(" time exec = ", time() - start)
         return track_list
 
 
@@ -372,6 +372,7 @@ def show_da(out_da, x_array, y_array):
     #print "time execution = ", time() - start , " s"
     nx = len(x_array)
     ny = len(y_array)
+    #print(nx, ny, len(out_da))
     out_da = out_da.reshape(ny,nx)
     xmin, xmax, ymin, ymax = min(x_array), max(x_array), min(y_array), max(y_array)
     #plt.subplot(111, axisbg='darkslategray')

@@ -67,19 +67,15 @@ def radiation_integral(lattice, twiss_0, nsuperperiod = 1):
     return (I1*nsuperperiod,I2*nsuperperiod,I3*nsuperperiod, I4*nsuperperiod, I5*nsuperperiod)
 
 class EbeamParams:
-    def __init__(self, lattice, beam,  coupling = 0.01, nsuperperiod = 1):
     def __init__(self, lattice,beam,  coupling = 0.01, nsuperperiod = 1, tws0 = None):
         if beam.E  == 0:
             exit("beam.E must be non zero!")
         self.E = beam.E
-        tws0 = Twiss()
-        tws0.E = lattice.energy
-        tws = twiss(lattice, tws0)
-        self.tws0 = tws[0]
         if tws0 == None: 
             tws = twiss(lattice, Twiss())
             self.tws0 = tws[0]
         else:
+            tws0.E = lattice.energy
             self.tws0 = tws0 
             tws = twiss(lattice, tws0)
             

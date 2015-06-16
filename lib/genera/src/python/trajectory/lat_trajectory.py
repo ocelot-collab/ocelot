@@ -109,7 +109,7 @@ def trace4radiation(lat,particle0, accuracy = 1):
             particle = particle_end(motion, particle)
         else:
             dz = 0.05/accuracy #choise_dz(lat)
-            part_list = trace_particle(lat, particle, nPoints = int(lat.totalLen/dz)*2+1)
+            part_list = trace_obj(lat, particle, nPoints = int(lat.totalLen/dz)*2+1)
 
             x,y,s,px,py,pz = plist2arrays(part_list)
 

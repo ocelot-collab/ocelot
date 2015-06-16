@@ -5,6 +5,11 @@ from ocelot.lib.genera.src.python.trajectory.spline_py import *
 from pylab import *
 from time import time
 from scipy import interpolate
+from ocelot.common.globals import *
+from ocelot.cpbd.optics import *
+from ocelot.cpbd.elements import *
+
+
 class Motion:
     pass
 
@@ -76,28 +81,113 @@ def traj2motion(traj):
     motion.bx = bspline(motion.z, motion.bx, Z)
     motion.by = bspline(motion.z, motion.by, Z)
 
-
     motion.Bx = bspline(motion.z, motion.Bx, Z)
     motion.By = bspline(motion.z, motion.By, Z)
     motion.z = Z*1000.
-
-
     return motion
 
-def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma):
+
+def und_field(x, y, z, lperiod, Kx):
+    kx = 0.
+    kz = 2*pi/lperiod
+    ky = np.sqrt(kz*kz - kx*kx)
+    c = 299792458
+    m0 = 0.510998928*1e+6
+    B0 = Kx*m0*kz/c
+    k1 =  -B0*kx/ky
+    k2 = -B0*kz/ky
+
+    kx_x = kx*x
+    ky_y = ky*y
+    kz_z = kz*z
+    cosx = np.cos(kx_x)
+    sinhy = np.sinh(ky_y)
+    cosz = np.cos(kz_z)
+    Bx = k1*np.sin(kx_x)*sinhy*cosz #// here kx is only real
+    By = B0*cosx*np.cosh(ky_y)*cosz
+    Bz = k2*cosx*sinhy*np.sin(kz_z)
+    return (Bx, By, Bz)
+
+
+
+def energy_loss_und(energy, Kx, lperiod, L):
+    k = 4.*pi*pi/3.*ro_e/m_e_GeV
+    #print "k = ", k
+    U = k*(energy)**2*Kx**2*L/lperiod**2
+    #U = 0.
+    return U
+
+
+def track4rad(beam, lat, energy_loss = False):
+    energy = beam.E
+    Y0 = [beam.x,beam.xp, beam.y, beam.yp, 0, 0]
+    L = 0.
+    U = []
+    E = []
+    #n = 0
+    non_u = []
+    #K = 4
+    for elem in lat.sequence:
+        if elem.l == 0:
+            continue
+        if elem.type != "undulator":
+            non_u.append(elem)
+            U0 = 0.
+        else:
+            if len(non_u) != 0:
+                lat_el = MagneticLattice(non_u, energy = energy)
+                if lat_el.totalLen != 0:
+                    navi = Navigator()
+                    u = []
+                    N = 100
+                    for z in linspace(L, lat_el.totalLen + L, num = N):
+                        h = lat.totalLen/(N-1)
+                        track(lat_el, Y0, h, navi)
+                        ui = [Y0[0], Y0[1], Y0[2], Y0[3], z, sqrt(1. - Y0[1]*Y0[1] - Y0[3] *Y0[3] ), 0., 0., 0.]
+                        u.extend(ui)
+                    U.append(array(u))
+                    E.append(energy)
+                L += lat_el.totalLen
+            non_u = []
+
+            N = int(30*elem.nperiods+1)
+
+            U0 = energy_loss_und(energy, elem.Kx, elem.lperiod, elem.l)
+            #U0 = 8889.68503061*1e-9
+            #print "U0 = ", U0*1e9," eV"
+            if energy_loss  == False:
+                U0 = 0.
+            try:
+                mag_field = elem.mag_field
+            except:
+                mag_field = lambda x, y, z: und_field(x, y, z, elem.lperiod, elem.Kx)
+            u = rk_track_in_field(array(Y0), elem.l , N, energy, mag_field)
+            Y0[0] = u[-9,0]
+            Y0[1] =u[-8,0]
+            Y0[2] = u[-7,0]
+            Y0[3] =u[-6,0]
+            s = u[-5,0]
+            u[4::9] += L
+            L += s
+            U.append(u)
+            E.append(energy)
+        energy = energy - U0
+        print energy
+    return U, E
+
+
+def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step, tmp ):
     Q = 0.5866740802042227#; // (mm*T)^-1
     hc = 1.239841874330e-3 # // mm
     k2q3 = 1.1547005383792517#;//  = 2./sqrt(3)
     gamma2 = gamma*gamma
-    size = len(motion.z)
-    Nmotion = (size + 1)/3
-    h2 = (motion.z[-1]-motion.z[0])/2./(Nmotion-1)
-
-    w = [0.5555555555555556*h2, 0.8888888888888889*h2, 0.5555555555555556*h2]
+    w = [0.5555555555555556*half_step, 0.8888888888888889*half_step, 0.5555555555555556*half_step]
     LenPntrConst = screen.Distance - motion.z[0]#; // I have to pay attention to this
+    #print screen.Distance
+    phaseConst = np.pi*Erad/(gamma2*hc)
     for p in range(3):# // Gauss integration
         i = n*3 + p + 1
-        radConstAdd = w[p]*Q*k2q3*(screen.Distance - screen.Zstart)
+        #radConstAdd = w[p]*Q*k2q3*(screen.Distance - motion.z[0] - 0*screen.Zstart)
         XX = motion.x[i]
         YY = motion.y[i]
         ZZ = motion.z[i]
@@ -109,7 +199,6 @@ def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma):
         By = motion.By[i]
         LenPntrZ = screen.Distance - ZZ
 
-
         prX = Xscr - XX #//for pointer nx(z)
         prY = Yscr - YY #//for pointer ny(z)
         nx = prX/LenPntrZ
@@ -119,11 +208,11 @@ def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma):
         tx2 = tx*tx
         ty2 = ty*ty
         tyx = 2.*tx*ty
-        #denominator = (1. + tx2 + ty2)*(1. + tx2 + ty2)
-        radConst = radConstAdd/LenPntrZ/((1. + tx2 + ty2)*(1. + tx2 + ty2))
+
+        radConst = w[p]*Q*k2q3*(screen.Distance)/LenPntrZ/((1. + tx2 + ty2)*(1. + tx2 + ty2))
         radX = radConst*(By*(1. - tx2 + ty2) + Bx*tyx - 2.*tx/Q/LenPntrZ)#/*sigma*/
-        radY =-radConst*(Bx*(1. + tx2 - ty2) + By*tyx + 2.*ty/Q/LenPntrZ)#;/*pi*/
-        phaseConst = np.pi*Erad/(gamma2*hc)
+        radY = -radConst*(Bx*(1. + tx2 - ty2) + By*tyx + 2.*ty/Q/LenPntrZ)#;/*pi*/
+
         prXconst = Xscr - motion.x[0]
         prYconst = Yscr - motion.y[0]
         phaseConstIn = (prXconst*prXconst + prYconst*prYconst)/LenPntrConst
@@ -131,6 +220,7 @@ def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma):
         #// string below is for case direct accumulation
         #//double phase = screen->Phase[ypoint*xpoint*je + xpoint*jy + jx] + faseConst*(ZZ - motion->Z[0]  + gamma2*(IbetX2 + IbetY2 + phaseConstCur - phaseConstIn));
         phase = phaseConst*(ZZ - motion.z[0] + gamma2*(IbetX2 + IbetY2 + phaseConstCur - phaseConstIn)) + screen.arPhase
+        #phase = (phase/2./pi - floor(phase/2./pi))*2.*pi
         cosf = np.cos(phase)
         sinf = np.sin(phase)
         EreX = radX*cosf #//(cosf *cos(fase0) - sinf*sin(fase0));
@@ -143,18 +233,18 @@ def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma):
         screen.arReEy += EreY
         screen.arImEy += EimY
         if  i == n_end:# //(n == 5000 && p == 2)
-            #j = n*3 + p + 2
+            LenPntrZ = screen.Distance - motion.z[-1]
             prX = Xscr - motion.x[-1] # //for pointer nx(z)
             prY = Yscr - motion.y[-1] # //for pointer ny(z)
             IbetX2 = motion.XbetaI2[-1]
             IbetY2 = motion.YbetaI2[-1]
             phase = phaseConst*(motion.z[-1] - motion.z[0]  + gamma2*(IbetX2 + IbetY2 + prX*prX/LenPntrZ + prY*prY/LenPntrZ - phaseConstIn))
-            screen.arPhase += phase
+            screen.arPhase = screen.arPhase + phase*(1 + 0*2*tmp*5e-7)
     return screen
 
 
 
-def radiation_py(gamma, traj, screen):
+def radiation_py(gamma, traj, screen, tmp):
     """
     screen format     screen->ReEx[ypoint*xpoint*je + xpoint*jy + jx] += EreX;
     """
@@ -164,11 +254,13 @@ def radiation_py(gamma, traj, screen):
     #print "motion = ", time() - start
 
 
-    gamma = gamma
+    #gamma = gamma
 
     size = len(motion.z)
     Nmotion = (size + 1)/3
-
+    half_step = (motion.z[-1]-motion.z[0])/2./(Nmotion-1)
+    #plot(motion.z, motion.x, "r.-")
+    #show()
     n_end = len(motion.z)-2
     start3 = time()
     Xscr = np.linspace(screen.x_start, screen.x_start+screen.x_step*(screen.nx-1), num = screen.nx)
@@ -192,7 +284,8 @@ def radiation_py(gamma, traj, screen):
         screen.arImEy = screen.arImEy.reshape(shape_array)
         screen.arPhase = screen.arPhase.reshape(shape_array)
         for n in range(Nmotion-1):
-            screen = gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma)
+            #print "n = ", n
+            screen = gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step, tmp)
         screen.arReEx = screen.arReEx.flatten()
         screen.arImEx = screen.arImEx.flatten()
         screen.arReEy = screen.arReEy.flatten()
@@ -214,7 +307,7 @@ def radiation_py(gamma, traj, screen):
             screen.arPhase =np.zeros((screen.ny, screen.nx))
 
             for n in range(Nmotion-1):
-                screen = gintegrator(Xscr, Yscr, erad, motion, screen, n, n_end, gamma)
+                screen = gintegrator(Xscr, Yscr, erad, motion, screen, n, n_end, gamma, half_step)
 
             arReEx = np.append(arReEx,screen.arReEx.flatten())
             arImEx = np.append(arImEx,screen.arImEx.flatten())
@@ -231,7 +324,22 @@ def radiation_py(gamma, traj, screen):
 
     return 1
 
+def calculate_radiation(lat, screen, beam, energy_loss = False):
+    b_current = beam.I*1000. # b_current - beam current in [mA], but beam.I in [A]
+    energy = beam.E
+    gamma = energy/m_e_GeV
 
+    screen.nullify()
+    U, E = track4rad(beam, lat, energy_loss)
+    tmp = 0
+    for u, e in zip(U, E):
+        #print "Energy = ", e, e/m_e_GeV
+        #plot(u[4::9], u[0::9],".-")
+        radiation_py(e/m_e_GeV, u, screen, tmp)
+        tmp += 1
+    screen.distPhoton( gamma, current = b_current)
+
+    return screen
 
 """
 void sum_screens(Screen *screen, Screen screen_up)

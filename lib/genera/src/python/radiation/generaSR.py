@@ -10,6 +10,7 @@ from ctypes import CDLL, c_double, c_int, POINTER
 from numpy import array, zeros, abs
 from sys import path
 import os
+from ocelot.lib.genera.unit2unit import *
 from scipy.special import *
 from ocelot.common.globals import *
 from time import time
@@ -31,6 +32,7 @@ else:
 """
 import ocelot
 import os
+
 path_to_ocelot = os.path.dirname(ocelot.__file__)
 
 tail = "/lib/genera/build/genera_libs/radiation.so"

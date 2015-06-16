@@ -20,6 +20,15 @@ class EMScreen():
 
 
     def screen_to_emscreen(self, screen):
+
+        self.x = screen.x
+        self.y = screen.y
+        self.size_x = screen.size_x # half-size horizontal
+        self.size_y = screen.size_y # half-size vertical
+
+        self.start_energy = screen.start_energy
+        self.end_energy = screen.end_energy
+        self.num_energy = screen.num_energy
         # X
         self.x_start = (screen.x - screen.size_x)*1000.
 
@@ -28,7 +37,7 @@ class EMScreen():
         else:
             self.x_step = 0
             self.x_start = screen.x*1000.
-        self.nx = screen.nx
+        self.nx = screen.nx # points per horizontal direction
         # Y
         self.y_start =  (screen.y - screen.size_y)*1000.
         if(screen.ny != 1):
@@ -36,7 +45,7 @@ class EMScreen():
         else:
             self.y_step = 0
             self.y_start = screen.y*1000.
-        self.ny = screen.ny
+        self.ny = screen.ny # points per vertical direction
         # E
         self.e_start = screen.start_energy
         if(screen.num_energy != 1):

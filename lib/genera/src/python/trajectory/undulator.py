@@ -25,6 +25,7 @@ else:
 """
 import ocelot
 #print ocelot.__file__
+
 import os
 path_to_ocelot = os.path.dirname(ocelot.__file__)
 #print path

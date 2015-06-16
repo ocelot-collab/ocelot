@@ -119,7 +119,7 @@ class Drift(Element):
         self.tilt = 0.
 
 class Bend(Element):
-    def __init__(self, l, angle=0, tilt=0.0, e1 = 0, e2 = 0, k1 = 0, id = None):
+    def __init__(self, l, angle=0., tilt=0.0, e1 = 0., e2 = 0., k1 = 0., id = None):
         Element.__init__(self, id)
         self.type = "bend"
         self.l = l
@@ -180,13 +180,20 @@ class RBend(Bend):
     k - quadrupole strength in [1/m^2].
     """
     def __init__(self, l=0, angle=0,tilt=0, k1 = 0, id = None, e1 = None, e2 = None):
-        if e1 == None: e1 = angle/2.
-        if e2 == None: e2 = angle/2.
+        if e1 == None:
+            e1 = angle/2.
+        else:
+            e1 += angle/2.
+        if e2 == None:
+            e2 = angle/2.
+        else:
+            e1 += angle/2.
         Bend.__init__(self, l, angle=angle, e1=e1, e2=e2, k1=k1, id=id)
         self.type = "rbend"
         self.l = l
         self.angle = angle
         self.k1 = k1
+        self.tilt = tilt
         # for future
 
         #self.e1 = 0     # The rotation angle for the entrance pole face (default: 0 rad).
@@ -357,7 +364,7 @@ class MagneticLattice:
             prob_edge1 = self.sequence[i]
             elem = self.sequence[i+1]
             prob_edge2 = self.sequence[i+2]
-            if elem.type in ["bend", "rbend", "hcor", "vcor"]:
+            if elem.type in ["bend", "sbend", "rbend", "hcor", "vcor"]:
                 if prob_edge1.type != "edge" and prob_edge2 != "edge":
                     #print elem.type, prob_edge1.type, prob_edge2.type
                     return False
@@ -367,7 +374,7 @@ class MagneticLattice:
         n = 0
         for i in range(len(self.sequence)):
             elem = self.sequence[n]
-            if elem.type in ["bend", "rbend", "hcor", "vcor"] and elem.l != 0.:
+            if elem.type in ["bend", "sbend", "rbend", "hcor", "vcor"] and elem.l != 0.:
 
 
                 e_name = elem.id

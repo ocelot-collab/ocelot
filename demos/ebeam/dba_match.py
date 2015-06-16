@@ -10,22 +10,22 @@ from scipy.optimize import *
 
 d0 = Drift(l=1.0)
 d1 = Drift(l=2.5)
-b1 = RBend (l=3.0, angle=0.002, id = "b1")
-d2 = Drift(l=0.5)
-b2 = RBend (l=3.0, angle=0.002, id = "b2")
+b1 = RBend (l=3.0, angle=15./180.*3.14, id = "b1")
+d2 = Drift(l=1.0)
+b2 = RBend (l=3.0, angle=15./180.*3.14, id = "b2")
 
 
-q1 = Quadrupole(l=0.1, k1=1.0)
+q1 = Quadrupole(l=0.1, k1=2.0)
 q2 = Quadrupole(l=0.1, k1=-3.0)
-q3 = Quadrupole(l=0.1, k1=4.91776965)
-q4 = Quadrupole(l=0.1, k1=4.91776965)
+q3 = Quadrupole(l=0.1, k1=2)
+q4 = Quadrupole(l=0.1, k1=-2)
 q5 = Quadrupole(l=0.1, k1=-3.0)
 q6 = Quadrupole(l=0.1, k1=1.0)
 
 m1 = Monitor(id="start")
 m2 = Monitor(id="end")
 
-dba = (m1,d0,q1, d2, q2, d1, b1, d2, q3, (d0,)*5, q3, d2, b2, d1, q5, d2, q6,d0,m2)
+dba = (m1,d0,q1, d2, q2, d1, b1, d2, q3, d0, q4, d1, q4,d0, q3, d2, b1, d1, q2, d2, q1,d0,m2)
 
 beam = Beam()
 beam.E = 14.0
@@ -48,13 +48,13 @@ tws=twiss(lat, tw0, nPoints = 1000)
 
 
 
-constr = {m1:{'Dx':0.0, 'Dxp':0.0, 'beta_x':55.0, 'beta_y':90.0}, m2:{'beta_x':15.0, 'beta_y':30.0}}
-#constr = {'end':{'Dx':0.0, 'Dxp':0.0}, 'start':{'beta_x':15.0, 'beta_y':30.0}}
-#constr = {'end':{'Dx':0.0, 'Dxp':0.0}}
+constr = {m1:{'Dx':0.0, 'Dxp':0.0, 'beta_x':30.0, 'beta_y':30.0}, m2:{'beta_x':30.0, 'beta_y':30.0, 'Dx':0.0, 'Dxp':0.0,}}
+#constr = {m1:{'beta_x':80.0, 'beta_y':50.0, "alpha_x": 0, "alpha_y": 0}, m2:{'beta_x':80.0, 'beta_y':50.0, "alpha_x": 0, "alpha_y": 0}}
+#constr = { "periodic": True}
 
 
 #vars = [q1,q2,q3,q5,q6, [tw0, 'beta_x'], [tw0, 'beta_y']]
-vars = [q1,q2,q5,q6, [tw0, 'beta_x'], [tw0, 'beta_y'], [tw0, 'alpha_x'], [tw0, 'alpha_y']]
+vars = [q1,q2,q3, [tw0, 'beta_x'], [tw0, 'beta_y'], [tw0, 'alpha_x'], [tw0, 'alpha_y'], [tw0, 'Dx'], [tw0, 'Dxp']]
 #vars = [q1,q2,q3,q5,q6, [tw0, 'beta_x'], [tw0, 'beta_y'], [tw0, 'alpha_x'], [tw0, 'alpha_y']]
 
 match(lat, constr, vars, tw0)

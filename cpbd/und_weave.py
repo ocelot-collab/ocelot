@@ -2,7 +2,7 @@ __author__ = 'Sergey Tomin'
 
 import numpy as np
 from numpy import sqrt, matrix, cos, sin, log, tan, eye, zeros, pi, array, linspace, dot, abs, random, arctan, sign
-from scipy import weave
+
 from scipy.integrate import odeint
 #import os
 #os.environ["CC"] = "gcc-4.8"
@@ -93,6 +93,24 @@ def rk_track_in_field(y0, l, N, energy, mag_field):
     u[(N-1)*9 + 6], u[(N-1)*9 + 7], u[(N-1)*9 + 8] = mag_field(u[(N-1)*9 + 0], u[(N-1)*9 + 2], u[(N-1)*9 + 4])
     return u
 
+def rk_field(y0, l, N, energy, mag_field):
+    #z = linspace(0, l, num=N)
+    #h = z[1]-z[0]
+    #N = len(z)
+    traj_data = rk_track_in_field(y0, l, N, energy, mag_field)
+    #print np.shape(traj_data), np.shape(y0)
+    #print traj_data
+    y0[0::6] = traj_data[(N-1)*9 + 0,:]
+    y0[1::6] = traj_data[(N-1)*9 + 1,:]
+    y0[2::6] = traj_data[(N-1)*9 + 2,:]
+    y0[3::6] = traj_data[(N-1)*9 + 3,:]
+    #y0[4::6] = traj_data[(N-1)*9 + 4,:]
+    #y0[5::6] = traj_data[(N-1)*9 + 5,:]
+    return y0
+
+
+
+
 def scipy_track_in_field(y0, l, N, energy, mag_field):# y0, l, N, energy, mag_field
     z = np.linspace(0.,l, num=N)
     def func(y, z, fields):
@@ -143,20 +161,6 @@ def scipy_track_in_field(y0, l, N, energy, mag_field):# y0, l, N, energy, mag_fi
     return w
 
 
-def rk_field(y0, l, N, energy, mag_field):
-    #z = linspace(0, l, num=N)
-    #h = z[1]-z[0]
-    #N = len(z)
-    traj_data = rk_track_in_field(y0, l, N, energy, mag_field)
-    #print np.shape(traj_data), np.shape(y0)
-    #print traj_data
-    y0[0::6] = traj_data[(N-1)*9 + 0,:]
-    y0[1::6] = traj_data[(N-1)*9 + 1,:]
-    y0[2::6] = traj_data[(N-1)*9 + 2,:]
-    y0[3::6] = traj_data[(N-1)*9 + 3,:]
-    #y0[4::6] = traj_data[(N-1)*9 + 4,:]
-    #y0[5::6] = traj_data[(N-1)*9 + 5,:]
-    return y0
 
 def rk_field_scipy(y0, l, N, energy, mag_field):
     #z = linspace(0, l, num=N)
@@ -174,150 +178,154 @@ def rk_field_scipy(y0, l, N, energy, mag_field):
     return y0
 
 
-def track_und_sym(y0, z, kz, kx, Kx, energy):
-    gamma = energy*1957.
-    #if energy == 0:
-    #    h0 = 0.
-    #else:
-    h0 = 1./(gamma/Kx/kz)
+#def track_und_sym(y0, z, kz, kx, Kx, energy):
+#    gamma = energy*1957.
+#    #if energy == 0:
+#    #    h0 = 0.
+#    #else:
+#    h0 = 1./(gamma/Kx/kz)
+#
+#    #c = 299792458
+#    #m0 = 0.510998928*1e+6
+#    #B0 = Kx*m0*kz/c
+#    #y = array(y0)
+#    ky = sqrt(kz*kz + kx*kx)
+#
+#    h = z[1]-z[0]
+#    N = len(z)
+#    #print kx, ky, kz, N, 1./h0, h
+#    #Ax =  1/kz * np.cos(kx*y0[0])*np.cosh(ky*y0[2])*np.sin(kz*z[0])
+#    #Ay =  kx/(ky*kz) * np.sin(kx*y0[0])*np.sinh(ky*y0[2])*np.sin(kz*z[0])
+#    q = array([y0[0],y0[1] ,y0[2],y0[3], y0[4], y0[5], kx, ky, kz, h, N, h0])
+#    #print N
+#    u = zeros(6)
+#
+#    code = """
+#    double x = Q1(0);
+#    double px = Q1(1);
+#    double y = Q1(2);
+#    double py = Q1(3);
+#    double tau = Q1(4);
+#    double delta = Q1(5);
+#    U1(5) = delta;
+#
+#    double kx = Q1(6);
+#    double ky = Q1(7);
+#    double kz = Q1(8);
+#
+#    double h = Q1(9);
+#    int N = Q1(10);
+#    double h0 = Q1(11); //rho = Q1(11);
+#    double h02 = h0*h0;
+#    int i;
+#    double kx2 = kx*kx;
+#    double ky2 = ky*ky;
+#    double kz2 = kz*kz;
+#    //double Kx = kx2/kz2*h02;
+#    //double Ky = ky2/kz2*h02;
+#    //double x2, y2, x4, y4;
+#    h = h/(1. + delta);
+#    for ( i = 0; i<N-1; i++){
+#        //x2 = x*x;
+#        //y2 = y*y;
+#        //x4 = x2*x2;
+#        //y4 = y2*y2;
+#        double chx = cosh(kx*x);
+#        double chy = cosh(ky*y);
+#        double shx = sinh(kx*x);
+#        double shy = sinh(ky*y);
+#        px = px - h/2.*chx*shx*(kx*ky2*chy*chy + kx2*kx*shy*shy)/(ky2*kz2)*h02;
+#        py = py - h/2.*chy*shy*(ky2*chx*chx + kx2*shx*shx)/(ky*kz2)*h02;
+#        //px = px - h*Kx*(x/2. + kx2*x2*x/3. + kz2*x*y2 + (kx2*kx2* x4*x)/15. + (kx2* kz2* x2*x *y2)/3. + (kz2*ky2*x*y4)/6. );
+#        //py = py - h*Ky*(y/2. + ky2*y2*y/3. + kz2*kx2*x2*y/ky2 + (kx2 *kz2* x2* y2*y)/3. + (kx2*kx2* kz2* x4*y)/(6.*ky2)  + (ky2*ky2* y4*y)/15. );
+#        //tau = tau - h/(1.+delta) *((px*px + py*py)/2. + Kx*x2/4. + Ky*y2/4.
+#        //                        + Kx*kx2*x4/12. + Ky*ky2*y4/12.  + Kx*kx2*kx2/90.*x4*x2 + Ky*ky2*ky2/90.*y4*y2
+#        //                        + h02*(kx2*ky2/12.*x2*y4 + kx2*kx2/12.*x4*y2 + kx2*x2*y2/4.) );
+#        tau = tau - h/2./(1.+delta) * ((px*px + py*py) + chx*chx*chy*chy/(2.*kz2)*h02 + shx*shx*shy*shy*kx2/(2.*ky2*kz2)*h02);
+#        x = x + h*px;
+#        y = y + h*py;
+#
+#    }
+#    U1(0) = x;
+#    U1(1) = px;
+#    U1(2) = y;
+#    U1(3) = py;
+#    U1(4) = tau;
+#    """
+#    weave.inline(code, ['u',"q"])
+#    x = u[0]
+#    px = u[1]
+#    y = u[2]
+#    py = u[3]
+#    tau = u[4]
+#    return x, px,y, py, tau
+#
+#
+#def track_und_mag(y0, z, kz, kx, Kx, energy):
+#    gamma = energy*1957.
+#    rho = gamma/Kx/kz
+#    #c = 299792458
+#    #m0 = 0.510998928*1e+6
+#    #B0 = Kx*m0*kz/c
+#
+#    #y = array(y0)
+#    ky = sqrt(kz*kz + kx*kx)
+#
+#    h = z[1]-z[0]
+#    N = len(z)
+#    #Ax =  1/kz * np.cos(kx*y0[0])*np.cosh(ky*y0[2])*np.sin(kz*z[0])
+#    #Ay =  kx/(ky*kz) * np.sin(kx*y0[0])*np.sinh(ky*y0[2])*np.sin(kz*z[0])
+#    q = array([y0[0],y0[1] ,y0[2],y0[3], y0[4], y0[5], kx, ky, kz, h, N, rho])
+#    #print N
+#    u = zeros(6)
+#
+#    code = """
+#    double x = Q1(0);
+#    double px = Q1(1);
+#    double y = Q1(2);
+#    double py = Q1(3);
+#    double tau = Q1(4);
+#    double delta = Q1(5);
+#    U1(5) = delta;
+#
+#    double kx = Q1(6);
+#    double ky = Q1(7);
+#    double kz = Q1(8);
+#
+#    double h = Q1(9);
+#    int N = Q1(10);
+#    double rho = Q1(11);
+#
+#    int i;
+#    double kx2 = kx*kx;
+#    double ky2 = ky*ky;
+#    double kz2 = kz*kz;
+#    double K = h/(2.*rho*rho*kz2);
+#    for ( i = 0; i<N-1; i++){
+#
+#        x = x + h*px;
+#        y = y + h*py;
+#        px = px - K* (kx2*x - ky2*ky2/2.*x*y*y + (1./(8.*rho*rho) - kx2/2.)*kz2*x*x*x);
+#        //py = py - K*(y + kz2*y*y*y/6.);
+#        py = py - K* (ky2*y + ky2*ky2/6.*y*y*y - (3./(8.*rho*rho) - 3.*kx2/2.)*kz2*x*x*y);
+#    }
+#    U1(0) = x;
+#    U1(1) = px;
+#    U1(2) = y;
+#    U1(3) = py;
+#    U1(4) = tau;
+#    """
+#    weave.inline(code, ['u',"q"])
+#    x = u[0]
+#    px = u[1]
+#    y = u[2]
+#    py = u[3]
+#    tau = u[4]
+#    return x, px,y, py, tau
 
-    #c = 299792458
-    #m0 = 0.510998928*1e+6
-    #B0 = Kx*m0*kz/c
-    #y = array(y0)
-    ky = sqrt(kz*kz + kx*kx)
 
-    h = z[1]-z[0]
-    N = len(z)
-    #print kx, ky, kz, N, 1./h0, h
-    #Ax =  1/kz * np.cos(kx*y0[0])*np.cosh(ky*y0[2])*np.sin(kz*z[0])
-    #Ay =  kx/(ky*kz) * np.sin(kx*y0[0])*np.sinh(ky*y0[2])*np.sin(kz*z[0])
-    q = array([y0[0],y0[1] ,y0[2],y0[3], y0[4], y0[5], kx, ky, kz, h, N, h0])
-    #print N
-    u = zeros(6)
 
-    code = """
-    double x = Q1(0);
-    double px = Q1(1);
-    double y = Q1(2);
-    double py = Q1(3);
-    double tau = Q1(4);
-    double delta = Q1(5);
-    U1(5) = delta;
-
-    double kx = Q1(6);
-    double ky = Q1(7);
-    double kz = Q1(8);
-
-    double h = Q1(9);
-    int N = Q1(10);
-    double h0 = Q1(11); //rho = Q1(11);
-    double h02 = h0*h0;
-    int i;
-    double kx2 = kx*kx;
-    double ky2 = ky*ky;
-    double kz2 = kz*kz;
-    //double Kx = kx2/kz2*h02;
-    //double Ky = ky2/kz2*h02;
-    //double x2, y2, x4, y4;
-    h = h/(1. + delta);
-    for ( i = 0; i<N-1; i++){
-        //x2 = x*x;
-        //y2 = y*y;
-        //x4 = x2*x2;
-        //y4 = y2*y2;
-        double chx = cosh(kx*x);
-        double chy = cosh(ky*y);
-        double shx = sinh(kx*x);
-        double shy = sinh(ky*y);
-        px = px - h/2.*chx*shx*(kx*ky2*chy*chy + kx2*kx*shy*shy)/(ky2*kz2)*h02;
-        py = py - h/2.*chy*shy*(ky2*chx*chx + kx2*shx*shx)/(ky*kz2)*h02;
-        //px = px - h*Kx*(x/2. + kx2*x2*x/3. + kz2*x*y2 + (kx2*kx2* x4*x)/15. + (kx2* kz2* x2*x *y2)/3. + (kz2*ky2*x*y4)/6. );
-        //py = py - h*Ky*(y/2. + ky2*y2*y/3. + kz2*kx2*x2*y/ky2 + (kx2 *kz2* x2* y2*y)/3. + (kx2*kx2* kz2* x4*y)/(6.*ky2)  + (ky2*ky2* y4*y)/15. );
-        //tau = tau - h/(1.+delta) *((px*px + py*py)/2. + Kx*x2/4. + Ky*y2/4.
-        //                        + Kx*kx2*x4/12. + Ky*ky2*y4/12.  + Kx*kx2*kx2/90.*x4*x2 + Ky*ky2*ky2/90.*y4*y2
-        //                        + h02*(kx2*ky2/12.*x2*y4 + kx2*kx2/12.*x4*y2 + kx2*x2*y2/4.) );
-        tau = tau - h/2./(1.+delta) * ((px*px + py*py) + chx*chx*chy*chy/(2.*kz2)*h02 + shx*shx*shy*shy*kx2/(2.*ky2*kz2)*h02);
-        x = x + h*px;
-        y = y + h*py;
-
-    }
-    U1(0) = x;
-    U1(1) = px;
-    U1(2) = y;
-    U1(3) = py;
-    U1(4) = tau;
-    """
-    weave.inline(code, ['u',"q"])
-    x = u[0]
-    px = u[1]
-    y = u[2]
-    py = u[3]
-    tau = u[4]
-    return x, px,y, py, tau
-
-def track_und_mag(y0, z, kz, kx, Kx, energy):
-    gamma = energy*1957.
-    rho = gamma/Kx/kz
-    #c = 299792458
-    #m0 = 0.510998928*1e+6
-    #B0 = Kx*m0*kz/c
-
-    #y = array(y0)
-    ky = sqrt(kz*kz + kx*kx)
-
-    h = z[1]-z[0]
-    N = len(z)
-    #Ax =  1/kz * np.cos(kx*y0[0])*np.cosh(ky*y0[2])*np.sin(kz*z[0])
-    #Ay =  kx/(ky*kz) * np.sin(kx*y0[0])*np.sinh(ky*y0[2])*np.sin(kz*z[0])
-    q = array([y0[0],y0[1] ,y0[2],y0[3], y0[4], y0[5], kx, ky, kz, h, N, rho])
-    #print N
-    u = zeros(6)
-
-    code = """
-    double x = Q1(0);
-    double px = Q1(1);
-    double y = Q1(2);
-    double py = Q1(3);
-    double tau = Q1(4);
-    double delta = Q1(5);
-    U1(5) = delta;
-
-    double kx = Q1(6);
-    double ky = Q1(7);
-    double kz = Q1(8);
-
-    double h = Q1(9);
-    int N = Q1(10);
-    double rho = Q1(11);
-
-    int i;
-    double kx2 = kx*kx;
-    double ky2 = ky*ky;
-    double kz2 = kz*kz;
-    double K = h/(2.*rho*rho*kz2);
-    for ( i = 0; i<N-1; i++){
-
-        x = x + h*px;
-        y = y + h*py;
-        px = px - K* (kx2*x - ky2*ky2/2.*x*y*y + (1./(8.*rho*rho) - kx2/2.)*kz2*x*x*x);
-        //py = py - K*(y + kz2*y*y*y/6.);
-        py = py - K* (ky2*y + ky2*ky2/6.*y*y*y - (3./(8.*rho*rho) - 3.*kx2/2.)*kz2*x*x*y);
-    }
-    U1(0) = x;
-    U1(1) = px;
-    U1(2) = y;
-    U1(3) = py;
-    U1(4) = tau;
-    """
-    weave.inline(code, ['u',"q"])
-    x = u[0]
-    px = u[1]
-    y = u[2]
-    py = u[3]
-    tau = u[4]
-    return x, px,y, py, tau
-
+from scipy import weave
 
 def track_und_RK(y0, z, kz, kx ,Kx, energy):
     gamma = energy*1957.

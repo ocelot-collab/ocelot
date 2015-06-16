@@ -332,7 +332,7 @@ class Orbit:
 
 
     def calc_track(self,lattice):
-        part_list = trace_particle(lattice, self.particle0, nPoints = None)
+        part_list = trace_obj(lattice, self.particle0, nPoints = None)
         self.x_track = map(lambda p: p.x, part_list)
         self.y_track = map(lambda p: p.y, part_list)
         self.s_track = map(lambda p: p.s, part_list)
@@ -340,7 +340,7 @@ class Orbit:
 def draw_orbit(orbit,lattice, traject = True):
     if traject:
         bpm_draw = "o"
-        part_list = trace_particle(lattice, orbit.particle0, nPoints = None)
+        part_list = trace_obj(lattice, orbit.particle0, nPoints = None)
         #plt.plot(map(lambda p: p.s, part_list), map(lambda p: p.y, part_list), "-")
     else:
         bpm_draw = "o-"

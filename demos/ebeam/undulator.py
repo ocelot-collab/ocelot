@@ -27,7 +27,7 @@ plot_opt_func(lat, tws)
 
 plt.show()
 
-p1 = Particle(x = 0.001, y = 0.001)
+p1 = Particle(x = 0.001, y = 0.005)
 
 navi = Navigator()
 dz = 0.01
@@ -55,7 +55,7 @@ plt.show()
 lat = MagneticLattice(line, energy = 0)
 
 
-p1 = Particle(x = 0.001, y = 0.001)
+p1 = Particle(x = 0.001, y = 0.005)
 
 navi = Navigator()
 dz = 0.01

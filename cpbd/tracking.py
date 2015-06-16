@@ -365,7 +365,7 @@ def da_mpi(lat, nturns, x_array, y_array, errors = None, nsuperperiods = 1):
         return da.reshape(ny,nx)
 
 
-
+"""
 def show_da(out_da, x_array, y_array):
     from matplotlib import pyplot as plt
     from numpy import linspace, max, min
@@ -445,3 +445,4 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones = None ):
     plt.grid(True)
     cb.set_label('Qy')
     plt.show()
+"""

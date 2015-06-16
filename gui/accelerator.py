@@ -201,13 +201,13 @@ def elem_cord(lat):
         #temp = temp.reshape((4,2))
         
         if elem.type == "quadrupole":
-            k1 = abs(elem.k1)
+            k1 = elem.k1
             quad = np.append(quad, [[L, 0]], axis=0)
             quad = np.append(quad, [[L, k1]], axis=0)
-            quad = np.append(quad, [[L+elem.l/2, k1*(1 + 0.2 * np.sign(elem.k1)) ]], axis=0)
+            #quad = np.append(quad, [[L+elem.l/2, k1*(1 + 0.2 * np.sign(elem.k1)) ]], axis=0)
             quad = np.append(quad, [[L+elem.l, k1]],axis=0)
             quad = np.append(quad, [[L+elem.l, 0]],axis=0)
-        
+
         elif elem.type == "cavity":
             k1 = 1.
             cav = np.append(cav, [[L, 0]], axis=0)
@@ -238,7 +238,7 @@ def elem_cord(lat):
             bend = np.append(bend, temp, axis = 0)
         
         elif elem.type == "sextupole":
-            temp[:,1] = temp[:,1]*abs(elem.ms)
+            temp[:,1] = temp[:,1]*elem.ms
             sext = np.append(sext, temp, axis = 0)
         #s.append((L,  elem.l+0.03))
         
@@ -269,7 +269,7 @@ def plot_elems(ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legen
     #print len(quad), len(bend), len(sext), len(corr ),len( mons), len( cav)
     #print cav
     alpha = 1
-    ax.set_ylim((-0,1.2))
+    ax.set_ylim((-1,1.5))
     if y_lim != None:
         ax.set_ylim(y_lim)
     n = 0
@@ -609,8 +609,83 @@ def resonans_diag(Qx, Qy, order):
         plt.ylim(Qy,Qy+1)
         #plt.xticks(x, labels, rotation='vertical')
 
-#plot([0,1], [0,2])
-#plt.plot(Qx,Qy, "mo", lw = 3)
-#fig.canvas.mpl_connect('pick_event', onpick3)
-#plt.show()
-    
+
+def show_da(out_da, x_array, y_array):
+    from matplotlib import pyplot as plt
+    from numpy import linspace, max, min
+    #print "time execution = ", time() - start , " s"
+    nx = len(x_array)
+    ny = len(y_array)
+    #print(nx, ny, len(out_da))
+    out_da = out_da.reshape(ny,nx)
+    xmin, xmax, ymin, ymax = min(x_array), max(x_array), min(y_array), max(y_array)
+    #plt.subplot(111, axisbg='darkslategray')
+    extent = xmin, xmax, ymin, ymax
+    #print extent
+    #plt.savetxt("da.txt", da)
+    plt.figure(figsize=(10, 7))
+    fig1 = plt.contour(out_da, linewidths=2,extent = extent)#, colors = 'r')
+    #fig1 = plt.contourf(out_da, 20,cmap=plt.cm.rainbow,extent = extent)#, colors = 'r')
+    #plt.axis_bgcolor("#bdb76b")
+    plt.grid(True)
+    plt.xlabel("X, m")
+    plt.ylabel("Y, m")
+    cb = plt.colorbar()
+    cb.set_label('Nturns')
+    #cb.ax.set_yticklabels(map(str, linspace(min(out_da), max(out_da), 5) ))
+
+    #plt.savefig('da_error_'+str(int(np.random.rand()*100))+'.png')
+    plt.show()
+
+def show_mu(contour_da, mux, muy, x_array, y_array, zones = None ):
+    from matplotlib import pyplot as plt
+
+    nx = len(x_array)
+    ny = len(y_array)
+    t= linspace(0,3.14, num = 100)
+    contour_da = contour_da.reshape(ny,nx)
+    mux = mux.reshape(ny,nx)
+    muy = muy.reshape(ny,nx)
+    xmin, xmax, ymin, ymax = min(x_array), max(x_array), min(y_array), max(y_array)
+    plt.figure(1,figsize=(10, 7)) #axisbg='darkslategray'
+    extent = xmin, xmax, ymin, ymax
+
+    my_cmap = plt.cm.Paired
+    #my_cmap.set_under('w')
+    #norm = mlb.colors.Normalize(vmin=-0.005, vmax=max(mux))
+    fig1 = plt.contour(contour_da, 1,extent = extent, linewidths=2,colors='k')#, colors = 'r')
+    fig1 = plt.contourf(mux,40, cmap=my_cmap, extent = extent)#, colors = 'r')
+    cb = plt.colorbar(cmap=my_cmap)
+    fig1 = plt.contourf(mux,10, levels=[-1,-.0001], colors='w',extent = extent)
+    if zones != None:
+        x_zone = zones[0]
+        y_zone = zones[1]
+        plt.plot(x_zone*cos(t), y_zone*sin(t), "g", lw = 2)
+        plt.plot(2*x_zone*cos(t), 2*y_zone*sin(t), "b", lw = 2)
+        plt.plot(3*x_zone*cos(t), 3*y_zone*sin(t), "r", lw = 2)
+        plt.plot(4*x_zone*cos(t), 4*y_zone*sin(t), "y", lw = 2)
+    plt.grid(True)
+    #plt.figure(figsize=(10, 7))
+    plt.xlabel("X, m")
+    plt.ylabel("Y, m")
+    cb.set_label('Qx')
+    plt.figure(2,figsize=(10, 7))
+
+    fig1 = plt.contour(contour_da, 1,extent = extent, linewidths=2,colors='k')#, colors = 'r')
+    fig1 = plt.contourf(muy,40, cmap=my_cmap, extent = extent)#, colors = 'r')
+    if zones != None:
+        x_zone = zones[0]
+        y_zone = zones[1]
+        plt.plot(x_zone*cos(t), y_zone*sin(t), "g", lw = 2)
+        plt.plot(2*x_zone*cos(t), 2*y_zone*sin(t), "b", lw = 2)
+        plt.plot(3*x_zone*cos(t), 3*y_zone*sin(t), "r", lw = 2)
+        plt.plot(4*x_zone*cos(t), 4*y_zone*sin(t), "y", lw = 2)
+    #x = np.linspace(-, 0.01, 0.0001)
+    #plt.plot()
+    cb = plt.colorbar(cmap=my_cmap)
+    fig1 = plt.contourf(muy,10, levels=[-1,-.0001], colors='w',extent = extent)
+    plt.xlabel("X, m")
+    plt.ylabel("Y, m")
+    plt.grid(True)
+    cb.set_label('Qy')
+    plt.show()

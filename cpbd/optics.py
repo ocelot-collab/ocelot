@@ -841,15 +841,15 @@ def twiss(lattice, tws0, nPoints = None):
     return twiss_list
 
 
-def trace_particle(lattice, p0, nPoints = None):
-    '''
-    track a particle using generic 'trace_obj' function
-    '''
-    if p0.__class__ == Particle:
-        p_list = trace_obj(lattice, p0, nPoints)
-    else:
-        exit("unknown object p0")
-    return p_list
+#def trace_obj(lattice, p0, nPoints = None):
+#    '''
+#    track a particle using generic 'trace_obj' function
+#    '''
+#    if p0.__class__ == Particle:
+#        p_list = trace_obj(lattice, p0, nPoints)
+#    else:
+#        exit("unknown object p0")
+#    return p_list
 
 
 class Navigator:

@@ -921,13 +921,16 @@ def track(lat, particle_list, dz, navi):
 
     t_maps, de = get_map(lat, dz, navi)
     #print 'getting map, de=', de
-
-    for tm in t_maps:
-        #print "tm :",  tm.length
-        tm.apply(particle_list)
-        particle_list.E += de
-        particle_list.de = de
-        #tm.apply(plist)
+    if particle_list.__class__ == ParticleArray:
+        for tm in t_maps:
+            #print "tm :",  tm.length
+            tm.apply(particle_list)
+            particle_list.E += de
+            particle_list.de = de
+            #tm.apply(plist)
+    else:
+        for tm in t_maps:
+            tm.apply(particle_list)
 
     return
 

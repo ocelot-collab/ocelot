@@ -248,7 +248,7 @@ def ellipse_track_list(beam, n_t_sigma = 3, num = 1000, type = "contour"):
 def tracking(lat, nturns, track_list, nsuperperiods, save_track = True):
     xlim, ylim, px_lim, py_lim = aperture_limit(lat, xlim = 1, ylim = 1)
     navi = Navigator()
-    t_maps = get_map(lat, lat.totalLen, navi)
+    t_maps, delta_e = get_map(lat, lat.totalLen, navi)
 
     track_list_const = copy(track_list)
     p_array = ParticleArray(n = len(track_list))

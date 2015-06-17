@@ -1,9 +1,7 @@
 __author__ = 'Sergey Tomin'
 
-from ocelot.cpbd.optics import *
 from ocelot.cpbd.elements import *
 from ocelot.gui.accelerator import *
-import pylab as plt
 
 und = Undulator (Kx = 0.49, nperiods=200, lperiod=0.007, id = "und")
 D1 = Drift (l = 0.5, id = "D1")
@@ -33,7 +31,7 @@ navi = Navigator()
 dz = 0.01
 P1 = []
 for i in range(int(lat.totalLen/dz)):
-    track(lat, [p1], dz = dz, navi = navi)
+    step(lat, [p1], dz = dz, navi = navi)
     P1.append(copy(p1))
 
 s = [f.s for f in P1]
@@ -61,7 +59,7 @@ navi = Navigator()
 dz = 0.01
 P1 = []
 for i in range(int(lat.totalLen/dz)):
-    track(lat, [p1], dz = dz, navi = navi)
+    step(lat, [p1], dz = dz, navi = navi)
     P1.append(copy(p1))
 
 s = [f.s for f in P1]

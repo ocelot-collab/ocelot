@@ -6,7 +6,7 @@ from ocelot.cpbd.elements import *
 from ocelot.cpbd.optics import *
 from ocelot.cpbd.e_beam_params import *
 from ocelot.cpbd.chromaticity import *
-from ocelot.cpbd.tracking import *
+from ocelot.cpbd.track import *
 
 Q1 = Quadrupole(l= 0.4, k1=-1.3, id = "Q1")
 Q2 = Quadrupole(l= 0.8, k1=1.4, id = "Q2")

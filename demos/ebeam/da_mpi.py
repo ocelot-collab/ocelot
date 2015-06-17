@@ -8,7 +8,7 @@ from ocelot.cpbd.elements import *
 from ocelot.cpbd.optics import *
 from ocelot.cpbd.e_beam_params import *
 from ocelot.cpbd.chromaticity import *
-from ocelot.cpbd.tracking import *
+from ocelot.cpbd.track import *
 from mpi4py import MPI
 
 

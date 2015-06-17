@@ -2,7 +2,6 @@ __author__ = 'Sergey Tomin'
 
 from ocelot.cpbd.match import *
 from ocelot.gui.accelerator import *
-import matplotlib.pyplot as plt
 
 Q1 = Quadrupole(l= 0.4, k1=-1.3, id = "Q1")
 Q2 = Quadrupole(l= 0.8, k1=1.4, id = "Q2")
@@ -44,7 +43,7 @@ navi = Navigator()
 dz = 0.01
 P1 = []
 for i in range(int(lat.totalLen/dz)):
-    track(lat, [p1], dz = dz, navi = navi)
+    step(lat, [p1], dz = dz, navi = navi)
     P1.append(copy(p1))
 
 s = [f.s for f in P1]#map(lambda f: f.s, P1)
@@ -73,7 +72,7 @@ dz = 0.01
 P1 = []
 P2 = []
 for i in range(int(lat.totalLen/dz)):
-    track(lat, [p1, p2], dz = dz, navi = navi)
+    step(lat, [p1, p2], dz = dz, navi = navi)
     P1.append(copy(p1))
     P2.append(copy(p2))
 

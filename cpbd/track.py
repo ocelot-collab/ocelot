@@ -1,3 +1,6 @@
+from ocelot.cpbd.beam import ParticleArray
+from ocelot.cpbd.optics import get_map
+
 __author__ = 'Sergey Tomin'
 from ocelot.cpbd.optics import *
 #from mpi4py import MPI
@@ -363,6 +366,30 @@ def da_mpi(lat, nturns, x_array, y_array, errors = None, nsuperperiods = 1):
         nx = len(x_array)
         ny = len(y_array)
         return da.reshape(ny,nx)
+
+
+def step(lat, particle_list, dz, navi):
+    '''
+    tracking for a fixed step dz
+    '''
+    #print navi.z0 + dz , lat.totalLen
+    if navi.z0 + dz > lat.totalLen:
+        dz = lat.totalLen - navi.z0
+
+    t_maps, de = get_map(lat, dz, navi)
+    #print 'getting map, de=', de
+    if particle_list.__class__ == ParticleArray:
+        for tm in t_maps:
+            #print "tm :",  tm.length
+            tm.apply(particle_list)
+            particle_list.E += de
+            particle_list.de = de
+            #tm.apply(plist)
+    else:
+        for tm in t_maps:
+            tm.apply(particle_list)
+
+    return
 
 
 """

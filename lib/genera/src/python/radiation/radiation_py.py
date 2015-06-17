@@ -1,11 +1,10 @@
 __author__ = 'Sergey Tomin'
 
-import numpy as np
-from ocelot.lib.genera.src.python.trajectory.spline_py import *
-from pylab import *
 from time import time
+
 from scipy import interpolate
-from ocelot.common.globals import *
+
+from ocelot.lib.genera.src.python.trajectory.spline_py import *
 from ocelot.cpbd.optics import *
 from ocelot.cpbd.elements import *
 
@@ -142,7 +141,7 @@ def track4rad(beam, lat, energy_loss = False):
                     N = 100
                     for z in linspace(L, lat_el.totalLen + L, num = N):
                         h = lat.totalLen/(N-1)
-                        track(lat_el, Y0, h, navi)
+                        step(lat_el, Y0, h, navi)
                         ui = [Y0[0], Y0[1], Y0[2], Y0[3], z, sqrt(1. - Y0[1]*Y0[1] - Y0[3] *Y0[3] ), 0., 0., 0.]
                         u.extend(ui)
                     U.append(array(u))

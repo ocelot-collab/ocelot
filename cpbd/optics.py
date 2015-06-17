@@ -1,12 +1,7 @@
 __author__ = 'Sergey'
 
-from numpy import sqrt, matrix, cos, sin, log, tan, eye, zeros, pi, array, linspace, dot, abs, random, arctan, sign, cosh, sinh
-import numpy as np
-from ocelot.cpbd.beam import Beam, Particle, Twiss, ParticleArray
+from ocelot.cpbd.beam import Particle, Twiss, ParticleArray
 from ocelot.common.globals import *
-from numpy.linalg import inv
-from scipy.integrate import simps, trapz
-from copy import copy
 #from scipy import weave
 from und_weave import *
 
@@ -779,29 +774,6 @@ def get_map(lattice, dz, navi):
     TM.append(tm)
     return TM, delta_e
 
-
-def track(lat, particle_list, dz, navi):
-    '''
-    tracking for a fixed step dz
-    '''
-    #print navi.z0 + dz , lat.totalLen
-    if navi.z0 + dz > lat.totalLen:
-        dz = lat.totalLen - navi.z0
-
-    t_maps, de = get_map(lat, dz, navi)
-    #print 'getting map, de=', de
-    if particle_list.__class__ == ParticleArray:
-        for tm in t_maps:
-            #print "tm :",  tm.length
-            tm.apply(particle_list)
-            particle_list.E += de
-            particle_list.de = de
-            #tm.apply(plist)
-    else:
-        for tm in t_maps:
-            tm.apply(particle_list)
-
-    return
 
 def gaussFromTwiss(emit, beta, alpha):
     phi = 2*pi * random.rand()

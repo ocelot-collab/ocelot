@@ -945,7 +945,7 @@ def get_power_z(g):
 
 
 #from ocelot.adaptors.genesis import *
-from ocelot.common.math import *
+from ocelot.common.math_op import *
 from ocelot.cpbd.optics import gaussFromTwiss
 #import matplotlib.animation as anim
 #import numpy as np

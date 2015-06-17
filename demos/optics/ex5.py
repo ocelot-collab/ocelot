@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import scipy.integrate as integrate
 
 
-from ocelot.common.math import *
+from ocelot.common.math_op import *
 
 from ocelot.optics.elements import *
 from ocelot.optics.wave import *

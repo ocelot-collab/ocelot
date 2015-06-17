@@ -1,16 +1,17 @@
 __author__ = 'Sergey Tomin'
 
-from ocelot.cpbd.beam import Particle, Twiss
+import copy
+from time import time
+
+import matplotlib.pyplot as plt
+from scipy.interpolate import splrep, splev
+from scipy.integrate import simps
+from numpy.linalg import svd
+from numpy import diag, transpose, linspace, shape
+
 from ocelot.cpbd.errors import *
 from ocelot.cpbd.match import closed_orbit
 from ocelot.cpbd.optics import *
-import copy
-import matplotlib.pyplot as plt
-from scipy.interpolate import splrep, splev
-from scipy.integrate import simps, quad
-from time import time
-from numpy.linalg import svd
-from numpy import diag, transpose, linspace, shape
 
 
 class BPM(object):
@@ -142,7 +143,7 @@ class Orbit:
         L = 0.
         for bpm in self.bpms:
             dz = bpm.s - L
-            track(lattice, [p], dz, navi)
+            step(lattice, [p], dz, navi)
             bpm.x = p.x
             bpm.y = p.y
             L = bpm.s

@@ -2,6 +2,9 @@ __author__ = 'Sergey'
 
 from ocelot.cpbd.beam import Particle, Twiss, ParticleArray
 from ocelot.common.globals import *
+from copy import copy
+from numpy.linalg import inv
+from numpy import cosh, sinh
 #from scipy import weave
 from und_weave import *
 
@@ -653,9 +656,8 @@ def trace_z(lattice, obj0, z_array):
             i += 1
             elem = lattice.sequence[i]
             L += elem.l
-
         obj_z = elem.transfer_map(z - (L - elem.l))*obj_elem
-        #print elem.transfer_map(z - (L - elem.l)).dx
+
         obj_list.append(obj_z)
     return obj_list
 

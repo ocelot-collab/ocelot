@@ -64,7 +64,7 @@ rematch(19.0, l_fodo, qdh, lat, extra_fodo, beam, qf, qd) # jeez...
 lat.update_transfer_maps()
 
 tw0 = Twiss(beam)
-print(tw0)
+#print(tw0)
 tws=twiss(lat, tw0, nPoints = 1000)
 
 

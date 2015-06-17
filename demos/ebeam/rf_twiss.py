@@ -2,6 +2,7 @@
 
 from ocelot.cpbd.elements import *
 from ocelot.cpbd.optics import *
+from ocelot.cpbd.beam import *
 from ocelot.gui.accelerator import plot_lattice, plot_opt_func
 from pylab import *
 

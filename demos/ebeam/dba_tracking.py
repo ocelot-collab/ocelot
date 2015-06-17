@@ -2,6 +2,8 @@ __author__ = 'Sergey Tomin'
 
 from ocelot.cpbd.match import *
 from ocelot.gui.accelerator import *
+from ocelot.cpbd.track import step
+
 
 Q1 = Quadrupole(l= 0.4, k1=-1.3, id = "Q1")
 Q2 = Quadrupole(l= 0.8, k1=1.4, id = "Q2")

@@ -7,7 +7,7 @@ from ocelot.lib.genera.src.python.radiation.em_screen import *
 from ocelot.common.screen import *
 from ocelot.cpbd.optics import *
 import matplotlib
-
+from ocelot.cpbd.beam import *
 
 font = {'size'   : 14}
 matplotlib.rc('font', **font)

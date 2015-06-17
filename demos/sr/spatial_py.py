@@ -2,6 +2,7 @@ __author__ = 'Sergey Tomin'
 
 from ocelot.lib.genera.src.python.radiation.radiation_py import *
 from ocelot.lib.genera.src.python.radiation.em_screen import *
+from ocelot.cpbd.beam import *
 import matplotlib
 font = {'size'   : 14}
 matplotlib.rc('font', **font)

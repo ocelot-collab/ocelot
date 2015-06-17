@@ -303,7 +303,7 @@ class Matrix(Element):
         self.rm43 = rm43
         self.rm44 = rm44
 
-class Scavenger(Element):
+class UnknownElement(Element):
     """
     l - length of lens in [m]
     """

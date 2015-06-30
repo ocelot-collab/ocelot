@@ -17,6 +17,7 @@ m_e_eV = m_e_MeV*1e+6
 m_e_GeV = m_e_MeV*1.e-3      # GeV
 pi = 3.14159265359
 h_eV_s = 4.135667516e-15    #eV s
+hr_eV_s = h_eV_s/2./pi
 ro_e = 2.8179403267e-15
 Cgamma = 4.*pi/3.*ro_e/m_e_MeV**3
 Cq = 55./(32.*sqrt(3)*2*pi)*h_eV_s*speed_of_light/m_e_eV

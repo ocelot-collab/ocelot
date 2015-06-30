@@ -6,6 +6,7 @@ from scipy import interpolate
 
 from ocelot.lib.genera.src.python.trajectory.spline_py import *
 from ocelot.cpbd.optics import *
+from ocelot.cpbd.track import *
 from ocelot.cpbd.elements import *
 
 
@@ -109,15 +110,31 @@ def und_field(x, y, z, lperiod, Kx):
 
 
 
-def energy_loss_und(energy, Kx, lperiod, L):
-    k = 4.*pi*pi/3.*ro_e/m_e_GeV
-    #print "k = ", k
-    U = k*(energy)**2*Kx**2*L/lperiod**2
-    #U = 0.
+def energy_loss_und(energy, Kx, lperiod, L, energy_loss = False):
+    if energy_loss:
+        k = 4.*pi*pi/3.*ro_e/m_e_GeV
+        #print "k = ", k
+        U = k*(energy)**2*Kx**2*L/lperiod**2
+    else:
+        U = 0.
+    return U
+
+def quantum_diffusion(energy, Kx, lperiod, L, quantum_diff = False):
+    if quantum_diff:
+        gamma = energy/m_e_GeV
+        lambda_compt = 2.4263102389e-12 #m
+        lambda_compt_r = lambda_compt/2./pi
+        f = lambda K: 1.2 + 1./(K + 1.5*K*K + 0.95*K**3)
+        delta_Eq2 = 122.*pi**3/15.*lambda_compt_r*ro_e*gamma**4/lperiod**3*Kx**3*f(Kx)*L
+        sigma_Eq = sqrt(delta_Eq2/(gamma*gamma))
+        #print "sigma_q = ", sigma_Eq, energy
+        U = sigma_Eq*np.random.randn()*energy
+    else:
+        U = 0.
     return U
 
 
-def track4rad(beam, lat, energy_loss = False):
+def track4rad(beam, lat, energy_loss = False, quantum_diff = False):
     energy = beam.E
     Y0 = [beam.x,beam.xp, beam.y, beam.yp, 0, 0]
     L = 0.
@@ -151,11 +168,15 @@ def track4rad(beam, lat, energy_loss = False):
 
             N = int(30*elem.nperiods+1)
 
-            U0 = energy_loss_und(energy, elem.Kx, elem.lperiod, elem.l)
+            U0 = energy_loss_und(energy, elem.Kx, elem.lperiod, elem.l, energy_loss)
+            Uq = quantum_diffusion(energy, elem.Kx, elem.lperiod, elem.l, quantum_diff)
+            #print U0, Uq
+            U0 = U0 + Uq
             #U0 = 8889.68503061*1e-9
             #print "U0 = ", U0*1e9," eV"
-            if energy_loss  == False:
-                U0 = 0.
+            #if energy_loss  == False:
+            #    U0 = 0.
+
             try:
                 mag_field = elem.mag_field
             except:
@@ -169,9 +190,10 @@ def track4rad(beam, lat, energy_loss = False):
             u[4::9] += L
             L += s
             U.append(u)
+
             E.append(energy)
         energy = energy - U0
-        print energy
+        #print energy
     return U, E
 
 
@@ -319,17 +341,17 @@ def radiation_py(gamma, traj, screen, tmp):
         screen.arReEy = arReEy
         screen.arImEy = arImEy
         screen.arPhase = arPhase
-    print "reshape = ", time() - start3
+    #print "reshape = ", time() - start3
 
     return 1
 
-def calculate_radiation(lat, screen, beam, energy_loss = False):
+def calculate_radiation(lat, screen, beam, energy_loss = False, quantum_diff = False):
     b_current = beam.I*1000. # b_current - beam current in [mA], but beam.I in [A]
     energy = beam.E
     gamma = energy/m_e_GeV
 
     screen.nullify()
-    U, E = track4rad(beam, lat, energy_loss)
+    U, E = track4rad(beam, lat, energy_loss = energy_loss, quantum_diff = quantum_diff)
     tmp = 0
     for u, e in zip(U, E):
         #print "Energy = ", e, e/m_e_GeV
@@ -338,7 +360,9 @@ def calculate_radiation(lat, screen, beam, energy_loss = False):
         tmp += 1
     screen.distPhoton( gamma, current = b_current)
 
-    return screen
+    return screen, E[-1]
+
+
 
 """
 void sum_screens(Screen *screen, Screen screen_up)
@@ -359,7 +383,7 @@ void sum_screens(Screen *screen, Screen screen_up)
 }
 """
 if __name__ == "__main__":
-
+    quantum_diffusion(17.5, 4., 0.04, 200. ,quantum_diff=True)
     x = np.linspace(0, 1, 4)
     xnew = x2xgaus(x)
     print x

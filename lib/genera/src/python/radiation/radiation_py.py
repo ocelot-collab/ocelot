@@ -122,10 +122,10 @@ def energy_loss_und(energy, Kx, lperiod, L, energy_loss = False):
 def quantum_diffusion(energy, Kx, lperiod, L, quantum_diff = False):
     if quantum_diff:
         gamma = energy/m_e_GeV
-        lambda_compt = 2.4263102389e-12 #m
+        lambda_compt = 2.4263102389e-12 # h_eV_s/m_e_eV*speed_of_light
         lambda_compt_r = lambda_compt/2./pi
-        f = lambda K: 1.2 + 1./(K + 1.5*K*K + 0.95*K**3)
-        delta_Eq2 = 122.*pi**3/15.*lambda_compt_r*ro_e*gamma**4/lperiod**3*Kx**3*f(Kx)*L
+        f = lambda K: 1.2 + 1./(K + 1.33*K*K + 0.4*K**3)
+        delta_Eq2 = 56.*pi**3/15.*lambda_compt_r*ro_e*gamma**4/lperiod**3*Kx**3*f(Kx)*L
         sigma_Eq = sqrt(delta_Eq2/(gamma*gamma))
         #print "sigma_q = ", sigma_Eq, energy
         U = sigma_Eq*np.random.randn()*energy

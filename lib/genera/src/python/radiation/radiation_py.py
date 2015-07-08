@@ -359,8 +359,8 @@ def calculate_radiation(lat, screen, beam, energy_loss = False, quantum_diff = F
         radiation_py(e/m_e_GeV, u, screen, tmp)
         tmp += 1
     screen.distPhoton( gamma, current = b_current)
-
-    return screen, E[-1]
+    screen.Ef_electron = E[-1]
+    return screen
 
 
 

@@ -24,12 +24,12 @@ here index nnn means (1,2,3,4,5,6) = (x, x', y, y', s, delta)
 Defenition:
 Brown -> OCELOT
 n = ky**2/h**2
-beta = k2/h**3
+beta = K2/h**3
 
 # Green's function for X is Gx(t, tau) = 1/kx*sin(kx*(t - tau))
 
 f111 = -(h**3 + K2 - 2*h*ky**2)*cx**2 + 1./2.*h*kx**4*sx*2 - kx**3*cx*sx*h'
-f112 = -h * kx**2 * cx * sx - 2 * kx * (h**3 + K2 - 2 * h * ky**2) * cx * sx + (cx**2 - kx**2 * sx**2)*h'
+f112 = - 2 * kx * (h**3 + K2 - 2 * h * ky**2) * cx * sx - h * kx**2 * cx * sx + (cx**2 - kx**2 * sx**2)*h'
 f116 = (2*h^2 -ky^2)* cx + 2 *(h^3+K2-2 *h *ky^2) *cx* dx-h^2*kx^2 *sx^2 + (h *kx *cx *sx-dx* kx^2*sx)* h'
 f122 = 1/2* h* cx^2 + h^3* (-1-K2/h^3+(2 ky^2)/h^2) *sx^2 + sx *sx* h'
 f126 = h^2 *(2-ky^2/h^2) sx+h^2 *cx* sx + 2 h^3 (-1-K2/h^3+(2 ky^2)/h^2) *dx* sx + (cx dx +h sx^2) h'
@@ -73,12 +73,24 @@ I346 = Gy * dx*sy = h/kx2*(I34 - I314)
 """
 
 
-def t_nnn(L, angle, k1, k2, k3):
+def t_nnn(L, h, k1, k2):
+    """
+    :param L:
+    :param angle:
+    :param k1:
+    :param k2:
+    :return:
+
+    here is used the following set of variables:
+    x, dx/ds, y, dy/ds,
+    """
+    """
     h = 0.
     if L >0:
         h = angle/L
     else:
         exit("error: l <= 0")
+    """
 
     h2 = h*h
     h3 = h2*h
@@ -91,51 +103,87 @@ def t_nnn(L, angle, k1, k2, k3):
     cx = cos(kx*L)
     sx = sin(kx*L)/kx
     cy = cos(ky*L)
-    sy = sin(ky*L)/ky
+    if ky != 0.:
+        sy = sin(ky*L)/ky
+    else:
+        sy = L
     sx2 = sx*sx
     sy2 = sy*sy
 
     dx = h/kx2*(1. - cx)
+    dx_h = (1. - cx)/kx2
 
     # Integrals
     denom = kx2 - 4.*ky2
-    I111 = 1./3.*(dx/h + sx2)                               #  I111 = Gx * cx**2
-    I122 = dx**2/3./h2                                      #  I122 = Gx * sx**2
-    I112 = sx*dx/(3.*h)                                     #  I112 = Gx * cx*sx
+    I111 = 1./3.*(sx2 + dx_h)                               #  I111 = Gx * cx**2
+    I122 = dx_h*dx_h/3.                                     #  I122 = Gx * sx**2
+    I112 = sx*dx_h/3.                                       #  I112 = Gx * cx*sx
     I11  = L*sx/2.                                          #  I11  = Gx * cx
     I116 = h/kx2*(I11 - I111)                               #  I116 = Gx * cx*dx
-    I12  = 0.5/kx2*(sx - L*cx/2.)                           #  I12  = Gx * sx
+    I12  = 0.5/kx2*(sx - L*cx)                              #  I12  = Gx * sx
     I126 = h/kx2*(I12 - I112)                               #  I126 = Gx * sx*dx
-    I10  = dx/h                                             #  I10  = Gx
-    I16  = h/kx2*(dx/h - L*sx/2.)                           #  I16  = Gx * dx
+    I10  = dx_h                                             #  I10  = Gx
+    I16  = h/kx2*(dx_h - L*sx/2.)                           #  I16  = Gx * dx
     I166 = h2/kx4*(I10 - 2*I11 + I111)                      #  I166 = Gx * dx**2
-    I144 = (sy2 - 2.*dx/h)/denom                            #  I144 = Gx * sy**2
-    I133 = dx/h + ky2*(2.*dx/h - sy2)/denom                 #  I133 = Gx * cy**2
+    I144 = (sy2 - 2.*dx_h)/denom                            #  I144 = Gx * sy**2
+    I133 = dx_h - ky2*(sy2 - 2.*dx_h)/denom                 #  I133 = Gx * cy**2
     I134 = (sy*cy - sx)/denom                               #  I134 = Gx * cy*sy
-    I313 = (kx2*cy*dx/h - 2*ky2*sx*sy)/denom                #  I313 = Gy * cx*cy
-    I324 = (kx2*cy*dx/h - 2*ky2*sx*sy)/denom                #  I324 = Gy * sx*sy
-    I314 = (2*cy*sx - (1 + cx)*sy)/denom                    #  I314 = Gy * cx*sy
-    I323 = ((1 - 2*ky2*dx/h)*sy - cy*sx)/ denom             #  I323 = Gy * sx*cy
+    I313 = (kx2*cy*dx_h - 2.*ky2*sx*sy)/denom               #  I313 = Gy * cx*cy
+    I324 = (2.*cy*dx_h - sx*sy)/denom                       #  I324 = Gy * sx*sy
+    I314 = (2.*cy*sx - (1. + cx)*sy)/denom                  #  I314 = Gy * cx*sy
+    I323 = (2*ky2/kx2*(1 + cx)*sy - cy*sx)/denom + sy/kx2   #  I323 = Gy * sx*cy
     I33  = L*sy/2.                                          #  I33  = Gy * cy
     I336 = h/kx2*(I33 - I313)                               #  I336 = Gy * dx*cy
-    I34  = (sy - L*cy)/(2*ky2)                              #  I34  = Gy * sy
+    I34  = (sy - L*cy)/(2.*ky2) if ky !=0. else 0.          #  I34  = Gy * sy
     I346 = h/kx2*(I34 - I314)                               #  I346 = Gy * dx*sy
 
     #derivative of Integrals
     I211 = sx/3.*(1. + 2.*cx)
+    I222 = 2.*dx_h*sx/3.
+    I212 = 1./3.*(2*sx2 - dx_h)
+    I21  = 1./2.*(L*cx + sx)
+    I216 = h/kx2*(I21 - I211)
+    I22  = I11
+    I226 = h/kx2*(I22 - I212)
+    I20  = sx
+    I26  = h /(2.*kx2)*(sx - L*cx)
+    I266 = h2/kx4*(I20 - 2.*I21 + I211)
+    I244 = 2.*(cy*sy - sx)/denom
+    I233 = sx + 2.*ky2*(cy*sy - sx)/denom
+    I234 = (kx2*dx_h - 2.*ky2*sy2)/denom
+    I413 = ((kx2 - 2.*ky2)*cy*sx - ky2*sy*(1. + cx))/denom
+    I424 = (cy*sx - cx*sy - 2.*ky2*sy*dx_h)/denom
+    I414 = ((kx2 - 2.*ky2)*sx*sy - (1. - cx)*cy)/denom
+    I423 = ((2.*ky2)/kx2*(1 + cx)*cy - cx*cy - ky2*sx*sy)/denom + cy/kx2
+    I43  = 0.5*(L*cy + sy)
+    I436 = h/kx2*(I43 - I413)
+    I44  = I33
+    I446 = h/kx2*(I44 - I414)
 
+    K2 = k2/2.
+    coef1 = 2.*ky2*h - h3 - K2
+    coef3 = 2.*h2 - ky2
 
-    coef1 = 2*ky2*h - h3 - k2/2
-
-    t111 =    coef1*I111 + 0.5*h*kx4*I122
+    t111 =    coef1*I111 + h*kx4*I122/2.
     t112 = 2.*coef1*I112 - h*kx2*I112
-    t116 = 2.*coef1*I116 + (2*h2 - ky2)*I11 - h2*kx2*I122
+    t116 = 2.*coef1*I116 + coef3*I11 - h2*kx2*I122
     t122 =    coef1*I122 + 0.5*h*I111
-    t126 = 2.*coef1*I126 + (2*h2 - ky2)*I12 + h2*I112
-    t166 =    coef1*I166 - dx + I16*(2.*h2 - ky2) + 0.5*h3*I122
-    t133 = (k2*I133 - ky2*dx)*0.5
-    t134 = I134*k2
-    t144 = 0.5*(k2*I144 - dx)
+    t126 = 2.*coef1*I126 + coef3*I12 + h2*I112
+    t166 =    coef1*I166 + coef3*I16 + 0.5*h3*I122 - h*I10
+    t133 =       K2*I133 - ky2*h*I10/2.
+    t134 =    2.*K2*I134
+    t144 =       K2*I144 - h*I10/2.
+
+    t211 =    coef1*I211 + h*kx4*I222/2.
+    t212 = 2.*coef1*I212 - h*kx2*I212
+    t216 = 2.*coef1*I216 + coef3*I21 - h2*kx2*I222
+    t222 =    coef1*I222 + 0.5*h*I211
+    t226 = 2.*coef1*I226 + coef3*I22 + h2*I212
+    t266 =    coef1*I266 + coef3*I26 + 0.5*h3*I222 - h*I20
+    t233 =       K2*I233 - ky2*h*I20/2.
+    t234 =    2.*K2*I234
+    t244 =       K2*I244 - h*I20/2.
+
 
     coef2 = 2*(K2 - ky2*h)
 
@@ -146,9 +194,18 @@ def t_nnn(L, angle, k1, k2, k3):
     t336 = coef2*I336 + ky2*I33 - h2*ky2*I324
     t346 = coef2*I346 + h2*I323 + ky2*I34
 
+    t413 = coef2*I413 + h*kx2*ky2*I424
+    t414 = coef2*I414 - h*kx2*I423
+    t423 = coef2*I423 - h*ky2*I414
+    t424 = coef2*I424 + h*I413
+    t436 = coef2*I436 - h2*ky2*I424 + ky2*I43
+    t446 = coef2*I446 + h2*I423 + ky2*I44
+
 def map(l, angle, k1, k2, k3):
     pass
 
+if __name__ == "__main__":
+    t_nnn(1., 1., 1., 1.)
 
 
 

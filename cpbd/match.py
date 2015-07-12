@@ -53,7 +53,7 @@ def weights(val):
     if val == 'Dxp': return 10000000.0
     if val == 'tau': return 10000000.0
     if val in ['alpha_x', 'alpha_y']: return 100.0
-    if val in ['beta_x', 'beta_y']: return 1.0
+    if val in ['beta_x', 'beta_y']: return 100.0
     return 0.0001
 
 def match(lat, constr, vars, tw, print_proc = 1, max_iter=1000):
@@ -132,7 +132,7 @@ def match(lat, constr, vars, tw, print_proc = 1, max_iter=1000):
                     #print 'evaluation debug: constr ', e.id, k,constr[e][k]
                                         
                     if constr[e][k].__class__ == list:
-                        #print 'list'   
+                        #print 'list'
                         v1 = constr[e][k][1]
 
                         if constr[e][k][0] == '<':

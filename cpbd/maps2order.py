@@ -101,19 +101,56 @@ def t_nnn(L, h, k1, k2):
     kx = sqrt(kx2 + 0.j)
     ky = sqrt(ky2 + 0.j)
     cx = cos(kx*L)
-    sx = sin(kx*L)/kx
+    sx = sin(kx*L)/kx if kx != 0 else L
     cy = cos(ky*L)
-    if ky != 0.:
-        sy = sin(ky*L)/ky
-    else:
-        sy = L
+
+    sy = sin(ky*L)/ky if ky != 0 else L
+
     sx2 = sx*sx
     sy2 = sy*sy
 
-    dx = h/kx2*(1. - cx)
-    dx_h = (1. - cx)/kx2
+    dx = h/kx2*(1. - cx) if kx != 0. else L*L*h/2.
+    dx_h = (1. - cx)/kx2 if kx != 0. else L*L/2.
 
     # Integrals
+    """
+    if kx == 0:
+        I116 = h*L**4/24.       #  I116 = Gx * cx*dx
+        I12  = L**3/6.          #  I12  = Gx * sx
+        I126 = h*L**5/40.       #  I126 = Gx * sx*dx
+        I16  = h*L**4/24.       #  I16  = Gx * dx
+        I166 = h2*L**6/120.     #  I166 = Gx * dx**2
+        I133 = 0.25*(L**2 + sy2) #  I133 = Gx * cy**2
+        I313 = (L*sy)/2.        #  I313 = Gy * cx*cy
+
+        I216 = h*L**3/6.
+        I22  = L**2/2.
+        I226 = h*L**4/8.
+        I26  = h*L**3/6.
+        I266 = h2*L**5/20.
+        I233 = 0.5*(L + sy*cy)
+        I413 = (L*cy + sy)/2.
+
+
+    if kx == 0 and ky != 0:
+        I144 = (L**2 - sy2)/(4.*ky2)                                  #  I144 = Gx * sy**2
+        I134 = (L - sy*cy)/(4.*ky2)                                   #  I134 = Gx * cy*sy
+        I324 = (L*(sy - L*cy))/(4*ky2)                                #  I324 = Gy * sx*sy
+        I314 = (sy - s*cy)/(2.*ky2)                                   #  I314 = Gy * cx*sy
+        I323 = (L*cy + (ky2*L**2 - 1.)*sy)/(4.*ky2)                   #  I323 = Gy * sx*cy
+        I336 = (h*L*(3.*L*cy + (2.*ky2*L**2 - 3.)*sy))/(24.*ky2)      #  I336 = Gy * dx*cy
+        I346 = (h*((3.*L - 2.*ky2*L**3)*cy + 3.*(ky2*L**2 - 1.)*sy))/(24.*ky**4) #  I346 = Gy * dx*sy
+
+    elif kx == 0 and ky == 0:
+        I144 = L**4/12.
+        I134 = L**3/6.
+        I324 = L**4/12.
+        I314 = L**3/6.
+        I323 = L**3/6.
+        I336 = (h*L**4)/24.
+        I346 = (h*L**5)/40
+    """
+
     denom = kx2 - 4.*ky2
     I111 = 1./3.*(sx2 + dx_h)                               #  I111 = Gx * cx**2
     I122 = dx_h*dx_h/3.                                     #  I122 = Gx * sx**2
@@ -134,7 +171,7 @@ def t_nnn(L, h, k1, k2):
     I323 = (2*ky2/kx2*(1 + cx)*sy - cy*sx)/denom + sy/kx2   #  I323 = Gy * sx*cy
     I33  = L*sy/2.                                          #  I33  = Gy * cy
     I336 = h/kx2*(I33 - I313)                               #  I336 = Gy * dx*cy
-    I34  = (sy - L*cy)/(2.*ky2) if ky !=0. else 0.          #  I34  = Gy * sy
+    I34  = (sy - L*cy)/(2.*ky2) if ky !=0. else L**3/6.     #  I34  = Gy * sy
     I346 = h/kx2*(I34 - I314)                               #  I346 = Gy * dx*sy
 
     #derivative of Integrals

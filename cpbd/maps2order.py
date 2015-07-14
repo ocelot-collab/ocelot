@@ -1,6 +1,6 @@
 __author__ = 'Sergey Tomin'
 
-from numpy import cos, sin, sqrt
+from numpy import cos, sin, sqrt, zeros
 
 """
 differential equation:
@@ -100,102 +100,179 @@ def t_nnn(L, h, k1, k2):
     ky4 = ky2*ky2
     kx = sqrt(kx2 + 0.j)
     ky = sqrt(ky2 + 0.j)
-    cx = cos(kx*L)
-    sx = sin(kx*L)/kx if kx != 0 else L
-    cy = cos(ky*L)
+    cx = cos(kx*L).real
+    sx = (sin(kx*L)/kx).real if kx != 0 else L
+    cy = cos(ky*L).real
 
-    sy = sin(ky*L)/ky if ky != 0 else L
+    sy = (sin(ky*L)/ky).real if ky != 0 else L
 
     sx2 = sx*sx
     sy2 = sy*sy
-
+    L2 = L*L
+    L3 = L2*L
+    L4 = L3*L
+    L5 = L4*L
     dx = h/kx2*(1. - cx) if kx != 0. else L*L*h/2.
     dx_h = (1. - cx)/kx2 if kx != 0. else L*L/2.
 
     # Integrals
     """
     if kx == 0:
-        I116 = h*L**4/24.       #  I116 = Gx * cx*dx
-        I12  = L**3/6.          #  I12  = Gx * sx
-        I126 = h*L**5/40.       #  I126 = Gx * sx*dx
-        I16  = h*L**4/24.       #  I16  = Gx * dx
-        I166 = h2*L**6/120.     #  I166 = Gx * dx**2
-        I133 = 0.25*(L**2 + sy2) #  I133 = Gx * cy**2
-        I313 = (L*sy)/2.        #  I313 = Gy * cx*cy
+        I116 = h*L4/24.        #  I116 = Gx * cx*dx
+        I12  = L3/6.           #  I12  = Gx * sx
+        I126 = h*L5/40.        #  I126 = Gx * sx*dx
+        I16  = h*L4/24.        #  I16  = Gx * dx
+        I166 = h2*L5*L/120.      #  I166 = Gx * dx**2
+        I133 = 0.25*(L2 + sy2) #  I133 = Gx * cy**2
+        I313 = (L*sy)/2.         #  I313 = Gy * cx*cy
 
-        I216 = h*L**3/6.
-        I22  = L**2/2.
-        I226 = h*L**4/8.
-        I26  = h*L**3/6.
-        I266 = h2*L**5/20.
+        I216 = h*L3/6.
+        I22  = L2/2.
+        I226 = h*L4/8.
+        I26  = h*L3/6.
+        I266 = h2*L5/20.
         I233 = 0.5*(L + sy*cy)
         I413 = (L*cy + sy)/2.
 
 
     if kx == 0 and ky != 0:
-        I144 = (L**2 - sy2)/(4.*ky2)                                  #  I144 = Gx * sy**2
-        I134 = (L - sy*cy)/(4.*ky2)                                   #  I134 = Gx * cy*sy
-        I324 = (L*(sy - L*cy))/(4*ky2)                                #  I324 = Gy * sx*sy
-        I314 = (sy - s*cy)/(2.*ky2)                                   #  I314 = Gy * cx*sy
-        I323 = (L*cy + (ky2*L**2 - 1.)*sy)/(4.*ky2)                   #  I323 = Gy * sx*cy
-        I336 = (h*L*(3.*L*cy + (2.*ky2*L**2 - 3.)*sy))/(24.*ky2)      #  I336 = Gy * dx*cy
+        #I144 = (L**2 - sy2)/(4.*ky2)                                             #  I144 = Gx * sy**2
+        #I134 = (L - sy*cy)/(4.*ky2)                                              #  I134 = Gx * cy*sy
+        #I324 = (L*(sy - L*cy))/(4*ky2)                                           #  I324 = Gy * sx*sy
+        #I314 = (sy - s*cy)/(2.*ky2)                                              #  I314 = Gy * cx*sy
+        #I323 = (L*cy + (ky2*L**2 - 1.)*sy)/(4.*ky2)                               #  I323 = Gy * sx*cy
+        I336 = (h*L*(3.*L*cy + (2.*ky2*L**2 - 3.)*sy))/(24.*ky2)                 #  I336 = Gy * dx*cy
         I346 = (h*((3.*L - 2.*ky2*L**3)*cy + 3.*(ky2*L**2 - 1.)*sy))/(24.*ky**4) #  I346 = Gy * dx*sy
 
-    elif kx == 0 and ky == 0:
-        I144 = L**4/12.
-        I134 = L**3/6.
-        I324 = L**4/12.
-        I314 = L**3/6.
-        I323 = L**3/6.
-        I336 = (h*L**4)/24.
-        I346 = (h*L**5)/40
+        #I244 = (L - sy*cy)/(2.*ky2)
+
+
+    if kx == 0 and ky == 0:
+        I144 = L4/12.
+        I134 = L3/6.
+        I324 = L4/12.
+        I314 = L3/6.
+        I323 = L3/6.
+        I336 = (h*L4)/24.
+        I346 = (h*L5)/40
+
+        I244 = L3/3.
+        I234 = L2/2.
+        I424 = L3/3.
+        I414 = L2/2.
+        I423 = L2/2.
+        I436 = (h*L3)/6.
+        I446 = (h*L4)/8.
+
     """
 
     denom = kx2 - 4.*ky2
-    I111 = 1./3.*(sx2 + dx_h)                               #  I111 = Gx * cx**2
-    I122 = dx_h*dx_h/3.                                     #  I122 = Gx * sx**2
-    I112 = sx*dx_h/3.                                       #  I112 = Gx * cx*sx
-    I11  = L*sx/2.                                          #  I11  = Gx * cx
-    I116 = h/kx2*(I11 - I111)                               #  I116 = Gx * cx*dx
-    I12  = 0.5/kx2*(sx - L*cx)                              #  I12  = Gx * sx
-    I126 = h/kx2*(I12 - I112)                               #  I126 = Gx * sx*dx
-    I10  = dx_h                                             #  I10  = Gx
-    I16  = h/kx2*(dx_h - L*sx/2.)                           #  I16  = Gx * dx
-    I166 = h2/kx4*(I10 - 2*I11 + I111)                      #  I166 = Gx * dx**2
-    I144 = (sy2 - 2.*dx_h)/denom                            #  I144 = Gx * sy**2
-    I133 = dx_h - ky2*(sy2 - 2.*dx_h)/denom                 #  I133 = Gx * cy**2
-    I134 = (sy*cy - sx)/denom                               #  I134 = Gx * cy*sy
-    I313 = (kx2*cy*dx_h - 2.*ky2*sx*sy)/denom               #  I313 = Gy * cx*cy
-    I324 = (2.*cy*dx_h - sx*sy)/denom                       #  I324 = Gy * sx*sy
-    I314 = (2.*cy*sx - (1. + cx)*sy)/denom                  #  I314 = Gy * cx*sy
-    I323 = (2*ky2/kx2*(1 + cx)*sy - cy*sx)/denom + sy/kx2   #  I323 = Gy * sx*cy
-    I33  = L*sy/2.                                          #  I33  = Gy * cy
-    I336 = h/kx2*(I33 - I313)                               #  I336 = Gy * dx*cy
-    I34  = (sy - L*cy)/(2.*ky2) if ky !=0. else L**3/6.     #  I34  = Gy * sy
-    I346 = h/kx2*(I34 - I314)                               #  I346 = Gy * dx*sy
-
-    #derivative of Integrals
+    I111 = 1./3.*(sx2 + dx_h)                          #  I111 = Gx * cx**2
+    I122 = dx_h*dx_h/3.                                #  I122 = Gx * sx**2
+    I112 = sx*dx_h/3.                                  #  I112 = Gx * cx*sx
+    I11  = L*sx/2.                                     #  I11  = Gx * cx
+    I10  = dx_h                                        #  I10  = Gx
+    I33  = L*sy/2.                                     #  I33  = Gy * cy
+    I34  = (sy - L*cy)/(2.*ky2) if ky !=0. else L3/6.  #  I34  = Gy * sy
     I211 = sx/3.*(1. + 2.*cx)
     I222 = 2.*dx_h*sx/3.
     I212 = 1./3.*(2*sx2 - dx_h)
     I21  = 1./2.*(L*cx + sx)
-    I216 = h/kx2*(I21 - I211)
     I22  = I11
-    I226 = h/kx2*(I22 - I212)
     I20  = sx
-    I26  = h /(2.*kx2)*(sx - L*cx)
-    I266 = h2/kx4*(I20 - 2.*I21 + I211)
-    I244 = 2.*(cy*sy - sx)/denom
-    I233 = sx + 2.*ky2*(cy*sy - sx)/denom
-    I234 = (kx2*dx_h - 2.*ky2*sy2)/denom
-    I413 = ((kx2 - 2.*ky2)*cy*sx - ky2*sy*(1. + cx))/denom
-    I424 = (cy*sx - cx*sy - 2.*ky2*sy*dx_h)/denom
-    I414 = ((kx2 - 2.*ky2)*sx*sy - (1. - cx)*cy)/denom
-    I423 = ((2.*ky2)/kx2*(1 + cx)*cy - cx*cy - ky2*sx*sy)/denom + cy/kx2
     I43  = 0.5*(L*cy + sy)
-    I436 = h/kx2*(I43 - I413)
     I44  = I33
-    I446 = h/kx2*(I44 - I414)
+    if kx != 0:
+        I116 = h/kx2*(I11 - I111)                     #  I116 = Gx * cx*dx
+        I12  = 0.5/kx2*(sx - L*cx)                    #  I12  = Gx * sx
+        I126 = h/kx2*(I12 - I112)                     #  I126 = Gx * sx*dx
+        I16  = h/kx2*(dx_h - L*sx/2.)                 #  I16  = Gx * dx
+        I166 = h2/kx4*(I10 - 2*I11 + I111)            #  I166 = Gx * dx**2
+        I216 = h/kx2*(I21 - I211)
+        I226 = h/kx2*(I22 - I212)
+        I26  = h /(2.*kx2)*(sx - L*cx)
+        I266 = h2/kx4*(I20 - 2.*I21 + I211)
+    else:
+        I116 = h*L4/24.                               #  I116 = Gx * cx*dx
+        I12  = L3/6.                                  #  I12  = Gx * sx
+        I126 = h*L5/40.                               #  I126 = Gx * sx*dx
+        I16  = h*L4/24.                               #  I16  = Gx * dx
+        I166 = h2*L5*L/120.                           #  I166 = Gx * dx**2
+        I216 = h*L3/6.
+        I226 = h*L4/8.
+        I26  = h*L3/6.
+        I266 = h2*L5/20.
+
+    if kx != 0 and ky != 0:
+        I144 = (sy2 - 2.*dx_h)/denom                         #  I144 = Gx * sy**2
+        I133 = dx_h - ky2*(sy2 - 2.*dx_h)/denom              #  I133 = Gx * cy**2
+        I134 = (sy*cy - sx)/denom                            #  I134 = Gx * cy*sy
+        I313 = (kx2*cy*dx_h - 2.*ky2*sx*sy)/denom            #  I313 = Gy * cx*cy
+        I324 = (2.*cy*dx_h - sx*sy)/denom                    #  I324 = Gy * sx*sy
+        I314 = (2.*cy*sx - (1. + cx)*sy)/denom               #  I314 = Gy * cx*sy
+        I323 = (sy - cy*sx - 2.*ky2*sy*dx_h)/denom           #  I323 = Gy * sx*cy = (2*ky2/kx2*(1 + cx)*sy - cy*sx)/denom + sy/kx2
+        #derivative of Integrals
+        I244 = 2.*(cy*sy - sx)/denom
+        I233 = sx + 2.*ky2*(cy*sy - sx)/denom
+        I234 = (kx2*dx_h - 2.*ky2*sy2)/denom
+        I413 = ((kx2 - 2.*ky2)*cy*sx - ky2*sy*(1. + cx))/denom
+        I424 = (cy*sx - cx*sy - 2.*ky2*sy*dx_h)/denom
+        I414 = ((kx2 - 2.*ky2)*sx*sy - (1. - cx)*cy)/denom
+        I423 = (cy*dx_h*(kx2 - 2*ky2) - ky2*sx*sy)/denom      #  I423 = I323' = ((2.*ky2)/kx2*(1 + cx)*cy - cx*cy - ky2*sx*sy)/denom + cy/kx2
+    else:
+        I144 = L4/12.                                          #  I144 = Gx * sy**2
+        I133 = L2/2.                                           #  I133 = Gx * cy**2
+        I134 = L3/6.                                           #  I134 = Gx * cy*sy
+        I313 = L2/2.                                           #  I313 = Gy * cx*cy
+        I324 = L4/12.                                          #  I324 = Gy * sx*sy
+        I314 = L3/6.                                           #  I314 = Gy * cx*sy
+        I323 = L3/6.                                           #  I323 = Gy * sx*cy
+        I244 = L3/3.
+        I233 = L
+        I234 = L2/2.
+        I413 = L
+        I424 = L3/3.
+        I414 = L2/2.
+        I423 = L2/2.
+
+    if kx == 0 and ky != 0:
+        I336 = (h*L*(3.*L*cy + (2.*ky2*L2 - 3.)*sy))/(24.*ky2)
+        I346 = (h*((3. - 2.*ky2*L2)*L*cy + 3.*(ky2*L2 - 1.)*sy))/(24.*ky4)
+        I436 = I346
+        I446 = (h*L*(-3.*L*cy + (3. + 2.*ky2*L2)*sy))/(24.*ky2)
+    elif kx == 0 and ky == 0:
+        I336 = (h*L4)/24.
+        I346 = (h*L5)/40.
+        I436 = (h*L3)/6.
+        I446 = (h*L4)/8.
+    else:
+        I336 = h/kx2*(I33 - I313)                                  #  I336 = Gy * dx*cy
+        I346 = h/kx2*(I34 - I314)                                  #  I346 = Gy * dx*sy
+        I436 = h/kx2*(I43 - I413)
+        I446 = h/kx2*(I44 - I414)
+
+    #derivative of Integrals
+    #I211 = sx/3.*(1. + 2.*cx)
+    #I222 = 2.*dx_h*sx/3.
+    #I212 = 1./3.*(2*sx2 - dx_h)
+    #I21  = 1./2.*(L*cx + sx)
+    #I216 = h/kx2*(I21 - I211)
+    #I22  = I11
+    #I226 = h/kx2*(I22 - I212)
+    #I20  = sx
+    #I26  = h /(2.*kx2)*(sx - L*cx)
+    #I266 = h2/kx4*(I20 - 2.*I21 + I211)
+    #I244 = 2.*(cy*sy - sx)/denom                           if non_drift else L3/3.
+    #I233 = sx + 2.*ky2*(cy*sy - sx)/denom                  if non_drift else L
+    #I234 = (kx2*dx_h - 2.*ky2*sy2)/denom                   if non_drift else L2/2.
+    #I413 = ((kx2 - 2.*ky2)*cy*sx - ky2*sy*(1. + cx))/denom if non_drift else L
+    #I424 = (cy*sx - cx*sy - 2.*ky2*sy*dx_h)/denom          if non_drift else L3/3.
+    #I414 = ((kx2 - 2.*ky2)*sx*sy - (1. - cx)*cy)/denom     if non_drift else L2/2.
+    #I423 = (cy*dx_h*(kx2 - 2*ky2) - ky2*sx*sy)/denom       if non_drift else L2/2.   #  I423 = I323' = ((2.*ky2)/kx2*(1 + cx)*cy - cx*cy - ky2*sx*sy)/denom + cy/kx2
+    #I43  = 0.5*(L*cy + sy)
+    #I436 = h/kx2*(I43 - I413)
+    #I44  = I33
+    #I446 = h/kx2*(I44 - I414)
 
     K2 = k2/2.
     coef1 = 2.*ky2*h - h3 - K2
@@ -221,7 +298,6 @@ def t_nnn(L, h, k1, k2):
     t234 =    2.*K2*I234
     t244 =       K2*I244 - h*I20/2.
 
-
     coef2 = 2*(K2 - ky2*h)
 
     t313 = coef2*I313 + h*kx2*ky2*I324
@@ -238,6 +314,80 @@ def t_nnn(L, h, k1, k2):
     t436 = coef2*I436 - h2*ky2*I424 + ky2*I43
     t446 = coef2*I446 + h2*I423 + ky2*I44
 
+    # Coordinates transformation from Curvilinear to a Restangular
+    cx_1 = -kx2*sx
+    sx_1 = cx
+    cy_1 = -ky2*sy
+    sy_1 = cy
+    dx_1 = h*sx
+    T = zeros((6,6,6))
+    T[0, 0, 0] = t111
+    T[0, 0, 1] = t112 + h*sx
+    T[0, 0, 5] = t116
+    T[0, 1, 1] = t122
+    T[0, 1, 5] = t126
+    T[0, 5, 5] = t166
+    T[0, 2, 2] = t133
+    T[0, 2, 3] = t134
+    T[0, 3, 3] = t144
+
+    T[1, 0, 0] = t211 - h*cx*cx_1
+    T[1, 0, 1] = t212 + h*sx_1 - h*(sx*cx_1 + cx*sx_1)
+    T[1, 0, 5] = t216 - h*(dx*cx_1 + cx*dx_1)
+    T[1, 1, 1] = t222 - h*sx*sx_1
+    T[1, 1, 5] = t226 - h*(sx*dx_1 + dx*sx_1)
+    T[1, 5, 5] = t266 - dx*h*dx_1
+    T[1, 2, 2] = t233
+    T[1, 2, 3] = t234
+    T[1, 3, 3] = t244
+
+    T[2, 0, 2] = t313
+    T[2, 0, 3] = t314 + h*sy
+    T[2, 1, 2] = t323
+    T[2, 1, 3] = t324
+    T[2, 2, 5] = t336
+    T[2, 3, 5] = t346
+
+    T[3, 0, 2] = t413 - h*cx*cy_1
+    T[3, 0, 3] = t414 + (1 - cx)*h*sy_1
+    T[3, 1, 2] = t423 - h*sx*cy_1
+    T[3, 1, 3] = t424 - h*sx*sy_1
+    T[3, 2, 5] = t436 - h*dx*cy_1
+    T[3, 3, 5] = t446 - h*dx*sy_1
+
+    print "t111 = ", t111
+    print "t112 = ", t112
+    print "t116 = ", t116
+    print "t122 = ", t122
+    print "t126 = ", t126
+    print "t166 = ", t166
+    print "t133 = ", t133
+    print "t134 = ", t134
+    print "t144 = ", t144
+    print "t211 = ", t211
+    print "t212 = ", t212
+    print "t216 = ", t216
+    print "t222 = ", t222
+    print "t226 = ", t226
+    print "t266 = ", t266
+    print "t233 = ", t233
+    print "t234 = ", t234
+    print "t244 = ", t244
+    print "t313 = ", t313
+    print "t314 = ", t314
+    print "t323 = ", t323
+    print "t324 = ", t324
+    print "t336 = ", t336
+    print "t346 = ", t346
+    print "t413 = ", t413
+    print "t414 = ", t414
+    print "t423 = ", t423
+    print "t424 = ", t424
+    print "t436 = ", t436
+    print "t446 = ", t446
+    return T
+
+
 def map(l, angle, k1, k2, k3):
     pass
 
@@ -250,7 +400,54 @@ if __name__ == "__main__":
 
 
 
+"""
 
+
+        I111 = 1./3.*(sx2 + dx_h)                                                    #  I111 = Gx * cx**2
+        I122 = dx_h*dx_h/3.                                                          #  I122 = Gx * sx**2
+        I112 = sx*dx_h/3.                                                            #  I112 = Gx * cx*sx
+        I11  = L*sx/2.                                                               #  I11  = Gx * cx
+        I116 = h/kx2*(I11 - I111)                  if kx != 0 else h*L4/24.          #  I116 = Gx * cx*dx
+        I12  = 0.5/kx2*(sx - L*cx)                 if kx != 0 else L3/6.             #  I12  = Gx * sx
+        I126 = h/kx2*(I12 - I112)                  if kx != 0 else h*L5/40.          #  I126 = Gx * sx*dx
+        I10  = dx_h                                                                  #  I10  = Gx
+        I16  = h/kx2*(dx_h - L*sx/2.)              if kx != 0 else h*L4/24.          #  I16  = Gx * dx
+        I166 = h2/kx4*(I10 - 2*I11 + I111)         if kx != 0 else h2*L5*L/120.      #  I166 = Gx * dx**2
+        I144 = (sy2 - 2.*dx_h)/denom               if non_drift else L4/12.          #  I144 = Gx * sy**2
+        I133 = dx_h - ky2*(sy2 - 2.*dx_h)/denom    if non_drift else L2/2.           #  I133 = Gx * cy**2
+        I134 = (sy*cy - sx)/denom                  if non_drift else L3/6.           #  I134 = Gx * cy*sy
+        I313 = (kx2*cy*dx_h - 2.*ky2*sx*sy)/denom  if non_drift else L2/2.           #  I313 = Gy * cx*cy
+        I324 = (2.*cy*dx_h - sx*sy)/denom          if non_drift else L4/12.          #  I324 = Gy * sx*sy
+        I314 = (2.*cy*sx - (1. + cx)*sy)/denom     if non_drift else L3/6.           #  I314 = Gy * cx*sy
+        I323 = (sy - cy*sx - 2.*ky2*sy*dx_h)/denom if non_drift else L3/6.           #  I323 = Gy * sx*cy = (2*ky2/kx2*(1 + cx)*sy - cy*sx)/denom + sy/kx2
+        I33  = L*sy/2.                                                               #  I33  = Gy * cy
+        I34  = (sy - L*cy)/(2.*ky2)                if ky !=0. else L3/6.             #  I34  = Gy * sy
+        I336 = h/kx2*(I33 - I313)                                                    #  I336 = Gy * dx*cy
+        I346 = h/kx2*(I34 - I314)                                                    #  I346 = Gy * dx*sy
+
+        #derivative of Integrals
+        I211 = sx/3.*(1. + 2.*cx)
+        I222 = 2.*dx_h*sx/3.
+        I212 = 1./3.*(2*sx2 - dx_h)
+        I21  = 1./2.*(L*cx + sx)
+        I216 = h/kx2*(I21 - I211)
+        I22  = I11
+        I226 = h/kx2*(I22 - I212)
+        I20  = sx
+        I26  = h /(2.*kx2)*(sx - L*cx)
+        I266 = h2/kx4*(I20 - 2.*I21 + I211)
+        I244 = 2.*(cy*sy - sx)/denom                           if non_drift else L3/3.
+        I233 = sx + 2.*ky2*(cy*sy - sx)/denom                  if non_drift else L
+        I234 = (kx2*dx_h - 2.*ky2*sy2)/denom                   if non_drift else L2/2.
+        I413 = ((kx2 - 2.*ky2)*cy*sx - ky2*sy*(1. + cx))/denom if non_drift else L
+        I424 = (cy*sx - cx*sy - 2.*ky2*sy*dx_h)/denom          if non_drift else L3/3.
+        I414 = ((kx2 - 2.*ky2)*sx*sy - (1. - cx)*cy)/denom     if non_drift else L2/2.
+        I423 = (cy*dx_h*(kx2 - 2*ky2) - ky2*sx*sy)/denom       if non_drift else L2/2.   #  I423 = I323' = ((2.*ky2)/kx2*(1 + cx)*cy - cx*cy - ky2*sx*sy)/denom + cy/kx2
+        I43  = 0.5*(L*cy + sy)
+        I436 = h/kx2*(I43 - I413)
+        I44  = I33
+        I446 = h/kx2*(I44 - I414)
+"""
 
 
 

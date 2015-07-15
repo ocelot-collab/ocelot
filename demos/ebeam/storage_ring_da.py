@@ -43,7 +43,7 @@ x_array = linspace(-0.03, 0.03, nx)
 y_array = linspace(0.0001, 0.03, ny)
 start = time()
 pxy_list = create_track_list(x_array, y_array)
-pxy_list = tracking( lat, nturns, pxy_list,  nsuperperiods = 8, save_track=True)
+pxy_list = tracking_second( lat, nturns, pxy_list,  nsuperperiods = 8, save_track=True)
 
 print("time exec = ", time() - start)
 pxy_list = freq_analysis(pxy_list, lat, nturns, harm = True)

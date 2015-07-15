@@ -67,11 +67,12 @@ class Quadrupole(Element):
     k1 - strength of quadrupole lens in [1/m^2],
     l - length of lens in [m].
     """
-    def __init__(self, l=0, k1=0, tilt = 0, id = None):
+    def __init__(self, l=0, k1=0, k2=0., tilt=0, id=None):
         Element.__init__(self, id)
         self.type = "quadrupole"
         self.l = l
         self.k1 = k1
+        self.k2 = k2
         self.tilt = tilt
 
 class Sextupole(Element):
@@ -79,7 +80,7 @@ class Sextupole(Element):
     m - strength of sextupole lens in [1/m^3],
     l - length of lens in [m].
     """
-    def __init__(self, l=0, k2=None, ms = None, id = None, tilt = 0):
+    def __init__(self, l=0, k2=None, ms=None, id=None, tilt=0):
         """
         k2 is sextupole strength
         ms = k2*l
@@ -96,7 +97,7 @@ class Octupole(Element):
     m - strength of sextupole lens in [1/m^3],
     l - length of lens in [m].
     """
-    def __init__(self, l=0, k3=None, id = None, tilt = 0):
+    def __init__(self, l=0, k3=None, id=None, tilt=0.):
         """
         k2 is sextupole strength
         moct = k3*l
@@ -119,18 +120,27 @@ class Drift(Element):
         self.tilt = 0.
 
 class Bend(Element):
-    def __init__(self, l, angle=0., tilt=0.0, e1 = 0., e2 = 0., k1 = 0., id = None):
+    def __init__(self, l, angle=0., k1 = 0., k2 = 0., tilt=0.0, e1 = 0., e2 = 0.,
+                 gap = 0, h_pole1 = 0., h_pole2 = 0., fint = 0., id = None):
         Element.__init__(self, id)
         self.type = "bend"
         self.l = l
         self.angle = angle
         self.k1 = k1
+        self.k2 = k2
         self.e1 = e1
         self.e2 = e2
+        self.gap = gap
+        self.h_pole1 = h_pole1
+        self.h_pole2 = h_pole2
+        self.fint1 = fint
+        self.fint2 = fint
         self.tilt = tilt
 
 class Edge(Bend):
-    def __init__(self, l=0, angle=0.0, edge = 0., tilt=0.0, dtilt = 0.0, dx = 0.0, dy = 0.0, id = None):
+    def __init__(self, l=0, angle=0.0, k1 = 0, edge = 0.,
+                 tilt=0.0, dtilt = 0.0, dx = 0.0, dy = 0.0,
+                 h_pole = 0., gap = 0., fint = 0., pos = 1, id = None):
         Element.__init__(self, id)
         self.type = "edge"
         if l!=0.:
@@ -138,11 +148,16 @@ class Edge(Bend):
         else:
             self.h = 0
         self.l = 0.
+        self.k1 = k1
+        self.h_pole = h_pole
+        self.gap = gap
+        self.fint = fint
         self.edge = edge
         self.dx = dx
         self.dy = dy
         self.dtilt = dtilt
         self.tilt = tilt
+        self.pos = pos
         """
         m = matrix(eye(6))
         y = tan(angle)*hx
@@ -159,14 +174,21 @@ class SBend(Bend):
     angle - angle of bend in [rad],
     k - quadrupole strength in [1/m^2].
     """
-    def __init__(self, l=0, angle=0.0, e1 = 0.0, e2 = 0.0, tilt=0.0, k1 = 0.0, id = None):
-        Bend.__init__(self, l, angle=angle, e1=e1, e2=e2, k1=k1, id=id)
+    def __init__(self, l=0, angle=0.0,k1 = 0.0, k2 = 0., e1 = 0.0, e2 = 0.0, tilt=0.0,
+                 gap = 0, h_pole1 = 0., h_pole2 = 0., fint = 0., id = None):
+        Bend.__init__(self, l, angle=angle, k1=k1, k2=k2, e1=e1, e2=e2,
+                      gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, id=id)
         self.type = "sbend"
         self.l = l
         self.angle = angle
         self.k1 = k1
+        self.k2 = k2
         self.tilt = tilt
-
+        self.gap = gap
+        self.h_pole1 = h_pole1
+        self.h_pole2 = h_pole2
+        self.fint1 = fint
+        self.fint2 = fint
         # for future
 
         #self.e1 = 0     # The rotation angle for the entrance pole face (default: 0 rad).
@@ -179,7 +201,8 @@ class RBend(Bend):
     angle - angle of bend in [rad],
     k - quadrupole strength in [1/m^2].
     """
-    def __init__(self, l=0, angle=0,tilt=0, k1 = 0, id = None, e1 = None, e2 = None):
+    def __init__(self, l=0, angle=0,tilt=0, k1 = 0, k2 = 0.,  e1 = None, e2 = None,
+                 gap=0, h_pole1=0., h_pole2=0., fint=0., id=None):
         if e1 == None:
             e1 = angle/2.
         else:
@@ -188,20 +211,23 @@ class RBend(Bend):
             e2 = angle/2.
         else:
             e1 += angle/2.
-        Bend.__init__(self, l, angle=angle, e1=e1, e2=e2, k1=k1, id=id)
+        Bend.__init__(self, l, angle=angle, e1=e1, e2=e2, k1=k1, k2=k2,
+                      gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, id=id)
         self.type = "rbend"
         self.l = l
         self.angle = angle
         self.k1 = k1
+        self.k2 = k2
         self.tilt = tilt
-        # for future
-
-        #self.e1 = 0     # The rotation angle for the entrance pole face (default: 0 rad).
-        #self.e2 = 0     # The rotation angle for the exit pole face (default: 0 rad).
+        self.gap = gap
+        self.h_pole1 = h_pole1
+        self.h_pole2 = h_pole2
+        self.fint1 = fint
+        self.fint2 = fint
 
 class Hcor(RBend):
     def __init__(self,l = 0, angle = 0, id = None):
-        RBend.__init__(self,l=l,angle=angle,id = id)
+        RBend.__init__(self, l=l, angle=angle, id = id)
         self.type = "hcor"
         self.l = l
         self.angle = angle
@@ -209,7 +235,7 @@ class Hcor(RBend):
 
 class Vcor(RBend):
     def __init__(self,l = 0, angle = 0, id = None):
-        RBend.__init__(self,l=l,angle=angle,id = id)
+        RBend.__init__(self, l=l, angle=angle, id = id)
         self.type = "vcor"
         self.l = l
         self.angle = angle
@@ -339,22 +365,18 @@ class MagneticLattice:
         if not self.check_edges():
             self.add_edges()
         self.update_transfer_maps()
-        
-        
+
         self.__hash__ = {}
         #print 'creating hash'
         for e in self.sequence:
             #print e
             self.__hash__[e] = e
-        
-
     
     def __getitem__(self, el):
         try:
             return self.__hash__[el]
         except:
             return None
-    
 
     def check_edges(self):
         """
@@ -376,19 +398,18 @@ class MagneticLattice:
             elem = self.sequence[n]
             if elem.type in ["bend", "sbend", "rbend", "hcor", "vcor"] and elem.l != 0.:
 
-
                 e_name = elem.id
 
                 if elem.id == None:
                     e_name = "b_" + str(i)
 
-                e1 = Edge(l = elem.l, angle = elem.angle, edge = elem.e1, tilt = elem.tilt, dtilt = elem.dtilt,
-                          dx = elem.dx, dy = elem.dy, id = e_name + "_e1")
+                e1 = Edge(l=elem.l, angle=elem.angle, k1=elem.k1, edge=elem.e1, tilt=elem.tilt, dtilt=elem.dtilt,
+                          dx=elem.dx, dy=elem.dy, h_pole=elem.h_pole1, gap=elem.gap, fint=elem.fint1, pos=1, id = e_name + "_e1")
 
                 self.sequence.insert(n, e1)
 
-                e2 = Edge(l = elem.l, angle = elem.angle, edge = elem.e2, tilt = elem.tilt, dtilt = elem.dtilt,
-                          dx = elem.dx, dy = elem.dy, id = e_name + "_e2")
+                e2 = Edge(l=elem.l, angle=elem.angle, k1=elem.k1, edge=elem.e2, tilt = elem.tilt, dtilt = elem.dtilt,
+                          dx=elem.dx, dy=elem.dy, h_pole=elem.h_pole2, gap=elem.gap, fint=elem.fint2, pos=2, id=e_name + "_e2")
 
                 self.sequence.insert(n+2, e2)
                 n += 2

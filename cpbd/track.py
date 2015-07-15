@@ -4,7 +4,7 @@ from ocelot.cpbd.optics import get_map
 __author__ = 'Sergey Tomin'
 from ocelot.cpbd.optics import *
 #from mpi4py import MPI
-from numpy import delete, append, array, linspace
+from numpy import delete, append, array, linspace, argwhere, unique
 from ocelot.cpbd.errors import *
 from ocelot.cpbd.elements import *
 from matplotlib import pyplot as plt
@@ -174,6 +174,7 @@ class Track_info:
     def get_yp(self):
         return np.array(map(lambda p: p[3], self.p_list))
 
+
 def contour_da(track_list, nturns, lvl = 0.9):
     """
     the function defines contour of DA. If particle "lived" > lvl*nturns then we set up nturns
@@ -262,7 +263,6 @@ def tracking(lat, nturns, track_list, nsuperperiods, save_track = True):
         print(i)
         for n in range(nsuperperiods):
 
-
             for tm in t_maps:
                 tm.apply(p_array)
 
@@ -274,6 +274,39 @@ def tracking(lat, nturns, track_list, nsuperperiods, save_track = True):
             #pxy.p_list = append(pxy.p_list, p_array.particles[n*6:n*6+6])
             if  save_track:
                 pxy.p_list.append(p_array.particles[n*6:n*6+6])
+    return np.array(track_list_const)
+
+
+def tracking_second(lat, nturns, track_list, nsuperperiods, save_track = True):
+    xlim, ylim, px_lim, py_lim = aperture_limit(lat, xlim = 1, ylim = 1)
+    navi = Navigator()
+    #t_maps, delta_e = get_map(lat, lat.totalLen, navi)
+
+    track_list_const = copy(track_list)
+    #p_array = ParticleArray(n = len(track_list))
+    #for i, pxy in enumerate(track_list):
+    #    p_array[i] = pxy.p
+
+    for i in range(nturns):
+        print(i)
+        for n in range(nsuperperiods):
+
+            for elem in lat.sequence:
+                for pxy in track_list:
+                    pxy.p = elem.transfer_map*pxy.p
+            x = [pxy.p.x for pxy in track_list]
+            px = [pxy.p.px for pxy in track_list]
+            y = [pxy.p.y for pxy in track_list]
+            py = [pxy.p.py for pxy in track_list]
+            #p_indx = p_array.rm_tails(xlim, ylim, px_lim, py_lim)
+            ind_angles = append(argwhere(px > px_lim), argwhere(py > py_lim))
+            p_idxs = unique(append(argwhere(x > xlim), append(argwhere(y > ylim), append(argwhere(x != x), append(argwhere(y!= y), ind_angles)) )))
+            track_list = delete(track_list, p_idxs)
+        for n, pxy in enumerate(track_list):
+            pxy.turn = i
+            pxy.p_list = append(pxy.p_list,pxy.p)
+            #if  save_track:
+            #    pxy.p_list.append(p_array.particles[n*6:n*6+6])
     return np.array(track_list_const)
 
 

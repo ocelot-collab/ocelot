@@ -7,7 +7,7 @@ from numpy.linalg import inv
 from numpy import cosh, sinh
 #from scipy import weave
 from und_weave import *
-
+from ocelot.cpbd.maps2order import *
 
 
 class TransferMap:
@@ -62,13 +62,14 @@ class TransferMap:
     def map_x_particle(self, m, dB):
 
         p = Particle()
+        X0 = array([m.x, m.px, m.y, m.py, m.tau, m.p])
         if self.order <= 1:
-            V = dot(self.R, array([m.x, m.px, m.y, m.py, m.tau, m.p])) + self.B + dB
-            p.x, p.px, p.y, p.py, p.tau, p.p = V[0], V[1], V[2], V[3], V[4], V[5]
+            X1 = dot(self.R, X0) + dot(dot(self.T, X0),X0)+ self.B + dB
+            p.x, p.px, p.y, p.py, p.tau, p.p = X1[0], X1[1], X1[2], X1[3], X1[4], X1[5]
         elif self.order == 2:
-            V = array([m.x, m.px, m.y, m.py, m.tau, m.p])
+            #V = array([m.x, m.px, m.y, m.py, m.tau, m.p])
             #print V
-            p.x, p.px, p.y, p.py, p.tau, p.p = self.nonl_kick(V)
+            p.x, p.px, p.y, p.py, p.tau, p.p = self.nonl_kick(X0)
         p.s = m.s + self.length
         return p
 
@@ -158,13 +159,12 @@ class TransferMap:
                     particles[i*6:i*6+6] = self.nonl_kick(V)
                 """
             prcl_series.s += self.length
-
-        
             
     def __call__(self, s):
         m = copy(self)
         m.length = s
         m.R = m.R_z(s)
+        m.T = m.T_z(s)
         m.nonl_kick = lambda u: m.nonl_kick_z(u, s)
         m.nonl_kick_array = lambda u: m.nonl_kick_array_z(u, s)
         return m
@@ -189,29 +189,24 @@ def create_transfer_map(element, order=1, energy = 0, track_acceleration = False
     def uni_matrix(z, k1, hx, hy = 0, sum_tilts = 0.):
         #r = element.l/element.angle
         # - K - focusing lens , +K - defoc
-        dp = 0.
-        Kx = (k1 + hx*hx)/(1.+dp)
-        Ky = -k1/(1.+dp)
 
-        Qx = sqrt(Kx + 0.j)
-        Qy = sqrt(Ky + 0.j)
-        ux = 0
-        uy = 0
-        if Ky == 0:
-            uy = 1
-        if Kx == 0:
-            ux = 1
-        cos_x = cos(z*Qx)
-        sin_x = sin(z*Qx)
-        cos_z = cos(z*Qy)
-        sin_z = sin(z*Qy)
+        kx2 = (k1 + hx*hx)
+        ky2 = -k1
 
-        uni_matrix = array([[ cos_x,  sin_x/(Qx+ux) + ux*z, 0. ,0. ,0.,  (1. - cos_x)*hx/(Kx+ux) ],
-                            [-Qx*sin_x, cos_x, 0. ,0. ,0., sin_x*hx/(Qx+ux) ],
-                            [0., 0., cos_z,  sin_z/(Qy+uy) + uy*z,  0., 0. ],
-                            [0., 0., -Qy*sin_z, cos_z, 0., 0.],
-                            [hx/(Qx+ux)*sin(z*Qx), hx/(Qx*Qx + ux)*(1. - cos(z*Qx)), 0., 0. ,1. ,hx*hx/(Qx**3+ux)*(Qx*z - sin(Qx*z)) ],
-                            [0., 0., 0., 0. ,0. ,1. ]]).real
+        kx = sqrt(kx2 + 0.j)
+        ky = sqrt(ky2 + 0.j)
+        cx = cos(z*kx).real
+        sx = (sin(kx*z)/kx).real if kx != 0 else z
+        cy = cos(z*ky).real
+        sy = (sin(ky*z)/ky).real if ky != 0 else z
+        dx = hx/kx2*(1. - cx) if kx != 0. else z*z*hx/2.
+        R56 = hx*hx*(z - sx)/kx2 if kx !=0 else hx*hx*z**3/6.
+        uni_matrix = array([[cx, sx, 0., 0., 0., dx],
+                            [-kx2*sx, cx, 0., 0., 0., sx*hx],
+                            [0., 0., cy, sy, 0., 0.],
+                            [0., 0., -ky2*sy, cy, 0., 0.],
+                            [hx*sx, dx, 0., 0., 1., R56],
+                            [0., 0., 0., 0., 0., 1.]])
 
         uni_matrix = dot(dot(rot_mtx(-sum_tilts),uni_matrix),rot_mtx(sum_tilts))
         return uni_matrix
@@ -224,21 +219,25 @@ def create_transfer_map(element, order=1, energy = 0, track_acceleration = False
 
         transfer_map.R_z = lambda z: uni_matrix(z, element.k1, hx = hx, sum_tilts = element.dtilt + element.tilt)#lambda z: transfer_map.R1(z)*transfer_map.e_start
         transfer_map.R = transfer_map.R_z(element.l)#transfer_map.e_end*transfer_map.R_z(element.l)
-
+        transfer_map.T_z = lambda z: t_nnn(z, hx, element.k1, element.k2)
+        transfer_map.T = transfer_map.T_z(element.l)
 
     if element.type == "quadrupole":
 
         transfer_map.R_z = lambda z: uni_matrix(z, element.k1, hx = 0, sum_tilts = element.dtilt + element.tilt)
         transfer_map.R = transfer_map.R_z(element.l)
+        transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=element.k1, k2=element.k2)
+        transfer_map.T = transfer_map.T_z(element.l)
 
-    elif element.type == "sbend" or element.type == "rbend" or element.type == "bend":
+    elif element.type in ["sbend", "rbend", "bend"]:
 
-        bend(element,transfer_map)
+        bend(element, transfer_map)
 
     elif element.type == "edge":
         #print 'Edge', element.id, element.edge
-        y = tan(element.edge)*element.h
         tilt = element.tilt + element.dtilt
+        """
+        y = tan(element.edge)*element.h
         m1 = y*cos(tilt)*cos(tilt) - y*sin(tilt)*sin(tilt)
         m2 = y*sin(2*tilt)
 
@@ -247,6 +246,12 @@ def create_transfer_map(element, order=1, energy = 0, track_acceleration = False
         transfer_map.R[3,1] = m2
         transfer_map.R[3,2] = -m1
         transfer_map.R_z = lambda z: transfer_map.R
+        """
+        R, T = fringe_ent(h=element.h, k1=element.k1,  e=element.edge, h_pole=element.h_pole, gap=element.gap, fint=element.fint)
+        transfer_map.R = dot(dot(rot_mtx(-tilt), R), rot_mtx(tilt))
+        transfer_map.R_z = lambda z: transfer_map.R
+        transfer_map.T = T
+        transfer_map.T_z = lambda z: transfer_map.T
 
     elif element.type == "sextupole":
 
@@ -269,6 +274,7 @@ def create_transfer_map(element, order=1, energy = 0, track_acceleration = False
             element.ms = element.k2*element.l
         if element.k2 == None and element.l != 0:
             element.k2 = element.ms/element.l
+
         transfer_map.order = 2
 
         #transfer_map.nonl_kick = nonl_kick #lambda V: nonl_kick(transfer_map, V)
@@ -288,6 +294,11 @@ def create_transfer_map(element, order=1, energy = 0, track_acceleration = False
         #print "transfer_map.ms = ",transfer_map.ms
         transfer_map.R_z = lambda z: uni_matrix(z, 0, hx = 0)
         transfer_map.R = transfer_map.R_z(element.l)
+        k2 = element.k2
+        if element.k2 == None:
+            k2 = 0.
+        transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=k2)
+        transfer_map.T = transfer_map.T_z(element.l)
 
     elif element.type == "octupole":
 
@@ -325,13 +336,17 @@ def create_transfer_map(element, order=1, energy = 0, track_acceleration = False
             transfer_map.nonl_kick_array = lambda u: nonl_kick_array_z(u, element.l, element.moct)
 
 
-        transfer_map.R_z = lambda z: uni_matrix(z, 0, hx = 0)
+        transfer_map.R_z = lambda z: uni_matrix(z, 0., hx = 0.)
         transfer_map.R = transfer_map.R_z(element.l)
+        transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
+        transfer_map.T = transfer_map.T_z(element.l)
 
     elif element.type == "drift":
 
         transfer_map.R_z = lambda z: uni_matrix(z, 0., hx = 0.)
         transfer_map.R = transfer_map.R_z(element.l)
+        transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
+        transfer_map.T = transfer_map.T_z(element.l)
 
     elif element.type == "undulator":
 
@@ -431,15 +446,22 @@ def create_transfer_map(element, order=1, energy = 0, track_acceleration = False
             transfer_map.nonl_kick_array_z = lambda u, z: nonl_kick_array_z(u, z, ndiv = 5)
             transfer_map.nonl_kick_z = lambda u, z: nonl_kick_array_z(u, z, ndiv = 5)
 
+        transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
+        transfer_map.T = transfer_map.T_z(element.l)
+
     elif element.type == "monitor":
         
         transfer_map.R_z = lambda z: uni_matrix(z, 0., hx = 0.)
         transfer_map.R = transfer_map.R_z(element.l)
+        transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
+        transfer_map.T = transfer_map.T_z(element.l)
 
     elif element.type == "marker":
 
         transfer_map.R_z = lambda z: eye(6)
         transfer_map.R = transfer_map.R_z(element.l)
+        transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
+        transfer_map.T = transfer_map.T_z(element.l)
 
     elif element.type == "hcor" or element.type == "vcor":
 
@@ -526,6 +548,8 @@ def create_transfer_map(element, order=1, energy = 0, track_acceleration = False
             transfer_map.R_z = lambda z: cavity_R_z(z, de = element.delta_e * z / element.l, f=element.f, E=element.E, track_acceleration = track_acceleration)
             transfer_map.R = transfer_map.R_z(element.l)
 
+        transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
+        transfer_map.T = transfer_map.T_z(element.l)
 
     elif element.type == "solenoid":
         def sol(l, k):
@@ -572,7 +596,8 @@ def create_transfer_map(element, order=1, energy = 0, track_acceleration = False
                 R_z = Rm
             return R_z
         transfer_map.R_z = lambda z: matriz(z, element.l, Rm)
-
+        transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
+        transfer_map.T = transfer_map.T_z(element.l)
     else:
 
         print (element.type , " : unknown type of magnetic element. Cannot create transfer map ")

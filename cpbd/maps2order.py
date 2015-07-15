@@ -319,7 +319,7 @@ def fringe_ent(h, k1,  e, h_pole = 0., gap = 0., fint = 0.):
     R = eye(6)
     R[1,0] = h*tan_e
     R[3,2] = -h*tan(e - phi)
-    print R
+    #print R
 
     T = zeros((6,6,6))
     T[0,0,0] = -h/2.*tan_e2
@@ -348,7 +348,7 @@ def fringe_ext(h, k1,  e, h_pole = 0., gap = 0., fint = 0.):
 
     R[1,0] = h*tan_e
     R[3,2] = -h*tan(e - phi)
-    print R
+    #print R
 
     T = zeros((6,6,6))
     T[0,0,0] = h/2.*tan_e2
@@ -364,19 +364,6 @@ def fringe_ext(h, k1,  e, h_pole = 0., gap = 0., fint = 0.):
     T[3,1,2] = h*sec_e2
     T[3,2,5] = h*tan_e - h*phi/cos(e - phi)**2
     return R, T
-
-
-
-def map(l, angle, k1, k2, k3):
-    pass
-
-if __name__ == "__main__":
-    t_nnn(1., 1., 1., 1.)
-
-
-
-
-
 
 
 """

@@ -1,6 +1,6 @@
 __author__ = 'Sergey Tomin'
 
-from numpy import cos, sin, sqrt, zeros
+from numpy import cos, sin, sqrt, zeros, eye, tan
 
 """
 differential equation:
@@ -84,13 +84,6 @@ def t_nnn(L, h, k1, k2):
     here is used the following set of variables:
     x, dx/ds, y, dy/ds,
     """
-    """
-    h = 0.
-    if L >0:
-        h = angle/L
-    else:
-        exit("error: l <= 0")
-    """
 
     h2 = h*h
     h3 = h2*h
@@ -116,56 +109,6 @@ def t_nnn(L, h, k1, k2):
     dx_h = (1. - cx)/kx2 if kx != 0. else L*L/2.
 
     # Integrals
-    """
-    if kx == 0:
-        I116 = h*L4/24.        #  I116 = Gx * cx*dx
-        I12  = L3/6.           #  I12  = Gx * sx
-        I126 = h*L5/40.        #  I126 = Gx * sx*dx
-        I16  = h*L4/24.        #  I16  = Gx * dx
-        I166 = h2*L5*L/120.      #  I166 = Gx * dx**2
-        I133 = 0.25*(L2 + sy2) #  I133 = Gx * cy**2
-        I313 = (L*sy)/2.         #  I313 = Gy * cx*cy
-
-        I216 = h*L3/6.
-        I22  = L2/2.
-        I226 = h*L4/8.
-        I26  = h*L3/6.
-        I266 = h2*L5/20.
-        I233 = 0.5*(L + sy*cy)
-        I413 = (L*cy + sy)/2.
-
-
-    if kx == 0 and ky != 0:
-        #I144 = (L**2 - sy2)/(4.*ky2)                                             #  I144 = Gx * sy**2
-        #I134 = (L - sy*cy)/(4.*ky2)                                              #  I134 = Gx * cy*sy
-        #I324 = (L*(sy - L*cy))/(4*ky2)                                           #  I324 = Gy * sx*sy
-        #I314 = (sy - s*cy)/(2.*ky2)                                              #  I314 = Gy * cx*sy
-        #I323 = (L*cy + (ky2*L**2 - 1.)*sy)/(4.*ky2)                               #  I323 = Gy * sx*cy
-        I336 = (h*L*(3.*L*cy + (2.*ky2*L**2 - 3.)*sy))/(24.*ky2)                 #  I336 = Gy * dx*cy
-        I346 = (h*((3.*L - 2.*ky2*L**3)*cy + 3.*(ky2*L**2 - 1.)*sy))/(24.*ky**4) #  I346 = Gy * dx*sy
-
-        #I244 = (L - sy*cy)/(2.*ky2)
-
-
-    if kx == 0 and ky == 0:
-        I144 = L4/12.
-        I134 = L3/6.
-        I324 = L4/12.
-        I314 = L3/6.
-        I323 = L3/6.
-        I336 = (h*L4)/24.
-        I346 = (h*L5)/40
-
-        I244 = L3/3.
-        I234 = L2/2.
-        I424 = L3/3.
-        I414 = L2/2.
-        I423 = L2/2.
-        I436 = (h*L3)/6.
-        I446 = (h*L4)/8.
-
-    """
-
     denom = kx2 - 4.*ky2
     I111 = 1./3.*(sx2 + dx_h)                          #  I111 = Gx * cx**2
     I122 = dx_h*dx_h/3.                                #  I122 = Gx * sx**2
@@ -251,29 +194,6 @@ def t_nnn(L, h, k1, k2):
         I436 = h/kx2*(I43 - I413)
         I446 = h/kx2*(I44 - I414)
 
-    #derivative of Integrals
-    #I211 = sx/3.*(1. + 2.*cx)
-    #I222 = 2.*dx_h*sx/3.
-    #I212 = 1./3.*(2*sx2 - dx_h)
-    #I21  = 1./2.*(L*cx + sx)
-    #I216 = h/kx2*(I21 - I211)
-    #I22  = I11
-    #I226 = h/kx2*(I22 - I212)
-    #I20  = sx
-    #I26  = h /(2.*kx2)*(sx - L*cx)
-    #I266 = h2/kx4*(I20 - 2.*I21 + I211)
-    #I244 = 2.*(cy*sy - sx)/denom                           if non_drift else L3/3.
-    #I233 = sx + 2.*ky2*(cy*sy - sx)/denom                  if non_drift else L
-    #I234 = (kx2*dx_h - 2.*ky2*sy2)/denom                   if non_drift else L2/2.
-    #I413 = ((kx2 - 2.*ky2)*cy*sx - ky2*sy*(1. + cx))/denom if non_drift else L
-    #I424 = (cy*sx - cx*sy - 2.*ky2*sy*dx_h)/denom          if non_drift else L3/3.
-    #I414 = ((kx2 - 2.*ky2)*sx*sy - (1. - cx)*cy)/denom     if non_drift else L2/2.
-    #I423 = (cy*dx_h*(kx2 - 2*ky2) - ky2*sx*sy)/denom       if non_drift else L2/2.   #  I423 = I323' = ((2.*ky2)/kx2*(1 + cx)*cy - cx*cy - ky2*sx*sy)/denom + cy/kx2
-    #I43  = 0.5*(L*cy + sy)
-    #I436 = h/kx2*(I43 - I413)
-    #I44  = I33
-    #I446 = h/kx2*(I44 - I414)
-
     K2 = k2/2.
     coef1 = 2.*ky2*h - h3 - K2
     coef3 = 2.*h2 - ky2
@@ -354,7 +274,7 @@ def t_nnn(L, h, k1, k2):
     T[3, 1, 3] = t424 - h*sx*sy_1
     T[3, 2, 5] = t436 - h*dx*cy_1
     T[3, 3, 5] = t446 - h*dx*sy_1
-
+    """
     print "t111 = ", t111
     print "t112 = ", t112
     print "t116 = ", t116
@@ -385,7 +305,66 @@ def t_nnn(L, h, k1, k2):
     print "t424 = ", t424
     print "t436 = ", t436
     print "t446 = ", t446
+    """
     return T
+
+def fringe_ent(h, k1,  e, h_pole = 0., gap = 0., fint = 0.):
+
+    sec_e = 1./cos(e)
+    sec_e2 = sec_e*sec_e
+    sec_e3 = sec_e2*sec_e
+    tan_e = tan(e)
+    tan_e2 = tan_e*tan_e
+    phi = fint*h*gap*sec_e*(1. + sin(e)**2)
+    R = eye(6)
+    R[1,0] = h*tan_e
+    R[3,2] = -h*tan(e - phi)
+    print R
+
+    T = zeros((6,6,6))
+    T[0,0,0] = -h/2.*tan_e2
+    T[0,2,2] = h/2.*sec_e2
+    T[1,0,0] = h/2.*h_pole*sec_e3 + k1*tan_e
+    T[1,0,1] = h*tan_e2
+    T[1,0,5] = -h*tan_e
+    T[1,2,2] = (-k1 + h*h/2. + h*h*tan_e2)*tan_e - h/2.*h_pole*sec_e3
+    T[1,2,3] = -h*tan_e2
+    T[2,0,2] = h*tan_e2
+    T[3,0,2] = -h*h_pole*sec_e3 - 2*k1*tan_e
+    T[3,0,3] = -h*tan_e2
+    T[3,1,2] = -h*sec_e2
+    T[3,2,5] = h*tan_e - h*phi/cos(e - phi)**2
+    return R, T
+
+def fringe_ext(h, k1,  e, h_pole = 0., gap = 0., fint = 0.):
+
+    sec_e = 1./cos(e)
+    sec_e2 = sec_e*sec_e
+    sec_e3 = sec_e2*sec_e
+    tan_e = tan(e)
+    tan_e2 = tan_e*tan_e
+    phi = fint*h*gap*sec_e*(1. + sin(e)**2)
+    R = eye(6)
+
+    R[1,0] = h*tan_e
+    R[3,2] = -h*tan(e - phi)
+    print R
+
+    T = zeros((6,6,6))
+    T[0,0,0] = h/2.*tan_e2
+    T[0,2,2] = -h/2.*sec_e2
+    T[1,0,0] = h/2.*h_pole*sec_e3 - (-k1 + h*h/2.*tan_e2)*tan_e
+    T[1,0,1] = -h*tan_e2
+    T[1,0,5] = -h*tan_e
+    T[1,2,2] = (-k1 - h*h/2.*tan_e2)*tan_e - h/2.*h_pole*sec_e3
+    T[1,2,3] = h*tan_e2
+    T[2,0,2] = -h*tan_e2
+    T[3,0,2] = -h*h_pole*sec_e3 +(-k1 + h*h*sec_e2)*tan_e
+    T[3,0,3] = h*tan_e2
+    T[3,1,2] = h*sec_e2
+    T[3,2,5] = h*tan_e - h*phi/cos(e - phi)**2
+    return R, T
+
 
 
 def map(l, angle, k1, k2, k3):

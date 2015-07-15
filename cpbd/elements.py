@@ -415,7 +415,7 @@ class MagneticLattice:
     def printElements(self):
         print( '\nLattice\n')
         for e in self.sequence:
-            print( '-->',  e.id, '[', e.l, ']' )
+            print('-->',  e.id, '[', e.l, ']')
 
 
 def survey(lat, ang = 0.0, x0=0, z0=0):

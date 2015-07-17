@@ -1,6 +1,6 @@
 __author__ = 'Sergey Tomin'
 
-from numpy import cos, sin, sqrt, zeros, eye, tan
+from numpy import cos, sin, sqrt, zeros, eye, tan, dot, empty_like, array, transpose
 
 """
 differential equation:
@@ -125,6 +125,11 @@ def t_nnn(L, h, k1, k2):
     I20  = sx
     I43  = 0.5*(L*cy + sy)
     I44  = I33
+
+    #I5xx = h*Integrate(I1xx, dx)
+    I512 = h*dx_h*dx_h/6
+    I51  = L*dx/2.
+
     if kx != 0:
         I116 = h/kx2*(I11 - I111)                     #  I116 = Gx * cx*dx
         I12  = 0.5/kx2*(sx - L*cx)                    #  I12  = Gx * sx
@@ -135,6 +140,16 @@ def t_nnn(L, h, k1, k2):
         I226 = h/kx2*(I22 - I212)
         I26  = h /(2.*kx2)*(sx - L*cx)
         I266 = h2/kx4*(I20 - 2.*I21 + I211)
+
+        I511 = h*(3.*L - 2.*sx - sx*cx)/(6.*kx2)
+        I522 = h*(3.*L - 4*sx + sx*cx)/(6.*kx4)
+        I516 = h/kx2*(I51 - I511)
+        I52  =  (dx - 4.*L*sx)/(2.*kx2)
+        I526 = h/kx2*(I52 - I512)
+        I50  = h*(L - sx)/kx2
+        I566 = h2/kx4*(I50 - 2*I51 + I511)
+        I56  = (h2*(L*(1. + cx) - 2.*sx))/(2.*kx4)
+
     else:
         I116 = h*L4/24.                               #  I116 = Gx * cx*dx
         I12  = L3/6.                                  #  I12  = Gx * sx
@@ -145,6 +160,15 @@ def t_nnn(L, h, k1, k2):
         I226 = h*L4/8.
         I26  = h*L3/6.
         I266 = h2*L5/20.
+
+        I511 = h*L3/6.
+        I522 = h*L5/60.
+        I516 = h2*L5/120.
+        I52  = h*L4/24.
+        I526 = h2*L5*L/240.
+        I50  = h*L3/6.
+        I566 = h2*h*L5*L2/840.
+        I56  = h2*L5/120.
 
     if kx != 0 and ky != 0:
         I144 = (sy2 - 2.*dx_h)/denom                         #  I144 = Gx * sy**2
@@ -162,6 +186,8 @@ def t_nnn(L, h, k1, k2):
         I424 = (cy*sx - cx*sy - 2.*ky2*sy*dx_h)/denom
         I414 = ((kx2 - 2.*ky2)*sx*sy - (1. - cx)*cy)/denom
         I423 = (cy*dx_h*(kx2 - 2*ky2) - ky2*sx*sy)/denom      #  I423 = I323' = ((2.*ky2)/kx2*(1 + cx)*cy - cx*cy - ky2*sx*sy)/denom + cy/kx2
+
+
     else:
         I144 = L4/12.                                          #  I144 = Gx * sy**2
         I133 = L2/2.                                           #  I133 = Gx * cy**2
@@ -178,21 +204,37 @@ def t_nnn(L, h, k1, k2):
         I414 = L2/2.
         I423 = L2/2.
 
+
+
     if kx == 0 and ky != 0:
         I336 = (h*L*(3.*L*cy + (2.*ky2*L2 - 3.)*sy))/(24.*ky2)
         I346 = (h*((3. - 2.*ky2*L2)*L*cy + 3.*(ky2*L2 - 1.)*sy))/(24.*ky4)
         I436 = I346
         I446 = (h*L*(-3.*L*cy + (3. + 2.*ky2*L2)*sy))/(24.*ky2)
+
+        I533 = (h*(3.*L + 2.*ky2*L3 - 3.*sy*cy))/(24.*ky2)
+        I534 = (h*(L2 - sy2))/(8.*ky2)
+        I544 = (h*(-3.*L + 2.*ky2*L3 + 3.*sy*cy))/(24.*ky4)
+
     elif kx == 0 and ky == 0:
         I336 = (h*L4)/24.
         I346 = (h*L5)/40.
         I436 = (h*L3)/6.
         I446 = (h*L4)/8.
+
+        I533 = h*L3/6.
+        I534 = h*L4/24.
+        I544 = h*L5/60.
+
     else:
         I336 = h/kx2*(I33 - I313)                                  #  I336 = Gy * dx*cy
         I346 = h/kx2*(I34 - I314)                                  #  I346 = Gy * dx*sy
         I436 = h/kx2*(I43 - I413)
         I446 = h/kx2*(I44 - I414)
+
+        I533 = (h*(denom*L - 2.*(denom + 2.*ky2)*sx + kx2*cy*sy))/(2.*denom*kx2)
+        I534 = (h*sy2 - 2*dx)/(2*denom)
+        I544 = (sy2 - 2*dx_h)/denom
 
     K2 = k2/2.
     coef1 = 2.*ky2*h - h3 - K2
@@ -233,6 +275,7 @@ def t_nnn(L, h, k1, k2):
     t424 = coef2*I424 + h*I413
     t436 = coef2*I436 - h2*ky2*I424 + ky2*I43
     t446 = coef2*I446 + h2*I423 + ky2*I44
+
 
     # Coordinates transformation from Curvilinear to a Restangular
     cx_1 = -kx2*sx
@@ -275,6 +318,58 @@ def t_nnn(L, h, k1, k2):
     T[3, 2, 5] = t436 - h*dx*cy_1
     T[3, 3, 5] = t446 - h*dx*sy_1
     """
+    Path length difference
+    linear = cx*h*x0 + h*sx*x0' + dx*h*dp;
+    nonlinear = (h*T111 + 1/2*(cx')^2)*x0^2 + (h*T112 + cx'*sx')*x0*x0' + (h*T116 + cx'*dx')*x0*dp
+                +(h*T122 + 1/2*(sx')^2)*(x0')^2 + (h*T126 + dx'*sx')*dp*x0' + (h*T166 + 1/2*(dx')^2)*dp^2
+                +(h*T133 + 1/2*(cy')^2)*y0^2 + (h*T134 + cy'*sy')*y0*y0' + (h*T144 + 1/2*(sy')^2)*(y0')^2
+    dl = Integrate(linear*ds + nonlinear*ds)
+    """
+
+    t511 =    coef1*I511 + h*kx4*I522/2.
+    t512 = 2.*coef1*I512 - h*kx2*I512
+    t516 = 2.*coef1*I516 + coef3*I51 - h2*kx2*I522
+    t522 =    coef1*I522 + 0.5*h*I511
+    t526 = 2.*coef1*I526 + coef3*I52 + h2*I512
+    t566 =    coef1*I566 + coef3*I56 + 0.5*h3*I522 - h*I50
+    t533 =       K2*I533 - ky2*h*I50/2.
+    t534 =    2.*K2*I534
+    t544 =       K2*I544 - h*I50/2.
+    #print "asfd = ", L,  coef1, I522, (L + sx*cx)/4.
+    i566 = h2*(L - sx*cx)/(4.*kx2) if kx != 0 else h2*L3/6.
+
+    T511 = t511 + 1/4.*kx2*(L - cx*sx)
+    T512 = t512 - (1/2.)*kx2*sx2 + h*dx
+    T516 = t516 + h*(sx*cx - L)/2.
+    T522 = t522 + (L + sx*cx)/4.
+    T526 = t526 + h*sx2/2.
+    T566 = t566 + i566
+    T533 = t533 + 1/4.*ky2*(L - sy*cy )
+    T534 = t534 - 1/2.*ky2*sy2
+    T544 = t544 + (L + sy*cy)/4.
+
+    T[4, 0, 0] = T511
+    T[4, 0, 1] = T512
+    T[4, 0, 5] = T516
+    T[4, 1, 1] = T522
+    T[4, 1, 5] = T526
+    T[4, 5, 5] = T566
+    T[4, 2, 2] = T533
+    T[4, 2, 3] = T534
+    T[4, 3, 3] = T544
+    """
+    print "T511 = ", T511
+    print "T512 = ", T512
+    print "T516 = ", T516
+    print "T522 = ", T522
+    print "T526 = ", T526
+    print "T566 = ", T566
+    print "T533 = ", T533
+    print "T534 = ", T534
+    print "T544 = ", T544
+
+
+
     print "t111 = ", t111
     print "t112 = ", t112
     print "t116 = ", t116
@@ -307,6 +402,59 @@ def t_nnn(L, h, k1, k2):
     print "t446 = ", t446
     """
     return T
+
+def rot_mtx(angle):
+    return array([[cos(angle), 0., sin(angle), 0., 0., 0.],
+                    [0., cos(angle), 0., sin(angle), 0., 0.],
+                    [-sin(angle), 0., cos(angle), 0., 0., 0.],
+                    [0., -sin(angle), 0., cos(angle), 0., 0.],
+                    [0., 0., 0., 0., 1., 0.],
+                    [0., 0., 0., 0., 0., 1.]])
+
+def transform_vec(X, dx, dy, tilt):
+    n = len(X)
+    for i in range(n/6):
+        X0 = X[6*i:6*(i+1)]
+        X0 -= array([dx, 0.,dy,0.,0.,0.])
+        X[6*i:6*(i+1)] = dot(rot_mtx(tilt), X0)
+    return X
+
+def t_apply(R, T, X, dx, dy, tilt):
+    #print X
+    if dx != 0 or dy != 0 or tilt != 0:
+        X = transform_vec(X, dx, dy, tilt)
+    n = len(X)
+    #dX = array([dx, 0.,dy,0.,0.,0.]*n/6)
+
+    #X -= dX
+    Xr = transpose(dot(R, transpose(X.reshape(n/6,6)))).reshape(n)
+
+
+    Xt = zeros(n)
+    x, px, y, py, tau, dp = X[0::6], X[1::6],X[2::6], X[3::6], X[4::6], X[5::6]
+
+    #Xext = array([X1[0]*X1[0], X1[0]*X1[1], X1[0]*X1[5], X1[1]*X1[1], X1[1]*X1[5], X1[5]*X1[5], X1[2]*X1[2], X1[2]*X1[2], X1[3]*X1[3]])
+
+    #for i in range(n/6):
+    #    X0 = X[6*i:6*(i+1)]
+    #    #print "sdf", X0
+    #    Xt[6*i:6*(i+1)] = dot(dot(T, X0), X0)
+
+    Xt[0::6] = T[0, 0, 0]*x*x + T[0, 0, 1]*x*px + T[0, 0, 5]*x*dp + T[0, 1, 1]*px*px + T[0, 1, 5]*px*dp + \
+               T[0, 5, 5]*dp*dp + T[0, 2, 2]*y*y + T[0, 2, 3]*y*py + T[0, 3, 3]*py*py
+    Xt[1::6] = T[1, 0, 0]*x*x + T[1, 0, 1]*x*px + T[1, 0, 5]*x*dp + T[1, 1, 1]*px*px + T[1, 1, 5]*px*dp + \
+               T[1, 5, 5]*dp*dp + T[1, 2, 2]*y*y + T[1, 2, 3]*y*py + T[1, 3, 3]*py*py
+
+    Xt[2::6] = T[2, 0, 2]*x*y + T[2, 0, 3]*x*py + T[2, 1, 2]*px*y + T[2, 1, 3]*px*py + T[2, 2, 5]*y*dp + T[2, 3, 5]*py*dp
+    Xt[3::6] = T[3, 0, 2]*x*y + T[3, 0, 3]*x*py + T[3, 1, 2]*px*y + T[3, 1, 3]*px*py + T[3, 2, 5]*y*dp + T[3, 3, 5]*py*dp
+
+    Xt[4::6] = T[4, 0, 0]*x*x + T[4, 0, 1]*x*px + T[4, 0, 5]*x*dp + T[4, 1, 1]*px*px + T[4, 1, 5]*px*dp + \
+               T[4, 5, 5]*dp*dp + T[4, 2, 2]*y*y + T[4, 2, 3]*y*py + T[4, 3, 3]*py*py
+    #print "x2 = ", x2
+    X[:] = Xr[:] + Xt[:]
+    if dx != 0 or dy != 0 or tilt != 0:
+        X = transform_vec(X, -dx, -dy, -tilt)
+    return X
 
 def fringe_ent(h, k1,  e, h_pole = 0., gap = 0., fint = 0.):
 

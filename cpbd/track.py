@@ -221,7 +221,7 @@ def create_track_list(x_array, y_array):
     track_list = []
     for y in (y_array):
         for x in (x_array):
-            p = Particle(x = x, y = y, p=-0.03)
+            p = Particle(x = x, y = y, p=-0.00)
             pxy = Track_info(p, x, y)
             track_list.append(pxy)
 
@@ -262,7 +262,7 @@ def tracking(lat, nturns, track_list, nsuperperiods, order = 1, save_track = Tru
     else:
         def turn(p_array):
             for elem in lat.sequence:
-                elem.transfer_map.el_map(p_array.particles)
+                elem.transfer_map.map(p_array.particles)
                 p_array.s += elem.transfer_map.length
 
     track_list_const = copy(track_list)
@@ -321,7 +321,7 @@ def tracking_second(lat, nturns, track_list, nsuperperiods, save_track = True):
     return np.array(track_list_const)
 
 
-def tracking_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods = 1, save_track = True):
+def tracking_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods = 1, order = 1, save_track = True):
     size = mpi_comm.Get_size()
     rank = mpi_comm.Get_rank()
     lat_copy = create_copy(lat, nsuperperiods = nsuperperiods)
@@ -356,7 +356,7 @@ def tracking_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods
         # but for nturns = 1000 program crashes with error in mpi_comm.gather()
         # the same situation if treads not so much - solution increase number of treads.
         print("nsuperperiods = ", nsuperperiods)
-        track_list = tracking(lat, nturns, track_list, nsuperperiods, save_track = save_track)
+        track_list = tracking(lat, nturns, track_list, nsuperperiods,order = order, save_track = save_track)
         return track_list
     start = time()
     track_list = mpi_comm.scatter(chunks_track_list, root=0)

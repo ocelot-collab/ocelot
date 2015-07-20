@@ -420,40 +420,33 @@ def transform_vec(X, dx, dy, tilt):
     return X
 
 def t_apply(R, T, X, dx, dy, tilt):
-    #print X
+
     if dx != 0 or dy != 0 or tilt != 0:
         X = transform_vec(X, dx, dy, tilt)
+
     n = len(X)
-    #dX = array([dx, 0.,dy,0.,0.,0.]*n/6)
-
-    #X -= dX
     Xr = transpose(dot(R, transpose(X.reshape(n/6,6)))).reshape(n)
-
-
     Xt = zeros(n)
     x, px, y, py, tau, dp = X[0::6], X[1::6],X[2::6], X[3::6], X[4::6], X[5::6]
 
-    #Xext = array([X1[0]*X1[0], X1[0]*X1[1], X1[0]*X1[5], X1[1]*X1[1], X1[1]*X1[5], X1[5]*X1[5], X1[2]*X1[2], X1[2]*X1[2], X1[3]*X1[3]])
-
-    #for i in range(n/6):
-    #    X0 = X[6*i:6*(i+1)]
-    #    #print "sdf", X0
-    #    Xt[6*i:6*(i+1)] = dot(dot(T, X0), X0)
-
     Xt[0::6] = T[0, 0, 0]*x*x + T[0, 0, 1]*x*px + T[0, 0, 5]*x*dp + T[0, 1, 1]*px*px + T[0, 1, 5]*px*dp + \
                T[0, 5, 5]*dp*dp + T[0, 2, 2]*y*y + T[0, 2, 3]*y*py + T[0, 3, 3]*py*py
+
     Xt[1::6] = T[1, 0, 0]*x*x + T[1, 0, 1]*x*px + T[1, 0, 5]*x*dp + T[1, 1, 1]*px*px + T[1, 1, 5]*px*dp + \
                T[1, 5, 5]*dp*dp + T[1, 2, 2]*y*y + T[1, 2, 3]*y*py + T[1, 3, 3]*py*py
 
     Xt[2::6] = T[2, 0, 2]*x*y + T[2, 0, 3]*x*py + T[2, 1, 2]*px*y + T[2, 1, 3]*px*py + T[2, 2, 5]*y*dp + T[2, 3, 5]*py*dp
+
     Xt[3::6] = T[3, 0, 2]*x*y + T[3, 0, 3]*x*py + T[3, 1, 2]*px*y + T[3, 1, 3]*px*py + T[3, 2, 5]*y*dp + T[3, 3, 5]*py*dp
 
     Xt[4::6] = T[4, 0, 0]*x*x + T[4, 0, 1]*x*px + T[4, 0, 5]*x*dp + T[4, 1, 1]*px*px + T[4, 1, 5]*px*dp + \
                T[4, 5, 5]*dp*dp + T[4, 2, 2]*y*y + T[4, 2, 3]*y*py + T[4, 3, 3]*py*py
-    #print "x2 = ", x2
+
     X[:] = Xr[:] + Xt[:]
+
     if dx != 0 or dy != 0 or tilt != 0:
         X = transform_vec(X, -dx, -dy, -tilt)
+
     return X
 
 def fringe_ent(h, k1,  e, h_pole = 0., gap = 0., fint = 0.):

@@ -174,7 +174,7 @@ class ParticleArray:
     '''
     array of particles of fixed size; for optimized performance
     '''
-    def __init__(self, n):
+    def __init__(self, n = 0):
         self.particles = zeros(n*6)
         self.s = 0
         self.E = 0
@@ -222,6 +222,18 @@ class ParticleArray:
         p_list = []
         for i in xrange(self.size()):
             p_list.append( self[i])
+        return p_list
+
+    def array2ex_list(self, p_list):
+
+        for i, p in enumerate(p_list):
+            p.x = self.particles[i*6]
+            p.px = self.particles[i*6 + 1]
+            p.y = self.particles[i*6+2]
+            p.py = self.particles[i*6+3]
+            p.tau = self.particles[i*6+4]
+            p.p = self.particles[i*6+5]
+            p.s = self.s
         return p_list
 
     def size(self):

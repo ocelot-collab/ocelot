@@ -61,21 +61,32 @@ class TransferMap:
 
         return tws
 
-    def map_x_particle(self, m):
+    #def map_x_particle(self, m):
+    #
+    #    p = Particle()
+    #    X0 = array([m.x, m.px, m.y, m.py, m.tau, m.p])
+    #    if self.order <= 1:
+    #        X1 = dot(self.R, X0) + self.B #+ dB
+    #        #dX = array([self.dx, 0., self.dy, 0.,0.,0.])
+    #        #X1 =  t_apply(self.R, self.T, X0, 0) + self.B + dB
+    #        p.x, p.px, p.y, p.py, p.tau, p.p = X1[0], X1[1], X1[2], X1[3], X1[4], X1[5]
+    #    elif self.order == 2:
+    #        #V = array([m.x, m.px, m.y, m.py, m.tau, m.p])
+    #        #print V
+    #        p.x, p.px, p.y, p.py, p.tau, p.p = self.map(X0)
+    #    p.s = m.s + self.length
+    #    return p
 
-        p = Particle()
-        X0 = array([m.x, m.px, m.y, m.py, m.tau, m.p])
-        if self.order <= 1:
-            X1 = dot(self.R, X0) + self.B #+ dB
-            #dX = array([self.dx, 0., self.dy, 0.,0.,0.])
-            #X1 =  t_apply(self.R, self.T, X0, 0) + self.B + dB
-            p.x, p.px, p.y, p.py, p.tau, p.p = X1[0], X1[1], X1[2], X1[3], X1[4], X1[5]
-        elif self.order == 2:
-            #V = array([m.x, m.px, m.y, m.py, m.tau, m.p])
-            #print V
-            p.x, p.px, p.y, p.py, p.tau, p.p = self.map(X0)
-        p.s = m.s + self.length
-        return p
+    def mul_p_array(self, particles, order):
+        #particles = pa.particles
+        if self.order == 1 and order == 1:
+            n = len(particles)
+            a = np.add(np.transpose(dot(self.R, np.transpose(particles.reshape(n/6,6)) ) ),self.B).reshape(n)
+            particles[:]=a[:]
+        else:
+            self.map(particles)
+        #pa.s += self.length
+        return particles
 
     def __mul__(self, m):
 
@@ -97,31 +108,48 @@ class TransferMap:
             return m2
 
         elif m.__class__ == Particle:
-            p = self.map_x_particle(m)
+            p = Particle()
+            X0 = array([m.x, m.px, m.y, m.py, m.tau, m.p])
+            p.x, p.px, p.y, p.py, p.tau, p.p = self.mul_p_array(X0, order = 1)
+            p.s = m.s + self.length
+            #p = self.map_x_particle(m)
             return p
 
         elif m.__class__ == Twiss:
             tws = self.map_x_twiss(m)
             # trajectory
+            X0 = array([m.x, m.xp, m.y, m.yp, m.tau, m.p])
+            tws.x, tws.xp, tws.y, tws.yp, tws.tau, tws.dE = self.mul_p_array(X0, order = 1)
+            tws.s = m.s + self.length
+            """
             p_tmp = Particle(x=m.x, y=m.y, px=m.xp, py=m.yp, s=m.s, p=m.p,  tau=m.tau)
             p = self.map_x_particle(p_tmp)
             tws.x, tws.xp, tws.y, tws.yp, tws.tau, tws.dE = p.x,p.px, p.y, p.py, p.tau, p.p
             tws.s = p.s
+            """
             return tws
 
         else:
             print(m.__class__)
-            exit("unknow object in transfer map multiplication (TransferMap.__mul__)")
-            
-    def apply(self, prcl_series):
+            exit("unknown object in transfer map multiplication (TransferMap.__mul__)")
+
+    def apply(self, prcl_series, order = 1):
         #M = self.R
         #dx = self.dx
         #dy = self.dy
         #dB = array([(M[0,0]-1)*dx + M[0,2]*dy, M[1,0]*dx + M[1,2]*dy, M[2,0]*dx + (M[2,2]-1)*dy, M[3,0]*dx + M[3,2]*dy, M[4,0]*dx + M[4,2]*dy, M[5,0]*dx + M[5,2]*dy])
 
+
         if prcl_series.__class__ == list and prcl_series[0].__class__ == Particle:
+            pa = ParticleArray()
+            pa.list2array(prcl_series)
+            self.mul_p_array(pa.particles, order)
+            pa.s += self.length
+            pa.array2ex_list(prcl_series)
+            """
             n = len(prcl_series)
-            if self.order == 1:
+            if self.order == 1 and order == 1:
+
                 B = self.B #+ dB
                 for i in range(n):
                     p = prcl_series[i]
@@ -134,10 +162,11 @@ class TransferMap:
                     V = array([p.x, p.px, p.y, p.py, p.tau, p.p])
                     p.x, p.px, p.y, p.py, p.tau, p.p = self.map(V)
                     p.s += self.length
-
+            """
         elif prcl_series.__class__ == ParticleArray:
-            particles = prcl_series.particles
-
+            #particles = prcl_series.particles
+            self.mul_p_array(prcl_series.particles, order)
+            prcl_series.s += self.length
             #def multy_vect(v, r, b):
             #
             #    n = len(v)
@@ -146,26 +175,26 @@ class TransferMap:
             #    #v = t_apply(self.R, self.T, v, 0, 0, 0)
             #    return v
 
-            if self.order == 1:
-                #B = self.B# + dB
-                #particles = multy_vect(v= particles, r = self.R, b = B)
-                n = len(particles)
-                a = np.add(np.transpose(dot(self.R, np.transpose(particles.reshape(n/6,6)) ) ),self.B).reshape(n)
-                particles[:]=a[:]
-
-                """
-                for i in xrange(len(particles)/6):
-                    V = particles[i*6:i*6+6]
-                    particles[i*6:i*6+6] = dot(self.R, V)+B
-                """
-            else:
-                self.map(particles)
-                """
-                for i in xrange(len(particles)/6):
-                    V = particles[i*6:i*6+6]
-                    particles[i*6:i*6+6] = self.nonl_kick(V)
-                """
-            prcl_series.s += self.length
+            #if self.order == 1 and order == 1:
+            #    #B = self.B# + dB
+            #    #particles = multy_vect(v= particles, r = self.R, b = B)
+            #    n = len(particles)
+            #    a = np.add(np.transpose(dot(self.R, np.transpose(particles.reshape(n/6,6)) ) ),self.B).reshape(n)
+            #    particles[:]=a[:]
+            #
+            #    """
+            #    for i in xrange(len(particles)/6):
+            #        V = particles[i*6:i*6+6]
+            #        particles[i*6:i*6+6] = dot(self.R, V)+B
+            #    """
+            #else:
+            #    self.map(particles)
+            #    """
+            #    for i in xrange(len(particles)/6):
+            #        V = particles[i*6:i*6+6]
+            #        particles[i*6:i*6+6] = self.nonl_kick(V)
+            #    """
+            #prcl_series.s += self.length
             
     def __call__(self, s):
         m = copy(self)
@@ -230,16 +259,18 @@ def create_transfer_map(element, order=1, energy = 0, track_acceleration = False
         transfer_map.R = transfer_map.R_z(element.l)#transfer_map.e_end*transfer_map.R_z(element.l)
         transfer_map.T_z = lambda z: t_nnn(z, hx, element.k1, element.k2)
         transfer_map.T = transfer_map.T_z(element.l)
-        transfer_map.map_z = lambda X, z: t_apply(transfer_map.R_z(z), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
+        R_z = lambda z: uni_matrix(z, element.k1, hx = hx, sum_tilts = 0)
+        transfer_map.map_z = lambda X, z: t_apply(R_z(z), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
         transfer_map.map = lambda X: transfer_map.map_z(X, element.l)
 
     if element.type == "quadrupole":
 
-        transfer_map.R_z = lambda z: uni_matrix(z, element.k1, hx = 0, sum_tilts = element.dtilt + element.tilt)
+        transfer_map.R_z = lambda z: uni_matrix(z, element.k1, hx = 0., sum_tilts = element.dtilt + element.tilt)
         transfer_map.R = transfer_map.R_z(element.l)
         transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=element.k1, k2=element.k2)
         transfer_map.T = transfer_map.T_z(element.l)
-        transfer_map.map_z = lambda X, z: t_apply(transfer_map.R_z(z), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
+        R_z = lambda z: uni_matrix(z, element.k1, hx = 0., sum_tilts = 0)
+        transfer_map.map_z = lambda X, z: t_apply(R_z(z), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
         transfer_map.map = lambda X: transfer_map.map_z(X, element.l)
 
     elif element.type in ["sbend", "rbend", "bend"]:
@@ -265,7 +296,7 @@ def create_transfer_map(element, order=1, energy = 0, track_acceleration = False
         transfer_map.R_z = lambda z: transfer_map.R
         transfer_map.T = T
         transfer_map.T_z = lambda z: transfer_map.T
-        transfer_map.map_z = lambda X, z: t_apply(transfer_map.R_z(z), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
+        transfer_map.map_z = lambda X, z: t_apply(R, transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
         transfer_map.map = lambda X: transfer_map.map_z(X, element.l)
 
     elif element.type == "sextupole":
@@ -371,7 +402,7 @@ def create_transfer_map(element, order=1, energy = 0, track_acceleration = False
         transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
         transfer_map.T = transfer_map.T_z(element.l)
 
-        transfer_map.map_z = lambda X, z: t_apply(transfer_map.R_z(z), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
+        transfer_map.map_z = lambda X, z: t_apply(transfer_map.R_z(z), transfer_map.T_z(z), X, 0, 0, 0)
         transfer_map.map = lambda X: transfer_map.map_z(X, element.l)
         #transfer_map.map = lambda X: t_apply(transfer_map.R, transfer_map.T, X, 0, 0, 0)
 

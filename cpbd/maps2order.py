@@ -187,7 +187,6 @@ def t_nnn(L, h, k1, k2):
         I414 = ((kx2 - 2.*ky2)*sx*sy - (1. - cx)*cy)/denom
         I423 = (cy*dx_h*(kx2 - 2*ky2) - ky2*sx*sy)/denom      #  I423 = I323' = ((2.*ky2)/kx2*(1 + cx)*cy - cx*cy - ky2*sx*sy)/denom + cy/kx2
 
-
     else:
         I144 = L4/12.                                          #  I144 = Gx * sy**2
         I133 = L2/2.                                           #  I133 = Gx * cy**2
@@ -203,8 +202,6 @@ def t_nnn(L, h, k1, k2):
         I424 = L3/3.
         I414 = L2/2.
         I423 = L2/2.
-
-
 
     if kx == 0 and ky != 0:
         I336 = (h*L*(3.*L*cy + (2.*ky2*L2 - 3.)*sy))/(24.*ky2)

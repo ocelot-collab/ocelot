@@ -251,19 +251,20 @@ def ellipse_track_list(beam, n_t_sigma = 3, num = 1000, type = "contour"):
 
 def tracking(lat, nturns, track_list, nsuperperiods, order = 1, save_track = True):
     xlim, ylim, px_lim, py_lim = aperture_limit(lat, xlim = 1, ylim = 1)
-
-    if order == 1:
-        navi = Navigator()
-        t_maps, delta_e = get_map(lat, lat.totalLen, navi)
-
-        def turn(p_array):
-            for tm in t_maps:
-                tm.apply(p_array)
-    else:
-        def turn(p_array):
-            for elem in lat.sequence:
-                elem.transfer_map.map(p_array.particles)
-                p_array.s += elem.transfer_map.length
+    navi = Navigator()
+    t_maps, delta_e = get_map(lat, lat.totalLen, navi, order = order)
+    #if order == 1:
+    #    navi = Navigator()
+    #    t_maps, delta_e = get_map(lat, lat.totalLen, navi)
+    #
+    #    def turn(p_array):
+    #        for tm in t_maps:
+    #            tm.apply(p_array)
+    #else:
+    #    def turn(p_array):
+    #        for elem in lat.sequence:
+    #            elem.transfer_map.map(p_array.particles)
+    #            p_array.s += elem.transfer_map.length
 
     track_list_const = copy(track_list)
     p_array = ParticleArray(n = len(track_list))
@@ -273,9 +274,9 @@ def tracking(lat, nturns, track_list, nsuperperiods, order = 1, save_track = Tru
     for i in range(nturns):
         print(i)
         for n in range(nsuperperiods):
-            turn(p_array)
-            #for tm in t_maps:
-            #    tm.apply(p_array)
+            #turn(p_array)
+            for tm in t_maps:
+                tm.apply(p_array, order = order)
 
             p_indx = p_array.rm_tails(xlim, ylim, px_lim, py_lim)
 

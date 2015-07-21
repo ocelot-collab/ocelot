@@ -12,7 +12,8 @@ from ocelot.cpbd.maps2order import *
 
 class TransferMap:
 
-    def __init__(self, order=1):
+    def __init__(self, order=1, identity=False):
+        self.identity = identity
         self.order = order
         self.dx = 0.
         self.dy = 0.
@@ -23,7 +24,7 @@ class TransferMap:
         self.T = zeros((6, 6, 6))
         self.R_z = lambda z: zeros((6, 6))
         self.B = zeros(6)  # tmp matrix
-
+        #self.map = lambda x: x
         # TODO: implement polynomial transfer maps
         if order > 1:
             pass
@@ -845,9 +846,9 @@ class Navigator:
     #        dz = self.lat.totalLen - self.z0
     #    return dz
 
-def get_map(lattice, dz, navi, order = 1):
+def get_map(lattice, dz, navi, order=1):
     TM = []
-    tm = TransferMap()
+    tm = TransferMap(identity=True)
     i = navi.n_elem
     z1 = navi.z0 + dz
     elem = lattice.sequence[i]
@@ -858,10 +859,11 @@ def get_map(lattice, dz, navi, order = 1):
     while z1 > L:
         dl = L - navi.z0
         #print dl, L, navi.z0, elem.l
-        if elem.transfer_map.order >1 or order > 1:
-            TM.append(tm)
+        if elem.transfer_map.order > 1 or order > 1:
+            if tm.identity == False:
+                TM.append(tm)
             TM.append(elem.transfer_map(dl))
-            tm = TransferMap()
+            tm = TransferMap(identity=True)
         else:
             tm = elem.transfer_map(dl)*tm
             if elem.type == "cavity":
@@ -883,7 +885,8 @@ def get_map(lattice, dz, navi, order = 1):
     navi.z0 += dz
     navi.sum_lengths = L - elem.l
     navi.n_elem = i
-    TM.append(tm)
+    if tm.identity == False:
+        TM.append(tm)
     return TM, delta_e
 
 

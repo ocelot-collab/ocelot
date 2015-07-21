@@ -237,7 +237,6 @@ def create_transfer_map(element, order=1, energy=0, track_acceleration=False):
 
         kx2 = (k1 + hx*hx)
         ky2 = -k1
-
         kx = sqrt(kx2 + 0.j)
         ky = sqrt(ky2 + 0.j)
         cx = cos(z*kx).real

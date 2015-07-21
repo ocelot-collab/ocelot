@@ -5,14 +5,14 @@ from ocelot.common.globals import *
 from copy import copy
 from numpy.linalg import inv
 from numpy import cosh, sinh
-#from scipy import weave
+# from scipy import weave
 from und_weave import *
 from ocelot.cpbd.maps2order import *
 
 
 class TransferMap:
 
-    def __init__(self, order = 1):
+    def __init__(self, order=1):
         self.order = order
         self.dx = 0.
         self.dy = 0.
@@ -20,12 +20,12 @@ class TransferMap:
         self.length = 0
         # 6x6 linear transfer matrix
         self.R = eye(6)
-        self.T = zeros((6,6,6))
-        self.R_z = lambda z: zeros((6,6))
-        self.B = zeros(6) # tmp matrix
+        self.T = zeros((6, 6, 6))
+        self.R_z = lambda z: zeros((6, 6))
+        self.B = zeros(6)  # tmp matrix
 
         # TODO: implement polynomial transfer maps
-        if order > 1 :
+        if order > 1:
             pass
 
     def map_x_twiss(self, tws0):
@@ -33,12 +33,12 @@ class TransferMap:
         m = tws0
         tws = Twiss(tws0)
         tws.p = m.p
-        tws.beta_x = M[0,0]*M[0,0]*m.beta_x - 2*M[0,1]*M[0,0]*m.alpha_x + M[0,1]*M[0,1]*m.gamma_x
-        #tws.beta_x = ((M[0,0]*tws.beta_x - M[0,1]*m.alpha_x)**2 + M[0,1]*M[0,1])/m.beta_x
-        tws.beta_y = M[2,2]*M[2,2]*m.beta_y - 2*M[2,3]*M[2,2]*m.alpha_y + M[2,3]*M[2,3]*m.gamma_y
-        #tws.beta_y = ((M[2,2]*tws.beta_y - M[2,3]*m.alpha_y)**2 + M[2,3]*M[2,3])/m.beta_y
-        tws.alpha_x = -M[0,0]*M[1,0]*m.beta_x + (M[0,1]*M[1,0]+M[1,1]*M[0,0])*m.alpha_x - M[0,1]*M[1,1]*m.gamma_x
-        tws.alpha_y = -M[2,2]*M[3,2]*m.beta_y + (M[2,3]*M[3,2]+M[3,3]*M[2,2])*m.alpha_y - M[2,3]*M[3,3]*m.gamma_y
+        tws.beta_x = M[0, 0]*M[0, 0]*m.beta_x - 2*M[0, 1]*M[0, 0]*m.alpha_x + M[0, 1]*M[0, 1]*m.gamma_x
+        # tws.beta_x = ((M[0,0]*tws.beta_x - M[0,1]*m.alpha_x)**2 + M[0,1]*M[0,1])/m.beta_x
+        tws.beta_y = M[2, 2]*M[2, 2]*m.beta_y - 2*M[2, 3]*M[2, 2]*m.alpha_y + M[2, 3]*M[2, 3]*m.gamma_y
+        # tws.beta_y = ((M[2,2]*tws.beta_y - M[2,3]*m.alpha_y)**2 + M[2,3]*M[2,3])/m.beta_y
+        tws.alpha_x = -M[0, 0]*M[1, 0]*m.beta_x + (M[0, 1]*M[1, 0]+M[1, 1]*M[0, 0])*m.alpha_x - M[0, 1]*M[1, 1]*m.gamma_x
+        tws.alpha_y = -M[2, 2]*M[3, 2]*m.beta_y + (M[2, 3]*M[3, 2]+M[3, 3]*M[2, 2])*m.alpha_y - M[2, 3]*M[3, 3]*m.gamma_y
     
         tws.gamma_x = (1. + tws.alpha_x*tws.alpha_x)/tws.beta_x
         tws.gamma_y = (1. + tws.alpha_y*tws.alpha_y)/tws.beta_y
@@ -78,19 +78,26 @@ class TransferMap:
     #    return p
 
     def mul_p_array(self, particles, order):
-        #particles = pa.particles
+        # particles = pa.particles
         if self.order == 1 and order == 1:
             n = len(particles)
-            a = np.add(np.transpose(dot(self.R, np.transpose(particles.reshape(n/6,6)) ) ),self.B).reshape(n)
-            particles[:]=a[:]
+            a = np.add(np.transpose(dot(self.R, np.transpose(particles.reshape(n/6, 6)))), self.B).reshape(n)
+            particles[:] = a[:]
         else:
             self.map(particles)
-        #pa.s += self.length
+        # pa.s += self.length
         return particles
 
     def __mul__(self, m):
-
-        M = self.R
+        """
+        :param m: TransferMap, Particle or Twiss
+        :return: TransferMap, Particle or Twiss
+        Ma = {Ba, Ra, Ta}
+        Mb = {Bb, Rb, Tb}
+        X1 = R*(X0 - dX) + dX = R*X0 + B
+        B = (E - R)*dX
+        """
+        #M = self.R
         #dx = self.dx
         #dy = self.dy
         #dB = array([(M[0,0]-1)*dx + M[0,2]*dy, M[1,0]*dx + M[1,2]*dy, M[2,0]*dx + (M[2,2]-1)*dy, M[3,0]*dx + M[3,2]*dy, M[4,0]*dx + M[4,2]*dy, M[5,0]*dx + M[5,2]*dy])
@@ -100,8 +107,8 @@ class TransferMap:
 
         if m.__class__ == TransferMap:
             m2 = TransferMap()
-            m2.R = dot(M, m.R)
-            m2.B = dot(M, m.B) + self.B #+dB #check
+            m2.R = dot(self.R, m.R)
+            m2.B = dot(self.R, m.B) + self.B  #+dB #check
             m2.length = m.length + self.length
             if self.order > 1:
                 pass
@@ -138,7 +145,6 @@ class TransferMap:
         #dx = self.dx
         #dy = self.dy
         #dB = array([(M[0,0]-1)*dx + M[0,2]*dy, M[1,0]*dx + M[1,2]*dy, M[2,0]*dx + (M[2,2]-1)*dy, M[3,0]*dx + M[3,2]*dy, M[4,0]*dx + M[4,2]*dy, M[5,0]*dx + M[5,2]*dy])
-
 
         if prcl_series.__class__ == list and prcl_series[0].__class__ == Particle:
             pa = ParticleArray()
@@ -207,7 +213,7 @@ class TransferMap:
         return m
 
 
-def create_transfer_map(element, order=1, energy = 0, track_acceleration = False):
+def create_transfer_map(element, order=1, energy=0, track_acceleration=False):
     #print 'creating TM', element.id
     transfer_map = TransferMap()
     transfer_map.length = element.l
@@ -216,15 +222,16 @@ def create_transfer_map(element, order=1, energy = 0, track_acceleration = False
     transfer_map.tilt = element.dtilt + element.tilt
     transfer_map.energy = energy
     #transfer_map.map = None
+
     def rot_mtx(angle):
         return array([[cos(angle), 0., sin(angle), 0., 0., 0.],
-                        [0., cos(angle), 0., sin(angle), 0., 0.],
-                        [-sin(angle), 0., cos(angle), 0., 0., 0.],
-                        [0., -sin(angle), 0., cos(angle), 0., 0.],
-                        [0., 0., 0., 0., 1., 0.],
-                        [0., 0., 0., 0., 0., 1.]])
+                      [0., cos(angle), 0., sin(angle), 0., 0.],
+                      [-sin(angle), 0., cos(angle), 0., 0., 0.],
+                      [0., -sin(angle), 0., cos(angle), 0., 0.],
+                      [0., 0., 0., 0., 1., 0.],
+                      [0., 0., 0., 0., 0., 1.]])
 
-    def uni_matrix(z, k1, hx, hy = 0, sum_tilts = 0.):
+    def uni_matrix(z, k1, hx, hy=0, sum_tilts=0.):
         #r = element.l/element.angle
         # - K - focusing lens , +K - defoc
 
@@ -239,15 +246,15 @@ def create_transfer_map(element, order=1, energy = 0, track_acceleration = False
         sy = (sin(ky*z)/ky).real if ky != 0 else z
         dx = hx/kx2*(1. - cx) if kx != 0. else z*z*hx/2.
         R56 = hx*hx*(z - sx)/kx2 if kx !=0 else hx*hx*z**3/6.
-        uni_matrix = array([[cx, sx, 0., 0., 0., dx],
+        u_matrix = array([[cx, sx, 0., 0., 0., dx],
                             [-kx2*sx, cx, 0., 0., 0., sx*hx],
                             [0., 0., cy, sy, 0., 0.],
                             [0., 0., -ky2*sy, cy, 0., 0.],
                             [hx*sx, dx, 0., 0., 1., R56],
                             [0., 0., 0., 0., 0., 1.]])
 
-        uni_matrix = dot(dot(rot_mtx(-sum_tilts),uni_matrix),rot_mtx(sum_tilts))
-        return uni_matrix
+        u_matrix = dot(dot(rot_mtx(-sum_tilts), u_matrix), rot_mtx(sum_tilts))
+        return u_matrix
 
     def bend(element,transfer_map):
         if element.l == 0:
@@ -567,7 +574,7 @@ def create_transfer_map(element, order=1, energy = 0, track_acceleration = False
             phi = 0
             
             #Ep = de * cos(phi) / (z * 0.000511) # energy derivative
-            de=de;
+            de = de;
             Ep = de / (z) # energy derivative
             #Ep = de  # energy derivative
             #Ef = E + de
@@ -634,12 +641,12 @@ def create_transfer_map(element, order=1, energy = 0, track_acceleration = False
             else:
                 s_k = s/k
 
-            sol_matrix = array([[c*c, c*s_k, s*c ,s*s_k ,0., 0.],
-                                [-k*s*c, c*c, -k*s*s ,s*c ,0., 0.],
+            sol_matrix = array([[c*c, c*s_k, s*c, s*s_k, 0., 0.],
+                                [-k*s*c, c*c, -k*s*s, s*c, 0., 0.],
                                 [-s*c, -s*s_k, c*c, c*s_k, 0., 0.],
                                 [k*s*s, -s*c, -k*s*c, c*c, 0., 0.],
-                                [0., 0., 0., 0. ,1. ,0.],
-                                [0., 0., 0., 0. ,0. ,1.]]).real
+                                [0., 0., 0., 0., 1., 0.],
+                                [0., 0., 0., 0., 0., 1.]]).real
             return sol_matrix
 
         transfer_map.R_z = lambda z: sol(z, k = element.k)
@@ -659,13 +666,15 @@ def create_transfer_map(element, order=1, energy = 0, track_acceleration = False
         Rm[3,3] = element.rm44
 
         transfer_map.R = Rm
-        def matrix(z,l, Rm):
+
+        def r_matrix(z, l, Rm):
             if z < l:
                 R_z = uni_matrix(z, 0, hx = 0)
             else:
                 R_z = Rm
             return R_z
-        transfer_map.R_z = lambda z: matrix(z, element.l, Rm)
+
+        transfer_map.R_z = lambda z: r_matrix(z, element.l, Rm)
         transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
         transfer_map.T = transfer_map.T_z(element.l)
         transfer_map.map_z = lambda X: t_apply(transfer_map.R, transfer_map.T, X, element.dx, element.dy, element.tilt)
@@ -677,8 +686,8 @@ def create_transfer_map(element, order=1, energy = 0, track_acceleration = False
         print (element.type , " : unknown type of magnetic element. Cannot create transfer map ")
 
     if element.type != "hcor" or element.type != "vcor":
-        transfer_map.B_z = lambda z: dot((eye(6) - transfer_map.R_z(z)), array([element.dx, 0., element.dy, 0., 0.,0.]))
-        transfer_map.B = dot((eye(6) - transfer_map.R), array([element.dx, 0., element.dy, 0., 0.,0.]))
+        transfer_map.B_z = lambda z: dot((eye(6) - transfer_map.R_z(z)), array([element.dx, 0., element.dy, 0., 0., 0.]))
+        transfer_map.B = dot((eye(6) - transfer_map.R), array([element.dx, 0., element.dy, 0., 0., 0.]))
 
     return transfer_map
 
@@ -688,41 +697,39 @@ def periodic_solution(tws, transfer_matrix):
 
     """ find periodical twiss  """
 
-
     tws = Twiss(tws)
     M = transfer_matrix
 
-    cosmx = (M[0,0] + M[1,1])/2.
-    cosmy = (M[2,2] + M[3,3])/2.
+    cosmx = (M[0, 0] + M[1, 1])/2.
+    cosmy = (M[2, 2] + M[3, 3])/2.
 
     #print cosmx, cosmy
 
     if abs(cosmx) >= 1 or abs(cosmy) >= 1:
-        print( "************ periodic solution does not exist. return None ***********")
+        print("************ periodic solution does not exist. return None ***********")
         return None
     sinmx = sqrt(1.-cosmx*cosmx)
     sinmy = sqrt(1.-cosmy*cosmy)
-    tws.beta_x = abs(M[0,1]/sinmx)
-    tws.beta_y = abs(M[2,3]/sinmy)
+    tws.beta_x = abs(M[0, 1]/sinmx)
+    tws.beta_y = abs(M[2, 3]/sinmy)
 
+    tws.alpha_x = (M[0, 0] - M[1, 1])/(2*sinmx)  # X[0,0]
+    tws.gamma_x = (1. + tws.alpha_x*tws.alpha_x)/tws.beta_x  # X[1,0]
 
-    tws.alpha_x = (M[0,0] - M[1,1])/(2*sinmx) #X[0,0]
-    tws.gamma_x = (1. + tws.alpha_x*tws.alpha_x)/tws.beta_x#X[1,0]
+    tws.alpha_y = (M[2, 2] - M[3, 3])/(2*sinmy)  # Y[0,0]
+    tws.gamma_y = (1. + tws.alpha_y*tws.alpha_y)/tws.beta_y  # Y[1,0]
 
-    tws.alpha_y = (M[2,2] - M[3,3])/(2*sinmy)#Y[0,0]
-    tws.gamma_y = (1. + tws.alpha_y*tws.alpha_y)/tws.beta_y# Y[1,0]
+    Hx = array([[M[0, 0] - 1, M[0, 1]], [M[1, 0], M[1, 1]-1]])
+    Hhx = array([[M[0, 5]], [M[1, 5]]])
+    hh = dot(inv(-Hx), Hhx)
+    tws.Dx = hh[0, 0]
+    tws.Dxp = hh[1, 0]
 
-    Hx = array([[M[0,0] - 1, M[0,1] ], [M[1,0], M[1,1]-1]])
-    Hhx = array([[M[0,5]], [M[1,5]]])
-    hh = dot(inv(-Hx),Hhx)
-    tws.Dx = hh[0,0]
-    tws.Dxp = hh[1,0]
-
-    Hy = array([[M[2,2] - 1, M[2,3] ], [M[3,2], M[3,3]-1]])
-    Hhy = array([[M[2,5]], [M[3,5]]])
-    hhy = dot(inv(-Hy),Hhy)
-    tws.Dy = hhy[0,0]
-    tws.Dyp = hhy[1,0]
+    Hy = array([[M[2, 2] - 1, M[2, 3]], [M[3, 2], M[3, 3]-1]])
+    Hhy = array([[M[2, 5]], [M[3, 5]]])
+    hhy = dot(inv(-Hy), Hhy)
+    tws.Dy = hhy[0, 0]
+    tws.Dyp = hhy[1, 0]
     return tws
 
 

@@ -3,7 +3,7 @@ import sys
 ind = sys.path[0].find("ocelot")
 sys.path.append(sys.path[0][:ind])
 #from ocelot.cpbd.match import *
-from ocelot.gui.accelerator import *
+#from ocelot.gui.accelerator import *
 from ocelot.cpbd.elements import *
 from ocelot.cpbd.optics import *
 from ocelot.cpbd.e_beam_params import *
@@ -56,4 +56,5 @@ pxy_list = tracking_mpi( mpi_comm,lat, nturns, pxy_list,  nsuperperiods = 8, sav
 if rank == 0:
     print( time() - start)
     da = array(map(lambda pxy: pxy.turn, pxy_list))
+    from ocelot.gui.accelerator import *
     show_da(da, x_array, y_array)

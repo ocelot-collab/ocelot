@@ -7,7 +7,7 @@ from ocelot.cpbd.optics import *
 from numpy import delete, append, array, linspace, argwhere, unique
 from ocelot.cpbd.errors import *
 from ocelot.cpbd.elements import *
-from matplotlib import pyplot as plt
+#from matplotlib import pyplot as plt
 import scipy
 from copy import copy
 from time import time

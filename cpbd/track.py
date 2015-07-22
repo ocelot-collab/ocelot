@@ -253,6 +253,7 @@ def tracking(lat, nturns, track_list, nsuperperiods, order = 1, save_track = Tru
     xlim, ylim, px_lim, py_lim = aperture_limit(lat, xlim = 1, ylim = 1)
     navi = Navigator()
     t_maps, delta_e = get_map(lat, lat.totalLen, navi, order = order)
+    print len(t_maps), len(lat.sequence)
     #if order == 1:
     #    navi = Navigator()
     #    t_maps, delta_e = get_map(lat, lat.totalLen, navi)
@@ -413,7 +414,7 @@ def da_mpi(lat, nturns, x_array, y_array, errors = None, nsuperperiods = 1):
         return da.reshape(ny,nx)
 
 
-def step(lat, particle_list, dz, navi):
+def step(lat, particle_list, dz, navi, order=1):
     '''
     tracking for a fixed step dz
     '''
@@ -421,18 +422,18 @@ def step(lat, particle_list, dz, navi):
     if navi.z0 + dz > lat.totalLen:
         dz = lat.totalLen - navi.z0
 
-    t_maps, de = get_map(lat, dz, navi)
+    t_maps, de = get_map(lat, dz, navi,order=order)
     #print 'getting map, de=', de
     if particle_list.__class__ == ParticleArray:
         for tm in t_maps:
             #print "tm :",  tm.length
-            tm.apply(particle_list)
+            tm.apply(particle_list, order=order)
             particle_list.E += de
             particle_list.de = de
             #tm.apply(plist)
     else:
         for tm in t_maps:
-            tm.apply(particle_list)
+            tm.apply(particle_list, order=order)
 
     return
 

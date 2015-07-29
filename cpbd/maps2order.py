@@ -503,6 +503,31 @@ def fringe_ext(h, k1,  e, h_pole = 0., gap = 0., fint = 0.):
     T[3,2,5] = h*tan_e - h*phi/cos(e - phi)**2
     return R, T
 
+def symp_kick2(X, h, k1, k2, ndivs = 1):
+
+    beta = 1.
+    gamma2_inv = 0.
+    L = length/ndivs
+    R_2 = R_z(L/2.)
+    n = len(X)
+    for i in range(ndivs):
+        Xr = transpose(dot(R_2, transpose(X.reshape(n/6,6)))).reshape(n)
+        Xt = zeros(n)
+        x, px, y, py, tau, dp = Xr[0::6], Xr[1::6], Xr[2::6], Xr[3::6], Xr[4::6], Xr[5::6]
+
+        px2 = px*px
+        py2 = py*py
+
+        Xt[0::6] = x + L*px*(h*x - dp/beta)
+        Xt[1::6] = px + -0.5*L*(h*(px2 + py2) + (2.*h*k1 + k2)*x*x - (h*k1 + k2)*y*y)
+
+        Xt[2::6] = y + L*py*(h*x - dp/beta)
+        Xt[3::6] = py + L*(h*k1 + k2)*x*y
+
+        Xt[4::6] = tau + L*(-(px2 + py2)/(2*beta) - gamma2_inv/(beta*(1+beta)))
+        X = transpose(dot(R_2, transpose(Xt.reshape(n/6,6)))).reshape(n)
+    return X
+
 
 """
 

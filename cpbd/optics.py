@@ -78,6 +78,30 @@ class TransferMap:
     #        p.x, p.px, p.y, p.py, p.tau, p.p = self.map(X0)
     #    p.s = m.s + self.length
     #    return p
+    def symp_kick2(self, X, h, k1, k2, ndivs = 1):
+
+        beta = 1.
+        gamma2_inv = 0.
+        L = self.length/ndivs
+        R_2 = self.R_z(L/2.)
+        n = len(X)
+        for i in range(ndivs):
+            Xr = transpose(dot(R_2, transpose(X.reshape(n/6,6)))).reshape(n)
+            Xt = zeros(n)
+            x, px, y, py, tau, dp = Xr[0::6], Xr[1::6], Xr[2::6], Xr[3::6], Xr[4::6], Xr[5::6]
+
+            px2 = px*px
+            py2 = py*py
+
+            Xt[0::6] = x + L*px*(h*x - dp/beta)
+            Xt[1::6] = px + -0.5*L*(h*(px2 + py2) + (2.*h*k1 + k2)*x*x - (h*k1 + k2)*y*y)
+
+            Xt[2::6] = y + L*py*(h*x - dp/beta)
+            Xt[3::6] = py + L*(h*k1 + k2)*x*y
+
+            Xt[4::6] = tau + L*(-(px2 + py2)/(2*beta) - gamma2_inv/(beta*(1+beta)))
+            X = transpose(dot(R_2, transpose(Xt.reshape(n/6,6)))).reshape(n)
+        return X
 
     def mul_p_array(self, particles, order):
         # particles = pa.particles
@@ -542,17 +566,20 @@ def create_transfer_map(element, order=1, energy=0, track_acceleration=False):
                 hx = 0.; hy = 0.
             else:
                 hx = angle_x/l; hy = angle_y/l
-            ux = 0
-            uy = 0
-            if hx == 0:
-                ux = 1
-            if hy == 0:
-                uy = 1
-            b = array([(1 - cos(z*hx))/(hx+ux), sin(z*hx)+ux*angle_x, (1 - cos(z*hy))/(hy+uy), sin(z*hy)+uy*angle_y, 0, 0])
+
+            dx = hx*z*z/2.
+            dy = hy*z*z/2.
+            dx1 = hx*z if l != 0 else angle_x
+            dy1 = hy*z if l != 0 else angle_y
+            b = array([dx, dx1, dy, dy1, 0.,0.])
+            #ux = 0 if hx != 0 else 1.
+            #uy = 0 if hy != 0 else 1.
+            # b = array([(1 - cos(z*hx))/(hx+ux), sin(z*hx)+ux*angle_x, (1 - cos(z*hy))/(hy+uy), sin(z*hy)+uy*angle_y, 0, 0])
             return b
 
         transfer_map.order = 0
-        bend(element,transfer_map)
+
+        # bend(element,transfer_map)
 
         if element.type == "hcor":
             transfer_map.B_z = lambda z: kick_b(z, element.l, element.angle, 0)
@@ -560,6 +587,14 @@ def create_transfer_map(element, order=1, energy=0, track_acceleration=False):
         else:
             transfer_map.B_z = lambda z: kick_b(z, element.l, 0, element.angle)
             transfer_map.B = transfer_map.B_z(element.l)
+
+        transfer_map.R_z = lambda z: uni_matrix(z, 0., hx = 0.)
+        transfer_map.R = transfer_map.R_z(element.l)
+        transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
+        transfer_map.T = transfer_map.T_z(element.l)
+
+        transfer_map.map_z = lambda X, z: dot(transfer_map.R_z(z), X) + transfer_map.B_z(z)
+        transfer_map.map = lambda X: transfer_map.map_z(X, element.l)
 
     elif element.type == "cavity":
                 

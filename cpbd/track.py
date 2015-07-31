@@ -253,6 +253,9 @@ def tracking(lat, nturns, track_list, nsuperperiods, order = 1, save_track = Tru
     xlim, ylim, px_lim, py_lim = aperture_limit(lat, xlim = 1, ylim = 1)
     navi = Navigator()
     t_maps, delta_e = get_map(lat, lat.totalLen, navi, order = order)
+    #print len(t_maps)
+    #for t in t_maps:
+    #    print t.R
     #print len(t_maps), len(lat.sequence)
     #if order == 1:
     #    navi = Navigator()

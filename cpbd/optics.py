@@ -10,6 +10,84 @@ from und_weave import *
 from ocelot.cpbd.maps2order import *
 
 
+def rot_mtx(angle):
+    return array([[cos(angle), 0., sin(angle), 0., 0., 0.],
+                  [0., cos(angle), 0., sin(angle), 0., 0.],
+                  [-sin(angle), 0., cos(angle), 0., 0., 0.],
+                  [0., -sin(angle), 0., cos(angle), 0., 0.],
+                  [0., 0., 0., 0., 1., 0.],
+                  [0., 0., 0., 0., 0., 1.]])
+
+
+def uni_matrix(z, k1, hx, sum_tilts=0.):
+    # r = element.l/element.angle
+    # - K - focusing lens , +K - defoc
+    kx2 = (k1 + hx*hx)
+    ky2 = -k1
+    kx = sqrt(kx2 + 0.j)
+    ky = sqrt(ky2 + 0.j)
+    cx = cos(z*kx).real
+    cy = cos(z*ky).real
+    sy = (sin(ky*z)/ky).real if ky != 0 else z
+    if kx != 0:
+        sx = (sin(kx*z)/kx).real
+        dx = hx/kx2*(1. - cx)
+        r56 = hx*hx*(z - sx)/kx2
+    else:
+        sx = z
+        dx = z*z*hx/2.
+        r56 = hx*hx*z**3/6.
+    u_matrix = array([[cx, sx, 0., 0., 0., dx],
+                        [-kx2*sx, cx, 0., 0., 0., sx*hx],
+                        [0., 0., cy, sy, 0., 0.],
+                        [0., 0., -ky2*sy, cy, 0., 0.],
+                        [hx*sx, dx, 0., 0., 1., r56],
+                        [0., 0., 0., 0., 0., 1.]])
+    u_matrix = dot(dot(rot_mtx(-sum_tilts), u_matrix), rot_mtx(sum_tilts))
+    return u_matrix
+
+
+def transform_vec(X, dx, dy, tilt):
+    n = len(X)
+    for i in range(n/6):
+        X0 = X[6*i:6*(i+1)]
+        X0 -= array([dx, 0.,dy,0.,0.,0.])
+        X[6*i:6*(i+1)] = dot(rot_mtx(tilt), X0)
+    return X
+
+
+def t_apply(R, T, X, dx, dy, tilt):
+
+    if dx != 0 or dy != 0 or tilt != 0:
+        X = transform_vec(X, dx, dy, tilt)
+
+    n = len(X)
+    Xr = transpose(dot(R, transpose(X.reshape(n/6, 6)))).reshape(n)
+
+    Xt = zeros(n)
+    x, px, y, py, tau, dp = X[0::6], X[1::6],X[2::6], X[3::6], X[4::6], X[5::6]
+
+    Xt[0::6] = T[0, 0, 0]*x*x + T[0, 0, 1]*x*px + T[0, 0, 5]*x*dp + T[0, 1, 1]*px*px + T[0, 1, 5]*px*dp + \
+               T[0, 5, 5]*dp*dp + T[0, 2, 2]*y*y + T[0, 2, 3]*y*py + T[0, 3, 3]*py*py
+
+    Xt[1::6] = T[1, 0, 0]*x*x + T[1, 0, 1]*x*px + T[1, 0, 5]*x*dp + T[1, 1, 1]*px*px + T[1, 1, 5]*px*dp + \
+               T[1, 5, 5]*dp*dp + T[1, 2, 2]*y*y + T[1, 2, 3]*y*py + T[1, 3, 3]*py*py
+
+    Xt[2::6] = T[2, 0, 2]*x*y + T[2, 0, 3]*x*py + T[2, 1, 2]*px*y + T[2, 1, 3]*px*py + T[2, 2, 5]*y*dp + T[2, 3, 5]*py*dp
+
+    Xt[3::6] = T[3, 0, 2]*x*y + T[3, 0, 3]*x*py + T[3, 1, 2]*px*y + T[3, 1, 3]*px*py + T[3, 2, 5]*y*dp + T[3, 3, 5]*py*dp
+
+    Xt[4::6] = T[4, 0, 0]*x*x + T[4, 0, 1]*x*px + T[4, 0, 5]*x*dp + T[4, 1, 1]*px*px + T[4, 1, 5]*px*dp + \
+               T[4, 5, 5]*dp*dp + T[4, 2, 2]*y*y + T[4, 2, 3]*y*py + T[4, 3, 3]*py*py
+
+    X[:] = Xr[:] + Xt[:]
+
+    if dx != 0 or dy != 0 or tilt != 0:
+        X = transform_vec(X, -dx, -dy, -tilt)
+
+    return X
+
+
 class TransferMap:
 
     def __init__(self, order=1, identity=False):
@@ -19,12 +97,15 @@ class TransferMap:
         self.dy = 0.
         self.tilt = 0.
         self.length = 0
+        self.k1 = 0.
+        self.k2 = 0.
+        self.hx = 0.
         # 6x6 linear transfer matrix
         self.R = eye(6)
         self.T = zeros((6, 6, 6))
         self.R_z = lambda z: zeros((6, 6))
         self.B = zeros(6)  # tmp matrix
-        #self.map = lambda x: x
+        # self.map = lambda x: x
         # TODO: implement polynomial transfer maps
         if order > 1:
             pass
@@ -63,46 +144,6 @@ class TransferMap:
 
         return tws
 
-    #def map_x_particle(self, m):
-    #
-    #    p = Particle()
-    #    X0 = array([m.x, m.px, m.y, m.py, m.tau, m.p])
-    #    if self.order <= 1:
-    #        X1 = dot(self.R, X0) + self.B #+ dB
-    #        #dX = array([self.dx, 0., self.dy, 0.,0.,0.])
-    #        #X1 =  t_apply(self.R, self.T, X0, 0) + self.B + dB
-    #        p.x, p.px, p.y, p.py, p.tau, p.p = X1[0], X1[1], X1[2], X1[3], X1[4], X1[5]
-    #    elif self.order == 2:
-    #        #V = array([m.x, m.px, m.y, m.py, m.tau, m.p])
-    #        #print V
-    #        p.x, p.px, p.y, p.py, p.tau, p.p = self.map(X0)
-    #    p.s = m.s + self.length
-    #    return p
-    def symp_kick2(self, X, h, k1, k2, ndivs = 1):
-
-        beta = 1.
-        gamma2_inv = 0.
-        L = self.length/ndivs
-        R_2 = self.R_z(L/2.)
-        n = len(X)
-        for i in range(ndivs):
-            Xr = transpose(dot(R_2, transpose(X.reshape(n/6,6)))).reshape(n)
-            Xt = zeros(n)
-            x, px, y, py, tau, dp = Xr[0::6], Xr[1::6], Xr[2::6], Xr[3::6], Xr[4::6], Xr[5::6]
-
-            px2 = px*px
-            py2 = py*py
-
-            Xt[0::6] = x + L*px*(h*x - dp/beta)
-            Xt[1::6] = px + -0.5*L*(h*(px2 + py2) + (2.*h*k1 + k2)*x*x - (h*k1 + k2)*y*y)
-
-            Xt[2::6] = y + L*py*(h*x - dp/beta)
-            Xt[3::6] = py + L*(h*k1 + k2)*x*y
-
-            Xt[4::6] = tau + L*(-(px2 + py2)/(2*beta) - gamma2_inv/(beta*(1+beta)))
-            X = transpose(dot(R_2, transpose(Xt.reshape(n/6,6)))).reshape(n)
-        return X
-
     def mul_p_array(self, particles, order):
         # particles = pa.particles
         if self.order == 1 and order == 1:
@@ -111,6 +152,7 @@ class TransferMap:
             particles[:] = a[:]
         else:
             self.map(particles)
+            #self.symp_kick2(particles)
         # pa.s += self.length
         return particles
 
@@ -123,13 +165,6 @@ class TransferMap:
         X1 = R*(X0 - dX) + dX = R*X0 + B
         B = (E - R)*dX
         """
-        #M = self.R
-        #dx = self.dx
-        #dy = self.dy
-        #dB = array([(M[0,0]-1)*dx + M[0,2]*dy, M[1,0]*dx + M[1,2]*dy, M[2,0]*dx + (M[2,2]-1)*dy, M[3,0]*dx + M[3,2]*dy, M[4,0]*dx + M[4,2]*dy, M[5,0]*dx + M[5,2]*dy])
-
-        #if self.order == 0:
-        #    dB = self.b(self.length)
 
         if m.__class__ == TransferMap:
             m2 = TransferMap()
@@ -167,10 +202,6 @@ class TransferMap:
             exit("unknown object in transfer map multiplication (TransferMap.__mul__)")
 
     def apply(self, prcl_series, order = 1):
-        #M = self.R
-        #dx = self.dx
-        #dy = self.dy
-        #dB = array([(M[0,0]-1)*dx + M[0,2]*dy, M[1,0]*dx + M[1,2]*dy, M[2,0]*dx + (M[2,2]-1)*dy, M[3,0]*dx + M[3,2]*dy, M[4,0]*dx + M[4,2]*dy, M[5,0]*dx + M[5,2]*dy])
 
         if prcl_series.__class__ == list and prcl_series[0].__class__ == Particle:
             pa = ParticleArray()
@@ -196,38 +227,10 @@ class TransferMap:
                     p.s += self.length
             """
         elif prcl_series.__class__ == ParticleArray:
-            #particles = prcl_series.particles
+
             self.mul_p_array(prcl_series.particles, order)
             prcl_series.s += self.length
-            #def multy_vect(v, r, b):
-            #
-            #    n = len(v)
-            #    a = np.add(np.transpose(dot(r, np.transpose(v.reshape(n/6,6)) ) ),b).reshape(n)
-            #    v[:]=a[:]
-            #    #v = t_apply(self.R, self.T, v, 0, 0, 0)
-            #    return v
 
-            #if self.order == 1 and order == 1:
-            #    #B = self.B# + dB
-            #    #particles = multy_vect(v= particles, r = self.R, b = B)
-            #    n = len(particles)
-            #    a = np.add(np.transpose(dot(self.R, np.transpose(particles.reshape(n/6,6)) ) ),self.B).reshape(n)
-            #    particles[:]=a[:]
-            #
-            #    """
-            #    for i in xrange(len(particles)/6):
-            #        V = particles[i*6:i*6+6]
-            #        particles[i*6:i*6+6] = dot(self.R, V)+B
-            #    """
-            #else:
-            #    self.map(particles)
-            #    """
-            #    for i in xrange(len(particles)/6):
-            #        V = particles[i*6:i*6+6]
-            #        particles[i*6:i*6+6] = self.nonl_kick(V)
-            #    """
-            #prcl_series.s += self.length
-            
     def __call__(self, s):
         m = copy(self)
         m.length = s
@@ -235,102 +238,110 @@ class TransferMap:
         m.B = m.B_z(s)
         m.T = m.T_z(s)
         m.map = lambda u: m.map_z(u, s)
-        #m.nonl_kick_array = lambda u: m.nonl_kick_array_z(u, s)
         return m
 
 
 def create_transfer_map(element, order=1, energy=0, track_acceleration=False):
-    #print 'creating TM', element.id
     transfer_map = TransferMap()
     transfer_map.length = element.l
     transfer_map.dx = element.dx
     transfer_map.dy = element.dy
     transfer_map.tilt = element.dtilt + element.tilt
     transfer_map.energy = energy
-    #transfer_map.map = None
+    transfer_map.k1 = element.k1
+    transfer_map.k2 = element.k2
+    # transfer_map.map = None
 
-    def rot_mtx(angle):
-        return array([[cos(angle), 0., sin(angle), 0., 0., 0.],
-                      [0., cos(angle), 0., sin(angle), 0., 0.],
-                      [-sin(angle), 0., cos(angle), 0., 0., 0.],
-                      [0., -sin(angle), 0., cos(angle), 0., 0.],
-                      [0., 0., 0., 0., 1., 0.],
-                      [0., 0., 0., 0., 0., 1.]])
+    if element.l == 0:
+        transfer_map.hx = 0.
+    else:
+        transfer_map.hx = element.angle/element.l
 
-    def uni_matrix(z, k1, hx, hy=0, sum_tilts=0.):
-        #r = element.l/element.angle
-        # - K - focusing lens , +K - defoc
+    transfer_map.R_z = lambda z: uni_matrix(z, element.k1, hx = transfer_map.hx, sum_tilts = transfer_map.tilt)
+    transfer_map.R = transfer_map.R_z(element.l)
 
-        kx2 = (k1 + hx*hx)
-        ky2 = -k1
-        kx = sqrt(kx2 + 0.j)
-        ky = sqrt(ky2 + 0.j)
-        cx = cos(z*kx).real
-        sx = (sin(kx*z)/kx).real if kx != 0 else z
-        cy = cos(z*ky).real
-        sy = (sin(ky*z)/ky).real if ky != 0 else z
-        dx = hx/kx2*(1. - cx) if kx != 0. else z*z*hx/2.
-        R56 = hx*hx*(z - sx)/kx2 if kx !=0 else hx*hx*z**3/6.
-        u_matrix = array([[cx, sx, 0., 0., 0., dx],
-                            [-kx2*sx, cx, 0., 0., 0., sx*hx],
-                            [0., 0., cy, sy, 0., 0.],
-                            [0., 0., -ky2*sy, cy, 0., 0.],
-                            [hx*sx, dx, 0., 0., 1., R56],
-                            [0., 0., 0., 0., 0., 1.]])
+    transfer_map.T_z = lambda z: t_nnn(z, transfer_map.hx, element.k1, element.k2)
+    transfer_map.T = transfer_map.T_z(element.l)
 
-        u_matrix = dot(dot(rot_mtx(-sum_tilts), u_matrix), rot_mtx(sum_tilts))
-        return u_matrix
+    transfer_map.B_z = lambda z: dot((eye(6) - transfer_map.R_z(z)), array([element.dx, 0., element.dy, 0., 0., 0.]))
+    transfer_map.B = dot((eye(6) - transfer_map.R), array([element.dx, 0., element.dy, 0., 0., 0.]))
 
-    def bend(element,transfer_map):
-        if element.l == 0:
-            hx = 0.
-        else:
-            hx = element.angle/element.l
+    r_z = lambda z: uni_matrix(z, element.k1, hx = transfer_map.hx, sum_tilts = 0)
 
-        transfer_map.R_z = lambda z: uni_matrix(z, element.k1, hx = hx, sum_tilts = element.dtilt + element.tilt)#lambda z: transfer_map.R1(z)*transfer_map.e_start
-        transfer_map.R = transfer_map.R_z(element.l)#transfer_map.e_end*transfer_map.R_z(element.l)
-        transfer_map.T_z = lambda z: t_nnn(z, hx, element.k1, element.k2)
-        transfer_map.T = transfer_map.T_z(element.l)
-        R_z = lambda z: uni_matrix(z, element.k1, hx = hx, sum_tilts = 0)
-        transfer_map.map_z = lambda X, z: t_apply(R_z(z), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
-        transfer_map.map = lambda X: transfer_map.map_z(X, element.l)
+    transfer_map.map_z = lambda X, z: t_apply(r_z(z), transfer_map.T_z(z), X, element.dx, element.dy, transfer_map.tilt)
+    transfer_map.map = lambda X: transfer_map.map_z(X, element.l)
 
+    #def symp_kick2(X, transfer_map, ndivs = 1):
+    #    h = transfer_map.hx
+    #    if h != 0:
+    #        ndivs = 100
+    #    k1 = transfer_map.k1
+    #    if k1 !=0:
+    #        ndivs = 30
+    #    k2 = transfer_map.k2
+    #    beta = 1.
+    #    gamma2_inv = 0.
+    #    L = transfer_map.length/ndivs
+    #    #print h, k1, k2, L
+    #    #R_2 = transfer_map.R_z(L/2.)
+    #    n = len(X)
+    #    #Xt = transpose(dot(R, transpose(X.reshape(n/6, 6)))).reshape(n)
+    #    #X[:] = Xt[:]
+    #    Xn = zeros(n)
+    #    Xn[:] = X[:]
+    #    #print R_2
+    #    n = len(X)
+    #    for i in range(ndivs):
+    #        #Xr = transpose(dot(R_2, transpose(Xn.reshape(n/6,6)))).reshape(n)
+    #        Xt = zeros(n)
+    #        #x, px, y, py, tau, dp = Xr[0::6], Xr[1::6], Xr[2::6], Xr[3::6], Xr[4::6], Xr[5::6]
+    #        x, px, y, py, tau, dp = Xn[0::6], Xn[1::6], Xn[2::6], Xn[3::6], Xn[4::6], Xn[5::6]
+    #        px2 = px*px
+    #        py2 = py*py
+    #
+    #        Xt[0::6] = x + L*px*(1. + h*x - dp/beta)
+    #        Xt[1::6] = px + L*0.5*(-h*(px2 + py2) - 2*(h*h + k1)*x - (2*h*k1 + k2)*x*x + (h*k1+k2)*y*y + (2*h *dp)/beta)
+    #
+    #        Xt[2::6] = y + L*py*(1. + h*x - dp/beta)
+    #        Xt[3::6] = py + L*((k1 + h*k1*x + k2*x)*y)
+    #
+    #        Xt[4::6] = tau + L*(-(px2 + py2)/(2*beta) - gamma2_inv/(beta*(1+beta)))
+    #        Xt[5::6] = dp
+    #        Xn[:] = Xt[:]
+    #        #Xn = transpose(dot(R_2, transpose(Xt.reshape(n/6, 6)))).reshape(n)
+    #    X[:] = Xn[:]
+    #    return X
+    #transfer_map.symp_kick2 = lambda X: symp_kick2(X, transfer_map.R)
     if element.type == "quadrupole":
-
-        transfer_map.R_z = lambda z: uni_matrix(z, element.k1, hx = 0., sum_tilts = element.dtilt + element.tilt)
-        transfer_map.R = transfer_map.R_z(element.l)
-        transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=element.k1, k2=element.k2)
-        transfer_map.T = transfer_map.T_z(element.l)
-        R_z = lambda z: uni_matrix(z, element.k1, hx = 0., sum_tilts = 0)
-        transfer_map.map_z = lambda X, z: t_apply(R_z(z), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
-        transfer_map.map = lambda X: transfer_map.map_z(X, element.l)
+        pass
 
     elif element.type in ["sbend", "rbend", "bend"]:
+        pass
 
-        bend(element, transfer_map)
+    elif element.type == "drift":
+        pass
+
+    elif element.type == "monitor":
+        pass
+
+    elif element.type == "marker":
+        pass
 
     elif element.type == "edge":
-        #print 'Edge', element.id, element.edge
         tilt = element.tilt + element.dtilt
-        """
-        y = tan(element.edge)*element.h
-        m1 = y*cos(tilt)*cos(tilt) - y*sin(tilt)*sin(tilt)
-        m2 = y*sin(2*tilt)
-
-        transfer_map.R[1,0] = m1
-        transfer_map.R[1,2] = m2
-        transfer_map.R[3,1] = m2
-        transfer_map.R[3,2] = -m1
-        transfer_map.R_z = lambda z: transfer_map.R
-        """
-        R, T = fringe_ent(h=element.h, k1=element.k1,  e=element.edge, h_pole=element.h_pole, gap=element.gap, fint=element.fint)
+        #R, T = fringe_ent(h=element.h, k1=element.k1,  e=element.edge, h_pole=element.h_pole, gap=element.gap, fint=element.fint)
+        if element.pos == 1:
+            R, T = fringe_ent(h=element.h, k1=element.k1,  e=element.edge, h_pole=element.h_pole, gap=element.gap, fint=element.fint)
+        else:
+            R, T = fringe_ext(h=element.h, k1=element.k1,  e=element.edge, h_pole=element.h_pole, gap=element.gap, fint=element.fint)
         transfer_map.R = dot(dot(rot_mtx(-tilt), R), rot_mtx(tilt))
         transfer_map.R_z = lambda z: transfer_map.R
         transfer_map.T = T
         transfer_map.T_z = lambda z: transfer_map.T
         transfer_map.map_z = lambda X, z: t_apply(R, transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
         transfer_map.map = lambda X: transfer_map.map_z(X, element.l)
-
+        #print element.edge, element.pos
+        #print T
     elif element.type == "sextupole":
 
         def nonl_kick_array_z(u, z, ms):
@@ -347,51 +358,28 @@ def create_transfer_map(element, order=1, energy=0, track_acceleration=False):
 
             return u
 
-        if element.ms == None:
-            element.ms = element.k2*element.l
-        if element.k2 == None and element.l != 0:
-            element.k2 = element.ms/element.l
-
-        transfer_map.order = 2
-
-        #transfer_map.nonl_kick = nonl_kick #lambda V: nonl_kick(transfer_map, V)
-        #transfer_map.nonl_kick_array = nonl_kick_array
         if element.l == 0:
             transfer_map.nonl_kick_z = lambda u, z: nonl_kick_array_z(u, z, element.ms)
             transfer_map.nonl_kick = lambda u: nonl_kick_array_z(u, element.l, element.ms)
-            #transfer_map.nonl_kick_array_z = lambda u, z: nonl_kick_array_z(u, z, element.ms)
-            #transfer_map.nonl_kick_array = lambda u: nonl_kick_array_z(u, element.l, element.ms)
-            transfer_map.ms = element.ms
 
+            transfer_map.ms = element.ms
+            #transfer_map.symp_kick2 = transfer_map.nonl_kick
             transfer_map.T[1, 0, 0] = -element.ms/2.
             transfer_map.T[1, 2, 2] = element.ms/2.
             transfer_map.T[3, 0, 2] = element.ms
             transfer_map.T_z = lambda z: transfer_map.T
 
-        else:
-            #print "element.k2 = None"
-            transfer_map.nonl_kick_z = lambda u, z: nonl_kick_array_z(u, z, element.k2*z)
-            transfer_map.nonl_kick = lambda u: nonl_kick_array_z(u, element.l, element.ms)
-            #transfer_map.nonl_kick_array_z = lambda u, z: nonl_kick_array_z(u, z, element.k2*z)
-            #transfer_map.nonl_kick_array = lambda u: nonl_kick_array_z(u, element.l, element.ms)
-            #transfer_map.ms = element.ms
-            transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=element.k2)
-            transfer_map.T = transfer_map.T_z(element.l)
-        #print transfer_map.T
-        #transfer_map.map = lambda X: t_apply(transfer_map.R, transfer_map.T, X, element.dx, element.dy, element.tilt)
-        #transfer_map.el_map = lambda X: transfer_map.nonl_kick_array(X)
-        #print "transfer_map.ms = ",transfer_map.ms
-        transfer_map.R_z = lambda z: uni_matrix(z, 0., hx = 0.)
+        transfer_map.R_z = lambda z: uni_matrix(z, 0., hx=0.)
         transfer_map.R = transfer_map.R_z(element.l)
         transfer_map.map_z = lambda X, z: t_apply(transfer_map.R_z(z), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
         transfer_map.map = lambda X: transfer_map.map_z(X, element.l)
+        transfer_map.order = 2
 
     elif element.type == "octupole":
 
         def nonl_kick_array_z(u, z, moct):
             #TODO: check expressions
             #v = np.array([transfer_map.dx, transfer_map.dy, z, moct])
-            #
 
             z1 = z/2.
             x = u[0::6] + u[1::6]*z1 - transfer_map.dx
@@ -411,36 +399,20 @@ def create_transfer_map(element, order=1, energy=0, track_acceleration=False):
         if element.l == 0:
             transfer_map.map_z = lambda u, z: nonl_kick_array_z(u, z, element.moct)
             transfer_map.map = lambda u: nonl_kick_array_z(u, element.l, element.moct)
-            #transfer_map.nonl_kick_array_z = lambda u, z: nonl_kick_array_z(u, z, element.moct)
-            #transfer_map.nonl_kick_array = lambda u: nonl_kick_array_z(u, element.l, element.moct)
-            #transfer_map.moct = element.moct
+
         else:
 
             transfer_map.map_z = lambda u, z: nonl_kick_array_z(u, z, element.k3*z)
             transfer_map.map = lambda u: nonl_kick_array_z(u, element.l, element.moct)
-            #transfer_map.nonl_kick_array_z = lambda u, z: nonl_kick_array_z(u, z, element.k3*z)
-            #transfer_map.nonl_kick_array = lambda u: nonl_kick_array_z(u, element.l, element.moct)
 
         transfer_map.R_z = lambda z: uni_matrix(z, 0., hx = 0.)
         transfer_map.R = transfer_map.R_z(element.l)
         transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
         transfer_map.T = transfer_map.T_z(element.l)
-        #transfer_map.map = lambda X: nonl_kick_array_z(X, element.l, element.moct)
-
-    elif element.type == "drift":
-
-        transfer_map.R_z = lambda z: uni_matrix(z, 0., hx = 0.)
-        transfer_map.R = transfer_map.R_z(element.l)
-        transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
-        transfer_map.T = transfer_map.T_z(element.l)
-
-        transfer_map.map_z = lambda X, z: t_apply(transfer_map.R_z(z), transfer_map.T_z(z), X, 0, 0, 0)
-        transfer_map.map = lambda X: transfer_map.map_z(X, element.l)
-        #transfer_map.map = lambda X: t_apply(transfer_map.R, transfer_map.T, X, 0, 0, 0)
 
     elif element.type == "undulator":
-        transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
-        transfer_map.T = transfer_map.T_z(element.l)
+        #transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
+        #transfer_map.T = transfer_map.T_z(element.l)
 
         def undulator_R_z(z, lperiod, Kx, Ky, energy):
             #print energy
@@ -458,7 +430,6 @@ def create_transfer_map(element, order=1, energy=0, track_acceleration=False):
             R[3,2] = -sin(omega_x * z ) * omega_x
             R[3,3] = cos(omega_x * z )
             return R
-
 
         def nonl_kick_rk( u):
 
@@ -535,29 +506,7 @@ def create_transfer_map(element, order=1, energy=0, track_acceleration=False):
             else:
                 kx = 2.*pi/element.ax
             transfer_map.map = lambda u: nonl_kick_array_z(u, element.l, ndiv = 20)
-            #transfer_map.nonl_kick = lambda u: nonl_kick_rk(u)
-            #transfer_map.nonl_kick_array = lambda u: nonl_kick_array_z(u, element.l, ndiv = 20)
-            #transfer_map.nonl_kick_array_z = lambda u, z: nonl_kick_array_z(u, z, ndiv = 5)
             transfer_map.map_z = lambda u, z: nonl_kick_array_z(u, z, ndiv = 5)
-
-            #transfer_map.map = lambda X: nonl_kick_array_z(X, element.l, ndiv = 20)
-
-    elif element.type == "monitor":
-        
-        transfer_map.R_z = lambda z: uni_matrix(z, 0., hx = 0.)
-        transfer_map.R = transfer_map.R_z(element.l)
-        transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
-        transfer_map.T = transfer_map.T_z(element.l)
-        transfer_map.map_z = lambda X, z: t_apply(transfer_map.R_z(z), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
-        transfer_map.map = lambda X: transfer_map.map_z(X, element.l)
-
-    elif element.type == "marker":
-
-        transfer_map.R_z = lambda z: eye(6)
-        transfer_map.R = transfer_map.R_z(element.l)
-        transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
-        transfer_map.map_z = lambda X, z: t_apply(transfer_map.R_z(z), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
-        transfer_map.map = lambda X: transfer_map.map_z(X, element.l)
 
     elif element.type == "hcor" or element.type == "vcor":
 
@@ -571,7 +520,7 @@ def create_transfer_map(element, order=1, energy=0, track_acceleration=False):
             dy = hy*z*z/2.
             dx1 = hx*z if l != 0 else angle_x
             dy1 = hy*z if l != 0 else angle_y
-            b = array([dx, dx1, dy, dy1, 0.,0.])
+            b = array([dx, dx1, dy, dy1, 0., 0.])
             #ux = 0 if hx != 0 else 1.
             #uy = 0 if hy != 0 else 1.
             # b = array([(1 - cos(z*hx))/(hx+ux), sin(z*hx)+ux*angle_x, (1 - cos(z*hy))/(hy+uy), sin(z*hy)+uy*angle_y, 0, 0])
@@ -610,7 +559,7 @@ def create_transfer_map(element, order=1, energy=0, track_acceleration=False):
             phi = 0
             
             #Ep = de * cos(phi) / (z * 0.000511) # energy derivative
-            de = de;
+            de = de
             Ep = de / (z) # energy derivative
             #Ep = de  # energy derivative
             #Ef = E + de
@@ -631,10 +580,10 @@ def create_transfer_map(element, order=1, energy=0, track_acceleration=False):
             
             # for twiss parameters
             if not track_acceleration:
-                r11=r11*sqrt(Ef/Ei);
-                r12=r12*sqrt(Ef/Ei);
-                r21=r21*sqrt(Ef/Ei);
-                r22=r22*sqrt(Ef/Ei);
+                r11=r11*sqrt(Ef/Ei)
+                r12=r12*sqrt(Ef/Ei)
+                r21=r21*sqrt(Ef/Ei)
+                r22=r22*sqrt(Ef/Ei)
             
             #print r11, r12, r21, r22
             
@@ -684,10 +633,10 @@ def create_transfer_map(element, order=1, energy=0, track_acceleration=False):
                                 [0., 0., 0., 0., 1., 0.],
                                 [0., 0., 0., 0., 0., 1.]]).real
             return sol_matrix
-
+        T = zeros((6,6,6))
         transfer_map.R_z = lambda z: sol(z, k = element.k)
         transfer_map.R = transfer_map.R_z(element.l)
-        transfer_map.map_z = lambda X, z: t_apply(transfer_map.R_z(z), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
+        transfer_map.map_z = lambda X, z: t_apply(transfer_map.R_z(z), T, X, element.dx, element.dy, element.tilt)
         transfer_map.map = lambda X: transfer_map.map_z(X, element.l)
 
     elif element.type == "matrix":
@@ -718,13 +667,9 @@ def create_transfer_map(element, order=1, energy=0, track_acceleration=False):
         transfer_map.map = lambda X: transfer_map.map_z(X, element.l)
 
     else:
-
-        print (element.type , " : unknown type of magnetic element. Cannot create transfer map ")
-
-    if element.type != "hcor" or element.type != "vcor":
-        transfer_map.B_z = lambda z: dot((eye(6) - transfer_map.R_z(z)), array([element.dx, 0., element.dy, 0., 0., 0.]))
-        transfer_map.B = dot((eye(6) - transfer_map.R), array([element.dx, 0., element.dy, 0., 0., 0.]))
-
+        print (element.type, " : unknown type of magnetic element. Cannot create transfer map ")
+    #if element.type != "sextupole":
+    #    transfer_map.symp_kick2 = lambda X: symp_kick2(X, transfer_map)
     return transfer_map
 
 
@@ -739,7 +684,7 @@ def periodic_solution(tws, transfer_matrix):
     cosmx = (M[0, 0] + M[1, 1])/2.
     cosmy = (M[2, 2] + M[3, 3])/2.
 
-    #print cosmx, cosmy
+    # print cosmx, cosmy
 
     if abs(cosmx) >= 1 or abs(cosmy) >= 1:
         print("************ periodic solution does not exist. return None ***********")

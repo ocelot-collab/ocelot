@@ -26,14 +26,17 @@ class Element:
             #print 'setting automatic id'
             self.id = "ID_{0}_".format(np.random.randint(100000000))
         self.type = "none"
-        self.tilt = 0        # TILT: The roll angle about the longitudinal axis
+        self.tilt = 0.       # TILT: The roll angle about the longitudinal axis
                              # (default: 0 rad, i.e. a normal quadrupole).
                              # A positive angle represents a clockwise rotation.
                              # A TILT=pi/4 turns a positive normal quadrupole into a negative skew quadrupole.
 
-        self.dx = 0
-        self.dy = 0
-        self.dtilt = 0
+        self.angle = 0.
+        self.k1 = 0.
+        self.k2 = 0.
+        self.dx = 0.
+        self.dy = 0.
+        self.dtilt = 0.
         
         self.params = {}
         
@@ -80,13 +83,20 @@ class Sextupole(Element):
     m - strength of sextupole lens in [1/m^3],
     l - length of lens in [m].
     """
-    def __init__(self, l=0, k2=None, ms=None, id=None, tilt=0):
+    def __init__(self, l=0, k2=0., ms=0., id=None, tilt=0):
         """
         k2 is sextupole strength
         ms = k2*l
         """
         Element.__init__(self, id)
         self.type = "sextupole"
+        if l != 0 and ms != 0:
+            if k2 == 0:
+                k2 = ms/l
+                ms = 0.
+            else:
+                ms = 0.
+
         self.l = l
         self.k2 = k2
         self.ms = ms

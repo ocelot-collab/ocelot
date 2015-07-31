@@ -400,51 +400,6 @@ def t_nnn(L, h, k1, k2):
     """
     return T
 
-def rot_mtx(angle):
-    return array([[cos(angle), 0., sin(angle), 0., 0., 0.],
-                    [0., cos(angle), 0., sin(angle), 0., 0.],
-                    [-sin(angle), 0., cos(angle), 0., 0., 0.],
-                    [0., -sin(angle), 0., cos(angle), 0., 0.],
-                    [0., 0., 0., 0., 1., 0.],
-                    [0., 0., 0., 0., 0., 1.]])
-
-def transform_vec(X, dx, dy, tilt):
-    n = len(X)
-    for i in range(n/6):
-        X0 = X[6*i:6*(i+1)]
-        X0 -= array([dx, 0.,dy,0.,0.,0.])
-        X[6*i:6*(i+1)] = dot(rot_mtx(tilt), X0)
-    return X
-
-def t_apply(R, T, X, dx, dy, tilt):
-
-    if dx != 0 or dy != 0 or tilt != 0:
-        X = transform_vec(X, dx, dy, tilt)
-
-    n = len(X)
-    Xr = transpose(dot(R, transpose(X.reshape(n/6,6)))).reshape(n)
-    Xt = zeros(n)
-    x, px, y, py, tau, dp = X[0::6], X[1::6],X[2::6], X[3::6], X[4::6], X[5::6]
-
-    Xt[0::6] = T[0, 0, 0]*x*x + T[0, 0, 1]*x*px + T[0, 0, 5]*x*dp + T[0, 1, 1]*px*px + T[0, 1, 5]*px*dp + \
-               T[0, 5, 5]*dp*dp + T[0, 2, 2]*y*y + T[0, 2, 3]*y*py + T[0, 3, 3]*py*py
-
-    Xt[1::6] = T[1, 0, 0]*x*x + T[1, 0, 1]*x*px + T[1, 0, 5]*x*dp + T[1, 1, 1]*px*px + T[1, 1, 5]*px*dp + \
-               T[1, 5, 5]*dp*dp + T[1, 2, 2]*y*y + T[1, 2, 3]*y*py + T[1, 3, 3]*py*py
-
-    Xt[2::6] = T[2, 0, 2]*x*y + T[2, 0, 3]*x*py + T[2, 1, 2]*px*y + T[2, 1, 3]*px*py + T[2, 2, 5]*y*dp + T[2, 3, 5]*py*dp
-
-    Xt[3::6] = T[3, 0, 2]*x*y + T[3, 0, 3]*x*py + T[3, 1, 2]*px*y + T[3, 1, 3]*px*py + T[3, 2, 5]*y*dp + T[3, 3, 5]*py*dp
-
-    Xt[4::6] = T[4, 0, 0]*x*x + T[4, 0, 1]*x*px + T[4, 0, 5]*x*dp + T[4, 1, 1]*px*px + T[4, 1, 5]*px*dp + \
-               T[4, 5, 5]*dp*dp + T[4, 2, 2]*y*y + T[4, 2, 3]*y*py + T[4, 3, 3]*py*py
-
-    X[:] = Xr[:] + Xt[:]
-
-    if dx != 0 or dy != 0 or tilt != 0:
-        X = transform_vec(X, -dx, -dy, -tilt)
-
-    return X
 
 def fringe_ent(h, k1,  e, h_pole = 0., gap = 0., fint = 0.):
 
@@ -503,6 +458,56 @@ def fringe_ext(h, k1,  e, h_pole = 0., gap = 0., fint = 0.):
     T[3,2,5] = h*tan_e - h*phi/cos(e - phi)**2
     return R, T
 
+
+"""
+def rot_mtx(angle):
+    return array([[cos(angle), 0., sin(angle), 0., 0., 0.],
+                    [0., cos(angle), 0., sin(angle), 0., 0.],
+                    [-sin(angle), 0., cos(angle), 0., 0., 0.],
+                    [0., -sin(angle), 0., cos(angle), 0., 0.],
+                    [0., 0., 0., 0., 1., 0.],
+                    [0., 0., 0., 0., 0., 1.]])
+
+def transform_vec(X, dx, dy, tilt):
+    n = len(X)
+    for i in range(n/6):
+        X0 = X[6*i:6*(i+1)]
+        X0 -= array([dx, 0.,dy,0.,0.,0.])
+        X[6*i:6*(i+1)] = dot(rot_mtx(tilt), X0)
+    return X
+
+def t_apply(R, T, X, dx, dy, tilt):
+
+    if dx != 0 or dy != 0 or tilt != 0:
+        X = transform_vec(X, dx, dy, tilt)
+
+    n = len(X)
+    Xr = transpose(dot(R, transpose(X.reshape(n/6,6)))).reshape(n)
+    Xt = zeros(n)
+    x, px, y, py, tau, dp = X[0::6], X[1::6],X[2::6], X[3::6], X[4::6], X[5::6]
+
+    Xt[0::6] = T[0, 0, 0]*x*x + T[0, 0, 1]*x*px + T[0, 0, 5]*x*dp + T[0, 1, 1]*px*px + T[0, 1, 5]*px*dp + \
+               T[0, 5, 5]*dp*dp + T[0, 2, 2]*y*y + T[0, 2, 3]*y*py + T[0, 3, 3]*py*py
+
+    Xt[1::6] = T[1, 0, 0]*x*x + T[1, 0, 1]*x*px + T[1, 0, 5]*x*dp + T[1, 1, 1]*px*px + T[1, 1, 5]*px*dp + \
+               T[1, 5, 5]*dp*dp + T[1, 2, 2]*y*y + T[1, 2, 3]*y*py + T[1, 3, 3]*py*py
+
+    Xt[2::6] = T[2, 0, 2]*x*y + T[2, 0, 3]*x*py + T[2, 1, 2]*px*y + T[2, 1, 3]*px*py + T[2, 2, 5]*y*dp + T[2, 3, 5]*py*dp
+
+    Xt[3::6] = T[3, 0, 2]*x*y + T[3, 0, 3]*x*py + T[3, 1, 2]*px*y + T[3, 1, 3]*px*py + T[3, 2, 5]*y*dp + T[3, 3, 5]*py*dp
+
+    Xt[4::6] = T[4, 0, 0]*x*x + T[4, 0, 1]*x*px + T[4, 0, 5]*x*dp + T[4, 1, 1]*px*px + T[4, 1, 5]*px*dp + \
+               T[4, 5, 5]*dp*dp + T[4, 2, 2]*y*y + T[4, 2, 3]*y*py + T[4, 3, 3]*py*py
+
+    X[:] = Xr[:] + Xt[:]
+
+    if dx != 0 or dy != 0 or tilt != 0:
+        X = transform_vec(X, -dx, -dy, -tilt)
+
+    return X
+"""
+
+"""
 def symp_kick2(X, h, k1, k2, ndivs = 1):
 
     beta = 1.
@@ -527,7 +532,7 @@ def symp_kick2(X, h, k1, k2, ndivs = 1):
         Xt[4::6] = tau + L*(-(px2 + py2)/(2*beta) - gamma2_inv/(beta*(1+beta)))
         X = transpose(dot(R_2, transpose(Xt.reshape(n/6,6)))).reshape(n)
     return X
-
+"""
 
 """
 

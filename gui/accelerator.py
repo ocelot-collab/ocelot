@@ -610,7 +610,7 @@ def resonans_diag(Qx, Qy, order):
         #plt.xticks(x, labels, rotation='vertical')
 
 
-def show_da(out_da, x_array, y_array):
+def show_da(out_da, x_array, y_array, title=""):
     from matplotlib import pyplot as plt
     from numpy import linspace, max, min
     #print "time execution = ", time() - start , " s"
@@ -628,6 +628,7 @@ def show_da(out_da, x_array, y_array):
     #fig1 = plt.contourf(out_da, 20,cmap=plt.cm.rainbow,extent = extent)#, colors = 'r')
     #plt.axis_bgcolor("#bdb76b")
     plt.grid(True)
+    plt.title(title)
     plt.xlabel("X, m")
     plt.ylabel("Y, m")
     cb = plt.colorbar()

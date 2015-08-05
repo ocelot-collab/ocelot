@@ -82,7 +82,7 @@ def t_nnn(L, h, k1, k2):
     :return:
 
     here is used the following set of variables:
-    x, dx/ds, y, dy/ds,
+    x, dx/ds, y, dy/ds, delta_l, dp/p0
     """
 
     h2 = h*h
@@ -273,8 +273,7 @@ def t_nnn(L, h, k1, k2):
     t436 = coef2*I436 - h2*ky2*I424 + ky2*I43
     t446 = coef2*I446 + h2*I423 + ky2*I44
 
-
-    # Coordinates transformation from Curvilinear to a Restangular
+    # Coordinates transformation from Curvilinear to a Cartesian
     cx_1 = -kx2*sx
     sx_1 = cx
     cy_1 = -ky2*sy

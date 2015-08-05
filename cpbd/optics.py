@@ -47,19 +47,27 @@ def uni_matrix(z, k1, hx, sum_tilts=0.):
     return u_matrix
 
 
-def transform_vec(X, dx, dy, tilt):
+def transform_vec_ent(X, dx, dy, tilt):
     n = len(X)
     for i in range(n/6):
         X0 = X[6*i:6*(i+1)]
-        X0 -= array([dx, 0.,dy,0.,0.,0.])
+        X0 -= array([dx, 0., dy, 0., 0., 0.])
         X[6*i:6*(i+1)] = dot(rot_mtx(tilt), X0)
+    return X
+
+def transform_vec_ext(X, dx, dy, tilt):
+    n = len(X)
+    for i in range(n/6):
+        X0 = X[6*i:6*(i+1)]
+        X[6*i:6*(i+1)] = dot(rot_mtx(-tilt), X0)
+        X0 += array([dx, 0., dy, 0., 0., 0.])
     return X
 
 
 def t_apply(R, T, X, dx, dy, tilt):
 
     if dx != 0 or dy != 0 or tilt != 0:
-        X = transform_vec(X, dx, dy, tilt)
+        X = transform_vec_ent(X, dx, dy, tilt)
 
     n = len(X)
     Xr = transpose(dot(R, transpose(X.reshape(n/6, 6)))).reshape(n)
@@ -83,7 +91,7 @@ def t_apply(R, T, X, dx, dy, tilt):
     X[:] = Xr[:] + Xt[:]
 
     if dx != 0 or dy != 0 or tilt != 0:
-        X = transform_vec(X, -dx, -dy, -tilt)
+        X = transform_vec_ext(X, dx, dy, tilt)
 
     return X
 
@@ -662,7 +670,7 @@ def create_transfer_map(element, order=1, energy=0, track_acceleration=False):
         transfer_map.R_z = lambda z: r_matrix(z, element.l, Rm)
         transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
         transfer_map.T = transfer_map.T_z(element.l)
-        transfer_map.map_z = lambda X: t_apply(transfer_map.R, transfer_map.T, X, element.dx, element.dy, element.tilt)
+        #transfer_map.map_z = lambda X: t_apply(transfer_map.R, transfer_map.T, X, element.dx, element.dy, element.tilt)
         transfer_map.map_z = lambda X, z: t_apply(transfer_map.R_z(z), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
         transfer_map.map = lambda X: transfer_map.map_z(X, element.l)
 

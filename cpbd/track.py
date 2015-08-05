@@ -154,8 +154,8 @@ def freq_analysis(track_list, lat, nturns, harm = True, diap = 0.10, nearest = F
 
 
 class Track_info:
-    def __init__(self, p, x, y):
-        self.p = p
+    def __init__(self, particle, x, y):
+        self.particle = particle
         self.turn = 0
         self.x = x #initail coordinate
         self.y = y #initail coordinate
@@ -163,14 +163,17 @@ class Track_info:
         #self.y_array = [p.y]
         self.mux = -0.001
         self.muy = -0.001
-        self.p_list = [[p.x,p.px,p.y,p.py,p.tau,p.p]]
+        self.p_list = [[particle.x, particle.px, particle.y, particle.py, particle.tau, particle.p]]
 
     def get_x(self):
         return np.array(map(lambda p: p[0], self.p_list))
+
     def get_xp(self):
         return np.array(map(lambda p: p[1], self.p_list))
+
     def get_y(self):
         return np.array(map(lambda p: p[2], self.p_list))
+
     def get_yp(self):
         return np.array(map(lambda p: p[3], self.p_list))
 
@@ -214,16 +217,17 @@ def phase_space_transform(x,y, tws):
     return x,y
 
 
-def create_track_list(x_array, y_array):
+def create_track_list(x_array, y_array, p_array):
     """
     the function create list of Pxy
     """
     track_list = []
-    for y in (y_array):
-        for x in (x_array):
-            p = Particle(x = x, y = y, p=-0.00)
-            pxy = Track_info(p, x, y)
-            track_list.append(pxy)
+    for p in p_array:
+        for y in (y_array):
+            for x in (x_array):
+                particle = Particle(x=x, y=y, p=p)
+                pxy = Track_info(particle, x, y)
+                track_list.append(pxy)
 
     return track_list
 
@@ -273,7 +277,7 @@ def tracking(lat, nturns, track_list, nsuperperiods, order = 1, save_track = Tru
     track_list_const = copy(track_list)
     p_array = ParticleArray(n = len(track_list))
     for i, pxy in enumerate(track_list):
-        p_array[i] = pxy.p
+        p_array[i] = pxy.particle
 
     for i in range(nturns):
         print(i)

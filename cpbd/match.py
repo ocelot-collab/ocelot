@@ -52,8 +52,8 @@ def weights(val):
     if val == 'Dx': return 10000000.0
     if val == 'Dxp': return 10000000.0
     if val == 'tau': return 10000000.0
-    if val in ['alpha_x', 'alpha_y']: return 100.0
-    if val in ['beta_x', 'beta_y']: return 100.0
+    if val in ['alpha_x', 'alpha_y']: return 100000.0
+    if val in ['beta_x', 'beta_y']: return 100000.0
     return 0.0001
 
 def match(lat, constr, vars, tw, print_proc = 1, max_iter=1000):

@@ -382,6 +382,7 @@ def create_transfer_map(element, order=1, energy=0, track_acceleration=False):
         transfer_map.map_z = lambda X, z: t_apply(transfer_map.R_z(z), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
         transfer_map.map = lambda X: transfer_map.map_z(X, element.l)
         transfer_map.order = 2
+        #print transfer_map.T
 
     elif element.type == "octupole":
 

@@ -265,7 +265,7 @@ def create_transfer_map(element, order=1, energy=0, track_acceleration=False):
     else:
         transfer_map.hx = element.angle/element.l
 
-    transfer_map.R_z = lambda z: uni_matrix(z, element.k1, hx = transfer_map.hx, sum_tilts = transfer_map.tilt)
+    transfer_map.R_z = lambda z: uni_matrix(z, element.k1, hx = transfer_map.hx, sum_tilts=transfer_map.tilt)
     transfer_map.R = transfer_map.R_z(element.l)
 
     transfer_map.T_z = lambda z: t_nnn(z, transfer_map.hx, element.k1, element.k2)
@@ -274,7 +274,7 @@ def create_transfer_map(element, order=1, energy=0, track_acceleration=False):
     transfer_map.B_z = lambda z: dot((eye(6) - transfer_map.R_z(z)), array([element.dx, 0., element.dy, 0., 0., 0.]))
     transfer_map.B = dot((eye(6) - transfer_map.R), array([element.dx, 0., element.dy, 0., 0., 0.]))
 
-    r_z = lambda z: uni_matrix(z, element.k1, hx = transfer_map.hx, sum_tilts = 0)
+    r_z = lambda z: uni_matrix(z, element.k1, hx = transfer_map.hx, sum_tilts=0)
 
     transfer_map.map_z = lambda X, z: t_apply(r_z(z), transfer_map.T_z(z), X, element.dx, element.dy, transfer_map.tilt)
     transfer_map.map = lambda X: transfer_map.map_z(X, element.l)

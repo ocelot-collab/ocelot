@@ -19,7 +19,7 @@ def rot_mtx(angle):
                   [0., 0., 0., 0., 0., 1.]])
 
 
-def uni_matrix(z, k1, hx, sum_tilts=0.):
+def uni_matrix(z, k1, hx, sum_tilts=0., gamma_inv = 0.):
     # r = element.l/element.angle
     # - K - focusing lens , +K - defoc
     kx2 = (k1 + hx*hx)
@@ -551,7 +551,8 @@ def create_transfer_map(element, order=1, energy=0, track_acceleration=False):
         transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
         transfer_map.T = transfer_map.T_z(element.l)
 
-        transfer_map.map_z = lambda X, z: dot(transfer_map.R_z(z), X) + transfer_map.B_z(z)
+        transfer_map.map_z = lambda X, z: np.add(np.transpose(dot(transfer_map.R_z(z), np.transpose(X.reshape(len(X)/6, 6)))), transfer_map.B_z(z)).reshape(len(X))
+        #transfer_map.map_z = lambda X, z: dot(transfer_map.R_z(z), X) + transfer_map.B_z(z)
         transfer_map.map = lambda X: transfer_map.map_z(X, element.l)
 
     elif element.type == "cavity":

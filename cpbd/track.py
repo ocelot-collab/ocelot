@@ -459,16 +459,18 @@ def step(lat, particle_list, dz, navi, order=1):
     if particle_list.__class__ == ParticleArray:
         #velocity bunching ##
         for tm in t_maps:
-            gamma=(particle_list.E+0.5*dE)*1e9/ E_ele_eV
-            tm.R[4,5]=tm.R[4,5]-dz/gamma**2
+            gamma = (particle_list.E+0.5*dE)*1e9/ E_ele_eV
+            tm.R[4,5] = tm.R[4,5] - dz/gamma**2
             tm.apply(particle_list, order=order)
         # RF curvature
         if abs(dE)>0:
-            E0=particle_list.E; E1=particle_list.E+dE
-            k=2*pi*freq/c0; phi_rad=phi*pi/180; V=dE/cos(phi_rad)
-            particle_list.particles[5::6]=(particle_list.particles[5::6]*E0+
-            V*np.cos(particle_list.particles[4::6]*k+phi_rad)-dE)/E1
-            particle_list.E=particle_list.E+dE
+            E0 = particle_list.E
+            E1 = particle_list.E+dE
+            k = 2*pi*freq/c0
+            phi_rad = phi*pi/180
+            V = dE/cos(phi_rad)
+            particle_list.particles[5::6] = (particle_list.particles[5::6]*E0 + V*np.cos(particle_list.particles[4::6]*k+phi_rad)-dE)/E1
+            particle_list.E = particle_list.E+dE
             particle_list.de = dE
     else:
         for tm in t_maps:

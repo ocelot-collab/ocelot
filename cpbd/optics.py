@@ -844,6 +844,8 @@ def get_map(lattice, dz, navi, order=1):
     L = navi.sum_lengths + elem.l
     
     delta_e = 0.0
+    phi=0.0
+    freq=0.0
 
     while z1 > L:
         dl = L - navi.z0
@@ -857,6 +859,8 @@ def get_map(lattice, dz, navi, order=1):
             tm = elem.transfer_map(dl)*tm
             if elem.type == "cavity":
                 delta_e += elem.delta_e * dl / elem.l
+                phi=elem.phi
+                freq=elem.f
 
         navi.z0 = L
         dz -= dl
@@ -870,13 +874,15 @@ def get_map(lattice, dz, navi, order=1):
         tm = elem.transfer_map(dz)*tm
         if elem.type == "cavity":
             delta_e += elem.delta_e * dz / elem.l
+            phi=elem.phi
+            freq=elem.f
 
     navi.z0 += dz
     navi.sum_lengths = L - elem.l
     navi.n_elem = i
     if tm.identity == False:
         TM.append(tm)
-    return TM, delta_e
+    return TM, delta_e, phi, freq
 
 
 def gaussFromTwiss(emit, beta, alpha):

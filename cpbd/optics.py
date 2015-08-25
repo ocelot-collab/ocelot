@@ -882,7 +882,7 @@ def get_map(lattice, dz, navi, order=1):
     navi.n_elem = i
     if tm.identity == False:
         TM.append(tm)
-    return TM, delta_e, phi, freq
+    return TM, delta_e, phi, freq #
 
 
 def gaussFromTwiss(emit, beta, alpha):

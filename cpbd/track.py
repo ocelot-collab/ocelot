@@ -457,7 +457,7 @@ def step(lat, particle_list, dz, navi, order=1):
     t_maps, dE, phi, freq = get_map(lat, dz, navi,order=order)
     #print 'getting map, de=', de
     if particle_list.__class__ == ParticleArray:
-        #velocity bunching
+        #velocity bunching #
         for tm in t_maps:
            # gamma=(particle_list.E+0.5*dE)*1e9/ E_ele_eV
            # tm.R[4,5]=tm.R[4,5]-dz/gamma**2

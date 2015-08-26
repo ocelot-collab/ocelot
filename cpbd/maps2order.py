@@ -344,15 +344,15 @@ def t_nnn(L, h, k1, k2):
     T534 = t534 - 1/2.*ky2*sy2
     T544 = t544 + (L + sy*cy)/4.
 
-    T[4, 0, 0] = T511
-    T[4, 0, 1] = T512
-    T[4, 0, 5] = T516
-    T[4, 1, 1] = T522
-    T[4, 1, 5] = T526
-    T[4, 5, 5] = T566
-    T[4, 2, 2] = T533
-    T[4, 2, 3] = T534
-    T[4, 3, 3] = T544
+    #T[4, 0, 0] = T511
+    #T[4, 0, 1] = T512
+    #T[4, 0, 5] = T516
+    #T[4, 1, 1] = T522
+    #T[4, 1, 5] = T526
+    #T[4, 5, 5] = T566
+    #T[4, 2, 2] = T533
+    #T[4, 2, 3] = T534
+    #T[4, 3, 3] = T544
     """
     print "T511 = ", T511
     print "T512 = ", T512
@@ -414,18 +414,18 @@ def fringe_ent(h, k1,  e, h_pole = 0., gap = 0., fint = 0.):
     #print R
 
     T = zeros((6,6,6))
-    T[0,0,0] = -h/2.*tan_e2
-    T[0,2,2] = h/2.*sec_e2
-    T[1,0,0] = h/2.*h_pole*sec_e3 + k1*tan_e
-    T[1,0,1] = h*tan_e2
-    T[1,0,5] = -h*tan_e
-    T[1,2,2] = (-k1 + h*h/2. + h*h*tan_e2)*tan_e - h/2.*h_pole*sec_e3
-    T[1,2,3] = -h*tan_e2
-    T[2,0,2] = h*tan_e2
-    T[3,0,2] = -h*h_pole*sec_e3 - 2*k1*tan_e
-    T[3,0,3] = -h*tan_e2
-    T[3,1,2] = -h*sec_e2
-    T[3,2,5] = h*tan_e - h*phi/cos(e - phi)**2
+    T[0, 0, 0] = -h/2.*tan_e2
+    T[0, 2, 2] = h/2.*sec_e2
+    T[1, 0, 0] = h/2.*h_pole*sec_e3 + k1*tan_e
+    T[1, 0, 1] = h*tan_e2
+    T[1, 0, 5] = -h*tan_e
+    T[1, 2, 2] = (-k1 + h*h/2. + h*h*tan_e2)*tan_e - h/2.*h_pole*sec_e3
+    T[1, 2, 3] = -h*tan_e2
+    T[2, 0, 2] = h*tan_e2
+    T[3, 0, 2] = -h*h_pole*sec_e3 - 2*k1*tan_e
+    T[3, 0, 3] = -h*tan_e2
+    T[3, 1, 2] = -h*sec_e2
+    T[3, 2, 5] = h*tan_e - h*phi/cos(e - phi)**2
     return R, T
 
 def fringe_ext(h, k1,  e, h_pole = 0., gap = 0., fint = 0.):
@@ -457,6 +457,55 @@ def fringe_ext(h, k1,  e, h_pole = 0., gap = 0., fint = 0.):
     T[3,2,5] = h*tan_e - h*phi/cos(e - phi)**2
     return R, T
 
+def H23(vec_x, h, k1, k2, beta=1., g_inv=0.):
+    """
+    H2 = (px**2 + py**2)/2 + (h**2 + k1)*x**2/2 - (k1*y**2)/2 - (h*pt*x)/beta
+    H3 = (h*x - ps/beta)*(px**2 + py**2)/2 + (2*h*k1 + k2)*(x**3)/6 - (h*k1 + k2)*(x*y**2)/2 - ps/(beta*gamma**2*(1. + beta))
+    H23 = H2 + H3
+    :param vec_x: [x, px, y, py, sigma, psigma]
+    :param h: curvature
+    :param k1: quadrupole strength
+    :param k2: sextupole strength
+    :param beta: = 1, velocity
+    :param g_inv: 1/gamma, by default 0.
+    :return: [x', px', y', py', sigma', psigma']
+    """
+    x = vec_x[0]
+    px = vec_x[1]
+    y = vec_x[2]
+    py = vec_x[3]
+    ps = vec_x[5]
+    px2 = px*px
+    py2 = py*py
+    x1 = px*(1. + h*x - ps/beta)
+    px1 = -(h*h + k1)*x + (h*ps)/beta + (-h*(px2 + py2) - (2.*h*k1 + k2)*x*x + (h*k1 + k2)*y*y)/2.
+    y1 = py*(1. + h*x - ps/beta)
+    py1 = k1*y + (h*k1 + k2)*x*y
+    sigma1 = -(h*x)/beta - ((px2 + py2)/(2.*beta)) - g_inv*g_inv/(beta*(1. + beta))
+    return array([x1, px1, y1, py1, sigma1, 0.])
+
+def verlet(vec_x, step, h, k1, k2, beta=1, g_inv=0.):
+    """
+    q_{n+1} = q_{n} + h * dH(p_{n}, q_{n+1})/dp
+    p_{n+1} = p_{n} - h * dH(p_{n}, q_{n+1})/dq
+    """
+    x = vec_x[0]
+    px = vec_x[1]
+    y = vec_x[2]
+    py = vec_x[3]
+    sigma = vec_x[4]
+    ps = vec_x[5]
+
+    x1 = (x + step*px*(1.-ps/beta))/(1.-step*h*px)
+    y1 = y + step*py*(1. + h*x1 - ps/beta)
+    sigma1 = sigma + step*(-(h*x1)/beta - ((px*px + py*py)/(2.*beta)) - g_inv*g_inv/(beta*(1. + beta)))
+
+    vec0 = H23([x1, px, y1, py, sigma1, ps], h, k1, k2, beta, g_inv)
+
+    px1 = px + step*vec0[1]
+    py1 = py + step*vec0[3]
+    ps1 = ps + step*vec0[5]
+    return array([x1, px1, y1, py1, sigma1, ps1])
 
 """
 def rot_mtx(angle):

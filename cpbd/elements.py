@@ -353,7 +353,7 @@ class Sequence:
         self.l = l
 
 class MagneticLattice:
-    def __init__(self, sequence, start=None, stop=None, energy = 0):
+    def __init__(self, sequence, start=None, stop=None, energy=0.):
         self.energy = energy
         self.sequence = list(flatten(sequence))
 
@@ -374,6 +374,7 @@ class MagneticLattice:
         self.totalLen = 0
         if not self.check_edges():
             self.add_edges()
+        # TODO: set energy to elements
         self.update_transfer_maps()
 
         self.__hash__ = {}
@@ -425,10 +426,8 @@ class MagneticLattice:
                 n += 2
             n +=1
 
-
-
     def update_transfer_maps(self, track_acceleration = False):
-
+        E = self.energy
         self.totalLen = 0
         for element in self.sequence:
             if element.type == "undulator":
@@ -437,10 +436,16 @@ class MagneticLattice:
                     if element.field_map.units =="mm":
                         element.l = element.l*0.001
             self.totalLen += element.l
+            """
             try:
-                element.transfer_map = create_transfer_map(element, energy = element.E, track_acceleration = track_acceleration)
+                element.transfer_map = create_transfer_map(element, energy=element.E, track_acceleration=track_acceleration)
             except:
-                element.transfer_map = create_transfer_map(element, energy = self.energy, track_acceleration = track_acceleration)
+                element.transfer_map = create_transfer_map(element, energy=self.energy, track_acceleration=track_acceleration)
+            """
+            #if element.type == "cavity":
+            #    E += element.delta_e
+            #print "init = ", E
+            element.transfer_map = create_transfer_map(element, track_acceleration=track_acceleration)
         return self
 
     def printElements(self):

@@ -53,7 +53,6 @@ dz = 0.01
 for i in range(int(lat.totalLen/dz)):
     step(lat, [p1], dz = dz, navi = navi1, order = 1)  # R only
     step(lat, [p2], dz = dz, navi = navi2, order = 2)  # R + T
-    print p2.p
     P1.append(copy(p1))
     P2.append(copy(p2))
 

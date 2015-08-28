@@ -42,7 +42,7 @@ ny = 100
 x_array = linspace(-0.03, 0.03, nx)
 y_array = linspace(0.0001, 0.03, ny)
 start = time()
-pxy_list = create_track_list(x_array, y_array)
+pxy_list = create_track_list(x_array, y_array, p_array=[0.])
 pxy_list = tracking( lat, nturns, pxy_list,  nsuperperiods = 8, save_track=True)
 
 print("time exec = ", time() - start)

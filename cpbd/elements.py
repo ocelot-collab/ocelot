@@ -37,7 +37,7 @@ class Element:
         self.dx = 0.
         self.dy = 0.
         self.dtilt = 0.
-        
+        self.E = 0.
         self.params = {}
         
     

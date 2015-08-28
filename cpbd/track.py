@@ -259,7 +259,7 @@ def ellipse_track_list(beam, n_t_sigma = 3, num = 1000, type = "contour"):
 def tracking(lat, nturns, track_list, nsuperperiods, order = 1, save_track = True):
     xlim, ylim, px_lim, py_lim = aperture_limit(lat, xlim = 1, ylim = 1)
     navi = Navigator()
-    t_maps, delta_e = get_map(lat, lat.totalLen, navi, order = order)
+    t_maps = get_map(lat, lat.totalLen, navi, order = order)
     #print len(t_maps)
     #for t in t_maps:
     #    print t.R
@@ -456,6 +456,8 @@ def step(lat, particle_list, dz, navi, order=1):
 
     #t_maps, Delta_e, Phi, Freq = get_map(lat, dz, navi, order=order)
     t_maps = get_map(lat, dz, navi, order=order)
+    for tm in t_maps:
+        tm.apply(particle_list, order=order)
     #if navi.n_elem == 120:
     #print "number = ", len(t_maps)
     #L = 0.
@@ -479,35 +481,35 @@ def step(lat, particle_list, dz, navi, order=1):
     #print "m.l = ", L, "    de = ", de, "   phi = ", max(phi), "   freq = ", max(freq)
     #print "Rsum = ", R
     #print 'getting map, de=', de
-    if particle_list.__class__ == ParticleArray:
-        #velocity bunching ##
-        for tm in t_maps:
-            #gamma = (particle_list.E + 0.5*tm.delta_e)/ m_e_GeV
-            #tm.R[4,5] = tm.R[4,5] - dz/gamma**2
-            #print "RRRRR = ", tm.length, tm.R
-            tm.apply(particle_list, order=order)
-            #if 5.453 <particle_list.s<5.6378:
-            #    print tm.R
-            #    print particle_list.s,  particle_list.particles[0::6]
-            #    print "angels = ", particle_list.particles[1::6]
-            #    print "p = ", particle_list.de, particle_list.E
-            # RF curvature
-            #if abs(tm.delta_e)>0:
-            #    E0 = particle_list.E
-            #    E1 = particle_list.E + tm.delta_e
-            #    k = 2*pi*tm.freq/c0
-            #    phi_rad = tm.phi*pi/180
-            #    V = tm.delta_e/cos(phi_rad)
-            #    #print "i = ", navi.n_elem, "E0 = ", E0, "  E1 = ", E1, "  k = ", k, "phi = ", phi_rad, "  V = ", V
-            #    particle_list.particles[5::6] = (particle_list.particles[5::6]*E0 + V*np.cos(particle_list.particles[4::6]*k + phi_rad) - tm.delta_e)/E1
-            #    particle_list.E = particle_list.E + tm.delta_e
-            #    particle_list.de = tm.delta_e
-                #print "particle_list = ", particle_list.de, particle_list.E
-                #print particle_list.particles[5::6][:5]
-
-    else:
-        for tm in t_maps:
-            tm.apply(particle_list, order=order)
+    #if particle_list.__class__ == ParticleArray:
+    #    #velocity bunching ##
+    #    for tm in t_maps:
+    #        #gamma = (particle_list.E + 0.5*tm.delta_e)/ m_e_GeV
+    #        #tm.R[4,5] = tm.R[4,5] - dz/gamma**2
+    #        #print "RRRRR = ", tm.length, tm.R
+    #        tm.apply(particle_list, order=order)
+    #        #if 5.453 <particle_list.s<5.6378:
+    #        #    print tm.R
+    #        #    print particle_list.s,  particle_list.particles[0::6]
+    #        #    print "angels = ", particle_list.particles[1::6]
+    #        #    print "p = ", particle_list.de, particle_list.E
+    #        # RF curvature
+    #        #if abs(tm.delta_e)>0:
+    #        #    E0 = particle_list.E
+    #        #    E1 = particle_list.E + tm.delta_e
+    #        #    k = 2*pi*tm.freq/c0
+    #        #    phi_rad = tm.phi*pi/180
+    #        #    V = tm.delta_e/cos(phi_rad)
+    #        #    #print "i = ", navi.n_elem, "E0 = ", E0, "  E1 = ", E1, "  k = ", k, "phi = ", phi_rad, "  V = ", V
+    #        #    particle_list.particles[5::6] = (particle_list.particles[5::6]*E0 + V*np.cos(particle_list.particles[4::6]*k + phi_rad) - tm.delta_e)/E1
+    #        #    particle_list.E = particle_list.E + tm.delta_e
+    #        #    particle_list.de = tm.delta_e
+    #            #print "particle_list = ", particle_list.de, particle_list.E
+    #            #print particle_list.particles[5::6][:5]
+    #
+    #else:
+    #    for tm in t_maps:
+    #        tm.apply(particle_list, order=order)
 
     return
 

@@ -5,6 +5,8 @@ from ocelot.gui.accelerator import *
 from ocelot.cpbd.beam import *
 from ocelot.cpbd.track import *
 
+# TODO: check the result
+
 und = Undulator (Kx = 0.49, nperiods=200, lperiod=0.007, id = "und")
 D1 = Drift (l = 0.5, id = "D1")
 Q1 = Quadrupole (l = 0.3, k1 = 3., id = "Q1")

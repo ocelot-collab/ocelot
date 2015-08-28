@@ -455,6 +455,7 @@ def step(lat, particle_list, dz, navi, order=1):
         dz = lat.totalLen - navi.z0
 
     #t_maps, Delta_e, Phi, Freq = get_map(lat, dz, navi, order=order)
+    print "energy = ", particle_list.E
     t_maps = get_map(lat, dz, navi, order=order)
     for tm in t_maps:
         tm.apply(particle_list, order=order)

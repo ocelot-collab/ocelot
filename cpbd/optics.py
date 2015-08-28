@@ -251,10 +251,10 @@ class TransferMap:
                     p.s += self.length
             """
         elif prcl_series.__class__ == ParticleArray:
-
+            prcl_series.E += self.delta_e
             self.mul_p_array(prcl_series.particles, energy=prcl_series.E, order=order)
             prcl_series.s += self.length
-            prcl_series.E += self.delta_e
+
             print "particle energy = ", prcl_series.E
             #if abs(self.delta_e)>0:
             #    E0 = prcl_series.E
@@ -665,6 +665,7 @@ def create_transfer_map(element, order=1, energy=0., track_acceleration=False):
                 #print element.E, element.v, element.delta_e
                 #transfer_map.R_z = lambda z: cavity_R_z(z, de = element.delta_e*z/element.l, f=element.f, E=element.E, track_acceleration=track_acceleration)
                 # TODO: pay atantion to E=energy, before was E=element.E
+
                 r_z = cavity_R_z(z, de=element.delta_e*z/element.l, f=element.f, E=energy, track_acceleration=track_acceleration)
                 #transfer_map.R_z = lambda z, energy: cavity_R_z(z, de = element.delta_e*z/element.l, f=element.f, E=element.E, track_acceleration=track_acceleration)
                 #transfer_map.R = lambda energy: transfer_map.R_z(element.l, energy)
@@ -680,7 +681,7 @@ def create_transfer_map(element, order=1, energy=0., track_acceleration=False):
         transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
         transfer_map.T = transfer_map.T_z(element.l)
         #transfer_map.map_z = lambda X, z: t_apply(transfer_map.R_z(z), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
-        transfer_map.map_z = lambda X, z, energy: map4cav(R_z(z, transfer_map.energy), transfer_map.T_z(z), X,
+        transfer_map.map_z = lambda X, z, energy: map4cav(R_z(z, energy), transfer_map.T_z(z), X,
                                                  transfer_map.dx, transfer_map.dy, transfer_map.tilt,
                                                  energy,  transfer_map.delta_e_z(z), element.f, element.phi)
 
@@ -728,8 +729,6 @@ def create_transfer_map(element, order=1, energy=0., track_acceleration=False):
         Rm[2,3] = element.rm34
         Rm[3,2] = element.rm43
         Rm[3,3] = element.rm44
-
-
 
         def r_matrix(z, l, Rm):
             if z < l:

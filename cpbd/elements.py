@@ -445,6 +445,7 @@ class MagneticLattice:
             #if element.type == "cavity":
             #    E += element.delta_e
             #print "init = ", E
+
             element.transfer_map = create_transfer_map(element, track_acceleration=track_acceleration)
         return self
 

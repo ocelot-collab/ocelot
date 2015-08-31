@@ -82,7 +82,7 @@ class Particle:
         self.p = p         # longitudinal momentum
         self.s = s
         self.tau = tau     # time-like coordinate wrt reference particle in the bunch (e.g phase)
-
+        self.E = 0.        # energy
 
 class Beam:
     def __init__(self,x=0,xp=0,y=0,yp=0):

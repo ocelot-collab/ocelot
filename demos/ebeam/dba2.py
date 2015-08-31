@@ -67,7 +67,7 @@ beam.alpha_y = 0.
 
 
 
-lat = MagneticLattice(dba, energy=3.0)
+lat = MagneticLattice(dba)
 tw0 = Twiss(beam)
 tws=twiss(lat, Twiss(), nPoints = 1000)
 print( tws[0].beta_x)

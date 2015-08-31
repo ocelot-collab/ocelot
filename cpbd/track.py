@@ -22,7 +22,7 @@ c0=299792458
 E_ele_eV=5.109986258350895e+05
 
 def aperture_limit(lat, xlim = 1, ylim = 1):
-    tws=twiss(lat, Twiss(),nPoints=1000)
+    tws=twiss(lat, Twiss(), nPoints=1000)
     bxmax = max(map(lambda tw: tw.beta_x, tws))
     bymax = max(map(lambda tw: tw.beta_y, tws))
     bx0 = tws[0].beta_x
@@ -350,7 +350,7 @@ def tracking_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods
             elem.dy = errors[1][i]
             elem.dtilt = errors[2][i]
 
-    lat = MagneticLattice(lat_copy.sequence, energy = lat.energy)
+    lat = MagneticLattice(lat_copy.sequence)
     if rank == 0:
         # dividing data into chunks
         chunks_track_list = [[] for _ in range(size)]
@@ -420,9 +420,8 @@ def da_mpi(lat, nturns, x_array, y_array, errors = None, nsuperperiods = 1):
         da = array(map(lambda track: track.turn, track_list))#.reshape((len(y_array), len(x_array)))
         nx = len(x_array)
         ny = len(y_array)
-        return da.reshape(ny,nx)
+        return da.reshape(ny, nx)
 
-"""
 def step(lat, particle_list, dz, navi, order=1):
     '''
     tracking for a fixed step dz
@@ -431,87 +430,9 @@ def step(lat, particle_list, dz, navi, order=1):
     if navi.z0 + dz > lat.totalLen:
         dz = lat.totalLen - navi.z0
 
-    t_maps, de = get_map(lat, dz, navi,order=order)
-    #print 'getting map, de=', de
-    if particle_list.__class__ == ParticleArray:
-        for tm in t_maps:
-            #print "tm :",  tm.length
-            tm.apply(particle_list, order=order)
-            particle_list.E += de
-            particle_list.de = de
-            #tm.apply(plist)
-    else:
-        for tm in t_maps:
-            tm.apply(particle_list, order=order)
-
-    return
-"""
-def step(lat, particle_list, dz, navi, order=1):
-    '''
-    tracking for a fixed step dz
-    '''
-    #print navi.z0 + dz , lat.totalLen
-    if navi.z0 + dz > lat.totalLen:
-        dz = lat.totalLen - navi.z0
-
-    #t_maps, Delta_e, Phi, Freq = get_map(lat, dz, navi, order=order)
-    print "energy = ", particle_list.E
     t_maps = get_map(lat, dz, navi, order=order)
     for tm in t_maps:
         tm.apply(particle_list, order=order)
-    #if navi.n_elem == 120:
-    #print "number = ", len(t_maps)
-    #L = 0.
-    #de = 0.
-    #phi = []
-    #freq = []
-    #R = np.eye(6)
-    #for maps in t_maps:
-    #    #print "navi.z0 = ", navi.z0 - dz
-    #    #print "maps.length = ", maps.length
-    #    #print "R = ", maps.R
-    #    #print "de = ", maps.delta_e, "   phi = ", maps.phi, "   freq = ", maps.freq
-    #    R = np.dot(maps.R, R)
-    #    #print maps.B
-    #    L += maps.length
-    #    de += maps.delta_e
-    #    phi.append(maps.phi)
-    #    freq.append(maps.freq)
-    #    #print "phi = ", maps.phi, maps.freq
-    #print navi.z0, navi.n_elem
-    #print "m.l = ", L, "    de = ", de, "   phi = ", max(phi), "   freq = ", max(freq)
-    #print "Rsum = ", R
-    #print 'getting map, de=', de
-    #if particle_list.__class__ == ParticleArray:
-    #    #velocity bunching ##
-    #    for tm in t_maps:
-    #        #gamma = (particle_list.E + 0.5*tm.delta_e)/ m_e_GeV
-    #        #tm.R[4,5] = tm.R[4,5] - dz/gamma**2
-    #        #print "RRRRR = ", tm.length, tm.R
-    #        tm.apply(particle_list, order=order)
-    #        #if 5.453 <particle_list.s<5.6378:
-    #        #    print tm.R
-    #        #    print particle_list.s,  particle_list.particles[0::6]
-    #        #    print "angels = ", particle_list.particles[1::6]
-    #        #    print "p = ", particle_list.de, particle_list.E
-    #        # RF curvature
-    #        #if abs(tm.delta_e)>0:
-    #        #    E0 = particle_list.E
-    #        #    E1 = particle_list.E + tm.delta_e
-    #        #    k = 2*pi*tm.freq/c0
-    #        #    phi_rad = tm.phi*pi/180
-    #        #    V = tm.delta_e/cos(phi_rad)
-    #        #    #print "i = ", navi.n_elem, "E0 = ", E0, "  E1 = ", E1, "  k = ", k, "phi = ", phi_rad, "  V = ", V
-    #        #    particle_list.particles[5::6] = (particle_list.particles[5::6]*E0 + V*np.cos(particle_list.particles[4::6]*k + phi_rad) - tm.delta_e)/E1
-    #        #    particle_list.E = particle_list.E + tm.delta_e
-    #        #    particle_list.de = tm.delta_e
-    #            #print "particle_list = ", particle_list.de, particle_list.E
-    #            #print particle_list.particles[5::6][:5]
-    #
-    #else:
-    #    for tm in t_maps:
-    #        tm.apply(particle_list, order=order)
-
     return
 
 

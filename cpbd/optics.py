@@ -173,7 +173,6 @@ class TransferMap:
         if d_muy < 0:
             d_muy += pi
         tws.muy = m.muy + d_muy
-
         return tws
 
     def mul_p_array(self, particles, energy=0., order=1):
@@ -197,7 +196,6 @@ class TransferMap:
 
         if m.__class__ == TransferMap:
             m2 = TransferMap()
-            # TODO
             m2.R = lambda energy: dot(self.R(energy), m.R(energy))
             m2.B = lambda energy: dot(self.R(energy), m.B(energy)) + self.B(energy)  #+dB #check
             m2.length = m.length + self.length

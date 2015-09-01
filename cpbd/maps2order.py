@@ -1,6 +1,7 @@
 __author__ = 'Sergey Tomin'
 
-from numpy import cos, sin, sqrt, zeros, eye, tan, dot, empty_like, array, transpose
+from numpy import cos, sin, sqrt, zeros, eye, tan, dot, empty_like, array, transpose, linspace
+from ocelot.common.globals import *
 
 """
 differential equation:
@@ -470,6 +471,7 @@ def H23(vec_x, h, k1, k2, beta=1., g_inv=0.):
     :param g_inv: 1/gamma, by default 0.
     :return: [x', px', y', py', sigma', psigma']
     """
+    #print "H23: ", vec_x
     x = vec_x[0]
     px = vec_x[1]
     y = vec_x[2]
@@ -482,30 +484,69 @@ def H23(vec_x, h, k1, k2, beta=1., g_inv=0.):
     y1 = py*(1. + h*x - ps/beta)
     py1 = k1*y + (h*k1 + k2)*x*y
     sigma1 = -(h*x)/beta - ((px2 + py2)/(2.*beta)) - g_inv*g_inv/(beta*(1. + beta))
-    return array([x1, px1, y1, py1, sigma1, 0.])
+    return [x1, px1, y1, py1, sigma1, 0.]
 
-def verlet(vec_x, step, h, k1, k2, beta=1, g_inv=0.):
+from copy import copy
+def verlet(vec_x, step, h, k1, k2, beta=1., g_inv=0.):
     """
     q_{n+1} = q_{n} + h * dH(p_{n}, q_{n+1})/dp
     p_{n+1} = p_{n} - h * dH(p_{n}, q_{n+1})/dq
     """
-    x = vec_x[0]
-    px = vec_x[1]
-    y = vec_x[2]
-    py = vec_x[3]
-    sigma = vec_x[4]
-    ps = vec_x[5]
-
-    x1 = (x + step*px*(1.-ps/beta))/(1.-step*h*px)
+    #vec_x0 = copy(vec_x)
+    x =     vec_x[0::6]
+    px =    vec_x[1::6]
+    y =     vec_x[2::6]
+    py =    vec_x[3::6]
+    sigma = vec_x[4::6]
+    ps =    vec_x[5::6]
+    #print "1: verlet: ", x[:3], px[:3], y[:3], py[:3], sigma[:3], ps[:3]
+    x1 = (x + step*px*(1. - ps/beta))/(1. - step*h*px)
     y1 = y + step*py*(1. + h*x1 - ps/beta)
     sigma1 = sigma + step*(-(h*x1)/beta - ((px*px + py*py)/(2.*beta)) - g_inv*g_inv/(beta*(1. + beta)))
-
+    #print "verlet: ", [x1, px, y1, py, sigma1, ps]
     vec0 = H23([x1, px, y1, py, sigma1, ps], h, k1, k2, beta, g_inv)
-
+    #print "verlet: ", vec0
     px1 = px + step*vec0[1]
     py1 = py + step*vec0[3]
     ps1 = ps + step*vec0[5]
-    return array([x1, px1, y1, py1, sigma1, ps1])
+    #print "verlet: params : h = ", h, k1, k2
+    #print "2: verlet: ", x1[:3], px1[:3], y1[:3], py1[:3], sigma1[:3], ps1[:3]
+    #w = zeros(len(vec_x))
+    vec_x[0::6] = x1[:]
+    vec_x[1::6] = px1[:]
+    vec_x[2::6] = y1[:]
+    vec_x[3::6] = py1[:]
+    vec_x[4::6] = sigma1[:]
+    vec_x[5::6] = ps1[:]
+    #vec_x[:] = w[:]
+    return vec_x
+
+def sym_map(z, X, h, k1, k2, energy=0.):
+
+    if h != 0 or k1 != 0:
+        step = 0.005
+    else:
+        step = z
+    if step > z:
+        step = z
+    #print z, h, k1, k2
+    n = int(z/step) + 1
+    gamma = energy/m_e_GeV
+    g_inv = 0.
+    beta = 1.
+    if gamma !=0:
+        g_inv = 1/gamma
+        beta = sqrt(1. - g_inv*g_inv)
+    z_array = linspace(0., z, num=n)
+    #print z_array
+    step = z_array[1] - z_array[0]
+    #print len(X)
+    for i in linspace(0., z, num=(n-1)):
+
+        X = verlet(X, step, h, k1, k2, beta=beta, g_inv=g_inv)
+
+    return X
+
 
 """
 def rot_mtx(angle):

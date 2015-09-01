@@ -180,8 +180,10 @@ class TransferMap:
             n = len(particles)
             a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(n/6, 6)))), self.B(energy)).reshape(n)
             particles[:] = a[:]
-        else:
+        elif order == 2:
             self.map(particles, energy=energy)
+        else:
+            self.sym_map(particles, energy=energy)
         return particles
 
     def __mul__(self, m):
@@ -254,6 +256,7 @@ class TransferMap:
         m.T = m.T_z(s)
         m.delta_e = m.delta_e_z(s)
         m.map = lambda u, energy: m.map_z(u, s, energy)
+        m.sym_map = lambda u, energy: m.sym_map_z(u, s, energy)
         return m
 
 
@@ -278,6 +281,8 @@ def create_transfer_map(element, order=1):
     transfer_map.T = transfer_map.T_z(element.l)
 
     transfer_map.map_z = lambda X, z, energy: t_apply(R_z(z, energy), transfer_map.T_z(z), X, element.dx, element.dy, transfer_map.tilt)
+    #experiment with symplecticity
+    transfer_map.sym_map_z = lambda X, z, energy: sym_map(z, X, transfer_map.hx, element.k1, element.k2, energy)
 
     if element.type == "quadrupole":
         pass
@@ -304,7 +309,10 @@ def create_transfer_map(element, order=1):
 
         transfer_map.T = T
         transfer_map.T_z = lambda z: transfer_map.T
-        transfer_map.map_z = lambda X, z, energy: t_apply(R, transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
+
+        #transfer_map.map_z = lambda X, z, energy: t_apply(R, transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
+        transfer_map.map_z = lambda X, z, energy: t_apply(R, np.zeros((6, 6, 6)), X, element.dx, element.dy, element.tilt)
+        transfer_map.sym_map_z = lambda X, z, energy: t_apply(R, np.zeros((6, 6, 6)), X, element.dx, element.dy, element.tilt)
 
     elif element.type == "sextupole":
 
@@ -322,6 +330,7 @@ def create_transfer_map(element, order=1):
         #
         #    return u
 
+        R_z = lambda z, energy: uni_matrix(z, 0., hx=0., energy=energy)
         if element.l == 0:
 
             transfer_map.ms = element.ms
@@ -330,7 +339,8 @@ def create_transfer_map(element, order=1):
             transfer_map.T[1, 2, 2] = element.ms/2.
             transfer_map.T[3, 0, 2] = element.ms
             transfer_map.T_z = lambda z: transfer_map.T
-        R_z = lambda z, energy: uni_matrix(z, 0., hx=0., energy=energy)
+            transfer_map.sym_map_z = lambda X, z, energy: t_apply(R_z(z, energy), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
+
         transfer_map.map_z = lambda X, z, energy: t_apply(R_z(z, energy), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
         transfer_map.order = 2
 
@@ -622,6 +632,7 @@ def create_transfer_map(element, order=1):
     transfer_map.R_z = lambda z, energy: R_z(z, energy)
     transfer_map.R = lambda energy: transfer_map.R_z(element.l, energy)
     transfer_map.map = lambda X, energy: transfer_map.map_z(X, element.l, energy)
+    transfer_map.sym_map = lambda X, energy: transfer_map.sym_map_z(X, element.l, energy)
     return transfer_map
 
 

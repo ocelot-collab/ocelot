@@ -287,6 +287,7 @@ def tracking(lat, nturns, track_list, nsuperperiods, order = 1, save_track = Tru
         for n in range(nsuperperiods):
             #turn(p_array)
             for tm in t_maps:
+                #print "length ", tm.length
                 tm.apply(p_array, order = order)
 
             p_indx = p_array.rm_tails(xlim, ylim, px_lim, py_lim)
@@ -429,7 +430,7 @@ def step(lat, particle_list, dz, navi, order=1):
     #print navi.z0 + dz , lat.totalLen
     if navi.z0 + dz > lat.totalLen:
         dz = lat.totalLen - navi.z0
-
+    #print "particle list", len(particle_list)
     t_maps = get_map(lat, dz, navi, order=order)
     for tm in t_maps:
         tm.apply(particle_list, order=order)

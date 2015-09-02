@@ -401,7 +401,7 @@ def t_nnn(L, h, k1, k2):
     return T
 
 
-def fringe_ent(h, k1,  e, h_pole = 0., gap = 0., fint = 0.):
+def fringe_ent(h, k1, e, h_pole=0., gap=0., fint=0.):
 
     sec_e = 1./cos(e)
     sec_e2 = sec_e*sec_e
@@ -429,7 +429,7 @@ def fringe_ent(h, k1,  e, h_pole = 0., gap = 0., fint = 0.):
     T[3, 2, 5] = h*tan_e - h*phi/cos(e - phi)**2
     return R, T
 
-def fringe_ext(h, k1,  e, h_pole = 0., gap = 0., fint = 0.):
+def fringe_ext(h, k1, e, h_pole=0., gap=0., fint=0.):
 
     sec_e = 1./cos(e)
     sec_e2 = sec_e*sec_e

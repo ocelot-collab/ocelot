@@ -310,8 +310,8 @@ def create_transfer_map(element, order=1):
         transfer_map.T = T
         transfer_map.T_z = lambda z: transfer_map.T
 
-        #transfer_map.map_z = lambda X, z, energy: t_apply(R, transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
-        transfer_map.map_z = lambda X, z, energy: t_apply(R, np.zeros((6, 6, 6)), X, element.dx, element.dy, element.tilt)
+        transfer_map.map_z = lambda X, z, energy: t_apply(R, transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
+        #transfer_map.map_z = lambda X, z, energy: t_apply(R, np.zeros((6, 6, 6)), X, element.dx, element.dy, element.tilt)
         transfer_map.sym_map_z = lambda X, z, energy: t_apply(R, np.zeros((6, 6, 6)), X, element.dx, element.dy, element.tilt)
 
     elif element.type == "sextupole":

@@ -7,7 +7,7 @@ from ocelot.cpbd.track import *
 
 # TODO: check the result
 
-und = Undulator (Kx=2, nperiods=200, lperiod=0.007, id="und")
+und = Undulator(Kx=2, nperiods=100, lperiod=0.02, id="und")
 und.solver = "sym"
 D1 = Drift(l=0.5, id="D1")
 Q1 = Quadrupole(l=0.3, k1=3., id="Q1")
@@ -43,19 +43,19 @@ s = [f.s for f in P1]
 x = [f.x for f in P1]
 y = [f.y for f in P1]
 
-
-plt.plot(s, x, "r", label="X")
-plt.plot(s, y, "b", label="Y")
+plt.figure(1)
+plt.plot(s, x, "g", label="X sym")
+plt.plot(s, y, "r", label="Y sym")
 # plt.plot(s, [f.px for f in P1], "b", label = "Y")
-plt.title("E != 0. Symplectic transfer map")
-plt.legend()
-plt.xlabel("S, m")
-plt.ylabel("X/Y, m")
+#plt.title("E != 0. Symplectic transfer map")
+#plt.legend()
+#plt.xlabel("S, m")
+#plt.ylabel("X/Y, m")
 plt.grid(True)
-plt.show()
 
-lat = MagneticLattice(line)
 und.solver = "lin"
+lat = MagneticLattice(line)
+
 p1 = Particle(x=0.001, y=0.002)
 p1.E = beam.E
 navi = Navigator()
@@ -69,16 +69,16 @@ s = [f.s for f in P1]
 x = [f.x for f in P1]
 y = [f.y for f in P1]
 
-
-plt.plot(s, x, "r", label="X")
-plt.plot(s, y, "b", label="Y")
+#plt.figure(2)
+plt.plot(s, x, "y", label="X lin")
+plt.plot(s, y, "b", label="Y lin")
 # plt.plot(s, [f.px for f in P1], "b", label = "Y")
-plt.title("E != 0. Linear transfer map")
+#plt.title("E != 0. Linear transfer map")
 plt.legend()
 plt.xlabel("S, m")
 plt.ylabel("X/Y, m")
 plt.grid(True)
-plt.show()
+
 
 
 lat = MagneticLattice(line)
@@ -97,7 +97,7 @@ s = [f.s for f in P1]
 x = [f.x for f in P1]
 y = [f.y for f in P1]
 
-
+plt.figure(3)
 plt.plot(s, x, "r", label="X")
 plt.plot(s, y, "b", label="Y")
 plt.title("E = 0")
@@ -105,4 +105,5 @@ plt.legend()
 plt.xlabel("S, m")
 plt.ylabel("X/Y, m")
 plt.grid(True)
+
 plt.show()

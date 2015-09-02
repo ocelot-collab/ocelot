@@ -1,5 +1,6 @@
 __author__ = 'Sergey Tomin'
 
+
 import numpy as np
 from numpy import sqrt, matrix, cos, sin, log, tan, eye, zeros, pi, array, linspace, dot, abs, random, arctan, sign
 
@@ -41,7 +42,7 @@ def rk_track_in_field(y0, l, N, energy, mag_field):
     u[1,:] = y0[1::6]
     u[2,:] = y0[2::6]
     u[3,:] = y0[3::6]
-    u[4,:] = 0.
+    u[4,:] = z[0]
     u[5,:] = pz
     dzk = dz*k
     for i in range(N-1):

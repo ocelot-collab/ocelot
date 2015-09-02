@@ -105,6 +105,7 @@ class TransferMap:
 
     def __init__(self, order=1, identity=False):
         self.identity = identity
+        self.type = "none"
         self.order = order
         self.dx = 0.
         self.dy = 0.
@@ -116,8 +117,7 @@ class TransferMap:
         self.hx = 0.
         # test RF
         self.delta_e = 0.0
-        #self.phi = 0.0
-        #self.freq = 0.0
+        self.delta_e_z = lambda z: 0.0
         self.map = lambda x, energy: x
         # 6x6 linear transfer matrix
         self.R = lambda energy: eye(6)
@@ -180,10 +180,11 @@ class TransferMap:
             n = len(particles)
             a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(n/6, 6)))), self.B(energy)).reshape(n)
             particles[:] = a[:]
-        elif order == 2:
-            self.map(particles, energy=energy)
-        else:
+        elif order == 3:
             self.sym_map(particles, energy=energy)
+
+        else:
+            self.map(particles, energy=energy)
         return particles
 
     def __mul__(self, m):
@@ -236,9 +237,10 @@ class TransferMap:
                     self.mul_p_array(array([p.x, p.px, p.y, p.py, p.tau, p.p]), energy=p.E, order=order)
                     p.s += self.length
             else:
+
                 pa = ParticleArray()
                 pa.list2array(prcl_series)
-                pa.E = energy=prcl_series[0].E
+                pa.E = prcl_series[0].E
                 self.mul_p_array(pa.particles, energy=pa.E, order=order)
                 pa.s += self.length
                 pa.array2ex_list(prcl_series)
@@ -262,14 +264,13 @@ class TransferMap:
 
 def create_transfer_map(element, order=1):
     transfer_map = TransferMap()
+    transfer_map.type = element.type
     transfer_map.length = element.l
     transfer_map.dx = element.dx
     transfer_map.dy = element.dy
     transfer_map.tilt = element.dtilt + element.tilt
     transfer_map.k1 = element.k1
     transfer_map.k2 = element.k2
-    transfer_map.delta_e = 0.
-    transfer_map.delta_e_z = lambda z: 0.0
     if element.l == 0:
         transfer_map.hx = 0.
     else:
@@ -394,59 +395,41 @@ def create_transfer_map(element, order=1):
 
         R_z = lambda z, energy: undulator_R_z(z, lperiod=element.lperiod, Kx=element.Kx, Ky=element.Ky, energy=energy)
 
-        def nonl_kick_rk(u, energy):
-
-            z = np.linspace(0, element.l, 10000)
-            #x, px,y, py = track_in_undul(u[:4], z, kz, kx, rho)
-            x, px, y, py, z, pz = track_und_RK(u, z, kz, kx, element.Kx, energy)
-            u[0] = x[-1]
-            u[1] = px[-1]
-            u[2] = y[-1]
-            u[3] = py[-1]
-            return u
-
         def map4undulator(u, z, kz, kx, energy, ndiv):
-
-            if element.solver == "rk":
-                # It requires scipy.weave !!!
-                track_und_openmp(u, z, 5000, kz, kx, element.Kx, energy)
-
-            elif element.solver == "rk_func":
-                rk_field(u, z, 5000, energy, element.mag_field)
-
-            else:
-                zi = linspace(0., z, num=ndiv)
-                h = zi[1] - zi[0]
-                kx2 = kx*kx
-                kz2 = kz*kz
-                ky2 = kz*kz + kx*kx
-                ky = sqrt(ky2)
-                gamma = energy/m_e_GeV
-                h0 = 0.
-                if gamma != 0:
-                    h0 = 1./(gamma/element.Kx/kz)
-                h02 = h0*h0
-                h = h/(1.+ u[5::6])
-                x = u[::6]
-                y = u[2::6]
-                for z in range(len(zi)-1):
-                    chx = cosh(kx*x)
-                    chy = cosh(ky*y)
-                    shx = sinh(kx*x)
-                    shy = sinh(ky*y)
-                    u[1::6] -= h/2.*chx*shx*(kx*ky2*chy*chy + kx2*kx*shy*shy)/(ky2*kz2)*h02
-                    u[3::6] -= h/2.*chy*shy*(ky2*chx*chx + kx2*shx*shx)/(ky*kz2)*h02
-                    u[4::6] -= h/2./(1.+u[5::6]) * ((u[1::6]*u[1::6] + u[3::6]*u[3::6]) + chx*chx*chy*chy/(2.*kz2)*h02 + shx*shx*shy*shy*kx2/(2.*ky2*kz2)*h02)
-                    u[::6] = x + h*u[1::6]
-                    u[2::6] = y + h*u[3::6]
+            zi = linspace(0., z, num=ndiv)
+            h = zi[1] - zi[0]
+            kx2 = kx*kx
+            kz2 = kz*kz
+            ky2 = kz*kz + kx*kx
+            ky = sqrt(ky2)
+            gamma = energy/m_e_GeV
+            h0 = 0.
+            if gamma != 0:
+                h0 = 1./(gamma/element.Kx/kz)
+            h02 = h0*h0
+            h = h/(1.+ u[5::6])
+            x = u[::6]
+            y = u[2::6]
+            for z in range(len(zi)-1):
+                chx = cosh(kx*x)
+                chy = cosh(ky*y)
+                shx = sinh(kx*x)
+                shy = sinh(ky*y)
+                u[1::6] -= h/2.*chx*shx*(kx*ky2*chy*chy + kx2*kx*shy*shy)/(ky2*kz2)*h02
+                u[3::6] -= h/2.*chy*shy*(ky2*chx*chx + kx2*shx*shx)/(ky*kz2)*h02
+                u[4::6] -= h/2./(1.+u[5::6]) * ((u[1::6]*u[1::6] + u[3::6]*u[3::6]) + chx*chx*chy*chy/(2.*kz2)*h02 + shx*shx*shy*shy*kx2/(2.*ky2*kz2)*h02)
+                u[::6] = x + h*u[1::6]
+                u[2::6] = y + h*u[3::6]
 
             return u
 
-        if element.solver in ["lin", "linear"]:
-            transfer_map.order = 1
-            transfer_map.map_z = lambda X, z, energy: t_apply(R_z(z, energy), transfer_map.T_z(z), X, 0., 0., 0.)
 
-        elif element.solver in ["sym", "symplectic"]:
+        transfer_map.order = 1
+        transfer_map.map_z = lambda X, z, energy: t_apply(R_z(z, energy), transfer_map.T_z(z), X, 0., 0., 0.)
+        transfer_map.sym_map_z = lambda X, z, energy: t_apply(R_z(z, energy), transfer_map.T_z(z), X, 0., 0., 0.)
+
+        if element.solver in ["sym", "symplectic"]:
+            #print "undulator transfer map is symplectic map! "
             transfer_map.order = 2
             kz = 2.*pi/element.lperiod
             if element.ax == -1:
@@ -454,10 +437,11 @@ def create_transfer_map(element, order=1):
             else:
                 kx = 2.*pi/element.ax
             transfer_map.map_z = lambda u, z, energy: map4undulator(u, z, kz, kx, energy, ndiv=int(z*10+2))
-        else:
-            print "undulator transfer map is symplectic map! "
-            # TODO: add RK map
-            transfer_map.map_z = lambda u, z, energy: map4undulator(u, z, kz, kx, energy, ndiv=int(z*10+2))
+            transfer_map.sym_map_z = lambda u, z, energy: map4undulator(u, z, kz, kx, energy, ndiv=int(z*10+2))
+
+        transfer_map.map_rk = lambda u, z, energy: rk_field(u, z, N=int(z*10./element.lperiod),
+                                                                   energy=energy, mag_field=element.mag_field)
+
 
     elif element.type == "hcor" or element.type == "vcor":
 
@@ -747,7 +731,7 @@ class Navigator:
             self.lat = lattice
         
     z0 = 0.             # current position if navigator
-    n_elem = 0          # current number of the element in lattece
+    n_elem = 0          # current number of the element in lattice
     sum_lengths = 0.    # sum_lengths = Sum[lat.sequence[i].l, {i, 0, n_elem-1}]
 
     #def check(self, dz):

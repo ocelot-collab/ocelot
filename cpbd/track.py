@@ -427,10 +427,9 @@ def step(lat, particle_list, dz, navi, order=1):
     '''
     tracking for a fixed step dz
     '''
-    #print navi.z0 + dz , lat.totalLen
     if navi.z0 + dz > lat.totalLen:
         dz = lat.totalLen - navi.z0
-    #print "particle list", len(particle_list)
+
     t_maps = get_map(lat, dz, navi, order=order)
     for tm in t_maps:
         tm.apply(particle_list, order=order)

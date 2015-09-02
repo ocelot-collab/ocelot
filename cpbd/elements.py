@@ -266,7 +266,7 @@ class Undulator(Element):
         self.l = lperiod * nperiods
         self.Kx = Kx
         self.Ky = Ky
-        self.solver = "linear" # can be "lin" is liear matrix,  "sym" - symplectic method and "rk" is Runge-Kutta
+        self.solver = "linear"  # can be "lin" is liear matrix,  "sym" - symplectic method and "rk" is Runge-Kutta
         self.phase = 0 # phase between Bx and By + pi/4 (spiral undulator)
         
         self.ax = -1              # width of undulator, when ax is negative undulator width is infinite

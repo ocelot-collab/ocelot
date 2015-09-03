@@ -220,7 +220,7 @@ def phase_space_transform(x,y, tws):
     return x,y
 
 
-def create_track_list(x_array, y_array, p_array):
+def create_track_list(x_array, y_array, p_array, energy=0.):
     """
     the function create list of Pxy
     """
@@ -228,7 +228,7 @@ def create_track_list(x_array, y_array, p_array):
     for p in p_array:
         for y in (y_array):
             for x in (x_array):
-                particle = Particle(x=x, y=y, p=p)
+                particle = Particle(x=x, y=y, p=p, E=energy)
                 pxy = Track_info(particle, x, y)
                 track_list.append(pxy)
 
@@ -256,10 +256,10 @@ def ellipse_track_list(beam, n_t_sigma = 3, num = 1000, type = "contour"):
     return track_list
 
 
-def tracking(lat, nturns, track_list, nsuperperiods, order = 1, save_track = True):
+def tracking(lat, nturns, track_list, nsuperperiods, order=1, save_track=True):
     xlim, ylim, px_lim, py_lim = aperture_limit(lat, xlim = 1, ylim = 1)
     navi = Navigator()
-    t_maps = get_map(lat, lat.totalLen, navi, order = order)
+    t_maps = get_map(lat, lat.totalLen, navi, order=order)
     #print len(t_maps)
     #for t in t_maps:
     #    print t.R
@@ -287,8 +287,8 @@ def tracking(lat, nturns, track_list, nsuperperiods, order = 1, save_track = Tru
         for n in range(nsuperperiods):
             #turn(p_array)
             for tm in t_maps:
-                #print "length ", tm.length
-                tm.apply(p_array, order = order)
+                #print "length ", tm.type, tm.R(6)
+                tm.apply(p_array, order=order)
 
             p_indx = p_array.rm_tails(xlim, ylim, px_lim, py_lim)
 
@@ -369,13 +369,13 @@ def tracking_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods
         # but for nturns = 1000 program crashes with error in mpi_comm.gather()
         # the same situation if treads not so much - solution increase number of treads.
         print("nsuperperiods = ", nsuperperiods)
-        track_list = tracking(lat, nturns, track_list, nsuperperiods,order = order, save_track = save_track)
+        track_list = tracking(lat, nturns, track_list, nsuperperiods, order=order, save_track=save_track)
         return track_list
     start = time()
     track_list = mpi_comm.scatter(chunks_track_list, root=0)
     print(" scatter time = ", time() - start, " sec, rank = ", rank, "  len(pxy_list) = ", len(track_list) )
     start = time()
-    track_list = tracking(lat, nturns, track_list, nsuperperiods, save_track = save_track)
+    track_list = tracking(lat, nturns, track_list, nsuperperiods, order=order, save_trac =save_track)
     print( " scanning time = ", time() - start, " sec, rank = ", rank)
     start = time()
     out_track_list = mpi_comm.gather(track_list, root=0)

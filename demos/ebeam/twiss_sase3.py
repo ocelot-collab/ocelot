@@ -42,9 +42,10 @@ def rematch(beta_mean, l_fodo, qdh, lat, extra_fodo, beam, qf, qd):
     lat.update_transfer_maps()
     extra.update_transfer_maps()
     
-    m1 = lattice_transfer_map( extra )
+    R1 = lattice_transfer_map( extra, beam.E)
     #print "dsf = ", np.linalg.inv(m1.R(beam.E))
-    Rinv = np.linalg.inv(m1.R(beam.E))
+    Rinv = np.linalg.inv(R1)
+    m1 = TransferMap()
     m1.R = lambda energy: Rinv
     #print "dsfasf", m1.R(0)
     tw0m = m1.map_x_twiss(tw2m)

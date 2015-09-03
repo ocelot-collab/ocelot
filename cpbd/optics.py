@@ -178,6 +178,7 @@ class TransferMap:
     def mul_p_array(self, particles, energy=0., order=1):
         if self.order == 1 and order == 1:
             n = len(particles)
+            #print self.R(energy)
             a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(n/6, 6)))), self.B(energy)).reshape(n)
             particles[:] = a[:]
         elif order == 3:
@@ -199,6 +200,7 @@ class TransferMap:
 
         if m.__class__ == TransferMap:
             m2 = TransferMap()
+            #print m.type
             m2.R = lambda energy: dot(self.R(energy), m.R(energy))
             m2.B = lambda energy: dot(self.R(energy), m.B(energy)) + self.B(energy)  #+dB #check
             m2.length = m.length + self.length
@@ -275,8 +277,11 @@ def create_transfer_map(element, order=1):
         transfer_map.hx = 0.
     else:
         transfer_map.hx = element.angle/element.l
-
+    #def R_z(z, energy):
+    #    return uni_matrix(z, element.k1, hx = transfer_map.hx, sum_tilts=0, energy=energy)
     R_z = lambda z, energy: uni_matrix(z, element.k1, hx = transfer_map.hx, sum_tilts=0, energy=energy)
+    #def b_z(z, energy):
+    #    return dot((eye(6) - R_z(z, energy)), array([element.dx, 0., element.dy, 0., 0., 0.]))
     b_z = lambda z, energy: dot((eye(6) - R_z(z, energy)), array([element.dx, 0., element.dy, 0., 0., 0.]))
     transfer_map.T_z = lambda z: t_nnn(z, transfer_map.hx, element.k1, element.k2)
     transfer_map.T = transfer_map.T_z(element.l)
@@ -531,29 +536,34 @@ def create_transfer_map(element, order=1):
             return cav_matrix
 
         def map4cav(R, T, X, dx, dy, tilt, E,  delta_e, freq, phi):
+            #print E
 
             X = t_apply(R, T, X, dx, dy, tilt)
-
-            k = 2.*pi*freq/speed_of_light
-            phi_rad = phi*np.pi/180.
-            v = delta_e/cos(phi_rad)
-            X[5::6] = (X[5::6]*E + v*np.cos(X[4::6]*k + phi_rad) - delta_e)/(E + delta_e)
+            if E + delta_e > 0:
+                k = 2.*pi*freq/speed_of_light
+                phi_rad = phi*np.pi/180.
+                v = delta_e/cos(phi_rad)
+                X[5::6] = (X[5::6]*E + v*np.cos(X[4::6]*k + phi_rad) - delta_e)/(E + delta_e)
 
         transfer_map.order = 2
-
-        def R_z(z, energy):
-            if energy == 0 or (element.v < 1.e-10 and element.delta_e < 1.e-10 ):
-                r_z = uni_matrix(z, 0., hx=0., sum_tilts=element.dtilt + element.tilt, energy=energy)
-            else:
-                de = element.delta_e*z/element.l
-                r_z = cavity_R_z(z, de=de, f=element.f, E=energy)
-            return r_z
+        if element.v < 1.e-10 and element.delta_e < 1.e-10:
+            #transfer_map.order = 1
+            R_z = lambda z, energy: uni_matrix(z, 0., hx=0., sum_tilts=element.dtilt + element.tilt, energy=energy)
+        else:
+            R_z = lambda z, energy: cavity_R_z(z, de=element.delta_e*z/element.l, f=element.f, E=energy)
+        #def R_z(z, energy):
+        #    if energy == 0 or (element.v < 1.e-10 and element.delta_e < 1.e-10 ):
+        #        r_z = uni_matrix(z, 0., hx=0., sum_tilts=element.dtilt + element.tilt, energy=energy)
+        #    else:
+        #        de = element.delta_e*z/element.l
+        #        r_z = cavity_R_z(z, de=de, f=element.f, E=energy)
+        #    return r_z
 
         transfer_map.delta_e_z = lambda z: element.delta_e * z / element.l
         transfer_map.delta_e = element.delta_e
 
-        transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
-        transfer_map.T = transfer_map.T_z(element.l)
+        #transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
+        #transfer_map.T = transfer_map.T_z(element.l)
         transfer_map.map_z = lambda X, z, energy: map4cav(R_z(z, energy), transfer_map.T_z(z), X,
                                                  transfer_map.dx, transfer_map.dy, transfer_map.tilt,
                                                  energy,  transfer_map.delta_e_z(z), element.f, element.phi)
@@ -630,7 +640,7 @@ def periodic_solution(tws, R):
     cosmx = (R[0, 0] + R[1, 1])/2.
     cosmy = (R[2, 2] + R[3, 3])/2.
 
-    # print cosmx, cosmy
+    print cosmx, cosmy
 
     if abs(cosmx) >= 1 or abs(cosmy) >= 1:
         print("************ periodic solution does not exist. return None ***********")
@@ -660,13 +670,14 @@ def periodic_solution(tws, R):
     return tws
 
 
-def lattice_transfer_map(lattice):
+def lattice_transfer_map(lattice, energy):
     """ transfer map for the whole lattice"""
-    lat_transfer_map = TransferMap()
-    for elem in lattice.sequence:
-        #print elem.type
-        lat_transfer_map = elem.transfer_map*lat_transfer_map
-    return lat_transfer_map
+    R = np.eye(6)
+    for i, elem in enumerate(lattice.sequence):
+
+        R = dot(elem.transfer_map.R(energy), R)
+        #print i, len(lattice.sequence), elem.type, elem.transfer_map.R(6)
+    return R
 
 
 def trace_z(lattice, obj0, z_array):
@@ -712,7 +723,7 @@ def twiss(lattice, tws0, nPoints = None):
 
     if tws0.__class__ == Twiss:
         if tws0.beta_x == 0  or tws0.beta_y == 0:
-            tws0 = periodic_solution(tws0, lattice_transfer_map(lattice).R(tws0.E))
+            tws0 = periodic_solution(tws0, lattice_transfer_map(lattice, tws0.E))
             if tws0 == None:
                 return None
         else:
@@ -743,6 +754,8 @@ class Navigator:
     #    return dz
 
 def get_map(lattice, dz, navi, order=1):
+    #for i, elem in enumerate(lattice.sequence):
+    #    print i, elem.type, elem.id
     #order = 2
     TM = []
     tm = TransferMap(identity=True)
@@ -750,16 +763,24 @@ def get_map(lattice, dz, navi, order=1):
     z1 = navi.z0 + dz
     elem = lattice.sequence[i]
     L = navi.sum_lengths + elem.l
-
+    rec_count = 0  # counter of recursion in R = lambda energy: dot(R1(energy), R2(energy))
     while z1 > L:
         dl = L - navi.z0
         if elem.transfer_map.order > 1 or order > 1:
             if tm.identity == False:
+                #print "while, identity == False",  i, elem.type, elem.id,  tm.R
                 TM.append(tm)
+                rec_count = 0
+            #print "while, identity == True", i, elem.type, elem.transfer_map(dl).R(6)
             TM.append(elem.transfer_map(dl))
             tm = TransferMap(identity=True)
         else:
             tm = elem.transfer_map(dl)*tm
+            rec_count += 1
+            if rec_count > 100:
+                TM.append(tm)
+                tm = TransferMap(identity=True)
+                rec_count = 0
         navi.z0 = L
         dz -= dl
         i += 1
@@ -768,8 +789,12 @@ def get_map(lattice, dz, navi, order=1):
 
     if elem.transfer_map.order > 1 or order > 1:
         if tm.identity == False:
+            #print "identity == False", i, elem.type, tm.R(6)
             TM.append(tm)
+            rec_count = 0
+        #print "identity == True", i, elem.type, tm.R(6)
         TM.append(elem.transfer_map(dz))
+        rec_count = 0
         tm = TransferMap(identity=True)
     else:
         tm = elem.transfer_map(dz)*tm
@@ -778,6 +803,7 @@ def get_map(lattice, dz, navi, order=1):
     navi.sum_lengths = L - elem.l
     navi.n_elem = i
     if tm.identity == False:
+        #print "Final, identity == False", i, elem.type, tm.R(6)
         TM.append(tm)
     return TM
 

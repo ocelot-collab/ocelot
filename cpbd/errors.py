@@ -32,7 +32,7 @@ def create_copy(lattice, nsuperperiods):
                 if elem.type != "sextupole":
                     lat_copy_seg[-1].id = lat_copy_seg[-1].id+ "_sp" +str(i)+"_"+str(n)
     #print "errors: ", len(lattice.sequence)
-    return MagneticLattice(lat_copy_seg, energy= lattice.energy)
+    return MagneticLattice(lat_copy_seg)
 
 #class Errors:
 

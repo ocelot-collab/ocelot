@@ -529,6 +529,9 @@ def sym_map(z, X, h, k1, k2, energy=0.):
         step = z
     if step > z:
         step = z
+    if step == 0:
+        #print "step = 0", h, k1, k2, energy
+        return X
     #print z, h, k1, k2
     n = int(z/step) + 1
     gamma = energy/m_e_GeV

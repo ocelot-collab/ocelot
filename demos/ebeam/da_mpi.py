@@ -24,8 +24,8 @@ Q4 = Quadrupole(l= 0.5, k1=1.19250444829 , id = "Q4")
 
 B  = Bend(l=2.7, k1=-.06, angle=2*pi/16., e1=pi/16., e2=pi/16., id = "B")
 
-SF = Sextupole(l=0., ms = 1.5, id = "SF") #random value
-SD = Sextupole(l=0., ms = -1.5, id = "SD") #random value
+SF = Sextupole(l=0., ms = 5.8914775395193555, id = "SF") #random value
+SD = Sextupole(l=0., ms =  -6.8036102026266558, id = "SD") #random value
 
 D1 = Drift(l=2., id = "D1")
 D2 = Drift(l=0.6, id = "D2")
@@ -42,7 +42,7 @@ lat = MagneticLattice(ring)
 
 
 
-compensate_chromaticity(lat, ksi_x_comp = 0, ksi_y_comp = 0,  nsuperperiod = 8)
+#compensate_chromaticity(lat, ksi_x_comp = 0, ksi_y_comp = 0,  nsuperperiod = 8)
 
 nturns = 1000
 nx = 80
@@ -52,7 +52,7 @@ x_array = linspace(-0.03, 0.03, nx)
 y_array = linspace(0.0001, 0.03, ny)
 start = time()
 pxy_list = create_track_list(x_array, y_array, p_array=[0.])
-pxy_list = tracking_mpi( mpi_comm,lat, nturns, pxy_list,  nsuperperiods = 8, order = 1, save_track=False)
+pxy_list = tracking_mpi( mpi_comm,lat, nturns, pxy_list,  nsuperperiods = 8, order = 3, save_track=False)
 if rank == 0:
     print( time() - start)
     da = array(map(lambda pxy: pxy.turn, pxy_list))

@@ -375,7 +375,7 @@ def tracking_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods
     track_list = mpi_comm.scatter(chunks_track_list, root=0)
     print(" scatter time = ", time() - start, " sec, rank = ", rank, "  len(pxy_list) = ", len(track_list) )
     start = time()
-    track_list = tracking(lat, nturns, track_list, nsuperperiods, order=order, save_trac =save_track)
+    track_list = tracking(lat, nturns, track_list, nsuperperiods, order=order, save_track =save_track)
     print( " scanning time = ", time() - start, " sec, rank = ", rank)
     start = time()
     out_track_list = mpi_comm.gather(track_list, root=0)

@@ -12,7 +12,7 @@ phi_bc2 = 0.033646252962410
 l0 = 0.5
 l_bc2 = l0 *phi_bc2 /sin((phi_bc2))
 
-ac_v = 5e+008
+ac_v = 0.5 #5e+008 #GeV
 
 bb_393_b2 = Bend(l=l_bc2, angle=phi_bc2, e1=0.000000000, e2=phi_bc2, tilt=1.570796330, id = 'bb_393_b2')
 bb_402_b2 = Bend(l=l_bc2, angle=-phi_bc2, e1=-phi_bc2, e2=0.000000000, tilt=1.570796330, id = 'bb_402_b2')
@@ -57,11 +57,14 @@ beam.alpha_x = 1.9630
 beam.alpha_y = 4.0972
 
 
-lat = MagneticLattice(bc2_l3, energy=2.4)
+lat = MagneticLattice(bc2_l3)
 
 tw0 = Twiss(beam)
 
-tws=twiss(lat, tw0, nPoints = 2000)
+tws=twiss(lat, tw0, nPoints = None)
+#lat.update_transfer_maps()
+#tws=twiss(lat, tw0, nPoints = None)
+#lat.update_transfer_maps()
 plot_opt_func(lat, tws, top_plot = ["E"])
 plt.show()
 

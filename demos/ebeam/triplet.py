@@ -2,7 +2,7 @@ __author__ = 'Sergey Tomin'
 
 from ocelot.cpbd.elements import *
 from ocelot.cpbd.optics import *
-from ocelot.cpbd.track import *
+from ocelot.cpbd.track import step
 from ocelot.gui.accelerator import *
 import matplotlib.pyplot as plt
 from copy import deepcopy

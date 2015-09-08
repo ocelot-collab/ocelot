@@ -67,10 +67,10 @@ def match(lat, constr, vars, tw, print_proc = 1, max_iter=1000):
         for i in range(len(vars)):
             if vars[i].__class__ == Quadrupole:
                 vars[i].k1 = x[i]
-                vars[i].transfer_map = create_transfer_map(vars[i], energy = tw.E)
+                vars[i].transfer_map = create_transfer_map(vars[i])
             if vars[i].__class__ in [RBend, SBend, Bend]:
                 vars[i].angle = x[i]
-                vars[i].transfer_map = create_transfer_map(vars[i], energy = tw.E)
+                vars[i].transfer_map = create_transfer_map(vars[i])
             if vars[i].__class__ == list:
                 if vars[i][0].__class__ == Twiss and  vars[i][1].__class__ == str:
                     k = vars[i][1]
@@ -79,7 +79,7 @@ def match(lat, constr, vars, tw, print_proc = 1, max_iter=1000):
         err = 0.0
         if "periodic" in constr.keys():
             if constr["periodic"] == True:
-                tw_loc = periodic_solution(tw_loc, lattice_transfer_map(lat).R)
+                tw_loc = periodic_solution(tw_loc, lattice_transfer_map(lat,tw.E))
                 if tw_loc == None:
                     return 1.0
         
@@ -204,8 +204,8 @@ def match(lat, constr, vars, tw, print_proc = 1, max_iter=1000):
 def match_tunes(lat, tw0, quads,  nu_x, nu_y, ncells= 1, print_proc = 0):
     print ("matching start .... ")
     end = Monitor(id = "end")
-    lat = MagneticLattice(lat.sequence + [end], energy = lat.energy)
-    tw0.E = lat.energy
+    lat = MagneticLattice(lat.sequence + [end])
+    #tw0.E = lat.energy
     tws=twiss(lat, tw0, nPoints=None)
 
     nu_x_old = tws[-1].mux/2/pi * ncells
@@ -220,7 +220,7 @@ def match_tunes(lat, tw0, quads,  nu_x, nu_y, ncells= 1, print_proc = 0):
     match(lat, constr, vars, tws[0], print_proc = print_proc)
     for i, q in enumerate(quads):
         print( q.id, ".k1: before: ",strengths1[i], "  after: ", q.k1)
-    lat = MagneticLattice(lat.sequence[:-1], energy = lat.energy)
+    lat = MagneticLattice(lat.sequence[:-1])
     tws=twiss(lat, tw0,nPoints=None)
     print ("nu_x: before: ", nu_x_old, "after: ", tws[-1].mux/2/pi * ncells )
     print ("nu_y: before: ", nu_y_old, "after: ", tws[-1].muy/2/pi * ncells )

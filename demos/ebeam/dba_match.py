@@ -42,7 +42,7 @@ beam.alpha_y = -0.98
 
 
 
-lat = MagneticLattice(dba, energy=3.0)
+lat = MagneticLattice(dba)
 tw0 = Twiss(beam)
 tws=twiss(lat, tw0, nPoints = 1000)
 

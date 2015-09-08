@@ -20,7 +20,7 @@ def rematch(beta_mean, l_fodo, qdh, lat, extra_fodo, beam, qf, qd):
     print('before rematching k=%f %f   beta=%f %f alpha=%f %f' % (qf.k1, qd.k1, tw0.beta_x, tw0.beta_y, tw0.alpha_x, tw0.alpha_y))
 
         
-    extra = MagneticLattice(extra_fodo, energy=lat.energy)
+    extra = MagneticLattice(extra_fodo)
     tws=twiss(extra, tw0)
     tw2 = tws[-1]
     
@@ -42,9 +42,12 @@ def rematch(beta_mean, l_fodo, qdh, lat, extra_fodo, beam, qf, qd):
     lat.update_transfer_maps()
     extra.update_transfer_maps()
     
-    m1 = lattice_transfer_map( extra )
-    m1.R = np.linalg.inv(m1.R)
-    
+    R1 = lattice_transfer_map( extra, beam.E)
+    #print "dsf = ", np.linalg.inv(m1.R(beam.E))
+    Rinv = np.linalg.inv(R1)
+    m1 = TransferMap()
+    m1.R = lambda energy: Rinv
+    #print "dsfasf", m1.R(0)
     tw0m = m1.map_x_twiss(tw2m)
     print('after rematching k=%f %f   beta=%f %f alpha=%f %f' % (qf.k1, qd.k1, tw0m.beta_x, tw0m.beta_y, tw0m.alpha_x, tw0m.alpha_y))
 
@@ -55,7 +58,7 @@ def rematch(beta_mean, l_fodo, qdh, lat, extra_fodo, beam, qf, qd):
 from sase3 import *
 
 #lat = MagneticLattice(sase3_segment(n=7), energy=17.5)
-lat = MagneticLattice(sase3_ss, energy=17.5)
+lat = MagneticLattice(sase3_ss)
 
 rematch(19.0, l_fodo, qdh, lat, extra_fodo, beam, qf, qd) # jeez...
 

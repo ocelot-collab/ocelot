@@ -145,7 +145,7 @@ def quantum_diffusion(energy, Kx, lperiod, L, quantum_diff = False):
 
 def track4rad(beam, lat, energy_loss = False, quantum_diff = False):
     energy = beam.E
-    Y0 = [beam.x,beam.xp, beam.y, beam.yp, 0, 0]
+    Y0 = [beam.x, beam.xp, beam.y, beam.yp, 0, 0]
     L = 0.
     U = []
     E = []
@@ -160,7 +160,7 @@ def track4rad(beam, lat, energy_loss = False, quantum_diff = False):
             U0 = 0.
         else:
             if len(non_u) != 0:
-                lat_el = MagneticLattice(non_u, energy = energy)
+                lat_el = MagneticLattice(non_u)
                 if lat_el.totalLen != 0:
                     navi = Navigator()
                     u = []

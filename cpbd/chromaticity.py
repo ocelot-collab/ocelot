@@ -150,10 +150,10 @@ def calculate_sex_strength(lattice, tws_0, ksi, ksi_comp, nsuperperiod):
     return sex_dict_stg
 
 
-def compensate_chromaticity(lattice, ksi_x_comp = 0, ksi_y_comp = 0,  nsuperperiod = 1):
-    tws = Twiss()
-    tws.E = lattice.energy
-    tws = twiss(lattice, tws)
+def compensate_chromaticity(lattice, energy=0., ksi_x_comp=0, ksi_y_comp=0,  nsuperperiod=1):
+    tws0 = Twiss()
+    tws0.E = energy
+    tws = twiss(lattice, tws0)
     tws_0 = tws[0]
     ksi_comp = (ksi_x_comp, ksi_y_comp)
     ksi = chromaticity(lattice, tws_0, nsuperperiod)

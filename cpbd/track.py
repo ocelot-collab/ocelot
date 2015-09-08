@@ -22,7 +22,7 @@ c0=299792458
 E_ele_eV=5.109986258350895e+05
 
 def aperture_limit(lat, xlim = 1, ylim = 1):
-    tws=twiss(lat, Twiss(),nPoints=1000)
+    tws=twiss(lat, Twiss(), nPoints=1000)
     bxmax = max(map(lambda tw: tw.beta_x, tws))
     bymax = max(map(lambda tw: tw.beta_y, tws))
     bx0 = tws[0].beta_x
@@ -220,7 +220,7 @@ def phase_space_transform(x,y, tws):
     return x,y
 
 
-def create_track_list(x_array, y_array, p_array):
+def create_track_list(x_array, y_array, p_array, energy=0.):
     """
     the function create list of Pxy
     """
@@ -228,7 +228,7 @@ def create_track_list(x_array, y_array, p_array):
     for p in p_array:
         for y in (y_array):
             for x in (x_array):
-                particle = Particle(x=x, y=y, p=p)
+                particle = Particle(x=x, y=y, p=p, E=energy)
                 pxy = Track_info(particle, x, y)
                 track_list.append(pxy)
 
@@ -256,10 +256,10 @@ def ellipse_track_list(beam, n_t_sigma = 3, num = 1000, type = "contour"):
     return track_list
 
 
-def tracking(lat, nturns, track_list, nsuperperiods, order = 1, save_track = True):
+def tracking(lat, nturns, track_list, nsuperperiods, order=1, save_track=True):
     xlim, ylim, px_lim, py_lim = aperture_limit(lat, xlim = 1, ylim = 1)
     navi = Navigator()
-    t_maps, delta_e = get_map(lat, lat.totalLen, navi, order = order)
+    t_maps = get_map(lat, lat.totalLen, navi, order=order)
     #print len(t_maps)
     #for t in t_maps:
     #    print t.R
@@ -287,7 +287,8 @@ def tracking(lat, nturns, track_list, nsuperperiods, order = 1, save_track = Tru
         for n in range(nsuperperiods):
             #turn(p_array)
             for tm in t_maps:
-                tm.apply(p_array, order = order)
+                #print "length ", tm.type, tm.R(6)
+                tm.apply(p_array, order=order)
 
             p_indx = p_array.rm_tails(xlim, ylim, px_lim, py_lim)
 
@@ -350,7 +351,7 @@ def tracking_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods
             elem.dy = errors[1][i]
             elem.dtilt = errors[2][i]
 
-    lat = MagneticLattice(lat_copy.sequence, energy = lat.energy)
+    lat = MagneticLattice(lat_copy.sequence)
     if rank == 0:
         # dividing data into chunks
         chunks_track_list = [[] for _ in range(size)]
@@ -368,13 +369,13 @@ def tracking_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods
         # but for nturns = 1000 program crashes with error in mpi_comm.gather()
         # the same situation if treads not so much - solution increase number of treads.
         print("nsuperperiods = ", nsuperperiods)
-        track_list = tracking(lat, nturns, track_list, nsuperperiods,order = order, save_track = save_track)
+        track_list = tracking(lat, nturns, track_list, nsuperperiods, order=order, save_track=save_track)
         return track_list
     start = time()
     track_list = mpi_comm.scatter(chunks_track_list, root=0)
     print(" scatter time = ", time() - start, " sec, rank = ", rank, "  len(pxy_list) = ", len(track_list) )
     start = time()
-    track_list = tracking(lat, nturns, track_list, nsuperperiods, save_track = save_track)
+    track_list = tracking(lat, nturns, track_list, nsuperperiods, order=order, save_trac =save_track)
     print( " scanning time = ", time() - start, " sec, rank = ", rank)
     start = time()
     out_track_list = mpi_comm.gather(track_list, root=0)
@@ -420,62 +421,18 @@ def da_mpi(lat, nturns, x_array, y_array, errors = None, nsuperperiods = 1):
         da = array(map(lambda track: track.turn, track_list))#.reshape((len(y_array), len(x_array)))
         nx = len(x_array)
         ny = len(y_array)
-        return da.reshape(ny,nx)
+        return da.reshape(ny, nx)
 
-"""
 def step(lat, particle_list, dz, navi, order=1):
     '''
     tracking for a fixed step dz
     '''
-    #print navi.z0 + dz , lat.totalLen
     if navi.z0 + dz > lat.totalLen:
         dz = lat.totalLen - navi.z0
 
-    t_maps, de = get_map(lat, dz, navi,order=order)
-    #print 'getting map, de=', de
-    if particle_list.__class__ == ParticleArray:
-        for tm in t_maps:
-            #print "tm :",  tm.length
-            tm.apply(particle_list, order=order)
-            particle_list.E += de
-            particle_list.de = de
-            #tm.apply(plist)
-    else:
-        for tm in t_maps:
-            tm.apply(particle_list, order=order)
-
-    return
-"""
-def step(lat, particle_list, dz, navi, order=1):
-    '''
-    tracking for a fixed step dz
-    '''
-    #print navi.z0 + dz , lat.totalLen
-    if navi.z0 + dz > lat.totalLen:
-        dz = lat.totalLen - navi.z0
-
-    t_maps, dE, phi, freq = get_map(lat, dz, navi,order=order)
-    #print 'getting map, de=', de
-    if particle_list.__class__ == ParticleArray:
-        #velocity bunching ##
-        for tm in t_maps:
-            gamma = (particle_list.E+0.5*dE)*1e9/ E_ele_eV
-            tm.R[4,5] = tm.R[4,5] - dz/gamma**2
-            tm.apply(particle_list, order=order)
-        # RF curvature
-        if abs(dE)>0:
-            E0 = particle_list.E
-            E1 = particle_list.E+dE
-            k = 2*pi*freq/c0
-            phi_rad = phi*pi/180
-            V = dE/cos(phi_rad)
-            particle_list.particles[5::6] = (particle_list.particles[5::6]*E0 + V*np.cos(particle_list.particles[4::6]*k+phi_rad)-dE)/E1
-            particle_list.E = particle_list.E+dE
-            particle_list.de = dE
-    else:
-        for tm in t_maps:
-            tm.apply(particle_list, order=order)
-
+    t_maps = get_map(lat, dz, navi, order=order)
+    for tm in t_maps:
+        tm.apply(particle_list, order=order)
     return
 
 

@@ -74,7 +74,7 @@ class Particle:
     particle
     to be used for tracking
     '''
-    def __init__(self, x=0.0, y=0.0, px=0.0, py=0.0, s=0.0, p=0.0,  tau=0.0):
+    def __init__(self, x=0.0, y=0.0, px=0.0, py=0.0, s=0.0, p=0.0,  tau=0.0, E=0.0):
         self.x = x
         self.y = y
         self.px = px       # horizontal (generalized) momentum
@@ -82,7 +82,7 @@ class Particle:
         self.p = p         # longitudinal momentum
         self.s = s
         self.tau = tau     # time-like coordinate wrt reference particle in the bunch (e.g phase)
-
+        self.E = E        # energy
 
 class Beam:
     def __init__(self,x=0,xp=0,y=0,yp=0):

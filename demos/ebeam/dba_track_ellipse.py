@@ -38,7 +38,7 @@ for xi, xpi in zip(x,xp):
 plot(x, xp)
 navi = Navigator()
 dz = 10.
-step(lat, plist, dz = dz, navi = navi)
+step(lat, plist, dz=dz, navi=navi)
 
 
 x2 = [f.x for f in plist] #map(lambda f: f.x, plist)

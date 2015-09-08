@@ -37,9 +37,7 @@ class Element:
         self.dx = 0.
         self.dy = 0.
         self.dtilt = 0.
-        
         self.params = {}
-        
     
     def __hash__(self):
         return hash( (self.id, self.type) )
@@ -260,7 +258,7 @@ class Undulator(Element):
     field_file_path - absolute path to magnetic field data;\n
     id - name of undulator. 
     """
-    def __init__(self, lperiod, nperiods, Kx, Ky = 0, field_file = None, id = None):
+    def __init__(self, lperiod, nperiods, Kx, Ky=0, field_file=None, id=None):
         Element.__init__(self, id)
         self.type = "undulator"
         self.lperiod = lperiod
@@ -268,6 +266,7 @@ class Undulator(Element):
         self.l = lperiod * nperiods
         self.Kx = Kx
         self.Ky = Ky
+        self.solver = "linear"  # can be "lin" is liear matrix,  "sym" - symplectic method and "rk" is Runge-Kutta
         self.phase = 0 # phase between Bx and By + pi/4 (spiral undulator)
         
         self.ax = -1              # width of undulator, when ax is negative undulator width is infinite
@@ -353,8 +352,8 @@ class Sequence:
         self.l = l
 
 class MagneticLattice:
-    def __init__(self, sequence, start=None, stop=None, energy = 0):
-        self.energy = energy
+    def __init__(self, sequence, start=None, stop=None):
+        #self.energy = energy
         self.sequence = list(flatten(sequence))
 
         try:
@@ -414,21 +413,21 @@ class MagneticLattice:
                     e_name = "b_" + str(i)
 
                 e1 = Edge(l=elem.l, angle=elem.angle, k1=elem.k1, edge=elem.e1, tilt=elem.tilt, dtilt=elem.dtilt,
-                          dx=elem.dx, dy=elem.dy, h_pole=elem.h_pole1, gap=elem.gap, fint=elem.fint1, pos=1, id = e_name + "_e1")
+                          dx=elem.dx, dy=elem.dy, h_pole=elem.h_pole1, gap=elem.gap, fint=elem.fint1, pos=1,
+                          id=e_name + "_e1")
 
                 self.sequence.insert(n, e1)
 
-                e2 = Edge(l=elem.l, angle=elem.angle, k1=elem.k1, edge=elem.e2, tilt = elem.tilt, dtilt = elem.dtilt,
-                          dx=elem.dx, dy=elem.dy, h_pole=elem.h_pole2, gap=elem.gap, fint=elem.fint2, pos=2, id=e_name + "_e2")
+                e2 = Edge(l=elem.l, angle=elem.angle, k1=elem.k1, edge=elem.e2, tilt=elem.tilt, dtilt=elem.dtilt,
+                          dx=elem.dx, dy=elem.dy, h_pole=elem.h_pole2, gap=elem.gap, fint=elem.fint2, pos=2,
+                          id=e_name + "_e2")
 
                 self.sequence.insert(n+2, e2)
                 n += 2
             n +=1
 
-
-
-    def update_transfer_maps(self, track_acceleration = False):
-
+    def update_transfer_maps(self):
+        #E = self.energy
         self.totalLen = 0
         for element in self.sequence:
             if element.type == "undulator":
@@ -437,10 +436,17 @@ class MagneticLattice:
                     if element.field_map.units =="mm":
                         element.l = element.l*0.001
             self.totalLen += element.l
+            """
             try:
-                element.transfer_map = create_transfer_map(element, energy = element.E, track_acceleration = track_acceleration)
+                element.transfer_map = create_transfer_map(element, energy=element.E, track_acceleration=track_acceleration)
             except:
-                element.transfer_map = create_transfer_map(element, energy = self.energy, track_acceleration = track_acceleration)
+                element.transfer_map = create_transfer_map(element, energy=self.energy, track_acceleration=track_acceleration)
+            """
+            #if element.type == "cavity":
+            #    E += element.delta_e
+            #print "init = ", E
+
+            element.transfer_map = create_transfer_map(element)
         return self
 
     def printElements(self):

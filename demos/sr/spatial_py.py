@@ -18,7 +18,7 @@ beam.Dx = 0.526
 
 und = Undulator (Kx = 0.43, nperiods = 500, lperiod=0.007, id = "und")
 
-lat = MagneticLattice((und), energy = beam.E)
+lat = MagneticLattice((und))
 
 screen = Screen()
 screen.z = 100.0

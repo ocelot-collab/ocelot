@@ -44,9 +44,9 @@ lat = MagneticLattice(ring)
 
 compensate_chromaticity(lat, ksi_x_comp = 0, ksi_y_comp = 0,  nsuperperiod = 8)
 
-nturns = 2048
-nx = 100
-ny = 100
+nturns = 1000
+nx = 80
+ny = 80
 
 x_array = linspace(-0.03, 0.03, nx)
 y_array = linspace(0.0001, 0.03, ny)

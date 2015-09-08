@@ -52,9 +52,15 @@ x_array = linspace(-0.03, 0.03, nx)
 y_array = linspace(0.0001, 0.03, ny)
 start = time()
 pxy_list = create_track_list(x_array, y_array, p_array=[0.])
-pxy_list = tracking_mpi( mpi_comm,lat, nturns, pxy_list,  nsuperperiods = 8, order = 3, save_track=False)
+pxy_list = tracking_mpi( mpi_comm,lat, nturns, pxy_list,  nsuperperiods = 8, order = 1, save_track=False)
 if rank == 0:
     print( time() - start)
     da = array(map(lambda pxy: pxy.turn, pxy_list))
-    from ocelot.gui.accelerator import *
-    show_da(da, x_array, y_array)
+    np.savetxt("da.txt", (da))
+    b = []
+    for x, y in zip(x_array, y_array):
+        a = [x, y]
+        b.append(array([x,y]))
+    np.savetxt("da_axis.txt", array(b))
+    #from ocelot.gui.accelerator import *
+    #show_da(da, x_array, y_array)

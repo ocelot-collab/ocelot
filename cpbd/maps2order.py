@@ -521,7 +521,7 @@ def verlet(vec_x, step, h, k1, k2, beta=1., g_inv=0.):
     vec_x[2] = y1
     return vec_x
 
-from time import time
+#from time import time
 def sym_map(z, X, h, k1, k2, energy=0.):
 
     if h != 0. or k1 != 0.:
@@ -553,10 +553,10 @@ def sym_map(z, X, h, k1, k2, energy=0.):
     ps =    X[5::6]
     vec = [x, px, y, py, sigma, ps]
     for i in linspace(0., z, num=(n-1)):
-        start = time()
+        #start = time()
         vec = verlet(vec, step, h, k1, k2, beta=beta, g_inv=g_inv)
-        if time() - start > 0.01:
-            print "exec = ", time() - start
+        #if time() - start > 0.01:
+        #    print "exec = ", time() - start
     X[0::6] = vec[0][:]
     X[1::6] = vec[1][:]
     X[2::6] = vec[2][:]

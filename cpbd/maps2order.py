@@ -503,16 +503,17 @@ def verlet(vec_x, step, h, k1, k2, beta=1., g_inv=0.):
     py =    vec_x[3]
     sigma = vec_x[4]
     ps =    vec_x[5]
-    px2 = px*px
-    py2 = py*py
-
-    x1 = (x + step*px*(1. - ps/beta))/(1. - step*h*px)
-    y1 = y + step*py*(1. + h*x1 - ps/beta)
-    vec_x[4] = sigma + step*(-h*x1/beta - (px2 + py2)/(2.*beta) - g_inv*g_inv/(beta*(1. + beta)))
+    #px2 = px*px
+    #py2 = py*py
+    px2_py2 = px*px + py*py
+    ps_beta = ps/beta
+    x1 = (x + step*px*(1. - ps_beta))/(1. - step*h*px)
+    y1 = y + step*py*(1. + h*x1 - ps_beta)
+    vec_x[4] = sigma + step*(-h*x1/beta - px2_py2/(2.*beta) - g_inv*g_inv/(beta*(1. + beta)))
 
     #vec0 = H23([x1, px, y1, py, sigma1, ps], h, k1, k2, beta, g_inv)
     # derivatives
-    px_d = -(h*h + k1)*x1 + h*ps/beta + (-h*(px2 + py2) - (2.*h*k1 + k2)*x1*x1 + (h*k1 + k2)*y1*y1)/2.
+    px_d = -(h*h + k1)*x1 + h*ps_beta + (-h*px2_py2 - (2.*h*k1 + k2)*x1*x1 + (h*k1 + k2)*y1*y1)/2.
 
     py_d = k1*y1 + (h*k1 + k2)*x1*y1
     vec_x[1] = px + step*px_d
@@ -521,10 +522,38 @@ def verlet(vec_x, step, h, k1, k2, beta=1., g_inv=0.):
     vec_x[2] = y1
     return vec_x
 
+def verlet1O(vec_x, step, h, k1, k2, beta=1., g_inv=0.):
+    """
+    q_{n+1} = q_{n} + h * dH(p_{n}, q_{n+1})/dp
+    p_{n+1} = p_{n} - h * dH(p_{n}, q_{n+1})/dq
+    """
+    x =     vec_x[0]
+    px =    vec_x[1]
+    y =     vec_x[2]
+    py =    vec_x[3]
+    sigma = vec_x[4]
+    ps =    vec_x[5]
+    #px2_py2 = px*px + py*py
+    ps_beta = ps/beta
+
+    x1 = x + step*px
+    y1 = y + step*py
+    vec_x[4] = sigma - step*h*x1/beta
+
+    # derivatives
+    #px_d = -(h*h + k1)*x1 + h*ps_beta + (-h*px2_py2 - (2.*h*k1 + k2)*x1*x1 + (h*k1 + k2)*y1*y1)/2.
+    #py_d = k1*y1 + (h*k1 + k2)*x1*y1
+
+    vec_x[1] = px - step*((h*h + k1)*x1 - h*ps_beta)
+    vec_x[3] = py + step*k1*y1
+    vec_x[0] = x1
+    vec_x[2] = y1
+    return vec_x
+
 #from time import time
 def sym_map(z, X, h, k1, k2, energy=0.):
 
-    if h != 0. or k1 != 0.:
+    if h != 0. or k1 != 0. or k2 != 0:
         step = 0.005
     else:
         step = z

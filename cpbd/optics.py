@@ -176,6 +176,7 @@ class TransferMap:
         return tws
 
     def mul_p_array(self, particles, energy=0., order=1):
+
         if self.order == 1 and order == 1:
             n = len(particles)
             #print self.R(energy)
@@ -185,6 +186,7 @@ class TransferMap:
             self.sym_map(particles, energy=energy)
 
         else:
+            #print " Brown "
             self.map(particles, energy=energy)
         return particles
 
@@ -764,6 +766,7 @@ def get_map(lattice, dz, navi, order=1):
     elem = lattice.sequence[i]
     L = navi.sum_lengths + elem.l
     rec_count = 0  # counter of recursion in R = lambda energy: dot(R1(energy), R2(energy))
+    print "get_map: order = ", order
     while z1 > L:
         dl = L - navi.z0
         if elem.transfer_map.order > 1 or order > 1:

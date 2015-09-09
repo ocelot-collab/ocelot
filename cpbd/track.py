@@ -259,8 +259,9 @@ def ellipse_track_list(beam, n_t_sigma = 3, num = 1000, type = "contour"):
 def tracking(lat, nturns, track_list, nsuperperiods, order=1, save_track=True):
     xlim, ylim, px_lim, py_lim = aperture_limit(lat, xlim = 1, ylim = 1)
     navi = Navigator()
+
     t_maps = get_map(lat, lat.totalLen, navi, order=order)
-    #print len(t_maps)
+
     #for t in t_maps:
     #    print t.R
     #print len(t_maps), len(lat.sequence)
@@ -287,7 +288,6 @@ def tracking(lat, nturns, track_list, nsuperperiods, order=1, save_track=True):
         for n in range(nsuperperiods):
             #turn(p_array)
             for tm in t_maps:
-                #print "length ", tm.type, tm.R(6)
                 tm.apply(p_array, order=order)
 
             p_indx = p_array.rm_tails(xlim, ylim, px_lim, py_lim)
@@ -352,6 +352,17 @@ def tracking_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods
             elem.dtilt = errors[2][i]
 
     lat = MagneticLattice(lat_copy.sequence)
+
+    if size == 1:
+        # it is made to prevent memory crash in mpi_comm.gather() for one-tread case and for case of big pxy_list
+        # (for instance, number of pxy in the list - nx*ny = 120*60 and nturns = 1000 (nturns means length of pxy class))
+        # for instance, for case nturns = 500 is all ok
+        # but for nturns = 1000 program crashes with error in mpi_comm.gather()
+        # the same situation if treads not so much - solution increase number of treads.
+        print("nsuperperiods = ", nsuperperiods, order)
+        track_list = tracking(lat, nturns, track_list, nsuperperiods, order=order, save_track=save_track)
+        return track_list
+
     if rank == 0:
         # dividing data into chunks
         chunks_track_list = [[] for _ in range(size)]
@@ -362,15 +373,6 @@ def tracking_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods
         track_list = None
         chunks_track_list = None
 
-    if size == 1:
-        # it is made to prevent memory crash in mpi_comm.gather() for one-tread case and for case of big pxy_list
-        # (for instance, number of pxy in the list - nx*ny = 120*60 and nturns = 1000 (nturns means length of pxy class))
-        # for instance, for case nturns = 500 is all ok
-        # but for nturns = 1000 program crashes with error in mpi_comm.gather()
-        # the same situation if treads not so much - solution increase number of treads.
-        print("nsuperperiods = ", nsuperperiods)
-        track_list = tracking(lat, nturns, track_list, nsuperperiods, order=order, save_track=save_track)
-        return track_list
     start = time()
     track_list = mpi_comm.scatter(chunks_track_list, root=0)
     print(" scatter time = ", time() - start, " sec, rank = ", rank, "  len(pxy_list) = ", len(track_list) )

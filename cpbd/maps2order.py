@@ -479,9 +479,13 @@ def H23(vec_x, h, k1, k2, beta=1., g_inv=0.):
     ps = vec_x[5]
     px2 = px*px
     py2 = py*py
-    x1 = px*(1. + h*x - ps/beta)
-    px1 = -(h*h + k1)*x + (h*ps)/beta + (-h*(px2 + py2) - (2.*h*k1 + k2)*x*x + (h*k1 + k2)*y*y)/2.
-    y1 = py*(1. + h*x - ps/beta)
+    x2 = x*x
+    y2 = y*y
+    ps_beta = ps/beta
+    k = 1. + h*x - ps_beta
+    x1 = px*k
+    px1 = -(h*h + k1)*x + h*ps_beta + (-h*(px2 + py2) - (2.*h*k1 + k2)*x2 + (h*k1 + k2)*y2)/2.
+    y1 = py*k
     py1 = k1*y + (h*k1 + k2)*x*y
     sigma1 = -(h*x)/beta - ((px2 + py2)/(2.*beta)) - g_inv*g_inv/(beta*(1. + beta))
     return [x1, px1, y1, py1, sigma1, 0.]
@@ -493,43 +497,40 @@ def verlet(vec_x, step, h, k1, k2, beta=1., g_inv=0.):
     p_{n+1} = p_{n} - h * dH(p_{n}, q_{n+1})/dq
     """
     #vec_x0 = copy(vec_x)
-    x =     vec_x[0::6]
-    px =    vec_x[1::6]
-    y =     vec_x[2::6]
-    py =    vec_x[3::6]
-    sigma = vec_x[4::6]
-    ps =    vec_x[5::6]
-    #print "1: verlet: ", x[:3], px[:3], y[:3], py[:3], sigma[:3], ps[:3]
+    x =     vec_x[0]
+    px =    vec_x[1]
+    y =     vec_x[2]
+    py =    vec_x[3]
+    sigma = vec_x[4]
+    ps =    vec_x[5]
+    px2 = px*px
+    py2 = py*py
+
     x1 = (x + step*px*(1. - ps/beta))/(1. - step*h*px)
     y1 = y + step*py*(1. + h*x1 - ps/beta)
-    sigma1 = sigma + step*(-(h*x1)/beta - ((px*px + py*py)/(2.*beta)) - g_inv*g_inv/(beta*(1. + beta)))
-    #print "verlet: ", [x1, px, y1, py, sigma1, ps]
-    vec0 = H23([x1, px, y1, py, sigma1, ps], h, k1, k2, beta, g_inv)
-    #print "verlet: ", vec0
-    px1 = px + step*vec0[1]
-    py1 = py + step*vec0[3]
-    ps1 = ps + step*vec0[5]
-    #print "verlet: params : h = ", h, k1, k2
-    #print "2: verlet: ", x1[:3], px1[:3], y1[:3], py1[:3], sigma1[:3], ps1[:3]
-    #w = zeros(len(vec_x))
-    vec_x[0::6] = x1[:]
-    vec_x[1::6] = px1[:]
-    vec_x[2::6] = y1[:]
-    vec_x[3::6] = py1[:]
-    vec_x[4::6] = sigma1[:]
-    vec_x[5::6] = ps1[:]
-    #vec_x[:] = w[:]
+    vec_x[4] = sigma + step*(-h*x1/beta - (px2 + py2)/(2.*beta) - g_inv*g_inv/(beta*(1. + beta)))
+
+    #vec0 = H23([x1, px, y1, py, sigma1, ps], h, k1, k2, beta, g_inv)
+    # derivatives
+    px_d = -(h*h + k1)*x1 + h*ps/beta + (-h*(px2 + py2) - (2.*h*k1 + k2)*x1*x1 + (h*k1 + k2)*y1*y1)/2.
+
+    py_d = k1*y1 + (h*k1 + k2)*x1*y1
+    vec_x[1] = px + step*px_d
+    vec_x[3] = py + step*py_d
+    vec_x[0] = x1
+    vec_x[2] = y1
     return vec_x
 
+from time import time
 def sym_map(z, X, h, k1, k2, energy=0.):
 
-    if h != 0 or k1 != 0:
+    if h != 0. or k1 != 0.:
         step = 0.005
     else:
         step = z
     if step > z:
         step = z
-    if step == 0:
+    if step == 0.:
         #print "step = 0", h, k1, k2, energy
         return X
     #print z, h, k1, k2
@@ -537,17 +538,30 @@ def sym_map(z, X, h, k1, k2, energy=0.):
     gamma = energy/m_e_GeV
     g_inv = 0.
     beta = 1.
-    if gamma !=0:
-        g_inv = 1/gamma
+    if gamma != 0.:
+        g_inv = 1./gamma
         beta = sqrt(1. - g_inv*g_inv)
     z_array = linspace(0., z, num=n)
     #print z_array
     step = z_array[1] - z_array[0]
     #print len(X)
+    x =     X[0::6]
+    px =    X[1::6]
+    y =     X[2::6]
+    py =    X[3::6]
+    sigma = X[4::6]
+    ps =    X[5::6]
+    vec = [x, px, y, py, sigma, ps]
     for i in linspace(0., z, num=(n-1)):
-
-        X = verlet(X, step, h, k1, k2, beta=beta, g_inv=g_inv)
-
+        start = time()
+        vec = verlet(vec, step, h, k1, k2, beta=beta, g_inv=g_inv)
+        if time() - start > 0.01:
+            print "exec = ", time() - start
+    X[0::6] = vec[0][:]
+    X[1::6] = vec[1][:]
+    X[2::6] = vec[2][:]
+    X[3::6] = vec[3][:]
+    X[4::6] = vec[4][:]
     return X
 
 

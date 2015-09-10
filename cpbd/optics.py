@@ -620,6 +620,7 @@ def create_transfer_map(element, order=1):
         transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
         transfer_map.T = transfer_map.T_z(element.l)
         transfer_map.map_z = lambda X, z, energy: t_apply(R_z(z, energy), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
+        transfer_map.sym_map_z = lambda X, z, energy: transfer_map.map_z(X, z, energy)
     else:
         print (element.type, " : unknown type of magnetic element. Cannot create transfer map ")
 
@@ -766,7 +767,7 @@ def get_map(lattice, dz, navi, order=1):
     elem = lattice.sequence[i]
     L = navi.sum_lengths + elem.l
     rec_count = 0  # counter of recursion in R = lambda energy: dot(R1(energy), R2(energy))
-    print "get_map: order = ", order
+    #print "get_map: order = ", order
     while z1 > L:
         dl = L - navi.z0
         if elem.transfer_map.order > 1 or order > 1:

@@ -553,7 +553,7 @@ def verlet1O(vec_x, step, h, k1, k2, beta=1., g_inv=0.):
 #from time import time
 def sym_map(z, X, h, k1, k2, energy=0.):
 
-    if h != 0. or k1 != 0. or k2 != 0:
+    if h != 0. or k1 != 0. or k2 != 0.:
         step = 0.005
     else:
         step = z
@@ -574,6 +574,24 @@ def sym_map(z, X, h, k1, k2, energy=0.):
     #print z_array
     step = z_array[1] - z_array[0]
     #print len(X)
+
+    #if k2 != 0:
+    #    #for i in linspace(0., z, num=(n-1)):
+    #    #    vec = verlet(vec, step, h, k1, k2, beta=beta, g_inv=g_inv)
+    #
+    #    ms = step*k2
+    #    z1 = step/2.
+    #    x = X[0::6] + X[1::6]*z1
+    #    y = X[2::6] + X[3::6]*z1
+    #
+    #    X[1::6] += -ms/2.*(x*x - y*y)
+    #    X[3::6] += x*y*ms
+    #
+    #    X[0::6] = x + X[1::6]*z1
+    #    X[2::6] = y + X[3::6]*z1
+    #
+    #
+    #else:
     x =     X[0::6]
     px =    X[1::6]
     y =     X[2::6]
@@ -582,10 +600,9 @@ def sym_map(z, X, h, k1, k2, energy=0.):
     ps =    X[5::6]
     vec = [x, px, y, py, sigma, ps]
     for i in linspace(0., z, num=(n-1)):
-        #start = time()
         vec = verlet(vec, step, h, k1, k2, beta=beta, g_inv=g_inv)
-        #if time() - start > 0.01:
-        #    print "exec = ", time() - start
+    #if time() - start > 0.01:
+    #    print "exec = ", time() - start
     X[0::6] = vec[0][:]
     X[1::6] = vec[1][:]
     X[2::6] = vec[2][:]

@@ -4,10 +4,12 @@ import numpy as np
 def translate(lines):
     lines2 = []
     for line in lines:
+
+        #print line
         line = line.replace('asin', "arcsin")
         line = line.replace('acos', "arccos")
         line = line.replace('phi0', "phi")
-        line = line.replace('deltae', "delta_e")
+        #line = line.replace('deltae', "deltae")
         line = line.replace('^', "**")
         line = line.replace('solenoid', "Solenoid")
         line = line.replace('drift', "Drift")
@@ -17,10 +19,10 @@ def translate(lines):
         line = line.replace('sbend', "Bend")
         line = line.replace('rbend', "RBend")
         line = line.replace('bend', "Bend")
-        line = line.replace('ecol', "UnknownElement")
+
         line = line.replace('title', "#title")
 
-        line = line.replace('octupole', "UnknownElement")
+        line = line.replace('octupole', "Octupole")
         line = line.replace('monitor', "Monitor")
         line = line.replace('matrix', "Matrix")
         line = line.replace('lcavity', "Cavity")
@@ -30,6 +32,7 @@ def translate(lines):
         line = line.replace('instrument', "UnknownElement")
         line = line.replace('rcollimator', "UnknownElement")
         line = line.replace('ecollimator', "UnknownElement")
+        line = line.replace('ecol', "UnknownElement")
         line = line.replace('vkicker', "UnknownElement")
         line = line.replace('hkicker', "UnknownElement")
         line = line.replace('kicker', "UnknownElement")
@@ -42,7 +45,8 @@ def translate(lines):
     return lines2
 
 
-def find_objects(line):
+def find_objects(line, info):
+    #info = {}
     if ":" in line and line[0] != "#":
         line_test = line.split("#")[0]
         line_test = line_test.split(":")[1]
@@ -58,11 +62,43 @@ def find_objects(line):
             return line
         name = temp[0].replace(' ', '')
         type = temp[1].replace(' ', '')
+        #print name, type
         params = words[1:]
-        if len(', '.join(params) )>0:
-            line = name + " = "+ type +"(" + ', '.join(params) + ", id = '" + name + "')"
+        if type == "lcavity":
+            for i, p in enumerate(params):
+                args = p.split("=")
+                args[0] = args[0].replace('deltae', "delta_e")
+                params[i] = "=".join(args)
+            #print params
+        params = ', '.join(params)
+        if not("at" in params):
+            info[name] = {"type": type, "params": params}
+
+            if not (type in ["drift", "sbend", "rbend", "bend",
+                             "matrix", "quadrupole", "marker",
+                             "hkicker", "vkicker", "monitor", "kicker",
+                             "sextupole", "lcavity", "ecollimator",
+                             "solenoid", 'octupole', "sequence"]):
+                type = info[type]["type"]
+
+        if len(params )>0:
+            line = name + " = "+ type +"(" + params + ", id = '" + name + "')"
         else:
-            line = name + " = "+ type +"(" + ', '.join(params) + "id = '" + name + "')"
+            line = name + " = "+ type +"(" + params + "id = '" + name + "')"
+        #print type
+        if type == "matrix":
+            #print line
+            line = line.replace('rm(1, 1)', "rm11")
+            line = line.replace('rm(1, 2)', "rm12")
+            line = line.replace('rm(1, 3)', "rm13")
+            line = line.replace('rm(2, 1)', "rm21")
+            line = line.replace('rm(2, 2)', "rm22")
+            line = line.replace('rm(3, 3)', "rm33")
+            line = line.replace('rm(3, 4)', "rm34")
+            line = line.replace('rm(4, 3)', "rm43")
+            line = line.replace('rm(4, 4)', "rm44")
+
+
     return line
 
 def find_subroutine(lines):
@@ -173,20 +209,25 @@ def xfel_line_transform(file):
         #print line
         line = line.replace(':=', '=')
         line = line.replace('!', '#')
+
         #line = line.replace('&', '\\')
         ind = line.find(":")
         if ind>0 and line[0] != "#":
-            part = line[:ind]
-            part = part.replace(" ", "")
+            parts = line.split(":")
+            #print parts
+            #type = parts[1].split(",")[0]
+            part = parts[0].replace(" ", "")
             name_budget.append(part)
-            #print part
+            #print part, type
             part = part.replace(".", "_")
             line = part+line[ind:]
         #print line
         names = np.array(name_budget)
         names = names[np.argsort(map(len, names))][::-1]
-        #print names
+        #if "i1.qih.20" in names:
+        #    print names
         for name in names:
+
             name_ = name.replace(".", "_")
             line = line.replace(name, name_)
             #ind = line.find(name)
@@ -226,35 +267,15 @@ def find_multiline(lines):
     return new_lines
 
 
-# def xfel_find_objects(lines):
-#     """
-#     searching mad's objects. if there ara name and ":" it is object
-#     """
-#     mad_objs = []
-#     for line in lines:
-#         if ":" in line and line[0] != "#":
-#             madObj = MadObj()
-#             i = line.find("#")
-#             line2 = line[:i]
-#             words = line2.split(",")
-#             temp = words[0].split(":")
-#             name = temp[0].replace(' ', '')
-#             type = temp[1].replace(' ', '')
-#             madObj.type = type
-#             madObj.name = name
-#             madObj.params = words[1:]
-#             mad_objs.append(madObj)
-#     return mad_objs
-
-
 def lattice_str_from_mad8(name_file):
-    f = open(name_file,"r")
+    f = open(name_file, "r")
     lines = xfel_line_transform(f)
     new_lines = find_multiline(lines)
     lines = []
+    info = {}
     for line in new_lines:
         #print line
-        line = find_objects(line)
+        line = find_objects(line, info)
         #print line
         lines.append(line)
     lines = find_functions(lines)

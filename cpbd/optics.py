@@ -130,11 +130,13 @@ class TransferMap:
             pass
 
     def map_x_twiss(self, tws0):
-        E = tws0.E + self.delta_e
+        E = tws0.E
         M = self.R(E)
         if self.delta_e != 0:
-            Ei = E - self.delta_e
-            Ef = E
+            #M = self.R(E + )
+            Ei = tws0.E
+            Ef = tws0.E + self.delta_e #* cos(self.phi)
+            #print "Ei = ", Ei, "Ef = ", Ef
             k = sqrt(Ef/Ei)
             M[0, 0] = M[0, 0]*k
             M[0, 1] = M[0, 1]*k
@@ -144,6 +146,7 @@ class TransferMap:
             M[2, 3] = M[2, 3]*k
             M[3, 2] = M[3, 2]*k
             M[3, 3] = M[3, 3]*k
+            E = Ef
         m = tws0
         tws = Twiss(tws0)
         tws.E = E
@@ -281,7 +284,7 @@ def create_transfer_map(element, order=1):
         transfer_map.hx = element.angle/element.l
     #def R_z(z, energy):
     #    return uni_matrix(z, element.k1, hx = transfer_map.hx, sum_tilts=0, energy=energy)
-    R_z = lambda z, energy: uni_matrix(z, element.k1, hx = transfer_map.hx, sum_tilts=0, energy=energy)
+    R_z = lambda z, energy: uni_matrix(z, element.k1, hx = transfer_map.hx, sum_tilts=transfer_map.tilt, energy=energy)
     #def b_z(z, energy):
     #    return dot((eye(6) - R_z(z, energy)), array([element.dx, 0., element.dy, 0., 0., 0.]))
     b_z = lambda z, energy: dot((eye(6) - R_z(z, energy)), array([element.dx, 0., element.dy, 0., 0., 0.]))
@@ -486,7 +489,7 @@ def create_transfer_map(element, order=1):
 
     elif element.type == "cavity":
                 
-        def cavity_R_z(z, de, f, E):
+        def cavity_R_z(z, de, f, E, phi=0.):
             """
             :param z: length
             :param de: delta E
@@ -499,16 +502,17 @@ def create_transfer_map(element, order=1):
             phi = 0.
             
             #Ep = de * cos(phi) / (z * 0.000511) # energy derivative
-            de = de
+            de = de*cos(phi)
             Ep = de / (z) # energy derivative
             #Ep = de  # energy derivative
             #Ef = E + de
             #Ei = E
-            Ei = E - de
-            Ef = E 
+            Ei = E
+            Ef = E + de
             
             #print Ei,Ef,Ep, z, de
-            
+            if Ei == 0:
+                print("Warning! Initial energy is zero and cavity.delta_e != 0! Change Ei or cavity.delta_e must be 0" )
             alpha = sqrt(eta / 8.) / cos(phi) * log(Ef/Ei)
             
             #print 'cavity map Ei=',E, 'Ef=', Ef, 'alpha=', alpha
@@ -517,14 +521,16 @@ def create_transfer_map(element, order=1):
             r12 = sqrt(8./eta) * Ei / Ep * cos(phi) * sin(alpha)
             r21 = -Ep/Ei * (cos(phi)/ sqrt(2.*eta) + sqrt(eta/8.) / cos(phi) ) * sin(alpha)
             r22 = Ei/Ef * ( cos(alpha) + sqrt(2./eta) * cos(phi) * sin(alpha) )
-            
+            #print -Ep/Ei
             # for twiss parameters go to function -> map_x_twiss()
             #if not track_acceleration:
             #    r11 = r11*sqrt(Ef/Ei)
             #    r12 = r12*sqrt(Ef/Ei)
             #    r21 = r21*sqrt(Ef/Ei)
             #    r22 = r22*sqrt(Ef/Ei)
-
+            #print z, "Ei = ", Ei, "Ef = ", Ef, "de = ", de, "l = ", z
+            #if z == 0.346:
+            #    print r11, r12,r21 ,r22, "Ei = ", Ei, "Ef = ", Ef, "de = ", de, "l = ", z
             r56 = 0.
             if gamma != 0:
                 r56 = z/(gamma*gamma)
@@ -546,13 +552,14 @@ def create_transfer_map(element, order=1):
                 phi_rad = phi*np.pi/180.
                 v = delta_e/cos(phi_rad)
                 X[5::6] = (X[5::6]*E + v*np.cos(X[4::6]*k + phi_rad) - delta_e)/(E + delta_e)
-
+        transfer_map.phi = element.phi
         transfer_map.order = 2
-        if element.v < 1.e-10 and element.delta_e < 1.e-10:
+        #if element.v < 1.e-10 and element.delta_e < 1.e-10:
+        if element.delta_e == 0.:
             #transfer_map.order = 1
             R_z = lambda z, energy: uni_matrix(z, 0., hx=0., sum_tilts=element.dtilt + element.tilt, energy=energy)
         else:
-            R_z = lambda z, energy: cavity_R_z(z, de=element.delta_e*z/element.l, f=element.f, E=energy)
+            R_z = lambda z, energy: cavity_R_z(z, de=element.delta_e*z/element.l, f=element.f, E=energy, phi=element.phi)
         #def R_z(z, energy):
         #    if energy == 0 or (element.v < 1.e-10 and element.delta_e < 1.e-10 ):
         #        r_z = uni_matrix(z, 0., hx=0., sum_tilts=element.dtilt + element.tilt, energy=energy)
@@ -562,7 +569,7 @@ def create_transfer_map(element, order=1):
         #    return r_z
 
         transfer_map.delta_e_z = lambda z: element.delta_e * z / element.l
-        transfer_map.delta_e = element.delta_e
+        transfer_map.delta_e = transfer_map.delta_e_z(element.l)
 
         #transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
         #transfer_map.T = transfer_map.T_z(element.l)

@@ -254,7 +254,10 @@ def elem_cord(lat):
     if len(quad) != 1:
         quad[:,1] = quad[:,1]/max(quad[:,1])
     if len(bend) != 1:
-        bend[:,1] = bend[:,1]/max(bend[:,1])
+        if max(bend[:,1]) == 0:
+            bend[:,1] = 0
+        else:
+            bend[:,1] = bend[:,1]/max(bend[:,1])
     if len(sext) != 1 and max(sext[:,1] != 0):
         sext[:,1] = sext[:,1]/max(np.abs(sext[:,1]))
     if len(corr) != 1 and max(corr[:,1] != 0):
@@ -324,8 +327,10 @@ def plot_disp(ax,tws, top_plot, font_size):
     if d_F == 0:
         d_Dx = 1
         ax.set_ylim(( min(Fmin)-d_Dx*0.1, max(Fmax)+d_Dx*0.1))
-
-    top_ylabel = r"$"+"/".join(top_plot) +"$"+ ", m"
+    if top_plot[0] == "E":
+        top_ylabel = r"$"+"/".join(top_plot) +"$"+ ", GeV"
+    else:
+        top_ylabel = r"$"+"/".join(top_plot) +"$"+ ", m"
 
     yticks = ax.get_yticks()
     yticks = yticks[2::2]
@@ -358,14 +363,14 @@ def plot_xy(ax, S, X, Y, font_size):
     leg.get_frame().set_alpha(0.5)
 
 
-def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, name = None):
+def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, fig_name = None):
 
     font_size = 16
-    if name == None:
+    if fig_name == None:
         fig = plt.figure()
     else:
-        fig = plt.figure(name)
-        
+        fig = plt.figure(fig_name)
+
     plt.rc('axes', grid=True)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
     left, width = 0.1, 0.85

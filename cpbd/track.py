@@ -289,7 +289,10 @@ def tracking(lat, nturns, track_list, nsuperperiods, order=1, save_track=True):
             #turn(p_array)
             for tm in t_maps:
                 tm.apply(p_array, order=order)
-
+                # for test
+                #p_array.E += tm.delta_e
+                #tm.sym_map(p_array.particles, energy=p_array.E)
+                #p_array.s += tm.length
             p_indx = p_array.rm_tails(xlim, ylim, px_lim, py_lim)
 
             track_list = delete(track_list, p_indx)
@@ -437,8 +440,26 @@ def step(lat, particle_list, dz, navi, order=1):
         tm.apply(particle_list, order=order)
     return
 
-
-
+def merge_drifts(lat):
+    print "before merging: len(sequence) = ", len(lat.sequence)
+    L = 0.
+    seq = []
+    new_elem = None
+    for elem in lat.sequence:
+        #next_elem = lat.sequence[i+1]
+        if elem.type == "drift":
+            L += elem.l
+            new_elem = Drift(l=L, id=elem.id)
+        else:
+            if new_elem != None:
+                seq.append(new_elem)
+                L = 0.
+                new_elem = None
+            seq.append(elem)
+    if new_elem != None:
+        seq.append(new_elem)
+    print "after merging: len(sequence) = ", len(seq)
+    return MagneticLattice(sequence=seq)
 
 
 """

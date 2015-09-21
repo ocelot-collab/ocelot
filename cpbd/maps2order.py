@@ -503,19 +503,14 @@ def verlet(vec_x, step, h, k1, k2, beta=1., g_inv=0.):
     py =    vec_x[3]
     sigma = vec_x[4]
     ps =    vec_x[5]
-    #px2 = px*px
-    #py2 = py*py
+
     px2_py2 = px*px + py*py
     ps_beta = ps/beta
     x1 = (x + step*px*(1. - ps_beta))/(1. - step*h*px)
     y1 = y + step*py*(1. + h*x1 - ps_beta)
     vec_x[4] = sigma + step*(-h*x1/beta - px2_py2/(2.*beta) - g_inv*g_inv/(beta*(1. + beta)))
-
-    #vec0 = H23([x1, px, y1, py, sigma1, ps], h, k1, k2, beta, g_inv)
-    # derivatives
-    px_d = -(h*h + k1)*x1 + h*ps_beta + (-h*px2_py2 - (2.*h*k1 + k2)*x1*x1 + (h*k1 + k2)*y1*y1)/2.
-
-    py_d = k1*y1 + (h*k1 + k2)*x1*y1
+    px_d = -(h*h + k1 + (h*k1 + k2/2.)*x1)*x1 + h*ps_beta + (-h*px2_py2 + (h*k1 + k2)*y1*y1)/2.
+    py_d = (k1 + (h*k1 + k2)*x1)*y1
     vec_x[1] = px + step*px_d
     vec_x[3] = py + step*py_d
     vec_x[0] = x1
@@ -560,9 +555,7 @@ def sym_map(z, X, h, k1, k2, energy=0.):
     if step > z:
         step = z
     if step == 0.:
-        #print "step = 0", h, k1, k2, energy
         return X
-    #print z, h, k1, k2
     n = int(z/step) + 1
     gamma = energy/m_e_GeV
     g_inv = 0.
@@ -571,43 +564,36 @@ def sym_map(z, X, h, k1, k2, energy=0.):
         g_inv = 1./gamma
         beta = sqrt(1. - g_inv*g_inv)
     z_array = linspace(0., z, num=n)
-    #print z_array
     step = z_array[1] - z_array[0]
-    #print len(X)
 
-    #if k2 != 0:
-    #    #for i in linspace(0., z, num=(n-1)):
-    #    #    vec = verlet(vec, step, h, k1, k2, beta=beta, g_inv=g_inv)
-    #
-    #    ms = step*k2
-    #    z1 = step/2.
-    #    x = X[0::6] + X[1::6]*z1
-    #    y = X[2::6] + X[3::6]*z1
-    #
-    #    X[1::6] += -ms/2.*(x*x - y*y)
-    #    X[3::6] += x*y*ms
-    #
-    #    X[0::6] = x + X[1::6]*z1
-    #    X[2::6] = y + X[3::6]*z1
-    #
-    #
-    #else:
     x =     X[0::6]
     px =    X[1::6]
     y =     X[2::6]
     py =    X[3::6]
     sigma = X[4::6]
     ps =    X[5::6]
-    vec = [x, px, y, py, sigma, ps]
-    for i in linspace(0., z, num=(n-1)):
-        vec = verlet(vec, step, h, k1, k2, beta=beta, g_inv=g_inv)
-    #if time() - start > 0.01:
-    #    print "exec = ", time() - start
-    X[0::6] = vec[0][:]
-    X[1::6] = vec[1][:]
-    X[2::6] = vec[2][:]
-    X[3::6] = vec[3][:]
-    X[4::6] = vec[4][:]
+
+    ps_beta = ps/beta
+    #vec = [x, px, y, py, sigma, ps]
+    c1 = h*h + k1
+    c2 = h*k1 + k2/2.
+    c3 = h*k1 + k2
+    c4 = g_inv*g_inv/(beta*(1. + beta))
+    for z in xrange(len(z_array) - 1):
+        #vec = verlet(vec, step, h, k1, k2, beta=beta, g_inv=g_inv)
+        px2_py2 = px*px + py*py
+        x = (x + step*px*(1. - ps_beta))/(1. - step*h*px)
+        y = y + step*py*(1. + h*x - ps_beta)
+        sigma = sigma + step*(-h*x/beta - px2_py2/(2.*beta) - c4)
+
+        px = px + step*(h*ps_beta + (-h*px2_py2 + c3*y*y)/2. - (c1 + c2*x)*x)
+        py = py + step*(k1 + c3*x)*y
+
+    X[0::6] = x[:] #vec[0][:]
+    X[1::6] = px[:] #vec[1][:]
+    X[2::6] = y[:] #vec[2][:]
+    X[3::6] = py[:] #vec[3][:]
+    X[4::6] = sigma[:] #vec[4][:]
     return X
 
 

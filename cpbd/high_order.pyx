@@ -1,5 +1,7 @@
 __author__ = 'Sergey Tomin'
+#from __future__ import division
 import numpy as np
+#cimport numpy as np
 from ocelot.common.globals import *
 def sym_map(z, X, h, k1, k2, energy=0.):
 
@@ -52,6 +54,7 @@ def sym_map(z, X, h, k1, k2, energy=0.):
     return X
 
 def cython_test(X, step, h,k1, N, cc, ps_beta, beta):
+
     x =     X[0]
     px =    X[1]
     y =     X[2]

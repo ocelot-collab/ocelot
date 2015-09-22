@@ -545,6 +545,11 @@ def verlet1O(vec_x, step, h, k1, k2, beta=1., g_inv=0.):
     vec_x[2] = y1
     return vec_x
 
+#import
+import pyximport; pyximport.install()
+import high_order
+
+
 #from time import time
 def sym_map(z, X, h, k1, k2, energy=0.):
 
@@ -579,15 +584,17 @@ def sym_map(z, X, h, k1, k2, energy=0.):
     c2 = h*k1 + k2/2.
     c3 = h*k1 + k2
     c4 = g_inv*g_inv/(beta*(1. + beta))
-    for z in xrange(len(z_array) - 1):
-        #vec = verlet(vec, step, h, k1, k2, beta=beta, g_inv=g_inv)
-        px2_py2 = px*px + py*py
-        x = (x + step*px*(1. - ps_beta))/(1. - step*h*px)
-        y = y + step*py*(1. + h*x - ps_beta)
-        sigma = sigma + step*(-h*x/beta - px2_py2/(2.*beta) - c4)
-
-        px = px + step*(h*ps_beta + (-h*px2_py2 + c3*y*y)/2. - (c1 + c2*x)*x)
-        py = py + step*(k1 + c3*x)*y
+    Y = high_order.cython_test([x, px, y, py, sigma, ps], step, h,k1, len(z_array) , (c1,c2,c3,c4), ps_beta, beta)
+    x, px, y, py, sigma, ps = Y
+    #for z in xrange(len(z_array) - 1):
+    #    #vec = verlet(vec, step, h, k1, k2, beta=beta, g_inv=g_inv)
+    #    px2_py2 = px*px + py*py
+    #    x = (x + step*px*(1. - ps_beta))/(1. - step*h*px)
+    #    y = y + step*py*(1. + h*x - ps_beta)
+    #    sigma = sigma + step*(-h*x/beta - px2_py2/(2.*beta) - c4)
+    #
+    #    px = px + step*(h*ps_beta + (-h*px2_py2 + c3*y*y)/2. - (c1 + c2*x)*x)
+    #    py = py + step*(k1 + c3*x)*y
 
     X[0::6] = x[:] #vec[0][:]
     X[1::6] = px[:] #vec[1][:]

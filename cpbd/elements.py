@@ -129,7 +129,7 @@ class Drift(Element):
 
 class Bend(Element):
     def __init__(self, l, angle=0., k1 = 0., k2 = 0., tilt=0.0, e1 = 0., e2 = 0.,
-                 gap = 0, h_pole1 = 0., h_pole2 = 0., fint = 0., id = None):
+                 gap = 0, h_pole1 = 0., h_pole2 = 0., fint = 0., fintx=0., id = None):
         Element.__init__(self, id)
         self.type = "bend"
         self.l = l
@@ -143,6 +143,8 @@ class Bend(Element):
         self.h_pole2 = h_pole2
         self.fint1 = fint
         self.fint2 = fint
+        if fintx>0:
+            self.fint2 = fintx
         self.tilt = tilt
 
 class Edge(Bend):
@@ -183,7 +185,7 @@ class SBend(Bend):
     k - quadrupole strength in [1/m^2].
     """
     def __init__(self, l=0, angle=0.0,k1 = 0.0, k2 = 0., e1 = 0.0, e2 = 0.0, tilt=0.0,
-                 gap = 0, h_pole1 = 0., h_pole2 = 0., fint = 0., id = None):
+                 gap = 0, h_pole1 = 0., h_pole2 = 0., fint = 0., fintx=0., id = None):
         Bend.__init__(self, l, angle=angle, k1=k1, k2=k2, e1=e1, e2=e2,
                       gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, id=id)
         self.type = "sbend"
@@ -197,6 +199,8 @@ class SBend(Bend):
         self.h_pole2 = h_pole2
         self.fint1 = fint
         self.fint2 = fint
+        if fintx>0:
+            self.fint2 = fintx
         # for future
 
         #self.e1 = 0     # The rotation angle for the entrance pole face (default: 0 rad).
@@ -210,7 +214,7 @@ class RBend(Bend):
     k - quadrupole strength in [1/m^2].
     """
     def __init__(self, l=0, angle=0,tilt=0, k1 = 0, k2 = 0.,  e1 = None, e2 = None,
-                 gap=0, h_pole1=0., h_pole2=0., fint=0., id=None):
+                 gap=0, h_pole1=0., h_pole2=0., fint=0., fintx=0., id=None):
         if e1 == None:
             e1 = angle/2.
         else:
@@ -220,7 +224,7 @@ class RBend(Bend):
         else:
             e1 += angle/2.
         Bend.__init__(self, l, angle=angle, e1=e1, e2=e2, k1=k1, k2=k2,
-                      gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, id=id)
+                      gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, fintx=fintx, id=id)
         self.type = "rbend"
         self.l = l
         self.angle = angle
@@ -232,6 +236,8 @@ class RBend(Bend):
         self.h_pole2 = h_pole2
         self.fint1 = fint
         self.fint2 = fint
+        if fintx > 0:
+            self.fint2 = fintx
 
 class Hcor(RBend):
     def __init__(self,l = 0, angle = 0, id = None):

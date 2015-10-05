@@ -1,5 +1,5 @@
 '''
-tuning using 4 corrector direct sase optimization
+main tuning script
 '''
 import ocelot.utils.mint.mint as mint
 import ocelot.utils.mint.swig.dcs as dcs

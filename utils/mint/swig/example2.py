@@ -34,8 +34,8 @@ for blm_name in blm_names:
 
 gmd_channel = 'TTF2.DAQ/PHFLUX/OUT33/VAL'
 mag_channel = 'TTF2.MAGNETS/STEERER/H3UND1/PS.RBV'
-blm_channel = 'TTF2.DIAG/BLM/1R.UND1/CH00.TD'
-
+#blm_channel = 'TTF2.DIAG/BLM/1R.UND1/CH00.TD'
+blm_channel = 'FLASH.DIAG/BLM/3.2FL2SASE3/SIGNAL.TD'
 h = np.array(dcs.get_device_td(blm_channel))
 print 'sum:', np.sum(h)
 #plt.plot(h)
@@ -44,15 +44,38 @@ print 'sum:', np.sum(h)
 val = dcs.get_device_val(gmd_channel)
 print 'gmd:', val
 
+
+gmd_bpm_x_channel = 'TTF2.FEL/GMDPOSMON/TUNNEL/IX.POS'
+gmd_bpm_y_channel = 'TTF2.FEL/GMDPOSMON/TUNNEL/IY.POS'
+
+val = dcs.get_device_val(gmd_bpm_x_channel)
+print 'gmd tunnel bpm x:', val
+val = dcs.get_device_val(gmd_bpm_y_channel)
+print 'gmd tunnel bpm y:', val
+
+
+gmd_bpm_x_channel = 'TTF2.FEL/GMDPOSMON/BDA/IX.POS'
+gmd_bpm_y_channel = 'TTF2.FEL/GMDPOSMON/BDA/IY.POS'
+
+val = dcs.get_device_val(gmd_bpm_x_channel)
+print 'gmd bda bpm x:', val
+val = dcs.get_device_val(gmd_bpm_y_channel)
+print 'gmd bda bpm y:', val
+
 val = dcs.get_device_val(mag_channel)
 print 'steerer:', val
 
-
-rf_channel = 'FLASH.RF/LLRF.DAQ/VS.ACC67/AMPL.TD'
-val = dcs.get_device_val(rf_channel)
-print 'rf:', val
-h = np.array(dcs.get_device_td(rf_channel))
-print np.max( np.abs(h) ), len(h)
-
+# probably incorrect
+h = np.array(dcs.get_device_td('TTF2.FEL/BKR.FLASH.STATE/BKR.FLASH.STATE/ENERGY.CLIP.SPECT'))
+print 'sum:', np.sum(h)
 plt.plot(h)
+
+spec = np.array(dcs.get_device_td('TTF2.EXP/PBD.PHOTONWL.ML/WAVE_LENGTH/VAL.TD'))
+plt.figure()
+plt.plot(spec)
+
+mcp = np.array(dcs.get_device_td('FLASH.DIAG/MCP.ADC/FL2MCP/MCP1.TD'))
+plt.figure()
+plt.plot(mcp)
+
 plt.show()

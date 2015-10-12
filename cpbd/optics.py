@@ -171,7 +171,7 @@ class TransferMap:
         if d_mux < 0:
             d_mux += pi
         tws.mux = m.mux + d_mux
-
+        #print M[2, 3]/M[2, 2]*m.beta_y - M[2, 3]*m.alpha_y, arctan(M[2, 3]/(M[2, 2]*m.beta_y - M[2, 3]*m.alpha_y))
         d_muy = arctan(M[2, 3]/(M[2, 2]*m.beta_y - M[2, 3]*m.alpha_y))
         if d_muy < 0:
             d_muy += pi
@@ -327,21 +327,22 @@ def create_transfer_map(element, order=1):
 
     elif element.type == "sextupole":
 
-        #def map4sextupole(u, z, ms, energy):
-        #
-        #    z1 = z/2.
-        #    x = u[0::6] + u[1::6]*z1 - transfer_map.dx
-        #    y = u[2::6] + u[3::6]*z1 - transfer_map.dy
-        #
-        #    u[1::6] += -ms/2.*(x*x - y*y)
-        #    u[3::6] += x*y*ms
-        #
-        #    u[0::6] = x + u[1::6]*z1 + transfer_map.dx
-        #    u[2::6] = y + u[3::6]*z1 + transfer_map.dy
-        #
-        #    return u
+        def map4sextupole(u, z, ms, energy):
+
+            z1 = z/2.
+            x = u[0::6] + u[1::6]*z1 - transfer_map.dx
+            y = u[2::6] + u[3::6]*z1 - transfer_map.dy
+
+            u[1::6] += -ms/2.*(x*x - y*y)
+            u[3::6] += x*y*ms
+
+            u[0::6] = x + u[1::6]*z1 + transfer_map.dx
+            u[2::6] = y + u[3::6]*z1 + transfer_map.dy
+
+            return u
 
         R_z = lambda z, energy: uni_matrix(z, 0., hx=0., energy=energy)
+        transfer_map.sym_map_z = lambda X, z, energy: map4sextupole(X, z, element.k2*element.l, energy)
         if element.l == 0:
 
             transfer_map.ms = element.ms
@@ -350,7 +351,8 @@ def create_transfer_map(element, order=1):
             transfer_map.T[1, 2, 2] = element.ms/2.
             transfer_map.T[3, 0, 2] = element.ms
             transfer_map.T_z = lambda z: transfer_map.T
-            transfer_map.sym_map_z = lambda X, z, energy: t_apply(R_z(z, energy), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
+            transfer_map.sym_map_z = lambda X, z, energy: map4sextupole(X, z, element.ms, energy)
+            #transfer_map.sym_map_z = lambda X, z, energy: t_apply(R_z(z, energy), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
 
         transfer_map.map_z = lambda X, z, energy: t_apply(R_z(z, energy), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
         transfer_map.order = 2

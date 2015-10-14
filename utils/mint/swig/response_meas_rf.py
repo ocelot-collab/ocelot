@@ -20,7 +20,7 @@ class ResponseFunction:
       pass
 
 
-def measure_response(rf_params, init_v = None, step = 10.0, n_steps = 3, delay=0.1):
+def measure_response(rf_params, init_v = None, step = 10.0, n_steps = 3, delay=0.5):
    '''
    response of sase, orbit, spectrum vs. rf knobs, 
    '''
@@ -112,6 +112,23 @@ def measure_response(rf_params, init_v = None, step = 10.0, n_steps = 3, delay=0
 
       cur_step = step
 
+      '''
+      v1, phi1, v39, phi39=find_parameters_RF1(c0,-692.8,c2,c3)
+      dcs.set_device_val(rf_ch_amp_1, v1)
+      dcs.set_device_val(rf_ch_ph_1, phi1)
+      dcs.set_device_val(rf_ch_amp_39, v39)
+      dcs.set_device_val(rf_ch_ph_39, phi39)
+
+      return None
+      '''
+
+      '''
+      v2, phi2 = find_parameters_RF2(c4,-1588.0)
+      dcs.set_device_val(rf_ch_amp_2, v2)
+      dcs.set_device_val(rf_ch_ph_2, phi2)
+      return None
+      '''
+
       for i in range(n_steps*4):
 
          if i == n_steps:
@@ -130,14 +147,14 @@ def measure_response(rf_params, init_v = None, step = 10.0, n_steps = 3, delay=0
          v2, phi2 = find_parameters_RF2(c4,c5)
 
          if s in ['c0','c1','c2','c3']:
-            #dcs.set_device_val(rf_ch_amp_1, v1)
-            #dcs.set_device_val(rf_ch_ph_1, phi1)
-            #dcs.set_device_val(rf_ch_amp_39, v39)
-            #dcs.set_device_val(rf_ch_ph_39, phi39)
+            dcs.set_device_val(rf_ch_amp_1, v1)
+            dcs.set_device_val(rf_ch_ph_1, phi1)
+            dcs.set_device_val(rf_ch_amp_39, v39)
+            dcs.set_device_val(rf_ch_ph_39, phi39)
             print 'BC1'
          else:
-            #dcs.set_device_val(rf_ch_amp_2, v2)
-            #dcs.set_device_val(rf_ch_ph_2, phi2)
+            dcs.set_device_val(rf_ch_amp_2, v2)
+            dcs.set_device_val(rf_ch_ph_2, phi2)
             print 'BC2'
 
          print 'knobs:', c0,c1,c2,c3, c4, c5
@@ -158,9 +175,10 @@ def measure_response(rf_params, init_v = None, step = 10.0, n_steps = 3, delay=0
    return resp_funcs 
    
 
-resp_funcs = measure_response(['c1'], init_v=None, step = 10.0, n_steps = 10)
-
-
+resp_funcs = measure_response(['c1'], init_v=None, step = 0.05, n_steps = 30)
+resp_funcs = measure_response(['c2'], init_v=None, step = 55.0, n_steps = 50)
+resp_funcs = measure_response(['c3'], init_v=None, step = 15000.0, n_steps = 30)
+#resp_funcs = measure_response(['c5'], init_v=None, step = 3.0, n_steps = 30)
 
 print 'response fucntions'
 
@@ -172,10 +190,10 @@ except:
 dump(resp_funcs, open(f_name,'w'))
 
 for rf in resp_funcs:
-   plt.figure()
-   print [s[0] for s in rf.bpm_vals['4UND3']]
-   plt.plot(rf.set_vals, [s[0] for s in rf.bpm_vals['5UND3']], 'rp')
-   plt.plot(rf.set_vals, [s[1] for s in rf.bpm_vals['5UND3']], 'bp')
+   #plt.figure()
+   #print [s[0] for s in rf.bpm_vals['4UND3']]
+   #plt.plot(rf.set_vals, [s[0] for s in rf.bpm_vals['5UND3']], 'rp')
+   #plt.plot(rf.set_vals, [s[1] for s in rf.bpm_vals['5UND3']], 'bp')
    plt.figure()
    plt.plot(rf.set_vals, rf.sase_vals, 'gp')
    plt.figure()

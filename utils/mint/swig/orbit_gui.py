@@ -11,6 +11,9 @@ from matplotlib.figure import Figure
 import ocelot.utils.mint.mint as mint
 import ocelot.utils.mint.swig.dcs as dcs
 import os, sys
+import numpy as np
+
+from tune_common import get_sase, blm_names, init_blms, get_alarms
 
 progname = os.path.basename(sys.argv[0])
 
@@ -54,8 +57,10 @@ bpm_names = ['BPM1TCOL',
 for i in xrange(len(bpm_names)):
     bpm_names[i] = bpm_names[i].replace('BPM','')
 
-
-blm_names = ['1L.UND1',
+'''
+blm_names = ['14L.SMATCH',
+             '14R.SMATCH',
+             '1L.UND1',
              '1R.UND1',
              '1L.UND2', 
              '1R.UND2', 
@@ -66,14 +71,15 @@ blm_names = ['1L.UND1',
              '1L.UND5',
              '1R.UND5',
              '1L.UND6',
-             '1R.UND6']
+             '1R.UND6', 
+             '1SFUND1','1SFUND2','1SFUND3','1SFUND4',
+             '1SFELC','3SFELC','4SFELC',
+             '10SMATCH','3SDUMP']
 
 
 #blm_names = ['1L.UND1']
-
-
-gmd_channel = 'TTF2.DAQ/PHFLUX/OUT33/VAL' 
-
+blm_names = ['3.1FL2SASE3','3.2FL2SASE3']
+'''
 
 bpms = []
 
@@ -84,7 +90,7 @@ for bpm_name in bpm_names:
 
 blms = []
 
-		
+'''		
 for blm_name in blm_names:
 	blm = dcs.Device("TTF2.DIAG/BLM/" + blm_name)
         #alarm_ch = "TTF2.DIAG/BLM.ALARM/" + blm_name + '/THRFHI'
@@ -92,6 +98,9 @@ for blm_name in blm_names:
 	#blm_channel = blm.id + '/CH00.TD'
 	print 'blm info:', blm.id, bpm.z_pos
 	blms.append(blm)
+'''
+
+init_blms(blms)
 
 
 
@@ -173,9 +182,15 @@ class BLMCanvas(MyMplCanvas):
     def update_figure(self):
 
         z = [blm.z_pos for blm in blms]   
+        #names = [blm.id.replace('FLASH.DIAG/BLM/','') for blm in blms]
+        names = blm_names
+
+        print 'names', names
+        '''
 	loss = {}
 	
 	for blm in blms:
+            
 		blm_channel = blm.id + '/CH00.TD'
 		print 'blm info:', blm.id, blm.z_pos
 		h = array(dcs.get_device_td(blm_channel))
@@ -190,6 +205,9 @@ class BLMCanvas(MyMplCanvas):
 
 		
         y = [loss[blm] for blm in blms]
+        '''
+
+        y = get_alarms(names)
 
 	
 	self.axes.bar(z, y, width=0.2, color='b')
@@ -205,14 +223,15 @@ class SASECanvas(MyMplCanvas):
 	self.data = []
         timer = QtCore.QTimer(self)
         timer.timeout.connect(self.update_figure)
-        timer.start(1000)
+        timer.start(100)
 
     def compute_initial_figure(self):
         self.axes.plot(range(14), range(14), color='b')
 	#self.axes.set_ylim((-4,4))
 
     def update_figure(self):
-	val = dcs.get_device_val(gmd_channel)
+        val = get_sase(detector = 'flash2.mcp')
+
 	self.data.append(val)
 	self.axes.plot(xrange(len(self.data)), self.data, color='b')
             
@@ -230,6 +249,10 @@ class ApplicationWindow(QtGui.QMainWindow):
         self.file_menu = QtGui.QMenu('&File', self)
         self.file_menu.addAction('&Quit', self.fileQuit,
                                  QtCore.Qt.CTRL + QtCore.Qt.Key_Q)
+
+        self.file_menu.addAction('&Save', self.fileSave,
+                                 QtCore.Qt.CTRL + QtCore.Qt.Key_S)
+
         self.menuBar().addMenu(self.file_menu)
 
         self.help_menu = QtGui.QMenu('&Help', self)
@@ -254,6 +277,9 @@ class ApplicationWindow(QtGui.QMainWindow):
         
     def fileQuit(self):
         self.close()
+
+    def fileSave(self):
+        print 'saving...'
 
     def closeEvent(self, ce):
         self.fileQuit()

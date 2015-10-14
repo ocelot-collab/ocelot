@@ -157,11 +157,11 @@ def freq_analysis(track_list, lat, nturns, harm = True, diap = 0.10, nearest = F
 
 
 class Track_info:
-    def __init__(self, particle, x, y):
+    def __init__(self, particle, x=0., y=0.):
         self.particle = particle
         self.turn = 0
-        self.x = x #initail coordinate
-        self.y = y #initail coordinate
+        self.x = particle.x #initail coordinate
+        self.y = particle.y #initail coordinate
         #self.x_array = [p.x]
         #self.y_array = [p.y]
         self.mux = -0.001
@@ -256,7 +256,8 @@ def ellipse_track_list(beam, n_t_sigma = 3, num = 1000, type = "contour"):
     return track_list
 
 
-def tracking(lat, nturns, track_list, nsuperperiods, order=1, save_track=True):
+
+def tracking(lat, nturns, track_list, nsuperperiods=1, order=1, save_track=True):
     xlim, ylim, px_lim, py_lim = aperture_limit(lat, xlim = 1, ylim = 1)
     navi = Navigator()
 

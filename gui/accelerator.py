@@ -179,6 +179,7 @@ def elem_cord(lat):
     quad = np.array([[0,0]])
     bend = np.array([[0,0]])
     sext = np.array([[0,0]])
+    multi = np.array([[0,0]])
     c = []
     corr = np.array([[0,0]])
     mons = np.array([[0,0]])
@@ -240,7 +241,13 @@ def elem_cord(lat):
         elif elem.type == "sextupole":
             temp[:,1] = temp[:,1]*elem.ms
             sext = np.append(sext, temp, axis = 0)
-        #s.append((L,  elem.l+0.03))
+
+        elif elem.type == "multipole":
+            if sum(abs(elem.kn)) != 0:
+                temp[:,1] = temp[:,1]*sum(elem.kn)/sum(abs(elem.kn))
+            else:
+                temp[:,1] = temp[:,1]*0.
+            multi = np.append(multi, temp, axis=0)
         
         elif elem.type in ["hcor" , "vcor"]:
             temp[:,1] = temp[:,1]#*abs(elem.angle)
@@ -264,11 +271,11 @@ def elem_cord(lat):
         corr[:,1] = corr[:,1]/max(corr[:,1])
     #if len(corr) != 1 and max(mons[:,1] != 0):
     #mons[:,1] = mons[:,1]/max(mons[:,1])
-    return quad, bend, sext, corr, mons, cav, mat, und
+    return quad, bend, sext, corr, mons, cav, mat, und, multi
 
 
 def plot_elems(ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legend = True):
-    quad, bend, sext, corr, mons, cav, mat, und = elem_cord(lat)
+    quad, bend, sext, corr, mons, cav, mat, und, multi = elem_cord(lat)
     #print len(quad), len(bend), len(sext), len(corr ),len( mons), len( cav)
     #print cav
     alpha = 1
@@ -286,6 +293,9 @@ def plot_elems(ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legen
             n += 1
         if len(sext)>1:
             ax.fill(sext[:,0]+i*lat.totalLen + s_point, sext[:,1]*y_scale*0.8, "green",  edgecolor = "green", alpha = alpha, label = "sext")
+            n += 1
+        if len(multi)>1:
+            ax.fill(multi[:,0]+i*lat.totalLen + s_point, multi[:,1]*y_scale*0.8, "green",  edgecolor = "green", alpha = alpha, label = "multi")
             n += 1
         if len(corr)>1:
             ax.fill(corr[:,0]+i*lat.totalLen + s_point, corr[:,1]*y_scale*0.7, "b", edgecolor = "b", alpha = alpha, label = "corr")
@@ -378,7 +388,6 @@ def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, fig_name = None):
     rect1 = [left, 0.63, width, 0.3]
     rect2 = [left, 0.18, width, 0.45]
     rect3 = [left, 0.05, width, 0.13]
-    
 
     ax_top = fig.add_axes(rect1)
     ax_b = fig.add_axes(rect2, sharex=ax_top)  #left, bottom, width, height

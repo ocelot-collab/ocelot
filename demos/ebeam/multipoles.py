@@ -11,10 +11,10 @@ Nbends = 32
 D = Drift(l=C/Ncells/4, id="D")
 Qf = Multipole(kn=[0., 0.021/2.], id="Qf")
 Qd = Multipole(kn=[0., -0.02], id="Qd")
-B = Multipole(kn=2*pi/Nbends)
-Sf = Multipole(kn=(0, 0, 0.0), id="Sf")
-Sd = Multipole(kn=(0, 0, -0.0), id="Sd")
-F = Multipole(kn=[0,0,0,0., 0.005])
+B = Multipole(kn=2.*pi/Nbends)
+Sf = Multipole(kn=(0., 0., 0.0), id="Sf")
+Sd = Multipole(kn=(0., 0., -0.0), id="Sd")
+F = Multipole(kn=[0., 0., 0., 0., 0.005])
 cell = (Qf,Sf, D,F,B, D, Qd, Sd, D, B, D, Sf, Qf)
 
 lat = MagneticLattice(Ncells*cell)
@@ -32,7 +32,7 @@ dz = 1.
 P1 = []
 P2 = []
 for i in range(int(lat.totalLen/dz)):
-    step(lat, [p1, p2], dz = dz, navi = navi, order=2)
+    step(lat, [p1, p2], dz = dz, navi = navi, order=1)
     P1.append(copy(p1))
     P2.append(copy(p2))
 
@@ -56,8 +56,8 @@ plt.legend()
 plt.show()
 x_array = np.linspace(0.4, 0.60, num=500)
 track_list = create_track_list(x_array, [0.], [0.], energy=0.)
-track_list = tracking(lat, 10000, track_list, order=2, save_track=True)
-track_list = stable_particles(track_list, 10000)
+track_list = tracking(lat, 5000, track_list, order=2, save_track=True)
+track_list = stable_particles(track_list, 5000)
 print "number stable particles = ", len(track_list)
 for xyp in track_list:
     x = xyp.get_x()

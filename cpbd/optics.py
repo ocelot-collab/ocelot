@@ -167,13 +167,21 @@ class TransferMap:
     
         tws.Dxp = M[1, 0]*m.Dx + M[1, 1]*m.Dxp + M[1, 5]
         tws.Dyp = M[3, 2]*m.Dy + M[3, 3]*m.Dyp + M[3, 5]
+        denom_x = M[0, 0]*m.beta_x - M[0, 1]*m.alpha_x
+        if denom_x == 0.:
+            d_mux = pi/2.*M[0, 1]/np.abs(M[0, 1])
+        else:
+            d_mux = arctan(M[0, 1]/denom_x)
 
-        d_mux = arctan(M[0, 1]/(M[0, 0]*m.beta_x - M[0, 1]*m.alpha_x))
         if d_mux < 0:
             d_mux += pi
         tws.mux = m.mux + d_mux
-        #print M[2, 3]/M[2, 2]*m.beta_y - M[2, 3]*m.alpha_y, arctan(M[2, 3]/(M[2, 2]*m.beta_y - M[2, 3]*m.alpha_y))
-        d_muy = arctan(M[2, 3]/(M[2, 2]*m.beta_y - M[2, 3]*m.alpha_y))
+        #print M[0, 0]*m.beta_x - M[0, 1]*m.alpha_x, arctan(M[2, 3]/(M[2, 2]*m.beta_y - M[2, 3]*m.alpha_y))
+        denom_y = M[2, 2]*m.beta_y - M[2, 3]*m.alpha_y
+        if denom_y == 0.:
+            d_muy = pi/2.*M[2, 3]/np.abs(M[2, 3])
+        else:
+            d_muy = arctan(M[2, 3]/denom_y)
         if d_muy < 0:
             d_muy += pi
         tws.muy = m.muy + d_muy
@@ -636,7 +644,7 @@ def create_transfer_map(element, order=1):
         R[1, 0] = -element.kn[1]
         R[3, 2] = element.kn[1]
         R[1, 5] = element.kn[0]
-
+        #transfer_map.order = 2
         R_z = lambda z, energy: R
         if element.n>2:
             transfer_map.order = 2

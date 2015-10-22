@@ -14,7 +14,7 @@ from pickle import dump, load
 from time import *
 from numpy.fft import *
 
-from ocelot.common.math import *
+from ocelot.common.math_op import *
 
 #print localtime(time()).tm_min, localtime(time()).tm_sec, localtime(time())
 

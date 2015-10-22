@@ -15,20 +15,30 @@ def translate(lines):
         line = line.replace('drift', "Drift")
         line = line.replace('quadrupole', "Quadrupole")
         line = line.replace('quad', "Quadrupole")
+        line = line.replace('drif', "Drift")
         line = line.replace('csrcsbend', "SBend")
         line = line.replace('sbend', "Bend")
         line = line.replace('rbend', "RBend")
+        line = line.replace('sben', "Bend")
         line = line.replace('bend', "Bend")
 
         line = line.replace('title', "#title")
 
         line = line.replace('octupole', "Octupole")
         line = line.replace('monitor', "Monitor")
+        line = line.replace('moni', "Monitor")
+        line = line.replace('inst', "Monitor")
         line = line.replace('matrix', "Matrix")
         line = line.replace('lcavity', "Cavity")
+        line = line.replace('lcav', "Cavity")
+
         line = line.replace('rfcavity', "Cavity")
         line = line.replace('sextupole', "Sextupole")
         line = line.replace('marker', "Marker")
+        line = line.replace('mark', "Marker")
+        line = line.replace('rcol', "Marker")
+        line = line.replace('ecol', "Marker")
+        line = line.replace('prof', "Monitor")
         line = line.replace('instrument', "UnknownElement")
         line = line.replace('rcollimator', "UnknownElement")
         line = line.replace('ecollimator', "UnknownElement")
@@ -36,6 +46,10 @@ def translate(lines):
         line = line.replace('vkicker', "UnknownElement")
         line = line.replace('hkicker', "UnknownElement")
         line = line.replace('kicker', "UnknownElement")
+        line = line.replace('hkic', "UnknownElement")
+        line = line.replace('vkic', "UnknownElement")
+        line = line.replace('hkick', "UnknownElement")
+        line = line.replace('vkick', "UnknownElement")
         line = line.replace('sequence', "Sequence")
         line = line.replace('return', "#return")
         line = line.replace('->', ".")
@@ -48,8 +62,12 @@ def translate(lines):
 def find_objects(line, info):
     #info = {}
     if ":" in line and line[0] != "#":
-        line_test = line.split("#")[0]
-        line_test = line_test.split(":")[1]
+        
+        try:
+            line_test = line.split("#")[0]
+            line_test = line_test.split(":")[1]
+        except:
+            print 'crashed on', line
         #print line_test
         if line_test.find("line")>=0 or line_test.find("subroutine")>0:
             return line
@@ -74,11 +92,12 @@ def find_objects(line, info):
         if not("at" in params):
             info[name] = {"type": type, "params": params}
 
-            if not (type in ["drift", "sbend", "rbend", "bend",
-                             "matrix", "quadrupole", "marker",
-                             "hkicker", "vkicker", "monitor", "kicker",
-                             "sextupole", "lcavity", "ecollimator",
+            if not (type in ["drift", "drif","sbend", "sben", "rbend", "bend", "rcol", "ecol",
+                             "matrix", "quadrupole", "quad", "marker",
+                             "hkicker", "vkicker", "hkic","vkic","hkick","vkick","monitor", "moni", "inst", "kicker", "mark", "prof",
+                             "sextupole", "lcavity", 'lcav',"ecollimator",
                              "solenoid", 'octupole', "sequence"]):
+                print "debug:",  name, ",", type, ",", params
                 type = info[type]["type"]
 
         if len(params )>0:

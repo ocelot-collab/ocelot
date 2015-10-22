@@ -305,14 +305,14 @@ class Cavity(Element):
     v - voltage [V/m]
     f - frequency [GHz]
     '''
-    def __init__(self, l, delta_e = 0.0, freq=0.0, phi=0.0, id = None, volt = 0., volterr = 0.):
+    def __init__(self, l, delta_e=0.0, freq=0.0, phi=0.0, id=None, volt=0., volterr=0.):
         Element.__init__(self, id)
         self.type = "cavity"
         self.l = l
-        self.v = volt
+        self.v = volt*1e-9   #in GV
         self.delta_e = delta_e
         self.f = freq
-        self.phi = phi
+        self.phi = phi*np.pi/180.
         self.E = 0
         self.volterr = volterr
 
@@ -327,6 +327,21 @@ class Solenoid(Element):
         self.k = k # B0/(2B*rho)
         self.l = l
 
+class Multipole(Element):
+    """
+    kn - list of strengths
+    """
+    def __init__(self, kn=0., id=None):
+
+        Element.__init__(self, id)
+        self.type = "multipole"
+        kn = np.array([kn]).flatten()
+        if len(kn) < 2:
+            self.kn = np.append(kn, 0.)
+        else:
+            self.kn = kn
+        self.n = len(self.kn)
+        self.l = 0.
 
 
 class Matrix(Element):

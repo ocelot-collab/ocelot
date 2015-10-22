@@ -47,7 +47,7 @@ def chromaticity(lattice, tws_0, nsuperperiod = 1):
     integr_x = 0.
     integr_y = 0.
     for elem in lattice.sequence:
-        if elem.type == "rbend" or elem.type == "sbend" or elem.type == "bend" or elem.type == "quadrupole":
+        if elem.type in ["rbend", "sbend", "bend", "quadrupole"]:
             bx = []
             by = []
             k = []
@@ -58,7 +58,8 @@ def chromaticity(lattice, tws_0, nsuperperiod = 1):
                 bx.append(twiss_z.beta_x)
                 by.append(twiss_z.beta_y)
                 k.append(elem.k1)
-                if  elem.type != "quadrupole" or elem.l == 0:
+                print elem.l
+                if elem.type != "quadrupole" and elem.l != 0:
                     h.append(elem.angle/elem.l)
                 else:
                     h.append(0.)
@@ -69,7 +70,10 @@ def chromaticity(lattice, tws_0, nsuperperiod = 1):
             Y = -array(by)*array(k)
             integr_x += simps(X, Z)
             integr_y += simps(Y, Z)
-
+        elif elem.type == "multipole":
+            twiss_z = elem.transfer_map*tws_elem
+            integr_x += twiss_z.beta_x*elem.kn[1]
+            integr_y -= twiss_z.beta_y*elem.kn[1]
         tws_elem = elem.transfer_map*tws_elem
     ksi_x = -(integr_x - edge_ksi_x)/(4*pi)
     ksi_y = -(integr_y - edge_ksi_y)/(4*pi)
@@ -113,8 +117,17 @@ def sextupole_id(lattice):
     sex = {}
     for element in lattice.sequence:
         if element.type == "sextupole":
+            if element.id == None:
+                print("Please add ID to sextupole")
             sex[element.id] = element.ms
+        if element.type == "multipole" and element.n==3:
+            if element.id == None:
+                print("Please add ID to sextupole")
+            sex[element.id] = element.kn[2]
     sex_name = sex.keys()
+
+    if len(sex_name)<2:
+        exit("Only " + str(len(sex_name))+" families of sextupole are found")
     if len(sex_name)>2:
         exit("more than two families of sextupole")
     return sex
@@ -134,13 +147,13 @@ def calculate_sex_strength(lattice, tws_0, ksi, ksi_comp, nsuperperiod):
     tws_elem = tws_0
     sex_dict_stg = {}
     for element in lattice.sequence:
-        if element.type == "sextupole":
-            if element.id == sex_name[0]:
-                m1x += tws_elem.Dx*tws_elem.beta_x/(4*pi)*nsuperperiod
-                m1y -= tws_elem.Dx*tws_elem.beta_y/(4*pi)*nsuperperiod
-            elif element.id == sex_name[1]:
-                m2x += tws_elem.Dx*tws_elem.beta_x/(4*pi)*nsuperperiod
-                m2y -= tws_elem.Dx*tws_elem.beta_y/(4*pi)*nsuperperiod
+        #if element.type == "sextupole":
+        if element.id == sex_name[0]:
+            m1x += tws_elem.Dx*tws_elem.beta_x/(4*pi)*nsuperperiod
+            m1y -= tws_elem.Dx*tws_elem.beta_y/(4*pi)*nsuperperiod
+        elif element.id == sex_name[1]:
+            m2x += tws_elem.Dx*tws_elem.beta_x/(4*pi)*nsuperperiod
+            m2y -= tws_elem.Dx*tws_elem.beta_y/(4*pi)*nsuperperiod
         tws_elem = element.transfer_map*tws_elem
     M = matrix([ [m1x, m2x], [m1y, m2y] ])
     ksi = matrix([ [ksi_x_comp - ksi_x], [ksi_y_comp - ksi_y] ])
@@ -150,9 +163,8 @@ def calculate_sex_strength(lattice, tws_0, ksi, ksi_comp, nsuperperiod):
     return sex_dict_stg
 
 
-def compensate_chromaticity(lattice, energy=0., ksi_x_comp=0, ksi_y_comp=0,  nsuperperiod=1):
+def compensate_chromaticity(lattice,  ksi_x_comp=0, ksi_y_comp=0,  nsuperperiod=1):
     tws0 = Twiss()
-    tws0.E = energy
     tws = twiss(lattice, tws0)
     tws_0 = tws[0]
     ksi_comp = (ksi_x_comp, ksi_y_comp)

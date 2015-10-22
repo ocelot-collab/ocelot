@@ -10,17 +10,25 @@ from numpy import sqrt
 #h_eV_s = const.codata.value('Planck constant in eV s')
 #ro_e = const.codata.value("classical electron radius")
 
+pi = 3.14159265359
 speed_of_light = 299792458.0 #m/s
 m_e_MeV = 0.510998928        # MeV
-
-m_e_eV = m_e_MeV*1e+6
+m_e_eV = m_e_MeV*1e+6        # eV
 m_e_GeV = m_e_MeV*1.e-3      # GeV
-pi = 3.14159265359
+m_e_kg = 9.10938215e-31      # kg
+
+q_e = 1.6021766208e-19       # C - Elementary charge
+mu_0 = 4*pi*1e-7
+epsilon_0 = 8.854187817620e-12 # F/m
+
 h_eV_s = 4.135667516e-15    #eV s
 hr_eV_s = h_eV_s/2./pi
 ro_e = 2.8179403267e-15     # m
+
 Cgamma = 4.*pi/3.*ro_e/m_e_MeV**3
 Cq = 55./(32.*sqrt(3)*2*pi)*h_eV_s*speed_of_light/m_e_eV
+
+Z0 = 1./(speed_of_light*epsilon_0)  # Ohm - impedance of free space
 
 """
 def lambda2eV(Lambda):

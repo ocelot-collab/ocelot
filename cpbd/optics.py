@@ -509,7 +509,7 @@ def create_transfer_map(element, order=1):
             #phi = 0.
             de = V*cos(phi)
             # pure pi-standing-wave case
-            phi = 0.
+            #phi = 0.
             eta = 1.0
 
             gamma = (E + 0.5*de)/m_e_GeV
@@ -523,13 +523,19 @@ def create_transfer_map(element, order=1):
             if Ei == 0:
                 print("Warning! Initial energy is zero and cavity.delta_e != 0! Change Ei or cavity.delta_e must be 0" )
             alpha = sqrt(eta / 8.) / cos(phi) * log(Ef/Ei)
-            
+            #alpha = sqrt(1./ 8.) * log(Ef/Ei)
             #print 'cavity map Ei=',E, 'Ef=', Ef, 'alpha=', alpha
             
             r11 = cos(alpha) - sqrt(2./eta) * cos(phi) * sin(alpha)
             r12 = sqrt(8./eta) * Ei / Ep * cos(phi) * sin(alpha)
-            r21 = -Ep/Ei * (cos(phi)/ sqrt(2.*eta) + sqrt(eta/8.) / cos(phi) ) * sin(alpha)
+            r21 = -Ep/Ef * (cos(phi)/ sqrt(2.*eta) + sqrt(eta/8.) / cos(phi) ) * sin(alpha)
             r22 = Ei/Ef * ( cos(alpha) + sqrt(2./eta) * cos(phi) * sin(alpha) )
+
+            #r11 = cos(alpha) - sqrt(2.) * sin(alpha)
+            #r12 = sqrt(8.) * Ei / Ep * sin(alpha)
+            #r21 = -3.*Ep/sqrt(8.)/Ef * sin(alpha)
+            #r22 = Ei/Ef * ( cos(alpha) + sqrt(2.) * sin(alpha) )
+
             #print -Ep/Ei
             # for twiss parameters go to function -> map_x_twiss()
             #if not track_acceleration:

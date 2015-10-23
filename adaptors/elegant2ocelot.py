@@ -1,36 +1,49 @@
 '''
 Created on 05.04.2013
 @author: zagor
+modified by S. Tomin
 '''
 import csv
 from ocelot.cpbd.elements import *
 from math import *
+import numpy as np
+
+def read_file(filename):
+    f=open(filename, 'rb')
+    data=csv.reader(f, delimiter='\t')
+    data=[row for row in data]
+    f.close()
+    return data
 
 def read_lattice_elegant(file_flo, file_par):
-    f=open(file_flo,'rb')
-    data_flo=csv.reader(f,delimiter='\t')
-    data_flo=[row for row in data_flo]
-    f.close()
-    f=open(file_par,'rb')
-    data_par=csv.reader(f, delimiter='\t')
-    data_par=[row for row in data_par]
-    f.close()
+
+    data_flo = read_file(file_flo)
+    data_par = read_file(file_par)
+
     lattice=[]
     n_flo=len(data_flo)
-    i_s=0;# i_X=1; i_Y=2; 
-    i_Z=3;#i_theta=4;i_phi=5;    i_psi=6;    
-    i_ElementName=7;# i_ElementOccurence=8; 
-    i_ElementType=9; 
-    for i in range(8,n_flo):
+    flo_params = np.array(data_flo[5])
+    #print flo_params, np.where(flo_params == "ElementType")[0][0]
+    i_s = np.where(flo_params == "s")[0][0] # i_X=1; i_Y=2;
+    i_Z = np.where(flo_params == "Z")[0][0] #i_theta=4;i_phi=5;    i_psi=6;
+    i_ElementName = np.where(flo_params == "ElementName")[0][0] # i_ElementOccurence=8;
+    i_ElementType = np.where(flo_params == "ElementType")[0][0]
+    for i in range(8, n_flo):
         v=data_flo[i] 
         sname=v[i_ElementName]
         stype=v[i_ElementType];
         sname=sname.replace('-C','')
+        #print stype,sname
         if stype=='QUAD':
             quad = Quadrupole(id=sname)
             quad.s=eval(v[i_s])
             quad.z=eval(v[i_Z])
             lattice=lattice+[quad]
+        elif stype in ["DRIF", "LSCDRIFT", "CSRDRIFT", "MARK", "KICKER", "ECOL"]:
+            drift = Drift(id=sname)
+            drift.s=eval(v[i_s])
+            drift.z=eval(v[i_Z])
+            lattice=lattice+[drift]
         elif stype=='SEXT':
             sext = Sextupole(id=sname)
             sext.s=eval(v[i_s])
@@ -90,10 +103,12 @@ def read_lattice_elegant(file_flo, file_par):
             elem.k2=eval(data_par[pos+1][2])
         elif elem.type=="bend":
             elem.angle=eval(data_par[pos+1][2])
-            if (stype=='CRBEND') or (stype=='CSRCRBEND') or (stype=='CSRCSBEND'):
-                elem.e1=eval(data_par[pos+10][2])
-                elem.e2=eval(data_par[pos+11][2])
-                elem.tilt=eval(data_par[pos+12][2])
+            if stype in ['CRBEND', 'CSRCRBEND', 'CSRCSBEND', "CSBEND"]:
+                elem.e1 = eval(data_par[pos+10][2])
+                elem.e2 = eval(data_par[pos+11][2])
+                elem.tilt = eval(data_par[pos+12][2])
+                elem.fint1 = eval(data_par[pos+16][2])
+                elem.fint2 = eval(data_par[pos+16][2])
             if stype=='SBEN':
                 elem.e1=eval(data_par[pos+3][2])
                 elem.e2=eval(data_par[pos+4][2])
@@ -118,10 +133,14 @@ def read_lattice_elegant(file_flo, file_par):
         elif elem.type=="vcor":
             elem.l=eval(data_par[pos][2])
         elif elem.type=="monitor":
-            elem.l=eval(data_par[pos][2]) 
+            elem.l=eval(data_par[pos][2])
+        elif elem.type=="drift":
+            elem.l=eval(data_par[pos][2])
         elem.id=elem.id.replace('.','_')              
     return lattice
 
+
+"""
 def insert_drifts(z_start, z_stop, lat_def):
     lattice= []
     s0=z_start
@@ -144,8 +163,7 @@ def insert_drifts(z_start, z_stop, lat_def):
         str_id=str(ds).replace('.','_')
         lattice=lattice+[Drift(l=ds,id='DRIFT'+str_id)]
     return lattice
-
-    
+"""
      
 
 

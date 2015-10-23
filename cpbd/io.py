@@ -46,7 +46,7 @@ def lat2input(lat):
     mons = find_objects(lat, types = ["monitor"])
     unds = find_objects(lat, types = ["undulator"])
     cors = find_objects(lat, types = ["hcor", "vcor"])
-    bends = find_objects(lat, types = ["bend","rbend", "sbend"])
+    bends = find_objects(lat, types = ["bend", "rbend", "sbend"])
     #end find objects
 
     lines = []
@@ -71,7 +71,11 @@ def lat2input(lat):
             k = ''
         else:
             k = ", k1 = "+ str(bend.k1)
-        line = bend.id + type + str(bend.l) + k + ", angle = "+ str(bend.angle)+ ", e1 = " + str(bend.e1) + ", e2 = " + str(bend.e2) + ", tilt = " + str(bend.tilt) +", id = '"+ bend.id+ "')\n"
+        fint = bend.fint1
+        #if bend.fint1 == bend.fint2:
+        #    fint = bend.fint1
+
+        line = bend.id + type + str(bend.l) + k + ", angle = " + str(bend.angle)+ ", e1 = " + str(bend.e1) + ", e2 = " + str(bend.e2) + ", tilt = " + str(bend.tilt) + ", fint = " + str(fint) +", id = '"+ bend.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# correctors \n")
@@ -153,7 +157,7 @@ def lat2input(lat):
     return lines
 
 
-def write_lattice(lattice, file_name = "lattice.inp"):
+def write_lattice(lattice, file_name="lattice.inp"):
     lines = lat2input(lattice)
 
     f = open(file_name, 'w')

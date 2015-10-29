@@ -5,6 +5,7 @@ from ocelot.common.globals import *
 from copy import copy
 from numpy.linalg import inv
 from numpy import cosh, sinh
+from scipy.misc import factorial
 # from scipy import weave
 from und_weave import *
 from ocelot.cpbd.maps2order import *
@@ -646,23 +647,24 @@ def create_transfer_map(element, order=1):
         transfer_map.sym_map_z = lambda X, z, energy: transfer_map.map_z(X, z, energy)
 
     elif element.type == "multipole":
+        def kick(X, kn):
+            p = -kn[0]*X[5::6] + 0j
+            for n in range(1, len(kn)):
+                p += kn[n]*(X[0::6] + 1j*X[2::6])**n/factorial(n)
+            X[1::6] = X[1::6] - np.real(p)
+            X[3::6] = X[3::6] + np.imag(p)
+            X[4::6] = X[4::6] + kn[0::6]*X[0]
+            #print X[1], X[3]
+            return X
+
         R = np.eye(6)
         R[1, 0] = -element.kn[1]
         R[3, 2] = element.kn[1]
         R[1, 5] = element.kn[0]
         #transfer_map.order = 2
         R_z = lambda z, energy: R
-        if element.n>2:
+        if element.n > 2:
             transfer_map.order = 2
-        def kick(X, kn):
-            p = -kn[0]*X[5::6] + 0j
-            for n in range(1, len(kn)):
-                p += kn[n]*(X[0::6] + 1j*X[2::6])**n
-            X[1::6] = X[1::6] - np.real(p)
-            X[3::6] = X[3::6] + np.imag(p)
-            X[4::6] = X[4::6] + kn[0::6]*X[0]
-            #print X[1], X[3]
-            return X
 
         transfer_map.map_z = lambda X, z, energy: kick(X, element.kn)
         transfer_map.sym_map_z = lambda X, z, energy: kick(X, element.kn)
@@ -684,7 +686,7 @@ def periodic_solution(tws, R):
     """ find periodical twiss  """
 
     tws = Twiss(tws)
-
+    #print R
     cosmx = (R[0, 0] + R[1, 1])/2.
     cosmy = (R[2, 2] + R[3, 3])/2.
 
@@ -693,12 +695,16 @@ def periodic_solution(tws, R):
     if abs(cosmx) >= 1 or abs(cosmy) >= 1:
         print("************ periodic solution does not exist. return None ***********")
         return None
-    sinmx = sqrt(1.-cosmx*cosmx)
-    sinmy = sqrt(1.-cosmy*cosmy)
+    sinmx = sign(R[0, 1])*sqrt(1.-cosmx*cosmx)
+    sinmy = sign(R[2, 3])*sqrt(1.-cosmy*cosmy)
+    #sinmx2 = sign(R[0, 1])*sqrt(R[0, 1]*R[1, 0] - 0.25*(R[0, 0] - R[1, 1])**2)
+    #print "sinmx = ", sinmx, sinmx2,R[0, 1], R[0, 1]*R[1, 0] - 0.25*(R[0, 0] - R[1, 1])**2
+
     tws.beta_x = abs(R[0, 1]/sinmx)
     tws.beta_y = abs(R[2, 3]/sinmy)
 
-    tws.alpha_x = (R[0, 0] - R[1, 1])/(2*sinmx)  # X[0,0]
+    tws.alpha_x = (R[0, 0] - R[1, 1])/(2.*sinmx)  # X[0,0]
+    #print R[0, 0] - R[1, 1], 2.*sinmx
     tws.gamma_x = (1. + tws.alpha_x*tws.alpha_x)/tws.beta_x  # X[1,0]
 
     tws.alpha_y = (R[2, 2] - R[3, 3])/(2*sinmy)  # Y[0,0]
@@ -714,6 +720,7 @@ def periodic_solution(tws, R):
     hhy = dot(inv(-Hy), Hhy)
     tws.Dy = hhy[0, 0]
     tws.Dyp = hhy[1, 0]
+    #tws.display()
     return tws
 
 
@@ -766,7 +773,7 @@ def trace_obj(lattice, obj, nPoints = None):
     return obj_list
 
 
-def twiss(lattice, tws0 = None, nPoints = None):
+def twiss(lattice, tws0=None, nPoints=None):
     if tws0 == None:
         tws0 = periodic_solution(tws0, lattice_transfer_map(lattice, energy=0.))
 

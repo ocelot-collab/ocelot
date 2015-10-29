@@ -188,6 +188,22 @@ def t_nnn(L, h, k1, k2):
         I414 = ((kx2 - 2.*ky2)*sx*sy - (1. - cx)*cy)/denom
         I423 = (cy*dx_h*(kx2 - 2*ky2) - ky2*sx*sy)/denom      #  I423 = I323' = ((2.*ky2)/kx2*(1 + cx)*cy - cx*cy - ky2*sx*sy)/denom + cy/kx2
 
+    elif kx != 0 and ky == 0:
+        I323 = (L - sx)/kx2
+        I324 = 2.*(1. - cx)/kx4 - L*sx/kx2
+        I314 = (2.*sx - 1. - cx)/kx2
+        I313 = (1. - cx)/kx2
+        I144 = (-2. + kx2*L2 + 2.*cx)/kx4
+        I133 = (1. - cx)/kx2
+        I134 = (L - sx)/kx2
+        # derivative of Integrals
+        I423 = (1. - cx)/kx2
+        I424 = (sx - L*cx)/kx2
+        I414 = 2*cx/kx2 + sx
+        I413 = sx
+        I244 = (2.*L - 2.*sx)/kx2
+        I233 = sx
+        I234 = (1. - cx)/kx2
     else:
         I144 = L4/12.                                          #  I144 = Gx * sy**2
         I133 = L2/2.                                           #  I133 = Gx * cy**2
@@ -266,7 +282,7 @@ def t_nnn(L, h, k1, k2):
     t324 = coef2*I324 + h*I313
     t336 = coef2*I336 + ky2*I33 - h2*ky2*I324
     t346 = coef2*I346 + h2*I323 + ky2*I34
-
+    #print "I323 = ", I323, "L, h, k1, k2 = ", L, h, k1, k2, "  t314 = ", t314
     t413 = coef2*I413 + h*kx2*ky2*I424
     t414 = coef2*I414 - h*kx2*I423
     t423 = coef2*I423 - h*ky2*I414

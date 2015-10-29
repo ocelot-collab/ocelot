@@ -8,7 +8,7 @@ Note:
 (B) xp, yp are in [rad] but the meaning is not specified
 '''
 
-from numpy import zeros, array, append, sqrt, abs, argwhere, unique, delete
+from numpy import zeros, array, append, sqrt, abs, argwhere, unique, delete, pi
 
 class Twiss:
     def __init__(self, beam = None):
@@ -67,6 +67,21 @@ class Twiss:
             self.s = 0 # position along the reference trajectory
             self.id = ""
 
+    def display(self):
+        print "beta_x  = ", self.beta_x
+        print "beta_y  = ", self.beta_y
+        print "alpha_x = ", self.alpha_x
+        print "alpha_y = ", self.alpha_y
+        print "gamma_x = ", self.gamma_x
+        print "gamma_y = ", self.gamma_y
+        print "Dx      = ", self.Dx
+        print "Dy      = ", self.Dy
+        print "Dxp     = ", self.Dxp
+        print "Dyp     = ", self.Dyp
+        print "mux     = ", self.mux
+        print "muy     = ", self.muy
+        print "nu_x    = ", self.mux/2./pi
+        print "nu_y    = ", self.muy/2./pi
 
             
 class Particle:

@@ -67,15 +67,15 @@ def radiation_integral(lattice, twiss_0, nsuperperiod = 1):
     return (I1*nsuperperiod,I2*nsuperperiod,I3*nsuperperiod, I4*nsuperperiod, I5*nsuperperiod)
 
 class EbeamParams:
-    def __init__(self, lattice,beam,  coupling = 0.01, nsuperperiod = 1, tws0 = None):
-        if beam.E  == 0:
+    def __init__(self, lattice, beam,  coupling = 0.01, nsuperperiod = 1, tws0 = None):
+        if beam.E == 0:
             exit("beam.E must be non zero!")
         self.E = beam.E
         if tws0 == None: 
-            tws = twiss(lattice, Twiss())
+            tws = twiss(lattice, Twiss(beam))
             self.tws0 = tws[0]
         else:
-            tws0.E = lattice.energy
+            #tws0.E = lattice.energy
             self.tws0 = tws0 
             tws = twiss(lattice, tws0)
             
@@ -123,7 +123,7 @@ class EbeamParams:
         for elem in self.lat.sequence:
             if elem.type == "undulator":
                 B = K2field(elem.Kx, lu = elem.lperiod)
-                h0 = B*speed_of_light/self.lat.energy*1e-9
+                h0 = B*speed_of_light/self.E*1e-9
                 #print h0, B
                 tws = trace_z(self.lat, self.tws0, [L, L + elem.l/2.])
                 i2 = I2_ID(elem.l,h0)
@@ -146,13 +146,13 @@ class EbeamParams:
             L += elem.l
         self.emit_ID = self.emittance * (1.+self.I5_IDs/self.I5)/(1+(self.I2_IDs  - self.I4_IDs)/(self.I2 - self.I4))
         self.sigma_e_ID = self.sigma_e * sqrt((1.+ self.I3_IDs / self.I3)/(1 + (2*self.I2_IDs + self.I4_IDs)/(2.*self.I2 + self.I4) ) )
-        self.U0_ID = Cgamma*(self.lat.energy*1000)**4.*self.I2_IDs/(2.*pi)
+        self.U0_ID = Cgamma*(self.E*1000)**4.*self.I2_IDs/(2.*pi)
         print("emittance with IDs = ", self.emit_ID*1e9, " nm*rad")
         print("sigma_e with IDs =   ", self.sigma_e_ID)
         print("U0 from IDs =        ", self.U0_ID,  "  MeV")
 
     def print_params(self):
-        print("I2 =        ", self.I2)
+        print( "I2 =        ", self.I2)
         print( "I3 =        ", self.I3)
         print( "I4 =        ", self.I4)
         print( "I5 =        ", self.I5)

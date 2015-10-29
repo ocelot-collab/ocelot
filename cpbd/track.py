@@ -304,7 +304,7 @@ def tracking(lat, nturns, track_list, nsuperperiods=1, order=1, save_track=True)
                 pxy.p_list.append(p_array.particles[n*6:n*6+6])
     return np.array(track_list_const)
 
-
+'''
 def tracking_second(lat, nturns, track_list, nsuperperiods, save_track = True):
     xlim, ylim, px_lim, py_lim = aperture_limit(lat, xlim = 1, ylim = 1)
     navi = Navigator()
@@ -336,7 +336,7 @@ def tracking_second(lat, nturns, track_list, nsuperperiods, save_track = True):
             #if  save_track:
             #    pxy.p_list.append(p_array.particles[n*6:n*6+6])
     return np.array(track_list_const)
-
+'''
 
 def tracking_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods = 1, order = 1, save_track = True):
     size = mpi_comm.Get_size()
@@ -440,6 +440,19 @@ def step(lat, particle_list, dz, navi, order=1):
     for tm in t_maps:
         tm.apply(particle_list, order=order)
     return
+
+def lattice_track(lat, p, order=1):
+    plist = [copy(p)]
+    for elem in lat.sequence:
+        elem.transfer_map.apply([p], order=order)
+        if not (elem.type in ["sbend", "rbend", "bend"]):
+            if elem.type == "edge":
+                #print elem.pos
+                if elem.pos == 1:
+                    continue
+            plist.append(copy(p))
+    return plist
+
 
 def merge_drifts(lat):
     print "before merging: len(sequence) = ", len(lat.sequence)

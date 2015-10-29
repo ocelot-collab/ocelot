@@ -648,7 +648,8 @@ def writeRadiationFile_mpi(comm, filename, slices, shape):
 
 def readGenesisOutput(fileName):
     out = GenesisOutput()
-    
+    out.path = fileName
+
     chunk = 'header'
     
     nSlice = 0
@@ -725,6 +726,34 @@ def readGenesisOutput(fileName):
 
     print 'nSlice', out.nSlices
     print 'nZ', out.nZ
+
+
+    out.power = []
+    out.phi = []
+    out.power_z = 0*np.array(out.sliceValues[out.sliceValues.keys()[1]]['power'])
+    out.power_int = []
+    out.max_power = 0.0
+    for i in xrange(1,out.nSlices):
+        pend = out.sliceValues[out.sliceValues.keys()[i]]['power'][-1]
+        out.power_int.append(pend)
+        out.power.append(out.sliceValues[out.sliceValues.keys()[i]]['p_mid'][-1])
+        out.phi.append(out.sliceValues[out.sliceValues.keys()[i]]['phi_mid'][-1])
+        out.power_z +=  np.array(out.sliceValues[out.sliceValues.keys()[i]]['power']) / out.nSlices
+
+        if out.max_power < pend: out.max_power = pend
+
+    out.t = 1.0e+15 * out('zsep') * out('xlamds') / c * np.arange(0,len(out.power))
+    out.dt = (out.t[1] - out.t[0]) * 1.e-15
+    
+    out.spec = fft.fft(np.sqrt( np.array(out.power) ) * np.exp( 1.j* np.array(out.phi) ) )
+    out.freq_ev = h * fftfreq(len(out.spec), d=out('zsep') * out('xlamds') / c) 
+
+    out.power = np.array(out.power)
+    out.phi = np.array(out.phi)
+    out.power_int = np.array(out.power_int)
+
+    out.z = np.array(out.z)
+    out.I = np.array(out.I)
 
     return out
 
@@ -945,7 +974,7 @@ def get_power_z(g):
 
 
 #from ocelot.adaptors.genesis import *
-from ocelot.common.math_op import *
+from ocelot.common.math import *
 from ocelot.cpbd.optics import gaussFromTwiss
 #import matplotlib.animation as anim
 #import numpy as np

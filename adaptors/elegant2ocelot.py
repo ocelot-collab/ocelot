@@ -1,7 +1,12 @@
 '''
 Created on 05.04.2013
-@author: zagor
+@author: I. Zagororodnov
 modified by S. Tomin
+
+Usage:
+# file.flo and file.par must be converted in text format (e.g. by sdds2spreadsheet.exe)
+sequence = read_lattice_elegant(file_flo=file_flo.txt, file_par=file_par.txt)
+lat = MagneticLattice(sequence)
 '''
 import csv
 from ocelot.cpbd.elements import *

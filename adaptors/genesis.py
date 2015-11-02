@@ -4,16 +4,16 @@ interface to genesis
 
 import sys, os
 import numpy as np
-#import copy
 import struct
 from numpy import cos, sin, exp, sqrt, sum, mean
 import numpy.fft as fft
-
 from ocelot.fel.fel import *
 from ocelot.cpbd.beam import Beam
-
+import ocelot.utils.reswake as w
 from copy import copy, deepcopy
-#from pylab import *
+from ocelot.common.math_op import *
+from ocelot.cpbd.optics import gaussFromTwiss
+
 
 h = 4.135667516e-15
 c = 299792458.0
@@ -425,7 +425,6 @@ def read_beam_file(fileName):
     return beam
 
 
-        
 def readRadiationFile(fileName='simulation.gout.dfl', npoints=51, slice_start=0, slice_end = -1, idx=None):
     
     def read_in_chunks(file, size=1024):
@@ -971,17 +970,6 @@ def get_power_z(g):
     return power_z / nslice
 
 
-
-
-#from ocelot.adaptors.genesis import *
-from ocelot.common.math_op import *
-from ocelot.cpbd.optics import gaussFromTwiss
-#import matplotlib.animation as anim
-#import numpy as np
-#from numpy import *
-#import matplotlib.pyplot as plt
-
-
 def beam_file_str(beam):
     #header = "# \n? VERSION = 1.0\n? SIZE ="+str(len(beam.column_values['ZPOS']))+"\n? COLUMNS ZPOS GAMMA0 DELGAM EMITX EMITY BETAX BETAY XBEAM YBEAM PXBEAM PYBEAM ALPHAX ALPHAY CURPEAK ELOSS\n"
     header = "# \n? VERSION = 1.0\n? SIZE ="+str(len(beam.z))+"\n? COLUMNS"
@@ -1023,6 +1011,21 @@ def beam_file_str(beam):
         f_str = f_str.rstrip() +  '\n'
 
     return f_str
+
+
+def add_wake_to_beamf(beamf, new_beamf):
+    beam = read_beam_file(beamf)
+    s, bunch, wake = w.xfel_pipe_wake(s=array(beam.z), current=array(beam.I))
+    print 'read ', len(wake), ' slice values'
+    beam.eloss = wake[::-1]
+
+    f=open(new_beamf,'w')
+    f.write(beam_file_str(beam))
+    f.close()
+
+
+
+
 '''
 def plot_beam(fig, beam):
     

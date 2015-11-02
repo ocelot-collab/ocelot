@@ -445,7 +445,7 @@ def lattice_track(lat, p, order=1):
     plist = [copy(p)]
     for elem in lat.sequence:
         elem.transfer_map.apply([p], order=order)
-        if not (elem.type in ["sbend", "rbend", "bend"]):
+        if not (elem.type in ["bend", "sbend", "rbend", "hcor", "vcor"] and elem.l != 0.):
             if elem.type == "edge":
                 #print elem.pos
                 if elem.pos == 1:

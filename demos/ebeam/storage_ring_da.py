@@ -31,8 +31,6 @@ ring = cell
 
 lat = MagneticLattice(ring)
 
-
-
 compensate_chromaticity(lat, ksi_x_comp=0, ksi_y_comp=0,  nsuperperiod=8)
 
 nturns = 2048

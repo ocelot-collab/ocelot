@@ -1,5 +1,16 @@
 '''
 utilities to add externaly calculated wakes to beam files
+
+Usage:
+from command line:
+python add_wake.py add           beamfile beamfile_wake
+python add_wake.py add_from_file beamfile wakefile       beamfile_wake
+python add_wake.py current       beamfile currentfile
+
+from script:
+from ocelot.utils.add_wake import add_wake_to_beamf
+add_wake_to_beamf(beamf, new_beamf)
+
 '''
 import sys
 sys.path.append("../../")
@@ -46,7 +57,7 @@ if len(sys.argv)>3:
     beamf = sys.argv[2]    
     outf = sys.argv[3]
 else:
-    command = "ss"
+    pass
     #beamf = '/home/iagapov/tmp/run_2/tmp.beam'
     #command = 'current'
     #outf = 'tmp.beam'

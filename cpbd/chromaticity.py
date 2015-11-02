@@ -58,7 +58,7 @@ def chromaticity(lattice, tws_0, nsuperperiod = 1):
                 bx.append(twiss_z.beta_x)
                 by.append(twiss_z.beta_y)
                 k.append(elem.k1)
-                print elem.l
+                #print elem.l
                 if elem.type != "quadrupole" and elem.l != 0:
                     h.append(elem.angle/elem.l)
                 else:

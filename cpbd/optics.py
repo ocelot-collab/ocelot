@@ -71,11 +71,17 @@ def transform_vec_ext(X, dx, dy, tilt):
 
 
 def t_apply(R, T, X, dx, dy, tilt):
+    #x, px, y, py, tau, dp = X[0::6], X[1::6], X[2::6], X[3::6], X[4::6], X[5::6]
+    #px = px*(1. + py*py + px*px)
+    #py = py*(1. + py*py + px*px)
+    #X[1::6] = px[:]
+    #X[3::6] = py[:]
 
     if dx != 0 or dy != 0 or tilt != 0:
         X = transform_vec_ent(X, dx, dy, tilt)
 
     n = len(X)
+
     Xr = transpose(dot(R, transpose(X.reshape(n/6, 6)))).reshape(n)
 
     Xt = zeros(n)
@@ -90,11 +96,18 @@ def t_apply(R, T, X, dx, dy, tilt):
     Xt[2::6] = T[2, 0, 2]*x*y + T[2, 0, 3]*x*py + T[2, 1, 2]*px*y + T[2, 1, 3]*px*py + T[2, 2, 5]*y*dp + T[2, 3, 5]*py*dp
 
     Xt[3::6] = T[3, 0, 2]*x*y + T[3, 0, 3]*x*py + T[3, 1, 2]*px*y + T[3, 1, 3]*px*py + T[3, 2, 5]*y*dp + T[3, 3, 5]*py*dp
-
+    #print Xt[2::6], Xt[3::6]
     Xt[4::6] = T[4, 0, 0]*x*x + T[4, 0, 1]*x*px + T[4, 0, 5]*x*dp + T[4, 1, 1]*px*px + T[4, 1, 5]*px*dp + \
                T[4, 5, 5]*dp*dp + T[4, 2, 2]*y*y + T[4, 2, 3]*y*py + T[4, 3, 3]*py*py
 
     X[:] = Xr[:] + Xt[:]
+
+
+    #x, x1, y, y1, tau, dp = X[0::6], X[1::6], X[2::6], X[3::6], X[4::6], X[5::6]
+    #px = x1*(1. - y1*y1 - x1*x1)
+    #py = y1*(1. - y1*y1 - x1*x1)
+    #X[1::6] = px[:]
+    #X[3::6] = py[:]
 
     if dx != 0 or dy != 0 or tilt != 0:
         X = transform_vec_ext(X, dx, dy, tilt)
@@ -507,10 +520,9 @@ def create_transfer_map(element, order=1):
             :param E: initial energy
             :return: matrix
             """
-            #phi = 0.
+
             de = V*cos(phi)
             # pure pi-standing-wave case
-            #phi = 0.
             eta = 1.0
 
             gamma = (E + 0.5*de)/m_e_GeV
@@ -524,29 +536,15 @@ def create_transfer_map(element, order=1):
             if Ei == 0:
                 print("Warning! Initial energy is zero and cavity.delta_e != 0! Change Ei or cavity.delta_e must be 0" )
             alpha = sqrt(eta / 8.) / cos(phi) * log(Ef/Ei)
-            #alpha = sqrt(1./ 8.) * log(Ef/Ei)
-            #print 'cavity map Ei=',E, 'Ef=', Ef, 'alpha=', alpha
             
             r11 = cos(alpha) - sqrt(2./eta) * cos(phi) * sin(alpha)
-            r12 = sqrt(8./eta) * Ei / Ep * cos(phi) * sin(alpha)
+            if Ep != 0:
+                r12 = sqrt(8./eta) * Ei / Ep * cos(phi) * sin(alpha)
+            else:
+                r12 = z
             r21 = -Ep/Ef * (cos(phi)/ sqrt(2.*eta) + sqrt(eta/8.) / cos(phi) ) * sin(alpha)
             r22 = Ei/Ef * ( cos(alpha) + sqrt(2./eta) * cos(phi) * sin(alpha) )
 
-            #r11 = cos(alpha) - sqrt(2.) * sin(alpha)
-            #r12 = sqrt(8.) * Ei / Ep * sin(alpha)
-            #r21 = -3.*Ep/sqrt(8.)/Ef * sin(alpha)
-            #r22 = Ei/Ef * ( cos(alpha) + sqrt(2.) * sin(alpha) )
-
-            #print -Ep/Ei
-            # for twiss parameters go to function -> map_x_twiss()
-            #if not track_acceleration:
-            #    r11 = r11*sqrt(Ef/Ei)
-            #    r12 = r12*sqrt(Ef/Ei)
-            #    r21 = r21*sqrt(Ef/Ei)
-            #    r22 = r22*sqrt(Ef/Ei)
-            #print z, "Ei = ", Ei, "Ef = ", Ef, "de = ", de, "l = ", z
-            #if z == 0.346:
-            #    print r11, r12,r21 ,r22, "Ei = ", Ei, "Ef = ", Ef, "de = ", de, "l = ", z
             r56 = 0.
             if gamma != 0:
                 r56 = z/(gamma*gamma)
@@ -577,13 +575,6 @@ def create_transfer_map(element, order=1):
             R_z = lambda z, energy: uni_matrix(z, 0., hx=0., sum_tilts=element.dtilt + element.tilt, energy=energy)
         else:
             R_z = lambda z, energy: cavity_R_z(z, V=element.v*z/element.l, f=element.f, E=energy, phi=element.phi)
-        #def R_z(z, energy):
-        #    if energy == 0 or (element.v < 1.e-10 and element.delta_e < 1.e-10 ):
-        #        r_z = uni_matrix(z, 0., hx=0., sum_tilts=element.dtilt + element.tilt, energy=energy)
-        #    else:
-        #        de = element.delta_e*z/element.l
-        #        r_z = cavity_R_z(z, de=de, f=element.f, E=energy)
-        #    return r_z
 
         transfer_map.delta_e_z = lambda z: element.v*cos(element.phi) * z / element.l
         transfer_map.delta_e = transfer_map.delta_e_z(element.l)

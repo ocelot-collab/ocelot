@@ -82,7 +82,7 @@ class Optimizer:
                 print '{0} x[{1}]={2}'.format(correctors[i], i, x[i])
                 limits = self.dp.get_limits(correctors[i])
                 print  'limits=[{0}, {1}]'.format(limits[0], limits[1])
-                if x[i] < limits[0] and x[i] > limits[1]:
+                if x[i] < limits[0] or x[i] > limits[1]:
                     return pen_max
     
     

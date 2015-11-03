@@ -279,8 +279,10 @@ class Undulator(Element):
                                   # I need it for analytic description of undulator 
         
         self.field_file = field_file
-
-        self.field_map = FieldMap(self.field_file)
+        if self.field_file != None:
+            self.field_map = FieldMap(self.field_file)
+        else:
+            self.field_map = None
         self.v_angle = 0.
         self.h_angle = 0.
         #self.processing()  # here we can check all data and here we can load magnetic map from file

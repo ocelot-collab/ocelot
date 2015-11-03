@@ -12,10 +12,12 @@ from ocelot.cpbd.maps2order import *
 
 
 def rot_mtx(angle):
-    return array([[cos(angle), 0., sin(angle), 0., 0., 0.],
-                  [0., cos(angle), 0., sin(angle), 0., 0.],
-                  [-sin(angle), 0., cos(angle), 0., 0., 0.],
-                  [0., -sin(angle), 0., cos(angle), 0., 0.],
+    cs = cos(angle)
+    sn = sin(angle)
+    return array([[cs, 0., sn, 0., 0., 0.],
+                  [0., cs, 0., sn, 0., 0.],
+                  [-sn, 0., cs, 0., 0., 0.],
+                  [0., -sn, 0., cs, 0., 0.],
                   [0., 0., 0., 0., 1., 0.],
                   [0., 0., 0., 0., 0., 1.]])
 
@@ -55,17 +57,19 @@ def uni_matrix(z, k1, hx, sum_tilts=0., energy=0.):
 
 def transform_vec_ent(X, dx, dy, tilt):
     n = len(X)
+    rotmat = rot_mtx(tilt)
     for i in range(n/6):
         X0 = X[6*i:6*(i+1)]
         X0 -= array([dx, 0., dy, 0., 0., 0.])
-        X[6*i:6*(i+1)] = dot(rot_mtx(tilt), X0)
+        X[6*i:6*(i+1)] = dot(rotmat, X0)
     return X
 
 def transform_vec_ext(X, dx, dy, tilt):
     n = len(X)
+    rotmat = rot_mtx(-tilt)
     for i in range(n/6):
         X0 = X[6*i:6*(i+1)]
-        X[6*i:6*(i+1)] = dot(rot_mtx(-tilt), X0)
+        X[6*i:6*(i+1)] = dot(rotmat, X0)
         X0 += array([dx, 0., dy, 0., 0., 0.])
     return X
 
@@ -78,6 +82,7 @@ def t_apply(R, T, X, dx, dy, tilt):
     #X[3::6] = py[:]
 
     if dx != 0 or dy != 0 or tilt != 0:
+        #print "Iam here 1"
         X = transform_vec_ent(X, dx, dy, tilt)
 
     n = len(X)
@@ -110,6 +115,7 @@ def t_apply(R, T, X, dx, dy, tilt):
     #X[3::6] = py[:]
 
     if dx != 0 or dy != 0 or tilt != 0:
+        #print "Iam here 2"
         X = transform_vec_ext(X, dx, dy, tilt)
 
     return X

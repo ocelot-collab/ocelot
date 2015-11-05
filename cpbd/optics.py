@@ -89,23 +89,37 @@ def t_apply(R, T, X, dx, dy, tilt):
 
     Xr = transpose(dot(R, transpose(X.reshape(n/6, 6)))).reshape(n)
 
-    Xt = zeros(n)
+    #Xt = zeros(n)
     x, px, y, py, tau, dp = X[0::6], X[1::6], X[2::6], X[3::6], X[4::6], X[5::6]
+    x2 = x*x
+    xpx = x*px
+    px2 = px*px
+    py2 = py*py
+    ypy = y*py
+    y2 = y*y
+    dp2 = dp*dp
+    xdp = x*dp
+    pxdp = px*dp
+    xy = x*y
+    xpy = x*py
+    ypx = px*y
+    pxpy = px*py
+    ydp = y*dp
+    pydp = py*dp
+    X[0::6] = Xr[::6] + T[0, 0, 0]*x2 + T[0, 0, 1]*xpx + T[0, 0, 5]*xdp + T[0, 1, 1]*px2 + T[0, 1, 5]*pxdp + \
+               T[0, 5, 5]*dp2 + T[0, 2, 2]*y2 + T[0, 2, 3]*ypy + T[0, 3, 3]*py2
 
-    Xt[0::6] = T[0, 0, 0]*x*x + T[0, 0, 1]*x*px + T[0, 0, 5]*x*dp + T[0, 1, 1]*px*px + T[0, 1, 5]*px*dp + \
-               T[0, 5, 5]*dp*dp + T[0, 2, 2]*y*y + T[0, 2, 3]*y*py + T[0, 3, 3]*py*py
+    X[1::6] = Xr[1::6] + T[1, 0, 0]*x2 + T[1, 0, 1]*xpx + T[1, 0, 5]*xdp + T[1, 1, 1]*px2 + T[1, 1, 5]*pxdp + \
+               T[1, 5, 5]*dp2 + T[1, 2, 2]*y2 + T[1, 2, 3]*ypy + T[1, 3, 3]*py2
 
-    Xt[1::6] = T[1, 0, 0]*x*x + T[1, 0, 1]*x*px + T[1, 0, 5]*x*dp + T[1, 1, 1]*px*px + T[1, 1, 5]*px*dp + \
-               T[1, 5, 5]*dp*dp + T[1, 2, 2]*y*y + T[1, 2, 3]*y*py + T[1, 3, 3]*py*py
+    X[2::6] = Xr[2::6] + T[2, 0, 2]*xy + T[2, 0, 3]*xpy + T[2, 1, 2]*ypx + T[2, 1, 3]*pxpy + T[2, 2, 5]*ydp + T[2, 3, 5]*pydp
 
-    Xt[2::6] = T[2, 0, 2]*x*y + T[2, 0, 3]*x*py + T[2, 1, 2]*px*y + T[2, 1, 3]*px*py + T[2, 2, 5]*y*dp + T[2, 3, 5]*py*dp
+    X[3::6] = Xr[3::6] + T[3, 0, 2]*xy + T[3, 0, 3]*xpy + T[3, 1, 2]*ypx + T[3, 1, 3]*pxpy + T[3, 2, 5]*ydp + T[3, 3, 5]*pydp
 
-    Xt[3::6] = T[3, 0, 2]*x*y + T[3, 0, 3]*x*py + T[3, 1, 2]*px*y + T[3, 1, 3]*px*py + T[3, 2, 5]*y*dp + T[3, 3, 5]*py*dp
-    #print Xt[2::6], Xt[3::6]
-    Xt[4::6] = T[4, 0, 0]*x*x + T[4, 0, 1]*x*px + T[4, 0, 5]*x*dp + T[4, 1, 1]*px*px + T[4, 1, 5]*px*dp + \
-               T[4, 5, 5]*dp*dp + T[4, 2, 2]*y*y + T[4, 2, 3]*y*py + T[4, 3, 3]*py*py
+    X[4::6] = Xr[4::6] + T[4, 0, 0]*x2 + T[4, 0, 1]*xpx + T[4, 0, 5]*xdp + T[4, 1, 1]*px2 + T[4, 1, 5]*pxdp + \
+               T[4, 5, 5]*dp2 + T[4, 2, 2]*y2 + T[4, 2, 3]*ypy + T[4, 3, 3]*py2
 
-    X[:] = Xr[:] + Xt[:]
+    #X[:] = Xr[:] + Xt[:]
 
 
     #x, x1, y, y1, tau, dp = X[0::6], X[1::6], X[2::6], X[3::6], X[4::6], X[5::6]
@@ -210,11 +224,13 @@ class TransferMap:
     def mul_p_array(self, particles, energy=0., order=1):
 
         if self.order == 1 and order == 1:
+            #print "1order"
             n = len(particles)
-            #print self.R(energy)
+            #print self.B(energy)
             a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(n/6, 6)))), self.B(energy)).reshape(n)
             particles[:] = a[:]
         elif order == 3:
+            #print " sym "
             self.sym_map(particles, energy=energy)
 
         else:
@@ -267,6 +283,7 @@ class TransferMap:
     def apply(self, prcl_series, order = 1):
 
         if prcl_series.__class__ == list and prcl_series[0].__class__ == Particle:
+
             list_e = array([p.E for p in prcl_series])
             if False in (list_e[:] == list_e[0]):
                 for p in prcl_series:
@@ -285,6 +302,10 @@ class TransferMap:
             prcl_series.E += self.delta_e
             self.mul_p_array(prcl_series.particles, energy=prcl_series.E, order=order)
             prcl_series.s += self.length
+        else:
+            print(prcl_series)
+            exit("Unknown type of Particle_series. class TransferMap.apply()")
+
 
     def __call__(self, s):
         m = copy(self)

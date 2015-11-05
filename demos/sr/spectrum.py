@@ -20,9 +20,9 @@ beam.beta_x = 12.84
 beam.beta_y = 6.11
 beam.Dx = 0.526
 
-und = Undulator (Kx = 0.43, nperiods = 280, lperiod=0.007, id = "und")
+und = Undulator (Kx = 0.49, nperiods = 280, lperiod=0.007, id="und")
 
-lat = MagneticLattice((und), energy = beam.E)
+lat = MagneticLattice((und))
 
 screen = Screen()
 screen.z = 100.0
@@ -32,7 +32,7 @@ screen.nx = 1
 screen.ny = 1
 
 
-screen.start_energy = 7000 #eV
+screen.start_energy = 7400 #eV
 screen.end_energy = 7900 #eV
 screen.num_energy = 1000
 

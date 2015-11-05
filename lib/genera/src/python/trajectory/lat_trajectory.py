@@ -14,8 +14,8 @@ def split_lat(lattice):
     for elem in lattice.sequence:
         if elem.type == "undulator":
             if len(cell)>0:
-                cells.append(MagneticLattice(cell, energy = lattice.energy))
-            cells.append(MagneticLattice(elem, energy = lattice.energy))
+                cells.append(MagneticLattice(cell))
+            cells.append(MagneticLattice(elem))
             cell = []
         else:
             cell.append(elem)
@@ -24,13 +24,14 @@ def split_lat(lattice):
             #cells.append(MagneticLattice([elem], energy = lattice.energy))
             #cell = []
     if len(cell)>0:
-        cells.append(MagneticLattice(cell, energy = lattice.energy))
+        cells.append(MagneticLattice(cell))
 
     return cells
 
 def particle_end(motion, p_start):
     m = motion
-    p = Particle(x=m.X[-1]/1000., y=m.Y[-1]/1000., px=m.Xbeta[-1], py=m.Ybeta[-1], s=m.Z[-1]/1000., p=p_start.p,  tau=p_start.tau)
+    p = Particle(x=m.X[-1]/1000., y=m.Y[-1]/1000., px=m.Xbeta[-1], py=m.Ybeta[-1], s=m.Z[-1]/1000.,
+                 p=p_start.p,  tau=p_start.tau, E=p_start.E)
     return p
 
 
@@ -105,14 +106,15 @@ def trace4radiation(lat,particle0, accuracy = 1):
         #part_list = []
         if lat.sequence[0].type == "undulator":
             undulator = lat.sequence[0]
-            motion = und_trace(undulator, particle, energy = lat.energy, bRough = 0, n_trajectory_points = None, accuracy = accuracy)
+            #print "energy = ", particle.E
+            motion = und_trace(undulator, particle, energy = particle.E, bRough = 0, n_trajectory_points = None, accuracy = accuracy)
             particle = particle_end(motion, particle)
         else:
             dz = 0.05/accuracy #choise_dz(lat)
             part_list = trace_obj(lat, particle, nPoints = int(lat.totalLen/dz)*2+1)
 
             x,y,s,px,py,pz = plist2arrays(part_list)
-
+            #print "sadfas", x,y,s,px,py,pz
             Is, Ipx2, Ipy2 = integration_beta2(s, px, py)
 
             s_new = x2x(Is)
@@ -139,7 +141,7 @@ def trace4radiation(lat,particle0, accuracy = 1):
             #plt.show()
             #motion = prepare_gauss(motion)
             #print "z = ", z, dz
-            particle = part_list[-1]#particle_end(motion, particle)
+            particle = particle_end(motion, particle)
         motions.append(motion)
     return motions
 

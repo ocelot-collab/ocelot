@@ -443,6 +443,7 @@ def step(lat, particle_list, dz, navi, order=1):
 
 def lattice_track(lat, p, order=1):
     plist = [copy(p)]
+
     for elem in lat.sequence:
         elem.transfer_map.apply([p], order=order)
         if not (elem.type in ["bend", "sbend", "rbend", "hcor", "vcor"] and elem.l != 0.):

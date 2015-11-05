@@ -180,7 +180,6 @@ def checking_step(lat, screen, beam, list_motions):
     z = screen.z - lat.totalLen
     xc_max = screen.size_x + screen.x
     yc_max = screen.size_y + screen.y
-
     lph = h_eV_s*speed_of_light/screen.end_energy
     Bmax = []
     Rx = []
@@ -189,9 +188,11 @@ def checking_step(lat, screen, beam, list_motions):
     #import matplotlib.pyplot as plt
     for motion in list_motions:
         if len(motion.Z)>3:
-            z = screen.z - motion.Z
-            rx = max(abs(xc_max/z*0 - motion.X/z - motion.Xbeta))
-            ry = max(abs(yc_max/z*0 - motion.Y/z - motion.Ybeta))
+            #print screen.z
+            #print motion.Z[:20], motion.Z[-20:]
+            z = screen.z*1000 - motion.Z*1e-3
+            rx = max(abs(xc_max*1000/z*0 - motion.X/z - motion.Xbeta))
+            ry = max(abs(yc_max*1000/z*0 - motion.Y/z - motion.Ybeta))
             B = max(motion.Bx**2 + motion.By**2)
             Bmax.append(B)
             L = motion.Z[-1] - motion.Z[0]
@@ -253,7 +254,7 @@ def calculateSR_py(lat, beam, screen, runParameters = None):
     return trj, em_screen
 """
 
-
+"""
 class ID_radiation:
     def __init__(self, beam, undulator):
         if beam.E == 0:
@@ -378,7 +379,7 @@ def print_rad_props(beam, K, lu, L, E, distance):
     print ("flux density : ", F, " ph/sec/mrad^2;   ", F/distance/distance, " ph/sec/mm^2")
     #print "flux density : ", F/distance/distance, " ph/sec/mm^2"
     print ("brilliance   : ", brightness, " ph/sec/mrad^2/mm^2")
-
+"""
 
 
 def calculateSR_py(lat, beam, screen, runParameters = None):
@@ -398,12 +399,12 @@ def calculateSR_py(lat, beam, screen, runParameters = None):
     #print "in calculator ", screen.size_x, screen.x
     for elem in lat.sequence:
         if elem.type == "undulator":
-            print_rad_props(beam, elem.Kx, elem.lperiod, elem.l, lat.energy, screen.z)
+            print_rad_props(beam, elem.Kx, elem.lperiod, elem.l, screen.z)
             undulator = elem
             undulator.status = 0
     beam.gamma = beam.E/m_e_GeV
-    particle0 = Particle(x=beam.x, y=beam.y, px=beam.xp, py=beam.xp, s=0.0, p=0,  tau=0)
-    list_motions = trace4radiation(lat,particle0, accuracy = accuracy)
+    particle0 = Particle(x=beam.x, y=beam.y, px=beam.xp, py=beam.xp, s=0.0, p=0, tau=0, E=beam.E)
+    list_motions = trace4radiation(lat, particle0, accuracy = accuracy)
     #TODO: include in process checking_step
     checking_step(lat, screen, beam, list_motions)
 

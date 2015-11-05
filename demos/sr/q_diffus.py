@@ -40,7 +40,7 @@ U40_short = Undulator(nperiods = kp, lperiod=0.040, Kx=4, id="und")
 
 seg = (U40_short,)*int(nperiods*nund/kp)
 
-lat = MagneticLattice(seg, energy=2.5)
+lat = MagneticLattice(seg)
 
 
 screen_no = calculate_radiation(lat, deepcopy(screen), beam, energy_loss = False)

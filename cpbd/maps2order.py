@@ -145,7 +145,8 @@ def t_nnn(L, h, k1, k2):
         I511 = h*(3.*L - 2.*sx - sx*cx)/(6.*kx2)
         I522 = h*(3.*L - 4*sx + sx*cx)/(6.*kx4)
         I516 = h/kx2*(I51 - I511)
-        I52  =  (dx - 4.*L*sx)/(2.*kx2)
+        #I52  =  (dx - 4.*L*sx)/(2.*kx2)
+        I52  =  (2.*dx - h*L*sx)/(2.*kx2)
         I526 = h/kx2*(I52 - I512)
         I50  = h*(L - sx)/kx2
         I566 = h2/kx4*(I50 - 2*I51 + I511)
@@ -352,9 +353,11 @@ def t_nnn(L, h, k1, k2):
     i566 = h2*(L - sx*cx)/(4.*kx2) if kx != 0 else h2*L3/6.
 
     T511 = t511 + 1/4.*kx2*(L - cx*sx)
+
     T512 = t512 - (1/2.)*kx2*sx2 + h*dx
     T516 = t516 + h*(sx*cx - L)/2.
     T522 = t522 + (L + sx*cx)/4.
+    #print L, h, k1, k2, "T = ", T522
     T526 = t526 + h*sx2/2.
     T566 = t566 + i566
     T533 = t533 + 1/4.*ky2*(L - sy*cy )
@@ -476,6 +479,9 @@ def fringe_ext(h, k1, e, h_pole=0., gap=0., fint=0.):
 
 def H23(vec_x, h, k1, k2, beta=1., g_inv=0.):
     """
+    {x, px}, {y, py}, {sigma, ps}
+    sigma = s - ct
+    ps = (E - E0)/(p0*c)
     H2 = (px**2 + py**2)/2 + (h**2 + k1)*x**2/2 - (k1*y**2)/2 - (h*pt*x)/beta
     H3 = (h*x - ps/beta)*(px**2 + py**2)/2 + (2*h*k1 + k2)*(x**3)/6 - (h*k1 + k2)*(x*y**2)/2 - ps/(beta*gamma**2*(1. + beta))
     H23 = H2 + H3

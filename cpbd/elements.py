@@ -415,7 +415,7 @@ class MagneticLattice:
             prob_edge1 = self.sequence[i]
             elem = self.sequence[i+1]
             prob_edge2 = self.sequence[i+2]
-            if elem.type in ["bend", "sbend", "rbend", "hcor", "vcor"]:
+            if elem.type in ["bend", "sbend", "rbend"]: # , "hcor", "vcor"
                 if prob_edge1.type != "edge" and prob_edge2 != "edge":
                     #print elem.type, prob_edge1.type, prob_edge2.type
                     return False
@@ -425,7 +425,7 @@ class MagneticLattice:
         n = 0
         for i in range(len(self.sequence)):
             elem = self.sequence[n]
-            if elem.type in ["bend", "sbend", "rbend", "hcor", "vcor"] and elem.l != 0.:
+            if elem.type in ["bend", "sbend", "rbend"] and elem.l != 0.: # , "hcor", "vcor"
 
                 e_name = elem.id
 

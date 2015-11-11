@@ -11,6 +11,7 @@ from und_weave import *
 from ocelot.cpbd.maps2order import *
 
 
+
 def rot_mtx(angle):
     cs = cos(angle)
     sn = sin(angle)
@@ -43,15 +44,18 @@ def uni_matrix(z, k1, hx, sum_tilts=0., energy=0.):
         dx = z*z*hx/2.
         r56 = hx*hx*z**3/6.
     if gamma != 0:
-        r56 -= z/(gamma*gamma)
-
+        gamma2 = gamma*gamma
+        beta = 1. - 0.5/gamma2
+        #print 1./(beta*beta)
+        r56 -= z/(beta*beta*gamma2)
     u_matrix = array([[cx, sx, 0., 0., 0., dx],
                         [-kx2*sx, cx, 0., 0., 0., sx*hx],
                         [0., 0., cy, sy, 0., 0.],
                         [0., 0., -ky2*sy, cy, 0., 0.],
                         [hx*sx, dx, 0., 0., 1., r56],
                         [0., 0., 0., 0., 0., 1.]])
-    u_matrix = dot(dot(rot_mtx(-sum_tilts), u_matrix), rot_mtx(sum_tilts))
+    if sum_tilts != 0:
+        u_matrix = dot(dot(rot_mtx(-sum_tilts), u_matrix), rot_mtx(sum_tilts))
     return u_matrix
 
 
@@ -82,7 +86,6 @@ def t_apply(R, T, X, dx, dy, tilt):
     #X[3::6] = py[:]
 
     if dx != 0 or dy != 0 or tilt != 0:
-        #print "Iam here 1"
         X = transform_vec_ent(X, dx, dy, tilt)
 
     n = len(X)
@@ -106,6 +109,7 @@ def t_apply(R, T, X, dx, dy, tilt):
     pxpy = px*py
     ydp = y*dp
     pydp = py*dp
+    #U5666 = R[0,5]*R[1,5]*R[1,5]*R[1,5]/R[0,1] if R[0,1] != 0 else 0.
     X[0::6] = Xr[::6] + T[0, 0, 0]*x2 + T[0, 0, 1]*xpx + T[0, 0, 5]*xdp + T[0, 1, 1]*px2 + T[0, 1, 5]*pxdp + \
                T[0, 5, 5]*dp2 + T[0, 2, 2]*y2 + T[0, 2, 3]*ypy + T[0, 3, 3]*py2
 
@@ -117,10 +121,10 @@ def t_apply(R, T, X, dx, dy, tilt):
     X[3::6] = Xr[3::6] + T[3, 0, 2]*xy + T[3, 0, 3]*xpy + T[3, 1, 2]*ypx + T[3, 1, 3]*pxpy + T[3, 2, 5]*ydp + T[3, 3, 5]*pydp
 
     X[4::6] = Xr[4::6] + T[4, 0, 0]*x2 + T[4, 0, 1]*xpx + T[4, 0, 5]*xdp + T[4, 1, 1]*px2 + T[4, 1, 5]*pxdp + \
-               T[4, 5, 5]*dp2 + T[4, 2, 2]*y2 + T[4, 2, 3]*ypy + T[4, 3, 3]*py2
-
+               T[4, 5, 5]*dp2 + T[4, 2, 2]*y2 + T[4, 2, 3]*ypy + T[4, 3, 3]*py2 #- U5666*dp2*dp    # third order
+    #print T[4, 0, 0]*x2 + T[4, 0, 1]*xpx + T[4, 0, 5]*xdp + T[4, 1, 1]*px2 + T[4, 1, 5]*pxdp + T[4, 5, 5]*dp2 + T[4, 2, 2]*y2 + T[4, 2, 3]*ypy + T[4, 3, 3]*py2
     #X[:] = Xr[:] + Xt[:]
-
+    #print U5666, U5666*dp2*dp
 
     #x, x1, y, y1, tau, dp = X[0::6], X[1::6], X[2::6], X[3::6], X[4::6], X[5::6]
     #px = x1*(1. - y1*y1 - x1*x1)
@@ -172,7 +176,7 @@ class TransferMap:
             Ef = tws0.E + self.delta_e #* cos(self.phi)
             #print "Ei = ", Ei, "Ef = ", Ef
             k = sqrt(Ef/Ei)
-            #k = 1.
+            #k = 1
             M[0, 0] = M[0, 0]*k
             M[0, 1] = M[0, 1]*k
             M[1, 0] = M[1, 0]*k
@@ -181,6 +185,7 @@ class TransferMap:
             M[2, 3] = M[2, 3]*k
             M[3, 2] = M[3, 2]*k
             M[3, 3] = M[3, 3]*k
+            #M[4, 5] = M[3, 3]*k
             E = Ef
         m = tws0
         tws = Twiss(tws0)
@@ -283,11 +288,12 @@ class TransferMap:
     def apply(self, prcl_series, order = 1):
 
         if prcl_series.__class__ == list and prcl_series[0].__class__ == Particle:
-
+            # TODO: put here prcl_series.E += self.delta_e
             list_e = array([p.E for p in prcl_series])
             if False in (list_e[:] == list_e[0]):
                 for p in prcl_series:
                     self.mul_p_array(array([p.x, p.px, p.y, p.py, p.tau, p.p]), energy=p.E, order=order)
+                    p.E += self.delta_e
                     p.s += self.length
             else:
 
@@ -295,12 +301,14 @@ class TransferMap:
                 pa.list2array(prcl_series)
                 pa.E = prcl_series[0].E
                 self.mul_p_array(pa.particles, energy=pa.E, order=order)
+                pa.E += self.delta_e
                 pa.s += self.length
                 pa.array2ex_list(prcl_series)
 
         elif prcl_series.__class__ == ParticleArray:
-            prcl_series.E += self.delta_e
+            #prcl_series.E += self.delta_e
             self.mul_p_array(prcl_series.particles, energy=prcl_series.E, order=order)
+            prcl_series.E += self.delta_e
             prcl_series.s += self.length
         else:
             print(prcl_series)
@@ -558,23 +566,26 @@ def create_transfer_map(element, order=1):
 
             Ei = E
             Ef = E + de
-            
+            k = 1#Ef/Ei
+            #phi =0.
             #print Ei,Ef,Ep, z, de
             if Ei == 0:
                 print("Warning! Initial energy is zero and cavity.delta_e != 0! Change Ei or cavity.delta_e must be 0" )
             alpha = sqrt(eta / 8.) / cos(phi) * log(Ef/Ei)
             
-            r11 = cos(alpha) - sqrt(2./eta) * cos(phi) * sin(alpha)
-            if Ep != 0:
-                r12 = sqrt(8./eta) * Ei / Ep * cos(phi) * sin(alpha)
+            r11 = k*(cos(alpha) - sqrt(2./eta) * cos(phi) * sin(alpha))
+            if abs(Ep) > 1e-10:
+                r12 = k*sqrt(8./eta) * Ei / Ep * cos(phi) * sin(alpha)
             else:
                 r12 = z
-            r21 = -Ep/Ef * (cos(phi)/ sqrt(2.*eta) + sqrt(eta/8.) / cos(phi) ) * sin(alpha)
-            r22 = Ei/Ef * ( cos(alpha) + sqrt(2./eta) * cos(phi) * sin(alpha) )
-
+            r21 = -Ep/Ef *k * (cos(phi)/ sqrt(2.*eta) + sqrt(eta/8.) / cos(phi) ) * sin(alpha)
+            r22 = Ei/Ef * k *( cos(alpha) + sqrt(2./eta) * cos(phi) * sin(alpha) )
+            #print r11, r12, r21, r22
             r56 = 0.
             if gamma != 0:
-                r56 = z/(gamma*gamma)
+                gamma2 = gamma*gamma
+                beta = 1. - 0.5/gamma2
+                r56 = -z/(beta*beta*gamma2)
             cav_matrix = array([[r11, r12, 0., 0., 0., 0.],
                                 [r21, r22, 0., 0., 0., 0.],
                                 [0., 0., r11, r12, 0., 0.],
@@ -593,6 +604,8 @@ def create_transfer_map(element, order=1):
                 k = 2.*pi*freq/speed_of_light
                 #phi_rad = phi*np.pi/180.
                 #v = delta_e/cos(phi_rad)
+                #X[1::6] = X[1::6]*E/(E + delta_e)
+                #X[3::6] = X[3::6]*E/(E + delta_e)
                 X[5::6] = (X[5::6]*E + V*np.cos(X[4::6]*k + phi) - delta_e)/(E + delta_e)
         transfer_map.phi = element.phi
         transfer_map.order = 2
@@ -837,8 +850,10 @@ def get_map(lattice, dz, navi, order=1):
     z1 = navi.z0 + dz
     elem = lattice.sequence[i]
     L = navi.sum_lengths + elem.l
+
     rec_count = 0  # counter of recursion in R = lambda energy: dot(R1(energy), R2(energy))
     #print "get_map: order = ", order
+
     while z1 > L:
         dl = L - navi.z0
         if elem.transfer_map.order > 1 or order > 1:
@@ -857,6 +872,7 @@ def get_map(lattice, dz, navi, order=1):
                 tm = TransferMap(identity=True)
                 rec_count = 0
         navi.z0 = L
+
         dz -= dl
         i += 1
         elem = lattice.sequence[i]
@@ -873,7 +889,6 @@ def get_map(lattice, dz, navi, order=1):
         tm = TransferMap(identity=True)
     else:
         tm = elem.transfer_map(dz)*tm
-
     navi.z0 += dz
     navi.sum_lengths = L - elem.l
     navi.n_elem = i

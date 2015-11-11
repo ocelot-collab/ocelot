@@ -232,6 +232,7 @@ class ParticleArray:
         for i, p in enumerate(p_list):
             self[i] = p
         self.s = p_list[0].s
+        self.E = p_list[0].E
 
     def array2list(self):
         p_list = []
@@ -248,6 +249,7 @@ class ParticleArray:
             p.py = self.particles[i*6+3]
             p.tau = self.particles[i*6+4]
             p.p = self.particles[i*6+5]
+            p.E = self.E
             p.s = self.s
         return p_list
 

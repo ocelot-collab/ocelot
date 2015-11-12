@@ -10,7 +10,7 @@ from numpy import sqrt
 #h_eV_s = const.codata.value('Planck constant in eV s')
 #ro_e = const.codata.value("classical electron radius")
 
-pi = 3.14159265359
+pi = 3.141592653589793
 speed_of_light = 299792458.0 #m/s
 m_e_MeV = 0.510998928        # MeV
 m_e_eV = m_e_MeV*1e+6        # eV

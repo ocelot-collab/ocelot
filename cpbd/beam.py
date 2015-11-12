@@ -8,7 +8,7 @@ Note:
 (B) xp, yp are in [rad] but the meaning is not specified
 '''
 
-from numpy import zeros, array, append, sqrt, abs, argwhere, unique, delete, pi
+from numpy import *
 
 class Twiss:
     def __init__(self, beam = None):
@@ -262,3 +262,34 @@ class ParticleArray:
     def py(self): return self.particles[3::6]
     def tau(self): return self.particles[4::6]
     def p(self): return self.particles[5::6]
+
+
+def get_envelope(p_array):
+    tws = Twiss()
+    x = p_array.x()
+    px = p_array.px()
+    y = p_array.y()
+    py = p_array.py()
+    tws.x = 0.  #mean(x)
+    tws.y = 0.  #mean(y)
+    tws.px =0.  #mean(px)
+    tws.py =0.  #mean(py)
+    #print tws.x, tws.y, tws.px,tws.py
+    tws.xx = mean((x-tws.x)*(x-tws.x))
+    tws.xpx = mean((x-tws.x)*(px-tws.px))
+    tws.pxpx = mean((px-tws.px)*(px-tws.px))
+    tws.yy = mean((y-tws.y)*(y-tws.y))
+    tws.ypy = mean((y-tws.y)*(py-tws.py))
+    tws.pypy = mean((py-tws.py)*(py-tws.py))
+    tws.p = mean( p_array.p())
+    tws.E = p_array.E
+    #tws.de = p_array.de
+
+    tws.emit_x = sqrt(tws.xx*tws.pxpx-tws.xpx**2)
+    tws.emit_y = sqrt(tws.yy*tws.pypy-tws.ypy**2)
+    #print tws.emit_x, sqrt(tws.xx*tws.pxpx-tws.xpx**2), tws.emit_y, sqrt(tws.yy*tws.pypy-tws.ypy**2)
+    tws.beta_x = tws.xx/tws.emit_x
+    tws.beta_y = tws.yy/tws.emit_y
+    tws.alpha_x = -tws.xpx/tws.emit_x
+    tws.alpha_y = -tws.ypy/tws.emit_y
+    return tws

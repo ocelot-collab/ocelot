@@ -441,7 +441,22 @@ def body_trajectory(fig, ax_xy, ax_el, lat, list_particles):
 
     plot_elems(ax_el, lat, nturns = int(S[-1]/lat.totalLen), legend = False) # plot elements
 
-
+"""
+def plot_current(p_array, charge, num_bins = 200):
+    z = p_array.particles[4::6]
+    hist, bin_edges = np.histogram(z, bins=num_bins)
+    delta_Z = max(z) - min(z)
+    delta_z = delta_Z/num_bins
+    t_bins = delta_z/speed_of_light
+    print "Imax = ", max(hist)*charge/t_bins
+    hist = np.append(hist, hist[-1])
+    plt.plot(bin_edges, hist*charge/t_bins)
+    plt.grid(True)
+    plt.title("current")
+    plt.xlabel("s, m")
+    plt.ylabel("I, A")
+    plt.show()
+"""
 
 def plot_trajectory(lat, list_particles):
     fig = plt.figure()

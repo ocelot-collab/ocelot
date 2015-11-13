@@ -1,7 +1,8 @@
 '''
 definition of particles, beams and trajectories
 '''
-
+import numpy as np
+from ocelot.common.globals import *
 '''
 Note:
 (A) the reference frame (e.g. co-moving or not with the beam is not fixed) 
@@ -270,10 +271,10 @@ def get_envelope(p_array):
     px = p_array.px()
     y = p_array.y()
     py = p_array.py()
-    tws.x = 0.  #mean(x)
-    tws.y = 0.  #mean(y)
-    tws.px =0.  #mean(px)
-    tws.py =0.  #mean(py)
+    tws.x = mean(x)
+    tws.y = mean(y)
+    tws.px =mean(px)
+    tws.py =mean(py)
     #print tws.x, tws.y, tws.px,tws.py
     tws.xx = mean((x-tws.x)*(x-tws.x))
     tws.xpx = mean((x-tws.x)*(px-tws.px))
@@ -293,3 +294,17 @@ def get_envelope(p_array):
     tws.alpha_x = -tws.xpx/tws.emit_x
     tws.alpha_y = -tws.ypy/tws.emit_y
     return tws
+
+def get_current(p_array, charge, num_bins = 200):
+    """
+    return: hist -  current in A
+          : bin_edges - points position
+    """
+    z = p_array.particles[4::6]
+    hist, bin_edges = np.histogram(z, bins=num_bins)
+    delta_Z = max(z) - min(z)
+    delta_z = delta_Z/num_bins
+    t_bins = delta_z/speed_of_light
+    print "Imax = ", max(hist)*charge/t_bins
+    hist = np.append(hist, hist[-1])
+    return bin_edges, hist*charge/t_bins

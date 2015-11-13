@@ -2,8 +2,8 @@ __author__ = 'Sergey Tomin'
 
 from time import time
 from pylab import *
-from ocelot.lib.genera.src.python.radiation.radiation_py import *
-from ocelot.lib.genera.src.python.radiation.em_screen import *
+from ocelot.rad.radiation_py import *
+from ocelot.rad.screen import *
 from ocelot.cpbd.elements import *
 from ocelot.cpbd.beam import *
 from copy import deepcopy
@@ -27,8 +27,6 @@ screen.start_energy = 8030 #eV
 screen.end_energy = 8090 #eV
 screen.num_energy = 500
 
-screen = EMScreen(screen)
-
 start = time()
 
 nund = 15               # Number of undulators
@@ -43,12 +41,12 @@ seg = (U40_short,)*int(nperiods*nund/kp)
 lat = MagneticLattice(seg)
 
 
-screen_no = calculate_radiation(lat, deepcopy(screen), beam, energy_loss = False)
-total = np.zeros_like(screen.arReEx)
+screen_no = calculate_radiation(lat, deepcopy(screen), beam, energy_loss=False, quantum_diff=False)
+total = np.zeros(screen.num_energy)
 Uq = []
 for i in range(npls):
     print i
-    screen = calculate_radiation(lat, deepcopy(screen), beam, energy_loss = False, quantum_diff = True)
+    screen = calculate_radiation(lat, deepcopy(screen), beam, energy_loss=False, quantum_diff=True)
     total += screen.Total/npls
     Uq.append(screen.Ef_electron)
 

@@ -4,7 +4,7 @@ from time import time
 
 from scipy import interpolate
 
-from ocelot.lib.genera.src.python.trajectory.spline_py import *
+from spline_py import *
 from ocelot.cpbd.optics import *
 from ocelot.cpbd.track import *
 from ocelot.cpbd.elements import *
@@ -212,7 +212,7 @@ def track4rad(beam, lat, energy_loss = False, quantum_diff = False):
     return U, E
 
 
-def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step, tmp ):
+def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step, tmp):
     Q = 0.5866740802042227#; // (mm*T)^-1
     hc = 1.239841874330e-3 # // mm
     k2q3 = 1.1547005383792517#;//  = 2./sqrt(3)
@@ -368,7 +368,8 @@ def radiation_py(gamma, traj, screen, tmp):
     return 1
 
 def calculate_radiation(lat, screen, beam, energy_loss = False, quantum_diff = False):
-    b_current = beam.I*1000. # b_current - beam current in [mA], but beam.I in [A]
+    screen.update()
+    b_current = beam.I*1000. # b_current - beam current must be in [mA], but beam.I in [A]
     energy = beam.E
     gamma = energy/m_e_GeV
 

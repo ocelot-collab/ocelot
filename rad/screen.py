@@ -4,47 +4,112 @@ __author__ = 'Sergey Tomin'
 #import convolution as conv
 from ctypes import c_double
 from numpy import zeros, empty_like, linspace, array, sin, cos
-from ocelot.common.screen import Screen
+#from ocelot.common.screen import Screen
+
 
 def Py2C(array):
     arr_type =  c_double*len(array)
     c_array = arr_type(*array)
     return c_array
-        
-class EMScreen():
-    def __init__(self, screen=None):
-        if screen !=None:
-            self.screen_to_emscreen(screen)
+
+
+class Screen:
+    def __init__(self):
+        # position of screen center
+        self.x = 0.0   # in [m]
+        self.y = 0.0   # in [m]
+        self.z = 100.0   # in [m]
+
+        # Screen sizes and resolution
+        self.size_x = 1.0  # half-size horizontal in [m]
+        self.size_y = 1.0  # half-size vertical in [m]
+        self.nx = 1  # points per horizontal direction
+        self.ny = 1  # points per vertical direction
+
+        # parameters of energy options
+        self.start_energy = 100.0
+        self.end_energy = 10000.0
+        self.num_energy = 1000
+
+        # half of angle aperture.  Angle relative to undulator axis for emittance influence on spectrum
+        self.theta_x = 0  # rad
+        self.theta_y = 0  # rad
+        self.update()
+
+    def update(self):
+        self.x_start = (self.x - self.size_x)*1000.  # in mm
+
+        if(self.nx != 1):
+            self.x_step = float(self.size_x*2.)/(self.nx - 1)*1000.  # in mm
         else:
-            self.create_empty_emclass()
+            self.x_step = 0.                # in mm
+            self.x_start = self.x*1000.  # in mm
+        # Y
+        self.y_start = (self.y - self.size_y)*1000.  # in mm
+        if self.ny != 1:
+            self.y_step = float(self.size_y*2.)/(self.ny - 1)*1000.  # in mm
+        else:
+            self.y_step = 0                 # in mm
+            self.y_start = self.y*1000.  # in mm
+        # E
+        self.e_start = self.start_energy
+        if(self.num_energy != 1):
+            self.e_step = (float(self.end_energy) - self.start_energy)/(self.num_energy - 1)
+        else:
+            self.e_step = 0
+        self.ne = self.num_energy
+
+        self.Zstart = 0. # this parameter is needed to calculation radiation
+
+        self.Distance = self.z*1000. # Note this parameter is just distance from ZERO to screen # in mm!!!
+
+        Nscr = self.ne*self.nx*self.ny
+
+        self.memory_screen = zeros(Nscr*5)
+        self.arReEx = self.memory_screen[0:Nscr]
+        self.arImEx = self.memory_screen[Nscr:2*Nscr]
+        self.arReEy = self.memory_screen[2*Nscr:3*Nscr]
+        self.arImEy = self.memory_screen[3*Nscr:4*Nscr]
+        self.arPhase = self.memory_screen[4*Nscr:5*Nscr]
+        self.Xph = linspace(self.x_start, self.x_start + self.x_step*(self.nx -1), self.nx)
+        self.Yph = linspace(self.y_start, self.y_start + self.y_step*(self.ny -1), self.ny)
+        self.Eph = linspace(self.e_start, self.e_start + self.e_step*(self.ne -1), self.ne)
+
+
+        #class EMScreen():
+        #    def __init__(self, screen=None):
+        #        if screen !=None:
+        #            self.screen_to_emscreen(screen)
+        #        else:
+        #            self.create_empty_emclass()
 
 
     def screen_to_emscreen(self, screen):
 
-        self.x = screen.x
-        self.y = screen.y
-        self.size_x = screen.size_x # half-size horizontal
-        self.size_y = screen.size_y # half-size vertical
+        self.x = screen.x   # in [m]
+        self.y = screen.y   # in [m]
+        self.size_x = screen.size_x  # in [m] half-size horizontal
+        self.size_y = screen.size_y  # in [m] half-size vertical
 
-        self.start_energy = screen.start_energy
-        self.end_energy = screen.end_energy
-        self.num_energy = screen.num_energy
+        self.start_energy = screen.start_energy # in [eV]
+        self.end_energy = screen.end_energy     # in [eV]
+        self.num_energy = screen.num_energy     # in [eV]
         # X
-        self.x_start = (screen.x - screen.size_x)*1000.
+        self.x_start = (screen.x - screen.size_x)*1000.  # in mm
 
         if(screen.nx != 1):
-            self.x_step = float(screen.size_x*2.)/(screen.nx - 1)*1000.
+            self.x_step = float(screen.size_x*2.)/(screen.nx - 1)*1000.  # in mm
         else:
-            self.x_step = 0
-            self.x_start = screen.x*1000.
+            self.x_step = 0.
+            self.x_start = screen.x*1000.  # in mm
         self.nx = screen.nx # points per horizontal direction
         # Y
-        self.y_start =  (screen.y - screen.size_y)*1000.
+        self.y_start =  (screen.y - screen.size_y)*1000.  # in mm
         if(screen.ny != 1):
-            self.y_step = float(screen.size_y*2.)/(screen.ny - 1)*1000.
+            self.y_step = float(screen.size_y*2.)/(screen.ny - 1)*1000.  # in mm
         else:
             self.y_step = 0
-            self.y_start = screen.y*1000.
+            self.y_start = screen.y*1000.  # in mm
         self.ny = screen.ny # points per vertical direction
         # E
         self.e_start = screen.start_energy
@@ -57,7 +122,7 @@ class EMScreen():
         self.Zstart = 0. # this parameter is needed to calculation radiation
         # it is initial position in longitudinal direction for chain of undulators
         self.z = screen.z
-        self.Distance = screen.z*1000. # Note this parameter is just distance from ZERO to screen!!!
+        self.Distance = screen.z*1000. # Note this parameter is just distance from ZERO to screen # in mm!!!
 
         # half of angle aperture.  Angle relative to undulator axis for emittance influence on spectrum
         self.theta_x = screen.theta_x
@@ -77,7 +142,7 @@ class EMScreen():
 
         # additional
         #self.fund_harm_eV = screen.fund_harm_eV
-        self.start_energy = screen.start_energy
+        #self.start_energy = screen.start_energy
 
     def create_empty_emclass(self):
         self.x_step = 0
@@ -94,7 +159,7 @@ class EMScreen():
 
         self.Zstart = 0
 
-        self.Distance =0
+        self.Distance = 0
         # half of angle aperture.  Angle relative to undulator axis for emittance influence on spectrum
         self.theta_x = 0.
         self.theta_y = 0.
@@ -216,153 +281,16 @@ def sum_screens(screen_down, screen_up):
     because the radiation calculation starts from zero phase from each emitter.
     """
     #screen = Screen()
-    em_screen = EMScreen()
-    em_screen.create_like(screen_down)
+    screen = Screen()
+    screen.create_like(screen_down)
 
     sinfa = sin(screen_down.arPhase)
     cosfa = cos(screen_down.arPhase)
-    em_screen.arReEx = screen_down.arReEx + screen_up.arReEx*cosfa - screen_up.arImEx*sinfa
-    em_screen.arImEx = screen_down.arImEx + screen_up.arImEx*cosfa + screen_up.arReEx*sinfa
-    em_screen.arReEy = screen_down.arReEy + screen_up.arReEy*cosfa - screen_up.arImEy*sinfa
-    em_screen.arImEy = screen_down.arImEy + screen_up.arImEy*cosfa + screen_up.arReEy*sinfa
+    screen.arReEx = screen_down.arReEx + screen_up.arReEx*cosfa - screen_up.arImEx*sinfa
+    screen.arImEx = screen_down.arImEx + screen_up.arImEx*cosfa + screen_up.arReEx*sinfa
+    screen.arReEy = screen_down.arReEy + screen_up.arReEy*cosfa - screen_up.arImEy*sinfa
+    screen.arImEy = screen_down.arImEy + screen_up.arImEy*cosfa + screen_up.arReEy*sinfa
 
-    em_screen.arPhase = screen_down.arPhase + screen_up.arPhase
-    return em_screen
+    screen.arPhase = screen_down.arPhase + screen_up.arPhase
+    return screen
 
-import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib
-from matplotlib import cm
-
-def show_flux(screen, show = 'Total', xlim = (0,0), ylim = (0,0),  file_name = None, unit = "mm"):
-    if show == 'Total':
-        data = screen.Total
-    elif show == 'Sigma':
-        data = screen.Sigma
-    else:
-        data = screen.Pi
-
-    if screen.nx == 1 or screen.ny == 1:
-        if screen.nx == 1 and screen.ny == 1:
-            X = screen.Eph
-            xlabel = r'$E_{ph}$, $eV$'
-            status = "spectrum"
-        elif screen.nx == 1:
-            X = screen.Yph
-            xlabel = r'$Y$, $mm$'
-            if unit == "mrad":
-                xlabel = r'$Y$, $mrad$'
-            status = "spatial"
-        else:
-            X = screen.Xph
-            xlabel = r'$X$, $mm$'
-            if unit == "mrad":
-                xlabel = r'$X$, $mrad$'
-            status = "spatial"
-
-        D1(data, X, distance =  screen.Distance, xlabel = xlabel, xlim = xlim, ylim = ylim,  file_name = file_name, unit = unit, status = status)
-    else:
-        if screen.ne!=1:
-            print " ******** ERROR into show.screen ! *********** "
-            return
-        D3(screen, data, distance =  screen.Distance, file_name = file_name, unit = unit)
-
-
-def D1(data, X, distance, xlabel, xlim, ylim,  file_name, unit, status ):
-    # distance in [mm]
-    if unit == "mrad":
-        data = data*distance*distance*1e-6
-    if unit == "mrad" and status == "spatial":
-        X = X/distance*1e3
-
-    maxS = max(data)
-    index = np.where(data== max(data))[0][0]
-    energy = X[index]
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.plot(X, data)
-
-    if xlim != (0,0):
-        ax.set_xlim(xlim)
-    if ylim != (0,0):
-        ax.set_ylim(ylim)
-    #ax.set_title()
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(r"$I$, $\frac{ph}{sec \cdot mm^2 10^{-3}BW}$")
-    if unit == "mrad":
-        ax.set_ylabel(r"$I$, $\frac{ph}{sec mrad^2 10^{-3}BW}$")
-    ax.grid(True)
-
-    ax.annotate('$\epsilon_1 = ' + str(int(energy*10)/10.) +'$', xy=(-30, -20),
-               xycoords='axes points',
-               horizontalalignment='right', verticalalignment='top',
-               fontsize=20)
-
-    power = np.floor(np.log10(maxS))
-    intensity = np.around(maxS*10**(-power), 2)*10**power
-    ax.annotate('I = ' + str(intensity) , xy=(-25, -50),
-               xycoords='axes points',
-               horizontalalignment='right', verticalalignment='top',
-               fontsize=15)
-
-    if file_name != None:
-        figg = plt.gcf()
-        k_size = 1.4
-        figg.set_size_inches( (4*k_size, 3.01*k_size) )
-        figg.savefig(file_name)
-    else:
-        plt.show()
-    plt.show()
-
-
-def D3(screen,Data, distance, file_name = None , unit = "mm"):
-    #print " showme.any = ", np.shape(Data)
-    X,Y = np.meshgrid(screen.Xph, screen.Yph)
-    if unit == "mrad":
-        Data = Data*distance*distance*1e-6
-        X = X/distance*1e6
-        Y = Y/distance*1e6
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-
-
-    #print " showme.any = ", np.shape(X)
-    #print " showme.any = ", np.shape(Y)
-    data = np.zeros((screen.ny, screen.nx))
-    for j in range(screen.ny):
-        for i in range(screen.nx):
-            data[j,i] = Data[screen.nx*j + i]
-    ax.plot_surface(X, Y, data, rstride=1, cstride=1, cmap=cm.jet)
-    #ax.set_zlim3d(0, 1)
-
-    if unit == "mrad":
-        ax.set_xlabel(r'$\theta_x$, $\mu rad$')
-        ax.set_ylabel(r'$\theta_y$, $\mu rad$')
-        ax.set_zlabel(r"$I$, $\frac{ph}{s \cdot mrad^2 10^{-3}BW}$")
-    else:
-        ax.set_xlabel(r'$X$, $mm$')
-        ax.set_ylabel(r'$Y$, $mm$')
-        ax.set_zlabel(r"$I$, $\frac{ph}{s\cdot mm^2 10^{-3}BW}$")
-
-    #ax.set_xticks([])
-    if file_name != None:
-        figg = plt.gcf()
-        k_size = 1.7
-        figg.set_size_inches( (4*k_size, 3.01*k_size) )
-        figg.savefig(file_name)
-    else:
-        plt.show()
-    #plt.show()
-
-def plot3D_data(data, x = None, y = None):
-    if x != None and y != None:
-        X,Y = np.meshgrid(x,y)
-    else:
-        print np.shape(data)
-        X,Y = np.meshgrid(np.arange(np.shape(data)[1]), np.arange(np.shape(data)[0]))
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.plot_surface(X, Y, data, rstride=1, cstride=1, cmap=cm.jet)
-    plt.show()

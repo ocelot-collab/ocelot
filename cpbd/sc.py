@@ -208,19 +208,6 @@ def SC_xp_update(xp, Q, gamref, dS, nxyz):
     xp[:,4] = xp[:, 4] + cdT*(1-betref*u[:, 2])*Exyz[:, 1]
     xp[:,5] = xp[:, 5] + cdT*(Exyz[:, 2] + betref*(u[:, 0]*Exyz[:, 0] + u[:, 1]*Exyz[:, 1]))
 
-def get_current(p_array, charge, num_bins = 200):
-    """
-    return: hist -  current in A
-          : bin_edges - points position
-    """
-    z = p_array.particles[4::6]
-    hist, bin_edges = np.histogram(z, bins=num_bins)
-    delta_Z = max(z) - min(z)
-    delta_z = delta_Z/num_bins
-    t_bins = delta_z/speed_of_light
-    print "Imax = ", max(hist)*charge/t_bins
-    hist = np.append(hist, hist[-1])
-    return bin_edges, hist*charge/t_bins
 
 """
 def sc_track(lattice):

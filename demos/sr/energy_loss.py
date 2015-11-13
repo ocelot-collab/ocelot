@@ -2,8 +2,8 @@ __author__ = 'Sergey Tomin'
 
 from time import time
 from pylab import *
-from ocelot.lib.genera.src.python.radiation.radiation_py import *
-from ocelot.lib.genera.src.python.radiation.em_screen import *
+from ocelot.rad.radiation_py import *
+from ocelot.rad.screen import *
 from ocelot.cpbd.elements import *
 #from ocelot.cpbd.optics import *
 #from ocelot.cpbd.e_beam_params import *
@@ -28,11 +28,7 @@ screen.start_energy = 8030 #eV
 screen.end_energy = 8090 #eV
 screen.num_energy = 500
 
-screen = EMScreen(screen)
-
 start = time()
-
-
 
 Nunduls = 15
 Nperiods = 125

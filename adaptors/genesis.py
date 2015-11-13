@@ -2,18 +2,14 @@
 interface to genesis
 '''
 
-import sys, os
-import numpy as np
 import struct
-from numpy import cos, sin, exp, sqrt, sum, mean
-import numpy.fft as fft
-from ocelot.fel.fel import *
+from copy import copy
+
+from ocelot.rad.fel import *
 from ocelot.cpbd.beam import Beam
 import ocelot.utils.reswake as w
-from copy import copy, deepcopy
 from ocelot.common.math_op import *
 from ocelot.cpbd.optics import gaussFromTwiss
-
 
 h = 4.135667516e-15
 c = 299792458.0

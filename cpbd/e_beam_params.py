@@ -1,11 +1,12 @@
 __author__ = 'Sergey'
 
-from numpy import linspace, array, sqrt, pi
 from scipy.integrate import simps
+
 from ocelot.common.globals import *
 from ocelot.cpbd.optics import trace_z, twiss
 from ocelot.cpbd.beam import *
-from ocelot.lib.genera.unit2unit import *
+from ocelot.rad.undulator_params import *
+
 
 def I2_ID(L, h0):
     return L/2.*h0*h0

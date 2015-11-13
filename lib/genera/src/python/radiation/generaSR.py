@@ -1,7 +1,6 @@
 __author__ = 'Sergey Tomin'
 
-from em_screen import EMScreen, show_flux
-from ocelot.common.globals import *
+from ocelot.rad.screen import *
 #from codes.genera.src.python.trajectory.tr_solver import trajectory_body
 from ocelot.lib.genera.src.python.trajectory.lat_trajectory import trace4radiation
 from emitt_spread import  change_sizes_screen, convolution_all
@@ -9,14 +8,9 @@ from ocelot.cpbd.beam import *
 from ctypes import CDLL, c_double, c_int, POINTER
 from numpy import array, zeros, abs
 from sys import path
-import os
-from ocelot.lib.genera.unit2unit import *
-from scipy.special import *
+from ocelot.rad.undulator_params import *
 from ocelot.common.globals import *
 from time import time
-from os import name as os_name
-from sys import platform
-import socket
 
 """
 if os_name == "nt":
@@ -394,6 +388,7 @@ def calculateSR_py(lat, beam, screen, runParameters = None):
         c. Code can choose right library (dll / so) automatically depend on OS
         d. list_lists_motion will be transform to list_motiona
     """
+    screen.update()
     accuracy = 2
 
     #print "in calculator ", screen.size_x, screen.x
@@ -411,19 +406,19 @@ def calculateSR_py(lat, beam, screen, runParameters = None):
     trj = motion_to_trj(list_motions)
     #showMeTrajectory(list_motions)
     #display_undulator_param(screen, cell, beam, list_motion, show_param)
-    em_screen = EMScreen(screen)
+    #em_screen = EMScreen(screen)
 
     beam_current = beam.I*1000
 
-    print ("before x:", em_screen.nx, em_screen.x_start, em_screen.x_step)
-    print ("before y:", em_screen.ny, em_screen.y_start, em_screen.y_step)
-    print ("before e:", em_screen.ne, em_screen.e_start, em_screen.e_step)
-    change_sizes_screen(em_screen, beam)
-    print ("after x:", em_screen.nx, em_screen.x_start, em_screen.x_step, em_screen.nx_add)
-    print ("after y:", em_screen.ny, em_screen.y_start, em_screen.y_step, em_screen.ny_add)
-    print ("after e:", em_screen.ne, em_screen.e_start, em_screen.e_step, em_screen.ne_add)
+    print ("before x:", screen.nx, screen.x_start, screen.x_step)
+    print ("before y:", screen.ny, screen.y_start, screen.y_step)
+    print ("before e:", screen.ne, screen.e_start, screen.e_step)
+    change_sizes_screen(screen, beam)
+    print ("after x:", screen.nx, screen.x_start, screen.x_step, screen.nx_add)
+    print ("after y:", screen.ny, screen.y_start, screen.y_step, screen.ny_add)
+    print ("after e:", screen.ne, screen.e_start, screen.e_step, screen.ne_add)
     start = time()
-    em_screen = radiation(em_screen, list_motions, beam.gamma, beam_current, undulator, mode_proc = "CPU")
+    em_screen = radiation(screen, list_motions, beam.gamma, beam_current, undulator, mode_proc = "CPU")
     print ("radiation solver: ", time() - start, " sec")
     start = time()
 

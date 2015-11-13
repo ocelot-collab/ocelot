@@ -1,12 +1,10 @@
 
 from numpy import sqrt
+import numpy as np
+import scipy.special as sf
 from scipy.special import jn
-speed_of_light = 299792458.0 #m/s
-m_e_MeV = 0.510998928        # MeV
-m_e_eV = m_e_MeV*1e+6
-m_e_GeV = m_e_MeV*1.e-3      # GeV
-h_eV_s = 4.135667516e-15    #eV s
-pi = 3.14159265359
+from ocelot.common.globals import *
+
 
 def lambda2eV(Lambda):
     Eph = h_eV_s*speed_of_light/Lambda
@@ -180,3 +178,83 @@ def print_rad_props(beam, K, lu, L, distance):
     print ("brilliance   : ", brightness, " ph/sec/mrad^2/mm^2")
 
 
+
+class UndulatorParameters:
+
+    def __init__(self, und = None):
+
+        if und == None:
+            self.Nw = 100   # number of periods
+            self.lw = 0.045 # period length, m
+            self.E = 1.0 # electron energy, in GeV
+            self.K = 1.0    # undulator parameter
+
+        else:
+
+            self.Nw = und.nperiods   # number of periods
+            self.lw = und.lperiod # period length, m
+            self.E = 1.0 # electron energy, in GeV
+            self.K = und.Kx    # undulator parameter
+
+        self.recalculate()
+
+
+    def recalculate(self):
+
+        self.gamma = 1.0e+9 * self.E / m_e_eV
+        self.L = self.Nw*self.lw
+        self.B = 2.0*pi * self.K * m_e_eV / (self.lw * speed_of_light)
+        self.kw = 2.0*pi / self.lw
+        self.beta = sqrt(1.0 - 1.0 / (self.gamma*self.gamma) )
+        self.beta_z = self.beta * (1.0 - (self.K*self.K)/ (4.0*self.gamma*self.gamma))
+        #self.w1, _, _ = self.computeRadiationAnalytical(200.0, 0.0, 0)
+        self.w1 = 1.0 / ( (1.0 + self.K*self.K/2.0 ) / (2*self.kw*speed_of_light*self.gamma**2) )
+        self.lamd_ev = h_eV_s*self.w1/(2*np.pi)
+
+
+    def computeRadiationAnalytical(self,z0, theta, phi, dwRel = 0.1, npoints=100):
+        w1 = 1.0 / ( (1.0 + self.K*self.K/2.0 + self.gamma*self.gamma*theta) / (2*self.kw*speed_of_light*self.gamma**2) ) # first harmonic
+        dw = w1 * dwRel
+        step_w = dw / npoints
+        w = np.arange(w1-dw, w1+dw, step_w)
+        phis = theta * theta * w * z0 / (2.0 * speed_of_light)
+        delta_w = w - w1
+
+        u = w * self.K*self.K / (8*self.kw*speed_of_light*self.gamma*self.gamma)
+        ajj = sf.jv(0,u) - sf.jv(1,u)
+        I = self.Nw * self.lw * self.K * w *  np.exp(1j * phis) / ( z0 * self.gamma)  * np.sinc(pi*self.Nw*(w-w1)/w1) * ajj
+        I = np.real(I)
+
+        self.fundamentalWavelength = self.lw / (2*self.gamma**2) * (1+ self.K**2 / 2.0 + self.gamma**2 * theta)
+
+        print 'test', h_eV_s*speed_of_light / self.fundamentalWavelength
+
+        return w1, w, I
+
+    def get_k(self, E):
+        # w1 in ev
+        w1 = 2. * np.pi * E / h_eV_s
+        return np.sqrt( (4.*self.kw*speed_of_light*self.gamma**2)/w1 - 2. )
+
+
+    def printParameters(self):
+
+        self.recalculate()
+
+        print "Undulator parameters:"
+        print "L=", self.L
+        print "gamma(electron)=", self.gamma
+        print "K=", self.K
+        print "B[T]=", self.B
+
+        w1, _, _ = self.computeRadiationAnalytical(200.0, 0.0, 0)
+
+        print "Radiation parameters:"
+        print "w1(first harmonic, zero angle)=", w1, "Hz/2pi", h_eV_s*w1/(2*np.pi), "[eV]", self.fundamentalWavelength, "m"
+
+        t = self.L / speed_of_light
+        cb = 379.35 # 1/(gev sec Tesla^2)
+
+        eloss = self.E - self.E / (1.0 + 0.5*self.B*self.B*cb*self.E*t)
+
+        print "Total energy loss [Gev]", eloss

@@ -3,35 +3,14 @@ functions common to xfel decks
 '''
 
 
-import scipy.special as sf
-import scipy.integrate as integrate
-from numpy.polynomial.chebyshev import *
-from numpy import *
-import numpy as np
-
-from copy import copy, deepcopy
-
-from ocelot.cpbd.elements import Element, Quadrupole, RBend, Drift, Undulator, MagneticLattice, Hcor, Vcor
-from ocelot.cpbd.beam import Beam, ParticleArray
-from ocelot.cpbd.optics import *
-
-from ocelot.optics.utils import *
-
-from ocelot.common.screen import Screen
 #from ocelot.common.xio import XIO
 
 #from ocelot.adaptors import srwutil as srw
 
-import os, socket
-from ocelot.utils.launcher import *
-
-
-from ocelot.rad.sr import *
-from ocelot.fel.fel import *
-from ocelot.adaptors.genesis import *
-from copy import deepcopy, copy
 
 from pylab import *
+
+from ocelot.adaptors.genesis import *
 params = {'backend': 'ps', 'axes.labelsize': 18, 'text.fontsize': 16, 'legend.fontsize': 24, 'xtick.labelsize': 32,  'ytick.labelsize': 32, 'text.usetex': True}
 rcParams.update(params)
 rc('text', usetex=True) # required to have greek fonts on redhat

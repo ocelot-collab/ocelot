@@ -192,7 +192,7 @@ def t_nnn(L, h, k1, k2):
     elif kx != 0 and ky == 0:
         I323 = (L - sx)/kx2
         I324 = 2.*(1. - cx)/kx4 - L*sx/kx2
-        I314 = (2.*sx - 1. - cx)/kx2
+        I314 = (2.*sx - L*(1. + cx))/kx2
         I313 = (1. - cx)/kx2
         I144 = (-2. + kx2*L2 + 2.*cx)/kx4
         I133 = (1. - cx)/kx2
@@ -200,7 +200,8 @@ def t_nnn(L, h, k1, k2):
         # derivative of Integrals
         I423 = (1. - cx)/kx2
         I424 = (sx - L*cx)/kx2
-        I414 = 2*cx/kx2 + sx
+        #I414 = 2*cx/kx2 + sx
+        I414 = (cx - 1.)/kx2 + L*sx
         I413 = sx
         I244 = (2.*L - 2.*sx)/kx2
         I233 = sx
@@ -221,6 +222,7 @@ def t_nnn(L, h, k1, k2):
         I414 = L2/2.
         I423 = L2/2.
 
+    # print I323, L, kx, ky
     if kx == 0 and ky != 0:
         I336 = (h*L*(3.*L*cy + (2.*ky2*L2 - 3.)*sy))/(24.*ky2)
         I346 = (h*((3. - 2.*ky2*L2)*L*cy + 3.*(ky2*L2 - 1.)*sy))/(24.*ky4)
@@ -290,7 +292,7 @@ def t_nnn(L, h, k1, k2):
     t424 = coef2*I424 + h*I413
     t436 = coef2*I436 - h2*ky2*I424 + ky2*I43
     t446 = coef2*I446 + h2*I423 + ky2*I44
-
+    #print "I414=", I414, "  I423 = ", I423,  "   t414 = ", t414, L, kx, ky
     # Coordinates transformation from Curvilinear to a Cartesian
     cx_1 = -kx2*sx
     sx_1 = cx
@@ -331,6 +333,8 @@ def t_nnn(L, h, k1, k2):
     T[3, 1, 3] = t424 - h*sx*sy_1
     T[3, 2, 5] = t436 - h*dx*cy_1
     T[3, 3, 5] = t446 - h*dx*sy_1
+
+    #print "I414=", I414, "  I423 = ", I423,  "   t446 = ", t446, "add = ",h*dx*sy_1, "L = ", L, kx, ky
     """
     Path length difference
     linear = cx*h*x0 + h*sx*x0' + dx*h*dp;

@@ -44,11 +44,16 @@ def read_lattice_elegant(file_flo, file_par):
             quad.s=eval(v[i_s])
             quad.z=eval(v[i_Z])
             lattice=lattice+[quad]
-        elif stype in ["DRIF", "LSCDRIFT", "CSRDRIFT", "MARK", "KICKER", "ECOL"]:
+        elif stype in ["DRIF", "LSCDRIFT", "CSRDRIFT", "KICKER", "ECOL"]:
             drift = Drift(id=sname)
             drift.s=eval(v[i_s])
             drift.z=eval(v[i_Z])
             lattice=lattice+[drift]
+        elif stype in ["MARK", "WATCH"]:
+            mark = Marker(id=sname)
+            mark.s=eval(v[i_s])
+            mark.z=eval(v[i_Z])
+            lattice=lattice+[mark]
         elif stype=='SEXT':
             sext = Sextupole(id=sname)
             sext.s=eval(v[i_s])
@@ -129,16 +134,18 @@ def read_lattice_elegant(file_flo, file_par):
             elem.Ky=0
         elif elem.type=="cavity":
             elem.l=eval(data_par[pos][2])
-            elem.v=eval(data_par[pos+1][2])
-            elem.phi=eval(data_par[pos+2][2])-90
+            elem.v=eval(data_par[pos+1][2])*1e-9  # V -> GV
+            elem.phi=(eval(data_par[pos+2][2])-90)/180.*np.pi
             elem.f=eval(data_par[pos+3][2])
-            elem.delta_e=elem.v*1e-9*cos(elem.phi*pi/180)        
+            elem.delta_e=elem.v*cos(elem.phi)  # in GeV
         elif elem.type=="hcor":
             elem.l=eval(data_par[pos][2])
         elif elem.type=="vcor":
             elem.l=eval(data_par[pos][2])
         elif elem.type=="monitor":
             elem.l=eval(data_par[pos][2])
+        elif elem.type=="marker":
+            elem.l= 0. # eval(data_par[pos][2])
         elif elem.type=="drift":
             elem.l=eval(data_par[pos][2])
         elem.id=elem.id.replace('.','_')              

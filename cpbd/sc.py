@@ -3,9 +3,9 @@ Created on 27.03.2015
 @author: Igor Zagorodnov @ Martin Dohlus
 '''
 
-import numpy as np
-import scipy.ndimage as ndimage 
-from time import time
+import scipy.ndimage as ndimage
+
+from ocelot.adaptors.astra2ocelot import exact_xp_2_xxstg, exact_xxstg_2_xp
 from track import *
 from ocelot.common.globals import *
 
@@ -61,7 +61,7 @@ def sym_kernel(ijk2, hxyz):
     return kern
 
 
-def Phi(q, steps):
+def potential(q, steps):
     hx = steps[0]
     hy = steps[1]
     hz = steps[2]
@@ -87,42 +87,6 @@ def Phi(q, steps):
     return out[:Nx, :Ny, :Nz]
 
 
-def exact_xp_2_xxstg(xp, gamref):
-    N = xp.shape[0]
-    xxstg = np.zeros((N, 6))
-    pref = m_e_eV*sqrt(gamref**2-1)
-    u = np.c_[xp[:, 3], xp[:, 4], xp[:, 5]+pref]
-    gamma = np.sqrt(1 + np.sum(u*u, 1)/m_e_eV**2)
-    beta = np.sqrt(1-gamma**-2)
-    u = u/np.linalg.norm(u, 2, 1).reshape((N, 1))
-    cdt = -xp[:, 2]/(beta*u[:, 2])
-    xxstg[:, 0] = xp[:, 0]+beta*u[:, 0]*cdt
-    xxstg[:, 2] = xp[:, 1]+beta*u[:, 1]*cdt
-    xxstg[:, 4] = cdt
-    xxstg[:, 1] = u[:, 0]/u[:, 2]
-    xxstg[:, 3] = u[:, 1]/u[:, 2]
-    xxstg[:, 5] = gamma/gamref-1
-    return xxstg
-
-
-def exact_xxstg_2_xp(xxstg, gamref):
-    N = xxstg.shape[0]
-    xp = np.zeros((N, 6))
-    pref = m_e_eV*sqrt(gamref**2-1)
-    gamma = gamref*(1+xxstg[:, 5])
-    beta = np.sqrt(1-gamma**-2)
-    u = np.c_[xxstg[:, 1], xxstg[:, 3], np.ones(N)]
-    norm = np.linalg.norm(u, 2, 1).reshape((N, 1))
-    u = u/norm
-    xp[:, 0] = xxstg[:, 0]-u[:, 0]*beta*xxstg[:, 4]
-    xp[:, 1] = xxstg[:, 2]-u[:, 1]*beta*xxstg[:, 4]
-    xp[:, 2] = -u[:, 2]*beta*xxstg[:, 4]
-    xp[:, 3] = u[:, 0]*gamma*beta*m_e_eV
-    xp[:, 4] = u[:, 1]*gamma*beta*m_e_eV
-    xp[:, 5] = u[:, 2]*gamma*beta*m_e_eV-pref
-    return xp
-
-
 def el_field(X, Q, gamma, nxyz):
     N = X.shape[0]
     X[:, 2] = X[:, 2]*gamma
@@ -145,7 +109,7 @@ def el_field(X, Q, gamma, nxyz):
     print inds.shape, nxyz
 
     q = np.bincount(inds, Q, nzny*nx).reshape(nxyz)
-    p = Phi(q, steps)
+    p = potential(q, steps)
     Ex = np.zeros(p.shape)
     Ey = np.zeros(p.shape)
     Ez = np.zeros(p.shape)
@@ -251,7 +215,7 @@ if __name__ == "__main__":
     xp[:,5]=xp[:,5]-pav
     Pref=pz0 
     gamref=sqrt((Pref/m_e_eV)**2+1)
-    xxstg=exact_xp_2_xxstg(xp,gamref)
+    xxstg= exact_xp_2_xxstg(xp,gamref)
     xxstg0=np.copy(xxstg)
     L0=False
     Lxxs=True
@@ -267,9 +231,9 @@ if __name__ == "__main__":
         if Lxxs:
             sc_apply(xxstg, Q, dS, L0, np.r_[53, 53, 53])
         else:    
-            xp=exact_xxstg_2_xp(xxstg,gamref)
+            xp= exact_xxstg_2_xp(xxstg,gamref)
             SC_xp_update(xp,Q,gamref,dS,np.r_[53,53,53])
-            xxstg=exact_xp_2_xxstg(xp,gamref)
+            xxstg= exact_xp_2_xxstg(xp,gamref)
         t1=time.time()
         print 'step time:', t1-t0,' sec'
         f.add_subplot(211)

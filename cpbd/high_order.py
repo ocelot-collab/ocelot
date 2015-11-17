@@ -1,8 +1,12 @@
 __author__ = 'Sergey Tomin'
 
-from numpy import cos, sin, sqrt, zeros, eye, tan, dot, empty_like, array, transpose, linspace
+import numpy as np
+from scipy.integrate import odeint
+#from numpy.core.umath import sqrt
+#from scipy import weave
+from numpy import cos, sin, sqrt, sqrt, zeros, eye, tan, dot, empty_like, array, transpose, linspace
 from ocelot.common.globals import *
-
+from copy import copy
 """
 differential equation:
 
@@ -516,7 +520,7 @@ def H23(vec_x, h, k1, k2, beta=1., g_inv=0.):
     sigma1 = -(h*x)/beta - ((px2 + py2)/(2.*beta)) - g_inv*g_inv/(beta*(1. + beta))
     return [x1, px1, y1, py1, sigma1, 0.]
 
-from copy import copy
+
 def verlet(vec_x, step, h, k1, k2, beta=1., g_inv=0.):
     """
     q_{n+1} = q_{n} + h * dH(p_{n}, q_{n+1})/dp
@@ -630,80 +634,6 @@ def sym_map(z, X, h, k1, k2, energy=0.):
     return X
 
 
-"""
-def rot_mtx(angle):
-    return array([[cos(angle), 0., sin(angle), 0., 0., 0.],
-                    [0., cos(angle), 0., sin(angle), 0., 0.],
-                    [-sin(angle), 0., cos(angle), 0., 0., 0.],
-                    [0., -sin(angle), 0., cos(angle), 0., 0.],
-                    [0., 0., 0., 0., 1., 0.],
-                    [0., 0., 0., 0., 0., 1.]])
-
-def transform_vec(X, dx, dy, tilt):
-    n = len(X)
-    for i in range(n/6):
-        X0 = X[6*i:6*(i+1)]
-        X0 -= array([dx, 0.,dy,0.,0.,0.])
-        X[6*i:6*(i+1)] = dot(rot_mtx(tilt), X0)
-    return X
-
-def t_apply(R, T, X, dx, dy, tilt):
-
-    if dx != 0 or dy != 0 or tilt != 0:
-        X = transform_vec(X, dx, dy, tilt)
-
-    n = len(X)
-    Xr = transpose(dot(R, transpose(X.reshape(n/6,6)))).reshape(n)
-    Xt = zeros(n)
-    x, px, y, py, tau, dp = X[0::6], X[1::6],X[2::6], X[3::6], X[4::6], X[5::6]
-
-    Xt[0::6] = T[0, 0, 0]*x*x + T[0, 0, 1]*x*px + T[0, 0, 5]*x*dp + T[0, 1, 1]*px*px + T[0, 1, 5]*px*dp + \
-               T[0, 5, 5]*dp*dp + T[0, 2, 2]*y*y + T[0, 2, 3]*y*py + T[0, 3, 3]*py*py
-
-    Xt[1::6] = T[1, 0, 0]*x*x + T[1, 0, 1]*x*px + T[1, 0, 5]*x*dp + T[1, 1, 1]*px*px + T[1, 1, 5]*px*dp + \
-               T[1, 5, 5]*dp*dp + T[1, 2, 2]*y*y + T[1, 2, 3]*y*py + T[1, 3, 3]*py*py
-
-    Xt[2::6] = T[2, 0, 2]*x*y + T[2, 0, 3]*x*py + T[2, 1, 2]*px*y + T[2, 1, 3]*px*py + T[2, 2, 5]*y*dp + T[2, 3, 5]*py*dp
-
-    Xt[3::6] = T[3, 0, 2]*x*y + T[3, 0, 3]*x*py + T[3, 1, 2]*px*y + T[3, 1, 3]*px*py + T[3, 2, 5]*y*dp + T[3, 3, 5]*py*dp
-
-    Xt[4::6] = T[4, 0, 0]*x*x + T[4, 0, 1]*x*px + T[4, 0, 5]*x*dp + T[4, 1, 1]*px*px + T[4, 1, 5]*px*dp + \
-               T[4, 5, 5]*dp*dp + T[4, 2, 2]*y*y + T[4, 2, 3]*y*py + T[4, 3, 3]*py*py
-
-    X[:] = Xr[:] + Xt[:]
-
-    if dx != 0 or dy != 0 or tilt != 0:
-        X = transform_vec(X, -dx, -dy, -tilt)
-
-    return X
-"""
-
-"""
-def symp_kick2(X, h, k1, k2, ndivs = 1):
-
-    beta = 1.
-    gamma2_inv = 0.
-    L = length/ndivs
-    R_2 = R_z(L/2.)
-    n = len(X)
-    for i in range(ndivs):
-        Xr = transpose(dot(R_2, transpose(X.reshape(n/6,6)))).reshape(n)
-        Xt = zeros(n)
-        x, px, y, py, tau, dp = Xr[0::6], Xr[1::6], Xr[2::6], Xr[3::6], Xr[4::6], Xr[5::6]
-
-        px2 = px*px
-        py2 = py*py
-
-        Xt[0::6] = x + L*px*(h*x - dp/beta)
-        Xt[1::6] = px + -0.5*L*(h*(px2 + py2) + (2.*h*k1 + k2)*x*x - (h*k1 + k2)*y*y)
-
-        Xt[2::6] = y + L*py*(h*x - dp/beta)
-        Xt[3::6] = py + L*(h*k1 + k2)*x*y
-
-        Xt[4::6] = tau + L*(-(px2 + py2)/(2*beta) - gamma2_inv/(beta*(1+beta)))
-        X = transpose(dot(R_2, transpose(Xt.reshape(n/6,6)))).reshape(n)
-    return X
-"""
 
 """
 
@@ -755,4 +685,515 @@ def symp_kick2(X, h, k1, k2, ndivs = 1):
 """
 
 
+def moments(bx, by, Bx, By, Bz, dzk):
+    bx2 = bx*bx
+    by2 = by*by
+    bxy = bx*by
+    #sq = 1 + (bx2 + by2)/2.
+    sq = np.sqrt(1. + bx2 + by2)
+    k = sq*dzk
+    mx = k*(by*Bz - By*(1.+bx2) + bxy*Bx)
+    my = -k*(bx*Bz - Bx*(1.+by2) + bxy*By)
+    return mx, my
+
+
+def rk_track_in_field(y0, l, N, energy, mag_field):
+    z = np.linspace(0.,l, num=N)
+    h = z[1] - z[0]
+    N = len(z)
+    gamma = energy/m_e_GeV
+    charge = 1
+    mass = 1 #in electron mass
+    cmm = speed_of_light
+    massElectron = m_e_eV# 0.510998910e+6 #// rest mass of electron
+
+    u = np.zeros((N*9,len(y0)/6))
+    px = y0[1::6]
+    py = y0[3::6]
+    dz = h
+    dGamma2 = 1. - 0.5/(gamma*gamma)
+    pz = dGamma2 - (px*px + py*py)/2.
+    k = charge*cmm/(massElectron*mass*gamma)
+    u[0,:] = y0[0::6]
+    u[1,:] = y0[1::6]
+    u[2,:] = y0[2::6]
+    u[3,:] = y0[3::6]
+    u[4,:] = z[0]
+    u[5,:] = pz
+    dzk = dz*k
+    for i in range(N-1):
+        X = u[i*9 + 0]
+        Y = u[i*9 + 2]
+        Z = u[i*9 + 4]
+        bxconst = u[i*9 + 1]
+        byconst = u[i*9 + 3]
+        #bz = u[i*6 + 5]
+        bx = bxconst
+        by = byconst
+        kx1 = bx*dz
+        ky1 = by*dz
+        Bx, By, Bz = mag_field(X, Y, Z)
+        mx1, my1 = moments(bx, by, Bx, By, Bz, dzk)
+        u[i*9 + 6] = Bx
+        u[i*9 + 7] = By
+        u[i*9 + 8] = Bz
+        #K2
+        bx = bxconst + mx1/2.
+        by = byconst + my1/2.
+        kx2 = bx*dz
+        ky2 = by*dz
+        Bx, By, Bz = mag_field(X + kx1/2., Y + ky1/2., Z + dz/2.)
+        mx2, my2 = moments(bx, by, Bx, By, Bz, dzk)
+        # K3
+        bx = bxconst + mx2/2.
+        by = byconst + my2/2.
+        kx3 = bx*dz
+        ky3 = by*dz
+        Bx, By, Bz = mag_field(X + kx2/2., Y + ky2/2., Z + dz/2.)
+        mx3, my3 = moments(bx, by, Bx, By, Bz, dzk)
+        #K4
+        Z_n = Z + dz
+        bx = bxconst + mx3
+        by = byconst + my3
+        kx4 = bx*dz
+        ky4 = by*dz
+        Bx, By, Bz = mag_field(X + kx3, Y + ky3, Z_n)
+        mx4, my4 = moments(bx, by, Bx, By, Bz, dzk)
+
+        u[(i+1)*9 + 0] = X + 1/6.*(kx1 + 2.*(kx2 + kx3) + kx4)
+        u[(i+1)*9 + 1] = bxconst + 1/6.*(mx1 + 2.*(mx2 + mx3) + mx4) #// conversion in mrad
+        u[(i+1)*9 + 2] = Y + 1/6.*(ky1 + 2.*(ky2 + ky3) + ky4)
+        u[(i+1)*9 + 3] = byconst + 1/6.*(my1 + 2.*(my2 + my3) + my4)
+        u[(i+1)*9 + 4] = Z_n
+        u[(i+1)*9 + 5] = dGamma2 - (u[(i+1)*9 + 1]*u[(i+1)*9 + 1] + u[(i+1)*9 + 3]*u[(i+1)*9 + 3])/2.
+
+    u[(N-1)*9 + 6], u[(N-1)*9 + 7], u[(N-1)*9 + 8] = mag_field(u[(N-1)*9 + 0], u[(N-1)*9 + 2], u[(N-1)*9 + 4])
+    return u
+
+
+def rk_field(y0, l, N, energy, mag_field):
+    #z = linspace(0, l, num=N)
+    #h = z[1]-z[0]
+    #N = len(z)
+    traj_data = rk_track_in_field(y0, l, N, energy, mag_field)
+    #print np.shape(traj_data), np.shape(y0)
+    #print traj_data
+    y0[0::6] = traj_data[(N-1)*9 + 0,:]
+    y0[1::6] = traj_data[(N-1)*9 + 1,:]
+    y0[2::6] = traj_data[(N-1)*9 + 2,:]
+    y0[3::6] = traj_data[(N-1)*9 + 3,:]
+    #y0[4::6] = traj_data[(N-1)*9 + 4,:]
+    #y0[5::6] = traj_data[(N-1)*9 + 5,:]
+    return y0
+
+
+def scipy_track_in_field(y0, l, N, energy, mag_field):# y0, l, N, energy, mag_field
+    z = np.linspace(0.,l, num=N)
+    def func(y, z, fields):
+        gamma = energy/m_e_GeV
+        charge = 1
+        mass = 1 #in electron mass
+        cmm = speed_of_light
+        massElectron = m_e_eV #0.510998910e+6 #// rest mass of electron
+        k = charge*cmm/(massElectron*mass*gamma)
+        n = len(y)/4
+        X = y[0:n]
+        bx = y[n:2*n]
+        Y = y[2*n:3*n]
+        by = y[3*n:4*n]
+        bx2 = bx*bx
+        by2 = by*by
+        bxy = bx*by
+        #sq = 1 + (bx2 + by2)/2.
+        sq = np.sqrt(1. + bx2 + by2)
+        k = sq*k
+        Bx, By, Bz = fields(X, Y, z)
+        mx = k*(by*Bz - By*(1.+bx2) + bxy*Bx)
+        my = -k*(bx*Bz - Bx*(1.+by2) + bxy*By)
+        y = np.append(bx, (mx, by, my))
+        return array(y) #[y[1],mx, y[3], my]
+
+    n = len(y0)/6
+    x = y0[0::6]
+    bx = y0[1::6]
+    y = y0[2::6]
+    by = y0[3::6]
+    Y0 = np.append(x, (bx, y, by))
+
+    u = odeint(func, Y0, z, args = (mag_field,), rtol=1e-10, atol=1e-10)
+
+    w = np.zeros((6*len(z), n))
+    w[0::6] = u[:, 0:n]
+    w[1::6] = u[:, n:2*n]
+    w[2::6] = u[:, 2*n:3*n]
+    w[3::6] = u[:, 3*n:4*n]
+    N = len(z)
+    sub = y0[4::6]
+    sub = np.tile(sub, N).reshape((N, n))
+    w[4::6] = sub[:]
+    sub = y0[5::6]
+    sub = np.tile(sub, N).reshape((N, n))
+    w[5::6] = sub[:]
+    return w
+
+
+def rk_field_scipy(y0, l, N, energy, mag_field):
+    #z = linspace(0, l, num=N)
+    #h = z[1]-z[0]
+    #N = len(z)
+    traj_data = scipy_track_in_field(y0, l, N, energy, mag_field)
+    #print np.shape(traj_data), np.shape(y0)
+    #print traj_data
+    y0[0::6] = traj_data[(N-1)*6 + 0,:]
+    y0[1::6] = traj_data[(N-1)*6 + 1,:]
+    y0[2::6] = traj_data[(N-1)*6 + 2,:]
+    y0[3::6] = traj_data[(N-1)*6 + 3,:]
+    #y0[4::6] = traj_data[(N-1)*9 + 4,:]
+    #y0[5::6] = traj_data[(N-1)*9 + 5,:]
+    return y0
+
+
+def track_und_weave(y0, z, kz, kx ,Kx, energy):
+    from scipy import weave
+    gamma = energy/m_e_GeV
+    #rho = gamma/Kx/kz
+    c = speed_of_light
+    m0 = m_e_eV
+    B0 = Kx*m0*kz/c
+    #y = array(y0)
+    ky = sqrt(kz*kz - kx*kx)
+    #print "B0 = ", B0
+    #print "rho = ", rho
+    #print "kz = ", kz
+    #print "kx = ", kx
+    #print "gamma = ", gamma
+    h = z[1]-z[0]
+    N = len(z)
+    #Ax =  1/kz * np.cos(kx*y0[0])*np.cosh(ky*y0[2])*np.sin(kz*z[0])
+    #Ay =  kx/(ky*kz) * np.sin(kx*y0[0])*np.sinh(ky*y0[2])*np.sin(kz*z[0])
+    q = array([y0[0],y0[1] ,y0[2],y0[3], y0[4], y0[5], kx, ky, kz, h, N, B0, gamma*(1+y0[5])])
+    #print N
+
+    u = zeros(N*6)
+    support_code = """
+    extern "C" {
+    void fields(double x, double y, double z, double kx, double ky, double kz, double B0, double *Bx, double *By, double *Bz)
+    {
+        double k1 =  -B0*kx/ky;
+        double k2 = -B0*kz/ky;
+        double kx_x = kx*x;
+        double ky_y = ky*y;
+        double kz_z = kz*z;
+        double cosx = cos(kx_x);
+        double sinhy = sinh(ky_y);
+        double cosz = cos(kz_z);
+        *Bx = k1*sin(kx_x)*sinhy*cosz ;
+        *By = B0*cosx*cosh(ky_y)*cosz;
+        *Bz = k2*cosx*sinhy*sin(kz_z);
+    };
+    void moments(double bx, double by, double Bx, double By, double Bz, double dzk, double *mx, double *my)
+    {
+        double bx2 = bx*bx;
+        double by2 = by*by;
+        double bxy = bx*by;
+        //#sq = 1 + (bx2 + by2)/2.
+        double k = sqrt(1. + bx2 + by2)*dzk;
+        *mx = k*(by*Bz - By*(1.+bx2) + bxy*Bx);
+        *my = -k*(bx*Bz - Bx*(1.+by2) + bxy*By);
+    }
+    }
+    """
+    code = """
+
+    double charge = 1;
+    double mass = 1; //in electron mass
+
+    double X, Y, Z;
+    double bx, by;
+    double kx1, ky1;
+    double kx2, ky2;
+    double kx3, ky3;
+    double kx4, ky4;
+    double mx1, my1;
+    double mx2, my2;
+    double mx3, my3;
+    double mx4, my4;
+    double bxconst;
+    double byconst;
+
+    double cmm = 299792458;
+    //double k;
+    double massElectron = 0.510998910e+6; // rest mass of electron
+    double dzk ;
+    double Bx;
+    double By;
+    double Bz;
+
+
+    double px = Q1(1);
+    double py = Q1(3);
+    double kx = Q1(6);
+    double ky = Q1(7);
+    double kz = Q1(8);
+
+    double dz = Q1(9);
+    int N = Q1(10);
+    double B0 = Q1(11);
+    double gamma = Q1(12);
+    double dGamma2 = 1. - 0.5/(gamma*gamma);
+    double pz = dGamma2 - (px*px + py*py)/2.;
+
+    int i;
+
+    double k = charge*cmm/(massElectron*mass*gamma);
+
+    U1(0) = Q1(0);
+    U1(1) = Q1(1);
+    U1(2) = Q1(2);
+    U1(3) = Q1(3);
+    U1(4) = 0.;
+    U1(5) = pz;
+    dzk = dz*k;
+    for(i = 0; i < N-1; i++)
+    {
+
+
+        X = U1(i*6 + 0);
+        Y = U1(i*6 + 2);
+        Z = U1(i*6 + 4);
+
+        bxconst = U1(i*6 + 1);
+        byconst = U1(i*6 + 3);
+
+        bx = bxconst;
+        by = byconst;
+        kx1 = bx*dz;
+        ky1 = by*dz;
+
+        fields( X,  Y,  Z,  kx,  ky,  kz,  B0, &Bx, &By, &Bz);
+        moments( bx,  by,  Bx,  By,  Bz,  dzk,  &mx1,  &my1);
+        //K2
+        bx = bxconst + mx1/2.;
+        by = byconst + my1/2.;
+        kx2 = bx*dz;
+        ky2 = by*dz;
+        fields( X + kx1/2.,  Y + ky1/2.,  Z + dz/2.,  kx,  ky,  kz,  B0, &Bx, &By, &Bz);
+        moments( bx,  by,  Bx,  By,  Bz,  dzk,  &mx2,  &my2);
+        // K3
+        bx = bxconst + mx2/2.;
+        by = byconst + my2/2.;
+        kx3 = bx*dz;
+        ky3 = by*dz;
+        fields( X + kx2/2.,  Y + ky2/2.,  Z + dz/2.,  kx,  ky,  kz,  B0, &Bx, &By, &Bz);
+        moments( bx,  by,  Bx,  By,  Bz,  dzk,  &mx3,  &my3);
+        //K4
+        bx = bxconst + mx3;
+        by = byconst + my3;
+        kx4 = bx*dz;
+        ky4 = by*dz;
+        fields( X + kx3,  Y + ky3,  Z + dz,  kx,  ky,  kz,  B0, &Bx, &By, &Bz);
+        moments( bx,  by,  Bx,  By,  Bz,  dzk,  &mx4,  &my4);
+
+        U1((i+1)*6 + 0) = X + 1/6.*(kx1 + 2.*kx2 + 2.*kx3 + kx4);
+        U1((i+1)*6 + 1) = bxconst + 1/6.*(mx1 + 2.*mx2 + 2.*mx3 + mx4); // conversion in mrad
+        U1((i+1)*6 + 2) = Y + 1/6.*(ky1 + 2.*ky2 + 2.*ky3 + ky4);
+        U1((i+1)*6 + 3) = byconst + 1/6.*(my1 + 2.*my2 + 2.*my3 + my4);
+
+        U1((i+1)*6 + 4) = Z + dz;
+        U1((i+1)*6 + 5) = dGamma2 - (U1((i+1)*6 + 1)*U1((i+1)*6 + 1) + U1((i+1)*6 + 3)*U1((i+1)*6 + 3))/2.; //bz;
+
+
+    }
+    //err = B3D(field, motion->X[i+1], motion->Y[i+1], motion->Z[i+1] + Zshift, pBx, pBy, pBz);
+    //std::cout<<" B = "<<megaPack->motion.Z[i+1] <<std::endl;
+    //motion->Bx[i+1] = Bx;
+    //motion->By[i+1] = By;
+    //motion->Bz[i+1] = Bz;
+
+
+    """
+    weave.inline(code, ['u',"q"], support_code= support_code)
+    x = u[::6]
+    y = u[2::6]
+    #print x
+    #print y
+    px = u[1::6]
+    py = u[3::6]
+    z = u[4::6]
+    pz = u[5::6]
+    return x, px,y, py, z, pz
+
+
+def track_und_weave_openmp(u, l, N, kz, kx ,Kx, energy):
+    from scipy import weave
+    import numpy
+    gamma = energy/m_e_GeV
+    #rho = gamma/Kx/kz
+    c = speed_of_light
+    m0 = m_e_eV
+    B0 = Kx*m0*kz/c
+
+    ky = sqrt(kz*kz - kx*kx)
+    z = linspace(0, l, num=N)
+    h = z[1]-z[0]
+    N = len(z)
+
+    nparticles = len(u)/6
+    q = array([ kx, ky, kz, h, N, B0, gamma, nparticles])
+    code = """
+    double charge = 1;
+    double mass = 1; //in electron mass
+
+    double cmm = 299792458;
+
+    double massElectron = 0.510998910e+6; // rest mass of electron
+
+    double kx = Q1(0);
+    double ky = Q1(1);
+    double kz = Q1(2);
+
+    double dz = Q1(3);
+    int N = Q1(4);
+    double B0 = Q1(5);
+
+    int npart = Q1(7);
+
+    double sq;
+    #pragma omp parallel for
+    for(int n = 0; n < npart; n++)
+    {
+        double kx1, ky1;
+        double kx2, ky2;
+        double kx3, ky3;
+        double kx4, ky4;
+        double mx1, my1;
+        double mx2, my2;
+        double mx3, my3;
+        double mx4, my4;
+        double bx2;
+        double by2;
+        double gamma = Q1(6);//*(1+U1(n*6 + 5));
+        double dGamma2 = 1. - 0.5/(gamma*gamma);
+        double k = charge*cmm/(massElectron*mass*gamma);
+
+        double X = U1(n*6 + 0);
+        double bxconst = U1(n*6 + 1);
+        double Y = U1(n*6 + 2);
+        double byconst = U1(n*6 + 3);
+        double Bx;
+        double By;
+        double Bz;
+        //double pz = dGamma2 - (bxconst*bxconst + byconst*byconst)/2.;
+        //bz = pz;
+        double dzk = dz*k;
+        double Z = 0.;
+
+        for(int i = 0; i < N-1; i++)
+        {
+            double x = X;
+            double y = Y;
+            double z = Z;
+            double bx = bxconst;
+            double by = byconst;
+
+            Bx = -B0*kx/ky*sin(kx*x)*sinh(ky*y)*cos(kz*z); // here kx is only real
+            By = B0*cos(kx*x)*cosh(ky*y)*cos(kz*z);
+            Bz = -B0*kz/ky*cos(kx*x)*sinh(ky*y)*sin(kz*z);
+
+            //motion->XbetaI2[i] = motion->By[i];
+            kx1 = bx*dz;
+            ky1 = by*dz;
+            bx2 = bx*bx;
+            by2 = by*by;
+            //sq = 1 + (bx2 + by2)/2.;
+            sq = sqrt(1 + bx2 + by2);
+
+            mx1 = sq*(by*Bz - By*(1+bx2) + bx*by*Bx)*dzk;
+            my1 = -sq*(bx*Bz - Bx*(1+by2) + bx*by*By)*dzk;
+            //K2
+            //err = B3D(field, X + kx1/2., Y + ky1/2., Z + dz/2. + Zshift, pBx, pBy, pBz);
+            x = X + kx1/2.;
+            y = Y + ky1/2.;
+            z = Z + dz/2.;
+            Bx = -B0*kx/ky*sin(kx*x)*sinh(ky*y)*cos(kz*z); // here kx is only real
+            By = B0*cos(kx*x)*cosh(ky*y)*cos(kz*z);
+            Bz = -B0*kz/ky*cos(kx*x)*sinh(ky*y)*sin(kz*z);
+
+            bx = bxconst + mx1/2.;
+            by = byconst + my1/2.;
+
+            kx2 = bx*dz;
+            ky2 = by*dz;
+            bx2 = bx*bx;
+            by2 = by*by;
+            //sq = 1 + (bx2 + by2)/2.;
+            sq = sqrt(1 + bx*bx + by*by);
+            mx2 = sq*(by*Bz - By*(1+bx2) + bx*by*Bx)*dzk;
+            my2 = -sq*(bx*Bz - Bx*(1+by2) + bx*by*By)*dzk;
+            // K3
+            //err = B3D(field, X + kx2/2., Y + ky2/2., Z + dz/2. + Zshift, pBx, pBy, pBz);
+
+            x = X + kx2/2.;
+            y = Y + ky2/2.;
+            z = Z + dz/2.;
+            Bx = -B0*kx/ky*sin(kx*x)*sinh(ky*y)*cos(kz*z); // here kx is only real
+            By = B0*cos(kx*x)*cosh(ky*y)*cos(kz*z);
+            Bz = -B0*kz/ky*cos(kx*x)*sinh(ky*y)*sin(kz*z);
+
+            bx = bxconst + mx2/2.;
+            by = byconst + my2/2.;
+
+            kx3 = bx*dz;
+            ky3 = by*dz;
+            bx2 = bx*bx;
+            by2 = by*by;
+            //sq = 1 + (bx2 + by2)/2.;
+            sq = sqrt(1 + bx*bx + by*by);
+            mx3 = sq*(by*Bz - By*(1+bx2) + bx*by*Bx)*dzk;
+            my3 = -sq*(bx*Bz - Bx*(1+by2) + bx*by*By)*dzk;
+
+            //K4
+            //err = B3D(field, X + kx3, Y + ky3, Z + dz + Zshift,pBx, pBy, pBz);
+
+            x = X + kx3;
+            y = Y + ky3;
+            z = Z + dz;
+            Bx = -B0*kx/ky*sin(kx*x)*sinh(ky*y)*cos(kz*z); // here kx is only real
+            By = B0*cos(kx*x)*cosh(ky*y)*cos(kz*z);
+            Bz = -B0*kz/ky*cos(kx*x)*sinh(ky*y)*sin(kz*z);
+
+            bx = bxconst + mx3;
+            by = byconst + my3;
+
+
+            kx4 = bx*dz;
+            ky4 = by*dz;
+            bx2 = bx*bx;
+            by2 = by*by;
+            //sq = 1 + (bx2 + by2)/2.;
+            sq = sqrt(1 + bx*bx + by*by);
+            mx4 = sq*(by*Bz - By*(1+bx2) + bx*by*Bx)*dzk;
+            my4 = -sq*(bx*Bz - Bx*(1+by2) + bx*by*By)*dzk;
+
+            X = X + 1/6.*(kx1 + 2.*kx2 + 2.*kx3 + kx4);
+            bxconst = bxconst + 1/6.*(mx1 + 2.*mx2 + 2.*mx3 + mx4); // conversion in mrad
+            Y= Y + 1/6.*(ky1 + 2.*ky2 + 2.*ky3 + ky4);
+            byconst = byconst + 1/6.*(my1 + 2.*my2 + 2.*my3 + my4);
+
+            Z = Z + dz;
+            //bz = dGamma2 - (bxconst*bxconst +byconst*byconst)/2.; //bz;
+        }
+        U1(n*6 + 0) = X;
+        U1(n*6 + 1) = bxconst;
+        U1(n*6 + 2) = Y;
+        U1(n*6 + 3) = byconst;
+    }
+    """
+    weave.inline(code, ['u',"q"],
+    extra_compile_args =['-O3 -fopenmp'],
+    compiler = 'gcc',
+    libraries=['gomp'],
+    headers=['<omp.h>']
+    )
+    return u
 

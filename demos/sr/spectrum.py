@@ -31,7 +31,7 @@ screen.nx = 1
 screen.ny = 1
 
 
-screen.start_energy = 7000 #eV
+screen.start_energy = 7300 #eV
 screen.end_energy = 7900 #eV
 screen.num_energy = 1000
 

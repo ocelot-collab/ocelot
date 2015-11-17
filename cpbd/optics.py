@@ -1,14 +1,14 @@
 __author__ = 'Sergey'
 
-from ocelot.cpbd.beam import Particle, Twiss, ParticleArray
-from ocelot.common.globals import *
-from copy import copy
 from numpy.linalg import inv
 from numpy import cosh, sinh
 from scipy.misc import factorial
+
+from ocelot.cpbd.beam import Particle, Twiss, ParticleArray
+
 # from scipy import weave
-from und_weave import *
-from ocelot.cpbd.maps2order import *
+#from und_weave import *
+from ocelot.cpbd.high_order import *
 
 
 
@@ -210,7 +210,7 @@ class TransferMap:
         if denom_x == 0.:
             d_mux = pi/2.*M[0, 1]/np.abs(M[0, 1])
         else:
-            d_mux = arctan(M[0, 1]/denom_x)
+            d_mux = np.arctan(M[0, 1]/denom_x)
 
         if d_mux < 0:
             d_mux += pi
@@ -220,7 +220,7 @@ class TransferMap:
         if denom_y == 0.:
             d_muy = pi/2.*M[2, 3]/np.abs(M[2, 3])
         else:
-            d_muy = arctan(M[2, 3]/denom_y)
+            d_muy = np.arctan(M[2, 3]/denom_y)
         if d_muy < 0:
             d_muy += pi
         tws.muy = m.muy + d_muy
@@ -229,17 +229,14 @@ class TransferMap:
     def mul_p_array(self, particles, energy=0., order=1):
 
         if self.order == 1 and order == 1:
-            #print "1order"
             n = len(particles)
-            #print self.B(energy)
             a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(n/6, 6)))), self.B(energy)).reshape(n)
             particles[:] = a[:]
+
         elif order == 3:
-            #print " sym "
             self.sym_map(particles, energy=energy)
 
         else:
-            #print " Brown "
             self.map(particles, energy=energy)
         return particles
 
@@ -255,7 +252,6 @@ class TransferMap:
 
         if m.__class__ == TransferMap:
             m2 = TransferMap()
-            #print m.type
             m2.R = lambda energy: dot(self.R(energy), m.R(energy))
             m2.B = lambda energy: dot(self.R(energy), m.B(energy)) + self.B(energy)  #+dB #check
             m2.length = m.length + self.length
@@ -270,7 +266,6 @@ class TransferMap:
             X0 = array([m.x, m.px, m.y, m.py, m.tau, m.p])
             p.x, p.px, p.y, p.py, p.tau, p.p = self.mul_p_array(X0, order=1)
             p.s = m.s + self.length
-            #p = self.map_x_particle(m)
             return p
 
         elif m.__class__ == Twiss:
@@ -288,7 +283,6 @@ class TransferMap:
     def apply(self, prcl_series, order = 1):
 
         if prcl_series.__class__ == list and prcl_series[0].__class__ == Particle:
-            # TODO: put here prcl_series.E += self.delta_e
             list_e = array([p.E for p in prcl_series])
             if False in (list_e[:] == list_e[0]):
                 for p in prcl_series:
@@ -306,14 +300,12 @@ class TransferMap:
                 pa.array2ex_list(prcl_series)
 
         elif prcl_series.__class__ == ParticleArray:
-            #prcl_series.E += self.delta_e
             self.mul_p_array(prcl_series.particles, energy=prcl_series.E, order=order)
             prcl_series.E += self.delta_e
             prcl_series.s += self.length
         else:
             print(prcl_series)
             exit("Unknown type of Particle_series. class TransferMap.apply()")
-
 
     def __call__(self, s):
         m = copy(self)
@@ -340,11 +332,9 @@ def create_transfer_map(element, order=1):
         transfer_map.hx = 0.
     else:
         transfer_map.hx = element.angle/element.l
-    #def R_z(z, energy):
-    #    return uni_matrix(z, element.k1, hx = transfer_map.hx, sum_tilts=0, energy=energy)
+
     R_z = lambda z, energy: uni_matrix(z, element.k1, hx = transfer_map.hx, sum_tilts=transfer_map.tilt, energy=energy)
-    #def b_z(z, energy):
-    #    return dot((eye(6) - R_z(z, energy)), array([element.dx, 0., element.dy, 0., 0., 0.]))
+
     b_z = lambda z, energy: dot((eye(6) - R_z(z, energy)), array([element.dx, 0., element.dy, 0., 0., 0.]))
     transfer_map.T_z = lambda z: t_nnn(z, transfer_map.hx, element.k1, element.k2)
     transfer_map.T = transfer_map.T_z(element.l)
@@ -566,20 +556,18 @@ def create_transfer_map(element, order=1):
 
             Ei = E
             Ef = E + de
-            k = 1#Ef/Ei
-            #phi =0.
-            #print Ei,Ef,Ep, z, de
+
             if Ei == 0:
                 print("Warning! Initial energy is zero and cavity.delta_e != 0! Change Ei or cavity.delta_e must be 0" )
-            alpha = sqrt(eta / 8.) / cos(phi) * log(Ef/Ei)
+            alpha = sqrt(eta / 8.) / cos(phi) * np.log(Ef/Ei)
             
-            r11 = k*(cos(alpha) - sqrt(2./eta) * cos(phi) * sin(alpha))
+            r11 = (cos(alpha) - sqrt(2./eta) * cos(phi) * sin(alpha))
             if abs(Ep) > 1e-10:
-                r12 = k*sqrt(8./eta) * Ei / Ep * cos(phi) * sin(alpha)
+                r12 = sqrt(8./eta) * Ei / Ep * cos(phi) * sin(alpha)
             else:
                 r12 = z
-            r21 = -Ep/Ef *k * (cos(phi)/ sqrt(2.*eta) + sqrt(eta/8.) / cos(phi) ) * sin(alpha)
-            r22 = Ei/Ef * k *( cos(alpha) + sqrt(2./eta) * cos(phi) * sin(alpha) )
+            r21 = -Ep/Ef *(cos(phi)/ sqrt(2.*eta) + sqrt(eta/8.) / cos(phi) ) * sin(alpha)
+            r22 = Ei/Ef * (cos(alpha) + sqrt(2./eta) * cos(phi) * sin(alpha))
             #print r11, r12, r21, r22
             r56 = 0.
             if gamma != 0:
@@ -597,15 +585,10 @@ def create_transfer_map(element, order=1):
 
         def map4cav(R, T, X, dx, dy, tilt, E,  V, freq, phi):
             #print E
-
             X = t_apply(R, T, X, dx, dy, tilt)
             delta_e = V*cos(phi)
             if E + delta_e > 0:
                 k = 2.*pi*freq/speed_of_light
-                #phi_rad = phi*np.pi/180.
-                #v = delta_e/cos(phi_rad)
-                #X[1::6] = X[1::6]*E/(E + delta_e)
-                #X[3::6] = X[3::6]*E/(E + delta_e)
                 X[5::6] = (X[5::6]*E + V*np.cos(X[4::6]*k + phi) - delta_e)/(E + delta_e)
         transfer_map.phi = element.phi
         transfer_map.order = 2
@@ -619,8 +602,6 @@ def create_transfer_map(element, order=1):
         transfer_map.delta_e_z = lambda z: element.v*cos(element.phi) * z / element.l
         transfer_map.delta_e = transfer_map.delta_e_z(element.l)
 
-        #transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
-        #transfer_map.T = transfer_map.T_z(element.l)
         transfer_map.map_z = lambda X, z, energy: map4cav(R_z(z, energy), transfer_map.T_z(z), X,
                                                  transfer_map.dx, transfer_map.dy, transfer_map.tilt,
                                                  energy,  element.v*z/element.l, element.f, element.phi)
@@ -717,25 +698,21 @@ def periodic_solution(tws, R):
     """ find periodical twiss  """
 
     tws = Twiss(tws)
-    #print R
+
     cosmx = (R[0, 0] + R[1, 1])/2.
     cosmy = (R[2, 2] + R[3, 3])/2.
-
-    #print cosmx, cosmy
 
     if abs(cosmx) >= 1 or abs(cosmy) >= 1:
         print("************ periodic solution does not exist. return None ***********")
         return None
-    sinmx = sign(R[0, 1])*sqrt(1.-cosmx*cosmx)
-    sinmy = sign(R[2, 3])*sqrt(1.-cosmy*cosmy)
-    #sinmx2 = sign(R[0, 1])*sqrt(R[0, 1]*R[1, 0] - 0.25*(R[0, 0] - R[1, 1])**2)
-    #print "sinmx = ", sinmx, sinmx2,R[0, 1], R[0, 1]*R[1, 0] - 0.25*(R[0, 0] - R[1, 1])**2
+    sinmx = np.sign(R[0, 1])*sqrt(1.-cosmx*cosmx)
+    sinmy = np.sign(R[2, 3])*sqrt(1.-cosmy*cosmy)
 
     tws.beta_x = abs(R[0, 1]/sinmx)
     tws.beta_y = abs(R[2, 3]/sinmy)
 
     tws.alpha_x = (R[0, 0] - R[1, 1])/(2.*sinmx)  # X[0,0]
-    #print R[0, 0] - R[1, 1], 2.*sinmx
+
     tws.gamma_x = (1. + tws.alpha_x*tws.alpha_x)/tws.beta_x  # X[1,0]
 
     tws.alpha_y = (R[2, 2] - R[3, 3])/(2*sinmy)  # Y[0,0]
@@ -858,10 +835,9 @@ def get_map(lattice, dz, navi, order=1):
         dl = L - navi.z0
         if elem.transfer_map.order > 1 or order > 1:
             if tm.identity == False:
-                #print "while, identity == False",  i, elem.type, elem.id,  tm.R
                 TM.append(tm)
                 rec_count = 0
-            #print "while, identity == True", i, elem.type, elem.transfer_map(dl).R(6)
+
             TM.append(elem.transfer_map(dl))
             tm = TransferMap(identity=True)
         else:
@@ -880,10 +856,8 @@ def get_map(lattice, dz, navi, order=1):
 
     if elem.transfer_map.order > 1 or order > 1:
         if tm.identity == False:
-            #print "identity == False", i, elem.type, tm.R(6)
             TM.append(tm)
             rec_count = 0
-        #print "identity == True", i, elem.type, tm.R(6)
         TM.append(elem.transfer_map(dz))
         rec_count = 0
         tm = TransferMap(identity=True)
@@ -893,18 +867,8 @@ def get_map(lattice, dz, navi, order=1):
     navi.sum_lengths = L - elem.l
     navi.n_elem = i
     if tm.identity == False:
-        #print "Final, identity == False", i, elem.type, tm.R(6)
         TM.append(tm)
     return TM
-
-
-def gaussFromTwiss(emit, beta, alpha):
-    phi = 2*pi * random.rand()
-    u = random.rand()
-    a = sqrt(-2*log( (1-u)) * emit)
-    x = a * sqrt(beta) * cos(phi)
-    xp = -a / sqrt(beta) * ( sin(phi) + alpha * cos(phi) );
-    return (x,xp)
 
 
 '''

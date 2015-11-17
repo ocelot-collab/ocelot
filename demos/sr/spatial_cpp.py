@@ -60,3 +60,20 @@ screen.num_energy = 100
 traj, screen = generaSR.calculateSR_py(lat, beam, screen, runParameters = None)
 
 show_flux(screen, unit="mrad")
+
+
+# 2D
+screen = Screen()
+screen.z = 100.0
+screen.size_x = 0.002
+screen.size_y = 0.002
+screen.nx = 51
+screen.ny = 51
+
+
+screen.start_energy = 7761.2 #eV
+screen.end_energy = 7900 #eV
+screen.num_energy = 1
+
+traj, screen = generaSR.calculateSR_py(lat, beam, screen, runParameters = None)
+show_flux(screen, unit="mrad")

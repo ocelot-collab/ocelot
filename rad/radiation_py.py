@@ -169,8 +169,8 @@ def track4rad(beam, lat, energy_loss = False, quantum_diff = False):
                 if lat_el.totalLen != 0:
                     navi = Navigator()
                     u = []
-                    N = 1000
-                    for z in linspace(L, lat_el.totalLen + L, num = N):
+                    N = 500
+                    for z in linspace(L, lat_el.totalLen + L, num=N):
                         h = lat_el.totalLen/(N)
                         step(lat_el, [p], h, navi)
                         #print p.s

@@ -2,7 +2,10 @@
 definition of particles, beams and trajectories
 '''
 import numpy as np
+from numpy.core.umath import sqrt, cos, sin
 from ocelot.common.globals import *
+from ocelot.common.globals import pi
+
 '''
 Note:
 (A) the reference frame (e.g. co-moving or not with the beam is not fixed) 
@@ -313,3 +316,12 @@ def get_current(p_array, charge, num_bins = 200):
     print "Imax = ", max(hist)*charge/t_bins
     hist = np.append(hist, hist[-1])
     return bin_edges, hist*charge/t_bins
+
+
+def gaussFromTwiss(emit, beta, alpha):
+    phi = 2*pi * np.random.rand()
+    u = np.random.rand()
+    a = sqrt(-2*np.log( (1-u)) * emit)
+    x = a * sqrt(beta) * cos(phi)
+    xp = -a / sqrt(beta) * ( sin(phi) + alpha * cos(phi) )
+    return (x, xp)

@@ -318,7 +318,7 @@ def get_current(p_array, charge, num_bins = 200):
     return bin_edges, hist*charge/t_bins
 
 
-def gaussFromTwiss(emit, beta, alpha):
+def gauss_from_twiss(emit, beta, alpha):
     phi = 2*pi * np.random.rand()
     u = np.random.rand()
     a = sqrt(-2*np.log( (1-u)) * emit)

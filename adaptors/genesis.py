@@ -6,10 +6,9 @@ import struct
 from copy import copy
 
 from ocelot.rad.fel import *
-from ocelot.cpbd.beam import Beam, gaussFromTwiss
+from ocelot.cpbd.beam import Beam, gauss_from_twiss
 import ocelot.utils.reswake as w
 from ocelot.common.math_op import *
-from ocelot.cpbd.optics import gaussFromTwiss
 
 h = 4.135667516e-15
 c = 299792458.0

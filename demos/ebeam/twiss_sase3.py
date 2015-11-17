@@ -1,8 +1,6 @@
 import sys
+from ocelot import *
 from ocelot.gui.accelerator import plot_lattice
-from ocelot.cpbd.elements import Element, Quadrupole, RBend, Drift, Undulator, MagneticLattice, Hcor, Vcor
-from ocelot.cpbd.beam import Beam, ParticleArray
-from ocelot.cpbd.optics import *
 from pylab import *
 
 def rematch(beta_mean, l_fodo, qdh, lat, extra_fodo, beam, qf, qd):

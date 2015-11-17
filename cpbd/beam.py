@@ -270,21 +270,21 @@ class ParticleArray:
 
 def get_envelope(p_array, tws_i=Twiss()):
     tws = Twiss()
-    x = p_array.x()
-    px = p_array.px()
-    y = p_array.y()
-    py = p_array.py()
     p = p_array.p()
     dx = tws_i.Dx*p
     dy = tws_i.Dy*p
     dpx = tws_i.Dxp*p
     dpy = tws_i.Dyp*p
-    tws.x = 0*mean(x) + dx
-    tws.y = 0*mean(y) + dy
-    tws.px =0*mean(px) + dpx
-    tws.py =0*mean(py) + dpy
+    x = p_array.x() - dx
+    px = p_array.px() - dpx
+    y = p_array.y() - dy
+    py = p_array.py() - dpy
+    tws.x = mean(x)
+    tws.y = mean(y)
+    tws.px =mean(px)
+    tws.py =mean(py)
     #print tws.x, tws.y, tws.px,tws.py
-    tws.xx = mean((x-tws.x)*(x-tws.x))
+    tws.xx = mean((x - tws.x)*(x - tws.x))
     tws.xpx = mean((x-tws.x)*(px-tws.px))
     tws.pxpx = mean((px-tws.px)*(px-tws.px))
     tws.yy = mean((y-tws.y)*(y-tws.y))

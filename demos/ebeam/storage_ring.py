@@ -1,17 +1,12 @@
 __author__ = 'Sergey Tomin'
 
-#from ocelot.cpbd.match import *
-from ocelot.gui.accelerator import *
-from ocelot.cpbd.elements import *
-from ocelot.cpbd.optics import *
-from ocelot.cpbd.match import *
-from ocelot.cpbd.e_beam_params import *
+from ocelot.gui import *
+from ocelot import *
 
-
-Q1 = Quadrupole(l= 0.4, k1=-1.3, id = "Q1")
-Q2 = Quadrupole(l= 0.8, k1=1.4, id = "Q2")
-Q3 = Quadrupole(l= 0.4, k1=-1.7, id = "Q3")
-Q4 = Quadrupole(l= 0.5, k1=1.19250444829 , id = "Q4")
+Q1 = Quadrupole(l=0.4, k1=-1.3, id = "Q1")
+Q2 = Quadrupole(l=0.8, k1=1.4, id = "Q2")
+Q3 = Quadrupole(l=0.4, k1=-1.7, id = "Q3")
+Q4 = Quadrupole(l=0.5, k1=1.19250444829 , id = "Q4")
 
 B  = Bend(l=2.7, k1=-.06, angle=2*pi/16., e1=pi/16., e2=pi/16., id = "B")
 

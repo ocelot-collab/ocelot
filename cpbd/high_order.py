@@ -2,8 +2,6 @@ __author__ = 'Sergey Tomin'
 
 import numpy as np
 from scipy.integrate import odeint
-#from numpy.core.umath import sqrt
-#from scipy import weave
 from numpy import cos, sin, sqrt, sqrt, zeros, eye, tan, dot, empty_like, array, transpose, linspace
 from ocelot.common.globals import *
 from copy import copy

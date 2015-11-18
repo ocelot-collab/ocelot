@@ -1,9 +1,8 @@
 __author__ = 'Sergey Tomin'
 
-from ocelot.cpbd.match import *
-from ocelot.gui.accelerator import *
-from ocelot.cpbd.track import step
-
+from ocelot import *
+from ocelot.gui import *
+from copy import copy
 
 Q1 = Quadrupole(l= 0.4, k1=-1.3, id = "Q1")
 Q2 = Quadrupole(l= 0.8, k1=1.4, id = "Q2")
@@ -35,7 +34,7 @@ tws=twiss(lat, tw0, nPoints=1000)
 print( "start: Dx = ", tws[0].Dx, " Dxp = ", tws[0].Dxp)
 print("end:   Dx = ", tws[-1].Dx, " Dxp = ", tws[-1].Dxp)
 plot_opt_func(lat, tws,top_plot = ["x", "y"])
-plt.show()
+
 
 # Single particle tracking with transverse shift
 
@@ -45,12 +44,13 @@ navi = Navigator()
 dz = 0.01
 P1 = []
 for i in range(int(lat.totalLen/dz)):
-    step(lat, [p1], dz = dz, navi = navi)
+    track(lat, [p1], dz = dz, navi = navi)
     P1.append(copy(p1))
 
-s = [f.s for f in P1]#map(lambda f: f.s, P1)
-x = [f.x for f in P1]#map(lambda f: f.x, P1)
-y = [f.y for f in P1] #map(lambda f: f.y, P1)
+s = [f.s for f in P1]
+x = [f.x for f in P1]
+y = [f.y for f in P1]
+
 
 font = {'size'   : 10}
 matplotlib.rc('font', **font)
@@ -74,7 +74,7 @@ dz = 0.01
 P1 = []
 P2 = []
 for i in range(int(lat.totalLen/dz)):
-    step(lat, [p1, p2], dz = dz, navi = navi)
+    track(lat, [p1, p2], dz = dz, navi = navi)
     P1.append(copy(p1))
     P2.append(copy(p2))
 

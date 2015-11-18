@@ -1,12 +1,8 @@
 __author__ = 'Sergey Tomin'
 
-import matplotlib
-
-from ocelot.rad.radiation_py import *
-from ocelot.rad.screen import *
-from ocelot.rad.undulator_params import *
-from ocelot.cpbd.beam import *
-from ocelot.gui.sr_plot import *
+from ocelot.rad import *
+from ocelot import *
+from ocelot.gui import *
 
 font = {'size'   : 14}
 matplotlib.rc('font', **font)

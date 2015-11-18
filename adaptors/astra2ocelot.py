@@ -39,7 +39,7 @@ def exact_xxstg_2_xp(xxstg, gamref):
     return xp
 
 
-def astra_beam2particleArray(filename):
+def astraBeam2particleArray(filename):
     P0 = np.loadtxt(filename)
     charge_array = -P0[:, 7]*1e-9  #charge in nC -> in C
     print "charge = ", sum(charge_array)
@@ -59,7 +59,7 @@ def astra_beam2particleArray(filename):
     p_array.particles[5::6] = xxstg[:,5]
     return p_array, charge_array
 
-def particleArray2astra_beam(p_array):
+def particleArray2astraBeam(p_array):
     gamref = p_array.E/m_e_GeV
     print gamref
     P = p_array.particles.view()

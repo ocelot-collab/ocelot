@@ -1,12 +1,9 @@
 __author__ = 'Sergey Tomin'
 
-#from ocelot.cpbd.match import *
-from ocelot.gui.accelerator import *
-from ocelot.cpbd.elements import *
-from ocelot.cpbd.optics import *
-from ocelot.cpbd.e_beam_params import *
-from ocelot.cpbd.chromaticity import *
-from ocelot.cpbd.track import *
+from ocelot.gui import *
+from ocelot import *
+import numpy as np
+from time import time
 
 Q1 = Quadrupole(l= 0.4, k1=-1.3, id = "Q1")
 Q2 = Quadrupole(l= 0.8, k1=1.4, id = "Q2")
@@ -37,20 +34,20 @@ nturns = 2048
 nx = 200
 ny = 100
 
-x_array = linspace(-0.03, 0.03, nx)
-y_array = linspace(0.0001, 0.03, ny)
+x_array = np.linspace(-0.03, 0.03, nx)
+y_array = np.linspace(0.0001, 0.03, ny)
 start = time()
 pxy_list = create_track_list(x_array, y_array, p_array=[0.])
-pxy_list = tracking( lat, nturns, pxy_list,  nsuperperiods = 8, save_track=True)
+pxy_list = track_nturns( lat, nturns, pxy_list,  nsuperperiods = 8, save_track=True)
 
 print("time exec = ", time() - start)
 pxy_list = freq_analysis(pxy_list, lat, nturns, harm = True)
 
-da = array([pxy.turn for pxy in pxy_list])
+da = np.array([pxy.turn for pxy in pxy_list])
 show_da(da, x_array, y_array)
 
 da_contr = contour_da(pxy_list, nturns)
 
-da_mux = array([pxy.mux for pxy in pxy_list])
-da_muy = array([pxy.muy for pxy in pxy_list])
+da_mux = np.array([pxy.mux for pxy in pxy_list])
+da_muy = np.array([pxy.muy for pxy in pxy_list])
 show_mu(da_contr, da_mux, da_muy, x_array, y_array)

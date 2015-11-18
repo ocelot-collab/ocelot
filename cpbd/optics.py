@@ -3,11 +3,7 @@ __author__ = 'Sergey'
 from numpy.linalg import inv
 from numpy import cosh, sinh
 from scipy.misc import factorial
-
 from ocelot.cpbd.beam import Particle, Twiss, ParticleArray
-
-# from scipy import weave
-#from und_weave import *
 from ocelot.cpbd.high_order import *
 
 

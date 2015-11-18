@@ -1,16 +1,11 @@
-
-
-from ocelot.cpbd.elements import *
-from ocelot.cpbd.optics import *
-from ocelot.cpbd.beam import *
-from ocelot.gui.accelerator import plot_lattice, plot_opt_func
-from pylab import *
-
+from ocelot import *
+from ocelot.gui import *
+import numpy as np
 
 phi_bc2 = 0.033646252962410
 
 l0 = 0.5
-l_bc2 = l0 *phi_bc2 /sin((phi_bc2))
+l_bc2 = l0 *phi_bc2 /np.sin((phi_bc2))
 
 ac_v = 0.02265625*1e+9 # in V
 
@@ -20,7 +15,7 @@ bb_404_b2 = Bend(l=l_bc2, angle=-phi_bc2, e1=0.000000000, e2=-phi_bc2, tilt=1.57
 bb_413_b2 = Bend(l=l_bc2, angle=phi_bc2, e1=phi_bc2, e2=0.000000000, tilt=1.570796330,  id = 'bb_413_b2')
 
 d10cm =   Drift(l=0.1, id = 'd10cm')
-cd850cm = Drift(l=8.5 / cos(phi_bc2), id = 'cd850cm')
+cd850cm = Drift(l=8.5 / np.cos(phi_bc2), id = 'cd850cm')
 cd150cm = Drift(l=1.5, id = 'cd150cm')
 cd100cm = Drift(l=1, id = 'cd100cm')
 d34cm59 = Drift(l=0.3459, id = 'd34cm59')

@@ -1,10 +1,9 @@
 __author__ = 'Sergey Tomin'
 
-from ocelot.cpbd.optics import *
-from ocelot.cpbd.elements import *
-from ocelot.gui.accelerator import *
-from ocelot.cpbd.chromaticity import *
-from ocelot.cpbd.track import *
+from copy import copy
+from ocelot import *
+from ocelot.gui import *
+
 C = 1000.
 Ncells = 16
 Nbends = 32
@@ -32,7 +31,7 @@ dz = 1.
 P1 = []
 P2 = []
 for i in range(int(lat.totalLen/dz)):
-    step(lat, [p1, p2], dz = dz, navi = navi, order=1)
+    track(lat, [p1, p2], dz = dz, navi = navi, order=1)
     P1.append(copy(p1))
     P2.append(copy(p2))
 

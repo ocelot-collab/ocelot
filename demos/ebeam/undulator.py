@@ -1,11 +1,8 @@
 __author__ = 'Sergey Tomin'
 
-from ocelot.cpbd.elements import *
-from ocelot.gui.accelerator import *
-from ocelot.cpbd.beam import *
-from ocelot.cpbd.track import *
-
-# TODO: check the result
+from ocelot import *
+from ocelot.gui import *
+import copy
 
 und = Undulator(Kx=2, nperiods=100, lperiod=0.02, id="und")
 und.solver = "sym"
@@ -36,8 +33,8 @@ navi = Navigator()
 dz = 0.01
 P1 = []
 for i in range(int(lat.totalLen/dz)):
-    step(lat, [p1], dz=dz, navi=navi)
-    P1.append(copy(p1))
+    track(lat, [p1], dz=dz, navi=navi)
+    P1.append(copy.copy(p1))
 
 s = [f.s for f in P1]
 x = [f.x for f in P1]
@@ -46,11 +43,6 @@ y = [f.y for f in P1]
 plt.figure(1)
 plt.plot(s, x, "g", label="X sym")
 plt.plot(s, y, "r", label="Y sym")
-# plt.plot(s, [f.px for f in P1], "b", label = "Y")
-#plt.title("E != 0. Symplectic transfer map")
-#plt.legend()
-#plt.xlabel("S, m")
-#plt.ylabel("X/Y, m")
 plt.grid(True)
 
 und.solver = "lin"
@@ -62,8 +54,8 @@ navi = Navigator()
 dz = 0.01
 P1 = []
 for i in range(int(lat.totalLen/dz)):
-    step(lat, [p1], dz=dz, navi=navi)
-    P1.append(copy(p1))
+    track(lat, [p1], dz=dz, navi=navi)
+    P1.append(copy.copy(p1))
 
 s = [f.s for f in P1]
 x = [f.x for f in P1]
@@ -90,8 +82,8 @@ navi = Navigator()
 dz = 0.01
 P1 = []
 for i in range(int(lat.totalLen/dz)):
-    step(lat, [p1], dz=dz, navi=navi)
-    P1.append(copy(p1))
+    track(lat, [p1], dz=dz, navi=navi)
+    P1.append(copy.copy(p1))
 
 s = [f.s for f in P1]
 x = [f.x for f in P1]

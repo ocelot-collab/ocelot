@@ -416,6 +416,7 @@ def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, fig_name = None):
     plot_betas(ax_b, S, beta_x, beta_y, font_size)
 
     plot_elems(ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8) # plot elements
+    plt.show()
 
 
 def body_trajectory(fig, ax_xy, ax_el, lat, list_particles):

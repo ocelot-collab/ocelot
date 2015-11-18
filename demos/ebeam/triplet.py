@@ -1,12 +1,9 @@
 __author__ = 'Sergey Tomin'
 
-from ocelot.cpbd.elements import *
-from ocelot.cpbd.optics import *
-from ocelot.cpbd.track import step
-from ocelot.gui.accelerator import *
-import matplotlib.pyplot as plt
-from copy import deepcopy
-
+from ocelot import *
+from ocelot.gui import *
+import copy
+import numpy as np
 
 
 Q1 = Quadrupole(l = 0.3, k1 = 5)
@@ -28,18 +25,18 @@ plot_opt_func(lat,tws)
 plt.show()
 
 # track ellipse
-t = linspace(0, 2*pi, num = 100)
-x, px = 0.1*cos(t), 0.1*sin(t)
+t = np.linspace(0, 2*pi, num = 100)
+x, px = 0.1*np.cos(t), 0.1*np.sin(t)
 plist = []
 for xi, pxi in zip(x, px):
     plist.append(Particle(x = xi, px= pxi))
 
-plist_1 = deepcopy(plist)
+plist_1 = copy.deepcopy(plist)
 
 navi = Navigator()
 dz = lat.totalLen
-step(lat, plist, dz = dz, navi = navi, order = 2)  # R + T
-step(lat, plist_1, dz = dz, navi = navi, order = 1)  # R only
+track(lat, plist, dz = dz, navi = navi, order = 2)  # R + T
+track(lat, plist_1, dz = dz, navi = navi, order = 1)  # R only
 
 tau2 = [f.tau for f in plist]
 x2 = [f.x for f in plist]
@@ -69,17 +66,17 @@ plt.show()
 
 p1 = Particle(x = 0.01, p = 0.02)
 p2 = Particle(x = 0.01, p = 0.02)
-P1 = [copy(p1)]
-P2 = [copy(p2)]
+P1 = [copy.copy(p1)]
+P2 = [copy.copy(p2)]
 navi1 = Navigator()
 navi2 = Navigator()
 dz = 0.01
 
 for i in range(int(lat.totalLen/dz)):
-    step(lat, [p1], dz = dz, navi = navi1, order = 1)  # R only
-    step(lat, [p2], dz = dz, navi = navi2, order = 2)  # R + T
-    P1.append(copy(p1))
-    P2.append(copy(p2))
+    track(lat, [p1], dz = dz, navi = navi1, order = 1)  # R only
+    track(lat, [p2], dz = dz, navi = navi2, order = 2)  # R + T
+    P1.append(copy.copy(p1))
+    P2.append(copy.copy(p2))
 
 s = [p.s for p in P1]
 x1 = [p.x for p in P1]

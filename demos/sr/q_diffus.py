@@ -2,10 +2,8 @@ __author__ = 'Sergey Tomin'
 
 from time import time
 from pylab import *
-from ocelot.rad.radiation_py import *
-from ocelot.rad.screen import *
-from ocelot.cpbd.elements import *
-from ocelot.cpbd.beam import *
+from ocelot.rad import *
+from ocelot import *
 from copy import deepcopy
 
 font = {'size': 20}
@@ -50,7 +48,7 @@ for i in range(npls):
     total += screen.Total/npls
     Uq.append(screen.Ef_electron)
 
-sigma = Sigma_Eq(beam.E, U40_short.Kx, U40_short.lperiod, U40_short.lperiod*nund*nperiods)
+sigma = sigma_gamma_quat(beam.E, U40_short.Kx, U40_short.lperiod, U40_short.lperiod*nund*nperiods)
 
 
 num_bins = 50

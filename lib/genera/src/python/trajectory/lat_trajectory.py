@@ -1,6 +1,6 @@
 __author__ = 'Sergey Tomin'
 from undulator import und_trace
-from ocelot.cpbd.track import step
+from ocelot.cpbd.track import track
 from numpy import linspace, arange, array, append
 from ocelot.cpbd.optics import *
 from ocelot.cpbd.elements import *

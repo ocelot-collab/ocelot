@@ -1,12 +1,9 @@
 __author__ = 'Sergey Tomin'
 
-from ocelot.cpbd.elements import *
-from ocelot.cpbd.optics import *
-from ocelot.cpbd.track import *
-from ocelot.gui.accelerator import *
-import matplotlib.pyplot as plt
-from copy import deepcopy
-
+from ocelot import *
+from ocelot.gui import *
+import copy as cp
+from pylab import *
 
 """
 ro*tan(phi)+
@@ -42,19 +39,18 @@ plt.show()
 
 # trajectory with energy offset
 
-p1 = Particle(x = 0.00, p = 0.02)
-p2 = Particle(x = 0.00, p = 0.02)
-P1 = [copy(p1)]
-P2 = [copy(p2)]
+p1 = Particle(x=0.00, p=0.02)
+p2 = Particle(x=0.00, p=0.02)
+P1 = [cp.copy(p1)]
+P2 = [cp.copy(p2)]
 navi1 = Navigator()
 navi2 = Navigator()
 dz = 0.01
-
 for i in range(int(lat.totalLen/dz)):
-    step(lat, [p1], dz = dz, navi = navi1, order = 1)  # R only
-    step(lat, [p2], dz = dz, navi = navi2, order = 2)  # R + T
-    P1.append(copy(p1))
-    P2.append(copy(p2))
+    track(lat, [p1], dz = dz, navi = navi1, order = 1)  # R only
+    track(lat, [p2], dz = dz, navi = navi2, order = 2)  # R + T
+    P1.append(cp.copy(p1))
+    P2.append(cp.copy(p2))
 
 s = [p.s for p in P1]
 x1 = [p.x for p in P1]
@@ -74,11 +70,11 @@ plist = []
 for xi, xpi in zip(x,xp):
     plist.append(Particle(x = xi, px= xpi))
 
-plist_1 = deepcopy(plist)
+plist_1 = cp.deepcopy(plist)
 navi = Navigator()
 
-step(lat, plist_1, dz=lat.totalLen, navi=copy(navi),order=1)
-step(lat, plist, dz=lat.totalLen, navi=copy(navi),order=2)
+track(lat, plist_1, dz=lat.totalLen, navi=cp.copy(navi),order=1)
+track(lat, plist, dz=lat.totalLen, navi=cp.copy(navi),order=2)
 x2 = [f.x for f in plist]
 xp2 = [f.px for f in plist]
 

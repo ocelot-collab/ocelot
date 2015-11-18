@@ -1,14 +1,19 @@
 __author__ = 'Sergey Tomin'
 
-from time import time
-from pylab import *
-from ocelot.rad.radiation_py import *
-from ocelot.rad.screen import *
-from ocelot.cpbd.elements import *
-#from ocelot.cpbd.optics import *
-#from ocelot.cpbd.e_beam_params import *
-from ocelot.cpbd.beam import *
+#from time import time
+#from pylab import *
+#from ocelot.rad.radiation_py import *
+#from ocelot.rad.screen import *
+#from ocelot.cpbd.elements import *
+##from ocelot.cpbd.optics import *
+##from ocelot.cpbd.e_beam_params import *
+#from ocelot.cpbd.beam import *
+
 from copy import deepcopy
+from ocelot.gui import *
+from ocelot import *
+from ocelot.rad import *
+from time import time
 
 font = {'size'   : 20}
 matplotlib.rc('font', **font)
@@ -49,10 +54,10 @@ max_I = max(t_no)
 print "time = ", time() - start
 
 
-plot(E_no, t_no/max_I,"k",  screen.Eph, screen.Total/max_I, "r", lw = 2)
-grid(True)
-legend(["No e.loss", "e.loss", "no e.loss"], loc = 2)
-xlabel(r"$E_{ph}$")
-#ylabel("Flux, ph/s/mm^2/(0.1%BW)")
-ylabel("Normalized intens")
-show()
+plt.plot(E_no, t_no/max_I,"k",  screen.Eph, screen.Total/max_I, "r", lw = 2)
+plt.grid(True)
+plt.legend(["No e.loss", "e.loss", "no e.loss"], loc = 2)
+plt.xlabel(r"$E_{ph}$")
+#plt.ylabel("Flux, ph/s/mm^2/(0.1%BW)")
+plt.ylabel("Normalized intens")
+plt.show()

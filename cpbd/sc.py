@@ -4,9 +4,8 @@ Created on 27.03.2015
 '''
 
 import scipy.ndimage as ndimage
-
-from ocelot.adaptors.astra2ocelot import exact_xp_2_xxstg, exact_xxstg_2_xp
-from track import *
+import numpy as np
+from time import time
 from ocelot.common.globals import *
 
 

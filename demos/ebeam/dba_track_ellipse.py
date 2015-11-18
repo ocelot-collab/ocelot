@@ -1,8 +1,9 @@
 __author__ = 'Sergey Tomin'
 
-from ocelot.cpbd.match import *
+
 from pylab import *
-from ocelot.cpbd.track import step
+from ocelot import *
+#from ocelot.cpbd.track import step
 
 Q1 = Quadrupole(l= 0.4, k1=-1.3, id = "Q1")
 Q2 = Quadrupole(l= 0.8, k1=1.4, id = "Q2")
@@ -38,7 +39,7 @@ for xi, xpi in zip(x,xp):
 plot(x, xp)
 navi = Navigator()
 dz = 10.
-step(lat, plist, dz=dz, navi=navi)
+track(lat, plist, dz=dz, navi=navi)
 
 
 x2 = [f.x for f in plist] #map(lambda f: f.x, plist)
@@ -75,7 +76,7 @@ for xi, xpi in zip(x,xp):
 plot(x, xp)
 navi = Navigator()
 dz = 10.
-step(lat, plist, dz = dz, navi = navi)
+track(lat, plist, dz = dz, navi = navi)
 
 x2 = [f.x for f in plist] #map(lambda f: f.x, plist)
 xp2 = [f.px for f in plist] #map(lambda f: f.px, plist)

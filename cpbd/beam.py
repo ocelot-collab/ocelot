@@ -4,7 +4,6 @@ definition of particles, beams and trajectories
 import numpy as np
 from numpy.core.umath import sqrt, cos, sin
 from ocelot.common.globals import *
-from ocelot.common.globals import pi
 
 '''
 Note:

@@ -1,6 +1,5 @@
 from ocelot.cpbd.optics import *
 from ocelot.cpbd.elements import *
-
 from copy import deepcopy
 from scipy.optimize import *
 

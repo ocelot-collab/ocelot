@@ -1,25 +1,23 @@
-from ocelot.cpbd.beam import ParticleArray
-from ocelot.cpbd.optics import get_map
-
 __author__ = 'Sergey Tomin'
+
 from ocelot.cpbd.optics import *
 #from mpi4py import MPI
 from numpy import delete, append, array, linspace, argwhere, unique
 from ocelot.cpbd.errors import *
 from ocelot.cpbd.elements import *
-#from matplotlib import pyplot as plt
 import scipy
 from copy import copy
 from time import time
 from scipy.stats import truncnorm
+
 try:
     from scipy.signal import argrelextrema
     extrema_chk = 1
 except:
     extrema_chk = 0
     
-c0=299792458
-E_ele_eV=5.109986258350895e+05
+#c0=299792458
+#E_ele_eV=5.109986258350895e+05
 
 def aperture_limit(lat, xlim = 1, ylim = 1):
     tws=twiss(lat, Twiss(), nPoints=1000)
@@ -257,7 +255,7 @@ def ellipse_track_list(beam, n_t_sigma = 3, num = 1000, type = "contour"):
 
 
 
-def tracking(lat, nturns, track_list, nsuperperiods=1, order=1, save_track=True):
+def track_nturns(lat, nturns, track_list, nsuperperiods=1, order=1, save_track=True):
     xlim, ylim, px_lim, py_lim = aperture_limit(lat, xlim = 1, ylim = 1)
     navi = Navigator()
 
@@ -338,7 +336,7 @@ def tracking_second(lat, nturns, track_list, nsuperperiods, save_track = True):
     return np.array(track_list_const)
 '''
 
-def tracking_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods = 1, order = 1, save_track = True):
+def track_nturns_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods = 1, order = 1, save_track = True):
     size = mpi_comm.Get_size()
     rank = mpi_comm.Get_rank()
     lat_copy = create_copy(lat, nsuperperiods = nsuperperiods)
@@ -364,7 +362,7 @@ def tracking_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods
         # but for nturns = 1000 program crashes with error in mpi_comm.gather()
         # the same situation if treads not so much - solution increase number of treads.
         print("nsuperperiods = ", nsuperperiods, order)
-        track_list = tracking(lat, nturns, track_list, nsuperperiods, order=order, save_track=save_track)
+        track_list = track_nturns(lat, nturns, track_list, nsuperperiods, order=order, save_track=save_track)
         return track_list
 
     if rank == 0:
@@ -381,7 +379,7 @@ def tracking_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods
     track_list = mpi_comm.scatter(chunks_track_list, root=0)
     print(" scatter time = ", time() - start, " sec, rank = ", rank, "  len(pxy_list) = ", len(track_list) )
     start = time()
-    track_list = tracking(lat, nturns, track_list, nsuperperiods, order=order, save_track =save_track)
+    track_list = track_nturns(lat, nturns, track_list, nsuperperiods, order=order, save_track =save_track)
     print( " scanning time = ", time() - start, " sec, rank = ", rank)
     start = time()
     out_track_list = mpi_comm.gather(track_list, root=0)
@@ -403,7 +401,7 @@ def fma(lat, nturns, x_array, y_array, nsuperperiods = 1):
     mpi_comm = MPI.COMM_WORLD
     rank = mpi_comm.Get_rank()
     track_list = create_track_list(x_array, y_array)
-    track_list = tracking_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods = nsuperperiods)
+    track_list = track_nturns_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods = nsuperperiods)
     if rank == 0:
         nx = len(x_array)
         ny = len(y_array)
@@ -421,7 +419,7 @@ def da_mpi(lat, nturns, x_array, y_array, errors = None, nsuperperiods = 1):
     rank = mpi_comm.Get_rank()
 
     track_list = create_track_list(x_array, y_array)
-    track_list = tracking_mpi(mpi_comm, lat, nturns, track_list, errors = errors, nsuperperiods = nsuperperiods, save_track=False)
+    track_list = track_nturns_mpi(mpi_comm, lat, nturns, track_list, errors = errors, nsuperperiods = nsuperperiods, save_track=False)
 
     if rank == 0:
         da = array(map(lambda track: track.turn, track_list))#.reshape((len(y_array), len(x_array)))
@@ -429,7 +427,7 @@ def da_mpi(lat, nturns, x_array, y_array, errors = None, nsuperperiods = 1):
         ny = len(y_array)
         return da.reshape(ny, nx)
 
-def step(lat, particle_list, dz, navi, order=1):
+def track(lat, particle_list, dz, navi, order=1):
     '''
     tracking for a fixed step dz
     '''

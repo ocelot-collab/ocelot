@@ -1,5 +1,5 @@
 __author__ = 'Sergey Tomin'
-#from e_optics import *
+
 from numpy.random import normal
 from numpy import abs, append
 from ocelot.cpbd.elements import *

@@ -122,7 +122,15 @@ def energy_loss_und(energy, Kx, lperiod, L, energy_loss = False):
         U = 0.
     return U
 
-def Sigma_Eq(energy, Kx, lperiod, L):
+def sigma_gamma_quat(energy, Kx, lperiod, L):
+    """
+    rate of energy diffusion
+    :param energy: electron beam energy
+    :param Kx: undulator parameter
+    :param lperiod: undulator period
+    :param L: length
+    :return: sigma_gamma/gamma
+    """
     gamma = energy/m_e_GeV
     lambda_compt = 2.4263102389e-12 #m
     lambda_compt_r = lambda_compt/2./pi
@@ -138,7 +146,7 @@ def quantum_diffusion(energy, Kx, lperiod, L, quantum_diff = False):
         # lambda_compt_r = lambda_compt/2./pi
         # f = lambda K: 1.2 + 1./(K + 1.33*K*K + 0.4*K**3)
         # delta_Eq2 = 56.*pi**3/15.*lambda_compt_r*ro_e*gamma**4/lperiod**3*Kx**3*f(Kx)*L
-        sigma_Eq = Sigma_Eq(energy, Kx, lperiod, L) # sqrt(delta_Eq2/(gamma*gamma))
+        sigma_Eq = sigma_gamma_quat(energy, Kx, lperiod, L) # sqrt(delta_Eq2/(gamma*gamma))
         # print "sigma_q = ", sigma_Eq, energy
         U = sigma_Eq*np.random.randn()*energy
     else:
@@ -172,7 +180,7 @@ def track4rad(beam, lat, energy_loss = False, quantum_diff = False):
                     N = 500
                     for z in linspace(L, lat_el.totalLen + L, num=N):
                         h = lat_el.totalLen/(N)
-                        step(lat_el, [p], h, navi)
+                        track(lat_el, [p], h, navi)
                         #print p.s
                         ui = [p.x, p.px, p.y, p.py, z, sqrt(1. - p.px*p.px - p.py *p.py), 0., 0., 0.]
                         u.extend(ui)

@@ -1,6 +1,12 @@
 __author__ = 'Sergey Tomin'
 
-from ocelot.cpbd.elements import Drift
+from ocelot import *
+
+def RFcavity(l, volt, lag, harmon):
+    rf = Cavity(l = l, volt=volt, id = id)
+    rf.lag = lag
+    rf.harmon = harmon
+    return rf
 
 class MadObj:
 
@@ -205,8 +211,8 @@ def collect_sequence(lines):
     return lines2
 
 
-def lattice_str_from_madx(name_file):
-    f = open(name_file,"r")
+def lattice_str_from_madx(filename_seq):
+    f = open(filename_seq,"r")
     lines = line_transform(f)
     mad_objs = find_objects(lines)
 
@@ -248,6 +254,14 @@ def madx_seq2ocelot_seq(list_elem_pos, tot_length, exclude_elems = []):
     len_last_drift = tot_length - list_elem_pos[-1][-1] - list_elem_pos[-1][0].l/2.
     drift = Drift(l = len_last_drift, id = "drift_last")
     seq.append(drift)
+    return seq
+
+def madx2ocelot(file_seq, exclude_elems):
+    lines = lattice_str_from_madx(filename_seq=file_seq)
+    #print lines
+    file = "\n"
+    exec(file.join(lines))
+    seq = madx_seq2ocelot_seq(lattice, tot_length = ring.l, exclude_elems=exclude_elems)
     return seq
 
 

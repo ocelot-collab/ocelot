@@ -1,6 +1,6 @@
 import sys
 from ocelot import *
-from ocelot.gui.accelerator import plot_lattice
+from ocelot.gui import *
 from pylab import *
 
 def rematch(beta_mean, l_fodo, qdh, lat, extra_fodo, beam, qf, qd):

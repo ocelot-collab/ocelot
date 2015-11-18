@@ -1,10 +1,5 @@
-# need to rememberr
-
-from ocelot.gui.accelerator import plot_lattice
-from ocelot.cpbd.elements import *
-from ocelot.cpbd.beam import *
-from ocelot.cpbd.optics import *
-from ocelot.cpbd.match import *
+from ocelot import *
+from ocelot.gui import*
 from pylab import *
 
 from copy import deepcopy

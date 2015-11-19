@@ -87,8 +87,8 @@ blm_names = ['3.1FL2SASE3','3.2FL2SASE3']
 bpms = []
 
 for bpm_name in bpm_names:
-	bpm = dcs.BPM("TTF2.DIAG/BPM/" + bpm_name)
-	bpms.append(bpm)
+    bpm = dcs.BPM("TTF2.DIAG/BPM/" + bpm_name)
+    bpms.append(bpm)
 
 
 mi = FLASH1MachineInterface()
@@ -134,46 +134,47 @@ class XYCanvas(MyMplCanvas):
 
     def compute_initial_figure(self):
         self.axes.bar(range(14), range(14), width=0.2, color='b')
-	self.axes.set_ylim((-4,4))
+        self.axes.set_ylim((-4,4))
 
     def update_figure(self):
         
-	for bpm in bpms:
-		dcs.get_bpm_val(bpm)
-		print 'bpm read:', bpm.id, bpm.x, bpm.y
-		
+        for bpm in bpms:
+            dcs.get_bpm_val(bpm)
+            print 'bpm read:', bpm.id, bpm.x, bpm.y
+
         x = [bpm.x for bpm in bpms]
-	y = [bpm.y for bpm in bpms]
+        y = [bpm.y for bpm in bpms]
         z = [bpm.z_pos for bpm in bpms]
-	
-	self.axes.bar(z, x, width=0.2, color='b', alpha=0.5)
-	self.axes.hold(True)
-	self.axes.bar(z, y, width=0.2, color='g', alpha=0.5)
-	self.axes.hold(False)
-	self.axes.set_ylim((-4,4))
+
+        self.axes.bar(z, x, width=0.2, color='b', alpha=0.5)
+        self.axes.hold(True)
+        self.axes.bar(z, y, width=0.2, color='g', alpha=0.5)
+        self.axes.hold(False)
+        self.axes.set_ylim((-4,4))
             
         self.axes.set_title('Orbit')
         self.draw()
+
 
 class BLMCanvas(MyMplCanvas):
     """A canvas that updates itself every second with a new plot."""
     def __init__(self, *args, **kwargs):
         MyMplCanvas.__init__(self, *args, **kwargs)
-	self.plane = 'x'
+        self.plane = 'x'
         timer = QtCore.QTimer(self)
         timer.timeout.connect(self.update_figure)
         timer.start(1000)
 
     def compute_initial_figure(self):
         self.axes.bar(range(14), range(14), width=0.2, color='b')
-	#self.axes.set_ylim((-4,4))
+        #self.axes.set_ylim((-4,4))
 
     def update_figure(self):
 
         y = mi.get_alarms()
         z = range(0, len(y))
-	
-	self.axes.bar(z, y, width=0.2, color='b')
+
+        self.axes.bar(z, y, width=0.2, color='b')
             
         self.axes.set_title('Beam loss (threshold perc.)')
         self.draw()
@@ -183,25 +184,25 @@ class SASECanvas(MyMplCanvas):
     """A canvas that updates itself every second with a new plot."""
     def __init__(self, *args, **kwargs):
         MyMplCanvas.__init__(self, *args, **kwargs)
-	self.data = []
+        self.data = []
         timer = QtCore.QTimer(self)
         timer.timeout.connect(self.update_figure)
         timer.start(100)
 
     def compute_initial_figure(self):
         self.axes.plot(range(14), range(14), color='b')
-	#self.axes.set_ylim((-4,4))
+        #self.axes.set_ylim((-4,4))
 
     def update_figure(self):
         val = mi.get_sase(detector = 'gmd_default')
 
-	self.data.append(val)
-	self.axes.plot(xrange(len(self.data)), self.data, color='b')
+        self.data.append(val)
+        self.axes.plot(xrange(len(self.data)), self.data, color='b')
             
         self.axes.set_title('SASE')
         self.draw()
 
-	
+
 class ApplicationWindow(QtGui.QMainWindow):
     def __init__(self):
                 

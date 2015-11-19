@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.core.umath import sqrt
+#from numpy.core.umath import sqrt
 from ocelot.common.globals import m_e_eV
 from ocelot.cpbd.beam import *
 
@@ -10,7 +10,11 @@ def exact_xp_2_xxstg(xp, gamref):
     u = np.c_[xp[:, 3], xp[:, 4], xp[:, 5]+pref]
     gamma = np.sqrt(1 + np.sum(u*u, 1)/m_e_eV**2)
     beta = np.sqrt(1-gamma**-2)
-    u = u/np.linalg.norm(u, 2, 1).reshape((N, 1))
+    if np.__version__ > "1.8":
+        p0 = np.linalg.norm(u, 2, 1).reshape((N, 1))
+    else:
+        p0 = np.sqrt(u[:, 0]**2 + u[:, 1]**2 + u[:, 2]**2).reshape((N, 1))
+    u = u/p0
     cdt = -xp[:, 2]/(beta*u[:, 2])
     xxstg[:, 0] = xp[:, 0]+beta*u[:, 0]*cdt
     xxstg[:, 2] = xp[:, 1]+beta*u[:, 1]*cdt
@@ -28,7 +32,10 @@ def exact_xxstg_2_xp(xxstg, gamref):
     gamma = gamref*(1+xxstg[:, 5])
     beta = np.sqrt(1-gamma**-2)
     u = np.c_[xxstg[:, 1], xxstg[:, 3], np.ones(N)]
-    norm = np.linalg.norm(u, 2, 1).reshape((N, 1))
+    if np.__version__ > "1.8":
+        norm = np.linalg.norm(u, 2, 1).reshape((N, 1))
+    else:
+        norm = np.sqrt(u[:, 0]**2 + u[:, 1]**2 + u[:, 2]**2).reshape((N, 1))
     u = u/norm
     xp[:, 0] = xxstg[:, 0]-u[:, 0]*beta*xxstg[:, 4]
     xp[:, 1] = xxstg[:, 2]-u[:, 1]*beta*xxstg[:, 4]

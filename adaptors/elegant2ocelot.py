@@ -128,7 +128,9 @@ def read_lattice_elegant(file_flo, file_par):
             elem.tilt=eval(data_par[pos+12][2])
         elif elem.type=="undulator":
             elem.l=eval(data_par[pos][2])
-            elem.nperiods=eval(data_par[pos+7][2])/2
+            print elem.l
+            elem.nperiods=eval(data_par[pos+8][2])/2
+            print elem.nperiods
             elem.lperiod=elem.l/elem.nperiods
             elem.Kx=eval(data_par[pos+2][2])
             elem.Ky=0

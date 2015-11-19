@@ -51,13 +51,14 @@ class Optimizer:
         self.mi = mi
         self.dp = dp
         self.timeout = 1.0
+        self.logging = False
 
-    def eval(self, seq):
+    def eval(self, seq, logging = False, log_file = None):
         for s in seq:
             s.apply()
 
 
-    def max_sase(self,correctors, opt_pointing=False):
+    def max_sase(self,correctors, method = 'simplex', params = {}, opt_pointing = False):
         '''
         direct sase optimization with simplex, using correctors as a multiknob
         '''
@@ -83,6 +84,7 @@ class Optimizer:
                 limits = self.dp.get_limits(correctors[i])
                 print  'limits=[{0}, {1}]'.format(limits[0], limits[1])
                 if x[i] < limits[0] or x[i] > limits[1]:
+                    print 'limits exceeded'
                     return pen_max
     
     
@@ -95,8 +97,6 @@ class Optimizer:
             sase = self.mi.get_sase()
             alarm = np.max(self.mi.get_alarms())
             #z1, z2 = get_sase_pos()
-    
-    
     
             if self.debug: print 'alarm:', alarm
             if self.debug: print 'sase:', sase
@@ -121,8 +121,70 @@ class Optimizer:
     
         x = self.mi.init_corrector_vals(correctors)
         x_init = x
+
+        if self.logging: 
+            f = open(self.log_file,'a')
+            f.write('\n*** optimization step ***\n')
+            f.write(str(correctors) + '\n')
+            f.write(method + '\n')
+            f.write('x0=' + str(x_init) + '\n')
+            f.write('sase0=' + str(sase_ref) + '\n')
+
         
-        res  = opt.fmin(error_func,x,xtol=1e-3, maxiter=150, maxfun=150)
+        if method == 'cg':
+            print 'using CG optimizer, params:', params 
+            
+            try:
+                max_iter = params['maxiter']
+            except KeyError:
+                max_iter = 10 * len(x)
+
+            try:
+                epsilon = params['epsilon']
+            except KeyError:
+                epsilon = 0.1
+
+            try:
+                gtol = params['gtol']
+            except KeyError:
+                gtol = 1.e-3
+                        
+            opt.fmin_cg(error_func,x,gtol=gtol, epsilon = epsilon, maxiter=max_iter)
+        
+        if method == 'simplex':
+            print 'using simplex optimizer, params:', params
+            
+            try:
+                max_iter = params['maxiter']
+            except KeyError:
+                max_iter = 10 * len(x)
+
+            try:
+                xtol = params['xtol']
+            except KeyError:
+                xtol = 1.e-3
+
+            opt.fmin(error_func,x,xtol=xtol, maxiter=max_iter)
+        
+        if method == 'powell': 
+            print 'using powell optimizer, params:', params
+            
+            try:
+                max_iter = params['maxiter']
+            except KeyError:
+                max_iter = 10 * len(x)
+
+            try:
+                xtol = params['xtol']
+            except KeyError:
+                xtol = 1.e-3
+
+            opt.fmin_powell(error_func,x,xtol=xtol, maxiter=max_iter)
+
+
+        if method == 'fancy_stuff_from': 
+            print 'using fancy optimizer, params:', params
+            pass
 
         sase_new = self.mi.get_sase()
         
@@ -131,6 +193,10 @@ class Optimizer:
             for i in xrange(len(correctors)):
                 print 'reverting', correctors[i], '->',x_init[i]
                 self.mi.set_value(correctors[i], x_init[i])
+
+        if self.logging:
+             f.write('sase_new=' + str(sase_new) + '\n')
+             f.close()
 
 
 
@@ -141,7 +207,7 @@ class Action:
         self.id = id
     def apply(self):
         print 'applying...', self.id
-        return self.func(*self.args)
+        self.func(*self.args)
     def to_JSON(self):
         print "hoo"
     def __repr__(self):

@@ -184,7 +184,7 @@ def t_nnn(L, h, k1, k2):
         I323 = (sy - cy*sx - 2.*ky2*sy*dx_h)/denom           #  I323 = Gy * sx*cy = (2*ky2/kx2*(1 + cx)*sy - cy*sx)/denom + sy/kx2
         #derivative of Integrals
         I244 = 2.*(cy*sy - sx)/denom
-        I233 = sx + 2.*ky2*(cy*sy - sx)/denom
+        I233 = sx - 2.*ky2*(cy*sy - sx)/denom
         I234 = (kx2*dx_h - 2.*ky2*sy2)/denom
         I413 = ((kx2 - 2.*ky2)*cy*sx - ky2*sy*(1. + cx))/denom
         I424 = (cy*sx - cx*sy - 2.*ky2*sy*dx_h)/denom
@@ -371,7 +371,7 @@ def t_nnn(L, h, k1, k2):
     T544 = t544 + (L + sy*cy)/4.
 
     T[4, 0, 0] = T511
-    T[4, 0, 1] = T512
+    T[4, 0, 1] = T512 + h*dx
     T[4, 0, 5] = T516
     T[4, 1, 1] = T522
     T[4, 1, 5] = T526

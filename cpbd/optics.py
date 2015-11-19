@@ -74,13 +74,7 @@ def transform_vec_ext(X, dx, dy, tilt):
     return X
 
 
-def t_apply(R, T, X, dx, dy, tilt):
-    #x, px, y, py, tau, dp = X[0::6], X[1::6], X[2::6], X[3::6], X[4::6], X[5::6]
-    #px = px*(1. + py*py + px*px)
-    #py = py*(1. + py*py + px*px)
-    #X[1::6] = px[:]
-    #X[3::6] = py[:]
-
+def t_apply(R, T,  X, dx, dy, tilt, U5666=0.):
     if dx != 0 or dy != 0 or tilt != 0:
         X = transform_vec_ent(X, dx, dy, tilt)
 
@@ -105,7 +99,7 @@ def t_apply(R, T, X, dx, dy, tilt):
     pxpy = px*py
     ydp = y*dp
     pydp = py*dp
-    #U5666 = R[0,5]*R[1,5]*R[1,5]*R[1,5]/R[0,1] if R[0,1] != 0 else 0.
+
     X[0::6] = Xr[::6] + T[0, 0, 0]*x2 + T[0, 0, 1]*xpx + T[0, 0, 5]*xdp + T[0, 1, 1]*px2 + T[0, 1, 5]*pxdp + \
                T[0, 5, 5]*dp2 + T[0, 2, 2]*y2 + T[0, 2, 3]*ypy + T[0, 3, 3]*py2
 
@@ -117,19 +111,10 @@ def t_apply(R, T, X, dx, dy, tilt):
     X[3::6] = Xr[3::6] + T[3, 0, 2]*xy + T[3, 0, 3]*xpy + T[3, 1, 2]*ypx + T[3, 1, 3]*pxpy + T[3, 2, 5]*ydp + T[3, 3, 5]*pydp
 
     X[4::6] = Xr[4::6] + T[4, 0, 0]*x2 + T[4, 0, 1]*xpx + T[4, 0, 5]*xdp + T[4, 1, 1]*px2 + T[4, 1, 5]*pxdp + \
-               T[4, 5, 5]*dp2 + T[4, 2, 2]*y2 + T[4, 2, 3]*ypy + T[4, 3, 3]*py2 #- U5666*dp2*dp    # third order
-    #print T[4, 0, 0]*x2 + T[4, 0, 1]*xpx + T[4, 0, 5]*xdp + T[4, 1, 1]*px2 + T[4, 1, 5]*pxdp + T[4, 5, 5]*dp2 + T[4, 2, 2]*y2 + T[4, 2, 3]*ypy + T[4, 3, 3]*py2
+               T[4, 5, 5]*dp2 + T[4, 2, 2]*y2 + T[4, 2, 3]*ypy + T[4, 3, 3]*py2 # + U5666*dp2*dp    # third order
     #X[:] = Xr[:] + Xt[:]
-    #print U5666, U5666*dp2*dp
-
-    #x, x1, y, y1, tau, dp = X[0::6], X[1::6], X[2::6], X[3::6], X[4::6], X[5::6]
-    #px = x1*(1. - y1*y1 - x1*x1)
-    #py = y1*(1. - y1*y1 - x1*x1)
-    #X[1::6] = px[:]
-    #X[3::6] = py[:]
 
     if dx != 0 or dy != 0 or tilt != 0:
-        #print "Iam here 2"
         X = transform_vec_ext(X, dx, dy, tilt)
 
     return X
@@ -343,6 +328,16 @@ def create_transfer_map(element, order=1):
         pass
 
     elif element.type in ["sbend", "rbend", "bend"]:
+        """
+        # U5666 testing
+        h = transfer_map.hx
+        kx2 = (transfer_map.k1 + h*h)
+        sx = lambda z, energy: R_z(z, energy)[0, 1]
+        cx = lambda z, energy: R_z(z, energy)[0, 0]
+        U5666 = lambda z, energy: -0.5*h**4*(6*z - (4.*kx2*sx(z, energy)**2 - 6*cx(z, energy))*sx(z, energy))/(12*kx2*kx2)
+        transfer_map.map_z = lambda X, z, energy: t_apply(R_z(z, energy), transfer_map.T_z(z), X, element.dx, element.dy, transfer_map.tilt,
+                                                          U5666(z, energy))
+        """
         pass
 
     elif element.type == "drift":

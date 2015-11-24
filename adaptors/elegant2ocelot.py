@@ -38,7 +38,11 @@ def read_lattice_elegant(file_flo, file_par):
         sname=v[i_ElementName]
         stype=v[i_ElementType];
         sname=sname.replace('-C','')
-        #print stype,sname
+        #sname=sname.replace('[','_')
+        #sname=sname.replace(']','')
+        #sname=sname.replace('-','_')
+        #sname=sname.replace('.','_')
+        print stype,sname
         if stype=='QUAD':
             quad = Quadrupole(id=sname)
             quad.s=eval(v[i_s])
@@ -109,6 +113,7 @@ def read_lattice_elegant(file_flo, file_par):
         elem.l=eval(data_par[pos][2])
         if elem.type=="quadrupole":
             elem.k1=eval(data_par[pos+1][2])
+            elem.tilt = eval(data_par[pos+2][2])
         elif elem.type=="sextupole":
             elem.k2=eval(data_par[pos+1][2])
         elif elem.type=="bend":
@@ -150,7 +155,9 @@ def read_lattice_elegant(file_flo, file_par):
             elem.l= 0. # eval(data_par[pos][2])
         elif elem.type=="drift":
             elem.l=eval(data_par[pos][2])
-        elem.id=elem.id.replace('.','_')              
+        elem.id = elem.id.replace('.','_')
+        elem.id = elem.id.replace('[','_')
+        elem.id = elem.id.replace(']','')
     return lattice
 
 

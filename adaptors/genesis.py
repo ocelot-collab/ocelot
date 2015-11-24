@@ -890,7 +890,8 @@ def generate_lattice(lattice, unit=1.0, energy = None, debug = False):
         elif e.type == 'quadrupole':
             #k = energy/0.2998 * float(e.k1) *  ( e.l / unit - int(e.l / unit) )
             #k = float(energy) * float(e.k1) / e.l #*  (1 +  e.l / unit - int(e.l / unit) )
-            k = float(energy) * float(e.k1) * 0.2998 / e.l #*  (1 +  e.l / unit - int(e.l / unit) )
+            #k = float(energy) * float(e.k1) * 0.2998 / e.l #*  (1 +  e.l / unit - int(e.l / unit) )
+            k = float(energy) * float(e.k1) / 0.2998
             if debug: print 'DEBUG', e.k1, k, energy
             quadLat += 'QF' +'    '+ str(k) + '   ' + str( (e.l / unit ) ) + '  ' + str( ( (pos - prevPosQ - prevLenQ)  / unit) ) + '\n'
             prevPosQ = pos

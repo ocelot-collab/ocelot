@@ -186,6 +186,7 @@ def elem_cord(lat):
     cav = np.array([[0,0]])
     mat = np.array([[0,0]])
     und = np.array([[0,0]])
+    drft = np.array([[0,0]])
     L = 0
     #for elem in lat.sequence:
     #if elem.type == "drift" and elem.l == 0:
@@ -215,12 +216,17 @@ def elem_cord(lat):
             cav = np.append(cav, [[L, k1]], axis=0)
             cav = np.append(cav, [[L+elem.l, k1]],axis=0)
             cav = np.append(cav, [[L+elem.l, 0]],axis=0)
-
-        elif elem.type == "matrix":
+        elif elem.type == "drift":
             k1 = 1.
+            drft = np.append(drft, [[L, 0]], axis=0)
+            drft = np.append(drft, [[L, 0]], axis=0)
+            drft = np.append(drft, [[L+elem.l, 0]],axis=0)
+            drft = np.append(drft, [[L+elem.l, 0]],axis=0)
+        elif elem.type == "matrix":
+            #k1 = 1.
             mat = np.append(mat, [[L, 0]], axis=0)
-            mat = np.append(mat, [[L, k1]], axis=0)
-            mat = np.append(mat, [[L+elem.l, k1]],axis=0)
+            #mat = np.append(mat, [[L, k1]], axis=0)
+            #mat = np.append(mat, [[L+elem.l, k1]],axis=0)
             mat = np.append(mat, [[L+elem.l, 0]],axis=0)
 
         elif elem.type == "undulator":
@@ -239,7 +245,8 @@ def elem_cord(lat):
             bend = np.append(bend, temp, axis = 0)
         
         elif elem.type == "sextupole":
-            temp[:,1] = temp[:,1]*elem.ms
+
+            temp[:,1] = temp[:,1]*elem.ms+ temp[:,1]*elem.k2
             sext = np.append(sext, temp, axis = 0)
 
         elif elem.type == "multipole":
@@ -271,11 +278,11 @@ def elem_cord(lat):
         corr[:,1] = corr[:,1]/max(corr[:,1])
     #if len(corr) != 1 and max(mons[:,1] != 0):
     #mons[:,1] = mons[:,1]/max(mons[:,1])
-    return quad, bend, sext, corr, mons, cav, mat, und, multi
+    return quad, bend, sext, corr, mons, cav, mat, und, multi, drft
 
 
 def plot_elems(ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legend = True):
-    quad, bend, sext, corr, mons, cav, mat, und, multi = elem_cord(lat)
+    quad, bend, sext, corr, mons, cav, mat, und, multi, drft = elem_cord(lat)
     #print len(quad), len(bend), len(sext), len(corr ),len( mons), len( cav)
     #print cav
     alpha = 1
@@ -312,6 +319,9 @@ def plot_elems(ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legen
             n += 1
         if len(und)>1:
             ax.fill(und[:,0]+i*lat.totalLen + s_point, und[:,1]*y_scale*0.7, "pink", edgecolor = "lightgreen", alpha = alpha, label = "und")
+            n += 1
+        if len(drft)>1:
+            ax.fill(drft[:,0]+i*lat.totalLen + s_point, drft[:,1]*y_scale*0.7, "k")
             n += 1
     #ax.broken_barh(s , (y0, yw*1.3), facecolors='green', edgecolor = "green", alpha = alpha, label = "Sext")
     #ax.broken_barh(c , (y0, yw), facecolors='b',edgecolor = "b", alpha = alpha)

@@ -156,8 +156,11 @@ class TransferMap:
             Ei = tws0.E
             Ef = tws0.E + self.delta_e #* cos(self.phi)
             #print "Ei = ", Ei, "Ef = ", Ef
-            k = sqrt(Ef/Ei)
-            #k = 1
+            #gammaf = Ef/m_e_GeV
+            #betaf = sqrt(1. - 1./gammaf/gammaf)
+            #gammai = Ei/m_e_GeV
+            #betai = sqrt(1. - 1./gammai/gammai)
+            k = sqrt(Ef/(Ei))
             M[0, 0] = M[0, 0]*k
             M[0, 1] = M[0, 1]*k
             M[1, 0] = M[1, 0]*k

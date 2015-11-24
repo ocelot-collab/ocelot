@@ -56,7 +56,7 @@ def lat2input(lat):
 
     lines.append("\n# quadrupoles \n")
     for quad in quads:
-        line = quad.id + " = Quadrupole(l = " + str(quad.l) +", k1 = "+ str(quad.k1) +", id = '"+ quad.id+ "')\n"
+        line = quad.id + " = Quadrupole(l = " + str(quad.l) +", k1 = "+ str(quad.k1) +", tilt = "+ str(quad.tilt)  +", id = '"+ quad.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# bending magnets \n")

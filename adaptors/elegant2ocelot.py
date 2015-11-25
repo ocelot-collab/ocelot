@@ -11,14 +11,31 @@ lat = MagneticLattice(sequence)
 import csv
 from ocelot.cpbd.elements import *
 from math import *
+import sys
 import numpy as np
 
 def read_file(filename):
-    f=open(filename, 'rb')
+    if sys.version_info[0] < 3:
+        f=open(filename, 'rb')
+    else:
+        f = open(filename, 'r', newline='', encoding='utf8')
     data=csv.reader(f, delimiter='\t')
     data=[row for row in data]
     f.close()
     return data
+
+
+def read_twi_file(namefile):
+    data = read_file(namefile)
+    S = []
+    Bx = []
+    By = []
+    for d in data[59:]:
+        S.append(float(d[0]))
+        Bx.append(float(d[1]))
+        By.append(float(d[7]))
+    return S, Bx, By
+
 
 def read_lattice_elegant(file_flo, file_par):
 

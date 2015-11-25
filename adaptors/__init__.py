@@ -1,5 +1,5 @@
 
-__all__ = ["read_lattice_elegant",
+__all__ = ["read_lattice_elegant", "read_twi_file",
            "astraBeam2particleArray", "particleArray2astraBeam",
            "madx2ocelot",
            ]

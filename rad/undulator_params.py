@@ -51,6 +51,9 @@ def Ephoton2field(energy, lu = 0.04, Eeb = 14):
     field = K*2.*pi*m_e_eV/(lu*speed_of_light)
     return field
 
+def lambda2Ebeam(Lambda = 10.4e-9, lu=0.0272, K=1.2392):
+    gamma = sqrt(lu/(2.*Lambda)*(1. + K*K/2.))
+    return gamma*m_e_GeV
 
 class ID_radiation:
     def __init__(self, beam, undulator):

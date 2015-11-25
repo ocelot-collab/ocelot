@@ -375,14 +375,6 @@ def plot_betas(ax, S, beta_x, beta_y, font_size):
     leg.get_frame().set_alpha(0.5)
 
 
-def plot_xy(ax, S, X, Y, font_size):
-    ax.set_ylabel(r"$X, Y$, m")
-    ax.plot(S, X,'r', lw = 2, label=r"$X$")
-    ax.plot(S, Y,'b', lw = 2, label=r"$Y$")
-    leg = ax.legend(loc='upper right', shadow=True, fancybox=True, prop=font_manager.FontProperties(size=font_size))
-    leg.get_frame().set_alpha(0.5)
-
-
 def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, fig_name = None):
 
     font_size = 16
@@ -429,10 +421,18 @@ def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, fig_name = None):
     plt.show()
 
 
-def body_trajectory(fig, ax_xy, ax_el, lat, list_particles):
-    X = map(lambda p:p.x, list_particles)
-    Y = map(lambda p:p.y, list_particles)
-    S = map(lambda p:p.s, list_particles)
+def plot_xy(ax, S, X, Y, font_size):
+    ax.set_ylabel(r"$X, Y$, m")
+    ax.plot(S, X,'r', lw = 2, label=r"$X$")
+    ax.plot(S, Y,'b', lw = 2, label=r"$Y$")
+    leg = ax.legend(loc='upper right', shadow=True, fancybox=True, prop=font_manager.FontProperties(size=font_size))
+    leg.get_frame().set_alpha(0.5)
+
+
+def body_trajectory(fig, ax_xy, ax_el, lat, plist):
+    X = [p.x for p in plist]
+    Y = [p.y for p in plist]
+    S = [p.s for p in plist]
     
     font_size = 16
     
@@ -444,13 +444,13 @@ def body_trajectory(fig, ax_xy, ax_el, lat, list_particles):
     ax_xy.grid(True)
     ax_el.set_yticks([])
     ax_el.grid(True)
-    plt.xlim(S[0], S[-1])
+    #plt.xlim(S[0], S[-1])
     
     fig.subplots_adjust(hspace=0)
     
     plot_xy(ax_xy, S, X, Y, font_size)
 
-    plot_elems(ax_el, lat, nturns = int(S[-1]/lat.totalLen), legend = False) # plot elements
+    plot_elems(ax_el, lat, nturns = 1, legend = False) # plot elements
 
 """
 def plot_current(p_array, charge, num_bins = 200):
@@ -483,59 +483,37 @@ def plot_trajectory(lat, list_particles):
     body_trajectory(fig, ax_xy, ax_el, lat, list_particles)
     plt.show()
 
-def plot_trajectory_test(fig, lat, p1, p2, p3,p4, alpha = 1):
-    #fig = plt.figure()
+
+def plot_API(lat):
+    fig = plt.figure()
     plt.rc('axes', grid=True)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
     left, width = 0.1, 0.85
     rect2 = [left, 0.2, width, 0.7]
     rect3 = [left, 0.05, width, 0.15]
-    
+
     ax_xy = fig.add_axes(rect2)  #left, bottom, width, height
     ax_el = fig.add_axes(rect3, sharex=ax_xy)
-    
-    X = array(map(lambda p:p.x, p1))
-    S = map(lambda p:p.s, p1)
-    X2 = array(map(lambda p:p.x, p2))
-    S2 = map(lambda p:p.s, p2)
-    
+
     font_size = 16
-    
+
     for ax in ax_xy, ax_el:
         if ax!=ax_el:
             for label in ax.get_xticklabels():
                 label.set_visible(False)
-    
+
     ax_xy.grid(True)
     ax_el.set_yticks([])
     ax_el.grid(True)
-    plt.xlim(S[0], S[-1])
-    
+    #plt.xlim(S[0], S[-1])
+
     fig.subplots_adjust(hspace=0)
-    Si = map(lambda p:p.s, p3)
-    Xi1 = array(map(lambda p:p.x, p3))*1000
-    Xi2 = array(map(lambda p:p.x, p4))*1000
-    ax_xy.plot(Si, Xi1,'b', lw = 2, label=r"inj $\pm \sigma_x$")
-    ax_xy.plot(Si, Xi2,'b', lw = 2)
-    ax_xy.fill_between(Si, Xi1,Xi2, alpha=alpha, facecolor='blue', label =r"inj $\pm  \sigma_x$")
+
     #plot_xy(ax_xy, S, X, Y, font_size)
-    ax_xy.set_ylabel(r"$X$, mm")
-    
-    ax_xy.plot(S, X*1000,'r', lw = 2, label=r"store $\pm \sigma_x$")
-    ax_xy.plot(S2, X2*1000,'r', lw = 2)
-    ax_xy.fill_between(S, X*1000,X2*1000, alpha=alpha, facecolor='red', label =r"store $\pm  \sigma_x$")
-    
-    
-    
-    
-    ax_xy.broken_barh([(10, 0.344)] , (-20, -2.4), facecolors='black')
-    ax_xy.broken_barh([(10, 0.344)] , (-22.4, -10), facecolors='yellow')
-    #ax_xy.plot([10., 10, 10.344, 10.344, 10.], array([0.02,0.0224, 0.0224, 0.02, 0.02])*1000, 'k')
-    #ax_xy.plot([10., 10, 10.344, 10.344, 10.], array([0.0224,0.0324, 0.0324, 0.0224, 0.0224])*1000, 'k')
-    leg = ax_xy.legend(loc='upper right', shadow=True, fancybox=True, prop=font_manager.FontProperties(size=font_size))
-    leg.get_frame().set_alpha(0.5)
-    plot_elems(ax_el, lat, nturns = int(S[-1]/lat.totalLen), legend = True) # plot elements
-#plt.show()
+
+    plot_elems(ax_el, lat, nturns = 1, legend = False) # plot elements
+    return ax_xy
+
 
 def plot_traj_pulse(lat, list_particles, list_particles2, U1, U2):
     fig = plt.figure()

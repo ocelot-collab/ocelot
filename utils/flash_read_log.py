@@ -9,16 +9,6 @@ font = {'size'   : 20}
 matplotlib.rc('font', **font)
 
 
-if len(sys.argv)>1:
-    filename = sys.argv[1]
-else:
-    filename = "test.txt"
-
-f = open(filename, "r")
-line = f.readline()
-f.close()
-
-names = line.split("\t")
 
 def read_wrong(filename):
     f = open(filename, "r")
@@ -54,49 +44,60 @@ def read_wrong(filename):
     return new_name
 
 
-#filename = read_wrong(filename)
-
-data = np.loadtxt(filename, comments = "#")
-inrv = 1
-
-ncols = np.shape(data)[1]
-timestamp = data[:, 0]
-
-#data = data[:, 1]
-
-
-dates = [datetime.fromtimestamp(t) for t in timestamp]
-
-fig, ax = plt.subplots(figsize=(20,10))
-#plt.xticks( rotation=25 )
-
-xfmt = md.DateFormatter('%H:%M:%S')
-ax.xaxis.set_major_formatter(xfmt)
-ax.set_ylabel(r"$W, \mu J$")
-pax2 = ax.plot( dates[::inrv], data[::inrv,-1],"r-", lw=2, label = "sase")
-ax2 = ax.twinx()
-pict = []
-for i in range(1, ncols-1):
-    x = data[:,i]
-    shift = np.around(x[0], decimals=2)
     
-    ax2.plot( dates[::inrv], x[::inrv] - shift, label = names[i]+ ": " + str(shift) )
-    #pict.append(p)
-fig.autofmt_xdate()
+def read_log(filename):
+    f = open(filename, "r")
+    line = f.readline()
+    line = line.replace("#", "")
+    line = line.replace("\n","")
+    f.close()
+    names = line.split("\t")
+    data = np.loadtxt(filename, comments = "#")
+
+    dict_data = {}
+    for name, col in zip(names, np.transpose(data)):
+        dict_data[name] = col
+
+    return dict_data
+    
+def plot_log(filename):
+    dict_data = read_log(filename)
+    inrv = 1
+    times = [datetime.fromtimestamp(t) for t in dict_data["time"]]
+    devices = list(dict_data.keys())
+    devices.remove("time")
+    devices.remove("sase")
+    print devices
+    fig, ax = plt.subplots(figsize=(20,10))
+
+    xfmt = md.DateFormatter('%H:%M:%S')
+    ax.xaxis.set_major_formatter(xfmt)
+    ax.set_ylabel(r"$W, \mu J$")
+    pax2 = ax.plot(times[::inrv],  dict_data["sase"][::inrv],"r-", lw=2, label = "sase")
+    ax.grid()
+
+    ax.set_xlim([times[0], datetime.fromtimestamp(dict_data["time"][-1])])
+    ax.legend(loc=1)
+    ax2 = ax.twinx()
+    pict = []
+    for device in devices:
+        x = dict_data[device]
+        shift = np.around(x[0], decimals=2)
+        ax2.plot( times[::inrv], x[::inrv] - shift, label = device + ": " + str(shift) )
+    fig.autofmt_xdate()
+    pict.append(pax2)
+    ax2.legend(loc=4)
+    ax2.grid(True)
+    ax2.set_ylabel(r"$I, A$")
+    plt.savefig(filename.split(".")[0]+".png")
+    plt.show()
 
 
-pict.append(pax2)
-#ax2.legend(loc='upper center')
-ax2.legend(loc=1)
-ax2.grid(True)
-ax2.set_ylabel(r"$I, A$")
-#ax.legend(pict, [l.get_label() for l in pict])
-ax.grid()
-#plt.plot(data[::inrv],'.-')
-print dates[-1]
-ax.set_xlim([dates[0], datetime.fromtimestamp(timestamp[-1]+120)])
-plt.savefig(filename.split(".")[0]+".png")
-
-plt.show()
-
-
+if __name__ == "__main__":
+    
+    if len(sys.argv)>1:
+        filename = sys.argv[1]
+    else:
+        filename = "opt_3.txt"
+    #filename = read_wrong(filename)
+    plot_log(filename)

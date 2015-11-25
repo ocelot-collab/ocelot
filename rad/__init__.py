@@ -3,5 +3,5 @@ __all__ = ["Screen",
            "print_rad_props"]
 
 from screen import *
-from radiation_py import *
-from undulator_params import *
+from ocelot.rad.radiation_py import *
+from ocelot.rad.undulator_params import *

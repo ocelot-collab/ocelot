@@ -278,7 +278,7 @@ if __name__ == "__main__":
     lines = c2py(lines)
     lines = collect_sequence(lines)
     for line in lines:
-        print line
+        print( line)
     f.close()
     part_name = name_file.split(".")
     part_name[0] += ".py"

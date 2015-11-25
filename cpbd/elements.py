@@ -385,7 +385,7 @@ class MagneticLattice:
             else:
                 self.sequence = self.sequence[id1:]
         except:
-            print 'cannot construct sequence, element not found'
+            print( 'cannot construct sequence, element not found')
             raise
 
         #self.transferMaps = {}

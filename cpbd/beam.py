@@ -71,20 +71,20 @@ class Twiss:
             self.id = ""
 
     def display(self):
-        print "beta_x  = ", self.beta_x
-        print "beta_y  = ", self.beta_y
-        print "alpha_x = ", self.alpha_x
-        print "alpha_y = ", self.alpha_y
-        print "gamma_x = ", self.gamma_x
-        print "gamma_y = ", self.gamma_y
-        print "Dx      = ", self.Dx
-        print "Dy      = ", self.Dy
-        print "Dxp     = ", self.Dxp
-        print "Dyp     = ", self.Dyp
-        print "mux     = ", self.mux
-        print "muy     = ", self.muy
-        print "nu_x    = ", self.mux/2./pi
-        print "nu_y    = ", self.muy/2./pi
+        print( "beta_x  = ", self.beta_x)
+        print( "beta_y  = ", self.beta_y)
+        print( "alpha_x = ", self.alpha_x)
+        print( "alpha_y = ", self.alpha_y)
+        print( "gamma_x = ", self.gamma_x)
+        print( "gamma_y = ", self.gamma_y)
+        print( "Dx      = ", self.Dx)
+        print( "Dy      = ", self.Dy)
+        print( "Dxp     = ", self.Dxp)
+        print( "Dyp     = ", self.Dyp)
+        print( "mux     = ", self.mux)
+        print( "muy     = ", self.muy)
+        print( "nu_x    = ", self.mux/2./pi)
+        print( "nu_y    = ", self.muy/2./pi)
 
             
 class Particle:
@@ -312,7 +312,7 @@ def get_current(p_array, charge, num_bins = 200):
     delta_Z = max(z) - min(z)
     delta_z = delta_Z/num_bins
     t_bins = delta_z/speed_of_light
-    print "Imax = ", max(hist)*charge/t_bins
+    print( "Imax = ", max(hist)*charge/t_bins)
     hist = np.append(hist, hist[-1])
     return bin_edges, hist*charge/t_bins
 

@@ -4,6 +4,6 @@ __all__ = ["read_lattice_elegant",
            "madx2ocelot",
            ]
 
-from elegant2ocelot import *
-from astra2ocelot import *
-from madx import madx2ocelot
+from ocelot.adaptors.elegant2ocelot import *
+from ocelot.adaptors.astra2ocelot import *
+from ocelot.adaptors.madx import madx2ocelot

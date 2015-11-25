@@ -4,7 +4,7 @@ from time import time
 
 from scipy import interpolate
 
-from spline_py import *
+from ocelot.rad.spline_py import *
 from ocelot.cpbd.optics import *
 from ocelot.cpbd.track import *
 from ocelot.cpbd.elements import *
@@ -343,7 +343,7 @@ def radiation_py(gamma, traj, screen, tmp):
         screen.arImEy = screen.arImEy.flatten()
         screen.arPhase = screen.arPhase.flatten()
     else:
-        print "SR 3D calculation"
+        print( "SR 3D calculation")
         arReEx = np.array([])
         arImEx = np.array([])
         arReEy = np.array([])
@@ -419,5 +419,5 @@ if __name__ == "__main__":
     quantum_diffusion(17.5, 4., 0.04, 200. ,quantum_diff=True)
     x = np.linspace(0, 1, 4)
     xnew = x2xgaus(x)
-    print x
-    print xnew
+    print( x)
+    print( xnew)

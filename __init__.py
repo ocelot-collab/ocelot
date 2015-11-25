@@ -17,14 +17,14 @@ __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope", 
            "sc_apply",                                                                          # sc
            ]
 
-from cpbd.beam import *
-from cpbd.optics import *
-from cpbd.elements import *
-from cpbd.match import *
-from cpbd.track import *
+from ocelot.cpbd.beam import *
+from ocelot.cpbd.optics import *
+from ocelot.cpbd.elements import *
+from ocelot.cpbd.match import *
+from ocelot.cpbd.track import *
 from ocelot.common.globals import *
-from cpbd.chromaticity import *
-from cpbd.e_beam_params import *
-from cpbd.io import *
-from cpbd.sc import *
+from ocelot.cpbd.chromaticity import *
+from ocelot.cpbd.e_beam_params import *
+from ocelot.cpbd.io import *
+from ocelot.cpbd.sc import *
 

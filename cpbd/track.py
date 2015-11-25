@@ -454,7 +454,7 @@ def lattice_track(lat, p, order=1):
 
 
 def merge_drifts(lat):
-    print "before merging: len(sequence) = ", len(lat.sequence)
+    print( "before merging: len(sequence) = ", len(lat.sequence) )
     L = 0.
     seq = []
     new_elem = None
@@ -471,7 +471,7 @@ def merge_drifts(lat):
             seq.append(elem)
     if new_elem != None:
         seq.append(new_elem)
-    print "after merging: len(sequence) = ", len(seq)
+    print( "after merging: len(sequence) = ", len(seq) )
     return MagneticLattice(sequence=seq)
 
 

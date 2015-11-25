@@ -80,7 +80,7 @@ def potential(q, steps):
     t0 = time()
     out = np.real(np.fft.ifftn(np.fft.fftn(out)*np.fft.fftn(K2)))
     t1 = time()
-    print 'fft time:', t1-t0, ' sec'
+    print( 'fft time:', t1-t0, ' sec')
 
     out[:Nx, :Ny, :Nz] = out[:Nx,:Ny,:Nz]/(4*pi*epsilon_0*hx*hy*hz)
     return out[:Nx, :Ny, :Nz]
@@ -91,7 +91,7 @@ def el_field(X, Q, gamma, nxyz):
     X[:, 2] = X[:, 2]*gamma
     XX = np.max(X, axis=0)-np.min(X, axis=0)
     XX = XX*np.random.uniform(low=1.0, high=1.1)
-    print 'mesh steps:', XX
+    print( 'mesh steps:', XX)
 
     steps = XX/(nxyz-3)
     X = X/steps
@@ -105,7 +105,7 @@ def el_field(X, Q, gamma, nxyz):
     nzny = nz*ny
     Xi = np.int_(np.floor(X)+1)
     inds = np.int_(Xi[:, 0]*nzny+Xi[:, 1]*nz+Xi[:, 2])  # 3d -> 1d
-    print inds.shape, nxyz
+    print( inds.shape, nxyz)
 
     q = np.bincount(inds, Q, nzny*nx).reshape(nxyz)
     p = potential(q, steps)
@@ -234,7 +234,7 @@ if __name__ == "__main__":
             SC_xp_update(xp,Q,gamref,dS,np.r_[53,53,53])
             xxstg= exact_xp_2_xxstg(xp,gamref)
         t1=time.time()
-        print 'step time:', t1-t0,' sec'
+        print( 'step time:', t1-t0,' sec')
         f.add_subplot(211)
         plt.plot(xxstg[:,4],xxstg[:,5],'.',xxstg0[:,4],xxstg0[:,5],'.')
         f.add_subplot(212)

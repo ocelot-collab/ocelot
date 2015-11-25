@@ -35,7 +35,7 @@ def show_flux(screen, show = 'Total', xlim = (0,0), ylim = (0,0),  file_name = N
         D1(data, X, distance =  screen.Distance, xlabel = xlabel, xlim = xlim, ylim = ylim,  file_name = file_name, unit = unit, status = status)
     else:
         if screen.ne!=1:
-            print " ******** ERROR into show.screen ! *********** "
+            print (" ******** ERROR into show.screen ! *********** ")
             return
         D3(screen, data, distance =  screen.Distance, file_name = file_name, unit = unit)
 
@@ -131,7 +131,7 @@ def plot3D_data(data, x = None, y = None):
     if x != None and y != None:
         X,Y = np.meshgrid(x,y)
     else:
-        print np.shape(data)
+        print( np.shape(data))
         X,Y = np.meshgrid(np.arange(np.shape(data)[1]), np.arange(np.shape(data)[0]))
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')

@@ -59,16 +59,16 @@ def read_log(filename):
         dict_data[name] = col
 
     return dict_data
-    
-def plot_log(filename):
-    dict_data = read_log(filename)
-    inrv = 1
+
+
+def plot_dict(dict_data, filename=None, interval=1, mode="%"):
+    inrv = interval
     times = [datetime.fromtimestamp(t) for t in dict_data["time"]]
     devices = list(dict_data.keys())
     devices.remove("time")
     devices.remove("sase")
     print devices
-    fig, ax = plt.subplots(figsize=(20,10))
+    fig, ax = plt.subplots(figsize=(20, 10))
 
     xfmt = md.DateFormatter('%H:%M:%S')
     ax.xaxis.set_major_formatter(xfmt)
@@ -77,20 +77,31 @@ def plot_log(filename):
     ax.grid()
 
     ax.set_xlim([times[0], datetime.fromtimestamp(dict_data["time"][-1])])
-    ax.legend(loc=1)
+    ax.legend(loc=1, framealpha=0.7)
     ax2 = ax.twinx()
     pict = []
     for device in devices:
         x = dict_data[device]
         shift = np.around(x[0], decimals=2)
-        ax2.plot( times[::inrv], x[::inrv] - shift, label = device + ": " + str(shift) )
+        if mode == "%":
+            ax2.plot( times[::inrv], (x[::inrv] - x[0])/x[0], label = device)
+        else:
+            ax2.plot( times[::inrv], x[::inrv] - shift, label = device + ": " + str(shift) )
     fig.autofmt_xdate()
     pict.append(pax2)
-    ax2.legend(loc=4)
+    ax2.legend(loc=4, framealpha=0.7)
     ax2.grid(True)
-    ax2.set_ylabel(r"$I, A$")
-    plt.savefig(filename.split(".")[0]+".png")
+    if mode == "%":
+        ax2.set_ylabel(r"$\Delta I/I$")
+    else:
+        ax2.set_ylabel(r"$I, A$")
+    if filename != None:
+        plt.savefig(filename.split(".")[0]+".png")
     plt.show()
+
+def plot_log(filename):
+    dict_data = read_log(filename)
+    plot_dict(dict_data,filename=filename, interval=1)
 
 
 if __name__ == "__main__":

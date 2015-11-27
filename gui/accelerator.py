@@ -14,7 +14,7 @@ import matplotlib.path as mpath
 import matplotlib.pyplot as plt
 from ocelot.cpbd.optics import *
 import numpy as np
-
+from copy import deepcopy
 
 import matplotlib.font_manager as font_manager
 font = {
@@ -300,6 +300,7 @@ dict_plot = {"quadrupole": {"scale": 0.7,   "color": "r",            "label": "q
 
 
 def new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legend = True):
+    dict_copy=deepcopy(dict_plot)
     alpha = 1
     ax.set_ylim((-1,1.5))
     if y_lim != None:
@@ -338,8 +339,8 @@ def new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale =
     ncols = np.sign(len(q)) + np.sign(len(b)) + np.sign(len(s)) + np.sign(len(c)) + np.sign(len(u)) + np.sign(len(rf))+ np.sign(len(m))
 
     labels_dict = {}
-    for elem in dict_plot.keys():
-        labels_dict[elem] = dict_plot[elem]["label"]
+    for elem in dict_copy.keys():
+        labels_dict[elem] = dict_copy[elem]["label"]
     for elem in lat.sequence:
         if elem.type in ["marker", "edge"]:
             L +=elem.l
@@ -348,47 +349,47 @@ def new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale =
         if l == 0:
             l = 0.03
         type = elem.type
-        scale = dict_plot[type]["scale"]
-        color = dict_plot[type]["color"]
-        label = dict_plot[type]["label"]
+        scale = dict_copy[type]["scale"]
+        color = dict_copy[type]["color"]
+        label = dict_copy[type]["label"]
         ampl = 1
 
         if elem.type == "quadrupole":
             ampl = elem.k1/q_max if q_max != 0 else 1
             point, = ax.fill(np.array([L, L, L+l, L+l, L]) + s_point, (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color,
-                             alpha = alpha, label=dict_plot[type]["label"])
-            dict_plot[type]["label"] = ""
+                             alpha = alpha, label=dict_copy[type]["label"])
+            dict_copy[type]["label"] = ""
         elif elem.type in ["bend", "rbend", "sbend"]:
             ampl = elem.angle/b_max if b_max != 0 else 1
             point, = ax.fill(np.array([L, L, L+l, L+l, L]) + s_point, (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color,
-                             alpha = alpha, label=dict_plot[type]["label"])
-            dict_plot[type]["label"] = ""
+                             alpha = alpha, label=dict_copy[type]["label"])
+            dict_copy[type]["label"] = ""
         elif elem.type in ["hcor", "vcor"]:
             ampl = elem.angle/c_max if c_max != 0 else 0.5
             point, = ax.fill(np.array([L, L, L+l, L+l, L]) + s_point, (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color,
-                             alpha = alpha, label=dict_plot[type]["label"])
-            dict_plot["hcor"]["label"] = ""
-            dict_plot["vcor"]["label"] = ""
+                             alpha = alpha, label=dict_copy[type]["label"])
+            dict_copy["hcor"]["label"] = ""
+            dict_copy["vcor"]["label"] = ""
         elif elem.type == "sextupole":
             ampl = (elem.k2 + elem.ms)/s_max if s_max != 0 else 1
             point, = ax.fill(np.array([L, L, L+l, L+l, L]) + s_point, (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color,
-                             alpha = alpha, label=dict_plot[type]["label"])
-            dict_plot[type]["label"] = ""
+                             alpha = alpha, label=dict_copy[type]["label"])
+            dict_copy[type]["label"] = ""
         elif elem.type == "cavity":
             ampl = elem.v/rf_max if rf_max != 0 else 0.5
             point, = ax.fill(np.array([L, L, L+l, L+l, L]) + s_point, np.array([-1, 1, 1, -1, -1])*ampl*scale*y_scale, color,
-                             alpha = alpha, edgecolor = "lightgreen", label=dict_plot[type]["label"])
-            dict_plot[type]["label"] = ""
+                             alpha = alpha, edgecolor = "lightgreen", label=dict_copy[type]["label"])
+            dict_copy[type]["label"] = ""
         elif elem.type == "undulator":
             ampl = elem.Kx/u_max if u_max != 0 else 0.5
             point, = ax.fill(np.array([L, L, L+l, L+l, L]) + s_point, np.array([-1, 1, 1, -1, -1])*ampl*scale*y_scale, color,
-                             alpha = alpha, label=dict_plot[type]["label"])
-            dict_plot[type]["label"] = ""
+                             alpha = alpha, label=dict_copy[type]["label"])
+            dict_copy[type]["label"] = ""
         elif elem.type == "multipole":
             ampl = sum(elem.kn)/m_max if u_max != 0 else 0.5
             point, = ax.fill(np.array([L, L, L+l, L+l, L]) + s_point, np.array([-1, 1, 1, -1, -1])*ampl*scale*y_scale, color,
-                             alpha = alpha, label=dict_plot[type]["label"])
-            dict_plot[type]["label"] = ""
+                             alpha = alpha, label=dict_copy[type]["label"])
+            dict_copy[type]["label"] = ""
         else:
             point, = ax.fill(np.array([L, L, L+l, L+l, L]) + s_point, np.array([-1, 1, 1, -1, -1])*ampl*scale*y_scale, color,
                              alpha = alpha)
@@ -561,46 +562,6 @@ def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, fig_name = None):
 
     #plot_elems(ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8) # plot elements
     new_plot_elems(fig, ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8)
-    """
-
-    alpha = 1
-    points_with_annotation = []
-    L = 0.
-    for elem in lat.sequence:
-        l = elem.l
-        type = elem.type
-        scale = dict_plot[type]["scale"]
-        color = dict_plot[type]["color"]
-        point, = ax_el.fill([L, L, L+l, L+l, L], np.array([0, 1, 1, 0, 0])*scale, color, alpha = alpha)
-        annotation = ax_el.annotate(elem.id,
-            xy=(L+l/2., scale/2.+0.1), #xycoords='data',
-            #xytext=(i + 1, i), textcoords='data',
-            #horizontalalignment="left",
-            #arrowprops=dict(arrowstyle="simple", connectionstyle="arc3,rad=-0.2"),
-            #bbox=dict(boxstyle="round", facecolor="w", edgecolor="0.5", alpha=0.9)
-            )
-        # by default, disable the annotation visibility
-        annotation.set_visible(False)
-        L +=l
-        points_with_annotation.append([point, annotation])
-
-    def on_move(event):
-
-        visibility_changed = False
-        for point, annotation in points_with_annotation:
-            should_be_visible = (point.contains(event)[0] == True)
-
-            if should_be_visible != annotation.get_visible():
-                visibility_changed = True
-                annotation.set_visible(should_be_visible)
-
-        if visibility_changed:
-            plt.draw()
-
-    on_move_id = fig.canvas.mpl_connect('motion_notify_event', on_move)
-
-    """
-
 
     plt.show()
 

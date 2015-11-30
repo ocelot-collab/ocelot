@@ -35,7 +35,7 @@ def read_wrong(filename):
             L.append(line)
         #print line
     new_name = filename.split(".")[0]+"_mod.txt"
-    print new_name
+    print (new_name)
     f2 = open(new_name, "w")
     #for l in L:
     #    print l
@@ -67,7 +67,7 @@ def plot_dict(dict_data, filename=None, interval=1, mode="%"):
     devices = list(dict_data.keys())
     devices.remove("time")
     devices.remove("sase")
-    print devices
+    #print devices
     fig, ax = plt.subplots(figsize=(20, 10))
 
     xfmt = md.DateFormatter('%H:%M:%S')

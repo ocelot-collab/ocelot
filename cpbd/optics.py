@@ -318,12 +318,13 @@ def create_transfer_map(element, order=1):
         transfer_map.hx = element.angle/element.l
 
     R_z = lambda z, energy: uni_matrix(z, element.k1, hx = transfer_map.hx, sum_tilts=transfer_map.tilt, energy=energy)
+    R_z_no_tilt = lambda z, energy: uni_matrix(z, element.k1, hx = transfer_map.hx, sum_tilts=0, energy=energy)
 
     b_z = lambda z, energy: dot((eye(6) - R_z(z, energy)), array([element.dx, 0., element.dy, 0., 0., 0.]))
     transfer_map.T_z = lambda z: t_nnn(z, transfer_map.hx, element.k1, element.k2)
     transfer_map.T = transfer_map.T_z(element.l)
 
-    transfer_map.map_z = lambda X, z, energy: t_apply(R_z(z, energy), transfer_map.T_z(z), X, element.dx, element.dy, transfer_map.tilt)
+    transfer_map.map_z = lambda X, z, energy: t_apply(R_z_no_tilt(z, energy), transfer_map.T_z(z), X, element.dx, element.dy, transfer_map.tilt)
     #experiment with symplecticity
     transfer_map.sym_map_z = lambda X, z, energy: sym_map(z, X, transfer_map.hx, element.k1, element.k2, energy)
 

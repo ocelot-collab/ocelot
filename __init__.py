@@ -1,6 +1,7 @@
 __version__ = '15.11'
 
 __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope",                 # beam
+            "ellipse_from_twiss",                                                               # beam
            'fodo_parameters', 'lattice_transfer_map', 'TransferMap', 'gauss_from_twiss',        # optics
            'Element', 'Multipole', 'Quadrupole', 'RBend', "Matrix", "UnknownElement",           # elements
            'SBend', 'Bend', 'Drift', 'Undulator', 'MagneticLattice', 'Hcor',                    # elements

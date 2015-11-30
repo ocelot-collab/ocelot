@@ -324,3 +324,12 @@ def gauss_from_twiss(emit, beta, alpha):
     x = a * sqrt(beta) * cos(phi)
     xp = -a / sqrt(beta) * ( sin(phi) + alpha * cos(phi) )
     return (x, xp)
+
+def ellipse_from_twiss(emit, beta, alpha):
+    phi = 2*pi * np.random.rand()
+    #u = np.random.rand()
+    #a = sqrt(-2*np.log( (1-u)) * emit)
+    a = sqrt(emit)
+    x = a * sqrt(beta) * cos(phi)
+    xp = -a / sqrt(beta) * ( sin(phi) + alpha * cos(phi) )
+    return (x, xp)

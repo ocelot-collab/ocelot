@@ -281,21 +281,21 @@ def elem_cord(lat):
     return quad, bend, sext, corr, mons, cav, mat, und, multi, drft
 
 
-dict_plot = {"quadrupole": {"scale": 0.7,   "color": "r",            "label": "quad"},
-             "sextupole":  {"scale": 0.7,   "color": "g",            "label": "sext"},
-             "cavity":     {"scale": 0.7, "color": "orange",       "label": "cav"},
-             "bend":       {"scale": 0.7,   "color": "lightskyblue", "label": "bend"},
-             "rbend":      {"scale": 0.7,   "color": "lightskyblue", "label": "bend"},
-             "sbend":      {"scale": 0.7,   "color": "lightskyblue", "label": "bend"},
-             "matrix":     {"scale": 0.7, "color": "pink",         "label": "mat"},
-             "multipole":  {"scale": 0.7, "color": "g",            "label": "mult"},
-             "undulator":  {"scale": 0.7, "color": "pink",         "label": "und"},
-             "monitor":    {"scale": 0.7, "color": "orange",       "label": "mon"},
-             "hcor":       {"scale": 0.7, "color": "b",            "label": "cor"},
-             "vcor":       {"scale": 0.7, "color": "b",            "label": "cor"},
-             "drift":      {"scale": 0.,  "color": "k",            "label": ""},
-             "marker":     {"scale": 0.,  "color": "k",            "label": "mark"},
-             "edge":       {"scale": 0.,  "color": "k",            "label": ""},
+dict_plot = {"quadrupole": {"scale": 0.7, "color": "r",            "edgecolor": "r",          "label": "quad"},
+             "sextupole":  {"scale": 0.5, "color": "g",            "edgecolor": "g",          "label": "sext"},
+             "cavity":     {"scale": 0.7, "color": "orange",       "edgecolor": "lightgreen", "label": "cav"},
+             "bend":       {"scale": 0.7, "color": "lightskyblue", "edgecolor": "k",          "label": "bend"},
+             "rbend":      {"scale": 0.7, "color": "lightskyblue", "edgecolor": "k",          "label": "bend"},
+             "sbend":      {"scale": 0.7, "color": "lightskyblue", "edgecolor": "k",          "label": "bend"},
+             "matrix":     {"scale": 0.7, "color": "pink",         "edgecolor": "k",          "label": "mat"},
+             "multipole":  {"scale": 0.7, "color": "g",            "edgecolor": "k",          "label": "mult"},
+             "undulator":  {"scale": 0.7, "color": "pink",         "edgecolor": "k",          "label": "und"},
+             "monitor":    {"scale": 0.5, "color": "orange",       "edgecolor": "orange",     "label": "mon"},
+             "hcor":       {"scale": 0.7, "color": "c",            "edgecolor": "c",          "label": "cor"},
+             "vcor":       {"scale": 0.7, "color": "c",            "edgecolor": "c",          "label": "cor"},
+             "drift":      {"scale": 0.,  "color": "k",            "edgecolor": "k",          "label": ""},
+             "marker":     {"scale": 0.,  "color": "k",            "edgecolor": "k",          "label": "mark"},
+             "edge":       {"scale": 0.,  "color": "k",            "edgecolor": "k",          "label": ""},
              }
 
 
@@ -352,46 +352,54 @@ def new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale =
         scale = dict_copy[type]["scale"]
         color = dict_copy[type]["color"]
         label = dict_copy[type]["label"]
+        ecolor = dict_copy[type]["edgecolor"]
         ampl = 1
-
+        s_coord = np.array([L + elem.l/2 - l/2., L + elem.l/2- l/2., L+ elem.l/2 +l/2., L+ elem.l/2 +l/2., L + elem.l/2- l/2.]) + s_point
         if elem.type == "quadrupole":
             ampl = elem.k1/q_max if q_max != 0 else 1
-            point, = ax.fill(np.array([L, L, L+l, L+l, L]) + s_point, (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color,
+            point, = ax.fill(s_coord,  (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color, edgecolor=ecolor,
                              alpha = alpha, label=dict_copy[type]["label"])
             dict_copy[type]["label"] = ""
+
         elif elem.type in ["bend", "rbend", "sbend"]:
             ampl = elem.angle/b_max if b_max != 0 else 1
-            point, = ax.fill(np.array([L, L, L+l, L+l, L]) + s_point, (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color,
+            point, = ax.fill(s_coord, (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color,
                              alpha = alpha, label=dict_copy[type]["label"])
             dict_copy[type]["label"] = ""
+
         elif elem.type in ["hcor", "vcor"]:
             ampl = elem.angle/c_max if c_max != 0 else 0.5
-            point, = ax.fill(np.array([L, L, L+l, L+l, L]) + s_point, (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color,
+            point, = ax.fill(s_coord, (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color,  edgecolor=ecolor,
                              alpha = alpha, label=dict_copy[type]["label"])
             dict_copy["hcor"]["label"] = ""
             dict_copy["vcor"]["label"] = ""
+
         elif elem.type == "sextupole":
             ampl = (elem.k2 + elem.ms)/s_max if s_max != 0 else 1
-            point, = ax.fill(np.array([L, L, L+l, L+l, L]) + s_point, (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color,
+            point, = ax.fill(s_coord, (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color,
                              alpha = alpha, label=dict_copy[type]["label"])
             dict_copy[type]["label"] = ""
+
         elif elem.type == "cavity":
-            ampl = elem.v/rf_max if rf_max != 0 else 0.5
-            point, = ax.fill(np.array([L, L, L+l, L+l, L]) + s_point, np.array([-1, 1, 1, -1, -1])*ampl*scale*y_scale, color,
+            ampl = 1 # elem.v/rf_max if rf_max != 0 else 0.5
+            point, = ax.fill(s_coord, np.array([-1, 1, 1, -1, -1])*ampl*scale*y_scale, color,
                              alpha = alpha, edgecolor = "lightgreen", label=dict_copy[type]["label"])
             dict_copy[type]["label"] = ""
+
         elif elem.type == "undulator":
             ampl = elem.Kx/u_max if u_max != 0 else 0.5
-            point, = ax.fill(np.array([L, L, L+l, L+l, L]) + s_point, np.array([-1, 1, 1, -1, -1])*ampl*scale*y_scale, color,
+            point, = ax.fill(s_coord, np.array([-1, 1, 1, -1, -1])*ampl*scale*y_scale, color,
                              alpha = alpha, label=dict_copy[type]["label"])
             dict_copy[type]["label"] = ""
+
         elif elem.type == "multipole":
             ampl = sum(elem.kn)/m_max if u_max != 0 else 0.5
-            point, = ax.fill(np.array([L, L, L+l, L+l, L]) + s_point, np.array([-1, 1, 1, -1, -1])*ampl*scale*y_scale, color,
+            point, = ax.fill(s_coord, np.array([-1, 1, 1, -1, -1])*ampl*scale*y_scale, color,
                              alpha = alpha, label=dict_copy[type]["label"])
             dict_copy[type]["label"] = ""
+
         else:
-            point, = ax.fill(np.array([L, L, L+l, L+l, L]) + s_point, np.array([-1, 1, 1, -1, -1])*ampl*scale*y_scale, color,
+            point, = ax.fill(s_coord, np.array([-1, 1, 1, -1, -1])*ampl*scale*y_scale, color, edgecolor=ecolor,
                              alpha = alpha)
         annotation = ax.annotate(elem.type+": " + elem.id,
             xy=(L+l/2., 0), #xycoords='data',

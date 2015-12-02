@@ -49,7 +49,7 @@ class SuperOrbit(QObject):
         #print self.z
 
     def find_resp(self):
-        self.orbit.ideal_response_matrix(self.lat_errors)
+        self.orbit.ring_response_matrix(self.lat_errors)
         #real_resp = measure_response_matrix(orbit, lat_errors)
         #orbit.resp = real_resp
         self.emit(SIGNAL("resp_ok()"))

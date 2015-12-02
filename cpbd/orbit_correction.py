@@ -1,10 +1,10 @@
 __author__ = 'Sergey Tomin'
 
-import copy
+
 from time import time
 
 import matplotlib.pyplot as plt
-from scipy.interpolate import splrep, splev
+from scipy.interpolate import splrep, splev, interp1d
 from scipy.integrate import simps
 from numpy.linalg import svd
 from numpy import diag, transpose, linspace, shape
@@ -12,7 +12,8 @@ from numpy import diag, transpose, linspace, shape
 from ocelot.cpbd.errors import *
 from ocelot.cpbd.match import closed_orbit
 from ocelot.cpbd.optics import *
-
+from ocelot.cpbd.track import *
+import copy
 
 class BPM(object):
     def __init__(self, id = None):
@@ -128,7 +129,7 @@ class Orbit:
             print "there is not vertical corrector"
 
 
-    def read_virtual_orbit(self, lattice):
+    def read_virtual_orbit(self, lattice, p_init=None):
         """
         searching closed orbit by function closed_orbit(lattice) and searching coordinates of beam at the bpm possitions
         :param lattice: class MagneticLattice
@@ -136,14 +137,17 @@ class Orbit:
         """
         X = []
         Y = []
-        self.particle0 = closed_orbit(lattice)
+        if p_init == None:
+            self.particle0 = closed_orbit(lattice)
+        else:
+            self.particle0 = p_init
         #print "particle2 = ", self.particle0.s, self.particle0.x
         p = copy.copy(self.particle0)
         navi = Navigator()
         L = 0.
         for bpm in self.bpms:
             dz = bpm.s - L
-            step(lattice, [p], dz, navi)
+            track(lattice, [p], dz, navi)
             bpm.x = p.x
             bpm.y = p.y
             L = bpm.s
@@ -152,7 +156,7 @@ class Orbit:
         return array(X), array(Y)
 
 
-    def optical_func_params(self, lattice):
+    def optical_func_params(self, lattice, tw_init=None):
         """
         Optical function parameters for correctors and bpms. It is needed for calculation of ideal response matrix:
         defining beta functions on the azimuth of correctors and bpms: beta_x, beta_y;
@@ -161,42 +165,51 @@ class Orbit:
         :param lattice: class MagneticLattice
         :return:
         """
-        tw0 = Twiss()
-        tws = twiss(lattice, tw0, nPoints=int(lattice.totalLen/0.05))
+        if tw_init == None:
+            tw_init = Twiss()
 
-        s = array(map(lambda tw:tw.s, tws))
-        beta_x = array(map(lambda tw:tw.beta_x, tws))
-        beta_y = array(map(lambda tw:tw.beta_y, tws))
-        self.nu_x = simps(1./beta_x, s)/2./pi
-        self.nu_y = simps(1./beta_y, s)/2./pi
+        tws = twiss(lattice, tw_init, nPoints=int(lattice.totalLen/0.05))
+        #tws = twiss(lattice, tw_init)
+        s = array([tw.s for tw in tws])
+        #plt.plot(s, array([tw.mux for tw in tws]))
+        #plt.show()
+        tck_mux = splrep(s, array([tw.mux for tw in tws]))
+        tck_muy = splrep(s, array([tw.muy for tw in tws]))
 
-        tck_x = splrep(s, beta_x)
-        tck_y = splrep(s, beta_y)
+        #print f_mux(1)
+        #tck_mux = splrep(s, [tw.mux  for tw in tws])
+        #f_mux = splev(z, tck_mux)
+        beta_x = array([tw.beta_x for tw in tws])
+        beta_y = array([tw.beta_y for tw in tws])
+        self.nu_x = tws[-1].mux/2./pi
+        self.nu_y = tws[-1].muy/2./pi
 
+        tck_bx = splrep(s, beta_x)
+        tck_by = splrep(s, beta_y)
+        energy_s = [tw.E for tw in tws]
+        tck_E = splrep(s, energy_s)
         for bpm in self.bpms:
-            z = linspace(0., bpm.s, num = int(bpm.s*100.))
-            f_beta_x = splev(z, tck_x)
-            f_beta_y = splev(z, tck_y)
-            fx = 1./f_beta_x
-            fy = 1./f_beta_y
-            bpm.phi_x = simps(fx, z) #+ phi_x
-            bpm.phi_y = simps(fy, z)# + phi_y
-            bpm.beta_x = f_beta_x[-1]
-            bpm.beta_y = f_beta_y[-1]
+            bpm.phi_x = splev([bpm.s], tck_mux)[0]
+            bpm.phi_y = splev([bpm.s], tck_muy)[0]
+
+            bpm.beta_x = splev([bpm.s], tck_bx)[0]
+            bpm.beta_y = splev([bpm.s], tck_by)[0]
+            bpm.E = splev([bpm.s], tck_E)[0]
 
         for hcor in self.hcors:
-            z = linspace(0., hcor.s, num = int(hcor.s*100.))
-            f_beta_x = splev(z, tck_x)
-            fx = 1./f_beta_x
-            hcor.phi_x = simps(fx, z)
-            hcor.beta_x = f_beta_x[-1]
+            hcor.phi_x = splev([hcor.s], tck_mux)[0]
+            hcor.phi_y = splev([hcor.s], tck_muy)[0]
 
+            hcor.beta_x = splev([hcor.s], tck_bx)[0]
+            hcor.beta_y = splev([hcor.s], tck_by)[0]
+            hcor.E = splev([hcor.s], tck_E)[0]
         for vcor in self.vcors:
-            z = linspace(0., vcor.s, num = int(vcor.s*100.))
-            f_beta_y = splev(z, tck_y)
-            fy = 1./f_beta_y
-            vcor.phi_y = simps(fy, z)#
-            vcor.beta_y = f_beta_y[-1]
+            vcor.phi_x = splev([vcor.s], tck_mux)[0]
+            vcor.phi_y = splev([vcor.s], tck_muy)[0]
+
+            vcor.beta_x = splev([vcor.s], tck_bx)[0]
+            vcor.beta_y = splev([vcor.s], tck_by)[0]
+            vcor.E = splev([vcor.s], tck_E)[0]
 
     def read_response_matrix(self, dictionary):
         Energy = dictionary["energy"]
@@ -226,13 +239,14 @@ class Orbit:
         self.resp = real_resp
         return self.resp
 
-    def ideal_response_matrix(self, lattice):
+    def ring_response_matrix(self, lattice, tw_init=None):
         """
         calculation of ideal response matrix
         :param lattice: class MagneticLattice
+        :param tw_init: if tw_init == None, function tries to find periodical solution
         :return: orbit.resp
         """
-        self.optical_func_params(lattice)
+        self.optical_func_params(lattice, tw_init=tw_init)
 
         m = len(self.bpms)
         nx = len(self.hcors)
@@ -246,19 +260,50 @@ class Orbit:
             ky = sqrt(bpm.beta_y)/(2.*sin_pnu_y)
             for j, hcor in enumerate(self.hcors):
                 mu_x = abs(bpm.phi_x - hcor.phi_x)
-                #if mu_x<0.:
-                #    print "mu_x = ", mu_x
-                    #mu_x = 2*pi*self.nu_x + mu_x
-                #mu_x = abs(mu_x)
                 h_resp[i,j] = kx*sqrt(hcor.beta_x)*cos(mu_x - pi*self.nu_x)
             for n, vcor in enumerate(self.vcors):
                 mu_y = abs(bpm.phi_y - vcor.phi_y)
-                #if mu_y<0.:
-                #    mu_y = 2*pi*self.nu_y + mu_y
                 v_resp[i,n] = ky*sqrt(vcor.beta_y)*cos(mu_y - pi*self.nu_y)
 
-        #self.h_resp = h_resp
-        #self.v_resp = v_resp
+        m = len(self.bpms)
+        kx = len(self.hcors)
+        ky = len(self.vcors)
+        self.resp = zeros((2*m, kx + ky))
+        self.resp[:m,:kx] = h_resp[:,:]
+        self.resp[m:,kx:] = v_resp[:,:]
+        #print "shape = ", shape(self.resp)
+        return self.resp
+
+
+    def linac_response_matrix(self, lattice, tw_init=None):
+        """
+        calculation of ideal response matrix
+        :param lattice: class MagneticLattice
+        :param tw_init: if tw_init == None, function tries to find periodical solution
+        :return: orbit.resp
+        """
+        self.optical_func_params(lattice, tw_init=tw_init)
+
+        m = len(self.bpms)
+        nx = len(self.hcors)
+        ny = len(self.vcors)
+        h_resp = zeros((m, nx))
+        v_resp = zeros((m, ny))
+
+        for i, bpm in enumerate(self.bpms):
+            kx = sqrt(bpm.beta_x)#/(2.*sin_pnu_x)
+            ky = sqrt(bpm.beta_y)#/(2.*sin_pnu_y)
+            for j, hcor in enumerate(self.hcors):
+                if hcor.s < bpm.s:
+                    mu_x = (bpm.phi_x - hcor.phi_x)
+
+                    h_resp[i,j] = kx*sqrt(hcor.beta_x)*sin(mu_x)*sqrt(hcor.E/bpm.E)
+
+            for n, vcor in enumerate(self.vcors):
+                if vcor.s < bpm.s:
+                    mu_y = (bpm.phi_y - vcor.phi_y)
+                    v_resp[i,n] = ky*sqrt(vcor.beta_y)*sin(mu_y)*sqrt(vcor.E/bpm.E)
+
         m = len(self.bpms)
         kx = len(self.hcors)
         ky = len(self.vcors)
@@ -464,7 +509,7 @@ def test(lattice, errors):
 
     orbit = Orbit()
     orbit.lattice_analysis(lat_errors)
-    orbit.ideal_response_matrix(lat_errors)
+    orbit.ring_response_matrix(lat_errors)
     #print orbit.resp
     #real_resp = measure_response_matrix(orbit, lat_errors)
     #print real_resp

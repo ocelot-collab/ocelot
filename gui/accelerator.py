@@ -354,7 +354,7 @@ def new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale =
         label = dict_copy[type]["label"]
         ecolor = dict_copy[type]["edgecolor"]
         ampl = 1
-        s_coord = np.array([L + elem.l/2 - l/2., L + elem.l/2- l/2., L+ elem.l/2 +l/2., L+ elem.l/2 +l/2., L + elem.l/2- l/2.]) + s_point
+        s_coord = np.array([L + elem.l/2. - l/2., L + elem.l/2. - l/2., L + elem.l/2. +l/2., L + elem.l/2. +l/2., L + elem.l/2.- l/2.]) + s_point
         if elem.type == "quadrupole":
             ampl = elem.k1/q_max if q_max != 0 else 1
             point, = ax.fill(s_coord,  (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color, edgecolor=ecolor,
@@ -368,8 +368,15 @@ def new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale =
             dict_copy[type]["label"] = ""
 
         elif elem.type in ["hcor", "vcor"]:
+
             ampl = elem.angle/c_max if c_max != 0 else 0.5
-            point, = ax.fill(s_coord, (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color,  edgecolor=ecolor,
+            #print c_max, elem.angle, ampl
+            if elem.angle == 0:
+                ampl=0.5
+                point, = ax.fill(s_coord, (np.array([-1, 1, 1, -1, -1]))*ampl*scale*y_scale, "lightcyan",  edgecolor="k",
+                             alpha = 0.5, label=dict_copy[type]["label"])
+            else:
+                point, = ax.fill(s_coord, (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color,  edgecolor=ecolor,
                              alpha = alpha, label=dict_copy[type]["label"])
             dict_copy["hcor"]["label"] = ""
             dict_copy["vcor"]["label"] = ""
@@ -555,7 +562,6 @@ def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, fig_name = None):
     ax_el.set_yticks([])
     ax_el.grid(True)
 
-    
     fig.subplots_adjust(hspace=0)
     beta_x = [p.beta_x for p in tws] # list(map(lambda p:p.beta_x, tws))
     beta_y = [p.beta_y for p in tws] #list(map(lambda p:p.beta_y, tws))
@@ -664,7 +670,8 @@ def plot_API(lat):
 
     #plot_xy(ax_xy, S, X, Y, font_size)
 
-    plot_elems(ax_el, lat, nturns = 1, legend = True) # plot elements
+    #plot_elems(ax_el, lat, nturns = 1, legend = True) # plot elements
+    new_plot_elems(fig, ax_el, lat, nturns = 1, legend = True)
     return ax_xy
 
 

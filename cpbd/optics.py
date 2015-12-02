@@ -449,6 +449,7 @@ def create_transfer_map(element, order=1):
             return R
 
         R_z = lambda z, energy: undulator_R_z(z, lperiod=element.lperiod, Kx=element.Kx, Ky=element.Ky, energy=energy)
+        b_z = lambda z, energy: dot((eye(6) - R_z(z, energy)), array([element.dx, 0., element.dy, 0., 0., 0.]))
 
         def map4undulator(u, z, kz, kx, energy, ndiv):
             zi = linspace(0., z, num=ndiv)
@@ -593,6 +594,7 @@ def create_transfer_map(element, order=1):
             R_z = lambda z, energy: uni_matrix(z, 0., hx=0., sum_tilts=element.dtilt + element.tilt, energy=energy)
         else:
             R_z = lambda z, energy: cavity_R_z(z, V=element.v*z/element.l, f=element.f, E=energy, phi=element.phi)
+        b_z = lambda z, energy: dot((eye(6) - R_z(z, energy)), array([element.dx, 0., element.dy, 0., 0., 0.]))
 
         transfer_map.delta_e_z = lambda z: element.v*cos(element.phi) * z / element.l
         transfer_map.delta_e = transfer_map.delta_e_z(element.l)
@@ -632,14 +634,14 @@ def create_transfer_map(element, order=1):
 
     elif element.type == "matrix":
         Rm = eye(6)
-        Rm[0,0] = element.rm11
-        Rm[0,1] = element.rm12
-        Rm[1,0] = element.rm21
-        Rm[1,1] = element.rm22
-        Rm[2,2] = element.rm33
-        Rm[2,3] = element.rm34
-        Rm[3,2] = element.rm43
-        Rm[3,3] = element.rm44
+        Rm[0, 0] = element.rm11
+        Rm[0, 1] = element.rm12
+        Rm[1, 0] = element.rm21
+        Rm[1, 1] = element.rm22
+        Rm[2, 2] = element.rm33
+        Rm[2, 3] = element.rm34
+        Rm[3, 2] = element.rm43
+        Rm[3, 3] = element.rm44
 
         def r_matrix(z, l, Rm):
             if z < l:

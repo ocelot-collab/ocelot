@@ -7,7 +7,7 @@ try:
     import swig.dcs as dcs
     import PyTine as pt
 except:
-    print 'error importing PyTine library'
+    print('error importing PyTine library')
 
 import re
 from pylab import *
@@ -59,10 +59,10 @@ class FLASH1MachineInterface():
             blm_channel = 'TTF2.DIAG/BLM/'+self.blm_names[i]#+'/CH00.TD'
             blm_alarm_ch  = ('TTF2.DIAG/BLM/'+self.blm_names[i]).replace('BLM', 'BLM.ALARMS')# + '/THRFHI'
             if (self.debug):
-                print 'reading alarm channel', blm_alarm_ch
+                print('reading alarm channel', blm_alarm_ch)
             alarm_val = pt.get(blm_alarm_ch, property="THRFHI")["data"] * 1.25e-3 # alarm thr. in Volts
             if (self.debug):
-                print 'alarm:', alarm_val
+                print('alarm:', alarm_val)
 
             h = np.array(pt.get(blm_channel, property='CH00.TD')["data"]["data"])
 

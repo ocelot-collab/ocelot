@@ -49,17 +49,15 @@ class FLASH1MachineInterface():
             alarm_vals[i] = np.max( np.abs(h) ) / alarm_val 
             
         return alarm_vals
-    
-    
+
     def get_sase(self, detector='gmd_default'):
         
         if detector == 'mcp':
-	    # incorrect
-	    return dcs.get_device_val('TTF2.DIAG/MCP.HV/MCP.HV1/HV_CURRENT')
-	    #return np.abs( np.mean(h) )
+            # incorrect
+            return dcs.get_device_val('TTF2.DIAG/MCP.HV/MCP.HV1/HV_CURRENT')
+            #return np.abs( np.mean(h) )
         if detector == 'gmd_fl1_slow':
-            return dcs.get_device_val('TTF2.FEL/BKR.FLASH.STATE/BKR.FLASH.STATE/SLOW.INTENSITY' ) 
-	    
+            return dcs.get_device_val('TTF2.FEL/BKR.FLASH.STATE/BKR.FLASH.STATE/SLOW.INTENSITY' )
 
         # default 'BKR' gmd
         h = np.array(dcs.get_device_td('TTF2.FEL/BKR.FLASH.STATE/BKR.FLASH.STATE/ENERGY.CLIP.SPECT'))

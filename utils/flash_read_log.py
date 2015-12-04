@@ -72,7 +72,7 @@ def plot_dict(dict_data, filename=None, interval=1, mode="%"):
 
     xfmt = md.DateFormatter('%H:%M:%S')
     ax.xaxis.set_major_formatter(xfmt)
-    ax.set_ylabel(r"$W, \mu J$")
+    ax.set_ylabel(r"$U,\, \mu J$")
     pax2 = ax.plot(times[::inrv],  dict_data["sase"][::inrv],"r-", lw=2, label = "sase")
     ax.grid()
 

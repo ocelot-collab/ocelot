@@ -98,7 +98,7 @@ class Orbit:
                 self.bpms.append(bpm)
             L += elem.l
         if len(self.bpms) == 0:
-            print "there is not monitors"
+            print("there is not monitors")
         return self.bpms
 
 
@@ -124,9 +124,9 @@ class Orbit:
                 self.hcors.append(hcor)
             L += elem.l
         if len(self.hcors) == 0:
-            print "there is not horizontal corrector"
+            print("there is not horizontal corrector")
         if len(self.vcors) == 0:
-            print "there is not vertical corrector"
+            print("there is not vertical corrector")
 
 
     def read_virtual_orbit(self, lattice, p_init=None):
@@ -213,7 +213,6 @@ class Orbit:
 
     def read_response_matrix(self, dictionary):
         Energy = dictionary["energy"]
-        print Energy
         m = len(self.bpms)
         nx = len(self.hcors)
         ny = len(self.vcors)
@@ -336,7 +335,7 @@ class Orbit:
             monitors[i+m] = bpm.y
         start = time()
         angle = self.apply_svd(self.resp, monitors)
-        print "correction = ", time() - start
+        print("correction = ", time() - start)
         ix = 0
         iy = 0
         for elem in lattice.sequence:
@@ -360,7 +359,7 @@ class Orbit:
             monitors[i+m] = bpm.y
         start = time()
         poss = self.apply_svd(quad_response, monitors)
-        print "correction = ", time() - start
+        print("correction = ", time() - start)
         ix = 0
         iy = 0
         for elem in lattice.sequence:
@@ -444,7 +443,7 @@ def measure_response_matrix(orbit, lattice):
     orbit.read_virtual_orbit( lattice)
     bpms = copy.deepcopy(orbit.bpms)
     for ix, hcor in enumerate(orbit.hcors):
-        print "measure X - ", ix,"/",len(orbit.hcors)
+        print("measure X - ", ix,"/",len(orbit.hcors))
         lattice = change_corrector(hcor, lattice)
 
         orbit.read_virtual_orbit(lattice)
@@ -477,7 +476,7 @@ def quad_response_matrix(orbit, lattice):
     orbit.read_virtual_orbit(lattice)
     bpms = copy.deepcopy(orbit.bpms)
     for ix, hquad in enumerate(orbit.hquads):
-        print "measure X - ", ix,"/",nx
+        print("measure X - ", ix,"/",nx)
         lattice = change_quad_position(hquad, lattice, dx = 0.001, dy = 0)
         orbit.read_virtual_orbit(lattice)
 
@@ -524,7 +523,7 @@ def test(lattice, errors):
 
     lat_corrected2 = orbit.correction(lat_errors)
     for hcor in orbit.hcors:
-        print hcor.id, hcor.angle
+        print (hcor.id, hcor.angle)
 
     orbit.read_virtual_orbit(lat_corrected2)
     draw(orbit, lat_corrected2, traject = True)

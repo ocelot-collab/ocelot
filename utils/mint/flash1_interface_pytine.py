@@ -4,7 +4,7 @@ machine interface
 includes online optimizer, response measurement and other stuff
 '''
 try:
-    import swig.dcs as dcs
+    #import swig.dcs as dcs
     import PyTine as pt
 except:
     print('error importing PyTine library')

@@ -36,11 +36,11 @@ class FLASH1MachineInterface():
             vals[i] = pt.get(mag_channel, property="PS")["data"]
         return vals
 
-    def get_bpms_values(self, bpms):
+    def get_bpms_XY(self, bpms):
         X = [0.0]*len(bpms)#np.zeros(len(correctors))
         Y = [0.0]*len(bpms)
         for i in range(len(bpms)):
-            mag_channel = 'TTF2.DIAG/BPM/' + bpms[i]# + '/PS'
+            mag_channel = 'TTF2.DIAG/ORBIT/' + bpms[i]# + '/PS'
             X[i] = pt.get(mag_channel, property="X.FLASH1")["data"]
             Y[i] = pt.get(mag_channel, property="Y.FLASH1")["data"]
         return X, Y

@@ -471,7 +471,7 @@ def quad_response_matrix(orbit, lattice):
     m = len(orbit.bpms)
     nx = len(orbit.hquads)
     ny = len(orbit.vquads)
-    print nx, ny, m
+    print(nx, ny, m)
     real_resp = zeros((m*2, nx + ny))
     orbit.read_virtual_orbit(lattice)
     bpms = copy.deepcopy(orbit.bpms)

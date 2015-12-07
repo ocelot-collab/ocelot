@@ -316,7 +316,7 @@ class Orbit:
         #print resp_matrix
         U, s,V = svd(resp_matrix)
         s_inv = 1./s
-        for i in xrange(len(s)):
+        for i in range(len(s)):
             if s_inv[i]>1.e+5:
                 s_inv[i] = 0.
 

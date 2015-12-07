@@ -183,7 +183,7 @@ class FLASH1DeviceProperties:
         vals = [0.0]*len(quads)#np.zeros(len(correctors))
         for i in range(len(quads)):
             mag_channel = 'TTF2.MAG/QUAD/' + quads[i]# + '/PS'
-            vals[i] = pt.get(mag_channel, property="PS_POLARITY")["data"]
+            vals[i] = pt.get(mag_channel, property="PS.Polarity")["data"]
         return vals
 
 
@@ -191,5 +191,5 @@ class FLASH1DeviceProperties:
         vals = [0.0]*len(quads)#np.zeros(len(correctors))
         for i in range(len(quads)):
             mag_channel = 'TTF2.MAG/QUAD/' + quads[i]# + '/PS'
-            vals[i] = pt.get(mag_channel, property="TYPE")["data"]
+            vals[i] = pt.get(mag_channel, property="DEVTYPE")["data"]
         return vals

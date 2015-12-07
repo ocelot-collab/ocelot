@@ -41,8 +41,8 @@ class FLASH1MachineInterface():
         Y = [0.0]*len(bpms)
         for i in range(len(bpms)):
             mag_channel = 'TTF2.DIAG/ORBIT/' + bpms[i]# + '/PS'
-            X[i] = pt.get(mag_channel, property="X.FLASH1")["data"]
-            Y[i] = pt.get(mag_channel, property="Y.FLASH1")["data"]
+            X[i] = pt.get(mag_channel, property="X.FLASH1")["data"]*0.001 # mm -> m
+            Y[i] = pt.get(mag_channel, property="Y.FLASH1")["data"]*0.001 # mm -> m
         return X, Y
 
     def get_quads_current(self, quads):

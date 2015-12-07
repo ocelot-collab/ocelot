@@ -364,12 +364,12 @@ class Orbit:
         iy = 0
         for elem in lattice.sequence:
             if ix<len(self.hquads) and elem.id == self.hquads[ix].id:
-                elem.dx -= poss[ix]
+                elem.dx += poss[ix]
                 #self.hquads[ix].dx -= poss[ix]
                 ix += 1
 
             if iy<len(self.vquads) and elem.id == self.vquads[iy].id:
-                elem.dy -= poss[iy+len(self.hquads)]
+                elem.dy += poss[iy+len(self.hquads)]
                 #self.vquads[iy].dy -= poss[iy+len(self.hquads)]
                 iy += 1
 

@@ -416,7 +416,7 @@ def change_corrector(corrector, lattice):
         if elem.id == corrector.id:
             elem.angle += corrector.dI
             #print "change ", elem.angle
-            elem.transfer_map = create_transfer_map(elem, energy = lattice.energy)
+            elem.transfer_map = create_transfer_map(elem)
             #print elem.transfer_map.b(1)
     return lattice#.update_transfer_maps()
 
@@ -424,7 +424,7 @@ def restore_corrector(corrector, lattice):
     for elem in lattice.sequence:
         if elem.id == corrector.id:
             elem.angle -= corrector.dI
-            elem.transfer_map = create_transfer_map(elem, energy = lattice.energy)
+            elem.transfer_map = create_transfer_map(elem)
     return lattice#.update_transfer_maps()
 
 def change_quad_position(quad, lattice, dx = 0., dy = 0.):
@@ -432,7 +432,7 @@ def change_quad_position(quad, lattice, dx = 0., dy = 0.):
         if elem.id == quad.id:
             elem.dx += dx
             elem.dy += dy
-            elem.transfer_map = create_transfer_map(elem, energy = lattice.energy)
+            elem.transfer_map = create_transfer_map(elem)
     return lattice.update_transfer_maps()
 
 
@@ -502,6 +502,60 @@ def quad_response_matrix(orbit, lattice):
         lattice = change_quad_position(vquad, lattice, dx = 0., dy = -0.001)
     return real_resp
 
+def sim_quad_response_matrix(orbit, lattice, p_init):
+    shift = 0.0001
+    m = len(orbit.bpms)
+    orbit.hquads = []
+    orbit.vquads = []
+    for elem in lattice.sequence:
+        if elem.type == "quadrupole":
+            orbit.hquads.append(elem)
+            orbit.vquads.append(elem)
+    nx = len(orbit.hquads)
+    ny = len(orbit.vquads)
+    print(nx, ny, m)
+    real_resp = zeros((m*2, nx + ny))
+    orbit.read_virtual_orbit(lattice, p_init = copy.deepcopy(p_init))
+    bpms = copy.deepcopy(orbit.bpms)
+    for ix, hquad in enumerate(orbit.hquads):
+        #if elem.type == "quadrupole":
+        print("measure X - ", ix, "/", nx)
+        #lattice = change_quad_position(hquad, lattice, dx = 0.001, dy = 0)
+        hquad.dx += shift
+        lattice.update_transfer_maps()
+        orbit.read_virtual_orbit(lattice, p_init = copy.deepcopy(p_init))
+
+        for j, bpm in enumerate(orbit.bpms):
+            real_resp[j, ix] = (bpm.x - bpms[j].x)/shift
+            real_resp[j+m, ix] = (bpm.y - bpms[j].y)/shift
+
+            #if real_resp[j, ix] == 0 or real_resp[j+m, ix] == 0:
+
+                #print bpm.x ,bpm.y, j, j+m, ix
+        #lattice = change_quad_position(hquad, lattice, dx = -0.001, dy = 0)
+        hquad.dx -= shift
+        lattice.update_transfer_maps()
+
+    for iy, vquad in enumerate(orbit.vquads):
+        print("measure Y - ", iy,"/",ny)
+        #lattice = change_quad_position(vquad, lattice, dx = 0., dy = 0.001)
+        vquad.dy += shift
+        lattice.update_transfer_maps()
+        orbit.read_virtual_orbit(lattice, p_init = copy.deepcopy(p_init))
+        #plt.plot([bpm.s for bpm in orbit.bpms], [bpm.x for bpm in orbit.bpms], "r")
+        #plt.plot([bpm.s for bpm in orbit.bpms], [bpm.y for bpm in orbit.bpms], "b")
+        #plt.show()
+        for j, bpm in enumerate(orbit.bpms):
+            real_resp[j, iy+nx] = (bpm.x - bpms[j].x)/shift
+            real_resp[j+m, iy+nx] = (bpm.y - bpms[j].y)/shift
+
+            #if real_resp[j, iy+nx] == 0 or real_resp[j+m, iy+nx] == 0:
+            #print bpm.x ,bpm.y, j, j+m, iy+nx
+        #lattice = change_quad_position(vquad, lattice, dx = 0., dy = -0.001)
+        vquad.dy -= shift
+        lattice.update_transfer_maps()
+    return real_resp
+
 
 def test(lattice, errors):
     lat_errors = errors_seed(lattice, errors, nsuperperiods = 6)
@@ -533,7 +587,7 @@ def test(lattice, errors):
 
 
 if __name__ == "__main__":
-    from xframework.cpbd.elements import *
+    from ocelot.cpbd.elements import *
     exec( open("../../repository/siberia2/sibir2_correct.inp" ))
     err_list = {"quadrupole": {"offset": 0.02e-3, "dtilt": 0.001},
             "sbend":{"dtilt": 0.001}, "rbend":{"dtilt": 0.001}, "bend":{"dtilt": 0.001}}

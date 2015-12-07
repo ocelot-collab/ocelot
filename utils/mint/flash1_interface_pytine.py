@@ -36,7 +36,7 @@ class FLASH1MachineInterface():
             vals[i] = pt.get(mag_channel, property="PS")["data"]
         return vals
 
-    def get_bpms_XY(self, bpms):
+    def get_bpms_xy(self, bpms):
         X = [0.0]*len(bpms)#np.zeros(len(correctors))
         Y = [0.0]*len(bpms)
         for i in range(len(bpms)):
@@ -178,3 +178,18 @@ class FLASH1DeviceProperties:
             if self.patterns[k].match(device) != None:
                 return self.limits[k]
         return [-0.11, -0.08]
+
+    def get_polarity(self, quads):
+        vals = [0.0]*len(quads)#np.zeros(len(correctors))
+        for i in range(len(quads)):
+            mag_channel = 'TTF2.MAG/QUAD/' + quads[i]# + '/PS'
+            vals[i] = pt.get(mag_channel, property="PS_POLARITY")["data"]
+        return vals
+
+
+    def get_type_magnet(self, quads):
+        vals = [0.0]*len(quads)#np.zeros(len(correctors))
+        for i in range(len(quads)):
+            mag_channel = 'TTF2.MAG/QUAD/' + quads[i]# + '/PS'
+            vals[i] = pt.get(mag_channel, property="TYPE")["data"]
+        return vals

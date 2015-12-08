@@ -81,6 +81,7 @@ class Orbit:
         """
         self.create_BPM(lattice)
         self.create_COR(lattice)
+        self.create_quads(lattice)
         return self
 
     def create_BPM(self, lattice):
@@ -128,6 +129,15 @@ class Orbit:
         if len(self.vcors) == 0:
             print("there is not vertical corrector")
 
+    def create_quads(self, lattice):
+        self.hquads = []
+        self.vquads = []
+        for elem in lattice.sequence:
+            if elem.type == "quadrupole":
+                if "_U" in elem.id:
+                    continue
+                self.hquads.append(elem)
+                self.vquads.append(elem)
 
     def read_virtual_orbit(self, lattice, p_init=None):
         """
@@ -354,12 +364,6 @@ class Orbit:
     def quad_correction(self, lattice, quad_response):
         m = len(self.bpms)
         monitors = zeros(2*m)
-        self.hquads = []
-        self.vquads = []
-        for elem in lattice.sequence:
-            if elem.type == "quadrupole":
-                self.hquads.append(elem)
-                self.vquads.append(elem)
 
         for i, bpm in enumerate(self.bpms):
             monitors[i] = bpm.x
@@ -512,12 +516,6 @@ def quad_response_matrix(orbit, lattice):
 def sim_quad_response_matrix(orbit, lattice, p_init):
     shift = 0.0001
     m = len(orbit.bpms)
-    orbit.hquads = []
-    orbit.vquads = []
-    for elem in lattice.sequence:
-        if elem.type == "quadrupole":
-            orbit.hquads.append(elem)
-            orbit.vquads.append(elem)
     nx = len(orbit.hquads)
     ny = len(orbit.vquads)
     print(nx, ny, m)

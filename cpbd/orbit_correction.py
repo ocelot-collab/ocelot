@@ -354,6 +354,13 @@ class Orbit:
     def quad_correction(self, lattice, quad_response):
         m = len(self.bpms)
         monitors = zeros(2*m)
+        self.hquads = []
+        self.vquads = []
+        for elem in lattice.sequence:
+            if elem.type == "quadrupole":
+                self.hquads.append(elem)
+                self.vquads.append(elem)
+
         for i, bpm in enumerate(self.bpms):
             monitors[i] = bpm.x
             monitors[i+m] = bpm.y

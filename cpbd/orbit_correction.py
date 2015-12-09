@@ -366,10 +366,10 @@ class Orbit:
 
         return lattice.update_transfer_maps()
 
-    def elem_correction(self, lattice, elem_response, elem_types):
+    def elem_correction(self, lattice, elem_response, elem_types,  remove_elems=[]):
         m = len(self.bpms)
         monitors = zeros(2*m)
-        self.create_types(lattice, elem_types)
+        self.create_types(lattice, elem_types, remove_elems=remove_elems)
         for i, bpm in enumerate(self.bpms):
             monitors[i] = bpm.x
             monitors[i+m] = bpm.y
@@ -519,10 +519,10 @@ def quad_response_matrix(orbit, lattice):
         lattice = change_quad_position(vquad, lattice, dx = 0., dy = -0.001)
     return real_resp
 
-def elem_response_matrix(orbit, lattice, p_init, elem_types, remuve_elem):
+def elem_response_matrix(orbit, lattice, p_init, elem_types, remove_elem):
     shift = 0.0001
     m = len(orbit.bpms)
-    orbit.create_types(lattice, elem_types, remuve_elem)
+    orbit.create_types(lattice, elem_types, remove_elem)
     nx = len(orbit.htypes)
     ny = len(orbit.vtypes)
     print(nx, ny, m)

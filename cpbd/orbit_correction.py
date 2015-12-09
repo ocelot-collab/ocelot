@@ -81,7 +81,6 @@ class Orbit:
         """
         self.create_BPM(lattice)
         self.create_COR(lattice)
-        self.create_quads(lattice)
         return self
 
     def create_BPM(self, lattice):
@@ -129,15 +128,19 @@ class Orbit:
         if len(self.vcors) == 0:
             print("there is not vertical corrector")
 
-    def create_quads(self, lattice):
-        self.hquads = []
-        self.vquads = []
+    def create_types(self, lattice, types):
+        self.htypes = []
+        self.vtypes = []
+        L = 0.
         for elem in lattice.sequence:
-            if elem.type == "quadrupole":
+            L += elem.l
+            if elem.type in types:
                 if "_U" in elem.id:
                     continue
-                self.hquads.append(elem)
-                self.vquads.append(elem)
+                elem.s = L - elem.l/2.
+                self.htypes.append(elem)
+                self.vtypes.append(elem)
+
 
     def read_virtual_orbit(self, lattice, p_init=None):
         """
@@ -361,26 +364,27 @@ class Orbit:
 
         return lattice.update_transfer_maps()
 
-    def quad_correction(self, lattice, quad_response):
+    def elem_correction(self, lattice, elem_response, elem_types):
         m = len(self.bpms)
         monitors = zeros(2*m)
-
+        self.create_types(lattice, elem_types)
         for i, bpm in enumerate(self.bpms):
             monitors[i] = bpm.x
             monitors[i+m] = bpm.y
         start = time()
-        poss = self.apply_svd(quad_response, monitors)
+
+        poss = self.apply_svd(elem_response, monitors)
         print("correction = ", time() - start)
         ix = 0
         iy = 0
         for elem in lattice.sequence:
-            if ix<len(self.hquads) and elem.id == self.hquads[ix].id:
+            if ix<len(self.htypes) and elem.id == self.htypes[ix].id:
                 elem.dx += poss[ix]
                 #self.hquads[ix].dx -= poss[ix]
                 ix += 1
 
-            if iy<len(self.vquads) and elem.id == self.vquads[iy].id:
-                elem.dy += poss[iy+len(self.hquads)]
+            if iy<len(self.vtypes) and elem.id == self.vtypes[iy].id:
+                elem.dy += poss[iy+len(self.htypes)]
                 #self.vquads[iy].dy -= poss[iy+len(self.hquads)]
                 iy += 1
 
@@ -513,19 +517,18 @@ def quad_response_matrix(orbit, lattice):
         lattice = change_quad_position(vquad, lattice, dx = 0., dy = -0.001)
     return real_resp
 
-def sim_quad_response_matrix(orbit, lattice, p_init):
+def elem_response_matrix(orbit, lattice, p_init, elem_types):
     shift = 0.0001
     m = len(orbit.bpms)
-    nx = len(orbit.hquads)
-    ny = len(orbit.vquads)
+    orbit.create_types(lattice, elem_types)
+    nx = len(orbit.htypes)
+    ny = len(orbit.vtypes)
     print(nx, ny, m)
     real_resp = zeros((m*2, nx + ny))
     orbit.read_virtual_orbit(lattice, p_init = copy.deepcopy(p_init))
     bpms = copy.deepcopy(orbit.bpms)
-    for ix, hquad in enumerate(orbit.hquads):
-        #if elem.type == "quadrupole":
+    for ix, hquad in enumerate(orbit.htypes):
         print("measure X - ", ix, "/", nx)
-        #lattice = change_quad_position(hquad, lattice, dx = 0.001, dy = 0)
         hquad.dx += shift
         lattice.update_transfer_maps()
         orbit.read_virtual_orbit(lattice, p_init = copy.deepcopy(p_init))
@@ -534,16 +537,11 @@ def sim_quad_response_matrix(orbit, lattice, p_init):
             real_resp[j, ix] = (bpm.x - bpms[j].x)/shift
             real_resp[j+m, ix] = (bpm.y - bpms[j].y)/shift
 
-            #if real_resp[j, ix] == 0 or real_resp[j+m, ix] == 0:
-
-                #print bpm.x ,bpm.y, j, j+m, ix
-        #lattice = change_quad_position(hquad, lattice, dx = -0.001, dy = 0)
         hquad.dx -= shift
         lattice.update_transfer_maps()
 
-    for iy, vquad in enumerate(orbit.vquads):
+    for iy, vquad in enumerate(orbit.vtypes):
         print("measure Y - ", iy,"/",ny)
-        #lattice = change_quad_position(vquad, lattice, dx = 0., dy = 0.001)
         vquad.dy += shift
         lattice.update_transfer_maps()
         orbit.read_virtual_orbit(lattice, p_init = copy.deepcopy(p_init))
@@ -553,10 +551,6 @@ def sim_quad_response_matrix(orbit, lattice, p_init):
         for j, bpm in enumerate(orbit.bpms):
             real_resp[j, iy+nx] = (bpm.x - bpms[j].x)/shift
             real_resp[j+m, iy+nx] = (bpm.y - bpms[j].y)/shift
-
-            #if real_resp[j, iy+nx] == 0 or real_resp[j+m, iy+nx] == 0:
-            #print bpm.x ,bpm.y, j, j+m, iy+nx
-        #lattice = change_quad_position(vquad, lattice, dx = 0., dy = -0.001)
         vquad.dy -= shift
         lattice.update_transfer_maps()
     return real_resp

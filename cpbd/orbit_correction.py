@@ -128,7 +128,7 @@ class Orbit:
         if len(self.vcors) == 0:
             print("there is not vertical corrector")
 
-    def create_types(self, lattice, types):
+    def create_types(self, lattice, types, remove_elems=[]):
         self.htypes = []
         self.vtypes = []
         L = 0.
@@ -136,6 +136,8 @@ class Orbit:
             L += elem.l
             if elem.type in types:
                 if "_U" in elem.id:
+                    continue
+                if elem.id in remove_elems:
                     continue
                 elem.s = L - elem.l/2.
                 self.htypes.append(elem)
@@ -517,21 +519,21 @@ def quad_response_matrix(orbit, lattice):
         lattice = change_quad_position(vquad, lattice, dx = 0., dy = -0.001)
     return real_resp
 
-def elem_response_matrix(orbit, lattice, p_init, elem_types):
+def elem_response_matrix(orbit, lattice, p_init, elem_types, remuve_elem):
     shift = 0.0001
     m = len(orbit.bpms)
-    orbit.create_types(lattice, elem_types)
+    orbit.create_types(lattice, elem_types, remuve_elem)
     nx = len(orbit.htypes)
     ny = len(orbit.vtypes)
     print(nx, ny, m)
     real_resp = zeros((m*2, nx + ny))
-    orbit.read_virtual_orbit(lattice, p_init = copy.deepcopy(p_init))
+    orbit.read_virtual_orbit(lattice, p_init=copy.deepcopy(p_init))
     bpms = copy.deepcopy(orbit.bpms)
     for ix, hquad in enumerate(orbit.htypes):
         print("measure X - ", ix, "/", nx)
         hquad.dx += shift
         lattice.update_transfer_maps()
-        orbit.read_virtual_orbit(lattice, p_init = copy.deepcopy(p_init))
+        orbit.read_virtual_orbit(lattice, p_init=copy.deepcopy(p_init))
 
         for j, bpm in enumerate(orbit.bpms):
             real_resp[j, ix] = (bpm.x - bpms[j].x)/shift
@@ -544,7 +546,7 @@ def elem_response_matrix(orbit, lattice, p_init, elem_types):
         print("measure Y - ", iy,"/",ny)
         vquad.dy += shift
         lattice.update_transfer_maps()
-        orbit.read_virtual_orbit(lattice, p_init = copy.deepcopy(p_init))
+        orbit.read_virtual_orbit(lattice, p_init=copy.deepcopy(p_init))
         #plt.plot([bpm.s for bpm in orbit.bpms], [bpm.x for bpm in orbit.bpms], "r")
         #plt.plot([bpm.s for bpm in orbit.bpms], [bpm.y for bpm in orbit.bpms], "b")
         #plt.show()

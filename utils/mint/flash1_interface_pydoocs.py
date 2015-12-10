@@ -169,3 +169,17 @@ class FLASH1DeviceProperties:
             if self.patterns[k].match(device) != None:
                 return self.limits[k]
         return [-0.11, -0.08]   
+
+    def get_polarity(self, quads):
+        vals = [0.0]*len(quads)#np.zeros(len(correctors))
+        for i in range(len(quads)):
+            mag_channel = 'TTF2.MAGNETS/QUAD/' + quads[i]# + '/PS'
+            vals[i] = doocs.read(mag_channel + "/PS.Polarity")
+        return vals
+
+    def get_type_magnet(self, quads):
+        vals = [0.0]*len(quads)#np.zeros(len(correctors))
+        for i in range(len(quads)):
+            mag_channel = 'TTF2.MAGNETS/QUAD/' + quads[i]# + '/PS'
+            vals[i] = doocs.get(mag_channel + "/DEVTYPE")
+        return vals

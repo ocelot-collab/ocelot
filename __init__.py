@@ -1,4 +1,4 @@
-__version__ = '15.11'
+__version__ = '15.11.0'
 
 __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope",                 # beam
            'fodo_parameters', 'lattice_transfer_map', 'TransferMap', 'gauss_from_twiss',        # optics

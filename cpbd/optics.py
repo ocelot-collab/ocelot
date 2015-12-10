@@ -634,14 +634,25 @@ def create_transfer_map(element, order=1):
 
     elif element.type == "matrix":
         Rm = eye(6)
-        Rm[0, 0] = element.rm11
-        Rm[0, 1] = element.rm12
-        Rm[1, 0] = element.rm21
-        Rm[1, 1] = element.rm22
-        Rm[2, 2] = element.rm33
-        Rm[2, 3] = element.rm34
-        Rm[3, 2] = element.rm43
-        Rm[3, 3] = element.rm44
+        Rm[0,0] = element.rm11
+        Rm[0,1] = element.rm12
+        Rm[1,0] = element.rm21
+        Rm[1,1] = element.rm22
+
+        Rm[2,2] = element.rm33
+        Rm[2,3] = element.rm34
+        Rm[3,2] = element.rm43
+        Rm[3,3] = element.rm44
+
+        Rm[0,2] = element.rm13
+        Rm[0,3] = element.rm14
+        Rm[1,2] = element.rm23
+        Rm[1,3] = element.rm24
+
+        Rm[2,0] = element.rm31
+        Rm[3,0] = element.rm41
+        Rm[2,1] = element.rm32
+        Rm[3,1] = element.rm42
 
         def r_matrix(z, l, Rm):
             if z < l:
@@ -818,6 +829,7 @@ def get_map(lattice, dz, navi, order=1):
     #for i, elem in enumerate(lattice.sequence):
     #    print i, elem.type, elem.id
     #order = 2
+    nelems = len(lattice.sequence)
     TM = []
     tm = TransferMap(identity=True)
     i = navi.n_elem
@@ -828,7 +840,9 @@ def get_map(lattice, dz, navi, order=1):
     rec_count = 0  # counter of recursion in R = lambda energy: dot(R1(energy), R2(energy))
     #print "get_map: order = ", order
 
-    while z1 > L:
+    while z1 + 1e-10 > L:
+        if i>=nelems-1:
+            break
         dl = L - navi.z0
         if elem.transfer_map.order > 1 or order > 1:
             if tm.identity == False:

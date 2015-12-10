@@ -344,17 +344,32 @@ class Multipole(Element):
 
 
 class Matrix(Element):
-    def __init__(self, l = 0., rm11 = 0., rm12=0., rm13 = 0., rm21=0.0, rm22=0.0, rm33 = 0., rm34 = 0., rm43 = 0., rm44 = 0., id = None):
+    def __init__(self, l = 0.,
+                 rm11 = 0., rm12=0., rm13 = 0., rm14 = 0.,
+                 rm21 = 0., rm22=0., rm23 = 0., rm24 = 0.,
+                 rm31 = 0., rm32=0., rm33 = 0., rm34 = 0.,
+                 rm41 = 0., rm42=0., rm43 = 0., rm44 = 0.,
+                 id = None):
         Element.__init__(self, id)
         self.type = "matrix"
         self.l = l
         self.rm11 = rm11
         self.rm12 = rm12
         self.rm13 = rm13
+        self.rm14 = rm14
+
         self.rm21 = rm21
         self.rm22 = rm22
+        self.rm23 = rm23
+        self.rm24 = rm24
+
+        self.rm31 = rm31
+        self.rm32 = rm32
         self.rm33 = rm33
         self.rm34 = rm34
+
+        self.rm41 = rm41
+        self.rm42 = rm42
         self.rm43 = rm43
         self.rm44 = rm44
 

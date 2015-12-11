@@ -165,9 +165,11 @@ class Orbit:
             track(lattice, [p], dz, navi)
             bpm.x = p.x
             bpm.y = p.y
+            bpm.E = p.E
             L = bpm.s
             X.append(p.x)
             Y.append(p.y)
+        #print("energy = ", p.E)
         return array(X), array(Y)
 
 
@@ -528,7 +530,7 @@ def elem_response_matrix(orbit, lattice, p_init, elem_types, remove_elem):
     nx = len(orbit.htypes)
     ny = len(orbit.vtypes)
     print(nx, ny, m)
-    real_resp = zeros((m*2, nx + ny + 4))
+    real_resp = zeros((m*2, nx + ny +4))
     orbit.read_virtual_orbit(lattice, p_init=copy.deepcopy(p_init))
     bpms = copy.deepcopy(orbit.bpms)
     for ix, hquad in enumerate(orbit.htypes):
@@ -561,17 +563,19 @@ def elem_response_matrix(orbit, lattice, p_init, elem_types, remove_elem):
     for i, par in enumerate(["x", "px", "y", "py"]):
         print(i)
         p_i = Particle(E = p_init.E)
-        p_i.__dict__[par] = 0.00001
+        p_i.__dict__[par] = 0.0001
         #print p_i.x, p_i.px, p_i.y, p_i.py, p_i.E
-        orbit.read_virtual_orbit(lattice, p_init=p_i)
+        p2 = copy.deepcopy(p_i)
+        orbit.read_virtual_orbit(lattice, p_init=p2)
+        #print ("energy = ", p2.E)
         #plt.plot([bpm.s for bpm in orbit.bpms], [bpm.x for bpm in orbit.bpms], "r")
         #plt.plot([bpm.s for bpm in orbit.bpms], [bpm.y for bpm in orbit.bpms], "b")
         #plt.show()
         for j, bpm in enumerate(orbit.bpms):
-            real_resp[j, nx + ny + i] = (bpm.x - bpms[j].x)/0.00001
-            real_resp[j+m, nx + ny + i] = (bpm.y - bpms[j].y)/0.00001
+            real_resp[j, nx + ny + i] = (bpm.x - bpms[j].x)/0.0001
+            real_resp[j+m, nx + ny + i] = (bpm.y - bpms[j].y)/0.0001
             #print j+m, nx + ny + i, (bpm.x - bpms[j].x)/0.00001
-    print real_resp[:,-5:]
+    #print real_resp[:,-5:]
     return real_resp
 
 

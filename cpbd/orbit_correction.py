@@ -558,14 +558,16 @@ def elem_response_matrix(orbit, lattice, p_init, elem_types, remove_elem):
         lattice.update_transfer_maps()
 
     for i, par in enumerate(["x", "px", "y", "py"]):
-        p_i = Particle(p_init.E)
-        p_i.__dict__[par] = 0.0001
+        p_i = Particle(E = p_init.E)
+        p_i.__dict__[par] = 0.00001
+        #print p_i.x, p_i.px, p_i.y, p_i.py, p_i.E
         orbit.read_virtual_orbit(lattice, p_init=p_i)
 
         for j, bpm in enumerate(orbit.bpms):
-            real_resp[j, nx + ny-4 + i] = (bpm.x - bpms[j].x)/0.0001
-            real_resp[j+m, nx + ny-4 + i] = (bpm.y - bpms[j].y)/0.0001
+            real_resp[j, nx + ny-4 + i] = (bpm.x - bpms[j].x)/0.00001
+            real_resp[j+m, nx + ny-4 + i] = (bpm.y - bpms[j].y)/0.00001
 
+    #print real_resp
     return real_resp
 
 

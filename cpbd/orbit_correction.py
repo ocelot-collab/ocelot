@@ -389,8 +389,9 @@ class Orbit:
                 elem.dy += poss[iy+len(self.htypes)]
                 #self.vquads[iy].dy -= poss[iy+len(self.hquads)]
                 iy += 1
-
-        return lattice.update_transfer_maps()
+        p = Particle(x=poss[-4], px=poss[-3], y=poss[-2], py=poss[-1])
+        lattice.update_transfer_maps()
+        return p
 
 
     def calc_track(self,lattice):
@@ -526,7 +527,7 @@ def elem_response_matrix(orbit, lattice, p_init, elem_types, remove_elem):
     nx = len(orbit.htypes)
     ny = len(orbit.vtypes)
     print(nx, ny, m)
-    real_resp = zeros((m*2, nx + ny))
+    real_resp = zeros((m*2, nx + ny + 4))
     orbit.read_virtual_orbit(lattice, p_init=copy.deepcopy(p_init))
     bpms = copy.deepcopy(orbit.bpms)
     for ix, hquad in enumerate(orbit.htypes):
@@ -555,6 +556,16 @@ def elem_response_matrix(orbit, lattice, p_init, elem_types, remove_elem):
             real_resp[j+m, iy+nx] = (bpm.y - bpms[j].y)/shift
         vquad.dy -= shift
         lattice.update_transfer_maps()
+
+    for i, par in enumerate(["x", "px", "y", "py"]):
+        p_init = Particle()
+        p_init.__dict__[par] = 0.0001
+        orbit.read_virtual_orbit(lattice, p_init=p_init)
+
+        for j, bpm in enumerate(orbit.bpms):
+            real_resp[j, nx + ny-4 + i] = (bpm.x - bpms[j].x)/0.0001
+            real_resp[j+m, nx + ny-4 + i] = (bpm.y - bpms[j].y)/0.0001
+
     return real_resp
 
 

@@ -389,7 +389,7 @@ class Orbit:
                 elem.dy += poss[iy+len(self.htypes)]
                 #self.vquads[iy].dy -= poss[iy+len(self.hquads)]
                 iy += 1
-        p = Particle(x=-poss[-4], px=-poss[-3], y=-poss[-2], py=-poss[-1])
+        p = Particle(x=poss[-4], px=poss[-3], y=poss[-2], py=poss[-1])
         print poss[-5:]
         lattice.update_transfer_maps()
         return p
@@ -559,6 +559,7 @@ def elem_response_matrix(orbit, lattice, p_init, elem_types, remove_elem):
         lattice.update_transfer_maps()
 
     for i, par in enumerate(["x", "px", "y", "py"]):
+        print(i)
         p_i = Particle(E = p_init.E)
         p_i.__dict__[par] = 0.00001
         #print p_i.x, p_i.px, p_i.y, p_i.py, p_i.E
@@ -567,10 +568,10 @@ def elem_response_matrix(orbit, lattice, p_init, elem_types, remove_elem):
         #plt.plot([bpm.s for bpm in orbit.bpms], [bpm.y for bpm in orbit.bpms], "b")
         #plt.show()
         for j, bpm in enumerate(orbit.bpms):
-            real_resp[j, nx + ny-4 + i] = (bpm.x - bpms[j].x)/0.00001
-            real_resp[j+m, nx + ny-4 + i] = (bpm.y - bpms[j].y)/0.00001
-
-    print real_resp
+            real_resp[j, nx + ny + i] = (bpm.x - bpms[j].x)/0.00001
+            real_resp[j+m, nx + ny + i] = (bpm.y - bpms[j].y)/0.00001
+            #print j+m, nx + ny + i, (bpm.x - bpms[j].x)/0.00001
+    print real_resp[:,-5:]
     return real_resp
 
 

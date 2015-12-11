@@ -562,12 +562,14 @@ def elem_response_matrix(orbit, lattice, p_init, elem_types, remove_elem):
         p_i.__dict__[par] = 0.00001
         #print p_i.x, p_i.px, p_i.y, p_i.py, p_i.E
         orbit.read_virtual_orbit(lattice, p_init=p_i)
-
+        #plt.plot([bpm.s for bpm in orbit.bpms], [bpm.x for bpm in orbit.bpms], "r")
+        #plt.plot([bpm.s for bpm in orbit.bpms], [bpm.y for bpm in orbit.bpms], "b")
+        #plt.show()
         for j, bpm in enumerate(orbit.bpms):
             real_resp[j, nx + ny-4 + i] = (bpm.x - bpms[j].x)/0.00001
             real_resp[j+m, nx + ny-4 + i] = (bpm.y - bpms[j].y)/0.00001
 
-    #print real_resp
+    print real_resp
     return real_resp
 
 

@@ -389,7 +389,7 @@ class Orbit:
                 elem.dy += poss[iy+len(self.htypes)]
                 #self.vquads[iy].dy -= poss[iy+len(self.hquads)]
                 iy += 1
-        p = Particle(x=poss[-4], px=poss[-3], y=poss[-2], py=poss[-1])
+        p = Particle(x=-poss[-4], px=-poss[-3], y=-poss[-2], py=-poss[-1])
         lattice.update_transfer_maps()
         return p
 

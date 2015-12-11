@@ -40,8 +40,8 @@ class FLASH1MachineInterface():
         for i in range(len(cavs)):
             ampl_channel = 'FLASH.RF/LLRF.CONTROLLER/CTRL.' + cavs[i] + '/SP.AMPL'
             phase_channel = 'FLASH.RF/LLRF.CONTROLLER/CTRL.' + cavs[i] + '/SP.PHASE'
-            #print(ampl_channel)
-            #print(phase_channel)
+            print(ampl_channel)
+            print(phase_channel)
             ampls[i] = doocs.read(ampl_channel)
             phases[i] = doocs.read(phase_channel)
         return ampls, phases

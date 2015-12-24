@@ -1,4 +1,4 @@
-import numpy as np
+﻿import numpy as np
 #from numpy.core.umath import sqrt
 from ocelot.common.globals import m_e_eV
 from ocelot.cpbd.beam import *
@@ -70,7 +70,7 @@ def particleArray2astraBeam(p_array):
     gamref = p_array.E/m_e_GeV
     print gamref
     P = p_array.particles.view()
+    P.shape = len(P)/6,6
     xp = exact_xxstg_2_xp(P, gamref)
     xp[0, 5] = xp[0, 5] + p_array.E*1e9
-    #np.savetxt('D:/pytest.ast',xp)
     np.savetxt('pytest.ast',xp)

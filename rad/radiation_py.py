@@ -8,7 +8,6 @@ from ocelot.rad.spline_py import *
 from ocelot.cpbd.optics import *
 from ocelot.cpbd.track import *
 from ocelot.cpbd.elements import *
-import matplotlib.pyplot as plt
 
 
 class Motion:

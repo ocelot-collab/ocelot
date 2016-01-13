@@ -105,7 +105,7 @@ def el_field(X, Q, gamma, nxyz):
     nzny = nz*ny
     Xi = np.int_(np.floor(X)+1)
     inds = np.int_(Xi[:, 0]*nzny+Xi[:, 1]*nz+Xi[:, 2])  # 3d -> 1d
-    print( inds.shape, nxyz)
+    #print( inds.shape, nxyz)
 
     q = np.bincount(inds, Q, nzny*nx).reshape(nxyz)
     p = potential(q, steps)

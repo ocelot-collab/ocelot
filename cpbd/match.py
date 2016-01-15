@@ -55,7 +55,7 @@ def weights(val):
     if val in ['beta_x', 'beta_y']: return 1000.0
     return 0.0001
 
-def match(lat, constr, vars, tw, print_proc = 1, max_iter=1000):
+def match(lat, constr, vars, tw, print_proc = 1, max_iter=1000, xtol=1e-8):
     
     #tw = deepcopy(tw0)
     
@@ -189,7 +189,7 @@ def match(lat, constr, vars, tw, print_proc = 1, max_iter=1000):
             x[i] = vars[i].angle
 
     print ("initial value: x = ", x )
-    res = fmin(errf,x,xtol=1e-8, maxiter=max_iter, maxfun=max_iter)
+    res = fmin(errf,x, xtol=xtol, maxiter=max_iter, maxfun=max_iter)
     #print res
     for i in range(len(vars)):
         if vars[i].__class__ == list:

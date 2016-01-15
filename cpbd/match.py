@@ -48,11 +48,11 @@ def closed_orbit(lattice, eps_xy = 1.e-7, eps_angle = 1.e-7):
 
 
 def weights(val):
-    if val == 'Dx': return 10000000.0
-    if val == 'Dxp': return 10000000.0
-    if val == 'tau': return 10000000.0
-    if val in ['alpha_x', 'alpha_y']: return 100000.0
-    if val in ['beta_x', 'beta_y']: return 100000.0
+    if val == 'Dx': return 1000.0
+    if val == 'Dxp': return 1000.0
+    if val == 'tau': return 1000.0
+    if val in ['alpha_x', 'alpha_y']: return 1000.0
+    if val in ['beta_x', 'beta_y']: return 1000.0
     return 0.0001
 
 def match(lat, constr, vars, tw, print_proc = 1, max_iter=1000):
@@ -189,7 +189,7 @@ def match(lat, constr, vars, tw, print_proc = 1, max_iter=1000):
             x[i] = vars[i].angle
 
     print ("initial value: x = ", x )
-    res  = fmin(errf,x,xtol=1e-8, maxiter=max_iter, maxfun=max_iter)
+    res = fmin(errf,x,xtol=1e-8, maxiter=max_iter, maxfun=max_iter)
     #print res
     for i in range(len(vars)):
         if vars[i].__class__ == list:
@@ -225,3 +225,4 @@ def match_tunes(lat, tw0, quads,  nu_x, nu_y, ncells= 1, print_proc = 0):
     print ("nu_y: before: ", nu_y_old, "after: ", tws[-1].muy/2/pi * ncells )
     print ("matching end." )
     return lat
+

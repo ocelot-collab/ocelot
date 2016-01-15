@@ -69,6 +69,7 @@ def plot_dict(dict_data, filename=None, interval=1, mode="%"):
     devices.remove("sase")
     #print devices
     fig, ax = plt.subplots(figsize=(20, 10))
+    #fig, ax = plt.subplots()
 
     xfmt = md.DateFormatter('%H:%M:%S')
     ax.xaxis.set_major_formatter(xfmt)
@@ -97,6 +98,8 @@ def plot_dict(dict_data, filename=None, interval=1, mode="%"):
         ax2.set_ylabel(r"$I, A$")
     if filename != None:
         plt.savefig(filename.split(".")[0]+".png")
+    #fig.set_size_inches(20, 10)
+    #fig.savefig("optim_vect_pict.svg", format="svg")
     plt.show()
 
 def plot_log(filename):

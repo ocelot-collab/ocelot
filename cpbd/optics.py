@@ -541,7 +541,7 @@ def create_transfer_map(element, order=1):
             :param E: initial energy
             :return: matrix
             """
-
+            phi = phi*np.pi/180.
             de = V*cos(phi)
             # pure pi-standing-wave case
             eta = 1.0
@@ -580,6 +580,7 @@ def create_transfer_map(element, order=1):
             return cav_matrix
 
         def map4cav(R, T, X, dx, dy, tilt, E,  V, freq, phi):
+            phi = phi*np.pi/180.
             #print E
             X = t_apply(R, T, X, dx, dy, tilt)
             delta_e = V*cos(phi)
@@ -596,7 +597,7 @@ def create_transfer_map(element, order=1):
             R_z = lambda z, energy: cavity_R_z(z, V=element.v*z/element.l, f=element.f, E=energy, phi=element.phi)
         b_z = lambda z, energy: dot((eye(6) - R_z(z, energy)), array([element.dx, 0., element.dy, 0., 0., 0.]))
 
-        transfer_map.delta_e_z = lambda z: element.v*cos(element.phi) * z / element.l
+        transfer_map.delta_e_z = lambda z: element.v*cos(element.phi*np.pi/180.) * z / element.l
         transfer_map.delta_e = transfer_map.delta_e_z(element.l)
 
         transfer_map.map_z = lambda X, z, energy: map4cav(R_z(z, energy), transfer_map.T_z(z), X,

@@ -133,6 +133,11 @@ def pipe_wake(z, current, tube_radius, tube_len, conductivity, tau, roughness, d
     return bunch, wake
 
 def xfel_pipe_wake(s, current):
+    """
+    :param s:
+    :param current:
+    :return: s, current, wake
+    """
     conductivity=3.66e+7   # Ohm aluminium Dohlus
     tau=7.1e-15            # s relaxation time - aluminium Dohlus
     tube_radius = 5e-3     # m radius

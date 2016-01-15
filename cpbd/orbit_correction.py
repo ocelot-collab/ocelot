@@ -383,6 +383,7 @@ class Orbit:
         iy = 0
         for elem in lattice.sequence:
             if ix<len(self.htypes) and elem.id == self.htypes[ix].id:
+                print "quad, ", elem.dx, poss[ix]
                 elem.dx += poss[ix]
                 #self.hquads[ix].dx -= poss[ix]
                 ix += 1
@@ -403,7 +404,7 @@ class Orbit:
         self.y_track = map(lambda p: p.y, part_list)
         self.s_track = map(lambda p: p.s, part_list)
 
-def draw_orbit(orbit,lattice, traject = True):
+def draw_orbit(orbit, lattice, traject=True):
     if traject:
         bpm_draw = "o"
         part_list = trace_obj(lattice, orbit.particle0, nPoints = None)
@@ -412,7 +413,7 @@ def draw_orbit(orbit,lattice, traject = True):
         bpm_draw = "o-"
     #plt.plot(map(lambda p: p.s, orbit.bpms), map(lambda p: p.y, orbit.bpms), bpm_draw)
     #plt.grid(True)
-    return  part_list
+    return part_list
 
 """
 def other_method(lat_err, p_list_1):
@@ -448,7 +449,7 @@ def restore_corrector(corrector, lattice):
             elem.transfer_map = create_transfer_map(elem)
     return lattice#.update_transfer_maps()
 
-def change_quad_position(quad, lattice, dx = 0., dy = 0.):
+def change_quad_position(quad, lattice, dx=0., dy=0.):
     for elem in lattice.sequence:
         if elem.id == quad.id:
             elem.dx += dx
@@ -524,7 +525,7 @@ def quad_response_matrix(orbit, lattice):
     return real_resp
 
 def elem_response_matrix(orbit, lattice, p_init, elem_types, remove_elem):
-    shift = 0.0001
+    shift = 0.001
     m = len(orbit.bpms)
     orbit.create_types(lattice, elem_types, remove_elem)
     nx = len(orbit.htypes)

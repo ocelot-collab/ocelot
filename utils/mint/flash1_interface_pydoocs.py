@@ -3,6 +3,8 @@ machine interface
 includes online optimizer, response measurement and other stuff
 '''
 try:
+    # in server "doocsdev12" set environment
+    #  $ export PYTHONPATH=/home/ttflinac/user/python-2.7/Debian/
     import doocs
 except:
     print 'error importing doocs library'
@@ -11,7 +13,7 @@ import re
 from pylab import *
 
 
-    
+
 class FLASH1MachineInterface():
     def __init__(self):
         

@@ -159,7 +159,7 @@ def read_lattice_elegant(file_flo, file_par):
         elif elem.type=="cavity":
             elem.l=eval(data_par[pos][2])
             elem.v=eval(data_par[pos+1][2])*1e-9  # V -> GV
-            elem.phi=(eval(data_par[pos+2][2])-90)/180.*np.pi
+            elem.phi=(eval(data_par[pos+2][2])-90)#/180.*np.pi
             elem.f=eval(data_par[pos+3][2])
             elem.delta_e=elem.v*cos(elem.phi)  # in GeV
         elif elem.type=="hcor":

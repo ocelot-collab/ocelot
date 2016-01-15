@@ -9,6 +9,7 @@ from ocelot.rad.fel import *
 from ocelot.cpbd.beam import Beam, gauss_from_twiss
 import ocelot.utils.reswake as w
 from ocelot.common.math_op import *
+import os
 
 h = 4.135667516e-15
 c = 299792458.0
@@ -226,7 +227,6 @@ class GenesisInput:
         else:
             input = input.replace("__FIELDFILE__\n", "")
 
-        
         if self.magin == 0:
             input = input.replace("__MAGFILE__\n", "")
         else:
@@ -259,7 +259,6 @@ class GenesisOutput:
         self.sliceValues = {}
         
         self.parameters = {}
-            
     
     def __call__(self, name):
         '''
@@ -740,7 +739,7 @@ def readGenesisOutput(fileName):
     out.dt = (out.t[1] - out.t[0]) * 1.e-15
     
     out.spec = fft.fft(np.sqrt( np.array(out.power) ) * np.exp( 1.j* np.array(out.phi) ) )
-    out.freq_ev = h * fftfreq(len(out.spec), d=out('zsep') * out('xlamds') / c) 
+    out.freq_ev = h * fft.fftfreq(len(out.spec), d=out('zsep') * out('xlamds') / c)
 
     out.power = np.array(out.power)
     out.phi = np.array(out.phi)

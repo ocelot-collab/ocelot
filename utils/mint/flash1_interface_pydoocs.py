@@ -50,6 +50,10 @@ class FLASH1MachineInterface():
             phases[i] = doocs.read(phase_channel)
         return ampls, phases
 
+    def get_gun_energy(self):
+        gun_energy = doocs.read("FLASH.RF/LLRF.ENERGYGAIN.ML/GUN/ENERGYGAIN.FLASH1")
+        return gun_energy
+
     def get_bpms_xy(self, bpms):
         X = [0.0]*len(bpms)#np.zeros(len(correctors))
         Y = [0.0]*len(bpms)

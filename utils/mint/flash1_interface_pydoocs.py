@@ -52,6 +52,7 @@ class FLASH1MachineInterface():
 
     def get_gun_energy(self):
         gun_energy = doocs.read("FLASH.RF/LLRF.ENERGYGAIN.ML/GUN/ENERGYGAIN.FLASH1")
+        gun_energy = gun_energy*0.001 # MeV -> GeV
         return gun_energy
 
     def get_bpms_xy(self, bpms):

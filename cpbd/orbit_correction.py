@@ -93,7 +93,11 @@ class Orbit:
         L = 0.
         for elem in lattice.sequence:
             if elem.type == "monitor":
-                bpm = BPM(id = elem.id)
+                try:
+                    elem.weight
+                except:
+                    elem.weight = 1.
+                bpm = elem #BPM(id = elem.id)
                 bpm.s = L+elem.l/2.
                 self.bpms.append(bpm)
             L += elem.l
@@ -329,29 +333,41 @@ class Orbit:
         #print "shape = ", shape(self.resp)
         return self.resp
 
-    def apply_svd(self, resp_matrix, misallign):
+    def apply_svd(self, resp_matrix, misallign, weight=None):
         #print resp_matrix
-        U, s,V = svd(resp_matrix)
-        s_inv = 1./s
+        if weight == None:
+            weight = eye(len(misallign))
+        resp_matrix_w = dot(weight, resp_matrix)
+        misallign_w = dot(weight, misallign)
+        U, s,V = svd(resp_matrix_w)
+        #s_inv = 1./s
+        #for i in range(len(s)):
+        #    if s_inv[i]>1.e+5:
+        #        s_inv[i] = 0.
+        s_inv = zeros(len(s))
         for i in range(len(s)):
-            if s_inv[i]>1.e+5:
+            if s[i]<1.e-5:
                 s_inv[i] = 0.
-
+            else:
+                s_inv[i] = 1./s[i]
         Sinv = zeros((shape(U)[0],shape(V)[0]))
         Sinv[:len(s), :len(s)] = diag(s_inv)
         Sinv = transpose(Sinv)
-        A = dot(transpose(V),dot(Sinv,transpose(U)))
-        angle = dot(A, misallign)
+        A = dot(transpose(V),dot(Sinv, transpose(U)))
+        angle = dot(A, misallign_w)
         return angle
 
     def correction(self, lattice):
         m = len(self.bpms)
         monitors = zeros(2*m)
+        weights = eye(len(monitors))
         for i, bpm in enumerate(self.bpms):
             monitors[i] = bpm.x
             monitors[i+m] = bpm.y
+            weights[i, i] = bpm.weight
+            weights[i+m, i+m] = bpm.weight
         start = time()
-        angle = self.apply_svd(self.resp, monitors)
+        angle = self.apply_svd(self.resp, monitors, weight=weights)
         print("correction = ", time() - start)
         ix = 0
         iy = 0

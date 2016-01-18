@@ -117,12 +117,12 @@ class Orbit:
         L = 0.
         for elem in lattice.sequence:
             if elem.type == "vcor":
-                vcor = copy.copy(elem)
+                vcor = elem #copy.copy(elem)
                 vcor.s = L+elem.l/2.
                 vcor.dI = 0.0001
                 self.vcors.append(vcor)
             elif elem.type == "hcor":
-                hcor = copy.copy(elem)
+                hcor = elem #copy.copy(elem)
                 hcor.s = L+elem.l/2.
                 hcor.dI = 0.0001
                 self.hcors.append(hcor)
@@ -374,12 +374,12 @@ class Orbit:
         for elem in lattice.sequence:
             if ix<len(self.hcors) and elem.id == self.hcors[ix].id:
                 elem.angle -= angle[ix]
-                self.hcors[ix].angle -= angle[ix]
+                #self.hcors[ix].angle -= angle[ix]
                 ix += 1
 
             if iy<len(self.vcors) and elem.id == self.vcors[iy].id:
                 elem.angle -= angle[iy+len(self.hcors)]
-                self.vcors[iy].angle -= angle[iy+len(self.hcors)]
+                #self.vcors[iy].angle -= angle[iy+len(self.hcors)]
                 iy += 1
 
         return lattice.update_transfer_maps()

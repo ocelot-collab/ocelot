@@ -71,6 +71,13 @@ class FLASH1MachineInterface():
             vals[i] = doocs.read(mag_channel + "/PS")
         return vals
 
+    def get_sext_current(self, sext):
+        vals = [0.0]*len(sext)#np.zeros(len(correctors))
+        for i in range(len(sext)):
+            mag_channel = "TTF2.MAGNETS/SEXT/" + sext[i]
+            vals[i] = doocs.read(mag_channel + "/PS")
+        return vals
+
     def get_alarms(self):
         alarm_vals = np.zeros(len(self.blm_names))
         for i in xrange(len(self.blm_names)):

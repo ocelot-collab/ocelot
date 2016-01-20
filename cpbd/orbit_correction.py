@@ -223,6 +223,8 @@ class Orbit:
         energy_s = [tw.E for tw in tws]
         tck_E = splrep(s, energy_s)
         for bpm in self.bpms:
+            print [bpm.s], tck_mux
+            print splev([bpm.s], tck_mux)
             bpm.phi_x = splev([bpm.s], tck_mux)[0]
             bpm.phi_y = splev([bpm.s], tck_muy)[0]
 

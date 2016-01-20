@@ -315,6 +315,7 @@ class Orbit:
             #plt.show()
             for j, bpm in enumerate(self.bpms):
                 #real_resp[j, iy+nx] = (bpm.x - bpms[j].x)/shift
+                print bpm.x,  bpms[j].x, (bpm.x - bpms[j].x)/shift
                 real_resp[j+m, iy+nx] = (bpm.y - bpms[j].y)/shift
             vcor.angle = 0
             #lattice.update_transfer_maps()

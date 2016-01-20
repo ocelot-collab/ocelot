@@ -179,7 +179,7 @@ class Orbit:
         L = 0.
         for bpm in self.bpms:
             dz = bpm.s - L
-            track(lattice, [p], dz, navi, order=2)
+            track(lattice, [p], dz, navi, order=1)
             bpm.x = p.x
             bpm.y = p.y
             bpm.E = p.E

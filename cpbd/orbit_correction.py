@@ -115,6 +115,7 @@ class Orbit:
 
     def minus_reference(self):
         for bpm in self.bpms:
+            print bpm.x, bpm.x_ref
             bpm.x = bpm.x - bpm.x_ref
             bpm.y = bpm.y - bpm.y_ref
 
@@ -436,11 +437,11 @@ class Orbit:
             weights[i+m, i+m] = bpm.weight
         start = time()
         angle = self.apply_svd(self.resp, monitors, weight=weights)
-        print angle
-        print
-        print monitors
-        print
-        print self.resp
+        #print angle
+        #print
+        #print monitors
+        #print
+        #print self.resp
         print("correction = ", time() - start)
         ix = 0
         iy = 0

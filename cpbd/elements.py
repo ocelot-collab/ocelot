@@ -61,23 +61,23 @@ class Monitor(Element, object):
         self._x = 0.
         self._y = 0.
 
-        @property
-        def x(self):
-            print "get"
-            return self._x - self.x_ref
+    @property
+    def x(self):
+        #print "get"
+        return self._x - self.x_ref
 
-        @x.setter
-        def x(self, value):
-            print "set"
-            self._x = value
+    @x.setter
+    def x(self, value):
+        #print "set"
+        self._x = value
 
-        @property
-        def y(self):
-            return self._y - self.y_ref
+    @property
+    def y(self):
+        return self._y - self.y_ref
 
-        @y.setter
-        def y(self, value):
-            self._y = value
+    @y.setter
+    def y(self, value):
+        self._y = value
 
 class Marker(Element):
     def __init__(self, id = None):

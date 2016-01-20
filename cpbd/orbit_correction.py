@@ -274,27 +274,29 @@ class Orbit:
             hcor.angle += shift
             lattice.update_transfer_maps()
             self.read_virtual_orbit(lattice, p_init=copy.deepcopy(p_init))
-
+            plt.plot([bpm.s for bpm in self.bpms], [bpm.x for bpm in self.bpms], "r")
+            plt.plot([bpm.s for bpm in self.bpms], [bpm.y for bpm in self.bpms], "b")
+            plt.show()
             for j, bpm in enumerate(self.bpms):
                 real_resp[j, ix] = (bpm.x - bpms[j].x)/shift
                 real_resp[j+m, ix] = (bpm.y - bpms[j].y)/shift
 
             hcor.angle -= shift
-            lattice.update_transfer_maps()
+            #lattice.update_transfer_maps()
 
         for iy, vcor in enumerate(self.vcors):
             print("measure Y - ", iy,"/",ny)
             vcor.angle += shift
             lattice.update_transfer_maps()
             self.read_virtual_orbit(lattice, p_init=copy.deepcopy(p_init))
-            #plt.plot([bpm.s for bpm in orbit.bpms], [bpm.x for bpm in orbit.bpms], "r")
-            #plt.plot([bpm.s for bpm in orbit.bpms], [bpm.y for bpm in orbit.bpms], "b")
-            #plt.show()
+            plt.plot([bpm.s for bpm in self.bpms], [bpm.x for bpm in self.bpms], "r")
+            plt.plot([bpm.s for bpm in self.bpms], [bpm.y for bpm in self.bpms], "b")
+            plt.show()
             for j, bpm in enumerate(self.bpms):
                 real_resp[j, iy+nx] = (bpm.x - bpms[j].x)/shift
                 real_resp[j+m, iy+nx] = (bpm.y - bpms[j].y)/shift
             vcor.angle -= shift
-            lattice.update_transfer_maps()
+            #lattice.update_transfer_maps()
 
         #for i, par in enumerate(["x", "px", "y", "py"]):
         #    print(i)

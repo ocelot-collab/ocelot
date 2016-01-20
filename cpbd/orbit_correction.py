@@ -276,7 +276,7 @@ class Orbit:
         return self.resp
 
     def measure_response_matrix(self, lattice, p_init):
-        shift = 0.0001
+        shift = 0.00001
         m = len(self.bpms)
         #orbit.create_types(lattice, elem_types, remove_elem)
         nx = len(self.hcors)

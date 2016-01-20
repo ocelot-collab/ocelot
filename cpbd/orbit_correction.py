@@ -113,6 +113,10 @@ class Orbit:
             bpm.x_ref = bpm.x
             bpm.y_ref = bpm.y
 
+    def minus_reference(self):
+        for bpm in self.bpms:
+            bpm.x = bpm.x - bpm.x_ref
+            bpm.y = bpm.y - bpm.y_ref
 
     def create_COR(self, lattice):
         """

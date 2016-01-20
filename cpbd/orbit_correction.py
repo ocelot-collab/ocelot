@@ -222,30 +222,31 @@ class Orbit:
         tck_by = splrep(s, beta_y)
         energy_s = [tw.E for tw in tws]
         tck_E = splrep(s, energy_s)
+        s_bpm = [bpm.s for bpm in self.bpms]
         for bpm in self.bpms:
             #print [bpm.s], tck_mux
-            print splev([0, bpm.s], tck_mux)
-            bpm.phi_x = splev([bpm.s], tck_mux)[0]
-            bpm.phi_y = splev([bpm.s], tck_muy)[0]
+            #print splev([0, bpm.s], tck_mux)
+            bpm.phi_x = splev([0, bpm.s], tck_mux)[1]
+            bpm.phi_y = splev([0, bpm.s], tck_muy)[1]
 
-            bpm.beta_x = splev([bpm.s], tck_bx)[0]
-            bpm.beta_y = splev([bpm.s], tck_by)[0]
-            bpm.E = splev([bpm.s], tck_E)[0]
+            bpm.beta_x = splev([0, bpm.s], tck_bx)[1]
+            bpm.beta_y = splev([0, bpm.s], tck_by)[1]
+            bpm.E = splev([0, bpm.s], tck_E)[1]
 
         for hcor in self.hcors:
-            hcor.phi_x = splev([hcor.s], tck_mux)[0]
-            hcor.phi_y = splev([hcor.s], tck_muy)[0]
+            hcor.phi_x = splev([0, hcor.s], tck_mux)[1]
+            hcor.phi_y = splev([0, hcor.s], tck_muy)[1]
 
-            hcor.beta_x = splev([hcor.s], tck_bx)[0]
-            hcor.beta_y = splev([hcor.s], tck_by)[0]
-            hcor.E = splev([hcor.s], tck_E)[0]
+            hcor.beta_x = splev([0, hcor.s], tck_bx)[1]
+            hcor.beta_y = splev([0, hcor.s], tck_by)[1]
+            hcor.E = splev([0, hcor.s], tck_E)[1]
         for vcor in self.vcors:
-            vcor.phi_x = splev([vcor.s], tck_mux)[0]
-            vcor.phi_y = splev([vcor.s], tck_muy)[0]
+            vcor.phi_x = splev([0, vcor.s], tck_mux)[1]
+            vcor.phi_y = splev([0, vcor.s], tck_muy)[1]
 
-            vcor.beta_x = splev([vcor.s], tck_bx)[0]
-            vcor.beta_y = splev([vcor.s], tck_by)[0]
-            vcor.E = splev([vcor.s], tck_E)[0]
+            vcor.beta_x = splev([0, vcor.s], tck_bx)[1]
+            vcor.beta_y = splev([0, vcor.s], tck_by)[1]
+            vcor.E = splev([0, vcor.s], tck_E)[1]
 
     def read_response_matrix(self, dictionary):
         Energy = dictionary["energy"]

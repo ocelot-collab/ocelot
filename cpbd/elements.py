@@ -63,19 +63,19 @@ class Monitor(Element):
 
         @property
         def x(self):
-            return self._x
+            return self._x - self.x_ref
 
         @x.setter
         def x(self, value):
-            self._x = value - self.x_ref
+            self._x = value
 
         @property
         def y(self):
-            return self._y
+            return self._y - self.y_ref
 
         @y.setter
         def y(self, value):
-            self._y = value - self.y_ref
+            self._y = value
 
 class Marker(Element):
     def __init__(self, id = None):

@@ -424,6 +424,10 @@ class Orbit:
         start = time()
         angle = self.apply_svd(self.resp, monitors, weight=weights)
         print angle
+        print
+        print monitors
+        print
+        print self.resp
         print("correction = ", time() - start)
         ix = 0
         iy = 0

@@ -50,10 +50,10 @@ class Element:
     
 
 # to mark locations of bpms and other diagnostics
-class Monitor(object):
+class Monitor(Element, object):
         
     def __init__(self, l=0.0, id = None):
-        #Element.__init__(self, id)
+        Element.__init__(self, id)
         self.type = "monitor"
         self.l = l
         self.x_ref = 0.
@@ -63,10 +63,12 @@ class Monitor(object):
 
         @property
         def x(self):
+            print "get"
             return self._x - self.x_ref
 
         @x.setter
         def x(self, value):
+            print "set"
             self._x = value
 
         @property

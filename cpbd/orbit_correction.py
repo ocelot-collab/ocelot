@@ -115,7 +115,7 @@ class Orbit:
 
     def minus_reference(self):
         for bpm in self.bpms:
-            print bpm.x, bpm.x_ref
+            #print bpm.x, bpm.x_ref
             bpm.x = bpm.x - bpm.x_ref
             bpm.y = bpm.y - bpm.y_ref
 

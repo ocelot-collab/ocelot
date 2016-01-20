@@ -73,6 +73,13 @@ class FLASH1MachineInterface():
             vals[i] = doocs.read(mag_channel + "/PS")
         return vals
 
+    def get_bends_current(self, bends):
+        vals = [0.0]*len(bends)#np.zeros(len(correctors))
+        for i in range(len(bends)):
+            mag_channel = 'TTF2.MAGNETS/DIPOLE/' + bends[i]# + '/PS'
+            vals[i] = doocs.read(mag_channel + "/PS")
+        return vals
+
     def get_sext_current(self, sext):
         vals = [0.0]*len(sext)#np.zeros(len(correctors))
         for i in range(len(sext)):

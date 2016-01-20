@@ -259,6 +259,56 @@ class Orbit:
         self.resp = real_resp
         return self.resp
 
+    def measure_response_matrix(self, lattice, p_init):
+        shift = 0.001
+        m = len(self.bpms)
+        #orbit.create_types(lattice, elem_types, remove_elem)
+        nx = len(self.hcors)
+        ny = len(self.vcors)
+        #print(nx, ny, m)
+        real_resp = zeros((m*2, nx + ny))
+        self.read_virtual_orbit(lattice, p_init=copy.deepcopy(p_init))
+        bpms = copy.deepcopy(self.bpms)
+        for ix, hcor in enumerate(self.hcors):
+            print("measure X - ", ix, "/", nx)
+            hcor.angle += shift
+            lattice.update_transfer_maps()
+            self.read_virtual_orbit(lattice, p_init=copy.deepcopy(p_init))
+
+            for j, bpm in enumerate(self.bpms):
+                real_resp[j, ix] = (bpm.x - bpms[j].x)/shift
+                real_resp[j+m, ix] = (bpm.y - bpms[j].y)/shift
+
+            hcor.angle -= shift
+            lattice.update_transfer_maps()
+
+        for iy, vcor in enumerate(self.vcors):
+            print("measure Y - ", iy,"/",ny)
+            vcor.angle += shift
+            lattice.update_transfer_maps()
+            self.read_virtual_orbit(lattice, p_init=copy.deepcopy(p_init))
+            #plt.plot([bpm.s for bpm in orbit.bpms], [bpm.x for bpm in orbit.bpms], "r")
+            #plt.plot([bpm.s for bpm in orbit.bpms], [bpm.y for bpm in orbit.bpms], "b")
+            #plt.show()
+            for j, bpm in enumerate(self.bpms):
+                real_resp[j, iy+nx] = (bpm.x - bpms[j].x)/shift
+                real_resp[j+m, iy+nx] = (bpm.y - bpms[j].y)/shift
+            vcor.angle -= shift
+            lattice.update_transfer_maps()
+
+        #for i, par in enumerate(["x", "px", "y", "py"]):
+        #    print(i)
+        #    p_i = Particle(E = p_init.E)
+        #    p_i.__dict__[par] = 0.0001
+        #    p2 = copy.deepcopy(p_i)
+        #    orbit.read_virtual_orbit(lattice, p_init=p2)
+        #    for j, bpm in enumerate(orbit.bpms):
+        #        real_resp[j, nx + ny + i] = (bpm.x - bpms[j].x)/0.0001
+        #        real_resp[j+m, nx + ny + i] = (bpm.y - bpms[j].y)/0.0001
+        #        #print j+m, nx + ny + i, (bpm.x - bpms[j].x)/0.00001
+        ##print real_resp[:,-5:]
+        return real_resp
+
     def ring_response_matrix(self, lattice, tw_init=None):
         """
         calculation of ideal response matrix
@@ -316,13 +366,12 @@ class Orbit:
             for j, hcor in enumerate(self.hcors):
                 if hcor.s < bpm.s:
                     mu_x = (bpm.phi_x - hcor.phi_x)
-
-                    h_resp[i,j] = kx*sqrt(hcor.beta_x)*sin(mu_x)*sqrt(hcor.E/bpm.E)
+                    h_resp[i, j] = kx*sqrt(hcor.beta_x)*sin(mu_x)*sqrt(hcor.E/bpm.E)
 
             for n, vcor in enumerate(self.vcors):
                 if vcor.s < bpm.s:
                     mu_y = (bpm.phi_y - vcor.phi_y)
-                    v_resp[i,n] = ky*sqrt(vcor.beta_y)*sin(mu_y)*sqrt(vcor.E/bpm.E)
+                    v_resp[i, n] = ky*sqrt(vcor.beta_y)*sin(mu_y)*sqrt(vcor.E/bpm.E)
 
         m = len(self.bpms)
         kx = len(self.hcors)
@@ -335,7 +384,7 @@ class Orbit:
 
     def apply_svd(self, resp_matrix, misallign, weight=None):
         #print resp_matrix
-        if weight == None:
+        if weight is None:
             weight = eye(len(misallign))
         resp_matrix_w = dot(weight, resp_matrix)
         misallign_w = dot(weight, misallign)

@@ -68,7 +68,7 @@ class Quadrupole(Element):
     k1 - strength of quadrupole lens in [1/m^2],
     l - length of lens in [m].
     """
-    def __init__(self, l=0, k1=0, k2=0., tilt=0, id=None):
+    def __init__(self, l=0, k1=0, k2=0.,  tilt=0, id=None):
         Element.__init__(self, id)
         self.type = "quadrupole"
         self.l = l

@@ -130,7 +130,7 @@ class FLASH1MachineInterface():
     
     def set_value(self, device_name, val):
         ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS'
-        return dcs.set_device_val(ch, val)
+        return doocs.set_device_val(ch, str(val))
  
  
 class FLASH1DeviceProperties:

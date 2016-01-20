@@ -99,11 +99,18 @@ class Orbit:
                     elem.weight = 1.
                 bpm = elem #BPM(id = elem.id)
                 bpm.s = L+elem.l/2.
+                bpm.x_ref = 0.
+                bpm.y_ref = 0.
                 self.bpms.append(bpm)
             L += elem.l
         if len(self.bpms) == 0:
             print("there is not monitors")
         return self.bpms
+
+    def set_ref_pos(self):
+        for bpm in self.bpms:
+            bpm.x_ref = bpm.x
+            bpm.y_ref = bpm.y
 
 
     def create_COR(self, lattice):

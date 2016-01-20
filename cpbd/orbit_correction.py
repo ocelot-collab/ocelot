@@ -307,6 +307,7 @@ class Orbit:
         #        real_resp[j+m, nx + ny + i] = (bpm.y - bpms[j].y)/0.0001
         #        #print j+m, nx + ny + i, (bpm.x - bpms[j].x)/0.00001
         ##print real_resp[:,-5:]
+        self.resp = real_resp
         return real_resp
 
     def ring_response_matrix(self, lattice, tw_init=None):

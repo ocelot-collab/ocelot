@@ -50,7 +50,7 @@ class Element:
     
 
 # to mark locations of bpms and other diagnostics
-class Monitor(Element):
+class Monitor(Element, object):
         
     def __init__(self, l=0.0, id = None):
         Element.__init__(self, id)

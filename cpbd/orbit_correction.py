@@ -18,6 +18,7 @@ import copy
 class BPM(object):
     def __init__(self, id = None):
         self.id = id
+        self.type = "monitor"
         self.__x = 0
         self.__y = 0
         self.dx = 0

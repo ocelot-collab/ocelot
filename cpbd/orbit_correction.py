@@ -276,7 +276,7 @@ class Orbit:
         return self.resp
 
     def measure_response_matrix(self, lattice, p_init):
-        shift = 0.00001
+        shift = 0.0001
         m = len(self.bpms)
         #orbit.create_types(lattice, elem_types, remove_elem)
         nx = len(self.hcors)
@@ -297,7 +297,7 @@ class Orbit:
             for j, bpm in enumerate(self.bpms):
                 real_resp[j, ix] = (bpm.x - bpms[j].x)/shift
                 #print bpm.y, bpms[j].y, (bpm.y - bpms[j].y)/shift
-                real_resp[j+m, ix] = (bpm.y - bpms[j].y)/shift
+                #real_resp[j+m, ix] = (bpm.y - bpms[j].y)/shift
                 #print (bpm.x - bpms[j].x)/shift, (bpm.y - bpms[j].y)/shift
             hcor.angle -= shift
             hcor.angle = 0
@@ -314,7 +314,7 @@ class Orbit:
             #plt.plot([bpm.s for bpm in self.bpms], [bpm.y for bpm in self.bpms], "b")
             #plt.show()
             for j, bpm in enumerate(self.bpms):
-                real_resp[j, iy+nx] = (bpm.x - bpms[j].x)/shift
+                #real_resp[j, iy+nx] = (bpm.x - bpms[j].x)/shift
                 #print bpm.x,  bpms[j].x, (bpm.x - bpms[j].x)/shift
                 real_resp[j+m, iy+nx] = (bpm.y - bpms[j].y)/shift
             vcor.angle = 0

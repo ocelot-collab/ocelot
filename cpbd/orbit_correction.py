@@ -296,6 +296,7 @@ class Orbit:
             #plt.show()
             for j, bpm in enumerate(self.bpms):
                 real_resp[j, ix] = (bpm.x - bpms[j].x)/shift
+                print bpm.y, bpms[j].y, (bpm.y - bpms[j].y)/shift
                 #real_resp[j+m, ix] = (bpm.y - bpms[j].y)/shift
                 #print (bpm.x - bpms[j].x)/shift, (bpm.y - bpms[j].y)/shift
             hcor.angle -= shift

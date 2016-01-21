@@ -448,7 +448,7 @@ class Orbit:
             weights[i+m, i+m] = bpm.weight
         start = time()
         angle = self.apply_svd(self.resp, monitors, weight=weights)
-        #print angle
+        print angle[:10], angle[-10:]
         #print
         #print monitors
         #print

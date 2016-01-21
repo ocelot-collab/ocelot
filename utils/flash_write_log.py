@@ -9,7 +9,7 @@ from pylab import *
 from scipy.optimize import *
 from time import sleep, time
 
-from flash1_interface import FLASH1MachineInterface
+from ocelot.utils.mint.flash1_interface_pydoocs import FLASH1MachineInterface
 
 sys.path.append('../')
 

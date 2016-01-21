@@ -29,6 +29,8 @@ class FLASH1MachineInterface():
                           '10SMATCH','3SDUMP']
 
 
+
+
     def init_corrector_vals(self, correctors):
         vals = [0.0]*len(correctors)#np.zeros(len(correctors))
         for i in range(len(correctors)):
@@ -172,13 +174,13 @@ class FLASH1DeviceProperties:
         self.limits['Q15MATCH'] = [-16.0,-14.0]
 
         self.patterns['H3DBC3'] = re.compile('H3DBC3')
-        self.limits['H3DBC3'] = [-0.15,-0.07]
+        self.limits['H3DBC3'] = [-0.24, -0.0]
 
         self.patterns['V3DBC3'] = re.compile('V3DBC3')
-        self.limits['V3DBC3'] = [0.046,0.106]
+        self.limits['V3DBC3'] = [0.046, 0.106]
 
         self.patterns['H10ACC7'] = re.compile('H10ACC7')
-        self.limits['H10ACC7'] = [0.8,1.3]
+        self.limits['H10ACC7'] = [0.,1.3]
 
         self.patterns['V10ACC7'] = re.compile('V10ACC7')
         self.limits['V10ACC7'] = [-2.6,-1.8]
@@ -195,7 +197,7 @@ class FLASH1DeviceProperties:
             #print 'testing', k
             if self.patterns[k].match(device) != None:
                 return self.limits[k]
-        return [-0.11, -0.08]   
+        return [-2, 2]
 
     def get_polarity(self, quads):
         vals = [0.0]*len(quads)#np.zeros(len(correctors))

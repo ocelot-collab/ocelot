@@ -444,8 +444,11 @@ class Orbit:
         for i, bpm in enumerate(self.bpms):
             monitors[i] = bpm.x
             monitors[i+m] = bpm.y
-            weights[i, i] = bpm.weight
-            weights[i+m, i+m] = bpm.weight
+            #weights[i, i] = bpm.weight
+            #weights[i+m, i+m] = bpm.weight
+        sigma_x = sqrt(sum(monitors[:m]**2/m))*1000.
+        sigma_y = sqrt(sum(monitors[m:]**2/m))*1000.
+        print "cor: sigma_x=", sigma_x, "mm, sigma_y=", sigma_y," mm"
         start = time()
         angle = self.apply_svd(self.resp, monitors, weight=weights)
         print angle[:10], angle[-10:]

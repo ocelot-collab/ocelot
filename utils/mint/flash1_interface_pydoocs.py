@@ -95,9 +95,9 @@ class FLASH1MachineInterface():
             if (self.debug): print 'reading alarm channel', blm_alarm_ch
             alarm_val = doocs.read(blm_alarm_ch) * 1.25e-3 # alarm thr. in Volts
             if (self.debug): print 'alarm:', alarm_val
-    
-            h = np.array(doocs.read(blm_channel))
-    
+            sample = doocs.read(blm_channel)
+            h = np.array([x[1] for x in sample])
+
             alarm_vals[i] = np.max( np.abs(h) ) / alarm_val 
             
         return alarm_vals

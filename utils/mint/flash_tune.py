@@ -13,7 +13,7 @@ from flash1_interface import FLASH1MachineInterface, FLASH1DeviceProperties
 #import json
 
 
-dp = FLASH1DeviceProperties()
+#dp = FLASH1DeviceProperties()
 
 mi = FLASH1MachineInterface()
 dp = FLASH1DeviceProperties()

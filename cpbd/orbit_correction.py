@@ -119,6 +119,12 @@ class Orbit:
             bpm.x = bpm.x - bpm.x_ref
             bpm.y = bpm.y - bpm.y_ref
 
+    def set_bpm_signal(self, x_bpm, y_bpm):
+        for i, bpm in enumerate(self.bpms):
+            #print bpm.x, bpm.x_ref
+            bpm.x = x_bpm[i]
+            bpm.y = y_bpm[i]
+
     def create_COR(self, lattice):
         """
         Search correctors (horizontal and vertical) in the lattice and create list of hcors and list of vcors

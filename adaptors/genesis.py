@@ -390,27 +390,24 @@ def read_beam_file(fileName):
 
     beam.z = beam.column_values['ZPOS']
     beam.zsep = beam.z[1] - beam.z[0]
-
-    beam.ex = beam.column_values['EMITX']
-    beam.ey = beam.column_values['EMITY']
-    
-    beam.betax = beam.column_values['BETAX']
-    beam.betay = beam.column_values['BETAY']
-    
-    beam.alphax = beam.column_values['ALPHAX']
-    beam.alphay = beam.column_values['ALPHAY']
-
-    beam.x = beam.column_values['XBEAM']
-    beam.y = beam.column_values['YBEAM']
-
-    beam.px = beam.column_values['PXBEAM']
-    beam.py = beam.column_values['PYBEAM']
-
-    
     beam.I = np.array(beam.column_values['CURPEAK'])
-    
-    beam.g0 = np.array(beam.column_values['GAMMA0'])
-    beam.dg = np.array(beam.column_values['DELGAM'])
+    try:
+        beam.ex = beam.column_values['EMITX']
+        beam.ey = beam.column_values['EMITY']
+        beam.betax = beam.column_values['BETAX']
+        beam.betay = beam.column_values['BETAY']
+        
+        beam.alphax = beam.column_values['ALPHAX']
+        beam.alphay = beam.column_values['ALPHAY']
+        
+        beam.x = beam.column_values['XBEAM']
+        beam.y = beam.column_values['YBEAM']
+        beam.px = beam.column_values['PXBEAM']
+        beam.py = beam.column_values['PYBEAM']
+        beam.g0 = np.array(beam.column_values['GAMMA0'])
+        beam.dg = np.array(beam.column_values['DELGAM'])
+    except:
+        pass
     
     try:
         beam.eloss = np.array(beam.column_values['ELOSS'])
@@ -976,29 +973,31 @@ def beam_file_str(beam):
     
     f_str = header
     
+    
     beam.column_values['ZPOS'] = beam.z 
-    beam.column_values['EMITX'] = beam.ex
-    beam.column_values['EMITY'] = beam.ey
-    
-    beam.column_values['BETAX'] = beam.betax
-    beam.column_values['BETAY'] = beam.betay
-    
-    beam.column_values['ALPHAX'] = beam.alphax
-    beam.column_values['ALPHAY'] = beam.alphay
-
-    beam.column_values['XBEAM'] = beam.x
-    beam.column_values['YBEAM'] = beam.y
-
-    beam.column_values['PXBEAM'] = beam.px
-    beam.column_values['PYBEAM'] = beam.py
-    
     beam.column_values['CURPEAK'] = beam.I
+    try:
+        beam.column_values['EMITX'] = beam.ex
+        beam.column_values['EMITY'] = beam.ey
+        
+        beam.column_values['BETAX'] = beam.betax
+        beam.column_values['BETAY'] = beam.betay
+        
+        beam.column_values['ALPHAX'] = beam.alphax
+        beam.column_values['ALPHAY'] = beam.alphay
     
-    beam.column_values['GAMMA0'] = beam.g0
-    beam.column_values['DELGAM'] = beam.dg
+        beam.column_values['XBEAM'] = beam.x
+        beam.column_values['YBEAM'] = beam.y
     
-    beam.column_values['ELOSS'] = beam.eloss
-    
+        beam.column_values['PXBEAM'] = beam.px
+        beam.column_values['PYBEAM'] = beam.py
+        
+        beam.column_values['GAMMA0'] = beam.g0
+        beam.column_values['DELGAM'] = beam.dg
+        
+        beam.column_values['ELOSS'] = beam.eloss
+    except:
+        pass
 
     for i in xrange(len(beam.z)):
         for c in beam.columns:

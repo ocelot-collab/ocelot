@@ -78,7 +78,8 @@ def plot_dict(dict_data, filename=None, interval=1, mode="%"):
     ax.grid()
 
     ax.set_xlim([times[0], datetime.fromtimestamp(dict_data["time"][-1])])
-    ax.legend(loc=1, framealpha=0.7)
+    #ax.legend(loc=1, framealpha=0.7)
+    ax.legend(loc=1)
     ax2 = ax.twinx()
     pict = []
     for device in devices:

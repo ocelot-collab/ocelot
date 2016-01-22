@@ -18,7 +18,7 @@ class FLASH1MachineInterface():
     def __init__(self):
         
         self.debug = False
-        
+        """
         self.blm_names = ['14L.SMATCH','14R.SMATCH',
                           '1L.UND1', '1R.UND1',
                           '1L.UND2', '1R.UND2', 
@@ -27,7 +27,14 @@ class FLASH1MachineInterface():
                           '1L.UND5', '1R.UND5',
                           '1L.UND6', '1R.UND6',
                           '10SMATCH','3SDUMP']
-
+        """
+        self.blm_names = ['1L.UND1', '1R.UND1',
+                          '1L.UND2', '1R.UND2',
+                          '1L.UND3', '1R.UND3',
+                          '1L.UND4', '1R.UND4',
+                          '1L.UND5', '1R.UND5',
+                          '1L.UND6', '1R.UND6',
+                          '10SMATCH','3SDUMP']
 
 
 

@@ -169,29 +169,44 @@ class FLASH1DeviceProperties:
         self.limits['intra_steerer'] = [-5.0,-2.0]
         
         self.patterns['QF'] = re.compile('Q5UND1.3.5')
-        self.limits['QF'] = [4,9]
+        self.limits['QF'] = [1,7]
         
         self.patterns['QD'] = re.compile('Q5UND2.4')
-        self.limits['QD'] = [-9,-4]
+        self.limits['QD'] = [-5,-1]
         
         self.patterns['Q13MATCH'] = re.compile('Q13SMATCH')
-        self.limits['Q13MATCH'] = [47.0,49.0]
+        self.limits['Q13MATCH'] = [17.0,39.0]
 
         self.patterns['Q15MATCH'] = re.compile('Q15SMATCH')
-        self.limits['Q15MATCH'] = [-16.0,-14.0]
+        self.limits['Q15MATCH'] = [-16.0,-2.0]
 
         self.patterns['H3DBC3'] = re.compile('H3DBC3')
-        self.limits['H3DBC3'] = [-0.24, -0.0]
+        self.limits['H3DBC3'] = [-0.035, -0.018]
 
         self.patterns['V3DBC3'] = re.compile('V3DBC3')
-        self.limits['V3DBC3'] = [0.046, 0.106]
+        self.limits['V3DBC3'] = [-0.1, 0.10]
 
         self.patterns['H10ACC7'] = re.compile('H10ACC7')
-        self.limits['H10ACC7'] = [0.,1.3]
+        self.limits['H10ACC7'] = [0.12, 0.17]
 
+        self.patterns['H10ACC6'] = re.compile('H10ACC6')
+        self.limits['H10ACC6'] = [-0.9, -0.4]
+
+        self.patterns['H10ACC5'] = re.compile('H10ACC5')
+        self.limits['H10ACC5'] = [0.8, 1.2]
+
+        self.patterns['H10ACC4'] = re.compile('H10ACC4')
+        self.limits['H10ACC4'] = [-0.2, 0.1]
 
         self.patterns['V10ACC7'] = re.compile('V10ACC7')
         self.limits['V10ACC7'] = [-2.6,-1.8]
+
+        self.patterns['V10ACC4'] = re.compile('V10ACC4')
+        self.limits['V10ACC4'] = [0.9,1.2]
+
+        self.patterns['V10ACC5'] = re.compile('V10ACC5')
+        self.limits['V10ACC5'] = [-0.7,-0.5]
+
 
         self.patterns['H8TCOL'] = re.compile('H8TCOL')
         self.limits['H8TCOL'] = [0.02,0.06]

@@ -407,7 +407,7 @@ class Optimizer:
                 return alarm * 50.0
             pen += alarm
 
-            pen -= orb_min
+            pen += orb_min
 
             if self.debug: print 'penalty:', pen
 
@@ -429,25 +429,7 @@ class Optimizer:
             f.write('sase0=' + str(orb_ref) + '\n')
 
 
-        if method == 'cg':
-            print 'using CG optimizer, params:', params
 
-            try:
-                max_iter = params['maxiter']
-            except KeyError:
-                max_iter = 10 * len(x)
-
-            try:
-                epsilon = params['epsilon']
-            except KeyError:
-                epsilon = 0.1
-
-            try:
-                gtol = params['gtol']
-            except KeyError:
-                gtol = 1.e-3
-
-            opt.fmin_cg(error_func,x,gtol=gtol, epsilon = epsilon, maxiter=max_iter)
 
         if method == 'simplex':
             print 'using simplex optimizer, params:', params
@@ -464,33 +446,11 @@ class Optimizer:
 
             opt.fmin(error_func,x,xtol=xtol, maxiter=max_iter)
 
-        if method == 'powell':
-            print 'using powell optimizer, params:', params
 
-            try:
-                max_iter = params['maxiter']
-            except KeyError:
-                max_iter = 10 * len(x)
-
-            try:
-                xtol = params['xtol']
-            except KeyError:
-                xtol = 1.e-3
-
-            opt.fmin_powell(error_func,x,xtol=xtol, maxiter=max_iter)
-
-
-        if method == 'fancy_stuff_from':
-            print 'using fancy optimizer, params:', params
-            pass
 
         orb_new = get_rms(bpms)
 
         print 'step ended changing sase from/to', orb_ref, orb_new
-        if orb_new <= orb_ref:
-            for i in xrange(len(correctors)):
-                print 'reverting', correctors[i], '->',x_init[i]
-                self.mi.set_value(correctors[i], x_init[i])
 
         if self.logging:
              f.write('sase_new=' + str(orb_new) + '\n')

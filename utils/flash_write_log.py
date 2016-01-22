@@ -1,12 +1,12 @@
 '''
 tuning using 4 corrector direct sase optimization
 '''
-import ocelot.utils.mint.mint as mint
-import ocelot.utils.mint.swig.dcs as dcs
+#import ocelot.utils.mint.mint as mint
+#import ocelot.utils.mint.swig.dcs as dcs
 import os, sys
 
 from pylab import *
-from scipy.optimize import *
+#from scipy.optimize import *
 from time import sleep, time
 
 from ocelot.utils.mint.flash1_interface_pydoocs import FLASH1MachineInterface

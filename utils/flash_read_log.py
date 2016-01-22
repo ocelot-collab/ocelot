@@ -91,7 +91,8 @@ def plot_dict(dict_data, filename=None, interval=1, mode="%"):
             ax2.plot( times[::inrv], x[::inrv] - shift, label = device + ": " + str(shift) )
     fig.autofmt_xdate()
     pict.append(pax2)
-    ax2.legend(loc=4, framealpha=0.7)
+    #ax2.legend(loc=4, framealpha=0.7)
+    ax2.legend(loc=4)
     ax2.grid(True)
     if mode == "%":
         ax2.set_ylabel(r"$\Delta I/I$")

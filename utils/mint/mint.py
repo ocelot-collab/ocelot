@@ -354,13 +354,6 @@ class Optimizer:
 
         if self.debug: print 'starting multiknob optimization, correctors = ', correctors
 
-        if opt_pointing:
-            weight_gmd_bpm_1 = 10.0
-            weight_gmd_bpm_2 = 10.0
-        else:
-            weight_gmd_bpm_1 = 0.0
-            weight_gmd_bpm_2 = 0.0
-
         def get_rms(bpms):
             #print
             #print "bpms= ",  bpms.keys()
@@ -371,12 +364,12 @@ class Optimizer:
                 X, Y = self.mi.get_bpms_xy([bpm])
                 x += (X[0] - bpms[bpm]["x"])**2
                 y += (Y[0] - bpms[bpm]["y"])**2
-            #print sqrt(x/n)*1000. + sqrt(y/n)*1000.
+            print "rms = ", sqrt(x/n)*1000. + sqrt(y/n)*1000.
             return sqrt(x/n)*1000. + sqrt(y/n)*1000.
 
         def error_func(x):
 
-            print self.dp
+            #print self.dp
 
             pen_max = 100.0
 

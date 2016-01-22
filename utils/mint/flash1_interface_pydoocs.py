@@ -189,6 +189,7 @@ class FLASH1DeviceProperties:
         self.patterns['H10ACC7'] = re.compile('H10ACC7')
         self.limits['H10ACC7'] = [0.,1.3]
 
+
         self.patterns['V10ACC7'] = re.compile('V10ACC7')
         self.limits['V10ACC7'] = [-2.6,-1.8]
 

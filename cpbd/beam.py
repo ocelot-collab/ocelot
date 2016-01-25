@@ -86,6 +86,25 @@ class Twiss:
         print "nu_x    = ", self.mux/2./pi
         print "nu_y    = ", self.muy/2./pi
 
+    def __str__(self):
+        val = ""
+        val = val + "beta_x  = " + str(self.beta_x) + "\n"
+        val = val + "beta_y  = " + str(self.beta_y) + "\n"
+        val = val + "alpha_x = " + str(self.alpha_x) + "\n"
+        val = val + "alpha_y = " + str(self.alpha_y) + "\n"
+        val = val + "gamma_x = " + str(self.gamma_x) + "\n"
+        val = val + "gamma_y = " + str(self.gamma_y) + "\n"
+        val = val + "Dx      = " + str(self.Dx) + "\n"
+        val = val + "Dy      = " + str(self.Dy) + "\n"
+        val = val + "Dxp     = " + str(self.Dxp) + "\n"
+        val = val + "Dyp     = " + str(self.Dyp) + "\n"
+        val = val + "mux     = " + str(self.mux) + "\n"
+        val = val + "muy     = " + str(self.muy) + "\n"
+        val = val + "nu_x    = " + str(self.mux/2./pi) + "\n"
+        val = val + "nu_y    = " + str(self.muy/2./pi) + "\n"
+        return val
+
+
             
 class Particle:
     '''
@@ -324,3 +343,19 @@ def gauss_from_twiss(emit, beta, alpha):
     x = a * sqrt(beta) * cos(phi)
     xp = -a / sqrt(beta) * ( sin(phi) + alpha * cos(phi) )
     return (x, xp)
+
+def waterbag_from_twiss(emit, beta, alpha):
+    phi = 2*pi * np.random.rand()
+    a = sqrt(emit) * np.random.rand()
+    x = a * sqrt(beta) * cos(phi)
+    xp = -a / sqrt(beta) * ( sin(phi) + alpha * cos(phi) )
+    return (x, xp)
+
+
+def ellipse_from_twiss(emit, beta, alpha):
+    phi = 2*pi * np.random.rand()
+    a = sqrt(emit)
+    x = a * sqrt(beta) * cos(phi)
+    xp = -a / sqrt(beta) * ( sin(phi) + alpha * cos(phi) )
+    return (x, xp)
+

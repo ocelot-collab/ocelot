@@ -1,8 +1,10 @@
 Ilya Agapov ilya.agapov@desy.de
 architecture, releases
+optimizer, x-ray optics
 
 Sergey Tomin 2012-2016
-cpbd module, optics functions
+cpbd module optics functions
+optimizer
 
 Igor Zagorodnov 
 cpbd module, space charge

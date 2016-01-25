@@ -128,6 +128,7 @@ def run(inp, launcher):
     
     out_file = inp.run_dir + '/run.' + str(inp.runid) + '.gout'
     os.system('rm -rf ' + out_file + '.dfl') # to make sure field file is not attached to old one
+    os.system('rm -rf ' + out_file + '.dpa') # to make sure particle file is not attached to old one
 
     launcher.dir = inp.run_dir
     launcher.prepare()

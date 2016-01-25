@@ -127,6 +127,7 @@ inputTemplate = "\
  offsetradf =    0\n\
  multconv =    0\n\
 __BEAMFILE__\n\
+__PARTFILE__\n\
 __FIELDFILE__\n\
 __MAGFILE__\n\
  outputfile ='run.__RUNID__.gout'\n\
@@ -156,7 +157,7 @@ class GenesisInput:
         self.zsep = 20   #separation between slices in terms of radiation length xlamds        
         self.zrayl = 0.00001
         
-         
+        self.prad0 = 0 
         self.npart = 8192   # number of macroparticles per slice
         self.ncar = 151   # number of grid points for field calculation along one axis
         self.nslice = 1504   # number of slices
@@ -204,6 +205,7 @@ class GenesisInput:
         #self.useBeamFile = False
         self.beamfile = None
         self.fieldfile = None
+        self.partfile = None
 
     def input(self):
         input = inputTemplate
@@ -225,6 +227,11 @@ class GenesisInput:
             input = input.replace("__FIELDFILE__", " fieldfile  =  '"+ str(self.fieldfile)+ "'")
         else:
             input = input.replace("__FIELDFILE__\n", "")
+            
+        if self.partfile != None:
+            input = input.replace("__PARTFILE__", " partfile  =  '"+ str(self.partfile)+ "'")
+        else:
+            input = input.replace("__PARTFILE__\n", "")
 
         
         if self.magin == 0:
@@ -745,7 +752,7 @@ def readGenesisOutput(fileName):
 
     out.z = np.array(out.z)
     out.I = np.array(out.I)
-
+    
     return out
 
 def getAverageUndulatorParameter(lattice, unit=1.0, energy = 17.5):
@@ -976,6 +983,7 @@ def beam_file_str(beam):
     
     beam.column_values['ZPOS'] = beam.z 
     beam.column_values['CURPEAK'] = beam.I
+    
     try:
         beam.column_values['EMITX'] = beam.ex
         beam.column_values['EMITY'] = beam.ey
@@ -985,10 +993,10 @@ def beam_file_str(beam):
         
         beam.column_values['ALPHAX'] = beam.alphax
         beam.column_values['ALPHAY'] = beam.alphay
-    
+	
         beam.column_values['XBEAM'] = beam.x
         beam.column_values['YBEAM'] = beam.y
-    
+        
         beam.column_values['PXBEAM'] = beam.px
         beam.column_values['PYBEAM'] = beam.py
         
@@ -998,13 +1006,13 @@ def beam_file_str(beam):
         beam.column_values['ELOSS'] = beam.eloss
     except:
         pass
-
+    
     for i in xrange(len(beam.z)):
         for c in beam.columns:
             buf = str(beam.column_values[c][i])
             f_str = f_str + buf + ' '
         f_str = f_str.rstrip() +  '\n'
-
+    
     return f_str
 
 
@@ -1087,7 +1095,7 @@ def plot_beam(fig, beam):
 
 
 
-def transform_beam_file(beam_file = None, out_file='tmp.beam', transform = [ [25.0,0.1], [21.0, -0.1] ], energy_scale=1, emit_scale = 1, n_interp = None):
+def transform_beam_file(beam_file = None, out_file='tmp.beam', transform = [ [25.0,0.1], [21.0, -0.1] ], energy_scale=1, energy_new = None, emit_scale = 1, n_interp = None):
     
     beam = read_beam_file(beam_file)
         
@@ -1176,6 +1184,10 @@ def transform_beam_file(beam_file = None, out_file='tmp.beam', transform = [ [25
         beam_new = Beam()
         beam_new.column_values = beam.column_values
         beam_new.columns = beam.columns
+        
+        if energy_new != None:
+            gamma_new=energy_new / (0.511e-3)
+            energy_scale=gamma_new/np.mean(np.array(beam.g0))
         
         if n_interp == None:
         

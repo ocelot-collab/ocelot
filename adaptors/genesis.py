@@ -127,6 +127,7 @@ inputTemplate = "\
  offsetradf =    0\n\
  multconv =    0\n\
 __BEAMFILE__\n\
+__PARTFILE__\n\
 __FIELDFILE__\n\
 __MAGFILE__\n\
  outputfile ='run.__RUNID__.gout'\n\
@@ -156,7 +157,7 @@ class GenesisInput:
         self.zsep = 20   #separation between slices in terms of radiation length xlamds        
         self.zrayl = 0.00001
         
-         
+        self.prad0 = 0 
         self.npart = 8192   # number of macroparticles per slice
         self.ncar = 151   # number of grid points for field calculation along one axis
         self.nslice = 1504   # number of slices
@@ -204,6 +205,7 @@ class GenesisInput:
         #self.useBeamFile = False
         self.beamfile = None
         self.fieldfile = None
+        self.partfile = None
 
     def input(self):
         input = inputTemplate
@@ -225,6 +227,11 @@ class GenesisInput:
             input = input.replace("__FIELDFILE__", " fieldfile  =  '"+ str(self.fieldfile)+ "'")
         else:
             input = input.replace("__FIELDFILE__\n", "")
+            
+        if self.partfile != None:
+            input = input.replace("__PARTFILE__", " partfile  =  '"+ str(self.partfile)+ "'")
+        else:
+            input = input.replace("__PARTFILE__\n", "")
 
         
         if self.magin == 0:
@@ -745,7 +752,7 @@ def readGenesisOutput(fileName):
 
     out.z = np.array(out.z)
     out.I = np.array(out.I)
-
+    
     return out
 
 def getAverageUndulatorParameter(lattice, unit=1.0, energy = 17.5):

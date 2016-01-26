@@ -104,8 +104,16 @@ def plot_dict(dict_data, filename=None, interval=1, mode="%"):
     #fig.savefig("optim_vect_pict.svg", format="svg")
     plt.show()
 
-def plot_log(filename):
+def plot_log(filename, devices=None):
     dict_data = read_log(filename)
+    if devices is not None:
+        dict_data_new = {}
+        n = 0#len(dict_data["sase"])
+        dict_data_new["sase"] = dict_data["sase"][n/2:]
+        dict_data_new["time"] = dict_data["time"][n/2:]
+        for name in devices:
+            dict_data_new[name] = dict_data[name][n/2:]
+        dict_data = dict_data_new
     plot_dict(dict_data,filename=filename, interval=1)
 
 

@@ -543,6 +543,7 @@ def create_transfer_map(element, order=1):
             """
             phi = phi*np.pi/180.
             de = V*cos(phi)
+
             # pure pi-standing-wave case
             eta = 1.0
 
@@ -555,15 +556,19 @@ def create_transfer_map(element, order=1):
 
             if Ei == 0:
                 print("Warning! Initial energy is zero and cavity.delta_e != 0! Change Ei or cavity.delta_e must be 0" )
-            alpha = sqrt(eta / 8.) / cos(phi) * np.log(Ef/Ei)
-            
-            r11 = (cos(alpha) - sqrt(2./eta) * cos(phi) * sin(alpha))
+
+            cos_phi = cos(phi)
+            alpha = sqrt(eta / 8.) / cos_phi * np.log(Ef/Ei)
+
+            sin_alpha = sin(alpha)
+
+            r11 = (cos(alpha) - sqrt(2./eta)*cos_phi*sin_alpha)
             if abs(Ep) > 1e-10:
-                r12 = sqrt(8./eta) * Ei / Ep * cos(phi) * sin(alpha)
+                r12 = sqrt(8./eta)*Ei/Ep*cos_phi*sin_alpha
             else:
                 r12 = z
-            r21 = -Ep/Ef *(cos(phi)/ sqrt(2.*eta) + sqrt(eta/8.) / cos(phi) ) * sin(alpha)
-            r22 = Ei/Ef * (cos(alpha) + sqrt(2./eta) * cos(phi) * sin(alpha))
+            r21 = -Ep/Ef*(cos_phi/sqrt(2.*eta) + sqrt(eta/8.)/cos_phi)*sin_alpha
+            r22 = Ei/Ef*(cos(alpha) + sqrt(2./eta)*cos_phi*sin_alpha)
             #print r11, r12, r21, r22
             r56 = 0.
             if gamma != 0:
@@ -581,12 +586,12 @@ def create_transfer_map(element, order=1):
 
         def map4cav(R, T, X, dx, dy, tilt, E,  V, freq, phi):
             phi = phi*np.pi/180.
-            #print E
             X = t_apply(R, T, X, dx, dy, tilt)
             delta_e = V*cos(phi)
             if E + delta_e > 0:
                 k = 2.*pi*freq/speed_of_light
                 X[5::6] = (X[5::6]*E + V*np.cos(X[4::6]*k + phi) - delta_e)/(E + delta_e)
+
         transfer_map.phi = element.phi
         transfer_map.order = 2
         #if element.v < 1.e-10 and element.delta_e < 1.e-10:

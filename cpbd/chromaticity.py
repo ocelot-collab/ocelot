@@ -5,6 +5,7 @@ from ocelot.cpbd.optics import trace_z, twiss
 from scipy.integrate import simps
 from numpy.linalg import inv
 from ocelot.cpbd.beam import *
+from ocelot.cpbd.elements import *
 
 def edge_chromaticity_old(lattice, tws_0):
     #tested !
@@ -87,7 +88,7 @@ def sextupole_chromaticity(lattice, tws0, nsuperperiod = 1):
     integr_x = 0.
     integr_y = 0.
     for elem in lattice.sequence:
-        if elem.type == "sextupole":
+        if elem.__class__ == Sextupole:
             bx = []
             by = []
             Dx = []

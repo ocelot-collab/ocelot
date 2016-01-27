@@ -483,6 +483,7 @@ def create_transfer_map(element, order=1):
         transfer_map.map_z = lambda X, z, energy: t_apply(R_z(z, energy), transfer_map.T_z(z), X, 0., 0., 0.)
         transfer_map.sym_map_z = lambda X, z, energy: t_apply(R_z(z, energy), transfer_map.T_z(z), X, 0., 0., 0.)
 
+        #transfer_map.map_z = lambda u, z, energy: map4undulator(u, z, 2.*pi/element.lperiod, 0., energy, ndiv=int(z*10+2))
         if element.solver in ["sym", "symplectic"]:
             #print "undulator transfer map is symplectic map! "
             transfer_map.order = 2

@@ -6,7 +6,7 @@ from time import time
 import matplotlib.pyplot as plt
 from scipy.interpolate import splrep, splev, interp1d
 from scipy.integrate import simps
-from numpy.linalg import svd
+from numpy.linalg import svd, inv
 from numpy import diag, transpose, linspace, shape
 
 from ocelot.cpbd.errors import *
@@ -14,6 +14,7 @@ from ocelot.cpbd.match import closed_orbit
 from ocelot.cpbd.optics import *
 from ocelot.cpbd.track import *
 import copy
+
 
 class BPM(object):
     def __init__(self, id = None):
@@ -84,7 +85,7 @@ class Orbit:
         self.create_COR(lattice)
         return self
 
-    def create_BPM(self, lattice):
+    def create_BPM(self, lattice, bpm_list=None):
         """
         Search bpm in the lattice and create list of bpms
         :param lattice: class MagneticLattice
@@ -94,15 +95,15 @@ class Orbit:
         L = 0.
         for elem in lattice.sequence:
             if elem.type == "monitor":
-                try:
-                    elem.weight
-                except:
-                    elem.weight = 1.
-                bpm = elem #BPM(id = elem.id)
-                bpm.s = L+elem.l/2.
-                bpm.x_ref = 0.
-                bpm.y_ref = 0.
-                self.bpms.append(bpm)
+                if bpm_list is None or elem.id in bpm_list:
+                    try:
+                        elem.weight
+                    except:
+                        elem.weight = 1.
+                    elem.s = L+elem.l/2.
+                    elem.x_ref = 0.
+                    elem.y_ref = 0.
+                    self.bpms.append(elem)
             L += elem.l
         if len(self.bpms) == 0:
             print("there is not monitors")
@@ -125,7 +126,7 @@ class Orbit:
             bpm.x = x_bpm[i]
             bpm.y = y_bpm[i]
 
-    def create_COR(self, lattice):
+    def create_COR(self, lattice, cor_list=None):
         """
         Search correctors (horizontal and vertical) in the lattice and create list of hcors and list of vcors
         :param lattice: class MagneticLattice
@@ -136,20 +137,23 @@ class Orbit:
         L = 0.
         for elem in lattice.sequence:
             if elem.type == "vcor":
-                vcor = elem #copy.copy(elem)
-                vcor.s = L+elem.l/2.
-                vcor.dI = 0.0001
-                self.vcors.append(vcor)
+                if cor_list is None or elem.id in cor_list:
+                    #elem = elem #copy.copy(elem)
+                    elem.s = L+elem.l/2.
+                    #vcor.dI = 0.0001
+                    self.vcors.append(elem)
             elif elem.type == "hcor":
-                hcor = elem #copy.copy(elem)
-                hcor.s = L+elem.l/2.
-                hcor.dI = 0.0001
-                self.hcors.append(hcor)
+                if cor_list is None or elem.id in cor_list:
+                    #elem = elem #copy.copy(elem)
+                    elem.s = L+elem.l/2.
+                    #hcor.dI = 0.0001
+                    self.hcors.append(elem)
             L += elem.l
         if len(self.hcors) == 0:
             print("there is not horizontal corrector")
         if len(self.vcors) == 0:
             print("there is not vertical corrector")
+
 
     def create_types(self, lattice, types, remove_elems=[]):
         self.htypes = []
@@ -184,6 +188,7 @@ class Orbit:
         navi = Navigator()
         L = 0.
         for bpm in self.bpms:
+            #print("energy = ", p.E)
             dz = bpm.s - L
             track(lattice, [p], dz, navi, order=1)
             bpm.x = p.x
@@ -281,13 +286,22 @@ class Orbit:
         self.resp = real_resp
         return self.resp
 
-    def measure_response_matrix(self, lattice, p_init=None):
+    def measure_response_matrix(self, lattice, p_init=None, match_ic=False):
+        """
+        :param lattice:
+        :param p_init:
+        :param match_ic: matching initial coordinates of particles
+        :return:
+        """
         print "measure = ", p_init.x, p_init.y, p_init.px, p_init.py, p_init.E
         shift = 0.0001
         m = len(self.bpms)
         nx = len(self.hcors)
         ny = len(self.vcors)
-        real_resp = zeros((m*2, nx + ny))
+        if match_ic:
+            real_resp = zeros((m*2, nx + ny+4))
+        else:
+            real_resp = zeros((m*2, nx + ny))
         self.read_virtual_orbit(lattice, p_init=copy.deepcopy(p_init))
         bpms = copy.deepcopy(self.bpms)
 
@@ -296,9 +310,10 @@ class Orbit:
             hcor.angle = shift
             lattice.update_transfer_maps()
             self.read_virtual_orbit(lattice, p_init=copy.deepcopy(p_init))
+
             for j, bpm in enumerate(self.bpms):
                 real_resp[j, ix] = (bpm.x - bpms[j].x)/shift
-                real_resp[j+m, ix] = 0#(bpm.y - bpms[j].y)/shift
+                real_resp[j+m, ix] =(bpm.y - bpms[j].y)/shift
             hcor.angle = 0
         lattice.update_transfer_maps()
 
@@ -307,23 +322,24 @@ class Orbit:
             vcor.angle = shift
             lattice.update_transfer_maps()
             self.read_virtual_orbit(lattice, p_init=copy.deepcopy(p_init))
+
             for j, bpm in enumerate(self.bpms):
-                real_resp[j, iy+nx] = 0#(bpm.x - bpms[j].x)/shift
+                real_resp[j, iy+nx] = (bpm.x - bpms[j].x)/shift
                 real_resp[j+m, iy+nx] = (bpm.y - bpms[j].y)/shift
             vcor.angle = 0
         lattice.update_transfer_maps()
 
-        #for i, par in enumerate(["x", "px", "y", "py"]):
-        #    print(i)
-        #    print "measure = ", p_init.x, p_init.y, p_init.px, p_init.py, p_init.E
-        #    p_i = Particle(E = p_init.E)
-        #    p_i.__dict__[par] = 0.001
-        #    p2 = copy.deepcopy(p_i)
-        #    self.read_virtual_orbit(lattice, p_init=p2)
-        #    for j, bpm in enumerate(self.bpms):
-        #        real_resp[j, nx + ny + i] = (bpm.x - bpms[j].x)/0.001
-        #        real_resp[j+m, nx + ny + i] = (bpm.y - bpms[j].y)/0.001
-
+        if match_ic:
+            for i, par in enumerate(["x", "px", "y", "py"]):
+                print(i)
+                p_i = Particle(E = p_init.E)
+                p_i.__dict__[par] = 0.0001
+                p2 = copy.deepcopy(p_i)
+                print "measure = ", p2.x, p2.y, p2.px, p2.py, p2.E
+                self.read_virtual_orbit(lattice, p_init=p2)
+                for j, bpm in enumerate(self.bpms):
+                    real_resp[j, nx + ny + i] = (bpm.x - bpms[j].x)/0.0001
+                    real_resp[j+m, nx + ny + i] = (bpm.y - bpms[j].y)/0.0001
         self.resp = real_resp
         return real_resp
 
@@ -396,9 +412,8 @@ class Orbit:
         ky = len(self.vcors)
 
         self.resp = zeros((2*m, kx + ky))
-        self.resp[:m,:kx] = h_resp[:,:]
-        self.resp[m:,kx:] = v_resp[:,:]
-
+        self.resp[:m,:kx] = h_resp[:, :]
+        self.resp[m:,kx:] = v_resp[:, :]
         """
         if tw_init is not None:
             p_init = Particle(E=tw_init.E)
@@ -406,13 +421,13 @@ class Orbit:
             bpms = copy.deepcopy(self.bpms)
             for i, par in enumerate(["x", "px", "y", "py"]):
                 print(i)
-                p_i = Particle(E = p_init.E)
+                p_i = Particle(E=p_init.E)
                 p_i.__dict__[par] = 0.0001
                 p2 = copy.deepcopy(p_i)
                 self.read_virtual_orbit(lattice, p_init=p2)
                 for j, bpm in enumerate(self.bpms):
-                    self.resp[j, kx + ky + i] = (bpm.x - bpms[j].x)/0.0001
-                    self.resp[j+m, kx + ky + i] = (bpm.y - bpms[j].y)/0.0001
+                    self.resp[j, kx + ky + i] = 0#(bpm.x - bpms[j].x)/0.0001
+                    self.resp[j+m, kx + ky + i]=0# (bpm.y - bpms[j].y)/0.0001
                     #print j+m, nx + ny + i, (bpm.x - bpms[j].x)/0.00001
         """
         return self.resp
@@ -423,21 +438,19 @@ class Orbit:
             weight = eye(len(misallign))
         resp_matrix_w = dot(weight, resp_matrix)
         misallign_w = dot(weight, misallign)
-        U, s,V = svd(resp_matrix_w)
-        #s_inv = 1./s
-        #for i in range(len(s)):
-        #    if s_inv[i]>1.e+5:
-        #        s_inv[i] = 0.
+        U, s, V = svd(resp_matrix_w)
+        #print s
         s_inv = zeros(len(s))
         for i in range(len(s)):
-            if s[i]<1.e-5:
+            #if s[i]<1./max(s):
+            if s[i] < 1.e-2:
                 s_inv[i] = 0.
             else:
                 s_inv[i] = 1./s[i]
-        Sinv = zeros((shape(U)[0],shape(V)[0]))
+        Sinv = zeros((shape(U)[0], shape(V)[0]))
         Sinv[:len(s), :len(s)] = diag(s_inv)
         Sinv = transpose(Sinv)
-        A = dot(transpose(V),dot(Sinv, transpose(U)))
+        A = dot(transpose(V), dot(Sinv, transpose(U)))
         angle = dot(A, misallign_w)
         return angle
 
@@ -455,6 +468,11 @@ class Orbit:
         angle = self.apply_svd(self.resp, monitors, weight=weights)
 
         print("correction = ", time() - start)
+        for i, hcor in enumerate(self.hcors):
+            hcor.angle -= angle[i]
+        for i, vcor in enumerate(self.vcors):
+            vcor.angle -= angle[i+len(self.hcors)]
+        """
         ix = 0
         iy = 0
         for elem in lattice.sequence:
@@ -467,9 +485,14 @@ class Orbit:
                 elem.angle -= angle[iy+len(self.hcors)]
                 #print "y:", elem.angle
                 iy += 1
+        """
         #print "ix = ", ix, "iy =", iy, len(angle)
-        #p = Particle(x=angle[-4], px=angle[-3], y=angle[-2], py=angle[-1], E=p_init.E)
         lattice.update_transfer_maps()
+        if p_init is not None:
+            p_init.x = -angle[-4]
+            p_init.px = -angle[-3]
+            p_init.y  = -angle[-2]
+            p_init.py = -angle[-1]
         return 0
 
     def elem_correction(self, lattice, elem_response, elem_types,  remove_elems=[]):

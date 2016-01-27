@@ -122,7 +122,7 @@ class FLASH1MachineInterface():
 
         # default 'BKR' gmd
         h = np.array(doocs.read('TTF2.FEL/BKR.FLASH.STATE/BKR.FLASH.STATE/ENERGY.CLIP.SPECT'))
-        val = np.mean(h)
+        val = np.mean(np.array([x[1] for x in h]))
         return val
 
 

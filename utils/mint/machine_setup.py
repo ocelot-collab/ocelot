@@ -39,6 +39,8 @@ class HighLevelInterface:
         self.dp = dp
 
     def read_all(self):
+        self.lat.gun_energy = self.mi.get_gun_energy()
+        self.lat.sase = self.mi.get_sase()
         self.read_cavs()
         self.read_quads()
         self.read_bends()
@@ -178,10 +180,65 @@ class HighLevelInterface:
 
 
 class MachineSetup:
-    def __init__(self):
+    def __init__(self, lattice, mi=None, dp=None):
+        self.lat = lattice
+        self.mi = mi
+        self.dp = dp
+        self.hli = HighLevelInterface(lattice, mi, dp)
         pass
 
-    def load_lattice(self, filename, lat):
+    def save_lattice(self, filename):
+        print "reading currents from DOOCS system ... ",
+        self.hli.read_all()
+        print "OK"
+
+        print "getting currents of quad ... "
+        self.dict_quad = self.get_elem_type_currents(self.lat, ["quadrupole"])
+        print "OK"
+
+        print "getting currents of bend ... "
+        self.dict_bend = self.get_elem_type_currents(self.lat, ["sbend", "rbend", "bend"])
+        print "OK"
+
+        print "getting currents of correctors ... "
+        self.dict_cor = self.get_elem_type_currents(self.lat, ["hcor", "vcor"])
+        print "OK"
+
+        print "getting params of cavities ... "
+        self.dict_cav = self.get_cav_params(self.lat)
+        print "OK"
+
+        print "getting beam positions ...  "
+        self.dict_orbit = self.get_orbit(self.lat)
+        print "OK"
+
+        print "getting currents of sext  ...  "
+        self.dict_sext = self.get_elem_type_currents(self.lat, ["sextupole"])
+        print "OK"
+
+        print "getting gun energy  ...  "
+        self.gun_energy = self.get_elem_type_currents(self.lat, ["sextupole"])
+        print "OK"
+
+        print "getting currents of sext  ...  "
+        self.dict_sext = self.get_elem_type_currents(self.lat, ["sextupole"])
+        print "OK"
+
+        #print ("getting orbit ... ", )
+        #self.dict_orbit = self.get_cav_params(lat)
+        #print ("OK")
+        data = {}
+        data["quad"] = self.dict_quad
+        data["bend"] = self.dict_bend
+        data["cor"] = self.dict_cor
+        data["cav"] = self.dict_cav
+        data["orbit"] = self.dict_orbit
+        data["sext"] = self.dict_sext
+        data["sase"] = self.lat.sase
+        data["gun_energy"] = self.lat.gun_energy
+        pickle.dump(data, open(filename, "wb"))
+
+    def load_lattice(self, filename, lattice):
         data = pickle.load(open(filename, "rb"))
         self.dict_quad = data["quad"]
         self.dict_bend = data["bend"]
@@ -189,8 +246,16 @@ class MachineSetup:
         self.dict_cav = data["cav"]
         self.dict_orbit = data["orbit"]
         self.dict_sext = data["sext"]
+        try:
+            lattice.sase = data["sase"]
+        except:
+            print "SASE value was not logged"
+        try:
+            lattice.gun_energy = data["gun_energy"]
+        except:
+            print "gun energy was not logged"
 
-        for elem in lat.sequence:
+        for elem in lattice.sequence:
 
             if elem.type == "quadrupole" and elem.id in self.dict_quad.keys():
                 elem.mi_id = self.dict_quad[elem.id]["mi_id"]
@@ -221,43 +286,14 @@ class MachineSetup:
                 elem.mi_id = self.dict_sext[elem.id]["mi_id"]
                 elem.dev_type = self.dict_sext[elem.id]["dev_type"]
                 elem.I = self.dict_sext[elem.id]["I"]
+        return lattice.update_transfer_maps()
 
-    def save_lattice(self, lat, filename):
-        print "getting currents of quad ... "
-        self.dict_quad = self.get_elem_type_currents(lat, ["quadrupole"])
-        print "OK"
+    def set_elem_energy(self, lat, init_energy):
+        E = init_energy
+        for elem in lat.sequence:
+            E += elem.transfer_map.delta_e
+            elem.E = E
 
-        print "getting currents of bend ... "
-        self.dict_bend = self.get_elem_type_currents(lat, ["sbend", "rbend", "bend"])
-        print "OK"
-
-        print "getting currents of correctors ... "
-        self.dict_cor = self.get_elem_type_currents(lat, ["hcor", "vcor"])
-        print "OK"
-
-        print "getting params of cavities ... "
-        self.dict_cav = self.get_cav_params(lat)
-        print "OK"
-
-        print "getting beam positions ...  "
-        self.dict_orbit = self.get_orbit(lat)
-        print "OK"
-
-        print "getting currents of sext  ...  "
-        self.dict_sext = self.get_elem_type_currents(lat, ["sextupole"])
-        print "OK"
-
-        #print ("getting orbit ... ", )
-        #self.dict_orbit = self.get_cav_params(lat)
-        #print ("OK")
-        data = {}
-        data["quad"] = self.dict_quad
-        data["bend"] = self.dict_bend
-        data["cor"] = self.dict_cor
-        data["cav"] = self.dict_cav
-        data["orbit"] = self.dict_orbit
-        data["sext"] = self.dict_sext
-        pickle.dump(data, open(filename, "wb"))
 
     def get_elem_type_currents(self, lat, type):
         data = {}
@@ -327,6 +363,17 @@ class MachineSetup:
                     elem.y = data[elem.id]["y"]
         return lat
 
+    def set_orbit(self, lat):
+        data = self.dict_orbit
+        for elem in lat.sequence:
+            if elem.type == "monitor":
+                if elem.id in data.keys():
+                    elem.mi_id = data[elem.id]["mi_id"]
+                    elem.x = data[elem.id]["x"]
+                    elem.y = data[elem.id]["y"]
+        return lat
+
+
     def convert_currents(self, lat, init_energy):
         E = init_energy
         for elem in lat.sequence:
@@ -365,3 +412,4 @@ class MachineSetup:
             #        print(elem.id,  elem.I, E, angle, elem.dev_type)
             #    else:
             #        elem.angle = angle*0.001
+        lat.update_transfer_maps()

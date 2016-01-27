@@ -41,10 +41,10 @@ class FLASH1MachineInterface():
     def init_corrector_vals(self, correctors):
         vals = np.zeros(len(correctors))#np.zeros(len(correctors))
         for i in range(len(correctors)):
-            print correctors[i],
+            #print correctors[i],
             mag_channel = 'TTF2.MAGNETS/STEERER/' + correctors[i] + '/PS'
             vals[i] = doocs.read(mag_channel)
-            print vals[i], doocs.read(mag_channel), mag_channel
+            #print vals[i], doocs.read(mag_channel), mag_channel
         return vals
 
     def get_cavity_info(self, cavs):

@@ -46,7 +46,7 @@ class HighLevelInterface:
         self.read_bends()
         self.read_cors()
         self.read_sexts()
-        self.read_bends()
+        self.read_bpms()
 
     def read_quads(self):
         id2I_dict = {}
@@ -131,6 +131,7 @@ class HighLevelInterface:
         return self.lat
 
     def read_cors(self):
+        id2I_dict = {}
         for elem in self.lat.sequence:
             if elem.type in ["hcor", "vcor"]:
                 name = elem.id
@@ -139,14 +140,18 @@ class HighLevelInterface:
                     elem.mi_id
                 except:
                     elem.mi_id = name
-                try:
-                    #print elem.mi_id, elem.id
-                    vals = self.mi.init_corrector_vals([elem.mi_id])
-                    elem.I = vals[0]
-                    #print elem.I
-                except:
-                    print(elem.mi_id, "UNKNOW")
-                    elem.type = "drift"
+                if elem.mi_id in id2I_dict.keys():
+                    elem.I = id2I_dict[elem.mi_id]
+                else:
+                    try:
+                        #print elem.mi_id, elem.id
+                        vals = self.mi.init_corrector_vals([elem.mi_id])
+                        elem.I = vals[0]
+                        id2I_dict[elem.mi_id] = elem.I
+                        #print elem.I
+                    except:
+                        print(elem.mi_id, "UNKNOW")
+                        elem.type = "drift"
 
     def read_sexts(self):
         id2I_dict = {}

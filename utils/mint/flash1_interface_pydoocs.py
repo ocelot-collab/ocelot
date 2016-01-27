@@ -59,7 +59,7 @@ class FLASH1MachineInterface():
             #print(phase_channel)
             ampls[i] = doocs.read(ampl_channel)
             phases[i] = doocs.read(phase_channel)
-            print cavs[i], ampls[i], phases[i]
+            #print cavs[i], ampls[i], phases[i]
         return ampls, phases
 
     def get_gun_energy(self):

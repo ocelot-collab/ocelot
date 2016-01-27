@@ -115,6 +115,7 @@ class HighLevelInterface:
                         phases = dict_cavity[elem.mi_id]["phi"]
                     else:
                         ampls, phases = self.mi.get_cavity_info([elem.mi_id])
+                        dict_cavity[elem.mi_id] = {}
                         dict_cavity[elem.mi_id]["ampl"] = ampls[0]
                         dict_cavity[elem.mi_id]["phi"] = phases[0]
                 except:

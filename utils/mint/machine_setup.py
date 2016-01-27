@@ -117,8 +117,8 @@ class HighLevelInterface:
                 elem.phi = phases[0]
                 if elem.mi_id == "M1.ACC1":
                     elem.v = elem.v/8.
-                    if abs(elem.phase) > 10:
-                        print "too large phase on ", elem.mi_id, elem.phase
+                    if abs(elem.phi) > 10:
+                        print "too large phase on ", elem.mi_id, elem.phi
                 elif elem.mi_id == "M1.ACC39":
                     # deaccelerator
                     elem.v = elem.v/4.

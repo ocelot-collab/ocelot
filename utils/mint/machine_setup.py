@@ -125,16 +125,16 @@ class HighLevelInterface:
                     elem.phi = phases[0] + 180.
                 elif "ACC23" in elem.mi_id:
                     elem.v = elem.v/8.
-                    if abs(elem.phase) > 10:
-                        print "too large phase on ", elem.mi_id, elem.phase
+                    if abs(elem.phi) > 10:
+                        print "too large phase on ", elem.mi_id, elem.phi
                 elif "ACC45" in elem.mi_id :
                     elem.v = elem.v/8.
-                    if abs(elem.phase) > 10:
-                        print "too large phase on ", elem.mi_id, elem.phase
+                    if abs(elem.phi) > 10:
+                        print "too large phase on ", elem.mi_id, elem.phi
                 elif "ACC67" in elem.mi_id:
                     elem.v = elem.v/8.
-                    if abs(elem.phase) > 10:
-                        print "too large phase on ", elem.mi_id, elem.phase
+                    if abs(elem.phi) > 10:
+                        print "too large phase on ", elem.mi_id, elem.phi
         self.lat.update_transfer_maps()
         return self.lat
 

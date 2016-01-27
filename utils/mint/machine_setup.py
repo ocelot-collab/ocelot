@@ -140,10 +140,10 @@ class HighLevelInterface:
                 except:
                     elem.mi_id = name
                 try:
-                    print elem.mi_id, elem.id
+                    #print elem.mi_id, elem.id
                     vals = self.mi.init_corrector_vals([elem.mi_id])
                     elem.I = vals[0]
-                    print elem.I
+                    #print elem.I
                 except:
                     print(elem.mi_id, "UNKNOW")
                     elem.type = "drift"

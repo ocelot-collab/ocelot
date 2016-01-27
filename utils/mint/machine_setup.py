@@ -73,7 +73,7 @@ class HighLevelInterface:
                         id2I_dict[elem.mi_id]["I"] = elem.I
                         id2I_dict[elem.mi_id]["polarity"] = elem.polarity
                     except:
-                        print(name, "  CAN MOT FIND")
+                        print "* ", name, "  CAN MOT FIND"
 
     def read_bends(self):
         id2I_dict = {}
@@ -101,7 +101,7 @@ class HighLevelInterface:
                         id2I_dict[elem.mi_id] = {}
                         id2I_dict[elem.mi_id]["I"] = elem.I
                     except:
-                        print(elem.id, "  CAN MOT FIND")
+                        print "* ", elem.id, "  CAN MOT FIND"
 
     def read_cavs(self):
         for elem in self.lat.sequence:
@@ -118,7 +118,7 @@ class HighLevelInterface:
                 if elem.mi_id == "M1.ACC1":
                     elem.v = elem.v/8.
                     if abs(elem.phi) > 10:
-                        print "too large phase on ", elem.mi_id, elem.phi
+                        print "* too large phase on ", elem.mi_id, elem.phi
                 elif elem.mi_id == "M1.ACC39":
                     # deaccelerator
                     elem.v = elem.v/4.
@@ -126,15 +126,15 @@ class HighLevelInterface:
                 elif "ACC23" in elem.mi_id:
                     elem.v = elem.v/8.
                     if abs(elem.phi) > 10:
-                        print "too large phase on ", elem.mi_id, elem.phi
+                        print "* too large phase on ", elem.mi_id, elem.phi
                 elif "ACC45" in elem.mi_id :
                     elem.v = elem.v/8.
                     if abs(elem.phi) > 10:
-                        print "too large phase on ", elem.mi_id, elem.phi
+                        print "* too large phase on ", elem.mi_id, elem.phi
                 elif "ACC67" in elem.mi_id:
                     elem.v = elem.v/8.
                     if abs(elem.phi) > 10:
-                        print "too large phase on ", elem.mi_id, elem.phi
+                        print "* too large phase on ", elem.mi_id, elem.phi
         self.lat.update_transfer_maps()
         return self.lat
 
@@ -158,7 +158,7 @@ class HighLevelInterface:
                         id2I_dict[elem.mi_id] = elem.I
                         #print elem.I
                     except:
-                        print(elem.mi_id, "UNKNOW")
+                        print "* ", elem.mi_id, "UNKNOW"
                         elem.type = "drift"
 
     def read_sexts(self):
@@ -188,7 +188,7 @@ class HighLevelInterface:
                     elem.x = X[0]
                     elem.y = Y[0]
                 except:
-                    print(name, "  CAN MOT FIND")
+                    print "* ", name, "  CAN MOT FIND"
 
 
 

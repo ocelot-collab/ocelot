@@ -39,7 +39,7 @@ class FLASH1MachineInterface():
 
 
     def init_corrector_vals(self, correctors):
-        vals = np.zeros(len(correctors))#np.zeros(len(correctors))
+        vals = np.zeros(len(correctors))
         for i in range(len(correctors)):
             #print correctors[i],
             mag_channel = 'TTF2.MAGNETS/STEERER/' + correctors[i] + '/PS'
@@ -55,8 +55,6 @@ class FLASH1MachineInterface():
             #phase_channel = 'FLASH.RF/LLRF.CONTROLLER/CTRL.' + cavs[i] + '/SP.PHASE'
             ampl_channel = "FLASH.RF/LLRF.CONTROLLER/PVS." + cavs[i] + "/AMPL.SAMPLE"
             phase_channel = "FLASH.RF/LLRF.CONTROLLER/PVS." + cavs[i]+ "/PHASE.SAMPLE"
-            #print(ampl_channel)
-            #print(phase_channel)
             ampls[i] = doocs.read(ampl_channel)
             phases[i] = doocs.read(phase_channel)
             #print cavs[i], ampls[i], phases[i]

@@ -104,17 +104,27 @@ class HighLevelInterface:
                         print "* ", elem.id, "  CAN MOT FIND"
 
     def read_cavs(self):
+        dict_cavity = {}
         for elem in self.lat.sequence:
             if elem.type == "cavity":
                 name = elem.id.split("_")
                 elem.mi_id = name[-2] + "." + name[-1]
                 try:
-                    ampls, phases = self.mi.get_cavity_info([elem.mi_id])
+                    if elem.mi_id in dict_cavity.keys():
+                        ampls = dict_cavity[elem.mi_id]["ampl"]
+                        phases = dict_cavity[elem.mi_id]["phi"]
+                    else:
+                        ampls, phases = self.mi.get_cavity_info([elem.mi_id])
+                        dict_cavity[elem.mi_id]["ampl"] = ampls[0]
+                        dict_cavity[elem.mi_id]["phi"] = phases[0]
                 except:
-                    print ("UNKNOWN cav", elem.mi_id, elem.id)
+                    print "* UNKNOWN cav", elem.mi_id, elem.id
                     continue
-                elem.v = ampls[0]*0.001 # MeV -> GeV
-                elem.phi = phases[0]
+                ampls = dict_cavity[elem.mi_id]["ampl"]
+                phases = dict_cavity[elem.mi_id]["phi"]
+
+                elem.v = ampls*0.001 # MeV -> GeV
+                elem.phi = phases
                 if elem.mi_id == "M1.ACC1":
                     elem.v = elem.v/8.
                     if abs(elem.phi) > 10:
@@ -122,14 +132,13 @@ class HighLevelInterface:
                 elif elem.mi_id == "M1.ACC39":
                     # deaccelerator
                     elem.v = elem.v/4.
-                    elem.phi = phases[0] + 180.
+                    elem.phi = phases + 180.
                 elif "ACC23" in elem.mi_id:
                     elem.v = elem.v/8.
                     if abs(elem.phi) > 10:
                         print "* too large phase on ", elem.mi_id, elem.phi
                         print "# set to element zero phase: ", elem.mi_id,".phi <-- 0"
                         elem.phi = 0.
-
                 elif "ACC45" in elem.mi_id :
                     elem.v = elem.v/8.
                     if abs(elem.phi) > 10:
@@ -138,6 +147,8 @@ class HighLevelInterface:
                     elem.v = elem.v/8.
                     if abs(elem.phi) > 10:
                         print "* too large phase on ", elem.mi_id, elem.phi
+        for cav in dict_cavity.keys():
+            print cav, " E = ", dict_cavity[cav]["ampl"], "MeV, phi =  ", dict_cavity[cav]["phi"], " grad"
         self.lat.update_transfer_maps()
         return self.lat
 

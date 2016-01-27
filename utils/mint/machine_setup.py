@@ -136,8 +136,7 @@ class HighLevelInterface:
                 elif "ACC23" in elem.mi_id:
                     elem.v = elem.v/8.
                     if abs(elem.phi) > 10:
-                        print "* too large phase on ", elem.mi_id, elem.phi
-                        print "# set to element zero phase: ", elem.mi_id,".phi <-- 0"
+                        print "* too large phase on ", elem.mi_id, elem.phi, "  # set zero phase: ", elem.mi_id,".phi <-- 0"
                         elem.phi = 0.
                 elif "ACC45" in elem.mi_id :
                     elem.v = elem.v/8.

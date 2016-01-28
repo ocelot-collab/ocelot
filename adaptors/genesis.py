@@ -50,7 +50,7 @@ inputTemplate = "\
  xlamds =  __XLAMDS__\n\
  prad0 =  __PRAD0__\n\
  zrayl =  __ZRAYL__\n\
- zwaist =  0.000000E+00\n\
+ zwaist =  __ZWAIST__\n\
  ncar  =  __NCAR__\n\
  lbc   =    0\n\
  rmax0 =  __RMAX0__\n\
@@ -83,7 +83,7 @@ inputTemplate = "\
  ildpx =    3\n\
  ildpy =    4\n\
  itgaus =    1\n\
- nbins =    4\n\
+ nbins =    __NBINS__\n\
  igamgaus =    1\n\
  lout  = 1 1 1 1 1 0 1 1 1 1 1 0 0 1 0 0 0 0 0 0 0 0 0 0\n\
  iphsty =    2\n\
@@ -119,7 +119,7 @@ inputTemplate = "\
  idmppar =    __DUMP_PARTICLES__\n\
  ilog  =    0\n\
  ffspec =    0\n\
- convharm =    1\n\
+ convharm =    __CONVHARM__\n\
  ibfield =  0.000000E+00\n\
  imagl =    0.000000E+00\n\
  idril =    0.000000E+00\n\
@@ -158,6 +158,7 @@ class GenesisInput:
         self.zrayl = 0.00001
         
         self.prad0 = 0 
+        self.zwaist = 0 
         self.npart = 8192   # number of macroparticles per slice
         self.ncar = 151   # number of grid points for field calculation along one axis
         self.nslice = 1504   # number of slices
@@ -181,7 +182,8 @@ class GenesisInput:
         self.solen = 0   #
         self.sl = 0   #
         self.f1st = 0   # 
-
+        self.nbins = 4  # Number of bins in the particle phase. The value has to be at least 4 or larger than (2+2n), depending on whether the bunching at the nth harmonics is needed 
+        
         self.eloss = 0
         self.srsig = 1 # energy fluctuations from sr
         self.sravg = 1 # energy loss from sr
@@ -194,7 +196,7 @@ class GenesisInput:
         self.zstop = 256.0
         
         self.svar = 0.01  
-    
+        self.convharm = 1 #When the particle distribution is imported from a PARTFILE Genesis 1.3 allows the upconversion to a higher harmonics. The harmonic number is specified with CONVHARM and has a defulat value of 1, corresponding to no up-conversion. The user has to make sure that in the input deck XLAMDS is adjusted, according to the new wavelength.
         self.nharm = 1
         self.iotail = 1
     

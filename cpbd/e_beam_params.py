@@ -5,6 +5,7 @@ from scipy.integrate import simps
 from ocelot.common.globals import *
 from ocelot.cpbd.optics import trace_z, twiss
 from ocelot.cpbd.beam import *
+from ocelot.cpbd.elements import *
 from ocelot.rad.undulator_params import *
 
 
@@ -31,13 +32,16 @@ def I5_ID(L, h0, lu, beta_xc, Dx0, Dxp0):
         150 *h0* pi**2* lu**2* (480* Dx0 + h0* (4* L**2 + 48 *beta_xc**2 - lu**2))))
     return I
 
-def radiation_integral(lattice, twiss_0, nsuperperiod = 1):
+def radiation_integrals(lattice, twiss_0, nsuperperiod = 1):
     #TODO: add I4 for rectangular magnets I4 = Integrate(2 Dx(z)*k(z)*h(z), Z)
+    
+    n_points_element = 5
+    
     tws_elem = twiss_0
     (I1, I2, I3,I4, I5) = (0., 0., 0., 0., 0.)
     h = 0.
     for elem in lattice.sequence:
-        if elem.type == "rbend" or elem.type == "sbend" or elem.type == "bend" or elem.type == "quadrupole":
+        if elem.__class__ in (SBend, RBend, Bend, Quadrupole):
             Dx = []
             Hinvariant = []
             Z = []
@@ -46,7 +50,7 @@ def radiation_integral(lattice, twiss_0, nsuperperiod = 1):
             else:
                 h = 0.
 
-            for z in linspace(0, elem.l,num = 50, endpoint=True):
+            for z in linspace(0, elem.l,num = n_points_element, endpoint=True):
                 tws_z = elem.transfer_map(z)*tws_elem
                 Dx.append(tws_z.Dx)
                 Z.append(z)
@@ -81,7 +85,7 @@ class EbeamParams:
             tws = twiss(lattice, tws0)
             
         self.lat = lattice
-        (I1,I2,I3, I4, I5) = radiation_integral(lattice, self.tws0 , nsuperperiod)
+        (I1,I2,I3, I4, I5) = radiation_integrals(lattice, self.tws0 , nsuperperiod)
         self.I1 = I1
         self.I2 = I2
         self.I3 = I3
@@ -152,33 +156,37 @@ class EbeamParams:
         print("sigma_e with IDs =   ", self.sigma_e_ID)
         print("U0 from IDs =        ", self.U0_ID,  "  MeV")
 
-    def print_params(self):
-        print( "I2 =        ", self.I2)
-        print( "I3 =        ", self.I3)
-        print( "I4 =        ", self.I4)
-        print( "I5 =        ", self.I5)
-        print( "Je =        ", self.Je)
-        print( "Jx =        ", self.Jx)
-        print( "Jy =        ", self.Jy)
-        print( "energy =    ", self.E, "GeV")
-        print( "gamma =     ", self.gamma)
-        print( "sigma_e =   ", self.sigma_e)
-        print( "emittance = ", self.emittance*1e9, " nm*rad")
-        print( "Length =    ", self.Length, " m")
-        print( "U0 =        ", self.U0, "  MeV")
-        print( "Tperiod =   ", self.Tperiod*1e9, " nsec")
-        print( "alpha =     ", self.alpha)
-        print( "tau0 =      ", self.tau0*1e3, " msec")
-        print( "tau_e =     ", self.tau_e*1e3, " msec")
-        print( "tau_x =     ", self.tau_x*1e3, " msec")
-        print( "tau_y =     ", self.tau_y*1e3, " msec")
-        print( "beta_x =    ", self.tws0.beta_x, " m")
-        print( "beta_y =    ", self.tws0.beta_y, " m")
-        print( "alpha_x =   ", self.tws0.alpha_x)
-        print( "alpha_y =   ", self.tws0.alpha_y)
-        print( "Dx =        ", self.tws0.Dx, " m")
-        print( "Dy =        ", self.tws0.Dy, " m")
-        print( "sigma_x =   ", self.sigma_x*1e6, " um")
-        print( "sigma_y =   ", self.sigma_y*1e6, " um")
-        print( "sigma_x' =  ", self.sigma_xp*1e6, " urad")
-        print( "sigma_y' =  ", self.sigma_yp*1e6, " urad")
+    def __str__(self):
+        val = ""
+        val += ( "I2 =        " + str(self.I2) )
+        val += ( "\nI3 =        " + str(self.I3) )
+        val += ( "\nI4 =        " + str(self.I4) )
+        val += ( "\nI5 =        " + str(self.I5) )
+        val += ( "\nJe =        " + str(self.Je) )
+        val += ( "\nJx =        " + str(self.Jx) )
+        val += ( "\nJy =        " + str(self.Jy) )
+        val += ( "\nenergy =    " + str(self.E) +"GeV")
+        val += ( "\ngamma =     " + str(self.gamma) )
+        val += ( "\nsigma_e =   " + str(self.sigma_e) )
+        val += ( "\nemittance = " + str(self.emittance*1e9) +" nm*rad")
+        val += ( "\nLength =    " + str(self.Length) + " m")
+        val += ( "\nU0 =        " + str(self.U0) + "  MeV")
+        val += ( "\nTperiod =   " + str(self.Tperiod*1e9) + " nsec")
+        val += ( "\nalpha =     " + str(self.alpha) )
+        val += ( "\ntau0 =      " + str(self.tau0*1e3) + " msec")
+        val += ( "\ntau_e =     " + str(self.tau_e*1e3) + " msec")
+        val += ( "\ntau_x =     " + str(self.tau_x*1e3) + " msec")
+        val += ( "\ntau_y =     " + str(self.tau_y*1e3) + " msec")
+        val += ( "\nbeta_x =    " + str(self.tws0.beta_x) + " m")
+        val += ( "\nbeta_y =    " + str(self.tws0.beta_y) +" m")
+        val += ( "\nalpha_x =   " + str(self.tws0.alpha_x))
+        val += ( "\nalpha_y =   " + str(self.tws0.alpha_y))
+        val += ( "\nDx =        " + str(self.tws0.Dx) + " m")
+        val += ( "\nDy =        " + str(self.tws0.Dy) + " m")
+        val += ( "\nsigma_x =   " + str(self.sigma_x*1e6) + " um")
+        val += ( "\nsigma_y =   " + str(self.sigma_y*1e6) + " um")
+        val += ( "\nsigma_x' =  " + str(self.sigma_xp*1e6) + " urad")
+        val += ( "\nsigma_y' =  " + str(self.sigma_yp*1e6) + " urad\n")
+        return val
+        
+    

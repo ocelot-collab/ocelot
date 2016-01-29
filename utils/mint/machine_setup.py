@@ -2,7 +2,7 @@ __author__ = 'Sergey Tomin'
 import pickle
 from ocelot.utils.mint.flash1_converter import *
 import numpy as np
-
+import time
 
 """
 def save_currents(lat, filename):
@@ -41,6 +41,7 @@ class HighLevelInterface:
     def read_all(self):
         self.lat.gun_energy = self.mi.get_gun_energy()
         self.lat.sase = self.mi.get_sase()
+        self.timestamp = time.time()
         self.read_cavs()
         self.read_quads()
         self.read_bends()
@@ -263,6 +264,7 @@ class MachineSetup:
         data["sext"] = self.dict_sext
         data["sase"] = self.lat.sase
         data["gun_energy"] = self.lat.gun_energy
+        data["timestamp"] = self.hli.timestamp
         pickle.dump(data, open(filename, "wb"))
 
     def load_lattice(self, filename, lattice):

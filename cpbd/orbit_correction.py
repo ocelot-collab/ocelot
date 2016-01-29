@@ -14,7 +14,7 @@ from ocelot.cpbd.match import closed_orbit
 from ocelot.cpbd.optics import *
 from ocelot.cpbd.track import *
 import copy
-
+import pickle
 
 class BPM(object):
     def __init__(self, id = None):
@@ -56,36 +56,40 @@ class BPM(object):
         self.x0 = self.x
         self.y0 = self.y
 
+class Response_matrix:
+    def __init__(self):
+        self.cor_names = []
+        self.bpm_names = []
+        self.rmatrix = []
+
+    def save(self, filename):
+        pass
+
+    def load(self, filename):
+        pass
+
+    def compare(self, rmatrix):
+        pass
+
 
 class Orbit:
-    def __init__(self, lattice = None):
+    def __init__(self, lattice):
         #self.monitors = []
         #self.correctors = []
-        self.lattice = 0
-        self.h_resp = []
-        self.v_resp = []
+        self.lat = lattice
+        #self.h_resp = []
+        #self.v_resp = []
         self.bpms = []
         self.hcors = []
         self.vcors = []
         self.nu_x = 0.
         self.nu_y = 0.
         self.resp = []
-        if lattice != None:
-            self.lattice_analysis(lattice)
+        #if lattice != None:
+        self.create_BPM()
+        self.create_COR()
 
-    def lattice_analysis(self, lattice):
-        """
-        Analysis of lattice and creation of bpms and correctors lists
-        self.create_BPM(lattice)
-        self.create_COR(lattice)
-        :param lattice: class MagneticLattice
-        :return: orbit
-        """
-        self.create_BPM(lattice)
-        self.create_COR(lattice)
-        return self
-
-    def create_BPM(self, lattice, bpm_list=None):
+    def create_BPM(self, bpm_list=None):
         """
         Search bpm in the lattice and create list of bpms
         :param lattice: class MagneticLattice
@@ -93,7 +97,7 @@ class Orbit:
         """
         self.bpms = []
         L = 0.
-        for elem in lattice.sequence:
+        for elem in self.lat.sequence:
             if elem.type == "monitor":
                 if bpm_list is None or elem.id in bpm_list:
                     try:
@@ -106,7 +110,7 @@ class Orbit:
                     self.bpms.append(elem)
             L += elem.l
         if len(self.bpms) == 0:
-            print("there is not monitors")
+            print("there are not monitors")
         return self.bpms
 
     def set_ref_pos(self):
@@ -126,7 +130,7 @@ class Orbit:
             bpm.x = x_bpm[i]
             bpm.y = y_bpm[i]
 
-    def create_COR(self, lattice, cor_list=None):
+    def create_COR(self, cor_list=None):
         """
         Search correctors (horizontal and vertical) in the lattice and create list of hcors and list of vcors
         :param lattice: class MagneticLattice
@@ -135,31 +139,27 @@ class Orbit:
         self.hcors = []
         self.vcors = []
         L = 0.
-        for elem in lattice.sequence:
+        for elem in self.lat.sequence:
             if elem.type == "vcor":
                 if cor_list is None or elem.id in cor_list:
-                    #elem = elem #copy.copy(elem)
                     elem.s = L+elem.l/2.
-                    #vcor.dI = 0.0001
                     self.vcors.append(elem)
             elif elem.type == "hcor":
                 if cor_list is None or elem.id in cor_list:
-                    #elem = elem #copy.copy(elem)
                     elem.s = L+elem.l/2.
-                    #hcor.dI = 0.0001
                     self.hcors.append(elem)
             L += elem.l
         if len(self.hcors) == 0:
-            print("there is not horizontal corrector")
+            print("there are not horizontal correctors")
         if len(self.vcors) == 0:
-            print("there is not vertical corrector")
+            print("there are not vertical correctora")
 
 
-    def create_types(self, lattice, types, remove_elems=[]):
+    def create_types(self, types, remove_elems=[]):
         self.htypes = []
         self.vtypes = []
         L = 0.
-        for elem in lattice.sequence:
+        for elem in self.lat.sequence:
             L += elem.l
             if elem.type in types:
                 if "_U" in elem.id:
@@ -171,7 +171,7 @@ class Orbit:
                 self.vtypes.append(elem)
 
 
-    def read_virtual_orbit(self, lattice, p_init=None):
+    def read_virtual_orbit(self, p_init=None):
         """
         searching closed orbit by function closed_orbit(lattice) and searching coordinates of beam at the bpm possitions
         :param lattice: class MagneticLattice
@@ -180,7 +180,7 @@ class Orbit:
         X = []
         Y = []
         if p_init == None:
-            self.particle0 = closed_orbit(lattice)
+            self.particle0 = closed_orbit(self.lat)
         else:
             self.particle0 = p_init
         #print "particle2 = ", self.particle0.s, self.particle0.x
@@ -190,7 +190,7 @@ class Orbit:
         for bpm in self.bpms:
             #print("energy = ", p.E)
             dz = bpm.s - L
-            track(lattice, [p], dz, navi, order=1)
+            track(self.lat, [p], dz, navi, order=1)
             bpm.x = p.x
             bpm.y = p.y
             bpm.E = p.E
@@ -201,7 +201,7 @@ class Orbit:
         return array(X), array(Y)
 
 
-    def optical_func_params(self, lattice, tw_init=None):
+    def optical_func_params(self, tw_init=None):
         """
         Optical function parameters for correctors and bpms. It is needed for calculation of ideal response matrix:
         defining beta functions on the azimuth of correctors and bpms: beta_x, beta_y;
@@ -213,17 +213,11 @@ class Orbit:
         if tw_init == None:
             tw_init = Twiss()
 
-        tws = twiss(lattice, tw_init, nPoints=int(lattice.totalLen/0.05))
-        #tws = twiss(lattice, tw_init)
+        tws = twiss(self.lat, tw_init, nPoints=int(self.lat.totalLen/0.05))
         s = array([tw.s for tw in tws])
-        #plt.plot(s, array([tw.mux for tw in tws]))
-        #plt.show()
         tck_mux = splrep(s, array([tw.mux for tw in tws]))
         tck_muy = splrep(s, array([tw.muy for tw in tws]))
 
-        #print f_mux(1)
-        #tck_mux = splrep(s, [tw.mux  for tw in tws])
-        #f_mux = splev(z, tck_mux)
         beta_x = array([tw.beta_x for tw in tws])
         beta_y = array([tw.beta_y for tw in tws])
         self.nu_x = tws[-1].mux/2./pi
@@ -233,10 +227,9 @@ class Orbit:
         tck_by = splrep(s, beta_y)
         energy_s = [tw.E for tw in tws]
         tck_E = splrep(s, energy_s)
-        s_bpm = [bpm.s for bpm in self.bpms]
+        #s_bpm = [bpm.s for bpm in self.bpms]
+
         for bpm in self.bpms:
-            #print [bpm.s], tck_mux
-            #print splev([0, bpm.s], tck_mux)
             bpm.phi_x = splev([0, bpm.s], tck_mux)[1]
             bpm.phi_y = splev([0, bpm.s], tck_muy)[1]
 
@@ -258,7 +251,7 @@ class Orbit:
             vcor.beta_x = splev([0, vcor.s], tck_bx)[1]
             vcor.beta_y = splev([0, vcor.s], tck_by)[1]
             vcor.E = splev([0, vcor.s], tck_E)[1]
-
+    """
     def read_response_matrix(self, dictionary):
         Energy = dictionary["energy"]
         m = len(self.bpms)
@@ -285,8 +278,8 @@ class Orbit:
                 real_resp[j+m, iy+nx] = response[bpm.id][1]*(Energy/(vcor.angle_coef*vcor.length_iron*30.))
         self.resp = real_resp
         return self.resp
-
-    def measure_response_matrix(self, lattice, p_init=None, match_ic=False):
+    """
+    def measure_response_matrix(self, p_init=None, match_ic=False):
         """
         :param lattice:
         :param p_init:
@@ -302,32 +295,32 @@ class Orbit:
             real_resp = zeros((m*2, nx + ny+4))
         else:
             real_resp = zeros((m*2, nx + ny))
-        self.read_virtual_orbit(lattice, p_init=copy.deepcopy(p_init))
+        self.read_virtual_orbit(p_init=copy.deepcopy(p_init))
         bpms = copy.deepcopy(self.bpms)
 
         for ix, hcor in enumerate(self.hcors):
             print("measure X - ", ix, "/", nx)
             hcor.angle = shift
-            lattice.update_transfer_maps()
-            self.read_virtual_orbit(lattice, p_init=copy.deepcopy(p_init))
+            self.lat.update_transfer_maps()
+            self.read_virtual_orbit(p_init=copy.deepcopy(p_init))
 
             for j, bpm in enumerate(self.bpms):
                 real_resp[j, ix] = (bpm.x - bpms[j].x)/shift
                 real_resp[j+m, ix] =(bpm.y - bpms[j].y)/shift
             hcor.angle = 0
-        lattice.update_transfer_maps()
+        self.lat.update_transfer_maps()
 
         for iy, vcor in enumerate(self.vcors):
             print("measure Y - ", iy,"/",ny)
             vcor.angle = shift
-            lattice.update_transfer_maps()
-            self.read_virtual_orbit(lattice, p_init=copy.deepcopy(p_init))
+            self.lat.update_transfer_maps()
+            self.read_virtual_orbit(p_init=copy.deepcopy(p_init))
 
             for j, bpm in enumerate(self.bpms):
                 real_resp[j, iy+nx] = (bpm.x - bpms[j].x)/shift
                 real_resp[j+m, iy+nx] = (bpm.y - bpms[j].y)/shift
             vcor.angle = 0
-        lattice.update_transfer_maps()
+        self.lat.update_transfer_maps()
 
         if match_ic:
             for i, par in enumerate(["x", "px", "y", "py"]):
@@ -336,21 +329,21 @@ class Orbit:
                 p_i.__dict__[par] = 0.0001
                 p2 = copy.deepcopy(p_i)
                 print "measure = ", p2.x, p2.y, p2.px, p2.py, p2.E
-                self.read_virtual_orbit(lattice, p_init=p2)
+                self.read_virtual_orbit(p_init=p2)
                 for j, bpm in enumerate(self.bpms):
                     real_resp[j, nx + ny + i] = (bpm.x - bpms[j].x)/0.0001
                     real_resp[j+m, nx + ny + i] = (bpm.y - bpms[j].y)/0.0001
         self.resp = real_resp
         return real_resp
 
-    def ring_response_matrix(self, lattice, tw_init=None):
+    def ring_response_matrix(self, tw_init=None):
         """
         calculation of ideal response matrix
         :param lattice: class MagneticLattice
         :param tw_init: if tw_init == None, function tries to find periodical solution
         :return: orbit.resp
         """
-        self.optical_func_params(lattice, tw_init=tw_init)
+        self.optical_func_params(tw_init=tw_init)
 
         m = len(self.bpms)
         nx = len(self.hcors)
@@ -378,15 +371,14 @@ class Orbit:
         #print "shape = ", shape(self.resp)
         return self.resp
 
-
-    def linac_response_matrix(self, lattice, tw_init=None):
+    def linac_response_matrix(self, tw_init=None):
         """
         calculation of ideal response matrix
         :param lattice: class MagneticLattice
         :param tw_init: if tw_init == None, function tries to find periodical solution
         :return: orbit.resp
         """
-        self.optical_func_params(lattice, tw_init=tw_init)
+        self.optical_func_params(tw_init=tw_init)
 
         m = len(self.bpms)
         nx = len(self.hcors)
@@ -454,7 +446,7 @@ class Orbit:
         angle = dot(A, misallign_w)
         return angle
 
-    def correction(self, lattice, p_init=None):
+    def correction(self, p_init=None):
         m = len(self.bpms)
         monitors = zeros(2*m)
         weights = eye(len(monitors))
@@ -487,7 +479,7 @@ class Orbit:
                 iy += 1
         """
         #print "ix = ", ix, "iy =", iy, len(angle)
-        lattice.update_transfer_maps()
+        self.lat.update_transfer_maps()
         if p_init is not None:
             p_init.x = -angle[-4]
             p_init.px = -angle[-3]
@@ -495,10 +487,10 @@ class Orbit:
             p_init.py = -angle[-1]
         return 0
 
-    def elem_correction(self, lattice, elem_response, elem_types,  remove_elems=[]):
+    def elem_correction(self, elem_response, elem_types,  remove_elems=[]):
         m = len(self.bpms)
         monitors = zeros(2*m)
-        self.create_types(lattice, elem_types, remove_elems=remove_elems)
+        self.create_types( elem_types, remove_elems=remove_elems)
         for i, bpm in enumerate(self.bpms):
             monitors[i] = bpm.x
             monitors[i+m] = bpm.y
@@ -508,7 +500,7 @@ class Orbit:
         print("correction = ", time() - start)
         ix = 0
         iy = 0
-        for elem in lattice.sequence:
+        for elem in self.lat.sequence:
             if ix<len(self.htypes) and elem.id == self.htypes[ix].id:
                 print "quad, ", elem.dx, poss[ix]
                 elem.dx += poss[ix]
@@ -521,8 +513,70 @@ class Orbit:
                 iy += 1
         p = Particle(x=poss[-4], px=poss[-3], y=poss[-2], py=poss[-1])
         #print poss[-5:]
-        lattice.update_transfer_maps()
+        self.lat.update_transfer_maps()
         return p
+
+    def save_rmatrix(self, filename):
+        dict_rmatrix = {}
+        cors = np.append(self.hcors, self.vcors)
+        cor_names = [cor.id for cor in cors]
+        bpm_names = [bpm.id for bpm in self.bpms]
+        dict_rmatrix["cor_names"] = cor_names
+        dict_rmatrix["bpm_names"] = bpm_names
+        dict_rmatrix["matrix"] = self.resp
+        pickle.dump(dict_rmatrix, open(filename, "wb"))
+
+    def read_rmatrix(self, filename):
+        dict_rmatrix = pickle.load(open(filename, "rb"))
+        cor_names = dict_rmatrix["cor_names"]
+        bpm_names = dict_rmatrix["bpm_names"]
+        rmatrix = dict_rmatrix["matrix"]
+        orbit = Orbit(self.lat)
+        orbit.create_COR(cor_list=cor_names)
+        orbit.create_BPM(bpm_list=bpm_names)
+        orbit.resp = rmatrix
+        return orbit
+
+    def compare_rmatrix(self, orbit2):
+        cors1 = np.append(np.array([cor.id for cor in self.hcors]), np.array([cor.id for cor in self.vcors]))
+        cors2 = np.append(np.array([cor.id for cor in orbit2.hcors]), np.array([cor.id for cor in orbit2.vcors]))
+        bpms1 = [bpm.id for bpm in self.bpms]
+        bpms2 = [bpm.id for bpm in orbit2.bpms]
+
+
+        s = np.shape(resp_mat1)
+        for i in range(s[0]):
+            bpm_id = orb.bpms[i%54].id
+            plane = "X"
+            if i>54:
+                plane = "Y"
+            for j in range(s[1]):
+                x1 = resp_mat1[i,j]
+                x2 = resp_mat2[i,j]
+                if x1 == 0 and x2 == 0:
+                    continue
+                if abs(x1 - x2)/max(np.abs([x1, x2])) < 0.10:
+                    continue
+                if j <=48:
+                    name = orb.hcors[j].id
+                elif j>48:
+                    print j, j-49, len(orb.vcors)
+                    name = orb.vcors[j-49].id
+                print "resp: ", plane, bpm_id, name, "V=", resp_mat1[i,j], resp_mat2[i,j]
+
+        """
+        #bpm_x = np.array([bpm.x for bpm in self.bpms])
+        #bpm_y = np.array([bpm.y for bpm in self.bpms])
+        #bpms = np.append(bpm_x, bpm_y)
+        for i, cor in enumerate(cors):
+            d_cor = {}
+            dict_rmatrix[cor.id] = d_cor
+            for j, bpm in enumerate(self.bpms):
+                xy = {}
+                xy["x"] = bpm
+                dict_rmatrix[cor.id][bpm.id+".x"] =
+        """
+
 
 
     def calc_track(self,lattice):
@@ -530,7 +584,7 @@ class Orbit:
         self.x_track = map(lambda p: p.x, part_list)
         self.y_track = map(lambda p: p.y, part_list)
         self.s_track = map(lambda p: p.s, part_list)
-
+"""
 def draw_orbit(orbit, lattice, traject=True):
     if traject:
         bpm_draw = "o"
@@ -541,7 +595,7 @@ def draw_orbit(orbit, lattice, traject=True):
     #plt.plot(map(lambda p: p.s, orbit.bpms), map(lambda p: p.y, orbit.bpms), bpm_draw)
     #plt.grid(True)
     return part_list
-
+"""
 """
 def other_method(lat_err, p_list_1):
     navi = Navigator()

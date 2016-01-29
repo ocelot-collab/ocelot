@@ -299,7 +299,7 @@ dict_plot = {"quadrupole": {"scale": 0.7, "color": "r",            "edgecolor": 
              }
 
 
-def new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legend = True):
+def  new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legend = True):
     dict_copy=deepcopy(dict_plot)
     alpha = 1
     ax.set_ylim((-1,1.5))
@@ -519,7 +519,7 @@ def plot_disp(ax,tws, top_plot, font_size):
     ax.set_ylabel(top_ylabel)
     
     #ax.plot(S, Dx,'black', lw = 2, label=lable)
-    leg2 = ax.legend(loc='upper right', shadow=True, fancybox=True,prop=font_manager.FontProperties(size=font_size))
+    leg2 = ax.legend(loc='upper right', shadow=True, fancybox=True, prop=font_manager.FontProperties(size=font_size))
     leg2.get_frame().set_alpha(0.5)
 
 

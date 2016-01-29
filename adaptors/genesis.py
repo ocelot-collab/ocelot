@@ -267,7 +267,7 @@ class GenesisOutput:
         self.sliceKeys = []
         self.sliceValues = {}
         
-        self.parameters = {}
+        self.parameters = {} #probably will have to make changes here
             
     
     def __call__(self, name):

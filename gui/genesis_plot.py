@@ -11,9 +11,130 @@ from mpl_toolkits.mplot3d import Axes3D
 # from matplotlib.collections import PatchCollection
 # import matplotlib.patches as mpatches
 # import matplotlib.path as mpath
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 # from ocelot.cpbd.optics import *
-# import numpy as np
+import numpy as np
+
+
+h = 4.135667516e-15
+c = 299792458.0
+
+
+def gen_outplot_e(g, legend = True, fig_name = None):
+
+    font_size = 16
+    if fig_name == None:
+        fig = plt.figure()
+    else:
+        fig = plt.figure(fig_name)
+
+    plt.rc('axes', grid=True)
+    plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
+    left, width = 0.1, 0.85
+    
+    rect1 = [left, 0.63, width, 0.3]
+    rect2 = [left, 0.18, width, 0.45]
+    rect3 = [left, 0.05, width, 0.13]
+
+    ax_und = fig.add_axes(rect1)
+    ax_sizepos = fig.add_axes(rect2, sharex=ax_und)  #left, bottom, width, height
+    ax_energy = fig.add_axes(rect3, sharex=ax_und)
+    ax_spread = fig.add_axes(rect3, sharex=ax_und)
+    for ax in ax_sizepos, ax_energy, ax_und, ax_spread:
+        if ax!=ax_energy:
+            for label in ax.get_xticklabels():
+                label.set_visible(False)
+    
+    ax_sizepos.grid(True)
+    ax_und.grid(True)
+    ax_energy.set_yticks([])
+    ax_energy.grid(True)
+
+    fig.subplots_adjust(hspace=0)
+    # beta_x = [p.beta_x for p in tws] # list(map(lambda p:p.beta_x, tws))
+    # beta_y = [p.beta_y for p in tws] #list(map(lambda p:p.beta_y, tws))
+    # S = [p.s for p in tws] #list(map(lambda p:p.s, tws))
+    #plt.plot(S, beta_x)
+
+    t_array = np.linspace(g.t[0], g.t[-1], len(g.t))
+    s_array = t_array*c*1.0e-15
+    ncar = g('ncar')
+    dgrid = g('dgrid')
+    
+    xlamds = float(g('xlamds'))
+    nslice = len(g.spec)
+    zsep  = float(g('zsep'))
+    zstop  = float(g('zstop'))
+    
+    srange = nslice*zsep*xlamds     #range in s
+    dk = 2*np.pi/srange
+    ds = zsep*xlamds
+    
+    #w_l_m  =  g('xlamds')
+    w_l_ev = h * c / g('xlamds')
+    
+    max_pw_list = np.zeros(run_end+1)
+    max_argpw_list = np.zeros(run_end+1)
+    max_sp_list = np.zeros(run_end+1)
+    max_argsp_list = np.zeros(run_end+1) 
+    
+    plt.xlim(s_array[0], s_array[-1])#fix
+    
+    plot_lattice(g, font_size)
+    
+    # plot_betas(ax_sizepos, S, beta_x, beta_y, font_size)
+    
+    # plot_elems(ax_energy, lat, s_point = S[0], legend = legend, y_scale=0.8) # plot elements
+    plt.show()
+
+
+def plot_lattice(g, font_size):
+    
+    
+    
+    S = [p.s for p in tws]#map(lambda p:p.s, tws)
+    d_Ftop = []
+    Fmin = []
+    Fmax = []
+    for elem in top_plot:
+        Ftop = [p.__dict__[elem] for p in tws]# map(lambda p:p.__dict__[elem], tws)
+        #for f in Ftop:
+        #    print(f)
+        #print (max(Ftop))
+        Fmin.append(min(Ftop))
+        Fmax.append(max(Ftop))
+        top_label = r"$"+elem+"$"
+        ax.plot(S, Ftop, lw = 2, label=top_label)
+        d_Ftop.append( max(Ftop) - min(Ftop))
+    d_F = max(d_Ftop)
+    if d_F == 0:
+        d_Dx = 1
+        ax.set_ylim(( min(Fmin)-d_Dx*0.1, max(Fmax)+d_Dx*0.1))
+    if top_plot[0] == "E":
+        top_ylabel = r"$"+"/".join(top_plot) +"$"+ ", GeV"
+    else:
+        top_ylabel = r"$"+"/".join(top_plot) +"$"+ ", m"
+
+    yticks = ax.get_yticks()
+    yticks = yticks[2::2]
+    ax.set_yticks(yticks)
+    #for i, label in enumerate(ax.get_yticklabels()):
+    #    if i == 0 or i == 1:
+    #        label.set_visible(False)
+    ax.set_ylabel(top_ylabel)
+    
+    #ax.plot(S, Dx,'black', lw = 2, label=lable)
+    leg2 = ax.legend(loc='upper right', shadow=True, fancybox=True,prop=font_manager.FontProperties(size=font_size))
+    leg2.get_frame().set_alpha(0.5)
+
+
+
+
+
+
+
+
+
 
 
 
@@ -384,50 +505,6 @@ from mpl_toolkits.mplot3d import Axes3D
     # leg.get_frame().set_alpha(0.5)
 
 
-def plot_gen_out_z_els(lat, tws, top_plot = ["Dx"], legend = True, fig_name = None):
-
-    font_size = 16
-    if fig_name == None:
-        fig = plt.figure()
-    else:
-        fig = plt.figure(fig_name)
-
-    plt.rc('axes', grid=True)
-    plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
-    left, width = 0.1, 0.85
-    
-    rect1 = [left, 0.63, width, 0.3]
-    rect2 = [left, 0.18, width, 0.45]
-    rect3 = [left, 0.05, width, 0.13]
-
-    ax_top = fig.add_axes(rect1)
-    ax_b = fig.add_axes(rect2, sharex=ax_top)  #left, bottom, width, height
-    ax_el = fig.add_axes(rect3, sharex=ax_top)
-    for ax in ax_b, ax_el, ax_top:
-        if ax!=ax_el:
-            for label in ax.get_xticklabels():
-                label.set_visible(False)
-    
-    ax_b.grid(True)
-    ax_top.grid(True)
-    ax_el.set_yticks([])
-    ax_el.grid(True)
-
-    
-    fig.subplots_adjust(hspace=0)
-    beta_x = [p.beta_x for p in tws] # list(map(lambda p:p.beta_x, tws))
-    beta_y = [p.beta_y for p in tws] #list(map(lambda p:p.beta_y, tws))
-    S = [p.s for p in tws] #list(map(lambda p:p.s, tws))
-    #plt.plot(S, beta_x)
-
-    plt.xlim(S[0], S[-1])
-
-    plot_disp(ax_top,tws, top_plot, font_size)
-
-    plot_betas(ax_b, S, beta_x, beta_y, font_size)
-
-    plot_elems(ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8) # plot elements
-    plt.show()
 
 
 # def body_trajectory(fig, ax_xy, ax_el, lat, list_particles):
@@ -553,8 +630,8 @@ def plot_gen_out_z_els(lat, tws, top_plot = ["Dx"], legend = True, fig_name = No
     # ax_xy.plot(S, U2,'b', lw = 1, label=r"$U2$")
     # #print map(lambda p:p.s, list_particles2)
     # ax_xy.plot(map(lambda p:p.s, list_particles2), map(lambda p:p.x, list_particles2),'b', lw = 2, label=r"$p2$")
-    # body_trajectory(fig, ax_xy, ax_el, lat, list_particles)
-    # #body_trajectory(fig, ax_xy, ax_el, lat, list_particles2)
+    # body_trajectory(fig, ax_xy, ax_energy, lat, list_particles)
+    # #body_trajectory(fig, ax_xy, ax_energy, lat, list_particles2)
     # plt.show()
 
 

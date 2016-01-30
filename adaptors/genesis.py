@@ -267,7 +267,8 @@ class GenesisOutput:
         self.sliceKeys = []
         self.sliceValues = {}
         
-        self.parameters = {} #probably will have to make changes here
+        self.parameters = {}
+        self.filename = ''
             
     
     def __call__(self, name):
@@ -290,6 +291,26 @@ class GenesisBeamDefinition():
     def __init__(self):
         self.columns=[]
         self.column_values={}
+
+# class GenesisOutParm():
+#
+#     def __init__(self):
+#         self.v=[]
+#         self.mean_S=[]
+#         #self.mean_Z=[]
+#         self.max_S=[]
+#         #self.max_Z=[]
+#         self.end_Z=[]
+#
+#     def scan(self,value):
+#         g=GenesisOutParm()
+#         g.v=np.array(value)
+#         g.mean_S=np.mean(g.v,axis=0)
+#         #g.mean_Z=np.mean(g.v,axis=1)
+#         g.end_Z=g.v[:,-1]
+#         g.max_S=np.amax(g.v,axis=0)
+#         return g
+
 
 
 ''' 
@@ -646,7 +667,7 @@ def writeRadiationFile_mpi(comm, filename, slices, shape):
         os.system(cmd)
 
 
-def readGenesisOutput(fileName):
+def readGenesisOutput(fileName , readall=None):
     out = GenesisOutput()
     out.path = fileName
 
@@ -700,6 +721,7 @@ def readGenesisOutput(fileName):
         if chunk == 'input':
             tokens=line.replace('=','').strip().split()
             out.parameters[tokens[0]] = tokens[1:]
+            #out.parameters[tokens[0]] = tokens[0:]
             #print 'input:', tokens
 
 
@@ -733,28 +755,84 @@ def readGenesisOutput(fileName):
     out.power_z = 0*np.array(out.sliceValues[out.sliceValues.keys()[1]]['power'])
     out.power_int = []
     out.max_power = 0.0
+    if readall:
+        out.r_size = []
+        out.el_energy = []
+        out.bunching = []
+        out.xrms = []
+        out.yrms = []
+        out.error = []
+        out.el_e_spread = []
+        out.p_mid = []
+        out.p_int = []
+        out.phi_mid = []
+        out.increment = []
+        #out.increment=GenesisOutput()
+
     for i in xrange(1,out.nSlices):
         pend = out.sliceValues[out.sliceValues.keys()[i]]['power'][-1]
         out.power_int.append(pend)
         out.power.append(out.sliceValues[out.sliceValues.keys()[i]]['p_mid'][-1])
         out.phi.append(out.sliceValues[out.sliceValues.keys()[i]]['phi_mid'][-1])
         out.power_z +=  np.array(out.sliceValues[out.sliceValues.keys()[i]]['power']) / out.nSlices
+        if readall:
+            out.p_mid.append(out.sliceValues[out.sliceValues.keys()[i]]['p_mid'])
+            out.p_int.append(out.sliceValues[out.sliceValues.keys()[i]]['power'])
+            out.phi_mid.append(out.sliceValues[out.sliceValues.keys()[i]]['phi_mid'])
+            out.increment.append(out.sliceValues[out.sliceValues.keys()[i]]['increment'])
+            out.r_size.append(out.sliceValues[out.sliceValues.keys()[i]]['r_size'])
+            out.el_energy.append(out.sliceValues[out.sliceValues.keys()[i]]['energy'])
+            out.bunching.append(out.sliceValues[out.sliceValues.keys()[i]]['bunching'])
+            out.xrms.append(out.sliceValues[out.sliceValues.keys()[i]]['xrms'])
+            out.yrms.append(out.sliceValues[out.sliceValues.keys()[i]]['yrms'])
+            out.error.append(out.sliceValues[out.sliceValues.keys()[i]]['error'])
+            out.el_e_spread.append(out.sliceValues[out.sliceValues.keys()[i]]['e-spread'])
 
         if out.max_power < pend: out.max_power = pend
 
     out.t = 1.0e+15 * out('zsep') * out('xlamds') / c * np.arange(0,len(out.power))
     out.dt = (out.t[1] - out.t[0]) * 1.e-15
     
-    out.spec = fft.fft(np.sqrt( np.array(out.power) ) * np.exp( 1.j* np.array(out.phi) ) )
-    out.freq_ev = h * fftfreq(len(out.spec), d=out('zsep') * out('xlamds') / c) 
+    out.spec = fft.fft(np.sqrt(np.array(out.power) ) * np.exp( 1.j* np.array(out.phi) ) )
+    out.freq_ev = h * fftfreq(len(out.spec), d=out('zsep') * out('xlamds') / c)
 
     out.power = np.array(out.power)
     out.phi = np.array(out.phi)
     out.power_int = np.array(out.power_int)
-
     out.z = np.array(out.z)
     out.I = np.array(out.I)
-    
+
+    if readall:
+        out.p_mid = np.array(out.p_mid)
+        out.p_int = np.array(out.p_int)
+        out.phi_mid = np.array(out.phi_mid)
+        out.increment = np.array(out.increment)
+        out.r_size = np.array(out.r_size)
+        out.el_energy = np.array(out.el_energy)+out('gamma0')
+        out.bunching = np.array(out.bunching)
+        out.xrms = np.array(out.xrms)
+        out.yrms = np.array(out.yrms)
+        out.error = np.array(out.error)
+        out.el_e_spread = np.array(out.el_e_spread)
+        # out.power = np.array(out.power)
+
+        if out('dgrid')==0:
+            rbeam=sqrt(out('rxbeam')^2+np.power(out('rybeam'),2))
+            ray=sqrt(out('zrayl')*out('xlamds')/np.pi*(power(1+(out('zwaist')/out('zrayl')),2))); #not cross-checked
+            out.leng=out('rmax0')*(rbeam+ray)
+        else:
+            out.leng=out('dgrid')*2
+
+
+        # out.energy_GeV=out.el_energy*0.511e-3
+        # out.e_spread_GeV=(out.el_e_spread+out.el_energy)*0.511e-3-out.energy_GeV
+        # out.e_spread_GeV=out.el_e_spread*0.511e-3
+        # parm_names=out.parameters.keys()
+# for val in parm_names:
+#     if str.isdigit(val[0]) or  val[0]=='$':
+#         pass
+#     else:
+        out.filename = fileName
     return out
 
 def getAverageUndulatorParameter(lattice, unit=1.0, energy = 17.5):

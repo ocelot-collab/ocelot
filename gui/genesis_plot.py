@@ -14,47 +14,88 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 # from ocelot.cpbd.optics import *
 import numpy as np
+from numpy import matlib
+# from ocelot.common.math_op import *
+
+from pylab import * #tmp
+params = {'backend': 'ps', 'axes.labelsize': 15, 'font.size': 16, 'legend.fontsize': 24, 'xtick.labelsize': 19,  'ytick.labelsize': 19, 'text.usetex': True}
+# params = {'backend': 'ps', 'axes.labelsize': 18, 'text.fontsize': 16, 'legend.fontsize': 24, 'xtick.labelsize': 32,  'ytick.labelsize': 32, 'text.usetex': True}
+rcParams.update(params)
+rc('text', usetex=True) # required to have greek fonts on redhat
 
 
 h = 4.135667516e-15
 c = 299792458.0
 
-
 def gen_outplot_e(g, legend = True, fig_name = None):
 
-    font_size = 16
-    if fig_name == None:
-        fig = plt.figure()
+    import matplotlib.ticker as ticker
+
+    font_size = 1
+    if fig_name is None:
+        if g.filename is '':
+            fig = plt.figure('Electrons')
+        else:
+            fig = plt.figure('Electrons '+g.filename)
     else:
         fig = plt.figure(fig_name)
 
     plt.rc('axes', grid=True)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
-    left, width = 0.1, 0.85
-    
-    rect1 = [left, 0.63, width, 0.3]
-    rect2 = [left, 0.18, width, 0.45]
-    rect3 = [left, 0.05, width, 0.13]
+    # left, width = 0.1, 0.85
 
-    ax_und = fig.add_axes(rect1)
-    ax_sizepos = fig.add_axes(rect2, sharex=ax_und)  #left, bottom, width, height
-    ax_energy = fig.add_axes(rect3, sharex=ax_und)
-    ax_spread = fig.add_axes(rect3, sharex=ax_und)
-    for ax in ax_sizepos, ax_energy, ax_und, ax_spread:
-        if ax!=ax_energy:
+    max_yticks = 5
+
+    #
+    # rect1 = [left, 0.75, width, 0.20]
+    # rect2 = [left, 0.55, width, 0.20]
+    # rect3 = [left, 0.35, width, 0.20]
+    # rect4 = [left, 0.15, width, 0.20]
+
+    #
+    ax_und=fig.add_subplot(4, 1, 1)
+    ax_und.clear()
+    ax_sizepos=fig.add_subplot(4, 1, 2,sharex=ax_und)
+    ax_sizepos.clear()
+    ax_energy=fig.add_subplot(4, 1, 3,sharex=ax_und)
+    ax_energy.clear()
+    ax_bunching=fig.add_subplot(4, 1, 4,sharex=ax_und)
+    ax_bunching.clear()
+
+
+    # for ax in ax_sizepos, ax_energy, ax_und, ax_bunching:
+
+    # ax_sizepos.grid(True)
+    # ax_und.grid(True)
+    # ax_energy.set_yticks([])
+    # ax_energy.grid(True)
+
+
+    # ax_und = fig.add_axes(rect1)
+    # ax_sizepos = fig.add_axes(rect2, sharex=ax_und)  #left, bottom, width, height
+    # ax_energy = fig.add_axes(rect3, sharex=ax_und)
+    # ax_bunching = fig.add_axes(rect4, sharex=ax_und)
+    for ax in ax_sizepos, ax_energy, ax_und, ax_bunching:
+        if ax!=ax_bunching:
             for label in ax.get_xticklabels():
                 label.set_visible(False)
-    
-    ax_sizepos.grid(True)
-    ax_und.grid(True)
-    ax_energy.set_yticks([])
-    ax_energy.grid(True)
 
+
+    # for tick in ax.yaxis.get_major_ticks():
+    #     tick.label.set_fontsize(14)
+    #     # specify integer or one of preset strings, e.g.
+    #     #tick.label.set_fontsize('x-small')
+    #     tick.label.set_rotation('vertical')
+
+
+
+
+    #
     fig.subplots_adjust(hspace=0)
-    # beta_x = [p.beta_x for p in tws] # list(map(lambda p:p.beta_x, tws))
-    # beta_y = [p.beta_y for p in tws] #list(map(lambda p:p.beta_y, tws))
-    # S = [p.s for p in tws] #list(map(lambda p:p.s, tws))
-    #plt.plot(S, beta_x)
+    # # beta_x = [p.beta_x for p in tws] # list(map(lambda p:p.beta_x, tws))
+    # # beta_y = [p.beta_y for p in tws] #list(map(lambda p:p.beta_y, tws))
+    # # S = [p.s for p in tws] #list(map(lambda p:p.s, tws))
+    # #plt.plot(S, beta_x)
 
     t_array = np.linspace(g.t[0], g.t[-1], len(g.t))
     s_array = t_array*c*1.0e-15
@@ -73,59 +114,367 @@ def gen_outplot_e(g, legend = True, fig_name = None):
     #w_l_m  =  g('xlamds')
     w_l_ev = h * c / g('xlamds')
     
-    max_pw_list = np.zeros(run_end+1)
-    max_argpw_list = np.zeros(run_end+1)
-    max_sp_list = np.zeros(run_end+1)
-    max_argsp_list = np.zeros(run_end+1) 
+    # max_pw_list = np.zeros(run_end+1)
+    # max_argpw_list = np.zeros(run_end+1)
+    # max_sp_list = np.zeros(run_end+1)
+    # max_argsp_list = np.zeros(run_end+1)
     
-    plt.xlim(s_array[0], s_array[-1])#fix
+    #
     
-    plot_lattice(g, font_size)
+    # plot_lattice(g, font_size)
     
     # plot_betas(ax_sizepos, S, beta_x, beta_y, font_size)
     
     # plot_elems(ax_energy, lat, s_point = S[0], legend = legend, y_scale=0.8) # plot elements
+
+    print len(t_array)
+    print len(g.xrms)
+    print len(g.z)
+
+    #sys.exit()
+
+    # ax_und
+    # ax_sizepos
+    # ax_energy
+    # ax_spread
+
+    ax_und.plot(g.z, g.aw, 'b-')
+    ax_und.set_ylabel('K')
+
+    ax_quad = ax_und.twinx()
+    ax_quad.plot(g.z, g.qfld, 'r-')
+    ax_quad.set_ylabel('Quad')
+
+    # print len(g.z),len(g.xrms[0,:]),len(np.mean(g.yrms,axis=0))
+
+    #sys.exit()
+    ax_sizepos.plot(g.z, np.mean(g.xrms,axis=0)*1e6, 'g-',g.z, np.mean(g.yrms,axis=0)*1e6, 'b-')
+    ax_sizepos.set_ylabel('Beam size [$\mu$m]')
+
+
+    ax_energy.plot(g.z, np.average(g.el_energy*0.511e-3, weights=g.I[1:], axis=0), 'g-')
+    ax_energy.set_ylabel('Energy [GeV]')
+    #ax_energy.plot(g.z, np.mean(g.energy_GeV,axis=0), 'g-')
+    ax_spread = ax_energy.twinx()
+    ax_spread.plot(g.z, np.average(g.el_e_spread*0.511e-3, weights=g.I[1:], axis=0), 'b--', g.z, np.amax(g.el_e_spread*0.511e-3, axis=0), 'b-')
+    ax_spread.set_ylabel('Energy spread ($\Delta$E)')
+
+    number_ticks=4
+
+
+    ax_bunching.plot(g.z, np.average(g.bunching, weights=g.I[1:], axis=0), 'k--', g.z, np.amax(g.bunching, axis=0), 'r-')
+    ax_bunching.set_ylabel('Bunching')
+
+    ax_bunching.set_xlabel('s [m]')
+    x1,x2,y1,y2 = ax_sizepos.axis()
+    ax_sizepos.axis([x1,x2,0,y2])
+    x1,x2,y1,y2 = ax_spread.axis()
+    ax_spread.axis([x1,x2,0,y2])
+
+    ax_und.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_quad.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_sizepos.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_spread.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_energy.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_bunching.yaxis.major.locator.set_params(nbins=number_ticks)
+
+    # yloc = plt.MaxNLocator(max_yticks)
+    # # print yloc
+    # ax_sizepos.yaxis.set_major_locator(yloc)
+    # ax_energy.yaxis.set_major_locator(yloc)
+    # ax_und.yaxis.set_major_locator(yloc)
+    # ax_bunching.yaxis.set_major_locator(yloc)
+
+    # ax_energy.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.1e'))
+
+    plt.xlim(g.z[0], g.z[-1])
+
+    fig.subplots_adjust(top=0.95, bottom=0.1, right=0.85, left=0.15)
+
+
+
+
+
+    plt.show()
+
+
+def gen_outplot_ph(g, legend = True, fig_name = None):
+
+    import matplotlib.ticker as ticker
+
+    font_size = 1
+    if fig_name is None:
+        if g.filename is '':
+            fig = plt.figure('Photons')
+        else:
+            fig = plt.figure('Photons '+g.filename)
+    else:
+        fig = plt.figure(fig_name)
+
+    plt.rc('axes', grid=True)
+    plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
+    # left, width = 0.1, 0.85
+
+    max_yticks = 5
+
+    #
+    # rect1 = [left, 0.75, width, 0.20]
+    # rect2 = [left, 0.55, width, 0.20]
+    # rect3 = [left, 0.35, width, 0.20]
+    # rect4 = [left, 0.15, width, 0.20]
+
+    #
+    ax_pow=fig.add_subplot(3, 1, 1)
+    ax_pow.clear()
+    ax_spectrum=fig.add_subplot(3, 1, 2,sharex=ax_pow)
+    ax_spectrum.clear()
+    ax_size=fig.add_subplot(3, 1, 3,sharex=ax_pow)
+    ax_size.clear()
+
+
+    # for ax in ax_sizepos, ax_energy, ax_und, ax_bunching:
+
+    # ax_sizepos.grid(True)
+    # ax_und.grid(True)
+    # ax_energy.set_yticks([])
+    # ax_energy.grid(True)
+
+
+    # ax_und = fig.add_axes(rect1)
+    # ax_sizepos = fig.add_axes(rect2, sharex=ax_und)  #left, bottom, width, height
+    # ax_energy = fig.add_axes(rect3, sharex=ax_und)
+    # ax_bunching = fig.add_axes(rect4, sharex=ax_und)
+    for ax in ax_pow, ax_spectrum, ax_size:
+        if ax!=ax_size:
+            for label in ax.get_xticklabels():
+                label.set_visible(False)
+
+
+    # for tick in ax.yaxis.get_major_ticks():
+    #     tick.label.set_fontsize(14)
+    #     # specify integer or one of preset strings, e.g.
+    #     #tick.label.set_fontsize('x-small')
+    #     tick.label.set_rotation('vertical')
+
+
+
+
+    #
+    fig.subplots_adjust(hspace=0)
+    # # beta_x = [p.beta_x for p in tws] # list(map(lambda p:p.beta_x, tws))
+    # # beta_y = [p.beta_y for p in tws] #list(map(lambda p:p.beta_y, tws))
+    # # S = [p.s for p in tws] #list(map(lambda p:p.s, tws))
+    # #plt.plot(S, beta_x)
+
+    t_array = np.linspace(g.t[0], g.t[-1], len(g.t))
+    s_array = t_array*c*1.0e-15
+    ncar = g('ncar')
+    dgrid = g('dgrid')
+
+    xlamds = float(g('xlamds'))
+    nslice = len(g.spec)
+    zsep  = float(g('zsep'))
+    zstop  = float(g('zstop'))
+
+    srange = nslice*zsep*xlamds     #range in s
+    dk = 2*np.pi/srange
+    ds = zsep*xlamds
+
+    #w_l_m  =  g('xlamds')
+    w_l_ev = h * c / g('xlamds')
+
+    # max_pw_list = np.zeros(run_end+1)
+    # max_argpw_list = np.zeros(run_end+1)
+    # max_sp_list = np.zeros(run_end+1)
+    # max_argsp_list = np.zeros(run_end+1)
+
+    #
+
+    # plot_lattice(g, font_size)
+
+    # plot_betas(ax_sizepos, S, beta_x, beta_y, font_size)
+
+    # plot_elems(ax_energy, lat, s_point = S[0], legend = legend, y_scale=0.8) # plot elements
+
+    print len(t_array)
+    print len(g.xrms)
+    print len(g.z)
+
+    #sys.exit()
+
+    # ax_und
+    # ax_sizepos
+    # ax_energy
+    # ax_spread
+
+    # ax_pow
+    # ax_spectrum
+    # ax_size
+
+    ax_pow.plot(g.z, np.amax(g.p_int, axis=0), 'b-')
+    ax_pow.set_ylabel('P [W]')
+    ax_pow.set_yscale('log')
+
+    # outp.power.mean_S*inp.xlamds*inp.zsep*inp.nslice/c
+    ax_en = ax_pow.twinx()
+    ax_en.plot(g.z, np.mean(g.p_int,axis=0)*g('xlamds')*g('zsep')*g.nSlices/c, 'r-')
+    ax_en.set_ylabel('E [J]')
+    ax_en.set_yscale('log')
+
+    n_pad=1
+    # print len(g.z),len(g.xrms[0,:]),len(np.mean(g.yrms,axis=0))
+    power=np.pad(g.p_mid, [(int(g.nSlices/2)*n_pad, (g.nSlices-(int(g.nSlices/2))))*n_pad, (0, 0)], mode='constant')
+    phase=np.pad(g.phi_mid, [(int(g.nSlices/2)*n_pad, (g.nSlices-(int(g.nSlices/2))))*n_pad, (0, 0)], mode='constant')
+    # spectrum = np.power(abs(fft(np.sqrt( np.array(g.p_mid)) * np.exp( 1.j* np.array(g.phi_mid) ) , axis=0)),2)#/sqrt(g.nSlices)
+    spectrum = np.power(abs(fft(np.sqrt( np.array(power)) * np.exp( 1.j* np.array(phase) ) , axis=0)),2)/sqrt(g.nSlices)/np.power((2*g.leng/g('ncar')),2)/1e10
+    e_0=1239.8/g('xlamds')/1e9
+    # print e_0
+
+    g.freq_ev1 = h * fftfreq(len(spectrum), d=g('zsep') * g('xlamds') / c)+e_0
+    lamdscale=1239.8/g.freq_ev1
+    #sys.exit()
+    print 'shape',spectrum.shape
+    spectrum_lamdpos=sum(np.matlib.repmat(lamdscale,spectrum.shape[1],1)*transpose(spectrum),axis=1)/np.sum(spectrum,axis=0)
+
+
+    ax_spectrum.plot(g.z, np.amax(spectrum,axis=0), 'g-')
+    ax_spectrum.set_ylabel('P_{max}($\lambda$)')
+    ax_spectrum.set_yscale('log')
+
+    #fix!!!
+    # spectrum_lamdpos=sum(np.matlib.repmat(lamdscale,spectrum.shape[1],1)*transpose(spectrum),axis=1)/np.sum(spectrum,axis=0)
+    # spectrum_width=sqrt(sum((np.power(np.matlib.repmat(lamdscale,spectrum.shape[1],1)-np.matlib.repmat(spectrum_lamdpos,spectrum.shape[1],1),2)*spectrum),1)/sum(spectrum,axis=0));
+    # ax_spec_bandw = ax_spectrum.twinx()
+    # ax_spec_bandw.plot(g.z, spectrum_lamdpos, 'g-')
+    # fix and include!!!
+
+
+
+    # print 'spec1', len(spectrum)
+    # print 'freq_ev1', len(g.freq_ev1)
+
+
+    #
+    # fig2=plt.plot(fftshift(g.freq_ev1),fftshift(spectrum[:,-1],axes=0))
+    # plt.show()
+    # fig3=plt.plot(fftshift(lamdscale),fftshift(spectrum[:,-1],axes=0))
+    # plt.show()
+
+    print g.r_size.shape
+    print g.p_int.shape
+
+
+    ax_size.plot(g.z, np.average(g.r_size*2*1e6, weights=g.p_int, axis=0), 'b-')
+    ax_size.set_ylabel('transverse [$\mu$m]')
+    #ax_energy.plot(g.z, np.mean(g.energy_GeV,axis=0), 'g-')
+    # ax_spread = ax_energy.twinx()
+    # ax_spread.plot(g.z, np.average(g.e_spread_GeV, weights=g.I[1:], axis=0), 'b--', g.z, np.amax(g.e_spread_GeV, axis=0), 'b-')
+    # ax_spread.set_ylabel('Energy spread ($\Delta$E)')
+
+    number_ticks=4
+
+
+
+    # ax_bunching.plot(g.z, np.average(g.bunching, weights=g.I[1:], axis=0), 'k--', g.z, np.amax(g.bunching, axis=0), 'r-')
+    # ax_bunching.set_ylabel('Bunching')
+
+    # ax_bunching.set_xlabel('s [m]')
+    # x1,x2,y1,y2 = ax_sizepos.axis()
+    # ax_sizepos.axis([x1,x2,0,y2])
+    # x1,x2,y1,y2 = ax_spread.axis()
+    # ax_spread.axis([x1,x2,0,y2])
+
+# ax_pow
+    # ax_spectrum
+    # ax_size
+
+
+    # ax_pow.yaxis.major.locator.set_params(nbins=number_ticks)
+    # ax_en.yaxis.major.locator.set_params(nbins=number_ticks)
+    # ax_spectrum.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_size.yaxis.major.locator.set_params(nbins=number_ticks)
+    # ax_energy.yaxis.major.locator.set_params(nbins=number_ticks)
+    # ax_bunching.yaxis.major.locator.set_params(nbins=number_ticks)
+
+    # yloc = plt.MaxNLocator(max_yticks)
+    # # print yloc
+    # ax_sizepos.yaxis.set_major_locator(yloc)
+    # ax_energy.yaxis.set_major_locator(yloc)
+    # ax_und.yaxis.set_major_locator(yloc)
+    # ax_bunching.yaxis.set_major_locator(yloc)
+
+    # ax_energy.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.1e'))
+
+    plt.xlim(g.z[0], g.z[-1])
+
+    fig.subplots_adjust(top=0.95, bottom=0.1, right=0.85, left=0.15)
+
+
+
+
+
     plt.show()
 
 
 def plot_lattice(g, font_size):
-    
-    
-    
-    S = [p.s for p in tws]#map(lambda p:p.s, tws)
-    d_Ftop = []
-    Fmin = []
-    Fmax = []
-    for elem in top_plot:
-        Ftop = [p.__dict__[elem] for p in tws]# map(lambda p:p.__dict__[elem], tws)
-        #for f in Ftop:
-        #    print(f)
-        #print (max(Ftop))
-        Fmin.append(min(Ftop))
-        Fmax.append(max(Ftop))
-        top_label = r"$"+elem+"$"
-        ax.plot(S, Ftop, lw = 2, label=top_label)
-        d_Ftop.append( max(Ftop) - min(Ftop))
-    d_F = max(d_Ftop)
-    if d_F == 0:
-        d_Dx = 1
-        ax.set_ylim(( min(Fmin)-d_Dx*0.1, max(Fmax)+d_Dx*0.1))
-    if top_plot[0] == "E":
-        top_ylabel = r"$"+"/".join(top_plot) +"$"+ ", GeV"
-    else:
-        top_ylabel = r"$"+"/".join(top_plot) +"$"+ ", m"
 
-    yticks = ax.get_yticks()
-    yticks = yticks[2::2]
-    ax.set_yticks(yticks)
-    #for i, label in enumerate(ax.get_yticklabels()):
-    #    if i == 0 or i == 1:
-    #        label.set_visible(False)
-    ax.set_ylabel(top_ylabel)
-    
-    #ax.plot(S, Dx,'black', lw = 2, label=lable)
-    leg2 = ax.legend(loc='upper right', shadow=True, fancybox=True,prop=font_manager.FontProperties(size=font_size))
-    leg2.get_frame().set_alpha(0.5)
+    plot(srange, g.aw, 'b-')
+    xlabel('s [m]')
+    ylabel('K_value')
+
+    # turn off the 2nd axes rectangle with frameon kwarg
+    ax2 = twinx()
+    s2 = sin(2*pi*t)
+    plot(t, s2, 'r.')
+    ylabel('sin')
+    ax2.yaxis.tick_right()
+    show()
+
+
+
+    ax.set_ylabel(r"$\beta_{x,y}$, m")
+    ax.plot(S, beta_x,'r', lw = 2, label=r"$\beta_{x}$")
+    ax.plot(S, beta_y,'b', lw = 2, label=r"$\beta_{y}$")
+    leg = ax.legend(loc='upper right', shadow=True, fancybox=True, prop=font_manager.FontProperties(size=font_size))
+    leg.get_frame().set_alpha(0.5)
+
+
+
+
+    # S = [p.s for p in tws]#map(lambda p:p.s, tws)
+    # d_Ftop = []
+    # Fmin = []
+    # Fmax = []
+    # for elem in top_plot:
+    #     Ftop = [p.__dict__[elem] for p in tws]# map(lambda p:p.__dict__[elem], tws)
+    #     #for f in Ftop:
+    #     #    print(f)
+    #     #print (max(Ftop))
+    #     Fmin.append(min(Ftop))
+    #     Fmax.append(max(Ftop))
+    #     top_label = r"$"+elem+"$"
+    #     ax.plot(S, Ftop, lw = 2, label=top_label)
+    #     d_Ftop.append( max(Ftop) - min(Ftop))
+    # d_F = max(d_Ftop)
+    # if d_F == 0:
+    #     d_Dx = 1
+    #     ax.set_ylim(( min(Fmin)-d_Dx*0.1, max(Fmax)+d_Dx*0.1))
+    # if top_plot[0] == "E":
+    #     top_ylabel = r"$"+"/".join(top_plot) +"$"+ ", GeV"
+    # else:
+    #     top_ylabel = r"$"+"/".join(top_plot) +"$"+ ", m"
+    #
+    # yticks = ax.get_yticks()
+    # yticks = yticks[2::2]
+    # ax.set_yticks(yticks)
+    # #for i, label in enumerate(ax.get_yticklabels()):
+    # #    if i == 0 or i == 1:
+    # #        label.set_visible(False)
+    # ax.set_ylabel(top_ylabel)
+    #
+    # #ax.plot(S, Dx,'black', lw = 2, label=lable)
+    # leg2 = ax.legend(loc='upper right', shadow=True, fancybox=True,prop=font_manager.FontProperties(size=font_size))
+    # leg2.get_frame().set_alpha(0.5)
 
 
 

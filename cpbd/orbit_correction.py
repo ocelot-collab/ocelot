@@ -1,7 +1,7 @@
 __author__ = 'Sergey Tomin'
 
 
-from time import time
+from time import time, sleep
 
 import matplotlib.pyplot as plt
 from scipy.interpolate import splrep, splev, interp1d
@@ -15,6 +15,17 @@ from ocelot.cpbd.optics import *
 from ocelot.cpbd.track import *
 import copy
 import pickle
+
+def show_currents( elems, alpha):
+    print "******* displaying currents - START ********"
+    for elem in elems:
+        if elem.dI == 0:
+            continue
+        n = len(elem.id)
+        n2 = len(str(elem.I + elem.dI))
+        n3 = len(str(elem.I))
+        print elem.id, " "*(10-n) + "<-- ", elem.I + elem.dI,  " "*(18-n2)+ " was = ", elem.I, " "*(18-n3) + " dI = ", elem.dI, "x", alpha
+    print "******* displaying currents - END ********"
 
 class BPM(object):
     def __init__(self, id = None):
@@ -56,20 +67,75 @@ class BPM(object):
         self.x0 = self.x
         self.y0 = self.y
 
+
 class Response_matrix:
     def __init__(self):
         self.cor_names = []
         self.bpm_names = []
-        self.rmatrix = []
+        self.matrix = []
 
     def save(self, filename):
-        pass
+        dict_rmatrix = {}
+        dict_rmatrix["cor_names"] = self.cor_names
+        dict_rmatrix["bpm_names"] = self.bpm_names
+        dict_rmatrix["matrix"] = self.matrix
+        pickle.dump(dict_rmatrix, open(filename, "wb"))
 
     def load(self, filename):
-        pass
+        dict_rmatrix = pickle.load(open(filename, "rb"))
+        self.cor_names = dict_rmatrix["cor_names"]
+        self.bpm_names = dict_rmatrix["bpm_names"]
+        self.matrix = dict_rmatrix["matrix"]
+        return 1
+
+    #def measure(self, mi, dp):
+    #    I0 = mi.init_corrector_vals(self.cor_names)
+    #    for cor in self.cor_names:
+    #        I0 = mi.init_corrector_vals([cor])[0]
+    #        print cor, " I0 = ", I0
+    #        I0array.append(I0)
+
 
     def compare(self, rmatrix):
-        pass
+        cors1 = self.cor_names
+        cors2 = rmatrix.cor_names
+        bpms1 = self.bpm_names
+        bpms2 = rmatrix.bpm_names
+        nb1 = len(bpms1)
+        nb2 = len(bpms2)
+        c_names = np.intersect1d(cors1, cors2)
+        c_i1 = np.where(np.in1d(cors1, cors2))[0]
+        c_i2 = np.where(np.in1d(cors2, cors1))[0]
+        b_names = np.intersect1d(bpms1, bpms2)
+        b_i1 = np.where(np.in1d(bpms1, bpms2))[0]
+        b_i2 = np.where(np.in1d(bpms2, bpms1))[0]
+        plane = ["X", "Y"]
+        for n in range(2):
+            print "****************   ", plane[n], "   ****************"
+            for i, c in enumerate(c_names):
+                for j, b in enumerate(b_names):
+                    #print b_i1[j],  nb1*n, c_i1[i]
+                    x1 = self.matrix[b_i1[j] + nb1*n, c_i1[i]]
+                    x2 = rmatrix.matrix[b_i2[j] + nb2*n, c_i2[i]]
+                    if abs(x1 - x2) <0.0001:
+                        continue
+                    if abs(x1 - x2)/max(np.abs([x1, x2])) < 0.10:
+                        continue
+                    l_x1 = len(str(x1))
+                    print plane[n], c, " "*(10 - len(c)), b, " "*(10 - len(b)), "r1: ", x1," "*(18 - l_x1),"r2: ", x2
+
+    def show(self, list_cor=None, list_bpm=None):
+        print " "*10,
+        for bpm in self.bpm_names:
+            print bpm,
+        print
+        for i in range(shape(self.matrix)[1]):
+            print self.cor_names[i] + " "*(10 - len(self.cor_names[i])),
+            #print np.array_str(self.matrix[:, i], precision=2, suppress_small=True)
+            for j in range(shape(self.matrix)[0]):
+                print "%.2f" % self.matrix[j, i],
+            print
+
 
 
 class Orbit:
@@ -170,8 +236,12 @@ class Orbit:
                 self.htypes.append(elem)
                 self.vtypes.append(elem)
 
+    def export_response_matrix(self, r_matrix):
+        self.create_BPM(bpm_list=r_matrix.bpm_names)
+        self.create_COR(cor_list=r_matrix.cor_names)
+        self.resp = r_matrix.matrix
 
-    def read_virtual_orbit(self, p_init=None):
+    def read_virtual_orbit(self, p_init=None, order=1):
         """
         searching closed orbit by function closed_orbit(lattice) and searching coordinates of beam at the bpm possitions
         :param lattice: class MagneticLattice
@@ -190,7 +260,7 @@ class Orbit:
         for bpm in self.bpms:
             #print("energy = ", p.E)
             dz = bpm.s - L
-            track(self.lat, [p], dz, navi, order=1)
+            track(self.lat, [p], dz, navi, order=order)
             bpm.x = p.x
             bpm.y = p.y
             bpm.E = p.E
@@ -200,6 +270,39 @@ class Orbit:
         #print("energy = ", p.E)
         return array(X), array(Y)
 
+    def response_matrix(self, mi, dp):
+        resp = np.zeros(len(self.bpms)*2, len(self.hcors)+len(self.vcors))
+        plane = ["X", "Y"]
+        for n, cor_list in enumerate([self.hcors, self.vcors]):
+
+            for cor in cor_list:
+                i = mi.init_corrector_vals(cor.id)
+                cor.I = i[0]
+                cor.dI = 0.01
+                print "X:  ", cor.id, "I = ", cor.I
+
+            show_currents(cor_list, alpha=1.)
+            inp = raw_input("Start measurement of response matrix for" + plane[n]+":? ")
+            if inp == "yes":
+                #resp = np.zeros(len(self.bpms)*2, len(cor_list))
+                X0, Y0 = mi.get_bpms_xy(self.bpms)
+                XY0 = np.append(X0, Y0)
+                for i, cor in enumerate(cor_list):
+                    print i, "/", len(cor_list), cor.id
+                    mi.set_value(cor.id, cor.I + cor.dI)
+                    sleep(0.5)
+                    X, Y = mi.get_bpms_xy(self.bpms)
+                    XY = np.append(X, Y)
+                    resp[:, i + n*len(self.hcors)] = (XY - XY0)/cor.dI
+                    mi.set_value(cor.id, cor.I - cor.dI)
+                    sleep(0.5)
+                    X0, Y0 = mi.get_bpms_xy(self.bpms)
+                    XY0 = np.append(X0, Y0)
+        rmatrix = Response_matrix()
+        rmatrix.bpm_names = [b.id for b in self.bpms]
+        rmatrix.cor_names = np.append(np.array([c.id for c in self.hcors]), np.array([c.id for c in self.vcors]))
+        rmatrix.matrix = resp
+        return rmatrix
 
     def optical_func_params(self, tw_init=None):
         """
@@ -244,6 +347,7 @@ class Orbit:
             hcor.beta_x = splev([0, hcor.s], tck_bx)[1]
             hcor.beta_y = splev([0, hcor.s], tck_by)[1]
             hcor.E = splev([0, hcor.s], tck_E)[1]
+
         for vcor in self.vcors:
             vcor.phi_x = splev([0, vcor.s], tck_mux)[1]
             vcor.phi_y = splev([0, vcor.s], tck_muy)[1]
@@ -251,35 +355,8 @@ class Orbit:
             vcor.beta_x = splev([0, vcor.s], tck_bx)[1]
             vcor.beta_y = splev([0, vcor.s], tck_by)[1]
             vcor.E = splev([0, vcor.s], tck_E)[1]
-    """
-    def read_response_matrix(self, dictionary):
-        Energy = dictionary["energy"]
-        m = len(self.bpms)
-        nx = len(self.hcors)
-        ny = len(self.vcors)
-        real_resp = zeros((m*2, nx + ny))
-        #self.read_virtual_orbit( lattice)
-        #bpms = copy.deepcopy(orbit.bpms)
-        for ix, hcor in enumerate(self.hcors):
 
-            response = dictionary[hcor.id]
-
-            for j, bpm in enumerate(self.bpms):
-
-                real_resp[j, ix] = response[bpm.id][0]*(Energy/(hcor.angle_coef*hcor.length_iron*30.))
-                real_resp[j+m, ix] = response[bpm.id][1]*(Energy/(hcor.angle_coef*hcor.length_iron*30.))
-
-        for iy, vcor in enumerate(self.vcors):
-
-            response = dictionary[vcor.id]
-
-            for j, bpm in enumerate(self.bpms):
-                real_resp[j, iy+nx] = response[bpm.id][0]*(Energy/(vcor.angle_coef*vcor.length_iron*30.))
-                real_resp[j+m, iy+nx] = response[bpm.id][1]*(Energy/(vcor.angle_coef*vcor.length_iron*30.))
-        self.resp = real_resp
-        return self.resp
-    """
-    def measure_response_matrix(self, p_init=None, match_ic=False):
+    def measure_response_matrix(self, p_init=None, match_ic=False, order=1):
         """
         :param lattice:
         :param p_init:
@@ -295,14 +372,14 @@ class Orbit:
             real_resp = zeros((m*2, nx + ny+4))
         else:
             real_resp = zeros((m*2, nx + ny))
-        self.read_virtual_orbit(p_init=copy.deepcopy(p_init))
+        self.read_virtual_orbit(p_init=copy.deepcopy(p_init), order=order)
         bpms = copy.deepcopy(self.bpms)
 
         for ix, hcor in enumerate(self.hcors):
             print("measure X - ", ix, "/", nx)
             hcor.angle = shift
             self.lat.update_transfer_maps()
-            self.read_virtual_orbit(p_init=copy.deepcopy(p_init))
+            self.read_virtual_orbit(p_init=copy.deepcopy(p_init), order=order)
 
             for j, bpm in enumerate(self.bpms):
                 real_resp[j, ix] = (bpm.x - bpms[j].x)/shift
@@ -314,14 +391,14 @@ class Orbit:
             print("measure Y - ", iy,"/",ny)
             vcor.angle = shift
             self.lat.update_transfer_maps()
-            self.read_virtual_orbit(p_init=copy.deepcopy(p_init))
+            self.read_virtual_orbit(p_init=copy.deepcopy(p_init), order=order)
 
             for j, bpm in enumerate(self.bpms):
                 real_resp[j, iy+nx] = (bpm.x - bpms[j].x)/shift
                 real_resp[j+m, iy+nx] = (bpm.y - bpms[j].y)/shift
             vcor.angle = 0
         self.lat.update_transfer_maps()
-
+        self.read_virtual_orbit(p_init=copy.deepcopy(p_init), order=order)
         if match_ic:
             for i, par in enumerate(["x", "px", "y", "py"]):
                 print(i)
@@ -329,12 +406,16 @@ class Orbit:
                 p_i.__dict__[par] = 0.0001
                 p2 = copy.deepcopy(p_i)
                 print "measure = ", p2.x, p2.y, p2.px, p2.py, p2.E
-                self.read_virtual_orbit(p_init=p2)
+                self.read_virtual_orbit(p_init=p2, order=order)
                 for j, bpm in enumerate(self.bpms):
                     real_resp[j, nx + ny + i] = (bpm.x - bpms[j].x)/0.0001
                     real_resp[j+m, nx + ny + i] = (bpm.y - bpms[j].y)/0.0001
         self.resp = real_resp
-        return real_resp
+        rmatrix = Response_matrix()
+        rmatrix.bpm_names = [b.id for b in self.bpms]
+        rmatrix.cor_names = np.append(np.array([c.id for c in self.hcors]), np.array([c.id for c in self.vcors]))
+        rmatrix.matrix = self.resp
+        return rmatrix
 
     def ring_response_matrix(self, tw_init=None):
         """
@@ -406,23 +487,12 @@ class Orbit:
         self.resp = zeros((2*m, kx + ky))
         self.resp[:m,:kx] = h_resp[:, :]
         self.resp[m:,kx:] = v_resp[:, :]
-        """
-        if tw_init is not None:
-            p_init = Particle(E=tw_init.E)
-            self.read_virtual_orbit(lattice, p_init=copy.deepcopy(p_init))
-            bpms = copy.deepcopy(self.bpms)
-            for i, par in enumerate(["x", "px", "y", "py"]):
-                print(i)
-                p_i = Particle(E=p_init.E)
-                p_i.__dict__[par] = 0.0001
-                p2 = copy.deepcopy(p_i)
-                self.read_virtual_orbit(lattice, p_init=p2)
-                for j, bpm in enumerate(self.bpms):
-                    self.resp[j, kx + ky + i] = 0#(bpm.x - bpms[j].x)/0.0001
-                    self.resp[j+m, kx + ky + i]=0# (bpm.y - bpms[j].y)/0.0001
-                    #print j+m, nx + ny + i, (bpm.x - bpms[j].x)/0.00001
-        """
-        return self.resp
+
+        rmatrix = Response_matrix()
+        rmatrix.bpm_names = [b.id for b in self.bpms]
+        rmatrix.cor_names = np.append(np.array([c.id for c in self.hcors]), np.array([c.id for c in self.vcors]))
+        rmatrix.matrix = self.resp
+        return rmatrix
 
     def apply_svd(self, resp_matrix, misallign, weight=None):
         #print resp_matrix
@@ -515,7 +585,7 @@ class Orbit:
         #print poss[-5:]
         self.lat.update_transfer_maps()
         return p
-
+    """
     def save_rmatrix(self, filename):
         dict_rmatrix = {}
         cors = np.append(self.hcors, self.vcors)
@@ -537,46 +607,7 @@ class Orbit:
         orbit.resp = rmatrix
         return orbit
 
-    def compare_rmatrix(self, orbit2):
-        cors1 = np.append(np.array([cor.id for cor in self.hcors]), np.array([cor.id for cor in self.vcors]))
-        cors2 = np.append(np.array([cor.id for cor in orbit2.hcors]), np.array([cor.id for cor in orbit2.vcors]))
-        bpms1 = [bpm.id for bpm in self.bpms]
-        bpms2 = [bpm.id for bpm in orbit2.bpms]
-
-
-        s = np.shape(resp_mat1)
-        for i in range(s[0]):
-            bpm_id = orb.bpms[i%54].id
-            plane = "X"
-            if i>54:
-                plane = "Y"
-            for j in range(s[1]):
-                x1 = resp_mat1[i,j]
-                x2 = resp_mat2[i,j]
-                if x1 == 0 and x2 == 0:
-                    continue
-                if abs(x1 - x2)/max(np.abs([x1, x2])) < 0.10:
-                    continue
-                if j <=48:
-                    name = orb.hcors[j].id
-                elif j>48:
-                    print j, j-49, len(orb.vcors)
-                    name = orb.vcors[j-49].id
-                print "resp: ", plane, bpm_id, name, "V=", resp_mat1[i,j], resp_mat2[i,j]
-
-        """
-        #bpm_x = np.array([bpm.x for bpm in self.bpms])
-        #bpm_y = np.array([bpm.y for bpm in self.bpms])
-        #bpms = np.append(bpm_x, bpm_y)
-        for i, cor in enumerate(cors):
-            d_cor = {}
-            dict_rmatrix[cor.id] = d_cor
-            for j, bpm in enumerate(self.bpms):
-                xy = {}
-                xy["x"] = bpm
-                dict_rmatrix[cor.id][bpm.id+".x"] =
-        """
-
+    """
 
 
     def calc_track(self,lattice):

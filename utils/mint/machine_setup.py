@@ -384,6 +384,8 @@ class MachineSetup:
 
     def load_orbit(self, filename, lat):
         data = pickle.load(open(filename, "rb"))
+        data = data["orbit"]
+        #print data
         for elem in lat.sequence:
             if elem.type == "monitor":
                 if elem.id in data.keys():

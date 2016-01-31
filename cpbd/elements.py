@@ -58,8 +58,8 @@ class Monitor(Element):
         self.l = l
         self.x_ref = 0.
         self.y_ref = 0.
-        self._x = 0.
-        self._y = 0.
+        self.x = 0.
+        self.y = 0.
     """
     @property
     def x(self):

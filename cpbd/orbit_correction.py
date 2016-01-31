@@ -270,8 +270,8 @@ class Orbit:
         #print("energy = ", p.E)
         return array(X), array(Y)
 
-    def response_matrix(self, mi, dp):
-        resp = np.zeros(len(self.bpms)*2, len(self.hcors)+len(self.vcors))
+    def response_matrix(self, mi, dp, timeout=0.5):
+        resp = np.zeros((len(self.bpms)*2, len(self.hcors)+len(self.vcors)))
         plane = ["X", "Y"]
         for n, cor_list in enumerate([self.hcors, self.vcors]):
 
@@ -282,7 +282,7 @@ class Orbit:
                 print "X:  ", cor.id, "I = ", cor.I
 
             show_currents(cor_list, alpha=1.)
-            inp = raw_input("Start measurement of response matrix for" + plane[n]+":? ")
+            inp = raw_input("Start measurement of response matrix for " + plane[n]+":? ")
             if inp == "yes":
                 #resp = np.zeros(len(self.bpms)*2, len(cor_list))
                 X0, Y0 = mi.get_bpms_xy(self.bpms)
@@ -290,12 +290,12 @@ class Orbit:
                 for i, cor in enumerate(cor_list):
                     print i, "/", len(cor_list), cor.id
                     mi.set_value(cor.id, cor.I + cor.dI)
-                    sleep(0.5)
+                    sleep(timeout)
                     X, Y = mi.get_bpms_xy(self.bpms)
                     XY = np.append(X, Y)
                     resp[:, i + n*len(self.hcors)] = (XY - XY0)/cor.dI
                     mi.set_value(cor.id, cor.I - cor.dI)
-                    sleep(0.5)
+                    sleep(timeout)
                     X0, Y0 = mi.get_bpms_xy(self.bpms)
                     XY0 = np.append(X0, Y0)
         rmatrix = Response_matrix()

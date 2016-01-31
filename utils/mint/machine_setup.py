@@ -244,17 +244,6 @@ class MachineSetup:
         self.dict_sext = self.get_elem_type_currents(self.lat, ["sextupole"])
         print "OK"
 
-        print "getting gun energy  ...  "
-        self.gun_energy = self.get_elem_type_currents(self.lat, ["sextupole"])
-        print "OK"
-
-        print "getting currents of sext  ...  "
-        self.dict_sext = self.get_elem_type_currents(self.lat, ["sextupole"])
-        print "OK"
-
-        #print ("getting orbit ... ", )
-        #self.dict_orbit = self.get_cav_params(lat)
-        #print ("OK")
         data = {}
         data["quad"] = self.dict_quad
         data["bend"] = self.dict_bend

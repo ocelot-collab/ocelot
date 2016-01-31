@@ -88,6 +88,44 @@ class Response_matrix:
         self.matrix = dict_rmatrix["matrix"]
         return 1
 
+    def extract(self, cor_list, bpm_list):
+        cors1 = self.cor_names
+        cors2 = cor_list
+        bpms1 = self.bpm_names
+        bpms2 = bpm_list
+        nb1 = len(bpms1)
+
+        c_names = np.intersect1d(cors1, cors2)
+
+        c_i1 = np.where(np.in1d(cors1, cors2))[0]
+        c_i2 = np.where(np.in1d(cors2, cors1))[0]
+        b_names = np.intersect1d(bpms1, bpms2)
+        b_i1 = np.where(np.in1d(bpms1, bpms2))[0]
+        b_i2 = np.where(np.in1d(bpms2, bpms1))[0]
+
+        if not np.array_equal(c_names, cor_list):
+            print " in origin response matrix does not exist correctors:"
+            print cor_list[c_i2[:]]
+        if not np.array_equal(b_names, bpm_list):
+            print " in origin response matrix does not exist BPMs:"
+            print bpm_list[b_i2[:]]
+
+        extr_matrix = np.zeros((len(b_names)*2, len(c_names)))
+        #plane = ["X", "Y"]
+        for n in range(2):
+            #print "****************   ", plane[n], "   ****************"
+            for i, c in enumerate(c_names):
+                for j, b in enumerate(b_names):
+                    #print b_i1[j],  nb1*n, c_i1[i]
+                    x1 = self.matrix[b_i1[j] + nb1*n, c_i1[i]]
+                    extr_matrix[j + n*len(b_names), i] = x1
+
+        rmatrix = Response_matrix()
+        rmatrix.cor_names = c_names
+        rmatrix.bpm_names = b_names
+        rmatrix.matrix = extr_matrix
+        return rmatrix
+
     #def measure(self, mi, dp):
     #    I0 = mi.init_corrector_vals(self.cor_names)
     #    for cor in self.cor_names:

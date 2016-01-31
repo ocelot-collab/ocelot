@@ -70,7 +70,7 @@ class FLASH1MachineInterface():
         Y = [0.0]*len(bpms)
         for i in range(len(bpms)):
             mag_channel = 'TTF2.DIAG/ORBIT/' + bpms[i]# + '/PS'
-            #print mag_channel
+            print mag_channel
             X[i] = doocs.read(mag_channel + "/X.FLASH1")*0.001 # mm -> m
             Y[i] = doocs.read(mag_channel + "/Y.FLASH1")*0.001 # mm -> m
             #print X, Y

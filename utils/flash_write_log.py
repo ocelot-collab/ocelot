@@ -57,10 +57,11 @@ def print_string(values):
 
 print "#time" + "\t" + "\t".join([str(v) for v in names]) + "\t" + "sase"
 while True:
-    sleep(0.1)
+    sleep(1)
     #print time()
     values = [mi.get_value(name) for name in names]
     values.append( mi.get_sase(detector = 'gmd_fl1_slow'))
+
     print_string(values)
 
 

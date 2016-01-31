@@ -312,10 +312,10 @@ class Orbit:
         resp = np.zeros((len(self.bpms)*2, len(self.hcors)+len(self.vcors)))
         plane = ["X", "Y"]
         for n, cor_list in enumerate([self.hcors, self.vcors]):
-            print "cor_list = ", cor_list
+            #print "cor_list = ", cor_list
             for cor in cor_list:
-                print "cor = ", cor
-                i = mi.init_corrector_vals(cor.id)
+                #print "cor = ", cor
+                i = mi.init_corrector_vals([cor.id])
                 cor.I = i[0]
                 cor.dI = 0.01
                 print "X:  ", cor.id, "I = ", cor.I

@@ -311,6 +311,7 @@ class Orbit:
     def response_matrix(self, mi, dp, timeout=0.5):
         resp = np.zeros((len(self.bpms)*2, len(self.hcors)+len(self.vcors)))
         plane = ["X", "Y"]
+        bpm_names = [b.id for b in self.bpms]
         for n, cor_list in enumerate([self.hcors, self.vcors]):
             #print "cor_list = ", cor_list
             for cor in cor_list:
@@ -324,20 +325,20 @@ class Orbit:
             inp = raw_input("Start measurement of response matrix for " + plane[n]+":? ")
             if inp == "yes":
                 #resp = np.zeros(len(self.bpms)*2, len(cor_list))
-                X0, Y0 = mi.get_bpms_xy(self.bpms)
+                X0, Y0 = mi.get_bpms_xy(bpm_names)
                 XY0 = np.append(X0, Y0)
                 for i, cor in enumerate(cor_list):
                     print i, "/", len(cor_list), cor.id
                     mi.set_value(cor.id, cor.I + cor.dI)
                     sleep(timeout)
-                    X, Y = mi.get_bpms_xy(self.bpms)
+                    X, Y = mi.get_bpms_xy(bpm_names)
                     XY = np.append(X, Y)
                     print "XY = ", XY, XY0
                     print (XY - XY0)/cor.dI
                     resp[:, i + n*len(self.hcors)] = (XY - XY0)/cor.dI
                     mi.set_value(cor.id, cor.I - cor.dI)
                     sleep(timeout)
-                    X0, Y0 = mi.get_bpms_xy(self.bpms)
+                    X0, Y0 = mi.get_bpms_xy(bpm_names)
                     XY0 = np.append(X0, Y0)
         rmatrix = Response_matrix()
         rmatrix.bpm_names = [b.id for b in self.bpms]

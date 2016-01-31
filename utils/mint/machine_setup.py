@@ -215,7 +215,7 @@ class MachineSetup:
         self.hli = HighLevelInterface(lattice, mi, dp)
         pass
 
-    def save_lattice(self, filename):
+    def read_save_lattice(self, filename):
         print "reading currents from DOOCS system ... ",
         self.hli.read_all()
         print "OK"

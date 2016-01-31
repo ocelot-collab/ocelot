@@ -332,6 +332,8 @@ class Orbit:
                     sleep(timeout)
                     X, Y = mi.get_bpms_xy(self.bpms)
                     XY = np.append(X, Y)
+                    print "XY = ", XY, XY0
+                    print (XY - XY0)/cor.dI
                     resp[:, i + n*len(self.hcors)] = (XY - XY0)/cor.dI
                     mi.set_value(cor.id, cor.I - cor.dI)
                     sleep(timeout)

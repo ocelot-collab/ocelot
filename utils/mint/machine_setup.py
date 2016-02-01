@@ -40,7 +40,7 @@ class HighLevelInterface:
 
     def read_all(self):
         self.lat.gun_energy = self.mi.get_gun_energy()
-        self.lat.sase = self.mi.get_sase()
+        self.lat.sase = self.mi.get_sase(detector="gmd_fl1_slow")
         self.timestamp = time.time()
         self.read_cavs()
         self.read_quads()

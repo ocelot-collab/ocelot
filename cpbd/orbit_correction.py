@@ -80,6 +80,7 @@ class Response_matrix:
         dict_rmatrix["cor_names"] = self.cor_names
         dict_rmatrix["bpm_names"] = self.bpm_names
         dict_rmatrix["matrix"] = self.matrix
+        dict_rmatrix["mode"] = self.mode
         pickle.dump(dict_rmatrix, open(filename, "wb"))
 
     def load(self, filename):
@@ -87,6 +88,7 @@ class Response_matrix:
         self.cor_names = dict_rmatrix["cor_names"]
         self.bpm_names = dict_rmatrix["bpm_names"]
         self.matrix = dict_rmatrix["matrix"]
+        self.mode = dict_rmatrix["mode"]
         return 1
 
     def extract(self, cor_list, bpm_list):
@@ -125,6 +127,7 @@ class Response_matrix:
         rmatrix.cor_names = c_names
         rmatrix.bpm_names = b_names
         rmatrix.matrix = extr_matrix
+        rmatrix.mode = self.mode
         return rmatrix
 
 
@@ -281,6 +284,7 @@ class Orbit:
         self.create_BPM(bpm_list=r_matrix.bpm_names)
         self.create_COR(cor_list=r_matrix.cor_names)
         self.resp = r_matrix.matrix
+        self.mode = r_matrix.mode
 
     def read_virtual_orbit(self, p_init=None, order=1):
         """
@@ -351,6 +355,7 @@ class Orbit:
         rmatrix.bpm_names = [b.id for b in self.bpms]
         rmatrix.cor_names = np.append(np.array([c.id for c in self.hcors]), np.array([c.id for c in self.vcors]))
         rmatrix.matrix = resp
+        rmatrix.mode = "ampere"
         return rmatrix
 
     def optical_func_params(self, tw_init=None):
@@ -464,6 +469,7 @@ class Orbit:
         rmatrix.bpm_names = [b.id for b in self.bpms]
         rmatrix.cor_names = np.append(np.array([c.id for c in self.hcors]), np.array([c.id for c in self.vcors]))
         rmatrix.matrix = self.resp
+        rmatrix.mode = "radian"
         return rmatrix
 
     def ring_response_matrix(self, tw_init=None):
@@ -541,6 +547,7 @@ class Orbit:
         rmatrix.bpm_names = [b.id for b in self.bpms]
         rmatrix.cor_names = np.append(np.array([c.id for c in self.hcors]), np.array([c.id for c in self.vcors]))
         rmatrix.matrix = self.resp
+        rmatrix.mode = "radian"
         return rmatrix
 
     def apply_svd(self, resp_matrix, misallign, weight=None):

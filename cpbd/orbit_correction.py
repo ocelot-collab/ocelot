@@ -26,7 +26,7 @@ def show_currents( elems, alpha):
         n3 = len(str(elem.I))
         print elem.id, " "*(10-n) + "<-- ", elem.I + elem.dI,  " "*(18-n2)+ " was = ", elem.I, " "*(18-n3) + " dI = ", elem.dI, "x", alpha
     print "******* displaying currents - END ********"
-
+"""
 class BPM(object):
     def __init__(self, id = None):
         self.id = id
@@ -66,7 +66,7 @@ class BPM(object):
     def save(self):
         self.x0 = self.x
         self.y0 = self.y
-
+"""
 
 class Response_matrix:
     def __init__(self):
@@ -125,6 +125,7 @@ class Response_matrix:
         rmatrix.bpm_names = b_names
         rmatrix.matrix = extr_matrix
         return rmatrix
+
 
     #def measure(self, mi, dp):
     #    I0 = mi.init_corrector_vals(self.cor_names)

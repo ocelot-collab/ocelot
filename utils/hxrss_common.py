@@ -558,8 +558,9 @@ def update_beam_2(beam_new, g, n_interp):
     plt.show()
     '''    
 
-def sseed_2(hostfile, input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug=True, output_file = None,  xt_couple=False):
 
+def sseed_2(method='hxr_wake', hostfile, input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug=True, output_file = None,  xt_couple=False, filterfilename=''):
+    
     h = 4.135667516e-15
     c = 299792458.0
        
@@ -607,42 +608,55 @@ def sseed_2(hostfile, input_file, output_files, E_ev, chicane, run_dir, delay = 
     #g.idx_max = idx_max
     #print 'ss idx_max:', g.idx_max    
 
-    r = Ray() 
-    r.lamb = 2 * pi * hbar * c / E_ev
-    print 'wavelength', r.lamb, '(', E_ev, 'eV), filetring...'
-    
-    ref_idx = chicane.cryst.ref_idx
-    filt = get_crystal_filter(chicane.cryst, r, nk=1000, ref_idx = ref_idx)
-    
-    chicane.cryst.filter = filt
 
-    klpos, krpos, cwidth = FWHM(filt.k, 1.0-np.abs(filt.tr))
-    cmid_idx   = int((krpos - klpos)/2.0)
-    cmid       = filt.k[cmid_idx]        
+    if method=='hxr_wake_calc':
+        
+        r = Ray() 
+        r.lamb = 2 * pi * hbar * c / E_ev
+        print 'wavelength', r.lamb, '(', E_ev, 'eV), filetring...'
+        
+        ref_idx = chicane.cryst.ref_idx
+        filt = get_crystal_filter(chicane.cryst, r, nk=1000, ref_idx = ref_idx)
+        
+        chicane.cryst.filter = filt
 
-    H, d, phi = find_bragg(lambd = r.lamb, lattice=chicane.cryst.lattice, ord_max = 15)
-    dhkl = d[ref_idx]
-    thetaB = phi[ref_idx]* np.pi / 180.0
-    
-    dk = cwidth/5.0 #The filter transmissivity defines this quantity by taking 5 points on the bottom of T
-    dr = ncar/(dgrid*np.tan(thetaB/5.0)) #dr prepares for inclusion of the spatiotemporal coupling; it is transverse pix size/cot(thetaB)
-    #dr=1.0
-    print '#################'
-    print 'dgrid = ', dgrid
-    print 'ncar = ',ncar
-    print 'dr = ',dr
-    print 'thetaB = ',thetaB
-    print 'ds = ',ds
-    print 'SHF = ',SHF
-    print '#################'
-    mult = np.int(dkold/dk)
-    
-     
-    if int(mult/2) - mult/2 ==0: mult = mult-1
-    print 'MULT = ',mult
-    dk = dkold/mult #Important! Otherwise the np.int in the line changes the k scale substantially 
+        klpos, krpos, cwidth = FWHM(filt.k, 1.0-np.abs(filt.tr))
+        cmid_idx   = int((krpos - klpos)/2.0)
+        cmid       = filt.k[cmid_idx]        
 
-    phases = unfold_angles(np.angle(np.conj(filt.tr)))
+        H, d, phi = find_bragg(lambd = r.lamb, lattice=chicane.cryst.lattice, ord_max = 15)
+        dhkl = d[ref_idx]
+        thetaB = phi[ref_idx]* np.pi / 180.0
+        
+        dk = cwidth/5.0 #The filter transmissivity defines this quantity by taking 5 points on the bottom of T
+        dr = ncar/(dgrid*np.tan(thetaB/5.0)) #dr prepares for inclusion of the spatiotemporal coupling; it is transverse pix size/cot(thetaB)
+        #dr=1.0
+        print '#################'
+        print 'dgrid = ', dgrid
+        print 'ncar = ',ncar
+        print 'dr = ',dr
+        print 'thetaB = ',thetaB
+        print 'ds = ',ds
+        print 'SHF = ',SHF
+        print '#################'
+        mult = np.int(dkold/dk)
+        
+         
+        if int(mult/2) - mult/2 ==0: mult = mult-1
+        print 'MULT = ',mult
+        dk = dkold/mult #Important! Otherwise the np.int in the line changes the k scale substantially 
+
+        phases = unfold_angles(np.angle(np.conj(filt.tr)))
+
+    if method=='sxr_filter_read':
+        f = open(filterfilename, 'r')
+        #[abs, dlpl]
+        
+        # bring to common format !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        dr=1
+        mult = 1
+        phases = unfold_angles(np.angle(np.conj(filt.tr)))
+        
 
     f1 = open(output_files[1], 'w')
     f2 = open(output_files[2], 'w')

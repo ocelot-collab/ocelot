@@ -93,23 +93,28 @@ class Response_matrix:
         return 1
 
     def extract(self, cor_list, bpm_list):
-        cors1 = self.cor_names
+        cor_list = np.array(cor_list)
+        bpm_list = np.array(bpm_list)
+        cors1 = np.array(self.cor_names)
         cors2 = cor_list
-        bpms1 = self.bpm_names
+        bpms1 = np.array(self.bpm_names)
         bpms2 = bpm_list
         nb1 = len(bpms1)
 
-        c_names = np.intersect1d(cors1, cors2)
+        c_names = cors1[np.in1d(cors1, cors2)]
 
         c_i1 = np.where(np.in1d(cors1, cors2))[0]
-        c_i2 = np.where(np.in1d(cors2, cors1))[0]
-        b_names = np.intersect1d(bpms1, bpms2)
+        c_i2 = np.where(np.in1d(cors2, c_names))[0]
+        #print bpms1, np.in1d(bpms1, bpms2)
+        b_names = bpms1[np.in1d(bpms1, bpms2)]
+        #print b_names
         b_i1 = np.where(np.in1d(bpms1, bpms2))[0]
-        b_i2 = np.where(np.in1d(bpms2, bpms1))[0]
+        b_i2 = np.where(np.in1d(bpms2, b_names))[0]
 
         if not np.array_equal(c_names, cor_list):
             print " in origin response matrix does not exist correctors:"
-            print cor_list[c_i2[:]]
+            #print c_names
+            print cors2[np.in1d(cors2, c_names, invert=True)]
         if not np.array_equal(b_names, bpm_list):
             print " in origin response matrix does not exist BPMs:"
             print bpm_list[b_i2[:]]
@@ -684,7 +689,7 @@ class Orbit:
         ax.plot(s_bpm, x_bpm*1000.,  "ro-", label="X/mm")
         ax.plot(s_bpm, y_bpm*1000.,   "bo-", label="Y/mm")
         ax.legend()
-        plt.show()
+        plt.draw()
 
     def calc_track(self,lattice):
         part_list = trace_obj(lattice, self.particle0, nPoints = None)

@@ -4,31 +4,70 @@ from ocelot.utils.mint.flash1_converter import *
 import numpy as np
 import time
 
-"""
-def save_currents(lat, filename):
-    data = {}
-    for elem in lat.sequence:
-        try:
-            I = elem.I
-        except:
+def show_currents( elems, alpha):
+    print "******* displaying currents - START ********"
+    for elem in elems:
+        if elem.dI == 0:
             continue
-        data[elem.id] = {}
-        data[elem.id]["type"] = elem.type
-        data[elem.id]["mi_id"] = elem.mi_id
-        data[elem.id]["dev_type"] = elem.dev_type
-        data[elem.id]["I"] = I
-    pickle.dump(data, open(filename, "wb"))
-    return data
+        n = len(elem.id)
+        n2 = len(str(elem.I + elem.dI))
+        n3 = len(str(elem.I))
+        print elem.id, " "*(10-n) + "<-- ", elem.I + elem.dI,  " "*(18-n2)+ " was = ", elem.I, " "*(18-n3) + " dI = ", elem.dI, "x", alpha
+    print "******* displaying currents - END ********"
 
-def load_currents(filename, lat):
-    data = pickle.load(open(filename, "rb"))
-    for elem in lat.sequence:
-        if elem.id in data.keys():
-            params = data[elem.id]
-            elem.I = params["I"]
-            elem.mi_id = params["mi_id"]
-            elem.dev_type = params["dev_type"]
-"""
+def set_currents(mi, elems, alpha):
+    for elem in elems:
+        if elem.dI == 0:
+            continue
+        n = len(elem.id)
+        new_I = elem.I + elem.dI*alpha
+        n2 = len(str(new_I))
+        print elem.id,  " "*(10-n) + "<-- ", new_I,  " "*(18-n2)+ " was = ", elem.I
+        mi.set_value(elem.mi_id, new_I)
+
+def restore_current(mi, elems):
+    for elem in elems:
+        if elem.dI == 0:
+            continue
+        n = len(elem.id)
+        print elem.id, " "*(10-n) +"<-- ", elem.I
+        mi.set_value(elem.mi_id, elem.I)
+
+def currents2angles(orb):
+    for elem in np.append(orb.hcors, orb.vcors):
+
+        angle = tpi2k(elem.dev_type, elem.E, elem.dI)*0.001
+
+        #print elem.id, elem.dI, angle, elem.E
+        elem.angle = angle
+        #dI = tpk2i(elem.dev_type, elem.E, elem.angle*1000.)
+        if abs(angle) > 1e-10:
+            elem.angle = angle
+            if elem.id in ['H10ACC5', 'H10ACC6', 'V10ACC5', 'V10ACC6', 'V2SFELC']:
+                elem.angle = angle*2.
+            #print elem.id, "angle=", elem.angle, " dI = ", elem.dI, " I = ", elem.I
+        else:
+            elem.dI = 0.
+            elem.angle = 0.
+        if abs(elem.angle) > 0.005:
+            print elem.id, " @@@@@@@@@@@@@@@@ HIGH CURRENT @@@@@@@@@@@@@@@ = ", elem.angle
+
+def angles2currents(orb):
+    for elem in np.append(orb.hcors, orb.vcors):
+
+        #print elem.id
+        dI = tpk2i(elem.dev_type, elem.E, elem.angle*1000.)
+        #print elem.id, dI, elem.angle, elem.E
+        if abs(dI) > 0.00005:
+            elem.dI = dI
+            if elem.id in ['H10ACC5', 'H10ACC6', 'V10ACC5', 'V10ACC6', 'V2SFELC']:
+                elem.dI = dI/2.
+            #print elem.id, "angle=", elem.angle, " dI = ", elem.dI, " I = ", elem.I
+        else:
+            elem.dI = 0.
+            elem.angle = 0.
+        if abs(elem.dI) > 0.5:
+            print elem.id, " @@@@@@@@@@@@@@@@ HIGH CURRENT @@@@@@@@@@@@@@@ = ", elem.dI
 
 
 class HighLevelInterface:

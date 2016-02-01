@@ -195,7 +195,7 @@ def gen_outplot_e(g, legend = True, fig_name = None):
 
 
 
-    plt.show()
+    # plt.show()
 
 
 def gen_outplot_ph(g, legend = True, fig_name = None):
@@ -413,8 +413,225 @@ def gen_outplot_ph(g, legend = True, fig_name = None):
 
 
 
-    plt.show()
+    # plt.show()
 
+
+def gen_outplot_z(g, legend = True, fig_name = None):
+
+    import matplotlib.ticker as ticker
+
+    font_size = 1
+    if fig_name is None:
+        if g.filename is '':
+            fig = plt.figure('Photons')
+        else:
+            fig = plt.figure('Photons '+g.filename)
+    else:
+        fig = plt.figure(fig_name)
+
+    plt.rc('axes', grid=True)
+    plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
+    # left, width = 0.1, 0.85
+
+    max_yticks = 5
+
+    #
+    # rect1 = [left, 0.75, width, 0.20]
+    # rect2 = [left, 0.55, width, 0.20]
+    # rect3 = [left, 0.35, width, 0.20]
+    # rect4 = [left, 0.15, width, 0.20]
+
+    #
+    ax_pow=fig.add_subplot(3, 1, 1)
+    ax_pow.clear()
+    ax_spectrum=fig.add_subplot(3, 1, 2,sharex=ax_pow)
+    ax_spectrum.clear()
+    ax_size=fig.add_subplot(3, 1, 3,sharex=ax_pow)
+    ax_size.clear()
+
+
+    # for ax in ax_sizepos, ax_energy, ax_und, ax_bunching:
+
+    # ax_sizepos.grid(True)
+    # ax_und.grid(True)
+    # ax_energy.set_yticks([])
+    # ax_energy.grid(True)
+
+
+    # ax_und = fig.add_axes(rect1)
+    # ax_sizepos = fig.add_axes(rect2, sharex=ax_und)  #left, bottom, width, height
+    # ax_energy = fig.add_axes(rect3, sharex=ax_und)
+    # ax_bunching = fig.add_axes(rect4, sharex=ax_und)
+    for ax in ax_pow, ax_spectrum, ax_size:
+        if ax!=ax_size:
+            for label in ax.get_xticklabels():
+                label.set_visible(False)
+
+
+    # for tick in ax.yaxis.get_major_ticks():
+    #     tick.label.set_fontsize(14)
+    #     # specify integer or one of preset strings, e.g.
+    #     #tick.label.set_fontsize('x-small')
+    #     tick.label.set_rotation('vertical')
+
+
+
+
+    #
+    fig.subplots_adjust(hspace=0)
+    # # beta_x = [p.beta_x for p in tws] # list(map(lambda p:p.beta_x, tws))
+    # # beta_y = [p.beta_y for p in tws] #list(map(lambda p:p.beta_y, tws))
+    # # S = [p.s for p in tws] #list(map(lambda p:p.s, tws))
+    # #plt.plot(S, beta_x)
+
+    t_array = np.linspace(g.t[0], g.t[-1], len(g.t))
+    s_array = t_array*c*1.0e-15
+    ncar = g('ncar')
+    dgrid = g('dgrid')
+
+    xlamds = float(g('xlamds'))
+    nslice = len(g.spec)
+    zsep  = float(g('zsep'))
+    zstop  = float(g('zstop'))
+
+    srange = nslice*zsep*xlamds     #range in s
+    dk = 2*np.pi/srange
+    ds = zsep*xlamds
+
+    #w_l_m  =  g('xlamds')
+    w_l_ev = h * c / g('xlamds')
+
+    # max_pw_list = np.zeros(run_end+1)
+    # max_argpw_list = np.zeros(run_end+1)
+    # max_sp_list = np.zeros(run_end+1)
+    # max_argsp_list = np.zeros(run_end+1)
+
+    #
+
+    # plot_lattice(g, font_size)
+
+    # plot_betas(ax_sizepos, S, beta_x, beta_y, font_size)
+
+    # plot_elems(ax_energy, lat, s_point = S[0], legend = legend, y_scale=0.8) # plot elements
+
+    print len(t_array)
+    print len(g.xrms)
+    print len(g.z)
+
+    #sys.exit()
+
+    # ax_und
+    # ax_sizepos
+    # ax_energy
+    # ax_spread
+
+    # ax_pow
+    # ax_spectrum
+    # ax_size
+
+    ax_pow.plot(g.z, np.amax(g.p_int, axis=0), 'b-')
+    ax_pow.set_ylabel('P [W]')
+    ax_pow.set_yscale('log')
+
+    # outp.power.mean_S*inp.xlamds*inp.zsep*inp.nslice/c
+    ax_en = ax_pow.twinx()
+    ax_en.plot(g.z, np.mean(g.p_int,axis=0)*g('xlamds')*g('zsep')*g.nSlices/c, 'r-')
+    ax_en.set_ylabel('E [J]')
+    ax_en.set_yscale('log')
+
+    n_pad=1
+    # print len(g.z),len(g.xrms[0,:]),len(np.mean(g.yrms,axis=0))
+    power=np.pad(g.p_mid, [(int(g.nSlices/2)*n_pad, (g.nSlices-(int(g.nSlices/2))))*n_pad, (0, 0)], mode='constant')
+    phase=np.pad(g.phi_mid, [(int(g.nSlices/2)*n_pad, (g.nSlices-(int(g.nSlices/2))))*n_pad, (0, 0)], mode='constant')
+    # spectrum = np.power(abs(fft(np.sqrt( np.array(g.p_mid)) * np.exp( 1.j* np.array(g.phi_mid) ) , axis=0)),2)#/sqrt(g.nSlices)
+    spectrum = np.power(abs(fft(np.sqrt( np.array(power)) * np.exp( 1.j* np.array(phase) ) , axis=0)),2)/sqrt(g.nSlices)/np.power((2*g.leng/g('ncar')),2)/1e10
+    e_0=1239.8/g('xlamds')/1e9
+    # print e_0
+
+    g.freq_ev1 = h * fftfreq(len(spectrum), d=g('zsep') * g('xlamds') / c)+e_0
+    lamdscale=1239.8/g.freq_ev1
+    #sys.exit()
+    print 'shape',spectrum.shape
+    spectrum_lamdpos=sum(np.matlib.repmat(lamdscale,spectrum.shape[1],1)*transpose(spectrum),axis=1)/np.sum(spectrum,axis=0)
+
+
+    ax_spectrum.plot(g.z, np.amax(spectrum,axis=0), 'g-')
+    ax_spectrum.set_ylabel('P_{max}($\lambda$)')
+    ax_spectrum.set_yscale('log')
+
+    #fix!!!
+    # spectrum_lamdpos=sum(np.matlib.repmat(lamdscale,spectrum.shape[1],1)*transpose(spectrum),axis=1)/np.sum(spectrum,axis=0)
+    # spectrum_width=sqrt(sum((np.power(np.matlib.repmat(lamdscale,spectrum.shape[1],1)-np.matlib.repmat(spectrum_lamdpos,spectrum.shape[1],1),2)*spectrum),1)/sum(spectrum,axis=0));
+    # ax_spec_bandw = ax_spectrum.twinx()
+    # ax_spec_bandw.plot(g.z, spectrum_lamdpos, 'g-')
+    # fix and include!!!
+
+
+
+    # print 'spec1', len(spectrum)
+    # print 'freq_ev1', len(g.freq_ev1)
+
+
+    #
+    # fig2=plt.plot(fftshift(g.freq_ev1),fftshift(spectrum[:,-1],axes=0))
+    # plt.show()
+    # fig3=plt.plot(fftshift(lamdscale),fftshift(spectrum[:,-1],axes=0))
+    # plt.show()
+
+    print g.r_size.shape
+    print g.p_int.shape
+
+
+    ax_size.plot(g.z, np.average(g.r_size*2*1e6, weights=g.p_int, axis=0), 'b-')
+    ax_size.set_ylabel('transverse [$\mu$m]')
+    #ax_energy.plot(g.z, np.mean(g.energy_GeV,axis=0), 'g-')
+    # ax_spread = ax_energy.twinx()
+    # ax_spread.plot(g.z, np.average(g.e_spread_GeV, weights=g.I[1:], axis=0), 'b--', g.z, np.amax(g.e_spread_GeV, axis=0), 'b-')
+    # ax_spread.set_ylabel('Energy spread ($\Delta$E)')
+
+    number_ticks=4
+
+
+
+    # ax_bunching.plot(g.z, np.average(g.bunching, weights=g.I[1:], axis=0), 'k--', g.z, np.amax(g.bunching, axis=0), 'r-')
+    # ax_bunching.set_ylabel('Bunching')
+
+    # ax_bunching.set_xlabel('s [m]')
+    # x1,x2,y1,y2 = ax_sizepos.axis()
+    # ax_sizepos.axis([x1,x2,0,y2])
+    # x1,x2,y1,y2 = ax_spread.axis()
+    # ax_spread.axis([x1,x2,0,y2])
+
+# ax_pow
+    # ax_spectrum
+    # ax_size
+
+
+    # ax_pow.yaxis.major.locator.set_params(nbins=number_ticks)
+    # ax_en.yaxis.major.locator.set_params(nbins=number_ticks)
+    # ax_spectrum.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_size.yaxis.major.locator.set_params(nbins=number_ticks)
+    # ax_energy.yaxis.major.locator.set_params(nbins=number_ticks)
+    # ax_bunching.yaxis.major.locator.set_params(nbins=number_ticks)
+
+    # yloc = plt.MaxNLocator(max_yticks)
+    # # print yloc
+    # ax_sizepos.yaxis.set_major_locator(yloc)
+    # ax_energy.yaxis.set_major_locator(yloc)
+    # ax_und.yaxis.set_major_locator(yloc)
+    # ax_bunching.yaxis.set_major_locator(yloc)
+
+    # ax_energy.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.1e'))
+
+    plt.xlim(g.z[0], g.z[-1])
+
+    fig.subplots_adjust(top=0.95, bottom=0.1, right=0.85, left=0.15)
+
+
+
+
+
+    # plt.show()
 
 def plot_lattice(g, font_size):
 

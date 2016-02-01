@@ -2,7 +2,7 @@ __author__ = 'Sergey Tomin'
 
 
 from time import time, sleep
-
+from ocelot.gui.accelerator import *
 import matplotlib.pyplot as plt
 from scipy.interpolate import splrep, splev, interp1d
 from scipy.integrate import simps
@@ -89,6 +89,7 @@ class Response_matrix:
         self.bpm_names = dict_rmatrix["bpm_names"]
         self.matrix = dict_rmatrix["matrix"]
         self.mode = dict_rmatrix["mode"]
+        print self.mode
         return 1
 
     def extract(self, cor_list, bpm_list):
@@ -557,11 +558,11 @@ class Orbit:
         resp_matrix_w = dot(weight, resp_matrix)
         misallign_w = dot(weight, misallign)
         U, s, V = svd(resp_matrix_w)
-        #print s
+        print s
         s_inv = zeros(len(s))
         for i in range(len(s)):
             #if s[i]<1./max(s):
-            if s[i] < 1.e-2:
+            if s[i] < 1.e-4:
                 s_inv[i] = 0.
             else:
                 s_inv[i] = 1./s[i]
@@ -672,6 +673,18 @@ class Orbit:
 
     """
 
+    def show_orbit(self, title=" "):
+
+        s_bpm = np.array([p.s for p in self.bpms])
+        x_bpm = np.array([p.x for p in self.bpms])
+        y_bpm = np.array([p.y for p in self.bpms])
+
+        ax = plot_API(self.lat)
+        ax.set_title(title)
+        ax.plot(s_bpm, x_bpm*1000.,  "ro-", label="X/mm")
+        ax.plot(s_bpm, y_bpm*1000.,   "bo-", label="Y/mm")
+        ax.legend()
+        plt.show()
 
     def calc_track(self,lattice):
         part_list = trace_obj(lattice, self.particle0, nPoints = None)

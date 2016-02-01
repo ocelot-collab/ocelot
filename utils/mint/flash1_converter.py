@@ -27,7 +27,7 @@ def p3(a, x):
 def p3p(a, x):
     return a[1] + x*( 2.0*a[2] + x* 3.0*a[3] )
 
-def p3inv(a, y):
+def p3inv_old(a, y):
     tol=1.e-8
     x1 = p1inv( a, y )
     if a[2]==0.0 and a[3]==0.0:
@@ -36,7 +36,7 @@ def p3inv(a, y):
     x = newton(func, x1, tol=tol)
     return x
 
-def p3inv_old(a, y): # // uses undamped Newton-Raphson
+def p3inv(a, y): # // uses undamped Newton-Raphson
     tol=1.e-8
     x1 = p1inv( a, y )
     if a[2]==0.0 and a[3]==0.0:

@@ -157,7 +157,6 @@ class ParabolicMirror:
         self.no = no   # outwards (from mirror surface) looking normal
         self.a = a     # coefficient of the parabola z=a[0]*x**2 + a[1]*y**2    
         self.size = size
-    
 
 class Grating:
     def __init__(self, r=[0,0,0], no=[0,1,0], size=[1.0,1.0,0.1], d=0, id=""):
@@ -166,7 +165,6 @@ class Grating:
         self.size=size
         self.d = d
         self.id = id
-
 
 class Crystal:
     def __init__(self, r=[0,0,0], no = [0,0,1], size=[1,1,0.1], id=""): 
@@ -178,6 +176,13 @@ class Crystal:
     def slit(self,x,y):
         pass
 
+class Filter_freq:
+    def __init__(self, r=[0,0,0], no = [0,0,1], size=[1,1,1], id="", filename=""): 
+        self.r = r
+        self.no = no
+        self.size = size
+        self.id = id
+        self.filename = filename
 
 class OptDrift:
     '''

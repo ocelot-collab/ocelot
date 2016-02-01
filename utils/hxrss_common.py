@@ -418,3 +418,280 @@ def sseed(input_file, E_ev, chicane, run_dir, delay = None, debug=True,
 
     return g
 
+'''
+########################################
+#########     Added by G.G.    #########
+########################################
+'''
+
+def FWHM(X,Y):
+    '''
+    Function name: FWHM(X,Y)
+    
+    Description:  
+                 returns the FWHM of Y(X)
+		  
+		  
+    Arguments:
+		  -X :   abscissa
+		  -Y :   ordinate
+		  	  
+		  
+    Date revised: 2013.8.8
+    
+    '''
+    
+    from pylab import *
+    
+    half_max = max(Y) / 2.
+    print half_max
+    #find when function crosses line half_max (when sign of diff flips)
+    #take the 'derivative' of signum(half_max - Y[])
+    d = sign(half_max - array(Y[0:-1])) - sign(half_max - array(Y[1:]))
+    #plot(X,d) #if you are interested
+    #find the left and right most indexes
+    left_idx = find(d > 0)[0]
+    right_idx = find(d < 0)[-1]
+    print X[left_idx]
+    print X[right_idx]
+    return [left_idx, right_idx, X[right_idx] - X[left_idx]] #return the xpos, left and right and difference (full width)
+
+def readres(namef):
+    '''
+    Function name: readres(namef)
+    
+    Description:
+                  -Reads files from the Result directory. These are always 2 columns of ascii data.
+		  -Returns X and Y columns
+		  -NO comment is written into the log file
+		  
+    Arguments:
+                  -namef:    file name
+		  	  
+		  
+    Date revised: 2013.8.7
+    
+    '''
+    
+  
+
+    dataX = []
+    dataY = []
+    f = open(namef, 'r')
+
+    for line in f:
+        line = line.strip()
+        columns = line.split()
+        dataX = np.append(dataX,float(columns[0]))
+        dataY = np.append(dataY,float(columns[1]))
+    
+    f.close()
+    
+    return np.array([dataX,dataY])
+     
+
+def update_beam_2(beam_new, g, n_interp):
+    beam = deepcopy(beam_new)
+    g0 = np.array(map(lambda x : g.sliceValues[x]['energy'][-1], xrange(1,g.nSlices+1)) )
+    dg = np.array(map(lambda x : g.sliceValues[x]['e-spread'][-1], xrange(1,g.nSlices+1)) )
+    
+    print len(g0)
+    print g.nSlices
+    
+    print len(beam_new.z)
+    
+    I = np.array(g.I)
+    
+    if n_interp == 0: n_interp = g.nSlices
+    '''
+    plt.figure()
+    plt.plot(beam_new.g0)
+    plt.plot(g0 + beam.gamma_rel)
+    plt.figure()
+    plt.plot(beam_new.dg)
+    plt.plot(dg)
+    plt.figure()
+    plt.plot(I)
+    plt.plot(beam_new.I)
+    plt.show()
+    '''
+    beam_new.z = np.linspace(beam.z[0], beam.z[-1], n_interp) 
+    z2 = np.linspace(beam.z[0], beam.z[-1], g.nSlices)
+    beam_new.I = np.interp(beam_new.z, beam.z, beam.I)
+            
+    zmax, Imax = peaks(beam_new.z, beam_new.I, n=1)
+    beam_new.idx_max = np.where(beam_new.z == zmax)[0][0]
+            
+    beam_new.ex = np.interp(beam_new.z, beam.z, beam.ex) 
+    beam_new.ey = np.interp(beam_new.z, beam.z, beam.ey) 
+    beam_new.zsep = beam.zsep * len(beam.z) / len(beam_new.z)
+    #beam_new.g0 = np.interp(beam_new.z, beam.z, beam.g0) 
+    beam_new.g0 = g0 + beam.gamma_rel
+    print len(beam_new.z)
+    print len(beam_new.g0)
+    print len(beam.z)
+    beam_new.g0 = np.interp(beam_new.z, z2, beam_new.g0)
+    beam_new.dg = dg   
+    beam_new.dg = np.interp(beam_new.z, z2, beam_new.dg)
+        
+    beam_new.eloss = np.interp(beam_new.z, beam.z, beam.eloss)
+    
+    beam_new.betax = np.interp(beam_new.z, beam.z, beam.betax)
+    beam_new.betay = np.interp(beam_new.z, beam.z, beam.betay)
+    beam_new.alphax = np.interp(beam_new.z, beam.z, beam.alphax)
+    beam_new.alphay = np.interp(beam_new.z, beam.z, beam.alphay)
+    
+    beam_new.x = np.interp(beam_new.z, beam.z, beam.x) 
+    beam_new.px = np.interp(beam_new.z, beam.z, beam.px) 
+    beam_new.y = np.interp(beam_new.z, beam.z, beam.y)
+    beam_new.py = np.interp(beam_new.z, beam.z, beam.py)
+    '''
+    plt.figure()
+    plt.plot(beam_new.g0)
+    plt.plot(g0 + beam.gamma_rel)
+    plt.figure()
+    plt.plot(beam_new.dg)
+    plt.plot(dg)
+    plt.figure()
+    plt.plot(I)
+    plt.plot(beam_new.I)
+    plt.show()
+    '''    
+
+def sseed_2(method='hxr_wake', hostfile, input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug=True, output_file = None,  xt_couple=False, filterfilename=''):
+
+    
+
+    h = 4.135667516e-15
+    c = 299792458.0
+       
+    g = readGenesisOutput(input_file)
+    print 'read sliced field ', g('ncar'), g.nSlices
+    ncar = int(g('ncar'))
+    dgrid = float(g('dgrid'))
+    xlamds = float(g('xlamds'))
+    nslice = len(g.spec)
+    print 'nslice = ',nslice
+    zsep  = float(g('zsep'))
+    print zsep
+
+    k0 = 2*np.pi/xlamds    
+    ds = zsep*xlamds                #interval ds
+    srange = nslice*zsep*xlamds     #range in s
+    
+    
+    
+    
+    
+    
+    dkold = 2*np.pi/srange    
+    krange = dkold*nslice
+    #idx_max = np.argmax(g.I)
+    #s_imax = -srange/2.0 + idx_max*ds
+    
+    
+
+    #SHF = np.int((delay-s_imax)/ds)
+    
+    SHF = np.int(delay/ds)
+    
+    #print 'imax = ', idx_imax
+    #print 'delay = ', delay
+    #print 'delay-s_imax', delay-s_imax
+    #print 'SHF*ds', SHF*ds
+    
+    #SHF = np.int((-0.5e-5+s_imax)/ds)
+    ####SHF = np.int((delay)/ds)
+    #print np.int((delay+s_imax)/ds)*ds
+    #print 'due=', SHF*ds
+    #exit()
+
+    #g.idx_max = idx_max
+    #print 'ss idx_max:', g.idx_max    
+
+    if method=='hxr_wake_calc':
+        
+        r = Ray() 
+        r.lamb = 2 * pi * hbar * c / E_ev
+        print 'wavelength', r.lamb, '(', E_ev, 'eV), filetring...'
+        
+        ref_idx = chicane.cryst.ref_idx
+        filt = get_crystal_filter(chicane.cryst, r, nk=1000, ref_idx = ref_idx)
+        
+        chicane.cryst.filter = filt
+
+        klpos, krpos, cwidth = FWHM(filt.k, 1.0-np.abs(filt.tr))
+        cmid_idx   = int((krpos - klpos)/2.0)
+        cmid       = filt.k[cmid_idx]        
+
+        H, d, phi = find_bragg(lambd = r.lamb, lattice=chicane.cryst.lattice, ord_max = 15)
+        dhkl = d[ref_idx]
+        thetaB = phi[ref_idx]* np.pi / 180.0
+        
+        dk = cwidth/5.0 #The filter transmissivity defines this quantity by taking 5 points on the bottom of T
+        dr = ncar/(dgrid*np.tan(thetaB/5.0)) #dr prepares for inclusion of the spatiotemporal coupling; it is transverse pix size/cot(thetaB)
+        #dr=1.0
+        print '#################'
+        print 'dgrid = ', dgrid
+        print 'ncar = ',ncar
+        print 'dr = ',dr
+        print 'thetaB = ',thetaB
+        print 'ds = ',ds
+        print 'SHF = ',SHF
+        print '#################'
+        mult = np.int(dkold/dk)
+        
+         
+        if int(mult/2) - mult/2 ==0: mult = mult-1
+        print 'MULT = ',mult
+        dk = dkold/mult #Important! Otherwise the np.int in the line changes the k scale substantially 
+
+        phases = unfold_angles(np.angle(np.conj(filt.tr)))
+
+    if method=='sxr_filter_read':
+        f = open(filterfilename, 'r')
+        #[abs, dlpl]
+        
+        # bring to common format !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        dr=1
+        mult = 1
+        phases = unfold_angles(np.angle(np.conj(filt.tr)))
+        
+    f1 = open(output_files[1], 'w')
+    f2 = open(output_files[2], 'w')
+    for i in range(len(filt.k)):
+        f1.write('%s ' %(filt.k[i]) + '%s' %np.abs(filt.tr[i]) +'\n')
+        f2.write('%s ' %(filt.k[i]) + '%s' %phases[i] +'\n')
+        
+    f1.close()
+    f2.close()
+
+    
+    ARGS   =   ''.join([input_file+'.dfl'+' ', 	        
+		output_files[0]+' ',                  
+	        output_files[1]+' ',                       
+		output_files[2]+' ',                       
+		output_files[3]+' ',
+		output_files[4]+' ',                       
+		output_files[5]+' ',                       
+		output_files[6]+' ',                       
+		output_files[7]+' ',
+                output_files[8]+' ', 
+		str(xlamds)+' ',                       
+		str(ncar)+' ',                       
+		str(mult)+' ',                       
+		str(ds)+' ',                       
+		str(dk)+' ',                       
+		str(SHF)+' ',                       
+		str(nslice)+' ', 
+		str(dr)])	
+    runpar = '`which mpirun` -x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH --hostfile '+ os.path.abspath('.')+hostfile
+    prog   = ' '+'python /data/netapp/xfel/gianluca/products/ocelot/utils/seed.py '+ARGS+''
+	
+    cmd = runpar+prog
+    os.system(cmd)
+
+    ssc, Pout = readres(output_files[5])
+    lsc, Sout = readres(output_files[7])
+    
+    return ssc, Pout, lsc, Sout

@@ -308,7 +308,7 @@ class Orbit:
         #print("energy = ", p.E)
         return array(X), array(Y)
 
-    def response_matrix(self, mi, dp, timeout=0.5):
+    def response_matrix(self, mi, dp, timeout=0.5, delta_i=0.01):
         resp = np.zeros((len(self.bpms)*2, len(self.hcors)+len(self.vcors)))
         plane = ["X", "Y"]
         bpm_names = [b.id for b in self.bpms]
@@ -318,7 +318,11 @@ class Orbit:
                 #print "cor = ", cor
                 i = mi.init_corrector_vals([cor.id])
                 cor.I = i[0]
-                cor.dI = 0.01
+                try:
+                    cor.dI
+                except:
+                    #print cor.id, " delta_i = ", delta_i
+                    cor.dI = delta_i
                 print "X:  ", cor.id, "I = ", cor.I
 
             show_currents(cor_list, alpha=1.)

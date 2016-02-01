@@ -67,10 +67,10 @@ while True:
 
     values.append( mi.get_sase(detector = 'gmd_fl1_slow'))
     pos = mi.get_sase_pos()
-    values.append(pos[0])
-    values.append(pos[1])
-    values.append(pos[2])
-    values.append(pos[3])
+    values.append(pos[0][0])
+    values.append(pos[0][1])
+    values.append(pos[1][0])
+    values.append(pos[1][1])
     print_string(values)
 
 

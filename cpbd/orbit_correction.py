@@ -73,6 +73,7 @@ class Response_matrix:
         self.cor_names = []
         self.bpm_names = []
         self.matrix = []
+        self.mode = "radian"  # or "ampere"
 
     def save(self, filename):
         dict_rmatrix = {}
@@ -190,6 +191,7 @@ class Orbit:
         self.nu_x = 0.
         self.nu_y = 0.
         self.resp = []
+        self.mode = "radian" # or "ampere"
         #if lattice != None:
         self.create_BPM()
         self.create_COR()
@@ -577,10 +579,17 @@ class Orbit:
         angle = self.apply_svd(self.resp, monitors, weight=weights)
 
         print("correction = ", time() - start)
-        for i, hcor in enumerate(self.hcors):
-            hcor.angle -= angle[i]
+        for i, cor in enumerate(np.append(self.hcors, self.vcors)):
+            if self.mode == "ampere":
+                #print "ampere"
+                cor.dI = -angle[i]
+            else:
+                #print len(np.append(self.hcors, self.vcors)), i, len(angle)
+                cor.angle -= angle[i]
+        """
         for i, vcor in enumerate(self.vcors):
             vcor.angle -= angle[i+len(self.hcors)]
+        """
         """
         ix = 0
         iy = 0

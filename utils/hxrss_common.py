@@ -558,7 +558,7 @@ def update_beam_2(beam_new, g, n_interp):
     plt.show()
     '''    
 
-def sseed_2(hostfile, input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug=True, output_file = None,  xt_couple=False, filterfilename='',method='hxr_wake'):
+def sseed_2(hostfile, input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug=True, output_file = None,  xt_couple=False, filterfilename='',method='hxr_wake_calc'):
 
     
 

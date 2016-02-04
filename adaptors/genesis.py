@@ -284,7 +284,18 @@ class GenesisOutput:
             p, = self.parameters[name]
             return float(p.replace('D','E'))
         
-        
+class GenesisParticles:
+    
+    def __init__(self):
+        self.e = []
+        self.ph = []
+        self.x = []
+        self.y = []
+        self.px = []
+        self.py = []
+
+        self.filename = ''
+
         
 class GenesisBeamDefinition():
     
@@ -317,33 +328,33 @@ class GenesisBeamDefinition():
    I/O functions
 '''
 
-def read_particle_file(file_name, npart, nslice):
-    data=open(file_name,'rb').read()
-    dataSize = len(data)
+def read_particle_file(filename, npart=[]):
+#    print npart
+    #new faster function with different output convenstion    
+    particles=GenesisParticles
+#    start_time = time.time()
+    tmp=np.fromfile(filename,dtype=float)
     
-    print 'sizes ', dataSize, npart, nslice, dataSize / (6.0*npart*nslice) /8.0  
+#    if npart!=[] and nslice!=[]    
+#    if len(tmp)!=npart*nslice*6:
+#    print len(tmp)/npart/6
+    #nslice=int(len(tmp)/npart/6)
+    nslice=600
+    tmp=tmp.reshape(npart,nslice,6)
+    particles.e=tmp[:,0,:] #gamma
+    particles.ph=tmp[:,1,:] 
+    particles.x=tmp[:,2,:]
+    particles.y=tmp[:,3,:]
+    particles.px=tmp[:,4,:]
+    particles.py=tmp[:,5,:]
+    particles.filename=filename
     
-    slices = []
+    return particles
+#    print("--- read Particles - %s seconds ---" % (time.time() - start_time))
     
-    nn = npart * 6
-    
-    for i in range(0, nslice):
 
-        buf=map(lambda x: struct.unpack('d',data[8*x:8*x+8])[0] , range(i*nn,(i+1)*nn))
-
-        E = np.array(buf[0:npart])
-        pz = np.array(buf[npart:npart*2])
-        x = np.array(buf[npart*2:npart*3])
-        y = np.array(buf[npart*3:npart*4])
-        px = np.array(buf[npart*4:npart*5])
-        py = np.array(buf[npart*5:npart*6])
-
-        slices.append([E,pz,x,px,y,py])
-
-    return slices
-
-def readParticleFile(fileName, npart, nslice):
-    
+def readParticleFile_old(fileName, npart, nslice):
+    #old file with different output convenstion
     def read_in_chunks(f, size=1024):
         while True:
             data = f.read(size)

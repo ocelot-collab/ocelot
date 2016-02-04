@@ -52,7 +52,8 @@ def taper(lat, k):
         if lat2.sequence[i].__class__ == Undulator:
             #print lat2.sequence[i].id, lat2.sequence[i].Kx
             lat2.sequence[i] = deepcopy(lat.sequence[i]) 
-            lat2.sequence[i].Kx = lat2.sequence[i].Kx * k(n+1)
+            ##MOD BY GG. #lat2.sequence[i].Kx = lat2.sequence[i].Kx * k(n+1)
+	    lat2.sequence[i].Kx = k(n+1)/np.sqrt(0.5) ##MOD BY GG.
             n += 1
 
     return lat2
@@ -139,6 +140,7 @@ def run(inp, launcher):
     return g
 
 
+'''
 def get_genesis_launcher(nproc = 1):
     host = socket.gethostname()
     
@@ -155,7 +157,31 @@ def get_genesis_launcher(nproc = 1):
     launcher.nproc = nproc
     
     return launcher
+'''
 
+'''
+#### MODIFIED BY GG ####
+'''
+def get_genesis_launcher(nproc = 1, hostfilename = ''):
+    host = socket.gethostname()
+    
+    launcher = MpiLauncher()
+    
+    if host.startswith('kolmogorov'):
+        launcher.program = '/home/iagapov/workspace/xcode/codes/genesis/genesis < tmp.cmd | tee log'
+    if host.startswith('it-hpc'):
+        launcher.program = '/data/netapp/xfel/products/genesis/genesis < tmp.cmd | tee log'
+	if hostfilename == '':
+            #launcher.mpiParameters ='-x LD_LIBRARY_PATH=/usr/local/lib:/data/netapp/it/tools/gcc47/lib64 --prefix /data/netapp/it/tools/gcc47'
+            launcher.mpiParameters ='-x LD_LIBRARY_PATH=/usr/local/lib:/usr/lib64/openmpi/lib --prefix /usr/lib64/openmpi/'
+            launcher.mpiParameters = launcher.mpiParameters + ' -hostfile '+ os.path.abspath('.') +'/hosts.txt'
+        else:
+	    launcher.mpiParameters ='-x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH'
+            launcher.mpiParameters = launcher.mpiParameters + ' -hostfile '+ os.path.abspath('.') +hostfilename
+	
+    launcher.nproc = nproc
+    
+    return launcher
 
 def get_data_dir():
     host = socket.gethostname()

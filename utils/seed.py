@@ -359,6 +359,17 @@ def writeRadiationFile_mpi(comm, filename, slices, shape):
     
 #END EXPERIMENTAL FUNCTION
 
+#BEGIN EXPERIMENTAL FUNCTION
+
+
+def readRadiationFile_my(fileName, npoints=151):
+    import numpy as np
+    b=np.fromfile(fileName,dtype=complex)
+    slice_num=b.shape[0]/npoints/npoints
+    c=b.reshape(slice_num,npoints,npoints)
+    return c
+
+#END EXPERIMENTAL FUNCTION
 
 
 #############################################
@@ -405,7 +416,8 @@ if __name__ == "__main__":
     
    
     
-    slices = readRadiationFile_mpi(comm=comm, fileName=filename, npoints=MTR)
+    #slices = readRadiationFile_mpi(comm=comm, fileName=filename, npoints=MTR)
+    slices = readRadiationFile_my(fileName=filename, npoints=MTR)
     #slices = slices[(len(slices)-nslice):len(slices)]
     print len(slices)
     print nslice

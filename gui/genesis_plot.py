@@ -27,7 +27,9 @@ rc('text', usetex=True) # required to have greek fonts on redhat
 h = 4.135667516e-15
 c = 299792458.0
 
-def gen_outplot_e(g, legend = True, fig_name = None):
+max_yticks = 7
+
+def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = None):
 
     import matplotlib.ticker as ticker
 
@@ -39,13 +41,12 @@ def gen_outplot_e(g, legend = True, fig_name = None):
             fig = plt.figure('Electrons '+g.filename)
     else:
         fig = plt.figure(fig_name)
-
+    
+    fig.set_size_inches(figsize,forward=True)
     plt.rc('axes', grid=True)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
     # left, width = 0.1, 0.85
-
-    max_yticks = 5
-
+    plt.clf()
     #
     # rect1 = [left, 0.75, width, 0.20]
     # rect2 = [left, 0.55, width, 0.20]
@@ -97,22 +98,22 @@ def gen_outplot_e(g, legend = True, fig_name = None):
     # # S = [p.s for p in tws] #list(map(lambda p:p.s, tws))
     # #plt.plot(S, beta_x)
 
-    t_array = np.linspace(g.t[0], g.t[-1], len(g.t))
-    s_array = t_array*c*1.0e-15
-    ncar = g('ncar')
-    dgrid = g('dgrid')
+#    t_array = np.linspace(g.t[0], g.t[-1], len(g.t))
+#    s_array = t_array*c*1.0e-15
+#    ncar = g('ncar')
+#    dgrid = g('dgrid')
     
-    xlamds = float(g('xlamds'))
-    nslice = len(g.spec)
-    zsep  = float(g('zsep'))
-    zstop  = float(g('zstop'))
-    
-    srange = nslice*zsep*xlamds     #range in s
-    dk = 2*np.pi/srange
-    ds = zsep*xlamds
-    
-    #w_l_m  =  g('xlamds')
-    w_l_ev = h * c / g('xlamds')
+#    xlamds = float(g('xlamds'))
+#    nslice = len(g.spec)
+#    zsep  = float(g('zsep'))
+#    zstop  = float(g('zstop'))
+#    
+#    srange = nslice*zsep*xlamds     #range in s
+#    dk = 2*np.pi/srange
+#    ds = zsep*xlamds
+#    
+#    #w_l_m  =  g('xlamds')
+#    w_l_ev = h * c / g('xlamds')
     
     # max_pw_list = np.zeros(run_end+1)
     # max_argpw_list = np.zeros(run_end+1)
@@ -127,9 +128,7 @@ def gen_outplot_e(g, legend = True, fig_name = None):
     
     # plot_elems(ax_energy, lat, s_point = S[0], legend = legend, y_scale=0.8) # plot elements
 
-    print len(t_array)
-    print len(g.xrms)
-    print len(g.z)
+ 
 
     #sys.exit()
 
@@ -138,34 +137,36 @@ def gen_outplot_e(g, legend = True, fig_name = None):
     # ax_energy
     # ax_spread
 
-    ax_und.plot(g.z, g.aw, 'b-')
+    ax_und.plot(g.z, g.aw, 'b-',linewidth=1.5)
     ax_und.set_ylabel('K')
 
     ax_quad = ax_und.twinx()
-    ax_quad.plot(g.z, g.qfld, 'r-')
+    ax_quad.plot(g.z, g.qfld, 'r-',linewidth=1.5)
     ax_quad.set_ylabel('Quad')
 
     # print len(g.z),len(g.xrms[0,:]),len(np.mean(g.yrms,axis=0))
 
     #sys.exit()
     ax_sizepos.plot(g.z, np.mean(g.xrms,axis=0)*1e6, 'g-',g.z, np.mean(g.yrms,axis=0)*1e6, 'b-')
-    ax_sizepos.set_ylabel('Beam size [$\mu$m]')
+    ax_sizepos.set_ylabel('$\sigma_{x,y}$ [$\mu$m]')
 
 
-    ax_energy.plot(g.z, np.average(g.el_energy*0.511e-3, weights=g.I[1:], axis=0), 'g-')
-    ax_energy.set_ylabel('Energy [GeV]')
+    ax_energy.plot(g.z, np.average(g.el_energy*0.511e-3, weights=g.I, axis=0), 'b-',linewidth=1.5)
+    ax_energy.set_ylabel('E [GeV]')
+    ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
     #ax_energy.plot(g.z, np.mean(g.energy_GeV,axis=0), 'g-')
     ax_spread = ax_energy.twinx()
-    ax_spread.plot(g.z, np.average(g.el_e_spread*0.511e-3, weights=g.I[1:], axis=0), 'b--', g.z, np.amax(g.el_e_spread*0.511e-3, axis=0), 'b-')
-    ax_spread.set_ylabel('Energy spread ($\Delta$E)')
+    ax_spread.plot(g.z, np.average(g.el_e_spread*0.511e-3*1000, weights=g.I, axis=0), 'r--', g.z, np.amax(g.el_e_spread*0.511e-3*1000, axis=0), 'r-')
+    ax_spread.set_ylabel('$\sigma_E$ [MeV]')
 
     number_ticks=4
 
 
-    ax_bunching.plot(g.z, np.average(g.bunching, weights=g.I[1:], axis=0), 'k--', g.z, np.amax(g.bunching, axis=0), 'r-')
+    #ax_bunching.plot(g.z, np.average(g.bunching, weights=g.I[1:], axis=0), 'k--', g.z, np.amax(g.bunching, axis=0), 'r-')    
+    ax_bunching.plot(g.z, np.average(g.bunching, weights=g.I, axis=0), 'k--', g.z, np.amax(g.bunching, axis=0), 'g-')
     ax_bunching.set_ylabel('Bunching')
 
-    ax_bunching.set_xlabel('s [m]')
+    ax_bunching.set_xlabel('s [$\mu$m]')
     x1,x2,y1,y2 = ax_sizepos.axis()
     ax_sizepos.axis([x1,x2,0,y2])
     x1,x2,y1,y2 = ax_spread.axis()
@@ -191,17 +192,25 @@ def gen_outplot_e(g, legend = True, fig_name = None):
 
     fig.subplots_adjust(top=0.95, bottom=0.1, right=0.85, left=0.15)
 
+    ax_und.tick_params(axis='y', which='both', colors='b')
+    ax_und.yaxis.label.set_color('b')    
+    ax_quad.tick_params(axis='y', which='both', colors='r')
+    ax_quad.yaxis.label.set_color('r') 
+    ax_energy.tick_params(axis='y', which='both', colors='b')
+    ax_energy.yaxis.label.set_color('b')    
+    ax_spread.tick_params(axis='y', which='both', colors='r')
+    ax_spread.yaxis.label.set_color('r') 
 
 
 
+    plt.show()
 
-    # plt.show()
 
-
-def gen_outplot_ph(g, legend = True, fig_name = None):
-
+def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None):
+#    max_yticks = 7
     import matplotlib.ticker as ticker
-
+    
+    
     font_size = 1
     if fig_name is None:
         if g.filename is '':
@@ -211,11 +220,13 @@ def gen_outplot_ph(g, legend = True, fig_name = None):
     else:
         fig = plt.figure(fig_name)
 
+    fig.set_size_inches(figsize,forward=True)
+
     plt.rc('axes', grid=True)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
     # left, width = 0.1, 0.85
+    plt.clf()
 
-    max_yticks = 5
 
     #
     # rect1 = [left, 0.75, width, 0.20]
@@ -266,22 +277,22 @@ def gen_outplot_ph(g, legend = True, fig_name = None):
     # # S = [p.s for p in tws] #list(map(lambda p:p.s, tws))
     # #plt.plot(S, beta_x)
 
-    t_array = np.linspace(g.t[0], g.t[-1], len(g.t))
-    s_array = t_array*c*1.0e-15
-    ncar = g('ncar')
-    dgrid = g('dgrid')
-
-    xlamds = float(g('xlamds'))
-    nslice = len(g.spec)
-    zsep  = float(g('zsep'))
-    zstop  = float(g('zstop'))
-
-    srange = nslice*zsep*xlamds     #range in s
-    dk = 2*np.pi/srange
-    ds = zsep*xlamds
-
-    #w_l_m  =  g('xlamds')
-    w_l_ev = h * c / g('xlamds')
+#    t_array = np.linspace(g.t[0], g.t[-1], len(g.t))
+#    s_array = t_array*c*1.0e-15
+#    ncar = g('ncar')
+#    dgrid = g('dgrid')
+#
+#    xlamds = float(g('xlamds'))
+#    nslice = len(g.spec)
+#    zsep  = float(g('zsep'))
+#    zstop  = float(g('zstop'))
+#
+#    srange = nslice*zsep*xlamds     #range in s
+#    dk = 2*np.pi/srange
+#    ds = zsep*xlamds
+#
+#    #w_l_m  =  g('xlamds')
+#    w_l_ev = h * c / g('xlamds')
 
     # max_pw_list = np.zeros(run_end+1)
     # max_argpw_list = np.zeros(run_end+1)
@@ -296,9 +307,9 @@ def gen_outplot_ph(g, legend = True, fig_name = None):
 
     # plot_elems(ax_energy, lat, s_point = S[0], legend = legend, y_scale=0.8) # plot elements
 
-    print len(t_array)
-    print len(g.xrms)
-    print len(g.z)
+#    print len(t_array)
+#    print len(g.xrms)
+#    print len(g.z)
 
     #sys.exit()
 
@@ -311,13 +322,13 @@ def gen_outplot_ph(g, legend = True, fig_name = None):
     # ax_spectrum
     # ax_size
 
-    ax_pow.plot(g.z, np.amax(g.p_int, axis=0), 'b-')
+    ax_pow.plot(g.z, np.amax(g.p_int, axis=0), 'g-',linewidth=1.5)
     ax_pow.set_ylabel('P [W]')
     ax_pow.set_yscale('log')
 
     # outp.power.mean_S*inp.xlamds*inp.zsep*inp.nslice/c
     ax_en = ax_pow.twinx()
-    ax_en.plot(g.z, np.mean(g.p_int,axis=0)*g('xlamds')*g('zsep')*g.nSlices/c, 'r-')
+    ax_en.plot(g.z, np.mean(g.p_int,axis=0)*g('xlamds')*g('zsep')*g.nSlices/c, 'r--')
     ax_en.set_ylabel('E [J]')
     ax_en.set_yscale('log')
 
@@ -333,8 +344,8 @@ def gen_outplot_ph(g, legend = True, fig_name = None):
     g.freq_ev1 = h * fftfreq(len(spectrum), d=g('zsep') * g('xlamds') / c)+e_0
     lamdscale=1239.8/g.freq_ev1
     #sys.exit()
-    print 'shape',spectrum.shape
-    spectrum_lamdpos=sum(np.matlib.repmat(lamdscale,spectrum.shape[1],1)*transpose(spectrum),axis=1)/np.sum(spectrum,axis=0)
+#    print 'shape',spectrum.shape
+#    spectrum_lamdpos=sum(np.matlib.repmat(lamdscale,spectrum.shape[1],1)*transpose(spectrum),axis=1)/np.sum(spectrum,axis=0)
 
 
     ax_spectrum.plot(g.z, np.amax(spectrum,axis=0), 'g-')
@@ -360,10 +371,10 @@ def gen_outplot_ph(g, legend = True, fig_name = None):
     # fig3=plt.plot(fftshift(lamdscale),fftshift(spectrum[:,-1],axes=0))
     # plt.show()
 
-    print g.r_size.shape
-    print g.p_int.shape
+#    print g.r_size.shape
+#    print g.p_int.shape
 
-
+    g.p_int=np.amax(g.p_int)/1e6+g.p_int # nasty fix from division by zero
     ax_size.plot(g.z, np.average(g.r_size*2*1e6, weights=g.p_int, axis=0), 'b-')
     ax_size.set_ylabel('transverse [$\mu$m]')
     #ax_energy.plot(g.z, np.mean(g.energy_GeV,axis=0), 'g-')
@@ -410,30 +421,56 @@ def gen_outplot_ph(g, legend = True, fig_name = None):
     fig.subplots_adjust(top=0.95, bottom=0.1, right=0.85, left=0.15)
 
 
+    ax_pow.tick_params(axis='y', which='both', colors='g')
+    ax_pow.yaxis.label.set_color('g')    
+    ax_en.tick_params(axis='y', which='both', colors='r')
+    ax_en.yaxis.label.set_color('r') 
+    ax_spectrum.tick_params(axis='y', which='both', colors='b')
+    ax_spectrum.yaxis.label.set_color('b')    
+    ax_size.tick_params(axis='y', which='both', colors='b')
+    ax_size.yaxis.label.set_color('b') 
 
 
+    plt.show()
 
-    # plt.show()
 
-
-def gen_outplot_z(g, legend = True, fig_name = None):
-
+def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf):
+#    max_yticks = 7
     import matplotlib.ticker as ticker
+
+    if z==inf:
+        print 'Showing profile parameters at the end of undulator'
+        z=np.amax(g.z)
+
+    if z>np.amax(g.z):
+        print 'Z parameter too large, setting to the undulator end'
+        z=np.amax(g.z)
+    
+    if z<np.amin(g.z):
+        print 'Z parameter too small, setting to the undulator entrance'    
+        z=np.amin(g.z)
+        
+    zi=np.where(g.z>=15)[0][0]
+    z=g.z[zi];
+
+
+
 
     font_size = 1
     if fig_name is None:
         if g.filename is '':
-            fig = plt.figure('Photons')
+            fig = plt.figure('Bunch profile')
         else:
-            fig = plt.figure('Photons '+g.filename)
+            fig = plt.figure('Bunch profile '+g.filename)
     else:
         fig = plt.figure(fig_name)
-
+    fig.set_size_inches(figsize,forward=True)
     plt.rc('axes', grid=True)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
     # left, width = 0.1, 0.85
-
-    max_yticks = 5
+    
+    plt.clf()
+    
 
     #
     # rect1 = [left, 0.75, width, 0.20]
@@ -442,64 +479,42 @@ def gen_outplot_z(g, legend = True, fig_name = None):
     # rect4 = [left, 0.15, width, 0.20]
 
     #
-    ax_pow=fig.add_subplot(3, 1, 1)
-    ax_pow.clear()
-    ax_spectrum=fig.add_subplot(3, 1, 2,sharex=ax_pow)
+    ax_curr=fig.add_subplot(4, 1, 1)
+    ax_curr.clear()
+    ax_energy=fig.add_subplot(4, 1, 2,sharex=ax_curr)
+    ax_energy.clear()    
+    ax_phase=fig.add_subplot(4, 1, 3,sharex=ax_curr)
+    ax_phase.clear()
+    ax_spectrum=fig.add_subplot(4, 1, 4)
     ax_spectrum.clear()
-    ax_size=fig.add_subplot(3, 1, 3,sharex=ax_pow)
-    ax_size.clear()
 
-
-    # for ax in ax_sizepos, ax_energy, ax_und, ax_bunching:
-
-    # ax_sizepos.grid(True)
-    # ax_und.grid(True)
-    # ax_energy.set_yticks([])
-    # ax_energy.grid(True)
-
-
-    # ax_und = fig.add_axes(rect1)
-    # ax_sizepos = fig.add_axes(rect2, sharex=ax_und)  #left, bottom, width, height
-    # ax_energy = fig.add_axes(rect3, sharex=ax_und)
-    # ax_bunching = fig.add_axes(rect4, sharex=ax_und)
-    for ax in ax_pow, ax_spectrum, ax_size:
-        if ax!=ax_size:
+    for ax in ax_curr, ax_phase, ax_spectrum, ax_energy:
+        if ax!=ax_spectrum and ax!=ax_phase:
             for label in ax.get_xticklabels():
                 label.set_visible(False)
 
-
-    # for tick in ax.yaxis.get_major_ticks():
-    #     tick.label.set_fontsize(14)
-    #     # specify integer or one of preset strings, e.g.
-    #     #tick.label.set_fontsize('x-small')
-    #     tick.label.set_rotation('vertical')
-
-
-
-
     #
+    
+    
     fig.subplots_adjust(hspace=0)
-    # # beta_x = [p.beta_x for p in tws] # list(map(lambda p:p.beta_x, tws))
-    # # beta_y = [p.beta_y for p in tws] #list(map(lambda p:p.beta_y, tws))
-    # # S = [p.s for p in tws] #list(map(lambda p:p.s, tws))
-    # #plt.plot(S, beta_x)
-
-    t_array = np.linspace(g.t[0], g.t[-1], len(g.t))
-    s_array = t_array*c*1.0e-15
-    ncar = g('ncar')
-    dgrid = g('dgrid')
-
-    xlamds = float(g('xlamds'))
-    nslice = len(g.spec)
-    zsep  = float(g('zsep'))
-    zstop  = float(g('zstop'))
-
-    srange = nslice*zsep*xlamds     #range in s
-    dk = 2*np.pi/srange
-    ds = zsep*xlamds
-
-    #w_l_m  =  g('xlamds')
-    w_l_ev = h * c / g('xlamds')
+ 
+ 
+#    t_array = np.linspace(g.t[0], g.t[-1], len(g.t))
+#    s_array = t_array*c*1.0e-15
+#    ncar = g('ncar')
+#    dgrid = g('dgrid')
+#
+#    xlamds = float(g('xlamds'))
+#    nslice = len(g.spec)
+#    zsep  = float(g('zsep'))
+#    zstop  = float(g('zstop'))
+#
+#    srange = nslice*zsep*xlamds     #range in s
+#    dk = 2*np.pi/srange
+#    ds = zsep*xlamds
+#
+#    #w_l_m  =  g('xlamds')
+#    w_l_ev = h * c / g('xlamds')
 
     # max_pw_list = np.zeros(run_end+1)
     # max_argpw_list = np.zeros(run_end+1)
@@ -513,32 +528,55 @@ def gen_outplot_z(g, legend = True, fig_name = None):
     # plot_betas(ax_sizepos, S, beta_x, beta_y, font_size)
 
     # plot_elems(ax_energy, lat, s_point = S[0], legend = legend, y_scale=0.8) # plot elements
+    s=g.t*c*1.0e-15*1e6
+    
+    
+        
+    
+    ax_curr.plot(s, g.I/1e3, 'k--')
+    ax_curr.set_ylabel('I[kA]')
+    
+    ax_time = ax_curr.twiny()
 
-    print len(t_array)
-    print len(g.xrms)
-    print len(g.z)
+#    X = np.linspace(0,1,1000)
+#    Y = np.cos(X*20)
+#    
+#    ax1.plot(X,Y)
+#   #new_tick_locations = np.array([4, 8, 12, 16])
+    
+    def tick_function(X):
+        V = X*3.33
+        return ["%.1f" % z for z in V]
+    
+    ax_time.set_xlim(ax_curr.get_xlim())
+#    ax_time.set_xticks(new_tick_locations)
+    ax_time.set_xticklabels(tick_function(s))
+#    ax_time.set_xticks(new_tick_locations)
+    ax_time.set_xlabel(r"t [fs]")
+    
+    #ax_pow.set_yscale('log')
 
-    #sys.exit()
+#    print s.shape 
+#    print g.p_int[:,zi].shape
 
-    # ax_und
-    # ax_sizepos
-    # ax_energy
-    # ax_spread
+    
+#    ax_power.plot = (s, g.p_int[:,zi], 'k-')
+    ax_power = ax_curr.twinx()
+    ax_power.plot(s,g.p_int[:,zi],'g-',linewidth=1.5)    
+    ax_power.set_ylabel('Power [W]')
+    ax_power.set_ylim([0, np.amax(g.p_int[:,zi])])
+#    ax_power.get_xaxis().get_offset_text().set_x(1.1)
 
-    # ax_pow
-    # ax_spectrum
-    # ax_size
-
-    ax_pow.plot(g.z, np.amax(g.p_int, axis=0), 'b-')
-    ax_pow.set_ylabel('P [W]')
-    ax_pow.set_yscale('log')
-
-    # outp.power.mean_S*inp.xlamds*inp.zsep*inp.nslice/c
-    ax_en = ax_pow.twinx()
-    ax_en.plot(g.z, np.mean(g.p_int,axis=0)*g('xlamds')*g('zsep')*g.nSlices/c, 'r-')
-    ax_en.set_ylabel('E [J]')
-    ax_en.set_yscale('log')
-
+    ax_energy.plot(s, g.el_energy[:,zi]*0.511e-3, 'b-', s, (g.el_energy[:,zi]+g.el_e_spread[:,zi])*0.511e-3, 'r--',s, (g.el_energy[:,zi]-g.el_e_spread[:,zi])*0.511e-3, 'r--',)
+    ax_energy.set_ylabel('$E\pm\sigma_E$\n[GeV]')
+#    ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
+    ax_energy.ticklabel_format(useOffset=False, style='plain')   
+    phase=unwrap(g.phi_mid[:,zi])
+    ax_phase.plot(s, phase-np.roll(phase,1,0), 'k-',linewidth=0.5)
+    ax_phase.set_ylabel('$\phi$ [rad]')
+    ax_phase.set_ylim([-0.5, 0.5])
+    ax_phase.set_xlabel('[$\mum$]')   
+    
     n_pad=1
     # print len(g.z),len(g.xrms[0,:]),len(np.mean(g.yrms,axis=0))
     power=np.pad(g.p_mid, [(int(g.nSlices/2)*n_pad, (g.nSlices-(int(g.nSlices/2))))*n_pad, (0, 0)], mode='constant')
@@ -551,14 +589,21 @@ def gen_outplot_z(g, legend = True, fig_name = None):
     g.freq_ev1 = h * fftfreq(len(spectrum), d=g('zsep') * g('xlamds') / c)+e_0
     lamdscale=1239.8/g.freq_ev1
     #sys.exit()
-    print 'shape',spectrum.shape
+    #print 'shape',spectrum.shape
+
+    spectrum_average_z=np.sum(spectrum,axis=0)
+    spectrum_average_z[np.where(spectrum_average_z==0)[0]]=1 #avoid division by zero
     spectrum_lamdpos=sum(np.matlib.repmat(lamdscale,spectrum.shape[1],1)*transpose(spectrum),axis=1)/np.sum(spectrum,axis=0)
 
+#    print 'p_mid',g.p_mid.shape
+#    print 'lamdpos',spectrum_lamdpos.shape
+#    print 'lamdscale',lamdscale.shape    
+#    print 'spectrum',spectrum.shape
 
-    ax_spectrum.plot(g.z, np.amax(spectrum,axis=0), 'g-')
-    ax_spectrum.set_ylabel('P_{max}($\lambda$)')
-    ax_spectrum.set_yscale('log')
-
+    ax_spectrum.plot(fftshift(lamdscale), fftshift(spectrum[:,zi]), 'r-')
+    ax_spectrum.set_ylabel('P($\lambda$)')
+    ax_spectrum.set_xlabel('$\lambda$ [nm]')
+    
     #fix!!!
     # spectrum_lamdpos=sum(np.matlib.repmat(lamdscale,spectrum.shape[1],1)*transpose(spectrum),axis=1)/np.sum(spectrum,axis=0)
     # spectrum_width=sqrt(sum((np.power(np.matlib.repmat(lamdscale,spectrum.shape[1],1)-np.matlib.repmat(spectrum_lamdpos,spectrum.shape[1],1),2)*spectrum),1)/sum(spectrum,axis=0));
@@ -578,12 +623,7 @@ def gen_outplot_z(g, legend = True, fig_name = None):
     # fig3=plt.plot(fftshift(lamdscale),fftshift(spectrum[:,-1],axes=0))
     # plt.show()
 
-    print g.r_size.shape
-    print g.p_int.shape
 
-
-    ax_size.plot(g.z, np.average(g.r_size*2*1e6, weights=g.p_int, axis=0), 'b-')
-    ax_size.set_ylabel('transverse [$\mu$m]')
     #ax_energy.plot(g.z, np.mean(g.energy_GeV,axis=0), 'g-')
     # ax_spread = ax_energy.twinx()
     # ax_spread.plot(g.z, np.average(g.e_spread_GeV, weights=g.I[1:], axis=0), 'b--', g.z, np.amax(g.e_spread_GeV, axis=0), 'b-')
@@ -602,7 +642,7 @@ def gen_outplot_z(g, legend = True, fig_name = None):
     # x1,x2,y1,y2 = ax_spread.axis()
     # ax_spread.axis([x1,x2,0,y2])
 
-# ax_pow
+    # ax_pow
     # ax_spectrum
     # ax_size
 
@@ -610,8 +650,11 @@ def gen_outplot_z(g, legend = True, fig_name = None):
     # ax_pow.yaxis.major.locator.set_params(nbins=number_ticks)
     # ax_en.yaxis.major.locator.set_params(nbins=number_ticks)
     # ax_spectrum.yaxis.major.locator.set_params(nbins=number_ticks)
-    ax_size.yaxis.major.locator.set_params(nbins=number_ticks)
-    # ax_energy.yaxis.major.locator.set_params(nbins=number_ticks)
+    
+    ax_phase.xaxis.major.locator.set_params(nbins=5)
+    ax_power.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_energy.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_spectrum.yaxis.major.locator.set_params(nbins=number_ticks)
     # ax_bunching.yaxis.major.locator.set_params(nbins=number_ticks)
 
     # yloc = plt.MaxNLocator(max_yticks)
@@ -623,15 +666,30 @@ def gen_outplot_z(g, legend = True, fig_name = None):
 
     # ax_energy.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.1e'))
 
-    plt.xlim(g.z[0], g.z[-1])
+    plt.xlim(s[0], s[-1])
 
-    fig.subplots_adjust(top=0.95, bottom=0.1, right=0.85, left=0.15)
+    fig.subplots_adjust(top=0.95, bottom=0.2, right=0.85, left=0.15)
 
+    #fig.set_size_inches((8,8),forward=True)
+    
+    pos1 = ax_spectrum.get_position() # get the original position 
+    pos2 = [pos1.x0 + 0, pos1.y0 - 0.1,  pos1.width / 1.0, pos1.height / 0.9] 
+    ax_spectrum.set_position(pos2)
 
+    ax_spectrum.tick_params(axis='y', which='both', colors='r')
+    ax_spectrum.yaxis.label.set_color('r')    
+    ax_energy.tick_params(axis='y', which='both', colors='b')
+    ax_energy.yaxis.label.set_color('b')    
+    ax_power.tick_params(axis='y', which='both', colors='g')
+    ax_power.yaxis.label.set_color('g')    
+    
+    
+    
+#    ax_spectrum.spines['left'].set_color('red')
 
-
-
-    # plt.show()
+    plt.show()
+    
+#    ax.ticklabel_format(useOffset=False, style='plain')
 
 def plot_lattice(g, font_size):
 

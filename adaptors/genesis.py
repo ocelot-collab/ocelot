@@ -769,7 +769,7 @@ def readGenesisOutput(fileName , readall=None):
         out.increment = []
         #out.increment=GenesisOutput()
 
-    for i in xrange(1,out.nSlices):
+    for i in xrange(0,out.nSlices):
         pend = out.sliceValues[out.sliceValues.keys()[i]]['power'][-1]
         out.power_int.append(pend)
         out.power.append(out.sliceValues[out.sliceValues.keys()[i]]['p_mid'][-1])
@@ -833,6 +833,7 @@ def readGenesisOutput(fileName , readall=None):
 #         pass
 #     else:
         out.filename = fileName
+        
     return out
 
 def getAverageUndulatorParameter(lattice, unit=1.0, energy = 17.5):

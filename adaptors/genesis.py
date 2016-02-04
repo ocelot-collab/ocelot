@@ -600,7 +600,14 @@ def readRadiationFile_mpi(comm=None, fileName='simulation.gout.dfl', npoints=51)
     
     return slices
 
-def writeRadiationFile(filename, slices):
+
+def writeRadiationFile(filename,rad):
+    #a new backward compatible version ~10x faster
+    d=rad.flatten()
+    d.tofile(filename,format='complex')
+
+
+def writeRadiationFile_old(filename, slices):
     f=open(filename,'wb')  
     n1, n2 = slices.shape[1], slices.shape[2]
     for i1 in xrange(slices.shape[0]):

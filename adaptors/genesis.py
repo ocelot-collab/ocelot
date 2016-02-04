@@ -447,6 +447,14 @@ def read_beam_file(fileName):
     return beam
 
 
+def readRadiationFile_my(fileName, npoints=151):
+    import numpy as np
+    b=np.fromfile(fileName,dtype=complex)
+    slice_num=b.shape[0]/npoints/npoints
+    c=b.reshape(slice_num,npoints,npoints)
+    return c
+
+    
 def readRadiationFile(fileName='simulation.gout.dfl', npoints=51, slice_start=0, slice_end = -1, idx=None):
     
     def read_in_chunks(file, size=1024):

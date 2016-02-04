@@ -559,6 +559,7 @@ def update_beam_2(beam_new, g, n_interp):
     '''    
 
 
+
 def sseed_2(hostfile, input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug=True, output_file = None,  xt_couple=False, filterfilename='', method='hxr_wake_calc'):
     
     h = 4.135667516e-15
@@ -647,37 +648,77 @@ def sseed_2(hostfile, input_file, output_files, E_ev, chicane, run_dir, delay = 
         dk = dkold/mult #Important! Otherwise the np.int in the line changes the k scale substantially 
 
         phases = unfold_angles(np.angle(np.conj(filt.tr)))
+        
+        f1 = open(output_files[1], 'w')
+        f2 = open(output_files[2], 'w')
+        for i in range(len(filt.k)):
+            f1.write('%s ' %(filt.k[i]) + '%s' %np.abs(filt.tr[i]) +'\n')
+            f2.write('%s ' %(filt.k[i]) + '%s' %phases[i] +'\n')
+        
+        f1.close()
+        f2.close()
 
     if method=='sxr_filter_read':
-        f = open(filterfilename, 'r')
+        # f = open(filterfilename, 'r')
         #[abs, dlpl]
+        # import numpy as np
+        # from math import pi
+#        E_ev=1000.
+        #icf_path='d:\Work\!PROJECTS\ocelot_test\ICF_1000.ascii'
+        f = open(filterfilename, 'r')
+        data = np.genfromtxt(f, delimiter=',')
+        #delete(data,0,0) # Erases the first row (i.e. the header)
+        #plot(data[:,0],data[:,1],'o')
+        f.close()
+        
+        dlpl=np.flipud(data[:,0])
+        Tmod=np.flipud(data[:,1])
+        
+        
+        Tpha=np.zeros(len(data[:,0]))
+        lambda_0=1239.8/E_ev*1e-9
+        k=2*pi/(lambda_0+lambda_0*dlpl)
+        dk_f=k[0]-k[1]
+        k=np.concatenate(([k[0]+dk_f],k,[k[-1]-dk_f]))
+        Tmod=np.concatenate(([0],Tmod,[0]))
+        Tpha=np.concatenate(([0],Tpha,[0]))
+        # Tmod=np.insert(Tmod,slice(0),0)
+        # Tmod=np.insert(Tmod,slice(-1),0)
+        # Tpha=np.insert(Tmod,slice(0),0)
+        # Tpha=np.insert(Tmod,slice(-1),0)
+        # Tmod=np.insert(Tmod,slice(0,-1),[0,0])
+        # Tpha=np.insert(Tpha,slice(0,-1),[0,0])#padding with zeros on edges, so that interpolation was done with zeros as well
+        print np.column_stack((k, Tmod))
+        #f = open(res_dir+'s2.Tmod.dat', 'w')
+    #    writepath_Tmod='d:\Work\!PROJECTS\ocelot_test\s2.Tmod.dat'
+    #    writepath_Tpha='d:\Work\!PROJECTS\ocelot_test\s2.Tpha.dat'
+        np.savetxt(output_files[1],np.column_stack((k, Tmod)))
+        np.savetxt(output_files[2],np.column_stack((k, Tpha)))
+        
+        klpos, krpos, cwidth = FWHM(k, Tmod)
+        cwidth=abs(cwidth)
+        print 'CWIDTH=',cwidth
+        dk = cwidth/10.0
+        mult = np.int(dkold/dk)
+        
+        #if int(mult/2) - mult/2 ==0: mult = mult-1 %probably it needs to be even
+        
+        print 'MULT = ',mult
+        dk = dkold/mult #Important! Otherwise the np.int in the line changes the k scale substantially 
         
         # bring to common format !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        dr=1
-        mult = 1
-        phases = unfold_angles(np.angle(np.conj(filt.tr)))
-        
-
-    f1 = open(output_files[1], 'w')
-    f2 = open(output_files[2], 'w')
-    for i in range(len(filt.k)):
-        f1.write('%s ' %(filt.k[i]) + '%s' %np.abs(filt.tr[i]) +'\n')
-        f2.write('%s ' %(filt.k[i]) + '%s' %phases[i] +'\n')
-        
-    f1.close()
-    f2.close()
-
+        dr=0
     
     ARGS   =   ''.join([input_file+'.dfl'+' ', 	        
-		output_files[0]+' ',                  
-	        output_files[1]+' ',                       
+        output_files[0]+' ',                  
+        output_files[1]+' ',                       
 		output_files[2]+' ',                       
 		output_files[3]+' ',
 		output_files[4]+' ',                       
 		output_files[5]+' ',                       
 		output_files[6]+' ',                       
 		output_files[7]+' ',
-                output_files[8]+' ', 
+        output_files[8]+' ', 
 		str(xlamds)+' ',                       
 		str(ncar)+' ',                       
 		str(mult)+' ',                       
@@ -687,11 +728,14 @@ def sseed_2(hostfile, input_file, output_files, E_ev, chicane, run_dir, delay = 
 		str(nslice)+' ', 
 		str(dr)])	
     runpar = '`which mpirun` -x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH --hostfile '+ os.path.abspath('.')+hostfile
-    prog   = ' '+'python /data/netapp/xfel/gianluca/products/ocelot/utils/seed.py '+ARGS+''
-	
+    # prog   = ' '+'python /data/netapp/xfel/gianluca/products/ocelot/utils/seed.py '+ARGS+''
+    prog   = ' '+'python /data/netapp/xfel/svitozar/CODE/ocelot/utils/seed.py '+ARGS+''
+    
     cmd = runpar+prog
     os.system(cmd)
-
+    
+    print 'reading filtered file (hxrss_common, lile 728) ', output_files[5]
+    
     ssc, Pout = readres(output_files[5])
     lsc, Sout = readres(output_files[7])
     

@@ -338,9 +338,9 @@ def read_particle_file(filename, npart=[]):
 #    if npart!=[] and nslice!=[]    
 #    if len(tmp)!=npart*nslice*6:
 #    print len(tmp)/npart/6
-    #nslice=int(len(tmp)/npart/6)
-    nslice=600
-    tmp=tmp.reshape(npart,nslice,6)
+    nslice=int(len(tmp)/npart/6)
+    #nslice=600
+    tmp=tmp.reshape(nslice,6,npart)
     particles.e=tmp[:,0,:] #gamma
     particles.ph=tmp[:,1,:] 
     particles.x=tmp[:,2,:]

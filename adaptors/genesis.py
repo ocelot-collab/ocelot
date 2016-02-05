@@ -753,7 +753,6 @@ def readGenesisOutput(fileName , readall=None):
             #out.parameters[tokens[0]] = tokens[0:]
             #print 'input:', tokens
 
-
         if chunk == 'slice':
             vals = map(float,tokens)
             #print vals
@@ -830,7 +829,7 @@ def readGenesisOutput(fileName , readall=None):
     out.power_int = np.array(out.power_int)
     out.z = np.array(out.z)
     out.I = np.array(out.I)
-
+    out.beam_charge=np.sum(out.I*out('zsep')*out('xlamds')/c)
     if readall:
         out.p_mid = np.array(out.p_mid)
         out.p_int = np.array(out.p_int)

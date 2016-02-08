@@ -4,7 +4,7 @@ interface to genesis
 
 import struct
 from copy import copy
-
+import time
 from ocelot.rad.fel import *
 from ocelot.cpbd.beam import Beam, gauss_from_twiss
 import ocelot.utils.reswake as w
@@ -293,6 +293,8 @@ class GenesisParticles:
         self.y = []
         self.px = []
         self.py = []
+        self.z = []
+        self.t = []
 
         self.filename = ''
 
@@ -328,29 +330,51 @@ class GenesisBeamDefinition():
    I/O functions
 '''
 
-def read_particle_file(filename, npart=[]):
-#    print npart
-    #new faster function with different output convenstion    
-    particles=GenesisParticles
-#    start_time = time.time()
-    tmp=np.fromfile(filename,dtype=float)
+#def read_particle_file(filename, npart=[]):
+##    print npart
+#    #new faster function with different output convenstion    
+#    particles=GenesisParticles
+##    start_time = time.time()
+#    tmp=np.fromfile(filename,dtype=float)
+#    
+##    if npart!=[] and nslice!=[]    
+##    if len(tmp)!=npart*nslice*6:
+##    print len(tmp)/npart/6
+#    nslice=int(len(tmp)/npart/6)
+#    #nslice=600
+#    tmp=tmp.reshape(nslice,6,npart)
+#    particles.e=tmp[:,0,:] #gamma
+#    particles.ph=tmp[:,1,:] 
+#    particles.x=tmp[:,2,:]
+#    particles.y=tmp[:,3,:]
+#    particles.px=tmp[:,4,:]
+#    particles.py=tmp[:,5,:]
+#    particles.filename=filename
+#    
+#    return particles
+def read_particle_file(file_name, nbins=4, npart=[],debug=0):
+
+    particles=GenesisParticles    
     
-#    if npart!=[] and nslice!=[]    
-#    if len(tmp)!=npart*nslice*6:
-#    print len(tmp)/npart/6
-    nslice=int(len(tmp)/npart/6)
-    #nslice=600
-    tmp=tmp.reshape(nslice,6,npart)
-    particles.e=tmp[:,0,:] #gamma
-    particles.ph=tmp[:,1,:] 
-    particles.x=tmp[:,2,:]
-    particles.y=tmp[:,3,:]
-    particles.px=tmp[:,4,:]
-    particles.py=tmp[:,5,:]
-    particles.filename=filename
-    
+    start_time = time.time()
+    b=np.fromfile(file_name,dtype=float)
+    print("--- read Particles - %s seconds ---" % (time.time() - start_time))
+#    print 'b', b.shape
+    nslice=int(len(b)/npart/6)
+    if debug:
+        print '    nslice',nslice
+        print '    npart',npart
+        print '    nbins',nbins
+#    print 'b=',nslice*npart*6
+    b=b.reshape(nslice,6,nbins,npart/nbins)    
+    particles.e=b[:,0,:,:] #gamma
+    particles.ph=b[:,1,:,:] 
+    particles.x=b[:,2,:,:]
+    particles.y=b[:,3,:,:]
+    particles.px=b[:,4,:,:]
+    particles.py=b[:,5,:,:]
+    particles.filename=file_name
     return particles
-#    print("--- read Particles - %s seconds ---" % (time.time() - start_time))
     
 
 def readParticleFile_old(fileName, npart, nslice):
@@ -458,10 +482,10 @@ def read_beam_file(fileName):
     return beam
 
 
-def readRadiationFile(fileName, npoints=151, slice_start=0, slice_end = -1):
+def readRadiationFile(fileName, npoints=151, slice_start=0, slice_end = -1, vartype=complex128):
     #a new backward compatible version ~100x faster
     import numpy as np
-    b=np.fromfile(fileName,dtype=complex)
+    b=np.fromfile(fileName,dtype=complex).astype(vartype)
     slice_num=b.shape[0]/npoints/npoints
     b=b.reshape(slice_num,npoints,npoints)
     if slice_end == -1:
@@ -603,6 +627,7 @@ def readRadiationFile_mpi(comm=None, fileName='simulation.gout.dfl', npoints=51)
 
 def writeRadiationFile(filename,rad):
     #a new backward compatible version ~10x faster
+    print '        -writing dfl to ', filename
     d=rad.flatten()
     d.tofile(filename,format='complex')
 
@@ -863,6 +888,87 @@ def readGenesisOutput(fileName , readall=None):
         out.filename = fileName
         
     return out
+
+
+
+def dpa2dist (gen,file_name_read='',file_name_write='',no_macroparticles=1e5,debug=0):
+    
+    import random
+    import numpy as np
+    c = 299792458.0
+        
+    npart=int(gen('npart'))
+    nslice=int(gen('nslice'))
+    nbins=int(gen('nbins'))
+    xlamds=gen('xlamds')
+    zsep=int(gen('zsep'))
+    gen_I=gen.I
+    gen_t=gen.t    
+    if file_name_read=='':
+        file_name_read=gen.filename+'.dpa'
+    if file_name_write=='':
+        file_name_write=gen.filename+'.dist'
+    par=read_particle_file(file_name_read, nbins=nbins, npart=npart,debug=debug)
+
+    #start_time = time.time()
+    #for i in range(100):
+    m=np.arange(nslice)
+    m=np.broadcast_to(m,[nbins,npart/nbins,nslice])
+    m=np.rollaxis(m,2,0)
+    #print("--- Create matrix - %s seconds ---" % (time.time() - start_time))
+
+    par.z=par.ph*xlamds/2/pi+m*xlamds*zsep+xlamds*zsep*(1-np.random.random((nslice, nbins,npart/nbins)))
+    par.t=par.z/c
+
+    t_scale=np.linspace(0,nslice*zsep*xlamds/c*1e15,nslice)
+    I_scale=np.interp(t_scale,gen_t,gen_I)
+
+    pick_n=I_scale
+    pick_n=(pick_n/np.sum(pick_n)*no_macroparticles).astype(int)
+    print sum(pick_n)
+    result_filesize=sum(pick_n)
+    t_out=[]
+    e_out=[]
+    x_out=[]
+    y_out=[]
+    px_out=[]
+    py_out=[]
+    
+    par.t=np.reshape(par.t,(nslice,npart))
+    par.e=np.reshape(par.e,(nslice,npart))
+    par.x=np.reshape(par.x,(nslice,npart))
+    par.y=np.reshape(par.y,(nslice,npart))
+    par.px=np.reshape(par.px,(nslice,npart))
+    par.py=np.reshape(par.py,(nslice,npart))
+    
+    for i in arange(nslice):
+        pick_i=random.sample(arange(nslice),pick_n[i])
+        t_out=append(t_out,par.t[i,pick_i])
+        e_out=append(e_out,par.e[i,pick_i])
+        x_out=append(x_out,par.x[i,pick_i])
+        y_out=append(y_out,par.y[i,pick_i])
+        px_out=append(px_out,par.px[i,pick_i])
+        py_out=append(py_out,par.py[i,pick_i])
+
+    if debug==1:
+        import matplotlib.pyplot as plt
+        bins=100
+        plt.figure('Time - Enenrgy')
+    #    plt.clf()
+        plt.hist2d(t_out, e_out, bins)
+        plt.figure('Time - X')
+        plt.hist2d(t_out, x_out, bins)
+        plt.figure('X - Y')
+        plt.hist2d(x_out, y_out, bins)
+        plt.figure('X - pX')
+        plt.hist2d(x_out, px_out, bins)
+        plt.show()
+
+    header='? VERSION = 1.0 \n? SIZE = %s \n? CHARGE = %E \n? COLUMNS X XPRIME Y YPRIME T P'%(result_filesize,gen.beam_charge)
+    np.savetxt(file_name_write, np.c_[x_out,px_out/e_out,y_out,py_out/e_out,t_out,e_out],header=header,fmt="%E", newline='\n',comments='')
+
+
+
 
 def getAverageUndulatorParameter(lattice, unit=1.0, energy = 17.5):
     positions = sorted(lattice.lattice.keys())

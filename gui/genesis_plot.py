@@ -18,11 +18,22 @@ from numpy import matlib
 # from ocelot.common.math_op import *
 
 from pylab import * #tmp
+
+
+# font = {'family' : 'normal',
+#        'weight' : 'bold',
+#        'size'   : 20}
 params = {'backend': 'ps', 'axes.labelsize': 15, 'font.size': 16, 'legend.fontsize': 24, 'xtick.labelsize': 19,  'ytick.labelsize': 19, 'text.usetex': True}
 # params = {'backend': 'ps', 'axes.labelsize': 18, 'text.fontsize': 16, 'legend.fontsize': 24, 'xtick.labelsize': 32,  'ytick.labelsize': 32, 'text.usetex': True}
 rcParams.update(params)
 rc('text', usetex=True) # required to have greek fonts on redhat
+#rc('font', **font)
 
+font = {'family' : 'normal',
+        'weight' : 'bold',
+        'size'   : 22}
+
+matplotlib.rc('font', **font)
 
 h = 4.135667516e-15
 c = 299792458.0

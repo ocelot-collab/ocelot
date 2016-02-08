@@ -688,7 +688,7 @@ def sseed_2(hostfile, input_file, output_files, E_ev, chicane, run_dir, delay = 
         # Tpha=np.insert(Tmod,slice(-1),0)
         # Tmod=np.insert(Tmod,slice(0,-1),[0,0])
         # Tpha=np.insert(Tpha,slice(0,-1),[0,0])#padding with zeros on edges, so that interpolation was done with zeros as well
-        print np.column_stack((k, Tmod))
+#        print np.column_stack((k, Tmod))
         #f = open(res_dir+'s2.Tmod.dat', 'w')
     #    writepath_Tmod='d:\Work\!PROJECTS\ocelot_test\s2.Tmod.dat'
     #    writepath_Tpha='d:\Work\!PROJECTS\ocelot_test\s2.Tpha.dat'
@@ -740,3 +740,114 @@ def sseed_2(hostfile, input_file, output_files, E_ev, chicane, run_dir, delay = 
     lsc, Sout = readres(output_files[7])
     
     return ssc, Pout, lsc, Sout
+
+'''
+########################################
+#########     Added by S.S.    #########
+########################################
+'''
+
+def clearall():
+    # similar to "clear all" in Matlab - clears all the variables from the memory 
+    all = [var for var in locals() if (var[:2], var[-2:]) != ("__", "__")]
+    for var in all:
+        del locals()[var]
+
+def dfl_filt(dfl_filename_read,dfl_filename_write,filter_filename,gen,lambda_filter=[],energy_filter=[],zeros_add=0,debug=0):
+    
+    if (lambda_filter==[] and energy_filter==[]) or (lambda_filter!=[] and energy_filter!=[]):
+        raise Exception('only one lambda_filter or energy_filter should be defined')
+    if lambda_filter==[]:
+        lambda_filter=1239.8/energy_filter*1e-9
+    
+        
+    start_time = time.time()
+    xlamds=gen('xlamds')
+    zsep=gen('zsep')
+    ncar=gen('ncar')
+    rad0_t  = readRadiationFile(dfl_filename_read, npoints=ncar,slice_start=0, slice_end = -1,vartype=complex128)
+    #rad0_t=rad0_t[:1024,:,:]
+    nz_0=np.size(rad0_t,0)
+    print("--- Read *.dfl file - %s seconds ---" % (time.time() - start_time))
+    if debug:
+        print("--- debug ---")
+        start_time = time.time()
+        rad0_zscale=np.arange(nz_0)*xlamds*zsep
+        dk=2*pi/(np.amax(rad0_zscale)-np.amin(rad0_zscale))
+        sc=np.linspace(-nz_0/2,nz_0/2,num=nz_0)
+        k=2*pi/xlamds
+        K=k+dk*sc
+        rad0_lamdscale=2*pi/K
+        rad0_f=np.fft.fftshift(np.fft.fft(rad0_t,axis=0),axes=0)/sqrt(nz_0)
+        
+        plt.figure('dfl_power_init')
+        plt.clf()
+        plt.plot(rad0_zscale,np.power(np.abs(rad0_t[:,75,75]),2))
+        plt.gca().get_xaxis().get_major_formatter().set_useOffset(False)
+        plt.gca().get_xaxis().get_major_formatter().set_scientific(True)
+        plt.gca().get_xaxis().get_major_formatter().set_powerlimits((-3, 4))
+        #ax.ticklabel_format(axis='x', style='sci', scilimits=(-3, 3), useOffset=False)
+        plt.figure('dfl_spectrum_init')
+        plt.clf()
+        plt.plot(rad0_lamdscale,np.sum(np.power(np.abs(rad0_f),2),axis=(1,2)))
+        plt.gca().get_xaxis().get_major_formatter().set_useOffset(False)
+        plt.gca().get_xaxis().get_major_formatter().set_scientific(True)
+        plt.gca().get_xaxis().get_major_formatter().set_powerlimits((-3, 4))#[:,75,75]
+        print("--- Show dfl file - %s seconds ---" % (time.time() - start_time))
+        del rad0_f
+    
+    start_time = time.time()
+
+    f = open(filter_filename, 'r')
+    data = np.genfromtxt(f, delimiter=',')
+    f.close()
+    dlpl=data[:,0]
+    Tmod=sqrt(data[:,1]) #getting filter amplituse (sqrt of intensity)
+    Tpha=np.zeros(len(data[:,0]))
+    T=Tmod*exp(1j*Tpha)
+    lambda_f=lambda_filter+lambda_filter*dlpl
+    k_f=2*pi/(lambda_filter+lambda_filter*dlpl)
+    dk_f=k_f[0]-k_f[1]    
+    
+    print("--- Read filter file - %s seconds ---" % (time.time() - start_time))
+    
+    start_time = time.time()
+#    zeros_add=1
+    #  #######\-------\-------\-------
+    #  #######\0000000\0000000\------- zeros_add=2
+    nz_1=nz_0*(zeros_add+1)
+    rad1_t=np.lib.pad(rad0_t, ((0,zeros_add*nz_0), (0,0), (0,0)), mode='constant', constant_values=0)
+    rad1_zscale=np.arange(nz_1)*xlamds*zsep
+    
+    del rad0_t
+    gc.collect()
+    
+    rad1_zscale=np.arange(nz_1)*xlamds*zsep
+    dk1=2*pi/(np.amax(rad1_zscale)-np.amin(rad1_zscale))
+    sc=np.linspace(-nz_1/2,nz_1/2,num=nz_1)
+    k=2*pi/xlamds
+    K=k+dk1*sc
+    
+    rad1_lamdscale=2*pi/K
+
+    
+    filter_func=np.interp(rad1_lamdscale,lambda_f,Tmod,left=0,right=0)
+    filter_func=np.fft.ifftshift(filter_func,axes=0)
+    
+    
+    rad1_t=np.fft.fft(rad1_t,axis=0) #was f FFT
+    rad1_t=(rad1_t.T*filter_func).T#was f   Filter
+    rad1_t=np.fft.ifft(rad1_t,axis=0)#      iFFT
+    rad1_t=rad1_t[:nz_0,:,:]
+
+    print("--- Pad and filter *.dfl file - %s seconds ---" % (time.time() - start_time))
+    
+    if debug:
+        plt.figure('dfl_power_final')
+        plt.clf()
+        plt.plot(rad0_zscale,np.power(np.abs(rad1_t[:,int((ncar-1)/2),int((ncar-1)/2)]),2))
+        plt.gca().get_xaxis().get_major_formatter().set_useOffset(False)
+        plt.gca().get_xaxis().get_major_formatter().set_scientific(True)
+        plt.gca().get_xaxis().get_major_formatter().set_powerlimits((-3, 4))
+    
+    writeRadiationFile(dfl_filename_write,rad1_t)

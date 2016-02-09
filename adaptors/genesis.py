@@ -129,6 +129,7 @@ inputTemplate = "\
 __BEAMFILE__\n\
 __PARTFILE__\n\
 __FIELDFILE__\n\
+__DISTFILE__\n\
 __MAGFILE__\n\
  outputfile ='run.__RUNID__.gout'\n\
  filetype ='ORIGINAL'\n\
@@ -208,6 +209,7 @@ class GenesisInput:
         self.beamfile = None
         self.fieldfile = None
         self.partfile = None
+        self.distfile = None
 
     def input(self):
         input = inputTemplate
@@ -234,12 +236,16 @@ class GenesisInput:
             input = input.replace("__PARTFILE__", " partfile  =  '"+ str(self.partfile)+ "'")
         else:
             input = input.replace("__PARTFILE__\n", "")
-
+            
+        if self.distfile != None:
+            input = input.replace("__DISTFILE__", " distfile  =  '"+ str(self.distfile)+ "'")
+        else:
+            input = input.replace("__DISTFILE__\n", "")
         
         if self.magin == 0:
             input = input.replace("__MAGFILE__\n", "")
         else:
-            input = input.replace("__MAGFILE__\n", "maginfile ='lattice.inp'\n")
+            input = input.replace("__MAGFILE__\n", " maginfile ='lattice.inp'\n")
         
         for p in self.__dict__.keys():
             input = input.replace("__"  + str(p).upper() + "__", str(self.__dict__[p]))
@@ -909,23 +915,27 @@ def dpa2dist (gen,file_name_read='',file_name_write='',no_macroparticles=1e5,deb
     if file_name_write=='':
         file_name_write=gen.filename+'.dist'
     par=read_particle_file(file_name_read, nbins=nbins, npart=npart,debug=debug)
-
+    # print par.e.shape
     #start_time = time.time()
     #for i in range(100):
     m=np.arange(nslice)
     m=np.tile(m,(nbins,npart/nbins,1))
     m=np.rollaxis(m,2,0)
+    # m=np.broadcast_to(m,[nbins,npart/nbins,nslice])
+    # m=np.rollaxis(m,2,0)
     #print("--- Create matrix - %s seconds ---" % (time.time() - start_time))
 
     par.z=par.ph*xlamds/2/pi+m*xlamds*zsep+xlamds*zsep*(1-np.random.random((nslice, nbins,npart/nbins)))
     par.t=par.z/c
-
+    
     t_scale=np.linspace(0,nslice*zsep*xlamds/c*1e15,nslice)
+    # print 'range_t_scale', np.amin(t_scale), np.amax(t_scale)
+    # print 'range_gen_t', np.amin(gen_t), np.amax(gen_t)
     I_scale=np.interp(t_scale,gen_t,gen_I)
 
     pick_n=I_scale
     pick_n=(pick_n/np.sum(pick_n)*no_macroparticles).astype(int)
-    print sum(pick_n)
+    # print sum(pick_n)
     result_filesize=sum(pick_n)
     t_out=[]
     e_out=[]
@@ -933,13 +943,19 @@ def dpa2dist (gen,file_name_read='',file_name_write='',no_macroparticles=1e5,deb
     y_out=[]
     px_out=[]
     py_out=[]
-    
+    # print 'max_par.t', np.amax(par.t)
+    # print 'par.e', np.amax(par.e),np.amin(par.e)
     par.t=np.reshape(par.t,(nslice,npart))
     par.e=np.reshape(par.e,(nslice,npart))
     par.x=np.reshape(par.x,(nslice,npart))
     par.y=np.reshape(par.y,(nslice,npart))
     par.px=np.reshape(par.px,(nslice,npart))
     par.py=np.reshape(par.py,(nslice,npart))
+    # print par.t.shape
+    
+    # print par.t.shape
+    # print 'max_par.t', np.amax(par.t)
+    # print 'par.e', np.amax(par.e),np.amin(par.e)
     
     for i in arange(nslice):
         pick_i=random.sample(arange(nslice),pick_n[i])
@@ -949,25 +965,40 @@ def dpa2dist (gen,file_name_read='',file_name_write='',no_macroparticles=1e5,deb
         y_out=append(y_out,par.y[i,pick_i])
         px_out=append(px_out,par.px[i,pick_i])
         py_out=append(py_out,par.py[i,pick_i])
-
+    t_out=t_out*(-1)+max(t_out)
+    # print 'max_y_out', np.amax(t_out)
+    # print 'e_out', np.amax(e_out),np.amin(e_out)
+    debug=0 #possible problems with pyplot on cluster
     if debug==1:
         import matplotlib.pyplot as plt
         bins=100
-        plt.figure('Time - Enenrgy')
+        # plt.figure('Time - Enenrgy')
+        plt.figure(40001)
     #    plt.clf()
         plt.hist2d(t_out, e_out, bins)
-        plt.figure('Time - X')
+        # plt.figure('Time - X')
+        plt.figure(40002)
         plt.hist2d(t_out, x_out, bins)
-        plt.figure('X - Y')
+        # plt.figure('X - Y')
+        plt.figure(40003)
         plt.hist2d(x_out, y_out, bins)
-        plt.figure('X - pX')
+        # plt.figure('X - pX')
+        plt.figure(40004)
         plt.hist2d(x_out, px_out, bins)
         plt.show()
 
-    
-    header='? VERSION = 1.0 \n? SIZE = %s \n? CHARGE = %E \n? COLUMNS X XPRIME Y YPRIME T P'%(result_filesize,gen.beam_charge)
-    np.savetxt(file_name_write, np.c_[x_out,px_out/e_out,y_out,py_out/e_out,t_out,e_out],header=header,fmt="%E", newline='\n',comments='')
+    #REQUIRES NUMPY 1.7
+    # header='? VERSION = 1.0 \n? SIZE = %s \n? CHARGE = %E \n? COLUMNS X XPRIME Y YPRIME T P'%(result_filesize,gen.beam_charge)
+    # np.savetxt(file_name_write, np.c_[x_out,px_out/e_out,y_out,py_out/e_out,t_out,e_out],header=header,fmt="%E", newline='\n',comments='')
 
+    
+    header='? VERSION = 1.0 \n? SIZE = %s \n? CHARGE = %E \n? COLUMNS X XPRIME Y YPRIME T P\n'%(result_filesize,gen.beam_charge)
+    f = file(file_name_write,'w')
+    f.write(header)
+    f.close()
+    f = file(file_name_write,'a')
+    np.savetxt(f, np.c_[x_out,px_out/e_out,y_out,py_out/e_out,t_out,e_out],fmt="%E", newline='\n')
+    f.close()
 
 
 

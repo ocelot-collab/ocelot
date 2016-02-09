@@ -913,7 +913,7 @@ def dpa2dist (gen,file_name_read='',file_name_write='',no_macroparticles=1e5,deb
     #start_time = time.time()
     #for i in range(100):
     m=np.arange(nslice)
-    m=np.broadcast_to(m,[nbins,npart/nbins,nslice])
+    m=np.tile(m,(nbins,npart/nbins,1))
     m=np.rollaxis(m,2,0)
     #print("--- Create matrix - %s seconds ---" % (time.time() - start_time))
 
@@ -964,6 +964,7 @@ def dpa2dist (gen,file_name_read='',file_name_write='',no_macroparticles=1e5,deb
         plt.hist2d(x_out, px_out, bins)
         plt.show()
 
+    
     header='? VERSION = 1.0 \n? SIZE = %s \n? CHARGE = %E \n? COLUMNS X XPRIME Y YPRIME T P'%(result_filesize,gen.beam_charge)
     np.savetxt(file_name_write, np.c_[x_out,px_out/e_out,y_out,py_out/e_out,t_out,e_out],header=header,fmt="%E", newline='\n',comments='')
 

@@ -754,7 +754,7 @@ def clearall():
         del locals()[var]
 
 def dfl_filt(dfl_filename_read,dfl_filename_write,filter_filename,gen,lambda_filter=[],energy_filter=[],zeros_add=0,debug=0):
-    
+    import gc
     if (lambda_filter==[] and energy_filter==[]) or (lambda_filter!=[] and energy_filter!=[]):
         raise Exception('only one lambda_filter or energy_filter should be defined')
     if lambda_filter==[]:
@@ -764,7 +764,7 @@ def dfl_filt(dfl_filename_read,dfl_filename_write,filter_filename,gen,lambda_fil
     start_time = time.time()
     xlamds=gen('xlamds')
     zsep=gen('zsep')
-    ncar=gen('ncar')
+    ncar=int(gen('ncar'))
     rad0_t  = readRadiationFile(dfl_filename_read, npoints=ncar,slice_start=0, slice_end = -1,vartype=complex128)
     #rad0_t=rad0_t[:1024,:,:]
     nz_0=np.size(rad0_t,0)
@@ -780,14 +780,14 @@ def dfl_filt(dfl_filename_read,dfl_filename_write,filter_filename,gen,lambda_fil
         rad0_lamdscale=2*pi/K
         rad0_f=np.fft.fftshift(np.fft.fft(rad0_t,axis=0),axes=0)/sqrt(nz_0)
         
-        plt.figure('dfl_power_init')
+        plt.figure(50001)
         plt.clf()
         plt.plot(rad0_zscale,np.power(np.abs(rad0_t[:,75,75]),2))
         plt.gca().get_xaxis().get_major_formatter().set_useOffset(False)
         plt.gca().get_xaxis().get_major_formatter().set_scientific(True)
         plt.gca().get_xaxis().get_major_formatter().set_powerlimits((-3, 4))
         #ax.ticklabel_format(axis='x', style='sci', scilimits=(-3, 3), useOffset=False)
-        plt.figure('dfl_spectrum_init')
+        plt.figure(50002)
         plt.clf()
         plt.plot(rad0_lamdscale,np.sum(np.power(np.abs(rad0_f),2),axis=(1,2)))
         plt.gca().get_xaxis().get_major_formatter().set_useOffset(False)
@@ -816,7 +816,8 @@ def dfl_filt(dfl_filename_read,dfl_filename_write,filter_filename,gen,lambda_fil
     #  #######\-------\-------\-------
     #  #######\0000000\0000000\------- zeros_add=2
     nz_1=nz_0*(zeros_add+1)
-    rad1_t=np.lib.pad(rad0_t, ((0,zeros_add*nz_0), (0,0), (0,0)), mode='constant', constant_values=0)
+    rad1_t=np.concatenate((rad0_t,zeros((zeros_add*nz_0,ncar,ncar))),axis=0)
+    # rad1_t=np.pad(rad0_t, ((0,zeros_add*nz_0), (0,0), (0,0)), mode='constant', constant_values=0) #not supported by old numpy
     rad1_zscale=np.arange(nz_1)*xlamds*zsep
     
     del rad0_t
@@ -829,21 +830,25 @@ def dfl_filt(dfl_filename_read,dfl_filename_write,filter_filename,gen,lambda_fil
     K=k+dk1*sc
     
     rad1_lamdscale=2*pi/K
-
     
+    # print 'filter_max=' , np.amax(Tmod)
+    # print 'range_rad1_lamdscale=',np.amin(rad1_lamdscale),np.amax(rad1_lamdscale)
+    # print 'range_rad1_lambda_f=',np.amin(lambda_f),np.amax(lambda_f)
     filter_func=np.interp(rad1_lamdscale,lambda_f,Tmod,left=0,right=0)
     filter_func=np.fft.ifftshift(filter_func,axes=0)
     
+    # print 'filter_max=' , np.amax(filter_func)
     
+    # print 'rad_max=' , np.amax(rad1_t)
     rad1_t=np.fft.fft(rad1_t,axis=0) #was f FFT
     rad1_t=(rad1_t.T*filter_func).T#was f   Filter
     rad1_t=np.fft.ifft(rad1_t,axis=0)#      iFFT
     rad1_t=rad1_t[:nz_0,:,:]
-
+    print 'rad_max=' , np.amax(rad1_t)
     print("--- Pad and filter *.dfl file - %s seconds ---" % (time.time() - start_time))
     
     if debug:
-        plt.figure('dfl_power_final')
+        plt.figure(50004)
         plt.clf()
         plt.plot(rad0_zscale,np.power(np.abs(rad1_t[:,int((ncar-1)/2),int((ncar-1)/2)]),2))
         plt.gca().get_xaxis().get_major_formatter().set_useOffset(False)

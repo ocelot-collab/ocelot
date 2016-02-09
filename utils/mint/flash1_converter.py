@@ -2,7 +2,7 @@ __author__ = 'Sergey Tomin'
 
 """
 author Mathias Vogt, DESY.
-converted to Python by Sergey Tomin XFEL
+converted to Python by Sergey Tomin, E.XFEL, 2015.
 
 "USAGE: tpk2i <type-string> <momentum/GeV> <k_i /m^-(i+1) or angle/deg or kick/mrad> \n");
 """
@@ -27,7 +27,7 @@ def p3(a, x):
 def p3p(a, x):
     return a[1] + x*( 2.0*a[2] + x* 3.0*a[3] )
 
-def p3inv_old(a, y):
+def p3inv(a, y):
     tol=1.e-8
     x1 = p1inv( a, y )
     if a[2]==0.0 and a[3]==0.0:
@@ -36,7 +36,7 @@ def p3inv_old(a, y):
     x = newton(func, x1, tol=tol)
     return x
 
-def p3inv(a, y): # // uses undamped Newton-Raphson
+def p3inv_old(a, y): # // uses undamped Newton-Raphson
     tol=1.e-8
     x1 = p1inv( a, y )
     if a[2]==0.0 and a[3]==0.0:
@@ -126,11 +126,8 @@ def tpi2k(id, p, dI):
     a = table[id]["A"]
     el = table[id]["EL"]
     km = table[id]["KM"]
-    #print magnet_type, a, el, km, p
     dk0 = p3(a, dI ) * km/(p*p2brho)
-    #print dk0
     dk = 0.
-    #print magnet_type, a, el, km, dk0
     if magnet_type == "S" or magnet_type == "Q":
         #case kQ:
         dk = dk0
@@ -175,10 +172,12 @@ def tpk2i(id, p, k):
         phi=k*1.e-3
         dk=2.0*np.sin(0.5*phi)/el
     di = p3inv( a, p*p2brho*dk/km )
-    di_old = p3inv_old( a, p*p2brho*dk/km )
-    #print di, di_old
     return di
 
 if __name__ == "__main__":
-    print (tpi2k(id = "TSB", p = 0.700, dI=50))
-    print (tpk2i(id = "TCA40", p = 0.7, k=-12.3061297779))
+    I = 50.
+    k2 = tpi2k(id = "TSB", p = 0.700, dI=I)
+    I = tpk2i(id = "TSB", p = 0.700, k=k2)
+    print "p = 0.700, sextupole -> tpi2k: current = ", I, "A;", " strength = ", k2, "1/m**3"
+    print "p = 0.700, sextupole -> tpk2i: strength = ", k2, "1/m**3;", " current = ", I, "A"
+    #print (tpk2i(id = "TCA40", p = 0.7, k=-12.3061297779))

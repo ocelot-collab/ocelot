@@ -156,7 +156,8 @@ class FLASH1MachineInterface():
     
     def set_value(self, device_name, val):
         ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS'
-        return 1#doocs.write(ch, str(val))
+        print ch, val
+        return doocs.write(ch, str(val))
  
  
 class FLASH1DeviceProperties:
@@ -210,11 +211,22 @@ class FLASH1DeviceProperties:
 
 
         self.patterns['H8TCOL'] = re.compile('H8TCOL')
-        self.limits['H8TCOL'] = [0.02,0.06]
+        self.limits['H8TCOL'] = [0.04,0.05]
 
         self.patterns['V8TCOL'] = re.compile('V8TCOL')
-        self.limits['V8TCOL'] = [0.09,0.15]
+        self.limits['V8TCOL'] = [0.033,0.043]
         
+        self.patterns['V1ORS'] = re.compile('V1ORS')
+        self.limits['V1ORS'] = [0.1, 0.15]
+
+        self.patterns['H5ORS'] = re.compile('H5ORS')
+        self.limits['H5ORS'] = [-0.06, -0.01]
+
+        self.patterns['H10ORS'] = re.compile('H10ORS')
+        self.limits['H10ORS'] = [-0.2, -0.1]
+
+        self.patterns['V12ORS'] = re.compile('V12ORS')
+        self.limits['V12ORS'] = [0.04, 0.15]
         
     def get_limits(self, device):
         for k in self.patterns.keys():

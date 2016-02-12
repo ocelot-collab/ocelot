@@ -1,5 +1,6 @@
 import numpy as np
-from datetime import datetime
+import datetime
+import time
 #import dateutil
 import matplotlib.pyplot as plt
 import matplotlib.dates as md
@@ -56,14 +57,64 @@ def read_log(filename):
 
     dict_data = {}
     for name, col in zip(names, np.transpose(data)):
+        if name == "time":
+            col = col.astype(int)
         dict_data[name] = col
 
     return dict_data
 
 
+def read_orbit_log(filename):
+    f = open(filename, "r")
+    line = f.readline()
+    line = line.replace("#", "")
+    line = line.replace(" ", "")
+    line = line.replace("\n","")
+
+    names = line.split("\t")
+    names.remove("plane")
+    n_n = len(names)
+    #content = f.readlines()
+    lines = [line.rstrip('\n') for line in f]
+    f.close()
+
+    x_plane = []
+    y_plane = []
+    for line in lines:
+        data_line = line.split("\t")
+        if data_line[-1] == "X":
+            x = np.array(data_line[:-1]).astype(float)
+            x_plane.append(x)
+        else:
+            y = np.array(data_line[:-1]).astype(float)
+            y_plane.append(y)
+
+    #x_plane = np.array(x_plane)
+    x_plane = np.array([item for sublist in x_plane for item in sublist])
+    nx = len(x_plane)
+    x_plane.reshape((nx/n_n, n_n))
+    dict_data_x = {}
+    for name, col in zip(names, np.transpose(x_plane)):
+        if name == "time":
+            col = col.astype(int)
+        dict_data_x[name] = col
+
+    y_plane = np.array([item for sublist in y_plane for item in sublist])
+    ny = len(y_plane)
+    y_plane.reshape((ny/n_n, n_n))
+    dict_data_y = {}
+    for name, col in zip(names, np.transpose(y_plane)):
+        if name == "time":
+            col = col.astype(int)
+        dict_data_y[name] = col
+
+    return dict_data_x, dict_data_y
+
+
 def plot_dict(dict_data, filename=None, interval=1, mode="%"):
     inrv = interval
-    times = [datetime.fromtimestamp(t) for t in dict_data["time"]]
+    times = [datetime.datetime.fromtimestamp(t) for t in dict_data["time"]]
+    #print times
     devices = list(dict_data.keys())
     devices.remove("time")
     devices.remove("sase")
@@ -77,7 +128,7 @@ def plot_dict(dict_data, filename=None, interval=1, mode="%"):
     pax2 = ax.plot(times[::inrv],  dict_data["sase"][::inrv],"r-", lw=2, label = "sase")
     ax.grid()
 
-    ax.set_xlim([times[0], datetime.fromtimestamp(dict_data["time"][-1])])
+    ax.set_xlim([times[0], datetime.datetime.fromtimestamp(dict_data["time"][-1])])
     #ax.legend(loc=1, framealpha=0.7)
     ax.legend(loc=1)
     ax2 = ax.twinx()
@@ -97,24 +148,47 @@ def plot_dict(dict_data, filename=None, interval=1, mode="%"):
     if mode == "%":
         ax2.set_ylabel(r"$\Delta I/I$")
     else:
-        ax2.set_ylabel(r"$I, A$")
+        #ax2.set_ylabel(r"$I, A$")
+        ax2.set_ylabel(mode)
     if filename != None:
         plt.savefig(filename.split(".")[0]+".png")
     #fig.set_size_inches(20, 10)
     #fig.savefig("optim_vect_pict.svg", format="svg")
     plt.show()
 
-def plot_log(filename, devices=None):
+def timslot_extract(dict_data, timeslot):
+    #d0 = datetime.datetime.fromtimestamp(dict_data["time"][0])
+    times = [datetime.datetime.fromtimestamp(t) for t in dict_data["time"]]
+    start = timeslot[0].split(":")
+    end = timeslot[1].split(":")
+    print start, end
+    ind_0 = 0
+    ind_1 = -1
+    for i, t in enumerate(times):
+        if t.hour == int(start[0]) and t.minute == int(start[1]):
+            ind_0 = i
+        if t.hour == int(end[0]) and t.minute == int(end[1]):
+            ind_1 = i
+            break
+    for name in dict_data.keys():
+        dict_data[name] = dict_data[name][ind_0:ind_1]
+    return dict_data
+
+def plot_log(filename, devices=None, timeslot=None, mode="%"):
+
     dict_data = read_log(filename)
+    if timeslot is not None:
+        dict_data = timslot_extract(dict_data, timeslot)
+
     if devices is not None:
         dict_data_new = {}
-        n = 0#len(dict_data["sase"])
-        dict_data_new["sase"] = dict_data["sase"][n/2:]
-        dict_data_new["time"] = dict_data["time"][n/2:]
+
+        dict_data_new["sase"] = dict_data["sase"]
+        dict_data_new["time"] = dict_data["time"]
         for name in devices:
-            dict_data_new[name] = dict_data[name][n/2:]
+            dict_data_new[name] = dict_data[name]
         dict_data = dict_data_new
-    plot_dict(dict_data,filename=filename, interval=1)
+    plot_dict(dict_data,filename=filename, interval=1, mode=mode)
 
 
 def rm_nonwork_devices(dict_data, threshold=0.01, debug=False, rm_devices=["",]):
@@ -172,5 +246,10 @@ if __name__ == "__main__":
         filename = sys.argv[1]
     else:
         filename = "opt_3.txt"
+        filename = "../../desy/flash/exp_files_1_02/cor_sase_shif.txt"
     #filename = read_wrong(filename)
-    plot_log(filename)
+    #print filename
+    #, "bda_x", "bda_y"
+    #"tun_x", "tun_y"
+    plot_log(filename, devices=["bda_x", "bda_y"], timeslot=["01:52", "02:02"], mode="units")
+    plot_log(filename, devices=["tun_x", "tun_y"], timeslot=None)

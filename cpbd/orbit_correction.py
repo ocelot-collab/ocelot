@@ -145,33 +145,38 @@ class Response_matrix:
     #        I0array.append(I0)
 
 
-    def compare(self, rmatrix):
-        cors1 = self.cor_names
-        cors2 = rmatrix.cor_names
-        bpms1 = self.bpm_names
-        bpms2 = rmatrix.bpm_names
+    def compare(self, rmatrix, absolut = 0.001, relative = 0.1):
+        cors1 = np.array(self.cor_names)
+        cors2 = np.array(rmatrix.cor_names)
+        bpms1 = np.array(self.bpm_names)
+        bpms2 = np.array(rmatrix.bpm_names)
         nb1 = len(bpms1)
         nb2 = len(bpms2)
-        c_names = np.intersect1d(cors1, cors2)
+        #c_names = np.intersect1d(cors1, cors2)
+        c_names = cors1[np.in1d(cors1, cors2)]
         c_i1 = np.where(np.in1d(cors1, cors2))[0]
         c_i2 = np.where(np.in1d(cors2, cors1))[0]
-        b_names = np.intersect1d(bpms1, bpms2)
+        #b_names = np.intersect1d(bpms1, bpms2)
+        b_names = bpms1[np.in1d(bpms1, bpms2)]
         b_i1 = np.where(np.in1d(bpms1, bpms2))[0]
         b_i2 = np.where(np.in1d(bpms2, bpms1))[0]
         plane = ["X", "Y"]
         for n in range(2):
             print "****************   ", plane[n], "   ****************"
+            counter = 0
             for i, c in enumerate(c_names):
                 for j, b in enumerate(b_names):
                     #print b_i1[j],  nb1*n, c_i1[i]
                     x1 = self.matrix[b_i1[j] + nb1*n, c_i1[i]]
                     x2 = rmatrix.matrix[b_i2[j] + nb2*n, c_i2[i]]
-                    if abs(x1 - x2) <0.0001:
+                    if abs(x1 - x2) <absolut:
                         continue
-                    if abs(x1 - x2)/max(np.abs([x1, x2])) < 0.10:
+                    if abs(x1 - x2)/max(np.abs([x1, x2])) < relative:
                         continue
                     l_x1 = len(str(x1))
                     print plane[n], c, " "*(10 - len(c)), b, " "*(10 - len(b)), "r1: ", x1," "*(18 - l_x1),"r2: ", x2
+                    counter += 1
+            print "shown", counter, "elements of", len(c_names)*len(b_names)
 
     def show(self, list_cor=None, list_bpm=None):
         print " "*10,

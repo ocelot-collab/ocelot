@@ -101,31 +101,23 @@ class Quadrupole(Element):
 
 class Sextupole(Element):
     """
-    m - strength of sextupole lens in [1/m^3],
+    k2 - strength of sextupole lens in [1/m^3],
     l - length of lens in [m].
     """
-    def __init__(self, l=0, k2=0., ms=0., id=None, tilt=0):
+    def __init__(self, l=0, k2=0., id=None, tilt=0):
         """
         k2 is sextupole strength
         ms = k2*l
         """
         Element.__init__(self, id)
         self.type = "sextupole"
-        if l != 0 and ms != 0:
-            if k2 == 0:
-                k2 = ms/l
-                ms = 0.
-            else:
-                ms = 0.
-
         self.l = l
         self.k2 = k2
-        self.ms = ms
         self.tilt = tilt
 
 class Octupole(Element):
     """
-    m - strength of sextupole lens in [1/m^3],
+    k3 - strength of sextupole lens in [1/m^4],
     l - length of lens in [m].
     """
     def __init__(self, l=0, k3=None, id=None, tilt=0.):

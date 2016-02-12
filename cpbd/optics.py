@@ -386,6 +386,7 @@ def create_transfer_map(element, order=1):
 
         R_z = lambda z, energy: uni_matrix(z, 0., hx=0., energy=energy)
         transfer_map.sym_map_z = lambda X, z, energy: map4sextupole(X, z, element.k2*element.l, energy)
+        """
         if element.l == 0:
 
             transfer_map.ms = element.ms
@@ -396,7 +397,7 @@ def create_transfer_map(element, order=1):
             transfer_map.T_z = lambda z: transfer_map.T
             transfer_map.sym_map_z = lambda X, z, energy: map4sextupole(X, z, element.ms, energy)
             #transfer_map.sym_map_z = lambda X, z, energy: t_apply(R_z(z, energy), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
-
+        """
         transfer_map.map_z = lambda X, z, energy: t_apply(R_z(z, energy), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
         transfer_map.order = 2
 

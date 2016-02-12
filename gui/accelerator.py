@@ -246,7 +246,7 @@ def elem_cord(lat):
         
         elif elem.type == "sextupole":
 
-            temp[:,1] = temp[:,1]*elem.ms+ temp[:,1]*elem.k2
+            temp[:,1] = temp[:,1]*elem.k2
             sext = np.append(sext, temp, axis = 0)
 
         elif elem.type == "multipole":
@@ -322,7 +322,7 @@ def  new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale 
         elif elem.type in ["hcor", "vcor"]:
             c.append(elem.angle)
         elif elem.type == "sextupole":
-            s.append(elem.k2 + elem.ms)
+            s.append(elem.k2)
         elif elem.type == "undulator":
             u.append(elem.Kx + elem.Ky)
         elif elem.type == "cavity":
@@ -382,7 +382,7 @@ def  new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale 
             dict_copy["vcor"]["label"] = ""
 
         elif elem.type == "sextupole":
-            ampl = (elem.k2 + elem.ms)/s_max if s_max != 0 else 1
+            ampl = (elem.k2)/s_max if s_max != 0 else 1
             point, = ax.fill(s_coord, (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color,
                              alpha = alpha, label=dict_copy[type]["label"])
             dict_copy[type]["label"] = ""

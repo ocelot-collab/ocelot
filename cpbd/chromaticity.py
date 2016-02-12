@@ -5,6 +5,8 @@ from ocelot.cpbd.optics import trace_z, twiss
 from scipy.integrate import simps
 from numpy.linalg import inv
 from ocelot.cpbd.beam import *
+from ocelot.cpbd.elements import *
+
 
 def edge_chromaticity_old(lattice, tws_0):
     #tested !
@@ -47,7 +49,7 @@ def chromaticity(lattice, tws_0, nsuperperiod = 1):
     integr_x = 0.
     integr_y = 0.
     for elem in lattice.sequence:
-        if elem.type in ["rbend", "sbend", "bend", "quadrupole"]:
+        if elem.__class__ in (SBend, RBend, Bend, Quadrupole):
             bx = []
             by = []
             k = []
@@ -59,7 +61,7 @@ def chromaticity(lattice, tws_0, nsuperperiod = 1):
                 by.append(twiss_z.beta_y)
                 k.append(elem.k1)
                 #print elem.l
-                if elem.type != "quadrupole" and elem.l != 0:
+                if elem.__class__ != Quadrupole and elem.l != 0:
                     h.append(elem.angle/elem.l)
                 else:
                     h.append(0.)
@@ -70,7 +72,7 @@ def chromaticity(lattice, tws_0, nsuperperiod = 1):
             Y = -array(by)*array(k)
             integr_x += simps(X, Z)
             integr_y += simps(Y, Z)
-        elif elem.type == "multipole":
+        elif elem.__class__ == Multipole:
             twiss_z = elem.transfer_map*tws_elem
             integr_x += twiss_z.beta_x*elem.kn[1]
             integr_y -= twiss_z.beta_y*elem.kn[1]
@@ -87,7 +89,7 @@ def sextupole_chromaticity(lattice, tws0, nsuperperiod = 1):
     integr_x = 0.
     integr_y = 0.
     for elem in lattice.sequence:
-        if elem.type == "sextupole":
+        if elem.__class__ == Sextupole:
             bx = []
             by = []
             Dx = []
@@ -106,6 +108,10 @@ def sextupole_chromaticity(lattice, tws0, nsuperperiod = 1):
             integr_x += simps(X, Z)*elem.k2
             integr_y += simps(Y, Z)*elem.k2
 
+        elif elem.__class__ == Multipole and elem.n > 2:
+            integr_x += twiss_z.beta_x*twiss_z.Dx*elem.kn[2]
+            integr_y += twiss_z.beta_y*twiss_z.Dx*elem.kn[2]
+
         tws_elem = elem.transfer_map*tws_elem
     chrom_sex_x = (integr_x)/(4*pi)
     chrom_sex_y = -(integr_y)/(4*pi)
@@ -116,13 +122,13 @@ def sextupole_chromaticity(lattice, tws0, nsuperperiod = 1):
 def sextupole_id(lattice):
     sex = {}
     for element in lattice.sequence:
-        if element.type == "sextupole":
+        if element.__class__ == Sextupole:
             if element.id == None:
                 print("Please add ID to sextupole")
             sex[element.id] = element.ms
-        if element.type == "multipole" and element.n==3:
+        if element.__class__ == Multipole and element.n>2:
             if element.id == None:
-                print("Please add ID to sextupole")
+                print("Please add ID to multipole with sextupole component")
             sex[element.id] = element.kn[2]
     sex_name = sex.keys()
 
@@ -176,9 +182,15 @@ def compensate_chromaticity(lattice,  ksi_x_comp=0, ksi_y_comp=0,  nsuperperiod=
     #print sex_dict_stg
     sex_name = list(sex_dict_stg.keys())
     for element in lattice.sequence:
-        if element.type == "sextupole":
+        if element.__class__ == Sextupole:
             if element.id == sex_name[0]:
-                element.ms = sex_dict_stg[element.id]
+                element.k2 = sex_dict_stg[element.id]/element.l
             elif element.id == sex_name[1]:
-                element.ms = sex_dict_stg[element.id]
+                element.k2 = sex_dict_stg[element.id]/element.l
+
+        elif element.__class__ == Multipole:
+            if element.id == sex_name[0]:
+                element.kn[2] = sex_dict_stg[element.id]
+            elif element.id == sex_name[1]:
+                element.kn[2] = sex_dict_stg[element.id]
     lattice.update_transfer_maps()

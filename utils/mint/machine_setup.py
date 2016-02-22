@@ -88,6 +88,9 @@ class HighLevelInterface:
         self.read_sexts()
         self.read_bpms()
 
+    def read_sase(self):
+        return self.mi.get_sase()
+
     def read_quads(self):
         id2I_dict = {}
         for elem in self.lat.sequence:

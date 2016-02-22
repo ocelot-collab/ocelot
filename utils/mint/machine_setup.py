@@ -89,7 +89,9 @@ class HighLevelInterface:
         self.read_bpms()
 
     def read_sase(self):
-        return self.mi.get_sase()
+        sase_fast = self.mi.get_sase()
+        sase_slow = self.mi.get_sase(detector="gmd_fl1_slow")
+        return sase_fast, sase_slow
 
     def read_quads(self):
         id2I_dict = {}

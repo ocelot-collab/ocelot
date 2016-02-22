@@ -178,6 +178,6 @@ if __name__ == "__main__":
     I = 50.
     k2 = tpi2k(id = "TSB", p = 0.700, dI=I)
     I = tpk2i(id = "TSB", p = 0.700, k=k2)
-    print "p = 0.700, sextupole -> tpi2k: current = ", I, "A;", " strength = ", k2, "1/m**3"
-    print "p = 0.700, sextupole -> tpk2i: strength = ", k2, "1/m**3;", " current = ", I, "A"
+    print ("p = 0.700, sextupole -> tpi2k: current = ", I, "A;", " strength = ", k2, "1/m**3")
+    print ("p = 0.700, sextupole -> tpk2i: strength = ", k2, "1/m**3;", " current = ", I, "A")
     #print (tpk2i(id = "TCA40", p = 0.7, k=-12.3061297779))

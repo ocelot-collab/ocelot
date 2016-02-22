@@ -5,15 +5,15 @@ import numpy as np
 import time
 
 def show_currents( elems, alpha):
-    print "******* displaying currents - START ********"
+    print("******* displaying currents - START ********")
     for elem in elems:
         if elem.dI == 0:
             continue
         n = len(elem.id)
         n2 = len(str(elem.I + elem.dI))
         n3 = len(str(elem.I))
-        print elem.id, " "*(10-n) + "<-- ", elem.I + elem.dI,  " "*(18-n2)+ " was = ", elem.I, " "*(18-n3) + " dI = ", elem.dI, "x", alpha
-    print "******* displaying currents - END ********"
+        print(elem.id, " "*(10-n) + "<-- ", elem.I + elem.dI,  " "*(18-n2)+ " was = ", elem.I, " "*(18-n3) + " dI = ", elem.dI, "x", alpha)
+    print("******* displaying currents - END ********")
 
 def set_currents(mi, elems, alpha):
     for elem in elems:
@@ -22,7 +22,7 @@ def set_currents(mi, elems, alpha):
         n = len(elem.id)
         new_I = elem.I + elem.dI*alpha
         n2 = len(str(new_I))
-        print elem.id,  " "*(10-n) + "<-- ", new_I,  " "*(18-n2)+ " was = ", elem.I
+        print(elem.id,  " "*(10-n) + "<-- ", new_I,  " "*(18-n2)+ " was = ", elem.I)
         mi.set_value(elem.mi_id, new_I)
 
 def restore_current(mi, elems):
@@ -30,7 +30,7 @@ def restore_current(mi, elems):
         if elem.dI == 0:
             continue
         n = len(elem.id)
-        print elem.id, " "*(10-n) +"<-- ", elem.I
+        print(elem.id, " "*(10-n) +"<-- ", elem.I)
         mi.set_value(elem.mi_id, elem.I)
 
 def currents2angles(orb):
@@ -50,7 +50,7 @@ def currents2angles(orb):
             elem.dI = 0.
             elem.angle = 0.
         if abs(elem.angle) > 0.005:
-            print elem.id, " @@@@@@@@@@@@@@@@ HIGH CURRENT @@@@@@@@@@@@@@@ = ", elem.angle
+            print(elem.id, " @@@@@@@@@@@@@@@@ HIGH CURRENT @@@@@@@@@@@@@@@ = ", elem.angle)
 
 def angles2currents(orb):
     for elem in np.append(orb.hcors, orb.vcors):
@@ -67,7 +67,7 @@ def angles2currents(orb):
             elem.dI = 0.
             elem.angle = 0.
         if abs(elem.dI) > 0.5:
-            print elem.id, " @@@@@@@@@@@@@@@@ HIGH CURRENT @@@@@@@@@@@@@@@ = ", elem.dI
+            print(elem.id, " @@@@@@@@@@@@@@@@ HIGH CURRENT @@@@@@@@@@@@@@@ = ", elem.dI)
 
 
 class HighLevelInterface:
@@ -113,7 +113,7 @@ class HighLevelInterface:
                         id2I_dict[elem.mi_id]["I"] = elem.I
                         id2I_dict[elem.mi_id]["polarity"] = elem.polarity
                     except:
-                        print "* ", name, "  CAN MOT FIND"
+                        print("* ", name, "  CAN MOT FIND")
 
     def read_bends(self):
         id2I_dict = {}
@@ -141,7 +141,7 @@ class HighLevelInterface:
                         id2I_dict[elem.mi_id] = {}
                         id2I_dict[elem.mi_id]["I"] = elem.I
                     except:
-                        print "* ", elem.id, "  CAN MOT FIND"
+                        print("* ", elem.id, "  CAN MOT FIND")
 
     def read_cavs(self):
         dict_cavity = {}
@@ -159,7 +159,7 @@ class HighLevelInterface:
                         dict_cavity[elem.mi_id]["ampl"] = ampls[0]
                         dict_cavity[elem.mi_id]["phi"] = phases[0]
                 except:
-                    print "* UNKNOWN cav", elem.mi_id, elem.id
+                    print("* UNKNOWN cav", elem.mi_id, elem.id)
                     continue
                 ampls = dict_cavity[elem.mi_id]["ampl"]
                 phases = dict_cavity[elem.mi_id]["phi"]
@@ -169,7 +169,7 @@ class HighLevelInterface:
                 if elem.mi_id == "M1.ACC1":
                     elem.v = elem.v/8.
                     if abs(elem.phi) > 10:
-                        print "* too large phase on ", elem.mi_id, elem.phi
+                        print("* too large phase on ", elem.mi_id, elem.phi)
                 elif elem.mi_id == "M1.ACC39":
                     # deaccelerator
                     elem.v = elem.v/4.
@@ -177,18 +177,18 @@ class HighLevelInterface:
                 elif "ACC23" in elem.mi_id:
                     elem.v = elem.v/8.
                     if abs(elem.phi) > 10:
-                        print "* too large phase on ", elem.mi_id, elem.phi, "  # set zero phase: ", elem.mi_id,".phi <-- 0"
+                        print("* too large phase on ", elem.mi_id, elem.phi, "  # set zero phase: ", elem.mi_id,".phi <-- 0")
                         elem.phi = 0.
                 elif "ACC45" in elem.mi_id :
                     elem.v = elem.v/8.
                     if abs(elem.phi) > 10:
-                        print "* too large phase on ", elem.mi_id, elem.phi
+                        print("* too large phase on ", elem.mi_id, elem.phi)
                 elif "ACC67" in elem.mi_id:
                     elem.v = elem.v/8.
                     if abs(elem.phi) > 10:
-                        print "* too large phase on ", elem.mi_id, elem.phi
+                        print("* too large phase on ", elem.mi_id, elem.phi)
         for cav in dict_cavity.keys():
-            print cav, " E = ", dict_cavity[cav]["ampl"], "MeV, phi =  ", dict_cavity[cav]["phi"], " grad"
+            print (cav, " E = ", dict_cavity[cav]["ampl"], "MeV, phi =  ", dict_cavity[cav]["phi"], " grad")
         self.lat.update_transfer_maps()
         return self.lat
 
@@ -212,7 +212,7 @@ class HighLevelInterface:
                         id2I_dict[elem.mi_id] = elem.I
                         #print elem.I
                     except:
-                        print "* ", elem.mi_id, "UNKNOW"
+                        print("* ", elem.mi_id, "UNKNOW")
                         elem.type = "drift"
 
     def read_sexts(self):
@@ -233,17 +233,22 @@ class HighLevelInterface:
                         elem.I = -vals[0]
 
     def read_bpms(self):
+        X = []
+        Y = []
         for elem in self.lat.sequence:
             if elem.type == "monitor":
                 name = elem.id.replace("BPM", "")
                 elem.mi_id = name
                 try:
-                    X, Y = self.mi.get_bpms_xy([elem.mi_id])
-                    elem.x = X[0]
-                    elem.y = Y[0]
-                except:
-                    print "* ", name, "  CAN MOT FIND"
 
+                    x, y = self.mi.get_bpms_xy([elem.mi_id])
+                    elem.x = x[0]
+                    elem.y = y[0]
+                    X.append(elem.x)
+                    Y.append(elem.y)
+                except:
+                    print("* ", name, "  CAN MOT FIND")
+        return np.array(X), np.array(Y)
 
 
 class MachineSetup:
@@ -255,33 +260,33 @@ class MachineSetup:
         pass
 
     def read_save_lattice(self, filename):
-        print "reading currents from DOOCS system ... ",
+        print("reading currents from DOOCS system ... ",)
         self.hli.read_all()
-        print "OK"
+        print("OK")
 
-        print "getting currents of quad ... "
+        print("getting currents of quad ... ")
         self.dict_quad = self.get_elem_type_currents(self.lat, ["quadrupole"])
-        print "OK"
+        print("OK")
 
-        print "getting currents of bend ... "
+        print("getting currents of bend ... ")
         self.dict_bend = self.get_elem_type_currents(self.lat, ["sbend", "rbend", "bend"])
-        print "OK"
+        print("OK")
 
-        print "getting currents of correctors ... "
+        print("getting currents of correctors ... ")
         self.dict_cor = self.get_elem_type_currents(self.lat, ["hcor", "vcor"])
-        print "OK"
+        print("OK")
 
-        print "getting params of cavities ... "
+        print("getting params of cavities ... ")
         self.dict_cav = self.get_cav_params(self.lat)
-        print "OK"
+        print("OK")
 
-        print "getting beam positions ...  "
+        print("getting beam positions ...  ")
         self.dict_orbit = self.get_orbit(self.lat)
-        print "OK"
+        print("OK")
 
-        print "getting currents of sext  ...  "
+        print("getting currents of sext  ...  ")
         self.dict_sext = self.get_elem_type_currents(self.lat, ["sextupole"])
-        print "OK"
+        print("OK")
 
         data = {}
         data["quad"] = self.dict_quad
@@ -306,11 +311,11 @@ class MachineSetup:
         try:
             lattice.sase = data["sase"]
         except:
-            print "SASE value was not logged"
+            print("SASE value was not logged")
         try:
             lattice.gun_energy = data["gun_energy"]
         except:
-            print "gun energy was not logged"
+            print("gun energy was not logged")
 
         for elem in lattice.sequence:
 
@@ -405,9 +410,9 @@ class MachineSetup:
         return data
 
     def save_orbit(self, lat, filename):
-        print "getting beam positions ... "
+        print("getting beam positions ... ")
         self.dict_orbit = self.get_orbit(lat)
-        print "OK"
+        print("OK")
         pickle.dump(self.dict_orbit, open(filename, "wb"))
 
     def load_orbit(self, filename, lat):

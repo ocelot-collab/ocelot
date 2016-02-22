@@ -5,6 +5,7 @@ from numpy import cosh, sinh
 from scipy.misc import factorial
 from ocelot.cpbd.beam import Particle, Twiss, ParticleArray
 from ocelot.cpbd.high_order import *
+from copy import deepcopy
 
 
 
@@ -751,10 +752,31 @@ def periodic_solution(tws, R):
 def lattice_transfer_map(lattice, energy):
     """ transfer map for the whole lattice"""
     R = np.eye(6)
+    #T = np.zeros((6, 6, 6))
+    #print lattice.sequence[0].transfer_map.T
     for i, elem in enumerate(lattice.sequence):
 
-        R = dot(elem.transfer_map.R(energy), R)
+        Rb = elem.transfer_map.R(energy)
+        """
+        Tb = elem.transfer_map.T
+        Ta = deepcopy(T)
+        for i in range(6):
+            for j in range(6):
+                for k in range(6):
+                    t1 = np.dot(Rb[i, :], Ta[:, j, k])
+                    t2 = 0.
+                    for l in range(6):
+                        for m in range(6):
+                            t2 += Tb[i, l, m]*R[l, j]*R[m, k]
+                    #print t1, t2
+                    T[i,j,k] = t1+t2
+        """
+        R = dot(Rb, R)
+        #T = Ta
         #print i, len(lattice.sequence), elem.type, elem.transfer_map.R(6)
+    #print T
+    #lattice.T = T
+    #lattice.R = R
     return R
 
 

@@ -7,7 +7,7 @@ phi_bc2 = 0.033646252962410
 l0 = 0.5
 l_bc2 = l0 *phi_bc2 /np.sin((phi_bc2))
 
-ac_v = 0.02265625*1e+9 # in V
+ac_v = 0.02265625 # in GV
 
 bb_393_b2 = Bend(l=l_bc2, angle=phi_bc2, e1=0.000000000, e2=phi_bc2, tilt=1.570796330, id = 'bb_393_b2')
 bb_402_b2 = Bend(l=l_bc2, angle=-phi_bc2, e1=-phi_bc2, e2=0.000000000, tilt=1.570796330, id = 'bb_402_b2')
@@ -31,7 +31,7 @@ q_249_l2 =  Quadrupole(l=0.3000000, k1=0.25, tilt=0.000000000, id = 'q_249_l2')
 q_261_l2 =  Quadrupole(l=0.3000000, k1=-0.29711100, tilt=0.000000000, id = 'q_261_l2')
 
 
-c_a3 = Cavity(l=1.0377000, phi=0.0, volt = ac_v, freq=1.300e+009, id = 'c_a3')
+c_a3 = Cavity(l=1.0377000, phi=0.0, v = ac_v, freq=1.300e+009, id = 'c_a3')
 
 
 l3  = (d13cm,qd_415_b2,d130cm, qd_417_b2, d130cm, qd_418_b2,d130cm,

@@ -11,8 +11,8 @@ Q4 = Quadrupole(l= 0.5, k1=1.19250444829 , id = "Q4")
 
 B  = Bend(l=2.7, k1=-.06, angle=2*pi/16., e1=pi/16., e2=pi/16., id = "B")
 
-SF = Sextupole(l=0., ms = 1.5, id = "SF") #random value
-SD = Sextupole(l=0., ms = -1.5, id = "SD") #random value
+SF = Sextupole(l=0.01, k2 = 150, id = "SF") #random value
+SD = Sextupole(l=0.01, k2 =-150, id = "SD") #random value
 
 D1 = Drift(l=2., id = "D1")
 D2 = Drift(l=0.6, id = "D2")

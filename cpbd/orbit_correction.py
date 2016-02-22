@@ -17,15 +17,15 @@ import copy
 import pickle
 
 def show_currents( elems, alpha):
-    print "******* displaying currents - START ********"
+    print( "******* displaying currents - START ********")
     for elem in elems:
         if elem.dI == 0:
             continue
         n = len(elem.id)
         n2 = len(str(elem.I + elem.dI))
         n3 = len(str(elem.I))
-        print elem.id, " "*(10-n) + "<-- ", elem.I + elem.dI,  " "*(18-n2)+ " was = ", elem.I, " "*(18-n3) + " dI = ", elem.dI, "x", alpha
-    print "******* displaying currents - END ********"
+        print( elem.id, " "*(10-n) + "<-- ", elem.I + elem.dI,  " "*(18-n2)+ " was = ", elem.I, " "*(18-n3) + " dI = ", elem.dI, "x", alpha)
+    print ("******* displaying currents - END ********")
 """
 class BPM(object):
     def __init__(self, id = None):
@@ -89,7 +89,7 @@ class Response_matrix:
         self.bpm_names = dict_rmatrix["bpm_names"]
         self.matrix = dict_rmatrix["matrix"]
         self.mode = dict_rmatrix["mode"]
-        print self.mode
+        #print (self.mode)
         return 1
 
     def extract(self, cor_list, bpm_list):
@@ -112,12 +112,12 @@ class Response_matrix:
         b_i2 = np.where(np.in1d(bpms2, b_names))[0]
 
         if not np.array_equal(c_names, cor_list):
-            print " in origin response matrix does not exist correctors:"
+            print (" in origin response matrix does not exist correctors:")
             #print c_names
-            print cors2[np.in1d(cors2, c_names, invert=True)]
+            print (cors2[np.in1d(cors2, c_names, invert=True)])
         if not np.array_equal(b_names, bpm_list):
-            print " in origin response matrix does not exist BPMs:"
-            print bpm_list[b_i2[:]]
+            print (" in origin response matrix does not exist BPMs:")
+            print (bpm_list[b_i2[:]])
 
         extr_matrix = np.zeros((len(b_names)*2, len(c_names)))
         #plane = ["X", "Y"]
@@ -162,7 +162,7 @@ class Response_matrix:
         b_i2 = np.where(np.in1d(bpms2, bpms1))[0]
         plane = ["X", "Y"]
         for n in range(2):
-            print "****************   ", plane[n], "   ****************"
+            print ("****************   ", plane[n], "   ****************")
             counter = 0
             for i, c in enumerate(c_names):
                 for j, b in enumerate(b_names):
@@ -174,21 +174,21 @@ class Response_matrix:
                     if abs(x1 - x2)/max(np.abs([x1, x2])) < relative:
                         continue
                     l_x1 = len(str(x1))
-                    print plane[n], c, " "*(10 - len(c)), b, " "*(10 - len(b)), "r1: ", x1," "*(18 - l_x1),"r2: ", x2
+                    print (plane[n], c, " "*(10 - len(c)), b, " "*(10 - len(b)), "r1: ", x1," "*(18 - l_x1),"r2: ", x2)
                     counter += 1
-            print "shown", counter, "elements of", len(c_names)*len(b_names)
+            print("shown", counter, "elements of", len(c_names)*len(b_names))
 
     def show(self, list_cor=None, list_bpm=None):
-        print " "*10,
+        print (" "*10,)
         for bpm in self.bpm_names:
-            print bpm,
-        print
+            print (bpm,)
+        print()
         for i in range(shape(self.matrix)[1]):
-            print self.cor_names[i] + " "*(10 - len(self.cor_names[i])),
+            print (self.cor_names[i] + " "*(10 - len(self.cor_names[i])),)
             #print np.array_str(self.matrix[:, i], precision=2, suppress_small=True)
             for j in range(shape(self.matrix)[0]):
-                print "%.2f" % self.matrix[j, i],
-            print
+                print ("%.2f" % self.matrix[j, i],)
+            print()
 
 
 
@@ -341,7 +341,7 @@ class Orbit:
                 except:
                     #print cor.id, " delta_i = ", delta_i
                     cor.dI = delta_i
-                print "X:  ", cor.id, "I = ", cor.I
+                print ("X:  ", cor.id, "I = ", cor.I)
 
             show_currents(cor_list, alpha=1.)
             inp = raw_input("Start measurement of response matrix for " + plane[n]+":? ")
@@ -350,7 +350,7 @@ class Orbit:
                 X0, Y0 = mi.get_bpms_xy(bpm_names)
                 XY0 = np.append(X0, Y0)
                 for i, cor in enumerate(cor_list):
-                    print i, "/", len(cor_list), cor.id
+                    print (i, "/", len(cor_list), cor.id)
                     mi.set_value(cor.id, cor.I + cor.dI)
                     sleep(timeout)
                     X, Y = mi.get_bpms_xy(bpm_names)
@@ -428,7 +428,7 @@ class Orbit:
         :param match_ic: matching initial coordinates of particles
         :return:
         """
-        print "measure = ", p_init.x, p_init.y, p_init.px, p_init.py, p_init.E
+        print ("measure = ", p_init.x, p_init.y, p_init.px, p_init.py, p_init.E)
         shift = 0.0001
         m = len(self.bpms)
         nx = len(self.hcors)
@@ -470,7 +470,7 @@ class Orbit:
                 p_i = Particle(E = p_init.E)
                 p_i.__dict__[par] = 0.0001
                 p2 = copy.deepcopy(p_i)
-                print "measure = ", p2.x, p2.y, p2.px, p2.py, p2.E
+                print ("measure = ", p2.x, p2.y, p2.px, p2.py, p2.E)
                 self.read_virtual_orbit(p_init=p2, order=order)
                 for j, bpm in enumerate(self.bpms):
                     real_resp[j, nx + ny + i] = (bpm.x - bpms[j].x)/0.0001
@@ -568,7 +568,7 @@ class Orbit:
         resp_matrix_w = dot(weight, resp_matrix)
         misallign_w = dot(weight, misallign)
         U, s, V = svd(resp_matrix_w)
-        print s
+        #print (s)
         s_inv = zeros(len(s))
         for i in range(len(s)):
             #if s[i]<1./max(s):
@@ -646,7 +646,7 @@ class Orbit:
         iy = 0
         for elem in self.lat.sequence:
             if ix<len(self.htypes) and elem.id == self.htypes[ix].id:
-                print "quad, ", elem.dx, poss[ix]
+                print ("quad, ", elem.dx, poss[ix])
                 elem.dx += poss[ix]
                 #self.hquads[ix].dx -= poss[ix]
                 ix += 1

@@ -16,8 +16,8 @@ D7 = Drift (l = 0.289, id = "D7")
 D8 = Drift (l = 0.399, id = "D8")
 D9 = Drift (l = 3.009/2., id = "D9")
 
-SF = Sextupole(l = 0, ms = 1.7673786254063251, id = "SF")
-SD = Sextupole(l = 0, ms = -3.6169817233025707, id = "SD")
+SF = Sextupole(l = 0.01, k2 = 176.73786254063251, id = "SF")
+SD = Sextupole(l = 0.01, k2 = -361.69817233025707, id = "SD")
 
 
 Q1 = Quadrupole (l = 0.293, k1 = 2.62, id = "Q1")

@@ -62,7 +62,7 @@ class Optimizer:
         '''
         direct sase optimization with simplex, using correctors as a multiknob
         '''
-        if self.debug: print 'starting multiknob optimization, correctors = ', correctors
+        if self.debug: print('starting multiknob optimization, correctors = ', correctors)
 
         if opt_pointing:
             weight_gmd_bpm_1 = 10.0
@@ -73,23 +73,23 @@ class Optimizer:
     
         def error_func(x):
 
-            print self.dp
+            print (self.dp)
             
             pen_max = 100.0
     
             #print 'error_func: ', bpm_names, '->',  planes
     
-            for i in xrange(len(x)):
-                print '{0} x[{1}]={2}'.format(correctors[i], i, x[i])
+            for i in range(len(x)):
+                print('{0} x[{1}]={2}'.format(correctors[i], i, x[i]))
                 limits = self.dp.get_limits(correctors[i])
-                print  'limits=[{0}, {1}]'.format(limits[0], limits[1])
+                print('limits=[{0}, {1}]'.format(limits[0], limits[1]))
                 if x[i] < limits[0] or x[i] > limits[1]:
-                    print 'limits exceeded'
+                    print('limits exceeded')
                     return pen_max
     
     
-            for i in xrange(len(correctors)):
-                print 'setting', correctors[i], '->',x[i]
+            for i in range(len(correctors)):
+                print ('setting', correctors[i], '->',x[i])
                 self.mi.set_value(correctors[i], x[i])
     
             sleep(self.timeout)
@@ -98,8 +98,8 @@ class Optimizer:
             alarm = np.max(self.mi.get_alarms())
             #z1, z2 = get_sase_pos()
     
-            if self.debug: print 'alarm:', alarm
-            if self.debug: print 'sase:', sase
+            if self.debug: print ('alarm:', alarm)
+            if self.debug: print ('sase:', sase)
             #print 'pointing', z1, z2, 'weights', weight_gmd_bpm_1, weight_gmd_bpm_2
     
             pen = 0.0
@@ -112,7 +112,7 @@ class Optimizer:
     
             pen -= sase    
 
-            if self.debug: print 'penalty:', pen
+            if self.debug: print ('penalty:', pen)
     
             return pen
         
@@ -132,7 +132,7 @@ class Optimizer:
 
         
         if method == 'cg':
-            print 'using CG optimizer, params:', params 
+            print ('using CG optimizer, params:', params )
             
             try:
                 max_iter = params['maxiter']
@@ -152,7 +152,7 @@ class Optimizer:
             opt.fmin_cg(error_func,x,gtol=gtol, epsilon = epsilon, maxiter=max_iter)
         
         if method == 'simplex':
-            print 'using simplex optimizer, params:', params
+            print ('using simplex optimizer, params:', params)
             
             try:
                 max_iter = params['maxiter']
@@ -167,7 +167,7 @@ class Optimizer:
             opt.fmin(error_func,x,xtol=xtol, maxiter=max_iter)
         
         if method == 'powell': 
-            print 'using powell optimizer, params:', params
+            print ('using powell optimizer, params:', params)
             
             try:
                 max_iter = params['maxiter']
@@ -183,15 +183,15 @@ class Optimizer:
 
 
         if method == 'fancy_stuff_from': 
-            print 'using fancy optimizer, params:', params
+            print ('using fancy optimizer, params:', params)
             pass
 
         sase_new = self.mi.get_sase()
         
-        print 'step ended changing sase from/to', sase_ref, sase_new
+        print ('step ended changing sase from/to', sase_ref, sase_new)
         if sase_new <= sase_ref:
-            for i in xrange(len(correctors)):
-                print 'reverting', correctors[i], '->',x_init[i]
+            for i in range(len(correctors)):
+                print ('reverting', correctors[i], '->',x_init[i])
                 self.mi.set_value(correctors[i], x_init[i])
 
         if self.logging:
@@ -202,7 +202,7 @@ class Optimizer:
         '''
         direct sase optimization with simplex, using correctors as a multiknob
         '''
-        if self.debug: print 'starting multiknob optimization, correctors = ', bump
+        if self.debug: print ('starting multiknob optimization, correctors = ', bump)
 
         if opt_pointing:
             weight_gmd_bpm_1 = 10.0
@@ -213,7 +213,7 @@ class Optimizer:
 
         def error_func(x):
 
-            print self.dp
+            print (self.dp)
 
             pen_max = 100.0
 
@@ -224,18 +224,18 @@ class Optimizer:
             currents = bump["currents"]
             #print 'error_func: ', bpm_names, '->',  planes
             correctors_ = bump["correctors"]
-            for i in xrange(len(correctors_)):
-                print "alpha = ", x
-                print '{0} x[{1}]={2}'.format(correctors_[i], i, currents[i] + dI[i]*x)
+            for i in range(len(correctors_)):
+                print ("alpha = ", x)
+                print ('{0} x[{1}]={2}'.format(correctors_[i], i, currents[i] + dI[i]*x))
                 limits = self.dp.get_limits(correctors_[i])
-                print  'limits=[{0}, {1}]'.format(limits[0], limits[1])
+                print  ('limits=[{0}, {1}]'.format(limits[0], limits[1]))
                 if currents[i] + dI[i]*x < limits[0] or currents[i] + dI[i]*x > limits[1]:
-                    print 'limits exceeded'
+                    print ('limits exceeded')
                     return pen_max
 
 
-            for i in xrange(len(correctors_)):
-                print 'setting', correctors_[i], '->', currents[i] + dI[i]*x
+            for i in range(len(correctors_)):
+                print ('setting', correctors_[i], '->', currents[i] + dI[i]*x)
                 self.mi.set_value(correctors_[i], currents[i] + dI[i]*x)
 
             sleep(self.timeout)
@@ -244,8 +244,8 @@ class Optimizer:
             alarm = np.max(self.mi.get_alarms())
             #z1, z2 = get_sase_pos()
 
-            if self.debug: print 'alarm:', alarm
-            if self.debug: print 'sase:', sase
+            if self.debug: print ('alarm:', alarm)
+            if self.debug: print ('sase:', sase)
             #print 'pointing', z1, z2, 'weights', weight_gmd_bpm_1, weight_gmd_bpm_2
 
             pen = 0.0
@@ -258,7 +258,7 @@ class Optimizer:
 
             pen -= sase
 
-            if self.debug: print 'penalty:', pen
+            if self.debug: print ('penalty:', pen)
 
             return pen
 
@@ -278,7 +278,7 @@ class Optimizer:
 
 
         if method == 'cg':
-            print 'using CG optimizer, params:', params
+            print ('using CG optimizer, params:', params)
 
             try:
                 max_iter = params['maxiter']
@@ -298,7 +298,7 @@ class Optimizer:
             opt.fmin_cg(error_func,x,gtol=gtol, epsilon = epsilon, maxiter=max_iter)
 
         if method == 'simplex':
-            print 'using simplex optimizer, params:', params
+            print ('using simplex optimizer, params:', params)
 
             try:
                 max_iter = params['maxiter']
@@ -313,7 +313,7 @@ class Optimizer:
             opt.fmin(error_func,x,xtol=xtol, maxiter=max_iter)
 
         if method == 'powell':
-            print 'using powell optimizer, params:', params
+            print ('using powell optimizer, params:', params)
 
             try:
                 max_iter = params['maxiter']
@@ -329,15 +329,15 @@ class Optimizer:
 
 
         if method == 'fancy_stuff_from':
-            print 'using fancy optimizer, params:', params
+            print ('using fancy optimizer, params:', params)
             pass
 
         sase_new = self.mi.get_sase()
 
-        print 'step ended changing sase from/to', sase_ref, sase_new
+        print ('step ended changing sase from/to', sase_ref, sase_new)
         if sase_new <= sase_ref:
-            for i in xrange(len(bump["correctors"])):
-                print 'reverting', bump["correctors"][i], '->',bump["currents"][i]
+            for i in range(len(bump["correctors"])):
+                print ('reverting', bump["correctors"][i], '->',bump["currents"][i])
                 self.mi.set_value(bump["correctors"][i], bump["currents"][i])
 
         if self.logging:
@@ -352,7 +352,7 @@ class Optimizer:
         correctors = orbit["correctors"]
         bpms = orbit["bpms"]
 
-        if self.debug: print 'starting multiknob optimization, correctors = ', correctors
+        if self.debug: print ('starting multiknob optimization, correctors = ', correctors)
 
         def get_rms(bpms):
             #print
@@ -364,7 +364,7 @@ class Optimizer:
                 X, Y = self.mi.get_bpms_xy([bpm])
                 x += (X[0] - bpms[bpm]["x"])**2
                 y += (Y[0] - bpms[bpm]["y"])**2
-            print "rms = ", sqrt(x/n)*1000. + sqrt(y/n)*1000.
+            print ("rms = ", sqrt(x/n)*1000. + sqrt(y/n)*1000.)
             return sqrt(x/n)*1000. + sqrt(y/n)*1000.
 
         def error_func(x):
@@ -375,17 +375,17 @@ class Optimizer:
 
             #print 'error_func: ', bpm_names, '->',  planes
 
-            for i in xrange(len(x)):
-                print '{0} x[{1}]={2}'.format(correctors[i], i, x[i])
+            for i in range(len(x)):
+                print ('{0} x[{1}]={2}'.format(correctors[i], i, x[i]))
                 limits = self.dp.get_limits(correctors[i])
-                print  'limits=[{0}, {1}]'.format(limits[0], limits[1])
+                print  ('limits=[{0}, {1}]'.format(limits[0], limits[1]))
                 if x[i] < limits[0] or x[i] > limits[1]:
-                    print 'limits exceeded'
+                    print ('limits exceeded')
                     return pen_max
 
 
-            for i in xrange(len(correctors)):
-                print 'setting', correctors[i], '->',x[i]
+            for i in range(len(correctors)):
+                print ('setting', correctors[i], '->',x[i])
                 self.mi.set_value(correctors[i], x[i])
 
             sleep(self.timeout)
@@ -395,8 +395,8 @@ class Optimizer:
             alarm = np.max(self.mi.get_alarms())
             #z1, z2 = get_sase_pos()
 
-            if self.debug: print 'alarm:', alarm
-            if self.debug: print 'sase:', orb_min
+            if self.debug: print ('alarm:', alarm)
+            if self.debug: print ('sase:', orb_min)
             #print 'pointing', z1, z2, 'weights', weight_gmd_bpm_1, weight_gmd_bpm_2
 
             pen = 0.0
@@ -409,7 +409,7 @@ class Optimizer:
 
             pen += orb_min
 
-            if self.debug: print 'penalty:', pen
+            if self.debug: print ('penalty:', pen)
 
             return pen
 
@@ -417,7 +417,7 @@ class Optimizer:
         orb_ref = get_rms(bpms)
 
         x = self.mi.init_corrector_vals(correctors)
-        print "initial X", x
+        print ("initial X", x)
         x_init = x
 
         if self.logging:
@@ -432,7 +432,7 @@ class Optimizer:
 
 
         if method == 'simplex':
-            print 'using simplex optimizer, params:', params
+            print ('using simplex optimizer, params:', params)
 
             try:
                 max_iter = params['maxiter']
@@ -450,7 +450,7 @@ class Optimizer:
 
         orb_new = get_rms(bpms)
 
-        print 'step ended changing sase from/to', orb_ref, orb_new
+        print ('step ended changing sase from/to', orb_ref, orb_new)
 
         if self.logging:
              f.write('sase_new=' + str(orb_new) + '\n')
@@ -462,10 +462,10 @@ class Action:
         self.args = args
         self.id = id
     def apply(self):
-        print 'applying...', self.id
+        print ('applying...', self.id)
         self.func(*self.args)
     def to_JSON(self):
-        print "hoo"
+        print ("hoo")
     def __repr__(self):
         return json.dumps(self.__dict__)
 
@@ -477,8 +477,8 @@ class TestInterface:
     def __init__(self):
         pass
     def get_alarms(self):
-        return [0.0,]
-    def get_sase(self):
+        return np.random.rand(4)#0.0, 0.0, 0.0, 0.0]
+    def get_sase(self, detector=None):
         return 0.0
     def init_corrector_vals(self, correctors):
         vals = [0.0]*len(correctors)

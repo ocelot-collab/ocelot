@@ -80,7 +80,7 @@ def find_highest(sorted_posns, value, diap):
 
 def nearest_particle(track_list, xi,yi):
     #x_array = np.unique(np.sort(map(lambda pxy: pxy.x, pxy_list)))
-    y_array = np.unique(np.sort(map(lambda pxy: pxy.y, track_list)))
+    y_array = np.unique(np.sort([pxy.y for pxy in track_list]))
     yi = find_nearest(y_array, yi)
     x_array_i = []
     for pxy in track_list:

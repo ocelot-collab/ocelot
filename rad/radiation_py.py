@@ -306,7 +306,7 @@ def radiation_py(gamma, traj, screen, tmp):
     #gamma = gamma
 
     size = len(motion.z)
-    Nmotion = (size + 1)/3
+    Nmotion = int((size + 1)/3)
     half_step = (motion.z[-1]-motion.z[0])/2./(Nmotion-1)
     #plot(motion.z, motion.x, "r.-")
     #show()
@@ -333,6 +333,7 @@ def radiation_py(gamma, traj, screen, tmp):
         screen.arImEy = screen.arImEy.reshape(shape_array)
         screen.arPhase = screen.arPhase.reshape(shape_array)
         #print screen.arPhase
+
         for n in range(Nmotion-1):
             #print "n = ", n
             screen = gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step, tmp)

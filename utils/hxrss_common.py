@@ -15,7 +15,7 @@ from copy import deepcopy
 import multiprocessing
 
 #import fftw3
-import sharedmem as shm
+# import sharedmem as shm
 import time
 import copy
 import scipy.fftpack as fft
@@ -492,8 +492,10 @@ def readres(namef):
 
 def update_beam_2(beam_new, g, n_interp):
     beam = deepcopy(beam_new)
-    g0 = np.array(map(lambda x : g.sliceValues[x]['energy'][-1], xrange(1,g.nSlices+1)) )
-    dg = np.array(map(lambda x : g.sliceValues[x]['e-spread'][-1], xrange(1,g.nSlices+1)) )
+    # g0 = np.array(map(lambda x : g.sliceValues[x]['energy'][-1], xrange(1,g.nSlices+1)) )
+    # dg = np.array(map(lambda x : g.sliceValues[x]['e-spread'][-1], xrange(1,g.nSlices+1)) )
+    g0=g.el_energy[:,-1]
+    dg=g.el_e_spread[:,-1]
     
     print len(g0)
     print g.nSlices
@@ -526,7 +528,7 @@ def update_beam_2(beam_new, g, n_interp):
     beam_new.ey = np.interp(beam_new.z, beam.z, beam.ey) 
     beam_new.zsep = beam.zsep * len(beam.z) / len(beam_new.z)
     #beam_new.g0 = np.interp(beam_new.z, beam.z, beam.g0) 
-    beam_new.g0 = g0 + beam.gamma_rel
+    beam_new.g0 = g0 + beam.gamma_rel #potential problem here, no beam.gamma_rel
     print len(beam_new.z)
     print len(beam_new.g0)
     print len(beam.z)

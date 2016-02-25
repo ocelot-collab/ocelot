@@ -730,7 +730,7 @@ def writeRadiationFile_mpi(comm, filename, slices, shape):
         os.system(cmd)
 
 
-def readGenesisOutput(fileName , readall=None, debug=None):
+def readGenesisOutput(fileName , readall=True, debug=None):
 
     print '    reading output file'    
 #    print '        - reading from ', fileName
@@ -866,8 +866,8 @@ def readGenesisOutput(fileName , readall=None, debug=None):
     out.dt = (out.t[1] - out.t[0]) * 1.e-15
     
     
-#    out.spec = fft.fft(np.sqrt(np.array(out.power) ) * np.exp( 1.j* np.array(out.phi) ) )
-#    out.freq_ev = h * fftfreq(len(out.spec), d=out('zsep') * out('xlamds') / c)
+    out.spec = fft.fft(np.sqrt(np.array(out.power) ) * np.exp( 1.j* np.array(out.phi) ) )
+    out.freq_ev = h * fftfreq(len(out.spec), d=out('zsep') * out('xlamds') / c)
 
     out.power = np.array(out.power)
     out.phi = np.array(out.phi)

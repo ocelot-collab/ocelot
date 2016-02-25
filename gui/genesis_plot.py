@@ -219,7 +219,7 @@ def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = None):
 
 
 
-    plt.show()
+
 
 
 def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None):
@@ -340,13 +340,15 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None):
 
     ax_pow.plot(g.z, np.amax(g.p_int, axis=0), 'g-',linewidth=1.5)
     ax_pow.set_ylabel('P [W]')
-    ax_pow.set_yscale('log')
+    if np.amin(g.p_int)>0:
+        ax_pow.set_yscale('log')
 
     # outp.power.mean_S*inp.xlamds*inp.zsep*inp.nslice/c
     ax_en = ax_pow.twinx()
     ax_en.plot(g.z, np.mean(g.p_int,axis=0)*g('xlamds')*g('zsep')*g.nSlices/c, 'k--',linewidth=1.5)
     ax_en.set_ylabel('E [J]')
-    ax_en.set_yscale('log')
+    if np.amin(g.p_int)>0:
+        ax_en.set_yscale('log')
 
     n_pad=1
     # print len(g.z),len(g.xrms[0,:]),len(np.mean(g.yrms,axis=0))
@@ -383,7 +385,8 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None):
 
     ax_spectrum.plot(g.z, np.amax(spectrum,axis=0), 'r-',linewidth=1.5)
     ax_spectrum.set_ylabel('P($\lambda$)_{max} [a.u]')
-    ax_spectrum.set_yscale('log')
+    if np.amin(np.amax(spectrum,axis=0))>0:
+        ax_spectrum.set_yscale('log')
 
     #fix!!!
     # spectrum_lamdpos=sum(np.matlib.repmat(lamdscale,spectrum.shape[1],1)*transpose(spectrum),axis=1)/np.sum(spectrum,axis=0)
@@ -494,7 +497,7 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None):
 #    ax_size_t.set_yticklabels(labels)    
     
     
-    plt.show()
+
 
 
 def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf):
@@ -655,12 +658,13 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf):
     
     
     n_pad=1
-    # print len(g.z),len(g.xrms[0,:]),len(np.mean(g.yrms,axis=0))
     power=np.pad(g.p_mid, [(int(g.nSlices/2)*n_pad, (g.nSlices-(int(g.nSlices/2))))*n_pad, (0, 0)], mode='constant')
-    phase=np.pad(g.phi_mid, [(int(g.nSlices/2)*n_pad, (g.nSlices-(int(g.nSlices/2))))*n_pad, (0, 0)], mode='constant')
-#    print "power shape", power.shape
-#    print "phase shape", phase.shape
-    # spectrum = np.power(abs(fft(np.sqrt( np.array(g.p_mid)) * np.exp( 1.j* np.array(g.phi_mid) ) , axis=0)),2)#/sqrt(g.nSlices)
+    phase=np.pad(g.phi_mid, [(int(g.nSlices/2)*n_pad, (g.nSlices-(int(g.nSlices/2))))*n_pad, (0, 0)], mode='constant') #not supported by the numpy 1.6.2
+
+#    print "g.p_mid.shape", g.p_mid.shape
+#    power=np.concatenate((g.p_mid,zeros((g.nSlices,n_pad-1*g.nZ))),axis=0)
+#    phase=np.concatenate((g.phi_mid,zeros((g.nSlices,n_pad-1*g.nZ))),axis=0)
+
     spectrum = abs(fft(np.sqrt( np.array(power)) * np.exp( 1.j* np.array(phase) ) , axis=0))**2/sqrt(g.nSlices)/(2*g.leng/g('ncar'))**2/1e10
     e_0=1239.8/g('xlamds')/1e9
     # print e_0
@@ -795,7 +799,7 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf):
     
 #    ax_spectrum.spines['left'].set_color('red')
 
-    plt.show()
+
     
 #    ax.ticklabel_format(useOffset=False, style='plain')
 

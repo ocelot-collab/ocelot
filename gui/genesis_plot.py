@@ -179,7 +179,7 @@ def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = None):
     ax_bunching.plot(g.z, np.average(g.bunching, weights=g.I, axis=0), 'k-', g.z, np.amax(g.bunching, axis=0), 'g-',linewidth=1.5)
     ax_bunching.set_ylabel('Bunching')
 
-    ax_bunching.set_xlabel('s [$\mu$m]')
+    ax_bunching.set_xlabel('z [$m$]')
     x1,x2,y1,y2 = ax_size_tpos.axis()
     ax_size_tpos.axis([x1,x2,0,y2])
     x1,x2,y1,y2 = ax_spread.axis()
@@ -340,15 +340,21 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None):
 
     ax_pow.plot(g.z, np.amax(g.p_int, axis=0), 'g-',linewidth=1.5)
     ax_pow.set_ylabel('P [W]')
+    ax_pow.get_yaxis().get_major_formatter().set_useOffset(False)
+    ax_pow.get_yaxis().get_major_formatter().set_scientific(True)
     if np.amin(g.p_int)>0:
         ax_pow.set_yscale('log')
+
 
     # outp.power.mean_S*inp.xlamds*inp.zsep*inp.nslice/c
     ax_en = ax_pow.twinx()
     ax_en.plot(g.z, np.mean(g.p_int,axis=0)*g('xlamds')*g('zsep')*g.nSlices/c, 'k--',linewidth=1.5)
     ax_en.set_ylabel('E [J]')
+    ax_en.get_yaxis().get_major_formatter().set_useOffset(False)
+    ax_en.get_yaxis().get_major_formatter().set_scientific(True)
     if np.amin(g.p_int)>0:
         ax_en.set_yscale('log')
+
 
     n_pad=1
     # print len(g.z),len(g.xrms[0,:]),len(np.mean(g.yrms,axis=0))
@@ -371,15 +377,21 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None):
 #    for i in range(g.nZ):
 #        spectrum_lamdpos(i)=np.sum(spectrum(:,i)*lamdscale/np.sum(spectrum,))
 #        spectrum_lamdwidth=sqrt(np.sum(spectrum*(lamdscale_array-spectrum_lamdpos)**2/np.sum(spectrum),axis=0))
-    spectrum_lamdpos=np.sum(spectrum*lamdscale_array/np.sum(spectrum,axis=0),axis=0)
+    
+
+    spectrum_norm=np.sum(spectrum,axis=0)#avoiding division by zero
+    spectrum_norm[spectrum_norm==0]=1
+    spectrum_lamdpos=np.sum(spectrum*lamdscale_array/spectrum_norm,axis=0)
 #    print "spectrum lamdpos", spectrum_lamdpos
-    spectrum_lamdwidth=sqrt(np.sum(spectrum*(lamdscale_array-spectrum_lamdpos)**2/np.sum(spectrum,axis=0),axis=0))    
+    spectrum_lamdwidth=sqrt(np.sum(spectrum*(lamdscale_array-spectrum_lamdpos)**2/spectrum_norm,axis=0))    
     
     spectrum_lamdwidth1=np.empty(g.nZ)
     for zz in range(g.nZ):
-        peak=fwhm3(spectrum[:,zz])
-        spectrum_lamdwidth1[zz]=abs(lamdscale[peak[0]]-lamdscale[peak[0]+1])*peak[1] #the FWHM of spectral line
-
+        if np.sum(spectrum[:,zz])!=0:
+            peak=fwhm3(spectrum[:,zz])
+            spectrum_lamdwidth1[zz]=abs(lamdscale[peak[0]]-lamdscale[peak[0]+1])*peak[1] #the FWHM of spectral line
+        else:
+            spectrum_lamdwidth1[zz]=0
 
 
 
@@ -415,9 +427,11 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None):
 #    for i in range(g.nZ):
 #        spectrum_lamdpos(i)=np.sum(spectrum(:,i)*lamdscale/np.sum(spectrum,))
 #        spectrum_lamdwidth=sqrt(np.sum(spectrum*(lamdscale_array-spectrum_lamdpos)**2/np.sum(spectrum),axis=0))
-    rad_longit_pos=np.sum(g.p_int*s_array/np.sum(g.p_int,axis=0),axis=0)
+    p_int_norm=np.sum(g.p_int,axis=0)#avoiding division by zero
+    p_int_norm[p_int_norm==0]=1
+    rad_longit_pos=np.sum(g.p_int*s_array/p_int_norm,axis=0)
 #    print "spectrum lamdpos", spectrum_lamdpos
-    rad_longit_size=sqrt(np.sum(g.p_int*(s_array-rad_longit_pos)**2/np.sum(g.p_int,axis=0),axis=0)) #this is standard deviation (sigma)
+    rad_longit_size=sqrt(np.sum(g.p_int*(s_array-rad_longit_pos)**2/p_int_norm,axis=0)) #this is standard deviation (sigma)
 
     g.p_int=np.amax(g.p_int)/1e6+g.p_int # nasty fix from division by zero
     ax_size_t.plot(g.z, np.average(g.r_size*2*1e6, weights=g.p_int, axis=0), 'b-',linewidth=1.5)
@@ -467,7 +481,7 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None):
 
 
     ax_pow.tick_params(axis='y', which='both', colors='g')
-    ax_pow.yaxis.label.set_color('g')    
+    ax_pow.yaxis.label.set_color('g')  
     ax_en.tick_params(axis='y', which='both', colors='k')
     ax_en.yaxis.label.set_color('k') 
     ax_en.grid(False)
@@ -482,6 +496,8 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None):
     ax_size_l.tick_params(axis='y', which='both', colors='indigo')
     ax_size_l.yaxis.label.set_color('indigo') 
     ax_size_l.grid(False)
+    ax_pow.yaxis.get_offset_text().set_color(ax_pow.yaxis.label.get_color())
+    ax_en.yaxis.get_offset_text().set_color(ax_en.yaxis.label.get_color())
     
     ax_spec_bandw.set_ylim(ymin=0)
     ax_size_t.set_ylim(ymin=0)
@@ -602,45 +618,15 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf):
     
     ax_curr.plot(s, g.I/1e3, 'k--')
     ax_curr.set_ylabel('I[kA]')
-    ax_curr.grid(False)
-    
-    ax_time = ax_curr.twiny()
-    ax_time.plot([0,s[-1]*3.333],[0,0])
-#    ax_time.cla()
-    ax_time.grid(False)
-    ax_time.set_xlabel("t [fs]")
-#    labels = ax_time.get_xticklabels()
-##    print dir(labels), labels
-#    labels[0] = ""
-#    ax_time.set_xticklabels(labels)
-#    xticks = ax_time.xaxis.get_major_ticks()
-#    xticks[-1].label1.set_visible(False)
-#    ax_space_values=ax_curr.get_xticks()
-#    ax_time_values=[]
-#    for x in ax_space_values:
-#        ax_time_values.append(ax_space_values*3.333)
-#    ax_time.set_xticks(ax1Xs)
-##    X = np.linspace(0,1,1000)
-##    Y = np.cos(X*20)
-##    
-##    ax1.plot(X,Y)
-##   #new_tick_locations = np.array([4, 8, 12, 16])
-#    
-#    
-#    ax_time.set_xlim(ax_curr.get_xlim())
-##    ax_time.set_xticks(new_tick_locations)
-#    ax_time.set_xticklabels(tick_function(s))
-#    ax_time.set_xticks(new_tick_locations)
-    
-    
-    #ax_pow.set_yscale('log')
-
-#    print s.shape 
-#    print g.p_int[:,zi].shape
 
     
-#    ax_power.plot = (s, g.p_int[:,zi], 'k-')
+    # ax_time = ax_curr.twiny()
+    # ax_time.plot([0,s[-1]*3.333],[0,0])
+    # ax_time.grid(False)
+    # ax_time.set_xlabel("t [fs]")
+
     ax_power = ax_curr.twinx()
+    ax_power.grid(False)
     ax_power.plot(s,g.p_int[:,zi],'g-',linewidth=1.5)    
     ax_power.set_ylabel('Power [W]')
     ax_power.set_ylim([0, np.amax(g.p_int[:,zi])])
@@ -700,6 +686,7 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf):
     ax_spectrum.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_spectrum.get_yaxis().get_major_formatter().set_scientific(True)
     ax_spectrum.get_yaxis().get_major_formatter().set_powerlimits((-3, 4))#[:,75,75]
+    ax_spectrum.set_xlim([np.amin(lamdscale), np.amax(lamdscale)])
     ax_phase.set_xlabel('s [$\mu$]')
     #fix!!!
     # spectrum_lamdpos=sum(np.matlib.repmat(lamdscale,spectrum.shape[1],1)*transpose(spectrum),axis=1)/np.sum(spectrum,axis=0)
@@ -711,9 +698,6 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf):
     maxspectrum_wavelength=lamdscale[maxspectrum_index]*1e-9
 
     phase=unwrap(g.phi_mid[:,zi])
-    
-    print "gen", g('xlamds')
-    print 'max', maxspectrum_wavelength
     
     phase_cor=np.arange(g.nSlices)*(maxspectrum_wavelength-g('xlamds'))/g('xlamds')*g('zsep')*2*pi
     phase_fixed=phase+phase_cor

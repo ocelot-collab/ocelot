@@ -359,7 +359,7 @@ class GenesisBeamDefinition():
 #    
 #    return particles
 def read_particle_file(file_name, nbins=4, npart=[],debug=0):
-
+    print '    reading praticle file' 
     particles=GenesisParticles    
     
     start_time = time.time()
@@ -368,9 +368,9 @@ def read_particle_file(file_name, nbins=4, npart=[],debug=0):
 #    print 'b', b.shape
     nslice=int(len(b)/npart/6)
     if debug:
-        print '    nslice',nslice
-        print '    npart',npart
-        print '    nbins',nbins
+        print '        nslice',nslice
+        print '        npart',npart
+        print '        nbins',nbins
 #    print 'b=',nslice*npart*6
     b=b.reshape(nslice,6,nbins,npart/nbins)    
     particles.e=b[:,0,:,:] #gamma
@@ -490,7 +490,9 @@ def read_beam_file(fileName):
 
 def readRadiationFile(fileName, npoints=151, slice_start=0, slice_end = -1, vartype=complex128):
     #a new backward compatible version ~100x faster
+    print '    reading radiation file'    
     import numpy as np
+#    print '        - reading from ', fileName
     b=np.fromfile(fileName,dtype=complex).astype(vartype)
     slice_num=b.shape[0]/npoints/npoints
     b=b.reshape(slice_num,npoints,npoints)
@@ -632,8 +634,9 @@ def readRadiationFile_mpi(comm=None, fileName='simulation.gout.dfl', npoints=51)
 
 
 def writeRadiationFile(filename,rad):
+    print '    writing radiation file' 
     #a new backward compatible version ~10x faster
-    print '        -writing dfl to ', filename
+#    print '        - writing to ', filename
     d=rad.flatten()
     d.tofile(filename,format='complex')
 
@@ -727,7 +730,11 @@ def writeRadiationFile_mpi(comm, filename, slices, shape):
         os.system(cmd)
 
 
-def readGenesisOutput(fileName , readall=None):
+def readGenesisOutput(fileName , readall=None, debug=None):
+
+    print '    reading output file'    
+#    print '        - reading from ', fileName
+
     out = GenesisOutput()
     out.path = fileName
 
@@ -746,12 +753,12 @@ def readGenesisOutput(fileName , readall=None):
         
         if tokens == ['z[m]', 'aw', 'qfld']:
             chunk = 'optics'
-            print 'reading optics '
+            print '      reading optics '
             continue
         
         if tokens[0] == 'Input':
             chunk = 'input'
-            print 'reading input parameters'
+            print '      reading input parameters'
             continue
         
         #********** output: slice    10
@@ -759,6 +766,8 @@ def readGenesisOutput(fileName , readall=None):
             #print 'slice:', tokens[3]
             chunk = 'slices'
             nSlice = int(tokens[3])
+            if debug:
+                print '      reading slice # ',nSlice
          
         if tokens[0] == 'power':
             chunk = 'slice'
@@ -801,21 +810,21 @@ def readGenesisOutput(fileName , readall=None):
                 out.n.append(nSlice)
 
 
-
+    
     out.nSlices = len(out.sliceValues ) 
     out.nZ = len(out.sliceValues[1][out.sliceKeys[0]])
 
-    print 'nSlice', out.nSlices
-    print 'nZ', out.nZ
+    print '        nSlice', out.nSlices
+    print '        nZ', out.nZ
 
-
+#    print '      processing 1'
     out.power = []
     out.phi = []
-    out.power_z = 0*np.array(out.sliceValues[out.sliceValues.keys()[1]]['power'])
+    out.power_z = 0*np.array(out.sliceValues[out.sliceValues.keys()[0]]['power'])
     out.power_int = []
     out.max_power = 0.0
     if readall:
-        out.r_size = []
+        out.r_size = [] #make an np arrays to save further conversion time?
         out.el_energy = []
         out.bunching = []
         out.xrms = []
@@ -827,8 +836,9 @@ def readGenesisOutput(fileName , readall=None):
         out.phi_mid = []
         out.increment = []
         #out.increment=GenesisOutput()
-
+#    print '      processing 2'
     for i in xrange(0,out.nSlices):
+
         pend = out.sliceValues[out.sliceValues.keys()[i]]['power'][-1]
         out.power_int.append(pend)
         out.power.append(out.sliceValues[out.sliceValues.keys()[i]]['p_mid'][-1])
@@ -848,12 +858,16 @@ def readGenesisOutput(fileName , readall=None):
             out.el_e_spread.append(out.sliceValues[out.sliceValues.keys()[i]]['e-spread'])
 
         if out.max_power < pend: out.max_power = pend
-
-    out.t = 1.0e+15 * out('zsep') * out('xlamds') / c * np.arange(0,len(out.power))
+    del out.sliceValues
+#    print '      processing 3'
+    out.s = out('zsep') * out('xlamds') * np.arange(0,len(out.power))
+    out.t = out.s/ c *1.e+15
+#    out.t = 1.0e+15 * out('zsep') * out('xlamds') / c * np.arange(0,len(out.power))
     out.dt = (out.t[1] - out.t[0]) * 1.e-15
     
-    out.spec = fft.fft(np.sqrt(np.array(out.power) ) * np.exp( 1.j* np.array(out.phi) ) )
-    out.freq_ev = h * fftfreq(len(out.spec), d=out('zsep') * out('xlamds') / c)
+    
+#    out.spec = fft.fft(np.sqrt(np.array(out.power) ) * np.exp( 1.j* np.array(out.phi) ) )
+#    out.freq_ev = h * fftfreq(len(out.spec), d=out('zsep') * out('xlamds') / c)
 
     out.power = np.array(out.power)
     out.phi = np.array(out.phi)
@@ -876,8 +890,8 @@ def readGenesisOutput(fileName , readall=None):
         # out.power = np.array(out.power)
 
         if out('dgrid')==0:
-            rbeam=sqrt(out('rxbeam')^2+np.power(out('rybeam'),2))
-            ray=sqrt(out('zrayl')*out('xlamds')/np.pi*(power(1+(out('zwaist')/out('zrayl')),2))); #not cross-checked
+            rbeam=sqrt(out('rxbeam')**2+out('rybeam')**2)
+            ray=sqrt(out('zrayl')*out('xlamds')/np.pi*(1+(out('zwaist')/out('zrayl')))**2); #not cross-checked
             out.leng=out('rmax0')*(rbeam+ray)
         else:
             out.leng=out('dgrid')*2

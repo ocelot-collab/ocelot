@@ -40,7 +40,7 @@ c = 299792458.0
 
 max_yticks = 7
 
-def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = None):
+def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = None, save=False):
 
     import matplotlib.ticker as ticker
 
@@ -217,12 +217,14 @@ def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = None):
     ax_spread.tick_params(axis='y', which='both', colors='r')
     ax_spread.yaxis.label.set_color('r') 
 
+    if save:
+        fig.savefig(g.path+'_elec.png')
+        
+    return fig
 
 
 
-
-
-def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None):
+def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=False):
 #    max_yticks = 7
     import matplotlib.ticker as ticker
     
@@ -230,9 +232,9 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None):
     font_size = 1
     if fig_name is None:
         if g.filename is '':
-            fig = plt.figure('Photons')
+            fig = plt.figure('Radaition')
         else:
-            fig = plt.figure('Photons '+g.filename)
+            fig = plt.figure('Radiation '+g.filename)
     else:
         fig = plt.figure(fig_name)
 
@@ -511,12 +513,14 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None):
 ##    print dir(labels), labels
 #    labels[0] = ""
 #    ax_size_t.set_yticklabels(labels)    
+    if save:
+        fig.savefig(g.path+'_rad.png')
     
-    
+    return fig
 
 
 
-def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf):
+def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, save=False):
 #    max_yticks = 7
     import matplotlib.ticker as ticker
     
@@ -780,7 +784,10 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf):
     ax_power.yaxis.get_offset_text().set_color(ax_power.yaxis.label.get_color())
     ax_spectrum.yaxis.get_offset_text().set_color(ax_spectrum.yaxis.label.get_color())
     
+    if save:
+        fig.savefig(g.path+'_z_'+str(z)+'m.png')
     
+    return fig
 #    ax_spectrum.spines['left'].set_color('red')
 
 

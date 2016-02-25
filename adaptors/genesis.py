@@ -905,7 +905,8 @@ def readGenesisOutput(fileName , readall=True, debug=None):
 #     if str.isdigit(val[0]) or  val[0]=='$':
 #         pass
 #     else:
-        out.filename = fileName
+        
+        out.filename = fileName[-fileName[::-1].find('/')::]
         
     return out
 

@@ -176,10 +176,10 @@ def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = None, save=False)
 
 
     #ax_bunching.plot(g.z, np.average(g.bunching, weights=g.I[1:], axis=0), 'k--', g.z, np.amax(g.bunching, axis=0), 'r-')    
-    ax_bunching.plot(g.z, np.average(g.bunching, weights=g.I, axis=0), 'k-', g.z, np.amax(g.bunching, axis=0), 'g-',linewidth=1.5)
+    ax_bunching.plot(g.z, np.average(g.bunching, weights=g.I, axis=0), 'k-', g.z, np.amax(g.bunching, axis=0), 'grey',linewidth=1.5)
     ax_bunching.set_ylabel('Bunching')
 
-    ax_bunching.set_xlabel('z [$m$]')
+    ax_bunching.set_xlabel('z [m]')
     x1,x2,y1,y2 = ax_size_tpos.axis()
     ax_size_tpos.axis([x1,x2,0,y2])
     x1,x2,y1,y2 = ax_spread.axis()
@@ -494,7 +494,7 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=Fals
     ax_spec_bandw.grid(False)
     ax_size_t.tick_params(axis='y', which='both', colors='b')
     ax_size_t.yaxis.label.set_color('b') 
-    ax_size_t.set_xlabel('s [$\mu$]')
+    ax_size_t.set_xlabel('z [m]')
     ax_size_l.tick_params(axis='y', which='both', colors='indigo')
     ax_size_l.yaxis.label.set_color('indigo') 
     ax_size_l.grid(False)
@@ -640,11 +640,14 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
     
 #    ax_power.get_xaxis().get_offset_text().set_x(1.1)
 
-    ax_energy.plot(s, g.el_energy[:,zi]*0.511e-3, 'b-', s, (g.el_energy[:,zi]+g.el_e_spread[:,zi])*0.511e-3, 'r--',s, (g.el_energy[:,zi]-g.el_e_spread[:,zi])*0.511e-3, 'r--',)
+    ax_energy.plot(s, g.el_energy[:,zi]*0.511e-3, 'b-', s, (g.el_energy[:,zi]+g.el_e_spread[:,zi])*0.511e-3, 'r--',s, (g.el_energy[:,zi]-g.el_e_spread[:,zi])*0.511e-3, 'r--')
     ax_energy.set_ylabel('$E\pm\sigma_E$\n[GeV]')
 #    ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
     ax_energy.ticklabel_format(useOffset=False, style='plain')   
 
+    ax_bunching = ax_energy.twinx()
+    ax_bunching.plot(s,g.bunching[:,zi],'grey',linewidth=0.5)
+    ax_bunching.set_ylabel('Bunching')
     
     
     n_pad=1
@@ -779,6 +782,10 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
     ax_spectrum.yaxis.label.set_color('r')    
     ax_energy.tick_params(axis='y', which='both', colors='b')
     ax_energy.yaxis.label.set_color('b')    
+
+    ax_bunching.tick_params(axis='y', which='both', colors='grey')
+    ax_bunching.yaxis.label.set_color('grey')  
+    
     ax_power.tick_params(axis='y', which='both', colors='g')
     ax_power.yaxis.label.set_color('g')    
     ax_power.yaxis.get_offset_text().set_color(ax_power.yaxis.label.get_color())

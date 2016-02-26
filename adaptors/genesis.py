@@ -22,8 +22,8 @@ inputTemplate = "\
  xlamd =  __XLAMD__\n\
  fbess0 =  __FBESS0__\n\
  delaw =  0.000000E+00\n\
- iertyp =    0\n\
- iwityp =    0\n\
+ iertyp =    __IERTYP__\n\
+ iwityp =    __IWITYP__\n\
  awd   =  __AW0__ \n\
  awx   =  0.000000E+00\n\
  awy   =  0.000000E+00\n\
@@ -143,6 +143,8 @@ class GenesisInput:
                 
         self.runid = 0
                 
+        self.iertyp =0
+        self.iwityp =0
         self.iseed = -1  #initial seeding of the random number generator for field errors
         self.ipseed = -1  #initial seeding of the random number generator for shot noise     
         self.emitx = 1.0e-7
@@ -152,7 +154,6 @@ class GenesisInput:
         self.alphay = 0.0       
         
         self.gamma0 =  3.424658E+04            
-
         self.curpeak = 2.500000E+03
         self.curlen = 7E-06
         self.zsep = 20   #separation between slices in terms of radiation length xlamds        
@@ -188,7 +189,7 @@ class GenesisInput:
         self.eloss = 0
         self.srsig = 1 # energy fluctuations from sr
         self.sravg = 1 # energy loss from sr
-
+        
         self.iorb = 0   # enforce orbit correction
         
         self.magin = 1   # read in magnetic lattice
@@ -200,7 +201,7 @@ class GenesisInput:
         self.convharm = 1 #When the particle distribution is imported from a PARTFILE Genesis 1.3 allows the upconversion to a higher harmonics. The harmonic number is specified with CONVHARM and has a defulat value of 1, corresponding to no up-conversion. The user has to make sure that in the input deck XLAMDS is adjusted, according to the new wavelength.
         self.nharm = 1
         self.iotail = 1
-    
+        
         self.type = 'steady'
         self.DUMP_FIELDS = 0
         self.DUMP_PARTICLES = 0

@@ -16,20 +16,23 @@ class Ui_MainWindow(object):
         self.area = DockArea()
         MainWindow.setCentralWidget(self.area)
         MainWindow.resize(1200,600)
-        MainWindow.setWindowTitle('pyqtgraph example: dockarea')
+        MainWindow.setWindowTitle('SASE optimization')
 
         ## Create docks, place them into the window one at a time.
         ## Note that size arguments are only a suggestion; docks will still have to
         ## fill the entire dock area and obey the limits of their internal widgets.
         self.orb_fig = Dock("Orbit", size=(400, 300))     ## give this dock the minimum possible size
-        self.sase_fig = Dock("SASE", size=(400,300), closable=True)
+        #self.orb_fig.float()
+        #self.sase_fig = Dock("SASE", size=(400,300), closable=True)
+        self.sase_fig = Dock("SASE", size=(400,300))
         self.blm_fig = Dock("BLM", size=(400,200))
         self.seq_cntr = Dock("Sequence", size=(150,200))
-        self.sase_cntr = Dock("Controls", size=(50,200))
+        self.sase_cntr = Dock("Controls", size=(150,200))
         self.orb_cntr = Dock("orb contr.", size=(400,100))
+        self.cur_fig = Dock("Currents", size=(400,300))
 
-
-        self.area.addDock(self.orb_fig, 'left')      ## place d1 at left edge of dock area (it will fill the whole space since there are no other docks yet)
+        self.area.addDock(self.cur_fig, 'left')
+        self.area.addDock(self.orb_fig, 'above', self.cur_fig)      ## place d1 at left edge of dock area (it will fill the whole space since there are no other docks yet)
         self.area.addDock(self.sase_fig, 'right')     ## place d2 at right edge of dock area
         self.area.addDock(self.blm_fig, 'bottom', self.sase_fig)## place d3 at bottom edge of d1
         self.area.addDock(self.sase_cntr, 'right')  ## place d5 at left edge of d1
@@ -50,13 +53,13 @@ class Ui_MainWindow(object):
             self.p = Parameter.create(name='params', type='group', children=params)
             self.t.setParameters(self.p, showTop=False)
 
-        self.t.setWindowTitle('pyqtgraph example: Parameter Tree')
+        self.t.setWindowTitle('SASE optimization')
         self.seq_cntr.addWidget(self.t)
 
 
         self.seq = pg.LayoutWidget()
         self.label = QtGui.QLabel("""sequence control""")
-        self.add_seq_btn = QtGui.QPushButton('Add seq')
+        self.add_seq_btn = QtGui.QPushButton('Add Action')
         self.save_seq_btn = QtGui.QPushButton('save seqs')
         self.load_seq_btn = QtGui.QPushButton('load seqs')
         #self.restoreBtn.setEnabled(False)
@@ -67,39 +70,62 @@ class Ui_MainWindow(object):
         self.seq_cntr.addWidget(self.seq)
 
 
+        #Currents graphics
+        self.current = pg.PlotWidget(title="Currents")
 
+        self.cur_fig.addWidget(self.current)
 
 
         # Orbit graphics
         #self.orbit = pg.PlotWidget(title="Orbit")
         self.orbit = pg.GraphicsWindow(title="Basic plotting examples")
-        #self.w1.plot(np.random.normal(size=100))
         self.orb_fig.addWidget(self.orbit)
-
 
 
         #BLM graphics
         ## Hide title bar on dock 3
         #d3.hideTitleBar()
         self.blm = pg.PlotWidget(title="BLM")
-        #self.blm.plot(np.random.normal(size=100))
         self.blm_fig.addWidget(self.blm)
 
 
         #SASE graphics
         self.sase = pg.PlotWidget(title="SASE")
-        #self.sase.plot(np.random.normal(size=100))
         self.sase_fig.addWidget(self.sase)
 
         #controls
         self.w5 = pg.LayoutWidget()
-        self.start_btm = QtGui.QPushButton('start')
-        self.restore_btn = QtGui.QPushButton('restore')
-        self.stop_btn = QtGui.QPushButton('stop')
+        self.start_opt_btm = QtGui.QPushButton('start')
+
+        params = [
+            {'name': 'Basic opt. parameters', 'type': 'group', 'children': [
+        {'name': 'debug', 'type': 'bool', 'value': False},
+        {'name': 'logging', 'type': 'bool', 'value': True},
+        {'name': 'log file', 'type': 'str', 'value': 'test.log'},
+        {'name': 'timeout', 'type': 'float', 'value': 1.2, 'step': 0.1, 'limits': (0, 10)}]}
+        ]
+
+        self.t_cntr = ParameterTree()
+        self.p_cntr = Parameter.create(name='control', type='group', children=params)
+        self.t_cntr.setParameters(self.p_cntr, showTop=False)
+
+
+        self.restore_cur_btn = QtGui.QPushButton('restore')
+        self.stop_opt_btn = QtGui.QPushButton('stop')
+
+
+        self.save_machine_btn = QtGui.QPushButton('write')
         #self.stop_btn = QtGui.QPushButton('stop')
-        self.w5.addWidget(self.start_btm, row=0, col=0)
-        self.w5.addWidget(self.restore_btn, row=1, col=0)
-        self.w5.addWidget(self.stop_btn, row=2, col=0)
+        self.w5.addWidget(self.start_opt_btm, row=0, col=0)
+        self.w5.addWidget(self.restore_cur_btn, row=1, col=0)
+        self.w5.addWidget(self.stop_opt_btn, row=2, col=0)
+
+        #self.w5.addWidget(self.debug_opt_chk, row=3, col=0)
+        #self.w5.addWidget(self.log_opt_chk, row=4, col=0)
+        self.w5.addWidget(self.t_cntr, row=3, col=0)
+
+        self.w5.addWidget(QtGui.QLabel("""machine settings"""), row=6, col=0)
+        self.w5.addWidget(self.save_machine_btn, row=7, col=0)
         self.sase_cntr.addWidget(self.w5)
 
 
@@ -123,7 +149,7 @@ class Ui_ChildWindow(object):
         self.area = DockArea()
         MainWindow.setCentralWidget(self.area)
         MainWindow.resize(500, 700)
-        MainWindow.setWindowTitle('pyqtgraph example: dockarea')
+        MainWindow.setWindowTitle('Action construct')
 
 
         self.seq_cntr = Dock("Sequence", size=(150,200))
@@ -142,9 +168,9 @@ class Ui_ChildWindow(object):
 
 
         self.seq = pg.LayoutWidget()
-        self.label = QtGui.QLabel(""" -- DockArea Example --""")
-        self.saveBtn = QtGui.QPushButton('Save dock state')
-        self.restoreBtn = QtGui.QPushButton('Restore dock state')
+        self.label = QtGui.QLabel("""Controls""")
+        self.saveBtn = QtGui.QPushButton('Add Action')
+        self.restoreBtn = QtGui.QPushButton('Modify table')
         self.restoreBtn.setEnabled(False)
         self.seq.addWidget(self.label, row=0, col=0)
         self.seq.addWidget(self.saveBtn, row=1, col=0)

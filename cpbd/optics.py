@@ -682,7 +682,7 @@ def create_transfer_map(element, order=1):
                 p += kn[n]*(X[0::6] + 1j*X[2::6])**n/factorial(n)
             X[1::6] = X[1::6] - np.real(p)
             X[3::6] = X[3::6] + np.imag(p)
-            X[4::6] = X[4::6] + kn[0::6]*X[0]
+            X[4::6] = X[4::6] - kn[0]*X[0::6]
             #print X[1], X[3]
             return X
 

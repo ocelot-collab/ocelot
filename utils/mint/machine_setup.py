@@ -77,6 +77,14 @@ class HighLevelInterface:
         self.mi = mi
         self.dp = dp
 
+    def get_value(self, dev_name):
+        if "Q" in dev_name:
+            current = self.mi.get_quads_current([dev_name])[0]
+        else:
+            current = self.mi.get_value(dev_name)
+        return current
+
+
     def read_all(self):
         self.lat.gun_energy = self.mi.get_gun_energy()
         self.lat.sase = self.mi.get_sase(detector="gmd_fl1_slow")
@@ -238,9 +246,11 @@ class HighLevelInterface:
                         elem.I = -vals[0]
 
     def read_bpms(self):
-        X = []
-        Y = []
+
+        orbit = []
+        L = 0.
         for elem in self.lat.sequence:
+            L += elem.l
             if elem.type == "monitor":
                 name = elem.id.replace("BPM", "")
                 elem.mi_id = name
@@ -249,11 +259,11 @@ class HighLevelInterface:
                     x, y = self.mi.get_bpms_xy([elem.mi_id])
                     elem.x = x[0]
                     elem.y = y[0]
-                    X.append(elem.x)
-                    Y.append(elem.y)
+
+                    orbit.append([elem.mi_id, L - elem.l/2., elem.x, elem.y])
                 except:
                     print("* ", name, "  CAN MOT FIND")
-        return np.array(X), np.array(Y)
+        return orbit
 
 
 class MachineSetup:

@@ -83,6 +83,34 @@ class FLASH1MachineInterface():
             vals[i] = pydoocs.read(mag_channel + "/PS")['data']
         return vals
 
+
+
+    def get_quad_set(self, quad):
+        mag_channel = 'TTF2.MAGNETS/QUAD/' + quad + '/PS'
+        return pydoocs.read(mag_channel)['data']
+
+    def get_quad_value(self, quad):
+        mag_channel = 'TTF2.MAGNETS/QUAD/' + quad + '/PS.RBV'
+        return pydoocs.read(mag_channel)['data']
+
+    def set_quad_value(self, quad, value):
+        mag_channel = 'TTF2.MAGNETS/QUAD/' + quad + '/PS'
+        return pydoocs.write(mag_channel, value)
+
+    def get_cor_value(self, device_name):
+        ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS.RBV'
+        return pydoocs.read(ch)['data']
+
+    def get_cor_set(self, device_name):
+        ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS'
+        return pydoocs.read(ch)['data']
+
+    def set_cor_value(self, device_name, val):
+        ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS'
+        return pydoocs.write(ch, str(val))
+
+
+
     def get_bends_current(self, bends):
         vals = [0.0]*len(bends)#np.zeros(len(correctors))
         for i in range(len(bends)):
@@ -162,6 +190,8 @@ class FLASH1MachineInterface():
  
 class FLASH1DeviceProperties:
     def __init__(self):
+        self.stop_exec = False
+        self.save_machine = False
         self.patterns = {}
         self.limits = {}
         self.patterns['launch_steerer'] = re.compile('[HV][0-9]+SMATCH')
@@ -227,7 +257,11 @@ class FLASH1DeviceProperties:
 
         self.patterns['V12ORS'] = re.compile('V12ORS')
         self.limits['V12ORS'] = [0.04, 0.15]
-        
+
+    def set_limits(self, dev_name, limits):
+        self.patterns[dev_name] = re.compile(dev_name)
+        self.limits[dev_name] = limits
+
     def get_limits(self, device):
         for k in self.patterns.keys():
             #print 'testing', k
@@ -248,3 +282,4 @@ class FLASH1DeviceProperties:
             mag_channel = 'TTF2.MAGNETS/QUAD/' + quads[i]# + '/PS'
             vals[i] = pydoocs.get(mag_channel + "/DEVTYPE")['data']
         return vals
+

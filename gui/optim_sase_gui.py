@@ -444,7 +444,10 @@ class ExampleApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         #self.hlmi.read_sase()
         sase_fast = self.opt_thread.opt.mi.get_sase()
         sase_slow = self.opt_thread.opt.mi.get_sase(detector="gmd_fl1_slow")
-        print("sase = ", sase_fast, sase_slow)
+        if np.isnan(sase_slow):
+            sase_slow = 0.
+
+        #print("sase = ", sase_fast, sase_slow)
         self.data_fast[self.ptr1] = sase_fast #np.random.normal()
         self.ptr1 += 1
 
@@ -469,7 +472,7 @@ class ExampleApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         self.y = np.array([z[3] for z in orbit])
         x = self.x - self.x_ref # np.random.normal(size=100)
         y = self.y - self.y_ref # np.random.normal(size=100)
-        print(orbit)
+        #print(orbit)
         self.curve_orb_x.setData(self.s, x*1000., pen='r', symbol='o', symbolPen='r', symbolBrush=0.5, name='new')
 
         self.curve_orb_y.setData(self.s, y*1000., pen='r', symbol='o', symbolPen='r', symbolBrush=0.5, name='new')

@@ -144,7 +144,7 @@ class Optimizer:
                 tol = act["tol"][i]
                 #print(tol,act['values'][i])
                 lim = [float(s) for s in tol.split(',')]
-                #print (lim,lim[0]/100.*act['values'][i])
+                print("limits= ", lim)
                 if len(lim) == 1:
                     limits[0] = float(act['values'][i])*(1. - lim[0]/100.)
                     limits[1] = float(act['values'][i])*(1. + lim[0]/100.)

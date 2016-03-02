@@ -141,13 +141,14 @@ class Optimizer:
         limits = [0, 0]
         for act in seq_dict:
             for i, devname in enumerate(act["devices"]):
+                I = float(act['values'][i])
                 tol = act["tol"][i]
                 #print(tol,act['values'][i])
                 lim = [float(s) for s in tol.split(',')]
                 print("limits= ", lim)
                 if len(lim) == 1:
-                    limits[0] = float(act['values'][i])*(1. - lim[0]/100.)
-                    limits[1] = float(act['values'][i])*(1. + lim[0]/100.)
+                    limits[0] = I*(1. - np.sign(I)*lim[0]/100.)
+                    limits[1] = I*(1. + np.sign(I)*lim[0]/100.)
                 else:
                     limits[0] = lim[0]
                     limits[1] = lim[1]

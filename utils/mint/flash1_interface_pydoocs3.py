@@ -95,7 +95,7 @@ class FLASH1MachineInterface():
 
     def set_quad_value(self, quad, value):
         mag_channel = 'TTF2.MAGNETS/QUAD/' + quad + '/PS'
-        return pydoocs.write(mag_channel, value)
+        return 0#pydoocs.write(mag_channel, value)
 
     def get_cor_value(self, device_name):
         ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS.RBV'
@@ -107,7 +107,7 @@ class FLASH1MachineInterface():
 
     def set_cor_value(self, device_name, val):
         ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS'
-        return pydoocs.write(ch, str(val))
+        return 0#pydoocs.write(ch, str(val))
 
 
 
@@ -185,7 +185,7 @@ class FLASH1MachineInterface():
     def set_value(self, device_name, val):
         ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS'
         print (ch, val)
-        return pydoocs.write(ch, str(val))
+        return 0#pydoocs.write(ch, str(val))
  
  
 class FLASH1DeviceProperties:

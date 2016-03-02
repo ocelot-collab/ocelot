@@ -469,6 +469,7 @@ class ExampleApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         self.y = np.array([z[3] for z in orbit])
         x = self.x - self.x_ref # np.random.normal(size=100)
         y = self.y - self.y_ref # np.random.normal(size=100)
+        print(orbit)
         self.curve_orb_x.setData(self.s, x*1000., pen='r', symbol='o', symbolPen='r', symbolBrush=0.5, name='new')
 
         self.curve_orb_y.setData(self.s, y*1000., pen='r', symbol='o', symbolPen='r', symbolBrush=0.5, name='new')
@@ -554,7 +555,7 @@ def main():
 
     timer = pg.QtCore.QTimer()
     timer.timeout.connect(form.update_sase)
-    timer.start(100)
+    timer.start(300)
 
     timer1 = pg.QtCore.QTimer()
     timer1.timeout.connect(form.update_orbit)
@@ -562,7 +563,7 @@ def main():
 
     timer2 = pg.QtCore.QTimer()
     timer2.timeout.connect(form.update_blm)
-    timer2.start(100)
+    timer2.start(300)
 
     timer3 = pg.QtCore.QTimer()
     timer3.timeout.connect(form.update_tree_currents)

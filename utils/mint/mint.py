@@ -64,12 +64,47 @@ class Optimizer:
 
     def eval(self, seq, logging = False, log_file = None):
         self.isRunning = True
-        self.save_machine(self.seq_dict, flag="start")
         self.wasSaved = False
         for s in seq:
+            self.save_action(s.args)
             s.apply()
-        self.save_machine(self.seq_dict, flag="end")
+            self.save_action(s.args)
         self.isRunning = False
+
+    def save_action(self, args):
+        print("SAVE MACHINE")
+
+        data_base = {}
+        data_base["timestamp"] = time
+        data_base["devices"] = args[0]
+        data_base["method"] = args[1]
+        data_base["maxiter"] = args[2]["maxiter"]
+        limits = []
+        currents = []
+        for dev in data_base["devices"]:
+            limits.append(self.dp.get_limits(dev))
+            currents.append(self.get_value(dev))
+        data_base["limits"] = limits
+        data_base["currents"] = currents
+        data_base["sase_pos"] = self.mi.get_sase_pos()
+        data_base["niter"] = self.niter
+        data_base["sase"] = self.mi.get_sase()
+        data_base["sase_slow"] = self.mi.get_sase(detector='gmd_fl1_slow')
+        orbit = []
+        dict_cav = {}
+        if self.hlmint != None:
+            orbit = self.hlmint.read_bpms()
+            dict_cav = self.hlmint.read_cavs()
+        data_base["orbit"] = orbit
+        data_base["cavs"] = dict_cav
+        data_base["wavelength"] = 0
+        data_base["charge"] = 0
+        data_base["gun_energy"] = self.mi.get_gun_energy()
+        print("save action", data_base)
+
+        self.niter = 0
+        self.wasSaved = True
+
 
     def run(self, seq_dict, opt_params):
         self.seq_dict = seq_dict
@@ -100,33 +135,6 @@ class Optimizer:
             action = Action(func=func, args=args)
             sequence.append(action)
         return sequence
-
-    def save_machine(self, seq_dict, flag="start"):
-        print("SAVE MACHINE")
-        print("timestamp: ", time)
-        print("number of iterations: ", self.niter)
-        print("Max number of iterations: ", self.maxiter)
-        print("SASE level: ", self.mi.get_sase())
-        print("SASE level slow: ", self.mi.get_sase(detector='gmd_fl1_slow'))
-        tun_xy, bda_xy = self.mi.get_sase_pos()
-        print("SASE pos: ", tun_xy, bda_xy)
-        print(seq_dict)
-        print("wavelength: ", 0)
-        print("charge: ", 0)
-        orbit = []
-        if self.hlmint != None:
-            orbit = self.hlmint.read_bpms()
-
-        print("orbit", orbit)
-        print("cavities")
-        print("flag: ", flag)
-
-        self.niter = 0
-        self.wasSaved = True
-    #def read_dev_values(self, seq_dict):
-    #    for act in seq_dict:
-    #        for i, devname in enumerate(act["devices"]):
-    #            self.high_level_mint.get_value(devname)
 
 
     def set_limits(self, seq_dict):
@@ -180,7 +188,7 @@ class Optimizer:
 
             if not self.isRunning:
                 print("save machine parameters and kill optimizer")
-                self.save_machine(flag="end")
+                self.save_action([correctors, method, params])
 
                 pass
 
@@ -599,6 +607,8 @@ class TestInterface:
     def init_corrector_vals(self, correctors):
         vals = [0.0]*len(correctors)
         return vals
+    def get_cor_value(self, devname):
+        return np.random.rand(1)[0]
     def get_value(self, device_name):
         return np.random.rand(1)[0]
     def set_value(self, device_name, val):
@@ -611,7 +621,8 @@ class TestInterface:
         return X, Y
     def get_sase_pos(self):
         return [(0,0), (0, 0)]
-
+    def get_gun_energy(self):
+        return 0.
 
 '''
 flight simulator implementation of the machine interface

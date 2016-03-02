@@ -60,8 +60,8 @@ class Ui_MainWindow(object):
         self.seq = pg.LayoutWidget()
         self.label = QtGui.QLabel("""sequence control""")
         self.add_seq_btn = QtGui.QPushButton('Add Action')
-        self.save_seq_btn = QtGui.QPushButton('save seqs')
-        self.load_seq_btn = QtGui.QPushButton('load seqs')
+        self.save_seq_btn = QtGui.QPushButton('Save seqs')
+        self.load_seq_btn = QtGui.QPushButton('Load seqs')
         #self.restoreBtn.setEnabled(False)
         self.seq.addWidget(self.label, row=0, col=0)
         self.seq.addWidget(self.add_seq_btn, row=1, col=0)
@@ -110,11 +110,11 @@ class Ui_MainWindow(object):
         self.t_cntr.setParameters(self.p_cntr, showTop=False)
 
 
-        self.restore_cur_btn = QtGui.QPushButton('restore')
-        self.stop_opt_btn = QtGui.QPushButton('stop')
+        self.restore_cur_btn = QtGui.QPushButton('Restore')
+        self.stop_opt_btn = QtGui.QPushButton('Stop')
 
 
-        self.save_machine_btn = QtGui.QPushButton('write')
+        self.save_machine_btn = QtGui.QPushButton('Write')
         #self.stop_btn = QtGui.QPushButton('stop')
         self.w5.addWidget(self.start_opt_btm, row=0, col=0)
         self.w5.addWidget(self.restore_cur_btn, row=1, col=0)
@@ -131,9 +131,9 @@ class Ui_MainWindow(object):
 
         # orbit controls
         self.w6 = pg.LayoutWidget()
-        self.ref_btm = QtGui.QPushButton('ref orbit')
-        self.save_btn = QtGui.QPushButton('save')
-        self.load_btn = QtGui.QPushButton('load')
+        self.ref_btm = QtGui.QPushButton('Set ref. orbit')
+        self.save_btn = QtGui.QPushButton('Save')
+        self.load_btn = QtGui.QPushButton('Load')
         self.w6.addWidget(self.ref_btm, row=0, col=0)
         self.w6.addWidget(self.save_btn, row=0, col=1)
         self.w6.addWidget(self.load_btn, row=0, col=2)

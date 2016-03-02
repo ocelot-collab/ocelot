@@ -203,7 +203,7 @@ class HighLevelInterface:
         for cav in dict_cavity.keys():
             print (cav, " E = ", dict_cavity[cav]["ampl"], "MeV, phi =  ", dict_cavity[cav]["phi"], " grad")
         self.lat.update_transfer_maps()
-        return self.lat
+        return dict_cavity
 
     def read_cors(self):
         id2I_dict = {}

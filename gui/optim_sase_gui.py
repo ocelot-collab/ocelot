@@ -431,11 +431,11 @@ class ExampleApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
                 self.data[n, self.pntr_cur] = current
                 n += 1
         self.pntr_cur += 1
-        print (self.data.shape)
+        #print (self.data.shape)
         if self.pntr_cur >= self.data.shape[1]:
             tmp = self.data
-            self.data = np.empty((self.ndevs, self.data.shape[0] * 2))
-            self.data[:,:tmp.shape[0]] = tmp[:,:]
+            self.data = np.empty((self.ndevs, self.data.shape[1] * 2))
+            self.data[:,:tmp.shape[1]] = tmp[:,:]
         for i, x in enumerate(self.data):
             self.curves_cur[i].setData(x[:self.pntr_cur])
 

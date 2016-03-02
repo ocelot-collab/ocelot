@@ -138,21 +138,22 @@ class Optimizer:
 
 
     def set_limits(self, seq_dict):
-        limits = [0, 0]
+
         for act in seq_dict:
             for i, devname in enumerate(act["devices"]):
+                limits = [0, 0]
                 I = float(act['values'][i])
                 tol = act["tol"][i]
                 #print(tol,act['values'][i])
                 lim = [float(s) for s in tol.split(',')]
-                print("limits= ", lim)
+                #print("limits= ", lim)
                 if len(lim) == 1:
                     limits[0] = I*(1. - np.sign(I)*lim[0]/100.)
                     limits[1] = I*(1. + np.sign(I)*lim[0]/100.)
                 else:
                     limits[0] = lim[0]
                     limits[1] = lim[1]
-                print(devname, limits)
+                #print(devname, limits)
                 self.dp.set_limits( dev_name=devname, limits=limits)
 
     def set_value(self, devname, value):

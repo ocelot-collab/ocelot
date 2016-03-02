@@ -260,14 +260,16 @@ class FLASH1DeviceProperties:
 
     def set_limits(self, dev_name, limits):
         self.patterns[dev_name] = re.compile(dev_name)
+        #print(self.patterns[dev_name])
         self.limits[dev_name] = limits
-        print("inside dp set = ", dev_name, self.limits[dev_name])
+        #print("inside dp set = ", self.patterns[dev_name], self.limits)
 
     def get_limits(self, device):
+        #print(self.limits)
         for k in self.patterns.keys():
-            #print 'testing', k
+            print('testing', k)
             if self.patterns[k].match(device) != None:
-                print("inside dp get = ", device, self.limits[k])
+                #print("inside dp get = ", device, self.limits[k])
                 return self.limits[k]
         return [-2, 2]
 

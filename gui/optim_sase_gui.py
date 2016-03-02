@@ -442,8 +442,9 @@ class ExampleApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
 
     def update_sase(self):
         #self.hlmi.read_sase()
-        sase_fast, sase_slow = self.hlmi.read_sase()
-
+        sase_fast = self.opt_thread.opt.mi.get_sase()
+        sase_slow = self.opt_thread.opt.mi.get_sase(detector="gmd_fl1_slow")
+        print("sase = ", sase_fast, sase_slow)
         self.data_fast[self.ptr1] = sase_fast #np.random.normal()
         self.ptr1 += 1
 
@@ -457,6 +458,7 @@ class ExampleApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
 
             self.data_slow = np.empty(self.data_slow.shape[0] * 2)
             self.data_slow[:tmp2.shape[0]] = tmp2
+
         self.curve_sase_fast.setData(self.data_fast[:self.ptr1])
 
         self.curve_sase_slow.setData(self.data_slow[:self.ptr2], pen='r')

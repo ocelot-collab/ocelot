@@ -446,7 +446,7 @@ class MagneticLattice:
             elem = self.sequence[i+1]
             prob_edge2 = self.sequence[i+2]
             if elem.type in ["bend", "sbend", "rbend"]: # , "hcor", "vcor"
-                if prob_edge1.type != "edge" and prob_edge2 != "edge":
+                if prob_edge1.type != "edge" and prob_edge2.type != "edge":
                     #print elem.type, prob_edge1.type, prob_edge2.type
                     return False
         return True
@@ -475,6 +475,7 @@ class MagneticLattice:
                 self.sequence.insert(n+2, e2)
                 n += 2
             n +=1
+
 
     def update_transfer_maps(self):
         #E = self.energy

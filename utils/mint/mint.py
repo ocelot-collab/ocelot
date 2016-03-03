@@ -9,7 +9,7 @@ import scipy.optimize as opt
 from time import sleep, time
 
 import json
-from ocelot.utils.mint.machine_setup import *
+#from ocelot.utils.mint.machine_setup import *
 
 '''
 Any machine interface class should implement following methods  
@@ -46,64 +46,63 @@ class DeviceProperties:
 
 
 class Optimizer:
-    def __init__(self, mi, dp, lat=None):
+    def __init__(self, mi, dp, sop=None):
         self.debug = False
         self.mi = mi
         self.dp = dp
         self.timeout = 1.0
         self.logging = False
+        self.log_file = "test.log"
+
         self.wasSaved = False
         self.isRunning = False
         self.niter = 0
         self.maxiter = None
-        self.lat = lat
-        self.hlmint = None
-        if self.lat != None:
-            self.hlmint = HighLevelInterface(lat, mi, dp)
-
+        self.sop = sop
+        self.seq_init_cur = [[]]
 
     def eval(self, seq, logging = False, log_file = None):
         self.isRunning = True
         self.wasSaved = False
+
+        self.seq_init_cur = self.save_init_currents(seq)
+
         for s in seq:
-            self.save_action(s.args)
+            self.save_action(s.args, flag="start")
+            self.wasSaved = False
+
             s.apply()
-            self.save_action(s.args)
+
+            self.save_action(s.args, flag="stop")
         self.isRunning = False
 
-    def save_action(self, args):
-        print("SAVE MACHINE")
-
-        data_base = {}
-        data_base["timestamp"] = time
-        data_base["devices"] = args[0]
-        data_base["method"] = args[1]
-        data_base["maxiter"] = args[2]["maxiter"]
-        limits = []
-        currents = []
-        for dev in data_base["devices"]:
-            limits.append(self.dp.get_limits(dev))
-            currents.append(self.get_value(dev))
-        data_base["limits"] = limits
-        data_base["currents"] = currents
-        data_base["sase_pos"] = self.mi.get_sase_pos()
-        data_base["niter"] = self.niter
-        data_base["sase"] = self.mi.get_sase()
-        data_base["sase_slow"] = self.mi.get_sase(detector='gmd_fl1_slow')
-        orbit = []
-        dict_cav = {}
-        if self.hlmint != None:
-            orbit = self.hlmint.read_bpms()
-            dict_cav = self.hlmint.read_cavs()
-        data_base["orbit"] = orbit
-        data_base["cavs"] = dict_cav
-        data_base["wavelength"] = 0
-        data_base["charge"] = 0
-        data_base["gun_energy"] = self.mi.get_gun_energy()
-        print("save action", data_base)
+    def save_action(self, args, flag):
+        print("SAVE MACHINE",  flag)
+        if self.sop is not None:
+            self.sop.save(args, time=time(), niter=self.niter, flag=flag)
 
         self.niter = 0
         self.wasSaved = True
+
+    def save_init_currents(self, seq):
+        seq_init_cur = []
+        for s in seq:
+            act_init_cur = []
+            devices = s.args[0]
+            for i, devname in enumerate(devices):
+                act_init_cur.append([devname, self.mi.get_value(devname)])
+            seq_init_cur.append(act_init_cur)
+        return seq_init_cur
+
+
+    def restore_currents(self):
+        for act_init_cur in self.seq_init_cur:
+            for x in act_init_cur:
+                if len(x) == 2:
+                    devname = x[0]
+                    current = x[1]
+                    print('reverting', devname, '->', current)
+                    self.mi.set_value(devname, current)
 
 
     def run(self, seq_dict, opt_params):
@@ -131,7 +130,7 @@ class Optimizer:
                 func = self.min_orbit
 
             args = [act["devices"], act["method"], {'maxiter': act["maxiter"]}]
-            print(args)
+            #print(args)
             action = Action(func=func, args=args)
             sequence.append(action)
         return sequence
@@ -141,38 +140,16 @@ class Optimizer:
 
         for act in seq_dict:
             for i, devname in enumerate(act["devices"]):
-                limits = [0, 0]
-                I = float(act['values'][i])
-                tol = act["tol"][i]
-                #print(tol,act['values'][i])
-                lim = [float(s) for s in tol.split(',')]
-                #print("limits= ", lim)
-                if len(lim) == 1:
-                    limits[0] = I*(1. - np.sign(I)*lim[0]/100.)
-                    limits[1] = I*(1. + np.sign(I)*lim[0]/100.)
-                else:
-                    limits[0] = lim[0]
-                    limits[1] = lim[1]
-                #print(devname, limits)
+                limits = act["tol"][i]
                 self.dp.set_limits( dev_name=devname, limits=limits)
 
-    def set_value(self, devname, value):
-        #if
-        return self.mi.set_cor_value(devname, value)
 
-    def get_value(self, devname):
-        return self.mi.get_cor_value(devname)
-    #def stop_exec(self):
-    #    return self.dp.stop_exec
-    #
-    #def save_machine(self):
-    #    self.dp.save_machine = True
 
-    def max_sase(self, correctors, method = 'simplex', params = {}, opt_pointing = False):
+    def max_sase(self, devices, method = 'simplex', params = {}, opt_pointing = False):
         '''
         direct sase optimization with simplex, using correctors as a multiknob
         '''
-        if self.debug: print('starting multiknob optimization, correctors = ', correctors)
+        if self.debug: print('starting multiknob optimization, correctors = ', devices)
 
         if opt_pointing:
             weight_gmd_bpm_1 = 10.0
@@ -190,7 +167,7 @@ class Optimizer:
 
             if not self.isRunning:
                 print("save machine parameters and kill optimizer")
-                self.save_action([correctors, method, params])
+                self.save_action([devices, method, params], flag="force stop")
 
                 pass
 
@@ -201,17 +178,17 @@ class Optimizer:
             #print 'error_func: ', bpm_names, '->',  planes
     
             for i in range(len(x)):
-                if self.debug: print('{0} x[{1}]={2}'.format(correctors[i], i, x[i]))
-                limits = self.dp.get_limits(correctors[i])
+                if self.debug: print('{0} x[{1}]={2}'.format(devices[i], i, x[i]))
+                limits = self.dp.get_limits(devices[i])
                 if self.debug: print('limits=[{0}, {1}]'.format(limits[0], limits[1]))
                 if x[i] < limits[0] or x[i] > limits[1]:
                     print('limits exceeded')
                     return pen_max
     
     
-            for i in range(len(correctors)):
-                print ('setting', correctors[i], '->',x[i])
-                self.mi.set_value(correctors[i], x[i])
+            for i in range(len(devices)):
+                print ('setting', devices[i], '->',x[i])
+                self.mi.set_value(devices[i], x[i])
     
             sleep(self.timeout)
     
@@ -240,13 +217,13 @@ class Optimizer:
 
         sase_ref = self.mi.get_sase()
     
-        x = self.mi.init_corrector_vals(correctors)
+        x = self.mi.init_corrector_vals(devices)
         x_init = x
 
         if self.logging: 
             f = open(self.log_file,'a')
             f.write('\n*** optimization step ***\n')
-            f.write(str(correctors) + '\n')
+            f.write(str(devices) + '\n')
             f.write(method + '\n')
             f.write('x0=' + str(x_init) + '\n')
             f.write('sase0=' + str(sase_ref) + '\n')
@@ -315,9 +292,9 @@ class Optimizer:
 
         print ('step ended changing sase from/to', sase_ref, sase_new)
         if sase_new <= sase_ref:
-            for i in range(len(correctors)):
-                print ('reverting', correctors[i], '->',x_init[i])
-                self.mi.set_value(correctors[i], x_init[i])
+            for i in range(len(devices)):
+                print ('reverting', devices[i], '->',x_init[i])
+                self.mi.set_value(devices[i], x_init[i])
 
         if self.logging:
              f.write('sase_new=' + str(sase_new) + '\n')
@@ -604,27 +581,41 @@ class TestInterface:
         pass
     def get_alarms(self):
         return np.random.rand(4)#0.0, 0.0, 0.0, 0.0]
+
     def get_sase(self, detector=None):
         return 0.0
+
     def init_corrector_vals(self, correctors):
         vals = [0.0]*len(correctors)
         return vals
+
     def get_cor_value(self, devname):
         return np.random.rand(1)[0]
+
     def get_value(self, device_name):
         return np.random.rand(1)[0]
+
     def set_value(self, device_name, val):
         return 0.0
+
     def get_quads_current(self, device_names):
         return np.random.rand(len(device_names))
+
     def get_bpms_xy(self, bpms):
-        X = [0.0]*len(bpms)#np.zeros(len(correctors))
-        Y = [0.0]*len(bpms)
+        X = np.zeros(len(bpms))
+        Y = np.zeros(len(bpms))
         return X, Y
+
     def get_sase_pos(self):
         return [(0,0), (0, 0)]
+
     def get_gun_energy(self):
         return 0.
+
+    def get_cavity_info(self, devnames):
+        X = np.zeros(len(devnames))
+        Y = np.zeros(len(devnames))
+        return X, Y
 
 '''
 flight simulator implementation of the machine interface

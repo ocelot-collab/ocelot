@@ -11,7 +11,48 @@ except:
     
 import re
 from pylab import *
+from ocelot.utils.mint.machine_setup import *
 
+
+class SaveOptParams:
+    def __init__(self, mi, dp, lat=None):
+        self.mi = mi
+        self.dp = dp
+        self.hlmint = None
+        if lat != None:
+            self.hlmint = HighLevelInterface(lat, mi, dp)
+
+
+    def save(self, args, time, niter, flag="start"):
+        data_base = {}
+        data_base["flag"] = flag
+        data_base["timestamp"] = time
+        data_base["devices"] = args[0]
+        data_base["method"] = args[1]
+        data_base["maxiter"] = args[2]["maxiter"]
+        limits = []
+        currents = []
+        for dev in data_base["devices"]:
+            limits.append(self.dp.get_limits(dev))
+            currents.append(self.mi.get_value(dev))
+        data_base["limits"] = limits
+        data_base["currents"] = currents
+        data_base["sase_pos"] = self.mi.get_sase_pos()
+        data_base["niter"] = niter
+        data_base["sase"] = self.mi.get_sase()
+        data_base["sase_slow"] = self.mi.get_sase(detector='gmd_fl1_slow')
+        orbit = []
+        dict_cav = {}
+
+        if self.hlmint != None:
+            orbit = self.hlmint.read_bpms()
+            dict_cav = self.hlmint.read_cavs()
+        #data_base["orbit"] = orbit
+        #data_base["cavs"] = dict_cav
+        data_base["wavelength"] = 0
+        data_base["charge"] = 0
+        data_base["gun_energy"] = self.mi.get_gun_energy()
+        print("save action", data_base)
 
 
 class FLASH1MachineInterface():
@@ -41,10 +82,8 @@ class FLASH1MachineInterface():
     def init_corrector_vals(self, correctors):
         vals = np.zeros(len(correctors))
         for i in range(len(correctors)):
-            #print correctors[i]
             mag_channel = 'TTF2.MAGNETS/STEERER/' + correctors[i] + '/PS'
             vals[i] = pydoocs.read(mag_channel)["data"]
-            #print vals[i], doocs.read(mag_channel), mag_channel
         return vals
 
     def get_cavity_info(self, cavs):
@@ -70,46 +109,16 @@ class FLASH1MachineInterface():
         Y = [0.0]*len(bpms)
         for i in range(len(bpms)):
             mag_channel = 'TTF2.DIAG/ORBIT/' + bpms[i]# + '/PS'
-            #print mag_channel
             X[i] = pydoocs.read(mag_channel + "/X.FLASH1")['data']*0.001 # mm -> m
             Y[i] = pydoocs.read(mag_channel + "/Y.FLASH1")['data']*0.001 # mm -> m
-            #print X, Y
         return X, Y
 
     def get_quads_current(self, quads):
-        vals = [0.0]*len(quads)#np.zeros(len(correctors))
+        vals = np.zeros(len(quads))
         for i in range(len(quads)):
             mag_channel = 'TTF2.MAGNETS/QUAD/' + quads[i]# + '/PS'
             vals[i] = pydoocs.read(mag_channel + "/PS")['data']
         return vals
-
-
-
-    def get_quad_set(self, quad):
-        mag_channel = 'TTF2.MAGNETS/QUAD/' + quad + '/PS'
-        return pydoocs.read(mag_channel)['data']
-
-    def get_quad_value(self, quad):
-        mag_channel = 'TTF2.MAGNETS/QUAD/' + quad + '/PS.RBV'
-        return pydoocs.read(mag_channel)['data']
-
-    def set_quad_value(self, quad, value):
-        mag_channel = 'TTF2.MAGNETS/QUAD/' + quad + '/PS'
-        return 0#pydoocs.write(mag_channel, value)
-
-    def get_cor_value(self, device_name):
-        ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS.RBV'
-        return pydoocs.read(ch)['data']
-
-    def get_cor_set(self, device_name):
-        ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS'
-        return pydoocs.read(ch)['data']
-
-    def set_cor_value(self, device_name, val):
-        ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS'
-        return 0#pydoocs.write(ch, str(val))
-
-
 
     def get_bends_current(self, bends):
         vals = [0.0]*len(bends)#np.zeros(len(correctors))

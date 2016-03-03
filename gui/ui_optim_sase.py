@@ -111,10 +111,12 @@ class Ui_MainWindow(object):
 
 
         self.restore_cur_btn = QtGui.QPushButton('Restore')
+        #self.restore_cur_btn.setEnabled(False)
         self.stop_opt_btn = QtGui.QPushButton('Stop')
 
 
         self.save_machine_btn = QtGui.QPushButton('Write')
+        self.save_machine_btn.setEnabled(False)
         #self.stop_btn = QtGui.QPushButton('stop')
         self.w5.addWidget(self.start_opt_btm, row=0, col=0)
         self.w5.addWidget(self.restore_cur_btn, row=1, col=0)
@@ -133,7 +135,9 @@ class Ui_MainWindow(object):
         self.w6 = pg.LayoutWidget()
         self.ref_btm = QtGui.QPushButton('Set ref. orbit')
         self.save_btn = QtGui.QPushButton('Save')
+        self.save_btn.setEnabled(False)
         self.load_btn = QtGui.QPushButton('Load')
+        self.load_btn.setEnabled(False)
         self.w6.addWidget(self.ref_btm, row=0, col=0)
         self.w6.addWidget(self.save_btn, row=0, col=1)
         self.w6.addWidget(self.load_btn, row=0, col=2)

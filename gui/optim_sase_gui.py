@@ -49,9 +49,6 @@ def generate_tree_params(lat):
             sub_quad_seq = {'name': name_seq, 'type': 'group','expanded': False,'children':[]}
             sub_quad_chld = []
 
-        #if elem.id == 'STARTUBC2':
-        #    break
-
         if elem.__class__ in [Hcor, Vcor]:
             tmp = {}
             tmp["name"] = elem.id
@@ -74,8 +71,6 @@ def generate_tree_params(lat):
     quads['children'].append(sub_quad_seq)
     devices.append(cors)
     devices.append(quads)
-    #print("cors = ", cors)
-    #print("deevice = ", devices)
     return devices
 
 
@@ -98,26 +93,21 @@ def tree2seq(tree):
             if sub.opts["type"] == "action":
                 continue
             type_devs, dev = sub.opts["name"].split("/")
-            #print("tree2seq", type_devs, dev)
             new_seq['devices'].append(dev)
             new_seq['type_devs'].append(type_devs)
             new_seq['values'].append(sub.opts["value"])
             for ch in sub:
-                new_seq['tol'].append(ch.opts["value"])
-            """
-            if sub.opts["name"] == "order":
-                new_seq['order'] = sub.opts["value"]
-
-            if sub.opts["name"] == "devices":
-
-                new_seq['devices'] = []
-                new_seq['tol'] = []
-
-                for ch in sub:
-                    #print(ch.opts["name"])
-                    new_seq['devices'].append(ch.opts["name"])
-                    new_seq['tol'].append(ch.opts["value"])
-            """
+                limits = [0, 0]
+                I = float(sub.opts["value"])
+                tol = ch.opts["value"]
+                lim = [float(s) for s in tol.split(',')]
+                if len(lim) == 1:
+                    limits[0] = I*(1. - np.sign(I)*lim[0]/100.)
+                    limits[1] = I*(1. + np.sign(I)*lim[0]/100.)
+                else:
+                    limits[0] = lim[0]
+                    limits[1] = lim[1]
+                new_seq['tol'].append(limits)
         sequence.append(new_seq)
     return sequence
 
@@ -127,9 +117,11 @@ def seq2tree(tree, seq):
     for act in seq:
         new_chld= []
         for i, dev in enumerate(act['devices']):
+            tol = act['tol'][i]
+            tol_str = [str(np.around(x, 3)) for x in tol]
             name = act["type_devs"][i]+'/'+dev
             tmp = {'name': name, 'type': "str", "value": "0",'readonly': True, 'expanded': False, 'children': []}
-            tmp['children'].append({'name': 'limits', 'type': "str", "value": "10"})
+            tmp['children'].append({'name': 'limits', 'type': "str", "value": ", ".join(tol_str)})
             new_chld.append(tmp)
 
         new_chld.append({'name': 'start Action', 'type': 'action'})
@@ -173,8 +165,6 @@ class AThread(QtCore.QThread):
     def __init__(self, optimizer):
         QtCore.QThread.__init__(self)
         self.opt = optimizer
-        #self.seq_dict=[]
-        #self.opt_params={}
 
     def __del__(self):
         self.wait()
@@ -191,14 +181,13 @@ class AThread(QtCore.QThread):
             print ("Increasing")
             count += 1
         """
-    #def quit(self):
 
 
 
 
-class ExampleApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
+class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
     def __init__(self, high_level_mi, parent=None, params=None, devices=None, optimizer=None):
-        super(ExampleApp, self).__init__(parent)
+        super(OptimApp, self).__init__(parent)
         self.setupUi(self, params=params)
         self.opt_thread = optimizer
 
@@ -219,7 +208,7 @@ class ExampleApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         self.hlmi = high_level_mi
 
         self.start_opt_btm.clicked.connect(self.start_opt)
-
+        self.restore_cur_btn.clicked.connect(self.restore)
         self.stop_opt_btn.clicked.connect(self.force_stop)
 
         self.save_seq_btn.clicked.connect(self.save_sequences)
@@ -275,16 +264,20 @@ class ExampleApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         print("force stop")
 
         self.opt_thread.opt.isRunning=False
+        #print("wasSaved:", self.opt_thread.opt.wasSaved)
         while self.opt_thread.opt.wasSaved == False:
-            sleep(0.1)
-            pass
+            sleep(0.5)
+            #print("inside")
+            #pass
         self.opt_thread.terminate()
         self.opt_thread.isRunning = False
         self.start_opt_btm.setEnabled(True)
+        self.restore_cur_btn.setEnabled(True)
 
     def stop(self):
         print("stop")
         self.start_opt_btm.setEnabled(True)
+        self.restore_cur_btn.setEnabled(True)
 
     def error_box(self):
         QtGui.QMessageBox.about(self, "Error box", "all Actions have zero order" )
@@ -295,9 +288,7 @@ class ExampleApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         for act in self.sequence:
             order.append(act['order'])
         order = np.array(order)
-        #print(order)
         indx_sort = np.argsort(order)
-        #print(indx_sort, order[indx_sort])
         indx = np.nonzero(order[indx_sort])[0]
         indx = indx_sort[indx]
         if len(indx) == 0:
@@ -306,13 +297,16 @@ class ExampleApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
             self.work_seq = self.sequence[indx]
             self.optimization()
 
+    def restore(self):
+        if not self.opt_thread.opt.isRunning:
+            self.opt_thread.opt.restore_currents()
 
 
     def optimization(self):
         #print(self.opt_thread.isRunning())
         if not self.opt_thread.opt.isRunning:
             self.start_opt_btm.setEnabled(False)
-
+            self.restore_cur_btn.setEnabled(False)
             opt_params = optim_params(self.p_cntr)
             print("sequence for optimization: ", self.work_seq)
             print(opt_params)
@@ -373,10 +367,8 @@ class ExampleApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
                 print('  change:    %s'% change)
                 print('  data:      %s'% str(data))
                 print('  ----------')
-            if change == "activated":
 
-                #print("hoo")
-                #print(path)
+            if change == "activated":
                 self.work_seq = []
                 act_name = path[0]
                 for act in self.sequence:
@@ -431,7 +423,6 @@ class ExampleApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
                 self.data[n, self.pntr_cur] = current
                 n += 1
         self.pntr_cur += 1
-        #print (self.data.shape)
         if self.pntr_cur >= self.data.shape[1]:
             tmp = self.data
             self.data = np.empty((self.ndevs, self.data.shape[1] * 2))
@@ -441,13 +432,12 @@ class ExampleApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
 
 
     def update_sase(self):
-        #self.hlmi.read_sase()
+
         sase_fast = self.opt_thread.opt.mi.get_sase()
         sase_slow = self.opt_thread.opt.mi.get_sase(detector="gmd_fl1_slow")
         if np.isnan(sase_slow):
             sase_slow = 0.
 
-        #print("sase = ", sase_fast, sase_slow)
         self.data_fast[self.ptr1] = sase_fast #np.random.normal()
         self.ptr1 += 1
 
@@ -472,7 +462,7 @@ class ExampleApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         self.y = np.array([z[3] for z in orbit])
         x = self.x - self.x_ref # np.random.normal(size=100)
         y = self.y - self.y_ref # np.random.normal(size=100)
-        #print(orbit)
+
         self.curve_orb_x.setData(self.s, x*1000., pen='r', symbol='o', symbolPen='r', symbolBrush=0.5, name='new')
 
         self.curve_orb_y.setData(self.s, y*1000., pen='r', symbol='o', symbolPen='r', symbolBrush=0.5, name='new')
@@ -539,22 +529,23 @@ class Form2(QtGui.QMainWindow, ui_optim_sase.Ui_ChildWindow):
 
 def main():
     mi = FLASH1MachineInterface()
-    #mi = TestInterface()
+    mi = TestInterface()
     dp = FLASH1DeviceProperties()
+
     lat = MagneticLattice(lattice)
+    sop = SaveOptParams(mi, dp, lat)
     hlmi = HighLevelInterface(lat, mi, dp)
     #opt = Optimizer(mi, dp)
-    opt = Optimizer(mi, dp)
+    opt = Optimizer(mi, dp, sop)
     opt = AThread(optimizer=opt)
     #opt.finished.connect(app.exit)
 
     app = QtGui.QApplication(sys.argv)
 
 
-
     devices = generate_tree_params(lat)
 
-    form = ExampleApp(hlmi, params=[], devices=devices, optimizer=opt)
+    form = OptimApp(hlmi, params=[], devices=devices, optimizer=opt)
 
     timer = pg.QtCore.QTimer()
     timer.timeout.connect(form.update_sase)

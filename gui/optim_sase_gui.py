@@ -466,7 +466,7 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         self.pntr_cur += 1
         if self.pntr_cur >= self.data.shape[1]:
             tmp = self.data
-            self.data = np.empty((self.ndevs, self.data.shape[1] * 2))
+            self.data = np.empty((self.ndevs*2, self.data.shape[1] * 2))
             self.data[:, :tmp.shape[1]] = tmp[:, :]
 
 

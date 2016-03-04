@@ -64,10 +64,9 @@ class SaveOptParams:
         if self.hlmint != None:
             orbit = self.hlmint.read_bpms()
             dict_cav = self.hlmint.read_cavs()
-        #data_base["orbit"] = orbit
-        #data_base["cavs"] = dict_cav
-        data_base["wavelength"] = 0
-        data_base["charge"] = 0
+        data_base["orbit"] = orbit
+        data_base["cavs"] = dict_cav
+
         data_base["gun_energy"] = self.mi.get_gun_energy()
         print("save action", data_base)
 
@@ -331,16 +330,16 @@ class FLASH1DeviceProperties:
 
     def set_limits(self, dev_name, limits):
         self.patterns[dev_name] = re.compile(dev_name)
-        #print(self.patterns[dev_name])
+        print(self.patterns[dev_name])
         self.limits[dev_name] = limits
-        #print("inside dp set = ", self.patterns[dev_name], self.limits)
+        print("inside dp set = ", self.patterns[dev_name], self.limits)
 
     def get_limits(self, device):
-        #print(self.limits)
+        print(self.limits)
         for k in self.patterns.keys():
-            #print('testing', k)
+            print('testing', k)
             if self.patterns[k].match(device) != None:
-                #print("inside dp get = ", device, self.limits[k])
+                print("inside dp get = ", device, self.limits[k])
                 return self.limits[k]
         return [-2, 2]
 

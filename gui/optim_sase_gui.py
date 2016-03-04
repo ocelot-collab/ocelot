@@ -338,8 +338,11 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
             print(self.ndevs)
             self.current.clear()
             self.data = np.zeros((self.ndevs*2, 100))
+            self.current.addLegend()
             #self.curves_cur = [self.current.plot(pen=(i,self.ndevs*1.3)) for i in range(self.ndevs)]
-            self.curves_cur = [self.current.plot(pen=(i,self.ndevs*1.3)) for i in range(2)]
+            #self.curves_cur = [self.current.plot(pen=(i,self.ndevs*1.3)) for i in range(2)]
+            self.curves_cur = [self.current.plot(pen='r', name='set'), self.current.plot(pen='g', name='RBV')]
+
             self.pntr_cur = 0
 
 

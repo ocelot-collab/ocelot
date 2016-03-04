@@ -459,8 +459,8 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
             for i, devname in enumerate(act["devices"]):
                 current_RBS = self.opt_thread.opt.mi.get_value(devname)
                 surrent_set = self.opt_thread.opt.mi.get_value_ps(devname)
-                self.data[n, self.pntr_cur] = current_RBS
-                self.data[n+1, self.pntr_cur] = surrent_set
+                self.data[n, self.pntr_cur] = surrent_set
+                self.data[n+1, self.pntr_cur] = current_RBS
                 n += 2
 
         self.pntr_cur += 1

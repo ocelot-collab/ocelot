@@ -264,6 +264,7 @@ class FLASH1DeviceProperties:
         self.save_machine = False
         self.patterns = {}
         self.limits = {}
+        """
         self.patterns['launch_steerer'] = re.compile('[HV][0-9]+SMATCH')
         self.limits['launch_steerer'] = [-4,4]
         
@@ -327,6 +328,7 @@ class FLASH1DeviceProperties:
 
         self.patterns['V12ORS'] = re.compile('V12ORS')
         self.limits['V12ORS'] = [0.04, 0.15]
+        """
 
     def set_limits(self, dev_name, limits):
         self.patterns[dev_name] = re.compile(dev_name)

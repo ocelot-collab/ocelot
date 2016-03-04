@@ -276,8 +276,11 @@ def get_envelope(p_array, tws_i=Twiss()):
     dpy = tws_i.Dyp*p
     x = p_array.x() - dx
     px = p_array.px() - dpx
+
     y = p_array.y() - dy
     py = p_array.py() - dpy
+    px = px*(1.-0.5*px*px - 0.5*py*py)
+    py = py*(1.-0.5*px*px - 0.5*py*py)
     tws.x = mean(x)
     tws.y = mean(y)
     tws.px =mean(px)

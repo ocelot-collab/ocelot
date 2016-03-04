@@ -535,7 +535,46 @@ def create_transfer_map(element, order=1):
         transfer_map.map_z = lambda X, z, energy: map4corr(R_z(z, energy), b_z(z, energy), X)
 
     elif element.type == "cavity":
-                
+
+        def eidelman(z, V, f, E, phi=0.):
+            V = V/m_e_GeV
+            print(m_e_GeV)
+            beta = 1.
+            dz = z
+            k0 = 2.*pi*f/speed_of_light
+            #print(speed_of_light/f)
+            phi = phi*np.pi/180.
+            de = V*cos(phi)
+            Ep = 2*V/z
+            gamma = (E + 0.5*V*m_e_GeV*cos(phi))/m_e_GeV
+            z_ = 0*z/2.
+
+            print(gamma, V, beta**2*V**2*cos(k0*z_  + phi)**2 ,Ep*cos(k0*z_  + phi), k0*beta*V*sin(k0*z_  + phi))
+            x = 1/(2*gamma)*(beta**2*V**2*cos(k0*z_ + phi)**2 - Ep*cos(k0*z_ + phi) + 0*k0*beta*V*sin(k0*z_ + phi))
+
+            eps = np.sqrt(x + 0j)
+            print(eps)
+            delta = beta/(2*gamma)*V*cos(k0*z_  + phi)
+            r12 = np.exp(-delta*dz)*np.sinh(eps*dz)/eps
+            r11 = np.exp(-delta*dz)*np.cosh(eps*dz) + r12*delta
+            r21 = (eps**2 - delta**2)*r12
+            r22 = r11 - 2*r12*delta
+            print (r11, r12, r21, r22)
+            r56 = 0.
+            if gamma != 0:
+                gamma2 = gamma*gamma
+                beta = 1. - 0.5/gamma2
+                r56 = -z/(beta*beta*gamma2)
+            cav_matrix = array([[r11, r12, 0., 0., 0., 0.],
+                                [r21, r22, 0., 0., 0., 0.],
+                                [0., 0., r11, r12, 0., 0.],
+                                [0., 0., r21, r22, 0., 0.],
+                                [0., 0., 0., 0., 1., r56],
+                                [0., 0., 0., 0., 0., 1.]]).real
+
+            return cav_matrix
+
+
         def cavity_R_z(z, V, f, E, phi=0.):
             """
             :param z: length
@@ -568,6 +607,7 @@ def create_transfer_map(element, order=1):
             r11 = (cos(alpha) - sqrt(2./eta)*cos_phi*sin_alpha)
             if abs(Ep) > 1e-10:
                 r12 = sqrt(8./eta)*Ei/Ep*cos_phi*sin_alpha
+                #r12 = r11
             else:
                 r12 = z
             r21 = -Ep/Ef*(cos_phi/sqrt(2.*eta) + sqrt(eta/8.)/cos_phi)*sin_alpha

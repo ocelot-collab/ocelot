@@ -100,6 +100,11 @@ def tree2seq(tree):
                 limits = [0, 0]
                 I = float(sub.opts["value"])
                 tol = ch.opts["value"]
+
+                #print(I, tol)
+                limits[0] = I - tol
+                limits[1] = I + tol
+                """
                 lim = [float(s) for s in tol.split(',')]
                 if len(lim) == 1:
                     limits[0] = I*(1. - np.sign(I)*lim[0]/100.)
@@ -107,6 +112,7 @@ def tree2seq(tree):
                 else:
                     limits[0] = lim[0]
                     limits[1] = lim[1]
+                """
                 new_seq['tol'].append(limits)
         sequence.append(new_seq)
     return sequence
@@ -118,10 +124,12 @@ def seq2tree(tree, seq):
         new_chld= []
         for i, dev in enumerate(act['devices']):
             tol = act['tol'][i]
-            tol_str = [str(np.around(x, 3)) for x in tol]
+            tol = (tol[1] - tol[0])/2.
+            #print(tol)
+            #tol_str = [str(np.around(x, 3)) for x in tol]
             name = act["type_devs"][i]+'/'+dev
             tmp = {'name': name, 'type': "str", "value": "0",'readonly': True, 'expanded': False, 'children': []}
-            tmp['children'].append({'name': 'limits', 'type': "str", "value": ", ".join(tol_str)})
+            tmp['children'].append({'name': 'tol., A', 'type': "float", "value": tol, 'step': 0.01})
             new_chld.append(tmp)
 
         new_chld.append({'name': 'start Action', 'type': 'action'})
@@ -138,7 +146,10 @@ def devices2def_seq(devs, type_devs):
     def_dict['order'] = 0
     def_dict['devices'] = devs
     def_dict["type_devs"] = type_devs
-    def_dict['tol'] = ['10']*len(devs)
+
+    def_dict['tol'] = []
+    for dev in devs:
+        def_dict['tol'].append([0.1, 0.3])
     def_dict['method'] = "simplex"
     def_dict['func'] = "max_sase"
     def_dict['maxiter'] = None
@@ -194,6 +205,7 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         try:
             with open("default.seq", 'rb') as f:
                 seq = pickle.load(f)
+
         except:
             seq = []
         #print(seq)
@@ -305,6 +317,7 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
     def optimization(self):
         #print(self.opt_thread.isRunning())
         if not self.opt_thread.opt.isRunning:
+            self.create_tree_cur_contr()
             self.start_opt_btm.setEnabled(False)
             self.restore_cur_btn.setEnabled(False)
             opt_params = optim_params(self.p_cntr)
@@ -324,9 +337,9 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
                 self.ndevs += len(act["devices"])
             print(self.ndevs)
             self.current.clear()
-            self.data = np.zeros((self.ndevs, 100))
-            self.curves_cur = [self.current.plot(pen=(i,self.ndevs*1.3)) for i in range(self.ndevs)]
-
+            self.data = np.zeros((self.ndevs*2, 100))
+            #self.curves_cur = [self.current.plot(pen=(i,self.ndevs*1.3)) for i in range(self.ndevs)]
+            self.curves_cur = [self.current.plot(pen=(i,self.ndevs*1.3)) for i in range(2)]
             self.pntr_cur = 0
 
 
@@ -414,21 +427,54 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
 
         self.update_current()
 
-    def update_current(self):
+    def create_tree_cur_contr(self):
+        devices = []
+        for act in self.work_seq:
+            for i, devname in enumerate(act["devices"]):
+                devices.append(devname)
+                #current = self.opt_thread.opt.mi.get_value(devname)
+                #self.data[n, self.pntr_cur] = current
+        #print(devices)
+        for p in self.p_cur_cntr:
+            print(p)
+        self.p_cur_cntr.clearChildren()
+        self.p_cur_cntr.addChild({'name': 'Devices', 'type': 'list', 'values': devices, 'value': 0})
+        #self.p_cur_cntr.opts["values"] = devices
 
+        self.t_cur_cntr.setParameters(self.p_cur_cntr, showTop=False)
+        return devices
+
+    def update_current(self):
+        devices = []
+        devname_sel = ''
+        for p in self.p_cur_cntr:
+            devname_sel = p.opts["value"]
+            devices = p.opts["values"]
+        #print(devices, devname_sel)
         n = 0
         for act in self.work_seq:
             for i, devname in enumerate(act["devices"]):
-                current = self.hlmi.get_value(devname)
-                self.data[n, self.pntr_cur] = current
-                n += 1
+                current_RBS = self.opt_thread.opt.mi.get_value(devname)
+                surrent_set = self.opt_thread.opt.mi.get_value_ps(devname)
+                self.data[n, self.pntr_cur] = current_RBS
+                self.data[n+1, self.pntr_cur] = surrent_set
+                n += 2
+
         self.pntr_cur += 1
         if self.pntr_cur >= self.data.shape[1]:
             tmp = self.data
             self.data = np.empty((self.ndevs, self.data.shape[1] * 2))
-            self.data[:,:tmp.shape[1]] = tmp[:,:]
-        for i, x in enumerate(self.data):
-            self.curves_cur[i].setData(x[:self.pntr_cur])
+            self.data[:, :tmp.shape[1]] = tmp[:, :]
+
+
+        for i, name in enumerate(devices):
+            #print(name == devname_sel, name, devname_sel)
+            if name == devname_sel:
+                #print(i)
+                self.curves_cur[0].setData(self.data[2*i, :self.pntr_cur])
+                self.curves_cur[1].setData(self.data[2*i + 1, :self.pntr_cur])
+        #for i, x in enumerate(self.data):
+        #    self.curves_cur[i].setData(x[:self.pntr_cur])
 
 
     def update_sase(self):

@@ -15,7 +15,7 @@ from ocelot.utils.mint.machine_setup import *
 
 
 class SaveOptParams:
-    def __init__(self, mi, dp, lat=None):
+    def __init__(self, mi, dp, lat=None, filename=None):
         self.mi = mi
         self.dp = dp
         self.hlmint = None
@@ -24,6 +24,14 @@ class SaveOptParams:
 
 
     def save(self, args, time, niter, flag="start"):
+        filename = "simpl_data_base.txt"
+        try:
+            with open(filename, 'rb') as f:
+                all_data = pickle.load(f)
+        except:
+            all_data = []
+
+
         data_base = {}
         data_base["flag"] = flag
         data_base["timestamp"] = time
@@ -41,6 +49,15 @@ class SaveOptParams:
         data_base["niter"] = niter
         data_base["sase"] = self.mi.get_sase()
         data_base["sase_slow"] = self.mi.get_sase(detector='gmd_fl1_slow')
+
+        data_base["charge"] = self.mi.get_charge()
+        data_base["wavelength"] = self.mi.get_wavelangth()
+        data_base["bc2_pyros"] = self.mi.get_bc2_pyros()
+        data_base["bc3_pyros"] = self.mi.get_bc3_pyros()
+        data_base["final_energy"] = self.mi.get_final_energy()
+        data_base["solenoid"] = self.mi.get_sol_value()
+        data_base["nbunches"] = self.mi.get_nbunches()
+
         orbit = []
         dict_cav = {}
 
@@ -53,6 +70,10 @@ class SaveOptParams:
         data_base["charge"] = 0
         data_base["gun_energy"] = self.mi.get_gun_energy()
         print("save action", data_base)
+
+        all_data.append(data_base)
+        with open(filename, 'wb') as f:
+            pickle.dump(all_data, f)
 
 
 class FLASH1MachineInterface():
@@ -186,7 +207,48 @@ class FLASH1MachineInterface():
             f = np.linspace(f_min, f_max, len(spec))
     
         return f, spec
- 
+    def get_charge(self):
+        charge = pydoocs.read('TTF2.FEEDBACK/LONGITUDINAL/MONITOR2/MEAN_AVG')
+        #print("charge = ", charge["data"], " nQ")
+        return charge["data"]
+
+    def get_wavelangth(self):
+        wavelength = pydoocs.read('TTF2.DAQ/ENERGY.DOGLEG/LAMBDA_MEAN/VAL')
+        #print("wavelength = ", wavelength["data"], "nm")
+        return wavelength["data"]
+
+    def get_bc2_pyros(self):
+        bc2_pyro = pydoocs.read( "FLASH.DIAG/BCM/9DBC2.1/CH00.FLASH1")
+        bc2_pyro_fine = pydoocs.read("FLASH.DIAG/BCM/9DBC2.2/CH00.FLASH1")
+        #print("BC2 comp_fine = ", bc2_pyro["data"], bc2_pyro_fine["data"])
+        return (bc2_pyro["data"], bc2_pyro_fine["data"])
+
+    def get_bc3_pyros(self):
+        bc3_pyro = pydoocs.read("FLASH.DIAG/BCM/4DBC3.1/CH00.FLASH1")
+        bc3_pyro_fine = pydoocs.read("FLASH.DIAG/BCM/4DBC3.2/CH00.FLASH1")
+        #print("BC3 comp_fine = ", bc3_pyro["data"], bc3_pyro_fine["data"])
+        return (bc3_pyro["data"], bc3_pyro_fine["data"])
+
+
+    def get_final_energy(self):
+        final_energy = pydoocs.read("TTF2.FEEDBACK/LONGITUDINAL/MONITOR11/MEAN_AVG")
+        #print("final_energy = ", final_energy["data"], "MeV")
+        return final_energy["data"]
+
+    def get_sol_value(self):
+        sol = pydoocs.read("TTF2.MAGNETS/SOL/1GUN/PS")
+        #print("sol = ", sol["data"], "A")
+        return sol["data"]
+
+    def get_nbunches(self):
+        nbunches = pydoocs.read("FLASH.DIAG/TIMER/FLASHCPUTIME1.0/NUMBER_BUNCHES.1")
+        #print("nbunches = ", nbunches["data"])
+        return nbunches["data"]
+
+    def get_value_ps(self, device_name):
+        ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS'
+        return pydoocs.read(ch)['data']
+
     def get_value(self, device_name):
         ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS.RBV'
         return pydoocs.read(ch)['data']

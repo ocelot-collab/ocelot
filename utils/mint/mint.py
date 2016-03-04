@@ -617,6 +617,28 @@ class TestInterface:
         Y = np.zeros(len(devnames))
         return X, Y
 
+    def get_charge(self):
+        return 0.
+
+    def get_wavelangth(self):
+        return 0.
+
+    def get_bc2_pyros(self):
+        return (0, 0)
+
+    def get_bc3_pyros(self):
+        return (0, 0)
+
+    def get_final_energy(self):
+        return 0
+
+    def get_sol_value(self):
+        return 0
+
+    def get_nbunches(self):
+        return 0
+    def get_value_ps(self, device_name):
+        return 0.
 '''
 flight simulator implementation of the machine interface
 '''

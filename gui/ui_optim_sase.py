@@ -30,8 +30,10 @@ class Ui_MainWindow(object):
         self.sase_cntr = Dock("Controls", size=(150,200))
         self.orb_cntr = Dock("orb contr.", size=(400,100))
         self.cur_fig = Dock("Currents", size=(400,300))
+        #self.cur_cntr = Dock("Currents", size=(100,300))
 
         self.area.addDock(self.cur_fig, 'left')
+
         self.area.addDock(self.orb_fig, 'above', self.cur_fig)      ## place d1 at left edge of dock area (it will fill the whole space since there are no other docks yet)
         self.area.addDock(self.sase_fig, 'right')     ## place d2 at right edge of dock area
         self.area.addDock(self.blm_fig, 'bottom', self.sase_fig)## place d3 at bottom edge of d1
@@ -71,10 +73,15 @@ class Ui_MainWindow(object):
 
 
         #Currents graphics
+        self.t_cur_cntr = ParameterTree()
+        param = [{'name': 'Devices', 'type': 'list', 'values': {}, 'value': 0}]
+        self.p_cur_cntr = Parameter.create(name='control', type='group', children=param)
+        self.t_cur_cntr.setParameters(self.p_cur_cntr, showTop=False)
+
         self.current = pg.PlotWidget(title="Currents")
 
-        self.cur_fig.addWidget(self.current)
-
+        self.cur_fig.addWidget(self.current, row=0, col=0)
+        self.cur_fig.addWidget(self.t_cur_cntr, row=0, col=1)
 
         # Orbit graphics
         #self.orbit = pg.PlotWidget(title="Orbit")

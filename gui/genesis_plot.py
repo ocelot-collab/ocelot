@@ -340,12 +340,16 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=Fals
     # ax_spectrum
     # ax_size_t
 
+#    if np.sum(g.p_int[:,0])==0: #Numpy does not scale log if zeros are present
+#        g.p_int[:,0]=g.p_int[:,1]/2
+#        g.p_mid[:,0]=g.p_mid[:,1]/2
+        
     ax_pow.plot(g.z, np.amax(g.p_int, axis=0), 'g-',linewidth=1.5)
     ax_pow.set_ylabel('P [W]')
     ax_pow.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_pow.get_yaxis().get_major_formatter().set_scientific(True)
-    if np.amin(g.p_int)>0:
-        ax_pow.set_yscale('log')
+#    if np.amin(g.p_int)>0:
+    ax_pow.set_yscale('log')
 
 
     # outp.power.mean_S*inp.xlamds*inp.zsep*inp.nslice/c
@@ -354,8 +358,8 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=Fals
     ax_en.set_ylabel('E [J]')
     ax_en.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_en.get_yaxis().get_major_formatter().set_scientific(True)
-    if np.amin(g.p_int)>0:
-        ax_en.set_yscale('log')
+#    if np.amin(g.p_int)>0:
+    ax_en.set_yscale('log')
 
 
     n_pad=1
@@ -363,6 +367,7 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=Fals
     power=np.pad(g.p_mid, [(int(g.nSlices/2)*n_pad, (g.nSlices-(int(g.nSlices/2))))*n_pad, (0, 0)], mode='constant')
     phase=np.pad(g.phi_mid, [(int(g.nSlices/2)*n_pad, (g.nSlices-(int(g.nSlices/2))))*n_pad, (0, 0)], mode='constant')
     # spectrum = np.power(abs(fft(np.sqrt( np.array(g.p_mid)) * np.exp( 1.j* np.array(g.phi_mid) ) , axis=0)),2)#/sqrt(g.nSlices)
+#    print power.shape
     spectrum = abs(fft(np.sqrt( np.array(power)) * np.exp( 1.j* np.array(phase) ) , axis=0))**2/sqrt(g.nSlices)/(2*g.leng/g('ncar'))**2/1e10
     e_0=1239.8/g('xlamds')/1e9
     # print e_0
@@ -380,9 +385,10 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=Fals
 #        spectrum_lamdpos(i)=np.sum(spectrum(:,i)*lamdscale/np.sum(spectrum,))
 #        spectrum_lamdwidth=sqrt(np.sum(spectrum*(lamdscale_array-spectrum_lamdpos)**2/np.sum(spectrum),axis=0))
     
-
+#    print spectrum.shape
     spectrum_norm=np.sum(spectrum,axis=0)#avoiding division by zero
     spectrum_norm[spectrum_norm==0]=1
+#    print spectrum_norm.shape
     spectrum_lamdpos=np.sum(spectrum*lamdscale_array/spectrum_norm,axis=0)
 #    print "spectrum lamdpos", spectrum_lamdpos
     spectrum_lamdwidth=sqrt(np.sum(spectrum*(lamdscale_array-spectrum_lamdpos)**2/spectrum_norm,axis=0))    
@@ -399,9 +405,9 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=Fals
 
     ax_spectrum.plot(g.z, np.amax(spectrum,axis=0), 'r-',linewidth=1.5)
     ax_spectrum.set_ylabel('P($\lambda$)_{max} [a.u]')
-    if np.amin(np.amax(spectrum,axis=0))>0:
-        ax_spectrum.set_yscale('log')
-
+#    if np.amin(np.amax(spectrum,axis=0))>0:
+    ax_spectrum.set_yscale('log')
+    
     #fix!!!
     # spectrum_lamdpos=sum(np.matlib.repmat(lamdscale,spectrum.shape[1],1)*transpose(spectrum),axis=1)/np.sum(spectrum,axis=0)
     # spectrum_width=sqrt(sum((np.power(np.matlib.repmat(lamdscale,spectrum.shape[1],1)-np.matlib.repmat(spectrum_lamdpos,spectrum.shape[1],1),2)*spectrum),1)/sum(spectrum,axis=0));
@@ -688,13 +694,15 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
 #    print 'spectrum',spectrum.shape
 
     ax_spectrum.plot(fftshift(lamdscale), fftshift(spectrum[:,zi]), 'r-')
+    ax_spectrum.text(0.5, 0.5,'on axis', horizontalalignment='center', verticalalignment='center')
     ax_spectrum.set_ylabel('P($\lambda$)')
     ax_spectrum.set_xlabel('$\lambda$ [nm]')
     ax_spectrum.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_spectrum.get_yaxis().get_major_formatter().set_scientific(True)
     ax_spectrum.get_yaxis().get_major_formatter().set_powerlimits((-3, 4))#[:,75,75]
     ax_spectrum.set_xlim([np.amin(lamdscale), np.amax(lamdscale)])
-    ax_phase.set_xlabel('s [$\mu$]')
+    ax_phase.set_xlabel('s [$\mu$m]')
+    
     #fix!!!
     # spectrum_lamdpos=sum(np.matlib.repmat(lamdscale,spectrum.shape[1],1)*transpose(spectrum),axis=1)/np.sum(spectrum,axis=0)
     # spectrum_width=sqrt(sum((np.power(np.matlib.repmat(lamdscale,spectrum.shape[1],1)-np.matlib.repmat(spectrum_lamdpos,spectrum.shape[1],1),2)*spectrum),1)/sum(spectrum,axis=0));
@@ -791,12 +799,14 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
     ax_power.yaxis.get_offset_text().set_color(ax_power.yaxis.label.get_color())
     ax_spectrum.yaxis.get_offset_text().set_color(ax_spectrum.yaxis.label.get_color())
     
+#    
+    
+    
     if save:
         fig.savefig(g.path+'_z_'+str(z)+'m.png')
     
     return fig
 #    ax_spectrum.spines['left'].set_color('red')
-
 
     
 #    ax.ticklabel_format(useOffset=False, style='plain')

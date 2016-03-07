@@ -119,6 +119,8 @@ class Ui_MainWindow(object):
 
         self.restore_cur_btn = QtGui.QPushButton('Restore')
         #self.restore_cur_btn.setEnabled(False)
+        self.setmax_opt_btn = QtGui.QPushButton('Set max')
+        #self.setmax_opt_btn.setEnabled(False)
         self.stop_opt_btn = QtGui.QPushButton('Stop')
 
 
@@ -127,11 +129,12 @@ class Ui_MainWindow(object):
         #self.stop_btn = QtGui.QPushButton('stop')
         self.w5.addWidget(self.start_opt_btm, row=0, col=0)
         self.w5.addWidget(self.restore_cur_btn, row=1, col=0)
-        self.w5.addWidget(self.stop_opt_btn, row=2, col=0)
+        self.w5.addWidget(self.setmax_opt_btn, row=2, col=0)
+        self.w5.addWidget(self.stop_opt_btn, row=3, col=0)
 
         #self.w5.addWidget(self.debug_opt_chk, row=3, col=0)
         #self.w5.addWidget(self.log_opt_chk, row=4, col=0)
-        self.w5.addWidget(self.t_cntr, row=3, col=0)
+        self.w5.addWidget(self.t_cntr, row=4, col=0)
 
         self.w5.addWidget(QtGui.QLabel("""machine settings"""), row=6, col=0)
         self.w5.addWidget(self.save_machine_btn, row=7, col=0)

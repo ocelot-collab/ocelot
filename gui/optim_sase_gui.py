@@ -222,7 +222,7 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         self.start_opt_btm.clicked.connect(self.start_opt)
         self.restore_cur_btn.clicked.connect(self.restore)
         self.stop_opt_btn.clicked.connect(self.force_stop)
-
+        self.setmax_opt_btn.clicked.connect(self.set_max_sase)
         self.save_machine_btn.clicked.connect(self.write_machine)
 
         self.save_seq_btn.clicked.connect(self.save_sequences)
@@ -340,7 +340,7 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
                 self.ndevs += len(act["devices"])
             print(self.ndevs)
             self.current.clear()
-            self.data = np.zeros((self.ndevs*2, 100))
+            self.data = np.zeros((self.ndevs*2+1, 100))
             self.current.addLegend()
             #self.curves_cur = [self.current.plot(pen=(i,self.ndevs*1.3)) for i in range(self.ndevs)]
             #self.curves_cur = [self.current.plot(pen=(i,self.ndevs*1.3)) for i in range(2)]
@@ -463,6 +463,7 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
                 surrent_set = self.opt_thread.opt.mi.get_value_ps(devname)
                 self.data[n, self.pntr_cur] = surrent_set
                 self.data[n+1, self.pntr_cur] = current_RBS
+                self.data[-1, self.pntr_cur] = self.opt_thread.opt.mi.get_sase()
                 n += 2
 
         self.pntr_cur += 1
@@ -480,6 +481,19 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
                 self.curves_cur[1].setData(self.data[2*i + 1, :self.pntr_cur])
         #for i, x in enumerate(self.data):
         #    self.curves_cur[i].setData(x[:self.pntr_cur])
+
+    def set_max_sase(self):
+        if not self.opt_thread.opt.isRunning:
+            sase = self.data[-1,:]
+            indx = np.argmax(sase)
+            devices = []
+            for p in self.p_cur_cntr:
+                devices = p.opts["values"]
+
+            for i, name in enumerate(devices):
+                I = self.data[2*i+1, indx]
+                print(name, "<-- ", I)
+                self.opt_thread.opt.mi.set_value(name, I)
 
 
     def update_sase(self):

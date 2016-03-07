@@ -16,19 +16,19 @@ c = 299792458.0
 inputTemplate = "\
  $newrun \n\
  aw0   =  __AW0__ \n\
- xkx   =  0.000000E+00\n\
- xky   =  1.000000E+00\n\
+ xkx   =  __XKX__\n\
+ xky   =  __XKY__\n\
  wcoefz =  0.000000E+00   0.000000E+00   0.000000E+00\n\
  xlamd =  __XLAMD__\n\
  fbess0 =  __FBESS0__\n\
- delaw =  0.000000E+00\n\
- iertyp =    __IERTYP__\n\
- iwityp =    __IWITYP__\n\
- awd   =  __AW0__ \n\
- awx   =  0.000000E+00\n\
- awy   =  0.000000E+00\n\
- iseed =   __ISEED__\n\
- npart = __NPART__\n\
+ delaw =  __DELAW__\n\
+ iertyp =  __IERTYP__\n\
+ iwityp =  __IWITYP__\n\
+ awd   =  __AWD__ \n\
+ awx   =  __AWX__\n\
+ awy   =  __AWY__\n\
+ iseed =  __ISEED__\n\
+ npart =  __NPART__\n\
  gamma0 =  __GAMMA0__\n\
  delgam =  __DELGAM__\n\
  rxbeam =  __RXBEAM__\n\
@@ -41,22 +41,23 @@ inputTemplate = "\
  ybeam =  __YBEAM__\n\
  pxbeam =  __PXBEAM__\n\
  pybeam =  __PYBEAM__\n\
- conditx =  0.000000E+00\n\
- condity =  0.000000E+00\n\
- bunch =  0.000000E+00\n\
- bunchphase =  0.000000E+00\n\
- emod =  0.000000E+00\n\
- emodphase =  0.000000E+00\n\
+ conditx =  __CONDITX__\n\
+ condity =  __CONDITY__\n\
+ bunch =  __BUNCH__\n\
+ bunchphase =  __BUNCHPHASE__\n\
+ emod =  __EMOD__\n\
+ emodphase =  __EMODPHASE__\n\
  xlamds =  __XLAMDS__\n\
  prad0 =  __PRAD0__\n\
+ pradh0 =  __PRADH0__\n\
  zrayl =  __ZRAYL__\n\
  zwaist =  __ZWAIST__\n\
  ncar  =  __NCAR__\n\
- lbc   =    0\n\
+ lbc   =  __LBC__\n\
  rmax0 =  __RMAX0__\n\
  dgrid =  __DGRID__\n\
- nscr  =    0\n\
- nscz  =    0\n\
+ nscr  =  __NSCR__\n\
+ nscz  =  __NSCZ__\n\
  nptr  =   __NPTR__\n\
  nwig  =   __NWIG__\n\
  zsep  =   __ZSEP__\n\
@@ -76,56 +77,56 @@ inputTemplate = "\
  qfdy  =  __QFDY__\n\
  solen =  __SOLEN__\n\
  sl    =  __SL__\n\
- ildgam =    5\n\
- ildpsi =    7\n\
- ildx  =    1\n\
- ildy  =    2\n\
- ildpx =    3\n\
- ildpy =    4\n\
- itgaus =    1\n\
+ ildgam =  __ILDGAM__\n\
+ ildpsi =  __ILDPSI__\n\
+ ildx  =  __ILDX__\n\
+ ildy  =  __ILDY__\n\
+ ildpx =  __ILDPX__\n\
+ ildpy =  __ILDPY__\n\
+ itgaus =  __ITGAUS__\n\
  nbins =    __NBINS__\n\
- igamgaus =    1\n\
+ igamgaus =  __IGAMGAUS__\n\
  lout  = 1 1 1 1 1 0 1 1 1 1 1 0 0 1 0 0 0 0 0 0 0 0 0 0\n\
- iphsty =    2\n\
- ishsty =    1\n\
- ippart =    0\n\
- ispart =    0\n\
- ipradi =    0\n\
- isradi =    0\n\
- idump =    0\n\
+ iphsty =  __IPHSTY__\n\
+ ishsty =  __ISHSTY__\n\
+ ippart =  __IPPART__\n\
+ ispart =  __ISPART__\n\
+ ipradi =  __IPRADI__\n\
+ isradi =  __ISRADI__\n\
+ idump =  __IDUMP__\n\
  iotail =    __IOTAIL__\n\
  nharm =    __NHARM__\n\
- iallharm =    1\n\
- iharmsc =    0\n\
+ iallharm =  __IALLHARM__\n\
+ iharmsc =  __IHARMSC__\n\
  curpeak =  __CURPEAK__\n\
  curlen =  __CURLEN__\n\
  ntail = __NTAIL__\n\
  nslice = __NSLICE__\n\
  __SHOTNOISE__\n\
- isntyp =    0\n\
- iall  =    0\n\
+ isntyp =  __ISNTYP__\n\
+ iall  =  __IALL__\n\
  __ITDP__\n\
  ipseed =   __IPSEED__\n\
- iscan =    0\n\
- nscan =    3\n\
+ iscan =  __ISCAN__\n\
+ nscan =  __NSCAN__\n\
  svar  =  __SVAR__\n\
- isravg =    __SRAVG__\n\
- isrsig =    __SRSIG__\n\
- cuttail = -1.000000E+00\n\
+ isravg =    __ISRAVG__\n\
+ isrsig =    __ISRSIG__\n\
+ cuttail = __CUTTAIL__\n\
  eloss =  __ELOSS__\n\
- version =  1.0\n\
- ndcut =   -1\n\
- idmpfld =    __DUMP_FIELDS__\n\
- idmppar =    __DUMP_PARTICLES__\n\
- ilog  =    0\n\
- ffspec =    0\n\
+ version =  __VERSION__\n\
+ ndcut =  __NDCUT__\n\
+ idmpfld =    __IDMPFLD__\n\
+ idmppar =    __IDMPPAR__\n\
+ ilog  =  __ILOG__\n\
+ ffspec =  __FFSPEC__\n\
  convharm =    __CONVHARM__\n\
- ibfield =  0.000000E+00\n\
- imagl =    0.000000E+00\n\
- idril =    0.000000E+00\n\
- alignradf =    1\n\
- offsetradf =    0\n\
- multconv =    0\n\
+ ibfield =  __IBFIELD__\n\
+ imagl =  __IMAGL__\n\
+ idril =  __IDRIL__\n\
+ alignradf =  __ALIGNRADF__\n\
+ offsetradf =  __OFFSETRADF__\n\
+ multconv =  __MULTCONV__\n\
 __BEAMFILE__\n\
 __PARTFILE__\n\
 __FIELDFILE__\n\
@@ -139,78 +140,144 @@ class GenesisInput:
     
     def __init__(self):
         
-        # defaults
-                
+    # defaults
+        
         self.runid = 0
-                
-        self.iertyp =0
-        self.iwityp =0
-        self.iseed = -1  #initial seeding of the random number generator for field errors
-        self.ipseed = -1  #initial seeding of the random number generator for shot noise     
-        self.emitx = 1.0e-7
-        self.emity = 1.0e-7       
-
-        self.alphax = 0.0
-        self.alphay = 0.0       
-        
-        self.gamma0 =  3.424658E+04            
-        self.curpeak = 2.500000E+03
-        self.curlen = 7E-06
-        self.zsep = 20   #separation between slices in terms of radiation length xlamds        
-        self.zrayl = 0.00001
-        
-        self.prad0 = 0 
-        self.zwaist = 0 
-        self.npart = 8192   # number of macroparticles per slice
-        self.ncar = 151   # number of grid points for field calculation along one axis
-        self.nslice = 1504   # number of slices
-        self.delz = 1.0   # time step in terms of undulator periods
-
-        self.ntail = - self.nslice / 2
-
-        self.rmax0 = 9.0   # mesh size in units of radiation+beam sizes
-        self.dgrid = 0.0   # exmplicit mesh size
-        self.nptr = 40   # space charge mesh points
-        
-        self.nwig = 98   # 
-        self.nsec = 1   #
-        self.quadf = 0   #
-        self.quadd = 0   # 
-        self.fl = 0   #
-        self.dl = 0   #
-        self.drl = 0   # 
-        self.qfdx = 0   #
-        self.qfdy = 0   # 
-        self.solen = 0   #
-        self.sl = 0   #
-        self.f1st = 0   # 
-        self.nbins = 4  # Number of bins in the particle phase. The value has to be at least 4 or larger than (2+2n), depending on whether the bunching at the nth harmonics is needed 
-        
-        self.eloss = 0
-        self.srsig = 1 # energy fluctuations from sr
-        self.sravg = 1 # energy loss from sr
-        
-        self.iorb = 0   # enforce orbit correction
-        
-        self.magin = 1   # read in magnetic lattice
-        self.magout = 0   # output magnetic lattice
-        
-        self.zstop = 256.0
-        
-        self.svar = 0.01  
-        self.convharm = 1 #When the particle distribution is imported from a PARTFILE Genesis 1.3 allows the upconversion to a higher harmonics. The harmonic number is specified with CONVHARM and has a defulat value of 1, corresponding to no up-conversion. The user has to make sure that in the input deck XLAMDS is adjusted, according to the new wavelength.
-        self.nharm = 1
-        self.iotail = 1
-        
         self.type = 'steady'
-        self.DUMP_FIELDS = 0
-        self.DUMP_PARTICLES = 0
+        
+        #undulator
+        self.aw0 = 0.735 #The normalized, dimensionless rms undulator parameter
+        self.awd = 0.735 #A virtual undulator parameter for the gap between undulator modules.
+        self.iertyp =0 # Type of undulator field errors.
+        self.iwityp =0 # the undulator type. A value of zero indicates a planar undulator, any other value a helical one. 
+        self.xkx   =  0 #Normalized natural focusing of the undulator in x. Common values are XKX = 0.0, XKY = 1.0 for a planar undulator or XKX, XKY = 0.5 for a helical undulator, but might vary if focusing by curved pole faces is simulated. The values should fulfill the constraint XKX + XKY = 1.0. 
+        self.xky   =  1 #Normalized natural focusing of the undulator in y 
+        self.delaw =  0 #RMS value of the undulator field error distribution. A value of zero disables field errors. 
+        self.nwig = 98   # The number of periods within a single undulator module. The product of NWIG and XLAMD defines the length of the undulator module. 
+        self.nsec = 1   # The number of sections of the undulator.
+        self.awx   =  0 #Maximum offset in x for undulator module misalignment. The error for each individual module follows a uniform distribution
+        self.awy   =  0 #Maximum offset in y for undulator module misalignment. The error for each individual module follows a uniform distribution
+        self.iseed = -1  #initial seeding of the random number generator for field errors
 
-        #self.useBeamFile = False
+        #electron beam
+        self.curpeak = 2.5E+03 #Peak current of the electron beam. Time-independent simulations enforces a constant current. 
+        self.curlen = 7E-06 # Bunch length of the current profile. If CURLEN is positive a Gaussian distribution is generated with an rms length given by CURLEN. A negative or zero value yield a constant profile. 
+        self.npart = 8192   # number of macroparticles per slice. NPART must be a multiple of 4*NBINS
+        self.gamma0 =  3.424658E+04   # The mean energy of the electron beam in terms of the electron rest mass energy. 
+        self.delgam = 5.0E-3  #The RMS value of the energy distribution in terms of electron rest mass energy. 
+        self.rxbeam = 100e-6 #The rms value in x of the transverse, spatial distribution. 
+        self.rybeam = 100e-6 #The rms value in y of the transverse, spatial distribution.
+        self.emitx = 1.0e-7 #The normalized rms emittance in x
+        self.emity = 1.0e-7 #The normalized rms emittance in y
+        self.alphax = 0.0 #Rotation of the transverse phase space distribution in x according to the standard definition ALPHAX = - < xx' > GAMMA0 / EMITX. 
+        self.alphay = 0.0 #Rotation of the transverse phase space distribution in y according to the standard definition ALPHAY = - < yy' > GAMMA0 / EMITY. 
+        self.xbeam = 0.0 #Transverse position in x of the electron beam at the undulator entrance with respect to the undulator axis
+        self.ybeam = 0.0 #Transverse position in y of the electron beam at the undulator entrance with respect to the undulator axis
+        self.pxbeam = 0.0 #Average normalized transverse momentum x of the electron beam at the undulator entrance. The momenta are defined as PXBEAM = betax*gamma where betax = c*v_x is the average transverse velocity and gamma the Lorenz factor of the electron energy. 
+        self.pybeam = 0.0 #y
+        self.cuttail = -1.0 #Cut in the transverse phase space in measures of the rms size to collimate transverse beam tails/halos. The cut is applied after the loading and beam current is set accordingly to the reduced number of macro particles. It is disabled if the value is negative or the electron beam is imported from an external file. 
+        self.conditx =  0.0 #the correlation strength between the amplitude of the eletron's betatron oscillation x and its energy.
+        self.condity =  0.0 # y
+        self.bunch =  0.0 #Initial value of the bunching factor, when quite loading is used. 
+        self.bunchphase =  0.0 # Phase of initial bunching, when quite loading is used. 
+        self.emod =  0.0 #Initial energy modulation, when quite loading is used. The value is the modulation amplitude in terms of gamma. 
+        self.emodphase =  0.0 #Phase of initial energy modulation, when quite loading is used. 
+
+        #particle loading
+        self.ildpsi =    7 #Indices of the Hammersley sequence bases for loading the particle phase. 
+        self.ildgam =    5 #Hammersley base for loading the energy distribution. 
+        self.ildx  =    1 #Hammersley base for loading the distribution in x.
+        self.ildy  =    2 #Hammersley base for loading the distribution in y.
+        self.ildpx =    3 #Hammersley base for loading the distribution in px.
+        self.ildpy =    4 #Hammersley base for loading the distribution in py.
+        self.itgaus =    1 #Defines distribution profile in the transverse variables. The available distributions are: Gaussian (1) Uniform (2) Parabolic (otherwise) 
+        self.igamgaus =    1 #Defines distribution profile in energy. A non-zero value generates a Gaussian distribution and a uniform otherwise.
+        self.iall  =    0 #A non-zero value of IALL enforces that all slices are starting with the same element of the Hammersley sequences.
+        self.ipseed = -1  #Initial seed for the random number generator used for particle phase fluctuation (shot noise). GENESIS 1.3 requires a re-initialization of the random number generator to guarantee the same loading whether magnetic field errors are used or not. 
+        self.nbins = 4  # Number of bins in the particle phase. The value has to be at least 4 or larger than (2+2n), depending on whether the bunching at the nth harmonics is needed for space charge calculations or output.
+        
+        #radiation
+        self.xlamds = 1E-9 #The resonant radiation wavelength.
+        self.prad0 = 0 #The input power of the radiation field.
+        self.pradh0 = 0 #Radiation power for seeding with a harmonics, defined by NHARM.
+        self.zrayl = 0.5 #The Rayleigh length of the seeding radiation field.
+        self.zwaist = 0 # Position of the waist of the seeding radiation field with respect to the undulator entrance.
+
+        #mesh
+        self.ncar = 151   # The number of grid points for the radiation field along a single axis. The total number for the mesh is NCAR^2
+        self.lbc   =    0 # Flag to set the boundary condition for the field solver. The options are Direchlet boundary condition (LBC = 0) and Neumann boundary condition (otherwise).
+        self.nscr  =    0 #Number of azimuthal modes for space charge calculation. 
+        self.nscz  =    0 #Number of longitudinal Fourier components for space charge calculation. NSCZ must be greater than 0 to include space charge but less than (2NBINS+2) for valid results. 
+        self.nptr = 40   # Number of radial grid points, on which the space charge field is evaluated.
+        self.rmax0 = 9.0   # mesh size in units of radiation+beam sizes
+        self.dgrid = 0.0   # explicit trnsverse mesh size overruling the calculation by the RMAX0-parameter. 
+        
+        
+        #focusing
+        self.quadf = 0   # The field strength of (F-)quadrupoles, focusing in the x-plane. 
+        self.quadd = 0   # The fields strength of (D-)quadrupoles, defocusing in the x-plane.
+        self.fl = 0   # Length of the F-quadrupoles in measures of the undulator period.
+        self.dl = 0   # Length of the D-quadrupoles in measures of the undulator period. 
+        self.drl = 0   # Drift length between F- and D-quadrupoles in measures of undulator period.
+        self.qfdx = 0   # Maximum transverse misplacement of the quadrupoles in x-direction. A random offset between [-,] in x is applied to every quadrupole.
+        self.qfdy = 0   # Maximum transverse misplacement of the quadrupoles in y-direction, respectively.
+        self.solen = 0   # On-axis field strength of a superimposed solenoid field. 
+        self.sl = 0   # Length of solenoid field in measures of undulator period. The solenoid is aligned to the beginning of each undulator section. 
+        self.f1st = 0   # Position within a FODO cell, where GENESIS 1.3 starts the FODO cell lattice
+        
+        #simulation
+        self.version =  1.0 #Used for backward compatibility of the input decks.
+        self.zsep = 20   #Separation of beam slices in measures of the radiation wavelength. ZSEP must be a multiple of DELZ.
+        self.nslice = 1000   # Total number of simulated slices. It defines the time window of the simulation with NSLICE * ZSEP * XLAMDS/c
+        self.ntail = - self.nslice / 2 #Position of the first simulated slice in measures of ZSEP*XLAMDS. GENESIS 1.3 starts with the tail side of the time window, progressing towards the head. Thus a negative or positive value shifts the slices towards the tail or head region of the beam, respectively.
+        self.delz = 1.0   # Integration step size in measure of the undulator period length.
+        self.zstop = 256.0 #Defines the total integration length. If the undulator length is shorter than ZSTOP or ZSTOP is zero or negative, the parameter is ignored and the integration is performed over the entire undulator. 
+        self.iorb = 0   # enforce orbit correction. For any non-zero value the offset due to the wiggle motion is taken into account for the interaction between electron beam and radiation field.
+        self.isravg = 1 # If set to a non-zero value the energy loss due to spontaneous synchrotron radiation is included in the calculation. 
+        self.isrsig = 1 # If set to a non-zero value the increase of the energy spread due to the quantum fluctuation of the spontaneous synchrotron radiation is included in the calculation.
+        self.eloss = 0 # Externally applied energy loss of the electron beam.
+        self.nharm = 1 #Enables the calculation of harmonics up to the one, specified by NHARM. Note that the number of NBINS has to be at least twice as large as NHARM to allow for the correct representation of the harmonics. Note also that this parameter does not enable automatically the output. For that the corresponding bit in LOUT has to be set as well.
+        self.iscan =    0 #Selects the parameter for a scan over a certain range of its value (e.g. 1,2,3... for  GAMMA0, DELGAM, CURPEAK... )
+        self.nscan =    3 #Number of steps per scan. 
+        self.svar = 0.01  #Defines the scan range of the selected scan parameter. The parameter is varied between (1-SVAR) and (1+SVAR) of its initial value.
+        
+        #I/O
+        self.iphsty =    1 # Generate output in the main output file at each IPHSTYth integration step. To disable output set IPHSTY to zero. 
+        self.ishsty =    1 # Generate output in the main output file for each ISHSTYth slice. 
+        self.ippart =    0 # Write the particle distribution to file at each IPPARTth integration step. To disable output set IPPART to zero. The filename is the same of the main outputfile + the extension '.par'. 
+        self.ispart =    0 # Write the particle distribution to file for every ISPART slice. 
+        self.ipradi =    0 # Write the field distribution to file at each IPRADIth integration step. To disable output set IPRADI to zero. The filename is the same of the main outputfile + the extension '.fld'. 
+        self.isradi =    0 # Write the field distribution to file for every ISRADI slice. 
+        self.iotail = 1 # If set to a non-zero value the output time window is the same as the simulated time window. Otherwise the output for the first slices covered by the slippage length is subpressed.
+        self.magin = 1   # read in magnetic lattice (If set to a non-zero value the user is prompted to type in the file name containing a explicit description of the magnetic field.)
+        self.magout = 0   # output magnetic lattice
+        self.idump =    0 # If set to a non-zero value the complete particle and field distribution is dumped at the undulator exit into two outputfiles.
+        self.idmpfld= 0 # Similar to IDUMP but only for the field distribution. 
+        self.idmppar = 0 # Similar to IDUMP but only for the particle distribution. 
         self.beamfile = None
         self.fieldfile = None
         self.partfile = None
         self.distfile = None
+        
+        self.ndcut =   -1 # ??? If NDCUT is zero, the time-window is adjusted, so that in average NPART/NBINS particles fall in each slice. 
+        self.alignradf =    1 # if zero , Genesis 1.3 aligns the radiation field to the electron beam so that the radiaiton field is one ful slippage behind the electron beam.
+        self.offsetradf =    0 # slices to shift the electrron beam with respect to the radiation if ALIGNRADF=1.
+        self.convharm = 1 #When the particle distribution is imported from a PARTFILE Genesis 1.3 allows the upconversion to a higher harmonics. The harmonic number is specified with CONVHARM and has a defulat value of 1, corresponding to no up-conversion. The user has to make sure that in the input deck XLAMDS is adjusted, according to the new wavelength.
+        self.multconv =    0 # If an imported particle distribution from a PARTFILE is up-converted to a higher harmonics the dault behavior is that the number of slices is preserved. This requires that ZSEPis adjusted together with XLAMDS. However if frequency resolution is a problem then a particle distribution can be converted and used multiple times to keep ZSEP constant. The disadvantage is that the CPU execution time is increased as well. 
+        
+        self.ibfield =  0.0 #When the PARTFILE features is used the imported particle distribution can be tracked through a generic 4 magnet chicane before running the Genesis simulation. The chicane consists out of 4 bending magnets of the field strength IBFIELD and length IMAGL separated by 5 drifts of length IDRIL.
+        self.imagl =    0.0 #The length of each bending magnet of the chicane. If the magnet length is set to zero but IDRIL is not the resulting beam line correspond to a simple drift of the length 5 times IDRIL
+        self.idril =    0.0 #The length of the 5 drift lengths of the magnetic chicane (three between the magnets and one before and after the magnets).
+        
+        self.iallharm =    1 #Setting the value to a non-zero value will also include all harmonics between 1 and NHARM
+        self.iharmsc =    0 # setting to a non-zero value includes the coupling of the harmonic radiation back to the electron beam for a self-consistent model of harmonics. Enabling this feature will automatically include all harmonics by setting IALLHARM to one.
+        self.isntyp =    0 # Non-zero if the user wants to use the Pennman algorithm for the shot noise (which is not recommended).
+        
+        self.ilog  =    0 #Create a log file.
+        self.ffspec =    0 # amplitude/phase values for spectrum calculation: 0 - on-axis power/phase along the pulse, -1 - the same in far field, 1 - near field total power
+        
+  
+        #self.useBeamFile = False
 
     def input(self):
         input = inputTemplate
@@ -1059,7 +1126,8 @@ def generate_input(up, beam, itdp=False):
     #inp.nsec = 20
         
     inp.xlamd = up.lw
-    inp.aw0 = up.K * np.sqrt(0.5)
+    inp.aw0 = up.K * np.sqrt(0.5) #The normalized, dimensionless rms undulator parameter, defined by AW0 = (e/mc)(Bu/ku), where e is the electron charge, m is electron mass, c is speed of light, ku=2pi/lambdau is the undulator wave number, lambdau is the undulator period. Bu is the rms undulator field with Bu = Bp/2 for a planar undulator and Bu = Bp for a helical undulator, where Bp is the on-axis peak field. 
+    inp.awd=inp.aw0 #A virtual undulator parameter for the gap between undulator modules. The only purpose of this parameter is to delay the longitudinal motion of the electrons in the same manner as AW0 does within the undulator modules.
     inp.delgam = beam.sigma_E / 0.000510998
     inp.gamma0 = beam.E / 0.000510998
     inp.rxbeam = np.sqrt (beam.emit_x * beam.beta_x )

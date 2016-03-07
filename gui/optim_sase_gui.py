@@ -197,7 +197,7 @@ class AThread(QtCore.QThread):
 
 
 class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
-    def __init__(self, high_level_mi, parent=None, params=None, devices=None, optimizer=None):
+    def __init__(self, parent=None, params=None, devices=None, optimizer=None):
         super(OptimApp, self).__init__(parent)
         self.setupUi(self, params=params)
         self.opt_thread = optimizer
@@ -217,11 +217,13 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
 
         #print(self.sequence)
         self.new_seq = []
-        self.hlmi = high_level_mi
+        #self.hlmi = high_level_mi
 
         self.start_opt_btm.clicked.connect(self.start_opt)
         self.restore_cur_btn.clicked.connect(self.restore)
         self.stop_opt_btn.clicked.connect(self.force_stop)
+
+        self.save_machine_btn.clicked.connect(self.write_machine)
 
         self.save_seq_btn.clicked.connect(self.save_sequences)
         self.load_seq_btn.clicked.connect(self.load_sequences)
@@ -255,7 +257,8 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         self.ptr1 = 0
         self.data_slow = np.empty(100)
         self.ptr2 = 0
-        orbit= self.hlmi.read_bpms()
+        #orbit= self.hlmi.read_bpms()
+        orbit = self.opt_thread.opt.sop.read_bpms()
         self.x = np.array([z[2] for z in orbit])
         self.y = np.array([z[3] for z in orbit])
         self.s = np.array([z[1] for z in orbit])
@@ -384,7 +387,7 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
                 print('  data:      %s'% str(data))
                 print('  ----------')
 
-            if change == "activated":
+            if change == "activated" and not self.opt_thread.opt.isRunning:
                 self.work_seq = []
                 act_name = path[0]
                 for act in self.sequence:
@@ -425,7 +428,7 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
             for child, dev in zip(p, act["devices"]):
                 if child.opts["type"] == "action":
                     continue
-                current = self.hlmi.get_value(dev)
+                current = self.opt_thread.opt.mi.get_value(dev)
                 child.setValue(str(current))
 
         self.update_current()
@@ -435,11 +438,10 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         for act in self.work_seq:
             for i, devname in enumerate(act["devices"]):
                 devices.append(devname)
-                #current = self.opt_thread.opt.mi.get_value(devname)
-                #self.data[n, self.pntr_cur] = current
+
         #print(devices)
-        for p in self.p_cur_cntr:
-            print(p)
+        #for p in self.p_cur_cntr:
+        #    print(p)
         self.p_cur_cntr.clearChildren()
         self.p_cur_cntr.addChild({'name': 'Devices', 'type': 'list', 'values': devices, 'value': 0})
         #self.p_cur_cntr.opts["values"] = devices
@@ -506,9 +508,10 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         self.curve_sase_slow.setData(self.data_slow[:self.ptr2], pen='r')
 
     def update_orbit(self):
-        orbit = self.hlmi.read_bpms()
+        orbit = self.opt_thread.opt.sop.read_bpms()
         self.x = np.array([z[2] for z in orbit])
         self.y = np.array([z[3] for z in orbit])
+        #print(self.x_ref)
         x = self.x - self.x_ref # np.random.normal(size=100)
         y = self.y - self.y_ref # np.random.normal(size=100)
 
@@ -517,14 +520,19 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         self.curve_orb_y.setData(self.s, y*1000., pen='r', symbol='o', symbolPen='r', symbolBrush=0.5, name='new')
 
     def update_blm(self):
-        alarm_vals = self.hlmi.mi.get_alarms()
+        alarm_vals = self.opt_thread.opt.sop.mi.get_alarms()
         self.curve_blm.setData(range(len(alarm_vals)+1), alarm_vals, stepMode=True, fillLevel=0, brush=(0,0,255,150))
+
+    def write_machine(self):
+        self.opt_thread.opt.sop.save_machine()
+
 
     def create_child(self):
         # here put the code that creates the new window and shows it.
         if self.window2 is None:
             self.window2 = Form2(parent=self, params=self.devices)
         self.window2.show()
+
 
 
 
@@ -583,7 +591,7 @@ def main():
 
     lat = MagneticLattice(lattice)
     sop = SaveOptParams(mi, dp, lat)
-    hlmi = HighLevelInterface(lat, mi, dp)
+    #hlmi = HighLevelInterface(lat, mi, dp)
     #opt = Optimizer(mi, dp)
     opt = Optimizer(mi, dp, sop)
     opt = AThread(optimizer=opt)
@@ -594,7 +602,7 @@ def main():
 
     devices = generate_tree_params(lat)
 
-    form = OptimApp(hlmi, params=[], devices=devices, optimizer=opt)
+    form = OptimApp(params=[], devices=devices, optimizer=opt)
 
     timer = pg.QtCore.QTimer()
     timer.timeout.connect(form.update_sase)

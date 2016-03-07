@@ -11,16 +11,51 @@ except:
     
 import re
 from pylab import *
-from ocelot.utils.mint.machine_setup import *
-
+import time
+import pickle
 
 class SaveOptParams:
     def __init__(self, mi, dp, lat=None, filename=None):
         self.mi = mi
         self.dp = dp
-        self.hlmint = None
+
         if lat != None:
-            self.hlmint = HighLevelInterface(lat, mi, dp)
+            self.lat = lat
+
+    def read_magnets(self, types):
+        id2I_dict = {}
+        for elem in self.lat.sequence:
+            if elem.type in types:
+                try:
+                    id2I_dict[elem.id] = self.mi.get_value(elem.id)
+                except:
+                    id2I_dict[elem.id] = None
+        return id2I_dict
+
+    def read_bpms(self):
+        orbit = []
+        L = 0.
+        for elem in self.lat.sequence:
+            L += elem.l
+            if elem.type == "monitor":
+                try:
+                    x, y = self.mi.get_bpms_xy([elem.id])
+                except:
+                    x, y = [None], [None]
+                orbit.append([elem.id, L - elem.l/2., x[0], y[0]])
+        return orbit
+
+    def read_cavs(self):
+        dict_cavity = {}
+        for elem in self.lat.sequence:
+            if elem.type == "cavity":
+                try:
+                    ampl = self.mi.get_cav_ampl(elem.id)
+                    phi = self.mi.get_cav_phase(elem.id)
+                except:
+                    ampl, phi = None, None
+                dict_cavity[elem.id] = [ampl, phi]
+        return dict_cavity
 
 
     def save(self, args, time, niter, flag="start"):
@@ -61,9 +96,9 @@ class SaveOptParams:
         orbit = []
         dict_cav = {}
 
-        if self.hlmint != None:
-            orbit = self.hlmint.read_bpms()
-            dict_cav = self.hlmint.read_cavs()
+        if self.lat != None:
+            orbit = self.read_bpms()
+            dict_cav = self.read_cavs()
         data_base["orbit"] = orbit
         data_base["cavs"] = dict_cav
 
@@ -73,6 +108,28 @@ class SaveOptParams:
         all_data.append(data_base)
         with open(filename, 'wb') as f:
             pickle.dump(all_data, f)
+
+
+    def save_machine(self):
+        filename = "machine.txt"
+        try:
+            with open(filename, 'rb') as f:
+                setups = pickle.load(f)
+        except:
+            setups = []
+
+        machine_setup = {}
+        machine_setup["timestamp"] = time.time()
+        machine_setup["sexts"] = self.read_magnets(["sextupole"])
+        machine_setup["quands"] = self.read_magnets(["quadrupole"])
+        machine_setup["cors"] = self.read_magnets(["hcor", "vcor"])
+        machine_setup["bends"] = self.read_magnets(["bend", "rbend", "sbend"])
+        machine_setup["cavs"] = self.read_cavs()
+
+        setups.append(machine_setup)
+        with open(filename, 'wb') as f:
+            pickle.dump(setups, f)
+
 
 
 class FLASH1MachineInterface():
@@ -106,17 +163,20 @@ class FLASH1MachineInterface():
             vals[i] = pydoocs.read(mag_channel)["data"]
         return vals
 
+    def get_cav_ampl(self, cav):
+        return pydoocs.read("FLASH.RF/LLRF.CONTROLLER/PVS." + cav + "/AMPL.SAMPLE")["data"]
+
+    def get_cav_phase(self, cav):
+        return pydoocs.read("FLASH.RF/LLRF.CONTROLLER/PVS." + cav + "/PHASE.SAMPLE")["data"]
+
     def get_cavity_info(self, cavs):
         ampls = [0.0]*len(cavs)#np.zeros(len(correctors))
         phases = [0.0]*len(cavs)#np.zeros(len(correctors))
         for i in range(len(cavs)):
             #ampl_channel = 'FLASH.RF/LLRF.CONTROLLER/CTRL.' + cavs[i] + '/SP.AMPL'
             #phase_channel = 'FLASH.RF/LLRF.CONTROLLER/CTRL.' + cavs[i] + '/SP.PHASE'
-            ampl_channel = "FLASH.RF/LLRF.CONTROLLER/PVS." + cavs[i] + "/AMPL.SAMPLE"
-            phase_channel = "FLASH.RF/LLRF.CONTROLLER/PVS." + cavs[i]+ "/PHASE.SAMPLE"
-            ampls[i] = pydoocs.read(ampl_channel)['data']
-            phases[i] = pydoocs.read(phase_channel)['data']
-            #print cavs[i], ampls[i], phases[i]
+            ampls[i] = self.get_cav_ampl(cavs[i])
+            phases[i] = self.get_cav_phase(cavs[i])
         return ampls, phases
 
     def get_gun_energy(self):

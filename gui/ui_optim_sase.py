@@ -123,7 +123,7 @@ class Ui_MainWindow(object):
 
 
         self.save_machine_btn = QtGui.QPushButton('Write')
-        self.save_machine_btn.setEnabled(False)
+        #self.save_machine_btn.setEnabled(False)
         #self.stop_btn = QtGui.QPushButton('stop')
         self.w5.addWidget(self.start_opt_btm, row=0, col=0)
         self.w5.addWidget(self.restore_cur_btn, row=1, col=0)

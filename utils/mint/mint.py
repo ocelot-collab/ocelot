@@ -639,6 +639,8 @@ class TestInterface:
         return 0
     def get_value_ps(self, device_name):
         return 0.
+
+
 '''
 flight simulator implementation of the machine interface
 '''

@@ -163,7 +163,8 @@ def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = None, save=False)
     ax_size_tpos.set_ylabel('$\sigma_{x,y}$ [$\mu$m]')
 
 
-    ax_energy.plot(g.z, np.average(g.el_energy*0.511e-3, weights=g.I, axis=0), 'b-',linewidth=1.5)
+    # ax_energy.plot(g.z, np.average(g.el_energy*0.511e-3, weights=g.I, axis=0), 'b-',linewidth=1.5) #with current as weight 
+    ax_energy.plot(g.z, np.average(g.el_energy*0.511e-3, axis=0), 'b-',linewidth=1.5)
     ax_energy.set_ylabel('E [GeV]')
     ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
     #ax_energy.plot(g.z, np.mean(g.energy_GeV,axis=0), 'g-')
@@ -441,8 +442,9 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=Fals
 #    print "spectrum lamdpos", spectrum_lamdpos
     rad_longit_size=sqrt(np.sum(g.p_int*(s_array-rad_longit_pos)**2/p_int_norm,axis=0)) #this is standard deviation (sigma)
 
-    g.p_int=np.amax(g.p_int)/1e6+g.p_int # nasty fix from division by zero
-    ax_size_t.plot(g.z, np.average(g.r_size*2*1e6, weights=g.p_int, axis=0), 'b-',linewidth=1.5)
+    #g.p_int=np.amax(g.p_int)/1e6+g.p_int # nasty fix from division by zero
+    weight=g.p_int+np.amin(g.p_int[g.p_int!=0])/1e6
+    ax_size_t.plot(g.z, np.average(g.r_size*2*1e6, weights=weight, axis=0), 'b-',linewidth=1.5)
     ax_size_t.set_ylabel('transverse [$\mu$m]')
 
     ax_size_l = ax_size_t.twinx() #longitudinal size
@@ -654,6 +656,7 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
     ax_bunching = ax_energy.twinx()
     ax_bunching.plot(s,g.bunching[:,zi],'grey',linewidth=0.5)
     ax_bunching.set_ylabel('Bunching')
+    ax_bunching.grid(False)
     
     
     n_pad=1

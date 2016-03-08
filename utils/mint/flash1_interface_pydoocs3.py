@@ -60,12 +60,12 @@ class SaveOptParams:
         return dict_cavity
 
     def send_to_db(self):
-        db = PerfDB()
-        tune_id = db.current_tuning_id()
+        #db = PerfDB()
+        tune_id = self.db.current_tuning_id()
         print ('new action for tune_id', tune_id)
-        db.new_action(tune_id, start_sase = self.data[0]["sase_slow"], end_sase = self.data[1]["sase_slow"])
+        self.db.new_action(tune_id, start_sase = self.data[0]["sase_slow"], end_sase = self.data[1]["sase_slow"])
         print ('current actions in tuning', [(t.id, t.tuning_id, t.sase_start, t.sase_end) for t in db.get_actions()])
-        action_id = db.current_action_id()
+        action_id = self.db.current_action_id()
         print ('updating', tune_id, action_id)
 
         names = np.array([self.data[0]["devices"]])
@@ -83,7 +83,7 @@ class SaveOptParams:
         #        vals[i] = np.append(vals[i], data[name])
         #print("test ",  vals)
         print(names, vals[0], vals[1])
-        db.add_action_parameters(tune_id, action_id, param_names = names, start_vals = vals[0], end_vals=vals[1])
+        self.db.add_action_parameters(tune_id, action_id, param_names = names, start_vals = vals[0], end_vals=vals[1])
 
     def save(self, args, time, niter, flag="start"):
         #filename = "simpl_data_base.txt"

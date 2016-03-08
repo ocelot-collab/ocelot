@@ -64,7 +64,7 @@ class SaveOptParams:
         tune_id = self.db.current_tuning_id()
         print ('new action for tune_id', tune_id)
         self.db.new_action(tune_id, start_sase = self.data[0]["sase_slow"], end_sase = self.data[1]["sase_slow"])
-        print ('current actions in tuning', [(t.id, t.tuning_id, t.sase_start, t.sase_end) for t in db.get_actions()])
+        print ('current actions in tuning', [(t.id, t.tuning_id, t.sase_start, t.sase_end) for t in self.db.get_actions()])
         action_id = self.db.current_action_id()
         print ('updating', tune_id, action_id)
 

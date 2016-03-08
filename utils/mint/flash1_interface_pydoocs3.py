@@ -71,7 +71,7 @@ class SaveOptParams:
 
         names = np.array([self.data[0]["devices"]])
         names = np.append(names, "time")
-
+        print("shape datda", len(self.data) )
         vals = [np.array([]), np.array([])]
         for i, val in enumerate(vals):
             print(val,  self.data[i]["currents"])
@@ -122,7 +122,7 @@ class SaveOptParams:
 
 
 
-        print("save action", data_base)
+        #print("save action", data_base)
 
 
         if flag == "start":

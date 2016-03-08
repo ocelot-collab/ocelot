@@ -353,6 +353,7 @@ class FLASH1MachineInterface():
 
     def get_value(self, device_name):
         ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS.RBV'
+        print("getting value = ", ch)
         return pydoocs.read(ch)['data']
     
     def set_value(self, device_name, val):

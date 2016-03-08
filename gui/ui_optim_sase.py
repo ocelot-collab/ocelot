@@ -119,7 +119,7 @@ class Ui_MainWindow(object):
 
         self.restore_cur_btn = QtGui.QPushButton('Restore')
         #self.restore_cur_btn.setEnabled(False)
-        self.setmax_opt_btn = QtGui.QPushButton('Set max')
+        self.setmax_opt_btn = QtGui.QPushButton('Set cur')
         #self.setmax_opt_btn.setEnabled(False)
         self.stop_opt_btn = QtGui.QPushButton('Stop')
 

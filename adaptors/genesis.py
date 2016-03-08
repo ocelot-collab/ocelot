@@ -49,7 +49,6 @@ inputTemplate = "\
  emodphase =  __EMODPHASE__\n\
  xlamds =  __XLAMDS__\n\
  prad0 =  __PRAD0__\n\
- pradh0 =  __PRADH0__\n\
  zrayl =  __ZRAYL__\n\
  zwaist =  __ZWAIST__\n\
  ncar  =  __NCAR__\n\
@@ -96,8 +95,6 @@ inputTemplate = "\
  idump =  __IDUMP__\n\
  iotail =    __IOTAIL__\n\
  nharm =    __NHARM__\n\
- iallharm =  __IALLHARM__\n\
- iharmsc =  __IHARMSC__\n\
  curpeak =  __CURPEAK__\n\
  curlen =  __CURLEN__\n\
  ntail = __NTAIL__\n\
@@ -136,6 +133,10 @@ __MAGFILE__\n\
  filetype ='ORIGINAL'\n\
  $end\n"
 
+ # iallharm =  __IALLHARM__\n\
+ # iharmsc =  __IHARMSC__\n\
+ # pradh0 =  __PRADH0__\n\
+ 
 class GenesisInput:
     
     def __init__(self):
@@ -226,7 +227,7 @@ class GenesisInput:
         self.f1st = 0   # Position within a FODO cell, where GENESIS 1.3 starts the FODO cell lattice
         
         #simulation
-        self.version =  1.0 #Used for backward compatibility of the input decks.
+        self.version =  0.1 #Used for backward compatibility of the input decks.
         self.zsep = 20   #Separation of beam slices in measures of the radiation wavelength. ZSEP must be a multiple of DELZ.
         self.nslice = 1000   # Total number of simulated slices. It defines the time window of the simulation with NSLICE * ZSEP * XLAMDS/c
         self.ntail = - self.nslice / 2 #Position of the first simulated slice in measures of ZSEP*XLAMDS. GENESIS 1.3 starts with the tail side of the time window, progressing towards the head. Thus a negative or positive value shifts the slices towards the tail or head region of the beam, respectively.
@@ -269,7 +270,7 @@ class GenesisInput:
         self.imagl =    0.0 #The length of each bending magnet of the chicane. If the magnet length is set to zero but IDRIL is not the resulting beam line correspond to a simple drift of the length 5 times IDRIL
         self.idril =    0.0 #The length of the 5 drift lengths of the magnetic chicane (three between the magnets and one before and after the magnets).
         
-        self.iallharm =    1 #Setting the value to a non-zero value will also include all harmonics between 1 and NHARM
+        self.iallharm =    0 #Setting the value to a non-zero value will also include all harmonics between 1 and NHARM
         self.iharmsc =    0 # setting to a non-zero value includes the coupling of the harmonic radiation back to the electron beam for a self-consistent model of harmonics. Enabling this feature will automatically include all harmonics by setting IALLHARM to one.
         self.isntyp =    0 # Non-zero if the user wants to use the Pennman algorithm for the shot noise (which is not recommended).
         

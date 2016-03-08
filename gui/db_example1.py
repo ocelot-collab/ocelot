@@ -15,7 +15,7 @@ for t in tunes:
     
 print (' *** selection ***')
 for t in tunes:
-    if abs(t.wl - 13.6) < 0.01 and t.charge  < 0.4: 
+        #if abs(t.wl - 13.6) < 0.01 and t.charge  < 0.4:
         print ('\ntime={} id={} c={} wl={}'.format(t.time, t.id, t.charge, t.wl))
         print ('machine parameters', [p[1:] for p in db.get_machine_parameters(t.id)])
         print ('   actions:')

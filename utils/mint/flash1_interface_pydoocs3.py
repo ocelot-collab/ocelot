@@ -60,7 +60,7 @@ class SaveOptParams:
         return dict_cavity
 
     def send_to_db(self):
-        #db = PerfDB()
+        self.db = PerfDB()
         tune_id = self.db.current_tuning_id()
         print ('new action for tune_id', tune_id)
         self.db.new_action(tune_id, start_sase = self.data[0]["sase_slow"], end_sase = self.data[1]["sase_slow"])

@@ -71,7 +71,7 @@ class SaveOptParams:
 
         names = np.array([self.data[0]["devices"]])
         names = np.append(names, "time")
-        print("shape datda", len(self.data) )
+        #print("shape datda", len(self.data) )
         vals = [np.array([]), np.array([])]
         for i, val in enumerate(vals):
             print(val,  self.data[i]["currents"])
@@ -83,7 +83,7 @@ class SaveOptParams:
         #    for name in data.keys():
         #        vals[i] = np.append(vals[i], data[name])
         #print("test ",  vals)
-        print(names, vals[0], vals[1])
+        #print(names, vals[0], vals[1])
         self.db.add_action_parameters(tune_id, action_id, param_names = names, start_vals = vals[0], end_vals=vals[1])
 
     def save(self, args, time, niter, flag="start"):
@@ -131,6 +131,7 @@ class SaveOptParams:
             self.data.append(data_base)
         else:
             self.data.append(data_base)
+            print("#### ***** ", len(self.data))
             self.send_to_db()
             self.data = []
         #all_data.append(data_base)
@@ -168,7 +169,7 @@ class SaveOptParams:
         mach_par.update(cors)
         mach_par.update(bends)
         #mach_par.update(cavs)
-        print(mach_par)
+        #print(mach_par)
         self.db.add_machine_parameters(tune_id, params = mach_par)
         print ('current machine parameters', self.db.get_machine_parameters(tune_id))
 
@@ -436,16 +437,16 @@ class FLASH1DeviceProperties:
 
     def set_limits(self, dev_name, limits):
         self.patterns[dev_name] = re.compile(dev_name)
-        print(self.patterns[dev_name])
+        #print(self.patterns[dev_name])
         self.limits[dev_name] = limits
-        print("inside dp set = ", self.patterns[dev_name], self.limits)
+        #print("inside dp set = ", self.patterns[dev_name], self.limits)
 
     def get_limits(self, device):
-        print(self.limits)
+        #print(self.limits)
         for k in self.patterns.keys():
-            print('testing', k)
+            #print('testing', k)
             if self.patterns[k].match(device) != None:
-                print("inside dp get = ", device, self.limits[k])
+                #print("inside dp get = ", device, self.limits[k])
                 return self.limits[k]
         return [-2, 2]
 

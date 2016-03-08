@@ -129,6 +129,7 @@ class SaveOptParams:
             print(flag)
             self.data = []
             self.data.append(data_base)
+            print("#### ***** start", len(self.data))
         else:
             self.data.append(data_base)
             print("#### ***** ", len(self.data))

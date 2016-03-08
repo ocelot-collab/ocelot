@@ -13,12 +13,14 @@ import re
 from pylab import *
 import time
 import pickle
+from ocelot.utils.db import *
 
 class SaveOptParams:
     def __init__(self, mi, dp, lat=None, filename=None):
         self.mi = mi
         self.dp = dp
-
+        self.db = PerfDB()
+        self.data = []
         if lat != None:
             self.lat = lat
 
@@ -57,15 +59,39 @@ class SaveOptParams:
                 dict_cavity[elem.id] = [ampl, phi]
         return dict_cavity
 
+    def send_to_db(self):
+        db = PerfDB()
+        tune_id = db.current_tuning_id()
+        print ('new action for tune_id', tune_id)
+        db.new_action(tune_id, start_sase = self.data[0]["sase_slow"], end_sase = self.data[1]["sase_slow"])
+        print ('current actions in tuning', [(t.id, t.tuning_id, t.sase_start, t.sase_end) for t in db.get_actions()])
+        action_id = db.current_action_id()
+        print ('updating', tune_id, action_id)
+
+        names = np.array([self.data[0]["devices"]])
+        names = np.append(names, "time")
+
+        vals = [np.array([]), np.array([])]
+        for i, val in enumerate(vals):
+            print(val,  self.data[i]["currents"])
+            vals[i] = np.append(vals[i], self.data[i]["currents"])
+            vals[i] = np.append(vals[i], self.data[i]["timestamp"])
+
+        #vals = [np.array([]), np.array([])]
+        #for i, data in enumerate(self.data):
+        #    for name in data.keys():
+        #        vals[i] = np.append(vals[i], data[name])
+        #print("test ",  vals)
+        print(names, vals[0], vals[1])
+        db.add_action_parameters(tune_id, action_id, param_names = names, start_vals = vals[0], end_vals=vals[1])
 
     def save(self, args, time, niter, flag="start"):
-        filename = "simpl_data_base.txt"
-        try:
-            with open(filename, 'rb') as f:
-                all_data = pickle.load(f)
-        except:
-            all_data = []
-
+        #filename = "simpl_data_base.txt"
+        #try:
+        #    with open(filename, 'rb') as f:
+        #        all_data = pickle.load(f)
+        #except:
+        #    all_data = []
 
         data_base = {}
         data_base["flag"] = flag
@@ -85,50 +111,64 @@ class SaveOptParams:
         data_base["sase"] = self.mi.get_sase()
         data_base["sase_slow"] = self.mi.get_sase(detector='gmd_fl1_slow')
 
-        data_base["charge"] = self.mi.get_charge()
-        data_base["wavelength"] = self.mi.get_wavelangth()
-        data_base["bc2_pyros"] = self.mi.get_bc2_pyros()
-        data_base["bc3_pyros"] = self.mi.get_bc3_pyros()
-        data_base["final_energy"] = self.mi.get_final_energy()
-        data_base["solenoid"] = self.mi.get_sol_value()
-        data_base["nbunches"] = self.mi.get_nbunches()
+
+
 
         orbit = []
-        dict_cav = {}
-
         if self.lat != None:
             orbit = self.read_bpms()
-            dict_cav = self.read_cavs()
         data_base["orbit"] = orbit
-        data_base["cavs"] = dict_cav
 
-        data_base["gun_energy"] = self.mi.get_gun_energy()
+
+
         print("save action", data_base)
 
-        all_data.append(data_base)
-        with open(filename, 'wb') as f:
-            pickle.dump(all_data, f)
+
+        if flag == "start":
+            print(flag)
+            self.data = []
+            self.data.append(data_base)
+        else:
+            self.data.append(data_base)
+            self.send_to_db()
+            self.data = []
+        #all_data.append(data_base)
+        #with open(filename, 'wb') as f:
+        #    pickle.dump(all_data, f)
 
 
-    def save_machine(self):
-        filename = "machine.txt"
-        try:
-            with open(filename, 'rb') as f:
-                setups = pickle.load(f)
-        except:
-            setups = []
+    def new_tuning(self):
+        sexts =  self.read_magnets(["sextupole"])
+        quands = self.read_magnets(["quadrupole"])
+        cors =   self.read_magnets(["hcor", "vcor"])
+        bends =  self.read_magnets(["bend", "rbend", "sbend"])
+        cavs = self.read_cavs()
 
-        machine_setup = {}
-        machine_setup["timestamp"] = time.time()
-        machine_setup["sexts"] = self.read_magnets(["sextupole"])
-        machine_setup["quands"] = self.read_magnets(["quadrupole"])
-        machine_setup["cors"] = self.read_magnets(["hcor", "vcor"])
-        machine_setup["bends"] = self.read_magnets(["bend", "rbend", "sbend"])
-        machine_setup["cavs"] = self.read_cavs()
+        charge = self.mi.get_charge()
+        wl = self.mi.get_wavelangth()
 
-        setups.append(machine_setup)
-        with open(filename, 'wb') as f:
-            pickle.dump(setups, f)
+        self.db.new_tuning({'wl': wl, 'charge': charge, 'comment': 'test tuning'}) # creates new tuning record (e.g. for each shift);
+        tunings = self.db.get_tunings()
+        print ('current tunings', [(t.id, t.time, t.charge, t.wl) for t in tunings])
+        tune_id = self.db.current_tuning_id()
+        print ('current id', tune_id)
+
+        mach_par = {}
+        #mach_par["bc2_pyros"] = self.mi.get_bc2_pyros()
+        #mach_par["bc3_pyros"] = self.mi.get_bc3_pyros()
+        mach_par["final_energy"] = self.mi.get_final_energy()
+        mach_par["solenoid"] = self.mi.get_sol_value()
+        mach_par["nbunches"] = self.mi.get_nbunches()
+        mach_par["gun_energy"] = self.mi.get_gun_energy()
+        mach_par["time"] = time.time()
+        mach_par.update(sexts)
+        mach_par.update(quands)
+        mach_par.update(cors)
+        mach_par.update(bends)
+        #mach_par.update(cavs)
+        print(mach_par)
+        self.db.add_machine_parameters(tune_id, params = mach_par)
+        print ('current machine parameters', self.db.get_machine_parameters(tune_id))
 
 
 
@@ -266,6 +306,7 @@ class FLASH1MachineInterface():
             f = np.linspace(f_min, f_max, len(spec))
     
         return f, spec
+
     def get_charge(self):
         charge = pydoocs.read('TTF2.FEEDBACK/LONGITUDINAL/MONITOR2/MEAN_AVG')
         #print("charge = ", charge["data"], " nQ")

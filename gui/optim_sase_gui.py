@@ -538,7 +538,7 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         self.curve_blm.setData(range(len(alarm_vals)+1), alarm_vals, stepMode=True, fillLevel=0, brush=(0,0,255,150))
 
     def write_machine(self):
-        self.opt_thread.opt.sop.save_machine()
+        self.opt_thread.opt.sop.new_tuning()
 
 
     def create_child(self):
@@ -600,7 +600,7 @@ class Form2(QtGui.QMainWindow, ui_optim_sase.Ui_ChildWindow):
 
 def main():
     mi = FLASH1MachineInterface()
-    #mi = TestInterface()
+    mi = TestInterface()
     dp = FLASH1DeviceProperties()
 
     lat = MagneticLattice(lattice)

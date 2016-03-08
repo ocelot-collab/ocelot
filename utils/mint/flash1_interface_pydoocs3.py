@@ -63,6 +63,7 @@ class SaveOptParams:
         self.db = PerfDB()
         tune_id = self.db.current_tuning_id()
         print ('new action for tune_id', tune_id)
+        print("############# sase=", self.data[0]["sase_slow"],self.data[1]["sase_slow"] )
         self.db.new_action(tune_id, start_sase = self.data[0]["sase_slow"], end_sase = self.data[1]["sase_slow"])
         print ('current actions in tuning', [(t.id, t.tuning_id, t.sase_start, t.sase_end) for t in self.db.get_actions()])
         action_id = self.db.current_action_id()
@@ -138,6 +139,7 @@ class SaveOptParams:
 
 
     def new_tuning(self):
+        self.db = PerfDB()
         sexts =  self.read_magnets(["sextupole"])
         quands = self.read_magnets(["quadrupole"])
         cors =   self.read_magnets(["hcor", "vcor"])

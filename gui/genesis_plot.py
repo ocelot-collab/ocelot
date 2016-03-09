@@ -209,8 +209,11 @@ def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = None, save=False)
 
     fig.subplots_adjust(top=0.95, bottom=0.1, right=0.85, left=0.15)
 
+    aw_tmp=np.array(g.aw)[np.array(g.aw)!=0]
+    if np.amax(aw_tmp)!=np.amin(aw_tmp):
+        ax_und.set_ylim([np.amin(aw_tmp),np.amax(aw_tmp)])
     ax_und.tick_params(axis='y', which='both', colors='b')
-    ax_und.yaxis.label.set_color('b')    
+    ax_und.yaxis.label.set_color('b')
     ax_quad.tick_params(axis='y', which='both', colors='r')
     ax_quad.yaxis.label.set_color('r') 
     ax_energy.tick_params(axis='y', which='both', colors='b')

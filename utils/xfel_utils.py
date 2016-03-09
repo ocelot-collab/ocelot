@@ -111,7 +111,7 @@ def rematch(beta_mean, l_fodo, qdh, lat, extra_fodo, beam, qf, qd):
     beam.beta_y, beam.alpha_y = tw0m.beta_y, tw0m.alpha_y
 
 
-def run(inp, launcher):
+def run(inp, launcher,plot=None):
     
     try:
         os.makedirs(inp.run_dir)
@@ -140,6 +140,15 @@ def run(inp, launcher):
     launcher.launch()
     
     g = readGenesisOutput(out_file)
+    
+    save=True
+    if plot == 'all':
+        from ocelot.gui.genesis_plot import *
+        gen_outplot_e(g,save=save)
+        gen_outplot_ph(g,save=save)
+        gen_outplot_z(g, z=0,save=save)
+        gen_outplot_z(g, z=inf,save=save)
+    
     return g
 
 
@@ -207,19 +216,23 @@ def create_exp_dir(exp_dir, run_ids):
 def checkout_run(run_dir, run_id, prefix1, prefix2, save=True):
     old_file = run_dir + '/run.' +str(run_id) + prefix1 + '.gout'
     new_file = run_dir + '/run.' +str(run_id) + prefix2 + '.gout'
+    
     os.system('cp ' + old_file + ' ' + new_file )
-    try: os.system('cp ' + old_file + '.dfl ' + new_file + '.dfl') except OSError as exc: pass
-    try: os.system('cp ' + old_file + '.dpa ' + new_file + '.dpa') except OSError as exc: pass
-    try: os.system('cp ' + old_file + '.beam ' + new_file + '.beam') except OSError as exc: pass
+    os.system('cp ' + old_file + '.dfl ' + new_file + '.dfl 2>/dev/null') # 2>/dev/null to suypress error messages if no such file
+    os.system('cp ' + old_file + '.dpa ' + new_file + '.dpa 2>/dev/null') 
+    os.system('cp ' + old_file + '.beam ' + new_file + '.beam 2>/dev/null') 
+    
     os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout')
-    try: os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout.dfl') except OSError as exc: pass
-    try: os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout.dpa') except OSError as exc: pass
-    try: os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout.beam') except OSError as exc: pass
+    os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout.dfl 2>/dev/null') 
+    os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout.dpa 2>/dev/null') 
+    os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout.beam 2>/dev/null') 
+
     if not save:
         os.system('rm ' + old_file)
-        try: os.system('rm ' + old_file + '.dfl ') except OSError as exc: pass
-        try: os.system('rm ' + old_file + '.dpa ') except OSError as exc: pass
-        try: os.system('rm ' + old_file + '.beam ') except OSError as exc: pass
+        os.system('rm ' + old_file + '.dfl  2>/dev/null') 
+        os.system('rm ' + old_file + '.dpa  2>/dev/null') 
+        os.system('rm ' + old_file + '.beam  2>/dev/null') 
+
 
 
 def show_output(g, show_field = False, show_slice=0):

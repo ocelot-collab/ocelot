@@ -1584,8 +1584,12 @@ def transform_beam_file(beam_file = None, out_file='tmp.beam', transform = [ [25
 
 def cut_beam(beam = None, cut_z = [-inf, inf]):
     if np.amin(beam.z)<cut_z[0] or np.amax(beam.z)>cut_z[1]:
-    
+        
         condition = (beam.z > cut_z[0]) * (beam.z<cut_z[1])
+        beam_new = Beam()
+        beam_new.column_values = beam.column_values
+        beam_new.columns = beam.columns
+        
         beam_new.x = np.extract(condition,beam.x)
         beam_new.px = np.extract(condition,beam.px)
         beam_new.y = np.extract(condition,beam.y)
@@ -1606,6 +1610,9 @@ def cut_beam(beam = None, cut_z = [-inf, inf]):
 
         beam_new.zsep = beam.zsep
         zmax, Imax = peaks(beam_new.z, beam_new.I, n=1)
+        print zmax, Imax
+        # idx = beam.z.index(zmax)
+        # beam_new.idx_max = idx
         beam_new.idx_max = np.where(beam_new.z == zmax)[0][0]
     else:
         beam_new=beam

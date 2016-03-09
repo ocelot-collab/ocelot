@@ -1580,7 +1580,39 @@ def transform_beam_file(beam_file = None, out_file='tmp.beam', transform = [ [25
         beam_new.f_str = beam_file_str(beam_new)
     
     return beam_new
+  
+
+def cut_beam_file(beam_file = None, cut_z = [-inf, inf]):
+    if np.amin(beam.z)<cut_z[0] or np.amax(beam.z)>cut_z[1]:
     
+        condition = (beam.z > cut_z[0]) * (beam.z<cut_z[1])
+        beam_new.x = np.extract(condition,beam.x)
+        beam_new.px = np.extract(condition,beam.px)
+        beam_new.y = np.extract(condition,beam.y)
+        beam_new.py = np.extract(condition,beam.py)
+        beam_new.z = np.extract(condition,beam.z)
+        
+        beam_new.I = np.extract(condition,beam.I)
+        beam_new.ex = np.extract(condition,beam.ex)
+        beam_new.ey = np.extract(condition,beam.ey)
+        beam_new.g0 = np.extract(condition,beam.g0)
+        beam_new.dg = np.extract(condition,beam.dg)
+        beam_new.eloss = np.extract(condition,beam.eloss)
+        
+        beam_new.betax = np.extract(condition,beam.betax)
+        beam_new.betay = np.extract(condition,beam.betay)
+        beam_new.alphax = np.extract(condition,beam.alphax)
+        beam_new.alphay = np.extract(condition,beam.alphay)
+
+        beam_new.zsep = beam.zsep
+        zmax, Imax = peaks(beam_new.z, beam_new.I, n=1)
+        beam_new.idx_max = np.where(beam_new.z == zmax)[0][0]
+    else:
+        beam_new=beam
+    return beam_new
+        
+
+  
 def find_transform(g1,g2):
     '''
     find transform from twiss matrix g1 to g2: x -> M x, g -> Mi.T g M

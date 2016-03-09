@@ -1582,7 +1582,7 @@ def transform_beam_file(beam_file = None, out_file='tmp.beam', transform = [ [25
     return beam_new
   
 
-def cut_beam_file(beam_file = None, cut_z = [-inf, inf]):
+def cut_beam(beam = None, cut_z = [-inf, inf]):
     if np.amin(beam.z)<cut_z[0] or np.amax(beam.z)>cut_z[1]:
     
         condition = (beam.z > cut_z[0]) * (beam.z<cut_z[1])

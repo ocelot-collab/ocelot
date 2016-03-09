@@ -208,18 +208,18 @@ def checkout_run(run_dir, run_id, prefix1, prefix2, save=True):
     old_file = run_dir + '/run.' +str(run_id) + prefix1 + '.gout'
     new_file = run_dir + '/run.' +str(run_id) + prefix2 + '.gout'
     os.system('cp ' + old_file + ' ' + new_file )
-    os.system('cp ' + old_file + '.dfl ' + new_file + '.dfl')
-    os.system('cp ' + old_file + '.dpa ' + new_file + '.dpa')
-    os.system('cp ' + old_file + '.beam ' + new_file + '.beam')
+    try: os.system('cp ' + old_file + '.dfl ' + new_file + '.dfl') except OSError as exc: pass
+    try: os.system('cp ' + old_file + '.dpa ' + new_file + '.dpa') except OSError as exc: pass
+    try: os.system('cp ' + old_file + '.beam ' + new_file + '.beam') except OSError as exc: pass
     os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout')
-    os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout.dfl')
-    os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout.dpa')
-    os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout.beam')
+    try: os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout.dfl') except OSError as exc: pass
+    try: os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout.dpa') except OSError as exc: pass
+    try: os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout.beam') except OSError as exc: pass
     if not save:
         os.system('rm ' + old_file)
-        os.system('rm ' + old_file + '.dfl ')
-        os.system('rm ' + old_file + '.dpa ')
-        os.system('rm ' + old_file + '.beam ')
+        try: os.system('rm ' + old_file + '.dfl ') except OSError as exc: pass
+        try: os.system('rm ' + old_file + '.dpa ') except OSError as exc: pass
+        try: os.system('rm ' + old_file + '.beam ') except OSError as exc: pass
 
 
 def show_output(g, show_field = False, show_slice=0):

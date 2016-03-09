@@ -554,9 +554,9 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
     font_size = 1
     if fig_name is None:
         if g.filename is '':
-            fig = plt.figure('Bunch profile')
+            fig = plt.figure('Bunch profile at '+str(z)+'m')
         else:
-            fig = plt.figure('Bunch profile '+g.filename)
+            fig = plt.figure('Bunch profile at '+str(z)+'m '+g.filename)
     else:
         fig = plt.figure(fig_name)
     fig.set_size_inches(figsize,forward=True)

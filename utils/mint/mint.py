@@ -72,8 +72,8 @@ class Optimizer:
             self.wasSaved = False
 
             s.apply()
-            #if not self.wasSaved:
-            self.save_action(s.args, flag="stop")
+            if not self.wasSaved:
+                self.save_action(s.args, flag="stop")
         self.isRunning = False
 
     def save_action(self, args, flag):

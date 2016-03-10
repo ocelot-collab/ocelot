@@ -21,6 +21,7 @@ class SaveOptParams:
         self.dp = dp
         self.db = PerfDB()
         self.data = []
+        self.wasSaved = False
         if lat != None:
             self.lat = lat
 
@@ -85,7 +86,7 @@ class SaveOptParams:
         #print("test ",  vals)
         #print(names, vals[0], vals[1])
         self.db.add_action_parameters(tune_id, action_id, param_names = names, start_vals = vals[0], end_vals=vals[1])
-        #self.saved = True
+        return True
 
     def save(self, args, time, niter, flag="start"):
         #filename = "simpl_data_base.txt"
@@ -132,12 +133,14 @@ class SaveOptParams:
             self.data.append(data_base)
             print("#### ***** start", len(self.data) #, data_base
                   )
+            return True
         else:
             self.data.append(data_base)
-            print("#### ***** ", len(self.data)  #, data_base
+            print("#### ***** stop", len(self.data)  #, data_base
                   )
-            self.send_to_db()
+            self.wasSaved = self.send_to_db()
             self.data = []
+            return self.wasSaved
         #all_data.append(data_base)
         #with open(filename, 'wb') as f:
         #    pickle.dump(all_data, f)

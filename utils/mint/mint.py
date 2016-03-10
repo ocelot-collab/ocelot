@@ -79,10 +79,10 @@ class Optimizer:
     def save_action(self, args, flag):
         print("SAVE MACHINE",  flag)
         if self.sop is not None:
-            self.sop.save(args, time=time(), niter=self.niter, flag=flag)
+            self.wasSaved = self.sop.save(args, time=time(), niter=self.niter, flag=flag)
 
         self.niter = 0
-        self.wasSaved = True
+        #self.wasSaved = True
 
     def save_init_currents(self, seq):
         seq_init_cur = []

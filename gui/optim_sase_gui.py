@@ -280,11 +280,11 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
 
         self.opt_thread.opt.isRunning=False
         #print("wasSaved:", self.opt_thread.opt.wasSaved)
-        for i in range(150):
+        for i in range(300):
             sleep(0.01)
             if self.opt_thread.opt.wasSaved == True:
                 break
-            print("inside", i)
+            #print("inside", i)
         print("*** Params were saved!: ", self.opt_thread.opt.wasSaved)
         self.opt_thread.terminate()
         self.opt_thread.isRunning = False

@@ -281,9 +281,9 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         self.opt_thread.opt.isRunning=False
         #print("wasSaved:", self.opt_thread.opt.wasSaved)
         while self.opt_thread.opt.wasSaved == False:
-            sleep(0.5)
+            #sleep(0.5)
             #print("inside")
-            #pass
+            pass
         self.opt_thread.terminate()
         self.opt_thread.isRunning = False
         self.start_opt_btm.setEnabled(True)
@@ -600,7 +600,7 @@ class Form2(QtGui.QMainWindow, ui_optim_sase.Ui_ChildWindow):
 
 def main():
     mi = FLASH1MachineInterface()
-    #mi = TestInterface()
+    mi = TestInterface()
     dp = FLASH1DeviceProperties()
 
     lat = MagneticLattice(lattice)

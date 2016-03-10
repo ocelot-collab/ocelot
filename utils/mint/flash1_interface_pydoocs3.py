@@ -85,6 +85,7 @@ class SaveOptParams:
         #print("test ",  vals)
         #print(names, vals[0], vals[1])
         self.db.add_action_parameters(tune_id, action_id, param_names = names, start_vals = vals[0], end_vals=vals[1])
+        #self.saved = True
 
     def save(self, args, time, niter, flag="start"):
         #filename = "simpl_data_base.txt"

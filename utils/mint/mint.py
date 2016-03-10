@@ -633,6 +633,7 @@ class TestInterface:
         return 0
 
     def get_sol_value(self):
+        sleep(0.1)
         return 0
 
     def get_nbunches(self):

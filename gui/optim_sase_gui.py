@@ -32,7 +32,7 @@ def generate_tree_params(lat):
     sub_quad_seq = {'name': name_seq, 'type': 'group','expanded': False, 'children':[]}
     sub_quad_chld = []
 
-    print("test = ", sub_cor_seq['children'])
+    #print("test = ", sub_cor_seq['children'])
     for elem in lat.sequence:
         if elem.__class__ == Marker and elem.id in section.keys():
 
@@ -326,8 +326,8 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
             self.start_opt_btm.setEnabled(False)
             self.restore_cur_btn.setEnabled(False)
             opt_params = optim_params(self.p_cntr)
-            print("sequence for optimization: ", self.work_seq)
-            print(opt_params)
+            #print("sequence for optimization: ", self.work_seq)
+            #print(opt_params)
 
             #self.opt.set_limits(seq_dict=self.work_seq)
             self.opt_thread.seq_dict=self.work_seq
@@ -340,7 +340,7 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
             self.ndevs = 0
             for act in self.work_seq:
                 self.ndevs += len(act["devices"])
-            print(self.ndevs)
+            #print(self.ndevs)
             self.current.clear()
             self.data = np.zeros((self.ndevs*2+1, 100))
             self.current.addLegend()
@@ -352,7 +352,7 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
 
 
     def save_sequences(self):
-        fileName = QtGui.QFileDialog.getSaveFileName(self, 'Save sequences')
+        fileName = QtGui.QFileDialog.getSaveFileName(self, 'Save sequences', filter ="txt (*.seq *.)")
 
         seq = tree2seq(tree=self.p)
         if fileName:
@@ -363,7 +363,7 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
 
 
     def load_sequences(self):
-        fileName = QtGui.QFileDialog.getOpenFileName(self, 'Load file')
+        fileName = QtGui.QFileDialog.getOpenFileName(self, 'Load file', filter ="txt (*.seq *.)")
         if fileName:
             #print(fileName)
             with open(fileName, 'rb') as f:
@@ -403,7 +403,7 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
     def create_tree(self):
         self.n_seqs += 1
         self.new_seq[0]["name"] = self.new_seq[0]["name"]+str(self.n_seqs )
-        print("new name = ", self.new_seq)
+        #print("new name = ", self.new_seq)
         seq2tree(tree=self.p, seq=self.new_seq)
         self.t.setParameters(self.p, showTop=False)
 
@@ -588,7 +588,7 @@ class Form2(QtGui.QMainWindow, ui_optim_sase.Ui_ChildWindow):
         self.sequence = devices2def_seq(devices, type_devices)
 
     def create_seq(self):
-        print( "new action = ", self.sequence)
+        #print( "new action = ", self.sequence)
         self.parent().new_seq = self.sequence
         self.parent().create_tree()
         self.restore()

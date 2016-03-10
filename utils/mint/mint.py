@@ -162,13 +162,13 @@ class Optimizer:
             if self.debug: print("isRunning:", self.isRunning)
             self.niter += 1
 
-            print("number of iterations: ", self.niter)
+            print("number of func eval: ", self.niter)
 
 
             if not self.isRunning:
                 print("save machine parameters and kill optimizer")
                 self.save_action([devices, method, params], flag="force stop")
-                sleep(0.5)
+                #sleep(0.5)
                 pass
 
             #print (self.dp)

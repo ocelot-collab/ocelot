@@ -130,10 +130,12 @@ class SaveOptParams:
             print(flag)
             self.data = []
             self.data.append(data_base)
-            print("#### ***** start", len(self.data), data_base)
+            print("#### ***** start", len(self.data) #, data_base
+                  )
         else:
             self.data.append(data_base)
-            print("#### ***** ", len(self.data), data_base)
+            print("#### ***** ", len(self.data)  #, data_base
+                  )
             self.send_to_db()
             self.data = []
         #all_data.append(data_base)

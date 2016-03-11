@@ -168,7 +168,7 @@ class Optimizer:
             if not self.isRunning:
                 print("save machine parameters and kill optimizer")
                 self.save_action([devices, method, params], flag="force stop")
-                sleep(1)
+                sleep(1) # in order to give time to save parameters before next evaluation of error function
                 pass
 
             #print (self.dp)

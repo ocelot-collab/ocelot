@@ -57,45 +57,71 @@ class SaveOptParams:
                     phi = self.mi.get_cav_phase(elem.id)
                 except:
                     ampl, phi = None, None
-                dict_cavity[elem.id] = [ampl, phi]
+                dict_cavity[elem.id + ".ampl"] = ampl
+                dict_cavity[elem.id + ".phi"] = phi
         return dict_cavity
 
     def send_to_db(self):
         self.db = PerfDB()
         tune_id = self.db.current_tuning_id()
         print ('new action for tune_id', tune_id)
-        print("############# sase=", self.data[0]["sase_slow"],self.data[1]["sase_slow"] )
         self.db.new_action(tune_id, start_sase = self.data[0]["sase_slow"], end_sase = self.data[1]["sase_slow"])
         print ('current actions in tuning', [(t.id, t.tuning_id, t.sase_start, t.sase_end) for t in self.db.get_actions()])
         action_id = self.db.current_action_id()
         print ('updating', tune_id, action_id)
 
         names = np.array([self.data[0]["devices"]])
-        names = np.append(names, "time")
-        #print("shape datda", len(self.data) )
+        names = np.append(names, ["tol." + name for name in self.data[0]["devices"]])
+
+        sase_pos_name = ["sase_pos.tun.x", "sase_pos.tun.y", "sase_pos.bda.x","sase_pos.bda.y"]
+        names = np.append(names, sase_pos_name)
+
+        names = np.append(names, "timestamp")
+        names = np.append(names, "method")
+        names = np.append(names, "maxiter")
+        names = np.append(names, "sase")
+        names = np.append(names, "sase_slow")
+        names = np.append(names, "flag")
+        names = np.append(names, "niter")
+
+
+
         vals = [np.array([]), np.array([])]
         for i, val in enumerate(vals):
-            print(val,  self.data[i]["currents"])
+            #print(val,  self.data[i]["currents"])
             vals[i] = np.append(vals[i], self.data[i]["currents"])
-            vals[i] = np.append(vals[i], self.data[i]["timestamp"])
+            vals[i] = np.append(vals[i], [(lim[1]-lim[0])/2. for lim in self.data[i]["limits"]])
+            pos = self.data[i]["sase_pos"]
+            vals[i] = np.append(vals[i], [pos[0][0],  pos[0][1],  pos[1][0], pos[1][1]])
 
-        #vals = [np.array([]), np.array([])]
-        #for i, data in enumerate(self.data):
-        #    for name in data.keys():
-        #        vals[i] = np.append(vals[i], data[name])
-        #print("test ",  vals)
+            vals[i] = np.append(vals[i], self.data[i]["timestamp"])
+            vals[i] = np.append(vals[i], self.data[i]["method"])
+            vals[i] = np.append(vals[i], self.data[i]["maxiter"])
+            vals[i] = np.append(vals[i], self.data[i]["sase"])
+            vals[i] = np.append(vals[i], self.data[i]["sase_slow"])
+            vals[i] = np.append(vals[i], self.data[i]["flag"])
+            vals[i] = np.append(vals[i], self.data[i]["niter"])
+
+        orbit1 = self.data[0]["orbit"]
+        orbit2 = self.data[1]["orbit"]
+        for i, bpm in enumerate(orbit1):
+            names = np.append(names, ["bpm.x." + bpm[0]])
+            names = np.append(names, ["bpm.y." + bpm[0]])
+            vals[0] = np.append(vals[0], bpm[2])
+            vals[0] = np.append(vals[0], bpm[3])
+            bpm2 = orbit2[i]
+            vals[1] = np.append(vals[1], bpm2[2])
+            vals[1] = np.append(vals[1], bpm2[3])
+        #print("shape datda", len(self.data) )
+        #print(self.data[0]["sase_pos"])
         #print(names, vals[0], vals[1])
+        #print(len(names), len(vals[0]), len(vals[1]))
+
         self.db.add_action_parameters(tune_id, action_id, param_names = names, start_vals = vals[0], end_vals=vals[1])
         return True
 
-    def save(self, args, time, niter, flag="start"):
-        #filename = "simpl_data_base.txt"
-        #try:
-        #    with open(filename, 'rb') as f:
-        #        all_data = pickle.load(f)
-        #except:
-        #    all_data = []
 
+    def save(self, args, time, niter, flag="start"):
         data_base = {}
         data_base["flag"] = flag
         data_base["timestamp"] = time
@@ -115,16 +141,10 @@ class SaveOptParams:
         data_base["sase_slow"] = self.mi.get_sase(detector='gmd_fl1_slow')
 
 
-
-
         orbit = []
         if self.lat != None:
             orbit = self.read_bpms()
         data_base["orbit"] = orbit
-
-
-
-        #print("save action", data_base)
 
 
         if flag == "start":
@@ -141,9 +161,6 @@ class SaveOptParams:
             self.wasSaved = self.send_to_db()
             self.data = []
             return self.wasSaved
-        #all_data.append(data_base)
-        #with open(filename, 'wb') as f:
-        #    pickle.dump(all_data, f)
 
 
     def new_tuning(self):
@@ -164,8 +181,10 @@ class SaveOptParams:
         print ('current id', tune_id)
 
         mach_par = {}
-        #mach_par["bc2_pyros"] = self.mi.get_bc2_pyros()
-        #mach_par["bc3_pyros"] = self.mi.get_bc3_pyros()
+        mach_par["bc2_pyros"] = self.mi.get_bc2_pyros()[0]
+        mach_par["bc2_pyros.fine"] = self.mi.get_bc2_pyros()[1]
+        mach_par["bc3_pyros"] = self.mi.get_bc3_pyros()[0]
+        mach_par["bc3_pyros.fine"] = self.mi.get_bc3_pyros()[1]
         mach_par["final_energy"] = self.mi.get_final_energy()
         mach_par["solenoid"] = self.mi.get_sol_value()
         mach_par["nbunches"] = self.mi.get_nbunches()
@@ -175,7 +194,7 @@ class SaveOptParams:
         mach_par.update(quands)
         mach_par.update(cors)
         mach_par.update(bends)
-        #mach_par.update(cavs)
+        mach_par.update(cavs)
         #print(mach_par)
         self.db.add_machine_parameters(tune_id, params = mach_par)
         print ('current machine parameters', self.db.get_machine_parameters(tune_id))

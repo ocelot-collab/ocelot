@@ -56,10 +56,10 @@ names = ["H8TCOL", "V8TCOL", hu1, hu2, hu3, hu4, hu5, hu6, qu13, qu24,q13, q14, 
 mi = FLASH1MachineInterface()
 
 def print_string(values):
-    print str(time())+"\t"+"\t".join([str(v) for v in values])
+    print (str(time())+"\t"+"\t".join([str(v) for v in values]))
 
 
-print "#time" + "\t" + "\t".join([str(v) for v in names]) + "\t" + "sase" + "\t" + "tun_x" + "\t" + "tun_y" + "\t" + "bda_x"+ "\t" + "bda_y"
+print ("#time" + "\t" + "\t".join([str(v) for v in names]) + "\t" + "sase" + "\t" + "tun_x" + "\t" + "tun_y" + "\t" + "bda_x"+ "\t" + "bda_y")
 while True:
     sleep(1)
     #print time()

@@ -15,6 +15,7 @@ import time
 import pickle
 from ocelot.utils.db import *
 
+
 class SaveOptParams:
     def __init__(self, mi, dp, lat=None, filename=None):
         self.mi = mi
@@ -221,7 +222,9 @@ class FLASH1MachineInterface():
                           '1L.UND4', '1R.UND4',
                           '1L.UND5', '1R.UND5',
                           '1L.UND6', '1R.UND6',
-                          '10SMATCH','3SDUMP']
+                          '10SMATCH','3SDUMP',
+                          "5R.UND6"
+                          ]
 
 
 
@@ -306,11 +309,12 @@ class FLASH1MachineInterface():
             #return np.abs( np.mean(h) )
         if detector == 'gmd_fl1_slow':
             return pydoocs.read('TTF2.FEL/BKR.FLASH.STATE/BKR.FLASH.STATE/SLOW.INTENSITY' )['data']
-
-        # default 'BKR' gmd
-        h = np.array(pydoocs.read('TTF2.FEL/BKR.FLASH.STATE/BKR.FLASH.STATE/ENERGY.CLIP.SPECT')['data'])
-        val = np.mean(np.array([x[1] for x in h]))
-        return val
+        if detector == "bkr":
+            # default 'BKR' gmd
+            h = np.array(pydoocs.read('TTF2.FEL/BKR.FLASH.STATE/BKR.FLASH.STATE/ENERGY.CLIP.SPECT')['data'])
+            val = np.mean(np.array([x[1] for x in h]))
+            return val
+        return pydoocs.read("TTF2.FEL/PHFLUX/TUNNEL/ENPULSEIC")['data']
 
 
 
@@ -490,3 +494,72 @@ class FLASH1DeviceProperties:
             vals[i] = pydoocs.get(mag_channel + "/DEVTYPE")['data']
         return vals
 
+
+'''
+test interface
+'''
+class TestInterface:
+    def __init__(self):
+        pass
+    def get_alarms(self):
+        return np.random.rand(4)#0.0, 0.0, 0.0, 0.0]
+
+    def get_sase(self, detector=None):
+        return 0.0
+
+    def init_corrector_vals(self, correctors):
+        vals = [0.0]*len(correctors)
+        return vals
+
+    def get_cor_value(self, devname):
+        return np.random.rand(1)[0]
+
+    def get_value(self, device_name):
+        print("get value", device_name)
+        return np.random.rand(1)[0]
+
+    def set_value(self, device_name, val):
+        return 0.0
+
+    def get_quads_current(self, device_names):
+        return np.random.rand(len(device_names))
+
+    def get_bpms_xy(self, bpms):
+        X = np.zeros(len(bpms))
+        Y = np.zeros(len(bpms))
+        return X, Y
+
+    def get_sase_pos(self):
+        return [(0,0), (0, 0)]
+
+    def get_gun_energy(self):
+        return 0.
+
+    def get_cavity_info(self, devnames):
+        X = np.zeros(len(devnames))
+        Y = np.zeros(len(devnames))
+        return X, Y
+
+    def get_charge(self):
+        return 0.
+
+    def get_wavelangth(self):
+        return 0.
+
+    def get_bc2_pyros(self):
+        return (0, 0)
+
+    def get_bc3_pyros(self):
+        return (0, 0)
+
+    def get_final_energy(self):
+        return 0
+
+    def get_sol_value(self):
+        time.sleep(0.1)
+        return 0
+
+    def get_nbunches(self):
+        return 0
+    def get_value_ps(self, device_name):
+        return 0.

@@ -6,7 +6,7 @@ import numpy as np
 from ocelot.utils.mint.flash1_interface_pydoocs3 import *
 from ocelot.utils.mint.machine_setup import *
 from desy.flash.lattices.lattice_rf_red import *
-from ocelot.utils.mint.mint import TestInterface
+#from ocelot.utils.mint.mint import TestInterface
 from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
 import pickle
 from ocelot.utils.mint.mint import Optimizer, Action
@@ -320,32 +320,25 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
 
 
     def optimization(self):
-        #print(self.opt_thread.isRunning())
+
         if not self.opt_thread.opt.isRunning:
             self.create_tree_cur_contr()
             self.start_opt_btm.setEnabled(False)
             self.restore_cur_btn.setEnabled(False)
             opt_params = optim_params(self.p_cntr)
-            #print("sequence for optimization: ", self.work_seq)
-            #print(opt_params)
 
-            #self.opt.set_limits(seq_dict=self.work_seq)
             self.opt_thread.seq_dict=self.work_seq
             self.opt_thread.opt_params=opt_params
             self.opt_thread.start()
-            #self.opt.run(seq_dict=self.work_seq, opt_params=opt_params)
-
 
             # currents drawing
             self.ndevs = 0
             for act in self.work_seq:
                 self.ndevs += len(act["devices"])
-            #print(self.ndevs)
+
             self.current.clear()
             self.data = np.zeros((self.ndevs*2+1, 100))
             self.current.addLegend()
-            #self.curves_cur = [self.current.plot(pen=(i,self.ndevs*1.3)) for i in range(self.ndevs)]
-            #self.curves_cur = [self.current.plot(pen=(i,self.ndevs*1.3)) for i in range(2)]
             self.curves_cur = [self.current.plot(pen='r', name='set'), self.current.plot(pen='g', name='RBV')]
 
             self.pntr_cur = 0
@@ -408,8 +401,6 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         self.t.setParameters(self.p, showTop=False)
 
 
-
-
     def orbit2file(self):
         fileName = QtGui.QFileDialog.getSaveFileName(self, 'Dialog Title')
         if fileName:
@@ -426,11 +417,16 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
 
     def update_tree_currents(self):
         self.sequence = tree2seq(tree=self.p)
+        dict_cur = {}
         for p, act in zip(self.p.children(), self.sequence):
             for child, dev in zip(p, act["devices"]):
                 if child.opts["type"] == "action":
                     continue
-                current = self.opt_thread.opt.mi.get_value(dev)
+                if dev in dict_cur.keys():
+                    current = dict_cur[dev]
+                else:
+                    current = self.opt_thread.opt.mi.get_value(dev)
+                    dict_cur[dev] = current
                 child.setValue(str(current))
 
         self.update_current()
@@ -441,9 +437,6 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
             for i, devname in enumerate(act["devices"]):
                 devices.append(devname)
 
-        #print(devices)
-        #for p in self.p_cur_cntr:
-        #    print(p)
         self.p_cur_cntr.clearChildren()
         self.p_cur_cntr.addChild({'name': 'Devices', 'type': 'list', 'values': devices, 'value': 0})
         #self.p_cur_cntr.opts["values"] = devices
@@ -459,10 +452,16 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
             devices = p.opts["values"]
         #print(devices, devname_sel)
         n = 0
+        dict_cur = {}
         for act in self.work_seq:
             for i, devname in enumerate(act["devices"]):
-                current_RBS = self.opt_thread.opt.mi.get_value(devname)
-                surrent_set = self.opt_thread.opt.mi.get_value_ps(devname)
+                if devname in dict_cur.keys():
+                    current_RBS = dict_cur[devname]
+                    surrent_set = current_RBS
+                else:
+                    current_RBS = self.opt_thread.opt.mi.get_value(devname)
+                    dict_cur[devname] = current_RBS
+                    surrent_set = current_RBS #self.opt_thread.opt.mi.get_value_ps(devname)
                 self.data[n, self.pntr_cur] = surrent_set
                 self.data[n+1, self.pntr_cur] = current_RBS
                 self.data[-1, self.pntr_cur] = self.opt_thread.opt.mi.get_sase()
@@ -602,7 +601,7 @@ class Form2(QtGui.QMainWindow, ui_optim_sase.Ui_ChildWindow):
 
 def main():
     mi = FLASH1MachineInterface()
-    #mi = TestInterface()
+    mi = TestInterface()
     dp = FLASH1DeviceProperties()
 
     lat = MagneticLattice(lattice)
@@ -634,7 +633,7 @@ def main():
 
     timer3 = pg.QtCore.QTimer()
     timer3.timeout.connect(form.update_tree_currents)
-    timer3.start(1000)
+    timer3.start(2000)
 
     form.show()
     app.exec_()

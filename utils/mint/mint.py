@@ -576,6 +576,7 @@ class Action:
 '''
 test interface
 '''
+"""
 class TestInterface:
     def __init__(self):
         pass
@@ -641,7 +642,7 @@ class TestInterface:
     def get_value_ps(self, device_name):
         return 0.
 
-
+"""
 '''
 flight simulator implementation of the machine interface
 '''

@@ -109,7 +109,7 @@ class Ui_MainWindow(object):
         {'name': 'debug', 'type': 'bool', 'value': False},
         {'name': 'logging', 'type': 'bool', 'value': True},
         {'name': 'log file', 'type': 'str', 'value': 'test.log'},
-        {'name': 'timeout', 'type': 'float', 'value': 1.2, 'step': 0.1, 'limits': (0, 10)}]}
+        {'name': 'timeout', 'type': 'float', 'value': 3, 'step': 0.1, 'limits': (0, 10)}]}
         ]
 
         self.t_cntr = ParameterTree()

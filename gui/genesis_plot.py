@@ -401,7 +401,8 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=Fals
     for zz in range(g.nZ):
         if np.sum(spectrum[:,zz])!=0:
             peak=fwhm3(spectrum[:,zz])
-            spectrum_lamdwidth1[zz]=abs(lamdscale[peak[0]]-lamdscale[peak[0]+1])*peak[1] #the FWHM of spectral line
+            #spectrum_lamdwidth1[zz]=abs(lamdscale[peak[0]]-lamdscale[peak[0]+1])*peak[1] #the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
+            spectrum_lamdwidth1[zz]=abs(lamdscale[0]-lamdscale[1])*peak[1] #the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
         else:
             spectrum_lamdwidth1[zz]=0
 

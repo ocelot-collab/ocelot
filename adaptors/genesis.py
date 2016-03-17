@@ -18,7 +18,7 @@ inputTemplate = "\
  aw0   =  __AW0__ \n\
  xkx   =  __XKX__\n\
  xky   =  __XKY__\n\
- wcoefz =  0.000000E+00   0.000000E+00   0.000000E+00\n\
+ wcoefz =  __WCOEFZ__\n\
  xlamd =  __XLAMD__\n\
  fbess0 =  __FBESS0__\n\
  delaw =  __DELAW__\n\
@@ -85,7 +85,7 @@ inputTemplate = "\
  itgaus =  __ITGAUS__\n\
  nbins =    __NBINS__\n\
  igamgaus =  __IGAMGAUS__\n\
- lout  = 1 1 1 1 1 0 1 1 1 1 1 0 0 1 0 0 0 0 0 0 0 0 0 0\n\
+ lout  = __LOUT__\n\
  iphsty =  __IPHSTY__\n\
  ishsty =  __ISHSTY__\n\
  ippart =  __IPPART__\n\
@@ -149,6 +149,7 @@ class GenesisInput:
         #undulator
         self.aw0 = 0.735 #The normalized, dimensionless rms undulator parameter
         self.awd = 0.735 #A virtual undulator parameter for the gap between undulator modules.
+        self.wcoefz = [0,0,0]
         self.iertyp =0 # Type of undulator field errors.
         self.iwityp =0 # the undulator type. A value of zero indicates a planar undulator, any other value a helical one. 
         self.xkx   =  0 #Normalized natural focusing of the undulator in x. Common values are XKX = 0.0, XKY = 1.0 for a planar undulator or XKX, XKY = 0.5 for a helical undulator, but might vary if focusing by curved pole faces is simulated. The values should fulfill the constraint XKX + XKY = 1.0. 
@@ -255,6 +256,33 @@ class GenesisInput:
         self.idump =    0 # If set to a non-zero value the complete particle and field distribution is dumped at the undulator exit into two outputfiles.
         self.idmpfld= 0 # Similar to IDUMP but only for the field distribution. 
         self.idmppar = 0 # Similar to IDUMP but only for the particle distribution. 
+        self.lout=[1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                #  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24
+                # 1. radiation power
+                # 2. logarithmic derivative of the power growth
+                # 3. power density at the undulator axis
+                # 4. radiation phase at the undulator axis
+                # 5. transverse radiation size
+                # 6. rms diffraction angle of the radiation
+                # 7. beam energy
+                # 8. bunching factor
+                # 9. beam size in x
+                # 10. beam size in y
+                # 11. error in energy conservation
+                # 12. beam position in x
+                # 13. beam position in y
+                # 14. energy spread
+                # 15. on-axis field intensity in the far field zone
+                # 16. bunching at the 2nd harmonic
+                # 17. bunching at the 3rd harmonic
+                # 18. bunching at the 4th harmonic
+                # 19. bunching at the 5th harmonic
+                # 20. bunching phase of the 1st harmonic
+                # 21. bunching phase of the 2nd harmonic
+                # 22. bunching phase of the 3rd harmonic
+                # 23. bunching phase of the 4th harmonic
+                # 24. bunching phase of the 5th harmonics
+
         self.beamfile = None
         self.fieldfile = None
         self.partfile = None
@@ -317,7 +345,7 @@ class GenesisInput:
             input = input.replace("__MAGFILE__\n", " maginfile ='lattice.inp'\n")
         
         for p in self.__dict__.keys():
-            input = input.replace("__"  + str(p).upper() + "__", str(self.__dict__[p]))
+            input = input.replace("__"  + str(p).upper() + "__", str(self.__dict__[p]).replace('[','').replace(']','').replace(',',''))
                                 
         return input
     
@@ -1610,9 +1638,6 @@ def cut_beam(beam = None, cut_z = [-inf, inf]):
 
         beam_new.zsep = beam.zsep
         zmax, Imax = peaks(beam_new.z, beam_new.I, n=1)
-        print zmax, Imax
-        # idx = beam.z.index(zmax)
-        # beam_new.idx_max = idx
         beam_new.idx_max = np.where(beam_new.z == zmax)[0][0]
     else:
         beam_new=beam

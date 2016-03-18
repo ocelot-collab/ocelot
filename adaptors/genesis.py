@@ -1091,6 +1091,11 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
             exec('out.'+out.sliceKeys[i].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(nSlice)+','+str(len(out.z))+'))')
         if hasattr(out,'energy'):
             out.energy+=out('gamma0')
+        
+        out.power_z=np.max(out.power,0)
+        out.spec = fft.fft(np.sqrt(np.array(out.power) ) * np.exp( 1.j* np.array(out.phi_mid) ) )
+        out.freq_ev = h * fftfreq(len(out.spec), d=out('zsep') * out('xlamds') / c)
+
             
     out.nSlices = nSlice
     out.nZ = len(out.z)
@@ -1098,9 +1103,6 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
     print '        nSlice', out.nSlices
     print '        nZ', out.nZ
 
-    out.power_z=np.max(out.power,0)
-    out.spec = fft.fft(np.sqrt(np.array(out.power) ) * np.exp( 1.j* np.array(out.phi_mid) ) )
-    out.freq_ev = h * fftfreq(len(out.spec), d=out('zsep') * out('xlamds') / c)
     
     out.s = out('zsep') * out('xlamds') * np.arange(0,nSlice)
     out.t = out.s/ c *1.e+15

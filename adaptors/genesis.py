@@ -1117,18 +1117,19 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
     out.filename = fileName[-fileName[::-1].find('/')::]
     
 
-    #tmp for back_compatibility        
-    out.power_int=out.power[:,-1]
-    out.max_power=np.amax(out.power_int)
-    for parm in [['power','p_int'],
-                 ['energy','el_energy'],
-                 ['e_spread','el_e_spread'],
-                 ]:
-         if hasattr(out,parm[0]):
-             setattr(out,parm[1],getattr(out,parm[0]))
-#             delattr(out,parm[0])
-    out.power=out.p_mid[:,-1]
-    out.phi=out.phi_mid[:,-1] 
+    #tmp for back_compatibility    
+    if readall:    
+        out.power_int=out.power[:,-1]
+        out.max_power=np.amax(out.power_int)
+        for parm in [['power','p_int'],
+                     ['energy','el_energy'],
+                     ['e_spread','el_e_spread'],
+                     ]:
+             if hasattr(out,parm[0]):
+                 setattr(out,parm[1],getattr(out,parm[0]))
+    #             delattr(out,parm[0])
+        out.power=out.p_mid[:,-1]
+        out.phi=out.phi_mid[:,-1] 
     
 
     print('    done in %.3f seconds' % (time.time() - start_time))        

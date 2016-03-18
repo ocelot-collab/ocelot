@@ -1009,7 +1009,7 @@ def readGenesisOutput_old(fileName , readall=True, debug=None):
 
 
 def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
-
+    start_time = time.time()     
     print '    reading output file'    
 #    print '        - reading from ', fileName
 
@@ -1038,7 +1038,7 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
             chunk = 'slice'
             if nSlice == 1:
                 out.sliceKeys = copy(tokens)
-                print '      reading slice values ',nSlice
+                print '      reading slice values '
             continue
             
         if tokens[0] == '$newrun':
@@ -1124,7 +1124,7 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
          if hasattr(out,parm[0]):
              setattr(out,parm[1],getattr(out,parm[0]))
 #             delattr(out,parm[0])
-
+    print('    done in %.3f seconds' % (time.time() - start_time))        
     return out
 
 

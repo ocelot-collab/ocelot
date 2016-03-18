@@ -356,7 +356,7 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=Fals
     ax_pow.set_yscale('log')
 
 
-    # outp.power.mean_S*inp.xlamds*inp.zsep*inp.nslice/c
+
     ax_en = ax_pow.twinx()
     ax_en.plot(g.z, np.mean(g.p_int,axis=0)*g('xlamds')*g('zsep')*g.nSlices/c, 'k--',linewidth=1.5)
     ax_en.set_ylabel('E [J]')

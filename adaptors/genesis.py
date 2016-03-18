@@ -827,7 +827,7 @@ def writeRadiationFile_mpi(comm, filename, slices, shape):
         os.system(cmd)
 
 
-def readGenesisOutput(fileName , readall=True, debug=None):
+def readGenesisOutput_old(fileName , readall=True, debug=None):
 
     print '    reading output file'    
 #    print '        - reading from ', fileName
@@ -895,7 +895,7 @@ def readGenesisOutput(fileName , readall=True, debug=None):
             #print vals
             for i in range(0,len(vals)):
                 out.sliceValues[nSlice][out.sliceKeys[i]].append(vals[i])
-            
+#            out.sliceValues[nSlice][out.sliceKeys[i]].extend(vals)
             #out.zSlice.append(vals[2])
             #out.aw.append(aw)
             #out.qfld.append(qfld)
@@ -1007,6 +1007,125 @@ def readGenesisOutput(fileName , readall=True, debug=None):
         
     return out
 
+
+def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
+
+    print '    reading output file'    
+#    print '        - reading from ', fileName
+
+    out = GenesisOutput()
+    out.path = fileName
+
+    chunk = ''
+    output_unsorted=[] 
+    nSlice = 0
+    
+    f=open(fileName,'r')
+    null=f.readline()
+    for line in f: 
+        tokens = line.strip().split()
+
+        if len(tokens) < 1:
+            continue
+
+        if tokens[0] == '**********':
+            chunk = 'slices'
+            nSlice = int(tokens[3])
+            if debug:
+                print '      reading slice # ',nSlice
+
+        if tokens[0] == 'power':
+            chunk = 'slice'
+            if nSlice == 1:
+                out.sliceKeys = copy(tokens)
+                print '      reading slice values ',nSlice
+            continue
+            
+        if tokens[0] == '$newrun':
+            chunk = 'input1'
+            print '      reading input parameters'
+            continue  
+
+        if tokens[0] == '$end':
+            chunk = 'input2'
+            continue     
+        
+        if tokens == ['z[m]', 'aw', 'qfld']:
+            chunk = 'magnetic optics'
+            print '      reading magnetic optics '
+            continue
+
+        if chunk == 'magnetic optics':
+            z,aw,qfld = map(precision,tokens)
+            out.z.append(z)
+            out.aw.append(aw)
+            out.qfld.append(qfld)
+            
+        if chunk == 'input1':
+            tokens=line.replace('=','').strip().split()
+            out.parameters[tokens[0]] = tokens[1:]
+            #out.parameters[tokens[0]] = tokens[0:]
+            #print 'input:', tokens
+        if chunk == 'input2':
+            tokens=line.replace('=','').strip().split()
+            out.parameters['_'.join(tokens[1:])] = tokens[0]
+            #out.parameters[tokens[0]] = tokens[0:]
+            #print 'input:', tokens
+#
+        if chunk == 'slice' and readall:
+            vals = map(precision,tokens)
+            output_unsorted.append(vals)
+
+        if chunk == 'slices':
+            if len(tokens) == 2 and tokens[1]=='current':
+                #print tokens[1]
+                out.I.append(float(tokens[0]))
+                out.n.append(nSlice)     
+
+    for parm in ['z', 'aw', 'qfld', 'I', 'n']:
+        exec('out.'+parm+' = np.array(out.'+parm+')')
+    
+    if readall:
+        output_unsorted=np.array(output_unsorted)#.astype(precision)
+        for i in range(len(out.sliceKeys)):
+            exec('out.'+out.sliceKeys[i].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(nSlice)+','+str(len(out.z))+'))')
+        if hasattr(out,'energy'):
+            out.energy+=out('gamma0')
+            
+    out.nSlices = nSlice
+    out.nZ = len(out.z)
+
+    print '        nSlice', out.nSlices
+    print '        nZ', out.nZ
+
+    out.power_z=np.max(out.power,1)
+    out.spec = fft.fft(np.sqrt(np.array(out.power) ) * np.exp( 1.j* np.array(out.phi_mid) ) )
+    out.freq_ev = h * fftfreq(len(out.spec), d=out('zsep') * out('xlamds') / c)
+    
+    out.s = out('zsep') * out('xlamds') * np.arange(0,nSlice)
+    out.t = out.s/ c *1.e+15
+    out.dt = (out.t[1] - out.t[0]) * 1.e-15
+    out.beam_charge=np.sum(out.I*out('zsep')*out('xlamds')/c)
+    
+    if out('dgrid')==0:
+        rbeam=sqrt(out('rxbeam')**2+out('rybeam')**2)
+        ray=sqrt(out('zrayl')*out('xlamds')/np.pi*(1+(out('zwaist')/out('zrayl')))**2); #not cross-checked
+        out.leng=out('rmax0')*(rbeam+ray)
+    else:
+        out.leng=out('dgrid')*2
+    
+    out.filename = fileName[-fileName[::-1].find('/')::]
+        
+    #tmp for back_compatibility
+    for parm in [['power','p_int'],
+                 ['energy','el_energy'],
+                 ['e_spread','el_e_spread'],
+                 ]:
+         if hasattr(out,parm[0]):
+             setattr(out,parm[1],getattr(out,parm[0]))
+#             delattr(out,parm[0])
+
+    return out
 
 
 def dpa2dist (gen,file_name_read='',file_name_write='',no_macroparticles=1e5,debug=0):

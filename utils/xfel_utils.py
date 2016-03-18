@@ -111,7 +111,7 @@ def rematch(beta_mean, l_fodo, qdh, lat, extra_fodo, beam, qf, qd):
     beam.beta_y, beam.alpha_y = tw0m.beta_y, tw0m.alpha_y
 
 
-def run(inp, launcher,plot=None):
+def run(inp, launcher,readall=True):
     
     try:
         os.makedirs(inp.run_dir)
@@ -139,16 +139,19 @@ def run(inp, launcher,plot=None):
     launcher.prepare()
     launcher.launch()
     
-    g = readGenesisOutput(out_file)
+    g = readGenesisOutput(out_file,readall=readall)
     
-    save=True
-    if plot == 'all':
-        from ocelot.gui.genesis_plot import *
-        gen_outplot_e(g,save=save)
-        gen_outplot_ph(g,save=save)
-        gen_outplot_z(g, z=0,save=save)
-        gen_outplot_z(g, z=inf,save=save)
-    
+    # save=True
+    # if do_plot == 'all':
+        
+        # from ocelot.gui.genesis_plot import *
+        # gen_outplot_e(g,save=save)s
+        # gen_outplot_ph(g,save=save)
+        # gen_outplot_z(g, z=0,save=save)
+        # gen_outplot_z(g, z=inf,save=save)
+    # else:
+        # g = readGenesisOutput(out_file,readall=0)
+        
     return g
 
 

@@ -1098,7 +1098,7 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
     print '        nSlice', out.nSlices
     print '        nZ', out.nZ
 
-    out.power_z=np.max(out.power,1)
+    out.power_z=np.max(out.power,0)
     out.spec = fft.fft(np.sqrt(np.array(out.power) ) * np.exp( 1.j* np.array(out.phi_mid) ) )
     out.freq_ev = h * fftfreq(len(out.spec), d=out('zsep') * out('xlamds') / c)
     
@@ -1115,8 +1115,11 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
         out.leng=out('dgrid')*2
     
     out.filename = fileName[-fileName[::-1].find('/')::]
-        
-    #tmp for back_compatibility
+    
+
+    #tmp for back_compatibility        
+    out.power_int=out.power[:,-1]
+    out.max_power=np.amax(out.power_int)
     for parm in [['power','p_int'],
                  ['energy','el_energy'],
                  ['e_spread','el_e_spread'],
@@ -1124,6 +1127,10 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
          if hasattr(out,parm[0]):
              setattr(out,parm[1],getattr(out,parm[0]))
 #             delattr(out,parm[0])
+    out.power=out.p_mid[:,-1]
+    out.phi=out.phi_mid[:,-1] 
+    
+
     print('    done in %.3f seconds' % (time.time() - start_time))        
     return out
 

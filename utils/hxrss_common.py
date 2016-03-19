@@ -177,14 +177,27 @@ def update_beam(beam_new, g, beam):
 def log_info(sim_info, g, run_id, stage):
     
     r = RunInfo(run_id)
-    r.max_power = g.max_power
-    r.power = g.power
-    r.power_z = g.power_z
-    r.stage = stage
-    r.z = g.z
-    r.t = g.t
-    r.spec = g.spec
-    r.freq_ev = g.freq_ev
+    
+    for parm in ['max_power',
+             'power',
+             'power_z',
+             'stage',
+             'z',
+             't',
+             'spec',
+             'freq_ev',
+             ]:
+        if hasattr(g,parm):
+            setattr(r,parm,getattr(g,parm))
+
+    # r.max_power = g.max_power
+    # r.power = g.power
+    # r.power_z = g.power_z
+    # r.stage = stage
+    # r.z = g.z
+    # r.t = g.t
+    # r.spec = g.spec
+    # r.freq_ev = g.freq_ev
 
     sim_info.runs[r.id] = r
 

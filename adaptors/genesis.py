@@ -1106,9 +1106,6 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
             out.energy+=out('gamma0')
         
         out.power_z=np.max(out.power,0)
-        out.spec = fft.fft(np.sqrt(np.array(out.power) ) * np.exp( 1.j* np.array(out.phi_mid) ) )
-        out.freq_ev = h * fftfreq(len(out.spec), d=out('zsep') * out('xlamds') / c)
-
             
     out.nSlices = nSlice
     out.nZ = len(out.z)
@@ -1116,18 +1113,21 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
     print '        nSlice', out.nSlices
     print '        nZ', out.nZ
 
-    
-    out.s = out('zsep') * out('xlamds') * np.arange(0,nSlice)
-    out.t = out.s/ c *1.e+15
-    out.dt = (out.t[1] - out.t[0]) * 1.e-15
-    out.beam_charge=np.sum(out.I*out('zsep')*out('xlamds')/c)
-    
+    if out('itdp') == True:
+        out.s = out('zsep') * out('xlamds') * np.arange(0,nSlice)
+        out.t = out.s/ c *1.e+15
+        out.dt = (out.t[1] - out.t[0]) * 1.e-15
+        out.beam_charge=np.sum(out.I*out('zsep')*out('xlamds')/c)
+        if readall == True:
+            out.spec = fft.fft(np.sqrt(np.array(out.power) ) * np.exp( 1.j* np.array(out.phi_mid) ) )
+            out.freq_ev = h * fftfreq(len(out.spec), d=out('zsep') * out('xlamds') / c)# d=out.dt
+
     if out('dgrid')==0:
         rbeam=sqrt(out('rxbeam')**2+out('rybeam')**2)
         ray=sqrt(out('zrayl')*out('xlamds')/np.pi*(1+(out('zwaist')/out('zrayl')))**2);
-        out.leng=out('rmax0')*(rbeam+ray)*2
+        out.leng=2*out('rmax0')*(rbeam+ray)
     else:
-        out.leng=out('dgrid')*2
+        out.leng=2*out('dgrid')
     
 
     #tmp for back_compatibility    
@@ -1144,7 +1144,6 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
         out.power=out.p_mid[:,-1]
         out.phi=out.phi_mid[:,-1] 
     
-
     print('    done in %.3f seconds' % (time.time() - start_time))        
     return out
 

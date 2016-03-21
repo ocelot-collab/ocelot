@@ -157,17 +157,29 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=Fals
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
     plt.clf()
 
-    ax_pow=fig.add_subplot(3, 1, 1)
-    ax_pow.clear()
-    ax_spectrum=fig.add_subplot(3, 1, 2,sharex=ax_pow)
-    ax_spectrum.clear()
-    ax_size_t=fig.add_subplot(3, 1, 3,sharex=ax_pow)
-    ax_size_t.clear()
+    
+    if g('itdp')==True:
+        ax_pow=fig.add_subplot(3, 1, 1)
+        ax_pow.clear()
+        ax_spectrum=fig.add_subplot(3, 1, 2,sharex=ax_pow)
+        ax_spectrum.clear()
+        ax_size_t=fig.add_subplot(3, 1, 3,sharex=ax_pow)
+        ax_size_t.clear()
+        for ax in ax_pow, ax_spectrum, ax_size_t:
+            if ax!=ax_size_t:
+                for label in ax.get_xticklabels():
+                    label.set_visible(False)
+    else:
+        ax_pow=fig.add_subplot(2, 1, 1)
+        ax_pow.clear()
+        ax_size_t=fig.add_subplot(2, 1, 2,sharex=ax_pow)
+        ax_size_t.clear()
+        for ax in ax_pow, ax_size_t:
+            if ax!=ax_size_t:
+                for label in ax.get_xticklabels():
+                    label.set_visible(False)
 
-    for ax in ax_pow, ax_spectrum, ax_size_t:
-        if ax!=ax_size_t:
-            for label in ax.get_xticklabels():
-                label.set_visible(False)
+
 
     # for tick in ax.yaxis.get_major_ticks():
     #     tick.label.set_fontsize(14)
@@ -196,65 +208,73 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=Fals
     ax_en.set_yscale('log')
 
 
-    n_pad=1
-    # print len(g.z),len(g.xrms[0,:]),len(np.mean(g.yrms,axis=0))
-    power=np.pad(g.p_mid, [(int(g.nSlices/2)*n_pad, (g.nSlices-(int(g.nSlices/2))))*n_pad, (0, 0)], mode='constant')
-    phase=np.pad(g.phi_mid, [(int(g.nSlices/2)*n_pad, (g.nSlices-(int(g.nSlices/2))))*n_pad, (0, 0)], mode='constant')
-    spectrum = abs(fft(np.sqrt( np.array(power)) * np.exp( 1.j* np.array(phase) ) , axis=0))**2/sqrt(g.nSlices)/(2*g.leng/g('ncar'))**2/1e10
-    e_0=1239.8/g('xlamds')/1e9
-    # print e_0
-
-    g.freq_ev1 = h * fftfreq(len(spectrum), d=g('zsep') * g('xlamds') / c)+e_0
-    lamdscale=1239.8/g.freq_ev1
-    lamdscale_array=np.swapaxes(np.tile(lamdscale,(g.nZ,1)),0,1)    
+    if g('itdp')==True:
+        n_pad=1
+        # print len(g.z),len(g.xrms[0,:]),len(np.mean(g.yrms,axis=0))
+        power=np.pad(g.p_mid, [(int(g.nSlices/2)*n_pad, (g.nSlices-(int(g.nSlices/2))))*n_pad, (0, 0)], mode='constant')
+        phase=np.pad(g.phi_mid, [(int(g.nSlices/2)*n_pad, (g.nSlices-(int(g.nSlices/2))))*n_pad, (0, 0)], mode='constant')
+        spectrum = abs(fft(np.sqrt( np.array(power)) * np.exp( 1.j* np.array(phase) ) , axis=0))**2/sqrt(g.nSlices)/(2*g.leng/g('ncar'))**2/1e10
+        e_0=1239.8/g('xlamds')/1e9
+        # print e_0
     
-#    print spectrum.shape
-    spectrum_norm=np.sum(spectrum,axis=0)#avoiding division by zero
-    spectrum_norm[spectrum_norm==0]=1
-#    print spectrum_norm.shape
-    spectrum_lamdpos=np.sum(spectrum*lamdscale_array/spectrum_norm,axis=0)
-#    print "spectrum lamdpos", spectrum_lamdpos
-    spectrum_lamdwidth=sqrt(np.sum(spectrum*(lamdscale_array-spectrum_lamdpos)**2/spectrum_norm,axis=0))    
+        g.freq_ev1 = h * fftfreq(len(spectrum), d=g('zsep') * g('xlamds') / c)+e_0
+        lamdscale=1239.8/g.freq_ev1
+        lamdscale_array=np.swapaxes(np.tile(lamdscale,(g.nZ,1)),0,1)    
+        
+    #    print spectrum.shape
+        spectrum_norm=np.sum(spectrum,axis=0)#avoiding division by zero
+        spectrum_norm[spectrum_norm==0]=1
+    #    print spectrum_norm.shape
+        spectrum_lamdpos=np.sum(spectrum*lamdscale_array/spectrum_norm,axis=0)
+    #    print "spectrum lamdpos", spectrum_lamdpos
+        spectrum_lamdwidth=sqrt(np.sum(spectrum*(lamdscale_array-spectrum_lamdpos)**2/spectrum_norm,axis=0))    
+        
+        spectrum_lamdwidth1=np.empty(g.nZ)
+        for zz in range(g.nZ):
+            if np.sum(spectrum[:,zz])!=0:
+                peak=fwhm3(spectrum[:,zz])
+                #spectrum_lamdwidth1[zz]=abs(lamdscale[peak[0]]-lamdscale[peak[0]+1])*peak[1] #the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
+                spectrum_lamdwidth1[zz]=abs(lamdscale[0]-lamdscale[1])*peak[1] #the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
+            else:
+                spectrum_lamdwidth1[zz]=0
     
-    spectrum_lamdwidth1=np.empty(g.nZ)
-    for zz in range(g.nZ):
-        if np.sum(spectrum[:,zz])!=0:
-            peak=fwhm3(spectrum[:,zz])
-            #spectrum_lamdwidth1[zz]=abs(lamdscale[peak[0]]-lamdscale[peak[0]+1])*peak[1] #the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
-            spectrum_lamdwidth1[zz]=abs(lamdscale[0]-lamdscale[1])*peak[1] #the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
-        else:
-            spectrum_lamdwidth1[zz]=0
-
-
-
-    ax_spectrum.plot(g.z, np.amax(spectrum,axis=0), 'r-',linewidth=1.5)
-    ax_spectrum.set_ylabel('P($\lambda$)_{max} [a.u]')
-#    if np.amin(np.amax(spectrum,axis=0))>0:
-    ax_spectrum.set_yscale('log')
     
-    #fix!!!
-    ax_spec_bandw = ax_spectrum.twinx()
-    ax_spec_bandw.plot(g.z, spectrum_lamdwidth*2, 'm--')
-    ax_spec_bandw.set_ylabel('$2\sigma\lambda$ [nm]')
-    # fix and include!!!
+    
+        ax_spectrum.plot(g.z, np.amax(spectrum,axis=0), 'r-',linewidth=1.5)
+        ax_spectrum.set_ylabel('P($\lambda$)_{max} [a.u]')
+    #    if np.amin(np.amax(spectrum,axis=0))>0:
+        ax_spectrum.set_yscale('log')
+        
+        #fix!!!
+        ax_spec_bandw = ax_spectrum.twinx()
+        ax_spec_bandw.plot(g.z, spectrum_lamdwidth*2, 'm--')
+        ax_spec_bandw.set_ylabel('$2\sigma\lambda$ [nm]')
+        # fix and include!!!
+    
+    
+        s=g.t*c*1.0e-15*1e6
+        s_array=np.swapaxes(np.tile(s,(g.nZ,1)),0,1)    
+        p_int_norm=np.sum(g.p_int,axis=0)#avoiding division by zero
+        p_int_norm[p_int_norm==0]=1
+        rad_longit_pos=np.sum(g.p_int*s_array/p_int_norm,axis=0)
+        rad_longit_size=sqrt(np.sum(g.p_int*(s_array-rad_longit_pos)**2/p_int_norm,axis=0)) #this is standard deviation (sigma)
+    
+        #g.p_int=np.amax(g.p_int)/1e6+g.p_int # nasty fix from division by zero
+        weight=g.p_int+np.amin(g.p_int[g.p_int!=0])/1e6
+        
+        ax_size_l = ax_size_t.twinx() #longitudinal size
+        ax_size_l.plot(g.z, rad_longit_size*2, color='indigo', linestyle='dashed',linewidth=1.5)
+        ax_size_l.set_ylabel('longitudinal [$\mu$m]')
+
+        ax_size_t.plot(g.z, np.average(g.r_size*2*1e6, weights=weight, axis=0), 'b-',linewidth=1.5)
+        ax_size_t.plot([np.amin(g.z), np.amax(g.z)],[g.leng*1e6, g.leng*1e6], 'b-',linewidth=1.0)
+        ax_size_t.set_ylabel('transverse [$\mu$m]')
+    else:
+        ax_size_t.plot(g.z, g.r_size.T*2*1e6, 'b-',linewidth=1.5)
+        ax_size_t.plot([np.amin(g.z), np.amax(g.z)],[g.leng*1e6, g.leng*1e6], 'b-',linewidth=1.0)
+        ax_size_t.set_ylabel('transverse [$\mu$m]')
 
 
-    s=g.t*c*1.0e-15*1e6
-    s_array=np.swapaxes(np.tile(s,(g.nZ,1)),0,1)    
-    p_int_norm=np.sum(g.p_int,axis=0)#avoiding division by zero
-    p_int_norm[p_int_norm==0]=1
-    rad_longit_pos=np.sum(g.p_int*s_array/p_int_norm,axis=0)
-    rad_longit_size=sqrt(np.sum(g.p_int*(s_array-rad_longit_pos)**2/p_int_norm,axis=0)) #this is standard deviation (sigma)
-
-    #g.p_int=np.amax(g.p_int)/1e6+g.p_int # nasty fix from division by zero
-    weight=g.p_int+np.amin(g.p_int[g.p_int!=0])/1e6
-    ax_size_t.plot(g.z, np.average(g.r_size*2*1e6, weights=weight, axis=0), 'b-',linewidth=1.5)
-    ax_size_t.plot([np.amin(g.z), np.amax(g.z)],[g.leng*1e6, g.leng*1e6], 'b-',linewidth=1.0)
-    ax_size_t.set_ylabel('transverse [$\mu$m]')
-
-    ax_size_l = ax_size_t.twinx() #longitudinal size
-    ax_size_l.plot(g.z, rad_longit_size*2, color='indigo', linestyle='dashed',linewidth=1.5)
-    ax_size_l.set_ylabel('longitudinal [$\mu$m]')
 
     plt.xlim(g.z[0], g.z[-1])
 
@@ -266,23 +286,26 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=Fals
     ax_en.tick_params(axis='y', which='both', colors='k')
     ax_en.yaxis.label.set_color('k') 
     ax_en.grid(False)
-    ax_spectrum.tick_params(axis='y', which='both', colors='r')
-    ax_spectrum.yaxis.label.set_color('r')  
-    ax_spec_bandw.tick_params(axis='y', which='both', colors='m')
-    ax_spec_bandw.yaxis.label.set_color('m')
-    ax_spec_bandw.grid(False)
     ax_size_t.tick_params(axis='y', which='both', colors='b')
     ax_size_t.yaxis.label.set_color('b') 
     ax_size_t.set_xlabel('z [m]')
-    ax_size_l.tick_params(axis='y', which='both', colors='indigo')
-    ax_size_l.yaxis.label.set_color('indigo') 
-    ax_size_l.grid(False)
+    ax_size_t.set_ylim(ymin=0)
     ax_pow.yaxis.get_offset_text().set_color(ax_pow.yaxis.label.get_color())
     ax_en.yaxis.get_offset_text().set_color(ax_en.yaxis.label.get_color())
-    
-    ax_spec_bandw.set_ylim(ymin=0)
-    ax_size_t.set_ylim(ymin=0)
-    ax_size_l.set_ylim(ymin=0)
+
+    if g('itdp')==True:
+        ax_spectrum.tick_params(axis='y', which='both', colors='r')
+        ax_spectrum.yaxis.label.set_color('r')  
+        ax_spec_bandw.tick_params(axis='y', which='both', colors='m')
+        ax_spec_bandw.yaxis.label.set_color('m')
+        ax_spec_bandw.grid(False)
+        ax_size_l.tick_params(axis='y', which='both', colors='indigo')
+        ax_size_l.yaxis.label.set_color('indigo') 
+        ax_size_l.grid(False)
+        ax_size_l.set_ylim(ymin=0)    
+        ax_spec_bandw.set_ylim(ymin=0)
+
+
     
 #    for a in [ax_size_l,ax_size_t,ax_spec_bandw,ax_spectrum]:
 #        xticks = a.yaxis.get_major_ticks()
@@ -301,6 +324,11 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=Fals
 
 def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, save=False):
 #    max_yticks = 7
+    if g('itdp')==False:
+        print('    plotting bunch profile at '+str(z)+' [m]')
+        print('!     not possible for steady-state')
+        return
+    
     import matplotlib.ticker as ticker
     
     if z==inf:
@@ -318,7 +346,7 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
     zi=np.where(g.z>=z)[0][0]
     z=g.z[zi];
     
-    print('    plotting results at '+str(z)+' [m]')
+    print('    plotting bunch profile at '+str(z)+' [m]')
 
 
 

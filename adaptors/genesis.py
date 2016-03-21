@@ -1026,11 +1026,13 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
     output_unsorted=[] 
     nSlice = 0
     
-    attempt=10
+    wait_attempt=10
+    wait_time=0.2
     while os.path.isfile(fileName)!=True:
         time.sleep(0.1) #wait for the .out file to be assembled
-        attempt=-1
-        if attempt==0:
+        print('    waiting for "'+out.filename+'" '+str(wait_time)+'s')
+        wait_attempt=-1
+        if wait_attempt==0:
             raise Exception('File '+fileName+' not found')
     f=open(fileName,'r')
         
@@ -1106,6 +1108,9 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
             out.energy+=out('gamma0')
         
         out.power_z=np.max(out.power,0)
+        out.spec = fft.fft(np.sqrt(np.array(out.power) ) * np.exp( 1.j* np.array(out.phi_mid) ) )
+        out.freq_ev = h * fftfreq(len(out.spec), d=out('zsep') * out('xlamds') / c)
+
             
     out.nSlices = nSlice
     out.nZ = len(out.z)
@@ -1113,21 +1118,18 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
     print '        nSlice', out.nSlices
     print '        nZ', out.nZ
 
-    if out('itdp') == True:
-        out.s = out('zsep') * out('xlamds') * np.arange(0,nSlice)
-        out.t = out.s/ c *1.e+15
-        out.dt = (out.t[1] - out.t[0]) * 1.e-15
-        out.beam_charge=np.sum(out.I*out('zsep')*out('xlamds')/c)
-        if readall == True:
-            out.spec = fft.fft(np.sqrt(np.array(out.power) ) * np.exp( 1.j* np.array(out.phi_mid) ) )
-            out.freq_ev = h * fftfreq(len(out.spec), d=out('zsep') * out('xlamds') / c)# d=out.dt
-
+    
+    out.s = out('zsep') * out('xlamds') * np.arange(0,nSlice)
+    out.t = out.s/ c *1.e+15
+    out.dt = (out.t[1] - out.t[0]) * 1.e-15
+    out.beam_charge=np.sum(out.I*out('zsep')*out('xlamds')/c)
+    
     if out('dgrid')==0:
         rbeam=sqrt(out('rxbeam')**2+out('rybeam')**2)
         ray=sqrt(out('zrayl')*out('xlamds')/np.pi*(1+(out('zwaist')/out('zrayl')))**2);
-        out.leng=2*out('rmax0')*(rbeam+ray)
+        out.leng=out('rmax0')*(rbeam+ray)*2
     else:
-        out.leng=2*out('dgrid')
+        out.leng=out('dgrid')*2
     
 
     #tmp for back_compatibility    
@@ -1144,6 +1146,7 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
         out.power=out.p_mid[:,-1]
         out.phi=out.phi_mid[:,-1] 
     
+
     print('    done in %.3f seconds' % (time.time() - start_time))        
     return out
 

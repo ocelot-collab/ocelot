@@ -991,7 +991,7 @@ def readGenesisOutput_old(fileName , readall=True, debug=None):
         if out('dgrid')==0:
             rbeam=sqrt(out('rxbeam')**2+out('rybeam')**2)
             ray=sqrt(out('zrayl')*out('xlamds')/np.pi*(1+(out('zwaist')/out('zrayl')))**2); #not cross-checked
-            out.leng=out('rmax0')*(rbeam+ray)# *2 ????
+            out.leng=out('rmax0')*(rbeam+ray)*2# *2 ????
         else:
             out.leng=out('dgrid')*2
 

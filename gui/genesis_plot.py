@@ -247,7 +247,7 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=Fals
     #g.p_int=np.amax(g.p_int)/1e6+g.p_int # nasty fix from division by zero
     weight=g.p_int+np.amin(g.p_int[g.p_int!=0])/1e6
     ax_size_t.plot(g.z, np.average(g.r_size*2*1e6, weights=weight, axis=0), 'b-',linewidth=1.5)
-    ax_size_t.plot([np.amin(g.z), np.amax(g.z)],[g.leng*2*1e6, g.leng*2*1e6], 'b-',linewidth=1.0)
+    ax_size_t.plot([np.amin(g.z), np.amax(g.z)],[g.leng*1e6, g.leng*1e6], 'b-',linewidth=1.0)
     ax_size_t.set_ylabel('transverse [$\mu$m]')
 
     ax_size_l = ax_size_t.twinx() #longitudinal size

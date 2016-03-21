@@ -149,7 +149,9 @@ class GenesisInput:
         #undulator
         self.aw0 = 0.735 #The normalized, dimensionless rms undulator parameter
         self.awd = 0.735 #A virtual undulator parameter for the gap between undulator modules.
-        self.wcoefz = [0,0,0]
+        self.wcoefz = [0,0,0]   #(1-[m]) Start of undulator tapering.  Note that tapering is applied, even the magnetic lattice is defined by an external file.
+                                #(2-[ ]) The relative change of the undulator field over the entire taper length (AW(exit) = (1 -WCOEFZ(2))
+                                #(3) The taper model: 1 for linear taper, 2 for quadratic taper,
         self.iertyp =0 # Type of undulator field errors.
         self.iwityp =0 # the undulator type. A value of zero indicates a planar undulator, any other value a helical one. 
         self.xkx   =  0 #Normalized natural focusing of the undulator in x. Common values are XKX = 0.0, XKY = 1.0 for a planar undulator or XKX, XKY = 0.5 for a helical undulator, but might vary if focusing by curved pole faces is simulated. The values should fulfill the constraint XKX + XKY = 1.0. 
@@ -989,7 +991,7 @@ def readGenesisOutput_old(fileName , readall=True, debug=None):
         if out('dgrid')==0:
             rbeam=sqrt(out('rxbeam')**2+out('rybeam')**2)
             ray=sqrt(out('zrayl')*out('xlamds')/np.pi*(1+(out('zwaist')/out('zrayl')))**2); #not cross-checked
-            out.leng=out('rmax0')*(rbeam+ray)
+            out.leng=out('rmax0')*(rbeam+ray)# *2 ????
         else:
             out.leng=out('dgrid')*2
 

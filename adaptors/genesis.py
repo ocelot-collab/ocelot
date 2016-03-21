@@ -831,14 +831,11 @@ def writeRadiationFile_mpi(comm, filename, slices, shape):
 
 def readGenesisOutput_old(fileName , readall=True, debug=None):
 
-   
+    print '    reading output file'    
 #    print '        - reading from ', fileName
 
     out = GenesisOutput()
     out.path = fileName
-    out.filename = fileName[-fileName[::-1].find('/')::]
-
-    print('    reading output file "'+out.filename+'"')
 
     chunk = 'header'
     
@@ -993,7 +990,7 @@ def readGenesisOutput_old(fileName , readall=True, debug=None):
 
         if out('dgrid')==0:
             rbeam=sqrt(out('rxbeam')**2+out('rybeam')**2)
-            ray=sqrt(out('zrayl')*out('xlamds')/np.pi*(1+(out('zwaist')/out('zrayl')))**2);
+            ray=sqrt(out('zrayl')*out('xlamds')/np.pi*(1+(out('zwaist')/out('zrayl')))**2); #not cross-checked
             out.leng=out('rmax0')*(rbeam+ray)*2
         else:
             out.leng=out('dgrid')*2
@@ -1008,14 +1005,20 @@ def readGenesisOutput_old(fileName , readall=True, debug=None):
 #         pass
 #     else:
         
-        
+        out.filename = fileName[-fileName[::-1].find('/')::]
         
     return out
 
 
 def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
     start_time = time.time()     
-    print '    reading output file'    
+
+
+    out = GenesisOutput()
+    out.path = fileName
+    out.filename = fileName[-fileName[::-1].find('/')::]
+
+    print('    reading output file "'+out.filename+'"')
 #    print '        - reading from ', fileName
 
     out = GenesisOutput()
@@ -1116,12 +1119,10 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
     
     if out('dgrid')==0:
         rbeam=sqrt(out('rxbeam')**2+out('rybeam')**2)
-        ray=sqrt(out('zrayl')*out('xlamds')/np.pi*(1+(out('zwaist')/out('zrayl')))**2); #not cross-checked
-        out.leng=out('rmax0')*(rbeam+ray)
+        ray=sqrt(out('zrayl')*out('xlamds')/np.pi*(1+(out('zwaist')/out('zrayl')))**2);
+        out.leng=out('rmax0')*(rbeam+ray)*2
     else:
         out.leng=out('dgrid')*2
-    
-    out.filename = fileName[-fileName[::-1].find('/')::]
     
 
     #tmp for back_compatibility    

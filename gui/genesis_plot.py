@@ -34,8 +34,9 @@ c = 299792458.0
 max_yticks = 7
 
 def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = None, save=False):
-
     import matplotlib.ticker as ticker
+
+    print('    plotting e-beam evolution')
 
     font_size = 1
     if fig_name is None:
@@ -139,6 +140,7 @@ def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = None, save=False)
 def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=False):
     import matplotlib.ticker as ticker
     
+    print('    plotting radiation evolution')
     
     font_size = 1
     if fig_name is None:
@@ -302,21 +304,21 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
     import matplotlib.ticker as ticker
     
     if z==inf:
-        print 'Showing profile parameters at the end of undulator'
+#        print 'Showing profile parameters at the end of undulator'
         z=np.amax(g.z)
 
     elif z>np.amax(g.z):
-        print 'Z parameter too large, setting to the undulator end'
+#        print 'Z parameter too large, setting to the undulator end'
         z=np.amax(g.z)
     
     elif z<np.amin(g.z):
-        print 'Z parameter too small, setting to the undulator entrance'    
+#        print 'Z parameter too small, setting to the undulator entrance'    
         z=np.amin(g.z)
         
     zi=np.where(g.z>=z)[0][0]
     z=g.z[zi];
     
-
+    print('    plotting results at '+str(z)+' [m]')
 
 
 

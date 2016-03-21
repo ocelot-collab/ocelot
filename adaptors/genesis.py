@@ -831,11 +831,14 @@ def writeRadiationFile_mpi(comm, filename, slices, shape):
 
 def readGenesisOutput_old(fileName , readall=True, debug=None):
 
-    print '    reading output file'    
+   
 #    print '        - reading from ', fileName
 
     out = GenesisOutput()
     out.path = fileName
+    out.filename = fileName[-fileName[::-1].find('/')::]
+
+    print('    reading output file "'+out.filename+'"')
 
     chunk = 'header'
     
@@ -1005,7 +1008,7 @@ def readGenesisOutput_old(fileName , readall=True, debug=None):
 #         pass
 #     else:
         
-        out.filename = fileName[-fileName[::-1].find('/')::]
+        
         
     return out
 

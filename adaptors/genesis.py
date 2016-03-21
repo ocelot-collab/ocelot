@@ -4,7 +4,7 @@ interface to genesis
 
 import struct
 from copy import copy
-import time
+import time, os
 from ocelot.rad.fel import *
 from ocelot.cpbd.beam import Beam, gauss_from_twiss
 import ocelot.utils.reswake as w
@@ -241,7 +241,8 @@ class GenesisInput:
         self.isrsig = 1 # If set to a non-zero value the increase of the energy spread due to the quantum fluctuation of the spontaneous synchrotron radiation is included in the calculation.
         self.eloss = 0 # Externally applied energy loss of the electron beam.
         self.nharm = 1 #Enables the calculation of harmonics up to the one, specified by NHARM. Note that the number of NBINS has to be at least twice as large as NHARM to allow for the correct representation of the harmonics. Note also that this parameter does not enable automatically the output. For that the corresponding bit in LOUT has to be set as well.
-        self.iscan =    0 #Selects the parameter for a scan over a certain range of its value (e.g. 1,2,3... for  GAMMA0, DELGAM, CURPEAK... )
+        self.iscan =    0 #Selects the parameter for a scan over a certain range of its value 
+        #(1.GAMMA0 2.DELGAM 3.CURPEAK 4.XLAMDS 5.AW0 6.ISEED 7.PXBEAM 8.PYBEAM 9.XBEAM 10.YBEAM 11.RXBEAM 12.RYBEAM 13.XLAMD 14.DELAW 15.ALPHAX 16.ALPHAY 17.EMITX 18.EMITY 19.PRAD0 20.ZRAYL 21.ZWAIST 22.AWD 23.BEAMFILE 24.BEAMOPT 25.BEAMGAM)        
         self.nscan =    3 #Number of steps per scan. 
         self.svar = 0.01  #Defines the scan range of the selected scan parameter. The parameter is varied between (1-SVAR) and (1+SVAR) of its initial value.
         
@@ -1021,14 +1022,18 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
     print('    reading output file "'+out.filename+'"')
 #    print '        - reading from ', fileName
 
-    out = GenesisOutput()
-    out.path = fileName
-
     chunk = ''
     output_unsorted=[] 
     nSlice = 0
     
+    attempt=10
+    while os.path.isfile(fileName)!=True:
+        time.sleep(0.1) #wait for the .out file to be assembled
+        attempt=-1
+        if attempt==0:
+            raise Exception('File '+fileName+' not found')
     f=open(fileName,'r')
+        
     null=f.readline()
     for line in f: 
         tokens = line.strip().split()

@@ -75,7 +75,7 @@ def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = None, save=False)
     fig.subplots_adjust(hspace=0)
 
     ax_und.plot(g.z, g.aw, 'b-',linewidth=1.5)
-    ax_und.set_ylabel('K')
+    ax_und.set_ylabel('K (rms)')
 
     ax_quad = ax_und.twinx()
     ax_quad.plot(g.z, g.qfld, 'r-',linewidth=1.5)
@@ -326,7 +326,7 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
 #    max_yticks = 7
     if g('itdp')==False:
         print('    plotting bunch profile at '+str(z)+' [m]')
-        print('!     not possible for steady-state')
+        print('!     not applicable for steady-state')
         return
     
     import matplotlib.ticker as ticker
@@ -499,6 +499,132 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
     
     return fig
 
+
+
+def gen_outplot_scanned_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, save=False):
+#    max_yticks = 7
+    if g('itdp')==True:
+        print('    plotting scan at '+str(z)+' [m]')
+        print('!     Not implemented yet for time dependent, skipping')
+        return
+        
+    if g('iscan')==0 and g('scan')==0:
+        print('    plotting scan at '+str(z)+' [m]')
+        print('!     Not a scan, skipping')
+        return
+    
+    import matplotlib.ticker as ticker
+    
+    if z==inf:
+#        print 'Showing profile parameters at the end of undulator'
+        z=np.amax(g.z)
+
+    elif z>np.amax(g.z):
+#        print 'Z parameter too large, setting to the undulator end'
+        z=np.amax(g.z)
+    
+    elif z<np.amin(g.z):
+#        print 'Z parameter too small, setting to the undulator entrance'    
+        z=np.amin(g.z)
+        
+    zi=np.where(g.z>=z)[0][0]
+    z=g.z[zi];
+    
+    print('    plotting scan at '+str(z)+' [m]')
+
+
+
+    font_size = 1
+    if fig_name is None:
+        if g.filename is '':
+            fig = plt.figure('Genesis scan at '+str(z)+'m')
+        else:
+            fig = plt.figure('Genesis scan at '+str(z)+'m '+g.filename)
+    else:
+        fig = plt.figure(fig_name)
+    fig.set_size_inches(figsize,forward=True)
+    plt.rc('axes', grid=True)
+    plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
+    # left, width = 0.1, 0.85
+    
+    plt.clf()
+    
+    ax_curr=fig.add_subplot(2, 1, 1)
+    ax_curr.clear()
+    ax_energy=fig.add_subplot(2, 1, 2,sharex=ax_curr)
+    ax_energy.clear()    
+#    ax_phase=fig.add_subplot(4, 1, 3,sharex=ax_curr)
+#    ax_phase.clear()
+#    ax_spectrum=fig.add_subplot(4, 1, 4)
+#    ax_spectrum.clear()
+
+    for ax in [ax_curr]:#, ax_energy: #ax_phase, ax_spectrum, 
+        for label in ax.get_xticklabels():
+            label.set_visible(False)
+
+    #
+    
+    
+    fig.subplots_adjust(hspace=0)
+    
+    s=g.scv #scan value is written to current colunm
+        
+    
+    ax_curr.plot(s, np.linspace(g('curpeak'),g('curpeak'),len(s)), 'k--')
+    ax_curr.set_ylabel('I[kA]')
+
+
+    ax_power = ax_curr.twinx()
+    ax_power.grid(False)
+    ax_power.plot(s,g.p_int[:,zi],'g-',linewidth=1.5)    
+    ax_power.set_ylabel('Power [W]')
+    ax_power.set_ylim([0, np.amax(g.p_int[:,zi])])
+    ax_power.get_yaxis().get_major_formatter().set_useOffset(False)
+    ax_power.get_yaxis().get_major_formatter().set_scientific(True)
+    ax_power.get_yaxis().get_major_formatter().set_powerlimits((-3, 4))#[:,75,75]
+    
+#    ax_power.get_xaxis().get_offset_text().set_x(1.1)
+
+    ax_energy.plot(s, g.el_energy[:,zi]*0.511e-3, 'b-', s, (g.el_energy[:,zi]+g.el_e_spread[:,zi])*0.511e-3, 'r--',s, (g.el_energy[:,zi]-g.el_e_spread[:,zi])*0.511e-3, 'r--')
+    ax_energy.set_ylabel('$E\pm\sigma_E$\n[GeV]')
+#    ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
+    ax_energy.ticklabel_format(useOffset=False, style='plain')   
+    ax_energy.get_xaxis().get_major_formatter().set_useOffset(False)
+    ax_energy.get_xaxis().get_major_formatter().set_scientific(True)
+
+
+    ax_bunching = ax_energy.twinx()
+    ax_bunching.plot(s,g.bunching[:,zi],'grey',linewidth=0.5)
+    ax_bunching.set_ylabel('Bunching')
+    ax_bunching.grid(False)
+    
+    
+#    ax_power.yaxis.major.locator.set_params(nbins=number_ticks)
+#    ax_energy.yaxis.major.locator.set_params(nbins=number_ticks)
+
+    # ax_energy.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.1e'))
+
+    plt.xlim(s[0], s[-1])
+
+    fig.subplots_adjust(top=0.95, bottom=0.2, right=0.85, left=0.15)
+
+    #fig.set_size_inches((8,8),forward=True)
+    
+   
+    ax_energy.tick_params(axis='y', which='both', colors='b')
+    ax_energy.yaxis.label.set_color('b')    
+
+    ax_bunching.tick_params(axis='y', which='both', colors='grey')
+    ax_bunching.yaxis.label.set_color('grey')
+    
+    ax_power.tick_params(axis='y', which='both', colors='g')
+    ax_power.yaxis.label.set_color('g')    
+    ax_power.yaxis.get_offset_text().set_color(ax_power.yaxis.label.get_color())
+    
+    if save:
+        fig.savefig(g.path+'_z_'+str(z)+'m.png')
+    
+    return fig
 
 
 def fwhm3(valuelist, peakpos=-1):

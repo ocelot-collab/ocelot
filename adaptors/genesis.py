@@ -1097,7 +1097,10 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
             if len(tokens) == 2 and tokens[1]=='current':
                 #print tokens[1]
                 out.I.append(float(tokens[0]))
-                out.n.append(nSlice)     
+                out.n.append(nSlice)  
+            elif len(tokens) == 3 and tokens[1]=='scan':
+                out.I.append(float(tokens[0]))
+                out.n.append(nSlice)  
 
     for parm in ['z', 'aw', 'qfld', 'I', 'n']:
         exec('out.'+parm+' = np.array(out.'+parm+')')
@@ -1137,6 +1140,10 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
         out.leng=2*out('rmax0')*(rbeam+ray)
     else:
         out.leng=2*out('dgrid')
+        
+    if out('iscan')!=0 or out('scan')!=0:
+        out.scv=out.I #scan value
+        out.I=np.linspace(1,1,len(out.scv)) #because used as a weight
     
 
     #tmp for back_compatibility    

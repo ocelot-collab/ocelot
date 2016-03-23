@@ -8,7 +8,11 @@ try:
     import pydoocs
 except:
     print ('error importing doocs library')
-    
+
+import sys
+sys.path.append("/home/ttflinac/user/tomins/repository/pyqtgraph-0.9.10/build/lib")
+sys.path.append("/home/ttflinac/user/tomins/repository")
+
 import re
 from pylab import *
 import time

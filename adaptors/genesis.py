@@ -105,6 +105,7 @@ inputTemplate = "\
  __ITDP__\n\
  ipseed =   __IPSEED__\n\
  iscan =  __ISCAN__\n\
+ scan =  __SCAN__\n\
  nscan =  __NSCAN__\n\
  svar  =  __SVAR__\n\
  isravg =    __ISRAVG__\n\
@@ -147,7 +148,7 @@ class GenesisInput:
         self.type = 'steady'
         
         #undulator
-        self.aw0 = 0.735 #The normalized, dimensionless rms undulator parameter
+        self.aw0 = 0.735 #The normalized, dimensionless rms undulator parameter, defined by AW0 = (e/mc)(Bu/ku), where e is the electron charge, m is electron mass, c is speed of light, ku=2pi/lambdau is the undulator wave number, lambdau is the undulator period. Bu is the rms undulator field with Bu = Bp/2 for a planar undulator and Bu = Bp for a helical undulator, where Bp is the on-axis peak field. 
         self.awd = 0.735 #A virtual undulator parameter for the gap between undulator modules.
         self.wcoefz = [0,0,0]   #(1-[m]) Start of undulator tapering.  Note that tapering is applied, even the magnetic lattice is defined by an external file.
                                 #(2-[ ]) The relative change of the undulator field over the entire taper length (AW(exit) = (1 -WCOEFZ(2))
@@ -242,7 +243,8 @@ class GenesisInput:
         self.eloss = 0 # Externally applied energy loss of the electron beam.
         self.nharm = 1 #Enables the calculation of harmonics up to the one, specified by NHARM. Note that the number of NBINS has to be at least twice as large as NHARM to allow for the correct representation of the harmonics. Note also that this parameter does not enable automatically the output. For that the corresponding bit in LOUT has to be set as well.
         self.iscan =    0 #Selects the parameter for a scan over a certain range of its value 
-        #(1.GAMMA0 2.DELGAM 3.CURPEAK 4.XLAMDS 5.AW0 6.ISEED 7.PXBEAM 8.PYBEAM 9.XBEAM 10.YBEAM 11.RXBEAM 12.RYBEAM 13.XLAMD 14.DELAW 15.ALPHAX 16.ALPHAY 17.EMITX 18.EMITY 19.PRAD0 20.ZRAYL 21.ZWAIST 22.AWD 23.BEAMFILE 24.BEAMOPT 25.BEAMGAM)        
+        #(1.GAMMA0 2.DELGAM 3.CURPEAK 4.XLAMDS 5.AW0 6.ISEED 7.PXBEAM 8.PYBEAM 9.XBEAM 10.YBEAM 11.RXBEAM 12.RYBEAM 13.XLAMD 14.DELAW 15.ALPHAX 16.ALPHAY 17.EMITX 18.EMITY 19.PRAD0 20.ZRAYL 21.ZWAIST 22.AWD 23.BEAMFILE 24.BEAMOPT 25.BEAMGAM)  
+        self.scan = '' #By supplying the parameter name to scan over it overrules the setting of ISCAN
         self.nscan =    3 #Number of steps per scan. 
         self.svar = 0.01  #Defines the scan range of the selected scan parameter. The parameter is varied between (1-SVAR) and (1+SVAR) of its initial value.
         
@@ -1012,13 +1014,11 @@ def readGenesisOutput_old(fileName , readall=True, debug=None):
 
 
 def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
-    start_time = time.time()     
-
-
     out = GenesisOutput()
     out.path = fileName
     out.filename = fileName[-fileName[::-1].find('/')::]
 
+    print(' ')
     print('    reading output file "'+out.filename+'"')
 #    print '        - reading from ', fileName
 
@@ -1026,16 +1026,18 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
     output_unsorted=[] 
     nSlice = 0
     
-    wait_attempt=10
-    wait_time=0.2
+    wait_attempt=6
+    wait_time=10
     while os.path.isfile(fileName)!=True:
-        time.sleep(0.1) #wait for the .out file to be assembled
-        print('    waiting for "'+out.filename+'" '+str(wait_time)+'s')
-        wait_attempt=-1
+        print('!     waiting for "'+out.filename+'" '+str(wait_time)+'s ['+str(wait_attempt)+']')
+        time.sleep(wait_time) #wait for the .out file to be assembled
+        wait_attempt-=1
         if wait_attempt==0:
             raise Exception('File '+fileName+' not found')
+    
+    start_time = time.time()    
     f=open(fileName,'r')
-        
+    
     null=f.readline()
     for line in f: 
         tokens = line.strip().split()
@@ -1108,8 +1110,8 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
             out.energy+=out('gamma0')
         
         out.power_z=np.max(out.power,0)
-        out.spec = fft.fft(np.sqrt(np.array(out.power) ) * np.exp( 1.j* np.array(out.phi_mid) ) )
-        out.freq_ev = h * fftfreq(len(out.spec), d=out('zsep') * out('xlamds') / c)
+
+
 
             
     out.nSlices = nSlice
@@ -1118,18 +1120,23 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
     print '        nSlice', out.nSlices
     print '        nZ', out.nZ
 
-    
-    out.s = out('zsep') * out('xlamds') * np.arange(0,nSlice)
-    out.t = out.s/ c *1.e+15
-    out.dt = (out.t[1] - out.t[0]) * 1.e-15
-    out.beam_charge=np.sum(out.I*out('zsep')*out('xlamds')/c)
-    
+    if out('itdp') == True:
+
+        out.s = out('zsep') * out('xlamds') * np.arange(0,nSlice)
+        out.t = out.s/ c *1.e+15
+        out.dt = (out.t[1] - out.t[0]) * 1.e-15
+        out.beam_charge=np.sum(out.I*out('zsep')*out('xlamds')/c)
+        if readall == True:
+            out.spec = fft.fft(np.sqrt(np.array(out.power) ) * np.exp( 1.j* np.array(out.phi_mid) ) )
+            out.freq_ev = h * fftfreq(len(out.spec), d=out('zsep') * out('xlamds') / c)# d=out.dt
+
+
     if out('dgrid')==0:
         rbeam=sqrt(out('rxbeam')**2+out('rybeam')**2)
         ray=sqrt(out('zrayl')*out('xlamds')/np.pi*(1+(out('zwaist')/out('zrayl')))**2);
-        out.leng=out('rmax0')*(rbeam+ray)*2
+        out.leng=2*out('rmax0')*(rbeam+ray)
     else:
-        out.leng=out('dgrid')*2
+        out.leng=2*out('dgrid')
     
 
     #tmp for back_compatibility    
@@ -1297,8 +1304,8 @@ def generate_input(up, beam, itdp=False):
     #inp.nsec = 20
         
     inp.xlamd = up.lw
-    inp.aw0 = up.K * np.sqrt(0.5) #The normalized, dimensionless rms undulator parameter, defined by AW0 = (e/mc)(Bu/ku), where e is the electron charge, m is electron mass, c is speed of light, ku=2pi/lambdau is the undulator wave number, lambdau is the undulator period. Bu is the rms undulator field with Bu = Bp/2 for a planar undulator and Bu = Bp for a helical undulator, where Bp is the on-axis peak field. 
-    inp.awd=inp.aw0 #A virtual undulator parameter for the gap between undulator modules. The only purpose of this parameter is to delay the longitudinal motion of the electrons in the same manner as AW0 does within the undulator modules.
+    inp.aw0 = up.K * np.sqrt(0.5) 
+    inp.awd=inp.aw0
     inp.delgam = beam.sigma_E / 0.000510998
     inp.gamma0 = beam.E / 0.000510998
     inp.rxbeam = np.sqrt (beam.emit_x * beam.beta_x )
@@ -1323,7 +1330,6 @@ def generate_input(up, beam, itdp=False):
     inp.prad0 = felParameters.power
     inp.fbess0 = felParameters.fc
     inp.zrayl = felParameters.zr
-    
     
     if itdp:
         inp.type = "tdp"
@@ -1372,7 +1378,6 @@ def generate_lattice(lattice, unit=1.0, energy = None, debug = False):
         l = float(e.l)
         
         #print e.type, pos, prevPos
-        
         if e.type == 'undulator':
 
             l = float(e.nperiods) * float(e.lperiod)
@@ -1388,7 +1393,6 @@ def generate_lattice(lattice, unit=1.0, energy = None, debug = False):
 
             prevPos = pos
             prevLen = l 
-
             
         elif e.type == 'rbend' or e.type == 'sbend' or e.type == 'drift':
             pass
@@ -1402,12 +1406,9 @@ def generate_lattice(lattice, unit=1.0, energy = None, debug = False):
             quadLat += 'QF' +'    '+ str(k) + '   ' + str( (e.l / unit ) ) + '  ' + str( ( (pos - prevPosQ - prevLenQ)  / unit) ) + '\n'
             prevPosQ = pos
             prevLenQ = l 
-
             #pass
   
-  
         pos = pos + l
-
 
     return lat + undLat + driftLat + quadLat
 
@@ -1760,23 +1761,27 @@ def cut_beam(beam = None, cut_z = [-inf, inf]):
         beam_new.column_values = beam.column_values
         beam_new.columns = beam.columns
         
-        beam_new.x = np.extract(condition,beam.x)
-        beam_new.px = np.extract(condition,beam.px)
-        beam_new.y = np.extract(condition,beam.y)
-        beam_new.py = np.extract(condition,beam.py)
-        beam_new.z = np.extract(condition,beam.z)
+        for parm in ['x','px','y','py','z','I','ex','ey','g0','dg','eloss','betax','betay','alphax','alphay']:
+            if hasattr(beam,parm):
+                setattr(beam_new,parm,np.extract(condition,getattr(beam,parm)))
         
-        beam_new.I = np.extract(condition,beam.I)
-        beam_new.ex = np.extract(condition,beam.ex)
-        beam_new.ey = np.extract(condition,beam.ey)
-        beam_new.g0 = np.extract(condition,beam.g0)
-        beam_new.dg = np.extract(condition,beam.dg)
-        beam_new.eloss = np.extract(condition,beam.eloss)
+        # beam_new.x = np.extract(condition,beam.x)
+        # beam_new.px = np.extract(condition,beam.px)
+        # beam_new.y = np.extract(condition,beam.y)
+        # beam_new.py = np.extract(condition,beam.py)
+        # beam_new.z = np.extract(condition,beam.z)
         
-        beam_new.betax = np.extract(condition,beam.betax)
-        beam_new.betay = np.extract(condition,beam.betay)
-        beam_new.alphax = np.extract(condition,beam.alphax)
-        beam_new.alphay = np.extract(condition,beam.alphay)
+        # beam_new.I = np.extract(condition,beam.I)
+        # beam_new.ex = np.extract(condition,beam.ex)
+        # beam_new.ey = np.extract(condition,beam.ey)
+        # beam_new.g0 = np.extract(condition,beam.g0)
+        # beam_new.dg = np.extract(condition,beam.dg)
+        # beam_new.eloss = np.extract(condition,beam.eloss)
+        
+        # beam_new.betax = np.extract(condition,beam.betax)
+        # beam_new.betay = np.extract(condition,beam.betay)
+        # beam_new.alphax = np.extract(condition,beam.alphax)
+        # beam_new.alphay = np.extract(condition,beam.alphay)
 
         beam_new.zsep = beam.zsep
         zmax, Imax = peaks(beam_new.z, beam_new.I, n=1)

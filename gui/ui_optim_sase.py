@@ -124,7 +124,7 @@ class Ui_MainWindow(object):
         self.stop_opt_btn = QtGui.QPushButton('Stop')
 
 
-        self.save_machine_btn = QtGui.QPushButton('New tuning')
+        self.save_machine_btn = QtGui.QPushButton('Save new tuning')
         #self.save_machine_btn.setEnabled(False)
         #self.stop_btn = QtGui.QPushButton('stop')
         self.w5.addWidget(self.start_opt_btm, row=0, col=0)

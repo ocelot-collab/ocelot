@@ -92,6 +92,9 @@ def tree2seq(tree):
         for sub in p:
             if sub.opts["type"] == "action":
                 continue
+            if sub.opts["name"] == "max iter":
+                new_seq['maxiter'] = sub.opts["value"]
+                continue
             type_devs, dev = sub.opts["name"].split("/")
             new_seq['devices'].append(dev)
             new_seq['type_devs'].append(type_devs)
@@ -115,6 +118,7 @@ def tree2seq(tree):
                 """
                 new_seq['tol'].append(limits)
         sequence.append(new_seq)
+        #print(sequence)
     return sequence
 
 
@@ -131,7 +135,7 @@ def seq2tree(tree, seq):
             tmp = {'name': name, 'type': "str", "value": "0",'readonly': True, 'expanded': False, 'children': []}
             tmp['children'].append({'name': 'tol., A', 'type': "float", "value": tol, 'step': 0.01})
             new_chld.append(tmp)
-
+        new_chld.append({'name': 'max iter', 'type': 'int', "value": 30})
         new_chld.append({'name': 'start Action', 'type': 'action'})
 
         new_seq = {'name': act['name'], 'type': 'int', 'limits': (0, 20),  'value': act['order'], 'removable': True, 'children': new_chld}
@@ -621,7 +625,7 @@ def main():
 
     timer = pg.QtCore.QTimer()
     timer.timeout.connect(form.update_sase)
-    timer.start(300)
+    timer.start(100)
 
     timer1 = pg.QtCore.QTimer()
     timer1.timeout.connect(form.update_orbit)
@@ -629,11 +633,11 @@ def main():
 
     timer2 = pg.QtCore.QTimer()
     timer2.timeout.connect(form.update_blm)
-    timer2.start(300)
+    timer2.start(100)
 
     timer3 = pg.QtCore.QTimer()
     timer3.timeout.connect(form.update_tree_currents)
-    timer3.start(2000)
+    timer3.start(1000)
 
     form.show()
     app.exec_()

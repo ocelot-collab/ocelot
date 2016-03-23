@@ -13,6 +13,7 @@ import re
 from pylab import *
 import time
 import pickle
+from threading import Thread, Lock
 from ocelot.utils.db import *
 
 
@@ -225,14 +226,16 @@ class FLASH1MachineInterface():
                           '10SMATCH','3SDUMP',
                           "5R.UND6"
                           ]
-
+        self.mutex = Lock()
 
 
     def init_corrector_vals(self, correctors):
         vals = np.zeros(len(correctors))
         for i in range(len(correctors)):
             mag_channel = 'TTF2.MAGNETS/STEERER/' + correctors[i] + '/PS'
+            self.mutex.acquire()
             vals[i] = pydoocs.read(mag_channel)["data"]
+            self.mutex.release()
         return vals
 
     def get_cav_ampl(self, cav):
@@ -380,18 +383,26 @@ class FLASH1MachineInterface():
 
     def get_value_ps(self, device_name):
         ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS'
-        return pydoocs.read(ch)['data']
+        self.mutex.acquire()
+        val = pydoocs.read(ch)['data']
+        self.mutex.release()
+        return val
 
     def get_value(self, device_name):
         ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS.RBV'
         #print("getting value = ", ch)
-        return pydoocs.read(ch)['data']
+        self.mutex.acquire()
+        val = pydoocs.read(ch)['data']
+        self.mutex.release()
+        return val
     
     def set_value(self, device_name, val):
         ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS'
         print (ch, val)
-        return 0#pydoocs.write(ch, str(val))
- 
+        self.mutex.acquire()
+        pydoocs.write(ch, str(val))
+        self.mutex.release()
+        return 0
  
 class FLASH1DeviceProperties:
     def __init__(self):

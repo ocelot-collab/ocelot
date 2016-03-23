@@ -265,8 +265,9 @@ class Optimizer:
             except KeyError:
                 xtol = 1.e-3
             self.maxiter=max_iter
-            opt.fmin(error_func,x,xtol=xtol, maxiter=max_iter)
-        
+            #opt.fmin(error_func,x,xtol=xtol, maxiter=max_iter)
+            opt.fmin(error_func,x,xtol=xtol, maxfun=max_iter)
+
         if method == 'powell': 
             print ('using powell optimizer, params:', params)
             

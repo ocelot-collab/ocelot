@@ -625,7 +625,7 @@ def main():
 
     timer = pg.QtCore.QTimer()
     timer.timeout.connect(form.update_sase)
-    timer.start(100)
+    timer.start(200)
 
     timer1 = pg.QtCore.QTimer()
     timer1.timeout.connect(form.update_orbit)
@@ -633,7 +633,7 @@ def main():
 
     timer2 = pg.QtCore.QTimer()
     timer2.timeout.connect(form.update_blm)
-    timer2.start(100)
+    timer2.start(200)
 
     timer3 = pg.QtCore.QTimer()
     timer3.timeout.connect(form.update_tree_currents)

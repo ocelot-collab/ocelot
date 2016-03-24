@@ -1,3 +1,7 @@
+import sys
+sys.path.append("/home/ttflinac/user/tomins/repository/pyqtgraph-0.9.10/build/lib")
+sys.path.append("/home/ttflinac/user/tomins/repository")
+
 from ocelot.gui import ui_optim_sase
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtGui

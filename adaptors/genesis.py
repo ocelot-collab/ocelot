@@ -105,7 +105,6 @@ inputTemplate = "\
  __ITDP__\n\
  ipseed =   __IPSEED__\n\
  iscan =  __ISCAN__\n\
- scan =  __SCAN__\n\
  nscan =  __NSCAN__\n\
  svar  =  __SVAR__\n\
  isravg =    __ISRAVG__\n\
@@ -244,7 +243,7 @@ class GenesisInput:
         self.nharm = 1 #Enables the calculation of harmonics up to the one, specified by NHARM. Note that the number of NBINS has to be at least twice as large as NHARM to allow for the correct representation of the harmonics. Note also that this parameter does not enable automatically the output. For that the corresponding bit in LOUT has to be set as well.
         self.iscan =    0 #Selects the parameter for a scan over a certain range of its value 
         #(1.GAMMA0 2.DELGAM 3.CURPEAK 4.XLAMDS 5.AW0 6.ISEED 7.PXBEAM 8.PYBEAM 9.XBEAM 10.YBEAM 11.RXBEAM 12.RYBEAM 13.XLAMD 14.DELAW 15.ALPHAX 16.ALPHAY 17.EMITX 18.EMITY 19.PRAD0 20.ZRAYL 21.ZWAIST 22.AWD 23.BEAMFILE 24.BEAMOPT 25.BEAMGAM)  
-        self.scan = '' #By supplying the parameter name to scan over it overrules the setting of ISCAN
+        #self.scan = '' #By supplying the parameter name to scan over it overrules the setting of ISCAN
         self.nscan =    3 #Number of steps per scan. 
         self.svar = 0.01  #Defines the scan range of the selected scan parameter. The parameter is varied between (1-SVAR) and (1+SVAR) of its initial value.
         
@@ -538,7 +537,7 @@ def read_beam_file(fileName):
     beam = GenesisBeamDefinition()
     
     f=open(fileName,'r')
-    f.readline()
+    null=f.readline()
     for line in f: 
         tokens = line.strip().split()
         
@@ -1141,7 +1140,7 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
     else:
         out.leng=2*out('dgrid')
         
-    if out('iscan')!=0 or out('scan')!=0:
+    if out('iscan')!=0:
         out.scv=out.I #scan value
         out.I=np.linspace(1,1,len(out.scv)) #because used as a weight
     
@@ -1343,9 +1342,11 @@ def generate_input(up, beam, itdp=False):
         inp.DUMP_FIELDS = 1
         inp.ipseed = 132
         inp.ncar = 151
-        inp.nslice = 300
+        #inp.nslice = 300
         inp.curlen = beam.tpulse * 3.e-7
-        inp.zsep = 8 * int(inp.curlen  / inp.nslice / inp.xlamds )
+        inp.zsep = int(0.25/(4*pi*felParameters.rho)) #0.25 is the additional factor to be "on the safe side"
+        # inp.zsep = 8 * int(inp.curlen  / inp.nslice / inp.xlamds )
+        inp.nslice = 8 * int(inp.curlen  / inp.zsep / inp.xlamds )
     
     inp.ntail = - int ( inp.nslice / 2 )
     inp.npart = 2048
@@ -1796,7 +1797,41 @@ def cut_beam(beam = None, cut_z = [-inf, inf]):
     else:
         beam_new=beam
     return beam_new
+
+def get_beam_peak(beam = None): #experimental, the code is too inconsistent to introduce suc function yet (e.g. xp <-> px)
+    import copy
+    #obtains the peak current values
+    if len(beam.I)>1:# and np.amax(beam.I)!=np.amin(beam.I):
+        pkslice = np.argmax(beam.I)
         
+        beam_new=copy.deepcopy(beam)
+        
+        beam_new.I=beam.I[pkslice]
+        beam_new.alpha_x=beam.alphax[pkslice]
+        beam_new.alpha_y=beam.alphay[pkslice]
+        beam_new.beta_x=beam.betax[pkslice]
+        beam_new.beta_y=beam.betay[pkslice]
+        beam_new.emit_xn=beam.ex[pkslice]
+        beam_new.emit_yn=beam.ey[pkslice]
+        beam_new.gamma_rel=beam.g0[pkslice]
+        beam_new.sigma_E=beam.dg[pkslice]*(0.000510998)
+        
+        beam_new.E=beam_new.gamma_rel*(0.511e-3)
+        beam_new.emit_x = beam_new.emit_xn / beam_new.gamma_rel
+        beam_new.emit_y = beam_new.emit_yn / beam_new.gamma_rel
+        
+        for parm in ['alphax','alphay','betax','betay','z','ex','ey','g0','dg']:
+            if hasattr(beam_new,parm):
+                delattr(beam_new,parm)
+        
+        # beam_new.x = np.extract(condition,beam.x)
+
+    else:
+        beam_new=beam
+    return beam_new
+    
+        
+
 
   
 def find_transform(g1,g2):

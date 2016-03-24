@@ -627,6 +627,37 @@ def gen_outplot_scanned_z(g, figsize=(8, 10), legend = True, fig_name = None, z=
     return fig
 
 
+def gen_outplot(handle=None,save=True,show=False,debug=0):
+    import os
+    from ocelot.adaptors.genesis import *
+    
+    
+    if os.path.isdir(str(handle)):
+        handles=[]
+        for root, dirs, files in os.walk(handle):
+            for name in files:
+                if name.endswith('.gout') or name.endswith('.out'):
+                    handles.append(os.path.join(root, name))
+        print('\n  plotting all files in '+str(handle))
+    else:
+        handles=[handle]
+    
+    for handle in handles:
+    
+        if os.path.isfile(str(handle)):
+            handle=readGenesisOutput(handle,readall=1,debug=debug)
+            
+        if isinstance(handle,GenesisOutput):
+            gen_outplot_e(handle,save=save)
+            gen_outplot_ph(handle,save=save)
+            gen_outplot_z(handle, z=0,save=save)
+            gen_outplot_z(handle, z=inf,save=save)
+    
+    if show:
+        plt.show()
+
+
+
 def fwhm3(valuelist, peakpos=-1):
     """calculates the full width at half maximum (fwhm) of some curve.
     the function will return the fwhm with sub-pixel interpolation. It will start at the maximum position and 'walk' left and right until it approaches the half values.

@@ -1160,7 +1160,7 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
         out.phi=out.phi_mid[:,-1] 
     
 
-    print('    done in %.3f seconds' % (time.time() - start_time))        
+    print('      done in %.3f seconds' % (time.time() - start_time))        
     return out
 
 

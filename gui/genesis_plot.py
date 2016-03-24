@@ -14,7 +14,6 @@ from numpy import matlib
 
 from pylab import * #tmp
 
-
 # font = {'family' : 'normal',
 #        'weight' : 'bold',
 #        'size'   : 20}
@@ -100,16 +99,18 @@ def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = None, save=False)
     ax_bunching.set_ylabel('Bunching')
 
     ax_bunching.set_xlabel('z [m]')
-    x1,x2,y1,y2 = ax_size_tpos.axis()
-    ax_size_tpos.axis([x1,x2,0,y2])
-    x1,x2,y1,y2 = ax_spread.axis()
-    ax_spread.axis([x1,x2,0,y2])
+    
+    ax_size_tpos.set_ylim(ymin=0)
+    ax_spread.set_ylim(ymin=0)
 
+    number_ticks=6
 
-
-    number_ticks=4
-#    ax_und.yaxis.major.locator.set_params(nbins=number_ticks)
-
+    ax_und.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_quad.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_energy.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_spread.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_bunching.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_size_tpos.yaxis.major.locator.set_params(nbins=number_ticks)
     # yloc = plt.MaxNLocator(max_yticks)
     # ax_size_tpos.yaxis.set_major_locator(yloc)
     # ax_energy.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.1e'))
@@ -130,8 +131,10 @@ def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = None, save=False)
     ax_spread.tick_params(axis='y', which='both', colors='r')
     ax_spread.yaxis.label.set_color('r') 
 
-    if save:
-        fig.savefig(g.path+'_elec.png')
+    if save!=False:
+        if save==True:
+            save='png'
+        fig.savefig(g.path+'_elec.'+str(save),format=save)
         
     return fig
 
@@ -241,7 +244,7 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=Fals
     
     
         ax_spectrum.plot(g.z, np.amax(spectrum,axis=0), 'r-',linewidth=1.5)
-        ax_spectrum.set_ylabel('P($\lambda$)_{max} [a.u]')
+        ax_spectrum.set_ylabel('P$(\lambda)_{max}$ [a.u.]')
     #    if np.amin(np.amax(spectrum,axis=0))>0:
         ax_spectrum.set_yscale('log')
         
@@ -306,18 +309,20 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=Fals
         ax_spec_bandw.set_ylim(ymin=0)
 
 
+    # #attempt to fix overlapping label values
+# #    for a in [ax_size_l,ax_size_t,ax_spec_bandw,ax_spectrum]:
+# #        xticks = a.yaxis.get_major_ticks()
+# #        xticks[-1].label.set_visible(False)  
     
-#    for a in [ax_size_l,ax_size_t,ax_spec_bandw,ax_spectrum]:
-#        xticks = a.yaxis.get_major_ticks()
-#        xticks[-1].label.set_visible(False)  
-    
-#    labels = ax_size_t.get_yticklabels()
-##    print dir(labels), labels
-#    labels[0] = ""
-#    ax_size_t.set_yticklabels(labels)    
-    if save:
-        fig.savefig(g.path+'_rad.png')
-    
+# #    labels = ax_size_t.get_yticklabels()
+# ##    print dir(labels), labels
+# #    labels[0] = ""
+# #    ax_size_t.set_yticklabels(labels)    
+
+    if save!=False:
+        if save==True:
+            save='png'
+        fig.savefig(g.path+'_rad.'+str(save),format=save)
     return fig
 
 
@@ -390,14 +395,17 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
         
     
     ax_curr.plot(s, g.I/1e3, 'k--')
-    ax_curr.set_ylabel('I[kA]')
+    ax_curr.set_ylabel('I [kA]')
+    ax_curr.set_ylim(ymin=0)
 
 
     ax_power = ax_curr.twinx()
     ax_power.grid(False)
     ax_power.plot(s,g.p_int[:,zi],'g-',linewidth=1.5)    
     ax_power.set_ylabel('Power [W]')
-    ax_power.set_ylim([0, np.amax(g.p_int[:,zi])])
+    ax_power.set_ylim(ymin=0)
+    # if np.amax(g.p_int[:,zi])!=np.amin(g.p_int[:,zi]):
+        # ax_power.set_ylim([0, np.amax(g.p_int[:,zi])])
     ax_power.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_power.get_yaxis().get_major_formatter().set_scientific(True)
     ax_power.get_yaxis().get_major_formatter().set_powerlimits((-3, 4))#[:,75,75]
@@ -405,13 +413,14 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
 #    ax_power.get_xaxis().get_offset_text().set_x(1.1)
 
     ax_energy.plot(s, g.el_energy[:,zi]*0.511e-3, 'b-', s, (g.el_energy[:,zi]+g.el_e_spread[:,zi])*0.511e-3, 'r--',s, (g.el_energy[:,zi]-g.el_e_spread[:,zi])*0.511e-3, 'r--')
-    ax_energy.set_ylabel('$E\pm\sigma_E$\n[GeV]')
+    ax_energy.set_ylabel('$E\pm\sigma_E$ [GeV]')
 #    ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
     ax_energy.ticklabel_format(useOffset=False, style='plain')   
 
     ax_bunching = ax_energy.twinx()
     ax_bunching.plot(s,g.bunching[:,zi],'grey',linewidth=0.5)
     ax_bunching.set_ylabel('Bunching')
+    ax_bunching.set_ylim(ymin=0)
     ax_bunching.grid(False)
     
     
@@ -436,7 +445,7 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
 
     ax_spectrum.plot(fftshift(lamdscale), fftshift(spectrum[:,zi]), 'r-')
     ax_spectrum.text(0.5, 0.5,'on axis', horizontalalignment='center', verticalalignment='center')
-    ax_spectrum.set_ylabel('P($\lambda$)')
+    ax_spectrum.set_ylabel('P($\lambda$) [a.u.]')
     ax_spectrum.set_xlabel('$\lambda$ [nm]')
     ax_spectrum.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_spectrum.get_yaxis().get_major_formatter().set_scientific(True)
@@ -459,14 +468,16 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
     ax_phase.set_ylabel('$\phi$ [rad]')
     ax_phase.set_ylim([-pi, pi])
 
-    number_ticks=4
+    number_ticks=6
 
     # ax_spectrum.yaxis.major.locator.set_params(nbins=number_ticks)
     
-    ax_phase.xaxis.major.locator.set_params(nbins=5)
+    ax_phase.xaxis.major.locator.set_params(nbins=number_ticks)
     ax_power.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_energy.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_spectrum.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_bunching.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_curr.yaxis.major.locator.set_params(nbins=number_ticks)
 
     # ax_energy.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.1e'))
 
@@ -494,8 +505,10 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
     ax_spectrum.yaxis.get_offset_text().set_color(ax_spectrum.yaxis.label.get_color())
     
 
-    if save:
-        fig.savefig(g.path+'_z_'+str(z)+'m.png')
+    if save!=False:
+        if save==True:
+            save='png'
+        fig.savefig(g.path+'_z_'+str(z)+'m.'+str(save),format=save)
     
     return fig
 
@@ -621,15 +634,22 @@ def gen_outplot_scanned_z(g, figsize=(8, 10), legend = True, fig_name = None, z=
     ax_power.yaxis.label.set_color('g')    
     ax_power.yaxis.get_offset_text().set_color(ax_power.yaxis.label.get_color())
     
-    if save:
-        fig.savefig(g.path+'_z_'+str(z)+'m.png')
+    if save!=False:
+        if save==True:
+            save='png'
+        fig.savefig(g.path+'_z_'+str(z)+'m_scan.'+str(save),format=save)
     
     return fig
 
 
-def gen_outplot(handle=None,save=True,show=False,debug=0):
+def gen_outplot(handle=None,save='eps',show=False,debug=0):
+    #picks as an input "GenesisOutput" object, file path of directory as strings. 
+    #plots e-beam evolution, radiation evolution, initial and final simulation window
+    #If folder path is provided, all *.gout and *.out files are plotted
     import os
-    from ocelot.adaptors.genesis import *
+    from ocelot.adaptors.genesis import readGenesisOutput, GenesisOutput
+    
+    plt.ioff()
     
     
     if os.path.isdir(str(handle)):
@@ -648,13 +668,19 @@ def gen_outplot(handle=None,save=True,show=False,debug=0):
             handle=readGenesisOutput(handle,readall=1,debug=debug)
             
         if isinstance(handle,GenesisOutput):
-            gen_outplot_e(handle,save=save)
-            gen_outplot_ph(handle,save=save)
-            gen_outplot_z(handle, z=0,save=save)
-            gen_outplot_z(handle, z=inf,save=save)
+            f1=gen_outplot_e(handle,save=save)
+            f2=gen_outplot_ph(handle,save=save)
+            f3=gen_outplot_z(handle, z=0,save=save)
+            f4=gen_outplot_z(handle, z=inf,save=save)
     
-    if show:
+    if show==True:
+        print('    showing plots, close all to proceed')
         plt.show()
+        
+    if save!=False:
+        print('    plots recorded to *.'+str(save)+' files')
+    
+    return [f1,f2,f3,f4]
 
 
 

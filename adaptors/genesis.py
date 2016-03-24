@@ -1052,7 +1052,7 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
 
         if tokens[0] == 'power':
             chunk = 'slice'
-            if nSlice == 1:
+            if out.sliceKeys == []: #to record the first instance
                 out.sliceKeys = copy(tokens)
                 print '      reading slice values '
             continue
@@ -1084,7 +1084,7 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
             #print 'input:', tokens
         if chunk == 'input2':
             tokens=line.replace('=','').strip().split()
-            out.parameters['_'.join(tokens[1:])] = tokens[0]
+            out.parameters['_'.join(tokens[1:])] = [tokens[0]]
             #out.parameters[tokens[0]] = tokens[0:]
             #print 'input:', tokens
 #
@@ -1106,27 +1106,29 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
     
     if readall:
         output_unsorted=np.array(output_unsorted)#.astype(precision)
+        # print out.sliceKeys
         for i in range(len(out.sliceKeys)):
-            exec('out.'+out.sliceKeys[i].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(nSlice)+','+str(len(out.z))+'))')
+            #exec('out.'+out.sliceKeys[i].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(out.nSlices)+','+str(len(out.z))+'))')
+            exec('out.'+out.sliceKeys[i].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(out('history_records'))+','+str(out('entries_per_record'))+'))')
         if hasattr(out,'energy'):
             out.energy+=out('gamma0')
-        
         out.power_z=np.max(out.power,0)
 
 
 
             
-    out.nSlices = nSlice
-    out.nZ = len(out.z)
+    out.nSlices = int(out('history_records'))
+    out.nZ = int(out('entries_per_record'))
 
     print '        nSlice', out.nSlices
     print '        nZ', out.nZ
 
     if out('itdp') == True:
 
-        out.s = out('zsep') * out('xlamds') * np.arange(0,nSlice)
-        out.t = out.s/ c *1.e+15
-        out.dt = (out.t[1] - out.t[0]) * 1.e-15
+        out.s = out('zsep') * out('xlamds') * np.arange(0,out.nSlices)
+        out.t = out.s / c * 1.e+15
+        #out.dt = (out.t[1] - out.t[0]) * 1.e-15
+        out.dt=out('zsep') * out('xlamds') / c 
         out.beam_charge=np.sum(out.I*out('zsep')*out('xlamds')/c)
         if readall == True:
             out.spec = fft.fft(np.sqrt(np.array(out.power) ) * np.exp( 1.j* np.array(out.phi_mid) ) )
@@ -1144,7 +1146,6 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
         out.scv=out.I #scan value
         out.I=np.linspace(1,1,len(out.scv)) #because used as a weight
     
-
     #tmp for back_compatibility    
     if readall:    
         out.power_int=out.power[:,-1]

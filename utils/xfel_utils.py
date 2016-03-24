@@ -131,7 +131,7 @@ def run(inp, launcher,readall=True):
         open(inp.run_dir + '/tmp.beam','w').write(inp.beam_file_str)
         print ('    writing /tmp.beam')
 
-        out_file = inp.run_dir + '/run.' + str(inp.runid) + '.gout'
+    out_file = inp.run_dir + '/run.' + str(inp.runid) + '.gout'
     os.system('rm -rf ' + out_file + '.dfl') # to make sure field file is not attached to old one
     os.system('rm -rf ' + out_file + '.dpa') # to make sure particle file is not attached to old one
 

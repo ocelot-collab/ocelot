@@ -5,6 +5,7 @@ from ocelot.cpbd.optics import trace_z, twiss
 from scipy.integrate import simps
 from numpy.linalg import inv
 from ocelot.cpbd.beam import *
+from ocelot.cpbd.elements import *
 
 def edge_chromaticity_old(lattice, tws_0):
     #tested !
@@ -38,9 +39,9 @@ def edge_chromaticity(lattice, tws_0):
             #print "*************    ", tw_start, tw_end
             ksi_x_edge += tw_start[0].beta_x*tan(element.edge)*element.h
             ksi_y_edge += tw_start[0].beta_y*tan(-element.edge)*element.h
-    return (ksi_x_edge, ksi_y_edge)
+    return np.array([ksi_x_edge, ksi_y_edge])
 
-def chromaticity(lattice, tws_0, nsuperperiod = 1):
+def natural_chromaticity(lattice, tws_0, nsuperperiod = 1):
     edge_ksi_x, edge_ksi_y = edge_chromaticity(lattice, tws_0)
     tws_elem = tws_0
     #M = TransferMap()
@@ -77,7 +78,7 @@ def chromaticity(lattice, tws_0, nsuperperiod = 1):
         tws_elem = elem.transfer_map*tws_elem
     ksi_x = -(integr_x - edge_ksi_x)/(4*pi)
     ksi_y = -(integr_y - edge_ksi_y)/(4*pi)
-    return (ksi_x*nsuperperiod, ksi_y*nsuperperiod)
+    return np.array([ksi_x*nsuperperiod, ksi_y*nsuperperiod])
 
 
 def sextupole_chromaticity(lattice, tws0, nsuperperiod = 1):
@@ -87,13 +88,13 @@ def sextupole_chromaticity(lattice, tws0, nsuperperiod = 1):
     integr_x = 0.
     integr_y = 0.
     for elem in lattice.sequence:
-        if elem.type == "sextupole":
+        if elem.__class__ == Sextupole:
             bx = []
             by = []
             Dx = []
             Z = []
 
-            for z in linspace(0, elem.l, num = int(elem.l/0.01)+1, endpoint=True):
+            for z in linspace(0, elem.l, num = 10, endpoint=True):
                 twiss_z = elem.transfer_map(z)*tws_elem
                 bx.append(twiss_z.beta_x)
                 by.append(twiss_z.beta_y)
@@ -109,9 +110,11 @@ def sextupole_chromaticity(lattice, tws0, nsuperperiod = 1):
         tws_elem = elem.transfer_map*tws_elem
     chrom_sex_x = (integr_x)/(4*pi)
     chrom_sex_y = -(integr_y)/(4*pi)
-    return (chrom_sex_x*nsuperperiod, chrom_sex_y*nsuperperiod)
+    return np.array([chrom_sex_x*nsuperperiod, chrom_sex_y*nsuperperiod])
 
 
+def chromaticity(lattice, tws_0, nsuperperiod = 1):
+    return natural_chromaticity(lattice, tws_0, nsuperperiod) + sextupole_chromaticity(lattice, tws_0, nsuperperiod)
 
 def sextupole_id(lattice):
     sex = {}
@@ -133,12 +136,14 @@ def sextupole_id(lattice):
     return sex
 
 def calculate_sex_strength(lattice, tws_0, ksi, ksi_comp, nsuperperiod):
-    # we suppose that sextupole is the thin element l = 0
+    '''
+    compensation with two families
+    '''
     ksi_x, ksi_y = ksi
     ksi_x_comp, ksi_y_comp = ksi_comp
     sex = sextupole_id(lattice)
     sex_name = list(sex.keys())
-    print("Chromatism compensate: Before: ", sex)
+    print("Chromaticity compensation: Before: ", sex)
     m1x = 0.
     m1y = 0.
     m2x = 0.
@@ -164,21 +169,29 @@ def calculate_sex_strength(lattice, tws_0, ksi, ksi_comp, nsuperperiod):
 
 
 def compensate_chromaticity(lattice,  ksi_x_comp=0, ksi_y_comp=0,  nsuperperiod=1):
+    '''
+    old chromaticity compensation with 2 sextupole families
+    '''
     tws0 = Twiss()
     tws = twiss(lattice, tws0)
     tws_0 = tws[0]
     ksi_comp = (ksi_x_comp, ksi_y_comp)
-    ksi = chromaticity(lattice, tws_0, nsuperperiod)
+    ksi = natural_chromaticity(lattice, tws_0, nsuperperiod)
     print("ksi_x = ", ksi[0])
     print("ksi_y = ", ksi[1])
     sex_dict_stg = calculate_sex_strength(lattice, tws_0, ksi, ksi_comp, nsuperperiod)
-    print("Chromatism compensate: After:  ", sex_dict_stg)
+    print("Chromaticity compensatation: After:  ", sex_dict_stg)
     #print sex_dict_stg
     sex_name = list(sex_dict_stg.keys())
     for element in lattice.sequence:
         if element.type == "sextupole":
             if element.id == sex_name[0]:
                 element.ms = sex_dict_stg[element.id]
+                if element.l != 0: element.k2 = element.ms / element.l 
             elif element.id == sex_name[1]:
                 element.ms = sex_dict_stg[element.id]
+                if element.l != 0: element.k2 = element.ms / element.l
     lattice.update_transfer_maps()
+    
+def correct_chrom(lat, c1, c2,):
+    pass

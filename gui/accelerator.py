@@ -14,7 +14,7 @@ import matplotlib.path as mpath
 import matplotlib.pyplot as plt
 from ocelot.cpbd.optics import *
 import numpy as np
-
+from copy import deepcopy
 
 import matplotlib.font_manager as font_manager
 font = {
@@ -281,6 +281,164 @@ def elem_cord(lat):
     return quad, bend, sext, corr, mons, cav, mat, und, multi, drft
 
 
+dict_plot = {"quadrupole": {"scale": 0.7, "color": "r",            "edgecolor": "r",          "label": "quad"},
+             "sextupole":  {"scale": 0.5, "color": "g",            "edgecolor": "g",          "label": "sext"},
+             "cavity":     {"scale": 0.7, "color": "orange",       "edgecolor": "lightgreen", "label": "cav"},
+             "bend":       {"scale": 0.7, "color": "lightskyblue", "edgecolor": "k",          "label": "bend"},
+             "rbend":      {"scale": 0.7, "color": "lightskyblue", "edgecolor": "k",          "label": "bend"},
+             "sbend":      {"scale": 0.7, "color": "lightskyblue", "edgecolor": "k",          "label": "bend"},
+             "matrix":     {"scale": 0.7, "color": "pink",         "edgecolor": "k",          "label": "mat"},
+             "multipole":  {"scale": 0.7, "color": "g",            "edgecolor": "k",          "label": "mult"},
+             "undulator":  {"scale": 0.7, "color": "pink",         "edgecolor": "k",          "label": "und"},
+             "monitor":    {"scale": 0.5, "color": "orange",       "edgecolor": "orange",     "label": "mon"},
+             "hcor":       {"scale": 0.7, "color": "c",            "edgecolor": "c",          "label": "cor"},
+             "vcor":       {"scale": 0.7, "color": "c",            "edgecolor": "c",          "label": "cor"},
+             "drift":      {"scale": 0.,  "color": "k",            "edgecolor": "k",          "label": ""},
+             "marker":     {"scale": 0.,  "color": "k",            "edgecolor": "k",          "label": "mark"},
+             "edge":       {"scale": 0.,  "color": "k",            "edgecolor": "k",          "label": ""},
+             }
+
+
+def new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legend = True):
+    dict_copy=deepcopy(dict_plot)
+    alpha = 1
+    ax.set_ylim((-1,1.5))
+    if y_lim != None:
+        ax.set_ylim(y_lim)
+    points_with_annotation = []
+    L = 0.
+    q = []
+    b = []
+    c = []
+    s = []
+    u = []
+    rf = []
+    m = []
+    for elem in lat.sequence:
+        if elem.type == "quadrupole":
+            q.append(elem.k1)
+        elif elem.type in ["bend", "rbend", "sbend"]:
+            b.append(elem.angle)
+        elif elem.type in ["hcor", "vcor"]:
+            c.append(elem.angle)
+        elif elem.type == "sextupole":
+            s.append(elem.k2 + elem.ms)
+        elif elem.type == "undulator":
+            u.append(elem.Kx + elem.Ky)
+        elif elem.type == "cavity":
+            rf.append(elem.v )
+        elif elem.type == "multipole":
+            m.append(sum(np.abs(elem.kn)))
+    q_max = np.max(np.abs(q))if len(q) !=0 else 0
+    b_max = np.max(np.abs(b))if len(b) !=0 else 0
+    s_max = np.max(np.abs(s))if len(s) !=0 else 0
+    c_max = np.max(np.abs(c))if len(c) !=0 else 0
+    u_max = np.max(np.abs(u))if len(u) !=0 else 0
+    rf_max = np.max(np.abs(rf))if len(rf) !=0 else 0
+    m_max = np.max(m) if len(m) !=0 else 0
+    ncols = np.sign(len(q)) + np.sign(len(b)) + np.sign(len(s)) + np.sign(len(c)) + np.sign(len(u)) + np.sign(len(rf))+ np.sign(len(m))
+
+    labels_dict = {}
+    for elem in dict_copy.keys():
+        labels_dict[elem] = dict_copy[elem]["label"]
+    for elem in lat.sequence:
+        if elem.type in ["marker", "edge"]:
+            L +=elem.l
+            continue
+        l = elem.l
+        if l == 0:
+            l = 0.03
+        type = elem.type
+        scale = dict_copy[type]["scale"]
+        color = dict_copy[type]["color"]
+        label = dict_copy[type]["label"]
+        ecolor = dict_copy[type]["edgecolor"]
+        ampl = 1
+        s_coord = np.array([L + elem.l/2. - l/2., L + elem.l/2. - l/2., L + elem.l/2. +l/2., L + elem.l/2. +l/2., L + elem.l/2.- l/2.]) + s_point
+        if elem.type == "quadrupole":
+            ampl = elem.k1/q_max if q_max != 0 else 1
+            point, = ax.fill(s_coord,  (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color, edgecolor=ecolor,
+                             alpha = alpha, label=dict_copy[type]["label"])
+            dict_copy[type]["label"] = ""
+
+        elif elem.type in ["bend", "rbend", "sbend"]:
+            ampl = elem.angle/b_max if b_max != 0 else 1
+            point, = ax.fill(s_coord, (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color,
+                             alpha = alpha, label=dict_copy[type]["label"])
+            dict_copy[type]["label"] = ""
+
+        elif elem.type in ["hcor", "vcor"]:
+
+            ampl = elem.angle/c_max if c_max != 0 else 0.5
+            #print c_max, elem.angle, ampl
+            if elem.angle == 0:
+                ampl=0.5
+                point, = ax.fill(s_coord, (np.array([-1, 1, 1, -1, -1]))*ampl*scale*y_scale, "lightcyan",  edgecolor="k",
+                             alpha = 0.5, label=dict_copy[type]["label"])
+            else:
+                point, = ax.fill(s_coord, (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color,  edgecolor=ecolor,
+                             alpha = alpha, label=dict_copy[type]["label"])
+            dict_copy["hcor"]["label"] = ""
+            dict_copy["vcor"]["label"] = ""
+
+        elif elem.type == "sextupole":
+            ampl = (elem.k2 + elem.ms)/s_max if s_max != 0 else 1
+            point, = ax.fill(s_coord, (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color,
+                             alpha = alpha, label=dict_copy[type]["label"])
+            dict_copy[type]["label"] = ""
+
+        elif elem.type == "cavity":
+            ampl = 1 # elem.v/rf_max if rf_max != 0 else 0.5
+            point, = ax.fill(s_coord, np.array([-1, 1, 1, -1, -1])*ampl*scale*y_scale, color,
+                             alpha = alpha, edgecolor = "lightgreen", label=dict_copy[type]["label"])
+            dict_copy[type]["label"] = ""
+
+        elif elem.type == "undulator":
+            ampl = elem.Kx/u_max if u_max != 0 else 0.5
+            point, = ax.fill(s_coord, np.array([-1, 1, 1, -1, -1])*ampl*scale*y_scale, color,
+                             alpha = alpha, label=dict_copy[type]["label"])
+            dict_copy[type]["label"] = ""
+
+        elif elem.type == "multipole":
+            ampl = sum(elem.kn)/m_max if u_max != 0 else 0.5
+            point, = ax.fill(s_coord, np.array([-1, 1, 1, -1, -1])*ampl*scale*y_scale, color,
+                             alpha = alpha, label=dict_copy[type]["label"])
+            dict_copy[type]["label"] = ""
+
+        else:
+            point, = ax.fill(s_coord, np.array([-1, 1, 1, -1, -1])*ampl*scale*y_scale, color, edgecolor=ecolor,
+                             alpha = alpha)
+        annotation = ax.annotate(elem.type+": " + elem.id,
+            xy=(L+l/2., 0), #xycoords='data',
+            #xytext=(i + 1, i), textcoords='data',
+            horizontalalignment="left",
+            arrowprops=dict(arrowstyle="simple", connectionstyle="arc3,rad=+0.2"),
+            bbox=dict(boxstyle="round", facecolor="w", edgecolor="0.5", alpha=0.9),
+                                 fontsize=16
+            )
+        # by default, disable the annotation visibility
+        annotation.set_visible(False)
+        L +=elem.l
+        points_with_annotation.append([point, annotation])
+
+    def on_move(event):
+
+        visibility_changed = False
+        for point, annotation in points_with_annotation:
+            should_be_visible = (point.contains(event)[0] == True)
+
+            if should_be_visible != annotation.get_visible():
+                visibility_changed = True
+                annotation.set_visible(should_be_visible)
+
+        if visibility_changed:
+            plt.draw()
+
+    on_move_id = fig.canvas.mpl_connect('motion_notify_event', on_move)
+    if legend:
+        ax.legend(loc='upper center', ncol=ncols, shadow=False, prop=font_manager.FontProperties(size=15))
+
+
 def plot_elems(ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legend = True):
     quad, bend, sext, corr, mons, cav, mat, und, multi, drft = elem_cord(lat)
     #print len(quad), len(bend), len(sext), len(corr ),len( mons), len( cav)
@@ -375,14 +533,6 @@ def plot_betas(ax, S, beta_x, beta_y, font_size):
     leg.get_frame().set_alpha(0.5)
 
 
-def plot_xy(ax, S, X, Y, font_size):
-    ax.set_ylabel(r"$X, Y$, m")
-    ax.plot(S, X,'r', lw = 2, label=r"$X$")
-    ax.plot(S, Y,'b', lw = 2, label=r"$Y$")
-    leg = ax.legend(loc='upper right', shadow=True, fancybox=True, prop=font_manager.FontProperties(size=font_size))
-    leg.get_frame().set_alpha(0.5)
-
-
 def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, fig_name = None):
 
     font_size = 16
@@ -412,7 +562,6 @@ def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, fig_name = None):
     ax_el.set_yticks([])
     ax_el.grid(True)
 
-    
     fig.subplots_adjust(hspace=0)
     beta_x = [p.beta_x for p in tws] # list(map(lambda p:p.beta_x, tws))
     beta_y = [p.beta_y for p in tws] #list(map(lambda p:p.beta_y, tws))
@@ -425,14 +574,24 @@ def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, fig_name = None):
 
     plot_betas(ax_b, S, beta_x, beta_y, font_size)
 
-    plot_elems(ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8) # plot elements
+    #plot_elems(ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8) # plot elements
+    new_plot_elems(fig, ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8)
+
     plt.show()
 
 
-def body_trajectory(fig, ax_xy, ax_el, lat, list_particles):
-    X = map(lambda p:p.x, list_particles)
-    Y = map(lambda p:p.y, list_particles)
-    S = map(lambda p:p.s, list_particles)
+def plot_xy(ax, S, X, Y, font_size):
+    ax.set_ylabel(r"$X, Y$, m")
+    ax.plot(S, X,'r', lw = 2, label=r"$X$")
+    ax.plot(S, Y,'b', lw = 2, label=r"$Y$")
+    leg = ax.legend(loc='upper right', shadow=True, fancybox=True, prop=font_manager.FontProperties(size=font_size))
+    leg.get_frame().set_alpha(0.5)
+
+
+def body_trajectory(fig, ax_xy, ax_el, lat, plist):
+    X = [p.x for p in plist]
+    Y = [p.y for p in plist]
+    S = [p.s for p in plist]
     
     font_size = 16
     
@@ -444,13 +603,13 @@ def body_trajectory(fig, ax_xy, ax_el, lat, list_particles):
     ax_xy.grid(True)
     ax_el.set_yticks([])
     ax_el.grid(True)
-    plt.xlim(S[0], S[-1])
+    #plt.xlim(S[0], S[-1])
     
     fig.subplots_adjust(hspace=0)
     
     plot_xy(ax_xy, S, X, Y, font_size)
 
-    plot_elems(ax_el, lat, nturns = int(S[-1]/lat.totalLen), legend = False) # plot elements
+    plot_elems(ax_el, lat, nturns = 1, legend = False) # plot elements
 
 """
 def plot_current(p_array, charge, num_bins = 200):
@@ -483,59 +642,38 @@ def plot_trajectory(lat, list_particles):
     body_trajectory(fig, ax_xy, ax_el, lat, list_particles)
     plt.show()
 
-def plot_trajectory_test(fig, lat, p1, p2, p3,p4, alpha = 1):
-    #fig = plt.figure()
+
+def plot_API(lat):
+    fig = plt.figure()
     plt.rc('axes', grid=True)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
     left, width = 0.1, 0.85
     rect2 = [left, 0.2, width, 0.7]
     rect3 = [left, 0.05, width, 0.15]
-    
+
     ax_xy = fig.add_axes(rect2)  #left, bottom, width, height
     ax_el = fig.add_axes(rect3, sharex=ax_xy)
-    
-    X = array(map(lambda p:p.x, p1))
-    S = map(lambda p:p.s, p1)
-    X2 = array(map(lambda p:p.x, p2))
-    S2 = map(lambda p:p.s, p2)
-    
+
     font_size = 16
-    
+
     for ax in ax_xy, ax_el:
         if ax!=ax_el:
             for label in ax.get_xticklabels():
                 label.set_visible(False)
-    
+
     ax_xy.grid(True)
     ax_el.set_yticks([])
     ax_el.grid(True)
-    plt.xlim(S[0], S[-1])
-    
+    #plt.xlim(S[0], S[-1])
+
     fig.subplots_adjust(hspace=0)
-    Si = map(lambda p:p.s, p3)
-    Xi1 = array(map(lambda p:p.x, p3))*1000
-    Xi2 = array(map(lambda p:p.x, p4))*1000
-    ax_xy.plot(Si, Xi1,'b', lw = 2, label=r"inj $\pm \sigma_x$")
-    ax_xy.plot(Si, Xi2,'b', lw = 2)
-    ax_xy.fill_between(Si, Xi1,Xi2, alpha=alpha, facecolor='blue', label =r"inj $\pm  \sigma_x$")
+
     #plot_xy(ax_xy, S, X, Y, font_size)
-    ax_xy.set_ylabel(r"$X$, mm")
-    
-    ax_xy.plot(S, X*1000,'r', lw = 2, label=r"store $\pm \sigma_x$")
-    ax_xy.plot(S2, X2*1000,'r', lw = 2)
-    ax_xy.fill_between(S, X*1000,X2*1000, alpha=alpha, facecolor='red', label =r"store $\pm  \sigma_x$")
-    
-    
-    
-    
-    ax_xy.broken_barh([(10, 0.344)] , (-20, -2.4), facecolors='black')
-    ax_xy.broken_barh([(10, 0.344)] , (-22.4, -10), facecolors='yellow')
-    #ax_xy.plot([10., 10, 10.344, 10.344, 10.], array([0.02,0.0224, 0.0224, 0.02, 0.02])*1000, 'k')
-    #ax_xy.plot([10., 10, 10.344, 10.344, 10.], array([0.0224,0.0324, 0.0324, 0.0224, 0.0224])*1000, 'k')
-    leg = ax_xy.legend(loc='upper right', shadow=True, fancybox=True, prop=font_manager.FontProperties(size=font_size))
-    leg.get_frame().set_alpha(0.5)
-    plot_elems(ax_el, lat, nturns = int(S[-1]/lat.totalLen), legend = True) # plot elements
-#plt.show()
+
+    #plot_elems(ax_el, lat, nturns = 1, legend = True) # plot elements
+    new_plot_elems(fig, ax_el, lat, nturns = 1, legend = True)
+    return ax_xy
+
 
 def plot_traj_pulse(lat, list_particles, list_particles2, U1, U2):
     fig = plt.figure()
@@ -572,7 +710,7 @@ def plot_elem_disp(lat, tws):
     plt.show()
 
 
-def resonans(Qx, Qy, order = 5):
+def resonance(Qx, Qy, order = 5):
     ORD = order
     qx1, qy1 = 0,0
     qx2, qy2 = 2,2
@@ -608,7 +746,7 @@ def resonans(Qx, Qy, order = 5):
                 Order.append(order)
     return X,Y,Order,params
 
-def resonans_diag(Qx, Qy, order):
+def resonance_diag(Qx, Qy, order):
     X,Y,Order,params = resonans(Qx, Qy, order)
     indsort = np.argsort(Order)
     #print Order

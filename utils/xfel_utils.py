@@ -19,7 +19,8 @@ from ocelot.rad.fel import *
 from ocelot.adaptors.genesis import *
 from pylab import *
 
-params = {'backend': 'ps', 'axes.labelsize': 18, 'text.fontsize': 16, 'legend.fontsize': 24, 'xtick.labelsize': 32,  'ytick.labelsize': 32, 'text.usetex': True}
+params = {'backend': 'ps', 'axes.labelsize': 18, 'font.size': 16, 'legend.fontsize': 24, 'xtick.labelsize': 32,  'ytick.labelsize': 32, 'text.usetex': True}
+# params = {'backend': 'ps', 'axes.labelsize': 18, 'text.fontsize': 16, 'legend.fontsize': 24, 'xtick.labelsize': 32,  'ytick.labelsize': 32, 'text.usetex': True}
 rcParams.update(params)
 rc('text', usetex=True) # required to have greek fonts on redhat
 
@@ -51,7 +52,8 @@ def taper(lat, k):
         if lat2.sequence[i].__class__ == Undulator:
             #print lat2.sequence[i].id, lat2.sequence[i].Kx
             lat2.sequence[i] = deepcopy(lat.sequence[i]) 
-            lat2.sequence[i].Kx = lat2.sequence[i].Kx * k(n+1)
+            ##MOD BY GG. #lat2.sequence[i].Kx = lat2.sequence[i].Kx * k(n+1)
+	    lat2.sequence[i].Kx = k(n+1)/np.sqrt(0.5) ##MOD BY GG.
             n += 1
 
     return lat2
@@ -109,7 +111,7 @@ def rematch(beta_mean, l_fodo, qdh, lat, extra_fodo, beam, qf, qd):
     beam.beta_y, beam.alpha_y = tw0m.beta_y, tw0m.alpha_y
 
 
-def run(inp, launcher):
+def run(inp, launcher,readall=True):
     
     try:
         os.makedirs(inp.run_dir)
@@ -122,21 +124,38 @@ def run(inp, launcher):
     open(inp.run_dir + '/lattice.inp','w').write( inp.lattice_str )
     open(inp.run_dir + '/tmp.cmd','w').write("tmp.gen\n")
     open(inp.run_dir + '/tmp.gen','w').write(inp.input())   
-    
+
+    print ('    before writing /tmp.beam')
+    print inp.beamfile
     if inp.beamfile != None:
         open(inp.run_dir + '/tmp.beam','w').write(inp.beam_file_str)
-    
+        print ('    writing /tmp.beam')
+
     out_file = inp.run_dir + '/run.' + str(inp.runid) + '.gout'
     os.system('rm -rf ' + out_file + '.dfl') # to make sure field file is not attached to old one
+    os.system('rm -rf ' + out_file + '.dpa') # to make sure particle file is not attached to old one
 
     launcher.dir = inp.run_dir
     launcher.prepare()
     launcher.launch()
     
-    g = readGenesisOutput(out_file)
+    g = readGenesisOutput(out_file,readall=readall)
+    
+    # save=True
+    # if do_plot == 'all':
+        
+        # from ocelot.gui.genesis_plot import *
+        # gen_outplot_e(g,save=save)s
+        # gen_outplot_ph(g,save=save)
+        # gen_outplot_z(g, z=0,save=save)
+        # gen_outplot_z(g, z=inf,save=save)
+    # else:
+        # g = readGenesisOutput(out_file,readall=0)
+        
     return g
 
 
+'''
 def get_genesis_launcher(nproc = 1):
     host = socket.gethostname()
     
@@ -153,7 +172,31 @@ def get_genesis_launcher(nproc = 1):
     launcher.nproc = nproc
     
     return launcher
+'''
 
+'''
+#### MODIFIED BY GG ####
+'''
+def get_genesis_launcher(nproc = 1, hostfilename = ''):
+    host = socket.gethostname()
+    
+    launcher = MpiLauncher()
+    
+    if host.startswith('kolmogorov'):
+        launcher.program = '/home/iagapov/workspace/xcode/codes/genesis/genesis < tmp.cmd | tee log'
+    if host.startswith('it-hpc'):
+        launcher.program = '/data/netapp/xfel/products/genesis/genesis < tmp.cmd | tee log'
+	if hostfilename == '':
+            #launcher.mpiParameters ='-x LD_LIBRARY_PATH=/usr/local/lib:/data/netapp/it/tools/gcc47/lib64 --prefix /data/netapp/it/tools/gcc47'
+            launcher.mpiParameters ='-x LD_LIBRARY_PATH=/usr/local/lib:/usr/lib64/openmpi/lib --prefix /usr/lib64/openmpi/'
+            launcher.mpiParameters = launcher.mpiParameters + ' -hostfile '+ os.path.abspath('.') +'/hosts.txt'
+        else:
+	    launcher.mpiParameters ='-x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH'
+            launcher.mpiParameters = launcher.mpiParameters + ' -hostfile '+ os.path.abspath('.') +hostfilename
+	
+    launcher.nproc = nproc
+    
+    return launcher
 
 def get_data_dir():
     host = socket.gethostname()
@@ -176,13 +219,23 @@ def create_exp_dir(exp_dir, run_ids):
 def checkout_run(run_dir, run_id, prefix1, prefix2, save=True):
     old_file = run_dir + '/run.' +str(run_id) + prefix1 + '.gout'
     new_file = run_dir + '/run.' +str(run_id) + prefix2 + '.gout'
+    
     os.system('cp ' + old_file + ' ' + new_file )
-    os.system('cp ' + old_file + '.dfl ' + new_file + '.dfl')
-    os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout')
-    os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout.dfl')
+    os.system('cp ' + old_file + '.dfl ' + new_file + '.dfl 2>/dev/null') # 2>/dev/null to supress error messages if no such file
+    os.system('cp ' + old_file + '.dpa ' + new_file + '.dpa 2>/dev/null') 
+    os.system('cp ' + old_file + '.beam ' + new_file + '.beam 2>/dev/null') 
+    
+    os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout*')
+    # os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout.dfl 2>/dev/null') 
+    # os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout.dpa 2>/dev/null') 
+    # os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout.beam 2>/dev/null') 
+
     if not save:
         os.system('rm ' + old_file)
-        os.system('rm ' + old_file + '.dfl ')
+        os.system('rm ' + old_file + '.dfl  2>/dev/null') 
+        os.system('rm ' + old_file + '.dpa  2>/dev/null') 
+        os.system('rm ' + old_file + '.beam  2>/dev/null') 
+
 
 
 def show_output(g, show_field = False, show_slice=0):

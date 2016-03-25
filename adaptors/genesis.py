@@ -1052,7 +1052,7 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
 
         if tokens[0] == 'power':
             chunk = 'slice'
-            if out.sliceKeys == []: #to record the first instance
+            if len(out.sliceKeys) == 0: #to record the first instance
                 out.sliceKeys = copy(tokens)
                 print '      reading slice values '
             continue

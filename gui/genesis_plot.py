@@ -3,7 +3,6 @@ user interface for viewing genesis simulation results
 '''
 
 import sys, os, csv
-
  
 import matplotlib
 from matplotlib.figure import Figure
@@ -642,15 +641,17 @@ def gen_outplot_scanned_z(g, figsize=(8, 10), legend = True, fig_name = None, z=
     return fig
 
 
-def gen_outplot(handle=None,save='eps',show=False,debug=0):
+def gen_outplot(handle=None,save='png',show=False,debug=0):
     #picks as an input "GenesisOutput" object, file path of directory as strings. 
     #plots e-beam evolution, radiation evolution, initial and final simulation window
     #If folder path is provided, all *.gout and *.out files are plotted
     import os
-    from ocelot.adaptors.genesis import readGenesisOutput, GenesisOutput
+    from ocelot.adaptors.genesis import GenesisOutput, readGenesisOutput, readRadiationFile
     
     plt.ioff()
     
+    if save==True:
+        save='png'
     
     if os.path.isdir(str(handle)):
         handles=[]
@@ -672,7 +673,11 @@ def gen_outplot(handle=None,save='eps',show=False,debug=0):
             f2=gen_outplot_ph(handle,save=save)
             f3=gen_outplot_z(handle, z=0,save=save)
             f4=gen_outplot_z(handle, z=inf,save=save)
-    
+        
+        if os.path.isfile(handle.path+'.dfl'):
+            dfl=readRadiationFile(handle.path+'.dfl', handle.ncar)
+            f5=plot_dfl(dfl, handle,save=save)
+            
     if show==True:
         print('    showing plots, close all to proceed')
         plt.show()
@@ -680,9 +685,326 @@ def gen_outplot(handle=None,save='eps',show=False,debug=0):
     if save!=False:
         print('    plots recorded to *.'+str(save)+' files')
     
-    return [f1,f2,f3,f4]
+    # return [f1,f2,f3,f4]
 
 
+def plot_dfl(dfl, g, figsize=3, legend = True, fig_name = None, save=False):
+    
+    print('    plotting dfl file')
+    
+    if dfl.shape[0]!=1:
+        column_3d=True
+    else:
+        column_3d=False
+    
+    dfl=swapaxes(dfl[::-1,:,:],2,1) # zyx -> zxy
+    
+    #number of mesh points
+    ncar_x=dfl.shape[1]
+    leng_x=g.leng*1e6 #transverse size of mesh [um], to be upgraded
+    ncar_y=dfl.shape[2]
+    leng_y=g.leng*1e6
+    if column_3d==True:
+        ncar_z=dfl.shape[0]
+        leng_z=(max(g.s)-min(g.s))*1e6
+    
+    x = np.linspace(-leng_x/2, leng_x/2, ncar_x)
+    y = np.linspace(-leng_y/2, leng_y/2, ncar_y)
+    z = np.linspace(0, leng_z, ncar_z)
+    
+    if fig_name is None:
+        if g.filename is '':
+            fig = plt.figure('Radiation field')
+        else:
+            fig = plt.figure('Radiation field, '+g.filename)
+    else:
+        fig = plt.figure(fig_name)
+    fig.clf()
+    fig.set_size_inches(((3+2*column_3d)*figsize,3*figsize),forward=True)
+    # plt.rc('axes', grid=True)
+    # plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
+    
+    cmap_int = plt.get_cmap('jet') #change to convenient
+    cmap_ph = plt.get_cmap('hsv')
+    
+    #calculate transverse projection, remove z dimention
+    
+    dfl_int=abs(dfl)**2
+    xy_proj=sqrt((dfl_int).sum(0))*exp(1j*angle(dfl.sum(0))) #(amplitude-like) view from front, sum of square of amplitudes with phase as sum of phasors (latter is dedicated for illustration purposes: good to see an averaged wavefront)
+    # xy_proj=sum(dfl,0); #view from front
+    yz_proj=sum(dfl_int,1); #intensity view from side
+    xz_proj=sum(dfl_int,2); #intensity view from top
+    del dfl_int
+
+    
+    # x_line=xy_proj[]
+    # y_line=xy_proj[]
+    
+    int_proj=abs(xy_proj)**2
+    ph_proj=angle(xy_proj)
+    
+    x_proj=sum(int_proj,1)
+    y_proj=sum(int_proj,0)
+    
+    x_line=int_proj[:,int((ncar_y-1)/2)]
+    y_line=int_proj[int((ncar_x-1)/2),:]
+    
+    if max(x_line)!=0 and max(y_line)!=0:
+        x_line,y_line=x_line/max(x_line),y_line/max(y_line)
+    
+    
+    
+    #X=sqrt(sum(abs(X).^2,3)).*exp(1i.*angle(mean(X,3))); #%Matlab 2D field calculation
+    # normI = BoundaryNorm(levelsI, ncolors=cmapI.N, clip=True)
+    # normP = BoundaryNorm(levelsP, ncolors=cmapP.N, clip=True)
+    
+    
+    
+    
+    
+    
+    ax_int=fig.add_subplot(2, 2+column_3d, 1)
+    # ax_int.pcolormesh(x, y, int_proj, cmap=cmap_int)
+    intplt=ax_int.pcolormesh(x, y, swapaxes(int_proj,1,0))
+    ax_int.set_title('Intensity', fontsize=15)
+    ax_int.axis('equal')
+    # ax_int.axes.get_xaxis().set_visible(False)
+    ax_int.set_xlabel(r'x [$\mu m$]')
+    ax_int.set_ylabel(r'y [$\mu m$]')
+    
+    ax_ph=fig.add_subplot(2, 2+column_3d, 4+column_3d, sharex=ax_int,sharey=ax_int)
+    # ax_ph.pcolormesh(x, y, ph_proj, cmap=cmap_ph)
+    ax_ph.pcolormesh(x, y, swapaxes(ph_proj,1,0))
+    #ax_ph.axis('equal')
+    ax_ph.axis([min(x),max(x),min(y),max(y)])
+    ax_ph.set_title('Phase', fontsize=15)
+    # ax_ph.set_xlabel(r'[$\mu m$]')
+    # ax_ph.set_ylabel(r'[$\mu m$]')
+    
+    ax_proj_x=fig.add_subplot(2, 2+column_3d, 3+column_3d, sharex=ax_int)
+    ax_proj_x.plot(x,x_line)
+    ax_proj_x.set_title('X projection', fontsize=15)
+    x_line_f, fwhm_x=fwhm_gauss_fit(x,x_line)
+    ax_proj_x.plot(x,x_line_f)
+    ax_proj_x.text(0.95, 0.95,'FWHM= '+str(round_sig(fwhm_x,3))+r'$\mu m$', horizontalalignment='right', verticalalignment='top', transform = ax_proj_x.transAxes)
+    
+    
+    ax_proj_y=fig.add_subplot(2, 2+column_3d, 2, sharey=ax_int)
+    ax_proj_y.plot(y_line,y)
+    ax_proj_y.set_title('Y projection', fontsize=15)
+    y_line_f, fwhm_y=fwhm_gauss_fit(y,y_line)
+    ax_proj_y.plot(y_line_f,y)
+    ax_proj_y.text(0.95, 0.95,'FWHM= '+str(round_sig(fwhm_y,3))+r'$\mu m$', horizontalalignment='right', verticalalignment='top', transform = ax_proj_y.transAxes)
+
+    
+    
+    if column_3d:
+        ax_proj_xz=fig.add_subplot(2, 2+column_3d, 6)
+        ax_proj_xz.pcolormesh(z, x, swapaxes(xz_proj,1,0))
+        ax_proj_xz.set_title('top view', fontsize=15)
+        ax_proj_xz.axis('tight')
+        ax_proj_xz.set_xlabel(r'z [$\mu m$]')
+        ax_proj_yz=fig.add_subplot(2, 2+column_3d, 3,sharey=ax_int,sharex=ax_proj_xz)
+        ax_proj_yz.pcolormesh(z, y, swapaxes(yz_proj,1,0))
+        ax_proj_yz.set_title('side view', fontsize=15)
+        ax_proj_yz.axis('tight')
+
+        
+        
+        
+    cbar=0
+    if cbar:
+        fig.subplots_adjust(top=0.95, bottom=0.05, right=0.85, left=0.1)
+        #fig.subplots_adjust()
+        cbar_int = fig.add_axes([0.89, 0.15, 0.015, 0.7])
+        cbar=plt.colorbar(intplt, cax=cbar_int)# pad = -0.05 ,fraction=0.01)
+        # cbar.set_label(r'[$ph/cm^2$]',size=10)
+        cbar.set_label(r'a.u.',size=10)
+    
+    
+    
+    
+    # ax_int.get_yaxis().get_major_formatter().set_useOffset(False)
+    # ax_int.get_yaxis().get_major_formatter().set_scientific(True)
+    # ax_ph.get_yaxis().get_major_formatter().set_useOffset(False)
+    # ax_ph.get_yaxis().get_major_formatter().set_scientific(True)
+    
+    ax_int.set_aspect('equal')
+    ax_int.autoscale(tight=True)
+    
+    subplots_adjust(wspace=0.4,hspace=0.4)
+    
+    
+    if save!=False:
+        if save==True:
+            save='png'
+        fig.savefig(g.path+'_dfl.'+str(save),format=save)
+        
+    return fig
+    
+    
+
+# def plot_dfl_o(g, figsize=(8, 10), legend = True, fig_name = None, save=False):
+# # def plotfield1(name ,Xs, Xf, nx, Ys, Yf, ny, arI, arP, E_ph):
+    # import matplotlib.pyplot as plt
+    # from matplotlib.colors import BoundaryNorm
+    # from matplotlib.ticker import MaxNLocator
+    # import numpy as np
+    # import math
+    # import pylab as pl
+    # from pylab import clf, axis
+
+    # # generate 2 2d grids for the x & y bounds
+
+    # x = 1e6 * np.linspace(Xs, Xf, nx)
+    # y = 1e6 * np.linspace(Ys, Yf, ny)
+
+    # dataI = np.array( arI )/E_ph/1.6e-19/10000
+    # #dataI =x/E_ph/1.6e-19 for x in dataI
+    # zI=dataI.reshape( ny, nx )
+
+    # dataP = np.array( arP )
+    # zP=dataP.reshape( ny, nx )
+
+    # #x and y are bounds, so z should be the value *inside* those bounds.
+    # # Therefore, remove the last value from the z array.
+    # #zI = zI[:-1, :-1]
+    # levelsI = MaxNLocator(nbins=50).tick_values(zI.min(), zI.max())
+    # #zP = zP[:-1, :-1]
+    # levelsP = MaxNLocator(nbins=50).tick_values(-math.pi, math.pi)
+
+
+    # # pick the desired colormap, sensible levels, and define a normalization
+    # # instance which takes data values and translates those into levels.
+    # cmapI = plt.get_cmap('jet')
+    # cmapP = plt.get_cmap('hsv')
+    # normI = BoundaryNorm(levelsI, ncolors=cmapI.N, clip=True)
+    # normP = BoundaryNorm(levelsP, ncolors=cmapP.N, clip=True)
+
+    # fig = plt.figure(name)
+    # clf()
+
+    # # plt.subplot(2, 2, 1)-------------------------------------
+    # p1=fig.add_subplot(2, 2, 1)
+    # p1.clear()
+
+    # pp1=p1.pcolormesh(x, y, zI, cmap=cmapI)#, norm=normI)
+
+    # #plt.colorbar(pp1,shrink=0.9,fraction=0.01)# pad = -0.05)
+    # # # set the limits of the plot to the limits of the data
+    # p1.axis([x.min(), x.max(), y.min(), y.max()])
+    # #p1.title('intensity')
+    # plt.title('Intensity')
+    # axis('equal')
+
+    # p1.set_xlabel(r'[$\mu m$]')
+    # p1.set_ylabel(r'[$\mu m$]')
+    # # axis([Xs*1e6, Xf*1e6, Ys*1e6, Yf*1e6])
+
+    # # plt.subplot(2, 2, 2)--------------------------------------
+    # p2=fig.add_subplot(2, 2, 2, sharey=p1)
+    # p2.clear()
+
+    # #arIm=reshape(np.matrix(arI), [nx, ny])
+    # #arIpx=np.sum(arIm,1)
+    # #plt.plot(np.linspace(wfr.mesh.xStart,wfr.mesh.xFin,wfr.mesh.nx),arIpx)
+
+    # arIpy=np.sum(zI,1)
+    # arIpy=arIpy/max(arIpy)
+    # #
+    # #p2.plot(x, arIpx)
+    # p2.plot(arIpy,y)
+    # arIpyf, fwhmy=fwhm_gauss_fit(y,arIpy)
+    # p2.plot(arIpyf,y)
+
+    # pl.text(0.95, 0.95,'FWHM= '+str(round_sig(fwhmy,3))+r'$\mu m$',
+    # horizontalalignment='right',
+    # verticalalignment='top',
+    # transform = p2.transAxes)  
+
+    # # plt.subplot(2, 2, 3)--------------------------------------
+    # p3=fig.add_subplot(2, 2, 3, sharex=p1)
+    # p3.clear()
+
+    # #arIm=reshape(np.matrix(arI), [nx, ny])
+    # #arIpx=np.sum(arIm,1)
+    # #plt.plot(np.linspace(wfr.mesh.xStart,wfr.mesh.xFin,wfr.mesh.nx),arIpx)
+
+    # arIpx=np.sum(zI,0)
+    # arIpx=arIpx/max(arIpx)
+
+    # #p2.plot(x, arIpx)
+    # p3.plot(x,arIpx)
+    # arIpxf, fwhmx=fwhm_gauss_fit(x,arIpx)
+    # #fwhmv=fwhm_gauss_fit(x,arIpx)[1]
+    # #np.disp(fwhmv)
+    # p3.plot(x,arIpxf)
+
+    # pl.text(0.95, 0.95,'FWHM= '+str(round_sig(fwhmx,3))+r'$\mu m$',
+    # horizontalalignment='right',
+    # verticalalignment='top',
+    # transform = p3.transAxes)
+
+    # # # set the limits of the plot to the limits of the data
+    # #p2.axis([x.min(), x.max()])
+    # # plt.title('intensity')
+    # #axis('equal')
+    # # axis([Xs*1e6, Xf*1e6, Ys*1e6, Yf*1e6])
+
+    # # plt.subplot(2, 2, 4)---------------------------------------
+    # p4=fig.add_subplot(2, 2, 4, sharex=p1)
+    # p4.clear()
+
+    # p4.pcolormesh(x, y, zP, cmap=cmapP, norm=normP)
+    # #plt.colorbar()
+    # # set the limits of the plot to the limits of the data
+    # # plt.axis([x.min(), x.max(), y.min(), y.max()])
+    # plt.title('Phase')
+    # axis('equal')
+    # # axis([Xs*1e6, Xf*1e6, Ys*1e6, Yf*1e6])
+
+    # ## plt.subplot(2, 2, 4)---------------------------------------
+    # #pha=fig.add_subplot(2, 2, 4)
+    # #pha.clear()
+    # #
+    # #plt.pcolormesh(x, y, zP, cmap=cmapP, norm=normP)
+    # #plt.colorbar()
+    # ## set the limits of the plot to the limits of the data
+    # ## plt.axis([x.min(), x.max(), y.min(), y.max()])
+    # #plt.title('Phase')
+    # #axis('equal')
+    # ## axis([Xs*1e6, Xf*1e6, Ys*1e6, Yf*1e6])
+
+    # fig.subplots_adjust(top=0.95, bottom=0.05, right=0.85, left=0.1)
+    # #fig.subplots_adjust()
+    # cbar_int = fig.add_axes([0.89, 0.15, 0.015, 0.7])
+    # cbar=plt.colorbar(pp1, cax=cbar_int)# pad = -0.05 ,fraction=0.01)
+    # cbar.set_label(r'[$ph/cm^2$]',size=10)
+    # plt.show()
+    # fig.canvas.draw()
+    # draw()
+    # return fig
+
+
+def round_sig(x, sig=2):
+    from math import log10, floor
+    return round(x, sig-int(floor(log10(x)))-1)
+    
+    
+def fwhm_gauss_fit(X,Y):
+    import numpy as np
+    import scipy.optimize as opt
+    
+    def gauss(x, p): # p[0]==mean, p[1]==stdev p[2]==peak
+        return p[2]/(p[1]*np.sqrt(2*np.pi))*np.exp(-(x-p[0])**2/(2*p[1]**2))
+        
+    p0 = [0,max(X)/2,max(Y)]
+    errfunc = lambda p, x, y: gauss(x, p) - y
+    p1, success = opt.leastsq(errfunc, p0[:], args=(X, Y))
+    fit_mu,fit_stdev,ampl = p1
+    Y1=gauss(X,p1)
+    FWHM = 2*np.sqrt(2*np.log(2))*fit_stdev
+    return (Y1, FWHM)
 
 def fwhm3(valuelist, peakpos=-1):
     """calculates the full width at half maximum (fwhm) of some curve.

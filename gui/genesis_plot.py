@@ -102,9 +102,10 @@ def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = None, save=False)
     
     ax_size_tpos.set_ylim(ymin=0)
     ax_spread.set_ylim(ymin=0)
-
+    ax_bunching.set_ylim(ymin=0)
+    
     number_ticks=6
-
+    
     ax_und.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_quad.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_energy.yaxis.major.locator.set_params(nbins=number_ticks)
@@ -114,11 +115,11 @@ def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = None, save=False)
     # yloc = plt.MaxNLocator(max_yticks)
     # ax_size_tpos.yaxis.set_major_locator(yloc)
     # ax_energy.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.1e'))
-
+    
     plt.xlim(g.z[0], g.z[-1])
-
+    
     fig.subplots_adjust(top=0.95, bottom=0.1, right=0.85, left=0.15)
-
+    
     aw_tmp=np.array(g.aw)[np.array(g.aw)!=0]
     if np.amax(aw_tmp)!=np.amin(aw_tmp):
         ax_und.set_ylim([np.amin(aw_tmp),np.amax(aw_tmp)])

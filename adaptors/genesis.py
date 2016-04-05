@@ -599,6 +599,7 @@ def readRadiationFile(fileName, npoints=151, slice_start=0, slice_end = -1, vart
     b=b.reshape(slice_num,npoints,npoints)
     if slice_end == -1:
         slice_end=None
+    print '      done'  
     return b[slice_start:slice_end]
 
     
@@ -1114,11 +1115,10 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
             out.energy+=out('gamma0')
         out.power_z=np.max(out.power,0)
 
-
-
             
-    out.nSlices = int(out('history_records'))
-    out.nZ = int(out('entries_per_record'))
+    out.nSlices = int(out('history_records'))#number of slices in the output
+    out.nZ = int(out('entries_per_record'))#number of records along the undulator
+    out.ncar=int(out('ncar')) #number of mesh points
 
     print '        nSlice', out.nSlices
     print '        nZ', out.nZ

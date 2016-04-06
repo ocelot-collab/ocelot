@@ -16,13 +16,13 @@ from pylab import * #tmp
 # font = {'family' : 'normal',
 #        'weight' : 'bold',
 #        'size'   : 20}
-params = {'backend': 'ps', 'axes.labelsize': 15, 'font.size': 16, 'legend.fontsize': 24, 'xtick.labelsize': 19,  'ytick.labelsize': 19, 'text.usetex': True}
+params = {'backend': 'ps', 'axes.labelsize': 15, 'font.size': 15, 'legend.fontsize': 24, 'xtick.labelsize': 19,  'ytick.labelsize': 19, 'text.usetex': True}
 rcParams.update(params)
 rc('text', usetex=True) # required to have greek fonts on redhat
 
 font = {'family' : 'normal',
         'weight' : 'bold',
-        'size'   : 22}
+        'size'   : 15}
 
 matplotlib.rc('font', **font)
 
@@ -444,9 +444,10 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
     
 
     ax_spectrum.plot(fftshift(lamdscale), fftshift(spectrum[:,zi]), 'r-')
-    ax_spectrum.text(0.5, 0.5,'on axis', horizontalalignment='center', verticalalignment='center')
+    ax_spectrum.text(0, 0,r"on axis", fontsize=15)#horizontalalignment='center', verticalalignment='center',
     ax_spectrum.set_ylabel('P($\lambda$) [a.u.]')
     ax_spectrum.set_xlabel('$\lambda$ [nm]')
+    ax_spectrum.set_ylim(ymin=0)
     ax_spectrum.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_spectrum.get_yaxis().get_major_formatter().set_scientific(True)
     ax_spectrum.get_yaxis().get_major_formatter().set_powerlimits((-3, 4))#[:,75,75]
@@ -787,7 +788,8 @@ def plot_dfl(dfl, g, figsize=3, legend = True, fig_name = None, save=False):
     ax_proj_x.set_title('X projection', fontsize=15)
     x_line_f, fwhm_x=fwhm_gauss_fit(x,x_line)
     ax_proj_x.plot(x,x_line_f)
-    ax_proj_x.text(0.95, 0.95,'FWHM= '+str(round_sig(fwhm_x,3))+r'$\mu m$', horizontalalignment='right', verticalalignment='top', transform = ax_proj_x.transAxes)
+    ax_proj_x.text(0.95, 0.95,'FWHM= '+str(round_sig(fwhm_x,3))+r'$\mu m$', horizontalalignment='right', verticalalignment='top', transform = ax_proj_x.transAxes, fontsize=12)
+    ax_proj_x.set_ylim(ymin=0,ymax=1)
     
     
     ax_proj_y=fig.add_subplot(2, 2+column_3d, 2, sharey=ax_int)
@@ -795,7 +797,8 @@ def plot_dfl(dfl, g, figsize=3, legend = True, fig_name = None, save=False):
     ax_proj_y.set_title('Y projection', fontsize=15)
     y_line_f, fwhm_y=fwhm_gauss_fit(y,y_line)
     ax_proj_y.plot(y_line_f,y)
-    ax_proj_y.text(0.95, 0.95,'FWHM= '+str(round_sig(fwhm_y,3))+r'$\mu m$', horizontalalignment='right', verticalalignment='top', transform = ax_proj_y.transAxes)
+    ax_proj_y.text(0.95, 0.95,'FWHM= '+str(round_sig(fwhm_y,3))+r'$\mu m$', horizontalalignment='right', verticalalignment='top', transform = ax_proj_y.transAxes, fontsize=12)
+    ax_proj_y.set_xlim(xmin=0,xmax=1)
 
     
     

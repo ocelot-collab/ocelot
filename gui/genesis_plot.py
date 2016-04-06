@@ -101,9 +101,10 @@ def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = None, save=False)
     
     ax_size_tpos.set_ylim(ymin=0)
     ax_spread.set_ylim(ymin=0)
-
+    ax_bunching.set_ylim(ymin=0)
+    
     number_ticks=6
-
+    
     ax_und.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_quad.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_energy.yaxis.major.locator.set_params(nbins=number_ticks)
@@ -113,11 +114,11 @@ def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = None, save=False)
     # yloc = plt.MaxNLocator(max_yticks)
     # ax_size_tpos.yaxis.set_major_locator(yloc)
     # ax_energy.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.1e'))
-
+    
     plt.xlim(g.z[0], g.z[-1])
-
+    
     fig.subplots_adjust(top=0.95, bottom=0.1, right=0.85, left=0.15)
-
+    
     aw_tmp=np.array(g.aw)[np.array(g.aw)!=0]
     if np.amax(aw_tmp)!=np.amin(aw_tmp):
         ax_und.set_ylim([np.amin(aw_tmp),np.amax(aw_tmp)])
@@ -443,9 +444,10 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
     
 
     ax_spectrum.plot(fftshift(lamdscale), fftshift(spectrum[:,zi]), 'r-')
-    ax_spectrum.text(0, 0, r'on axis')#horizontalalignment='center', verticalalignment='center'
+    ax_spectrum.text(0, 0,r"on axis", fontsize=15)#horizontalalignment='center', verticalalignment='center',
     ax_spectrum.set_ylabel('P($\lambda$) [a.u.]')
     ax_spectrum.set_xlabel('$\lambda$ [nm]')
+    ax_spectrum.set_ylim(ymin=0)
     ax_spectrum.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_spectrum.get_yaxis().get_major_formatter().set_scientific(True)
     ax_spectrum.get_yaxis().get_major_formatter().set_powerlimits((-3, 4))#[:,75,75]
@@ -826,7 +828,10 @@ def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=F
     x_line_f, rms_x=gauss_fit(x,x_line) #fit with Gaussian, and return fitted function and rms
     fwhm_x=fwhm3(x_line)[1]*dx #measure FWHM
     ax_proj_x.plot(x,x_line_f)
+
     ax_proj_x.text(0.95, 0.95,'fwhm= '+str(round_sig(fwhm_x,3))+r'[$\mu$'+unit_xy+']\nrms= '+str(round_sig(rms_x,3))+r'[$\mu$'+unit_xy+']', horizontalalignment='right', verticalalignment='top', transform = ax_proj_x.transAxes,fontsize=12)
+    ax_proj_x.set_ylim(ymin=0,ymax=1)
+
     
     
     ax_proj_y=fig.add_subplot(2, 2+column_3d, 2, sharey=ax_int)
@@ -836,6 +841,9 @@ def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=F
     fwhm_y=fwhm3(y_line)[1]*dy
     ax_proj_y.plot(y_line_f,y)
     ax_proj_y.text(0.95, 0.95,'fwhm= '+str(round_sig(fwhm_y,3))+r'[$\mu$'+unit_xy+']\nrms= '+str(round_sig(rms_y,3))+r'[$\mu$'+unit_xy+']', horizontalalignment='right', verticalalignment='top', transform = ax_proj_y.transAxes,fontsize=12)
+    ax_proj_y.set_xlim(xmin=0,xmax=1)
+
+
     
     if column_3d:
         if phase==True:

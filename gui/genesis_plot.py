@@ -16,13 +16,13 @@ from pylab import * #tmp
 # font = {'family' : 'normal',
 #        'weight' : 'bold',
 #        'size'   : 20}
-params = {'backend': 'ps', 'axes.labelsize': 15, 'font.size': 16, 'legend.fontsize': 24, 'xtick.labelsize': 19,  'ytick.labelsize': 19, 'text.usetex': True}
+params = {'backend': 'ps', 'axes.labelsize': 15, 'font.size': 15, 'legend.fontsize': 24, 'xtick.labelsize': 19,  'ytick.labelsize': 19, 'text.usetex': True}
 rcParams.update(params)
 rc('text', usetex=True) # required to have greek fonts on redhat
 
 font = {'family' : 'normal',
-        'weight' : 'bold',
-        'size'   : 22}
+        'weight' : 'normal',
+        'size'   : 15}
 
 matplotlib.rc('font', **font)
 
@@ -443,7 +443,7 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
     
 
     ax_spectrum.plot(fftshift(lamdscale), fftshift(spectrum[:,zi]), 'r-')
-    ax_spectrum.text(0.5, 0.5,'on axis', horizontalalignment='center', verticalalignment='center')
+    ax_spectrum.text(0, 0, r'on axis')#horizontalalignment='center', verticalalignment='center'
     ax_spectrum.set_ylabel('P($\lambda$) [a.u.]')
     ax_spectrum.set_xlabel('$\lambda$ [nm]')
     ax_spectrum.get_yaxis().get_major_formatter().set_useOffset(False)
@@ -676,7 +676,7 @@ def gen_outplot(handle=None,save='png',show=False,debug=0):
         
         if os.path.isfile(handle.path+'.dfl'):
             dfl=readRadiationFile(handle.path+'.dfl', handle.ncar)
-            f5=plot_dfl(dfl, handle,save=save)
+            f5=gen_outplot_dfl(dfl, handle,save=save)
             
     if show==True:
         print('    showing plots, close all to proceed')
@@ -688,35 +688,66 @@ def gen_outplot(handle=None,save='png',show=False,debug=0):
     # return [f1,f2,f3,f4]
 
 
-def plot_dfl(dfl, g, figsize=3, legend = True, fig_name = None, save=False):
+def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=False, fig_name = None, column_3d=True, save=False):
     
     print('    plotting dfl file')
     
+    # print dfl.shape
+    # print np.fft.ifftshift(dfl,(1,2)).shape
+    # print np.fft.fft2(dfl).shape
+    
+    # print dfl.shape
     if dfl.shape[0]!=1:
-        column_3d=True
+        ncar_z=dfl.shape[0]
+        if g('isradi')==0: #parameter for dfl output every isradi-th slice
+            leng_z=g('xlamds')*g('zsep')*ncar_z
+        else:
+            leng_z=g('xlamds')*g('zsep')*g('isradi')*ncar_z
+        z = np.linspace(0, leng_z, ncar_z)
     else:
         column_3d=False
     
-    dfl=swapaxes(dfl[::-1,:,:],2,1) # zyx -> zxy
+    dfl=swapaxes(dfl,2,1) # zyx -> zxy
     
     #number of mesh points
     ncar_x=dfl.shape[1]
-    leng_x=g.leng*1e6 #transverse size of mesh [um], to be upgraded
+    leng_x=g.leng #transverse size of mesh [m], to be upgraded
     ncar_y=dfl.shape[2]
-    leng_y=g.leng*1e6
-    if column_3d==True:
-        ncar_z=dfl.shape[0]
-        leng_z=(max(g.s)-min(g.s))*1e6
+    leng_y=g.leng
+
+
+    if far_field:
+        print('      calculating far field')
+        dfl=np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(dfl,(1,2))),(1,2))/sqrt(ncar_x*ncar_y) # sqrt(ncar_x*ncar_y) because of numpy fft function
+        dx=leng_x/ncar_x
+        dy=leng_y/ncar_y
+        x = np.linspace(-1/(2*dx)+1/(2*leng_x), 1/(2*dx)-1/(2*leng_x), ncar_x)*g('xlamds')
+        y = np.linspace(-1/(2*dy)+1/(2*leng_y), 1/(2*dy)-1/(2*leng_y), ncar_y)*g('xlamds')
+        dx=1/(leng_x)*g('xlamds')#check!!!
+        dy=1/(leng_y)*g('xlamds')
+        unit_xy='rad'
+    else:
+        dx=leng_x/ncar_x
+        dy=leng_y/ncar_y
+        x = np.linspace(-leng_x/2, leng_x/2, ncar_x)
+        y = np.linspace(-leng_y/2, leng_y/2, ncar_y)
+        unit_xy='m'
     
-    x = np.linspace(-leng_x/2, leng_x/2, ncar_x)
-    y = np.linspace(-leng_y/2, leng_y/2, ncar_y)
-    z = np.linspace(0, leng_z, ncar_z)
+    
+    dx*=1e6
+    dy*=1e6
+    x*=1e6
+    y*=1e6
+    z*=1e6
+    leng_x*=1e6
+    leng_y*=1e6
+    leng_z*=1e6
     
     if fig_name is None:
         if g.filename is '':
             fig = plt.figure('Radiation field')
         else:
-            fig = plt.figure('Radiation field, '+g.filename)
+            fig = plt.figure('Radiation field '+g.filename)
     else:
         fig = plt.figure(fig_name)
     fig.clf()
@@ -724,7 +755,7 @@ def plot_dfl(dfl, g, figsize=3, legend = True, fig_name = None, save=False):
     # plt.rc('axes', grid=True)
     # plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
     
-    cmap_int = plt.get_cmap('jet') #change to convenient
+    cmap_int = plt.get_cmap('inferno')#jet inferno viridis #change to convenient
     cmap_ph = plt.get_cmap('hsv')
     
     #calculate transverse projection, remove z dimention
@@ -734,6 +765,7 @@ def plot_dfl(dfl, g, figsize=3, legend = True, fig_name = None, save=False):
     # xy_proj=sum(dfl,0); #view from front
     yz_proj=sum(dfl_int,1); #intensity view from side
     xz_proj=sum(dfl_int,2); #intensity view from top
+    z_proj=sum(dfl_int,(1,2)); #temporal intensity profile
     del dfl_int
 
     
@@ -765,50 +797,59 @@ def plot_dfl(dfl, g, figsize=3, legend = True, fig_name = None, save=False):
     
     ax_int=fig.add_subplot(2, 2+column_3d, 1)
     # ax_int.pcolormesh(x, y, int_proj, cmap=cmap_int)
-    intplt=ax_int.pcolormesh(x, y, swapaxes(int_proj,1,0))
+    intplt=ax_int.pcolormesh(x, y, swapaxes(int_proj,1,0), cmap=cmap_int)
     ax_int.set_title('Intensity', fontsize=15)
     ax_int.axis('equal')
     # ax_int.axes.get_xaxis().set_visible(False)
-    ax_int.set_xlabel(r'x [$\mu m$]')
-    ax_int.set_ylabel(r'y [$\mu m$]')
+    ax_int.set_xlabel(r'x [$\mu$'+unit_xy+']')
+    ax_int.set_ylabel(r'y [$\mu$'+unit_xy+']')
     
-    ax_ph=fig.add_subplot(2, 2+column_3d, 4+column_3d, sharex=ax_int,sharey=ax_int)
-    # ax_ph.pcolormesh(x, y, ph_proj, cmap=cmap_ph)
-    ax_ph.pcolormesh(x, y, swapaxes(ph_proj,1,0))
-    #ax_ph.axis('equal')
-    ax_ph.axis([min(x),max(x),min(y),max(y)])
-    ax_ph.set_title('Phase', fontsize=15)
-    # ax_ph.set_xlabel(r'[$\mu m$]')
-    # ax_ph.set_ylabel(r'[$\mu m$]')
+    if phase==True:
+        ax_ph=fig.add_subplot(2, 2+column_3d, 4+column_3d, sharex=ax_int,sharey=ax_int)
+        # ax_ph.pcolormesh(x, y, ph_proj, cmap=cmap_ph)
+        ax_ph.pcolormesh(x, y, swapaxes(ph_proj,1,0), cmap=cmap_ph)
+        #ax_ph.axis('equal')
+        ax_ph.axis([min(x),max(x),min(y),max(y)])
+        ax_ph.set_title('Phase', fontsize=15)
+        # ax_ph.set_xlabel(r'[$\mu m$]')
+        # ax_ph.set_ylabel(r'[$\mu m$]')
+    else:
+        ax_z=fig.add_subplot(2, 2+column_3d, 4+column_3d)
+        ax_z.plot(z,z_proj)
+        ax_z.set_title('Z projection', fontsize=15)
+        ax_z.set_xlabel(r'z [$\mu$m]')
+        ax_z.set_ylabel(r'Power [W]')
     
     ax_proj_x=fig.add_subplot(2, 2+column_3d, 3+column_3d, sharex=ax_int)
     ax_proj_x.plot(x,x_line)
     ax_proj_x.set_title('X projection', fontsize=15)
-    x_line_f, fwhm_x=fwhm_gauss_fit(x,x_line)
+    x_line_f, rms_x=gauss_fit(x,x_line) #fit with Gaussian, and return fitted function and rms
+    fwhm_x=fwhm3(x_line)[1]*dx #measure FWHM
     ax_proj_x.plot(x,x_line_f)
-    ax_proj_x.text(0.95, 0.95,'FWHM= '+str(round_sig(fwhm_x,3))+r'$\mu m$', horizontalalignment='right', verticalalignment='top', transform = ax_proj_x.transAxes)
+    ax_proj_x.text(0.95, 0.95,'fwhm= '+str(round_sig(fwhm_x,3))+r'[$\mu$'+unit_xy+']\nrms= '+str(round_sig(rms_x,3))+r'[$\mu$'+unit_xy+']', horizontalalignment='right', verticalalignment='top', transform = ax_proj_x.transAxes,fontsize=12)
     
     
     ax_proj_y=fig.add_subplot(2, 2+column_3d, 2, sharey=ax_int)
     ax_proj_y.plot(y_line,y)
     ax_proj_y.set_title('Y projection', fontsize=15)
-    y_line_f, fwhm_y=fwhm_gauss_fit(y,y_line)
+    y_line_f, rms_y=gauss_fit(y,y_line)
+    fwhm_y=fwhm3(y_line)[1]*dy
     ax_proj_y.plot(y_line_f,y)
-    ax_proj_y.text(0.95, 0.95,'FWHM= '+str(round_sig(fwhm_y,3))+r'$\mu m$', horizontalalignment='right', verticalalignment='top', transform = ax_proj_y.transAxes)
-
-    
+    ax_proj_y.text(0.95, 0.95,'fwhm= '+str(round_sig(fwhm_y,3))+r'[$\mu$'+unit_xy+']\nrms= '+str(round_sig(rms_y,3))+r'[$\mu$'+unit_xy+']', horizontalalignment='right', verticalalignment='top', transform = ax_proj_y.transAxes,fontsize=12)
     
     if column_3d:
-        ax_proj_xz=fig.add_subplot(2, 2+column_3d, 6)
-        ax_proj_xz.pcolormesh(z, x, swapaxes(xz_proj,1,0))
+        if phase==True:
+            ax_proj_xz=fig.add_subplot(2, 2+column_3d, 6)
+        else:
+            ax_proj_xz=fig.add_subplot(2, 2+column_3d, 6,sharex=ax_z)
+        ax_proj_xz.pcolormesh(z, x, swapaxes(xz_proj,1,0), cmap=cmap_int)
         ax_proj_xz.set_title('top view', fontsize=15)
         ax_proj_xz.axis('tight')
-        ax_proj_xz.set_xlabel(r'z [$\mu m$]')
+        ax_proj_xz.set_xlabel(r'z [$\mu$m]')
         ax_proj_yz=fig.add_subplot(2, 2+column_3d, 3,sharey=ax_int,sharex=ax_proj_xz)
-        ax_proj_yz.pcolormesh(z, y, swapaxes(yz_proj,1,0))
+        ax_proj_yz.pcolormesh(z, y, swapaxes(yz_proj,1,0), cmap=cmap_int)
         ax_proj_yz.set_title('side view', fontsize=15)
         ax_proj_yz.axis('tight')
-
         
         
         
@@ -991,7 +1032,7 @@ def round_sig(x, sig=2):
     return round(x, sig-int(floor(log10(x)))-1)
     
     
-def fwhm_gauss_fit(X,Y):
+def gauss_fit(X,Y):
     import numpy as np
     import scipy.optimize as opt
     
@@ -1003,8 +1044,8 @@ def fwhm_gauss_fit(X,Y):
     p1, success = opt.leastsq(errfunc, p0[:], args=(X, Y))
     fit_mu,fit_stdev,ampl = p1
     Y1=gauss(X,p1)
-    FWHM = 2*np.sqrt(2*np.log(2))*fit_stdev
-    return (Y1, FWHM)
+    RMS = fit_stdev
+    return (Y1, RMS)
 
 def fwhm3(valuelist, peakpos=-1):
     """calculates the full width at half maximum (fwhm) of some curve.

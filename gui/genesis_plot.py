@@ -689,7 +689,7 @@ def gen_outplot(handle=None,save='png',show=False,debug=0):
     # return [f1,f2,f3,f4]
 
 
-def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=False, freq_domain=False, fig_name = None, column_3d=True, save=False, return_proj=False):
+def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=False, freq_domain=False, fig_name = None, auto_zoom=False, column_3d=True, save=False, return_proj=False):
     
     print('    plotting dfl file')
     start_time = time.time()
@@ -839,7 +839,6 @@ def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=F
     # ax_int.pcolormesh(x, y, xy_proj, cmap=cmap_int)
     intplt=ax_int.pcolormesh(x, y, swapaxes(xy_proj,1,0), cmap=cmap_int)
     ax_int.set_title(xy_title, fontsize=15)
-    ax_int.axis('equal')
     # ax_int.axes.get_xaxis().set_visible(False)
     ax_int.set_xlabel(r''+x_label)
     ax_int.set_ylabel(y_label)
@@ -865,9 +864,8 @@ def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=F
     ax_proj_x.set_title(x_title, fontsize=15)
     x_line_f, rms_x=gauss_fit(x,x_line) #fit with Gaussian, and return fitted function and rms
     fwhm_x=fwhm3(x_line)[1]*dx #measure FWHM
-    ax_proj_x.plot(x,x_line_f,'g--')
-
-    ax_proj_x.text(0.95, 0.95,'fwhm= '+str(round_sig(fwhm_x,3))+r' ['+unit_xy+']\nrms= '+str(round_sig(rms_x,3))+r' ['+unit_xy+']', horizontalalignment='right', verticalalignment='top', transform = ax_proj_x.transAxes,fontsize=12)
+    ax_proj_x.plot(x,x_line_f,'g-')
+    ax_proj_x.text(0.95, 0.95,'fwhm= \n'+str(round_sig(fwhm_x,3))+r' ['+unit_xy+']\nrms= \n'+str(round_sig(rms_x,3))+r' ['+unit_xy+']', horizontalalignment='right', verticalalignment='top', transform = ax_proj_x.transAxes,fontsize=12)
     ax_proj_x.set_ylim(ymin=0,ymax=1)
 
     
@@ -877,8 +875,8 @@ def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=F
     ax_proj_y.set_title(y_title, fontsize=15)
     y_line_f, rms_y=gauss_fit(y,y_line)
     fwhm_y=fwhm3(y_line)[1]*dy
-    ax_proj_y.plot(y_line_f,y,'g--')
-    ax_proj_y.text(0.95, 0.95,'fwhm= \n'+str(round_sig(fwhm_y,3))+r' ['+unit_xy+']\nrms= \n'+str(round_sig(rms_y,3))+r' ['+unit_xy+']', horizontalalignment='right', verticalalignment='top', transform = ax_proj_y.transAxes,fontsize=12)
+    ax_proj_y.plot(y_line_f,y,'g-')
+    ax_proj_y.text(0.95, 0.95,'fwhm= '+str(round_sig(fwhm_y,3))+r' ['+unit_xy+']\nrms= '+str(round_sig(rms_y,3))+r' ['+unit_xy+']', horizontalalignment='right', verticalalignment='top', transform = ax_proj_y.transAxes,fontsize=12)
     ax_proj_y.set_xlim(xmin=0,xmax=1)
 
 
@@ -890,12 +888,14 @@ def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=F
             ax_proj_xz=fig.add_subplot(2, 2+column_3d, 6,sharex=ax_z)
         ax_proj_xz.pcolormesh(z, x, swapaxes(xz_proj,1,0), cmap=cmap_int)
         ax_proj_xz.set_title('Top view', fontsize=15)
-        ax_proj_xz.axis('tight')
+
+        # 
         ax_proj_xz.set_xlabel(z_label)
         ax_proj_yz=fig.add_subplot(2, 2+column_3d, 3,sharey=ax_int,sharex=ax_proj_xz)
         ax_proj_yz.pcolormesh(z, y, swapaxes(yz_proj,1,0), cmap=cmap_int)
         ax_proj_yz.set_title('Side view', fontsize=15)
-        ax_proj_yz.axis('tight')
+
+        # 
         
         
         
@@ -907,21 +907,35 @@ def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=F
         cbar=plt.colorbar(intplt, cax=cbar_int)# pad = -0.05 ,fraction=0.01)
         # cbar.set_label(r'[$ph/cm^2$]',size=10)
         cbar.set_label(r'a.u.',size=10)
-    
-    
-    
-    
+
     # ax_int.get_yaxis().get_major_formatter().set_useOffset(False)
     # ax_int.get_yaxis().get_major_formatter().set_scientific(True)
     # ax_ph.get_yaxis().get_major_formatter().set_useOffset(False)
     # ax_ph.get_yaxis().get_major_formatter().set_scientific(True)
-    
-    ax_int.set_aspect('equal')
-    ax_int.autoscale(tight=True)
-    
+
+
+    if auto_zoom!=False:
+        if phase and column_3d == True:
+            ax_proj_xz.set_xlim(z[nonzero(z_proj>max(z_proj)*0.01)][[0,-1]])
+        elif phase == False:
+            ax_z.set_xlim(z[nonzero(z_proj>max(z_proj)*0.01)][[0,-1]])
+        size_x=max(abs(x[nonzero(x_line>0.01)][[0,-1]]))
+        size_y=max(abs(x[nonzero(x_line>0.01)][[0,-1]]))
+        size_xy=max(size_x,size_y)
+        ax_int.axis('equal')
+        ax_int.axis([-size_xy, size_xy,-size_xy, size_xy])
+        ax_proj_xz.set_ylim([-size_xy, size_xy])
+        #ax_int.set_ylim(int(ncar_y/2-ind)*dy, int(ncar_y/2+ind)*dy)
+        #ax_proj_x.set_xlim(xmin=x[nonzero(x_line>0.01)][0],xmax=x[nonzero(x_line>0.01)][-1])
+    else:
+        ax_proj_xz.axis('tight')
+        ax_proj_yz.axis('tight')
+        ax_int.set_aspect('equal')
+        ax_int.autoscale(tight=True)
+        
     subplots_adjust(wspace=0.4,hspace=0.4)
     
-    
+
     if save!=False:
         if save==True:
             save='png'
@@ -959,7 +973,7 @@ def gauss_fit(X,Y):
     RMS = fit_stdev
     return (Y1, RMS)
 
-def fwhm3(valuelist, peakpos=-1):
+def fwhm3(valuelist, height=0.5, peakpos=-1):
     """calculates the full width at half maximum (fwhm) of some curve.
     the function will return the fwhm with sub-pixel interpolation. It will start at the maximum position and 'walk' left and right until it approaches the half values.
     INPUT: 
@@ -975,7 +989,7 @@ def fwhm3(valuelist, peakpos=-1):
         peakpos = np.min( np.nonzero( valuelist==peak  )  )
 
     peakvalue = valuelist[peakpos]
-    phalf = peakvalue / 2.0
+    phalf = peakvalue * height
 
     # go left and right, starting from peakpos
     ind1 = peakpos
@@ -993,5 +1007,5 @@ def fwhm3(valuelist, peakpos=-1):
     p2interp= ind2 + (phalf -valuelist[ind2])/grad2
     #calculate the width
     width = p2interp-p1interp
-    return (peakpos,width)
+    return (peakpos,width,np.array([ind1,ind2]))
 

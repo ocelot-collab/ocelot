@@ -3,7 +3,7 @@ user interface for viewing genesis simulation results
 '''
 
 import sys, os, csv
- 
+import time
 import matplotlib
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
@@ -431,8 +431,6 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
 
     spectrum = abs(fft(np.sqrt( np.array(power)) * np.exp( 1.j* np.array(phase) ) , axis=0))**2/sqrt(g.nSlices)/(2*g.leng/g('ncar'))**2/1e10
     e_0=1239.8/g('xlamds')/1e9
-
-    
     g.freq_ev1 = h * fftfreq(len(spectrum), d=g('zsep') * g('xlamds') / c)+e_0
     lamdscale=1239.8/g.freq_ev1
 
@@ -677,8 +675,9 @@ def gen_outplot(handle=None,save='png',show=False,debug=0):
             f4=gen_outplot_z(handle, z=inf,save=save)
         
         if os.path.isfile(handle.path+'.dfl'):
-            dfl=readRadiationFile(handle.path+'.dfl', handle.ncar)
+            dfl=readRadiationFile(handle.path+'.dfl', handle.ncar, vartype=complex64)
             f5=gen_outplot_dfl(dfl, handle,save=save)
+            f6=gen_outplot_dfl(dfl, handle,far_field=1,freq_domain=1,save=save)
             
     if show==True:
         print('    showing plots, close all to proceed')
@@ -690,14 +689,14 @@ def gen_outplot(handle=None,save='png',show=False,debug=0):
     # return [f1,f2,f3,f4]
 
 
-def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=False, fig_name = None, column_3d=True, save=False):
+def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=False, freq_domain=False, fig_name = None, column_3d=True, save=False, return_proj=False):
     
     print('    plotting dfl file')
-    
+    start_time = time.time()
     # print dfl.shape
     # print np.fft.ifftshift(dfl,(1,2)).shape
     # print np.fft.fft2(dfl).shape
-    
+    suffix=''
     # print dfl.shape
     if dfl.shape[0]!=1:
         ncar_z=dfl.shape[0]
@@ -720,6 +719,10 @@ def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=F
 
     if far_field:
         print('      calculating far field')
+        calc_time=time.time()
+        # for i in arange(0,dfl.shape[0]):
+            # dfl[i,:,:]=np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(dfl[i,:,:],(0,1))),(0,1))
+        # dfl/=sqrt(ncar_x*ncar_y)# sqrt(ncar_x*ncar_y) because of numpy fft function
         dfl=np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(dfl,(1,2))),(1,2))/sqrt(ncar_x*ncar_y) # sqrt(ncar_x*ncar_y) because of numpy fft function
         dx=leng_x/ncar_x
         dy=leng_y/ncar_y
@@ -727,15 +730,50 @@ def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=F
         y = np.linspace(-1/(2*dy)+1/(2*leng_y), 1/(2*dy)-1/(2*leng_y), ncar_y)*g('xlamds')
         dx=1/(leng_x)*g('xlamds')#check!!!
         dy=1/(leng_y)*g('xlamds')
-        unit_xy='rad'
+        unit_xy='$\mu$rad'
+        x_label=r'$\theta_x$ ['+unit_xy+']'
+        y_label=r'$\theta_y$ ['+unit_xy+']'
+        suffix+='_ff'
+        x_title='X divergence'
+        y_title='Y divergence'
+        xy_title='Far field intensity'
+        x_y_color='grey'
+        print('        done in %.2f seconds' %(time.time()-calc_time))
     else:
         dx=leng_x/ncar_x
         dy=leng_y/ncar_y
         x = np.linspace(-leng_x/2, leng_x/2, ncar_x)
         y = np.linspace(-leng_y/2, leng_y/2, ncar_y)
-        unit_xy='m'
+        unit_xy='$\mu$m'
+        x_label='x ['+unit_xy+']'
+        y_label='y ['+unit_xy+']'
+        x_title='X projection'
+        y_title='Y projection'
+        xy_title='Intensity'
+        x_y_color='blue'
     
-    
+    if freq_domain:
+        print('      calculating spectrum')
+        calc_time=time.time()
+        dfl=np.fft.ifftshift(np.fft.fft(dfl,axis=0),0)/sqrt(ncar_z) # sqrt(ncar_x*ncar_y) because of numpy fft function
+        dk=2*pi/leng_z;
+        k=2*pi/g('xlamds');
+        z = 2*pi/np.linspace(k-dk/2*ncar_z, k+dk/2*ncar_z, ncar_z)
+        suffix+='_fd'
+        z*=1e3
+        unit_z='nm'
+        z_label='$\lambda$ ['+unit_z+']'
+        z_labelv=r'[arb. units]'
+        z_title='Spectrum'
+        z_color='red'
+        print('        done in %.2f seconds' %(time.time()-calc_time))
+    else:
+        unit_z='$\mu$m'
+        z_label='z ['+unit_z+']'
+        z_labelv=r'Power [W]'
+        z_title='Z projection'
+        z_color='blue'
+        
     dx*=1e6
     dy*=1e6
     x*=1e6
@@ -747,9 +785,9 @@ def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=F
     
     if fig_name is None:
         if g.filename is '':
-            fig = plt.figure('Radiation field')
+            fig = plt.figure('Radiation distribution')
         else:
-            fig = plt.figure('Radiation field '+g.filename)
+            fig = plt.figure('Radiation distribution'+suffix+' '+g.filename)
     else:
         fig = plt.figure(fig_name)
     fig.clf()
@@ -757,31 +795,31 @@ def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=F
     # plt.rc('axes', grid=True)
     # plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
     
-    cmap_int = plt.get_cmap('inferno')#jet inferno viridis #change to convenient
+    cmap_int = plt.get_cmap('jet')#jet inferno viridis #change to convenient
     cmap_ph = plt.get_cmap('hsv')
     
     #calculate transverse projection, remove z dimention
     
     dfl_int=abs(dfl)**2
-    xy_proj=sqrt((dfl_int).sum(0))*exp(1j*angle(dfl.sum(0))) #(amplitude-like) view from front, sum of square of amplitudes with phase as sum of phasors (latter is dedicated for illustration purposes: good to see an averaged wavefront)
-    # xy_proj=sum(dfl,0); #view from front
+    xy_proj_ampl=sqrt((dfl_int).sum(0))*exp(1j*angle(dfl.sum(0))) #(amplitude-like) view from front, sum of square of amplitudes with phase as sum of phasors (latter is dedicated for illustration purposes: good to see an averaged wavefront)
+    # xy_proj_ampl=sum(dfl,0); #view from front
     yz_proj=sum(dfl_int,1); #intensity view from side
     xz_proj=sum(dfl_int,2); #intensity view from top
     z_proj=sum(dfl_int,(1,2)); #temporal intensity profile
-    del dfl_int
+    del dfl_int, dfl
 
     
-    # x_line=xy_proj[]
-    # y_line=xy_proj[]
+    # x_line=xy_proj_ampl[]
+    # y_line=xy_proj_ampl[]
     
-    int_proj=abs(xy_proj)**2
-    ph_proj=angle(xy_proj)
+    xy_proj=abs(xy_proj_ampl)**2
+    xy_proj_ph=angle(xy_proj_ampl)
     
-    x_proj=sum(int_proj,1)
-    y_proj=sum(int_proj,0)
+    x_proj=sum(xy_proj,1)
+    y_proj=sum(xy_proj,0)
     
-    x_line=int_proj[:,int((ncar_y-1)/2)]
-    y_line=int_proj[int((ncar_x-1)/2),:]
+    x_line=xy_proj[:,int((ncar_y-1)/2)]
+    y_line=xy_proj[int((ncar_x-1)/2),:]
     
     if max(x_line)!=0 and max(y_line)!=0:
         x_line,y_line=x_line/max(x_line),y_line/max(y_line)
@@ -798,18 +836,18 @@ def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=F
     
     
     ax_int=fig.add_subplot(2, 2+column_3d, 1)
-    # ax_int.pcolormesh(x, y, int_proj, cmap=cmap_int)
-    intplt=ax_int.pcolormesh(x, y, swapaxes(int_proj,1,0), cmap=cmap_int)
-    ax_int.set_title('Intensity', fontsize=15)
+    # ax_int.pcolormesh(x, y, xy_proj, cmap=cmap_int)
+    intplt=ax_int.pcolormesh(x, y, swapaxes(xy_proj,1,0), cmap=cmap_int)
+    ax_int.set_title(xy_title, fontsize=15)
     ax_int.axis('equal')
     # ax_int.axes.get_xaxis().set_visible(False)
-    ax_int.set_xlabel(r'x [$\mu$'+unit_xy+']')
-    ax_int.set_ylabel(r'y [$\mu$'+unit_xy+']')
+    ax_int.set_xlabel(r''+x_label)
+    ax_int.set_ylabel(y_label)
     
     if phase==True:
         ax_ph=fig.add_subplot(2, 2+column_3d, 4+column_3d, sharex=ax_int,sharey=ax_int)
-        # ax_ph.pcolormesh(x, y, ph_proj, cmap=cmap_ph)
-        ax_ph.pcolormesh(x, y, swapaxes(ph_proj,1,0), cmap=cmap_ph)
+        # ax_ph.pcolormesh(x, y, xy_proj_ph, cmap=cmap_ph)
+        ax_ph.pcolormesh(x, y, swapaxes(xy_proj_ph,1,0), cmap=cmap_ph)
         #ax_ph.axis('equal')
         ax_ph.axis([min(x),max(x),min(y),max(y)])
         ax_ph.set_title('Phase', fontsize=15)
@@ -817,30 +855,30 @@ def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=F
         # ax_ph.set_ylabel(r'[$\mu m$]')
     else:
         ax_z=fig.add_subplot(2, 2+column_3d, 4+column_3d)
-        ax_z.plot(z,z_proj)
-        ax_z.set_title('Z projection', fontsize=15)
-        ax_z.set_xlabel(r'z [$\mu$m]')
-        ax_z.set_ylabel(r'Power [W]')
+        ax_z.plot(z,z_proj,linewidth=1.5,color=z_color)
+        ax_z.set_title(z_title, fontsize=15)
+        ax_z.set_xlabel(z_label)
+        ax_z.set_ylabel(z_labelv)
     
     ax_proj_x=fig.add_subplot(2, 2+column_3d, 3+column_3d, sharex=ax_int)
-    ax_proj_x.plot(x,x_line)
-    ax_proj_x.set_title('X projection', fontsize=15)
+    ax_proj_x.plot(x,x_line,linewidth=2,color=x_y_color)
+    ax_proj_x.set_title(x_title, fontsize=15)
     x_line_f, rms_x=gauss_fit(x,x_line) #fit with Gaussian, and return fitted function and rms
     fwhm_x=fwhm3(x_line)[1]*dx #measure FWHM
-    ax_proj_x.plot(x,x_line_f)
+    ax_proj_x.plot(x,x_line_f,'g--')
 
-    ax_proj_x.text(0.95, 0.95,'fwhm= '+str(round_sig(fwhm_x,3))+r'[$\mu$'+unit_xy+']\nrms= '+str(round_sig(rms_x,3))+r'[$\mu$'+unit_xy+']', horizontalalignment='right', verticalalignment='top', transform = ax_proj_x.transAxes,fontsize=12)
+    ax_proj_x.text(0.95, 0.95,'fwhm= '+str(round_sig(fwhm_x,3))+r' ['+unit_xy+']\nrms= '+str(round_sig(rms_x,3))+r' ['+unit_xy+']', horizontalalignment='right', verticalalignment='top', transform = ax_proj_x.transAxes,fontsize=12)
     ax_proj_x.set_ylim(ymin=0,ymax=1)
 
     
     
     ax_proj_y=fig.add_subplot(2, 2+column_3d, 2, sharey=ax_int)
-    ax_proj_y.plot(y_line,y)
-    ax_proj_y.set_title('Y projection', fontsize=15)
+    ax_proj_y.plot(y_line,y,linewidth=2,color=x_y_color)
+    ax_proj_y.set_title(y_title, fontsize=15)
     y_line_f, rms_y=gauss_fit(y,y_line)
     fwhm_y=fwhm3(y_line)[1]*dy
-    ax_proj_y.plot(y_line_f,y)
-    ax_proj_y.text(0.95, 0.95,'fwhm= '+str(round_sig(fwhm_y,3))+r'[$\mu$'+unit_xy+']\nrms= '+str(round_sig(rms_y,3))+r'[$\mu$'+unit_xy+']', horizontalalignment='right', verticalalignment='top', transform = ax_proj_y.transAxes,fontsize=12)
+    ax_proj_y.plot(y_line_f,y,'g--')
+    ax_proj_y.text(0.95, 0.95,'fwhm= \n'+str(round_sig(fwhm_y,3))+r' ['+unit_xy+']\nrms= \n'+str(round_sig(rms_y,3))+r' ['+unit_xy+']', horizontalalignment='right', verticalalignment='top', transform = ax_proj_y.transAxes,fontsize=12)
     ax_proj_y.set_xlim(xmin=0,xmax=1)
 
 
@@ -851,12 +889,12 @@ def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=F
         else:
             ax_proj_xz=fig.add_subplot(2, 2+column_3d, 6,sharex=ax_z)
         ax_proj_xz.pcolormesh(z, x, swapaxes(xz_proj,1,0), cmap=cmap_int)
-        ax_proj_xz.set_title('top view', fontsize=15)
+        ax_proj_xz.set_title('Top view', fontsize=15)
         ax_proj_xz.axis('tight')
-        ax_proj_xz.set_xlabel(r'z [$\mu$m]')
+        ax_proj_xz.set_xlabel(z_label)
         ax_proj_yz=fig.add_subplot(2, 2+column_3d, 3,sharey=ax_int,sharex=ax_proj_xz)
         ax_proj_yz.pcolormesh(z, y, swapaxes(yz_proj,1,0), cmap=cmap_int)
-        ax_proj_yz.set_title('side view', fontsize=15)
+        ax_proj_yz.set_title('Side view', fontsize=15)
         ax_proj_yz.axis('tight')
         
         
@@ -887,152 +925,18 @@ def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=F
     if save!=False:
         if save==True:
             save='png'
-        fig.savefig(g.path+'_dfl.'+str(save),format=save)
+        fig.savefig(g.path+'_dfl'+suffix+'.'+str(save),format=save)
+       
+    print('      done in %.2f seconds' % (time.time() - start_time))
+       
+    if return_proj:
+        return [xy_proj,yz_proj,xz_proj,x,y,z]
+    else:
+        return fig
         
-    return fig
     
     
-
-# def plot_dfl_o(g, figsize=(8, 10), legend = True, fig_name = None, save=False):
-# # def plotfield1(name ,Xs, Xf, nx, Ys, Yf, ny, arI, arP, E_ph):
-    # import matplotlib.pyplot as plt
-    # from matplotlib.colors import BoundaryNorm
-    # from matplotlib.ticker import MaxNLocator
-    # import numpy as np
-    # import math
-    # import pylab as pl
-    # from pylab import clf, axis
-
-    # # generate 2 2d grids for the x & y bounds
-
-    # x = 1e6 * np.linspace(Xs, Xf, nx)
-    # y = 1e6 * np.linspace(Ys, Yf, ny)
-
-    # dataI = np.array( arI )/E_ph/1.6e-19/10000
-    # #dataI =x/E_ph/1.6e-19 for x in dataI
-    # zI=dataI.reshape( ny, nx )
-
-    # dataP = np.array( arP )
-    # zP=dataP.reshape( ny, nx )
-
-    # #x and y are bounds, so z should be the value *inside* those bounds.
-    # # Therefore, remove the last value from the z array.
-    # #zI = zI[:-1, :-1]
-    # levelsI = MaxNLocator(nbins=50).tick_values(zI.min(), zI.max())
-    # #zP = zP[:-1, :-1]
-    # levelsP = MaxNLocator(nbins=50).tick_values(-math.pi, math.pi)
-
-
-    # # pick the desired colormap, sensible levels, and define a normalization
-    # # instance which takes data values and translates those into levels.
-    # cmapI = plt.get_cmap('jet')
-    # cmapP = plt.get_cmap('hsv')
-    # normI = BoundaryNorm(levelsI, ncolors=cmapI.N, clip=True)
-    # normP = BoundaryNorm(levelsP, ncolors=cmapP.N, clip=True)
-
-    # fig = plt.figure(name)
-    # clf()
-
-    # # plt.subplot(2, 2, 1)-------------------------------------
-    # p1=fig.add_subplot(2, 2, 1)
-    # p1.clear()
-
-    # pp1=p1.pcolormesh(x, y, zI, cmap=cmapI)#, norm=normI)
-
-    # #plt.colorbar(pp1,shrink=0.9,fraction=0.01)# pad = -0.05)
-    # # # set the limits of the plot to the limits of the data
-    # p1.axis([x.min(), x.max(), y.min(), y.max()])
-    # #p1.title('intensity')
-    # plt.title('Intensity')
-    # axis('equal')
-
-    # p1.set_xlabel(r'[$\mu m$]')
-    # p1.set_ylabel(r'[$\mu m$]')
-    # # axis([Xs*1e6, Xf*1e6, Ys*1e6, Yf*1e6])
-
-    # # plt.subplot(2, 2, 2)--------------------------------------
-    # p2=fig.add_subplot(2, 2, 2, sharey=p1)
-    # p2.clear()
-
-    # #arIm=reshape(np.matrix(arI), [nx, ny])
-    # #arIpx=np.sum(arIm,1)
-    # #plt.plot(np.linspace(wfr.mesh.xStart,wfr.mesh.xFin,wfr.mesh.nx),arIpx)
-
-    # arIpy=np.sum(zI,1)
-    # arIpy=arIpy/max(arIpy)
-    # #
-    # #p2.plot(x, arIpx)
-    # p2.plot(arIpy,y)
-    # arIpyf, fwhmy=fwhm_gauss_fit(y,arIpy)
-    # p2.plot(arIpyf,y)
-
-    # pl.text(0.95, 0.95,'FWHM= '+str(round_sig(fwhmy,3))+r'$\mu m$',
-    # horizontalalignment='right',
-    # verticalalignment='top',
-    # transform = p2.transAxes)  
-
-    # # plt.subplot(2, 2, 3)--------------------------------------
-    # p3=fig.add_subplot(2, 2, 3, sharex=p1)
-    # p3.clear()
-
-    # #arIm=reshape(np.matrix(arI), [nx, ny])
-    # #arIpx=np.sum(arIm,1)
-    # #plt.plot(np.linspace(wfr.mesh.xStart,wfr.mesh.xFin,wfr.mesh.nx),arIpx)
-
-    # arIpx=np.sum(zI,0)
-    # arIpx=arIpx/max(arIpx)
-
-    # #p2.plot(x, arIpx)
-    # p3.plot(x,arIpx)
-    # arIpxf, fwhmx=fwhm_gauss_fit(x,arIpx)
-    # #fwhmv=fwhm_gauss_fit(x,arIpx)[1]
-    # #np.disp(fwhmv)
-    # p3.plot(x,arIpxf)
-
-    # pl.text(0.95, 0.95,'FWHM= '+str(round_sig(fwhmx,3))+r'$\mu m$',
-    # horizontalalignment='right',
-    # verticalalignment='top',
-    # transform = p3.transAxes)
-
-    # # # set the limits of the plot to the limits of the data
-    # #p2.axis([x.min(), x.max()])
-    # # plt.title('intensity')
-    # #axis('equal')
-    # # axis([Xs*1e6, Xf*1e6, Ys*1e6, Yf*1e6])
-
-    # # plt.subplot(2, 2, 4)---------------------------------------
-    # p4=fig.add_subplot(2, 2, 4, sharex=p1)
-    # p4.clear()
-
-    # p4.pcolormesh(x, y, zP, cmap=cmapP, norm=normP)
-    # #plt.colorbar()
-    # # set the limits of the plot to the limits of the data
-    # # plt.axis([x.min(), x.max(), y.min(), y.max()])
-    # plt.title('Phase')
-    # axis('equal')
-    # # axis([Xs*1e6, Xf*1e6, Ys*1e6, Yf*1e6])
-
-    # ## plt.subplot(2, 2, 4)---------------------------------------
-    # #pha=fig.add_subplot(2, 2, 4)
-    # #pha.clear()
-    # #
-    # #plt.pcolormesh(x, y, zP, cmap=cmapP, norm=normP)
-    # #plt.colorbar()
-    # ## set the limits of the plot to the limits of the data
-    # ## plt.axis([x.min(), x.max(), y.min(), y.max()])
-    # #plt.title('Phase')
-    # #axis('equal')
-    # ## axis([Xs*1e6, Xf*1e6, Ys*1e6, Yf*1e6])
-
-    # fig.subplots_adjust(top=0.95, bottom=0.05, right=0.85, left=0.1)
-    # #fig.subplots_adjust()
-    # cbar_int = fig.add_axes([0.89, 0.15, 0.015, 0.7])
-    # cbar=plt.colorbar(pp1, cax=cbar_int)# pad = -0.05 ,fraction=0.01)
-    # cbar.set_label(r'[$ph/cm^2$]',size=10)
-    # plt.show()
-    # fig.canvas.draw()
-    # draw()
-    # return fig
+    
 
 
 def round_sig(x, sig=2):

@@ -789,7 +789,7 @@ def generate_input(up, beam, itdp=False):
     inp.magin = 1
     #inp.zstop = 50
     #inp.nsec = 20
-        
+
     inp.xlamd = up.lw
     inp.aw0 = up.K * np.sqrt(0.5)
     inp.delgam = beam.sigma_E / 0.000510998

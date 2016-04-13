@@ -7,7 +7,7 @@ import numpy as np
 import time
 #from scipy.optimize import curve_fit
 from k_analysis import *
-from ocelot.lib.genera.src.python.radiation import generaSR
+#from ocelot.lib.genera.src.python.radiation import generaSR
 
 font = {'size'   : 14}
 matplotlib.rc('font', **font)

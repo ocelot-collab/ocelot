@@ -7,7 +7,7 @@ from os import name as os_name
 import os
 from ocelot.common.globals import *
 from ocelot.cpbd.beam import Particle
-from motion import Motion
+from ocelot.lib.genera.src.python.trajectory.motion import Motion
 und_type = "undulator"
 import socket
 from sys import platform
@@ -34,7 +34,7 @@ home_dir = path[0]
 #index =  path[0].find("siberia2")
 #pathToDll = path[0][:index]+ tail
 pathToDll = path_to_ocelot + "/lib/genera/build/genera_libs/undulator.so"
-print pathToDll
+#print pathToDll
 try:
     cundul= CDLL(pathToDll)
 except:
@@ -45,9 +45,9 @@ except:
 
 def errorsBlock(error):
     def printOfStars(phrases, error):
-        print '**********************************************'
-        print '*', phrases, error
-        print '**********************************************'
+        print ('**********************************************')
+        print ('*', phrases, error)
+        print ('**********************************************')
     if error>0:
         phrases =  "Errors Block - OK. Error cod = "
     elif error == -100:
@@ -141,7 +141,7 @@ def field_map_for_dll(undulator):
 def motion2particles(aMotion, particle0):
     list_particle = []
     npoints_traj = int(len(aMotion)/11)
-    for i in xrange(npoints_traj):
+    for i in range(npoints_traj):
         particle = Particle()
         particle.x = aMotion[i]/1000.
         particle.px = aMotion[3*npoints_traj + i]
@@ -275,7 +275,7 @@ def track_with_IDs(lattice,particle0, ndiv_lin = 1,ndiv_und = 1000):
 
             energy = element.transfer_map.energy
             if energy == 0:
-                print "energy = 0 GeV: undulator as matrix"
+                print ("energy = 0 GeV: undulator as matrix")
                 particle = element.transfer_map*particle
                 particle_list.append(particle)
                 continue

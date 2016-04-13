@@ -556,3 +556,4 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones = None ):
     cb.set_label('Qy')
     plt.show()
 """
+

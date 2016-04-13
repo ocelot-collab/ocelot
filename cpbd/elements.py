@@ -142,6 +142,16 @@ class Drift(Element):
         self.l = l
         self.tilt = 0.
 
+class CSRDrift(Element):
+    """
+    l - length of lens in [m]
+    """
+    def __init__(self, l=0, id = None):
+        Element.__init__(self, id)
+        self.type = "csrdrift"
+        self.l = l
+        self.tilt = 0.
+
 class Bend(Element):
     def __init__(self, l, angle=0., k1 = 0., k2 = 0., tilt=0.0, e1 = 0., e2 = 0.,
                  gap = 0, h_pole1 = 0., h_pole2 = 0., fint = 0., fintx=0., id = None):
@@ -161,6 +171,24 @@ class Bend(Element):
         if fintx>0:
             self.fint2 = fintx
         self.tilt = tilt
+
+class SCRBend(Bend):
+    def __init__(self, l, angle=0., k1 = 0., k2 = 0., tilt=0.0, e1 = 0., e2 = 0.,
+                 gap = 0, h_pole1 = 0., h_pole2 = 0., fint = 0., fintx=0., id = None):
+        Element.__init__(self, id)
+        self.type = "scrbend"
+        self.l = l
+        self.angle = angle
+        self.k1 = k1
+        self.k2 = k2
+        self.tilt = tilt
+        self.gap = gap
+        self.h_pole1 = h_pole1
+        self.h_pole2 = h_pole2
+        self.fint1 = fint
+        self.fint2 = fint
+        if fintx>0:
+            self.fint2 = fintx
 
 class Edge(Bend):
     def __init__(self, l=0, angle=0.0, k1 = 0, edge = 0.,

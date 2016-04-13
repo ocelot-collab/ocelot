@@ -1,10 +1,10 @@
 __author__ = 'Sergey Tomin'
-from undulator import und_trace
+from ocelot.lib.genera.src.python.trajectory.undulator import und_trace
 from ocelot.cpbd.track import track
 from numpy import linspace, arange, array, append
 from ocelot.cpbd.optics import *
 from ocelot.cpbd.elements import *
-from motion import Motion
+from ocelot.lib.genera.src.python.trajectory.motion import Motion
 from scipy.interpolate import splrep, splev
 from matplotlib import pyplot as plt
 

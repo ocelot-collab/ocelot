@@ -20,6 +20,7 @@ from ocelot.utils.mint import machine_setup as log
 #    return dict_bpms
 
 def checking():
+    print("@@@@@@@@@@@@   checking correctors ..... ")
     for name in horizantal + vertical:
         print(name)
         try:
@@ -27,6 +28,8 @@ def checking():
             print(val)
         except:
             print("not available")
+
+    print("@@@@@@@@@@@@   checking BPM ..... ")
     for bpm in bpms:
         print(bpm)
         try:
@@ -38,7 +41,16 @@ def checking():
     vals = mi.init_corrector_vals(horizantal + vertical)
     print(vals)
 
+    print("@@@@@@@@@@@@   checking BLM ..... ")
+    alarms = mi.get_alarms()
+    print("alarms", alarms)
 
+
+def set_limits(corrs, limit):
+    for name in corrs:
+        val = mi.get_value(name)
+        dp.set_limits(name, [val - limit, val + limit])
+        print(name, "limits:", dp.get_limits(name))
 
 #dp = FLASH1DeviceProperties()
 
@@ -111,8 +123,9 @@ orbit["correctors"]  =  horizantal + vertical #['V3DBC3', 'V10ACC4', 'H10ACC5', 
 
 orbit["bpms"] = bpms
 
-alarms = mi.get_alarms()
-print("alarms", alarms)
+set_limits(horizantal, limit= 0.01)
+
+
 #seq_min_orb = [Action(func=opt.min_orbit, args=[orbit, 'simplex' ] )]
 
 #opt.eval(seq_min_orb)

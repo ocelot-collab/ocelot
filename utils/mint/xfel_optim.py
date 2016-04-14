@@ -19,6 +19,27 @@ from ocelot.utils.mint import machine_setup as log
 #            dict_bpms[elem.mi_id]["y"] = elem.y
 #    return dict_bpms
 
+def checking():
+    for name in horizantal + vertical:
+        print(name)
+        try:
+            val = mi.get_value(name)
+            print(val)
+        except:
+            print("not available")
+    for bpm in bpms:
+        print(bpm)
+        try:
+            x, y = mi.get_bpms_xy([bpm])
+            print(x, y)
+        except:
+            print("not available")
+
+    vals = mi.init_corrector_vals(horizantal + vertical)
+    print(vals)
+
+
+
 #dp = FLASH1DeviceProperties()
 
 mi = XFELMachineInterface()
@@ -32,8 +53,6 @@ opt.timeout = 1.2
 
 
 orbit = {}
-
-
 
 horizantal = [
                 'CKX.23.I1',
@@ -88,33 +107,12 @@ bpms = [
 
 
 
-
-
-
-
 orbit["correctors"]  =  horizantal + vertical #['V3DBC3', 'V10ACC4', 'H10ACC5', 'H10ACC6', 'H10ACC7']
 
 orbit["bpms"] = bpms
 
-#print(orbit["bpms"])
-
-for name in horizantal + vertical:
-    print(name)
-    try:
-        val = mi.get_value(name)
-        print(val)
-    except:
-        print("not available")
-for bpm in bpms:
-    print(bpm)
-    try:
-        x, y = mi.get_bpms_xy([bpm])
-        print(x, y)
-    except:
-        print("not available")
-
-vals = mi.init_corrector_vals(horizantal + vertical)
-print(vals)
+alarms = mi.get_alarms()
+print("alarms", alarms)
 #seq_min_orb = [Action(func=opt.min_orbit, args=[orbit, 'simplex' ] )]
 
 #opt.eval(seq_min_orb)

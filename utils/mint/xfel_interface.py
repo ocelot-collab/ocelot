@@ -261,7 +261,7 @@ class XFELMachineInterface():
         Y = [0.0]*len(bpms)
         for i in range(len(bpms)):
             ch = 'XFEL.DIAG/ORBIT/' + bpms[i]
-            print(ch)
+            #print(ch)
             X[i] = pydoocs.read(ch + "/X.SA1")['data']*0.001 # mm -> m
             Y[i] = pydoocs.read(ch + "/Y.SA1")['data']*0.001 # mm -> m
         return X, Y
@@ -290,16 +290,15 @@ class XFELMachineInterface():
     def get_alarms(self):
         alarm_vals = np.zeros(len(self.blm_names))
         for i in range(len(self.blm_names)):
-            blm_channel = 'TTF2.DIAG/BLM/'+self.blm_names[i]+'/CH00.TD'
-            blm_alarm_ch  = ('TTF2.DIAG/BLM/'+self.blm_names[i]).replace('BLM', 'BLM.ALARM') + '/THRFHI'
+            blm_channel = 'XFEL.DIAG/BLM/'+self.blm_names[i]+'/SIGNAL.SA1'
+            blm_alarm_ch  = ('XFEL.DIAG/BLM/'+self.blm_names[i]) + '/MULTIPLE_ALARM_THRESHOLD'
             if (self.debug): print('reading alarm channel', blm_alarm_ch)
-            alarm_val = pydoocs.read(blm_alarm_ch)['data'] * 1.25e-3 # alarm thr. in Volts
+            alarm_val = pydoocs.read(blm_alarm_ch)['data']
             if (self.debug): print ('alarm:', alarm_val)
-            sample = pydoocs.read(blm_channel)['data']
-            h = np.array([x[1] for x in sample])
-
-            alarm_vals[i] = np.max( np.abs(h) ) / alarm_val 
-            
+            val = pydoocs.read(blm_channel)['data']
+            #h = np.array([x[1] for x in sample])
+            #alarm_vals[i] = np.max( np.abs(h) ) / alarm_val
+            alarm_vals[i] = val/alarm_val
         return alarm_vals
 
 

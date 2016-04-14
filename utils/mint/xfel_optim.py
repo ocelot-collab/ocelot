@@ -100,7 +100,10 @@ print(orbit["bpms"])
 
 for name in horizantal:
     print(name)
-    mi.get_value(name)
+    try:
+        mi.get_value(name)
+    except:
+        print("not available")
 #seq_min_orb = [Action(func=opt.min_orbit, args=[orbit, 'simplex' ] )]
 
 #opt.eval(seq_min_orb)

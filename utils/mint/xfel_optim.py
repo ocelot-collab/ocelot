@@ -125,6 +125,7 @@ orbit["bpms"] = bpms_dict(bpms)#bpms
 
 checking()
 
+mi.set_value('CKX.24.I1', 0.228)
 #set_limits(horizantal, limit= 0.01)
 #set_limits(vertical, limit= 0.01)
 

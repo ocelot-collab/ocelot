@@ -291,7 +291,7 @@ class XFELMachineInterface():
         alarm_vals = np.zeros(len(self.blm_names))
         for i in range(len(self.blm_names)):
             blm_channel = 'XFEL.DIAG/BLM/'+self.blm_names[i]+'/SIGNAL.SA1'
-            blm_alarm_ch  = 'XFEL.DIAG/BLM/'+self.blm_names[i] + '/MULTIPLE_ALARM_THRESHOLD'
+            blm_alarm_ch  = 'XFEL.DIAG/BLM/'+self.blm_names[i] + '/SINGLE_ALARM_THRESHOLD'
             if (self.debug): print('reading alarm channel', blm_alarm_ch)
             print('reading alarm channel', blm_alarm_ch)
             alarm_val = pydoocs.read(blm_alarm_ch)['data']

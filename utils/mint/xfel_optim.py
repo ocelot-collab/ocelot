@@ -56,7 +56,7 @@ def set_limits(corrs, limit):
 mi = XFELMachineInterface()
 dp = XFELDeviceProperties()
 #opt = Optimizer(mi, dp)
-mi = TestInterface()
+#mi = TestInterface()
 opt = Optimizer(mi, dp)
 opt.debug = True
 opt.logging = True

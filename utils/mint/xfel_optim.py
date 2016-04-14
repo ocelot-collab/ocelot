@@ -77,7 +77,7 @@ bpms = [
         'BPMA.59.I1',
         #'BPMATEST.60.I1',
         #'BPMATEST.61.I1',
-        #'BPMA.63.I1',
+        'BPMA.63.I1',
         #'BPMA.72.I1',
         #'BPMA.75.I1',
         #'BPMA.77.I1',
@@ -96,7 +96,7 @@ orbit["correctors"]  =  horizantal + vertical #['V3DBC3', 'V10ACC4', 'H10ACC5', 
 
 orbit["bpms"] = bpms
 
-print(orbit["bpms"])
+#print(orbit["bpms"])
 
 for name in horizantal + vertical:
     print(name)

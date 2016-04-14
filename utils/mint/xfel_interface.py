@@ -260,9 +260,10 @@ class XFELMachineInterface():
         X = [0.0]*len(bpms)#np.zeros(len(correctors))
         Y = [0.0]*len(bpms)
         for i in range(len(bpms)):
-            mag_channel = 'XFEL.DIAG/ORBIT/' + bpms[i]
-            X[i] = pydoocs.read(mag_channel + "/X.SA1")['data']*0.001 # mm -> m
-            Y[i] = pydoocs.read(mag_channel + "/Y.SA1")['data']*0.001 # mm -> m
+            ch = 'XFEL.DIAG/ORBIT/' + bpms[i]
+            print(ch)
+            X[i] = pydoocs.read(ch + "/X.SA1")['data']*0.001 # mm -> m
+            Y[i] = pydoocs.read(ch + "/Y.SA1")['data']*0.001 # mm -> m
         return X, Y
 
     def get_quads_current(self, quads):

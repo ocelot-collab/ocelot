@@ -331,7 +331,7 @@ class XFELMachineInterface():
 
     def get_value(self, device_name):
         ch = 'XFEL.MAGNETS/MAGNET.ML/' + device_name + '/CURRENT.RBV'
-        print("getting value = ", ch)
+        #print("getting value = ", ch)
 
         #self.mutex.acquire()
         val = pydoocs.read(ch)

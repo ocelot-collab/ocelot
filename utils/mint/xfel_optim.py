@@ -44,12 +44,12 @@ horizantal = [
                 'CIX.51.I1',
                 'CIX.57.I1',
                 'CIX.65.I1',
-                'CIX.73I.I1',
-                'CIX.73II.I1',
-                'CIX.76.I1',
-                'CIX.78.I1',
-                'CIX.81.I1',
-                'CIX.83.I1',
+                #'CIX.73I.I1',
+                #'CIX.73II.I1',
+                #'CIX.76.I1',
+                #'CIX.78.I1',
+                #'CIX.81.I1',
+                #'CIX.83.I1',
                ]
 
 vertical = ['CKY.23.I1',
@@ -98,7 +98,7 @@ orbit["bpms"] = bpms
 
 print(orbit["bpms"])
 
-for name in horizantal:
+for name in horizantal + vertical:
     print(name)
     try:
         mi.get_value(name)

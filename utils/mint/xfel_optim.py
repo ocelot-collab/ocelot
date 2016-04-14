@@ -123,12 +123,14 @@ orbit["correctors"]  =  horizantal + vertical #['V3DBC3', 'V10ACC4', 'H10ACC5', 
 
 orbit["bpms"] = bpms_dict(bpms)#bpms
 
-set_limits(horizantal, limit= 0.01)
-set_limits(vertical, limit= 0.01)
+checking()
 
-seq_min_orb = [Action(func=opt.min_orbit, args=[orbit, 'simplex' ] )]
+#set_limits(horizantal, limit= 0.01)
+#set_limits(vertical, limit= 0.01)
 
-opt.eval(seq_min_orb)
+#seq_min_orb = [Action(func=opt.min_orbit, args=[orbit, 'simplex' ] )]
+
+#opt.eval(seq_min_orb)
 
 
 #opt.eval(seq5 + seq3 + seq6 + seq8 + seq9)

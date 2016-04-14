@@ -108,7 +108,7 @@ for name in horizantal + vertical:
 for bpm in bpms:
     print(bpm)
     try:
-        x, y = mi.get_bpms_xy(bpm)
+        x, y = mi.get_bpms_xy([bpm])
         print(x, y)
     except:
         print("not available")

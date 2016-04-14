@@ -228,10 +228,11 @@ class XFELMachineInterface():
     def init_corrector_vals(self, correctors):
         vals = np.zeros(len(correctors))
         for i in range(len(correctors)):
-            mag_channel = 'TTF2.MAGNETS/STEERER/' + correctors[i] + '/PS'
-            self.mutex.acquire()
-            vals[i] = pydoocs.read(mag_channel)["data"]
-            self.mutex.release()
+            #mag_channel = 'TTF2.MAGNETS/STEERER/' + correctors[i] + '/PS'
+            #self.mutex.acquire()
+            vals[i] = self.get_value(correctors[i])#pydoocs.read(mag_channel)["data"]
+
+            #self.mutex.release()
         return vals
 
     def get_cav_ampl(self, cav):
@@ -259,9 +260,9 @@ class XFELMachineInterface():
         X = [0.0]*len(bpms)#np.zeros(len(correctors))
         Y = [0.0]*len(bpms)
         for i in range(len(bpms)):
-            mag_channel = 'TTF2.DIAG/ORBIT/' + bpms[i]# + '/PS'
-            X[i] = pydoocs.read(mag_channel + "/X.FLASH1")['data']*0.001 # mm -> m
-            Y[i] = pydoocs.read(mag_channel + "/Y.FLASH1")['data']*0.001 # mm -> m
+            mag_channel = 'XFEL.DIAG/ORBIT/' + bpms[i]
+            X[i] = pydoocs.read(mag_channel + "/X.SA1")['data']*0.001 # mm -> m
+            Y[i] = pydoocs.read(mag_channel + "/Y.SA1")['data']*0.001 # mm -> m
         return X, Y
 
     def get_quads_current(self, quads):
@@ -335,7 +336,7 @@ class XFELMachineInterface():
 
         #self.mutex.acquire()
         val = pydoocs.read(ch)
-        print(val)
+        #print(val)
         #['data']
         #self.mutex.release()
         return val["data"]

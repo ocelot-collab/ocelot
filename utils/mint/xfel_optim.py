@@ -99,6 +99,7 @@ orbit["bpms"] = bpms
 print(orbit["bpms"])
 
 for name in horizantal:
+    print(name)
     mi.get_value(name)
 #seq_min_orb = [Action(func=opt.min_orbit, args=[orbit, 'simplex' ] )]
 

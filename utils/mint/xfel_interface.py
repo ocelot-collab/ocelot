@@ -331,11 +331,14 @@ class XFELMachineInterface():
 
     def get_value(self, device_name):
         ch = 'XFEL.MAGNETS/MAGNET.ML/' + device_name + '/CURRENT.RBV'
-        #print("getting value = ", ch)
-        self.mutex.acquire()
-        val = pydoocs.read(ch)['data']
-        self.mutex.release()
-        return val
+        print("getting value = ", ch)
+
+        #self.mutex.acquire()
+        val = pydoocs.read(ch)
+        print(val)
+        #['data']
+        #self.mutex.release()
+        return val["data"]
     
     def set_value(self, device_name, val):
         ch = 'XFEL.MAGNETS/STEERER/' + device_name + '/PS'

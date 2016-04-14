@@ -50,7 +50,7 @@ def set_limits(corrs, limit):
     for name in corrs:
         val = mi.get_value(name)
         dp.set_limits(name, [val - limit, val + limit])
-        print(name, "limits:", dp.get_limits(name))
+        print(name," I = ", val, "A; ",  "limits:", dp.get_limits(name))
 
 #dp = FLASH1DeviceProperties()
 

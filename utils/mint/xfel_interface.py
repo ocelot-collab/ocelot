@@ -295,6 +295,7 @@ class XFELMachineInterface():
             if (self.debug): print('reading alarm channel', blm_alarm_ch)
             alarm_val = pydoocs.read(blm_alarm_ch)['data']
             if (self.debug): print ('alarm:', alarm_val)
+            print("blm channel: ", blm_channel)
             val = pydoocs.read(blm_channel)['data']
             #h = np.array([x[1] for x in sample])
             #alarm_vals[i] = np.max( np.abs(h) ) / alarm_val

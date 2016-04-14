@@ -4,20 +4,19 @@ __author__ = 'Sergey Tomin'
 
 
 from ocelot.utils.mint.mint import Optimizer, Action
-from ocelot.utils.mint.xfel_interface import XFELMachineInterface, XFELDeviceProperties
+from ocelot.utils.mint.xfel_interface import XFELMachineInterface, XFELDeviceProperties, TestInterface
 from ocelot.utils.mint import machine_setup as log
 #from flash1_interface import FLASH1DeviceProperties
 
 
 ##import json
-#def get_dict(lat, bpms):
-#    dict_bpms = {}
-#    for elem in lat.sequence:
-#        if elem.type == "monitor" and elem.mi_id in bpms:
-#            dict_bpms[elem.mi_id] = {}
-#            dict_bpms[elem.mi_id]["x"] = elem.x
-#            dict_bpms[elem.mi_id]["y"] = elem.y
-#    return dict_bpms
+def bpms_dict(bpms):
+    dict_bpms = {}
+    for bpm in bpms:
+        dict_bpms[bpm] = {}
+        dict_bpms[bpm]["x"] = 0.
+        dict_bpms[bpm]["y"] = 0.
+    return dict_bpms
 
 def checking():
     print("@@@@@@@@@@@@   checking correctors ..... ")
@@ -57,6 +56,7 @@ def set_limits(corrs, limit):
 mi = XFELMachineInterface()
 dp = XFELDeviceProperties()
 #opt = Optimizer(mi, dp)
+mi = TestInterface()
 opt = Optimizer(mi, dp)
 opt.debug = True
 opt.logging = True
@@ -121,14 +121,14 @@ bpms = [
 
 orbit["correctors"]  =  horizantal + vertical #['V3DBC3', 'V10ACC4', 'H10ACC5', 'H10ACC6', 'H10ACC7']
 
-orbit["bpms"] = bpms
+orbit["bpms"] = bpms_dict(bpms)#bpms
 
 set_limits(horizantal, limit= 0.01)
+set_limits(vertical, limit= 0.01)
 
+seq_min_orb = [Action(func=opt.min_orbit, args=[orbit, 'simplex' ] )]
 
-#seq_min_orb = [Action(func=opt.min_orbit, args=[orbit, 'simplex' ] )]
-
-#opt.eval(seq_min_orb)
+opt.eval(seq_min_orb)
 
 
 #opt.eval(seq5 + seq3 + seq6 + seq8 + seq9)

@@ -467,8 +467,8 @@ class Optimizer:
                 X, Y = self.mi.get_bpms_xy([bpm])
                 x += (X[0] - bpms[bpm]["x"])**2
                 y += (Y[0] - bpms[bpm]["y"])**2
-            print ("rms = ", sqrt(x/n)*1000. + sqrt(y/n)*1000.)
-            return sqrt(x/n)*1000. + sqrt(y/n)*1000.
+            print ("rms = ", np.sqrt(x/n)*1000. + np.sqrt(y/n)*1000.)
+            return np.sqrt(x/n)*1000. + np.sqrt(y/n)*1000.
 
         def error_func(x):
 

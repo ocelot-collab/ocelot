@@ -641,7 +641,7 @@ def gen_outplot_scanned_z(g, figsize=(8, 10), legend = True, fig_name = None, z=
     return fig
 
 
-def gen_outplot(handle=None,save='png',show=False,debug=0):
+def gen_outplot(handle=None,save='png',show=False,debug=0,all=False,vartype_dfl=complex128):
     #picks as an input "GenesisOutput" object, file path of directory as strings. 
     #plots e-beam evolution, radiation evolution, initial and final simulation window
     #If folder path is provided, all *.gout and *.out files are plotted
@@ -674,10 +674,10 @@ def gen_outplot(handle=None,save='png',show=False,debug=0):
             f3=gen_outplot_z(handle, z=0,save=save)
             f4=gen_outplot_z(handle, z=inf,save=save)
         
-        if os.path.isfile(handle.path+'.dfl'):
-            dfl=readRadiationFile(handle.path+'.dfl', handle.ncar, vartype=complex64)
+        if os.path.isfile(handle.path+'.dfl') and all:
+            dfl=readRadiationFile(handle.path+'.dfl', handle.ncar, vartype=vartype_dfl)
             f5=gen_outplot_dfl(dfl, handle,save=save)
-            f6=gen_outplot_dfl(dfl, handle,far_field=1,freq_domain=1,save=save)
+            f6=gen_outplot_dfl(dfl, handle,far_field=1,freq_domain=0,auto_zoom=0,save=save)
             
     if show==True:
         print('    showing plots, close all to proceed')
@@ -689,33 +689,114 @@ def gen_outplot(handle=None,save='png',show=False,debug=0):
     # return [f1,f2,f3,f4]
 
 
-def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=False, freq_domain=False, fig_name = None, auto_zoom=False, column_3d=True, save=False, return_proj=False):
+def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True, phase = False, far_field=False, freq_domain=False, fig_name = None, auto_zoom=False, column_3d=True, save=False, show=False, return_proj=False, vartype_dfl=complex64):
+    
     
     print('    plotting dfl file')
     start_time = time.time()
     # print dfl.shape
     # print np.fft.ifftshift(dfl,(1,2)).shape
     # print np.fft.fft2(dfl).shape
+    
+
+    
+    if dfl.__class__==str and out==None: #the case if only path to .dfl or .out is given
+        from ocelot.adaptors.genesis import GenesisOutput, readGenesisOutput, readRadiationFile
+        dfl_dir=dfl
+        out_dir=dfl_dir.replace('.dfl','')
+        out=readGenesisOutput(out_dir,readall=0,debug=0)
+        dfl=readRadiationFile(out.path+'.dfl', out.ncar, vartype=vartype_dfl)
+    
+    # dfl=dfl[100:110,:,:]
+    
     suffix=''
     # print dfl.shape
     if dfl.shape[0]!=1:
         ncar_z=dfl.shape[0]
-        if g('isradi')==0: #parameter for dfl output every isradi-th slice
-            leng_z=g('xlamds')*g('zsep')*ncar_z
-        else:
-            leng_z=g('xlamds')*g('zsep')*g('isradi')*ncar_z
+        # if out('isradi')==0: #parameter for dfl output every isradi-th slice #not the case?
+        leng_z=out('xlamds')*out('zsep')*ncar_z
+        # else:
+            # leng_z=out('xlamds')*out('zsep')*out('isradi')*ncar_z
         z = np.linspace(0, leng_z, ncar_z)
     else:
         column_3d=False
+        phase = True
+        freq_domain=False
     
     dfl=swapaxes(dfl,2,1) # zyx -> zxy
+
+    #Make sure it is time-dependent
+    if dfl.shape[0]==1:
+        z_lim=[]
+    
+
     
     #number of mesh points
     ncar_x=dfl.shape[1]
-    leng_x=g.leng #transverse size of mesh [m], to be upgraded
+    leng_x=out.leng #transverse size of mesh [m], to be upgraded
     ncar_y=dfl.shape[2]
-    leng_y=g.leng
+    leng_y=out.leng
 
+    if dfl.shape[0]!=1:
+        if freq_domain:
+            print('      calculating spectrum')
+            calc_time=time.time()
+            dfl=np.fft.ifftshift(np.fft.fft(dfl,axis=0),0)/sqrt(ncar_z) # sqrt(ncar_x*ncar_y) because of numpy fft function
+            dk=2*pi/leng_z;
+            k=2*pi/out('xlamds');
+            z = 2*pi/np.linspace(k-dk/2*ncar_z, k+dk/2*ncar_z, ncar_z)
+            suffix+='_fd'
+            z*=1e3
+            unit_z='nm'
+            z_label='$\lambda$ ['+unit_z+']'
+            z_labelv=r'[arb. units]'
+            z_title='Spectrum'
+            z_color='red'
+            z=z[::-1]
+            dfl=dfl[::-1,:,:]
+            print('        done in %.2f seconds' %(time.time()-calc_time))
+            z*=1e6
+            leng_z*=1e6
+        else:
+            unit_z='$\mu$m'
+            z_label='z ['+unit_z+']'
+            z_labelv=r'Power [W]'
+            z_title='Z projection'
+            z_color='blue'
+            z*=1e6
+            leng_z*=1e6
+
+        if z_lim!=[]:
+            if len(z_lim)==1:
+                z_lim=[z_lim,z_lim]
+            if z_lim[0]>z_lim[1]:
+                z_lim[0]=-inf
+                z_lim[1]=inf
+            if z_lim[1]<np.amin(z) or z_lim[1]>np.amax(z):
+                z_lim[1]=np.amax(z)
+                # print('      set top lim to max')
+            if z_lim[0]>np.amax(z) or z_lim[0]<np.amin(z):
+                z_lim[0]=np.amin(z)
+                # print('      set low lim to min')
+            # z_lim_1=np.where(z>=z_lim[0])[0][0]
+            # z_lim_2=np.where(z<=z_lim[1])[0][-1]
+            print'      setting z-axis limits to ', np.amin(z),':',z_lim[0],'-',z_lim[1],':',np.amax(z) #tmp
+            z_lim_1=np.where(z<=z_lim[0])[0][-1]
+            z_lim_2=np.where(z>=z_lim[1])[0][0]
+            
+            if z_lim_1==z_lim_2 and z_lim_1==0:
+                z_lim_2=z_lim_1+1
+            elif z_lim_1==z_lim_2 and z_lim_1!=0:
+                z_lim_1=z_lim_2-1
+            print z_lim_1,z_lim_2,len(z) #tmp
+            dfl=dfl[z_lim_1:z_lim_2,:,:]
+            z=z[z_lim_1:z_lim_2]
+            ncar_z=dfl.shape[0]
+            suffix+='_zoom_%.2f-%.2f' % (np.amin(z),np.amax(z))  
+
+    # if dfl.shape[0]==1:
+        # column_3d=False
+        # phase = True
 
     if far_field:
         print('      calculating far field')
@@ -726,10 +807,10 @@ def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=F
         dfl=np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(dfl,(1,2))),(1,2))/sqrt(ncar_x*ncar_y) # sqrt(ncar_x*ncar_y) because of numpy fft function
         dx=leng_x/ncar_x
         dy=leng_y/ncar_y
-        x = np.linspace(-1/(2*dx)+1/(2*leng_x), 1/(2*dx)-1/(2*leng_x), ncar_x)*g('xlamds')
-        y = np.linspace(-1/(2*dy)+1/(2*leng_y), 1/(2*dy)-1/(2*leng_y), ncar_y)*g('xlamds')
-        dx=1/(leng_x)*g('xlamds')#check!!!
-        dy=1/(leng_y)*g('xlamds')
+        x = np.linspace(-1/(2*dx)+1/(2*leng_x), 1/(2*dx)-1/(2*leng_x), ncar_x)*out('xlamds')
+        y = np.linspace(-1/(2*dy)+1/(2*leng_y), 1/(2*dy)-1/(2*leng_y), ncar_y)*out('xlamds')
+        dx=1/(leng_x)*out('xlamds')#check!!!
+        dy=1/(leng_y)*out('xlamds')
         unit_xy='$\mu$rad'
         x_label=r'$\theta_x$ ['+unit_xy+']'
         y_label=r'$\theta_y$ ['+unit_xy+']'
@@ -752,42 +833,22 @@ def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=F
         xy_title='Intensity'
         x_y_color='blue'
     
-    if freq_domain:
-        print('      calculating spectrum')
-        calc_time=time.time()
-        dfl=np.fft.ifftshift(np.fft.fft(dfl,axis=0),0)/sqrt(ncar_z) # sqrt(ncar_x*ncar_y) because of numpy fft function
-        dk=2*pi/leng_z;
-        k=2*pi/g('xlamds');
-        z = 2*pi/np.linspace(k-dk/2*ncar_z, k+dk/2*ncar_z, ncar_z)
-        suffix+='_fd'
-        z*=1e3
-        unit_z='nm'
-        z_label='$\lambda$ ['+unit_z+']'
-        z_labelv=r'[arb. units]'
-        z_title='Spectrum'
-        z_color='red'
-        print('        done in %.2f seconds' %(time.time()-calc_time))
-    else:
-        unit_z='$\mu$m'
-        z_label='z ['+unit_z+']'
-        z_labelv=r'Power [W]'
-        z_title='Z projection'
-        z_color='blue'
-        
+    dfl=dfl.astype(np.complex64)
+
     dx*=1e6
     dy*=1e6
     x*=1e6
     y*=1e6
-    z*=1e6
+
     leng_x*=1e6
     leng_y*=1e6
-    leng_z*=1e6
+
     
     if fig_name is None:
-        if g.filename is '':
+        if out.filename is '':
             fig = plt.figure('Radiation distribution')
         else:
-            fig = plt.figure('Radiation distribution'+suffix+' '+g.filename)
+            fig = plt.figure('Radiation distribution'+suffix+' '+out.filename)
     else:
         fig = plt.figure(fig_name)
     fig.clf()
@@ -879,7 +940,6 @@ def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=F
     ax_proj_y.text(0.95, 0.95,'fwhm= '+str(round_sig(fwhm_y,3))+r' ['+unit_xy+']\nrms= '+str(round_sig(rms_y,3))+r' ['+unit_xy+']', horizontalalignment='right', verticalalignment='top', transform = ax_proj_y.transAxes,fontsize=12)
     ax_proj_y.set_xlim(xmin=0,xmax=1)
 
-
     
     if column_3d:
         if phase==True:
@@ -895,7 +955,7 @@ def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=F
         ax_proj_yz.pcolormesh(z, y, swapaxes(yz_proj,1,0), cmap=cmap_int)
         ax_proj_yz.set_title('Side view', fontsize=15)
 
-        # 
+        
         
         
         
@@ -915,23 +975,33 @@ def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=F
 
 
     if auto_zoom!=False:
-        if phase and column_3d == True:
+        if phase==True and column_3d==True and z_lim==[]:
             ax_proj_xz.set_xlim(z[nonzero(z_proj>max(z_proj)*0.01)][[0,-1]])
-        elif phase == False:
+        elif phase==False and z_lim==[]:
             ax_z.set_xlim(z[nonzero(z_proj>max(z_proj)*0.01)][[0,-1]])
-        size_x=max(abs(x[nonzero(x_line>0.01)][[0,-1]]))
-        size_y=max(abs(x[nonzero(x_line>0.01)][[0,-1]]))
+        elif column_3d==True:
+            ax_proj_xz.set_ylim([-size_xy, size_xy])
+        size_x=max(abs(x[nonzero(x_line>0.005)][[0,-1]]))
+        size_y=max(abs(x[nonzero(x_line>0.005)][[0,-1]]))
         size_xy=max(size_x,size_y)
         ax_int.axis('equal')
         ax_int.axis([-size_xy, size_xy,-size_xy, size_xy])
-        ax_proj_xz.set_ylim([-size_xy, size_xy])
+        suffix+='_zmd'
         #ax_int.set_ylim(int(ncar_y/2-ind)*dy, int(ncar_y/2+ind)*dy)
         #ax_proj_x.set_xlim(xmin=x[nonzero(x_line>0.01)][0],xmax=x[nonzero(x_line>0.01)][-1])
     else:
-        ax_proj_xz.axis('tight')
-        ax_proj_yz.axis('tight')
+        if column_3d==True:
+            ax_proj_xz.axis('tight')
+            ax_proj_yz.axis('tight')
+        elif column_3d==False and phase==False:
+            ax_z.axis('tight')
         ax_int.set_aspect('equal')
         ax_int.autoscale(tight=True)
+        
+    if len(xy_lim)==2:
+        ax_int.axis([-xy_lim[0], xy_lim[0],-xy_lim[1], xy_lim[1]])
+    elif len(xy_lim)==1:
+        ax_int.axis([-xy_lim[0], xy_lim[0],-xy_lim[0], xy_lim[0]])
         
     subplots_adjust(wspace=0.4,hspace=0.4)
     
@@ -939,17 +1009,294 @@ def gen_outplot_dfl(dfl, g, figsize=3, legend = True, phase = False, far_field=F
     if save!=False:
         if save==True:
             save='png'
-        fig.savefig(g.path+'_dfl'+suffix+'.'+str(save),format=save)
+        fig.savefig(out.path+'_dfl'+suffix+'.'+str(save),format=save)
        
     print('      done in %.2f seconds' % (time.time() - start_time))
-       
+
+    if show==True:
+        print('    showing dfl')
+        plt.show()
+    
     if return_proj:
         return [xy_proj,yz_proj,xz_proj,x,y,z]
     else:
         return fig
         
+
+    
+# def gen_outplot_dpa(dpa, g, figsize=3, legend = True, phase = False, far_field=False, freq_domain=False, fig_name = None, auto_zoom=False, column_3d=True, save=False, return_proj=False):
+    
+    # print('    plotting dpa file')
+    # start_time = time.time()
+    # suffix=''
+
+    # # if os.path.isfile(str(dpa)):
+    # # read_particle_file(dpa, nbins=4, npart=[],debug=0):
+    
+    # particles.e=b[:,0,:,:] #gamma
+    # particles.ph=b[:,1,:,:] 
+    # particles.x=b[:,2,:,:]
+    # particles.y=b[:,3,:,:]
+    # particles.px=b[:,4,:,:]
+    # particles.py=b[:,5,:,:]
+    
+    # figure()
+    
+    # nslice=100
+    
+    # plt.scatter(particles.ph[nslice,1,:],particles.e[nslice,1,:])
     
     
+    
+    # if dfl.shape[0]!=1:
+        # ncar_z=dfl.shape[0]
+        # # if g('isradi')==0: #parameter for dfl output every isradi-th slice #not the case?
+        # leng_z=g('xlamds')*g('zsep')*ncar_z
+        # # else:
+            # # leng_z=g('xlamds')*g('zsep')*g('isradi')*ncar_z
+        # z = np.linspace(0, leng_z, ncar_z)
+    # else:
+        # column_3d=False
+    
+    # dfl=swapaxes(dfl,2,1) # zyx -> zxy
+    
+    # #number of mesh points
+    # ncar_x=dfl.shape[1]
+    # leng_x=g.leng #transverse size of mesh [m], to be upgraded
+    # ncar_y=dfl.shape[2]
+    # leng_y=g.leng
+
+
+    # if far_field:
+        # print('      calculating far field')
+        # calc_time=time.time()
+        # # for i in arange(0,dfl.shape[0]):
+            # # dfl[i,:,:]=np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(dfl[i,:,:],(0,1))),(0,1))
+        # # dfl/=sqrt(ncar_x*ncar_y)# sqrt(ncar_x*ncar_y) because of numpy fft function
+        # dfl=np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(dfl,(1,2))),(1,2))/sqrt(ncar_x*ncar_y) # sqrt(ncar_x*ncar_y) because of numpy fft function
+        # dx=leng_x/ncar_x
+        # dy=leng_y/ncar_y
+        # x = np.linspace(-1/(2*dx)+1/(2*leng_x), 1/(2*dx)-1/(2*leng_x), ncar_x)*g('xlamds')
+        # y = np.linspace(-1/(2*dy)+1/(2*leng_y), 1/(2*dy)-1/(2*leng_y), ncar_y)*g('xlamds')
+        # dx=1/(leng_x)*g('xlamds')#check!!!
+        # dy=1/(leng_y)*g('xlamds')
+        # unit_xy='$\mu$rad'
+        # x_label=r'$\theta_x$ ['+unit_xy+']'
+        # y_label=r'$\theta_y$ ['+unit_xy+']'
+        # suffix+='_ff'
+        # x_title='X divergence'
+        # y_title='Y divergence'
+        # xy_title='Far field intensity'
+        # x_y_color='grey'
+        # print('        done in %.2f seconds' %(time.time()-calc_time))
+    # else:
+        # dx=leng_x/ncar_x
+        # dy=leng_y/ncar_y
+        # x = np.linspace(-leng_x/2, leng_x/2, ncar_x)
+        # y = np.linspace(-leng_y/2, leng_y/2, ncar_y)
+        # unit_xy='$\mu$m'
+        # x_label='x ['+unit_xy+']'
+        # y_label='y ['+unit_xy+']'
+        # x_title='X projection'
+        # y_title='Y projection'
+        # xy_title='Intensity'
+        # x_y_color='blue'
+    
+    # if freq_domain:
+        # print('      calculating spectrum')
+        # calc_time=time.time()
+        # dfl=np.fft.ifftshift(np.fft.fft(dfl,axis=0),0)/sqrt(ncar_z) # sqrt(ncar_x*ncar_y) because of numpy fft function
+        # dk=2*pi/leng_z;
+        # k=2*pi/g('xlamds');
+        # z = 2*pi/np.linspace(k-dk/2*ncar_z, k+dk/2*ncar_z, ncar_z)
+        # suffix+='_fd'
+        # z*=1e3
+        # unit_z='nm'
+        # z_label='$\lambda$ ['+unit_z+']'
+        # z_labelv=r'[arb. units]'
+        # z_title='Spectrum'
+        # z_color='red'
+        # print('        done in %.2f seconds' %(time.time()-calc_time))
+    # else:
+        # unit_z='$\mu$m'
+        # z_label='z ['+unit_z+']'
+        # z_labelv=r'Power [W]'
+        # z_title='Z projection'
+        # z_color='blue'
+        
+    # dx*=1e6
+    # dy*=1e6
+    # x*=1e6
+    # y*=1e6
+    # z*=1e6
+    # leng_x*=1e6
+    # leng_y*=1e6
+    # leng_z*=1e6
+    
+    # if fig_name is None:
+        # if g.filename is '':
+            # fig = plt.figure('Radiation distribution')
+        # else:
+            # fig = plt.figure('Radiation distribution'+suffix+' '+g.filename)
+    # else:
+        # fig = plt.figure(fig_name)
+    # fig.clf()
+    # fig.set_size_inches(((3+2*column_3d)*figsize,3*figsize),forward=True)
+    # # plt.rc('axes', grid=True)
+    # # plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
+    
+    # cmap_int = plt.get_cmap('jet')#jet inferno viridis #change to convenient
+    # cmap_ph = plt.get_cmap('hsv')
+    
+    # #calculate transverse projection, remove z dimention
+    
+    # dfl_int=abs(dfl)**2
+    # xy_proj_ampl=sqrt((dfl_int).sum(0))*exp(1j*angle(dfl.sum(0))) #(amplitude-like) view from front, sum of square of amplitudes with phase as sum of phasors (latter is dedicated for illustration purposes: good to see an averaged wavefront)
+    # # xy_proj_ampl=sum(dfl,0); #view from front
+    # yz_proj=sum(dfl_int,1); #intensity view from side
+    # xz_proj=sum(dfl_int,2); #intensity view from top
+    # z_proj=sum(dfl_int,(1,2)); #temporal intensity profile
+    # del dfl_int, dfl
+
+    
+    # # x_line=xy_proj_ampl[]
+    # # y_line=xy_proj_ampl[]
+    
+    # xy_proj=abs(xy_proj_ampl)**2
+    # xy_proj_ph=angle(xy_proj_ampl)
+    
+    # x_proj=sum(xy_proj,1)
+    # y_proj=sum(xy_proj,0)
+    
+    # x_line=xy_proj[:,int((ncar_y-1)/2)]
+    # y_line=xy_proj[int((ncar_x-1)/2),:]
+    
+    # if max(x_line)!=0 and max(y_line)!=0:
+        # x_line,y_line=x_line/max(x_line),y_line/max(y_line)
+    
+    
+    
+    # #X=sqrt(sum(abs(X).^2,3)).*exp(1i.*angle(mean(X,3))); #%Matlab 2D field calculation
+    # # normI = BoundaryNorm(levelsI, ncolors=cmapI.N, clip=True)
+    # # normP = BoundaryNorm(levelsP, ncolors=cmapP.N, clip=True)
+    
+    
+    
+    
+    
+    
+    # ax_int=fig.add_subplot(2, 2+column_3d, 1)
+    # # ax_int.pcolormesh(x, y, xy_proj, cmap=cmap_int)
+    # intplt=ax_int.pcolormesh(x, y, swapaxes(xy_proj,1,0), cmap=cmap_int)
+    # ax_int.set_title(xy_title, fontsize=15)
+    # # ax_int.axes.get_xaxis().set_visible(False)
+    # ax_int.set_xlabel(r''+x_label)
+    # ax_int.set_ylabel(y_label)
+    
+    # if phase==True:
+        # ax_ph=fig.add_subplot(2, 2+column_3d, 4+column_3d, sharex=ax_int,sharey=ax_int)
+        # # ax_ph.pcolormesh(x, y, xy_proj_ph, cmap=cmap_ph)
+        # ax_ph.pcolormesh(x, y, swapaxes(xy_proj_ph,1,0), cmap=cmap_ph)
+        # #ax_ph.axis('equal')
+        # ax_ph.axis([min(x),max(x),min(y),max(y)])
+        # ax_ph.set_title('Phase', fontsize=15)
+        # # ax_ph.set_xlabel(r'[$\mu m$]')
+        # # ax_ph.set_ylabel(r'[$\mu m$]')
+    # else:
+        # ax_z=fig.add_subplot(2, 2+column_3d, 4+column_3d)
+        # ax_z.plot(z,z_proj,linewidth=1.5,color=z_color)
+        # ax_z.set_title(z_title, fontsize=15)
+        # ax_z.set_xlabel(z_label)
+        # ax_z.set_ylabel(z_labelv)
+    
+    # ax_proj_x=fig.add_subplot(2, 2+column_3d, 3+column_3d, sharex=ax_int)
+    # ax_proj_x.plot(x,x_line,linewidth=2,color=x_y_color)
+    # ax_proj_x.set_title(x_title, fontsize=15)
+    # x_line_f, rms_x=gauss_fit(x,x_line) #fit with Gaussian, and return fitted function and rms
+    # fwhm_x=fwhm3(x_line)[1]*dx #measure FWHM
+    # ax_proj_x.plot(x,x_line_f,'g-')
+    # ax_proj_x.text(0.95, 0.95,'fwhm= \n'+str(round_sig(fwhm_x,3))+r' ['+unit_xy+']\nrms= \n'+str(round_sig(rms_x,3))+r' ['+unit_xy+']', horizontalalignment='right', verticalalignment='top', transform = ax_proj_x.transAxes,fontsize=12)
+    # ax_proj_x.set_ylim(ymin=0,ymax=1)
+
+    
+    
+    # ax_proj_y=fig.add_subplot(2, 2+column_3d, 2, sharey=ax_int)
+    # ax_proj_y.plot(y_line,y,linewidth=2,color=x_y_color)
+    # ax_proj_y.set_title(y_title, fontsize=15)
+    # y_line_f, rms_y=gauss_fit(y,y_line)
+    # fwhm_y=fwhm3(y_line)[1]*dy
+    # ax_proj_y.plot(y_line_f,y,'g-')
+    # ax_proj_y.text(0.95, 0.95,'fwhm= '+str(round_sig(fwhm_y,3))+r' ['+unit_xy+']\nrms= '+str(round_sig(rms_y,3))+r' ['+unit_xy+']', horizontalalignment='right', verticalalignment='top', transform = ax_proj_y.transAxes,fontsize=12)
+    # ax_proj_y.set_xlim(xmin=0,xmax=1)
+
+
+    
+    # if column_3d:
+        # if phase==True:
+            # ax_proj_xz=fig.add_subplot(2, 2+column_3d, 6)
+        # else:
+            # ax_proj_xz=fig.add_subplot(2, 2+column_3d, 6,sharex=ax_z)
+        # ax_proj_xz.pcolormesh(z, x, swapaxes(xz_proj,1,0), cmap=cmap_int)
+        # ax_proj_xz.set_title('Top view', fontsize=15)
+
+        # # 
+        # ax_proj_xz.set_xlabel(z_label)
+        # ax_proj_yz=fig.add_subplot(2, 2+column_3d, 3,sharey=ax_int,sharex=ax_proj_xz)
+        # ax_proj_yz.pcolormesh(z, y, swapaxes(yz_proj,1,0), cmap=cmap_int)
+        # ax_proj_yz.set_title('Side view', fontsize=15)
+
+        # # 
+        
+        
+        
+    # cbar=0
+    # if cbar:
+        # fig.subplots_adjust(top=0.95, bottom=0.05, right=0.85, left=0.1)
+        # #fig.subplots_adjust()
+        # cbar_int = fig.add_axes([0.89, 0.15, 0.015, 0.7])
+        # cbar=plt.colorbar(intplt, cax=cbar_int)# pad = -0.05 ,fraction=0.01)
+        # # cbar.set_label(r'[$ph/cm^2$]',size=10)
+        # cbar.set_label(r'a.u.',size=10)
+
+    # # ax_int.get_yaxis().get_major_formatter().set_useOffset(False)
+    # # ax_int.get_yaxis().get_major_formatter().set_scientific(True)
+    # # ax_ph.get_yaxis().get_major_formatter().set_useOffset(False)
+    # # ax_ph.get_yaxis().get_major_formatter().set_scientific(True)
+
+
+    # if auto_zoom!=False:
+        # if phase and column_3d == True:
+            # ax_proj_xz.set_xlim(z[nonzero(z_proj>max(z_proj)*0.01)][[0,-1]])
+        # elif phase == False:
+            # ax_z.set_xlim(z[nonzero(z_proj>max(z_proj)*0.01)][[0,-1]])
+        # size_x=max(abs(x[nonzero(x_line>0.01)][[0,-1]]))
+        # size_y=max(abs(x[nonzero(x_line>0.01)][[0,-1]]))
+        # size_xy=max(size_x,size_y)
+        # ax_int.axis('equal')
+        # ax_int.axis([-size_xy, size_xy,-size_xy, size_xy])
+        # ax_proj_xz.set_ylim([-size_xy, size_xy])
+        # #ax_int.set_ylim(int(ncar_y/2-ind)*dy, int(ncar_y/2+ind)*dy)
+        # #ax_proj_x.set_xlim(xmin=x[nonzero(x_line>0.01)][0],xmax=x[nonzero(x_line>0.01)][-1])
+    # else:
+        # ax_proj_xz.axis('tight')
+        # ax_proj_yz.axis('tight')
+        # ax_int.set_aspect('equal')
+        # ax_int.autoscale(tight=True)
+        
+    # subplots_adjust(wspace=0.4,hspace=0.4)
+    
+
+    # if save!=False:
+        # if save==True:
+            # save='png'
+        # fig.savefig(g.path+'_dfl'+suffix+'.'+str(save),format=save)
+       
+    # print('      done in %.2f seconds' % (time.time() - start_time))
+       
+    # if return_proj:
+        # return [xy_proj,yz_proj,xz_proj,x,y,z]
+    # else:
+        # return fig
     
 
 

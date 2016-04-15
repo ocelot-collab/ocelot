@@ -645,7 +645,7 @@ def sseed_2(hostfile, input_file, output_files, E_ev, chicane, run_dir, delay = 
         thetaB = phi[ref_idx]* np.pi / 180.0
         
         dk = cwidth/5.0 #The filter transmissivity defines this quantity by taking 5 points on the bottom of T
-        dr = ncar/(dgrid*np.tan(thetaB/5.0)) #dr prepares for inclusion of the spatiotemporal coupling; it is transverse pix size/cot(thetaB)
+        dr = ncar/(dgrid*np.tan(thetaB)) #dr prepares for inclusion of the spatiotemporal coupling; it is transverse pix size/cot(thetaB)
         #dr=1.0
         print '#################'
         print 'dgrid = ', dgrid
@@ -743,8 +743,8 @@ def sseed_2(hostfile, input_file, output_files, E_ev, chicane, run_dir, delay = 
 		str(nslice)+' ', 
 		str(dr)])	
     runpar = '`which mpirun` -x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH --hostfile '+ os.path.abspath('.')+hostfile
-    # prog   = ' '+'python /data/netapp/xfel/gianluca/products/ocelot/utils/seed.py '+ARGS+''
-    prog   = ' '+'python /data/netapp/xfel/svitozar/CODE/ocelot/utils/seed.py '+ARGS+''
+    prog   = ' '+'python /data/netapp/xfel/gianluca/products/ocelot/utils/seed.py '+ARGS+''
+    #prog   = ' '+'python /data/netapp/xfel/svitozar/CODE/ocelot/utils/seed.py '+ARGS+''
     
     cmd = runpar+prog
     os.system(cmd)

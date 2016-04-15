@@ -1,6 +1,6 @@
 '''
 seed.py
-
+w
 *Author*
 Gianluca Geloni
 
@@ -38,7 +38,7 @@ Other functions are used by the program, or are use to filter the field with a s
 # Imports used libraries #
 #                        #
 ##########################
-import sys, os
+import sys, os, time
 
 sys.path.append('/usr/lib64/python2.6/site-packages/openmpi-intel')
 sys.path.append('/data/netapp/xfel/gianluca/products/ocelot') 
@@ -292,6 +292,8 @@ def writeRadiationFile_mpi(comm, filename, slices, shape):
     rank = comm.Get_rank()
     nproc = comm.Get_size()
     
+    confirmed=1
+    
     if nproc == 1:
         f=open(filename,'wb')  
     else:
@@ -348,13 +350,32 @@ def writeRadiationFile_mpi(comm, filename, slices, shape):
         print 'merging temporary files'
         cmd = 'cat '
         cmd2 = 'rm '
-        for i in xrange(nproc): 
+        for i in xrange(nproc):
+	    checkex = 0
+	    while (checkex ==  0):
+	        if os.path.isfile(str(filename) + '.' + str(i)) == 1: 
+		    file_i = open(str(filename) + '.' + str(i)).read()
+		    if len(file_i) > 100: 
+		        checkex = 1
+		    else:
+		        print 'waiting for '+str(filename) + '.' + str(i)
             cmd += ' ' + str(filename) + '.' + str(i)
             cmd2 += ' ' + str(filename) + '.' + str(i)
         cmd = cmd + ' > ' + filename
         cmd = cmd + ' ; ' + cmd2
         print cmd
-        os.system(cmd)
+	'''
+	confirmed = 1
+	while (confirmed != 0):
+            confirmed = os.system(cmd)
+	    if (confirmed != 0): 
+	        print 'merging not succeeded... trying again in 5s...'
+		time.sleep(5)
+	'''
+	confirmed = os.system(cmd)    
+    confirmed     = comm.bcast(confirmed, root = 0) 
+    return confirmed    
+	
 
     
 #END EXPERIMENTAL FUNCTION
@@ -621,7 +642,16 @@ if __name__ == "__main__":
 
 	    MypartR = np.append(MypartR,np.real(Ffilament[SHTOT:SHTOT+nslice]))             #Defines the output field part calculated by a certain process
 	    MypartI = np.append(MypartI,np.imag(Ffilament[SHTOT:SHTOT+nslice]))
-	   
+	    
+	    if rank==int(size/2.0) and count == int(each/2.0) and nn == int(MTR/2.0):
+	        f11 = open(filenamePout+'.axis.dat','w')
+	        f12 = open(filenamePphout+'.axix.dat','w')
+		ssc  = sscale(nslice, mult, ds)
+		for i in range(len(Ffilament)):	
+	            f11.write('%s ' %ssc[i] + '%s' %np.abs(Ffilament[i])**2 +'\n')
+	            f12.write('%s ' %ssc[i] + '%s' %np.angle(Ffilament[i]) +'\n')
+		f11.close()
+		f12.close()
 
     #############################################
     # Gets partial quantities back to process 0 #
@@ -690,8 +720,15 @@ if __name__ == "__main__":
 	print nslice
 	print len(slices)
 	
-    #nslice = 1856	    
+    #nslice = 1856
     writeRadiationFile_mpi(comm, filenameF, slices, [nslice, MTR, MTR])
+    '''
+    confirmedok = 1
+    while (confirmedok != 0):	    
+        confirmedok = writeRadiationFile_mpi(comm, filenameF, slices, [nslice, MTR, MTR])
+	comm.Barrier()
+	if (rank == 0 and confirmedok != 0): print 'Writing failed; attempting once more...'
+    '''	
     if rank == 0:
         print 'Writing output data to file...'
         	
@@ -701,6 +738,8 @@ if __name__ == "__main__":
 	f8 = open(filenamePout, 'w')
         f9 = open(filenamePphout, 'w')
         f10 = open(filenameSout, 'w')
+	
+	print 'This is the new version'
 	print 'fin s =',ssc[-1]
 	print 'in s = ',ssc[0]
 
@@ -710,11 +749,10 @@ if __name__ == "__main__":
             f9.write('%s ' %ssc[i] + '%s' %sumphatafter[i] +'\n')
 	    f10.write('%s ' %(2*np.pi/k[i]) + '%s' %sumspecafter[i] +'\n')
 	    
-	
 	f2.close()
     	f8.close()
     	f9.close()
     	f10.close()
-	    
+	
 	print 'End of parallel filtering procedure.'
 	

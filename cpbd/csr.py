@@ -287,11 +287,15 @@ def csr_apply(particle_list, charge_array, delta_s, s_cur, csr_traj, mesh_params
     #plt.show()
     #bins_start, hist_start = get_current(particle_list, charge=charge_array[0], num_bins=1000)
     #print("rms = ", np.std(z))
-    lam_K1 = np.convolve(b_distr_filt, K1 )
+    lam_K1 = np.convolve(b_distr_filt, K1)
     Nend = len(lam_K1)
     x = np.arange(Ns+1-Nend,Ns+1)*Ndw[1]
     tck = interpolate.splrep(x, lam_K1, k=1)
     dE = interpolate.splev(z, tck, der=0)
+
+    particle_list.E = particle_list.E*(1. + particle_list.particles[5])
+    particle_list.particles[5::6] -= particle_list.particles[5]
+    #print("dE = ", particle_list.E)
     #plt.plot(x, lam_K1, "b")
     #print("E = ", particle_list.E)
     particle_list.particles[5::6] += dE*1e-9/particle_list.E*delta_s

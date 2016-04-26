@@ -237,9 +237,9 @@ class FLASH1MachineInterface():
         vals = np.zeros(len(correctors))
         for i in range(len(correctors)):
             mag_channel = 'TTF2.MAGNETS/STEERER/' + correctors[i] + '/PS'
-            self.mutex.acquire()
+            #self.mutex.acquire()
             vals[i] = pydoocs.read(mag_channel)["data"]
-            self.mutex.release()
+            #self.mutex.release()
         return vals
 
     def get_cav_ampl(self, cav):
@@ -395,9 +395,9 @@ class FLASH1MachineInterface():
     def get_value(self, device_name):
         ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS.RBV'
         #print("getting value = ", ch)
-        self.mutex.acquire()
+        #self.mutex.acquire()
         val = pydoocs.read(ch)['data']
-        self.mutex.release()
+        #self.mutex.release()
         return val
     
     def set_value(self, device_name, val):

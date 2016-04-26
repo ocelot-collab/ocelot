@@ -71,9 +71,10 @@ def particleArray2astraBeam(p_array, charge_array, filename="tytest.ast"):
     gamref = p_array.E/m_e_GeV
     #print gamref
     P = p_array.particles.view()
-    #print(P)
+    #energy = P[5]
     xp = exact_xxstg_2_xp(P, gamref)
-    xp[0, 5] = xp[0, 5] + p_array.E*1e9
+    Pref = np.sqrt(p_array.E**2/m_e_GeV**2 - 1)*m_e_eV
+    xp[0, 5] = xp[0, 5] + Pref # xp[0, 5] + p_array.E*1e9
     #np.savetxt('D:/pytest.ast',xp)
     charge_array = -charge_array.reshape(len(charge_array), 1)*1e+9 #charge in C -> in nC
     flag = np.zeros((len(charge_array),1))

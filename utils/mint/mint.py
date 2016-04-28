@@ -61,18 +61,18 @@ class Optimizer:
         self.sop = sop
         self.seq_init_cur = [[]]
 
+
     def eval(self, seq, logging = False, log_file = None):
         self.isRunning = True
         self.wasSaved = False
-
-        self.seq_init_cur = self.save_init_currents(seq)
+        if self.sop != None: self.seq_init_cur = self.save_init_currents(seq)
 
         for s in seq:
-            self.save_action(s.args, flag="start")
+            if self.sop != None: self.save_action(s.args, flag="start")
             self.wasSaved = False
 
             s.apply()
-            if not self.wasSaved:
+            if not self.wasSaved and self.sop != None:
                 self.save_action(s.args, flag="stop")
         self.isRunning = False
 

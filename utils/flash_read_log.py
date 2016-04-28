@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as md
 import matplotlib
 import sys
-font = {'size'   : 20}
+font = {'size'   : 24}
 matplotlib.rc('font', **font)
 
 
@@ -125,14 +125,15 @@ def plot_dict(dict_data, filename=None, interval=1, mode="%"):
     xfmt = md.DateFormatter('%H:%M:%S')
     ax.xaxis.set_major_formatter(xfmt)
     ax.set_ylabel(r"$U,\, \mu J$")
-    pax2 = ax.plot(times[::inrv],  dict_data["sase"][::inrv],"r-", lw=2, label = "sase")
-    ax.grid()
+    pax2 = ax.plot(times[::inrv],  dict_data["sase"][::inrv],"r-", lw=3, label = "sase")
+    #ax.grid()
 
     ax.set_xlim([times[0], datetime.datetime.fromtimestamp(dict_data["time"][-1])])
-    #ax.legend(loc=1, framealpha=0.7)
-    ax.legend(loc=1)
+    ax.legend(loc=1, framealpha=0.7)
+    #ax.legend(loc=1)
     ax2 = ax.twinx()
     pict = []
+    #devices=['V3DBC3', 'H3DBC3', 'H10SMATCH', 'V14SMATCH', 'H12SMATCH', 'V7SMATCH']
     for device in devices:
         x = dict_data[device]
         shift = np.around(x[0], decimals=2)
@@ -143,7 +144,7 @@ def plot_dict(dict_data, filename=None, interval=1, mode="%"):
     fig.autofmt_xdate()
     pict.append(pax2)
     #ax2.legend(loc=4, framealpha=0.7)
-    ax2.legend(loc=4)
+    #ax2.legend(loc=4)
     ax2.grid(True)
     if mode == "%":
         ax2.set_ylabel(r"$\Delta I/I$")
@@ -161,7 +162,7 @@ def timslot_extract(dict_data, timeslot):
     times = [datetime.datetime.fromtimestamp(t) for t in dict_data["time"]]
     start = timeslot[0].split(":")
     end = timeslot[1].split(":")
-    print start, end
+    print(start, end)
     ind_0 = 0
     ind_1 = -1
     for i, t in enumerate(times):
@@ -188,7 +189,7 @@ def plot_log(filename, devices=None, timeslot=None, mode="%"):
         for name in devices:
             dict_data_new[name] = dict_data[name]
         dict_data = dict_data_new
-    plot_dict(dict_data,filename=filename, interval=1, mode=mode)
+    plot_dict(dict_data, filename=filename, interval=1, mode=mode)
 
 
 def rm_nonwork_devices(dict_data, threshold=0.01, debug=False, rm_devices=["",]):
@@ -245,11 +246,11 @@ if __name__ == "__main__":
     if len(sys.argv)>1:
         filename = sys.argv[1]
     else:
-        filename = "opt_3.txt"
-        filename = "../../desy/flash/exp_files_1_02/cor_sase_shif.txt"
+        filename = "../../desy/flash/exp_files/new_opt_4.txt"
+        #filename = "../../desy/flash/exp_files_1_02/cor_sase_shif.txt"
     #filename = read_wrong(filename)
     #print filename
     #, "bda_x", "bda_y"
     #"tun_x", "tun_y"
-    plot_log(filename, devices=["bda_x", "bda_y"], timeslot=["01:52", "02:02"], mode="units")
-    plot_log(filename, devices=["tun_x", "tun_y"], timeslot=None)
+    #plot_log(filename, devices=["bda_x", "bda_y"], timeslot=["01:52", "02:02"], mode="units")
+    plot_log(filename, devices=['V3DBC3', 'H3DBC3', 'H10SMATCH', 'V14SMATCH', 'H12SMATCH', 'V7SMATCH'], timeslot=None)

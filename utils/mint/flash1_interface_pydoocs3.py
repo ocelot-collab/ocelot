@@ -19,7 +19,7 @@ import time
 import pickle
 from threading import Thread, Lock
 from ocelot.utils.db import *
-
+from ocelot.common.globals import *
 
 class SaveOptParams:
     def __init__(self, mi, dp, lat=None, filename=None):
@@ -211,6 +211,7 @@ class FLASH1MachineInterface():
     def __init__(self):
         
         self.debug = False
+
         """
         self.blm_names = ['14L.SMATCH','14R.SMATCH',
                           '1L.UND1', '1R.UND1',
@@ -221,6 +222,7 @@ class FLASH1MachineInterface():
                           '1L.UND6', '1R.UND6',
                           '10SMATCH','3SDUMP']
         """
+
         self.blm_names = ['1L.UND1', '1R.UND1',
                           '1L.UND2', '1R.UND2',
                           '1L.UND3', '1R.UND3',
@@ -393,7 +395,10 @@ class FLASH1MachineInterface():
         return val
 
     def get_value(self, device_name):
-        ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS.RBV'
+        if device_name.find("ACC")>=0:
+            ch = 'FLASH.RF/LLRF.CONTROLLER/CTRL.' + device_name
+        else:
+            ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS.RBV'
         #print("getting value = ", ch)
         #self.mutex.acquire()
         val = pydoocs.read(ch)['data']
@@ -401,13 +406,17 @@ class FLASH1MachineInterface():
         return val
     
     def set_value(self, device_name, val):
-        ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS'
+        if device_name.find("ACC")>=0:
+            ch = 'FLASH.RF/LLRF.CONTROLLER/CTRL.' + device_name
+        else:
+            ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS'
         print (ch, val)
         self.mutex.acquire()
         pydoocs.write(ch, str(val))
         self.mutex.release()
         return 0
- 
+
+
 class FLASH1DeviceProperties:
     def __init__(self):
         self.stop_exec = False

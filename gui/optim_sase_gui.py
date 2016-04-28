@@ -9,7 +9,8 @@ import sys
 import numpy as np
 from ocelot.utils.mint.flash1_interface_pydoocs3 import *
 from ocelot.utils.mint.machine_setup import *
-from desy.flash.lattices.lattice_rf_red import *
+from ocelot.gui.flash_tree import *
+#from desy.flash.lattices.lattice_rf_red import *
 #from ocelot.utils.mint.mint import TestInterface
 from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
 import pickle
@@ -19,63 +20,6 @@ from ocelot.utils.mint.mint import Optimizer, Action
 from time import sleep
 
 
-def generate_tree_params(lat):
-    devices = []
-    cors = {'name': 'correctors', 'type': 'group', 'children':[]}
-    #cors['children'] = cor_places
-    quads = {'name': 'quadrupoles', 'type': 'group', 'children':[]}
-    #quad_chld = []
-    cav = {}
-    section = {'STARTUBC2':"BC2", 'STARTACC2':"ACC23", 'STARTUBC3':"BC3", 'STARTACC4':"ACC4-7", 'ENDACC7':"DOGLEG",
-               'STARTSMATCH1':"MATCH", 'STARTUND':"UND"}
-
-    name_seq = "GUN-ACC39"
-    sub_cor_seq = {'name': name_seq, 'type': 'group','expanded': False, 'children':[]}
-    sub_cor_chld = []
-
-    sub_quad_seq = {'name': name_seq, 'type': 'group','expanded': False, 'children':[]}
-    sub_quad_chld = []
-
-    #print("test = ", sub_cor_seq['children'])
-    for elem in lat.sequence:
-        if elem.__class__ == Marker and elem.id in section.keys():
-
-            name_seq = section[elem.id]
-            #correctors
-            sub_cor_seq['children']= sub_cor_chld
-            cors['children'].append(sub_cor_seq)
-            sub_cor_seq = {'name': name_seq, 'type': 'group','expanded': False,'children':[]}
-            sub_cor_chld = []
-
-            #quadrupoles
-            sub_quad_seq['children'] = sub_quad_chld
-            quads['children'].append(sub_quad_seq)
-            sub_quad_seq = {'name': name_seq, 'type': 'group','expanded': False,'children':[]}
-            sub_quad_chld = []
-
-        if elem.__class__ in [Hcor, Vcor]:
-            tmp = {}
-            tmp["name"] = elem.id
-            tmp["type"] = "bool"
-            tmp["value"] = False
-            sub_cor_chld.append(tmp)
-        elif elem.__class__ in [Quadrupole]:
-            if elem.id in [p['name'] for p in sub_quad_chld]:
-                continue
-            tmp = {}
-            tmp["name"] = elem.id
-            tmp["type"] = "bool"
-            tmp["value"] = False
-            sub_quad_chld.append(tmp)
-
-    sub_cor_seq['children'] = sub_cor_chld
-    cors['children'].append(sub_cor_seq)
-
-    sub_quad_seq['children'] = sub_quad_chld
-    quads['children'].append(sub_quad_seq)
-    devices.append(cors)
-    devices.append(quads)
-    return devices
 
 
 def tree2seq(tree):
@@ -99,7 +43,13 @@ def tree2seq(tree):
             if sub.opts["name"] == "max iter":
                 new_seq['maxiter'] = sub.opts["value"]
                 continue
-            type_devs, dev = sub.opts["name"].split("/")
+            indx = sub.opts["name"].find("/")
+            #print(sub.opts["name"].find("/"))
+            type_devs = sub.opts["name"][:indx]
+            dev = sub.opts["name"][indx+1:]
+            #print(indx, type_devs, dev)
+            #type_devs, dev = sub.opts["name"].split("/")
+
             new_seq['devices'].append(dev)
             new_seq['type_devs'].append(type_devs)
             new_seq['values'].append(sub.opts["value"])
@@ -139,7 +89,11 @@ def seq2tree(tree, seq):
             tmp = {'name': name, 'type': "str", "value": "0",'readonly': True, 'expanded': False, 'children': []}
             tmp['children'].append({'name': 'tol., A', 'type': "float", "value": tol, 'step': 0.01})
             new_chld.append(tmp)
-        new_chld.append({'name': 'max iter', 'type': 'int', "value": 30})
+        if act['maxiter'] == None:
+            maxiter = 50
+        else:
+            maxiter = act['maxiter']
+        new_chld.append({'name': 'max iter', 'type': 'int', "value": maxiter})
         new_chld.append({'name': 'start Action', 'type': 'action'})
 
         new_seq = {'name': act['name'], 'type': 'int', 'limits': (0, 20),  'value': act['order'], 'removable': True, 'children': new_chld}
@@ -337,6 +291,7 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
 
             self.opt_thread.seq_dict=self.work_seq
             self.opt_thread.opt_params=opt_params
+            #print(self.work_seq)
             self.opt_thread.start()
 
             # currents drawing
@@ -609,7 +564,7 @@ class Form2(QtGui.QMainWindow, ui_optim_sase.Ui_ChildWindow):
 
 def main():
     mi = FLASH1MachineInterface()
-    #mi = TestInterface()
+    mi = TestInterface()
     dp = FLASH1DeviceProperties()
 
     lat = MagneticLattice(lattice)

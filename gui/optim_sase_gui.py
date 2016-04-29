@@ -204,7 +204,7 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         self.stop_opt_btn.clicked.connect(self.force_stop)
         self.setmax_opt_btn.clicked.connect(self.set_max_sase)
         self.save_machine_btn.clicked.connect(self.write_machine)
-
+        self.clear_disp_btn.clicked.connect(self.clear_sase)
         self.save_seq_btn.clicked.connect(self.save_sequences)
         self.load_seq_btn.clicked.connect(self.load_sequences)
 
@@ -502,6 +502,12 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         self.curve_sase_fast.setData(self.data_fast[:self.ptr1])
 
         self.curve_sase_slow.setData(self.data_slow[:self.ptr2], pen='r')
+
+    def clear_sase(self):
+        self.data_fast = np.empty(100)
+        self.ptr1 = 0
+        self.data_slow = np.empty(100)
+        self.ptr2 = 0
 
     def update_orbit(self):
         orbit = self.opt_thread.opt.sop.read_bpms()

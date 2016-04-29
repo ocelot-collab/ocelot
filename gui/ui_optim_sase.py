@@ -99,6 +99,7 @@ class Ui_MainWindow(object):
 
 
         #SASE graphics
+
         self.sase = pg.PlotWidget(title="SASE")
         self.sase_fig.addWidget(self.sase)
 
@@ -124,7 +125,7 @@ class Ui_MainWindow(object):
         self.setmax_opt_btn = QtGui.QPushButton('Set currents for max SASE')
         #self.setmax_opt_btn.setEnabled(False)
         self.stop_opt_btn = QtGui.QPushButton('Stop')
-
+        self.clear_disp_btn = QtGui.QPushButton('Clear display')
 
         self.save_machine_btn = QtGui.QPushButton('Save new tuning')
         #self.save_machine_btn.setEnabled(False)
@@ -133,10 +134,11 @@ class Ui_MainWindow(object):
         self.w5.addWidget(self.restore_cur_btn, row=1, col=0)
         self.w5.addWidget(self.setmax_opt_btn, row=2, col=0)
         self.w5.addWidget(self.stop_opt_btn, row=3, col=0)
+        self.w5.addWidget(self.clear_disp_btn, row=4, col=0)
 
         #self.w5.addWidget(self.debug_opt_chk, row=3, col=0)
         #self.w5.addWidget(self.log_opt_chk, row=4, col=0)
-        self.w5.addWidget(self.t_cntr, row=4, col=0)
+        self.w5.addWidget(self.t_cntr, row=5, col=0)
 
         self.w5.addWidget(QtGui.QLabel("""machine settings"""), row=6, col=0)
         self.w5.addWidget(self.save_machine_btn, row=7, col=0)

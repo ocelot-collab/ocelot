@@ -22,13 +22,15 @@ from time import sleep
 
 class Logger(object):
     def __init__(self, form, filename="default.log"):
-        #self.terminal = sys.stdout
+        self.terminal = sys.stderr
         self.log = form.log_lab
-        self.log.setText("test")
+        self.form = form
+        #self.log.setText("test")
         self.log2file = open(filename, "a")
 
     def write(self, message):
-        #self.terminal.write(message)
+        self.form.area.moveDock(self.form.logger, 'above', self.form.blm_fig)
+        self.terminal.write(message)
         #self.log.append(message)
         self.log.moveCursor(QtGui.QTextCursor.End)
         self.log.insertPlainText( message )
@@ -597,7 +599,7 @@ def main():
     devices = generate_tree_params(lat)
 
     form = OptimApp(params=[], devices=devices, optimizer=opt)
-    sys.stdout = Logger(form)
+    sys.stderr = Logger(form)
     timer = pg.QtCore.QTimer()
     timer.timeout.connect(form.update_sase)
     timer.start(200)

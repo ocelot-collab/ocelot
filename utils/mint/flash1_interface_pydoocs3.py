@@ -269,8 +269,8 @@ class FLASH1MachineInterface():
         Y = [0.0]*len(bpms)
         for i in range(len(bpms)):
             mag_channel = 'TTF2.DIAG/ORBIT/' + bpms[i]# + '/PS'
-            X[i] = pydoocs.read(mag_channel + "/X.FLASH1")['data']*0.001 # mm -> m
-            Y[i] = pydoocs.read(mag_channel + "/Y.FLASH1")['data']*0.001 # mm -> m
+            X[i] = pydoocs.read(mag_channel + "/X.FLASH1.PULSE.MEAN")['data']*0.001 # mm -> m
+            Y[i] = pydoocs.read(mag_channel + "/Y.FLASH1.PULSE.MEAN")['data']*0.001 # mm -> m
         return X, Y
 
     def get_quads_current(self, quads):

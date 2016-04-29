@@ -52,7 +52,6 @@ class Ui_MainWindow(object):
 
         #add Logger
         self.log_lab = QtGui.QTextBrowser()
-        #self.log_lab.
         #self.log_lab.verticalScrollBar().setValue(self.log_lab.verticalScrollBar().maximum())
         self.logger.addWidget(self.log_lab)
 

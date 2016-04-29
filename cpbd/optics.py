@@ -156,11 +156,8 @@ class TransferMap:
             Ei = tws0.E
             Ef = tws0.E + self.delta_e #* cos(self.phi)
             #print "Ei = ", Ei, "Ef = ", Ef
-            #gammaf = Ef/m_e_GeV
-            #betaf = sqrt(1. - 1./gammaf/gammaf)
-            #gammai = Ei/m_e_GeV
-            #betai = sqrt(1. - 1./gammai/gammai)
-            k = sqrt(Ef/(Ei))
+            k = sqrt(Ef/Ei)
+            #k = 1
             M[0, 0] = M[0, 0]*k
             M[0, 1] = M[0, 1]*k
             M[1, 0] = M[1, 0]*k
@@ -212,6 +209,8 @@ class TransferMap:
 
     def mul_p_array(self, particles, energy=0., order=1):
 
+        #print 'mul_p_array', self.order, order
+
         if self.order == 1 and order == 1:
             n = len(particles)
             a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(n/6, 6)))), self.B(energy)).reshape(n)
@@ -221,6 +220,7 @@ class TransferMap:
             self.sym_map(particles, energy=energy)
 
         else:
+            #print 'applying 2nd order map'
             self.map(particles, energy=energy)
         return particles
 
@@ -377,7 +377,9 @@ def create_transfer_map(element, order=1):
 
             u[1::6] += -ms/2.*(x*x - y*y)
             u[3::6] += x*y*ms
-
+            
+            #print 'sext debug: x,y ', x, y
+            #print 'sext kicks:', -ms/2.*(x*x - y*y), x*y*ms
             u[0::6] = x + u[1::6]*z1 + transfer_map.dx
             u[2::6] = y + u[3::6]*z1 + transfer_map.dy
 
@@ -396,7 +398,8 @@ def create_transfer_map(element, order=1):
             transfer_map.sym_map_z = lambda X, z, energy: map4sextupole(X, z, element.ms, energy)
             #transfer_map.sym_map_z = lambda X, z, energy: t_apply(R_z(z, energy), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
 
-        transfer_map.map_z = lambda X, z, energy: t_apply(R_z(z, energy), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
+        #transfer_map.map_z = lambda X, z, energy: t_apply(R_z(z, energy), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
+        transfer_map.map_z = lambda X, z, energy: map4sextupole(X, z, element.k2*element.l, energy)
         transfer_map.order = 2
 
     elif element.type == "octupole":
@@ -577,19 +580,41 @@ def create_transfer_map(element, order=1):
     
             return cav_matrix
 
-        def map4cav(R, T, X, dx, dy, tilt, E,  V, freq, phi):
+
+
+        def map4cav_new(R, T, X, dx, dy, tilt, E,  V, freq, phi):
+            #TODO this does not work for storage rings
             #print E
+            E = 5.0
+            phi = pi/2.
+            print V,  E, freq
+            X = t_apply(R, T, X, dx, dy, tilt)
+            delta_e = V*cos(phi)
+            print 'applying map4cav', E, delta_e
+            print X[5::6]*1.e6, X[4::6]
+            if E + delta_e > 0:
+                k = 2.*pi*freq/speed_of_light
+                print 'xxx ', V, k, phi, ':', V*np.cos(X[4::6]*k + phi)*1.e6
+                #X[5::6] = (X[5::6]*E + V*np.cos(X[4::6]*k + phi) - delta_e)/(E + delta_e)
+                X[5::6] += V*np.cos(X[4::6]*k + phi)/E
+                print '-->',  X[5::6] * 1.e6
+
+        def map4cav(R, T, X, dx, dy, tilt, E,  V, freq, phi):
+            print E
             X = t_apply(R, T, X, dx, dy, tilt)
             delta_e = V*cos(phi)
             if E + delta_e > 0:
                 k = 2.*pi*freq/speed_of_light
                 X[5::6] = (X[5::6]*E + V*np.cos(X[4::6]*k + phi) - delta_e)/(E + delta_e)
+                  
+                
         transfer_map.phi = element.phi
         transfer_map.order = 2
         #if element.v < 1.e-10 and element.delta_e < 1.e-10:
         if element.delta_e == 0.:
             #transfer_map.order = 1
             R_z = lambda z, energy: uni_matrix(z, 0., hx=0., sum_tilts=element.dtilt + element.tilt, energy=energy)
+            #R_z = lambda z, energy: ring_cavity_map(z, V=element.v*z/element.l, f=element.f, E=energy, phi=element.phi)
         else:
             R_z = lambda z, energy: cavity_R_z(z, V=element.v*z/element.l, f=element.f, E=energy, phi=element.phi)
 
@@ -635,10 +660,23 @@ def create_transfer_map(element, order=1):
         Rm[0,1] = element.rm12
         Rm[1,0] = element.rm21
         Rm[1,1] = element.rm22
+        
         Rm[2,2] = element.rm33
         Rm[2,3] = element.rm34
         Rm[3,2] = element.rm43
-        Rm[3,3] = element.rm44
+        Rm[3,3] = element.rm44       
+
+        Rm[0,2] = element.rm13
+        Rm[0,3] = element.rm14
+        Rm[1,2] = element.rm23
+        Rm[1,3] = element.rm24
+        
+        Rm[2,0] = element.rm31
+        Rm[3,0] = element.rm41
+        Rm[2,1] = element.rm32
+        Rm[3,1] = element.rm42       
+
+
 
         def r_matrix(z, l, Rm):
             if z < l:
@@ -646,6 +684,7 @@ def create_transfer_map(element, order=1):
             else:
                 R_z = Rm
             return R_z
+        
         R_z = lambda z, energy: r_matrix(z, element.l, Rm)
         transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
         transfer_map.T = transfer_map.T_z(element.l)
@@ -776,6 +815,7 @@ def trace_obj(lattice, obj, nPoints = None):
 
 
 def twiss(lattice, tws0=None, nPoints=None):
+    
     if tws0 == None:
         tws0 = periodic_solution(tws0, lattice_transfer_map(lattice, energy=0.))
 

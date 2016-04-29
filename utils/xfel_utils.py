@@ -53,7 +53,7 @@ def taper(lat, k):
             #print lat2.sequence[i].id, lat2.sequence[i].Kx
             lat2.sequence[i] = deepcopy(lat.sequence[i]) 
             ##MOD BY GG. #lat2.sequence[i].Kx = lat2.sequence[i].Kx * k(n+1)
-	    lat2.sequence[i].Kx = k(n+1)/np.sqrt(0.5) ##MOD BY GG.
+            lat2.sequence[i].Kx = k(n+1)#/np.sqrt(0.5) ##MOD BY GG.
             n += 1
 
     return lat2

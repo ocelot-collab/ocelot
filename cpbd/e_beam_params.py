@@ -1,7 +1,7 @@
 __author__ = 'Sergey'
 
 from scipy.integrate import simps
-
+from ocelot.cpbd.elements import *
 from ocelot.common.globals import *
 from ocelot.cpbd.optics import trace_z, twiss
 from ocelot.cpbd.beam import *
@@ -37,11 +37,11 @@ def radiation_integral(lattice, twiss_0, nsuperperiod = 1):
     (I1, I2, I3,I4, I5) = (0., 0., 0., 0., 0.)
     h = 0.
     for elem in lattice.sequence:
-        if elem.type == "rbend" or elem.type == "sbend" or elem.type == "bend" or elem.type == "quadrupole":
+        if elem.__class__ in [RBend, SBend, Bend, Quadrupole]:
             Dx = []
             Hinvariant = []
             Z = []
-            if  elem.type != "quadrupole" or elem.l == 0:
+            if elem.__class__ != Quadrupole or elem.l != 0:
                 h = elem.angle/elem.l
             else:
                 h = 0.

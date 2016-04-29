@@ -28,7 +28,7 @@ class Ui_MainWindow(object):
         self.blm_fig = Dock("BLM", size=(400,200))
         self.seq_cntr = Dock("Sequence", size=(150,200))
         self.sase_cntr = Dock("Controls", size=(150,200))
-        self.orb_cntr = Dock("orb contr.", size=(400,100))
+        #self.orb_cntr = Dock("orb contr.", size=(400,100))
         self.cur_fig = Dock("Settings", size=(400,300))
         self.logger = Dock("Logger", size=(100,300))
 
@@ -40,10 +40,10 @@ class Ui_MainWindow(object):
         self.area.addDock(self.blm_fig, 'top', self.sase_fig)## place d3 at bottom edge of d1
         self.area.addDock(self.sase_cntr, 'right')  ## place d5 at left edge of d1
         self.area.addDock(self.seq_cntr, 'left', self.sase_cntr)     ## place d4 at right edge of dock area
-        self.area.addDock(self.orb_cntr, 'bottom', self.orb_fig)
+        #self.area.addDock(self.orb_cntr, 'bottom', self.orb_fig)
 
         ## Test ability to move docks programatically after they have been placed
-        self.area.moveDock(self.sase_fig, 'bottom', self.orb_cntr)     ## move d4 to top edge of d2
+        self.area.moveDock(self.sase_fig, 'bottom', self.orb_fig)     ## move d4 to top edge of d2
         #self.area.moveDock(self.blm_fig, 'bottom', self.sase_fig)   ## move d6 to stack on top of d4
         self.area.addDock(self.logger, 'bottom', self.sase_fig)
         self.area.moveDock(self.blm_fig, 'above', self.logger)
@@ -89,10 +89,6 @@ class Ui_MainWindow(object):
         self.cur_fig.addWidget(self.current, row=0, col=0)
         self.cur_fig.addWidget(self.t_cur_cntr, row=0, col=1)
 
-        # Orbit graphics
-        #self.orbit = pg.PlotWidget(title="Orbit")
-        self.orbit = pg.GraphicsWindow(title="Basic plotting examples")
-        self.orb_fig.addWidget(self.orbit)
 
 
         #BLM graphics
@@ -146,6 +142,10 @@ class Ui_MainWindow(object):
         self.w5.addWidget(self.save_machine_btn, row=7, col=0)
         self.sase_cntr.addWidget(self.w5)
 
+        # Orbit graphics
+        #self.orbit = pg.PlotWidget(title="Orbit")
+        self.orbit = pg.GraphicsWindow(title="Orbit")
+        self.orb_fig.addWidget(self.orbit)
 
         # orbit controls
         self.w6 = pg.LayoutWidget()
@@ -157,7 +157,8 @@ class Ui_MainWindow(object):
         self.w6.addWidget(self.ref_btm, row=0, col=0)
         self.w6.addWidget(self.save_btn, row=0, col=1)
         self.w6.addWidget(self.load_btn, row=0, col=2)
-        self.orb_cntr.addWidget(self.w6)
+        #self.orb_cntr.addWidget(self.w6)
+        self.orb_fig.addWidget(self.w6)
         #return win
 
 

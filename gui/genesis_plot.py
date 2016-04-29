@@ -119,9 +119,14 @@ def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = None, save=False)
     
     fig.subplots_adjust(top=0.95, bottom=0.1, right=0.85, left=0.15)
     
-    aw_tmp=np.array(g.aw)[np.array(g.aw)!=0]
-    if np.amax(aw_tmp)!=np.amin(aw_tmp):
-        ax_und.set_ylim([np.amin(aw_tmp),np.amax(aw_tmp)])
+    #plot undulator K rms. if there is tapering and K!=0, plot is scaled to viwew the tapering profile
+    if np.amax(g.aw)!=0:
+        aw_tmp=np.array(g.aw)[np.array(g.aw)!=0]
+        if np.amax(aw_tmp)!=np.amin(aw_tmp):
+            diff=np.amax(aw_tmp)-np.amin(aw_tmp)
+            ax_und.set_ylim([np.amin(aw_tmp)-diff/10,np.amax(aw_tmp)+diff/10])
+    else:
+        ax_und.set_ylim([0,1])
     ax_und.tick_params(axis='y', which='both', colors='b')
     ax_und.yaxis.label.set_color('b')
     ax_quad.tick_params(axis='y', which='both', colors='r')
@@ -198,7 +203,8 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=Fals
     ax_pow.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_pow.get_yaxis().get_major_formatter().set_scientific(True)
 #    if np.amin(g.p_int)>0:
-    ax_pow.set_yscale('log')
+    if np.amax(g.p_int)>0:
+        ax_pow.set_yscale('log')
 
 
 
@@ -207,8 +213,8 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=Fals
     ax_en.set_ylabel('E [J]')
     ax_en.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_en.get_yaxis().get_major_formatter().set_scientific(True)
-#    if np.amin(g.p_int)>0:
-    ax_en.set_yscale('log')
+    if np.amax(g.p_int)>0:
+        ax_en.set_yscale('log')
 
 
     if g('itdp')==True:
@@ -245,8 +251,9 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=Fals
     
         ax_spectrum.plot(g.z, np.amax(spectrum,axis=0), 'r-',linewidth=1.5)
         ax_spectrum.set_ylabel('P$(\lambda)_{max}$ [a.u.]')
-    #    if np.amin(np.amax(spectrum,axis=0))>0:
-        ax_spectrum.set_yscale('log')
+        # if np.amin(np.amax(spectrum,axis=0))>0:
+        if np.amax(np.amax(spectrum,axis=0))>0:
+            ax_spectrum.set_yscale('log')
         
         #fix!!!
         ax_spec_bandw = ax_spectrum.twinx()
@@ -263,7 +270,11 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=Fals
         rad_longit_size=sqrt(np.sum(g.p_int*(s_array-rad_longit_pos)**2/p_int_norm,axis=0)) #this is standard deviation (sigma)
     
         #g.p_int=np.amax(g.p_int)/1e6+g.p_int # nasty fix from division by zero
-        weight=g.p_int+np.amin(g.p_int[g.p_int!=0])/1e6
+        if np.amax(g.p_int)>0:
+            weight=g.p_int+np.amin(g.p_int[g.p_int!=0])/1e6
+        else:
+            weight=np.ones_like(g.p_int)
+            
         
         ax_size_l = ax_size_t.twinx() #longitudinal size
         ax_size_l.plot(g.z, rad_longit_size*2, color='indigo', linestyle='dashed',linewidth=1.5)
@@ -741,7 +752,7 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
         if freq_domain:
             print('      calculating spectrum')
             calc_time=time.time()
-            dfl=np.fft.ifftshift(np.fft.fft(dfl,axis=0),0)/sqrt(ncar_z) # sqrt(ncar_x*ncar_y) because of numpy fft function
+            dfl=np.fft.ifftshift(np.fft.fft(dfl,axis=0),0)/sqrt(ncar_z) # 
             dk=2*pi/leng_z;
             k=2*pi/out('xlamds');
             z = 2*pi/np.linspace(k-dk/2*ncar_z, k+dk/2*ncar_z, ncar_z)
@@ -818,7 +829,7 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
         x_title='X divergence'
         y_title='Y divergence'
         xy_title='Far field intensity'
-        x_y_color='grey'
+        x_y_color='green'
         print('        done in %.2f seconds' %(time.time()-calc_time))
     else:
         dx=leng_x/ncar_x
@@ -843,7 +854,6 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
     leng_x*=1e6
     leng_y*=1e6
 
-    
     if fig_name is None:
         if out.filename is '':
             fig = plt.figure('Radiation distribution')
@@ -868,6 +878,13 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
     xz_proj=sum(dfl_int,2); #intensity view from top
     z_proj=sum(dfl_int,(1,2)); #temporal intensity profile
     del dfl_int, dfl
+    
+    if len(z)>1 and freq_domain==False:
+        E_pulse=np.sum(z_proj)*(z[1]-z[0])/1e6/c
+        print('      E_pulse= %.3e J' %(E_pulse))
+    elif len(z)>1 and freq_domain==True:
+        E_pulse=np.sum(z_proj)*(z[1]-z[0])
+        E_pulse=0
 
     
     # x_line=xy_proj_ampl[]
@@ -903,6 +920,8 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
     # ax_int.axes.get_xaxis().set_visible(False)
     ax_int.set_xlabel(r''+x_label)
     ax_int.set_ylabel(y_label)
+    if len(z)>1:
+        ax_int.text(0.01,0.01,r'$E_{p}$=%.2e J' %(E_pulse), horizontalalignment='left', verticalalignment='bottom',fontsize=12, color='white',transform=ax_int.transAxes) #
     
     if phase==True:
         ax_ph=fig.add_subplot(2, 2+column_3d, 4+column_3d, sharex=ax_int,sharey=ax_int)
@@ -925,7 +944,7 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
     ax_proj_x.set_title(x_title, fontsize=15)
     x_line_f, rms_x=gauss_fit(x,x_line) #fit with Gaussian, and return fitted function and rms
     fwhm_x=fwhm3(x_line)[1]*dx #measure FWHM
-    ax_proj_x.plot(x,x_line_f,'g-')
+    ax_proj_x.plot(x,x_line_f,'k-')
     ax_proj_x.text(0.95, 0.95,'fwhm= \n'+str(round_sig(fwhm_x,3))+r' ['+unit_xy+']\nrms= \n'+str(round_sig(rms_x,3))+r' ['+unit_xy+']', horizontalalignment='right', verticalalignment='top', transform = ax_proj_x.transAxes,fontsize=12)
     ax_proj_x.set_ylim(ymin=0,ymax=1)
 
@@ -936,7 +955,7 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
     ax_proj_y.set_title(y_title, fontsize=15)
     y_line_f, rms_y=gauss_fit(y,y_line)
     fwhm_y=fwhm3(y_line)[1]*dy
-    ax_proj_y.plot(y_line_f,y,'g-')
+    ax_proj_y.plot(y_line_f,y,'k-')
     ax_proj_y.text(0.95, 0.95,'fwhm= '+str(round_sig(fwhm_y,3))+r' ['+unit_xy+']\nrms= '+str(round_sig(rms_y,3))+r' ['+unit_xy+']', horizontalalignment='right', verticalalignment='top', transform = ax_proj_y.transAxes,fontsize=12)
     ax_proj_y.set_xlim(xmin=0,xmax=1)
 
@@ -975,15 +994,17 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
 
 
     if auto_zoom!=False:
+        size_x=max(abs(x[nonzero(x_line>0.005)][[0,-1]]))
+        size_y=max(abs(x[nonzero(x_line>0.005)][[0,-1]]))
+        size_xy=max(size_x,size_y)
         if phase==True and column_3d==True and z_lim==[]:
             ax_proj_xz.set_xlim(z[nonzero(z_proj>max(z_proj)*0.01)][[0,-1]])
         elif phase==False and z_lim==[]:
             ax_z.set_xlim(z[nonzero(z_proj>max(z_proj)*0.01)][[0,-1]])
+            print '      scaling xy to', size_xy
+            ax_proj_xz.set_ylim([-size_xy, size_xy])
         elif column_3d==True:
             ax_proj_xz.set_ylim([-size_xy, size_xy])
-        size_x=max(abs(x[nonzero(x_line>0.005)][[0,-1]]))
-        size_y=max(abs(x[nonzero(x_line>0.005)][[0,-1]]))
-        size_xy=max(size_x,size_y)
         ax_int.axis('equal')
         ax_int.axis([-size_xy, size_xy,-size_xy, size_xy])
         suffix+='_zmd'
@@ -1000,8 +1021,10 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
         
     if len(xy_lim)==2:
         ax_int.axis([-xy_lim[0], xy_lim[0],-xy_lim[1], xy_lim[1]])
+        ax_proj_xz.set_ylim([-xy_lim[0], xy_lim[0]])
     elif len(xy_lim)==1:
         ax_int.axis([-xy_lim[0], xy_lim[0],-xy_lim[0], xy_lim[0]])
+        ax_proj_xz.set_ylim([-xy_lim[0], xy_lim[0]])
         
     subplots_adjust(wspace=0.4,hspace=0.4)
     
@@ -1009,9 +1032,10 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
     if save!=False:
         if save==True:
             save='png'
+        print '      suffix= ',suffix
         fig.savefig(out.path+'_dfl'+suffix+'.'+str(save),format=save)
        
-    print('      done in %.2f seconds' % (time.time() - start_time))
+    print(('      done in %.2f seconds' % (time.time() - start_time)))
 
     if show==True:
         print('    showing dfl')

@@ -197,8 +197,9 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=Fals
 
     #
     fig.subplots_adjust(hspace=0)
-        
+
     ax_pow.plot(g.z, np.amax(g.p_int, axis=0), 'g-',linewidth=1.5)
+    ax_pow.text(0.98, 0.02,'$P_{end}$= %.2e W\n$E_{end}$= %.2e J' %(np.amax(g.p_int[:,-1]),np.mean(g.p_int[:,-1],axis=0)*g('xlamds')*g('zsep')*g.nSlices/c), fontsize=12, horizontalalignment='right', verticalalignment='bottom', transform = ax_pow.transAxes)#horizontalalignment='center', verticalalignment='center',
     ax_pow.set_ylabel('P [W]')
     ax_pow.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_pow.get_yaxis().get_major_formatter().set_scientific(True)
@@ -250,6 +251,7 @@ def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=Fals
     
     
         ax_spectrum.plot(g.z, np.amax(spectrum,axis=0), 'r-',linewidth=1.5)
+        ax_spectrum.text(0.5, 0.98,r"(on axis)", fontsize=10, horizontalalignment='center', verticalalignment='top', transform = ax_spectrum.transAxes)#horizontalalignment='center', verticalalignment='center',
         ax_spectrum.set_ylabel('P$(\lambda)_{max}$ [a.u.]')
         # if np.amin(np.amax(spectrum,axis=0))>0:
         if np.amax(np.amax(spectrum,axis=0))>0:
@@ -408,6 +410,7 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
     ax_curr.plot(s, g.I/1e3, 'k--')
     ax_curr.set_ylabel('I [kA]')
     ax_curr.set_ylim(ymin=0)
+    ax_curr.text(0.02, 0.98,r"Q= %.2f pC" %(g.beam_charge*1e12), fontsize=12, horizontalalignment='left', verticalalignment='top', transform = ax_curr.transAxes)#horizontalalignment='center', verticalalignment='center',
 
 
     ax_power = ax_curr.twinx()
@@ -453,7 +456,7 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
     
 
     ax_spectrum.plot(fftshift(lamdscale), fftshift(spectrum[:,zi]), 'r-')
-    ax_spectrum.text(0, 0,r"on axis", fontsize=15)#horizontalalignment='center', verticalalignment='center',
+    ax_spectrum.text(0.98, 0.98,r"(on axis)", fontsize=10, horizontalalignment='right', verticalalignment='top', transform = ax_spectrum.transAxes)#horizontalalignment='center', verticalalignment='center',
     ax_spectrum.set_ylabel('P($\lambda$) [a.u.]')
     ax_spectrum.set_xlabel('$\lambda$ [nm]')
     ax_spectrum.set_ylim(ymin=0)
@@ -475,6 +478,7 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
     n=1
     phase_fixed = ( phase_fixed + n*pi) % (2 * n*pi ) - n*pi
     ax_phase.plot(s, phase_fixed, 'k-',linewidth=0.5)
+    ax_phase.text(0.98, 0.98,r"(on axis)", fontsize=10, horizontalalignment='right', verticalalignment='top', transform = ax_phase.transAxes)#horizontalalignment='center', verticalalignment='center',
     ax_phase.set_ylabel('$\phi$ [rad]')
     ax_phase.set_ylim([-pi, pi])
 
@@ -776,6 +780,9 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
             z_color='blue'
             z*=1e6
             leng_z*=1e6
+    else:
+        z=[0]
+
 
         if z_lim!=[]:
             if len(z_lim)==1:
@@ -872,17 +879,18 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
     #calculate transverse projection, remove z dimention
     
     dfl_int=abs(dfl)**2
+    #xy_proj_ampl=sqrt((dfl_int).sum(0))
     xy_proj_ampl=sqrt((dfl_int).sum(0))*exp(1j*angle(dfl.sum(0))) #(amplitude-like) view from front, sum of square of amplitudes with phase as sum of phasors (latter is dedicated for illustration purposes: good to see an averaged wavefront)
-    # xy_proj_ampl=sum(dfl,0); #view from front
+
     yz_proj=sum(dfl_int,1); #intensity view from side
     xz_proj=sum(dfl_int,2); #intensity view from top
     z_proj=sum(dfl_int,(1,2)); #temporal intensity profile
     del dfl_int, dfl
     
-    if len(z)>1 and freq_domain==False:
+    if len(z)!=1 and freq_domain==False:
         E_pulse=np.sum(z_proj)*(z[1]-z[0])/1e6/c
         print('      E_pulse= %.3e J' %(E_pulse))
-    elif len(z)>1 and freq_domain==True:
+    elif len(z)!=1 and freq_domain==True:
         E_pulse=np.sum(z_proj)*(z[1]-z[0])
         E_pulse=0
 
@@ -1032,7 +1040,7 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
     if save!=False:
         if save==True:
             save='png'
-        print '      suffix= ',suffix
+        print'      suffix= ',suffix
         fig.savefig(out.path+'_dfl'+suffix+'.'+str(save),format=save)
        
     print(('      done in %.2f seconds' % (time.time() - start_time)))

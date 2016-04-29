@@ -20,6 +20,22 @@ from ocelot.utils.mint.mint import Optimizer, Action
 from time import sleep
 
 
+class Logger(object):
+    def __init__(self, form, filename="default.log"):
+        #self.terminal = sys.stdout
+        self.log = form.log_lab
+        self.log.setText("test")
+        self.log2file = open(filename, "a")
+
+    def write(self, message):
+        #self.terminal.write(message)
+        #self.log.append(message)
+        self.log.moveCursor(QtGui.QTextCursor.End)
+        self.log.insertPlainText( message )
+        self.log2file.write(message)
+    def flush(self):
+        pass
+
 
 
 def tree2seq(tree):
@@ -87,7 +103,7 @@ def seq2tree(tree, seq):
             #tol_str = [str(np.around(x, 3)) for x in tol]
             name = act["type_devs"][i]+'/'+dev
             tmp = {'name': name, 'type': "str", "value": "0",'readonly': True, 'expanded': False, 'children': []}
-            tmp['children'].append({'name': 'tol., A', 'type': "float", "value": tol, 'step': 0.01})
+            tmp['children'].append({'name': 'tol.', 'type': "float", "value": tol, 'step': 0.01})
             new_chld.append(tmp)
         if act['maxiter'] == None:
             maxiter = 50
@@ -96,7 +112,7 @@ def seq2tree(tree, seq):
         new_chld.append({'name': 'max iter', 'type': 'int', "value": maxiter})
         new_chld.append({'name': 'start Action', 'type': 'action'})
 
-        new_seq = {'name': act['name'], 'type': 'int', 'limits': (0, 20),  'value': act['order'], 'removable': True, 'children': new_chld}
+        new_seq = {'name': act['name'], 'type': 'int', 'limits': (0, 20),  'value': act['order'],'renamable': True, 'removable': True, 'children': new_chld}
         tree.addChild(new_seq)  # = Parameter.create(name='params', type='group', children=self.sequence)
     return tree
 
@@ -564,7 +580,7 @@ class Form2(QtGui.QMainWindow, ui_optim_sase.Ui_ChildWindow):
 
 def main():
     mi = FLASH1MachineInterface()
-    #mi = TestInterface()
+    mi = TestInterface()
     dp = FLASH1DeviceProperties()
 
     lat = MagneticLattice(lattice)
@@ -581,7 +597,7 @@ def main():
     devices = generate_tree_params(lat)
 
     form = OptimApp(params=[], devices=devices, optimizer=opt)
-
+    sys.stdout = Logger(form)
     timer = pg.QtCore.QTimer()
     timer.timeout.connect(form.update_sase)
     timer.start(200)

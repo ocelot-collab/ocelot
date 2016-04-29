@@ -412,8 +412,8 @@ def create_transfer_map(element, order=1):
             x = u[0::6] + u[1::6]*z1 - transfer_map.dx
             y = u[2::6] + u[3::6]*z1 - transfer_map.dy
 
-            u[1::6] += -moct/2.*(x*x*x - 3.*y*y*x)
-            u[3::6] += moct*(3.*y*x*x-y*y*y)
+            u[1::6] = u[1::6] - moct/2.*(x*x*x - 3.*y*y*x)
+            u[3::6] = u[3::6] + moct*(3.*y*x*x-y*y*y)
 
             u[0::6] = x + u[1::6]*z1 + transfer_map.dx
             u[2::6] = y + u[3::6]*z1 + transfer_map.dy

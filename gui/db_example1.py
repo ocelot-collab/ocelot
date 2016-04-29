@@ -4,8 +4,8 @@ import datetime, time
 
 from ocelot.utils.db import PerfDB
 
-db = PerfDB()
-db.new_tuning({'wl':13.6, 'charge':0.1,'comment':'test tuning'})
+db = PerfDB(dbname = "flash_29_04.db")
+#db.new_tuning({'wl':13.6, 'charge':0.1,'comment':'test tuning'})
 tunes = db.get_tunings()
 
 print ('*** all tunings ***')

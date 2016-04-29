@@ -238,9 +238,8 @@ class FLASH1MachineInterface():
     def init_corrector_vals(self, correctors):
         vals = np.zeros(len(correctors))
         for i in range(len(correctors)):
-            mag_channel = 'TTF2.MAGNETS/STEERER/' + correctors[i] + '/PS'
             #self.mutex.acquire()
-            vals[i] = pydoocs.read(mag_channel)["data"]
+            vals[i] = self.get_value(correctors[i])
             #self.mutex.release()
         return vals
 
@@ -397,6 +396,9 @@ class FLASH1MachineInterface():
     def get_value(self, device_name):
         if device_name.find("ACC")>=0:
             ch = 'FLASH.RF/LLRF.CONTROLLER/CTRL.' + device_name
+        elif device_name.find("knob")>=0:
+            pass
+            #return get_knob_value(device_name)
         else:
             ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS.RBV'
         #print("getting value = ", ch)

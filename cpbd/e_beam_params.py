@@ -41,7 +41,7 @@ def radiation_integral(lattice, twiss_0, nsuperperiod = 1):
             Dx = []
             Hinvariant = []
             Z = []
-            if  elem.type != "quadrupole" or elem.l == 0:
+            if elem.type != "quadrupole" or elem.l != 0:
                 h = elem.angle/elem.l
             else:
                 h = 0.
@@ -95,7 +95,7 @@ class EbeamParams:
         self.Jx = 1 - I4/I2
         self.Jy = 1
         self.gamma = self.E/m_e_GeV
-        self.sigma_e = self.gamma*sqrt(Cq * self.I3/(self.Je*I2))
+        self.sigma_e = self.gamma*np.sqrt(Cq * self.I3/(self.Je*I2))
         self.emittance = Cq*self.gamma*self.gamma * self.I5/(self.Jx* self.I2)
         self.U0 = Cgamma*(beam.E*1000)**4*self.I2/(2*pi)
         #print "*********  ", twiss_0.Energy

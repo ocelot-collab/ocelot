@@ -29,25 +29,32 @@ class Ui_MainWindow(object):
         self.seq_cntr = Dock("Sequence", size=(150,200))
         self.sase_cntr = Dock("Controls", size=(150,200))
         self.orb_cntr = Dock("orb contr.", size=(400,100))
-        self.cur_fig = Dock("Currents", size=(400,300))
-        #self.cur_cntr = Dock("Currents", size=(100,300))
+        self.cur_fig = Dock("Settings", size=(400,300))
+        self.logger = Dock("Logger", size=(100,300))
 
         self.area.addDock(self.cur_fig, 'left')
 
         self.area.addDock(self.orb_fig, 'above', self.cur_fig)      ## place d1 at left edge of dock area (it will fill the whole space since there are no other docks yet)
         self.area.addDock(self.sase_fig, 'right')     ## place d2 at right edge of dock area
-        self.area.addDock(self.blm_fig, 'bottom', self.sase_fig)## place d3 at bottom edge of d1
+
+        self.area.addDock(self.blm_fig, 'top', self.sase_fig)## place d3 at bottom edge of d1
         self.area.addDock(self.sase_cntr, 'right')  ## place d5 at left edge of d1
         self.area.addDock(self.seq_cntr, 'left', self.sase_cntr)     ## place d4 at right edge of dock area
         self.area.addDock(self.orb_cntr, 'bottom', self.orb_fig)
 
         ## Test ability to move docks programatically after they have been placed
         self.area.moveDock(self.sase_fig, 'bottom', self.orb_cntr)     ## move d4 to top edge of d2
-        self.area.moveDock(self.blm_fig, 'bottom', self.sase_fig)   ## move d6 to stack on top of d4
-
-
+        #self.area.moveDock(self.blm_fig, 'bottom', self.sase_fig)   ## move d6 to stack on top of d4
+        self.area.addDock(self.logger, 'bottom', self.sase_fig)
+        self.area.moveDock(self.blm_fig, 'above', self.logger)
 
         ## Add widgets into each dock
+
+        #add Logger
+        self.log_lab = QtGui.QTextBrowser()
+        #self.log_lab.
+        #self.log_lab.verticalScrollBar().setValue(self.log_lab.verticalScrollBar().maximum())
+        self.logger.addWidget(self.log_lab)
 
         ## first dock gets save/restore buttons
         self.t = ParameterTree()
@@ -78,7 +85,7 @@ class Ui_MainWindow(object):
         self.p_cur_cntr = Parameter.create(name='control', type='group', children=param)
         self.t_cur_cntr.setParameters(self.p_cur_cntr, showTop=False)
 
-        self.current = pg.PlotWidget(title="Currents")
+        self.current = pg.PlotWidget(title="Settings")
 
         self.cur_fig.addWidget(self.current, row=0, col=0)
         self.cur_fig.addWidget(self.t_cur_cntr, row=0, col=1)

@@ -615,7 +615,7 @@ def sym_map(z, X, h, k1, k2, energy=0.):
     c4 = g_inv*g_inv/(beta*(1. + beta))
     #Y = high_order.cython_test([x, px, y, py, sigma, ps], step, h,k1, len(z_array) , (c1,c2,c3,c4), ps_beta, beta)
     #x, px, y, py, sigma, ps = Y
-    for z in xrange(len(z_array) - 1):
+    for z in range(len(z_array) - 1):
         #vec = verlet(vec, step, h, k1, k2, beta=beta, g_inv=g_inv)
         px2_py2 = px*px + py*py
         x = (x + step*px*(1. - ps_beta))/(1. - step*h*px)

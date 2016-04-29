@@ -283,6 +283,7 @@ def elem_cord(lat):
 
 dict_plot = {"quadrupole": {"scale": 0.7, "color": "r",            "edgecolor": "r",          "label": "quad"},
              "sextupole":  {"scale": 0.5, "color": "g",            "edgecolor": "g",          "label": "sext"},
+             "octupole":  {"scale": 0.5, "color": "g",            "edgecolor": "g",          "label": "sext"},
              "cavity":     {"scale": 0.7, "color": "orange",       "edgecolor": "lightgreen", "label": "cav"},
              "bend":       {"scale": 0.7, "color": "lightskyblue", "edgecolor": "k",          "label": "bend"},
              "rbend":      {"scale": 0.7, "color": "lightskyblue", "edgecolor": "k",          "label": "bend"},

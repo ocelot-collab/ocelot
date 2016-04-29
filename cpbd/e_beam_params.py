@@ -41,11 +41,11 @@ def radiation_integrals(lattice, twiss_0, nsuperperiod = 1):
     (I1, I2, I3,I4, I5) = (0., 0., 0., 0., 0.)
     h = 0.
     for elem in lattice.sequence:
-        if elem.__class__ in (SBend, RBend, Bend, Quadrupole):
+        if elem.__class__ in (SBend, RBend, Bend, Quadrupole) and elem.l != 0:
             Dx = []
             Hinvariant = []
             Z = []
-            if elem.__class__ != Quadrupole or elem.l != 0:
+            if elem.__class__ != Quadrupole:
                 h = elem.angle/elem.l
             else:
                 h = 0.

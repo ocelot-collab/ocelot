@@ -122,6 +122,7 @@ class Optimizer:
         self.log_file = opt_params['log file']       #'test.log'
         self.timeout = opt_params['timeout']         #1.2
         self.detector = opt_params['detector']       #'gmd_default'
+        print("SET PARAMS", opt_params)
 
     def create_seq(self, seq_dict):
 
@@ -194,7 +195,7 @@ class Optimizer:
                 self.mi.set_value(devices[i], x[i])
     
             sleep(self.timeout)
-    
+            #print("MINT detector", self.detector)
             sase = self.mi.get_sase(detector=self.detector)
             alarm = np.max(self.mi.get_alarms())
 

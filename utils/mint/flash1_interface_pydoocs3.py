@@ -544,6 +544,7 @@ class TestInterface:
         return np.random.rand(4)#0.0, 0.0, 0.0, 0.0]
 
     def get_sase(self, detector=None):
+        #print("Detector", detector)
         return 0.0
 
     def init_corrector_vals(self, correctors):

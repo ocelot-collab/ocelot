@@ -144,6 +144,7 @@ def devices2def_seq(devs, type_devs):
 
 def optim_params(tree):
     opt_params = {}
+    #print([p for p in tree], tree.opts["children"])
     for p in tree:
         for sub in p:
             if sub.opts["name"] == "debug":
@@ -204,6 +205,8 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
 
         #print(self.sequence)
         self.new_seq = []
+        opt_params = optim_params(self.p_cntr)
+        self.detector = opt_params["detector"]
         #self.hlmi = high_level_mi
 
         self.start_opt_btm.clicked.connect(self.start_opt)
@@ -252,6 +255,7 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         self.x_ref = np.zeros(len(self.x))
         self.y_ref = np.zeros(len(self.y))
         self.p.sigTreeStateChanged.connect(self.change)
+        self.p_cntr.sigTreeStateChanged.connect(self.change_detector)
         #self.tmp = None
 
         self.opt_thread.finished.connect(self.stop)
@@ -380,6 +384,10 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
                     else:
                         act['order'] = 0
                 self.optimization()
+    def change_detector(self, param, changes):
+        opt_params = optim_params(self.p_cntr)
+        self.detector = opt_params["detector"]
+        #for param, change, data in changes:
 
     def create_tree(self):
         self.n_seqs += 1
@@ -452,7 +460,7 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
                     surrent_set = current_RBS #self.opt_thread.opt.mi.get_value_ps(devname)
                 self.data[n, self.pntr_cur] = surrent_set
                 self.data[n+1, self.pntr_cur] = current_RBS
-                self.data[-1, self.pntr_cur] = self.opt_thread.opt.mi.get_sase()
+                self.data[-1, self.pntr_cur] = self.opt_thread.opt.mi.get_sase(detector=self.detector)
                 n += 2
 
         self.pntr_cur += 1
@@ -487,7 +495,7 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
 
     def update_sase(self):
 
-        sase_fast = self.opt_thread.opt.mi.get_sase()
+        sase_fast = self.opt_thread.opt.mi.get_sase(detector=self.detector)
         sase_slow = self.opt_thread.opt.mi.get_sase(detector="gmd_fl1_slow")
         if np.isnan(sase_slow):
             sase_slow = 0.

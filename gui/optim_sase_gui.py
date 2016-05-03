@@ -104,10 +104,16 @@ def seq2tree(tree, seq):
         else:
             maxiter = act['maxiter']
         new_chld.append({'name': 'max iter', 'type': 'int', "value": maxiter})
+        try:
+            bBDA = act['pBPM']["BDA"]
+            bTun = act['pBPM']["Tunnel"]
+        except:
+            bBDA = False
+            bTun = False
 
         new_chld.append({'name': 'photon BPMs', 'type': "group", 'expanded': False, 'children':
-            [{'name': 'BDA', 'type': "bool", "value": act['pBPM']["BDA"]},
-             {'name': 'Tunnel', 'type': "bool", "value": act['pBPM']["Tunnel"]}]})
+            [{'name': 'BDA', 'type': "bool", "value": bBDA},
+             {'name': 'Tunnel', 'type': "bool", "value": bTun}]})
 
         new_chld.append({'name': 'start Action', 'type': 'action'})
 

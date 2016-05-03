@@ -427,7 +427,7 @@ class FLASH1MachineInterface():
             ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS'
         print (ch, val)
         self.mutex.acquire()
-        pydoocs.write(ch, str(val))
+        #pydoocs.write(ch, str(val))
         self.mutex.release()
         return 0
 

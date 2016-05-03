@@ -112,7 +112,9 @@ class Ui_MainWindow(object):
         {'name': 'debug', 'type': 'bool', 'value': False},
         {'name': 'logging', 'type': 'bool', 'value': True},
         {'name': 'log file', 'type': 'str', 'value': 'test.log'},
-        {'name': 'timeout', 'type': 'float', 'value': 3, 'step': 0.1, 'limits': (0, 10)}]}
+        {'name': 'timeout', 'type': 'float', 'value': 3, 'step': 0.1, 'limits': (0, 10)},
+        #{'name': 'SASE det.', 'type': 'list', 'values': {'mcp': 'mcp', 'gmd slow':'gmd_fl1_slow', 'bkr':'bkr', 'default':'gmd_default'}, 'value': "default"},
+        {'name': 'detector', 'type': 'list', 'values': ['gmd_default', 'mcp', 'gmd_fl1_slow', 'bkr'], 'value': "gmd_default"} ]}
         ]
 
         self.t_cntr = ParameterTree()

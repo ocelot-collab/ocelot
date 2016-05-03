@@ -68,7 +68,7 @@ class SaveOptParams:
         return dict_cavity
 
     def send_to_db(self):
-        self.db = PerfDB()
+        self.db = PerfDB(dbname = "flash.db")
         tune_id = self.db.current_tuning_id()
         print ('new action for tune_id', tune_id)
         self.db.new_action(tune_id, start_sase = self.data[0]["sase_slow"], end_sase = self.data[1]["sase_slow"])
@@ -89,6 +89,8 @@ class SaveOptParams:
         names = np.append(names, "sase_slow")
         names = np.append(names, "flag")
         names = np.append(names, "niter")
+        names = np.append(names, "pBPM.tun")
+        names = np.append(names, "pBPM.bda")
 
 
 
@@ -107,6 +109,8 @@ class SaveOptParams:
             vals[i] = np.append(vals[i], self.data[i]["sase_slow"])
             vals[i] = np.append(vals[i], self.data[i]["flag"])
             vals[i] = np.append(vals[i], self.data[i]["niter"])
+            vals[i] = np.append(vals[i], self.data[i]["pBPM"]["Tunnel"])
+            vals[i] = np.append(vals[i], self.data[i]["pBPM"]["BDA"])
 
         orbit1 = self.data[0]["orbit"]
         orbit2 = self.data[1]["orbit"]
@@ -134,6 +138,7 @@ class SaveOptParams:
         data_base["devices"] = args[0]
         data_base["method"] = args[1]
         data_base["maxiter"] = args[2]["maxiter"]
+        data_base["pBPM"] = args[2]["pBPM"]
         limits = []
         currents = []
         for dev in data_base["devices"]:
@@ -310,7 +315,7 @@ class FLASH1MachineInterface():
         return alarm_vals
 
     def get_sase(self, detector='gmd_default'):
-        
+        print(detector)
         if detector == 'mcp':
             # incorrect
             return pydoocs.read('TTF2.DIAG/MCP.HV/MCP.HV1/HV_CURRENT')['data']
@@ -385,6 +390,14 @@ class FLASH1MachineInterface():
         nbunches = pydoocs.read("FLASH.DIAG/TIMER/FLASHCPUTIME1.0/NUMBER_BUNCHES.1")
         #print("nbunches = ", nbunches["data"])
         return nbunches["data"]
+
+    def sase_fast(self):
+        nb = self.get_nbunches()
+        ch = 'TTF2.FEL/PHFLUX/TUNNEL/PHOTONPULSE.FF.SPECT'
+        data = pydoocs.read(ch)['data'][700:700 + nb - 1]
+        v = np.mean(np.array([x[1] for x in data]))
+        return v
+
 
     def get_value_ps(self, device_name):
         ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS'
@@ -541,7 +554,7 @@ class TestInterface:
         return np.random.rand(1)[0]
 
     def get_value(self, device_name):
-        print("get value", device_name)
+        #print("get value", device_name)
         return np.random.rand(1)[0]
 
     def set_value(self, device_name, val):

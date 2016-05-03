@@ -110,28 +110,16 @@ def elements(lat, section, groupname='quadrupoles', elemtypes=[Quadrupole]):
     return big_group
 
 
-def knobs():
-    big_group = {'name': 'knobs', 'type': 'group', 'children':[]}
-
-    loc_group1 = {'name': "ACC1-39", 'type': 'group', 'expanded': False, 'children': []}
-
-    loc_group1["children"].append({"name": "Ep1", "type":"bool", "value": False})
-    loc_group1["children"].append({"name": "Ep2", "type":"bool", "value": False})
-    loc_group1["children"].append({"name": "Ep3", "type":"bool", "value": False})
-
-    loc_group2 = {'name': "ACC23", 'type': 'group', 'expanded': False, 'children': []}
-
-    loc_group2["children"].append({"name": "Ep1", "type":"bool", "value": False})
-    loc_group2["children"].append({"name": "Ep2", "type":"bool", "value": False})
-
-    big_group["children"] = [loc_group1, loc_group2]
-
-    return big_group
-
+def create_group(groupname="group", devnames=['dev1',]):
+    group = {'name': groupname, 'type': 'group', 'children':[]}
+    for name in devnames:
+        group['children'].append({"name": name, "type":"bool", "value": False})
+    return group
 
 
 def generate_tree_params(lat):
     devices = []
+
     section = {"first": "GUN-ACC39", 'STARTUBC2': "BC2", 'STARTACC2': "ACC23", 'STARTUBC3': "BC3", 'STARTACC4': "ACC4-7", 'ENDACC7':"DOGLEG",
                'STARTSMATCH1': "MATCH", 'STARTUND': "UND"}
     quads = elements(lat, section, groupname='quadrupoles', elemtypes=[Quadrupole])
@@ -141,7 +129,9 @@ def generate_tree_params(lat):
 
     cavs = rf_cavities(lat)
     devices.append(cavs)
-    devices.append(knobs())
+    devices.append(create_group(groupname="solenoid", devnames=['1GUN']))
+    devices.append(create_group(groupname="dipols", devnames=['D1ECOL']))
+    #devices.append(knobs())
     return devices
 
 

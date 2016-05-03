@@ -8,15 +8,11 @@ from pyqtgraph.Qt import QtCore, QtGui
 import sys
 import numpy as np
 from ocelot.utils.mint.flash1_interface_pydoocs3 import *
-from ocelot.utils.mint.machine_setup import *
+#from ocelot.utils.mint.machine_setup import *
 from ocelot.gui.flash_tree import *
-#from desy.flash.lattices.lattice_rf_red import *
-#from ocelot.utils.mint.mint import TestInterface
 from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
 import pickle
 from ocelot.utils.mint.mint import Optimizer, Action
-#from ocelot.utils.mint.flash1_interface_pydoocs3 import FLASH1MachineInterface, FLASH1DeviceProperties
-#from ocelot.utils.mint.flash_tune_gui import *
 from time import sleep
 
 
@@ -54,19 +50,23 @@ def tree2seq(tree):
         new_seq['tol'] = []
         new_seq['values'] = []
         new_seq["type_devs"] = []
-
+        new_seq["pBPM"] = {}
+        new_seq["pBPM"]['centers'] = [0, 0, 0, 0]  # centers of the photon beam [tun.x, tun.y, bda.x, bda.y]
+        new_seq["pBPM"]['delta'] = [0.5, 0.5, 0.5, 0.5]  # zeros penalty for range centers +- delta; delta=[tun.x, tun.y, bda.x, bda.y]
         for sub in p:
             if sub.opts["type"] == "action":
                 continue
             if sub.opts["name"] == "max iter":
                 new_seq['maxiter'] = sub.opts["value"]
                 continue
+            if sub.opts["name"] == "photon BPMs":
+                for ch in sub:
+                    new_seq["pBPM"][ch.opts["name"]] = ch.opts["value"]
+                continue
+
             indx = sub.opts["name"].find("/")
-            #print(sub.opts["name"].find("/"))
             type_devs = sub.opts["name"][:indx]
             dev = sub.opts["name"][indx+1:]
-            #print(indx, type_devs, dev)
-            #type_devs, dev = sub.opts["name"].split("/")
 
             new_seq['devices'].append(dev)
             new_seq['type_devs'].append(type_devs)
@@ -79,15 +79,6 @@ def tree2seq(tree):
                 #print(I, tol)
                 limits[0] = I - tol
                 limits[1] = I + tol
-                """
-                lim = [float(s) for s in tol.split(',')]
-                if len(lim) == 1:
-                    limits[0] = I*(1. - np.sign(I)*lim[0]/100.)
-                    limits[1] = I*(1. + np.sign(I)*lim[0]/100.)
-                else:
-                    limits[0] = lim[0]
-                    limits[1] = lim[1]
-                """
                 new_seq['tol'].append(limits)
         sequence.append(new_seq)
         #print(sequence)
@@ -105,16 +96,23 @@ def seq2tree(tree, seq):
             #tol_str = [str(np.around(x, 3)) for x in tol]
             name = act["type_devs"][i]+'/'+dev
             tmp = {'name': name, 'type': "str", "value": "0",'readonly': True, 'expanded': False, 'children': []}
-            tmp['children'].append({'name': 'tol.', 'type': "float", "value": tol, 'step': 0.01})
+            tmp['children'].append({'name': 'tol.', 'type': "float", "value": tol, 'step': 0.01, 'tip': 'range: X +/- tol'})
             new_chld.append(tmp)
+
         if act['maxiter'] == None:
             maxiter = 50
         else:
             maxiter = act['maxiter']
         new_chld.append({'name': 'max iter', 'type': 'int', "value": maxiter})
+
+        new_chld.append({'name': 'photon BPMs', 'type': "group", 'expanded': False, 'children':
+            [{'name': 'BDA', 'type': "bool", "value": act['pBPM']["BDA"]},
+             {'name': 'Tunnel', 'type': "bool", "value": act['pBPM']["Tunnel"]}]})
+
         new_chld.append({'name': 'start Action', 'type': 'action'})
 
-        new_seq = {'name': act['name'], 'type': 'int', 'limits': (0, 20),  'value': act['order'],'renamable': True, 'removable': True, 'children': new_chld}
+        new_seq = {'name': act['name'], 'type': 'int', 'limits': (0, 20),  'value': act['order'], 'renamable': True,
+                   'removable': True, 'children': new_chld}
         tree.addChild(new_seq)  # = Parameter.create(name='params', type='group', children=self.sequence)
     return tree
 
@@ -133,6 +131,7 @@ def devices2def_seq(devs, type_devs):
     def_dict['method'] = "simplex"
     def_dict['func'] = "max_sase"
     def_dict['maxiter'] = None
+    def_dict['pBPM'] = {'BDA': False, "Tunnel":False}
     def_seq = [def_dict]
     return def_seq
 
@@ -149,6 +148,8 @@ def optim_params(tree):
                 opt_params['log file'] = sub.opts["value"]
             elif sub.opts["name"] == 'timeout':
                 opt_params['timeout'] = sub.opts["value"]
+            elif sub.opts["name"] == 'detector':
+                opt_params['detector'] = sub.opts["value"]
     return opt_params
 
 
@@ -566,6 +567,9 @@ class Form2(QtGui.QMainWindow, ui_optim_sase.Ui_ChildWindow):
         type_devices = []
         for p in self.p_child:
             for sub in p:
+                if sub.opts["value"] == True:
+                    devices.append(sub.opts["name"])
+                    type_devices.append(p.opts["name"][:4])
                 for ch in sub:
                     if ch.opts["value"] == True:
                         devices.append(ch.opts["name"])
@@ -574,7 +578,10 @@ class Form2(QtGui.QMainWindow, ui_optim_sase.Ui_ChildWindow):
         self.sequence = devices2def_seq(devices, type_devices)
 
     def create_seq(self):
-        #print( "new action = ", self.sequence)
+        print( "new action = ", self.sequence)
+        if len(self.sequence) == 0:
+            QtGui.QMessageBox.about(self, "Error box", "Nothing selected")
+            return 0
         self.parent().new_seq = self.sequence
         self.parent().create_tree()
         self.restore()
@@ -588,7 +595,7 @@ class Form2(QtGui.QMainWindow, ui_optim_sase.Ui_ChildWindow):
 
 def main():
     mi = FLASH1MachineInterface()
-    #mi = TestInterface()
+    mi = TestInterface()
     dp = FLASH1DeviceProperties()
 
     lat = MagneticLattice(lattice)

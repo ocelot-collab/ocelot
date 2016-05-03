@@ -23,7 +23,7 @@ class MachineInterface:
         values range between (0,1) 1 corresponds to alarm level
         '''
         pass
-    def get_sase(self, detector_name='default'):
+    def get_sase(self, detector='default'):
         '''
         return SASE pulse energy
         units and averaging can be arbitrary        '''
@@ -53,7 +53,7 @@ class Optimizer:
         self.timeout = 1.0
         self.logging = False
         self.log_file = "test.log"
-
+        self.detector = 'gmd_default'
         self.wasSaved = False
         self.isRunning = False
         self.niter = 0
@@ -107,6 +107,7 @@ class Optimizer:
 
     def run(self, seq_dict, opt_params):
         self.seq_dict = seq_dict
+        #print(self.seq_dict)
         self.set_limits(seq_dict)
         self.set_params(opt_params)
         seq = self.create_seq(seq_dict)
@@ -120,6 +121,7 @@ class Optimizer:
         self.logging = opt_params["logging"]         #True
         self.log_file = opt_params['log file']       #'test.log'
         self.timeout = opt_params['timeout']         #1.2
+        self.detector = opt_params['detector']       #'gmd_default'
 
     def create_seq(self, seq_dict):
 
@@ -129,7 +131,7 @@ class Optimizer:
             if act["func"] == "min_orbit":
                 func = self.min_orbit
 
-            args = [act["devices"], act["method"], {'maxiter': act["maxiter"]}]
+            args = [act["devices"], act["method"], {'maxiter': act["maxiter"], 'pBPM': act['pBPM']}]
             #print(args)
             action = Action(func=func, args=args)
             sequence.append(action)
@@ -149,6 +151,8 @@ class Optimizer:
         '''
         direct sase optimization with simplex, using correctors as a multiknob
         '''
+        pbpm_bda = params['pBPM']['BDA']
+        pbpm_tun = params['pBPM']['Tunnel']
         if self.debug: print('starting multiknob optimization, correctors = ', devices)
 
         if opt_pointing:
@@ -184,17 +188,30 @@ class Optimizer:
                 if x[i] < limits[0] or x[i] > limits[1]:
                     print('limits exceeded')
                     return pen_max
-    
-    
+
             for i in range(len(devices)):
                 print ('setting', devices[i], '->',x[i])
                 self.mi.set_value(devices[i], x[i])
     
             sleep(self.timeout)
     
-            sase = self.mi.get_sase()
+            sase = self.mi.get_sase(detector=self.detector)
             alarm = np.max(self.mi.get_alarms())
-            #z1, z2 = get_sase_pos()
+
+            # photon beam position penalty
+            pos_pen = 0.
+            if pbpm_tun or pbpm_bda:
+                (tun_x, tun_y), (bda_x, bda_y) = self.mi.get_sase_pos()
+
+                if not pbpm_tun: tun_x, tun_y = 0., 0.
+                if not pbpm_bda: bda_x, bda_y = 0., 0.
+
+                z = np.array([tun_x, tun_y, bda_x, bda_y]) - np.array(params['pBPM']['centers'])
+                z_pen = np.abs(z) - np.array(params['pBPM']['delta'])
+                if max(z_pen) > 0.:
+                    pos_pen = max(z_pen)*3.
+                else:
+                    pos_pen = 0.
     
             if self.debug: print ('alarm:', alarm)
             if self.debug: print ('sase:', sase)
@@ -207,15 +224,15 @@ class Optimizer:
             if alarm > 0.7:
                 return alarm * 50.0
             pen += alarm
-    
+            pen += pos_pen  # photon beam position penalty
             pen -= sase    
-
+            print("PENALTY", pen, pos_pen, params['pBPM']['delta'], params['pBPM']['centers'])
             if self.debug: print ('penalty:', pen)
     
             return pen
         
 
-        sase_ref = self.mi.get_sase()
+        sase_ref = self.mi.get_sase(detector=self.detector)
     
         x = self.mi.init_corrector_vals(devices)
         x_init = x
@@ -288,7 +305,7 @@ class Optimizer:
             print ('using fancy optimizer, params:', params)
             pass
 
-        sase_new = self.mi.get_sase()
+        sase_new = self.mi.get_sase(detector=self.detector)
         #self.save_machine_set()
 
         print ('step ended changing sase from/to', sase_ref, sase_new)
@@ -343,7 +360,7 @@ class Optimizer:
 
             sleep(self.timeout)
 
-            sase = self.mi.get_sase()
+            sase = self.mi.get_sase(detector=self.detector)
             alarm = np.max(self.mi.get_alarms())
             #z1, z2 = get_sase_pos()
 
@@ -366,7 +383,7 @@ class Optimizer:
             return pen
 
 
-        sase_ref = self.mi.get_sase()
+        sase_ref = self.mi.get_sase(detector=self.detector)
 
         x = alpha
         x_init = x
@@ -435,7 +452,7 @@ class Optimizer:
             print ('using fancy optimizer, params:', params)
             pass
 
-        sase_new = self.mi.get_sase()
+        sase_new = self.mi.get_sase(detector=self.detector)
 
         print ('step ended changing sase from/to', sase_ref, sase_new)
         if sase_new <= sase_ref:

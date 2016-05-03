@@ -609,11 +609,11 @@ class Form2(QtGui.QMainWindow, ui_optim_sase.Ui_ChildWindow):
 
 def main():
     mi = FLASH1MachineInterface()
-    #mi = TestInterface()
+    mi = TestInterface()
     dp = FLASH1DeviceProperties()
 
     lat = MagneticLattice(lattice)
-    sop = SaveOptParams(mi, dp, lat)
+    sop = SaveOptParams(mi, dp, lat, dbname='../../data/flash.db')
     #hlmi = HighLevelInterface(lat, mi, dp)
     #opt = Optimizer(mi, dp)
     opt = Optimizer(mi, dp, sop)

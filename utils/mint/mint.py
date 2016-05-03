@@ -152,8 +152,12 @@ class Optimizer:
         '''
         direct sase optimization with simplex, using correctors as a multiknob
         '''
-        pbpm_bda = params['pBPM']['BDA']
-        pbpm_tun = params['pBPM']['Tunnel']
+        try:
+            pbpm_bda = params['pBPM']['BDA']
+            pbpm_tun = params['pBPM']['Tunnel']
+        except:
+            pbpm_bda = False
+            pbpm_tun = False
         if self.debug: print('starting multiknob optimization, correctors = ', devices)
 
         if opt_pointing:
@@ -226,8 +230,8 @@ class Optimizer:
                 return alarm * 50.0
             pen += alarm
             pen += pos_pen  # photon beam position penalty
-            pen -= sase    
-            print("PENALTY", pen, pos_pen, params['pBPM']['delta'], params['pBPM']['centers'])
+            pen -= sase
+            print("PENALTY", pen, pos_pen)
             if self.debug: print ('penalty:', pen)
     
             return pen

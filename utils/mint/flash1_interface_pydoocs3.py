@@ -22,10 +22,11 @@ from ocelot.utils.db import *
 from ocelot.common.globals import *
 
 class SaveOptParams:
-    def __init__(self, mi, dp, lat=None, filename=None):
+    def __init__(self, mi, dp, lat=None, dbname='flash.db'):
         self.mi = mi
         self.dp = dp
-        self.db = PerfDB()
+        self.dbname = dbname
+        self.db = PerfDB(dbname = self.dbname)
         self.data = []
         self.wasSaved = False
         if lat != None:
@@ -68,7 +69,7 @@ class SaveOptParams:
         return dict_cavity
 
     def send_to_db(self):
-        self.db = PerfDB(dbname = "flash.db")
+        self.db = PerfDB(dbname = self.dbname)
         tune_id = self.db.current_tuning_id()
         print ('new action for tune_id', tune_id)
         self.db.new_action(tune_id, start_sase = self.data[0]["sase_slow"], end_sase = self.data[1]["sase_slow"])
@@ -175,7 +176,7 @@ class SaveOptParams:
 
 
     def new_tuning(self):
-        self.db = PerfDB()
+        self.db = PerfDB(dbname=self.dbname)
         sexts =  self.read_magnets(["sextupole"])
         quands = self.read_magnets(["quadrupole"])
         cors =   self.read_magnets(["hcor", "vcor"])
@@ -209,6 +210,7 @@ class SaveOptParams:
         #print(mach_par)
         self.db.add_machine_parameters(tune_id, params = mach_par)
         print ('current machine parameters', self.db.get_machine_parameters(tune_id))
+
 
 
 
@@ -315,7 +317,7 @@ class FLASH1MachineInterface():
         return alarm_vals
 
     def get_sase(self, detector='gmd_default'):
-        print(detector)
+        #print(detector)
         if detector == 'mcp':
             # incorrect
             return pydoocs.read('TTF2.DIAG/MCP.HV/MCP.HV1/HV_CURRENT')['data']
@@ -548,7 +550,9 @@ class TestInterface:
         return 0.0
 
     def init_corrector_vals(self, correctors):
-        vals = [0.0]*len(correctors)
+        vals = []
+        for name in correctors:
+            vals.append(self.get_value( name))
         return vals
 
     def get_cor_value(self, devname):
@@ -556,7 +560,7 @@ class TestInterface:
 
     def get_value(self, device_name):
         #print("get value", device_name)
-        return np.random.rand(1)[0]
+        return 0.3#np.random.rand(1)[0]
 
     def set_value(self, device_name, val):
         return 0.0

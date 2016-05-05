@@ -300,8 +300,9 @@ class FLASH1MachineInterface():
             mag_channel = "TTF2.MAGNETS/SEXT/" + sext[i]
             vals[i] = pydoocs.read(mag_channel + "/PS")['data']
         return vals
+
     def get_alarm_ACC39(self):
-        val = self.get_cav_ampl("ACC39")
+        val = self.get_cav_ampl("M1.ACC39")
         if val >= 20.2:
             return 1.
         elif val >= 20:

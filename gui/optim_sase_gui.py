@@ -1,6 +1,7 @@
 import sys
-sys.path.append("/home/ttflinac/user/tomins/repository/pyqtgraph-0.9.10/build/lib")
-sys.path.append("/home/ttflinac/user/tomins/repository")
+sys.path.append("/home/ttflinac/ocelot/dev/ocelot/gui")
+sys.path.append("/home/ttflinac/ocelot/releases/pyqtgraph-0.9.10/build/lib")
+sys.path.append("/home/ttflinac/ocelot/dev")
 
 from ocelot.gui import ui_optim_sase
 import pyqtgraph as pg
@@ -52,7 +53,7 @@ def tree2seq(tree):
         new_seq["type_devs"] = []
         new_seq["pBPM"] = {}
         new_seq["pBPM"]['centers'] = [0, 0, 0, 0]  # centers of the photon beam [tun.x, tun.y, bda.x, bda.y]
-        new_seq["pBPM"]['delta'] = [0.5, 0.5, 0.5, 0.5]  # zeros penalty for range centers +- delta; delta=[tun.x, tun.y, bda.x, bda.y]
+        new_seq["pBPM"]['delta'] = [0.5, 0.5, 0.5, 0.5]  # zeros penalty for range = centers +- delta; delta=[tun.x, tun.y, bda.x, bda.y]
         for sub in p:
             if sub.opts["type"] == "action":
                 continue

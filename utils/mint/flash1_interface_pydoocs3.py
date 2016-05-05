@@ -418,7 +418,10 @@ class FLASH1MachineInterface():
             ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS.RBV'
         #print("getting value = ", ch)
         #self.mutex.acquire()
-        val = pydoocs.read(ch)['data']
+        try:
+            val = pydoocs.read(ch)['data']
+        except:
+            print("Error in pydoocs.read()")
         #self.mutex.release()
         return val
     
@@ -429,7 +432,10 @@ class FLASH1MachineInterface():
             ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS'
         print (ch, val)
         self.mutex.acquire()
-        #pydoocs.write(ch, str(val))
+        try:
+            pydoocs.write(ch, str(val))
+        except:
+            print("Error in pydoocs.write()")
         self.mutex.release()
         return 0
 

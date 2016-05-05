@@ -167,7 +167,11 @@ class Optimizer:
             weight_gmd_bpm_1 = 0.0
             weight_gmd_bpm_2 = 0.0
     
-        def error_func(x):
+        def error_func(x, x_init, tols):
+            print("X_relative = ", x, x_init, tols)
+            x = x_init + (x-1)*tols/(2.*0.05) # relative to absolute
+            
+            print("X_absolute = ", x, x_init)
             if self.debug: print("isRunning:", self.isRunning)
             self.niter += 1
 
@@ -217,7 +221,7 @@ class Optimizer:
                     pos_pen = max(z_pen)*3.
                 else:
                     pos_pen = 0.
-    
+
             if self.debug: print ('alarm:', alarm)
             if self.debug: print ('sase:', sase)
             #print 'pointing', z1, z2, 'weights', weight_gmd_bpm_1, weight_gmd_bpm_2
@@ -239,9 +243,16 @@ class Optimizer:
 
         sase_ref = self.mi.get_sase(detector=self.detector)
     
-        x = self.mi.init_corrector_vals(devices)
+        x = np.array(self.mi.init_corrector_vals(devices))
+        tols = np.zeros(len(devices))
+        for i, dev in enumerate(devices):
+            limits = self.dp.get_limits(dev)
+            tols[i] = (limits[1] - limits[0])/2.
+        
         x_init = x
-
+        print("TEST", x, x/x_init)
+        #x = x / x_init
+        
         if self.logging: 
             f = open(self.log_file,'a')
             f.write('\n*** optimization step ***\n')
@@ -269,7 +280,7 @@ class Optimizer:
             except KeyError:
                 gtol = 1.e-3
                         
-            opt.fmin_cg(error_func,x,gtol=gtol, epsilon = epsilon, maxiter=max_iter)
+            opt.fmin_cg(error_func, x/x_init, args =(x_init,), gtol=gtol, epsilon = epsilon, maxiter=max_iter)
         
         if method == 'simplex':
             print ('using simplex optimizer, params:', params)
@@ -288,7 +299,7 @@ class Optimizer:
                 xtol = 1.e-3
             self.maxiter=max_iter
             #opt.fmin(error_func,x,xtol=xtol, maxiter=max_iter)
-            opt.fmin(error_func,x,xtol=xtol, maxfun=max_iter)
+            opt.fmin(error_func, np.ones(len(x)), args=(x_init,tols), xtol=xtol, maxfun=max_iter)
 
         if method == 'powell': 
             print ('using powell optimizer, params:', params)
@@ -303,7 +314,7 @@ class Optimizer:
             except KeyError:
                 xtol = 1.e-3
 
-            opt.fmin_powell(error_func,x,xtol=xtol, maxiter=max_iter)
+            opt.fmin_powell(error_func,x/x_init, args=(x_init, ), xtol=xtol, maxiter=max_iter)
 
 
         if method == 'fancy_stuff_from': 

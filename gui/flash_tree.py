@@ -131,6 +131,7 @@ def generate_tree_params(lat):
     devices.append(cavs)
     devices.append(create_group(groupname="solenoid", devnames=['1GUN']))
     devices.append(create_group(groupname="dipols", devnames=['D1ECOL']))
+    devices.append(create_group(groupname="SumvoltACC139", devnames=['SUMVOLTAGE.CURVATURE','SUMVOLTAGE.THIRDDERIVATIVE']))
     #devices.append(knobs())
     return devices
 

@@ -300,6 +300,14 @@ class FLASH1MachineInterface():
             mag_channel = "TTF2.MAGNETS/SEXT/" + sext[i]
             vals[i] = pydoocs.read(mag_channel + "/PS")['data']
         return vals
+    def get_alarm_ACC39(self):
+        val = self.get_cav_ampl("ACC39")
+        if val >= 20.2:
+            return 1.
+        elif val >= 20:
+            return 0.8
+        else:
+            return 0.
 
     def get_alarms(self):
         alarm_vals = np.zeros(len(self.blm_names))
@@ -313,7 +321,7 @@ class FLASH1MachineInterface():
             h = np.array([x[1] for x in sample])
 
             alarm_vals[i] = np.max( np.abs(h) ) / alarm_val 
-            
+        alarm_vals = np.append(alarm_vals, self.get_alarm_ACC39)
         return alarm_vals
 
     def get_sase(self, detector='gmd_default'):
@@ -414,6 +422,8 @@ class FLASH1MachineInterface():
         elif device_name.find("knob")>=0:
             pass
             #return get_knob_value(device_name)
+        elif device_name.find("SUMVOLTAGE")>=0:
+            ch = 'FLASH.RF/LLRF.SUMVOLTAGE_CTRL/ACC139/' + device_name + '.SP.FLASH1'
         else:
             ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS.RBV'
         #print("getting value = ", ch)
@@ -428,12 +438,15 @@ class FLASH1MachineInterface():
     def set_value(self, device_name, val):
         if device_name.find("ACC")>=0:
             ch = 'FLASH.RF/LLRF.CONTROLLER/CTRL.' + device_name
+        elif device_name.find("SUMVOLTAGE")>=0:
+            ch = 'FLASH.RF/LLRF.SUMVOLTAGE_CTRL/ACC139/' + device_name + '.SP.FLASH1'
         else:
             ch = 'TTF2.MAGNETS/STEERER/' + device_name + '/PS'
         print (ch, val)
         self.mutex.acquire()
         try:
-            pydoocs.write(ch, str(val))
+            #pydoocs.write(ch, str(val))
+            pass
         except:
             print("Error in pydoocs.write()")
         self.mutex.release()

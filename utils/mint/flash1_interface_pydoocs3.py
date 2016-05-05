@@ -322,6 +322,7 @@ class FLASH1MachineInterface():
 
             alarm_vals[i] = np.max( np.abs(h) ) / alarm_val 
         alarm_vals = np.append(alarm_vals, self.get_alarm_ACC39)
+        print(alarm_vals)
         return alarm_vals
 
     def get_sase(self, detector='gmd_default'):

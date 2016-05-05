@@ -320,8 +320,9 @@ class FLASH1MachineInterface():
             sample = pydoocs.read(blm_channel)['data']
             h = np.array([x[1] for x in sample])
 
-            alarm_vals[i] = np.max( np.abs(h) ) / alarm_val 
-        alarm_vals = np.append(alarm_vals, self.get_alarm_ACC39)
+            alarm_vals[i] = np.max( np.abs(h) ) / alarm_val
+
+        alarm_vals = np.append(alarm_vals, self.get_alarm_ACC39() )
         print(alarm_vals)
         return alarm_vals
 

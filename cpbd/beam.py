@@ -16,29 +16,29 @@ from numpy import *
 class Twiss:
     def __init__(self, beam = None):
         if beam == None:
-            self.emit_x = 0 # ???
-            self.emit_y = 0 # ???
-            self.beta_x = 0
-            self.beta_y = 0
-            self.alpha_x = 0
-            self.alpha_y = 0
-            self.gamma_x = 0
-            self.gamma_y = 0
-            self.mux = 0.
-            self.muy = 0.
+            self.emit_x = 0.0 # ???
+            self.emit_y = 0.0 # ???
+            self.beta_x = 0.0
+            self.beta_y = 0.0
+            self.alpha_x = 0.0
+            self.alpha_y = 0.0
+            self.gamma_x = 0.0
+            self.gamma_y = 0.0
+            self.mux = 0.0
+            self.muy = 0.0
             #self.dQ = 0.
-            self.Dx = 0
-            self.Dy = 0
-            self.Dxp = 0
-            self.Dyp = 0
-            self.x = 0
-            self.y = 0
-            self.xp = 0
-            self.yp = 0
-            self.E = 0
-            self.p = 0
-            self.tau = 0
-            self.s = 0 # position along the reference trajectory
+            self.Dx = 0.0
+            self.Dy = 0.0
+            self.Dxp = 0.0
+            self.Dyp = 0.0
+            self.x = 0.0
+            self.y = 0.0
+            self.xp = 0.0
+            self.yp = 0.0
+            self.E = 0.0
+            self.p = 0.0
+            self.tau = 0.0
+            self.s = 0.0 # position along the reference trajectory
             self.id = ""
         else:
             self.emit_x = beam.emit_x
@@ -58,16 +58,16 @@ class Twiss:
             self.y = beam.y
             self.xp = beam.xp
             self.yp = beam.yp
-            if beam.beta_x == 0 or beam.beta_y == 0:
-                self.gamma_x = 0
-                self.gamma_y = 0
+            if beam.beta_x == 0.0 or beam.beta_y == 0.0:
+                self.gamma_x = 0.0
+                self.gamma_y = 0.0
             else:
                 self.gamma_x = (1 + beam.alpha_x * beam.alpha_x) / beam.beta_x
                 self.gamma_y = (1 + beam.alpha_y * beam.alpha_y) / beam.beta_y
             self.E = beam.E
-            self.p = 0 
-            self.tau = 0
-            self.s = 0 # position along the reference trajectory
+            self.p = 0.0
+            self.tau = 0.0
+            self.s = 0.0 # position along the reference trajectory
             self.id = ""
 
 
@@ -198,8 +198,8 @@ class ParticleArray:
     '''
     def __init__(self, n = 0):
         self.particles = zeros(n*6)
-        self.s = 0
-        self.E = 0
+        self.s = 0.0
+        self.E = 0.0
 
     def rm_tails(self, xlim, ylim, px_lim, py_lim):
         '''

@@ -40,7 +40,7 @@ Other functions are used by the program, or are use to filter the field with a s
 ##########################
 import sys, os, time
 
-sys.path.append('/usr/lib64/python2.6/site-packages/openmpi-intel')
+#sys.path.append('/usr/lib64/python2.6/site-packages/openmpi-intel')
 sys.path.append('/data/netapp/xfel/gianluca/products/ocelot') 
     
 from mpi4py import MPI

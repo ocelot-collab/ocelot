@@ -177,6 +177,7 @@ def get_genesis_launcher(nproc = 1):
 '''
 #### MODIFIED BY GG ####
 '''
+'''
 def get_genesis_launcher(nproc = 1, hostfilename = ''):
     host = socket.gethostname()
     
@@ -197,6 +198,26 @@ def get_genesis_launcher(nproc = 1, hostfilename = ''):
     launcher.nproc = nproc
     
     return launcher
+'''
+
+'''
+#### 12.05.2016 MODIFIED BY GG FOR MAXWELL####
+'''
+def get_genesis_launcher():
+    host = socket.gethostname()
+    
+    launcher = MpiLauncher()
+    
+    if host.startswith('kolmogorov'):
+        launcher.program = '/home/iagapov/workspace/xcode/codes/genesis/genesis < tmp.cmd | tee log'
+    if host.startswith('max'):
+        launcher.program = '/data/netapp/xfel/gianluca/products/genesis/genesis < tmp.cmd | tee log'
+	launcher.mpiParameters ='-x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH'
+	
+    #launcher.nproc = nproc
+    
+    return launcher
+
 
 def get_data_dir():
     host = socket.gethostname()

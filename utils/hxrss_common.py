@@ -575,7 +575,7 @@ def update_beam_2(beam_new, g, n_interp):
 
 
 
-def sseed_2(hostfile, input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug=True, output_file = None,  xt_couple=False, filterfilename='', method='hxr_wake_calc'):
+def sseed_2(input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug=True, output_file = None,  xt_couple=False, filterfilename='', method='hxr_wake_calc'):
     
     h = 4.135667516e-15
     c = 299792458.0
@@ -742,7 +742,7 @@ def sseed_2(hostfile, input_file, output_files, E_ev, chicane, run_dir, delay = 
 		str(SHF)+' ',                       
 		str(nslice)+' ', 
 		str(dr)])	
-    runpar = '`which mpirun` -x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH --hostfile '+ os.path.abspath('.')+hostfile
+    runpar = '`which mpirun` -x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH'
     prog   = ' '+'python /data/netapp/xfel/gianluca/products/ocelot/utils/seed.py '+ARGS+''
     #prog   = ' '+'python /data/netapp/xfel/svitozar/CODE/ocelot/utils/seed.py '+ARGS+''
     

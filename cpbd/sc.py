@@ -172,35 +172,10 @@ def SC_xp_update(xp, Q, gamref, dS, nxyz):
     xp[:,5] = xp[:, 5] + cdT*(Exyz[:, 2] + betref*(u[:, 0]*Exyz[:, 0] + u[:, 1]*Exyz[:, 1]))
 
 
-"""
-def sc_track(lattice):
-    navi = Navigator(lattice=lattice)
-    #start = time.time()
-
-    for i, zi in enumerate(Z[1:]):
-        print zi
-        dz = zi - Z[i]
-        step(lat=lat, particle_list=p_array, dz=dz, navi=navi, order=order)
-        if SC:
-            #SC_xxstg_update(P, Q, p_array.E / 0.000511, dz, True, nxnynz)
-            #sc.sc_apply(p_array, Q, dz, True, nxnynz)
-            sc.sc_apply(p_array, q_array=Q, zstep=dz, nmesh_xyz=[63, 63, 63], low_order_kick=True)
-        tw = get_envelope(p_array)
-        tw.s = navi.z0
-        tws_track.append(tw)
-        #f.add_subplot(211)
-        #plt.plot(p_array.particles[::6], p_array.particles[2::6], '.')
-        #f.add_subplot(212)
-        #plt.plot(p_array.particles[4::6],p_array.particles[5::6],'.')
-        #plt.draw()
-        #plt.pause(0.1)
-    print "time exc = ", time.time() - start
-"""
         
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-    P=np.loadtxt('D:/MyTools/MartinsTracker/2ASTRA/test.ast')
-    #P=np.loadtxt('D:/MyTools/MartinsTracker/2ASTRA/bc1_out.ast')
+    P=np.loadtxt('test.ast')
     Q=-P[:,7]*1e-9 #charge in nC -> in C 
     xp=P[:,:6] 
     z00=xp[0,2] 
@@ -242,7 +217,7 @@ if __name__ == "__main__":
         plt.draw()
         plt.pause(0.1)
     plt.ioff();plt.show()    
-    np.savetxt('D:/pytest.ast',xxstg)
+    np.savetxt('pytest.ast',xxstg)
     
     
     

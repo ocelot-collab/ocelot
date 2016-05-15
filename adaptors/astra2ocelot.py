@@ -52,7 +52,10 @@ def astraBeam2particleArray(filename):
     print "charge = ", sum(charge_array)
     xp = P0[:, :6]
     Pref = xp[0, 5]
-    xp[0,5] = 0
+    z0=xp[0,2]
+    xp[0,5] = 0.0
+    xp[0,2] = 0.0
+
     gamref = sqrt((Pref/m_e_eV)**2+1)
     xxstg = exact_xp_2_xxstg(xp, gamref)
 
@@ -64,13 +67,13 @@ def astraBeam2particleArray(filename):
     p_array.particles[3::6] = xxstg[:,3]
     p_array.particles[4::6] = xxstg[:,4]
     p_array.particles[5::6] = xxstg[:,5]
-    return p_array, charge_array
+    return p_array, charge_array, z0, gamref
 
-def particleArray2astraBeam(p_array):
+def particleArray2astraBeam(p_array,filename='pytest.ast'):
     gamref = p_array.E/m_e_GeV
     print gamref
     P = p_array.particles.view()
     P.shape = len(P)/6,6
     xp = exact_xxstg_2_xp(P, gamref)
     xp[0, 5] = xp[0, 5] + p_array.E*1e9
-    np.savetxt('pytest.ast',xp)
+    np.savetxt(filename,xp)

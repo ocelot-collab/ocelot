@@ -93,6 +93,8 @@ def el_field(X, Q, gamma, nxyz):
     XX = XX*np.random.uniform(low=1.0, high=1.1)
     print 'mesh steps:', XX
 
+    # here we use a fast 3D "near-point" interpolation 
+    # we need a stand-alone module with 1D,2D,3D parricles-to-grid functions
     steps = XX/(nxyz-3)
     X = X/steps
     X_min = np.min(X, axis=0)

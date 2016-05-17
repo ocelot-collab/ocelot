@@ -3,9 +3,10 @@
 from ocelot.common.globals import m_e_eV
 from ocelot.cpbd.beam import *
 
-def exact_xp_2_xxstg(xp, gamref):
+def exact_xp_2_xxstg(xp, gamref, xxstg=None):
     N = xp.shape[0]
-    xxstg = np.zeros((N, 6))
+    if xxstg is None:
+        xxstg = np.zeros((N, 6))
     pref = m_e_eV*sqrt(gamref**2-1)
     u = np.c_[xp[:, 3], xp[:, 4], xp[:, 5]+pref]
     gamma = np.sqrt(1 + np.sum(u*u, 1)/m_e_eV**2)
@@ -25,9 +26,10 @@ def exact_xp_2_xxstg(xp, gamref):
     return xxstg
 
 
-def exact_xxstg_2_xp(xxstg, gamref):
+def exact_xxstg_2_xp(xxstg, gamref, xp=None):
     N = xxstg.shape[0]
-    xp = np.zeros((N, 6))
+    if xp is None:
+        xp = np.zeros((N, 6))
     pref = m_e_eV*sqrt(gamref**2-1)
     gamma = gamref*(1+xxstg[:, 5])
     beta = np.sqrt(1-gamma**-2)
@@ -69,11 +71,20 @@ def astraBeam2particleArray(filename):
     p_array.particles[5::6] = xxstg[:,5]
     return p_array, charge_array, z0, gamref
 
-def particleArray2astraBeam(p_array,filename='pytest.ast'):
+def particleArray2astraBeam(p_array,charge_array,z0=0,filename='pytest.ast'):
     gamref = p_array.E/m_e_GeV
+    pref = m_e_eV*sqrt(gamref**2-1)
     print gamref
     P = p_array.particles.view()
-    P.shape = len(P)/6,6
-    xp = exact_xxstg_2_xp(P, gamref)
-    xp[0, 5] = xp[0, 5] + p_array.E*1e9
+    Np=len(P)/6
+    P.shape = Np,6
+    xp=np.zeros([Np,10])
+    xp[:,0:6] = exact_xxstg_2_xp(P, gamref)
+    xp[:, 5] = xp[:, 5] + pref
+    xp[:, 2] = xp[:, 2] + z0
+    xp[1:Np, 5] = xp[1:Np, 5]-xp[0, 5]
+    xp[1:Np, 2] = xp[1:Np, 2]-xp[0, 2]
+    xp[:, 7]=-charge_array*1e9
+    xp[:,8]=1 
+    xp[:,9]=5
     np.savetxt(filename,xp)

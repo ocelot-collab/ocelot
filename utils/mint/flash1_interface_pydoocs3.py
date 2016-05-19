@@ -434,10 +434,11 @@ class FLASH1MachineInterface():
         #self.mutex.acquire()
         try:
             val = pydoocs.read(ch)['data']
+            return val
         except:
             print("Error in pydoocs.read(): ch = ", ch)
         #self.mutex.release()
-        return val
+
     
     def set_value(self, device_name, val):
         if device_name.find("ACC")>=0:

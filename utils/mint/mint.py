@@ -201,9 +201,9 @@ class Optimizer:
             for i in range(len(devices)):
                 print ('setting', devices[i], '->',x[i])
                 self.mi.set_value(devices[i], x[i])
-    
+
             sleep(self.timeout)
-            #print("MINT detector", self.detector)
+
             sase = self.mi.get_sase(detector=self.detector)
             alarm = np.max(self.mi.get_alarms())
 

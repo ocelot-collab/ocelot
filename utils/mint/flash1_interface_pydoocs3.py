@@ -434,7 +434,7 @@ class FLASH1MachineInterface():
         try:
             val = pydoocs.read(ch)['data']
         except:
-            print("Error in pydoocs.read()")
+            print("Error in pydoocs.read(): ch = ", ch)
         #self.mutex.release()
         return val
     
@@ -451,7 +451,7 @@ class FLASH1MachineInterface():
             pydoocs.write(ch, str(val))
             #pass
         except:
-            print("Error in pydoocs.write()")
+            print("Error in pydoocs.write(): ch = ", ch, " val = ", val)
         self.mutex.release()
         return 0
 

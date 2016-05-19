@@ -420,7 +420,7 @@ class FLASH1MachineInterface():
         return val
 
     def get_value(self, device_name):
-        print(device_name, device_name.find("ACC"))
+        #print(device_name, device_name.find("ACC"))
         if device_name.find("ACC")==0:
             ch = 'FLASH.RF/LLRF.CONTROLLER/CTRL.' + device_name
         elif device_name.find("knob")>=0:

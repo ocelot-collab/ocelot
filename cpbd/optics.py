@@ -59,19 +59,19 @@ def uni_matrix(z, k1, hx, sum_tilts=0., energy=0.):
 def transform_vec_ent(X, dx, dy, tilt):
     n = len(X)
     rotmat = rot_mtx(tilt)
-    for i in range(n/6):
+    for i in range(int(n/6)):
         X0 = X[6*i:6*(i+1)]
-        X0 -= array([dx, 0., dy, 0., 0., 0.])
+        X0 =X0 - array([dx, 0., dy, 0., 0., 0.])
         X[6*i:6*(i+1)] = dot(rotmat, X0)
     return X
 
 def transform_vec_ext(X, dx, dy, tilt):
     n = len(X)
     rotmat = rot_mtx(-tilt)
-    for i in range(n/6):
+    for i in range(int(n/6)):
         X0 = X[6*i:6*(i+1)]
         X[6*i:6*(i+1)] = dot(rotmat, X0)
-        X0 += array([dx, 0., dy, 0., 0., 0.])
+        X0 = X0 + array([dx, 0., dy, 0., 0., 0.])
     return X
 
 
@@ -161,7 +161,7 @@ class TransferMap:
             #betaf = sqrt(1. - 1./gammaf/gammaf)
             #gammai = Ei/m_e_GeV
             #betai = sqrt(1. - 1./gammai/gammai)
-            k = sqrt(Ef/(Ei))
+            k = sqrt(Ef/Ei)
             M[0, 0] = M[0, 0]*k
             M[0, 1] = M[0, 1]*k
             M[1, 0] = M[1, 0]*k
@@ -549,17 +549,17 @@ def create_transfer_map(element, order=1):
             gamma = (E + 0.5*V*m_e_GeV*cos(phi))/m_e_GeV
             z_ = 0*z/2.
 
-            print(gamma, V, beta**2*V**2*cos(k0*z_  + phi)**2 ,Ep*cos(k0*z_  + phi), k0*beta*V*sin(k0*z_  + phi))
+            #print(gamma, V, beta**2*V**2*cos(k0*z_  + phi)**2 ,Ep*cos(k0*z_  + phi), k0*beta*V*sin(k0*z_  + phi))
             x = 1/(2*gamma)*(beta**2*V**2*cos(k0*z_ + phi)**2 - Ep*cos(k0*z_ + phi) + 0*k0*beta*V*sin(k0*z_ + phi))
 
             eps = np.sqrt(x + 0j)
-            print(eps)
+            #print(eps)
             delta = beta/(2*gamma)*V*cos(k0*z_  + phi)
             r12 = np.exp(-delta*dz)*np.sinh(eps*dz)/eps
             r11 = np.exp(-delta*dz)*np.cosh(eps*dz) + r12*delta
             r21 = (eps**2 - delta**2)*r12
             r22 = r11 - 2*r12*delta
-            print (r11, r12, r21, r22)
+            #print (r11, r12, r21, r22)
             r56 = 0.
             if gamma != 0:
                 gamma2 = gamma*gamma
@@ -583,6 +583,23 @@ def create_transfer_map(element, order=1):
             :param E: initial energy
             :return: matrix
             """
+            # % Serafini, Rosenzweig
+            # E_in=gamref*E_ele _eV;
+            # E_out=E_in+delta_E;
+            #
+            # eta=1.0;
+            # gi=E_in/E_ele_eV;
+            # gf=E_out/E_ele_eV;
+            # gs=(gf-gi)/length;
+            # alpha=sqrt (eta/8)/cos(phi)*log(gf/gi);
+            # m11=cos(alpha)-sqrt(2/eta)*cos(phi)*sin(alpha);
+            # m12=sqrt(8/eta)*gi/gs*cos(phi)*sin(alpha);
+            # m21=-gs/gf*(cos (phi)/sqrt(2*eta)+sqrt (eta/8)/cos(phi))*sin(alpha);
+            # m22=gi/gf*(cos(alpha)+sqrt(2/eta)*cos(phi)*sin(alpha));
+            # m65=-k0*tan(phi)*(gf-gi)/gf;
+            # m66=gi/gf;
+
+
             phi = phi*np.pi/180.
             de = V*cos(phi)
 
@@ -591,11 +608,9 @@ def create_transfer_map(element, order=1):
 
             gamma = (E + 0.5*de)/m_e_GeV
 
-            Ep = de/z  # energy derivative
-
-            Ei = E
-            Ef = E + de
-
+            Ei = E/m_e_GeV
+            Ef = (E + de)/m_e_GeV
+            Ep = (Ef - Ei)/z  # energy derivative
             if Ei == 0:
                 print("Warning! Initial energy is zero and cavity.delta_e != 0! Change Ei or cavity.delta_e must be 0" )
 
@@ -605,12 +620,15 @@ def create_transfer_map(element, order=1):
             sin_alpha = sin(alpha)
 
             r11 = (cos(alpha) - sqrt(2./eta)*cos_phi*sin_alpha)
+
             if abs(Ep) > 1e-10:
                 r12 = sqrt(8./eta)*Ei/Ep*cos_phi*sin_alpha
+
                 #r12 = r11
             else:
                 r12 = z
             r21 = -Ep/Ef*(cos_phi/sqrt(2.*eta) + sqrt(eta/8.)/cos_phi)*sin_alpha
+
             r22 = Ei/Ef*(cos(alpha) + sqrt(2./eta)*cos_phi*sin_alpha)
             #print r11, r12, r21, r22
             r56 = 0.
@@ -638,7 +656,7 @@ def create_transfer_map(element, order=1):
         transfer_map.phi = element.phi
         transfer_map.order = 2
         #if element.v < 1.e-10 and element.delta_e < 1.e-10:
-        if element.delta_e == 0.:
+        if element.delta_e == 0. and element.v == 0.:
             #transfer_map.order = 1
             R_z = lambda z, energy: uni_matrix(z, 0., hx=0., sum_tilts=element.dtilt + element.tilt, energy=energy)
         else:

@@ -18,7 +18,7 @@ from copy import deepcopy
 
 import matplotlib.font_manager as font_manager
 font = {
-        'size'   : 20}
+        'size'   : 30}
 matplotlib.rc('font', **font)
 
 
@@ -283,7 +283,7 @@ def elem_cord(lat):
 
 dict_plot = {"quadrupole": {"scale": 0.7, "color": "r",            "edgecolor": "r",          "label": "quad"},
              "sextupole":  {"scale": 0.5, "color": "g",            "edgecolor": "g",          "label": "sext"},
-             "octupole":  {"scale": 0.5, "color": "g",            "edgecolor": "g",          "label": "sext"},
+             "octupole":   {"scale": 0.5, "color": "g",            "edgecolor": "g",          "label": "sext"},
              "cavity":     {"scale": 0.7, "color": "orange",       "edgecolor": "lightgreen", "label": "cav"},
              "bend":       {"scale": 0.7, "color": "lightskyblue", "edgecolor": "k",          "label": "bend"},
              "rbend":      {"scale": 0.7, "color": "lightskyblue", "edgecolor": "k",          "label": "bend"},
@@ -297,6 +297,7 @@ dict_plot = {"quadrupole": {"scale": 0.7, "color": "r",            "edgecolor": 
              "drift":      {"scale": 0.,  "color": "k",            "edgecolor": "k",          "label": ""},
              "marker":     {"scale": 0.,  "color": "k",            "edgecolor": "k",          "label": "mark"},
              "edge":       {"scale": 0.,  "color": "k",            "edgecolor": "k",          "label": ""},
+             "solenoid":   {"scale": 0.7, "color": "g",            "edgecolor": "g",          "label": "sol"},
              }
 
 
@@ -500,7 +501,7 @@ def plot_disp(ax,tws, top_plot, font_size):
         Fmin.append(min(Ftop))
         Fmax.append(max(Ftop))
         top_label = r"$"+elem+"$"
-        ax.plot(S, Ftop, lw = 2, label=top_label)
+        ax.plot(S, Ftop, "r", lw = 2, label=top_label)
         d_Ftop.append( max(Ftop) - min(Ftop))
     d_F = max(d_Ftop)
     if d_F == 0:
@@ -520,8 +521,8 @@ def plot_disp(ax,tws, top_plot, font_size):
     ax.set_ylabel(top_ylabel)
     
     #ax.plot(S, Dx,'black', lw = 2, label=lable)
-    leg2 = ax.legend(loc='upper right', shadow=True, fancybox=True, prop=font_manager.FontProperties(size=font_size))
-    leg2.get_frame().set_alpha(0.5)
+    leg2 = ax.legend(loc='upper right', shadow=False, fancybox=True, prop=font_manager.FontProperties(size=font_size))
+    leg2.get_frame().set_alpha(0.2)
 
 
 
@@ -530,19 +531,19 @@ def plot_betas(ax, S, beta_x, beta_y, font_size):
     ax.set_ylabel(r"$\beta_{x,y}$, m")
     ax.plot(S, beta_x,'r', lw = 2, label=r"$\beta_{x}$")
     ax.plot(S, beta_y,'b', lw = 2, label=r"$\beta_{y}$")
-    leg = ax.legend(loc='upper right', shadow=True, fancybox=True, prop=font_manager.FontProperties(size=font_size))
-    leg.get_frame().set_alpha(0.5)
+    leg = ax.legend(loc='upper right', shadow=False, fancybox=True, prop=font_manager.FontProperties(size=font_size))
+    leg.get_frame().set_alpha(0.2)
 
 
-def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, fig_name = None):
+def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, fig_name = None, grid=True):
 
-    font_size = 16
+    font_size = 25
     if fig_name == None:
         fig = plt.figure()
     else:
         fig = plt.figure(fig_name)
 
-    plt.rc('axes', grid=True)
+    plt.rc('axes', grid=grid)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
     left, width = 0.1, 0.85
     
@@ -558,10 +559,10 @@ def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, fig_name = None):
             for label in ax.get_xticklabels():
                 label.set_visible(False)
     
-    ax_b.grid(True)
-    ax_top.grid(True)
+    ax_b.grid(grid)
+    ax_top.grid(grid)
     ax_el.set_yticks([])
-    ax_el.grid(True)
+    ax_el.grid(grid)
 
     fig.subplots_adjust(hspace=0)
     beta_x = [p.beta_x for p in tws] # list(map(lambda p:p.beta_x, tws))

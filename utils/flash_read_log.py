@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as md
 import matplotlib
 import sys
-font = {'size'   : 24}
+font = {'size'   : 30}
 matplotlib.rc('font', **font)
 
 
@@ -111,7 +111,7 @@ def read_orbit_log(filename):
     return dict_data_x, dict_data_y
 
 
-def plot_dict(dict_data, filename=None, interval=1, mode="%"):
+def plot_dict(dict_data, filename=None, interval=1, mode="%", grid=True):
     inrv = interval
     times = [datetime.datetime.fromtimestamp(t) for t in dict_data["time"]]
     #print times
@@ -124,9 +124,9 @@ def plot_dict(dict_data, filename=None, interval=1, mode="%"):
 
     xfmt = md.DateFormatter('%H:%M:%S')
     ax.xaxis.set_major_formatter(xfmt)
-    ax.set_ylabel(r"$U,\, \mu J$")
-    pax2 = ax.plot(times[::inrv],  dict_data["sase"][::inrv],"r-", lw=3, label = "sase")
-    #ax.grid()
+    ax.set_ylabel(r"$U,\, [\mu J]$")
+    pax2 = ax.plot(times[::inrv],  dict_data["sase"][::inrv],"r-", lw=4, label = "sase")
+    ax.grid(grid)
 
     ax.set_xlim([times[0], datetime.datetime.fromtimestamp(dict_data["time"][-1])])
     ax.legend(loc=1, framealpha=0.7)
@@ -138,14 +138,14 @@ def plot_dict(dict_data, filename=None, interval=1, mode="%"):
         x = dict_data[device]
         shift = np.around(x[0], decimals=2)
         if mode == "%":
-            ax2.plot( times[::inrv], (x[::inrv] - x[0])/x[0], label = device)
+            ax2.plot( times[::inrv], (x[::inrv] - x[0])/x[0], lw = 2, label = device)
         else:
-            ax2.plot( times[::inrv], x[::inrv] - shift, label = device + ": " + str(shift) )
+            ax2.plot( times[::inrv], x[::inrv] - shift,lw=2,  label = device + ": " + str(shift) )
     fig.autofmt_xdate()
     pict.append(pax2)
-    #ax2.legend(loc=4, framealpha=0.7)
+    ax2.legend(loc=4, framealpha=0.7)
     #ax2.legend(loc=4)
-    ax2.grid(True)
+    ax2.grid(grid)
     if mode == "%":
         ax2.set_ylabel(r"$\Delta I/I$")
     else:
@@ -175,7 +175,7 @@ def timslot_extract(dict_data, timeslot):
         dict_data[name] = dict_data[name][ind_0:ind_1]
     return dict_data
 
-def plot_log(filename, devices=None, timeslot=None, mode="%"):
+def plot_log(filename, devices=None, timeslot=None, mode="%", grid=True):
 
     dict_data = read_log(filename)
     if timeslot is not None:
@@ -189,7 +189,7 @@ def plot_log(filename, devices=None, timeslot=None, mode="%"):
         for name in devices:
             dict_data_new[name] = dict_data[name]
         dict_data = dict_data_new
-    plot_dict(dict_data, filename=filename, interval=1, mode=mode)
+    plot_dict(dict_data, filename=filename, interval=1, mode=mode, grid=grid)
 
 
 def rm_nonwork_devices(dict_data, threshold=0.01, debug=False, rm_devices=["",]):
@@ -247,10 +247,12 @@ if __name__ == "__main__":
         filename = sys.argv[1]
     else:
         filename = "../../desy/flash/exp_files/new_opt_4.txt"
+        #filename = "../../desy/flash/exp_files/optim.txt"
+        #filename = "../../desy/flash/exp_files_1_02/cor_sase_shif.txt"
         #filename = "../../desy/flash/exp_files_1_02/cor_sase_shif.txt"
     #filename = read_wrong(filename)
     #print filename
     #, "bda_x", "bda_y"
     #"tun_x", "tun_y"
     #plot_log(filename, devices=["bda_x", "bda_y"], timeslot=["01:52", "02:02"], mode="units")
-    plot_log(filename, devices=['V3DBC3', 'H3DBC3', 'H10SMATCH', 'V14SMATCH', 'H12SMATCH', 'V7SMATCH'], timeslot=None)
+    plot_log(filename, devices=['V3DBC3', 'H3DBC3', 'H10SMATCH', 'H12SMATCH', 'V14SMATCH', 'V7SMATCH'], timeslot=None, grid=False)

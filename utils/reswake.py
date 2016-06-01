@@ -105,7 +105,7 @@ def LossShape(bunch, wake):
 def pipe_wake(z, current, tube_radius, tube_len, conductivity, tau, roughness, d_oxid):
 
     Q = simps(current, z)/speed_of_light
-    print "Charge = ", Q*1e12, "pC"
+    print ("Charge = ", Q*1e12, "pC")
     xb = -z[::-1]
     yb = current[::-1]/(speed_of_light*Q)
     Q = Q*1e12 #C->pC

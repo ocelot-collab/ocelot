@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as md
 import matplotlib
 import sys
-font = {'size'   : 30}
+font = {'size'   : 35}
 matplotlib.rc('font', **font)
 
 
@@ -114,7 +114,7 @@ def read_orbit_log(filename):
 def plot_dict(dict_data, filename=None, interval=1, mode="%", grid=True):
     inrv = interval
     times = [datetime.datetime.fromtimestamp(t) for t in dict_data["time"]]
-    #print times
+    #print (times)
     devices = list(dict_data.keys())
     devices.remove("time")
     devices.remove("sase")
@@ -124,7 +124,7 @@ def plot_dict(dict_data, filename=None, interval=1, mode="%", grid=True):
 
     xfmt = md.DateFormatter('%H:%M:%S')
     ax.xaxis.set_major_formatter(xfmt)
-    ax.set_ylabel(r"$U,\, [\mu J]$")
+    ax.set_ylabel(r"U [$\mu$ J]")
     pax2 = ax.plot(times[::inrv],  dict_data["sase"][::inrv],"r-", lw=4, label = "sase")
     ax.grid(grid)
 
@@ -143,7 +143,7 @@ def plot_dict(dict_data, filename=None, interval=1, mode="%", grid=True):
             ax2.plot( times[::inrv], x[::inrv] - shift,lw=2,  label = device + ": " + str(shift) )
     fig.autofmt_xdate()
     pict.append(pax2)
-    ax2.legend(loc=4, framealpha=0.7)
+    ax2.legend(loc=4, framealpha=0.5)
     #ax2.legend(loc=4)
     ax2.grid(grid)
     if mode == "%":

@@ -572,13 +572,17 @@ test interface
 '''
 class TestInterface:
     def __init__(self):
-        pass
+        self.dev = {}
+
     def get_alarms(self):
-        return np.random.rand(4)#0.0, 0.0, 0.0, 0.0]
+        return np.random.rand(4)*0.2 #0.0, 0.0, 0.0, 0.0]
 
     def get_sase(self, detector=None):
         #print("Detector", detector)
-        return 0.0
+        S = 0.
+        for name in self.dev:
+            S += (self.dev[name] - 0.3)**2 + np.random.rand(1)[0]*0.1
+        return S
 
     def init_corrector_vals(self, correctors):
         vals = []
@@ -591,9 +595,14 @@ class TestInterface:
 
     def get_value(self, device_name):
         #print("get value", device_name)
-        return np.random.rand(1)[0]
+        try:
+            val = self.dev[device_name]
+        except:
+            val = 0.
+        return val#np.random.rand(1)[0]
 
     def set_value(self, device_name, val):
+        self.dev[device_name] = val
         return 0.0
 
     def get_quads_current(self, device_names):

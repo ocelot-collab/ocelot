@@ -16,6 +16,8 @@ import pickle
 from ocelot.utils.mint.mint import Optimizer, Action
 from time import sleep
 
+#pg.setConfigOption('background', 'w')
+#pg.setConfigOption('foreground', 'k')
 
 class Logger(object):
     def __init__(self, form, filename="default.log"):
@@ -234,8 +236,10 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
 
         self.sase.setDownsampling(mode='peak')
         self.sase.setClipToView(True)
-        self.curve_sase_fast = self.sase.plot()
-        self.curve_sase_slow = self.sase.plot()
+        self.sase.addLegend()
+        self.curve_sase_fast = self.sase.plot(name = "det")
+        self.curve_sase_slow = self.sase.plot(name='slow')
+        self.curve_penalty = self.sase.plot(name='pen')
 
         self.curve_blm = self.blm.plot()
         self.blm.setYRange(0, 1)
@@ -246,10 +250,9 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         #self.curve_orb_x_ref = self.p_x.plot()
         #self.curve_orb_y = self.p_y.plot()
         #self.curve_orb_y_ref = self.p_y.plot()
-        self.data_fast = np.empty(100)
-        self.ptr1 = 0
-        self.data_slow = np.empty(100)
-        self.ptr2 = 0
+        self.data_sase = np.empty((3, 100))
+        self.ptr_sase = 0
+
         #orbit= self.hlmi.read_bpms()
         #orbit = self.opt_thread.opt.sop.read_bpms()
         #self.x = np.array([z[2] for z in orbit])
@@ -434,40 +437,21 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
                     current = self.opt_thread.opt.mi.get_value(dev)
                     dict_cur[dev] = current
                 child.setValue(str(current))
-        if self.opt_thread.opt.isRunning == True:
-            self.update_current()
+        #if self.opt_thread.opt.isRunning == True:
+        self.update_current()
 
     def create_tree_cur_contr(self):
-        devices = []
+        #devices = []
         self.p_cur_cntr.clearChildren()
-        #self.p_cur_cntr.addChild(devices)
         for act in self.work_seq:
             for i, devname in enumerate(act["devices"]):
-                #devices.append(devname)
-                #devices.append({'name': devname, 'type': 'bool','value': False})
                 self.p_cur_cntr.addChild({'name': devname, 'type': 'bool','value': False})
-        #self.p_cur_cntr.addChild({'name': 'Devices', 'type': 'list', 'values': devices, 'value': 0})
-        #self.p_cur_cntr.opts["values"] = devices
-
         self.t_cur_cntr.setParameters(self.p_cur_cntr, showTop=False)
-        return devices
+        return #devices
 
     def update_current(self):
         n = 0
         dict_cur = {}
-        for act in self.work_seq:
-            for i, devname in enumerate(act["devices"]):
-                if devname in dict_cur.keys():
-                    current_RBS = dict_cur[devname]
-                    surrent_set = current_RBS
-                else:
-                    current_RBS = self.opt_thread.opt.mi.get_value(devname)
-                    dict_cur[devname] = current_RBS
-                    surrent_set = current_RBS #self.opt_thread.opt.mi.get_value_ps(devname)
-                self.data[n, self.pntr_cur] = surrent_set
-                self.data[n+1, self.pntr_cur] = current_RBS
-                self.data[-1, self.pntr_cur] = self.opt_thread.opt.mi.get_sase(detector=self.detector)
-                n += 2
 
         self.pntr_cur += 1
         if self.pntr_cur >= self.data.shape[1]:
@@ -478,6 +462,19 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         devices = [p.opts["name"] for p in self.p_cur_cntr]
         devbools= [p.opts["value"] for p in self.p_cur_cntr]
         for i, name in enumerate(devices):
+
+            if name in dict_cur.keys():
+                current_RBS = dict_cur[name]
+                surrent_set = current_RBS
+            else:
+                current_RBS = self.opt_thread.opt.mi.get_value(name)
+                dict_cur[name] = current_RBS
+                surrent_set = current_RBS #self.opt_thread.opt.mi.get_value_ps(devname)
+            self.data[n, self.pntr_cur] = surrent_set
+            self.data[n+1, self.pntr_cur] = current_RBS
+            self.data[-1, self.pntr_cur] = self.opt_thread.opt.mi.get_sase(detector=self.detector)
+            n += 2
+
             if devbools[i]:
                 self.curves_cur[i].setData(self.data[2*i, :self.pntr_cur])
             else:
@@ -498,35 +495,29 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
 
 
     def update_sase(self):
-
         sase_fast = self.opt_thread.opt.mi.get_sase(detector=self.detector)
         sase_slow = self.opt_thread.opt.mi.get_sase(detector="gmd_fl1_slow")
+        penalty = -self.opt_thread.opt.penalty
         if np.isnan(sase_slow):
             sase_slow = 0.
 
-        self.data_fast[self.ptr1] = sase_fast #np.random.normal()
-        self.ptr1 += 1
+        self.data_sase[0, self.ptr_sase] = sase_fast #np.random.normal()
+        self.data_sase[1, self.ptr_sase] = sase_slow
+        self.data_sase[2, self.ptr_sase] = penalty
+        self.ptr_sase += 1
+        if self.ptr_sase >= self.data_sase.shape[1]:
+            tmp1 = self.data_sase
+            self.data_sase = np.empty((3, self.data_sase.shape[1] * 2))
+            self.data_sase[:, :tmp1.shape[1]] = tmp1[:, :]
 
-        self.data_slow[self.ptr2] = sase_slow #np.random.normal()
-        self.ptr2 += 1
-        if self.ptr1 >= self.data_fast.shape[0]:
-            tmp1 = self.data_fast
-            tmp2 = self.data_slow
-            self.data_fast = np.empty(self.data_fast.shape[0] * 2)
-            self.data_fast[:tmp1.shape[0]] = tmp1
-
-            self.data_slow = np.empty(self.data_slow.shape[0] * 2)
-            self.data_slow[:tmp2.shape[0]] = tmp2
-
-        self.curve_sase_fast.setData(self.data_fast[:self.ptr1])
-
-        self.curve_sase_slow.setData(self.data_slow[:self.ptr2], pen='r')
+        self.curve_sase_fast.setData(self.data_sase[0, :self.ptr_sase])
+        self.curve_sase_slow.setData(self.data_sase[1, :self.ptr_sase], width=3,  pen='r', name="sdf")
+        self.curve_penalty.setData(self.data_sase[2, :self.ptr_sase], width=3,  pen='g')
 
     def clear_sase(self):
-        self.data_fast = np.empty(100)
-        self.ptr1 = 0
-        self.data_slow = np.empty(100)
-        self.ptr2 = 0
+        self.data_sase = np.empty((2, 100))
+        self.ptr_sase = 0
+
 
     #def update_orbit(self):
     #    orbit = self.opt_thread.opt.sop.read_bpms()
@@ -613,7 +604,7 @@ class Form2(QtGui.QMainWindow, ui_optim_sase.Ui_ChildWindow):
 
 def main():
     mi = FLASH1MachineInterface()
-    mi = TestInterface()
+    #mi = TestInterface()
     dp = FLASH1DeviceProperties()
 
     lat = MagneticLattice(lattice)

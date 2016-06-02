@@ -60,6 +60,7 @@ class Optimizer:
         self.maxiter = None
         self.sop = sop
         self.seq_init_cur = [[]]
+        self.penalty = 0.
 
 
     def eval(self, seq, logging = False, log_file = None):
@@ -237,7 +238,7 @@ class Optimizer:
             pen -= sase
             #print("PENALTY", pen, pos_pen)
             if self.debug: print ('penalty:', pen)
-    
+            self.penalty = pen
             return pen
         
 
@@ -250,7 +251,7 @@ class Optimizer:
             tols[i] = (limits[1] - limits[0])/2.
         
         x_init = x
-        print("TEST", x, x/x_init)
+        print("TEST", x)
         #x = x / x_init
         
         if self.logging: 
@@ -296,7 +297,7 @@ class Optimizer:
             self.maxiter=max_iter
             #opt.fmin(error_func,x,xtol=xtol, maxiter=max_iter)
             opt.fmin(error_func, np.ones(len(x)), args=(x_init,tols), xtol=xtol, maxfun=max_iter)
-
+            #opt.fmin(error_func, x, args=(x_init,tols), xtol=xtol, maxfun=max_iter)
         if method == 'powell': 
             print ('using powell optimizer, params:', params)
             try:

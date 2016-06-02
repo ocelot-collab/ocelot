@@ -73,7 +73,7 @@ class SaveOptParams:
         tune_id = self.db.current_tuning_id()
         print ('new action for tune_id', tune_id)
         self.db.new_action(tune_id, start_sase = self.data[0]["sase_slow"], end_sase = self.data[1]["sase_slow"])
-        print ('current actions in tuning', [(t.id, t.tuning_id, t.sase_start, t.sase_end) for t in self.db.get_actions()])
+        #print ('current actions in tuning', [(t.id, t.tuning_id, t.sase_start, t.sase_end) for t in self.db.get_actions()])
         action_id = self.db.current_action_id()
         print ('updating', tune_id, action_id)
 
@@ -92,8 +92,8 @@ class SaveOptParams:
         names = np.append(names, "niter")
         names = np.append(names, "pBPM.tun")
         names = np.append(names, "pBPM.bda")
-
-
+        names = np.append(names, "charge")
+        names = np.append(names, "wavelength")
 
         vals = [np.array([]), np.array([])]
         for i, val in enumerate(vals):
@@ -112,7 +112,10 @@ class SaveOptParams:
             vals[i] = np.append(vals[i], self.data[i]["niter"])
             vals[i] = np.append(vals[i], self.data[i]["pBPM"]["Tunnel"])
             vals[i] = np.append(vals[i], self.data[i]["pBPM"]["BDA"])
-
+            vals[i] = np.append(vals[i], self.data[i]["charge"])
+            vals[i] = np.append(vals[i], self.data[i]["wavelength"])
+        #orbit !!!
+        """
         orbit1 = self.data[0]["orbit"]
         orbit2 = self.data[1]["orbit"]
         for i, bpm in enumerate(orbit1):
@@ -123,6 +126,7 @@ class SaveOptParams:
             bpm2 = orbit2[i]
             vals[1] = np.append(vals[1], bpm2[2])
             vals[1] = np.append(vals[1], bpm2[3])
+        """
         #print("shape datda", len(self.data) )
         #print(self.data[0]["sase_pos"])
         #print(names, vals[0], vals[1])
@@ -139,6 +143,7 @@ class SaveOptParams:
         data_base["devices"] = args[0]
         data_base["method"] = args[1]
         data_base["maxiter"] = args[2]["maxiter"]
+        #print('data_base["pBPM"] = args[2]["pBPM"]', args[2]["pBPM"])
         data_base["pBPM"] = args[2]["pBPM"]
         limits = []
         currents = []
@@ -151,13 +156,15 @@ class SaveOptParams:
         data_base["niter"] = niter
         data_base["sase"] = self.mi.get_sase()
         data_base["sase_slow"] = self.mi.get_sase(detector='gmd_fl1_slow')
-
-
+        data_base['charge'] = self.mi.get_charge()
+        data_base['wavelength'] = self.mi.get_wavelangth()
+        # orbit !!!
+        """
         orbit = []
         if self.lat != None:
             orbit = self.read_bpms()
         data_base["orbit"] = orbit
-
+        """
 
         if flag == "start":
             print(flag)
@@ -168,7 +175,7 @@ class SaveOptParams:
             return True
         else:
             self.data.append(data_base)
-            print("#### ***** ",flag,  len(self.data)  #, data_base
+            print("#### ***** ", flag,  len(self.data)  #, data_base
                   )
             self.wasSaved = self.send_to_db()
             self.data = []
@@ -584,7 +591,7 @@ class TestInterface:
 
     def get_value(self, device_name):
         #print("get value", device_name)
-        return 0.3#np.random.rand(1)[0]
+        return np.random.rand(1)[0]
 
     def set_value(self, device_name, val):
         return 0.0

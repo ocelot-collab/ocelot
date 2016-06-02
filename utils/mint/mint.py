@@ -169,7 +169,7 @@ class Optimizer:
     
         def error_func(x, x_init, tols):
             print("X_relative = ", x, x_init, tols)
-            x = x_init + (x-1)*tols/(2.*0.05) # relative to absolute
+            x = x_init + (x-1)*tols/(10.*0.05) # relative to absolute
             
             print("X_absolute = ", x, x_init)
             if self.debug: print("isRunning:", self.isRunning)
@@ -208,6 +208,7 @@ class Optimizer:
             alarm = np.max(self.mi.get_alarms())
 
             # photon beam position penalty
+            """
             pos_pen = 0.
             if pbpm_tun or pbpm_bda:
                 (tun_x, tun_y), (bda_x, bda_y) = self.mi.get_sase_pos()
@@ -221,21 +222,20 @@ class Optimizer:
                     pos_pen = max(z_pen)*3.
                 else:
                     pos_pen = 0.
-
+            """
             if self.debug: print ('alarm:', alarm)
             if self.debug: print ('sase:', sase)
             #print 'pointing', z1, z2, 'weights', weight_gmd_bpm_1, weight_gmd_bpm_2
-    
+
             pen = 0.0
-    
             if alarm > 1.0:
                 return pen_max
             if alarm > 0.7:
                 return alarm * 50.0
             pen += alarm
-            pen += pos_pen  # photon beam position penalty
+            #pen += pos_pen  # photon beam position penalty
             pen -= sase
-            print("PENALTY", pen, pos_pen)
+            #print("PENALTY", pen, pos_pen)
             if self.debug: print ('penalty:', pen)
     
             return pen
@@ -264,22 +264,18 @@ class Optimizer:
         
         if method == 'cg':
             print ('using CG optimizer, params:', params )
-            
             try:
                 max_iter = params['maxiter']
             except KeyError:
                 max_iter = 10 * len(x)
-
             try:
                 epsilon = params['epsilon']
             except KeyError:
                 epsilon = 0.1
-
             try:
                 gtol = params['gtol']
             except KeyError:
                 gtol = 1.e-3
-                        
             opt.fmin_cg(error_func, x/x_init, args =(x_init,), gtol=gtol, epsilon = epsilon, maxiter=max_iter)
         
         if method == 'simplex':
@@ -303,17 +299,14 @@ class Optimizer:
 
         if method == 'powell': 
             print ('using powell optimizer, params:', params)
-            
             try:
                 max_iter = params['maxiter']
             except KeyError:
                 max_iter = 10 * len(x)
-
             try:
                 xtol = params['xtol']
             except KeyError:
                 xtol = 1.e-3
-
             opt.fmin_powell(error_func,x/x_init, args=(x_init, ), xtol=xtol, maxiter=max_iter)
 
 
@@ -324,11 +317,11 @@ class Optimizer:
         sase_new = self.mi.get_sase(detector=self.detector)
         #self.save_machine_set()
 
-        print ('step ended changing sase from/to', sase_ref, sase_new)
-        if sase_new <= sase_ref:
-            for i in range(len(devices)):
-                print ('reverting', devices[i], '->',x_init[i])
-                self.mi.set_value(devices[i], x_init[i])
+        #print ('step ended changing sase from/to', sase_ref, sase_new)
+        #if sase_new <= sase_ref:
+        #    for i in range(len(devices)):
+        #        print ('reverting', devices[i], '->',x_init[i])
+        #        self.mi.set_value(devices[i], x_init[i])
 
         if self.logging:
              f.write('sase_new=' + str(sase_new) + '\n')

@@ -54,6 +54,8 @@ def tree2seq(tree):
         new_seq["pBPM"] = {}
         new_seq["pBPM"]['centers'] = [0, 0, 0, 0]  # centers of the photon beam [tun.x, tun.y, bda.x, bda.y]
         new_seq["pBPM"]['delta'] = [0.5, 0.5, 0.5, 0.5]  # zeros penalty for range = centers +- delta; delta=[tun.x, tun.y, bda.x, bda.y]
+        new_seq["pBPM"]['Tunnel'] = False
+        new_seq["pBPM"]['BDA'] = False
         for sub in p:
             if sub.opts["type"] == "action":
                 continue
@@ -97,7 +99,7 @@ def seq2tree(tree, seq):
             #tol_str = [str(np.around(x, 3)) for x in tol]
             name = act["type_devs"][i]+'/'+dev
             tmp = {'name': name, 'type': "str", "value": "0",'readonly': True, 'expanded': False, 'children': []}
-            tmp['children'].append({'name': 'tol.', 'type': "float", "value": tol, 'step': 0.01, 'tip': 'range: X +/- tol'})
+            tmp['children'].append({'name': 'lim', 'type': "float", "value": tol, 'step': 0.01, 'tip': 'range: X +/- lim'})
             new_chld.append(tmp)
 
         if act['maxiter'] == None:
@@ -112,9 +114,9 @@ def seq2tree(tree, seq):
             bBDA = False
             bTun = False
 
-        new_chld.append({'name': 'photon BPMs', 'type': "group", 'expanded': False, 'children':
-            [{'name': 'BDA', 'type': "bool", "value": bBDA},
-             {'name': 'Tunnel', 'type': "bool", "value": bTun}]})
+        #new_chld.append({'name': 'photon BPMs', 'type': "group", 'expanded': False, 'children':
+        #    [{'name': 'BDA', 'type': "bool", "value": bBDA},
+        #     {'name': 'Tunnel', 'type': "bool", "value": bTun}]})
 
         new_chld.append({'name': 'start Action', 'type': 'action'})
 
@@ -210,19 +212,19 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         self.detector = opt_params["detector"]
         #self.hlmi = high_level_mi
 
-        self.start_opt_btm.clicked.connect(self.start_opt)
+        #self.start_opt_btm.clicked.connect(self.start_opt)
         self.restore_cur_btn.clicked.connect(self.restore)
         self.stop_opt_btn.clicked.connect(self.force_stop)
-        self.setmax_opt_btn.clicked.connect(self.set_max_sase)
+        #self.setmax_opt_btn.clicked.connect(self.set_max_sase)
         self.save_machine_btn.clicked.connect(self.write_machine)
         self.clear_disp_btn.clicked.connect(self.clear_sase)
         self.save_seq_btn.clicked.connect(self.save_sequences)
         self.load_seq_btn.clicked.connect(self.load_sequences)
 
 
-        self.save_btn.clicked.connect(self.orbit2file)
-        self.load_btn.clicked.connect(self.file2orb)
-        self.ref_btm.clicked.connect(self.ref_orbit)
+        #self.save_btn.clicked.connect(self.orbit2file)
+        #self.load_btn.clicked.connect(self.file2orb)
+        #self.ref_btm.clicked.connect(self.ref_orbit)
 
         self.add_seq_btn.clicked.connect(self.create_child)
         #self.restore_btn.clicked.connect(self.create_tree)
@@ -238,23 +240,23 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         self.curve_blm = self.blm.plot()
         self.blm.setYRange(0, 1)
 
-        self.p_x = self.orbit.addPlot(title="X", row=0, col=0)
-        self.p_y = self.orbit.addPlot(title="Y", row=1, col=0)
-        self.curve_orb_x = self.p_x.plot()
-        self.curve_orb_x_ref = self.p_x.plot()
-        self.curve_orb_y = self.p_y.plot()
-        self.curve_orb_y_ref = self.p_y.plot()
+        #self.p_x = self.orbit.addPlot(title="X", row=0, col=0)
+        #self.p_y = self.orbit.addPlot(title="Y", row=1, col=0)
+        #self.curve_orb_x = self.p_x.plot()
+        #self.curve_orb_x_ref = self.p_x.plot()
+        #self.curve_orb_y = self.p_y.plot()
+        #self.curve_orb_y_ref = self.p_y.plot()
         self.data_fast = np.empty(100)
         self.ptr1 = 0
         self.data_slow = np.empty(100)
         self.ptr2 = 0
         #orbit= self.hlmi.read_bpms()
-        orbit = self.opt_thread.opt.sop.read_bpms()
-        self.x = np.array([z[2] for z in orbit])
-        self.y = np.array([z[3] for z in orbit])
-        self.s = np.array([z[1] for z in orbit])
-        self.x_ref = np.zeros(len(self.x))
-        self.y_ref = np.zeros(len(self.y))
+        #orbit = self.opt_thread.opt.sop.read_bpms()
+        #self.x = np.array([z[2] for z in orbit])
+        #self.y = np.array([z[3] for z in orbit])
+        #self.s = np.array([z[1] for z in orbit])
+        #self.x_ref = np.zeros(len(self.x))
+        #self.y_ref = np.zeros(len(self.y))
         self.p.sigTreeStateChanged.connect(self.change)
         self.p_cntr.sigTreeStateChanged.connect(self.change_detector)
         #self.tmp = None
@@ -268,8 +270,11 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
 
 
     def force_stop(self):
-        print("force stop")
 
+        if self.opt_thread.opt.isRunning == False:
+            #QtGui.QMessageBox.about(self, "Error box", "Action is nor running" )
+            return 0
+        print("force stop")
         self.opt_thread.opt.isRunning=False
         #print("wasSaved:", self.opt_thread.opt.wasSaved)
         for i in range(300):
@@ -291,20 +296,20 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
     def error_box(self):
         QtGui.QMessageBox.about(self, "Error box", "all Actions have zero order" )
 
-    def start_opt(self):
-        self.sequence = np.array(tree2seq(tree=self.p))
-        order = []
-        for act in self.sequence:
-            order.append(act['order'])
-        order = np.array(order)
-        indx_sort = np.argsort(order)
-        indx = np.nonzero(order[indx_sort])[0]
-        indx = indx_sort[indx]
-        if len(indx) == 0:
-            self.error_box()
-        else:
-            self.work_seq = self.sequence[indx]
-            self.optimization()
+    #def start_opt(self):
+    #    self.sequence = np.array(tree2seq(tree=self.p))
+    #    order = []
+    #    for act in self.sequence:
+    #        order.append(act['order'])
+    #    order = np.array(order)
+    #    indx_sort = np.argsort(order)
+    #    indx = np.nonzero(order[indx_sort])[0]
+    #    indx = indx_sort[indx]
+    #    if len(indx) == 0:
+    #        self.error_box()
+    #    else:
+    #        self.work_seq = self.sequence[indx]
+    #        self.optimization()
 
     def restore(self):
         if not self.opt_thread.opt.isRunning:
@@ -321,7 +326,7 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
 
             self.opt_thread.seq_dict=self.work_seq
             self.opt_thread.opt_params=opt_params
-            #print(self.work_seq)
+            print(self.work_seq)
             self.opt_thread.start()
 
             # currents drawing
@@ -332,8 +337,12 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
             self.current.clear()
             self.data = np.zeros((self.ndevs*2+1, 100))
             self.current.addLegend()
-            self.curves_cur = [self.current.plot(pen='r', name='set'), self.current.plot(pen='g', name='RBV')]
-
+            #print("work_seq = ", self.work_seq[0]["devices"])
+            #self.curves_cur = []#[self.current.plot(pen='r', name='set'), self.current.plot(pen='g', name='RBV')]
+            self.curves_cur = []
+            c = ["r", "g", "b", "y", "w", 'm']
+            for i, name in enumerate(self.work_seq[0]["devices"]):
+                self.curves_cur.append(self.current.plot(pen=c[i%6],  name=name))
             self.pntr_cur = 0
 
 
@@ -398,19 +407,19 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         self.t.setParameters(self.p, showTop=False)
 
 
-    def orbit2file(self):
-        fileName = QtGui.QFileDialog.getSaveFileName(self, 'Dialog Title')
-        if fileName:
-            print( fileName)
+    #def orbit2file(self):
+    #    fileName = QtGui.QFileDialog.getSaveFileName(self, 'Dialog Title')
+    #    if fileName:
+    #        print( fileName)
 
-    def file2orb(self):
-        fileName = QtGui.QFileDialog.getOpenFileName(self, 'Load file')
-        if fileName:
-            print(fileName)
+    #def file2orb(self):
+    #    fileName = QtGui.QFileDialog.getOpenFileName(self, 'Load file')
+    #    if fileName:
+    #        print(fileName)
 
-    def ref_orbit(self):
-        self.x_ref = self.x
-        self.y_ref = self.y
+    #def ref_orbit(self):
+    #    self.x_ref = self.x
+    #    self.y_ref = self.y
 
     def update_tree_currents(self):
         self.sequence = tree2seq(tree=self.p)
@@ -425,29 +434,25 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
                     current = self.opt_thread.opt.mi.get_value(dev)
                     dict_cur[dev] = current
                 child.setValue(str(current))
-
-        self.update_current()
+        if self.opt_thread.opt.isRunning == True:
+            self.update_current()
 
     def create_tree_cur_contr(self):
         devices = []
+        self.p_cur_cntr.clearChildren()
+        #self.p_cur_cntr.addChild(devices)
         for act in self.work_seq:
             for i, devname in enumerate(act["devices"]):
-                devices.append(devname)
-
-        self.p_cur_cntr.clearChildren()
-        self.p_cur_cntr.addChild({'name': 'Devices', 'type': 'list', 'values': devices, 'value': 0})
+                #devices.append(devname)
+                #devices.append({'name': devname, 'type': 'bool','value': False})
+                self.p_cur_cntr.addChild({'name': devname, 'type': 'bool','value': False})
+        #self.p_cur_cntr.addChild({'name': 'Devices', 'type': 'list', 'values': devices, 'value': 0})
         #self.p_cur_cntr.opts["values"] = devices
 
         self.t_cur_cntr.setParameters(self.p_cur_cntr, showTop=False)
         return devices
 
     def update_current(self):
-        devices = []
-        devname_sel = ''
-        for p in self.p_cur_cntr:
-            devname_sel = p.opts["value"]
-            devices = p.opts["values"]
-        #print(devices, devname_sel)
         n = 0
         dict_cur = {}
         for act in self.work_seq:
@@ -470,28 +475,26 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
             self.data = np.empty((self.ndevs*2+1, self.data.shape[1] * 2))
             self.data[:, :tmp.shape[1]] = tmp[:, :]
 
-
+        devices = [p.opts["name"] for p in self.p_cur_cntr]
+        devbools= [p.opts["value"] for p in self.p_cur_cntr]
         for i, name in enumerate(devices):
-            #print(name == devname_sel, name, devname_sel)
-            if name == devname_sel:
-                #print(i)
-                self.curves_cur[0].setData(self.data[2*i, :self.pntr_cur])
-                self.curves_cur[1].setData(self.data[2*i + 1, :self.pntr_cur])
-        #for i, x in enumerate(self.data):
-        #    self.curves_cur[i].setData(x[:self.pntr_cur])
+            if devbools[i]:
+                self.curves_cur[i].setData(self.data[2*i, :self.pntr_cur])
+            else:
+                self.curves_cur[i].clear()
 
-    def set_max_sase(self):
-        if not self.opt_thread.opt.isRunning:
-            sase = self.data[-1,:]
-            indx = np.argmax(sase)
-            devices = []
-            for p in self.p_cur_cntr:
-                devices = p.opts["values"]
-
-            for i, name in enumerate(devices):
-                I = self.data[2*i+1, indx]
-                print(name, "<-- ", I)
-                self.opt_thread.opt.mi.set_value(name, I)
+    #def set_max_sase(self):
+    #    if not self.opt_thread.opt.isRunning:
+    #        sase = self.data[-1,:]
+    #        indx = np.argmax(sase)
+    #        devices = []
+    #        for p in self.p_cur_cntr:
+    #            devices = p.opts["values"]
+    #
+    #        for i, name in enumerate(devices):
+    #            I = self.data[2*i+1, indx]
+    #            print(name, "<-- ", I)
+    #            self.opt_thread.opt.mi.set_value(name, I)
 
 
     def update_sase(self):
@@ -525,17 +528,17 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         self.data_slow = np.empty(100)
         self.ptr2 = 0
 
-    def update_orbit(self):
-        orbit = self.opt_thread.opt.sop.read_bpms()
-        self.x = np.array([z[2] for z in orbit])
-        self.y = np.array([z[3] for z in orbit])
-        #print(self.x_ref)
-        x = self.x - self.x_ref # np.random.normal(size=100)
-        y = self.y - self.y_ref # np.random.normal(size=100)
-
-        self.curve_orb_x.setData(self.s, x*1000., pen='r', symbol='o', symbolPen='r', symbolBrush=0.5, name='new')
-
-        self.curve_orb_y.setData(self.s, y*1000., pen='r', symbol='o', symbolPen='r', symbolBrush=0.5, name='new')
+    #def update_orbit(self):
+    #    orbit = self.opt_thread.opt.sop.read_bpms()
+    #    self.x = np.array([z[2] for z in orbit])
+    #    self.y = np.array([z[3] for z in orbit])
+    #    #print(self.x_ref)
+    #    x = self.x - self.x_ref # np.random.normal(size=100)
+    #    y = self.y - self.y_ref # np.random.normal(size=100)
+    #
+    #    self.curve_orb_x.setData(self.s, x*1000., pen='r', symbol='o', symbolPen='r', symbolBrush=0.5, name='new')
+    #
+    #    self.curve_orb_y.setData(self.s, y*1000., pen='r', symbol='o', symbolPen='r', symbolBrush=0.5, name='new')
 
     def update_blm(self):
         alarm_vals = self.opt_thread.opt.sop.mi.get_alarms()
@@ -610,7 +613,7 @@ class Form2(QtGui.QMainWindow, ui_optim_sase.Ui_ChildWindow):
 
 def main():
     mi = FLASH1MachineInterface()
-    #mi = TestInterface()
+    mi = TestInterface()
     dp = FLASH1DeviceProperties()
 
     lat = MagneticLattice(lattice)
@@ -630,15 +633,15 @@ def main():
     sys.stderr = Logger(form)
     timer = pg.QtCore.QTimer()
     timer.timeout.connect(form.update_sase)
-    timer.start(200)
+    timer.start(300)
 
-    timer1 = pg.QtCore.QTimer()
-    timer1.timeout.connect(form.update_orbit)
-    timer1.start(1000)
+    #timer1 = pg.QtCore.QTimer()
+    #timer1.timeout.connect(form.update_orbit)
+    #timer1.start(1000)
 
     timer2 = pg.QtCore.QTimer()
     timer2.timeout.connect(form.update_blm)
-    timer2.start(200)
+    timer2.start(300)
 
     timer3 = pg.QtCore.QTimer()
     timer3.timeout.connect(form.update_tree_currents)

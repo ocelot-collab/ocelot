@@ -35,7 +35,7 @@ beam.alpha_y = -0.842
 beamf = 'data/test_beam.txt'
 beam_new = transform_beam_file(beam_file = beamf,  
 							transform = [ [beam.beta_x,beam.alpha_x], [beam.beta_y,beam.alpha_y] ], 
-							energy_scale = beam.E / 17.5, n_interp = 3000)
+							energy_scale = beam.E / 17.5, n_interp = 1000)
 
 		
 print 'beam file size:', len(beam_new.z)

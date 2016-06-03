@@ -4,7 +4,6 @@ linear dimensions in [m]
 '''
 
 from ocelot.cpbd.field_map import FieldMap
-from ocelot.cpbd.optics import create_transfer_map
 from ocelot.common.globals import *
 import numpy as np
 from numpy import cos, sin
@@ -13,24 +12,20 @@ from numpy import cos, sin
 flatten = lambda *n: (e for a in n
                             for e in (flatten(*a) if isinstance(a, (tuple, list)) else (a,)))
 
-'''
-TODO: rename Element class into something else to avoid confusion 
-'''
 class Element:
     
-    ''' Element is a beamline building element with an arbitrary set of parameters attached '''
+    ''' 
+        Element is a basic beamline building element 
+        Accelerator optics elements are subclasses of Element
+        Arbitrary set of additional parameters can be attached if necessary 
+    '''
     
-    def __init__(self, id = None):
-        self.id = id
-        if id == None:
+    def __init__(self, el_id = None):
+        self.id = el_id
+        if el_id == None:
             #print 'setting automatic id'
             self.id = "ID_{0}_".format(np.random.randint(100000000))
-        self.type = "none"
-        self.tilt = 0.       # TILT: The roll angle about the longitudinal axis
-                             # (default: 0 rad, i.e. a normal quadrupole).
-                             # A positive angle represents a clockwise rotation.
-                             # A TILT=pi/4 turns a positive normal quadrupole into a negative skew quadrupole.
-
+        self.tilt = 0. # rad, pi/4 to turn positive quad into negative skew
         self.angle = 0.
         self.k1 = 0.
         self.k2 = 0.
@@ -40,7 +35,7 @@ class Element:
         self.params = {}
     
     def __hash__(self):
-        return hash( (self.id, self.type) )
+        return hash( (self.id, self.__class__) )
 
     def __eq__(self, other):
         try:
@@ -52,25 +47,22 @@ class Element:
 # to mark locations of bpms and other diagnostics
 class Monitor(Element):
         
-    def __init__(self, l=0.0, id = None):
-        Element.__init__(self, id)
-        self.type = "monitor"
+    def __init__(self, l=0.0, el_id = None):
+        Element.__init__(self, el_id)
         self.l = l
 
 class Marker(Element):
-    def __init__(self, id = None):
-        Element.__init__(self, id)
-        self.type = "marker"
+    def __init__(self, el_id = None):
+        Element.__init__(self, el_id)
         self.l = 0.
 
 class Quadrupole(Element):
     """
-    k1 - strength of quadrupole lens in [1/m^2],
-    l - length of lens in [m].
+    k1 - strength, [1/m^2],
+    l - length, [m].
     """
-    def __init__(self, l=0, k1=0, k2=0., tilt=0, id=None):
-        Element.__init__(self, id)
-        self.type = "quadrupole"
+    def __init__(self, l=0, k1=0, k2=0., tilt=0, el_id=None):
+        Element.__init__(self, el_id)
         self.l = l
         self.k1 = k1
         self.k2 = k2
@@ -78,16 +70,11 @@ class Quadrupole(Element):
 
 class Sextupole(Element):
     """
-    m - strength of sextupole lens in [1/m^3],
-    l - length of lens in [m].
+    k2 strength, [1/m^3],
+    ms = k2*l
     """
-    def __init__(self, l=0, k2=0., ms=0., id=None, tilt=0):
-        """
-        k2 is sextupole strength
-        ms = k2*l
-        """
-        Element.__init__(self, id)
-        self.type = "sextupole"
+    def __init__(self, l=0, k2=0., ms=0., el_id=None, tilt=0):
+        Element.__init__(self, el_id)
         if l != 0 and ms != 0:
             if k2 == 0:
                 k2 = ms/l
@@ -102,36 +89,25 @@ class Sextupole(Element):
 
 class Octupole(Element):
     """
-    m - strength of sextupole lens in [1/m^3],
-    l - length of lens in [m].
+    moct = k3*l
     """
-    def __init__(self, l=0, k3=None, id=None, tilt=0.):
-        """
-        k2 is sextupole strength
-        moct = k3*l
-        """
-        Element.__init__(self, id)
-        self.type = "octupole"
+    def __init__(self, l=0, k3=None, el_id=None, tilt=0.):
+        Element.__init__(self, el_id)
         self.l = l
         self.k3 = k3
         self.tilt = tilt
         self.moct = None
 
 class Drift(Element):
-    """
-    l - length of lens in [m]
-    """
-    def __init__(self, l=0, id = None):
-        Element.__init__(self, id)
-        self.type = "drift"
+    def __init__(self, l=0, el_id = None):
+        Element.__init__(self, el_id)
         self.l = l
         self.tilt = 0.
 
 class Bend(Element):
     def __init__(self, l, angle=0., k1 = 0., k2 = 0., tilt=0.0, e1 = 0., e2 = 0.,
-                 gap = 0, h_pole1 = 0., h_pole2 = 0., fint = 0., fintx=0., id = None):
-        Element.__init__(self, id)
-        self.type = "bend"
+                 gap = 0, h_pole1 = 0., h_pole2 = 0., fint = 0., fintx=0., el_id = None):
+        Element.__init__(self, el_id)
         self.l = l
         self.angle = angle
         self.k1 = k1
@@ -150,9 +126,8 @@ class Bend(Element):
 class Edge(Bend):
     def __init__(self, l=0, angle=0.0, k1 = 0, edge = 0.,
                  tilt=0.0, dtilt = 0.0, dx = 0.0, dy = 0.0,
-                 h_pole = 0., gap = 0., fint = 0., pos = 1, id = None):
-        Element.__init__(self, id)
-        self.type = "edge"
+                 h_pole = 0., gap = 0., fint = 0., pos = 1, el_id = None):
+        Element.__init__(self, el_id)
         if l!=0.:
             self.h = angle/l
         else:
@@ -181,14 +156,13 @@ class SBend(Bend):
     """
     sector bending magnet,
     l - length of magnet,
-    angle - angle of bend in [rad],
-    k - quadrupole strength in [1/m^2].
+    angle - total bend angle, [rad],
+    k - strength, [1/m^2].
     """
     def __init__(self, l=0, angle=0.0,k1 = 0.0, k2 = 0., e1 = 0.0, e2 = 0.0, tilt=0.0,
-                 gap = 0, h_pole1 = 0., h_pole2 = 0., fint = 0., fintx=0., id = None):
+                 gap = 0, h_pole1 = 0., h_pole2 = 0., fint = 0., fintx=0., el_id = None):
         Bend.__init__(self, l, angle=angle, k1=k1, k2=k2, e1=e1, e2=e2,
-                      gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, id=id)
-        self.type = "sbend"
+                      gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, el_id=el_id)
         self.l = l
         self.angle = angle
         self.k1 = k1
@@ -210,11 +184,11 @@ class RBend(Bend):
     """
     rectangular bending magnet,
     l - length of magnet,
-    angle - angle of bend in [rad],
-    k - quadrupole strength in [1/m^2].
+    angle - total bend angle, [rad],
+    k - strength, [1/m^2].
     """
     def __init__(self, l=0, angle=0,tilt=0, k1 = 0, k2 = 0.,  e1 = None, e2 = None,
-                 gap=0, h_pole1=0., h_pole2=0., fint=0., fintx=0., id=None):
+                 gap=0, h_pole1=0., h_pole2=0., fint=0., fintx=0., el_id=None):
         if e1 == None:
             e1 = angle/2.
         else:
@@ -224,8 +198,7 @@ class RBend(Bend):
         else:
             e1 += angle/2.
         Bend.__init__(self, l, angle=angle, e1=e1, e2=e2, k1=k1, k2=k2,
-                      gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, fintx=fintx, id=id)
-        self.type = "rbend"
+                      gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, fintx=fintx, el_id=el_id)
         self.l = l
         self.angle = angle
         self.k1 = k1
@@ -240,17 +213,15 @@ class RBend(Bend):
             self.fint2 = fintx
 
 class Hcor(RBend):
-    def __init__(self,l = 0, angle = 0, id = None):
-        RBend.__init__(self, l=l, angle=angle, id = id)
-        self.type = "hcor"
+    def __init__(self,l = 0, angle = 0, el_id = None):
+        RBend.__init__(self, l=l, angle=angle, el_id = el_id)
         self.l = l
         self.angle = angle
         self.tilt = 0
 
 class Vcor(RBend):
-    def __init__(self,l = 0, angle = 0, id = None):
-        RBend.__init__(self, l=l, angle=angle, id = id)
-        self.type = "vcor"
+    def __init__(self,l = 0, angle = 0, el_id = None):
+        RBend.__init__(self, l=l, angle=angle, el_id = el_id)
         self.l = l
         self.angle = angle
         self.tilt = pi/2.
@@ -262,11 +233,10 @@ class Undulator(Element):
     Kx - undulator paramenter for vertical field; \n
     Ky - undulator parameter for horizantal field;\n
     field_file_path - absolute path to magnetic field data;\n
-    id - name of undulator. 
+    el_id - name of undulator. 
     """
-    def __init__(self, lperiod, nperiods, Kx, Ky=0, field_file=None, id=None):
-        Element.__init__(self, id)
-        self.type = "undulator"
+    def __init__(self, lperiod, nperiods, Kx, Ky=0, field_file=None, el_id=None):
+        Element.__init__(self, el_id)
         self.lperiod = lperiod
         self.nperiods = nperiods
         self.l = lperiod * nperiods
@@ -302,11 +272,10 @@ class Cavity(Element):
     '''
     RF cavity
     v - voltage [V/m]
-    f - frequency [GHz]
+    f - frequency [Hz]
     '''
-    def __init__(self, l, delta_e=0.0, freq=0.0, phi=0.0, id=None, volt=0., volterr=0.):
-        Element.__init__(self, id)
-        self.type = "cavity"
+    def __init__(self, l, delta_e=0.0, freq=0.0, phi=0.0, el_id=None, volt=0., volterr=0.):
+        Element.__init__(self, el_id)
         self.l = l
         self.v = volt*1e-9   #in GV
         self.delta_e = delta_e
@@ -320,9 +289,8 @@ class Solenoid(Element):
     '''
     Solenoid
     '''
-    def __init__(self, l, k = 0., id = None):
-        Element.__init__(self, id)
-        self.type = "solenoid"
+    def __init__(self, l, k = 0., el_id = None):
+        Element.__init__(self, el_id)
         self.k = k # B0/(2B*rho)
         self.l = l
 
@@ -330,10 +298,9 @@ class Multipole(Element):
     """
     kn - list of strengths
     """
-    def __init__(self, kn=0., id=None):
+    def __init__(self, kn=0., el_id=None):
 
-        Element.__init__(self, id)
-        self.type = "multipole"
+        Element.__init__(self, el_id)
         kn = np.array([kn]).flatten()
         if len(kn) < 2:
             self.kn = np.append(kn, 0.)
@@ -349,9 +316,8 @@ class Matrix(Element):
                  rm21 = 0., rm22=0., rm23 = 0., rm24 = 0.,
                  rm31 = 0., rm32=0., rm33 = 0., rm34 = 0.,
                  rm41 = 0., rm42=0., rm43 = 0., rm44 = 0.,
-                 id = None):
-        Element.__init__(self, id)
-        self.type = "matrix"
+                 el_id = None):
+        Element.__init__(self, el_id)
         self.l = l
         self.rm11 = rm11
         self.rm12 = rm12
@@ -373,14 +339,16 @@ class Matrix(Element):
         self.rm43 = rm43
         self.rm44 = rm44
         
+class Pulse:
+    def __init__(self):
+        self.kick_x = lambda tau: 0.0
+        self.kick_y = lambda tau: 0.0
+        self.kick_z = lambda tau: 0.0
+
 
 class UnknownElement(Element):
-    """
-    l - length of lens in [m]
-    """
-    def __init__(self, l=0, kick = 0,xsize = 0, ysize = 0, volt = 0, lag = 0, harmon = 0, refer = 0,vkick = 0,hkick = 0, id = None):
-        Element.__init__(self, id)
-        self.type = "drift"
+    def __init__(self, l=0, kick = 0,xsize = 0, ysize = 0, volt = 0, lag = 0, harmon = 0, refer = 0,vkick = 0,hkick = 0, el_id = None):
+        Element.__init__(self, el_id)
         self.l = l
 
 class Sequence:
@@ -412,9 +380,7 @@ class MagneticLattice:
         self.update_transfer_maps()
 
         self.__hash__ = {}
-        #print 'creating hash'
         for e in self.sequence:
-            #print e
             self.__hash__[e] = e
     
     def __getitem__(self, el):
@@ -431,8 +397,8 @@ class MagneticLattice:
             prob_edge1 = self.sequence[i]
             elem = self.sequence[i+1]
             prob_edge2 = self.sequence[i+2]
-            if elem.type in ["bend", "sbend", "rbend"]: # , "hcor", "vcor"
-                if prob_edge1.type != "edge" and prob_edge2 != "edge":
+            if elem.__class__ in (SBend, RBend, Bend): # , "hcor", "vcor"
+                if prob_edge1.__class__ != Edge and prob_edge2.__class__ != Edge:
                     #print elem.type, prob_edge1.type, prob_edge2.type
                     return False
         return True
@@ -441,7 +407,7 @@ class MagneticLattice:
         n = 0
         for i in range(len(self.sequence)):
             elem = self.sequence[n]
-            if elem.type in ["bend", "sbend", "rbend"] and elem.l != 0.: # , "hcor", "vcor"
+            if elem.__class__ in (SBend, RBend, Bend) and elem.l != 0.: # , "hcor", "vcor"
 
                 e_name = elem.id
 
@@ -450,13 +416,13 @@ class MagneticLattice:
 
                 e1 = Edge(l=elem.l, angle=elem.angle, k1=elem.k1, edge=elem.e1, tilt=elem.tilt, dtilt=elem.dtilt,
                           dx=elem.dx, dy=elem.dy, h_pole=elem.h_pole1, gap=elem.gap, fint=elem.fint1, pos=1,
-                          id=e_name + "_e1")
+                          el_id=e_name + "_e1")
 
                 self.sequence.insert(n, e1)
 
                 e2 = Edge(l=elem.l, angle=elem.angle, k1=elem.k1, edge=elem.e2, tilt=elem.tilt, dtilt=elem.dtilt,
                           dx=elem.dx, dy=elem.dy, h_pole=elem.h_pole2, gap=elem.gap, fint=elem.fint2, pos=2,
-                          id=e_name + "_e2")
+                          el_id=e_name + "_e2")
 
                 self.sequence.insert(n+2, e2)
                 n += 2
@@ -466,23 +432,15 @@ class MagneticLattice:
         #E = self.energy
         self.totalLen = 0
         for element in self.sequence:
-            if element.type == "undulator":
+            if element.__class__ == Undulator:
                 if element.field_file != None:
                     element.l = element.field_map.l * element.field_map.field_file_rep
                     if element.field_map.units =="mm":
                         element.l = element.l*0.001
             self.totalLen += element.l
-            """
-            try:
-                element.transfer_map = create_transfer_map(element, energy=element.E, track_acceleration=track_acceleration)
-            except:
-                element.transfer_map = create_transfer_map(element, energy=self.energy, track_acceleration=track_acceleration)
-            """
-            #if element.type == "cavity":
-            #    E += element.delta_e
-            #print "init = ", E
-
+            from ocelot.cpbd.optics import create_transfer_map
             element.transfer_map = create_transfer_map(element)
+            if 'pulse' in element.__dict__: element.transfer_map.pulse = element.pulse
         return self
 
     def printElements(self):
@@ -501,13 +459,5 @@ def survey(lat, ang = 0.0, x0=0, z0=0):
             ang += e.angle
         x0 += e.l*cos(ang)  
         z0 += e.l*sin(ang)
-    return x, z
+    return x, z, ang
 
-
-
-if __name__ == "__main__":
-
-    fm1 = FieldMap(field_file="center.dat", format = "tabular")
-    fm2 = FieldMap(field_file="epu49cen.dat", format = "flat")
-    print( fm1.z_arr)
-    print(fm2.z_arr )

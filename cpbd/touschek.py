@@ -3,10 +3,6 @@ from pylab import *
 from scipy.special import kn
 
 
-'''
-Piwinski DESY 98-179
-'''
-
 def B1():
     pass
 
@@ -35,9 +31,11 @@ def F(tm, B1, B2):
     
     return Fi * I2
     
-
 def t_touschek(tws, beam):
-   
+    '''
+    Touschek lifetime
+    Piwinski DESY 98-179
+    '''
     rp2c = 2.380588258494943e-21    
     gam  = beam.E / 0.000511
     beta = sqrt(1 - 1./gam**2)

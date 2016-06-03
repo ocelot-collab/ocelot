@@ -42,25 +42,26 @@ def edge_chromaticity(lattice, tws_0):
     return np.array([ksi_x_edge, ksi_y_edge])
 
 def natural_chromaticity(lattice, tws_0, nsuperperiod = 1):
-    edge_ksi_x, edge_ksi_y = edge_chromaticity(lattice, tws_0)
+    #edge_ksi_x, edge_ksi_y = edge_chromaticity(lattice, tws_0)
+    edge_ksi_x, edge_ksi_y = 0, 0
     tws_elem = tws_0
     #M = TransferMap()
     integr_x = 0.
     integr_y = 0.
     for elem in lattice.sequence:
-        if elem.type in ["rbend", "sbend", "bend", "quadrupole"]:
+        if elem.__class__ in [SBend, RBend, Bend, Quadrupole]:
             bx = []
             by = []
             k = []
             h = []
             Z = []
-            for z in linspace(0, elem.l,num = 20, endpoint=True):
+            for z in linspace(0, elem.l,num = 5, endpoint=True):
                 twiss_z = elem.transfer_map(z)*tws_elem
                 bx.append(twiss_z.beta_x)
                 by.append(twiss_z.beta_y)
                 k.append(elem.k1)
                 #print elem.l
-                if elem.type != "quadrupole" and elem.l != 0:
+                if elem.__class__ != Quadrupole and elem.l != 0:
                     h.append(elem.angle/elem.l)
                 else:
                     h.append(0.)
@@ -71,7 +72,7 @@ def natural_chromaticity(lattice, tws_0, nsuperperiod = 1):
             Y = -array(by)*array(k)
             integr_x += simps(X, Z)
             integr_y += simps(Y, Z)
-        elif elem.type == "multipole":
+        elif elem.__class__ == Multipole:
             twiss_z = elem.transfer_map*tws_elem
             integr_x += twiss_z.beta_x*elem.kn[1]
             integr_y -= twiss_z.beta_y*elem.kn[1]
@@ -94,7 +95,7 @@ def sextupole_chromaticity(lattice, tws0, nsuperperiod = 1):
             Dx = []
             Z = []
 
-            for z in linspace(0, elem.l, num = 10, endpoint=True):
+            for z in linspace(0, elem.l, num = 5, endpoint=True):
                 twiss_z = elem.transfer_map(z)*tws_elem
                 bx.append(twiss_z.beta_x)
                 by.append(twiss_z.beta_y)
@@ -106,7 +107,7 @@ def sextupole_chromaticity(lattice, tws0, nsuperperiod = 1):
             Y = array(by)*array(Dx)
             integr_x += simps(X, Z)*elem.k2
             integr_y += simps(Y, Z)*elem.k2
-
+            
         tws_elem = elem.transfer_map*tws_elem
     chrom_sex_x = (integr_x)/(4*pi)
     chrom_sex_y = -(integr_y)/(4*pi)

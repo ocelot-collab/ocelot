@@ -83,10 +83,11 @@ class Twiss:
         val = val + "Dy      = " + str(self.Dy) + "\n"
         val = val + "Dxp     = " + str(self.Dxp) + "\n"
         val = val + "Dyp     = " + str(self.Dyp) + "\n"
-        val = val + "mux     = " + str(self.mux) + "\n"
-        val = val + "muy     = " + str(self.muy) + "\n"
-        val = val + "nu_x    = " + str(self.mux/2./pi) + "\n"
-        val = val + "nu_y    = " + str(self.muy/2./pi) + "\n"
+        val = val + "mux     = " + str(self.mux / 2. / pi) + "\n"
+        val = val + "muy     = " + str(self.muy/ 2. / pi) + "\n"
+        #val = val + "nu_x    = " + str(self.mux/2./pi) + "\n"
+        #val = val + "nu_y    = " + str(self.muy/2./pi) + "\n"
+        val = val + "s    = " + str(self.s) + "\n"
         return val
 
 

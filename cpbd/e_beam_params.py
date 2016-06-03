@@ -35,17 +35,17 @@ def I5_ID(L, h0, lu, beta_xc, Dx0, Dxp0):
 def radiation_integrals(lattice, twiss_0, nsuperperiod = 1):
     #TODO: add I4 for rectangular magnets I4 = Integrate(2 Dx(z)*k(z)*h(z), Z)
     
-    n_points_element = 5
+    n_points_element = 15
     
     tws_elem = twiss_0
     (I1, I2, I3,I4, I5) = (0., 0., 0., 0., 0.)
     h = 0.
     for elem in lattice.sequence:
-        if elem.__class__ in (SBend, RBend, Bend, Quadrupole):
+        if elem.__class__ in (SBend, RBend, Bend, Quadrupole) and elem.l != 0:
             Dx = []
             Hinvariant = []
             Z = []
-            if  elem.type != "quadrupole" or elem.l == 0:
+            if  elem.__class__ != Quadrupole:
                 h = elem.angle/elem.l
             else:
                 h = 0.

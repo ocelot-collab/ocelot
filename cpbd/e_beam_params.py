@@ -45,7 +45,8 @@ def radiation_integrals(lattice, twiss_0, nsuperperiod = 1):
             Dx = []
             Hinvariant = []
             Z = []
-            if  elem.__class__ != Quadrupole:
+
+            if elem.__class__ != Quadrupole:
                 h = elem.angle/elem.l
             else:
                 h = 0.

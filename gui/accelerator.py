@@ -23,18 +23,6 @@ font = {
 matplotlib.rc('font', **font)
 
 
-'''
-try:
-    from PyQt4.QtCore import *
-    from PyQt4.QtGui import *
-    from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-    from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
-except:
-    print 'WARNING: Qt not installed, some graphics may not work properly'
-'''
-
-
-
 def plot_lattice(lat, axis, alpha=1.0, params={'kmax':2.0, 'ang_max':0.5e-2}, s_start = 0.0):
     axis.grid(True)
     

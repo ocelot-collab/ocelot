@@ -12,7 +12,7 @@ from ocelot.gui.accelerator import *
 
 
 def RFcavity(l, volt, lag, harmon):
-    rf = Cavity(l = l, id = id)
+    rf = Cavity(l = l, eid= id)
     rf.volt = volt
     rf.lag = lag
     rf.harmon = harmon

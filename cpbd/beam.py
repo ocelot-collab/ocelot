@@ -16,29 +16,29 @@ from numpy import *
 class Twiss:
     def __init__(self, beam = None):
         if beam == None:
-            self.emit_x = 0 # ???
-            self.emit_y = 0 # ???
-            self.beta_x = 0
-            self.beta_y = 0
-            self.alpha_x = 0
-            self.alpha_y = 0
-            self.gamma_x = 0
-            self.gamma_y = 0
-            self.mux = 0.
-            self.muy = 0.
+            self.emit_x = 0.0 # ???
+            self.emit_y = 0.0 # ???
+            self.beta_x = 0.0
+            self.beta_y = 0.0
+            self.alpha_x = 0.0
+            self.alpha_y = 0.0
+            self.gamma_x = 0.0
+            self.gamma_y = 0.0
+            self.mux = 0.0
+            self.muy = 0.0
             #self.dQ = 0.
-            self.Dx = 0
-            self.Dy = 0
-            self.Dxp = 0
-            self.Dyp = 0
-            self.x = 0
-            self.y = 0
-            self.xp = 0
-            self.yp = 0
-            self.E = 0
-            self.p = 0
-            self.tau = 0
-            self.s = 0 # position along the reference trajectory
+            self.Dx = 0.0
+            self.Dy = 0.0
+            self.Dxp = 0.0
+            self.Dyp = 0.0
+            self.x = 0.0
+            self.y = 0.0
+            self.xp = 0.0
+            self.yp = 0.0
+            self.E = 0.0
+            self.p = 0.0
+            self.tau = 0.0
+            self.s = 0.0 # position along the reference trajectory
             self.id = ""
         else:
             self.emit_x = beam.emit_x
@@ -58,33 +58,37 @@ class Twiss:
             self.y = beam.y
             self.xp = beam.xp
             self.yp = beam.yp
-            if beam.beta_x == 0 or beam.beta_y == 0:
-                self.gamma_x = 0
-                self.gamma_y = 0
+            if beam.beta_x == 0.0 or beam.beta_y == 0.0:
+                self.gamma_x = 0.0
+                self.gamma_y = 0.0
             else:
                 self.gamma_x = (1 + beam.alpha_x * beam.alpha_x) / beam.beta_x
                 self.gamma_y = (1 + beam.alpha_y * beam.alpha_y) / beam.beta_y
             self.E = beam.E
-            self.p = 0 
-            self.tau = 0
-            self.s = 0 # position along the reference trajectory
+            self.p = 0.0
+            self.tau = 0.0
+            self.s = 0.0 # position along the reference trajectory
             self.id = ""
 
-    def display(self):
-        print( "beta_x  = ", self.beta_x)
-        print( "beta_y  = ", self.beta_y)
-        print( "alpha_x = ", self.alpha_x)
-        print( "alpha_y = ", self.alpha_y)
-        print( "gamma_x = ", self.gamma_x)
-        print( "gamma_y = ", self.gamma_y)
-        print( "Dx      = ", self.Dx)
-        print( "Dy      = ", self.Dy)
-        print( "Dxp     = ", self.Dxp)
-        print( "Dyp     = ", self.Dyp)
-        print( "mux     = ", self.mux)
-        print( "muy     = ", self.muy)
-        print( "nu_x    = ", self.mux/2./pi)
-        print( "nu_y    = ", self.muy/2./pi)
+
+    def __str__(self):
+        val = ""
+        val = val + "beta_x  = " + str(self.beta_x) + "\n"
+        val = val + "beta_y  = " + str(self.beta_y) + "\n"
+        val = val + "alpha_x = " + str(self.alpha_x) + "\n"
+        val = val + "alpha_y = " + str(self.alpha_y) + "\n"
+        val = val + "gamma_x = " + str(self.gamma_x) + "\n"
+        val = val + "gamma_y = " + str(self.gamma_y) + "\n"
+        val = val + "Dx      = " + str(self.Dx) + "\n"
+        val = val + "Dy      = " + str(self.Dy) + "\n"
+        val = val + "Dxp     = " + str(self.Dxp) + "\n"
+        val = val + "Dyp     = " + str(self.Dyp) + "\n"
+        val = val + "mux     = " + str(self.mux) + "\n"
+        val = val + "muy     = " + str(self.muy) + "\n"
+        val = val + "nu_x    = " + str(self.mux/2./pi) + "\n"
+        val = val + "nu_y    = " + str(self.muy/2./pi) + "\n"
+        val = val + "s    = " + str(self.s) + "\n"
+        return val
 
             
 class Particle:
@@ -194,8 +198,8 @@ class ParticleArray:
     '''
     def __init__(self, n = 0):
         self.particles = zeros(n*6)
-        self.s = 0
-        self.E = 0
+        self.s = 0.0
+        self.E = 0.0
 
     def rm_tails(self, xlim, ylim, px_lim, py_lim):
         '''
@@ -239,7 +243,7 @@ class ParticleArray:
 
     def array2list(self):
         p_list = []
-        for i in xrange(self.size()):
+        for i in range(self.size()):
             p_list.append( self[i])
         return p_list
 
@@ -324,6 +328,13 @@ def gauss_from_twiss(emit, beta, alpha):
     phi = 2*pi * np.random.rand()
     u = np.random.rand()
     a = sqrt(-2*np.log( (1-u)) * emit)
+    x = a * sqrt(beta) * cos(phi)
+    xp = -a / sqrt(beta) * ( sin(phi) + alpha * cos(phi) )
+    return (x, xp)
+
+def waterbag_from_twiss(emit, beta, alpha):
+    phi = 2*pi * np.random.rand()
+    a = sqrt(emit) * np.random.rand()
     x = a * sqrt(beta) * cos(phi)
     xp = -a / sqrt(beta) * ( sin(phi) + alpha * cos(phi) )
     return (x, xp)

@@ -7,12 +7,12 @@ from ocelot.gui import *
 C = 1000.
 Ncells = 16
 Nbends = 32
-D = Drift(l=C/Ncells/4, id="D")
-Qf = Multipole(kn=[0., 0.021/2.], id="Qf")
-Qd = Multipole(kn=[0., -0.02], id="Qd")
+D = Drift(l=C/Ncells/4, eid="D")
+Qf = Multipole(kn=[0., 0.021/2.], eid="Qf")
+Qd = Multipole(kn=[0., -0.02], eid="Qd")
 B = Multipole(kn=2.*pi/Nbends)
-Sf = Multipole(kn=(0., 0., 0.0), id="Sf")
-Sd = Multipole(kn=(0., 0., -0.0), id="Sd")
+Sf = Multipole(kn=(0., 0., 0.0), eid="Sf")
+Sd = Multipole(kn=(0., 0., -0.0), eid="Sd")
 F = Multipole(kn=[0., 0., 0., 0., 0.01])
 cell = (Qf,Sf, D,F,B, D, Qd, Sd, D, B, D, Sf, Qf)
 

@@ -4,11 +4,11 @@ from ocelot import *
 from ocelot.gui import *
 import copy
 
-und = Undulator(Kx=2, nperiods=100, lperiod=0.02, id="und")
+und = Undulator(Kx=2, nperiods=100, lperiod=0.02, eid="und")
 und.solver = "sym"
-D1 = Drift(l=0.5, id="D1")
-Q1 = Quadrupole(l=0.3, k1=3., id="Q1")
-Q2 = Quadrupole(l=0.3, k1=-3, id="Q2")
+D1 = Drift(l=0.5, eid="D1")
+Q1 = Quadrupole(l=0.3, k1=3., eid="Q1")
+Q2 = Quadrupole(l=0.3, k1=-3, eid="Q2")
 
 line = (D1, Q1, D1, und, D1, Q2, D1)
 

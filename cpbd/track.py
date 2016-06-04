@@ -462,7 +462,7 @@ def merge_drifts(lat):
         #next_elem = lat.sequence[i+1]
         if elem.type == "drift":
             L += elem.l
-            new_elem = Drift(l=L, id=elem.id)
+            new_elem = Drift(l=L, eid=elem.id)
         else:
             if new_elem != None:
                 seq.append(new_elem)

@@ -19,11 +19,11 @@ beam.I = 0.1
 #beam.beta_y = 6.11
 #beam.Dx = 0.526
 def phase_shifter(i):
-    und = Undulator(Kx = 4., nperiods=125, lperiod=0.04, id = "und")
-    D = Drift(l=0.5, id="D")
-    b1 = Hcor(l=0.1, angle = 0.1*i*-0.00001, id="b1")
-    b2 = Hcor(l=0.2, angle = 0.1*i*0.00002, id="b2")
-    b3 = Hcor(l=0.1, angle = 0.1*i*-0.00001, id="b3")
+    und = Undulator(Kx = 4., nperiods=125, lperiod=0.04, eid= "und")
+    D = Drift(l=0.5, eid="D")
+    b1 = Hcor(l=0.1, angle = 0.1*i*-0.00001, eid="b1")
+    b2 = Hcor(l=0.2, angle = 0.1*i*0.00002, eid="b2")
+    b3 = Hcor(l=0.1, angle = 0.1*i*-0.00001, eid="b3")
     phase_shift =  (b1, b2, b3)
     cell = (und, D, phase_shift, D, und)
     lat = MagneticLattice(cell)

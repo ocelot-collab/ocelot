@@ -19,7 +19,7 @@ beam.E = 17.5
 beam.I = 0.1
 
 
-und = Undulator(Kx = 4., nperiods = 125, lperiod=0.04, id = "und")
+und = Undulator(Kx = 4., nperiods = 125, lperiod=0.04, eid= "und")
 lat = MagneticLattice((und))
 
 screen = Screen()

@@ -61,57 +61,57 @@ def read_lattice_elegant(file_flo, file_par):
         #sname=sname.replace('.','_')
         print( stype,sname)
         if stype=='QUAD':
-            quad = Quadrupole(id=sname)
+            quad = Quadrupole(eid=sname)
             quad.s=eval(v[i_s])
             quad.z=eval(v[i_Z])
             lattice=lattice+[quad]
         elif stype in ["DRIF", "LSCDRIFT", "CSRDRIFT", "KICKER", "ECOL"]:
-            drift = Drift(id=sname)
+            drift = Drift(eid=sname)
             drift.s=eval(v[i_s])
             drift.z=eval(v[i_Z])
             lattice=lattice+[drift]
         elif stype in ["MARK", "WATCH"]:
-            mark = Marker(id=sname)
+            mark = Marker(eid=sname)
             mark.s=eval(v[i_s])
             mark.z=eval(v[i_Z])
             lattice=lattice+[mark]
         elif stype=='SEXT':
-            sext = Sextupole(id=sname)
+            sext = Sextupole(eid=sname)
             sext.s=eval(v[i_s])
             sext.z=eval(v[i_Z])
             lattice=lattice+[sext]
         elif (stype=='CSBEND') or (stype == 'CSRCSBEND') or (stype == 'SBEN'):
-            sben = Bend(l=1,id=sname)
+            sben = Bend(l=1, eid=sname)
             sben.s=eval(v[i_s])
             sben.z=eval(v[i_Z])
             lattice=lattice+[sben]
         elif (stype=='CRBEND') or (stype=='CSRCRBEND'):
-            rben= RBend (id=sname)
+            rben= RBend (eid=sname)
             rben.s=eval(v[i_s])
             rben.z=eval(v[i_Z])
             lattice=lattice+[rben]
         elif stype=='WIGGLER':
-            undulator = Undulator(id=sname, lperiod=0, nperiods=0, Kx=0)
+            undulator = Undulator(eid=sname, lperiod=0, nperiods=0, Kx=0)
             undulator.s=eval(v[i_s])
             undulator.z=eval(v[i_Z])
             lattice=lattice+[undulator]   
         elif stype=='RFCA':
-            cavity = Cavity(id=sname, l=0)
+            cavity = Cavity(eid=sname, l=0)
             cavity.s=eval(v[i_s])
             cavity.z=eval(v[i_Z])
             lattice=lattice+[cavity]   
         elif stype=='HKICK':
-            hcor = Hcor(id=sname)
+            hcor = Hcor(eid=sname)
             hcor.s=eval(v[i_s])
             hcor.z=eval(v[i_Z])
             lattice=lattice+[hcor]
         elif stype=='VKICK':
-            vcor = Vcor(id=sname)
+            vcor = Vcor(eid=sname)
             vcor.s=eval(v[i_s])
             vcor.z=eval(v[i_Z])
             lattice=lattice+[vcor]
         elif stype=='MONI':
-            monitor = Monitor(id=sname)
+            monitor = Monitor(eid=sname)
             monitor.s=eval(v[i_s])
             monitor.z=eval(v[i_Z])
             lattice=lattice+[monitor]

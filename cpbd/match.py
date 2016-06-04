@@ -202,7 +202,7 @@ def match(lat, constr, vars, tw, print_proc = 1, max_iter=1000, xtol=1e-8):
 
 def match_tunes(lat, tw0, quads,  nu_x, nu_y, ncells= 1, print_proc = 0):
     print ("matching start .... ")
-    end = Monitor(id = "end")
+    end = Monitor(eid= "end")
     lat = MagneticLattice(lat.sequence + [end])
     #tw0.E = lat.energy
     tws=twiss(lat, tw0, nPoints=None)

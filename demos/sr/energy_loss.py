@@ -38,7 +38,7 @@ start = time()
 Nunduls = 15
 Nperiods = 125
 nperiods = 1
-U40_short = Undulator(nperiods = nperiods, lperiod=0.040, Kx = 4, id = "und")
+U40_short = Undulator(nperiods = nperiods, lperiod=0.040, Kx = 4, eid= "und")
 
 seg = (U40_short,)*int(Nperiods*Nunduls/nperiods)
 

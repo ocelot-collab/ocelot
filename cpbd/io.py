@@ -1,8 +1,9 @@
 __author__ = 'Sergey Tomin'
-'''
-I/O of magnetic lattice
-'''
-
+"""
+module contains lat2input function which creates python input string
+(ocelot natice) for a lattice object
+author sergey.tomin
+"""
 
 
 from numpy import around, pi
@@ -33,7 +34,9 @@ def find_objects(lat, types):
 
 
 def lat2input(lat):
-    # start find objects
+    """
+    returns python input string for the lattice in the lat object
+    """
     drifts = find_objects(lat, types = ["drift"])
     quads = find_objects(lat, types = ["quadrupole"])
     sexts = find_objects(lat, types = ["sextupole"])
@@ -158,6 +161,9 @@ def lat2input(lat):
 
 
 def write_lattice(lattice, file_name="lattice.inp"):
+    """
+    saves lattice as python imput file
+    """
     lines = lat2input(lattice)
 
     f = open(file_name, 'w')

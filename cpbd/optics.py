@@ -152,15 +152,12 @@ class TransferMap:
     def map_x_twiss(self, tws0):
         E = tws0.E
         M = self.R(E)
-        if self.delta_e != 0:
+        zero_tol = 1.e-10
+        if abs(self.delta_e) > zero_tol:
             #M = self.R(E + )
             Ei = tws0.E
             Ef = tws0.E + self.delta_e #* cos(self.phi)
             #print "Ei = ", Ei, "Ef = ", Ef
-            #gammaf = Ef/m_e_GeV
-            #betaf = sqrt(1. - 1./gammaf/gammaf)
-            #gammai = Ei/m_e_GeV
-            #betai = sqrt(1. - 1./gammai/gammai)
             k = sqrt(Ef/Ei)
             M[0, 0] = M[0, 0]*k
             M[0, 1] = M[0, 1]*k
@@ -329,10 +326,10 @@ def create_transfer_map(element, order=1):
     #experiment with symplecticity
     transfer_map.sym_map_z = lambda X, z, energy: sym_map(z, X, transfer_map.hx, element.k1, element.k2, energy)
 
-    if element.type == "quadrupole":
+    if element.__class__ == Quadrupole:
         pass
 
-    elif element.type in ["sbend", "rbend", "bend"]:
+    elif element.__class__ in [SBend, RBend, Bend]:
         """
         # U5666 testing
         h = transfer_map.hx
@@ -345,16 +342,16 @@ def create_transfer_map(element, order=1):
         """
         pass
 
-    elif element.type == "drift":
+    elif element.__class__ == Drift:
         pass
 
-    elif element.type == "monitor":
+    elif element.__class__ == Monitor:
         pass
 
-    elif element.type == "marker":
+    elif element.__class__ == Marker:
         pass
 
-    elif element.type == "edge":
+    elif element.__class__ == Edge:
         tilt = element.tilt + element.dtilt
         if element.pos == 1:
             R, T = fringe_ent(h=element.h, k1=element.k1,  e=element.edge, h_pole=element.h_pole, gap=element.gap, fint=element.fint)
@@ -369,7 +366,7 @@ def create_transfer_map(element, order=1):
         #transfer_map.map_z = lambda X, z, energy: t_apply(R, np.zeros((6, 6, 6)), X, element.dx, element.dy, element.tilt)
         transfer_map.sym_map_z = lambda X, z, energy: t_apply(R, np.zeros((6, 6, 6)), X, element.dx, element.dy, element.tilt)
 
-    elif element.type == "sextupole":
+    elif element.__class__ == Sextupole:
 
         def map4sextupole(u, z, ms, energy):
 
@@ -402,7 +399,7 @@ def create_transfer_map(element, order=1):
         transfer_map.map_z = lambda X, z, energy: t_apply(R_z(z, energy), transfer_map.T_z(z), X, element.dx, element.dy, element.tilt)
         transfer_map.order = 2
 
-    elif element.type == "octupole":
+    elif element.__class__ == Octupole:
 
         def map4octupole(u, z, moct):
             #TODO: check expressions
@@ -433,7 +430,7 @@ def create_transfer_map(element, order=1):
         transfer_map.T_z = lambda z: t_nnn(z, h=0., k1=0., k2=0.)
         transfer_map.T = transfer_map.T_z(element.l)
 
-    elif element.type == "undulator":
+    elif element.__class__ == Undulator:
         def undulator_R_z(z, lperiod, Kx, Ky, energy):
             gamma = energy / m_e_GeV
             R = eye(6)

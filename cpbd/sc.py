@@ -92,7 +92,8 @@ def el_field(X, Q, gamma, nxyz):
     XX = np.max(X, axis=0)-np.min(X, axis=0)
     XX = XX*np.random.uniform(low=1.0, high=1.1)
     print( 'mesh steps:', XX)
-
+    # here we use a fast 3D "near-point" interpolation
+    # we need a stand-alone module with 1D,2D,3D parricles-to-grid functions
     steps = XX/(nxyz-3)
     X = X/steps
     X_min = np.min(X, axis=0)
@@ -159,7 +160,7 @@ def sc_apply(p_array, q_array, zstep, nmesh_xyz, low_order_kick=True):
 def SC_xp_update(xp, Q, gamref, dS, nxyz):
     #Lorentz transformation with z-axis and gamref
     betref2 = 1 - gamref**-2
-    betref = sqrt(betref2)
+    betref = np.sqrt(betref2)
     Eref = gamref*m_e_eV
     pref = Eref*betref
     Exyz = el_field(np.c_[xp[:, 0], xp[:, 1], xp[:, 2]], Q, gamref, nxyz)
@@ -199,6 +200,7 @@ def sc_track(lattice):
         
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
+    P=np.loadtxt('test.ast')
     P=np.loadtxt('D:/MyTools/MartinsTracker/2ASTRA/test.ast')
     #P=np.loadtxt('D:/MyTools/MartinsTracker/2ASTRA/bc1_out.ast')
     Q=-P[:,7]*1e-9 #charge in nC -> in C 
@@ -213,7 +215,7 @@ if __name__ == "__main__":
     pz0=pz00+pav; 
     xp[:,5]=xp[:,5]-pav
     Pref=pz0 
-    gamref=sqrt((Pref/m_e_eV)**2+1)
+    gamref=np.sqrt((Pref/m_e_eV)**2+1)
     xxstg= exact_xp_2_xxstg(xp,gamref)
     xxstg0=np.copy(xxstg)
     L0=False

@@ -120,11 +120,11 @@ def chromaticity(lattice, tws_0, nsuperperiod = 1):
 def sextupole_id(lattice):
     sex = {}
     for element in lattice.sequence:
-        if element.type == "sextupole":
+        if element.__class__ == Sextupole:
             if element.id == None:
                 print("Please add ID to sextupole")
-            sex[element.id] = element.ms
-        if element.type == "multipole" and element.n==3:
+            sex[element.id] = element.k2*element.l
+        if element.__class__ == Multipole and element.n==3:
             if element.id == None:
                 print("Please add ID to sextupole")
             sex[element.id] = element.kn[2]
@@ -185,13 +185,19 @@ def compensate_chromaticity(lattice,  ksi_x_comp=0, ksi_y_comp=0,  nsuperperiod=
     #print sex_dict_stg
     sex_name = list(sex_dict_stg.keys())
     for element in lattice.sequence:
-        if element.type == "sextupole":
+        if element.__class__ == Sextupole:
             if element.id == sex_name[0]:
-                element.ms = sex_dict_stg[element.id]
-                if element.l != 0: element.k2 = element.ms / element.l
+                element.k2 = sex_dict_stg[element.id] / element.l
+                #if element.l != 0: element.k2 = element.ms / element.l
             elif element.id == sex_name[1]:
-                element.ms = sex_dict_stg[element.id]
-                if element.l != 0: element.k2 = element.ms / element.l
+                element.k2 = sex_dict_stg[element.id] / element.l
+                #if element.l != 0: element.k2 = element.ms / element.l
+        if element.__class__ == Multipole and element.n == 3:
+            if element.id == sex_name[0]:
+                element.kn[2] = sex_dict_stg[element.id]
+            elif element.id == sex_name[1]:
+                element.kn[2] = sex_dict_stg[element.id]
+
     lattice.update_transfer_maps()
 """
 def DZ(lattice, energy):

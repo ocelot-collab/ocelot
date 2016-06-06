@@ -201,7 +201,7 @@ def sc_track(lattice):
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     P=np.loadtxt('test.ast')
-    P=np.loadtxt('D:/MyTools/MartinsTracker/2ASTRA/test.ast')
+    #P=np.loadtxt('D:/MyTools/MartinsTracker/2ASTRA/test.ast')
     #P=np.loadtxt('D:/MyTools/MartinsTracker/2ASTRA/bc1_out.ast')
     Q=-P[:,7]*1e-9 #charge in nC -> in C 
     xp=P[:,:6] 

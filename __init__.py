@@ -1,8 +1,9 @@
 __version__ = '15.11'
 
 __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope",                 # beam
-            "ellipse_from_twiss",                                                               # beam
+            "ellipse_from_twiss",  "ParticleArray",                                             # beam
            'fodo_parameters', 'lattice_transfer_map', 'TransferMap', 'gauss_from_twiss',        # optics
+           "get_map",                                                                           # optics
            'Element', 'Multipole', 'Quadrupole', 'RBend', "Matrix", "UnknownElement",           # elements
            'SBend', 'Bend', 'Drift', 'Undulator', 'MagneticLattice', 'Hcor',                    # elements
            'Vcor', "Sextupole", "Monitor", "Marker", "Octupole", "Cavity", "Edge",              # elements
@@ -15,7 +16,7 @@ __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope", 
            "compensate_chromaticity",                                                           # chromaticity
            "EbeamParams",                                                                       # e_beam_params
            "write_lattice",                                                                     # io
-           "sc_apply",                                                                          # sc
+           "sc_apply",
            ]
 
 from ocelot.cpbd.beam import *
@@ -24,8 +25,11 @@ from ocelot.cpbd.elements import *
 from ocelot.cpbd.match import *
 from ocelot.cpbd.track import *
 from ocelot.common.globals import *
+from ocelot.common.logging import Logger
 from ocelot.cpbd.chromaticity import *
 from ocelot.cpbd.e_beam_params import *
 from ocelot.cpbd.io import *
 from ocelot.cpbd.sc import *
 
+print('initializing ocelot...')
+logger = Logger()

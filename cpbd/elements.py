@@ -4,7 +4,7 @@ linear dimensions in [m]
 """
 
 from ocelot.cpbd.field_map import FieldMap
-from ocelot.cpbd.optics import create_transfer_map
+#from ocelot.cpbd.optics import create_transfer_map
 from ocelot.common.globals import *
 import numpy as np
 from numpy import cos, sin
@@ -434,6 +434,7 @@ class MagneticLattice:
                     if element.field_map.units == "mm":
                         element.l = element.l*0.001
             self.totalLen += element.l
+            from ocelot.cpbd.optics import create_transfer_map
             element.transfer_map = create_transfer_map(element)
             if 'pulse' in element.__dict__: element.transfer_map.pulse = element.pulse
         return self

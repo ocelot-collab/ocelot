@@ -54,12 +54,12 @@ def lat2input(lat):
 
     lines = []
     for drift in drifts:
-        line = drift.id + " = Drift(l = " + str(drift.l)+ ", id = '"+ drift.id+ "')\n"
+        line = drift.id + " = Drift(l = " + str(drift.l)+ ", eid = '"+ drift.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# quadrupoles \n")
     for quad in quads:
-        line = quad.id + " = Quadrupole(l = " + str(quad.l) +", k1 = "+ str(quad.k1) +", tilt = "+ str(quad.tilt)  +", id = '"+ quad.id+ "')\n"
+        line = quad.id + " = Quadrupole(l = " + str(quad.l) +", k1 = "+ str(quad.k1) +", tilt = "+ str(quad.tilt)  +", eid = '"+ quad.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# bending magnets \n")
@@ -78,7 +78,7 @@ def lat2input(lat):
         #if bend.fint1 == bend.fint2:
         #    fint = bend.fint1
 
-        line = bend.id + type + str(bend.l) + k + ", angle = " + str(bend.angle)+ ", e1 = " + str(bend.e1) + ", e2 = " + str(bend.e2) + ", tilt = " + str(bend.tilt) + ", fint = " + str(fint) +", id = '"+ bend.id+ "')\n"
+        line = bend.id + type + str(bend.l) + k + ", angle = " + str(bend.angle)+ ", e1 = " + str(bend.e1) + ", e2 = " + str(bend.e2) + ", tilt = " + str(bend.tilt) + ", fint = " + str(fint) +", eid = '"+ bend.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# correctors \n")
@@ -87,59 +87,61 @@ def lat2input(lat):
             type = " = Hcor(l = "
         else:
             type = " = Vcor(l = "
-        line = cor.id + type + str(cor.l) + ", angle = "+ str(cor.angle) +", id = '"+ cor.id+ "')\n"
+        line = cor.id + type + str(cor.l) + ", angle = "+ str(cor.angle) +", eid = '"+ cor.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# markers \n")
     for mark in marks:
-        line = mark.id + " = Marker(id = '"+ mark.id+ "')\n"
+        line = mark.id + " = Marker(eid = '"+ mark.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# monitor \n")
     for mon in mons:
-        line = mon.id + " = Monitor(id = '"+ mon.id+ "')\n"
+        line = mon.id + " = Monitor(eid = '"+ mon.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# sextupoles \n")
     for sext in sexts:
-        line = sext.id + " = Sextupole(l = " + str(sext.l) +", k2 = "+ str(sext.k2) +", tilt = "+ str(sext.tilt) +", id = '"+ sext.id+ "')\n"
+        line = sext.id + " = Sextupole(l = " + str(sext.l) +", k2 = "+ str(sext.k2) +", tilt = "+ str(sext.tilt) +", eid = '"+ sext.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# octupole \n")
     for oct in octs:
-        line = oct.id + " = Octupole(l = " + str(oct.l) +", k3 = "+ str(oct.k3) +", tilt = "+ str(oct.tilt) +", id = '"+ oct.id+ "')\n"
+        line = oct.id + " = Octupole(l = " + str(oct.l) +", k3 = "+ str(oct.k3) +", tilt = "+ str(oct.tilt) +", eid = '"+ oct.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# undulator \n")
     for und in unds:
-        line = und.id + " = Undulator(lperiod = " + str(und.lperiod) +", nperiods = "+ str(und.nperiods) +", Kx = "+ str(und.Kx) +", Ky = "+ str(und.Ky) +", id = '"+ und.id+ "')\n"
+        line = und.id + " = Undulator(lperiod = " + str(und.lperiod) +", nperiods = "+ str(und.nperiods) +", Kx = "+ str(und.Kx) +", Ky = "+ str(und.Ky) +", eid = '"+ und.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# cavity \n")
     for cav in cavs:
         line = cav.id + " = Cavity(l = " + str(cav.l) +", v = "+ str(cav.v) +", delta_e = "+ str(cav.delta_e)+\
-               ", freq = "+ str(cav.f) +", phi = "+ str(cav.phi) +", volterr = "+ str(cav.volterr) +", id = '"+ cav.id+ "')\n"
+               ", freq = "+ str(cav.f) +", phi = "+ str(cav.phi) +", volterr = "+ str(cav.volterr) +", eid = '"+ cav.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# rfcavity \n")
     for rfcav in rfcavs:
         line = rfcav.id + " = RFcavity(l = " + str(rfcav.l) +", volt = "+ str(rfcav.volt) +", lag = "+ str(rfcav.lag)+\
-               ", harmon = "+ str(rfcav.harmon) +", id = '"+ rfcav.id+ "')\n"
+               ", harmon = "+ str(rfcav.harmon) +", eid = '"+ rfcav.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# Matrices \n")
 
     for mat in matrices:
-        line = mat.id + " = Matrix(l = " + str(mat.l) +", rm11 = "+ str(mat.rm11) +", rm12 = "+ str(mat.rm12)+\
-               ", rm13 = "+ str(mat.rm13) +", rm21 = "+ str(mat.rm21) + ", rm22 = "+ str(mat.rm22) +", rm33 = "+ str(mat.rm33) +\
-               ", rm34 = "+ str(mat.rm34) +", rm43 = "+ str(mat.rm43) + ", rm44 = "+ str(mat.rm44) +\
-               ", id = '"+ mat.id+ "')\n"
+        line = mat.id + " = Matrix(l = " + str(mat.l) +\
+               ", rm11 = "+ str(mat.rm11) + ", rm12 = "+ str(mat.rm12) + ", rm13 = "+ str(mat.rm13) + ", rm14 = "+ str(mat.rm14) +\
+               ", rm21 = "+ str(mat.rm21) + ", rm22 = "+ str(mat.rm22) + ", rm23 = "+ str(mat.rm23) + ", rm24 = "+ str(mat.rm24) +\
+               ", rm31 = "+ str(mat.rm31) + ", rm32 = "+ str(mat.rm32) + ", rm33 = "+ str(mat.rm33) + ", rm34 = "+ str(mat.rm34) +\
+               ", rm41 = "+ str(mat.rm41) + ", rm42 = "+ str(mat.rm42) + ", rm43 = "+ str(mat.rm43) + ", rm44 = "+ str(mat.rm44) +\
+               ", eid = '"+ mat.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# Solenoids \n")
 
     for sol in sols:
-        line = sol.id + " = Solenoid(l = " + str(sol.l) +", k = "+ str(sol.k) +", id = '"+ sol.id+ "')\n"
+        line = sol.id + " = Solenoid(l = " + str(sol.l) +", k = "+ str(sol.k) +", eid = '"+ sol.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# lattice \n")

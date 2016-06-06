@@ -63,7 +63,7 @@ plt.show()
 
 
 for element in lat.sequence:
-    if element.type == "sextupole":
+    if element.__class__ == Sextupole:
         element.k2 = 0.
 lat.update_transfer_maps()
 

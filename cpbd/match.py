@@ -78,7 +78,7 @@ def match(lat, constr, vars, tw, print_proc = 1, max_iter=1000, xtol=1e-8):
         err = 0.0
         if "periodic" in constr.keys():
             if constr["periodic"] == True:
-                tw_loc = periodic_solution(tw_loc, lattice_transfer_map(lat,tw.E))
+                tw_loc = periodic_twiss(tw_loc, lattice_transfer_map(lat,tw.E))
                 if tw_loc == None:
                     return 1.0
         

@@ -203,7 +203,7 @@ def elem_cord(lat):
         temp = np.append(temp, [[L+elem.l + dL, 0]], axis = 0)
         #temp = temp.reshape((4,2))
         
-        if elem.type == "quadrupole":
+        if elem.__class__ == Quadrupole:
             k1 = elem.k1
             quad = np.append(quad, [[L, 0]], axis=0)
             quad = np.append(quad, [[L, k1]], axis=0)
@@ -211,33 +211,35 @@ def elem_cord(lat):
             quad = np.append(quad, [[L+elem.l, k1]],axis=0)
             quad = np.append(quad, [[L+elem.l, 0]],axis=0)
 
-        elif elem.type == "cavity":
+        elif elem.__class__ == Cavity:
             k1 = 1.
             cav = np.append(cav, [[L, 0]], axis=0)
             cav = np.append(cav, [[L, k1]], axis=0)
             cav = np.append(cav, [[L+elem.l, k1]],axis=0)
             cav = np.append(cav, [[L+elem.l, 0]],axis=0)
-        elif elem.type == "drift":
+
+        elif elem.__class__  == Drift:
             k1 = 1.
             drft = np.append(drft, [[L, 0]], axis=0)
             drft = np.append(drft, [[L, 0]], axis=0)
             drft = np.append(drft, [[L+elem.l, 0]],axis=0)
             drft = np.append(drft, [[L+elem.l, 0]],axis=0)
-        elif elem.type == "matrix":
+
+        elif elem.__class__ == Matrix:
             #k1 = 1.
             mat = np.append(mat, [[L, 0]], axis=0)
             #mat = np.append(mat, [[L, k1]], axis=0)
             #mat = np.append(mat, [[L+elem.l, k1]],axis=0)
             mat = np.append(mat, [[L+elem.l, 0]],axis=0)
 
-        elif elem.type == "undulator":
+        elif elem.__class__ == Undulator:
             k1 = 1.
             und = np.append(und, [[L, 0]], axis=0)
             und = np.append(und, [[L, k1]], axis=0)
             und = np.append(und, [[L+elem.l, k1]],axis=0)
             und = np.append(und, [[L+elem.l, 0]],axis=0)
 
-        elif elem.type in ["sbend", "bend", "rbend"]:
+        elif elem.__class__ in [SBend, RBend, Bend]:
             if elem.l == 0:
                 h = 0
             else:
@@ -245,23 +247,23 @@ def elem_cord(lat):
             temp[:,1] = temp[:,1]*h
             bend = np.append(bend, temp, axis = 0)
         
-        elif elem.type == "sextupole":
+        elif elem.__class__ == Sextupole:
 
             temp[:,1] = temp[:,1]*elem.k2
             sext = np.append(sext, temp, axis = 0)
 
-        elif elem.type == "multipole":
+        elif elem.__class__ == Multipole:
             if sum(abs(elem.kn)) != 0:
                 temp[:,1] = temp[:,1]*sum(elem.kn)/sum(abs(elem.kn))
             else:
                 temp[:,1] = temp[:,1]*0.
             multi = np.append(multi, temp, axis=0)
         
-        elif elem.type in ["hcor" , "vcor"]:
+        elif elem.__class__ in [Hcor, Vcor]:
             temp[:,1] = temp[:,1]#*abs(elem.angle)
             corr = np.append(corr, temp, axis=0)
         
-        elif elem.type in ["monitor"]:
+        elif elem.__class__ in [Monitor]:
             temp[:,1] = temp[:,1]#*abs(elem.angle)
             mons = np.append(mons, temp, axis=0)
         #c.append((L,  elem.l+0.03))
@@ -381,8 +383,8 @@ def  new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale 
             else:
                 point, = ax.fill(s_coord, (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color,  edgecolor=ecolor,
                              alpha = alpha, label=dict_copy[elem.__class__]["label"])
-            dict_copy["hcor"]["label"] = ""
-            dict_copy["vcor"]["label"] = ""
+            dict_copy[Hcor]["label"] = ""
+            dict_copy[Vcor]["label"] = ""
 
         elif elem.__class__ == Sextupole:
             ampl = (elem.k2)/s_max if s_max != 0 else 1
@@ -713,7 +715,7 @@ def plot_elem_disp(lat, tws):
     plt.show()
 
 
-def resonans(Qx, Qy, order = 5):
+def resonance(Qx, Qy, order = 5):
     ORD = order
     qx1, qy1 = 0,0
     qx2, qy2 = 2,2
@@ -749,8 +751,8 @@ def resonans(Qx, Qy, order = 5):
                 Order.append(order)
     return X,Y,Order,params
 
-def resonans_diag(Qx, Qy, order):
-    X,Y,Order,params = resonans(Qx, Qy, order)
+def plot_resonance_diag(ax, Qx, Qy, order):
+    X,Y,Order,params = resonance(Qx, Qy, order)
     indsort = np.argsort(Order)
     #print Order
     #print len(indsort), len(X)

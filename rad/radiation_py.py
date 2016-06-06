@@ -166,7 +166,7 @@ def track4rad(beam, lat, energy_loss = False, quantum_diff = False):
     for elem in lat.sequence:
         if elem.l == 0:
             continue
-        if elem.type != "undulator":
+        if elem.__class__ != Undulator:
             non_u.append(elem)
             U0 = 0.
         else:

@@ -43,4 +43,4 @@ plt.show()
 
 
 eb = EbeamParams(lat, beam, nsuperperiod=8)
-eb.print_params()
+print(eb)

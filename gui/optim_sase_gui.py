@@ -6,7 +6,7 @@ sys.path.append("/home/ttflinac/ocelot/dev")
 from ocelot.gui import ui_optim_sase
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtGui
-from ocelot.mint.flash1_interface_pydoocs3 import *
+from ocelot.mint.flash1_interface import *
 #from ocelot.utils.mint.machine_setup import *
 from ocelot.gui.flash_tree import *
 import pickle
@@ -601,7 +601,7 @@ class Form2(QtGui.QMainWindow, ui_optim_sase.Ui_ChildWindow):
 
 def main():
     mi = FLASH1MachineInterface()
-    #mi = TestInterface()
+    mi = TestInterface()
     dp = FLASH1DeviceProperties()
 
     lat = MagneticLattice(lattice)

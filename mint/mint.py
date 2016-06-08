@@ -7,13 +7,11 @@ from pylab import *
 from scipy.optimize import *
 import scipy.optimize as opt
 from time import sleep, time
-
 import json
-#from ocelot.utils.mint.machine_setup import *
 
-'''
-Any machine interface class should implement following methods  
-'''
+"""
+# Any machine interface class should implement following methods
+
 class MachineInterface:
     def __init__(self):
         pass
@@ -37,16 +35,15 @@ class MachineInterface:
         pass
     
 
-'''
-placeholder for magnet field ranges etc.
-'''
+# placeholder for magnet field ranges etc.
+
 class DeviceProperties:
     def __init__(self):
         self.limits = [-1000, 1000]
-
+"""
 
 class Optimizer:
-    def __init__(self, mi, dp, sop=None):
+    def __init__(self, mi, dp, save_opt_params=None):
         self.debug = False
         self.mi = mi
         self.dp = dp
@@ -58,15 +55,13 @@ class Optimizer:
         self.isRunning = False
         self.niter = 0
         self.maxiter = None
-        self.sop = sop
-        self.seq_init_cur = [[]]
+        self.sop = save_opt_params
         self.penalty = 0.
 
 
     def eval(self, seq, logging = False, log_file = None):
         self.isRunning = True
         self.wasSaved = False
-        if self.sop != None: self.seq_init_cur = self.save_init_currents(seq)
 
         for s in seq:
             if self.sop != None: self.save_action(s.args, flag="start")
@@ -81,93 +76,23 @@ class Optimizer:
         print("SAVE MACHINE",  flag)
         if self.sop is not None:
             self.wasSaved = self.sop.save(args, time=time(), niter=self.niter, flag=flag)
-
         self.niter = 0
-        #self.wasSaved = True
 
-    def save_init_currents(self, seq):
-        seq_init_cur = []
-        for s in seq:
-            act_init_cur = []
-            devices = s.args[0]
-            for i, devname in enumerate(devices):
-                act_init_cur.append([devname, self.mi.get_value(devname)])
-            seq_init_cur.append(act_init_cur)
-        return seq_init_cur
-
-
-    def restore_currents(self):
-        for act_init_cur in self.seq_init_cur:
-            for x in act_init_cur:
-                if len(x) == 2:
-                    devname = x[0]
-                    current = x[1]
-                    print('reverting', devname, '->', current)
-                    self.mi.set_value(devname, current)
-
-
-    def run(self, seq_dict, opt_params):
-        self.seq_dict = seq_dict
-        #print(self.seq_dict)
-        self.set_limits(seq_dict)
-        self.set_params(opt_params)
-        seq = self.create_seq(seq_dict)
+    def run(self, sequence):
+        #self.set_params(opt_params)
         if self.isRunning:
             print("Optimization is still running")
         else:
-            self.eval(seq)
-
-    def set_params(self, opt_params):
-        self.debug = opt_params["debug"]             #True
-        self.logging = opt_params["logging"]         #True
-        self.log_file = opt_params['log file']       #'test.log'
-        self.timeout = opt_params['timeout']         #1.2
-        self.detector = opt_params['detector']       #'gmd_default'
-        print("SET PARAMS", opt_params)
-
-    def create_seq(self, seq_dict):
-
-        sequence = []
-        for act in seq_dict:
-            func = self.max_sase
-            if act["func"] == "min_orbit":
-                func = self.min_orbit
-
-            args = [act["devices"], act["method"], {'maxiter': act["maxiter"], 'pBPM': act['pBPM']}]
-            #print(args)
-            action = Action(func=func, args=args)
-            sequence.append(action)
-        return sequence
-
-
-    def set_limits(self, seq_dict):
-
-        for act in seq_dict:
-            for i, devname in enumerate(act["devices"]):
-                limits = act["tol"][i]
-                self.dp.set_limits( dev_name=devname, limits=limits)
-
+            self.eval(sequence)
 
 
     def max_sase(self, devices, method = 'simplex', params = {}, opt_pointing = False):
         '''
         direct sase optimization with simplex, using correctors as a multiknob
         '''
-        try:
-            pbpm_bda = params['pBPM']['BDA']
-            pbpm_tun = params['pBPM']['Tunnel']
-        except:
-            pbpm_bda = False
-            pbpm_tun = False
+
         if self.debug: print('starting multiknob optimization, correctors = ', devices)
 
-        if opt_pointing:
-            weight_gmd_bpm_1 = 10.0
-            weight_gmd_bpm_2 = 10.0
-        else:
-            weight_gmd_bpm_1 = 0.0
-            weight_gmd_bpm_2 = 0.0
-    
         def error_func(x, x_init, tols):
             print("X_relative = ", x, x_init, tols)
             x = x_init + (x-1)*tols/(10.*0.05) # relative to absolute
@@ -178,18 +103,13 @@ class Optimizer:
 
             print("number of func eval: ", self.niter)
 
-
             if not self.isRunning:
                 print("save machine parameters and kill optimizer")
                 if self.sop != None: self.save_action([devices, method, params], flag="force stop")
                 sleep(1) # in order to give time to save parameters before next evaluation of error function
                 pass
 
-            #print (self.dp)
-            
             pen_max = 100.0
-    
-            #print 'error_func: ', bpm_names, '->',  planes
     
             for i in range(len(x)):
                 if self.debug: print('{0} x[{1}]={2}'.format(devices[i], i, x[i]))
@@ -208,51 +128,31 @@ class Optimizer:
             sase = self.mi.get_sase(detector=self.detector)
             alarm = np.max(self.mi.get_alarms())
 
-            # photon beam position penalty
-            """
-            pos_pen = 0.
-            if pbpm_tun or pbpm_bda:
-                (tun_x, tun_y), (bda_x, bda_y) = self.mi.get_sase_pos()
-
-                if not pbpm_tun: tun_x, tun_y = 0., 0.
-                if not pbpm_bda: bda_x, bda_y = 0., 0.
-
-                z = np.array([tun_x, tun_y, bda_x, bda_y]) - np.array(params['pBPM']['centers'])
-                z_pen = np.abs(z) - np.array(params['pBPM']['delta'])
-                if max(z_pen) > 0.:
-                    pos_pen = max(z_pen)*3.
-                else:
-                    pos_pen = 0.
-            """
             if self.debug: print ('alarm:', alarm)
             if self.debug: print ('sase:', sase)
-            #print 'pointing', z1, z2, 'weights', weight_gmd_bpm_1, weight_gmd_bpm_2
 
             pen = 0.0
             if alarm > 1.0:
                 return pen_max
             if alarm > 0.7:
                 return alarm * 50.0
+
             pen += alarm
-            #pen += pos_pen  # photon beam position penalty
             pen -= sase
-            #print("PENALTY", pen, pos_pen)
+
             if self.debug: print ('penalty:', pen)
             self.penalty = pen
             return pen
-        
 
         sase_ref = self.mi.get_sase(detector=self.detector)
     
-        x = np.array(self.mi.init_corrector_vals(devices))
+        x = np.array([self.mi.get_value(dev) for dev in devices])
         tols = np.zeros(len(devices))
         for i, dev in enumerate(devices):
             limits = self.dp.get_limits(dev)
             tols[i] = (limits[1] - limits[0])/2.
         
         x_init = x
-        print("TEST", x)
-        #x = x / x_init
         
         if self.logging: 
             f = open(self.log_file,'a')
@@ -262,52 +162,38 @@ class Optimizer:
             f.write('x0=' + str(x_init) + '\n')
             f.write('sase0=' + str(sase_ref) + '\n')
 
+        try:
+            max_iter = params['maxiter']
+        except KeyError:
+            max_iter = 10 * len(x)
+
+        if max_iter == None:
+            max_iter = 10 * len(x)
+
+        try:
+            xtol = params['xtol']
+        except KeyError:
+            xtol = 1.e-3
+
+        self.maxiter = max_iter
+        if method == 'simplex':
+            print('using simplex optimizer, params:', params)
+            # opt.fmin(error_func,x,xtol=xtol, maxiter=max_iter)
+            opt.fmin(error_func, np.ones(len(x)), args=(x_init, tols), xtol=xtol, maxfun=max_iter)
+            # opt.fmin(error_func, x, args=(x_init,tols), xtol=xtol, maxfun=max_iter)
         
         if method == 'cg':
             print ('using CG optimizer, params:', params )
-            try:
-                max_iter = params['maxiter']
-            except KeyError:
-                max_iter = 10 * len(x)
+
             try:
                 epsilon = params['epsilon']
             except KeyError:
                 epsilon = 0.1
-            try:
-                gtol = params['gtol']
-            except KeyError:
-                gtol = 1.e-3
-            opt.fmin_cg(error_func, x/x_init, args =(x_init,), gtol=gtol, epsilon = epsilon, maxiter=max_iter)
-        
-        if method == 'simplex':
-            print ('using simplex optimizer, params:', params)
-            
-            try:
-                max_iter = params['maxiter']
-            except KeyError:
-                max_iter = 10 * len(x)
 
-            if max_iter == None:
-                max_iter = 10 * len(x)
+            opt.fmin_cg(error_func, x/x_init, args =(x_init,), gtol=xtol, epsilon = epsilon, maxiter=max_iter)
 
-            try:
-                xtol = params['xtol']
-            except KeyError:
-                xtol = 1.e-3
-            self.maxiter=max_iter
-            #opt.fmin(error_func,x,xtol=xtol, maxiter=max_iter)
-            opt.fmin(error_func, np.ones(len(x)), args=(x_init,tols), xtol=xtol, maxfun=max_iter)
-            #opt.fmin(error_func, x, args=(x_init,tols), xtol=xtol, maxfun=max_iter)
         if method == 'powell': 
             print ('using powell optimizer, params:', params)
-            try:
-                max_iter = params['maxiter']
-            except KeyError:
-                max_iter = 10 * len(x)
-            try:
-                xtol = params['xtol']
-            except KeyError:
-                xtol = 1.e-3
             opt.fmin_powell(error_func,x/x_init, args=(x_init, ), xtol=xtol, maxiter=max_iter)
 
 

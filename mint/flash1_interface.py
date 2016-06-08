@@ -264,8 +264,8 @@ class FLASH1MachineInterface():
         return pydoocs.read("FLASH.RF/LLRF.CONTROLLER/PVS." + cav + "/PHASE.SAMPLE")["data"]
 
     def get_cavity_info(self, cavs):
-        ampls = [0.0]*len(cavs)#np.zeros(len(correctors))
-        phases = [0.0]*len(cavs)#np.zeros(len(correctors))
+        ampls = np.zeros(len(cavs))
+        phases = np.zeros(len(cavs))
         for i in range(len(cavs)):
             #ampl_channel = 'FLASH.RF/LLRF.CONTROLLER/CTRL.' + cavs[i] + '/SP.AMPL'
             #phase_channel = 'FLASH.RF/LLRF.CONTROLLER/CTRL.' + cavs[i] + '/SP.PHASE'

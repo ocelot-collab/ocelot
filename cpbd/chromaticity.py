@@ -17,7 +17,7 @@ def edge_chromaticity_old(lattice, tws_0):
         if element.type == "rbend":
             r = element.l/element.angle
             tw_start = trace_z(lattice,tws_0,[(L - element.l)])
-            tw_end = trace_z(lattice,tws_0,[L])
+            tw_end = trace_z(lattice, tws_0,[L])
             #print "*************    ", tw_start, tw_end
             ksi_x_edge += (tw_start.beta_x + tw_end.beta_x)*tan(element.angle/2)/r
             ksi_y_edge += (tw_start.beta_y + tw_end.beta_y)*tan(-element.angle/2)/r
@@ -29,17 +29,20 @@ def edge_chromaticity(lattice, tws_0):
     ksi_x_edge = 0.
     ksi_y_edge = 0.
     L = 0.
+    tws_elem = tws_0
     for element in lattice.sequence:
         L += element.l
+        tws_elem = element.transfer_map * tws_elem
         if element.type == Edge:
             #r = element.l/element.angle
-            tw_start = trace_z(lattice,tws_0,[(L - element.l)])
+            #tw_start = trace_z(lattice, tws_0, [(L - element.l)])
             #print element.id
             #tw_end = trace_z(lattice,tws_0,[L])
             #print "*************    ", tw_start, tw_end
-            ksi_x_edge += tw_start[0].beta_x*tan(element.edge)*element.h
-            ksi_y_edge += tw_start[0].beta_y*tan(-element.edge)*element.h
+            ksi_x_edge += tws_elem.beta_x*tan(element.edge)*element.h
+            ksi_y_edge += tws_elem.beta_y*tan(-element.edge)*element.h
     return np.array([ksi_x_edge, ksi_y_edge])
+
 
 def natural_chromaticity(lattice, tws_0, nsuperperiod = 1):
     #edge_ksi_x, edge_ksi_y = edge_chromaticity(lattice, tws_0)
@@ -116,6 +119,7 @@ def sextupole_chromaticity(lattice, tws0, nsuperperiod = 1):
 
 def chromaticity(lattice, tws_0, nsuperperiod = 1):
     return natural_chromaticity(lattice, tws_0, nsuperperiod) + sextupole_chromaticity(lattice, tws_0, nsuperperiod)
+
 
 def sextupole_id(lattice):
     sex = {}

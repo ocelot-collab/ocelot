@@ -124,15 +124,16 @@ inputTemplate = "\
  alignradf =  __ALIGNRADF__\n\
  offsetradf =  __OFFSETRADF__\n\
  multconv =  __MULTCONV__\n\
+__OUTPUTFILE__\n\
 __BEAMFILE__\n\
 __PARTFILE__\n\
 __FIELDFILE__\n\
 __DISTFILE__\n\
 __MAGFILE__\n\
- outputfile ='run.__RUNID__.gout'\n\
  filetype ='ORIGINAL'\n\
  $end\n"
 
+ # outputfile ='run.__RUNID__.gout'\n\
  # iallharm =  __IALLHARM__\n\
  # iharmsc =  __IHARMSC__\n\
  # pradh0 =  __PRADH0__\n\
@@ -291,6 +292,7 @@ class GenesisInput:
         self.fieldfile = None
         self.partfile = None
         self.distfile = None
+        self.outputfile = None
         
         self.ndcut =   -1 # ??? If NDCUT is zero, the time-window is adjusted, so that in average NPART/NBINS particles fall in each slice. 
         self.alignradf =    1 # if zero , Genesis 1.3 aligns the radiation field to the electron beam so that the radiaiton field is one ful slippage behind the electron beam.
@@ -342,6 +344,11 @@ class GenesisInput:
             input = input.replace("__DISTFILE__", " distfile  =  '"+ str(self.distfile)+ "'")
         else:
             input = input.replace("__DISTFILE__\n", "")
+            
+        if self.outputfile != None:
+            input = input.replace("__OUTPUTFILE__", " outputfile  =  '"+ str(self.outputfile)+ "'")
+        else:
+            input = input.replace("__OUTPUTFILE__", "outputfile ='run.__RUNID__.gout'")
         
         if self.magin == 0:
             input = input.replace("__MAGFILE__\n", "")

@@ -706,6 +706,20 @@ def gen_outplot(handle=None,save='png',show=False,debug=0,all=False,vartype_dfl=
 
 def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True, phase = False, far_field=False, freq_domain=False, fig_name = None, auto_zoom=False, column_3d=True, save=False, show=False, return_proj=False, vartype_dfl=complex64):
     
+    #dfl can be either object or the path to dfl file
+    #out can be genesis output object
+    #z_lim sets the boundaries to CUT the dfl object in z to ranges of e.g. [2,5] um or nm depending on freq_domain=False of True
+    #xy_lim sets the boundaries to SCALE the dfl object in x and y to ranges of e.g. [2,5] um or urad depending on far_field=False of True
+    #figsize rescales the size of the figure
+    #legend not used yet
+    #phase can replace Z projection or spectrum with phase front distribution
+    #far_field and freq_domain carry out FFT along xy and z dimentions correspondingly
+    #fig_name is the desired name of the output figure
+    #auto_zoom automatically scales xyz the images to the (1%?) of the intensity limits
+    #column_3d plots top and side views of the radiation distribution
+    #save and show allow to save figure to image (save='png' (default) or save='eps', etc...) or to display it (slower)
+    #return_proj returns [xy_proj,yz_proj,xz_proj,x,y,z] array.
+    #vartype_dfl is the data type to store dfl in memory [either complex128 (two 64-bit floats) or complex64 (two 32-bit floats)], may save memory
     
     print('    plotting dfl file')
     start_time = time.time()
@@ -713,13 +727,14 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
     # print np.fft.ifftshift(dfl,(1,2)).shape
     # print np.fft.fft2(dfl).shape
     
-
-    
-    if dfl.__class__==str and out==None: #the case if only path to .dfl or .out is given
-        from ocelot.adaptors.genesis import GenesisOutput, readGenesisOutput, readRadiationFile
+    if out==None: #the case if only path to .dfl or .out is given
+        from ocelot.adaptors.genesis import GenesisOutput, readGenesisOutput
         dfl_dir=dfl
         out_dir=dfl_dir.replace('.dfl','')
         out=readGenesisOutput(out_dir,readall=0,debug=0)
+    
+    if dfl.__class__==str:
+        from ocelot.adaptors.genesis import readRadiationFile
         dfl=readRadiationFile(out.path+'.dfl', out.ncar, vartype=vartype_dfl)
     
     # dfl=dfl[100:110,:,:]
@@ -952,7 +967,7 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
     ax_proj_x.set_title(x_title, fontsize=15)
     x_line_f, rms_x=gauss_fit(x,x_line) #fit with Gaussian, and return fitted function and rms
     fwhm_x=fwhm3(x_line)[1]*dx #measure FWHM
-    ax_proj_x.plot(x,x_line_f,'k-')
+    ax_proj_x.plot(x,x_line_f,color='grey')
     ax_proj_x.text(0.95, 0.95,'fwhm= \n'+str(round_sig(fwhm_x,3))+r' ['+unit_xy+']\nrms= \n'+str(round_sig(rms_x,3))+r' ['+unit_xy+']', horizontalalignment='right', verticalalignment='top', transform = ax_proj_x.transAxes,fontsize=12)
     ax_proj_x.set_ylim(ymin=0,ymax=1)
 
@@ -963,7 +978,7 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
     ax_proj_y.set_title(y_title, fontsize=15)
     y_line_f, rms_y=gauss_fit(y,y_line)
     fwhm_y=fwhm3(y_line)[1]*dy
-    ax_proj_y.plot(y_line_f,y,'k-')
+    ax_proj_y.plot(y_line_f,y,color='grey')
     ax_proj_y.text(0.95, 0.95,'fwhm= '+str(round_sig(fwhm_y,3))+r' ['+unit_xy+']\nrms= '+str(round_sig(rms_y,3))+r' ['+unit_xy+']', horizontalalignment='right', verticalalignment='top', transform = ax_proj_y.transAxes,fontsize=12)
     ax_proj_y.set_xlim(xmin=0,xmax=1)
 

@@ -219,22 +219,28 @@ def create_exp_dir(exp_dir, run_ids):
 def checkout_run(run_dir, run_id, prefix1, prefix2, save=True):
     old_file = run_dir + '/run.' +str(run_id) + prefix1 + '.gout'
     new_file = run_dir + '/run.' +str(run_id) + prefix2 + '.gout'
-    
-    os.system('cp ' + old_file + ' ' + new_file )
-    os.system('cp ' + old_file + '.dfl ' + new_file + '.dfl 2>/dev/null') # 2>/dev/null to supress error messages if no such file
-    os.system('cp ' + old_file + '.dpa ' + new_file + '.dpa 2>/dev/null') 
-    os.system('cp ' + old_file + '.beam ' + new_file + '.beam 2>/dev/null') 
-    
-    os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout*')
-    # os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout.dfl 2>/dev/null') 
-    # os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout.dpa 2>/dev/null') 
-    # os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout.beam 2>/dev/null') 
 
-    if not save:
-        os.system('rm ' + old_file)
-        os.system('rm ' + old_file + '.dfl  2>/dev/null') 
-        os.system('rm ' + old_file + '.dpa  2>/dev/null') 
-        os.system('rm ' + old_file + '.beam  2>/dev/null') 
+    if save:
+        os.system('cp ' + old_file + ' ' + new_file )
+        os.system('cp ' + old_file + '.dfl ' + new_file + '.dfl 2>/dev/null') # 2>/dev/null to supress error messages if no such file
+        os.system('cp ' + old_file + '.dpa ' + new_file + '.dpa 2>/dev/null') 
+        os.system('cp ' + old_file + '.beam ' + new_file + '.beam 2>/dev/null') 
+        os.system('cp '+run_dir+'/tmp.gen'+' '+run_dir+'/geninp.'+str(run_id)+prefix2+'.inp 2>/dev/null')
+        os.system('cp '+run_dir+'/lattice.inp'+' '+run_dir+'/lattice.'+str(run_id)+prefix2+'.inp 2>/dev/null')
+    else:
+        os.system('mv ' + old_file + ' ' + new_file )
+        os.system('mv ' + old_file + '.dfl ' + new_file + '.dfl 2>/dev/null') # 2>/dev/null to supress error messages if no such file
+        os.system('mv ' + old_file + '.dpa ' + new_file + '.dpa 2>/dev/null') 
+        os.system('mv ' + old_file + '.beam ' + new_file + '.beam 2>/dev/null')
+        os.system('mv '+run_dir+'/tmp.gen'+' '+run_dir+'/geninp.'+str(run_id)+prefix2+'.inp 2>/dev/null')
+        os.system('mv '+run_dir+'/lattice.inp'+' '+run_dir+'/lattice.'+str(run_id)+prefix2+'.inp 2>/dev/null')
+    # os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout*')
+
+    # if not save:
+        # os.system('rm ' + old_file)
+        # os.system('rm ' + old_file + '.dfl  2>/dev/null') 
+        # os.system('rm ' + old_file + '.dpa  2>/dev/null') 
+        # os.system('rm ' + old_file + '.beam  2>/dev/null') 
 
 
 

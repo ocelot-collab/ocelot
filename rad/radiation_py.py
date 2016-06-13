@@ -1,13 +1,10 @@
 __author__ = 'Sergey Tomin'
 
-from time import time
-
 from scipy import interpolate
 
-from ocelot.rad.spline_py import *
-from ocelot.cpbd.optics import *
-from ocelot.cpbd.track import *
 from ocelot.cpbd.elements import *
+from ocelot.cpbd.track import *
+from ocelot.rad.spline_py import *
 
 
 class Motion:

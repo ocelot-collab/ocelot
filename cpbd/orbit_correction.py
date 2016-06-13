@@ -1,20 +1,18 @@
 __author__ = 'Sergey Tomin'
 
-
-from time import time, sleep
-from ocelot.gui.accelerator import *
-import matplotlib.pyplot as plt
-from scipy.interpolate import splrep, splev, interp1d
-from scipy.integrate import simps
-from numpy.linalg import svd, inv
-from numpy import diag, transpose, linspace, shape
-
-from ocelot.cpbd.errors import *
-from ocelot.cpbd.match import closed_orbit
-from ocelot.cpbd.optics import *
-from ocelot.cpbd.track import *
 import copy
 import pickle
+from time import sleep
+
+import matplotlib.pyplot as plt
+from numpy import diag, shape
+from numpy.linalg import svd
+from scipy.interpolate import splrep, splev
+
+from ocelot.cpbd.match import closed_orbit
+from ocelot.cpbd.track import *
+from ocelot.gui.accelerator import *
+
 
 def show_currents( elems, alpha):
     print( "******* displaying currents - START ********")

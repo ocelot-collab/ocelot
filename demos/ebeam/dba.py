@@ -24,7 +24,7 @@ D6 = Drift(l=0.2, eid= "D6")
 cell = (D1, Q1, D2, Q2, D3, Q3, D4, B, D5, SD, D5, SF, D6, Q4, D6, SF, D5, SD,D5, B, D4, Q3, D3, Q2, D2, Q1, D1)
 
 
-lat = MagneticLattice(cell)
+lat = MagneticLattice(cell, method="linear")
 
 tw0 = Twiss()
 

@@ -3,22 +3,11 @@ main tuning script, LCLS
 '''
 import numpy as np
 
-from ocelot.mint.mint import Optimizer, Action, TestInterface
-from flash1_interface_pydoocs import FLASH1MachineInterface, FLASH1DeviceProperties
-#from flash1_interface import FLASH1DeviceProperties
+from ocelot.mint.mint import Optimizer, Action
+from ocelot.mint.flash1_interface import FLASH1MachineInterface, FLASH1DeviceProperties, TestInterface
 
 
-#import json
-def get_dict(lat, bpms):
-    dict_bpms = {}
-    for elem in lat.sequence:
-        if elem.type == "monitor" and elem.mi_id in bpms:
-            dict_bpms[elem.mi_id] = {}
-            dict_bpms[elem.mi_id]["x"] = elem.x
-            dict_bpms[elem.mi_id]["y"] = elem.y
-    return dict_bpms
 
-#dp = FLASH1DeviceProperties()
 
 mi = FLASH1MachineInterface()
 dp = FLASH1DeviceProperties()
@@ -51,6 +40,22 @@ seq0 = [Action(func=opt.max_sase, args=[ ['H10SMATCH','H12SMATCH'], 'cg', {'maxi
         Action(func=opt.max_sase, args=[ ['H10SMATCH','H12SMATCH'], 'simplex', {'maxiter':25}] )]
 
 
+opt.eval(seq1)
+
+"""
+
+#import json
+def get_dict(lat, bpms):
+    dict_bpms = {}
+    for elem in lat.sequence:
+        if elem.type == "monitor" and elem.mi_id in bpms:
+            dict_bpms[elem.mi_id] = {}
+            dict_bpms[elem.mi_id]["x"] = elem.x
+            dict_bpms[elem.mi_id]["y"] = elem.y
+    return dict_bpms
+
+#dp = FLASH1DeviceProperties()
+
 def apply_bump(names, currents, dIs, alpha):
         mi.set_value(names, currents+dIs*alpha)
 
@@ -80,8 +85,4 @@ seq_min_orb = [Action(func=opt.min_orbit, args=[orbit, 'simplex' ] )]
 
 opt.eval(seq_bump)
 apply_bump(cors, currents, dI, alpha=0.1)
-
-
-#opt.eval(seq5 + seq3 + seq6 + seq8 + seq9)
- 
-
+"""

@@ -1,7 +1,8 @@
+from ocelot import MagneticLattice
+
 __author__ = 'Sergey Tomin'
 
-from ocelot.cpbd.elements import *
-from ocelot.adaptors.madx import lattice_str_from_madx, madx_seq2ocelot_seq, save_lattice_str
+from ocelot.adaptors.madx import lattice_str_from_madx, madx_seq2ocelot_seq
 from ocelot.cpbd import io
 from ocelot.gui.accelerator import *
 

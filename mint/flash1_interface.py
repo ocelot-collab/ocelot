@@ -76,7 +76,16 @@ class SaveOptParams:
         #print ('current actions in tuning', [(t.id, t.tuning_id, t.sase_start, t.sase_end) for t in self.db.get_actions()])
         action_id = self.db.current_action_id()
         print ('updating', tune_id, action_id)
-
+        names = []
+        start_data = []
+        stop_data = []
+        for name in self.data[0].keys():
+            names.append(name)
+            start_data.append(self.data[0][name])
+            stop_data.append(self.data[1][name])
+            print('{0}, {1}, {2}'.format(name, self.data[0][name], self.data[1][name]) )
+        self.db.add_action_parameters(tune_id, action_id, param_names=names, start_vals=start_data, end_vals=stop_data)
+        """
         names = np.array([self.data[0]["devices"]])
         names = np.append(names, ["tol." + name for name in self.data[0]["devices"]])
 
@@ -94,6 +103,15 @@ class SaveOptParams:
         names = np.append(names, "pBPM.bda")
         names = np.append(names, "charge")
         names = np.append(names, "wavelength")
+        print("NAMES ", names, self.data[0].keys(), self.data[0]['devices'])
+
+        names2 = []
+        for name in self.data[0].keys():
+            if self.data[0][name].__class__ == dict:
+                for name2 in self.data[0][name].keys():
+                    print("inside", name2)
+            else:
+                print(name)
 
         vals = [np.array([]), np.array([])]
         for i, val in enumerate(vals):
@@ -114,7 +132,10 @@ class SaveOptParams:
             vals[i] = np.append(vals[i], self.data[i]["pBPM"]["BDA"])
             vals[i] = np.append(vals[i], self.data[i]["charge"])
             vals[i] = np.append(vals[i], self.data[i]["wavelength"])
+        for name, val in zip(names, vals[0]):
+            print("db ", name, val)
         #orbit !!!
+        """
         """
         orbit1 = self.data[0]["orbit"]
         orbit2 = self.data[1]["orbit"]
@@ -132,7 +153,7 @@ class SaveOptParams:
         #print(names, vals[0], vals[1])
         #print(len(names), len(vals[0]), len(vals[1]))
 
-        self.db.add_action_parameters(tune_id, action_id, param_names = names, start_vals = vals[0], end_vals=vals[1])
+        #self.db.add_action_parameters(tune_id, action_id, param_names = names, start_vals = vals[0], end_vals=vals[1])
         return True
 
 
@@ -140,19 +161,23 @@ class SaveOptParams:
         data_base = {}
         data_base["flag"] = flag
         data_base["timestamp"] = time
-        data_base["devices"] = args[0]
+        #data_base["devices"] = args[0]
         data_base["method"] = args[1]
         data_base["maxiter"] = args[2]["maxiter"]
         #print('data_base["pBPM"] = args[2]["pBPM"]', args[2]["pBPM"])
-        data_base["pBPM"] = args[2]["pBPM"]
-        limits = []
-        currents = []
-        for dev in data_base["devices"]:
-            limits.append(self.dp.get_limits(dev))
-            currents.append(self.mi.get_value(dev))
-        data_base["limits"] = limits
-        data_base["currents"] = currents
-        data_base["sase_pos"] = self.mi.get_sase_pos()
+        #data_base["pBPM"] = args[2]["pBPM"]
+
+        for dev in args[0]:
+            data_base[dev] = self.mi.get_value(dev)
+            lim = self.dp.get_limits(dev)
+            data_base["lim."+dev] = (lim[1] - lim[0])/2.
+
+        pos_names = ["sase_pos.tun.x", "sase_pos.tun.y", "sase_pos.bda.x", "sase_pos.bda.y"]
+        pos_sase = np.ravel(self.mi.get_sase_pos())
+        for name, sase_pos in zip(pos_names, pos_sase):
+            data_base[name] = sase_pos
+
+        #data_base["sase_pos"] = self.mi.get_sase_pos()
         data_base["niter"] = niter
         data_base["sase"] = self.mi.get_sase()
         data_base["sase_slow"] = self.mi.get_sase(detector='gmd_fl1_slow')

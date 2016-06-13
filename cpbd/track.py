@@ -2,10 +2,9 @@ __author__ = 'Sergey Tomin'
 
 from ocelot.cpbd.optics import *
 #from mpi4py import MPI
-from numpy import delete, append, array, linspace, argwhere, unique
+from numpy import delete, array, linspace
 from ocelot.cpbd.errors import *
 from ocelot.cpbd.elements import *
-import scipy
 from copy import copy
 from time import time
 from scipy.stats import truncnorm
@@ -427,16 +426,16 @@ def da_mpi(lat, nturns, x_array, y_array, errors = None, nsuperperiods = 1):
         ny = len(y_array)
         return da.reshape(ny, nx)
 
-def track(lat, particle_list, dz, navi, order=1):
+def track(lat, particle_list, dz, navi):
     '''
     tracking for a fixed step dz
     '''
     if navi.z0 + dz > lat.totalLen:
         dz = lat.totalLen - navi.z0
 
-    t_maps = get_map(lat, dz, navi, order=order)
+    t_maps = get_map(lat, dz, navi)
     for tm in t_maps:
-        tm.apply(particle_list, order=order)
+        tm.apply(particle_list)
     return
 
 def lattice_track(lat, p, order=1):

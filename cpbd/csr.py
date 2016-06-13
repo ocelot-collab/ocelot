@@ -2,6 +2,7 @@
 @ author Martin Dohlus DESY, 2015
 @ Python realization Sergey Tomin XFEL, 2016
 """
+
 import numpy as np
 from ocelot import *
 from scipy import interpolate

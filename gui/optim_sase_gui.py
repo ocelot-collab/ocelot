@@ -223,10 +223,6 @@ class OptimApp(QtGui.QMainWindow, ui_optim_sase.Ui_MainWindow):
         self.load_seq_btn.clicked.connect(self.load_sequences)
 
 
-        #self.save_btn.clicked.connect(self.orbit2file)
-        #self.load_btn.clicked.connect(self.file2orb)
-        #self.ref_btm.clicked.connect(self.ref_orbit)
-
         self.add_seq_btn.clicked.connect(self.create_child)
         #self.restore_btn.clicked.connect(self.create_tree)
         #self.start_btm.clicked.connect(self.update_sase)

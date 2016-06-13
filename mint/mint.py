@@ -79,7 +79,6 @@ class Optimizer:
         self.niter = 0
 
     def run(self, sequence):
-        #self.set_params(opt_params)
         if self.isRunning:
             print("Optimization is still running")
         else:
@@ -94,10 +93,10 @@ class Optimizer:
         if self.debug: print('starting multiknob optimization, correctors = ', devices)
 
         def error_func(x, x_init, tols):
-            print("X_relative = ", x, x_init, tols)
+            if self.debug: print("X_relative = ", x, x_init, tols)
             x = x_init + (x-1)*tols/(10.*0.05) # relative to absolute
-            
-            print("X_absolute = ", x, x_init)
+
+            if self.debug: print("X_absolute = ", x, x_init)
             if self.debug: print("isRunning:", self.isRunning)
             self.niter += 1
 
@@ -106,8 +105,7 @@ class Optimizer:
             if not self.isRunning:
                 print("save machine parameters and kill optimizer")
                 if self.sop != None: self.save_action([devices, method, params], flag="force stop")
-                sleep(1) # in order to give time to save parameters before next evaluation of error function
-                pass
+                sleep(1) # in order to give time to save parameters before next evaluation of error_func
 
             pen_max = 100.0
     

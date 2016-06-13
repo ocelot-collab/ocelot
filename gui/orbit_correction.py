@@ -1,19 +1,13 @@
 __author__ = 'Sergey Tomin'
 
-
-import sys, os, random
+import cPickle
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
-from matplotlib.lines import Line2D
-import matplotlib
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
-from matplotlib.figure import Figure
-from numpy import linspace, sin, random
+
 from ocelot.cpbd.orbit_correction import *
-from ocelot.cpbd.elements import *
-import numpy as np
-import cPickle
+
 
 class SuperOrbit(QObject):
     def __init__(self):

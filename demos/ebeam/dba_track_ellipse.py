@@ -26,7 +26,7 @@ cell = (D1, Q1, D2, Q2, D3, Q3, D4, B, D5, SD, D5, SF, D6, Q4, D6, SF, D5, SD,D5
 
 
 
-lat = MagneticLattice(cell)
+lat = MagneticLattice(cell, method="brown")
 
 
 t = linspace(0, 2*pi, num = 100)

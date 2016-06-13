@@ -2,7 +2,6 @@ __author__ = 'Sergey Tomin'
 
 from numpy.random import normal
 from numpy import abs, append
-from ocelot.cpbd.elements import *
 import copy
 
 
@@ -22,7 +21,7 @@ def create_copy(lattice, nsuperperiods):
 
     lat_copy_seg = []
     #print "errors: ", len(lattice.sequence)
-    for i in xrange(nsuperperiods):
+    for i in range(nsuperperiods):
 
         for n, elem in enumerate(lattice.sequence):
             lat_copy_seg.append(copy.deepcopy(elem))

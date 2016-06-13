@@ -3,7 +3,8 @@ SASE
 '''
 from ocelot.gui.accelerator import plot_lattice
 from ocelot.gui.misc import plot_beam
-from ocelot.cpbd.elements import Element, Quadrupole, RBend, Drift, Undulator, MagneticLattice, Hcor, Vcor
+from ocelot.cpbd.elements import Element, Quadrupole, RBend, Drift, Undulator, Hcor, Vcor
+from ocelot import MagneticLattice
 from ocelot.cpbd.beam import Beam, ParticleArray
 from ocelot.cpbd.optics import *
 from ocelot.adaptors.genesis import *

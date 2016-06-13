@@ -2,7 +2,8 @@ import sys
 
 from ocelot.adaptors.genesis import *
 
-from ocelot.cpbd.elements import Element, Quadrupole, RBend, Drift, Undulator, MagneticLattice
+from ocelot.cpbd.elements import Element, Quadrupole, RBend, Drift, Undulator
+from ocelot import MagneticLattice
 from ocelot.cpbd.beam import Beam
 from ocelot.cpbd.optics import *
 

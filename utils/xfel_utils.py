@@ -139,6 +139,14 @@ def run(inp, launcher,readall=True):
     launcher.prepare()
     launcher.launch()
     
+    os.system('cat ' + out_file + ' ' + out_file +'.slice* > '+ out_file +'.2')
+    os.system('mv ' + out_file +'.2 '+ out_file)
+    os.system('cat ' + out_file +'.dfl.slice* > ' + out_file+'.dfl')
+    os.system('cat ' + out_file +'.dpa.slice* > ' + out_file+'.dpa')
+    os.system('rm ' + out_file +'.slice*')
+    os.system('rm ' + out_file +'.dfl.slice*')
+    os.system('rm ' + out_file +'.dpa.slice*')
+    
     g = readGenesisOutput(out_file,readall=readall)
     
     # save=True

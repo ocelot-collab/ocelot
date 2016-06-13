@@ -127,6 +127,7 @@ inputTemplate = "\
 __BEAMFILE__\n\
 __PARTFILE__\n\
 __FIELDFILE__\n\
+__RADFILE__\n\
 __DISTFILE__\n\
 __MAGFILE__\n\
  outputfile ='run.__RUNID__.gout'\n\
@@ -291,6 +292,7 @@ class GenesisInput:
         self.fieldfile = None
         self.partfile = None
         self.distfile = None
+        self.radfile = None
         
         self.ndcut =   -1 # ??? If NDCUT is zero, the time-window is adjusted, so that in average NPART/NBINS particles fall in each slice. 
         self.alignradf =    1 # if zero , Genesis 1.3 aligns the radiation field to the electron beam so that the radiaiton field is one ful slippage behind the electron beam.
@@ -342,6 +344,19 @@ class GenesisInput:
             input = input.replace("__DISTFILE__", " distfile  =  '"+ str(self.distfile)+ "'")
         else:
             input = input.replace("__DISTFILE__\n", "")
+
+        '''
+        Fix for radin file GG - 27.05.2016
+        '''
+        #print 'self.radfile is equal to ', self.radfile
+
+        if self.radfile != None:
+            input = input.replace("__RADFILE__", " radfile  =  '"+ str(self.radfile)+ "'")
+        else:
+            input = input.replace("__RADFILE__\n", "")
+
+
+
         
         if self.magin == 0:
             input = input.replace("__MAGFILE__\n", "")
@@ -533,7 +548,44 @@ def readParticleFile_old(fileName, npart, nslice):
     return slices
 
 
+
+def read_rad_file(fileName):
+    beam = GenesisBeamDefinition()
+    
+    f=open(fileName,'r')
+    null=f.readline()
+    for line in f: 
+        tokens = line.strip().split()
+        
+        if len(tokens) < 2:
+            continue
+        
+        #print tokens[0:2]
+        
+        if tokens[0] == "?" and tokens[1] == "COLUMNS":
+            beam.columns = tokens[2:]
+            for c in beam.columns:
+                beam.column_values[c] = []
+                
+            print beam.columns
+ 
+        if tokens[0] != "?":
+            #print tokens
+            for i in range(0,len(tokens)):
+                beam.column_values[beam.columns[i]].append( float (tokens[i]) )
+            
+    #print beam.columns
+
+    beam.z = beam.column_values['ZPOS']        
+    beam.prad0 = np.array(beam.column_values['PRAD0'])
+        
+    return beam
+    
+    
+    
+
 def read_beam_file(fileName):
+    
     beam = GenesisBeamDefinition()
     
     f=open(fileName,'r')
@@ -577,7 +629,7 @@ def read_beam_file(fileName):
         beam.px = beam.column_values['PXBEAM']
         beam.py = beam.column_values['PYBEAM']
         beam.g0 = np.array(beam.column_values['GAMMA0'])
-        beam.dg = np.array(beam.column_values['DELGAM'])
+        beam.dg = np.array(beam.column_values['DELGAM'])	
     except:
         pass
     
@@ -735,7 +787,7 @@ def readRadiationFile_mpi(comm=None, fileName='simulation.gout.dfl', npoints=51)
     return slices
 
 
-def writeRadiationFile(filename,rad):
+def readRadiationFile(filename,rad):
     print '    writing radiation file' 
     #a new backward compatible version ~10x faster
 #    print '        - writing to ', filename
@@ -1302,9 +1354,14 @@ def generate_input(up, beam, itdp=False):
     '''
     inp = GenesisInput()
 
+    #Next line added by GG 27.05.2016: it was in script
+    
+    beam.emit_xn, beam.emit_yn = beam.emit[beam.C]
     beam.gamma_rel = beam.E / (0.511e-3)
     beam.emit_x = beam.emit_xn / beam.gamma_rel
     beam.emit_y = beam.emit_yn / beam.gamma_rel
+    
+
 
     inp.magin = 1
     #inp.zstop = 50
@@ -1332,6 +1389,7 @@ def generate_input(up, beam, itdp=False):
     inp.emity = beam.emit_yn
 
     felParameters = calculateFelParameters(inp)
+    #printFelParameters(inp)
 
     inp.xlamds = felParameters.lambda0
     inp.prad0 = felParameters.power
@@ -1481,7 +1539,34 @@ def get_power_z(g):
 
     return power_z / nslice
 
-
+def rad_file_str(beam):
+    #header = "# \n? VERSION = 1.0\n? SIZE ="+str(len(beam.column_values['ZPOS']))+"\n? COLUMNS ZPOS GAMMA0 DELGAM EMITX EMITY BETAX BETAY XBEAM YBEAM PXBEAM PYBEAM ALPHAX ALPHAY CURPEAK ELOSS\n"
+    header = "# \n? VERSION = 1.0\n? SIZE ="+str(len(beam.z))+"\n? COLUMNS"
+    #ZPOS GAMMA0 DELGAM EMITX EMITY BETAX BETAY XBEAM YBEAM PXBEAM PYBEAM ALPHAX ALPHAY CURPEAK ELOSS\n"
+    for c in beam.columns:
+        header = header + " " + c 
+    header +="\n"
+    
+    f_str = header
+    
+    
+    beam.column_values['ZPOS'] = beam.z 
+    beam.column_values['PRAD0'] = beam.prad0
+    
+    
+    for i in xrange(len(beam.z)):
+        for c in beam.columns:
+            buf = str(beam.column_values[c][i])
+            f_str = f_str + buf + ' '
+        f_str = f_str.rstrip() +  '\n'
+	
+    print beam.z[301]
+    	
+    
+    return f_str
+    
+    
+    
 def beam_file_str(beam):
     #header = "# \n? VERSION = 1.0\n? SIZE ="+str(len(beam.column_values['ZPOS']))+"\n? COLUMNS ZPOS GAMMA0 DELGAM EMITX EMITY BETAX BETAY XBEAM YBEAM PXBEAM PYBEAM ALPHAX ALPHAY CURPEAK ELOSS\n"
     header = "# \n? VERSION = 1.0\n? SIZE ="+str(len(beam.z))+"\n? COLUMNS"
@@ -1605,7 +1690,19 @@ def plot_beam(fig, beam):
     ax.legend([p1,p2],[r'$p_x [\mu rad]$',r'$p_y [\mu rad]$'])
 '''
 
-
+def adapt_rad_file(beam = None, rad_file = None, out_file='tmp.rad'):
+        
+    rad = read_rad_file(rad_file)    
+    rad.prad0 = np.interp(beam.z, rad.z, rad.prad0)
+    rad.z     = beam.z
+    
+    #print rad.z[301]    
+    #print beam.z[301]
+    open(out_file,'w').write(rad_file_str(rad))
+    #exit()
+    
+    
+    
 
 def transform_beam_file(beam_file = None, out_file='tmp.beam', transform = [ [25.0,0.1], [21.0, -0.1] ], energy_scale=1, energy_new = None, emit_scale = 1, n_interp = None):
     

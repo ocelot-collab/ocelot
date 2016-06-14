@@ -434,7 +434,9 @@ def track(lat, particle_list, dz, navi):
         dz = lat.totalLen - navi.z0
 
     t_maps = get_map(lat, dz, navi)
+
     for tm in t_maps:
+        print("tm:", tm.__class__)
         tm.apply(particle_list)
     return
 

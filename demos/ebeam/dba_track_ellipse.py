@@ -26,14 +26,14 @@ cell = (D1, Q1, D2, Q2, D3, Q3, D4, B, D5, SD, D5, SF, D6, Q4, D6, SF, D5, SD,D5
 
 
 
-lat = MagneticLattice(cell, method="brown")
+lat = MagneticLattice(cell, method="linear")
 
 
 t = linspace(0, 2*pi, num = 100)
 x, xp = 0.1*cos(t), 0.1*sin(t)
 plist = []
-for xi, xpi in zip(x,xp):
-    plist.append(Particle(x = xi, px= xpi))
+for xi, xpi in zip(x, xp):
+    plist.append(Particle(x=xi, px=xpi))
 
 
 plot(x, xp)

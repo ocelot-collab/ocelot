@@ -1,5 +1,7 @@
 from ocelot.cpbd.optics import create_transfer_map
 from ocelot.cpbd.elements import *
+from copy import deepcopy
+
 
 flatten = lambda *n: (e for a in n
                       for e in (flatten(*a) if isinstance(a, (tuple, list)) else (a,)))
@@ -8,7 +10,7 @@ flatten = lambda *n: (e for a in n
 class MagneticLattice:
     def __init__(self, sequence, start=None, stop=None, method="linear"):
         #self.energy = energy
-        self.sequence = list(flatten(sequence))
+        self.sequence = deepcopy(list(flatten(sequence)))
 
         try:
             if start != None:
@@ -94,6 +96,7 @@ class MagneticLattice:
             self.totalLen += element.l
 
             element.transfer_map = create_transfer_map(element, method=method)
+            print("update: ",method,  element.transfer_map.__class__)
             if 'pulse' in element.__dict__: element.transfer_map.pulse = element.pulse
         return self
 

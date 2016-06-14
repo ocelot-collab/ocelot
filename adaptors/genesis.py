@@ -787,7 +787,7 @@ def readRadiationFile_mpi(comm=None, fileName='simulation.gout.dfl', npoints=51)
     return slices
 
 
-def readRadiationFile(filename,rad):
+def writeRadiationFile(filename,rad):
     print '    writing radiation file' 
     #a new backward compatible version ~10x faster
 #    print '        - writing to ', filename

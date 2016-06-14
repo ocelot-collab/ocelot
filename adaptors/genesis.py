@@ -123,6 +123,7 @@ inputTemplate = "\
  idril =  __IDRIL__\n\
  alignradf =  __ALIGNRADF__\n\
  offsetradf =  __OFFSETRADF__\n\
+ offset = __OFFSET__\n\
  multconv =  __MULTCONV__\n\
 __BEAMFILE__\n\
 __PARTFILE__\n\
@@ -296,6 +297,7 @@ class GenesisInput:
         
         self.ndcut =   -1 # ??? If NDCUT is zero, the time-window is adjusted, so that in average NPART/NBINS particles fall in each slice. 
         self.alignradf =    1 # if zero , Genesis 1.3 aligns the radiation field to the electron beam so that the radiaiton field is one ful slippage behind the electron beam.
+	self.offset = 0 #to be commented, check
         self.offsetradf =    0 # slices to shift the electrron beam with respect to the radiation if ALIGNRADF=1.
         self.convharm = 1 #When the particle distribution is imported from a PARTFILE Genesis 1.3 allows the upconversion to a higher harmonics. The harmonic number is specified with CONVHARM and has a defulat value of 1, corresponding to no up-conversion. The user has to make sure that in the input deck XLAMDS is adjusted, according to the new wavelength.
         self.multconv =    0 # If an imported particle distribution from a PARTFILE is up-converted to a higher harmonics the dault behavior is that the number of slices is preserved. This requires that ZSEPis adjusted together with XLAMDS. However if frequency resolution is a problem then a particle distribution can be converted and used multiple times to keep ZSEP constant. The disadvantage is that the CPU execution time is increased as well. 

@@ -17,7 +17,7 @@ __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope", 
            "EbeamParams",  # e_beam_params
            "write_lattice",  # io
            "sc_apply",
-           "MagneticLattice",
+           "MagneticLattice", "MethodTM",
            ]
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.cpbd.beam import *

@@ -1,8 +1,9 @@
 from scipy.optimize import *
 
 from ocelot.cpbd.e_beam_params import radiation_integrals
-#from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.cpbd.optics import *
+
 
 
 def weights_default(val):
@@ -37,16 +38,16 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                     return weights('negative_length')
                     pass
                 vars[i].l = x[i]
-                vars[i].transfer_map = create_transfer_map(vars[i])
+                vars[i].transfer_map = lat.method.create_tm(vars[i])
             if vars[i].__class__ == Quadrupole:
                 vars[i].k1 = x[i]
-                vars[i].transfer_map = create_transfer_map(vars[i])
+                vars[i].transfer_map = lat.method.create_tm(vars[i])
             if vars[i].__class__ in [RBend, SBend, Bend]:
                 if vary_bend_angle:
                     vars[i].angle = x[i]
                 else:
                     vars[i].k1 = x[i]
-                vars[i].transfer_map = create_transfer_map(vars[i])
+                vars[i].transfer_map = lat.method.create_tm(vars[i])
             if vars[i].__class__ == list:
                 if vars[i][0].__class__ == Twiss and vars[i][1].__class__ == str:
                     k = vars[i][1]
@@ -221,7 +222,7 @@ def match_matrix(lat, beam, varz, target_matrix):
 
 def match_tunes(lat, tw0, quads, nu_x, nu_y, ncells=1, print_proc=0):
     print("matching start .... ")
-    end = Monitor(id="end")
+    end = Monitor(eid="end")
     lat = MagneticLattice(lat.sequence + [end])
     # tw0.E = lat.energy
     tws = twiss(lat, tw0, nPoints=None)
@@ -235,7 +236,7 @@ def match_tunes(lat, tw0, quads, nu_x, nu_y, ncells=1, print_proc=0):
     # print constr
     vars = quads
 
-    match(lat, constr, vars, tws[0], print_proc=print_proc)
+    match(lat, constr, vars, tws[0])
     for i, q in enumerate(quads):
         print(q.id, ".k1: before: ", strengths1[i], "  after: ", q.k1)
     lat = MagneticLattice(lat.sequence[:-1])

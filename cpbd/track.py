@@ -166,16 +166,16 @@ class Track_info:
         self.p_list = [[particle.x, particle.px, particle.y, particle.py, particle.tau, particle.p]]
 
     def get_x(self):
-        return np.array(map(lambda p: p[0], self.p_list))
+        return np.array([p[0] for p in self.p_list])
 
     def get_xp(self):
-        return np.array(map(lambda p: p[1], self.p_list))
+        return np.array([p[1] for p in self.p_list])
 
     def get_y(self):
-        return np.array(map(lambda p: p[2], self.p_list))
+        return np.array([p[2] for p in self.p_list])
 
     def get_yp(self):
-        return np.array(map(lambda p: p[3], self.p_list))
+        return np.array([p[3] for p in self.p_list])
 
 
 def contour_da(track_list, nturns, lvl = 0.9):
@@ -258,7 +258,7 @@ def track_nturns(lat, nturns, track_list, nsuperperiods=1, order=1, save_track=T
     xlim, ylim, px_lim, py_lim = aperture_limit(lat, xlim = 1, ylim = 1)
     navi = Navigator()
 
-    t_maps = get_map(lat, lat.totalLen, navi, order=order)
+    t_maps = get_map(lat, lat.totalLen, navi)
 
     #for t in t_maps:
     #    print t.R
@@ -286,7 +286,8 @@ def track_nturns(lat, nturns, track_list, nsuperperiods=1, order=1, save_track=T
         for n in range(nsuperperiods):
             #turn(p_array)
             for tm in t_maps:
-                tm.apply(p_array, order=order)
+                #print("track ", tm.__class__)
+                tm.apply(p_array)
                 # for test
                 #p_array.E += tm.delta_e
                 #tm.sym_map(p_array.particles, energy=p_array.E)

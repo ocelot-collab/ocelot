@@ -1,6 +1,10 @@
-from ocelot.cpbd.optics import create_transfer_map
+from ocelot.cpbd.optics import MethodTM
 from ocelot.cpbd.elements import *
 from copy import deepcopy
+
+
+
+
 
 
 flatten = lambda *n: (e for a in n
@@ -8,10 +12,10 @@ flatten = lambda *n: (e for a in n
 
 
 class MagneticLattice:
-    def __init__(self, sequence, start=None, stop=None, method="linear"):
+    def __init__(self, sequence, start=None, stop=None, method=MethodTM()):
         #self.energy = energy
         self.sequence = deepcopy(list(flatten(sequence)))
-
+        self.method = method
         try:
             if start != None:
                 id1 = self.sequence.index(start)
@@ -31,7 +35,7 @@ class MagneticLattice:
         self.totalLen = 0
         if not self.check_edges():
             self.add_edges()
-        self.update_transfer_maps(method=method)
+        self.update_transfer_maps()
 
         self.__hash__ = {}
         #print 'creating hash'
@@ -84,7 +88,7 @@ class MagneticLattice:
                 n += 2
             n += 1
 
-    def update_transfer_maps(self, method="linear"):
+    def update_transfer_maps(self):
         #E = self.energy
         self.totalLen = 0
         for element in self.sequence:
@@ -95,8 +99,8 @@ class MagneticLattice:
                         element.l = element.l*0.001
             self.totalLen += element.l
 
-            element.transfer_map = create_transfer_map(element, method=method)
-            print("update: ",method,  element.transfer_map.__class__)
+            element.transfer_map = self.method.create_tm(element)
+            print("update: ", element.transfer_map.__class__)
             if 'pulse' in element.__dict__: element.transfer_map.pulse = element.pulse
         return self
 

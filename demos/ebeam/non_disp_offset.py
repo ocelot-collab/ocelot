@@ -24,17 +24,21 @@ ro = (1./sqrt(Q1.k1)*(Lc*sqrt(Q1.k1)*cos(phi) + 2.*sin(phi))/(Lc*sqrt(Q1.k1)*sin
 B1 = SBend(l = ro*angle, angle=-angle)
 B2 = SBend(l = ro*angle, angle=angle)
 lattice = [B1, Db, Q1, Dc, Q2, Dc, Q1, Db, B2]
-
-lat = MagneticLattice(lattice)
+method1 = MethodTM()
+method1.global_method = "linear"
+method2 = MethodTM()
+method2.global_method = "second"
+lat1 = MagneticLattice(lattice, method=method1)
+lat2 = MagneticLattice(lattice, method=method2)
 tw0 = Twiss()
 tw0.beta_x = 5.
 tw0.alpha_x = 1.4
 tw0.beta_y = 16
 tw0.alpha_y = 5.1
 
-tws = twiss(lat, tw0, nPoints=500)
+tws = twiss(lat1, tw0, nPoints=500)
 
-plot_opt_func(lat,tws)
+plot_opt_func(lat1,tws)
 plt.show()
 
 # trajectory with energy offset
@@ -46,9 +50,9 @@ P2 = [cp.copy(p2)]
 navi1 = Navigator()
 navi2 = Navigator()
 dz = 0.01
-for i in range(int(lat.totalLen/dz)):
-    track(lat, [p1], dz = dz, navi = navi1, order = 1)  # R only
-    track(lat, [p2], dz = dz, navi = navi2, order = 2)  # R + T
+for i in range(int(lat1.totalLen/dz)):
+    track(lat1, [p1], dz = dz, navi = navi1)  # R only
+    track(lat2, [p2], dz = dz, navi = navi2)  # R + T
     P1.append(cp.copy(p1))
     P2.append(cp.copy(p2))
 
@@ -73,8 +77,8 @@ for xi, xpi in zip(x,xp):
 plist_1 = cp.deepcopy(plist)
 navi = Navigator()
 
-track(lat, plist_1, dz=lat.totalLen, navi=cp.copy(navi),order=1)
-track(lat, plist, dz=lat.totalLen, navi=cp.copy(navi),order=2)
+track(lat1, plist_1, dz=lat1.totalLen, navi=cp.copy(navi))
+track(lat2, plist, dz=lat2.totalLen, navi=cp.copy(navi))
 x2 = [f.x for f in plist]
 xp2 = [f.px for f in plist]
 

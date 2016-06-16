@@ -696,8 +696,8 @@ def moments(bx, by, Bx, By, Bz, dzk):
     return mx, my
 
 
-def rk_track_in_field(y0, l, N, energy, mag_field):
-    z = np.linspace(0.,l, num=N)
+def rk_track_in_field(y0, l, N, energy, mag_field, s_start=0.):
+    z = np.linspace(s_start, l, num=N)
     h = z[1] - z[0]
     N = len(z)
     gamma = energy/m_e_GeV
@@ -770,11 +770,14 @@ def rk_track_in_field(y0, l, N, energy, mag_field):
     return u
 
 
-def rk_field(y0, l, N, energy, mag_field):
+def rk_field(y0, s_start, s_stop, N, energy, mag_field):
     #z = linspace(0, l, num=N)
     #h = z[1]-z[0]
     #N = len(z)
-    traj_data = rk_track_in_field(y0, l, N, energy, mag_field)
+    if s_start > s_stop:
+        print("rk_field: s_start > s_stop. Setup s_start = 0")
+        s_start = 0.
+    traj_data = rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=s_start)
     #print np.shape(traj_data), np.shape(y0)
     #print traj_data
     y0[0::6] = traj_data[(N-1)*9 + 0,:]

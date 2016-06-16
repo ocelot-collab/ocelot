@@ -287,7 +287,7 @@ class Multipole(Element):
         Element.__init__(self, eid)
         kn = np.array([kn]).flatten()
         if len(kn) < 2:
-            self.kn = np.append(kn, 0.)
+            self.kn = np.append(kn, [0.])
         else:
             self.kn = kn
         self.n = len(self.kn)

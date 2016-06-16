@@ -3,7 +3,7 @@ __author__ = 'Sergey Tomin'
 
 from pylab import *
 from ocelot import *
-#from ocelot.cpbd.track import step
+from ocelot.cpbd.optics import *
 
 Q1 = Quadrupole(l= 0.4, k1=-1.3, eid= "Q1")
 Q2 = Quadrupole(l= 0.8, k1=1.4, eid= "Q2")
@@ -25,8 +25,8 @@ D6 = Drift(l=0.2, eid= "D6")
 cell = (D1, Q1, D2, Q2, D3, Q3, D4, B, D5, SD, D5, SF, D6, Q4, D6, SF, D5, SD,D5, B, D4, Q3, D3, Q2, D2, Q1, D1)
 
 
-
-lat = MagneticLattice(cell, method="linear")
+method = MethodTM(params={"global":"second"})
+lat = MagneticLattice(cell, method=method)
 
 
 t = linspace(0, 2*pi, num = 100)

@@ -497,7 +497,8 @@ def plot_disp(ax,tws, top_plot, font_size):
     Fmin = []
     Fmax = []
     for elem in top_plot:
-        Ftop = [p.__dict__[elem] for p in tws]# map(lambda p:p.__dict__[elem], tws)
+        #print(elem, tws.__dict__[elem] )
+        Ftop = [p.__dict__[elem] for p in tws]
         #for f in Ftop:
         #    print(f)
         #print (max(Ftop))

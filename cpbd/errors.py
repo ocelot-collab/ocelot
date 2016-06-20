@@ -3,7 +3,8 @@ __author__ = 'Sergey Tomin'
 from numpy.random import normal
 from numpy import abs, append
 import copy
-
+from ocelot.cpbd.elements import *
+from ocelot.cpbd.magnetic_lattice import *
 
 class Errors:
     def __init__(self):
@@ -50,10 +51,10 @@ def errors_seed(lattice, er_list):
         elem.dx = 0
         elem.dy = 0
         elem.dtilt = 0
-        if elem.type == "quadrupole":
-            elem.dx = tgauss(sigma = er_list[elem.type]["offset"])
-            elem.dy = tgauss(sigma = er_list[elem.type]["offset"])
-            elem.dtilt = tgauss(sigma = er_list[elem.type]["dtilt"])
+        if elem.__class__ == Quadrupole:
+            elem.dx = tgauss(sigma = er_list[elem.__class__]["offset"])
+            elem.dy = tgauss(sigma = er_list[elem.__class__]["offset"])
+            elem.dtilt = tgauss(sigma = er_list[elem.__class__]["dtilt"])
             if the_same == 1:
                 elem.dx = elem_dx
                 elem.dy = elem_dy
@@ -64,14 +65,14 @@ def errors_seed(lattice, er_list):
             elem_dy = elem.dy
             elem_dtilt = elem.dtilt
 
-        elif elem.type == "sbend" or elem.type == "rbend" or elem.type == "bend":
+        elif elem.__class__ in [SBend, RBend, Bend]:
             elem.dx = 0
             elem.dy = 0
             if the_same == 1:
                 elem.dtilt = elem_dtilt
                 the_same = 0
             else:
-                elem.dtilt = tgauss(sigma = er_list[elem.type]["dtilt"])
+                elem.dtilt = tgauss(sigma = er_list[elem.__class__]["dtilt"])
 
         #elem_dx = elem.dx
         #elem_dy = elem.dy

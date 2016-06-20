@@ -247,7 +247,7 @@ def match_tunes(lat, tw0, quads, nu_x, nu_y, ncells=1, print_proc=0):
     return lat
 
 
-def closed_orbit(lattice, eps_xy=1.e-7, eps_angle=1.e-7):
+def closed_orbit(lattice, eps_xy=1.e-7, eps_angle=1.e-7, energy=0):
     __author__ = 'Sergey Tomin'
 
     """
@@ -258,23 +258,25 @@ def closed_orbit(lattice, eps_xy=1.e-7, eps_angle=1.e-7):
     :param eps_angle: tolerance on the angles of beam in the start and end of lattice
     :return: class Particle
     """
+    #R = lattice_transfer_map(lattice, energy)
     navi = Navigator()
     t_maps = get_map(lattice, lattice.totalLen, navi)
 
     tm0 = TransferMap()
     for tm in t_maps:
-        if tm.order != 2:
-            tm0 = tm * tm0
-        else:
-            sex = TransferMap()
-            sex.R[0, 1] = tm.length
-            sex.R[2, 3] = tm.length
-            tm0 = sex * tm0
+        tm0 = tm * tm0
+        #if tm.order != 2:
+        #    tm0 = tm * tm0
+        #else:
+        #    sex = TransferMap()
+        #    sex.R[0, 1] = tm.length
+        #    sex.R[2, 3] = tm.length
+        #    tm0 = sex * tm0
 
-    R = tm0.R[:4, :4]
+    R = tm0.R(energy)[:4, :4]
 
     ME = eye(4) - R
-    P = dot(inv(ME), tm0.B[:4])
+    P = dot(inv(ME), tm0.B(energy)[:4])
 
     def errf(x):
 

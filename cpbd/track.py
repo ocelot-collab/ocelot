@@ -5,9 +5,9 @@ from ocelot.cpbd.optics import *
 from numpy import delete, array, linspace
 from ocelot.cpbd.errors import *
 from ocelot.cpbd.elements import *
-from copy import copy
 from time import time
 from scipy.stats import truncnorm
+from copy import copy
 
 try:
     from scipy.signal import argrelextrema
@@ -441,17 +441,18 @@ def track(lat, particle_list, dz, navi):
         tm.apply(particle_list)
     return
 
-def lattice_track(lat, p, order=1):
+def lattice_track(lat, p):
     plist = [copy(p)]
 
     for elem in lat.sequence:
-        elem.transfer_map.apply([p], order=order)
-        if not (elem.type in ["bend", "sbend", "rbend"] and elem.l != 0.): #, "hcor", "vcor"
-            if elem.type == "edge":
+        elem.transfer_map.apply([p])
+        print(p)
+        if not (elem.__class__ in [Bend, RBend, SBend] and elem.l != 0.): #, "hcor", "vcor"
+            if elem.__class__ == Edge:
                 #print elem.pos
                 if elem.pos == 1:
                     continue
-            plist.append(copy(p))
+        plist.append(copy(p))
     return plist
 
 

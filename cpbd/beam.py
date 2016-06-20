@@ -106,6 +106,17 @@ class Particle:
         self.tau = tau     # time-like coordinate wrt reference particle in the bunch (e.g phase)
         self.E = E        # energy
 
+    def __str__(self):
+        val = ""
+        val = val + "x = " + str(self.x) + "\n"
+        val = val + "px = " + str(self.px) + "\n"
+        val = val + "y = " + str(self.y) + "\n"
+        val = val + "py = " + str(self.py) + "\n"
+        val = val + "tau = " + str(self.tau) + "\n"
+        val = val + "E = " + str(self.E) + "\n"
+        val = val + "s = " + str(self.s) + "\n"
+        return val
+
 class Beam:
     def __init__(self,x=0,xp=0,y=0,yp=0):
         # initial conditions

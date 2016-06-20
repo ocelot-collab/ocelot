@@ -1,6 +1,6 @@
 __author__ = 'Sergey Tomin'
 
-import copy
+
 import pickle
 from time import sleep
 
@@ -12,7 +12,7 @@ from scipy.interpolate import splrep, splev
 from ocelot.cpbd.match import closed_orbit
 from ocelot.cpbd.track import *
 from ocelot.gui.accelerator import *
-
+import copy
 
 def show_currents( elems, alpha):
     print( "******* displaying currents - START ********")
@@ -217,7 +217,7 @@ class Orbit:
         self.bpms = []
         L = 0.
         for elem in self.lat.sequence:
-            if elem.type == "monitor":
+            if elem.__class__ == Monitor:
                 if bpm_list is None or elem.id in bpm_list:
                     try:
                         elem.weight
@@ -259,11 +259,11 @@ class Orbit:
         self.vcors = []
         L = 0.
         for elem in self.lat.sequence:
-            if elem.type == "vcor":
+            if elem.__class__ == Vcor:
                 if cor_list is None or elem.id in cor_list:
                     elem.s = L+elem.l/2.
                     self.vcors.append(elem)
-            elif elem.type == "hcor":
+            elif elem.__class__ == Hcor:
                 if cor_list is None or elem.id in cor_list:
                     elem.s = L+elem.l/2.
                     self.hcors.append(elem)
@@ -271,7 +271,7 @@ class Orbit:
         if len(self.hcors) == 0:
             print("there are not horizontal correctors")
         if len(self.vcors) == 0:
-            print("there are not vertical correctora")
+            print("there are not vertical correctors")
 
 
     def create_types(self, types, remove_elems=[]):
@@ -280,7 +280,7 @@ class Orbit:
         L = 0.
         for elem in self.lat.sequence:
             L += elem.l
-            if elem.type in types:
+            if elem.__class__ in types:
                 if "_U" in elem.id:
                     continue
                 if elem.id in remove_elems:
@@ -295,7 +295,7 @@ class Orbit:
         self.resp = r_matrix.matrix
         self.mode = r_matrix.mode
 
-    def read_virtual_orbit(self, p_init=None, order=1):
+    def read_virtual_orbit(self, p_init=None):
         """
         searching closed orbit by function closed_orbit(lattice) and searching coordinates of beam at the bpm possitions
         :param lattice: class MagneticLattice
@@ -314,7 +314,7 @@ class Orbit:
         for bpm in self.bpms:
             #print("energy = ", p.E)
             dz = bpm.s - L
-            track(self.lat, [p], dz, navi, order=order)
+            track(self.lat, [p], dz, navi)
             bpm.x = p.x
             bpm.y = p.y
             bpm.E = p.E
@@ -435,14 +435,14 @@ class Orbit:
             real_resp = zeros((m*2, nx + ny+4))
         else:
             real_resp = zeros((m*2, nx + ny))
-        self.read_virtual_orbit(p_init=copy.deepcopy(p_init), order=order)
+        self.read_virtual_orbit(p_init=copy.deepcopy(p_init))
         bpms = copy.deepcopy(self.bpms)
 
         for ix, hcor in enumerate(self.hcors):
             print("measure X - ", ix, "/", nx)
             hcor.angle = shift
             self.lat.update_transfer_maps()
-            self.read_virtual_orbit(p_init=copy.deepcopy(p_init), order=order)
+            self.read_virtual_orbit(p_init=copy.deepcopy(p_init))
 
             for j, bpm in enumerate(self.bpms):
                 real_resp[j, ix] = (bpm.x - bpms[j].x)/shift
@@ -454,14 +454,14 @@ class Orbit:
             print("measure Y - ", iy,"/",ny)
             vcor.angle = shift
             self.lat.update_transfer_maps()
-            self.read_virtual_orbit(p_init=copy.deepcopy(p_init), order=order)
+            self.read_virtual_orbit(p_init=copy.deepcopy(p_init))
 
             for j, bpm in enumerate(self.bpms):
                 real_resp[j, iy+nx] = (bpm.x - bpms[j].x)/shift
                 real_resp[j+m, iy+nx] = (bpm.y - bpms[j].y)/shift
             vcor.angle = 0
         self.lat.update_transfer_maps()
-        self.read_virtual_orbit(p_init=copy.deepcopy(p_init), order=order)
+        self.read_virtual_orbit(p_init=copy.deepcopy(p_init))
         if match_ic:
             for i, par in enumerate(["x", "px", "y", "py"]):
                 print(i)
@@ -602,6 +602,7 @@ class Orbit:
             else:
                 #print len(np.append(self.hcors, self.vcors)), i, len(angle)
                 cor.angle -= angle[i]
+                print(cor.angle)
         """
         for i, vcor in enumerate(self.vcors):
             vcor.angle -= angle[i+len(self.hcors)]

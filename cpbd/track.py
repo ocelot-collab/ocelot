@@ -20,8 +20,8 @@ except:
 
 def aperture_limit(lat, xlim = 1, ylim = 1):
     tws=twiss(lat, Twiss(), nPoints=1000)
-    bxmax = max(map(lambda tw: tw.beta_x, tws))
-    bymax = max(map(lambda tw: tw.beta_y, tws))
+    bxmax = max([tw.beta_x for tw in tws])
+    bymax = max([tw.beta_y for tw in tws])
     bx0 = tws[0].beta_x
     by0 = tws[0].beta_y
     px_lim = float(xlim)/sqrt(bxmax*bx0)
@@ -254,14 +254,15 @@ def ellipse_track_list(beam, n_t_sigma = 3, num = 1000, type = "contour"):
 
 
 
-def track_nturns(lat, nturns, track_list, nsuperperiods=1, order=1, save_track=True):
+def track_nturns(lat, nturns, track_list, nsuperperiods=1, save_track=True):
     xlim, ylim, px_lim, py_lim = aperture_limit(lat, xlim = 1, ylim = 1)
     navi = Navigator()
 
     t_maps = get_map(lat, lat.totalLen, navi)
-
+    #t_maps = merge_maps(t_maps)
+    #print("TMaps = ", len(t_maps))
     #for t in t_maps:
-    #    print t.R
+    #    print(t.length, t.__class__, t.R(0) )
     #print len(t_maps), len(lat.sequence)
     #if order == 1:
     #    navi = Navigator()
@@ -285,6 +286,7 @@ def track_nturns(lat, nturns, track_list, nsuperperiods=1, order=1, save_track=T
         print(i)
         for n in range(nsuperperiods):
             #turn(p_array)
+            #print(p_array.particles[:6])
             for tm in t_maps:
                 #print("track ", tm.__class__)
                 tm.apply(p_array)
@@ -336,7 +338,7 @@ def tracking_second(lat, nturns, track_list, nsuperperiods, save_track = True):
     return np.array(track_list_const)
 '''
 
-def track_nturns_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods = 1, order = 1, save_track = True):
+def track_nturns_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods = 1, save_track = True):
     size = mpi_comm.Get_size()
     rank = mpi_comm.Get_rank()
     lat_copy = create_copy(lat, nsuperperiods = nsuperperiods)
@@ -353,7 +355,7 @@ def track_nturns_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperper
             elem.dy = errors[1][i]
             elem.dtilt = errors[2][i]
 
-    lat = MagneticLattice(lat_copy.sequence)
+    lat = MagneticLattice(lat_copy.sequence, method=lat_copy.method)
 
     if size == 1:
         # it is made to prevent memory crash in mpi_comm.gather() for one-tread case and for case of big pxy_list
@@ -361,8 +363,8 @@ def track_nturns_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperper
         # for instance, for case nturns = 500 is all ok
         # but for nturns = 1000 program crashes with error in mpi_comm.gather()
         # the same situation if treads not so much - solution increase number of treads.
-        print("nsuperperiods = ", nsuperperiods, order)
-        track_list = track_nturns(lat, nturns, track_list, nsuperperiods, order=order, save_track=save_track)
+        print("nsuperperiods = ", nsuperperiods)
+        track_list = track_nturns(lat, nturns, track_list, nsuperperiods, save_track=save_track)
         return track_list
 
     if rank == 0:
@@ -379,7 +381,7 @@ def track_nturns_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperper
     track_list = mpi_comm.scatter(chunks_track_list, root=0)
     print(" scatter time = ", time() - start, " sec, rank = ", rank, "  len(pxy_list) = ", len(track_list) )
     start = time()
-    track_list = track_nturns(lat, nturns, track_list, nsuperperiods, order=order, save_track =save_track)
+    track_list = track_nturns(lat, nturns, track_list, nsuperperiods, save_track =save_track)
     print( " scanning time = ", time() - start, " sec, rank = ", rank)
     start = time()
     out_track_list = mpi_comm.gather(track_list, root=0)
@@ -446,7 +448,7 @@ def lattice_track(lat, p):
 
     for elem in lat.sequence:
         elem.transfer_map.apply([p])
-        print(p)
+        #print(p)
         if not (elem.__class__ in [Bend, RBend, SBend] and elem.l != 0.): #, "hcor", "vcor"
             if elem.__class__ == Edge:
                 #print elem.pos

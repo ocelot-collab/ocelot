@@ -21,21 +21,22 @@ Q4 = Quadrupole(l=0.5, k1=1.19250444829 , eid= "Q4")
 
 B  = Bend(l=2.7, k1=-.06, angle=2*pi/16., e1=pi/16., e2=pi/16., eid= "B")
 
-SF = Sextupole(l=0., ms = 5.8914775395193555, eid= "SF") #random value
-SD = Sextupole(l=0., ms =  -6.8036102026266558, eid= "SD") #random value
+SF = Sextupole(l=0.01, k2 = 5.8914775395193555*100, eid= "SF") #random value
+SD = Sextupole(l=0.01, k2 = -6.8036102026266558*100, eid= "SD") #random value
 
-D1 = Drift(l=2., eid= "D1")
-D2 = Drift(l=0.6, eid= "D2")
-D3 = Drift(l=0.3, eid= "D3")
-D4 = Drift(l=0.7, eid= "D4")
-D5 = Drift(l=0.9, eid= "D5")
-D6 = Drift(l=0.2, eid= "D6")
+D1 = Drift(l=2., eid = "D1")
+D2 = Drift(l=0.6, eid = "D2")
+D3 = Drift(l=0.3, eid = "D3")
+D4 = Drift(l=0.7, eid = "D4")
+D5 = Drift(l=0.9, eid = "D5")
+D6 = Drift(l=0.2, eid = "D6")
 
 
 cell = (D1, Q1, D2, Q2, D3, Q3, D4, B, D5, SD, D5, SF, D6, Q4, D6, SF, D5, SD,D5, B, D4, Q3, D3, Q2, D2, Q1, D1)
 ring = cell
-
-lat = MagneticLattice(ring)
+method = MethodTM()
+method.params[Sextupole] = "kick"
+lat = MagneticLattice(ring, method=method)
 
 
 
@@ -49,10 +50,11 @@ x_array = np.linspace(-0.03, 0.03, nx)
 y_array = np.linspace(0.0001, 0.03, ny)
 start = time()
 pxy_list = create_track_list(x_array, y_array, p_array=[0.])
-pxy_list = track_nturns_mpi( mpi_comm,lat, nturns, pxy_list,  nsuperperiods = 8, order = 2, save_track=False)
+print("stop")
+pxy_list = track_nturns_mpi( mpi_comm,lat, nturns, pxy_list,  nsuperperiods = 8, save_track=False)
 if rank == 0:
     print( time() - start)
-    da = np.array(map(lambda pxy: pxy.turn, pxy_list))
+    da = np.array([ pxy.turn for pxy in pxy_list])
     np.savetxt("da.txt", (da))
     b = []
     for x, y in zip(x_array, y_array):

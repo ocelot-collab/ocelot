@@ -29,10 +29,10 @@ def create_copy(lattice, nsuperperiods):
             if lat_copy_seg[-1].id == None:
                 lat_copy_seg[-1].id = lat_copy_seg[-1].type[:2] + "_sp" +str(i)+"_"+str(n)
             else:
-                if elem.type != "sextupole":
+                if elem.__class__ != Sextupole:
                     lat_copy_seg[-1].id = lat_copy_seg[-1].id+ "_sp" +str(i)+"_"+str(n)
     #print "errors: ", len(lattice.sequence)
-    return MagneticLattice(lat_copy_seg)
+    return MagneticLattice(lat_copy_seg, method=lattice.method)
 
 #class Errors:
 

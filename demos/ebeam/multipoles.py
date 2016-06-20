@@ -56,7 +56,7 @@ plt.show()
 nturns = 1000
 x_array = np.linspace(0.4, 0.60, num=100)
 track_list = create_track_list(x_array, [0.], [0.], energy=0.)
-track_list = track_nturns(lat, nturns, track_list, order=2, save_track=True)
+track_list = track_nturns(lat, nturns, track_list, save_track=True)
 track_list = stable_particles(track_list, nturns)
 print ("number stable particles = ", len(track_list))
 for xyp in track_list:

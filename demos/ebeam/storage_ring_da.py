@@ -27,21 +27,21 @@ cell = (D1, Q1, D2, Q2, D3, Q3, D4, B, D5, SD, D5, SF, D6, Q4, D6, SF, D5, SD,D5
 ring = cell
 method = MethodTM()
 method.params[Sextupole] = "kick"
-method.global_method = "second"
+method.global_method = "linear"
 lat = MagneticLattice(ring, method=method)
 
 compensate_chromaticity(lat, ksi_x_comp=0, ksi_y_comp=0,  nsuperperiod=8)
 
-nturns = 1000
-nx = 100
-ny = 50
+nturns = 2000
+nx = 150
+ny = 100
 
 x_array = np.linspace(-0.03, 0.03, nx)
 y_array = np.linspace(0.0001, 0.03, ny)
 start = time()
 pxy_list = create_track_list(x_array, y_array, p_array=[0.])
 pxy_list = track_nturns( lat, nturns, pxy_list,  nsuperperiods = 8, save_track=True)
-print([p.turn for p in pxy_list])
+#print([p.turn for p in pxy_list])
 
 print("time exec = ", time() - start)
 pxy_list = freq_analysis(pxy_list, lat, nturns, harm = True)

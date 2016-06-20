@@ -150,11 +150,12 @@ class TransferMap:
         B = (E - R)*dX
         """
 
-        if m.__class__ in [TransferMap, SecondTM, CavityTM, KickTM]:
+        if m.__class__ in [TransferMap]:
             m2 = TransferMap()
             m2.R = lambda energy: dot(self.R(energy), m.R(energy))
             m2.B = lambda energy: dot(self.R(energy), m.B(energy)) + self.B(energy)  #+dB #check
             m2.length = m.length + self.length
+            #print("B = ", m2.R(0))
             #m2.delta_e += self.delta_e
 
             return m2
@@ -272,26 +273,12 @@ class CorrectorTM(TransferMap):
         return b
 
     def kick(self, X,  z, l, angle_x, angle_y, energy):
-        print("corrector kick", angle_x, angle_y)
+        #print("corrector kick", angle_x, angle_y)
         ocelot.logger.debug('invoking kick_b')
-        #if l == 0:
-        #    hx = 0.
-        #    hy = 0.
-        #else:
-        #    hx = angle_x / l
-        #    hy = angle_y / l
-        #
-        #dx = hx * z * z / 2.
-        #dy = hy * z * z / 2.
-        #dx1 = hx * z if l != 0 else angle_x
-        #dy1 = hy * z if l != 0 else angle_y
-        #b = array([dx, dx1, dy, dy1, 0., 0.])
-        b = self.kick_b(z, l, angle_x, angle_y)
-        #print(b, X)
         n = len(X)
-        #X1 = np.add(X.reshape(int(n/6), 6), b).reshape(n)
+        b = self.kick_b(z, l, angle_x, angle_y)
         X1 = np.add(np.transpose( dot(self.R(energy), np.transpose( X.reshape(n/6, 6)))), b).reshape(n)
-        print(X1)
+        #print(X1)
         X[:] = X1[:]
         return X
 
@@ -562,7 +549,7 @@ class MethodTM:
 
         # global method
         if method == "kick":
-            print('kick')
+            #print('kick')
             try:
                 k3 = element.k3
             except:
@@ -599,7 +586,7 @@ class MethodTM:
             tm.mag_field = element.mag_field
 
         if element.__class__ == Cavity:
-            print("CAVITY create")
+            #print("CAVITY create")
             tm = CavityTM(v=element.v, f=element.f, phi=element.phi)
 
         if element.__class__ == Multipole:
@@ -797,6 +784,21 @@ def get_map(lattice, dz, navi):
     navi.sum_lengths = L - elem.l
     navi.n_elem = i
     return TM
+
+
+def merge_maps(t_maps):
+    tm0 = TransferMap()
+    t_maps_new = []
+    for tm in t_maps:
+        if tm.__class__ == TransferMap:
+            tm0 = tm*tm0
+        else:
+            t_maps_new.append(tm0)
+            t_maps_new.append(tm)
+            tm0 = TransferMap()
+    t_maps_new.append(tm0)
+    return t_maps_new
+
 
 def get_map_old(lattice, dz, navi):
     #for i, elem in enumerate(lattice.sequence):

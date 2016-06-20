@@ -90,7 +90,9 @@ Q3s = [q3s, M3s, H3s, V3s]
 Q4s = [q4s, M4s, H4s, V4s]
 Q5s = [q5s, M5s, H5s, V5s]
 Q6s = [q6s, M6s, H6s, V6s]
-superperiod = ( D1,SF, D2,Q1,D3, Q2,D2,SD,D4,B1,B2,D5,Q3,D5,B2,B1,D6,Q4,D7,Q5,D8,Q6,D9,Q6s,D8,Q5s,D7,Q4s,D6,B1,B2,D5,Q3s,D5,B2,B1,D4,SD,D2,Q2s,D3,Q1s,D2,SF,D1)
+
+cell = ( D1,SF, D2,Q1,D3, Q2,D2,SD,D4,B1,B2,D5,Q3,D5,B2,B1,D6,Q4,D7,Q5,D8,Q6,D9,Q6s,D8,Q5s,D7,Q4s,D6,B1,B2,D5,Q3s,D5,B2,B1,D4,SD,D2,Q2s,D3,Q1s,D2,SF,D1)
+
 
 beam = Beam()
 beam.E = 2.5
@@ -99,7 +101,7 @@ beam.I = 0.1
 
 method = MethodTM()
 #method.params[Sextupole] = "kick"
-lat = MagneticLattice(superperiod, method=method)
+lat = MagneticLattice(cell, method=method)
 
 tw0 = Twiss(beam)
 tws=twiss(lat, tw0, nPoints=1000)
@@ -110,34 +112,28 @@ plt.show()
 orb = Orbit(lat)
 
 s_bpm_b = np.array([p.s for p in orb.bpms])
-#x_bpm_b = np.array([p.x for p in orb.bpms])
-#y_bpm_b = np.array([p.y for p in orb.bpms])
-#print(s_bpm_b)
+
 p0=Particle(E=beam.E)
 x_bpm_b, y_bpm_b = orb.read_virtual_orbit()
 ax = plot_API(lat)
-ax.plot(s_bpm_b, x_bpm_b, "ro-")
-ax.plot(s_bpm_b, y_bpm_b, "bo-")
+ax.plot(s_bpm_b, x_bpm_b*1000., "ro-")
+ax.plot(s_bpm_b, y_bpm_b*1000., "bo-")
 plt.show()
-
 
 resp_mat1 = orb.ring_response_matrix()
 
-
-print(resp_mat1)
+#print(resp_mat1)
 orb.correction()
 
-#p0=Particle(E=beam.E)
-print("********************************************************")
 x_bpm, y_bpm = orb.read_virtual_orbit()
-print("********************************************************")
+
 p_list = lattice_track(lat, orb.particle0)
 s = [p.s for p in p_list]
-x = [p.x for p in p_list]
-y = [p.y for p in p_list]
+x = [p.x*1000. for p in p_list]
+y = [p.y*1000. for p in p_list]
 ax = plot_API(lat)
-ax.plot(s_bpm_b, (x_bpm + 0*x_bpm_b), "ro")
+ax.plot(s_bpm_b, x_bpm*1000., "ro")
 ax.plot(s, x, 'r')
-ax.plot(s_bpm_b, (y_bpm + 0*y_bpm_b), "bo")
+ax.plot(s_bpm_b, y_bpm*1000., "bo")
 ax.plot(s, y, 'b')
 plt.show()

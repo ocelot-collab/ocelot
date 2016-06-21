@@ -2,27 +2,27 @@ __author__ = 'Sergey Tomin'
 
 from ocelot.cpbd.optics import *
 #from mpi4py import MPI
-from numpy import delete, append, array, linspace, argwhere, unique
+from numpy import delete, array, linspace
 from ocelot.cpbd.errors import *
 from ocelot.cpbd.elements import *
-import scipy
-from copy import copy
 from time import time
 from scipy.stats import truncnorm
+from copy import copy
 
 try:
     from scipy.signal import argrelextrema
     extrema_chk = 1
 except:
     extrema_chk = 0
-    
+
+
 #c0=299792458
 #E_ele_eV=5.109986258350895e+05
 
 def aperture_limit(lat, xlim = 1, ylim = 1):
     tws=twiss(lat, Twiss(), nPoints=1000)
-    bxmax = max(map(lambda tw: tw.beta_x, tws))
-    bymax = max(map(lambda tw: tw.beta_y, tws))
+    bxmax = max([tw.beta_x for tw in tws])
+    bymax = max([tw.beta_y for tw in tws])
     bx0 = tws[0].beta_x
     by0 = tws[0].beta_y
     px_lim = float(xlim)/sqrt(bxmax*bx0)
@@ -80,7 +80,7 @@ def find_highest(sorted_posns, value, diap):
 
 def nearest_particle(track_list, xi,yi):
     #x_array = np.unique(np.sort(map(lambda pxy: pxy.x, pxy_list)))
-    y_array = np.unique(np.sort(map(lambda pxy: pxy.y, track_list)))
+    y_array = np.unique(np.sort([pxy.y for pxy in track_list]))
     yi = find_nearest(y_array, yi)
     x_array_i = []
     for pxy in track_list:
@@ -167,16 +167,16 @@ class Track_info:
         self.p_list = [[particle.x, particle.px, particle.y, particle.py, particle.tau, particle.p]]
 
     def get_x(self):
-        return np.array(map(lambda p: p[0], self.p_list))
+        return np.array([p[0] for p in self.p_list])
 
     def get_xp(self):
-        return np.array(map(lambda p: p[1], self.p_list))
+        return np.array([p[1] for p in self.p_list])
 
     def get_y(self):
-        return np.array(map(lambda p: p[2], self.p_list))
+        return np.array([p[2] for p in self.p_list])
 
     def get_yp(self):
-        return np.array(map(lambda p: p[3], self.p_list))
+        return np.array([p[3] for p in self.p_list])
 
 
 def contour_da(track_list, nturns, lvl = 0.9):
@@ -255,14 +255,15 @@ def ellipse_track_list(beam, n_t_sigma = 3, num = 1000, type = "contour"):
 
 
 
-def track_nturns(lat, nturns, track_list, nsuperperiods=1, order=1, save_track=True):
+def track_nturns(lat, nturns, track_list, nsuperperiods=1, save_track=True):
     xlim, ylim, px_lim, py_lim = aperture_limit(lat, xlim = 1, ylim = 1)
     navi = Navigator()
 
-    t_maps = get_map(lat, lat.totalLen, navi, order=order)
-
+    t_maps = get_map(lat, lat.totalLen, navi)
+    #t_maps = merge_maps(t_maps)
+    #print("TMaps = ", len(t_maps))
     #for t in t_maps:
-    #    print t.R
+    #    print(t.length, t.__class__, t.R(0) )
     #print len(t_maps), len(lat.sequence)
     #if order == 1:
     #    navi = Navigator()
@@ -286,8 +287,10 @@ def track_nturns(lat, nturns, track_list, nsuperperiods=1, order=1, save_track=T
         print(i)
         for n in range(nsuperperiods):
             #turn(p_array)
+            #print(p_array.particles[:6])
             for tm in t_maps:
-                tm.apply(p_array, order=order)
+                #print("track ", tm.__class__)
+                tm.apply(p_array)
                 # for test
                 #p_array.E += tm.delta_e
                 #tm.sym_map(p_array.particles, energy=p_array.E)
@@ -336,7 +339,7 @@ def tracking_second(lat, nturns, track_list, nsuperperiods, save_track = True):
     return np.array(track_list_const)
 '''
 
-def track_nturns_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods = 1, order = 1, save_track = True):
+def track_nturns_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods = 1, save_track = True):
     size = mpi_comm.Get_size()
     rank = mpi_comm.Get_rank()
     lat_copy = create_copy(lat, nsuperperiods = nsuperperiods)
@@ -353,7 +356,7 @@ def track_nturns_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperper
             elem.dy = errors[1][i]
             elem.dtilt = errors[2][i]
 
-    lat = MagneticLattice(lat_copy.sequence)
+    lat = MagneticLattice(lat_copy.sequence, method=lat_copy.method)
 
     if size == 1:
         # it is made to prevent memory crash in mpi_comm.gather() for one-tread case and for case of big pxy_list
@@ -361,8 +364,8 @@ def track_nturns_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperper
         # for instance, for case nturns = 500 is all ok
         # but for nturns = 1000 program crashes with error in mpi_comm.gather()
         # the same situation if treads not so much - solution increase number of treads.
-        print("nsuperperiods = ", nsuperperiods, order)
-        track_list = track_nturns(lat, nturns, track_list, nsuperperiods, order=order, save_track=save_track)
+        print("nsuperperiods = ", nsuperperiods)
+        track_list = track_nturns(lat, nturns, track_list, nsuperperiods, save_track=save_track)
         return track_list
 
     if rank == 0:
@@ -379,7 +382,7 @@ def track_nturns_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperper
     track_list = mpi_comm.scatter(chunks_track_list, root=0)
     print(" scatter time = ", time() - start, " sec, rank = ", rank, "  len(pxy_list) = ", len(track_list) )
     start = time()
-    track_list = track_nturns(lat, nturns, track_list, nsuperperiods, order=order, save_track =save_track)
+    track_list = track_nturns(lat, nturns, track_list, nsuperperiods, save_track =save_track)
     print( " scanning time = ", time() - start, " sec, rank = ", rank)
     start = time()
     out_track_list = mpi_comm.gather(track_list, root=0)
@@ -427,34 +430,38 @@ def da_mpi(lat, nturns, x_array, y_array, errors = None, nsuperperiods = 1):
         ny = len(y_array)
         return da.reshape(ny, nx)
 
-def track(lat, particle_list, dz, navi, order=1):
+def track(lat, particle_list, dz, navi):
     '''
     tracking for a fixed step dz
     '''
     if navi.z0 + dz > lat.totalLen:
         dz = lat.totalLen - navi.z0
 
-    t_maps = get_map(lat, dz, navi, order=order)
+    t_maps = get_map(lat, dz, navi)
+
     for tm in t_maps:
-        tm.apply(particle_list, order=order)
+        #print("tm:", tm.__class__)
+        logger.debug("tm:" + tm.__class__.__name__)
+        tm.apply(particle_list)
     return
 
-def lattice_track(lat, p, order=1):
+def lattice_track(lat, p):
     plist = [copy(p)]
 
     for elem in lat.sequence:
-        elem.transfer_map.apply([p], order=order)
-        if not (elem.type in ["bend", "sbend", "rbend"] and elem.l != 0.): #, "hcor", "vcor"
-            if elem.type == "edge":
+        elem.transfer_map.apply([p])
+        #print(p)
+        if not (elem.__class__ in [Bend, RBend, SBend] and elem.l != 0.): #, "hcor", "vcor"
+            if elem.__class__ == Edge:
                 #print elem.pos
                 if elem.pos == 1:
                     continue
-            plist.append(copy(p))
+        plist.append(copy(p))
     return plist
 
 
 def merge_drifts(lat):
-    print "before merging: len(sequence) = ", len(lat.sequence)
+    print( "before merging: len(sequence) = ", len(lat.sequence) )
     L = 0.
     seq = []
     new_elem = None
@@ -462,7 +469,7 @@ def merge_drifts(lat):
         #next_elem = lat.sequence[i+1]
         if elem.type == "drift":
             L += elem.l
-            new_elem = Drift(l=L, id=elem.id)
+            new_elem = Drift(l=L, eid=elem.id)
         else:
             if new_elem != None:
                 seq.append(new_elem)
@@ -471,7 +478,7 @@ def merge_drifts(lat):
             seq.append(elem)
     if new_elem != None:
         seq.append(new_elem)
-    print "after merging: len(sequence) = ", len(seq)
+    print( "after merging: len(sequence) = ", len(seq) )
     return MagneticLattice(sequence=seq)
 
 
@@ -556,3 +563,4 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones = None ):
     cb.set_label('Qy')
     plt.show()
 """
+

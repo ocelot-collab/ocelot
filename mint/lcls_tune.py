@@ -2,12 +2,8 @@
 main tuning script, LCLS
 '''
 
-from pylab import *
-
-from ocelot.utils.mint.mint import Optimizer, Action, TestInterface
+from ocelot.mint.mint import Optimizer, Action, TestInterface
 from lcls_interface import LCLSMachineInterface, LCLSDeviceProperties
-
-import json
 
 mi = LCLSMachineInterface()
 dp = LCLSDeviceProperties()

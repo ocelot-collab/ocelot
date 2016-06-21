@@ -18,18 +18,18 @@ ncar = g('ncar')
 
 smax = nslice * zsep * xlamds 
                  
-print 'zstop=', zstop
-print 'delz=', delz
-print 'xlamd=', xlamd
-print 'xlamds=', xlamds
-print 'npoints', npoints
-print 'nslice', nslice
-print 'zsep', zsep
-print 'ncar', ncar
+print ('zstop=', zstop)
+print ('delz=', delz)
+print ('xlamd=', xlamd)
+print ('xlamds=', xlamds)
+print ('npoints', npoints)
+print ('nslice', nslice)
+print ('zsep', zsep)
+print ('ncar', ncar)
 
 
 radSlices = readRadiationFile(fileName=file+'.dfl', npoints=npoints)
-print 'read', len(radSlices), 'slices'
+print ('read', len(radSlices), 'slices')
 E = np.copy(radSlices[0])
 
 for i in np.arange(1,len(radSlices)):

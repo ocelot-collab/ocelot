@@ -12,16 +12,23 @@ D = Drift(l = 0.5)
 De = Drift(l = 0.5)
 lattice = [D, Q1, D, Q2, D, Q1, De]
 
-lat = MagneticLattice(lattice)
+method1 = MethodTM()
+method1.global_method = TransferMap
+lat1 = MagneticLattice(lattice, method=method1)
+
+method2 = MethodTM()
+method2.global_method = SecondTM
+lat2 = MagneticLattice(lattice, method=method2)
+
 tw0 = Twiss()
 tw0.beta_x = 5.
 tw0.alpha_x = -0.87
 tw0.beta_y = 2.1
 tw0.alpha_y = 0.96
 
-tws = twiss(lat, tw0, nPoints=100)
+tws = twiss(lat1, tw0, nPoints=None)
 
-plot_opt_func(lat,tws)
+plot_opt_func(lat1, tws)
 plt.show()
 
 # track ellipse
@@ -34,9 +41,11 @@ for xi, pxi in zip(x, px):
 plist_1 = copy.deepcopy(plist)
 
 navi = Navigator()
-dz = lat.totalLen
-track(lat, plist, dz = dz, navi = navi, order = 2)  # R + T
-track(lat, plist_1, dz = dz, navi = navi, order = 1)  # R only
+dz = lat1.totalLen
+track(lat2, plist, dz = dz, navi = navi)  # R + T
+#for e in lat1.sequence:
+#    print("check", e.transfer_map.__class__)
+track(lat1, plist_1, dz = dz, navi = navi)  # R only
 
 tau2 = [f.tau for f in plist]
 x2 = [f.x for f in plist]
@@ -72,9 +81,9 @@ navi1 = Navigator()
 navi2 = Navigator()
 dz = 0.01
 
-for i in range(int(lat.totalLen/dz)):
-    track(lat, [p1], dz = dz, navi = navi1, order = 1)  # R only
-    track(lat, [p2], dz = dz, navi = navi2, order = 2)  # R + T
+for i in range(int(lat1.totalLen/dz)):
+    track(lat1, [p1], dz = dz, navi = navi1)  # R only
+    track(lat2, [p2], dz = dz, navi = navi2)  # R + T
     P1.append(copy.copy(p1))
     P2.append(copy.copy(p2))
 

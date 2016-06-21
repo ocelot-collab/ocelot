@@ -2,9 +2,9 @@ __author__ = 'Sergey Tomin'
 
 from numpy.random import normal
 from numpy import abs, append
-from ocelot.cpbd.elements import *
 import copy
-
+from ocelot.cpbd.elements import *
+from ocelot.cpbd.magnetic_lattice import *
 
 class Errors:
     def __init__(self):
@@ -22,17 +22,17 @@ def create_copy(lattice, nsuperperiods):
 
     lat_copy_seg = []
     #print "errors: ", len(lattice.sequence)
-    for i in xrange(nsuperperiods):
+    for i in range(nsuperperiods):
 
         for n, elem in enumerate(lattice.sequence):
             lat_copy_seg.append(copy.deepcopy(elem))
             if lat_copy_seg[-1].id == None:
                 lat_copy_seg[-1].id = lat_copy_seg[-1].type[:2] + "_sp" +str(i)+"_"+str(n)
             else:
-                if elem.type != "sextupole":
+                if elem.__class__ != Sextupole:
                     lat_copy_seg[-1].id = lat_copy_seg[-1].id+ "_sp" +str(i)+"_"+str(n)
     #print "errors: ", len(lattice.sequence)
-    return MagneticLattice(lat_copy_seg)
+    return MagneticLattice(lat_copy_seg, method=lattice.method)
 
 #class Errors:
 
@@ -51,10 +51,10 @@ def errors_seed(lattice, er_list):
         elem.dx = 0
         elem.dy = 0
         elem.dtilt = 0
-        if elem.type == "quadrupole":
-            elem.dx = tgauss(sigma = er_list[elem.type]["offset"])
-            elem.dy = tgauss(sigma = er_list[elem.type]["offset"])
-            elem.dtilt = tgauss(sigma = er_list[elem.type]["dtilt"])
+        if elem.__class__ == Quadrupole:
+            elem.dx = tgauss(sigma = er_list[elem.__class__]["offset"])
+            elem.dy = tgauss(sigma = er_list[elem.__class__]["offset"])
+            elem.dtilt = tgauss(sigma = er_list[elem.__class__]["dtilt"])
             if the_same == 1:
                 elem.dx = elem_dx
                 elem.dy = elem_dy
@@ -65,14 +65,14 @@ def errors_seed(lattice, er_list):
             elem_dy = elem.dy
             elem_dtilt = elem.dtilt
 
-        elif elem.type == "sbend" or elem.type == "rbend" or elem.type == "bend":
+        elif elem.__class__ in [SBend, RBend, Bend]:
             elem.dx = 0
             elem.dy = 0
             if the_same == 1:
                 elem.dtilt = elem_dtilt
                 the_same = 0
             else:
-                elem.dtilt = tgauss(sigma = er_list[elem.type]["dtilt"])
+                elem.dtilt = tgauss(sigma = er_list[elem.__class__]["dtilt"])
 
         #elem_dx = elem.dx
         #elem_dy = elem.dy

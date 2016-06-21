@@ -18,7 +18,7 @@ beam.beta_x = 12.84
 beam.beta_y = 6.11
 beam.Dx = 0.526
 
-und = Undulator(Kx = 0.43, nperiods = 500, lperiod=0.007, id = "und")
+und = Undulator(Kx = 0.43, nperiods = 500, lperiod=0.007, eid= "und")
 
 lat = MagneticLattice((und))
 

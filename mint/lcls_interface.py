@@ -21,7 +21,7 @@ class LCLSMachineInterface:
         last 120 entries correspond to pulse energies over past 1 second  
         '''
         data = epics.caget("GDET:FEE1:241:ENRCHSTBR")[-120:]
-        print "gmd averaging over n points: ", len(data) 
+        print ("gmd averaging over n points: ", len(data) )
         return np.mean( data ) 
 
     

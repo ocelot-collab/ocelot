@@ -1,12 +1,10 @@
 import sys
-import ocelot.common.xio as xio
-from ocelot.utils.xdb import Xdb
-
-from ocelot.cpbd.elements import Element, Quadrupole, RBend, Drift, Undulator, MagneticLattice
-from ocelot.cpbd.beam import Beam
-from ocelot.cpbd.optics import *
 
 import numpy.fft as fft
+
+from ocelot import MagneticLattice
+from ocelot.cpbd.optics import *
+from ocelot.utils.xdb import Xdb
 
 sys.path.append('../utils/')
 from xfel_utils import *

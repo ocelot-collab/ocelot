@@ -1,9 +1,6 @@
-import ocelot.utils.mint.mint as mint
-import ocelot.utils.mint.swig.dcs as dcs
-import os, sys
-
 from pylab import *
 
+import ocelot.mint.swig.dcs as dcs
 
 print 'corrector setting test...'
 

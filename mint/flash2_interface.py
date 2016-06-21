@@ -53,9 +53,9 @@ class FLASH1MachineInterface():
             blm_channel = 'TTF2.DIAG/BLM/'+self.blm_names[i]+'/CH00.TD'
             blm_alarm_ch  = ('TTF2.DIAG/BLM/'+self.blm_names[i]).replace('BLM', 'BLM.ALARM') + '/THRFHI'
             blm_alarm_ch  = ('FLASH.DIAG/BLM/'+self.blm_names[i]).replace('BLM', 'BLM.ALARM') + '/THRFHI'
-            if (self.debug): print 'reading alarm channel', blm_alarm_ch
+            if (self.debug): print ('reading alarm channel', blm_alarm_ch)
             alarm_val = dcs.get_device_val(blm_alarm_ch) * 1.25e-3 # alarm thr. in Volts
-            if (self.debug): print 'alarm:', alarm_val
+            if (self.debug): print ('alarm:', alarm_val)
     
             h = np.array(dcs.get_device_td(blm_channel))
     
@@ -109,7 +109,7 @@ class FLASH2MachineInterface():
  
     def get_alarms(self):
         alarm_vals = np.zeros(len(self.blm_names))
-        for i in xrange(len(self.blm_names)):
+        for i in range(len(self.blm_names)):
             alarm_val = 2000
             blm_channel = 'FLASH.DIAG/BLM/'+self.blm_names[i]+'/SIGNAL.TD'     
             h = np.array(dcs.get_device_td(blm_channel))

@@ -20,7 +20,7 @@ beam.Dx = 0.526
 #beam.emit_x = 90e-9
 #beam.emit_y = 1e-9
 
-und = Undulator (Kx = 0.43, nperiods = 500, lperiod=0.007, id = "und")
+und = Undulator (Kx = 0.43, nperiods = 500, lperiod=0.007, eid= "und")
 
 lat = MagneticLattice((und))
 

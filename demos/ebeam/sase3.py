@@ -4,40 +4,40 @@ input deck for XFEL SASE3 beamline
 from ocelot import *
 import numpy as np
 
-und = Undulator(nperiods=73, lperiod=0.068, Kx=0.0, id = "und"); voodoo = 1.5
+und = Undulator(nperiods=73, lperiod=0.068, Kx=0.0, eid= "und"); voodoo = 1.5
 #und = Undulator(nperiods=140, lperiod=0.036, Kx=0.0, id = "und"); voodoo = 0.8
 
 
 
-d = Drift (l=1.0, id = "d")
+d = Drift (l=1.0, eid= "d")
 
-d1 = Drift (l=0.55, id = "d1")
+d1 = Drift (l=0.55, eid= "d1")
 #d2 = Drift (l=0.45, id = "d2")
-d2 = Drift (l=und.lperiod, id = "d2")
+d2 = Drift (l=und.lperiod, eid= "d2")
 #d3 = Drift (l=0.27, id = "d0.05nm3")
-d3 = Drift (l=und.lperiod, id = "d0.05nm3")
+d3 = Drift (l=und.lperiod, eid= "d0.05nm3")
 
 # phase shifter
 
 #b1 = RBend (l=0.0575, angle=0.0, id = "b1")
 #b2 = RBend (l=0.0575, angle=-0.0, id = "b2")
-b1 = RBend (l=und.lperiod, angle=0.0, id = "b1")
-b2 = RBend (l=und.lperiod, angle=-0.0, id = "b2")
+b1 = RBend (l=und.lperiod, angle=0.0, eid= "b1")
+b2 = RBend (l=und.lperiod, angle=-0.0, eid= "b2")
 
 
 #psu=(b1,b2,b2,b1)
-psu= Drift (l=b1.l*2 + b2.l*2 + d3.l, id = "d1")
+psu= Drift (l=b1.l*2 + b2.l*2 + d3.l, eid= "d1")
 
 #qf = Quadrupole (l=0.1, id = "qf")
 #qd = Quadrupole (l=0.1, id = "qd")
-qf = Quadrupole (l=und.lperiod*2, id = "qf")
-qd = Quadrupole (l=und.lperiod*2, id = "qd")
+qf = Quadrupole (l=und.lperiod*2, eid= "qf")
+qd = Quadrupole (l=und.lperiod*2, eid= "qd")
 
 
 #qfh = Quadrupole (l=0.05, id = "qfh")
 #qdh = Quadrupole (l=0.05, id = "qdh")
-qfh = Quadrupole (l=qf.l / 2., id = "qfh")
-qdh = Quadrupole (l=qd.l / 2., id = "qdh")
+qfh = Quadrupole (l=qf.l / 2., eid= "qfh")
+qdh = Quadrupole (l=qd.l / 2., eid= "qdh")
 
 
 cell_ps = (und, d2, qf, psu, und, d2, qd, psu)
@@ -49,7 +49,7 @@ sase = sase3
 
 
 # self-seeding setup
-und2 = Undulator(nperiods=73, lperiod=0.068, Kx=0.0, id = "und2")
+und2 = Undulator(nperiods=73, lperiod=0.068, Kx=0.0, eid= "und2")
 sase3_ss_1 = (und2, d2, qd, psu, und2, d2, qf, psu, und2,d2, qd, psu, und2, d2, qf, psu, und2)
 
 sase3_ss_2 = (d2, qd, psu, und, d2, qf, psu)
@@ -58,12 +58,12 @@ lc = d2.l + qd.l + psu.l + und.l +  d2.l + qf.l +  psu.l
 lcm = psu.l +  und.l + d2.l
 
 
-d1_c = Drift (l=0.1, id = "d1_c")
-b1_c = Hcor (l=0.2, angle=1.e-5, id = "b1_c")
-b2_c = Hcor (l=0.2, angle=-1.e-5, id = "b2_c")
+d1_c = Drift (l=0.1, eid= "d1_c")
+b1_c = Hcor (l=0.2, angle=1.e-5, eid= "b1_c")
+b2_c = Hcor (l=0.2, angle=-1.e-5, eid= "b2_c")
 
-d2_c = Drift (l=(lcm - 2*d1_c.l - 2*b1_c.l - 2*b2_c.l)/3., id = "d2_c")
-d3_c = Drift (l=(lcm - 2*d1_c.l - 2*b1_c.l - 2*b2_c.l)/3., id = "d3_c")
+d2_c = Drift (l=(lcm - 2*d1_c.l - 2*b1_c.l - 2*b2_c.l)/3., eid= "d2_c")
+d3_c = Drift (l=(lcm - 2*d1_c.l - 2*b1_c.l - 2*b2_c.l)/3., eid= "d3_c")
 
 chic = (d2, qd, d1_c, b1_c, d2_c, b2_c, d3_c, b2_c, d2_c, b1_c, d1_c, qf, psu)
 sase3_ss_2m = chic
@@ -128,7 +128,7 @@ def f1(n, n0, a0, a1, a2):
     '''
     piecewise-quadratic tapering function
     '''
-    for i in xrange(1,len(n0)):
+    for i in range(1,len(n0)):
         if n < n0[i]:
             return a0 + (n-n0[i-1])*a1[i-1] + (n-n0[i-1])**2 * a2[i-1]
         a0 += (n0[i]-n0[i-1])*a1[i-1] + (n0[i]-n0[i-1])**2 * a2[i-1]
@@ -164,15 +164,15 @@ def get_taper_coeff(ebeam, ephoton):
             return n0, a0, a1, a2
         if ephoton >= 2000 and ephoton < 2999:
             n0 = [0,8, 25,35]
-	    #n0 = [0,10, 25,35] # 1nc
+            #n0 = [0,10, 25,35] # 1nc
             a0 = 0.999
             a1 = [-0., -0.001,  -0.00 ]
             a2 = [0., -0.0001, -0.000 ]
-	    #a2 = [0., -0.00005, -0.000 ]
+            #a2 = [0., -0.00005, -0.000 ]
             return n0, a0, a1, a2
         if ephoton >= 2999:
             n0 = [0,10, 25,35]
-	    #n0 = [0,13, 25,35] # 1nc
+            #n0 = [0,13, 25,35] # 1nc
             a0 = 0.999
             a1 = [-0., -0.001,  -0.00 ]
             a2 = [0., -0.0001, -0.000 ]

@@ -7,31 +7,31 @@ phi_bc2 = 0.033646252962410
 l0 = 0.5
 l_bc2 = l0 *phi_bc2 /np.sin((phi_bc2))
 
-ac_v = 0.02265625*1e+9 # in V
+ac_v = 0.02265625 # in GV
 
-bb_393_b2 = Bend(l=l_bc2, angle=phi_bc2, e1=0.000000000, e2=phi_bc2, tilt=1.570796330, el_id = 'bb_393_b2')
-bb_402_b2 = Bend(l=l_bc2, angle=-phi_bc2, e1=-phi_bc2, e2=0.000000000, tilt=1.570796330, el_id = 'bb_402_b2')
-bb_404_b2 = Bend(l=l_bc2, angle=-phi_bc2, e1=0.000000000, e2=-phi_bc2, tilt=1.570796330,  el_id = 'bb_404_b2')
-bb_413_b2 = Bend(l=l_bc2, angle=phi_bc2, e1=phi_bc2, e2=0.000000000, tilt=1.570796330,  el_id = 'bb_413_b2')
+bb_393_b2 = Bend(l=l_bc2, angle=phi_bc2, e1=0.000000000, e2=phi_bc2, tilt=1.570796330, eid= 'bb_393_b2')
+bb_402_b2 = Bend(l=l_bc2, angle=-phi_bc2, e1=-phi_bc2, e2=0.000000000, tilt=1.570796330, eid= 'bb_402_b2')
+bb_404_b2 = Bend(l=l_bc2, angle=-phi_bc2, e1=0.000000000, e2=-phi_bc2, tilt=1.570796330,  eid= 'bb_404_b2')
+bb_413_b2 = Bend(l=l_bc2, angle=phi_bc2, e1=phi_bc2, e2=0.000000000, tilt=1.570796330,  eid= 'bb_413_b2')
 
-d10cm =   Drift(l=0.1, id = 'd10cm')
-cd850cm = Drift(l=8.5 / np.cos(phi_bc2), id = 'cd850cm')
-cd150cm = Drift(l=1.5, id = 'cd150cm')
-cd100cm = Drift(l=1, id = 'cd100cm')
-d34cm59 = Drift(l=0.3459, id = 'd34cm59')
-d13cm =   Drift(l=0.13, id = 'd13cm')
-d130cm =  Drift(l=1.3, id = 'd130cm')
+d10cm =   Drift(l=0.1, eid= 'd10cm')
+cd850cm = Drift(l=8.5 / np.cos(phi_bc2), eid= 'cd850cm')
+cd150cm = Drift(l=1.5, eid= 'cd150cm')
+cd100cm = Drift(l=1, eid= 'cd100cm')
+d34cm59 = Drift(l=0.3459, eid= 'd34cm59')
+d13cm =   Drift(l=0.13, eid= 'd13cm')
+d130cm =  Drift(l=1.3, eid= 'd130cm')
 
 bc2  = (d10cm, bb_393_b2, cd850cm, bb_402_b2, cd150cm, bb_404_b2, cd850cm, bb_413_b2,  cd100cm)
 
-qd_415_b2 = Quadrupole(l=0.2000000, k1=0.3, tilt=0.000000000, el_id = 'qd_415_b2')
-qd_417_b2 = Quadrupole(l=0.2000000, k1=-0.2, tilt=0.000000000, el_id = 'qd_417_b2')
-qd_418_b2 = Quadrupole(l=0.2000000, k1=-0.5, tilt=0.000000000, el_id = 'qd_418_b2')
-q_249_l2 =  Quadrupole(l=0.3000000, k1=0.25, tilt=0.000000000, el_id = 'q_249_l2')
-q_261_l2 =  Quadrupole(l=0.3000000, k1=-0.29711100, tilt=0.000000000, el_id = 'q_261_l2')
+qd_415_b2 = Quadrupole(l=0.2000000, k1=0.3, tilt=0.000000000, eid= 'qd_415_b2')
+qd_417_b2 = Quadrupole(l=0.2000000, k1=-0.2, tilt=0.000000000, eid= 'qd_417_b2')
+qd_418_b2 = Quadrupole(l=0.2000000, k1=-0.5, tilt=0.000000000, eid= 'qd_418_b2')
+q_249_l2 =  Quadrupole(l=0.3000000, k1=0.25, tilt=0.000000000, eid= 'q_249_l2')
+q_261_l2 =  Quadrupole(l=0.3000000, k1=-0.29711100, tilt=0.000000000, eid= 'q_261_l2')
 
 
-c_a3 = Cavity(l=1.0377000, phi=0.0, volt = ac_v, freq=1.300e+009, el_id = 'c_a3')
+c_a3 = Cavity(l=1.0377000, phi=0.0, v = ac_v, freq=1.300e+009, eid= 'c_a3')
 
 
 l3  = (d13cm,qd_415_b2,d130cm, qd_417_b2, d130cm, qd_418_b2,d130cm,

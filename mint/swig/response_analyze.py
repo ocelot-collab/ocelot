@@ -1,15 +1,10 @@
 '''
 response function measurement
 '''
-import ocelot.utils.mint.mint as mint
-import ocelot.utils.mint.swig.dcs as dcs
-import os, sys
+
+from pickle import load
 
 from pylab import *
-from scipy.optimize import *
-from time import sleep
-from pickle import dump, load
-
 
 steerers = []
 

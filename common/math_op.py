@@ -182,3 +182,6 @@ def find_saturation(power, z, n_smooth=5):
 
     return z[ii+1], ii+1
 
+def find_nearest(array, value):
+    idx = (np.abs(array-value)).argmin()
+    return array[idx]

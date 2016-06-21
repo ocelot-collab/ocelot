@@ -1,15 +1,9 @@
 '''
 n-stage tuning using action graph
 '''
-import ocelot.utils.mint.mint as mint
-import ocelot.utils.mint.swig.dcs as dcs
-import os, sys
-
 from pylab import *
-from scipy.optimize import *
-from time import sleep
 
-
+import ocelot.mint.swig.dcs as dcs
 from action_graph import *
 
 blm_names = ['1L.UND1',

@@ -80,7 +80,7 @@ def potential(q, steps):
     t0 = time()
     out = np.real(np.fft.ifftn(np.fft.fftn(out)*np.fft.fftn(K2)))
     t1 = time()
-    print 'fft time:', t1-t0, ' sec'
+    print( 'fft time:', t1-t0, ' sec')
 
     out[:Nx, :Ny, :Nz] = out[:Nx,:Ny,:Nz]/(4*pi*epsilon_0*hx*hy*hz)
     return out[:Nx, :Ny, :Nz]
@@ -91,9 +91,8 @@ def el_field(X, Q, gamma, nxyz):
     X[:, 2] = X[:, 2]*gamma
     XX = np.max(X, axis=0)-np.min(X, axis=0)
     XX = XX*np.random.uniform(low=1.0, high=1.1)
-    print 'mesh steps:', XX
-
-    # here we use a fast 3D "near-point" interpolation 
+    print( 'mesh steps:', XX)
+    # here we use a fast 3D "near-point" interpolation
     # we need a stand-alone module with 1D,2D,3D parricles-to-grid functions
     steps = XX/(nxyz-3)
     X = X/steps
@@ -107,7 +106,7 @@ def el_field(X, Q, gamma, nxyz):
     nzny = nz*ny
     Xi = np.int_(np.floor(X)+1)
     inds = np.int_(Xi[:, 0]*nzny+Xi[:, 1]*nz+Xi[:, 2])  # 3d -> 1d
-    print inds.shape, nxyz
+    #print( inds.shape, nxyz)
 
     q = np.bincount(inds, Q, nzny*nx).reshape(nxyz)
     p = potential(q, steps)
@@ -161,7 +160,7 @@ def sc_apply(p_array, q_array, zstep, nmesh_xyz, low_order_kick=True):
 def SC_xp_update(xp, Q, gamref, dS, nxyz):
     #Lorentz transformation with z-axis and gamref
     betref2 = 1 - gamref**-2
-    betref = sqrt(betref2)
+    betref = np.sqrt(betref2)
     Eref = gamref*m_e_eV
     pref = Eref*betref
     Exyz = el_field(np.c_[xp[:, 0], xp[:, 1], xp[:, 2]], Q, gamref, nxyz)
@@ -174,10 +173,36 @@ def SC_xp_update(xp, Q, gamref, dS, nxyz):
     xp[:,5] = xp[:, 5] + cdT*(Exyz[:, 2] + betref*(u[:, 0]*Exyz[:, 0] + u[:, 1]*Exyz[:, 1]))
 
 
+"""
+def sc_track(lattice):
+    navi = Navigator(lattice=lattice)
+    #start = time.time()
+
+    for i, zi in enumerate(Z[1:]):
+        print zi
+        dz = zi - Z[i]
+        step(lat=lat, particle_list=p_array, dz=dz, navi=navi, order=order)
+        if SC:
+            #SC_xxstg_update(P, Q, p_array.E / 0.000511, dz, True, nxnynz)
+            #sc.sc_apply(p_array, Q, dz, True, nxnynz)
+            sc.sc_apply(p_array, q_array=Q, zstep=dz, nmesh_xyz=[63, 63, 63], low_order_kick=True)
+        tw = get_envelope(p_array)
+        tw.s = navi.z0
+        tws_track.append(tw)
+        #f.add_subplot(211)
+        #plt.plot(p_array.particles[::6], p_array.particles[2::6], '.')
+        #f.add_subplot(212)
+        #plt.plot(p_array.particles[4::6],p_array.particles[5::6],'.')
+        #plt.draw()
+        #plt.pause(0.1)
+    print "time exc = ", time.time() - start
+"""
         
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     P=np.loadtxt('test.ast')
+    #P=np.loadtxt('D:/MyTools/MartinsTracker/2ASTRA/test.ast')
+    #P=np.loadtxt('D:/MyTools/MartinsTracker/2ASTRA/bc1_out.ast')
     Q=-P[:,7]*1e-9 #charge in nC -> in C 
     xp=P[:,:6] 
     z00=xp[0,2] 
@@ -190,7 +215,7 @@ if __name__ == "__main__":
     pz0=pz00+pav; 
     xp[:,5]=xp[:,5]-pav
     Pref=pz0 
-    gamref=sqrt((Pref/m_e_eV)**2+1)
+    gamref=np.sqrt((Pref/m_e_eV)**2+1)
     xxstg= exact_xp_2_xxstg(xp,gamref)
     xxstg0=np.copy(xxstg)
     L0=False
@@ -211,7 +236,7 @@ if __name__ == "__main__":
             SC_xp_update(xp,Q,gamref,dS,np.r_[53,53,53])
             xxstg= exact_xp_2_xxstg(xp,gamref)
         t1=time.time()
-        print 'step time:', t1-t0,' sec'
+        print( 'step time:', t1-t0,' sec')
         f.add_subplot(211)
         plt.plot(xxstg[:,4],xxstg[:,5],'.',xxstg0[:,4],xxstg0[:,5],'.')
         f.add_subplot(212)
@@ -219,7 +244,7 @@ if __name__ == "__main__":
         plt.draw()
         plt.pause(0.1)
     plt.ioff();plt.show()    
-    np.savetxt('pytest.ast',xxstg)
+    np.savetxt('D:/pytest.ast',xxstg)
     
     
     

@@ -223,6 +223,7 @@ def filter_1d(pulse, transm, i):
     sp = np.roll( sp, pulse.n/2)
     pulse.f[i,0:n_p1] = fft.ifft(sp)
 
+#sseed_2(hostfile, input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug=True, output_file = None,  xt_couple=False)
 
 def sseed(input_file, E_ev, chicane, run_dir, delay = None, debug=True, 
           output_file = None, wake=None, xt_couple=False, n_peak = 1, 
@@ -352,7 +353,7 @@ def sseed(input_file, E_ev, chicane, run_dir, delay = None, debug=True,
 
     t = pulses_1d.t[n_start:n_start+pulses_1d.nslice]
     pulse3d.slices = np.reshape(pulse3d.slices, (pulses_1d.nslice, pulse3d_part.nx, pulse3d_part.nx))
-    field_from_pulses( t, pulses_1d.f[i1:i2,n_start:n_start+pulses_1d.nslice], pulse3d.mesh_size,pulse3d.slices)
+    field_from_pulses( t, pulses_1d.f[i1:i2,n_start:n_start+pulses_1d.nslice], pulse3d.mesh_size, pulse3d.slices)
 
     g.spec = np.fft.fft(pulse3d.slices[:,ncar/2,ncar/2])
     g.max_power = np.max(np.abs(pulse3d.slices[:,ncar/2,ncar/2]))

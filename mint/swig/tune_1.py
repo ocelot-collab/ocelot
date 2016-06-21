@@ -1,19 +1,16 @@
 '''
 main tuning script
 '''
-import ocelot.utils.mint.mint as mint
-import ocelot.utils.mint.swig.dcs as dcs
-import os, sys
-
-
-from tune_common import *
+from time import sleep
 
 from pylab import *
 from scipy.optimize import *
 import scipy.optimize as opt
-from time import sleep
 
-init_blms(blms)    
+import ocelot.mint.swig.dcs as dcs
+from tune_common import *
+
+init_blms(blms)
 
 
 def init_corrector_vals(correctors):

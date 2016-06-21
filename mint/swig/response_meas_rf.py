@@ -1,18 +1,15 @@
 '''
 response function measurement
 '''
-import ocelot.utils.mint.mint as mint
-import ocelot.utils.mint.swig.dcs as dcs
-import os, sys
+from time import sleep
+from pickle import dump
 
 from pylab import *
-from scipy.optimize import *
-from time import sleep
-from pickle import dump, load
 
+import ocelot.mint.swig.dcs as dcs
 from tune_common import *
 
-init_blms()    
+init_blms()
 
 
 class ResponseFunction:

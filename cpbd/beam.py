@@ -83,13 +83,12 @@ class Twiss:
         val = val + "Dy      = " + str(self.Dy) + "\n"
         val = val + "Dxp     = " + str(self.Dxp) + "\n"
         val = val + "Dyp     = " + str(self.Dyp) + "\n"
-        val = val + "mux     = " + str(self.mux / 2. / pi) + "\n"
-        val = val + "muy     = " + str(self.muy/ 2. / pi) + "\n"
-        #val = val + "nu_x    = " + str(self.mux/2./pi) + "\n"
-        #val = val + "nu_y    = " + str(self.muy/2./pi) + "\n"
+        val = val + "mux     = " + str(self.mux) + "\n"
+        val = val + "muy     = " + str(self.muy) + "\n"
+        val = val + "nu_x    = " + str(self.mux/2./pi) + "\n"
+        val = val + "nu_y    = " + str(self.muy/2./pi) + "\n"
         val = val + "s    = " + str(self.s) + "\n"
         return val
-
 
             
 class Particle:
@@ -106,6 +105,17 @@ class Particle:
         self.s = s
         self.tau = tau     # time-like coordinate wrt reference particle in the bunch (e.g phase)
         self.E = E        # energy
+
+    def __str__(self):
+        val = ""
+        val = val + "x = " + str(self.x) + "\n"
+        val = val + "px = " + str(self.px) + "\n"
+        val = val + "y = " + str(self.y) + "\n"
+        val = val + "py = " + str(self.py) + "\n"
+        val = val + "tau = " + str(self.tau) + "\n"
+        val = val + "E = " + str(self.E) + "\n"
+        val = val + "s = " + str(self.s) + "\n"
+        return val
 
 class Beam:
     def __init__(self,x=0,xp=0,y=0,yp=0):
@@ -244,7 +254,7 @@ class ParticleArray:
 
     def array2list(self):
         p_list = []
-        for i in xrange(self.size()):
+        for i in range(self.size()):
             p_list.append( self[i])
         return p_list
 
@@ -281,8 +291,11 @@ def get_envelope(p_array, tws_i=Twiss()):
     dpy = tws_i.Dyp*p
     x = p_array.x() - dx
     px = p_array.px() - dpx
+
     y = p_array.y() - dy
     py = p_array.py() - dpy
+    px = px*(1.-0.5*px*px - 0.5*py*py)
+    py = py*(1.-0.5*px*px - 0.5*py*py)
     tws.x = mean(x)
     tws.y = mean(y)
     tws.px =mean(px)
@@ -317,7 +330,7 @@ def get_current(p_array, charge, num_bins = 200):
     delta_Z = max(z) - min(z)
     delta_z = delta_Z/num_bins
     t_bins = delta_z/speed_of_light
-    print "Imax = ", max(hist)*charge/t_bins
+    print( "Imax = ", max(hist)*charge/t_bins)
     hist = np.append(hist, hist[-1])
     return bin_edges, hist*charge/t_bins
 
@@ -337,11 +350,11 @@ def waterbag_from_twiss(emit, beta, alpha):
     xp = -a / sqrt(beta) * ( sin(phi) + alpha * cos(phi) )
     return (x, xp)
 
-
 def ellipse_from_twiss(emit, beta, alpha):
     phi = 2*pi * np.random.rand()
+    #u = np.random.rand()
+    #a = sqrt(-2*np.log( (1-u)) * emit)
     a = sqrt(emit)
     x = a * sqrt(beta) * cos(phi)
     xp = -a / sqrt(beta) * ( sin(phi) + alpha * cos(phi) )
     return (x, xp)
-

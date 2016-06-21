@@ -1,18 +1,14 @@
 #from __future__ import unicode_literals
-import random
-import pickle
+
+import os
+import sys
 
 from PyQt4 import QtGui, QtCore
-
-from numpy import arange, sin, pi, abs, max, sum, mean, array
+from numpy import arange, sin, pi
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
-import ocelot.utils.mint.mint as mint
-import ocelot.utils.mint.swig.dcs as dcs
-import os, sys
-import numpy as np
-
+import ocelot.mint.swig.dcs as dcs
 from tune_common import get_sase, blm_names, init_blms, get_alarms
 
 progname = os.path.basename(sys.argv[0])

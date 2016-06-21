@@ -1,22 +1,19 @@
 #from __future__ import unicode_literals
-import random
-import pickle
+
+import os
+import sys
 
 from PyQt4 import QtGui, QtCore
-
-from numpy import arange, sin, pi, abs, max, sum, mean, array
+from numpy import arange, sin, pi
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
-import ocelot.utils.mint.mint as mint
-import ocelot.utils.mint.swig.dcs as dcs
-import os, sys
-import numpy as np
+import ocelot.mint.swig.dcs as dcs
+
 
 #from tune_common import get_sase, blm_names, init_blms, get_alarms
 
-from flash1_interface import FLASH1MachineInterface, FLASH1DeviceProperties
-
+from ocelot.mint.flash1_interface import FLASH1MachineInterface
 
 progname = os.path.basename(sys.argv[0])
 
@@ -140,7 +137,7 @@ class XYCanvas(MyMplCanvas):
         
         for bpm in bpms:
             dcs.get_bpm_val(bpm)
-            print 'bpm read:', bpm.id, bpm.x, bpm.y
+            print ('bpm read:', bpm.id, bpm.x, bpm.y)
 
         x = [bpm.x for bpm in bpms]
         y = [bpm.y for bpm in bpms]
@@ -243,7 +240,7 @@ class ApplicationWindow(QtGui.QMainWindow):
         self.close()
 
     def fileSave(self):
-        print 'saving...'
+        print ('saving...')
 
     def closeEvent(self, ce):
         self.fileQuit()

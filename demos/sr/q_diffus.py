@@ -32,7 +32,7 @@ nperiods = 125          # Period numbers per undulator
 kp = 1                  # applying energy diffusion "kick" every N period
 npls = 100              # particles number
 
-U40_short = Undulator(nperiods = kp, lperiod=0.040, Kx=4, id="und")
+U40_short = Undulator(nperiods = kp, lperiod=0.040, Kx=4, eid="und")
 
 seg = (U40_short,)*int(nperiods*nund/kp)
 

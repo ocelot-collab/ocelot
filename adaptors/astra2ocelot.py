@@ -1,13 +1,13 @@
-﻿import numpy as np
+
 #from numpy.core.umath import sqrt
 from ocelot.common.globals import m_e_eV
 from ocelot.cpbd.beam import *
+import numpy as np
 
-def exact_xp_2_xxstg(xp, gamref, xxstg=None):
+def exact_xp_2_xxstg(xp, gamref):
     N = xp.shape[0]
-    if xxstg is None:
-        xxstg = np.zeros((N, 6))
-    pref = m_e_eV*sqrt(gamref**2-1)
+    xxstg = np.zeros((N, 6))
+    pref = m_e_eV*np.sqrt(gamref**2-1)
     u = np.c_[xp[:, 3], xp[:, 4], xp[:, 5]+pref]
     gamma = np.sqrt(1 + np.sum(u*u, 1)/m_e_eV**2)
     beta = np.sqrt(1-gamma**-2)
@@ -26,22 +26,21 @@ def exact_xp_2_xxstg(xp, gamref, xxstg=None):
     return xxstg
 
 
-def exact_xxstg_2_xp(xxstg, gamref, xp=None):
-    N = xxstg.shape[0]
-    if xp is None:
-        xp = np.zeros((N, 6))
-    pref = m_e_eV*sqrt(gamref**2-1)
-    gamma = gamref*(1+xxstg[:, 5])
+def exact_xxstg_2_xp(xxstg, gamref):
+    N = len(xxstg)/6
+    xp = np.zeros((N, 6))
+    pref = m_e_eV*np.sqrt(gamref**2-1)
+    gamma = gamref*(1+xxstg[5::6])
     beta = np.sqrt(1-gamma**-2)
-    u = np.c_[xxstg[:, 1], xxstg[:, 3], np.ones(N)]
+    u = np.c_[xxstg[1::6], xxstg[3::6], np.ones(N)]
     if np.__version__ > "1.8":
         norm = np.linalg.norm(u, 2, 1).reshape((N, 1))
     else:
         norm = np.sqrt(u[:, 0]**2 + u[:, 1]**2 + u[:, 2]**2).reshape((N, 1))
     u = u/norm
-    xp[:, 0] = xxstg[:, 0]-u[:, 0]*beta*xxstg[:, 4]
-    xp[:, 1] = xxstg[:, 2]-u[:, 1]*beta*xxstg[:, 4]
-    xp[:, 2] = -u[:, 2]*beta*xxstg[:, 4]
+    xp[:, 0] = xxstg[0::6]-u[:, 0]*beta*xxstg[4::6]
+    xp[:, 1] = xxstg[2::6]-u[:, 1]*beta*xxstg[4::6]
+    xp[:, 2] = -u[:, 2]*beta*xxstg[4::6]
     xp[:, 3] = u[:, 0]*gamma*beta*m_e_eV
     xp[:, 4] = u[:, 1]*gamma*beta*m_e_eV
     xp[:, 5] = u[:, 2]*gamma*beta*m_e_eV-pref
@@ -51,40 +50,37 @@ def exact_xxstg_2_xp(xxstg, gamref, xp=None):
 def astraBeam2particleArray(filename):
     P0 = np.loadtxt(filename)
     charge_array = -P0[:, 7]*1e-9  #charge in nC -> in C
-    print "charge = ", sum(charge_array)
+    print( "charge = ", sum(charge_array))
     xp = P0[:, :6]
     Pref = xp[0, 5]
-    z0=xp[0,2]
-    xp[0,5] = 0.0
-    xp[0,2] = 0.0
-
-    gamref = sqrt((Pref/m_e_eV)**2+1)
+    xp[0, 5] = 0
+    gamref = np.sqrt((Pref/m_e_eV)**2+1)
     xxstg = exact_xp_2_xxstg(xp, gamref)
 
     p_array = ParticleArray(len(charge_array))
-    p_array.E =  sqrt((Pref/m_e_eV)**2+1)*m_e_GeV
+    p_array.E =  np.sqrt((Pref/m_e_eV)**2+1)*m_e_GeV
     p_array.particles[0::6] = xxstg[:,0]
     p_array.particles[1::6] = xxstg[:,1]
     p_array.particles[2::6] = xxstg[:,2]
     p_array.particles[3::6] = xxstg[:,3]
     p_array.particles[4::6] = xxstg[:,4]
     p_array.particles[5::6] = xxstg[:,5]
-    return p_array, charge_array, z0, gamref
+    return p_array, charge_array
 
-def particleArray2astraBeam(p_array,charge_array,z0=0,filename='pytest.ast'):
+def particleArray2astraBeam(p_array, charge_array, filename="tytest.ast"):
     gamref = p_array.E/m_e_GeV
-    pref = m_e_eV*sqrt(gamref**2-1)
-    print gamref
+    #print gamref
     P = p_array.particles.view()
-    Np=len(P)/6
-    P.shape = Np,6
-    xp=np.zeros([Np,10])
-    xp[:,0:6] = exact_xxstg_2_xp(P, gamref)
-    xp[:, 5] = xp[:, 5] + pref
-    xp[:, 2] = xp[:, 2] + z0
-    xp[1:Np, 5] = xp[1:Np, 5]-xp[0, 5]
-    xp[1:Np, 2] = xp[1:Np, 2]-xp[0, 2]
-    xp[:, 7]=-charge_array*1e9
-    xp[:,8]=1 
-    xp[:,9]=5
-    np.savetxt(filename,xp)
+    #energy = P[5]
+    xp = exact_xxstg_2_xp(P, gamref)
+    Pref = np.sqrt(p_array.E**2/m_e_GeV**2 - 1)*m_e_eV
+    xp[0, 5] = xp[0, 5] + Pref # xp[0, 5] + p_array.E*1e9
+    #np.savetxt('D:/pytest.ast',xp)
+    charge_array = -charge_array.reshape(len(charge_array), 1)*1e+9 #charge in C -> in nC
+    flag = np.zeros((len(charge_array),1))
+    #print(np.shape(xp), np.shape(charge_array))
+    astra = np.append(xp, flag, axis=1)
+    astra = np.append(astra, charge_array, axis=1)
+    astra = np.append(astra, flag, axis=1)
+    astra = np.append(astra, flag, axis=1)
+    np.savetxt(filename, astra)

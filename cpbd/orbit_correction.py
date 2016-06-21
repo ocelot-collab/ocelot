@@ -602,7 +602,7 @@ class Orbit:
             else:
                 #print len(np.append(self.hcors, self.vcors)), i, len(angle)
                 cor.angle -= angle[i]
-                print(cor.angle)
+                #print(cor.angle)
         """
         for i, vcor in enumerate(self.vcors):
             vcor.angle -= angle[i+len(self.hcors)]

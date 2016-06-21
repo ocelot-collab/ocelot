@@ -20,7 +20,7 @@ beam.I = 0.1
 tw0 = Twiss(beam)
 
 method = MethodTM()
-method.params[Undulator] = "undul_sim"
+method.params[Undulator] = UndulatorTestTM
 lat = MagneticLattice(line, method=method)
 
 tws = twiss(lat, tw0, nPoints=100)

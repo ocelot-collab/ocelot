@@ -26,15 +26,15 @@ D6 = Drift(l=0.2, eid= "D6")
 cell = (D1, Q1, D2, Q2, D3, Q3, D4, B, D5, SD, D5, SF, D6, Q4, D6, SF, D5, SD,D5, B, D4, Q3, D3, Q2, D2, Q1, D1)
 ring = cell
 method = MethodTM()
-method.params[Sextupole] = "kick"
-method.global_method = "linear"
+method.params[Sextupole] = KickTM
+method.global_method = SecondTM
 lat = MagneticLattice(ring, method=method)
 
 compensate_chromaticity(lat, ksi_x_comp=0, ksi_y_comp=0,  nsuperperiod=8)
 
-nturns = 2000
-nx = 150
-ny = 100
+nturns = 1000
+nx = 100
+ny = 80
 
 x_array = np.linspace(-0.03, 0.03, nx)
 y_array = np.linspace(0.0001, 0.03, ny)

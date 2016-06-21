@@ -13,11 +13,11 @@ De = Drift(l = 0.5)
 lattice = [D, Q1, D, Q2, D, Q1, De]
 
 method1 = MethodTM()
-method1.global_method = "linear"
+method1.global_method = TransferMap
 lat1 = MagneticLattice(lattice, method=method1)
 
 method2 = MethodTM()
-method2.global_method = "second"
+method2.global_method = SecondTM
 lat2 = MagneticLattice(lattice, method=method2)
 
 tw0 = Twiss()

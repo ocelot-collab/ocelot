@@ -383,7 +383,7 @@ class KickTM(TransferMap):
         return m
 
 
-class UndulatorSpecTM(TransferMap):
+class UndulatorTestTM(TransferMap):
     def __init__(self, lperiod, Kx, ax=0, ndiv=5):
         TransferMap.__init__(self)
         self.lperiod = lperiod
@@ -523,7 +523,7 @@ class SecondTM(TransferMap):
 class MethodTM:
     def __init__(self, params=None):
         if params == None:
-            self.params = {'global': "linear"}
+            self.params = {'global': TransferMap}
         else:
             self.params = params
         self.global_method = self.params['global']
@@ -548,7 +548,7 @@ class MethodTM:
         r_z_e = create_r_matrix(element)
 
         # global method
-        if method == "kick":
+        if method == KickTM:
             #print('kick')
             try:
                 k3 = element.k3
@@ -556,7 +556,7 @@ class MethodTM:
                 k3 = 0.
             tm = KickTM(angle=element.angle, k1=element.k1, k2=element.k2, k3=k3, nkick=self.nkick)
 
-        elif method == "second":
+        elif method == SecondTM:
             T_z = lambda z: t_nnn(z, hx, element.k1, element.k2)
 
             if element.__class__ == Edge:
@@ -572,14 +572,14 @@ class MethodTM:
         else:
             tm = TransferMap()
 
-        if element.__class__ == Undulator and method == "undul_sim":
+        if element.__class__ == Undulator and method == UndulatorTestTM:
             try:
                 ndiv = element.ndiv
             except:
                 ndiv = 5
-            tm = UndulatorSpecTM(lperiod=element.lperiod, Kx=element.Kx, ax=element.ax, ndiv=ndiv)
+            tm = UndulatorTestTM(lperiod=element.lperiod, Kx=element.Kx, ax=element.ax, ndiv=ndiv)
 
-        if method == "RK":
+        if method == RungeKuttaTM:
             tm = RungeKuttaTM
             tm.s_start = element.s_start
             tm.s_stop = element.s_stop

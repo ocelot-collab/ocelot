@@ -25,9 +25,9 @@ B1 = SBend(l = ro*angle, angle=-angle)
 B2 = SBend(l = ro*angle, angle=angle)
 lattice = [B1, Db, Q1, Dc, Q2, Dc, Q1, Db, B2]
 method1 = MethodTM()
-method1.global_method = "linear"
+#method1.global_method = TransferMap
 method2 = MethodTM()
-method2.global_method = "second"
+method2.global_method = SecondTM
 lat1 = MagneticLattice(lattice, method=method1)
 lat2 = MagneticLattice(lattice, method=method2)
 tw0 = Twiss()

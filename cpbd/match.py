@@ -198,7 +198,7 @@ def match_matrix(lat, beam, varz, target_matrix):
         for i in range(len(varz)):
             if varz[i].__class__ == Quadrupole:
                 varz[i].k1 = x[i]
-                varz[i].transfer_map = create_transfer_map(varz[i])
+                varz[i].transfer_map = lat.method.create_tm(varz[i]) # create_transfer_map(varz[i])
 
         R = lattice_transfer_map(lat, beam.E)[0:2, 0:2]
         #print

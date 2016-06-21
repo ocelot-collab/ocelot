@@ -211,7 +211,7 @@ def get_genesis_launcher():
     if host.startswith('kolmogorov'):
         launcher.program = '/home/iagapov/workspace/xcode/codes/genesis/genesis < tmp.cmd | tee log'
     if host.startswith('max'):
-        launcher.program = '/data/netapp/xfel/gianluca/products/genesis/genesis < tmp.cmd | tee log'
+        launcher.program = '/data/netapp/xfel/products/genesis/genesis < tmp.cmd | tee log'
 	launcher.mpiParameters ='-x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH'
 	
     #launcher.nproc = nproc

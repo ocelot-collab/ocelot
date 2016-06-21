@@ -14,7 +14,8 @@ try:
     extrema_chk = 1
 except:
     extrema_chk = 0
-    
+
+
 #c0=299792458
 #E_ele_eV=5.109986258350895e+05
 
@@ -439,7 +440,8 @@ def track(lat, particle_list, dz, navi):
     t_maps = get_map(lat, dz, navi)
 
     for tm in t_maps:
-        print("tm:", tm.__class__)
+        #print("tm:", tm.__class__)
+        logger.debug("tm:" + tm.__class__.__name__)
         tm.apply(particle_list)
     return
 

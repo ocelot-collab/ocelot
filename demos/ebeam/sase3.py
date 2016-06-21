@@ -128,7 +128,7 @@ def f1(n, n0, a0, a1, a2):
     '''
     piecewise-quadratic tapering function
     '''
-    for i in xrange(1,len(n0)):
+    for i in range(1,len(n0)):
         if n < n0[i]:
             return a0 + (n-n0[i-1])*a1[i-1] + (n-n0[i-1])**2 * a2[i-1]
         a0 += (n0[i]-n0[i-1])*a1[i-1] + (n0[i]-n0[i-1])**2 * a2[i-1]
@@ -164,15 +164,15 @@ def get_taper_coeff(ebeam, ephoton):
             return n0, a0, a1, a2
         if ephoton >= 2000 and ephoton < 2999:
             n0 = [0,8, 25,35]
-	    #n0 = [0,10, 25,35] # 1nc
+            #n0 = [0,10, 25,35] # 1nc
             a0 = 0.999
             a1 = [-0., -0.001,  -0.00 ]
             a2 = [0., -0.0001, -0.000 ]
-	    #a2 = [0., -0.00005, -0.000 ]
+            #a2 = [0., -0.00005, -0.000 ]
             return n0, a0, a1, a2
         if ephoton >= 2999:
             n0 = [0,10, 25,35]
-	    #n0 = [0,13, 25,35] # 1nc
+            #n0 = [0,13, 25,35] # 1nc
             a0 = 0.999
             a1 = [-0., -0.001,  -0.00 ]
             a2 = [0., -0.0001, -0.000 ]

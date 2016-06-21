@@ -1,7 +1,8 @@
 from ocelot.cpbd.optics import MethodTM
 from ocelot.cpbd.elements import *
+from ocelot.common.logging import *
 from copy import deepcopy
-
+logger = Logger()
 
 
 
@@ -100,7 +101,8 @@ class MagneticLattice:
             self.totalLen += element.l
 
             element.transfer_map = self.method.create_tm(element)
-            print("update: ", element.transfer_map.__class__)
+            logger.debug("update: " + element.transfer_map.__class__.__name__)
+            #print("update: ", element.transfer_map.__class__.__name__)
             if 'pulse' in element.__dict__: element.transfer_map.pulse = element.pulse
         return self
 

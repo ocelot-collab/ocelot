@@ -72,32 +72,4 @@ plt.legend()
 plt.xlabel("S, m")
 plt.ylabel("X/Y, m")
 plt.grid(True)
-
-
-"""
-lat2 = MagneticLattice(line)
-
-
-p1 = Particle(x=0.001, y=0.002)
-p1.E = 0.0
-navi = Navigator()
-dz = 0.01
-P1 = []
-for i in range(int(lat2.totalLen/dz)):
-    track(lat2, [p1], dz=dz, navi=navi)
-    P1.append(copy.copy(p1))
-
-s = [f.s for f in P1]
-x = [f.x for f in P1]
-y = [f.y for f in P1]
-
-plt.figure(3)
-plt.plot(s, x, "r", label="X")
-plt.plot(s, y, "b", label="Y")
-plt.title("E = 0")
-plt.legend()
-plt.xlabel("S, m")
-plt.ylabel("X/Y, m")
-plt.grid(True)
-"""
 plt.show()

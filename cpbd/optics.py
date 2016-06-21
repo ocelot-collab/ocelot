@@ -777,7 +777,7 @@ def get_map(lattice, dz, navi):
         dz -= dl
         i += 1
         elem = lattice.sequence[i]
-        print("get_map ", elem.transfer_map.__class__)
+        #print("get_map ", elem.transfer_map.__class__)
         L += elem.l
     TM.append(elem.transfer_map(dz))
     navi.z0 += dz

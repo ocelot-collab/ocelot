@@ -507,7 +507,7 @@ def update_beam_2(beam_new, g, n_interp):
     beam = deepcopy(beam_new)
     # g0 = np.array(map(lambda x : g.sliceValues[x]['energy'][-1], xrange(1,g.nSlices+1)) )
     # dg = np.array(map(lambda x : g.sliceValues[x]['e-spread'][-1], xrange(1,g.nSlices+1)) )
-    g0=g.el_energy[:,-1]
+    g0=g.el_energy[:,-1] * (0.511e-3)
     dg=g.el_e_spread[:,-1]
     
     print len(g0)
@@ -530,6 +530,9 @@ def update_beam_2(beam_new, g, n_interp):
     plt.plot(beam_new.I)
     plt.show()
     '''
+    
+    
+    
     beam_new.z = np.linspace(beam.z[0], beam.z[-1], n_interp) 
     z2 = np.linspace(beam.z[0], beam.z[-1], g.nSlices)
     beam_new.I = np.interp(beam_new.z, beam.z, beam.I)
@@ -560,6 +563,10 @@ def update_beam_2(beam_new, g, n_interp):
     beam_new.px = np.interp(beam_new.z, beam.z, beam.px) 
     beam_new.y = np.interp(beam_new.z, beam.z, beam.y)
     beam_new.py = np.interp(beam_new.z, beam.z, beam.py)
+    
+    
+    
+    
     '''
     plt.figure()
     plt.plot(beam_new.g0)
@@ -571,7 +578,7 @@ def update_beam_2(beam_new, g, n_interp):
     plt.plot(I)
     plt.plot(beam_new.I)
     plt.show()
-    '''    
+    '''  
 
 
 
@@ -747,6 +754,7 @@ def sseed_2(input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug
     #prog   = ' '+'python /data/netapp/xfel/svitozar/CODE/ocelot/utils/seed.py '+ARGS+''
     
     cmd = runpar+prog
+    print cmd
     os.system(cmd)
     
     print 'reading filtered file (hxrss_common, lile 728) ', output_files[5]

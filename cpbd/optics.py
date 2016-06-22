@@ -119,7 +119,7 @@ class TransferMap:
     def mul_p_array(self, particles, energy=0.):
         #print("linear:", self.R(0.1))
         #print 'Map: mul_p_array', self.order, order
-        ocelot.logger.debug('invoking mul_p_array, particle array len ' + str(len(particles)))
+        #ocelot.logger.debug('invoking mul_p_array, particle array len ' + str(len(particles)))
         #ocelot.logger.debug(order)
         #ocelot.logger.debug(self.method)
 
@@ -274,7 +274,7 @@ class CorrectorTM(TransferMap):
 
     def kick(self, X,  z, l, angle_x, angle_y, energy):
         #print("corrector kick", angle_x, angle_y)
-        ocelot.logger.debug('invoking kick_b')
+        #ocelot.logger.debug('invoking kick_b')
         n = len(X)
         b = self.kick_b(z, l, angle_x, angle_y)
         X1 = np.add(np.transpose( dot(self.R(energy), np.transpose( X.reshape(n/6, 6)))), b).reshape(n)
@@ -384,7 +384,7 @@ class KickTM(TransferMap):
 
 
 class UndulatorTestTM(TransferMap):
-    def __init__(self, lperiod, Kx, ax=0, ndiv=5):
+    def __init__(self, lperiod, Kx, ax=0, ndiv=10):
         TransferMap.__init__(self)
         self.lperiod = lperiod
         self.Kx = Kx
@@ -407,7 +407,7 @@ class UndulatorTestTM(TransferMap):
         gamma = energy / m_e_GeV
         h0 = 0.
         if gamma != 0:
-            h0 = 1. / (gamma / self.Kx / kz)
+            h0 = 1. / (gamma / Kx / kz)
         h02 = h0 * h0
         h = h / (1. + u[5::6])
         x = u[::6]
@@ -438,9 +438,12 @@ class UndulatorTestTM(TransferMap):
 
 
 class RungeKuttaTM(TransferMap):
-    def __init__(self):
+    def __init__(self, s_start=0, npoints=200):
         TransferMap.__init__(self)
-        self.map = lambda X, energy: rk_field(X, self.s_start, self.s_stop, self.N, energy, self.mag_field)
+        self.s_start = s_start
+        self.npoints = npoints
+        self.mag_field = lambda x, y, z: (0, 0, 0)
+        self.map = lambda X, energy: rk_field(X, self.s_start, self.length, self.npoints, energy, self.mag_field)
 
     def __call__(self, s):
         m = copy(self)
@@ -449,7 +452,7 @@ class RungeKuttaTM(TransferMap):
         m.B = lambda energy: m.B_z(s, energy)
         m.delta_e = m.delta_e_z(s)
         # print(m.R_z_no_tilt(s, 0.3))
-        m.map = lambda X, energy: m.rk_field(X, m.s_start, s, m.N, energy, m.mag_field)
+        m.map = lambda X, energy: rk_field(X, m.s_start, s, m.npoints, energy, m.mag_field)
         return m
 
 
@@ -580,9 +583,15 @@ class MethodTM:
             tm = UndulatorTestTM(lperiod=element.lperiod, Kx=element.Kx, ax=element.ax, ndiv=ndiv)
 
         if method == RungeKuttaTM:
-            tm = RungeKuttaTM
-            tm.s_start = element.s_start
-            tm.s_stop = element.s_stop
+            try:
+                s_start = element.s_start
+            except:
+                s_start = 0.
+            try:
+                npoints=element.npoints
+            except:
+                npoints=200
+            tm = RungeKuttaTM(s_start=s_start, npoints=npoints)
             tm.mag_field = element.mag_field
 
         if element.__class__ == Cavity:

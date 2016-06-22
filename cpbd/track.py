@@ -279,9 +279,12 @@ def track_nturns(lat, nturns, track_list, nsuperperiods=1, save_track=True):
     #            p_array.s += elem.transfer_map.length
 
     track_list_const = copy(track_list)
-    p_array = ParticleArray(n = len(track_list))
-    for i, pxy in enumerate(track_list):
-        p_array[i] = pxy.particle
+    p_array = ParticleArray()
+    p_list = [p.particle for p in track_list]
+    p_array.list2array(p_list)
+    #p_array = ParticleArray(n = len(track_list))
+    #for i, pxy in enumerate(track_list):
+    #    p_array[i] = pxy.particle
 
     for i in range(nturns):
         print(i)
@@ -301,7 +304,7 @@ def track_nturns(lat, nturns, track_list, nsuperperiods=1, save_track=True):
         for n, pxy in enumerate(track_list):
             pxy.turn = i
             #pxy.p_list = append(pxy.p_list, p_array.particles[n*6:n*6+6])
-            if  save_track:
+            if save_track:
                 pxy.p_list.append(p_array.particles[n*6:n*6+6])
     return np.array(track_list_const)
 

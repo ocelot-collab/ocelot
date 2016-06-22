@@ -774,6 +774,7 @@ def rk_field(y0, s_start, s_stop, N, energy, mag_field):
     #z = linspace(0, l, num=N)
     #h = z[1]-z[0]
     #N = len(z)
+    #print(mag_field(0,0,0))
     if s_start > s_stop:
         print("rk_field: s_start > s_stop. Setup s_start = 0")
         s_start = 0.

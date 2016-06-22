@@ -78,12 +78,14 @@ def create_r_matrix(element):
         r_z_e = lambda z, energy: uni_matrix(z, 0, hx=0, sum_tilts=0, energy=energy)
 
     elif element.__class__ == Undulator:
-
+        print("Undulator")
         def undulator_r_z(z, lperiod, Kx, Ky, energy):
+
             gamma = energy / m_e_GeV
             r = np.eye(6)
             r[0, 1] = z
             if gamma != 0 and lperiod != 0 and Kx != 0:
+                #print("here")
                 beta = 1 / np.sqrt(1.0 - 1.0 / (gamma * gamma))
                 omega_x = np.sqrt(2.0) * pi * Kx / (lperiod * gamma * beta)
                 omega_y = np.sqrt(2.0) * pi * Ky / (lperiod * gamma * beta)
@@ -91,6 +93,7 @@ def create_r_matrix(element):
                 r[2, 3] = np.sin(omega_x * z) / omega_x
                 r[3, 2] = -np.sin(omega_x * z) * omega_x
                 r[3, 3] = np.cos(omega_x * z)
+                #print("here", r[2, 2], r[2, 3], r[3, 2], r[3, 3])
             else:
                 r[2, 3] = z
             return r

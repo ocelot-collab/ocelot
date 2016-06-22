@@ -28,8 +28,8 @@ method1 = MethodTM()
 #method1.global_method = TransferMap
 method2 = MethodTM()
 method2.global_method = SecondTM
-lat1 = MagneticLattice(lattice, method=method1)
-lat2 = MagneticLattice(lattice, method=method2)
+lat1 = MagneticLattice(cp.deepcopy(lattice), method=method1)
+lat2 = MagneticLattice(cp.deepcopy(lattice), method=method2)
 tw0 = Twiss()
 tw0.beta_x = 5.
 tw0.alpha_x = 1.4

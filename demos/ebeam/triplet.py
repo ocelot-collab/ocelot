@@ -14,11 +14,11 @@ lattice = [D, Q1, D, Q2, D, Q1, De]
 
 method1 = MethodTM()
 method1.global_method = TransferMap
-lat1 = MagneticLattice(lattice, method=method1)
+lat1 = MagneticLattice(copy.deepcopy(lattice), method=method1)
 
 method2 = MethodTM()
 method2.global_method = SecondTM
-lat2 = MagneticLattice(lattice, method=method2)
+lat2 = MagneticLattice(copy.deepcopy(lattice), method=method2)
 
 tw0 = Twiss()
 tw0.beta_x = 5.

@@ -15,7 +15,7 @@ flatten = lambda *n: (e for a in n
 class MagneticLattice:
     def __init__(self, sequence, start=None, stop=None, method=MethodTM()):
         #self.energy = energy
-        self.sequence = deepcopy(list(flatten(sequence)))
+        self.sequence = list(flatten(sequence))
         self.method = method
         try:
             if start != None:
@@ -99,7 +99,7 @@ class MagneticLattice:
                     if element.field_map.units == "mm":
                         element.l = element.l*0.001
             self.totalLen += element.l
-
+            #print(element.k1)
             element.transfer_map = self.method.create_tm(element)
             logger.debug("update: " + element.transfer_map.__class__.__name__)
             #print("update: ", element.transfer_map.__class__.__name__)

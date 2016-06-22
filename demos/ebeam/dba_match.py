@@ -51,6 +51,8 @@ constr = {m1:{'Dx':0.0, 'Dxp':0.0, 'beta_x':30.0, 'beta_y':30.0}, m2:{'beta_x':3
 #vars = [q1,q2,q3,q5,q6, [tw0, 'beta_x'], [tw0, 'beta_y']]
 vars = [q1,q2,q3, [tw0, 'beta_x'], [tw0, 'beta_y'], [tw0, 'alpha_x'], [tw0, 'alpha_y'], [tw0, 'Dx'], [tw0, 'Dxp']]
 #vars = [q1,q2,q3,q5,q6, [tw0, 'beta_x'], [tw0, 'beta_y'], [tw0, 'alpha_x'], [tw0, 'alpha_y']]
+#vars = [q1,q2,q3]
+
 
 match(lat, constr, vars, tw0)
 

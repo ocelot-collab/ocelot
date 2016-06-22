@@ -1356,10 +1356,10 @@ def generate_input(up, beam, itdp=False):
 
     #Next line added by GG 27.05.2016: it was in script
     
-    beam.emit_xn, beam.emit_yn = beam.emit[beam.C]
-    beam.gamma_rel = beam.E / (0.511e-3)
-    beam.emit_x = beam.emit_xn / beam.gamma_rel
-    beam.emit_y = beam.emit_yn / beam.gamma_rel
+    #beam.emit_xn, beam.emit_yn = beam.emit[beam.C]
+    #beam.gamma_rel = beam.E / (0.511e-3)
+    #beam.emit_x = beam.emit_xn / beam.gamma_rel
+    #beam.emit_y = beam.emit_yn / beam.gamma_rel
     
 
 
@@ -1389,7 +1389,7 @@ def generate_input(up, beam, itdp=False):
     inp.emity = beam.emit_yn
 
     felParameters = calculateFelParameters(inp)
-    #printFelParameters(inp)
+    printFelParameters(inp)
 
     inp.xlamds = felParameters.lambda0
     inp.prad0 = felParameters.power
@@ -1402,7 +1402,7 @@ def generate_input(up, beam, itdp=False):
         inp.ipseed = 132
         inp.ncar = 151
         #inp.nslice = 300
-        inp.curlen = beam.tpulse * 3.e-7
+        inp.curlen = beam.tpulse * c/1e15
         inp.zsep = int(0.25/(4*pi*felParameters.rho)) #0.25 is the additional factor to be "on the safe side"
         # inp.zsep = 8 * int(inp.curlen  / inp.nslice / inp.xlamds )
         inp.nslice = 8 * int(inp.curlen  / inp.zsep / inp.xlamds )

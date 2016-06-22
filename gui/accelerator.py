@@ -18,7 +18,7 @@ from copy import deepcopy
 
 import matplotlib.font_manager as font_manager
 font = {
-        'size'   : 30}
+        'size'   : 16}
 matplotlib.rc('font', **font)
 
 

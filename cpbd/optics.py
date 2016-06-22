@@ -529,7 +529,12 @@ class MethodTM:
             self.params = {'global': TransferMap}
         else:
             self.params = params
-        self.global_method = self.params['global']
+
+        if "global" in self.params.keys():
+            self.global_method = self.params['global']
+        else:
+            self.global_method = TransferMap
+
         self.nkick = self.params['nkick'] if 'nkick' in self.params.keys() else 1
 
     def create_tm(self, element):

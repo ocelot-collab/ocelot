@@ -112,7 +112,7 @@ class MpiLauncher(Launcher):
         t1 = time.time()
         print 'launching mpi job'
         ##THIS LINE AND THE NEXT CHANGED BY GG ## command = 'mkdir -p '+ self.dir + '; ' + 'cd '+ self.dir + '; '+ "mpirun " + str(self.mpiParameters) + " -n " + str(self.nproc) + " " + self.program
-	command = 'mkdir -p '+ self.dir + '; ' + 'cd '+ self.dir + '; '+ "`which mpirun` " + str(self.mpiParameters) + " " + self.program
+        command = 'mkdir -p '+ self.dir + '; ' + 'cd '+ self.dir + '; '+ "`which mpirun` " + str(self.mpiParameters) + " " + self.program
         print command
         os.system(command)
         t2 = time.time()

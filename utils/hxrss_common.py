@@ -202,7 +202,7 @@ def log_info(sim_info, g, run_id, stage):
     sim_info.runs[r.id] = r
 
 
-    print 'saving run ', id
+    print ('    saving log of run ' +str(run_id))
     f_obj = open(sim_info.log_dir + 'dump.dat', 'wb')
     pickle.dump(sim_info, f_obj)
     f_obj.close()

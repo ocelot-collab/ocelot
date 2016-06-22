@@ -663,6 +663,10 @@ def gen_outplot(handle=None,save='png',show=False,debug=0,all=False,vartype_dfl=
     import os
     from ocelot.adaptors.genesis import GenesisOutput, readGenesisOutput, readRadiationFile
     
+    print('')
+    print('  plotting genesis output:')
+    plotting_time = time.time()
+    
     plt.ioff()
     
     if save==True:
@@ -700,6 +704,8 @@ def gen_outplot(handle=None,save='png',show=False,debug=0,all=False,vartype_dfl=
         
     if save!=False:
         print('    plots recorded to *.'+str(save)+' files')
+    
+    print ('    total plotting time %.2f seconds' % (time.time() - plotting_time))
     
     # return [f1,f2,f3,f4]
 

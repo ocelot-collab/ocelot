@@ -9,7 +9,7 @@ from numpy import *
 import numpy as np
 
 from copy import copy, deepcopy
-import os, socket, errno
+import os, socket, errno, time
 
 from ocelot import *
 from ocelot.optics.utils import *
@@ -72,7 +72,7 @@ def rematch(beta_mean, l_fodo, qdh, lat, extra_fodo, beam, qf, qd):
     
     tw0 = Twiss(beam)
     
-    print 'before rematching k=%f %f   beta=%f %f alpha=%f %f' % (qf.k1, qd.k1, tw0.beta_x, tw0.beta_y, tw0.alpha_x, tw0.alpha_y)
+    print('before rematching k=%f %f   beta=%f %f alpha=%f %f' % (qf.k1, qd.k1, tw0.beta_x, tw0.beta_y, tw0.alpha_x, tw0.alpha_y))
 
         
     extra = MagneticLattice(extra_fodo)
@@ -111,8 +111,14 @@ def rematch(beta_mean, l_fodo, qdh, lat, extra_fodo, beam, qf, qd):
     beam.beta_y, beam.alpha_y = tw0m.beta_y, tw0m.alpha_y
 
 
-def run(inp, launcher,readall=True):
-    
+def run(inp, launcher,readall=True,dfl_slipage_incl=True):
+    # inp               - GenesisInput() object with genesis input parameters
+    # launcher          - MpiLauncher() object obtained via get_genesis_launcher() function
+    # readall           - Parameter to read and calculate all _slice_ values from the output. 
+    # dfl_slipage_incl  - whether to dedicate time in order to keep the dfl slices, slipped out of the simulation window. if zero, reduces assembly time by ~30%
+
+
+    # create experimental directory
     try:
         os.makedirs(inp.run_dir)
     except OSError as exc: 
@@ -120,93 +126,61 @@ def run(inp, launcher,readall=True):
             pass
         else: raise
     
-    
+    # create and fill necessary input files
     open(inp.run_dir + '/lattice.inp','w').write( inp.lattice_str )
     open(inp.run_dir + '/tmp.cmd','w').write("tmp.gen\n")
     open(inp.run_dir + '/tmp.gen','w').write(inp.input())   
-
-    print ('    before writing /tmp.beam')
-    print inp.beamfile
+    #print ('    before writing /tmp.beam')
+    #print inp.beamfile
     if inp.beamfile != None:
-        open(inp.run_dir + '/tmp.beam','w').write(inp.beam_file_str)
         print ('    writing /tmp.beam')
-
+        open(inp.run_dir + '/tmp.beam','w').write(inp.beam_file_str)
+    
     out_file = inp.run_dir + '/run.' + str(inp.runid) + '.gout'
     os.system('rm -rf ' + out_file + '.dfl') # to make sure field file is not attached to old one
     os.system('rm -rf ' + out_file + '.dpa') # to make sure particle file is not attached to old one
 
     launcher.dir = inp.run_dir
     launcher.prepare()
-    launcher.launch()
     
-    os.system('cat ' + out_file + ' ' + out_file +'.slice* > '+ out_file +'.2')
-    os.system('mv ' + out_file +'.2 '+ out_file)
-    os.system('cat ' + out_file +'.dfl.slice* > ' + out_file+'.dfl')
-    os.system('cat ' + out_file +'.dpa.slice* > ' + out_file+'.dpa')
-    os.system('rm ' + out_file +'.slice*')
-    os.system('rm ' + out_file +'.dfl.slice*')
-    os.system('rm ' + out_file +'.dpa.slice*')
+    # RUNNING GENESIS ###
+    launcher.launch() ###
+    # RUNNING GENESIS ###
+    
+    # genesis output slices assembly
+    print (' ')
+    print ('    assembling slices')
+    assembly_time = time.time()
+    print ('      assembling *.out file')
+    start_time = time.time()
+    os.system('cat ' + out_file +'.slice* >> '+ out_file)
+    print ('        done in %.2f seconds' % (time.time() - start_time))
+    print ('      assembling *.dfl file')
+    start_time = time.time()
+    if dfl_slipage_incl:
+        os.system('cat ' + out_file+'.dfl.slice*  >> ' + out_file+'.dfl.tmp')
+        #bytes=os.path.getsize(out_file +'.dfl.tmp')
+        command='dd if=' + out_file +'.dfl.tmp of='+ out_file +'.dfl conv=notrunc conv=notrunc 2>/dev/null' # obs='+str(bytes)+' skip=1
+        os.system(command)
+    else:
+        os.system('cat ' + out_file+'.dfl.slice*  > ' + out_file+'.dfl')
+    print ('        done in %.2f seconds' % (time.time() - start_time))
+    print ('      assembling *.dpa file')
+    start_time = time.time()
+    os.system('cat ' + out_file +'.dpa.slice* >> ' + out_file+'.dpa')
+    print ('        done in %.2f seconds' % (time.time() - start_time))
+    print ('      removing temporary files')
+    start_time = time.time()
+    os.system('rm ' + out_file +'.slice* 2>/dev/null')
+    os.system('rm ' + out_file +'.dfl.slice* 2>/dev/null')
+    os.system('rm ' + out_file +'.dfl.tmp 2>/dev/null')
+    os.system('rm ' + out_file +'.dpa.slice* 2>/dev/null')
+    print ('        done in %.2f seconds' % (time.time() - start_time))
+    print ('      total time %.2f seconds' % (time.time() - assembly_time))
     
     g = readGenesisOutput(out_file,readall=readall)
     
-    # save=True
-    # if do_plot == 'all':
-        
-        # from ocelot.gui.genesis_plot import *
-        # gen_outplot_e(g,save=save)s
-        # gen_outplot_ph(g,save=save)
-        # gen_outplot_z(g, z=0,save=save)
-        # gen_outplot_z(g, z=inf,save=save)
-    # else:
-        # g = readGenesisOutput(out_file,readall=0)
-        
     return g
-
-
-'''
-def get_genesis_launcher(nproc = 1):
-    host = socket.gethostname()
-    
-    launcher = MpiLauncher()
-    
-    if host.startswith('kolmogorov'):
-        launcher.program = '/home/iagapov/workspace/xcode/codes/genesis/genesis < tmp.cmd | tee log'
-    if host.startswith('it-hpc'):
-        launcher.program = '/data/netapp/xfel/products/genesis/genesis < tmp.cmd | tee log'
-        #launcher.mpiParameters ='-x LD_LIBRARY_PATH=/usr/local/lib:/data/netapp/it/tools/gcc47/lib64 --prefix /data/netapp/it/tools/gcc47'
-        launcher.mpiParameters ='-x LD_LIBRARY_PATH=/usr/local/lib:/usr/lib64/openmpi/lib --prefix /usr/lib64/openmpi/'
-        launcher.mpiParameters = launcher.mpiParameters + ' -hostfile '+ os.path.abspath('.') +'/hosts.txt'
-    
-    launcher.nproc = nproc
-    
-    return launcher
-'''
-
-'''
-#### MODIFIED BY GG ####
-'''
-'''
-def get_genesis_launcher(nproc = 1, hostfilename = ''):
-    host = socket.gethostname()
-    
-    launcher = MpiLauncher()
-    
-    if host.startswith('kolmogorov'):
-        launcher.program = '/home/iagapov/workspace/xcode/codes/genesis/genesis < tmp.cmd | tee log'
-    if host.startswith('it-hpc'):
-        launcher.program = '/data/netapp/xfel/products/genesis/genesis < tmp.cmd | tee log'
-	if hostfilename == '':
-            #launcher.mpiParameters ='-x LD_LIBRARY_PATH=/usr/local/lib:/data/netapp/it/tools/gcc47/lib64 --prefix /data/netapp/it/tools/gcc47'
-            launcher.mpiParameters ='-x LD_LIBRARY_PATH=/usr/local/lib:/usr/lib64/openmpi/lib --prefix /usr/lib64/openmpi/'
-            launcher.mpiParameters = launcher.mpiParameters + ' -hostfile '+ os.path.abspath('.') +'/hosts.txt'
-        else:
-	    launcher.mpiParameters ='-x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH'
-            launcher.mpiParameters = launcher.mpiParameters + ' -hostfile '+ os.path.abspath('.') +hostfilename
-	
-    launcher.nproc = nproc
-    
-    return launcher
-'''
 
 '''
 #### 12.05.2016 MODIFIED BY GG FOR MAXWELL####
@@ -220,10 +194,9 @@ def get_genesis_launcher():
         launcher.program = '/home/iagapov/workspace/xcode/codes/genesis/genesis < tmp.cmd | tee log'
     if host.startswith('max'):
         launcher.program = '/data/netapp/xfel/products/genesis/genesis < tmp.cmd | tee log'
-	launcher.mpiParameters ='-x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH'
+    launcher.mpiParameters ='-x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH'
     #launcher.nproc = nproc
     return launcher
-
 
 def get_data_dir():
     host = socket.gethostname()
@@ -244,6 +217,7 @@ def create_exp_dir(exp_dir, run_ids):
             else: raise
 
 def checkout_run(run_dir, run_id, prefix1, prefix2, save=True):
+    print ('    checking out run from '+prefix1+'.gout to '+prefix2+'.gout')
     old_file = run_dir + '/run.' +str(run_id) + prefix1 + '.gout'
     new_file = run_dir + '/run.' +str(run_id) + prefix2 + '.gout'
 
@@ -262,12 +236,6 @@ def checkout_run(run_dir, run_id, prefix1, prefix2, save=True):
         os.system('mv '+run_dir+'/tmp.gen'+' '+run_dir+'/geninp.'+str(run_id)+prefix2+'.inp 2>/dev/null')
         os.system('mv '+run_dir+'/lattice.inp'+' '+run_dir+'/lattice.'+str(run_id)+prefix2+'.inp 2>/dev/null')
     # os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout*')
-
-    # if not save:
-        # os.system('rm ' + old_file)
-        # os.system('rm ' + old_file + '.dfl  2>/dev/null') 
-        # os.system('rm ' + old_file + '.dpa  2>/dev/null') 
-        # os.system('rm ' + old_file + '.beam  2>/dev/null') 
 
 
 

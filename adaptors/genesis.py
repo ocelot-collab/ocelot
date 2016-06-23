@@ -1356,10 +1356,10 @@ def generate_input(up, beam, itdp=False):
 
     #Next line added by GG 27.05.2016: it was in script
     
-    beam.emit_xn, beam.emit_yn = beam.emit[beam.C]
-    beam.gamma_rel = beam.E / (0.511e-3)
-    beam.emit_x = beam.emit_xn / beam.gamma_rel
-    beam.emit_y = beam.emit_yn / beam.gamma_rel
+    #beam.emit_xn, beam.emit_yn = beam.emit[beam.C]
+    #beam.gamma_rel = beam.E / (0.511e-3)
+    #beam.emit_x = beam.emit_xn / beam.gamma_rel
+    #beam.emit_y = beam.emit_yn / beam.gamma_rel
     
 
 

@@ -46,8 +46,8 @@ ring = 3*cell + cell_u + 2*cell
 
 method = MethodTM()
 method.params[Sextupole] = KickTM
-method.params[Undulator] = UndulatorTestTM
-#method.params[Undulator] = RungeKuttaTM
+#method.params[Undulator] = UndulatorTestTM
+method.params[Undulator] = RungeKuttaTM
 method.global_method = TransferMap
 lat = MagneticLattice(ring, method=method)
 beam = Beam()
@@ -56,52 +56,53 @@ beam.I = 0.1 #A
 tw0 = Twiss(beam)
 tws = twiss(lat,tw0, nPoints=1000)
 plot_opt_func(lat, tws)
-plt.show()
-#compensate_chromaticity(lat, ksi_x_comp=0, ksi_y_comp=0,  nsuperperiod=1)
 
-nturns = 2048*2
-#nx = 100
-#ny = 80
+nturns = 2048*2-1
 
-#x_array = np.linspace(-0.03, 0.03, nx)
-#y_array = np.linspace(0.0001, 0.03, ny)
 start = time()
-#pxy_list = create_track_list(x_array, y_array, p_array=[0.])
-pxy_list = [Track_info(Particle(y=0.001, E=2), 0.00, 0.0001)]
+
+pxy_list = [Track_info(Particle(y=0.0001, E=2), 0.00, 0.0001)]
 
 pxy_list = track_nturns( lat, nturns, pxy_list,  nsuperperiods = 1, save_track=True)
-#print([p.turn for p in pxy_list])
 y = [p[2] for p in pxy_list[0].p_list]
 py = [p[3] for p in pxy_list[0].p_list]
 
 print("time exec = ", time() - start)
 pxy_list = freq_analysis(pxy_list, lat, nturns, harm = True)
-print(pxy_list[0].muy)
-sp = np.fft.fft(y)
-freq = np.fft.fftfreq(len(y))
+print("low resolution: mu_x = ", pxy_list[0].muy)
 
-plt.plot( sp.real, sp.imag)
-plt.show()
 
 def dft(sample, freqs):
-    transf = np.zeros(len(freqs), dtype=np.complex)
     n = len(sample)
+    x_freq = freqs*n
+    transf = np.zeros(len(freqs), dtype=np.complex)
+    
     for i, ai in enumerate(sample):
-        transf += ai*np.exp(-2*np.pi*i/n*1j*freqs)
+        transf += ai*np.exp(-2*np.pi*i/n*1j*x_freq)
     return transf
 
-#transf = dft(y, np.arange(0, ))
+x = np.linspace(0.3, 0.31, 2048+1)
 
-#f = dft(y, np.linspace(0.27, 0.33, 500))
-plt.plot(freq, sp.real, freq, sp.imag)
-plt.show()
-plt.plot(y, py, "r.")
-plt.show()
-#da = np.array([pxy.turn for pxy in pxy_list])
-#show_da(da, x_array, y_array)
+f = np.abs(dft(y, x))
+print("high resolution: mu_x = ", x[np.argmax(f)])
 
-#da_contr = contour_da(pxy_list, nturns)
-
-#da_mux = np.array([pxy.mux for pxy in pxy_list])
-#da_muy = np.array([pxy.muy for pxy in pxy_list])
-#show_mu(da_contr, da_mux, da_muy, x_array, y_array)
+"""
+beta = 0.56
+E = 2e9
+c = 3e8
+L = 1
+Kx = 2
+lperiod = 0.02
+Bx = Kx/94.3/lperiod
+Bx = 1.0709745594714459
+print("Bx = ", Bx)
+ro = E/(Bx*c)
+print("ro = ", ro)
+nu = L/(8*np.pi*ro**2)*(beta + L**2/(12*beta))
+print("nu = ", nu)
+print("lin = ", 0.304169921875 - 0.3034375)
+print("1 mm: sim=", 0.304169921875 - 0.303413085937)
+print("1 mm: rk = ", 0.304169921875 - 0.303432617187)
+print("0.1 mm: sim=", 0.304169921875 - 0.30341796875)
+print("0.1 mm: rk = ", 0.304169921875 - 0.3034375)
+"""

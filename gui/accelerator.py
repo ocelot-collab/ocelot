@@ -583,7 +583,7 @@ def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, fig_name = None, g
     #plot_elems(ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8) # plot elements
     new_plot_elems(fig, ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8)
 
-    plt.show()
+    #plt.show()
 
 
 def plot_xy(ax, S, X, Y, font_size):

@@ -696,7 +696,7 @@ def gen_outplot(handle=None,save='png',show=False,debug=0,all=False,vartype_dfl=
         if os.path.isfile(handle.path+'.dfl') and all:
             dfl=readRadiationFile(handle.path+'.dfl', handle.ncar, vartype=vartype_dfl)
             f5=gen_outplot_dfl(dfl, handle,save=save)
-            f6=gen_outplot_dfl(dfl, handle,far_field=1,freq_domain=0,auto_zoom=0,save=save)
+            #f6=gen_outplot_dfl(dfl, handle,far_field=1,freq_domain=0,auto_zoom=0,save=save)
             
     if show==True:
         print('    showing plots, close all to proceed')
@@ -741,7 +741,12 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
     
     if dfl.__class__==str:
         from ocelot.adaptors.genesis import readRadiationFile
-        dfl=readRadiationFile(out.path+'.dfl', out.ncar, vartype=vartype_dfl)
+        try:
+            dfl=readRadiationFile(dfl, out.ncar, vartype=vartype_dfl)
+        except IOError:
+            print ('      ERR: no such file "'+dfl+'"')
+            print ('      ERR: reading "'+out.path+'.dfl'+'"')
+            dfl=readRadiationFile(out.path+'.dfl', out.ncar, vartype=vartype_dfl)
     
     # dfl=dfl[100:110,:,:]
     

@@ -9,7 +9,8 @@ from ocelot.cpbd.beam import Particle, Twiss, ParticleArray
 from ocelot.cpbd.high_order import *
 from ocelot.cpbd.r_matrix import *
 from copy import deepcopy
-import ocelot
+from ocelot.common.logging import Logger
+logger = Logger()
 
 
 def transform_vec_ent(X, dx, dy, tilt):
@@ -125,19 +126,19 @@ class TransferMap:
 
         n = len(particles)
         if 'pulse' in self.__dict__:
-            ocelot.logger.debug('TD transfer map')
-            if n > 6: ocelot.logger.debug('warning: time-dependent transfer maps not implemented for an array. Using 1st particle value')
-            if n > 6: ocelot.logger.debug('warning: time-dependent transfer maps not implemented for steps inside element')
+            logger.debug('TD transfer map')
+            if n > 6: logger.debug('warning: time-dependent transfer maps not implemented for an array. Using 1st particle value')
+            if n > 6: logger.debug('warning: time-dependent transfer maps not implemented for steps inside element')
             tau = particles[4]
             dxp = self.pulse.kick_x(tau)
             dyp = self.pulse.kick_y(tau)
-            ocelot.logger.debug('kick ' + str(dxp) + ' ' + str(dyp))
+            logger.debug('kick ' + str(dxp) + ' ' + str(dyp))
             b = array([0.0, dxp, 0.0, dyp, 0., 0.])
             a = np.add( np.transpose(  dot(self.R(energy), np.transpose( particles.reshape(n/6, 6)) ) ), b ).reshape(n)
         else:
             a = np.add( np.transpose(  dot(self.R(energy), np.transpose( particles.reshape(n/6, 6)) ) ), self.B(energy) ).reshape(n)
         particles[:] = a[:]
-        ocelot.logger.debug('return trajectory, array ' + str(len(particles)))
+        logger.debug('return trajectory, array ' + str(len(particles)))
         return particles
 
     def __mul__(self, m):
@@ -303,7 +304,7 @@ class CavityTM(TransferMap):
         self.map = lambda X, energy: self.map4cav(X, energy,  self.v, self.f, self.phi)
 
     def map4cav(self, X, E,  V, freq, phi):
-        print("CAVITY")
+        #print("CAVITY")
         n = len(X)
         phi = phi*np.pi/180.
         X = self.mul_p_array(X, energy=E) #t_apply(R, T, X, dx, dy, tilt)
@@ -756,14 +757,14 @@ def twiss(lattice, tws0=None, nPoints=None):
 
 
 
-class Navigator:
-    def __init__(self, lattice = None):
-        if lattice != None:
-            self.lat = lattice
-        
-    z0 = 0.             # current position of navigator
-    n_elem = 0          # current number of the element in lattice
-    sum_lengths = 0.    # sum_lengths = Sum[lat.sequence[i].l, {i, 0, n_elem-1}]
+#class Navigator:
+#    def __init__(self, lattice = None):
+#        if lattice != None:
+#            self.lat = lattice
+#
+#    z0 = 0.             # current position of navigator
+#    n_elem = 0          # current number of the element in lattice
+#    sum_lengths = 0.    # sum_lengths = Sum[lat.sequence[i].l, {i, 0, n_elem-1}]
 
     #def check(self, dz):
     #    '''
@@ -773,27 +774,90 @@ class Navigator:
     #        dz = self.lat.totalLen - self.z0
     #    return dz
 
+class ProcessTable:
+    def __init__(self, lattice):
+        self.proc_list = []
+        self.lat = lattice
+
+    def add_physics_proc(self, physics_proc, elem1, elem2):
+        physics_proc.start_elem = elem1
+        physics_proc.end_elem = elem2
+        physics_proc.indx0 = self.lat.sequence.index(elem1)
+        physics_proc.indx1 = self.lat.sequence.index(elem2)
+        physics_proc.counter = physics_proc.step
+        physics_proc.prepare(self.lat)
+        self.proc_list.append(physics_proc)
+
+class Navigator:
+    def __init__(self, lattice=None):
+        if lattice != None:
+            self.lat = lattice
+        self.process_table = ProcessTable(lattice)
+
+        self.z0 = 0.             # current position of navigator
+        self.n_elem = 0          # current index of the element in lattice
+        self.sum_lengths = 0.    # sum_lengths = Sum[lat.sequence[i].l, {i, 0, n_elem-1}]
+        self.unit_step = 1       # unit step for physics processes
+
+    def add_physics_proc(self, physics_proc, elem1, elem2):
+        self.process_table.add_physics_proc(physics_proc, elem1, elem2)
+
+    def get_proc_list(self):
+
+        proc_list = []
+        for p in self.process_table.proc_list:
+            if p.indx0 <= self.n_elem <  p.indx1:
+                proc_list.append(p)
+        return proc_list
+
+    def get_next(self):
+
+        proc_list = self.get_proc_list()
+        if len(proc_list) > 0:
+
+            counters = np.array([p.counter for p in proc_list])
+            step = counters.min()
+
+            inxs = np.where(counters == step)
+            processes = [proc_list[i] for i in inxs[0]]
+            for p in proc_list:
+                p.counter -= step
+                if p.counter == 0:
+                    p.counter = p.step
+            dz = step*self.unit_step
+        else:
+
+            processes = proc_list
+            n_elems = len(self.lat.sequence)
+            if n_elems >= self.n_elem+1:
+                L = np.sum(np.array([elem.l for elem in self.lat.sequence[:self.n_elem+1]]))
+            else:
+                L = self.lat.totalLen
+            dz = L - self.z0
+        logger.debug("navi.z0="+str(self.z0) + " navi.n_elem=" + str(self.n_elem) + " navi.sum_lengths=" +str(self.sum_lengths) + " dz=" +str(dz))
+        return dz, processes
+
+
 def get_map(lattice, dz, navi):
     nelems = len(lattice.sequence)
     TM = []
     i = navi.n_elem
     z1 = navi.z0 + dz
     elem = lattice.sequence[i]
+    #navi.sum_lengths = np.sum([elem.l for elem in lattice.sequence[:i]])
     L = navi.sum_lengths + elem.l
-
     while z1 + 1e-10 > L:
         if i >= nelems-1:
             break
         dl = L - navi.z0
         TM.append(elem.transfer_map(dl))
-
         navi.z0 = L
         dz -= dl
         i += 1
         elem = lattice.sequence[i]
-        #print("get_map ", elem.transfer_map.__class__)
         L += elem.l
-    TM.append(elem.transfer_map(dz))
+    if abs(dz) > 1e-10:
+        TM.append(elem.transfer_map(dz))
     navi.z0 += dz
     navi.sum_lengths = L - elem.l
     navi.n_elem = i
@@ -812,63 +876,6 @@ def merge_maps(t_maps):
             tm0 = TransferMap()
     t_maps_new.append(tm0)
     return t_maps_new
-
-
-def get_map_old(lattice, dz, navi):
-    #for i, elem in enumerate(lattice.sequence):
-    #    print i, elem.type, elem.id
-    #order = 2
-    nelems = len(lattice.sequence)
-    TM = []
-    tm = TransferMap(identity=True)
-    i = navi.n_elem
-    z1 = navi.z0 + dz
-    elem = lattice.sequence[i]
-    L = navi.sum_lengths + elem.l
-
-    rec_count = 0  # counter of recursion in R = lambda energy: dot(R1(energy), R2(energy))
-    #print "get_map: order = ", order
-
-    while z1 + 1e-10 > L:
-        if i >= nelems-1:
-            break
-        dl = L - navi.z0
-        if elem.transfer_map.__class__ in [SecondTM, CavityTM]:
-            if tm.identity == False:
-                TM.append(tm)
-                rec_count = 0
-
-            TM.append(elem.transfer_map(dl))
-            tm = TransferMap(identity=True)
-        else:
-            tm = elem.transfer_map(dl)*tm
-            rec_count += 1
-            if rec_count > 100:
-                TM.append(tm)
-                tm = TransferMap(identity=True)
-                rec_count = 0
-        navi.z0 = L
-
-        dz -= dl
-        i += 1
-        elem = lattice.sequence[i]
-        L += elem.l
-
-    if elem.transfer_map.__class__ in [SecondTM, CavityTM]:
-        if tm.identity == False:
-            TM.append(tm)
-            rec_count = 0
-        TM.append(elem.transfer_map(dz))
-        rec_count = 0
-        tm = TransferMap(identity=True)
-    else:
-        tm = elem.transfer_map(dz)*tm
-    navi.z0 += dz
-    navi.sum_lengths = L - elem.l
-    navi.n_elem = i
-    if tm.identity == False:
-        TM.append(tm)
-    return TM
 
 
 '''

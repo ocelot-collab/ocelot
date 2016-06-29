@@ -36,141 +36,154 @@ def smooth_z(Zin, mslice):
     Zout[inds] = Zout2
     return Zout
 
-def sym_kernel(ijk2, hxyz):
-    i2 = ijk2[0]
-    j2 = ijk2[1]
-    k2 = ijk2[2]
-    hx = hxyz[0]
-    hy = hxyz[1]
-    hz = hxyz[2]
-    x = hx*np.r_[0:i2+1] - hx/2
-    y = hy*np.r_[0:j2+1] - hy/2
-    z = hz*np.r_[0:k2+1] - hz/2
-    x, y, z = np.ix_(x, y, z)
-    r = np.sqrt(x*x + y*y + z*z)
 
-    IG = (-x*x*0.5*np.arctan(y*z/(x*r)) + y*z*np.log(x+r)
-          -y*y*0.5*np.arctan(z*x/(y*r)) + z*x*np.log(y+r)
-          -z*z*0.5*np.arctan(x*y/(z*r)) + x*y*np.log(z+r))
+class SpaceCharge():
+    def __init__(self):
+        #PhysicsProcess.__init__(self)
+        self.step = 1 # in unit step
+        self.nmesh_xyz = [63, 63, 63]
+        self.low_order_kick = True
 
-    kern = (IG[1:i2+1, 1:j2+1, 1:k2+1] - IG[0:i2, 1:j2+1, 1:k2+1]
-           -IG[1:i2+1, 0:j2, 1:k2+1] + IG[0:i2, 0:j2, 1:k2+1]
-           -IG[1:i2+1, 1:j2+1, 0:k2] + IG[0:i2, 1:j2+1, 0:k2]
-           +IG[1:i2+1, 0:j2, 0:k2] - IG[0:i2, 0:j2, 0:k2])
-    return kern
+        self.start_elem = None
+        self.end_elem = None
 
+    def prepare(self, lat):
+        pass
 
-def potential(q, steps):
-    hx = steps[0]
-    hy = steps[1]
-    hz = steps[2]
-    Nx = q.shape[0]
-    Ny = q.shape[1]
-    Nz = q.shape[2]
-    out = np.zeros((2*Nx-1, 2*Ny-1, 2*Nz-1))
-    out[:Nx, :Ny, :Nz] = q
+    def sym_kernel(self, ijk2, hxyz):
+        i2 = ijk2[0]
+        j2 = ijk2[1]
+        k2 = ijk2[2]
+        hx = hxyz[0]
+        hy = hxyz[1]
+        hz = hxyz[2]
+        x = hx*np.r_[0:i2+1] - hx/2
+        y = hy*np.r_[0:j2+1] - hy/2
+        z = hz*np.r_[0:k2+1] - hz/2
+        x, y, z = np.ix_(x, y, z)
+        r = np.sqrt(x*x + y*y + z*z)
 
-    K1 = sym_kernel(q.shape, steps)
-    K2 = np.zeros((2*Nx-1, 2*Ny-1, 2*Nz-1))
-    K2[0:Nx, 0:Ny, 0:Nz] = K1
-    K2[0:Nx, 0:Ny, Nz:2*Nz-1] = K2[0:Nx, 0:Ny, Nz-1:0:-1] #z-mirror
-    K2[0:Nx, Ny:2*Ny-1,:] = K2[0:Nx, Ny-1:0:-1, :]       #y-mirror
-    K2[Nx:2*Nx-1, :, :] = K2[Nx-1:0:-1, :, :]             #x-mirror
+        IG = (-x*x*0.5*np.arctan(y*z/(x*r)) + y*z*np.log(x+r)
+              -y*y*0.5*np.arctan(z*x/(y*r)) + z*x*np.log(y+r)
+              -z*z*0.5*np.arctan(x*y/(z*r)) + x*y*np.log(z+r))
 
-    t0 = time()
-    out = np.real(np.fft.ifftn(np.fft.fftn(out)*np.fft.fftn(K2)))
-    t1 = time()
-    print( 'fft time:', t1-t0, ' sec')
-
-    out[:Nx, :Ny, :Nz] = out[:Nx,:Ny,:Nz]/(4*pi*epsilon_0*hx*hy*hz)
-    return out[:Nx, :Ny, :Nz]
+        kern = (IG[1:i2+1, 1:j2+1, 1:k2+1] - IG[0:i2, 1:j2+1, 1:k2+1]
+               -IG[1:i2+1, 0:j2, 1:k2+1] + IG[0:i2, 0:j2, 1:k2+1]
+               -IG[1:i2+1, 1:j2+1, 0:k2] + IG[0:i2, 1:j2+1, 0:k2]
+               +IG[1:i2+1, 0:j2, 0:k2] - IG[0:i2, 0:j2, 0:k2])
+        return kern
 
 
-def el_field(X, Q, gamma, nxyz):
-    N = X.shape[0]
-    X[:, 2] = X[:, 2]*gamma
-    XX = np.max(X, axis=0)-np.min(X, axis=0)
-    XX = XX*np.random.uniform(low=1.0, high=1.1)
-    print( 'mesh steps:', XX)
-    # here we use a fast 3D "near-point" interpolation
-    # we need a stand-alone module with 1D,2D,3D parricles-to-grid functions
-    steps = XX/(nxyz-3)
-    X = X/steps
-    X_min = np.min(X, axis=0)
-    X_mid = np.dot(Q, X)/np.sum(Q)
-    X_off = np.floor(X_min-X_mid) + X_mid
-    X = X - X_off
-    nx = nxyz[0]
-    ny = nxyz[1]
-    nz = nxyz[2]
-    nzny = nz*ny
-    Xi = np.int_(np.floor(X)+1)
-    inds = np.int_(Xi[:, 0]*nzny+Xi[:, 1]*nz+Xi[:, 2])  # 3d -> 1d
-    #print( inds.shape, nxyz)
+    def potential(self, q, steps):
+        hx = steps[0]
+        hy = steps[1]
+        hz = steps[2]
+        Nx = q.shape[0]
+        Ny = q.shape[1]
+        Nz = q.shape[2]
+        out = np.zeros((2*Nx-1, 2*Ny-1, 2*Nz-1))
+        out[:Nx, :Ny, :Nz] = q
 
-    q = np.bincount(inds, Q, nzny*nx).reshape(nxyz)
-    p = potential(q, steps)
-    Ex = np.zeros(p.shape)
-    Ey = np.zeros(p.shape)
-    Ez = np.zeros(p.shape)
-    Ex[:nx-1, :, :] = (p[:nx-1, :, :] - p[1:nx, :, :])/steps[0]
-    Ey[:, :ny-1, :] = (p[:, :ny-1, :] - p[:, 1:ny, :])/steps[1]
-    Ez[:, :, :nz-1] = (p[:, :, :nz-1] - p[:, :, 1:nz])/steps[2]
+        K1 = self.sym_kernel(q.shape, steps)
+        K2 = np.zeros((2*Nx-1, 2*Ny-1, 2*Nz-1))
+        K2[0:Nx, 0:Ny, 0:Nz] = K1
+        K2[0:Nx, 0:Ny, Nz:2*Nz-1] = K2[0:Nx, 0:Ny, Nz-1:0:-1] #z-mirror
+        K2[0:Nx, Ny:2*Ny-1,:] = K2[0:Nx, Ny-1:0:-1, :]        #y-mirror
+        K2[Nx:2*Nx-1, :, :] = K2[Nx-1:0:-1, :, :]             #x-mirror
 
-    Exyz = np.zeros((N, 3))
-    Exyz[:, 0] = ndimage.map_coordinates(Ex, np.c_[X[:, 0], X[:, 1]+0.5, X[:, 2]+0.5].T, order=1)*gamma
-    Exyz[:, 1] = ndimage.map_coordinates(Ey, np.c_[X[:, 0]+0.5, X[:, 1], X[:, 2]+0.5].T, order=1)*gamma
-    Exyz[:, 2] = ndimage.map_coordinates(Ez, np.c_[X[:, 0]+0.5, X[:, 1]+0.5, X[:, 2]].T, order=1)
-    return Exyz
+        t0 = time()
+        out = np.real(np.fft.ifftn(np.fft.fftn(out)*np.fft.fftn(K2)))
+        t1 = time()
+        print( 'fft time:', t1-t0, ' sec')
+
+        out[:Nx, :Ny, :Nz] = out[:Nx,:Ny,:Nz]/(4*pi*epsilon_0*hx*hy*hz)
+        return out[:Nx, :Ny, :Nz]
 
 
-def sc_apply(p_array, q_array, zstep, nmesh_xyz, low_order_kick=True):
-    # L0 = true : use low order approximation for kick
-    #Lorentz transformation with z-axis and gamref
-    nmesh_xyz = np.array(nmesh_xyz)
-    gamref = p_array.E/m_e_GeV
-    betref2 = 1-gamref**-2
-    betref = sqrt(betref2)
-    Eref = gamref*m_e_eV
-    pref = Eref*betref
-    xxstg = p_array.particles.view()
-    npartl = len(xxstg)/6
-    xxstg.shape = (npartl, 6)
-    Exyz = el_field(np.c_[xxstg[:, 0], xxstg[:, 2], -betref*xxstg[:, 4]], q_array, gamref, nmesh_xyz)
-    cdT = zstep/betref
+    def el_field(self, X, Q, gamma, nxyz):
+        N = X.shape[0]
+        X[:, 2] = X[:, 2]*gamma
+        XX = np.max(X, axis=0)-np.min(X, axis=0)
+        XX = XX*np.random.uniform(low=1.0, high=1.1)
+        print( 'mesh steps:', XX)
+        # here we use a fast 3D "near-point" interpolation
+        # we need a stand-alone module with 1D,2D,3D parricles-to-grid functions
+        steps = XX/(nxyz-3)
+        X = X/steps
+        X_min = np.min(X, axis=0)
+        X_mid = np.dot(Q, X)/np.sum(Q)
+        X_off = np.floor(X_min-X_mid) + X_mid
+        X = X - X_off
+        nx = nxyz[0]
+        ny = nxyz[1]
+        nz = nxyz[2]
+        nzny = nz*ny
+        Xi = np.int_(np.floor(X)+1)
+        inds = np.int_(Xi[:, 0]*nzny+Xi[:, 1]*nz+Xi[:, 2])  # 3d -> 1d
+        #print( inds.shape, nxyz)
 
-    if low_order_kick:
-        # -- 0te Ordnung -------------------------------------------------------
-        xxstg[:, 1] = xxstg[:, 1] + (cdT/pref/gamref**2)*Exyz[:, 0]
-        xxstg[:, 3] = xxstg[:, 3] + (cdT/pref/gamref**2)*Exyz[:, 1]
-        xxstg[:, 5] = xxstg[:, 5] + (zstep/Eref)*Exyz[:, 2]
-    else:
-        # -- 1te Ordnung -------------------------------------------------------
-        betax = betref*xxstg[:, 1]
-        betay = betref*xxstg[:, 3]
-        betaz = betref*(1+xxstg[:, 5]/(gamref**2-1))
-        dpxyz_q_pref_x = (cdT/pref)*(1-betref*betaz)*Exyz[:, 0]
-        dpxyz_q_pref_y = (cdT/pref)*(1-betref*betaz)*Exyz[:, 1]
-        dpxyz_q_pref_z = (cdT/pref)*(Exyz[:, 2] + betref*(betax*Exyz[:, 0] + betay*Exyz[:, 1]))
-        xxstg[:, 1] = (1 - dpxyz_q_pref_z)*(xxstg[:, 1] + dpxyz_q_pref_x)
-        xxstg[:, 3] = (1 - dpxyz_q_pref_z)*(xxstg[:, 3] + dpxyz_q_pref_y)
-        xxstg[:, 5] = xxstg[:, 5] + dpxyz_q_pref_z*betref2
+        q = np.bincount(inds, Q, nzny*nx).reshape(nxyz)
+        p = self.potential(q, steps)
+        Ex = np.zeros(p.shape)
+        Ey = np.zeros(p.shape)
+        Ez = np.zeros(p.shape)
+        Ex[:nx-1, :, :] = (p[:nx-1, :, :] - p[1:nx, :, :])/steps[0]
+        Ey[:, :ny-1, :] = (p[:, :ny-1, :] - p[:, 1:ny, :])/steps[1]
+        Ez[:, :, :nz-1] = (p[:, :, :nz-1] - p[:, :, 1:nz])/steps[2]
+
+        Exyz = np.zeros((N, 3))
+        Exyz[:, 0] = ndimage.map_coordinates(Ex, np.c_[X[:, 0], X[:, 1]+0.5, X[:, 2]+0.5].T, order=1)*gamma
+        Exyz[:, 1] = ndimage.map_coordinates(Ey, np.c_[X[:, 0]+0.5, X[:, 1], X[:, 2]+0.5].T, order=1)*gamma
+        Exyz[:, 2] = ndimage.map_coordinates(Ez, np.c_[X[:, 0]+0.5, X[:, 1]+0.5, X[:, 2]].T, order=1)
+        return Exyz
+
+    def apply(self, p_array, zstep):
+        # L0 = true : use low order approximation for kick
+        #Lorentz transformation with z-axis and gamref
+        nmesh_xyz = np.array(self.nmesh_xyz)
+        gamref = p_array.E/m_e_GeV
+        betref2 = 1-gamref**-2
+        betref = np.sqrt(betref2)
+        Eref = gamref*m_e_eV
+        pref = Eref*betref
+        xxstg = p_array.particles.view()
+        npartl = len(xxstg)/6
+        xxstg.shape = (npartl, 6)
+        Exyz = self.el_field(np.c_[xxstg[:, 0], xxstg[:, 2], -betref*xxstg[:, 4]], p_array.q_array, gamref, nmesh_xyz)
+        cdT = zstep/betref
+
+        if self.low_order_kick:
+            # -- 0te Ordnung -------------------------------------------------------
+            xxstg[:, 1] = xxstg[:, 1] + (cdT/pref/gamref**2)*Exyz[:, 0]
+            xxstg[:, 3] = xxstg[:, 3] + (cdT/pref/gamref**2)*Exyz[:, 1]
+            xxstg[:, 5] = xxstg[:, 5] + (zstep/Eref)*Exyz[:, 2]
+        else:
+            # -- 1te Ordnung -------------------------------------------------------
+            betax = betref*xxstg[:, 1]
+            betay = betref*xxstg[:, 3]
+            betaz = betref*(1+xxstg[:, 5]/(gamref**2-1))
+            dpxyz_q_pref_x = (cdT/pref)*(1-betref*betaz)*Exyz[:, 0]
+            dpxyz_q_pref_y = (cdT/pref)*(1-betref*betaz)*Exyz[:, 1]
+            dpxyz_q_pref_z = (cdT/pref)*(Exyz[:, 2] + betref*(betax*Exyz[:, 0] + betay*Exyz[:, 1]))
+            xxstg[:, 1] = (1 - dpxyz_q_pref_z)*(xxstg[:, 1] + dpxyz_q_pref_x)
+            xxstg[:, 3] = (1 - dpxyz_q_pref_z)*(xxstg[:, 3] + dpxyz_q_pref_y)
+            xxstg[:, 5] = xxstg[:, 5] + dpxyz_q_pref_z*betref2
         
         
-def SC_xp_update(xp, Q, gamref, dS, nxyz):
-    #Lorentz transformation with z-axis and gamref
-    betref2 = 1 - gamref**-2
-    betref = np.sqrt(betref2)
-    Eref = gamref*m_e_eV
-    pref = Eref*betref
-    Exyz = el_field(np.c_[xp[:, 0], xp[:, 1], xp[:, 2]], Q, gamref, nxyz)
-    u = np.c_[xp[:, 3], xp[:, 4], xp[:, 5] + pref]
-    gamma = np.sqrt(1+np.sum(u*u, 1)/m_e_eV**2).reshape((xp.shape[0], 1))
-    cdT = dS/betref
-    u = u/(gamma*m_e_eV)
-    xp[:,3] = xp[:, 3] + cdT*(1-betref*u[:, 2])*Exyz[:, 0]
-    xp[:,4] = xp[:, 4] + cdT*(1-betref*u[:, 2])*Exyz[:, 1]
-    xp[:,5] = xp[:, 5] + cdT*(Exyz[:, 2] + betref*(u[:, 0]*Exyz[:, 0] + u[:, 1]*Exyz[:, 1]))
+    def SC_xp_update(self, xp, Q, gamref, dS, nxyz):
+        #Lorentz transformation with z-axis and gamref
+        betref2 = 1 - gamref**-2
+        betref = np.sqrt(betref2)
+        Eref = gamref*m_e_eV
+        pref = Eref*betref
+        Exyz = self.el_field(np.c_[xp[:, 0], xp[:, 1], xp[:, 2]], Q, gamref, nxyz)
+        u = np.c_[xp[:, 3], xp[:, 4], xp[:, 5] + pref]
+        gamma = np.sqrt(1+np.sum(u*u, 1)/m_e_eV**2).reshape((xp.shape[0], 1))
+        cdT = dS/betref
+        u = u/(gamma*m_e_eV)
+        xp[:,3] = xp[:, 3] + cdT*(1-betref*u[:, 2])*Exyz[:, 0]
+        xp[:,4] = xp[:, 4] + cdT*(1-betref*u[:, 2])*Exyz[:, 1]
+        xp[:,5] = xp[:, 5] + cdT*(Exyz[:, 2] + betref*(u[:, 0]*Exyz[:, 0] + u[:, 1]*Exyz[:, 1]))
 
 
 """
@@ -198,53 +211,6 @@ def sc_track(lattice):
     print "time exc = ", time.time() - start
 """
         
-if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-    P=np.loadtxt('test.ast')
-    #P=np.loadtxt('D:/MyTools/MartinsTracker/2ASTRA/test.ast')
-    #P=np.loadtxt('D:/MyTools/MartinsTracker/2ASTRA/bc1_out.ast')
-    Q=-P[:,7]*1e-9 #charge in nC -> in C 
-    xp=P[:,:6] 
-    z00=xp[0,2] 
-    pz00=xp[0,5] 
-    xp[0,2]=0; xp[0,5]=0
-    zav=np.mean(xp[:,2]) 
-    z0=z00+zav 
-    xp[:,2]=xp[:,2]-zav
-    pav=np.mean(xp[:,5]) 
-    pz0=pz00+pav; 
-    xp[:,5]=xp[:,5]-pav
-    Pref=pz0 
-    gamref=np.sqrt((Pref/m_e_eV)**2+1)
-    xxstg= exact_xp_2_xxstg(xp,gamref)
-    xxstg0=np.copy(xxstg)
-    L0=False
-    Lxxs=True
-    dS=30;
-    f=plt.figure()
-    plt.ion();plt.hold(False)
-    for i in range(10):
-        #drift
-        xxstg[:, 0] = xxstg[:, 0] + xxstg[:, 1]*dS
-        xxstg[:, 2] = xxstg[:, 2] + xxstg[:, 3]*dS
-        xxstg[:, 4] = xxstg[:, 4] + xxstg[:, 5]*dS/gamref**2
-        t0=time.time()
-        if Lxxs:
-            sc_apply(xxstg, Q, dS, L0, np.r_[53, 53, 53])
-        else:    
-            xp= exact_xxstg_2_xp(xxstg,gamref)
-            SC_xp_update(xp,Q,gamref,dS,np.r_[53,53,53])
-            xxstg= exact_xp_2_xxstg(xp,gamref)
-        t1=time.time()
-        print( 'step time:', t1-t0,' sec')
-        f.add_subplot(211)
-        plt.plot(xxstg[:,4],xxstg[:,5],'.',xxstg0[:,4],xxstg0[:,5],'.')
-        f.add_subplot(212)
-        plt.plot(xxstg[:,4],xxstg[:,0],'.',xxstg0[:,4],xxstg0[:,0],'.')
-        plt.draw()
-        plt.pause(0.1)
-    plt.ioff();plt.show()    
-    np.savetxt('D:/pytest.ast',xxstg)
-    
+
     
     

@@ -35,7 +35,7 @@ navi = Navigator()
 dz = 0.01
 P1 = []
 for i in range(int(lat.totalLen/dz)):
-    track(lat, [p1], dz=dz, navi=navi)
+    tracking_step(lat, [p1], dz=dz, navi=navi)
     P1.append(copy.copy(p1))
 
 s = [f.s for f in P1]
@@ -56,7 +56,7 @@ navi = Navigator()
 dz = 0.01
 P1 = []
 for i in range(int(lat.totalLen/dz)):
-    track(lat, [p1], dz=dz, navi=navi)
+    tracking_step(lat, [p1], dz=dz, navi=navi)
     P1.append(copy.copy(p1))
 
 s = [f.s for f in P1]

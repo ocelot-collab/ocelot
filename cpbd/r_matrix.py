@@ -118,6 +118,7 @@ def create_r_matrix(element):
             gamma = (E + 0.5 * de) / m_e_GeV
             Ei = E / m_e_GeV
             Ef = (E + de) / m_e_GeV
+            #print("cav z = ", z)
             Ep = (Ef - Ei) / z  # energy derivative
             if Ei == 0:
                 print("Warning! Initial energy is zero and cavity.delta_e != 0! Change Ei or cavity.delta_e must be 0")

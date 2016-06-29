@@ -56,7 +56,7 @@ def s2current(P0,q,Ns,NF,v):
     s=s0+np.arange(-NF2,Ns-NF2)*ds
 
     # here we need a fast 1D linear interpolation of charges on the grid
-    # in sc.py we use a fast 3D "near-point" interpolation 
+    # in sc_old.py we use a fast 3D "near-point" interpolation
     # we need a stand-alone module with 1D,2D,3D parricles-to-grid functions
     Ip=(P0-s0)/ds
     I0=np.floor(Ip)

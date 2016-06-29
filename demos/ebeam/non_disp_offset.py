@@ -51,8 +51,8 @@ navi1 = Navigator()
 navi2 = Navigator()
 dz = 0.01
 for i in range(int(lat1.totalLen/dz)):
-    track(lat1, [p1], dz = dz, navi = navi1)  # R only
-    track(lat2, [p2], dz = dz, navi = navi2)  # R + T
+    step(lat1, [p1], dz = dz, navi = navi1)  # R only
+    step(lat2, [p2], dz = dz, navi = navi2)  # R + T
     P1.append(cp.copy(p1))
     P2.append(cp.copy(p2))
 
@@ -77,8 +77,8 @@ for xi, xpi in zip(x,xp):
 plist_1 = cp.deepcopy(plist)
 navi = Navigator()
 
-track(lat1, plist_1, dz=lat1.totalLen, navi=cp.copy(navi))
-track(lat2, plist, dz=lat2.totalLen, navi=cp.copy(navi))
+step(lat1, plist_1, dz=lat1.totalLen, navi=cp.copy(navi))
+step(lat2, plist, dz=lat2.totalLen, navi=cp.copy(navi))
 x2 = [f.x for f in plist]
 xp2 = [f.px for f in plist]
 

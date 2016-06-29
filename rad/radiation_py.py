@@ -176,7 +176,7 @@ def track4rad(beam, lat, energy_loss = False, quantum_diff = False):
                     N = 500
                     for z in linspace(L, lat_el.totalLen + L, num=N):
                         h = lat_el.totalLen/(N)
-                        track(lat_el, [p], h, navi)
+                        tracking_step(lat_el, [p], h, navi)
                         #print p.s
                         ui = [p.x, p.px, p.y, p.py, z, sqrt(1. - p.px*p.px - p.py *p.py), 0., 0., 0.]
                         u.extend(ui)

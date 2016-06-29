@@ -314,7 +314,7 @@ class Orbit:
         for bpm in self.bpms:
             #print("energy = ", p.E)
             dz = bpm.s - L
-            track(self.lat, [p], dz, navi)
+            tracking_step(self.lat, [p], dz, navi)
             bpm.x = p.x
             bpm.y = p.y
             bpm.E = p.E

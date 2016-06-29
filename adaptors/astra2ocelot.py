@@ -53,11 +53,14 @@ def astraBeam2particleArray(filename):
     print( "charge = ", sum(charge_array))
     xp = P0[:, :6]
     Pref = xp[0, 5]
+    s_ref = xp[0, 2]
     xp[0, 5] = 0
+    xp[0, 2] = 0.
     gamref = np.sqrt((Pref/m_e_eV)**2+1)
     xxstg = exact_xp_2_xxstg(xp, gamref)
 
     p_array = ParticleArray(len(charge_array))
+    p_array.s = s_ref
     p_array.E =  np.sqrt((Pref/m_e_eV)**2+1)*m_e_GeV
     p_array.particles[0::6] = xxstg[:,0]
     p_array.particles[1::6] = xxstg[:,1]

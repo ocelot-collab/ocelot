@@ -696,7 +696,8 @@ def gen_outplot(handle=None,save='png',show=False,debug=0,all=False,vartype_dfl=
         if os.path.isfile(handle.path+'.dfl') and all:
             dfl=readRadiationFile(handle.path+'.dfl', handle.ncar, vartype=vartype_dfl)
             f5=gen_outplot_dfl(dfl, handle,save=save)
-            #f6=gen_outplot_dfl(dfl, handle,far_field=1,freq_domain=0,auto_zoom=0,save=save)
+            f6=gen_outplot_dfl(dfl, handle,far_field=1,freq_domain=0,auto_zoom=0,save=save)
+            f7=gen_outplot_dfl(dfl, handle,far_field=0,freq_domain=1,auto_zoom=0,save=save)
             
     if show==True:
         print('    showing plots, close all to proceed')
@@ -726,6 +727,8 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
     #save and show allow to save figure to image (save='png' (default) or save='eps', etc...) or to display it (slower)
     #return_proj returns [xy_proj,yz_proj,xz_proj,x,y,z] array.
     #vartype_dfl is the data type to store dfl in memory [either complex128 (two 64-bit floats) or complex64 (two 32-bit floats)], may save memory
+    
+    text_present=1
     
     print('    plotting dfl file')
     start_time = time.time()
@@ -954,7 +957,7 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
     # ax_int.axes.get_xaxis().set_visible(False)
     ax_int.set_xlabel(r''+x_label)
     ax_int.set_ylabel(y_label)
-    if len(z)>1:
+    if len(z)>1 and text_present:
         ax_int.text(0.01,0.01,r'$E_{p}$=%.2e J' %(E_pulse), horizontalalignment='left', verticalalignment='bottom',fontsize=12, color='white',transform=ax_int.transAxes) #
     
     if phase==True:
@@ -979,7 +982,8 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
     x_line_f, rms_x=gauss_fit(x,x_line) #fit with Gaussian, and return fitted function and rms
     fwhm_x=fwhm3(x_line)[1]*dx #measure FWHM
     ax_proj_x.plot(x,x_line_f,color='grey')
-    ax_proj_x.text(0.95, 0.95,'fwhm= \n'+str(round_sig(fwhm_x,3))+r' ['+unit_xy+']\nrms= \n'+str(round_sig(rms_x,3))+r' ['+unit_xy+']', horizontalalignment='right', verticalalignment='top', transform = ax_proj_x.transAxes,fontsize=12)
+    if text_present:
+        ax_proj_x.text(0.95, 0.95,'fwhm= \n'+str(round_sig(fwhm_x,3))+r' ['+unit_xy+']\nrms= \n'+str(round_sig(rms_x,3))+r' ['+unit_xy+']', horizontalalignment='right', verticalalignment='top', transform = ax_proj_x.transAxes,fontsize=12)
     ax_proj_x.set_ylim(ymin=0,ymax=1)
 
     
@@ -990,7 +994,8 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
     y_line_f, rms_y=gauss_fit(y,y_line)
     fwhm_y=fwhm3(y_line)[1]*dy
     ax_proj_y.plot(y_line_f,y,color='grey')
-    ax_proj_y.text(0.95, 0.95,'fwhm= '+str(round_sig(fwhm_y,3))+r' ['+unit_xy+']\nrms= '+str(round_sig(rms_y,3))+r' ['+unit_xy+']', horizontalalignment='right', verticalalignment='top', transform = ax_proj_y.transAxes,fontsize=12)
+    if text_present:
+        ax_proj_y.text(0.95, 0.95,'fwhm= '+str(round_sig(fwhm_y,3))+r' ['+unit_xy+']\nrms= '+str(round_sig(rms_y,3))+r' ['+unit_xy+']', horizontalalignment='right', verticalalignment='top', transform = ax_proj_y.transAxes,fontsize=12)
     ax_proj_y.set_xlim(xmin=0,xmax=1)
 
     
@@ -1079,7 +1084,6 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
         return [xy_proj,yz_proj,xz_proj,x,y,z]
     else:
         return fig
-        
 
     
 # def gen_outplot_dpa(dpa, g, figsize=3, legend = True, phase = False, far_field=False, freq_domain=False, fig_name = None, auto_zoom=False, column_3d=True, save=False, return_proj=False):

@@ -68,7 +68,10 @@ def astraBeam2particleArray(filename):
     p_array.particles[3::6] = xxstg[:,3]
     p_array.particles[4::6] = xxstg[:,4]
     p_array.particles[5::6] = xxstg[:,5]
+    p_array.q_array = charge_array
     return p_array, charge_array
+
+
 
 def particleArray2astraBeam(p_array, charge_array, filename="tytest.ast"):
     gamref = p_array.E/m_e_GeV

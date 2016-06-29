@@ -24,7 +24,7 @@ def interp1(x, y, xnew, k=1):
     return ynew
 
 
-class SCR:
+class CSR:
 
     def __init__(self):
         self.mesh_params = None # [n_mesh, mesh_step]. list N[0] 0 number of mesh points, N[1] = dW> 0 - increment, Mesh = Mesh = (N: 0) * dW

@@ -140,6 +140,7 @@ class SpaceCharge():
     def apply(self, p_array, zstep):
         # L0 = true : use low order approximation for kick
         #Lorentz transformation with z-axis and gamref
+        print("APPLY SC")
         nmesh_xyz = np.array(self.nmesh_xyz)
         gamref = p_array.E/m_e_GeV
         betref2 = 1-gamref**-2

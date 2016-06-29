@@ -475,6 +475,7 @@ def track(lattice, p_array, navi):
         L += dz
         tw.s += L
         tws_track.append(tw)
+        print("z = ", navi.z0)
     return tws_track, p_array
 
 

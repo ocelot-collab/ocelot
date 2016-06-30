@@ -449,8 +449,10 @@ def tracking_step(lat, particle_list, dz, navi):
 
     t_maps = get_map(lat, dz, navi)
     for tm in t_maps:
-        logger.debug("tm: l="+  str(tm.length) +"class=" + tm.__class__.__name__)
+        start = time()
         tm.apply(particle_list)
+        logger.debug("tm: l="+  str(tm.length) +"  class=" + tm.__class__.__name__ + " \n"
+            "tracking_step -> apply: time exec = " + str(time() - start) + "  sec")
     return
 
 

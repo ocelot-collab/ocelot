@@ -16,20 +16,16 @@ logger = Logger()
 def transform_vec_ent(X, dx, dy, tilt):
     n = len(X)
     rotmat = rot_mtx(tilt)
-    for i in range(int(n/6)):
-        X0 = X[6*i:6*(i+1)]
-        X0 =X0 - array([dx, 0., dy, 0., 0., 0.])
-        X[6*i:6*(i+1)] = dot(rotmat, X0)
+    x_add = np.add(X.reshape(n / 6, 6), np.array([-dx, 0., -dy, 0., 0., 0.])).transpose()
+    X[:] = np.dot(rotmat, x_add).transpose().reshape(n)[:]
     return X
 
 
 def transform_vec_ext(X, dx, dy, tilt):
     n = len(X)
     rotmat = rot_mtx(-tilt)
-    for i in range(int(n/6)):
-        X0 = X[6*i:6*(i+1)]
-        X[6*i:6*(i+1)] = dot(rotmat, X0)
-        X0 = X0 + array([dx, 0., dy, 0., 0., 0.])
+    x_tilt = np.dot(rotmat, np.transpose(X.reshape(n / 6, 6))).transpose()
+    X[:] = np.add(x_tilt, np.array([dx, 0., dy, 0., 0., 0.])).reshape(n)[:]
     return X
 
 
@@ -834,7 +830,11 @@ class Navigator:
             else:
                 L = self.lat.totalLen
             dz = L - self.z0
-        logger.debug("navi.z0="+str(self.z0) + " navi.n_elem=" + str(self.n_elem) + " navi.sum_lengths=" +str(self.sum_lengths) + " dz=" +str(dz))
+        #print(self.lat.sequence[self.n_elem].eid)
+        #logger.debug("navi.z0="+str(self.z0) + " navi.n_elem=" + str(self.n_elem) + " navi.sum_lengths=" +str(self.sum_lengths) + " dz=" +str(dz))
+        logger.debug("navi.z0="+str(self.z0) + " navi.n_elem=" + str(self.n_elem) + " navi.sum_lengths=" +str(self.sum_lengths) + " dz=" +str(dz) + '\n' +
+            "element type="+self.lat.sequence[self.n_elem].__class__.__name__ + " element name=" + self.lat.sequence[self.n_elem].id)
+
         return dz, processes
 
 

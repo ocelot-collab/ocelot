@@ -50,7 +50,8 @@ def exact_xxstg_2_xp(xxstg, gamref):
 def astraBeam2particleArray(filename):
     P0 = np.loadtxt(filename)
     charge_array = -P0[:, 7]*1e-9  #charge in nC -> in C
-    print( "charge = ", sum(charge_array))
+    print("charge = ", sum(charge_array))
+    print("particles number = ", len(charge_array))
     xp = P0[:, :6]
     Pref = xp[0, 5]
     s_ref = xp[0, 2]

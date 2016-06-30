@@ -16,7 +16,7 @@ __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope", 
            "compensate_chromaticity",  # chromaticity
            "EbeamParams",  # e_beam_params
            "write_lattice",  # io
-           "CSR", "SpaceCharge",
+           "CSR", "SpaceCharge", "Wake",
            "MagneticLattice",
            ]
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
@@ -32,5 +32,6 @@ from ocelot.cpbd.e_beam_params import *
 from ocelot.cpbd.io import *
 from ocelot.cpbd.sc import *
 from ocelot.cpbd.csr import *
+from ocelot.cpbd.wake3D import *
 print('initializing ocelot...')
 logger = Logger()

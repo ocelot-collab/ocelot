@@ -9,7 +9,7 @@ class Logger:
 
         self.show_info = True
         self.show_warning = True
-        self.show_debug = False
+        self.show_debug = True
         self.file = None
 
     def info(self, txt):

@@ -11,9 +11,12 @@ from scipy.optimize import curve_fit
 from ocelot.cpbd.beam import *
 from ocelot.cpbd.high_order import *
 from ocelot.cpbd.magnetic_lattice import *
+
+
+from matplotlib import pyplot as plt
+from ocelot.cpbd.wake3D import *
 import copy
 
-#from matplotlib import pyplot as plt
 
 def interp1(x, y, xnew, k=1):
     if len(xnew)>0:
@@ -295,20 +298,24 @@ class CSR:
 
         # filtering
         Ns = np.ceil(bunch_size/2./Ndw[1])
-        s = np.arange(-Ns, Ns+1)*Ndw[1]
-        hist, bin_edges = np.histogram(z, bins=len(s))
-        b_distr = hist*p_array.q_array[0]/(bin_edges[1] - bin_edges[0])
-        b_distr_filt = gaussian_filter(b_distr, sigma=2)
+        #s = np.arange(-Ns, Ns+1)*Ndw[1]
+        #hist, bin_edges = np.histogram(z, bins=len(s))
+        #b_distr = hist*p_array.q_array[0]/(bin_edges[1] - bin_edges[0])
+        #b_distr_filt = gaussian_filter(b_distr, sigma=2)
 
+
+        I = s2current(z, p_array.q_array, n_points=2*Ns+1, filter_order=5, mean_vel=speed_of_light)
+        b_distr_filt = I[:, 1]/speed_of_light
         #print("charge1 = ", sum(b_distr_filt*charge_array[0]))
         #plt.plot(s, b_distr_filt, "r")
-        #plt.plot(s, b_distr, "b")
+        #plt.plot(I[:, 0], I[:, 1]/speed_of_light, "b")
         #plt.show()
         #bins_start, hist_start = get_current(particle_list, charge=charge_array[0], num_bins=1000)
         #print("rms = ", np.std(z))
         lam_K1 = np.convolve(b_distr_filt, K1)
+
         Nend = len(lam_K1)
-        x = np.arange(Ns+1-Nend,Ns+1)*Ndw[1]
+        x = np.arange(Ns+1-Nend, Ns+1)*Ndw[1]
         tck = interpolate.splrep(x, lam_K1, k=1)
         dE = interpolate.splev(z, tck, der=0)
 

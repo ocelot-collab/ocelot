@@ -1085,8 +1085,36 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
     else:
         return fig
 
+def gen_outplot_dpa(out, dpa=None, z=[], figsize=3, legend = True, fig_name = None, auto_zoom=False, column_3d=True, save=False, show=False, return_proj=False, vartype_dfl=complex64):
     
-# def gen_outplot_dpa(dpa, g, figsize=3, legend = True, phase = False, far_field=False, freq_domain=False, fig_name = None, auto_zoom=False, column_3d=True, save=False, return_proj=False):
+    print('    plotting dpa file')
+    start_time = time.time()
+    suffix=''
+    
+    xlamds=out('xlamds')
+    zsep=out('zsep')
+    nslice=out('nslice')
+    nbins=out('nbins')
+    npart=out('npart')
+    
+    if dpa==None:
+        dpa=out.path+'.dpa'
+    if dpa.__class__==str:
+        try:
+            dpa=read_particle_file(dpa, nbins=nbins, npart=npart,debug=debug)
+        except IOError:
+            print ('      ERR: no such file "'+dpa+'"')
+            print ('      ERR: reading "'+out.path+'.dpa'+'"')
+            dpa=read_particle_file(out.path+'.dpa', nbins=nbins, npart=npart,debug=debug)
+
+    m=np.arange(nslice)
+    m=np.tile(m,(nbins,npart/nbins,1))
+    m=np.rollaxis(m,2,0)
+    
+    dpa.z=dpa.ph*xlamds/2/pi+m*xlamds*zsep
+    dpa.t=dpa.z/speed_of_light
+    
+    plt.scatter(dpa.ph[nslice,1,:],dpa.e[nslice,1,:])
     
     # print('    plotting dpa file')
     # start_time = time.time()

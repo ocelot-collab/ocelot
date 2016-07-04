@@ -1,13 +1,13 @@
 __author__ = 'Sergey Tomin'
 
 import numpy as np
-from ocelot.common.globals import *
+from ocelot.common.globals import m_e_GeV
 from ocelot.cpbd.elements import *
 
 
 def rot_mtx(angle):
-    cs = cos(angle)
-    sn = sin(angle)
+    cs = np.cos(angle)
+    sn = np.sin(angle)
     return np.array([[cs, 0., sn, 0., 0., 0.],
                   [0., cs, 0., sn, 0., 0.],
                   [-sn, 0., cs, 0., 0., 0.],

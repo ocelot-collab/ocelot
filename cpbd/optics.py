@@ -1,10 +1,9 @@
 __author__ = 'Sergey'
-
 from numpy.linalg import inv
 from numpy import cosh, sinh
 from scipy.misc import factorial
-from ocelot.cpbd.elements import *#Element, Multipole, Quadrupole, RBend,SBend, Bend, Matrix, UnknownElement, Solenoid, Drift, Undulator, Hcor, Vcor, Sextupole,Monitor, Marker, Octupole, Cavity, Edge
-from ocelot.cpbd.elements import Pulse
+#from ocelot.cpbd.elements import *
+#from ocelot.cpbd.elements import Pulse
 from ocelot.cpbd.beam import Particle, Twiss, ParticleArray
 from ocelot.cpbd.high_order import *
 from ocelot.cpbd.r_matrix import *
@@ -84,13 +83,13 @@ class TransferMap:
         # tws.beta_y = ((M[2,2]*tws.beta_y - M[2,3]*m.alpha_y)**2 + M[2,3]*M[2,3])/m.beta_y
         tws.alpha_x = -M[0, 0]*M[1, 0]*m.beta_x + (M[0, 1]*M[1, 0]+M[1, 1]*M[0, 0])*m.alpha_x - M[0, 1]*M[1, 1]*m.gamma_x
         tws.alpha_y = -M[2, 2]*M[3, 2]*m.beta_y + (M[2, 3]*M[3, 2]+M[3, 3]*M[2, 2])*m.alpha_y - M[2, 3]*M[3, 3]*m.gamma_y
-    
+
         tws.gamma_x = (1. + tws.alpha_x*tws.alpha_x)/tws.beta_x
         tws.gamma_y = (1. + tws.alpha_y*tws.alpha_y)/tws.beta_y
-    
+
         tws.Dx = M[0, 0]*m.Dx + M[0, 1]*m.Dxp + M[0, 5]
         tws.Dy = M[2, 2]*m.Dy + M[2, 3]*m.Dyp + M[2, 5]
-    
+
         tws.Dxp = M[1, 0]*m.Dx + M[1, 1]*m.Dxp + M[1, 5]
         tws.Dyp = M[3, 2]*m.Dy + M[3, 3]*m.Dyp + M[3, 5]
         denom_x = M[0, 0]*m.beta_x - M[0, 1]*m.alpha_x
@@ -130,9 +129,9 @@ class TransferMap:
             dyp = self.pulse.kick_y(tau)
             logger.debug('kick ' + str(dxp) + ' ' + str(dyp))
             b = array([0.0, dxp, 0.0, dyp, 0., 0.])
-            a = np.add( np.transpose(  dot(self.R(energy), np.transpose( particles.reshape(n/6, 6)) ) ), b ).reshape(n)
+            a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(n/6, 6)))), b).reshape(n)
         else:
-            a = np.add( np.transpose(  dot(self.R(energy), np.transpose( particles.reshape(n/6, 6)) ) ), self.B(energy) ).reshape(n)
+            a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(n/6, 6)))), self.B(energy)).reshape(n)
         particles[:] = a[:]
         logger.debug('return trajectory, array ' + str(len(particles)))
         return particles
@@ -251,7 +250,7 @@ class CorrectorTM(TransferMap):
         TransferMap.__init__(self)
         self.angle_x = angle_x
         self.angle_y = angle_y
-        self.map = lambda X, energy: self.kick(X,  self.length, self.length, self.angle_x, self.angle_y, energy)
+        self.map = lambda X, energy: self.kick(X, self.length, self.length, self.angle_x, self.angle_y, energy)
         self.B_z = lambda z, energy: self.kick_b(z, self.length, angle_x, angle_y)
 
     def kick_b(self, z, l, angle_x, angle_y):
@@ -274,7 +273,7 @@ class CorrectorTM(TransferMap):
         #ocelot.logger.debug('invoking kick_b')
         n = len(X)
         b = self.kick_b(z, l, angle_x, angle_y)
-        X1 = np.add(np.transpose( dot(self.R(energy), np.transpose( X.reshape(n/6, 6)))), b).reshape(n)
+        X1 = np.add(np.transpose(dot(self.R(energy), np.transpose( X.reshape(n/6, 6)))), b).reshape(n)
         #print(X1)
         X[:] = X1[:]
         return X
@@ -285,7 +284,7 @@ class CorrectorTM(TransferMap):
         m.R = lambda energy: m.R_z(s, energy)
         m.B = lambda energy: m.B_z(s, energy)
         m.delta_e = m.delta_e_z(s)
-        m.map = lambda X, energy: m.kick(X,  s, self.length, m.angle_x, m.angle_y, energy)
+        m.map = lambda X, energy: m.kick(X, s, self.length, m.angle_x, m.angle_y, energy)
         return m
 
 
@@ -417,7 +416,7 @@ class UndulatorTestTM(TransferMap):
             u[1::6] -= h / 2. * chx * shx * (kx * ky2 * chy * chy + kx2 * kx * shy * shy) / (ky2 * kz2) * h02
             u[3::6] -= h / 2. * chy * shy * (ky2 * chx * chx + kx2 * shx * shx) / (ky * kz2) * h02
             u[4::6] -= h / 2. / (1. + u[5::6]) * ((u[1::6] * u[1::6] + u[3::6] * u[3::6]) + chx * chx * chy * chy / (
-            2. * kz2) * h02 + shx * shx * shy * shy * kx2 / (2. * ky2 * kz2) * h02)
+                        2. * kz2) * h02 + shx * shx * shy * shy * kx2 / (2. * ky2 * kz2) * h02)
             u[::6] = x + h * u[1::6]
             u[2::6] = y + h * u[3::6]
         return u
@@ -590,9 +589,9 @@ class MethodTM:
             except:
                 s_start = 0.
             try:
-                npoints=element.npoints
+                npoints = element.npoints
             except:
-                npoints=200
+                npoints = 200
             tm = RungeKuttaTM(s_start=s_start, npoints=npoints)
             tm.mag_field = element.mag_field
 
@@ -748,7 +747,7 @@ def twiss(lattice, tws0=None, nPoints=None):
         twiss_list = trace_obj(lattice, tws0, nPoints)
         return twiss_list
     else:
-        print ('Twiss: no periodic solution')
+        print('Twiss: no periodic solution')
         return None
 
 
@@ -882,11 +881,11 @@ def merge_maps(t_maps):
 returns two solutions for a periodic fodo, given the mean beta
 initial betas are at the center of the focusing quad 
 '''
-def fodo_parameters(betaXmean = 36.0, L=10.0, verbose = False):
+def fodo_parameters(betaXmean=36.0, L=10.0, verbose = False):
     lquad = 0.001
         
-    kap1 = np.sqrt ( 1.0/2.0 * ( (betaXmean/L)*(betaXmean/L) + (betaXmean/L) * np.sqrt(-4.0 + (betaXmean/L)*(betaXmean/L))) )    
-    kap2 = np.sqrt ( 1.0/2.0 * ( (betaXmean/L)*(betaXmean/L) - (betaXmean/L) * np.sqrt(-4.0 + (betaXmean/L)*(betaXmean/L))) )
+    kap1 = np.sqrt (1.0/2.0 * ((betaXmean/L)*(betaXmean/L) + (betaXmean/L) * np.sqrt(-4.0 + (betaXmean/L)*(betaXmean/L))))
+    kap2 = np.sqrt (1.0/2.0 * ((betaXmean/L)*(betaXmean/L) - (betaXmean/L) * np.sqrt(-4.0 + (betaXmean/L)*(betaXmean/L))))
     
     k = 1.0 / (lquad * L * kap2)
     
@@ -899,15 +898,15 @@ def fodo_parameters(betaXmean = 36.0, L=10.0, verbose = False):
     k = np.array((1.0 / (lquad * L * kap1), 1.0 / (lquad * L * kap2) ))
     
     if verbose:
-        print ('********* calculating fodo parameters *********')
-        print ('fodo parameters:')
-        print ('k*l=', k*lquad)
-        print ('f=', L * kap1, L*kap2)
-        print ('kap1=', kap1)
-        print ('kap2=', kap2)
-        print ('betaMax=', betaMax)
-        print ('betaMin=', betaMin)
-        print ('betaMean=', betaMean)
-        print ('*********                             *********')
+        print('********* calculating fodo parameters *********')
+        print('fodo parameters:')
+        print('k*l=', k*lquad)
+        print('f=', L * kap1, L*kap2)
+        print('kap1=', kap1)
+        print('kap2=', kap2)
+        print('betaMax=', betaMax)
+        print('betaMin=', betaMin)
+        print('betaMean=', betaMean)
+        print('*********                             *********')
     
     return k*lquad, betaMin, betaMax, betaMean

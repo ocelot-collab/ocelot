@@ -4,6 +4,7 @@ from copy import copy
 from ocelot import *
 from ocelot.gui import *
 import numpy as np
+
 C = 1000.
 Ncells = 16
 Nbends = 32
@@ -11,9 +12,9 @@ D = Drift(l=C/Ncells/4, eid="D")
 Qf = Multipole(kn=[0., 0.021/2.], eid="Qf")
 Qd = Multipole(kn=[0., -0.02], eid="Qd")
 B = Multipole(kn=2.*pi/Nbends)
-Sf = Multipole(kn=(0., 0., 0.01), eid="Sf")
-Sd = Multipole(kn=(0., 0., -0.01), eid="Sd")
-F = Multipole(kn=[0., 0., 0., 0., 0.5])
+Sf = Multipole(kn=(0., 0., 0.0), eid="Sf")
+Sd = Multipole(kn=(0., 0., -0.0), eid="Sd")
+F = Multipole(kn=[0., 0., 0., 0., 0.1])
 cell = (Qf,Sf, D,F,B, D, Qd, Sd, D, B, D, Sf, Qf)
 
 lat = MagneticLattice(Ncells*cell)
@@ -31,7 +32,7 @@ dz = 1.
 P1 = []
 P2 = []
 for i in range(int(lat.totalLen/dz)):
-    tracking_step(lat, [p1, p2], dz = dz, navi = navi)
+    tracking_step(lat, [p1, p2], dz=dz, navi=navi)
     P1.append(copy(p1))
     P2.append(copy(p2))
 

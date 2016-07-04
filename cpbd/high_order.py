@@ -3,7 +3,7 @@ __author__ = 'Sergey Tomin'
 import numpy as np
 from scipy.integrate import odeint
 from numpy import cos, sin, sqrt, sqrt, zeros, eye, tan, dot, empty_like, array, transpose, linspace
-from ocelot.common.globals import *
+from ocelot.common.globals import m_e_GeV, m_e_eV, speed_of_light
 from copy import copy
 from numpy.linalg import norm
 """

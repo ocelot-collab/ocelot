@@ -70,24 +70,23 @@ class Twiss:
             self.s = 0.0 # position along the reference trajectory
             self.id = ""
 
-
     def __str__(self):
         val = ""
-        val = val + "beta_x  = " + str(self.beta_x) + "\n"
-        val = val + "beta_y  = " + str(self.beta_y) + "\n"
-        val = val + "alpha_x = " + str(self.alpha_x) + "\n"
-        val = val + "alpha_y = " + str(self.alpha_y) + "\n"
-        val = val + "gamma_x = " + str(self.gamma_x) + "\n"
-        val = val + "gamma_y = " + str(self.gamma_y) + "\n"
-        val = val + "Dx      = " + str(self.Dx) + "\n"
-        val = val + "Dy      = " + str(self.Dy) + "\n"
-        val = val + "Dxp     = " + str(self.Dxp) + "\n"
-        val = val + "Dyp     = " + str(self.Dyp) + "\n"
-        val = val + "mux     = " + str(self.mux) + "\n"
-        val = val + "muy     = " + str(self.muy) + "\n"
-        val = val + "nu_x    = " + str(self.mux/2./pi) + "\n"
-        val = val + "nu_y    = " + str(self.muy/2./pi) + "\n"
-        val = val + "s    = " + str(self.s) + "\n"
+        val += "beta_x  = " + str(self.beta_x) + "\n"
+        val += "beta_y  = " + str(self.beta_y) + "\n"
+        val += "alpha_x = " + str(self.alpha_x) + "\n"
+        val += "alpha_y = " + str(self.alpha_y) + "\n"
+        val += "gamma_x = " + str(self.gamma_x) + "\n"
+        val += "gamma_y = " + str(self.gamma_y) + "\n"
+        val += "Dx      = " + str(self.Dx) + "\n"
+        val += "Dy      = " + str(self.Dy) + "\n"
+        val += "Dxp     = " + str(self.Dxp) + "\n"
+        val += "Dyp     = " + str(self.Dyp) + "\n"
+        val += "mux     = " + str(self.mux) + "\n"
+        val += "muy     = " + str(self.muy) + "\n"
+        val += "nu_x    = " + str(self.mux/2./pi) + "\n"
+        val += "nu_y    = " + str(self.muy/2./pi) + "\n"
+        val += "s    = " + str(self.s) + "\n"
         return val
 
             
@@ -160,10 +159,10 @@ class Beam:
 
     def print_sizes(self):
         self.sizes()
-        print ("sigma_E/E and Dx/Dy : ", self.sigma_E/self.E, "  and ", self.Dx, "/",self.Dy, " m")
-        print ("emit_x/emit_y     : ",  self.emit_x*1e9, "/",self.emit_y*1e9, " nm-rad")
-        print ("sigma_x/y         : ", self.sigma_x*1e6, "/", self.sigma_y*1e6, " um")
-        print ("sigma_xp/yp       : ", self.sigma_xp*1e6, "/", self.sigma_yp*1e6, " urad")
+        print("sigma_E/E and Dx/Dy : ", self.sigma_E/self.E, "  and ", self.Dx, "/",self.Dy, " m")
+        print("emit_x/emit_y     : ",  self.emit_x*1e9, "/",self.emit_y*1e9, " nm-rad")
+        print("sigma_x/y         : ", self.sigma_x*1e6, "/", self.sigma_y*1e6, " um")
+        print("sigma_xp/yp       : ", self.sigma_xp*1e6, "/", self.sigma_yp*1e6, " urad")
 
 
 class Trajectory:
@@ -177,7 +176,7 @@ class Trajectory:
         self.z = []
         self.s = []
 
-    def add(self, ct,x,y,xp,yp,z,s):
+    def add(self, ct, x, y, xp, yp, z, s):
         self.ct.append(ct)
         self.x.append(x)
         self.y.append(y)
@@ -231,10 +230,10 @@ class ParticleArray:
 
 
     def __getitem__(self, idx):
-        return Particle(x = self.particles[idx*6], px=self.particles[idx*6 + 1],
-                         y=self.particles[idx*6+2], py = self.particles[idx*6+3],
-                         tau = self.particles[idx*6+4], p = self.particles[idx*6+5],
-                         s = self.s)
+        return Particle(x=self.particles[idx*6], px=self.particles[idx*6 + 1],
+                         y=self.particles[idx*6+2], py=self.particles[idx*6+3],
+                         tau=self.particles[idx*6+4], p=self.particles[idx*6+5],
+                         s=self.s)
 
     def __setitem__(self, idx, p):
         self.particles[idx*6] = p.x

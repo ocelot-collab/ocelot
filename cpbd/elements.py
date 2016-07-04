@@ -2,18 +2,13 @@
 definition of magnetic lattice
 linear dimensions in [m]
 """
-
 from ocelot.cpbd.field_map import FieldMap
 #from ocelot.cpbd.optics import create_transfer_map
-from ocelot.common.globals import *
+#from ocelot.common.globals import *
 import numpy as np
-from numpy import cos, sin
+from numpy import pi
 
 
-
-'''
-TODO: rename Element class into something else to avoid confusion 
-'''
 class Element:
     """
     Element is a basic beamline building element
@@ -22,7 +17,7 @@ class Element:
     """
     def __init__(self, eid=None):
         self.id = eid
-        if eid == None:
+        if eid is None:
             self.id = "ID_{0}_".format(np.random.randint(100000000))
 
         self.tilt = 0.  # rad, pi/4 to turn positive quad into negative skew
@@ -67,7 +62,7 @@ class Quadrupole(Element):
     k1 - strength of quadrupole lens in [1/m^2],
     l - length of lens in [m].
     """
-    def __init__(self, l=0, k1=0, k2=0.,  tilt=0, eid=None):
+    def __init__(self, l=0, k1=0, k2=0., tilt=0, eid=None):
         Element.__init__(self, eid)
         self.l = l
         self.k1 = k1

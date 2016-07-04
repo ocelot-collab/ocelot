@@ -7,26 +7,26 @@ from time import time
 from ocelot.cpbd.track import *
 from ocelot.rad.radiation_py import und_field
 
-D0 = Drift (l = 0., eid= "D0")
-D1 = Drift (l = 1.49, eid= "D1")
-D2 = Drift (l = 0.1035, eid= "D2")
-D3 = Drift (l = 0.307, eid= "D3")
-D4 = Drift (l = 0.33, eid= "D4")
-D5 = Drift (l = 0.3515, eid= "D5")
-D6 = Drift (l = 0.3145, eid= "D6")
-D7 = Drift (l = 0.289, eid= "D7")
-D8 = Drift (l = 0.399, eid= "D8")
-D9 = Drift (l = 3.009, eid= "D9")
+D0 = Drift(l=0., eid= "D0")
+D1 = Drift(l=1.49, eid= "D1")
+D2 = Drift(l=0.1035, eid= "D2")
+D3 = Drift(l=0.307, eid= "D3")
+D4 = Drift(l=0.33, eid= "D4")
+D5 = Drift(l=0.3515, eid= "D5")
+D6 = Drift(l=0.3145, eid= "D6")
+D7 = Drift(l=0.289, eid= "D7")
+D8 = Drift(l=0.399, eid= "D8")
+D9 = Drift(l=3.009, eid= "D9")
 
-SF = Sextupole(l = 0.0001, k2 = 17673.786254063251*0, eid= "SF")
-SD = Sextupole(l = 0.0001, k2 =-36169.817233025707*0, eid= "SD")
+SF = Sextupole(l=0.0001, k2= 17673.786254063251*0, eid= "SF")
+SD = Sextupole(l=0.0001, k2=-36169.817233025707*0, eid= "SD")
 
-Q1 = Quadrupole (l = 0.293, k1 = 2.62, eid= "Q1")
-Q2 = Quadrupole (l = 0.293, k1 = -3.1, eid= "Q2")
-Q3 = Quadrupole (l = 0.327, k1 = 2.8, eid= "Q3")
-Q4 = Quadrupole (l = 0.291, k1 = -3.7, eid= "Q4")
-Q5 = Quadrupole (l = 0.391, k1 = 4.0782, eid= "Q5")
-Q6 = Quadrupole (l = 0.291, k1 = -3.534859, eid= "D6")
+Q1 = Quadrupole(l=0.293, k1=2.62, eid= "Q1")
+Q2 = Quadrupole(l=0.293, k1=-3.1, eid= "Q2")
+Q3 = Quadrupole(l=0.327, k1=2.8, eid= "Q3")
+Q4 = Quadrupole(l=0.291, k1=-3.7, eid= "Q4")
+Q5 = Quadrupole(l=0.391, k1=4.0782, eid= "Q5")
+Q6 = Quadrupole(l=0.291, k1=-3.534859, eid= "D6")
 
 B1 = SBend(l = 0.23, angle = 0.23/19.626248, eid= "B1")
 B2 = SBend(l = 1.227, angle = 1.227/4.906312, eid= "B2")
@@ -51,13 +51,15 @@ method.params[Undulator] = RungeKuttaTM
 method.global_method = TransferMap
 lat = MagneticLattice(ring, method=method)
 beam = Beam()
-beam.E = 2. #GeV
+beam.E = 0. #GeV
 beam.I = 0.1 #A
 tw0 = Twiss(beam)
 tws = twiss(lat,tw0, nPoints=1000)
 plot_opt_func(lat, tws)
-
-nturns = 2048*2-1
+plt.show()
+mu_y_no_u = 1 - tws[-1].muy%(2*pi)/(2*pi)
+print(mu_y_no_u)
+nturns = 2048*1-1
 
 start = time()
 
@@ -69,7 +71,7 @@ py = [p[3] for p in pxy_list[0].p_list]
 
 print("time exec = ", time() - start)
 pxy_list = freq_analysis(pxy_list, lat, nturns, harm = True)
-print("low resolution: mu_x = ", pxy_list[0].muy)
+print("low resolution: mu_y = ", pxy_list[0].muy)
 
 
 def dft(sample, freqs):
@@ -84,7 +86,25 @@ def dft(sample, freqs):
 x = np.linspace(0.3, 0.31, 2048+1)
 
 f = np.abs(dft(y, x))
-print("high resolution: mu_x = ", x[np.argmax(f)])
+mu_y_h = x[np.argmax(f)]
+print("high resolution: mu_y = ", mu_y_h)
+
+print("simulation: dQy = ", mu_y_no_u - mu_y_h)
+
+# analytical solution
+beta = 0.57
+E = 2e9
+c = 3e8
+L = u.lperiod*u.nperiods
+Kx = u.Kx
+lperiod = u.lperiod
+Bx = Kx/93.4/lperiod
+#print("Bx = ", Bx)
+ro = E/(Bx*c)
+#print("ro = ", ro)
+delta_Q_y = L/(8*np.pi*ro**2)*(beta + L**2/(12*beta))
+print("analytics: dQy = ", delta_Q_y)
+
 
 """
 beta = 0.56

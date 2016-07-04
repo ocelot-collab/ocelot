@@ -778,7 +778,9 @@ class ProcessTable:
         physics_proc.start_elem = elem1
         physics_proc.end_elem = elem2
         physics_proc.indx0 = self.lat.sequence.index(elem1)
+        #print(self.lat.sequence.index(elem1))
         physics_proc.indx1 = self.lat.sequence.index(elem2)
+        #print(self.lat.sequence.index(elem2))
         physics_proc.counter = physics_proc.step
         physics_proc.prepare(self.lat)
         self.proc_list.append(physics_proc)
@@ -801,7 +803,7 @@ class Navigator:
 
         proc_list = []
         for p in self.process_table.proc_list:
-            if p.indx0 <= self.n_elem <  p.indx1:
+            if p.indx0 <= self.n_elem < p.indx1:
                 proc_list.append(p)
         return proc_list
 
@@ -829,8 +831,6 @@ class Navigator:
             else:
                 L = self.lat.totalLen
             dz = L - self.z0
-        #print(self.lat.sequence[self.n_elem].eid)
-        #logger.debug("navi.z0="+str(self.z0) + " navi.n_elem=" + str(self.n_elem) + " navi.sum_lengths=" +str(self.sum_lengths) + " dz=" +str(dz))
         logger.debug("navi.z0="+str(self.z0) + " navi.n_elem=" + str(self.n_elem) + " navi.sum_lengths=" +str(self.sum_lengths) + " dz=" +str(dz) + '\n' +
             "element type="+self.lat.sequence[self.n_elem].__class__.__name__ + " element name=" + self.lat.sequence[self.n_elem].id)
 

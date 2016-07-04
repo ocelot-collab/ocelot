@@ -84,7 +84,7 @@ class Wake():
         self.w_sampling = 500  # wake sampling
         self.filter_order = 20   # smoothing filter order
         self.wake_file = ""
-
+        self.factor = 1.
 
     def convolution(self, xu, u, xw, w):
         #convolution of equally spaced functions
@@ -192,16 +192,16 @@ class Wake():
         Nw=I00.shape[0]
         if (H[0,2]>0)or(H[2,3]>0)or(H[2,4]>0):
             qn=q*Y
-            I01 = self.s2current(Z,qn,Ns,NF,c)
+            I01 = s2current(Z,qn,Ns,NF,c)
         if (H[0, 1] > 0)or(H[1, 3] > 0) or (H[1, 4] > 0):
             qn=q*X
-            I10 = self.s2current(Z,qn,Ns,NF,c)
+            I10 = s2current(Z,qn,Ns,NF,c)
         if H[1,2]>0:
             qn=q*XY
-            I11 = self.s2current(Z,qn,Ns,NF,c)
+            I11 = s2current(Z,qn,Ns,NF,c)
         if H[1,1]>0:
             qn=q*(X2-Y2)
-            I20_02 = self.s2current(Z, qn, Ns, NF, c)
+            I20_02 = s2current(Z, qn, Ns, NF, c)
         #longitudinal wake
         #mn=0
         x, Wz = self.add_wake (I00, T[int(H[0, 0])])
@@ -281,6 +281,7 @@ class Wake():
         self.TH = self.load_wake_table(self.wake_file)
 
     def apply(self, p_array, dz):
+        print("apply: WAKE")
         #Px = 0
         #Py = 0
         #Pz = 0
@@ -291,6 +292,6 @@ class Wake():
         #if (3.0 < ziw <= 5.0):  # or(8.0<ziw<=10.0)or(12.0<ziw<=14.0):
         #    Px, Py, Pz, I00 = self.add_total_wake(Ps[:, 0], Ps[:, 2], Ps[:, 4], p_array.q_array, THh, Ns, NF)
         #print(zi, dz, ziw)
-        p_array.particles[5::6] = p_array.particles[5::6] + Pz * dz / (p_array.E * 1e9)
-        p_array.particles[3::6] = p_array.particles[3::6] + Py * dz / (p_array.E * 1e9)
-        p_array.particles[1::6] = p_array.particles[1::6] + Px * dz / (p_array.E * 1e9)
+        p_array.particles[5::6] = p_array.particles[5::6] + Pz * dz*self.factor / (p_array.E * 1e9)
+        p_array.particles[3::6] = p_array.particles[3::6] + Py * dz*self.factor / (p_array.E * 1e9)
+        p_array.particles[1::6] = p_array.particles[1::6] + Px * dz*self.factor / (p_array.E * 1e9)

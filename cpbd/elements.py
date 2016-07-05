@@ -258,8 +258,8 @@ class Cavity(Element):
         self.l = l
         self.v = v   # in GV
         self.delta_e = delta_e
-        self.f = freq
-        self.phi = phi # in grad *np.pi/180.
+        self.f = freq   # Hz
+        self.phi = phi  # in grad # *np.pi/180.
         self.E = 0
         self.volterr = volterr
 

@@ -46,23 +46,28 @@ def exact_xxstg_2_xp(xxstg, gamref):
     xp[:, 5] = u[:, 2]*gamma*beta*m_e_eV-pref
     return xp
 
-
+from pylab import *
 def astraBeam2particleArray(filename):
     P0 = np.loadtxt(filename)
     charge_array = -P0[:, 7]*1e-9  #charge in nC -> in C
-    print("charge = ", sum(charge_array))
-    print("particles number = ", len(charge_array))
+    print("Astra to Ocelot: charge = ", sum(charge_array))
+    print("Astra to Ocelot: particles number = ", len(charge_array))
     xp = P0[:, :6]
     Pref = xp[0, 5]
     s_ref = xp[0, 2]
     xp[0, 5] = 0
     xp[0, 2] = 0.
+    print(xp[1:, 2])
+    plot(xp[1:, 2], xp[1:, 5]/Pref, "b.")
+    show()
     gamref = np.sqrt((Pref/m_e_eV)**2+1)
     xxstg = exact_xp_2_xxstg(xp, gamref)
 
     p_array = ParticleArray(len(charge_array))
     p_array.s = s_ref
     p_array.E =  np.sqrt((Pref/m_e_eV)**2+1)*m_e_GeV
+    print("Astra to Ocelot: energy = ", p_array.E)
+    print("Astra to Ocelot: s pos = ", p_array.s)
     p_array.particles[0::6] = xxstg[:,0]
     p_array.particles[1::6] = xxstg[:,1]
     p_array.particles[2::6] = xxstg[:,2]

@@ -2,8 +2,6 @@ __author__ = 'Sergey'
 from numpy.linalg import inv
 from numpy import cosh, sinh
 from scipy.misc import factorial
-#from ocelot.cpbd.elements import *
-#from ocelot.cpbd.elements import Pulse
 from ocelot.cpbd.beam import Particle, Twiss, ParticleArray
 from ocelot.cpbd.high_order import *
 from ocelot.cpbd.r_matrix import *
@@ -35,9 +33,6 @@ class TransferMap:
         self.dy = 0.
         self.tilt = 0.
         self.length = 0
-        #self.energy = 0.
-        #self.k1 = 0.
-        #self.k2 = 0.
         self.hx = 0.
         # test RF
         self.delta_e = 0.0
@@ -159,8 +154,10 @@ class TransferMap:
         elif m.__class__ == Particle:
             p = Particle()
             X0 = array([m.x, m.px, m.y, m.py, m.tau, m.p])
-            p.x, p.px, p.y, p.py, p.tau, p.p = self.mul_p_array(X0)
+            #p.x, p.px, p.y, p.py, p.tau, p.p = self.mul_p_array(X0)
+            p.x, p.px, p.y, p.py, p.tau, p.p = self.map(X0, m.E)
             p.s = m.s + self.length
+            p.E = m.E
             return p
 
         elif m.__class__ == Twiss:
@@ -308,6 +305,7 @@ class CavityTM(TransferMap):
         #X[:] = a[:]
         delta_e = V*cos(phi)
         if E + delta_e > 0:
+            #print("******************** CAVITY")
             k = 2.*pi*freq/speed_of_light
             X[5::6] = (X[5::6]*E + V*np.cos(X[4::6]*k + phi) - delta_e)/(E + delta_e)
 

@@ -38,8 +38,8 @@ def uni_matrix(z, k1, hx, sum_tilts=0., energy=0.):
     if gamma != 0:
         gamma2 = gamma*gamma
         beta = 1. - 0.5/gamma2
-        # print 1./(beta*beta)
-        r56 -= z/(beta*beta*gamma2)
+        #r56 -= z/(beta*beta*gamma2)
+        #print("************** R56 = ", r56)
     u_matrix = np.array([[cx, sx, 0., 0., 0., dx],
                         [-kx2*sx, cx, 0., 0., 0., sx*hx],
                         [0., 0., cy, sy, 0., 0.],

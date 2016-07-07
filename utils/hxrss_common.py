@@ -582,17 +582,17 @@ def update_beam_2(beam_new, g, n_interp):
 
 
 
-def sseed_2(input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug=True, output_file = None,  xt_couple=False, filterfilename='', method='hxr_wake_calc'):
+def sseed_2(input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug=True, output_file = None,  xt_couple=False, filterfilename='', method='hxr_wake_calc', paral=False):
     
     h = 4.135667516e-15
     c = 299792458.0
        
-    g = readGenesisOutput(input_file)
+    g = readGenesisOutput(input_file, readall=0)
     print 'read sliced field ', g('ncar'), g.nSlices
     ncar = int(g('ncar'))
     dgrid = float(g('dgrid'))
     xlamds = float(g('xlamds'))
-    nslice = len(g.spec)
+    nslice = int(g.nSlices)
     print 'nslice = ',nslice
     zsep  = float(g('zsep'))
     print zsep
@@ -615,7 +615,7 @@ def sseed_2(input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug
 
     #SHF = np.int((delay-s_imax)/ds)
     
-    SHF = np.int(delay/ds)
+    SHF = np.int(delay)
     
     #print 'imax = ', idx_imax
     #print 'delay = ', delay
@@ -661,12 +661,17 @@ def sseed_2(input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug
         print 'thetaB = ',thetaB
         print 'ds = ',ds
         print 'SHF = ',SHF
+	print 'cwidth/5.0', dk
         print '#################'
-        mult = np.int(dkold/dk)
-        
+        ####mult = np.int(dkold/dk)
+        mult = dkold/dk
          
-        if int(mult/2) - mult/2 ==0: mult = mult-1
+        #if int(mult/2) - mult/2 ==0: mult = mult-1
         print 'MULT = ',mult
+	####if (nslice)*(mult-1)/2 + SHF < 0: mult = np.int(-SHF*2/nslice + 2) #can't be smaller thanz zero!
+	####print 'MULT = ',mult
+	####print nslice*(mult-1)/2+SHF
+	
         dk = dkold/mult #Important! Otherwise the np.int in the line changes the k scale substantially 
 
         phases = unfold_angles(np.angle(np.conj(filt.tr)))
@@ -685,7 +690,7 @@ def sseed_2(input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug
         #[abs, dlpl]
         # import numpy as np
         # from math import pi
-#        E_ev=1000.
+        # E_ev=1000.
         #icf_path='d:\Work\!PROJECTS\ocelot_test\ICF_1000.ascii'
         f = open(filterfilename, 'r')
         data = np.genfromtxt(f, delimiter=',')
@@ -730,37 +735,75 @@ def sseed_2(input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug
         
         # bring to common format !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         dr=0
+    if paral == True:
     
-    ARGS   =   ''.join([input_file+'.dfl'+' ', 	        
-        output_files[0]+' ',                  
-        output_files[1]+' ',                       
-		output_files[2]+' ',                       
-		output_files[3]+' ',
-		output_files[4]+' ',                       
-		output_files[5]+' ',                       
-		output_files[6]+' ',                       
-		output_files[7]+' ',
-        output_files[8]+' ', 
-		str(xlamds)+' ',                       
-		str(ncar)+' ',                       
-		str(mult)+' ',                       
-		str(ds)+' ',                       
-		str(dk)+' ',                       
-		str(SHF)+' ',                       
-		str(nslice)+' ', 
-		str(dr)])	
-    runpar = '`which mpirun` -x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH'
-    prog   = ' '+'python /data/netapp/xfel/gianluca/products/ocelot/utils/seed.py '+ARGS+''
-    #prog   = ' '+'python /data/netapp/xfel/svitozar/CODE/ocelot/utils/seed.py '+ARGS+''
+        import time
+        t1 = time.time()
+        ARGS   =   ''.join([input_file+'.dfl'+' ', 	        
+            output_files[0]+' ',                  
+            output_files[1]+' ',                       
+		    output_files[2]+' ',                       
+       		    output_files[3]+' ',
+		    output_files[4]+' ',                       
+		    output_files[5]+' ',                       
+		    output_files[6]+' ',                       
+		    output_files[7]+' ',
+            output_files[8]+' ', 
+		    str(xlamds)+' ',                       
+		    str(ncar)+' ',                       
+		    str(mult)+' ',                       
+		    str(ds)+' ',                       
+		    str(dk)+' ',                       
+		    str(SHF)+' ',                       
+		    str(nslice)+' ', 
+		    str(dr)])	
     
-    cmd = runpar+prog
-    print cmd
-    os.system(cmd)
+   
+        runpar = '`which mpirun` -x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH'
+        prog   = ' '+'python /data/netapp/xfel/gianluca/products/ocelot/utils/seed2n.py '+ARGS+''
+        #prog   = ' '+'python /data/netapp/xfel/svitozar/CODE/ocelot/utils/seed.py '+ARGS+''
+    
+        cmd = runpar+prog
+        print cmd
+        os.system(cmd)
+        t2 = time.time()
+        print t2-t1 
+        
+    if paral == False:
+    
+        
+        import seed0 as sd
+        sd.filterfield(input_file+'.dfl', 	        
+            output_files[0],                  
+            output_files[1],                       
+	    output_files[2],                       
+       	    output_files[3],
+	    output_files[4],                       
+	    output_files[5],                       
+	    output_files[6],                       
+	    output_files[7],
+            output_files[8],
+	    output_files[9],
+	    output_files[10],                       
+	    output_files[11],                       
+	    output_files[12],                       
+	    output_files[13],
+            output_files[14],
+	    output_files[15], 
+	    output_files[16],
+	    xlamds,                       
+	    ncar,                       
+	    mult,                       
+	    ds,                       
+	    dk,                       
+	    SHF,                       
+	    nslice, 
+	    dr)
     
     print 'reading filtered file (hxrss_common, lile 728) ', output_files[5]
     
-    ssc, Pout = readres(output_files[5])
-    lsc, Sout = readres(output_files[7])
+    ssc, Pout = readres(output_files[9])
+    lsc, Sout = readres(output_files[11])
     
     return ssc, Pout, lsc, Sout
 

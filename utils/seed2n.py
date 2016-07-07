@@ -65,7 +65,7 @@ import struct
    
 #BEGIN FUNCTION   
 
-def sscale(Nslice, mult, ds = 5.10373e-9):
+def sscale(Npts=10000, ds = 5.10373e-9):
     '''
     Function name: sscale(Nslice, mult, ds)
 
@@ -84,7 +84,7 @@ def sscale(Nslice, mult, ds = 5.10373e-9):
     Date revised: 2012.6.13
 
     '''
-    Npts = Nslice * mult
+
     ssc = []
     sc = np.linspace(-Npts/2, Npts/2, Npts)
     ssc = sc * ds
@@ -96,7 +96,7 @@ def sscale(Nslice, mult, ds = 5.10373e-9):
 #BEGIN FUNCTION
 
 
-def kscale(Nslice=1504,mult=21,k0=4.188790204e10, dk = (5*4.60612e-06 * 21)**(-1)):
+def kscale(Npts=10000,k0=4.188790204e10, dk = (5*4.60612e-06 * 21)**(-1)):
     '''
     Function name: kscale(Nslice, mult, k0)
 
@@ -117,7 +117,7 @@ def kscale(Nslice=1504,mult=21,k0=4.188790204e10, dk = (5*4.60612e-06 * 21)**(-1
 
     '''
     
-    Npts = Nslice * mult
+   
     k = []
     sc = np.linspace(-Npts/2, Npts/2, Npts)
     k = k0 + dk*sc #2*np.pi*dk*sc
@@ -391,6 +391,12 @@ def readRadiationFile_my(fileName, npoints=151):
     return c
 
 #END EXPERIMENTAL FUNCTION
+def writeRadiationFile_my(filename,rad):
+    print '    writing radiation file' 
+    #a new backward compatible version ~10x faster
+#    print '        - writing to ', filename
+    d=rad.flatten()
+    d.tofile(filename,format='complex')
 
 
 #############################################
@@ -510,10 +516,12 @@ if __name__ == "__main__":
 	# Defines the filter #
 	######################
 			
-        k  = kscale(nslice, mult, k0, dk)  #the scale in frequency (k) is calculated
-        ssc  = sscale(nslice, mult, ds)    #the scale in time (s) is calculated		
+        ntot = nslice*mult
+	print ntot
+	ntot = pow(2,np.ceil(np.log(1.0*ntot)/np.log(2.0))-1)			
+        k  = kscale(ntot, k0, dk)  #the scale in frequency (k) is calculated
+        ssc  = sscale(ntot, ds)    #the scale in time (s) is calculated		
         print 'Radiation k range (seed.py, line 480)', k[0], k[-1] 
-	ntot = nslice*mult                 #the total number of long points is mult*nslice to allow for required resolution
         Fmod    = rescalefilter(filenameM,k)  #Filter mod is rescaled according to the scale in k
         Fpha    = rescalefilter(filenameP,k)  #Filter pha is rescaled according to the scale in k
         print 'interpolated filter k range (seed.py, line 486)', Fmod[0][0], Fmod[0][-1]
@@ -548,7 +556,7 @@ if __name__ == "__main__":
 	sumphatafter  = np.zeros(ntot)
 	sumspecafter  = np.zeros(ntot)        
         for i in range(nslice):
-            SHX[i] = np.floor(np.abs(ssc[i+nslice*(mult-1)/2 + SHF])*dr)  #Defines the proper shift to account for spatiotemporal coupling
+            SHX[i] = np.floor(np.abs(ssc[i+ntot/2 -nslice/2 + SHF])*dr)  #Defines the proper shift to account for spatiotemporal coupling
 	    #print i, ds, ssc[2]-ssc[1], dr, SHF
         #exit()
         	
@@ -586,8 +594,8 @@ if __name__ == "__main__":
 
     
     # Defines ancyllary quantities for easier access to data
-    SH1   = (nslice)*(mult-1)/2
-    SHTOT = (nslice)*(mult-1)/2 + SHF       
+    SH1   = ntot/2-nslice/2
+    SHTOT = ntot/2-nslice/2 + SHF       
     imagy  = MTR * MTR
     MTR2   = 2* MTR * MTR
     
@@ -644,7 +652,7 @@ if __name__ == "__main__":
 	    if rank==int(size/2.0) and count == int(each/2.0) and nn == int(MTR/2.0):
 	        f11 = open(filenamePout+'.axis.dat','w')
 	        f12 = open(filenamePphout+'.axix.dat','w')
-		ssc  = sscale(nslice, mult, ds)
+		ssc  = sscale(ntot, ds)
 		for i in range(len(Ffilament)):	
 	            f11.write('%s ' %ssc[i] + '%s' %np.abs(Ffilament[i])**2 +'\n')
 	            f12.write('%s ' %ssc[i] + '%s' %np.angle(Ffilament[i]) +'\n')

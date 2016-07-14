@@ -316,6 +316,7 @@ class CavityTM(TransferMap):
             X[5::6] = (X[5::6]*E + V*np.cos(X[4::6]*k + phi) - delta_e)/(E + delta_e)
         return X
 
+
     def __call__(self, s):
         m = copy(self)
         m.length = s
@@ -707,15 +708,12 @@ def periodic_twiss(tws, R):
 
     cosmx = (R[0, 0] + R[1, 1])/2.
     cosmy = (R[2, 2] + R[3, 3])/2.
-    #print("**********", cosmx, cosmy)
+
     if abs(cosmx) >= 1 or abs(cosmy) >= 1:
         print("************ periodic solution does not exist. return None ***********")
         return None
     sinmx = np.sign(R[0, 1])*sqrt(1.-cosmx*cosmx)
     sinmy = np.sign(R[2, 3])*sqrt(1.-cosmy*cosmy)
-
-    #sinmx = np.sign(R[0, 1])*sqrt(R[0, 1]*R[1, 0]- (R[0,0] - R[1,1]**2))
-    #sinmy = np.sign(R[2, 3])*sqrt(R[2, 3]*R[3, 2]- (R[2,2] - R[3,3]**2))
 
     tws.beta_x = abs(R[0, 1]/sinmx)
     tws.beta_y = abs(R[2, 3]/sinmy)

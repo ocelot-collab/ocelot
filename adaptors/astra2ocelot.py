@@ -58,8 +58,8 @@ def astraBeam2particleArray(filename):
     xp[0, 5] = 0
     xp[0, 2] = 0.
     print(xp[1:, 2])
-    plot(xp[1:, 2], xp[1:, 5]/Pref, "b.")
-    show()
+    #plot(xp[1:, 2], xp[1:, 5]/Pref, "b.")
+    #show()
     gamref = np.sqrt((Pref/m_e_eV)**2+1)
     xxstg = exact_xp_2_xxstg(xp, gamref)
 
@@ -80,6 +80,7 @@ def astraBeam2particleArray(filename):
 
 
 def particleArray2astraBeam(p_array, charge_array, filename="tytest.ast"):
+
     gamref = p_array.E/m_e_GeV
     #print gamref
     P = p_array.particles.view()

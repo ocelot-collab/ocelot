@@ -465,6 +465,7 @@ def track(lattice, p_array, navi):
     :return: twiss list, ParticleArray
     """
     tw0 = get_envelope(p_array)
+    print(tw0)
     tws_track = [tw0]
     L = 0.
     while np.abs(navi.z0 - lattice.totalLen) > 1e-10:

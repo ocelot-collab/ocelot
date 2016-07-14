@@ -72,6 +72,8 @@ class Twiss:
 
     def __str__(self):
         val = ""
+        val += "emit_x  = " + str(self.emit_x) + "\n"
+        val += "emit_y  = " + str(self.emit_y) + "\n"
         val += "beta_x  = " + str(self.beta_x) + "\n"
         val += "beta_y  = " + str(self.beta_y) + "\n"
         val += "alpha_x = " + str(self.alpha_x) + "\n"
@@ -112,8 +114,9 @@ class Particle:
         val = val + "y = " + str(self.y) + "\n"
         val = val + "py = " + str(self.py) + "\n"
         val = val + "tau = " + str(self.tau) + "\n"
+        val = val + "p = " + str(self.p) + "\n"
         val = val + "E = " + str(self.E) + "\n"
-        val = val + "s = " + str(self.s) + "\n"
+        val = val + "s = " + str(self.s)
         return val
 
 class Beam:
@@ -357,3 +360,101 @@ def ellipse_from_twiss(emit, beta, alpha):
     x = a * sqrt(beta) * cos(phi)
     xp = -a / sqrt(beta) * ( sin(phi) + alpha * cos(phi) )
     return (x, xp)
+
+
+def moments(x, y, cut=0):
+    n = len(x)
+    inds = np.arange(n)
+    mx = np.mean(x)
+    my = np.mean(y)
+    x = x - mx
+    y = y - my
+    x2 = x*x
+    mxx = sum(x2)/n
+    y2 = y*y
+    myy = sum(y2)/n
+    xy = x*y
+    mxy = sum(xy)/n
+
+    emitt = sqrt(mxx*myy - mxy*mxy)
+
+    if cut>0:
+        inds=[]
+        beta = mxx/emitt
+        gamma = myy/emitt
+        alpha = mxy/emitt
+        emittp = gamma*x2 + 2.*alpha*xy + beta*y2
+        inds0 = np.argsort(emittp)
+        n1 = np.round(n*(100-cut)/100)
+        inds = inds0[0:n1]
+        mx = np.mean(x[inds])
+        my = np.mean(y[inds])
+        x1 = x[inds] - mx
+        y1 = y[inds] - my
+        mxx = np.sum(x1*x1)/n1
+        myy = np.sum(y1*y1)/n1
+        mxy = np.sum(x1*y1)/n1
+        emitt = sqrt(mxx*myy - mxy*mxy)
+    return mx, my, mxx, mxy, myy, emitt
+
+def m_from_twiss(Tw1, Tw2):
+    #% Transport matrix M for two sets of Twiss parameters (alpha,beta,psi)
+    b1 = Tw1[1]
+    a1 = Tw1[0]
+    psi1 = Tw1[2]
+    b2 = Tw2[1]
+    a2 = Tw2[0]
+    psi2 = Tw2[2]
+
+    psi = psi2-psi1
+    cosp = cos(psi)
+    sinp = sin(psi)
+    M = np.zeros((2, 2))
+    M[0, 0] = sqrt(b2/b1)*(cosp+a1*sinp)
+    M[0, 1] = sqrt(b2*b1)*sinp
+    M[1, 0] = ((a1-a2)*cosp-(1+a1*a2)*sinp)/sqrt(b2*b1)
+    M[1, 1] = sqrt(b1/b2)*(cosp-a2*sinp)
+    return M
+
+def beam_matching(particles, bounds, x_opt, y_opt):
+    pd = zeros(( int(len(particles)/6), 6))
+    pd[:, 0] = particles[0::6]
+    pd[:, 1] = particles[1::6]
+    pd[:, 2] = particles[2::6]
+    pd[:, 3] = particles[3::6]
+    pd[:, 4] = particles[4::6]
+    pd[:, 5] = particles[5::6]
+
+    z0 = np.mean(pd[:, 4])
+    sig0 = np.std(pd[:, 4])
+    #print((z0 + sig0*bounds[0] <= pd[:, 4]) * (pd[:, 4] <= z0 + sig0*bounds[1]))
+    inds = np.argwhere((z0 + sig0*bounds[0] <= pd[:, 4]) * (pd[:, 4] <= z0 + sig0*bounds[1]))
+    #print(moments(pd[inds, 0], pd[inds, 1]))
+    mx, mxs, mxx, mxxs, mxsxs, emitx0 = moments(pd[inds, 0], pd[inds, 1])
+    beta = mxx/emitx0
+    alpha = -mxxs/emitx0
+    print(beta, alpha)
+    M = m_from_twiss([alpha, beta, 0], x_opt)
+    print(M)
+    particles[0::6] = M[0, 0]*pd[:, 0] + M[0, 1]*pd[:, 1]
+    particles[1::6] = M[1, 0]*pd[:, 0] + M[1, 1]*pd[:, 1]
+    [mx, mxs, mxx, mxxs, mxsxs, emitx0] = moments(pd[inds, 2], pd[inds, 3])
+    beta = mxx/emitx0
+    alpha = -mxxs/emitx0
+    M = m_from_twiss([alpha, beta, 0], y_opt)
+    particles[2::6] = M[0, 0]*pd[:, 2] + M[0, 1]*pd[:, 3]
+    particles[3::6] = M[1, 0]*pd[:, 2] + M[1, 1]*pd[:, 3]
+    return particles
+
+
+class BeamTransform:
+    def __init__(self, x_opt, y_opt):
+        self.bounds = [-5, 5]  # [start, stop] in sigmas
+        self.x_opt = x_opt   # [alpha, beta, mu (phase advance)]
+        self.y_opt = y_opt   # [alpha, beta, mu (phase advance)]
+
+    def prepare(self, lat):
+        pass
+
+    def apply(self, p_array, dz):
+        beam_matching(p_array.particles, self.bounds, self.x_opt, self.y_opt)

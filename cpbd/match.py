@@ -59,6 +59,7 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                 tw_loc = periodic_twiss(tw_loc, lattice_transfer_map(lat, tw.E))
                 tw0 = deepcopy(tw_loc)
                 if tw_loc == None:
+                    print("########")
                     return weights('periodic')
 
         # save reference points where equality is asked

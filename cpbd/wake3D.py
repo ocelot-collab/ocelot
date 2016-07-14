@@ -295,3 +295,5 @@ class Wake():
         p_array.particles[5::6] = p_array.particles[5::6] + Pz * dz*self.factor / (p_array.E * 1e9)
         p_array.particles[3::6] = p_array.particles[3::6] + Py * dz*self.factor / (p_array.E * 1e9)
         p_array.particles[1::6] = p_array.particles[1::6] + Px * dz*self.factor / (p_array.E * 1e9)
+
+

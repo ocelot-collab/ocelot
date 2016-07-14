@@ -89,21 +89,21 @@ class TransferMap:
         tws.Dyp = M[3, 2]*m.Dy + M[3, 3]*m.Dyp + M[3, 5]
         denom_x = M[0, 0]*m.beta_x - M[0, 1]*m.alpha_x
         if denom_x == 0.:
-            d_mux = pi/2.*M[0, 1]/np.abs(M[0, 1])
+            d_mux = np.pi/2.*M[0, 1]/np.abs(M[0, 1])
         else:
             d_mux = np.arctan(M[0, 1]/denom_x)
 
         if d_mux < 0:
-            d_mux += pi
+            d_mux += np.pi
         tws.mux = m.mux + d_mux
         #print M[0, 0]*m.beta_x - M[0, 1]*m.alpha_x, arctan(M[2, 3]/(M[2, 2]*m.beta_y - M[2, 3]*m.alpha_y))
         denom_y = M[2, 2]*m.beta_y - M[2, 3]*m.alpha_y
         if denom_y == 0.:
-            d_muy = pi/2.*M[2, 3]/np.abs(M[2, 3])
+            d_muy = np.pi/2.*M[2, 3]/np.abs(M[2, 3])
         else:
             d_muy = np.arctan(M[2, 3]/denom_y)
         if d_muy < 0:
-            d_muy += pi
+            d_muy += np.pi
         tws.muy = m.muy + d_muy
         return tws
 
@@ -152,13 +152,8 @@ class TransferMap:
             return m2
 
         elif m.__class__ == Particle:
-            p = Particle()
-            X0 = array([m.x, m.px, m.y, m.py, m.tau, m.p])
-            #p.x, p.px, p.y, p.py, p.tau, p.p = self.mul_p_array(X0)
-            p.x, p.px, p.y, p.py, p.tau, p.p = self.map(X0, m.E)
-            p.s = m.s + self.length
-            p.E = m.E
-            return p
+            self.apply(m)
+            return deepcopy(m)
 
         elif m.__class__ == Twiss:
 
@@ -174,8 +169,24 @@ class TransferMap:
             exit("unknown object in transfer map multiplication (TransferMap.__mul__)")
 
     def apply(self, prcl_series):
+        """
+        :param prcl_series: can be list of Particles [Particle_1, Particle_2, ... ] or ParticleArray
+        :return: None
+        """
+        if prcl_series.__class__ == ParticleArray:
+            self.map(prcl_series.particles, energy=prcl_series.E)
+            prcl_series.E += self.delta_e
+            prcl_series.s += self.length
 
-        if prcl_series.__class__ == list and prcl_series[0].__class__ == Particle:
+        elif prcl_series.__class__ == Particle:
+            p = prcl_series
+            p.x, p.px, p.y, p.py, p.tau, p.p = self.map(array([p.x, p.px, p.y, p.py, p.tau, p.p]), p.E)
+            p.s += self.length
+            p.E += self.delta_e
+
+        elif prcl_series.__class__ == list and prcl_series[0].__class__ == Particle:
+            # If the energy is not the same (p.E) for all Particles in the list of Particles
+            # in that case cycle is applied. For particles with the same energy p.E
             list_e = array([p.E for p in prcl_series])
             if False in (list_e[:] == list_e[0]):
                 for p in prcl_series:
@@ -183,7 +194,6 @@ class TransferMap:
                     p.E += self.delta_e
                     p.s += self.length
             else:
-
                 pa = ParticleArray()
                 pa.list2array(prcl_series)
                 pa.E = prcl_series[0].E
@@ -192,10 +202,6 @@ class TransferMap:
                 pa.s += self.length
                 pa.array2ex_list(prcl_series)
 
-        elif prcl_series.__class__ == ParticleArray:
-            self.map(prcl_series.particles, energy=prcl_series.E)
-            prcl_series.E += self.delta_e
-            prcl_series.s += self.length
         else:
             print(prcl_series)
             exit("Unknown type of Particle_series. class TransferMap.apply()")
@@ -297,18 +303,18 @@ class CavityTM(TransferMap):
 
     def map4cav(self, X, E,  V, freq, phi):
         #print("CAVITY")
-        n = len(X)
+        #n = len(X)
         phi = phi*np.pi/180.
         X = self.mul_p_array(X, energy=E) #t_apply(R, T, X, dx, dy, tilt)
         #print(E, self.R(E))
         #a = np.add( np.transpose(  dot(self.R(E), np.transpose( X.reshape(n/6, 6)) ) ), self.B(E) ).reshape(n)
         #X[:] = a[:]
-        delta_e = V*cos(phi)
+        delta_e = V*np.cos(phi)
         if E + delta_e > 0:
             #print("******************** CAVITY")
-            k = 2.*pi*freq/speed_of_light
+            k = 2.*np.pi*freq/speed_of_light
             X[5::6] = (X[5::6]*E + V*np.cos(X[4::6]*k + phi) - delta_e)/(E + delta_e)
-
+        return X
 
     def __call__(self, s):
         m = copy(self)
@@ -387,17 +393,17 @@ class UndulatorTestTM(TransferMap):
         self.map = lambda X, energy: self.map4undulator(X, self.length, self.lperiod, self.Kx, self.ax, energy, self.ndiv)
 
     def map4undulator(self, u, z, lperiod, Kx, ax, energy, ndiv):
-        kz = 2. * pi / lperiod
+        kz = 2. * np.pi / lperiod
         if ax == 0:
             kx = 0
         else:
-            kx = 2. * pi/ax
+            kx = 2. * np.pi/ax
         zi = linspace(0., z, num=ndiv)
         h = zi[1] - zi[0]
         kx2 = kx * kx
         kz2 = kz * kz
         ky2 = kz * kz + kx * kx
-        ky = sqrt(ky2)
+        ky = np.sqrt(ky2)
         gamma = energy / m_e_GeV
         h0 = 0.
         if gamma != 0:
@@ -407,10 +413,10 @@ class UndulatorTestTM(TransferMap):
         x = u[::6]
         y = u[2::6]
         for z in range(len(zi) - 1):
-            chx = cosh(kx * x)
-            chy = cosh(ky * y)
-            shx = sinh(kx * x)
-            shy = sinh(ky * y)
+            chx = np.cosh(kx * x)
+            chy = np.cosh(ky * y)
+            shx = np.sinh(kx * x)
+            shy = np.sinh(ky * y)
             u[1::6] -= h / 2. * chx * shx * (kx * ky2 * chy * chy + kx2 * kx * shy * shy) / (ky2 * kz2) * h02
             u[3::6] -= h / 2. * chy * shy * (ky2 * chx * chx + kx2 * shx * shx) / (ky * kz2) * h02
             u[4::6] -= h / 2. / (1. + u[5::6]) * ((u[1::6] * u[1::6] + u[3::6] * u[3::6]) + chx * chx * chy * chy / (
@@ -626,6 +632,7 @@ def lattice_transfer_map(lattice, energy):
     for i, elem in enumerate(lattice.sequence):
 
         Rb = elem.transfer_map.R(energy)
+
         """
         Tb = elem.transfer_map.T
         Ta = deepcopy(T)
@@ -641,11 +648,13 @@ def lattice_transfer_map(lattice, energy):
                     T[i,j,k] = t1+t2
         """
         R = dot(Rb, R)
+        #print(elem.__class__.__name__, R)
         #T = Ta
         #print i, len(lattice.sequence), elem.type, elem.transfer_map.R(6)
     #print T
     #lattice.T = T
     #lattice.R = R
+    #print(R)
     return R
 
 
@@ -698,12 +707,15 @@ def periodic_twiss(tws, R):
 
     cosmx = (R[0, 0] + R[1, 1])/2.
     cosmy = (R[2, 2] + R[3, 3])/2.
-
+    #print("**********", cosmx, cosmy)
     if abs(cosmx) >= 1 or abs(cosmy) >= 1:
         print("************ periodic solution does not exist. return None ***********")
         return None
     sinmx = np.sign(R[0, 1])*sqrt(1.-cosmx*cosmx)
     sinmy = np.sign(R[2, 3])*sqrt(1.-cosmy*cosmy)
+
+    #sinmx = np.sign(R[0, 1])*sqrt(R[0, 1]*R[1, 0]- (R[0,0] - R[1,1]**2))
+    #sinmy = np.sign(R[2, 3])*sqrt(R[2, 3]*R[3, 2]- (R[2,2] - R[3,3]**2))
 
     tws.beta_x = abs(R[0, 1]/sinmx)
     tws.beta_y = abs(R[2, 3]/sinmy)

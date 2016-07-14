@@ -41,7 +41,7 @@ class SpaceCharge():
     def __init__(self):
         #PhysicsProcess.__init__(self)
         self.step = 1 # in unit step
-        self.nmesh_xyz = [63, 63, 63]
+        self.nmesh_xyz = [31, 31, 31]
         self.low_order_kick = True
 
         self.start_elem = None

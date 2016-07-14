@@ -37,9 +37,9 @@ def uni_matrix(z, k1, hx, sum_tilts=0., energy=0.):
         r56 = hx*hx*z**3/6.
     if gamma != 0:
         gamma2 = gamma*gamma
-        beta = 1. - 0.5/gamma2
-        #r56 -= z/(beta*beta*gamma2)
-        #print("************** R56 = ", r56)
+        beta = np.sqrt(1.0 - 1.0/gamma2)
+        r56 -= z/(beta*beta*gamma2)
+        print("************** R56 = ", r56)
     u_matrix = np.array([[cx, sx, 0., 0., 0., dx],
                         [-kx2*sx, cx, 0., 0., 0., sx*hx],
                         [0., 0., cy, sy, 0., 0.],
@@ -141,15 +141,17 @@ def create_r_matrix(element):
             r56 = 0.
             if gamma != 0:
                 gamma2 = gamma * gamma
-                beta = 1. - 0.5 / gamma2
+                beta = np.sqrt(1.0 - 1.0/gamma2)
                 r56 = -z / (beta * beta * gamma2)
 
+            # r11=1; r22=1; r21=0; r12=z; switching off the RF focusing
             cav_matrix = np.array([[r11, r12, 0., 0., 0., 0.],
                                 [r21, r22, 0., 0., 0., 0.],
                                 [0., 0., r11, r12, 0., 0.],
                                 [0., 0., r21, r22, 0., 0.],
                                 [0., 0., 0., 0., 1., r56],
                                 [0., 0., 0., 0., 0., 1.]]).real
+
             return cav_matrix
 
         if element.delta_e == 0. and element.v == 0.:

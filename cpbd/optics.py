@@ -307,7 +307,7 @@ class CavityTM(TransferMap):
         if E + delta_e > 0:
             #print("******************** CAVITY")
             k = 2.*pi*freq/speed_of_light
-            X[5::6] = (X[5::6]*E + V*np.cos(X[4::6]*k + phi) - delta_e)/(E + delta_e)
+            X[5::6] = (X[5::6]*E + V*np.cos(-X[4::6]*k + phi) - delta_e)/(E + delta_e)
 
 
     def __call__(self, s):

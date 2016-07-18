@@ -79,11 +79,56 @@ def s2current(s_array, q_array, n_points, filter_order, mean_vel):
     return I
 
 
+class WakeTable:
+
+    def __init__(self, wake_file):
+        self.TH = self.load_wake_table(wake_file)
+
+    def load_wake_table(self, wake_file):
+        """
+        :param wake_file: file name
+        :return: (T, H): T- table of wakes coefs, H- matrix of the coefs place in T
+        """
+        W = np.loadtxt(wake_file)
+        # head format %Nt 0 %N0 N1 %R L %C nm
+        H = np.zeros([5, 5])
+        Nt = int(W[0, 0])
+        T = []
+        ind = 0
+        for i in range(Nt):
+            ind = ind+1
+            N0 = int(W[ind, 0])
+            N1 = int(W[ind, 1])
+            R = W[ind + 1, 0]
+            L = W[ind + 1, 1]
+            Cinv = W[ind + 2, 0]
+            nm = int(W[ind+2, 1])
+            n = np.floor(nm/10)
+            m = nm - n*10
+            H[n, m] = i
+            ind = ind + 2
+            if N0 > 0:
+                W0 = np.zeros([N0, 2])
+                W0[0:N0, :] = W[ind+1:ind+N0+1, :]
+                ind = ind + N0
+            else:
+                W0 = 0
+            if N1 > 0:
+                W1 = np.zeros([N1, 2])
+                W1[0:N1, :]=W[ind+1:ind+N1+1, :]
+                ind = ind + N1
+            else:
+                W1 = 0
+            T = T + [(R, L, Cinv, nm, W0, N0, W1, N1)]
+        return (T, H)
+
+
 class Wake():
     def __init__(self):
         self.w_sampling = 500  # wake sampling
         self.filter_order = 20   # smoothing filter order
-        self.wake_file = ""
+        #self.wake_file = ""
+        self.wake_table = None
         self.factor = 1.
 
     def convolution(self, xu, u, xw, w):
@@ -139,44 +184,6 @@ class Wake():
           int_bunch = Int1(x,bunch)
           W = W - int_bunch*Cinv/c
         return x, W
-
-    def load_wake_table(self, wakeFile):
-        """
-        :param wakeFile: file name
-        :return: (T, H): T- table of wakes coefs, H- matrix of the coefs place in T
-        """
-        W = np.loadtxt(wakeFile)
-        # head format %Nt 0 %N0 N1 %R L %C nm
-        H = np.zeros([5, 5])
-        Nt = int(W[0, 0])
-        T = []
-        ind = 0
-        for i in range(Nt):
-            ind = ind+1
-            N0 = int(W[ind, 0])
-            N1 = int(W[ind, 1])
-            R = W[ind + 1, 0]
-            L = W[ind + 1, 1]
-            Cinv = W[ind + 2, 0]
-            nm = int(W[ind+2, 1])
-            n = np.floor(nm/10)
-            m = nm - n*10
-            H[n, m] = i
-            ind = ind + 2
-            if N0 > 0:
-                W0 = np.zeros([N0, 2])
-                W0[0:N0, :] = W[ind+1:ind+N0+1, :]
-                ind = ind + N0
-            else:
-                W0 = 0
-            if N1 > 0:
-                W1 = np.zeros([N1, 2])
-                W1[0:N1, :]=W[ind+1:ind+N1+1, :]
-                ind = ind + N1
-            else:
-                W1 = 0
-            T = T + [(R, L, Cinv, nm, W0, N0, W1, N1)]
-        return (T, H)
 
     def add_total_wake(self, X, Y, Z, q, TH, Ns, NF):
         #function [Px Py Pz I00]=AddTotalWake (P,q,wakeFile,Ns,NF)
@@ -278,7 +285,12 @@ class Wake():
         return Px, Py, Pz, I00
 
     def prepare(self, lat):
-        self.TH = self.load_wake_table(self.wake_file)
+        #pass
+        #self.TH = self.load_wake_table(self.wake_file)
+        if self.wake_table == None:
+            print("Wake.wake_table is None! Please specify the WakeTable()")
+        else:
+            self.TH = self.wake_table.TH
 
     def apply(self, p_array, dz):
         print("apply: WAKE")

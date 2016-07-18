@@ -19,7 +19,7 @@ class Element:
         self.id = eid
         if eid is None:
             self.id = "ID_{0}_".format(np.random.randint(100000000))
-
+        self.l = 0.
         self.tilt = 0.  # rad, pi/4 to turn positive quad into negative skew
         self.angle = 0.
         self.k1 = 0.
@@ -180,7 +180,7 @@ class RBend(Bend):
         if e2 == None:
             e2 = angle/2.
         else:
-            e1 += angle/2.
+            e2 += angle/2.
 
         Bend.__init__(self, l, angle=angle, e1=e1, e2=e2, k1=k1, k2=k2,
                       gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, fintx=fintx, eid=eid)
@@ -268,7 +268,7 @@ class Solenoid(Element):
     """
     Solenoid
     """
-    def __init__(self, l, k=0., eid=None):
+    def __init__(self, l=0., k=0., eid=None):
         Element.__init__(self, eid)
         self.k = k  # B0/(2B*rho)
         self.l = l

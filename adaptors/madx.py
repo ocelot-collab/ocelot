@@ -211,14 +211,9 @@ def convert_madx_seq(fname, manual_defs=''):
 
     return txt
 
-<<<<<<< HEAD
+
 import re
 def madx_input(s1):
-    
-=======
-
-def madx_input(lat):
->>>>>>> 55f2fd7eb614461732feee2e2a6754984c084a17
     '''
     s1 os the ocelot inpu file as text string
     returns madx input as string    

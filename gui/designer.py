@@ -14,13 +14,7 @@ import sys
 
 sys.path.append('/home/iagapov/workspace/petra/p4/rb/ocelot/')
 
-#lattice_file = '/home/iagapov/workspace/petra/p4/rb/ocelot/rb_lat.py'
-#lattice_file = '/home/iagapov/workspace/petra/p4/rb/ocelot/twist.py'
-lattice_file = '/home/iagapov/workspace/petra/p4/rb/ocelot/undcell.py'
-#lattice_file = '/home/iagapov/workspace/petra/p4/rb/ocelot/lss.py'
-
-#lattice_file = '/home/iagapov/workspace/optics_examples/cell2twist.py'
-#lattice_file = '/home/iagapov/workspace/petra/p4/rb/ocelot/twistcell.py'
+lattice_file = '/home/iagapov/workspace/petra/p4/rb/ocelot/undcell_v2.py'
 
 
 '''

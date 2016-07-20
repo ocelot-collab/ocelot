@@ -1,4 +1,8 @@
-__version__ = '15.11'
+'''
+general ocelot description
+'''
+
+__version__ = '16.7.dev'
 
 __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope",         # beam
             "ellipse_from_twiss",  "ParticleArray",                                     # beam

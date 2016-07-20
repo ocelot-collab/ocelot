@@ -7,20 +7,24 @@ from ocelot.cpbd.optics import *
 
 
 def weights_default(val):
-    if val == 'periodic': return 10000000.0
-    if val == 'Dx': return 10000000.0
-    if val == 'Dxp': return 10000000.0
-    if val == 'tau': return 10000000.0
-    if val == 'i5': return 1.e3
+    if val == 'periodic': return 10000001.0
+    if val == 'total_len': return 10000001.0
+    if val == 'Dx': return 10000002.0
+    if val == 'Dxp': return 10000003.0
+    if val == 'tau': return 10000004.0
+    if val == 'i5': return 1.e14
     if val == 'negative_length': return 1.5e6
-    if val in ['alpha_x', 'alpha_y']: return 100000.0
-    if val in ['mux', 'muy']: return 10000000.0
-    if val in ['beta_x', 'beta_y']: return 100000.0
+    if val in ['alpha_x', 'alpha_y']: return 100005.0
+    if val in ['mux', 'muy']: return 10000006.0
+    if val in ['beta_x', 'beta_y']: return 100007.0
     return 0.0001
 
 
 def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', weights=weights_default,
           vary_bend_angle=False, min_i5=False):
+    '''
+    matching stuff
+    '''
     # tw = deepcopy(tw0)
 
     def errf(x):
@@ -52,6 +56,11 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                 if vars[i][0].__class__ == Twiss and vars[i][1].__class__ == str:
                     k = vars[i][1]
                     tw_loc.__dict__[k] = x[i]
+            if vars[i].__class__ == tuple: # all quads strength in tuple varied simultaneously 
+                for v in vars[i]:
+                    v.k1 = x[i]
+                    v.transfer_map = lat.method.create_tm(v)
+                     
 
         err = 0.0
         if "periodic" in constr.keys():
@@ -61,12 +70,14 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                 if tw_loc == None:
                     return weights('periodic')
 
+
         # save reference points where equality is asked
 
         ref_hsh = {}  # penalties on two-point inequalities
 
         for e in constr.keys():
             if e == 'periodic': continue
+            if e == 'total_len': continue
             for k in constr[e].keys():
                 if constr[e][k].__class__ == list:
                     if constr[e][k][0] == '->':
@@ -77,10 +88,13 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
 
         ''' evaluating global and point penalties
         '''
+                        
+        tw_loc.s = 0
+                        
         for e in lat.sequence:
-            # print e.id, vars[0].k1, vars[1].k1
+            #print e.id,  e in constr.keys()
             # print tw_loc
-            # print '--->'
+            #print '--->'
             tw_loc = e.transfer_map * tw_loc
             # print tw_loc
 
@@ -92,11 +106,11 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                         v1 = constr['global'][c][1]
                         if constr['global'][c][0] == '<':
                             if tw_loc.__dict__[c] > v1:
-                                err = err + (tw_loc.__dict__[c] - v1) ** 2
+                                err = err + weights(k) * (tw_loc.__dict__[c] - v1) ** 2
                         if constr['global'][c][0] == '>':
                             # print '> constr'
                             if tw_loc.__dict__[c] < v1:
-                                err = err + (tw_loc.__dict__[c] - v1) ** 2
+                                err = err + weights(k) * (tw_loc.__dict__[c] - v1) ** 2
 
             if e in ref_hsh.keys():
                 # print 'saving twiss for', e.id
@@ -105,21 +119,34 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
             if e in constr.keys():
 
                 for k in constr[e].keys():
-
-                    if constr[e][k].__class__ == list:
+                    #print k
+                    if constr[e][k].__class__ == list:                    
                         v1 = constr[e][k][1]
 
                         if constr[e][k][0] == '<':
                             if tw_loc.__dict__[k] > v1:
-                                err = err + (tw_loc.__dict__[k] - v1) ** 2
+                                err = err + weights(k) * (tw_loc.__dict__[k] - v1) ** 2
                         if constr[e][k][0] == '>':
                             if tw_loc.__dict__[k] < v1:
-                                err = err + (tw_loc.__dict__[k] - v1) ** 2
+                                err = err + weights(k) * (tw_loc.__dict__[k] - v1) ** 2
+                        if constr[e][k][0] == 'a<':
+                            if np.abs(tw_loc.__dict__[k]) > v1:
+                                err = err + weights(k) * (tw_loc.__dict__[k] - v1) ** 2
+                        if constr[e][k][0] == 'a>':
+                            if np.abs(tw_loc.__dict__[k]) < v1:
+                                err = err + weights(k) * (tw_loc.__dict__[k] - v1) ** 2
+
 
                         if constr[e][k][0] == '->':
                             try:
-
-                                err += (tw_loc.__dict__[k] - ref_hsh[v1].__dict__[k]) ** 2
+                                #print 'huh', k, e.id, float(constr[e][k][2])
+                                
+                                if len(constr[e][k]) > 2:
+                                    dv1 = float(constr[e][k][2])
+                                else:
+                                    dv1 = 0.0
+                                #print 'weiter'
+                                err += (tw_loc.__dict__[k] - (ref_hsh[v1].__dict__[k]  + dv1 ) ) ** 2
 
                                 if tw_loc.__dict__[k] < v1:
                                     err = err + (tw_loc.__dict__[k] - v1) ** 2
@@ -134,6 +161,11 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                         # print "safaf", constr[e][k] , tw_loc.__dict__[k], k, e.id, x
                         err = err + weights(k) * (constr[e][k] - tw_loc.__dict__[k]) ** 2
                         # print err
+        
+        if "total_len" in constr.keys():
+            total_len = constr["periodic"]
+            err = err + weights('total_len')*(tw_loc.s - total_len)**2
+        
 
         if min_i5:
             ''' evaluating integral parameters
@@ -166,6 +198,8 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                     x[i] = 10.0
                 else:
                     x[i] = 0.0
+        if vars[i].__class__ == tuple:
+            x[i] = vars[i][0].k1
         if vars[i].__class__ == Quadrupole:
             x[i] = vars[i].k1
         if vars[i].__class__ == Drift:
@@ -178,8 +212,9 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                 x[i] = vars[i].k1
 
     print("initial value: x = ", x)
-    if method == 'simplex': res = fmin(errf, x, xtol=1e-9, maxiter=max_iter, maxfun=max_iter)
+    if method == 'simplex': res = fmin(errf, x, xtol=1e-4, maxiter=max_iter, maxfun=max_iter)
     if method == 'cg': res = fmin_cg(errf, x, gtol=1.e-5, epsilon=1.e-5, maxiter=max_iter)
+    if method == 'bfgs': res = fmin_bfgs(errf, x, gtol=1.e-5, epsilon=1.e-5, maxiter=max_iter)
 
     '''
     if initial twiss was varied set the twiss argument object to resulting value

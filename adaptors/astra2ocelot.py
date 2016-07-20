@@ -46,39 +46,53 @@ def exact_xxstg_2_xp(xxstg, gamref):
     xp[:, 5] = u[:, 2]*gamma*beta*m_e_eV-pref
     return xp
 
-
+#from pylab import *
 def astraBeam2particleArray(filename):
     P0 = np.loadtxt(filename)
     charge_array = -P0[:, 7]*1e-9  #charge in nC -> in C
-    print( "charge = ", sum(charge_array))
+    print("Astra to Ocelot: charge = ", sum(charge_array))
+    print("Astra to Ocelot: particles number = ", len(charge_array))
     xp = P0[:, :6]
     Pref = xp[0, 5]
+    s_ref = xp[0, 2]
     xp[0, 5] = 0
+    xp[0, 2] = 0.
+#    print(xp[1:, 2])
+#    plot(xp[1:, 2], xp[1:, 5]/Pref, "b.")
+#    show()
     gamref = np.sqrt((Pref/m_e_eV)**2+1)
     xxstg = exact_xp_2_xxstg(xp, gamref)
 
     p_array = ParticleArray(len(charge_array))
+    p_array.s = s_ref
     p_array.E =  np.sqrt((Pref/m_e_eV)**2+1)*m_e_GeV
+    print("Astra to Ocelot: energy = ", p_array.E)
+    print("Astra to Ocelot: s pos = ", p_array.s)
     p_array.particles[0::6] = xxstg[:,0]
     p_array.particles[1::6] = xxstg[:,1]
     p_array.particles[2::6] = xxstg[:,2]
     p_array.particles[3::6] = xxstg[:,3]
     p_array.particles[4::6] = xxstg[:,4]
     p_array.particles[5::6] = xxstg[:,5]
+    p_array.q_array = charge_array
     return p_array, charge_array
+
+
 
 def particleArray2astraBeam(p_array, charge_array, filename="tytest.ast"):
     gamref = p_array.E/m_e_GeV
-    #print gamref
+    s0=p_array.s; 
     P = p_array.particles.view()
-    #energy = P[5]
+    Np=len(P)/6
     xp = exact_xxstg_2_xp(P, gamref)
     Pref = np.sqrt(p_array.E**2/m_e_GeV**2 - 1)*m_e_eV
-    xp[0, 5] = xp[0, 5] + Pref # xp[0, 5] + p_array.E*1e9
-    #np.savetxt('D:/pytest.ast',xp)
+    xp[:, 5] = xp[:, 5] + Pref 
+    xp[:, 2] = xp[:, 2] + s0 
+    xp[1:Np, 5] = xp[1:Np, 5]-xp[0, 5]
+    xp[1:Np, 2] = xp[1:Np, 2]-xp[0, 2]
+
     charge_array = -charge_array.reshape(len(charge_array), 1)*1e+9 #charge in C -> in nC
     flag = np.zeros((len(charge_array),1))
-    #print(np.shape(xp), np.shape(charge_array))
     astra = np.append(xp, flag, axis=1)
     astra = np.append(astra, charge_array, axis=1)
     astra = np.append(astra, flag, axis=1)

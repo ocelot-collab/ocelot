@@ -1,6 +1,7 @@
 __author__ = 'Sergey Tomin'
 
 from ocelot.cpbd.optics import *
+from ocelot.cpbd.beam import *
 #from mpi4py import MPI
 from numpy import delete, array, linspace
 from ocelot.cpbd.errors import *
@@ -433,20 +434,53 @@ def da_mpi(lat, nturns, x_array, y_array, errors = None, nsuperperiods = 1):
         ny = len(y_array)
         return da.reshape(ny, nx)
 
-def track(lat, particle_list, dz, navi):
-    '''
+
+def tracking_step(lat, particle_list, dz, navi):
+    """
     tracking for a fixed step dz
-    '''
+    :param lat: Magnetic Lattice
+    :param particle_list: ParticleArray or Particle list
+    :param dz: step in [m]
+    :param navi: Navigator
+    :return: None
+    """
     if navi.z0 + dz > lat.totalLen:
         dz = lat.totalLen - navi.z0
 
     t_maps = get_map(lat, dz, navi)
-
     for tm in t_maps:
-        #print("tm:", tm.__class__)
-        logger.debug("tm:" + tm.__class__.__name__)
+        start = time()
         tm.apply(particle_list)
+        logger.debug("tm: l="+  str(tm.length) +"  class=" + tm.__class__.__name__ + " \n"
+            "tracking_step -> apply: time exec = " + str(time() - start) + "  sec")
     return
+
+
+def track(lattice, p_array, navi):
+    """
+    tracking through the lattice
+    :param lattice: Magnetic Lattice
+    :param p_array: ParticleArray
+    :param navi: Navigator
+    :return: twiss list, ParticleArray
+    """
+    tw0 = get_envelope(p_array)
+    print(tw0)
+    tws_track = [tw0]
+    L = 0.
+    while np.abs(navi.z0 - lattice.totalLen) > 1e-10:
+        dz, proc_list = navi.get_next()
+        tracking_step(lat=lattice, particle_list=p_array, dz=dz, navi=navi)
+        for p in proc_list:
+            p.z0 = navi.z0
+            p.apply(p_array, dz)
+        tw = get_envelope(p_array)
+        L += dz
+        tw.s += L
+        tws_track.append(tw)
+        print("z = ", navi.z0)
+    return tws_track, p_array
+
 
 def lattice_track(lat, p):
     plist = [copy(p)]

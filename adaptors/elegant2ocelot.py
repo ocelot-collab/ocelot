@@ -202,8 +202,4 @@ def insert_drifts(z_start, z_stop, lat_def):
         lattice=lattice+[Drift(l=ds,id='DRIFT'+str_id)]
     return lattice
 """
-     
-
-
-    
 

@@ -27,8 +27,9 @@ cell = (D1, Q1, D2, Q2, D3, Q3, D4, B, D5, SD, D5, SF, D6, Q4, D6, SF, D5, SD,D5
 ring = cell
 method = MethodTM()
 method.params[Sextupole] = KickTM
-method.global_method = SecondTM
+method.global_method = TransferMap
 lat = MagneticLattice(ring, method=method)
+#lat = MagneticLattice(ring, method=MethodTM({Sextupole: KickTM, "global": TransferMap}))
 
 compensate_chromaticity(lat, ksi_x_comp=0, ksi_y_comp=0,  nsuperperiod=8)
 

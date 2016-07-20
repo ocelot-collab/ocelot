@@ -524,7 +524,7 @@ def plot_betas(ax, S, beta_x, beta_y, font_size):
     leg.get_frame().set_alpha(0.2)
 
 
-def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, fig_name = None, grid=True):
+def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=True):
 
     font_size = 25
     if fig_name == None:
@@ -567,7 +567,6 @@ def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, fig_name = None, g
 
     #plot_elems(ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8) # plot elements
     new_plot_elems(fig, ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8)
-
 
 
 

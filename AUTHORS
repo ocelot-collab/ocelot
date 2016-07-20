@@ -3,11 +3,14 @@ architecture, releases
 optimizer, x-ray optics
 
 Sergey Tomin 
-cpbd module optics functions, csr
-optimizer
+cpbd module, optics functions
+optimizer, SR module
 
 Igor Zagorodnov 
-cpbd module,space charge, wakes
+cpbd module, space charge, wakefields
+
+Martin Dohlus
+space charge, CSR, wakefields
 
 Gianluca Geloni
 genesis adaptor

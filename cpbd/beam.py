@@ -70,24 +70,25 @@ class Twiss:
             self.s = 0.0 # position along the reference trajectory
             self.id = ""
 
-
     def __str__(self):
         val = ""
-        val = val + "beta_x  = " + str(self.beta_x) + "\n"
-        val = val + "beta_y  = " + str(self.beta_y) + "\n"
-        val = val + "alpha_x = " + str(self.alpha_x) + "\n"
-        val = val + "alpha_y = " + str(self.alpha_y) + "\n"
-        val = val + "gamma_x = " + str(self.gamma_x) + "\n"
-        val = val + "gamma_y = " + str(self.gamma_y) + "\n"
-        val = val + "Dx      = " + str(self.Dx) + "\n"
-        val = val + "Dy      = " + str(self.Dy) + "\n"
-        val = val + "Dxp     = " + str(self.Dxp) + "\n"
-        val = val + "Dyp     = " + str(self.Dyp) + "\n"
-        val = val + "mux     = " + str(self.mux) + "\n"
-        val = val + "muy     = " + str(self.muy) + "\n"
-        val = val + "nu_x    = " + str(self.mux/2./pi) + "\n"
-        val = val + "nu_y    = " + str(self.muy/2./pi) + "\n"
-        val = val + "s    = " + str(self.s) + "\n"
+        val += "emit_x  = " + str(self.emit_x) + "\n"
+        val += "emit_y  = " + str(self.emit_y) + "\n"
+        val += "beta_x  = " + str(self.beta_x) + "\n"
+        val += "beta_y  = " + str(self.beta_y) + "\n"
+        val += "alpha_x = " + str(self.alpha_x) + "\n"
+        val += "alpha_y = " + str(self.alpha_y) + "\n"
+        val += "gamma_x = " + str(self.gamma_x) + "\n"
+        val += "gamma_y = " + str(self.gamma_y) + "\n"
+        val += "Dx      = " + str(self.Dx) + "\n"
+        val += "Dy      = " + str(self.Dy) + "\n"
+        val += "Dxp     = " + str(self.Dxp) + "\n"
+        val += "Dyp     = " + str(self.Dyp) + "\n"
+        val += "mux     = " + str(self.mux) + "\n"
+        val += "muy     = " + str(self.muy) + "\n"
+        val += "nu_x    = " + str(self.mux/2./pi) + "\n"
+        val += "nu_y    = " + str(self.muy/2./pi) + "\n"
+        val += "s    = " + str(self.s) + "\n"
         return val
 
             
@@ -113,8 +114,9 @@ class Particle:
         val = val + "y = " + str(self.y) + "\n"
         val = val + "py = " + str(self.py) + "\n"
         val = val + "tau = " + str(self.tau) + "\n"
+        val = val + "p = " + str(self.p) + "\n"
         val = val + "E = " + str(self.E) + "\n"
-        val = val + "s = " + str(self.s) + "\n"
+        val = val + "s = " + str(self.s)
         return val
 
 class Beam:
@@ -160,10 +162,10 @@ class Beam:
 
     def print_sizes(self):
         self.sizes()
-        print ("sigma_E/E and Dx/Dy : ", self.sigma_E/self.E, "  and ", self.Dx, "/",self.Dy, " m")
-        print ("emit_x/emit_y     : ",  self.emit_x*1e9, "/",self.emit_y*1e9, " nm-rad")
-        print ("sigma_x/y         : ", self.sigma_x*1e6, "/", self.sigma_y*1e6, " um")
-        print ("sigma_xp/yp       : ", self.sigma_xp*1e6, "/", self.sigma_yp*1e6, " urad")
+        print("sigma_E/E and Dx/Dy : ", self.sigma_E/self.E, "  and ", self.Dx, "/",self.Dy, " m")
+        print("emit_x/emit_y     : ",  self.emit_x*1e9, "/",self.emit_y*1e9, " nm-rad")
+        print("sigma_x/y         : ", self.sigma_x*1e6, "/", self.sigma_y*1e6, " um")
+        print("sigma_xp/yp       : ", self.sigma_xp*1e6, "/", self.sigma_yp*1e6, " urad")
 
 
 class Trajectory:
@@ -177,7 +179,7 @@ class Trajectory:
         self.z = []
         self.s = []
 
-    def add(self, ct,x,y,xp,yp,z,s):
+    def add(self, ct, x, y, xp, yp, z, s):
         self.ct.append(ct)
         self.x.append(x)
         self.y.append(y)
@@ -231,10 +233,10 @@ class ParticleArray:
 
 
     def __getitem__(self, idx):
-        return Particle(x = self.particles[idx*6], px=self.particles[idx*6 + 1],
-                         y=self.particles[idx*6+2], py = self.particles[idx*6+3],
-                         tau = self.particles[idx*6+4], p = self.particles[idx*6+5],
-                         s = self.s)
+        return Particle(x=self.particles[idx*6], px=self.particles[idx*6 + 1],
+                         y=self.particles[idx*6+2], py=self.particles[idx*6+3],
+                         tau=self.particles[idx*6+4], p=self.particles[idx*6+5],
+                         s=self.s)
 
     def __setitem__(self, idx, p):
         self.particles[idx*6] = p.x
@@ -358,3 +360,101 @@ def ellipse_from_twiss(emit, beta, alpha):
     x = a * sqrt(beta) * cos(phi)
     xp = -a / sqrt(beta) * ( sin(phi) + alpha * cos(phi) )
     return (x, xp)
+
+
+def moments(x, y, cut=0):
+    n = len(x)
+    inds = np.arange(n)
+    mx = np.mean(x)
+    my = np.mean(y)
+    x = x - mx
+    y = y - my
+    x2 = x*x
+    mxx = sum(x2)/n
+    y2 = y*y
+    myy = sum(y2)/n
+    xy = x*y
+    mxy = sum(xy)/n
+
+    emitt = sqrt(mxx*myy - mxy*mxy)
+
+    if cut>0:
+        inds=[]
+        beta = mxx/emitt
+        gamma = myy/emitt
+        alpha = mxy/emitt
+        emittp = gamma*x2 + 2.*alpha*xy + beta*y2
+        inds0 = np.argsort(emittp)
+        n1 = np.round(n*(100-cut)/100)
+        inds = inds0[0:n1]
+        mx = np.mean(x[inds])
+        my = np.mean(y[inds])
+        x1 = x[inds] - mx
+        y1 = y[inds] - my
+        mxx = np.sum(x1*x1)/n1
+        myy = np.sum(y1*y1)/n1
+        mxy = np.sum(x1*y1)/n1
+        emitt = sqrt(mxx*myy - mxy*mxy)
+    return mx, my, mxx, mxy, myy, emitt
+
+def m_from_twiss(Tw1, Tw2):
+    #% Transport matrix M for two sets of Twiss parameters (alpha,beta,psi)
+    b1 = Tw1[1]
+    a1 = Tw1[0]
+    psi1 = Tw1[2]
+    b2 = Tw2[1]
+    a2 = Tw2[0]
+    psi2 = Tw2[2]
+
+    psi = psi2-psi1
+    cosp = cos(psi)
+    sinp = sin(psi)
+    M = np.zeros((2, 2))
+    M[0, 0] = sqrt(b2/b1)*(cosp+a1*sinp)
+    M[0, 1] = sqrt(b2*b1)*sinp
+    M[1, 0] = ((a1-a2)*cosp-(1+a1*a2)*sinp)/sqrt(b2*b1)
+    M[1, 1] = sqrt(b1/b2)*(cosp-a2*sinp)
+    return M
+
+def beam_matching(particles, bounds, x_opt, y_opt):
+    pd = zeros(( int(len(particles)/6), 6))
+    pd[:, 0] = particles[0::6]
+    pd[:, 1] = particles[1::6]
+    pd[:, 2] = particles[2::6]
+    pd[:, 3] = particles[3::6]
+    pd[:, 4] = particles[4::6]
+    pd[:, 5] = particles[5::6]
+
+    z0 = np.mean(pd[:, 4])
+    sig0 = np.std(pd[:, 4])
+    #print((z0 + sig0*bounds[0] <= pd[:, 4]) * (pd[:, 4] <= z0 + sig0*bounds[1]))
+    inds = np.argwhere((z0 + sig0*bounds[0] <= pd[:, 4]) * (pd[:, 4] <= z0 + sig0*bounds[1]))
+    #print(moments(pd[inds, 0], pd[inds, 1]))
+    mx, mxs, mxx, mxxs, mxsxs, emitx0 = moments(pd[inds, 0], pd[inds, 1])
+    beta = mxx/emitx0
+    alpha = -mxxs/emitx0
+    print(beta, alpha)
+    M = m_from_twiss([alpha, beta, 0], x_opt)
+    print(M)
+    particles[0::6] = M[0, 0]*pd[:, 0] + M[0, 1]*pd[:, 1]
+    particles[1::6] = M[1, 0]*pd[:, 0] + M[1, 1]*pd[:, 1]
+    [mx, mxs, mxx, mxxs, mxsxs, emitx0] = moments(pd[inds, 2], pd[inds, 3])
+    beta = mxx/emitx0
+    alpha = -mxxs/emitx0
+    M = m_from_twiss([alpha, beta, 0], y_opt)
+    particles[2::6] = M[0, 0]*pd[:, 2] + M[0, 1]*pd[:, 3]
+    particles[3::6] = M[1, 0]*pd[:, 2] + M[1, 1]*pd[:, 3]
+    return particles
+
+
+class BeamTransform:
+    def __init__(self, x_opt, y_opt):
+        self.bounds = [-5, 5]  # [start, stop] in sigmas
+        self.x_opt = x_opt   # [alpha, beta, mu (phase advance)]
+        self.y_opt = y_opt   # [alpha, beta, mu (phase advance)]
+
+    def prepare(self, lat):
+        pass
+
+    def apply(self, p_array, dz):
+        beam_matching(p_array.particles, self.bounds, self.x_opt, self.y_opt)

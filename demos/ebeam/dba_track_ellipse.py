@@ -39,7 +39,7 @@ for xi, xpi in zip(x, xp):
 plot(x, xp)
 navi = Navigator()
 dz = 10.
-track(lat, plist, dz=dz, navi=navi)
+tracking_step(lat, plist, dz=dz, navi=navi)
 
 
 x2 = [f.x for f in plist] #map(lambda f: f.x, plist)
@@ -76,7 +76,7 @@ for xi, xpi in zip(x,xp):
 plot(x, xp)
 navi = Navigator()
 dz = 10.
-track(lat, plist, dz = dz, navi = navi)
+tracking_step(lat, plist, dz = dz, navi = navi)
 
 x2 = [f.x for f in plist] #map(lambda f: f.x, plist)
 xp2 = [f.px for f in plist] #map(lambda f: f.px, plist)

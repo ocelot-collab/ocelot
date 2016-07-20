@@ -2,18 +2,13 @@
 definition of magnetic lattice
 linear dimensions in [m]
 """
-
 from ocelot.cpbd.field_map import FieldMap
 #from ocelot.cpbd.optics import create_transfer_map
-from ocelot.common.globals import *
+#from ocelot.common.globals import *
 import numpy as np
-from numpy import cos, sin
+from numpy import pi
 
 
-
-'''
-TODO: rename Element class into something else to avoid confusion 
-'''
 class Element:
     """
     Element is a basic beamline building element
@@ -22,9 +17,9 @@ class Element:
     """
     def __init__(self, eid=None):
         self.id = eid
-        if eid == None:
+        if eid is None:
             self.id = "ID_{0}_".format(np.random.randint(100000000))
-
+        self.l = 0.
         self.tilt = 0.  # rad, pi/4 to turn positive quad into negative skew
         self.angle = 0.
         self.k1 = 0.
@@ -67,7 +62,7 @@ class Quadrupole(Element):
     k1 - strength of quadrupole lens in [1/m^2],
     l - length of lens in [m].
     """
-    def __init__(self, l=0, k1=0, k2=0.,  tilt=0, eid=None):
+    def __init__(self, l=0, k1=0, k2=0., tilt=0, eid=None):
         Element.__init__(self, eid)
         self.l = l
         self.k1 = k1
@@ -185,7 +180,7 @@ class RBend(Bend):
         if e2 == None:
             e2 = angle/2.
         else:
-            e1 += angle/2.
+            e2 += angle/2.
 
         Bend.__init__(self, l, angle=angle, e1=e1, e2=e2, k1=k1, k2=k2,
                       gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, fintx=fintx, eid=eid)
@@ -263,8 +258,8 @@ class Cavity(Element):
         self.l = l
         self.v = v   # in GV
         self.delta_e = delta_e
-        self.f = freq
-        self.phi = phi # in grad *np.pi/180.
+        self.f = freq   # Hz
+        self.phi = phi  # in grad # *np.pi/180.
         self.E = 0
         self.volterr = volterr
 
@@ -273,7 +268,7 @@ class Solenoid(Element):
     """
     Solenoid
     """
-    def __init__(self, l, k=0., eid=None):
+    def __init__(self, l=0., k=0., eid=None):
         Element.__init__(self, eid)
         self.k = k  # B0/(2B*rho)
         self.l = l

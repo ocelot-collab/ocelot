@@ -1,13 +1,13 @@
 __author__ = 'Sergey Tomin'
 
 import numpy as np
-from ocelot.common.globals import *
+from ocelot.common.globals import m_e_GeV
 from ocelot.cpbd.elements import *
 
 
 def rot_mtx(angle):
-    cs = cos(angle)
-    sn = sin(angle)
+    cs = np.cos(angle)
+    sn = np.sin(angle)
     return np.array([[cs, 0., sn, 0., 0., 0.],
                   [0., cs, 0., sn, 0., 0.],
                   [-sn, 0., cs, 0., 0., 0.],
@@ -37,8 +37,7 @@ def uni_matrix(z, k1, hx, sum_tilts=0., energy=0.):
         r56 = hx*hx*z**3/6.
     if gamma != 0:
         gamma2 = gamma*gamma
-        beta = 1. - 0.5/gamma2
-        # print 1./(beta*beta)
+        beta = np.sqrt(1. - 1./gamma2)
         r56 -= z/(beta*beta*gamma2)
     u_matrix = np.array([[cx, sx, 0., 0., 0., dx],
                         [-kx2*sx, cx, 0., 0., 0., sx*hx],
@@ -78,7 +77,7 @@ def create_r_matrix(element):
         r_z_e = lambda z, energy: uni_matrix(z, 0, hx=0, sum_tilts=0, energy=energy)
 
     elif element.__class__ == Undulator:
-        print("Undulator")
+        #print("Undulator")
         def undulator_r_z(z, lperiod, Kx, Ky, energy):
 
             gamma = energy / m_e_GeV
@@ -87,8 +86,8 @@ def create_r_matrix(element):
             if gamma != 0 and lperiod != 0 and Kx != 0:
                 #print("here")
                 beta = 1 / np.sqrt(1.0 - 1.0 / (gamma * gamma))
-                omega_x = np.sqrt(2.0) * pi * Kx / (lperiod * gamma * beta)
-                omega_y = np.sqrt(2.0) * pi * Ky / (lperiod * gamma * beta)
+                omega_x = np.sqrt(2.0) * np.pi * Kx / (lperiod * gamma * beta)
+                omega_y = np.sqrt(2.0) * np.pi * Ky / (lperiod * gamma * beta)
                 r[2, 2] = np.cos(omega_x * z)
                 r[2, 3] = np.sin(omega_x * z) / omega_x
                 r[3, 2] = -np.sin(omega_x * z) * omega_x
@@ -118,6 +117,7 @@ def create_r_matrix(element):
             gamma = (E + 0.5 * de) / m_e_GeV
             Ei = E / m_e_GeV
             Ef = (E + de) / m_e_GeV
+            #print("cav z = ", z)
             Ep = (Ef - Ei) / z  # energy derivative
             if Ei == 0:
                 print("Warning! Initial energy is zero and cavity.delta_e != 0! Change Ei or cavity.delta_e must be 0")
@@ -140,7 +140,7 @@ def create_r_matrix(element):
             r56 = 0.
             if gamma != 0:
                 gamma2 = gamma * gamma
-                beta = 1. - 0.5 / gamma2
+                beta = np.sqrt(1. - 1 / gamma2)
                 r56 = -z / (beta * beta * gamma2)
 
             cav_matrix = np.array([[r11, r12, 0., 0., 0., 0.],
@@ -177,7 +177,9 @@ def create_r_matrix(element):
                 s_k = s / k
             r56 = 0.
             if gamma != 0:
-                r56 = l / (gamma * gamma)
+                gamma2 = gamma*gamma
+                beta = np.sqrt(1. - 1./gamma2)
+                r56 -= l/(beta*beta*gamma2)
             sol_matrix = np.array([[c * c, c * s_k, s * c, s * s_k, 0., 0.],
                                 [-k * s * c, c * c, -k * s * s, s * c, 0., 0.],
                                 [-s * c, -s * s_k, c * c, c * s_k, 0., 0.],

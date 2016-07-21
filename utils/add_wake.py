@@ -1,4 +1,5 @@
 '''
+
 utilities to add externaly calculated wakes to beam files
 Usage:
 from command line:
@@ -48,7 +49,6 @@ def add_wake_to_beamf(beamf, new_beamf):
     f.write(beam_file_str(beam))
     f.close()
 
-
 if len(sys.argv)>3:
     command = sys.argv[1]
     beamf = sys.argv[2]    
@@ -58,7 +58,7 @@ else:
     #beamf = '/home/iagapov/tmp/run_2/tmp.beam'
     #command = 'current'
     #outf = 'tmp.beam'
-
+ 
 
 if command == 'current':
         beam = read_beam_file(beamf)
@@ -68,7 +68,6 @@ if command == 'current':
         f.write(beam_file_str(beam))
         f.close()
         #print beam_file_str(beam) 
-
 if command == 'add_from_file':
 
     if len(sys.argv)>2:
@@ -77,7 +76,7 @@ if command == 'add_from_file':
     else:
         beamf = '/home/iagapov/tmp/run_2/tmp.beam'
         command = 'current'
-
+   
     wake = get_wake_from_file(wakef)
 
     beam = read_beam_file(beamf)

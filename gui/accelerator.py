@@ -17,21 +17,6 @@ import numpy as np
 from copy import deepcopy
 
 import matplotlib.font_manager as font_manager
-font = {
-        'size'   : 18}
-matplotlib.rc('font', **font)
-
-
-'''
-try:
-    from PyQt4.QtCore import *
-    from PyQt4.QtGui import *
-    from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-    from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
-except:
-    print 'WARNING: Qt not installed, some graphics may not work properly'
-'''
-
 
 
 def plot_lattice(lat, axis, alpha=1.0, params={'kmax':2.0, 'ang_max':0.5e-2}, s_start = 0.0):
@@ -505,7 +490,7 @@ def plot_disp(ax,tws, top_plot, font_size):
         Fmin.append(min(Ftop))
         Fmax.append(max(Ftop))
         top_label = r"$"+elem+"$"
-        ax.plot(S, Ftop, "r", lw = 2, label=top_label)
+        ax.plot(S, Ftop, lw = 2, label=top_label)
         d_Ftop.append( max(Ftop) - min(Ftop))
     d_F = max(d_Ftop)
     if d_F == 0:
@@ -533,8 +518,8 @@ def plot_disp(ax,tws, top_plot, font_size):
 
 def plot_betas(ax, S, beta_x, beta_y, font_size):
     ax.set_ylabel(r"$\beta_{x,y}$, m")
-    ax.plot(S, beta_x,'r', lw = 2, label=r"$\beta_{x}$")
-    ax.plot(S, beta_y,'b', lw = 2, label=r"$\beta_{y}$")
+    ax.plot(S, beta_x,'b', lw = 2, label=r"$\beta_{x}$")
+    ax.plot(S, beta_y,'r', lw = 2, label=r"$\beta_{y}$")
     leg = ax.legend(loc='upper right', shadow=False, fancybox=True, prop=font_manager.FontProperties(size=font_size))
     leg.get_frame().set_alpha(0.2)
 
@@ -583,7 +568,6 @@ def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=Tr
     #plot_elems(ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8) # plot elements
     new_plot_elems(fig, ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8)
 
-    #plt.show()
 
 
 def plot_xy(ax, S, X, Y, font_size):

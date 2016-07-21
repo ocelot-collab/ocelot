@@ -35,7 +35,7 @@ def I5_ID(L, h0, lu, beta_xc, Dx0, Dxp0):
 def radiation_integrals(lattice, twiss_0, nsuperperiod = 1):
     #TODO: add I4 for rectangular magnets I4 = Integrate(2 Dx(z)*k(z)*h(z), Z)
     
-    n_points_element = 5
+    n_points_element = 20
     
     tws_elem = twiss_0
     (I1, I2, I3,I4, I5) = (0., 0., 0., 0., 0.)
@@ -63,8 +63,8 @@ def radiation_integrals(lattice, twiss_0, nsuperperiod = 1):
             I4 += h*(2*elem.k1 + H2)*simps(array(Dx), Z)
             I5 += H3*simps(array(Hinvariant), Z)
         tws_elem = elem.transfer_map*tws_elem
-    if abs(tws_elem.beta_x - twiss_0.beta_x)>1e-7 or abs(tws_elem.beta_y - twiss_0.beta_y)>1e-7:
-        print( "WARNING! Results may be wrong! radiation_integral() -> beta functions are not matching. ")
+    #if abs(tws_elem.beta_x - twiss_0.beta_x)>1e-7 or abs(tws_elem.beta_y - twiss_0.beta_y)>1e-7:
+    #    print( "WARNING! Results may be wrong! radiation_integral() -> beta functions are not matching. ")
         #return None
     return (I1*nsuperperiod,I2*nsuperperiod,I3*nsuperperiod, I4*nsuperperiod, I5*nsuperperiod)
 
@@ -155,6 +155,7 @@ class EbeamParams:
 
     def __str__(self):
         val = ""
+        val += ( "I1 =        " + str(self.I1) )
         val += ( "I2 =        " + str(self.I2) )
         val += ( "\nI3 =        " + str(self.I3) )
         val += ( "\nI4 =        " + str(self.I4) )

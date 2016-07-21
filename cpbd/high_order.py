@@ -77,7 +77,7 @@ I346 = Gy * dx*sy = h/kx2*(I34 - I314)
 """
 
 
-def t_nnn(L, h, k1, k2):
+def t_nnn(L, h, k1, k2, energy=0):
     """
     :param L:
     :param angle:
@@ -370,16 +370,27 @@ def t_nnn(L, h, k1, k2):
     T533 = t533 + 1/4.*ky2*(L - sy*cy )
     T534 = t534 - 1/2.*ky2*sy2
     T544 = t544 + (L + sy*cy)/4.
+    beta = 1.
+    if energy != 0:
+        gamma = energy/m_e_GeV
+        gamma2 = gamma*gamma
+        beta = np.sqrt(1. - 1./gamma2)
+        T[4, 5, 5] = 1.5*L/(beta*beta*gamma2)
 
     T[4, 0, 0] = T511
-    T[4, 0, 1] = T512 + h*dx
+    T[4, 0, 1] = (T512 + h*dx)
     T[4, 0, 5] = T516
-    T[4, 1, 1] = T522
+    T[4, 1, 1] = T522/beta
     T[4, 1, 5] = T526
     T[4, 5, 5] = T566
     T[4, 2, 2] = T533
-    T[4, 2, 3] = T534
+    T[4, 2, 3] = T534/beta
     T[4, 3, 3] = T544
+    if energy != 0:
+        gamma = energy/m_e_GeV
+        gamma2 = gamma*gamma
+        beta = np.sqrt(1. - 1./gamma2)
+        T[4, 5, 5] = 1.5*L/(beta*beta*gamma2)
     """
     print "T511 = ", T511
     print "T512 = ", T512

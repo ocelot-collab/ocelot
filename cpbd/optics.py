@@ -306,14 +306,21 @@ class CavityTM(TransferMap):
         #n = len(X)
         phi = phi*np.pi/180.
         X = self.mul_p_array(X, energy=E) #t_apply(R, T, X, dx, dy, tilt)
-        #print(E, self.R(E))
         #a = np.add( np.transpose(  dot(self.R(E), np.transpose( X.reshape(n/6, 6)) ) ), self.B(E) ).reshape(n)
         #X[:] = a[:]
         delta_e = V*np.cos(phi)
         if E + delta_e > 0:
+            gamma = (E + delta_e/4.)/m_e_GeV
+            gamma2 = gamma * gamma
+            beta = np.sqrt(1. - 1 / gamma2)
+            X[4::6] -= self.length/2./ (beta * beta * gamma2) #- 1.5*self.length/2./(beta*beta*gamma2)*X[5::6]*X[5::6]
             #print("******************** CAVITY")
             k = 2.*np.pi*freq/speed_of_light
             X[5::6] = (X[5::6]*E + V*np.cos(X[4::6]*k + phi) - delta_e)/(E + delta_e)
+            gamma = (E + delta_e*3/4.)/m_e_GeV
+            gamma2 = gamma * gamma
+            beta = np.sqrt(1. - 1 / gamma2)
+            X[4::6] -= self.length/2. / (beta * beta * gamma2) #- 1.5*self.length/2./(beta*beta*gamma2)*X[5::6]*X[5::6]
         return X
 
 
@@ -458,11 +465,11 @@ class RungeKuttaTM(TransferMap):
 
 
 class SecondTM(TransferMap):
-    def __init__(self, r_z_no_tilt, t_mat_z):
+    def __init__(self, r_z_no_tilt, t_mat_z_e):
         TransferMap.__init__(self)
         self.r_z_no_tilt = r_z_no_tilt
-        self.t_mat_z = t_mat_z
-        self.map = lambda X, energy: self.t_apply(self.r_z_no_tilt(self.length, energy), self.t_mat_z(self.length), X, self.dx, self.dy, self.tilt)
+        self.t_mat_z_e = t_mat_z_e
+        self.map = lambda X, energy: self.t_apply(self.r_z_no_tilt(self.length, energy), self.t_mat_z_e(self.length, energy), X, self.dx, self.dy, self.tilt)
 
     def t_apply(self, R, T, X, dx, dy, tilt, U5666=0.):
         #print("t_apply", self.k2, self.T)
@@ -504,7 +511,7 @@ class SecondTM(TransferMap):
                   T[3, 3, 5] * pydp
 
         X[4::6] = Xr[4::6] + T[4, 0, 0] * x2 + T[4, 0, 1] * xpx + T[4, 0, 5] * xdp + T[4, 1, 1] * px2 + T[4, 1, 5] * pxdp + \
-                  T[4, 5, 5] * dp2 + T[4, 2, 2] * y2 + T[4, 2, 3] * ypy + T[4, 3, 3] * py2  # + U5666*dp2*dp    # third order
+                  T[4, 5, 5] * dp2 + T[4, 2, 2] * y2 + T[4, 2, 3] * ypy + T[4, 3, 3] * py2 # + U5666*dp2*dp    # third order
         # X[:] = Xr[:] + Xt[:]
 
         if dx != 0 or dy != 0 or tilt != 0:
@@ -517,10 +524,10 @@ class SecondTM(TransferMap):
         m.length = s
         m.R = lambda energy: m.R_z(s, energy)
         m.B = lambda energy: m.B_z(s, energy)
-        m.T = m.t_mat_z(s)
+        m.T = lambda s, energy: m.t_mat_z_e(s, energy)
         m.delta_e = m.delta_e_z(s)
         #print(m.R_z_no_tilt(s, 0.3))
-        m.map = lambda X, energy: m.t_apply(m.r_z_no_tilt(s, energy), m.t_mat_z(s), X, m.dx, m.dy, m.tilt)
+        m.map = lambda X, energy: m.t_apply(m.r_z_no_tilt(s, energy), m.t_mat_z_e(s, energy), X, m.dx, m.dy, m.tilt)
         return m
 
 
@@ -566,7 +573,7 @@ class MethodTM:
             tm = KickTM(angle=element.angle, k1=element.k1, k2=element.k2, k3=k3, nkick=self.nkick)
 
         elif method == SecondTM:
-            T_z = lambda z: t_nnn(z, hx, element.k1, element.k2)
+            T_z_e = lambda z, energy: t_nnn(z, hx, element.k1, element.k2, energy)
 
             if element.__class__ == Edge:
                 if element.pos == 1:
@@ -575,8 +582,8 @@ class MethodTM:
                 else:
                     R, T = fringe_ext(h=element.h, k1=element.k1, e=element.edge, h_pole=element.h_pole,
                                       gap=element.gap, fint=element.fint)
-                T_z = lambda z: T
-            tm = SecondTM(r_z_no_tilt=r_z_e, t_mat_z=T_z)
+                T_z_e = lambda z, energy: T
+            tm = SecondTM(r_z_no_tilt=r_z_e, t_mat_z_e=T_z_e)
 
         else:
             tm = TransferMap()

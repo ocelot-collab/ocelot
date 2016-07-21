@@ -62,7 +62,7 @@ class Quadrupole(Element):
     k1 - strength of quadrupole lens in [1/m^2],
     l - length of lens in [m].
     """
-    def __init__(self, l=0, k1=0, k2=0., tilt=0, eid=None):
+    def __init__(self, l=0., k1=0, k2=0., tilt=0., eid=None):
         Element.__init__(self, eid)
         self.l = l
         self.k1 = k1
@@ -75,7 +75,7 @@ class Sextupole(Element):
     k2 - strength of sextupole lens in [1/m^3],
     l - length of lens in [m].
     """
-    def __init__(self, l=0, k2=0., eid=None, tilt=0):
+    def __init__(self, l=0., k2=0., eid=None, tilt=0.):
         Element.__init__(self, eid)
         self.l = l
         self.k2 = k2
@@ -87,7 +87,7 @@ class Octupole(Element):
     k3 - strength of sextupole lens in [1/m^4],
     l - length of lens in [m].
     """
-    def __init__(self, l=0, k3=0, eid=None, tilt=0.):
+    def __init__(self, l=0., k3=0., eid=None, tilt=0.):
         Element.__init__(self, eid)
         self.l = l
         self.k3 = k3
@@ -98,14 +98,14 @@ class Drift(Element):
     """
     l - length of lens in [m]
     """
-    def __init__(self, l=0, eid=None):
+    def __init__(self, l=0., eid=None):
         Element.__init__(self, eid)
         self.l = l
 
 
 class Bend(Element):
-    def __init__(self, l, angle=0., k1=0., k2=0., tilt=0.0, e1=0., e2=0.,
-                 gap=0, h_pole1=0., h_pole2=0., fint=0., fintx=0., eid=None):
+    def __init__(self, l=0., angle=0., k1=0., k2=0., tilt=0.0, e1=0., e2=0.,
+                 gap=0., h_pole1=0., h_pole2=0., fint=0., fintx=0., eid=None):
         Element.__init__(self, eid)
         self.l = l
         self.angle = angle
@@ -124,7 +124,7 @@ class Bend(Element):
 
 
 class Edge(Bend):
-    def __init__(self, l=0, angle=0.0, k1=0., edge=0.,
+    def __init__(self, l=0., angle=0.0, k1=0., edge=0.,
                  tilt=0.0, dtilt=0.0, dx=0.0, dy=0.0,
                  h_pole=0., gap=0., fint=0., pos=1, eid=None):
         Element.__init__(self, eid)
@@ -155,7 +155,7 @@ class SBend(Bend):
     def __init__(self, l=0., angle=0.0, k1=0.0, k2=0., e1=0.0, e2=0.0, tilt=0.0,
                  gap=0, h_pole1=0., h_pole2=0., fint=0., fintx=0., eid=None):
 
-        Bend.__init__(self, l, angle=angle, k1=k1, k2=k2, e1=e1, e2=e2,
+        Bend.__init__(self, l=l, angle=angle, k1=k1, k2=k2, e1=e1, e2=e2, tilt=tilt,
                       gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, eid=eid)
 
         self.fint1 = fint
@@ -182,7 +182,7 @@ class RBend(Bend):
         else:
             e2 += angle/2.
 
-        Bend.__init__(self, l, angle=angle, e1=e1, e2=e2, k1=k1, k2=k2,
+        Bend.__init__(self, l=l, angle=angle, e1=e1, e2=e2, k1=k1, k2=k2, tilt=tilt,
                       gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, fintx=fintx, eid=eid)
 
         self.fint1 = fint
@@ -195,7 +195,8 @@ class Hcor(RBend):
         RBend.__init__(self, l=l, angle=angle, eid=eid)
         self.l = l
         self.angle = angle
-        self.tilt = 0
+        self.tilt = 0.
+
 
 class Vcor(RBend):
     def __init__(self, l=0., angle=0., eid=None):
@@ -203,6 +204,7 @@ class Vcor(RBend):
         self.l = l
         self.angle = angle
         self.tilt = pi/2.
+
 
 class Undulator(Element):
     """
@@ -213,7 +215,7 @@ class Undulator(Element):
     field_file_path - absolute path to magnetic field data;\n
     eid - id of undulator.
     """
-    def __init__(self, lperiod, nperiods, Kx, Ky=0, field_file=None, eid=None):
+    def __init__(self, lperiod=0., nperiods=0, Kx=0., Ky=0., field_file=None, eid=None):
         Element.__init__(self, eid)
         self.lperiod = lperiod
         self.nperiods = nperiods
@@ -221,7 +223,7 @@ class Undulator(Element):
         self.Kx = Kx
         self.Ky = Ky
         self.solver = "linear"  # can be "lin" is liear matrix,  "sym" - symplectic method and "rk" is Runge-Kutta
-        self.phase = 0  # phase between Bx and By + pi/4 (spiral undulator)
+        self.phase = 0.  # phase between Bx and By + pi/4 (spiral undulator)
         
         self.ax = -1              # width of undulator, when ax is negative undulator width is infinite
                                   # I need it for analytic description of undulator 
@@ -253,7 +255,7 @@ class Cavity(Element):
     v - voltage [V/m]
     f - frequency [GHz]
     """
-    def __init__(self, l, delta_e=0.0, freq=0.0, phi=0.0, eid=None, v=0., volterr=0.):
+    def __init__(self, l=0., delta_e=0.0, freq=0.0, phi=0.0, eid=None, v=0., volterr=0.):
         Element.__init__(self, eid)
         self.l = l
         self.v = v   # in GV

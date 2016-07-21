@@ -141,7 +141,7 @@ def create_r_matrix(element):
             if gamma != 0:
                 gamma2 = gamma * gamma
                 beta = np.sqrt(1. - 1 / gamma2)
-                r56 = -z / (beta * beta * gamma2)
+                #r56 = -z / (beta * beta * gamma2)
 
             cav_matrix = np.array([[r11, r12, 0., 0., 0., 0.],
                                 [r21, r22, 0., 0., 0., 0.],

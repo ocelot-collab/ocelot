@@ -10,6 +10,7 @@ from ocelot.cpbd.beam import Beam, gauss_from_twiss
 import ocelot.utils.reswake as w
 from ocelot.common.math_op import *
 from ocelot.common.globals import * #import of constants like "h_eV_s" and "speed_of_light"
+from numpy import *
 
 inputTemplate = "\
  $newrun \n\
@@ -648,7 +649,7 @@ def read_beam_file(fileName):
     return beam
 
 
-def readRadiationFile(fileName, npoints=151, slice_start=0, slice_end = -1, vartype=complex128):
+def readRadiationFile(fileName, npoints=151, slice_start=0, slice_end = -1, vartype=complex):
     #a new backward compatible version ~100x faster
     print '    reading radiation file'    
     import numpy as np
@@ -1121,24 +1122,28 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
     print '        nSlice', out.nSlices
     print '        nZ', out.nZ
 
-    if out('itdp') == True:
-
-        out.s = out('zsep') * out('xlamds') * np.arange(0,out.nSlices)
-        out.t = out.s / speed_of_light * 1.e+15
-        #out.dt = (out.t[1] - out.t[0]) * 1.e-15
-        out.dt=out('zsep') * out('xlamds') / speed_of_light 
-        out.beam_charge=np.sum(out.I*out('zsep')*out('xlamds')/speed_of_light)
-        if readall == True:
-            out.spec = fft.fft(np.sqrt(np.array(out.power) ) * np.exp( 1.j* np.array(out.phi_mid) ) )
-            out.freq_ev = h_eV_s * fftfreq(len(out.spec), d=out('zsep') * out('xlamds') / speed_of_light)# d=out.dt
-
-
     if out('dgrid')==0:
         rbeam=sqrt(out('rxbeam')**2+out('rybeam')**2)
         ray=sqrt(out('zrayl')*out('xlamds')/np.pi*(1+(out('zwaist')/out('zrayl')))**2);
         out.leng=2*out('rmax0')*(rbeam+ray)
     else:
         out.leng=2*out('dgrid')
+
+    if out('itdp') == True:
+        out.s = out('zsep') * out('xlamds') * np.arange(0,out.nSlices)
+        out.t = out.s / speed_of_light * 1.e+15
+        #out.dt = (out.t[1] - out.t[0]) * 1.e-15
+        out.dt=out('zsep') * out('xlamds') / speed_of_light 
+        out.beam_charge=np.sum(out.I*out('zsep')*out('xlamds')/speed_of_light)
+        if readall == True:
+#            out.spec = np.fft.fft(np.sqrt(np.array(out.power) ) * np.exp( 1.j* np.array(out.phi_mid) ) ) # may be wrong
+            out.spec = abs(np.fft.fft(np.sqrt(np.array(out.power)) * np.exp( 1.j* np.array(out.phi_mid) ) , axis=0))**2/sqrt(out.nSlices)/(2*out.leng/out('ncar'))**2/1e10
+            e_0=1239.8/out('xlamds')/1e9            
+            out.freq_ev = h_eV_s * np.fft.fftfreq(len(out.spec), d=out('zsep') * out('xlamds') / speed_of_light)+e_0# d=out.dt
+            
+            out.spec = np.fft.fftshift(out.spec,axes=0)
+            out.freq_ev = np.fft.fftshift(out.freq_ev,axes=0)
+            out.freq_lamd=1239.8/out.freq_ev
         
     if out('iscan')!=0:
         out.scv=out.I #scan value
@@ -1156,7 +1161,8 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
                  setattr(out,parm[1],getattr(out,parm[0]))
     #             delattr(out,parm[0])
         out.power=out.p_mid[:,-1]
-        out.phi=out.phi_mid[:,-1] 
+        out.phi=out.phi_mid[:,-1]
+        out.energy=np.mean(out.p_int,axis=0)*out('xlamds')*out('zsep')*out.nSlices/speed_of_light
     
 
     print('      done in %.3f seconds' % (time.time() - start_time))        

@@ -40,7 +40,7 @@ Other functions are used by the program, or are use to filter the field with a s
 ##########################
 import sys, os, time
 
-#sys.path.append('/usr/lib64/python2.6/site-packages/openmpi-intel')
+sys.path.append('/usr/lib64/python2.6/site-packages/openmpi-intel')
 sys.path.append('/data/netapp/xfel/gianluca/products/ocelot') 
     
 from mpi4py import MPI
@@ -159,8 +159,8 @@ def readfilter(filename = 'D:\Python\Scripts\Genesis - scripts\ModT_fig.dat'):
         #columns1 = line.split('\t')
         columns1 = line.split(' ')
         # clean any whitespace off the items
-	#print filename
-	#print columns1
+        #print filename
+        #print columns1
         columns.append([float(col.strip()) for col in columns1])
     return columns
 
@@ -351,31 +351,31 @@ def writeRadiationFile_mpi(comm, filename, slices, shape):
         cmd = 'cat '
         cmd2 = 'rm '
         for i in xrange(nproc):
-	    checkex = 0
-	    while (checkex ==  0):
-	        if os.path.isfile(str(filename) + '.' + str(i)) == 1: 
-		    file_i = open(str(filename) + '.' + str(i)).read()
-		    if len(file_i) > 100: 
-		        checkex = 1
-		    else:
-		        print 'waiting for '+str(filename) + '.' + str(i)
+            checkex = 0
+            while (checkex ==  0):
+                if os.path.isfile(str(filename) + '.' + str(i)) == 1: 
+                    file_i = open(str(filename) + '.' + str(i)).read()
+                    if len(file_i) > 100: 
+                        checkex = 1
+                    else:
+                        print 'waiting for '+str(filename) + '.' + str(i)
             cmd += ' ' + str(filename) + '.' + str(i)
             cmd2 += ' ' + str(filename) + '.' + str(i)
         cmd = cmd + ' > ' + filename
         cmd = cmd + ' ; ' + cmd2
         print cmd
-	'''
-	confirmed = 1
-	while (confirmed != 0):
+        '''
+        confirmed = 1
+        while (confirmed != 0):
             confirmed = os.system(cmd)
-	    if (confirmed != 0): 
-	        print 'merging not succeeded... trying again in 5s...'
-		time.sleep(5)
-	'''
-	confirmed = os.system(cmd)    
+            if (confirmed != 0): 
+                print 'merging not succeeded... trying again in 5s...'
+                time.sleep(5)
+        '''
+        confirmed = os.system(cmd)    
     confirmed     = comm.bcast(confirmed, root = 0) 
     return confirmed    
-	
+
 
     
 #END EXPERIMENTAL FUNCTION
@@ -391,6 +391,13 @@ def readRadiationFile_my(fileName, npoints=151):
     return c
 
 #END EXPERIMENTAL FUNCTION
+
+def writeRadiationFile_my(filename,rad):
+    print '    writing radiation file' 
+    #a new backward compatible version ~10x faster
+    #    print '        - writing to ', filename
+    d=rad.flatten()
+    d.tofile(filename,format='complex')
 
 
 #############################################
@@ -447,13 +454,6 @@ if __name__ == "__main__":
     if rank == 0:
         print 'seed'
         Dslice = len(slices)  - nslice #slices in the rad file are different. we must account for this
-	print 'start'
-	
-	print Dslice*ds
-	
-	
-	print (len(slices) - 1805)*ds
-	print 'stop'
     
     
     #Dslice   = comm.bcast(Dslice, root = 0) 
@@ -463,61 +463,51 @@ if __name__ == "__main__":
     if rank == 0:  #rank 0 is used for input-output
     
         print 'Multiplication factor = ',mult     
-	#print filename
-	#print filenameF
-	#print filenameM
-	#print filenameP
-	#print filenameMR
-	#print filenamePR
-	#print filenamePout
-	#print filenamePphout
-	#print filenameSout
-	#print filenameSphout
-	         
+
+        
         print 'Parallelized field filtering.'
-	print 'Reading radiation file...'
-	
-	print 'Read: ',len(slices),' slices vs nslice = ',nslice
-	
-	
-	
-	nslice = len(slices)
-	print 'NSLICE*DS = ',nslice*ds
-	
-	
-	
-				          
-	###############################################################################
-	# work is now a flat list                                                     #
-	# work[2*(n*MTR+m)    *nslice+i] accesses the real      part of the field at  # 
+        print 'Reading radiation file...'
+        
+        print 'Read: ',len(slices),' slices vs nslice = ',nslice
+
+
+
+        nslice = len(slices)
+        print 'NSLICE*DS = ',nslice*ds
+    
+    
+    
+        ###############################################################################
+        # work is now a flat list                                                     #
+        # work[2*(n*MTR+m)    *nslice+i] accesses the real      part of the field at  # 
         # work[(2*(n*MTR+m)+1)*nslice+i] accesses the imaginary part of the field at  #
-	#                                                                             #
-	#  slice: i (0...nslice-1)                                                    # 
-	#  transverse position n, m (0..MTR-1)                                        #
-	###############################################################################	
-	
-	print '...Finished reading radiation file.'	
+        #                                                                             #
+        #  slice: i (0...nslice-1)                                                    # 
+        #  transverse position n, m (0..MTR-1)                                        #
+        ###############################################################################	
+
+        print '...Finished reading radiation file.'	
         print 'Prepare for filtering...'
-	
-	work = np.zeros(MTR*MTR*2*nslice)
-	prova = np.real(slices[0:nslice-1,34,33] )
-	for n in range(MTR):
-	    for m in range(MTR):
-	        work[2*(n*MTR+m)    *nslice:2*(n*MTR+m)    *nslice+(nslice-1)] = np.real(slices[0:nslice-1,n,m] )
-	        work[(2*(n*MTR+m)+1)*nslice:(2*(n*MTR+m)+1)*nslice+(nslice-1)] = np.imag(slices[0:nslice-1,n,m] )
-		
-	######################	
-	# Defines the filter #
-	######################
-			
+
+        work = np.zeros(MTR*MTR*2*nslice)
+        prova = np.real(slices[0:nslice-1,34,33] )
+        for n in range(MTR):
+            for m in range(MTR):
+                work[2*(n*MTR+m)    *nslice:2*(n*MTR+m)    *nslice+(nslice-1)] = np.real(slices[0:nslice-1,n,m] )
+                work[(2*(n*MTR+m)+1)*nslice:(2*(n*MTR+m)+1)*nslice+(nslice-1)] = np.imag(slices[0:nslice-1,n,m] )
+            
+        ######################
+        # Defines the filter #
+        ######################
+            
         k  = kscale(nslice, mult, k0, dk)  #the scale in frequency (k) is calculated
         ssc  = sscale(nslice, mult, ds)    #the scale in time (s) is calculated		
         print 'Radiation k range (seed.py, line 480)', k[0], k[-1] 
-	ntot = nslice*mult                 #the total number of long points is mult*nslice to allow for required resolution
+        ntot = nslice*mult                 #the total number of long points is mult*nslice to allow for required resolution
         Fmod    = rescalefilter(filenameM,k)  #Filter mod is rescaled according to the scale in k
         Fpha    = rescalefilter(filenameP,k)  #Filter pha is rescaled according to the scale in k
         print 'interpolated filter k range (seed.py, line 486)', Fmod[0][0], Fmod[0][-1]
-	#Prints the rescaled filter to file
+        #Prints the rescaled filter to file
         f1 = open(filenameMR, 'w')
         f3 = open(filenamePR, 'w')
         for i in range(len(k)):
@@ -525,51 +515,49 @@ if __name__ == "__main__":
             f3.write('%s ' %(2*np.pi/k[i]) + '%s' %Fpha[1][i] +'\n')
         f1.close()
         f3.close()
-	
-	##################################################
+
+        ##################################################
         # Defines useful quantities for the parallel run #
-	##################################################
-	
-	lenchunck = len(work)/MTR   #work is divited in MTR parts	
+        ##################################################
+        
+        lenchunck = len(work)/MTR   #work is divited in MTR parts	
         each =  int(MTR/size)+1	    #each processor needs to process <each> parts	
-	totw = each*size            #therefore the total number of parts is <totw>
-	work = np.append(work,np.zeros((totw-MTR)*lenchunck))  #and one must append zeros to reach the right total length for work to divide work equally between processors
-	work = np.reshape(work,(size,-1))  #work is reshaped work[j] gives the part to be processed by rank j	
-	
-	###################################
-	# Initialization of output arrays #
-	###################################
-	
-	
-	
+        totw = each*size            #therefore the total number of parts is <totw>
+        work = np.append(work,np.zeros((totw-MTR)*lenchunck))  #and one must append zeros to reach the right total length for work to divide work equally between processors
+        work = np.reshape(work,(size,-1))  #work is reshaped work[j] gives the part to be processed by rank j	
+        
+        ###################################
+        # Initialization of output arrays #
+        ###################################
+        
+        
+        
         SHX = np.zeros(nslice)
-	sumpowafter   = np.zeros(ntot)
+        sumpowafter   = np.zeros(ntot)
         sumphafafter  = np.zeros(ntot)
-	sumphatafter  = np.zeros(ntot)
-	sumspecafter  = np.zeros(ntot)        
+        sumphatafter  = np.zeros(ntot)
+        sumspecafter  = np.zeros(ntot)        
         for i in range(nslice):
             SHX[i] = np.floor(np.abs(ssc[i+nslice*(mult-1)/2 + SHF])*dr)  #Defines the proper shift to account for spatiotemporal coupling
-	    #print i, ds, ssc[2]-ssc[1], dr, SHF
-        #exit()
-        	
-	print 'Parallel filtering... '
-	print 'MTR = ',MTR
-	
+            
+        print 'Parallel filtering... '
+        print 'MTR = ',MTR
+    
     else:
     
         #####################################################
         # Initializes quantities for processes other than 0 #
-	#####################################################
+        #####################################################
     
         flat = []
-	Fmod = []
-	Fpha = []
-	ntot = 1
-	each = 0
+        Fmod = []
+        Fpha = []
+        ntot = 1
+        each = 0
         work = None
-	Mustdo = None
+        Mustdo = None
 
-	
+
     comm.Barrier()  #Makes sure that everything is synchronized now
     
     ##########################################################
@@ -582,7 +570,8 @@ if __name__ == "__main__":
     ntot     = comm.bcast(ntot, root = 0)    
     nslice   = comm.bcast(nslice, root = 0)    
     each     = comm.bcast(each, root = 0)    
-    Mustdo   = comm.scatter(work, root = 0)  #any <Mustdo> received by any rank, has length = <each>    
+    Mustdo   = comm.scatter(work, root = 0)  #any <Mustdo> received by any rank, has length = <each>
+        
 
     
     # Defines ancyllary quantities for easier access to data
@@ -591,7 +580,6 @@ if __name__ == "__main__":
     imagy  = MTR * MTR
     MTR2   = 2* MTR * MTR
     
-   
     # Array initialization
     filament      = np.zeros(ntot,'complex')    
     Dmod2 = np.zeros(ntot)
@@ -613,7 +601,7 @@ if __name__ == "__main__":
     #    
     #    for j in range(len(Fmod[1])):
     #        Fmod[1][j] = 1.0
-    #	    Fpha[1][j] = 0.0
+    #        Fpha[1][j] = 0.0
     ########################################
     
     ##########################
@@ -624,40 +612,40 @@ if __name__ == "__main__":
      
         for nn in range(MTR):  #every part consists of MTR subparts
                 
-            filament[SH1:SH1+nslice] = Mustdo[(count)*MTR*nslice*2+nn*nslice*2:(count)*MTR*nslice*2+nn*nslice*2+nslice] + 1j*Mustdo[(count)*MTR*nslice*2+nn*nslice*2+nslice:(count)*MTR*nslice*2+nn*nslice*2+2*nslice]  #filament definition. This is <ntot> long in order to reach resolution; <filament> lives in the time domain	    	    
-	    ftfil  = np.roll(fft.fftshift(fft.fft(filament)), -int(mult/2) )                #The final roll is because fftshift treats differently depending on the length of the array. When filtering with increased resolution, an extra-roll is needed                                    #ftfil is the FT of <filament>: we filter in the frequency domain. When mult = 1, roll basically does nothing	    
+            filament[SH1:SH1+nslice] = Mustdo[(count)*MTR*nslice*2+nn*nslice*2:(count)*MTR*nslice*2+nn*nslice*2+nslice] + 1j*Mustdo[(count)*MTR*nslice*2+nn*nslice*2+nslice:(count)*MTR*nslice*2+nn*nslice*2+2*nslice]  #filament definition. This is <ntot> long in order to reach resolution; <filament> lives in the time domain
+            ftfil  = np.roll(fft.fftshift(fft.fft(filament)), -int(mult/2) )                #The final roll is because fftshift treats differently depending on the length of the array. When filtering with increased resolution, an extra-roll is needed                                    #ftfil is the FT of <filament>: we filter in the frequency domain. When mult = 1, roll basically does nothing
             Dmod   = np.abs(ftfil)                                                          #Modulus
             Dpha   = np.angle(ftfil)                                                        #Phase 
-	    DphaS  = DphaS + np.real(Dpha)
-	    Dmod2  = Dmod2 + abs(Dmod)**2
+            DphaS  = DphaS + np.real(Dpha)
+            Dmod2  = Dmod2 + abs(Dmod)**2
             filmodS = filmodS + abs(filament)**2
             filphaS = filphaS + np.angle(filament) 
             Tmod   = Dmod * Fmod[1]                                                         #Filtered modulus
             Tpha   = Dpha + Fpha[1]                                                         #Filtered phase                     
             Tmod2  = Tmod2 + abs(Tmod)**2		            
             TphaS  = TphaS + np.real(Tpha)			    
-            Ffilament = fft.ifft(fft.ifftshift(    np.roll(ftfil * Fmod[1]*np.exp(1j*Fpha[1]), int(mult/2))   ))  #NB: it rolls back too!   #back to the time domain                            
-	    FfilmodS = FfilmodS + abs(Ffilament)**2
-	    FfilphaS = FfilphaS + np.angle(Ffilament)                
-	    MypartR = np.append(MypartR,np.real(Ffilament[SHTOT:SHTOT+nslice]))             #Defines the output field part calculated by a certain process
-	    MypartI = np.append(MypartI,np.imag(Ffilament[SHTOT:SHTOT+nslice]))	   
-	    if rank==int(size/2.0) and count == int(each/2.0) and nn == int(MTR/2.0):
-	        f11 = open(filenamePout+'.axis.dat','w')
-	        f12 = open(filenamePphout+'.axix.dat','w')
-		ssc  = sscale(nslice, mult, ds)
-		for i in range(len(Ffilament)):	
-	            f11.write('%s ' %ssc[i] + '%s' %np.abs(Ffilament[i])**2 +'\n')
-	            f12.write('%s ' %ssc[i] + '%s' %np.angle(Ffilament[i]) +'\n')
-		f11.close()
-		f12.close()
-    
+            Ffilament = fft.ifft(fft.ifftshift(    np.roll(ftfil * Fmod[1]*np.exp(1j*Fpha[1]), int(mult/2))   ))  #NB: it rolls back too!   #back to the time domain                
+            FfilmodS = FfilmodS + abs(Ffilament)**2
+            FfilphaS = FfilphaS + np.angle(Ffilament)    
+
+            MypartR = np.append(MypartR,np.real(Ffilament[SHTOT:SHTOT+nslice]))             #Defines the output field part calculated by a certain process
+            MypartI = np.append(MypartI,np.imag(Ffilament[SHTOT:SHTOT+nslice]))
+        
+            if rank==int(size/2.0) and count == int(each/2.0) and nn == int(MTR/2.0):
+                f11 = open(filenamePout+'.axis.dat','w')
+                f12 = open(filenamePphout+'.axix.dat','w')
+                ssc  = sscale(nslice, mult, ds)
+                for i in range(len(Ffilament)):	
+                    f11.write('%s ' %ssc[i] + '%s' %np.abs(Ffilament[i])**2 +'\n')
+                    f12.write('%s ' %ssc[i] + '%s' %np.angle(Ffilament[i]) +'\n')
+                f11.close()
+                f12.close()
+
     #############################################
     # Gets partial quantities back to process 0 #
     #############################################	    
     
     comm.Barrier()
-    
-    #print MypartR
     
     ResFfilR      = comm.gather(MypartR, root = 0)   
     ResFfilI      = comm.gather(MypartI, root = 0)
@@ -681,22 +669,15 @@ if __name__ == "__main__":
         
     if rank == 0: #Process 0 now puts all together; all other processes are idle from now on
         
-	print 'Putting data together...'
+        print 'Putting data together...'
         
         print 'SHTOT', SHTOT*ds
-	print 'SHTOT+nslice',(SHTOT+nslice)*ds
-	print 'nslice*ds',nslice*ds
-	print 'size ',size
-	print 'MTR ',MTR
-	print 'each ',each
-	print 'nslice ',nslice
-	print 'size*MTR*each ', size*MTR*each
-	print len(ResFfilR)
-	print len(ResFfilR[0])
-    	ResFfilR = np.reshape(ResFfilR,(size*MTR*each,nslice))  #Reshapes 
-	ResFfilI = np.reshape(ResFfilI,(size*MTR*each,nslice))  #Reshapes 
-	
-	#############################################################################
+        print 'SHTOT+nslice',(SHTOT+nslice)*ds
+        print 'nslice*ds',nslice*ds
+        ResFfilR = np.reshape(ResFfilR,(size*MTR*each,nslice))  #Reshapes 
+        ResFfilI = np.reshape(ResFfilI,(size*MTR*each,nslice))  #Reshapes 
+
+        #############################################################################
         #                                                                           #
         # Note: Now, ResFfilR[m*MTR+n][i] or ResFfilI[m*MTR+n][i]                   #
         #                                                                           #
@@ -704,62 +685,60 @@ if __name__ == "__main__":
         # at transverse position identified by m (0.. MTR-1) and n (0.. MTR-1)      #
         # and longitudinal position i (0.. nslice-1).                               #
         # The other possible values of m are filled up with zeros and are a         # 
-	# consequence of the need to divide the work equally to proceess            #
+        # consequence of the need to divide the work equally to proceess            #
         #                                                                           #
         #############################################################################
 
-	for n in range(MTR):
-	    for m in range(MTR):
-	        slices[0:nslice,n,m] = ResFfilR[m*MTR+n][0:nslice] + 1j * ResFfilI[m*MTR+n][0:nslice]
-	        
-	    
+        for n in range(MTR):
+            for m in range(MTR):
+                slices[0:nslice,n,m] = ResFfilR[m*MTR+n][0:nslice] + 1j * ResFfilI[m*MTR+n][0:nslice]
+
+
         for i in range(nslice):
             slices[i] = np.roll(slices[i],-int(SHX[i]),axis=0)
   
-	
-    	
-	#######################
-	# Print data to files #
-	#######################
-	
-	
-        print 'Writing radiation file...'
-	print nslice
-	print len(slices)
-	
+    
+    #######################
+    # Print data to files #
+    #######################
+    
+    
+    #print 'Writing radiation file...'
+    #print nslice
+    #print len(slices)
+    
     #nslice = 1856
-    writeRadiationFile_mpi(comm, filenameF, slices, [nslice, MTR, MTR])
+    #writeRadiationFile_mpi(comm, filenameF, slices, [nslice, MTR, MTR])
+    
+    
     '''
     confirmedok = 1
-    while (confirmedok != 0):	    
+    while (confirmedok != 0):    
         confirmedok = writeRadiationFile_mpi(comm, filenameF, slices, [nslice, MTR, MTR])
-	comm.Barrier()
-	if (rank == 0 and confirmedok != 0): print 'Writing failed; attempting once more...'
-    '''	
+    comm.Barrier()
+    if (rank == 0 and confirmedok != 0): print 'Writing failed; attempting once more...'
+    '''
     if rank == 0:
+        writeRadiationFile_my(filenameF,slices)
         print 'Writing output data to file...'
-        	
-	
-	
-    	f2 = open(filenameSphout, 'w')
-	f8 = open(filenamePout, 'w')
+        
+        f2 = open(filenameSphout, 'w')
+        f8 = open(filenamePout, 'w')
         f9 = open(filenamePphout, 'w')
         f10 = open(filenameSout, 'w')
-	
-	print 'This is the new version'
-	print 'fin s =',ssc[-1]
-	print 'in s = ',ssc[0]
 
-	for i in range(len(k)):	              
+        print 'This is the new version'
+        print 'fin s =',ssc[-1]
+        print 'in s = ',ssc[0]
+
+        for i in range(len(k)):	              
             f2.write('%s ' %(2*np.pi/k[i]) + '%s' %sumphafafter[i] +'\n')
-	    f8.write('%s ' %ssc[i] + '%s' %sumpowafter[i] +'\n')
+            f8.write('%s ' %ssc[i] + '%s' %sumpowafter[i] +'\n')
             f9.write('%s ' %ssc[i] + '%s' %sumphatafter[i] +'\n')
-	    f10.write('%s ' %(2*np.pi/k[i]) + '%s' %sumspecafter[i] +'\n')
-	    
-	f2.close()
-    	f8.close()
-    	f9.close()
-    	f10.close()
-	
-	print 'End of parallel filtering procedure.'
-	
+            f10.write('%s ' %(2*np.pi/k[i]) + '%s' %sumspecafter[i] +'\n')
+        f2.close()
+        f8.close()
+        f9.close()
+        f10.close()
+    
+        print 'End of the new parallel filtering procedure.'

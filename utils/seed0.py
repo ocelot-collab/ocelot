@@ -64,18 +64,18 @@ def filterfield(filename       = 'D:/Genesis/test_data/simulation.gout.dfl',
                 filenameP      = 'D:\Python\Scripts\Genesis - scripts\PhaseT_fig.dat',
                 filenameMR     = 'D:\Python\Scripts\Genesis - scripts\ModT_RES.dat',
                 filenamePR     = 'D:\Python\Scripts\Genesis - scripts\PhaseT_RES.dat',
-                filenamePin    = 'D:\Python\Scripts\Genesis - scripts\Pin.dat',
-                filenamePphin  = 'D:\Python\Scripts\Genesis - scripts\Phin.dat',
-                filenameSin    = 'D:\Python\Scripts\Genesis - scripts\Sin.dat',
-                filenameSphin  = 'D:\Python\Scripts\Genesis - scripts\Sphin.dat',
+                #filenamePin    = 'D:\Python\Scripts\Genesis - scripts\Pin.dat',
+                #filenamePphin  = 'D:\Python\Scripts\Genesis - scripts\Phin.dat',
+                #filenameSin    = 'D:\Python\Scripts\Genesis - scripts\Sin.dat',
+                #filenameSphin  = 'D:\Python\Scripts\Genesis - scripts\Sphin.dat',
                 filenamePout   = 'D:\Python\Scripts\Genesis - scripts\Pout.dat',
                 filenamePphout = 'D:\Python\Scripts\Genesis - scripts\Pphout.dat',
                 filenameSout   = 'D:\Python\Scripts\Genesis - scripts\Sout.dat',
                 filenameSphout = 'D:\Python\Scripts\Genesis - scripts\Sphout.dat',
-		filenamePout_S   = 'D:\Python\Scripts\Genesis - scripts\Pout.dat',
-                filenamePphout_S = 'D:\Python\Scripts\Genesis - scripts\Pphout.dat',
-                filenameSout_S   = 'D:\Python\Scripts\Genesis - scripts\Sout.dat',
-                filenameSphout_S = 'D:\Python\Scripts\Genesis - scripts\Sphout.dat',
+                #filenamePout_S   = 'D:\Python\Scripts\Genesis - scripts\Pout.dat',
+                #filenamePphout_S = 'D:\Python\Scripts\Genesis - scripts\Pphout.dat',
+                #filenameSout_S   = 'D:\Python\Scripts\Genesis - scripts\Sout.dat',
+                #filenameSphout_S = 'D:\Python\Scripts\Genesis - scripts\Sphout.dat',
                 lam0 = 1.5011699558999657e-10,
                 MTR = 51,
                 mult = 21,
@@ -153,18 +153,18 @@ def filterfield(filename       = 'D:/Genesis/test_data/simulation.gout.dfl',
     print filenameP     
     print filenameMR    
     print filenamePR    
-    print filenamePin   
-    print filenamePphin  
-    print filenameSin    
-    print filenameSphin  
+    #print filenamePin   
+    #print filenamePphin  
+    #print filenameSin    
+    #print filenameSphin  
     print filenamePout   
     print filenamePphout 
     print filenameSout   
     print filenameSphout 
-    print filenamePout_S  
-    print filenamePphout_S 
-    print filenameSout_S  
-    print filenameSphout_S
+    #print filenamePout_S  
+    #print filenamePphout_S 
+    #print filenameSout_S  
+    #print filenameSphout_S
      
     ########################
     # Reads radiation file #
@@ -178,20 +178,30 @@ def filterfield(filename       = 'D:/Genesis/test_data/simulation.gout.dfl',
     print 'Prepare for filtering...'
     
     nslice = len(slices)   #better use the number in Genesis input file though!
-    flat = np.ravel(slices) #This 64bit version uses a flattened array of data to make the procedure more time-efficient
+    #flat = np.ravel(slices) #This 64bit version uses a flattened array of data to make the procedure more time-efficient
    
     
     ######################	
     # Defines the filter #
     ######################
     
-    ntot = int(nslice*mult)
-    print ntot
+    ntot = nslice*mult
+    ntot_old = ntot
+    
     if ntot/2-nslice/2 + SHF < 0: ntot = (-SHF+nslice/2)*2 + 1
-    print ntot
     ntot = int(pow(2,np.ceil(np.log(1.0*ntot)/np.log(2.0))))
-    #if ntot2/2 > ntot*1.1 : ntot = ntot###################### 
-    print ntot 
+    
+    dk_old = dk
+    #print dk, ' ',dk_old
+    #print ntot_old,' ',ntot
+    
+    dk = dk_old * ntot_old/ntot
+    #ntot_old -> nslice_old*mult
+    #print dk
+    
+    
+    #print ntot 
+   
     
  
     k  = kscale(ntot, k0, dk)
@@ -212,7 +222,7 @@ def filterfield(filename       = 'D:/Genesis/test_data/simulation.gout.dfl',
     #     and ancillary quantities    #
     ###################################
 
-    filament      = np.zeros(ntot,'complex')
+    filament      = np.zeros(ntot,'complex128')
     sumpowbefore  = np.zeros(ntot)
     sumpowafter   = np.zeros(ntot)
     sumspecbefore = np.zeros(ntot)
@@ -224,8 +234,8 @@ def filterfield(filename       = 'D:/Genesis/test_data/simulation.gout.dfl',
     SHX = np.zeros(nslice)
     for i in range(nslice):
         SHX[i] = np.floor(np.abs(ssc[i-ntot/2-nslice/2 + SHF])*dr)
-	
-    #############	
+
+    #############
     # Filtering #
     #############
         
@@ -260,29 +270,29 @@ def filterfield(filename       = 'D:/Genesis/test_data/simulation.gout.dfl',
     for nn in range(MTR):
         print 'Number ', nn, ' of ',MTR,' done.'
         for mm in range(MTR):
-	    
-            transv = mm * MTR + nn
-	    
-            filament[SH1:SH1+nslice] = slices[0:nslice,mm,nn]
+           
+            #transv = mm * MTR + nn
+           
+            filament[SH1:SH1+nslice] = slices[0:nslice,nn,mm]
             ftfil = np.fft.fftshift(pyfftw.interfaces.numpy_fft.fft(filament, overwrite_input=False, planner_effort='FFTW_MEASURE', threads=ncores))
-
-	    
-	    ##ftfil = np.fft.fftshift(np.fft.fft(filament))
-	    
+            
+            #ftfil = np.fft.fftshift(np.fft.fft(filament))
+            
+           
             Dmod   = np.abs(ftfil)
             Dpha   = np.angle(ftfil)
             Tmod   = Dmod * Fmod[1] 
             Tpha   = Dpha + Fpha[1]	    
             
-	    finput = fft.ifftshift(ftfil*Fmod[1]*np.exp(1j*Fpha[1]))
-
+            finput = fft.ifftshift(ftfil*Fmod[1]*np.exp(1j*Fpha[1]))
+           
             Ffilament = pyfftw.interfaces.numpy_fft.ifft(finput, overwrite_input=False, planner_effort='FFTW_MEASURE', threads=ncores)
-	    #Ffilament = np.fft.ifft(fft.ifftshift(ftfil*Fmod[1]*np.exp(1j*Fpha[1])))
-	    
-	    
-	    slices[0:nslice,mm,nn] =  Ffilament[SHTOT:SHTOT+nslice]	    
+            #Ffilament = np.fft.ifft(fft.ifftshift(ftfil*Fmod[1]*np.exp(1j*Fpha[1])))
+
+
+            slices[0:nslice,nn,mm] =  Ffilament[SHTOT:SHTOT+nslice]
             sumpowbefore  = sumpowbefore  + abs(filament)**2
-            sumpowafter   = sumpowafter   + abs(Ffilament)**2	    
+            sumpowafter   = sumpowafter   + abs(Ffilament)**2    
             sumphatbefore = sumphatbefore  + np.angle(filament)
             sumphatafter  = sumphatafter   + np.angle(Ffilament)
             sumspecbefore = sumspecbefore + abs(Dmod)**2
@@ -298,7 +308,7 @@ def filterfield(filename       = 'D:/Genesis/test_data/simulation.gout.dfl',
     for i in range(nslice):
         slices[i] = np.roll(slices[i],-int(SHX[i]),axis=0)
 
-	
+
     #######################
     # Print data to files #
     #######################
@@ -309,46 +319,46 @@ def filterfield(filename       = 'D:/Genesis/test_data/simulation.gout.dfl',
     
     print 'Writing output data to file...'     
     f2 = open(filenameSphout, 'w')
-    f4 = open(filenamePin, 'w')
-    f5 = open(filenamePphin, 'w')
-    f6 = open(filenameSin, 'w')
-    f7 = open(filenameSphin, 'w')
+    #f4 = open(filenamePout, 'w')
+    #f5 = open(filenamePphin, 'w')
+    #f6 = open(filenameSin, 'w')
+    #f7 = open(filenameSphin, 'w')
     f8 = open(filenamePout, 'w')
     f9 = open(filenamePphout, 'w')
     f10 = open(filenameSout, 'w')        
-    f11 = open(filenameSphout_S, 'w')        
-    f12 = open(filenamePout_S, 'w')
-    f13 = open(filenamePphout_S, 'w')
-    f14 = open(filenameSout_S, 'w') 
+    #f11 = open(filenameSphout_S, 'w')        
+    #f12 = open(filenamePout_S, 'w')
+    #f13 = open(filenamePphout_S, 'w')
+    #f14 = open(filenameSout_S, 'w') 
     
     for i in range(len(k)):
         ##f1.write('%s ' %(2*np.pi/k[i]) + '%s' %Fmod[1][i] +'\n')
         f2.write('%s ' %(2*np.pi/k[i]) + '%s' %sumphafafter[i] +'\n')
         ##f3.write('%s ' %(2*np.pi/k[i]) + '%s' %Fpha[1][i] +'\n')
-        f4.write('%s ' %ssc[i] + '%s' %sumpowbefore[i] +'\n')
-        f5.write('%s ' %ssc[i] + '%s' %sumphatbefore[i] +'\n')
-        f6.write('%s ' %(2*np.pi/k[i]) + '%s' %sumspecbefore[i] +'\n')
-        f7.write('%s ' %(2*np.pi/k[i]) + '%s' %sumphafbefore[i] +'\n')
+        #f4.write('%s ' %ssc[i] + '%s' %sumpowbefore[i] +'\n')
+        #f5.write('%s ' %ssc[i] + '%s' %sumphatbefore[i] +'\n')
+        #f6.write('%s ' %(2*np.pi/k[i]) + '%s' %sumspecbefore[i] +'\n')
+        #f7.write('%s ' %(2*np.pi/k[i]) + '%s' %sumphafbefore[i] +'\n')
         f8.write('%s ' %ssc[i] + '%s' %sumpowafter[i] +'\n')
         f9.write('%s ' %ssc[i] + '%s' %sumphatafter[i] +'\n')
-	f10.write('%s ' %(2*np.pi/k[i]) + '%s' %sumspecafter[i] +'\n')
-        if i in range(nslice):	     
-	    f11.write('%s ' %(2*np.pi/k[i]) + '%s' %sumphafafter[i] +'\n')
-            f12.write('%s ' %ssc[i] + '%s' %sumpowafter[i] +'\n')
-            f13.write('%s ' %ssc[i] + '%s' %sumphatafter[i] +'\n')
-            f14.write('%s ' %(2*np.pi/k[i]) + '%s' %sumspecafter[i] +'\n')          
+        f10.write('%s ' %(2*np.pi/k[i]) + '%s' %sumspecafter[i] +'\n')
+        #if i in range(nslice):
+        #    f11.write('%s ' %(2*np.pi/k[i]) + '%s' %sumphafafter[i] +'\n')
+        #    f12.write('%s ' %ssc[i] + '%s' %sumpowafter[i] +'\n')
+        #    f13.write('%s ' %ssc[i] + '%s' %sumphatafter[i] +'\n')
+        #    f14.write('%s ' %(2*np.pi/k[i]) + '%s' %sumspecafter[i] +'\n')          
     f2.close()
-    f4.close()
-    f5.close()
-    f6.close()
-    f7.close()
+    #f4.close()
+    #f5.close()
+    #f6.close()
+    #f7.close()
     f8.close()
     f9.close()
     f10.close()
-    f11.close()
-    f12.close()
-    f13.close()
-    f14.close()
+    #f11.close()
+    #f12.close()
+    #f13.close()
+    #f14.close()
      
     print 'End of single process field filtering. Recommended on 64bit processors.'
     

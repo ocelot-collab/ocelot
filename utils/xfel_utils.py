@@ -111,7 +111,7 @@ def rematch(beta_mean, l_fodo, qdh, lat, extra_fodo, beam, qf, qd):
     beam.beta_y, beam.alpha_y = tw0m.beta_y, tw0m.alpha_y
 
 
-def run(inp, launcher,readall=True,dfl_slipage_incl=True):
+def run(inp, launcher,readall=False,dfl_slipage_incl=True):
     # inp               - GenesisInput() object with genesis input parameters
     # launcher          - MpiLauncher() object obtained via get_genesis_launcher() function
     # readall           - Parameter to read and calculate all _slice_ values from the output. 

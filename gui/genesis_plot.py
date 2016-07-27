@@ -1137,7 +1137,7 @@ def gen_stat_plot(proj_dir,run_inp=range(1,1+5),stage=1,param_inp=['p_int','ener
                 plt.xlabel('z [m]')
                 plt.ylabel(dict_name.get(param,param)+' '+dict_unit.get(param,param))
                 if savefig!=False:
-                    print('      saving to ',saving_path+s_fig_name+'.'+savefig)
+                    print('      saving to '+saving_path+s_fig_name+'.'+savefig)
                     plt.savefig(saving_path+s_fig_name+'.'+savefig,format=savefig)
                 if saveval!=False:
                     np.savetxt(saving_path+s_fig_name+'.txt', vstack([outlist[irun].z,mean(s_value,0),s_value]).T,fmt="%E", newline='\n',comments='')
@@ -1177,7 +1177,7 @@ def gen_stat_plot(proj_dir,run_inp=range(1,1+5),stage=1,param_inp=['p_int','ener
                 plt.xlabel('s [um]')
             plt.ylabel(dict_name.get(param,param)+' '+dict_unit.get(param,param))
             if savefig!=False:
-                print('      saving to ',saving_path+z_fig_name+'.'+savefig)
+                print('      saving to '+saving_path+z_fig_name+'.'+savefig)
                 plt.savefig(saving_path+z_fig_name+'.'+savefig,format=savefig)
             if saveval!=False:
                 if param=='spec':

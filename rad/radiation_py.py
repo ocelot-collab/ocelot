@@ -1,14 +1,10 @@
 __author__ = 'Sergey Tomin'
 
-from time import time
-
 from scipy import interpolate
 
-from spline_py import *
-from ocelot.cpbd.optics import *
-from ocelot.cpbd.track import *
 from ocelot.cpbd.elements import *
-import matplotlib.pyplot as plt
+from ocelot.cpbd.track import *
+from ocelot.rad.spline_py import *
 
 
 class Motion:
@@ -167,7 +163,7 @@ def track4rad(beam, lat, energy_loss = False, quantum_diff = False):
     for elem in lat.sequence:
         if elem.l == 0:
             continue
-        if elem.type != "undulator":
+        if elem.__class__ != Undulator:
             non_u.append(elem)
             U0 = 0.
         else:
@@ -180,7 +176,7 @@ def track4rad(beam, lat, energy_loss = False, quantum_diff = False):
                     N = 500
                     for z in linspace(L, lat_el.totalLen + L, num=N):
                         h = lat_el.totalLen/(N)
-                        track(lat_el, [p], h, navi)
+                        tracking_step(lat_el, [p], h, navi)
                         #print p.s
                         ui = [p.x, p.px, p.y, p.py, z, sqrt(1. - p.px*p.px - p.py *p.py), 0., 0., 0.]
                         u.extend(ui)
@@ -307,7 +303,7 @@ def radiation_py(gamma, traj, screen, tmp):
     #gamma = gamma
 
     size = len(motion.z)
-    Nmotion = (size + 1)/3
+    Nmotion = int((size + 1)/3)
     half_step = (motion.z[-1]-motion.z[0])/2./(Nmotion-1)
     #plot(motion.z, motion.x, "r.-")
     #show()
@@ -334,6 +330,7 @@ def radiation_py(gamma, traj, screen, tmp):
         screen.arImEy = screen.arImEy.reshape(shape_array)
         screen.arPhase = screen.arPhase.reshape(shape_array)
         #print screen.arPhase
+
         for n in range(Nmotion-1):
             #print "n = ", n
             screen = gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step, tmp)
@@ -343,7 +340,7 @@ def radiation_py(gamma, traj, screen, tmp):
         screen.arImEy = screen.arImEy.flatten()
         screen.arPhase = screen.arPhase.flatten()
     else:
-        print "SR 3D calculation"
+        print( "SR 3D calculation")
         arReEx = np.array([])
         arImEx = np.array([])
         arReEy = np.array([])
@@ -419,5 +416,5 @@ if __name__ == "__main__":
     quantum_diffusion(17.5, 4., 0.04, 200. ,quantum_diff=True)
     x = np.linspace(0, 1, 4)
     xnew = x2xgaus(x)
-    print x
-    print xnew
+    print( x)
+    print( xnew)

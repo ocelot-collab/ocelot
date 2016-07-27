@@ -51,6 +51,9 @@ def Ephoton2field(energy, lu = 0.04, Eeb = 14):
     field = K*2.*pi*m_e_eV/(lu*speed_of_light)
     return field
 
+def lambda2Ebeam(Lambda = 10.4e-9, lu=0.0272, K=1.2392):
+    gamma = sqrt(lu/(2.*Lambda)*(1. + K*K/2.))
+    return gamma*m_e_GeV
 
 class ID_radiation:
     def __init__(self, beam, undulator):
@@ -227,7 +230,7 @@ class UndulatorParameters:
 
         self.fundamentalWavelength = self.lw / (2*self.gamma**2) * (1+ self.K**2 / 2.0 + self.gamma**2 * theta)
 
-        print 'test', h_eV_s*speed_of_light / self.fundamentalWavelength
+        print( 'test', h_eV_s*speed_of_light / self.fundamentalWavelength)
 
         return w1, w, I
 
@@ -241,20 +244,20 @@ class UndulatorParameters:
 
         self.recalculate()
 
-        print "Undulator parameters:"
-        print "L=", self.L
-        print "gamma(electron)=", self.gamma
-        print "K=", self.K
-        print "B[T]=", self.B
+        print( "Undulator parameters:")
+        print( "L=", self.L)
+        print( "gamma(electron)=", self.gamma)
+        print( "K=", self.K)
+        print( "B[T]=", self.B)
 
         w1, _, _ = self.computeRadiationAnalytical(200.0, 0.0, 0)
 
-        print "Radiation parameters:"
-        print "w1(first harmonic, zero angle)=", w1, "Hz/2pi", h_eV_s*w1/(2*np.pi), "[eV]", self.fundamentalWavelength, "m"
+        print ("Radiation parameters:")
+        print ("w1(first harmonic, zero angle)=", w1, "Hz/2pi", h_eV_s*w1/(2*np.pi), "[eV]", self.fundamentalWavelength, "m")
 
         t = self.L / speed_of_light
         cb = 379.35 # 1/(gev sec Tesla^2)
 
         eloss = self.E - self.E / (1.0 + 0.5*self.B*self.B*cb*self.E*t)
 
-        print "Total energy loss [Gev]", eloss
+        print( "Total energy loss [Gev]", eloss)

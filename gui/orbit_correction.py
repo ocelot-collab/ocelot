@@ -1,19 +1,13 @@
 __author__ = 'Sergey Tomin'
 
-
-import sys, os, random
+import cPickle
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
-from matplotlib.lines import Line2D
-import matplotlib
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
-from matplotlib.figure import Figure
-from numpy import linspace, sin, random
+
 from ocelot.cpbd.orbit_correction import *
-from ocelot.cpbd.elements import *
-import numpy as np
-import cPickle
+
 
 class SuperOrbit(QObject):
     def __init__(self):
@@ -49,7 +43,7 @@ class SuperOrbit(QObject):
         #print self.z
 
     def find_resp(self):
-        self.orbit.ideal_response_matrix(self.lat_errors)
+        self.orbit.ring_response_matrix(self.lat_errors)
         #real_resp = measure_response_matrix(orbit, lat_errors)
         #orbit.resp = real_resp
         self.emit(SIGNAL("resp_ok()"))

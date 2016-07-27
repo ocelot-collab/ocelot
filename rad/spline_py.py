@@ -85,7 +85,7 @@ def cspline_coef(x, y):
     d = np.zeros(n-1)
     z = np.zeros(n-1)
     if(n<4):
-        print "too short massive. Length must be > 3"
+        print( "too short massive. Length must be > 3")
         return 0
     M = moment(x, y)
     #print M
@@ -129,7 +129,7 @@ if __name__ == "__main__":
     y = np.array([f(xi) for xi  in x])
     start = time()
     A,B,C,D,Z = cspline_coef(x, y)
-    print time() - start
+    print( time() - start)
     #print D
     x_new = np.linspace(-1.1, 1.1, 1000)
     y_new = cinterp(x, y, x_new)
@@ -150,6 +150,6 @@ if __name__ == "__main__":
 
         return array(beta2)
     y2 = integ_beta2(x, y)
-    print len(y2), len(x), len(y)
+    print( len(y2), len(x), len(y) )
     plot(x, x/2. - 1./4.*sin(2*x), x, y2)
     show()

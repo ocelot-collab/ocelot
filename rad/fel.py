@@ -2,14 +2,14 @@
 basic fel calculations
 '''
 
-from pylab import *
+#from pylab import *
 import numpy as np
 import numpy.fft as fft
 import scipy.special as sf
-from matplotlib.figure import Figure
-from mpl_toolkits.mplot3d import Axes3D
+#from matplotlib.figure import Figure
+#from mpl_toolkits.mplot3d import Axes3D
 
-import fel
+#import fel
 
 class FelParameters:
     def __init__(self):

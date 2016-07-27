@@ -5,30 +5,30 @@ from pylab import *
 from copy import deepcopy
 from scipy.optimize import *
 
-D0 = Drift (l = 0., id = "D0")
-D1 = Drift (l = 1.49, id = "D1")
-D2 = Drift (l = 0.1035, id = "D2")
-D3 = Drift (l = 0.307, id = "D3")
-D4 = Drift (l = 0.33, id = "D4")
-D5 = Drift (l = 0.3515, id = "D5")
-D6 = Drift (l = 0.3145, id = "D6")
-D7 = Drift (l = 0.289, id = "D7")
-D8 = Drift (l = 0.399, id = "D8")
-D9 = Drift (l = 3.009/2., id = "D9")
+D0 = Drift (l = 0., eid= "D0")
+D1 = Drift (l = 1.49, eid= "D1")
+D2 = Drift (l = 0.1035, eid= "D2")
+D3 = Drift (l = 0.307, eid= "D3")
+D4 = Drift (l = 0.33, eid= "D4")
+D5 = Drift (l = 0.3515, eid= "D5")
+D6 = Drift (l = 0.3145, eid= "D6")
+D7 = Drift (l = 0.289, eid= "D7")
+D8 = Drift (l = 0.399, eid= "D8")
+D9 = Drift (l = 3.009/2., eid= "D9")
 
-SF = Sextupole(l = 0, ms = 1.7673786254063251, id = "SF")
-SD = Sextupole(l = 0, ms = -3.6169817233025707, id = "SD")
+SF = Sextupole(l = 0.01, k2 = 176.73786254063251, eid= "SF")
+SD = Sextupole(l = 0.01, k2 = -361.69817233025707, eid= "SD")
 
 
-Q1 = Quadrupole (l = 0.293, k1 = 2.62, id = "Q1")
-Q2 = Quadrupole (l = 0.293, k1 = -3.1, id = "Q2")
-Q3 = Quadrupole (l = 0.327, k1 = 2.8, id = "Q3")
-Q4 = Quadrupole (l = 0.291, k1 = -3.7, id = "Q4")
-Q5 = Quadrupole (l = 0.391, k1 = 4.0782, id = "Q5")
-Q6 = Quadrupole (l = 0.291, k1 = -3.534859, id = "D6")
+Q1 = Quadrupole (l = 0.293, k1 = 2.62, eid= "Q1")
+Q2 = Quadrupole (l = 0.293, k1 = -3.1, eid= "Q2")
+Q3 = Quadrupole (l = 0.327, k1 = 2.8, eid= "Q3")
+Q4 = Quadrupole (l = 0.291, k1 = -3.7, eid= "Q4")
+Q5 = Quadrupole (l = 0.391, k1 = 4.0782, eid= "Q5")
+Q6 = Quadrupole (l = 0.291, k1 = -3.534859, eid= "D6")
 
-B1 = SBend(l = 0.23, angle = 0.23/19.626248, id  = "B1")
-B2 = SBend(l = 1.227, angle = 1.227/4.906312, id = "B2")
+B1 = SBend(l = 0.23, angle = 0.23/19.626248, eid= "B1")
+B2 = SBend(l = 1.227, angle = 1.227/4.906312, eid= "B2")
 
 #und = Undulator (nperiods=200,lperiod=0.07,Kx = 0.49, id = "und")
 #und.field_map.units = "mm"
@@ -42,8 +42,8 @@ superperiod = ( D9,Q6,D8,Q5,D7,Q4,D6,B1,B2,D5,Q3,D5,B2,B1,D4,SD,D2,Q2,D3,Q1,D2,S
 
 
 
-m1 = Monitor(id="start")
-m2 = Monitor(id="end")
+m1 = Monitor(eid="start")
+m2 = Monitor(eid="end")
 
 dba = (m1,superperiod,m2)
 

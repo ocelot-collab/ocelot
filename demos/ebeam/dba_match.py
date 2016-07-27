@@ -5,9 +5,9 @@ from pylab import *
 
 d0 = Drift(l=1.0)
 d1 = Drift(l=2.5)
-b1 = RBend (l=3.0, angle=15./180.*3.14, id = "b1")
+b1 = RBend (l=3.0, angle=15./180.*3.14, eid= "b1")
 d2 = Drift(l=1.0)
-b2 = RBend (l=3.0, angle=15./180.*3.14, id = "b2")
+b2 = RBend (l=3.0, angle=15./180.*3.14, eid= "b2")
 
 
 q1 = Quadrupole(l=0.1, k1=2.0)
@@ -17,8 +17,8 @@ q4 = Quadrupole(l=0.1, k1=-2)
 q5 = Quadrupole(l=0.1, k1=-3.0)
 q6 = Quadrupole(l=0.1, k1=1.0)
 
-m1 = Monitor(id="start")
-m2 = Monitor(id="end")
+m1 = Monitor(eid="start")
+m2 = Monitor(eid="end")
 
 dba = (m1,d0,q1, d2, q2, d1, b1, d2, q3, d0, q4, d1, q4,d0, q3, d2, b1, d1, q2, d2, q1,d0,m2)
 
@@ -51,6 +51,8 @@ constr = {m1:{'Dx':0.0, 'Dxp':0.0, 'beta_x':30.0, 'beta_y':30.0}, m2:{'beta_x':3
 #vars = [q1,q2,q3,q5,q6, [tw0, 'beta_x'], [tw0, 'beta_y']]
 vars = [q1,q2,q3, [tw0, 'beta_x'], [tw0, 'beta_y'], [tw0, 'alpha_x'], [tw0, 'alpha_y'], [tw0, 'Dx'], [tw0, 'Dxp']]
 #vars = [q1,q2,q3,q5,q6, [tw0, 'beta_x'], [tw0, 'beta_y'], [tw0, 'alpha_x'], [tw0, 'alpha_y']]
+#vars = [q1,q2,q3]
+
 
 match(lat, constr, vars, tw0)
 

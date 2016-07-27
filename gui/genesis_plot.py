@@ -5,20 +5,20 @@ user interface for viewing genesis simulation results
 import sys, os, csv
 import time
 import matplotlib
-from matplotlib.figure import Figure
-from mpl_toolkits.mplot3d import Axes3D
+#from matplotlib.figure import Figure
+#from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy import matlib
+from numpy import *
+from ocelot.adaptors.genesis import *
+#from pylab import * #tmp
 
-from pylab import * #tmp
-
-# font = {'family' : 'normal',
+#font = {'family' : 'normal',
 #        'weight' : 'bold',
 #        'size'   : 20}
-params = {'backend': 'ps', 'axes.labelsize': 15, 'font.size': 15, 'legend.fontsize': 24, 'xtick.labelsize': 19,  'ytick.labelsize': 19, 'text.usetex': True}
-rcParams.update(params)
-rc('text', usetex=True) # required to have greek fonts on redhat
+#params = {'backend': 'ps', 'axes.labelsize': 15, 'font.size': 15, 'legend.fontsize': 24, 'xtick.labelsize': 19,  'ytick.labelsize': 19, 'text.usetex': True}
+#rcParams.update(params)
+#rc('text', usetex=True) # required to have greek fonts on redhat
 
 font = {'family' : 'normal',
         'weight' : 'normal',
@@ -1084,6 +1084,108 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
         return [xy_proj,yz_proj,xz_proj,x,y,z]
     else:
         return fig
+        
+        
+        
+        
+def gen_stat_plot(proj_dir,run_inp=range(1,1+5),stage=1,param_inp=['p_int','energy','el_e_spread','el_energy','bunching','spec'],s_inp=[1.e-6,'max','mean'], z_inp=[0,'end'], savefig=1, saveval=1, show=0):
+
+    import copy
+
+    dict_name={'p_int':'radiation power','energy': 'radiation pulse energy','el_e_spread': 'el.beam energy spread','el_energy': 'el.beam energy average','bunching': 'el.beam bunching','spec': 'radiation on-axis spectral density','r_size':'radiation transverse size','xrms':'el.beam x size','yrms':'el.beam y size','error':'genesis simulation error'}
+    dict_unit={'p_int':'[W]','energy': '[J]','el_e_spread': '[?]','el_energy': '[?]','bunching': '','spec': '[arb.units]','r_size':'[m]','xrms':'[m]','yrms':'[m]','error':''}    
+    
+    outlist=[GenesisOutput() for i in range(np.amax(run_inp)+1)]
+    
+    for irun in run_inp:
+        out_file=proj_dir+'run_'+str(irun)+'/run.'+str(irun)+'.s'+str(stage)+'.gout'
+        outlist[irun] = readGenesisOutput(out_file,readall=1)
+    
+    if savefig!=False or saveval!=False:
+        if savefig==True:
+            savefig='png'
+        saving_path=proj_dir+'plots/'
+        if not os.path.isdir(saving_path):
+            os.makedirs(saving_path)
+            
+    for param in param_inp:
+        for s_ind in s_inp:  
+            s_value=[]
+            s_fig_name='Z__'+dict_name.get(param,param).replace(' ','_')+'__'+str(s_ind)
+            for irun in run_inp:
+                if not hasattr(outlist[irun],param):
+                    break      
+                else:
+                    param_matrix=copy.deepcopy(getattr(outlist[irun],param))        
+                if len(param_matrix) == len(outlist[irun].z):
+                    s_value.append(param_matrix)
+                else:
+                    if s_ind=='max':
+                        s_value.append(np.amax(param_matrix,axis=0))
+                    elif s_ind=='mean':
+                        s_value.append(np.mean(param_matrix,axis=0))
+                    else:
+                        si=np.where(outlist[irun].s<=s_ind)[-1][-1]
+                        s_value.append(param_matrix[si,:])
+            if s_value!=[]:
+                fig=plt.figure(s_fig_name)
+                fig.clf()  
+                fig=plt.plot(outlist[irun].z,swapaxes(s_value,0,1),'0.8', linewidth=1)
+                fig=plt.plot(outlist[irun].z,mean(s_value,0),'k', linewidth=2)
+                #fig[0].axes.get_yaxis().get_major_formatter().set_scientific(True)
+                #plt.ticklabel_format(style='sci')
+                plt.xlabel('z [m]')
+                plt.ylabel(dict_name.get(param,param)+' '+dict_unit.get(param,param))
+                if savefig!=False:
+                    print('      saving to '+saving_path+s_fig_name+'.'+savefig)
+                    plt.savefig(saving_path+s_fig_name+'.'+savefig,format=savefig)
+                if saveval!=False:
+                    np.savetxt(saving_path+s_fig_name+'.txt', vstack([outlist[irun].z,mean(s_value,0),s_value]).T,fmt="%E", newline='\n',comments='')
+    
+    
+    for param in param_inp:
+        for z_ind in z_inp:
+            z_value=[]
+            z_fig_name='S__'+dict_name.get(param,param).replace(' ','_')+'__'+str(z_ind)+'__m'
+            for irun in run_inp:
+                if not hasattr(outlist[irun],param):
+                    break      
+                else:
+                    param_matrix=copy.deepcopy(getattr(outlist[irun],param))
+            
+                if len(param_matrix) == len(outlist[irun].z): #case if the array is 1D (no s/z matrix presented)
+                    break
+                else:
+                    if z_ind=='end' or z_ind==inf:
+                        z_value.append(param_matrix[:,-1]) #after undulator
+                    elif z_ind=='start':
+                        z_value.append(param_matrix[:,0]) #before undulator
+                    else:
+                        zi=np.where(outlist[irun].z<=z_ind)[-1][-1] 
+                        z_value.append(param_matrix[:,zi])
+        if z_value!=[]:
+            fig=plt.figure(z_fig_name)
+            fig.clf()
+            if param=='spec':
+                b=outlist[irun].freq_lamd*1e9
+                fig=plt.plot(outlist[irun].freq_lamd*1e9,swapaxes(z_value,0,1),'0.8')
+                fig=plt.plot(outlist[irun].freq_lamd*1e9,mean(z_value,0),'k', linewidth=2)
+                plt.xlabel('lambda [nm]')
+            else:
+                fig=plt.plot(outlist[irun].s*1e6,swapaxes(z_value,0,1),'0.8')
+                fig=plt.plot(outlist[irun].s*1e6,mean(z_value,0),'k', linewidth=2)
+                plt.xlabel('s [um]')
+            plt.ylabel(dict_name.get(param,param)+' '+dict_unit.get(param,param))
+            if savefig!=False:
+                print('      saving to '+saving_path+z_fig_name+'.'+savefig)
+                plt.savefig(saving_path+z_fig_name+'.'+savefig,format=savefig)
+            if saveval!=False:
+                if param=='spec':
+                    np.savetxt(saving_path+z_fig_name+'.txt', vstack([outlist[irun].freq_lamd*1e9,mean(z_value,0),z_value]).T,fmt="%E", newline='\n',comments='')
+                else:
+                    np.savetxt(saving_path+z_fig_name+'.txt', vstack([outlist[irun].s*1e6,mean(z_value,0),z_value]).T,fmt="%E", newline='\n',comments='')
+
+        
 
 def gen_outplot_dpa(out, dpa=None, z=[], figsize=3, legend = True, fig_name = None, auto_zoom=False, column_3d=True, save=False, show=False, return_proj=False, vartype_dfl=complex64):
     

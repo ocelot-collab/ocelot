@@ -35,7 +35,7 @@ def show_flux(screen, show = 'Total', xlim = (0,0), ylim = (0,0),  file_name = N
         D1(data, X, distance =  screen.Distance, xlabel = xlabel, xlim = xlim, ylim = ylim,  file_name = file_name, unit = unit, status = status)
     else:
         if screen.ne!=1:
-            print " ******** ERROR into show.screen ! *********** "
+            print (" ******** ERROR into show.screen ! *********** ")
             return
         D3(screen, data, distance =  screen.Distance, file_name = file_name, unit = unit)
 
@@ -66,15 +66,15 @@ def D1(data, X, distance, xlabel, xlim, ylim,  file_name, unit, status ):
         ax.set_ylabel(r"$I$, $\frac{ph}{sec mrad^2 10^{-3}BW}$")
     ax.grid(True)
 
-    ax.annotate('$\epsilon_1 = ' + str(int(energy*10)/10.) +'$', xy=(-30, -20),
-               xycoords='axes points',
+    ax.annotate('$\epsilon_1 = ' + str(int(energy*10)/10.) +'$', xy=(0.9, 0.85),
+               xycoords='axes fraction',
                horizontalalignment='right', verticalalignment='top',
                fontsize=20)
 
     power = np.floor(np.log10(maxS))
     intensity = np.around(maxS*10**(-power), 2)*10**power
-    ax.annotate('I = ' + str(intensity) , xy=(-25, -50),
-               xycoords='axes points',
+    ax.annotate('I = ' + str(intensity) , xy=(0.9, 0.93),
+               xycoords='axes fraction',
                horizontalalignment='right', verticalalignment='top',
                fontsize=15)
 
@@ -131,7 +131,7 @@ def plot3D_data(data, x = None, y = None):
     if x != None and y != None:
         X,Y = np.meshgrid(x,y)
     else:
-        print np.shape(data)
+        print( np.shape(data))
         X,Y = np.meshgrid(np.arange(np.shape(data)[1]), np.arange(np.shape(data)[0]))
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')

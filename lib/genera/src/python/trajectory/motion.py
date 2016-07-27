@@ -79,7 +79,7 @@ class Motion:
 
     def gaussIntegration(self):
         if(self.bRough>0):
-            print " gaussBetaSquare ERROR - bRough is not correct"
+            print (" gaussBetaSquare ERROR - bRough is not correct")
             return 0;
 
         size = (len(self.Z) + 1)/3;

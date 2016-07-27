@@ -3,8 +3,9 @@ __author__ = 'Sergey Tomin'
 import numpy as np
 from scipy.integrate import odeint
 from numpy import cos, sin, sqrt, sqrt, zeros, eye, tan, dot, empty_like, array, transpose, linspace
-from ocelot.common.globals import *
+from ocelot.common.globals import m_e_GeV, m_e_eV, speed_of_light
 from copy import copy
+from numpy.linalg import norm
 """
 differential equation:
 
@@ -76,7 +77,7 @@ I346 = Gy * dx*sy = h/kx2*(I34 - I314)
 """
 
 
-def t_nnn(L, h, k1, k2):
+def t_nnn(L, h, k1, k2, energy=0):
     """
     :param L:
     :param angle:
@@ -369,16 +370,27 @@ def t_nnn(L, h, k1, k2):
     T533 = t533 + 1/4.*ky2*(L - sy*cy )
     T534 = t534 - 1/2.*ky2*sy2
     T544 = t544 + (L + sy*cy)/4.
+    beta = 1.
+    if energy != 0:
+        gamma = energy/m_e_GeV
+        gamma2 = gamma*gamma
+        beta = np.sqrt(1. - 1./gamma2)
+        T[4, 5, 5] = 1.5*L/(beta*beta*gamma2)
 
     T[4, 0, 0] = T511
-    T[4, 0, 1] = T512 + h*dx
+    T[4, 0, 1] = (T512 + h*dx)
     T[4, 0, 5] = T516
-    T[4, 1, 1] = T522
+    T[4, 1, 1] = T522/beta
     T[4, 1, 5] = T526
     T[4, 5, 5] = T566
     T[4, 2, 2] = T533
-    T[4, 2, 3] = T534
+    T[4, 2, 3] = T534/beta
     T[4, 3, 3] = T544
+    if energy != 0:
+        gamma = energy/m_e_GeV
+        gamma2 = gamma*gamma
+        beta = np.sqrt(1. - 1./gamma2)
+        T[4, 5, 5] = 1.5*L/(beta*beta*gamma2)
     """
     print "T511 = ", T511
     print "T512 = ", T512
@@ -614,7 +626,7 @@ def sym_map(z, X, h, k1, k2, energy=0.):
     c4 = g_inv*g_inv/(beta*(1. + beta))
     #Y = high_order.cython_test([x, px, y, py, sigma, ps], step, h,k1, len(z_array) , (c1,c2,c3,c4), ps_beta, beta)
     #x, px, y, py, sigma, ps = Y
-    for z in xrange(len(z_array) - 1):
+    for z in range(len(z_array) - 1):
         #vec = verlet(vec, step, h, k1, k2, beta=beta, g_inv=g_inv)
         px2_py2 = px*px + py*py
         x = (x + step*px*(1. - ps_beta))/(1. - step*h*px)
@@ -695,8 +707,8 @@ def moments(bx, by, Bx, By, Bz, dzk):
     return mx, my
 
 
-def rk_track_in_field(y0, l, N, energy, mag_field):
-    z = np.linspace(0.,l, num=N)
+def rk_track_in_field(y0, l, N, energy, mag_field, s_start=0.):
+    z = np.linspace(s_start, l, num=N)
     h = z[1] - z[0]
     N = len(z)
     gamma = energy/m_e_GeV
@@ -769,11 +781,15 @@ def rk_track_in_field(y0, l, N, energy, mag_field):
     return u
 
 
-def rk_field(y0, l, N, energy, mag_field):
+def rk_field(y0, s_start, s_stop, N, energy, mag_field):
     #z = linspace(0, l, num=N)
     #h = z[1]-z[0]
     #N = len(z)
-    traj_data = rk_track_in_field(y0, l, N, energy, mag_field)
+    #print(mag_field(0,0,0))
+    if s_start > s_stop:
+        print("rk_field: s_start > s_stop. Setup s_start = 0")
+        s_start = 0.
+    traj_data = rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=s_start)
     #print np.shape(traj_data), np.shape(y0)
     #print traj_data
     y0[0::6] = traj_data[(N-1)*9 + 0,:]
@@ -1195,3 +1211,69 @@ def track_und_weave_openmp(u, l, N, kz, kx ,Kx, energy):
     )
     return u
 
+def arcline( SREin, Delta_S, dS, R_vect ):
+    """
+    Martin Dohlus DESY, 2015
+    :param SREin: trajectory. traj[0,:] - longitudinal coordinate (s),
+                             traj[1,:],traj[2,:],traj[3,:] - rectangular coordinates, (x, y, z)\
+                             traj[4,:],traj[5,:],traj[6,:] - tangential unit vectors, (x', y', z')
+    :param Delta_S:
+    :param dS:
+    :param R_vect: radius
+    :return:
+    """
+    #%arcline( sre0,Delta_S,dS,R_vect )
+
+    epsilon = 1e-8
+
+    sre0 = SREin[:,-1]
+    N = max(1, np.round(Delta_S/dS))
+    #print N
+    dS = Delta_S/N
+    SRE2 = np.zeros((7, N))
+    SRE2[0,:] = sre0[0] + np.arange(1, N+1)*dS
+
+    R_vect_valid = False
+    # if nargin==4 && isequal(size(R_vect),[3 1]):
+
+    if True:
+        #print np.all(np.equal(R_vect, np.zeros((3,1))))
+        R_vect_valid = np.all(np.isfinite(R_vect)) and not np.all(np.equal(R_vect, np.zeros((3,1))))
+        if R_vect_valid:
+            R = norm(R_vect)
+            n_vect = R_vect/R
+            e1=sre0[4:7]
+            if np.abs(np.dot(n_vect, e1)) > epsilon:
+                R_vect_valid = False
+                print('*** error in arcline: invalid R_vect --> using line')
+
+
+
+
+    if not R_vect_valid:
+        SRE2[2-1, :] = sre0[2-1] + sre0[5-1]*np.arange(1, N+1)*dS
+        SRE2[3-1, :] = sre0[3-1] + sre0[6-1]*np.arange(1, N+1)*dS
+        SRE2[4-1, :] = sre0[4-1] + sre0[7-1]*np.arange(1, N+1)*dS
+        SRE2[5-1, :] = sre0[5-1]
+        SRE2[6-1, :] = sre0[6-1]
+        SRE2[7-1, :] = sre0[7-1]
+    else:
+        R = norm(R_vect)
+        n_vect = R_vect/R
+        e2 = np.array([[n_vect[1]*e1[2] - n_vect[2]*e1[1]],
+            [n_vect[2]*e1[0] - n_vect[0]*e1[2]],
+            [n_vect[0]*e1[1] - n_vect[1]*e1[0]]])
+        si = np.sin(np.arange(1, N+1)*dS/R)
+        co = np.cos(np.arange(1, N+1)*dS/R)
+        omco = 2*np.sin(np.arange(1, N+1)*dS/R/2)**2
+        SRE2[2-1, :] = sre0[1] + R*(e1[0]*si + e2[0]*omco)
+        SRE2[3-1, :] = sre0[2] + R*(e1[1]*si + e2[1]*omco)
+        SRE2[4-1, :] = sre0[3] + R*(e1[2]*si + e2[2]*omco)
+        SRE2[5-1, :] = e1[0]*co + e2[0]*si
+        SRE2[6-1, :] = e1[1]*co + e2[1]*si
+        SRE2[7-1, :] = e1[2]*co + e2[2]*si
+
+    #print np.shape(np.transpose([SREin])), np.shape(SRE2)
+    SRE = np.append(SREin, SRE2, axis=1)
+
+    return SRE

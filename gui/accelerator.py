@@ -17,21 +17,6 @@ import numpy as np
 from copy import deepcopy
 
 import matplotlib.font_manager as font_manager
-font = {
-        'size'   : 20}
-matplotlib.rc('font', **font)
-
-
-'''
-try:
-    from PyQt4.QtCore import *
-    from PyQt4.QtGui import *
-    from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-    from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
-except:
-    print 'WARNING: Qt not installed, some graphics may not work properly'
-'''
-
 
 
 def plot_lattice(lat, axis, alpha=1.0, params={'kmax':2.0, 'ang_max':0.5e-2}, s_start = 0.0):
@@ -58,7 +43,8 @@ def plot_lattice(lat, axis, alpha=1.0, params={'kmax':2.0, 'ang_max':0.5e-2}, s_
     
     for e in lat.sequence:
         
-        if e.type in ['bend','sbend', 'rbend', 'quadrupole', 'undulator', 'drift', 'monitor','hcor','vcor', 'cavity','edge', 'solenoid']:
+        #if e.type in ['bend','sbend', 'rbend', 'quadrupole', 'undulator', 'drift', 'monitor','hcor','vcor', 'cavity','edge', 'solenoid']:
+        if e.__class__ in [Bend, SBend, RBend, Quadrupole, Undulator, Drift, Monitor, Hcor, Vcor, Cavity, Edge, Solenoid]:
             e.s = total_len
             rendered_seq.append(e)
             rendered_len += e.l
@@ -67,18 +53,18 @@ def plot_lattice(lat, axis, alpha=1.0, params={'kmax':2.0, 'ang_max':0.5e-2}, s_
     for e in rendered_seq:
         dx = e.l 
         
-        if e.type in ['bend', 'sbend', 'rbend','hcor','vcor']:
+        if e.__class__ in  [Bend, SBend, RBend,Hcor, Vcor]:
             axis.add_patch( mpatches.Rectangle(offs+np.array([pos, 0.0]), dx, 
                                                np.sign(-e.angle) * min_dipole_height - e.angle / ang_max * (1- min_dipole_height), 
                                                color='#0099FF', alpha = alpha))
 
-        if e.type in ['solenoid']:
+        if e.__class__ in [Solenoid]:
             axis.add_patch( mpatches.Rectangle(offs+np.array([pos, 0.0]), dx, 
                                                np.sign(-e.k) * min_solenoid_height - e.k / sol_max * (1- min_solenoid_height), 
                                                color='#FF99FF', alpha = alpha))
 
 
-        if e.type in ['quadrupole']:
+        if e.__class__ in [Quadrupole]:
                         
             if e.k1 >= 0:
                 axis.add_patch( mpatches.Ellipse(offs+np.array([pos, 0.0]), dx, min_quad_height + abs(e.k1/kmax)*2, color='green', alpha=alpha) )
@@ -105,7 +91,7 @@ def plot_lattice(lat, axis, alpha=1.0, params={'kmax':2.0, 'ang_max':0.5e-2}, s_
 
             
         
-        if e.type in ['undulator']:
+        if e.__class__ in [Undulator]:
             nper = 16
             dxs = dx / nper / 2.0
             
@@ -120,7 +106,7 @@ def plot_lattice(lat, axis, alpha=1.0, params={'kmax':2.0, 'ang_max':0.5e-2}, s_
                 axis.add_patch( mpatches.Rectangle(offs+np.array([pos + (iseg+1) * dxs, gap]), dxs, height, color='blue', alpha = alpha) )
                 axis.add_patch( mpatches.Rectangle(offs+np.array([pos + (iseg+1) * dxs, -height-gap]), dxs, height, color='red', alpha = alpha  ) )
 
-        if e.type in ['cavity']:
+        if e.__class__ in [Cavity]:
             nper = 16
             dxs = dx / nper / 2.0
             
@@ -139,7 +125,7 @@ def plot_lattice(lat, axis, alpha=1.0, params={'kmax':2.0, 'ang_max':0.5e-2}, s_
                             color='#FF0033', alpha = alpha))
 
      
-        if e.type in ['monitor']:
+        if e.__class__ in [Monitor]:
             Path = mpath.Path
             h = 0.005
             offs_mon = np.array([0.0, 0.03])
@@ -168,9 +154,9 @@ def plot_lattice(lat, axis, alpha=1.0, params={'kmax':2.0, 'ang_max':0.5e-2}, s_
     axis.add_patch( mpatches.Rectangle(offs - (0,lw/2), 1.0, lw, color='black', alpha = alpha*0.4) )
 
  
-    axis.set_ylim(-1,1)
-    axis.set_xticks([])
-    axis.set_yticks([])
+    #axis.set_ylim(-1,1)
+    #axis.set_xticks([])
+    #axis.set_yticks([])
 
 # Tomin Sergey functions
 
@@ -202,7 +188,7 @@ def elem_cord(lat):
         temp = np.append(temp, [[L+elem.l + dL, 0]], axis = 0)
         #temp = temp.reshape((4,2))
         
-        if elem.type == "quadrupole":
+        if elem.__class__ == Quadrupole:
             k1 = elem.k1
             quad = np.append(quad, [[L, 0]], axis=0)
             quad = np.append(quad, [[L, k1]], axis=0)
@@ -210,33 +196,35 @@ def elem_cord(lat):
             quad = np.append(quad, [[L+elem.l, k1]],axis=0)
             quad = np.append(quad, [[L+elem.l, 0]],axis=0)
 
-        elif elem.type == "cavity":
+        elif elem.__class__ == Cavity:
             k1 = 1.
             cav = np.append(cav, [[L, 0]], axis=0)
             cav = np.append(cav, [[L, k1]], axis=0)
             cav = np.append(cav, [[L+elem.l, k1]],axis=0)
             cav = np.append(cav, [[L+elem.l, 0]],axis=0)
-        elif elem.type == "drift":
+
+        elif elem.__class__  == Drift:
             k1 = 1.
             drft = np.append(drft, [[L, 0]], axis=0)
             drft = np.append(drft, [[L, 0]], axis=0)
             drft = np.append(drft, [[L+elem.l, 0]],axis=0)
             drft = np.append(drft, [[L+elem.l, 0]],axis=0)
-        elif elem.type == "matrix":
+
+        elif elem.__class__ == Matrix:
             #k1 = 1.
             mat = np.append(mat, [[L, 0]], axis=0)
             #mat = np.append(mat, [[L, k1]], axis=0)
             #mat = np.append(mat, [[L+elem.l, k1]],axis=0)
             mat = np.append(mat, [[L+elem.l, 0]],axis=0)
 
-        elif elem.type == "undulator":
+        elif elem.__class__ == Undulator:
             k1 = 1.
             und = np.append(und, [[L, 0]], axis=0)
             und = np.append(und, [[L, k1]], axis=0)
             und = np.append(und, [[L+elem.l, k1]],axis=0)
             und = np.append(und, [[L+elem.l, 0]],axis=0)
 
-        elif elem.type in ["sbend", "bend", "rbend"]:
+        elif elem.__class__ in [SBend, RBend, Bend]:
             if elem.l == 0:
                 h = 0
             else:
@@ -244,23 +232,23 @@ def elem_cord(lat):
             temp[:,1] = temp[:,1]*h
             bend = np.append(bend, temp, axis = 0)
         
-        elif elem.type == "sextupole":
+        elif elem.__class__ == Sextupole:
 
-            temp[:,1] = temp[:,1]*elem.ms+ temp[:,1]*elem.k2
+            temp[:,1] = temp[:,1]*elem.k2
             sext = np.append(sext, temp, axis = 0)
 
-        elif elem.type == "multipole":
+        elif elem.__class__ == Multipole:
             if sum(abs(elem.kn)) != 0:
                 temp[:,1] = temp[:,1]*sum(elem.kn)/sum(abs(elem.kn))
             else:
                 temp[:,1] = temp[:,1]*0.
             multi = np.append(multi, temp, axis=0)
         
-        elif elem.type in ["hcor" , "vcor"]:
+        elif elem.__class__ in [Hcor, Vcor]:
             temp[:,1] = temp[:,1]#*abs(elem.angle)
             corr = np.append(corr, temp, axis=0)
         
-        elif elem.type in ["monitor"]:
+        elif elem.__class__ in [Monitor]:
             temp[:,1] = temp[:,1]#*abs(elem.angle)
             mons = np.append(mons, temp, axis=0)
         #c.append((L,  elem.l+0.03))
@@ -281,25 +269,27 @@ def elem_cord(lat):
     return quad, bend, sext, corr, mons, cav, mat, und, multi, drft
 
 
-dict_plot = {"quadrupole": {"scale": 0.7, "color": "r",            "edgecolor": "r",          "label": "quad"},
-             "sextupole":  {"scale": 0.5, "color": "g",            "edgecolor": "g",          "label": "sext"},
-             "cavity":     {"scale": 0.7, "color": "orange",       "edgecolor": "lightgreen", "label": "cav"},
-             "bend":       {"scale": 0.7, "color": "lightskyblue", "edgecolor": "k",          "label": "bend"},
-             "rbend":      {"scale": 0.7, "color": "lightskyblue", "edgecolor": "k",          "label": "bend"},
-             "sbend":      {"scale": 0.7, "color": "lightskyblue", "edgecolor": "k",          "label": "bend"},
-             "matrix":     {"scale": 0.7, "color": "pink",         "edgecolor": "k",          "label": "mat"},
-             "multipole":  {"scale": 0.7, "color": "g",            "edgecolor": "k",          "label": "mult"},
-             "undulator":  {"scale": 0.7, "color": "pink",         "edgecolor": "k",          "label": "und"},
-             "monitor":    {"scale": 0.5, "color": "orange",       "edgecolor": "orange",     "label": "mon"},
-             "hcor":       {"scale": 0.7, "color": "c",            "edgecolor": "c",          "label": "cor"},
-             "vcor":       {"scale": 0.7, "color": "c",            "edgecolor": "c",          "label": "cor"},
-             "drift":      {"scale": 0.,  "color": "k",            "edgecolor": "k",          "label": ""},
-             "marker":     {"scale": 0.,  "color": "k",            "edgecolor": "k",          "label": "mark"},
-             "edge":       {"scale": 0.,  "color": "k",            "edgecolor": "k",          "label": ""},
+dict_plot = {Quadrupole: {"scale": 0.7, "color": "r",            "edgecolor": "r",          "label": "quad"},
+             Sextupole:  {"scale": 0.5, "color": "g",            "edgecolor": "g",          "label": "sext"},
+             Octupole:   {"scale": 0.5, "color": "g",            "edgecolor": "g",          "label": "sext"},
+             Cavity:     {"scale": 0.7, "color": "orange",       "edgecolor": "lightgreen", "label": "cav"},
+             Bend:       {"scale": 0.7, "color": "lightskyblue", "edgecolor": "k",          "label": "bend"},
+             RBend:      {"scale": 0.7, "color": "lightskyblue", "edgecolor": "k",          "label": "bend"},
+             SBend:      {"scale": 0.7, "color": "lightskyblue", "edgecolor": "k",          "label": "bend"},
+             Matrix:     {"scale": 0.7, "color": "pink",         "edgecolor": "k",          "label": "mat"},
+             Multipole:  {"scale": 0.7, "color": "g",            "edgecolor": "k",          "label": "mult"},
+             Undulator:  {"scale": 0.7, "color": "pink",         "edgecolor": "k",          "label": "und"},
+             Monitor:    {"scale": 0.5, "color": "orange",       "edgecolor": "orange",     "label": "mon"},
+             Hcor:       {"scale": 0.7, "color": "c",            "edgecolor": "c",          "label": "cor"},
+             Vcor:       {"scale": 0.7, "color": "c",            "edgecolor": "c",          "label": "cor"},
+             Drift:      {"scale": 0.,  "color": "k",            "edgecolor": "k",          "label": ""},
+             Marker:     {"scale": 0.,  "color": "k",            "edgecolor": "k",          "label": "mark"},
+             Edge:       {"scale": 0.,  "color": "k",            "edgecolor": "k",          "label": ""},
+             Solenoid:   {"scale": 0.7, "color": "g",            "edgecolor": "g",          "label": "sol"},
              }
 
 
-def new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legend = True):
+def  new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legend = True):
     dict_copy=deepcopy(dict_plot)
     alpha = 1
     ax.set_ylim((-1,1.5))
@@ -315,19 +305,19 @@ def new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale =
     rf = []
     m = []
     for elem in lat.sequence:
-        if elem.type == "quadrupole":
+        if elem.__class__ == Quadrupole:
             q.append(elem.k1)
-        elif elem.type in ["bend", "rbend", "sbend"]:
+        elif elem.__class__ in [Bend, RBend, SBend]:
             b.append(elem.angle)
-        elif elem.type in ["hcor", "vcor"]:
+        elif elem.__class__ in [Hcor, Vcor]:
             c.append(elem.angle)
-        elif elem.type == "sextupole":
-            s.append(elem.k2 + elem.ms)
-        elif elem.type == "undulator":
+        elif elem.__class__ == Sextupole:
+            s.append(elem.k2)
+        elif elem.__class__ == Undulator:
             u.append(elem.Kx + elem.Ky)
-        elif elem.type == "cavity":
+        elif elem.__class__ == Cavity:
             rf.append(elem.v )
-        elif elem.type == "multipole":
+        elif elem.__class__ == Multipole:
             m.append(sum(np.abs(elem.kn)))
     q_max = np.max(np.abs(q))if len(q) !=0 else 0
     b_max = np.max(np.abs(b))if len(b) !=0 else 0
@@ -342,73 +332,73 @@ def new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale =
     for elem in dict_copy.keys():
         labels_dict[elem] = dict_copy[elem]["label"]
     for elem in lat.sequence:
-        if elem.type in ["marker", "edge"]:
+        if elem.__class__ in [Marker, Edge]:
             L +=elem.l
             continue
         l = elem.l
         if l == 0:
             l = 0.03
-        type = elem.type
-        scale = dict_copy[type]["scale"]
-        color = dict_copy[type]["color"]
-        label = dict_copy[type]["label"]
-        ecolor = dict_copy[type]["edgecolor"]
+        #type = elem.type
+        scale = dict_copy[elem.__class__]["scale"]
+        color = dict_copy[elem.__class__]["color"]
+        label = dict_copy[elem.__class__]["label"]
+        ecolor = dict_copy[elem.__class__]["edgecolor"]
         ampl = 1
         s_coord = np.array([L + elem.l/2. - l/2., L + elem.l/2. - l/2., L + elem.l/2. +l/2., L + elem.l/2. +l/2., L + elem.l/2.- l/2.]) + s_point
-        if elem.type == "quadrupole":
+        if elem.__class__ == Quadrupole:
             ampl = elem.k1/q_max if q_max != 0 else 1
             point, = ax.fill(s_coord,  (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color, edgecolor=ecolor,
-                             alpha = alpha, label=dict_copy[type]["label"])
-            dict_copy[type]["label"] = ""
+                             alpha = alpha, label=dict_copy[elem.__class__]["label"])
+            dict_copy[elem.__class__]["label"] = ""
 
-        elif elem.type in ["bend", "rbend", "sbend"]:
+        elif elem.__class__ in [Bend, RBend, SBend]:
             ampl = elem.angle/b_max if b_max != 0 else 1
             point, = ax.fill(s_coord, (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color,
-                             alpha = alpha, label=dict_copy[type]["label"])
-            dict_copy[type]["label"] = ""
+                             alpha = alpha, label=dict_copy[elem.__class__]["label"])
+            dict_copy[elem.__class__]["label"] = ""
 
-        elif elem.type in ["hcor", "vcor"]:
+        elif elem.__class__ in [Hcor, Vcor]:
 
             ampl = elem.angle/c_max if c_max != 0 else 0.5
             #print c_max, elem.angle, ampl
             if elem.angle == 0:
                 ampl=0.5
                 point, = ax.fill(s_coord, (np.array([-1, 1, 1, -1, -1]))*ampl*scale*y_scale, "lightcyan",  edgecolor="k",
-                             alpha = 0.5, label=dict_copy[type]["label"])
+                             alpha = 0.5, label=dict_copy[elem.__class__]["label"])
             else:
                 point, = ax.fill(s_coord, (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color,  edgecolor=ecolor,
-                             alpha = alpha, label=dict_copy[type]["label"])
-            dict_copy["hcor"]["label"] = ""
-            dict_copy["vcor"]["label"] = ""
+                             alpha = alpha, label=dict_copy[elem.__class__]["label"])
+            dict_copy[Hcor]["label"] = ""
+            dict_copy[Vcor]["label"] = ""
 
-        elif elem.type == "sextupole":
-            ampl = (elem.k2 + elem.ms)/s_max if s_max != 0 else 1
+        elif elem.__class__ == Sextupole:
+            ampl = (elem.k2)/s_max if s_max != 0 else 1
             point, = ax.fill(s_coord, (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color,
-                             alpha = alpha, label=dict_copy[type]["label"])
-            dict_copy[type]["label"] = ""
+                             alpha = alpha, label=dict_copy[elem.__class__]["label"])
+            dict_copy[elem.__class__]["label"] = ""
 
-        elif elem.type == "cavity":
+        elif elem.__class__ == Cavity:
             ampl = 1 # elem.v/rf_max if rf_max != 0 else 0.5
             point, = ax.fill(s_coord, np.array([-1, 1, 1, -1, -1])*ampl*scale*y_scale, color,
-                             alpha = alpha, edgecolor = "lightgreen", label=dict_copy[type]["label"])
-            dict_copy[type]["label"] = ""
+                             alpha = alpha, edgecolor = "lightgreen", label=dict_copy[elem.__class__]["label"])
+            dict_copy[elem.__class__]["label"] = ""
 
-        elif elem.type == "undulator":
+        elif elem.__class__ == Undulator:
             ampl = elem.Kx/u_max if u_max != 0 else 0.5
             point, = ax.fill(s_coord, np.array([-1, 1, 1, -1, -1])*ampl*scale*y_scale, color,
-                             alpha = alpha, label=dict_copy[type]["label"])
-            dict_copy[type]["label"] = ""
+                             alpha = alpha, label=dict_copy[elem.__class__]["label"])
+            dict_copy[elem.__class__]["label"] = ""
 
-        elif elem.type == "multipole":
+        elif elem.__class__ == Multipole:
             ampl = sum(elem.kn)/m_max if u_max != 0 else 0.5
             point, = ax.fill(s_coord, np.array([-1, 1, 1, -1, -1])*ampl*scale*y_scale, color,
-                             alpha = alpha, label=dict_copy[type]["label"])
-            dict_copy[type]["label"] = ""
+                             alpha = alpha, label=dict_copy[elem.__class__]["label"])
+            dict_copy[elem.__class__]["label"] = ""
 
         else:
             point, = ax.fill(s_coord, np.array([-1, 1, 1, -1, -1])*ampl*scale*y_scale, color, edgecolor=ecolor,
                              alpha = alpha)
-        annotation = ax.annotate(elem.type+": " + elem.id,
+        annotation = ax.annotate(elem.__class__.__name__+": " + elem.id,
             xy=(L+l/2., 0), #xycoords='data',
             #xytext=(i + 1, i), textcoords='data',
             horizontalalignment="left",
@@ -492,7 +482,8 @@ def plot_disp(ax,tws, top_plot, font_size):
     Fmin = []
     Fmax = []
     for elem in top_plot:
-        Ftop = [p.__dict__[elem] for p in tws]# map(lambda p:p.__dict__[elem], tws)
+        #print(elem, tws.__dict__[elem] )
+        Ftop = [p.__dict__[elem] for p in tws]
         #for f in Ftop:
         #    print(f)
         #print (max(Ftop))
@@ -519,29 +510,29 @@ def plot_disp(ax,tws, top_plot, font_size):
     ax.set_ylabel(top_ylabel)
     
     #ax.plot(S, Dx,'black', lw = 2, label=lable)
-    leg2 = ax.legend(loc='upper right', shadow=True, fancybox=True,prop=font_manager.FontProperties(size=font_size))
-    leg2.get_frame().set_alpha(0.5)
+    leg2 = ax.legend(loc='upper right', shadow=False, fancybox=True, prop=font_manager.FontProperties(size=font_size))
+    leg2.get_frame().set_alpha(0.2)
 
 
 
 
 def plot_betas(ax, S, beta_x, beta_y, font_size):
     ax.set_ylabel(r"$\beta_{x,y}$, m")
-    ax.plot(S, beta_x,'r', lw = 2, label=r"$\beta_{x}$")
-    ax.plot(S, beta_y,'b', lw = 2, label=r"$\beta_{y}$")
-    leg = ax.legend(loc='upper right', shadow=True, fancybox=True, prop=font_manager.FontProperties(size=font_size))
-    leg.get_frame().set_alpha(0.5)
+    ax.plot(S, beta_x,'b', lw = 2, label=r"$\beta_{x}$")
+    ax.plot(S, beta_y,'r', lw = 2, label=r"$\beta_{y}$")
+    leg = ax.legend(loc='upper right', shadow=False, fancybox=True, prop=font_manager.FontProperties(size=font_size))
+    leg.get_frame().set_alpha(0.2)
 
 
-def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, fig_name = None):
+def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=True):
 
-    font_size = 16
+    font_size = 25
     if fig_name == None:
         fig = plt.figure()
     else:
         fig = plt.figure(fig_name)
 
-    plt.rc('axes', grid=True)
+    plt.rc('axes', grid=grid)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
     left, width = 0.1, 0.85
     
@@ -557,10 +548,10 @@ def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, fig_name = None):
             for label in ax.get_xticklabels():
                 label.set_visible(False)
     
-    ax_b.grid(True)
-    ax_top.grid(True)
+    ax_b.grid(grid)
+    ax_top.grid(grid)
     ax_el.set_yticks([])
-    ax_el.grid(True)
+    ax_el.grid(grid)
 
     fig.subplots_adjust(hspace=0)
     beta_x = [p.beta_x for p in tws] # list(map(lambda p:p.beta_x, tws))
@@ -577,7 +568,6 @@ def plot_opt_func(lat, tws, top_plot = ["Dx"], legend = True, fig_name = None):
     #plot_elems(ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8) # plot elements
     new_plot_elems(fig, ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8)
 
-    plt.show()
 
 
 def plot_xy(ax, S, X, Y, font_size):
@@ -746,8 +736,8 @@ def resonance(Qx, Qy, order = 5):
                 Order.append(order)
     return X,Y,Order,params
 
-def resonance_diag(Qx, Qy, order):
-    X,Y,Order,params = resonans(Qx, Qy, order)
+def plot_resonance_diag(ax, Qx, Qy, order):
+    X,Y,Order,params = resonance(Qx, Qy, order)
     indsort = np.argsort(Order)
     #print Order
     #print len(indsort), len(X)

@@ -10,7 +10,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy import *
-
+from ocelot.adaptors.genesis import *
 #from pylab import * #tmp
 
 #font = {'family' : 'normal',
@@ -1088,9 +1088,14 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
         
         
         
-def gen_stat_plot(proj_dir,run_inp=range(1,1+5),stage=1,param_inp=['p_int','energy','el_e_spread','el_energy','bunching','spec'],s_inp=[1.e-6,'max','mean'], z_inp=[0,'end'], savefig=1, saveval=1, show=0)
-        
-    outlist=[ GenesisOutput() for i in range(np.amax(run_inp)+1)]
+def gen_stat_plot(proj_dir,run_inp=range(1,1+5),stage=1,param_inp=['p_int','energy','el_e_spread','el_energy','bunching','spec'],s_inp=[1.e-6,'max','mean'], z_inp=[0,'end'], savefig=1, saveval=1, show=0):
+
+    import copy
+
+    dict_name={'p_int':'radiation power','energy': 'radiation pulse energy','el_e_spread': 'el.beam energy spread','el_energy': 'el.beam energy average','bunching': 'el.beam bunching','spec': 'radiation on-axis spectral density','r_size':'radiation transverse size','xrms':'el.beam x size','yrms':'el.beam y size','error':'genesis simulation error'}
+    dict_unit={'p_int':'[W]','energy': '[J]','el_e_spread': '[?]','el_energy': '[?]','bunching': '','spec': '[arb.units]','r_size':'[m]','xrms':'[m]','yrms':'[m]','error':''}    
+    
+    outlist=[GenesisOutput() for i in range(np.amax(run_inp)+1)]
     
     for irun in run_inp:
         out_file=proj_dir+'run_'+str(irun)+'/run.'+str(irun)+'.s'+str(stage)+'.gout'

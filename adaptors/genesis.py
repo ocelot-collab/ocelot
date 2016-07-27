@@ -3,7 +3,7 @@ interface to genesis
 '''
 
 import struct
-from copy import copy
+from copy import copy, deepcopy
 import time, os
 from ocelot.rad.fel import *
 from ocelot.cpbd.beam import Beam, gauss_from_twiss
@@ -1053,7 +1053,7 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
         if tokens[0] == 'power':
             chunk = 'slice'
             if len(out.sliceKeys) == 0: #to record the first instance
-                out.sliceKeys = copy(tokens)
+                out.sliceKeys = list(copy(tokens))
                 print '      reading slice values '
             continue
             
@@ -1113,7 +1113,7 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
         if hasattr(out,'energy'):
             out.energy+=out('gamma0')
         out.power_z=np.max(out.power,0)
-
+        out.sliceKeys_used=out.sliceKeys
             
     out.nSlices = int(out('history_records'))#number of slices in the output
     out.nZ = int(out('entries_per_record'))#number of records along the undulator
@@ -1144,27 +1144,57 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
             out.spec = np.fft.fftshift(out.spec,axes=0)
             out.freq_ev = np.fft.fftshift(out.freq_ev,axes=0)
             out.freq_lamd=1239.8/out.freq_ev
+            out.sliceKeys_used.append('spec')
+            
+        phase_fix=1 #the way to display the phase, without constant slope caused by different radiation wavelength from xlamds. phase is set to 0 at maximum power slice.
+        if phase_fix:
+            out.phi_mid_disp=deepcopy(out.phi_mid)
+            for zi in xrange(shape(out.phi_mid_disp)[1]):
+                maxspectrum_index=np.argmax(out.spec[:,zi])
+                maxspower_index=np.argmax(out.power[:,zi])
+                maxspectrum_wavelength=out.freq_lamd[maxspectrum_index]*1e-9    
+                phase=unwrap(out.phi_mid[:,zi])
+                phase_cor=np.arange(out.nSlices)*(maxspectrum_wavelength-out('xlamds'))/out('xlamds')*out('zsep')*2*pi
+                phase_fixed=phase+phase_cor
+                phase_fixed-=phase_fixed[maxspower_index]
+                n=1
+                phase_fixed = ( phase_fixed + n*pi) % (2 * n*pi ) - n*pi
+                out.phi_mid_disp[:,zi]=phase_fixed
+            out.sliceKeys_used.append('phi_mid_disp')    
+            
+        t_size_weighted=1
+        if t_size_weighted:
+            if np.amax(out.power)>0:
+                weight=out.power+np.amin(out.power[out.power!=0])/1e6
+            else:
+                weight=np.ones_like(out.power)
+            out.r_size_weighted=np.average(out.r_size*1e6, weights=weight, axis=0)
+            out.sliceKeys_used.append('r_size_weighted')
         
     if out('iscan')!=0:
         out.scv=out.I #scan value
         out.I=np.linspace(1,1,len(out.scv)) #because used as a weight
     
+    out.sn_Imax=np.argmax(out.I) #slice number with maximum current
+    
     #tmp for back_compatibility    
-    if readall:    
-        out.power_int=out.power[:,-1]
-        out.max_power=np.amax(out.power_int)
+    if readall:
+        out.power_int=out.power[:,-1] #remove?
+        out.max_power=np.amax(out.power_int) #remove?
         for parm in [['power','p_int'],
                      ['energy','el_energy'],
                      ['e_spread','el_e_spread'],
                      ]:
              if hasattr(out,parm[0]):
                  setattr(out,parm[1],getattr(out,parm[0]))
+             for index, parm_key in enumerate(out.sliceKeys_used):
+                 if parm_key==parm[0]:
+                     out.sliceKeys_used[index]=parm[1]
     #             delattr(out,parm[0])
         out.power=out.p_mid[:,-1]
         out.phi=out.phi_mid[:,-1]
         out.energy=np.mean(out.p_int,axis=0)*out('xlamds')*out('zsep')*out.nSlices/speed_of_light
     
-
     print('      done in %.3f seconds' % (time.time() - start_time))        
     return out
 
@@ -1858,12 +1888,12 @@ def cut_beam(beam = None, cut_z = [-inf, inf]):
 
 
 def get_beam_peak(beam = None): #experimental, the code is too inconsistent to introduce suc function yet (e.g. xp <-> px)
-    import copy
+
     #obtains the peak current values
     if len(beam.I)>1:# and np.amax(beam.I)!=np.amin(beam.I):
         pkslice = np.argmax(beam.I)
         
-        beam_new=copy.deepcopy(beam)
+        beam_new=deepcopy(beam)
         
         beam_new.I=beam.I[pkslice]
         beam_new.alpha_x=beam.alphax[pkslice]

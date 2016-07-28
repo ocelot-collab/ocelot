@@ -7,6 +7,7 @@ from copy import copy
 import time, os
 from ocelot.rad.fel import *
 from ocelot.cpbd.beam import Beam, gauss_from_twiss
+from ocelot.cpbd.elements import *
 import ocelot.utils.reswake as w
 from ocelot.common.math_op import *
 from ocelot.common.globals import * #import of constants like "h_eV_s" and "speed_of_light"
@@ -1413,7 +1414,7 @@ def generate_lattice(lattice, unit=1.0, energy = None, debug = False):
         l = float(e.l)
         
         #print e.type, pos, prevPos
-        if e.type == 'undulator':
+        if e.__class__  == Undulator:
 
             l = float(e.nperiods) * float(e.lperiod)
             
@@ -1429,10 +1430,10 @@ def generate_lattice(lattice, unit=1.0, energy = None, debug = False):
             prevPos = pos
             prevLen = l 
             
-        elif e.type == 'rbend' or e.type == 'sbend' or e.type == 'drift':
+        elif e.__class__ in [RBend, SBend, Drift]:
             pass
         
-        elif e.type == 'quadrupole':
+        elif e.__class__ == Quadrupole:
             #k = energy/0.2998 * float(e.k1) *  ( e.l / unit - int(e.l / unit) )
             #k = float(energy) * float(e.k1) / e.l #*  (1 +  e.l / unit - int(e.l / unit) )
             #k = float(energy) * float(e.k1) * 0.2998 / e.l #*  (1 +  e.l / unit - int(e.l / unit) )

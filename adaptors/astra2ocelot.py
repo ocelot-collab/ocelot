@@ -176,10 +176,10 @@ def astraBeam2particleArray(filename):
     p_array.particles[4::6] = xxstg[:, 4]
     p_array.particles[5::6] = xxstg[:, 5]
     p_array.q_array = charge_array
-    return p_array, charge_array
+    return p_array
 
 
-def particleArray2astraBeam(p_array, charge_array, filename="tytest.ast"):
+def particleArray2astraBeam(p_array, charge_array=None, filename="tytest.ast"):
     gamref = p_array.E / m_e_GeV
     s0 = p_array.s;
     P = p_array.particles.view()
@@ -191,7 +191,7 @@ def particleArray2astraBeam(p_array, charge_array, filename="tytest.ast"):
     xp[1:Np, 5] = xp[1:Np, 5] - xp[0, 5]
     xp[1:Np, 2] = xp[1:Np, 2] - xp[0, 2]
 
-    charge_array = -charge_array.reshape(len(charge_array), 1) * 1e+9  # charge in C -> in nC
+    charge_array = -p_array.q_array.reshape(len(p_array.q_array), 1) * 1e+9  # charge in C -> in nC
     flag = np.zeros((len(charge_array), 1))
     astra = np.append(xp, flag, axis=1)
     astra = np.append(astra, charge_array, axis=1)

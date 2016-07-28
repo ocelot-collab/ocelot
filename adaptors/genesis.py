@@ -1135,6 +1135,7 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
         #out.dt = (out.t[1] - out.t[0]) * 1.e-15
         out.dt=out('zsep') * out('xlamds') / speed_of_light 
         out.beam_charge=np.sum(out.I*out('zsep')*out('xlamds')/speed_of_light)
+        out.sn_Imax=np.argmax(out.I) #slice number with maximum current
         if readall == True:
 #            out.spec = np.fft.fft(np.sqrt(np.array(out.power) ) * np.exp( 1.j* np.array(out.phi_mid) ) ) # may be wrong
             out.spec = abs(np.fft.fft(np.sqrt(np.array(out.power)) * np.exp( 1.j* np.array(out.phi_mid) ) , axis=0))**2/sqrt(out.nSlices)/(2*out.leng/out('ncar'))**2/1e10
@@ -1146,36 +1147,36 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
             out.freq_lamd=1239.8/out.freq_ev
             out.sliceKeys_used.append('spec')
             
-        phase_fix=1 #the way to display the phase, without constant slope caused by different radiation wavelength from xlamds. phase is set to 0 at maximum power slice.
-        if phase_fix:
-            out.phi_mid_disp=deepcopy(out.phi_mid)
-            for zi in xrange(shape(out.phi_mid_disp)[1]):
-                maxspectrum_index=np.argmax(out.spec[:,zi])
-                maxspower_index=np.argmax(out.power[:,zi])
-                maxspectrum_wavelength=out.freq_lamd[maxspectrum_index]*1e-9    
-                phase=unwrap(out.phi_mid[:,zi])
-                phase_cor=np.arange(out.nSlices)*(maxspectrum_wavelength-out('xlamds'))/out('xlamds')*out('zsep')*2*pi
-                phase_fixed=phase+phase_cor
-                phase_fixed-=phase_fixed[maxspower_index]
-                n=1
-                phase_fixed = ( phase_fixed + n*pi) % (2 * n*pi ) - n*pi
-                out.phi_mid_disp[:,zi]=phase_fixed
-            out.sliceKeys_used.append('phi_mid_disp')    
-            
-        t_size_weighted=1
-        if t_size_weighted:
-            if np.amax(out.power)>0:
-                weight=out.power+np.amin(out.power[out.power!=0])/1e6
-            else:
-                weight=np.ones_like(out.power)
-            out.r_size_weighted=np.average(out.r_size*1e6, weights=weight, axis=0)
-            out.sliceKeys_used.append('r_size_weighted')
+            phase_fix=1 #the way to display the phase, without constant slope caused by different radiation wavelength from xlamds. phase is set to 0 at maximum power slice.
+            if phase_fix:
+                out.phi_mid_disp=deepcopy(out.phi_mid)
+                for zi in xrange(shape(out.phi_mid_disp)[1]):
+                    maxspectrum_index=np.argmax(out.spec[:,zi])
+                    maxspower_index=np.argmax(out.power[:,zi])
+                    maxspectrum_wavelength=out.freq_lamd[maxspectrum_index]*1e-9    
+                    phase=unwrap(out.phi_mid[:,zi])
+                    phase_cor=np.arange(out.nSlices)*(maxspectrum_wavelength-out('xlamds'))/out('xlamds')*out('zsep')*2*pi
+                    phase_fixed=phase+phase_cor
+                    phase_fixed-=phase_fixed[maxspower_index]
+                    n=1
+                    phase_fixed = ( phase_fixed + n*pi) % (2 * n*pi ) - n*pi
+                    out.phi_mid_disp[:,zi]=phase_fixed
+                out.sliceKeys_used.append('phi_mid_disp')    
+                
+            t_size_weighted=1
+            if t_size_weighted:
+                if np.amax(out.power)>0:
+                    weight=out.power+np.amin(out.power[out.power!=0])/1e6
+                else:
+                    weight=np.ones_like(out.power)
+                out.r_size_weighted=np.average(out.r_size*1e6, weights=weight, axis=0)
+                out.sliceKeys_used.append('r_size_weighted')
         
     if out('iscan')!=0:
         out.scv=out.I #scan value
         out.I=np.linspace(1,1,len(out.scv)) #because used as a weight
     
-    out.sn_Imax=np.argmax(out.I) #slice number with maximum current
+    
     
     #tmp for back_compatibility    
     if readall:

@@ -1261,6 +1261,106 @@ def gen_stat_plot(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
 
         
 
+
+def gen_corr_plot(proj_dir,set_1=['p_int',1,5,'max'], set_2=['bunching',1,inf,'mean'], run_inp=[]):
+    
+    param_1=set_1[0]
+    stage_1=set_1[1]
+    z_1=set_1[2]
+    s_1=set_1[3]
+    
+    param_2=set_2[0]
+    stage_2=set_2[1]
+    z_2=set_2[2]
+    s_2=set_2[3]
+    
+    outlist_1=[GenesisOutput() for i in xrange(1000)]
+    outlist_2=[GenesisOutput() for i in xrange(1000)]
+    if run_inp==[]:
+        run_range=xrange(1000)
+    else:
+        run_range=run_inp
+    
+    run_range_good_1=[]
+    run_range_good_2=[]
+    
+    if param_1 not in []:
+        for irun in run_range:
+            out_file_1=proj_dir+'run_'+str(irun)+'/run.'+str(irun)+'.s'+str(stage_1)+'.gout'
+            if os.path.isfile(out_file_1):
+                outlist_1[irun] = readGenesisOutput(out_file_1,readall=1)
+                run_range_good_1.append(irun)
+                
+    
+    if param_2 not in []:        
+        for irun in run_range:
+            out_file_2=proj_dir+'run_'+str(irun)+'/run.'+str(irun)+'.s'+str(stage_2)+'.gout'
+            if os.path.isfile(out_file_2):
+                outlist_2[irun] = readGenesisOutput(out_file_2,readall=1)
+                run_range_good_2.append(irun)
+            
+    run_range_good=[val for val in run_range_good_1 if val in run_range_good_2]
+    
+    if param_1 not in []:
+        irun=run_range_good[0]
+        if isinstance (s_1,(int,long,float)):
+            index_s1=np.where(outlist_1[irun].s<=s_1)[-1][-1]
+        
+        if isinstance (z_1,(int,long,float)):
+            index_z1=np.where(outlist_1[irun].z<=z_1)[-1][-1]
+    
+    if param_2 not in []:
+        if isinstance (s_2,(int,long,float)):
+            index_s2=np.where(outlist_1[irun].s<=s_2)[-1][-1]
+        
+        if isinstance (z_2,(int,long,float)):
+            index_z2=np.where(outlist_1[irun].z<=z_2)[-1][-1]
+    
+    
+    matrix_1=[]
+    matrix_2=[]
+    
+    for i in run_range_good:
+        matrix_1.append(getattr(outlist_1[i],param_1))
+        matrix_2.append(getattr(outlist_2[i],param_2))
+        
+    matrix_1=np.array(matrix_1)
+    matrix_2=np.array(matrix_2)
+    
+    if ndim(matrix_1)==2:
+        var_1=matrix_1[:,index_z1]
+    else:
+        if s_1=='mean':
+            var_1=mean(matrix_1[:,:,index_z1],axis=1)
+        elif s_1=='max':
+            var_1=np.amax(matrix_1[:,:,index_z1],axis=1)
+        else:
+            var_1=matrix_1[:,index_s1,index_z1]
+    
+    if ndim(matrix_2)==2:
+        var_2=matrix_2[:,index_z2]
+    else:
+        if s_2=='mean':
+            var_2=mean(matrix_2[:,:,index_z2],axis=1)
+        elif s_2=='max':
+            var_2=np.amax(matrix_2[:,:,index_z2],axis=1)
+        else:
+            var_2=matrix_2[:,index_s2,index_z2]    
+    
+    plt.figure()
+    plt.scatter(var_1, var_2)
+    
+    plt.xlabel(param_1+'_s'+str(stage_1)+'_z='+str(z_1)+'_s='+str(s_1))
+    plt.ylabel(param_2+'_s'+str(stage_2)+'_z='+str(z_2)+'_s='+str(s_2))
+    
+    plt.xlim(np.amin(var_1),np.amax(var_1))
+    plt.ylim(np.amin(var_2),np.amax(var_2))
+    
+    plt.xlim(0,np.amax(var_1)*1.05)
+    plt.ylim(0,np.amax(var_2)*1.05)
+
+
+
 def gen_outplot_dpa(out, dpa=None, z=[], figsize=3, legend = True, fig_name = None, auto_zoom=False, column_3d=True, save=False, show=False, return_proj=False, vartype_dfl=complex64):
     
     print('    plotting dpa file')

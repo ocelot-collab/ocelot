@@ -184,20 +184,20 @@ def print_rad_props(beam, K, lu, L, distance):
 
 class UndulatorParameters:
 
-    def __init__(self, und = None):
+    def __init__(self, und = None,el_E=1.0):
 
         if und == None:
             self.Nw = 100   # number of periods
             self.lw = 0.045 # period length, m
             self.E = 1.0 # electron energy, in GeV
-            self.K = 1.0    # undulator parameter
+            self.K = 1.0    # undulator parameter (peak)
 
         else:
 
             self.Nw = und.nperiods   # number of periods
             self.lw = und.lperiod # period length, m
-            self.E = 1.0 # electron energy, in GeV
-            self.K = und.Kx    # undulator parameter
+            self.E = el_E # electron energy, in GeV
+            self.K = und.Kx    # undulator parameter (peak)
 
         self.recalculate()
 

@@ -15,7 +15,7 @@ from copy import deepcopy
 import multiprocessing
 
 #import fftw3
-import sharedmem as shm
+# import sharedmem as shm
 import time
 import copy
 import scipy.fftpack as fft
@@ -177,19 +177,32 @@ def update_beam(beam_new, g, beam):
 def log_info(sim_info, g, run_id, stage):
     
     r = RunInfo(run_id)
-    r.max_power = g.max_power
-    r.power = g.power
-    r.power_z = g.power_z
-    r.stage = stage
-    r.z = g.z
-    r.t = g.t
-    r.spec = g.spec
-    r.freq_ev = g.freq_ev
+    
+    for parm in ['max_power',
+             'power',
+             'power_z',
+             'stage',
+             'z',
+             't',
+             'spec',
+             'freq_ev',
+             ]:
+        if hasattr(g,parm):
+            setattr(r,parm,getattr(g,parm))
+
+    # r.max_power = g.max_power
+    # r.power = g.power
+    # r.power_z = g.power_z
+    # r.stage = stage
+    # r.z = g.z
+    # r.t = g.t
+    # r.spec = g.spec
+    # r.freq_ev = g.freq_ev
 
     sim_info.runs[r.id] = r
 
 
-    print 'saving run ', id
+    print ('    saving log of run ' +str(run_id))
     f_obj = open(sim_info.log_dir + 'dump.dat', 'wb')
     pickle.dump(sim_info, f_obj)
     f_obj.close()
@@ -223,7 +236,6 @@ def filter_1d(pulse, transm, i):
     sp = np.roll( sp, pulse.n/2)
     pulse.f[i,0:n_p1] = fft.ifft(sp)
 
-#sseed_2(hostfile, input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug=True, output_file = None,  xt_couple=False)
 
 def sseed(input_file, E_ev, chicane, run_dir, delay = None, debug=True, 
           output_file = None, wake=None, xt_couple=False, n_peak = 1, 
@@ -353,7 +365,7 @@ def sseed(input_file, E_ev, chicane, run_dir, delay = None, debug=True,
 
     t = pulses_1d.t[n_start:n_start+pulses_1d.nslice]
     pulse3d.slices = np.reshape(pulse3d.slices, (pulses_1d.nslice, pulse3d_part.nx, pulse3d_part.nx))
-    field_from_pulses( t, pulses_1d.f[i1:i2,n_start:n_start+pulses_1d.nslice], pulse3d.mesh_size, pulse3d.slices)
+    field_from_pulses( t, pulses_1d.f[i1:i2,n_start:n_start+pulses_1d.nslice], pulse3d.mesh_size,pulse3d.slices)
 
     g.spec = np.fft.fft(pulse3d.slices[:,ncar/2,ncar/2])
     g.max_power = np.max(np.abs(pulse3d.slices[:,ncar/2,ncar/2]))
@@ -419,3 +431,451 @@ def sseed(input_file, E_ev, chicane, run_dir, delay = None, debug=True,
 
     return g
 
+'''
+########################################
+#########     Added by G.G.    #########
+########################################
+'''
+
+def FWHM(X,Y):
+    '''
+    Function name: FWHM(X,Y)
+    
+    Description:  
+                 returns the FWHM of Y(X)
+		  
+		  
+    Arguments:
+		  -X :   abscissa
+		  -Y :   ordinate
+		  	  
+		  
+    Date revised: 2013.8.8
+    
+    '''
+    
+    from pylab import *
+    
+    half_max = max(Y) / 2.
+    print half_max
+    #find when function crosses line half_max (when sign of diff flips)
+    #take the 'derivative' of signum(half_max - Y[])
+    d = sign(half_max - array(Y[0:-1])) - sign(half_max - array(Y[1:]))
+    #plot(X,d) #if you are interested
+    #find the left and right most indexes
+    left_idx = find(d > 0)[0]
+    right_idx = find(d < 0)[-1]
+    print X[left_idx]
+    print X[right_idx]
+    return [left_idx, right_idx, X[right_idx] - X[left_idx]] #return the xpos, left and right and difference (full width)
+
+def readres(namef):
+    '''
+    Function name: readres(namef)
+    
+    Description:
+                  -Reads files from the Result directory. These are always 2 columns of ascii data.
+		  -Returns X and Y columns
+		  -NO comment is written into the log file
+		  
+    Arguments:
+                  -namef:    file name
+		  	  
+		  
+    Date revised: 2013.8.7
+    
+    '''
+    
+  
+
+    dataX = []
+    dataY = []
+    f = open(namef, 'r')
+
+    for line in f:
+        line = line.strip()
+        columns = line.split()
+        dataX = np.append(dataX,float(columns[0]))
+        dataY = np.append(dataY,float(columns[1]))
+    
+    f.close()
+    
+    return np.array([dataX,dataY])
+     
+
+def update_beam_2(beam_new, g, n_interp):
+    beam = deepcopy(beam_new)
+    # g0 = np.array(map(lambda x : g.sliceValues[x]['energy'][-1], xrange(1,g.nSlices+1)) )
+    # dg = np.array(map(lambda x : g.sliceValues[x]['e-spread'][-1], xrange(1,g.nSlices+1)) )
+    g0=g.el_energy[:,-1] * (0.511e-3)
+    dg=g.el_e_spread[:,-1]
+    
+    print len(g0)
+    print g.nSlices
+    
+    print len(beam_new.z)
+    
+    I = np.array(g.I)
+    
+    if n_interp == 0: n_interp = g.nSlices
+    '''
+    plt.figure()
+    plt.plot(beam_new.g0)
+    plt.plot(g0 + beam.gamma_rel)
+    plt.figure()
+    plt.plot(beam_new.dg)
+    plt.plot(dg)
+    plt.figure()
+    plt.plot(I)
+    plt.plot(beam_new.I)
+    plt.show()
+    '''
+    
+    
+    
+    beam_new.z = np.linspace(beam.z[0], beam.z[-1], n_interp) 
+    z2 = np.linspace(beam.z[0], beam.z[-1], g.nSlices)
+    beam_new.I = np.interp(beam_new.z, beam.z, beam.I)
+            
+    zmax, Imax = peaks(beam_new.z, beam_new.I, n=1)
+    beam_new.idx_max = np.where(beam_new.z == zmax)[0][0]
+            
+    beam_new.ex = np.interp(beam_new.z, beam.z, beam.ex) 
+    beam_new.ey = np.interp(beam_new.z, beam.z, beam.ey) 
+    beam_new.zsep = beam.zsep * len(beam.z) / len(beam_new.z)
+    #beam_new.g0 = np.interp(beam_new.z, beam.z, beam.g0) 
+    beam_new.g0 = g0 + beam.gamma_rel #potential problem here, no beam.gamma_rel
+    print len(beam_new.z)
+    print len(beam_new.g0)
+    print len(beam.z)
+    beam_new.g0 = np.interp(beam_new.z, z2, beam_new.g0)
+    beam_new.dg = dg   
+    beam_new.dg = np.interp(beam_new.z, z2, beam_new.dg)
+        
+    beam_new.eloss = np.interp(beam_new.z, beam.z, beam.eloss)
+    
+    beam_new.betax = np.interp(beam_new.z, beam.z, beam.betax)
+    beam_new.betay = np.interp(beam_new.z, beam.z, beam.betay)
+    beam_new.alphax = np.interp(beam_new.z, beam.z, beam.alphax)
+    beam_new.alphay = np.interp(beam_new.z, beam.z, beam.alphay)
+    
+    beam_new.x = np.interp(beam_new.z, beam.z, beam.x) 
+    beam_new.px = np.interp(beam_new.z, beam.z, beam.px) 
+    beam_new.y = np.interp(beam_new.z, beam.z, beam.y)
+    beam_new.py = np.interp(beam_new.z, beam.z, beam.py)
+    
+    
+    
+    
+    '''
+    plt.figure()
+    plt.plot(beam_new.g0)
+    plt.plot(g0 + beam.gamma_rel)
+    plt.figure()
+    plt.plot(beam_new.dg)
+    plt.plot(dg)
+    plt.figure()
+    plt.plot(I)
+    plt.plot(beam_new.I)
+    plt.show()
+    '''  
+
+
+
+def sseed_2(input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug=True, output_file = None,  xt_couple=False, filterfilename='', method='hxr_wake_calc'):
+    
+    h = 4.135667516e-15
+    c = 299792458.0
+       
+    g = readGenesisOutput(input_file)
+    print 'read sliced field ', g('ncar'), g.nSlices
+    ncar = int(g('ncar'))
+    dgrid = float(g('dgrid'))
+    xlamds = float(g('xlamds'))
+    nslice = len(g.spec)
+    print 'nslice = ',nslice
+    zsep  = float(g('zsep'))
+    print zsep
+
+    k0 = 2*np.pi/xlamds    
+    ds = zsep*xlamds                #interval ds
+    srange = nslice*zsep*xlamds     #range in s
+    
+    
+    
+    
+    
+    
+    dkold = 2*np.pi/srange    
+    krange = dkold*nslice
+    #idx_max = np.argmax(g.I)
+    #s_imax = -srange/2.0 + idx_max*ds
+    
+    
+
+    #SHF = np.int((delay-s_imax)/ds)
+    
+    SHF = np.int(delay/ds)
+    
+    #print 'imax = ', idx_imax
+    #print 'delay = ', delay
+    #print 'delay-s_imax', delay-s_imax
+    #print 'SHF*ds', SHF*ds
+    
+    #SHF = np.int((-0.5e-5+s_imax)/ds)
+    ####SHF = np.int((delay)/ds)
+    #print np.int((delay+s_imax)/ds)*ds
+    #print 'due=', SHF*ds
+    #exit()
+
+    #g.idx_max = idx_max
+    #print 'ss idx_max:', g.idx_max    
+
+
+    if method=='hxr_wake_calc':
+        
+        r = Ray() 
+        r.lamb = 2 * pi * hbar * c / E_ev
+        print 'wavelength', r.lamb, '(', E_ev, 'eV), filetring...'
+        
+        ref_idx = chicane.cryst.ref_idx
+        filt = get_crystal_filter(chicane.cryst, r, nk=1000, ref_idx = ref_idx)
+        
+        chicane.cryst.filter = filt
+
+        klpos, krpos, cwidth = FWHM(filt.k, 1.0-np.abs(filt.tr))
+        cmid_idx   = int((krpos - klpos)/2.0)
+        cmid       = filt.k[cmid_idx]        
+
+        H, d, phi = find_bragg(lambd = r.lamb, lattice=chicane.cryst.lattice, ord_max = 15)
+        dhkl = d[ref_idx]
+        thetaB = phi[ref_idx]* np.pi / 180.0
+        
+        dk = cwidth/5.0 #The filter transmissivity defines this quantity by taking 5 points on the bottom of T
+        dr = ncar/(dgrid*np.tan(thetaB)) #dr prepares for inclusion of the spatiotemporal coupling; it is transverse pix size/cot(thetaB)
+        #dr=1.0
+        print '#################'
+        print 'dgrid = ', dgrid
+        print 'ncar = ',ncar
+        print 'dr = ',dr
+        print 'thetaB = ',thetaB
+        print 'ds = ',ds
+        print 'SHF = ',SHF
+        print '#################'
+        mult = np.int(dkold/dk)
+        
+         
+        if int(mult/2) - mult/2 ==0: mult = mult-1
+        print 'MULT = ',mult
+        dk = dkold/mult #Important! Otherwise the np.int in the line changes the k scale substantially 
+
+        phases = unfold_angles(np.angle(np.conj(filt.tr)))
+        
+        f1 = open(output_files[1], 'w')
+        f2 = open(output_files[2], 'w')
+        for i in range(len(filt.k)):
+            f1.write('%s ' %(filt.k[i]) + '%s' %np.abs(filt.tr[i]) +'\n')
+            f2.write('%s ' %(filt.k[i]) + '%s' %phases[i] +'\n')
+        
+        f1.close()
+        f2.close()
+
+    if method=='sxr_filter_read':
+        # f = open(filterfilename, 'r')
+        #[abs, dlpl]
+        # import numpy as np
+        # from math import pi
+#        E_ev=1000.
+        #icf_path='d:\Work\!PROJECTS\ocelot_test\ICF_1000.ascii'
+        f = open(filterfilename, 'r')
+        data = np.genfromtxt(f, delimiter=',')
+        #delete(data,0,0) # Erases the first row (i.e. the header)
+        #plot(data[:,0],data[:,1],'o')
+        f.close()
+        
+        dlpl=np.flipud(data[:,0])
+        Tmod=np.flipud(data[:,1])
+        
+        
+        Tpha=np.zeros(len(data[:,0]))
+        lambda_0=1239.8/E_ev*1e-9
+        k=2*pi/(lambda_0+lambda_0*dlpl)
+        dk_f=k[0]-k[1]
+        k=np.concatenate(([k[0]+dk_f],k,[k[-1]-dk_f]))
+        Tmod=np.concatenate(([0],Tmod,[0]))
+        Tpha=np.concatenate(([0],Tpha,[0]))
+        # Tmod=np.insert(Tmod,slice(0),0)
+        # Tmod=np.insert(Tmod,slice(-1),0)
+        # Tpha=np.insert(Tmod,slice(0),0)
+        # Tpha=np.insert(Tmod,slice(-1),0)
+        # Tmod=np.insert(Tmod,slice(0,-1),[0,0])
+        # Tpha=np.insert(Tpha,slice(0,-1),[0,0])#padding with zeros on edges, so that interpolation was done with zeros as well
+#        print np.column_stack((k, Tmod))
+        #f = open(res_dir+'s2.Tmod.dat', 'w')
+    #    writepath_Tmod='d:\Work\!PROJECTS\ocelot_test\s2.Tmod.dat'
+    #    writepath_Tpha='d:\Work\!PROJECTS\ocelot_test\s2.Tpha.dat'
+        np.savetxt(output_files[1],np.column_stack((k, Tmod)))
+        np.savetxt(output_files[2],np.column_stack((k, Tpha)))
+        
+        klpos, krpos, cwidth = FWHM(k, Tmod)
+        cwidth=abs(cwidth)
+        print 'CWIDTH=',cwidth
+        dk = cwidth/10.0
+        mult = np.int(dkold/dk)
+        
+        #if int(mult/2) - mult/2 ==0: mult = mult-1 %probably it needs to be even
+        
+        print 'MULT = ',mult
+        dk = dkold/mult #Important! Otherwise the np.int in the line changes the k scale substantially 
+        
+        # bring to common format !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        dr=0
+    
+    ARGS   =   ''.join([input_file+'.dfl'+' ', 	        
+        output_files[0]+' ',                  
+        output_files[1]+' ',                       
+		output_files[2]+' ',                       
+		output_files[3]+' ',
+		output_files[4]+' ',                       
+		output_files[5]+' ',                       
+		output_files[6]+' ',                       
+		output_files[7]+' ',
+        output_files[8]+' ', 
+		str(xlamds)+' ',                       
+		str(ncar)+' ',                       
+		str(mult)+' ',                       
+		str(ds)+' ',                       
+		str(dk)+' ',                       
+		str(SHF)+' ',                       
+		str(nslice)+' ', 
+		str(dr)])	
+    runpar = '`which mpirun` -x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH'
+    prog   = ' '+'python /data/netapp/xfel/gianluca/products/ocelot/utils/seed.py '+ARGS+''
+    #prog   = ' '+'python /data/netapp/xfel/svitozar/CODE/ocelot/utils/seed.py '+ARGS+''
+    
+    cmd = runpar+prog
+    print cmd
+    os.system(cmd)
+    
+    print 'reading filtered file (hxrss_common, lile 728) ', output_files[5]
+    
+    ssc, Pout = readres(output_files[5])
+    lsc, Sout = readres(output_files[7])
+    
+    return ssc, Pout, lsc, Sout
+
+'''
+########################################
+#########     Added by S.S.    #########
+########################################
+'''
+
+def clearall():
+    # similar to "clear all" in Matlab - clears all the variables from the memory 
+    all = [var for var in locals() if (var[:2], var[-2:]) != ("__", "__")]
+    for var in all:
+        del locals()[var]
+
+def dfl_filt(dfl_filename_read,dfl_filename_write,filter_filename,gen,lambda_filter=[],energy_filter=[],zeros_add=0,debug=0):
+    import gc
+    if (lambda_filter==[] and energy_filter==[]) or (lambda_filter!=[] and energy_filter!=[]):
+        raise Exception('only one lambda_filter or energy_filter should be defined')
+    if lambda_filter==[]:
+        lambda_filter=1239.8/energy_filter*1e-9
+    
+        
+    start_time = time.time()
+    xlamds=gen('xlamds')
+    zsep=gen('zsep')
+    ncar=int(gen('ncar'))
+    rad0_t  = readRadiationFile(dfl_filename_read, npoints=ncar,slice_start=0, slice_end = -1,vartype=complex128)
+    #rad0_t=rad0_t[:1024,:,:]
+    nz_0=np.size(rad0_t,0)
+    print("--- Read *.dfl file - %s seconds ---" % (time.time() - start_time))
+    if debug:
+        print("--- debug ---")
+        start_time = time.time()
+        rad0_zscale=np.arange(nz_0)*xlamds*zsep
+        dk=2*pi/(np.amax(rad0_zscale)-np.amin(rad0_zscale))
+        sc=np.linspace(-nz_0/2,nz_0/2,num=nz_0)
+        k=2*pi/xlamds
+        K=k+dk*sc
+        rad0_lamdscale=2*pi/K
+        rad0_f=np.fft.fftshift(np.fft.fft(rad0_t,axis=0),axes=0)/sqrt(nz_0)
+        
+        plt.figure(50001)#plt.figure('dfl_power_init')
+        plt.clf()
+        plt.plot(rad0_zscale,np.power(np.abs(rad0_t[:,75,75]),2))
+        plt.gca().get_xaxis().get_major_formatter().set_useOffset(False)
+        plt.gca().get_xaxis().get_major_formatter().set_scientific(True)
+        plt.gca().get_xaxis().get_major_formatter().set_powerlimits((-3, 4))
+        #ax.ticklabel_format(axis='x', style='sci', scilimits=(-3, 3), useOffset=False)
+        plt.figure(50002)#plt.figure('dfl_spectrum_init')
+        plt.clf()
+        plt.plot(rad0_lamdscale,np.sum(np.power(np.abs(rad0_f),2),axis=(1,2)))
+        plt.gca().get_xaxis().get_major_formatter().set_useOffset(False)
+        plt.gca().get_xaxis().get_major_formatter().set_scientific(True)
+        plt.gca().get_xaxis().get_major_formatter().set_powerlimits((-3, 4))#[:,75,75]
+        print("--- Show dfl file - %s seconds ---" % (time.time() - start_time))
+        del rad0_f
+    
+    start_time = time.time()
+
+    f = open(filter_filename, 'r')
+    data = np.genfromtxt(f, delimiter=',')
+    f.close()
+    dlpl=data[:,0]
+    Tmod=sqrt(data[:,1]) #getting filter amplituse (sqrt of intensity)
+    Tpha=np.zeros(len(data[:,0]))
+    T=Tmod*exp(1j*Tpha)
+    lambda_f=lambda_filter+lambda_filter*dlpl
+    k_f=2*pi/(lambda_filter+lambda_filter*dlpl)
+    dk_f=k_f[0]-k_f[1]    
+    
+    print("--- Read filter file - %s seconds ---" % (time.time() - start_time))
+    
+    start_time = time.time()
+#    zeros_add=1
+    #  #######\-------\-------\-------
+    #  #######\0000000\0000000\------- zeros_add=2
+    nz_1=nz_0*(zeros_add+1)
+    rad1_t=np.concatenate((rad0_t,zeros((zeros_add*nz_0,ncar,ncar))),axis=0)
+    # rad1_t=np.pad(rad0_t, ((0,zeros_add*nz_0), (0,0), (0,0)), mode='constant', constant_values=0) #not supported by old numpy
+    rad1_zscale=np.arange(nz_1)*xlamds*zsep
+    
+    del rad0_t
+    gc.collect()
+    
+    rad1_zscale=np.arange(nz_1)*xlamds*zsep
+    dk1=2*pi/(np.amax(rad1_zscale)-np.amin(rad1_zscale))
+    sc=np.linspace(-nz_1/2,nz_1/2,num=nz_1)
+    k=2*pi/xlamds
+    K=k+dk1*sc
+    
+    rad1_lamdscale=2*pi/K
+    
+    # print 'filter_max=' , np.amax(Tmod)
+    # print 'range_rad1_lamdscale=',np.amin(rad1_lamdscale),np.amax(rad1_lamdscale)
+    # print 'range_rad1_lambda_f=',np.amin(lambda_f),np.amax(lambda_f)
+    filter_func=np.interp(rad1_lamdscale,lambda_f,Tmod,left=0,right=0)
+    filter_func=np.fft.ifftshift(filter_func,axes=0)
+    
+    # print 'filter_max=' , np.amax(filter_func)
+    
+    # print 'rad_max=' , np.amax(rad1_t)
+    rad1_t=np.fft.fft(rad1_t,axis=0) #was f FFT
+    rad1_t=(rad1_t.T*filter_func).T#was f   Filter
+    rad1_t=np.fft.ifft(rad1_t,axis=0)#      iFFT
+    rad1_t=rad1_t[:nz_0,:,:]
+    print 'rad_max=' , np.amax(rad1_t)
+    print("--- Pad and filter *.dfl file - %s seconds ---" % (time.time() - start_time))
+    
+    if debug:
+        plt.figure(50004)#plt.figure('dfl_power_final')
+        plt.clf()
+        plt.plot(rad0_zscale,np.power(np.abs(rad1_t[:,int((ncar-1)/2),int((ncar-1)/2)]),2))
+        plt.gca().get_xaxis().get_major_formatter().set_useOffset(False)
+        plt.gca().get_xaxis().get_major_formatter().set_scientific(True)
+        plt.gca().get_xaxis().get_major_formatter().set_powerlimits((-3, 4))
+    
+    writeRadiationFile(dfl_filename_write,rad1_t)

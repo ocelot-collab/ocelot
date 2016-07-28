@@ -126,10 +126,6 @@ class TransferMap:
             a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(n/6, 6)))), b).reshape(n)
         else:
             a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(n/6, 6)))), self.B(energy)).reshape(n)
-            print("B = ", self.B(energy))
-            print("R = ", self.R(energy))
-            print("X0 = ", particles[:12])
-            print("X1 = ", a[:12])
         particles[:] = a[:]
         logger.debug('return trajectory, array ' + str(len(particles)))
         return particles

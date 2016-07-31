@@ -1148,6 +1148,10 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
             out.freq_lamd=1239.8/out.freq_ev
             out.sliceKeys_used.append('spec')
             
+            spec_avg_pos=0
+            if spec_avg_pos:
+                sum(out.spec*out.freq_lamd)/sum(out.spec) #fixfixifixfixfixfixfix: add for loop
+            
             phase_fix=1 #the way to display the phase, without constant slope caused by different radiation wavelength from xlamds. phase is set to 0 at maximum power slice.
             if phase_fix:
                 out.phi_mid_disp=deepcopy(out.phi_mid)
@@ -1162,10 +1166,10 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
                     n=1
                     phase_fixed = ( phase_fixed + n*pi) % (2 * n*pi ) - n*pi
                     out.phi_mid_disp[:,zi]=phase_fixed
-                out.sliceKeys_used.append('phi_mid_disp')    
+                out.sliceKeys_used.append('phi_mid_disp')
                 
             t_size_weighted=1
-            if t_size_weighted:
+            if t_size_weighted and hasattr(out,'r_size'):
                 if np.amax(out.power)>0:
                     weight=out.power+np.amin(out.power[out.power!=0])/1e6
                 else:

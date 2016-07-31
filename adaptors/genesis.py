@@ -1168,7 +1168,7 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
                     out.phi_mid_disp[:,zi]=phase_fixed
                 out.sliceKeys_used.append('phi_mid_disp')
                 
-            t_size_weighted=1
+            t_size_weighted=1 #to average the radiation size over slices with radiation power as a weight
             if t_size_weighted and hasattr(out,'r_size'):
                 if np.amax(out.power)>0:
                     weight=out.power+np.amin(out.power[out.power!=0])/1e6

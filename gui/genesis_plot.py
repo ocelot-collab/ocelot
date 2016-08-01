@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy import *
 from ocelot.adaptors.genesis import *
+from ocelot.common.globals import * #import of constants like "h_eV_s" and 
+
 from pylab import * #tmp
 
 #font = {'family' : 'normal',
@@ -26,52 +28,80 @@ font = {'family' : 'normal',
 
 matplotlib.rc('font', **font)
 
-h = 4.135667516e-15
-c = 299792458.0
-
 max_yticks = 7
 
-def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = None, save=False):
-    import matplotlib.ticker as ticker
 
-    print('    plotting e-beam evolution')
+
+
+
+def gen_outplot_evo(g, params=['und_quad','el_size','el_energy','el_bunching','rad_pow_en','rad_spec','rad_size'], figsize=[], legend = True, fig_name = None, save=False):
+
+    import matplotlib.ticker as ticker
+    
+    params_str=str(params).replace("'",'').replace('[','').replace(']','').replace(' ','').replace(',','--')
+    
+    if fig_name==None:
+        print('    plotting '+params_str)
+    else:
+        print('    plotting '+fig_name)
 
     font_size = 1
     if fig_name is None:
         if g.filename is '':
-            fig = plt.figure('Electrons')
+            fig = plt.figure(params_str)
         else:
-            fig = plt.figure('Electrons '+g.filename)
+            fig = plt.figure(params_str+' '+g.filename)
     else:
         fig = plt.figure(fig_name)
 
+    if figsize==[]:
+        figsize=(8, len(params)*2.5+1)
+    
     fig.set_size_inches(figsize,forward=True)
     plt.rc('axes', grid=True)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
     # left, width = 0.1, 0.85
     plt.clf()
-
-    ax_und=fig.add_subplot(4, 1, 1)
-    ax_und.clear()
-    ax_size_tpos=fig.add_subplot(4, 1, 2,sharex=ax_und)
-    ax_size_tpos.clear()
-    ax_energy=fig.add_subplot(4, 1, 3,sharex=ax_und)
-    ax_energy.clear()
-    ax_bunching=fig.add_subplot(4, 1, 4,sharex=ax_und)
-    ax_bunching.clear()
-
-    for ax in ax_size_tpos, ax_energy, ax_und, ax_bunching:
-        if ax!=ax_bunching:
-            for label in ax.get_xticklabels():
-                label.set_visible(False)
-
-    # for tick in ax.yaxis.get_major_ticks():
-    #     tick.label.set_fontsize(14)
-    #     # specify integer or one of preset strings, e.g.
-    #     #tick.label.set_fontsize('x-small')
-    #     tick.label.set_rotation('vertical')
     fig.subplots_adjust(hspace=0)
+    
+    ax=[]
+    for index, param in enumerate(params):
+        if len(ax)==0:
+            ax.append(fig.add_subplot(len(params), 1, index+1))
+        else:
+            ax.append(fig.add_subplot(len(params), 1, index+1,sharex=ax[0]))
+        #ax[-1]
+        if param=='und_quad':
+            subfig_und_quad(ax[-1],g,legend)
+        elif param=='el_size':
+            subfig_el_size(ax[-1],g,legend)
+        elif  param=='el_energy':
+            subfig_el_energy(ax[-1],g,legend)
+        elif  param=='el_bunching':
+            subfig_el_bunching(ax[-1],g,legend)
+        elif  param=='rad_pow_en':
+            subfig_rad_pow_en(ax[-1],g,legend)
+        elif  param=='rad_spec':
+            subfig_rad_spectrum(ax[-1],g,legend)
+        elif  param=='rad_size':
+            subfig_rad_size(ax[-1],g,legend)
+        else:
+            print('wrong parameter '+param)
 
+    ax[0].set_xlim(g.z[0], g.z[-1])
+    ax[-1].set_xlabel('z [m]')
+    fig.subplots_adjust(top=0.95, bottom=0.1, right=0.85, left=0.15)
+    
+    for axi in ax[0:-1]:
+        for label in axi.get_xticklabels():
+            label.set_visible(False)
+    
+    #ax[-1].grid(1)
+    plt.show()
+
+def subfig_und_quad(ax_und,g,legend):
+
+    number_ticks=6
     ax_und.plot(g.z, g.aw, 'b-',linewidth=1.5)
     ax_und.set_ylabel('K (rms)')
 
@@ -80,46 +110,9 @@ def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = None, save=False)
     ax_quad.set_ylabel('Quad')
     ax_quad.grid(False)
 
-    #sys.exit()
-    ax_size_tpos.plot(g.z, np.mean(g.xrms,axis=0)*1e6, 'g-',g.z, np.mean(g.yrms,axis=0)*1e6, 'b-')
-    ax_size_tpos.set_ylabel('$\sigma_{x,y}$ [$\mu$m]')
-
-
-    # ax_energy.plot(g.z, np.average(g.el_energy*0.511e-3, weights=g.I, axis=0), 'b-',linewidth=1.5) #with current as weight
-    ax_energy.plot(g.z, np.average(g.el_energy*0.511e-3, axis=0), 'b-',linewidth=1.5)
-    ax_energy.set_ylabel('E [GeV]')
-    ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
-    ax_spread = ax_energy.twinx()
-    ax_spread.plot(g.z, np.average(g.el_e_spread*0.511e-3*1000, weights=g.I, axis=0), 'm--', g.z, np.amax(g.el_e_spread*0.511e-3*1000, axis=0), 'r--',linewidth=1.5)
-    ax_spread.set_ylabel('$\sigma_E$ [MeV]')
-    ax_spread.grid(False)
-
-    ax_bunching.plot(g.z, np.average(g.bunching, weights=g.I, axis=0), 'k-', g.z, np.amax(g.bunching, axis=0), 'grey',linewidth=1.5)
-    ax_bunching.set_ylabel('Bunching')
-
-    ax_bunching.set_xlabel('z [m]')
-
-    ax_size_tpos.set_ylim(ymin=0)
-    ax_spread.set_ylim(ymin=0)
-    ax_bunching.set_ylim(ymin=0)
-
-    number_ticks=6
-
     ax_und.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_quad.yaxis.major.locator.set_params(nbins=number_ticks)
-    ax_energy.yaxis.major.locator.set_params(nbins=number_ticks)
-    ax_spread.yaxis.major.locator.set_params(nbins=number_ticks)
-    ax_bunching.yaxis.major.locator.set_params(nbins=number_ticks)
-    ax_size_tpos.yaxis.major.locator.set_params(nbins=number_ticks)
-    # yloc = plt.MaxNLocator(max_yticks)
-    # ax_size_tpos.yaxis.set_major_locator(yloc)
-    # ax_energy.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.1e'))
 
-    plt.xlim(g.z[0], g.z[-1])
-
-    fig.subplots_adjust(top=0.95, bottom=0.1, right=0.85, left=0.15)
-
-    #plot undulator K rms. if there is tapering and K!=0, plot is scaled to viwew the tapering profile
     if np.amax(g.aw)!=0:
         aw_tmp=np.array(g.aw)[np.array(g.aw)!=0]
         if np.amax(aw_tmp)!=np.amin(aw_tmp):
@@ -131,212 +124,430 @@ def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = None, save=False)
     ax_und.yaxis.label.set_color('b')
     ax_quad.tick_params(axis='y', which='both', colors='r')
     ax_quad.yaxis.label.set_color('r')
+
+
+def subfig_el_size(ax_size_tpos,g,legend):
+
+    number_ticks=6
+    
+    ax_size_tpos.plot(g.z, np.average(g.xrms,axis=0,weights=g.I)*1e6, 'g-',g.z, np.average(g.yrms,axis=0,weights=g.I)*1e6, 'b-')
+    ax_size_tpos.set_ylabel('$\sigma_{x,y}$ [$\mu$m]')
+
+    ax_size_tpos.set_ylim(ymin=0)
+    ax_size_tpos.yaxis.major.locator.set_params(nbins=number_ticks)
+
+    
+def subfig_el_energy(ax_energy,g,legend):
+    
+    number_ticks=6
+    
+    ax_energy.plot(g.z, np.average(g.el_energy*0.511e-3, axis=0), 'b-',linewidth=1.5)
+    ax_energy.set_ylabel('E [GeV]')
+    ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
+    
+    ax_spread = ax_energy.twinx()
+    ax_spread.plot(g.z, np.average(g.el_e_spread*0.511e-3*1000, weights=g.I, axis=0), 'm--', g.z, np.amax(g.el_e_spread*0.511e-3*1000, axis=0), 'r--',linewidth=1.5)
+    ax_spread.set_ylabel('$\sigma_E$ [MeV]')
+    ax_spread.grid(False)
+    ax_spread.set_ylim(ymin=0)
+    
+    ax_energy.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_spread.yaxis.major.locator.set_params(nbins=number_ticks)
+    
     ax_energy.tick_params(axis='y', which='both', colors='b')
     ax_energy.yaxis.label.set_color('b')
     ax_spread.tick_params(axis='y', which='both', colors='r')
     ax_spread.yaxis.label.set_color('r')
+    
+def subfig_el_bunching(ax_bunching,g,legend):
 
-    if save!=False:
-        if save==True:
-            save='png'
-        fig.savefig(g.path+'_elec.'+str(save),format=save)
-
-    return fig
-
-
-
-def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=False):
-    import matplotlib.ticker as ticker
-
-    print('    plotting radiation evolution')
-
-    font_size = 1
-    if fig_name is None:
-        if g.filename is '':
-            fig = plt.figure('Radaition')
-        else:
-            fig = plt.figure('Radiation '+g.filename)
-    else:
-        fig = plt.figure(fig_name)
-
-    fig.set_size_inches(figsize,forward=True)
-
-    plt.rc('axes', grid=True)
-    plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
-    plt.clf()
-
-
-    if g('itdp')==True:
-        ax_pow=fig.add_subplot(3, 1, 1)
-        ax_pow.clear()
-        ax_spectrum=fig.add_subplot(3, 1, 2,sharex=ax_pow)
-        ax_spectrum.clear()
-        ax_size_t=fig.add_subplot(3, 1, 3,sharex=ax_pow)
-        ax_size_t.clear()
-        for ax in ax_pow, ax_spectrum, ax_size_t:
-            if ax!=ax_size_t:
-                for label in ax.get_xticklabels():
-                    label.set_visible(False)
-    else:
-        ax_pow=fig.add_subplot(2, 1, 1)
-        ax_pow.clear()
-        ax_size_t=fig.add_subplot(2, 1, 2,sharex=ax_pow)
-        ax_size_t.clear()
-        for ax in ax_pow, ax_size_t:
-            if ax!=ax_size_t:
-                for label in ax.get_xticklabels():
-                    label.set_visible(False)
-
-
-
-    # for tick in ax.yaxis.get_major_ticks():
-    #     tick.label.set_fontsize(14)
-    #     # specify integer or one of preset strings, e.g.
-    #     #tick.label.set_fontsize('x-small')
-    #     tick.label.set_rotation('vertical')
-
-    #
-    fig.subplots_adjust(hspace=0)
-
-    ax_pow.plot(g.z, np.amax(g.p_int, axis=0), 'g-',linewidth=1.5)
-    ax_pow.text(0.98, 0.02,'$P_{end}$= %.2e W\n$E_{end}$= %.2e J' %(np.amax(g.p_int[:,-1]),np.mean(g.p_int[:,-1],axis=0)*g('xlamds')*g('zsep')*g.nSlices/c), fontsize=12, horizontalalignment='right', verticalalignment='bottom', transform = ax_pow.transAxes)#horizontalalignment='center', verticalalignment='center',
-    ax_pow.set_ylabel('P [W]')
-    ax_pow.get_yaxis().get_major_formatter().set_useOffset(False)
-    ax_pow.get_yaxis().get_major_formatter().set_scientific(True)
-#    if np.amin(g.p_int)>0:
+    number_ticks=6
+    
+    ax_bunching.plot(g.z, np.average(g.bunching, weights=g.I, axis=0), 'k-', g.z, np.amax(g.bunching, axis=0), 'grey',linewidth=1.5)
+    ax_bunching.set_ylabel('Bunching')
+    ax_bunching.set_ylim(ymin=0)
+    ax_bunching.yaxis.major.locator.set_params(nbins=number_ticks)
+    
+def subfig_rad_pow_en(ax_rad_pow,g,legend):
+    ax_rad_pow.plot(g.z, np.amax(g.p_int, axis=0), 'g-',linewidth=1.5)
+    ax_rad_pow.text(0.98, 0.02,'$P_{end}$= %.2e W\n$E_{end}$= %.2e J' %(np.amax(g.p_int[:,-1]),np.mean(g.p_int[:,-1],axis=0)*g('xlamds')*g('zsep')*g.nSlices/speed_of_light), fontsize=12, horizontalalignment='right', verticalalignment='bottom', transform = ax_rad_pow.transAxes)
+    ax_rad_pow.set_ylabel('P [W]')
+    ax_rad_pow.get_yaxis().get_major_formatter().set_useOffset(False)
+    ax_rad_pow.get_yaxis().get_major_formatter().set_scientific(True)
     if np.amax(g.p_int)>0:
-        ax_pow.set_yscale('log')
-
-
-
-    ax_en = ax_pow.twinx()
-    ax_en.plot(g.z, np.mean(g.p_int,axis=0)*g('xlamds')*g('zsep')*g.nSlices/c, 'k--',linewidth=1.5)
-    ax_en.set_ylabel('E [J]')
-    ax_en.get_yaxis().get_major_formatter().set_useOffset(False)
-    ax_en.get_yaxis().get_major_formatter().set_scientific(True)
+        ax_rad_pow.set_yscale('log')
+        
+    ax_rad_en = ax_rad_pow.twinx()
+    ax_rad_en.plot(g.z, np.mean(g.p_int,axis=0)*g('xlamds')*g('zsep')*g.nSlices/speed_of_light, 'k--',linewidth=1.5)
+    ax_rad_en.set_ylabel('E [J]')
+    ax_rad_en.get_yaxis().get_major_formatter().set_useOffset(False)
+    ax_rad_en.get_yaxis().get_major_formatter().set_scientific(True)
     if np.amax(g.p_int)>0:
-        ax_en.set_yscale('log')
-
-
-    if g('itdp')==True:
-        n_pad=1
-        # print len(g.z),len(g.xrms[0,:]),len(np.mean(g.yrms,axis=0))
-        power=np.pad(g.p_mid, [(int(g.nSlices/2)*n_pad, (g.nSlices-(int(g.nSlices/2))))*n_pad, (0, 0)], mode='constant')
-        phase=np.pad(g.phi_mid, [(int(g.nSlices/2)*n_pad, (g.nSlices-(int(g.nSlices/2))))*n_pad, (0, 0)], mode='constant')
-        spectrum = abs(fft(np.sqrt( np.array(power)) * np.exp( 1.j* np.array(phase) ) , axis=0))**2/sqrt(g.nSlices)/(2*g.leng/g('ncar'))**2/1e10
-        e_0=1239.8/g('xlamds')/1e9
-        # print e_0
-
-        g.freq_ev1 = h * fftfreq(len(spectrum), d=g('zsep') * g('xlamds') / c)+e_0
-        lamdscale=1239.8/g.freq_ev1
-        lamdscale_array=np.swapaxes(np.tile(lamdscale,(g.nZ,1)),0,1)
-
-    #    print spectrum.shape
-        spectrum_norm=np.sum(spectrum,axis=0)#avoiding division by zero
-        spectrum_norm[spectrum_norm==0]=1
-    #    print spectrum_norm.shape
-        spectrum_lamdpos=np.sum(spectrum*lamdscale_array/spectrum_norm,axis=0)
-    #    print "spectrum lamdpos", spectrum_lamdpos
-        spectrum_lamdwidth=sqrt(np.sum(spectrum*(lamdscale_array-spectrum_lamdpos)**2/spectrum_norm,axis=0))
-
-        spectrum_lamdwidth1=np.empty(g.nZ)
-        for zz in range(g.nZ):
-            if np.sum(spectrum[:,zz])!=0:
-                peak=fwhm3(spectrum[:,zz])
-                #spectrum_lamdwidth1[zz]=abs(lamdscale[peak[0]]-lamdscale[peak[0]+1])*peak[1] #the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
-                spectrum_lamdwidth1[zz]=abs(lamdscale[0]-lamdscale[1])*peak[1] #the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
-            else:
-                spectrum_lamdwidth1[zz]=0
-
-
-
-        ax_spectrum.plot(g.z, np.amax(spectrum,axis=0), 'r-',linewidth=1.5)
+        ax_rad_en.set_yscale('log')
+        
+    ax_rad_pow.tick_params(axis='y', which='both', colors='g')
+    ax_rad_pow.yaxis.label.set_color('g')
+    ax_rad_en.tick_params(axis='y', which='both', colors='k')
+    ax_rad_en.yaxis.label.set_color('k')
+    ax_rad_en.grid(False)
+    ax_rad_pow.yaxis.get_offset_text().set_color(ax_rad_pow.yaxis.label.get_color())
+    ax_rad_en.yaxis.get_offset_text().set_color(ax_rad_en.yaxis.label.get_color())
+    
+def subfig_rad_spectrum(ax_spectrum,g,legend):
+        ax_spectrum.plot(g.z, np.amax(g.spec,axis=0), 'r-',linewidth=1.5)
         ax_spectrum.text(0.5, 0.98,r"(on axis)", fontsize=10, horizontalalignment='center', verticalalignment='top', transform = ax_spectrum.transAxes)#horizontalalignment='center', verticalalignment='center',
         ax_spectrum.set_ylabel('P$(\lambda)_{max}$ [a.u.]')
         # if np.amin(np.amax(spectrum,axis=0))>0:
-        if np.amax(np.amax(spectrum,axis=0))>0:
+        if np.amax(np.amax(g.spec,axis=0))>0:
             ax_spectrum.set_yscale('log')
-
-        #fix!!!
-        ax_spec_bandw = ax_spectrum.twinx()
-        ax_spec_bandw.plot(g.z, spectrum_lamdwidth*2, 'm--')
-        ax_spec_bandw.set_ylabel('$2\sigma\lambda$ [nm]')
-        # fix and include!!!
-
-
-        s=g.t*c*1.0e-15*1e6
-        s_array=np.swapaxes(np.tile(s,(g.nZ,1)),0,1)
-        p_int_norm=np.sum(g.p_int,axis=0)#avoiding division by zero
-        p_int_norm[p_int_norm==0]=1
-        rad_longit_pos=np.sum(g.p_int*s_array/p_int_norm,axis=0)
-        rad_longit_size=sqrt(np.sum(g.p_int*(s_array-rad_longit_pos)**2/p_int_norm,axis=0)) #this is standard deviation (sigma)
-
-        #g.p_int=np.amax(g.p_int)/1e6+g.p_int # nasty fix from division by zero
-        if np.amax(g.p_int)>0:
-            weight=g.p_int+np.amin(g.p_int[g.p_int!=0])/1e6
-        else:
-            weight=np.ones_like(g.p_int)
-
-
-        ax_size_l = ax_size_t.twinx() #longitudinal size
-        ax_size_l.plot(g.z, rad_longit_size*2, color='indigo', linestyle='dashed',linewidth=1.5)
-        ax_size_l.set_ylabel('longitudinal [$\mu$m]')
-
-        
-        ax_size_t.plot([np.amin(g.z), np.amax(g.z)],[g.leng*1e6, g.leng*1e6], 'b-',linewidth=1.0)
-        ax_size_t.set_ylabel('transverse [$\mu$m]')
-    else:
+            
+        spectrum_lamdwidth=np.empty(g.nZ)
+        for zz in range(g.nZ):
+            if np.sum(g.spec[:,zz])!=0:
+                peak=fwhm3(g.spec[:,zz])
+                #spectrum_lamdwidth1[zz]=abs(lamdscale[peak[0]]-lamdscale[peak[0]+1])*peak[1] #the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
+                spectrum_lamdwidth[zz]=abs(g.freq_lamd[0]-g.freq_lamd[1])*peak[1] #the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
+            else:
+                spectrum_lamdwidth[zz]=0
+                
+def subfig_rad_size(ax_size_t,g,legend):
+    if g.nSlices==1:
         ax_size_t.plot(g.z, g.r_size.T*2*1e6, 'b-',linewidth=1.5)
         ax_size_t.plot([np.amin(g.z), np.amax(g.z)],[g.leng*1e6, g.leng*1e6], 'b-',linewidth=1.0)
-        ax_size_t.set_ylabel('transverse [$\mu$m]')
+        ax_size_t.set_ylabel('transverse $[\mu m]$')
+    else:
+    
+        if hasattr(g,'rad_t_size_weighted'):
+            ax_size_t.plot(g.z, g.rad_t_size_weighted*2*1e6, 'b-',linewidth=1.5)
+        else:
+        
+            if np.amax(g.p_int)>0:
+                weight=g.p_int+np.amin(g.p_int[g.p_int!=0])/1e6
+            else:
+                weight=np.ones_like(g.p_int)
+                
+            ax_size_t.plot(g.z, np.average(g.r_size*2*1e6, weights=weight, axis=0), 'b-',linewidth=1.5)
+    
+    ax_size_t.set_ylabel('transverse [$\mu$m]')
+
+    
+    
+    
+    
 
 
 
-    plt.xlim(g.z[0], g.z[-1])
-
-    fig.subplots_adjust(top=0.95, bottom=0.1, right=0.85, left=0.15)
 
 
-    ax_pow.tick_params(axis='y', which='both', colors='g')
-    ax_pow.yaxis.label.set_color('g')
-    ax_en.tick_params(axis='y', which='both', colors='k')
-    ax_en.yaxis.label.set_color('k')
-    ax_en.grid(False)
-    ax_size_t.tick_params(axis='y', which='both', colors='b')
-    ax_size_t.yaxis.label.set_color('b')
-    ax_size_t.set_xlabel('z [m]')
-    ax_size_t.set_ylim(ymin=0)
-    ax_pow.yaxis.get_offset_text().set_color(ax_pow.yaxis.label.get_color())
-    ax_en.yaxis.get_offset_text().set_color(ax_en.yaxis.label.get_color())
+def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = 'Electrons', save=False):
+    gen_outplot_evo(g, params=['und_quad','el_size','el_energy','el_bunching'], figsize=figsize, legend = legend, fig_name = fig_name, save=save)
+def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = 'Radaition', save=False):
+    gen_outplot_evo(g, params=['rad_pow_en','rad_spec','rad_size'], figsize=figsize, legend = legend, fig_name = fig_name, save=save)
 
-    if g('itdp')==True:
-        ax_spectrum.tick_params(axis='y', which='both', colors='r')
-        ax_spectrum.yaxis.label.set_color('r')
-        ax_spec_bandw.tick_params(axis='y', which='both', colors='m')
-        ax_spec_bandw.yaxis.label.set_color('m')
-        ax_spec_bandw.grid(False)
-        ax_size_l.tick_params(axis='y', which='both', colors='indigo')
-        ax_size_l.yaxis.label.set_color('indigo')
-        ax_size_l.grid(False)
-        ax_size_l.set_ylim(ymin=0)
-        ax_spec_bandw.set_ylim(ymin=0)
+# def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = None, save=False):
+    # import matplotlib.ticker as ticker
+
+    # print('    plotting e-beam evolution')
+
+    # font_size = 1
+    # if fig_name is None:
+        # if g.filename is '':
+            # fig = plt.figure('Electrons')
+        # else:
+            # fig = plt.figure('Electrons '+g.filename)
+    # else:
+        # fig = plt.figure(fig_name)
+
+    # fig.set_size_inches(figsize,forward=True)
+    # plt.rc('axes', grid=True)
+    # plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
+    # # left, width = 0.1, 0.85
+    # plt.clf()
+
+    # ax_und=fig.add_subplot(4, 1, 1)
+    # ax_und.clear()
+    # ax_size_tpos=fig.add_subplot(4, 1, 2,sharex=ax_und)
+    # ax_size_tpos.clear()
+    # ax_energy=fig.add_subplot(4, 1, 3,sharex=ax_und)
+    # ax_energy.clear()
+    # ax_bunching=fig.add_subplot(4, 1, 4,sharex=ax_und)
+    # ax_bunching.clear()
+
+    # for ax in ax_size_tpos, ax_energy, ax_und, ax_bunching:
+        # if ax!=ax_bunching:
+            # for label in ax.get_xticklabels():
+                # label.set_visible(False)
+
+    # # for tick in ax.yaxis.get_major_ticks():
+    # #     tick.label.set_fontsize(14)
+    # #     # specify integer or one of preset strings, e.g.
+    # #     #tick.label.set_fontsize('x-small')
+    # #     tick.label.set_rotation('vertical')
+    # fig.subplots_adjust(hspace=0)
+
+    # ax_und.plot(g.z, g.aw, 'b-',linewidth=1.5)
+    # ax_und.set_ylabel('K (rms)')
+
+    # ax_quad = ax_und.twinx()
+    # ax_quad.plot(g.z, g.qfld, 'r-',linewidth=1.5)
+    # ax_quad.set_ylabel('Quad')
+    # ax_quad.grid(False)
+
+    # #sys.exit()
+    # ax_size_tpos.plot(g.z, np.mean(g.xrms,axis=0)*1e6, 'g-',g.z, np.mean(g.yrms,axis=0)*1e6, 'b-')
+    # ax_size_tpos.set_ylabel('$\sigma_{x,y}$ [$\mu$m]')
 
 
-    # #attempt to fix overlapping label values
-# #    for a in [ax_size_l,ax_size_t,ax_spec_bandw,ax_spectrum]:
-# #        xticks = a.yaxis.get_major_ticks()
-# #        xticks[-1].label.set_visible(False)
+    # # ax_energy.plot(g.z, np.average(g.el_energy*0.511e-3, weights=g.I, axis=0), 'b-',linewidth=1.5) #with current as weight
+    # ax_energy.plot(g.z, np.average(g.el_energy*0.511e-3, axis=0), 'b-',linewidth=1.5)
+    # ax_energy.set_ylabel('E [GeV]')
+    # ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
+    # ax_spread = ax_energy.twinx()
+    # ax_spread.plot(g.z, np.average(g.el_e_spread*0.511e-3*1000, weights=g.I, axis=0), 'm--', g.z, np.amax(g.el_e_spread*0.511e-3*1000, axis=0), 'r--',linewidth=1.5)
+    # ax_spread.set_ylabel('$\sigma_E$ [MeV]')
+    # ax_spread.grid(False)
 
-# #    labels = ax_size_t.get_yticklabels()
-# ##    print dir(labels), labels
-# #    labels[0] = ""
-# #    ax_size_t.set_yticklabels(labels)
+    # ax_bunching.plot(g.z, np.average(g.bunching, weights=g.I, axis=0), 'k-', g.z, np.amax(g.bunching, axis=0), 'grey',linewidth=1.5)
+    # ax_bunching.set_ylabel('Bunching')
 
-    if save!=False:
-        if save==True:
-            save='png'
-        fig.savefig(g.path+'_rad.'+str(save),format=save)
-    return fig
+    # ax_bunching.set_xlabel('z [m]')
+
+    # ax_size_tpos.set_ylim(ymin=0)
+    # ax_spread.set_ylim(ymin=0)
+    # ax_bunching.set_ylim(ymin=0)
+
+    # number_ticks=6
+
+    # ax_und.yaxis.major.locator.set_params(nbins=number_ticks)
+    # ax_quad.yaxis.major.locator.set_params(nbins=number_ticks)
+    # ax_energy.yaxis.major.locator.set_params(nbins=number_ticks)
+    # ax_spread.yaxis.major.locator.set_params(nbins=number_ticks)
+    # ax_bunching.yaxis.major.locator.set_params(nbins=number_ticks)
+    # ax_size_tpos.yaxis.major.locator.set_params(nbins=number_ticks)
+    # # yloc = plt.MaxNLocator(max_yticks)
+    # # ax_size_tpos.yaxis.set_major_locator(yloc)
+    # # ax_energy.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.1e'))
+
+    # plt.xlim(g.z[0], g.z[-1])
+
+    # fig.subplots_adjust(top=0.95, bottom=0.1, right=0.85, left=0.15)
+
+    # #plot undulator K rms. if there is tapering and K!=0, plot is scaled to viwew the tapering profile
+    # if np.amax(g.aw)!=0:
+        # aw_tmp=np.array(g.aw)[np.array(g.aw)!=0]
+        # if np.amax(aw_tmp)!=np.amin(aw_tmp):
+            # diff=np.amax(aw_tmp)-np.amin(aw_tmp)
+            # ax_und.set_ylim([np.amin(aw_tmp)-diff/10,np.amax(aw_tmp)+diff/10])
+    # else:
+        # ax_und.set_ylim([0,1])
+    # ax_und.tick_params(axis='y', which='both', colors='b')
+    # ax_und.yaxis.label.set_color('b')
+    # ax_quad.tick_params(axis='y', which='both', colors='r')
+    # ax_quad.yaxis.label.set_color('r')
+    # ax_energy.tick_params(axis='y', which='both', colors='b')
+    # ax_energy.yaxis.label.set_color('b')
+    # ax_spread.tick_params(axis='y', which='both', colors='r')
+    # ax_spread.yaxis.label.set_color('r')
+
+    # if save!=False:
+        # if save==True:
+            # save='png'
+        # fig.savefig(g.path+'_elec.'+str(save),format=save)
+
+    # return fig
+
+# def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=False):
+    # import matplotlib.ticker as ticker
+
+    # print('    plotting radiation evolution')
+
+    # font_size = 1
+    # if fig_name is None:
+        # if g.filename is '':
+            # fig = plt.figure('Radaition')
+        # else:
+            # fig = plt.figure('Radiation '+g.filename)
+    # else:
+        # fig = plt.figure(fig_name)
+
+    # fig.set_size_inches(figsize,forward=True)
+
+    # plt.rc('axes', grid=True)
+    # plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
+    # plt.clf()
+
+
+    # if g('itdp')==True:
+        # ax_pow=fig.add_subplot(3, 1, 1)
+        # ax_pow.clear()
+        # ax_spectrum=fig.add_subplot(3, 1, 2,sharex=ax_pow)
+        # ax_spectrum.clear()
+        # ax_size_t=fig.add_subplot(3, 1, 3,sharex=ax_pow)
+        # ax_size_t.clear()
+        # for ax in ax_pow, ax_spectrum, ax_size_t:
+            # if ax!=ax_size_t:
+                # for label in ax.get_xticklabels():
+                    # label.set_visible(False)
+    # else:
+        # ax_pow=fig.add_subplot(2, 1, 1)
+        # ax_pow.clear()
+        # ax_size_t=fig.add_subplot(2, 1, 2,sharex=ax_pow)
+        # ax_size_t.clear()
+        # for ax in ax_pow, ax_size_t:
+            # if ax!=ax_size_t:
+                # for label in ax.get_xticklabels():
+                    # label.set_visible(False)
+
+
+
+    # # for tick in ax.yaxis.get_major_ticks():
+    # #     tick.label.set_fontsize(14)
+    # #     # specify integer or one of preset strings, e.g.
+    # #     #tick.label.set_fontsize('x-small')
+    # #     tick.label.set_rotation('vertical')
+
+    # #
+    # fig.subplots_adjust(hspace=0)
+
+    # ax_pow.plot(g.z, np.amax(g.p_int, axis=0), 'g-',linewidth=1.5)
+    # ax_pow.text(0.98, 0.02,'$P_{end}$= %.2e W\n$E_{end}$= %.2e J' %(np.amax(g.p_int[:,-1]),np.mean(g.p_int[:,-1],axis=0)*g('xlamds')*g('zsep')*g.nSlices/speed_of_light), fontsize=12, horizontalalignment='right', verticalalignment='bottom', transform = ax_pow.transAxes)#horizontalalignment='center', verticalalignment='center',
+    # ax_pow.set_ylabel('P [W]')
+    # ax_pow.get_yaxis().get_major_formatter().set_useOffset(False)
+    # ax_pow.get_yaxis().get_major_formatter().set_scientific(True)
+# #    if np.amin(g.p_int)>0:
+    # if np.amax(g.p_int)>0:
+        # ax_pow.set_yscale('log')
+
+
+
+    # ax_en = ax_pow.twinx()
+    # ax_en.plot(g.z, np.mean(g.p_int,axis=0)*g('xlamds')*g('zsep')*g.nSlices/speed_of_light, 'k--',linewidth=1.5)
+    # ax_en.set_ylabel('E [J]')
+    # ax_en.get_yaxis().get_major_formatter().set_useOffset(False)
+    # ax_en.get_yaxis().get_major_formatter().set_scientific(True)
+    # if np.amax(g.p_int)>0:
+        # ax_en.set_yscale('log')
+
+
+    # if g('itdp')==True:
+        # n_pad=1
+        # # print len(g.z),len(g.xrms[0,:]),len(np.mean(g.yrms,axis=0))
+        # power=np.pad(g.p_mid, [(int(g.nSlices/2)*n_pad, (g.nSlices-(int(g.nSlices/2))))*n_pad, (0, 0)], mode='constant')
+        # phase=np.pad(g.phi_mid, [(int(g.nSlices/2)*n_pad, (g.nSlices-(int(g.nSlices/2))))*n_pad, (0, 0)], mode='constant')
+        # spectrum = abs(fft(np.sqrt( np.array(power)) * np.exp( 1.j* np.array(phase) ) , axis=0))**2/sqrt(g.nSlices)/(2*g.leng/g('ncar'))**2/1e10
+        # e_0=1239.8/g('xlamds')/1e9
+        # # print e_0
+
+        # g.freq_ev1 = h_eV_s * fftfreq(len(spectrum), d=g('zsep') * g('xlamds') / speed_of_light)+e_0
+        # lamdscale=1239.8/g.freq_ev1
+        # lamdscale_array=np.swapaxes(np.tile(lamdscale,(g.nZ,1)),0,1)
+
+    # #    print spectrum.shape
+        # spectrum_norm=np.sum(spectrum,axis=0)#avoiding division by zero
+        # spectrum_norm[spectrum_norm==0]=1
+    # #    print spectrum_norm.shape
+        # spectrum_lamdpos=np.sum(spectrum*lamdscale_array/spectrum_norm,axis=0)
+    # #    print "spectrum lamdpos", spectrum_lamdpos
+        # spectrum_lamdwidth=sqrt(np.sum(spectrum*(lamdscale_array-spectrum_lamdpos)**2/spectrum_norm,axis=0))
+
+        # spectrum_lamdwidth1=np.empty(g.nZ)
+        # for zz in range(g.nZ):
+            # if np.sum(spectrum[:,zz])!=0:
+                # peak=fwhm3(spectrum[:,zz])
+                # #spectrum_lamdwidth1[zz]=abs(lamdscale[peak[0]]-lamdscale[peak[0]+1])*peak[1] #the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
+                # spectrum_lamdwidth1[zz]=abs(lamdscale[0]-lamdscale[1])*peak[1] #the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
+            # else:
+                # spectrum_lamdwidth1[zz]=0
+
+
+
+        # ax_spectrum.plot(g.z, np.amax(spectrum,axis=0), 'r-',linewidth=1.5)
+        # ax_spectrum.text(0.5, 0.98,r"(on axis)", fontsize=10, horizontalalignment='center', verticalalignment='top', transform = ax_spectrum.transAxes)#horizontalalignment='center', verticalalignment='center',
+        # ax_spectrum.set_ylabel('P$(\lambda)_{max}$ [a.u.]')
+        # # if np.amin(np.amax(spectrum,axis=0))>0:
+        # if np.amax(np.amax(spectrum,axis=0))>0:
+            # ax_spectrum.set_yscale('log')
+
+        # #fix!!!
+        # ax_spec_bandw = ax_spectrum.twinx()
+        # ax_spec_bandw.plot(g.z, spectrum_lamdwidth*2, 'm--')
+        # ax_spec_bandw.set_ylabel('$2\sigma\lambda$ [nm]')
+        # # fix and include!!!
+
+
+        # s=g.t*speed_of_light*1.0e-15*1e6
+        # s_array=np.swapaxes(np.tile(s,(g.nZ,1)),0,1)
+        # p_int_norm=np.sum(g.p_int,axis=0)#avoiding division by zero
+        # p_int_norm[p_int_norm==0]=1
+        # rad_longit_pos=np.sum(g.p_int*s_array/p_int_norm,axis=0)
+        # rad_longit_size=sqrt(np.sum(g.p_int*(s_array-rad_longit_pos)**2/p_int_norm,axis=0)) #this is standard deviation (sigma)
+
+        # #g.p_int=np.amax(g.p_int)/1e6+g.p_int # nasty fix from division by zero
+        # if np.amax(g.p_int)>0:
+            # weight=g.p_int+np.amin(g.p_int[g.p_int!=0])/1e6
+        # else:
+            # weight=np.ones_like(g.p_int)
+
+
+        # ax_size_l = ax_size_t.twinx() #longitudinal size
+        # ax_size_l.plot(g.z, rad_longit_size*2, color='indigo', linestyle='dashed',linewidth=1.5)
+        # ax_size_l.set_ylabel('longitudinal [$\mu$m]')
+
+        
+        # ax_size_t.plot([np.amin(g.z), np.amax(g.z)],[g.leng*1e6, g.leng*1e6], 'b-',linewidth=1.0)
+        # ax_size_t.set_ylabel('transverse [$\mu$m]')
+    # else:
+        # ax_size_t.plot(g.z, g.r_size.T*2*1e6, 'b-',linewidth=1.5)
+        # ax_size_t.plot([np.amin(g.z), np.amax(g.z)],[g.leng*1e6, g.leng*1e6], 'b-',linewidth=1.0)
+        # ax_size_t.set_ylabel('transverse [$\mu$m]')
+
+
+
+    # plt.xlim(g.z[0], g.z[-1])
+
+    # fig.subplots_adjust(top=0.95, bottom=0.1, right=0.85, left=0.15)
+
+
+    # ax_pow.tick_params(axis='y', which='both', colors='g')
+    # ax_pow.yaxis.label.set_color('g')
+    # ax_en.tick_params(axis='y', which='both', colors='k')
+    # ax_en.yaxis.label.set_color('k')
+    # ax_en.grid(False)
+    # ax_size_t.tick_params(axis='y', which='both', colors='b')
+    # ax_size_t.yaxis.label.set_color('b')
+    # ax_size_t.set_xlabel('z [m]')
+    # ax_size_t.set_ylim(ymin=0)
+    # ax_pow.yaxis.get_offset_text().set_color(ax_pow.yaxis.label.get_color())
+    # ax_en.yaxis.get_offset_text().set_color(ax_en.yaxis.label.get_color())
+
+    # if g('itdp')==True:
+        # ax_spectrum.tick_params(axis='y', which='both', colors='r')
+        # ax_spectrum.yaxis.label.set_color('r')
+        # ax_spec_bandw.tick_params(axis='y', which='both', colors='m')
+        # ax_spec_bandw.yaxis.label.set_color('m')
+        # ax_spec_bandw.grid(False)
+        # ax_size_l.tick_params(axis='y', which='both', colors='indigo')
+        # ax_size_l.yaxis.label.set_color('indigo')
+        # ax_size_l.grid(False)
+        # ax_size_l.set_ylim(ymin=0)
+        # ax_spec_bandw.set_ylim(ymin=0)
+
+
+    # # #attempt to fix overlapping label values
+# # #    for a in [ax_size_l,ax_size_t,ax_spec_bandw,ax_spectrum]:
+# # #        xticks = a.yaxis.get_major_ticks()
+# # #        xticks[-1].label.set_visible(False)
+
+# # #    labels = ax_size_t.get_yticklabels()
+# # ##    print dir(labels), labels
+# # #    labels[0] = ""
+# # #    ax_size_t.set_yticklabels(labels)
+
+    # if save!=False:
+        # if save==True:
+            # save='png'
+        # fig.savefig(g.path+'_rad.'+str(save),format=save)
+    # return fig
 
 
 
@@ -402,7 +613,7 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
 
     fig.subplots_adjust(hspace=0)
 
-    s=g.t*c*1.0e-15*1e6
+    s=g.t*speed_of_light*1.0e-15*1e6
 
 
 
@@ -445,7 +656,7 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
 
     spectrum = abs(fft(np.sqrt( np.array(power)) * np.exp( 1.j* np.array(phase) ) , axis=0))**2/sqrt(g.nSlices)/(2*g.leng/g('ncar'))**2/1e10
     e_0=1239.8/g('xlamds')/1e9
-    g.freq_ev1 = h * fftfreq(len(spectrum), d=g('zsep') * g('xlamds') / c)+e_0
+    g.freq_ev1 = h_eV_s * fftfreq(len(spectrum), d=g('zsep') * g('xlamds') / speed_of_light)+e_0
     lamdscale=1239.8/g.freq_ev1
 
     lamdscale_array=np.swapaxes(np.tile(lamdscale,(g.nZ,1)),0,1)
@@ -919,7 +1130,7 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
     del dfl_int, dfl
 
     if len(z)!=1 and freq_domain==False:
-        E_pulse=np.sum(z_proj)*(z[1]-z[0])/1e6/c
+        E_pulse=np.sum(z_proj)*(z[1]-z[0])/1e6/speed_of_light
         print('      E_pulse= %.3e J' %(E_pulse))
     elif len(z)!=1 and freq_domain==True:
         E_pulse=np.sum(z_proj)*(z[1]-z[0])
@@ -1631,197 +1842,7 @@ def fwhm3(valuelist, height=0.5, peakpos=-1):
     width = p2interp-p1interp
     return (peakpos,width,np.array([ind1,ind2]))
 
-def gen_outplot_evo(g, params=['und_quad','el_size','el_energy','el_bunching','rad_pow_en','rad_spec','rad_size'], figsize=[], legend = True, fig_name = None, save=False):
 
-    import matplotlib.ticker as ticker
-
-    print('    plotting ___')
-
-    font_size = 1
-    if fig_name is None:
-        if g.filename is '':
-            fig = plt.figure('___')
-        else:
-            fig = plt.figure('___ '+g.filename)
-    else:
-        fig = plt.figure(fig_name)
-
-    if figsize==[]:
-        figsize=(8, len(params)*2.5+1)
-    
-    fig.set_size_inches(figsize,forward=True)
-    plt.rc('axes', grid=True)
-    plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
-    # left, width = 0.1, 0.85
-    plt.clf()
-    fig.subplots_adjust(hspace=0)
-    
-    ax=[]
-    for index, param in enumerate(params):
-        print(param)
-        if len(ax)==0:
-            ax.append(fig.add_subplot(len(params), 1, index+1))
-        else:
-            ax.append(fig.add_subplot(len(params), 1, index+1,sharex=ax[0]))
-        #ax[-1]
-        if param=='und_quad':
-            subfig_und_quad(ax[-1],g,legend)
-        elif param=='el_size':
-            subfig_el_size(ax[-1],g,legend)
-        elif  param=='el_energy':
-            subfig_el_energy(ax[-1],g,legend)
-        elif  param=='el_bunching':
-            subfig_el_bunching(ax[-1],g,legend)
-        elif  param=='rad_pow_en':
-            subfig_rad_pow_en(ax[-1],g,legend)
-        elif  param=='rad_spec':
-            subfig_rad_spectrum(ax[-1],g,legend)
-        elif  param=='rad_size':
-            subfig_rad_size(ax[-1],g,legend)
-        else:
-            print('wrong parameter '+param)
-
-    ax[0].set_xlim(g.z[0], g.z[-1])
-    ax[-1].set_xlabel('z [m]')
-    fig.subplots_adjust(top=0.95, bottom=0.1, right=0.85, left=0.15)
-    
-    for axi in ax[0:-1]:
-        for label in axi.get_xticklabels():
-            label.set_visible(False)
-    
-    #ax[-1].grid(1)
-    plt.show()
-
-def subfig_und_quad(ax_und,g,legend):
-
-    number_ticks=6
-    ax_und.plot(g.z, g.aw, 'b-',linewidth=1.5)
-    ax_und.set_ylabel('K (rms)')
-
-    ax_quad = ax_und.twinx()
-    ax_quad.plot(g.z, g.qfld, 'r-',linewidth=1.5)
-    ax_quad.set_ylabel('Quad')
-    ax_quad.grid(False)
-
-    ax_und.yaxis.major.locator.set_params(nbins=number_ticks)
-    ax_quad.yaxis.major.locator.set_params(nbins=number_ticks)
-
-    if np.amax(g.aw)!=0:
-        aw_tmp=np.array(g.aw)[np.array(g.aw)!=0]
-        if np.amax(aw_tmp)!=np.amin(aw_tmp):
-            diff=np.amax(aw_tmp)-np.amin(aw_tmp)
-            ax_und.set_ylim([np.amin(aw_tmp)-diff/10,np.amax(aw_tmp)+diff/10])
-    else:
-        ax_und.set_ylim([0,1])
-    ax_und.tick_params(axis='y', which='both', colors='b')
-    ax_und.yaxis.label.set_color('b')
-    ax_quad.tick_params(axis='y', which='both', colors='r')
-    ax_quad.yaxis.label.set_color('r')
-
-
-def subfig_el_size(ax_size_tpos,g,legend):
-
-    number_ticks=6
-    
-    ax_size_tpos.plot(g.z, np.average(g.xrms,axis=0,weights=g.I)*1e6, 'g-',g.z, np.average(g.yrms,axis=0,weights=g.I)*1e6, 'b-')
-    ax_size_tpos.set_ylabel('$\sigma_{x,y}$ [$\mu$m]')
-
-    ax_size_tpos.set_ylim(ymin=0)
-    ax_size_tpos.yaxis.major.locator.set_params(nbins=number_ticks)
-
-    
-def subfig_el_energy(ax_energy,g,legend):
-    
-    number_ticks=6
-    
-    ax_energy.plot(g.z, np.average(g.el_energy*0.511e-3, axis=0), 'b-',linewidth=1.5)
-    ax_energy.set_ylabel('E [GeV]')
-    ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
-    
-    ax_spread = ax_energy.twinx()
-    ax_spread.plot(g.z, np.average(g.el_e_spread*0.511e-3*1000, weights=g.I, axis=0), 'm--', g.z, np.amax(g.el_e_spread*0.511e-3*1000, axis=0), 'r--',linewidth=1.5)
-    ax_spread.set_ylabel('$\sigma_E$ [MeV]')
-    ax_spread.grid(False)
-    ax_spread.set_ylim(ymin=0)
-    
-    ax_energy.yaxis.major.locator.set_params(nbins=number_ticks)
-    ax_spread.yaxis.major.locator.set_params(nbins=number_ticks)
-    
-    ax_energy.tick_params(axis='y', which='both', colors='b')
-    ax_energy.yaxis.label.set_color('b')
-    ax_spread.tick_params(axis='y', which='both', colors='r')
-    ax_spread.yaxis.label.set_color('r')
-    
-def subfig_el_bunching(ax_bunching,g,legend):
-
-    number_ticks=6
-    
-    ax_bunching.plot(g.z, np.average(g.bunching, weights=g.I, axis=0), 'k-', g.z, np.amax(g.bunching, axis=0), 'grey',linewidth=1.5)
-    ax_bunching.set_ylabel('Bunching')
-    ax_bunching.set_ylim(ymin=0)
-    ax_bunching.yaxis.major.locator.set_params(nbins=number_ticks)
-    
-def subfig_rad_pow_en(ax_rad_pow,g,legend):
-    ax_rad_pow.plot(g.z, np.amax(g.p_int, axis=0), 'g-',linewidth=1.5)
-    ax_rad_pow.text(0.98, 0.02,'$P_{end}$= %.2e W\n$E_{end}$= %.2e J' %(np.amax(g.p_int[:,-1]),np.mean(g.p_int[:,-1],axis=0)*g('xlamds')*g('zsep')*g.nSlices/c), fontsize=12, horizontalalignment='right', verticalalignment='bottom', transform = ax_rad_pow.transAxes)
-    ax_rad_pow.set_ylabel('P [W]')
-    ax_rad_pow.get_yaxis().get_major_formatter().set_useOffset(False)
-    ax_rad_pow.get_yaxis().get_major_formatter().set_scientific(True)
-    if np.amax(g.p_int)>0:
-        ax_rad_pow.set_yscale('log')
-        
-    ax_rad_en = ax_rad_pow.twinx()
-    ax_rad_en.plot(g.z, np.mean(g.p_int,axis=0)*g('xlamds')*g('zsep')*g.nSlices/c, 'k--',linewidth=1.5)
-    ax_rad_en.set_ylabel('E [J]')
-    ax_rad_en.get_yaxis().get_major_formatter().set_useOffset(False)
-    ax_rad_en.get_yaxis().get_major_formatter().set_scientific(True)
-    if np.amax(g.p_int)>0:
-        ax_rad_en.set_yscale('log')
-        
-    ax_rad_pow.tick_params(axis='y', which='both', colors='g')
-    ax_rad_pow.yaxis.label.set_color('g')
-    ax_rad_en.tick_params(axis='y', which='both', colors='k')
-    ax_rad_en.yaxis.label.set_color('k')
-    ax_rad_en.grid(False)
-    ax_rad_pow.yaxis.get_offset_text().set_color(ax_rad_pow.yaxis.label.get_color())
-    ax_rad_en.yaxis.get_offset_text().set_color(ax_rad_en.yaxis.label.get_color())
-    
-def subfig_rad_spectrum(ax_spectrum,g,legend):
-        ax_spectrum.plot(g.z, np.amax(g.spec,axis=0), 'r-',linewidth=1.5)
-        ax_spectrum.text(0.5, 0.98,r"(on axis)", fontsize=10, horizontalalignment='center', verticalalignment='top', transform = ax_spectrum.transAxes)#horizontalalignment='center', verticalalignment='center',
-        ax_spectrum.set_ylabel('P$(\lambda)_{max}$ [a.u.]')
-        # if np.amin(np.amax(spectrum,axis=0))>0:
-        if np.amax(np.amax(g.spec,axis=0))>0:
-            ax_spectrum.set_yscale('log')
-            
-        spectrum_lamdwidth=np.empty(g.nZ)
-        for zz in range(g.nZ):
-            if np.sum(g.spec[:,zz])!=0:
-                peak=fwhm3(g.spec[:,zz])
-                #spectrum_lamdwidth1[zz]=abs(lamdscale[peak[0]]-lamdscale[peak[0]+1])*peak[1] #the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
-                spectrum_lamdwidth[zz]=abs(g.freq_lamd[0]-g.freq_lamd[1])*peak[1] #the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
-            else:
-                spectrum_lamdwidth[zz]=0
-                
-def subfig_rad_size(ax_size_t,g,legend):
-    if g.nSlices==1:
-        ax_size_t.plot(g.z, g.r_size.T*2*1e6, 'b-',linewidth=1.5)
-        ax_size_t.plot([np.amin(g.z), np.amax(g.z)],[g.leng*1e6, g.leng*1e6], 'b-',linewidth=1.0)
-        ax_size_t.set_ylabel('transverse $[\mu m]$')
-    else:
-    
-        if hasattr(g,'rad_t_size_weighted'):
-            ax_size_t.plot(g.z, g.rad_t_size_weighted*2*1e6, 'b-',linewidth=1.5)
-        else:
-        
-            if np.amax(g.p_int)>0:
-                weight=g.p_int+np.amin(g.p_int[g.p_int!=0])/1e6
-            else:
-                weight=np.ones_like(g.p_int)
-                
-            ax_size_t.plot(g.z, np.average(g.r_size*2*1e6, weights=weight, axis=0), 'b-',linewidth=1.5)
-    
-    ax_size_t.set_ylabel('transverse [$\mu$m]')
     # ax_size_l = ax_size_t.twinx() #longitudinal size
     # ax_size_l.plot(g.z, rad_longit_size*2, color='indigo', linestyle='dashed',linewidth=1.5)
     # ax_size_l.set_ylabel('longitudinal [$\mu$m]')

@@ -464,28 +464,6 @@ class GenesisBeamDefinition(): # Genesis analytical radiation input files storag
    I/O functions
 '''
 
-#def read_particle_file(filename, npart=[]):
-##    print npart
-#    #new faster function with different output convenstion    
-#    particles=GenesisParticles
-##    start_time = time.time()
-#    tmp=np.fromfile(filename,dtype=float)
-#    
-##    if npart!=[] and nslice!=[]    
-##    if len(tmp)!=npart*nslice*6:
-##    print len(tmp)/npart/6
-#    nslice=int(len(tmp)/npart/6)
-#    #nslice=600
-#    tmp=tmp.reshape(nslice,6,npart)
-#    particles.e=tmp[:,0,:] #gamma
-#    particles.ph=tmp[:,1,:] 
-#    particles.x=tmp[:,2,:]
-#    particles.y=tmp[:,3,:]
-#    particles.px=tmp[:,4,:]
-#    particles.py=tmp[:,5,:]
-#    particles.filename=filename
-#    
-#    return particles
 def read_particle_file(file_name, nbins=4, npart=[],debug=0):
     print '    reading praticle file' 
     particles=GenesisParticles() 
@@ -509,55 +487,6 @@ def read_particle_file(file_name, nbins=4, npart=[],debug=0):
     particles.py=b[:,5,:,:]
     particles.filename=file_name
     return particles
-
-
-def readParticleFile_old(fileName, npart, nslice):
-    #old file with different output convenstion
-    def read_in_chunks(f, size=1024):
-        while True:
-            data = f.read(size)
-            if not data:
-                break
-            yield data
-
-    
-    f = open(fileName,'rb')
-    f.seek(0,2)
-    total_data_len = f.tell() / 8 / 6
-    f.seek(0,0)
-    slice_size = int(6*npart * 8.0)
-    
-    data_size = total_data_len * 16 
-
-    print 'slice size = ', slice_size
-    print 'data size = ', data_size
-    print 'total_data_len = ', total_data_len
-    
-    
-    n_slices = total_data_len / (slice_size/ 6 / 8)
-    
-    print 'n_slices = ', n_slices
-
-    
-    
-    slices = np.zeros([n_slices,npart*6], dtype=double)
-    
-    n = 0
-    
-    for piece in read_in_chunks(f, size  = slice_size):
-        
-        if True :
-            #print 'slice %s' % n
-            if ( len(piece) / 8 != npart * 6):
-                print 'warning, wrong slice size'
-        
-            for i in xrange(len(piece) / 8 ):
-                slices[n,i] = struct.unpack('d',piece[8*i:8*i+8])[0] 
-            n += 1
-    
-    print 'read slices: ', slices.shape
-
-    return slices
 
 
 def read_rad_file(fileName):
@@ -833,186 +762,6 @@ def writeRadiationFile_mpi(comm, filename, slices, shape):
         os.system(cmd)
 
 
-def readGenesisOutput_old(fileName , readall=True, debug=None):
-
-    print '    reading output file'    
-#    print '        - reading from ', fileName
-
-    out = GenesisOutput()
-    out.path = fileName
-
-    chunk = 'header'
-    
-    nSlice = 0
-    
-    f=open(fileName,'r')
-    f.readline()
-    for line in f: 
-        tokens = line.strip().split()
-
-        if len(tokens) < 1:
-            #chunk = 'none'
-            continue
-        
-        if tokens == ['z[m]', 'aw', 'qfld']:
-            chunk = 'optics'
-            print '      reading optics '
-            continue
-        
-        if tokens[0] == 'Input':
-            chunk = 'input'
-            print '      reading input parameters'
-            continue
-        
-        #********** output: slice    10
-        if tokens[0] == '**********':
-            #print 'slice:', tokens[3]
-            chunk = 'slices'
-            nSlice = int(tokens[3])
-            if debug:
-                print '      reading slice # ',nSlice
-         
-        if tokens[0] == 'power':
-            chunk = 'slice'
-            out.sliceKeys = copy(tokens)
-            #out.sliceValues[nSlice] = copy.copy(tokens)
-            out.sliceValues[nSlice] = {}
-            for i in range(0,len(tokens)):
-                out.sliceValues[nSlice][out.sliceKeys[i]] = []
-            #print 'reading slices'
-            #print out.sliceKeys
-            #print out.sliceValues[nSlice]
-            continue
-            
-        if chunk == 'optics':
-            z,aw,qfld = map(float,tokens)
-            out.z.append(z)
-            out.aw.append(aw)
-            out.qfld.append(qfld)
-            
-        if chunk == 'input':
-            tokens=line.replace('=','').strip().split()
-            out.parameters[tokens[0]] = tokens[1:]
-            #out.parameters[tokens[0]] = tokens[0:]
-            #print 'input:', tokens
-
-        if chunk == 'slice':
-            vals = map(float,tokens)
-            #print vals
-            for i in range(0,len(vals)):
-                out.sliceValues[nSlice][out.sliceKeys[i]].append(vals[i])
-#            out.sliceValues[nSlice][out.sliceKeys[i]].extend(vals)
-            #out.zSlice.append(vals[2])
-            #out.aw.append(aw)
-            #out.qfld.append(qfld)
-
-        if chunk == 'slices':
-            if len(tokens) == 2 and tokens[1]=='current':
-                #print tokens[1]
-                out.I.append(float(tokens[0]))
-                out.n.append(nSlice)
-
-
-    
-    out.nSlices = len(out.sliceValues ) 
-    out.nZ = len(out.sliceValues[1][out.sliceKeys[0]])
-
-    print '        nSlice', out.nSlices
-    print '        nZ', out.nZ
-
-#    print '      processing 1'
-    out.power = []
-    out.phi = []
-    out.power_z = 0*np.array(out.sliceValues[out.sliceValues.keys()[0]]['power'])
-    out.power_int = []
-    out.max_power = 0.0
-    if readall:
-        out.r_size = [] #make an np arrays to save further conversion time?
-        out.el_energy = []
-        out.bunching = []
-        out.xrms = []
-        out.yrms = []
-        out.error = []
-        out.el_e_spread = []
-        out.p_mid = []
-        out.p_int = []
-        out.phi_mid = []
-        out.increment = []
-        #out.increment=GenesisOutput()
-#    print '      processing 2'
-    for i in xrange(0,out.nSlices):
-
-        pend = out.sliceValues[out.sliceValues.keys()[i]]['power'][-1]
-        out.power_int.append(pend)
-        out.power.append(out.sliceValues[out.sliceValues.keys()[i]]['p_mid'][-1])
-        out.phi.append(out.sliceValues[out.sliceValues.keys()[i]]['phi_mid'][-1])
-        out.power_z +=  np.array(out.sliceValues[out.sliceValues.keys()[i]]['power']) / out.nSlices
-        if readall:
-            out.p_mid.append(out.sliceValues[out.sliceValues.keys()[i]]['p_mid'])
-            out.p_int.append(out.sliceValues[out.sliceValues.keys()[i]]['power'])
-            out.phi_mid.append(out.sliceValues[out.sliceValues.keys()[i]]['phi_mid'])
-            out.increment.append(out.sliceValues[out.sliceValues.keys()[i]]['increment'])
-            out.r_size.append(out.sliceValues[out.sliceValues.keys()[i]]['r_size'])
-            out.el_energy.append(out.sliceValues[out.sliceValues.keys()[i]]['energy'])
-            out.bunching.append(out.sliceValues[out.sliceValues.keys()[i]]['bunching'])
-            out.xrms.append(out.sliceValues[out.sliceValues.keys()[i]]['xrms'])
-            out.yrms.append(out.sliceValues[out.sliceValues.keys()[i]]['yrms'])
-            out.error.append(out.sliceValues[out.sliceValues.keys()[i]]['error'])
-            out.el_e_spread.append(out.sliceValues[out.sliceValues.keys()[i]]['e-spread'])
-
-        if out.max_power < pend: out.max_power = pend
-    del out.sliceValues
-#    print '      processing 3'
-    out.s = out('zsep') * out('xlamds') * np.arange(0,len(out.power))
-    out.t = out.s/ speed_of_light *1.e+15
-#    out.t = 1.0e+15 * out('zsep') * out('xlamds') / speed_of_light * np.arange(0,len(out.power))
-    out.dt = (out.t[1] - out.t[0]) * 1.e-15
-    
-    out.spec = fft.fft(np.sqrt(np.array(out.power) ) * np.exp( 1.j* np.array(out.phi) ) )
-    out.freq_ev = h_eV_s * fftfreq(len(out.spec), d=out('zsep') * out('xlamds') / speed_of_light)
-
-    out.power = np.array(out.power)
-    out.phi = np.array(out.phi)
-    out.power_int = np.array(out.power_int)
-    out.z = np.array(out.z)
-    out.I = np.array(out.I)
-    out.beam_charge=np.sum(out.I*out('zsep')*out('xlamds')/speed_of_light)
-    if readall:
-        out.p_mid = np.array(out.p_mid)
-        out.p_int = np.array(out.p_int)
-        out.phi_mid = np.array(out.phi_mid)
-        out.increment = np.array(out.increment)
-        out.r_size = np.array(out.r_size)
-        out.el_energy = np.array(out.el_energy)+out('gamma0')
-        out.bunching = np.array(out.bunching)
-        out.xrms = np.array(out.xrms)
-        out.yrms = np.array(out.yrms)
-        out.error = np.array(out.error)
-        out.el_e_spread = np.array(out.el_e_spread)
-        # out.power = np.array(out.power)
-
-        if out('dgrid')==0:
-            rbeam=sqrt(out('rxbeam')**2+out('rybeam')**2)
-            ray=sqrt(out('zrayl')*out('xlamds')/np.pi*(1+(out('zwaist')/out('zrayl')))**2); #not cross-checked
-            out.leng=out('rmax0')*(rbeam+ray)*2
-        else:
-            out.leng=out('dgrid')*2
-
-
-        # out.energy_GeV=out.el_energy*0.511e-3
-        # out.e_spread_GeV=(out.el_e_spread+out.el_energy)*0.511e-3-out.energy_GeV
-        # out.e_spread_GeV=out.el_e_spread*0.511e-3
-        # parm_names=out.parameters.keys()
-# for val in parm_names:
-#     if str.isdigit(val[0]) or  val[0]=='$':
-#         pass
-#     else:
-        
-        out.filename = fileName[-fileName[::-1].find('/')::]
-        
-    return out
-
-
 def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
     out = GenesisOutput()
     out.path = fileName
@@ -1148,10 +897,6 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
             out.freq_lamd=1239.8/out.freq_ev
             out.sliceKeys_used.append('spec')
             
-            spec_avg_pos=0
-            if spec_avg_pos:
-                sum(out.spec*out.freq_lamd)/sum(out.spec) #fixfixifixfixfixfixfix: add for loop
-            
             phase_fix=1 #the way to display the phase, without constant slope caused by different radiation wavelength from xlamds. phase is set to 0 at maximum power slice.
             if phase_fix:
                 out.phi_mid_disp=deepcopy(out.phi_mid)
@@ -1168,14 +913,14 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
                     out.phi_mid_disp[:,zi]=phase_fixed
                 out.sliceKeys_used.append('phi_mid_disp')
                 
-            t_size_weighted=1 #to average the radiation size over slices with radiation power as a weight
-            if t_size_weighted and hasattr(out,'r_size'):
+            rad_t_size_weighted=1 #to average the radiation size over slices with radiation power as a weight
+            if rad_t_size_weighted and out.nSlices!=1: 
                 if np.amax(out.power)>0:
                     weight=out.power+np.amin(out.power[out.power!=0])/1e6
                 else:
                     weight=np.ones_like(out.power)
-                out.r_size_weighted=np.average(out.r_size*1e6, weights=weight, axis=0)
-                out.sliceKeys_used.append('r_size_weighted')
+                out.rad_t_size_weighted=np.average(out.r_size*1e6, weights=weight, axis=0)
+                out.sliceKeys_used.append('rad_t_size_weighted')
         
     if out('iscan')!=0:
         out.scv=out.I #scan value

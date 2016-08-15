@@ -111,12 +111,12 @@ def rematch(beta_mean, l_fodo, qdh, lat, extra_fodo, beam, qf, qd):
     beam.beta_y, beam.alpha_y = tw0m.beta_y, tw0m.alpha_y
 
 
-def run(inp, launcher,readall=False,dfl_slipage_incl=True):
+def run(inp, launcher,readall=False,dfl_slipage_incl=True,assembly_ver='pyt'):
     # inp               - GenesisInput() object with genesis input parameters
     # launcher          - MpiLauncher() object obtained via get_genesis_launcher() function
     # readall           - Parameter to read and calculate all _slice_ values from the output. 
     # dfl_slipage_incl  - whether to dedicate time in order to keep the dfl slices, slipped out of the simulation window. if zero, reduces assembly time by ~30%
-
+    # assembly_ver      - version of the assembly script: 'sys' - system based, 'pyt' - python based
 
     # create experimental directory
     try:
@@ -151,37 +151,121 @@ def run(inp, launcher,readall=False,dfl_slipage_incl=True):
     print (' ')
     print ('    assembling slices')
     assembly_time = time.time()
-    print ('      assembling *.out file')
-    start_time = time.time()
-    os.system('cat ' + out_file +'.slice* >> '+ out_file)
-    print ('        done in %.2f seconds' % (time.time() - start_time))
-    print ('      assembling *.dfl file')
-    start_time = time.time()
-    if dfl_slipage_incl:
-        os.system('cat ' + out_file+'.dfl.slice*  >> ' + out_file+'.dfl.tmp')
-        #bytes=os.path.getsize(out_file +'.dfl.tmp')
-        command='dd if=' + out_file +'.dfl.tmp of='+ out_file +'.dfl conv=notrunc conv=notrunc 2>/dev/null' # obs='+str(bytes)+' skip=1
-        os.system(command)
-    else:
-        os.system('cat ' + out_file+'.dfl.slice*  > ' + out_file+'.dfl')
-    print ('        done in %.2f seconds' % (time.time() - start_time))
-    print ('      assembling *.dpa file')
-    start_time = time.time()
-    os.system('cat ' + out_file +'.dpa.slice* >> ' + out_file+'.dpa')
-    print ('        done in %.2f seconds' % (time.time() - start_time))
-    print ('      removing temporary files')
-    start_time = time.time()
+    
+    if assembly_ver=='sys':
+    
+        print ('      assembling *.out file')
+        start_time = time.time()
+        os.system('cat ' + out_file +'.slice* >> '+ out_file)
+        print ('        done in %.2f seconds' % (time.time() - start_time))
+        print ('      assembling *.dfl file')
+        start_time = time.time()
+        if dfl_slipage_incl:
+            os.system('cat ' + out_file+'.dfl.slice*  >> ' + out_file+'.dfl.tmp')
+            #bytes=os.path.getsize(out_file +'.dfl.tmp')
+            command='dd if=' + out_file +'.dfl.tmp of='+ out_file +'.dfl conv=notrunc conv=notrunc 2>/dev/null' # obs='+str(bytes)+' skip=1
+            os.system(command)
+        else:
+            os.system('cat ' + out_file+'.dfl.slice*  > ' + out_file+'.dfl')
+        print ('        done in %.2f seconds' % (time.time() - start_time))
+        print ('      assembling *.dpa file')
+        start_time = time.time()
+        os.system('cat ' + out_file +'.dpa.slice* >> ' + out_file+'.dpa')
+        print ('        done in %.2f seconds' % (time.time() - start_time))
+        print ('      removing temporary files')
+    
+    elif assembly_ver=='pyt':
+        import glob
+        ram=1
+        
+        print ('      assembling *.out file')
+        start_time = time.time()
+        assemble(out_file,ram=ram)
+        print ('        done in %.2f seconds' % (time.time() - start_time))
+    
+        print ('      assembling *.dfl file')
+        start_time = time.time()
+        assemble(out_file+'.dfl',tailappend=1,ram=ram)
+        print ('        done in %.2f seconds' % (time.time() - start_time))
+        
+        print ('      assembling *.dpa file')
+        start_time = time.time()
+        assemble(out_file+'.dpa',ram=ram)
+        print ('        done in %.2f seconds' % (time.time() - start_time))
+    
+    # start_time = time.time()
     os.system('rm ' + out_file +'.slice* 2>/dev/null')
     os.system('rm ' + out_file +'.dfl.slice* 2>/dev/null')
     os.system('rm ' + out_file +'.dfl.tmp 2>/dev/null')
     os.system('rm ' + out_file +'.dpa.slice* 2>/dev/null')
-    print ('        done in %.2f seconds' % (time.time() - start_time))
+    # print ('        done in %.2f seconds' % (time.time() - start_time))
     print ('      total time %.2f seconds' % (time.time() - assembly_time))
     
     g = readGenesisOutput(out_file,readall=readall)
     
     return g
 
+    
+def assemble(out_file,binary=1,remove=1,tailappend=0,ram=1):
+    import glob, sys
+    try:
+        if tailappend:
+            os.rename(out_file,out_file+'.slice999999')
+        
+        fins=glob.glob(out_file +'.slice*')
+        fins.sort()
+        
+        #if binary:
+        fout = file(out_file,'ab')
+        #else:
+        #    fout = file(out_file,'a')
+        N=len(fins)
+        if ram==1:
+            idata=''
+            data=''
+            print('        reading '+str(N)+' slices to RAM...')
+            index=10
+            for i, n in enumerate(fins):
+                # if i/N>=index:
+                    # sys.stdout.write(str(index)+'%.')
+                    # index +=10
+                fin = file(n,'rb')
+                while True:
+                    idata=fin.read(65536)
+                    if not idata:
+                        break
+                    else:
+                        data+=idata
+            print('        writing...')
+            fout.write(data)
+            try:
+                fin.close()
+            except:
+                pass
+            
+            if remove:
+                os.system('rm ' + out_file +'.slice* 2>/dev/null')
+                # os.remove(fins)
+        else:
+            for i, n in enumerate(fins):
+                # if i/N>=index:
+                    # sys.stdout.write(str(index)+'%.')
+                    # index +=10
+                fin = file(n,'rb')
+                while True:
+                    data = fin.read(65536)
+                    if not data:
+                        break
+                    fout.write(data)
+                fin.close()
+                if remove:
+                    os.remove(fin.name)
+        
+        fout.close()
+    except:
+        print('        could not assemble '+out_file)
+    
+    
 '''
 #### 12.05.2016 MODIFIED BY GG FOR MAXWELL####
 '''

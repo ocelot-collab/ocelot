@@ -267,6 +267,11 @@ def subfig_rad_spectrum(ax_spectrum,g,legend):
             else:
                 spectrum_lamdwidth[zz]=0
                 
+        ax_spec_bandw = ax_spectrum.twinx()
+        ax_spec_bandw.plot(g.z, spectrum_lamdwidth, 'm--')
+        # ax_spec_bandw.set_ylabel('$2\sigma\lambda$ [nm]')
+        ax_spec_bandw.set_ylabel('$\Delta\lambda_{fwhm}$ [nm]')
+                
 def subfig_rad_size(ax_size_t,g,legend):
     if g.nSlices==1:
         ax_size_t.plot(g.z, g.r_size.T*2*1e6, 'b-',linewidth=1.5)
@@ -1365,7 +1370,7 @@ def gen_stat_plot(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
     #savefig=1 save figures to given file format into proj_dir/results folder. 1 corresponds to 'png'. accepts other values, such as 'eps'
     #saveval=1, saves values being plotted to text files with the same names as the figures. first column - argument value (s[um],z[m],or lamd[nm]), second column - averaged parameters over shots, rest columns - single shot values.
     #showfig=1 envokes plt.show() to display figures interactively. May be time- and processor-consuming
-
+    # dfl_power dfl_trdist dfl_spec 
     import copy
     dict_name={'p_int':'radiation power','energy': 'radiation pulse energy','el_e_spread': 'el.beam energy spread','el_energy': 'el.beam energy average','bunching': 'el.beam bunching','spec': 'radiation on-axis spectral density','r_size':'radiation transv size','r_size_weighted':'radiation transv size (weighted)','xrms':'el.beam x size','yrms':'el.beam y size','error':'genesis simulation error','p_mid':'radiation power on-axis','phi_mid':'radiation phase on-axis','increment':'radiation power increment'}
     dict_unit={'p_int':'[W]','energy': '[J]','el_e_spread': '(gamma)','el_energy': '(gamma)','bunching': '','spec': '[arb.units]','r_size':'[m]','xrms':'[m]','yrms':'[m]','error':''}

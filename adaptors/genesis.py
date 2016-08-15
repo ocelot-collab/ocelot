@@ -465,7 +465,7 @@ class GenesisBeamDefinition(): # Genesis analytical radiation input files storag
 '''
 
 def read_particle_file(file_name, nbins=4, npart=[],debug=0):
-    print '    reading praticle file' 
+    print ('    reading praticle file' )
     particles=GenesisParticles() 
     
     start_time = time.time()
@@ -474,9 +474,9 @@ def read_particle_file(file_name, nbins=4, npart=[],debug=0):
 #    print 'b', b.shape
     nslice=int(len(b)/npart/6)
     if debug:
-        print '        nslice',nslice
-        print '        npart',npart
-        print '        nbins',nbins
+        print ('        nslice'+str(nslice))
+        print ('        npart'+str(npart))
+        print ('        nbins'+str(nbins))
 #    print 'b=',nslice*npart*6
     b=b.reshape(nslice,6,nbins,npart/nbins)    
     particles.e=b[:,0,:,:] #gamma
@@ -586,16 +586,19 @@ def write_beam_file(fileName, beam):
 
 def readRadiationFile(fileName, npoints=151, slice_start=0, slice_end = -1, vartype=complex):
     #a new backward compatible version ~100x faster
-    print '    reading radiation file'    
+    print ('    reading radiation file')
     import numpy as np
-#    print '        - reading from ', fileName
-    b=np.fromfile(fileName,dtype=complex).astype(vartype)
-    slice_num=b.shape[0]/npoints/npoints
-    b=b.reshape(slice_num,npoints,npoints)
-    if slice_end == -1:
-        slice_end=None
-    print '      done'  
-    return b[slice_start:slice_end]
+    if not os.path.isfile(fileName):
+        print ('      ! dfl file '+fileName+' not found !')
+    else:    
+        #print '        - reading from ', fileName
+        b=np.fromfile(fileName,dtype=complex).astype(vartype)
+        slice_num=b.shape[0]/npoints/npoints
+        b=b.reshape(slice_num,npoints,npoints)
+        if slice_end == -1:
+            slice_end=None
+        print('      done')  
+        return b[slice_start:slice_end]
 
 
 def readRadiationFile_mpi(comm=None, fileName='simulation.gout.dfl', npoints=51):
@@ -644,7 +647,7 @@ def readRadiationFile_mpi(comm=None, fileName='simulation.gout.dfl', npoints=51)
     
     f.seek(slice_start*slice_size, 0)
 
-    print 'rank', rank, ' reading', slice_start, slices_to_read, n_extra
+    print('rank '+str(rank)+' reading' + str (slice_start) + ' ' +  str(slices_to_read) + ' ' + str (n_extra))
 
     for piece in read_in_chunks(f, size  = slice_size):
                 
@@ -652,7 +655,7 @@ def readRadiationFile_mpi(comm=None, fileName='simulation.gout.dfl', npoints=51)
             break
         
         if ( len(piece) / 16 != ncar**2):
-            print 'warning, wrong slice size'
+            print ('warning, wrong slice size')
     
         for i in xrange(len(piece) / 16 ):
             i2 = i % ncar
@@ -673,7 +676,7 @@ def readRadiationFile_mpi(comm=None, fileName='simulation.gout.dfl', npoints=51)
 
 
 def writeRadiationFile(filename,rad):
-    print '    writing radiation file' 
+    print ('    writing radiation file') 
     #a new backward compatible version ~10x faster
 #    print '        - writing to ', filename
     d=rad.flatten()
@@ -732,7 +735,7 @@ def writeRadiationFile_mpi(comm, filename, slices, shape):
         
     #f.seek(slice_start*slice_size, 0)
         
-    print 'rank=', rank, 'slices_to_write=', slice_start, slices_to_write
+    print ('rank='+ str( rank)+ ' slices_to_write=' + str( slice_start) + ' ' + str( slices_to_write))
         
     
     for i1 in xrange(slices_to_write):
@@ -755,7 +758,7 @@ def writeRadiationFile_mpi(comm, filename, slices, shape):
     f.close()
     
     if rank == 0 and nproc>1:
-        print 'merging temporary files'
+        print ('merging temporary files')
         cmd = 'cat '
         cmd2 = 'rm '
         for i in xrange(nproc): 
@@ -803,18 +806,18 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
             chunk = 'slices'
             nSlice = int(tokens[3])
             if debug:
-                print '      reading slice # ',nSlice
+                print ('      reading slice # '+ str(nSlice))
 
         if tokens[0] == 'power':
             chunk = 'slice'
             if len(out.sliceKeys) == 0: #to record the first instance
                 out.sliceKeys = list(copy(tokens))
-                print '      reading slice values '
+                print ('      reading slice values ')
             continue
             
         if tokens[0] == '$newrun':
             chunk = 'input1'
-            print '      reading input parameters'
+            print ('      reading input parameters')
             continue  
 
         if tokens[0] == '$end':
@@ -823,7 +826,7 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
         
         if tokens == ['z[m]', 'aw', 'qfld']:
             chunk = 'magnetic optics'
-            print '      reading magnetic optics '
+            print ('      reading magnetic optics ')
             continue
 
         if chunk == 'magnetic optics':
@@ -874,8 +877,8 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
     out.nZ = int(out('entries_per_record'))#number of records along the undulator
     out.ncar=int(out('ncar')) #number of mesh points
 
-    print '        nSlice', out.nSlices
-    print '        nZ', out.nZ
+    print ('        nSlice '+ str(out.nSlices))
+    print ('        nZ '+ str(out.nZ))
 
     if out('dgrid')==0:
         rbeam=sqrt(out('rxbeam')**2+out('rybeam')**2)
@@ -1177,7 +1180,7 @@ def generate_input(up, beam, itdp=False):
 
 def generate_lattice(lattice, unit=1.0, energy = None, debug = False):
     
-    print 'generating lattice file...'
+    print ('generating lattice file...')
     
     lat = '# header is included\n? VERSION= 1.00  including new format\n? UNITLENGTH= '+str(unit)+' :unit length in header\n'
     undLat = ''
@@ -1206,11 +1209,11 @@ def generate_lattice(lattice, unit=1.0, energy = None, debug = False):
             
             undLat += 'AW' +'    '+ str(e.Kx * np.sqrt(0.5)) + '   ' + str( (l  / unit) ) + '  ' + str( ((pos - prevPos - prevLen) / unit) ) + '\n'
 
-            if debug: print 'added und ', 'pos=',pos, 'prevPos=',prevPos,'prevLen=',prevLen 
+            if debug: print ('added und '+ 'pos='+str(pos)+ ' prevPos='+str(prevPos)+' prevLen='+str(prevLen) )
                         
             if prevLen>0:
                 #drifts.append([str( (pos - prevPos ) / unit ), str(prevLen / unit)])
-                if debug: print 'appending drift', str( (prevLen ) / unit )
+                if debug: print ('appending drift'+ str( (prevLen ) / unit ))
                 driftLat += 'AD' +'    '+ str(e.Kx*np.sqrt(0.5)) + '   ' + str( ((pos - prevPos - prevLen) / unit ) ) + '  ' + str( (prevLen  / unit) ) + '\n'
 
             prevPos = pos
@@ -1224,7 +1227,7 @@ def generate_lattice(lattice, unit=1.0, energy = None, debug = False):
             #k = float(energy) * float(e.k1) / e.l #*  (1 +  e.l / unit - int(e.l / unit) )
             #k = float(energy) * float(e.k1) * 0.2998 / e.l #*  (1 +  e.l / unit - int(e.l / unit) )
             k = float(energy) * float(e.k1) / speed_of_light * 1e9
-            if debug: print 'DEBUG', e.k1, k, energy
+            if debug: print ('DEBUG'+ str(e.k1) + ' '+ str(k) + ' ' + str(energy)
             quadLat += 'QF' +'    '+ str(k) + '   ' + str( (e.l / unit ) ) + '  ' + str( ( (pos - prevPosQ - prevLenQ)  / unit) ) + '\n'
             prevPosQ = pos
             prevLenQ = l 
@@ -1249,6 +1252,7 @@ def next_run_id(dir = '.'):
    standrard post-processing functions
 '''
 
+
 def get_spectrum(power,phase, smax = 1.0):
 
     ''' pulse spectrum in eV '''
@@ -1261,6 +1265,13 @@ def get_spectrum(power,phase, smax = 1.0):
     freq = h_eV_s * (np.arange(1,len(spec)+1) / tmax - 0.5 * len(spec) / tmax)
     return freq, spec
 
+# def get_spectrum_n(power,phase, smax = 1.0):
+    # spec = abs(np.fft.fft(np.sqrt(np.array(power)) * np.exp( 1.j* np.array(out.phase) ) , axis=0))**2
+    # spec = spec / sqrt(out.nSlices)/(2*out.leng/out('ncar'))**2/1e10
+    # xlamds=smax / 
+    # e_0=1239.8/out('xlamds')/1e9            
+    # out.freq_ev = h_eV_s * np.fft.fftfreq(len(out.spec), d=out('zsep') * out('xlamds') / speed_of_light)+e_0# d=out.dt
+            
 
 def get_power_exit(g):
 
@@ -1368,7 +1379,7 @@ def beam_file_str(beam):
 def add_wake_to_beamf(beamf, new_beamf):
     beam = read_beam_file(beamf)
     s, bunch, wake = w.xfel_pipe_wake(s=array(beam.z), current=array(beam.I))
-    print 'read ', len(wake), ' slice values'
+    print ('read '+ str(len(wake))+ ' slice values')
     beam.eloss = wake[::-1]
 
     f=open(new_beamf,'w')
@@ -1458,13 +1469,13 @@ def transform_beam_file(beam_file = None, out_file='tmp.beam', transform = [ [25
     zmax, Imax = peaks(beam.z, beam.I, n=1)
     idx = beam.z.index(zmax)
     beam.idx_max = idx
-    print 'matching to slice', idx
+    print ('matching to slice ' + str(idx))
     
     #if plot: plot_beam(plt.figure(), beam)    
     
     
     if transform:
-        print 'transforming'
+        print ('transforming')
         g1x = np.matrix([[beam.betax[idx], beam.alphax[idx]],
                    [beam.alphax[idx], (1+beam.alphax[idx]**2)/beam.betax[idx]]])
 
@@ -1719,9 +1730,9 @@ def test_beam_transform(beta1=10.0, alpha1=-0.1, beta2=20, alpha2=2.2):
     
     g = Mi.T * g1 * Mi
     
-    print 'g1=', g1
-    print 'g2=', g2
-    print 'g=', g
+    print ('g1=' +str(g1))
+    print ('g2=' +str(g2))
+    print ('g=' +str(g))
 
     
     x = []

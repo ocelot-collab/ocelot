@@ -584,14 +584,15 @@ def write_beam_file(fileName, beam):
     fd.close()
 
 
-def readRadiationFile(fileName, npoints=151, slice_start=0, slice_end = -1, vartype=complex):
+def readRadiationFile(fileName, npoints=151, slice_start=0, slice_end = -1, vartype=complex,debug=0):
     #a new backward compatible version ~100x faster
     print ('    reading radiation file')
     import numpy as np
     if not os.path.isfile(fileName):
         print ('      ! dfl file '+fileName+' not found !')
     else:    
-        #print '        - reading from ', fileName
+        if debug:
+            print ('        - reading from '+ fileName)
         b=np.fromfile(fileName,dtype=complex).astype(vartype)
         slice_num=b.shape[0]/npoints/npoints
         b=b.reshape(slice_num,npoints,npoints)
@@ -1227,7 +1228,7 @@ def generate_lattice(lattice, unit=1.0, energy = None, debug = False):
             #k = float(energy) * float(e.k1) / e.l #*  (1 +  e.l / unit - int(e.l / unit) )
             #k = float(energy) * float(e.k1) * 0.2998 / e.l #*  (1 +  e.l / unit - int(e.l / unit) )
             k = float(energy) * float(e.k1) / speed_of_light * 1e9
-            if debug: print ('DEBUG'+ str(e.k1) + ' '+ str(k) + ' ' + str(energy)
+            if debug: print ('DEBUG'+ str(e.k1) + ' '+ str(k) + ' ' + str(energy))
             quadLat += 'QF' +'    '+ str(k) + '   ' + str( (e.l / unit ) ) + '  ' + str( ( (pos - prevPosQ - prevLenQ)  / unit) ) + '\n'
             prevPosQ = pos
             prevLenQ = l 

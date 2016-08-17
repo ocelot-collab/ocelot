@@ -1546,7 +1546,7 @@ def gen_stat_plot(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
             dfl_fig_name='DFL__'+'stage_'+str(stage)+'__'+param.replace(' ','_').replace('.','_')+'__end'
             for irun in run_range:
                 dfl_filename=proj_dir+'run_'+str(irun)+'/run.'+str(irun)+'.s'+str(stage)+'.gout.dfl'
-                dfl=readRadiationFile(dfl_filename, npoints=outlist[irun]('ncar'))
+                dfl=readRadiationFile(dfl_filename, npoints=outlist[irun]('ncar'),debug=1)
                 if dfl.shape[0]!=1:
                     ncar_z=dfl.shape[0]
                     leng_z=outlist[irun]('xlamds')*outlist[irun]('zsep')*ncar_z
@@ -1561,7 +1561,7 @@ def gen_stat_plot(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
                         print('      spectrum calculated')
                 
             if dfl_value!=[]:
-                fig=plt.figure(dfl_fig_name,debug=1)
+                fig=plt.figure(dfl_fig_name)
                 fig.clf()
                 fig.set_size_inches(figsize,forward=True)
                 if param=='dfl_spec':

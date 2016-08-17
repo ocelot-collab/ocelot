@@ -560,3 +560,11 @@ class FelSimulator(object):
             s3d.g = g           
             return s3d, None
 
+def background(command):
+    '''
+    start command as background process
+    the argument shohuld preferably be a string in triple quotes '
+    '''
+    import subprocess
+    imports='from ocelot.gui.genesis_plot import *; from ocelot.adaptors.genesis import *; from ocelot.utils.xfel_utils import *; '
+    subprocess.Popen(["python","-c",imports + command])

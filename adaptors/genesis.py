@@ -1826,3 +1826,14 @@ def create_rad_file(p_duration_s = None, p_intensity = None, beam = None, offset
     f.write(rad_file_str2(rad))
     f.close()
 
+def rad_file_str2(beam):
+    #header = "# \n? VERSION = 1.0\n? SIZE = "+str(len(beam.z))+"\n? OFFSET = "+str(beam.offset)+"\n? COLUMNS ZPOS PRAD0 \n"
+    #header = "# \n? VERSION = 1.0\n? SIZE = "+str(len(beam.z))+"\n? OFFSET = "+str(beam.offset2)+"\n? COLUMNS ZPOS PRAD0 \n"
+    header = "? VERSION = 1.0\n? SIZE = "+str(len(beam.z))+"\n? OFFSET = "+str(beam.offset2)+"\n? COLUMNS ZPOS PRAD0 \n"
+    f_str = header
+    
+    for i in xrange(len(beam.z)):
+        f_str_tmp = str(beam.z[i])+ ' ' + str(beam.prad0[i]) + '\n'
+        f_str += f_str_tmp
+    
+    return f_str

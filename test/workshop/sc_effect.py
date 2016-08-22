@@ -21,7 +21,7 @@ method.global_method = SecondTM
 
 lat = MagneticLattice(cell, start=start_sim, stop=C3_AH1_1_8_I1, method=method)
 
-p_array = astraBeam2particleArray(filename='Exfel.0320.ast')
+p_array = astraBeam2particleArray(filename='beam_distrib.ast')
 
 navi = Navigator(lat)
 navi.unit_step = 0.1

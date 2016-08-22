@@ -13,7 +13,11 @@ D_10 = Drift(l = 0.111, eid = 'D_10')
 D_11 = Drift(l = 0.05, eid = 'D_11')
 D_12 = Drift(l = 0.3864, eid = 'D_12')
 D_13 = Drift(l = 0.5512, eid = 'D_13')
-D_14 = Drift(l = 0.2216, eid = 'D_14')
+
+start_sim = Marker()
+D_14 = (Drift(l=0.0504), start_sim, Drift(l=0.1712))
+#D_14 = Drift(l = 0.2216, eid = 'D_14')
+
 D_15 = Drift(l = 0.3459, eid = 'D_15')
 D_16 = Drift(l = 0.3459, eid = 'D_16')
 D_17 = Drift(l = 0.3459, eid = 'D_17')

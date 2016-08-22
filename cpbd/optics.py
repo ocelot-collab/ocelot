@@ -732,6 +732,13 @@ def periodic_twiss(tws, R):
     return tws
 
 def twiss(lattice, tws0=None, nPoints=None):
+    """
+    twiss parameters calculation,
+    :param lattice: lattice, MagneticLattice() object
+    :param tws0: initial twiss parameters, Twiss() object. If None, try to find periodic solution.
+    :param nPoints: number of points per cell. If None, then twiss parameters are calculated at the end of each element.
+    :return: list of Twiss() objects
+    """
     if tws0 == None:
         tws0 = periodic_twiss(tws0, lattice_transfer_map(lattice, energy=0.))
 
@@ -778,6 +785,7 @@ class ProcessTable:
     def add_physics_proc(self, physics_proc, elem1, elem2):
         physics_proc.start_elem = elem1
         physics_proc.end_elem = elem2
+        #print(elem1.id, elem2.id, elem1.__hash__(), elem2.__hash__(), self.lat.sequence.index(elem1), self.lat.sequence.index(elem2))
         physics_proc.indx0 = self.lat.sequence.index(elem1)
         #print(self.lat.sequence.index(elem1))
         physics_proc.indx1 = self.lat.sequence.index(elem2)
@@ -785,8 +793,16 @@ class ProcessTable:
         physics_proc.counter = physics_proc.step
         physics_proc.prepare(self.lat)
         self.proc_list.append(physics_proc)
+        #print(elem1.__hash__(), elem2.__hash__(), physics_proc.indx0, physics_proc.indx1, self.proc_list)
 
 class Navigator:
+    """
+    Navigator defines step (dz) of tracking and which physical process will be applied during each step.
+    Methods:
+    add_physics_proc(physics_proc, elem1, elem2)
+        physics_proc - physics process, can be CSR, SpaceCharge or Wake,
+        elem1 and elem2 - first and last elements between which the physics process will be applied.
+    """
     def __init__(self, lattice=None):
         if lattice != None:
             self.lat = lattice

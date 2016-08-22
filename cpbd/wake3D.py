@@ -80,7 +80,10 @@ def s2current(s_array, q_array, n_points, filter_order, mean_vel):
 
 
 class WakeTable:
-
+    """
+    WakeTable(wake_file) - load and prepare wake table
+    wake_file - path to the wake table
+    """
     def __init__(self, wake_file):
         self.TH = self.load_wake_table(wake_file)
 
@@ -124,6 +127,16 @@ class WakeTable:
 
 
 class Wake():
+    """
+    calculation of wake kick
+
+    parameters:
+    -----------
+    w_sampling = 500 - wake sampling
+    filter_order = 20 - smoothing filter order
+    wake_table = None - wake table [WakeTable()]
+    factor = 1. - scaling coefficient
+    """
     def __init__(self):
         self.w_sampling = 500  # wake sampling
         self.filter_order = 20   # smoothing filter order
@@ -293,7 +306,7 @@ class Wake():
             self.TH = self.wake_table.TH
 
     def apply(self, p_array, dz):
-        print("apply: WAKE")
+        #print("apply: WAKE")
         #Px = 0
         #Py = 0
         #Pz = 0

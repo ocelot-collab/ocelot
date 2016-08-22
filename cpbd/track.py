@@ -3,12 +3,13 @@ __author__ = 'Sergey Tomin'
 from ocelot.cpbd.optics import *
 from ocelot.cpbd.beam import *
 #from mpi4py import MPI
-from numpy import delete, array, linspace
+from numpy import delete, array, linspace, sqrt
 from ocelot.cpbd.errors import *
 from ocelot.cpbd.elements import *
 from time import time
 from scipy.stats import truncnorm
 from copy import copy
+import sys
 
 try:
     from scipy.signal import argrelextrema
@@ -26,10 +27,10 @@ def aperture_limit(lat, xlim = 1, ylim = 1):
     bymax = max([tw.beta_y for tw in tws])
     bx0 = tws[0].beta_x
     by0 = tws[0].beta_y
-    px_lim = float(xlim)/sqrt(bxmax*bx0)
-    py_lim = float(ylim)/sqrt(bymax*by0)
-    xlim = float(xlim)*sqrt(bx0/bxmax)
-    ylim = float(ylim)*sqrt(by0/bymax)
+    px_lim = float(xlim)/np.sqrt(bxmax*bx0)
+    py_lim = float(ylim)/np.sqrt(bymax*by0)
+    xlim = float(xlim)*np.sqrt(bx0/bxmax)
+    ylim = float(ylim)*np.sqrt(by0/bymax)
 
     return xlim, ylim, px_lim, py_lim
 
@@ -214,8 +215,8 @@ def phase_space_transform(x,y, tws):
     """
 
     angle = np.arctan(2*tws.alpha_x/(tws.gamma_x-tws.beta_x))/2.
-    x = x*cos(angle) - y*sin(angle)
-    y = x*sin(angle) + y*cos(angle)
+    x = x*np.cos(angle) - y*np.sin(angle)
+    y = x*np.sin(angle) + y*np.cos(angle)
     return x,y
 
 
@@ -239,8 +240,8 @@ def ellipse_track_list(beam, n_t_sigma = 3, num = 1000, type = "contour"):
     #sigma_xp = sqrt((sigma_e*tws0.Dxp)**2 + emit*tws0.gamma_x)
     if type == "contour":
         t = linspace(0,2*pi, num)
-        x = n_t_sigma*beam.sigma_x*cos(t)
-        y = n_t_sigma*beam.sigma_xp*sin(t)
+        x = n_t_sigma*beam.sigma_x*np.cos(t)
+        y = n_t_sigma*beam.sigma_xp*np.sin(t)
     else:
         x = truncnorm( -n_t_sigma,  n_t_sigma, loc=0, scale=beam.sigma_x).rvs(num)
         y = truncnorm( -n_t_sigma,  n_t_sigma, loc=0, scale=beam.sigma_xp).rvs(num)
@@ -456,7 +457,7 @@ def tracking_step(lat, particle_list, dz, navi):
     return
 
 
-def track(lattice, p_array, navi):
+def track(lattice, p_array, navi, print_progress=True):
     """
     tracking through the lattice
     :param lattice: Magnetic Lattice
@@ -465,7 +466,7 @@ def track(lattice, p_array, navi):
     :return: twiss list, ParticleArray
     """
     tw0 = get_envelope(p_array)
-    print(tw0)
+    #print(tw0)
     tws_track = [tw0]
     L = 0.
     while np.abs(navi.z0 - lattice.totalLen) > 1e-10:
@@ -478,7 +479,12 @@ def track(lattice, p_array, navi):
         L += dz
         tw.s += L
         tws_track.append(tw)
-        print("z = ", navi.z0)
+
+        if print_progress:
+            poc_names = [p.__class__.__name__ for p in proc_list]
+            sys.stdout.write( "\r" + "z = " + str(navi.z0)+" / "+str(lattice.totalLen) + " : applied: " + ", ".join(poc_names)  )
+            sys.stdout.flush()
+
     return tws_track, p_array
 
 

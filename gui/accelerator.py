@@ -524,9 +524,18 @@ def plot_betas(ax, S, beta_x, beta_y, font_size):
     leg.get_frame().set_alpha(0.2)
 
 
-def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=True):
-
-    font_size = 25
+def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=True, font_size=18):
+    """
+    function for plotting: lattice (bottom section), vertical and horizontal beta-functions (middle section),
+    other parameters (top section) such as "Dx", "Dy", "E", "mux", "muy", "alpha_x", "alpha_y", "gamma_x", "gamma_y"
+    lat - MagneticLattice,
+    tws - list if Twiss objects,
+    top_plot=["Dx"] - parameters which displayed in top section. Example top_plot=["Dx", "Dy", "alpha_x"]
+    legend=True - displaying legend of element types in bottom section,
+    fig_name=None - name of figure,
+    grid=True - grid
+    font_size=18 - font size.
+    """
     if fig_name == None:
         fig = plt.figure()
     else:

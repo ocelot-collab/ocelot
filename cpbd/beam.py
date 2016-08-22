@@ -14,6 +14,9 @@ Note:
 from numpy import *
 
 class Twiss:
+    """
+    class - container for twiss parameters
+    """
     def __init__(self, beam = None):
         if beam == None:
             self.emit_x = 0.0 # ???
@@ -88,7 +91,8 @@ class Twiss:
         val += "muy     = " + str(self.muy) + "\n"
         val += "nu_x    = " + str(self.mux/2./pi) + "\n"
         val += "nu_y    = " + str(self.muy/2./pi) + "\n"
-        val += "s    = " + str(self.s) + "\n"
+        val += "E       = " + str(self.E) + "\n"
+        val += "s        = " + str(self.s) + "\n"
         return val
 
             
@@ -206,9 +210,9 @@ class Trajectory:
 
 
 class ParticleArray:
-    '''
+    """
     array of particles of fixed size; for optimized performance
-    '''
+    """
     def __init__(self, n=0):
         self.particles = zeros(n*6)
         self.s = 0.0

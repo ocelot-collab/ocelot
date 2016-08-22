@@ -419,6 +419,7 @@ def t_nnn(L, h, k1, k2, energy=0):
         # only T436 gives the different value for Quad in comparison with MAD, but it was checked and it is correct
         T[3, 2, 5] = h/beta*-ky2*K2*(2*cy*Jf - sy*Jd) + h/beta*(K2 + h*-ky2)*J1*cy + 0.5*beta*-ky2*(sy - L*cy)
         T[4, 0, 5] = -sx*h/(beta**2)*igamma2
+        T[2, 2, 5] = h/beta*K2*(sy*Jd - 2*-ky2*cy*Jf) + h2/beta*-ky2*J1*sy - 0.5/beta*-ky2*L*sy
         #print(dx_h, igamma2, beta2, h)
         #print(igamma2)
     # MAD STOP

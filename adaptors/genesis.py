@@ -1803,3 +1803,37 @@ def test_beam_transform(beta1=10.0, alpha1=-0.1, beta2=20, alpha2=2.2):
 #parser.add_argument('input', help='input file')
 #args = parser.parse_args()
 
+
+def create_rad_file(p_duration_s = None, p_intensity = None, beam = None, offset = None, out_file = 'tmp.rad'):
+    temporal_delay = offset
+    extention_twindow = 2
+    start = beam.z[0]-extention_twindow*(beam.z[math.floor(len(beam.z)/2)]-beam.z[0])
+    stop = beam.z[len(beam.z)-1]+extention_twindow*(beam.z[len(beam.z)-1]-beam.z[math.ceil(len(beam.z)/2)])
+    num = len(beam.z)*(1+extention_twindow)
+    intensity = np.empty(num)
+    p_duration_m = p_duration_s*299792458
+    
+    class radfileparams:
+        offset = temporal_delay
+        offset2 = start
+        z = np.linspace(start, stop, num)
+        for i in range(num):
+            intensity[i] = p_intensity*math.exp(-(z[i]-offset)**2/(2*p_duration_m**2)) 
+        prad0 = intensity
+        
+    rad = radfileparams()
+    f = open(out_file,'w')
+    f.write(rad_file_str2(rad))
+    f.close()
+
+def rad_file_str2(beam):
+    #header = "# \n? VERSION = 1.0\n? SIZE = "+str(len(beam.z))+"\n? OFFSET = "+str(beam.offset)+"\n? COLUMNS ZPOS PRAD0 \n"
+    #header = "# \n? VERSION = 1.0\n? SIZE = "+str(len(beam.z))+"\n? OFFSET = "+str(beam.offset2)+"\n? COLUMNS ZPOS PRAD0 \n"
+    header = "? VERSION = 1.0\n? SIZE = "+str(len(beam.z))+"\n? OFFSET = "+str(beam.offset2)+"\n? COLUMNS ZPOS PRAD0 \n"
+    f_str = header
+    
+    for i in xrange(len(beam.z)):
+        f_str_tmp = str(beam.z[i])+ ' ' + str(beam.prad0[i]) + '\n'
+        f_str += f_str_tmp
+    
+    return f_str

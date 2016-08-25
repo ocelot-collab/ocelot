@@ -38,6 +38,14 @@ def smooth_z(Zin, mslice):
 
 
 class SpaceCharge():
+    """
+    The space charge forces are calculated by solving the Poisson equation in the bunch frame.
+    Then the Lorentz transformed electromagnetic field is applied as a kick in the laboratory frame.
+    For the solution of the Poisson equation we use an integral representation of the electrostatic potential
+    by convolution of the free-space Green's function with the charge distribution.
+    The convolution equation is solved with the help of the Fast Fourier Transform (FFT). The same algorithm for
+    solution of the 3D Poisson equation is used, for example, in ASTRA
+    """
     def __init__(self):
         #PhysicsProcess.__init__(self)
         self.step = 1 # in unit step

@@ -128,11 +128,16 @@ class WakeTable:
 
 class Wake():
     """
-    calculation of wake kick
+    The wake field impact on the beam is included as series of kicks.
+    In order to take into account the impact of the wake field on the beam the longitudinal wake function
+    of point charge through the second order Taylor expansion is used.
+    In general case it uses 13 one-dimensional functions to represent the  longitudinal component of the wake
+    function for arbitrary sets of the source and the wittness particles near to the reference axis.
 
     parameters:
     -----------
-    w_sampling = 500 - wake sampling
+    w_sampling = 500 -  defines the number of the equidistant sampling points for the one-dimensional
+                        wake coefficients in the Taylor expansion of the 3D wake function.
     filter_order = 20 - smoothing filter order
     wake_table = None - wake table [WakeTable()]
     factor = 1. - scaling coefficient

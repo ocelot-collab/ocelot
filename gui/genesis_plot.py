@@ -1377,7 +1377,7 @@ def gen_stat_plot(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
     
     
     import copy
-    dict_name={'p_int':'radiation power','energy': 'radiation pulse energy','el_e_spread': 'el.beam energy spread','el_energy': 'el.beam energy average','bunching': 'el.beam bunching','spec': 'radiation on-axis spectral density','dfl_spec':'total radiation spectral density','r_size':'radiation transv size','r_size_weighted':'radiation transv size (weighted)','xrms':'el.beam x size','yrms':'el.beam y size','error':'genesis simulation error','p_mid':'radiation power on-axis','phi_mid':'radiation phase on-axis','increment':'radiation power increment'}
+    dict_name={'p_int':'radiation power','energy': 'radiation pulse energy','el_e_spread': 'el.beam energy spread','el_energy': 'el.beam energy average','bunching': 'el.beam bunching','spec': 'radiation on-axis spectral density','dfl_spec':'total radiation spectral density','r_size':'radiation transv size','r_size_weighted':'radiation transv size (weighted)','xrms':'el.beam x size','yrms':'el.beam y size','error':'genesis simulation error','p_mid':'radiation power on-axis','phi_mid':'radiation phase on-axis','phi_mid_disp':'radiation phase on-axis normalized','increment':'radiation power increment'}
     dict_unit={'p_int':'[W]','energy': '[J]','el_e_spread': '(gamma)','el_energy': '(gamma)','bunching': '','spec': '[arb.units]','dfl_spec': '[arb.units]','r_size':'[m]','xrms':'[m]','yrms':'[m]','error':''}
     
     figsize=(14,7)
@@ -1447,7 +1447,8 @@ def gen_stat_plot(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
         for param in s_param_range:
             for s_ind in s_inp:
                 s_value=[]
-                s_fig_name='Z__'+'stage_'+str(stage)+'__'+dict_name.get(param,param).replace(' ','_').replace('.','_')+'__'+str(s_ind)
+                # s_fig_name='Z__'+'stage_'+str(stage)+'__'+dict_name.get(param,param).replace(' ','_').replace('.','_')+'__'+str(s_ind)
+                s_fig_name='s'+str(stage)+'.'+dict_name.get(param,param).replace(' ','_').replace('.','_')+'__Z__'+str(s_ind)
                 for irun in run_range:
                     if not hasattr(outlist[irun],param):
                         continue
@@ -1494,7 +1495,8 @@ def gen_stat_plot(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
         for param in z_param_range:
             for z_ind in z_inp:
                 z_value=[]
-                z_fig_name='S__'+'stage_'+str(stage)+'__'+dict_name.get(param,param).replace(' ','_').replace('.','_')+'__'+str(z_ind)+'__m'
+                # z_fig_name='S__'+'stage_'+str(stage)+'__'+dict_name.get(param,param).replace(' ','_').replace('.','_')+'__'+str(z_ind)+'__m'
+                z_fig_name='s'+str(stage)+'.'+dict_name.get(param,param).replace(' ','_').replace('.','_')+'__S__'+str(z_ind)+'_m'
                 for irun in run_range:
                     if not hasattr(outlist[irun],param):
                         break
@@ -1543,7 +1545,7 @@ def gen_stat_plot(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
         
         for param in dfl_param_inp:
             dfl_value=[]
-            dfl_fig_name='DFL__'+'stage_'+str(stage)+'__'+param.replace(' ','_').replace('.','_')+'__end'
+            dfl_fig_name='s'+str(stage)+'.'+param.replace(' ','_').replace('.','_')+'__DFL__end'
             for irun in run_range:
                 dfl_filename=proj_dir+'run_'+str(irun)+'/run.'+str(irun)+'.s'+str(stage)+'.gout.dfl'
                 dfl=readRadiationFile(dfl_filename, npoints=outlist[irun]('ncar'),debug=1)

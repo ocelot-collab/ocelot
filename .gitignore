@@ -1,5 +1,6 @@
 *.xml
 *.pyc
 *.idea
+*.swp
 .project
 .pydevproject

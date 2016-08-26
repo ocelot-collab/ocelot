@@ -43,7 +43,7 @@ screen_no = calculate_radiation(lat, deepcopy(screen), beam, energy_loss=False, 
 total = np.zeros(screen.num_energy)
 Uq = []
 for i in range(npls):
-    print i
+    print(i)
     screen = calculate_radiation(lat, deepcopy(screen), beam, energy_loss=False, quantum_diff=True)
     total += screen.Total/npls
     Uq.append(screen.Ef_electron)
@@ -55,8 +55,8 @@ num_bins = 50
 # the histogram of the data
 n, bins, patches = plt.hist((np.array(Uq) - beam.E)/beam.E, num_bins, normed=1, facecolor='green', alpha=0.5)
 
-print "sigma = ", sigma
-print sigma/sqrt(nund*nperiods)
+print("sigma = ", sigma)
+print(sigma/sqrt(nund*nperiods))
 y = mlab.normpdf(bins, 0, sigma)
 plt.plot(bins, y, 'r--')
 plt.xlabel(r'$\delta E/ E $')
@@ -72,7 +72,7 @@ plt.show()
 E_no = screen_no.Eph
 t_no = screen_no.Total
 max_I = max(t_no)
-print "time = ", time() - start
+print("time = ", time() - start)
 
 
 plot(E_no, t_no/max_I,"k",  screen.Eph, total/max_I, "r",  lw = 2)

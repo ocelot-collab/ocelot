@@ -29,10 +29,62 @@ rc('text', usetex=True) # required to have greek fonts on redhat
 
 max_yticks = 7
 
+def gen_outplot(handle=None,savefig='png',showfig=False,debug=0,all=False,vartype_dfl=complex128):
+    #picks as an input "GenesisOutput" object, file path of directory as strings.
+    #plots e-beam evolution, radiation evolution, initial and final simulation window
+    #If folder path is provided, all *.gout and *.out files are plotted
+    import os
+    from ocelot.adaptors.genesis import GenesisOutput, readGenesisOutput, readRadiationFile
+
+    print('')
+    print('  plotting genesis output:')
+    plotting_time = time.time()
+
+    plt.ioff()
+
+    if savefig==True:
+        savefig='png'
+
+    if os.path.isdir(str(handle)):
+        handles=[]
+        for root, dirs, files in os.walk(handle):
+            for name in files:
+                if name.endswith('.gout') or name.endswith('.out'):
+                    handles.append(os.path.join(root, name))
+        print('\n  plotting all files in '+str(handle))
+    else:
+        handles=[handle]
+
+    for handle in handles:
+
+        if os.path.isfile(str(handle)):
+            handle=readGenesisOutput(handle,readall=1,debug=debug)
+
+        if isinstance(handle,GenesisOutput):
+            f1=gen_outplot_e(handle,savefig=savefig)
+            f2=gen_outplot_ph(handle,savefig=savefig)
+            f3=gen_outplot_z(handle, z=0,savefig=savefig)
+            f4=gen_outplot_z(handle, z=inf,savefig=savefig)
+
+        if os.path.isfile(handle.path+'.dfl') and all:
+            dfl=readRadiationFile(handle.path+'.dfl', handle.ncar, vartype=vartype_dfl)
+            f5=gen_outplot_dfl(dfl, handle,savefig=savefig)
+            f6=gen_outplot_dfl(dfl, handle,far_field=1,freq_domain=0,auto_zoom=0,savefig=savefig)
+            f7=gen_outplot_dfl(dfl, handle,far_field=0,freq_domain=1,auto_zoom=0,savefig=savefig)
+
+    if showfig:
+        print('    showing plots, close all to proceed')
+        plt.show()
+
+    if savefig!=False:
+        print('    plots recorded to *.'+str(savefig)+' files')
+
+    print ('    total plotting time %.2f seconds' % (time.time() - plotting_time))
+
+    # return [f1,f2,f3,f4]
 
 
-
-def gen_outplot_evo(g, params=['und_quad','el_size','el_energy','el_bunching','rad_pow_en','rad_spec','rad_size'], figsize=(), legend = True, fig_name = None, save=False, showfig=False):
+def gen_outplot_evo(g, params=['und_quad','el_size','el_energy','el_bunching','rad_pow_en','rad_spec','rad_size'], figsize=(), legend = True, fig_name = None, savefig=False, showfig=False):
 
     import matplotlib.ticker as ticker
     
@@ -101,19 +153,21 @@ def gen_outplot_evo(g, params=['und_quad','el_size','el_energy','el_bunching','r
             label.set_visible(False)
     
     
-    if save!=False:
-        if save==True:
-            save='png'
+    if savefig!=False:
+        if savefig==True:
+            savefig='png'
         if fig_name=='Electrons':
-            fig.savefig(g.path+'_elec.'+str(save),format=save)
+            fig.savefig(g.path+'_elec.'+str(savefig),format=savefig)
         elif fig_name=='Radiation':
-            fig.savefig(g.path+'_rad.'+str(save),format=save)
+            fig.savefig(g.path+'_rad.'+str(savefig),format=savefig)
         else:
-            fig.savefig(g.path+'_'+params_str+'.'+str(save),format=save)
+            fig.savefig(g.path+'_'+params_str+'.'+str(savefig),format=savefig)
 
     # return fig
     if showfig:
         plt.show()
+    
+    return fig
 
 def subfig_und_quad(ax_und,g,legend):
 
@@ -294,12 +348,15 @@ def subfig_rad_size(ax_size_t,g,legend):
 
 
 
-def gen_outplot_e(g, figsize=(),legend = True, fig_name = 'Electrons', save=False):
-    gen_outplot_evo(g, params=['und_quad','el_size','el_energy','el_bunching'], figsize=figsize, legend = legend, fig_name = fig_name, save=save)
-def gen_outplot_ph(g, figsize=(), legend = True, fig_name = 'Radiation', save=False):
-    gen_outplot_evo(g, params=['rad_pow_en','rad_spec','rad_size'], figsize=figsize, legend = legend, fig_name = fig_name, save=save)
+def gen_outplot_e(g, figsize=(),legend = True, fig_name = 'Electrons', savefig=False):
+    fig=gen_outplot_evo(g, params=['und_quad','el_size','el_energy','el_bunching'], figsize=figsize, legend = legend, fig_name = fig_name, savefig=savefig)
+    return fig
 
-# def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = None, save=False):
+def gen_outplot_ph(g, figsize=(), legend = True, fig_name = 'Radiation', savefig=False):
+    fig=gen_outplot_evo(g, params=['rad_pow_en','rad_spec','rad_size'], figsize=figsize, legend = legend, fig_name = fig_name, savefig=savefig)
+    return fig
+
+# def gen_outplot_e(g, figsize=(8,10), legend = True, fig_name = None, savefig=False):
     # import matplotlib.ticker as ticker
 
     # print('    plotting e-beam evolution')
@@ -404,14 +461,14 @@ def gen_outplot_ph(g, figsize=(), legend = True, fig_name = 'Radiation', save=Fa
     # ax_spread.tick_params(axis='y', which='both', colors='r')
     # ax_spread.yaxis.label.set_color('r')
 
-    # if save!=False:
-        # if save==True:
-            # save='png'
-        # fig.savefig(g.path+'_elec.'+str(save),format=save)
+    # if savefig!=False:
+        # if savefig==True:
+            # savefig='png'
+        # fig.savefig(g.path+'_elec.'+str(savefig),format=savefig)
 
     # return fig
 
-# def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, save=False):
+# def gen_outplot_ph(g, figsize=(8, 10), legend = True, fig_name = None, savefig=False):
     # import matplotlib.ticker as ticker
 
     # print('    plotting radiation evolution')
@@ -598,15 +655,15 @@ def gen_outplot_ph(g, figsize=(), legend = True, fig_name = 'Radiation', save=Fa
 # # #    labels[0] = ""
 # # #    ax_size_t.set_yticklabels(labels)
 
-    # if save!=False:
-        # if save==True:
-            # save='png'
-        # fig.savefig(g.path+'_rad.'+str(save),format=save)
+    # if savefig!=False:
+        # if savefig==True:
+            # savefig='png'
+        # fig.savefig(g.path+'_rad.'+str(savefig),format=savefig)
     # return fig
 
 
 
-def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, save=False):
+def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, savefig=False, showfig=False):
 #    max_yticks = 7
     if g('itdp')==False:
         print('    plotting bunch profile at '+str(z)+' [m]')
@@ -631,7 +688,6 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
     z=g.z[zi];
 
     print('    plotting bunch profile at '+str(z)+' [m]')
-
 
 
     font_size = 1
@@ -663,14 +719,10 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
             for label in ax.get_xticklabels():
                 label.set_visible(False)
 
-    #
-
 
     fig.subplots_adjust(hspace=0)
 
     s=g.t*speed_of_light*1.0e-15*1e6
-
-
 
 
     ax_curr.plot(s, g.I/1e3, 'k--')
@@ -788,16 +840,19 @@ def gen_outplot_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sav
     ax_spectrum.yaxis.get_offset_text().set_color(ax_spectrum.yaxis.label.get_color())
 
 
-    if save!=False:
-        if save==True:
-            save='png'
-        fig.savefig(g.path+'_z_'+str(z)+'m.'+str(save),format=save)
+    if savefig!=False:
+        if savefig==True:
+            savefig='png'
+        fig.savefig(g.path+'_z_'+str(z)+'m.'+str(savefig),format=savefig)
 
+    if showfig:
+        plt.show()
+    
     return fig
 
 
 
-def gen_outplot_scanned_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, save=False):
+def gen_outplot_scanned_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, savefig=False):
 #    max_yticks = 7
     if g('itdp')==True:
         print('    plotting scan at '+str(z)+' [m]')
@@ -917,70 +972,15 @@ def gen_outplot_scanned_z(g, figsize=(8, 10), legend = True, fig_name = None, z=
     ax_power.yaxis.label.set_color('g')
     ax_power.yaxis.get_offset_text().set_color(ax_power.yaxis.label.get_color())
 
-    if save!=False:
-        if save==True:
-            save='png'
-        fig.savefig(g.path+'_z_'+str(z)+'m_scan.'+str(save),format=save)
+    if savefig!=False:
+        if savefig==True:
+            savefig='png'
+        fig.savefig(g.path+'_z_'+str(z)+'m_scan.'+str(savefig),format=savefig)
 
     return fig
 
 
-def gen_outplot(handle=None,save='png',show=False,debug=0,all=False,vartype_dfl=complex128):
-    #picks as an input "GenesisOutput" object, file path of directory as strings.
-    #plots e-beam evolution, radiation evolution, initial and final simulation window
-    #If folder path is provided, all *.gout and *.out files are plotted
-    import os
-    from ocelot.adaptors.genesis import GenesisOutput, readGenesisOutput, readRadiationFile
-
-    print('')
-    print('  plotting genesis output:')
-    plotting_time = time.time()
-
-    plt.ioff()
-
-    if save==True:
-        save='png'
-
-    if os.path.isdir(str(handle)):
-        handles=[]
-        for root, dirs, files in os.walk(handle):
-            for name in files:
-                if name.endswith('.gout') or name.endswith('.out'):
-                    handles.append(os.path.join(root, name))
-        print('\n  plotting all files in '+str(handle))
-    else:
-        handles=[handle]
-
-    for handle in handles:
-
-        if os.path.isfile(str(handle)):
-            handle=readGenesisOutput(handle,readall=1,debug=debug)
-
-        if isinstance(handle,GenesisOutput):
-            f1=gen_outplot_e(handle,save=save)
-            f2=gen_outplot_ph(handle,save=save)
-            f3=gen_outplot_z(handle, z=0,save=save)
-            f4=gen_outplot_z(handle, z=inf,save=save)
-
-        if os.path.isfile(handle.path+'.dfl') and all:
-            dfl=readRadiationFile(handle.path+'.dfl', handle.ncar, vartype=vartype_dfl)
-            f5=gen_outplot_dfl(dfl, handle,save=save)
-            f6=gen_outplot_dfl(dfl, handle,far_field=1,freq_domain=0,auto_zoom=0,save=save)
-            f7=gen_outplot_dfl(dfl, handle,far_field=0,freq_domain=1,auto_zoom=0,save=save)
-
-    if show==True:
-        print('    showing plots, close all to proceed')
-        plt.show()
-
-    if save!=False:
-        print('    plots recorded to *.'+str(save)+' files')
-
-    print ('    total plotting time %.2f seconds' % (time.time() - plotting_time))
-
-    # return [f1,f2,f3,f4]
-
-
-def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True, phase = False, far_field=False, freq_domain=False, fig_name = None, auto_zoom=False, column_3d=True, save=False, show=False, return_proj=False, vartype_dfl=complex64):
+def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True, phase = False, far_field=False, freq_domain=False, fig_name = None, auto_zoom=False, column_3d=True, savefig=False, showfig=False, return_proj=False, vartype_dfl=complex64):
 
     #dfl can be either object or the path to dfl file
     #out can be genesis output object
@@ -993,7 +993,7 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
     #fig_name is the desired name of the output figure
     #auto_zoom automatically scales xyz the images to the (1%?) of the intensity limits
     #column_3d plots top and side views of the radiation distribution
-    #save and show allow to save figure to image (save='png' (default) or save='eps', etc...) or to display it (slower)
+    #savefig and showfig allow to save figure to image (savefig='png' (default) or savefig='eps', etc...) or to display it (slower)
     #return_proj returns [xy_proj,yz_proj,xz_proj,x,y,z] array.
     #vartype_dfl is the data type to store dfl in memory [either complex128 (two 64-bit floats) or complex64 (two 32-bit floats)], may save memory
 
@@ -1209,14 +1209,9 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
         x_line,y_line=x_line/max(x_line),y_line/max(y_line)
 
 
-
     #X=sqrt(sum(abs(X).^2,3)).*exp(1i.*angle(mean(X,3))); #%Matlab 2D field calculation
     # normI = BoundaryNorm(levelsI, ncolors=cmapI.N, clip=True)
     # normP = BoundaryNorm(levelsP, ncolors=cmapP.N, clip=True)
-
-
-
-
 
 
     ax_int=fig.add_subplot(2, 2+column_3d, 1)
@@ -1256,7 +1251,6 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
     ax_proj_x.set_ylim(ymin=0,ymax=1)
 
 
-
     ax_proj_y=fig.add_subplot(2, 2+column_3d, 2, sharey=ax_int)
     ax_proj_y.plot(y_line,y,linewidth=2,color=x_y_color)
     ax_proj_y.set_title(y_title, fontsize=15)
@@ -1281,9 +1275,6 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
         ax_proj_yz=fig.add_subplot(2, 2+column_3d, 3,sharey=ax_int,sharex=ax_proj_xz)
         ax_proj_yz.pcolormesh(z, y, swapaxes(yz_proj,1,0), cmap=cmap_int)
         ax_proj_yz.set_title('Side view', fontsize=15)
-
-
-
 
 
     cbar=0
@@ -1337,15 +1328,15 @@ def gen_outplot_dfl(dfl, out=None, z_lim=[], xy_lim=[], figsize=3, legend = True
     fig.subplots_adjust(wspace=0.4,hspace=0.4)
 
 
-    if save!=False:
-        if save==True:
-            save='png'
+    if savefig!=False:
+        if savefig==True:
+            savefig='png'
         print'      suffix= ',suffix
-        fig.savefig(out.path+'_dfl'+suffix+'.'+str(save),format=save)
+        fig.savefig(out.path+'_dfl'+suffix+'.'+str(savefig),format=savefig)
 
     print(('      done in %.2f seconds' % (time.time() - start_time)))
 
-    if show==True:
+    if showfig==True:
         print('    showing dfl')
         plt.show()
 
@@ -1374,10 +1365,9 @@ def gen_stat_plot(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
     
     # dfl_power, dfl_spec, dfl_size, dfl_divergence 
     
-    
-    
+
     import copy
-    dict_name={'p_int':'radiation power','energy': 'radiation pulse energy','el_e_spread': 'el.beam energy spread','el_energy': 'el.beam energy average','bunching': 'el.beam bunching','spec': 'radiation on-axis spectral density','dfl_spec':'total radiation spectral density','r_size':'radiation transv size','r_size_weighted':'radiation transv size (weighted)','xrms':'el.beam x size','yrms':'el.beam y size','error':'genesis simulation error','p_mid':'radiation power on-axis','phi_mid':'radiation phase on-axis','phi_mid_disp':'radiation phase on-axis normalized','increment':'radiation power increment'}
+    dict_name={'p_int':'radiation power','energy': 'radiation pulse energy','el_e_spread': 'el.beam energy spread','el_energy': 'el.beam energy average','bunching': 'el.beam bunching','spec': 'radiation on-axis spectral density','dfl_spec':'total radiation spectral density','r_size':'radiation transv size','r_size_weighted':'radiation transv size (weighted)','xrms':'el.beam x size','yrms':'el.beam y size','error':'genesis simulation error','p_mid':'radiation power on-axis','phi_mid':'radiation phase on-axis','increment':'radiation power increment'}
     dict_unit={'p_int':'[W]','energy': '[J]','el_e_spread': '(gamma)','el_energy': '(gamma)','bunching': '','spec': '[arb.units]','dfl_spec': '[arb.units]','r_size':'[m]','xrms':'[m]','yrms':'[m]','error':''}
     
     figsize=(14,7)
@@ -1447,8 +1437,7 @@ def gen_stat_plot(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
         for param in s_param_range:
             for s_ind in s_inp:
                 s_value=[]
-                # s_fig_name='Z__'+'stage_'+str(stage)+'__'+dict_name.get(param,param).replace(' ','_').replace('.','_')+'__'+str(s_ind)
-                s_fig_name='s'+str(stage)+'.'+dict_name.get(param,param).replace(' ','_').replace('.','_')+'__Z__'+str(s_ind)
+                s_fig_name='Z__'+'stage_'+str(stage)+'__'+dict_name.get(param,param).replace(' ','_').replace('.','_')+'__'+str(s_ind)
                 for irun in run_range:
                     if not hasattr(outlist[irun],param):
                         continue
@@ -1495,8 +1484,7 @@ def gen_stat_plot(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
         for param in z_param_range:
             for z_ind in z_inp:
                 z_value=[]
-                # z_fig_name='S__'+'stage_'+str(stage)+'__'+dict_name.get(param,param).replace(' ','_').replace('.','_')+'__'+str(z_ind)+'__m'
-                z_fig_name='s'+str(stage)+'.'+dict_name.get(param,param).replace(' ','_').replace('.','_')+'__S__'+str(z_ind)+'_m'
+                z_fig_name='S__'+'stage_'+str(stage)+'__'+dict_name.get(param,param).replace(' ','_').replace('.','_')+'__'+str(z_ind)+'__m'
                 for irun in run_range:
                     if not hasattr(outlist[irun],param):
                         break
@@ -1545,7 +1533,7 @@ def gen_stat_plot(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
         
         for param in dfl_param_inp:
             dfl_value=[]
-            dfl_fig_name='s'+str(stage)+'.'+param.replace(' ','_').replace('.','_')+'__DFL__end'
+            dfl_fig_name='DFL__'+'stage_'+str(stage)+'__'+param.replace(' ','_').replace('.','_')+'__end'
             for irun in run_range:
                 dfl_filename=proj_dir+'run_'+str(irun)+'/run.'+str(irun)+'.s'+str(stage)+'.gout.dfl'
                 dfl=readRadiationFile(dfl_filename, npoints=outlist[irun]('ncar'),debug=1)
@@ -1582,10 +1570,130 @@ def gen_stat_plot(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
                         
     if showfig:
         plt.show()
+        
+    return fig
 
 
+def gen_corr_plot(proj_dir,run_inp=[],p1=(),p2=(),savefig=False, showfig=False, saveval=False):
+    #param (parameter[str], stage[int], z_position[double], s_position [double or 'max'/'mean' stings])
+    #e.g. ('p_int',1,inf,'max') , ('spec',1,inf,'max')
+    
+    figsize=(7,7)
+    
+    if proj_dir[-1]!='/':
+        proj_dir+='/'
+    
+    param_1,stage_1,z_1,s_1=p1
+    param_2,stage_2,z_2,s_2=p2
 
-def gen_outplot_dpa(out, dpa=None, z=[], figsize=3, legend = True, fig_name = None, auto_zoom=False, column_3d=True, save=False, show=False, return_proj=False, vartype_dfl=complex64):
+    outlist_1=[GenesisOutput() for i in xrange(1000)]
+    outlist_2=[GenesisOutput() for i in xrange(1000)]
+    if run_inp==[]:
+        run_range=xrange(1000)
+    else:
+        run_range=run_inp
+
+    run_range_good_1=[]
+    run_range_good_2=[]
+
+    if param_1 not in []:
+        for irun in run_range:
+            out_file_1=proj_dir+'run_'+str(irun)+'/run.'+str(irun)+'.s'+str(stage_1)+'.gout'
+            if os.path.isfile(out_file_1):
+                outlist_1[irun] = readGenesisOutput(out_file_1,readall=1)
+                run_range_good_1.append(irun)
+                
+
+    if param_2 not in []:        
+        for irun in run_range:
+            out_file_2=proj_dir+'run_'+str(irun)+'/run.'+str(irun)+'.s'+str(stage_2)+'.gout'
+            if os.path.isfile(out_file_2):
+                outlist_2[irun] = readGenesisOutput(out_file_2,readall=1)
+                run_range_good_2.append(irun)
+            
+    run_range_good=[val for val in run_range_good_1 if val in run_range_good_2]
+
+    if param_1 not in []:
+        irun=run_range_good[0]
+        if isinstance (s_1,(int,long,float)):
+            index_s1=np.where(outlist_1[irun].s<=s_1)[-1][-1]
+        
+        if isinstance (z_1,(int,long,float)):
+            index_z1=np.where(outlist_1[irun].z<=z_1)[-1][-1]
+
+    if param_2 not in []:
+        if isinstance (s_2,(int,long,float)):
+            index_s2=np.where(outlist_2[irun].s<=s_2)[-1][-1]
+        
+        if isinstance (z_2,(int,long,float)):
+            index_z2=np.where(outlist_2[irun].z<=z_2)[-1][-1]
+
+    matrix_1=[]
+    matrix_2=[]
+
+    for i in run_range_good:
+        matrix_1.append(getattr(outlist_1[i],param_1))
+        matrix_2.append(getattr(outlist_2[i],param_2))
+        
+    matrix_1=np.array(matrix_1)
+    matrix_2=np.array(matrix_2)
+
+    if ndim(matrix_1)==2:
+        var_1=matrix_1[:,index_z1]
+    else:
+        if s_1=='mean':
+            var_1=mean(matrix_1[:,:,index_z1],axis=1)
+        elif s_1=='max':
+            var_1=np.amax(matrix_1[:,:,index_z1],axis=1)
+        else:
+            var_1=matrix_1[:,index_s1,index_z1]
+
+    if ndim(matrix_2)==2:
+        var_2=matrix_2[:,index_z2]
+    else:
+        if s_2=='mean':
+            var_2=mean(matrix_2[:,:,index_z2],axis=1)
+        elif s_2=='max':
+            var_2=np.amax(matrix_2[:,:,index_z2],axis=1)
+        else:
+            var_2=matrix_2[:,index_s2,index_z2]    
+
+    corr_fig_name='corr_'+param_1+'_s'+str(stage_1)+'_at'+str(z_1)+'_'+str(s_1)+'__'+param_2+'_s'+str(stage_2)+'_at'+str(z_2)+'_'+str(s_2)
+    
+    fig=plt.figure(corr_fig_name)
+    fig.clf()
+    fig.set_size_inches(figsize,forward=True)
+    fig=plt.scatter(var_1, var_2)
+    
+    
+    label1=param_1+'_s'+str(stage_1)+'_z='+str(z_1)+'_s='+str(s_1)
+    label2=param_2+'_s'+str(stage_2)+'_z='+str(z_2)+'_s='+str(s_2)
+    label1=label1.replace('_',' ')
+    label2=label2.replace('_',' ')
+    plt.xlabel(label1)
+    plt.ylabel(label2)
+
+    plt.xlim(np.amin(var_1),np.amax(var_1))
+    plt.ylim(np.amin(var_2),np.amax(var_2))
+
+    plt.xlim(0,np.amax(var_1)*1.05)
+    plt.ylim(0,np.amax(var_2)*1.05)
+    
+    
+    saving_path=proj_dir+'results/'
+    
+    if showfig:
+        plt.show()
+    if savefig!=False:
+        print('      saving '+corr_fig_name+'.'+savefig)
+        plt.savefig(saving_path+corr_fig_name+'.'+savefig,format=savefig)
+    if saveval!=False:
+        print('      saving '+corr_fig_name+'.txt')
+        np.savetxt(saving_path+corr_fig_name+'.txt', vstack([var_1,var_2]).T,fmt="%E", newline='\n',comments=param_1+'_s'+str(stage_1)+'_at'+str(z_1)+'_'+str(s_1)+' '+param_2+'_s'+str(stage_2)+'_at'+str(z_2)+'_'+str(s_2))
+    
+    return fig
+
+def gen_outplot_dpa(out, dpa=None, z=[], figsize=3, legend = True, fig_name = None, auto_zoom=False, column_3d=True, savefig=False, showfig=False, return_proj=False, vartype_dfl=complex64):
 
     print('    plotting dpa file')
     start_time = time.time()
@@ -1876,10 +1984,10 @@ def gen_outplot_dpa(out, dpa=None, z=[], figsize=3, legend = True, fig_name = No
     # subplots_adjust(wspace=0.4,hspace=0.4)
 
 
-    # if save!=False:
-        # if save==True:
-            # save='png'
-        # fig.savefig(g.path+'_dfl'+suffix+'.'+str(save),format=save)
+    # if savefig!=False:
+        # if savefig==True:
+            # savefig='png'
+        # fig.savefig(g.path+'_dfl'+suffix+'.'+str(savefig),format=savefig)
 
     # print('      done in %.2f seconds' % (time.time() - start_time))
 
@@ -1887,8 +1995,6 @@ def gen_outplot_dpa(out, dpa=None, z=[], figsize=3, legend = True, fig_name = No
         # return [xy_proj,yz_proj,xz_proj,x,y,z]
     # else:
         # return fig
-
-
 
 
 def round_sig(x, sig=2):

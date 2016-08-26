@@ -350,7 +350,7 @@ class GenesisInput: # Genesis input files storage object
         if self.outputfile != None:
             input = input.replace("__OUTPUTFILE__", " outputfile  =  '"+ str(self.outputfile)+ "'")
         else:
-            input = input.replace("__OUTPUTFILE__", "outputfile ='run.__RUNID__.gout'")
+            input = input.replace("__OUTPUTFILE__", " outputfile ='run.__RUNID__.gout'")
 
         #print 'self.radfile is equal to ', self.radfile
         if self.radfile != None:
@@ -553,6 +553,7 @@ def read_beam_file(fileName):
     beam.z = beam.column_values['ZPOS']
     beam.zsep = beam.z[1] - beam.z[0]
     beam.I = np.array(beam.column_values['CURPEAK'])
+    beam.idx_max = np.argmax(beam.I)
     try:
         beam.ex = beam.column_values['EMITX']
         beam.ey = beam.column_values['EMITY']
@@ -771,7 +772,7 @@ def writeRadiationFile_mpi(comm, filename, slices, shape):
         os.system(cmd)
 
 
-def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
+def readGenesisOutput(fileName, readall=True, debug=False, precision=float):
     out = GenesisOutput()
     out.path = fileName
     out.filename = fileName[-fileName[::-1].find('/')::]
@@ -806,19 +807,18 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
         if tokens[0] == '**********':
             chunk = 'slices'
             nSlice = int(tokens[3])
-            if debug:
-                print ('      reading slice # '+ str(nSlice))
+            if debug==2: print ('      reading slice # '+ str(nSlice))
 
         if tokens[0] == 'power':
             chunk = 'slice'
             if len(out.sliceKeys) == 0: #to record the first instance
                 out.sliceKeys = list(copy(tokens))
-                print ('      reading slice values ')
+                if debug: print ('      reading slice values ')
             continue
             
         if tokens[0] == '$newrun':
             chunk = 'input1'
-            print ('      reading input parameters')
+            if debug: print ('      reading input parameters')
             continue  
 
         if tokens[0] == '$end':
@@ -827,7 +827,7 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
         
         if tokens == ['z[m]', 'aw', 'qfld']:
             chunk = 'magnetic optics'
-            print ('      reading magnetic optics ')
+            if debug: print ('      reading magnetic optics ')
             continue
 
         if chunk == 'magnetic optics':
@@ -868,7 +868,7 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
         # print out.sliceKeys
         for i in range(len(out.sliceKeys)):
             #exec('out.'+out.sliceKeys[i].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(out.nSlices)+','+str(len(out.z))+'))')
-            exec('out.'+out.sliceKeys[i].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(out('history_records'))+','+str(out('entries_per_record'))+'))')
+            exec('out.'+out.sliceKeys[int(i)].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(out('history_records'))+','+str(out('entries_per_record'))+'))')
         if hasattr(out,'energy'):
             out.energy+=out('gamma0')
         out.power_z=np.max(out.power,0)
@@ -878,8 +878,8 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
     out.nZ = int(out('entries_per_record'))#number of records along the undulator
     out.ncar=int(out('ncar')) #number of mesh points
 
-    print ('        nSlice '+ str(out.nSlices))
-    print ('        nZ '+ str(out.nZ))
+    if debug: print ('        nSlice '+ str(out.nSlices))
+    if debug: print ('        nZ '+ str(out.nZ))
 
     if out('dgrid')==0:
         rbeam=sqrt(out('rxbeam')**2+out('rybeam')**2)
@@ -955,11 +955,11 @@ def readGenesisOutput(fileName , readall=True, debug=None, precision=float):
         out.phi=out.phi_mid[:,-1]
         out.energy=np.mean(out.p_int,axis=0)*out('xlamds')*out('zsep')*out.nSlices/speed_of_light
     
-    print('      done in %.3f seconds' % (time.time() - start_time))        
+    if debug: print('      done in %.3f seconds' % (time.time() - start_time))        
     return out
 
 
-def dpa2dist(gen,dpa=None,file_name_write='',no_macroparticles=1e5,debug=0):
+def dpa2dist(gen,dpa=None,file_name_write='',no_macroparticles=1e5,debug=False):
     
     import random
     import numpy as np
@@ -1664,6 +1664,7 @@ def get_beam_peak(beam = None): #experimental, the code is too inconsistent to i
         
         beam_new=deepcopy(beam)
         
+        beam_new.idx_max=pkslice
         beam_new.I=beam.I[pkslice]
         beam_new.alpha_x=beam.alphax[pkslice]
         beam_new.alpha_y=beam.alphay[pkslice]
@@ -1673,12 +1674,19 @@ def get_beam_peak(beam = None): #experimental, the code is too inconsistent to i
         beam_new.emit_yn=beam.ey[pkslice]
         beam_new.gamma_rel=beam.g0[pkslice]
         beam_new.sigma_E=beam.dg[pkslice]*(0.000510998)
+        beam_new.xp=beam.px[pkslice]
+        beam_new.yp=beam.py[pkslice]
+        beam_new.x=beam.x[pkslice]
+        beam_new.y=beam.y[pkslice]
         
         beam_new.E=beam_new.gamma_rel*(0.511e-3)
         beam_new.emit_x = beam_new.emit_xn / beam_new.gamma_rel
         beam_new.emit_y = beam_new.emit_yn / beam_new.gamma_rel
         
-        for parm in ['alphax','alphay','betax','betay','z','ex','ey','g0','dg']:
+        beam_new.tpulse = (beam.z[-1]-beam.z[0])/speed_of_light*1e15/6 #[fs]
+        beam_new.C=np.trapz(beam.I, x=np.array(beam.z)/speed_of_light)*1e9 #bunch charge[nC]
+        
+        for parm in ['alphax','alphay','betax','betay','z','ex','ey','g0','dg','px','py']:
             if hasattr(beam_new,parm):
                 delattr(beam_new,parm)
         

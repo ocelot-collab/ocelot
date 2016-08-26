@@ -269,16 +269,19 @@ def assemble(out_file,binary=1,remove=1,tailappend=0,ram=1):
 '''
 #### 12.05.2016 MODIFIED BY GG FOR MAXWELL####
 '''
-def get_genesis_launcher():
+def get_genesis_launcher(launcher_program=''):
     host = socket.gethostname()
-    
+
     launcher = MpiLauncher()
-    
-    if host.startswith('kolmogorov'):
-        launcher.program = '/home/iagapov/workspace/xcode/codes/genesis/genesis < tmp.cmd | tee log'
-    if host.startswith('max'):
-        launcher.program = '/data/netapp/xfel/products/genesis/genesis < tmp.cmd | tee log'
-    launcher.mpiParameters ='-x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH' #added -n
+    if launcher_program!='':
+        launcher.program=launcher_program
+    else:
+
+        if host.startswith('kolmogorov'):
+            launcher.program = '/home/iagapov/workspace/xcode/codes/genesis/genesis < tmp.cmd | tee log'
+        if host.startswith('max'):
+            launcher.program = '/data/netapp/xfel/products/genesis/genesis < tmp.cmd | tee log'
+        launcher.mpiParameters ='-x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH' #added -n
     #launcher.nproc = nproc
     return launcher
 

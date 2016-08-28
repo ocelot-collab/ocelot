@@ -1694,7 +1694,7 @@ def gen_corr_plot(proj_dir,run_inp=[],p1=(),p2=(),savefig=False, showfig=False, 
     return fig
 
 def gen_outplot_dpa(out, dpa=None, z=[], figsize=3, legend = True, fig_name = None, auto_zoom=False, column_3d=True, savefig=False, showfig=False, return_proj=False, vartype_dfl=complex64):
-
+    #not finished
     print('    plotting dpa file')
     start_time = time.time()
     suffix=''
@@ -1724,6 +1724,59 @@ def gen_outplot_dpa(out, dpa=None, z=[], figsize=3, legend = True, fig_name = No
 
     plt.scatter(dpa.ph[nslice,1,:],dpa.e[nslice,1,:])
 
+def gen_outplot_dist(dist, z=[], figsize=3, fig_name = None, savefig=False, showfig=False, scatter=False, vartype_dfl=complex64):
+    
+    print('    plotting dpa file')
+    start_time = time.time()
+    suffix=''
+
+    if fig_name==None:
+        fig_name='Electron distribution '+dist.filename
+    fig=plt.figure(fig_name)
+    
+    s=dist.t*speed_of_light*1e6
+    bins=100
+    
+    ax_curr=fig.add_subplot(2, 2, 1)
+    ax_curr.hist(s, bins)
+    ax_curr.set_xlabel('s, [$\mu$m]')
+    ax_se=fig.add_subplot(2, 2, 3,sharex=ax_curr)
+    if scatter: ax_se.scatter(s, dist.e)
+    else: ax_se.hist2d(s, dist.e, bins)
+    ax_se.set_xlabel('s, [$\mu$m]')
+    ax_se.set_ylabel('$\gamma$')
+    ax_xy=fig.add_subplot(2, 2, 2)
+    if scatter: ax_xy.scatter(dist.x*1e6, dist.y*1e6)
+    else: ax_xy.hist2d(dist.x*1e6, dist.y*1e6, bins)
+    ax_xy.set_xlabel('x, [$\mu$m]')
+    ax_xy.set_ylabel('y, [$\mu$m]')
+    ax_pxpy=fig.add_subplot(2, 2, 4)
+    if scatter: ax_pxpy.scatter(dist.px*1e6, dist.py*1e6)
+    else: ax_pxpy.hist2d(dist.px*1e6, dist.py*1e6, bins)
+    ax_pxpy.set_xlabel('px, []')
+    ax_pxpy.set_ylabel('py, []')
+    # plt.figure('Time - Enenrgy')
+    # plt.figure(40000)
+# #    plt.clf()
+    # plt.hist(dist.t, bins)
+    # plt.figure(40001)
+# #    plt.clf()
+    # plt.hist2d(dist.t, dist.e, bins)
+    # # plt.figure('Time - X')
+    # plt.figure(40002)
+    # plt.hist2d(dist.t, dist.x, bins)
+    # # plt.figure('X - Y')
+    # plt.figure(40003)
+    # plt.hist2d(dist.x, dist.y, bins)
+    # # plt.figure('X - pX')
+    # plt.figure(40004)
+    # plt.hist2d(dist.x, dist.px, bins)
+    if showfig: plt.show()
+
+    
+    
+    
+    
     # print('    plotting dpa file')
     # start_time = time.time()
     # suffix=''

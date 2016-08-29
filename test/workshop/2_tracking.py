@@ -16,7 +16,7 @@ from ocelot.adaptors.astra2ocelot import *
 # import injector lattice
 from ocelot.test.workshop.injector_lattice import *
 
-lat = MagneticLattice(cell)
+lat = MagneticLattice(cell, stop=D_38)
 
 # initialization of Twiss object
 tws0 = Twiss()
@@ -30,7 +30,8 @@ tws0.E = 0.005
 
 # calculate twiss functions with initial twiss parameters
 tws = twiss(lat, tws0, nPoints=None)
-
+tws1 = tws[-1]
+print(tws[-1])
 # ploting twiss paramentrs.
 plot_opt_func(lat, tws, top_plot=["Dx"], fig_name="i1", legend=False)
 
@@ -54,14 +55,18 @@ method.global_method = SecondTM
 # START_73_I1 - marker before dog leg
 # START_96_I1 - marker before BC
 
-lat = MagneticLattice(cell, start=start_sim, stop=START_73_I1, method=method)
-
+#lat = MagneticLattice(cell, start=start_sim, stop=START_73_I1, method=method)
+lat = MagneticLattice(cell, start=start_sim, stop=D_38, method=method)
 navi = Navigator(lat)
 p_array = deepcopy(p_array_init)
 tws_track, p_array = track(lat, p_array, navi)
 
 # you can change top_plot argument, for example top_plot=["alpha_x", "alpha_y"]
-plot_opt_func(lat, tws_track, top_plot=["E"], fig_name=0, legend=False)
+#plot_opt_func(lat, tws_track, top_plot=["E"], fig_name=0, legend=False)
+
+bt = BeamTransform(x_opt=[tws1.alpha_x, tws1.beta_x, 0], y_opt=[tws1.alpha_y, tws1.beta_y, 0])
+print([tws1.alpha_x, tws1.beta_x, 0], [tws1.alpha_y, tws1.beta_y, 0])
+bt.apply(p_array, 0)
 
 # Current profile
 

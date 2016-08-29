@@ -30,7 +30,8 @@ method.global_method = SecondTM
 # we will start simulation from point 3.2 from the gun. For this purpose  marker was created (start_sim=Marker())
 # and placed in 3.2 m after gun
 # C3_AH1_1_8_I1 is the last section of the 3.9 GHz cavity
-lat = MagneticLattice(cell, start=start_sim, stop=C3_AH1_1_8_I1, method=method)
+#lat = MagneticLattice(cell, start=start_sim, stop=C3_AH1_1_8_I1, method=method)
+lat = MagneticLattice(cell, start=start_sim, stop=D_38, method=method)
 
 sc = SpaceCharge()
 sc.nmesh_xyz = [31, 31, 31]
@@ -47,6 +48,7 @@ navi.unit_step = 0.1
 # deep copy of the initial beam distribution
 p_array = deepcopy(p_array_init)
 tws_track, p_array = track(lat, p_array, navi)
+
 
 # you can change top_plot argument, for example top_plot=["alpha_x", "alpha_y"]
 plot_opt_func(lat, tws_track, top_plot=["E"], fig_name=0, legend=False)

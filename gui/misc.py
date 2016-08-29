@@ -180,7 +180,7 @@ def plot_beam(fig, beam):
     ax.set_xlabel(r'$\mu m$')
     p1,= plt.plot(1.e6 * np.array(beam.z),beam.I,'r',lw=3)
     plt.plot(1.e6 * beam.z[beam.idx_max],beam.I[beam.idx_max],'bs')
-    
+    ax.set_xlim([1.e6 * beam.z[0] , 1.e6 * beam.z[-1]])
     ax = ax.twinx()
     
     p2,= plt.plot(1.e6 * np.array(beam.z),1.e-3 * np.array(beam.eloss),'g',lw=3)
@@ -192,6 +192,7 @@ def plot_beam(fig, beam):
     ax.set_xlabel(r'$\mu m$')
     #p1,= plt.plot(1.e6 * np.array(beam.z),1.e-3 * np.array(beam.eloss),'r',lw=3)
     p1, = plt.plot(1.e6 * np.array(beam.z),beam.g0,'r',lw=3)
+    ax.set_xlim([1.e6 * beam.z[0] , 1.e6 * beam.z[-1]])
     ax = ax.twinx()
     p2, = plt.plot(1.e6 * np.array(beam.z),beam.dg,'g',lw=3)
 
@@ -203,7 +204,7 @@ def plot_beam(fig, beam):
     p1, = plt.plot(1.e6 * np.array(beam.z),beam.ex, 'r', lw=3)
     p2, = plt.plot(1.e6 * np.array(beam.z),beam.ey, 'g', lw=3)
     plt.plot(1.e6 * beam.z[beam.idx_max],beam.ex[beam.idx_max], 'bs')
-    
+    ax.set_xlim([1.e6 * beam.z[0] , 1.e6 * beam.z[-1]])
     ax.legend([p1,p2],[r'$\varepsilon_x$',r'$\varepsilon_y$'])
     #ax3.legend([p3,p4],[r'$\varepsilon_x$',r'$\varepsilon_y$'])
     
@@ -214,7 +215,7 @@ def plot_beam(fig, beam):
     p1, = plt.plot(1.e6 * np.array(beam.z),beam.betax, 'r', lw=3)
     p2, = plt.plot(1.e6 * np.array(beam.z),beam.betay, 'g', lw=3)
     plt.plot(1.e6 * beam.z[beam.idx_max],beam.betax[beam.idx_max], 'bs')
-    
+    ax.set_xlim([1.e6 * beam.z[0] , 1.e6 * beam.z[-1]])
     ax.legend([p1,p2],[r'$\beta_x$',r'$\beta_y$'])
 
 
@@ -223,7 +224,7 @@ def plot_beam(fig, beam):
     ax.set_xlabel(r'$\mu m$')
     p1, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(beam.x), 'r', lw=3)
     p2, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(beam.y), 'g', lw=3)
-    
+    ax.set_xlim([1.e6 * beam.z[0] , 1.e6 * beam.z[-1]])
     ax.legend([p1,p2],[r'$x [\mu m]$',r'$y [\mu m]$'])
 
 
@@ -232,7 +233,7 @@ def plot_beam(fig, beam):
     ax.set_xlabel(r'$\mu m$')
     p1, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(beam.px), 'r', lw=3)
     p2, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(beam.py), 'g', lw=3)
-    
+    ax.set_xlim([1.e6 * beam.z[0] , 1.e6 * beam.z[-1]])
     ax.legend([p1,p2],[r'$p_x [\mu rad]$',r'$p_y [\mu rad]$'])
 
 def plot_beam_2(fig, beam, iplot=0):

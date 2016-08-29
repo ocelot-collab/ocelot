@@ -1693,7 +1693,7 @@ def gen_corr_plot(proj_dir,run_inp=[],p1=(),p2=(),savefig=False, showfig=False, 
     
     return fig
 
-def gen_outplot_dpa(out, dpa=None, z=[], figsize=3, legend = True, fig_name = None, auto_zoom=False, column_3d=True, savefig=False, showfig=False, return_proj=False, vartype_dfl=complex64):
+def plot_dpa(out, dpa=None, z=[], figsize=3, legend = True, fig_name = None, auto_zoom=False, column_3d=True, savefig=False, showfig=False, return_proj=False, vartype_dfl=complex64):
     #not finished
     print('    plotting dpa file')
     start_time = time.time()
@@ -1724,7 +1724,7 @@ def gen_outplot_dpa(out, dpa=None, z=[], figsize=3, legend = True, fig_name = No
 
     plt.scatter(dpa.ph[nslice,1,:],dpa.e[nslice,1,:])
 
-def gen_outplot_dist(dist, z=[], figsize=3, fig_name = None, savefig=False, showfig=False, scatter=False, vartype_dfl=complex64):
+def plot_dist(dist, z=[], figsize=3, fig_name = None, savefig=False, showfig=False, scatter=False, plot_x_y=True, plot_xy_s=True, bins=100, vartype_dfl=complex64):
     
     print('    plotting dpa file')
     start_time = time.time()
@@ -1735,26 +1735,42 @@ def gen_outplot_dist(dist, z=[], figsize=3, fig_name = None, savefig=False, show
     fig=plt.figure(fig_name)
     
     s=dist.t*speed_of_light*1e6
-    bins=100
     
-    ax_curr=fig.add_subplot(2, 2, 1)
+    ax_curr=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 1)
     ax_curr.hist(s, bins)
     ax_curr.set_xlabel('s, [$\mu$m]')
-    ax_se=fig.add_subplot(2, 2, 3,sharex=ax_curr)
-    if scatter: ax_se.scatter(s, dist.e)
+    
+    ax_se=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 3+plot_x_y,sharex=ax_curr)
+    if scatter: ax_se.scatter(s, dist.e,",")
     else: ax_se.hist2d(s, dist.e, bins)
     ax_se.set_xlabel('s, [$\mu$m]')
     ax_se.set_ylabel('$\gamma$')
-    ax_xy=fig.add_subplot(2, 2, 2)
-    if scatter: ax_xy.scatter(dist.x*1e6, dist.y*1e6)
-    else: ax_xy.hist2d(dist.x*1e6, dist.y*1e6, bins)
-    ax_xy.set_xlabel('x, [$\mu$m]')
-    ax_xy.set_ylabel('y, [$\mu$m]')
-    ax_pxpy=fig.add_subplot(2, 2, 4)
-    if scatter: ax_pxpy.scatter(dist.px*1e6, dist.py*1e6)
-    else: ax_pxpy.hist2d(dist.px*1e6, dist.py*1e6, bins)
-    ax_pxpy.set_xlabel('px, []')
-    ax_pxpy.set_ylabel('py, []')
+    
+    if plot_xy_s:
+        ax_xs=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 2,sharex=ax_curr)
+        if scatter: ax_xs.scatter(s, 1e6*dist.x,",")
+        else: ax_xs.hist2d(s, dist.x, bins)
+        ax_xs.set_xlabel('s, [$\mu$m]')
+        ax_xs.set_ylabel('x, [$\mu$m]')
+        
+        ax_ys=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 4+plot_x_y,sharex=ax_curr)
+        if scatter: ax_ys.scatter(s, 1e6*dist.y,",")
+        else: ax_ys.hist2d(s, dist.y, bins)
+        ax_ys.set_xlabel('s, [$\mu$m]')
+        ax_ys.set_ylabel('y, [$\mu$m]')
+        
+    if plot_x_y:
+        ax_xy=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 2+plot_xy_s)
+        if scatter: ax_xy.scatter(dist.x*1e6, dist.y*1e6,",")
+        else: ax_xy.hist2d(dist.x*1e6, dist.y*1e6, bins)
+        ax_xy.set_xlabel('x, [$\mu$m]')
+        ax_xy.set_ylabel('y, [$\mu$m]')
+        
+        ax_pxpy=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 4+2*plot_xy_s)
+        if scatter: ax_pxpy.scatter(dist.px*1e6, dist.py*1e6,",")
+        else: ax_pxpy.hist2d(dist.px*1e6, dist.py*1e6, bins)
+        ax_pxpy.set_xlabel('px, []')
+        ax_pxpy.set_ylabel('py, []')
     # plt.figure('Time - Enenrgy')
     # plt.figure(40000)
 # #    plt.clf()

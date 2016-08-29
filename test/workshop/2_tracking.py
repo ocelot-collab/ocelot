@@ -16,7 +16,7 @@ from ocelot.adaptors.astra2ocelot import *
 # import injector lattice
 from ocelot.test.workshop.injector_lattice import *
 
-lat = MagneticLattice(cell, stop=D_38)
+lat = MagneticLattice(cell)
 
 # initialization of Twiss object
 tws0 = Twiss()
@@ -36,7 +36,7 @@ print(tws[-1])
 plot_opt_func(lat, tws, top_plot=["Dx"], fig_name="i1", legend=False)
 
 # Loading of beam distribution
-p_array_init = astraBeam2particleArray(filename='beam_distrib.ast')
+p_array_init = astraBeam2particleArray(filename='beam_130MeV.ast')
 
 
 # initialization of tracking method
@@ -48,28 +48,23 @@ method.global_method = SecondTM
 # for first order tracking uncomment next line
 # method.global_method = TransferMap
 
-# we will start simulation from point 3.2 from the gun. For this purpose  marker was created (start_sim=Marker())
-# and placed in 3.2 m after gun
+# we will start simulation from the first quadrupole (QI.46.I1) after RF section.
 # you can change stop element (and the start element, as well)
-# TDSA_52_I1 - transverse deflection cavity
-# START_73_I1 - marker before dog leg
-# START_96_I1 - marker before BC
+# START_73_I1 - marker before Dog leg
+# START_96_I1 - marker before Bunch Compresion
 
-#lat = MagneticLattice(cell, start=start_sim, stop=START_73_I1, method=method)
-lat = MagneticLattice(cell, start=start_sim, stop=D_38, method=method)
+lat = MagneticLattice(cell, start=QI_46_I1, stop=None, method=method)
+
+
 navi = Navigator(lat)
 p_array = deepcopy(p_array_init)
 tws_track, p_array = track(lat, p_array, navi)
 
 # you can change top_plot argument, for example top_plot=["alpha_x", "alpha_y"]
-#plot_opt_func(lat, tws_track, top_plot=["E"], fig_name=0, legend=False)
-
-bt = BeamTransform(x_opt=[tws1.alpha_x, tws1.beta_x, 0], y_opt=[tws1.alpha_y, tws1.beta_y, 0])
-print([tws1.alpha_x, tws1.beta_x, 0], [tws1.alpha_y, tws1.beta_y, 0])
-bt.apply(p_array, 0)
+plot_opt_func(lat, tws_track, top_plot=["E"], fig_name=0, legend=False)
+plt.show()
 
 # Current profile
-
 bins_start, hist_start = get_current(p_array, charge=p_array.q_array[0], num_bins=200)
 
 plt.figure(4)
@@ -78,6 +73,7 @@ plt.plot(bins_start*1000, hist_start)
 plt.xlabel("s, mm")
 plt.ylabel("I, A")
 plt.grid(True)
+plt.show()
 
 # Beam distribution
 

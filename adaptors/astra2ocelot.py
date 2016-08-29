@@ -208,4 +208,5 @@ def particleArray2astraBeam(p_array, filename="tytest.ast"):
     astra = np.append(astra, charge_array, axis=1)
     astra = np.append(astra, flag, axis=1)
     astra = np.append(astra, flag, axis=1)
-    np.savetxt(filename, astra)
+    print("SAVE")
+    np.savetxt(filename, astra, fmt='%.7e')

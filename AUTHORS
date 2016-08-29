@@ -4,7 +4,8 @@ optimizer, x-ray optics
 
 Sergey Tomin 
 cpbd module, optics functions
-optimizer, SR module
+optimizer, SR module, tracking module
+orbit correction module
 
 Igor Zagorodnov 
 cpbd module, space charge, wakefields
@@ -17,4 +18,3 @@ genesis adaptor
 
 Svitozar Serkez
 genesis adaptor
-

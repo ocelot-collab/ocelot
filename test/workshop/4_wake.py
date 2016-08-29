@@ -49,7 +49,7 @@ method.global_method = SecondTM
 lat = MagneticLattice(lattice, method=method)
 
 # Load beam file
-p_array_init = astraBeam2particleArray(filename='chirper_beam_distrib.ast')
+p_array_init = astraBeam2particleArray(filename='beam_chirper.ast')
 
 # Initialization of the wakes and the places of their applying
 

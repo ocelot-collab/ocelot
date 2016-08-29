@@ -642,7 +642,7 @@ def plot_trajectory(lat, list_particles):
     plt.show()
 
 
-def plot_API(lat):
+def plot_API(lat, legend=True):
     fig = plt.figure()
     plt.rc('axes', grid=True)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
@@ -670,7 +670,7 @@ def plot_API(lat):
     #plot_xy(ax_xy, S, X, Y, font_size)
 
     #plot_elems(ax_el, lat, nturns = 1, legend = True) # plot elements
-    new_plot_elems(fig, ax_el, lat, nturns = 1, legend = True)
+    new_plot_elems(fig, ax_el, lat, nturns = 1, legend = legend)
     return ax_xy
 
 

@@ -478,7 +478,12 @@ class Display:
 
 def plot_beam(fig, beam):
     
-    ax = fig.add_subplot(321) 
+    if mean(beam.x)==0 and mean(beam.y)==0 and mean(beam.px)==0 and mean(beam.py)==0:
+        plot_xy=0
+    else:
+        plot_xy=1
+        
+    ax = fig.add_subplot(2+plot_xy,2,1) 
     plt.grid(True)
     ax.set_xlabel(r'$\mu m$')
     p1,= plt.plot(1.e6 * np.array(beam.z),beam.I,'r',lw=3)
@@ -488,9 +493,9 @@ def plot_beam(fig, beam):
     
     p2,= plt.plot(1.e6 * np.array(beam.z),1.e-3 * np.array(beam.eloss),'g',lw=3)
     
-    ax.legend([p1, p2],['I','Wake [KV/m]'])
-    
-    ax = fig.add_subplot(322) 
+    ax.legend([p1, p2],['I [A]','Wake [KV/m]'])
+    #ax.set_xlim([np.amin(beam.z),np.amax(beam.x)])
+    ax = fig.add_subplot(2+plot_xy,2,2) 
     plt.grid(True)
     ax.set_xlabel(r'$\mu m$')
     #p1,= plt.plot(1.e6 * np.array(beam.z),1.e-3 * np.array(beam.eloss),'r',lw=3)
@@ -500,7 +505,7 @@ def plot_beam(fig, beam):
 
     ax.legend([p1,p2],[r'$\gamma$',r'$\delta \gamma$'])
     
-    ax = fig.add_subplot(323) 
+    ax = fig.add_subplot(2+plot_xy,2,3) 
     plt.grid(True)
     ax.set_xlabel(r'$\mu m$')
     p1, = plt.plot(1.e6 * np.array(beam.z),beam.ex, 'r', lw=3)
@@ -511,7 +516,7 @@ def plot_beam(fig, beam):
     #ax3.legend([p3,p4],[r'$\varepsilon_x$',r'$\varepsilon_y$'])
     
     
-    ax = fig.add_subplot(324)
+    ax = fig.add_subplot(2+plot_xy,2,4)
     plt.grid(True)
     ax.set_xlabel(r'$\mu m$')
     p1, = plt.plot(1.e6 * np.array(beam.z),beam.betax, 'r', lw=3)
@@ -520,23 +525,23 @@ def plot_beam(fig, beam):
     
     ax.legend([p1,p2],[r'$\beta_x$',r'$\beta_y$'])
 
+    if plot_xy:
 
-    ax = fig.add_subplot(325)
-    plt.grid(True)
-    ax.set_xlabel(r'$\mu m$')
-    p1, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(beam.x), 'r', lw=3)
-    p2, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(beam.y), 'g', lw=3)
-    
-    ax.legend([p1,p2],[r'$x [\mu m]$',r'$y [\mu m]$'])
+        ax = fig.add_subplot(3,2,5)
+        plt.grid(True)
+        ax.set_xlabel(r'$\mu m$')
+        p1, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(beam.x), 'r', lw=3)
+        p2, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(beam.y), 'g', lw=3)
+        
+        ax.legend([p1,p2],[r'$x [\mu m]$',r'$y [\mu m]$'])
 
-
-    ax = fig.add_subplot(326)
-    plt.grid(True)
-    ax.set_xlabel(r'$\mu m$')
-    p1, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(beam.px), 'r', lw=3)
-    p2, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(beam.py), 'g', lw=3)
-    
-    ax.legend([p1,p2],[r'$p_x [\mu rad]$',r'$p_y [\mu rad]$'])
+        ax = fig.add_subplot(3,2,6)
+        plt.grid(True)
+        ax.set_xlabel(r'$\mu m$')
+        p1, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(beam.px), 'r', lw=3)
+        p2, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(beam.py), 'g', lw=3)
+        
+        ax.legend([p1,p2],[r'$p_x [\mu rad]$',r'$p_y [\mu rad]$'])
 
 def plot_beam_2(fig, beam, iplot=0):
     

@@ -1,3 +1,4 @@
+
 '''
 interface to genesis
 '''
@@ -479,7 +480,7 @@ def read_particle_file(file_name, nbins=4, npart=[],debug=0):
         print ('        npart'+str(npart))
         print ('        nbins'+str(nbins))
 #    print 'b=',nslice*npart*6
-    b=b.reshape(nslice,6,round(nbins),npart/nbins)    
+    b=b.reshape(nslice,6,round(nbins),round(npart/nbins))    
     particles.e=b[:,0,:,:] #gamma
     particles.ph=b[:,1,:,:] 
     particles.x=b[:,2,:,:]
@@ -960,7 +961,7 @@ def readGenesisOutput(fileName, readall=True, debug=False, precision=float):
     return out
 
 
-def dpa2dist(out,dpa=None,num_part=1e5,smear=1,debug=False):
+def dpa2dist(out,dpa=None,num_part=1e5,smear=0,debug=False):
     from matplotlib import pyplot as plt
     import random
     import numpy as np
@@ -1005,13 +1006,12 @@ def dpa2dist(out,dpa=None,num_part=1e5,smear=1,debug=False):
     t_scale=np.linspace(0,nslice*zsep*xlamds/speed_of_light*1e15,nslice)
     # print 'range_t_scale', np.amin(t_scale), np.amax(t_scale)
     # print 'range_gen_t', np.amin(gen_t), np.amax(gen_t)
-    print(t_scale[0],t_scale[-1],gen_t[0],gen_t[-1])
     pick_n=np.interp(t_scale,gen_t,gen_I)
     # plt.plot(gen_t,gen_I)
     # plt.show()
     
-    if max(pick_n)>npart*nbins:
-        pick_n=(pick_n/max(pick_n)*npart*nbins).astype(int) 
+    if max(pick_n)>npart:
+        pick_n=(pick_n/max(pick_n)*npart).astype(int) 
     else:
         pick_n=(pick_n/np.sum(pick_n)*num_part).astype(int)
     print(pick_n)
@@ -1521,7 +1521,7 @@ def transform_beam_file(beam_file = None, transform = [ [25.0,0.1], [21.0, -0.1]
         beam=beam_file
         
     zmax, Imax = peaks(beam.z, beam.I, n=1)
-    idx = beam.z.index(zmax)
+    idx = np.argmax(beam.z)
     beam.idx_max = idx
     print ('matching to slice ' + str(idx))
     

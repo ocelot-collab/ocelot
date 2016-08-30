@@ -1726,13 +1726,14 @@ def plot_dpa(out, dpa=None, z=[], figsize=3, legend = True, fig_name = None, aut
 
 def plot_dist(dist, z=[], figsize=3, fig_name = None, savefig=False, showfig=False, scatter=False, plot_x_y=True, plot_xy_s=True, bins=100, vartype_dfl=complex64):
     
-    print('    plotting dpa file')
+    print('    plotting dist file')
     start_time = time.time()
     suffix=''
 
     if fig_name==None:
         fig_name='Electron distribution '+dist.filename
     fig=plt.figure(fig_name)
+    fig.set_size_inches(((3+plot_x_y+plot_xy_s)*figsize,3*figsize),forward=True)
     
     s=dist.t*speed_of_light*1e6
     
@@ -1741,33 +1742,33 @@ def plot_dist(dist, z=[], figsize=3, fig_name = None, savefig=False, showfig=Fal
     ax_curr.set_xlabel('s, [$\mu$m]')
     
     ax_se=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 3+plot_x_y,sharex=ax_curr)
-    if scatter: ax_se.scatter(s, dist.e,",")
+    if scatter: ax_se.scatter(s, dist.e,marker='.')
     else: ax_se.hist2d(s, dist.e, bins)
     ax_se.set_xlabel('s, [$\mu$m]')
     ax_se.set_ylabel('$\gamma$')
     
     if plot_xy_s:
         ax_xs=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 2,sharex=ax_curr)
-        if scatter: ax_xs.scatter(s, 1e6*dist.x,",")
+        if scatter: ax_xs.scatter(s, 1e6*dist.x,marker='.')
         else: ax_xs.hist2d(s, dist.x, bins)
         ax_xs.set_xlabel('s, [$\mu$m]')
         ax_xs.set_ylabel('x, [$\mu$m]')
         
         ax_ys=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 4+plot_x_y,sharex=ax_curr)
-        if scatter: ax_ys.scatter(s, 1e6*dist.y,",")
+        if scatter: ax_ys.scatter(s, 1e6*dist.y,marker='.')
         else: ax_ys.hist2d(s, dist.y, bins)
         ax_ys.set_xlabel('s, [$\mu$m]')
         ax_ys.set_ylabel('y, [$\mu$m]')
         
     if plot_x_y:
         ax_xy=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 2+plot_xy_s)
-        if scatter: ax_xy.scatter(dist.x*1e6, dist.y*1e6,",")
+        if scatter: ax_xy.scatter(dist.x*1e6, dist.y*1e6,marker='.')
         else: ax_xy.hist2d(dist.x*1e6, dist.y*1e6, bins)
         ax_xy.set_xlabel('x, [$\mu$m]')
         ax_xy.set_ylabel('y, [$\mu$m]')
         
         ax_pxpy=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 4+2*plot_xy_s)
-        if scatter: ax_pxpy.scatter(dist.px*1e6, dist.py*1e6,",")
+        if scatter: ax_pxpy.scatter(dist.px*1e6, dist.py*1e6,marker='.')
         else: ax_pxpy.hist2d(dist.px*1e6, dist.py*1e6, bins)
         ax_pxpy.set_xlabel('px, []')
         ax_pxpy.set_ylabel('py, []')

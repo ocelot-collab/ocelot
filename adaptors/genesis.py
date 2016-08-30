@@ -475,12 +475,14 @@ def read_particle_file(file_name, nbins=4, npart=[],debug=0):
     if debug: print("     read Particles in %s sec" % (time.time() - start_time))
 #    print 'b', b.shape
     nslice=int(len(b)/npart/6)
+    nbins=int(nbins)
+    npart=int(npart)
     if debug:
         print ('        nslice'+str(nslice))
         print ('        npart'+str(npart))
         print ('        nbins'+str(nbins))
 #    print 'b=',nslice*npart*6
-    b=b.reshape(nslice,6,round(nbins),round(npart/nbins))    
+    b=b.reshape(nslice,6,nbins,npart/nbins)    
     particles.e=b[:,0,:,:] #gamma
     particles.ph=b[:,1,:,:] 
     particles.x=b[:,2,:,:]
@@ -870,7 +872,7 @@ def readGenesisOutput(fileName, readall=True, debug=False, precision=float):
         # print out.sliceKeys
         for i in range(len(out.sliceKeys)):
             #exec('out.'+out.sliceKeys[i].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(out.nSlices)+','+str(len(out.z))+'))')
-            exec('out.'+out.sliceKeys[int(i)].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(out('history_records'))+','+str(out('entries_per_record'))+'))')
+            exec('out.'+out.sliceKeys[int(i)].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(int(out('history_records')))+','+str(int(out('entries_per_record')))+'))')
         if hasattr(out,'energy'):
             out.energy+=out('gamma0')
         out.power_z=np.max(out.power,0)
@@ -1014,7 +1016,8 @@ def dpa2dist(out,dpa=None,num_part=1e5,smear=0,debug=False):
         pick_n=(pick_n/max(pick_n)*npart).astype(int) 
     else:
         pick_n=(pick_n/np.sum(pick_n)*num_part).astype(int)
-    print(pick_n)
+    
+    if debug: print(pick_n)
     # print sum(pick_n)
     # result_filesize=sum(pick_n)
     # t_out=[]
@@ -1025,15 +1028,12 @@ def dpa2dist(out,dpa=None,num_part=1e5,smear=0,debug=False):
     # py_out=[]
     # print 'max_par.t', np.amax(dpa.t)
     # print 'dpa.e', np.amax(dpa.e),np.amin(dpa.e)
-    print(dpa.t.shape)
-    print(dpa.e.shape)
     dpa.t=np.reshape(dpa.t,(nslice,npart))
     dpa.e=np.reshape(dpa.e,(nslice,npart))
     dpa.x=np.reshape(dpa.x,(nslice,npart))
     dpa.y=np.reshape(dpa.y,(nslice,npart))
     dpa.px=np.reshape(dpa.px,(nslice,npart))
     dpa.py=np.reshape(dpa.py,(nslice,npart))
-    print(dpa.t.shape)
     # print dpa.t.shape
     
     # print dpa.t.shape

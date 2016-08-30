@@ -87,11 +87,11 @@ start = time()
 tws_track, p_array = track(lat, p_array, navi)
 print("time exec: ", time() - start, "sec")
 
-
 # you can change top_plot argument, for example top_plot=["alpha_x", "alpha_y"]
 plot_opt_func(lat, tws_track, top_plot=["E"], fig_name=0, legend=False)
 plt.show()
 
+#particleArray2astraBeam(p_array, "beam_sc_after_RF.ast")
 # Comparison with ASTRA
 # Beam tracking with ASTRA was performed by Igor Zagorodnov (DESY).
 

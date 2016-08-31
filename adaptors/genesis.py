@@ -1514,21 +1514,176 @@ def adapt_rad_file(beam = None, rad_file = None, out_file='tmp.rad'):
     open(out_file,'w').write(rad_file_str(rad))
 
 
-def transform_beam_file(beam_file = None, transform = [ [25.0,0.1], [21.0, -0.1] ], energy_scale=1, energy_new = None, emit_scale = 1.0, n_interp = None):
-    if beam_file.__class__ ==str:
-        beam = read_beam_file(beam_file)
-    else:
-        beam=beam_file
+# def transform_beam_file(beam_file = None, transform = [ [25.0,0.1], [21.0, -0.1] ], energy_scale=1, energy_new = None, emit_scale = 1.0, n_interp = None):
+    # if beam_file.__class__ ==str:
+        # beam = read_beam_file(beam_file)
+    # else:
+        # beam=beam_file
+        
+    # zmax, Imax = peaks(beam.z, beam.I, n=1)
+    # idx = np.argmax(beam.z)
+    # beam.idx_max = idx
+    # print ('matching to slice ' + str(idx))
+    
+    # #if plot: plot_beam(plt.figure(), beam)    
+    
+    
+    # if transform!=None:
+        # print ('transforming')
+        # g1x = np.matrix([[beam.betax[idx], beam.alphax[idx]],
+                   # [beam.alphax[idx], (1+beam.alphax[idx]**2)/beam.betax[idx]]])
+
+        # g1y = np.matrix([[beam.betay[idx], beam.alphay[idx]],
+                   # [beam.alphay[idx], (1+beam.alphay[idx]**2)/beam.betay[idx]]])
+
+
+        # b2x = transform[0][0]
+        # a2x = transform[0][1]
+
+        # b2y = transform[1][0]
+        # a2y = transform[1][1]
+        
+        # g2x = np.matrix([[b2x, a2x],
+                   # [a2x, (1+a2x**2)/b2x]])
+
+        # g2y = np.matrix([[b2y, a2y],
+                   # [a2y, (1+a2y**2)/b2y]])
+
+
+        # Mix, Mx = find_transform(g1x,g2x)
+        # Miy, My = find_transform(g1y,g2y)
+        
+        # #print Mi
+        
+        # betax_new = []
+        # alphax_new = []
+
+        # betay_new = []
+        # alphay_new = []
+
+        # x_new = []
+        # px_new = []
+
+        # y_new = []
+        # py_new = []
+
+        
+        # for i in xrange(len(beam.z)):
+            # g1x = np.matrix([[beam.betax[i], beam.alphax[i]],
+                   # [beam.alphax[i], (1+beam.alphax[i]**2)/beam.betax[i]]])
+    
+            # gx = Mix.T * g1x * Mix
+
+            # g1y = np.matrix([[beam.betay[i], beam.alphay[i]],
+                   # [beam.alphay[i], (1+beam.alphay[i]**2)/beam.betay[i]]])
+    
+            # gy = Miy.T * g1y * Miy
+
+            
+            # #print i, gx[0,1], g1x[0,1]
+            
+            # betax_new.append(gx[0,0])
+            # alphax_new.append(gx[0,1])
+
+            # betay_new.append(gy[0,0])
+            # alphay_new.append(gy[0,1])
+            
+            # '''
+            # zx = np.matrix([beam.x[i], beam.px[i]])
+            # zx = Mix * zx
+            # x_new.appned(zx[0]) 
+            # px_new.appned(zx[1])
+
+            # zy = np.matrix([beam.y[i], beam.py[i]])
+            # zy = Miy * zy
+            # y_new.appned(zy[0]) 
+            # py_new.appned(zy[1])
+            # '''
+
+            
+        # #print betax_new
+        # beam_new = Beam()
+        # beam_new.column_values = beam.column_values
+        # beam_new.columns = beam.columns
+        
+        # if energy_new != None:
+            # gamma_new=energy_new / (0.511e-3)
+            # energy_scale=gamma_new/np.mean(np.array(beam.g0))
+        
+        # if n_interp == None:
+        
+            # beam_new.idx_max = idx
+            # beam_new.ex = np.array(beam.ex) * emit_scale
+            # beam_new.ey = np.array(beam.ey) * emit_scale
+            # beam_new.zsep = beam.zsep
+            # beam_new.z = np.array(beam.z)
+            # beam_new.I = np.array(beam.I)
+            # beam_new.g0 = np.array(beam.g0) * energy_scale
+            # beam_new.dg = np.array(beam.dg)
+            
+            # beam_new.eloss = beam.eloss
+    
+            # beam_new.betax = np.array(betax_new)
+            # beam_new.betay = np.array(betay_new)
+            # beam_new.alphax = np.array(alphax_new)
+            # beam_new.alphay = np.array(alphay_new)
+    
+            # beam_new.x = np.array(beam.x) * 0
+            # beam_new.px = np.array(beam.px) * 0
+            # beam_new.y = np.array(beam.y) * 0
+            # beam_new.py = np.array(beam.py) * 0
+        # else:
+            
+            
+            # beam_new.z = np.linspace(beam.z[0], beam.z[-1], n_interp) 
+            # beam_new.I = np.interp(beam_new.z, beam.z, beam.I)
+            
+            # zmax, Imax = peaks(beam_new.z, beam_new.I, n=1)
+            # beam_new.idx_max = np.where(beam_new.z == zmax)[0][0]
+            
+            # beam_new.ex = np.interp(beam_new.z, beam.z, beam.ex) * emit_scale
+            # beam_new.ey = np.interp(beam_new.z, beam.z, beam.ey) * emit_scale
+            # beam_new.zsep = beam.zsep * len(beam.z) / len(beam_new.z)
+            # beam_new.g0 = np.interp(beam_new.z, beam.z, beam.g0) * energy_scale
+            # beam_new.dg = np.interp(beam_new.z, beam.z, beam.dg)
+            
+            # beam_new.eloss = np.interp(beam_new.z, beam.z, beam.eloss)
+    
+            # beam_new.betax = np.interp(beam_new.z, beam.z, betax_new)
+            # beam_new.betay = np.interp(beam_new.z, beam.z, betay_new)
+            # beam_new.alphax = np.interp(beam_new.z, beam.z, alphax_new)
+            # beam_new.alphay = np.interp(beam_new.z, beam.z, alphay_new)
+    
+            # beam_new.x = np.interp(beam_new.z, beam.z, beam.x) 
+            # beam_new.px = np.interp(beam_new.z, beam.z, beam.px) 
+            # beam_new.y = np.interp(beam_new.z, beam.z, beam.y)
+            # beam_new.py = np.interp(beam_new.z, beam.z, beam.py)
+
+
+        
+        # #if plot: 
+        # #    plot_beam(plt.figure(), beam_new)    
+        # #    plt.show()
+    
+    # if transform != None:
+        # beam_new.f_str = beam_file_str(beam_new)
+    
+    # return beam_new
+    
+    
+def transform_beam_file(beam_file = None, out_file='tmp.beam', transform = [ [25.0,0.1], [21.0, -0.1] ], energy_scale=1, energy_new = None, emit_scale = 1, n_interp = None):
+    
+    beam = read_beam_file(beam_file)
         
     zmax, Imax = peaks(beam.z, beam.I, n=1)
-    idx = np.argmax(beam.z)
+    idx = beam.z.index(zmax)
     beam.idx_max = idx
     print ('matching to slice ' + str(idx))
     
     #if plot: plot_beam(plt.figure(), beam)    
     
     
-    if transform!=None:
+    if transform:
         print ('transforming')
         g1x = np.matrix([[beam.betax[idx], beam.alphax[idx]],
                    [beam.alphax[idx], (1+beam.alphax[idx]**2)/beam.betax[idx]]])
@@ -1613,20 +1768,20 @@ def transform_beam_file(beam_file = None, transform = [ [25.0,0.1], [21.0, -0.1]
         if n_interp == None:
         
             beam_new.idx_max = idx
-            beam_new.ex = np.array(beam.ex) * emit_scale
-            beam_new.ey = np.array(beam.ey) * emit_scale
+            beam_new.ex = beam.ex * emit_scale
+            beam_new.ey = beam.ey * emit_scale
             beam_new.zsep = beam.zsep
-            beam_new.z = np.array(beam.z)
-            beam_new.I = np.array(beam.I)
+            beam_new.z = beam.z
+            beam_new.I = beam.I
             beam_new.g0 = np.array(beam.g0) * energy_scale
             beam_new.dg = np.array(beam.dg)
             
             beam_new.eloss = beam.eloss
     
-            beam_new.betax = np.array(betax_new)
-            beam_new.betay = np.array(betay_new)
-            beam_new.alphax = np.array(alphax_new)
-            beam_new.alphay = np.array(alphay_new)
+            beam_new.betax = betax_new
+            beam_new.betay = betay_new
+            beam_new.alphax = alphax_new
+            beam_new.alphay = alphay_new
     
             beam_new.x = np.array(beam.x) * 0
             beam_new.px = np.array(beam.px) * 0

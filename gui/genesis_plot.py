@@ -1750,13 +1750,13 @@ def plot_dist(dist, z=[], figsize=3, fig_name = None, savefig=False, showfig=Fal
     if plot_xy_s:
         ax_xs=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 2,sharex=ax_curr)
         if scatter: ax_xs.scatter(s, 1e6*dist.x,marker='.')
-        else: ax_xs.hist2d(s, dist.x, bins)
+        else: ax_xs.hist2d(s, 1e6*dist.x, bins)
         ax_xs.set_xlabel('s, [$\mu$m]')
         ax_xs.set_ylabel('x, [$\mu$m]')
         
         ax_ys=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 4+plot_x_y,sharex=ax_curr)
         if scatter: ax_ys.scatter(s, 1e6*dist.y,marker='.')
-        else: ax_ys.hist2d(s, dist.y, bins)
+        else: ax_ys.hist2d(s, 1e6*dist.y, bins)
         ax_ys.set_xlabel('s, [$\mu$m]')
         ax_ys.set_ylabel('y, [$\mu$m]')
         

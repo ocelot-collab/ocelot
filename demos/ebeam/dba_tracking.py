@@ -51,10 +51,9 @@ s = [f.s for f in P1]
 x = [f.x for f in P1]
 y = [f.y for f in P1]
 
-
+plt.figure(2)
 font = {'size'   : 10}
 matplotlib.rc('font', **font)
-
 plt.plot(s, x, "r", label = "X")
 plt.plot(s, y, "b", label = "Y")
 

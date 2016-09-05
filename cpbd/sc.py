@@ -38,6 +38,14 @@ def smooth_z(Zin, mslice):
 
 
 class SpaceCharge():
+    """
+    The space charge forces are calculated by solving the Poisson equation in the bunch frame.
+    Then the Lorentz transformed electromagnetic field is applied as a kick in the laboratory frame.
+    For the solution of the Poisson equation we use an integral representation of the electrostatic potential
+    by convolution of the free-space Green's function with the charge distribution.
+    The convolution equation is solved with the help of the Fast Fourier Transform (FFT). The same algorithm for
+    solution of the 3D Poisson equation is used, for example, in ASTRA
+    """
     def __init__(self):
         #PhysicsProcess.__init__(self)
         self.step = 1 # in unit step
@@ -46,6 +54,7 @@ class SpaceCharge():
 
         self.start_elem = None
         self.end_elem = None
+        self.debug = False
 
     def prepare(self, lat):
         pass
@@ -73,7 +82,6 @@ class SpaceCharge():
                +IG[1:i2+1, 0:j2, 0:k2] - IG[0:i2, 0:j2, 0:k2])
         return kern
 
-
     def potential(self, q, steps):
         hx = steps[0]
         hy = steps[1]
@@ -94,18 +102,17 @@ class SpaceCharge():
         t0 = time()
         out = np.real(np.fft.ifftn(np.fft.fftn(out)*np.fft.fftn(K2)))
         t1 = time()
-        print( 'fft time:', t1-t0, ' sec')
+        if self.debug: print( 'fft time:', t1-t0, ' sec')
 
         out[:Nx, :Ny, :Nz] = out[:Nx,:Ny,:Nz]/(4*pi*epsilon_0*hx*hy*hz)
         return out[:Nx, :Ny, :Nz]
-
 
     def el_field(self, X, Q, gamma, nxyz):
         N = X.shape[0]
         X[:, 2] = X[:, 2]*gamma
         XX = np.max(X, axis=0)-np.min(X, axis=0)
         XX = XX*np.random.uniform(low=1.0, high=1.1)
-        print( 'mesh steps:', XX)
+        if self.debug: print( 'mesh steps:', XX)
         # here we use a fast 3D "near-point" interpolation
         # we need a stand-alone module with 1D,2D,3D parricles-to-grid functions
         steps = XX/(nxyz-3)
@@ -140,7 +147,7 @@ class SpaceCharge():
     def apply(self, p_array, zstep):
         # L0 = true : use low order approximation for kick
         #Lorentz transformation with z-axis and gamref
-        print("APPLY SC")
+        #print("APPLY SC")
         nmesh_xyz = np.array(self.nmesh_xyz)
         gamref = p_array.E/m_e_GeV
         betref2 = 1-gamref**-2

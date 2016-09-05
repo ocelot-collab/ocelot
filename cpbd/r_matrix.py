@@ -1,7 +1,7 @@
 __author__ = 'Sergey Tomin'
 
 import numpy as np
-from ocelot.common.globals import m_e_GeV
+from ocelot.common.globals import m_e_GeV, speed_of_light
 from ocelot.cpbd.elements import *
 
 
@@ -27,20 +27,26 @@ def uni_matrix(z, k1, hx, sum_tilts=0., energy=0.):
     cx = np.cos(z*kx).real
     cy = np.cos(z*ky).real
     sy = (np.sin(ky*z)/ky).real if ky != 0 else z
+
+    igamma2 = 0.
+
+    if gamma != 0:
+        igamma2 = 1./(gamma*gamma)
+
+    beta = np.sqrt(1. - igamma2)
+
     if kx != 0:
         sx = (np.sin(kx*z)/kx).real
         dx = hx/kx2*(1. - cx)
-        r56 = hx*hx*(z - sx)/kx2
+        r56 = hx*hx*(z - sx)/kx2/beta**2
     else:
         sx = z
         dx = z*z*hx/2.
-        r56 = hx*hx*z**3/6.
-    if gamma != 0:
-        gamma2 = gamma*gamma
-        beta = np.sqrt(1. - 1./gamma2)
-        r56 -= z/(beta*beta*gamma2)
-    u_matrix = np.array([[cx, sx, 0., 0., 0., dx],
-                        [-kx2*sx, cx, 0., 0., 0., sx*hx],
+        r56 = hx*hx*z**3/6./beta**2
+
+    r56 -= z/(beta*beta)*igamma2
+    u_matrix = np.array([[cx, sx, 0., 0., 0., dx/beta],
+                        [-kx2*sx, cx, 0., 0., 0., sx*hx/beta],
                         [0., 0., cy, sy, 0., 0.],
                         [0., 0., -ky2*sy, cy, 0., 0.],
                         [hx*sx, dx, 0., 0., 1., r56],
@@ -56,7 +62,6 @@ def create_r_matrix(element):
     #dy = element.dy
     #tilt = element.dtilt + element.tilt
     k1 = element.k1
-
     if element.l == 0:
         hx = 0.
     else:
@@ -70,21 +75,17 @@ def create_r_matrix(element):
         r = np.eye(6)
         r[1, 0] = element.h * np.tan(element.edge)
         r[3, 2] = -element.h * np.tan(element.edge - phi)
-
         r_z_e = lambda z, energy: r
 
     if element.__class__ in [Hcor, Vcor]:
         r_z_e = lambda z, energy: uni_matrix(z, 0, hx=0, sum_tilts=0, energy=energy)
 
     elif element.__class__ == Undulator:
-        #print("Undulator")
         def undulator_r_z(z, lperiod, Kx, Ky, energy):
-
             gamma = energy / m_e_GeV
             r = np.eye(6)
             r[0, 1] = z
             if gamma != 0 and lperiod != 0 and Kx != 0:
-                #print("here")
                 beta = 1 / np.sqrt(1.0 - 1.0 / (gamma * gamma))
                 omega_x = np.sqrt(2.0) * np.pi * Kx / (lperiod * gamma * beta)
                 omega_y = np.sqrt(2.0) * np.pi * Ky / (lperiod * gamma * beta)
@@ -117,7 +118,6 @@ def create_r_matrix(element):
             gamma = (E + 0.5 * de) / m_e_GeV
             Ei = E / m_e_GeV
             Ef = (E + de) / m_e_GeV
-            #print("cav z = ", z)
             Ep = (Ef - Ei) / z  # energy derivative
             if Ei == 0:
                 print("Warning! Initial energy is zero and cavity.delta_e != 0! Change Ei or cavity.delta_e must be 0")
@@ -142,13 +142,18 @@ def create_r_matrix(element):
                 gamma2 = gamma * gamma
                 beta = np.sqrt(1. - 1 / gamma2)
                 #r56 = -z / (beta * beta * gamma2)
+                gs = (Ef-Ei)/z
+                r56 = -(1.0/Ei-1.0/Ef)/gs
 
+            k = 2.*np.pi*freq/speed_of_light
+            r66 = Ei/Ef
+            r65 = k*np.sin(phi)*V/(Ef*m_e_GeV)
             cav_matrix = np.array([[r11, r12, 0., 0., 0., 0.],
                                 [r21, r22, 0., 0., 0., 0.],
                                 [0., 0., r11, r12, 0., 0.],
                                 [0., 0., r21, r22, 0., 0.],
                                 [0., 0., 0., 0., 1., r56],
-                                [0., 0., 0., 0., 0., 1.]]).real
+                                [0., 0., 0., 0., r65, r66]]).real
             return cav_matrix
 
         if element.delta_e == 0. and element.v == 0.:

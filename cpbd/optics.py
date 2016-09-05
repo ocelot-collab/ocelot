@@ -46,7 +46,6 @@ class TransferMap:
         #self.B = lambda energy: zeros(6)  # tmp matrix
         self.map = lambda u, energy: self.mul_p_array(u, energy=energy)
 
-
     def map_x_twiss(self, tws0):
         E = tws0.E
         M = self.R(E)
@@ -227,12 +226,9 @@ class MultipoleTM(TransferMap):
         self.map = lambda X, energy: self.kick(X, self.kn)
 
     def kick(self, X, kn):
-        #print("multipole 1", X)
         p = -kn[0] * X[5::6] + 0j
         for n in range(1, len(kn)):
-            #print(kn)
             p += kn[n] * (X[0::6] + 1j * X[2::6]) ** n / factorial(n)
-            #print(p)
         X[1::6] = X[1::6] - np.real(p)
         X[3::6] = X[3::6] + np.imag(p)
         X[4::6] = X[4::6] - kn[0] * X[0::6]
@@ -303,26 +299,15 @@ class CavityTM(TransferMap):
 
     def map4cav(self, X, E,  V, freq, phi):
         #print("CAVITY")
-        #n = len(X)
         phi = phi*np.pi/180.
         X = self.mul_p_array(X, energy=E) #t_apply(R, T, X, dx, dy, tilt)
-        #a = np.add( np.transpose(  dot(self.R(E), np.transpose( X.reshape(n/6, 6)) ) ), self.B(E) ).reshape(n)
-        #X[:] = a[:]
         delta_e = V*np.cos(phi)
         if E + delta_e > 0:
-            gamma = (E + delta_e/4.)/m_e_GeV
-            gamma2 = gamma * gamma
-            beta = np.sqrt(1. - 1 / gamma2)
-            X[4::6] -= self.length/2./ (beta * beta * gamma2) #- 1.5*self.length/2./(beta*beta*gamma2)*X[5::6]*X[5::6]
-            #print("******************** CAVITY")
             k = 2.*np.pi*freq/speed_of_light
-            X[5::6] = (X[5::6]*E + V*np.cos(X[4::6]*k + phi) - delta_e)/(E + delta_e)
-            gamma = (E + delta_e*3/4.)/m_e_GeV
-            gamma2 = gamma * gamma
-            beta = np.sqrt(1. - 1 / gamma2)
-            X[4::6] -= self.length/2. / (beta * beta * gamma2) #- 1.5*self.length/2./(beta*beta*gamma2)*X[5::6]*X[5::6]
+            #X[5::6] = (X[5::6]*E + V*np.cos(X[4::6]*k + phi) - delta_e)/(E + delta_e)
+            E1=E + delta_e
+            X[5::6] = X[5::6] + V/E1*(np.cos(-X[4::6]*k + phi) - np.cos(phi)-k*X[4::6]*np.sin(phi))
         return X
-
 
     def __call__(self, s):
         m = copy(self)
@@ -474,10 +459,9 @@ class SecondTM(TransferMap):
     def t_apply(self, R, T, X, dx, dy, tilt, U5666=0.):
         #print("t_apply", self.k2, self.T)
         if dx != 0 or dy != 0 or tilt != 0:
-            X = transform_vec_ent(X, dx, dy, tilt)
+            X = transform_vec_ent(X, dx, dy, -tilt)
 
         n = len(X)
-
         Xr = transpose(dot(R, transpose(X.reshape(n / 6, 6)))).reshape(n)
 
         # Xt = zeros(n)
@@ -515,7 +499,7 @@ class SecondTM(TransferMap):
         # X[:] = Xr[:] + Xt[:]
 
         if dx != 0 or dy != 0 or tilt != 0:
-            X = transform_vec_ext(X, dx, dy, tilt)
+            X = transform_vec_ext(X, dx, dy, -tilt)
 
         return X
 
@@ -583,6 +567,7 @@ class MethodTM:
                     R, T = fringe_ext(h=element.h, k1=element.k1, e=element.edge, h_pole=element.h_pole,
                                       gap=element.gap, fint=element.fint)
                 T_z_e = lambda z, energy: T
+                #print("trm", tilt, element.edge, element.h, r_z_e(0, 130)[1, 0])
             tm = SecondTM(r_z_no_tilt=r_z_e, t_mat_z_e=T_z_e)
 
         else:
@@ -717,7 +702,8 @@ def periodic_twiss(tws, R):
     cosmy = (R[2, 2] + R[3, 3])/2.
 
     if abs(cosmx) >= 1 or abs(cosmy) >= 1:
-        print("************ periodic solution does not exist. return None ***********")
+        logger.warn("************ periodic solution does not exist. return None ***********")
+        #print("************ periodic solution does not exist. return None ***********")
         return None
     sinmx = np.sign(R[0, 1])*sqrt(1.-cosmx*cosmx)
     sinmy = np.sign(R[2, 3])*sqrt(1.-cosmy*cosmy)
@@ -746,6 +732,13 @@ def periodic_twiss(tws, R):
     return tws
 
 def twiss(lattice, tws0=None, nPoints=None):
+    """
+    twiss parameters calculation,
+    :param lattice: lattice, MagneticLattice() object
+    :param tws0: initial twiss parameters, Twiss() object. If None, try to find periodic solution.
+    :param nPoints: number of points per cell. If None, then twiss parameters are calculated at the end of each element.
+    :return: list of Twiss() objects
+    """
     if tws0 == None:
         tws0 = periodic_twiss(tws0, lattice_transfer_map(lattice, energy=0.))
 
@@ -792,6 +785,7 @@ class ProcessTable:
     def add_physics_proc(self, physics_proc, elem1, elem2):
         physics_proc.start_elem = elem1
         physics_proc.end_elem = elem2
+        #print(elem1.id, elem2.id, elem1.__hash__(), elem2.__hash__(), self.lat.sequence.index(elem1), self.lat.sequence.index(elem2))
         physics_proc.indx0 = self.lat.sequence.index(elem1)
         #print(self.lat.sequence.index(elem1))
         physics_proc.indx1 = self.lat.sequence.index(elem2)
@@ -799,8 +793,16 @@ class ProcessTable:
         physics_proc.counter = physics_proc.step
         physics_proc.prepare(self.lat)
         self.proc_list.append(physics_proc)
+        #print(elem1.__hash__(), elem2.__hash__(), physics_proc.indx0, physics_proc.indx1, self.proc_list)
 
 class Navigator:
+    """
+    Navigator defines step (dz) of tracking and which physical process will be applied during each step.
+    Methods:
+    add_physics_proc(physics_proc, elem1, elem2)
+        physics_proc - physics process, can be CSR, SpaceCharge or Wake,
+        elem1 and elem2 - first and last elements between which the physics process will be applied.
+    """
     def __init__(self, lattice=None):
         if lattice != None:
             self.lat = lattice

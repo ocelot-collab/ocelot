@@ -30,11 +30,13 @@ class Element:
         self.params = {}
     
     def __hash__(self):
-        return hash((self.id, self.__class__))
+        return hash(id(self))
+        #return hash((self.id, self.__class__))
 
     def __eq__(self, other):
         try:
-            return (self.id, type) == (other.id, type)
+            #return (self.id, type) == (other.id, type)
+            return id(self) == id(other)
         except:
             return False
     
@@ -59,8 +61,10 @@ class Marker(Element):
 
 class Quadrupole(Element):
     """
+    l - length of lens in [m],
     k1 - strength of quadrupole lens in [1/m^2],
-    l - length of lens in [m].
+    k2 - strength of sextupole lens in [1/m^3],
+    tilt - tilt of lens in [rad].
     """
     def __init__(self, l=0., k1=0, k2=0., tilt=0., eid=None):
         Element.__init__(self, eid)
@@ -72,8 +76,8 @@ class Quadrupole(Element):
 
 class Sextupole(Element):
     """
-    k2 - strength of sextupole lens in [1/m^3],
-    l - length of lens in [m].
+    l - length of lens in [m],
+    k2 - strength of sextupole lens in [1/m^3].
     """
     def __init__(self, l=0., k2=0., eid=None, tilt=0.):
         Element.__init__(self, eid)
@@ -96,7 +100,7 @@ class Octupole(Element):
 
 class Drift(Element):
     """
-    l - length of lens in [m]
+    l - length of drift in [m]
     """
     def __init__(self, l=0., eid=None):
         Element.__init__(self, eid)
@@ -104,6 +108,16 @@ class Drift(Element):
 
 
 class Bend(Element):
+    """
+    bending magnet
+    l - length of magnet in [m],
+    angle - angle of bend in [rad],
+    k1 - strength of quadrupole lens in [1/m^2],
+    k2 - strength of sextupole lens in [1/m^3],
+    tilt - tilt of lens in [rad],
+    e1 - entrance angle with regards to a sector magnet in [rad],
+    e2 - exit angle with regards to a sector magnet [rad].
+    """
     def __init__(self, l=0., angle=0., k1=0., k2=0., tilt=0.0, e1=0., e2=0.,
                  gap=0., h_pole1=0., h_pole2=0., fint=0., fintx=0., eid=None):
         Element.__init__(self, eid)
@@ -148,9 +162,13 @@ class Edge(Bend):
 class SBend(Bend):
     """
     sector bending magnet,
-    l - length of magnet,
+    l - length of magnet in [m],
     angle - angle of bend in [rad],
-    k - quadrupole strength in [1/m^2].
+    k1 - strength of quadrupole lens in [1/m^2],
+    k2 - strength of sextupole lens in [1/m^3],
+    tilt - tilt of lens in [rad],
+    e1 - entrance angle in [rad],
+    e2 - exit angle in magnet [rad].
     """
     def __init__(self, l=0., angle=0.0, k1=0.0, k2=0., e1=0.0, e2=0.0, tilt=0.0,
                  gap=0, h_pole1=0., h_pole2=0., fint=0., fintx=0., eid=None):
@@ -167,9 +185,13 @@ class SBend(Bend):
 class RBend(Bend):
     """
     rectangular bending magnet,
-    l - length of magnet,
+    l - length of magnet in [m],
     angle - angle of bend in [rad],
-    k - quadrupole strength in [1/m^2].
+    k1 - strength of quadrupole lens in [1/m^2],
+    k2 - strength of sextupole lens in [1/m^3],
+    tilt - tilt of lens in [rad],
+    e1 - entrance angle in [rad],
+    e2 - exit angle in [rad].
     """
     def __init__(self, l=0., angle=0., tilt=0, k1=0., k2=0.,  e1=None, e2=None,
                  gap=0, h_pole1=0., h_pole2=0., fint=0., fintx=0., eid=None):
@@ -191,6 +213,11 @@ class RBend(Bend):
             self.fint2 = fintx
 
 class Hcor(RBend):
+    """
+    horizontal corrector,
+    l - length of magnet in [m],
+    angle - angle of bend in [rad],
+    """
     def __init__(self, l=0., angle=0., eid=None):
         RBend.__init__(self, l=l, angle=angle, eid=eid)
         self.l = l
@@ -199,6 +226,11 @@ class Hcor(RBend):
 
 
 class Vcor(RBend):
+    """
+    horizontal corrector,
+    l - length of magnet in [m],
+    angle - angle of bend in [rad],
+    """
     def __init__(self, l=0., angle=0., eid=None):
         RBend.__init__(self, l=l, angle=angle, eid=eid)
         self.l = l
@@ -208,6 +240,7 @@ class Vcor(RBend):
 
 class Undulator(Element):
     """
+    Undulator
     lperiod - undulator period in [m];\n
     nperiod - number of periods;\n
     Kx - undulator paramenter for vertical field; \n
@@ -252,8 +285,9 @@ class Undulator(Element):
 class Cavity(Element):
     """
     RF cavity
-    v - voltage [V/m]
-    f - frequency [GHz]
+    v - voltage [GV/m]
+    f - frequency [Hz]
+    phi - phase in [grad]
     """
     def __init__(self, l=0., delta_e=0.0, freq=0.0, phi=0.0, eid=None, v=0., volterr=0.):
         Element.__init__(self, eid)
@@ -269,6 +303,8 @@ class Cavity(Element):
 class Solenoid(Element):
     """
     Solenoid
+    l - length in m,
+    k - strength B0/(2B*rho)
     """
     def __init__(self, l=0., k=0., eid=None):
         Element.__init__(self, eid)

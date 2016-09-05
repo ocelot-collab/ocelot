@@ -7,6 +7,7 @@ import xlrd
 from ocelot.cpbd.magnetic_lattice import *
 from ocelot.cpbd.elements import *
 from ocelot.cpbd.io import *
+from numpy import sin
 
 class StructureConverter:
     

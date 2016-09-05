@@ -6,6 +6,9 @@ from numpy import cos, sin, sqrt, sqrt, zeros, eye, tan, dot, empty_like, array,
 from ocelot.common.globals import m_e_GeV, m_e_eV, speed_of_light
 from copy import copy
 from numpy.linalg import norm
+
+__MAD__ = True
+
 """
 differential equation:
 
@@ -76,7 +79,6 @@ I34  = Gy * sy    = (sy - s*cy)/(2*ky2)
 I346 = Gy * dx*sy = h/kx2*(I34 - I314)
 """
 
-
 def t_nnn(L, h, k1, k2, energy=0):
     """
     :param L:
@@ -89,6 +91,13 @@ def t_nnn(L, h, k1, k2, energy=0):
     x, dx/ds, y, dy/ds, delta_l, dp/p0
     """
 
+    igamma2 = 0.
+    if energy != 0:
+        gamma = energy/m_e_GeV
+        gamma2 = gamma*gamma
+        igamma2 = 1./gamma2
+
+    beta = np.sqrt(1. - igamma2)
     h2 = h*h
     h3 = h2*h
     kx2 = (k1 + h*h)
@@ -273,6 +282,7 @@ def t_nnn(L, h, k1, k2, energy=0):
     t211 =    coef1*I211 + h*kx4*I222/2.
     t212 = 2.*coef1*I212 - h*kx2*I212
     t216 = 2.*coef1*I216 + coef3*I21 - h2*kx2*I222
+    #print(I216, I21, I222, t216)
     t222 =    coef1*I222 + 0.5*h*I211
     t226 = 2.*coef1*I226 + coef3*I22 + h2*I212
     t266 =    coef1*I266 + coef3*I26 + 0.5*h3*I222 - h*I20
@@ -302,12 +312,12 @@ def t_nnn(L, h, k1, k2, energy=0):
     cy_1 = -ky2*sy
     sy_1 = cy
     dx_1 = h*sx
-    T = zeros((6,6,6))
+    T = zeros((6, 6, 6))
     T[0, 0, 0] = t111
     T[0, 0, 1] = t112 + h*sx
     T[0, 0, 5] = t116
     T[0, 1, 1] = t122
-    T[0, 1, 5] = t126
+    T[0, 1, 5] = t126/beta
     T[0, 5, 5] = t166
     T[0, 2, 2] = t133
     T[0, 2, 3] = t134
@@ -319,6 +329,7 @@ def t_nnn(L, h, k1, k2, energy=0):
     T[1, 1, 1] = t222 - h*sx*sx_1
     T[1, 1, 5] = t226 - h*(sx*dx_1 + dx*sx_1)
     T[1, 5, 5] = t266 - dx*h*dx_1
+
     T[1, 2, 2] = t233
     T[1, 2, 3] = t234
     T[1, 3, 3] = t244
@@ -328,7 +339,7 @@ def t_nnn(L, h, k1, k2, energy=0):
     T[2, 1, 2] = t323
     T[2, 1, 3] = t324
     T[2, 2, 5] = t336
-    T[2, 3, 5] = t346
+    T[2, 3, 5] = t346/beta
 
     T[3, 0, 2] = t413 - h*cx*cy_1
     T[3, 0, 3] = t414 + (1 - cx)*h*sy_1
@@ -356,7 +367,6 @@ def t_nnn(L, h, k1, k2, energy=0):
     t533 =       K2*I533 - ky2*h*I50/2.
     t534 =    2.*K2*I534
     t544 =       K2*I544 - h*I50/2.
-    #print "asfd = ", L,  coef1, I522, (L + sx*cx)/4.
     i566 = h2*(L - sx*cx)/(4.*kx2) if kx != 0 else h2*L3/6.
 
     T511 = t511 + 1/4.*kx2*(L - cx*sx)
@@ -364,33 +374,56 @@ def t_nnn(L, h, k1, k2, energy=0):
     T512 = t512 - (1/2.)*kx2*sx2 + h*dx
     T516 = t516 + h*(sx*cx - L)/2.
     T522 = t522 + (L + sx*cx)/4.
-    #print L, h, k1, k2, "T = ", T522
     T526 = t526 + h*sx2/2.
     T566 = t566 + i566
     T533 = t533 + 1/4.*ky2*(L - sy*cy )
     T534 = t534 - 1/2.*ky2*sy2
     T544 = t544 + (L + sy*cy)/4.
-    beta = 1.
-    if energy != 0:
-        gamma = energy/m_e_GeV
-        gamma2 = gamma*gamma
-        beta = np.sqrt(1. - 1./gamma2)
-        T[4, 5, 5] = 1.5*L/(beta*beta*gamma2)
 
-    T[4, 0, 0] = T511
-    T[4, 0, 1] = (T512 + h*dx)
-    T[4, 0, 5] = T516
+    #beta = 1.
+    #if energy != 0:
+    #    gamma = energy/m_e_GeV
+    #    gamma2 = gamma*gamma
+    #    beta = np.sqrt(1. - 1./gamma2)
+        #T[4, 5, 5] = 1.5*L/(beta*beta*gamma2)
+
+    T[4, 0, 0] = T511/beta
+    T[4, 0, 1] = (T512 + h*dx)/beta
+    T[4, 0, 5] = T516/beta
     T[4, 1, 1] = T522/beta
-    T[4, 1, 5] = T526
-    T[4, 5, 5] = T566
-    T[4, 2, 2] = T533
+    T[4, 1, 5] = T526/beta
+    T[4, 5, 5] = T566/beta + 1.5*L/(beta*beta)*igamma2
+    T[4, 2, 2] = T533/beta
     T[4, 2, 3] = T534/beta
-    T[4, 3, 3] = T544
-    if energy != 0:
-        gamma = energy/m_e_GeV
-        gamma2 = gamma*gamma
-        beta = np.sqrt(1. - 1./gamma2)
-        T[4, 5, 5] = 1.5*L/(beta*beta*gamma2)
+    T[4, 3, 3] = T544/beta
+
+    # MAD START
+    if __MAD__:
+        beta2 = beta*beta
+        d2y = (2 - 2*cy*cy)/ky2 if ky2 != 0 else 2*L2
+        s2y = sy*cy
+        fx = (L - sx)/kx2 if kx2 != 0 else L3/6.
+        f2y = (L - s2y)/ky2 if ky2 != 0 else 2./3.*L3
+        J1 = (L - sx)/kx2 if kx2 != 0 else L**3/6.
+        J2 = (3.*L - 4.*sx + sx*cx)/(2*kx4) if kx != 0 else L**5/20.
+        Jd = (d2y - dx_h)*(kx2 - 4*ky2)
+        Jf = (f2y - fx)*(kx2 - 4*ky2)
+        T[1, 0, 5] = -h*h/6./beta*(K2 - 2.*h*ky2)*(3.*cx*J1 + sx*dx_h) - 1./2./beta*-ky2*(sx - L*cx)
+        T[0, 1, 5] = -h*h/6./beta*(K2 - 2.*h*ky2)*(sx*dx_h*dx_h - 2.*cx*J2) + h2/2/beta*(sx*dx_h + cx*J1) - 1./2./beta*(sx + L*cx)
+        T[1, 1, 5] = -h*h/6./beta*(K2 - 2.*h*ky2)*(3.*sx*J1 + dx_h*dx_h) + 1./2./beta*-ky2*L*sx
+        T[1, 5, 5] = -h*h/6./(beta2)*(K2 - 2.*h*ky2)*(sx*dx_h*dx_h - 2.*cx*J2) - h/2./beta2*-ky2*(cx*J1 - sx*dx_h) - h*igamma2/(2.*beta2)*sx
+        T[2, 3, 5] = h/beta*K2*(sy*Jd - 2*cy*Jf) + h2/beta*J1*cy - 1./2./beta*(sy + L*cy)
+        T[4, 0, 1] = -(h/6./beta*(K2 + 2*h*-ky2)*dx_h*dx_h + 1/2./beta*-ky2*sx2)
+        T[4, 1, 5] = -(h/6./beta*(K2 + 2*h*-ky2)*(dx_h**3 - 2*sx*J2) + h/2./beta*-ky2*sx*J1 + h*igamma2/beta2*dx_h)
+        T[4, 5, 5] = -1.5/beta**2*igamma2*(h**2*J1-L)
+        # only T436 gives the different value for Quad in comparison with MAD, but it was checked and it is correct
+        T[3, 2, 5] = h/beta*-ky2*K2*(2*cy*Jf - sy*Jd) + h/beta*(K2 + h*-ky2)*J1*cy + 0.5*beta*-ky2*(sy - L*cy)
+        T[4, 0, 5] = -sx*h/(beta**2)*igamma2
+        T[2, 2, 5] = h/beta*K2*(sy*Jd - 2*-ky2*cy*Jf) + h2/beta*-ky2*J1*sy - 0.5/beta*-ky2*L*sy
+        #print(dx_h, igamma2, beta2, h)
+        #print(igamma2)
+    # MAD STOP
+
     """
     print "T511 = ", T511
     print "T512 = ", T512
@@ -464,6 +497,12 @@ def fringe_ent(h, k1, e, h_pole=0., gap=0., fint=0.):
     T[3, 0, 3] = -h*tan_e2
     T[3, 1, 2] = -h*sec_e2
     T[3, 2, 5] = h*tan_e - h*phi/cos(e - phi)**2
+    # MAD
+    if __MAD__:
+        T[1, 0, 5] = 0
+        T[3, 2, 5] = 0
+    #if e == 0:
+    #   T = zeros((6,6,6))
     return R, T
 
 def fringe_ext(h, k1, e, h_pole=0., gap=0., fint=0.):
@@ -481,18 +520,24 @@ def fringe_ext(h, k1, e, h_pole=0., gap=0., fint=0.):
     #print R
 
     T = zeros((6,6,6))
-    T[0,0,0] = h/2.*tan_e2
-    T[0,2,2] = -h/2.*sec_e2
-    T[1,0,0] = h/2.*h_pole*sec_e3 - (-k1 + h*h/2.*tan_e2)*tan_e
-    T[1,0,1] = -h*tan_e2
+    T[0, 0, 0] = h/2.*tan_e2
+    T[0, 2, 2] = -h/2.*sec_e2
+    T[1, 0, 0] = h/2.*h_pole*sec_e3 - (-k1 + h*h/2.*tan_e2)*tan_e
+    T[1, 0, 1] = -h*tan_e2
     T[1,0,5] = -h*tan_e
-    T[1,2,2] = (-k1 - h*h/2.*tan_e2)*tan_e - h/2.*h_pole*sec_e3
-    T[1,2,3] = h*tan_e2
-    T[2,0,2] = -h*tan_e2
-    T[3,0,2] = -h*h_pole*sec_e3 +(-k1 + h*h*sec_e2)*tan_e
-    T[3,0,3] = h*tan_e2
-    T[3,1,2] = h*sec_e2
-    T[3,2,5] = h*tan_e - h*phi/cos(e - phi)**2
+    T[1, 2, 2] = (-k1 - h*h/2.*tan_e2)*tan_e - h/2.*h_pole*sec_e3
+    T[1, 2, 3] = h*tan_e2
+    T[2, 0, 2] = -h*tan_e2
+    T[3, 0, 2] = -h*h_pole*sec_e3 +(-k1 + h*h*sec_e2)*tan_e
+    T[3, 0, 3] = h*tan_e2
+    T[3, 1, 2] = h*sec_e2
+    #T[3,2,5] = h*tan_e - h*phi/cos(e - phi)**2
+    # MAD
+    if __MAD__:
+        T[1,0,5] = 0
+        T[3,2,5] = 0
+    #if e == 0:
+    #    T = zeros((6,6,6))
     return R, T
 
 def H23(vec_x, h, k1, k2, beta=1., g_inv=0.):

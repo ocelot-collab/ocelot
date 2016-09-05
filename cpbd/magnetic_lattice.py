@@ -48,6 +48,12 @@ flatten = lambda *n: (e for a in n
 
 
 class MagneticLattice:
+    """
+    sequence - list of the elements,
+    start - first element of lattice. If None, then lattice starts from first element of sequence,
+    stop - last element of lattice. If None, then lattice stops by last element of sequence,
+    method = MethodTM() - method of the tracking.
+    """
     def __init__(self, sequence, start=None, stop=None, method=MethodTM()):
         #self.energy = energy
         self.sequence = list(flatten(sequence))

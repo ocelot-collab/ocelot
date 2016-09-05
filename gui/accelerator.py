@@ -524,9 +524,18 @@ def plot_betas(ax, S, beta_x, beta_y, font_size):
     leg.get_frame().set_alpha(0.2)
 
 
-def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=True):
-
-    font_size = 25
+def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=True, font_size=18):
+    """
+    function for plotting: lattice (bottom section), vertical and horizontal beta-functions (middle section),
+    other parameters (top section) such as "Dx", "Dy", "E", "mux", "muy", "alpha_x", "alpha_y", "gamma_x", "gamma_y"
+    lat - MagneticLattice,
+    tws - list if Twiss objects,
+    top_plot=["Dx"] - parameters which displayed in top section. Example top_plot=["Dx", "Dy", "alpha_x"]
+    legend=True - displaying legend of element types in bottom section,
+    fig_name=None - name of figure,
+    grid=True - grid
+    font_size=18 - font size.
+    """
     if fig_name == None:
         fig = plt.figure()
     else:
@@ -633,7 +642,7 @@ def plot_trajectory(lat, list_particles):
     plt.show()
 
 
-def plot_API(lat):
+def plot_API(lat, legend=True):
     fig = plt.figure()
     plt.rc('axes', grid=True)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
@@ -661,7 +670,7 @@ def plot_API(lat):
     #plot_xy(ax_xy, S, X, Y, font_size)
 
     #plot_elems(ax_el, lat, nturns = 1, legend = True) # plot elements
-    new_plot_elems(fig, ax_el, lat, nturns = 1, legend = True)
+    new_plot_elems(fig, ax_el, lat, nturns = 1, legend = legend)
     return ax_xy
 
 

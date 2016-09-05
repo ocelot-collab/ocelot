@@ -14,6 +14,9 @@ Note:
 from numpy import *
 
 class Twiss:
+    """
+    class - container for twiss parameters
+    """
     def __init__(self, beam = None):
         if beam == None:
             self.emit_x = 0.0 # ???
@@ -88,7 +91,8 @@ class Twiss:
         val += "muy     = " + str(self.muy) + "\n"
         val += "nu_x    = " + str(self.mux/2./pi) + "\n"
         val += "nu_y    = " + str(self.muy/2./pi) + "\n"
-        val += "s    = " + str(self.s) + "\n"
+        val += "E       = " + str(self.E) + "\n"
+        val += "s        = " + str(self.s) + "\n"
         return val
 
             
@@ -206,31 +210,27 @@ class Trajectory:
 
 
 class ParticleArray:
-    '''
+    """
     array of particles of fixed size; for optimized performance
-    '''
-    def __init__(self, n = 0):
+    """
+    def __init__(self, n=0):
         self.particles = zeros(n*6)
         self.s = 0.0
         self.E = 0.0
 
     def rm_tails(self, xlim, ylim, px_lim, py_lim):
-        '''
+        """
         comment behaviour and possibly move out of class
-        '''
-
+        """
         x = abs(self.particles[::6])
         px = abs(self.particles[1::6])
         y = abs(self.particles[2::6])
         py = abs(self.particles[3::6])
         ind_angles = append(argwhere(px > px_lim), argwhere(py > py_lim))
         p_idxs = unique(append(argwhere(x > xlim), append(argwhere(y > ylim), append(argwhere(x != x), append(argwhere(y!= y), ind_angles)) )))
-        #if len(p_idxs) != 0:
-        #e_idxs = map(lambda x: append(array([]), x), array([6*p_idxs, 6*p_idxs+1, 6*p_idxs+2, 6*p_idxs+3, 6*p_idxs+4, 6*p_idxs+5]))
         e_idxs = [append([], x) for x in array([6*p_idxs, 6*p_idxs+1, 6*p_idxs+2, 6*p_idxs+3, 6*p_idxs+4, 6*p_idxs+5])]
         self.particles = delete(self.particles, e_idxs)
         return p_idxs
-
 
     def __getitem__(self, idx):
         return Particle(x=self.particles[idx*6], px=self.particles[idx*6 + 1],
@@ -282,6 +282,19 @@ class ParticleArray:
     def py(self): return self.particles[3::6]
     def tau(self): return self.particles[4::6]
     def p(self): return self.particles[5::6]
+
+
+def save_particle_array(p_array, filename):
+    output = open(filename, 'wb')
+    pickle.dump(p_array, output)
+    output.close()
+
+
+def load_particle_array(filename):
+    output = open(filename, 'rb')
+    p_array = pickle.load(output)
+    output.close()
+    return p_array
 
 
 def get_envelope(p_array, tws_i=Twiss()):

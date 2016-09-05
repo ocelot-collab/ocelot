@@ -6,7 +6,7 @@ from ocelot import *
 Q1 = Quadrupole(l= 0.4, k1=-1.3, eid= "Q1")
 Q2 = Quadrupole(l= 0.8, k1=1.4, eid= "Q2")
 Q3 = Quadrupole(l= 0.4, k1=-1.7, eid= "Q3")
-Q4 = Quadrupole(l= 0.5, k1=1.3 , eid= "Q4")
+Q4 = Quadrupole(l= 0.5, k1=1.4 , eid= "Q4")
 
 B  = Bend(l=2.7, k1=-.06, angle=2*pi/16., e1=pi/16., e2=pi/16., eid= "B")
 
@@ -34,8 +34,7 @@ plot_opt_func(lat, tws)
 
 plt.show()
 
-
-
+# matching
 constr = {D1:{'Dx':0.0, 'Dxp':0.0}, 'periodic':True}
 
 vars = [Q4]

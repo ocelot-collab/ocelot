@@ -1,14 +1,5 @@
 __author__ = 'Sergey Tomin'
 
-#from time import time
-#from pylab import *
-#from ocelot.rad.radiation_py import *
-#from ocelot.rad.screen import *
-#from ocelot.cpbd.elements import *
-##from ocelot.cpbd.optics import *
-##from ocelot.cpbd.e_beam_params import *
-#from ocelot.cpbd.beam import *
-
 from copy import deepcopy
 from ocelot.gui import *
 from ocelot import *
@@ -51,7 +42,7 @@ screen = calculate_radiation(lat, deepcopy(screen), beam, energy_loss = True)
 E_no = screen_no.Eph
 t_no = screen_no.Total
 max_I = max(t_no)
-print "time = ", time() - start
+print("time = ", time() - start)
 
 
 plt.plot(E_no, t_no/max_I,"k",  screen.Eph, screen.Total/max_I, "r", lw = 2)

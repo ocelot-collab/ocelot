@@ -274,7 +274,7 @@ class CSR:
     #    pass
 
     def apply(self, p_array, delta_s):
-        print("APPLY CSR")
+        #print("APPLY CSR")
         s_cur = self.z0 - self.z_csr_start
         z = p_array.particles[4::6]
         #bins_start, hist_start = get_current(p_array, charge=p_array.q_array[0], num_bins=200)

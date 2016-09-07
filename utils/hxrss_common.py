@@ -578,7 +578,7 @@ def update_beam_2(beam_new, g, n_interp):
     beam_new.ey = np.interp(beam_new.z, beam.z, beam.ey) 
     beam_new.zsep = beam.zsep * len(beam.z) / len(beam_new.z)
     #beam_new.g0 = np.interp(beam_new.z, beam.z, beam.g0) 
-    beam_new.g0 = g0 + beam.gamma_rel #potential problem here, no beam.gamma_rel
+    beam_new.g0 = g0 + beam.E/(0.511e-3) #potential problem here, no beam.gamma_rel
     print len(beam_new.z)
     print len(beam_new.g0)
     print len(beam.z)

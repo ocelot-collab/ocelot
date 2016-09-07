@@ -441,6 +441,28 @@ class GenesisBeamDefinition(): # Genesis analytical radiation input files storag
         self.columns=[]
         self.column_values={}
 
+class OcelotCoherentRadiation(): #3d or 2d coherent radiation distribution, *.fld variable is the same as Genesis dfl structure
+    
+    def __init__(self):
+        self.fld=np.array([]) #(z,y,x)
+        self.leng_x=[]
+        self.leng_y=[]
+        self.leng_z=[]
+        self.xlamds=0 #wavelength, [nm]
+        self.l_domain='t' #longitudinal domain (t - time, f - frequency)
+        self.tr_domain='s' #transverse domain (s - space, k - inverse space)
+    
+    def Nz(self):
+        return shape(self.fld)[0]
+    def Ny(self):
+        return shape(self.fld)[1]
+    def Nx(self):
+        return shape(self.fld)[2]
+    
+    def __call__(self):
+        return self.fld
+
+        
 # class GenesisOutParm():
 #
 #     def __init__(self):
@@ -554,23 +576,23 @@ def read_beam_file(fileName):
             
     #print beam.columns
 
-    beam.z = beam.column_values['ZPOS']
+    beam.z = np.array(beam.column_values['ZPOS'])
     beam.zsep = beam.z[1] - beam.z[0]
     beam.I = np.array(beam.column_values['CURPEAK'])
     beam.idx_max = np.argmax(beam.I)
     try:
-        beam.ex = beam.column_values['EMITX']
-        beam.ey = beam.column_values['EMITY']
-        beam.betax = beam.column_values['BETAX']
-        beam.betay = beam.column_values['BETAY']
+        beam.ex = np.array(beam.column_values['EMITX'])
+        beam.ey = np.array(beam.column_values['EMITY'])
+        beam.betax = np.array(beam.column_values['BETAX'])
+        beam.betay = np.array(beam.column_values['BETAY'])
         
-        beam.alphax = beam.column_values['ALPHAX']
-        beam.alphay = beam.column_values['ALPHAY']
+        beam.alphax = np.array(beam.column_values['ALPHAX'])
+        beam.alphay = np.array(beam.column_values['ALPHAY'])
         
-        beam.x = beam.column_values['XBEAM']
-        beam.y = beam.column_values['YBEAM']
-        beam.px = beam.column_values['PXBEAM']
-        beam.py = beam.column_values['PYBEAM']
+        beam.x = np.array(beam.column_values['XBEAM'])
+        beam.y = np.array(beam.column_values['YBEAM'])
+        beam.px = np.array(beam.column_values['PXBEAM'])
+        beam.py = np.array(beam.column_values['PYBEAM'])
         beam.g0 = np.array(beam.column_values['GAMMA0'])
         beam.dg = np.array(beam.column_values['DELGAM'])
     except:
@@ -1672,12 +1694,16 @@ def adapt_rad_file(beam = None, rad_file = None, out_file='tmp.rad'):
     
     
 def transform_beam_file(beam_file = None, out_file='tmp.beam', transform = [ [25.0,0.1], [21.0, -0.1] ], energy_scale=1, energy_new = None, emit_scale = 1, n_interp = None):
-    
-    beam = read_beam_file(beam_file)
+    if beam_file.__class__==str:
+        beam = read_beam_file(beam_file)
+    elif beam_file.__class__==GenesisBeamDefinition:
+        beam=beam_file
+    else:
+        print('Wrong beam input!')
         
     zmax, Imax = peaks(beam.z, beam.I, n=1)
-    idx = beam.z.index(zmax)
-    beam.idx_max = idx
+    beam.idx_max = np.where(beam.z == zmax)[0][0]
+    idx=beam.idx_max
     print ('matching to slice ' + str(idx))
     
     #if plot: plot_beam(plt.figure(), beam)    
@@ -1830,6 +1856,7 @@ def cut_beam(beam = None, cut_z = [-inf, inf]):
     if np.amin(beam.z)<cut_z[0] or np.amax(beam.z)>cut_z[1]:
         
         condition = (beam.z > cut_z[0]) * (beam.z<cut_z[1])
+        print(sum(condition))
         beam_new = Beam()
         beam_new.column_values = beam.column_values
         beam_new.columns = beam.columns

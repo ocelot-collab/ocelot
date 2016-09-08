@@ -240,7 +240,7 @@ def run(inp, launcher,readall=False,dfl_slipage_incl=True,assembly_ver='sys'):
     
         print ('      assembling *.dfl file')
         start_time = time.time()
-        assemble(out_file+'.dfl',tailappend=1,ram=ram)
+        assemble(out_file+'.dfl',tailappend=dfl_slipage_incl,ram=ram)
         print ('        done in %.2f seconds' % (time.time() - start_time))
         
         print ('      assembling *.dpa file')

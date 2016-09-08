@@ -1011,15 +1011,10 @@ def dpa2dist(out,dpa=None,num_part=1e5,smear=0,debug=False):
     if dpa.__class__!=GenesisParticles:
         print('   could not read particle file')
     
-    # print dpa.e.shape
-    #start_time = time.time()
-    #for i in range(100):
+
     m=np.arange(nslice)
     m=np.tile(m,(nbins,npart/nbins,1))
     m=np.rollaxis(m,2,0)
-    # m=np.broadcast_to(m,[nbins,npart/nbins,nslice])
-    # m=np.rollaxis(m,2,0)
-    #print("--- Create matrix - %s seconds ---" % (time.time() - start_time))
     if smear:
         dpa.z=dpa.ph*xlamds/2/pi+m*xlamds*zsep+xlamds*zsep*(1-np.random.random((nslice, nbins,npart/nbins)))
     else:
@@ -1028,28 +1023,22 @@ def dpa2dist(out,dpa=None,num_part=1e5,smear=0,debug=False):
     dpa.t=np.array(dpa.z/speed_of_light)
     
     t_scale=np.linspace(0,nslice*zsep*xlamds/speed_of_light*1e15,nslice)
-    # print 'range_t_scale', np.amin(t_scale), np.amax(t_scale)
-    # print 'range_gen_t', np.amin(gen_t), np.amax(gen_t)
+
     pick_n=np.interp(t_scale,gen_t,gen_I)
-    # plt.plot(gen_t,gen_I)
-    # plt.show()
-    
+    # print('max pick_n='+str(max(pick_n)))
+    # print('npart='+str(npart))
+    # print('_____________________')
     if max(pick_n)>npart:
-        pick_n=(pick_n/max(pick_n)*npart).astype(int) 
-    else:
-        pick_n=(pick_n/np.sum(pick_n)*num_part).astype(int)
-    
-    if debug: print(pick_n)
-    # print sum(pick_n)
-    # result_filesize=sum(pick_n)
-    # t_out=[]
-    # e_out=[]
-    # x_out=[]
-    # y_out=[]
-    # px_out=[]
-    # py_out=[]
-    # print 'max_par.t', np.amax(dpa.t)
-    # print 'dpa.e', np.amax(dpa.e),np.amin(dpa.e)
+        pick_n=pick_n/max(pick_n)*npart
+    pick_n=pick_n.astype(int)
+    ratio=ceil(num_part/np.sum(pick_n))
+    # print('pick_n='+str(pick_n))
+    # print('max pick_n='+str(max(pick_n)))
+    # print('npart='+str(npart))
+    # print('ratio='+str(ratio))
+    # print('_____________________')
+    # if debug: print(pick_n)
+ 
     dpa.t=np.reshape(dpa.t,(nslice,npart))
     dpa.e=np.reshape(dpa.e,(nslice,npart))
     dpa.x=np.reshape(dpa.x,(nslice,npart))
@@ -1057,21 +1046,20 @@ def dpa2dist(out,dpa=None,num_part=1e5,smear=0,debug=False):
     dpa.px=np.reshape(dpa.px,(nslice,npart))
     dpa.py=np.reshape(dpa.py,(nslice,npart))
     # print dpa.t.shape
-    
     # print dpa.t.shape
     # print 'max_par.t', np.amax(dpa.t)
     # print 'dpa.e', np.amax(dpa.e),np.amin(dpa.e)
     
     dist=GenesisParticlesDist()
-    
     for i in arange(nslice):
-        pick_i=random.sample(arange(npart),pick_n[i])
-        dist.t=append(dist.t,dpa.t[i,pick_i])
-        dist.e=append(dist.e,dpa.e[i,pick_i])
-        dist.x=append(dist.x,dpa.x[i,pick_i])
-        dist.y=append(dist.y,dpa.y[i,pick_i])
-        dist.px=append(dist.px,dpa.px[i,pick_i])
-        dist.py=append(dist.py,dpa.py[i,pick_i])
+        for ii in arange(int(ratio)):
+            pick_i=random.sample(arange(npart),pick_n[i])
+            dist.t=append(dist.t,dpa.t[i,pick_i])
+            dist.e=append(dist.e,dpa.e[i,pick_i])
+            dist.x=append(dist.x,dpa.x[i,pick_i])
+            dist.y=append(dist.y,dpa.y[i,pick_i])
+            dist.px=append(dist.px,dpa.px[i,pick_i])
+            dist.py=append(dist.py,dpa.py[i,pick_i])
         
     dist.t=dist.t*(-1)+max(dist.t)
     dist.px=dist.px/dist.e
@@ -1084,11 +1072,15 @@ def dpa2dist(out,dpa=None,num_part=1e5,smear=0,debug=False):
     dist.t = flipud(dist.t)
     dist.e = flipud(dist.e)
     
+    # plt.figure()
+    # plt.hist((dist.t*1e15).flatten(),bins=100)
+    # plt.plot(gen_t,gen_I/2)
+    # plt.show()
+    
     dist.charge=out.beam_charge
     dist.filename='from dpa'
     # print 'max_y_out', np.amax(t_out)
     # print 'e_out', np.amax(e_out),np.amin(e_out)
-    
     
     return dist
     
@@ -1696,7 +1688,7 @@ def adapt_rad_file(beam = None, rad_file = None, out_file='tmp.rad'):
 def transform_beam_file(beam_file = None, out_file='tmp.beam', transform = [ [25.0,0.1], [21.0, -0.1] ], energy_scale=1, energy_new = None, emit_scale = 1, n_interp = None):
     if beam_file.__class__==str:
         beam = read_beam_file(beam_file)
-    elif beam_file.__class__==GenesisBeamDefinition:
+    elif beam_file.__class__==GenesisBeamDefinition or beam_file.__class__==Beam:
         beam=beam_file
     else:
         print('Wrong beam input!')

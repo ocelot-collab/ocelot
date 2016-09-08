@@ -541,7 +541,7 @@ def update_beam_2(beam_new, g, n_interp):
     beam = deepcopy(beam_new)
     # g0 = np.array(map(lambda x : g.sliceValues[x]['energy'][-1], xrange(1,g.nSlices+1)) )
     # dg = np.array(map(lambda x : g.sliceValues[x]['e-spread'][-1], xrange(1,g.nSlices+1)) )
-    g0=g.el_energy[:,-1] * (0.511e-3)
+    g0=g.el_energy[:,-1]# * (0.511e-3)
     dg=g.el_e_spread[:,-1]
     
     print len(g0)
@@ -578,6 +578,11 @@ def update_beam_2(beam_new, g, n_interp):
     beam_new.ey = np.interp(beam_new.z, beam.z, beam.ey) 
     beam_new.zsep = beam.zsep * len(beam.z) / len(beam_new.z)
     #beam_new.g0 = np.interp(beam_new.z, beam.z, beam.g0) 
+    # print ("_______________________________")
+    # print (g0)
+    # print(beam.E)
+    # print(beam.E/(0.511e-3))
+    # print ("_______________________________")
     beam_new.g0 = g0 + beam.E/(0.511e-3) #potential problem here, no beam.gamma_rel
     print len(beam_new.z)
     print len(beam_new.g0)

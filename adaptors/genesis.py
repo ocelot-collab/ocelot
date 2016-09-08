@@ -433,6 +433,9 @@ class GenesisParticlesDist: # Genesis electron beam distribution *.dat files sto
         self.charge=[]
         
         self.filename = ''
+        
+    def len(self):
+        return len(self.t)
 
         
 class GenesisBeamDefinition(): # Genesis analytical radiation input files storage object?
@@ -441,46 +444,32 @@ class GenesisBeamDefinition(): # Genesis analytical radiation input files storag
         self.columns=[]
         self.column_values={}
 
-class OcelotCoherentRadiation(): #3d or 2d coherent radiation distribution, *.fld variable is the same as Genesis dfl structure
-    
+class RadiationField(): #3d or 2d coherent radiation distribution, *.fld variable is the same as Genesis dfl structure     
     def __init__(self):
         self.fld=np.array([]) #(z,y,x)
-        self.leng_x=[]
-        self.leng_y=[]
-        self.leng_z=[]
+        self.Lx=[]  #full transverse mesh size, 2*dgrid 
+        self.Ly=[]  #full transverse mesh size, 2*dgrid 
+        self.Lz=[]  #full longitudinal mesh size, nslice*zsep*xlamds 
         self.xlamds=0 #wavelength, [nm]
         self.l_domain='t' #longitudinal domain (t - time, f - frequency)
-        self.tr_domain='s' #transverse domain (s - space, k - inverse space)
-    
-    def Nz(self):
-        return shape(self.fld)[0]
-    def Ny(self):
-        return shape(self.fld)[1]
-    def Nx(self):
-        return shape(self.fld)[2]
-    
-    def __call__(self):
-        return self.fld
-
+        self.tr_domain='s' #transverse domain (s - space, k - inverse space)\ 
+        self.filename=''
         
-# class GenesisOutParm():
-#
-#     def __init__(self):
-#         self.v=[]
-#         self.mean_S=[]
-#         #self.mean_Z=[]
-#         self.max_S=[]
-#         #self.max_Z=[]
-#         self.end_Z=[]
-#
-#     def scan(self,value):
-#         g=GenesisOutParm()
-#         g.v=np.array(value)
-#         g.mean_S=np.mean(g.v,axis=0)
-#         #g.mean_Z=np.mean(g.v,axis=1)
-#         g.end_Z=g.v[:,-1]
-#         g.max_S=np.amax(g.v,axis=0)
-#         return g
+    def shape(self): 
+        return shape(self.fld) 
+    def Nz(self): 
+        return shape(self.fld)[0] 
+    def Ny(self): 
+        return shape(self.fld)[1] 
+    def Nx(self): 
+        return shape(self.fld)[2] 
+    def I(self): 
+        return abs(self.fld)**2 
+    def E(self): 
+        if self.Nz()>1: 
+            return np.sum(self.I())*self.Lz/self.Nz()/speed_of_light 
+        else: 
+            return self.I()
 
 
 
@@ -494,7 +483,7 @@ def read_particle_file(file_name, nbins=4, npart=[],debug=0):
     
     start_time = time.time()
     b=np.fromfile(file_name,dtype=float)
-    if debug: print("     read Particles in %s sec" % (time.time() - start_time))
+    # if debug: print("     read Particles in %s sec" % (time.time() - start_time))
 #    print 'b', b.shape
     nslice=int(len(b)/npart/6)
     nbins=int(nbins)
@@ -512,6 +501,9 @@ def read_particle_file(file_name, nbins=4, npart=[],debug=0):
     particles.px=b[:,4,:,:]
     particles.py=b[:,5,:,:]
     particles.filename=file_name
+    
+    if debug: print('      done in %s sec' % (time.time() - start_time)) 
+    
     return particles
 
 
@@ -796,6 +788,111 @@ def writeRadiationFile_mpi(comm, filename, slices, shape):
         cmd = cmd + ' ; ' + cmd2
         print cmd
         os.system(cmd)
+        
+def rad_interp(F,interpN=(1,1),interpL=(1,1),newN=(None,None),newL=(None,None),method='cubic',debug=0): 
+    ''' 
+    2d interpolation of the coherent radiation distribution 
+    interpN and interpL define the desired interpolation coefficients for  
+    transverse point density and transverse mesh sizes correspondingly 
+    newN and newL define the final desire number of points and size of the mesh 
+    when newN and newL are not None interpN and interpL values are ignored 
+    coordinate convention is (x,y) 
+    ''' 
+    from scipy.interpolate import interp2d 
+         
+    if debug: print ('    interpolating radiation file' ) 
+    start_time = time.time() 
+     
+    # in case if interpolation is the same in toth dimentions 
+    if size(interpN)==1: 
+        interpN=(interpN,interpN) 
+    if size(interpL)==1: 
+        interpL=(interpL,interpL) 
+    if size(newN)==1: 
+        newN=(newN,newN) 
+    if size(newL)==1: 
+        newL=(newL,newL) 
+     
+    if interpN==(1,1) and interpL==(1,1) and newN==(None,None) and newL==(None,None): 
+        return F 
+        print('no interpolation required, returning original') 
+         
+    # calculate new mesh parameters only if not defined explicvitly 
+    if newN==(None,None) and newL==(None,None): 
+        interpNx=interpN[0] 
+        interpNy=interpN[1] 
+        interpLx=interpL[0] 
+        interpLy=interpL[1] 
+     
+        if interpNx==0 or interpLx==0 or interpNy==0 or interpLy==0: 
+            print('interpolation values cannot be 0') 
+            return None 
+            # place exception 
+        elif interpNx==1 and interpLx==1 and interpNy==1 and interpLy==1: 
+            return F 
+            print('no interpolation required, returning original') 
+        else: 
+            Nx2=int(F.Nx()*interpNx*interpLx) 
+            if Nx2%2==0: 
+                Nx2+=1 
+            Ny2=int(F.Ny()*interpNy*interpLy) 
+            if Ny2%2==0: 
+                Ny2+=1 
+     
+            Lx2=F.Lx*interpLx 
+            Ly2=F.Ly*interpLy 
+     
+    else: 
+        #redo to maintain mesh density 
+        if newN[0] != None:  
+            Nx2=newN[0]  
+        else: Nx2=F.Nx() 
+         
+        if newN[1] != None:  
+            Ny2=newN[1]  
+        else: Ny2=F.Ny() 
+     
+        if newL[0] != None:  
+            Lx2=newL[0]  
+        else: Lx2=F.Lx 
+     
+        if newL[1] != None:  
+            Ly2=newL[1]  
+        else: Ly2=F.Ly 
+     
+    xscale1=np.linspace(-F.Lx/2, F.Lx/2, F.Nx()) 
+    yscale1=np.linspace(-F.Ly/2, F.Ly/2, F.Ny())     
+    xscale2=np.linspace(-Lx2/2, Lx2/2, Nx2) 
+    yscale2=np.linspace(-Ly2/2, Ly2/2, Ny2) 
+ 
+    ix_min=np.where(xscale1>=xscale2[0])[0][0] 
+    ix_max=np.where(xscale1<=xscale2[-1])[-1][-1] 
+    iy_min=np.where(yscale1>=yscale2[0])[0][0] 
+    iy_max=np.where(yscale1<=yscale2[-1])[-1][-1] 
+    if debug: print('      energy before interpolation '+ str (F.E())) 
+    #interp_func = rgi((zscale1,yscale1,xscale1), F.fld, fill_value=0, bounds_error=False, method='nearest') 
+    fld2=[] 
+    for fslice in F.fld: 
+        re_func=interp2d(xscale1,yscale1,real(fslice), fill_value=0, bounds_error=False, kind=method) 
+        im_func=interp2d(xscale1,yscale1,imag(fslice), fill_value=0, bounds_error=False, kind=method) 
+        fslice2=re_func(xscale2,yscale2)+1j*im_func(xscale2,yscale2) 
+        P1=sum(abs(fslice[iy_min:iy_max,ix_min:ix_max])**2) 
+        P2=sum(abs(fslice2)**2) 
+        fslice2=fslice2*sqrt(P1/P2) 
+        fld2.append(fslice2) 
+     
+    F2=RadiationField() 
+    F2.fld=np.array(fld2) 
+    F2.Lx=Lx2 
+    F2.Ly=Ly2 
+    F2.Lz=F.Lz 
+    F2.l_domain=F.l_domain 
+    F2.tr_domain=F.tr_domain 
+    F2.xlamds=F.xlamds 
+    if debug: print('      energy after interpolation '+ str (F2.E())) 
+    if debug: print('      done in %s sec' % (time.time() - start_time)) 
+         
+    return F2 
 
 
 def readGenesisOutput(fileName, readall=True, debug=False, precision=float):
@@ -905,13 +1002,17 @@ def readGenesisOutput(fileName, readall=True, debug=False, precision=float):
         #raise
         print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
         print('.out is empty')
-    
+        
+    if (out.n[-1]-out.n[0]+1) != len(out.n):
+        #raise
+        print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        print('.out is missing at least '+str((out.n[-1]-out.n[0]+1)-len(out.n))+' slices')
+        
     if readall:
         output_unsorted=np.array(output_unsorted)#.astype(precision)
         # print out.sliceKeys
         for i in range(len(out.sliceKeys)):
             # print (out.sliceKeys)
-            print (out.sliceKeys[int(i)])
             # print ()
             # exec('out.'+out.sliceKeys[i].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(out.nSlices)+','+str(out.nZ)+'))')
             # exec('out.'+out.sliceKeys[int(i)].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(int(out('history_records')))+','+str(int(out('entries_per_record')))+'))')
@@ -1079,7 +1180,7 @@ def dpa2dist(out,dpa=None,num_part=1e5,smear=0,debug=False):
             dist.y=append(dist.y,dpa.y[i,pick_i])
             dist.px=append(dist.px,dpa.px[i,pick_i])
             dist.py=append(dist.py,dpa.py[i,pick_i])
-        
+    
     dist.t=dist.t*(-1)+max(dist.t)
     dist.px=dist.px/dist.e
     dist.py=dist.py/dist.e
@@ -1111,7 +1212,6 @@ def write_dist_file (dist,file_name):
     # np.savetxt(file_name_write, np.c_[dist.x,dist.px,dist.y,dist.py,dist.t,dist.e],header=header,fmt="%E", newline='\n',comments='')
 
     header='? VERSION = 1.0 \n? SIZE = %s \n? CHARGE = %E \n? COLUMNS X XPRIME Y YPRIME T P\n'%(len(dist.x),dist.charge)
-    # header='? VERSION = 1.0 \n? CHARGE = %E \n? COLUMNS X XPRIME Y YPRIME T P  \n'%(dist.charge)
     f = file(file_name,'w')
     f.write(header)
     f.close()
@@ -1120,7 +1220,7 @@ def write_dist_file (dist,file_name):
     f.close()
 
     
-def read_dist_file(fileName):
+def read_dist_file(fileName,debug=0):
     
     dist = GenesisParticlesDist()
     dist.filename=fileName
@@ -1141,7 +1241,7 @@ def read_dist_file(fileName):
             dist_columns = tokens[2:]
             for col in dist_columns:
                 dist_column_values[col] = []
-            print dist_columns
+            if debug: print(dist_columns)
  
         if tokens[0] != "?":
             for i in range(0,len(tokens)):
@@ -1163,6 +1263,33 @@ def read_dist_file(fileName):
     
     return dist
     
+
+def cut_dist(dist, 
+            t_lim=(-inf,inf),
+            e_lim=(-inf,inf),
+            x_lim=(-inf,inf),
+            px_lim=(-inf,inf),
+            y_lim=(-inf,inf),
+            py_lim=(-inf,inf)):
+                
+    index_t=logical_or(dist.t<t_lim[0], dist.t>t_lim[1])
+    index_e=logical_or(dist.e<e_lim[0], dist.e>e_lim[1])
+    index_x=logical_or(dist.x<x_lim[0], dist.x>x_lim[1])
+    index_y=logical_or(dist.y<y_lim[0], dist.y>y_lim[1])
+    index_px=logical_or(dist.px<px_lim[0], dist.px>px_lim[1])
+    index_py=logical_or(dist.py<py_lim[0], dist.py>py_lim[1])
+    
+    index=np.logical_or.reduce((index_t,index_e,index_x,index_y,index_px,index_py))
+    index=np.where(index)
+
+    dist_f=deepcopy(dist)
+    
+    for parm in ['t','e','px','py','x','y']:
+        if hasattr(dist_f,parm):
+            setattr(dist_f,parm,np.delete(getattr(dist_f,parm),index))
+    
+    return dist_f
+
 
 def getAverageUndulatorParameter(lattice, unit=1.0, energy = 17.5):
     positions = sorted(lattice.lattice.keys())

@@ -1724,7 +1724,7 @@ def plot_dpa(out, dpa=None, z=[], figsize=3, legend = True, fig_name = None, aut
 
     plt.scatter(dpa.ph[nslice,1,:],dpa.e[nslice,1,:])
 
-def plot_dist(dist, z=[], figsize=3, fig_name = None, savefig=False, showfig=False, scatter=False, plot_x_y=True, plot_xy_s=True, bins=50, vartype_dfl=complex64):
+def plot_dist(dist, figsize=3, fig_name = None, savefig=False, showfig=False, scatter=False, plot_x_y=True, plot_xy_s=True, bins=50, vartype_dfl=complex64):
     
     print('    plotting dist file')
     start_time = time.time()

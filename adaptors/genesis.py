@@ -441,36 +441,47 @@ class GenesisBeamDefinition(): # Genesis analytical radiation input files storag
         self.columns=[]
         self.column_values={}
 
-class RadiationField(): #3d or 2d coherent radiation distribution, *.fld variable is the same as Genesis dfl structure
+class OcelotCoherentRadiation(): #3d or 2d coherent radiation distribution, *.fld variable is the same as Genesis dfl structure
     
     def __init__(self):
         self.fld=np.array([]) #(z,y,x)
-        self.Lx=[]  #full transverse mesh size, 2*dgrid
-        self.Ly=[]  #full transverse mesh size, 2*dgrid
-        self.Lz=[]  #full longitudinal mesh size, nslice*zsep*xlamds
+        self.leng_x=[]
+        self.leng_y=[]
+        self.leng_z=[]
         self.xlamds=0 #wavelength, [nm]
         self.l_domain='t' #longitudinal domain (t - time, f - frequency)
-        self.tr_domain='s' #transverse domain (s - space, k - inverse space)\
-        self.filename=''
+        self.tr_domain='s' #transverse domain (s - space, k - inverse space)
     
-    def shape(self):
-        return shape(self.fld)
     def Nz(self):
         return shape(self.fld)[0]
     def Ny(self):
         return shape(self.fld)[1]
     def Nx(self):
         return shape(self.fld)[2]
-    def I(self):
-        return abs(self.fld)**2
-    def E(self):
-        if self.Nz()>1:
-            return np.sum(self.I())*self.Lz/self.Nz()/speed_of_light
-        else:
-            return self.I()
-                
-
     
+    def __call__(self):
+        return self.fld
+
+        
+# class GenesisOutParm():
+#
+#     def __init__(self):
+#         self.v=[]
+#         self.mean_S=[]
+#         #self.mean_Z=[]
+#         self.max_S=[]
+#         #self.max_Z=[]
+#         self.end_Z=[]
+#
+#     def scan(self,value):
+#         g=GenesisOutParm()
+#         g.v=np.array(value)
+#         g.mean_S=np.mean(g.v,axis=0)
+#         #g.mean_Z=np.mean(g.v,axis=1)
+#         g.end_Z=g.v[:,-1]
+#         g.max_S=np.amax(g.v,axis=0)
+#         return g
+
 
 
 ''' 
@@ -483,7 +494,7 @@ def read_particle_file(file_name, nbins=4, npart=[],debug=0):
     
     start_time = time.time()
     b=np.fromfile(file_name,dtype=float)
-
+    if debug: print("     read Particles in %s sec" % (time.time() - start_time))
 #    print 'b', b.shape
     nslice=int(len(b)/npart/6)
     nbins=int(nbins)
@@ -501,9 +512,6 @@ def read_particle_file(file_name, nbins=4, npart=[],debug=0):
     particles.px=b[:,4,:,:]
     particles.py=b[:,5,:,:]
     particles.filename=file_name
-    
-    if debug: print('      done in %s sec' % (time.time() - start_time))
-        
     return particles
 
 
@@ -788,111 +796,6 @@ def writeRadiationFile_mpi(comm, filename, slices, shape):
         cmd = cmd + ' ; ' + cmd2
         print cmd
         os.system(cmd)
-        
-def rad_interp(F,interpN=(1,1),interpL=(1,1),newN=(None,None),newL=(None,None),method='cubic',debug=0):
-    '''
-    2d interpolation of the coherent radiation distribution
-    interpN and interpL define the desired interpolation coefficients for 
-    transverse point density and transverse mesh sizes correspondingly
-    newN and newL define the final desire number of points and size of the mesh
-    when newN and newL are not None interpN and interpL values are ignored
-    coordinate convention is (x,y)
-    '''
-    from scipy.interpolate import interp2d
-        
-    if debug: print ('    interpolating radiation file' )
-    start_time = time.time()
-    
-    # in case if interpolation is the same in toth dimentions
-    if size(interpN)==1:
-        interpN=(interpN,interpN)
-    if size(interpL)==1:
-        interpL=(interpL,interpL)
-    if size(newN)==1:
-        newN=(newN,newN)
-    if size(newL)==1:
-        newL=(newL,newL)
-    
-    if interpN==(1,1) and interpL==(1,1) and newN==(None,None) and newL==(None,None):
-        return F
-        print('no interpolation required, returning original')
-        
-    # calculate new mesh parameters only if not defined explicvitly
-    if newN==(None,None) and newL==(None,None):
-        interpNx=interpN[0]
-        interpNy=interpN[1]
-        interpLx=interpL[0]
-        interpLy=interpL[1]
-    
-        if interpNx==0 or interpLx==0 or interpNy==0 or interpLy==0:
-            print('interpolation values cannot be 0')
-            return None
-            # place exception
-        elif interpNx==1 and interpLx==1 and interpNy==1 and interpLy==1:
-            return F
-            print('no interpolation required, returning original')
-        else:
-            Nx2=int(F.Nx()*interpNx*interpLx)
-            if Nx2%2==0:
-                Nx2+=1
-            Ny2=int(F.Ny()*interpNy*interpLy)
-            if Ny2%2==0:
-                Ny2+=1
-    
-            Lx2=F.Lx*interpLx
-            Ly2=F.Ly*interpLy
-    
-    else:
-        #redo to maintain mesh density
-        if newN[0] != None: 
-            Nx2=newN[0] 
-        else: Nx2=F.Nx()
-        
-        if newN[1] != None: 
-            Ny2=newN[1] 
-        else: Ny2=F.Ny()
-    
-        if newL[0] != None: 
-            Lx2=newL[0] 
-        else: Lx2=F.Lx
-    
-        if newL[1] != None: 
-            Ly2=newL[1] 
-        else: Ly2=F.Ly
-    
-    xscale1=np.linspace(-F.Lx/2, F.Lx/2, F.Nx())
-    yscale1=np.linspace(-F.Ly/2, F.Ly/2, F.Ny())    
-    xscale2=np.linspace(-Lx2/2, Lx2/2, Nx2)
-    yscale2=np.linspace(-Ly2/2, Ly2/2, Ny2)
-
-    ix_min=np.where(xscale1>=xscale2[0])[0][0]
-    ix_max=np.where(xscale1<=xscale2[-1])[-1][-1]
-    iy_min=np.where(yscale1>=yscale2[0])[0][0]
-    iy_max=np.where(yscale1<=yscale2[-1])[-1][-1]
-    if debug: print('      energy before interpolation '+ str (F.E()))
-    #interp_func = rgi((zscale1,yscale1,xscale1), F.fld, fill_value=0, bounds_error=False, method='nearest')
-    fld2=[]
-    for fslice in F.fld:
-        re_func=interp2d(xscale1,yscale1,real(fslice), fill_value=0, bounds_error=False, kind=method)
-        im_func=interp2d(xscale1,yscale1,imag(fslice), fill_value=0, bounds_error=False, kind=method)
-        fslice2=re_func(xscale2,yscale2)+1j*im_func(xscale2,yscale2)
-        P1=sum(abs(fslice[iy_min:iy_max,ix_min:ix_max])**2)
-        P2=sum(abs(fslice2)**2)
-        fslice2=fslice2*sqrt(P1/P2)
-        fld2.append(fslice2)
-    
-    F2=RadiationField()
-    F2.fld=np.array(fld2)
-    F2.Lx=Lx2
-    F2.Ly=Ly2
-    F2.Lz=F.Lz
-    F2.l_domain=F.l_domain
-    F2.tr_domain=F.tr_domain
-    F2.xlamds=F.xlamds
-    if debug: print('      energy after interpolation '+ str (F2.E()))
-    if debug: print('      done in %s sec' % (time.time() - start_time))
-        
-    return F2
 
 
 def readGenesisOutput(fileName, readall=True, debug=False, precision=float):
@@ -986,23 +889,41 @@ def readGenesisOutput(fileName, readall=True, debug=False, precision=float):
     for parm in ['z', 'aw', 'qfld', 'I', 'n']:
         exec('out.'+parm+' = np.array(out.'+parm+')')
     
+    
+    out.nSlices = len(out.n)
+    # int(out('history_records'))#number of slices in the output
+    # print(nSlice)
+    # print(out.nSlices)
+    # if out.nSlices
+    out.nZ = int(out('entries_per_record'))#number of records along the undulator
+    out.ncar=int(out('ncar')) #number of mesh points
+    
+    if debug: print ('        nSlice '+ str(out.nSlices))
+    if debug: print ('        nZ '+ str(out.nZ))
+    
+    if nSlice==0:
+        #raise
+        print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        print('.out is empty')
+    
     if readall:
         output_unsorted=np.array(output_unsorted)#.astype(precision)
         # print out.sliceKeys
         for i in range(len(out.sliceKeys)):
-            #exec('out.'+out.sliceKeys[i].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(out.nSlices)+','+str(len(out.z))+'))')
-            exec('out.'+out.sliceKeys[int(i)].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(int(out('history_records')))+','+str(int(out('entries_per_record')))+'))')
+            # print (out.sliceKeys)
+            print (out.sliceKeys[int(i)])
+            # print ()
+            # exec('out.'+out.sliceKeys[i].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(out.nSlices)+','+str(out.nZ)+'))')
+            # exec('out.'+out.sliceKeys[int(i)].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(int(out('history_records')))+','+str(int(out('entries_per_record')))+'))')
+            exec('out.'+out.sliceKeys[int(i)].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(int(out.nSlices))+','+str(int(out.nZ))+'))')
         if hasattr(out,'energy'):
             out.energy+=out('gamma0')
         out.power_z=np.max(out.power,0)
         out.sliceKeys_used=out.sliceKeys
             
-    out.nSlices = int(out('history_records'))#number of slices in the output
-    out.nZ = int(out('entries_per_record'))#number of records along the undulator
-    out.ncar=int(out('ncar')) #number of mesh points
 
-    if debug: print ('        nSlice '+ str(out.nSlices))
-    if debug: print ('        nZ '+ str(out.nZ))
+
+
 
     if out('dgrid')==0:
         rbeam=sqrt(out('rxbeam')**2+out('rybeam')**2)
@@ -1112,6 +1033,7 @@ def dpa2dist(out,dpa=None,num_part=1e5,smear=0,debug=False):
     m=np.arange(nslice)
     m=np.tile(m,(nbins,npart/nbins,1))
     m=np.rollaxis(m,2,0)
+    # print('shape_m='+str(shape(m)))
     if smear:
         dpa.z=dpa.ph*xlamds/2/pi+m*xlamds*zsep+xlamds*zsep*(1-np.random.random((nslice, nbins,npart/nbins)))
     else:
@@ -1175,7 +1097,8 @@ def dpa2dist(out,dpa=None,num_part=1e5,smear=0,debug=False):
     # plt.show()
     
     dist.charge=out.beam_charge
-    dist.filename='from dpa'
+    dist.filename=out.filename+'_calc'
+    dist.path=out.path+'_calc'
     # print 'max_y_out', np.amax(t_out)
     # print 'e_out', np.amax(e_out),np.amin(e_out)
     
@@ -1188,7 +1111,7 @@ def write_dist_file (dist,file_name):
     # np.savetxt(file_name_write, np.c_[dist.x,dist.px,dist.y,dist.py,dist.t,dist.e],header=header,fmt="%E", newline='\n',comments='')
 
     header='? VERSION = 1.0 \n? SIZE = %s \n? CHARGE = %E \n? COLUMNS X XPRIME Y YPRIME T P\n'%(len(dist.x),dist.charge)
-    header='? VERSION = 1.0 \n? CHARGE = %E \n? COLUMNS X XPRIME Y YPRIME T P  \n'%(dist.charge)
+    # header='? VERSION = 1.0 \n? CHARGE = %E \n? COLUMNS X XPRIME Y YPRIME T P  \n'%(dist.charge)
     f = file(file_name,'w')
     f.write(header)
     f.close()

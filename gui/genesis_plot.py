@@ -1724,7 +1724,7 @@ def plot_dpa(out, dpa=None, z=[], figsize=3, legend = True, fig_name = None, aut
 
     plt.scatter(dpa.ph[nslice,1,:],dpa.e[nslice,1,:])
 
-def plot_dist(dist, z=[], figsize=3, fig_name = None, savefig=False, showfig=False, scatter=False, plot_x_y=True, plot_xy_s=True, bins=100, vartype_dfl=complex64):
+def plot_dist(dist, z=[], figsize=3, fig_name = None, savefig=False, showfig=False, scatter=False, plot_x_y=True, plot_xy_s=True, bins=50, vartype_dfl=complex64):
     
     print('    plotting dist file')
     start_time = time.time()
@@ -1772,22 +1772,17 @@ def plot_dist(dist, z=[], figsize=3, fig_name = None, savefig=False, showfig=Fal
         else: ax_pxpy.hist2d(dist.px*1e6, dist.py*1e6, bins)
         ax_pxpy.set_xlabel('px, []')
         ax_pxpy.set_ylabel('py, []')
-    # plt.figure('Time - Enenrgy')
-    # plt.figure(40000)
-# #    plt.clf()
-    # plt.hist(dist.t, bins)
-    # plt.figure(40001)
-# #    plt.clf()
-    # plt.hist2d(dist.t, dist.e, bins)
-    # # plt.figure('Time - X')
-    # plt.figure(40002)
-    # plt.hist2d(dist.t, dist.x, bins)
-    # # plt.figure('X - Y')
-    # plt.figure(40003)
-    # plt.hist2d(dist.x, dist.y, bins)
-    # # plt.figure('X - pX')
-    # plt.figure(40004)
-    # plt.hist2d(dist.x, dist.px, bins)
+        
+    if scatter:
+        ax_curr.set_xlim([np.amin(s),np.amax(s)])
+    
+    if savefig!=False:
+        if savefig==True:
+            savefig='png'
+        print('      saving '+dist.filename+'_dist.'+savefig)
+        plt.savefig(dist.path+'_dist.'+savefig,format=savefig)
+        
+    
     if showfig: plt.show()
 
     

@@ -51,7 +51,7 @@ def s2current(s_array, q_array, n_points, filter_order, mean_vel):
     """
     s0 = np.min(s_array)
     s1 = np.max(s_array)
-    NF2 = int(np.floor(filter_order / 2))
+    NF2 = int(np.floor(filter_order / 2.))
     n_points = n_points + 2 * NF2
     Np = s_array.shape[0]
     ds = (s1 - s0) / (n_points - 2 - 2 * NF2)
@@ -188,9 +188,9 @@ class Wake():
             d1_bunch=Der(x,bunch)
         nb=x.shape[0]
         W=np.zeros(nb)
-        if N0>0:
+        if N0 > 0:
             x, ww = self.wake_convolution(x, bunch, W0[:, 0], W0[:, 1])
-            W=W-ww[0:nb]/c
+            W = W-ww[0:nb]/c
         if N1>0:
             x, ww = self.wake_convolution(x, d1_bunch, W1[:, 0], W1[:, 1])
             W = W - ww[0:nb]
@@ -199,7 +199,7 @@ class Wake():
         if L != 0:
             W = W-d1_bunch*L*c
         if Cinv != 0:
-          int_bunch = Int1(x,bunch)
+          int_bunch = Int1(x, bunch)
           W = W - int_bunch*Cinv/c
         return x, W
 
@@ -209,9 +209,9 @@ class Wake():
         c = speed_of_light
         #Z=-Z
         Np=X.shape[0]
-        X2=X**2
-        Y2=Y**2
-        XY=X*Y
+        X2 = X**2
+        Y2 = Y**2
+        XY = X*Y
         #generalized currents;
         I00 = s2current(Z, q, Ns, NF, c)
         Nw=I00.shape[0]
@@ -230,7 +230,7 @@ class Wake():
         #longitudinal wake
         #mn=0
         x, Wz = self.add_wake (I00, T[int(H[0, 0])])
-        if H[0,1]>0:
+        if H[0, 1] > 0:
             x, w = self.add_wake(I10, T[int(H[0, 1])])
             Wz = Wz+w
         if H[0,2]>0:

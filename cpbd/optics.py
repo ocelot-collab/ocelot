@@ -495,7 +495,7 @@ class SecondTM(TransferMap):
                   T[3, 3, 5] * pydp
 
         X[4::6] = Xr[4::6] + T[4, 0, 0] * x2 + T[4, 0, 1] * xpx + T[4, 0, 5] * xdp + T[4, 1, 1] * px2 + T[4, 1, 5] * pxdp + \
-                  T[4, 5, 5] * dp2 + T[4, 2, 2] * y2 + T[4, 2, 3] * ypy + T[4, 3, 3] * py2 # + U5666*dp2*dp    # third order
+                  T[4, 5, 5] * dp2 + T[4, 2, 2] * y2 + T[4, 2, 3] * ypy + T[4, 3, 3] * py2 #+ U5666*dp2*dp    # third order
         # X[:] = Xr[:] + Xt[:]
 
         if dx != 0 or dy != 0 or tilt != 0:

@@ -24,7 +24,8 @@ class Graph():
        self.fig, self.ax = plt.subplots()
        self.lineF, = self.ax.plot(self.x, self.y, 'ro', ms=3)
        self.lineND, = self.ax.plot(self.xnd, self.ynd, 'bo', ms=4, alpha=0.75)
-       
+       self.ax.set_xlabel("f1")
+       self.ax.set_xlabel("f2")
        self.ax.grid(True)
 
        self.update_time = 1000

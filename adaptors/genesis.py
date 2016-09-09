@@ -695,24 +695,24 @@ def readRadiationFile_mpi(comm=None, fileName='simulation.gout.dfl', npoints=51)
     return slices
 
 
-def writeRadiationFile(filename,rad):
+def writeRadiationFile(filename,fld):
     print ('    writing radiation file') 
     #a new backward compatible version ~10x faster
 #    print '        - writing to ', filename
-    d=rad.flatten()
+    d=fld.flatten()
     d.tofile(filename,format='complex')
 
-    f=open(filename,'wb')  
-    n1, n2 = slices.shape[1], slices.shape[2]
-    for i1 in xrange(slices.shape[0]):
-        str_bin = ''
-        for i2 in xrange(n1):
-            for i3 in xrange(n2):
-                str_bin += struct.pack('d',slices[i1,i2,i3].real) 
-                str_bin += struct.pack('d',slices[i1,i2,i3].imag)
-        f.write(str_bin)
+    # f=open(filename,'wb')  
+    # n1, n2 = slices.shape[1], slices.shape[2]
+    # for i1 in xrange(slices.shape[0]):
+        # str_bin = ''
+        # for i2 in xrange(n1):
+            # for i3 in xrange(n2):
+                # str_bin += struct.pack('d',slices[i1,i2,i3].real) 
+                # str_bin += struct.pack('d',slices[i1,i2,i3].imag)
+        # f.write(str_bin)
 
-    f.close()
+    # f.close()
 
 
 def writeRadiationFile_mpi(comm, filename, slices, shape):
@@ -833,11 +833,11 @@ def rad_interp(F,interpN=(1,1),interpL=(1,1),newN=(None,None),newL=(None,None),m
             print('no interpolation required, returning original') 
         else: 
             Nx2=int(F.Nx()*interpNx*interpLx) 
-            if Nx2%2==0: 
-                Nx2+=1 
+            if Nx2%2==0 and Nx2>F.Nx(): Nx2-=1 
+            if Nx2%2==0 and Nx2<F.Nx(): Nx2+=1  
             Ny2=int(F.Ny()*interpNy*interpLy) 
-            if Ny2%2==0: 
-                Ny2+=1 
+            if Ny2%2==0 and Ny2>F.Ny(): Ny2-=1 
+            if Ny2%2==0 and Ny2<F.Ny(): Ny2+=1  
      
             Lx2=F.Lx*interpLx 
             Ly2=F.Ly*interpLy 

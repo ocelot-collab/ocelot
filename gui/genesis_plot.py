@@ -1571,7 +1571,10 @@ def gen_stat_plot(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
     if showfig:
         plt.show()
         
-    return fig
+    try:
+        return fig
+    except:
+        return 0
 
 
 def gen_corr_plot(proj_dir,run_inp=[],p1=(),p2=(),savefig=False, showfig=False, saveval=False):

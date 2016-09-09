@@ -376,8 +376,10 @@ class GenesisInput: # Genesis input files storage object
             return self.__dict__[name]
 
 
-class GenesisOutput: # Genesis output *.out files storage object
-    
+class GenesisOutput: 
+    '''
+    Genesis output *.out files storage object
+    '''
     def __init__(self):
         self.z = []
         self.I = []
@@ -391,23 +393,20 @@ class GenesisOutput: # Genesis output *.out files storage object
         self.sliceValues = {}
         
         self.parameters = {}
-        self.filename = ''
+        self.fileName = ''
     
     def __call__(self, name):
-        '''
-        if name not in self.__dict__.keys():
-            return 0
-        else:
-            return self.__dict__[name]
-        '''
+
         if name not in self.parameters.keys():
             return NaN
         else:
             p, = self.parameters[name]
             return float(p.replace('D','E'))
         
-class GenesisParticles: # Genesis particle *.dpa files storage object
-    
+class GenesisParticles: 
+    '''
+    Genesis particle *.dpa files storage object
+    '''
     def __init__(self):
         self.e = []
         self.ph = []
@@ -415,13 +414,15 @@ class GenesisParticles: # Genesis particle *.dpa files storage object
         self.y = []
         self.px = []
         self.py = []
-        # self.z = []
-        # self.t = []
 
-        self.filename = ''
+        self.fileName = ''
+        self.filePath = ''
         
-class GenesisParticlesDist: # Genesis electron beam distribution *.dat files storage object
-    #  GENESIS follows the rule that the longitudinal position is reversed if a time is specified by the T column. In this case smaller numbers correspond to particle in the tail of the distribution.
+class GenesisParticlesDist: 
+    '''
+    Genesis electron beam distribution *.dat files storage object
+    GENESIS follows the rule that the longitudinal position is reversed if a time is specified by the T column. In this case smaller numbers correspond to particle in the tail of the distribution.
+    '''
     def __init__(self):
     
         self.x = [] # position in x in meters
@@ -432,19 +433,32 @@ class GenesisParticlesDist: # Genesis electron beam distribution *.dat files sto
         self.e = [] # total energy, normalized mc2
         self.charge=[]
         
-        self.filename = ''
+        self.fileName = ''
+        self.filePath = ''
         
     def len(self):
         return len(self.t)
-
-        
-class GenesisBeamDefinition(): # Genesis analytical radiation input files storage object?
     
+class GenesisBeam(): 
+    '''
+    Genesis analytical radiation input files storage object?
+    '''
     def __init__(self):
         self.columns=[]
         self.column_values={}
 
-class RadiationField(): #3d or 2d coherent radiation distribution, *.fld variable is the same as Genesis dfl structure     
+class GenesisRad(): 
+    '''
+    Genesis analytical radiation input files storage object?
+    '''
+    def __init__(self):
+        self.columns=[]
+        self.column_values={}
+
+class RadiationField(): 
+    '''
+    3d or 2d coherent radiation distribution, *.fld variable is the same as Genesis dfl structure     
+    '''
     def __init__(self):
         self.fld=np.array([]) #(z,y,x)
         self.Lx=[]  #full transverse mesh size, 2*dgrid 
@@ -453,7 +467,8 @@ class RadiationField(): #3d or 2d coherent radiation distribution, *.fld variabl
         self.xlamds=0 #wavelength, [nm]
         self.l_domain='t' #longitudinal domain (t - time, f - frequency)
         self.tr_domain='s' #transverse domain (s - space, k - inverse space)\ 
-        self.filename=''
+        self.fileName=''
+        self.filePath=''
         
     def shape(self): 
         return shape(self.fld) 
@@ -471,437 +486,17 @@ class RadiationField(): #3d or 2d coherent radiation distribution, *.fld variabl
         else: 
             return self.I()
 
-
-
 ''' 
    I/O functions
 '''
 
-def read_particle_file(file_name, nbins=4, npart=[],debug=0):
-    if debug: print ('    reading praticle file' )
-    particles=GenesisParticles() 
-    
-    start_time = time.time()
-    b=np.fromfile(file_name,dtype=float)
-    # if debug: print("     read Particles in %s sec" % (time.time() - start_time))
-#    print 'b', b.shape
-    nslice=int(len(b)/npart/6)
-    nbins=int(nbins)
-    npart=int(npart)
-    if debug:
-        print ('        nslice'+str(nslice))
-        print ('        npart'+str(npart))
-        print ('        nbins'+str(nbins))
-#    print 'b=',nslice*npart*6
-    b=b.reshape(nslice,6,nbins,npart/nbins)    
-    particles.e=b[:,0,:,:] #gamma
-    particles.ph=b[:,1,:,:] 
-    particles.x=b[:,2,:,:]
-    particles.y=b[:,3,:,:]
-    particles.px=b[:,4,:,:]
-    particles.py=b[:,5,:,:]
-    particles.filename=file_name
-    
-    if debug: print('      done in %s sec' % (time.time() - start_time)) 
-    
-    return particles
 
-
-def read_rad_file(fileName):
-    beam = GenesisBeamDefinition()
-    
-    f=open(fileName,'r')
-    null=f.readline()
-    for line in f: 
-        tokens = line.strip().split()
-        
-        if len(tokens) < 2:
-            continue
-        
-        #print tokens[0:2]
-        
-        if tokens[0] == "?" and tokens[1] == "COLUMNS":
-            beam.columns = tokens[2:]
-            for col in beam.columns:
-                beam.column_values[col] = []
-                
-            print beam.columns
- 
-        if tokens[0] != "?":
-            #print tokens
-            for i in range(0,len(tokens)):
-                beam.column_values[beam.columns[i]].append( float (tokens[i]) )
-            
-    #print beam.columns
-
-    beam.z = beam.column_values['ZPOS']        
-    beam.prad0 = np.array(beam.column_values['PRAD0'])
-        
-    return beam
-
-
-def read_beam_file(fileName):
-    
-    beam = GenesisBeamDefinition()
-    
-    f=open(fileName,'r')
-    null=f.readline()
-    for line in f: 
-        tokens = line.strip().split()
-        
-        if len(tokens) < 2:
-            continue
-        
-        #print tokens[0:2]
-        
-        if tokens[0] == "?" and tokens[1] == "COLUMNS":
-            beam.columns = tokens[2:]
-            for col in beam.columns:
-                beam.column_values[col] = []
-                
-            print beam.columns
- 
-        if tokens[0] != "?":
-            #print tokens
-            for i in range(0,len(tokens)):
-                beam.column_values[beam.columns[i]].append( float (tokens[i]) )
-            
-    #print beam.columns
-
-    beam.z = np.array(beam.column_values['ZPOS'])
-    beam.zsep = beam.z[1] - beam.z[0]
-    beam.I = np.array(beam.column_values['CURPEAK'])
-    beam.idx_max = np.argmax(beam.I)
-    try:
-        beam.ex = np.array(beam.column_values['EMITX'])
-        beam.ey = np.array(beam.column_values['EMITY'])
-        beam.betax = np.array(beam.column_values['BETAX'])
-        beam.betay = np.array(beam.column_values['BETAY'])
-        
-        beam.alphax = np.array(beam.column_values['ALPHAX'])
-        beam.alphay = np.array(beam.column_values['ALPHAY'])
-        
-        beam.x = np.array(beam.column_values['XBEAM'])
-        beam.y = np.array(beam.column_values['YBEAM'])
-        beam.px = np.array(beam.column_values['PXBEAM'])
-        beam.py = np.array(beam.column_values['PYBEAM'])
-        beam.g0 = np.array(beam.column_values['GAMMA0'])
-        beam.dg = np.array(beam.column_values['DELGAM'])
-    except:
-        pass
-    
-    try:
-        beam.eloss = np.array(beam.column_values['ELOSS'])
-    except:
-        beam.eloss = np.zeros_like(beam.I)
-    
-    return beam
-    
-def write_beam_file(fileName, beam):
-    fd=open(filename,'w')
-    fd.write(beam_file_str(beam))
-    fd.close()
-
-
-def readRadiationFile(fileName, npoints=151, slice_start=0, slice_end = -1, vartype=complex,debug=0):
-    #a new backward compatible version ~100x faster
-    print ('    reading radiation file')
-    import numpy as np
-    if not os.path.isfile(fileName):
-        print ('      ! dfl file '+fileName+' not found !')
-    else:    
-        if debug:
-            print ('        - reading from '+ fileName)
-        b=np.fromfile(fileName,dtype=complex).astype(vartype)
-        slice_num=b.shape[0]/npoints/npoints
-        b=b.reshape(slice_num,npoints,npoints)
-        if slice_end == -1:
-            slice_end=None
-        print('      done')  
-        return b[slice_start:slice_end]
-
-
-def readRadiationFile_mpi(comm=None, fileName='simulation.gout.dfl', npoints=51):
-    '''
-    not advisable to be used with very small n_proc due to memory overhead ~ file_size / n_proc  
-    '''
-    from mpi4py import MPI
-    
-    def read_in_chunks(file, size=1024):
-        while True:
-            data = file.read(size)
-            if not data:
-                break
-            yield data
-
-    
-    rank = comm.Get_rank()
-    nproc = comm.Get_size()
-        
-    f = open(fileName,'rb')
-    f.seek(0,2)
-    total_data_len = f.tell() / 8 / 2
-    f.seek(0,0)
-    slice_size = int(2.0*npoints*npoints * 8.0)
-    n_slices = int(total_data_len / (npoints**2))
-
-    ncar = int(np.sqrt((slice_size/16)))
-    
-    local_data_len = int(n_slices / nproc)
-    
-    n_extra = n_slices - local_data_len * nproc
-    
-    tmp_buf = np.zeros([local_data_len,ncar,ncar], dtype=complex)
-
-    
-    if rank == 0:
-        slice_start  = rank * local_data_len
-        slices = np.zeros([n_slices,ncar,ncar], dtype=complex)
-        slices_to_read = local_data_len + n_extra
-    else:
-        slice_start = rank * local_data_len + n_extra
-        slices = []
-        slices_to_read = local_data_len
-        
-    n = 0
-    
-    f.seek(slice_start*slice_size, 0)
-
-    print('rank '+str(rank)+' reading' + str (slice_start) + ' ' +  str(slices_to_read) + ' ' + str (n_extra))
-
-    for piece in read_in_chunks(f, size  = slice_size):
-                
-        if n >= slices_to_read :
-            break
-        
-        if ( len(piece) / 16 != ncar**2):
-            print ('warning, wrong slice size')
-    
-        for i in xrange(len(piece) / 16 ):
-            i2 = i % ncar
-            i1 = int(i / ncar)
-            if rank == 0:
-                #print n, n_extra
-                v = struct.unpack('d',piece[16*i:16*i+8])[0] + 1j*struct.unpack('d',piece[16*i+8:16*(i+1)])[0]
-                slices[n,i1,i2] = v
-                if n - n_extra >= 0:
-                    tmp_buf[n-n_extra,i1,i2] = v
-            else:
-                tmp_buf[n,i1,i2] = struct.unpack('d',piece[16*i:16*i+8])[0] + 1j*struct.unpack('d',piece[16*i+8:16*(i+1)])[0] 
-        n += 1
-    #print rank, 'tmp_buf=', tmp_buf
-    comm.Gather([tmp_buf,  MPI.COMPLEX], [slices[n_extra:], MPI.COMPLEX])
-    
-    return slices
-
-
-def writeRadiationFile(filename,fld):
-    print ('    writing radiation file') 
-    #a new backward compatible version ~10x faster
-#    print '        - writing to ', filename
-    d=fld.flatten()
-    d.tofile(filename,format='complex')
-
-    # f=open(filename,'wb')  
-    # n1, n2 = slices.shape[1], slices.shape[2]
-    # for i1 in xrange(slices.shape[0]):
-        # str_bin = ''
-        # for i2 in xrange(n1):
-            # for i3 in xrange(n2):
-                # str_bin += struct.pack('d',slices[i1,i2,i3].real) 
-                # str_bin += struct.pack('d',slices[i1,i2,i3].imag)
-        # f.write(str_bin)
-
-    # f.close()
-
-
-def writeRadiationFile_mpi(comm, filename, slices, shape):
-    '''
-    rank 0 should contain the slices
-    '''
-    from mpi4py import MPI 
-    n_slices, n1, n2 = shape[0], shape[1], shape[2]
-       
-    rank = comm.Get_rank()
-    nproc = comm.Get_size()
-    
-    if nproc == 1:
-        f=open(filename,'wb')  
-    else:
-        f=open(filename + '.' + str(rank),'wb')
-    
-    slice_size = n1*n2*8*2
-    
-    local_data_len = int(n_slices / nproc)
-    
-    n_extra = n_slices - local_data_len * nproc
-
-    tmp_buf = np.zeros([local_data_len,n1,n2], dtype=complex)    
-       
-    if rank == 0:
-        slice_start  = rank * local_data_len
-        slices_to_write = local_data_len + n_extra
-    else:
-        slice_start = rank * local_data_len + n_extra
-        slices = []
-        slices_to_write = local_data_len
-    
-    #print slices
-       
-    comm.Scatter([slices[n_extra:],  MPI.COMPLEX], [tmp_buf, MPI.COMPLEX])
-        
-    #print slices
-    #print tmp_buf
-        
-    #f.seek(slice_start*slice_size, 0)
-        
-    print ('rank='+ str( rank)+ ' slices_to_write=' + str( slice_start) + ' ' + str( slices_to_write))
-        
-    
-    for i1 in xrange(slices_to_write):
-        str_bin = ''
-        for i2 in xrange(n1):
-            for i3 in xrange(n2):
-                
-                if rank > 0:
-                    #print '>0', tmp_buf[i1,i2,i3]
-                    str_bin += struct.pack('d',tmp_buf[i1,i2,i3].real) 
-                    str_bin += struct.pack('d',tmp_buf[i1,i2,i3].imag)
-                else:
-                    #print '0', slices[i1,i2,i3]
-                    str_bin += struct.pack('d',slices[i1,i2,i3].real) 
-                    str_bin += struct.pack('d',slices[i1,i2,i3].imag)
-                    
-        #print 'writing', str_bin
-        f.write(str_bin)
-    
-    f.close()
-    
-    if rank == 0 and nproc>1:
-        print ('merging temporary files')
-        cmd = 'cat '
-        cmd2 = 'rm '
-        for i in xrange(nproc): 
-            cmd += ' ' + str(filename) + '.' + str(i)
-            cmd2 += ' ' + str(filename) + '.' + str(i)
-        cmd = cmd + ' > ' + filename
-        cmd = cmd + ' ; ' + cmd2
-        print cmd
-        os.system(cmd)
-        
-def rad_interp(F,interpN=(1,1),interpL=(1,1),newN=(None,None),newL=(None,None),method='cubic',debug=0): 
-    ''' 
-    2d interpolation of the coherent radiation distribution 
-    interpN and interpL define the desired interpolation coefficients for  
-    transverse point density and transverse mesh sizes correspondingly 
-    newN and newL define the final desire number of points and size of the mesh 
-    when newN and newL are not None interpN and interpL values are ignored 
-    coordinate convention is (x,y) 
-    ''' 
-    from scipy.interpolate import interp2d 
-         
-    if debug: print ('    interpolating radiation file' ) 
-    start_time = time.time() 
-     
-    # in case if interpolation is the same in toth dimentions 
-    if size(interpN)==1: 
-        interpN=(interpN,interpN) 
-    if size(interpL)==1: 
-        interpL=(interpL,interpL) 
-    if size(newN)==1: 
-        newN=(newN,newN) 
-    if size(newL)==1: 
-        newL=(newL,newL) 
-     
-    if interpN==(1,1) and interpL==(1,1) and newN==(None,None) and newL==(None,None): 
-        return F 
-        print('no interpolation required, returning original') 
-         
-    # calculate new mesh parameters only if not defined explicvitly 
-    if newN==(None,None) and newL==(None,None): 
-        interpNx=interpN[0] 
-        interpNy=interpN[1] 
-        interpLx=interpL[0] 
-        interpLy=interpL[1] 
-     
-        if interpNx==0 or interpLx==0 or interpNy==0 or interpLy==0: 
-            print('interpolation values cannot be 0') 
-            return None 
-            # place exception 
-        elif interpNx==1 and interpLx==1 and interpNy==1 and interpLy==1: 
-            return F 
-            print('no interpolation required, returning original') 
-        else: 
-            Nx2=int(F.Nx()*interpNx*interpLx) 
-            if Nx2%2==0 and Nx2>F.Nx(): Nx2-=1 
-            if Nx2%2==0 and Nx2<F.Nx(): Nx2+=1  
-            Ny2=int(F.Ny()*interpNy*interpLy) 
-            if Ny2%2==0 and Ny2>F.Ny(): Ny2-=1 
-            if Ny2%2==0 and Ny2<F.Ny(): Ny2+=1  
-     
-            Lx2=F.Lx*interpLx 
-            Ly2=F.Ly*interpLy 
-     
-    else: 
-        #redo to maintain mesh density 
-        if newN[0] != None:  
-            Nx2=newN[0]  
-        else: Nx2=F.Nx() 
-         
-        if newN[1] != None:  
-            Ny2=newN[1]  
-        else: Ny2=F.Ny() 
-     
-        if newL[0] != None:  
-            Lx2=newL[0]  
-        else: Lx2=F.Lx 
-     
-        if newL[1] != None:  
-            Ly2=newL[1]  
-        else: Ly2=F.Ly 
-     
-    xscale1=np.linspace(-F.Lx/2, F.Lx/2, F.Nx()) 
-    yscale1=np.linspace(-F.Ly/2, F.Ly/2, F.Ny())     
-    xscale2=np.linspace(-Lx2/2, Lx2/2, Nx2) 
-    yscale2=np.linspace(-Ly2/2, Ly2/2, Ny2) 
- 
-    ix_min=np.where(xscale1>=xscale2[0])[0][0] 
-    ix_max=np.where(xscale1<=xscale2[-1])[-1][-1] 
-    iy_min=np.where(yscale1>=yscale2[0])[0][0] 
-    iy_max=np.where(yscale1<=yscale2[-1])[-1][-1] 
-    if debug: print('      energy before interpolation '+ str (F.E())) 
-    #interp_func = rgi((zscale1,yscale1,xscale1), F.fld, fill_value=0, bounds_error=False, method='nearest') 
-    fld2=[] 
-    for fslice in F.fld: 
-        re_func=interp2d(xscale1,yscale1,real(fslice), fill_value=0, bounds_error=False, kind=method) 
-        im_func=interp2d(xscale1,yscale1,imag(fslice), fill_value=0, bounds_error=False, kind=method) 
-        fslice2=re_func(xscale2,yscale2)+1j*im_func(xscale2,yscale2) 
-        P1=sum(abs(fslice[iy_min:iy_max,ix_min:ix_max])**2) 
-        P2=sum(abs(fslice2)**2) 
-        fslice2=fslice2*sqrt(P1/P2) 
-        fld2.append(fslice2) 
-     
-    F2=RadiationField() 
-    F2.fld=np.array(fld2) 
-    F2.Lx=Lx2 
-    F2.Ly=Ly2 
-    F2.Lz=F.Lz 
-    F2.l_domain=F.l_domain 
-    F2.tr_domain=F.tr_domain 
-    F2.xlamds=F.xlamds 
-    if debug: print('      energy after interpolation '+ str (F2.E())) 
-    if debug: print('      done in %s sec' % (time.time() - start_time)) 
-         
-    return F2 
-
-
-def readGenesisOutput(fileName, readall=True, debug=False, precision=float):
+def read_genesis_output(filePath, readall=True, debug=0, precision=float):
     out = GenesisOutput()
-    out.path = fileName
-    out.filename = fileName[-fileName[::-1].find('/')::]
+    out.filePath = filePath
+    out.fileName = filePath[-filePath[::-1].find(os.path.sep)::]
 
-    if debug: print(' ')
-    if debug: print('    reading output file "'+out.filename+'"')
+    if debug>0: print('    reading output file "'+out.fileName+'"')
 #    print '        - reading from ', fileName
 
     chunk = ''
@@ -910,15 +505,15 @@ def readGenesisOutput(fileName, readall=True, debug=False, precision=float):
     
     wait_attempt=6
     wait_time=10
-    while os.path.isfile(fileName)!=True:
-        print('!     waiting for "'+out.filename+'" '+str(wait_time)+'s ['+str(wait_attempt)+']')
+    while os.path.isfile(out.filePath)!=True:
+        print('!     waiting for "'+out.fileName+'" '+str(wait_time)+'s ['+str(wait_attempt)+']')
         time.sleep(wait_time) #wait for the .out file to be assembled
         wait_attempt-=1
         if wait_attempt==0:
-            raise Exception('File '+fileName+' not found')
+            raise Exception('File '+out.fileName+' not found')
     
     start_time = time.time()    
-    f=open(fileName,'r')
+    f=open(out.filePath,'r')
     
     null=f.readline()
     for line in f: 
@@ -930,18 +525,18 @@ def readGenesisOutput(fileName, readall=True, debug=False, precision=float):
         if tokens[0] == '**********':
             chunk = 'slices'
             nSlice = int(tokens[3])
-            if debug==2: print ('      reading slice # '+ str(nSlice))
+            if debug>1: print ('      reading slice # '+ str(nSlice))
 
         if tokens[0] == 'power':
             chunk = 'slice'
             if len(out.sliceKeys) == 0: #to record the first instance
                 out.sliceKeys = list(copy(tokens))
-                if debug: print ('      reading slice values ')
+                if debug>1: print ('      reading slice values ')
             continue
             
         if tokens[0] == '$newrun':
             chunk = 'input1'
-            if debug: print ('      reading input parameters')
+            if debug>1: print ('      reading input parameters')
             continue  
 
         if tokens[0] == '$end':
@@ -950,7 +545,7 @@ def readGenesisOutput(fileName, readall=True, debug=False, precision=float):
         
         if tokens == ['z[m]', 'aw', 'qfld']:
             chunk = 'magnetic optics'
-            if debug: print ('      reading magnetic optics ')
+            if debug>1: print ('      reading magnetic optics ')
             continue
 
         if chunk == 'magnetic optics':
@@ -995,8 +590,8 @@ def readGenesisOutput(fileName, readall=True, debug=False, precision=float):
     out.nZ = int(out('entries_per_record'))#number of records along the undulator
     out.ncar=int(out('ncar')) #number of mesh points
     
-    if debug: print ('        nSlice '+ str(out.nSlices))
-    if debug: print ('        nZ '+ str(out.nZ))
+    if debug>1: print ('        nSlice '+ str(out.nSlices))
+    if debug>1: print ('        nZ '+ str(out.nZ))
     
     if nSlice==0:
         #raise
@@ -1082,7 +677,7 @@ def readGenesisOutput(fileName, readall=True, debug=False, precision=float):
     
     
     
-    #tmp for back_compatibility    
+    #tmp for back_compatibility
     if readall:
         out.power_int=out.power[:,-1] #remove?
         out.max_power=np.amax(out.power_int) #remove?
@@ -1100,14 +695,54 @@ def readGenesisOutput(fileName, readall=True, debug=False, precision=float):
         out.phi=out.phi_mid[:,-1]
         out.energy=np.mean(out.p_int,axis=0)*out('xlamds')*out('zsep')*out.nSlices/speed_of_light
     
-    if debug: print('      done in %.3f seconds' % (time.time() - start_time))        
+    if debug>0: print('      done in %.3f seconds' % (time.time() - start_time))        
     return out
 
 
-def dpa2dist(out,dpa=None,num_part=1e5,smear=0,debug=False):
+def read_particle_file_out(out,filePath=None,debug=0):
+    if filePath==None:
+        filePath=out.filePath+'.dpa'
+    return read_particle_file(filePath, nbins=out('nbins'), npart=out('npart'),debug=debug)
+
+def read_particle_file(filePath, nbins=4, npart=None,debug=0):
+    if debug>0: print ('    reading praticle file')
+    dpa=GenesisParticles() 
+    
+    start_time = time.time()
+    b=np.fromfile(filePath,dtype=float)
+    # if debug: print("     read Particles in %s sec" % (time.time() - start_time))
+#    print 'b', b.shape
+    assert npart!=None, 'number of particles per bin is not defined'
+    npart=int(npart)
+    nslice=int(len(b)/npart/6)
+    nbins=int(nbins)
+    
+    if debug>1:
+        print ('        nslice'+str(nslice))
+        print ('        npart'+str(npart))
+        print ('        nbins'+str(nbins))
+#    print 'b=',nslice*npart*6
+    b=b.reshape(nslice,6,nbins,npart/nbins)    
+    dpa.e=b[:,0,:,:] #gamma
+    dpa.ph=b[:,1,:,:] 
+    dpa.x=b[:,2,:,:]
+    dpa.y=b[:,3,:,:]
+    dpa.px=b[:,4,:,:]
+    dpa.py=b[:,5,:,:]
+    dpa.filePath=filePath
+    dpa.fileName = filePath[-filePath[::-1].find(os.path.sep)::]
+    
+    if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
+    
+    return dpa
+
+def dpa2dist(out,dpa,num_part=1e5,smear=1,debug=False):
     from matplotlib import pyplot as plt
     import random
     import numpy as np
+    
+    start_time = time.time()
+    if debug>0: print ('    transforming particle to distribution file' )
         
     npart=int(out('npart'))
     # nslice=int(out('nslice'))
@@ -1116,21 +751,20 @@ def dpa2dist(out,dpa=None,num_part=1e5,smear=0,debug=False):
     xlamds=out('xlamds')
     zsep=int(out('zsep'))
     gen_I=out.I
-    gen_t=out.t    
+    gen_t=out.t
     
-    if dpa==None:
-        dpa=out.path+'.dpa'
-    if dpa.__class__==str:
-        try:
-            dpa=read_particle_file(dpa, nbins=nbins, npart=npart,debug=debug)
-        except IOError:
-            print ('      ERR: no such file "'+dpa+'"')
-            print ('      ERR: reading "'+out.path+'.dpa'+'"')
-            dpa=read_particle_file(out.path+'.dpa', nbins=nbins, npart=npart,debug=debug)
-    if dpa.__class__!=GenesisParticles:
-        print('   could not read particle file')
+    # if dpa==None:
+        # dpa=out.filePath+'.dpa'
+    # if dpa.__class__==str:
+        # try:
+            # dpa=read_particle_file(dpa, nbins=nbins, npart=npart,debug=debug)
+        # except IOError:
+            # print ('      ERR: no such file "'+dpa+'"')
+            # print ('      ERR: reading "'+out.filePath+'.dpa'+'"')
+            # dpa=read_particle_file(out.filePath+'.dpa', nbins=nbins, npart=npart,debug=debug)
+    # if dpa.__class__!=GenesisParticles:
+        # print('   could not read particle file')
     
-
     m=np.arange(nslice)
     m=np.tile(m,(nbins,npart/nbins,1))
     m=np.rollaxis(m,2,0)
@@ -1198,35 +832,28 @@ def dpa2dist(out,dpa=None,num_part=1e5,smear=0,debug=False):
     # plt.show()
     
     dist.charge=out.beam_charge
-    dist.filename=out.filename+'_calc'
-    dist.path=out.path+'_calc'
+    dist.fileName=dpa.fileName+'_dist'
+    dist.filePath=dpa.filePath+'_dist'
     # print 'max_y_out', np.amax(t_out)
     # print 'e_out', np.amax(e_out),np.amin(e_out)
     
+    if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
+    
     return dist
-    
-def write_dist_file (dist,file_name):
 
-    #REQUIRES NUMPY 1.7
-    # header='? VERSION = 1.0 \n? SIZE = %s \n? CHARGE = %E \n? COLUMNS X XPRIME Y YPRIME T P'%(len(dist.x),charge)
-    # np.savetxt(file_name_write, np.c_[dist.x,dist.px,dist.y,dist.py,dist.t,dist.e],header=header,fmt="%E", newline='\n',comments='')
+def read_dist_file_out(out,debug=0):
+    return read_dist_file(out.filePath+'.dist',debug=debug)
 
-    header='? VERSION = 1.0 \n? SIZE = %s \n? CHARGE = %E \n? COLUMNS X XPRIME Y YPRIME T P\n'%(len(dist.x),dist.charge)
-    f = file(file_name,'w')
-    f.write(header)
-    f.close()
-    f = file(file_name,'a')
-    np.savetxt(f, np.c_[dist.x,dist.px,dist.y,dist.py,dist.t,dist.e],fmt="%e", newline='\n')
-    f.close()
-
-    
-def read_dist_file(fileName,debug=0):
+def read_dist_file(filePath,debug=0):
     
     dist = GenesisParticlesDist()
-    dist.filename=fileName
+    dist.filePath=filePath
+    
+    if debug>0: print ('    reading particle distribution file' )
+    start_time = time.time()
     
     dist_column_values={}
-    f=open(fileName,'r')
+    f=open(filePath,'r')
     null=f.readline()
     for line in f: 
         tokens = line.strip().split()
@@ -1241,7 +868,7 @@ def read_dist_file(fileName,debug=0):
             dist_columns = tokens[2:]
             for col in dist_columns:
                 dist_column_values[col] = []
-            if debug: print(dist_columns)
+            if debug>1: print(''.join(str(i)+' ' for i in dist_columns))
  
         if tokens[0] != "?":
             for i in range(0,len(tokens)):
@@ -1261,8 +888,30 @@ def read_dist_file(fileName,debug=0):
     dist.t = flipud(dist.t)
     dist.e = flipud(dist.e)
     
-    return dist
+    if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
     
+    return dist
+
+def write_dist_file (dist,filePath,debug=0):
+
+    #REQUIRES NUMPY 1.7
+    # header='? VERSION = 1.0 \n? SIZE = %s \n? CHARGE = %E \n? COLUMNS X XPRIME Y YPRIME T P'%(len(dist.x),charge)
+    # np.savetxt(filePath_write, np.c_[dist.x,dist.px,dist.y,dist.py,dist.t,dist.e],header=header,fmt="%E", newline='\n',comments='')
+
+    if debug>0: print ('    writing particle distribution file' )
+    start_time = time.time()
+    
+    header='? VERSION = 1.0 \n? SIZE = %s \n? CHARGE = %E \n? COLUMNS X XPRIME Y YPRIME T P\n'%(len(dist.x),dist.charge)
+    f = file(filePath,'w')
+    f.write(header)
+    f.close()
+    f = file(filePath,'a')
+    np.savetxt(f, np.c_[dist.x,dist.px,dist.y,dist.py,dist.t,dist.e],fmt="%e", newline='\n')
+    f.close()
+    
+    if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
+
+
 
 def cut_dist(dist, 
             t_lim=(-inf,inf),
@@ -1270,7 +919,10 @@ def cut_dist(dist,
             x_lim=(-inf,inf),
             px_lim=(-inf,inf),
             y_lim=(-inf,inf),
-            py_lim=(-inf,inf)):
+            py_lim=(-inf,inf),debug=0):
+            
+    if debug>0: print ('    cutting particle distribution file' )
+    start_time = time.time()
                 
     index_t=logical_or(dist.t<t_lim[0], dist.t>t_lim[1])
     index_e=logical_or(dist.e<e_lim[0], dist.e>e_lim[1])
@@ -1288,34 +940,292 @@ def cut_dist(dist,
         if hasattr(dist_f,parm):
             setattr(dist_f,parm,np.delete(getattr(dist_f,parm),index))
     
+    if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
+    
     return dist_f
 
-
-def getAverageUndulatorParameter(lattice, unit=1.0, energy = 17.5):
-    positions = sorted(lattice.lattice.keys())
-          
-    prevPos = 0
-
-    ks = []
-    ls = []
-
-    for pos in positions:
-        if lattice.elements[lattice.lattice[pos].id].type == 'undulator':
-            e = lattice.elements[lattice.lattice[pos].id]
-            l = float(e.params['nperiods']) * float(e.params['lperiod'])
+    
+def read_rad_file(filePath):
+    beam = GenesisBeam()
+    
+    f=open(filePath,'r')
+    null=f.readline()
+    for line in f: 
+        tokens = line.strip().split()
+        
+        if len(tokens) < 2:
+            continue
+        
+        #print tokens[0:2]
+        
+        if tokens[0] == "?" and tokens[1] == "COLUMNS":
+            beam.columns = tokens[2:]
+            for col in beam.columns:
+                beam.column_values[col] = []
+                
+            print beam.columns
+ 
+        if tokens[0] != "?":
+            #print tokens
+            for i in range(0,len(tokens)):
+                beam.column_values[beam.columns[i]].append( float (tokens[i]) )
             
-            ks.append( float(e.params['K']) )
-            ls.append( l / unit )
-            
-            #lat += 'AW' +'    '+ e.params['K'] + '   ' + str( l  / unit ) + '  ' + str( (pos - prevPos) / unit ) + '\n'
-            
-            #if prevPos>0:
-            #    drifts.append([str( (pos - prevPos ) / unit ), str(prevLen / unit)])
-            
-            #prevPos = pos + l
-            #prevLen = l 
+    #print beam.columns
 
-    return np.mean(ks)
+    beam.z = beam.column_values['ZPOS']        
+    beam.prad0 = np.array(beam.column_values['PRAD0'])
+        
+    return beam
+
+
+def read_beam_file_out(out,debug=0):
+    return read_beam_file(out.filePath,debug=debug)
+
+def read_beam_file(filePath,debug=0):
+    
+    if debug>0: print ('    readind beam file' )
+    start_time = time.time()
+    
+    beam = GenesisBeam()
+    
+    f=open(filePath,'r')
+    null=f.readline()
+    for line in f: 
+        tokens = line.strip().split()
+        
+        if len(tokens) < 2:
+            continue
+        
+        #print tokens[0:2]
+        
+        if tokens[0] == "?" and tokens[1] == "COLUMNS":
+            beam.columns = tokens[2:]
+            for col in beam.columns:
+                beam.column_values[col] = []
+                
+            print beam.columns
+ 
+        if tokens[0] != "?":
+            #print tokens
+            for i in range(0,len(tokens)):
+                beam.column_values[beam.columns[i]].append( float (tokens[i]) )
+            
+    #print beam.columns
+
+    beam.z = np.array(beam.column_values['ZPOS'])
+    beam.zsep = beam.z[1] - beam.z[0]
+    beam.I = np.array(beam.column_values['CURPEAK'])
+    beam.idx_max = np.argmax(beam.I)
+    try:
+        beam.ex = np.array(beam.column_values['EMITX'])
+        beam.ey = np.array(beam.column_values['EMITY'])
+        beam.betax = np.array(beam.column_values['BETAX'])
+        beam.betay = np.array(beam.column_values['BETAY'])
+        
+        beam.alphax = np.array(beam.column_values['ALPHAX'])
+        beam.alphay = np.array(beam.column_values['ALPHAY'])
+        
+        beam.x = np.array(beam.column_values['XBEAM'])
+        beam.y = np.array(beam.column_values['YBEAM'])
+        beam.px = np.array(beam.column_values['PXBEAM'])
+        beam.py = np.array(beam.column_values['PYBEAM'])
+        beam.g0 = np.array(beam.column_values['GAMMA0'])
+        beam.dg = np.array(beam.column_values['DELGAM'])
+    except:
+        pass
+    
+    try:
+        beam.eloss = np.array(beam.column_values['ELOSS'])
+    except:
+        beam.eloss = np.zeros_like(beam.I)
+    
+    beam.filePath=filePath
+    beam.fileName=filePath[-filePath[::-1].find(os.path.sep)::]
+    
+    if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
+    
+    return beam
+    
+def write_beam_file(filePath, beam,debug=0):
+    if debug>0: print ('    writing beam file')
+    start_time = time.time()
+
+    fd=open(filePath,'w')
+    fd.write(beam_file_str(beam))
+    fd.close()
+    
+    if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
+
+
+
+def read_radiation_file_out(out,filePath=None,debug=0):
+    #more compact function to read the file generated with known .out file
+    if filePath==None: 
+        filePath=out.filePath+'.dfl'
+    F=read_radiation_file(filePath, Nxy=out.ncar, Lxy=out.leng, zsep=out('zsep'), xlamds=out('xlamds'),debug=debug)
+    return F
+
+def read_radiation_file(filePath, Nxy=None, Lxy=None, Lz=None, zsep=None, xlamds=None, vartype=complex,debug=0):
+    '''
+    Function to read the Genesis output radiation file "dfl".
+    '''
+    if debug>0: print ('    reading radiation file')
+    start_time = time.time()
+
+    import numpy as np
+    
+    if Nxy==None:
+        raise ValueError('You need to define number of transverse points in Nxy')
+    
+    if not os.path.isfile(filePath):
+        if debug: 
+            raise IOError('      ! dfl file '+filePath+' not found !')
+        else:
+            print ('      ! dfl file '+filePath+' not found !')
+    else:    
+        if debug>1: print ('        - reading from '+ filePath)
+        
+        b=np.fromfile(filePath,dtype=complex).astype(vartype)
+        Nz=b.shape[0]/Nxy/Nxy
+        assert(Nz%1==0),'Wrong Nxy or corrupted file'
+        
+        F=RadiationField()
+        F.fld=b.reshape(Nz,Nxy,Nxy)
+        F.Lx=Lxy
+        F.Ly=Lxy
+        if Lz!=None:
+            F.Lz=Lz
+        elif zsep!=None and xlamds!=None:
+            F.Lz=F.Nz()*xlamds*zsep
+        else:
+            F.Lz=None
+        F.xlamds=xlamds
+        F.filePath=filePath
+        F.fileName = filePath[-filePath[::-1].find(os.path.sep)::]
+        
+        if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
+
+        return F
+
+
+def write_radiation_file(filePath,F,debug=0):
+
+    if debug>0: print ('    cutting distribution file' )
+    start_time = time.time()    
+    
+    d=F.fld.flatten()
+    d.tofile(filePath,format='complex')
+    
+    if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
+
+
+        
+def interp_radiation(F,interpN=(1,1),interpL=(1,1),newN=(None,None),newL=(None,None),method='cubic',debug=0): 
+    ''' 
+    2d interpolation of the coherent radiation distribution 
+    interpN and interpL define the desired interpolation coefficients for  
+    transverse point density and transverse mesh sizes correspondingly 
+    newN and newL define the final desire number of points and size of the mesh 
+    when newN and newL are not None interpN and interpL values are ignored 
+    coordinate convention is (x,y) 
+    ''' 
+    from scipy.interpolate import interp2d 
+         
+    if debug>0: print ('    interpolating radiation file')
+    start_time = time.time()
+     
+    # in case if interpolation is the same in toth dimentions 
+    if size(interpN)==1: 
+        interpN=(interpN,interpN) 
+    if size(interpL)==1: 
+        interpL=(interpL,interpL) 
+    if size(newN)==1: 
+        newN=(newN,newN) 
+    if size(newL)==1: 
+        newL=(newL,newL) 
+     
+    if interpN==(1,1) and interpL==(1,1) and newN==(None,None) and newL==(None,None): 
+        return F 
+        print('no interpolation required, returning original') 
+         
+    # calculate new mesh parameters only if not defined explicvitly 
+    if newN==(None,None) and newL==(None,None): 
+        interpNx=interpN[0] 
+        interpNy=interpN[1] 
+        interpLx=interpL[0] 
+        interpLy=interpL[1] 
+     
+        if interpNx==0 or interpLx==0 or interpNy==0 or interpLy==0: 
+            print('interpolation values cannot be 0') 
+            return None 
+            # place exception 
+        elif interpNx==1 and interpLx==1 and interpNy==1 and interpLy==1: 
+            return F 
+            print('no interpolation required, returning original') 
+        else: 
+            Nx2=int(F.Nx()*interpNx*interpLx) 
+            if Nx2%2==0 and Nx2>F.Nx(): Nx2-=1 
+            if Nx2%2==0 and Nx2<F.Nx(): Nx2+=1  
+            Ny2=int(F.Ny()*interpNy*interpLy) 
+            if Ny2%2==0 and Ny2>F.Ny(): Ny2-=1 
+            if Ny2%2==0 and Ny2<F.Ny(): Ny2+=1  
+     
+            Lx2=F.Lx*interpLx 
+            Ly2=F.Ly*interpLy 
+     
+    else: 
+        #redo to maintain mesh density 
+        if newN[0] != None:  
+            Nx2=newN[0]  
+        else: Nx2=F.Nx() 
+         
+        if newN[1] != None:  
+            Ny2=newN[1]  
+        else: Ny2=F.Ny() 
+     
+        if newL[0] != None:  
+            Lx2=newL[0]  
+        else: Lx2=F.Lx 
+     
+        if newL[1] != None:  
+            Ly2=newL[1]  
+        else: Ly2=F.Ly 
+     
+    xscale1=np.linspace(-F.Lx/2, F.Lx/2, F.Nx()) 
+    yscale1=np.linspace(-F.Ly/2, F.Ly/2, F.Ny())     
+    xscale2=np.linspace(-Lx2/2, Lx2/2, Nx2) 
+    yscale2=np.linspace(-Ly2/2, Ly2/2, Ny2) 
+ 
+    ix_min=np.where(xscale1>=xscale2[0])[0][0] 
+    ix_max=np.where(xscale1<=xscale2[-1])[-1][-1] 
+    iy_min=np.where(yscale1>=yscale2[0])[0][0] 
+    iy_max=np.where(yscale1<=yscale2[-1])[-1][-1] 
+    if debug>1: print('      energy before interpolation '+ str (F.E())) 
+    #interp_func = rgi((zscale1,yscale1,xscale1), F.fld, fill_value=0, bounds_error=False, method='nearest') 
+    fld2=[] 
+    for fslice in F.fld: 
+        re_func=interp2d(xscale1,yscale1,real(fslice), fill_value=0, bounds_error=False, kind=method) 
+        im_func=interp2d(xscale1,yscale1,imag(fslice), fill_value=0, bounds_error=False, kind=method) 
+        fslice2=re_func(xscale2,yscale2)+1j*im_func(xscale2,yscale2) 
+        P1=sum(abs(fslice[iy_min:iy_max,ix_min:ix_max])**2) 
+        P2=sum(abs(fslice2)**2) 
+        fslice2=fslice2*sqrt(P1/P2) 
+        fld2.append(fslice2) 
+     
+    F2=RadiationField() 
+    F2.fld=np.array(fld2) 
+    F2.Lx=Lx2 
+    F2.Ly=Ly2 
+    F2.Lz=F.Lz 
+    F2.l_domain=F.l_domain 
+    F2.tr_domain=F.tr_domain 
+    F2.xlamds=F.xlamds 
+    F2.fileName='!interp!'+F.fileName
+    F2.filePath='!interp!'+F.filePath
+    if debug>1: print('      energy after interpolation '+ str (F2.E())) 
+    if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
+         
+    return F2
 
 
 def generate_input(up, beam, itdp=False):
@@ -1389,8 +1299,6 @@ def generate_input(up, beam, itdp=False):
     return inp
 
 
-        
-
 def generate_lattice(lattice, unit=1.0, energy = None, debug = False):
     
     print ('generating lattice file...')
@@ -1449,6 +1357,73 @@ def generate_lattice(lattice, unit=1.0, energy = None, debug = False):
         pos = pos + l
 
     return lat + undLat + driftLat + quadLat
+
+def rad_file_str(beam):
+    #header = "# \n? VERSION = 1.0\n? SIZE ="+str(len(beam.column_values['ZPOS']))+"\n? COLUMNS ZPOS GAMMA0 DELGAM EMITX EMITY BETAX BETAY XBEAM YBEAM PXBEAM PYBEAM ALPHAX ALPHAY CURPEAK ELOSS\n"
+    header = "# \n? VERSION = 1.0\n? SIZE ="+str(len(beam.z))+"\n? COLUMNS"
+    #ZPOS GAMMA0 DELGAM EMITX EMITY BETAX BETAY XBEAM YBEAM PXBEAM PYBEAM ALPHAX ALPHAY CURPEAK ELOSS\n"
+    for col in beam.columns:
+        header = header + " " + col 
+    header +="\n"
+    
+    f_str = header
+    
+    beam.column_values['ZPOS'] = beam.z 
+    beam.column_values['PRAD0'] = beam.prad0
+    
+    for i in xrange(len(beam.z)):
+        for col in beam.columns:
+            buf = str(beam.column_values[col][i])
+            f_str = f_str + buf + ' '
+        f_str = f_str.rstrip() +  '\n'
+    
+    return f_str
+
+
+def beam_file_str(beam):
+    #header = "# \n? VERSION = 1.0\n? SIZE ="+str(len(beam.column_values['ZPOS']))+"\n? COLUMNS ZPOS GAMMA0 DELGAM EMITX EMITY BETAX BETAY XBEAM YBEAM PXBEAM PYBEAM ALPHAX ALPHAY CURPEAK ELOSS\n"
+    header = "# \n? VERSION = 1.0\n? SIZE ="+str(len(beam.z))+"\n? COLUMNS"
+    #ZPOS GAMMA0 DELGAM EMITX EMITY BETAX BETAY XBEAM YBEAM PXBEAM PYBEAM ALPHAX ALPHAY CURPEAK ELOSS\n"
+    for col in beam.columns:
+        header = header + " " + col 
+    header +="\n"
+    
+    f_str = header
+    
+    
+    beam.column_values['ZPOS'] = beam.z 
+    beam.column_values['CURPEAK'] = beam.I
+    
+    try:
+        beam.column_values['EMITX'] = beam.ex
+        beam.column_values['EMITY'] = beam.ey
+        
+        beam.column_values['BETAX'] = beam.betax
+        beam.column_values['BETAY'] = beam.betay
+        
+        beam.column_values['ALPHAX'] = beam.alphax
+        beam.column_values['ALPHAY'] = beam.alphay
+        
+        beam.column_values['XBEAM'] = beam.x
+        beam.column_values['YBEAM'] = beam.y
+        
+        beam.column_values['PXBEAM'] = beam.px
+        beam.column_values['PYBEAM'] = beam.py
+        
+        beam.column_values['GAMMA0'] = beam.g0
+        beam.column_values['DELGAM'] = beam.dg
+        
+        beam.column_values['ELOSS'] = beam.eloss
+    except:
+        pass
+    
+    for i in xrange(len(beam.z)):
+        for col in beam.columns:
+            buf = str(beam.column_values[col][i])
+            f_str = f_str + buf + ' '
+        f_str = f_str.rstrip() + '\n'
+    
+    return f_str
 
 def next_run_id(dir = '.'):
     run_ids = []
@@ -1514,79 +1489,6 @@ def get_power_z(g):
             power_z[i] += g.sliceValues[g.sliceValues.keys()[j]]['power'][i]
 
     return power_z / nslice
-
-
-def rad_file_str(beam):
-    #header = "# \n? VERSION = 1.0\n? SIZE ="+str(len(beam.column_values['ZPOS']))+"\n? COLUMNS ZPOS GAMMA0 DELGAM EMITX EMITY BETAX BETAY XBEAM YBEAM PXBEAM PYBEAM ALPHAX ALPHAY CURPEAK ELOSS\n"
-    header = "# \n? VERSION = 1.0\n? SIZE ="+str(len(beam.z))+"\n? COLUMNS"
-    #ZPOS GAMMA0 DELGAM EMITX EMITY BETAX BETAY XBEAM YBEAM PXBEAM PYBEAM ALPHAX ALPHAY CURPEAK ELOSS\n"
-    for col in beam.columns:
-        header = header + " " + col 
-    header +="\n"
-    
-    f_str = header
-    
-    
-    beam.column_values['ZPOS'] = beam.z 
-    beam.column_values['PRAD0'] = beam.prad0
-    
-    
-    for i in xrange(len(beam.z)):
-        for col in beam.columns:
-            buf = str(beam.column_values[col][i])
-            f_str = f_str + buf + ' '
-        f_str = f_str.rstrip() +  '\n'
-	
-    print beam.z[301]
-    	
-    
-    return f_str
-
-
-def beam_file_str(beam):
-    #header = "# \n? VERSION = 1.0\n? SIZE ="+str(len(beam.column_values['ZPOS']))+"\n? COLUMNS ZPOS GAMMA0 DELGAM EMITX EMITY BETAX BETAY XBEAM YBEAM PXBEAM PYBEAM ALPHAX ALPHAY CURPEAK ELOSS\n"
-    header = "# \n? VERSION = 1.0\n? SIZE ="+str(len(beam.z))+"\n? COLUMNS"
-    #ZPOS GAMMA0 DELGAM EMITX EMITY BETAX BETAY XBEAM YBEAM PXBEAM PYBEAM ALPHAX ALPHAY CURPEAK ELOSS\n"
-    for col in beam.columns:
-        header = header + " " + col 
-    header +="\n"
-    
-    f_str = header
-    
-    
-    beam.column_values['ZPOS'] = beam.z 
-    beam.column_values['CURPEAK'] = beam.I
-    
-    try:
-        beam.column_values['EMITX'] = beam.ex
-        beam.column_values['EMITY'] = beam.ey
-        
-        beam.column_values['BETAX'] = beam.betax
-        beam.column_values['BETAY'] = beam.betay
-        
-        beam.column_values['ALPHAX'] = beam.alphax
-        beam.column_values['ALPHAY'] = beam.alphay
-	
-        beam.column_values['XBEAM'] = beam.x
-        beam.column_values['YBEAM'] = beam.y
-        
-        beam.column_values['PXBEAM'] = beam.px
-        beam.column_values['PYBEAM'] = beam.py
-        
-        beam.column_values['GAMMA0'] = beam.g0
-        beam.column_values['DELGAM'] = beam.dg
-        
-        beam.column_values['ELOSS'] = beam.eloss
-    except:
-        pass
-    
-    for i in xrange(len(beam.z)):
-        for col in beam.columns:
-            buf = str(beam.column_values[col][i])
-            f_str = f_str + buf + ' '
-        f_str = f_str.rstrip() +  '\n'
-    
-    return f_str
 
 
 def add_wake_to_beamf(beamf, new_beamf):
@@ -1835,7 +1737,7 @@ def adapt_rad_file(beam = None, rad_file = None, out_file='tmp.rad'):
 def transform_beam_file(beam_file = None, out_file='tmp.beam', transform = [ [25.0,0.1], [21.0, -0.1] ], energy_scale=1, energy_new = None, emit_scale = 1, n_interp = None):
     if beam_file.__class__==str:
         beam = read_beam_file(beam_file)
-    elif beam_file.__class__==GenesisBeamDefinition or beam_file.__class__==Beam:
+    elif beam_file.__class__==GenesisBeam or beam_file.__class__==Beam:
         beam=beam_file
     else:
         print('Wrong beam input!')
@@ -2030,9 +1932,10 @@ def cut_beam(beam = None, cut_z = [-inf, inf]):
     return beam_new
 
 
-def get_beam_peak(beam = None): #experimental, the code is too inconsistent to introduce suc function yet (e.g. xp <-> px)
-
-    #obtains the peak current values
+def get_beam_peak(beam = None): 
+    '''
+    obtains the peak current values of the beam
+    '''
     if len(beam.I)>1:# and np.amax(beam.I)!=np.amin(beam.I):
         pkslice = np.argmax(beam.I)
         
@@ -2220,3 +2123,206 @@ def rad_file_str2(beam):
         f_str += f_str_tmp
     
     return f_str
+
+'''
+Scheduled for removal
+'''
+    
+def readRadiationFile(fileName, npoints=151, slice_start=0, slice_end = -1, vartype=complex,debug=0): #obsoletre, to be removed soon
+    #a new backward compatible version ~100x faster
+    print ('    reading radiation file')
+    import numpy as np
+    if not os.path.isfile(fileName):
+        print ('      ! dfl file '+fileName+' not found !')
+    else:    
+        if debug:
+            print ('        - reading from '+ fileName)
+        b=np.fromfile(fileName,dtype=complex).astype(vartype)
+        slice_num=b.shape[0]/npoints/npoints
+        b=b.reshape(slice_num,npoints,npoints)
+        if slice_end == -1:
+            slice_end=None
+        print('      done')  
+        return b[slice_start:slice_end]
+        
+def readRadiationFile_mpi(comm=None, fileName='simulation.gout.dfl', npoints=51): #obsoletre, to be removed soon?
+    '''
+    not advisable to be used with very small n_proc due to memory overhead ~ file_size / n_proc  
+    '''
+    from mpi4py import MPI
+    
+    def read_in_chunks(file, size=1024):
+        while True:
+            data = file.read(size)
+            if not data:
+                break
+            yield data
+
+    
+    rank = comm.Get_rank()
+    nproc = comm.Get_size()
+        
+    f = open(fileName,'rb')
+    f.seek(0,2)
+    total_data_len = f.tell() / 8 / 2
+    f.seek(0,0)
+    slice_size = int(2.0*npoints*npoints * 8.0)
+    n_slices = int(total_data_len / (npoints**2))
+
+    ncar = int(np.sqrt((slice_size/16)))
+    
+    local_data_len = int(n_slices / nproc)
+    
+    n_extra = n_slices - local_data_len * nproc
+    
+    tmp_buf = np.zeros([local_data_len,ncar,ncar], dtype=complex)
+
+    
+    if rank == 0:
+        slice_start  = rank * local_data_len
+        slices = np.zeros([n_slices,ncar,ncar], dtype=complex)
+        slices_to_read = local_data_len + n_extra
+    else:
+        slice_start = rank * local_data_len + n_extra
+        slices = []
+        slices_to_read = local_data_len
+        
+    n = 0
+    
+    f.seek(slice_start*slice_size, 0)
+
+    print('rank '+str(rank)+' reading' + str (slice_start) + ' ' +  str(slices_to_read) + ' ' + str (n_extra))
+
+    for piece in read_in_chunks(f, size  = slice_size):
+                
+        if n >= slices_to_read :
+            break
+        
+        if ( len(piece) / 16 != ncar**2):
+            print ('warning, wrong slice size')
+    
+        for i in xrange(len(piece) / 16 ):
+            i2 = i % ncar
+            i1 = int(i / ncar)
+            if rank == 0:
+                #print n, n_extra
+                v = struct.unpack('d',piece[16*i:16*i+8])[0] + 1j*struct.unpack('d',piece[16*i+8:16*(i+1)])[0]
+                slices[n,i1,i2] = v
+                if n - n_extra >= 0:
+                    tmp_buf[n-n_extra,i1,i2] = v
+            else:
+                tmp_buf[n,i1,i2] = struct.unpack('d',piece[16*i:16*i+8])[0] + 1j*struct.unpack('d',piece[16*i+8:16*(i+1)])[0] 
+        n += 1
+    #print rank, 'tmp_buf=', tmp_buf
+    comm.Gather([tmp_buf,  MPI.COMPLEX], [slices[n_extra:], MPI.COMPLEX])
+    
+    return slices
+
+
+def writeRadiationFile(filename,fld): #obsolete, to be removed soon
+    print ('    writing radiation file') 
+    #a new backward compatible version ~10x faster
+#    print '        - writing to ', filename
+    d=fld.flatten()
+    d.tofile(filename,format='complex')
+    
+def writeRadiationFile_mpi(comm, filename, slices, shape):
+    '''
+    rank 0 should contain the slices
+    '''
+    from mpi4py import MPI 
+    n_slices, n1, n2 = shape[0], shape[1], shape[2]
+       
+    rank = comm.Get_rank()
+    nproc = comm.Get_size()
+    
+    if nproc == 1:
+        f=open(filename,'wb')  
+    else:
+        f=open(filename + '.' + str(rank),'wb')
+    
+    slice_size = n1*n2*8*2
+    
+    local_data_len = int(n_slices / nproc)
+    
+    n_extra = n_slices - local_data_len * nproc
+
+    tmp_buf = np.zeros([local_data_len,n1,n2], dtype=complex)    
+       
+    if rank == 0:
+        slice_start  = rank * local_data_len
+        slices_to_write = local_data_len + n_extra
+    else:
+        slice_start = rank * local_data_len + n_extra
+        slices = []
+        slices_to_write = local_data_len
+    
+    #print slices
+       
+    comm.Scatter([slices[n_extra:],  MPI.COMPLEX], [tmp_buf, MPI.COMPLEX])
+        
+    #print slices
+    #print tmp_buf
+        
+    #f.seek(slice_start*slice_size, 0)
+        
+    print ('rank='+ str( rank)+ ' slices_to_write=' + str( slice_start) + ' ' + str( slices_to_write))
+        
+    
+    for i1 in xrange(slices_to_write):
+        str_bin = ''
+        for i2 in xrange(n1):
+            for i3 in xrange(n2):
+                
+                if rank > 0:
+                    #print '>0', tmp_buf[i1,i2,i3]
+                    str_bin += struct.pack('d',tmp_buf[i1,i2,i3].real) 
+                    str_bin += struct.pack('d',tmp_buf[i1,i2,i3].imag)
+                else:
+                    #print '0', slices[i1,i2,i3]
+                    str_bin += struct.pack('d',slices[i1,i2,i3].real) 
+                    str_bin += struct.pack('d',slices[i1,i2,i3].imag)
+                    
+        #print 'writing', str_bin
+        f.write(str_bin)
+    
+    f.close()
+    
+    if rank == 0 and nproc>1:
+        print ('merging temporary files')
+        cmd = 'cat '
+        cmd2 = 'rm '
+        for i in xrange(nproc): 
+            cmd += ' ' + str(filename) + '.' + str(i)
+            cmd2 += ' ' + str(filename) + '.' + str(i)
+        cmd = cmd + ' > ' + filename
+        cmd = cmd + ' ; ' + cmd2
+        print cmd
+        os.system(cmd)
+        
+        
+def getAverageUndulatorParameter(lattice, unit=1.0, energy = 17.5):
+    positions = sorted(lattice.lattice.keys())
+          
+    prevPos = 0
+
+    ks = []
+    ls = []
+
+    for pos in positions:
+        if lattice.elements[lattice.lattice[pos].id].type == 'undulator':
+            e = lattice.elements[lattice.lattice[pos].id]
+            l = float(e.params['nperiods']) * float(e.params['lperiod'])
+            
+            ks.append( float(e.params['K']) )
+            ls.append( l / unit )
+            
+            #lat += 'AW' +'    '+ e.params['K'] + '   ' + str( l  / unit ) + '  ' + str( (pos - prevPos) / unit ) + '\n'
+            
+            #if prevPos>0:
+            #    drifts.append([str( (pos - prevPos ) / unit ), str(prevLen / unit)])
+            
+            #prevPos = pos + l
+            #prevLen = l 
+
+    return np.mean(ks)

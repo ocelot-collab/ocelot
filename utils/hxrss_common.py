@@ -49,7 +49,7 @@ class FelSimulator(object):
             return s3d, None
         if self.engine == 'test_genesis':
             ''' read test sliced field '''
-            g = readGenesisOutput(self.input)
+            g = read_genesis_output(self.input)
             print 'read sliced field ', g('ncar'), g.nSlices
             slices = readRadiationFile(fileName=self.input + '.dfl', npoints=g('ncar'))            
             s3d = Signal3D()
@@ -232,7 +232,7 @@ def sseed(input_file, E_ev, chicane, run_dir, delay = None, debug=True,
     c = 299792458.0
     
     t1 = time.time()
-    g = readGenesisOutput(input_file)
+    g = read_genesis_output(input_file)
     print 'read sliced field ', g('ncar'), g.nSlices
     ncar = int(g('ncar'))
     dgrid = float(g('dgrid'))
@@ -610,7 +610,7 @@ def sseed_2(input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug
     h = 4.135667516e-15
     c = 299792458.0
        
-    g = readGenesisOutput(input_file, readall=0)
+    g = read_genesis_output(input_file, readall=0)
     print 'read sliced field ', g('ncar'), g.nSlices
     ncar = int(g('ncar'))
     dgrid = float(g('dgrid'))

@@ -593,15 +593,11 @@ def read_genesis_output(filePath, readall=True, debug=0, precision=float):
     if debug>1: print ('        nSlice '+ str(out.nSlices))
     if debug>1: print ('        nZ '+ str(out.nZ))
     
-    if nSlice==0:
-        #raise
-        print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-        print('.out is empty')
-        
+    assert nSlice!=0,'.out is empty'
+            
     if (out.n[-1]-out.n[0]+1) != len(out.n):
-        #raise
         print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-        print('.out is missing at least '+str((out.n[-1]-out.n[0]+1)-len(out.n))+' slices')
+        print('WARNING, .out is missing at least '+str((out.n[-1]-out.n[0]+1)-len(out.n))+' slices')
         
     if readall:
         output_unsorted=np.array(output_unsorted)#.astype(precision)
@@ -1190,7 +1186,7 @@ def interp_radiation(F,interpN=(1,1),interpL=(1,1),newN=(None,None),newL=(None,N
         if newL[1] != None:  
             Ly2=newL[1]  
         else: Ly2=F.Ly 
-     
+    
     xscale1=np.linspace(-F.Lx/2, F.Lx/2, F.Nx()) 
     yscale1=np.linspace(-F.Ly/2, F.Ly/2, F.Ny())     
     xscale2=np.linspace(-Lx2/2, Lx2/2, Nx2) 

@@ -256,7 +256,7 @@ def run(inp, launcher,readall=False,dfl_slipage_incl=True,assembly_ver='sys'):
     # print ('        done in %.2f seconds' % (time.time() - start_time))
     print ('      total time %.2f seconds' % (time.time() - assembly_time))
     
-    g = readGenesisOutput(out_file,readall=readall)
+    g = read_genesis_output(out_file,readall=readall)
     
     return g
 
@@ -614,7 +614,7 @@ class FelSimulator(object):
             return s3d, None
         if self.engine == 'test_genesis':
             ''' read test sliced field '''
-            g = readGenesisOutput(self.input)
+            g = read_genesis_output(self.input)
             print 'read sliced field ', g('ncar'), g.nSlices
             slices = readRadiationFile(fileName=self.input + '.dfl', npoints=g('ncar'))            
             s3d = Signal3D()

@@ -152,8 +152,8 @@ def quantum_diffusion(energy, Kx, lperiod, L, quantum_diff = False):
 
 def track4rad(beam, lat, energy_loss = False, quantum_diff = False):
     energy = beam.E
-    Y0 = [beam.x, beam.xp, beam.y, beam.yp, 0, 0]
-    p = Particle(x=beam.x,px=beam.xp, y=beam.yp, py=beam.yp, E=beam.E)
+    #Y0 = [beam.x, beam.xp, beam.y, beam.yp, 0, 0]
+    p = Particle(x=beam.x, px=beam.xp, y=beam.yp, py=beam.yp, E=beam.E)
     L = 0.
     U = []
     E = []
@@ -178,7 +178,7 @@ def track4rad(beam, lat, energy_loss = False, quantum_diff = False):
                         h = lat_el.totalLen/(N)
                         tracking_step(lat_el, [p], h, navi)
                         #print p.s
-                        ui = [p.x, p.px, p.y, p.py, z, sqrt(1. - p.px*p.px - p.py *p.py), 0., 0., 0.]
+                        ui = [p.x, p.px, p.y, p.py, z, np.sqrt(1. - p.px*p.px - p.py *p.py), 0., 0., 0.]
                         u.extend(ui)
                     U.append(array(u))
                     E.append(energy)
@@ -200,12 +200,12 @@ def track4rad(beam, lat, energy_loss = False, quantum_diff = False):
                 mag_field = elem.mag_field
             except:
                 mag_field = lambda x, y, z: und_field(x, y, z, elem.lperiod, elem.Kx)
-            u = rk_track_in_field(array(Y0), elem.l, N, energy, mag_field)
-            p.x = u[-9,0]
-            p.px =u[-8,0]
-            p.y = u[-7,0]
-            p.py =u[-6,0]
-            s = u[-5,0]
+            u = rk_track_in_field(array([p.x, p.px, p.y, p.py, 0, 0]), elem.l, N, energy, mag_field)
+            p.x = u[-9, 0]
+            p.px =u[-8, 0]
+            p.y = u[-7, 0]
+            p.py =u[-6, 0]
+            s = u[-5, 0]
             u[4::9] += L
             L += s
             U.append(u)

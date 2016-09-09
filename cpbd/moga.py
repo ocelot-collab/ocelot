@@ -44,8 +44,9 @@ class Moga():
 
         self.penalty = None
 
-        self.log = True if MPI_RANK == 0 else False
-        self.file = 'moga.dat' if MPI_RANK == 0 else None
+        self.log_print = True if MPI_RANK == 0 else False
+        self.log_file = 'moga_result.dat' if MPI_RANK == 0 else None
+        self.plt_file = 'moga_polt.dat' if MPI_RANK == 0 else None
 
         self.fit_func = lambda x: None
         self.fit_func_args = []
@@ -58,7 +59,7 @@ class Moga():
             self.bounds_max.append(bounds[i][1])
         
 
-    def set_params(self, pop_num=None, elite=None, penalty=None, cxpb=None, mutpb=None, ngen=None, log=None, file=None):
+    def set_params(self, pop_num=None, elite=None, penalty=None, cxpb=None, mutpb=None, ngen=None, log_print=None, log_file=None, plt_file=None):
         
         if pop_num != None:
             self.pop_num = pop_num
@@ -79,11 +80,14 @@ class Moga():
         if ngen != None:
             self.ngen = ngen
 
-        if log != None and MPI_RANK == 0:
-            self.log = True
+        if log_print != None and MPI_RANK == 0:
+            self.log_print = True
 
-        if file != None and MPI_RANK == 0:
-            self.file = file
+        if log_file != None and MPI_RANK == 0:
+            self.log_file = log_file
+
+        if plt_file != None and MPI_RANK == 0:
+            self.plt_file = plt_file
 
 
     def generate_ind(self):
@@ -127,20 +131,49 @@ class Moga():
         toolbox = self.init_deap_functions()
         toolbox.register("select", tools.selNSGA2)
 
-        if self.log: print("Number of used CPU: %i" % MPI_SIZE)
+        if self.log_print: print("Number of used CPU: %i" % MPI_SIZE)
+
+        # optimization
+        result = self.optimize(toolbox, init_pop)
+        
+        if self.log_print: print("End of (successful) evolution")
+
+        result_nd = self.get_nondominated_inds(toolbox, result)
+
+        if self.log_file: 
+            fh1 = open(self.log_file, 'a')
+            fh1.write("\n-------------------------- End of (successful) evolution --------------------------\n")
+            fh1.write("\nNon dominated individuals\n")
+            for ind in result_nd:
+                fh1.write("ind --> fit_func: " + str(ind) + ' --> ' + str(ind.fitness.values) + '\n')
+            fh1.close()
+
+        return result_nd
+
+
+    def optimize(self, toolbox, init_pop):
 
         # Create initial population
         pop = self.init_pop(toolbox, init_pop)
 
+        if self.log_print: print("-- Generation 0 --")
+        if self.log_file: 
+            fh1 = open(self.log_file, 'w')
+            fh1.close()
+        
         # Evaluate initial population
-        if self.log: print("-- Generation 0 --")
         pop = self.eval_pop(toolbox, pop)
 
 
         # Begin the evolution
         for g in range(self.ngen):
 
-            if self.log: print("-- Generation %i --" % (g+1))
+            if self.log_print: print("-- Generation %i --" % (g+1))
+
+            if self.log_file: 
+                fh1 = open(self.log_file, 'a')
+                fh1.write("\n-------------------------- Generation %i from %i --------------------------\n" % ((g+1), self.ngen))
+                fh1.close()
 
             # Select good and bad individuals
             good_inds = self.get_good_inds(toolbox, pop)
@@ -148,8 +181,15 @@ class Moga():
             # Create elite population (non dominated individuals)
             nond_inds = self.get_nondominated_inds(toolbox, pop)
 
+            if self.log_file: 
+                fh1 = open(self.log_file, 'a')
+                fh1.write("\nNon dominated individuals\n")
+                for ind in nond_inds:
+                   fh1.write("ind --> fit_func: " + str(ind) + ' --> ' + str(ind.fitness.values) + '\n')
+                fh1.close()
+
             # Save current population to file
-            if self.file != None:
+            if self.plt_file != None:
                 
                 data_file = []
                 data_file.append([g+1,self.ngen])
@@ -164,11 +204,18 @@ class Moga():
                     val_nd.append(ind.fitness.values)
                 data_file.append(val_nd)
                 
-                with open(self.file, 'wb') as f:
-                    pickle.dump(data_file, f)
+                with open(self.plt_file, 'wb') as fh2:
+                    pickle.dump(data_file, fh2)
 
             # Select individuals with best solution (best_inds[0] - with best fit_func_1 and best_inds[1] - with best fit_func_2)
             best_inds = self.get_best_inds(toolbox, pop)
+
+            if self.log_file: 
+                fh1 = open(self.log_file, 'a')
+                fh1.write("\nBest individuals\n")
+                for ind in best_inds:
+                    fh1.write("ind --> fit_func: " + str(ind) + ' --> ' + str(ind.fitness.values) + '\n')
+                fh1.close()
 
             # Select the next generation individuals
             offspring = self.apply_select(toolbox, pop)
@@ -210,9 +257,7 @@ class Moga():
             # Replace random individuals by bests
             pop = self.replace_rand_inds(toolbox, pop, best_inds)
 
-        if self.log: print("End of (successful) evolution")
-
-        return self.get_nondominated_inds(toolbox, pop)
+        return pop
 
 
     def init_pop(self, toolbox, init_pop):
@@ -277,7 +322,7 @@ class Moga():
         else:
             pop = None
 
-        if self.log: print("Evaluated %i" % (len(pop)))
+        if self.log_print: print("Evaluated %i" % (len(pop)))
 
         return pop
 
@@ -295,7 +340,7 @@ class Moga():
             else:
                 gb[1] += 1
                 
-        if self.log: print("good/bad solitions %i / %i" % (gb[0], gb[1]))
+        if self.log_print: print("good/bad solitions %i / %i" % (gb[0], gb[1]))
 
         return g_inds
 
@@ -307,7 +352,7 @@ class Moga():
         nd_inds = tools.sortNondominated(pop, k=len(pop), first_front_only=True)[0]
         nd_inds = [toolbox.clone(x) for x in nd_inds]
 
-        if self.log: print("non dominated %i" % len(nd_inds))
+        if self.log_print: print("non dominated %i" % len(nd_inds))
 
         return nd_inds
 

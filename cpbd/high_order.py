@@ -413,60 +413,68 @@ def t_nnn(L, h, k1, k2, energy=0):
         T[1, 1, 5] = -h*h/6./beta*(K2 - 2.*h*ky2)*(3.*sx*J1 + dx_h*dx_h) + 1./2./beta*-ky2*L*sx
         T[1, 5, 5] = -h*h/6./(beta2)*(K2 - 2.*h*ky2)*(sx*dx_h*dx_h - 2.*cx*J2) - h/2./beta2*-ky2*(cx*J1 - sx*dx_h) - h*igamma2/(2.*beta2)*sx
         T[2, 3, 5] = h/beta*K2*(sy*Jd - 2*cy*Jf) + h2/beta*J1*cy - 1./2./beta*(sy + L*cy)
+        T[2, 2, 5] = h/beta*K2*(sy*Jd - 2*-ky2*cy*Jf) + h2/beta*-ky2*J1*sy - 0.5/beta*-ky2*L*sy
+        # only T436 gives the different value for Quad in comparison with MAD, but it was checked and it is correct
+        T[3, 2, 5] = h/beta*-ky2*K2*(2*cy*Jf - sy*Jd) + h/beta*(K2 + h*-ky2)*J1*cy + 0.5*beta*-ky2*(sy - L*cy)
         T[4, 0, 1] = -(h/6./beta*(K2 + 2*h*-ky2)*dx_h*dx_h + 1/2./beta*-ky2*sx2)
         T[4, 1, 5] = -(h/6./beta*(K2 + 2*h*-ky2)*(dx_h**3 - 2*sx*J2) + h/2./beta*-ky2*sx*J1 + h*igamma2/beta2*dx_h)
         T[4, 5, 5] = -1.5/beta**2*igamma2*(h**2*J1-L)
-        # only T436 gives the different value for Quad in comparison with MAD, but it was checked and it is correct
-        T[3, 2, 5] = h/beta*-ky2*K2*(2*cy*Jf - sy*Jd) + h/beta*(K2 + h*-ky2)*J1*cy + 0.5*beta*-ky2*(sy - L*cy)
         T[4, 0, 5] = -sx*h/(beta**2)*igamma2
-        T[2, 2, 5] = h/beta*K2*(sy*Jd - 2*-ky2*cy*Jf) + h2/beta*-ky2*J1*sy - 0.5/beta*-ky2*L*sy
+        # 07.09.2016
+        T[0, 0, 5] = 2.*(-h/12./beta*(K2 + 2*h*-ky2)*(3*sx*J1 - dx_h*dx_h) + 0.5*h2/beta*sx2 + 0.25/beta*-ky2*L*sx)
+
+        T[4, 0, 0] = -(h/12./beta*(K2 + 2*h*-ky2)*(sx*dx_h + 3*J1) - 0.25/beta*-ky2*(L - sx*cx))
+        T[4, 1, 1] = -(h/6./beta*(K2 + 2*h*-ky2)*J2 - 0.5/beta*sx - 0.25/beta*-ky2*(J1 - sx*dx_h))
+        T[4, 2, 2] = -(-h/beta*-ky2*K2*Jf - 0.5*h/beta*(K2 + h*-ky2)*J1 + 0.25/beta*-ky2*(J1 - cy*sy))
+        T[4, 2, 3] = -2*(-0.5*h/beta*K2*Jd - 0.25/beta*-ky2*sy*sy)
+        T[4, 2, 3] = -(-h/beta*K2*Jf - 0.5*h2/beta*J1 -0.25/beta*(L + cy*sy))
         #print(dx_h, igamma2, beta2, h)
         #print(igamma2)
     # MAD STOP
 
     """
-    print "T511 = ", T511
-    print "T512 = ", T512
-    print "T516 = ", T516
-    print "T522 = ", T522
-    print "T526 = ", T526
-    print "T566 = ", T566
-    print "T533 = ", T533
-    print "T534 = ", T534
-    print "T544 = ", T544
+    #print("T511 = ", T511)
+    #print("T512 = ", T512)
+    #print("T516 = ", T516)
+    #print("T522 = ", T522)
+    #print("T526 = ", T526)
+    #print("T566 = ", T566)
+    #print("T533 = ", T533)
+    #print("T534 = ", T534)
+    #print("T544 = ", T544)
 
 
 
-    print "t111 = ", t111
-    print "t112 = ", t112
-    print "t116 = ", t116
-    print "t122 = ", t122
-    print "t126 = ", t126
-    print "t166 = ", t166
-    print "t133 = ", t133
-    print "t134 = ", t134
-    print "t144 = ", t144
-    print "t211 = ", t211
-    print "t212 = ", t212
-    print "t216 = ", t216
-    print "t222 = ", t222
-    print "t226 = ", t226
-    print "t266 = ", t266
-    print "t233 = ", t233
-    print "t234 = ", t234
-    print "t244 = ", t244
-    print "t313 = ", t313
-    print "t314 = ", t314
-    print "t323 = ", t323
-    print "t324 = ", t324
-    print "t336 = ", t336
-    print "t346 = ", t346
-    print "t413 = ", t413
-    print "t414 = ", t414
-    print "t423 = ", t423
-    print "t424 = ", t424
-    print "t436 = ", t436
-    print "t446 = ", t446
+    print("T111 = ", T[1-1, 1-1, 1-1])
+    print("T112 = ", T[1-1, 1-1, 2-1])
+    print("T116 = ", T[1-1, 1-1, 6-1])
+    print("T122 = ", T[1-1, 2-1, 2-1])
+    print("T126 = ", T[1-1, 2-1, 6-1])
+    print("T166 = ", T[1-1, 6-1, 6-1])
+    print("T133 = ", T[1-1, 3-1, 3-1])
+    print("T134 = ", T[1-1, 3-1, 4-1])
+    print("T144 = ", T[1-1, 4-1, 4-1])
+    print("T211 = ", T[2-1, 1-1, 1-1])
+    print("T212 = ", T[2-1, 1-1, 2-1])
+    print("T216 = ", T[2-1, 1-1, 6-1])
+    print("T222 = ", T[2-1, 2-1, 2-1])
+    print("T226 = ", T[2-1, 2-1, 6-1])
+    print("T266 = ", T[2-1, 6-1, 6-1])
+    print("T233 = ", T[2-1, 3-1, 3-1])
+    print("T234 = ", T[2-1, 3-1, 4-1])
+    print("T244 = ", T[2-1, 4-1, 4-1])
+    print("T313 = ", T[3-1, 1-1, 3-1])
+    print("T314 = ", T[3-1, 1-1, 4-1])
+    print("T323 = ", T[3-1, 2-1, 3-1])
+    print("T324 = ", T[3-1, 2-1, 4-1])
+    print("T336 = ", T[3-1, 3-1, 6-1])
+    print("T346 = ", T[3-1, 4-1, 6-1])
+    print("T413 = ", T[4-1, 1-1, 3-1])
+    print("T414 = ", T[4-1, 1-1, 4-1])
+    print("T423 = ", T[4-1, 2-1, 3-1])
+    print("T424 = ", T[4-1, 2-1, 4-1])
+    print("T436 = ", T[4-1, 3-1, 6-1])
+    print("T446 = ", T[4-1, 4-1, 6-1])
     """
     return T
 
@@ -741,10 +749,20 @@ def sym_map(z, X, h, k1, k2, energy=0.):
 
 
 def moments(bx, by, Bx, By, Bz, dzk):
+    """
+    mx = v/(dz/dt)*e/p*(y'*Bz - By*(1.+x'^2) + x'*y'*Bx)*dz
+    my = -v/(dz/dt)*e/p*(x'*Bz - Bx*(1.+y'^2) + x'*y'*By)*dz
+    :param bx: x' = dx/dz
+    :param by: y' = dy/dz
+    :param Bx: horizontal component of mag field
+    :param By: vertical component of mag field
+    :param Bz: longitudinal component of mag field
+    :param dzk: dz*e/p; dz - step, e - charge, p - momentum
+    :return: mx, my
+    """
     bx2 = bx*bx
     by2 = by*by
     bxy = bx*by
-    #sq = 1 + (bx2 + by2)/2.
     sq = np.sqrt(1. + bx2 + by2)
     k = sq*dzk
     mx = k*(by*Bz - By*(1.+bx2) + bxy*Bx)
@@ -752,8 +770,32 @@ def moments(bx, by, Bx, By, Bz, dzk):
     return mx, my
 
 
-def rk_track_in_field(y0, l, N, energy, mag_field, s_start=0.):
-    z = np.linspace(s_start, l, num=N)
+def rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=0.):
+    """
+    Runge-Kutta solver of the exact trajectory equations in the fixed coordinate system {X, Y, Z]}.
+    X, Y - transverse coordinates, Z - longitudinal.
+
+    Trajectory equations:
+    x'' = v/(dz/dt)*e/p*(y'*Bz - By*(1.+x'^2) + x'*y'*Bx)
+    y'' = -v/(dz/dt)*e/p*(x'*Bz - Bx*(1.+y'^2) + x'*y'*By)
+    v/(dz/dt) = sqrt(1 + y'^2 + x'^2)
+    z' is not needed in the initial conditions and z' is not used for SR calculation
+        therefore z' can be arbitrary defined in the returning array. z' = beta_z
+
+    :param y0: array n*6; initial coordinates of n particles
+                [x0, x0'=dx/dz, y0, y0=dy/dz, 0, 0,
+                x1, x1', y1, y1', 0, 0, ...
+                xn, xn', yn, yn', 0, 0]
+    :param s_stop: longitudinal coordinate of stop
+    :param N: number of steps
+    :param energy: energy of particle in [GeV]
+    :param mag_field: function. Bx, By, Bz = mag_field(X, Y, Z)
+    :param s_start: starting longitudinal coordinate
+    :return: array with length N*9- coordinates and magnetic fields on the trajectory
+            [x, x', y, y', z, z', Bx, By, Bz, ...
+            xn, xn', yn, yn', zn, zn', Bxn, Byn, Bzn]
+    """
+    z = np.linspace(s_start, s_stop, num=N)
     h = z[1] - z[0]
     N = len(z)
     gamma = energy/m_e_GeV
@@ -762,19 +804,21 @@ def rk_track_in_field(y0, l, N, energy, mag_field, s_start=0.):
     cmm = speed_of_light
     massElectron = m_e_eV# 0.510998910e+6 #// rest mass of electron
 
-    u = np.zeros((N*9,len(y0)/6))
+    u = np.zeros((N*9, len(y0)/6))
     px = y0[1::6]
     py = y0[3::6]
     dz = h
-    dGamma2 = 1. - 0.5/(gamma*gamma)
-    pz = dGamma2 - (px*px + py*py)/2.
+    #dGamma2 = 1. - 0.5/(gamma*gamma)
+    beta = np.sqrt(1. - 1./(gamma*gamma))
+    #pz = dGamma2 - (px*px + py*py)/2.
+    betaz = beta/np.sqrt(1 + px*px + py*py)
     k = charge*cmm/(massElectron*mass*gamma)
-    u[0,:] = y0[0::6]
-    u[1,:] = y0[1::6]
-    u[2,:] = y0[2::6]
-    u[3,:] = y0[3::6]
-    u[4,:] = z[0]
-    u[5,:] = pz
+    u[0, :] = y0[0::6]
+    u[1, :] = y0[1::6]
+    u[2, :] = y0[2::6]
+    u[3, :] = y0[3::6]
+    u[4, :] = z[0]
+    u[5, :] = betaz
     dzk = dz*k
     for i in range(N-1):
         X = u[i*9 + 0]
@@ -820,7 +864,7 @@ def rk_track_in_field(y0, l, N, energy, mag_field, s_start=0.):
         u[(i+1)*9 + 2] = Y + 1/6.*(ky1 + 2.*(ky2 + ky3) + ky4)
         u[(i+1)*9 + 3] = byconst + 1/6.*(my1 + 2.*(my2 + my3) + my4)
         u[(i+1)*9 + 4] = Z_n
-        u[(i+1)*9 + 5] = dGamma2 - (u[(i+1)*9 + 1]*u[(i+1)*9 + 1] + u[(i+1)*9 + 3]*u[(i+1)*9 + 3])/2.
+        u[(i+1)*9 + 5] = beta/np.sqrt(1 + u[(i+1)*9 + 1]*u[(i+1)*9 + 1] + u[(i+1)*9 + 3]*u[(i+1)*9 + 3])#dGamma2 - (u[(i+1)*9 + 1]*u[(i+1)*9 + 1] + u[(i+1)*9 + 3]*u[(i+1)*9 + 3])/2.
 
     u[(N-1)*9 + 6], u[(N-1)*9 + 7], u[(N-1)*9 + 8] = mag_field(u[(N-1)*9 + 0], u[(N-1)*9 + 2], u[(N-1)*9 + 4])
     return u
@@ -837,10 +881,10 @@ def rk_field(y0, s_start, s_stop, N, energy, mag_field):
     traj_data = rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=s_start)
     #print np.shape(traj_data), np.shape(y0)
     #print traj_data
-    y0[0::6] = traj_data[(N-1)*9 + 0,:]
-    y0[1::6] = traj_data[(N-1)*9 + 1,:]
-    y0[2::6] = traj_data[(N-1)*9 + 2,:]
-    y0[3::6] = traj_data[(N-1)*9 + 3,:]
+    y0[0::6] = traj_data[(N-1)*9 + 0, :]
+    y0[1::6] = traj_data[(N-1)*9 + 1, :]
+    y0[2::6] = traj_data[(N-1)*9 + 2, :]
+    y0[3::6] = traj_data[(N-1)*9 + 3, :]
     #y0[4::6] = traj_data[(N-1)*9 + 4,:]
     #y0[5::6] = traj_data[(N-1)*9 + 5,:]
     return y0

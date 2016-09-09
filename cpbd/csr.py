@@ -26,16 +26,29 @@ def interp1(x, y, xnew, k=1):
         ynew = []
     return ynew
 
+def convolution(xu, u, xw, w):
+    #convolution of equally spaced functions
+    hx = xu[1] - xu[0]
+    wc = np.convolve(u, w)*hx
+    nw = w.shape[0]
+    nu = u.shape[0]
+    x0 = xu[0] + xw[0]
+    xc = x0 + np.arange(nw + nu)*hx
+    return xc, wc
 
 class CSR:
 
     def __init__(self):
         self.mesh_params = None # [n_mesh, mesh_step]. list N[0] 0 number of mesh points, N[1] = dW> 0 - increment, Mesh = Mesh = (N: 0) * dW
         #self.csr_traj = np.transpose([[0, 0, 0, 0, 0, 0, 0]])
-        self.start_elem = None
-        self.end_elem = None
+        #self.start_elem = None
+        #self.end_elem = None
         self.z_csr_start = 0.  # z [m] position of the start_elem
         self.z0 = 0.           # self.z0 = navigator.z0 in track.track()
+        self.step = 1          # in unit step
+        self.filter_order = 20
+        self.energy = 10 # GeV
+        self.n_mesh = 300
 
     def K0_inf_anf(self, i, traj, wmin):
         #%function [ w,KS ] = K0_inf_anf( i,traj,wmin )
@@ -235,16 +248,19 @@ class CSR:
                                  traj[1,:], traj[2,:], traj[3,:] - rectangular coordinates, \
                                  traj[4,:], traj[5,:], traj[6,:] - tangential unit vectors
         """
-        csr_lat = MagneticLattice(copy.deepcopy(lat.sequence), start=self.start_elem, stop=self.end_elem)
+        seq_copy = deepcopy(lat.sequence)
+        start = seq_copy[self.indx0]
+        stop = seq_copy[self.indx1]
+        csr_lat = MagneticLattice(seq_copy, start=start, stop=stop)
 
-        self.z_csr_start = sum([p.l for p in lat.sequence[:lat.sequence.index(self.start_elem)]])
+        self.z_csr_start = sum([p.l for p in lat.sequence[:self.indx0]])
 
         #Particle(x=0.0, y=0.0, px=0.0, py=0.0, s=0.0, p=0.0,  tau=0.0, E=0.0)
         p = Particle()
         #energy = p.E
-
-        #beta = 1.#sqrt(1. - 1./gamma**2)
-        self.csr_traj = np.transpose([[0, p.x, p.y, p.s, p.px, p.py, 1.-p.px*p.px/2. - p.py*p.py/2.]])
+        gamma = self.energy/m_e_GeV
+        beta = np.sqrt(1. - 1./gamma**2)
+        self.csr_traj = np.transpose([[0, p.x, p.y, p.s, p.px, p.py, beta]])
 
         #angle = 0.
         for elem in csr_lat.sequence:
@@ -257,17 +273,18 @@ class CSR:
             if elem.__class__ in [Bend, RBend, SBend]:
                 R = elem.l/elem.angle
                 #B = energy*1e9*beta/(R*speed_of_light)
-                R_vect = [0, -R, 0.]
+                R_vect = [0, R, 0.]
 
                 #L = R*np.sin(elem.angle)
                 #angle += elem.angle
-                #print("B = ", B)
+                #print("B = ", R_vect)
             else:
                 #B = 0.
                 R_vect = [0, 0, 0.]
                 #L = elem.l*np.cos(angle)
             self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect )
-
+        #plt.plot(self.csr_traj[3, :], self.csr_traj[1,:], "r.-")
+        #plt.show()
         return self.csr_traj
 
     #def apply(self, p_array, delta_s):
@@ -277,57 +294,54 @@ class CSR:
         #print("APPLY CSR")
         s_cur = self.z0 - self.z_csr_start
         z = p_array.particles[4::6]
-        #bins_start, hist_start = get_current(p_array, charge=p_array.q_array[0], num_bins=200)
-        #plt.plot(bins_start, hist_start)
-        #plt.show()
         bunch_size = max(z) - min(z)
-        if self.mesh_params == None:
-            n_mesh = 2000
-            mesh_step = bunch_size/n_mesh*10.
-            Ndw = [n_mesh, mesh_step]
-        else:
-            Ndw = self.mesh_params
+        #self.n_mesh = 300
+        #if self.mesh_params == None:
+        #    n_mesh = 300
+        mesh_step = bunch_size/self.n_mesh
+        Ndw = [self.n_mesh, mesh_step]
+        #else:
+            #Ndw = self.mesh_params
 
-        s_array = self.csr_traj[0,:]
+        s_array = self.csr_traj[0, :]
         indx = (np.abs(s_array-s_cur)).argmin()
-        #print(s_cur, indx, Ndw)
+
         gamma = p_array.E/m_e_GeV
-        K1 = self.CSR_K1( indx, self.csr_traj, Ndw, gamma=gamma)
-        #plt.plot(K1)
-        #plt.show()
+        print(indx)
+        K1 = self.CSR_K1(indx, self.csr_traj, Ndw, gamma=gamma)
 
         # filtering
-        Ns = np.ceil(bunch_size/2./Ndw[1])
-        #s = np.arange(-Ns, Ns+1)*Ndw[1]
-        #hist, bin_edges = np.histogram(z, bins=len(s))
-        #b_distr = hist*p_array.q_array[0]/(bin_edges[1] - bin_edges[0])
-        #b_distr_filt = gaussian_filter(b_distr, sigma=2)
+        Ns = np.ceil(bunch_size/Ndw[1])
 
+        I = s2current(z, p_array.q_array, n_points=Ns + 2, filter_order=self.filter_order, mean_vel=speed_of_light)
+        #print(self.filter_order)
 
-        I = s2current(z, p_array.q_array, n_points=2*Ns+1, filter_order=5, mean_vel=speed_of_light)
+        I_zeros = np.zeros_like(I)
+        I_zeros[:, 0] = I[:, 0] - (I[-1, 0] - I[0, 0])
+        I = np.append(I_zeros, I, axis=0)
+        #print(I)
         b_distr_filt = I[:, 1]/speed_of_light
-        #print("charge1 = ", sum(b_distr_filt*charge_array[0]))
-        #plt.plot(s, b_distr_filt, "r")
-        #plt.plot(I[:, 0], I[:, 1]/speed_of_light, "b")
-        #plt.show()
-        #bins_start, hist_start = get_current(particle_list, charge=charge_array[0], num_bins=1000)
-        #print("rms = ", np.std(z))
+
         lam_K1 = np.convolve(b_distr_filt, K1)
 
         Nend = len(lam_K1)
-        x = np.arange(Ns+1-Nend, Ns+1)*Ndw[1]
+
+        N = int(abs(Ns+1-Nend) + Ns+1)
+        x = np.linspace(I[-1, 0], I[-1, 0] - N*Ndw[1], num=N, endpoint=False)[::-1]
+        #x = np.arange(Ns+1-Nend, Ns+1)*Ndw[1]
+        #plt.plot(K1)
+        #plt.plot(I[:,0], I[:, 1])
+        #plt.plot(x, lam_K1)
+        #plt.show()
         tck = interpolate.splrep(x, lam_K1, k=1)
         dE = interpolate.splev(z, tck, der=0)
 
-        p_array.E = p_array.E * (1. + p_array.particles[5])
-        p_array.particles[5::6] -= p_array.particles[5]
-        #print("dE = ", particle_list.E)
-        #plt.plot(x, lam_K1, "b")
-        #print("E = ", particle_list.E)
+        #p_array.E = p_array.E * (1. + p_array.particles[5])
+        #p_array.particles[5::6] -= p_array.particles[5]
+
         p_array.particles[5::6] += dE * 1e-9 / p_array.E * delta_s
-        #plt.plot(z, particle_list.particles[5::6], "r.")
-        #plt.plot(z, dE*1e-9/particle_list.E, "b.")
-        #plt.show()
+
+
 
 
 

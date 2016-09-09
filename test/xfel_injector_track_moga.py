@@ -39,7 +39,7 @@ c3_ah1_1_8_i1.v = V13; c3_ah1_1_8_i1.phi = phi13
 
 lattice = gun_5MeV + i1_150M
 
-p_array_init = astraBeam2particleArray(filename='workshop/Exfel.0320.ast')
+p_array_init = astraBeam2particleArray(filename='workshop/beam_6MeV.ast')
 
 n = 100
 p_array_init.particles = p_array_init.particles[::n]
@@ -54,7 +54,7 @@ method.global_method = SecondTM
 stop_element = i1_end_i1
 lat = MagneticLattice(lattice, start=start_sim, stop=stop_element, method=method)
 
-bounds = ((0.0, 30.0), (0.0, 30.0))
+bounds = ((0.0, 30.0), (160.0, 200.0))
 
 init_pop = []
 init_pop.append([c_a1_1_1_i1.phi, c3_ah1_1_1_i1.phi])
@@ -88,11 +88,11 @@ def fit_func(x0, args):
     sI1, I1 = get_current(p_array, charge=p_array.q_array[0], num_bins=25)
     tau = p_array.particles[4::6]
     dp = p_array.particles[5::6]
-    slope, intercept, r_value, p_value, std_err = stats.linregress(-tau*1000,dp)
+    slope, intercept, r_value, p_value, std_err = stats.linregress(-tau*1000, dp)
 
     f1 = 1.0 / np.max(I1)
     f2 = abs(slope)
-
+    print(1./f1, f2)
     return f1, f2
 
 

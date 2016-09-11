@@ -230,6 +230,7 @@ def run(inp, launcher,readall=False,dfl_slipage_incl=True,assembly_ver='sys'):
         print ('      removing temporary files')
     
     elif assembly_ver=='pyt':
+        #there is a bug with dfl assembly
         import glob
         ram=1
         

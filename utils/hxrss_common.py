@@ -9,7 +9,7 @@ from ocelot.optics.ray import Ray, trace as trace_ray
 from ocelot.gui.optics import *
 from ocelot.common.math_op import peaks
 from ocelot.adaptors.genesis import *
-from sim_info import *
+#from sim_info import *
 
 from copy import deepcopy
 import multiprocessing
@@ -50,7 +50,7 @@ class FelSimulator(object):
         if self.engine == 'test_genesis':
             ''' read test sliced field '''
             g = read_genesis_output(self.input)
-            print 'read sliced field ', g('ncar'), g.nSlices
+            print ('read sliced field ', g('ncar'), g.nSlices)
             slices = readRadiationFile(fileName=self.input + '.dfl', npoints=g('ncar'))            
             s3d = Signal3D()
             s3d.slices = slices
@@ -72,7 +72,7 @@ def pulses_from_field(pulse3d, range=None, npad = 2, threaded = False):
     tmax = pulse3d.tmax
     E_ref = pulse3d.E_ref
     k0 = E_ref / (hbar * c)
-    print 'creating ', n_pulses, ' pulses ', nx, 'x', ny, ' tmax=', tmax
+    print ('creating ', n_pulses, ' pulses ', nx, 'x', ny, ' tmax=', tmax)
     
     pulses = Signal()
              
@@ -109,8 +109,8 @@ def field_from_pulses_test(t, fs):
 def field_from_pulses(t, fs, mesh_size, slices=None, write_file = None):
     
     nslice = fs.shape[1]
-    print fs.shape
-    print 'creating field', nslice , 'x', mesh_size[0], 'x', mesh_size[1]
+    print (fs.shape)
+    print ('creating field', nslice , 'x', mesh_size[0], 'x', mesh_size[1])
     if slices == None: 
         slices = np.zeros([nslice, mesh_size[0], mesh_size[1]], dtype=complex)
         
@@ -150,7 +150,7 @@ def update_beam(beam_new, g, beam):
     i_diff = len(g0) - len(beam_new.z)
     if i_diff <= 0: i_diff = -len(g0)
 
-    print 'i_diff', i_diff
+    print ('i_diff', i_diff)
 
     g0 = g0[:-i_diff]
     dg = dg[:-i_diff]
@@ -189,7 +189,7 @@ def log_info(sim_info, g, run_id, stage):
     sim_info.runs[r.id] = r
 
 
-    print 'saving run ', id
+    print ('saving run ', id)
     f_obj = open(sim_info.log_dir + 'dump.dat', 'wb')
     pickle.dump(sim_info, f_obj)
     f_obj.close()
@@ -233,17 +233,17 @@ def sseed(input_file, E_ev, chicane, run_dir, delay = None, debug=True,
     
     t1 = time.time()
     g = read_genesis_output(input_file)
-    print 'read sliced field ', g('ncar'), g.nSlices
+    print ('read sliced field ', g('ncar'), g.nSlices)
     ncar = int(g('ncar'))
     dgrid = float(g('dgrid'))
 
     idx_max = np.argmax(g.I)
     g.idx_max = idx_max
-    print 'ss: idx_max:', g.idx_max
+    print ('ss: idx_max:', g.idx_max)
 
     slices = readRadiationFile(fileName=input_file + '.dfl', npoints=g('ncar'))  
 
-    print 'field readout :', time.time() - t1, ' sec'
+    print ('field readout :', time.time() - t1, ' sec')
     t1 = time.time()
 
     s3d = Signal3D()
@@ -263,12 +263,12 @@ def sseed(input_file, E_ev, chicane, run_dir, delay = None, debug=True,
     g.npad = npad
     pulses_1d = pulses_from_field(pulse3d_part, npad=npad, threaded = threaded) 
     g.nslice = pulses_1d.nslice
-    print '*** created', pulses_1d.n_pulses, ' pulses *** '
+    print ('*** created', pulses_1d.n_pulses, ' pulses *** ')
 
 
     if debug:
         pulse_idx = int(pulse3d_part.nx*pulse3d_part.ny/2.) 
-        print 'plotting slice', pulse_idx
+        print ('plotting slice', pulse_idx)
         fig = plt.figure()
         ax = fig.add_subplot(221)
         ax.grid(True)
@@ -288,19 +288,19 @@ def sseed(input_file, E_ev, chicane, run_dir, delay = None, debug=True,
 
     r = Ray() 
     r.lamb = 2 * pi * hbar * c / E_ev
-    print 'wavelength', r.lamb, '(', E_ev, 'eV), filetring...'
+    print ('wavelength', r.lamb, '(', E_ev, 'eV), filetring...')
 
 
     filt = get_crystal_filter(chicane.cryst, r, ref_idx = chicane.cryst.ref_idx, k = pulses_1d.freq_k)
-    print pulses_1d.freq_k
+    print (pulses_1d.freq_k)
     chicane.cryst.filter = filt
 
     f_av = np.zeros(len(pulses_1d.t)) 
 
-    print 'field/filter preparation: ', time.time() - t1, ' sec' 
+    print ('field/filter preparation: ', time.time() - t1, ' sec' )
     t1 = time.time()
     if threaded:
-        print 'filtering (threaded) ... '
+        print ('filtering (threaded) ... ')
         #ncores = multiprocessing.cpu_count()/8
         pool = multiprocessing.Pool()
         tasks = [pool.apply_async(filter_1d, (pulses_1d, chicane.cryst.filter.tr,i)) for i in range(pulses_1d.n_pulses)]
@@ -309,7 +309,7 @@ def sseed(input_file, E_ev, chicane, run_dir, delay = None, debug=True,
         pool.close()
         pool.join()
     else:
-        print 'filtering (not threaded) ... '
+        print ('filtering (not threaded) ... ')
         for i in range(pulses_1d.n_pulses):
             #print 'filtering:', i, '/', len(pulses_1d.f[i,:])
             filter_1d(pulses_1d, chicane.cryst.filter.tr, i )
@@ -317,7 +317,7 @@ def sseed(input_file, E_ev, chicane, run_dir, delay = None, debug=True,
     for i in xrange(pulses_1d.n_pulses):
         f_av += np.abs(pulses_1d.f[i,:])
     
-    print 'filtering time: ', time.time() - t1, ' sec'
+    print ('filtering time: ', time.time() - t1, ' sec')
     t1 = time.time()
 
     if wake != None:
@@ -336,7 +336,7 @@ def sseed(input_file, E_ev, chicane, run_dir, delay = None, debug=True,
 
 
     x,y = peaks(pulses_1d.t, f_wake, n=4)
-    print 'peaks', x, y
+    print ('peaks', x, y)
 
     if delay == None:
         delay = pulses_1d.t[pulses_1d.nslice*npad + g.idx_max] - x[n_peak] # based on current maximum
@@ -344,8 +344,8 @@ def sseed(input_file, E_ev, chicane, run_dir, delay = None, debug=True,
     n_delay = int(delay / (pulses_1d.t[1] - pulses_1d.t[0]))
     n_start = pulses_1d.npad*pulses_1d.nslice - n_delay
 
-    print 'delay', delay, ' fs ', delay * 1.e-15 * 3.e8 / 1.e-6 , 'mu m ', n_delay , ' slices', ' nslice=', pulses_1d.nslice, ' n_start=', n_start 
-    print 'max current slice: ', pulses_1d.nslice*npad + g.idx_max
+    print ('delay', delay, ' fs ', delay * 1.e-15 * 3.e8 / 1.e-6 , 'mu m ', n_delay , ' slices', ' nslice=', pulses_1d.nslice, ' n_start=', n_start )
+    print ('max current slice: ', pulses_1d.nslice*npad + g.idx_max)
 
     i1=0
     i2=pulses_1d.n_pulses
@@ -384,11 +384,11 @@ def sseed(input_file, E_ev, chicane, run_dir, delay = None, debug=True,
         ax.plot(t + 0, np.abs(pulse3d.slices[:,ncar/2,ncar/2+5]), 'r--')
         ax.plot(t + delay, np.abs(pulse3d.slices[:,ncar/2,ncar/2]), 'g-')
         ax.plot(pulses_1d.t[pulses_1d.nslice*npad + g.idx_max], f_wake[pulses_1d.nslice*npad + g.idx_max], 'bs')
-        print 'seed t', pulses_1d.t[pulses_1d.nslice*npad + g.idx_max], f_wake[pulses_1d.nslice*npad + g.idx_max]
+        print ('seed t', pulses_1d.t[pulses_1d.nslice*npad + g.idx_max], f_wake[pulses_1d.nslice*npad + g.idx_max])
 
         ax3 = fig.add_subplot(223)
         #ax3.plot(t + delay, np.imag(pulse3d.slices[:,ncar/2,ncar/2]), 'b-', lw=1)
-        print 'debug: max slice', g.idx_max,
+        print ('debug: max slice', g.idx_max,)
         ax3.plot(np.abs(pulse3d.slices[100,:,ncar/2]), 'r--')
         ax3.plot(np.abs(pulse3d.slices[200,:,ncar/2]), 'g--')
         ax3.plot(np.abs(pulse3d.slices[300,:,ncar/2]), 'b--')
@@ -407,14 +407,14 @@ def sseed(input_file, E_ev, chicane, run_dir, delay = None, debug=True,
 
         plt.show()
     
-    print 'creating final field: ', time.time() - t1, ' sec'
+    print ('creating final field: ', time.time() - t1, ' sec')
     t1 = time.time()
 
     if output_file != None:
         writeRadiationFile(output_file+'.dfl', pulse3d.slices)    
-        print 'written radiation file, slices', len(pulse3d.slices[:,ncar/2,ncar/2])
+        print ('written radiation file, slices', len(pulse3d.slices[:,ncar/2,ncar/2]))
 
-    print 'writing final field: ', time.time() - t1, ' sec'
+    print ('writing final field: ', time.time() - t1, ' sec')
 
     return g
 
@@ -440,10 +440,10 @@ def FWHM(X,Y):
     
     '''
     
-    from pylab import *
+    #from pylab import * #removed
     
     half_max = max(Y) / 2.
-    print half_max
+    print (half_max)
     #find when function crosses line half_max (when sign of diff flips)
     #take the 'derivative' of signum(half_max - Y[])
     d = sign(half_max - array(Y[0:-1])) - sign(half_max - array(Y[1:]))
@@ -451,8 +451,8 @@ def FWHM(X,Y):
     #find the left and right most indexes
     left_idx = find(d > 0)[0]
     right_idx = find(d < 0)[-1]
-    print X[left_idx]
-    print X[right_idx]
+    print (X[left_idx])
+    print (X[right_idx])
     return [left_idx, right_idx, X[right_idx] - X[left_idx]] #return the xpos, left and right and difference (full width)
 
 def readres(namef):
@@ -544,10 +544,10 @@ def update_beam_2(beam_new, g, n_interp):
     g0=g.el_energy[:,-1]# * (0.511e-3)
     dg=g.el_e_spread[:,-1]
     
-    print len(g0)
-    print g.nSlices
+    print (len(g0))
+    print (g.nSlices)
     
-    print len(beam_new.z)
+    print (len(beam_new.z))
     
     I = np.array(g.I)
     
@@ -584,9 +584,9 @@ def update_beam_2(beam_new, g, n_interp):
     # print(beam.E/(0.511e-3))
     # print ("_______________________________")
     beam_new.g0 = g0 + beam.E/(0.511e-3) #potential problem here, no beam.gamma_rel
-    print len(beam_new.z)
-    print len(beam_new.g0)
-    print len(beam.z)
+    print (len(beam_new.z))
+    print (len(beam_new.g0))
+    print (len(beam.z))
     beam_new.g0 = np.interp(beam_new.z, z2, beam_new.g0)
     beam_new.dg = dg   
     beam_new.dg = np.interp(beam_new.z, z2, beam_new.dg)
@@ -611,15 +611,15 @@ def sseed_2(input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug
     c = 299792458.0
        
     g = read_genesis_output(input_file, readall=0)
-    print 'read sliced field ', g('ncar'), g.nSlices
+    print ('read sliced field ', g('ncar'), g.nSlices)
     ncar = int(g('ncar'))
     dgrid = float(g('dgrid'))
     xlamds = float(g('xlamds'))
     #nslice = len(g.spec)
     nslice = int(g.nSlices)
-    print 'nslice = ',nslice
+    print ('nslice = ',nslice)
     zsep  = float(g('zsep'))
-    print zsep
+    print (zsep)
 
     k0 = 2*np.pi/xlamds    
     ds = zsep*xlamds                #interval ds
@@ -659,7 +659,7 @@ def sseed_2(input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug
         
         r = Ray() 
         r.lamb = 2 * pi * hbar * c / E_ev
-        print 'wavelength', r.lamb, '(', E_ev, 'eV), filetring...'
+        print ('wavelength', r.lamb, '(', E_ev, 'eV), filetring...')
         
         ref_idx = chicane.cryst.ref_idx
         filt = get_crystal_filter(chicane.cryst, r, nk=1000, ref_idx = ref_idx)
@@ -677,14 +677,14 @@ def sseed_2(input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug
         dk = cwidth/6.0 #The filter transmissivity defines this quantity by taking 5 points on the bottom of T; if not good separation, must tune!!!
         dr = ncar/(dgrid*np.tan(thetaB)) #dr prepares for inclusion of the spatiotemporal coupling; it is transverse pix size/cot(thetaB)
         #dr=1.0
-        print '#################'
-        print 'dgrid = ', dgrid
-        print 'ncar = ',ncar
-        print 'dr = ',dr
-        print 'thetaB = ',thetaB
-        print 'ds = ',ds
-        print 'SHF = ',SHF
-        print '#################'
+        print ('#################')
+        print ('dgrid = ', dgrid)
+        print ('ncar = ',ncar)
+        print ('dr = ',dr)
+        print ('thetaB = ',thetaB)
+        print ('ds = ',ds)
+        print ('SHF = ',SHF)
+        print ('#################')
         
         
         mult = np.int(dkold/dk)
@@ -692,7 +692,7 @@ def sseed_2(input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug
          
         if int(mult/2) - mult/2 ==0: mult = mult-1
         if mult == 0: mult =1
-        print 'MULT = ',mult
+        print ('MULT = ',mult)
         dk = dkold/mult #Important! Otherwise the np.int in the line changes the k scale substantially 
 
         phases = unfold_angles(np.angle(np.conj(filt.tr)))
@@ -737,7 +737,7 @@ def sseed_2(input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug
         # Tpha=np.insert(Tmod,slice(-1),0)
         # Tmod=np.insert(Tmod,slice(0,-1),[0,0])
         # Tpha=np.insert(Tpha,slice(0,-1),[0,0])#padding with zeros on edges, so that interpolation was done with zeros as well
-        print np.column_stack((k, Tmod))
+        print (np.column_stack((k, Tmod)))
         #f = open(res_dir+'s2.Tmod.dat', 'w')
         #    writepath_Tmod='d:\Work\!PROJECTS\ocelot_test\s2.Tmod.dat'
         #    writepath_Tpha='d:\Work\!PROJECTS\ocelot_test\s2.Tpha.dat'
@@ -746,13 +746,13 @@ def sseed_2(input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug
         
         klpos, krpos, cwidth = FWHM(k, Tmod)
         cwidth=abs(cwidth)
-        print 'CWIDTH=',cwidth
+        print ('CWIDTH=',cwidth)
         dk = cwidth/10.0
         mult = np.int(dkold/dk)
         
         #if int(mult/2) - mult/2 ==0: mult = mult-1 %probably it needs to be even
         
-        print 'MULT = ',mult
+        print ('MULT = ',mult)
         dk = dkold/mult #Important! Otherwise the np.int in the line changes the k scale substantially 
         
         # bring to common format !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -822,7 +822,7 @@ def sseed_2(input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug
             nslice, 
             dr)
     
-    print 'reading filtered file (hxrss_common, lile 728) ', output_files[5]
+    print ('reading filtered file (hxrss_common, lile 728) ', output_files[5])
     
     ssc, Pout = readres(output_files[5])
     lsc, Sout = readres(output_files[7])

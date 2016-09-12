@@ -497,7 +497,6 @@ def read_genesis_output(filePath, readall=True, debug=0, precision=float):
     out.fileName = filePath[-filePath[::-1].find(os.path.sep)::]
 
     if debug>0: print('    reading output file "'+out.fileName+'"')
-    if debug>1: print('      reading from '+ out.filePath)
 #    print '        - reading from ', fileName
 
     chunk = ''
@@ -507,7 +506,7 @@ def read_genesis_output(filePath, readall=True, debug=0, precision=float):
     wait_attempt=6
     wait_time=10
     while os.path.isfile(out.filePath)!=True:
-        if debug>0: print('!     waiting for "'+out.fileName+'" '+str(wait_time)+'s ['+str(wait_attempt)+']')
+        print('!     waiting for "'+out.fileName+'" '+str(wait_time)+'s ['+str(wait_attempt)+']')
         time.sleep(wait_time) #wait for the .out file to be assembled
         wait_attempt-=1
         if wait_attempt==0:
@@ -526,7 +525,7 @@ def read_genesis_output(filePath, readall=True, debug=0, precision=float):
         if tokens[0] == '**********':
             chunk = 'slices'
             nSlice = int(tokens[3])
-            if debug>2: print ('      reading slice # '+ str(nSlice))
+            if debug>1: print ('      reading slice # '+ str(nSlice))
 
         if tokens[0] == 'power':
             chunk = 'slice'
@@ -708,8 +707,8 @@ def read_particle_file(filePath, nbins=4, npart=None,debug=0):
     start_time = time.time()
     b=np.fromfile(filePath,dtype=float)
     # if debug: print("     read Particles in %s sec" % (time.time() - start_time))
-    #    print 'b', b.shape
-    #assert npart!=None, 'number of particles per bin is not defined'
+#    print 'b', b.shape
+    assert npart!=None, 'number of particles per bin is not defined'
     npart=int(npart)
     nslice=int(len(b)/npart/6)
     nbins=int(nbins)
@@ -842,13 +841,11 @@ def read_dist_file_out(out,debug=0):
     return read_dist_file(out.filePath+'.dist',debug=debug)
 
 def read_dist_file(filePath,debug=0):
-    #checked only for X,Y,XPRIME,YPRIME,T,P
-
+    
     dist = GenesisParticlesDist()
     dist.filePath=filePath
     
     if debug>0: print ('    reading particle distribution file' )
-    if debug>1: print ('      reading from '+dist.filePath)
     start_time = time.time()
     
     dist_column_values={}
@@ -861,13 +858,13 @@ def read_dist_file(filePath,debug=0):
             continue
         
         if tokens[0] == "?" and tokens[1] == "CHARGE":
-            dist.charge = float(tokens[3])
+            dist.charge = tokens[3]
         
         if tokens[0] == "?" and tokens[1] == "COLUMNS":
             dist_columns = tokens[2:]
             for col in dist_columns:
                 dist_column_values[col] = []
-            if debug>1: print('      columns: '+' '.join(str(i) for i in dist_columns))
+            if debug>1: print(''.join(str(i)+' ' for i in dist_columns))
  
         if tokens[0] != "?":
             for i in range(0,len(tokens)):
@@ -879,14 +876,7 @@ def read_dist_file(filePath,debug=0):
     dist.py = np.array(dist_column_values['YPRIME'])
     dist.t = np.array(dist_column_values['T'])
     dist.e = np.array(dist_column_values['P'])
-
-#    if 'T' in dist_column_values.keys():
-#        dist.t = np.array(dist_column_values['T'])
-#    elif 'Z' in dist_column_values.keys():
-#        dist.t = np.array(dist_column_values['Z'])*speed_of_light
-#    else:
-#        pass
-
+    
     dist.x = flipud(dist.x)
     dist.y = flipud(dist.y)
     dist.px = flipud(dist.px)
@@ -905,7 +895,6 @@ def write_dist_file (dist,filePath,debug=0):
     # np.savetxt(filePath_write, np.c_[dist.x,dist.px,dist.y,dist.py,dist.t,dist.e],header=header,fmt="%E", newline='\n',comments='')
 
     if debug>0: print ('    writing particle distribution file' )
-    if debug>1: print ('      writing to '+filePath)
     start_time = time.time()
     
     header='? VERSION = 1.0 \n? SIZE = %s \n? CHARGE = %E \n? COLUMNS X XPRIME Y YPRIME T P\n'%(len(dist.x),dist.charge)
@@ -926,8 +915,7 @@ def cut_dist(dist,
             x_lim=(-inf,inf),
             px_lim=(-inf,inf),
             y_lim=(-inf,inf),
-            py_lim=(-inf,inf),
-            debug=0):
+            py_lim=(-inf,inf),debug=0):
             
     if debug>0: print ('    cutting particle distribution file' )
     start_time = time.time()
@@ -971,14 +959,14 @@ def read_rad_file(filePath):
             for col in beam.columns:
                 beam.column_values[col] = []
                 
-            print beam.columns
+            print (beam.columns)
  
         if tokens[0] != "?":
             #print tokens
             for i in range(0,len(tokens)):
                 beam.column_values[beam.columns[i]].append( float (tokens[i]) )
             
-    #print beam.columns
+    #print (beam.columns)
 
     beam.z = beam.column_values['ZPOS']        
     beam.prad0 = np.array(beam.column_values['PRAD0'])
@@ -1011,7 +999,7 @@ def read_beam_file(filePath,debug=0):
             for col in beam.columns:
                 beam.column_values[col] = []
                 
-            if debug>1: print ('      columns: '+beam.columns)
+            print (beam.columns)
  
         if tokens[0] != "?":
             #print tokens
@@ -1056,7 +1044,6 @@ def read_beam_file(filePath,debug=0):
     
 def write_beam_file(filePath, beam,debug=0):
     if debug>0: print ('    writing beam file')
-    if debug>1: print ('      writing to'+filePath)
     start_time = time.time()
 
     fd=open(filePath,'w')
@@ -1092,7 +1079,7 @@ def read_radiation_file(filePath, Nxy=None, Lxy=None, Lz=None, zsep=None, xlamds
         else:
             print ('      ! dfl file '+filePath+' not found !')
     else:    
-        if debug>1: print ('      reading from '+ filePath)
+        if debug>1: print ('        - reading from '+ filePath)
         
         b=np.fromfile(filePath,dtype=complex).astype(vartype)
         Nz=b.shape[0]/Nxy/Nxy
@@ -1119,8 +1106,7 @@ def read_radiation_file(filePath, Nxy=None, Lxy=None, Lz=None, zsep=None, xlamds
 
 def write_radiation_file(filePath,F,debug=0):
 
-    if debug>0: print ('    writing radiation file' )
-    if debug>1: print ('      writing to '+filePath)
+    if debug>0: print ('    cutting distribution file' )
     start_time = time.time()    
     
     d=F.fld.flatten()
@@ -1156,7 +1142,7 @@ def interp_radiation(F,interpN=(1,1),interpL=(1,1),newN=(None,None),newL=(None,N
      
     if interpN==(1,1) and interpL==(1,1) and newN==(None,None) and newL==(None,None): 
         return F 
-        if debug>1: print('      no interpolation required, returning original') 
+        print('no interpolation required, returning original') 
          
     # calculate new mesh parameters only if not defined explicvitly 
     if newN==(None,None) and newL==(None,None): 
@@ -1166,11 +1152,12 @@ def interp_radiation(F,interpN=(1,1),interpL=(1,1),newN=(None,None),newL=(None,N
         interpLy=interpL[1] 
      
         if interpNx==0 or interpLx==0 or interpNy==0 or interpLy==0: 
-            raise ValueError('interpolation values cannot be 0') 
+            print('interpolation values cannot be 0') 
+            return None 
             # place exception 
         elif interpNx==1 and interpLx==1 and interpNy==1 and interpLy==1: 
             return F 
-            if debug>1: print('      no interpolation required, returning original') 
+            print('no interpolation required, returning original') 
         else: 
             Nx2=int(F.Nx()*interpNx*interpLx) 
             if Nx2%2==0 and Nx2>F.Nx(): Nx2-=1 
@@ -1209,7 +1196,7 @@ def interp_radiation(F,interpN=(1,1),interpL=(1,1),newN=(None,None),newL=(None,N
     ix_max=np.where(xscale1<=xscale2[-1])[-1][-1] 
     iy_min=np.where(yscale1>=yscale2[0])[0][0] 
     iy_max=np.where(yscale1<=yscale2[-1])[-1][-1] 
-    if debug>1: print('      pulse energy before interpolation '+ str (F.E())) 
+    if debug>1: print('      energy before interpolation '+ str (F.E())) 
     #interp_func = rgi((zscale1,yscale1,xscale1), F.fld, fill_value=0, bounds_error=False, method='nearest') 
     fld2=[] 
     for fslice in F.fld: 
@@ -1231,7 +1218,7 @@ def interp_radiation(F,interpN=(1,1),interpL=(1,1),newN=(None,None),newL=(None,N
     F2.xlamds=F.xlamds 
     F2.fileName='!interp!'+F.fileName
     F2.filePath='!interp!'+F.filePath
-    if debug>1: print('      pulse energy after interpolation '+ str (F2.E())) 
+    if debug>1: print('      energy after interpolation '+ str (F2.E())) 
     if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
          
     return F2
@@ -2306,7 +2293,7 @@ def writeRadiationFile_mpi(comm, filename, slices, shape):
             cmd2 += ' ' + str(filename) + '.' + str(i)
         cmd = cmd + ' > ' + filename
         cmd = cmd + ' ; ' + cmd2
-        print cmd
+        print (cmd)
         os.system(cmd)
         
         

@@ -28,7 +28,7 @@ def detune_k(lat, sig):
     lat2 = deepcopy(lat)
     n = 0
     for i in xrange(len(lat2.sequence)):
-        print lat2.sequence[i].__class__
+        # print (lat2.sequence[i].__class__)
         if lat2.sequence[i].__class__ == Undulator:
             lat2.sequence[i] = deepcopy(lat.sequence[i]) 
             lat2.sequence[i].Kx = lat2.sequence[i].Kx * (1 + np.random.randn() * sig)
@@ -105,7 +105,7 @@ def rematch(beta_mean, l_fodo, qdh, lat, extra_fodo, beam, qf, qd):
     m1.R = lambda e: Rinv
 
     tw0m = m1.map_x_twiss(tw2m)
-    print 'after rematching k=%f %f   beta=%f %f alpha=%f %f' % (qf.k1, qd.k1, tw0m.beta_x, tw0m.beta_y, tw0m.alpha_x, tw0m.alpha_y)
+    print ('after rematching k=%f %f   beta=%f %f alpha=%f %f' % (qf.k1, qd.k1, tw0m.beta_x, tw0m.beta_y, tw0m.alpha_x, tw0m.alpha_y))
 
     beam.beta_x, beam.alpha_x = tw0m.beta_x, tw0m.alpha_x
     beam.beta_y, beam.alpha_y = tw0m.beta_y, tw0m.alpha_y
@@ -160,13 +160,13 @@ def rematch_beam_lat(beam, lat, extra_fodo, l_fodo, beta_mean):
     m1.R = lambda e: Rinv
 
     tw0m = m1.map_x_twiss(tw2m)
-    print 'after rematching k=%f %f   beta=%f %f alpha=%f %f' % (qf.k1, qd.k1, tw0m.beta_x, tw0m.beta_y, tw0m.alpha_x, tw0m.alpha_y)
+    print ('after rematching k=%f %f   beta=%f %f alpha=%f %f' % (qf.k1, qd.k1, tw0m.beta_x, tw0m.beta_y, tw0m.alpha_x, tw0m.alpha_y))
 
     beam.beta_x, beam.alpha_x = tw0m.beta_x, tw0m.alpha_x
     beam.beta_y, beam.alpha_y = tw0m.beta_y, tw0m.alpha_y
     
 
-def run(inp, launcher,readall=False,dfl_slipage_incl=True,assembly_ver='sys'):
+def run(inp, launcher,readall=False,dfl_slipage_incl=True,assembly_ver='sys',debug=0):
     # inp               - GenesisInput() object with genesis input parameters
     # launcher          - MpiLauncher() object obtained via get_genesis_launcher() function
     # readall           - Parameter to read and calculate all _slice_ values from the output. 
@@ -188,7 +188,7 @@ def run(inp, launcher,readall=False,dfl_slipage_incl=True,assembly_ver='sys'):
     #print ('    before writing /tmp.beam')
     #print inp.beamfile
     if inp.beamfile != None:
-        print ('    writing /tmp.beam')
+        if debug>1: print ('    writing /tmp.beam')
         open(inp.run_dir + '/tmp.beam','w').write(inp.beam_file_str)
     
     out_file = inp.run_dir + '/run.' + str(inp.runid) + '.gout'
@@ -203,17 +203,17 @@ def run(inp, launcher,readall=False,dfl_slipage_incl=True,assembly_ver='sys'):
     # RUNNING GENESIS ###
     
     # genesis output slices assembly
-    print (' ')
-    print ('    assembling slices')
+    if debug>1: print (' ')
+    if debug>0: print ('    assembling slices')
     assembly_time = time.time()
     
     if assembly_ver=='sys':
     
-        print ('      assembling *.out file')
+        if debug>1: print ('      assembling *.out file')
         start_time = time.time()
         os.system('cat ' + out_file +'.slice* >> '+ out_file)
-        print ('        done in %.2f seconds' % (time.time() - start_time))
-        print ('      assembling *.dfl file')
+        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
+        if debug>1: print ('      assembling *.dfl file')
         start_time = time.time()
         if dfl_slipage_incl:
             os.system('cat ' + out_file+'.dfl.slice*  >> ' + out_file+'.dfl.tmp')
@@ -222,32 +222,32 @@ def run(inp, launcher,readall=False,dfl_slipage_incl=True,assembly_ver='sys'):
             os.system(command)
         else:
             os.system('cat ' + out_file+'.dfl.slice*  > ' + out_file+'.dfl')
-        print ('        done in %.2f seconds' % (time.time() - start_time))
-        print ('      assembling *.dpa file')
+        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
+        if debug>1: print ('      assembling *.dpa file')
         start_time = time.time()
         os.system('cat ' + out_file +'.dpa.slice* >> ' + out_file+'.dpa')
-        print ('        done in %.2f seconds' % (time.time() - start_time))
-        print ('      removing temporary files')
+        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
+        if debug>1: print ('      removing temporary files')
     
     elif assembly_ver=='pyt':
         #there is a bug with dfl assembly
         import glob
         ram=1
         
-        print ('      assembling *.out file')
+        if debug>1: print ('      assembling *.out file')
         start_time = time.time()
         assemble(out_file,ram=ram)
-        print ('        done in %.2f seconds' % (time.time() - start_time))
+        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
     
-        print ('      assembling *.dfl file')
+        if debug>1: print ('      assembling *.dfl file')
         start_time = time.time()
         assemble(out_file+'.dfl',tailappend=dfl_slipage_incl,ram=ram)
-        print ('        done in %.2f seconds' % (time.time() - start_time))
+        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
         
-        print ('      assembling *.dpa file')
+        if debug>1: print ('      assembling *.dpa file')
         start_time = time.time()
         assemble(out_file+'.dpa',ram=ram)
-        print ('        done in %.2f seconds' % (time.time() - start_time))
+        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
     
     # start_time = time.time()
     os.system('rm ' + out_file +'.slice* 2>/dev/null')
@@ -255,7 +255,7 @@ def run(inp, launcher,readall=False,dfl_slipage_incl=True,assembly_ver='sys'):
     os.system('rm ' + out_file +'.dfl.tmp 2>/dev/null')
     os.system('rm ' + out_file +'.dpa.slice* 2>/dev/null')
     # print ('        done in %.2f seconds' % (time.time() - start_time))
-    print ('      total time %.2f seconds' % (time.time() - assembly_time))
+    if debug>0: print ('      total time %.2f seconds' % (time.time() - assembly_time))
     
     g = read_genesis_output(out_file,readall=readall)
     
@@ -279,7 +279,7 @@ def assemble(out_file,binary=1,remove=1,tailappend=0,ram=1):
         if ram==1:
             idata=''
             data=''
-            print('        reading '+str(N)+' slices to RAM...')
+            if debug>1: print('        reading '+str(N)+' slices to RAM...')
             index=10
             for i, n in enumerate(fins):
                 # if i/N>=index:
@@ -292,7 +292,7 @@ def assemble(out_file,binary=1,remove=1,tailappend=0,ram=1):
                         break
                     else:
                         data+=idata
-            print('        writing...')
+            if debug>1: print('        writing...')
             fout.write(data)
             try:
                 fin.close()
@@ -384,7 +384,7 @@ def checkout_run(run_dir, run_id, prefix1, prefix2, save=True):
 
 def show_output(g, show_field = False, show_slice=0):
 
-    print 'plotting slice', show_slice
+    print ('plotting slice', show_slice)
 
     h = 4.135667516e-15
     c = 299792458.0
@@ -412,7 +412,7 @@ def show_output(g, show_field = False, show_slice=0):
     
     smax = nslice * zsep * xlamds   
                  
-    print 'wavelength ', xlamds
+    print ('wavelength ', xlamds)
     
     if show_field:
         #from mpi4py import MPI
@@ -420,7 +420,7 @@ def show_output(g, show_field = False, show_slice=0):
         #comm = MPI.COMM_WORLD
         #slices = readRadiationFile_mpi(comm=comm, fileName=file+'.dfl', npoints=npoints)
         slices = readRadiationFile(fileName= g.path + '.dfl', npoints=npoints)
-        print 'slices:', slices.shape
+        print ('slices:', slices.shape)
     
         E = np.zeros_like(slices[0,:,:])
         for i in xrange(slices.shape[0]): E += np.multiply(slices[i,:,:], slices[i,:,:].conjugate())
@@ -458,7 +458,7 @@ def show_plots(displays, fig):
     n2 = (len(displays) -1) / n1 +1
     #print n1, n2
     fmt = str(n1)+ str(n2)
-    print fmt
+    print (fmt)
     
     for i in xrange(len(displays)):
         ax = fig.add_subplot(fmt + str(i+1))
@@ -616,7 +616,7 @@ class FelSimulator(object):
         if self.engine == 'test_genesis':
             ''' read test sliced field '''
             g = read_genesis_output(self.input)
-            print 'read sliced field ', g('ncar'), g.nSlices
+            print ('read sliced field ', g('ncar'), g.nSlices)
             slices = readRadiationFile(fileName=self.input + '.dfl', npoints=g('ncar'))            
             s3d = Signal3D()
             s3d.slices = slices

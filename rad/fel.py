@@ -57,32 +57,32 @@ def calculateFelParameters(input):
 
 def printFelParameters(input):
     
-    #print input.parameters
+    #print (input.parameters)
     
     p = calculateFelParameters(input)
     
-    print '********    FEL Parameters    ********'
-    print 'ex=', p.ex
-    print 'ey=', p.ey
-    print 'rxbeam=', p.rxbeam, ' [m]'
-    print 'rybeam=', p.rybeam, ' [m]'
-    print 'rel energy spread deta=', p.deta, ' [m]'
-    print 'xlamd=', p.xlamd
-    print 'aw0=', p.aw0
-    print 'gamma0=', p.gamma0
-    print 'Ip=', p.Ip, ' beam peak current [A]'
-    print 'lambda0=', p.lambda0
-    print 'Pb=', p.Pb, ' beam power [W]'
-    print 'N=', p.N
-    print 'rho=', p.rho
-    print 'power=', p.power, ' equivalent shot noise power [W]'
-    print 'coupling parameter fc=', p.fc
-    print 'gain length estimate lg=', p.lg
-    print 'Rayleigh length estimate zr=', p.zr
-    print ''
-    print 'Ming Xie gain reduction estimates:'
-    print 'diffraction parameter etad=', p.xie_etad
-    print 'energy spread parameter etad=', p.xie_etagamma
-    print 'gain length degradation lscale=', p.xie_lscale
-    print '**************************************'
+    print ('********    FEL Parameters    ********')
+    print ('ex=', p.ex)
+    print ('ey=', p.ey)
+    print ('rxbeam=', p.rxbeam, ' [m]')
+    print ('rybeam=', p.rybeam, ' [m]')
+    print ('rel energy spread deta=', p.deta, ' [m]')
+    print ('xlamd=', p.xlamd)
+    print ('aw0=', p.aw0)
+    print ('gamma0=', p.gamma0)
+    print ('Ip=', p.Ip, ' beam peak current [A]')
+    print ('lambda0=', p.lambda0)
+    print ('Pb=', p.Pb, ' beam power [W]')
+    print ('N=', p.N)
+    print ('rho=', p.rho)
+    print ('power=', p.power, ' equivalent shot noise power [W]')
+    print ('coupling parameter fc=', p.fc)
+    print ('gain length estimate lg=', p.lg)
+    print ('Rayleigh length estimate zr=', p.zr)
+    print ('')
+    print ('Ming Xie gain reduction estimates:')
+    print ('diffraction parameter etad=', p.xie_etad)
+    print ('energy spread parameter etad=', p.xie_etagamma)
+    print ('gain length degradation lscale=', p.xie_lscale)
+    print ('**************************************')
     

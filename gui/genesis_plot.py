@@ -1014,7 +1014,7 @@ def plot_gen_out_scanned_z(g, figsize=(8, 10), legend = True, fig_name = None, z
     return fig
 
 
-def plot_dfl(F, z_lim=[], xy_lim=[], figsize=3, legend = True, phase = False, far_field=False, freq_domain=False, fig_name = None, auto_zoom=False, column_3d=True, savefig=False, showfig=False, return_proj=False, vartype_dfl=complex64):
+def plot_dfl(F, z_lim=[], xy_lim=[], figsize=3, legend = True, phase = False, far_field=False, freq_domain=False, fig_name = None, auto_zoom=False, column_3d=True, savefig=False, showfig=False, return_proj=False, debug=0, vartype_dfl=complex64):
     
     #F is RadiationField() object
     #z_lim sets the boundaries to CUT the dfl object in z to ranges of e.g. [2,5] um or nm depending on freq_domain=False of True
@@ -1032,7 +1032,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=3, legend = True, phase = False, fa
 
     text_present=1
 
-    print('    plotting Radiation field')
+    if debug>0: print('    plotting radiation field')
     start_time = time.time()
     # print dfl.shape
     # print np.fft.ifftshift(dfl,(1,2)).shape
@@ -1077,7 +1077,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=3, legend = True, phase = False, fa
 
     if dfl.shape[0]!=1:
         if freq_domain:
-            print('      calculating spectrum')
+            if debug>1: print('      calculating spectrum')
             calc_time=time.time()
             dfl=np.fft.ifftshift(np.fft.fft(dfl,axis=0),0)/sqrt(ncar_z) #
             dk=2*pi/leng_z;
@@ -1092,7 +1092,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=3, legend = True, phase = False, fa
             z_color='red'
             z=z[::-1]
             dfl=dfl[::-1,:,:]
-            print('        done in %.2f seconds' %(time.time()-calc_time))
+            if debug>1: print('        done in %.2f seconds' %(time.time()-calc_time))
             z*=1e6
             leng_z*=1e6
         else:
@@ -1121,7 +1121,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=3, legend = True, phase = False, fa
                 # print('      set low lim to min')
             # z_lim_1=np.where(z>=z_lim[0])[0][0]
             # z_lim_2=np.where(z<=z_lim[1])[0][-1]
-            print'      setting z-axis limits to ', np.amin(z),':',z_lim[0],'-',z_lim[1],':',np.amax(z) #tmp
+            if debug>1: print('      setting z-axis limits to '+ str(np.amin(z))+':'+str(z_lim[0])+'-'+str(z_lim[1])+':'+str(np.amax(z))) #tmp
             z_lim_1=np.where(z<=z_lim[0])[0][-1]
             z_lim_2=np.where(z>=z_lim[1])[0][0]
 
@@ -1129,7 +1129,6 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=3, legend = True, phase = False, fa
                 z_lim_2=z_lim_1+1
             elif z_lim_1==z_lim_2 and z_lim_1!=0:
                 z_lim_1=z_lim_2-1
-            print z_lim_1,z_lim_2,len(z) #tmp
             dfl=dfl[z_lim_1:z_lim_2,:,:]
             z=z[z_lim_1:z_lim_2]
             ncar_z=dfl.shape[0]
@@ -1140,7 +1139,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=3, legend = True, phase = False, fa
         # phase = True
 
     if far_field:
-        print('      calculating far field')
+        if debug>1: print('      calculating far field')
         calc_time=time.time()
         # for i in arange(0,dfl.shape[0]):
             # dfl[i,:,:]=np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(dfl[i,:,:],(0,1))),(0,1))
@@ -1160,7 +1159,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=3, legend = True, phase = False, fa
         y_title='Y divergence'
         xy_title='Far field intensity'
         x_y_color='green'
-        print('        done in %.2f seconds' %(time.time()-calc_time))
+        if debug>1: print('        done in %.2f seconds' %(time.time()-calc_time))
     else:
         dx=leng_x/ncar_x
         dy=leng_y/ncar_y
@@ -1366,13 +1365,13 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=3, legend = True, phase = False, fa
     if savefig!=False:
         if savefig==True:
             savefig='png'
-        print'      suffix= ',suffix
+        if debug>0: print('      saving *'+suffix+'.'+savefig)
         fig.savefig(F.filePath+suffix+'.'+str(savefig),format=savefig)
 
-    print(('      done in %.2f seconds' % (time.time() - start_time)))
+    if debug>0: print(('      done in %.2f seconds' % (time.time() - start_time)))
 
     if showfig==True:
-        print('    showing dfl')
+        if debug>0: print('    showing dfl')
         plt.show()
 
     if return_proj:
@@ -1383,7 +1382,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=3, legend = True, phase = False, fa
 
 
 
-def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_int','energy','r_size_weighted'],z_param_inp=['p_int','phi_mid_disp','spec','bunching'],dfl_param_inp=['dfl_spec'],s_inp=['max'],z_inp=['end'], savefig=1, saveval=1, showfig=0):
+def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_int','energy','r_size_weighted'],z_param_inp=['p_int','phi_mid_disp','spec','bunching'],dfl_param_inp=['dfl_spec'],s_inp=['max'],z_inp=['end'], savefig=1, saveval=1, showfig=0, debug=0):
 
     #The routine for plotting the statistical info of many GENESIS runs
     #
@@ -1406,6 +1405,9 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
     dict_unit={'p_int':'[W]','energy': '[J]','el_e_spread': '(gamma)','el_energy': '(gamma)','bunching': '','spec': '[arb.units]','dfl_spec': '[arb.units]','r_size':'[m]','xrms':'[m]','yrms':'[m]','error':''}
     
     figsize=(14,7)
+    
+    if debug>0: print ('statistical postprocessing started')
+    start_time = time.time()
     
     if proj_dir[-1]!='/':
         proj_dir+='/'
@@ -1440,8 +1442,8 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
         if run_range==[]:
             continue
 
-        print(' ')
-        print('    processing runs '+str(run_range)+' of stage '+str(stage))
+        
+        if debug>0: print('    processing runs '+str(run_range)+' of stage '+str(stage))
 
     #    for irun in run_range:
     #        out_file=proj_dir+'run_'+str(irun)+'/run.'+str(irun)+'.s'+str(stage)+'.gout'
@@ -1449,7 +1451,7 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
     #        print(outlist[irun].sliceKeys)
 
         if param_inp==[]:
-            print(outlist[run_range[0]].sliceKeys_used)
+            if debug>1: print(outlist[run_range[0]].sliceKeys_used)
             param_range=outlist[run_range[0]].sliceKeys_used
         else:
             param_range=param_inp
@@ -1460,13 +1462,13 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
             saving_path=proj_dir+'results/'
             if not os.path.isdir(saving_path):
                 os.makedirs(saving_path)
-            print('      saving to '+saving_path)
+            if debug>1: print('      saving to '+saving_path)
 
         if s_param_inp==[]:
             s_param_range=param_range
         else:
             s_param_range=s_param_inp
-            print('    processing S parameters '+str(s_param_range))
+            if debug>1: print('    processing S parameters '+str(s_param_range))
 
 
         for param in s_param_range:
@@ -1504,17 +1506,17 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
                     plt.xlabel('z [m]')
                     plt.ylabel(dict_name.get(param,param)+' '+dict_unit.get(param,''))
                     if savefig!=False:
-                        print('      saving '+s_fig_name+'.'+savefig)
+                        if debug>1: print('      saving '+s_fig_name+'.'+savefig)
                         plt.savefig(saving_path+s_fig_name+'.'+savefig,format=savefig)
                     if saveval!=False:
-                        print('      saving '+s_fig_name+'.txt')
+                        if debug>1: print('      saving '+s_fig_name+'.txt')
                         np.savetxt(saving_path+s_fig_name+'.txt', vstack([outlist[irun].z,mean(s_value,0),s_value]).T,fmt="%E", newline='\n',comments='')
         
         if z_param_inp==[]:
             z_param_range=param_range
         else:
             z_param_range=z_param_inp
-            print('    processing Z parameters '+str(z_param_range))
+            if debug>1: print('    processing Z parameters '+str(z_param_range))
 
         for param in z_param_range:
             for z_ind in z_inp:
@@ -1554,17 +1556,17 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
                         plt.xlabel('s [um]')
                     plt.ylabel(dict_name.get(param,param)+' '+dict_unit.get(param,''))
                     if savefig!=False:
-                        print('      saving '+z_fig_name+'.'+savefig)
+                        if debug>1: print('      saving '+z_fig_name+'.'+savefig)
                         plt.savefig(saving_path+z_fig_name+'.'+savefig,format=savefig)
                     if saveval!=False:
-                        print('      saving '+z_fig_name+'.txt')
+                        if debug>1: print('      saving '+z_fig_name+'.txt')
                         if param=='spec':
                             np.savetxt(saving_path+z_fig_name+'.txt', vstack([outlist[irun].freq_lamd*1e9,mean(z_value,0),z_value]).T,fmt="%E", newline='\n',comments='')
                         else:
                             np.savetxt(saving_path+z_fig_name+'.txt', vstack([outlist[irun].s*1e6,mean(z_value,0),z_value]).T,fmt="%E", newline='\n',comments='')
 
         if dfl_param_inp!=[]:
-            print('    processing DFL parameters '+str(dfl_param_inp))
+            if debug>1: print('    processing DFL parameters '+str(dfl_param_inp))
         
         for param in dfl_param_inp:
             dfl_value=[]
@@ -1583,7 +1585,7 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
                         dk=2*pi/leng_z
                         k=2*pi/outlist[irun]('xlamds')
                         freq_scale = 2*pi/np.linspace(k-dk/2*ncar_z, k+dk/2*ncar_z, ncar_z)*1e9
-                        print('      spectrum calculated')
+                        if debug>1: print('      spectrum calculated')
                 
             if dfl_value!=[]:
                 fig=plt.figure(dfl_fig_name)
@@ -1596,15 +1598,17 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
                     plt.xlabel('$\lambda$ [nm]')
                 plt.ylabel(dict_name.get(param,param)+' '+dict_unit.get(param,''))
                 if savefig!=False:
-                    print('      saving '+dfl_fig_name+'.'+savefig)
+                    if debug>1: print('      saving '+dfl_fig_name+'.'+savefig)
                     plt.savefig(saving_path+dfl_fig_name+'.'+savefig,format=savefig)
                 if saveval!=False:
-                    print('      saving '+dfl_fig_name+'.txt')
+                    if debug>1: print('      saving '+dfl_fig_name+'.txt')
                     if param=='dfl_spec':
                         np.savetxt(saving_path+dfl_fig_name+'.txt', vstack([freq_scale*1e9,mean(dfl_value,0),dfl_value]).T,fmt="%E", newline='\n',comments='')
                         
     if showfig:
         plt.show()
+        
+    if debug>0: print(('      done in %.2f seconds' % (time.time() - start_time)))        
         
     try:
         return fig
@@ -1762,11 +1766,11 @@ def plot_dpa(out, dpa=None, z=[], figsize=3, legend = True, fig_name = None, aut
 
     plt.scatter(dpa.ph[nslice,1,:],dpa.e[nslice,1,:])
 
-def plot_dist(dist, figsize=3, fig_name = None, savefig=False, showfig=False, scatter=False, plot_x_y=True, plot_xy_s=True, bins=50, flip_t=True, debug=0, vartype_dfl=complex64):
+def plot_dist(dist, figsize=3, fig_name = None, savefig=False, showfig=False, scatter=False, plot_x_y=True, plot_xy_s=True, bins=50, flip_t=True, debug=0):
     
     if debug>0: print('    plotting dist file')
     start_time = time.time()
-    suffix=''
+    #suffix=''
     
     if flip_t:
         dist.t=dist.t*(-1)+max(dist.t)
@@ -1778,10 +1782,16 @@ def plot_dist(dist, figsize=3, fig_name = None, savefig=False, showfig=False, sc
     fig.set_size_inches(((3+plot_x_y+plot_xy_s)*figsize,3*figsize),forward=True)
     
     s=dist.t*speed_of_light*1e6
+    hist,edges=np.histogram(s,bins=bins)#calculate current histogram
+    edges=edges[0:-1]#remove the last bin edge to save equal number of points
+    hist_int=np.trapz(hist,edges)/speed_of_light/1e6 #normalize
+    hist=hist/hist_int*dist.charge
     
     ax_curr=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 1)
-    ax_curr.hist(s, bins,color='b')
+    #ax_curr.hist(s, bins,color='b')
+    ax_curr.plot(edges, hist,color='b')
     ax_curr.set_xlabel('s, [$\mu$m]')
+    ax_curr.set_ylabel('I [A]')
     
     ax_se=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 3+plot_x_y,sharex=ax_curr)
     if scatter: ax_se.scatter(s, dist.e,marker='.')
@@ -1827,6 +1837,8 @@ def plot_dist(dist, figsize=3, fig_name = None, savefig=False, showfig=False, sc
         plt.savefig(dist.filePath+'.'+savefig,format=savefig)
         
     if showfig: plt.show()
+    
+    if debug>0: print(('      done in %.2f seconds' % (time.time() - start_time)))
     
     return fig
 

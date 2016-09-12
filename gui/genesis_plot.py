@@ -102,7 +102,7 @@ def plot_gen_out_all(handle=None,savefig='png',showfig=False,choice=(1,1,1,1,[],
         if os.path.isfile(handle.filePath+'.dpa') and choice[9]:
             dpa=read_particle_file_out(handle,debug=debug)
             dist=dpa2dist(handle,dpa,num_part=5e4,smear=1,debug=debug)
-            if choice[9]: f9=plot_dist(dist, figsize=3, fig_name = None, savefig=savefig, showfig=showfig, scatter=False, plot_x_y=True, plot_xy_s=True, bins=75, vartype_dfl=complex64)
+            if choice[9]: f9=plot_dist(dist, figsize=3, fig_name = None, savefig=savefig, showfig=showfig, bins=75)
             
     if showfig:
         print('    showing plots, close all to proceed')

@@ -1334,7 +1334,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=3, legend = True, phase = False, fa
             ax_proj_xz.set_xlim(z[nonzero(z_proj>max(z_proj)*0.01)][[0,-1]])
         elif phase==False and z_lim==[]:
             ax_z.set_xlim(z[nonzero(z_proj>max(z_proj)*0.01)][[0,-1]])
-            print '      scaling xy to', size_xy
+            print ('      scaling xy to', size_xy)
             ax_proj_xz.set_ylim([-size_xy, size_xy])
         elif column_3d==True:
             ax_proj_xz.set_ylim([-size_xy, size_xy])
@@ -1368,7 +1368,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=3, legend = True, phase = False, fa
         if debug>0: print('      saving *'+suffix+'.'+savefig)
         fig.savefig(F.filePath+suffix+'.'+str(savefig),format=savefig)
 
-    if debug>0: print(('      done in %.2f seconds' % (time.time() - start_time)))
+    if debug>0: print('      done in %.2f seconds' % (time.time() - start_time))
 
     if showfig==True:
         if debug>0: print('    showing dfl')
@@ -1413,17 +1413,17 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
         proj_dir+='/'
 
     if stage_inp==[]:
-        stage_range=xrange(15) #guess possible stages (0 to 100)
+        stage_range=range(15) #guess possible stages (0 to 100)
     else:
         stage_range=stage_inp
 
 
     for stage in stage_range: #scan through stages
 
-        outlist=[GenesisOutput() for i in xrange(1000)]
+        outlist=[GenesisOutput() for i in range(1000)]
 
         if run_inp==[]:
-            run_range=xrange(1000)
+            run_range=range(1000)
         else:
             run_range=run_inp
 
@@ -1433,7 +1433,7 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
             out_file=proj_dir+'run_'+str(irun)+'/run.'+str(irun)+'.s'+str(stage)+'.gout'
             if os.path.isfile(out_file):
 #                try:
-                outlist[irun] = read_genesis_output(out_file,readall=1)
+                outlist[irun] = read_genesis_output(out_file,readall=1,debug=debug)
                 run_range_good.append(irun)
 #                except:
 #                    print('     could not read '+out_file)
@@ -1573,7 +1573,7 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
             dfl_fig_name='DFL__'+'stage_'+str(stage)+'__'+param.replace(' ','_').replace('.','_')+'__end'
             for irun in run_range:
                 dfl_fileName=proj_dir+'run_'+str(irun)+'/run.'+str(irun)+'.s'+str(stage)+'.gout.dfl'
-                dfl=readRadiationFile(dfl_fileName, npoints=outlist[irun]('ncar'),debug=1)
+                dfl=readRadiationFile(dfl_fileName, npoints=outlist[irun]('ncar'),debug=debug)
                 if dfl.shape[0]!=1:
                     ncar_z=dfl.shape[0]
                     leng_z=outlist[irun]('xlamds')*outlist[irun]('zsep')*ncar_z
@@ -1608,7 +1608,7 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
     if showfig:
         plt.show()
         
-    if debug>0: print(('      done in %.2f seconds' % (time.time() - start_time)))        
+    if debug>0: print('      done in %.2f seconds' % (time.time() - start_time))       
         
     try:
         return fig
@@ -1628,10 +1628,10 @@ def plot_gen_corr(proj_dir,run_inp=[],p1=(),p2=(),savefig=False, showfig=False, 
     param_1,stage_1,z_1,s_1=p1
     param_2,stage_2,z_2,s_2=p2
 
-    outlist_1=[GenesisOutput() for i in xrange(1000)]
-    outlist_2=[GenesisOutput() for i in xrange(1000)]
+    outlist_1=[GenesisOutput() for i in range(1000)]
+    outlist_2=[GenesisOutput() for i in range(1000)]
     if run_inp==[]:
-        run_range=xrange(1000)
+        run_range=range(1000)
     else:
         run_range=run_inp
 

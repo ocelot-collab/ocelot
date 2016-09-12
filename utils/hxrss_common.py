@@ -93,7 +93,7 @@ def pulses_from_field(pulse3d, range=None, npad = 2, threaded = False):
     else:
         pulses.f = np.zeros([n_pulses,n], dtype=complex)
      
-    for i in xrange(n_pulses): 
+    for i in range(n_pulses): 
         pulses.f[i,npad*n_slices:(npad+1)*n_slices] = pulse3d.slices[i::nx*ny]        
 
     #del(pulse3d.slices)
@@ -114,9 +114,9 @@ def field_from_pulses(t, fs, mesh_size, slices=None, write_file = None):
     if slices == None: 
         slices = np.zeros([nslice, mesh_size[0], mesh_size[1]], dtype=complex)
         
-    for i in xrange(nslice):
-        for j in xrange(mesh_size[0]):
-            for k in xrange(mesh_size[1]):
+    for i in range(nslice):
+        for j in range(mesh_size[0]):
+            for k in range(mesh_size[1]):
                 #print i, j, k, j*mesh_size[0] + k, fs[j*mesh_size[0] + k][i]
                 slices[i,j,k] = fs[j*mesh_size[0] + k,i]
                 
@@ -134,7 +134,7 @@ def get_wake(f, n_fel_start, smooth_param=120):
     f2 = copy(f)
     fact = 1.0
     #d = np.abs(np.diff(f2))
-    for i in xrange(1,len(f2)):
+    for i in range(1,len(f2)):
         if i >= n_fel_start:
             fact = 0.0
         f2[i] *= fact
@@ -143,8 +143,8 @@ def get_wake(f, n_fel_start, smooth_param=120):
 
 
 def update_beam(beam_new, g, beam):
-    g0 = np.array(map(lambda x : g.sliceValues[x]['energy'][-1], xrange(1,g.nSlices+1)) )
-    dg = np.array(map(lambda x : g.sliceValues[x]['e-spread'][-1], xrange(1,g.nSlices+1)) )
+    g0 = np.array(map(lambda x : g.sliceValues[x]['energy'][-1], range(1,g.nSlices+1)) )
+    dg = np.array(map(lambda x : g.sliceValues[x]['e-spread'][-1], range(1,g.nSlices+1)) )
     I = np.array(g.I)
 
     i_diff = len(g0) - len(beam_new.z)
@@ -314,7 +314,7 @@ def sseed(input_file, E_ev, chicane, run_dir, delay = None, debug=True,
             #print 'filtering:', i, '/', len(pulses_1d.f[i,:])
             filter_1d(pulses_1d, chicane.cryst.filter.tr, i )
 
-    for i in xrange(pulses_1d.n_pulses):
+    for i in range(pulses_1d.n_pulses):
         f_av += np.abs(pulses_1d.f[i,:])
     
     print ('filtering time: ', time.time() - t1, ' sec')
@@ -368,7 +368,7 @@ def sseed(input_file, E_ev, chicane, run_dir, delay = None, debug=True,
     if xt_couple: # spatial-temporal coupling
         dct = (pulses_1d.t[1] - pulses_1d.t[0]) * 1.e-15 * c    
 
-        for i_slice in xrange(len(pulse3d.slices[:,0,0])):
+        for i_slice in range(len(pulse3d.slices[:,0,0])):
             #print 'shifting slice', i_slice
             shift_x = (nslice - i_slice)*dct * cos(chicane.cryst.thetaB) / sin(chicane.cryst.thetaB)
             #print 'shift_x' , shift_x
@@ -491,8 +491,8 @@ def readres(namef):
 OLD VERSION!
 def update_beam_2(beam_new, g, n_interp):
     beam = deepcopy(beam_new)
-    g0 = np.array(map(lambda x : g.sliceValues[x]['energy'][-1], xrange(1,g.nSlices+1)) )
-    dg = np.array(map(lambda x : g.sliceValues[x]['e-spread'][-1], xrange(1,g.nSlices+1)) )
+    g0 = np.array(map(lambda x : g.sliceValues[x]['energy'][-1], range(1,g.nSlices+1)) )
+    dg = np.array(map(lambda x : g.sliceValues[x]['e-spread'][-1], range(1,g.nSlices+1)) )
     
     print len(g0)
     print g.nSlices
@@ -539,8 +539,8 @@ def update_beam_2(beam_new, g, n_interp):
 
 def update_beam_2(beam_new, g, n_interp):
     beam = deepcopy(beam_new)
-    # g0 = np.array(map(lambda x : g.sliceValues[x]['energy'][-1], xrange(1,g.nSlices+1)) )
-    # dg = np.array(map(lambda x : g.sliceValues[x]['e-spread'][-1], xrange(1,g.nSlices+1)) )
+    # g0 = np.array(map(lambda x : g.sliceValues[x]['energy'][-1], range(1,g.nSlices+1)) )
+    # dg = np.array(map(lambda x : g.sliceValues[x]['e-spread'][-1], range(1,g.nSlices+1)) )
     g0=g.el_energy[:,-1]# * (0.511e-3)
     dg=g.el_e_spread[:,-1]
     
@@ -794,7 +794,7 @@ def sseed_2(input_file, output_files, E_ev, chicane, run_dir, delay = 0.0, debug
         os.system(cmd)
     
     if paral == False:
-        import seed0 as sd
+        import ocelot.utils.seed0 as sd #not found
         sd.filterfield(input_file+'.dfl',         
             output_files[0],                  
             output_files[1],                       

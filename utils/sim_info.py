@@ -24,7 +24,7 @@ if __name__ == "__main__":
         r = RunInfo(id)
         r.power = np.random.randint(100)
         o.runs[r.id] = r
-        print 'saving run ', id
+        print ('saving run ', id)
         f_obj = open('dump.dat', 'wb')
         pickle.dump(o, f_obj)
         f_obj.close()

@@ -27,7 +27,7 @@ rc('text', usetex=True) # required to have greek fonts on redhat
 def detune_k(lat, sig):
     lat2 = deepcopy(lat)
     n = 0
-    for i in xrange(len(lat2.sequence)):
+    for i in range(len(lat2.sequence)):
         # print (lat2.sequence[i].__class__)
         if lat2.sequence[i].__class__ == Undulator:
             lat2.sequence[i] = deepcopy(lat.sequence[i]) 
@@ -48,7 +48,7 @@ def detune_E(inp, beam, sig):
 def taper(lat, k):
     lat2 = deepcopy(lat)
     n = 0
-    for i in xrange(len(lat2.sequence)):
+    for i in range(len(lat2.sequence)):
         if lat2.sequence[i].__class__ == Undulator:
             #print lat2.sequence[i].id, lat2.sequence[i].Kx
             lat2.sequence[i] = deepcopy(lat.sequence[i]) 
@@ -423,7 +423,7 @@ def show_output(g, show_field = False, show_slice=0):
         print ('slices:', slices.shape)
     
         E = np.zeros_like(slices[0,:,:])
-        for i in xrange(slices.shape[0]): E += np.multiply(slices[i,:,:], slices[i,:,:].conjugate())
+        for i in range(slices.shape[0]): E += np.multiply(slices[i,:,:], slices[i,:,:].conjugate())
     
         
         fig = plt.figure()
@@ -433,7 +433,7 @@ def show_output(g, show_field = False, show_slice=0):
 
         fig.add_subplot(132)
         P = np.zeros_like(slices[:,0,0])
-        for i in xrange(len(P)):
+        for i in range(len(P)):
             s = sum( np.abs(np.multiply(slices[i,:,:], slices[i,:,:])) )
             P[i] = abs(s*s.conjugate()) * (dgrid**2 / npoints )**2  
     
@@ -460,7 +460,7 @@ def show_plots(displays, fig):
     fmt = str(n1)+ str(n2)
     print (fmt)
     
-    for i in xrange(len(displays)):
+    for i in range(len(displays)):
         ax = fig.add_subplot(fmt + str(i+1))
         ax.grid(True)
         for f in displays[i].data:

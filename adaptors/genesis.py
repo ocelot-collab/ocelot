@@ -549,7 +549,7 @@ def read_genesis_output(filePath, readall=True, debug=0, precision=float):
             continue
 
         if chunk == 'magnetic optics':
-            z,aw,qfld = map(precision,tokens)
+            z,aw,qfld = list(map(precision,tokens))
             out.z.append(z)
             out.aw.append(aw)
             out.qfld.append(qfld)
@@ -566,7 +566,7 @@ def read_genesis_output(filePath, readall=True, debug=0, precision=float):
             #print 'input:', tokens
 #
         if chunk == 'slice' and readall:
-            vals = map(precision,tokens)
+            vals = list(map(precision,tokens))
             output_unsorted.append(vals)
 
         if chunk == 'slices':
@@ -607,7 +607,9 @@ def read_genesis_output(filePath, readall=True, debug=0, precision=float):
             # print ()
             # exec('out.'+out.sliceKeys[i].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(out.nSlices)+','+str(out.nZ)+'))')
             # exec('out.'+out.sliceKeys[int(i)].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(int(out('history_records')))+','+str(int(out('entries_per_record')))+'))')
-            exec('out.'+out.sliceKeys[int(i)].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(int(out.nSlices))+','+str(int(out.nZ))+'))')
+            command='out.'+out.sliceKeys[int(i)].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(int(out.nSlices))+','+str(int(out.nZ))+'))'
+            # print(command)
+            exec(command)
         if hasattr(out,'energy'):
             out.energy+=out('gamma0')
         out.power_z=np.max(out.power,0)
@@ -645,7 +647,7 @@ def read_genesis_output(filePath, readall=True, debug=0, precision=float):
             phase_fix=1 #the way to display the phase, without constant slope caused by different radiation wavelength from xlamds. phase is set to 0 at maximum power slice.
             if phase_fix:
                 out.phi_mid_disp=deepcopy(out.phi_mid)
-                for zi in xrange(shape(out.phi_mid_disp)[1]):
+                for zi in range(shape(out.phi_mid_disp)[1]):
                     maxspectrum_index=np.argmax(out.spec[:,zi])
                     maxspower_index=np.argmax(out.power[:,zi])
                     maxspectrum_wavelength=out.freq_lamd[maxspectrum_index]*1e-9    
@@ -775,20 +777,17 @@ def dpa2dist(out,dpa,num_part=1e5,smear=1,debug=False):
     t_scale=np.linspace(0,nslice*zsep*xlamds/speed_of_light*1e15,nslice)
 
     pick_n=np.interp(t_scale,gen_t,gen_I)
-    # print('max pick_n='+str(max(pick_n)))
-    # print('npart='+str(npart))
-    # print('_____________________')
+    print('sum pick_n='+str(sum(pick_n)))
+    print('npart='+str(npart))
+    print('num_part='+str(num_part))
+    print('_____________________')
+    pick_n=pick_n/sum(pick_n)*num_part
     if max(pick_n)>npart:
         pick_n=pick_n/max(pick_n)*npart
     pick_n=pick_n.astype(int)
-    ratio=ceil(num_part/np.sum(pick_n))
-    # print('pick_n='+str(pick_n))
-    # print('max pick_n='+str(max(pick_n)))
-    # print('npart='+str(npart))
-    # print('ratio='+str(ratio))
-    # print('_____________________')
-    # if debug: print(pick_n)
- 
+    # ratio=ceil(num_part/np.sum(pick_n))
+    ratio=1
+    
     dpa.t=np.reshape(dpa.t,(nslice,npart))
     dpa.e=np.reshape(dpa.e,(nslice,npart))
     dpa.x=np.reshape(dpa.x,(nslice,npart))
@@ -803,7 +802,7 @@ def dpa2dist(out,dpa,num_part=1e5,smear=1,debug=False):
     dist=GenesisParticlesDist()
     for i in arange(nslice):
         for ii in arange(int(ratio)):
-            pick_i=random.sample(arange(npart),pick_n[i])
+            pick_i=random.sample(range(npart),pick_n[i])
             dist.t=append(dist.t,dpa.t[i,pick_i])
             dist.e=append(dist.e,dpa.e[i,pick_i])
             dist.x=append(dist.x,dpa.x[i,pick_i])
@@ -898,10 +897,10 @@ def write_dist_file (dist,filePath,debug=0):
     start_time = time.time()
     
     header='? VERSION = 1.0 \n? SIZE = %s \n? CHARGE = %E \n? COLUMNS X XPRIME Y YPRIME T P\n'%(len(dist.x),dist.charge)
-    f = file(filePath,'w')
+    f = open(filePath,'w')
     f.write(header)
     f.close()
-    f = file(filePath,'a')
+    f = open(filePath,'ab')
     np.savetxt(f, np.c_[dist.x,dist.px,dist.y,dist.py,dist.t,dist.e],fmt="%e", newline='\n')
     f.close()
     
@@ -1216,8 +1215,8 @@ def interp_radiation(F,interpN=(1,1),interpL=(1,1),newN=(None,None),newL=(None,N
     F2.l_domain=F.l_domain 
     F2.tr_domain=F.tr_domain 
     F2.xlamds=F.xlamds 
-    F2.fileName='!interp!'+F.fileName
-    F2.filePath='!interp!'+F.filePath
+    F2.fileName=F.fileName+'i'
+    F2.filePath=F.filePath+'i'
     if debug>1: print('      energy after interpolation '+ str (F2.E())) 
     if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
          
@@ -1367,7 +1366,7 @@ def rad_file_str(beam):
     beam.column_values['ZPOS'] = beam.z 
     beam.column_values['PRAD0'] = beam.prad0
     
-    for i in xrange(len(beam.z)):
+    for i in range(len(beam.z)):
         for col in beam.columns:
             buf = str(beam.column_values[col][i])
             f_str = f_str + buf + ' '
@@ -1413,7 +1412,7 @@ def beam_file_str(beam):
     except:
         pass
     
-    for i in xrange(len(beam.z)):
+    for i in range(len(beam.z)):
         for col in beam.columns:
             buf = str(beam.column_values[col][i])
             f_str = f_str + buf + ' '
@@ -1480,8 +1479,8 @@ def get_power_z(g):
     nslice = len(g.sliceValues.keys())
     nz = len(g.sliceValues[g.sliceValues.keys()[0]]['power'])
     power_z = np.zeros(nz)
-    for i in xrange(nz):
-        for j in xrange(nslice):
+    for i in range(nz):
+        for j in range(nslice):
             power_z[i] += g.sliceValues[g.sliceValues.keys()[j]]['power'][i]
 
     return power_z / nslice
@@ -1627,7 +1626,7 @@ def adapt_rad_file(beam = None, rad_file = None, out_file='tmp.rad'):
         # py_new = []
 
         
-        # for i in xrange(len(beam.z)):
+        # for i in range(len(beam.z)):
             # g1x = np.matrix([[beam.betax[i], beam.alphax[i]],
                    # [beam.alphax[i], (1+beam.alphax[i]**2)/beam.betax[i]]])
     
@@ -1786,7 +1785,7 @@ def transform_beam_file(beam_file = None, out_file='tmp.beam', transform = [ [25
         py_new = []
 
         
-        for i in xrange(len(beam.z)):
+        for i in range(len(beam.z)):
             g1x = np.matrix([[beam.betax[i], beam.alphax[i]],
                    [beam.alphax[i], (1+beam.alphax[i]**2)/beam.betax[i]]])
     
@@ -2028,7 +2027,7 @@ def test_beam_transform(beta1=10.0, alpha1=-0.1, beta2=20, alpha2=2.2):
     xp3 = []
 
     
-    for i in xrange(5000):
+    for i in range(5000):
         x_, xp_ = gaussFromTwiss(ex, beta1, alpha1)
         x.append(x_)
         xp.append(xp_)
@@ -2114,7 +2113,7 @@ def rad_file_str2(beam):
     header = "? VERSION = 1.0\n? SIZE = "+str(len(beam.z))+"\n? OFFSET = "+str(beam.offset2)+"\n? COLUMNS ZPOS PRAD0 \n"
     f_str = header
     
-    for i in xrange(len(beam.z)):
+    for i in range(len(beam.z)):
         f_str_tmp = str(beam.z[i])+ ' ' + str(beam.prad0[i]) + '\n'
         f_str += f_str_tmp
     
@@ -2197,7 +2196,7 @@ def readRadiationFile_mpi(comm=None, fileName='simulation.gout.dfl', npoints=51)
         if ( len(piece) / 16 != ncar**2):
             print ('warning, wrong slice size')
     
-        for i in xrange(len(piece) / 16 ):
+        for i in range(len(piece) / 16 ):
             i2 = i % ncar
             i1 = int(i / ncar)
             if rank == 0:
@@ -2265,10 +2264,10 @@ def writeRadiationFile_mpi(comm, filename, slices, shape):
     print ('rank='+ str( rank)+ ' slices_to_write=' + str( slice_start) + ' ' + str( slices_to_write))
         
     
-    for i1 in xrange(slices_to_write):
+    for i1 in range(slices_to_write):
         str_bin = ''
-        for i2 in xrange(n1):
-            for i3 in xrange(n2):
+        for i2 in range(n1):
+            for i3 in range(n2):
                 
                 if rank > 0:
                     #print '>0', tmp_buf[i1,i2,i3]
@@ -2288,7 +2287,7 @@ def writeRadiationFile_mpi(comm, filename, slices, shape):
         print ('merging temporary files')
         cmd = 'cat '
         cmd2 = 'rm '
-        for i in xrange(nproc): 
+        for i in range(nproc): 
             cmd += ' ' + str(filename) + '.' + str(i)
             cmd2 += ' ' + str(filename) + '.' + str(i)
         cmd = cmd + ' > ' + filename

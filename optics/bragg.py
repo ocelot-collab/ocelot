@@ -174,9 +174,9 @@ def find_bragg(lambd, lattice, ord_max):
     d = {}
     phi = {}
     
-    for h in xrange(0, ord_max+1):
-        for k in xrange(0, ord_max+1):
-            for l in xrange(0, ord_max+1):
+    for h in range(0, ord_max+1):
+        for k in range(0, ord_max+1):
+            for l in range(0, ord_max+1):
                 
                 if h == k == l == 0:
                     continue

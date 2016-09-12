@@ -145,7 +145,7 @@ class GenesisInput: # Genesis input files storage object
     def __init__(self):
         
     # defaults
-        
+        self.stageid=None
         self.runid = 0
         self.type = 'steady'
         

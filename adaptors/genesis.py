@@ -777,10 +777,9 @@ def dpa2dist(out,dpa,num_part=1e5,smear=1,debug=False):
     t_scale=np.linspace(0,nslice*zsep*xlamds/speed_of_light*1e15,nslice)
 
     pick_n=np.interp(t_scale,gen_t,gen_I)
-    print('sum pick_n='+str(sum(pick_n)))
-    print('npart='+str(npart))
-    print('num_part='+str(num_part))
-    print('_____________________')
+    if debug>1: print('sum pick_n='+str(sum(pick_n)))
+    if debug>1: print('npart='+str(npart))
+    if debug>1: print('num_part='+str(num_part))
     pick_n=pick_n/sum(pick_n)*num_part
     if max(pick_n)>npart:
         pick_n=pick_n/max(pick_n)*npart
@@ -1138,7 +1137,10 @@ def interp_radiation(F,interpN=(1,1),interpL=(1,1),newN=(None,None),newL=(None,N
         newN=(newN,newN) 
     if size(newL)==1: 
         newL=(newL,newL) 
-     
+        
+    print(newL)
+    print(newN)    
+    
     if interpN==(1,1) and interpL==(1,1) and newN==(None,None) and newL==(None,None): 
         return F 
         print('no interpolation required, returning original') 

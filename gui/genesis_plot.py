@@ -16,7 +16,7 @@ from ocelot.common.globals import * #import of constants like "h_eV_s" and
 # from pylab import rc, rcParams #tmp
 from matplotlib import rc, rcParams
 
-fntsz=5
+fntsz=3
 params = {'backend': 'ps', 'axes.labelsize': 3*fntsz, 'font.size': 3*fntsz, 'legend.fontsize': 5*fntsz, 'xtick.labelsize': 4*fntsz,  'ytick.labelsize': 4*fntsz, 'text.usetex': True}
 rcParams.update(params)
 rc('text', usetex=True) # required to have greek fonts on redhat
@@ -124,8 +124,6 @@ def plot_gen_out_evo(g, params=['und_quad','el_size','el_energy','el_bunching','
     
     params_str=str(params).replace("'",'').replace('[','').replace(']','').replace(' ','').replace(',','--')
     
-    font_size = 1
-    
     if os.path.isfile(str(g)):
         g=read_genesis_output(g,readall=1)
     #add check for output object
@@ -141,7 +139,7 @@ def plot_gen_out_evo(g, params=['und_quad','el_size','el_energy','el_bunching','
         print('    plotting '+fig_name)
 
     if figsize==():
-        figsize=(8, len(params)*2.5+1)
+        figsize=(9, len(params)*2.5+1)
     
     fig.set_size_inches(figsize,forward=True)
     plt.rc('axes', grid=True)
@@ -382,11 +380,11 @@ def subfig_rad_size(ax_size_t,g,legend):
 
 
 
-def plot_gen_out_e(g, figsize=(),legend = True, fig_name = 'Electrons', savefig=False):
+def plot_gen_out_e(g, legend = True, figsize=(), fig_name = 'Electrons', savefig=False):
     fig=plot_gen_out_evo(g, params=['und_quad','el_size','el_energy','el_bunching'], figsize=figsize, legend = legend, fig_name = fig_name, savefig=savefig)
     return fig
 
-def plot_gen_out_ph(g, figsize=(), legend = True, fig_name = 'Radiation', savefig=False):
+def plot_gen_out_ph(g, legend = True, figsize=(), fig_name = 'Radiation', savefig=False):
     fig=plot_gen_out_evo(g, params=['rad_pow_en','rad_spec','rad_size'], figsize=figsize, legend = legend, fig_name = fig_name, savefig=savefig)
     return fig
 
@@ -1264,6 +1262,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=3, legend = True, phase = False, fa
         ax_z.set_title(z_title, fontsize=15)
         ax_z.set_xlabel(z_label)
         ax_z.set_ylabel(z_labelv)
+        ax_z.set_ylim(ymin=0)
 
     ax_proj_x=fig.add_subplot(2, 2+column_3d, 3+column_3d, sharex=ax_int)
     ax_proj_x.plot(x,x_line,linewidth=2,color=x_y_color)
@@ -1735,36 +1734,40 @@ def plot_gen_corr(proj_dir,run_inp=[],p1=(),p2=(),savefig=False, showfig=False, 
     
     return fig
 
-def plot_dpa(out, dpa=None, z=[], figsize=3, legend = True, fig_name = None, auto_zoom=False, column_3d=True, savefig=False, showfig=False, return_proj=False, vartype_dfl=complex64):
-    #not finished
-    print('    plotting dpa file')
+def plot_dpa_bucket(out, dpa=None, z=[], figsize=3, legend = True, fig_name = None, savefig=False, showfig=False,debug=0):
+    
+    if debug>0: print('    plotting bucket')
     start_time = time.time()
-    suffix=''
+    
+    # #not finished
+    # print('    plotting dpa file')
+    # start_time = time.time()
+    # suffix=''
 
-    xlamds=out('xlamds')
-    zsep=out('zsep')
-    nslice=out('nslice')
-    nbins=out('nbins')
-    npart=out('npart')
+    # xlamds=out('xlamds')
+    # zsep=out('zsep')
+    # nslice=out('nslice')
+    # nbins=out('nbins')
+    # npart=out('npart')
 
-    if dpa==None:
-        dpa=out.filePath+'.dpa'
-    if dpa.__class__==str:
-        try:
-            dpa=read_particle_file(dpa, nbins=nbins, npart=npart,debug=debug)
-        except IOError:
-            print ('      ERR: no such file "'+dpa+'"')
-            print ('      ERR: reading "'+out.filePath+'.dpa'+'"')
-            dpa=read_particle_file(out.filePath+'.dpa', nbins=nbins, npart=npart,debug=debug)
+    # if dpa==None:
+        # dpa=out.filePath+'.dpa'
+    # if dpa.__class__==str:
+        # try:
+            # dpa=read_particle_file(dpa, nbins=nbins, npart=npart,debug=debug)
+        # except IOError:
+            # print ('      ERR: no such file "'+dpa+'"')
+            # print ('      ERR: reading "'+out.filePath+'.dpa'+'"')
+            # dpa=read_particle_file(out.filePath+'.dpa', nbins=nbins, npart=npart,debug=debug)
 
-    m=np.arange(nslice)
-    m=np.tile(m,(nbins,npart/nbins,1))
-    m=np.rollaxis(m,2,0)
+    # m=np.arange(nslice)
+    # m=np.tile(m,(nbins,npart/nbins,1))
+    # m=np.rollaxis(m,2,0)
 
-    dpa.z=dpa.ph*xlamds/2/pi+m*xlamds*zsep
-    dpa.t=dpa.z/speed_of_light
+    # dpa.z=dpa.ph*xlamds/2/pi+m*xlamds*zsep
+    # dpa.t=dpa.z/speed_of_light
 
-    plt.scatter(dpa.ph[nslice,1,:],dpa.e[nslice,1,:])
+    # plt.scatter(dpa.ph[nslice,1,:],dpa.e[nslice,1,:])
 
 def plot_dist(dist, figsize=3, fig_name = None, savefig=False, showfig=False, scatter=False, plot_x_y=True, plot_xy_s=True, bins=50, flip_t=True, debug=0):
     

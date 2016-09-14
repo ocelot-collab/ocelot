@@ -209,11 +209,11 @@ def run(inp, launcher,readall=False,dfl_slipage_incl=True,assembly_ver='sys',deb
     
     if assembly_ver=='sys':
     
-        if debug>1: print ('      assembling *.out file')
+        if debug>0: print ('      assembling *.out file')
         start_time = time.time()
         os.system('cat ' + out_file +'.slice* >> '+ out_file)
         if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
-        if debug>1: print ('      assembling *.dfl file')
+        if debug>0: print ('      assembling *.dfl file')
         start_time = time.time()
         if dfl_slipage_incl:
             os.system('cat ' + out_file+'.dfl.slice*  >> ' + out_file+'.dfl.tmp')
@@ -223,28 +223,28 @@ def run(inp, launcher,readall=False,dfl_slipage_incl=True,assembly_ver='sys',deb
         else:
             os.system('cat ' + out_file+'.dfl.slice*  > ' + out_file+'.dfl')
         if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
-        if debug>1: print ('      assembling *.dpa file')
+        if debug>0: print ('      assembling *.dpa file')
         start_time = time.time()
         os.system('cat ' + out_file +'.dpa.slice* >> ' + out_file+'.dpa')
         if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
-        if debug>1: print ('      removing temporary files')
+        if debug>0: print ('      removing temporary files')
     
     elif assembly_ver=='pyt':
         #there is a bug with dfl assembly
         import glob
         ram=1
         
-        if debug>1: print ('      assembling *.out file')
+        if debug>0: print ('      assembling *.out file')
         start_time = time.time()
         assemble(out_file,ram=ram)
         if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
     
-        if debug>1: print ('      assembling *.dfl file')
+        if debug>0: print ('      assembling *.dfl file')
         start_time = time.time()
         assemble(out_file+'.dfl',tailappend=dfl_slipage_incl,ram=ram)
         if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
         
-        if debug>1: print ('      assembling *.dpa file')
+        if debug>0: print ('      assembling *.dpa file')
         start_time = time.time()
         assemble(out_file+'.dpa',ram=ram)
         if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))

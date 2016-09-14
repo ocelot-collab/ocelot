@@ -1438,13 +1438,17 @@ def plot_dpa_bucket(dpa=None, slice_num=None, repeat=1 , GeV=1, figsize=3, legen
     if debug>0: print('    plotting bucket')
     start_time = time.time()
 
+    assert (slice_num<=shape(dpa.ph)[0]),'slice_num larger than the dpa shape'
+
     if fig_name==None:
         fig_name='Electron phase space '+dpa.fileName
     fig=plt.figure(fig_name)
     fig.clf()
     fig.set_size_inches((5*figsize,3*figsize),forward=True)
     
-    assert (slice_num<=shape(dpa.ph)[0]),'slice_num larger than the dpa shape'
+    ax_z_hist= plt.subplot2grid ((4, 1), (0, 0), rowspan=1)
+    ax_main= plt.subplot2grid ((4, 1), (1, 0), rowspan=3,sharex=ax_z_hist)
+    
     
     nbins=shape(dpa.ph)[1]
     phase=dpa.ph[slice_num,:,:]
@@ -1453,15 +1457,30 @@ def plot_dpa_bucket(dpa=None, slice_num=None, repeat=1 , GeV=1, figsize=3, legen
         energy*=m_e_MeV
     energy_mean=round(np.mean(energy),1)
     energy-=energy_mean
+    
+    phase_hist=np.array([])
+    for irep in range(repeat):
+        phase_hist=np.concatenate((phase_hist,np.ravel(phase)+2*np.pi*(irep-1)))
+    
+    hist,edges=np.histogram(phase_hist,bins=30*repeat)#calculate current histogram
+    edges=edges[0:-1]#remove the last bin edge to save equal number of points    
+    ax_z_hist.bar(edges,hist,width=edges[1]-edges[0])
+    
+    for label in ax_z_hist.get_xticklabels():
+        label.set_visible(False)
+    
+    ax_z_hist.set_xlim([edges[0],edges[-1]])
+    
+    
     for irep in range(repeat):    
         for ibin in range(nbins):
-            plt.scatter(phase[ibin,:]+2*np.pi*(irep-1),energy[ibin,:],color=part_colors[ibin],marker='.')
+            ax_main.scatter(phase[ibin,:]+2*np.pi*(irep-1),energy[ibin,:],color=part_colors[ibin],marker='.')
 
-    plt.xlabel('$\phi$ [rad]')    
+    ax_main.set_xlabel('$\phi$ [rad]')    
     if GeV:
-        plt.ylabel('E [MeV] + '+str(energy_mean/1000)+' [GeV]')
+        ax_main.set_ylabel('E [MeV] + '+str(energy_mean/1000)+' [GeV]')
     else:
-        plt.ylabel('$\gamma$ + '+str(energy_mean))
+        ax_main.set_ylabel('$\gamma$ + '+str(energy_mean))
     
     if savefig!=False:
         if savefig==True:
@@ -1470,41 +1489,16 @@ def plot_dpa_bucket(dpa=None, slice_num=None, repeat=1 , GeV=1, figsize=3, legen
         plt.savefig(dpa.filePath+'.'+savefig,format=savefig)    
     
     if showfig: plt.show()
-    # #not finished
-    # print('    plotting dpa file')
-    # start_time = time.time()
-    # suffix=''
 
-    # xlamds=out('xlamds')
-    # zsep=out('zsep')
-    # nslice=out('nslice')
-    # nbins=out('nbins')
-    # npart=out('npart')
 
-    # if dpa==None:
-        # dpa=out.filePath+'.dpa'
-    # if dpa.__class__==str:
-        # try:
-            # dpa=read_particle_file(dpa, nbins=nbins, npart=npart,debug=debug)
-        # except IOError:
-            # print ('      ERR: no such file "'+dpa+'"')
-            # print ('      ERR: reading "'+out.filePath+'.dpa'+'"')
-            # dpa=read_particle_file(out.filePath+'.dpa', nbins=nbins, npart=npart,debug=debug)
-
-    # m=np.arange(nslice)
-    # m=np.tile(m,(nbins,npart/nbins,1))
-    # m=np.rollaxis(m,2,0)
-
-    # dpa.z=dpa.ph*xlamds/2/pi+m*xlamds*zsep
-    # dpa.t=dpa.z/speed_of_light
-
-    # plt.scatter(dpa.ph[nslice,1,:],dpa.e[nslice,1,:])
-
-def plot_dist(dist, figsize=3, fig_name = None, savefig=False, showfig=False, scatter=False, plot_x_y=True, plot_xy_s=True, bins=50, flip_t=True, debug=0):
+def plot_dist(dist, figsize=3, fig_name = None, savefig=False, showfig=False, scatter=False, plot_x_y=True, plot_xy_s=True, bins=(50,50,50,50), flip_t=True, debug=0):
     
     if debug>0: print('    plotting dist file')
     start_time = time.time()
     #suffix=''
+    
+    if len(bins)==1:
+        bins=(bins,bins,bins,bins) #x,y,t,e
     
     if flip_t:
         dist.t=dist.t*(-1)+max(dist.t)
@@ -1516,10 +1510,10 @@ def plot_dist(dist, figsize=3, fig_name = None, savefig=False, showfig=False, sc
     fig.set_size_inches(((3+plot_x_y+plot_xy_s)*figsize,3*figsize),forward=True)
     
     s=dist.t*speed_of_light*1e6
-    hist,edges=np.histogram(s,bins=bins)#calculate current histogram
+    hist,edges=np.histogram(s,bins=bins[2])#calculate current histogram
     edges=edges[0:-1]#remove the last bin edge to save equal number of points
     hist_int=np.trapz(hist,edges)/speed_of_light/1e6 #normalize
-    hist=hist/hist_int*dist.charge
+    hist=np.rint(hist.astype(float)/(hist_int/float(dist.charge)))
     
     ax_curr=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 1)
     #ax_curr.hist(s, bins,color='b')
@@ -1529,33 +1523,33 @@ def plot_dist(dist, figsize=3, fig_name = None, savefig=False, showfig=False, sc
     
     ax_se=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 3+plot_x_y,sharex=ax_curr)
     if scatter: ax_se.scatter(s, dist.e,marker='.')
-    else: ax_se.hist2d(s, dist.e, bins)
+    else: ax_se.hist2d(s, dist.e, [bins[2],bins[3]])
     ax_se.set_xlabel('s, [$\mu$m]')
     ax_se.set_ylabel('$\gamma$')
     
     if plot_xy_s:
         ax_xs=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 4+plot_x_y,sharex=ax_curr)
         if scatter: ax_xs.scatter(s, 1e6*dist.x,marker='.')
-        else: ax_xs.hist2d(s, 1e6*dist.x, bins)
+        else: ax_xs.hist2d(s, 1e6*dist.x, [bins[2],bins[0]])
         ax_xs.set_xlabel('s, [$\mu$m]')
         ax_xs.set_ylabel('x, [$\mu$m]')
         
         ax_ys=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 2,sharex=ax_curr)
         if scatter: ax_ys.scatter(s, 1e6*dist.y,marker='.')
-        else: ax_ys.hist2d(s, 1e6*dist.y, bins)
+        else: ax_ys.hist2d(s, 1e6*dist.y, [bins[2],bins[1]])
         ax_ys.set_xlabel('s, [$\mu$m]')
         ax_ys.set_ylabel('y, [$\mu$m]')
         
     if plot_x_y:
         ax_xy=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 2+plot_xy_s)
         if scatter: ax_xy.scatter(dist.x*1e6, dist.y*1e6,marker='.')
-        else: ax_xy.hist2d(dist.x*1e6, dist.y*1e6, bins)
+        else: ax_xy.hist2d(dist.x*1e6, dist.y*1e6, [bins[0],bins[1]])
         ax_xy.set_xlabel('x, [$\mu$m]')
         ax_xy.set_ylabel('y, [$\mu$m]')
         
         ax_pxpy=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 4+2*plot_xy_s)
         if scatter: ax_pxpy.scatter(dist.px*1e6, dist.py*1e6,marker='.')
-        else: ax_pxpy.hist2d(dist.px*1e6, dist.py*1e6, bins)
+        else: ax_pxpy.hist2d(dist.px*1e6, dist.py*1e6, [bins[0],bins[1]])
         ax_pxpy.set_xlabel('px, []')
         ax_pxpy.set_ylabel('py, []')
         

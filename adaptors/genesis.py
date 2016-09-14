@@ -307,6 +307,44 @@ class GenesisInput: # Genesis input files storage object
         self.imagl =    0.0 #The length of each bending magnet of the chicane. If the magnet length is set to zero but IDRIL is not the resulting beam line correspond to a simple drift of the length 5 times IDRIL
         self.idril =    0.0 #The length of the 5 drift lengths of the magnetic chicane (three between the magnets and one before and after the magnets).
         
+        self.trama = 0 #Non zero value enables that a transport matrix is applied to the electron distribution when importing it with PARTFILE. The individual matrix is defined by ITRAM$$ 
+        self.itram11 = 1 #The pound signs are place holders for numbers between 1 and 6 (e.g. ITRAM21) and are defining the matrix element for the transport matrix, which is applied when importing a paticle distribution with the PARTFILE option. The matrix is defined in a standard way, acting on the vector (position in X, angle in X, position in Y, angle in Y, position in s, relative energy spread). The default value is the identity matrix.  
+        self.itram12 = 0 
+        self.itram13 = 0 
+        self.itram14 = 0 
+        self.itram15 = 0 
+        self.itram16 = 0 
+        self.itram21 = 0 
+        self.itram22 = 1 
+        self.itram23 = 0 
+        self.itram24 = 0 
+        self.itram25 = 0 
+        self.itram26 = 0 
+        self.itram31 = 0 
+        self.itram32 = 0 
+        self.itram33 = 1 
+        self.itram34 = 0 
+        self.itram35 = 0 
+        self.itram36 = 0 
+        self.itram41 = 0 
+        self.itram42 = 0 
+        self.itram43 = 0 
+        self.itram44 = 1 
+        self.itram45 = 0 
+        self.itram46 = 0 
+        self.itram51 = 0 
+        self.itram52 = 0 
+        self.itram53 = 0 
+        self.itram54 = 0 
+        self.itram55 = 1 
+        self.itram56 = 0 
+        self.itram61 = 0 
+        self.itram62 = 0 
+        self.itram63 = 0 
+        self.itram64 = 0 
+        self.itram65 = 0 
+        self.itram66 = 1 
+        
         self.iallharm =    0 #Setting the value to a non-zero value will also include all harmonics between 1 and NHARM
         self.iharmsc =    0 # setting to a non-zero value includes the coupling of the harmonic radiation back to the electron beam for a self-consistent model of harmonics. Enabling this feature will automatically include all harmonics by setting IALLHARM to one.
         self.isntyp =    0 # Non-zero if the user wants to use the Pennman algorithm for the shot noise (which is not recommended).
@@ -2088,13 +2126,26 @@ def test_beam_transform(beta1=10.0, alpha1=-0.1, beta2=20, alpha2=2.2):
 
 
 def create_rad_file(p_duration_s = None, p_intensity = None, beam = None, offset = None, out_file = 'tmp.rad'):
+    
+    def rad_file_str2(beam):
+        #header = "# \n? VERSION = 1.0\n? SIZE = "+str(len(beam.z))+"\n? OFFSET = "+str(beam.offset)+"\n? COLUMNS ZPOS PRAD0 \n"
+        #header = "# \n? VERSION = 1.0\n? SIZE = "+str(len(beam.z))+"\n? OFFSET = "+str(beam.offset2)+"\n? COLUMNS ZPOS PRAD0 \n"
+        header = "? VERSION = 1.0\n? SIZE = "+str(len(beam.z))+"\n? OFFSET = "+str(beam.offset2)+"\n? COLUMNS ZPOS PRAD0 \n"
+        f_str = header
+        
+        for i in range(len(beam.z)):
+            f_str_tmp = str(beam.z[i])+ ' ' + str(beam.prad0[i]) + '\n'
+            f_str += f_str_tmp
+        
+        return f_str
+    
     temporal_delay = offset
     extention_twindow = 2
     start = beam.z[0]-extention_twindow*(beam.z[math.floor(len(beam.z)/2)]-beam.z[0])
     stop = beam.z[len(beam.z)-1]+extention_twindow*(beam.z[len(beam.z)-1]-beam.z[math.ceil(len(beam.z)/2)])
     num = len(beam.z)*(1+extention_twindow)
     intensity = np.empty(num)
-    p_duration_m = p_duration_s*299792458
+    p_duration_m = p_duration_s*speed_of_light
     
     class radfileparams:
         offset = temporal_delay
@@ -2102,24 +2153,16 @@ def create_rad_file(p_duration_s = None, p_intensity = None, beam = None, offset
         z = np.linspace(start, stop, num)
         for i in range(num):
             intensity[i] = p_intensity*math.exp(-(z[i]-offset)**2/(2*p_duration_m**2)) 
+            if intensity[i] < 1e-50: 
+                intensity[i] = 0 
         prad0 = intensity
-        
+    
     rad = radfileparams()
     f = open(out_file,'w')
     f.write(rad_file_str2(rad))
     f.close()
 
-def rad_file_str2(beam):
-    #header = "# \n? VERSION = 1.0\n? SIZE = "+str(len(beam.z))+"\n? OFFSET = "+str(beam.offset)+"\n? COLUMNS ZPOS PRAD0 \n"
-    #header = "# \n? VERSION = 1.0\n? SIZE = "+str(len(beam.z))+"\n? OFFSET = "+str(beam.offset2)+"\n? COLUMNS ZPOS PRAD0 \n"
-    header = "? VERSION = 1.0\n? SIZE = "+str(len(beam.z))+"\n? OFFSET = "+str(beam.offset2)+"\n? COLUMNS ZPOS PRAD0 \n"
-    f_str = header
-    
-    for i in range(len(beam.z)):
-        f_str_tmp = str(beam.z[i])+ ' ' + str(beam.prad0[i]) + '\n'
-        f_str += f_str_tmp
-    
-    return f_str
+
 
 '''
 Scheduled for removal

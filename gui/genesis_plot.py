@@ -16,7 +16,7 @@ from ocelot.common.globals import * #import of constants like "h_eV_s" and
 # from pylab import rc, rcParams #tmp
 from matplotlib import rc, rcParams
 
-fntsz=5
+fntsz=3
 params = {'backend': 'ps', 'axes.labelsize': 3*fntsz, 'font.size': 3*fntsz, 'legend.fontsize': 5*fntsz, 'xtick.labelsize': 4*fntsz,  'ytick.labelsize': 4*fntsz, 'text.usetex': True}
 rcParams.update(params)
 rc('text', usetex=True) # required to have greek fonts on redhat
@@ -48,7 +48,8 @@ def plot_gen_out_all(handle=None,savefig='png',showfig=False,choice=(1,1,1,1,[],
         6 -                 inv.space-time      domain
         7 -                 space    -frequency domain
         8 -                 inv.space-frequency domain
-        9 - dpa as dist at the end
+        9 - dpa as dist at the end, smeared
+        10 - dpa as dist at the end, not smeared
         
     #picks as an input "GenesisOutput" object, file path of directory as strings.
     #plots e-beam evolution, radiation evolution, initial and final simulation window
@@ -64,9 +65,9 @@ def plot_gen_out_all(handle=None,savefig='png',showfig=False,choice=(1,1,1,1,[],
         savefig='png'
         
     if choice=='all':
-        choice=(1,1,1,1,[],1,1,1,1,1)
+        choice=(1,1,1,1,[],1,1,1,1,1,1)
     elif choice=='gen':
-        choice=(1,1,1,1,[],0,0,0,0,0)
+        choice=(1,1,1,1,[],0,0,0,0,0,0)
 
     if os.path.isdir(str(handle)):
         handles=[]
@@ -89,8 +90,8 @@ def plot_gen_out_all(handle=None,savefig='png',showfig=False,choice=(1,1,1,1,[],
             if choice[2]: f2=plot_gen_out_z(handle, z=0,savefig=savefig)
             if choice[3]: f3=plot_gen_out_z(handle, z=inf,savefig=savefig)
             if choice[4]!=[]:
-                #accepts a list of z_pozitions to be implemented in future
-                pass
+                for z in choice[4]:
+                    plot_gen_out_z(handle, z=z,savefig=savefig)
         if os.path.isfile(handle.filePath+'.dfl') and any(choice[5:8]):
             #change to new object!
             dfl=read_radiation_file_out(handle,debug=debug)
@@ -99,10 +100,15 @@ def plot_gen_out_all(handle=None,savefig='png',showfig=False,choice=(1,1,1,1,[],
             if choice[7]: f7=plot_dfl(dfl,far_field=0,freq_domain=1,auto_zoom=0,savefig=savefig)
             if choice[8]: f8=plot_dfl(dfl,far_field=1,freq_domain=1,auto_zoom=0,savefig=savefig)
         
-        if os.path.isfile(handle.filePath+'.dpa') and choice[9]:
+        if os.path.isfile(handle.filePath+'.dpa') and (choice[9] or choice[10]):
             dpa=read_particle_file_out(handle,debug=debug)
-            dist=dpa2dist(handle,dpa,num_part=5e4,smear=1,debug=debug)
-            if choice[9]: f9=plot_dist(dist, figsize=3, fig_name = None, savefig=savefig, showfig=showfig, bins=75)
+            if choice[9]: 
+                dist=dpa2dist(handle,dpa,num_part=5e4,smear=1,debug=debug)
+                f9=plot_dist(dist, figsize=3, fig_name = None, savefig=savefig, showfig=showfig, bins=150,debug=debug)
+            if choice[10]: 
+                dist=dpa2dist(handle,dpa,num_part=5e4,smear=0,debug=debug)
+                f9=plot_dist(dist, figsize=3, fig_name = None, savefig=savefig, showfig=showfig, bins=(100,100,550,250),debug=debug)
+                
             
     if showfig:
         print('    showing plots, close all to proceed')
@@ -262,8 +268,10 @@ def subfig_el_energy(ax_energy,g,legend):
     
     number_ticks=6
     
-    ax_energy.plot(g.z, np.average(g.el_energy*0.511e-3, axis=0), 'b-',linewidth=1.5)
-    ax_energy.set_ylabel('E [GeV]')
+    el_energy=g.el_energy*m_e_MeV
+    el_energy_av=int(mean(el_energy))
+    ax_energy.plot(g.z, np.average(el_energy-el_energy_av, axis=0), 'b-',linewidth=1.5)
+    ax_energy.set_ylabel('E + '+str(el_energy_av)+'[MeV]')
     ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
     
     ax_spread = ax_energy.twinx()
@@ -346,11 +354,13 @@ def subfig_rad_spectrum(ax_spectrum,g,legend,log=1):
             
         spectrum_lamdwidth=np.empty(g.nZ)
         for zz in range(g.nZ):
-            if np.sum(g.spec[:,zz])!=0:
+            # if np.sum(g.spec[:,zz])!=0:
+            try:
                 peak=fwhm3(g.spec[:,zz])
                 #spectrum_lamdwidth1[zz]=abs(lamdscale[peak[0]]-lamdscale[peak[0]+1])*peak[1] #the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
                 spectrum_lamdwidth[zz]=abs(g.freq_lamd[0]-g.freq_lamd[1])*peak[1] #the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
-            else:
+            # else:
+            except:
                 spectrum_lamdwidth[zz]=0
                 
         ax_spec_bandw = ax_spectrum.twinx()
@@ -1491,17 +1501,14 @@ def plot_dpa_bucket(dpa=None, slice_num=None, repeat=1 , GeV=1, figsize=3, legen
     if showfig: plt.show()
 
 
-def plot_dist(dist, figsize=3, fig_name = None, savefig=False, showfig=False, scatter=False, plot_x_y=True, plot_xy_s=True, bins=(50,50,50,50), flip_t=True, debug=0):
+def plot_dist(dist, figsize=3, fig_name = None, savefig=False, showfig=False, scatter=False, plot_x_y=True, plot_xy_s=True, bins=(50,50,50,50), flip_t=True, beam_E_plot='eV', cmin=0, debug=0):
     
     if debug>0: print('    plotting dist file')
     start_time = time.time()
     #suffix=''
     
-    if len(bins)==1:
+    if size(bins)==1:
         bins=(bins,bins,bins,bins) #x,y,t,e
-    
-    if flip_t:
-        dist.t=dist.t*(-1)+max(dist.t)
 
     if fig_name==None:
         fig_name='Electron distribution '+dist.fileName
@@ -1509,7 +1516,11 @@ def plot_dist(dist, figsize=3, fig_name = None, savefig=False, showfig=False, sc
     fig.clf()
     fig.set_size_inches(((3+plot_x_y+plot_xy_s)*figsize,3*figsize),forward=True)
     
-    s=dist.t*speed_of_light*1e6
+    if flip_t:
+        s=(dist.t*(-1)+max(dist.t))*speed_of_light*1e6
+    else:
+        s=dist.t*speed_of_light*1e6
+    
     hist,edges=np.histogram(s,bins=bins[2])#calculate current histogram
     edges=edges[0:-1]#remove the last bin edge to save equal number of points
     hist_int=np.trapz(hist,edges)/speed_of_light/1e6 #normalize
@@ -1521,35 +1532,45 @@ def plot_dist(dist, figsize=3, fig_name = None, savefig=False, showfig=False, sc
     ax_curr.set_xlabel('s, [$\mu$m]')
     ax_curr.set_ylabel('I [A]')
     
-    ax_se=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 3+plot_x_y,sharex=ax_curr)
-    if scatter: ax_se.scatter(s, dist.e,marker='.')
-    else: ax_se.hist2d(s, dist.e, [bins[2],bins[3]])
-    ax_se.set_xlabel('s, [$\mu$m]')
-    ax_se.set_ylabel('$\gamma$')
+    
+    ax_se=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 2+plot_x_y+plot_xy_s,sharex=ax_curr)
+    if beam_E_plot=='eV':
+        energy=dist.e*m_e_MeV
+        energy_av=int(mean(energy))
+        
+        if scatter: ax_se.scatter(s, energy-energy_av,marker='.')
+        else: ax_se.hist2d(s, energy-energy_av, [bins[2],bins[3]],cmin=cmin)
+        ax_se.set_xlabel('s, [$\mu$m]')
+        ax_se.set_ylabel('E + '+str(energy_av)+',[MeV]')
+    else: # elif beam_E_plot=='gamma':
+        if scatter: ax_se.scatter(s, dist.e,marker='.')
+        else: ax_se.hist2d(s, dist.e, [bins[2],bins[3]],cmin=cmin)
+        ax_se.set_xlabel('s, [$\mu$m]')
+        ax_se.set_ylabel('$\gamma$')
     
     if plot_xy_s:
         ax_xs=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 4+plot_x_y,sharex=ax_curr)
         if scatter: ax_xs.scatter(s, 1e6*dist.x,marker='.')
-        else: ax_xs.hist2d(s, 1e6*dist.x, [bins[2],bins[0]])
+        else: ax_xs.hist2d(s, 1e6*dist.x, [bins[2],bins[0]],cmin=cmin)
         ax_xs.set_xlabel('s, [$\mu$m]')
         ax_xs.set_ylabel('x, [$\mu$m]')
         
         ax_ys=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 2,sharex=ax_curr)
         if scatter: ax_ys.scatter(s, 1e6*dist.y,marker='.')
-        else: ax_ys.hist2d(s, 1e6*dist.y, [bins[2],bins[1]])
+        else: ax_ys.hist2d(s, 1e6*dist.y, [bins[2],bins[1]],cmin=cmin)
         ax_ys.set_xlabel('s, [$\mu$m]')
         ax_ys.set_ylabel('y, [$\mu$m]')
         
     if plot_x_y:
         ax_xy=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 2+plot_xy_s)
         if scatter: ax_xy.scatter(dist.x*1e6, dist.y*1e6,marker='.')
-        else: ax_xy.hist2d(dist.x*1e6, dist.y*1e6, [bins[0],bins[1]])
+        else: ax_xy.hist2d(dist.x*1e6, dist.y*1e6, [bins[0],bins[1]],cmin=cmin)
         ax_xy.set_xlabel('x, [$\mu$m]')
         ax_xy.set_ylabel('y, [$\mu$m]')
         
         ax_pxpy=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 4+2*plot_xy_s)
         if scatter: ax_pxpy.scatter(dist.px*1e6, dist.py*1e6,marker='.')
-        else: ax_pxpy.hist2d(dist.px*1e6, dist.py*1e6, [bins[0],bins[1]])
+        else: ax_pxpy.hist2d(dist.px*1e6, dist.py*1e6, [bins[0],bins[1]],cmin=cmin)
         ax_pxpy.set_xlabel('px, []')
         ax_pxpy.set_ylabel('py, []')
         
@@ -1846,6 +1867,137 @@ def plot_dist(dist, figsize=3, fig_name = None, savefig=False, showfig=False, sc
     # else:
         # return fig
 
+def plot_beam(beam,figsize=4,showfig=False,savefig=False,fig=None,plot_xy=None,debug=0):
+    
+    if plot_xy==None:
+        if mean(beam.x)==0 and mean(beam.y)==0 and mean(beam.px)==0 and mean(beam.py)==0:
+            plot_xy=0
+        else:
+            plot_xy=1
+    
+    if fig==None:
+        fig=plt.figure()
+    fig.clf()
+    
+    fig.set_size_inches((3*figsize,(3+plot_xy)*figsize),forward=True)
+    ax = fig.add_subplot(2+plot_xy,2,1) 
+    plt.grid(True)
+    ax.set_xlabel(r'$\mu m$')
+    p1,= plt.plot(1.e6 * np.array(beam.z),beam.I,'r',lw=3)
+    plt.plot(1.e6 * beam.z[beam.idx_max],beam.I[beam.idx_max],'bs')
+    
+    ax = ax.twinx()
+    
+    p2,= plt.plot(1.e6 * np.array(beam.z),1.e-3 * np.array(beam.eloss),'g',lw=3)
+    
+    ax.legend([p1, p2],['I [A]','Wake [KV/m]'],loc=4)
+    #ax.set_xlim([np.amin(beam.z),np.amax(beam.x)])
+    ax = fig.add_subplot(2+plot_xy,2,2) 
+    plt.grid(True)
+    ax.set_xlabel(r'$\mu m$')
+    #p1,= plt.plot(1.e6 * np.array(beam.z),1.e-3 * np.array(beam.eloss),'r',lw=3)
+    p1, = plt.plot(1.e6 * np.array(beam.z),beam.g0,'r',lw=3)
+    ax = ax.twinx()
+    p2, = plt.plot(1.e6 * np.array(beam.z),beam.dg,'g',lw=3)
+
+    ax.legend([p1,p2],[r'$\gamma$',r'$\delta \gamma$'])
+    
+    ax = fig.add_subplot(2+plot_xy,2,3) 
+    plt.grid(True)
+    ax.set_xlabel(r'$\mu m$')
+    p1, = plt.plot(1.e6 * np.array(beam.z),beam.ex, 'r', lw=3)
+    p2, = plt.plot(1.e6 * np.array(beam.z),beam.ey, 'g', lw=3)
+    plt.plot(1.e6 * beam.z[beam.idx_max],beam.ex[beam.idx_max], 'bs')
+    
+    ax.legend([p1,p2],[r'$\varepsilon_x$',r'$\varepsilon_y$'])
+    #ax3.legend([p3,p4],[r'$\varepsilon_x$',r'$\varepsilon_y$'])
+    
+    
+    ax = fig.add_subplot(2+plot_xy,2,4)
+    plt.grid(True)
+    ax.set_xlabel(r'$\mu m$')
+    p1, = plt.plot(1.e6 * np.array(beam.z),beam.betax, 'r', lw=3)
+    p2, = plt.plot(1.e6 * np.array(beam.z),beam.betay, 'g', lw=3)
+    plt.plot(1.e6 * beam.z[beam.idx_max],beam.betax[beam.idx_max], 'bs')
+    
+    ax.legend([p1,p2],[r'$\beta_x$',r'$\beta_y$'])
+
+    if plot_xy:
+
+        ax = fig.add_subplot(3,2,5)
+        plt.grid(True)
+        ax.set_xlabel(r'$\mu m$')
+        p1, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(beam.x), 'r', lw=3)
+        p2, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(beam.y), 'g', lw=3)
+        
+        ax.legend([p1,p2],[r'$x [\mu m]$',r'$y [\mu m]$'])
+
+        ax = fig.add_subplot(3,2,6)
+        plt.grid(True)
+        ax.set_xlabel(r'$\mu m$')
+        p1, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(beam.px), 'r', lw=3)
+        p2, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(beam.py), 'g', lw=3)
+        
+        ax.legend([p1,p2],[r'$p_x [\mu rad]$',r'$p_y [\mu rad]$'])
+        
+    if savefig!=False:
+        if savefig==True:
+            savefig='png'
+        if debug>1: print('      saving '+beam.fileName+'.'+savefig)
+        plt.savefig(beam.filePath+'.'+savefig,format=savefig) 
+    
+    if showfig:
+        plt.show()
+
+def plot_beam_2(fig, beam, iplot=0):
+    
+    ax = fig.add_subplot(111) 
+    plt.grid(True)
+    
+    if iplot == 0:
+    
+        ax.set_xlabel(r'$\mu m$')
+        ax.set_ylabel('A')
+        p1,= plt.plot(1.e6 * np.array(beam.z),beam.I,'r',lw=3)
+        #plt.plot(1.e6 * beam.z[beam.idx_max],beam.I[beam.idx_max],'bs')
+        
+        ax = ax.twinx()
+        ax.set_ylabel('KV/m')
+        
+        p2,= plt.plot(1.e6 * np.array(beam.z),1.e-3 * np.array(beam.eloss),'g',lw=3)
+        
+        ax.legend([p1, p2],['I',r'$E_{wake}$'])
+
+    if iplot == 1:
+    
+        ax.set_xlabel(r'$\mu m$')
+        #p1,= plt.plot(1.e6 * np.array(beam.z),1.e-3 * np.array(beam.eloss),'r',lw=3)
+        p1, = plt.plot(1.e6 * np.array(beam.z),beam.g0,'r',lw=3)
+        ax = ax.twinx()
+        p2, = plt.plot(1.e6 * np.array(beam.z),beam.dg,'g',lw=3)
+    
+        ax.legend([p1,p2],[r'$\gamma$',r'$\delta \gamma$'])
+    
+    if iplot == 2:
+
+        ax.set_xlabel(r'$\mu m$')
+        ax.set_ylabel(r'$mm \cdot mrad$')
+        p1, = plt.plot(1.e6 * np.array(beam.z),1.e6*np.array(beam.ex), 'r', lw=3)
+        p2, = plt.plot(1.e6 * np.array(beam.z),1.e6*np.array(beam.ey), 'g', lw=3)
+        #plt.plot(1.e6 * beam.z[beam.idx_max],beam.ex[beam.idx_max], 'bs')
+        
+        ax.legend([p1,p2],[r'$\varepsilon_x$',r'$\varepsilon_y$'])
+        #ax3.legend([p3,p4],[r'$\varepsilon_x$',r'$\varepsilon_y$'])
+    
+    if iplot == 3:
+    
+        ax.set_xlabel(r'$\mu m$')
+        ax.set_ylabel(r'$m$')
+        p1, = plt.plot(1.e6 * np.array(beam.z),beam.betax, 'r', lw=3)
+        p2, = plt.plot(1.e6 * np.array(beam.z),beam.betay, 'g', lw=3)
+        #plt.plot(1.e6 * beam.z[beam.idx_max],beam.betax[beam.idx_max], 'bs')
+        
+        ax.legend([p1,p2],[r'$\beta_x$',r'$\beta_y$'])
 
 def round_sig(x, sig=2):
     from math import log10, floor

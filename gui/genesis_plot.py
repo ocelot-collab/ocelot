@@ -358,15 +358,15 @@ def subfig_rad_spectrum(ax_spectrum,g,legend,log=1):
             try:
                 peak=fwhm3(g.spec[:,zz])
                 #spectrum_lamdwidth1[zz]=abs(lamdscale[peak[0]]-lamdscale[peak[0]+1])*peak[1] #the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
-                spectrum_lamdwidth[zz]=abs(g.freq_lamd[0]-g.freq_lamd[1])*peak[1] #the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
+                spectrum_lamdwidth[zz]=abs(g.freq_lamd[0]-g.freq_lamd[1])*peak[1]/g.freq_lamd[peak[0]] #the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
             # else:
             except:
                 spectrum_lamdwidth[zz]=0
                 
         ax_spec_bandw = ax_spectrum.twinx()
-        ax_spec_bandw.plot(g.z, spectrum_lamdwidth, 'm--')
+        ax_spec_bandw.plot(g.z, spectrum_lamdwidth*100, 'm--')
         # ax_spec_bandw.set_ylabel('$2\sigma\lambda$ [nm]')
-        ax_spec_bandw.set_ylabel('$\Delta\lambda_{fwhm}$ [nm]')
+        ax_spec_bandw.set_ylabel('$\Delta\lambda_{fwhm}/\lambda, \%$')
                 
 def subfig_rad_size(ax_size_t,g,legend):
     if g.nSlices==1:
@@ -386,6 +386,7 @@ def subfig_rad_size(ax_size_t,g,legend):
                 
             ax_size_t.plot(g.z, np.average(g.r_size*2*1e6, weights=weight, axis=0), 'b-',linewidth=1.5)
     
+    ax_size_t.set_ylim(ymin=0)
     ax_size_t.set_ylabel('transverse [$\mu$m]')
 
 def plot_gen_out_e(g, legend = True, figsize=(), fig_name = 'Electrons', savefig=False):
@@ -1101,6 +1102,7 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
     
 
     import copy
+    rc('text', usetex=False)
     dict_name={'p_int':'radiation power','energy': 'radiation pulse energy','el_e_spread': 'el.beam energy spread','el_energy': 'el.beam energy average','bunching': 'el.beam bunching','spec': 'radiation on-axis spectral density','dfl_spec':'total radiation spectral density','r_size':'radiation transv size','r_size_weighted':'radiation transv size (weighted)','xrms':'el.beam x size','yrms':'el.beam y size','error':'genesis simulation error','p_mid':'radiation power on-axis','phi_mid':'radiation phase on-axis','increment':'radiation power increment'}
     dict_unit={'p_int':'[W]','energy': '[J]','el_e_spread': '(gamma)','el_energy': '(gamma)','bunching': '','spec': '[arb.units]','dfl_spec': '[arb.units]','r_size':'[m]','xrms':'[m]','yrms':'[m]','error':''}
     

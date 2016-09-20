@@ -478,7 +478,7 @@ class GenesisOutput:
     def __call__(self, name):
 
         if name not in self.parameters.keys():
-            return NaN
+            return None
         else:
             p, = self.parameters[name]
             return float(p.replace('D','E'))
@@ -669,17 +669,18 @@ def read_genesis_output(filePath, readall=True, debug=1, precision=float):
     out.nSlices = len(out.n)
     # int(out('history_records'))#number of slices in the output
     # print(nSlice)
-    # print(out.nSlices)
+    # print(out.nSlices) 
     # if out.nSlices
+    assert out('entries_per_record')!=None, '.out header is missing!'
     out.nZ = int(out('entries_per_record'))#number of records along the undulator
     out.ncar=int(out('ncar')) #number of mesh points
     
     if debug>0: print ('        nSlice '+ str(out.nSlices))
     if debug>0: print ('        nZ '+ str(out.nZ))
     
-    assert nSlice!=0,'.out is empty'
+    assert nSlice!=0,'.out is empty!'
             
-    assert(out.n[-1]-out.n[0]+1)== len(out.n),'.out is missing at least '+str((out.n[-1]-out.n[0]+1)-len(out.n))+' slices'
+    assert(out.n[-1]-out.n[0]+1)== len(out.n),'.out is missing at least '+str((out.n[-1]-out.n[0]+1)-len(out.n))+' slices!'
         # print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
         # print('WARNING, .out is missing at least '+str((out.n[-1]-out.n[0]+1)-len(out.n))+' slices')
         
@@ -2009,6 +2010,10 @@ def transform_beam_file(beam_file = None, out_file='tmp.beam', transform = [ [25
         beam_new = Beam()
         beam_new.column_values = beam.column_values
         beam_new.columns = beam.columns
+        for parm in ['filePath','fileName']:
+            if hasattr(beam,parm):
+                setattr(beam_new,parm,getattr(beam,parm))
+        
         
         if energy_new != None:
             gamma_new=energy_new / (0.511e-3)
@@ -2079,6 +2084,7 @@ def transform_beam_file(beam_file = None, out_file='tmp.beam', transform = [ [25
 
 
 def cut_beam(beam = None, cut_z = [-inf, inf]):
+    beam=deepcopy(beam)
     if np.amin(beam.z)<cut_z[0] or np.amax(beam.z)>cut_z[1]:
         
         condition = (beam.z > cut_z[0]) * (beam.z<cut_z[1])
@@ -2090,6 +2096,10 @@ def cut_beam(beam = None, cut_z = [-inf, inf]):
         for parm in ['x','px','y','py','z','I','ex','ey','g0','dg','eloss','betax','betay','alphax','alphay']:
             if hasattr(beam,parm):
                 setattr(beam_new,parm,np.extract(condition,getattr(beam,parm)))
+                
+        for parm in ['filePath','fileName']:
+            if hasattr(beam,parm):
+                setattr(beam_new,parm,getattr(beam,parm))
         
         # beam_new.x = np.extract(condition,beam.x)
         # beam_new.px = np.extract(condition,beam.px)

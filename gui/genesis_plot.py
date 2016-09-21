@@ -123,7 +123,7 @@ def plot_gen_out_all(handle=None,savefig='png',showfig=False,choice=(1,1,1,1,[],
     # return [f1,f2,f3,f4]
 
 
-def plot_gen_out_evo(g, params=['und_quad','el_size','el_energy','el_bunching','rad_pow_en','rad_spec','rad_size'], figsize=(), legend = False, fig_name = None, savefig=False, showfig=False):
+def plot_gen_out_evo(g, params=['und_quad','el_size','el_energy','el_bunching','rad_pow_en','rad_spec','rad_size','rad_spec_evo_n','rad_pow_evo_n'], figsize=(), legend = False, fig_name = None, savefig=False, showfig=False):
     '''
     plots evolution of given parameters from genesis output with undulator length
     '''
@@ -177,9 +177,17 @@ def plot_gen_out_evo(g, params=['und_quad','el_size','el_energy','el_bunching','
         elif  param=='rad_pow':
             subfig_rad_pow(ax[-1],g,legend)
         elif  param=='rad_spec':
-            subfig_rad_spectrum(ax[-1],g,legend)
+            subfig_rad_spec(ax[-1],g,legend)
         elif  param=='rad_size':
             subfig_rad_size(ax[-1],g,legend)
+        elif param=='rad_spec_evo_n':
+            subfig_rad_spec_evo(ax[-1],g,legend,norm=1)
+        elif param=='rad_pow_evo_n':
+            subfig_rad_pow_evo(ax[-1],g,legend,norm=1)
+        elif param=='rad_spec_evo':
+            subfig_rad_spec_evo(ax[-1],g,legend,norm=0)
+        elif param=='rad_pow_evo':
+            subfig_rad_pow_evo(ax[-1],g,legend,norm=0)
         else:
             print('wrong parameter '+param)
 
@@ -203,8 +211,10 @@ def plot_gen_out_evo(g, params=['und_quad','el_size','el_energy','el_bunching','
             fig.savefig(g.filePath+'_'+params_str+'.'+str(savefig),format=savefig)
 
     # return fig
-    if showfig:
+    if showfig==True:
         plt.show()
+#    else:
+#        plt.close()
     
     return fig
 
@@ -346,7 +356,7 @@ def subfig_rad_pow(ax_rad_pow,g,legend,log=1):
 
     
     
-def subfig_rad_spectrum(ax_spectrum,g,legend,log=1):
+def subfig_rad_spec(ax_spectrum,g,legend,log=1):
         ax_spectrum.plot(g.z, np.amax(g.spec,axis=0), 'r-',linewidth=1.5)
         ax_spectrum.text(0.5, 0.98,r"(on axis)", fontsize=10, horizontalalignment='center', verticalalignment='top', transform = ax_spectrum.transAxes)#horizontalalignment='center', verticalalignment='center',
         ax_spectrum.set_ylabel('P$(\lambda)_{max}$ [a.u.]')
@@ -425,6 +435,37 @@ def subfig_rad_size(ax_size_t,g,legend):
         if legend: ax_size_s.legend()
 #        plt.legend('fwhm','std')
     
+def subfig_rad_pow_evo(ax_power_evo,g,legend,norm=1):
+    if g.nSlices>1:
+        z=g.z
+        s=g.s
+        power=g.p_int
+        if norm==1:
+            power=power/np.max(power,0)[np.newaxis,:]
+            power[isnan(power)]=0
+        ax_power_evo.pcolormesh(z,s*1e6,power)
+        ax_power_evo.set_xlabel('z [m]')
+        ax_power_evo.set_ylabel('s [$\mu$m]')
+        ax_power_evo.axis('tight')
+        ax_power_evo.grid(True)
+    else:
+        pass
+    
+def subfig_rad_spec_evo(ax_spectrum_evo,g,legend,norm=1):
+    if g.nSlices>1:
+        z=g.z
+        l=g.freq_lamd
+        spectrum=g.spec
+        if norm==1:
+            spectrum=spectrum/np.max(spectrum,0)[np.newaxis,:]
+            spectrum[isnan(spectrum)]=0
+        ax_spectrum_evo.pcolormesh(z,l,spectrum)
+        ax_spectrum_evo.set_xlabel('z [m]')
+        ax_spectrum_evo.set_ylabel('$\lambda$ [nm]')
+        ax_spectrum_evo.axis('tight')
+    else:
+        pass
+
 
 def plot_gen_out_e(g, legend = False, figsize=(), fig_name = 'Electrons', savefig=False):
     fig=plot_gen_out_evo(g, params=['und_quad','el_size','el_energy','el_bunching'], figsize=figsize, legend = legend, fig_name = fig_name, savefig=savefig)

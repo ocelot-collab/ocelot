@@ -29,7 +29,7 @@ rc('text', usetex=False) # required to have greek fonts on redhat
 
 max_yticks = 7
 
-def plot_gen_out_all(handle=None,savefig='png',showfig=False,choice=(1,1,1,1,[],1,0,0,0,0),vartype_dfl=complex128,debug=0):
+def plot_gen_out_all(handle=None,savefig='png',showfig=False,choice=(1,1,1,1,[],1,0,0,0,0,0),vartype_dfl=complex128,debug=0):
     '''
     plots all possible output from the genesis output
     handle is either:
@@ -115,8 +115,8 @@ def plot_gen_out_all(handle=None,savefig='png',showfig=False,choice=(1,1,1,1,[],
     if showfig:
         print('    showing plots, close all to proceed')
         plt.show()
-    else:
-        plt.close('all')
+    # else:
+        # plt.close('all')
 
     print ('    total plotting time %.2f seconds' % (time.time() - plotting_time))
 

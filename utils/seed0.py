@@ -147,20 +147,20 @@ def filterfield(filename       = 'D:/Genesis/test_data/simulation.gout.dfl',
     #                                                                                 #
     ###################################################################################
 
-    print filename       
-    print filenameF     
-    print filenameM    
-    print filenameP     
-    print filenameMR    
-    print filenamePR    
+    print (filename)       
+    print (filenameF)   
+    print (filenameM)    
+    print (filenameP)     
+    print (filenameMR)    
+    print (filenamePR)    
     #print filenamePin   
     #print filenamePphin  
     #print filenameSin    
     #print filenameSphin  
-    print filenamePout   
-    print filenamePphout 
-    print filenameSout   
-    print filenameSphout 
+    print (filenamePout)   
+    print (filenamePphout) 
+    print (filenameSout)   
+    print (filenameSphout) 
     #print filenamePout_S  
     #print filenamePphout_S 
     #print filenameSout_S  
@@ -171,11 +171,11 @@ def filterfield(filename       = 'D:/Genesis/test_data/simulation.gout.dfl',
     ########################    
 
     k0 = 2*np.pi/lam0
-    print 'Single process field filtering. Recommended on 64bit processor.'
-    print 'Reading radiation file: ',filename,' with ',MTR,'points...'
+    print ('Single process field filtering. Recommended on 64bit processor.')
+    print ('Reading radiation file: ',filename,' with ',MTR,'points...')
     slices =  readRadiationFile_my(filename, MTR)   
-    print '...finished reading radiation file.'
-    print 'Prepare for filtering...'
+    print ('...finished reading radiation file.')
+    print ('Prepare for filtering...')
     
     nslice = len(slices)   #better use the number in Genesis input file though!
     #flat = np.ravel(slices) #This 64bit version uses a flattened array of data to make the procedure more time-efficient
@@ -239,11 +239,11 @@ def filterfield(filename       = 'D:/Genesis/test_data/simulation.gout.dfl',
     # Filtering #
     #############
         
-    print 'Filtering...'
+    print ('Filtering...')
     SH1   = int(ntot/2 - nslice/2)
     SHTOT = int(ntot/2-nslice/2 + SHF)
-    print SHTOT
-    print SHF
+    print (SHTOT)
+    print (SHF)
     
     
     import time
@@ -262,13 +262,13 @@ def filterfield(filename       = 'D:/Genesis/test_data/simulation.gout.dfl',
     ncores = multiprocessing.cpu_count()
     pyfftw.interfaces.cache.enable()
     pyfftw.interfaces.cache.set_keepalive_time(30)
-    print 'ncores ',ncores
+    print ('ncores '+str(ncores))
     
     
    
     
     for nn in range(MTR):
-        print 'Number ', nn, ' of ',MTR,' done.'
+        print ('Number '+str (nn)+' of '+str(MTR)+' done.')
         for mm in range(MTR):
            
             #transv = mm * MTR + nn
@@ -301,10 +301,10 @@ def filterfield(filename       = 'D:/Genesis/test_data/simulation.gout.dfl',
             sumphafafter  = sumphafafter  + np.real(Tpha)
 
     t2 = time.time()
-    print 'time '
-    print t2-t1
+    print ('time ')
+    print (t2-t1)
 
-    print 'Introducing spatiotemporal coupling...'
+    print ('Introducing spatiotemporal coupling...')
     for i in range(nslice):
         slices[i] = np.roll(slices[i],-int(SHX[i]),axis=0)
 
@@ -313,11 +313,11 @@ def filterfield(filename       = 'D:/Genesis/test_data/simulation.gout.dfl',
     # Print data to files #
     #######################
     
-    print 'Writing radiation file...'
+    print ('Writing radiation file...')
     writeRadiationFile_my(filenameF,slices)
-    print '...Finished writing radiation file.'
+    print ('...Finished writing radiation file.')
     
-    print 'Writing output data to file...'     
+    print ('Writing output data to file...'  )   
     f2 = open(filenameSphout, 'w')
     #f4 = open(filenamePout, 'w')
     #f5 = open(filenamePphin, 'w')
@@ -360,7 +360,7 @@ def filterfield(filename       = 'D:/Genesis/test_data/simulation.gout.dfl',
     #f13.close()
     #f14.close()
      
-    print 'End of single process field filtering. Recommended on 64bit processors.'
+    print ('End of single process field filtering. Recommended on 64bit processors.')
     
 #END FUNCTION
 
@@ -449,7 +449,8 @@ def readfilter(filename = 'D:\Python\Scripts\Genesis - scripts\ModT_fig.dat'):
     '''
 
 
-    f = file(filename, 'r')  # iterate over the lines in the file
+    # f = file(filename, 'r')  # iterate over the lines in the file
+    f = open(filename, 'r')  # iterate over the lines in the file
     columns = []
     for line in f:
         # split the line into a list of column values
@@ -510,7 +511,7 @@ def readRadiationFile_my(fileName, npoints=151):
 #END  FUNCTION
 
 def writeRadiationFile_my(filename,rad):
-    print '    writing radiation file' 
+    print ('    writing radiation file' )
     #a new backward compatible version ~10x faster
     #    print '        - writing to ', filename
     d=rad.flatten()

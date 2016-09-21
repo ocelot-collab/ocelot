@@ -39,3 +39,4 @@ from ocelot.cpbd.csr import *
 from ocelot.cpbd.wake3D import *
 print('initializing ocelot...')
 logger = Logger()
+xrange=range

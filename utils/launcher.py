@@ -41,7 +41,7 @@ class LocalLauncher(Launcher):
     def launch(self):
         t1 = time.time()
         self.command = self.program
-        print 'launching in ', self.dir
+        print ('launching in ', self.dir)
 
         if hasattr(self, "filename"):
             self.output = open(self.filename,"w")
@@ -62,7 +62,7 @@ class LocalLauncher(Launcher):
                 p.poll()
                 line = p.stdout.readline()
                 if line:
-                    print line
+                    print (line)
                     if hasattr(self, "output"):
                         self.output.write(line)
                     p.stdout.flush()
@@ -76,16 +76,16 @@ class LocalLauncher(Launcher):
             stats = p.communicate()
 
             if stats[1] != "":
-                print "subprocess popen error:\n", stats[1]
+                print ("subprocess popen error:\n", stats[1])
                 if hasattr(self, "filename"):
                     self.output.write("subprocess popen error:\n"+stats[1])
                 exit()
 
             t2 = time.time()
-            print 'execution time ', t2 - t1, ' sec'
+            print ('execution time ', t2 - t1, ' sec')
 
-        except OSError, err:
-            print "os error:",err.errno,err.strerror, "initial cmd is:\n", self.program
+        except (OSError) as err:
+            print ("os error:",err.errno,err.strerror, "initial cmd is:\n", self.program)
             if hasattr(self, "output"):
                 self.output.write("os error: "+err.errno+" "+err.strerror)
             exit()
@@ -110,13 +110,13 @@ class MpiLauncher(Launcher):
 
     def launch(self):
         t1 = time.time()
-        print 'launching mpi job'
+        print ('launching mpi job')
         ##THIS LINE AND THE NEXT CHANGED BY GG ## command = 'mkdir -p '+ self.dir + '; ' + 'cd '+ self.dir + '; '+ "mpirun " + str(self.mpiParameters) + " -n " + str(self.nproc) + " " + self.program
         command = 'mkdir -p '+ self.dir + '; ' + 'cd '+ self.dir + '; '+ "`which mpirun` " + str(self.mpiParameters) + " " + self.program
-        print command
+        print (command)
         os.system(command)
         t2 = time.time()
-        print 'execution time ', t2 - t1, ' sec'
+        print ('execution time ', t2 - t1, ' sec')
             
     # collect data to directory
     def collect(self, inputDir, outputDir, pattern = "*"):
@@ -137,19 +137,19 @@ class PollableMpiLauncher(Launcher):
 
     def launch(self):
         t1 = time.time()
-        print 'launching mpi job'
+        print ('launching mpi job')
 
         ##THIS LINE AND THE NEXT CHANGED BY GG
         # ## command = 'mkdir -p '+ self.dir + '; ' + 'cd '+ self.dir + '; '+ "mpirun " + str(self.mpiParameters) + " -n " + str(self.nproc) + " " + self.program
         command = 'mkdir -p '+ self.dir + '; ' + 'cd '+ self.dir + '; '+ "`which mpirun` " + str(self.mpiParameters) + " " + self.program
-        print command
+        print (command)
         os.system(command)
         t2 = time.time()
-        print 'execution time ', t2 - t1, ' sec'
+        print ('execution time ', t2 - t1, ' sec')
             
     # collect data to directory
     def collect(self, inputDir, outputDir, pattern = "*"):
-        #print 'collecting results'
+        #print ('collecting results')
         #os.system('cp ' + inputDir + pattern + ' ' + outputDir)
         pass
 
@@ -171,9 +171,9 @@ class SshMpiLauncher(Launcher):
         command2 = "ssh " + self.port + " " + self.host + " 'rm -f " + self.dir + "/*'"
         command3 = "scp -r " + self.port.replace("-p","-P") + " job_sandbox/* " + self.host + ":" + self.dir
 
-        print command1
-        print command2
-        print command3
+        print (command1)
+        print (command2)
+        print (command3)
         os.system(command1)
         os.system(command2)
         os.system(command3)
@@ -181,15 +181,15 @@ class SshMpiLauncher(Launcher):
     
     def launch(self):
         t1 = time.time()
-        print 'launching remote mpi job'
+        print ('launching remote mpi job')
         command = "ssh " + self.port + " " + self.host + " 'mkdir -p " + self.dir + "; cd " + self.dir + "; mpirun " + str(self.mpiParameters) + " -n " + str(self.nproc) + " " + self.program + "'"
-        print command
+        print (command)
         os.system(command)
         t2 = time.time()
-        print 'execution time ', t2 - t1, ' sec'
+        print ('execution time ', t2 - t1, ' sec')
 
     def collect(self, inputDir, outputDir, pattern = "*"):
-        print 'collecting results from remote host'
+        print ('collecting results from remote host')
         os.system("mkdir -p " + outputDir)
         
         command1 = "ssh " + self.port + " " + self.host + " 'cd " + self.dir + "; python merge.py simulation.gout.slice >> simulation.gout'"

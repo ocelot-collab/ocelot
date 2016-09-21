@@ -119,51 +119,51 @@ class CrystalStructureFactors():
 def load_stucture_factors(file_name):
     import pickle
     #sys.modules[]
-    #print 'im in module', __name__
-    #print 'file ', sys.modules[__name__].__file__
+    #print ('im in module', __name__)
+    #print ('file ', sys.modules[__name__].__file__)
     dir_name = os.path.dirname(sys.modules[__name__].__file__)
     #print 'dir ', dir_name 
     abs_file_name = os.path.join(dir_name, 'data', file_name)
-    print 'abs path ', abs_file_name
+    print ('abs path ', abs_file_name)
     cdata = pickle.load(open(abs_file_name, 'rb'))
     return cdata
 
 def save_stucture_factors(cdata, file_name):
     import pickle
-    print 'saving structure factors to', file_name
+    print ('saving structure factors to', file_name)
     pickle.dump(cdata, open(file_name, 'wb'))
 
 
 def F_hkl(cryst, ref_idx, lamb, temp):
     
-    print 'calculating Fhkl', lamb, cryst.lattice.element_name, ref_idx
+    print ('calculating Fhkl', lamb, cryst.lattice.element_name, ref_idx)
     
     file_name = cryst.lattice.element_name + str(ref_idx[0]) + str(ref_idx[1]) + str(ref_idx[2]) + '.dat'
     
     target_ev = 2*pi * hbar * c / lamb
     
-    print 'reading file_name', file_name
+    print ('reading file_name', file_name)
     
     cdata = load_stucture_factors(file_name)
     
     try:
         cdata = load_stucture_factors(file_name)
     except:
-        print 'form factor data not found!!!'
+        print ('form factor data not found!!!')
         sys.exit(0)
         return 0.0, 0.0, 0.0
     
-    print 'searching ', target_ev
+    print ('searching ', target_ev)
 
     if target_ev < cdata.ev[0] or target_ev > cdata.ev[-1]:
-        print 'photon wavelength not covered in data'
+        print ('photon wavelength not covered in data')
         return 0.0, 0.0, 0.0
         
 
     de = cdata.ev[1] - cdata.ev[0]
     i_e = int( (target_ev - cdata.ev[0]) / de )
 
-    print 'using ', cdata.ev[i_e]
+    print ('using ', cdata.ev[i_e])
 
     return cdata.f000[i_e], cdata.fh[i_e], cdata.fhbar[i_e]
 
@@ -174,9 +174,9 @@ def find_bragg(lambd, lattice, ord_max):
     d = {}
     phi = {}
     
-    for h in xrange(0, ord_max+1):
-        for k in xrange(0, ord_max+1):
-            for l in xrange(0, ord_max+1):
+    for h in range(0, ord_max+1):
+        for k in range(0, ord_max+1):
+            for l in range(0, ord_max+1):
                 
                 if h == k == l == 0:
                     continue
@@ -229,7 +229,7 @@ def plot_bragg_reflections(idc = [(0,0,1), (1,1,1), (2,1,1), (3,1,1), (1,2,3), (
     
 def plot_scattering_factors():
     f = StructureFactorFactory().atomic_structure_factor('C')
-    print f(2)
+    print (f(2))
     
 
 def eta(Dtheta, cryst):
@@ -394,7 +394,7 @@ def get_crystal_filter(cryst, ray, nk=10, ref_idx = None, k = None):
         
     f0, fh, fmh =  F_hkl(cryst = cryst, ref_idx = ref_idx, lamb=ray.lamb, temp = 300*K)
     
-    print 'structure factors', f0, fh, fmh
+    print ('structure factors', f0, fh, fmh)
     #plt.figure()
 
     n_width = 7 #number of Darwin widths

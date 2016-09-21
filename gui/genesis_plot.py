@@ -16,10 +16,10 @@ from ocelot.common.globals import * #import of constants like "h_eV_s" and
 # from pylab import rc, rcParams #tmp
 from matplotlib import rc, rcParams
 
-fntsz=3
+fntsz=4
 params = {'backend': 'ps', 'axes.labelsize': 3*fntsz, 'font.size': 3*fntsz, 'legend.fontsize': 5*fntsz, 'xtick.labelsize': 4*fntsz,  'ytick.labelsize': 4*fntsz, 'text.usetex': True}
 rcParams.update(params)
-rc('text', usetex=True) # required to have greek fonts on redhat
+rc('text', usetex=False) # required to have greek fonts on redhat
 
 # font = {'family' : 'normal',
         # 'weight' : 'normal',
@@ -80,7 +80,7 @@ def plot_gen_out_all(handle=None,savefig='png',showfig=False,choice=(1,1,1,1,[],
         handles=[handle]
 
     for handle in handles:
-
+                
         if os.path.isfile(str(handle)):
             handle=read_genesis_output(handle,readall=1,debug=debug)
 
@@ -107,22 +107,23 @@ def plot_gen_out_all(handle=None,savefig='png',showfig=False,choice=(1,1,1,1,[],
                 f9=plot_dist(dist, figsize=3, fig_name = None, savefig=savefig, showfig=showfig, bins=150,debug=debug)
             if choice[10]: 
                 dist=dpa2dist(handle,dpa,num_part=5e4,smear=0,debug=debug)
-                f9=plot_dist(dist, figsize=3, fig_name = None, savefig=savefig, showfig=showfig, bins=(100,100,550,250),debug=debug)
+                f10=plot_dist(dist, figsize=3, fig_name = None, savefig=savefig, showfig=showfig, bins=(100,100,550,250),debug=debug)
                 
+    if savefig!=False:
+        print('    plots recorded to *.'+str(savefig)+' files')
             
     if showfig:
         print('    showing plots, close all to proceed')
         plt.show()
-
-    if savefig!=False:
-        print('    plots recorded to *.'+str(savefig)+' files')
+    else:
+        plt.close('all')
 
     print ('    total plotting time %.2f seconds' % (time.time() - plotting_time))
 
     # return [f1,f2,f3,f4]
 
 
-def plot_gen_out_evo(g, params=['und_quad','el_size','el_energy','el_bunching','rad_pow_en','rad_spec','rad_size'], figsize=(), legend = True, fig_name = None, savefig=False, showfig=False):
+def plot_gen_out_evo(g, params=['und_quad','el_size','el_energy','el_bunching','rad_pow_en','rad_spec','rad_size'], figsize=(), legend = False, fig_name = None, savefig=False, showfig=False):
     '''
     plots evolution of given parameters from genesis output with undulator length
     '''
@@ -145,7 +146,7 @@ def plot_gen_out_evo(g, params=['und_quad','el_size','el_energy','el_bunching','
         print('    plotting '+fig_name)
 
     if figsize==():
-        figsize=(9, len(params)*2.5+1)
+        figsize=(9, len(params)*2.5+2)
     
     fig.set_size_inches(figsize,forward=True)
     plt.rc('axes', grid=True)
@@ -315,7 +316,8 @@ def subfig_rad_pow_en(ax_rad_pow,g,legend,log=1):
     if np.amax(g.p_int)>0 and log:
         ax_rad_en.set_yscale('log')
     
-    ax_rad_pow.grid(False, which="minor")
+    ax_rad_pow.grid(True, which='minor')    
+#    ax_rad_pow.grid(False, which="minor")
     ax_rad_pow.tick_params(axis='y', which='both', colors='g')
     ax_rad_pow.yaxis.label.set_color('g')
     ax_rad_en.tick_params(axis='y', which='both', colors='k')
@@ -335,7 +337,7 @@ def subfig_rad_pow(ax_rad_pow,g,legend,log=1):
     if np.amax(g.p_int)>0 and log:
         ax_rad_pow.set_yscale('log')
     
-    ax_rad_pow.grid(False, which="minor") 
+    ax_rad_pow.grid(False, which='minor') 
     ax_rad_pow.tick_params(axis='y', which='both', colors='g')
     ax_rad_pow.yaxis.label.set_color('g')
     ax_rad_pow.yaxis.get_offset_text().set_color(ax_rad_pow.yaxis.label.get_color())
@@ -352,21 +354,28 @@ def subfig_rad_spectrum(ax_spectrum,g,legend,log=1):
         if np.amax(np.amax(g.spec,axis=0))>0 and log:
             ax_spectrum.set_yscale('log')
             
-        spectrum_lamdwidth=np.empty(g.nZ)
+        spectrum_lamdwidth_fwhm=np.zeros_like(g.z)
+        spectrum_lamdwidth_std=np.zeros_like(g.z)        
         for zz in range(g.nZ):
             # if np.sum(g.spec[:,zz])!=0:
             try:
                 peak=fwhm3(g.spec[:,zz])
-                #spectrum_lamdwidth1[zz]=abs(lamdscale[peak[0]]-lamdscale[peak[0]+1])*peak[1] #the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
-                spectrum_lamdwidth[zz]=abs(g.freq_lamd[0]-g.freq_lamd[1])*peak[1]/g.freq_lamd[peak[0]] #the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
-            # else:
+                spectrum_lamdwidth_fwhm[zz]=abs(g.freq_lamd[0]-g.freq_lamd[1])*peak[1]/g.freq_lamd[peak[0]] #the FWHM of spectral line (error when paekpos is at the edge of lamdscale)                
             except:
-                spectrum_lamdwidth[zz]=0
+                spectrum_lamdwidth_fwhm[zz]=0
                 
+            try:
+                spectrum_lamdwidth_std[zz]=std_moment(g.freq_lamd, g.spec[:,zz])/n_moment(g.freq_lamd, g.spec[:,zz],0,1)                
+            except:
+                spectrum_lamdwidth_std[zz]=0
+                            
         ax_spec_bandw = ax_spectrum.twinx()
-        ax_spec_bandw.plot(g.z, spectrum_lamdwidth*100, 'm--')
+        ax_spec_bandw.plot(g.z, spectrum_lamdwidth_fwhm*100, 'm:', label="fwhm")
+        ax_spec_bandw.plot(g.z, spectrum_lamdwidth_std*100, 'm--', label="std")
+        ax_spec_bandw.grid(False)
+        if legend: ax_spec_bandw.legend()
         # ax_spec_bandw.set_ylabel('$2\sigma\lambda$ [nm]')
-        ax_spec_bandw.set_ylabel('$\Delta\lambda_{fwhm}/\lambda, \%$')
+        ax_spec_bandw.set_ylabel('$\Delta\lambda/\lambda, \%$')
                 
 def subfig_rad_size(ax_size_t,g,legend):
     if g.nSlices==1:
@@ -387,13 +396,41 @@ def subfig_rad_size(ax_size_t,g,legend):
             ax_size_t.plot(g.z, np.average(g.r_size*2*1e6, weights=weight, axis=0), 'b-',linewidth=1.5)
     
     ax_size_t.set_ylim(ymin=0)
-    ax_size_t.set_ylabel('transverse [$\mu$m]')
+    ax_size_t.set_ylabel('size$_{transv}$ [$\mu$m]')
+    
+    if g.nSlices>1:
+        ax_size_s = ax_size_t.twinx()
+        size_long_fwhm=np.zeros_like(g.z)
+        size_long_std=np.zeros_like(g.z)
+        s=g.t*speed_of_light*1.0e-15*1e6
+        delta_s=(s[1]-s[0])
+        for zz in range(g.nZ):
+            # if np.sum(g.spec[:,zz])!=0:
+            try:
+                peak=fwhm3(g.p_int[:,zz])                
+                size_long_fwhm[zz]=abs(delta_s)*peak[1] #the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
+            except:
+                size_long_fwhm[zz]=0
 
-def plot_gen_out_e(g, legend = True, figsize=(), fig_name = 'Electrons', savefig=False):
+            try:
+                size_long_std[zz]=std_moment(s, g.p_int[:,zz])
+            except:
+                size_long_std[zz]=0
+                  
+        ax_size_s.plot(g.z,size_long_fwhm, color='navy', linestyle=':', linewidth=1.0, label="fwhm")
+        ax_size_s.plot(g.z,size_long_std, color='navy', linestyle='--', linewidth=1.0, label="std")
+        ax_size_s.set_ylim(ymin=0)
+        ax_size_s.set_ylabel('size$_{long}$ [$\mu$m]')
+        ax_size_s.grid(False)  
+        if legend: ax_size_s.legend()
+#        plt.legend('fwhm','std')
+    
+
+def plot_gen_out_e(g, legend = False, figsize=(), fig_name = 'Electrons', savefig=False):
     fig=plot_gen_out_evo(g, params=['und_quad','el_size','el_energy','el_bunching'], figsize=figsize, legend = legend, fig_name = fig_name, savefig=savefig)
     return fig
 
-def plot_gen_out_ph(g, legend = True, figsize=(), fig_name = 'Radiation', savefig=False):
+def plot_gen_out_ph(g, legend = False, figsize=(), fig_name = 'Radiation', savefig=False):
     fig=plot_gen_out_evo(g, params=['rad_pow_en','rad_spec','rad_size'], figsize=figsize, legend = legend, fig_name = fig_name, savefig=savefig)
     return fig
 
@@ -1531,7 +1568,7 @@ def plot_dist(dist, figsize=3, fig_name = None, savefig=False, showfig=False, sc
     ax_curr=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 1)
     #ax_curr.hist(s, bins,color='b')
     ax_curr.plot(edges, hist,color='b')
-    ax_curr.set_xlabel('s, [$\mu$m]')
+    ax_curr.set_xlabel('s [$\mu$m]')
     ax_curr.set_ylabel('I [A]')
     
     
@@ -1542,39 +1579,39 @@ def plot_dist(dist, figsize=3, fig_name = None, savefig=False, showfig=False, sc
         
         if scatter: ax_se.scatter(s, energy-energy_av,marker='.')
         else: ax_se.hist2d(s, energy-energy_av, [bins[2],bins[3]],cmin=cmin)
-        ax_se.set_xlabel('s, [$\mu$m]')
-        ax_se.set_ylabel('E + '+str(energy_av)+',[MeV]')
+        ax_se.set_xlabel('s [$\mu$m]')
+        ax_se.set_ylabel('E + '+str(energy_av)+' [MeV]')
     else: # elif beam_E_plot=='gamma':
         if scatter: ax_se.scatter(s, dist.e,marker='.')
         else: ax_se.hist2d(s, dist.e, [bins[2],bins[3]],cmin=cmin)
-        ax_se.set_xlabel('s, [$\mu$m]')
+        ax_se.set_xlabel('s [$\mu$m]')
         ax_se.set_ylabel('$\gamma$')
     
     if plot_xy_s:
         ax_xs=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 4+plot_x_y,sharex=ax_curr)
         if scatter: ax_xs.scatter(s, 1e6*dist.x,marker='.')
         else: ax_xs.hist2d(s, 1e6*dist.x, [bins[2],bins[0]],cmin=cmin)
-        ax_xs.set_xlabel('s, [$\mu$m]')
-        ax_xs.set_ylabel('x, [$\mu$m]')
+        ax_xs.set_xlabel('s [$\mu$m]')
+        ax_xs.set_ylabel('x [$\mu$m]')
         
         ax_ys=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 2,sharex=ax_curr)
         if scatter: ax_ys.scatter(s, 1e6*dist.y,marker='.')
         else: ax_ys.hist2d(s, 1e6*dist.y, [bins[2],bins[1]],cmin=cmin)
-        ax_ys.set_xlabel('s, [$\mu$m]')
-        ax_ys.set_ylabel('y, [$\mu$m]')
+        ax_ys.set_xlabel('s [$\mu$m]')
+        ax_ys.set_ylabel('y [$\mu$m]')
         
     if plot_x_y:
         ax_xy=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 2+plot_xy_s)
         if scatter: ax_xy.scatter(dist.x*1e6, dist.y*1e6,marker='.')
         else: ax_xy.hist2d(dist.x*1e6, dist.y*1e6, [bins[0],bins[1]],cmin=cmin)
-        ax_xy.set_xlabel('x, [$\mu$m]')
-        ax_xy.set_ylabel('y, [$\mu$m]')
+        ax_xy.set_xlabel('x [$\mu$m]')
+        ax_xy.set_ylabel('y [$\mu$m]')
         
         ax_pxpy=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 4+2*plot_xy_s)
         if scatter: ax_pxpy.scatter(dist.px*1e6, dist.py*1e6,marker='.')
         else: ax_pxpy.hist2d(dist.px*1e6, dist.py*1e6, [bins[0],bins[1]],cmin=cmin)
-        ax_pxpy.set_xlabel('px, []')
-        ax_pxpy.set_ylabel('py, []')
+        ax_pxpy.set_xlabel('px')
+        ax_pxpy.set_ylabel('py')
         
     if scatter:
         ax_curr.set_xlim([np.amin(s),np.amax(s)])
@@ -2062,4 +2099,9 @@ def fwhm3(valuelist, height=0.5, peakpos=-1):
     # ax_size_l.plot(g.z, rad_longit_size*2, color='indigo', linestyle='dashed',linewidth=1.5)
     # ax_size_l.set_ylabel('longitudinal [$\mu$m]')
     
-    
+def n_moment(x, counts, c, n):
+    return (np.sum((x-c)**n*counts) / np.sum(counts))**(1./n)
+        
+def std_moment(x, counts):
+    mean=n_moment(x, counts, 0, 1)
+    return n_moment(x, counts, mean, 2)

@@ -72,6 +72,7 @@ def create_r_matrix(element):
     if element.__class__ == Edge:
         sec_e = 1. / np.cos(element.edge)
         phi = element.fint * element.h * element.gap * sec_e * (1. + np.sin(element.edge) ** 2)
+        #phi = element.fint * element.h * element.gap * sec_e * (1. + np.sin(2*element.edge) )
         r = np.eye(6)
         r[1, 0] = element.h * np.tan(element.edge)
         r[3, 2] = -element.h * np.tan(element.edge - phi)
@@ -156,6 +157,7 @@ def create_r_matrix(element):
                                 [0., 0., 0., 0., r65, r66]]).real
             return cav_matrix
 
+
         if element.delta_e == 0. and element.v == 0.:
             r_z_e = lambda z, energy: uni_matrix(z, 0., hx=0., sum_tilts=element.dtilt + element.tilt, energy=energy)
         else:
@@ -164,6 +166,8 @@ def create_r_matrix(element):
 
         #delta_e_z = lambda z: element.v * np.cos(element.phi * np.pi / 180.) * z / element.l
         #delta_e = element.v * np.cos(element.phi * np.pi / 180.)
+
+
 
     elif element.__class__ == Solenoid:
         def sol(l, k, energy):

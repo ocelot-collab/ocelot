@@ -203,38 +203,79 @@ def compensate_chromaticity(lattice,  ksi_x_comp=0, ksi_y_comp=0,  nsuperperiod=
                 element.kn[2] = sex_dict_stg[element.id]
 
     lattice.update_transfer_maps()
-"""
+
+from ocelot.cpbd.optics import *
+from numpy.linalg import eig
+
+# TODO: finish DR, DZ guys and cromaticity from T matrices
 def DZ(lattice, energy):
+    tws0 = Twiss()
+    tws = twiss(lattice, tws0)
     R = lattice_transfer_map(lattice, energy)
     #print np.array(R[:4, :4])- np.eye(4),R[:4, 5]
 
     x = dot(R, [1,1,1,1,0,0])
     x2 = dot(R, [1,1,1,1,0,0.001])
-    print (x2 - x)/0.001
-    print R
+    #print (x2 - x)/0.001
+    #print R
 
     w, v = eig(R)
     #print R
     v1 = dot(R,v[0].real)
     #print "v0 = ", v[0].real
     #print "v*R = ", v1
-    DZ = np.dot(inv((np.eye(4) - R[:4, :4] )), R[:4, 5])
-    DZ = np.append(DZ, [0,1])
-    print "DZ = ",  DZ
-    #print "DZ2 = ", dot(R, DZ)
+    DZ = np.dot(inv(-R[:4, :4] + np.eye(4)), R[:4, 5])
+    DZ = np.append(DZ, [0, 1])
+    print("DZ0 = ", DZ)
+    DR_new = np.zeros(6)
+    DZ0 = deepcopy(DZ)
+    DQ1n = 0.
+    DQ2n = 0.
+    R_lat = np.eye(6)
+    for elem in lattice.sequence:
+        R = elem.transfer_map.R(energy)
+        R_lat = dot(R, R_lat)
+        #cosmx = (R[0, 0] + R[1, 1])/2.
+        #cosmy = (R[2, 2] + R[3, 3])/2.
 
+        #if abs(cosmx) >= 1 or abs(cosmy) >= 1:
+        #    logger.warn("************ periodic solution does not exist. return None ***********")
+        #    #print("************ periodic solution does not exist. return None ***********")
+        #    return None
+        # nsinmx = np.sign(R[0, 1])*sqrt(R[0,1]*R[1, 0] - (R[0, 0]*R[1,1])/4.)
+        # nsinmy = np.sign(R[2, 3])*sqrt(R[2,3]*R[3, 2] - (R[2, 2]*R[3,3])/4.)
+
+        DZ = dot(R_lat, DZ0)
+        DR = np.zeros((6,6))
+        T = elem.transfer_map.t_mat_z_e(elem.l, energy)
+        for i in range(6):
+            for j in range(6):
+                t = 0.
+                for m in range(6):
+                    t += T[i,j,m]*DZ[m]
+                DR[i,j] = 2*t # np.dot(lattice.T[i, j, :], DZ)
+        print(elem.l)
+        print(DR)
+        DR_new = DR + DR_new
+        #DQ1n += (DR[0, 0] + DR[1, 1])/(2*sin(tws[-1].mux))/2/pi
+        #DQ2n += (DR[2, 2] + DR[3, 3])/(2*sin(tws[-1].muy))/2/pi
+    print ("DZ = ",  DZ)
+    #print "DZ2 = ", dot(R, DZ)
+    print(DQ1n*6, DQ2n*6)
     DR = np.zeros((6,6))
 
     for i in range(6):
         for j in range(6):
-            DR[i,j] = 2*np.dot(lattice.T[i,j,:], DZ)
+            t = 0.
+            for m in range(6):
+                t += lattice.T[i,j,m]*DZ[m]
+            DR[i,j] = 2*t # np.dot(lattice.T[i, j, :], DZ)
     #print DR
+    DR = DR_new
 
-    tws0 = Twiss()
-    tws = twiss(lattice, tws0)
-    DQ1 = -3*(DR[0,0] + DR[1,1])/(2*sin(tws[-1].mux))/2/pi
-    DQ2 = -3*(DR[2,2] + DR[3,3])/(2*sin(tws[-1].muy))/2/pi
-    #print DQ1, DQ2
-    #print tws[-1].mux/2/pi*6
-    #print tws[-1].muy/2/pi*6
-"""
+    DQ1 = (DR[0,0] + DR[1,1])/(2*sin(tws[-1].mux))/2/pi
+    DQ2 = (DR[2,2] + DR[3,3])/(2*sin(tws[-1].muy))/2/pi
+    print(DQ1*6, DQ2*6)
+    print(tws[-1].mux/2/pi*6)
+    print(tws[-1].muy/2/pi*6)
+

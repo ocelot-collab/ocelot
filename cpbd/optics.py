@@ -1,7 +1,9 @@
 __author__ = 'Sergey'
+
 from numpy.linalg import inv
 from numpy import cosh, sinh
-from scipy.misc import factorial
+#from scipy.misc import factorial
+from math import factorial
 from ocelot.cpbd.beam import Particle, Twiss, ParticleArray
 from ocelot.cpbd.high_order import *
 from ocelot.cpbd.r_matrix import *
@@ -515,8 +517,76 @@ class SecondTM(TransferMap):
         return m
 
 
+class SlacCavityTM(TransferMap):
+    def __init__(self, l = 0, volt=0, phi=0,freq=0):
+        TransferMap.__init__(self)
+        self.length = l
+        self.dx = 0
+        self.dy = 0
+        self.tilt = 0
+        self.V = volt
+
+        self.phi = phi
+        self.freq = freq
+        self.delta_e_z = lambda z: self.V * np.cos(self.phi * np.pi / 180.) * z / self.length
+        self.delta_e = self.V * np.cos(self.phi * np.pi / 180.)
+        self.R_z = lambda z, energy: np.dot( self.slac_cavity_R_z(z, self.V*z/self.length, energy, self.freq, self.phi),
+                                             self.f_entrance(z, self.V*z/self.length, energy, self.phi))
+        self.R = lambda energy: np.dot(self.f_exit(self.length, self.V, energy, self.phi), self.R_z(self.length, energy))
+
+    def slac_cavity_R_z(self, z, V, E, freq, phi=0.):
+        """
+        :param z: length
+        :param de: delta E
+        :param f: frequency
+        :param E: initial energy
+        :return: matrix
+        """
+        phi = phi * np.pi / 180.
+        de = V * np.cos(phi)
+        #print(de, E, de/E)
+        r12 = z*E/de*np.log(1. + de/E) if de !=0 else z
+        r22 = E/(E + de)
+        #print(E, de, freq)
+        r65 = V*np.sin(phi)/(E + de)*(2*pi/(speed_of_light/freq)) if freq != 0 else 0
+        r66 = r22
+        cav_matrix = np.array([[1, r12, 0., 0., 0., 0.],
+                               [0, r22, 0., 0., 0., 0.],
+                               [0., 0., 1, r12, 0., 0.],
+                               [0., 0., 0, r22, 0., 0.],
+                               [0., 0., 0., 0., 1., 0],
+                               [0., 0., 0., 0., r65, r66]]).real
+        return cav_matrix
+
+    def f_entrance(self, z, V, E, phi=0.):
+        phi = phi * np.pi / 180.
+        de = V * np.cos(phi)
+        r = np.eye(6)
+        r[1, 0] = -de / z / 2. / E
+        r[3, 2] = r[1, 0]
+        return r
+
+    def f_exit(self, z, V, E, phi=0.):
+        phi = phi * np.pi / 180.
+        de = V * np.cos(phi)
+        r = np.eye(6)
+        r[1, 0] = +de / z / 2. / (E + de)
+        r[3, 2] = r[1, 0]
+        return r
+
+    def __call__(self, s):
+        m = copy(self)
+        m.length = s
+        m.R = lambda energy: m.R_z(s, energy)
+        m.B = lambda energy: m.B_z(s, energy)
+        m.delta_e = m.delta_e_z(s)
+        m.map = lambda u, energy: m.mul_p_array(u, energy=energy)
+        return m
+
+
 class MethodTM:
     def __init__(self, params=None):
+
         if params == None:
             self.params = {'global': TransferMap}
         else:
@@ -529,7 +599,9 @@ class MethodTM:
 
         self.nkick = self.params['nkick'] if 'nkick' in self.params.keys() else 1
 
+
     def create_tm(self, element):
+
         if element.__class__ in self.params.keys():
             transfer_map = self.set_tm( element, self.params[element.__class__])
         else:
@@ -569,6 +641,10 @@ class MethodTM:
                 T_z_e = lambda z, energy: T
                 #print("trm", tilt, element.edge, element.h, r_z_e(0, 130)[1, 0])
             tm = SecondTM(r_z_no_tilt=r_z_e, t_mat_z_e=T_z_e)
+
+        elif method == SlacCavityTM:
+            tm = SlacCavityTM(l=element.l, volt=element.v, phi=element.phi, freq=element.f)
+            return tm
 
         else:
             tm = TransferMap()
@@ -617,38 +693,58 @@ class MethodTM:
         return tm
 
 
+def sym_matrix(T):
+    for i in range(6):
+        for j in range(6):
+            for k in range(j, 6):
+                if j != k:
+                    a = T[i, j, k]/2.
+                    T[i, k, j] = a
+                    T[i, j, k] = a
+    return T
+
+def unsym_matrix(T):
+    for i in range(6):
+        for j in range(6):
+            for k in range(j, 6):
+                if j != k:
+                    a = T[i, j, k]*2.
+                    T[i, k, j] = 0
+                    T[i, j, k] = a
+    return T
+
 def lattice_transfer_map(lattice, energy):
     """ transfer map for the whole lattice"""
-    R = np.eye(6)
-    #T = np.zeros((6, 6, 6))
-    #print lattice.sequence[0].transfer_map.T
+    Ra = np.eye(6)
+    Ta = np.zeros((6, 6, 6))
+    E = energy
     for i, elem in enumerate(lattice.sequence):
 
-        Rb = elem.transfer_map.R(energy)
+        Rb = elem.transfer_map.R(E)
+        if lattice.method == SecondTM:
+            Tc = np.zeros((6, 6, 6))
+            Tb = deepcopy(elem.transfer_map.t_mat_z_e(elem.l, E))
+            Tb = sym_matrix(Tb)
+            for i in range(6):
+                for j in range(6):
+                    for k in range(6):
+                        t1 = 0.
+                        t2 = 0
+                        for l in range(6):
+                            t1 += Rb[i, l]*Ta[l, j, k]
 
-        """
-        Tb = elem.transfer_map.T
-        Ta = deepcopy(T)
-        for i in range(6):
-            for j in range(6):
-                for k in range(6):
-                    t1 = np.dot(Rb[i, :], Ta[:, j, k])
-                    t2 = 0.
-                    for l in range(6):
-                        for m in range(6):
-                            t2 += Tb[i, l, m]*R[l, j]*R[m, k]
-                    #print t1, t2
-                    T[i,j,k] = t1+t2
-        """
-        R = dot(Rb, R)
-        #print(elem.__class__.__name__, R)
-        #T = Ta
-        #print i, len(lattice.sequence), elem.type, elem.transfer_map.R(6)
-    #print T
-    #lattice.T = T
-    #lattice.R = R
-    #print(R)
-    return R
+                            for m in range(6):
+                                t2 += Tb[i, l, m]*Ra[l, j]*Ra[m, k]
+                        Tc[i, j, k] = t1 + t2
+            Ta = Tc
+        Ra = dot(Rb, Ra)
+        E += elem.transfer_map.delta_e
+
+
+    lattice.T_sym = Ta
+    lattice.T = unsym_matrix(deepcopy(Ta))
+    lattice.R = Ra
+    return Ra
 
 
 def trace_z(lattice, obj0, z_array):
@@ -744,7 +840,8 @@ def twiss(lattice, tws0=None, nPoints=None):
 
     if tws0.__class__ == Twiss:
         if tws0.beta_x == 0  or tws0.beta_y == 0:
-            tws0 = periodic_twiss(tws0, lattice_transfer_map(lattice, tws0.E))
+            R = lattice_transfer_map(lattice, tws0.E)
+            tws0 = periodic_twiss(tws0, R)
             if tws0 == None:
                 print('Twiss: no periodic solution')
                 return None

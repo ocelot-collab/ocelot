@@ -6,6 +6,7 @@ def translate(lines):
     for line in lines:
 
         #print line
+
         line = line.replace('asin', "arcsin")
         line = line.replace('acos', "arccos")
         line = line.replace('phi0', "phi")
@@ -25,9 +26,14 @@ def translate(lines):
         line = line.replace('title', "#title")
 
         line = line.replace('octupole', "Octupole")
+        line = line.replace('blmonitor', "Monitor")
+        line = line.replace('imonitor', "Monitor")
         line = line.replace('monitor', "Monitor")
-        line = line.replace('moni', "Monitor")
-        line = line.replace('inst', "Monitor")
+        #line = line.replace('moni', "Monitor")
+        line = line.replace('wire', "Monitor")
+        #line = line.replace('blmo', "Monitor")
+        #line = line.replace('blmo', "Monitor")
+        #line = line.replace('imon', "Monitor")
         line = line.replace('matrix', "Matrix")
         line = line.replace('lcavity', "Cavity")
         line = line.replace('lcav', "Cavity")
@@ -36,24 +42,26 @@ def translate(lines):
         line = line.replace('sextupole', "Sextupole")
         line = line.replace('marker', "Marker")
         line = line.replace('mark', "Marker")
-        line = line.replace('rcol', "Marker")
-        line = line.replace('ecol', "Marker")
-        line = line.replace('prof', "Monitor")
+        #line = line.replace('rcol', "Marker")
+
+        line = line.replace('profile', "Monitor")
+        #line = line.replace('inst', "Monitor")
         line = line.replace('instrument', "UnknownElement")
         line = line.replace('rcollimator', "UnknownElement")
         line = line.replace('ecollimator', "UnknownElement")
         line = line.replace('ecol', "UnknownElement")
-        line = line.replace('vkicker', "UnknownElement")
-        line = line.replace('hkicker', "UnknownElement")
+        line = line.replace('vkicker', "Vcor")
+        line = line.replace('hkicker', "Hcor")
         line = line.replace('kicker', "UnknownElement")
-        line = line.replace('hkic', "UnknownElement")
-        line = line.replace('vkic', "UnknownElement")
-        line = line.replace('hkick', "UnknownElement")
-        line = line.replace('vkick', "UnknownElement")
+        line = line.replace('hkic', "Hcor")
+        line = line.replace('vkic', "Vcor")
+        line = line.replace('hkick', "Hcor")
+        line = line.replace('vkick', "Vcor")
         line = line.replace('sequence', "Sequence")
         line = line.replace('return', "#return")
         line = line.replace('->', ".")
         line = line.replace('centre', "'centre'")
+        line = line.replace('value', "#")
         lines2.append(line)
         #print line
     return lines2
@@ -72,23 +80,30 @@ def find_objects(line, info):
         if line_test.find("line")>=0 or line_test.find("subroutine")>0:
             return line
         i = line.find("#")
-        line2 = line[:i]
-        line2 = line2.replace(' ', '')
+        if i != -1: line = line[:i]
+        line2 = line.replace(' ', '')
         words = line2.split(",")
         temp = words[0].split(":")
         if len(temp)<2:
             return line
         name = temp[0].replace(' ', '')
         type = temp[1].replace(' ', '')
-        #print name, type
         params = words[1:]
-        if type == "lcavity":
+        params = [item for item in params if not ("type=" in item or "aper" in item)]
+        params = [item.replace("hgap=", "gap=2*") for item in params]
+        params = [item.replace("ks=", "k=") for item in params]
+
+        if type in ["lcavity", "lcav"]:
             for i, p in enumerate(params):
-                args = p.split("=")
-                args[0] = args[0].replace('deltae', "delta_e")
-                params[i] = "=".join(args)
-            #print params
+
+                p = p.replace('deltae=', "v=1e-3*")
+                p = p.replace('phi0=', "phi=360*")
+                p = p.replace('freq=', "freq=1e3*")
+                #if args[0] == "type": continue
+                params[i] = p
+
         params = ', '.join(params)
+        #print(params)
         if not("at" in params):
             info[name] = {"type": type, "params": params}
 
@@ -96,14 +111,17 @@ def find_objects(line, info):
                              "matrix", "quadrupole", "quad", "marker",
                              "hkicker", "vkicker", "hkic","vkic","hkick","vkick","monitor", "moni", "inst", "kicker", "mark", "prof",
                              "sextupole", "lcavity", 'lcav',"ecollimator",
-                             "solenoid", 'octupole', "sequence"]):
-                print "debug:",  name, ",", type, ",", params
+                             "solenoid", 'octupole', "sequence",
+                             "beta0", "wire", "blmo", "imon",
+                             "instrument", "profile", "imonitor", "blmonitor", "rcollimator"]):
+                #print "debug:",  name, ",", type, ",", params
+                #print("info", info)
                 type = info[type]["type"]
 
         if len(params )>0:
-            line = name + " = "+ type +"(" + params + ", id = '" + name + "')"
+            line = name + " = "+ type +"(" + params + ", eid = '" + name + "')"
         else:
-            line = name + " = "+ type +"(" + params + "id = '" + name + "')"
+            line = name + " = "+ type +"(" + params + "eid = '" + name + "')"
         #print type
         if type == "matrix":
             #print line
@@ -141,7 +159,6 @@ def find_subroutine(lines):
                 line = "#"+name + " = "+ type +"(" + ', '.join(params) + '):'
 
                 new_lines.append(line)
-                #new_lines.append("    pass")
                 continue
         if n>0:
 
@@ -217,6 +234,7 @@ def find_line(lines):
 def xfel_line_transform(file):
     """
     replace ":=" by "="
+    replace ": CONSTANT =" by " = "
     replace '!' by '#'
     if there is not ";" at the end line, collect the multiline
     all letters in lowercase
@@ -226,41 +244,38 @@ def xfel_line_transform(file):
     name_budget = []
     for line in file:
         #print line
+        line = line.replace(" ", "")
         line = line.replace(':=', '=')
         line = line.replace('!', '#')
+        ind = line.find("#")
+        line = line[:ind]
+        if len(line) == 0:
+            continue
+        if "CONSTANT" in line:
+            line = line.replace(":CONSTANT=", "=")
 
-        #line = line.replace('&', '\\')
         ind = line.find(":")
         if ind>0 and line[0] != "#":
+
             parts = line.split(":")
-            #print parts
-            #type = parts[1].split(",")[0]
             part = parts[0].replace(" ", "")
             name_budget.append(part)
-            #print part, type
             part = part.replace(".", "_")
             line = part+line[ind:]
-        #print line
+
         names = np.array(name_budget)
         names = names[np.argsort(map(len, names))][::-1]
-        #if "i1.qih.20" in names:
-        #    print names
         for name in names:
 
             name_ = name.replace(".", "_")
             line = line.replace(name, name_)
-            #ind = line.find(name)
-            #if ind>0:
-            #    #print name, line, ind
-            #    name_ = name.replace(".", "_")
-            #    line = line[:ind]+name_+line[ind+len(name):]
-
         line = line.replace(';', '')
         line = line.lower()
         line = line.replace("[",".")
         line = line.replace(']', '')
         #print line
         lines.append(line)
+        #print(line)
     #print name_budget
     return lines
 
@@ -290,25 +305,92 @@ def lattice_str_from_mad8(name_file):
     f = open(name_file, "r")
     lines = xfel_line_transform(f)
     new_lines = find_multiline(lines)
+    new_lines = find_subroutine(new_lines)
     lines = []
     info = {}
     for line in new_lines:
-        #print line
         line = find_objects(line, info)
-        #print line
         lines.append(line)
     lines = find_functions(lines)
     lines = find_line(lines)
-    lines = find_subroutine(lines)
+
     lines = translate(lines)
     f.close()
     return lines
 
 def save_lattice_str(lines, name_file):
-    #part_name = name_file.split(".")
-    #part_name[0] += ".inp"
     f_new = open(name_file, "w")
+    f_new.write("from ocelot import * \n")
     for line in lines:
-        #print line
         f_new.write(line+"\n")
     f_new.close()
+
+
+
+
+def mad8saveline2lines(fname_saveline):
+    f = open(fname_saveline, "r")
+    lines = xfel_line_transform(f)
+    lines2 = find_multiline(lines)
+    lines = []
+    info = {}
+    for line in lines2:
+        line = find_objects(line, info)
+        lines.append(line)
+    lines = find_line(lines)
+    lines = translate(lines)
+    f.close()
+    return lines
+
+def mad8saveline2ocelot(fname_saveline, fname_ocelot):
+    lines = mad8saveline2lines(fname_saveline)
+    save_lattice_str(lines, fname_ocelot)
+
+
+if __name__ == "main":
+    # TODO: check XFEL lattice
+
+    from ocelot import *
+    from ocelot.cpbd.magnetic_lattice import *
+    from numpy import *
+    from ocelot.gui.accelerator import *
+    import re
+
+    filename = "LCLS.saveline"
+
+    mad8saveline2ocelot(fname_saveline=filename, fname_ocelot="test.py")
+
+    from test import*
+
+    method = MethodTM(params={Cavity: SlacCavityTM})
+
+    lat = MagneticLattice(lsfel, method=method)
+
+
+    cell = []
+    for elem in lat.sequence:
+        if elem.id == 'lh_und':
+            elem = Undulator(nperiods=0.2531315/0.054, lperiod=0.054, Kx = 1.38523906872,  eid = 'lh_und')
+        elif elem.id == 'us33':
+            elem = Undulator(nperiods=1.592/0.03, lperiod=0.03, Kx=0, eid=elem.id)
+        elif re.match("us+[0-3][0-9]", elem.id):
+            elem = Undulator(lperiod=0.03, nperiods=55.5, Kx=3.5, Ky=0.0, eid=elem.id)
+
+        cell.append(elem)
+
+    cell = exclude_zero_length_element(cell, elem_type=[UnknownElement, Marker])
+    cell = merge_drifts(cell)
+    lat = MagneticLattice(cell, method=method)
+
+    tws = Twiss()
+    tws.E = 0.006
+    tws.beta_y = 3.909300396E-01
+    tws.alpha_y = 5.514326695E-03
+    tws.beta_x = 1.557422201E+01
+    tws.alpha_x = -3.081460532E+00
+
+    write_lattice(lat, file_name="lcls_lattice.py")
+
+    tws = twiss(lat, tws)
+    plot_opt_func(lat, tws)
+    plt.show()

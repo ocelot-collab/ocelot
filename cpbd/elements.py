@@ -117,6 +117,8 @@ class Bend(Element):
     tilt - tilt of lens in [rad],
     e1 - entrance angle with regards to a sector magnet in [rad],
     e2 - exit angle with regards to a sector magnet [rad].
+    fint - fringe field integral
+    fintx - allows (fintx > 0) to set fint at the element exit different from its entry value.
     """
     def __init__(self, l=0., angle=0., k1=0., k2=0., tilt=0.0, e1=0., e2=0.,
                  gap=0., h_pole1=0., h_pole2=0., fint=0., fintx=0., eid=None):
@@ -130,10 +132,10 @@ class Bend(Element):
         self.gap = gap
         self.h_pole1 = h_pole1
         self.h_pole2 = h_pole2
-        self.fint1 = fint
-        self.fint2 = fint
-        if fintx > 0:
-            self.fint2 = fintx
+        self.fint = fint
+        self.fintx = fint
+        if fintx >= 0:
+            self.fintx = fintx
         self.tilt = tilt
 
 
@@ -174,12 +176,12 @@ class SBend(Bend):
                  gap=0, h_pole1=0., h_pole2=0., fint=0., fintx=0., eid=None):
 
         Bend.__init__(self, l=l, angle=angle, k1=k1, k2=k2, e1=e1, e2=e2, tilt=tilt,
-                      gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, eid=eid)
+                      gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, fintx=fintx, eid=eid)
 
-        self.fint1 = fint
-        self.fint2 = fint
-        if fintx > 0:
-            self.fint2 = fintx
+        #self.fint = fint
+        #self.fintx = fint
+        #if fintx > 0:
+        #    self.fintx = fintx
 
 
 class RBend(Bend):
@@ -207,10 +209,10 @@ class RBend(Bend):
         Bend.__init__(self, l=l, angle=angle, e1=e1, e2=e2, k1=k1, k2=k2, tilt=tilt,
                       gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, fintx=fintx, eid=eid)
 
-        self.fint1 = fint
-        self.fint2 = fint
-        if fintx > 0:
-            self.fint2 = fintx
+        #self.fint = fint
+        #self.fintx = fint
+        #if fintx > 0:
+        #    self.fintx = fintx
 
 class Hcor(RBend):
     """
@@ -386,8 +388,8 @@ def survey(lat, ang=0.0, x0=0, z0=0):
         z.append(z0)
         if e.__class__ in [Bend, SBend, RBend]:
             ang += e.angle
-        x0 += e.l*cos(ang)  
-        z0 += e.l*sin(ang)
+        x0 += e.l*np.cos(ang)
+        z0 += e.l*np.sin(ang)
     return x, z, ang
 
 if __name__ == "__main__":

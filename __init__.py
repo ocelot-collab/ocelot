@@ -23,6 +23,7 @@ __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope", 
            "CSR", "SpaceCharge", "Wake", "WakeTable",
            "MagneticLattice",
            ]
+
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.cpbd.beam import *
 from ocelot.cpbd.optics import *
@@ -38,4 +39,5 @@ from ocelot.cpbd.sc import *
 from ocelot.cpbd.csr import *
 from ocelot.cpbd.wake3D import *
 print('initializing ocelot...')
-logger = Logger()
+
+#logger = Logger()

@@ -8,10 +8,20 @@ import numpy as np
 from ocelot.rad import *
 from ocelot import *
 from ocelot.gui import *
+from ocelot.gui.accelerator import *
 
 font = {'size'   : 10}
 matplotlib.rc('font', **font)
 
+und = Undulator(Kx = 4., nperiods=125, lperiod=0.04, eid= "und")
+D = Drift(l=0.5, eid="D")
+b1 = Hcor(l=0.1, angle = 0.1*23*-0.00001, eid="b1")
+b2 = Hcor(l=0.2, angle = 0.1*23*0.00002, eid="b2")
+b3 = Hcor(l=0.1, angle = 0.1*23*-0.00001, eid="b3")
+q = Quadrupole(l=0.3, k1=1.2)
+phase_shift = (b1, b2, b3)
+cell = (und, D, phase_shift, q, D, und)
+lat = MagneticLattice(cell)
 
 
 #beam.beta_x = 12.84
@@ -22,17 +32,7 @@ def phase_shifter(i):
     beam.E = 17.5
     beam.I = 0.1
     beam.xp = 2e-7*i - 5e-6
-    i = 23
-    und = Undulator(Kx = 4., nperiods=125, lperiod=0.04, eid= "und")
-    D = Drift(l=0.5, eid="D")
-    b1 = Hcor(l=0.1, angle = 0.1*i*-0.00001, eid="b1")
-    b2 = Hcor(l=0.2, angle = 0.1*i*0.00002, eid="b2")
-    b3 = Hcor(l=0.1, angle = 0.1*i*-0.00001, eid="b3")
-    q = Quadrupole(l=0.3, k1=1.2)
-
-    phase_shift = (b1, b2, b3)
-    cell = (und, D, phase_shift, q, D, und)
-    lat = MagneticLattice(cell)
+    #i = 23
 
     screen = Screen()
     screen.z = 100.0
@@ -94,6 +94,7 @@ def animate(i):
 
 
 fig, (ax0, ax1) = plt.subplots(nrows=2)
+#ax0 = plot_API(lat)
 ax0.grid(True)
 ax0.set_ylabel(r"X, $\mu m$")
 ax0.set_xlabel(r"Z, $m$")

@@ -286,6 +286,7 @@ dict_plot = {Quadrupole: {"scale": 0.7, "color": "r",            "edgecolor": "r
              Marker:     {"scale": 0.,  "color": "k",            "edgecolor": "k",          "label": "mark"},
              Edge:       {"scale": 0.,  "color": "k",            "edgecolor": "k",          "label": ""},
              Solenoid:   {"scale": 0.7, "color": "g",            "edgecolor": "g",          "label": "sol"},
+             UnknownElement:{"scale": 0.7, "color": "g",            "edgecolor": "g",          "label": "unk"},
              }
 
 

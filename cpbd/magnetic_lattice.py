@@ -117,13 +117,13 @@ class MagneticLattice:
                     e_name = "b_" + str(i)
 
                 e1 = Edge(l=elem.l, angle=elem.angle, k1=elem.k1, edge=elem.e1, tilt=elem.tilt, dtilt=elem.dtilt,
-                          dx=elem.dx, dy=elem.dy, h_pole=elem.h_pole1, gap=elem.gap, fint=elem.fint1, pos=1,
+                          dx=elem.dx, dy=elem.dy, h_pole=elem.h_pole1, gap=elem.gap, fint=elem.fint, pos=1,
                           eid=e_name + "_e1")
 
                 self.sequence.insert(n, e1)
 
                 e2 = Edge(l=elem.l, angle=elem.angle, k1=elem.k1, edge=elem.e2, tilt=elem.tilt, dtilt=elem.dtilt,
-                          dx=elem.dx, dy=elem.dy, h_pole=elem.h_pole2, gap=elem.gap, fint=elem.fint2, pos=2,
+                          dx=elem.dx, dy=elem.dy, h_pole=elem.h_pole2, gap=elem.gap, fint=elem.fintx, pos=2,
                           eid=e_name + "_e2")
 
                 self.sequence.insert(n+2, e2)
@@ -151,3 +151,42 @@ class MagneticLattice:
         print('\nLattice\n')
         for e in self.sequence:
             print('-->',  e.id, '[', e.l, ']')
+
+def merge_drifts(cell):
+    """
+    Merge neighboring Drifts in one Drift
+
+    input: cell - list of element
+    return: new_cell - new list of elements
+    """
+
+    new_cell = []
+    L = 0.
+    for elem in cell:
+
+        if elem.__class__ in [Drift, UnknownElement]:
+            L += elem.l
+            #print(L)
+        else:
+            #print("new")
+            if L != 0:
+                new_elem = Drift(l=L)
+                new_cell.append(new_elem)
+            new_cell.append(elem)
+            L = 0.
+    print("Merge drift -> Element numbers: before -> after: ", len(cell), "->", len(new_cell))
+    return new_cell
+
+def exclude_zero_length_element(cell, elem_type=[UnknownElement, Marker]):
+    """
+    Exclude zero length elements some types in elem_type
+    input: cell
+    return: new cell
+    """
+    new_cell = []
+    for elem in cell:
+        if elem.__class__ in elem_type and elem.l == 0:
+            continue
+        new_cell.append(elem)
+    print("Exclude elements -> Element numbers: before -> after: ", len(cell), "->", len(new_cell))
+    return new_cell

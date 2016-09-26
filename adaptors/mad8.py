@@ -88,6 +88,7 @@ def find_objects(line, info):
             return line
         name = temp[0].replace(' ', '')
         type = temp[1].replace(' ', '')
+        type = type.replace("\r", "")
         params = words[1:]
         params = [item for item in params if not ("type=" in item or "aper" in item)]
         params = [item.replace("hgap=", "gap=2*") for item in params]

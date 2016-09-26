@@ -88,15 +88,11 @@ def lat2input(lat):
     lines = ["from ocelot import * \n"]
     lines.append("\n# drifts \n")
     for drift in drifts:
-        #name = drift.id.replace('.','_')
-        #name = name.replace(':','_')
         line = drift.name.lower() + " = Drift(l=" + str(drift.l)+ ", eid='"+ drift.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# quadrupoles \n")
     for quad in quads:
-        #name = quad.id.replace('.','_')
-        #name = name.replace(':','_')
         line = quad.name.lower() + " = Quadrupole(l=" + str(quad.l) +", k1="+ str(quad.k1) +", tilt="+ str(quad.tilt)  +", eid='"+ quad.id+ "')\n"
         lines.append(line)
 
@@ -112,76 +108,56 @@ def lat2input(lat):
             k = ''
         else:
             k = ", k1 = "+ str(bend.k1)
-        #fint = bend.fint1
-        #if bend.fint1 == bend.fint2:
-        #    fint = bend.fint1
 
-        #name = bend.id.replace('.','_')
-        #name = name.replace(':','_')
-        line = bend.name.lower() + type + str(bend.l) + k + ", angle = " + str(bend.angle)+\
-               ", e1 = " + str(bend.e1) + ", e2 = " + str(bend.e2)+ ", gap = " + str(bend.gap)  + \
-               ", tilt = " + str(bend.tilt) + ", fint = " + str(bend.fint)  + ", fintx = " + str(bend.fintx) +", eid = '"+ bend.id+ "')\n"
+        line = bend.name.lower() + type + str(bend.l) + k + ", angle=" + str(bend.angle)+\
+               ", e1=" + str(bend.e1) + ", e2=" + str(bend.e2)+ ", gap=" + str(bend.gap)  + \
+               ", tilt=" + str(bend.tilt) + ", fint=" + str(bend.fint)  + ", fintx=" + str(bend.fintx) +", eid='"+ bend.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# correctors \n")
     for cor in cors:
         if cor.__class__ == Hcor:
-            type = " = Hcor(l = "
+            type = " = Hcor(l="
         else:
-            type = " = Vcor(l = "
-        #name = cor.id.replace('.','_')
-        #name = name.replace(':','_')
-        line = cor.name.lower() + type + str(cor.l) + ", angle = "+ str(cor.angle) +", eid = '"+ cor.id+ "')\n"
+            type = " = Vcor(l="
+
+        line = cor.name.lower() + type + str(cor.l) + ", angle="+ str(cor.angle) +", eid='"+ cor.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# markers \n")
     for mark in marks:
-        #name = mark.id.replace('.','_')
-        #name = name.replace(':','_')
-        line = mark.name.lower() + " = Marker(eid = '"+ mark.id+ "')\n"
+        line = mark.name.lower() + " = Marker(eid='"+ mark.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# monitor \n")
     for mon in mons:
-        #name = mon.id.replace('.','_')
-        #name = name.replace(':','_')
-        line = mon.name.lower() + " = Monitor(eid = '"+ mon.id+ "')\n"
+        line = mon.name.lower() + " = Monitor(eid='"+ mon.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# sextupoles \n")
     for sext in sexts:
-        #name = sext.id.replace('.','_')
-        #name = name.replace(':','_')
-        line = sext.name.lower() +" = Sextupole(l = " + str(sext.l) +", k2 = "+ str(sext.k2) +", tilt = "+ str(sext.tilt) +", eid = '"+ sext.id+ "')\n"
+        line = sext.name.lower() +" = Sextupole(l=" + str(sext.l) +", k2="+ str(sext.k2) +", tilt="+ str(sext.tilt) +", eid='"+ sext.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# octupole \n")
     for oct in octs:
-        #name = oct.id.replace('.','_')
-        #name = name.replace(':','_')
-        line = oct.name.lower() + " = Octupole(l = " + str(oct.l) +", k3 = "+ str(oct.k3) +", tilt = "+ str(oct.tilt) +", eid = '"+ oct.id+ "')\n"
+        line = oct.name.lower() + " = Octupole(l=" + str(oct.l) +", k3="+ str(oct.k3) +", tilt="+ str(oct.tilt) +", eid='"+ oct.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# undulator \n")
     for und in unds:
-        #name = und.id.replace('.','_')
-        #name = name.replace(':','_')
-        line = und.name.lower() +  " = Undulator(lperiod = " + str(und.lperiod) +", nperiods = "+ str(und.nperiods) +", Kx = "+ str(und.Kx) +", Ky = "+ str(und.Ky) +", eid = '"+ und.id+ "')\n"
+        line = und.name.lower() +  " = Undulator(lperiod=" + str(und.lperiod) +", nperiods="+ str(und.nperiods) +", Kx="+ str(und.Kx) +", Ky="+ str(und.Ky) +", eid='"+ und.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# cavity \n")
     for cav in cavs:
-        #name = cav.id.replace('.','_')
-        #name = name.replace(':','_')
-        line = cav.name.lower() + " = Cavity(l = " + str(cav.l) + ", v = "+ str(cav.v) +\
-               ", freq = "+ str(cav.f) +", phi = "+ str(cav.phi) + ", eid = '"+ cav.id+ "')\n"
+        line = cav.name.lower() + " = Cavity(l=" + str(cav.l) + ", v="+ str(cav.v) +\
+               ", freq="+ str(cav.f) +", phi="+ str(cav.phi) + ", eid='"+ cav.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# UnknowElement \n")
     for unkn in unkns:
-        #name = unkn.id.replace('.','_')
-        #name = name.replace(':','_')
-        line = unkn.name.lower() +  " = UnknownElement(l = " + str(unkn.l) +  ", eid = '"+ unkn.id+ "')\n"
+        line = unkn.name.lower() +  " = UnknownElement(l=" + str(unkn.l) +  ", eid='"+ unkn.id+ "')\n"
         lines.append(line)
     #lines.append("\n# rfcavity \n")
     #for rfcav in rfcavs:
@@ -192,31 +168,24 @@ def lat2input(lat):
     lines.append("\n# Matrices \n")
 
     for mat in matrices:
-        #name = mat.id.replace('.','_')
-        #name = name.replace(':','_')
-        line = mat.name.lower() + " = Matrix(l = " + str(mat.l) +\
-               ", rm11 = "+ str(mat.rm11) + ", rm12 = "+ str(mat.rm12) + ", rm13 = "+ str(mat.rm13) + ", rm14 = "+ str(mat.rm14) +\
-               ", rm21 = "+ str(mat.rm21) + ", rm22 = "+ str(mat.rm22) + ", rm23 = "+ str(mat.rm23) + ", rm24 = "+ str(mat.rm24) +\
-               ", rm31 = "+ str(mat.rm31) + ", rm32 = "+ str(mat.rm32) + ", rm33 = "+ str(mat.rm33) + ", rm34 = "+ str(mat.rm34) +\
-               ", rm41 = "+ str(mat.rm41) + ", rm42 = "+ str(mat.rm42) + ", rm43 = "+ str(mat.rm43) + ", rm44 = "+ str(mat.rm44) +\
+        line = mat.name.lower() + " = Matrix(l=" + str(mat.l) +\
+               ", rm11="+ str(mat.rm11) + ", rm12="+ str(mat.rm12) + ", rm13="+ str(mat.rm13) + ", rm14="+ str(mat.rm14) +\
+               ", rm21="+ str(mat.rm21) + ", rm22="+ str(mat.rm22) + ", rm23="+ str(mat.rm23) + ", rm24="+ str(mat.rm24) +\
+               ", rm31="+ str(mat.rm31) + ", rm32="+ str(mat.rm32) + ", rm33="+ str(mat.rm33) + ", rm34="+ str(mat.rm34) +\
+               ", rm41="+ str(mat.rm41) + ", rm42="+ str(mat.rm42) + ", rm43="+ str(mat.rm43) + ", rm44="+ str(mat.rm44) +\
                ", eid = '"+ mat.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# Solenoids \n")
 
     for sol in sols:
-        #name = sol.id.replace('.','_')
-        #name = name.replace(':','_')
-        line = sol.name.lower() + " = Solenoid(l = " + str(sol.l) +", k = "+ str(sol.k) +", eid = '"+ sol.id+ "')\n"
+        line = sol.name.lower() + " = Solenoid(l=" + str(sol.l) +", k="+ str(sol.k) +", eid='"+ sol.id+ "')\n"
         lines.append(line)
 
     lines.append("\n# lattice \n")
     names = []
     for elem in lat.sequence:
-        #print elem.id, elem.type
         if elem.__class__ != Edge:
-            #name = elem.id.replace('.','_')
-            #name = name.replace(':','_')
             names.append(elem.name.lower())
     #names = map(lambda p: p.id, lat.sequence)
     new_names = []

@@ -174,6 +174,7 @@ def merge_drifts(cell):
                 new_cell.append(new_elem)
             new_cell.append(elem)
             L = 0.
+    if L != 0: new_cell.append(Drift(l=L))
     print("Merge drift -> Element numbers: before -> after: ", len(cell), "->", len(new_cell))
     return new_cell
 

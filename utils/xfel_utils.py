@@ -184,6 +184,16 @@ def run(inp, launcher,readout=1,dfl_slipage_incl=True,assembly_ver='sys',debug=1
             pass
         else: raise
     
+    
+    out_file = inp.run_dir + '/run.' + str(inp.runid) + '.gout'
+    #remove old files
+    os.system('rm -rf ' + out_file+'*') # to make sure out file slices are cleaned
+    os.system('rm -rf ' + out_file + '.dfl*') # to make sure field file is not attached to old one
+    os.system('rm -rf ' + out_file + '.dpa*') # to make sure particle file is not attached to old one
+    os.system('rm -rf ' + inp.run_dir + '/lattice.inp')
+    os.system('rm -rf ' + inp.run_dir + '/tmp.cmd')
+    os.system('rm -rf ' + inp.run_dir + '/tmp.gen')  
+    
     # create and fill necessary input files
     open(inp.run_dir + '/lattice.inp','w').write( inp.lattice_str )
     open(inp.run_dir + '/tmp.cmd','w').write("tmp.gen\n")
@@ -194,10 +204,6 @@ def run(inp, launcher,readout=1,dfl_slipage_incl=True,assembly_ver='sys',debug=1
         if debug>1: print ('    writing /tmp.beam')
         open(inp.run_dir + '/tmp.beam','w').write(inp.beam_file_str)
     
-    out_file = inp.run_dir + '/run.' + str(inp.runid) + '.gout'
-    os.system('rm -rf ' + out_file + '.dfl*') # to make sure field file is not attached to old one
-    os.system('rm -rf ' + out_file + '.dpa*') # to make sure particle file is not attached to old one
-
     launcher.dir = inp.run_dir
     launcher.prepare()
     

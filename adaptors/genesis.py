@@ -576,6 +576,7 @@ class RadiationField():
 
 
 def read_genesis_output(filePath, readall=True, debug=1, precision=float):
+    import re
     out = GenesisOutput()
     out.filePath = filePath
     out.fileName = filePath[-filePath[::-1].find(os.path.sep)::]
@@ -650,6 +651,12 @@ def read_genesis_output(filePath, readall=True, debug=1, precision=float):
             #print 'input:', tokens
 #
         if chunk == 'slice' and readall:
+            # print(tokens)
+            tokens_fixed=re.sub(r'([0-9])\-([0-9])',r'\g<1>E-\g<2>',' '.join(tokens))
+            # print(tokens_fixed)
+            tokens_fixed=re.sub(r'([0-9])\+([0-9])',r'\g<1>E+\g<2>',tokens_fixed)
+            # print(tokens_fixed)
+            tokens=tokens_fixed.split()
             vals = list(map(precision,tokens))
             output_unsorted.append(vals)
 
@@ -675,8 +682,8 @@ def read_genesis_output(filePath, readall=True, debug=1, precision=float):
     out.nZ = int(out('entries_per_record'))#number of records along the undulator
     out.ncar=int(out('ncar')) #number of mesh points
     
-    if debug>0: print ('        nSlice '+ str(out.nSlices))
-    if debug>0: print ('        nZ '+ str(out.nZ))
+    if debug>1: print ('        nSlices '+ str(out.nSlices))
+    if debug>1: print ('        nZ '+ str(out.nZ))
     
     assert nSlice!=0,'.out is empty!'
             
@@ -788,7 +795,7 @@ def read_particle_file_out(out,filePath=None,debug=1):
     return read_particle_file(filePath, nbins=out('nbins'), npart=out('npart'),debug=debug)
 
 def read_particle_file(filePath, nbins=4, npart=None,debug=1):
-    if debug>0: print ('    reading praticle file')
+    if debug>0: print ('    reading particle file')
     dpa=GenesisParticles() 
     
     start_time = time.time()
@@ -826,7 +833,9 @@ def dpa2dist(out,dpa,num_part=1e5,smear=1,debug=False):
     
     start_time = time.time()
     if debug>0: print ('    transforming particle to distribution file' )
-        
+    
+    assert out('itdp')==True, '! steadystate Genesis simulation, dpa2dist() not implemented yet!'
+    
     npart=int(out('npart'))
     # nslice=int(out('nslice'))
     nslice=int(out.nSlices)
@@ -835,6 +844,7 @@ def dpa2dist(out,dpa,num_part=1e5,smear=1,debug=False):
     zsep=int(out('zsep'))
     gen_I=out.I
     gen_t=out.t
+
     
     # if dpa==None:
         # dpa=out.filePath+'.dpa'

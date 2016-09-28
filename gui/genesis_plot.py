@@ -17,19 +17,18 @@ from ocelot.common.globals import * #import of constants like "h_eV_s" and
 from matplotlib import rc, rcParams
 
 fntsz=4
-params = {'backend': 'ps', 'axes.labelsize': 3*fntsz, 'font.size': 3*fntsz, 'legend.fontsize': 5*fntsz, 'xtick.labelsize': 4*fntsz,  'ytick.labelsize': 4*fntsz, 'text.usetex': True}
+params = {'backend': 'ps', 'axes.labelsize': 3*fntsz, 'font.size': 3*fntsz, 'legend.fontsize': 5*fntsz, 'xtick.labelsize': 4*fntsz,  'ytick.labelsize': 4*fntsz, 'text.usetex': False}
 rcParams.update(params)
-rc('text', usetex=False) # required to have greek fonts on redhat
+# rc('text', usetex=False) # required to have greek fonts on redhat
 
 # font = {'family' : 'normal',
-        # 'weight' : 'normal',
-        # 'size'   : 10}
-
+        # # 'weight' : 'normal',
+         # 'size'   : fntsz*3}
 # matplotlib.rc('font', **font)
 
 max_yticks = 7
 
-def plot_gen_out_all(handle=None,savefig='png',showfig=False,choice=(1,1,1,1,[],1,0,0,0,0,0),vartype_dfl=complex128,debug=0):
+def plot_gen_out_all(handle=None,savefig='png',showfig=False,choice=(1,1,1,1,6.05,1,0,0,0,0,0),vartype_dfl=complex128,debug=0):
     '''
     plots all possible output from the genesis output
     handle is either:
@@ -65,9 +64,9 @@ def plot_gen_out_all(handle=None,savefig='png',showfig=False,choice=(1,1,1,1,[],
         savefig='png'
         
     if choice=='all':
-        choice=(1,1,1,1,[],1,1,1,1,1,1)
+        choice=(1,1,1,1,6.05,1,1,1,1,1,1)
     elif choice=='gen':
-        choice=(1,1,1,1,[],0,0,0,0,0,0)
+        choice=(1,1,1,1,6.05,0,0,0,0,0,0)
 
     if os.path.isdir(str(handle)):
         handles=[]
@@ -89,8 +88,8 @@ def plot_gen_out_all(handle=None,savefig='png',showfig=False,choice=(1,1,1,1,[],
             if choice[1]: f1=plot_gen_out_ph(handle,savefig=savefig)
             if choice[2]: f2=plot_gen_out_z(handle, z=0,savefig=savefig)
             if choice[3]: f3=plot_gen_out_z(handle, z=inf,savefig=savefig)
-            if choice[4]!=[]:
-                for z in choice[4]:
+            if choice[4]!=0:
+                for z in arange(choice[4],max(handle.z),choice[4]):
                     plot_gen_out_z(handle, z=z,savefig=savefig)
         if os.path.isfile(handle.filePath+'.dfl') and any(choice[5:8]):
             #change to new object!
@@ -100,11 +99,11 @@ def plot_gen_out_all(handle=None,savefig='png',showfig=False,choice=(1,1,1,1,[],
             if choice[7]: f7=plot_dfl(dfl,far_field=0,freq_domain=1,auto_zoom=0,savefig=savefig)
             if choice[8]: f8=plot_dfl(dfl,far_field=1,freq_domain=1,auto_zoom=0,savefig=savefig)
         
-        if os.path.isfile(handle.filePath+'.dpa') and (choice[9] or choice[10]):
+        if os.path.isfile(handle.filePath+'.dpa') and (choice[9] or choice[10]) and handle('itdp')==True:
             dpa=read_particle_file_out(handle,debug=debug)
             if choice[9]: 
                 dist=dpa2dist(handle,dpa,num_part=5e4,smear=1,debug=debug)
-                f9=plot_dist(dist, figsize=3, fig_name = None, savefig=savefig, showfig=showfig, bins=150,debug=debug)
+                f9=plot_dist(dist, figsize=3, fig_name = None, savefig=savefig, showfig=showfig, bins=100,debug=debug)
             if choice[10]: 
                 dist=dpa2dist(handle,dpa,num_part=5e4,smear=0,debug=debug)
                 f10=plot_dist(dist, figsize=3, fig_name = None, savefig=savefig, showfig=showfig, bins=(100,100,550,250),debug=debug)
@@ -123,7 +122,15 @@ def plot_gen_out_all(handle=None,savefig='png',showfig=False,choice=(1,1,1,1,[],
     # return [f1,f2,f3,f4]
 
 
-def plot_gen_out_evo(g, params=['und_quad','el_size','el_energy','el_bunching','rad_pow_en','rad_spec','rad_size','rad_spec_evo_n','rad_pow_evo_n'], figsize=(), legend = False, fig_name = None, savefig=False, showfig=False):
+def plot_gen_out_e(g, legend = False, figsize=4, fig_name = 'Electrons', savefig=False,showfig=False):
+    fig=plot_gen_out_evo(g, params=['und_quad','el_size','el_energy','el_bunching'], figsize=figsize, legend = legend, fig_name = fig_name, savefig=savefig,showfig=showfig)
+    return fig
+
+def plot_gen_out_ph(g, legend = False, figsize=4, fig_name = 'Radiation', savefig=False,showfig=False):
+    fig=plot_gen_out_evo(g, params=['rad_pow_en','rad_spec','rad_size'], figsize=figsize, legend = legend, fig_name = fig_name, savefig=savefig,showfig=showfig)
+    return fig
+
+def plot_gen_out_evo(g, params=['und_quad','el_size','el_energy','el_bunching','rad_pow_en','rad_spec','rad_size','rad_spec_evo_n','rad_pow_evo_n'], figsize=4, legend = False, fig_name = None, savefig=False, showfig=False):
     '''
     plots evolution of given parameters from genesis output with undulator length
     '''
@@ -139,14 +146,14 @@ def plot_gen_out_evo(g, params=['und_quad','el_size','el_energy','el_bunching','
             fig = plt.figure(params_str)
             print('    plotting '+params_str)
         else:
-            fig = plt.figure(params_str+' '+g.fileName)
-            print('    plotting '+params_str+' '+g.fileName)
+            fig = plt.figure(g.fileName+'_'+params_str)
+            print('    plotting '+g.fileName+'_'+params_str)
     else:
         fig = plt.figure(fig_name)
         print('    plotting '+fig_name)
 
-    if figsize==():
-        figsize=(9, len(params)*2.5+2)
+    if size(figsize)==1:
+        figsize=(3*figsize, (len(params)+0.5)*figsize)
     
     fig.set_size_inches(figsize,forward=True)
     plt.rc('axes', grid=True)
@@ -156,6 +163,7 @@ def plot_gen_out_evo(g, params=['und_quad','el_size','el_energy','el_bunching','
     fig.subplots_adjust(hspace=0)
     
     ax=[]
+    is_tdp=g('itdp')
     for index, param in enumerate(params):
         if len(ax)==0:
             ax.append(fig.add_subplot(len(params), 1, index+1))
@@ -176,20 +184,21 @@ def plot_gen_out_evo(g, params=['und_quad','el_size','el_energy','el_bunching','
             subfig_rad_pow_en(ax[-1],g,legend)
         elif  param=='rad_pow':
             subfig_rad_pow(ax[-1],g,legend)
-        elif  param=='rad_spec':
-            subfig_rad_spec(ax[-1],g,legend)
         elif  param=='rad_size':
             subfig_rad_size(ax[-1],g,legend)
+        elif  param=='rad_spec':
+            if is_tdp: subfig_rad_spec(ax[-1],g,legend)
         elif param=='rad_spec_evo_n':
-            subfig_rad_spec_evo(ax[-1],g,legend,norm=1)
+            if is_tdp: subfig_rad_spec_evo(ax[-1],g,legend,norm=1)
         elif param=='rad_pow_evo_n':
-            subfig_rad_pow_evo(ax[-1],g,legend,norm=1)
+            if is_tdp: subfig_rad_pow_evo(ax[-1],g,legend,norm=1)
         elif param=='rad_spec_evo':
-            subfig_rad_spec_evo(ax[-1],g,legend,norm=0)
+            if is_tdp: subfig_rad_spec_evo(ax[-1],g,legend,norm=0)
         elif param=='rad_pow_evo':
-            subfig_rad_pow_evo(ax[-1],g,legend,norm=0)
+            if is_tdp: subfig_rad_pow_evo(ax[-1],g,legend,norm=0)
         else:
-            print('wrong parameter '+param)
+            print('! wrong parameter '+param)
+            
 
     ax[0].set_xlim(g.z[0], g.z[-1])
     ax[-1].set_xlabel('z [m]')
@@ -212,6 +221,9 @@ def plot_gen_out_evo(g, params=['und_quad','el_size','el_energy','el_bunching','
 
     # return fig
     if showfig==True:
+        dir_lst=g.filePath.split(os.path.sep)
+        dir=os.path.sep.join(dir_lst[0:-1])+os.path.sep
+        rcParams["savefig.directory"] = dir
         plt.show()
 #    else:
 #        plt.close()
@@ -333,6 +345,7 @@ def subfig_rad_pow_en(ax_rad_pow,g,legend,log=1):
     ax_rad_en.tick_params(axis='y', which='both', colors='k')
     ax_rad_en.yaxis.label.set_color('k')
     ax_rad_en.grid(False)
+    ax_rad_en.grid(False, which='minor')
     ax_rad_pow.yaxis.get_offset_text().set_color(ax_rad_pow.yaxis.label.get_color())
     ax_rad_en.yaxis.get_offset_text().set_color(ax_rad_en.yaxis.label.get_color())
     
@@ -441,8 +454,10 @@ def subfig_rad_pow_evo(ax_power_evo,g,legend,norm=1):
         s=g.s
         power=g.p_int
         if norm==1:
-            power=power/np.max(power,0)[np.newaxis,:]
-            power[isnan(power)]=0
+            max_power=np.max(power,0)[np.newaxis,:]
+            max_power[max_power==0]=1 #avoid division by zero
+            power=power/max_power
+            # power[isnan(power)]=0
         ax_power_evo.pcolormesh(z,s*1e6,power)
         ax_power_evo.set_xlabel('z [m]')
         ax_power_evo.set_ylabel('s [$\mu$m]')
@@ -457,25 +472,20 @@ def subfig_rad_spec_evo(ax_spectrum_evo,g,legend,norm=1):
         l=g.freq_lamd
         spectrum=g.spec
         if norm==1:
-            spectrum=spectrum/np.max(spectrum,0)[np.newaxis,:]
-            spectrum[isnan(spectrum)]=0
+            max_spectrum=np.max(spectrum,0)[np.newaxis,:]
+            max_spectrum[max_spectrum==0]=1 #avoid division by zero
+            spectrum=spectrum/max_spectrum
+            # spectrum[isnan(spectrum)]=0
         ax_spectrum_evo.pcolormesh(z,l,spectrum)
         ax_spectrum_evo.set_xlabel('z [m]')
         ax_spectrum_evo.set_ylabel('$\lambda$ [nm]')
         ax_spectrum_evo.axis('tight')
+        ax_spectrum_evo.grid(True)
     else:
         pass
 
 
-def plot_gen_out_e(g, legend = False, figsize=(), fig_name = 'Electrons', savefig=False):
-    fig=plot_gen_out_evo(g, params=['und_quad','el_size','el_energy','el_bunching'], figsize=figsize, legend = legend, fig_name = fig_name, savefig=savefig)
-    return fig
-
-def plot_gen_out_ph(g, legend = False, figsize=(), fig_name = 'Radiation', savefig=False):
-    fig=plot_gen_out_evo(g, params=['rad_pow_en','rad_spec','rad_size'], figsize=figsize, legend = legend, fig_name = fig_name, savefig=savefig)
-    return fig
-
-def plot_gen_out_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, savefig=False, showfig=False):
+def plot_gen_out_z(g, figsize=(10, 14), legend = True, fig_name = None, z=inf, savefig=False, showfig=False):
 #    max_yticks = 7
     if g('itdp')==False:
         print('    plotting bunch profile at '+str(z)+' [m]')
@@ -664,7 +674,7 @@ def plot_gen_out_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, sa
 
 
 
-def plot_gen_out_scanned_z(g, figsize=(8, 10), legend = True, fig_name = None, z=inf, savefig=False):
+def plot_gen_out_scanned_z(g, figsize=(10, 14), legend = True, fig_name = None, z=inf, savefig=False):
 #    max_yticks = 7
     if g('itdp')==True:
         print('    plotting scan at '+str(z)+' [m]')
@@ -792,7 +802,7 @@ def plot_gen_out_scanned_z(g, figsize=(8, 10), legend = True, fig_name = None, z
     return fig
 
 
-def plot_dfl(F, z_lim=[], xy_lim=[], figsize=3, legend = True, phase = False, far_field=False, freq_domain=False, fig_name = None, auto_zoom=False, column_3d=True, savefig=False, showfig=False, return_proj=False, debug=0, vartype_dfl=complex64):
+def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend = True, phase = False, far_field=False, freq_domain=False, fig_name = None, auto_zoom=False, column_3d=True, savefig=False, showfig=False, return_proj=False, debug=0, vartype_dfl=complex64):
     
     #F is RadiationField() object
     #z_lim sets the boundaries to CUT the dfl object in z to ranges of e.g. [2,5] um or nm depending on freq_domain=False of True
@@ -1161,7 +1171,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=3, legend = True, phase = False, fa
 
 
 
-def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_int','energy','r_size_weighted'],z_param_inp=['p_int','phi_mid_disp','spec','bunching'],dfl_param_inp=['dfl_spec'],s_inp=['max'],z_inp=['end'], savefig=1, saveval=1, showfig=0, debug=0):
+def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_int','energy','r_size_weighted','spec','error'],z_param_inp=['p_int','phi_mid_disp','spec','bunching'],dfl_param_inp=['dfl_spec'],s_inp=['max'],z_inp=['end'], savefig=1, saveval=1, showfig=0, debug=0):
 
     #The routine for plotting the statistical info of many GENESIS runs
     #
@@ -1280,6 +1290,7 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
                     fig=plt.plot(outlist[irun].z,swapaxes(s_value,0,1),'0.8', linewidth=1)
                     fig=plt.plot(outlist[irun].z,s_value[0],'0.5', linewidth=1)
                     fig=plt.plot(outlist[irun].z,mean(s_value,0),'k', linewidth=2)
+                    plt.xlim([min(outlist[irun].z),max(outlist[irun].z)])
 
                     #fig[0].axes.get_yaxis().get_major_formatter().set_scientific(True)
                     #plt.ticklabel_format(style='sci')
@@ -1327,12 +1338,14 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
                         fig=plt.plot(freq_scale,swapaxes(z_value,0,1),'0.8')
                         fig=plt.plot(freq_scale,z_value[0],'0.5', linewidth=1)
                         fig=plt.plot(freq_scale,mean(z_value,0),'k', linewidth=2)
+                        plt.xlim([min(freq_scale),max(freq_scale)])
                         plt.xlabel('$\lambda$ [nm]')
                     else:
                         s_scale=outlist[irun].s*1e6
                         fig=plt.plot(s_scale,swapaxes(z_value,0,1),'0.8')
                         fig=plt.plot(s_scale,z_value[0],'0.5', linewidth=1)
                         fig=plt.plot(s_scale,mean(z_value,0),'k', linewidth=2)
+                        plt.xlim([min(s_scale),max(s_scale)])
                         plt.xlabel('s [um]')
                     plt.ylabel(dict_name.get(param,param)+' '+dict_unit.get(param,''))
                     if savefig!=False:
@@ -1516,19 +1529,26 @@ def plot_gen_corr(proj_dir,run_inp=[],p1=(),p2=(),savefig=False, showfig=False, 
     return fig
 
 #np.where(out.s>1.8e-6)[0][0]
-def plot_dpa_bucket_out(out, dpa=None, slice_pos=None, repeat=1 , GeV=1, figsize=3, legend = True, fig_name = None, savefig=False, showfig=False,debug=0):
-    if slice_pos<np.amin(out.s) or slice_pos>np.amax(out.s):
-        raise ValueError('slice_pos outside out.s range')
+def plot_dpa_bucket_out(out, dpa, slice_pos=None, repeat=1 , GeV=1, figsize=4, legend = True, fig_name = None, savefig=False, showfig=False,debug=0):
+    if out.nSlices>1:
+        if slice_pos<np.amin(out.s) or slice_pos>np.amax(out.s):
+            raise ValueError('slice_pos outside out.s range')
+        else:
+            slice_num=np.where(out.s>slice_pos)[0][0]
+            return plot_dpa_bucket(dpa=dpa, slice_num=slice_num, repeat=repeat , GeV=GeV, figsize=figsize, legend = legend, fig_name = fig_name, savefig=savefig, showfig=showfig,debug=debug)
     else:
-        slice_num=np.where(out.s>slice_pos)[0][0]
+        slice_num=0
         return plot_dpa_bucket(dpa=dpa, slice_num=slice_num, repeat=repeat , GeV=GeV, figsize=figsize, legend = legend, fig_name = fig_name, savefig=savefig, showfig=showfig,debug=debug)
             
-def plot_dpa_bucket(dpa=None, slice_num=None, repeat=1 , GeV=1, figsize=3, legend = True, fig_name = None, savefig=False, showfig=False,debug=0):
+def plot_dpa_bucket(dpa, slice_num=None, repeat=1 , GeV=1, figsize=4, legend = True, fig_name = None, savefig=False, showfig=False,debug=0):
     part_colors=['darkred','orange','g','b','m']
     if debug>0: print('    plotting bucket')
     start_time = time.time()
-
-    assert (slice_num<=shape(dpa.ph)[0]),'slice_num larger than the dpa shape'
+    
+    if shape(dpa.ph)[0]==1:
+        slice_num=0
+    else:
+        assert (slice_num<=shape(dpa.ph)[0]),'slice_num larger than the dpa shape'
 
     if fig_name==None:
         fig_name='Electron phase space '+dpa.fileName
@@ -1546,6 +1566,7 @@ def plot_dpa_bucket(dpa=None, slice_num=None, repeat=1 , GeV=1, figsize=3, legen
     if GeV:
         energy*=m_e_MeV
     energy_mean=round(np.mean(energy),1)
+    print(energy_mean)
     energy-=energy_mean
     
     phase_hist=np.array([])
@@ -1555,6 +1576,7 @@ def plot_dpa_bucket(dpa=None, slice_num=None, repeat=1 , GeV=1, figsize=3, legen
     hist,edges=np.histogram(phase_hist,bins=30*repeat)#calculate current histogram
     edges=edges[0:-1]#remove the last bin edge to save equal number of points    
     ax_z_hist.bar(edges,hist,width=edges[1]-edges[0])
+    ax_z_hist.set_ylabel('counts')
     
     for label in ax_z_hist.get_xticklabels():
         label.set_visible(False)
@@ -1581,7 +1603,7 @@ def plot_dpa_bucket(dpa=None, slice_num=None, repeat=1 , GeV=1, figsize=3, legen
     if showfig: plt.show()
 
 
-def plot_dist(dist, figsize=3, fig_name = None, savefig=False, showfig=False, scatter=False, plot_x_y=True, plot_xy_s=True, bins=(50,50,50,50), flip_t=True, beam_E_plot='eV', cmin=0, debug=0):
+def plot_dist(dist, figsize=4, fig_name = None, savefig=False, showfig=False, scatter=False, plot_x_y=True, plot_xy_s=True, bins=(50,50,50,50), flip_t=True, beam_E_plot='eV', cmin=0, debug=0):
     
     if debug>0: print('    plotting dist file')
     start_time = time.time()
@@ -2128,11 +2150,15 @@ def fwhm3(valuelist, height=0.5, peakpos=-1):
     #ind1 and 2 are now just below phalf
     grad1 = valuelist[ind1+1]-valuelist[ind1]
     grad2 = valuelist[ind2]-valuelist[ind2-1]
-    #calculate the linear interpolations
-    p1interp= ind1 + (phalf -valuelist[ind1])/grad1
-    p2interp= ind2 + (phalf -valuelist[ind2])/grad2
-    #calculate the width
-    width = p2interp-p1interp
+    if grad1==0 or grad2==0:
+        width=None
+    else:
+        #calculate the linear interpolations
+        # print(ind1,ind2)
+        p1interp= ind1 + (phalf -valuelist[ind1])/grad1
+        p2interp= ind2 + (phalf -valuelist[ind2])/grad2
+        #calculate the width
+        width = p2interp-p1interp
     return (peakpos,width,np.array([ind1,ind2]))
 
 
@@ -2141,7 +2167,10 @@ def fwhm3(valuelist, height=0.5, peakpos=-1):
     # ax_size_l.set_ylabel('longitudinal [$\mu$m]')
     
 def n_moment(x, counts, c, n):
-    return (np.sum((x-c)**n*counts) / np.sum(counts))**(1./n)
+    if np.sum(counts)==0:
+        return 0
+    else:
+        return (np.sum((x-c)**n*counts) / np.sum(counts))**(1./n)
         
 def std_moment(x, counts):
     mean=n_moment(x, counts, 0, 1)

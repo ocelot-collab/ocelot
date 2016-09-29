@@ -41,8 +41,8 @@ def plot_gen_out_all(handle=None,savefig='png',showfig=False,choice=(1,1,1,1,6.0
         0 - electron evolution
         1 - radiation evolution
         2 - profile at z=0m
-        3 - profile atthe end
-        4 - profile at given lit of positions (to be done)
+        3 - profile at the end
+        4 - profile every m meters
         5 - dfl at the end, space    -time      domain
         6 -                 inv.space-time      domain
         7 -                 space    -frequency domain
@@ -86,18 +86,18 @@ def plot_gen_out_all(handle=None,savefig='png',showfig=False,choice=(1,1,1,1,6.0
         if isinstance(handle,GenesisOutput):
             if choice[0]: f0=plot_gen_out_e(handle,savefig=savefig)
             if choice[1]: f1=plot_gen_out_ph(handle,savefig=savefig)
-            if choice[2]: f2=plot_gen_out_z(handle, z=0,savefig=savefig)
-            if choice[3]: f3=plot_gen_out_z(handle, z=inf,savefig=savefig)
+            if choice[2]: f2=plot_gen_out_z(handle, z=0,savefig=savefig,debug=debug)
+            if choice[3]: f3=plot_gen_out_z(handle, z=inf,savefig=savefig,debug=debug)
             if choice[4]!=0:
                 for z in arange(choice[4],max(handle.z),choice[4]):
-                    plot_gen_out_z(handle, z=z,savefig=savefig)
+                    plot_gen_out_z(handle, z=z,savefig=savefig,debug=debug)
         if os.path.isfile(handle.filePath+'.dfl') and any(choice[5:8]):
             #change to new object!
             dfl=read_radiation_file_out(handle,debug=debug)
             if choice[5]: f5=plot_dfl(dfl,savefig=savefig)
-            if choice[6]: f6=plot_dfl(dfl,far_field=1,freq_domain=0,auto_zoom=0,savefig=savefig)
-            if choice[7]: f7=plot_dfl(dfl,far_field=0,freq_domain=1,auto_zoom=0,savefig=savefig)
-            if choice[8]: f8=plot_dfl(dfl,far_field=1,freq_domain=1,auto_zoom=0,savefig=savefig)
+            if choice[6]: f6=plot_dfl(dfl,far_field=1,freq_domain=0,auto_zoom=0,savefig=savefig,debug=debug)
+            if choice[7]: f7=plot_dfl(dfl,far_field=0,freq_domain=1,auto_zoom=0,savefig=savefig,debug=debug)
+            if choice[8]: f8=plot_dfl(dfl,far_field=1,freq_domain=1,auto_zoom=0,savefig=savefig,debug=debug)
         
         if os.path.isfile(handle.filePath+'.dpa') and (choice[9] or choice[10]) and handle('itdp')==True:
             dpa=read_particle_file_out(handle,debug=debug)
@@ -331,7 +331,7 @@ def subfig_rad_pow_en(ax_rad_pow,g,legend,log=1):
         ax_rad_pow.set_yscale('log')
         
     ax_rad_en = ax_rad_pow.twinx()
-    ax_rad_en.plot(g.z, np.mean(g.p_int,axis=0)*g('xlamds')*g('zsep')*g.nSlices/speed_of_light, 'k--',linewidth=1.5)
+    ax_rad_en.plot(g.z, g.energy, 'k--',linewidth=1.5)
     ax_rad_en.set_ylabel('E [J]')
     ax_rad_en.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_rad_en.get_yaxis().get_major_formatter().set_scientific(True)
@@ -485,7 +485,7 @@ def subfig_rad_spec_evo(ax_spectrum_evo,g,legend,norm=1):
         pass
 
 
-def plot_gen_out_z(g, figsize=(10, 14), legend = True, fig_name = None, z=inf, savefig=False, showfig=False):
+def plot_gen_out_z(g, figsize=(10, 14), legend = True, fig_name = None, z=inf, savefig=False, showfig=False, debug=1):
 #    max_yticks = 7
     if g('itdp')==False:
         print('    plotting bunch profile at '+str(z)+' [m]')
@@ -509,7 +509,7 @@ def plot_gen_out_z(g, figsize=(10, 14), legend = True, fig_name = None, z=inf, s
     zi=np.where(g.z>=z)[0][0]
     z=g.z[zi];
 
-    print('    plotting bunch profile at '+str(z)+' [m]')
+    if debug>0: print('    plotting bunch profile at '+str(z)+' [m]')
 
 
     font_size = 1
@@ -585,8 +585,7 @@ def plot_gen_out_z(g, figsize=(10, 14), legend = True, fig_name = None, z=inf, s
 
     spectrum = abs(np.fft.fft(np.sqrt( np.array(power)) * np.exp( 1.j* np.array(phase) ) , axis=0))**2/sqrt(g.nSlices)/(2*g.leng/g('ncar'))**2/1e10
     e_0=1239.8/g('xlamds')/1e9
-    g.freq_ev1 = h_eV_s * np.fft.fftfreq(len(spectrum), d=g('zsep') * g('xlamds') / speed_of_light)+e_0
-    g.freq_ev1 = h_eV_s * np.fft.fftfreq(len(spectrum), d=g('zsep') * g('xlamds') / speed_of_light)+e_0
+    g.freq_ev1 = h_eV_s * np.fft.fftfreq(len(spectrum), d=g('zsep') * g('xlamds') * g('ishsty') / speed_of_light)+e_0
     lamdscale=1239.8/g.freq_ev1
 
     lamdscale_array=np.swapaxes(np.tile(lamdscale,(g.nZ,1)),0,1)
@@ -596,7 +595,8 @@ def plot_gen_out_z(g, figsize=(10, 14), legend = True, fig_name = None, z=inf, s
 #    spectrum_lamdwidth=sqrt(np.sum(spectrum*(lamdscale_array-spectrum_lamdpos)**2/np.sum(spectrum,axis=0),axis=0))
 
 
-    ax_spectrum.plot(np.fft.fftshift(lamdscale), np.fft.fftshift(spectrum[:,zi]), 'r-')
+    # ax_spectrum.plot(np.fft.fftshift(lamdscale), np.fft.fftshift(spectrum[:,zi]), 'r-')
+    ax_spectrum.plot(g.freq_lamd, g.spec[:,zi], 'r-')
     ax_spectrum.text(0.98, 0.98,r"(on axis)", fontsize=10, horizontalalignment='right', verticalalignment='top', transform = ax_spectrum.transAxes)#horizontalalignment='center', verticalalignment='center',
     ax_spectrum.set_ylabel('P($\lambda$) [a.u.]')
     ax_spectrum.set_xlabel('$\lambda$ [nm]')
@@ -802,7 +802,7 @@ def plot_gen_out_scanned_z(g, figsize=(10, 14), legend = True, fig_name = None, 
     return fig
 
 
-def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend = True, phase = False, far_field=False, freq_domain=False, fig_name = None, auto_zoom=False, column_3d=True, savefig=False, showfig=False, return_proj=False, debug=0, vartype_dfl=complex64):
+def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend = True, phase = False, far_field=False, freq_domain=False, fig_name = None, auto_zoom=False, column_3d=True, savefig=False, showfig=False, return_proj=False, debug=1, vartype_dfl=complex64):
     
     #F is RadiationField() object
     #z_lim sets the boundaries to CUT the dfl object in z to ranges of e.g. [2,5] um or nm depending on freq_domain=False of True
@@ -819,7 +819,6 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend = True, phase = False, fa
     #vartype_dfl is the data type to store dfl in memory [either complex128 (two 64-bit floats) or complex64 (two 32-bit floats)], may save memory
 
     text_present=1
-
     if debug>0: print('    plotting radiation field')
     start_time = time.time()
     # print dfl.shape
@@ -1229,7 +1228,7 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
 #                    print('     could not read '+out_file)
         run_range=run_range_good
 
-        if run_range==[]:
+        if run_range==[] or len(run_range)==1:
             continue
 
         

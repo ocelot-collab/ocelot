@@ -245,17 +245,17 @@ def run(inp, launcher,readout=1,dfl_slipage_incl=True,assembly_ver='sys',debug=1
         
         if debug>0: print ('      assembling *.out file')
         start_time = time.time()
-        assemble(out_file,ram=ram)
+        assemble(out_file,ram=ram,debug=debug)
         if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
     
         if debug>0: print ('      assembling *.dfl file')
         start_time = time.time()
-        assemble(out_file+'.dfl',tailappend=dfl_slipage_incl,ram=ram)
+        assemble(out_file+'.dfl',tailappend=dfl_slipage_incl,ram=ram,debug=debug)
         if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
         
         if debug>0: print ('      assembling *.dpa file')
         start_time = time.time()
-        assemble(out_file+'.dpa',ram=ram)
+        assemble(out_file+'.dpa',ram=ram,debug=debug)
         if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
     
     # start_time = time.time()
@@ -277,64 +277,66 @@ def run(inp, launcher,readout=1,dfl_slipage_incl=True,assembly_ver='sys',debug=1
 
 
     
-def assemble(out_file,binary=1,remove=1,tailappend=0,ram=1):
+def assemble(out_file,remove=1,tailappend=0,ram=1,debug=1):
     import glob, sys
-    try:
-        if tailappend:
-            os.rename(out_file,out_file+'.slice999999')
+    # try:
+    # if tailappend:
+        # os.rename(out_file,out_file+'.slice999999')
+    
+    fins=glob.glob(out_file +'.slice*')
+    fins.sort()
+    
+    if tailappend:
+        fout = open(out_file,'r+b')
+    else:
+        fout = open(out_file,'ab')
+    #else:
+    #    fout = file(out_file,'a')
+    N=len(fins)
+    if ram==1:
+        idata=''
+        data=bytearray()
+        if debug>1: print('        reading '+str(N)+' slices to RAM...')
+        index=10
+        for i, n in enumerate(fins):
+            # if i/N>=index:
+                # sys.stdout.write(str(index)+'%.')
+                # index +=10
+            fin = open(n,'rb')
+            while True:
+                idata=fin.read(65536)
+                if not idata:
+                    break
+                else:
+                    data+=idata
+        if debug>1: print('        writing...')
+        fout.write(data)
+        try:
+            fin.close()
+        except:
+            pass
         
-        fins=glob.glob(out_file +'.slice*')
-        fins.sort()
-        
-        #if binary:
-        fout = file(out_file,'ab')
-        #else:
-        #    fout = file(out_file,'a')
-        N=len(fins)
-        if ram==1:
-            idata=''
-            data=''
-            if debug>1: print('        reading '+str(N)+' slices to RAM...')
-            index=10
-            for i, n in enumerate(fins):
-                # if i/N>=index:
-                    # sys.stdout.write(str(index)+'%.')
-                    # index +=10
-                fin = file(n,'rb')
-                while True:
-                    idata=fin.read(65536)
-                    if not idata:
-                        break
-                    else:
-                        data+=idata
-            if debug>1: print('        writing...')
-            fout.write(data)
-            try:
-                fin.close()
-            except:
-                pass
-            
+        if remove:
+            os.system('rm ' + out_file +'.slice* 2>/dev/null')
+            # os.remove(fins)
+    else:
+        for i, n in enumerate(fins):
+            # if i/N>=index:
+                # sys.stdout.write(str(index)+'%.')
+                # index +=10
+            fin = open(n,'rb')
+            while True:
+                data = fin.read(65536)
+                if not data:
+                    break
+                fout.write(data)
+            fin.close()
             if remove:
-                os.system('rm ' + out_file +'.slice* 2>/dev/null')
-                # os.remove(fins)
-        else:
-            for i, n in enumerate(fins):
-                # if i/N>=index:
-                    # sys.stdout.write(str(index)+'%.')
-                    # index +=10
-                fin = file(n,'rb')
-                while True:
-                    data = fin.read(65536)
-                    if not data:
-                        break
-                    fout.write(data)
-                fin.close()
-                if remove:
-                    os.remove(fin.name)
-        
-        fout.close()
-    except:
-        print('        could not assemble '+out_file)
+                os.remove(fin.name)
+    
+    fout.close()
+    # except:
+        # print('        could not assemble '+out_file)
     
     
 '''

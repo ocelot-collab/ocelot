@@ -84,6 +84,26 @@ class BayesOpt:
             self.model.fit(p_X, p_Y, min(m, num))
 
 
+    def terminate(self, devices):
+        """
+        Sets the position back to the location that seems best in hindsight.
+        It's a good idea to run this at the end of the optimization, since
+        Bayesian optimization tries to explore and might not always end in
+        a good place.
+        """
+        print("TERMINATE", self.x_best)
+        if(self.acq_func[0] == 'EI'):
+            # set position back to something reasonable
+            for i, dev in enumerate(devices):
+                dev.set_value(self.x_best[i])
+            #error_func(self.x_best)
+        if(self.acq_func[0] == 'UCB'):
+            # UCB doesn't keep track of x_best, so find it
+            (x_best, y_best) = self.best_seen()
+            for i, dev in enumerate(devices):
+                dev.set_value(x_best[i])
+
+
     def minimize(self, error_func, x):
         # weighting for exploration vs exploitation in the GP at the end of scan, alpha array goes from 1 to zero
         #alpha = [1.0 for i in range(40)]+[np.sqrt(50-i)/3.0 for i in range(41,51)]
@@ -193,21 +213,6 @@ class BayesOpt:
         else:
             print('Unknown acquisition function.')
             return 0
-
-    #def terminate(self):
-    #    """
-    #    Sets the position back to the location that seems best in hindsight.
-    #    It's a good idea to run this at the end of the optimization, since
-    #    Bayesian optimization tries to explore and might not always end in
-    #    a good place.
-    #    """
-    #    if(self.acq_func[0] == 'EI'):
-    #        # set position back to something reasonable
-    #        self.interface.setX(self.x_best)
-    #    if(self.acq_func[0] == 'UCB'):
-    #        # UCB doesn't keep track of x_best, so find it
-    #        (x_best, y_best) = self.best_seen()
-    #        self.interface.setX(x_best)
 
 
 class HyperParams:

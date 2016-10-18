@@ -292,19 +292,19 @@ class GpScanner(threading.Thread):
             return self.opt.kill
 
 
-        #self.opt.terminate()
+        #self.opt.minimizer.terminate(self.opt.error_func)
         #print "Getting last data point"
         #time.sleep(3)
-        self.objective_func.get_penalty()
-        self.parent.getPlotData()
-        print ("Done getting data")
+        #self.objective_func.get_penalty()
+        #self.parent.getPlotData()
+        #print ("Done getting data")
 
         #save data and update GUI on finish if not run as script
-        if (self.parent != None):
+        #if (self.parent != None):
 
             #self.saveModel()
             #self.parent.saveData(self.mi.data)
-            self.parent.scanFinished()
+            #self.parent.scanFinished()
 
         #Re-enable to let user start another scan
         try:

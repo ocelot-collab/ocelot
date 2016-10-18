@@ -70,6 +70,18 @@ class Optimizer:
         for s in seq:
             s.apply()
 
+    def exceed_limits(self, x):
+        for i in range(len(x)):
+            print('{0} x[{1}]={2}'.format(self.devices[i].id, i, x[i]))
+            if self.devices[i].check_limits(x[i]):
+                return True
+        return False
+
+    def set_values(self, x):
+        for i in range(len(self.devices)):
+            print('setting', self.devices[i].id, '->', x[i])
+            self.devices[i].set_value(x[i])
+
     def error_func(self, x):
 
         self.minimizer.kill = self.kill
@@ -78,14 +90,10 @@ class Optimizer:
             # NEW CODE - to kill if run from outside thread
             return
         # check limits
-        for i in range(len(x)):
-            print('{0} x[{1}]={2}'.format(self.devices[i].id, i, x[i]))
-            if self.devices[i].check_limits(x[i]):
-                return self.target.pen_max
+        if self.exceed_limits(x):
+            return self.target.pen_max
         # set values
-        for i in range(len(self.devices)):
-            print('setting', self.devices[i].id, '->', x[i])
-            self.devices[i].set_value(x[i])
+        self.set_values(x)
 
         print('sleeping ' + str(self.timeout))
         sleep(self.timeout)
@@ -118,6 +126,11 @@ class Optimizer:
             self.logger.log_start(dev_ids, method=self.minimizer.__class__.__name__, x_init=x_init, target_ref=target_ref)
 
         self.minimizer.minimize(self.error_func, x)
+        # set best solution
+        x = self.x_data[np.argmin(self.y_data)]
+        if self.exceed_limits(x):
+            return self.target.pen_max
+        self.set_values(x)
 
         target_new = self.target.get_penalty()
 

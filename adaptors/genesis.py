@@ -748,7 +748,9 @@ def read_genesis_output(filePath, readall=True, debug=1, precision=float):
         out.beam_charge=np.sum(out.I*out.dt)
         out.sn_Imax=np.argmax(out.I) #slice number with maximum current
         if readall == True:
+            if debug>1: print ('      calculating spectrum')
             out.spec = abs(np.fft.fft(np.sqrt(np.array(out.power)) * np.exp( 1.j* np.array(out.phi_mid) ) , axis=0))**2/sqrt(out.nSlices)/(2*out.leng/out('ncar'))**2/1e10
+            if debug>1: print ('        done')
             e_0=1239.8/out('xlamds')/1e9            
             out.freq_ev = h_eV_s * np.fft.fftfreq(len(out.spec), d=out('zsep') * out('xlamds')*out('ishsty') / speed_of_light)+e_0# d=out.dt
             
@@ -759,8 +761,10 @@ def read_genesis_output(filePath, readall=True, debug=1, precision=float):
             
             phase_fix=1 #the way to display the phase, without constant slope caused by different radiation wavelength from xlamds. phase is set to 0 at maximum power slice.
             if phase_fix:
+                if debug>0: print ('      fixing phase display')
                 out.phi_mid_disp=deepcopy(out.phi_mid)
                 for zi in range(shape(out.phi_mid_disp)[1]):
+                    if debug>1: print ('      fixing phase display: '+str(zi)+' of '+str(range(shape(out.phi_mid_disp)[1])))
                     maxspectrum_index=np.argmax(out.spec[:,zi])
                     maxspower_index=np.argmax(out.power[:,zi])
                     maxspectrum_wavelength=out.freq_lamd[maxspectrum_index]*1e-9    
@@ -775,6 +779,7 @@ def read_genesis_output(filePath, readall=True, debug=1, precision=float):
                 
             rad_t_size_weighted=1 #to average the radiation size over slices with radiation power as a weight
             if rad_t_size_weighted and out.nSlices!=1: 
+                if debug>1: print ('      averaging the radiation size properly')
                 if np.amax(out.power)>0:
                     weight=out.power+np.amin(out.power[out.power!=0])/1e6
                 else:
@@ -1034,7 +1039,7 @@ def read_dist_file(filePath,debug=1):
             continue
         
         if tokens[0] == "?" and tokens[1] == "CHARGE":
-            dist.charge = tokens[3]
+            dist.charge = float(tokens[3])
         
         if tokens[0] == "?" and tokens[1] == "COLUMNS":
             dist_columns = tokens[2:]
@@ -1105,13 +1110,17 @@ def cut_dist(dist,
     
     index=np.logical_or.reduce((index_t,index_e,index_x,index_y,index_px,index_py))
     index=np.where(index)
-
+    
+    part_c=dist.charge/dist.len()
     dist_f=deepcopy(dist)
     
     for parm in ['t','e','px','py','x','y']:
         if hasattr(dist_f,parm):
             setattr(dist_f,parm,np.delete(getattr(dist_f,parm),index))
     
+    dist_f.charge=dist_f.len()*part_c
+    
+    if debug>0: print('      %.2f percent cut' % ((dist.charge-dist_f.charge)/dist.charge*100))
     if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
     
     return dist_f
@@ -2007,7 +2016,7 @@ def add_alpha_beam(beam):
     beam.columns=list(beam.column_values.keys())
     
     
-def transform_beam_file(beam_file = None, out_file='tmp.beam', transform = [ [25.0,0.1], [21.0, -0.1] ], energy_scale=1, energy_new = None, emit_scale = 1, n_interp = None):
+def transform_beam_file(beam_file = None, out_file='tmp.beam', s=None, transform = [ [25.0,0.1], [21.0, -0.1] ], energy_scale=1, energy_new = None, emit_scale = 1, n_interp = None):
     if beam_file.__class__==str:
         beam = read_beam_file(beam_file)
     elif beam_file.__class__==GenesisBeam or beam_file.__class__==Beam:
@@ -2016,8 +2025,12 @@ def transform_beam_file(beam_file = None, out_file='tmp.beam', transform = [ [25
         print('Wrong beam input!')
         
     zmax, Imax = peaks(beam.z, beam.I, n=1)
-    beam.idx_max = np.where(beam.z == zmax)[0][0]
-    idx=beam.idx_max
+    if s==None:
+        idx = np.where(beam.z == zmax)[0][0]
+        beam.idx_max=idx
+    else:
+        idx = np.where(beam.z > s)[0][0]
+        beam.idx_max=idx
     print ('matching to slice ' + str(idx))
     
     #if plot: plot_beam(plt.figure(), beam)    
@@ -2220,6 +2233,49 @@ def cut_beam(beam = None, cut_z = [-inf, inf]):
     return beam_new
 
 
+def get_beam_s(beam = None,s=0): 
+    '''
+    obtains the peak current values of the beam
+    '''
+    if len(beam.I)>1:# and np.amax(beam.I)!=np.amin(beam.I):
+        slice = np.where(beam.z>=s)[0][0]
+        
+        # beam_new=deepcopy(beam)
+        beam_new=Beam()
+        
+        beam_new.idx_max=slice
+        beam_new.I=beam.I[slice]
+        beam_new.alpha_x=beam.alphax[slice]
+        beam_new.alpha_y=beam.alphay[slice]
+        beam_new.beta_x=beam.betax[slice]
+        beam_new.beta_y=beam.betay[slice]
+        beam_new.emit_xn=beam.ex[slice]
+        beam_new.emit_yn=beam.ey[slice]
+        beam_new.gamma_rel=beam.g0[slice]
+        beam_new.sigma_E=beam.dg[slice]*(0.510998e-3)
+        beam_new.xp=beam.px[slice]
+        beam_new.yp=beam.py[slice]
+        beam_new.x=beam.x[slice]
+        beam_new.y=beam.y[slice]
+        
+        beam_new.E=beam_new.gamma_rel*(0.510998e-3)
+        beam_new.emit_x = beam_new.emit_xn / beam_new.gamma_rel
+        beam_new.emit_y = beam_new.emit_yn / beam_new.gamma_rel
+        
+        beam_new.tpulse = (beam.z[-1]-beam.z[0])/speed_of_light*1e15/6 #[fs]
+        beam_new.C=np.trapz(beam.I, x=np.array(beam.z)/speed_of_light)*1e9 #bunch charge[nC]
+        
+        for parm in ['alphax','alphay','betax','betay','z','ex','ey','g0','dg','px','py']:
+            if hasattr(beam_new,parm):
+                delattr(beam_new,parm)
+        
+        # beam_new.x = np.extract(condition,beam.x)
+
+    else:
+        beam_new=beam
+    return beam_new
+
+
 def get_beam_peak(beam = None): 
     '''
     obtains the peak current values of the beam
@@ -2239,13 +2295,13 @@ def get_beam_peak(beam = None):
         beam_new.emit_xn=beam.ex[pkslice]
         beam_new.emit_yn=beam.ey[pkslice]
         beam_new.gamma_rel=beam.g0[pkslice]
-        beam_new.sigma_E=beam.dg[pkslice]*(0.000510998)
+        beam_new.sigma_E=beam.dg[pkslice]*(0.510998e-3)
         beam_new.xp=beam.px[pkslice]
         beam_new.yp=beam.py[pkslice]
         beam_new.x=beam.x[pkslice]
         beam_new.y=beam.y[pkslice]
         
-        beam_new.E=beam_new.gamma_rel*(0.511e-3)
+        beam_new.E=beam_new.gamma_rel*(0.510998e-3)
         beam_new.emit_x = beam_new.emit_xn / beam_new.gamma_rel
         beam_new.emit_y = beam_new.emit_yn / beam_new.gamma_rel
         
@@ -2619,3 +2675,36 @@ def getAverageUndulatorParameter(lattice, unit=1.0, energy = 17.5):
             #prevLen = l 
 
     return np.mean(ks)
+    
+def read_astra_dist(filename):
+    #reading astra distribution parameters Parameter x y z px py pz clock macro_charge particle_index status_flag
+    #with units m m m eV/c eV/c eV/c ns nC
+    adist=np.loadtxt(filename)
+    adist[1:]=adist[1:]+adist[0] #normalze to reference particle located at 1-st line
+    return adist
+    
+def astra2genesis_conv(adist,center=1):
+    #script to convert astra macroparticle file to Genesis
+
+    dist = GenesisParticlesDist()
+    dist.charge=abs(adist[0][7])*shape(adist)[0]*1e-9 #charge of particle from nC
+    dist.x=adist[:,0]#
+    dist.y=adist[:,1]#
+    dist.t=(adist[:,2]-np.mean(adist[:,2]))/speed_of_light #long position normalized to 0 and converted to time
+    dist.px=adist[:,3]/adist[:,5]#angle of particles in x
+    dist.py=adist[:,4]/adist[:,5]#angle of particles in y
+    dist.e=adist[:,5]/m_e_eV#energy to Gamma
+    
+    if center:
+        dist.x-=np.mean(dist.x)
+        dist.y-=np.mean(dist.y)
+        dist.px-=np.mean(dist.px)
+        dist.py-=np.mean(dist.py)
+        
+    return dist
+    
+def astra2genesis_conv_ext(filename_in, filename_out='',center=1):
+    if filename_out=='': filename_out=filename_in+'.dist'
+    adist=read_astra_dist(filename_in)
+    dist=astra2genesis_conv(adist,center=1)
+    write_dist_file (dist,filename_out,debug=0)

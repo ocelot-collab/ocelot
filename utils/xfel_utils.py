@@ -187,6 +187,7 @@ def run(inp, launcher,readout=1,dfl_slipage_incl=True,assembly_ver='sys',debug=1
     
     out_file = inp.run_dir + '/run.' + str(inp.runid) + '.gout'
     #remove old files
+    if debug>0: print ('    removing old files')
     os.system('rm -rf ' + out_file+'*') # to make sure out file slices are cleaned
     os.system('rm -rf ' + out_file + '.dfl*') # to make sure field file is not attached to old one
     os.system('rm -rf ' + out_file + '.dpa*') # to make sure particle file is not attached to old one
@@ -221,7 +222,9 @@ def run(inp, launcher,readout=1,dfl_slipage_incl=True,assembly_ver='sys',debug=1
         if debug>0: print ('      assembling *.out file')
         start_time = time.time()
         os.system('cat ' + out_file +'.slice* >> '+ out_file)
+        os.system('rm ' + out_file +'.slice* 2>/dev/null')
         if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
+        
         if debug>0: print ('      assembling *.dfl file')
         start_time = time.time()
         if dfl_slipage_incl:
@@ -231,12 +234,16 @@ def run(inp, launcher,readout=1,dfl_slipage_incl=True,assembly_ver='sys',debug=1
             os.system(command)
         else:
             os.system('cat ' + out_file+'.dfl.slice*  > ' + out_file+'.dfl')
+        os.system('rm ' + out_file +'.dfl.slice* 2>/dev/null')
+        os.system('rm ' + out_file +'.dfl.tmp 2>/dev/null')
         if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
+        
         if debug>0: print ('      assembling *.dpa file')
         start_time = time.time()
         os.system('cat ' + out_file +'.dpa.slice* >> ' + out_file+'.dpa')
+        os.system('rm ' + out_file +'.dpa.slice* 2>/dev/null')
         if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
-        if debug>0: print ('      removing temporary files')
+        # if debug>0: print ('      removing temporary files')
     
     elif assembly_ver=='pyt':
         #there is a bug with dfl assembly
@@ -246,23 +253,26 @@ def run(inp, launcher,readout=1,dfl_slipage_incl=True,assembly_ver='sys',debug=1
         if debug>0: print ('      assembling *.out file')
         start_time = time.time()
         assemble(out_file,ram=ram,debug=debug)
+        os.system('rm ' + out_file +'.slice* 2>/dev/null')
         if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
     
         if debug>0: print ('      assembling *.dfl file')
         start_time = time.time()
         assemble(out_file+'.dfl',tailappend=dfl_slipage_incl,ram=ram,debug=debug)
+        os.system('rm ' + out_file +'.dfl.slice* 2>/dev/null')
+        os.system('rm ' + out_file +'.dfl.tmp 2>/dev/null')
         if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
         
         if debug>0: print ('      assembling *.dpa file')
         start_time = time.time()
         assemble(out_file+'.dpa',ram=ram,debug=debug)
+        os.system('rm ' + out_file +'.dpa.slice* 2>/dev/null')
         if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
     
     # start_time = time.time()
-    os.system('rm ' + out_file +'.slice* 2>/dev/null')
-    os.system('rm ' + out_file +'.dfl.slice* 2>/dev/null')
-    os.system('rm ' + out_file +'.dfl.tmp 2>/dev/null')
-    os.system('rm ' + out_file +'.dpa.slice* 2>/dev/null')
+    
+
+
     # print ('        done in %.2f seconds' % (time.time() - start_time))
     if debug>0: print ('      total time %.2f seconds' % (time.time() - assembly_time))
     
@@ -400,6 +410,7 @@ def checkout_run(run_dir, run_id, prefix1, prefix2, save=False,debug=1):
         if debug>0: print ('      moving input files')
         os.system('mv '+run_dir+'/tmp.gen'+' '+run_dir+'/geninp.'+str(run_id)+prefix2+'.inp 2>/dev/null')
         os.system('mv '+run_dir+'/lattice.inp'+' '+run_dir+'/lattice.'+str(run_id)+prefix2+'.inp 2>/dev/null')
+    print ('      done')
     # os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout*')
 
 

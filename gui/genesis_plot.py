@@ -1618,7 +1618,7 @@ def plot_dist(dist, figsize=4, fig_name = None, savefig=False, showfig=False, sc
     fig.set_size_inches(((3+plot_x_y+plot_xy_s)*figsize,3*figsize),forward=True)
     
     if flip_t:
-        s=(dist.t*(-1)+max(dist.t))*speed_of_light*1e6
+        s=-dist.t*speed_of_light*1e6
     else:
         s=dist.t*speed_of_light*1e6
     
@@ -1672,8 +1672,8 @@ def plot_dist(dist, figsize=4, fig_name = None, savefig=False, showfig=False, sc
         ax_pxpy=fig.add_subplot(2, 1+plot_x_y+plot_xy_s, 4+2*plot_xy_s)
         if scatter: ax_pxpy.scatter(dist.px*1e6, dist.py*1e6,marker='.')
         else: ax_pxpy.hist2d(dist.px*1e6, dist.py*1e6, [bins[0],bins[1]],cmin=cmin)
-        ax_pxpy.set_xlabel('px')
-        ax_pxpy.set_ylabel('py')
+        ax_pxpy.set_xlabel('px [$\mu$rad]')
+        ax_pxpy.set_ylabel('py [$\mu$rad]')
         
     if scatter:
         ax_curr.set_xlim([np.amin(s),np.amax(s)])

@@ -431,7 +431,7 @@ def get_crystal_filter(cryst, ray, nk=10, ref_idx = None, k = None):
     f.tr, f.ref = transmissivity_reflectivity(k, cryst)    
     
     f.k = k    
-    f.ev = k * hbar * c
+    # f.ev = k * hbar * c
     
     return f 
 

@@ -844,7 +844,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend = True, phase = False, fa
     if F.Nz()!=1:
         #Make sure it is time-dependent
         ncar_z=F.Nz()
-        leng_z=F.Lz
+        leng_z=F.Lz()
         z = np.linspace(0, leng_z, ncar_z)
     else:
         column_3d=False
@@ -855,9 +855,9 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend = True, phase = False, fa
 
     #number of mesh points
     ncar_x=F.Nx()
-    leng_x=F.Lx #transverse size of mesh [m]
+    leng_x=F.Lx() #transverse size of mesh [m]
     ncar_y=F.Ny()
-    leng_y=F.Ly
+    leng_y=F.Ly()
     E_pulse=F.E()
     
     dfl=swapaxes(F.fld,2,1) # zyx -> zxy

@@ -11,6 +11,7 @@ import scipy.integrate as integrate
 #import matplotlib.animation as animation
 
 from ocelot.optics.elements import *
+from ocelot.common.globals import *
 
 
 class TransferFunction(object):
@@ -21,11 +22,14 @@ class TransferFunction(object):
         self.k = None
         self.tr = None
         self.ref = None
+    
+    def ev(self):
+        return self.k* h_eV_s/2/pi * speed_of_light
+    
     def __mul__(self, f):
         if f.__class__ == TransferFunction:
             f2 = TransferFunction()
             f2.k = f.k
-            f2.ev = f.ev
             # TODO check data grid alignment
             
             f2.tr = self.tr * f.tr

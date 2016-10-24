@@ -560,19 +560,43 @@ class RadiationField():
     '''
     3d or 2d coherent radiation distribution, *.fld variable is the same as Genesis dfl structure     
     '''
-    def __init__(self):
-        self.fld=np.array([]) #(z,y,x)
-        self.Lx=[]  #full transverse mesh size, 2*dgrid 
-        self.Ly=[]  #full transverse mesh size, 2*dgrid 
-        self.Lz=[]  #full longitudinal mesh size, nslice*zsep*xlamds 
+    def __init__(self,shape=(0,0,0)):
+        # self.fld=np.array([]) #(z,y,x)
+        self.fld=np.zeros(shape,dtype=complex128) #(z,y,x)
+        self.dx=[]
+        self.dy=[]
+        self.dz=[]
         self.xlamds=0 #wavelength, [nm]
-        self.l_domain='t' #longitudinal domain (t - time, f - frequency)
-        self.tr_domain='s' #transverse domain (s - space, k - inverse space)
+        self.domain_z='t' #longitudinal domain (t - time, f - frequency)
+        self.domain_xy='s' #transverse domain (s - space, k - inverse space)
         self.fileName=''
         self.filePath=''
         
+    def copy_param(self,dfl1):
+        self.dx=dfl1.dx
+        self.dx=dfl1.dy
+        self.dx=dfl1.dz
+        self.xlamds=dfl1.xlamds
+        self.domain_z=dfl1.domain_z
+        self.domain_xy=dfl1.domain_xy
+        self.fileName=dfl1.fileName
+        self.filePath=dfl1.filePath
+        
+    def __getitem__(self,i):
+        return self.fld[i]
+
+    def __setitem__(self,i,fld):
+        self.fld[i]=fld
+        
     def shape(self): 
         return shape(self.fld) 
+    def Lz(self): #full transverse mesh size, 2*dgrid
+        return self.dz*self.Nz()
+    def Ly(self): #full transverse mesh size, 2*dgrid 
+        return self.dy*self.Ny()
+    def Lx(self): #full longitudinal mesh size, nslice*zsep*xlamds 
+        return self.dx*self.Nx()
+        
     def Nz(self): 
         return shape(self.fld)[0] 
     def Ny(self): 
@@ -583,15 +607,84 @@ class RadiationField():
         return abs(self.fld)**2 
     def E(self): 
         if self.Nz()>1: 
-            return np.sum(self.I())*self.Lz/self.Nz()/speed_of_light 
+            return np.sum(self.I())*self.Lz()/self.Nz()/speed_of_light 
         else: 
             return self.I()
 
+
+
+        
+    def scale_z(self): #scale in meters
+        if self.domain_z=='t':
+            return np.linspace(0, self.Lz(), self.Nz())
+        elif self.domain_z=='f':
+            dk=2*pi/self.Lz();
+            k=2*pi/self.xlamds
+            return 2*pi/np.linspace(k-dk/2*self.Nz(), k+dk/2*self.Nz(), self.Nz())
+        else: raise AttributeError('Wrong z_domain attribute')
+        
+        
+
+
+def dfl_pad_z(dfl, padn):
+    assert mod(padn,1)==0,'pad should be integer'
+    if padn>1:
+        if mod(padn,2)==0: #check for odd
+            padn=int(padn+1)
+        padn_n=(padn-1)/2*dfl.Nz() #number of slices to add before and after
+        dfl_pad=RadiationField((dfl.Nz()+2*padn_n,dfl.Ny(),dfl.Nx()))
+        # dfl.Lz=dfl.Lz*padn
+        dfl_pad.fld[padn_n:-padn_n,:,:]=dfl.fld
+        # dfl_pad.fld=np.pad(dfl.fld,((padn_n,padn_n),(0,0),(0,0)),'constant',constant_values=(0,0))
+        return dfl_pad
+    elif padn<-1:
+        if mod(padn,2)==0: #check for odd
+            padn=int(padn-1)
+        padn=abs(padn)
+        # padn_n=dfl.Nz()/padn
+        padn_n=dfl.Nz()/padn*((padn-1)/2)
+        dfl_pad=RadiationField()
+        dfl_pad.fld=dfl.fld[padn_n:-padn_n,:,:]
+        return dfl_pad
+    else: return dfl
+
+def dfl_fft_z(dfl): #move to somewhere else
+    dfl_fft=RadiationField(dfl.shape())
+    dfl_fft.copy_param(dfl)
+    if dfl.domain_z=='t':
+        dfl_fft.fld=np.fft.fft(dfl.fld,axis=0)
+        dfl_fft.fld=np.fft.ifftshift(dfl.fld,0)
+        dfl_fft.fld/=sqrt(dfl.Nz())
+        dfl_fft.domain_z='f'
+        return dfl_fft
+    elif dfl.domain_z=='f':
+        dfl_fft.fld=np.fft.fftshift(dfl.fld,0)
+        dfl_fft.fld=np.fft.ifft(dfl.fld,axis=0)
+        dfl_fft.fld*=sqrt(dfl.Nz())
+        dfl_fft.domain_z='t'
+        return dfl_fft
+        
+def dfl_filt(dfl,trf,mode):
+    assert trf.__class__==TransferFunction,'Wrong TransferFunction class'
+    assert dfl.domain_z=='f','wrong dfl domain (must be frequency)!'
+    if mode=='tr':
+        filt=trf.tr
+    elif mode=='ref':
+        filt=trf.ref
+    else: raise AttributeError('Wrong z_domain attribute')
+    filt_lamdscale=2*pi/trf.k
+    if min(dfl.scale_s())>max(filt_lamdscale) or max(dfl.scale_s())<min(filt_lamdscale):
+        raise ValueError('frequency scales of dfl and transfer function do not overlap')
+    filt_interp=np.interp(dfl.scale_z(),filt_lamdscale,filt)
+    
+    dfl.fld*=filt_interp[:,np.newaxis,np.newaxis]
+    
+    return #dfl
+    
 ''' 
    I/O functions
 '''
-
-
+    
 def read_genesis_output(filePath, readall=True, debug=1, precision=float):
     import re
     out = GenesisOutput()
@@ -1360,12 +1453,12 @@ def read_radiation_file(filePath, Nxy=None, Lxy=None, Lz=None, zsep=None, xlamds
         
         F=RadiationField()
         F.fld=b.reshape(Nz,Nxy,Nxy)
-        F.Lx=Lxy
-        F.Ly=Lxy
+        F.dx=Lxy/F.Nx()
+        F.dy=Lxy/F.Ny()
         if Lz!=None:
-            F.Lz=Lz
+            F.dz=Lz/F.Nz()
         elif zsep!=None and xlamds!=None:
-            F.Lz=F.Nz()*xlamds*zsep
+            F.dz=xlamds*zsep
         else:
             F.Lz=None
         F.xlamds=xlamds
@@ -1442,8 +1535,8 @@ def interp_radiation(F,interpN=(1,1),interpL=(1,1),newN=(None,None),newL=(None,N
             if Ny2%2==0 and Ny2>F.Ny(): Ny2-=1 
             if Ny2%2==0 and Ny2<F.Ny(): Ny2+=1  
      
-            Lx2=F.Lx*interpLx 
-            Ly2=F.Ly*interpLy 
+            Lx2=F.Lx()*interpLx 
+            Ly2=F.Ly()*interpLy 
      
     else: 
         #redo to maintain mesh density 
@@ -1457,14 +1550,14 @@ def interp_radiation(F,interpN=(1,1),interpL=(1,1),newN=(None,None),newL=(None,N
      
         if newL[0] != None:  
             Lx2=newL[0]  
-        else: Lx2=F.Lx 
+        else: Lx2=F.Lx()
      
         if newL[1] != None:  
             Ly2=newL[1]  
-        else: Ly2=F.Ly 
+        else: Ly2=F.Ly()
     
-    xscale1=np.linspace(-F.Lx/2, F.Lx/2, F.Nx()) 
-    yscale1=np.linspace(-F.Ly/2, F.Ly/2, F.Ny())     
+    xscale1=np.linspace(-F.Lx()/2, F.Lx()/2, F.Nx()) 
+    yscale1=np.linspace(-F.Ly()/2, F.Ly()/2, F.Ny())     
     xscale2=np.linspace(-Lx2/2, Lx2/2, Nx2) 
     yscale2=np.linspace(-Ly2/2, Ly2/2, Ny2) 
  
@@ -1484,14 +1577,15 @@ def interp_radiation(F,interpN=(1,1),interpL=(1,1),newN=(None,None),newL=(None,N
         fslice2=fslice2*sqrt(P1/P2) 
         fld2.append(fslice2) 
      
-    F2=RadiationField() 
+    F2=deepcopy(fld2)
+    # F2=RadiationField() 
     F2.fld=np.array(fld2) 
-    F2.Lx=Lx2 
-    F2.Ly=Ly2 
-    F2.Lz=F.Lz 
-    F2.l_domain=F.l_domain 
-    F2.tr_domain=F.tr_domain 
-    F2.xlamds=F.xlamds 
+    F2.dx=Lx2/F2.Nx()
+    F2.dy=Ly2/F2.Ny()
+    # F2.Lz=F.Lz 
+    # F2.l_domain=F.l_domain 
+    # F2.tr_domain=F.tr_domain 
+    # F2.xlamds=F.xlamds 
     F2.fileName=F.fileName+'i'
     F2.filePath=F.filePath+'i'
     if debug>1: print('      energy after interpolation '+ str (F2.E())) 

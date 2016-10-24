@@ -14,6 +14,10 @@ from ocelot.common.math_op import *
 from ocelot.common.globals import * #import of constants like "h_eV_s" and "speed_of_light"
 from numpy import *
 
+import multiprocessing
+import pyfftw
+nthread = multiprocessing.cpu_count()
+
 inputTemplate = "\
  $newrun \n\
  aw0   =  __AW0__ \n\
@@ -574,8 +578,8 @@ class RadiationField():
         
     def copy_param(self,dfl1):
         self.dx=dfl1.dx
-        self.dx=dfl1.dy
-        self.dx=dfl1.dz
+        self.dy=dfl1.dy
+        self.dz=dfl1.dz
         self.xlamds=dfl1.xlamds
         self.domain_z=dfl1.domain_z
         self.domain_xy=dfl1.domain_xy
@@ -628,42 +632,71 @@ class RadiationField():
 
 def dfl_pad_z(dfl, padn):
     assert mod(padn,1)==0,'pad should be integer'
+    start = time.time()
     if padn>1:
+        print('    padding dfl by '+str(padn))
         if mod(padn,2)==0: #check for odd
             padn=int(padn+1)
         padn_n=(padn-1)/2*dfl.Nz() #number of slices to add before and after
         dfl_pad=RadiationField((dfl.Nz()+2*padn_n,dfl.Ny(),dfl.Nx()))
+        dfl_pad.copy_param(dfl)
         # dfl.Lz=dfl.Lz*padn
         dfl_pad.fld[padn_n:-padn_n,:,:]=dfl.fld
         # dfl_pad.fld=np.pad(dfl.fld,((padn_n,padn_n),(0,0),(0,0)),'constant',constant_values=(0,0))
-        return dfl_pad
     elif padn<-1:
         if mod(padn,2)==0: #check for odd
             padn=int(padn-1)
         padn=abs(padn)
+        print('    de-padding dfl by '+str(padn))
         # padn_n=dfl.Nz()/padn
         padn_n=dfl.Nz()/padn*((padn-1)/2)
         dfl_pad=RadiationField()
+        dfl_pad.copy_param(dfl)
         dfl_pad.fld=dfl.fld[padn_n:-padn_n,:,:]
-        return dfl_pad
     else: return dfl
+    
+    elapsed = time.time() - start
+    if elapsed<60: print('      done in %.2f ' %elapsed +'sec')
+    else: print('      done in %.2f ' %elapsed/60 +'min')
+    
+    return dfl_pad
+    
 
-def dfl_fft_z(dfl): #move to somewhere else
+def dfl_fft_z(dfl,method='np',nthread = multiprocessing.cpu_count()): #move to somewhere else
+    print('    calculating fft from '+dfl.domain_z+' domain with '+method)
+    start = time.time()
     dfl_fft=RadiationField(dfl.shape())
     dfl_fft.copy_param(dfl)
+    
     if dfl.domain_z=='t':
-        dfl_fft.fld=np.fft.fft(dfl.fld,axis=0)
-        dfl_fft.fld=np.fft.ifftshift(dfl.fld,0)
-        dfl_fft.fld/=sqrt(dfl.Nz())
+        if method=='np':
+            dfl_fft.fld=np.fft.fft(dfl.fld,axis=0)
+        elif method=='pyfftw':
+            fft = pyfftw.builders.fft(dfl.fld, axis=0, overwrite_input=False, planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
+            dfl_fft.fld=fft()
+        else: raise ValueError('fft method should be "np" or "pyfftw"')
+        dfl_fft.fld=np.fft.ifftshift(dfl_fft.fld,0)
+        dfl_fft.fld/=sqrt(dfl_fft.Nz())
         dfl_fft.domain_z='f'
-        return dfl_fft
+        # return dfl_fft
     elif dfl.domain_z=='f':
         dfl_fft.fld=np.fft.fftshift(dfl.fld,0)
-        dfl_fft.fld=np.fft.ifft(dfl.fld,axis=0)
-        dfl_fft.fld*=sqrt(dfl.Nz())
+        if method=='np':
+            dfl_fft.fld=np.fft.ifft(dfl_fft.fld,axis=0)
+        elif method=='pyfftw':
+            fft = pyfftw.builders.ifft(dfl_fft.fld, axis=0, overwrite_input=False, planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
+            dfl_fft.fld=fft()
+        else: raise ValueError('fft method should be "np" or "pyfftw"')
+        dfl_fft.fld*=sqrt(dfl_fft.Nz())
         dfl_fft.domain_z='t'
-        return dfl_fft
         
+    else: raise ValueError('domain_z value should be "f" or "t"')
+    
+    elapsed = time.time() - start
+    if elapsed<60: print('      done in %.2f ' %elapsed +'sec')
+    else: print('      done in %.2f ' %elapsed/60 +'min')
+    return dfl_fft
+    
 def dfl_filt(dfl,trf,mode):
     assert trf.__class__==TransferFunction,'Wrong TransferFunction class'
     assert dfl.domain_z=='f','wrong dfl domain (must be frequency)!'
@@ -677,9 +710,12 @@ def dfl_filt(dfl,trf,mode):
         raise ValueError('frequency scales of dfl and transfer function do not overlap')
     filt_interp=np.interp(dfl.scale_z(),filt_lamdscale,filt)
     
-    dfl.fld*=filt_interp[:,np.newaxis,np.newaxis]
+    dfl_filt=RadiationField(dfl.shape())
+    dfl_filt.copy_param(dfl)
+    dfl_filt.fld=dfl.fld*filt_interp[:,np.newaxis,np.newaxis]
     
-    return #dfl
+    return dfl_filt
+    
     
 ''' 
    I/O functions

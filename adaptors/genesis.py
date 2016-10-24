@@ -7,11 +7,12 @@ import struct
 from copy import copy, deepcopy
 import time, os
 from ocelot.rad.fel import *
-from ocelot.cpbd.beam import Beam, gauss_from_twiss
+from ocelot.cpbd.beam import Twiss,Beam, gauss_from_twiss
 from ocelot.cpbd.elements import *
 import ocelot.utils.reswake as w
 from ocelot.common.math_op import *
 from ocelot.common.globals import * #import of constants like "h_eV_s" and "speed_of_light"
+
 from numpy import *
 
 inputTemplate = "\
@@ -288,18 +289,18 @@ class GenesisInput: # Genesis input files storage object
         self.svar = 0.01  #Defines the scan range of the selected scan parameter. The parameter is varied between (1-SVAR) and (1+SVAR) of its initial value.
         
         #I/O
-        self.iphsty =    1 # Generate output in the main output file at each IPHSTYth integration step. To disable output set IPHSTY to zero. 
-        self.ishsty =    1 # Generate output in the main output file for each ISHSTYth slice. 
-        self.ippart =    0 # Write the particle distribution to file at each IPPARTth integration step. To disable output set IPPART to zero. The filename is the same of the main outputfile + the extension '.par'. 
-        self.ispart =    0 # Write the particle distribution to file for every ISPART slice. 
-        self.ipradi =    0 # Write the field distribution to file at each IPRADIth integration step. To disable output set IPRADI to zero. The filename is the same of the main outputfile + the extension '.fld'. 
-        self.isradi =    0 # Write the field distribution to file for every ISRADI slice. 
-        self.iotail = 1 # If set to a non-zero value the output time window is the same as the simulated time window. Otherwise the output for the first slices covered by the slippage length is subpressed.
-        self.magin = 1   # read in magnetic lattice (If set to a non-zero value the user is prompted to type in the file name containing a explicit description of the magnetic field.)
-        self.magout = 0   # output magnetic lattice
+        self.iphsty =   1 # Generate output in the main output file at each IPHSTYth integration step. To disable output set IPHSTY to zero. 
+        self.ishsty =   1 # Generate output in the main output file for each ISHSTYth slice. 
+        self.ippart =   0 # Write the particle distribution to file at each IPPARTth integration step. To disable output set IPPART to zero. The filename is the same of the main outputfile + the extension '.par'. 
+        self.ispart =   0 # Write the particle distribution to file for every ISPART slice. 
+        self.ipradi =   0 # Write the field distribution to file at each IPRADIth integration step. To disable output set IPRADI to zero. The filename is the same of the main outputfile + the extension '.fld'. 
+        self.isradi =   0 # Write the field distribution to file for every ISRADI slice. 
+        self.iotail =   1 # If set to a non-zero value the output time window is the same as the simulated time window. Otherwise the output for the first slices covered by the slippage length is subpressed.
+        self.magin =    1   # read in magnetic lattice (If set to a non-zero value the user is prompted to type in the file name containing a explicit description of the magnetic field.)
+        self.magout =   0   # output magnetic lattice
         self.idump =    0 # If set to a non-zero value the complete particle and field distribution is dumped at the undulator exit into two outputfiles.
-        self.idmpfld= 0 # Similar to IDUMP but only for the field distribution. 
-        self.idmppar = 0 # Similar to IDUMP but only for the particle distribution. 
+        self.idmpfld=   0 # Similar to IDUMP but only for the field distribution. 
+        self.idmppar =  0 # Similar to IDUMP but only for the particle distribution. 
         self.lout=[1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
                 #  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24
                 # 1. radiation power
@@ -333,12 +334,20 @@ class GenesisInput: # Genesis input files storage object
         self.distfile = None
         self.outputfile = None
         self.radfile = None
+        self.latticefile = None
         
-        self.ndcut =   -1 # ??? If NDCUT is zero, the time-window is adjusted, so that in average NPART/NBINS particles fall in each slice. 
+        self.beam = None
+        self.dist = None
+        self.lat = None
+        self.dfl = None
+        self.dpa = None
+        self.rad = None
+        
+        self.ndcut =        -1 # ??? If NDCUT is zero, the time-window is adjusted, so that in average NPART/NBINS particles fall in each slice. 
         self.alignradf =    1 # if zero , Genesis 1.3 aligns the radiation field to the electron beam so that the radiaiton field is one ful slippage behind the electron beam.
-        self.offsetradf =    0 # slices to shift the electrron beam with respect to the radiation if ALIGNRADF=1.
-        self.convharm = 1 #When the particle distribution is imported from a PARTFILE Genesis 1.3 allows the upconversion to a higher harmonics. The harmonic number is specified with CONVHARM and has a defulat value of 1, corresponding to no up-conversion. The user has to make sure that in the input deck XLAMDS is adjusted, according to the new wavelength.
-        self.multconv =    0 # If an imported particle distribution from a PARTFILE is up-converted to a higher harmonics the dault behavior is that the number of slices is preserved. This requires that ZSEPis adjusted together with XLAMDS. However if frequency resolution is a problem then a particle distribution can be converted and used multiple times to keep ZSEP constant. The disadvantage is that the CPU execution time is increased as well. 
+        self.offsetradf =   0 # slices to shift the electrron beam with respect to the radiation if ALIGNRADF=1.
+        self.convharm =     1 #When the particle distribution is imported from a PARTFILE Genesis 1.3 allows the upconversion to a higher harmonics. The harmonic number is specified with CONVHARM and has a defulat value of 1, corresponding to no up-conversion. The user has to make sure that in the input deck XLAMDS is adjusted, according to the new wavelength.
+        self.multconv =     0 # If an imported particle distribution from a PARTFILE is up-converted to a higher harmonics the dault behavior is that the number of slices is preserved. This requires that ZSEPis adjusted together with XLAMDS. However if frequency resolution is a problem then a particle distribution can be converted and used multiple times to keep ZSEP constant. The disadvantage is that the CPU execution time is increased as well. 
         
         self.ibfield =  0.0 #When the PARTFILE features is used the imported particle distribution can be tracked through a generic 4 magnet chicane before running the Genesis simulation. The chicane consists out of 4 bending magnets of the field strength IBFIELD and length IMAGL separated by 5 drifts of length IDRIL.
         self.imagl =    0.0 #The length of each bending magnet of the chicane. If the magnet length is set to zero but IDRIL is not the resulting beam line correspond to a simple drift of the length 5 times IDRIL
@@ -382,12 +391,12 @@ class GenesisInput: # Genesis input files storage object
         self.itram65 = 0 
         self.itram66 = 1 
         
-        self.iallharm =    0 #Setting the value to a non-zero value will also include all harmonics between 1 and NHARM
-        self.iharmsc =    0 # setting to a non-zero value includes the coupling of the harmonic radiation back to the electron beam for a self-consistent model of harmonics. Enabling this feature will automatically include all harmonics by setting IALLHARM to one.
-        self.isntyp =    0 # Non-zero if the user wants to use the Pennman algorithm for the shot noise (which is not recommended).
+        self.iallharm = 0 #Setting the value to a non-zero value will also include all harmonics between 1 and NHARM
+        self.iharmsc =  0 # setting to a non-zero value includes the coupling of the harmonic radiation back to the electron beam for a self-consistent model of harmonics. Enabling this feature will automatically include all harmonics by setting IALLHARM to one.
+        self.isntyp =   0 # Non-zero if the user wants to use the Pennman algorithm for the shot noise (which is not recommended).
         
         self.ilog  =    0 #Create a log file.
-        self.ffspec =    0 # amplitude/phase values for spectrum calculation: 0 - on-axis power/phase along the pulse, -1 - the same in far field, 1 - near field total power
+        self.ffspec =   0 # amplitude/phase values for spectrum calculation: 0 - on-axis power/phase along the pulse, -1 - the same in far field, 1 - near field total power
         
   
         #self.useBeamFile = False
@@ -437,7 +446,7 @@ class GenesisInput: # Genesis input files storage object
         if self.magin == 0:
             input = input.replace("__MAGFILE__\n", "")
         else:
-            input = input.replace("__MAGFILE__\n", " maginfile ='lattice.inp'\n")
+            input = input.replace("__MAGFILE__", " maginfile ='" + str(self.latticefile) + "'")
             
         # if self.trama == 1:
             # input = input.replace("__TRAMA__\n", "")
@@ -524,10 +533,10 @@ class GenesisParticlesDist:
     
         self.x = [] # position in x in meters
         self.y = [] # position in y in meters
-        self.px = [] # divergence in x
+        self.px = [] # divergence in x ### rename to xp (xprime == angle)
         self.py = [] # divergence in y
         self.t = [] # longitudinal position in seconds
-        self.e = [] # total energy, normalized mc2
+        self.e = [] # gamma (total energy, normalized mc2) #rename to g?
         self.charge=[]
         
         self.fileName = ''
@@ -535,6 +544,43 @@ class GenesisParticlesDist:
         
     def len(self):
         return len(self.t)
+    
+    def center(self):
+        self.x-=mean(self.x)
+        self.y-=mean(self.y)
+        self.px-=mean(self.px)
+        self.py-=mean(self.py)
+        return self
+    
+    def twiss(self):#not tested!!!
+        from ocelot.cpbd.beam import Twiss
+        tws=Twiss()
+        tws.x=mean(self.x)
+        tws.y=mean(self.y)
+        tws.px=mean(self.px)
+        tws.py=mean(self.py)
+        self=self.center()
+        
+        self.px = self.px*(1.-0.5*self.px**2 - 0.5*self.py**2)
+        self.py = self.py*(1.-0.5*self.px**2 - 0.5*self.py**2)
+        
+        tws.xx=mean(self.x**2)
+        tws.yy=mean(self.y**2)
+        tws.pxpx=mean(self.px**2)
+        tws.pypy=mean(self.py**2)
+        tws.xpx=mean(self.x*self.px)
+        tws.ypy=mean(self.y*self.py)
+        # mean_g=mean(self.e)
+        tws.E=mean(self.e)*m_e_GeV
+        
+        tws.emit_x= sqrt(tws.x*tws.pxpx-tws.xpx**2)
+        tws.emit_y= sqrt(tws.y*tws.pypy-tws.ypy**2)
+        tws.beta_x=tws.x/tws.emit_x
+        tws.beta_y=tws.y/tws.emit_y
+        tws.alpha_x=-tws.xpx/tws.emit_x
+        tws.alpha_y=-tws.ypy/tws.emit_y
+        
+        return tws
     
 class GenesisBeam(): 
     '''
@@ -545,7 +591,41 @@ class GenesisBeam():
         self.column_values={}
         self.fileName=''
         self.filePath=''
+    
+    def len(self):
+        return len(self.z)
+    
+    def __delitem__(self,indarr):
+        self.z=np.delete(self.z,indarr)
+        if hasattr(self,'I'):
+            self.I=np.delete(self.I,indarr)
+        if hasattr(self,'g0'):
+            self.g0=np.delete(self.g0,indarr)
+        if hasattr(self,'dg'):
+            self.dg=np.delete(self.dg,indarr)
+        if hasattr(self,'x'):
+            self.x=np.delete(self.x,indarr)
+        if hasattr(self,'y'):
+            self.y=np.delete(self.y,indarr)
+        if hasattr(self,'px'):
+            self.px=np.delete(self.px,indarr)
+        if hasattr(self,'py'):
+            self.py=np.delete(self.py,indarr)
+        if hasattr(self,'ex'):
+            self.ex=np.delete(self.ex,indarr)
+        if hasattr(self,'ey'):
+            self.ey=np.delete(self.ey,indarr)
+        if hasattr(self,'betax'):
+            self.betax=np.delete(self.betax,indarr)
+        if hasattr(self,'betay'):
+            self.betay=np.delete(self.betay,indarr)
+        if hasattr(self,'alphax'):
+            self.alphax=np.delete(self.alphax,indarr)
+        if hasattr(self,'alphay'):
+            self.alphay=np.delete(self.alphay,indarr)
+        return self
         
+    
 
 
 class GenesisRad(): 
@@ -596,7 +676,7 @@ def read_genesis_output(filePath, readall=True, debug=1, precision=float):
     import re
     out = GenesisOutput()
     out.filePath = filePath
-    out.fileName = filePath[-filePath[::-1].find(os.path.sep)::]
+    out.fileName = file_from_path(filePath)
 
     if debug>0: print('    reading output file "'+out.fileName+'"')
 #    print '        - reading from ', fileName
@@ -751,7 +831,7 @@ def read_genesis_output(filePath, readall=True, debug=1, precision=float):
             if debug>1: print ('      calculating spectrum')
             out.spec = abs(np.fft.fft(np.sqrt(np.array(out.power)) * np.exp( 1.j* np.array(out.phi_mid) ) , axis=0))**2/sqrt(out.nSlices)/(2*out.leng/out('ncar'))**2/1e10
             if debug>1: print ('        done')
-            e_0=1239.8/out('xlamds')/1e9            
+            e_0=1239.8/out('xlamds')/1e9
             out.freq_ev = h_eV_s * np.fft.fftfreq(len(out.spec), d=out('zsep') * out('xlamds')*out('ishsty') / speed_of_light)+e_0# d=out.dt
             
             out.spec = np.fft.fftshift(out.spec,axes=0)
@@ -1069,6 +1149,19 @@ def read_dist_file(filePath,debug=1):
     
     return dist
 
+# def dist_file_str(dist):
+    # #bad
+    # header='? VERSION = 1.0 \n? SIZE = %s \n? CHARGE = %E \n? COLUMNS X XPRIME Y YPRIME T P\n'%(len(dist.x),dist.charge)
+    
+    # f_str = header
+    
+    # for i in range(dist.len()):
+        # [dist.x[i],dist.px[i],dist.y[i],dist.py[i],dist.t[i],dist.e[i]]:
+            # f_str = f_str + ('%.5e' % col)+' '
+        # f_str = f_str.rstrip() + '\n'
+    
+    # return f_str
+
 def write_dist_file (dist,filePath,debug=1):
 
     #REQUIRES NUMPY 1.7
@@ -1157,33 +1250,57 @@ def dist2beam(dist,step=1e-7):
         beam.z[i]=(t_min+t_step*(i+0.5))*speed_of_light
         dist_mean_g=beam.g0[i]
         
+        if sum(indices)>2:
+            dist_e=dist.e[indices]
+            dist_x=dist.x[indices]
+            dist_y=dist.y[indices]
+            dist_px=dist.px[indices]
+            dist_py=dist.py[indices]
+            dist_mean_g=mean(dist_e)
+            
+            beam.I[i]=sum(indices)*part_c/t_step
+            beam.g0[i]= mean(dist_e)
+            beam.dg[i]= std(dist_e)
+            beam.x[i]=  mean(dist_x)
+            beam.y[i]=  mean(dist_y)
+            beam.px[i]= mean(dist_px)
+            beam.py[i]= mean(dist_py)
+            beam.ex[i]= dist_mean_g*(mean(dist_x**2)*mean(dist_px**2)-mean(dist_x*dist_px)**2)**0.5
+            # if beam.ex[i]==0: beam.ey[i]=1e-10
+            beam.ey[i]= dist_mean_g*(mean(dist_y**2)*mean(dist_py**2)-mean(dist_y*dist_py)**2)**0.5
+            # if beam.ey[i]==0: beam.ey[i]=1e-10
+            beam.betax[i]=dist_mean_g*mean(dist_x**2)/beam.ex[i]
+            beam.betay[i]=dist_mean_g*mean(dist_y**2)/beam.ey[i]
+            beam.alphax[i]=-dist_mean_g*mean(dist_x*dist_px)/beam.ex[i]
+            beam.alphay[i]=-dist_mean_g*mean(dist_y*dist_py)/beam.ey[i]
+
+    idx=np.where(np.logical_or.reduce((beam.I==0, beam.g0==0,beam.betax>mean(beam.betax)*10,beam.betay>mean(beam.betay)*10)))
+    del beam[idx]
+    # for i in reversed(range(npoints-1)):
+        # if beam.I[i]==0:
+            # np.delete(beam.I,i)
+            # np.delete(beam.g0,i)
+            # np.delete(beam.dg,i)
+            # np.delete(beam.x,i)
+            # np.delete(beam.y,i)
+            # np.delete(beam.px,i)
+            # np.delete(beam.py,i)
+            # np.delete(beam.ex,i)
+            # np.delete(beam.ey,i)
+            # np.delete(beam.betax,i)
+            # np.delete(beam.betay,i)
+            # np.delete(beam.alphax,i)
+            # np.delete(beam.alphay,i)
 
         
-        dist_e=dist.e[indices]
-        dist_x=dist.x[indices]
-        dist_y=dist.y[indices]
-        dist_px=dist.px[indices]
-        dist_py=dist.py[indices]
-        dist_mean_g=mean(dist_e)
-        
-        beam.I[i]=sum(indices)*part_c/t_step
-        beam.g0[i]= mean(dist_e)
-        beam.dg[i]= std(dist_e)
-        beam.x[i]=  mean(dist_x)
-        beam.y[i]=  mean(dist_y)
-        beam.px[i]= mean(dist_px)
-        beam.py[i]= mean(dist_py)
-        beam.ex[i]= dist_mean_g*(mean(dist_x**2)*mean(dist_px**2)-mean(dist_x*dist_px)**2)**0.5
-        beam.ey[i]= dist_mean_g*(mean(dist_y**2)*mean(dist_py**2)-mean(dist_y*dist_py)**2)**0.5
-        beam.betax[i]=dist_mean_g*mean(dist_x**2)/beam.ex[i]
-        beam.betay[i]=dist_mean_g*mean(dist_y**2)/beam.ey[i]
-        beam.alphax[i]=-dist_mean_g*mean(dist_x*dist_px)/beam.ex[i]
-        beam.alphay[i]=-dist_mean_g*mean(dist_y*dist_py)/beam.ey[i]
+    beam.columns=['ZPOS', 'GAMMA0', 'DELGAM', 'EMITX', 'EMITY', 'BETAX', 'BETAY', 'XBEAM', 'YBEAM', 'PXBEAM', 'PYBEAM', 'ALPHAX', 'ALPHAY', 'CURPEAK', 'ELOSS']
         
     beam.idx_max = np.argmax(beam.I)
     beam.eloss=np.zeros_like(beam.z)
     beam.fileName=dist.fileName+'.beam'
     beam.filePath=dist.filePath+'.beam'
+    
+    beam.zsep = beam.z[1] - beam.z[0] #get rid of
         
     return(beam)
 
@@ -1522,8 +1639,8 @@ def generate_input(up, beam, itdp=False):
     inp.xlamd = up.lw
     inp.aw0 = up.K * np.sqrt(0.5) 
     inp.awd=inp.aw0
-    inp.delgam = beam.sigma_E / 0.000510998
-    inp.gamma0 = beam.E / 0.000510998
+    inp.delgam = beam.sigma_E / m_e_GeV
+    inp.gamma0 = beam.E / m_e_GeV
     inp.rxbeam = np.sqrt (beam.emit_x * beam.beta_x )
     inp.rybeam = np.sqrt (beam.emit_y * beam.beta_y )
     
@@ -1634,22 +1751,22 @@ def generate_lattice(lattice, unit=1.0, energy = None, debug = False):
 
     return lat + undLat + driftLat + quadLat
 
-def rad_file_str(beam):
-    #header = "# \n? VERSION = 1.0\n? SIZE ="+str(len(beam.column_values['ZPOS']))+"\n? COLUMNS ZPOS GAMMA0 DELGAM EMITX EMITY BETAX BETAY XBEAM YBEAM PXBEAM PYBEAM ALPHAX ALPHAY CURPEAK ELOSS\n"
-    header = "# \n? VERSION = 1.0\n? SIZE ="+str(len(beam.z))+"\n? COLUMNS"
+def rad_file_str(rad):
+    #header = "# \n? VERSION = 1.0\n? SIZE ="+str(len(rad.column_values['ZPOS']))+"\n? COLUMNS ZPOS GAMMA0 DELGAM EMITX EMITY BETAX BETAY XBEAM YBEAM PXBEAM PYBEAM ALPHAX ALPHAY CURPEAK ELOSS\n"
+    header = "# \n? VERSION = 1.0\n? SIZE ="+str(len(rad.z))+"\n? COLUMNS"
     #ZPOS GAMMA0 DELGAM EMITX EMITY BETAX BETAY XBEAM YBEAM PXBEAM PYBEAM ALPHAX ALPHAY CURPEAK ELOSS\n"
-    for col in beam.columns:
+    for col in rad.columns:
         header = header + " " + col 
     header +="\n"
     
     f_str = header
     
-    beam.column_values['ZPOS'] = beam.z 
-    beam.column_values['PRAD0'] = beam.prad0
+    rad.column_values['ZPOS'] = rad.z 
+    rad.column_values['PRAD0'] = rad.prad0
     
-    for i in range(len(beam.z)):
-        for col in beam.columns:
-            buf = str(beam.column_values[col][i])
+    for i in range(len(rad.z)):
+        for col in rad.columns:
+            buf = str(rad.column_values[col][i])
             f_str = f_str + buf + ' '
         f_str = f_str.rstrip() +  '\n'
     
@@ -1666,32 +1783,51 @@ def beam_file_str(beam):
     
     f_str = header
     
+    for parm in [['z','ZPOS'],
+        ['I','CURPEAK'],
+        ['ex','EMITX'],
+        ['ey','EMITY'],
+        ['betax','BETAX'],
+        ['betay','BETAY'],
+        ['alphax','ALPHAX'],
+        ['alphay','ALPHAY'],
+        ['x','XBEAM'],
+        ['y','YBEAM'],
+        ['px','PXBEAM'],
+        ['py','PYBEAM'],
+        ['g0','GAMMA0'],
+        ['dg','DELGAM'],
+        ['eloss','ELOSS'],
+        ]:
+        try:
+            beam.column_values[parm[1]] = getattr(beam,parm[0])
+        except:
+            pass
+    # beam.column_values['ZPOS'] = beam.z 
+    # beam.column_values['CURPEAK'] = beam.I
     
-    beam.column_values['ZPOS'] = beam.z 
-    beam.column_values['CURPEAK'] = beam.I
-    
-    try:
-        beam.column_values['EMITX'] = beam.ex
-        beam.column_values['EMITY'] = beam.ey
+    # try:
+        # beam.column_values['EMITX'] = beam.ex
+        # beam.column_values['EMITY'] = beam.ey
         
-        beam.column_values['BETAX'] = beam.betax
-        beam.column_values['BETAY'] = beam.betay
+        # beam.column_values['BETAX'] = beam.betax
+        # beam.column_values['BETAY'] = beam.betay
         
-        beam.column_values['ALPHAX'] = beam.alphax
-        beam.column_values['ALPHAY'] = beam.alphay
+        # beam.column_values['ALPHAX'] = beam.alphax
+        # beam.column_values['ALPHAY'] = beam.alphay
         
-        beam.column_values['XBEAM'] = beam.x
-        beam.column_values['YBEAM'] = beam.y
+        # beam.column_values['XBEAM'] = beam.x
+        # beam.column_values['YBEAM'] = beam.y
         
-        beam.column_values['PXBEAM'] = beam.px
-        beam.column_values['PYBEAM'] = beam.py
+        # beam.column_values['PXBEAM'] = beam.px
+        # beam.column_values['PYBEAM'] = beam.py
         
-        beam.column_values['GAMMA0'] = beam.g0
-        beam.column_values['DELGAM'] = beam.dg
+        # beam.column_values['GAMMA0'] = beam.g0
+        # beam.column_values['DELGAM'] = beam.dg
         
-        beam.column_values['ELOSS'] = beam.eloss
-    except:
-        pass
+        # beam.column_values['ELOSS'] = beam.eloss
+    # except:
+        # pass
     
     for i in range(len(beam.z)):
         for col in beam.columns:
@@ -2225,7 +2361,7 @@ def cut_beam(beam = None, cut_z = [-inf, inf]):
         # beam_new.alphax = np.extract(condition,beam.alphax)
         # beam_new.alphay = np.extract(condition,beam.alphay)
 
-        beam_new.zsep = beam.zsep
+        # beam_new.zsep = beam.zsep
         zmax, Imax = peaks(beam_new.z, beam_new.I, n=1)
         beam_new.idx_max = np.where(beam_new.z == zmax)[0][0]
     else:
@@ -2708,3 +2844,57 @@ def astra2genesis_conv_ext(filename_in, filename_out='',center=1):
     adist=read_astra_dist(filename_in)
     dist=astra2genesis_conv(adist,center=1)
     write_dist_file (dist,filename_out,debug=0)
+    
+    
+def file_from_path(path_string):
+    return path_string[-path_string[::-1].find(os.path.sep)::]
+    
+def rematch_dist(dist,tws):
+        
+    betax_n=tws.beta_x
+    betay_n=tws.beta_y
+    alphax_n=tws.alpha_x
+    alphay_n=tws.alpha_y
+    
+    dist=dist.center()
+    
+    x=dist.x
+    y=dist.y
+    px=dist.px
+    py=dist.py
+
+    mean_x2=mean(x**2)
+    mean_y2=mean(y**2)
+    mean_px2=mean(px**2)
+    mean_py2=mean(py**2)
+    mean_xpx=mean(x*px)
+    mean_ypy=mean(y*py)
+    mean_g=mean(dist.e)
+
+    emitx= mean_g*(mean_x2*mean_px2-mean_xpx**2)**0.5
+    emity= mean_g*(mean_y2*mean_py2-mean_ypy**2)**0.5
+    betax=mean_g*mean_x2/emitx
+    betay=mean_g*mean_y2/emity
+    alphax=-mean_g*mean_xpx/emitx
+    alphay=-mean_g*mean_ypy/emity
+    
+    #remove correlation
+    px=px+x*alphax/betax
+    py=py+y*alphay/betay
+    
+    #scale beam
+    x=x*sqrt(betax_n/betax)
+    y=y*sqrt(betay_n/betay)
+    px=px*sqrt(betax/betax_n)
+    py=py*sqrt(betay/betax_n)
+    
+    #add new correlation
+    px=px-alphax_n*x/betax_n
+    py=py-alphay_n*y/betax_n
+    
+    dist.x=x
+    dist.y=y
+    dist.px=px
+    dist.py=py
+    return(dist)
+        

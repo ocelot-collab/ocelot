@@ -17,7 +17,7 @@ from ocelot.common.globals import * #import of constants like "h_eV_s" and
 from matplotlib import rc, rcParams
 
 fntsz=4
-params = {'backend': 'ps', 'axes.labelsize': 3*fntsz, 'font.size': 3*fntsz, 'legend.fontsize': 5*fntsz, 'xtick.labelsize': 4*fntsz,  'ytick.labelsize': 4*fntsz, 'text.usetex': False}
+params = {'backend': 'ps', 'axes.labelsize': 3*fntsz, 'font.size': 3*fntsz, 'legend.fontsize': 4*fntsz, 'xtick.labelsize': 4*fntsz,  'ytick.labelsize': 4*fntsz, 'text.usetex': False}
 rcParams.update(params)
 # rc('text', usetex=False) # required to have greek fonts on redhat
 
@@ -104,9 +104,9 @@ def plot_gen_out_all(handle=None,savefig='png',showfig=False,choice=(1,1,1,1,6.0
             if choice[9]: 
                 dist=dpa2dist(handle,dpa,num_part=5e4,smear=1,debug=debug)
                 f9=plot_dist(dist, figsize=3, fig_name = None, savefig=savefig, showfig=showfig, bins=100,debug=debug)
-            if choice[10]: 
+            if choice[10]:
                 dist=dpa2dist(handle,dpa,num_part=5e4,smear=0,debug=debug)
-                f10=plot_dist(dist, figsize=3, fig_name = None, savefig=savefig, showfig=showfig, bins=(100,100,550,250),debug=debug)
+                f10=plot_dist(dist, figsize=3, fig_name = None, savefig=savefig, showfig=showfig, bins=(100,100,300,200),debug=debug)
                 
     if savefig!=False:
         print('    plots recorded to *.'+str(savefig)+' files')
@@ -1970,6 +1970,8 @@ def plot_dist(dist, figsize=4, fig_name = None, savefig=False, showfig=False, sc
 
 def plot_beam(beam,figsize=4,showfig=False,savefig=False,fig=None,plot_xy=None,debug=0):
     
+    fontsize=15
+    
     if plot_xy==None:
         if mean(beam.x)==0 and mean(beam.y)==0 and mean(beam.px)==0 and mean(beam.py)==0:
             plot_xy=0
@@ -1991,7 +1993,7 @@ def plot_beam(beam,figsize=4,showfig=False,savefig=False,fig=None,plot_xy=None,d
     
     p2,= plt.plot(1.e6 * np.array(beam.z),1.e-3 * np.array(beam.eloss),'g',lw=3)
     
-    ax.legend([p1, p2],['I [A]','Wake [KV/m]'],loc=4)
+    ax.legend([p1, p2],[r'$I [A]$',r'Wake $[KV/m]$'],loc=4,fontsize=fontsize)
     #ax.set_xlim([np.amin(beam.z),np.amax(beam.x)])
     ax = fig.add_subplot(2+plot_xy,2,2) 
     plt.grid(True)
@@ -2006,11 +2008,11 @@ def plot_beam(beam,figsize=4,showfig=False,savefig=False,fig=None,plot_xy=None,d
     ax = fig.add_subplot(2+plot_xy,2,3) 
     plt.grid(True)
     ax.set_xlabel(r'$\mu m$')
-    p1, = plt.plot(1.e6 * np.array(beam.z),beam.ex, 'r', lw=3)
-    p2, = plt.plot(1.e6 * np.array(beam.z),beam.ey, 'g', lw=3)
+    p1, = plt.plot(1.e6 * np.array(beam.z),beam.ex*1e6, 'r', lw=3)
+    p2, = plt.plot(1.e6 * np.array(beam.z),beam.ey*1e6, 'g', lw=3)
     plt.plot(1.e6 * beam.z[beam.idx_max],beam.ex[beam.idx_max], 'bs')
     
-    ax.legend([p1,p2],[r'$\varepsilon_x$',r'$\varepsilon_y$'])
+    ax.legend([p1,p2],[r'$\varepsilon_x [\mu m]$',r'$\varepsilon_y [\mu m]$'],fontsize=fontsize)
     #ax3.legend([p3,p4],[r'$\varepsilon_x$',r'$\varepsilon_y$'])
     
     
@@ -2021,7 +2023,7 @@ def plot_beam(beam,figsize=4,showfig=False,savefig=False,fig=None,plot_xy=None,d
     p2, = plt.plot(1.e6 * np.array(beam.z),beam.betay, 'g', lw=3)
     plt.plot(1.e6 * beam.z[beam.idx_max],beam.betax[beam.idx_max], 'bs')
     
-    ax.legend([p1,p2],[r'$\beta_x$',r'$\beta_y$'])
+    ax.legend([p1,p2],[r'$\beta_x [m]$',r'$\beta_y [m]$'],fontsize=fontsize)
 
     if plot_xy:
 
@@ -2031,7 +2033,7 @@ def plot_beam(beam,figsize=4,showfig=False,savefig=False,fig=None,plot_xy=None,d
         p1, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(beam.x), 'r', lw=3)
         p2, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(beam.y), 'g', lw=3)
         
-        ax.legend([p1,p2],[r'$x [\mu m]$',r'$y [\mu m]$'])
+        ax.legend([p1,p2],[r'$x [\mu m]$',r'$y [\mu m]$'],fontsize=fontsize)
 
         ax = fig.add_subplot(3,2,6)
         plt.grid(True)
@@ -2039,7 +2041,9 @@ def plot_beam(beam,figsize=4,showfig=False,savefig=False,fig=None,plot_xy=None,d
         p1, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(beam.px), 'r', lw=3)
         p2, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(beam.py), 'g', lw=3)
         
-        ax.legend([p1,p2],[r'$p_x [\mu rad]$',r'$p_y [\mu rad]$'])
+        ax.legend([p1,p2],[r'$p_x [\mu rad]$',r'$p_y [\mu rad]$'],fontsize=fontsize)
+        
+    fig.subplots_adjust(hspace=0.2,wspace=0.3)
         
     if savefig!=False:
         if savefig==True:

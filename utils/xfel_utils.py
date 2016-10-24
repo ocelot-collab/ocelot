@@ -166,6 +166,177 @@ def rematch_beam_lat(beam, lat, extra_fodo, l_fodo, beta_mean):
     beam.beta_y, beam.alpha_y = tw0m.beta_y, tw0m.alpha_y
     
 
+
+def run1(inp, launcher,readout=1,assembly_ver='sys',debug=1):
+    # inp               - GenesisInput() object with genesis input parameters
+    # launcher          - MpiLauncher() object obtained via get_genesis_launcher() function
+    # readout           - Parameter to read and calculate values from the output:
+    #                   0 - do not read output
+    #                   1 - read input and current
+    #                   2 - read all values
+    # dfl_slipage_incl  - whether to dedicate time in order to keep the dfl slices, slipped out of the simulation window. if zero, reduces assembly time by ~30%
+    # assembly_ver      - version of the assembly script: 'sys' - system based, 'pyt' - python based
+
+    # create experimental directory
+    
+
+    
+    try:
+        os.makedirs(inp.run_dir)
+    except OSError as exc: 
+        if exc.errno == errno.EEXIST and os.path.isdir(inp.run_dir):
+            pass
+        else: raise
+    
+    if inp.stageid==None:
+        inp_path = inp.run_dir + '/run.' + str(inp.runid) + '.inp'
+        out_path = inp.run_dir + '/run.' + str(inp.runid) + '.gout'
+    else:
+        inp_path = inp.run_dir + '/run.' + str(inp.runid) + '.s'+ str(inp.stageid) + '.inp'
+        out_path = inp.run_dir + '/run.' + str(inp.runid) + '.s'+ str(inp.stageid) + '.gout'
+    
+    inp_file=file_from_path(inp_path)
+    out_file=file_from_path(out_path)
+    
+
+
+    if debug>0: print ('    removing old files')
+    os.system('rm -rf ' + out_path+'*') # to make sure out files are cleaned
+    os.system('rm -rf ' + inp_path+'*') # to make sure inp files are cleaned
+    # os.system('rm -rf ' + out_file + '.dfl*') # to make sure field file is not attached to old one
+    # os.system('rm -rf ' + out_file + '.dpa*') # to make sure particle file is not attached to old one
+    # os.system('rm -rf ' + inp.run_dir + '/lattice.inp')
+    os.system('rm -rf ' + inp.run_dir + '/tmp.cmd')
+    # os.system('rm -rf ' + inp.run_dir + '/tmp.gen')  
+    
+    # create and fill necessary input files
+
+    
+    
+    if inp.latticefile == None:
+        if inp.lat != None:
+            if debug>1: print ('    writing '+inp_file+'.lat')
+            open(inp_path+'.lat','w').write(generate_lattice(inp.lat, unit = inp.xlamd, energy = inp.gamma0*m_e_GeV ))
+            inp.latticefile=inp_file+'.lat'
+    
+    if inp.beamfile == None:
+        if inp.beam != None:
+            if debug>1: print ('    writing '+inp_file+'.beam')
+            open(inp_path+'.beam','w').write(beam_file_str(inp.beam))
+        
+    if inp.distfile == None:
+        if inp.dist != None:
+            if debug>1: print ('    writing '+inp_file+'.dist')
+            write_dist_file(inp.dist,inp_path+'.dist',debug=1)
+            inp.distfile = inp_file+'.dist'
+
+    if inp.partfile == None:
+        if inp.dpa != None:
+            if debug>1: print ('    writing '+inp_file+'.dpa')
+            print ('!!!!!!! no write_radiation_file() function')
+            inp.partfile = inp_file+'.dpa'
+
+    if inp.fieldfile == None:
+        if inp.dfl != None:
+            if debug>1: print ('    writing '+inp_file+'.dfl')
+            write_radiation_file(inp_path+'.dfl',inp.dfl,debug=1)
+            inp.fieldfile = inp_file+'.dfl'
+    
+    if inp.radfile == None:
+        if inp.rad != None:
+            if debug>1: print ('    writing '+inp_file+'.rad')
+            open(inp_path+'.rad','w').write(rad_file_str(inp.rad))
+            inp.radfile = inp_file+'.rad'
+
+    if inp.outputfile==None:
+        inp.outputfile=out_file
+    open(inp_path,'w').write(inp.input())
+    open(inp.run_dir + '/tmp.cmd','w').write(inp_file+'\n')
+
+        
+    launcher.dir = inp.run_dir
+    launcher.prepare()
+    if debug>1: print(inp.input())
+    # RUNNING GENESIS ###
+    launcher.launch() ###
+    # RUNNING GENESIS ###
+    
+    # genesis output slices assembly
+    if debug>1: print (' ')
+    if debug>0: print ('    assembling slices')
+    assembly_time = time.time()
+    
+    dfl_slipage_incl=True
+    if assembly_ver=='sys':
+    
+        if debug>0: print ('      assembling *.out file')
+        start_time = time.time()
+        os.system('cat ' + out_path +'.slice* >> '+ out_path)
+        os.system('rm ' + out_path +'.slice* 2>/dev/null')
+        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
+        
+        if debug>0: print ('      assembling *.dfl file')
+        start_time = time.time()
+        if dfl_slipage_incl:
+            os.system('cat ' + out_path+'.dfl.slice*  >> ' + out_path+'.dfl.tmp')
+            #bytes=os.path.getsize(out_path +'.dfl.tmp')
+            command='dd if=' + out_path +'.dfl.tmp of='+ out_path +'.dfl conv=notrunc conv=notrunc 2>/dev/null' # obs='+str(bytes)+' skip=1
+            os.system(command)
+        else:
+            os.system('cat ' + out_path+'.dfl.slice*  > ' + out_path+'.dfl')
+        os.system('rm ' + out_path +'.dfl.slice* 2>/dev/null')
+        os.system('rm ' + out_path +'.dfl.tmp 2>/dev/null')
+        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
+        
+        if debug>0: print ('      assembling *.dpa file')
+        start_time = time.time()
+        os.system('cat ' + out_path +'.dpa.slice* >> ' + out_path+'.dpa')
+        os.system('rm ' + out_path +'.dpa.slice* 2>/dev/null')
+        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
+        # if debug>0: print ('      removing temporary files')
+    
+    elif assembly_ver=='pyt':
+        #there is a bug with dfl assembly
+        import glob
+        ram=1
+        
+        if debug>0: print ('      assembling *.out file')
+        start_time = time.time()
+        assemble(out_path,ram=ram,debug=debug)
+        os.system('rm ' + out_path +'.slice* 2>/dev/null')
+        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
+    
+        if debug>0: print ('      assembling *.dfl file')
+        start_time = time.time()
+        assemble(out_path+'.dfl',tailappend=dfl_slipage_incl,ram=ram,debug=debug)
+        os.system('rm ' + out_path +'.dfl.slice* 2>/dev/null')
+        os.system('rm ' + out_path +'.dfl.tmp 2>/dev/null')
+        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
+        
+        if debug>0: print ('      assembling *.dpa file')
+        start_time = time.time()
+        assemble(out_path+'.dpa',ram=ram,debug=debug)
+        os.system('rm ' + out_path +'.dpa.slice* 2>/dev/null')
+        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
+    
+    # start_time = time.time()
+    
+
+
+    # print ('        done in %.2f seconds' % (time.time() - start_time))
+    if debug>0: print ('      total time %.2f seconds' % (time.time() - assembly_time))
+    
+    if readout==1:
+        g = read_genesis_output(out_path,readall=0)
+        return g
+    elif readout==2:
+        g = read_genesis_output(out_path,readall=1)
+        return g
+    else:
+        return None
+
+
+    
 def run(inp, launcher,readout=1,dfl_slipage_incl=True,assembly_ver='sys',debug=1):
     # inp               - GenesisInput() object with genesis input parameters
     # launcher          - MpiLauncher() object obtained via get_genesis_launcher() function
@@ -186,6 +357,7 @@ def run(inp, launcher,readout=1,dfl_slipage_incl=True,assembly_ver='sys',debug=1
     
     
     out_file = inp.run_dir + '/run.' + str(inp.runid) + '.gout'
+    inp.latticefile='lattice.inp'
     #remove old files
     if debug>0: print ('    removing old files')
     os.system('rm -rf ' + out_file+'*') # to make sure out file slices are cleaned
@@ -201,9 +373,13 @@ def run(inp, launcher,readout=1,dfl_slipage_incl=True,assembly_ver='sys',debug=1
     open(inp.run_dir + '/tmp.gen','w').write(inp.input())   
     #print ('    before writing /tmp.beam')
     #print inp.beamfile
-    if inp.beamfile != None:
-        if debug>1: print ('    writing /tmp.beam')
-        open(inp.run_dir + '/tmp.beam','w').write(inp.beam_file_str)
+    if inp.beam_file_str != None:
+        if debug>1: print ('    writing '+inp.beam_file)
+        open(inp.run_dir + '/' + inp.beam_file,'w').write(inp.beam_file_str)
+        
+    if inp.dist != None:
+        if debug>1: print ('    writing '+inp.dist_file)
+        write_dist_file (dist,inp.run_dir + '/' + inp.dist_file,debug=1)
     
     launcher.dir = inp.run_dir
     launcher.prepare()

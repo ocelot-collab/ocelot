@@ -608,13 +608,15 @@ class RadiationField():
     def Nx(self): 
         return shape(self.fld)[2]
     def int(self): #3d intensity
-        return abs(self.fld)**2
+        return self.fld.real**2+self.fld.imag**2
     def int_z(self): # intensity projection on z (power [W] or spectral density)
         return np.sum(self.int(),axis=(1,2))
     def int_y(self):
         return np.sum(self.int(),axis=(0,2))
     def int_x(self):
         return np.sum(self.int(),axis=(0,1))
+    def int_xy(self):
+        return np.sum(self.int(),axis=0)
     def E(self): # energy in the pulse [J]
         if self.Nz()>1:
             return np.sum(self.int())*self.Lz()/self.Nz()/speed_of_light 
@@ -648,7 +650,6 @@ class RadiationField():
         
         
 def dfl_shift_z(dfl,s,set_zeros=1):
-    #s in [m]
     # set_zeros - to set the values from out of initial time window to zeros
     assert dfl.domain_z=='t','dfl_shift_z works only in time domain!'
     shift_n=int(s/dfl.dz)
@@ -658,29 +659,24 @@ def dfl_shift_z(dfl,s,set_zeros=1):
     if set_zeros:
         if shift_n>0: dfl.fld[:shift_n,:,:]=0
         if shift_n<0: dfl.fld[shift_n:,:,:]=0
-    elapsed = time.time() - start
-    print('      done in %.2f ' %elapsed +'sec')
+    
+    t_func = time.time() - start
+    print('      done in %.2f ' %t_func +'sec')
     return dfl
 
 def dfl_pad_z(dfl, padn):
     assert mod(padn,1)==0,'pad should be integer'
     start = time.time()
+    
     if padn>1:
-        if mod(padn,2)==0: #check for odd
-            padn=int(padn+1)
         print('    padding dfl by '+str(padn))
         padn_n=(padn-1)/2*dfl.Nz() #number of slices to add before and after
         dfl_pad=RadiationField((dfl.Nz()+2*padn_n,dfl.Ny(),dfl.Nx()))
         dfl_pad.copy_param(dfl)
-        # dfl.Lz=dfl.Lz*padn
         dfl_pad.fld[padn_n:-padn_n,:,:]=dfl.fld
-        # dfl_pad.fld=np.pad(dfl.fld,((padn_n,padn_n),(0,0),(0,0)),'constant',constant_values=(0,0))
     elif padn<-1:
-        if mod(padn,2)==0: #check for odd
-            padn=int(padn-1)
         padn=abs(padn)
         print('    de-padding dfl by '+str(padn))
-        # padn_n=dfl.Nz()/padn
         padn_n=dfl.Nz()/padn*((padn-1)/2)
         dfl_pad=RadiationField()
         dfl_pad.copy_param(dfl)
@@ -690,10 +686,9 @@ def dfl_pad_z(dfl, padn):
         print('      pass')
         return dfl
     
-    elapsed = time.time() - start
-    if elapsed<60: print('      done in %.2f ' %elapsed +'sec')
-    else: print('      done in %.2f ' %elapsed/60 +'min')
-    
+    t_func = time.time() - start
+    if t_func<60: print('      done in %.2f ' %t_func +'sec')
+    else: print('      done in %.2f ' %t_func/60 +'min')
     return dfl_pad
     
 
@@ -726,12 +721,11 @@ def dfl_fft_z(dfl,method='mp',nthread = multiprocessing.cpu_count()): #move to s
         else: raise ValueError("fft method should be 'np' or 'mp'")
         dfl_fft.fld*=sqrt(dfl_fft.Nz())
         dfl_fft.domain_z='t'
-        
     else: raise ValueError("domain_z value should be 't' or 'f'")
     
-    elapsed = time.time() - start
-    if elapsed<60: print('      done in %.2f ' %elapsed +'sec')
-    else: print('      done in %.2f ' %elapsed/60 +'min')
+    t_func = time.time() - start
+    if t_func<60: print('      done in %.2f ' %t_func +'sec')
+    else: print('      done in %.2f ' %t_func/60 +'min')
     return dfl_fft
     
 def dfl_fft_xy(dfl,method='mp',nthread = multiprocessing.cpu_count()): #move to somewhere else
@@ -766,9 +760,9 @@ def dfl_fft_xy(dfl,method='mp',nthread = multiprocessing.cpu_count()): #move to 
         
     else: raise ValueError("domain_xy value should be 's' or 'k'")
     
-    elapsed = time.time() - start
-    if elapsed<60: print('      done in %.2f ' %elapsed +'sec')
-    else: print('      done in %.2f ' %elapsed/60 +'min')
+    t_func = time.time() - start
+    if t_func<60: print('      done in %.2f ' %t_func +'sec')
+    else: print('      done in %.2f ' %t_func/60 +'min')
     return dfl_fft
     
 def dfl_trf(dfl,trf,mode):
@@ -789,35 +783,17 @@ def dfl_trf(dfl,trf,mode):
     
     filt_interp_re=np.flipud(np.interp(np.flipud(dfl.scale_z()),np.flipud(filt_lamdscale),np.flipud(np.real(filt))))
     filt_interp_im=np.flipud(np.interp(np.flipud(dfl.scale_z()),np.flipud(filt_lamdscale),np.flipud(np.imag(filt))))
-    # print(dfl.scale_z()[0],dfl.scale_z()[-1],len(dfl.scale_z()))
-    # print(filt_lamdscale[0],filt_lamdscale[-1],len(filt_lamdscale))
     filt_interp=filt_interp_re-1j*filt_interp_im
     del filt_interp_re, filt_interp_im
-    
-    dfl_filt=RadiationField(dfl.shape())
-    dfl_filt.copy_param(dfl)
-    
-    # plt.figure()
-    # plt.plot(filt_lamdscale*1e9,np.real(filt))
-    
-    # plt.figure()
-    # plt.plot(dfl.scale_z()*1e9,sum(dfl.I(),axis=(1,2)))
-    
-    dfl_filt.fld=dfl.fld*filt_interp[:,np.newaxis,np.newaxis]
-    
-    # plt.figure()
-    # plt.plot(dfl_filt.scale_z()*1e9,sum(dfl_filt.I(),axis=(1,2)))
-    
-    # plt.figure()
-    # plt.scatter(dfl_filt.scale_z()*1e9,abs(filt_interp))
-    # plt.show()
-    elapsed = time.time() - start
-    print('      done in %.2f ' %elapsed +'sec')
-    return dfl_filt
+    dfl.fld=dfl.fld*filt_interp[:,np.newaxis,np.newaxis]
+
+    t_func = time.time() - start
+    print('      done in %.2f ' %t_func +'sec')
+    return dfl, filt_interp
     
     
-def dfl_hxrss_filt(dfl,trf,ev_seed,s_delay,st_cpl=1,res_per_fwhm=6,fft_method='mp'):
-    #needs optimizing!!!
+def dfl_hxrss_filt(dfl,trf,ev_seed,s_delay,st_cpl=1,res_per_fwhm=6,fft_method='mp',dump_proj=0):
+    #needs optimizing?
     nthread = multiprocessing.cpu_count()
     if nthread>8: nthread=int(nthread*0.9) #not to occupy all CPUs on login server
     print('  HXRSS dfl filtering')
@@ -827,17 +803,65 @@ def dfl_hxrss_filt(dfl,trf,ev_seed,s_delay,st_cpl=1,res_per_fwhm=6,fft_method='m
     dk_old=2*pi/dfl.Lz()
     dk = cwidth/res_per_fwhm
     padn = np.int(dk_old/dk)
+    if mod(padn,2)==0 and padn!=0: #check for odd
+        padn=int(padn+1)
     
-    dfl=dfl_pad_z(dfl, padn)
-    dfl=dfl_fft_z(dfl,method=fft_method,nthread = multiprocessing.cpu_count())
-    dfl=dfl_trf(dfl,trf,mode='tr')
-    dfl=dfl_fft_z(dfl,method=fft_method,nthread = multiprocessing.cpu_count())
-    dfl=dfl_shift_z(dfl,s_delay,set_zeros=0)
-    dfl=dfl_pad_z(dfl, -padn)
+    if dump_proj:
+        t1=time.time()
+        t_s_scale=dfl.scale_z() #time_small_scale
+        t_s_int_b=dfl.int_z() #intensity_before
+        t2=time.time()
+        
+        dfl=dfl_pad_z(dfl, padn)
+        
+        t3=time.time()
+        t_l_scale=dfl.scale_z()
+        t_l_int_b=dfl.int_z()
+        t4=time.time()
+        
+        dfl=dfl_fft_z(dfl,method=fft_method,nthread = multiprocessing.cpu_count())
+        
+        t5=time.time()
+        f_l_scale=dfl.scale_z() #frequency_large_scale (wavelength in m)
+        f_l_int_b=dfl.int_z()
+        t6=time.time()
+        
+        dfl,f_l_filt=dfl_trf(dfl,trf,mode='tr')
+        
+        t7=time.time()
+        f_l_int_a=dfl.int_z()
+        t8=time.time()
+        
+        dfl=dfl_fft_z(dfl,method=fft_method,nthread = multiprocessing.cpu_count())
+        
+        t9=time.time()
+        t_l_int_a=dfl.int_z()
+        t10=time.time()
+        
+        dfl=dfl_shift_z(dfl,s_delay,set_zeros=0)
+        dfl=dfl_pad_z(dfl, -padn)
+        
+        t11=time.time()
+        t_s_int_a=dfl.int_z() #intensity_after
+        t12=time.time()
+        
+        t_func = time.time() - start
+        t_proj=t2+t4+t6+t8+t10+t12-(t1+t3+t5+t7+t9+t11)
+        print('    done in %.2f sec, (%.2f sec for proj calc)' %(t_func,t_proj))
+        return dfl, ((t_s_scale,t_s_int_b,t_s_int_a),(t_l_scale,t_l_int_b,t_l_int_a),(f_l_scale,f_l_filt,f_l_int_b,f_l_int_a))
     
-    elapsed = time.time() - start
-    print('    done in %.2f ' %elapsed +'sec')
-    return dfl
+    else:
+        dfl=dfl_pad_z(dfl, padn)
+        dfl=dfl_fft_z(dfl,method=fft_method,nthread = multiprocessing.cpu_count())
+        dfl,_=dfl_trf(dfl,trf,mode='tr')
+        dfl=dfl_fft_z(dfl,method=fft_method,nthread = multiprocessing.cpu_count())
+        dfl=dfl_shift_z(dfl,s_delay,set_zeros=0)
+        dfl=dfl_pad_z(dfl, -padn)
+        
+        t_func = time.time() - start
+        print('    done in %.2f ' %t_func +'sec')
+        return dfl,()
+    
 ''' 
    I/O functions
 '''

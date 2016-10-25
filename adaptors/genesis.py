@@ -2265,6 +2265,8 @@ def get_beam_s(beam = None,s=0):
         beam_new.tpulse = (beam.z[-1]-beam.z[0])/speed_of_light*1e15/6 #[fs]
         beam_new.C=np.trapz(beam.I, x=np.array(beam.z)/speed_of_light)*1e9 #bunch charge[nC]
         
+        beam_new.zsep=None #to be removed
+        
         for parm in ['alphax','alphay','betax','betay','z','ex','ey','g0','dg','px','py']:
             if hasattr(beam_new,parm):
                 delattr(beam_new,parm)
@@ -2307,6 +2309,8 @@ def get_beam_peak(beam = None):
         
         beam_new.tpulse = (beam.z[-1]-beam.z[0])/speed_of_light*1e15/6 #[fs]
         beam_new.C=np.trapz(beam.I, x=np.array(beam.z)/speed_of_light)*1e9 #bunch charge[nC]
+        
+        beam_new.zsep=None #to be removed
         
         for parm in ['alphax','alphay','betax','betay','z','ex','ey','g0','dg','px','py']:
             if hasattr(beam_new,parm):

@@ -666,8 +666,8 @@ def dfl_pad_z(dfl, padn):
     assert mod(padn,1)==0,'pad should be integer'
     start = time.time()
     if padn>1:
-        if mod(padn,2)==0: #check for odd
-            padn=int(padn+1)
+        # if mod(padn,2)==0: #check for odd
+            # padn=int(padn+1)
         print('    padding dfl by '+str(padn))
         padn_n=(padn-1)/2*dfl.Nz() #number of slices to add before and after
         dfl_pad=RadiationField((dfl.Nz()+2*padn_n,dfl.Ny(),dfl.Nx()))
@@ -676,8 +676,8 @@ def dfl_pad_z(dfl, padn):
         dfl_pad.fld[padn_n:-padn_n,:,:]=dfl.fld
         # dfl_pad.fld=np.pad(dfl.fld,((padn_n,padn_n),(0,0),(0,0)),'constant',constant_values=(0,0))
     elif padn<-1:
-        if mod(padn,2)==0: #check for odd
-            padn=int(padn-1)
+        # if mod(padn,2)==0: #check for odd
+            # padn=int(padn-1)
         padn=abs(padn)
         print('    de-padding dfl by '+str(padn))
         # padn_n=dfl.Nz()/padn
@@ -827,6 +827,8 @@ def dfl_hxrss_filt(dfl,trf,ev_seed,s_delay,st_cpl=1,res_per_fwhm=6,fft_method='m
     dk_old=2*pi/dfl.Lz()
     dk = cwidth/res_per_fwhm
     padn = np.int(dk_old/dk)
+    if mod(padn,2)==0 and padn!=0: #check for odd
+        padn=int(padn+1)
     
     dfl=dfl_pad_z(dfl, padn)
     dfl=dfl_fft_z(dfl,method=fft_method,nthread = multiprocessing.cpu_count())

@@ -30,6 +30,7 @@ class TransferFunction(object):
         if f.__class__ == TransferFunction:
             f2 = TransferFunction()
             f2.k = f.k
+            f2.ev = f.ev
             # TODO check data grid alignment
             
             f2.tr = self.tr * f.tr

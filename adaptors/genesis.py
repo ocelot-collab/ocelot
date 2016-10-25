@@ -588,7 +588,7 @@ class RadiationField():
         
     def __getitem__(self,i):
         return self.fld[i]
-
+    
     def __setitem__(self,i,fld):
         self.fld[i]=fld
         
@@ -602,21 +602,40 @@ class RadiationField():
         return self.dx*self.Nx()
         
     def Nz(self): 
-        return shape(self.fld)[0] 
+        return shape(self.fld)[0]
     def Ny(self): 
-        return shape(self.fld)[1] 
+        return shape(self.fld)[1]
     def Nx(self): 
-        return shape(self.fld)[2] 
-    def I(self): 
-        return abs(self.fld)**2 
-    def E(self): 
-        if self.Nz()>1: 
-            return np.sum(self.I())*self.Lz()/self.Nz()/speed_of_light 
-        else: 
-            return self.I()
-
-
-
+        return shape(self.fld)[2]
+    def int(self): #3d intensity
+        return abs(self.fld)**2
+    def int_z(self): # intensity projection on z (power [W] or spectral density)
+        return np.sum(self.int(),axis=(1,2))
+    def int_y(self):
+        return np.sum(self.int(),axis=(0,2))
+    def int_x(self):
+        return np.sum(self.int(),axis=(0,1))
+    def E(self): # energy in the pulse [J]
+        if self.Nz()>1:
+            return np.sum(self.int())*self.Lz()/self.Nz()/speed_of_light 
+        else:
+            return self.int()
+    
+    def scale_x(self): #scale in meters or radians
+        if self.domain_xy=='s':
+            return np.linspace(0, self.Lx(), self.Nx())
+        elif self.domain_xy=='k':
+            ang=self.xlamds/self.dx
+            return np.linspace(-ang/2, ang/2, self.Nx())
+        else: raise AttributeError('Wrong domain_xy attribute')
+        
+    def scale_y(self): #scale in meters or radians
+        if self.domain_xy=='s':
+            return np.linspace(0, self.Ly(), self.Ny())
+        elif self.domain_xy=='k':
+            ang=self.xlamds/self.dy
+            return np.linspace(-ang/2, ang/2, self.Ny())
+        else: raise AttributeError('Wrong domain_xy attribute')
         
     def scale_z(self): #scale in meters
         if self.domain_z=='t':
@@ -625,18 +644,31 @@ class RadiationField():
             dk=2*pi/self.Lz();
             k=2*pi/self.xlamds
             return 2*pi/np.linspace(k-dk/2*self.Nz(), k+dk/2*self.Nz(), self.Nz())
-        else: raise AttributeError('Wrong z_domain attribute')
+        else: raise AttributeError('Wrong domain_z attribute')
         
         
-
+def dfl_shift_z(dfl,s,set_zeros=1):
+    #s in [m]
+    # set_zeros - to set the values from out of initial time window to zeros
+    assert dfl.domain_z=='t','dfl_shift_z works only in time domain!'
+    shift_n=int(s/dfl.dz)
+    print('    shifting dfl by %.2f um (%.0f slices)' %(s*1e6,shift_n))
+    start = time.time()
+    dfl.fld=np.roll(dfl.fld, shift_n, axis=0)
+    if set_zeros:
+        if shift_n>0: dfl.fld[:shift_n,:,:]=0
+        if shift_n<0: dfl.fld[shift_n:,:,:]=0
+    elapsed = time.time() - start
+    print('      done in %.2f ' %elapsed +'sec')
+    return dfl
 
 def dfl_pad_z(dfl, padn):
     assert mod(padn,1)==0,'pad should be integer'
     start = time.time()
     if padn>1:
-        print('    padding dfl by '+str(padn))
         if mod(padn,2)==0: #check for odd
             padn=int(padn+1)
+        print('    padding dfl by '+str(padn))
         padn_n=(padn-1)/2*dfl.Nz() #number of slices to add before and after
         dfl_pad=RadiationField((dfl.Nz()+2*padn_n,dfl.Ny(),dfl.Nx()))
         dfl_pad.copy_param(dfl)
@@ -653,7 +685,10 @@ def dfl_pad_z(dfl, padn):
         dfl_pad=RadiationField()
         dfl_pad.copy_param(dfl)
         dfl_pad.fld=dfl.fld[padn_n:-padn_n,:,:]
-    else: return dfl
+    else: 
+        print('    padding dfl by '+str(padn))
+        print('      pass')
+        return dfl
     
     elapsed = time.time() - start
     if elapsed<60: print('      done in %.2f ' %elapsed +'sec')
@@ -662,43 +697,86 @@ def dfl_pad_z(dfl, padn):
     return dfl_pad
     
 
-def dfl_fft_z(dfl,method='np',nthread = multiprocessing.cpu_count()): #move to somewhere else
-    print('    calculating fft from '+dfl.domain_z+' domain with '+method)
+def dfl_fft_z(dfl,method='mp',nthread = multiprocessing.cpu_count()): #move to somewhere else
+    print('    calculating fft_z from '+dfl.domain_z+' domain with '+method)
     start = time.time()
     dfl_fft=RadiationField(dfl.shape())
     dfl_fft.copy_param(dfl)
     
+    if nthread<2:
+        method='np'
+    
     if dfl.domain_z=='t':
         if method=='np':
             dfl_fft.fld=np.fft.fft(dfl.fld,axis=0)
-        elif method=='pyfftw':
+        elif method=='mp':
             fft = pyfftw.builders.fft(dfl.fld, axis=0, overwrite_input=False, planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
             dfl_fft.fld=fft()
-        else: raise ValueError('fft method should be "np" or "pyfftw"')
+        else: raise ValueError('fft method should be "np" or "mp"')
         dfl_fft.fld=np.fft.ifftshift(dfl_fft.fld,0)
         dfl_fft.fld/=sqrt(dfl_fft.Nz())
         dfl_fft.domain_z='f'
-        # return dfl_fft
     elif dfl.domain_z=='f':
         dfl_fft.fld=np.fft.fftshift(dfl.fld,0)
         if method=='np':
             dfl_fft.fld=np.fft.ifft(dfl_fft.fld,axis=0)
-        elif method=='pyfftw':
+        elif method=='mp':
             fft = pyfftw.builders.ifft(dfl_fft.fld, axis=0, overwrite_input=False, planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
             dfl_fft.fld=fft()
-        else: raise ValueError('fft method should be "np" or "pyfftw"')
+        else: raise ValueError("fft method should be 'np' or 'mp'")
         dfl_fft.fld*=sqrt(dfl_fft.Nz())
         dfl_fft.domain_z='t'
         
-    else: raise ValueError('domain_z value should be "f" or "t"')
+    else: raise ValueError("domain_z value should be 't' or 'f'")
     
     elapsed = time.time() - start
     if elapsed<60: print('      done in %.2f ' %elapsed +'sec')
     else: print('      done in %.2f ' %elapsed/60 +'min')
     return dfl_fft
     
-def dfl_filt(dfl,trf,mode):
-    assert trf.__class__==TransferFunction,'Wrong TransferFunction class'
+def dfl_fft_xy(dfl,method='mp',nthread = multiprocessing.cpu_count()): #move to somewhere else
+    print('    calculating fft_xy from '+dfl.domain_xy+' domain with '+method)
+    start = time.time()
+    dfl_fft=RadiationField(dfl.shape())
+    dfl_fft.copy_param(dfl)
+    
+    if nthread<2:
+        method='np'
+    
+    if dfl.domain_xy=='s':
+        if method=='np':
+            dfl_fft.fld=np.fft.fft2(dfl.fld,axes=(1,2))
+        elif method=='mp':
+            fft = pyfftw.builders.fft2(dfl.fld, axes=(1,2), overwrite_input=False, planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
+            dfl_fft.fld=fft()
+        else: raise ValueError("fft method should be 'np' or 'mp'")
+        dfl_fft.fld=np.fft.fftshift(dfl_fft.fld,axes=(1,2))
+        dfl_fft.fld/=sqrt(dfl_fft.Nx()*dfl_fft.Ny())
+        dfl_fft.domain_xy='k'
+    elif dfl.domain_xy=='k':
+        dfl_fft.fld=np.fft.ifftshift(dfl.fld,axes=(1,2))
+        if method=='np':
+            dfl_fft.fld=np.fft.ifft2(dfl_fft.fld,axes=(1,2))
+        elif method=='mp':
+            fft = pyfftw.builders.ifft2(dfl_fft.fld, axes=(1,2), overwrite_input=False, planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
+            dfl_fft.fld=fft()
+        else: raise ValueError("fft method should be 'np' or 'mp'")
+        dfl_fft.fld*=sqrt(dfl_fft.Nx()*dfl_fft.Ny())
+        dfl_fft.domain_xy='s'
+        
+    else: raise ValueError("domain_xy value should be 's' or 'k'")
+    
+    elapsed = time.time() - start
+    if elapsed<60: print('      done in %.2f ' %elapsed +'sec')
+    else: print('      done in %.2f ' %elapsed/60 +'min')
+    return dfl_fft
+    
+def dfl_trf(dfl,trf,mode):
+    import matplotlib.pyplot as plt
+    assert dfl.domain_z=='f','dfl_trf works only in frequency domain!'
+    print('    multiplying dfl by trf')
+    start = time.time()
+    # assert trf.__class__==TransferFunction,'Wrong TransferFunction class'
     assert dfl.domain_z=='f','wrong dfl domain (must be frequency)!'
     if mode=='tr':
         filt=trf.tr
@@ -706,17 +784,60 @@ def dfl_filt(dfl,trf,mode):
         filt=trf.ref
     else: raise AttributeError('Wrong z_domain attribute')
     filt_lamdscale=2*pi/trf.k
-    if min(dfl.scale_s())>max(filt_lamdscale) or max(dfl.scale_s())<min(filt_lamdscale):
+    if min(dfl.scale_z())>max(filt_lamdscale) or max(dfl.scale_z())<min(filt_lamdscale):
         raise ValueError('frequency scales of dfl and transfer function do not overlap')
-    filt_interp=np.interp(dfl.scale_z(),filt_lamdscale,filt)
+    
+    filt_interp_re=np.flipud(np.interp(np.flipud(dfl.scale_z()),np.flipud(filt_lamdscale),np.flipud(np.real(filt))))
+    filt_interp_im=np.flipud(np.interp(np.flipud(dfl.scale_z()),np.flipud(filt_lamdscale),np.flipud(np.imag(filt))))
+    # print(dfl.scale_z()[0],dfl.scale_z()[-1],len(dfl.scale_z()))
+    # print(filt_lamdscale[0],filt_lamdscale[-1],len(filt_lamdscale))
+    filt_interp=filt_interp_re-1j*filt_interp_im
+    del filt_interp_re, filt_interp_im
     
     dfl_filt=RadiationField(dfl.shape())
     dfl_filt.copy_param(dfl)
+    
+    # plt.figure()
+    # plt.plot(filt_lamdscale*1e9,np.real(filt))
+    
+    # plt.figure()
+    # plt.plot(dfl.scale_z()*1e9,sum(dfl.I(),axis=(1,2)))
+    
     dfl_filt.fld=dfl.fld*filt_interp[:,np.newaxis,np.newaxis]
     
+    # plt.figure()
+    # plt.plot(dfl_filt.scale_z()*1e9,sum(dfl_filt.I(),axis=(1,2)))
+    
+    # plt.figure()
+    # plt.scatter(dfl_filt.scale_z()*1e9,abs(filt_interp))
+    # plt.show()
+    elapsed = time.time() - start
+    print('      done in %.2f ' %elapsed +'sec')
     return dfl_filt
     
     
+def dfl_hxrss_filt(dfl,trf,ev_seed,s_delay,st_cpl=1,res_per_fwhm=6,fft_method='mp'):
+    #needs optimizing!!!
+    nthread = multiprocessing.cpu_count()
+    if nthread>8: nthread=int(nthread*0.9) #not to occupy all CPUs on login server
+    print('  HXRSS dfl filtering')
+    start = time.time()
+    # klpos, krpos, cwidth = FWHM(trf.k, 1.0-np.abs(trf.tr))
+    cwidth = fwhm(trf.k, 1.0-np.abs(trf.tr))
+    dk_old=2*pi/dfl.Lz()
+    dk = cwidth/res_per_fwhm
+    padn = np.int(dk_old/dk)
+    
+    dfl=dfl_pad_z(dfl, padn)
+    dfl=dfl_fft_z(dfl,method=fft_method,nthread = multiprocessing.cpu_count())
+    dfl=dfl_trf(dfl,trf,mode='tr')
+    dfl=dfl_fft_z(dfl,method=fft_method,nthread = multiprocessing.cpu_count())
+    dfl=dfl_shift_z(dfl,s_delay,set_zeros=0)
+    dfl=dfl_pad_z(dfl, -padn)
+    
+    elapsed = time.time() - start
+    print('    done in %.2f ' %elapsed +'sec')
+    return dfl
 ''' 
    I/O functions
 '''
@@ -880,12 +1001,12 @@ def read_genesis_output(filePath, readall=True, debug=1, precision=float):
             if debug>1: print ('      calculating spectrum')
             out.spec = abs(np.fft.fft(np.sqrt(np.array(out.power)) * np.exp( 1.j* np.array(out.phi_mid) ) , axis=0))**2/sqrt(out.nSlices)/(2*out.leng/out('ncar'))**2/1e10
             if debug>1: print ('        done')
-            e_0=1239.8/out('xlamds')/1e9            
+            e_0=h_eV_s*speed_of_light/out('xlamds')          
             out.freq_ev = h_eV_s * np.fft.fftfreq(len(out.spec), d=out('zsep') * out('xlamds')*out('ishsty') / speed_of_light)+e_0# d=out.dt
             
             out.spec = np.fft.fftshift(out.spec,axes=0)
             out.freq_ev = np.fft.fftshift(out.freq_ev,axes=0)
-            out.freq_lamd=1239.8/out.freq_ev
+            out.freq_lamd=h_eV_s*speed_of_light*1e9/out.freq_ev
             out.sliceKeys_used.append('spec')
             
             phase_fix=1 #the way to display the phase, without constant slope caused by different radiation wavelength from xlamds. phase is set to 0 at maximum power slice.

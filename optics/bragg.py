@@ -360,20 +360,21 @@ def transmissivity_reflectivity(klist, cryst):
     return t, r
 
 
-def get_crystal_filter(cryst, ray, nk=10, ref_idx = None, k = None):
+def get_crystal_filter(cryst, ev_seed, nk=10000, k = None):
     #import crystal as cry
-
-
-    kb     = 2*np.pi/ray.lamb
+    lamb=h_eV_s*speed_of_light/ev_seed
+    ref_idx=cryst.ref_idx
+    print(ref_idx)
+    kb     = 2*np.pi/lamb
     
-    H, d, phi = find_bragg(lambd = ray.lamb, lattice=cryst.lattice, ord_max = 15)
+    H, d, phi = find_bragg(lambd = lamb, lattice=cryst.lattice, ord_max = 15)
     
     polarization = 'sigma'
 
     dhkl = d[ref_idx]
     
     '''
-    print 'lamb=', ray.lamb
+    print 'lamb=', lamb
     print 'thick=', cryst.size[2]
     print 'd_hkl',d[ref_idx]
     print 'theta bragg', phi[ref_idx]
@@ -392,7 +393,7 @@ def get_crystal_filter(cryst, ray, nk=10, ref_idx = None, k = None):
     gammah = np.cos(psih)
     gamma  = gammah/gamma0
         
-    f0, fh, fmh =  F_hkl(cryst = cryst, ref_idx = ref_idx, lamb=ray.lamb, temp = 300*K)
+    f0, fh, fmh =  F_hkl(cryst = cryst, ref_idx = ref_idx, lamb=lamb, temp = 300*K)
     
     print ('structure factors', f0, fh, fmh)
     #plt.figure()
@@ -401,8 +402,8 @@ def get_crystal_filter(cryst, ray, nk=10, ref_idx = None, k = None):
         
     vcell = ( dhkl * np.sqrt( np.dot(ref_idx,ref_idx) ) ) **3
         
-    delta    = r_el * np.abs(c_pol) * ray.lamb**2 * np.sqrt( np.abs(gamma)*fh*fmh ) / ( np.pi * vcell * np.sin(2*thetaB) )
-    mid_TH = np.real( r_el * ray.lamb**2 * f0 * (1-gamma) / (2*np.pi * vcell * np.sin(2*thetaB)) )
+    delta    = r_el * np.abs(c_pol) * lamb**2 * np.sqrt( np.abs(gamma)*fh*fmh ) / ( np.pi * vcell * np.sin(2*thetaB) )
+    mid_TH = np.real( r_el * lamb**2 * f0 * (1-gamma) / (2*np.pi * vcell * np.sin(2*thetaB)) )
     mid_k  = kb / (- mid_TH * 1/np.tan(thetaB) + 1 )    
     dk  =  ( -2*kb*np.sin(thetaB) + np.sqrt(16*mid_k**2 * np.real(delta)**2 * np.cos(thetaB)**2 + 4*kb**2 * np.sin(thetaB)**2) ) / ( 2 * np.real(delta) * np.cos(thetaB) )
     
@@ -413,7 +414,7 @@ def get_crystal_filter(cryst, ray, nk=10, ref_idx = None, k = None):
         k = np.linspace(ki, kf, nk)    
         
     
-    cryst.lamb = ray.lamb
+    cryst.lamb = lamb
     cryst.kb = kb
     cryst.thetaB = thetaB
     cryst.gamma = gamma
@@ -421,19 +422,18 @@ def get_crystal_filter(cryst, ray, nk=10, ref_idx = None, k = None):
     cryst.gammah = gammah
     cryst.c_pol = c_pol
     
-    cryst.chi0  = - ( r_el * ray.lamb**2 * f0  ) / ( np.pi * vcell )
-    cryst.chih  = - ( r_el * ray.lamb**2 * fh  ) / ( np.pi * vcell )
-    cryst.chimh = - ( r_el * ray.lamb**2 * fmh ) / ( np.pi * vcell )
-    cryst.pl = np.pi * vcell * np.sqrt( gamma0 * np.abs(gammah) ) / ( r_el * ray.lamb * np.abs(c_pol) * np.sqrt( fh*fmh ) )
+    cryst.chi0  = - ( r_el * lamb**2 * f0  ) / ( np.pi * vcell )
+    cryst.chih  = - ( r_el * lamb**2 * fh  ) / ( np.pi * vcell )
+    cryst.chimh = - ( r_el * lamb**2 * fmh ) / ( np.pi * vcell )
+    cryst.pl = np.pi * vcell * np.sqrt( gamma0 * np.abs(gammah) ) / ( r_el * lamb * np.abs(c_pol) * np.sqrt( fh*fmh ) )
     
     f = TransferFunction()
     
     f.tr, f.ref = transmissivity_reflectivity(k, cryst)    
     
-    f.k = k    
-    # f.ev = k * hbar * c
+    f.k = k
     
-    return f 
+    return f
 
 
 

@@ -15,6 +15,10 @@ from ocelot.common.globals import * #import of constants like "h_eV_s" and "spee
 
 from numpy import *
 
+import multiprocessing
+import pyfftw
+nthread = multiprocessing.cpu_count()
+
 inputTemplate = "\
  $newrun \n\
  aw0   =  __AW0__ \n\
@@ -640,38 +644,308 @@ class RadiationField():
     '''
     3d or 2d coherent radiation distribution, *.fld variable is the same as Genesis dfl structure     
     '''
-    def __init__(self):
-        self.fld=np.array([]) #(z,y,x)
-        self.Lx=[]  #full transverse mesh size, 2*dgrid 
-        self.Ly=[]  #full transverse mesh size, 2*dgrid 
-        self.Lz=[]  #full longitudinal mesh size, nslice*zsep*xlamds 
+    def __init__(self,shape=(0,0,0)):
+        # self.fld=np.array([]) #(z,y,x)
+        self.fld=np.zeros(shape,dtype=complex128) #(z,y,x)
+        self.dx=[]
+        self.dy=[]
+        self.dz=[]
         self.xlamds=0 #wavelength, [nm]
-        self.l_domain='t' #longitudinal domain (t - time, f - frequency)
-        self.tr_domain='s' #transverse domain (s - space, k - inverse space)
+        self.domain_z='t' #longitudinal domain (t - time, f - frequency)
+        self.domain_xy='s' #transverse domain (s - space, k - inverse space)
         self.fileName=''
         self.filePath=''
         
+    def copy_param(self,dfl1):
+        self.dx=dfl1.dx
+        self.dy=dfl1.dy
+        self.dz=dfl1.dz
+        self.xlamds=dfl1.xlamds
+        self.domain_z=dfl1.domain_z
+        self.domain_xy=dfl1.domain_xy
+        self.fileName=dfl1.fileName
+        self.filePath=dfl1.filePath
+        
+    def __getitem__(self,i):
+        return self.fld[i]
+    
+    def __setitem__(self,i,fld):
+        self.fld[i]=fld
+        
     def shape(self): 
         return shape(self.fld) 
+    def Lz(self): #full transverse mesh size, 2*dgrid
+        return self.dz*self.Nz()
+    def Ly(self): #full transverse mesh size, 2*dgrid 
+        return self.dy*self.Ny()
+    def Lx(self): #full longitudinal mesh size, nslice*zsep*xlamds 
+        return self.dx*self.Nx()
+        
     def Nz(self): 
-        return shape(self.fld)[0] 
+        return shape(self.fld)[0]
     def Ny(self): 
-        return shape(self.fld)[1] 
+        return shape(self.fld)[1]
     def Nx(self): 
-        return shape(self.fld)[2] 
-    def I(self): 
-        return abs(self.fld)**2 
-    def E(self): 
-        if self.Nz()>1: 
-            return np.sum(self.I())*self.Lz/self.Nz()/speed_of_light 
-        else: 
-            return self.I()
+        return shape(self.fld)[2]
+    def int(self): #3d intensity
+        return self.fld.real**2+self.fld.imag**2
+    def int_z(self): # intensity projection on z (power [W] or spectral density)
+        return np.sum(self.int(),axis=(1,2))
+    def int_y(self):
+        return np.sum(self.int(),axis=(0,2))
+    def int_x(self):
+        return np.sum(self.int(),axis=(0,1))
+    def int_xy(self):
+        return np.sum(self.int(),axis=0)
+    def E(self): # energy in the pulse [J]
+        if self.Nz()>1:
+            return np.sum(self.int())*self.Lz()/self.Nz()/speed_of_light 
+        else:
+            return self.int()
+    
+    def scale_x(self): #scale in meters or radians
+        if self.domain_xy=='s':
+            return np.linspace(0, self.Lx(), self.Nx())
+        elif self.domain_xy=='k':
+            ang=self.xlamds/self.dx
+            return np.linspace(-ang/2, ang/2, self.Nx())
+        else: raise AttributeError('Wrong domain_xy attribute')
+        
+    def scale_y(self): #scale in meters or radians
+        if self.domain_xy=='s':
+            return np.linspace(0, self.Ly(), self.Ny())
+        elif self.domain_xy=='k':
+            ang=self.xlamds/self.dy
+            return np.linspace(-ang/2, ang/2, self.Ny())
+        else: raise AttributeError('Wrong domain_xy attribute')
+        
+    def scale_z(self): #scale in meters
+        if self.domain_z=='t':
+            return np.linspace(0, self.Lz(), self.Nz())
+        elif self.domain_z=='f':
+            dk=2*pi/self.Lz();
+            k=2*pi/self.xlamds
+            return 2*pi/np.linspace(k-dk/2*self.Nz(), k+dk/2*self.Nz(), self.Nz())
+        else: raise AttributeError('Wrong domain_z attribute')
+        
+        
+def dfl_shift_z(dfl,s,set_zeros=1):
+    # set_zeros - to set the values from out of initial time window to zeros
+    assert dfl.domain_z=='t','dfl_shift_z works only in time domain!'
+    shift_n=int(s/dfl.dz)
+    print('    shifting dfl by %.2f um (%.0f slices)' %(s*1e6,shift_n))
+    start = time.time()
+    dfl.fld=np.roll(dfl.fld, shift_n, axis=0)
+    if set_zeros:
+        if shift_n>0: dfl.fld[:shift_n,:,:]=0
+        if shift_n<0: dfl.fld[shift_n:,:,:]=0
+    
+    t_func = time.time() - start
+    print('      done in %.2f ' %t_func +'sec')
+    return dfl
 
+def dfl_pad_z(dfl, padn):
+    assert mod(padn,1)==0,'pad should be integer'
+    start = time.time()
+    
+    if padn>1:
+        print('    padding dfl by '+str(padn))
+        padn_n=(padn-1)/2*dfl.Nz() #number of slices to add before and after
+        dfl_pad=RadiationField((dfl.Nz()+2*padn_n,dfl.Ny(),dfl.Nx()))
+        dfl_pad.copy_param(dfl)
+        dfl_pad.fld[padn_n:-padn_n,:,:]=dfl.fld
+    elif padn<-1:
+        padn=abs(padn)
+        print('    de-padding dfl by '+str(padn))
+        padn_n=dfl.Nz()/padn*((padn-1)/2)
+        dfl_pad=RadiationField()
+        dfl_pad.copy_param(dfl)
+        dfl_pad.fld=dfl.fld[padn_n:-padn_n,:,:]
+    else: 
+        print('    padding dfl by '+str(padn))
+        print('      pass')
+        return dfl
+    
+    t_func = time.time() - start
+    if t_func<60: print('      done in %.2f ' %t_func +'sec')
+    else: print('      done in %.2f ' %t_func/60 +'min')
+    return dfl_pad
+    
+
+def dfl_fft_z(dfl,method='mp',nthread = multiprocessing.cpu_count()): #move to somewhere else
+    print('    calculating fft_z from '+dfl.domain_z+' domain with '+method)
+    start = time.time()
+    dfl_fft=RadiationField(dfl.shape())
+    dfl_fft.copy_param(dfl)
+    
+    if nthread<2:
+        method='np'
+    
+    if dfl.domain_z=='t':
+        if method=='np':
+            dfl_fft.fld=np.fft.fft(dfl.fld,axis=0)
+        elif method=='mp':
+            fft = pyfftw.builders.fft(dfl.fld, axis=0, overwrite_input=False, planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
+            dfl_fft.fld=fft()
+        else: raise ValueError('fft method should be "np" or "mp"')
+        dfl_fft.fld=np.fft.ifftshift(dfl_fft.fld,0)
+        dfl_fft.fld/=sqrt(dfl_fft.Nz())
+        dfl_fft.domain_z='f'
+    elif dfl.domain_z=='f':
+        dfl_fft.fld=np.fft.fftshift(dfl.fld,0)
+        if method=='np':
+            dfl_fft.fld=np.fft.ifft(dfl_fft.fld,axis=0)
+        elif method=='mp':
+            fft = pyfftw.builders.ifft(dfl_fft.fld, axis=0, overwrite_input=False, planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
+            dfl_fft.fld=fft()
+        else: raise ValueError("fft method should be 'np' or 'mp'")
+        dfl_fft.fld*=sqrt(dfl_fft.Nz())
+        dfl_fft.domain_z='t'
+    else: raise ValueError("domain_z value should be 't' or 'f'")
+    
+    t_func = time.time() - start
+    if t_func<60: print('      done in %.2f ' %t_func +'sec')
+    else: print('      done in %.2f ' %t_func/60 +'min')
+    return dfl_fft
+    
+def dfl_fft_xy(dfl,method='mp',nthread = multiprocessing.cpu_count()): #move to somewhere else
+    print('    calculating fft_xy from '+dfl.domain_xy+' domain with '+method)
+    start = time.time()
+    dfl_fft=RadiationField(dfl.shape())
+    dfl_fft.copy_param(dfl)
+    
+    if nthread<2:
+        method='np'
+    
+    if dfl.domain_xy=='s':
+        if method=='np':
+            dfl_fft.fld=np.fft.fft2(dfl.fld,axes=(1,2))
+        elif method=='mp':
+            fft = pyfftw.builders.fft2(dfl.fld, axes=(1,2), overwrite_input=False, planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
+            dfl_fft.fld=fft()
+        else: raise ValueError("fft method should be 'np' or 'mp'")
+        dfl_fft.fld=np.fft.fftshift(dfl_fft.fld,axes=(1,2))
+        dfl_fft.fld/=sqrt(dfl_fft.Nx()*dfl_fft.Ny())
+        dfl_fft.domain_xy='k'
+    elif dfl.domain_xy=='k':
+        dfl_fft.fld=np.fft.ifftshift(dfl.fld,axes=(1,2))
+        if method=='np':
+            dfl_fft.fld=np.fft.ifft2(dfl_fft.fld,axes=(1,2))
+        elif method=='mp':
+            fft = pyfftw.builders.ifft2(dfl_fft.fld, axes=(1,2), overwrite_input=False, planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
+            dfl_fft.fld=fft()
+        else: raise ValueError("fft method should be 'np' or 'mp'")
+        dfl_fft.fld*=sqrt(dfl_fft.Nx()*dfl_fft.Ny())
+        dfl_fft.domain_xy='s'
+        
+    else: raise ValueError("domain_xy value should be 's' or 'k'")
+    
+    t_func = time.time() - start
+    if t_func<60: print('      done in %.2f ' %t_func +'sec')
+    else: print('      done in %.2f ' %t_func/60 +'min')
+    return dfl_fft
+    
+def dfl_trf(dfl,trf,mode):
+    import matplotlib.pyplot as plt
+    assert dfl.domain_z=='f','dfl_trf works only in frequency domain!'
+    print('    multiplying dfl by trf')
+    start = time.time()
+    # assert trf.__class__==TransferFunction,'Wrong TransferFunction class'
+    assert dfl.domain_z=='f','wrong dfl domain (must be frequency)!'
+    if mode=='tr':
+        filt=trf.tr
+    elif mode=='ref':
+        filt=trf.ref
+    else: raise AttributeError('Wrong z_domain attribute')
+    filt_lamdscale=2*pi/trf.k
+    if min(dfl.scale_z())>max(filt_lamdscale) or max(dfl.scale_z())<min(filt_lamdscale):
+        raise ValueError('frequency scales of dfl and transfer function do not overlap')
+    
+    filt_interp_re=np.flipud(np.interp(np.flipud(dfl.scale_z()),np.flipud(filt_lamdscale),np.flipud(np.real(filt))))
+    filt_interp_im=np.flipud(np.interp(np.flipud(dfl.scale_z()),np.flipud(filt_lamdscale),np.flipud(np.imag(filt))))
+    filt_interp=filt_interp_re-1j*filt_interp_im
+    del filt_interp_re, filt_interp_im
+    dfl.fld=dfl.fld*filt_interp[:,np.newaxis,np.newaxis]
+
+    t_func = time.time() - start
+    print('      done in %.2f ' %t_func +'sec')
+    return dfl, filt_interp
+    
+    
+def dfl_hxrss_filt(dfl,trf,ev_seed,s_delay,st_cpl=1,res_per_fwhm=6,fft_method='mp',dump_proj=0):
+    #needs optimizing?
+    nthread = multiprocessing.cpu_count()
+    if nthread>8: nthread=int(nthread*0.9) #not to occupy all CPUs on login server
+    print('  HXRSS dfl filtering')
+    start = time.time()
+    # klpos, krpos, cwidth = FWHM(trf.k, 1.0-np.abs(trf.tr))
+    cwidth = fwhm(trf.k, 1.0-np.abs(trf.tr))
+    dk_old=2*pi/dfl.Lz()
+    dk = cwidth/res_per_fwhm
+    padn = np.int(dk_old/dk)
+    if mod(padn,2)==0 and padn!=0: #check for odd
+        padn=int(padn+1)
+    
+    if dump_proj:
+        t1=time.time()
+        t_s_scale=dfl.scale_z() #time_small_scale
+        t_s_int_b=dfl.int_z() #intensity_before
+        t2=time.time()
+        
+        dfl=dfl_pad_z(dfl, padn)
+        
+        t3=time.time()
+        t_l_scale=dfl.scale_z()
+        t_l_int_b=dfl.int_z()
+        t4=time.time()
+        
+        dfl=dfl_fft_z(dfl,method=fft_method,nthread = multiprocessing.cpu_count())
+        
+        t5=time.time()
+        f_l_scale=dfl.scale_z() #frequency_large_scale (wavelength in m)
+        f_l_int_b=dfl.int_z()
+        t6=time.time()
+        
+        dfl,f_l_filt=dfl_trf(dfl,trf,mode='tr')
+        
+        t7=time.time()
+        f_l_int_a=dfl.int_z()
+        t8=time.time()
+        
+        dfl=dfl_fft_z(dfl,method=fft_method,nthread = multiprocessing.cpu_count())
+        
+        t9=time.time()
+        t_l_int_a=dfl.int_z()
+        t10=time.time()
+        
+        dfl=dfl_shift_z(dfl,s_delay,set_zeros=0)
+        dfl=dfl_pad_z(dfl, -padn)
+        
+        t11=time.time()
+        t_s_int_a=dfl.int_z() #intensity_after
+        t12=time.time()
+        
+        t_func = time.time() - start
+        t_proj=t2+t4+t6+t8+t10+t12-(t1+t3+t5+t7+t9+t11)
+        print('    done in %.2f sec, (%.2f sec for proj calc)' %(t_func,t_proj))
+        return dfl, ((t_s_scale,t_s_int_b,t_s_int_a),(t_l_scale,t_l_int_b,t_l_int_a),(f_l_scale,f_l_filt,f_l_int_b,f_l_int_a))
+    
+    else:
+        dfl=dfl_pad_z(dfl, padn)
+        dfl=dfl_fft_z(dfl,method=fft_method,nthread = multiprocessing.cpu_count())
+        dfl,_=dfl_trf(dfl,trf,mode='tr')
+        dfl=dfl_fft_z(dfl,method=fft_method,nthread = multiprocessing.cpu_count())
+        dfl=dfl_shift_z(dfl,s_delay,set_zeros=0)
+        dfl=dfl_pad_z(dfl, -padn)
+        
+        t_func = time.time() - start
+        print('    done in %.2f ' %t_func +'sec')
+        return dfl,()
+    
 ''' 
    I/O functions
 '''
-
-
+    
 def read_genesis_output(filePath, readall=True, debug=1, precision=float):
     import re
     out = GenesisOutput()
@@ -831,12 +1105,12 @@ def read_genesis_output(filePath, readall=True, debug=1, precision=float):
             if debug>1: print ('      calculating spectrum')
             out.spec = abs(np.fft.fft(np.sqrt(np.array(out.power)) * np.exp( 1.j* np.array(out.phi_mid) ) , axis=0))**2/sqrt(out.nSlices)/(2*out.leng/out('ncar'))**2/1e10
             if debug>1: print ('        done')
-            e_0=1239.8/out('xlamds')/1e9
+            e_0=h_eV_s*speed_of_light/out('xlamds')          
             out.freq_ev = h_eV_s * np.fft.fftfreq(len(out.spec), d=out('zsep') * out('xlamds')*out('ishsty') / speed_of_light)+e_0# d=out.dt
             
             out.spec = np.fft.fftshift(out.spec,axes=0)
             out.freq_ev = np.fft.fftshift(out.freq_ev,axes=0)
-            out.freq_lamd=1239.8/out.freq_ev
+            out.freq_lamd=h_eV_s*speed_of_light*1e9/out.freq_ev
             out.sliceKeys_used.append('spec')
             
             phase_fix=1 #the way to display the phase, without constant slope caused by different radiation wavelength from xlamds. phase is set to 0 at maximum power slice.
@@ -1477,12 +1751,12 @@ def read_radiation_file(filePath, Nxy=None, Lxy=None, Lz=None, zsep=None, xlamds
         
         F=RadiationField()
         F.fld=b.reshape(Nz,Nxy,Nxy)
-        F.Lx=Lxy
-        F.Ly=Lxy
+        F.dx=Lxy/F.Nx()
+        F.dy=Lxy/F.Ny()
         if Lz!=None:
-            F.Lz=Lz
+            F.dz=Lz/F.Nz()
         elif zsep!=None and xlamds!=None:
-            F.Lz=F.Nz()*xlamds*zsep
+            F.dz=xlamds*zsep
         else:
             F.Lz=None
         F.xlamds=xlamds
@@ -1559,8 +1833,8 @@ def interp_radiation(F,interpN=(1,1),interpL=(1,1),newN=(None,None),newL=(None,N
             if Ny2%2==0 and Ny2>F.Ny(): Ny2-=1 
             if Ny2%2==0 and Ny2<F.Ny(): Ny2+=1  
      
-            Lx2=F.Lx*interpLx 
-            Ly2=F.Ly*interpLy 
+            Lx2=F.Lx()*interpLx 
+            Ly2=F.Ly()*interpLy 
      
     else: 
         #redo to maintain mesh density 
@@ -1574,14 +1848,14 @@ def interp_radiation(F,interpN=(1,1),interpL=(1,1),newN=(None,None),newL=(None,N
      
         if newL[0] != None:  
             Lx2=newL[0]  
-        else: Lx2=F.Lx 
+        else: Lx2=F.Lx()
      
         if newL[1] != None:  
             Ly2=newL[1]  
-        else: Ly2=F.Ly 
+        else: Ly2=F.Ly()
     
-    xscale1=np.linspace(-F.Lx/2, F.Lx/2, F.Nx()) 
-    yscale1=np.linspace(-F.Ly/2, F.Ly/2, F.Ny())     
+    xscale1=np.linspace(-F.Lx()/2, F.Lx()/2, F.Nx()) 
+    yscale1=np.linspace(-F.Ly()/2, F.Ly()/2, F.Ny())     
     xscale2=np.linspace(-Lx2/2, Lx2/2, Nx2) 
     yscale2=np.linspace(-Ly2/2, Ly2/2, Ny2) 
  
@@ -1601,14 +1875,15 @@ def interp_radiation(F,interpN=(1,1),interpL=(1,1),newN=(None,None),newL=(None,N
         fslice2=fslice2*sqrt(P1/P2) 
         fld2.append(fslice2) 
      
-    F2=RadiationField() 
+    F2=deepcopy(fld2)
+    # F2=RadiationField() 
     F2.fld=np.array(fld2) 
-    F2.Lx=Lx2 
-    F2.Ly=Ly2 
-    F2.Lz=F.Lz 
-    F2.l_domain=F.l_domain 
-    F2.tr_domain=F.tr_domain 
-    F2.xlamds=F.xlamds 
+    F2.dx=Lx2/F2.Nx()
+    F2.dy=Ly2/F2.Ny()
+    # F2.Lz=F.Lz 
+    # F2.l_domain=F.l_domain 
+    # F2.tr_domain=F.tr_domain 
+    # F2.xlamds=F.xlamds 
     F2.fileName=F.fileName+'i'
     F2.filePath=F.filePath+'i'
     if debug>1: print('      energy after interpolation '+ str (F2.E())) 

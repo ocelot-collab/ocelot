@@ -2034,14 +2034,19 @@ def plot_beam(beam,figsize=4,showfig=False,savefig=False,fig=None,plot_xy=None,d
         p2, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(beam.y), 'g', lw=3)
         
         ax.legend([p1,p2],[r'$x [\mu m]$',r'$y [\mu m]$'],fontsize=fontsize)
-
+        
+        p=beam.g0*m_e_eV/speed_of_light
+        pz=sqrt(p**2-beam.px**2-beam.py**2)
+        xp=beam.px/pz
+        yp=beam.py/pz
+        
         ax = fig.add_subplot(3,2,6)
         plt.grid(True)
         ax.set_xlabel(r'$\mu m$')
-        p1, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(beam.px), 'r', lw=3)
-        p2, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(beam.py), 'g', lw=3)
+        p1, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(xp), 'r', lw=3)
+        p2, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(yp), 'g', lw=3)
         
-        ax.legend([p1,p2],[r'$p_x [\mu rad]$',r'$p_y [\mu rad]$'],fontsize=fontsize)
+        ax.legend([p1,p2],[r'$x_p [\mu rad]$',r'$y_p [\mu rad]$'],fontsize=fontsize)
         
     fig.subplots_adjust(hspace=0.2,wspace=0.3)
         

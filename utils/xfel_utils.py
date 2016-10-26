@@ -167,7 +167,7 @@ def rematch_beam_lat(beam, lat, extra_fodo, l_fodo, beta_mean):
     
 
 
-def run1(inp, launcher,readout=1,assembly_ver='sys',debug=1):
+def run(inp, launcher,readout=1,assembly_ver='sys',debug=1):
     # inp               - GenesisInput() object with genesis input parameters
     # launcher          - MpiLauncher() object obtained via get_genesis_launcher() function
     # readout           - Parameter to read and calculate values from the output:
@@ -179,7 +179,11 @@ def run1(inp, launcher,readout=1,assembly_ver='sys',debug=1):
 
     # create experimental directory
     
-
+    if inp.run_dir==None and inp.exp_dir==None:
+        raise ValueError('run_dir and exp_dir are not specified!')
+    
+    if inp.run_dir==None:
+        inp.run_dir=inp.exp_dir + 'run_' + str(inp.runid)
     
     try:
         os.makedirs(inp.run_dir)
@@ -223,7 +227,8 @@ def run1(inp, launcher,readout=1,assembly_ver='sys',debug=1):
         if inp.beam != None:
             if debug>1: print ('    writing '+inp_file+'.beam')
             open(inp_path+'.beam','w').write(beam_file_str(inp.beam))
-        
+            inp.beamfile = inp_file+'.beam'
+            
     if inp.distfile == None:
         if inp.dist != None:
             if debug>1: print ('    writing '+inp_file+'.dist')
@@ -233,7 +238,7 @@ def run1(inp, launcher,readout=1,assembly_ver='sys',debug=1):
     if inp.partfile == None:
         if inp.dpa != None:
             if debug>1: print ('    writing '+inp_file+'.dpa')
-            print ('!!!!!!! no write_radiation_file() function')
+            print ('!!!!!!! no write_particle_file() function')
             inp.partfile = inp_file+'.dpa'
 
     if inp.fieldfile == None:
@@ -337,7 +342,8 @@ def run1(inp, launcher,readout=1,assembly_ver='sys',debug=1):
 
 
     
-def run(inp, launcher,readout=1,dfl_slipage_incl=True,assembly_ver='sys',debug=1):
+def run_old(inp, launcher,readout=1,dfl_slipage_incl=True,assembly_ver='sys',debug=1):
+    # old, to be removed
     # inp               - GenesisInput() object with genesis input parameters
     # launcher          - MpiLauncher() object obtained via get_genesis_launcher() function
     # readout           - Parameter to read and calculate values from the output:
@@ -561,6 +567,15 @@ def create_exp_dir(exp_dir, run_ids):
             if exc.errno == errno.EEXIST and os.path.isdir(run_dir):
                 pass
             else: raise
+    
+    try:
+        res_dir = exp_dir + 'results'
+        os.makedirs(res_dir)
+    except OSError as exc: 
+        if exc.errno == errno.EEXIST and os.path.isdir(run_dir):
+            pass
+        else: raise
+    
 
 def checkout_run(run_dir, run_id, prefix1, prefix2, save=False,debug=1):
     print ('    checking out run from '+prefix1+'.gout to '+prefix2+'.gout')

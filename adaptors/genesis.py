@@ -872,6 +872,40 @@ def dfl_trf(dfl,trf,mode):
     print('      done in %.2f ' %t_func +'sec')
     return dfl, filt_interp
     
+def dfl_st_cpl(dfl,theta_b,inp_axis='x',s_start=None):
+
+    print('    introducing spatio-temporal coupling')
+    start = time.time()
+    direction=1
+    if s_start==None:
+        s_start=n_moment(dfl.scale_z(),dfl.int_z(),0,1)
+
+    dfl2=deepcopy(dfl)
+    dfl2.fld[np.where(abs(dfl2.fld)>1e2)]=1e2
+    shift_z_scale=dfl2.scale_z()-s_start
+    shift_m_scale=shift_z_scale/tan(theta_b)
+    shift_m_scale[np.where(shift_m_scale>0)]=0
+    shift_pix_scale=floor(shift_m_scale/dfl2.dx).astype(int)
+
+    # pix_start=np.where(shift_m_scale==0)[0][0]
+
+    fld=dfl2.fld
+    if inp_axis=='y':
+        for i in np.where(shift_m_scale!=0)[0]:
+            fld[i,:,:]=np.roll(fld[i,:,:],-direction*shift_pix_scale[i],axis=0)
+            if direction==1:
+                fld[i,:abs(shift_pix_scale[i]),:]=0
+                
+    elif inp_axis=='x':
+        for i in np.where(shift_m_scale!=0)[0]:
+            fld[i,:,:]=np.roll(fld[i,:,:],-direction*shift_pix_scale[i],axis=1)
+            if direction==1:
+                fld[i,:,:abs(shift_pix_scale[i])]=0
+    
+    dfl2.fld=fld
+    t_func = time.time() - start
+    print('      done in %.2f ' %t_func +'sec')
+    return dfl2
     
 def dfl_hxrss_filt(dfl,trf,ev_seed,s_delay,st_cpl=1,res_per_fwhm=6,fft_method='mp',dump_proj=0):
     #needs optimizing?
@@ -886,6 +920,8 @@ def dfl_hxrss_filt(dfl,trf,ev_seed,s_delay,st_cpl=1,res_per_fwhm=6,fft_method='m
     padn = np.int(dk_old/dk)
     if mod(padn,2)==0 and padn!=0: #check for odd
         padn=int(padn+1)
+    
+    
     
     if dump_proj:
         
@@ -915,19 +951,23 @@ def dfl_hxrss_filt(dfl,trf,ev_seed,s_delay,st_cpl=1,res_per_fwhm=6,fft_method='m
         t_l_int_a=dfl.int_z()
         t8=time.time()
         
+        if st_cpl: dfl=dfl_st_cpl(dfl,trf.thetaB)
         dfl=dfl_shift_z(dfl,s_delay,set_zeros=0)
         dfl=dfl_pad_z(dfl, -padn)
         
         t_func = time.time() - start
-        t_proj=t2+t4+t6+t8-(t1+t3+t5+t7+t9)
+        t_proj=t2+t4+t6+t8-(t1+t3+t5+t7)
         print('    done in %.2f sec, (%.2f sec for proj calc)' %(t_func,t_proj))
         return dfl, ((t_l_scale,None,t_l_int_a),(f_l_scale,f_l_filt,None,f_l_int_a))#f_l_int_b,t_l_int_b,
     
     else:
+        
+        
         dfl=dfl_pad_z(dfl, padn)
         dfl=dfl_fft_z(dfl,method=fft_method,nthread = multiprocessing.cpu_count())
         dfl,_=dfl_trf(dfl,trf,mode='tr')
         dfl=dfl_fft_z(dfl,method=fft_method,nthread = multiprocessing.cpu_count())
+        if st_cpl: dfl=dfl_st_cpl(dfl,trf.thetaB)
         dfl=dfl_shift_z(dfl,s_delay,set_zeros=0)
         dfl=dfl_pad_z(dfl, -padn)
         
@@ -939,11 +979,11 @@ def dfl_hxrss_filt(dfl,trf,ev_seed,s_delay,st_cpl=1,res_per_fwhm=6,fft_method='m
    I/O functions
 '''
     
-def read_genesis_output(filePath, readall=True, debug=1, precision=float):
+def read_genesis_output(filePath, readall=1, debug=1, precision=float):
     import re
     out = GenesisOutput()
     out.filePath = filePath
-    out.fileName = file_from_path(filePath)
+    out.fileName = filename_from_path(filePath)
 
     if debug>0: print('    reading output file "'+out.fileName+'"')
 #    print '        - reading from ', fileName
@@ -972,6 +1012,7 @@ def read_genesis_output(filePath, readall=True, debug=1, precision=float):
             continue
         
         if tokens[0] == '**********':
+            if readall==-1: break
             chunk = 'slices'
             nSlice = int(tokens[3])
             if debug>1: print ('      reading slice # '+ str(nSlice))
@@ -1041,6 +1082,18 @@ def read_genesis_output(filePath, readall=True, debug=1, precision=float):
     for parm in ['z', 'aw', 'qfld', 'I', 'n']:
         exec('out.'+parm+' = np.array(out.'+parm+')')
     
+    if out('dgrid')==0:
+        rbeam=sqrt(out('rxbeam')**2+out('rybeam')**2)
+        ray=sqrt(out('zrayl')*out('xlamds')/np.pi*(1+(out('zwaist')/out('zrayl')))**2);
+        out.leng=2*out('rmax0')*(rbeam+ray)
+    else:
+        out.leng=2*out('dgrid')
+    out.ncar=int(out('ncar')) #number of mesh points
+    
+    if readall==-1:
+        print ('      returning *.out header')
+        if debug>0: print('      done in %.3f seconds' % (time.time() - start_time)) 
+        return out
     
     out.nSlices = len(out.n)
     # int(out('history_records'))#number of slices in the output
@@ -1049,7 +1102,7 @@ def read_genesis_output(filePath, readall=True, debug=1, precision=float):
     # if out.nSlices
     assert out('entries_per_record')!=None, '.out header is missing!'
     out.nZ = int(out('entries_per_record'))#number of records along the undulator
-    out.ncar=int(out('ncar')) #number of mesh points
+    
     
     if debug>1: print ('        nSlices '+ str(out.nSlices))
     if debug>1: print ('        nZ '+ str(out.nZ))
@@ -1057,10 +1110,8 @@ def read_genesis_output(filePath, readall=True, debug=1, precision=float):
     assert nSlice!=0,'.out is empty!'
             
     assert(out.n[-1]-out.n[0])== (len(out.n)-1)*out('ishsty'),'.out is missing at least '+str((out.n[-1]-out.n[0])-(len(out.n)-1)*out('ishsty'))+' slices!'
-        # print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-        # print('WARNING, .out is missing at least '+str((out.n[-1]-out.n[0]+1)-len(out.n))+' slices')
         
-    if readall:
+    if readall == True:
         output_unsorted=np.array(output_unsorted)#.astype(precision)
         # print out.sliceKeys
         for i in range(len(out.sliceKeys)):
@@ -1080,12 +1131,7 @@ def read_genesis_output(filePath, readall=True, debug=1, precision=float):
 
 
 
-    if out('dgrid')==0:
-        rbeam=sqrt(out('rxbeam')**2+out('rybeam')**2)
-        ray=sqrt(out('zrayl')*out('xlamds')/np.pi*(1+(out('zwaist')/out('zrayl')))**2);
-        out.leng=2*out('rmax0')*(rbeam+ray)
-    else:
-        out.leng=2*out('dgrid')
+
 
     if out('itdp') == True:
         out.s = out('zsep') * out('xlamds') * (out.n-out.n[0])#np.arange(0,out.nSlices)
@@ -1141,7 +1187,7 @@ def read_genesis_output(filePath, readall=True, debug=1, precision=float):
     
     
     #tmp for back_compatibility
-    if readall:
+    if readall == True:
         out.power_int=out.power[:,-1] #remove?
         out.max_power=np.amax(out.power_int) #remove?
         for parm in [['power','p_int'],
@@ -1255,7 +1301,7 @@ def read_particle_file(filePath, nbins=4, npart=None,debug=1):
     dpa.px=b[:,4,:,:]
     dpa.py=b[:,5,:,:]
     dpa.filePath=filePath
-    dpa.fileName = filePath[-filePath[::-1].find(os.path.sep)::]
+    dpa.fileName = filename_from_path(filePath)
     
     if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
     
@@ -1372,6 +1418,7 @@ def read_dist_file(filePath,debug=1):
     
     dist = GenesisParticlesDist()
     dist.filePath=filePath
+    dist.fileName=filename_from_path(filePath)
     
     if debug>0: print ('    reading particle distribution file' )
     start_time = time.time()
@@ -1693,7 +1740,7 @@ def read_beam_file(filePath,debug=1):
         beam.eloss = np.zeros_like(beam.I)
     
     beam.filePath=filePath
-    beam.fileName=filePath[-filePath[::-1].find(os.path.sep)::]
+    beam.fileName=filename_from_path(filePath)
     
     if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
     
@@ -1826,14 +1873,14 @@ def read_radiation_file(filePath, Nxy=None, Lxy=None, Lz=None, zsep=None, xlamds
             F.Lz=None
         F.xlamds=xlamds
         F.filePath=filePath
-        F.fileName = filePath[-filePath[::-1].find(os.path.sep)::]
+        F.fileName = filename_from_path(filePath)
         
         if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
 
         return F
 
 
-def write_radiation_file(filePath,F,debug=1):
+def write_radiation_file(F,filePath,debug=1):
 
     if debug>0: print ('    writing radiation file' )
     start_time = time.time()    
@@ -1868,9 +1915,10 @@ def interp_radiation(F,interpN=(1,1),interpL=(1,1),newN=(None,None),newL=(None,N
         newN=(newN,newN) 
     if size(newL)==1: 
         newL=(newL,newL) 
-        
-    print(newL)
-    print(newN)    
+    
+    if debug>1:
+        print('newL=',newL)
+        print('newN=',newN)    
     
     if interpN==(1,1) and interpL==(1,1) and newN==(None,None) and newL==(None,None): 
         return F 
@@ -1940,17 +1988,13 @@ def interp_radiation(F,interpN=(1,1),interpL=(1,1),newN=(None,None),newL=(None,N
         fslice2=fslice2*sqrt(P1/P2) 
         fld2.append(fslice2) 
      
-    F2=deepcopy(fld2)
+    F2=deepcopy(F)
     # F2=RadiationField() 
     F2.fld=np.array(fld2) 
     F2.dx=Lx2/F2.Nx()
     F2.dy=Ly2/F2.Ny()
-    # F2.Lz=F.Lz 
-    # F2.l_domain=F.l_domain 
-    # F2.tr_domain=F.tr_domain 
-    # F2.xlamds=F.xlamds 
-    F2.fileName=F.fileName+'i'
-    F2.filePath=F.filePath+'i'
+    # F2.fileName=F.fileName+'i'
+    # F2.filePath=F.filePath+'i'
     if debug>1: print('      energy after interpolation '+ str (F2.E())) 
     if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
          
@@ -2947,211 +2991,6 @@ def create_rad_file(p_duration_s = None, p_intensity = None, beam = None, offset
     f = open(out_file,'w')
     f.write(rad_file_str2(rad))
     f.close()
-
-
-
-'''
-Scheduled for removal
-'''
-    
-def readRadiationFile(fileName, npoints=151, slice_start=0, slice_end = -1, vartype=complex,debug=0): #obsoletre, to be removed soon
-    #a new backward compatible version ~100x faster
-    print ('    reading radiation file')
-    import numpy as np
-    if not os.path.isfile(fileName):
-        print ('      ! dfl file '+fileName+' not found !')
-    else:    
-        if debug:
-            print ('        - reading from '+ fileName)
-        b=np.fromfile(fileName,dtype=complex).astype(vartype)
-        slice_num=b.shape[0]/npoints/npoints
-        b=b.reshape(slice_num,npoints,npoints)
-        if slice_end == -1:
-            slice_end=None
-        print('      done')  
-        return b[slice_start:slice_end]
-        
-def readRadiationFile_mpi(comm=None, fileName='simulation.gout.dfl', npoints=51): #obsoletre, to be removed soon?
-    '''
-    not advisable to be used with very small n_proc due to memory overhead ~ file_size / n_proc  
-    '''
-    from mpi4py import MPI
-    
-    def read_in_chunks(file, size=1024):
-        while True:
-            data = file.read(size)
-            if not data:
-                break
-            yield data
-
-    
-    rank = comm.Get_rank()
-    nproc = comm.Get_size()
-        
-    f = open(fileName,'rb')
-    f.seek(0,2)
-    total_data_len = f.tell() / 8 / 2
-    f.seek(0,0)
-    slice_size = int(2.0*npoints*npoints * 8.0)
-    n_slices = int(total_data_len / (npoints**2))
-
-    ncar = int(np.sqrt((slice_size/16)))
-    
-    local_data_len = int(n_slices / nproc)
-    
-    n_extra = n_slices - local_data_len * nproc
-    
-    tmp_buf = np.zeros([local_data_len,ncar,ncar], dtype=complex)
-
-    
-    if rank == 0:
-        slice_start  = rank * local_data_len
-        slices = np.zeros([n_slices,ncar,ncar], dtype=complex)
-        slices_to_read = local_data_len + n_extra
-    else:
-        slice_start = rank * local_data_len + n_extra
-        slices = []
-        slices_to_read = local_data_len
-        
-    n = 0
-    
-    f.seek(slice_start*slice_size, 0)
-
-    print('rank '+str(rank)+' reading' + str (slice_start) + ' ' +  str(slices_to_read) + ' ' + str (n_extra))
-
-    for piece in read_in_chunks(f, size  = slice_size):
-                
-        if n >= slices_to_read :
-            break
-        
-        if ( len(piece) / 16 != ncar**2):
-            print ('warning, wrong slice size')
-    
-        for i in range(len(piece) / 16 ):
-            i2 = i % ncar
-            i1 = int(i / ncar)
-            if rank == 0:
-                #print n, n_extra
-                v = struct.unpack('d',piece[16*i:16*i+8])[0] + 1j*struct.unpack('d',piece[16*i+8:16*(i+1)])[0]
-                slices[n,i1,i2] = v
-                if n - n_extra >= 0:
-                    tmp_buf[n-n_extra,i1,i2] = v
-            else:
-                tmp_buf[n,i1,i2] = struct.unpack('d',piece[16*i:16*i+8])[0] + 1j*struct.unpack('d',piece[16*i+8:16*(i+1)])[0] 
-        n += 1
-    #print rank, 'tmp_buf=', tmp_buf
-    comm.Gather([tmp_buf,  MPI.COMPLEX], [slices[n_extra:], MPI.COMPLEX])
-    
-    return slices
-
-
-def writeRadiationFile(filename,fld): #obsolete, to be removed soon
-    print ('    writing radiation file') 
-    #a new backward compatible version ~10x faster
-#    print '        - writing to ', filename
-    d=fld.flatten()
-    d.tofile(filename,format='complex')
-    
-def writeRadiationFile_mpi(comm, filename, slices, shape):
-    '''
-    rank 0 should contain the slices
-    '''
-    from mpi4py import MPI 
-    n_slices, n1, n2 = shape[0], shape[1], shape[2]
-       
-    rank = comm.Get_rank()
-    nproc = comm.Get_size()
-    
-    if nproc == 1:
-        f=open(filename,'wb')  
-    else:
-        f=open(filename + '.' + str(rank),'wb')
-    
-    slice_size = n1*n2*8*2
-    
-    local_data_len = int(n_slices / nproc)
-    
-    n_extra = n_slices - local_data_len * nproc
-
-    tmp_buf = np.zeros([local_data_len,n1,n2], dtype=complex)    
-       
-    if rank == 0:
-        slice_start  = rank * local_data_len
-        slices_to_write = local_data_len + n_extra
-    else:
-        slice_start = rank * local_data_len + n_extra
-        slices = []
-        slices_to_write = local_data_len
-    
-    #print slices
-       
-    comm.Scatter([slices[n_extra:],  MPI.COMPLEX], [tmp_buf, MPI.COMPLEX])
-        
-    #print slices
-    #print tmp_buf
-        
-    #f.seek(slice_start*slice_size, 0)
-        
-    print ('rank='+ str( rank)+ ' slices_to_write=' + str( slice_start) + ' ' + str( slices_to_write))
-        
-    
-    for i1 in range(slices_to_write):
-        str_bin = ''
-        for i2 in range(n1):
-            for i3 in range(n2):
-                
-                if rank > 0:
-                    #print '>0', tmp_buf[i1,i2,i3]
-                    str_bin += struct.pack('d',tmp_buf[i1,i2,i3].real) 
-                    str_bin += struct.pack('d',tmp_buf[i1,i2,i3].imag)
-                else:
-                    #print '0', slices[i1,i2,i3]
-                    str_bin += struct.pack('d',slices[i1,i2,i3].real) 
-                    str_bin += struct.pack('d',slices[i1,i2,i3].imag)
-                    
-        #print 'writing', str_bin
-        f.write(str_bin)
-    
-    f.close()
-    
-    if rank == 0 and nproc>1:
-        print ('merging temporary files')
-        cmd = 'cat '
-        cmd2 = 'rm '
-        for i in range(nproc): 
-            cmd += ' ' + str(filename) + '.' + str(i)
-            cmd2 += ' ' + str(filename) + '.' + str(i)
-        cmd = cmd + ' > ' + filename
-        cmd = cmd + ' ; ' + cmd2
-        print (cmd)
-        os.system(cmd)
-        
-        
-def getAverageUndulatorParameter(lattice, unit=1.0, energy = 17.5):
-    positions = sorted(lattice.lattice.keys())
-          
-    prevPos = 0
-
-    ks = []
-    ls = []
-
-    for pos in positions:
-        if lattice.elements[lattice.lattice[pos].id].type == 'undulator':
-            e = lattice.elements[lattice.lattice[pos].id]
-            l = float(e.params['nperiods']) * float(e.params['lperiod'])
-            
-            ks.append( float(e.params['K']) )
-            ls.append( l / unit )
-            
-            #lat += 'AW' +'    '+ e.params['K'] + '   ' + str( l  / unit ) + '  ' + str( (pos - prevPos) / unit ) + '\n'
-            
-            #if prevPos>0:
-            #    drifts.append([str( (pos - prevPos ) / unit ), str(prevLen / unit)])
-            
-            #prevPos = pos + l
-            #prevLen = l 
-
-    return np.mean(ks)
     
 def read_astra_dist(filename):
     #reading astra distribution parameters Parameter x y z px py pz clock macro_charge particle_index status_flag
@@ -3188,8 +3027,9 @@ def astra2genesis_conv_ext(filename_in, filename_out='',center=1):
     write_dist_file (dist,filename_out,debug=0)
     
     
-def file_from_path(path_string):
-    return path_string[-path_string[::-1].find(os.path.sep)::]
+def filename_from_path(path_string):
+    # return path_string[-path_string[::-1].find(os.path.sep)::]
+    return path_string.split(os.path.sep)[-1]
     
 def rematch_dist(dist,tws):
         
@@ -3246,3 +3086,34 @@ def cut_lattice(lat,n_cells,elem_in_cell=4):
     del lat_new.sequence[0:elem_in_cell*(n_cells)]
     return lat_new
     #returns lattice with #cells elements removed
+    
+'''
+Scheduled for removal
+'''
+        
+        
+def getAverageUndulatorParameter(lattice, unit=1.0, energy = 17.5):
+    positions = sorted(lattice.lattice.keys())
+          
+    prevPos = 0
+
+    ks = []
+    ls = []
+
+    for pos in positions:
+        if lattice.elements[lattice.lattice[pos].id].type == 'undulator':
+            e = lattice.elements[lattice.lattice[pos].id]
+            l = float(e.params['nperiods']) * float(e.params['lperiod'])
+            
+            ks.append( float(e.params['K']) )
+            ls.append( l / unit )
+            
+            #lat += 'AW' +'    '+ e.params['K'] + '   ' + str( l  / unit ) + '  ' + str( (pos - prevPos) / unit ) + '\n'
+            
+            #if prevPos>0:
+            #    drifts.append([str( (pos - prevPos ) / unit ), str(prevLen / unit)])
+            
+            #prevPos = pos + l
+            #prevLen = l 
+
+    return np.mean(ks)

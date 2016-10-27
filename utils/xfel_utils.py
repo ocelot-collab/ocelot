@@ -199,8 +199,8 @@ def run(inp, launcher,readout=1,assembly_ver='sys',debug=1):
         inp_path = inp.run_dir + '/run.' + str(inp.runid) + '.s'+ str(inp.stageid) + '.inp'
         out_path = inp.run_dir + '/run.' + str(inp.runid) + '.s'+ str(inp.stageid) + '.gout'
     
-    inp_file=file_from_path(inp_path)
-    out_file=file_from_path(out_path)
+    inp_file=filename_from_path(inp_path)
+    out_file=filename_from_path(out_path)
     
 
 
@@ -244,7 +244,7 @@ def run(inp, launcher,readout=1,assembly_ver='sys',debug=1):
     if inp.fieldfile == None:
         if inp.dfl != None:
             if debug>1: print ('    writing '+inp_file+'.dfl')
-            write_radiation_file(inp_path+'.dfl',inp.dfl,debug=1)
+            write_radiation_file(inp.dfl,inp_path+'.dfl',debug=1)
             inp.fieldfile = inp_file+'.dfl'
     
     if inp.radfile == None:
@@ -741,3 +741,30 @@ def background(command):
     import subprocess
     imports='from ocelot.gui.genesis_plot import *; from ocelot.adaptors.genesis import *; from ocelot.utils.xfel_utils import *; '
     subprocess.Popen(["python","-c",imports + command])
+
+def save_xhrss_dump_proj(dump_proj,filePath):
+    #saves the dfl_hxrss_filt radiation projections dump to text files
+    
+    (t_l_scale,_,t_l_int_a),(f_l_scale,f_l_filt,_,f_l_int_a)=dump_proj
+
+    f = open(filePath+'.t.txt','wb')
+    header='Distance Power'
+    np.savetxt(f, np.c_[t_l_scale,t_l_int_a],header=header,fmt="%e", newline='\n',comments='')
+    f.close()
+
+    f = open(filePath+'.f.txt','wb')
+    header='Wavelength Spectrum Filter_Abs Filter_Ang'
+    np.savetxt(f, np.c_[f_l_scale,f_l_int_a,np.abs(f_l_filt),np.angle(f_l_filt)],header=header,fmt="%e", newline='\n',comments='')
+    f.close()
+    
+def save_trf(trf,attr,flePath):
+    if hasattr(trf,attr): 
+        filt=getattr(trf,attr)
+    else: 
+        raise ValueError('no attribute', attr, 'in fransfer function')
+    
+    f = open(flePath,'wb')
+    header='Energy[eV] Filter_Abs Filter_Ang'
+    np.savetxt(f, np.c_[trf.ev(),np.abs(trf.tr),np.angle(trf.tr)],header=header,fmt="%e", newline='\n',comments='')
+    f.close()
+    

@@ -12,6 +12,7 @@ import numpy as np
 from numpy import *
 from ocelot.adaptors.genesis import *
 from ocelot.common.globals import * #import of constants like "h_eV_s" and 
+from ocelot.common.math_op import * #import of mathematical functions
 
 # from pylab import rc, rcParams #tmp
 from matplotlib import rc, rcParams
@@ -135,6 +136,9 @@ def plot_gen_out_evo(g, params=['und_quad','el_size','el_energy','el_bunching','
     plots evolution of given parameters from genesis output with undulator length
     '''
     import matplotlib.ticker as ticker
+    
+    if showfig== False and savefig == False:
+        return
     
     params_str=str(params).replace("'",'').replace('[','').replace(']','').replace(' ','').replace(',','--')
     
@@ -486,7 +490,10 @@ def subfig_rad_spec_evo(ax_spectrum_evo,g,legend,norm=1):
 
 
 def plot_gen_out_z(g, figsize=(10, 14), legend = True, fig_name = None, z=inf, savefig=False, showfig=False, debug=1):
-#    max_yticks = 7
+    
+    if showfig== False and savefig == False:
+        return
+    
     if g('itdp')==False:
         print('    plotting bunch profile at '+str(z)+' [m]')
         print('!     not applicable for steady-state')
@@ -803,21 +810,27 @@ def plot_gen_out_scanned_z(g, figsize=(10, 14), legend = True, fig_name = None, 
 
 
 def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend = True, phase = False, far_field=False, freq_domain=False, fig_name = None, auto_zoom=False, column_3d=True, savefig=False, showfig=False, return_proj=False, debug=1, vartype_dfl=complex64):
+    '''
+    Plots dfl radiation object in 3d.
     
-    #F is RadiationField() object
-    #z_lim sets the boundaries to CUT the dfl object in z to ranges of e.g. [2,5] um or nm depending on freq_domain=False of True
-    #xy_lim sets the boundaries to SCALE the dfl object in x and y to ranges of e.g. [2,5] um or urad depending on far_field=False of True
-    #figsize rescales the size of the figure
-    #legend not used yet
-    #phase can replace Z projection or spectrum with phase front distribution
-    #far_field and freq_domain carry out FFT along xy and z dimentions correspondingly
-    #fig_name is the desired name of the output figure
-    #auto_zoom automatically scales xyz the images to the (1%?) of the intensity limits
-    #column_3d plots top and side views of the radiation distribution
-    #savefig and showfig allow to save figure to image (savefig='png' (default) or savefig='eps', etc...) or to display it (slower)
-    #return_proj returns [xy_proj,yz_proj,xz_proj,x,y,z] array.
-    #vartype_dfl is the data type to store dfl in memory [either complex128 (two 64-bit floats) or complex64 (two 32-bit floats)], may save memory
-
+    F is RadiationField() object
+    z_lim sets the boundaries to CUT the dfl object in z to ranges of e.g. [2,5] um or nm depending on freq_domain=False of True
+    xy_lim sets the boundaries to SCALE the dfl object in x and y to ranges of e.g. [2,5] um or urad depending on far_field=False of True
+    figsize rescales the size of the figure
+    legend not used yet
+    phase can replace Z projection or spectrum with phase front distribution
+    far_field and freq_domain carry out FFT along xy and z dimentions correspondingly
+    fig_name is the desired name of the output figure
+    auto_zoom automatically scales xyz the images to the (1%?) of the intensity limits
+    column_3d plots top and side views of the radiation distribution
+    savefig and showfig allow to save figure to image (savefig='png' (default) or savefig='eps', etc...) or to display it (slower)
+    return_proj returns [xy_proj,yz_proj,xz_proj,x,y,z] array.
+    vartype_dfl is the data type to store dfl in memory [either complex128 (two 64-bit floats) or complex64 (two 32-bit floats)], may save memory
+    '''
+    
+    if showfig == False and savefig == False:
+        return
+    
     text_present=1
     if debug>0: print('    plotting radiation field')
     start_time = time.time()
@@ -1161,6 +1174,8 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend = True, phase = False, fa
     if showfig==True:
         if debug>0: print('    showing dfl')
         plt.show()
+    else:
+        plt.close('all')
 
     if return_proj:
         return [xy_proj,yz_proj,xz_proj,x,y,z]
@@ -1365,7 +1380,9 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
             dfl_fig_name='DFL__'+'stage_'+str(stage)+'__'+param.replace(' ','_').replace('.','_')+'__end'
             for irun in run_range:
                 dfl_fileName=proj_dir+'run_'+str(irun)+'/run.'+str(irun)+'.s'+str(stage)+'.gout.dfl'
-                dfl=readRadiationFile(dfl_fileName, npoints=outlist[irun]('ncar'),debug=debug)
+                dfl=read_radiation_file(dfl_fileName, Nxy=outlist[irun]('ncar'),debug=debug)
+                # read_radiation_file(filePath, Nxy=None, Lxy=None, Lz=None, zsep=None, xlamds=None, vartype=complex,debug=1):
+                dfl=dfl.fld
                 if dfl.shape[0]!=1:
                     ncar_z=dfl.shape[0]
                     leng_z=outlist[irun]('xlamds')*outlist[irun]('zsep')*ncar_z
@@ -1399,6 +1416,8 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
                         
     if showfig:
         plt.show()
+    else:
+        plt.close('all')
         
     if debug>0: print('      done in %.2f seconds' % (time.time() - start_time))       
         
@@ -1686,11 +1705,12 @@ def plot_dist(dist, figsize=4, fig_name = None, savefig=False, showfig=False, sc
         if debug>1: print('      saving '+dist.fileName+'.'+savefig)
         plt.savefig(dist.filePath+'.'+savefig,format=savefig)
         
-    if showfig: plt.show()
+    if showfig: 
+        plt.show()
+    else:
+        plt.close('all')
     
     if debug>0: print(('      done in %.2f seconds' % (time.time() - start_time)))
-    
-    return fig
 
     
     
@@ -2058,6 +2078,8 @@ def plot_beam(beam,figsize=4,showfig=False,savefig=False,fig=None,plot_xy=None,d
     
     if showfig:
         plt.show()
+    else:
+        plt.close('all')
 
 def plot_beam_2(fig, beam, iplot=0):
     
@@ -2174,12 +2196,71 @@ def fwhm3(valuelist, height=0.5, peakpos=-1):
     # ax_size_l.plot(g.z, rad_longit_size*2, color='indigo', linestyle='dashed',linewidth=1.5)
     # ax_size_l.set_ylabel('longitudinal [$\mu$m]')
     
-def n_moment(x, counts, c, n):
-    if np.sum(counts)==0:
-        return 0
-    else:
-        return (np.sum((x-c)**n*counts) / np.sum(counts))**(1./n)
+
+    
+'''
+tmp?
+'''
+
+def read_plot_dump_proj(exp_dir,stage,run_ids):
+
+    t_l_int_arr=[]
+    f_l_int_arr=[]
+    for run_id in run_ids:
         
-def std_moment(x, counts):
-    mean=n_moment(x, counts, 0, 1)
-    return n_moment(x, counts, mean, 2)
+        array=np.loadtxt(exp_dir + 'run_'+ str(run_id)+'/run.'+ str(run_id)+'.s'+str(stage)+'.dfl.t.txt',skiprows=1)
+        array=np.rollaxis(array,1)
+        t_l_scale,t_l_int_a=array[0],array[1]
+        
+        array=np.loadtxt(exp_dir + 'run_'+ str(run_id)+'/run.'+ str(run_id)+'.s'+str(stage)+'.dfl.f.txt',skiprows=1)
+        array=np.rollaxis(array,1)
+        f_l_scale,f_l_int_a,f_l_ftlt_re=array[0],array[1],array[2]
+        
+        t_l_int_arr.append(t_l_int_a)
+        f_l_int_arr.append(f_l_int_a)
+
+    t_l_scale*=1e6
+    t_l_int_arr=np.array(t_l_int_arr)
+    f_l_int_arr=np.array(f_l_int_arr)
+    t_l_int_arr=np.rollaxis(t_l_int_arr,1)
+    f_l_int_arr=np.rollaxis(f_l_int_arr,1)
+
+    if len(run_ids)>1:
+        t_l_int_mean=np.mean(t_l_int_arr,axis=1)
+        f_l_int_mean=np.mean(f_l_int_arr,axis=1)
+    else:
+        t_l_int_mean=t_l_int_arr[:,0]
+        f_l_int_mean=f_l_int_arr[:,0]
+    # t_domain,t_norm=plt.figure('t_domain_filtered')
+    t_domain=plt.figure('Power (stage'+str(stage)+')')
+    ax1=t_domain.add_subplot(2, 1, 1)
+    ax2=t_domain.add_subplot(2, 1, 2,sharex=ax1)
+    # t_domain1,ax=plt.subplots(2, sharex=True)
+    pulse_average_pos=np.sum(t_l_scale*t_l_int_mean)/np.sum(t_l_int_mean)
+
+
+    ax1.plot(t_l_scale-pulse_average_pos,t_l_int_arr,'0.5')
+    ax1.plot(t_l_scale-pulse_average_pos,t_l_int_mean,'k',linewidth=1.5)
+    ax1.plot([0,0],[0,np.max(t_l_int_arr)],'r')
+
+    ax2.semilogy(t_l_scale-pulse_average_pos,t_l_int_arr,'0.5')
+    ax2.semilogy(t_l_scale-pulse_average_pos,t_l_int_mean,'k',linewidth=1.5)
+    ax2.plot([0,0],[np.min(t_l_int_arr),np.max(t_l_int_arr)],'r')
+    plt.xlabel(r'$S [\mu m]$')
+    plt.ylabel(r'$P$ [W]')
+
+    f_domain=plt.figure('Spectrum (stage'+str(stage)+')')
+    ax1=f_domain.add_subplot(2, 1, 1)
+    ax2=f_domain.add_subplot(2, 1, 2,sharex=ax1)
+    ax1.plot(h_eV_s*speed_of_light/f_l_scale,f_l_int_arr,'0.5')
+    ax1.plot(h_eV_s*speed_of_light/f_l_scale,f_l_int_mean,'k',linewidth=1.5)
+    plt.ylabel(r'$P(\lambda)$ [a.u.]')
+    plt.xlabel(r'$S [\mu m]$')
+
+    ax2.plot(h_eV_s*speed_of_light/f_l_scale,f_l_ftlt_re,'r')
+    plt.xlabel(r'$E$ [eV]')
+    plt.ylabel(r'$Transm$')
+    # ax[1].xlabel(r'$E$ [eV]')
+    # ax[0].xlabel(r'$P(\lambda)$ [a.u.]')
+    # ax[1].xlabel(r'$abs(TrF)$')
+    plt.show()

@@ -432,7 +432,7 @@ def get_crystal_filter(cryst, ev_seed, nk=10000, k = None):
     f.tr, f.ref = transmissivity_reflectivity(k, cryst)    
     
     f.k = k
-    
+    f.thetaB=thetaB
     return f
 
 

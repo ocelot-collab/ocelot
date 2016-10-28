@@ -3,7 +3,7 @@ statistical analysis functions, fitting, optimization and the like
 '''
 
 import numpy as np
-from numpy import cos, sin, sqrt, log, exp, sum
+from numpy import cos, sin, tan, sqrt, log, exp, sum
 
 def peaks(x, y, n=0):
     '''

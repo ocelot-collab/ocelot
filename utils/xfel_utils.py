@@ -2,27 +2,430 @@
 functions common to fel decks
 '''
 
-import scipy.special as sf
-import scipy.integrate as integrate
-from numpy.polynomial.chebyshev import *
-from numpy import *
+# import scipy.special as sf
+# import scipy.integrate as integrate
+# from numpy.polynomial.chebyshev import *
+import os
+import time
 import numpy as np
-
+from numpy import inf, complex128,complex64
 from copy import copy, deepcopy
-import os, socket, errno, time
-
+import ocelot
 from ocelot import *
-from ocelot.optics.utils import *
-from ocelot.utils.launcher import *
-from ocelot.rad.undulator_params import *
-from ocelot.rad.fel import *
-from ocelot.adaptors.genesis import *
-from pylab import *
+# from ocelot.common.math_op import *
 
-params = {'backend': 'ps', 'axes.labelsize': 18, 'font.size': 16, 'legend.fontsize': 24, 'xtick.labelsize': 32,  'ytick.labelsize': 32, 'text.usetex': True}
-# params = {'backend': 'ps', 'axes.labelsize': 18, 'text.fontsize': 16, 'legend.fontsize': 24, 'xtick.labelsize': 32,  'ytick.labelsize': 32, 'text.usetex': True}
-rcParams.update(params)
-rc('text', usetex=True) # required to have greek fonts on redhat
+# from ocelot.optics.utils import *
+# from ocelot.rad.undulator_params import *
+# from ocelot.rad.fel import *
+from ocelot.adaptors.genesis import *
+
+import multiprocessing
+import pyfftw
+nthread = multiprocessing.cpu_count()
+
+
+
+def background(command):
+    '''
+    start command as background process
+    the argument shohuld preferably be a string in triple quotes '
+    '''
+    import subprocess
+    imports='from ocelot.adaptors.genesis import *; from ocelot.gui.genesis_plot import *; from ocelot.utils.xfel_utils import *; '
+    subprocess.Popen(["python3","-c",imports + command])
+
+def copy_this_script(scriptName,scriptPath,folderPath):
+    cmd = 'cp '+scriptPath+' '+folderPath+'exec_'+scriptName+' '
+    os.system(cmd)
+
+'''
+SELF-SEEDING - relevant
+'''
+
+def dfl_interp(dfl,interpN=(1,1),interpL=(1,1),newN=(None,None),newL=(None,None),method='cubic',debug=1): 
+    ''' 
+    2d interpolation of the coherent radiation distribution 
+    interpN and interpL define the desired interpolation coefficients for  
+    transverse point density and transverse mesh sizes correspondingly 
+    newN and newL define the final desire number of points and size of the mesh 
+    when newN and newL are not None interpN and interpL values are ignored 
+    coordinate convention is (x,y) 
+    ''' 
+    from scipy.interpolate import interp2d 
+         
+    if debug>0: print ('    interpolating radiation file')
+    start_time = time.time()
+     
+    # in case if interpolation is the same in toth dimentions 
+    if np.size(interpN)==1: 
+        interpN=(interpN,interpN) 
+    if np.size(interpL)==1: 
+        interpL=(interpL,interpL) 
+    if np.size(newN)==1: 
+        newN=(newN,newN) 
+    if np.size(newL)==1: 
+        newL=(newL,newL) 
+    
+    if debug>1:
+        print('newL=',newL)
+        print('newN=',newN)    
+    
+    if (interpN==(1,1) and interpL==(1,1) and newN==(None,None) and newL==(None,None)) or \
+       (interpN==(1,1) and interpL==(1,1) and newN==(dfl.Nx(),dfl.Ny()) and newL==(dfl.Lx(),dfl.Ly())):
+        print('      skip (no interpolation required)')
+        return dfl 
+        
+         
+    # calculate new mesh parameters only if not defined explicvitly 
+    if newN==(None,None) and newL==(None,None): 
+        interpNx=interpN[0] 
+        interpNy=interpN[1] 
+        interpLx=interpL[0] 
+        interpLy=interpL[1] 
+     
+        if interpNx==0 or interpLx==0 or interpNy==0 or interpLy==0: 
+            print('interpolation values cannot be 0') 
+            return None 
+            # place exception 
+        elif interpNx==1 and interpLx==1 and interpNy==1 and interpLy==1: 
+            return dfl 
+            print('no interpolation required, returning original') 
+        else: 
+            Nx2=int(dfl.Nx()*interpNx*interpLx) 
+            if Nx2%2==0 and Nx2>dfl.Nx(): Nx2-=1 
+            if Nx2%2==0 and Nx2<dfl.Nx(): Nx2+=1  
+            Ny2=int(dfl.Ny()*interpNy*interpLy) 
+            if Ny2%2==0 and Ny2>dfl.Ny(): Ny2-=1 
+            if Ny2%2==0 and Ny2<dfl.Ny(): Ny2+=1  
+     
+            Lx2=dfl.Lx()*interpLx 
+            Ly2=dfl.Ly()*interpLy 
+     
+    else: 
+        #redo to maintain mesh density 
+        if newN[0] != None:  
+            Nx2=newN[0]  
+        else: Nx2=dfl.Nx() 
+         
+        if newN[1] != None:  
+            Ny2=newN[1]  
+        else: Ny2=dfl.Ny() 
+     
+        if newL[0] != None:  
+            Lx2=newL[0]  
+        else: Lx2=dfl.Lx()
+     
+        if newL[1] != None:  
+            Ly2=newL[1]  
+        else: Ly2=dfl.Ly()
+    
+    xscale1=np.linspace(-dfl.Lx()/2, dfl.Lx()/2, dfl.Nx()) 
+    yscale1=np.linspace(-dfl.Ly()/2, dfl.Ly()/2, dfl.Ny())     
+    xscale2=np.linspace(-Lx2/2, Lx2/2, Nx2) 
+    yscale2=np.linspace(-Ly2/2, Ly2/2, Ny2) 
+ 
+    ix_min=np.where(xscale1>=xscale2[0])[0][0] 
+    ix_max=np.where(xscale1<=xscale2[-1])[-1][-1] 
+    iy_min=np.where(yscale1>=yscale2[0])[0][0] 
+    iy_max=np.where(yscale1<=yscale2[-1])[-1][-1] 
+    if debug>1: print('      energy before interpolation '+ str (dfl.E())) 
+    #interp_func = rgi((zscale1,yscale1,xscale1), dfl.fld, fill_value=0, bounds_error=False, method='nearest') 
+    fld2=[] 
+    for fslice in dfl.fld: 
+        re_func=interp2d(xscale1,yscale1,np.real(fslice), fill_value=0, bounds_error=False, kind=method) 
+        im_func=interp2d(xscale1,yscale1,np.imag(fslice), fill_value=0, bounds_error=False, kind=method) 
+        fslice2=re_func(xscale2,yscale2)+1j*im_func(xscale2,yscale2) 
+        P1=sum(abs(fslice[iy_min:iy_max,ix_min:ix_max])**2) 
+        P2=sum(abs(fslice2)**2) 
+        fslice2=fslice2*sqrt(P1/P2) 
+        fld2.append(fslice2) 
+     
+    dfl2=deepcopy(dfl)
+    # dfl2=RadiationField() 
+    dfl2.fld=np.array(fld2) 
+    dfl2.dx=Lx2/dfl2.Nx()
+    dfl2.dy=Ly2/dfl2.Ny()
+    # dfl2.fileName=dfl.fileName+'i'
+    # dfl2.filePath=dfl.filePath+'i'
+    if debug>1: print('      energy after interpolation '+ str (F2.E())) 
+    if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
+         
+    return dfl2
+
+def dfl_shift_z(dfl,s,set_zeros=1):
+    # set_zeros - to set the values from out of initial time window to zeros
+    assert dfl.domain_z=='t','dfl_shift_z works only in time domain!'
+    shift_n=int(s/dfl.dz)
+    print('    shifting dfl by %.2f um (%.0f slices)' %(s*1e6,shift_n))
+    start = time.time()
+    dfl.fld=np.roll(dfl.fld, shift_n, axis=0)
+    if set_zeros:
+        if shift_n>0: dfl.fld[:shift_n,:,:]=0
+        if shift_n<0: dfl.fld[shift_n:,:,:]=0
+    
+    t_func = time.time() - start
+    print('      done in %.2f ' %t_func +'sec')
+    return dfl
+
+def dfl_pad_z(dfl, padn):
+    assert np.mod(padn,1)==0,'pad should be integer'
+    start = time.time()
+    
+    if padn>1:
+        print('    padding dfl by '+str(padn))
+        padn_n=(padn-1)/2*dfl.Nz() #number of slices to add before and after
+        dfl_pad=RadiationField((dfl.Nz()+2*padn_n,dfl.Ny(),dfl.Nx()))
+        dfl_pad.copy_param(dfl)
+        dfl_pad.fld[padn_n:-padn_n,:,:]=dfl.fld
+    elif padn<-1:
+        padn=abs(padn)
+        print('    de-padding dfl by '+str(padn))
+        padn_n=dfl.Nz()/padn*((padn-1)/2)
+        dfl_pad=RadiationField()
+        dfl_pad.copy_param(dfl)
+        dfl_pad.fld=dfl.fld[padn_n:-padn_n,:,:]
+    else: 
+        print('    padding dfl by '+str(padn))
+        print('      pass')
+        return dfl
+    
+    t_func = time.time() - start
+    if t_func<60: print('      done in %.2f ' %t_func +'sec')
+    else: print('      done in %.2f ' %t_func/60 +'min')
+    return dfl_pad
+    
+
+def dfl_fft_z(dfl,method='mp',nthread = multiprocessing.cpu_count()): #move to somewhere else
+    print('    calculating fft_z from '+dfl.domain_z+' domain with '+method)
+    start = time.time()
+    dfl_fft=RadiationField(dfl.shape())
+    dfl_fft.copy_param(dfl)
+    
+    if nthread<2:
+        method='np'
+    
+    if dfl.domain_z=='t':
+        if method=='np':
+            dfl_fft.fld=np.fft.fft(dfl.fld,axis=0)
+        elif method=='mp':
+            fft = pyfftw.builders.fft(dfl.fld, axis=0, overwrite_input=False, planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
+            dfl_fft.fld=fft()
+        else: raise ValueError('fft method should be "np" or "mp"')
+        dfl_fft.fld=np.fft.ifftshift(dfl_fft.fld,0)
+        dfl_fft.fld/=sqrt(dfl_fft.Nz())
+        dfl_fft.domain_z='f'
+    elif dfl.domain_z=='f':
+        dfl_fft.fld=np.fft.fftshift(dfl.fld,0)
+        if method=='np':
+            dfl_fft.fld=np.fft.ifft(dfl_fft.fld,axis=0)
+        elif method=='mp':
+            fft = pyfftw.builders.ifft(dfl_fft.fld, axis=0, overwrite_input=False, planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
+            dfl_fft.fld=fft()
+        else: raise ValueError("fft method should be 'np' or 'mp'")
+        dfl_fft.fld*=sqrt(dfl_fft.Nz())
+        dfl_fft.domain_z='t'
+    else: raise ValueError("domain_z value should be 't' or 'f'")
+    
+    t_func = time.time() - start
+    if t_func<60: print('      done in %.2f ' %t_func +'sec')
+    else: print('      done in %.2f ' %t_func/60 +'min')
+    return dfl_fft
+  
+def dfl_fft_xy(dfl,method='mp',nthread = multiprocessing.cpu_count()): #move to somewhere else
+    print('    calculating fft_xy from '+dfl.domain_xy+' domain with '+method)
+    start = time.time()
+    dfl_fft=RadiationField(dfl.shape())
+    dfl_fft.copy_param(dfl)
+    
+    if nthread<2:
+        method='np'
+    
+    if dfl.domain_xy=='s':
+        if method=='np':
+            dfl_fft.fld=np.fft.fft2(dfl.fld,axes=(1,2))
+        elif method=='mp':
+            fft = pyfftw.builders.fft2(dfl.fld, axes=(1,2), overwrite_input=False, planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
+            dfl_fft.fld=fft()
+        else: raise ValueError("fft method should be 'np' or 'mp'")
+        dfl_fft.fld=np.fft.fftshift(dfl_fft.fld,axes=(1,2))
+        dfl_fft.fld/=sqrt(dfl_fft.Nx()*dfl_fft.Ny())
+        dfl_fft.domain_xy='k'
+    elif dfl.domain_xy=='k':
+        dfl_fft.fld=np.fft.ifftshift(dfl.fld,axes=(1,2))
+        if method=='np':
+            dfl_fft.fld=np.fft.ifft2(dfl_fft.fld,axes=(1,2))
+        elif method=='mp':
+            fft = pyfftw.builders.ifft2(dfl_fft.fld, axes=(1,2), overwrite_input=False, planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
+            dfl_fft.fld=fft()
+        else: raise ValueError("fft method should be 'np' or 'mp'")
+        dfl_fft.fld*=sqrt(dfl_fft.Nx()*dfl_fft.Ny())
+        dfl_fft.domain_xy='s'
+        
+    else: raise ValueError("domain_xy value should be 's' or 'k'")
+    
+    t_func = time.time() - start
+    if t_func<60: print('      done in %.2f ' %t_func +'sec')
+    else: print('      done in %.2f ' %t_func/60 +'min')
+    return dfl_fft
+    
+def dfl_trf(dfl,trf,mode):
+    assert dfl.domain_z=='f','dfl_trf works only in frequency domain!'
+    print('    multiplying dfl by trf')
+    start = time.time()
+    # assert trf.__class__==TransferFunction,'Wrong TransferFunction class'
+    assert dfl.domain_z=='f','wrong dfl domain (must be frequency)!'
+    if mode=='tr':
+        filt=trf.tr
+    elif mode=='ref':
+        filt=trf.ref
+    else: raise AttributeError('Wrong z_domain attribute')
+    filt_lamdscale=2*pi/trf.k
+    if min(dfl.scale_z())>max(filt_lamdscale) or max(dfl.scale_z())<min(filt_lamdscale):
+        raise ValueError('frequency scales of dfl and transfer function do not overlap')
+    
+    filt_interp_re=np.flipud(np.interp(np.flipud(dfl.scale_z()),np.flipud(filt_lamdscale),np.flipud(np.real(filt))))
+    filt_interp_im=np.flipud(np.interp(np.flipud(dfl.scale_z()),np.flipud(filt_lamdscale),np.flipud(np.imag(filt))))
+    filt_interp=filt_interp_re-1j*filt_interp_im
+    del filt_interp_re, filt_interp_im
+    dfl.fld=dfl.fld*filt_interp[:,np.newaxis,np.newaxis]
+
+    t_func = time.time() - start
+    print('      done in %.2f ' %t_func +'sec')
+    return dfl, filt_interp
+    
+def dfl_st_cpl(dfl,theta_b,inp_axis='y',s_start=None):
+
+    print('    introducing spatio-temporal coupling')
+    start = time.time()
+    direction=1
+    if s_start==None:
+        s_start=n_moment(dfl.scale_z(),dfl.int_z(),0,1)
+
+    dfl2=deepcopy(dfl)
+    dfl2.fld[np.where(abs(dfl2.fld)>1e2)]=1e2
+    shift_z_scale=dfl2.scale_z()-s_start
+    shift_m_scale=shift_z_scale/tan(theta_b)
+    shift_m_scale[np.where(shift_m_scale>0)]=0
+    shift_pix_scale=np.floor(shift_m_scale/dfl2.dx).astype(int)
+
+    # pix_start=np.where(shift_m_scale==0)[0][0]
+
+    fld=dfl2.fld
+    if inp_axis=='y':
+        for i in np.where(shift_m_scale!=0)[0]:
+            fld[i,:,:]=np.roll(fld[i,:,:],-direction*shift_pix_scale[i],axis=0)
+            if direction==1:
+                fld[i,:abs(shift_pix_scale[i]),:]=0
+                
+    elif inp_axis=='x':
+        for i in np.where(shift_m_scale!=0)[0]:
+            fld[i,:,:]=np.roll(fld[i,:,:],-direction*shift_pix_scale[i],axis=1)
+            if direction==1:
+                fld[i,:,:abs(shift_pix_scale[i])]=0
+    
+    dfl2.fld=fld
+    t_func = time.time() - start
+    print('      done in %.2f ' %t_func +'sec')
+    return dfl2
+    
+    
+def dfl_hxrss_filt(dfl,trf,ev_seed,s_delay,st_cpl=1,res_per_fwhm=6,fft_method='mp',dump_proj=0):
+    #needs optimizing?
+    nthread = multiprocessing.cpu_count()
+    if nthread>8: nthread=int(nthread*0.9) #not to occupy all CPUs on login server
+    print('  HXRSS dfl filtering')
+    start = time.time()
+    # klpos, krpos, cwidth = FWHM(trf.k, 1.0-np.abs(trf.tr))
+    cwidth = fwhm(trf.k, 1.0-np.abs(trf.tr))
+    dk_old=2*pi/dfl.Lz()
+    dk = cwidth/res_per_fwhm
+    padn = np.int(dk_old/dk)
+    if np.mod(padn,2)==0 and padn!=0: #check for odd
+        padn=int(padn+1)
+    
+    
+    
+    if dump_proj:
+        
+        dfl=dfl_pad_z(dfl, padn)
+        
+        t1=time.time()
+        t_l_scale=dfl.scale_z()
+        # t_l_int_b=dfl.int_z()
+        t2=time.time()
+        
+        dfl=dfl_fft_z(dfl,method=fft_method,nthread = multiprocessing.cpu_count())
+        
+        t3=time.time()
+        f_l_scale=dfl.scale_z() #frequency_large_scale (wavelength in m)
+        # f_l_int_b=dfl.int_z()
+        t4=time.time()
+        
+        dfl,f_l_filt=dfl_trf(dfl,trf,mode='tr')
+        
+        t5=time.time()
+        f_l_int_a=dfl.int_z()
+        t6=time.time()
+        
+        dfl=dfl_fft_z(dfl,method=fft_method,nthread = multiprocessing.cpu_count())
+        
+        t7=time.time()
+        t_l_int_a=dfl.int_z()
+        t8=time.time()
+        
+        if st_cpl: dfl=dfl_st_cpl(dfl,trf.thetaB)
+        dfl=dfl_shift_z(dfl,s_delay,set_zeros=0)
+        dfl=dfl_pad_z(dfl, -padn)
+        
+        t_func = time.time() - start
+        t_proj=t2+t4+t6+t8-(t1+t3+t5+t7)
+        print('    done in %.2f sec, (%.2f sec for proj calc)' %(t_func,t_proj))
+        return dfl, ((t_l_scale,None,t_l_int_a),(f_l_scale,f_l_filt,None,f_l_int_a))#f_l_int_b,t_l_int_b,
+    
+    else:
+        
+        
+        dfl=dfl_pad_z(dfl, padn)
+        dfl=dfl_fft_z(dfl,method=fft_method,nthread = multiprocessing.cpu_count())
+        dfl,_=dfl_trf(dfl,trf,mode='tr')
+        dfl=dfl_fft_z(dfl,method=fft_method,nthread = multiprocessing.cpu_count())
+        if st_cpl: dfl=dfl_st_cpl(dfl,trf.thetaB)
+        dfl=dfl_shift_z(dfl,s_delay,set_zeros=0)
+        dfl=dfl_pad_z(dfl, -padn)
+        
+        t_func = time.time() - start
+        print('    done in %.2f ' %t_func +'sec')
+        return dfl,()
+    
+def save_xhrss_dump_proj(dump_proj,filePath):
+    #saves the dfl_hxrss_filt radiation projections dump to text files
+    
+    (t_l_scale,_,t_l_int_a),(f_l_scale,f_l_filt,_,f_l_int_a)=dump_proj
+
+    f = open(filePath+'.t.txt','wb')
+    header='Distance Power'
+    np.savetxt(f, np.c_[t_l_scale,t_l_int_a],header=header,fmt="%e", newline='\n',comments='')
+    f.close()
+
+    f = open(filePath+'.f.txt','wb')
+    header='Wavelength Spectrum Filter_Abs Filter_Ang'
+    np.savetxt(f, np.c_[f_l_scale,f_l_int_a,np.abs(f_l_filt),np.angle(f_l_filt)],header=header,fmt="%e", newline='\n',comments='')
+    f.close()
+    
+def save_trf(trf,attr,flePath):
+    if hasattr(trf,attr): 
+        filt=getattr(trf,attr)
+    else: 
+        raise ValueError('no attribute', attr, 'in fransfer function')
+    
+    f = open(flePath,'wb')
+    header='Energy[eV] Filter_Abs Filter_Ang'
+    np.savetxt(f, np.c_[trf.ev(),np.abs(trf.tr),np.angle(trf.tr)],header=header,fmt="%e", newline='\n',comments='')
+    f.close()
+    
+'''
+legacy
+'''
 
 def detune_k(lat, sig):
     lat2 = deepcopy(lat)
@@ -58,6 +461,61 @@ def taper(lat, k):
 
     return lat2
 
+def update_beam(beam_new, g, n_interp):
+    '''
+    check and rewrite!
+    '''
+    beam = deepcopy(beam_new)
+    # g0 = np.array(map(lambda x : g.sliceValues[x]['energy'][-1], range(1,g.nSlices+1)) )
+    # dg = np.array(map(lambda x : g.sliceValues[x]['e-spread'][-1], range(1,g.nSlices+1)) )
+    g0=g.el_energy[:,-1]# * (0.511e-3)
+    dg=g.el_e_spread[:,-1]
+    
+    print (len(g0))
+    print (g.nSlices)
+    
+    print (len(beam_new.z))
+    
+    I = np.array(g.I)
+    
+    if n_interp == 0: n_interp = g.nSlices
+
+
+    beam_new.z = np.linspace(beam.z[0], beam.z[-1], n_interp) 
+    z2 = np.linspace(beam.z[0], beam.z[-1], g.nSlices)
+    beam_new.I = np.interp(beam_new.z, beam.z, beam.I)
+            
+    zmax, Imax = peaks(beam_new.z, beam_new.I, n=1)
+    beam_new.idx_max = np.where(beam_new.z == zmax)[0][0]
+            
+    beam_new.ex = np.interp(beam_new.z, beam.z, beam.ex) 
+    beam_new.ey = np.interp(beam_new.z, beam.z, beam.ey) 
+    beam_new.zsep = beam.zsep * len(beam.z) / len(beam_new.z)
+    #beam_new.g0 = np.interp(beam_new.z, beam.z, beam.g0) 
+    # print ("_______________________________")
+    # print (g0)
+    # print(beam.E)
+    # print(beam.E/(0.511e-3))
+    # print ("_______________________________")
+    beam_new.g0 = g0 + beam.E/(0.511e-3) #potential problem here, no beam.gamma_rel
+    print (len(beam_new.z))
+    print (len(beam_new.g0))
+    print (len(beam.z))
+    beam_new.g0 = np.interp(beam_new.z, z2, beam_new.g0)
+    beam_new.dg = dg   
+    beam_new.dg = np.interp(beam_new.z, z2, beam_new.dg)
+        
+    beam_new.eloss = np.interp(beam_new.z, beam.z, beam.eloss)
+    
+    beam_new.betax = np.interp(beam_new.z, beam.z, beam.betax)
+    beam_new.betay = np.interp(beam_new.z, beam.z, beam.betay)
+    beam_new.alphax = np.interp(beam_new.z, beam.z, beam.alphax)
+    beam_new.alphay = np.interp(beam_new.z, beam.z, beam.alphay)
+    
+    beam_new.x = np.interp(beam_new.z, beam.z, beam.x) 
+    beam_new.px = np.interp(beam_new.z, beam.z, beam.px) 
+    beam_new.y = np.interp(beam_new.z, beam.z, beam.y)
+    beam_new.py = np.interp(beam_new.z, beam.z, beam.py)
 
 
 def rematch(beta_mean, l_fodo, qdh, lat, extra_fodo, beam, qf, qd):
@@ -164,391 +622,21 @@ def rematch_beam_lat(beam, lat, extra_fodo, l_fodo, beta_mean):
 
     beam.beta_x, beam.alpha_x = tw0m.beta_x, tw0m.alpha_x
     beam.beta_y, beam.alpha_y = tw0m.beta_y, tw0m.alpha_y
-    
 
 
-def run(inp, launcher,readout=1,assembly_ver='sys',debug=1):
-    # inp               - GenesisInput() object with genesis input parameters
-    # launcher          - MpiLauncher() object obtained via get_genesis_launcher() function
-    # readout           - Parameter to read and calculate values from the output:
-    #                   0 - do not read output
-    #                   1 - read input and current
-    #                   2 - read all values
-    # dfl_slipage_incl  - whether to dedicate time in order to keep the dfl slices, slipped out of the simulation window. if zero, reduces assembly time by ~30%
-    # assembly_ver      - version of the assembly script: 'sys' - system based, 'pyt' - python based
-
-    # create experimental directory
-    
-    if inp.run_dir==None and inp.exp_dir==None:
-        raise ValueError('run_dir and exp_dir are not specified!')
-    
-    if inp.run_dir==None:
-        inp.run_dir=inp.exp_dir + 'run_' + str(inp.runid)
-    
-    try:
-        os.makedirs(inp.run_dir)
-    except OSError as exc: 
-        if exc.errno == errno.EEXIST and os.path.isdir(inp.run_dir):
-            pass
-        else: raise
-    
-    if inp.stageid==None:
-        inp_path = inp.run_dir + '/run.' + str(inp.runid) + '.inp'
-        out_path = inp.run_dir + '/run.' + str(inp.runid) + '.gout'
-    else:
-        inp_path = inp.run_dir + '/run.' + str(inp.runid) + '.s'+ str(inp.stageid) + '.inp'
-        out_path = inp.run_dir + '/run.' + str(inp.runid) + '.s'+ str(inp.stageid) + '.gout'
-    
-    inp_file=filename_from_path(inp_path)
-    out_file=filename_from_path(out_path)
-    
 
 
-    if debug>0: print ('    removing old files')
-    os.system('rm -rf ' + out_path+'*') # to make sure out files are cleaned
-    os.system('rm -rf ' + inp_path+'*') # to make sure inp files are cleaned
-    # os.system('rm -rf ' + out_file + '.dfl*') # to make sure field file is not attached to old one
-    # os.system('rm -rf ' + out_file + '.dpa*') # to make sure particle file is not attached to old one
-    # os.system('rm -rf ' + inp.run_dir + '/lattice.inp')
-    os.system('rm -rf ' + inp.run_dir + '/tmp.cmd')
-    # os.system('rm -rf ' + inp.run_dir + '/tmp.gen')  
-    
-    # create and fill necessary input files
-
-    
-    
-    if inp.latticefile == None:
-        if inp.lat != None:
-            if debug>1: print ('    writing '+inp_file+'.lat')
-            open(inp_path+'.lat','w').write(generate_lattice(inp.lat, unit = inp.xlamd, energy = inp.gamma0*m_e_GeV ))
-            inp.latticefile=inp_file+'.lat'
-    
-    if inp.beamfile == None:
-        if inp.beam != None:
-            if debug>1: print ('    writing '+inp_file+'.beam')
-            open(inp_path+'.beam','w').write(beam_file_str(inp.beam))
-            inp.beamfile = inp_file+'.beam'
-            
-    if inp.distfile == None:
-        if inp.dist != None:
-            if debug>1: print ('    writing '+inp_file+'.dist')
-            write_dist_file(inp.dist,inp_path+'.dist',debug=1)
-            inp.distfile = inp_file+'.dist'
-
-    if inp.partfile == None:
-        if inp.dpa != None:
-            if debug>1: print ('    writing '+inp_file+'.dpa')
-            print ('!!!!!!! no write_particle_file() function')
-            inp.partfile = inp_file+'.dpa'
-
-    if inp.fieldfile == None:
-        if inp.dfl != None:
-            if debug>1: print ('    writing '+inp_file+'.dfl')
-            write_radiation_file(inp.dfl,inp_path+'.dfl',debug=1)
-            inp.fieldfile = inp_file+'.dfl'
-    
-    if inp.radfile == None:
-        if inp.rad != None:
-            if debug>1: print ('    writing '+inp_file+'.rad')
-            open(inp_path+'.rad','w').write(rad_file_str(inp.rad))
-            inp.radfile = inp_file+'.rad'
-
-    if inp.outputfile==None:
-        inp.outputfile=out_file
-    open(inp_path,'w').write(inp.input())
-    open(inp.run_dir + '/tmp.cmd','w').write(inp_file+'\n')
-
-        
-    launcher.dir = inp.run_dir
-    launcher.prepare()
-    if debug>1: print(inp.input())
-    # RUNNING GENESIS ###
-    launcher.launch() ###
-    # RUNNING GENESIS ###
-    
-    # genesis output slices assembly
-    if debug>1: print (' ')
-    if debug>0: print ('    assembling slices')
-    assembly_time = time.time()
-    
-    dfl_slipage_incl=True
-    if assembly_ver=='sys':
-    
-        if debug>0: print ('      assembling *.out file')
-        start_time = time.time()
-        os.system('cat ' + out_path +'.slice* >> '+ out_path)
-        os.system('rm ' + out_path +'.slice* 2>/dev/null')
-        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
-        
-        if debug>0: print ('      assembling *.dfl file')
-        start_time = time.time()
-        if dfl_slipage_incl:
-            os.system('cat ' + out_path+'.dfl.slice*  >> ' + out_path+'.dfl.tmp')
-            #bytes=os.path.getsize(out_path +'.dfl.tmp')
-            command='dd if=' + out_path +'.dfl.tmp of='+ out_path +'.dfl conv=notrunc conv=notrunc 2>/dev/null' # obs='+str(bytes)+' skip=1
-            os.system(command)
-        else:
-            os.system('cat ' + out_path+'.dfl.slice*  > ' + out_path+'.dfl')
-        os.system('rm ' + out_path +'.dfl.slice* 2>/dev/null')
-        os.system('rm ' + out_path +'.dfl.tmp 2>/dev/null')
-        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
-        
-        if debug>0: print ('      assembling *.dpa file')
-        start_time = time.time()
-        os.system('cat ' + out_path +'.dpa.slice* >> ' + out_path+'.dpa')
-        os.system('rm ' + out_path +'.dpa.slice* 2>/dev/null')
-        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
-        # if debug>0: print ('      removing temporary files')
-    
-    elif assembly_ver=='pyt':
-        #there is a bug with dfl assembly
-        import glob
-        ram=1
-        
-        if debug>0: print ('      assembling *.out file')
-        start_time = time.time()
-        assemble(out_path,ram=ram,debug=debug)
-        os.system('rm ' + out_path +'.slice* 2>/dev/null')
-        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
-    
-        if debug>0: print ('      assembling *.dfl file')
-        start_time = time.time()
-        assemble(out_path+'.dfl',tailappend=dfl_slipage_incl,ram=ram,debug=debug)
-        os.system('rm ' + out_path +'.dfl.slice* 2>/dev/null')
-        os.system('rm ' + out_path +'.dfl.tmp 2>/dev/null')
-        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
-        
-        if debug>0: print ('      assembling *.dpa file')
-        start_time = time.time()
-        assemble(out_path+'.dpa',ram=ram,debug=debug)
-        os.system('rm ' + out_path +'.dpa.slice* 2>/dev/null')
-        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
-    
-    # start_time = time.time()
-    
 
 
-    # print ('        done in %.2f seconds' % (time.time() - start_time))
-    if debug>0: print ('      total time %.2f seconds' % (time.time() - assembly_time))
-    
-    if readout==1:
-        g = read_genesis_output(out_path,readall=0)
-        return g
-    elif readout==2:
-        g = read_genesis_output(out_path,readall=1)
-        return g
-    else:
-        return None
 
 
-    
-def run_old(inp, launcher,readout=1,dfl_slipage_incl=True,assembly_ver='sys',debug=1):
-    # old, to be removed
-    # inp               - GenesisInput() object with genesis input parameters
-    # launcher          - MpiLauncher() object obtained via get_genesis_launcher() function
-    # readout           - Parameter to read and calculate values from the output:
-    #                   0 - do not read output
-    #                   1 - read input and current
-    #                   2 - read all values
-    # dfl_slipage_incl  - whether to dedicate time in order to keep the dfl slices, slipped out of the simulation window. if zero, reduces assembly time by ~30%
-    # assembly_ver      - version of the assembly script: 'sys' - system based, 'pyt' - python based
-
-    # create experimental directory
-    try:
-        os.makedirs(inp.run_dir)
-    except OSError as exc: 
-        if exc.errno == errno.EEXIST and os.path.isdir(inp.run_dir):
-            pass
-        else: raise
-    
-    
-    out_file = inp.run_dir + '/run.' + str(inp.runid) + '.gout'
-    inp.latticefile='lattice.inp'
-    #remove old files
-    if debug>0: print ('    removing old files')
-    os.system('rm -rf ' + out_file+'*') # to make sure out file slices are cleaned
-    os.system('rm -rf ' + out_file + '.dfl*') # to make sure field file is not attached to old one
-    os.system('rm -rf ' + out_file + '.dpa*') # to make sure particle file is not attached to old one
-    os.system('rm -rf ' + inp.run_dir + '/lattice.inp')
-    os.system('rm -rf ' + inp.run_dir + '/tmp.cmd')
-    os.system('rm -rf ' + inp.run_dir + '/tmp.gen')  
-    
-    # create and fill necessary input files
-    open(inp.run_dir + '/lattice.inp','w').write( inp.lattice_str )
-    open(inp.run_dir + '/tmp.cmd','w').write("tmp.gen\n")
-    open(inp.run_dir + '/tmp.gen','w').write(inp.input())   
-    #print ('    before writing /tmp.beam')
-    #print inp.beamfile
-    if inp.beam_file_str != None:
-        if debug>1: print ('    writing '+inp.beam_file)
-        open(inp.run_dir + '/' + inp.beam_file,'w').write(inp.beam_file_str)
-        
-    if inp.dist != None:
-        if debug>1: print ('    writing '+inp.dist_file)
-        write_dist_file (dist,inp.run_dir + '/' + inp.dist_file,debug=1)
-    
-    launcher.dir = inp.run_dir
-    launcher.prepare()
-    
-    # RUNNING GENESIS ###
-    launcher.launch() ###
-    # RUNNING GENESIS ###
-    
-    # genesis output slices assembly
-    if debug>1: print (' ')
-    if debug>0: print ('    assembling slices')
-    assembly_time = time.time()
-    
-    if assembly_ver=='sys':
-    
-        if debug>0: print ('      assembling *.out file')
-        start_time = time.time()
-        os.system('cat ' + out_file +'.slice* >> '+ out_file)
-        os.system('rm ' + out_file +'.slice* 2>/dev/null')
-        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
-        
-        if debug>0: print ('      assembling *.dfl file')
-        start_time = time.time()
-        if dfl_slipage_incl:
-            os.system('cat ' + out_file+'.dfl.slice*  >> ' + out_file+'.dfl.tmp')
-            #bytes=os.path.getsize(out_file +'.dfl.tmp')
-            command='dd if=' + out_file +'.dfl.tmp of='+ out_file +'.dfl conv=notrunc conv=notrunc 2>/dev/null' # obs='+str(bytes)+' skip=1
-            os.system(command)
-        else:
-            os.system('cat ' + out_file+'.dfl.slice*  > ' + out_file+'.dfl')
-        os.system('rm ' + out_file +'.dfl.slice* 2>/dev/null')
-        os.system('rm ' + out_file +'.dfl.tmp 2>/dev/null')
-        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
-        
-        if debug>0: print ('      assembling *.dpa file')
-        start_time = time.time()
-        os.system('cat ' + out_file +'.dpa.slice* >> ' + out_file+'.dpa')
-        os.system('rm ' + out_file +'.dpa.slice* 2>/dev/null')
-        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
-        # if debug>0: print ('      removing temporary files')
-    
-    elif assembly_ver=='pyt':
-        #there is a bug with dfl assembly
-        import glob
-        ram=1
-        
-        if debug>0: print ('      assembling *.out file')
-        start_time = time.time()
-        assemble(out_file,ram=ram,debug=debug)
-        os.system('rm ' + out_file +'.slice* 2>/dev/null')
-        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
-    
-        if debug>0: print ('      assembling *.dfl file')
-        start_time = time.time()
-        assemble(out_file+'.dfl',tailappend=dfl_slipage_incl,ram=ram,debug=debug)
-        os.system('rm ' + out_file +'.dfl.slice* 2>/dev/null')
-        os.system('rm ' + out_file +'.dfl.tmp 2>/dev/null')
-        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
-        
-        if debug>0: print ('      assembling *.dpa file')
-        start_time = time.time()
-        assemble(out_file+'.dpa',ram=ram,debug=debug)
-        os.system('rm ' + out_file +'.dpa.slice* 2>/dev/null')
-        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
-    
-    # start_time = time.time()
-    
 
 
-    # print ('        done in %.2f seconds' % (time.time() - start_time))
-    if debug>0: print ('      total time %.2f seconds' % (time.time() - assembly_time))
-    
-    if readout==1:
-        g = read_genesis_output(out_file,readall=0)
-        return g
-    elif readout==2:
-        g = read_genesis_output(out_file,readall=1)
-        return g
-    else:
-        return None
 
-
-    
-def assemble(out_file,remove=1,tailappend=0,ram=1,debug=1):
-    import glob, sys
-    # try:
-    # if tailappend:
-        # os.rename(out_file,out_file+'.slice999999')
-    
-    fins=glob.glob(out_file +'.slice*')
-    fins.sort()
-    
-    if tailappend:
-        fout = open(out_file,'r+b')
-    else:
-        fout = open(out_file,'ab')
-    #else:
-    #    fout = file(out_file,'a')
-    N=len(fins)
-    if ram==1:
-        idata=''
-        data=bytearray()
-        if debug>1: print('        reading '+str(N)+' slices to RAM...')
-        index=10
-        for i, n in enumerate(fins):
-            # if i/N>=index:
-                # sys.stdout.write(str(index)+'%.')
-                # index +=10
-            fin = open(n,'rb')
-            while True:
-                idata=fin.read(65536)
-                if not idata:
-                    break
-                else:
-                    data+=idata
-        if debug>1: print('        writing...')
-        fout.write(data)
-        try:
-            fin.close()
-        except:
-            pass
-        
-        if remove:
-            os.system('rm ' + out_file +'.slice* 2>/dev/null')
-            # os.remove(fins)
-    else:
-        for i, n in enumerate(fins):
-            # if i/N>=index:
-                # sys.stdout.write(str(index)+'%.')
-                # index +=10
-            fin = open(n,'rb')
-            while True:
-                data = fin.read(65536)
-                if not data:
-                    break
-                fout.write(data)
-            fin.close()
-            if remove:
-                os.remove(fin.name)
-    
-    fout.close()
-    # except:
-        # print('        could not assemble '+out_file)
-    
-    
 '''
-#### 12.05.2016 MODIFIED BY GG FOR MAXWELL####
+CHEDULED FOR REMOVAL
 '''
-def get_genesis_launcher(launcher_program=''):
-    host = socket.gethostname()
 
-    launcher = MpiLauncher()
-    if launcher_program!='':
-        launcher.program=launcher_program
-    else:
-
-        if host.startswith('kolmogorov'):
-            launcher.program = '/home/iagapov/workspace/xcode/codes/genesis/genesis < tmp.cmd | tee log'
-        if host.startswith('max'):
-            launcher.program = '/data/netapp/xfel/products/genesis/genesis < tmp.cmd | tee log'
-        launcher.mpiParameters ='-x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH' #added -n
-    #launcher.nproc = nproc
-    return launcher
 
 def get_data_dir():
     host = socket.gethostname()
@@ -557,25 +645,6 @@ def get_data_dir():
         return '/data/netapp/xfel/iagapov/xcode_data/'
     return '/tmp/'
 
-def create_exp_dir(exp_dir, run_ids):
-    for run_id in run_ids:
-
-        try:
-            run_dir = exp_dir + 'run_' + str(run_id)
-            os.makedirs(run_dir)
-        except OSError as exc: 
-            if exc.errno == errno.EEXIST and os.path.isdir(run_dir):
-                pass
-            else: raise
-    
-    try:
-        res_dir = exp_dir + 'results'
-        os.makedirs(res_dir)
-    except OSError as exc: 
-        if exc.errno == errno.EEXIST and os.path.isdir(run_dir):
-            pass
-        else: raise
-    
 
 def checkout_run(run_dir, run_id, prefix1, prefix2, save=False,debug=1):
     print ('    checking out run from '+prefix1+'.gout to '+prefix2+'.gout')
@@ -606,108 +675,11 @@ def checkout_run(run_dir, run_id, prefix1, prefix2, save=False,debug=1):
 
 
 
-def show_output(g, show_field = False, show_slice=0):
 
-    print ('plotting slice', show_slice)
-
-    h = 4.135667516e-15
-    c = 299792458.0
-    xrms = np.array(g.sliceValues[g.sliceValues.keys()[show_slice]]['xrms'])
-    yrms = np.array(g.sliceValues[g.sliceValues.keys()[show_slice]]['yrms'])
-        
-    f = plt.figure()
-    f.add_subplot(131), plt.plot(g.z, xrms, lw=3), plt.plot(g.z, yrms, lw=3), plt.grid(True)
-    f.add_subplot(132), plt.plot(g.z, g.power_z, lw=3), plt.grid(True)
-    t = 1.0e+15 * float(g('zsep')) * float(g('xlamds')) * np.arange(0,len(g.I)) / c
-
-    f.add_subplot(133)
-    plt.plot(g.t,g.power_int, lw=3)
-    plt.plot(t,g.I * np.max(g.power_int) / np.max(g.I), lw=3)
-    plt.grid(True)
-    
-    npoints = g('ncar')
-    zstop = g('zstop')
-    delz = g('delz')
-    xlamd = g('xlamd')
-    xlamds = g('xlamds')
-    nslice = g('nslice')
-    zsep = g('zsep')
-    dgrid = g('dgrid')
-    
-    smax = nslice * zsep * xlamds   
-                 
-    print ('wavelength ', xlamds)
-    
-    if show_field:
-        #from mpi4py import MPI
-        
-        #comm = MPI.COMM_WORLD
-        #slices = readRadiationFile_mpi(comm=comm, fileName=file+'.dfl', npoints=npoints)
-        slices = readRadiationFile(fileName= g.path + '.dfl', npoints=npoints)
-        print ('slices:', slices.shape)
-    
-        E = np.zeros_like(slices[0,:,:])
-        for i in range(slices.shape[0]): E += np.multiply(slices[i,:,:], slices[i,:,:].conjugate())
-    
-        
-        fig = plt.figure()
-        fig.add_subplot(131)
-        m = plt.imshow(abs(E),cmap='YlOrRd')
-        z = abs(slices[100,:,:])
-
-        fig.add_subplot(132)
-        P = np.zeros_like(slices[:,0,0])
-        for i in range(len(P)):
-            s = sum( np.abs(np.multiply(slices[i,:,:], slices[i,:,:])) )
-            P[i] = abs(s*s.conjugate()) * (dgrid**2 / npoints )**2  
-    
-            
-        t = 1.0e+15 * float(g('zsep')) * float(g('xlamds')) * np.arange(0,len(P)) / c
-        plt.plot(t, P)
-        plt.title('Pulse/axis')
-
-        fig.add_subplot(133)
-        spec = np.abs(np.fft.fft(slices[:,int(npoints/2),int(npoints/2)]))**2
-        freq_ev = h * fftfreq(len(spec), d=zsep * xlamds / c) 
-        plt.plot(freq_ev, spec)
-        plt.title('Spectrum/axis')
-
-
-
-'''
-putting arbitrarily many plots on single figure
-'''
-def show_plots(displays, fig):
-    n1 = (len(displays) -1 )/2 + 1
-    n2 = (len(displays) -1) / n1 +1
-    #print n1, n2
-    fmt = str(n1)+ str(n2)
-    print (fmt)
-    
-    for i in range(len(displays)):
-        ax = fig.add_subplot(fmt + str(i+1))
-        ax.grid(True)
-        for f in displays[i].data:
-            x,y = f(x = np.linspace(-10, 10, 100))
-            ax.plot(x, y, '.')
-
-    show()
-
-class Display:
-    def __init__(self, data=lambda x: (x, 0*x) , xlabel='',ylabel=''):
-        self.data = (data,)
-        self.xlabel = xlabel
-        self.ylabel = ylabel
-
-
-
-
-
-'''
-configurable to e.g. semi-empirical models
-'''
 class FelSimulator(object):
-    
+    '''
+    configurable to e.g. semi-empirical models
+    '''    
     def __init__(self):
         self.engine = 'genesis'
     
@@ -724,7 +696,7 @@ class FelSimulator(object):
             return s3d, None
         if self.engine == 'test_genesis':
             ''' read test sliced field '''
-            g = read_genesis_output(self.input)
+            g = read_out_file(self.input)
             print ('read sliced field ', g('ncar'), g.nSlices)
             slices = readRadiationFile(fileName=self.input + '.dfl', npoints=g('ncar'))            
             s3d = Signal3D()
@@ -733,38 +705,5 @@ class FelSimulator(object):
             s3d.g = g           
             return s3d, None
 
-def background(command):
-    '''
-    start command as background process
-    the argument shohuld preferably be a string in triple quotes '
-    '''
-    import subprocess
-    imports='from ocelot.gui.genesis_plot import *; from ocelot.adaptors.genesis import *; from ocelot.utils.xfel_utils import *; '
-    subprocess.Popen(["python","-c",imports + command])
 
-def save_xhrss_dump_proj(dump_proj,filePath):
-    #saves the dfl_hxrss_filt radiation projections dump to text files
-    
-    (t_l_scale,_,t_l_int_a),(f_l_scale,f_l_filt,_,f_l_int_a)=dump_proj
 
-    f = open(filePath+'.t.txt','wb')
-    header='Distance Power'
-    np.savetxt(f, np.c_[t_l_scale,t_l_int_a],header=header,fmt="%e", newline='\n',comments='')
-    f.close()
-
-    f = open(filePath+'.f.txt','wb')
-    header='Wavelength Spectrum Filter_Abs Filter_Ang'
-    np.savetxt(f, np.c_[f_l_scale,f_l_int_a,np.abs(f_l_filt),np.angle(f_l_filt)],header=header,fmt="%e", newline='\n',comments='')
-    f.close()
-    
-def save_trf(trf,attr,flePath):
-    if hasattr(trf,attr): 
-        filt=getattr(trf,attr)
-    else: 
-        raise ValueError('no attribute', attr, 'in fransfer function')
-    
-    f = open(flePath,'wb')
-    header='Energy[eV] Filter_Abs Filter_Ang'
-    np.savetxt(f, np.c_[trf.ev(),np.abs(trf.tr),np.angle(trf.tr)],header=header,fmt="%e", newline='\n',comments='')
-    f.close()
-    

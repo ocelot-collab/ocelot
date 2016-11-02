@@ -5,8 +5,17 @@ user interface for viewing genesis simulation results
 import sys, os, csv
 import time
 import matplotlib
-#from matplotlib.figure import Figure
-#from mpl_toolkits.mplot3d import Axes3D
+
+# check if Xserver is connected
+# havedisplay = "DISPLAY" in os.environ
+# if not havedisplay:
+    # # re-check
+    # exitval = os.system('python -c "import matplotlib.pyplot as plt; plt.figure()"')
+    # havedisplay = (exitval == 0)
+# if not havedisplay:
+    # # force matplotlib not ot use Xwindows backend. plots may still be plotted into e.g. *.png
+    # matplotlib.use('Agg')
+    
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy import *
@@ -82,7 +91,7 @@ def plot_gen_out_all(handle=None,savefig='png',showfig=False,choice=(1,1,1,1,6.0
     for handle in handles:
                 
         if os.path.isfile(str(handle)):
-            handle=read_out_file(handle,readall=1,debug=debug)
+            handle=read_out_file(handle,read_level=2,debug=debug)
 
         if isinstance(handle,GenesisOutput):
             if choice[0]: f0=plot_gen_out_e(handle,savefig=savefig,debug=debug)
@@ -337,7 +346,7 @@ def plot_gen_out_evo(g, params=['und_quad','el_size','el_energy','el_bunching','
     params_str=str(params).replace("'",'').replace('[','').replace(']','').replace(' ','').replace(',','--')
     
     if os.path.isfile(str(g)):
-        g=read_out_file(g,readall=1)
+        g=read_out_file(g,read_level=2)
     #add check for output object
     if fig_name is None:
         if g.fileName() is '':
@@ -851,7 +860,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend = True, phase = False, fa
         # from ocelot.adaptors.genesis import GenesisOutput, read_out_file
         # dfl_dir=dfl
         # out_dir=dfl_dir.replace('.dfl','')
-        # out=read_out_file(out_dir,readall=0,debug=0)
+        # out=read_out_file(out_dir,read_level=0,debug=0)
 
     # if F.__class__==str:
         # from ocelot.adaptors.genesis import readRadiationFile
@@ -1248,7 +1257,7 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
             out_file=proj_dir+'run_'+str(irun)+'/run.'+str(irun)+'.s'+str(stage)+'.gout'
             if os.path.isfile(out_file):
 #                try:
-                outlist[irun] = read_out_file(out_file,readall=1,debug=debug)
+                outlist[irun] = read_out_file(out_file,read_level=2,debug=debug)
                 run_range_good.append(irun)
 #                except:
 #                    print('     could not read '+out_file)
@@ -1262,7 +1271,7 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
 
     #    for irun in run_range:
     #        out_file=proj_dir+'run_'+str(irun)+'/run.'+str(irun)+'.s'+str(stage)+'.gout'
-    #        outlist[irun] = read_out_file(out_file,readall=1)
+    #        outlist[irun] = read_out_file(out_file,read_level=1)
     #        print(outlist[irun].sliceKeys)
 
         if param_inp==[]:
@@ -1469,7 +1478,7 @@ def plot_gen_corr(proj_dir,run_inp=[],p1=(),p2=(),savefig=False, showfig=False, 
         for irun in run_range:
             out_file_1=proj_dir+'run_'+str(irun)+'/run.'+str(irun)+'.s'+str(stage_1)+'.gout'
             if os.path.isfile(out_file_1):
-                outlist_1[irun] = read_out_file(out_file_1,readall=1)
+                outlist_1[irun] = read_out_file(out_file_1,read_level=2)
                 run_range_good_1.append(irun)
                 
 
@@ -1477,7 +1486,7 @@ def plot_gen_corr(proj_dir,run_inp=[],p1=(),p2=(),savefig=False, showfig=False, 
         for irun in run_range:
             out_file_2=proj_dir+'run_'+str(irun)+'/run.'+str(irun)+'.s'+str(stage_2)+'.gout'
             if os.path.isfile(out_file_2):
-                outlist_2[irun] = read_out_file(out_file_2,readall=1)
+                outlist_2[irun] = read_out_file(out_file_2,read_level=2)
                 run_range_good_2.append(irun)
             
     run_range_good=[val for val in run_range_good_1 if val in run_range_good_2]
@@ -1744,7 +1753,7 @@ def plot_edist(edist, figsize=4, fig_name = None, savefig=False, showfig=False, 
     
     if debug>0: print(('      done in %.2f seconds' % (time.time() - start_time)))
 
-def plot_beam(beam,figsize=4,showfig=False,savefig=False,fig=None,plot_xy=None,debug=0):
+def plot_beam(beam,figsize=3,showfig=False,savefig=False,fig=None,plot_xy=None,debug=0):
     
     if showfig == False and savefig == False:
         return
@@ -1761,75 +1770,79 @@ def plot_beam(beam,figsize=4,showfig=False,savefig=False,fig=None,plot_xy=None,d
         fig=plt.figure()
     fig.clf()
     
-    fig.set_size_inches((3*figsize,(3+plot_xy)*figsize),forward=True)
+    fig.set_size_inches((4*figsize,(3+plot_xy)*figsize),forward=True)
     ax = fig.add_subplot(2+plot_xy,2,1) 
     plt.grid(True)
     ax.set_xlabel(r'$\mu m$')
     p1,= plt.plot(1.e6 * np.array(beam.z),beam.I,'r',lw=3)
     plt.plot(1.e6 * beam.z[beam.idx_max],beam.I[beam.idx_max],'bs')
-    
     ax = ax.twinx()
     
     p2,= plt.plot(1.e6 * np.array(beam.z),1.e-3 * np.array(beam.eloss),'g',lw=3)
     
-    ax.legend([p1, p2],[r'$I [A]$',r'Wake $[KV/m]$'],loc=4,fontsize=fontsize)
+    ax.legend([p1, p2],[r'$I [A]$',r'Wake $[KV/m]$'],fontsize=fontsize,loc='best')
     #ax.set_xlim([np.amin(beam.z),np.amax(beam.x)])
-    ax = fig.add_subplot(2+plot_xy,2,2) 
+    ax = fig.add_subplot(2+plot_xy,2,2, sharex=ax) 
     plt.grid(True)
     ax.set_xlabel(r'$\mu m$')
     #p1,= plt.plot(1.e6 * np.array(beam.z),1.e-3 * np.array(beam.eloss),'r',lw=3)
     p1, = plt.plot(1.e6 * np.array(beam.z),beam.g0,'r',lw=3)
+    plt.plot(1.e6 * beam.z[beam.idx_max],beam.g0[beam.idx_max], 'bs')
     ax = ax.twinx()
     p2, = plt.plot(1.e6 * np.array(beam.z),beam.dg,'g',lw=3)
-
-    ax.legend([p1,p2],[r'$\gamma$',r'$\delta \gamma$'])
+    plt.plot(1.e6 * beam.z[beam.idx_max],beam.dg[beam.idx_max], 'bs')
+    ax.legend([p1,p2],[r'$\gamma$',r'$\delta \gamma$'],loc='best')
     
-    ax = fig.add_subplot(2+plot_xy,2,3) 
+    ax = fig.add_subplot(2+plot_xy,2,3, sharex=ax) 
     plt.grid(True)
     ax.set_xlabel(r'$\mu m$')
     p1, = plt.plot(1.e6 * np.array(beam.z),beam.ex*1e6, 'r', lw=3)
     p2, = plt.plot(1.e6 * np.array(beam.z),beam.ey*1e6, 'g', lw=3)
-    plt.plot(1.e6 * beam.z[beam.idx_max],beam.ex[beam.idx_max], 'bs')
+    plt.plot(1.e6 * beam.z[beam.idx_max],beam.ex[beam.idx_max]*1e6, 'bs')
     
-    ax.legend([p1,p2],[r'$\varepsilon_x [\mu m]$',r'$\varepsilon_y [\mu m]$'],fontsize=fontsize)
+    ax.legend([p1,p2],[r'$\varepsilon_x [\mu m]$',r'$\varepsilon_y [\mu m]$'],fontsize=fontsize,loc='best')
     #ax3.legend([p3,p4],[r'$\varepsilon_x$',r'$\varepsilon_y$'])
     
     
-    ax = fig.add_subplot(2+plot_xy,2,4)
+    ax = fig.add_subplot(2+plot_xy,2,4, sharex=ax)
     plt.grid(True)
     ax.set_xlabel(r'$\mu m$')
     p1, = plt.plot(1.e6 * np.array(beam.z),beam.betax, 'r', lw=3)
     p2, = plt.plot(1.e6 * np.array(beam.z),beam.betay, 'g', lw=3)
     plt.plot(1.e6 * beam.z[beam.idx_max],beam.betax[beam.idx_max], 'bs')
     
-    ax.legend([p1,p2],[r'$\beta_x [m]$',r'$\beta_y [m]$'],fontsize=fontsize)
+    ax.legend([p1,p2],[r'$\beta_x [m]$',r'$\beta_y [m]$'],fontsize=fontsize,loc='best')
 
     if plot_xy:
 
-        ax = fig.add_subplot(3,2,5)
+        ax = fig.add_subplot(3,2,5, sharex=ax)
         plt.grid(True)
         ax.set_xlabel(r'$\mu m$')
         p1, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(beam.x), 'r', lw=3)
         p2, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(beam.y), 'g', lw=3)
         
-        ax.legend([p1,p2],[r'$x [\mu m]$',r'$y [\mu m]$'],fontsize=fontsize)
+        ax.legend([p1,p2],[r'$x [\mu m]$',r'$y [\mu m]$'],fontsize=fontsize,loc='best')
         
         '''
         check!
         '''
-        p=beam.g0*m_e_eV/speed_of_light
-        pz=sqrt(p**2-beam.px**2-beam.py**2)
+        beam_beta=sqrt(1-(1/beam.g0**2))
+        beam_p=beam.g0*beam_beta
+        # p=beam.g0*m_e_eV/speed_of_light
+        pz=sqrt(beam_p**2-beam.px**2-beam.py**2)
         xp=beam.px/pz
         yp=beam.py/pz
         
-        ax = fig.add_subplot(3,2,6)
+        ax = fig.add_subplot(3,2,6, sharex=ax)
         plt.grid(True)
         ax.set_xlabel(r'$\mu m$')
         p1, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(xp), 'r', lw=3)
         p2, = plt.plot(1.e6 * np.array(beam.z),1.e6 * np.array(yp), 'g', lw=3)
         
-        ax.legend([p1,p2],[r'$x_p [\mu rad]$',r'$y_p [\mu rad]$'],fontsize=fontsize)
-        
+        ax.legend([p1,p2],[r'$x_p [\mu rad]$',r'$y_p [\mu rad]$'],fontsize=fontsize,loc='best')
+    
+    ax.set_xlim([1.e6*np.amin(beam.z), 1e6*np.amax(beam.z)])
+    
     fig.subplots_adjust(hspace=0.2,wspace=0.3)
      
     plt.draw()

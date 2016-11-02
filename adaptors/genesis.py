@@ -16,7 +16,7 @@ from ocelot.common.globals import * #import of constants like "h_eV_s" and "spee
 
 import math
 import numpy as np
-from numpy import inf, shape, append, complex128,complex64
+from numpy import mean, std, inf, shape, append, complex128,complex64
 
 inputTemplate = "\
  $newrun \n\
@@ -569,12 +569,37 @@ class GenesisElectronDist:
         return len(self.t)
     
     def center(self):
-        self.x-=mean(self.x)
-        self.y-=mean(self.y)
-        self.xp-=mean(self.xp)
-        self.yp-=mean(self.yp)
+        self.x-=np.mean(self.x)
+        self.y-=np.mean(self.y)
+        self.xp-=np.mean(self.xp)
+        self.yp-=np.mean(self.yp)
         return self
     
+    def twiss(self):
+        tws=Twiss()
+        
+        x=self.x
+        y=self.y
+        xp=self.xp
+        yp=self.yp
+
+        mean_x2=mean(x**2)
+        mean_y2=mean(y**2)
+        mean_px2=mean(xp**2)
+        mean_py2=mean(yp**2)
+        mean_xpx=mean(x*xp)
+        mean_ypy=mean(y*yp)
+        mean_g=mean(self.g)
+
+        tws.emit_x= mean_g*(mean_x2*mean_px2-mean_xpx**2)**0.5 / mean_g
+        tws.emit_y= mean_g*(mean_y2*mean_py2-mean_ypy**2)**0.5 / mean_g
+        tws.beta_x=mean_g*mean_x2/tws.emit_x
+        tws.beta_y=mean_g*mean_y2/tws.emit_y
+        tws.alpha_x=-mean_g*mean_xpx/tws.emit_x
+        tws.alpha_y=-mean_g*mean_ypy/tws.emit_y
+        tws.E=mean_g*m_e_GeV
+        
+        return tws
     # def twiss(self):#not tested!!!
         # from ocelot.cpbd.beam import Twiss
         # tws=Twiss()
@@ -763,20 +788,21 @@ class RadiationField():
     Genesis control
 '''
 
-def run_genesis(inp, launcher,readout=1,assembly_ver='pyt',debug=1):
+def run_genesis(inp, launcher,read_level=2,assembly_ver='pyt',debug=1):
     '''
     Main function for executing Genesis code
     inp               - GenesisInput() object with genesis input parameters
     launcher          - MpiLauncher() object obtained via get_genesis_launcher() function
-    readout           - Parameter to read and calculate values from the output:
-                      0 - do not read output
-                      1 - read input and current
+    read_level           - Parameter to read and calculate values from the output:
+                     -1 - do not read
+                      0 - read input only (header)
+                      1 - read input and current profile
                       2 - read all values
     dfl_slipage_incl  - whether to dedicate time in order to keep the dfl slices, slipped out of the simulation window. if zero, reduces assembly time by ~30%
     assembly_ver      - version of the assembly script: 'sys' - system based, 'pyt' - python based
     '''
-    # create experimental directory
     
+    # create experimental directory
     if inp.run_dir==None and inp.exp_dir==None:
         raise ValueError('run_dir and exp_dir are not specified!')
     
@@ -824,7 +850,7 @@ def run_genesis(inp, launcher,readout=1,assembly_ver='pyt',debug=1):
     if inp.edistfile == None:
         if inp.edist != None:
             if debug>1: print ('    writing '+inp_file+'.edist')
-            write_dist_file(inp.edist,inp_path+'.edist',debug=1)
+            write_edist_file(inp.edist,inp_path+'.edist',debug=1)
             inp.edistfile = inp_file+'.edist'
 
     if inp.partfile == None:
@@ -902,34 +928,32 @@ def run_genesis(inp, launcher,readout=1,assembly_ver='pyt',debug=1):
         assemble(out_path,ram=ram,debug=debug)
         os.system('rm ' + out_path +'.slice* 2>/dev/null')
         if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
-    
-        if debug>0: print ('      assembling *.dfl file')
-        start_time = time.time()
-        assemble(out_path+'.dfl',overwrite=dfl_slipage_incl,ram=ram,debug=debug)
-        os.system('rm ' + out_path +'.dfl.slice* 2>/dev/null')
-        os.system('rm ' + out_path +'.dfl.tmp 2>/dev/null')
-        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
         
-        if debug>0: print ('      assembling *.dpa file')
-        start_time = time.time()
-        assemble(out_path+'.dpa',ram=ram,debug=debug)
-        os.system('rm ' + out_path +'.dpa.slice* 2>/dev/null')
-        if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
+        if os.path.isfile(str(out_path+'.dfl')):
+            if debug>0: print ('      assembling *.dfl file')
+            start_time = time.time()
+            assemble(out_path+'.dfl',overwrite=dfl_slipage_incl,ram=ram,debug=debug)
+            os.system('rm ' + out_path +'.dfl.slice* 2>/dev/null')
+            os.system('rm ' + out_path +'.dfl.tmp 2>/dev/null')
+            if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
+        
+        if os.path.isfile(str(out_path+'.dpa')):
+            if debug>0: print ('      assembling *.dpa file')
+            start_time = time.time()
+            assemble(out_path+'.dpa',ram=ram,debug=debug)
+            os.system('rm ' + out_path +'.dpa.slice* 2>/dev/null')
+            if debug>1: print ('        done in %.2f seconds' % (time.time() - start_time))
     
     else: 
         raise ValueError('assembly_ver should be either "sys" or "pyt"')
     # start_time = time.time()
     
 
-
     # print ('        done in %.2f seconds' % (time.time() - start_time))
     if debug>0: print ('      total time %.2f seconds' % (time.time() - assembly_time))
     
-    if readout==1:
-        out = read_out_file(out_path,readall=0)
-        return out
-    elif readout==2:
-        out = read_out_file(out_path,readall=1)
+    if read_level>=0:
+        out = read_out_file(out_path,read_level=read_level)
         return out
     else:
         return None
@@ -1137,18 +1161,18 @@ def get_genesis_launcher(launcher_program=''):
    OUT
 '''
 
-def read_out_file(filePath, readall=1, precision=float, debug=1):
+def read_out_file(filePath, read_level=2, precision=float, debug=1):
     '''
     reads Genesis output from *.out file.
     thanks gods Genesis3 out will be in hdf5!
     
-    readall -   1 = all contents are read
-                0 = slice values are not processed. Current information is recorded, ~2x faster
-               -1 = only header is processed. Very fast
-    precision - precision of values stored
+    read_level -    0 = only header is processed. Very fast
+                    1 = slice values are not processed. Current information is obtained, ~2x faster
+                    2 = all contents are read
+    precision - precision of stored values precision
     debug -     0 = no messages printed in console
                 1 = basic info and execution time is printed
-                2 = very detailed info is printed
+                2 = most detailed info is printed (real debug)
     '''
     import re
     out = GenesisOutput()
@@ -1182,7 +1206,7 @@ def read_out_file(filePath, readall=1, precision=float, debug=1):
             continue
         
         if tokens[0] == '**********':
-            if readall==-1: break
+            if read_level==0: break
             chunk = 'slices'
             nSlice = int(tokens[3])
             if debug>1: print ('      reading slice # '+ str(nSlice))
@@ -1225,7 +1249,7 @@ def read_out_file(filePath, readall=1, precision=float, debug=1):
             #out.parameters[tokens[0]] = tokens[0:]
             #print 'input:', tokens
 #
-        if chunk == 'slice' and readall:
+        if chunk == 'slice' and read_level == 2:
 
             # tokens_fixed=re.sub(r'([0-9])\-([0-9])',r'\g<1>E-\g<2>',' '.join(tokens))
             # tokens_fixed=re.sub(r'([0-9])\+([0-9])',r'\g<1>E+\g<2>',tokens_fixed)
@@ -1260,7 +1284,7 @@ def read_out_file(filePath, readall=1, precision=float, debug=1):
         out.leng=2*out('dgrid')
     out.ncar=int(out('ncar')) #number of mesh points
     
-    if readall==-1:
+    if read_level==0:
         print ('      returning *.out header')
         if debug>0: print('      done in %.3f seconds' % (time.time() - start_time)) 
         return out
@@ -1281,7 +1305,7 @@ def read_out_file(filePath, readall=1, precision=float, debug=1):
             
     assert(out.n[-1]-out.n[0])== (len(out.n)-1)*out('ishsty'),'.out is missing at least '+str((out.n[-1]-out.n[0])-(len(out.n)-1)*out('ishsty'))+' slices!'
         
-    if readall == True:
+    if read_level == 2:
         output_unsorted=np.array(output_unsorted)#.astype(precision)
         # print out.sliceKeys
         for i in range(len(out.sliceKeys)):
@@ -1305,7 +1329,7 @@ def read_out_file(filePath, readall=1, precision=float, debug=1):
         # out.dt=out('zsep') * out('xlamds') / speed_of_light 
         out.beam_charge=np.sum(out.I*out.dt)
         out.sn_Imax=np.argmax(out.I) #slice number with maximum current
-        if readall == True:
+        if read_level == 2:
             if debug>1: print ('      calculating spectrum')
             out.spec = abs(np.fft.fft(np.sqrt(np.array(out.power)) * np.exp( 1.j* np.array(out.phi_mid) ) , axis=0))**2/sqrt(out.nSlices)/(2*out.leng/out('ncar'))**2/1e10
             if debug>1: print ('        done')
@@ -1352,7 +1376,7 @@ def read_out_file(filePath, readall=1, precision=float, debug=1):
     
     
     #tmp for back_compatibility
-    if readall == True:
+    if read_level == 2:
         out.power_int=out.power[:,-1] #remove?
         out.max_power=np.amax(out.power_int) #remove?
         for parm in [['power','p_int'],
@@ -1403,7 +1427,7 @@ def read_out_file_stat(proj_dir,stage,run_inp=[],param_inp=[],debug=1):
         out_file=proj_dir+'run_'+str(irun)+'/run.'+str(irun)+'.s'+str(stage)+'.gout'
         if os.path.isfile(out_file):
 #                try:
-            outlist[irun] = read_out_file(out_file,readall=1,debug=1)
+            outlist[irun] = read_out_file(out_file,read_level=2,debug=1)
             run_range_good.append(irun)
 #                except:
     run_range=run_range_good
@@ -1470,7 +1494,7 @@ def read_dfl_file_out(out,filePath=None,debug=1):
         if = None, then it is assumed to be *.out.dfl
     '''
     if os.path.isfile(str(out)):
-        out=read_out_file(out,readall=-1,debug=0)
+        out=read_out_file(out,read_level=0,debug=0)
     if not isinstance(out,GenesisOutput):
         raise ValueError('out is neither GenesisOutput() nor a valid path')
     
@@ -1556,7 +1580,7 @@ def write_dfl_file(dfl,filePath=None,debug=1):
 def read_dpa_file_out(out,filePath=None,debug=1):
     
     if os.path.isfile(str(out)):
-        out=read_out_file(out,readall=-1,debug=0)
+        out=read_out_file(out,read_level=0,debug=0)
     if not isinstance(out,GenesisOutput):
         raise ValueError('out is neither GenesisOutput() nor a valid path')
     
@@ -1761,14 +1785,16 @@ def read_edist_file(filePath,debug=1):
     return edist
 
 
-def cut_edist(edist, 
+def cut_edist(edist,
             t_lim=(-inf,inf),
             g_lim=(-inf,inf),
             x_lim=(-inf,inf),
             xp_lim=(-inf,inf),
             y_lim=(-inf,inf),
             yp_lim=(-inf,inf),debug=1):
-            
+    
+    from numpy import logical_or
+    
     if debug>0: print ('    cutting particle distribution file' )
     start_time = time.time()
                 
@@ -1791,12 +1817,38 @@ def cut_edist(edist,
     
     # edist_f.charge=edist_f.len()*part_c
     
-    if debug>0: print('      %.2f percent cut' % ((edist.charge-edist_f.charge)/edist.charge*100))
+    if debug>0: print('      %.2f percent cut' % ((edist.charge()-edist_f.charge())/edist.charge()*100))
     if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
     
     return edist_f
 
-def write_edist_file (edist,filePath,debug=1):
+def repeat_edist(edist,factor,smear=1):
+
+    edist_out=GenesisElectronDist()
+    
+    edist_out.x = np.repeat(edist.x,factor)
+    edist_out.y = np.repeat(edist.y,factor)
+    edist_out.xp = np.repeat(edist.xp,factor)
+    edist_out.yp = np.repeat(edist.yp,factor)
+    edist_out.t = np.repeat(edist.t,factor)
+    edist_out.g =  np.repeat(edist.g,factor)
+    edist_out.part_charge = edist.part_charge / factor
+    
+    if smear:
+        n_par=edist_out.len()
+        smear_factor=1e-3 #smear new particles by smear_factor of standard deviation of parameter
+        
+        edist_out.x+=np.random.normal(scale=np.std(edist_out.x)*smear_factor, size=n_par)
+        edist_out.y+=np.random.normal(scale=np.std(edist_out.y)*smear_factor, size=n_par)
+        edist_out.xp+=np.random.normal(scale=np.std(edist_out.xp)*smear_factor, size=n_par)
+        edist_out.yp+=np.random.normal(scale=np.std(edist_out.yp)*smear_factor, size=n_par)
+        edist_out.t+=np.random.normal(scale=np.std(edist_out.t)*smear_factor, size=n_par)
+        edist_out.g+=np.random.normal(scale=np.std(edist_out.g)*smear_factor, size=n_par)
+    
+    return edist_out
+
+    
+def write_edist_file (edist,filePath=None,debug=1):
 
     #REQUIRES NUMPY 1.7
     # header='? VERSION = 1.0 \n? SIZE = %s \n? CHARGE = %E \n? COLUMNS X XPRIME Y YPRIME T P'%(len(edist.x),charge)
@@ -1804,6 +1856,9 @@ def write_edist_file (edist,filePath,debug=1):
 
     if debug>0: print ('    writing particle distribution file' )
     start_time = time.time()
+    
+    if filePath==None:
+        filePath=edist.filePath
     
     header='? VERSION = 1.0 \n? SIZE = %s \n? CHARGE = %E \n? COLUMNS X XPRIME Y YPRIME T P\n'%(edist.len(),edist.charge())
     f = open(filePath,'w')
@@ -1817,6 +1872,9 @@ def write_edist_file (edist,filePath,debug=1):
 
     
 def edist2beam(edist,step=1e-7):
+    
+    from numpy import mean, std
+    
     part_c=edist.part_charge
     t_step=step/speed_of_light;
     t_min=min(edist.t)
@@ -1854,11 +1912,11 @@ def edist2beam(edist,step=1e-7):
             dist_y=edist.y[indices]
             dist_px=edist.xp[indices]
             dist_py=edist.yp[indices]
-            dist_mean_g=mean(dist_e)
+            dist_mean_g=mean(dist_g)
             
             beam.I[i]=sum(indices)*part_c/t_step
             beam.g0[i]= mean(dist_g)
-            beam.dg[i]= std(dist_g)
+            beam.dg[i]= np.std(dist_g)
             beam.x[i]=  mean(dist_x)
             beam.y[i]=  mean(dist_y)
             beam.px[i]= mean(dist_px)
@@ -2893,18 +2951,21 @@ def filename_from_path(path_string):
     return path_string.split(os.path.sep)[-1]
     
 def rematch_edist(edist,tws):
-        
+    
+    from numpy import mean
+    
     betax_n=tws.beta_x
     betay_n=tws.beta_y
     alphax_n=tws.alpha_x
     alphay_n=tws.alpha_y
     
-    edist=edist.center()
+    edist_out=deepcopy(edist)
+    edist_out=edist_out.center()
     
-    x=edist.x
-    y=edist.y
-    xp=edist.xp
-    yp=edist.yp
+    x=edist_out.x
+    y=edist_out.y
+    xp=edist_out.xp
+    yp=edist_out.yp
 
     mean_x2=mean(x**2)
     mean_y2=mean(y**2)
@@ -2912,7 +2973,7 @@ def rematch_edist(edist,tws):
     mean_py2=mean(yp**2)
     mean_xpx=mean(x*xp)
     mean_ypy=mean(y*yp)
-    mean_g=mean(edist.g)
+    mean_g=mean(edist_out.g)
 
     emitx= mean_g*(mean_x2*mean_px2-mean_xpx**2)**0.5
     emity= mean_g*(mean_y2*mean_py2-mean_ypy**2)**0.5
@@ -2929,18 +2990,18 @@ def rematch_edist(edist,tws):
     x=x*sqrt(betax_n/betax)
     y=y*sqrt(betay_n/betay)
     xp=xp*sqrt(betax/betax_n)
-    yp=yp*sqrt(betay/betax_n)
+    yp=yp*sqrt(betay/betay_n)
     
     #add new correlation
     xp=xp-alphax_n*x/betax_n
-    yp=yp-alphay_n*y/betax_n
+    yp=yp-alphay_n*y/betay_n
     
-    edist.x=x
-    edist.y=y
-    edist.xp=xp
-    edist.yp=yp
+    edist_out.x=x
+    edist_out.y=y
+    edist_out.xp=xp
+    edist_out.yp=yp
     
-    return edist
+    return edist_out
         
         
 def cut_lattice(lat,n_cells,elem_in_cell=4):

@@ -26,7 +26,7 @@ else:
 """
 import ocelot
 import os
-
+from ocelot import *
 path_to_ocelot = os.path.dirname(ocelot.__file__)
 
 tail = "/lib/genera/build/genera_libs/radiation.so"
@@ -376,7 +376,7 @@ def print_rad_props(beam, K, lu, L, E, distance):
 """
 
 
-def calculateSR_py(lat, beam, screen, runParameters = None):
+def calculateSR_py(lat, beam, screen, accuracy = 2, runParameters = None):
     """
     1. find trajectory and mag field on the trajectory. system of unit is [mm,rad]
     2. display undulator parameter, for the controlling of calculation
@@ -389,11 +389,11 @@ def calculateSR_py(lat, beam, screen, runParameters = None):
         d. list_lists_motion will be transform to list_motiona
     """
     screen.update()
-    accuracy = 2
+    accuracy = accuracy
 
     #print "in calculator ", screen.size_x, screen.x
     for elem in lat.sequence:
-        if elem.type == "undulator":
+        if elem.__class__ == Undulator:
             #print_rad_props(beam, elem.Kx, elem.lperiod, elem.l, screen.z)
             undulator = elem
             undulator.status = 0

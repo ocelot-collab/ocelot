@@ -13,7 +13,7 @@ def split_lat(lattice):
     cells = []
     cell = []
     for elem in lattice.sequence:
-        if elem.type == "undulator":
+        if elem.__class__ == Undulator:
             if len(cell)>0:
                 cells.append(MagneticLattice(cell))
             cells.append(MagneticLattice(elem))
@@ -105,7 +105,7 @@ def trace4radiation(lat,particle0, accuracy = 1):
     for lat in lattices:
         z = 0.
         #part_list = []
-        if lat.sequence[0].type == "undulator":
+        if lat.sequence[0].__class__ == Undulator:
             undulator = lat.sequence[0]
             #print "energy = ", particle.E
             motion = und_trace(undulator, particle, energy = particle.E, bRough = 0, n_trajectory_points = None, accuracy = accuracy)

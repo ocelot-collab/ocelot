@@ -49,8 +49,11 @@ def read_tabular_file(field_file):
     try:
         field_data = loadtxt(field_file, delimiter=' ', unpack = True)
     except:
-        print( "read_map: try to use delimiter = ','")
-        field_data = loadtxt(field_file, delimiter=',', unpack = True)
+        try:
+            print( "read_map: try to use delimiter = ','")
+            field_data = loadtxt(field_file, delimiter=',', unpack = True)
+        except:
+            field_data = loadtxt(field_file, unpack=True)
 
     ncols = shape(field_data)[0]
 
@@ -116,7 +119,7 @@ class FieldMap:
                 self.format = "tabular"
                 self.read(field_file)
 
-    def read(self,field_file):
+    def read(self, field_file):
         if self.format == "flat":
             self.x_arr, self.y_arr, self.z_arr, self.Bx_arr, self.By_arr, self.Bz_arr = read_flat_file(field_file)
 

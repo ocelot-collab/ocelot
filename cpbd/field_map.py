@@ -67,25 +67,25 @@ def read_tabular_file(field_file):
     if ncols == 2:
         # planar undulator or dipol magnet/phase shifter
         # So there is only one possibility - (z_array, By_array)
-        z_array = field_data[0,:]
-        Bx_array = field_data[1,:]
+        z_array = field_data[0, :]
+        Bx_array = field_data[1, :]
     elif ncols == 3:
     # spiral undulator or 2D map
     # So, (z_array, Bx_array, By_array) or  (x_array, z_array, By_array)
-        z_array = field_data[0,:]
-        Bx_array = field_data[1,:]
-        By_array = field_data[2,:]
+        z_array = field_data[0, :]
+        Bx_array = field_data[1, :]
+        By_array = field_data[2, :]
         #or (It seems it is unlikely )
         #x_array = field_data[0,:]
         #z_array = field_data[1,:]
         #By_array = field_data[2,:]
     elif ncols == 6:
-        x_array = field_data[0,:]
-        y_array = field_data[1,:]
-        z_array = field_data[2,:]
-        Bx_array = field_data[3,:]
-        By_array = field_data[4,:]
-        Bz_array = field_data[5,:]
+        x_array = field_data[0, :]
+        y_array = field_data[1, :]
+        z_array = field_data[2, :]
+        Bx_array = field_data[3, :]
+        By_array = field_data[4, :]
+        Bz_array = field_data[5, :]
         nx_t = length_array(x_array)
         ny_t = length_array(y_array)
         nz_t = length_array(z_array)
@@ -118,6 +118,8 @@ class FieldMap:
             except :
                 self.format = "tabular"
                 self.read(field_file)
+        else:
+            pass
 
     def read(self, field_file):
         if self.format == "flat":

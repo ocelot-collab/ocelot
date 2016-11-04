@@ -1,11 +1,16 @@
 __author__ = 'Sergey Tomin'
+"""
+can read different types of files. By default, mag_file is in [mm] .
+for python version, only vertical component of magnetic field (By) is taken into account.
+In order to overcome this limitation, someone have to change function radiation_py.field_map2field_func(z, By).
+Sergey Tomin 04.11.2016.
+"""
 
 from scipy import interpolate
-
 from ocelot.cpbd.elements import *
 from ocelot.cpbd.track import *
 from ocelot.rad.spline_py import *
-
+from ocelot.common.globals import *
 
 class Motion:
     pass
@@ -90,8 +95,8 @@ def und_field(x, y, z, lperiod, Kx):
     kx = 0.
     kz = 2*pi/lperiod
     ky = np.sqrt(kz*kz - kx*kx)
-    c = 299792458
-    m0 = 0.510998928*1e+6
+    c = speed_of_light
+    m0 = m_e_eV
     B0 = Kx*m0*kz/c
     k1 =  -B0*kx/ky
     k2 = -B0*kz/ky
@@ -135,6 +140,7 @@ def sigma_gamma_quat(energy, Kx, lperiod, L):
     sigma_Eq = sqrt(delta_Eq2/(gamma*gamma))
     return sigma_Eq
 
+
 def quantum_diffusion(energy, Kx, lperiod, L, quantum_diff = False):
     if quantum_diff:
         # gamma = energy/m_e_GeV
@@ -150,7 +156,13 @@ def quantum_diffusion(energy, Kx, lperiod, L, quantum_diff = False):
     return U
 
 
-def track4rad(beam, lat, energy_loss = False, quantum_diff = False):
+def field_map2field_func(z, By):
+    tck = interpolate.splrep(z, By, k=3)
+    func = lambda x, y, z: (0, interpolate.splev(z, tck, der=0), 0)
+    return func
+
+
+def track4rad(beam, lat, energy_loss=False, quantum_diff=False, accuracy=1):
     energy = beam.E
     #Y0 = [beam.x, beam.xp, beam.y, beam.yp, 0, 0]
     p = Particle(x=beam.x, px=beam.xp, y=beam.yp, py=beam.yp, E=beam.E)
@@ -185,7 +197,7 @@ def track4rad(beam, lat, energy_loss = False, quantum_diff = False):
                 L += lat_el.totalLen
             non_u = []
 
-            N = int(30*elem.nperiods+1)
+
 
             U0 = energy_loss_und(energy, elem.Kx, elem.lperiod, elem.l, energy_loss)
             Uq = quantum_diffusion(energy, elem.Kx, elem.lperiod, elem.l, quantum_diff)
@@ -195,12 +207,22 @@ def track4rad(beam, lat, energy_loss = False, quantum_diff = False):
             #print "U0 = ", U0*1e9," eV"
             #if energy_loss  == False:
             #    U0 = 0.
-
+            mag_length = elem.l
             try:
                 mag_field = elem.mag_field
             except:
-                mag_field = lambda x, y, z: und_field(x, y, z, elem.lperiod, elem.Kx)
-            u = rk_track_in_field(array([p.x, p.px, p.y, p.py, 0, 0]), elem.l, N, energy, mag_field)
+                if len(elem.field_map.z_arr) != 0:
+                    print("Field_map exist! Creating mag_field(x, y, z)")
+                    unit_coef = 0.001 if elem.field_map.units == "mm" else 1
+                    mag_length = elem.field_map.l*unit_coef
+                    z_array = (elem.field_map.z_arr - elem.field_map.z_arr[0])*unit_coef
+                    mag_field = field_map2field_func(z=z_array, By=elem.field_map.By_arr)
+                else:
+                    print("Standard undulator field")
+                    mag_field = lambda x, y, z: und_field(x, y, z, elem.lperiod, elem.Kx)
+            N = int((mag_length*1500 + 100)*accuracy)
+
+            u = rk_track_in_field(array([p.x, p.px, p.y, p.py, 0, 0]), mag_length, N, energy, mag_field)
             p.x = u[-9, 0]
             p.px =u[-8, 0]
             p.y = u[-7, 0]
@@ -372,14 +394,15 @@ def radiation_py(gamma, traj, screen, tmp):
 
     return 1
 
-def calculate_radiation(lat, screen, beam, energy_loss = False, quantum_diff = False):
+
+def calculate_radiation(lat, screen, beam, energy_loss=False, quantum_diff=False, accuracy=1):
     screen.update()
     b_current = beam.I*1000. # b_current - beam current must be in [mA], but beam.I in [A]
     energy = beam.E
     gamma = energy/m_e_GeV
 
     screen.nullify()
-    U, E = track4rad(beam, lat, energy_loss = energy_loss, quantum_diff = quantum_diff)
+    U, E = track4rad(beam, lat, energy_loss=energy_loss, quantum_diff=quantum_diff, accuracy=accuracy)
     tmp = 0
     for u, e in zip(U, E):
         #print "Energy = ", e, e/m_e_GeV

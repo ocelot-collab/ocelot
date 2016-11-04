@@ -34,7 +34,7 @@ screen.start_energy = 7761.2 #eV
 screen.end_energy = 7900 #eV
 screen.num_energy = 1
 
-screen = calculate_radiation(lat, screen, beam)
+screen = calculate_radiation(lat, screen, beam, accuracy=2)
 show_flux(screen, unit="mrad")
 
 # 2D

@@ -26,7 +26,7 @@ lat = MagneticLattice((und))
 
 screen = Screen()
 screen.z = 100.0
-screen.size_x = 0.005
+screen.size_x = 0.002
 screen.size_y = 0.0
 screen.nx = 100
 screen.ny = 1

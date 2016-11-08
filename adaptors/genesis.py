@@ -569,11 +569,12 @@ class GenesisElectronDist:
         return len(self.t)
     
     def center(self):
-        self.x-=np.mean(self.x)
-        self.y-=np.mean(self.y)
-        self.xp-=np.mean(self.xp)
-        self.yp-=np.mean(self.yp)
-        return self
+        edist_out=deepcopy(self)
+        edist_out.x-=np.mean(edist_out.x)
+        edist_out.y-=np.mean(edist_out.y)
+        edist_out.xp-=np.mean(edist_out.xp)
+        edist_out.yp-=np.mean(edist_out.yp)
+        return edist_out
     
     def twiss(self):
         tws=Twiss()
@@ -738,6 +739,11 @@ class RadiationField():
         return self.fld.real**2+self.fld.imag**2
     def int_z(self): # intensity projection on z (power [W] or spectral density)
         return np.sum(self.int(),axis=(1,2))
+    def ang_z_onaxis(self):
+        xn=int((self.Nx()+1)/2)
+        yn=int((self.Ny()+1)/2)
+        fld=self[:,yn,xn]
+        return np.angle(fld)
     def int_y(self):
         return np.sum(self.int(),axis=(0,2))
     def int_x(self):
@@ -2923,7 +2929,6 @@ def astra2edist(adist,center=1):
     #script to convert astra macroparticle file to Genesis
     #check
     edist = GenesisElectronDist()
-    edist.charge=abs(adist[0][7])*shape(adist)[0]*1e-9 #charge of particle from nC
     edist.x=adist[:,0]#
     edist.y=adist[:,1]#
     edist.t=(adist[:,2]-np.mean(adist[:,2]))/speed_of_light #long position normalized to 0 and converted to time
@@ -2931,6 +2936,7 @@ def astra2edist(adist,center=1):
     edist.yp=adist[:,4]/adist[:,5]#angle of particles in y
     p_tot=sqrt(adist[:,3]**2+adist[:,4]**2+adist[:,5]**2)
     edist.g=p_tot/m_e_eV#energy to Gamma
+    edist.part_charge=abs(adist[0][7])*1e-9 #charge of particle from nC
     
     if center:
         edist.x-=np.mean(edist.x)
@@ -2940,10 +2946,10 @@ def astra2edist(adist,center=1):
     return edist
     
 def astra2edist_ext(fileName_in, fileName_out='',center=1):
-    if filename_out=='': fileName_out=fileName_in+'.edist'
+    if fileName_out=='': fileName_out=fileName_in+'.edist'
     adist=read_astra_dist(fileName_in)
-    edist=astra2genesis_conv(adist,center=1)
-    write_dist_file (edist,fileName_out,debug=0)
+    edist=astra2edist(adist,center=center)
+    write_edist_file(edist,fileName_out,debug=0)
     
     
 def filename_from_path(path_string):

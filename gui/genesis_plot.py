@@ -484,12 +484,16 @@ def subfig_und(ax_und,g,legend):
     ax_und.yaxis.label.set_color('b')
 
 
-def subfig_el_size(ax_size_tpos,g,legend):
-
-    number_ticks=6
+def subfig_el_size(ax_size_tpos,g,legend,which='both'):
     
-    ax_size_tpos.plot(g.z, np.average(g.xrms,axis=0,weights=g.I)*1e6, 'g-',g.z, np.average(g.yrms,axis=0,weights=g.I)*1e6, 'b-')
+    number_ticks=6
+    if which == 'both' or which == 'averaged':
+        ax_size_tpos.plot(g.z, np.average(g.xrms,axis=0,weights=g.I)*1e6, 'g-',g.z, np.average(g.yrms,axis=0,weights=g.I)*1e6, 'b-')
+    if which == 'both' or which == 'peak_curr':
+        idx_pk=np.where(g.I==np.amax(g.I))[0][0]
+        ax_size_tpos.plot(g.z, g.xrms[idx_pk,:]*1e6, 'g--',g.z, g.yrms[idx_pk,:]*1e6, 'b--')
     ax_size_tpos.set_ylabel(r'$\sigma_{x,y}$ [$\mu$m]')
+    
 
     ax_size_tpos.set_ylim(ymin=0)
     ax_size_tpos.yaxis.major.locator.set_params(nbins=number_ticks)
@@ -1205,7 +1209,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend = True, phase = False, fa
 
 
 
-def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_int','energy','r_size_weighted','spec','error'],z_param_inp=['p_int','phi_mid_disp','spec','bunching'],dfl_param_inp=['dfl_spec'],s_inp=['max'],z_inp=['end'], savefig=1, saveval=1, showfig=0, debug=0):
+def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_int','energy','r_size_weighted','spec','error'],z_param_inp=['p_int','phi_mid_disp','spec','bunching'],dfl_param_inp=['dfl_spec'],run_param_inp=['p_int','spec','energy'],s_inp=['max'],z_inp=['end'],run_s_inp=['max'],run_z_inp=['end'], savefig=1, saveval=1, showfig=0, debug=0):
 
     #The routine for plotting the statistical info of many GENESIS runs
     #
@@ -1256,13 +1260,19 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
         for irun in run_range:
             out_file=proj_dir+'run_'+str(irun)+'/run.'+str(irun)+'.s'+str(stage)+'.gout'
             if os.path.isfile(out_file):
-#                try:
-                outlist[irun] = read_out_file(out_file,read_level=2,debug=debug)
+        #                try:
+                outlist[irun] = read_out_file(out_file,read_level=2,debug=1)
                 run_range_good.append(irun)
 #                except:
 #                    print('     could not read '+out_file)
         run_range=run_range_good
 
+        #check if all gout have the same number of slices nSlice and history records nZ
+        for irun in run_range[1:]:
+            if outlist[irun].nSlices!=outlist[run_range[0]].nSlices or outlist[irun].nZ!=outlist[run_range[0]].nZ:
+                raise ValueError('Non-uniform out objects')
+        
+        
         if run_range==[] or len(run_range)==1:
             continue
 
@@ -1274,11 +1284,11 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
     #        outlist[irun] = read_out_file(out_file,read_level=1)
     #        print(outlist[irun].sliceKeys)
 
-        if param_inp==[]:
-            if debug>1: print(outlist[run_range[0]].sliceKeys_used)
-            param_range=outlist[run_range[0]].sliceKeys_used
-        else:
-            param_range=param_inp
+        # if param_inp==[]:
+            # if debug>1: print(outlist[run_range[0]].sliceKeys_used)
+            # param_range=outlist[run_range[0]].sliceKeys_used
+        # else:
+        param_range=param_inp
 
         if savefig!=False or saveval!=False:
             if savefig==True:
@@ -1288,12 +1298,12 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
                 os.makedirs(saving_path)
             if debug>1: print('      saving to '+saving_path)
 
-        if s_param_inp==[]:
-            s_param_range=param_range
-        else:
-            s_param_range=s_param_inp
-            if debug>1: print('    processing S parameters '+str(s_param_range))
-
+        # if s_param_inp==[]:
+            # s_param_range=param_range
+        # else:
+        s_param_range=s_param_inp
+        if debug>0: print('    processing S parameters '+str(s_param_range))
+        if debug>1: print('      s_inp '+str(s_inp))
 
         for param in s_param_range:
             for s_ind in s_inp:
@@ -1305,6 +1315,10 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
                     else:
                         param_matrix=copy.deepcopy(getattr(outlist[irun],param))
 
+                    if debug>1:print('param',param,'irun',irun,'s_ind',s_ind)
+                    if debug>1:print('shape param_matrix',shape(param_matrix))
+                    if debug>1:print('length',len(param_matrix),len(outlist[irun].z))
+                    
                     if len(param_matrix) == len(outlist[irun].z):
                         s_value.append(param_matrix)
                     else:
@@ -1321,6 +1335,7 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
                     fig=plt.figure(s_fig_name)
                     fig.clf()
                     fig.set_size_inches(figsize,forward=True)
+                    if debug>1:print('plotting array shapes',shape(outlist[irun].z),shape(swapaxes(s_value,0,1)))
                     fig=plt.plot(outlist[irun].z,swapaxes(s_value,0,1),'0.8', linewidth=1)
                     fig=plt.plot(outlist[irun].z,s_value[0],'0.5', linewidth=1)
                     fig=plt.plot(outlist[irun].z,mean(s_value,0),'k', linewidth=2)
@@ -1337,13 +1352,14 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
                     if saveval!=False:
                         if debug>1: print('      saving '+s_fig_name+'.txt')
                         np.savetxt(saving_path+s_fig_name+'.txt', vstack([outlist[irun].z,mean(s_value,0),s_value]).T,fmt="%E", newline='\n',comments='')
+                    if not showfig: plt.close('all')
+        # if z_param_inp==[]:
+            # z_param_range=param_range
+        # else:
+        z_param_range=z_param_inp
+        if debug>0: print('    processing Z parameters '+str(z_param_range))
+        if debug>1: print('      z_inp '+str(z_inp))
         
-        if z_param_inp==[]:
-            z_param_range=param_range
-        else:
-            z_param_range=z_param_inp
-            if debug>1: print('    processing Z parameters '+str(z_param_range))
-
         for param in z_param_range:
             for z_ind in z_inp:
                 z_value=[]
@@ -1353,7 +1369,11 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
                         break
                     else:
                         param_matrix=copy.deepcopy(getattr(outlist[irun],param))
-
+                    
+                    if debug>1:print('param',param,'irun',irun,'z_ind',z_ind)
+                    if debug>1:print('shape param_matrix',shape(param_matrix))
+                    if debug>1:print('length',len(param_matrix),len(outlist[irun].z))
+                    
                     if len(param_matrix) == len(outlist[irun].z): #case if the array is 1D (no s/z matrix presented)
                         break
                     else:
@@ -1364,12 +1384,14 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
                         else:
                             zi=np.where(outlist[irun].z<=z_ind)[-1][-1]
                             z_value.append(param_matrix[:,zi])
+                
                 if z_value!=[]:
                     fig=plt.figure(z_fig_name)
                     fig.clf()
                     fig.set_size_inches(figsize,forward=True)
                     if param=='spec':
                         freq_scale=outlist[irun].freq_lamd#*1e9
+                        if debug>1:print('plotting array shapes freq',shape(freq_scale),shape(swapaxes(z_value,0,1)))
                         fig=plt.plot(freq_scale,swapaxes(z_value,0,1),'0.8')
                         fig=plt.plot(freq_scale,z_value[0],'0.5', linewidth=1)
                         fig=plt.plot(freq_scale,mean(z_value,0),'k', linewidth=2)
@@ -1377,6 +1399,7 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
                         plt.xlabel('$\lambda$ [nm]')
                     else:
                         s_scale=outlist[irun].s*1e6
+                        if debug>1:print('plotting array shapes',shape(s_scale),shape(swapaxes(z_value,0,1)))
                         fig=plt.plot(s_scale,swapaxes(z_value,0,1),'0.8')
                         fig=plt.plot(s_scale,z_value[0],'0.5', linewidth=1)
                         fig=plt.plot(s_scale,mean(z_value,0),'k', linewidth=2)
@@ -1393,9 +1416,76 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
                             np.savetxt(saving_path+z_fig_name+'.txt', vstack([outlist[irun].freq_lamd*1e9,mean(z_value,0),z_value]).T,fmt="%E", newline='\n',comments='')
                         else:
                             np.savetxt(saving_path+z_fig_name+'.txt', vstack([outlist[irun].s*1e6,mean(z_value,0),z_value]).T,fmt="%E", newline='\n',comments='')
-
+                    if not showfig: plt.close('all')
+        # if run_param_inp==[]:
+            # run_param_range=[]
+        # else:
+        run_param_range=run_param_inp
+        if debug>0: print('    processing run parameters '+str(run_param_range))
+        if debug>1: print('      run_s_inp '+str(run_s_inp))
+        if debug>1: print('      run_z_inp '+str(run_z_inp))
+                            
+        for param in run_param_range:
+            for z_ind in run_z_inp:
+                for s_ind in run_s_inp: #not optimal
+                    run_value=[]
+                    run_value_arr=[]
+                    run_fig_name='RUN__'+'stage_'+str(stage)+'__'+dict_name.get(param,param).replace(' ','_').replace('.','_')+'__'+str(s_ind)+'__um__'+str(z_ind)+'__m'
+                    for irun in run_range:
+                        if not hasattr(outlist[irun],param):
+                            break
+                        else:
+                            param_matrix=copy.deepcopy(getattr(outlist[irun],param))
+                            if debug>1:print('param',param,'irun',irun,'z_ind',z_ind,'s_ind',s_ind)
+                            if debug>1:print('shape param_matrix',shape(param_matrix))
+                            if debug>1:print('length',len(param_matrix),len(outlist[irun].z))
+                        
+                        if len(param_matrix) != len(outlist[irun].z): #case if the array is 1D (no s/z matrix presented)
+                            if z_ind=='end' or z_ind==inf:
+                                run_value=param_matrix[:,-1] #after undulator
+                            elif z_ind=='start':
+                                run_value=param_matrix[:,0] #before undulator
+                            else:
+                                zi=np.where(outlist[irun].z<=z_ind)[-1][-1]
+                                run_value=param_matrix[:,zi]
+                        else: 
+                            run_value=param_matrix
+                            
+                        if s_ind=='max':
+                            run_value=np.amax(run_value)
+                        elif s_ind=='max_cur':
+                            run_value=run_value[outlist[irun].sn_Imax]
+                        elif s_ind=='mean':
+                            run_value=np.amean(run_value)
+                        else:
+                            si=np.where(outlist[irun].s<=s_ind)[-1][-1]
+                            run_value=run_value[si]
+                        
+                        if debug>1:print('run_value ',run_value)
+                        
+                        run_value_arr.append(run_value)
+                        
+                    if run_value_arr!=[]:
+                        fig=plt.figure(run_fig_name)
+                        fig.clf()
+                        fig.set_size_inches(figsize,forward=True)
+                        
+                        fig=plt.plot(run_range,run_value_arr,'k')
+                        plt.xlim([min(run_range),max(run_range)])
+                        plt.xlabel('run')
+                            
+                        plt.ylabel(dict_name.get(param,param)+'  '+dict_unit.get(param,'')+' ('+str(s_ind)+' um, '+str(z_ind)+' m)')
+                        if savefig!=False:
+                            if debug>1: print('      saving '+run_fig_name+'.'+savefig)
+                            plt.draw()
+                            plt.savefig(saving_path+run_fig_name+'.'+savefig,format=savefig)
+                        if saveval!=False:
+                            if debug>1: print('      saving '+run_fig_name+'.txt')
+                            np.savetxt(saving_path+run_fig_name+'.txt', vstack([run_range,run_value_arr]).T,fmt="%E", newline='\n',comments='')
+                        if not showfig: plt.close('all')
+                            
         if dfl_param_inp!=[]:
-            if debug>1: print('    processing DFL parameters '+str(dfl_param_inp))
+            if debug>0: print('    processing DFL parameters '+str(dfl_param_inp))
         
         for param in dfl_param_inp:
             dfl_value=[]
@@ -1437,7 +1527,7 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
                     if debug>1: print('      saving '+dfl_fig_name+'.txt')
                     if param=='dfl_spec':
                         np.savetxt(saving_path+dfl_fig_name+'.txt', vstack([freq_scale*1e9,mean(dfl_value,0),dfl_value]).T,fmt="%E", newline='\n',comments='')
-    
+                if not showfig: plt.close('all')
     plt.draw()
     if showfig:
         plt.show()
@@ -1862,64 +1952,80 @@ def plot_beam(beam,figsize=3,showfig=False,savefig=False,fig=None,plot_xy=None,d
 tmp for HXRSS
 '''
 
-def read_plot_dump_proj(exp_dir,stage,run_ids):
-
+def read_plot_dump_proj(exp_dir,stage,run_ids,plot_phase=1):
+    
     t_l_int_arr=[]
+    t_l_pha_arr=[]
     f_l_int_arr=[]
     for run_id in run_ids:
         
         array=np.loadtxt(exp_dir + 'run_'+ str(run_id)+'/run.'+ str(run_id)+'.s'+str(stage)+'.dfl.t.txt',skiprows=1)
         array=np.rollaxis(array,1)
-        t_l_scale,t_l_int_a=array[0],array[1]
+        t_l_scale,t_l_int_a,t_l_pha_a=array[0],array[1],array[2]
         
         array=np.loadtxt(exp_dir + 'run_'+ str(run_id)+'/run.'+ str(run_id)+'.s'+str(stage)+'.dfl.f.txt',skiprows=1)
         array=np.rollaxis(array,1)
-        f_l_scale,f_l_int_a,f_l_ftlt_re=array[0],array[1],array[2]
+        f_l_scale,f_l_int_a,f_l_ftlt_abs,f_l_ftlt_ang=array[0],array[1],array[2],array[3]
         
         t_l_int_arr.append(t_l_int_a)
+        t_l_pha_arr.append(t_l_pha_a)
         f_l_int_arr.append(f_l_int_a)
 
     t_l_scale*=1e6
     t_l_int_arr=np.array(t_l_int_arr)
+    t_l_pha_arr=np.array(t_l_pha_arr)
     f_l_int_arr=np.array(f_l_int_arr)
     t_l_int_arr=np.rollaxis(t_l_int_arr,1)
+    t_l_pha_arr=np.rollaxis(t_l_pha_arr,1)
     f_l_int_arr=np.rollaxis(f_l_int_arr,1)
-
+    
+    t_l_pha_arr=np.unwrap(t_l_pha_arr,axis=0)
+    
     if len(run_ids)>1:
         t_l_int_mean=np.mean(t_l_int_arr,axis=1)
+        t_l_pha_mean=np.mean(t_l_pha_arr,axis=1)
         f_l_int_mean=np.mean(f_l_int_arr,axis=1)
     else:
         t_l_int_mean=t_l_int_arr[:,0]
+        t_l_pha_mean=t_l_pha_arr[:,0]
         f_l_int_mean=f_l_int_arr[:,0]
     # t_domain,t_norm=plt.figure('t_domain_filtered')
     t_domain=plt.figure('Power (stage'+str(stage)+')')
-    ax1=t_domain.add_subplot(2, 1, 1)
-    ax2=t_domain.add_subplot(2, 1, 2,sharex=ax1)
-    # t_domain1,ax=plt.subplots(2, sharex=True)
+    ax1=t_domain.add_subplot(2+plot_phase, 1, 1)
     pulse_average_pos=np.sum(t_l_scale*t_l_int_mean)/np.sum(t_l_int_mean)
-
-
     ax1.plot(t_l_scale-pulse_average_pos,t_l_int_arr,'0.5')
     ax1.plot(t_l_scale-pulse_average_pos,t_l_int_mean,'k',linewidth=1.5)
     ax1.plot([0,0],[0,np.max(t_l_int_arr)],'r')
-
+    plt.ylabel(r'$P$ [W]')
+    
+    ax2=t_domain.add_subplot(2+plot_phase, 1, 2,sharex=ax1)
     ax2.semilogy(t_l_scale-pulse_average_pos,t_l_int_arr,'0.5')
     ax2.semilogy(t_l_scale-pulse_average_pos,t_l_int_mean,'k',linewidth=1.5)
     ax2.plot([0,0],[np.min(t_l_int_arr),np.max(t_l_int_arr)],'r')
-    plt.xlabel(r'$S [\mu m]$')
     plt.ylabel(r'$P$ [W]')
-
+    
+    if plot_phase:
+        ax3=t_domain.add_subplot(2+plot_phase, 1, 3,sharex=ax1)
+        ax3.plot(t_l_scale-pulse_average_pos,t_l_pha_arr,'0.5')
+        ax3.plot(t_l_scale-pulse_average_pos,t_l_pha_mean,'k',linewidth=1.5)
+        plt.ylabel(r'$\phi [rad]$')
+    plt.xlabel(r'$S [\mu m]$')
+    
+    
     f_domain=plt.figure('Spectrum (stage'+str(stage)+')')
     ax1=f_domain.add_subplot(2, 1, 1)
-    ax2=f_domain.add_subplot(2, 1, 2,sharex=ax1)
     ax1.plot(h_eV_s*speed_of_light/f_l_scale,f_l_int_arr,'0.5')
     ax1.plot(h_eV_s*speed_of_light/f_l_scale,f_l_int_mean,'k',linewidth=1.5)
+    
     plt.ylabel(r'$P(\lambda)$ [a.u.]')
-    plt.xlabel(r'$S [\mu m]$')
+    ax2=f_domain.add_subplot(2, 1, 2,sharex=ax1)
+    # plt.xlabel(r'$S [\mu m]$')
 
-    ax2.plot(h_eV_s*speed_of_light/f_l_scale,f_l_ftlt_re,'r')
+    ax2.plot(h_eV_s*speed_of_light/f_l_scale,f_l_ftlt_abs,'r')
+    ax2_phase = ax2.twinx()
+    ax2_phase.plot(h_eV_s*speed_of_light/f_l_scale,f_l_ftlt_ang,'r--')
     plt.xlabel(r'$E$ [eV]')
-    plt.ylabel(r'$Transm$')
+    # plt.ylabel(r'$Transm$')
     # ax[1].xlabel(r'$E$ [eV]')
     # ax[0].xlabel(r'$P(\lambda)$ [a.u.]')
     # ax[1].xlabel(r'$abs(TrF)$')

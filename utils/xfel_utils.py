@@ -302,7 +302,6 @@ def dfl_st_cpl(dfl,theta_b,inp_axis='y',s_start=None):
         s_start=n_moment(dfl.scale_z(),dfl.int_z(),0,1)
 
     dfl2=deepcopy(dfl)
-    dfl2.fld[np.where(abs(dfl2.fld)>1e2)]=1e2
     shift_z_scale=dfl2.scale_z()-s_start
     shift_m_scale=shift_z_scale/tan(theta_b)
     shift_m_scale[np.where(shift_m_scale>0)]=0
@@ -314,14 +313,14 @@ def dfl_st_cpl(dfl,theta_b,inp_axis='y',s_start=None):
     if inp_axis=='y':
         for i in np.where(shift_m_scale!=0)[0]:
             fld[i,:,:]=np.roll(fld[i,:,:],-direction*shift_pix_scale[i],axis=0)
-            if direction==1:
-                fld[i,:abs(shift_pix_scale[i]),:]=0
+            # if direction==1:
+                # fld[i,:abs(shift_pix_scale[i]),:]=0
                 
     elif inp_axis=='x':
         for i in np.where(shift_m_scale!=0)[0]:
             fld[i,:,:]=np.roll(fld[i,:,:],-direction*shift_pix_scale[i],axis=1)
-            if direction==1:
-                fld[i,:,:abs(shift_pix_scale[i])]=0
+            # if direction==1:
+                # fld[i,:,:abs(shift_pix_scale[i])]=0
     
     dfl2.fld=fld
     t_func = time.time() - start
@@ -329,8 +328,11 @@ def dfl_st_cpl(dfl,theta_b,inp_axis='y',s_start=None):
     return dfl2
     
     
-def dfl_hxrss_filt(dfl,trf,ev_seed,s_delay,st_cpl=1,res_per_fwhm=6,fft_method='mp',dump_proj=0):
+def dfl_hxrss_filt(dfl,trf,ev_seed,s_delay,st_cpl=1,res_per_fwhm=6,fft_method='mp',dump_proj=0,debug=1):
     #needs optimizing?
+    #tmp
+    import matplotlib.pyplot as plt
+    
     nthread = multiprocessing.cpu_count()
     if nthread>8: nthread=int(nthread*0.9) #not to occupy all CPUs on login server
     print('  HXRSS dfl filtering')
@@ -371,16 +373,29 @@ def dfl_hxrss_filt(dfl,trf,ev_seed,s_delay,st_cpl=1,res_per_fwhm=6,fft_method='m
         
         t7=time.time()
         t_l_int_a=dfl.int_z()
+        t_l_pha_a=dfl.ang_z_onaxis()
         t8=time.time()
         
+        # if debug>2:###
+            # plt.figure('before st-c')
+            # plt.plot(dfl.scale_z(),dfl.ang_z_onaxis())
+            # plt.show()
+        
         if st_cpl: dfl=dfl_st_cpl(dfl,trf.thetaB)
+        
+        # if debug>2:###
+            # plt.figure('after st-c')
+            # plt.plot(dfl.scale_z(),dfl.ang_z_onaxis())
+            # plt.show()
+            
         dfl=dfl_shift_z(dfl,s_delay,set_zeros=0)
+        
         dfl=dfl_pad_z(dfl, -padn)
         
         t_func = time.time() - start
         t_proj=t2+t4+t6+t8-(t1+t3+t5+t7)
         print('    done in %.2f sec, (%.2f sec for proj calc)' %(t_func,t_proj))
-        return dfl, ((t_l_scale,None,t_l_int_a),(f_l_scale,f_l_filt,None,f_l_int_a))#f_l_int_b,t_l_int_b,
+        return dfl, ((t_l_scale,None,t_l_int_a,t_l_pha_a),(f_l_scale,f_l_filt,None,f_l_int_a))#f_l_int_b,t_l_int_b,
     
     else:
         
@@ -400,11 +415,11 @@ def dfl_hxrss_filt(dfl,trf,ev_seed,s_delay,st_cpl=1,res_per_fwhm=6,fft_method='m
 def save_xhrss_dump_proj(dump_proj,filePath):
     #saves the dfl_hxrss_filt radiation projections dump to text files
     
-    (t_l_scale,_,t_l_int_a),(f_l_scale,f_l_filt,_,f_l_int_a)=dump_proj
+    (t_l_scale,_,t_l_int_a,t_l_pha_a),(f_l_scale,f_l_filt,_,f_l_int_a)=dump_proj
 
     f = open(filePath+'.t.txt','wb')
-    header='Distance Power'
-    np.savetxt(f, np.c_[t_l_scale,t_l_int_a],header=header,fmt="%e", newline='\n',comments='')
+    header='Distance Power Phase'
+    np.savetxt(f, np.c_[t_l_scale,t_l_int_a,t_l_pha_a],header=header,fmt="%e", newline='\n',comments='')
     f.close()
 
     f = open(filePath+'.f.txt','wb')

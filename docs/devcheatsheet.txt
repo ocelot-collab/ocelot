@@ -1,0 +1,286 @@
+
+	    GIT DEVELOPMENT CHEATSHEET
+
+            Greg White, SLAC, Original Version 2-Nov-2016
+
+STATUS OF THIS DOCUMENT
+=======================
+
+This document is presently a generic git cheatsheet, though drawn from
+the git based development workflow used to develop EPICS Version 4.
+Beware examples MAY BE specific to ocelot, hypothetical or drawn from
+epics. I hope this file will be edited, extended and specialized to
+the development of ocelot once that workflow becomes clearer.
+
+Mods:
+* 2-Nov-2016 Greg White, greg@slac.stanford.edu
+Branched for Ocelot development from EPICS V4 Cheatsheet I wrote
+at http://epics-pvdata.sourceforge.net/cheatsheet.txt
+
+CONTENTS
+========
+
+1.   GIT
+1.1. Troublesome Circumstances
+1.2  Notes
+2.   REFERENCES
+
+
+1. GIT
+======
+Get an ocelot software repository (aka "repo") from github. Presently
+it's all in Ilya's personal github (I think):
+
+   git clone https://github.com/iagapov/ocelot.git
+   cd ocelot
+   
+Make sure I'm on the branch I think I'm on.
+
+   git branch                       Should say eg "* master" - * indicating I'm on the master branch
+
+Check what branches exist for this repository. The -a option lists ALL branches, BOTH locally
+pulled/checkedout and those only on the remote repo (shown in red) [NOTE: I have seen a exception to
+this, it can be that -a does not list all the remotes that -r does!!]
+
+   git branch -a
+   
+If necessary, set the branch you want to work on (this also works to bring in remote branches)
+
+   git checkout dev                 Presently for ocelot there are only dev and master branches. 
+                                    Pay attention to the advice "git checkout" will give you
+                                    about the status of your checkout, and issue the "git pull" if
+				    necessary.
+   git checkout release/4.0         In future branches may be numbered
+                                    corresponding to releases.
+   
+    
+Make a branch.
+
+Say you want to add a feature to the code, or fix an issue, on a new branch. You can
+do it on gitHub website, or:
+
+   git branch mybranch
+   git checkout mybranch
+   
+Has anyone changed the remote master repo requiring you to pull or merge?
+
+   git fetch origin; git log HEAD..origin/master
+
+   If other people have changed the remote repo, then (since you just did a git fetch) you can merge in
+   their changes with:
+
+      git merge     If you had changed your local repo, and there had been remote changes, git will
+                    have to do a "real" merge - as opposed to simply applying the remote changes to your
+		    local checkout. In that case you will be asked to make a comment - vi exit is ESC wq remember.
+		    If you have NOT chaged your local repo, and there had been remote changes, git will
+		    instead do a "fast-forward" quasi-merge - just applying the remote changes on top of
+		    your outdated checkout.
+
+      git merge --ff-only
+
+                    Ask git to check whether your repo has in fact been changed, and if not simply bring
+		    in remote changes. If your local repo has been changed, this command will have no
+		    effect and instead you'll have to do the real merge above. So this is a kind of "safe
+		    merge for the common case".
+                    
+   (not sure how this below is different - it seems to actually fetch and update local repo)
+   git checkout master
+   git remote -v update
+
+Pull in changes other people made (to the remote version of, by default, your currently set branch)
+
+   git pull [--rebase]              Add --rebase if you want their commit history included in your history
+                                    A git pull == git fetch ; git merge
+   git pull [--rebase] origin master   (if pulling changes from origin master into say nttableclarifylabels)
+
+See a summary of the changes I've made (on the presently set branch):
+
+   git status                       What files have you changed since your last commit, or commits waiting for push
+                                    Also shows whether the remote repo has been added to since your last push
+   git log                          What anyone has committed ever
+
+Diff of files I changed and so is waiting to be added and committed
+
+   git diff 
+
+What would be pushed were I to do the git push:
+
+   git log origin/master..master          What commits have I made (on master) since I last pushed w.r.t. o/m
+   git log origin/master..nttableclarifylabels     (what commits have I made on nttableclarifylabels w.r.t. o/m)
+
+   git diff --stat --cached origin/master          (the files to be pushed to origin/master)
+   git diff  origin/master                         (the code differences)
+   git diff --stat --cached nttableclarifylabels   (the files to be pushed to nttableclarifylabels)
+   git diff  nttableclarifylabels                  (the code differences)
+   
+Which local branch contains a given commit:
+   git branch --contains 2d6a0f6                   Uses trick of giving only first 7 chars of commit-id.
+   
+Which *remote* branches contain given commit (by hashtag) - use to verify whether a commit has been pushed.
+   git branch -r --contains cbd06e2325d4bd37950ace4f796e724ba7fe63cc
+
+
+Move files to new directory. Moving can be done 2 ways:
+
+   Using git mv:
+   
+     mkdir documentation
+     git mv RELEASE_NOTES.md documentation      [note I didn't have to git add the directory first]
+   
+   Using simply unix mv, git add, git rm:
+   
+     mkdir documentation
+     mv RELEASE_NOTES.md documentation
+     git add documentation/RELEASE_NOTES.md     Could also have simply "git add documentation" since its recursive.
+     git rm RELEASE_NOTES.md
+   
+Stage. Add changes you've made to the staging area. Note git 'add' command is not at all equivalent to cvs add,
+       because you have to git add it *each* time you change a file, not just when you add it to the repo the
+       first time. You're adding it to the list of files in the stage "area", which will then be committed
+       as one commit.
+
+   git add <file1> [<file2>] ...
+   git add .                        Add all files from root of project
+   git add <directoryname>          Add all files in directory. No "/" in dirname. 
+                                    Can be a pathname. Can be a new directory.
+   
+   [Can also be done with SmartGit "Stage" button]
+
+   
+Commit your staged changes (see git add above) to your *local* branch:
+
+   git commit -m "comment" 
+
+    Note: 'git add' and 'git commit' can be done in one command with 'git commit -am "comment"'
+    Also Emacs Tools->Version Control->Check In/Out does git commit -a
+
+Release your changes to epics-base in gitHub
+
+   git push origin  (push to same branch as you checked out)
+
+   git push origin my-new-feature-branch     ( push to my-new-feature-branch)
+   eg
+   git push origin nttableclarifylabels
+
+   [See also SmartGit "Push" button]
+   
+Pull request
+
+   check status, and if fine, push to remote branch at origin (epics-base)
+   git fetch origin
+   git log HEAD..origin/master
+   git push origin nttableclarifylabels
+
+   Having pushed to nttableclarifylabels, can then make pull prequest on git-hub.
+
+   NOTE: There is no specific need to make your own fork in order to create a pull request.
+   One can do just fine using a branch from within epics-base/<repo>. But it seems the v4
+   guys want contributions to be sourced from personal (forked) repos - esp Ralph. So, if
+   you do that, instructions at [9].
+   
+
+Undoing work
+
+   You edited a file, but want to undo. You have not yet done git add:
+
+      git checkout <filename>
+
+   You edited a file and did the git add, but you want to revert
+
+      git reset   ( see in particular example at [4])
+
+   You edited, git added, and committed, but you want to revert
+
+      got revert ...
+      
+   Fully clean a working copy clone directory
+
+      git reset --hard; git clean -f -d; 
+
+      then bring it up to date with git pull.
+      
+Recover an old revision of a file:
+
+    First, git log, to find the commit id (SHA1) of the file - the long hex code. Then do git show and redirect
+
+      git log
+      git show 60f1ae1:mainPage/index.html > t.tmp
+
+Remove a file from git's tracking (eg .DS_store files)
+
+      git rm --cached <filename>
+   eg git rm --cached mainPage/talks/.DS_Store
+
+
+1.1. Troublesome Circumstances
+==============================
+* A push of branch was out of sync with the remote. To fix just pull the latest changes (and see above):
+
+   git pull --rebase origin master
+
+* Decided after making commits to master, that changes should really be part of a pull request. 
+To fix, make branch (for pull request) and put work previously committed on origin/master onto it.
+
+    git checkout master
+    git log origin/master..master
+	        (write down commitnums to be moved)
+    git branch newbranch
+    git checkout newbranch	    
+    git cherry-pick <commitnum>   (commitnum from git log origin/master..master above)   
+    git branch --contains 2d6a0f6 (verify the branch the commitnum is now in)
+
+* Accidentally git added a file, and want to undo it. Not yet done a commit
+
+    git reset HEAD <filename>
+    
+    The filename is as output from git status. Eg
+
+       $ git status
+         On branch release/4.0
+         Changes to be committed:
+            (use "git reset HEAD <file>..." to unstage)
+ 
+            modified:   pom.xml
+            modified:   ....
+            new file:   src/services/rdbService/plantoconvert.txt    <===
+
+       $ git reset HEAD src/services/rdbService/plantoconvert.txt
+
+
+1.2 Notes
+---------
+git pull == git fetch + git merge
+git pull --rebase == git fetch + git rebase
+The second re-writes your history, making it look as if you had committed on top of origin's new branch.
+
+
+2. REFERENCES
+=============
+
+Good summary of git workflow and tagging. Best short description found to date 8-sep-15.
+[1] http://rogerdudler.github.io/git-guide/
+
+How we do actual releases - based on the Git Workflow:
+[2] https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow
+
+Overall reference on triangular workflow
+[3] https://github.com/blog/2042-git-2-5-including-multiple-worktrees-and-triangular-workflows
+
+Good short example of git pull / git pull --rebase / git merge / git rebase: 
+[4] http://stackoverflow.com/questions/3357122/git-pull-vs-git-fetch-git-rebase
+
+Good graphical descriptions of rebasing (merging branches)
+[5] https://git-scm.com/book/en/v2/Git-Branching-Rebasing
+
+Moving commits between branches (on which recipe for moving change from master to branch for pull-request is based)
+[6] http://stackoverflow.com/questions/1628563/move-the-most-recent-commits-to-a-new-branch-with-git
+
+[7]Good guild to pull-request
+http://yangsu.github.io/pull-request-tutorial/
+
+[8] Good cheatsheet
+https://gist.github.com/hofmannsven/6814451
+
+[9] Forking a repository (in preparation for changing someone elses repo and making a "pull request")
+https://help.github.com/articles/fork-a-repo/
+

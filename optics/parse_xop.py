@@ -1,6 +1,6 @@
 from ocelot.optics.bragg import *
 
-f_name = 'Si220'
+f_name = 'Ge111'
 
 
 lines=open('data/'+ f_name + '.txt').read().split('\n')
@@ -36,10 +36,10 @@ cdata.f000 = map(lambda x: f000[x], ev)
 cdata.fh = map(lambda x: fh[x], ev)
 cdata.fhbar = map(lambda x: fhbar[x], ev)
 
-print cdata.ev
-print cdata.fh
+print(cdata.ev)
+print(cdata.fh)
 
-save_stucture_factors(cdata, f_name + '.dat')
+save_stucture_factors(cdata, 'data/'+f_name + '.dat')
 bdata = load_stucture_factors(f_name + '.dat')
 
 plt.plot(bdata.ev, np.imag(bdata.f000), 'b.--')

@@ -48,15 +48,17 @@ cells = {}
 lattice_unit_cells['NaCl'] = (np.array([5.6404*A, 0, 0]), np.array([0, 5.6404*A, 0]), np.array([0, 0, 5.6404*A]))
 
 lattice_unit_cells['Si'] = (np.array([5.43*A, 0, 0]), np.array([0, 5.43*A, 0]), np.array([0, 0, 5.43*A]))
-cells['Si'] =(('C',[0,0,0]),('C',[0.5,0.5,0]),('C',[0.5,0,0.5]),('C',[0,0.5,0.5]),
-              ('C',[0.25,0.25,0.25]),('C',[0.75,0.25,0.75]),('C',[0.25,0.75,0.75]),('C',[0.75,0.75,0.25]))
+#error?
+#cells['Si'] =(('C',[0,0,0]),('C',[0.5,0.5,0]),('C',[0.5,0,0.5]),('C',[0,0.5,0.5]),
+#              ('C',[0.25,0.25,0.25]),('C',[0.75,0.25,0.75]),('C',[0.25,0.75,0.75]),('C',[0.75,0.75,0.25])) 
 
 #diamond
 lattice_unit_cells['C'] = (np.array([3.567*A, 0, 0]), np.array([0, 3.567*A, 0]), np.array([0, 0, 3.567*A]))
 cells['C'] =(('C',[0,0,0]),('C',[0.5,0.5,0]),('C',[0.5,0,0.5]),('C',[0,0.5,0.5]),
                      ('C',[0.25,0.25,0.25]),('C',[0.75,0.25,0.75]),('C',[0.25,0.75,0.75]),('C',[0.75,0.75,0.25]))
 
-
+lattice_unit_cells['Ge'] = (np.array([5.658*A, 0, 0]), np.array([0, 5.658*A, 0]), np.array([0, 0, 5.658*A]))
+                     
 class CrystalLattice():
     def __init__(self, element_name):
         self.element_name = element_name
@@ -360,8 +362,9 @@ def transmissivity_reflectivity(klist, cryst):
     return t, r
 
 
-def get_crystal_filter(cryst, ev_seed, nk=10000, k = None):
+def get_crystal_filter(cryst, ev_seed, nk=10000, k = None,n_width = 7):
     #import crystal as cry
+    #n_width - number of Darwin widths
     lamb=h_eV_s*speed_of_light/ev_seed
     ref_idx=cryst.ref_idx
     print(ref_idx)
@@ -398,7 +401,7 @@ def get_crystal_filter(cryst, ev_seed, nk=10000, k = None):
     print ('structure factors', f0, fh, fmh)
     #plt.figure()
 
-    n_width = 7 #number of Darwin widths
+     
         
     vcell = ( dhkl * np.sqrt( np.dot(ref_idx,ref_idx) ) ) **3
         

@@ -269,29 +269,30 @@ def dfl_fft_xy(dfl,method='mp',nthread = multiprocessing.cpu_count()): #move to 
     return dfl_fft
     
 def dfl_trf(dfl,trf,mode):
-    assert dfl.domain_z=='f','dfl_trf works only in frequency domain!'
+    dfl_out=deepcopy(dfl)
+    assert dfl_out.domain_z=='f','dfl_trf works only in frequency domain!'
     print('    multiplying dfl by trf')
     start = time.time()
     # assert trf.__class__==TransferFunction,'Wrong TransferFunction class'
-    assert dfl.domain_z=='f','wrong dfl domain (must be frequency)!'
+    assert dfl_out.domain_z=='f','wrong dfl domain (must be frequency)!'
     if mode=='tr':
         filt=trf.tr
     elif mode=='ref':
         filt=trf.ref
     else: raise AttributeError('Wrong z_domain attribute')
     filt_lamdscale=2*pi/trf.k
-    if min(dfl.scale_z())>max(filt_lamdscale) or max(dfl.scale_z())<min(filt_lamdscale):
+    if min(dfl_out.scale_z())>max(filt_lamdscale) or max(dfl_out.scale_z())<min(filt_lamdscale):
         raise ValueError('frequency scales of dfl and transfer function do not overlap')
     
-    filt_interp_re=np.flipud(np.interp(np.flipud(dfl.scale_z()),np.flipud(filt_lamdscale),np.flipud(np.real(filt))))
-    filt_interp_im=np.flipud(np.interp(np.flipud(dfl.scale_z()),np.flipud(filt_lamdscale),np.flipud(np.imag(filt))))
+    filt_interp_re=np.flipud(np.interp(np.flipud(dfl_out.scale_z()),np.flipud(filt_lamdscale),np.flipud(np.real(filt))))
+    filt_interp_im=np.flipud(np.interp(np.flipud(dfl_out.scale_z()),np.flipud(filt_lamdscale),np.flipud(np.imag(filt))))
     filt_interp=filt_interp_re-1j*filt_interp_im
     del filt_interp_re, filt_interp_im
-    dfl.fld=dfl.fld*filt_interp[:,np.newaxis,np.newaxis]
+    dfl_out.fld=dfl_out.fld*filt_interp[:,np.newaxis,np.newaxis]
 
     t_func = time.time() - start
     print('      done in %.2f ' %t_func +'sec')
-    return dfl, filt_interp
+    return dfl_out, filt_interp
     
 def dfl_st_cpl(dfl,theta_b,inp_axis='y',s_start=None):
 

@@ -645,6 +645,9 @@ class GenesisBeam():
     
     def len(self):
         return len(self.z)
+        
+    def idx_max_refresh(self):
+        self.idx_max = np.argmax(self.I)
     
     def __delitem__(self,indarr):
         self.z=np.delete(self.z,indarr)
@@ -1559,6 +1562,9 @@ def write_dfl_file(dfl,filePath=None,debug=1):
     if debug>0: print ('    writing radiation file' )
     start_time = time.time()    
     
+    if filePath==None:
+        filePath=dfl.filePath
+    
     d=dfl.fld.flatten()
     d.tofile(filePath,format='complex')
     
@@ -2122,6 +2128,14 @@ def add_wake_to_beamf(beamf, new_beamf):
     f=open(new_beamf,'w')
     f.write(beam_file_str(beam))
     f.close()
+    
+def zero_wake_at_ipk(beamf):
+    beamf_new=deepcopy(beamf)
+    beamf_new.idx_max_refresh()
+    beamf_new.eloss-=beamf_new.eloss[beamf_new.idx_max]
+    return beamf_new
+    
+    
 
 def set_beam_energy(beam, E_GeV_new):
     #sets the beam energy with peak current to E_GeV_new

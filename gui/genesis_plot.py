@@ -1308,7 +1308,7 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
         for param in s_param_range:
             for s_ind in s_inp:
                 s_value=[]
-                s_fig_name='Z__'+'stage_'+str(stage)+'__'+dict_name.get(param,param).replace(' ','_').replace('.','_')+'__'+str(s_ind)
+                s_fig_name='stage_'+str(stage)+'__Z__'+dict_name.get(param,param).replace(' ','_').replace('.','_')+'__'+str(s_ind)
                 for irun in run_range:
                     if not hasattr(outlist[irun],param):
                         continue
@@ -1363,7 +1363,7 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
         for param in z_param_range:
             for z_ind in z_inp:
                 z_value=[]
-                z_fig_name='S__'+'stage_'+str(stage)+'__'+dict_name.get(param,param).replace(' ','_').replace('.','_')+'__'+str(z_ind)+'__m'
+                z_fig_name='stage_'+str(stage)+'__S__'++dict_name.get(param,param).replace(' ','_').replace('.','_')+'__'+str(z_ind)+'__m'
                 for irun in run_range:
                     if not hasattr(outlist[irun],param):
                         break
@@ -1430,7 +1430,7 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
                 for s_ind in run_s_inp: #not optimal
                     run_value=[]
                     run_value_arr=[]
-                    run_fig_name='RUN__'+'stage_'+str(stage)+'__'+dict_name.get(param,param).replace(' ','_').replace('.','_')+'__'+str(s_ind)+'__um__'+str(z_ind)+'__m'
+                    run_fig_name='stage_'+str(stage)+'__RUN__'+dict_name.get(param,param).replace(' ','_').replace('.','_')+'__'+str(s_ind)+'__um__'+str(z_ind)+'__m'
                     for irun in run_range:
                         if not hasattr(outlist[irun],param):
                             break
@@ -1489,7 +1489,7 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
         
         for param in dfl_param_inp:
             dfl_value=[]
-            dfl_fig_name='DFL__'+'stage_'+str(stage)+'__'+param.replace(' ','_').replace('.','_')+'__end'
+            dfl_fig_name='stage_'+str(stage)+'__DFL__'+param.replace(' ','_').replace('.','_')+'__end'
             for irun in run_range:
                 dfl_filePath=proj_dir+'run_'+str(irun)+'/run.'+str(irun)+'.s'+str(stage)+'.gout.dfl'
                 dfl=read_dfl_file_out(outlist[irun],debug=debug)
@@ -1952,7 +1952,10 @@ def plot_beam(beam,figsize=3,showfig=False,savefig=False,fig=None,plot_xy=None,d
 tmp for HXRSS
 '''
 
-def read_plot_dump_proj(exp_dir,stage,run_ids,plot_phase=1):
+def read_plot_dump_proj(exp_dir,stage,run_ids,plot_phase=1,showfig=0,savefig=0,debug=1):
+    
+    if showfig==0 and savefig==0:
+        return None
     
     t_l_int_arr=[]
     t_l_pha_arr=[]
@@ -1990,7 +1993,8 @@ def read_plot_dump_proj(exp_dir,stage,run_ids,plot_phase=1):
         t_l_pha_mean=t_l_pha_arr[:,0]
         f_l_int_mean=f_l_int_arr[:,0]
     # t_domain,t_norm=plt.figure('t_domain_filtered')
-    t_domain=plt.figure('Power (stage'+str(stage)+')')
+    fig_name='stage_'+str(stage)+'__FILT__power'
+    t_domain=plt.figure(fig_name)
     ax1=t_domain.add_subplot(2+plot_phase, 1, 1)
     pulse_average_pos=np.sum(t_l_scale*t_l_int_mean)/np.sum(t_l_int_mean)
     ax1.plot(t_l_scale-pulse_average_pos,t_l_int_arr,'0.5')
@@ -2011,8 +2015,23 @@ def read_plot_dump_proj(exp_dir,stage,run_ids,plot_phase=1):
         plt.ylabel(r'$\phi [rad]$')
     plt.xlabel(r'$S [\mu m]$')
     
+    plt.draw()
     
-    f_domain=plt.figure('Spectrum (stage'+str(stage)+')')
+    if savefig!=False:
+        if savefig==True:
+            savefig='png'
+        if debug>1: print('      saving '+fig_name+'.'+savefig)
+        plt.savefig(exp_dir+'results/'+fig_name+'.'+savefig,format=savefig) 
+        
+    if showfig:
+        plt.show()
+    else:
+        plt.close('all')
+    
+    
+    
+    fig_name='stage_'+str(stage)+'__FILT__spectrum'
+    f_domain=plt.figure(fig_name)
     ax1=f_domain.add_subplot(2, 1, 1)
     ax1.plot(h_eV_s*speed_of_light/f_l_scale,f_l_int_arr,'0.5')
     ax1.plot(h_eV_s*speed_of_light/f_l_scale,f_l_int_mean,'k',linewidth=1.5)
@@ -2029,7 +2048,19 @@ def read_plot_dump_proj(exp_dir,stage,run_ids,plot_phase=1):
     # ax[1].xlabel(r'$E$ [eV]')
     # ax[0].xlabel(r'$P(\lambda)$ [a.u.]')
     # ax[1].xlabel(r'$abs(TrF)$')
-    plt.show()
+    
+    plt.draw()
+    
+    if savefig!=False:
+        if savefig==True:
+            savefig='png'
+        if debug>1: print('      saving '+fig_name+'.'+savefig)
+        plt.savefig(exp_dir+'results/'+fig_name+'.'+savefig,format=savefig) 
+        
+    if showfig:
+        plt.show()
+    else:
+        plt.close('all')
 
 
 

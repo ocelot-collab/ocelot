@@ -1363,7 +1363,7 @@ def plot_gen_stat(proj_dir,run_inp=[],stage_inp=[],param_inp=[],s_param_inp=['p_
         for param in z_param_range:
             for z_ind in z_inp:
                 z_value=[]
-                z_fig_name='stage_'+str(stage)+'__S__'++dict_name.get(param,param).replace(' ','_').replace('.','_')+'__'+str(z_ind)+'__m'
+                z_fig_name='stage_'+str(stage)+'__S__'+dict_name.get(param,param).replace(' ','_').replace('.','_')+'__'+str(z_ind)+'__m'
                 for irun in run_range:
                     if not hasattr(outlist[irun],param):
                         break

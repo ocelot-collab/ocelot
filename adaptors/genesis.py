@@ -766,7 +766,7 @@ class RadiationField():
     #propper scales in meters or 2 pi / meters
     def scale_kx(self): #scale in meters or meters**-1
         if self.domain_xy=='s': #space domain
-            return np.linspace(0, self.Lx(), self.Nx())
+            return np.linspace(-self.Lx()/2, self.Lx()/2, self.Nx())
         elif self.domain_xy=='k': #inverse space domain
             k=2*np.pi/self.dx
             return np.linspace(-k/2, k/2, self.Nx())
@@ -774,7 +774,7 @@ class RadiationField():
         
     def scale_ky(self): #scale in meters or meters**-1
         if self.domain_xy=='s': #space domain
-            return np.linspace(0, self.Ly(), self.Ny())
+            return np.linspace(-self.Ly()/2, self.Ly()/2, self.Ny())
         elif self.domain_xy=='k': #inverse space domain
             k=2*np.pi/self.dy
             return np.linspace(-k/2, k/2, self.Ny())

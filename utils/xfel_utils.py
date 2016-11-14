@@ -245,8 +245,8 @@ def dfl_pad_z(dfl, padn):
     return dfl_pad
     
 
-def dfl_fft_z(dfl,method='mp',nthread = multiprocessing.cpu_count()): #move to somewhere else
-    print('      calculating fft_z from '+dfl.domain_z+' domain with '+method)
+def dfl_fft_z(dfl,method='mp',nthread = multiprocessing.cpu_count(),debug=1): #move to somewhere else
+    if debug>0: print('      calculating fft_z from '+dfl.domain_z+' domain with '+method)
     start = time.time()
     dfl_fft=RadiationField(dfl.shape())
     dfl_fft.copy_param(dfl)
@@ -276,13 +276,14 @@ def dfl_fft_z(dfl,method='mp',nthread = multiprocessing.cpu_count()): #move to s
         dfl_fft.domain_z='t'
     else: raise ValueError("domain_z value should be 't' or 'f'")
     
-    t_func = time.time() - start
-    if t_func<60: print('        done in %.2f ' %t_func +'sec')
-    else: print('        done in %.2f ' %t_func/60 +'min')
+    if debug>0: 
+        t_func = time.time() - start
+        if t_func<60: print('        done in %.2f ' %t_func +'sec')
+        else: print('        done in %.2f ' %t_func/60 +'min')
     return dfl_fft
   
-def dfl_fft_xy(dfl,method='mp',nthread = multiprocessing.cpu_count()): #move to somewhere else
-    print('      calculating fft_xy from '+dfl.domain_xy+' domain with '+method)
+def dfl_fft_xy(dfl,method='mp',nthread = multiprocessing.cpu_count(),debug=1): #move to somewhere else
+    if debug>0: print('      calculating fft_xy from '+dfl.domain_xy+' domain with '+method)
     start = time.time()
     dfl_fft=RadiationField(dfl.shape())
     dfl_fft.copy_param(dfl)
@@ -313,9 +314,10 @@ def dfl_fft_xy(dfl,method='mp',nthread = multiprocessing.cpu_count()): #move to 
         
     else: raise ValueError("domain_xy value should be 's' or 'k'")
     
-    t_func = time.time() - start
-    if t_func<60: print('        done in %.2f ' %t_func +'sec')
-    else: print('        done in %.2f ' %t_func/60 +'min')
+    if debug>0: 
+        t_func = time.time() - start
+        if t_func<60: print('        done in %.2f ' %t_func +'sec')
+        else: print('        done in %.2f ' %t_func/60 +'min')
     return dfl_fft
     
 def dfl_trf(dfl,trf,mode):

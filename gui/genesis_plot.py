@@ -1259,7 +1259,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend = True, phase = False, fa
     if F.Nz()!=1:
         if freq_domain:
             if F.domain_z=='t':
-                F=dfl_fft_z(F)
+                F=dfl_fft_z(F,debug=debug)
             z=F.scale_z()*1e9
             
             F.fld=F.fld[::-1,:,:]
@@ -1273,7 +1273,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend = True, phase = False, fa
             suffix+='_fd'
         else:
             if F.domain_z=='f':
-                F=dfl_fft_z(F)
+                F=dfl_fft_z(F,debug=debug)
             z=F.scale_z()*1e6
             
             unit_z=r'$\mu$m'
@@ -1312,7 +1312,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend = True, phase = False, fa
     
     if far_field:
         if F.domain_xy=='s':
-            F=dfl_fft_xy(F)
+            F=dfl_fft_xy(F,debug=debug)
         x=F.scale_x()*1e6
         y=F.scale_y()*1e6
         
@@ -1327,7 +1327,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend = True, phase = False, fa
         # if debug>1: print('        done in %.2f seconds' %(time.time()-calc_time))
     else:
         if F.domain_xy=='k':
-            F=dfl_fft_xy(F)
+            F=dfl_fft_xy(F,debug=debug)
         x=F.scale_x()*1e6
         y=F.scale_y()*1e6
         

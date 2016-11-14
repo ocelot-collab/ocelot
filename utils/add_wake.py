@@ -67,7 +67,8 @@ if command == 'current':
         f=open(outf,'w')
         f.write(beam_file_str(beam))
         f.close()
-        #print beam_file_str(beam) 
+        #print beam_file_str(beam)
+
 if command == 'add_from_file':
 
     if len(sys.argv)>2:
@@ -104,18 +105,25 @@ if command == "add":
 
     beam = read_beam_file(beamf)
 
-
 """
+
 if __name__ == "__main__":
     import ocelot.utils.reswake as w
     from numpy import array
     from matplotlib.pyplot import *
-    beamf = "beam_1nC.txt"
+    #beamf = "../../desy/xfel/beams/beam_1nC.txt"
+    #beamf = "../../desy/xfel/beams/beam_0.02nC.txt"
+    beamf = "../../desy/xfel/beams/beam_0.25nC.txt"
     beam = get_current(beamf)
-    print beam.z, beam.I
+    print (beam.z, beam.I)
     s, bunch, wake = w.xfel_pipe_wake(s=array(beam.z), current=array(beam.I))
     beam.eloss = wake[::-1]
-    plot(beam.z, beam.I*max(beam.eloss)/max(beam.I), "b")
-    plot(beam.z, beam.eloss , "r")
+    fig, ax1 = subplots()
+    ax1.plot(beam.z, beam.I, "b")
+    ax1.set_ylabel('I[A]', color='b')
+    ax2 = ax1.twinx()
+    ax2.plot(beam.z, beam.eloss/1000 , "r")
+    ax2.set_ylabel('wake, [kV/m]', color='r')
     show()
 """
+

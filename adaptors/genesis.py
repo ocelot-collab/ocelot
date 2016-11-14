@@ -752,39 +752,64 @@ class RadiationField():
     def int_x(self):
         return np.sum(self.int(),axis=(0,1))
     def int_xy(self):
-        return np.sum(self.int(),axis=0)
+        return np.swapaxes( np.sum(self.int(),axis=0) ,1,0)
+    def int_zx(self):
+        return np.sum(self.int(),axis=1)
+    def int_zy(self):
+        return np.sum(self.int(),axis=2)
     def E(self): # energy in the pulse [J]
         if self.Nz()>1:
             return np.sum(self.int())*self.Lz()/self.Nz()/speed_of_light 
         else:
             return self.int()
-    
-    def scale_x(self): #scale in meters or radians
-        if self.domain_xy=='s':
+
+    #propper scales in meters or 2 pi / meters
+    def scale_kx(self): #scale in meters or meters**-1
+        if self.domain_xy=='s': #space domain
             return np.linspace(0, self.Lx(), self.Nx())
-        elif self.domain_xy=='k':
-            ang=self.xlamds/self.dx
-            return np.linspace(-ang/2, ang/2, self.Nx())
+        elif self.domain_xy=='k': #inverse space domain
+            k=2*np.pi/self.dx
+            return np.linspace(-k/2, k/2, self.Nx())
+        else: raise AttributeError('Wrong domain_xy attribute')
+        
+    def scale_ky(self): #scale in meters or meters**-1
+        if self.domain_xy=='s': #space domain
+            return np.linspace(0, self.Ly(), self.Ny())
+        elif self.domain_xy=='k': #inverse space domain
+            k=2*np.pi/self.dy
+            return np.linspace(-k/2, k/2, self.Ny())
+        else: raise AttributeError('Wrong domain_xy attribute')
+        
+    def scale_kz(self): #scale in meters or meters**-1
+        if self.domain_z=='t': #time domain
+            return np.linspace(0, self.Lz(), self.Nz())
+        elif self.domain_z=='f': #frequency domain
+            dk=2*pi/self.Lz();
+            k=2*pi/self.xlamds
+            return np.linspace(k-dk/2*self.Nz(), k+dk/2*self.Nz(), self.Nz())
+        else: raise AttributeError('Wrong domain_z attribute')
+
+        
+    def scale_x(self): #scale in meters or radians
+        if self.domain_xy=='s': #space domain
+            return self.scale_kx()
+        elif self.domain_xy=='k': #inverse space domain
+            return self.scale_kx()*self.xlamds/2/np.pi
         else: raise AttributeError('Wrong domain_xy attribute')
         
     def scale_y(self): #scale in meters or radians
-        if self.domain_xy=='s':
-            return np.linspace(0, self.Ly(), self.Ny())
-        elif self.domain_xy=='k':
-            ang=self.xlamds/self.dy
-            return np.linspace(-ang/2, ang/2, self.Ny())
+        if self.domain_xy=='s': #space domain
+            return self.scale_ky()
+        elif self.domain_xy=='k': #inverse space domain
+            return self.scale_ky()*self.xlamds/2/np.pi
         else: raise AttributeError('Wrong domain_xy attribute')
         
     def scale_z(self): #scale in meters
-        if self.domain_z=='t':
-            return np.linspace(0, self.Lz(), self.Nz())
-        elif self.domain_z=='f':
-            dk=2*pi/self.Lz();
-            k=2*pi/self.xlamds
-            return 2*pi/np.linspace(k-dk/2*self.Nz(), k+dk/2*self.Nz(), self.Nz())
+        if self.domain_z=='t': #time domain
+            return self.scale_kz()
+        elif self.domain_z=='f': #frequency domain
+            return 2*pi/self.scale_kz()
         else: raise AttributeError('Wrong domain_z attribute')
-
-
 
 
 
@@ -1295,7 +1320,7 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
     
     if read_level==0:
         print ('      returning *.out header')
-        if debug>0: print('      done in %.3f seconds' % (time.time() - start_time)) 
+        if debug>0: print('      done in %.2f seconds' % (time.time() - start_time)) 
         return out
     
     out.nSlices = len(out.n)
@@ -1403,7 +1428,7 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
         # out.energy=np.mean(out.p_int,axis=0)*out('xlamds')*out('zsep')*out.nSlices/speed_of_light
         out.energy=np.sum(out.p_int*out.dt,axis=0)
     
-    if debug>0: print('      done in %.3f seconds' % (time.time() - start_time))        
+    if debug>0: print('      done in %.2f seconds' % (time.time() - start_time))        
     return out
 
 def read_out_file_stat(proj_dir,stage,run_inp=[],param_inp=[],debug=1):
@@ -1547,7 +1572,7 @@ def read_dfl_file(filePath, Nxy, Lxy=None, zsep=None, xlamds=None, vartype=compl
         dfl.xlamds=xlamds
         dfl.filePath=filePath
         
-        if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
+        if debug>0: print('      done in %.2f sec' % (time.time() - start_time)) 
 
         return dfl
 
@@ -1568,7 +1593,7 @@ def write_dfl_file(dfl,filePath=None,debug=1):
     d=dfl.fld.flatten()
     d.tofile(filePath,format='complex')
     
-    if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
+    if debug>0: print('      done in %.2f sec' % (time.time() - start_time)) 
 
 
 
@@ -1628,7 +1653,7 @@ def read_dpa_file(filePath, nbins=4, npart=None,debug=1):
     dpa.filePath=filePath
     # dpa.fileName = filename_from_path(filePath)
     
-    if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
+    if debug>0: print('      done in %.2f sec' % (time.time() - start_time)) 
     
     return dpa
 
@@ -1724,7 +1749,7 @@ def dpa2edist(out,dpa,num_part=1e5,smear=1,debug=1):
     # print 'max_y_out', np.amax(t_out)
     # print 'e_out', np.amax(e_out),np.amin(e_out)
     
-    if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
+    if debug>0: print('      done in %.2f sec' % (time.time() - start_time)) 
     
     return edist
 
@@ -1792,7 +1817,7 @@ def read_edist_file(filePath,debug=1):
     
     edist.part_charge=charge/edist.len()
     
-    if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
+    if debug>0: print('      done in %.2f sec' % (time.time() - start_time)) 
     
     return edist
 
@@ -1880,7 +1905,7 @@ def write_edist_file (edist,filePath=None,debug=1):
     np.savetxt(f, np.c_[edist.x,edist.xp,edist.y,edist.yp,edist.t,edist.g],fmt="%e", newline='\n')
     f.close()
     
-    if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
+    if debug>0: print('      done in %.2f sec' % (time.time() - start_time)) 
 
     
 def edist2beam(edist,step=1e-7):
@@ -2051,7 +2076,7 @@ def read_beam_file(filePath,debug=1):
     beam.filePath=filePath
     # beam.fileName=filename_from_path(filePath)
     
-    if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
+    if debug>0: print('      done in %.2f sec' % (time.time() - start_time)) 
     
     return beam
 
@@ -2384,7 +2409,7 @@ def write_beam_file(filePath, beam,debug=0):
     fd.write(beam_file_str(beam))
     fd.close()
     
-    if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
+    if debug>0: print('      done in %.2f sec' % (time.time() - start_time)) 
 
 
 

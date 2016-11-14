@@ -42,11 +42,58 @@ def copy_this_script(scriptName,scriptPath,folderPath):
 SELF-SEEDING - relevant
 '''
 
+def dfl_prop(dfl,z):
+    '''
+    Fourier propagator for fieldfile
+    
+    can handle wide spectrum
+      (every slice in freq.domain is propagated 
+       according to its frequency)
+    no kx**2+ky**2<<k0**2 limitation
+    
+    dfl is the RadiationField() object
+    z is the propagation distance in [m] 
+    returns RadiationField() object
+    
+    z>0 ==> forward
+    '''
+    print('    propagating dfl file by %.2f meters' %(z))
+    
+    start=time.time()
+    
+    dfl_out=deepcopy(dfl)
+    domain_xy=dfl.domain_xy
+    domain_z=dfl.domain_z
+    
+    #switch to inv-space/freq domain
+    if dfl_out.domain_xy=='s':
+        dfl_out=dfl_fft_xy(dfl_out)
+    if dfl_out.domain_z=='t':
+        dfl_out=dfl_fft_z(dfl_out)
+        
+    k_x,k_y=np.meshgrid(dfl_out.scale_kx(),dfl_out.scale_ky())
+
+    for i in range(dfl_out.Nz()):
+        k=dfl_out.scale_kz()[i]
+        H=exp(1j*z*(sqrt(k**2-k_x**2-k_y**2)-k))
+        dfl_out.fld[i,:,:]*=H
+    
+    #switch to original domain
+    if domain_xy=='s':
+        dfl_out=dfl_fft_xy(dfl_out)
+    if domain_z=='t':
+        dfl_out=dfl_fft_z(dfl_out)
+    
+    t_func = time.time() - start
+    print('      done in %.2f ' %t_func +'sec')
+    
+    return dfl_out
+
 def dfl_interp(dfl,interpN=(1,1),interpL=(1,1),newN=(None,None),newL=(None,None),method='cubic',debug=1): 
     ''' 
     2d interpolation of the coherent radiation distribution 
     interpN and interpL define the desired interpolation coefficients for  
-    transverse point density and transverse mesh sizes correspondingly 
+    transverse point __density__ and transverse mesh __size__ correspondingly 
     newN and newL define the final desire number of points and size of the mesh 
     when newN and newL are not None interpN and interpL values are ignored 
     coordinate convention is (x,y) 
@@ -148,11 +195,14 @@ def dfl_interp(dfl,interpN=(1,1),interpL=(1,1),newN=(None,None),newL=(None,None)
     # dfl2.fileName=dfl.fileName+'i'
     # dfl2.filePath=dfl.filePath+'i'
     if debug>1: print('      energy after interpolation '+ str (F2.E())) 
-    if debug>0: print('      done in %s sec' % (time.time() - start_time)) 
+    if debug>0: print('      done in %.2f sec' % (time.time() - start_time)) 
          
     return dfl2
 
 def dfl_shift_z(dfl,s,set_zeros=1):
+    '''
+    shift the radiation within the window in time domain
+    '''
     # set_zeros - to set the values from out of initial time window to zeros
     assert dfl.domain_z=='t','dfl_shift_z works only in time domain!'
     shift_n=int(s/dfl.dz)
@@ -196,7 +246,7 @@ def dfl_pad_z(dfl, padn):
     
 
 def dfl_fft_z(dfl,method='mp',nthread = multiprocessing.cpu_count()): #move to somewhere else
-    print('    calculating fft_z from '+dfl.domain_z+' domain with '+method)
+    print('      calculating fft_z from '+dfl.domain_z+' domain with '+method)
     start = time.time()
     dfl_fft=RadiationField(dfl.shape())
     dfl_fft.copy_param(dfl)
@@ -227,12 +277,12 @@ def dfl_fft_z(dfl,method='mp',nthread = multiprocessing.cpu_count()): #move to s
     else: raise ValueError("domain_z value should be 't' or 'f'")
     
     t_func = time.time() - start
-    if t_func<60: print('      done in %.2f ' %t_func +'sec')
-    else: print('      done in %.2f ' %t_func/60 +'min')
+    if t_func<60: print('        done in %.2f ' %t_func +'sec')
+    else: print('        done in %.2f ' %t_func/60 +'min')
     return dfl_fft
   
 def dfl_fft_xy(dfl,method='mp',nthread = multiprocessing.cpu_count()): #move to somewhere else
-    print('    calculating fft_xy from '+dfl.domain_xy+' domain with '+method)
+    print('      calculating fft_xy from '+dfl.domain_xy+' domain with '+method)
     start = time.time()
     dfl_fft=RadiationField(dfl.shape())
     dfl_fft.copy_param(dfl)
@@ -264,8 +314,8 @@ def dfl_fft_xy(dfl,method='mp',nthread = multiprocessing.cpu_count()): #move to 
     else: raise ValueError("domain_xy value should be 's' or 'k'")
     
     t_func = time.time() - start
-    if t_func<60: print('      done in %.2f ' %t_func +'sec')
-    else: print('      done in %.2f ' %t_func/60 +'min')
+    if t_func<60: print('        done in %.2f ' %t_func +'sec')
+    else: print('        done in %.2f ' %t_func/60 +'min')
     return dfl_fft
     
 def dfl_trf(dfl,trf,mode):
@@ -395,7 +445,7 @@ def dfl_hxrss_filt(dfl,trf,ev_seed,s_delay,st_cpl=1,res_per_fwhm=6,fft_method='m
         
         t_func = time.time() - start
         t_proj=t2+t4+t6+t8-(t1+t3+t5+t7)
-        print('    done in %.2f sec, (%.2f sec for proj calc)' %(t_func,t_proj))
+        print('    done in %.2f sec, (inkl. %.2f sec for proj calc)' %(t_func,t_proj))
         return dfl, ((t_l_scale,None,t_l_int_a,t_l_pha_a),(f_l_scale,f_l_filt,None,f_l_int_a))#f_l_int_b,t_l_int_b,
     
     else:

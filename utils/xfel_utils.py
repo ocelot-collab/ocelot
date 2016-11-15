@@ -12,7 +12,7 @@ from numpy import inf, complex128,complex64
 from copy import copy, deepcopy
 import ocelot
 from ocelot import *
-# from ocelot.common.math_op import *
+from ocelot.common.math_op import *
 
 # from ocelot.optics.utils import *
 # from ocelot.rad.undulator_params import *
@@ -42,7 +42,7 @@ def copy_this_script(scriptName,scriptPath,folderPath):
 SELF-SEEDING - relevant
 '''
 
-def dfl_prop(dfl,z):
+def dfl_prop(dfl,z,fine=1,debug=1):
     '''
     Fourier propagator for fieldfile
     
@@ -53,11 +53,16 @@ def dfl_prop(dfl,z):
     
     dfl is the RadiationField() object
     z is the propagation distance in [m] 
+    fine==0 is a flag for ~2x faster propagation. 
+        no Fourier transform to frequency domain is done
+        assumes no angular dispersion (true for plain FEL radiation)
+        assumes narrow spectrum at center of xlamds (true for plain FEL radiation)
+        
     returns RadiationField() object
     
     z>0 ==> forward
     '''
-    print('    propagating dfl file by %.2f meters' %(z))
+    if debug>0: print('    propagating dfl file by %.2f meters' %(z))
     
     start=time.time()
     
@@ -67,29 +72,85 @@ def dfl_prop(dfl,z):
     
     #switch to inv-space/freq domain
     if dfl_out.domain_xy=='s':
-        dfl_out=dfl_fft_xy(dfl_out)
-    if dfl_out.domain_z=='t':
-        dfl_out=dfl_fft_z(dfl_out)
-        
-    k_x,k_y=np.meshgrid(dfl_out.scale_kx(),dfl_out.scale_ky())
-
-    for i in range(dfl_out.Nz()):
-        k=dfl_out.scale_kz()[i]
-        H=exp(1j*z*(sqrt(k**2-k_x**2-k_y**2)-k))
-        dfl_out.fld[i,:,:]*=H
+        dfl_out=dfl_fft_xy(dfl_out,debug=debug)
+    if dfl_out.domain_z=='t' and fine:
+        dfl_out=dfl_fft_z(dfl_out,debug=debug)
     
+    if fine:
+        k_x,k_y=np.meshgrid(dfl_out.scale_kx(),dfl_out.scale_ky())
+        for i in range(dfl_out.Nz()):
+            k=dfl_out.scale_kz()[i]
+            H=exp(1j*z*(sqrt(k**2-k_x**2-k_y**2)-k))
+            dfl_out.fld[i,:,:]*=H
+    else:
+        k_x,k_y=np.meshgrid(dfl_out.scale_kx(),dfl_out.scale_ky())
+        k=2*np.pi/dfl_out.xlamds
+        H=exp(1j*z*(sqrt(k**2-k_x**2-k_y**2)-k))
+        for i in range(dfl_out.Nz()):
+            dfl_out.fld[i,:,:]*=H
+            
     #switch to original domain
     if domain_xy=='s':
-        dfl_out=dfl_fft_xy(dfl_out)
-    if domain_z=='t':
-        dfl_out=dfl_fft_z(dfl_out)
+        dfl_out=dfl_fft_xy(dfl_out,debug=debug)
+    if domain_z=='t' and fine:
+        dfl_out=dfl_fft_z(dfl_out,debug=debug)
     
     t_func = time.time() - start
-    print('      done in %.2f ' %t_func +'sec')
+    if debug>0: print('      done in %.2f ' %t_func +'sec')
     
     return dfl_out
 
-def dfl_interp(dfl,interpN=(1,1),interpL=(1,1),newN=(None,None),newL=(None,None),method='cubic',debug=1): 
+def dfl_waistscan(dfl, z_pos, projection=0, debug=1):
+    '''
+    propagates the RadaitionField object dfl 
+    through the sequence of positions z_pos
+    and calculates transverse distribution parameters
+    such as peak photon density and sizes in both dimentions
+    
+    if projection==1, then size of projection is calculated
+        otherwise - size across the central line passing through the mesh center
+    '''
+    if debug>0: print('    scanning dfl waist in range %s meters' %(z_pos))
+    start=time.time()
+
+    sc_res=WaistScanResults()
+    sc_res.xlamds=dfl.xlamds
+    sc_res.filePath=dfl.filePath
+
+    for z in z_pos:
+        
+        if debug>0: print('      scanning at z = %.2f m' %(z))
+        
+        I_xy = dfl_prop(dfl, z, fine=0, debug=0).int_xy() # integrated xy intensity
+        
+        scale_x = dfl.scale_x()
+        scale_y = dfl.scale_y() 
+        center_x = (shape(I_xy)[0] + 1)/2
+        center_y = (shape(I_xy)[1] + 1)/2
+        
+        if projection:
+            I_x = np.sum(I_xy, axis=1)
+            I_y = np.sum(I_xy, axis=0)
+        else:
+            I_x = I_xy[:,center_y]
+            I_y = I_xy[center_x,:]
+        
+        sc_res.z_pos = np.append(sc_res.z_pos, z)
+        sc_res.phdens_max = np.append(sc_res.phdens_max, np.amax(I_xy))
+        sc_res.phdens_onaxis = np.append(sc_res.phdens_onaxis, I_xy[ center_x, center_y ])
+        sc_res.fwhm_x = np.append(sc_res.fwhm_x, fwhm(scale_x, I_x))
+        sc_res.fwhm_y = np.append(sc_res.fwhm_y, fwhm(scale_y, I_y))
+        sc_res.std_x = np.append(sc_res.std_x, std_moment(scale_x, I_x))
+        sc_res.std_y = np.append(sc_res.std_y, std_moment(scale_y, I_y))
+        
+        sc_res.z_max_phdens = sc_res.z_pos[ np.argmax(sc_res.phdens_max) ]
+    
+    t_func = time.time() - start
+    if debug>0: print('      done in %.2f ' %t_func +'sec') 
+    
+    return sc_res
+    
+def dfl_interp(dfl, interpN=(1,1), interpL=(1,1), newN=(None,None), newL=(None,None), method='cubic', debug=1): 
     ''' 
     2d interpolation of the coherent radiation distribution 
     interpN and interpL define the desired interpolation coefficients for  

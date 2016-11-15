@@ -811,9 +811,22 @@ class RadiationField():
             return 2*pi/self.scale_kz()
         else: raise AttributeError('Wrong domain_z attribute')
 
+class WaistScanResults():
+    
+    def __init__(self):
+        self.filePath=''
+        self.xlamds=None
+        self.z_pos=np.array([])
+        self.phdens_max=np.array([])
+        self.phdens_onaxis=np.array([])
+        self.fwhm_x=np.array([])
+        self.fwhm_y=np.array([])
+        self.std_x=np.array([])
+        self.std_y=np.array([])
+        self.z_maxint=None
 
-
-
+    def fileName(self):
+        return filename_from_path(self.filePath)
 
 
 

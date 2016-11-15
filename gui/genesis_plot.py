@@ -30,8 +30,7 @@ fntsz=4
 params = {'backend': 'ps', 'axes.labelsize': 3*fntsz, 'font.size': 3*fntsz, 'legend.fontsize': 4*fntsz, 'xtick.labelsize': 4*fntsz,  'ytick.labelsize': 4*fntsz, 'text.usetex': False}
 rcParams.update(params)
 # plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
-
-max_yticks = 7
+#rcParams["savefig.directory"] = os.chdir(os.path.dirname(__file__)) but __file__ appears to be genesis_plot
 
 def plot_gen_out_all(handle=None,savefig='png',showfig=False,choice=(1,1,1,1,6.05,1,0,0,0,0,0),vartype_dfl=complex128,debug=1):
     '''
@@ -705,7 +704,7 @@ def subfig_rad_spec_evo(ax_spectrum_evo,g,legend,norm=1):
 
 
 def plot_gen_out_scanned_z(g, figsize=(10, 14), legend = True, fig_name = None, z=inf, savefig=False):
-#    max_yticks = 7
+
     if g('itdp')==True:
         print('    plotting scan at '+str(z)+' [m]')
         print('!     Not implemented yet for time dependent, skipping')
@@ -1509,7 +1508,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend = True, phase = False, fa
 
     plt.draw()
     if showfig==True:
-        if debug>0: print('    showing dfl')
+        if debug>0: print('      showing dfl')
         plt.show()
     else:
         plt.close(fig)
@@ -2375,7 +2374,49 @@ def read_plot_dump_proj(exp_dir,stage,run_ids,plot_phase=1,showfig=0,savefig=0,d
     else:
         plt.close('all')
 
+def plot_dfl_waistscan(sc_res, fig_name=None, showfig=0, savefig=0, debug=1):
+    
+    if showfig == False and savefig == False:
+        return
+    
+    if fig_name is None:
+        if sc_res.fileName() is '':
+            fig = plt.figure('Waist scan')
+        else:
+            fig = plt.figure(sc_res.fileName()+' waist scan')
+    else:
+        fig = plt.figure(fig_name)
+    
+    plt.clf()
+    ax_int = fig.add_subplot(1, 1, 1)
+    ax_int.plot(sc_res.z_pos, sc_res.phdens_max, 'k', label='max', linewidth=2)
+    ax_int.plot(sc_res.z_pos, sc_res.phdens_onaxis, 'grey', label='on-axis')
+    ax_int.set_xlabel('z [m]')
+    ax_int.set_ylabel('photon density [arb.units]')
+    ax_int.legend(loc='lower left')
+    ax_size=ax_int.twinx()
+    ax_size.plot(sc_res.z_pos, sc_res.fwhm_x*1e6, 'g--', label='fwhm_x')
+    ax_size.plot(sc_res.z_pos, sc_res.fwhm_y*1e6, 'b--', label='fwhm_y')
+    ax_size.plot(sc_res.z_pos, sc_res.std_x*1e6, 'g:', label='std_x')
+    ax_size.plot(sc_res.z_pos, sc_res.std_y*1e6, 'b:', label='std_y')
 
+    ax_size.set_ylabel('size [um]')
+    ax_size.legend(loc='lower right')
+    
+    plt.draw()
+    
+    if savefig!=False:
+        if savefig==True:
+            savefig='png'
+        if debug>0: print('      saving *.'+savefig)
+        if debug>1: print('        to '+sc_res.filePath+'_%.2fm-%.2fm-waistscan.'%(sc_res.z_pos[0],sc_res.z_pos[-1])+str(savefig))
+        fig.savefig(sc_res.filePath+'_%.2fm-%.2fm-waistscan.'%(sc_res.z_pos[0],sc_res.z_pos[-1])+str(savefig),format=savefig)
+    # if debug>0: print('      done in %.2f seconds' % (time.time() - start_time))
+    if showfig:
+        if debug>0: print('      showing fig')
+        plt.show()
+    else:
+        plt.close(fig)
 
 
 

@@ -9,7 +9,7 @@ import numpy as np
 from numpy import pi
 
 
-class Element:
+class Element(object):
     """
     Element is a basic beamline building element
     Accelerator optics elements are subclasses of Element
@@ -67,7 +67,8 @@ class Quadrupole(Element):
     tilt - tilt of lens in [rad].
     """
     def __init__(self, l=0., k1=0, k2=0., tilt=0., eid=None):
-        Element.__init__(self, eid)
+        #Element.__init__(self, eid)
+        super(Quadrupole, self).__init__(eid=eid)
         self.l = l
         self.k1 = k1
         self.k2 = k2

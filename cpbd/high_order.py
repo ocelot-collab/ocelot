@@ -406,28 +406,34 @@ def t_nnn(L, h, k1, k2, energy=0):
         f2y = (L - s2y)/ky2 if ky2 != 0 else 2./3.*L3
         J1 = (L - sx)/kx2 if kx2 != 0 else L**3/6.
         J2 = (3.*L - 4.*sx + sx*cx)/(2*kx4) if kx != 0 else L**5/20.
+        J3 = (15*L - 22*sx +9*sx*cx - 2*sx*cx*cx)/(6*kx4*kx2) if kx != 0 else L**7/56.
         Jd = (d2y - dx_h)*(kx2 - 4*ky2)
         Jf = (f2y - fx)*(kx2 - 4*ky2)
         T[1, 0, 5] = -h*h/6./beta*(K2 - 2.*h*ky2)*(3.*cx*J1 + sx*dx_h) - 1./2./beta*-ky2*(sx - L*cx)
         T[0, 1, 5] = -h*h/6./beta*(K2 - 2.*h*ky2)*(sx*dx_h*dx_h - 2.*cx*J2) + h2/2/beta*(sx*dx_h + cx*J1) - 1./2./beta*(sx + L*cx)
+        T[0, 3, 3] = K2*Jd - h/2.*dx_h
         T[1, 1, 5] = -h*h/6./beta*(K2 - 2.*h*ky2)*(3.*sx*J1 + dx_h*dx_h) + 1./2./beta*-ky2*L*sx
         T[1, 5, 5] = -h*h/6./(beta2)*(K2 - 2.*h*ky2)*(sx*dx_h*dx_h - 2.*cx*J2) - h/2./beta2*-ky2*(cx*J1 - sx*dx_h) - h*igamma2/(2.*beta2)*sx
         T[2, 3, 5] = h/beta*K2*(sy*Jd - 2*cy*Jf) + h2/beta*J1*cy - 1./2./beta*(sy + L*cy)
         T[2, 2, 5] = h/beta*K2*(sy*Jd - 2*-ky2*cy*Jf) + h2/beta*-ky2*J1*sy - 0.5/beta*-ky2*L*sy
         # only T436 gives the different value for Quad in comparison with MAD, but it was checked and it is correct
-        T[3, 2, 5] = h/beta*-ky2*K2*(2*cy*Jf - sy*Jd) + h/beta*(K2 + h*-ky2)*J1*cy + 0.5*beta*-ky2*(sy - L*cy)
+        T[3, 2, 5] = h/beta*-ky2*K2*(2*cy*Jf - sy*Jd) + h/beta*(K2 + h*-ky2)*J1*cy + 0.5/beta*-ky2*(sy - L*cy)
+        T[3, 3, 5] = h/beta*K2*(2*-ky2*sy*Jf - cy*Jd) + h/beta*(K2 + h*-ky2)*J1*sy - 0.5/beta*-ky2*sy*L
+        #print("beta = ", beta, " T436 = ", T[3, 2, 5], "K1 = ", -ky2, "sy = ", sy, "L = ", L, " cy = ", cy, "rest = ", 0.5*beta*-ky2*(sy - L*cy) )
         T[4, 0, 1] = -(h/6./beta*(K2 + 2*h*-ky2)*dx_h*dx_h + 1/2./beta*-ky2*sx2)
         T[4, 1, 5] = -(h/6./beta*(K2 + 2*h*-ky2)*(dx_h**3 - 2*sx*J2) + h/2./beta*-ky2*sx*J1 + h*igamma2/beta2*dx_h)
-        T[4, 5, 5] = -1.5/beta**2*igamma2*(h**2*J1-L)
+        T[4, 5, 5] = -h2/6.*(h*(beta2*beta)*(K2 + 2*h*-ky2)*(3*J3 - 2*dx_h*J2) + -ky2*(sx*dx_h*dx_h - J2*(1 + 2*cx))) - 1.5/beta**3*igamma2*(h**2*J1-L)
+        #print((K2 + 2*h*-ky2)*(3*J3 - 2*dx_h*J2), -ky2*(sx*dx_h*dx_h - J2*(1 + 2*cx)))
         T[4, 0, 5] = -sx*h/(beta**2)*igamma2
+
         # 07.09.2016
         T[0, 0, 5] = 2.*(-h/12./beta*(K2 + 2*h*-ky2)*(3*sx*J1 - dx_h*dx_h) + 0.5*h2/beta*sx2 + 0.25/beta*-ky2*L*sx)
 
         T[4, 0, 0] = -(h/12./beta*(K2 + 2*h*-ky2)*(sx*dx_h + 3*J1) - 0.25/beta*-ky2*(L - sx*cx))
         T[4, 1, 1] = -(h/6./beta*(K2 + 2*h*-ky2)*J2 - 0.5/beta*sx - 0.25/beta*-ky2*(J1 - sx*dx_h))
-        T[4, 2, 2] = -(-h/beta*-ky2*K2*Jf - 0.5*h/beta*(K2 + h*-ky2)*J1 + 0.25/beta*-ky2*(J1 - cy*sy))
+        T[4, 2, 2] = -(-h/beta*-ky2*K2*Jf - 0.5*h/beta*(K2 + h*-ky2)*J1 + 0.25/beta*-ky2*(L - cy*sy))
         T[4, 2, 3] = -2*(-0.5*h/beta*K2*Jd - 0.25/beta*-ky2*sy*sy)
-        T[4, 2, 3] = -(-h/beta*K2*Jf - 0.5*h2/beta*J1 -0.25/beta*(L + cy*sy))
+        T[4, 3, 3] = -(-h/beta*K2*Jf - 0.5*h2/beta*J1 -0.25/beta*(L + cy*sy))
         #print(dx_h, igamma2, beta2, h)
         #print(igamma2)
     # MAD STOP
@@ -1335,9 +1341,6 @@ def arcline( SREin, Delta_S, dS, R_vect ):
             if np.abs(np.dot(n_vect, e1)) > epsilon:
                 R_vect_valid = False
                 print('*** error in arcline: invalid R_vect --> using line')
-
-
-
 
     if not R_vect_valid:
         SRE2[2-1, :] = sre0[2-1] + sre0[5-1]*np.arange(1, N+1)*dS

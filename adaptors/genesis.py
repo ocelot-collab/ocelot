@@ -511,7 +511,7 @@ def read_rad_file(fileName):
             for col in beam.columns:
                 beam.column_values[col] = []
                 
-            print beam.columns
+            print (beam.columns)
  
         if tokens[0] != "?":
             #print tokens
@@ -545,7 +545,7 @@ def read_beam_file(fileName):
             for col in beam.columns:
                 beam.column_values[col] = []
                 
-            print beam.columns
+            print (beam.columns)
  
         if tokens[0] != "?":
             #print tokens

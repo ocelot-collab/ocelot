@@ -11,23 +11,49 @@ from scipy.optimize import curve_fit
 from ocelot.cpbd.beam import *
 from ocelot.cpbd.high_order import *
 from ocelot.cpbd.magnetic_lattice import *
-
+import time
+from numba import jit
 
 from matplotlib import pyplot as plt
 from ocelot.cpbd.wake3D import *
 import copy
+#import StringIO
+
+
+def nextpow2(p):
+    i = 0
+    pow2 = 2**i
+    while p > pow2:
+        i += 1
+        pow2 = 2**i
+    return i
+
+
+def csr_convolution(a, b):
+    P = len(a)
+    Q = len(b)
+    L = P + Q - 1
+    K = 2 ** nextpow2(L)
+    a_pad = np.pad(a, (0, K - P), 'constant', constant_values=(0))
+    b_pad = np.pad(b, (0, K - Q), 'constant', constant_values=(0))
+    c = np.fft.ifft(np.fft.fft(a_pad)*np.fft.fft(b_pad))
+    c = c[0:L-1].real
+    return c
 
 
 def interp1(x, y, xnew, k=1):
-    if len(xnew)>0:
+    if len(xnew) > 0:
         tck = interpolate.splrep(x, y, k=k)
         ynew = interpolate.splev(xnew, tck, der=0)
     else:
         ynew = []
     return ynew
 
+
 def convolution(xu, u, xw, w):
-    #convolution of equally spaced functions
+    """
+    convolution of equally spaced functions
+    """
     hx = xu[1] - xu[0]
     wc = np.convolve(u, w)*hx
     nw = w.shape[0]
@@ -36,24 +62,261 @@ def convolution(xu, u, xw, w):
     xc = x0 + np.arange(nw + nu)*hx
     return xc, wc
 
-class CSR:
 
+def sample_0(i, a, b):
+    y = max(0, min(i + 0.5, b) - max(i - 0.5, a))
+    return y
+
+
+def sample_1(i, a, b, c):
+    y = 0
+    x1 = max(i - 0.5, a) - a
+    x2 = min(i + 0.5, b) - a
+    if x2 > x1:
+        y = (x2 - x1) * (x1 + x2) / (2 * (b - a))
+
+    x2 = c - max(i - 0.5, b)
+    x1 = c - min(i + 0.5, c)
+    if x2 > x1:
+        y = y + (x2 - x1) * (x1 + x2) / (2 * (b - a))
+    return y
+
+@jit
+def subbin_bound(q, s, x_qbin, n_bin, m_bin):
+    """
+    input
+        q         = array/scalar with charges of macro particles (sorted)
+        s         = longitudinal vector (time or space) (sorted)
+        B_params  = binning parameters
+                    [X_QBIN,N_BIN,M_BIN]
+                    X_QBIN = length or charge binning
+                             0 ... 1 = length ... charge
+                    N_BIN  = number of bins
+                    M_BIN  = multiple binning (with shifted bins)
+    output
+        SBINB     = array with subbin boundaries
+        NBIN      = particles per subbin
+    particles are sorted!
+    all particles are valid
+    """
+    X_QBIN = x_qbin
+    N_BIN = n_bin
+    M_BIN = m_bin
+    K_BIN = N_BIN*M_BIN          # number of sub-bins
+
+    Ns = len(s)
+    # binning intervalls
+    # aa=monoton "charge" vector
+    if np.size(q) == 1:
+        #% aa(1)=q/2; for n=2:Ns, aa(n)=aa(n-1)+q; end
+        aa = q*(np.arange(1, Ns+1) - 0.5)
+    else:
+        aa = 0.5*np.cumsum(q) + 0.5*np.append([0], np.cumsum(q[1:]))
+
+    aa = (aa - aa[0])/(aa[Ns-1] - aa[0])
+    # bb=monoton "length" vector
+    bb = (s - s[0])/(s[Ns-1] - s[0])
+    # aa=LK of "charge" and "length" vector; avoid zero stepwidth
+    aa = aa*X_QBIN + bb*(1 - X_QBIN)
+    if min(np.diff(aa)) == 0:
+        aa = 0.999*aa + 0.001*(np.arange(0, Ns))/(Ns-1)
+
+    # vector with bin boundaries
+    SBINB = interp1(aa, s, np.arange(K_BIN+1.)/K_BIN)
+    SBINB[0] = s[0]
+    SBINB[K_BIN] = s[Ns-1]
+    # particles per subbins
+    NBIN = np.zeros(K_BIN)
+    ib = 0
+    for n in arange(Ns):
+        while s[n] >= SBINB[ib+1] and ib < K_BIN-1:
+            ib = ib + 1
+        NBIN[ib] = NBIN[ib] + 1
+    return SBINB, NBIN
+
+@jit
+def Q2EQUI(q, BS_params, SBINB, NBIN):
+    """
+    input
+    BIN = bin boundaries BIN(N_BIN, 2), in time or space
+    Q_BIN = charges per bin Q_BIN(N_BIN)
+    BS_params = binning and smoothing parameters
+    binning.......................
+    X_QBIN = length or charge binning
+    0... 1 = length...charge
+    N_BIN = number of bins
+    M_BIN = multiple binning(with shifted bins)
+    smoothing.....................
+    IP_method = 0 / 1 / 2 for rectangular / triangular / gauss
+    SP = ? parameter for gauss
+    sigma_min = minimal sigma, if IP_method == 2
+    step_unit = if positive --> step=integer * step_unit
+    output
+    z1, z2, Nz = equidistant mesh(Nz meshlines)
+    charge_per_step = charge per step, charge_per_step(1:Nz)
+    bins might overlapp!
+    """
+    # ......................................................................
+
+    N_BIN = BS_params[1]
+    M_BIN = BS_params[2]
+    K_BIN = N_BIN * M_BIN # number of sub - bins
+    I_BIN = K_BIN - (M_BIN - 1) # number of bin intervalls
+    # put charges to sub - bins
+    Q_BIN = np.zeros(K_BIN)
+    n2 = 0
+    if np.size(q) == 1:
+        for k in range(K_BIN):
+            if NBIN[k] > 0:
+                n1 = n2 + 1
+                n2 = n2 + NBIN[k]
+                Q_BIN[k] = q * (n2 - n1 + 1)
+    else:
+        for k in range(K_BIN):
+            if NBIN[k] > 0:
+                n1 = n2 + 1
+                n2 = n2 + NBIN[k]
+                Q_BIN[k] = sum(q[n1-1:n2])
+
+    # put sub - bins to bins
+    qsum = np.append([0], np.cumsum(Q_BIN))
+    BIN = [SBINB[0:I_BIN], SBINB[M_BIN + np.arange(I_BIN)]]
+    Q_BIN = (qsum[M_BIN + np.arange(I_BIN)] - qsum[0:I_BIN])/M_BIN
+
+    # ......................................................................
+
+    # interpolation parameters
+    IP_method = BS_params[3]
+    SP = BS_params[4]
+    if SP <= 0:
+        SP = 0.5
+
+    sigma_min = max(0, BS_params[5])
+    if len(BS_params) < 7:
+        step_unit = 0
+    else:
+        step_unit = max(0, BS_params[6])
+
+
+    # define mesh
+    N_BIN = len(BIN[0])
+
+    if IP_method == 1:
+        z1 = min(2 * BIN[0][:] - BIN[1][:])
+        z2 = max(2 * BIN[1][:] - BIN[0][:])
+        step = 0.5 * min(BIN[1][:] - BIN[:][0])
+    elif IP_method == 2:
+        NSIG = 5
+        #MITTE = 0.5 * (BIN[0][:] + BIN[1][:])
+        #RMS = SP * (BIN[1][:] - BIN[0][:])
+        MITTE = 0.5 * (BIN[0] + BIN[1])
+        RMS = SP * (BIN[1] - BIN[0])
+        for nb in range(N_BIN):
+            RMS[nb] = max(np.append(RMS[nb], sigma_min))
+        z1 = min(MITTE - NSIG * RMS)
+        z2 = max(MITTE + NSIG * RMS)
+        step = 0.25 * min(RMS)
+    else:
+        z1 = min(BIN[0][:])
+        z2 = max(BIN[1][:])
+        step = 0.5 * min(BIN[1][:] - BIN[0][:])
+
+    if step_unit > 0:
+        step = step_unit * max(1, np.round(step / step_unit))
+        z1 = step * np.floor(z1 / step)
+        z2 = step * np.ceil(z2 / step)
+        Nz = np.round((z2 - z1) / step)
+    else:
+        Nz = np.round((z2 - z1) / step)
+        step = (z2 - z1) / Nz
+
+    charge_per_step = np.zeros(Nz)
+    if IP_method == 1:
+        for nb in arange(N_BIN):
+            aa = BIN[0][nb] - z1
+            bb = BIN[1][nb] - z1
+            qps = step * Q_BIN(nb) / (bb - aa)
+            a = ((3. * aa - bb) / 2.) / step + 1.
+            k1 = min(Nz, max(1, floor(a)))
+            b = ((aa + bb) / 2.) / step + 1.
+            c = ((3. * bb - aa) / 2.) / step + 1.
+            k2 = min(Nz, max(1, np.ceil(c)))
+            for k in arange(k1, k2):
+                w = sample_1(k, a, b, c)
+                charge_per_step[k-1] += w * qps
+
+    elif IP_method == 2:
+        for nb in arange(N_BIN):
+            qbin = Q_BIN[nb]
+            aa = BIN[0][nb] - z1
+            bb = BIN[1][nb] - z1
+            mitte = 0.5 * (aa + bb)
+            sigma = RMS[nb]
+            aa = mitte - NSIG * sigma
+            bb = mitte + NSIG * sigma
+            a = aa / step + 1
+            k1 = min(Nz, max(1, floor(a)))
+            b = bb / step + 1
+            k2 = min(Nz, max(1, ceil(b)))
+            fact = step / (np.sqrt(2 * pi) * sigma)
+            for k in arange(k1, k2):
+                xx = (k - 1) * step
+                yy = fact * np.exp(-0.5 * ((xx - mitte) / sigma) ** 2)
+                charge_per_step[k-1] += yy * qbin
+
+    else:
+        for nb in arange(N_BIN):
+            aa = BIN[0][nb] - z1
+            bb = BIN[1][nb] - z1
+            qps = step * Q_BIN[nb] / (bb - aa)
+            a = aa / step + 1
+            k1 = min(Nz, max(1, floor(a)))
+            b = bb / step + 1
+            k2 = min(Nz, max(1, ceil(b)))
+            for k in arange(k1, k2):
+                w = sample_0(k, a, b)
+                charge_per_step[k-1] += w * qps
+    return z1, z2, Nz, charge_per_step
+
+
+
+
+class CSR:
     def __init__(self):
-        self.mesh_params = None # [n_mesh, mesh_step]. list N[0] 0 number of mesh points, N[1] = dW> 0 - increment, Mesh = Mesh = (N: 0) * dW
-        #self.csr_traj = np.transpose([[0, 0, 0, 0, 0, 0, 0]])
-        #self.start_elem = None
-        #self.end_elem = None
-        self.z_csr_start = 0.  # z [m] position of the start_elem
-        self.z0 = 0.           # self.z0 = navigator.z0 in track.track()
-        self.step = 1          # in unit step
-        self.filter_order = 20
-        self.energy = 10 # GeV
-        self.n_mesh = 300
+        # binning parameters
+        self.x_qbin = 0             # length or charge binning; 0... 1 = length...charge
+        self.n_bin = 100            # number of bins
+        self.m_bin = 5              # multiple binning(with shifted bins)
+
+        # smoothing
+        self.ip_method = 2          # = 0 / 1 / 2 for rectangular / triangular / gauss
+        self.sp = 0.5               # ? parameter for gauss
+        self.sigma_min = 1.e-4      # minimal sigma, if ip_method == 2
+        self.step_unit = 0          # if positive --> step=integer * step_unit
+
+        # trajectory
+        self.traj_step = 0.0002     # [m] step of the trajectory
+        self.energy = None          # [GeV], if None, beta = 1
+
+        # CSR kick
+        self.apply_step = 0.0005    # [m] step of the calculation CSR kick: csr_kick += csr(apply_step)
+        self.step = 1               # step in the unit steps, step_in_[m] = self.step * navigator.unit_step [m].
+                                    # The CSR kick is applied at the end of the each step
+
+        self.z_csr_start = 0.       # z [m] position of the start_elem
+        self.z0 = 0.                # self.z0 = navigator.z0 in track.track()
+
+        self.debug = False
+        # another filter
+        self.filter_order = 10
+        self.n_mesh = 345
+
+
 
     def K0_inf_anf(self, i, traj, wmin):
-        #%function [ w,KS ] = K0_inf_anf( i,traj,wmin )
+        # function [ w,KS ] = K0_inf_anf( i,traj,wmin )
 
-        i1 = i-1 #% ignore points i1+1:i on linear path to observer
+        i1 = i-1 # ignore points i1+1:i on linear path to observer
         ra = np.arange(0, i1+1)
         s = traj[0, ra] - traj[0, i]
         n = np.array([traj[1, i] - traj[1, ra],
@@ -62,22 +325,22 @@ class CSR:
 
         R = np.sqrt(np.sum(n**2, axis=0))
         n = np.array([n[0, :]/R, n[1, :]/R, n[2, :]/R])
-        #print(ra)
+
         w = s + R
-        j = np.where(w<=wmin)[0]
+        j = np.where(w <= wmin)[0]
         if len(j) > 0:
             j = j[-1]
             ra = np.arange(j, i1+1)
             w = w[ra]
             s = s[ra]
 
-        #% kernel
+        # kernel
         K = (n[0, ra]*(traj[4, ra] - traj[4, i]) +
              n[1, ra]*(traj[5, ra] - traj[5, i]) +
              n[2, ra]*(traj[6, ra] - traj[6, i]) -
            (1. - traj[4, ra]*traj[4, i] - traj[5, ra]*traj[5, i] - traj[6, ra]*traj[6, i]))/R[ra]
 
-        #% integrated kernel: KS=int_s^0{K(u)*du}=int_0^{-s}{K(-u)*du}
+        # integrated kernel: KS=int_s^0{K(u)*du}=int_0^{-s}{K(-u)*du}
         if np.shape(K)[0] > 1:
             a = np.append(0.5*(K[0:-1] + K[1:])*np.diff(s), 0.5*K[-1]*s[-1])
             KS = np.cumsum(a[::-1])[::-1]
@@ -88,15 +351,15 @@ class CSR:
         return w, KS
 
     def K0_fin_anf(self, i, traj, wmin, gamma):
-        #%function [ w,KS ] = K0_inf_anf( i,traj,wmin,gamma )
+        # function [ w,KS ] = K0_inf_anf( i,traj,wmin,gamma )
 
         g2i = 1./gamma**2
         b2 = 1. - g2i
         beta = np.sqrt(b2)
-        i1 = i-1 #% ignore points i1+1:i on linear path to observer
+        i1 = i-1 # ignore points i1+1:i on linear path to observer
         ra = np.arange(0, i1+1)
         s = traj[0, ra]-traj[0, i]
-        n=np.array([traj[1, i] - traj[1, ra],
+        n = np.array([traj[1, i] - traj[1, ra],
                     traj[2, i] - traj[2, ra],
                     traj[3, i] - traj[3, ra]])
         R = np.sqrt(np.sum(n**2, axis=0))
@@ -110,14 +373,14 @@ class CSR:
             w = w[ra]
             s = s[ra]
 
-        #% kernel
+        # kernel
         K = ((beta*(n[0, ra]*(traj[4, ra] - traj[4, i]) +
                     n[1, ra]*(traj[5, ra] - traj[5, i]) +
                     n[2, ra]*(traj[6, ra] - traj[6, i])) -
             b2*(1. - traj[4, ra]*traj[4, i] - traj[5, ra]*traj[5, i] - traj[6, ra]*traj[6, i]) - g2i)/R[ra] -
             (1. - beta*(n[0, ra]*traj[4, ra] + n[1, ra]*traj[5, ra] + n[2, ra]*traj[6, ra]))/w*g2i)
 
-        #% integrated kernel: KS=int_s^0{K(u)*du}=int_0^{-s}{K(-u)*du}
+        # integrated kernel: KS=int_s^0{K(u)*du}=int_0^{-s}{K(-u)*du}
         if len(K) > 1:
             a = np.append(0.5*(K[0:-1] + K[1:])*np.diff(s), 0.5*K[-1]*s[-1])
             KS = np.cumsum(a[::-1])[::-1]
@@ -128,13 +391,13 @@ class CSR:
 
 
     def K0_fin_inf(self, i, traj, w_range, gamma):
-        #%function [ KS ] = K0_inf_inf( i,traj,w_range,gamma )
+        # function [ KS ] = K0_inf_inf( i,traj,w_range,gamma )
 
         g2 = gamma**2
         g2i = 1./g2
         b2 = 1. - g2i
         beta = np.sqrt(b2)
-        #% winf
+        # winf
         Rv1 = traj[1:4, i] - traj[1:4, 0]
         s1 =  traj[0, 0] - traj[0, i]
         ev1 = traj[4:, 0]
@@ -144,8 +407,9 @@ class CSR:
         aup = -Rv1 + winfms1*ev1
         a2 = np.dot(aup, aup)
         a = np.sqrt(a2)
-        #print(a, aup, a2)
-        uup = aup/a
+
+        uup = aup/a if a != 0 else None
+
         winf = s1 + winfms1
         s = winf + gamma*(gamma*(w_range - winf)-beta*np.sqrt(g2*(w_range-winf)**2+a2))
         R = (w_range-s)/beta
@@ -161,9 +425,7 @@ class CSR:
         return KS
 
     def K0_inf_inf(self, i, traj, w_range):
-        #%function [ KS ] = K0_inf_inf( i,traj,w_range )
-
-        #% winf
+        # winf
         Rv1 = traj[1:4, i] - traj[1:4, 0]
         s1 =  traj[0, 0] - traj[0, i]
         ev1 = traj[4:, 0]
@@ -172,7 +434,6 @@ class CSR:
         aup = -Rv1 + winfms1*ev1
         a2 = np.dot(aup, aup)
         a = np.sqrt(a2)
-        #print(a, aup, a2)
         uup = aup/a
         winf = s1 + winfms1
 
@@ -181,7 +442,7 @@ class CSR:
             Nvalid = Nvalid[0]
             w = w_range[Nvalid:]
             s = (winf+w)/2. + a2/2./(winf-w)
-            #%K =(1-ev1'*evo)*((winf-s)./(w-s)-1)./(w-s)+aup'*evo./(w-s).^2;
+            #K =(1-ev1'*evo)*((winf-s)./(w-s)-1)./(w-s)+aup'*evo./(w-s).^2;
             KS = (1. - np.dot(ev1, evo))*np.log(0.5*a2/(w-winf)/(w-s)) + np.dot(uup, evo)*(np.arctan((s-winf)/a) + np.pi/2.)
             KS = np.append(np.zeros(Nvalid), KS)
         else:
@@ -193,45 +454,44 @@ class CSR:
         """
         :param i: index of the trajectories points for the convolution kernel is calculated;
         :param traj: trajectory. traj[0,:] - longitudinal coordinate,
-                                 traj[1,:],traj[2,:],traj[3,:] - rectangular coordinates, \
-                                 traj[4,:],traj[5,:],traj[6,:] - tangential unit vectors
+                                 traj[1,:], traj[2,:], traj[3,:] - rectangular coordinates, \
+                                 traj[4,:], traj[5,:], traj[6,:] - tangential unit vectors
         :param NdW: list N[0] 0 number of mesh points, N[1] = dW> 0 - increment, Mesh = Mesh = (N: 0) * dW
         :param gamma:
         :return:
         """
-        #%function [ K1 ] = CSR_K1( i,traj,NdW,gamma )
+        # function [ K1 ] = CSR_K1( i,traj,NdW,gamma )
 
-        #L_fin=nargin==4 && ~isempty(gamma) && gamma>1
+        # L_fin=nargin==4 && ~isempty(gamma) && gamma>1
         if gamma != None:
             L_fin = True
         else:
             L_fin = False
         w_range = np.arange(-NdW[0]-1, 0)*NdW[1]
         if L_fin:
+            #start = time.time()
             w, KS = self.K0_fin_anf(i, traj, w_range[0], gamma)
-
+            #print("K0_fin_anf = ", time.time() - start)
         else:
             w, KS = self.K0_inf_anf(i, traj, w_range[0])
-            #print("w=", len(w))
-        #print("w=", len(w))
+
         KS1 = KS[0]
         idx = np.argsort(w)
-
         w = w[idx]
-        #print("w=", len(w))
         KS = KS[idx]
         w, idx = np.unique(w, return_index=True)
-        #print("w=", len(w))
         KS = KS[idx]
-        #% sort and unique takes time, but is required to avoid numerical trouble
+
+        # sort and unique takes time, but is required to avoid numerical trouble
         if w_range[0] < w[0]:
             m = np.where(w_range < w[0])[0][-1]
             if L_fin:
+                #start = time.time()
                 KS2 = self.K0_fin_inf(i, traj, np.append(w_range[0:m+1], w[0]), gamma)
+                #print("K0_fin_inf = ", time.time() - start)
             else:
                 KS2 = self.K0_inf_inf(i, traj, np.append(w_range[0:m+1], w[0]))
             KS2 = (KS2[-1] - KS2) + KS1
-            #print("lens", len(w), m, len(KS), len(w_range), len(w_range[m+1:]))
             KS = np.append(KS2[0:-1], interp1(w, KS, w_range[m+1:]))
         else:
             KS = interp1(w, KS, w_range)
@@ -254,92 +514,155 @@ class CSR:
         csr_lat = MagneticLattice(seq_copy, start=start, stop=stop)
 
         self.z_csr_start = sum([p.l for p in lat.sequence[:self.indx0]])
-
-        #Particle(x=0.0, y=0.0, px=0.0, py=0.0, s=0.0, p=0.0,  tau=0.0, E=0.0)
         p = Particle()
-        #energy = p.E
-        gamma = self.energy/m_e_GeV
-        beta = np.sqrt(1. - 1./gamma**2)
+
+        beta = 1. if self.energy == None else np.sqrt(1. - 1./(self.energy/m_e_GeV)**2)
         self.csr_traj = np.transpose([[0, p.x, p.y, p.s, p.px, p.py, beta]])
 
-        #angle = 0.
         for elem in csr_lat.sequence:
-            #print"elem.l = ", elem.l
             if elem.l == 0 :
                 continue
             delta_s = elem.l
-            #L = elem.l
-            step = 0.0002
+            step = self.traj_step
             if elem.__class__ in [Bend, RBend, SBend]:
-                R = elem.l/elem.angle
+                R = -elem.l/elem.angle
                 #B = energy*1e9*beta/(R*speed_of_light)
                 R_vect = [0, R, 0.]
-
-                #L = R*np.sin(elem.angle)
-                #angle += elem.angle
-                #print("B = ", R_vect)
             else:
                 #B = 0.
                 R_vect = [0, 0, 0.]
-                #L = elem.l*np.cos(angle)
             self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect )
-        #plt.plot(self.csr_traj[3, :], self.csr_traj[1,:], "r.-")
-        #plt.show()
+
         return self.csr_traj
 
-    #def apply(self, p_array, delta_s):
-    #    pass
-
     def apply(self, p_array, delta_s):
-        #print("APPLY CSR")
+        # test
+        #z = p_array.particles[4::6]
+        #ind_z_sort = np.argsort(z)
+        ## B_params = [0, 100, 5, 2, 0.500000000000000, 1.000000000000000e-04]
+        #SBINB, NBIN = subbin_bound(p_array.q_array, z[ind_z_sort], self.x_qbin, self.n_bin, self.m_bin)
+        #B_params = [self.x_qbin, self.n_bin, self.m_bin, self.ip_method, self.sp, self.sigma_min]
+        #s1, s2, Ns, lam_ds = Q2EQUI(p_array.q_array[ind_z_sort], B_params, SBINB, NBIN)
+        #z = p_array.particles[4::6]
+        #I = s2current(z, p_array.q_array, n_points=self.n_mesh-80, filter_order=80, mean_vel=speed_of_light)
+        #
+        #plt.plot(I[:, 0] - I[0, 0] - (I[-1, 0] - I[0, 0])/2., I[:, 1]/max(I[:, 1]), "r.-")
+        #plt.plot(np.linspace(0, s2-s1, num=Ns) - (s2-s1)/2, lam_ds/max(lam_ds), "b.-")
+        #plt.grid(True)
+        #plt.legend(["igor", "martin"])
+        #plt.show()
+        #test
+
+
+        martin = True
         s_cur = self.z0 - self.z_csr_start
-        z = p_array.particles[4::6]
-        bunch_size = max(z) - min(z)
-        #self.n_mesh = 300
-        #if self.mesh_params == None:
-        #    n_mesh = 300
-        mesh_step = bunch_size/self.n_mesh
-        Ndw = [self.n_mesh, mesh_step]
-        #else:
-            #Ndw = self.mesh_params
+        if martin:
+            z = -p_array.particles[4::6]
+            ind_z_sort = np.argsort(z)
+            #B_params = [0, 100, 5, 2, 0.500000000000000, 1.000000000000000e-04]
+            #start = time.time()
+            SBINB, NBIN = subbin_bound(p_array.q_array, z[ind_z_sort], self.x_qbin, self.n_bin, self.m_bin)
+            #print("bin = ", time.time() - start)
+            B_params = [self.x_qbin, self.n_bin, self.m_bin, self.ip_method, self.sp, self.sigma_min]
+            #start = time.time()
+            s1, s2, Ns, lam_ds = Q2EQUI(p_array.q_array[ind_z_sort], B_params, SBINB, NBIN)
+            #print("q2 = ", time.time() - start)
+
+            st = (s2 - s1) / Ns
+            sa = s1 + st / 2.
+            Ndw = [Ns - 1, st]
+            #print("ST = ", st, s2 - s1, len(lam_ds), Ns)
+        else:
+            z = p_array.particles[4::6]
+            s1 = min(z)
+            s2 = max(z)
+            bunch_size = s2 - s1
+            st = bunch_size/(self.n_mesh+1)
+
+            I = s2current(z, p_array.q_array, n_points=self.n_mesh, filter_order=self.filter_order, mean_vel=speed_of_light)
+            Ns = len(I[:, 0])
+
+            sa = s1 + st / 2.
+            Ndw = [self.n_mesh, st]
+            lam_ds = I[:, 1]/speed_of_light*st
+            #print("ST = ", st, s2 - s1, len(lam_ds), Ns)
 
         s_array = self.csr_traj[0, :]
         indx = (np.abs(s_array-s_cur)).argmin()
-
+        indx_prev = (np.abs(s_array - (s_cur - delta_s))).argmin()
         gamma = p_array.E/m_e_GeV
-        print(indx)
-        K1 = self.CSR_K1(indx, self.csr_traj, Ndw, gamma=gamma)
+        h = max(1., self.apply_step/self.traj_step)
+        itr_ra = np.unique(-np.round(np.arange(-indx, -indx_prev, h))).astype(np.int)
 
-        # filtering
-        Ns = np.ceil(bunch_size/Ndw[1])
+        nit = 0
+        n_iter = len(itr_ra)
+        start = time.time()
+        K1 = self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma)
+        for nit in range(1, n_iter):
+            K1 += self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma=gamma)
+        print("K1 = ", time.time() - start)
+        K1 = K1/n_iter
 
-        I = s2current(z, p_array.q_array, n_points=Ns + 2, filter_order=self.filter_order, mean_vel=speed_of_light)
-        #print(self.filter_order)
+        if martin:
+            #start = time.time()
+            lam_K1 = csr_convolution(lam_ds, K1[::-1]) / st * delta_s
+            #print("con = ", time.time() - start)
+            #start = time.time()
 
-        I_zeros = np.zeros_like(I)
-        I_zeros[:, 0] = I[:, 0] - (I[-1, 0] - I[0, 0])
-        I = np.append(I_zeros, I, axis=0)
-        #print(I)
-        b_distr_filt = I[:, 1]/speed_of_light
+            tck = interpolate.splrep(np.arange(len(lam_K1)), lam_K1, k=1)
+            dE = interpolate.splev(z*(1./st)+(0.-sa/st), tck, der=0)
+            #print("interp = ", time.time() - start)
 
-        lam_K1 = np.convolve(b_distr_filt, K1)
+        else:
 
-        Nend = len(lam_K1)
+            lam_K1 = csr_convolution(lam_ds, K1) / st * delta_s
+            Nend = len(lam_K1)
+            N = int(abs(self.n_mesh+1-Nend) + self.n_mesh+1)
+            x = np.linspace(I[-1, 0], I[-1, 0] - N*Ndw[1], num=N, endpoint=False)[::-1]
+            tck = interpolate.splrep(x, lam_K1, k=1)
+            dE = interpolate.splev(z, tck, der=0)
+        pc_ref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV
+        delta_p = dE * 1e-9 / pc_ref
+        p_array.particles[5::6] += delta_p
+        #E = p_array.particles[5::6] * pc_ref + p_array.E
+        #E1 = E + dE * 1e-9
+        #p_array.particles[5::6] = (E1 - p_array.E) / pc_ref
 
-        N = int(abs(Ns+1-Nend) + Ns+1)
-        x = np.linspace(I[-1, 0], I[-1, 0] - N*Ndw[1], num=N, endpoint=False)[::-1]
-        #x = np.arange(Ns+1-Nend, Ns+1)*Ndw[1]
-        #plt.plot(K1)
-        #plt.plot(I[:,0], I[:, 1])
-        #plt.plot(x, lam_K1)
+        #plt.figure(1)
+        #plt.plot(I[:, 0], lam_ds/(max(lam_ds)))
+        #plt.figure(2)
+        #plt.plot(x, lam_K1/max(lam_K1))
         #plt.show()
-        tck = interpolate.splrep(x, lam_K1, k=1)
-        dE = interpolate.splev(z, tck, der=0)
 
-        #p_array.E = p_array.E * (1. + p_array.particles[5])
-        #p_array.particles[5::6] -= p_array.particles[5]
 
-        p_array.particles[5::6] += dE * 1e-9 / p_array.E * delta_s
+        if False:
+            #plt.figure(5)
+            #plt.plot(K1[::-1], "r")
+            #plt.plot(data3, "b")
+            plt.figure(4)
+            plt.plot(NBIN, "r")
+            #plt.plot(data2, "b")
+            plt.figure(1)
+            plt.plot(lam_ds)
+            #plt.plot(data)
+            plt.figure(2)
+            plt.plot(K1[::-1])
+            plt.figure(3)
+            plt.plot(lam_K1)
+            plt.show()
+
+        if self.debug:
+            fig, ax1 = plt.subplots()
+            #ax1.plot(-I[::-1, 0]*(1/st)+(1. - sa/st), I[:, 1], "r")
+            ax1.plot(lam_ds, "r")
+            #ax1.plot(K1, "r")
+            ax1.set_ylabel("I, A", color='r')
+            ax1.set_xlabel('s, mm')
+            ax2 = ax1.twinx()
+            ax2.plot(lam_K1, "b")
+            ax2.set_ylabel("kernel", color='b')
+            plt.show()
+
 
 
 

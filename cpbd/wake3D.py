@@ -56,7 +56,6 @@ def s2current(s_array, q_array, n_points, filter_order, mean_vel):
     Np = s_array.shape[0]
     ds = (s1 - s0) / (n_points - 2 - 2 * NF2)
     s = s0 + np.arange(-NF2, n_points - NF2) * ds
-
     # here we need a fast 1D linear interpolation of charges on the grid
     # in sc.py we use a fast 3D "near-point" interpolation
     # we need a stand-alone module with 1D,2D,3D particles-to-grid functions

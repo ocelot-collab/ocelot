@@ -8,6 +8,7 @@ from ocelot.cpbd.beam import Particle, Twiss, ParticleArray
 from ocelot.cpbd.high_order import *
 from ocelot.cpbd.r_matrix import *
 from copy import deepcopy
+#from numba import jit
 from ocelot.common.logging import Logger
 logger = Logger()
 
@@ -827,6 +828,7 @@ def periodic_twiss(tws, R):
     #tws.display()
     return tws
 
+
 def twiss(lattice, tws0=None, nPoints=None):
     """
     twiss parameters calculation,
@@ -921,6 +923,14 @@ class Navigator:
                 proc_list.append(p)
         return proc_list
 
+    def hard_edge_step(self, dz):
+        #self.sum_lengths
+        elem1 = self.lat.sequence[self.n_elem]
+        L = self.sum_lengths + elem1.l
+        if self.z0 + dz > L:
+            dz = L - self.z0
+        return dz
+
     def get_next(self):
 
         proc_list = self.get_proc_list()
@@ -936,6 +946,7 @@ class Navigator:
                 if p.counter == 0:
                     p.counter = p.step
             dz = step*self.unit_step
+
         else:
 
             processes = proc_list
@@ -947,7 +958,6 @@ class Navigator:
             dz = L - self.z0
         logger.debug("navi.z0="+str(self.z0) + " navi.n_elem=" + str(self.n_elem) + " navi.sum_lengths=" +str(self.sum_lengths) + " dz=" +str(dz) + '\n' +
             "element type="+self.lat.sequence[self.n_elem].__class__.__name__ + " element name=" + self.lat.sequence[self.n_elem].id)
-
         return dz, processes
 
 

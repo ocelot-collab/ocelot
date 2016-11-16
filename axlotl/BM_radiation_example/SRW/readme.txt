@@ -7,3 +7,5 @@ SRW_Ex_field_Int_beam.txt and SRW_Ey_Int_beam - files of intensities for horizon
 IntX_one_Electron.png and IntY_one_Electron.pnd - saved pictures of intensities from one electron
 
 IntX_whole_Beam.png and IntY_whole_Beam.png - saved pictures of intensities from the whole beam
+
+BM_radiation.py - python code using SRW library which was used for the calculations

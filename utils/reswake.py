@@ -111,8 +111,8 @@ def pipe_wake(z, current, tube_radius, tube_len, conductivity, tau, roughness, d
     Q = Q*1e12 #C->pC
 
     ds=xb[3]-xb[0]
-    xb = append(xb, arange(1, 1001)*ds + xb[-1])
-    yb = append(yb, arange(1, 1001)*0)
+    xb = append(xb, arange(1, 100001)*ds + xb[-1])
+    yb = append(yb, arange(1, 100001)*0)
 
     # roughness and axid layer are here
     eps_r = 2.

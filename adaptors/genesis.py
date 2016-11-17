@@ -2198,15 +2198,15 @@ def beam_file_str(beam):
     return f_str
 
 
-def add_wake_to_beamf(beamf, new_beamf):
-    beam = read_beam_file(beamf)
-    s, bunch, wake = w.xfel_pipe_wake(s=array(beam.z), current=array(beam.I))
-    print ('read ' + str(len(wake)) + ' slice values')
-    beam.eloss = wake[::-1]
+# def add_wake_to_beamf(beamf, new_beamf):
+    # beam = read_beam_file(beamf)
+    # s, bunch, wake = w.xfel_pipe_wake(s=array(beam.z), current=array(beam.I))
+    # print ('read ' + str(len(wake)) + ' slice values')
+    # beam.eloss = wake[::-1]
 
-    f = open(new_beamf, 'w')
-    f.write(beam_file_str(beam))
-    f.close()
+    # f = open(new_beamf, 'w')
+    # f.write(beam_file_str(beam))
+    # f.close()
 
 
 def zero_wake_at_ipk(beamf):

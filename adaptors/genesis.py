@@ -1659,7 +1659,7 @@ def write_dfl_file(dfl, filePath=None, debug=1):
     if filePath == None:
         filePath = dfl.filePath
 
-    d = dfl.fld.flatten()
+    d = dfl.fld.flatten().astype(complex128)
     d.tofile(filePath, format='complex')
 
     if debug > 0:
@@ -2298,12 +2298,12 @@ def add_alpha_beam(beam):
 
 
 def cut_beam(beam=None, cut_z=[-inf, inf]):
-    beam = deepcopy(beam)
+    # beam = deepcopy(beam)
     if np.amin(beam.z) < cut_z[0] or np.amax(beam.z) > cut_z[1]:
 
         condition = (beam.z > cut_z[0]) * (beam.z < cut_z[1])
         print(sum(condition))
-        beam_new = Beam()
+        beam_new = GenesisBeam()
         beam_new.column_values = beam.column_values
         beam_new.columns = beam.columns
 

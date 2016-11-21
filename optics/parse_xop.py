@@ -1,6 +1,6 @@
 from ocelot.optics.bragg import *
 
-f_name = 'Ge111'
+f_name = 'C444'
 
 
 lines=open('data/'+ f_name + '.txt').read().split('\n')

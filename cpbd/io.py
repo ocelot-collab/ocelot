@@ -199,10 +199,26 @@ def lat2input(lat):
     return lines
 
 
-def write_lattice(lattice, file_name="lattice.inp"):
+def rem_drifts(lat):
+    drifts = {}
+    for i, elem in enumerate(lat.sequence):
+        if elem.__class__ == Drift:
+            if not (elem.l in drifts.keys()):
+                drifts[elem.l] = elem
+            else:
+                # print(cell[i],  drifts[elem.l])
+                lat.sequence[i] = drifts[elem.l]
+
+    return lat
+
+def write_lattice(lattice, file_name="lattice.inp", remove_rep_drifts=True):
     """
     saves lattice as python imput file
+    lattice - MagneticLattice
+    file_name - name of the file
+    remove_rep_drifts - if True, remove the drifts with the same lengths from the lattice drifts definition
     """
+    lattice = rem_drifts(lattice)
     lines = lat2input(lattice)
 
     f = open(file_name, 'w')

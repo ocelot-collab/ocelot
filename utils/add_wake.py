@@ -41,7 +41,7 @@ def get_wake_from_file(wakefile):
 
 def add_wake_to_beamf(beamf, new_beamf):
     beam = read_beam_file(beamf)
-    s, bunch, wake = w.xfel_pipe_wake(s=array(beam.z), current=array(beam.I))
+    s, bunch, wake = w.xfel_pipe_wake(s=array(beam.z), current=array(beam.I[::-1]))
     print ('read ', len(wake), ' slice values')
     beam.eloss = wake[::-1]
 
@@ -105,8 +105,8 @@ if command == "add":
 
     beam = read_beam_file(beamf)
 
-"""
 
+"""
 if __name__ == "__main__":
     import ocelot.utils.reswake as w
     from numpy import array
@@ -126,4 +126,5 @@ if __name__ == "__main__":
     ax2.set_ylabel('wake, [kV/m]', color='r')
     show()
 """
+
 

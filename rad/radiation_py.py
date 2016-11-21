@@ -12,6 +12,7 @@ from ocelot.cpbd.track import *
 from ocelot.rad.spline_py import *
 from ocelot.common.globals import *
 
+
 class Motion:
     pass
 
@@ -237,7 +238,7 @@ def track4rad(beam, lat, energy_loss=False, quantum_diff=False, accuracy=1):
         #print energy
     return U, E
 
-
+#@jit
 def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step, tmp):
     Q = 0.5866740802042227#; // (mm*T)^-1
     hc = 1.239841874330e-3 # // mm

@@ -6,9 +6,9 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>OCELOT Documentation &mdash; ocelot 16.7 documentation</title>
+    <title>OCELOT Documentation &#8212; ocelot 16.7 documentation</title>
     
-    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     
     <script type="text/javascript">
@@ -26,8 +26,8 @@
     <link rel="top" title="ocelot 16.7 documentation" href="#" />
     <link rel="next" title="Charged Particle Beam Dynamics (CPBD) module" href="cpbd.html" /> 
   </head>
-  <body>
-    <div class="related">
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -36,23 +36,66 @@
         <li class="right" >
           <a href="cpbd.html" title="Charged Particle Beam Dynamics (CPBD) module"
              accesskey="N">next</a> |</li>
-        <li><a href="#">ocelot 16.7 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="#">ocelot 16.7 documentation</a> &#187;</li> 
       </ul>
     </div>  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <div class="section" id="ocelot-documentation">
 <h1>OCELOT Documentation<a class="headerlink" href="#ocelot-documentation" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="overview">
 <h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
-<p>OCELOT is a framework</p>
-<p>cpbd module</p>
-<p>adaptors</p>
-<p>Installation notes</p>
+<p>OCELOT is a framework for synchrotron light source and FEL design and operation.</p>
+<p>Ocelot is a multiphysics simulation toolkit designed for studying FEL and storage ring based light sources.
+Ocelot is written in Python. Its central concept is the writing of python&#8217;s scripts for simulations with the usage of
+Ocelot&#8217;s modules and functions and the standard Python libraries.</p>
+<p>Ocelot includes following main modules:</p>
+<ul>
+<li><dl class="first docutils">
+<dt><strong>Charged particle beam dynamics module (CPBD)</strong></dt>
+<dd><ul class="first last">
+<li><p class="first">optics</p>
+</li>
+<li><p class="first">tracking</p>
+</li>
+<li><p class="first">matching</p>
+</li>
+<li><dl class="first docutils">
+<dt>collective effects</dt>
+<dd><ul class="first last simple">
+<li>Space Charge (true 3D Laplace solver)</li>
+<li>CSR (Coherent Synchrotron Radiation) (1D model with arbitrary number of dipoles) (under development).</li>
+<li>Wakefields (Taylor expansion up to second order for arbitrary geometry).</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p class="first">MOGA (Multi Objective Genetics Algorithm). (under development but we have already applied it for a storage ring <a class="reference external" href="http://accelconf.web.cern.ch/AccelConf/ipac2016/papers/thpmb034.pdf">application</a></p>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p class="first"><strong>Native module for spontaneous radiation calculation</strong></p>
+</li>
+<li><p class="first"><strong>FEL calculations: interface to GENESIS and pre/post-processing</strong></p>
+</li>
+<li><p class="first"><strong>Modules for online beam control and online optimization of accelerator performances.</strong> <a class="reference external" href="http://accelconf.web.cern.ch/accelconf/IPAC2014/papers/mopro086.pdf">Work1</a> , <a class="reference external" href="https://jacowfs.jlab.org/conf/y15/ipac15/prepress/TUPWA037.PDF">work2</a> , <a class="reference external" href="http://accelconf.web.cern.ch/AccelConf/ipac2016/papers/wepoy036.pdf">work3</a> .</p>
+</li>
+</ul>
+<p>Ocelot extensively  uses Python&#8217;s <a class="reference external" href="http://numpy.org">NumPy (Numerical Python</a> and <a class="reference external" href="http://scipy.org">SciPy (Scientific Python)</a> libraries,
+which enable efficient in-core numerical and scientific computation within Python and give you access to various mathematical and optimization techniques and algorithms.
+To produce high quality figures Python&#8217;s <a class="reference external" href="http://matplotlib.org/index.html">matplotlib</a> library is used.</p>
+<p>It is an open source project and it is being developed by physicists from  <a class="reference external" href="http://www.xfel.eu/">The European XFEL</a> , <a class="reference external" href="http://www.desy.de/">DESY</a> (Germany), <a class="reference external" href="http://www.nrcki.ru/">NRC Kurchatov Institute</a> (Russia).</p>
+<p>For a more detailed description see <a class="reference external" href="http://example.com/">Link text</a></p>
+<p><a class="reference external" href="http://githu.com/">Link text</a></p>
+</div>
+<div class="section" id="installation">
+<h2>Installation:<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
 </div>
 <div class="section" id="contents">
 <h2>Contents:<a class="headerlink" href="#contents" title="Permalink to this headline">¶</a></h2>
@@ -92,9 +135,9 @@
 <div class="section" id="indices-and-tables">
 <h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
 <ul class="simple">
-<li><a class="reference internal" href="genindex.html"><em>Index</em></a></li>
-<li><a class="reference internal" href="py-modindex.html"><em>Module Index</em></a></li>
-<li><a class="reference internal" href="search.html"><em>Search Page</em></a></li>
+<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
+<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
+<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
 </ul>
 </div>
 
@@ -102,12 +145,13 @@
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar">
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
   <h3><a href="#">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">OCELOT Documentation</a><ul>
 <li><a class="reference internal" href="#overview">Overview</a></li>
+<li><a class="reference internal" href="#installation">Installation:</a></li>
 <li><a class="reference internal" href="#contents">Contents:</a></li>
 </ul>
 </li>
@@ -117,29 +161,28 @@
   <h4>Next topic</h4>
   <p class="topless"><a href="cpbd.html"
                         title="next chapter">Charged Particle Beam Dynamics (CPBD) module</a></p>
-  <h3>This Page</h3>
-  <ul class="this-page-menu">
-    <li><a href="_sources/index.txt"
-           rel="nofollow">Show Source</a></li>
-  </ul>
-<div id="searchbox" style="display: none">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/index.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -148,12 +191,12 @@
         <li class="right" >
           <a href="cpbd.html" title="Charged Particle Beam Dynamics (CPBD) module"
              >next</a> |</li>
-        <li><a href="#">ocelot 16.7 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="#">ocelot 16.7 documentation</a> &#187;</li> 
       </ul>
     </div>
-    <div class="footer">
-        &copy; Copyright 2016, ia.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2016, ia.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.6.
     </div>
   </body>
 </html>

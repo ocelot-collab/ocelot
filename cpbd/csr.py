@@ -12,7 +12,7 @@ from ocelot.cpbd.beam import *
 from ocelot.cpbd.high_order import *
 from ocelot.cpbd.magnetic_lattice import *
 import time
-from numba import jit
+#from numba import jit
 
 from matplotlib import pyplot as plt
 from ocelot.cpbd.wake3D import *
@@ -81,7 +81,7 @@ def sample_1(i, a, b, c):
         y = y + (x2 - x1) * (x1 + x2) / (2 * (b - a))
     return y
 
-@jit
+#@jit
 def subbin_bound(q, s, x_qbin, n_bin, m_bin):
     """
     input
@@ -134,7 +134,7 @@ def subbin_bound(q, s, x_qbin, n_bin, m_bin):
         NBIN[ib] = NBIN[ib] + 1
     return SBINB, NBIN
 
-@jit
+#@jit
 def Q2EQUI(q, BS_params, SBINB, NBIN):
     """
     input
@@ -277,8 +277,6 @@ def Q2EQUI(q, BS_params, SBINB, NBIN):
                 w = sample_0(k, a, b)
                 charge_per_step[k-1] += w * qps
     return z1, z2, Nz, charge_per_step
-
-
 
 
 class CSR:

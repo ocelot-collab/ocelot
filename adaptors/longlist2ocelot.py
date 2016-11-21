@@ -12,7 +12,7 @@ from numpy import sin
 class StructureConverter:
     
     def __init__(self):
-        pass       
+        self.types = []
 
     def longlist_matrix_init(self):
         
@@ -24,8 +24,10 @@ class StructureConverter:
         self.longlist_matrix['MAGNET']['QUAD'] = {'type': Quadrupole, 'strength': ['k1', '1./length']}
         self.longlist_matrix['MAGNET']['SEXT'] = {'type': Sextupole, 'strength': 'k2'}
         self.longlist_matrix['MAGNET']['OCTU'] = {'type': Octupole, 'strength': 'k3'}
-        self.longlist_matrix['MAGNET']['HKIC'] = {'type': Hcor, 'strength': 'angle'}
-        self.longlist_matrix['MAGNET']['VKIC'] = {'type': Vcor, 'strength': 'angle'}
+        if "HKIC" in self.types:
+            self.longlist_matrix['MAGNET']['HKIC'] = {'type': Hcor, 'strength': 'angle'}
+        if "VKIC" in self.types:
+            self.longlist_matrix['MAGNET']['VKIC'] = {'type': Vcor, 'strength': 'angle'}
         self.longlist_matrix['MAGNET']['SOLE'] = {'type': Solenoid, 'strength': 'k'}
 
         #self.longlist_matrix['FASTKICK'] = {}
@@ -44,11 +46,13 @@ class StructureConverter:
         self.longlist_matrix['CAVITY']['LCAV'] = {'type': Cavity, 'strength': ['v', '1.e-3'], 'e1_lag': ['phi', '360.0'], 'e2_freq': 'f'}
 
         self.longlist_matrix['DIAG'] = {}
-        self.longlist_matrix['DIAG']['MONI'] = {'type': Monitor}
-        self.longlist_matrix['DIAG']['INSTR'] = {'type': Monitor}
-
-        self.longlist_matrix['MARK'] = {}
-        self.longlist_matrix['MARK']['MARK'] = {'type': Marker}
+        if "MONI" in self.types:
+            self.longlist_matrix['DIAG']['MONI'] = {'type': Monitor}
+        if "INSTR" in self.types:
+            self.longlist_matrix['DIAG']['INSTR'] = {'type': Monitor}
+        if "MARK" in self.types:
+            self.longlist_matrix['MARK'] = {}
+            self.longlist_matrix['MARK']['MARK'] = {'type': Marker}
 
         self.longlist_matrix['UNDU'] = {}
         self.longlist_matrix['UNDU']['UNDULATO'] = {'type': Undulator}
@@ -103,6 +107,7 @@ class StructureConverter:
                 element.l *= element.angle / sin(element.angle)
             else:
                 element.l *= element.angle * 0.5 / sin(element.angle * 0.5)
+
 
     def Longlist2Ocelot(self, filename, sheet_name='LONGLIST', pos_start=3, pos_stop=None, sbend_l_corr=False):
         """

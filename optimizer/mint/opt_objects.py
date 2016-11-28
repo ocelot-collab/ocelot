@@ -171,7 +171,7 @@ class SLACTarget(Target):
             std = np.std(  obj_func[(2599-5*120):-1])
             ave = np.mean( obj_func[(2599-5*120):-1])
         except:
-            print "Detector is not a waveform, Using scalar for hyperparameter calc"
+            print ("Detector is not a waveform, Using scalar for hyperparameter calc")
             ave = obj_func
             # Hard code in the std when obj func is a scalar
             # Not a great way to deal with this, should probably be fixed

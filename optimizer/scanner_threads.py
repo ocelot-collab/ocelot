@@ -397,7 +397,7 @@ class GpScanner(threading.Thread):
         print()
         dout = []
         if type(filename) == type(''):
-            print "Loaded seed data from file:", filename
+            print( "Loaded seed data from file:", filename)
             # stupid messy formating to unest matlab format
             din = scipy.io.loadmat(str(filename))['data']
             names = np.array(din.dtype.names)

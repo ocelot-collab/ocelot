@@ -4,11 +4,11 @@ Created on Wed Nov 18 19:46:52 2015
 
 @author: Mitch
 """
-
+from __future__ import print_function, absolute_import
 import numpy as np
 import numpy.linalg as alg
-from minimize import minimize
-from GP_utils import *
+from ocelot.optimizer.GP.minimize import minimize
+from ocelot.optimizer.GP.GP_utils import *
 
 def SPGP_train(X,Y,num_pseudo_inputs,num_starts=1):
     """

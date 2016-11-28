@@ -308,6 +308,11 @@ class CSR:
         # another filter
         self.filter_order = 10
         self.n_mesh = 345
+        self.pict_debug = False
+        if self.pict_debug:
+            self.f = plt.figure(figsize=(12, 9))
+            plt.ion()
+            #plt.hold(False)
 
 
 
@@ -552,38 +557,16 @@ class CSR:
         #test
 
 
-        martin = True
         s_cur = self.z0 - self.z_csr_start
-        if martin:
-            z = -p_array.particles[4::6]
-            ind_z_sort = np.argsort(z)
-            #B_params = [0, 100, 5, 2, 0.500000000000000, 1.000000000000000e-04]
-            #start = time.time()
-            SBINB, NBIN = subbin_bound(p_array.q_array, z[ind_z_sort], self.x_qbin, self.n_bin, self.m_bin)
-            #print("bin = ", time.time() - start)
-            B_params = [self.x_qbin, self.n_bin, self.m_bin, self.ip_method, self.sp, self.sigma_min]
-            #start = time.time()
-            s1, s2, Ns, lam_ds = Q2EQUI(p_array.q_array[ind_z_sort], B_params, SBINB, NBIN)
-            #print("q2 = ", time.time() - start)
+        z = -p_array.particles[4::6]
+        ind_z_sort = np.argsort(z)
+        SBINB, NBIN = subbin_bound(p_array.q_array, z[ind_z_sort], self.x_qbin, self.n_bin, self.m_bin)
+        B_params = [self.x_qbin, self.n_bin, self.m_bin, self.ip_method, self.sp, self.sigma_min]
+        s1, s2, Ns, lam_ds = Q2EQUI(p_array.q_array[ind_z_sort], B_params, SBINB, NBIN)
+        st = (s2 - s1) / Ns
+        sa = s1 + st / 2.
+        Ndw = [Ns - 1, st]
 
-            st = (s2 - s1) / Ns
-            sa = s1 + st / 2.
-            Ndw = [Ns - 1, st]
-            #print("ST = ", st, s2 - s1, len(lam_ds), Ns)
-        else:
-            z = p_array.particles[4::6]
-            s1 = min(z)
-            s2 = max(z)
-            bunch_size = s2 - s1
-            st = bunch_size/(self.n_mesh+1)
-
-            I = s2current(z, p_array.q_array, n_points=self.n_mesh, filter_order=self.filter_order, mean_vel=speed_of_light)
-            Ns = len(I[:, 0])
-
-            sa = s1 + st / 2.
-            Ndw = [self.n_mesh, st]
-            lam_ds = I[:, 1]/speed_of_light*st
-            #print("ST = ", st, s2 - s1, len(lam_ds), Ns)
 
         s_array = self.csr_traj[0, :]
         indx = (np.abs(s_array-s_cur)).argmin()
@@ -594,60 +577,57 @@ class CSR:
 
         nit = 0
         n_iter = len(itr_ra)
-        start = time.time()
+        #start = time.time()
         K1 = self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma)
         for nit in range(1, n_iter):
             K1 += self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma=gamma)
-        print("K1 = ", time.time() - start)
+        #print("K1 = ", time.time() - start)
         K1 = K1/n_iter
 
-        if martin:
-            #start = time.time()
-            lam_K1 = csr_convolution(lam_ds, K1[::-1]) / st * delta_s
-            #print("con = ", time.time() - start)
-            #start = time.time()
 
-            tck = interpolate.splrep(np.arange(len(lam_K1)), lam_K1, k=1)
-            dE = interpolate.splev(z*(1./st)+(0.-sa/st), tck, der=0)
-            #print("interp = ", time.time() - start)
+        lam_K1 = csr_convolution(lam_ds, K1[::-1]) / st * delta_s
+        tck = interpolate.splrep(np.arange(len(lam_K1)), lam_K1, k=1)
+        dE = interpolate.splev(z*(1./st)+(0.-sa/st), tck, der=0)
 
-        else:
+        if self.pict_debug:
+            self.f.clear()
+            self.f.add_subplot(411)
+            plt.plot(self.csr_traj[3,:], self.csr_traj[1,:],"r",  self.csr_traj[3,itr_ra], self.csr_traj[1,itr_ra], "bo")
 
-            lam_K1 = csr_convolution(lam_ds, K1) / st * delta_s
-            Nend = len(lam_K1)
-            N = int(abs(self.n_mesh+1-Nend) + self.n_mesh+1)
-            x = np.linspace(I[-1, 0], I[-1, 0] - N*Ndw[1], num=N, endpoint=False)[::-1]
-            tck = interpolate.splrep(x, lam_K1, k=1)
-            dE = interpolate.splev(z, tck, der=0)
+            #self.f.add_subplot(412)
+            #plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
+            #plt.plot(np.linspace(s1, s1+st*len(lam_K1), len(lam_K1))*1000, lam_K1)
+
+            #self.f.add_subplot(413)
+            #plt.xlim(s1*1000, (s1+st*len(lam_K1))*1000)
+            #plt.plot(np.linspace(s1, s1+st*Ns, Ns)*1000, lam_ds[:Ns])
+
+            self.f.add_subplot(412)
+            bins_start, hist_start = get_current(p_array, charge=p_array.q_array[0], num_bins=300)
+            plt.plot(-bins_start[::-1]*1000, hist_start[::-1])
+            plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
+            plt.ylabel("I, A")
+            self.f.add_subplot(413)
+            #bins_start, hist_start = get_current(p_array, charge=p_array.q_array[0], num_bins=300)
+            plt.plot(-p_array.particles[4::60][::-1]*1000, p_array.particles[0::60][::-1]*1000, "r.")
+            plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
+            plt.ylabel("X, mm")
+            self.f.add_subplot(414)
+            #bins_start, hist_start = get_current(p_array, charge=p_array.q_array[0], num_bins=300)
+            plt.plot(-p_array.particles[4::60][::-1]*1000, p_array.particles[5::60][::-1], "r.")
+            plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
+            plt.ylabel("dE/E")
+            plt.xlabel("S, mm")
+            x = str(int(int(np.around(s_cur, decimals=3)*1000)/10))
+            z = "0"*(3 - len(x))
+            plt.savefig( x + '.png')
+            plt.draw()
+            plt.pause(0.01)
+
         pc_ref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV
         delta_p = dE * 1e-9 / pc_ref
         p_array.particles[5::6] += delta_p
-        #E = p_array.particles[5::6] * pc_ref + p_array.E
-        #E1 = E + dE * 1e-9
-        #p_array.particles[5::6] = (E1 - p_array.E) / pc_ref
 
-        #plt.figure(1)
-        #plt.plot(I[:, 0], lam_ds/(max(lam_ds)))
-        #plt.figure(2)
-        #plt.plot(x, lam_K1/max(lam_K1))
-        #plt.show()
-
-
-        if False:
-            #plt.figure(5)
-            #plt.plot(K1[::-1], "r")
-            #plt.plot(data3, "b")
-            plt.figure(4)
-            plt.plot(NBIN, "r")
-            #plt.plot(data2, "b")
-            plt.figure(1)
-            plt.plot(lam_ds)
-            #plt.plot(data)
-            plt.figure(2)
-            plt.plot(K1[::-1])
-            plt.figure(3)
-            plt.plot(lam_K1)
-            plt.show()
 
         if self.debug:
             fig, ax1 = plt.subplots()
@@ -660,6 +640,54 @@ class CSR:
             ax2.plot(lam_K1, "b")
             ax2.set_ylabel("kernel", color='b')
             plt.show()
+
+
+    def apply_i(self, p_array, delta_s):
+
+        s_cur = self.z0 - self.z_csr_start
+        z = p_array.particles[4::6]
+        s1 = min(z)
+        s2 = max(z)
+        bunch_size = s2 - s1
+        st = bunch_size / (self.n_mesh + 1)
+        I = s2current(z, p_array.q_array, n_points=self.n_mesh, filter_order=self.filter_order, mean_vel=speed_of_light)
+        Ns = len(I[:, 0])
+        sa = s1 + st / 2.
+        Ndw = [self.n_mesh, st]
+        lam_ds = I[:, 1] / speed_of_light * st
+        # print("ST = ", st, s2 - s1, len(lam_ds), Ns)
+
+        s_array = self.csr_traj[0, :]
+        indx = (np.abs(s_array - s_cur)).argmin()
+        indx_prev = (np.abs(s_array - (s_cur - delta_s))).argmin()
+        gamma = p_array.E / m_e_GeV
+        h = max(1., self.apply_step / self.traj_step)
+        itr_ra = np.unique(-np.round(np.arange(-indx, -indx_prev, h))).astype(np.int)
+
+        nit = 0
+        n_iter = len(itr_ra)
+        # start = time.time()
+        K1 = self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma)
+        for nit in range(1, n_iter):
+            K1 += self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma=gamma)
+        # print("K1 = ", time.time() - start)
+        K1 = K1 / n_iter
+
+
+        lam_K1 = csr_convolution(lam_ds, K1) / st * delta_s
+        Nend = len(lam_K1)
+        N = int(abs(self.n_mesh + 1 - Nend) + self.n_mesh + 1)
+        x = np.linspace(I[-1, 0], I[-1, 0] - N * Ndw[1], num=N, endpoint=False)[::-1]
+        tck = interpolate.splrep(x, lam_K1, k=1)
+        dE = interpolate.splev(z, tck, der=0)
+        pc_ref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV
+        delta_p = dE * 1e-9 / pc_ref
+        p_array.particles[5::6] += delta_p
+
+
+
+
+
 
 
 

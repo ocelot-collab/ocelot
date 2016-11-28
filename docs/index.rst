@@ -37,17 +37,21 @@ To produce high quality figures Python's `matplotlib <http://matplotlib.org/inde
 It is an open source project and it is being developed by physicists from  `The European XFEL <http://www.xfel.eu/>`_ , `DESY <http://www.desy.de/>`_ (Germany), `NRC Kurchatov Institute <http://www.nrcki.ru/>`_ (Russia).
 
 
-Ocelot user profile
--------------------
+* **Ocelot user profile**
+
 
 Ocelot is designed for researchers who want to have the flexibility that is given by high-level languages such as Matlab, Python (with Numpy and SciPy) or Mathematica.
 However if someone needs a GUI  it can be developed using Python's libraries like a `PyQtGraph <http://www.pyqtgraph.org/>`_ or `PyQt <http://pyqt.sourceforge.net/Docs/PyQt4/>`_ .
 
+Downloads
+---------
 
 Installation:
 -------------
-you have to download from GitHub zip file.
+You have to download from GitHub zip file.
+
 Unzip ocelot-master.zip to your working folder ../your_working_dir/.
+
 Rename folder ../your_working_dir/ocelot-master to ../your_working_dir/ocelot.
 Add ../your_working_dir/ to PYTHONPATH
 Windows 7: go to Control Panel -> System and Security -> System -> Advance System Settings -> Environment Variables. and in User variables add ../your_working_dir/ to PYTHONPATH. If variable PYTHONPATH does not exist, create it

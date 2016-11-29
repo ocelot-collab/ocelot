@@ -10,11 +10,16 @@ def peaks(x, y, n=0):
     
     '''
     maxs = {}
-    
-    for i in np.arange(1, len(x)-1):
-        if (y[i] - y[i-1]) > 0 and (y[i+1] - y[i]) < 0:
-            maxs[y[i]] = x[i]
-    
+
+    if len((np.where(y == y.max()))[0]) == 1:
+        for i in np.arange(1, len(x)-1):
+            if (y[i] - y[i-1]) > 0 and (y[i+1] - y[i]) < 0:
+                maxs[y[i]] = x[i]
+    else:
+        for i in np.arange(2, len(x)-1):
+            if bool((y[i-1] - y[i-2]) > 0 and (y[i] - y[i-1]) == 0 and (y[i+1] - y[i]) < 0):
+                maxs[y[i]] = x[i]
+
     vals  = sorted(maxs.keys())
     f1 = []
     f2 = []

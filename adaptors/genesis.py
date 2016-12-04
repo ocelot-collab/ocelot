@@ -1612,11 +1612,13 @@ def read_dfl_file(filePath, Nxy, Lxy=None, zsep=None, xlamds=None, vartype=compl
     zsep - separation between slices in terms of wavelengths 
     xlamds  - wavelength of the radiation
     '''
+    
     if debug > 0:
         print ('    reading radiation file')
     start_time = time.time()
-
-    import numpy as np
+    
+    assert (Nxy % 1 == 0), 'Nxy nust be an integer'
+    Nxy = int(Nxy)
 
     if not os.path.isfile(filePath):
         if debug:
@@ -1629,8 +1631,9 @@ def read_dfl_file(filePath, Nxy, Lxy=None, zsep=None, xlamds=None, vartype=compl
 
         b = np.fromfile(filePath, dtype=complex).astype(vartype)
         Nz = b.shape[0] / Nxy / Nxy
-        assert(Nz % 1 == 0), 'Wrong Nxy or corrupted file'
-
+        assert (Nz % 1 == 0), 'Wrong Nxy or corrupted file'
+        Nz = int(Nz)
+        
         dfl = RadiationField()
         dfl.fld = b.reshape(Nz, Nxy, Nxy)
         dfl.dx = Lxy / dfl.Nx()

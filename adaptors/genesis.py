@@ -3052,6 +3052,7 @@ def rematch_edist(edist, tws):
 
 
 def cut_lattice(lat, n_cells, elem_in_cell=4):
+    n_cells=int(ceil(n_cells))
     lat_new = deepcopy(lat)
     del lat_new.sequence[0:elem_in_cell * (n_cells)]
     return lat_new

@@ -337,8 +337,10 @@ def plot_gen_out_e(g, legend=False, figsize=4, fig_name='Electrons', savefig=Fal
 
 
 def plot_gen_out_ph(g, legend=False, figsize=4, fig_name='Radiation', savefig=False, showfig=False, debug=1):
-    fig = plot_gen_out_evo(g, params=['rad_pow_en', 'rad_spec', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
-
+    if g('itdp'):
+        fig = plot_gen_out_evo(g, params=['rad_pow_en', 'rad_spec', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
+    else:
+        fig = plot_gen_out_evo(g, params=['rad_pow', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
 
 def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_energy', 'el_bunching', 'rad_pow_en', 'rad_spec', 'rad_size', 'rad_spec_evo_n', 'rad_pow_evo_n'], figsize=4, legend=False, fig_name=None, savefig=False, showfig=False, debug=1):
     '''

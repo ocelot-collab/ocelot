@@ -1149,7 +1149,7 @@ def create_exp_dir(exp_dir, run_ids):
         res_dir = exp_dir + 'results'
         os.makedirs(res_dir)
     except OSError as exc:
-        if exc.errno == errno.EEXIST and os.path.isdir(run_dir):
+        if exc.errno == errno.EEXIST and os.path.isdir(res_dir):
             pass
         else:
             raise
@@ -1495,7 +1495,8 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
         out.power = out.p_mid[:, -1]
         out.phi = out.phi_mid[:, -1]
         # out.energy=np.mean(out.p_int,axis=0)*out('xlamds')*out('zsep')*out.nSlices/speed_of_light
-        out.energy = np.sum(out.p_int * out.dt, axis=0)
+        if out('itdp'): 
+            out.energy = np.sum(out.p_int * out.dt, axis=0)
 
     if debug > 0:
         print('      done in %.2f seconds' % (time.time() - start_time))

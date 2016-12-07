@@ -889,6 +889,8 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', debug=1):
         raise ValueError('run_dir and exp_dir are not specified!')
 
     if inp.run_dir == None:
+        if inp.exp_dir[-1]!=os.path.sep:
+            inp.exp_dir+=os.path.sep
         inp.run_dir = inp.exp_dir + 'run_' + str(inp.runid)
 
     try:
@@ -1134,6 +1136,8 @@ def assemble(fileName, remove=1, overwrite=0, ram=1, debug=1):
 
 
 def create_exp_dir(exp_dir, run_ids):
+    if exp_dir[-1]!=os.path.sep:
+        exp_dir+=os.path.sep
     for run_id in run_ids:
 
         try:
@@ -3053,7 +3057,7 @@ def rematch_edist(edist, tws):
 
 
 def cut_lattice(lat, n_cells, elem_in_cell=4):
-    n_cells=int(ceil(n_cells))
+    n_cells=np.ceil(n_cells).astype(np.int)
     lat_new = deepcopy(lat)
     del lat_new.sequence[0:elem_in_cell * (n_cells)]
     return lat_new

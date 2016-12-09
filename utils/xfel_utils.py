@@ -483,7 +483,7 @@ def dfl_st_cpl(dfl, theta_b, inp_axis='y', s_start=None):
     return dfl2
 
 
-def dfl_hxrss_filt(dfl, trf, ev_seed, s_delay, st_cpl=1, res_per_fwhm=6, fft_method='mp', dump_proj=0, debug=1):
+def dfl_hxrss_filt(dfl, trf, ev_seed, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=6, fft_method='mp', dump_proj=0, debug=1):
     # needs optimizing?
     # tmp
     import matplotlib.pyplot as plt
@@ -497,10 +497,14 @@ def dfl_hxrss_filt(dfl, trf, ev_seed, s_delay, st_cpl=1, res_per_fwhm=6, fft_met
     cwidth = fwhm(trf.k, 1.0 - np.abs(trf.tr))
     dk_old = 2 * pi / dfl.Lz()
     dk = cwidth / res_per_fwhm
-    padn = np.int(dk_old / dk)
+    padn = np.ceil(dk_old / dk).astype(int)
     if np.mod(padn, 2) == 0 and padn != 0:  # check for odd
         padn = int(padn + 1)
-
+    
+    if enforce_padn!=None:
+        padn=enforce_padn
+        
+        
     if dump_proj:
 
         dfl = dfl_pad_z(dfl, padn)

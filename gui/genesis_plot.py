@@ -838,7 +838,7 @@ def plot_gen_out_scanned_z(g, figsize=(10, 14), legend=True, fig_name=None, z=in
     return fig
 
 
-def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend=True, phase=False, far_field=False, freq_domain=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=False, return_proj=False, debug=1, vartype_dfl=complex64):
+def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend=True, phase=False, far_field=False, freq_domain=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=False, return_proj=False, log_scale=0, debug=1, vartype_dfl=complex64):
     '''
     Plots dfl radiation object in 3d.
 
@@ -856,7 +856,8 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend=True, phase=False, far_fi
     return_proj returns [xy_proj,yz_proj,xz_proj,x,y,z] array.
     vartype_dfl is the data type to store dfl in memory [either complex128 (two 64-bit floats) or complex64 (two 32-bit floats)], may save memory
     '''
-
+    import matplotlib.colors as colors
+    
     if showfig == False and savefig == False:
         return
     from ocelot.utils.xfel_utils import dfl_fft_xy, dfl_fft_z
@@ -969,7 +970,10 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend=True, phase=False, far_fi
         y_title = 'Y projection'
         xy_title = 'Intensity'
         x_y_color = 'blue'
-
+    
+    if log_scale:
+        suffix += '_log'
+    
     F.fld = F.fld.astype(np.complex64)
     xy_proj = F.int_xy()
     xy_proj_ph = np.zeros_like(xy_proj)  # tmp
@@ -1002,7 +1006,10 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend=True, phase=False, far_fi
         x_line, y_line = x_line / max(x_line), y_line / max(y_line)
 
     ax_int = fig.add_subplot(2, 2 + column_3d, 1)
-    intplt = ax_int.pcolormesh(x, y, swapaxes(xy_proj, 1, 0), cmap=cmap_int)
+    if log_scale:
+        intplt = ax_int.pcolormesh(x, y, swapaxes(xy_proj, 1, 0), norm=colors.LogNorm(vmin=xy_proj.min(), vmax=xy_proj.max()), cmap=cmap_int)
+    else:
+        intplt = ax_int.pcolormesh(x, y, swapaxes(xy_proj, 1, 0), cmap=cmap_int)
     ax_int.set_title(xy_title, fontsize=15)
     ax_int.set_xlabel(r'' + x_label)
     ax_int.set_ylabel(y_label)
@@ -1016,14 +1023,16 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend=True, phase=False, far_fi
         ax_ph.set_title('Phase', fontsize=15)
     else:
         ax_z = fig.add_subplot(2, 2 + column_3d, 4 + column_3d)
-        ax_z.plot(z, z_proj, linewidth=1.5, color=z_color)
+        if log_scale:
+            ax_z.semilogy(z, z_proj, linewidth=1.5, color=z_color)
+        else:
+            ax_z.plot(z, z_proj, linewidth=1.5, color=z_color)
         ax_z.set_title(z_title, fontsize=15)
         ax_z.set_xlabel(z_label)
         ax_z.set_ylabel(z_labelv)
         ax_z.set_ylim(ymin=0)
 
     ax_proj_x = fig.add_subplot(2, 2 + column_3d, 3 + column_3d, sharex=ax_int)
-    ax_proj_x.plot(x, x_line, linewidth=2, color=x_y_color)
     ax_proj_x.set_title(x_title, fontsize=15)
 
     if sum(x_line) != 0:
@@ -1033,8 +1042,13 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend=True, phase=False, far_fi
         x_line_f = np.zeros_like(x_line)
         rms_x = 0
         fwhm_x = 0
-
-    ax_proj_x.plot(x, x_line_f, color='grey')
+    
+    if log_scale:
+        ax_proj_x.semilogy(x, x_line, linewidth=2, color=x_y_color)
+        ax_proj_x.semilogy(x, x_line_f, color='grey')
+    else:
+        ax_proj_x.plot(x, x_line, linewidth=2, color=x_y_color)
+        ax_proj_x.plot(x, x_line_f, color='grey')
 
     if text_present:
         try:
@@ -1045,7 +1059,6 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend=True, phase=False, far_fi
     ax_proj_x.set_xlabel(x_label)
 
     ax_proj_y = fig.add_subplot(2, 2 + column_3d, 2, sharey=ax_int)
-    ax_proj_y.plot(y_line, y, linewidth=2, color=x_y_color)
     ax_proj_y.set_title(y_title, fontsize=15)
 
     if sum(y_line) != 0:
@@ -1055,8 +1068,14 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend=True, phase=False, far_fi
         y_line_f = np.zeros_like(y_line)
         rms_y = 0
         fwhm_y = 0
-
-    ax_proj_y.plot(y_line_f, y, color='grey')
+    
+    if log_scale:
+        ax_proj_y.semilogx(y_line, y, linewidth=2, color=x_y_color)
+        ax_proj_y.semilogx(y_line_f, y, color='grey')
+    else:
+        ax_proj_y.plot(y_line, y, linewidth=2, color=x_y_color)
+        ax_proj_y.plot(y_line_f, y, color='grey')
+    
     if text_present:
         try:
             ax_proj_y.text(0.95, 0.95, 'fwhm= ' + str(round_sig(fwhm_y, 3)) + r' [' + unit_xy + ']\nrms= ' + str(round_sig(rms_y, 3)) + r' [' + unit_xy + ']', horizontalalignment='right', verticalalignment='top', transform=ax_proj_y.transAxes, fontsize=12)
@@ -1064,19 +1083,36 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend=True, phase=False, far_fi
             pass
     ax_proj_y.set_xlim(xmin=0, xmax=1)
     ax_proj_y.set_ylabel(y_label)
+    
+    # if log_scale:
+        # ax_proj_x.set_yscale('log')
+        # ax_proj_y.set_xscale('log')
+        # if not phase:
+            # ax_z.set_yscale('log')
 
     if column_3d:
+        
+        min_xz_proj=xz_proj[xz_proj!=0].min()
+        min_yz_proj=yz_proj[yz_proj!=0].min()
+        
         if phase == True:
             ax_proj_xz = fig.add_subplot(2, 2 + column_3d, 6)
         else:
             ax_proj_xz = fig.add_subplot(2, 2 + column_3d, 6, sharex=ax_z)
-        ax_proj_xz.pcolormesh(z, x, swapaxes(xz_proj, 1, 0), cmap=cmap_int)
+        if log_scale:
+            ax_proj_xz.pcolormesh(z, x, swapaxes(xz_proj, 1, 0), norm=colors.LogNorm(vmin=min_xz_proj, vmax=xz_proj.max()), cmap=cmap_int)
+        else:
+            ax_proj_xz.pcolormesh(z, x, swapaxes(xz_proj, 1, 0), cmap=cmap_int)
         ax_proj_xz.set_title('Top view', fontsize=15)
         ax_proj_xz.set_xlabel(z_label)
         ax_proj_xz.set_ylabel(x_label)
+        
 
         ax_proj_yz = fig.add_subplot(2, 2 + column_3d, 3, sharey=ax_int, sharex=ax_proj_xz)
-        ax_proj_yz.pcolormesh(z, y, swapaxes(yz_proj, 1, 0), cmap=cmap_int)
+        if log_scale:
+            ax_proj_yz.pcolormesh(z, y, swapaxes(yz_proj, 1, 0), norm=colors.LogNorm(vmin=min_yz_proj, vmax=yz_proj.max()), cmap=cmap_int)
+        else:
+            ax_proj_yz.pcolormesh(z, y, swapaxes(yz_proj, 1, 0), cmap=cmap_int)
         ax_proj_yz.set_title('Side view', fontsize=15)
         ax_proj_yz.set_xlabel(z_label)
         ax_proj_yz.set_ylabel(y_label)

@@ -7,32 +7,33 @@ import threading
 class Graph():
 
     def __init__(self):
-       
-       self.work = False
+         
+        self.work = False
 
-       self.limx = [0.0, 1.0]
-       self.limy = [0.0, 1.0]
-       self.file = 'moga.dat'
+        self.limx = [0.0, 1.0]
+        self.limy = [0.0, 1.0]
+        self.file = 'moga_plot.dat'
 
-       self.x = []
-       self.y = []
-       self.xnd = []
-       self.ynd = []
+        self.x = []
+        self.y = []
+        self.xnd = []
+        self.ynd = []
 
-       self.title = ''
+        self.title = ''
 
-       self.fig, self.ax = plt.subplots()
-       self.lineF, = self.ax.plot(self.x, self.y, 'ro', ms=3)
-       self.lineND, = self.ax.plot(self.xnd, self.ynd, 'bo', ms=4, alpha=0.75)
-       self.ax.set_xlabel("f1")
-       self.ax.set_xlabel("f2")
-       self.ax.grid(True)
+        self.fig, self.ax = plt.subplots()
+        self.lineF, = self.ax.plot(self.x, self.y, 'ro', ms=3)
+        self.lineND, = self.ax.plot(self.xnd, self.ynd, 'bo', ms=4, alpha=0.75)
+         
+        self.ax.grid(True)
 
-       self.update_time = 1000
+        self.update_time = 1000
+
 
     def get_data(self):
-        
+            
         while(self.work):
+
             t_start = datetime.datetime.now()
 
             try:
@@ -63,8 +64,6 @@ class Graph():
 
 
     def plot(self):
-        
-        t_start = datetime.datetime.now()
 
         plt.title(self.title)
 
@@ -75,7 +74,7 @@ class Graph():
 
 
     def run(self):
-        
+            
         self.work = True
 
         self.ax.set_xlim(self.limx)
@@ -94,8 +93,9 @@ class Graph():
 
 
 if __name__ == "__main__":
+
     pic = Graph()
-    pic.limx = [0.0, 20.0]
-    pic.limy = [0.0, 10.0e-3]
-    pic.file ="../test/moga.dat"
+    pic.limx = [0.0, 100.0e-9]
+    pic.limy = [0.0, 5.0e-3]
+    pic.file = "../test/siberia2/moga_plot.dat"
     pic.run()

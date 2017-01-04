@@ -32,7 +32,7 @@ class Moga():
         self.elite_num = int(self.pop_num / 10)
 
         # cross and mutation probability
-        self.cxpb, self.mutpb = 0.9, 0.9
+        self.cxpb, self.mutpb = 0.95, 0.95
 
         # number of generation
         self.ngen = 10
@@ -46,7 +46,7 @@ class Moga():
 
         self.log_print = True if MPI_RANK == 0 else False
         self.log_file = 'moga_result.dat' if MPI_RANK == 0 else None
-        self.plt_file = 'moga_polt.dat' if MPI_RANK == 0 else None
+        self.plt_file = 'moga_plot.dat' if MPI_RANK == 0 else None
 
         self.fit_func = lambda x: None
         self.fit_func_args = []
@@ -109,8 +109,9 @@ class Moga():
         if self.penalty != None:
             toolbox.decorate("evaluate", tools.DeltaPenality(self.feasible, self.inf_val))
 
+        # crossover - mate
         #toolbox.register("mate", tools.cxTwoPoint)
-        toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=self.bounds_min, up=self.bounds_max, eta=10.0)
+        toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=self.bounds_min, up=self.bounds_max, eta=10.0) 
 
         #toolbox.register("mutate", tools.mutGaussian, mu=0.0, sigma=0.2, indpb=MUTPB)
         toolbox.register("mutate", tools.mutPolynomialBounded, eta=10.0, low=self.bounds_min, up=self.bounds_max, indpb=self.mutpb)
@@ -455,6 +456,10 @@ class Moga():
         return pop
 
 
+    def spea2(self):
+        pass
+        
+        
     def rwga(self):
         pass
 

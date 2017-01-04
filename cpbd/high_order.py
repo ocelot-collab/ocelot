@@ -1322,7 +1322,7 @@ def arcline( SREin, Delta_S, dS, R_vect ):
     epsilon = 1e-8
 
     sre0 = SREin[:,-1]
-    N = max(1, np.round(Delta_S/dS))
+    N = int(max(1, np.round(Delta_S/dS)))
     #print N
     dS = Delta_S/N
     SRE2 = np.zeros((7, N))

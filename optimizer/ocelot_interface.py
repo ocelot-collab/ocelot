@@ -28,14 +28,14 @@ from shutil import copy
 #import Image
 
 #GUI layout file
-from UIOcelotInterface import Ui_Form
+from ocelot.optimizer.UIOcelotInterface import Ui_Form
 
 #slac python toolbox imports
 #from ocelot.optimizer.mint.lcls_interface import MatLog
 from ocelot.optimizer.mint.lcls_interface import TestMatLog as MatLog
 #local imports
 
-import scanner_threads
+from ocelot.optimizer import scanner_threads
 from ocelot.optimizer.mint.opt_objects import *
 
 #import taperThread
@@ -111,7 +111,7 @@ class OcelotInterfaceWindow(QFrame):
         except IOError:
             print ('No style sheet found!')
 
-    def setListener(self,state):
+    def setListener(self, state):
         """
         Method to set epics flag inducating that this GUI is running.
 
@@ -120,7 +120,7 @@ class OcelotInterfaceWindow(QFrame):
         """
         #watcher cud flag
         try:
-            self.mi.caput("PHYS:ACR0:OCLT:OPTISRUNNING",state)
+            self.mi.caput("PHYS:ACR0:OCLT:OPTISRUNNING", state)
         except:
             print ("No watcher cud PV found!")
         #listener application flag
@@ -132,7 +132,7 @@ class OcelotInterfaceWindow(QFrame):
         #sets the hostname env to another watcher cud PV
         try:
             opi = os.environ['HOSTNAME']
-            self.mi.caput("SIOC:SYS0:ML00:CA999",opi)
+            self.mi.caput("SIOC:SYS0:ML00:CA999", opi)
         except:
             print ("No OPI enviroment variable found")
 
@@ -503,29 +503,29 @@ class OcelotInterfaceWindow(QFrame):
         """
 
         #setup plot 1 for obj func monitor
-        self.plot1 = pg.PlotWidget(title = "Objective Function Monitor",labels={'left':str(self.objective_func_pv),'bottom':"Time (seconds)"})
-        self.plot1.showGrid(1,1,1)
+        self.plot1 = pg.PlotWidget(title="Objective Function Monitor",labels={'left': str(self.objective_func_pv), 'bottom': "Time (seconds)"})
+        self.plot1.showGrid(1, 1, 1)
         self.plot1.getAxis('left').enableAutoSIPrefix(enable=False) # stop the auto unit scaling on y axes
         layout = QtGui.QGridLayout()
         self.ui.widget_2.setLayout(layout)
-        layout.addWidget(self.plot1,0,0)
+        layout.addWidget(self.plot1, 0, 0)
 
         #setup plot 2 for device monitor
-        self.plot2 = pg.PlotWidget(title = "Device Monitor",labels={'left':"Device (Current - Start)",'bottom':"Time (seconds)"})
-        self.plot2.showGrid(1,1,1)
+        self.plot2 = pg.PlotWidget(title="Device Monitor", labels={'left': "Device (Current - Start)", 'bottom': "Time (seconds)"})
+        self.plot2.showGrid(1, 1, 1)
         self.plot2.getAxis('left').enableAutoSIPrefix(enable=False) # stop the auto unit scaling on y axes
         layout = QtGui.QGridLayout()
         self.ui.widget_3.setLayout(layout)
-        layout.addWidget(self.plot2,0,0)
+        layout.addWidget(self.plot2, 0, 0)
 
         #legend for plot 2
-        self.leg2 = customLegend(offset=(75,20))
+        self.leg2 = customLegend(offset=(75, 20))
         self.leg2.setParentItem(self.plot2.graphicsItem())
 
         #create the obj func line object
-        color = QtGui.QColor(0,255,255)
-        pen=pg.mkPen(color,width=3)
-        self.obj_func_line = pg.PlotCurveItem(x=[],y=[],pen=pen,antialias=True)
+        color = QtGui.QColor(0, 255, 255)
+        pen=pg.mkPen(color, width=3)
+        self.obj_func_line = pg.PlotCurveItem(x=[], y=[], pen=pen, antialias=True)
         self.plot1.addItem(self.obj_func_line)
 
     def randColor(self):
@@ -556,7 +556,7 @@ class OcelotInterfaceWindow(QFrame):
         self.leg2 = customLegend(offset=(50,10))
         self.leg2.setParentItem(self.plot2.graphicsItem())
 
-        default_colors = [QtGui.QColor(255,51,51),QtGui.QColor(51,255,51),QtGui.QColor(255,255,51),QtGui.QColor(178,102,255)]
+        default_colors = [QtGui.QColor(255, 51, 51), QtGui.QColor(51, 255, 51), QtGui.QColor(255, 255, 51),QtGui.QColor(178, 102, 255)]
         for i, dev in enumerate(devices):
 
             #set the first 4 devices to have the same default colors
@@ -654,21 +654,20 @@ class OcelotInterfaceWindow(QFrame):
 
 
         #start thread scan
-        try:
-            self.thread = self.scanMethodSelect()
-            #print(self.thread.__class__)
-            self.objective_func = self.get_object_func(self.objective_func_pv)
-            self.thread.setup(self.devices, self.objective_func, iters=self.iters)
-            self.thread.daemon = True
-            self.thread.start()
-            #Display error if the scanner object fails to inititialize and setup
-        except Exception:
-            print()
-            print("Error starting up scan thread!")
-            print()
-            #print(str(e))
-            self.scanFinished()
-            return
+        #try:
+        self.thread = self.scanMethodSelect()
+        self.objective_func = self.get_object_func(self.objective_func_pv)
+        self.thread.setup(self.devices, self.objective_func, iters=self.iters)
+        self.thread.daemon = True
+        self.thread.start()
+        #Display error if the scanner object fails to inititialize and setup
+        #except Exception:
+        #    print()
+        #    print("Error starting up scan thread!")
+        #    print()
+        #    #print(str(e))
+        #    self.scanFinished()
+        #    return
 
 
     def scanFinished(self):
@@ -803,7 +802,7 @@ class OcelotInterfaceWindow(QFrame):
         p.save(s, 'png')
         im = Image.open(s)
         im.save(s[:-4]+".ps")
-        p = p.scaled(465,400)
+        p = p.scaled(465, 400)
         #save again a small image to use for the logbook thumbnail
         p.save(str(s), 'png')
 

@@ -417,4 +417,4 @@ class Ui_Form(object):
         self.pushButton_4.setText(_translate("Form", "Dev Ocelot Epics Panel", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab2), _translate("Form", "Scan Setup Panel", None))
 
-from resetpanel.resetpanelbox import ResetpanelBoxWindow
+from ocelot.optimizer.resetpanel.resetpanelbox import ResetpanelBoxWindow

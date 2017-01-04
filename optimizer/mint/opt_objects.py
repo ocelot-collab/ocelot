@@ -18,6 +18,9 @@ class Device(object):
     def __init__(self, eid=None):
         self.eid = eid
         self.id = eid
+        self.data = []
+        self.time = []
+        self.simplex_step = 0
 
     def set_value(self, x):
         pass
@@ -29,7 +32,11 @@ class Device(object):
         return False
 
     def state(self):
-        return
+        return True
+
+    def clean(self):
+        self.data = []
+        self.time = []
 
 
 class SLACDevice(Device):
@@ -62,6 +69,8 @@ class TestDevice(Device):
         self.data = []
         self.time = []
         self.nsets = 0
+        self.mi = None
+        self.dp = None
         pass
 
     def get_value(self):
@@ -70,7 +79,7 @@ class TestDevice(Device):
     def set_value(self, value):
         self.data.append(value)
         self.nsets += 1
-        self.time.append(self.nsets)
+        self.time.append(time.time())
         self.test_value = value
 
     def check_limits(self, value):
@@ -82,7 +91,8 @@ class TestDevice(Device):
         return False
 
     def get_limits(self):
-        return [-100, 100]
+        return self.dp.get_limits(self.eid)
+        #return [-100, 100]
 
 
 class Target(object):
@@ -99,7 +109,7 @@ class Target(object):
         return 0
 
     def get_penalty(self):
-        pen = - self.get_value()
+        pen = -self.get_value()
         return pen
 
 class SLACTarget(Target):
@@ -222,7 +232,7 @@ class TestTarget(Target):
         self.niter += 1
         print("niter = ", self.niter)
         self.y.append(pen)
-        self.x.append(self.niter)
+        self.x.append(time.time())
         return pen
 
     def get_value(self):

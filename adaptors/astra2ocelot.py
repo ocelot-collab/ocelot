@@ -30,7 +30,7 @@ def exact_xp_2_xxstg_mad(xp, gamref):
 
 def exact_xxstg_2_xp_mad(xxstg, gamref):
     # from mad format
-    N = len(xxstg) / 6
+    N = int(len(xxstg) / 6)
     xp = np.zeros((N, 6))
     pref = m_e_eV * np.sqrt(gamref ** 2 - 1)
     betaref = np.sqrt(1 - gamref ** -2)
@@ -194,7 +194,7 @@ def particleArray2astraBeam(p_array, filename="tytest.ast"):
     gamref = p_array.E / m_e_GeV
     s0 = p_array.s
     P = p_array.particles.view()
-    Np = len(P) / 6
+    Np = int(len(P) / 6)
     xp = exact_xxstg_2_xp_mad(P, gamref)
     Pref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_eV
     xp[:, 5] = xp[:, 5] + Pref

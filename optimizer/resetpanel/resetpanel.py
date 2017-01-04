@@ -16,7 +16,7 @@ from ocelot.optimizer.mint.opt_objects import *
 from ocelot.optimizer.resetpanel.UIresetpanel import Ui_Form
 
 sys.path.append("..")
-from ocelot.optimizer.mint.lcls_interface import LCLSMachineInterface
+#from ocelot.optimizer.mint.lcls_interface import LCLSMachineInterface
 
 
 
@@ -30,7 +30,6 @@ class ResetpanelWindow(QFrame):
         QFrame.__init__(self)
         self.ui = Ui_Form()
         self.ui.setupUi(self)
-
         #epicsGet wrapper
         #self.epicsGet = mi.getter# epicsGet()
 
@@ -61,54 +60,50 @@ class ResetpanelWindow(QFrame):
         except IOError:
             print ('No style sheet found!')
 
-    def get_devices(self, pvs):
-        devices = []
-        for pv in pvs:
-            devices.append(SLACDevice(eid=pv))
-        return devices
 
-    def getPvList(self,pvs_in=None):
-        """
-        Method to build a pv list from file.
-
-        Can get passed string filename to parse text into a pv list, ex.
-                PV_1
-                PV_2
-                ...
-                PV_N
-
-        Entrys with at '#' in the file are ignored
-        Alternativly can be passed a list of pv strings for build the pv list
-        Saves the PV list as a class varable
-
-        Args:
-                pvs_in: Can be either List of pvs, or string filename
-
-        """
-
-        if not pvs_in:
-            return
-
-        if type(pvs_in) != list:
-            self.pvs = []
-            for line in open(pvs_in):
-                l = line.rstrip('\n')
-                if l[0] == '#': #exclude commented PVs
-                    continue
-                self.pvs.append(str(l))
-        else:
-            self.pvs = pvs_in
-
-        self.devices = self.get_devices(pvs=self.devices)
-
-        self.getStartValues()
-        self.initTable()
+    #def getPvList(self, pvs_in=None):
+    #    """
+    #    Method to build a pv list from file.
+    #
+    #    Can get passed string filename to parse text into a pv list, ex.
+    #            PV_1
+    #            PV_2
+    #            ...
+    #            PV_N
+    #
+    #    Entrys with at '#' in the file are ignored
+    #    Alternativly can be passed a list of pv strings for build the pv list
+    #    Saves the PV list as a class varable
+    #
+    #    Args:
+    #            pvs_in: Can be either List of pvs, or string filename
+    #
+    #    """
+    #
+    #    if not pvs_in:
+    #        return
+    #
+    #    if type(pvs_in) != list:
+    #        self.pvs = []
+    #        for line in open(pvs_in):
+    #            l = line.rstrip('\n')
+    #            if l[0] == '#': #exclude commented PVs
+    #                continue
+    #            self.pvs.append(str(l))
+    #    else:
+    #        self.pvs = pvs_in
+    #
+    #    self.devices = self.create_devices(pvs=self.pvs)
+    #
+    #    self.getStartValues()
+    #    self.initTable()
 
     def getStartValues(self):
         """ Initializes start values for the PV list. """
         for dev in self.devices:
             #self.pv_objects[pv] = epics.PV(pv)
             self.startValues[dev.eid] = dev.get_value()
+            #print(self.startValues[dev.eid])
             #self.pv_objects[pv].add_callback(callback=self.PvGetCallBack)
 
     def updateReference(self):
@@ -122,7 +117,7 @@ class ResetpanelWindow(QFrame):
 
     def initTable(self):
         """ Initialize the UI table object """
-        headers = ["PVs","Reference Value","Current Value"]
+        headers = ["PVs", "Reference Value", "Current Value"]
         self.ui.tableWidget.setColumnCount(len(headers))
         self.ui.tableWidget.setHorizontalHeaderLabels(headers)
         self.ui.tableWidget.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers) #No user edits on talbe
@@ -133,10 +128,19 @@ class ResetpanelWindow(QFrame):
             pv = self.pvs[row]
             #put PV in the table
             self.ui.tableWidget.setItem(row, 0, QtGui.QTableWidgetItem(str(pv)))
+            self.ui.tableWidget.item(row, 0).setTextColor(QtGui.QColor(0, 255, 255))
+
+            #self.ui.tableWidget.item(row, 0).setFont(font)
             #put start val in
             self.ui.tableWidget.setItem(row, 1, QtGui.QTableWidgetItem(str(self.startValues[pv])))
-            #self.pv_objects[pv].run_callbacks()#initialize in the pvs current value
 
+            #change font size
+            # font = QtGui.QFont()
+            # font.setPointSize(12)
+            # self.ui.tableWidget.item(row, 1).setFont(font)
+
+            #self.pv_objects[pv].run_callbacks()#initialize in the pvs current value
+            #print("init", self.ui.tableWidget.item(row, 0))
     #update the table on PV change callback
     #
     # REMOVED BECAUSE CALLBACK CAUSED SEG FAUTLS.
@@ -176,20 +180,21 @@ class ResetpanelWindow(QFrame):
         Hard coded to turn Current Value column red at 0.1% differenct from Ref Value.
         It would be better to update the table on a callback, but PyEpics crashes with cb funcitons.
         """
-
+        #print(self.devices)
         percent = 0.001
         self.currentValues = {}
+        #print(self.devices)
         for row, dev in enumerate(self.devices):
             pv = dev.eid
             self.currentValues[pv] = dev.get_value()
-            self.ui.tableWidget.setItem(row,2,QtGui.QTableWidgetItem(str(self.currentValues[pv])))
+            self.ui.tableWidget.setItem(row, 2, QtGui.QTableWidgetItem(str(self.currentValues[pv])))
 
             tol  = abs(self.startValues[pv]*percent)
             diff = abs(abs(self.startValues[pv]) - abs(self.currentValues[pv]))
             if diff > tol:
-                self.ui.tableWidget.item(row,2).setForeground(QtGui.QColor(255, 101, 101))#red
+                self.ui.tableWidget.item(row, 2).setForeground(QtGui.QColor(255, 101, 101))#red
             else:
-                self.ui.tableWidget.item(row,2).setForeground(QtGui.QColor(255, 255, 255))#white
+                self.ui.tableWidget.item(row, 2).setForeground(QtGui.QColor(255, 255, 255))#white
         QApplication.processEvents()
 
     def resetAll(self):

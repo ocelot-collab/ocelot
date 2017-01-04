@@ -465,7 +465,7 @@ class SecondTM(TransferMap):
             X = transform_vec_ent(X, dx, dy, -tilt)
 
         n = len(X)
-        Xr = transpose(dot(R, transpose(X.reshape(n / 6, 6)))).reshape(n)
+        Xr = transpose(dot(R, transpose(X.reshape(int(n / 6), 6)))).reshape(n)
 
         # Xt = zeros(n)
         x, px, y, py, tau, dp = X[0::6], X[1::6], X[2::6], X[3::6], X[4::6], X[5::6]

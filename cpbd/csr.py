@@ -176,7 +176,7 @@ def Q2EQUI(q, BS_params, SBINB, NBIN):
             if NBIN[k] > 0:
                 n1 = n2 + 1
                 n2 = n2 + NBIN[k]
-                Q_BIN[k] = sum(q[n1-1:n2])
+                Q_BIN[k] = sum(q[int(n1-1):int(n2)])
 
     # put sub - bins to bins
     qsum = np.append([0], np.cumsum(Q_BIN))
@@ -230,7 +230,7 @@ def Q2EQUI(q, BS_params, SBINB, NBIN):
         Nz = np.round((z2 - z1) / step)
         step = (z2 - z1) / Nz
 
-    charge_per_step = np.zeros(Nz)
+    charge_per_step = np.zeros(int(Nz))
     if IP_method == 1:
         for nb in arange(N_BIN):
             aa = BIN[0][nb] - z1
@@ -262,7 +262,7 @@ def Q2EQUI(q, BS_params, SBINB, NBIN):
             for k in arange(k1, k2):
                 xx = (k - 1) * step
                 yy = fact * np.exp(-0.5 * ((xx - mitte) / sigma) ** 2)
-                charge_per_step[k-1] += yy * qbin
+                charge_per_step[int(k-1)] += yy * qbin
 
     else:
         for nb in arange(N_BIN):
@@ -308,7 +308,7 @@ class CSR:
         # another filter
         self.filter_order = 10
         self.n_mesh = 345
-        self.pict_debug = False
+        self.pict_debug = True
         if self.pict_debug:
             self.f = plt.figure(figsize=(12, 9))
             plt.ion()
@@ -591,33 +591,39 @@ class CSR:
 
         if self.pict_debug:
             self.f.clear()
-            self.f.add_subplot(411)
-            plt.plot(self.csr_traj[3,:], self.csr_traj[1,:],"r",  self.csr_traj[3,itr_ra], self.csr_traj[1,itr_ra], "bo")
+            self.f.add_subplot(311)
+            plt.plot(self.csr_traj[3,:], self.csr_traj[1,:], "r",  self.csr_traj[3,itr_ra], self.csr_traj[1,itr_ra], "bo")
 
-            #self.f.add_subplot(412)
-            #plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
-            #plt.plot(np.linspace(s1, s1+st*len(lam_K1), len(lam_K1))*1000, lam_K1)
-
+            self.f.add_subplot(312)
+            plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
+            plt.plot(np.linspace(s1, s1+st*len(lam_K1), len(lam_K1))*1000, lam_K1/delta_s/1000.)
+            plt.ylim(-2500, 2500)
+            plt.ylabel("dE, keV/m")
             #self.f.add_subplot(413)
             #plt.xlim(s1*1000, (s1+st*len(lam_K1))*1000)
             #plt.plot(np.linspace(s1, s1+st*Ns, Ns)*1000, lam_ds[:Ns])
 
-            self.f.add_subplot(412)
+            self.f.add_subplot(313)
             bins_start, hist_start = get_current(p_array, charge=p_array.q_array[0], num_bins=300)
-            plt.plot(-bins_start[::-1]*1000, hist_start[::-1])
+            plt.plot(-bins_start[::-1]*1000, hist_start[::-1], "b", lw=2)
             plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
+            #plt.xlim(-3, 3)
+            plt.ylim(0, 12000)
             plt.ylabel("I, A")
-            self.f.add_subplot(413)
-            #bins_start, hist_start = get_current(p_array, charge=p_array.q_array[0], num_bins=300)
-            plt.plot(-p_array.particles[4::60][::-1]*1000, p_array.particles[0::60][::-1]*1000, "r.")
-            plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
-            plt.ylabel("X, mm")
-            self.f.add_subplot(414)
-            #bins_start, hist_start = get_current(p_array, charge=p_array.q_array[0], num_bins=300)
-            plt.plot(-p_array.particles[4::60][::-1]*1000, p_array.particles[5::60][::-1], "r.")
-            plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
-            plt.ylabel("dE/E")
-            plt.xlabel("S, mm")
+            #self.f.add_subplot(413)
+            ##bins_start, hist_start = get_current(p_array, charge=p_array.q_array[0], num_bins=300)
+            #plt.plot(-p_array.particles[4::60][::-1]*1000, p_array.particles[0::60][::-1]*1000, "r.")
+            ##plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
+            #plt.xlim(-3, 3)
+            #plt.ylim(-10, 6)
+            #plt.ylabel("X, mm")
+            #self.f.add_subplot(414)
+            ##bins_start, hist_start = get_current(p_array, charge=p_array.q_array[0], num_bins=300)
+            #plt.plot(-p_array.particles[4::60][::-1]*1000, p_array.particles[5::60][::-1], "g.")
+            ##plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
+            #plt.xlim(-3, 3)
+            #plt.ylabel("dE/E")
+            #plt.xlabel("S, mm")
             x = str(int(int(np.around(s_cur, decimals=3)*1000)/10))
             z = "0"*(3 - len(x))
             plt.savefig( x + '.png')

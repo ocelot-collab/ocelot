@@ -105,8 +105,8 @@ class WakeTable:
             L = W[ind + 1, 1]
             Cinv = W[ind + 2, 0]
             nm = int(W[ind+2, 1])
-            n = np.floor(nm/10)
-            m = nm - n*10
+            n = int(np.floor(nm/10))
+            m = int(nm - n*10)
             H[n, m] = i
             ind = ind + 2
             if N0 > 0:

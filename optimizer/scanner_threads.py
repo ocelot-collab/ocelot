@@ -214,7 +214,7 @@ class GpScanner(threading.Thread):
 
         #set new timing variables
         #self.mi.secs_to_ave = self.parent.data_delay
-        self.total_delay = self.parent.trim_delay+self.parent.data_delay
+        self.total_delay = self.parent.trim_delay + self.parent.data_delay
 
         # -------------- GP config setup -------------- #
 

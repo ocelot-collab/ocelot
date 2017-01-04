@@ -10,10 +10,7 @@ from PyQt4.QtGui import QApplication, QFrame, QPushButton, QClipboard, QTableWid
 from PyQt4 import QtGui, QtCore, Qt, uic
 import sys
 import time
-#from ocelot.optimizer.mint.opt_objects import *
-from ocelot.optimizer.mint import opt_objects as obj
-from ocelot.optimizer.mint.lcls_interface import *
-
+from ocelot.optimizer.mint.opt_objects import *
 
 class customTW(QTableWidget):
     """
@@ -35,57 +32,11 @@ class customTW(QTableWidget):
                 evt (QEvent): Event object passed in from QT
         """
         button = evt.button()
-        #print("TW Release event: ", button, self.parent.enableMiddleClick)
-        if (button == 4) and (self.parent.enableMiddleClick):
-
-            pv = QtGui.QApplication.clipboard().text()
-            self.parent.addPv(pv)
-            #print(QtGui.QApplication.clipboard().text())
-        else:
-            QTableWidget.mouseReleaseEvent(self, evt)
-
-    def mouseReleaseEvent_mclick(self, evt):
-        """
-        Grabs string from the clipboard if middle button click.
-
-        Tries to then add the PV to the parent GUI pv lists.
-        Calls parent.addPv() method.
-
-        Args:
-                evt (QEvent): Event object passed in from QT
-        """
-        button = evt.button()
         if (button == 4) and (self.parent.enableMiddleClick):
             pv = QtGui.QApplication.clipboard().text(mode=QClipboard.Selection)
             self.parent.addPv(pv)
         else:
-            QTableWidget.mouseReleaseEvent(self, evt)
-
-    def contextMenuEvent(self, event):
-        if self.selectionModel().selection().indexes():
-            rows = []
-            for i in self.selectionModel().selection().indexes():
-                row, column = i.row(), i.column()
-                rows.append(row)
-            self.menu = QtGui.QMenu(self)
-            deleteAction = QtGui.QAction('Delete', self)
-            deleteAction.triggered.connect(lambda: self.deleteSlot(rows))
-            self.menu.addAction(deleteAction)
-            # add other required actions
-            self.menu.popup(QtGui.QCursor.pos())
-
-
-    def deleteSlot(self, rows):
-        print ("delete rows called", rows)
-        for row in rows[::-1]:
-            self.parent.ui.tableWidget.removeRow(row)
-
-        table = self.parent.get_state()
-        pvs = table["id"]
-        self.parent.getPvList(pvs)
-        self.parent.uncheckBoxes()
-        self.parent.set_state(table)
-
+            QTableWidget.mouseReleaseEvent(self,evt)
 
 class ResetpanelBoxWindow(ResetpanelWindow):
     """
@@ -112,7 +63,6 @@ class ResetpanelBoxWindow(ResetpanelWindow):
         self.check.clicked.connect(lambda: self.getRows(2))
         self.uncheck.clicked.connect(lambda: self.getRows(0))
 
-
         #make button text bigger
         #self.check.setStyleSheet('font-size: 18pt; font-family: Courier;')
 
@@ -125,7 +75,6 @@ class ResetpanelBoxWindow(ResetpanelWindow):
         self.ui.gridLayout.addWidget(self.ui.tableWidget,0,0)
         #self.ui.tableWidget.itemClicked.connect(self.con)
 
-
     def mouseReleaseEvent(self, evt):
         """
         Get PV coppied from the system clipboard on button release
@@ -133,7 +82,6 @@ class ResetpanelBoxWindow(ResetpanelWindow):
         Button 4 is the middle click button.
         """
         button = evt.button()
-        print("Release event: ", button, self.parent.enableMiddleClick)
         if (button == 4) and (self.enableMiddleClick):
             pv = QtGui.QApplication.clipboard().text(mode=QClipboard.Selection)
             self.addPv(pv)
@@ -150,9 +98,7 @@ class ResetpanelBoxWindow(ResetpanelWindow):
             print ("PV already in list")
             return
         try:
-            #print("try to create dev")
-            dev = self.create_devices(pvs=[pv])[0]#obj.TestDevice(eid=pv)
-
+            dev = SLACDevice(eid=pv)
             #dev.get_value()
             #pv_obj = epics.PV(str(pv))
         except:
@@ -162,7 +108,6 @@ class ResetpanelBoxWindow(ResetpanelWindow):
         #time.sleep(0.05)
         #state=dev.connect(timeout=0.05)
         state = dev.state()
-        print("state=", state)
         if state:
             self.pvs.append(pv)
             self.devices.append(dev)
@@ -170,50 +115,31 @@ class ResetpanelBoxWindow(ResetpanelWindow):
             #self.pv_objects[pv].add_callback(callback=self.PvGetCallBack)
             val = dev.get_value()
             self.startValues[pv] = val
-            print(self.pvs)
-        table = self.get_state()
         self.initTable()
         self.addCheckBoxes()
-        self.uncheckBoxes()
-        self.set_state(table)
-
-
-    #def get_devices(self, pvs):
-    #    # TODO: method for creation of Device
-    #    devices = []
-    #    for pv in pvs:
-    #        devices.append(SLACDevice(eid=pv))
-    #    return devices
-
-    def create_devices(self, pvs):
-        # TODO: add new method for creation of devices
-        #self.pvs = self.getPvsFromCbState()
-        devices = []
-        for pv in pvs:
-            dev = obj.TestDevice(eid=pv)
-            dev.dp = TestLCLSDeviceProperties(self.ui.tableWidget)
-            devices.append(dev)
-        return devices
 
     def get_devices(self, pvs):
-        d_pvs = [dev.eid for dev in self.devices]
-        inxs = [d_pvs.index(pv) for pv in pvs]
-        return [self.devices[inx] for inx in inxs]
+        # TODO: method for creation of Device
+        devices = []
+        for pv in pvs:
+            devices.append(SLACDevice(eid=pv))
+        return devices
 
-    def getPvList(self, pvs_in=None):
+
+    def getPvList(self,pvs_in=None):
         """
         Redefine method to add in checkboxes when getting the PV list.
 
         Copied from resetpanel.py
         """
         print ("LOADING:")
-        if pvs_in == None:
-            print ('Exiting', pvs_in)
+        if not pvs_in:
+            print ('Exiting')
             return
 
         if type(pvs_in) != list:
             self.pvs = []
-            #print(pvs_in)
+            print(pvs_in)
             for line in open(pvs_in):
                 l = line.rstrip('\n')
                 if l[0] == '#':
@@ -223,35 +149,12 @@ class ResetpanelBoxWindow(ResetpanelWindow):
             self.pvs = pvs_in
 
         print ("PVS LOADED", self.pvs)
-        self.devices = self.create_devices(self.pvs)
+        self.devices = self.get_devices(self.pvs)
         self.getStartValues()
         self.initTable()
         self.addCheckBoxes()
 
-    def get_state(self):
-        devs = {"id":[], "lims": []}
-        for row in range(self.ui.tableWidget.rowCount()):
-            name = str(self.ui.tableWidget.item(row, 0).text())
-            devs["id"].append(name)
-            devs["lims"].append([self.ui.tableWidget.cellWidget(row, 3).value(), self.ui.tableWidget.cellWidget(row, 4).value()])
-        return devs
-
-    def set_state(self, table):
-        for row in range(self.ui.tableWidget.rowCount()):
-            pv = str(self.ui.tableWidget.item(row, 0).text())
-            if pv in table["id"]:
-                indx = table["id"].index(pv)
-                self.ui.tableWidget.cellWidget(row, 3).setValue(table["lims"][indx][0])
-                self.ui.tableWidget.cellWidget(row, 4).setValue(table["lims"][indx][1])
-
-
-        #for row, dev in enumerate(table["id"]):
-        #    #put PV in the table
-        #    self.ui.tableWidget.item(row, 0).setText(dev)
-        #    self.ui.tableWidget.cellWidget(row, 3).setValue(table["lims"][row][0])
-        #    self.ui.tableWidget.cellWidget(row, 4).setValue(table["lims"][row][1])
-
-    def getRows(self, state):
+    def getRows(self,state):
         """
         Method to set the UI checkbox state from slected rows.
 
@@ -278,42 +181,26 @@ class ResetpanelBoxWindow(ResetpanelWindow):
         headers = ["PVs","Saved Value","Current Value", "Min","Max", "Active"]
         self.ui.tableWidget.setColumnCount(len(headers))
         self.ui.tableWidget.setHorizontalHeaderLabels(headers)
-        header = self.ui.tableWidget.horizontalHeader()
-        header.setResizeMode(0, QtGui.QHeaderView.Stretch)
-        header.setResizeMode(1, QtGui.QHeaderView.ResizeToContents)
-        header.setResizeMode(2, QtGui.QHeaderView.ResizeToContents)
-        header.setResizeMode(3, QtGui.QHeaderView.ResizeToContents)
-        header.setResizeMode(4, QtGui.QHeaderView.ResizeToContents)
-        #header.setResizeMode(5, QtGui.QHeaderView.ResizeToContents)
-        header.setResizeMode(5, QtGui.QHeaderView.Fixed)
-        #self.ui.tableWidget.horizontalHeader().resizeSection(5, 80)
-        #self.ui.tableWidget.horizontalHeader().resizeSection(3, 80)
+
         for row in range(len(self.pvs)+1):
             eng = QtCore.QLocale(QtCore.QLocale.English, QtCore.QLocale.UnitedStates)
             #spin_box = QtGui.QSpinBox()
             for i in range(2):
                 spin_box = QtGui.QDoubleSpinBox()
-                if i == 0:
-                    spin_box.setStyleSheet("color: rgb(153,204,255); font-size: 16px")
-                else:
-                    spin_box.setStyleSheet("color: rgb(255,0,0); font-size: 16px")
                 spin_box.setLocale(eng)
                 spin_box.setDecimals(3)
                 spin_box.setMaximum(100)
                 spin_box.setMinimum(-100)
                 spin_box.setSingleStep(0.1)
                 spin_box.setAccelerated(True)
-                #spin_box.setFixedWidth(50)
                 self.ui.tableWidget.setCellWidget(row, 3+i, spin_box)
-                self.ui.tableWidget.resizeColumnsToContents()
                 #self.ui.tableWidget.setItem(row, 3 + i, spin_box)
 
             #spin_box
             checkBoxItem = QtGui.QTableWidgetItem()
-            #checkBoxItem.setBackgroundColor(QtGui.QColor(100,100,150))
             checkBoxItem.setCheckState(QtCore.Qt.Checked)
             flags = checkBoxItem.flags()
-            #flags != flags
+            flags != flags
             checkBoxItem.setFlags(flags)
             self.ui.tableWidget.setItem(row, 5, checkBoxItem)
             #self.ui.tableWidget.setItem(row, 4, spin_box)
@@ -348,7 +235,7 @@ class ResetpanelBoxWindow(ResetpanelWindow):
         for row, dev in enumerate(self.devices):
             pv = self.pvs[row]
             state = self.ui.tableWidget.item(row, 5).checkState()
-            print("STATE")
+            print ("STATE")
             if state == 2:
                 self.startValues[pv] = dev.get_value()
                 self.ui.tableWidget.setItem(row, 1, QtGui.QTableWidgetItem(str(self.startValues[pv])))
@@ -356,6 +243,13 @@ class ResetpanelBoxWindow(ResetpanelWindow):
                 #self.pv_objects[pv].add_callback(callback=self.PvGetCallBack)
         self.ui.updateReference.setText("Update Reference")
 
+    def get_limits(self, pv):
+        lims = []
+        for row in range(len(self.pvs)):
+            if pv == str(self.ui.tableWidget.item(row, 0).text()):
+                lims = [self.ui.tableWidget.cellWidget(row, 3).value(), self.ui.tableWidget.cellWidget(row, 4).value()]
+                return lims
+        return lims
 
     def getPvsFromCbState(self):
 
@@ -371,7 +265,6 @@ class ResetpanelBoxWindow(ResetpanelWindow):
             if state == 2:
                 pvs.append(str(self.ui.tableWidget.item(row, 0).text()))
         return pvs
-
 
     #switch string from to SLECTED
     def launchPopupAll(self):

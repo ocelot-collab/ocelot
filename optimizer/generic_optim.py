@@ -56,7 +56,7 @@ class OcelotInterfaceWindow(QFrame):
         Make the timer object that updates GUI on clock cycle durring a scan.
         """
 
-        self.set_file = "default.json"
+        self.set_file = "./parameters/default.json"
         # initialize
         self.mi = TestLCLSMachineInterface()
         self.dp = TestLCLSDeviceProperties()
@@ -75,6 +75,7 @@ class OcelotInterfaceWindow(QFrame):
 
         #load in the dark theme style sheet
         #self.loadStyleSheet()
+        self.hyper_file = "../parameters/hyperparameters.npy"
 
         self.ui.pb_start_scan.clicked.connect(self.start_scan)
         self.ui.pb_edit_obj_func.clicked.connect(self.run_editor)
@@ -149,13 +150,16 @@ class OcelotInterfaceWindow(QFrame):
         QFrame.closeEvent(self, event)
 
     def start_scan(self):
+
         self.scanStartTime = time.time()
+
         if self.ui.pb_start_scan.text() == "Stop scan":
             self.opt.opt_ctrl.stop()
             del(self.opt)
             self.ui.pb_start_scan.setStyleSheet("color: rgb(85, 255, 127);")
             self.ui.pb_start_scan.setText("Start scan")
             return 0
+
         self.pvs = self.ui.widget.getPvsFromCbState()
         self.devices = self.ui.widget.get_devices(self.pvs)
 
@@ -166,7 +170,6 @@ class OcelotInterfaceWindow(QFrame):
         self.setUpMultiPlot(self.devices)
         self.multiPvTimer.start(100)
 
-
         self.set_obj_fun()
         #self.objective_func = obj_function.TestTarget()
         minimizer = self.scan_method_select()
@@ -174,14 +177,18 @@ class OcelotInterfaceWindow(QFrame):
         if minimizer.__class__ == mint.GaussProcess:
             minimizer.seed_iter = self.ui.sb_seed_iter.value()
             minimizer.seed_timeout = self.ui.sb_tdelay.value()
+            minimizer.hyper_file = self.hyper_file
+
         elif minimizer.__class__ == mint.Simplex:
             if self.ui.cb_use_isim.checkState():
                 minimizer.dev_steps = []
+
                 for dev in self.devices:
                     if dev.simplex_step == 0:
                         lims = dev.get_limits()
                         rel_step = self.ui.sb_isim_rel_step.value()
                         minimizer.dev_steps.append((lims[1] - lims[0])*rel_step/100.)
+
             else:
                 minimizer.dev_steps = None
 
@@ -194,11 +201,13 @@ class OcelotInterfaceWindow(QFrame):
         self.opt_control.m_status = self.m_status
         self.opt.opt_ctrl = self.opt_control
         self.opt.timeout = self.ui.sb_tdelay.value()
+
         self.opt.minimizer = minimizer
+
         seq = [mint.Action(func=self.opt.max_target_func, args=[self.objective_func, self.devices])]
         self.opt.seq = seq
 
-        # opt.eval(seq)
+        #self.opt.eval(seq)
         self.opt.start()
         self.ui.pb_start_scan.setText("Stop scan")
         self.ui.pb_start_scan.setStyleSheet("color: red")

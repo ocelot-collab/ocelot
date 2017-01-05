@@ -10,6 +10,7 @@ import numpy as np
 from ocelot.optimizer.mint.opt_objects import *
 from scipy import optimize
 from ocelot.optimizer.GP.bayes_optimization import *
+from ocelot.optimizer.GP.OnlineGP import OGP
 import pandas as pd
 from threading import Thread
 
@@ -84,6 +85,7 @@ class GaussProcess(Minimizer):
         #                  m=m, bounds=bounds, iter_bound=iter_bound, prior_data=prior_data)
         self.target = None
         self.devices = []
+        self.energy = 3
         #GP parameters
         self.numBV = 30
         self.xi = 0.01
@@ -92,6 +94,7 @@ class GaussProcess(Minimizer):
         self.alt_param = -1
         self.m = 200
         self.iter_bound = False
+        self.hyper_file = "../parameters/hyperparameters.npy"
 
     def seed_simplex(self):
         opt_smx = Optimizer()
@@ -115,19 +118,19 @@ class GaussProcess(Minimizer):
         #print(self.devices)
         pvs = [dev.eid for dev in self.devices]
         #print(pvs)
-        hyp_params = HyperParams(pvs=pvs, filename="../parameters/hyperparameters.npy")
+        hyp_params = HyperParams(pvs=pvs, filename=self.hyper_file)
         ave = np.mean(-np.array(self.seed_y_data))
         std = np.std(-np.array(self.seed_y_data))
         noise = hyp_params.calcNoiseHP(ave, std=0.)
         coeff = hyp_params.calcAmpCoeffHP(ave, std=0.)
+
         len_sc_hyps = []
         for dev in self.devices:
             ave = 10
             std = 3
             len_sc_hyps.append(hyp_params.calcLengthScaleHP(ave, std))
-        #print("len_sc_hyps", len_sc_hyps )
 
-        #hyps = hyp_params.loadHyperParams(energy=3, detector_stat_params=target.get_stat_params())
+        #hyps = hyp_params.loadHyperParams(energy=self.energy, detector_stat_params=target.get_stat_params())
         hyps1 = (np.array([len_sc_hyps]), coeff, noise) #(np.array([hyps]), coeff, noise)
         #print("hyps1", hyps1)
         #init model
@@ -138,8 +141,6 @@ class GaussProcess(Minimizer):
                            alt_param=self.alt_param, m=self.m, bounds=self.bounds, iter_bound=self.iter_bound,
                                 prior_data=self.prior_data)
 
-    #def setup(self, ):
-
 
     def minimize(self,  error_func, x):
         #self.target_func = error_func
@@ -147,8 +148,6 @@ class GaussProcess(Minimizer):
         self.seed_simplex()
         self.preprocess()
         x = [dev.get_value() for dev in self.devices]
-        #print(self.target)
-        #exit(0)
         print("start GP")
         self.scanner.minimize(error_func, x)
         print("finish GP")
@@ -192,6 +191,7 @@ class CustomMinimizer(Minimizer):
                                   nfev=funcalls, success=(niter > 1))
         res = optimize.minimize(error_func, x, method=custmin, options=dict(stepsize=0.05))
         return res
+
 
 class MachineStatus:
     def __init__(self):
@@ -385,24 +385,31 @@ def test_simplex():
     test simplex method
     :return:
     """
+    d1 = TestDevice(eid="d1")
+    d2 = TestDevice(eid="d2")
+    d3 = TestDevice(eid="d3")
+
     def get_limits():
         return [-100, 100]
-    d1 = TestDevice(eid="d1")
+
     d1.get_limits = get_limits
-    d2 = TestDevice(eid="d2")
     d2.get_limits = get_limits
-    d3 = TestDevice(eid="d3")
     d3.get_limits = get_limits
+
+    devices = [d1, d2, d3]
     target = TestTarget()
 
+    # init Optimizer
     opt = Optimizer()
     opt.timeout = 0
+
+    # init Minimizer
     minimizer = Simplex()
     minimizer.max_iter = 300
-    opt.minimizer = minimizer
-    #opt.debug = True
 
-    seq = [Action(func=opt.max_target_func, args=[ target, [d1, d2, d3]])]
+    opt.minimizer = minimizer
+
+    seq = [Action(func=opt.max_target_func, args=[target, devices])]
     opt.eval(seq)
 
 
@@ -411,41 +418,39 @@ def test_gauss_process():
     test simplex method
     :return:
     """
+    d1 = TestDevice(eid="d1")
+    d2 = TestDevice(eid="d2")
+    d3 = TestDevice(eid="d3")
+
     def get_limits():
         return [-100, 100]
-    d1 = TestDevice(eid="d1")
+
     d1.get_limits = get_limits
-    d2 = TestDevice(eid="d2")
     d2.get_limits = get_limits
-    d3 = TestDevice(eid="d3")
     d3.get_limits = get_limits
 
-    devices = [d1, d2]
+    devices = [d1, d2, d3]
     target = TestTarget()
 
+    # init Optimizer
     opt = Optimizer()
-    #opt.devices = devices
     opt.timeout = 0
+
+    # init Minimizer
     minimizer = GaussProcess()
     minimizer.seed_iter = 3
-    #minimizer.target = target
-    #minimizer.devices = devices
     minimizer.max_iter = 300
 
-    #minimizer.seed_simplex()
-    #minimizer.preprocess()
-
     opt.minimizer = minimizer
-    #opt.debug = True
 
     seq = [Action(func=opt.max_target_func, args=[ target, devices])]
     opt.eval(seq)
 
 
-from itertools import chain
-import scipy
-from ocelot.optimizer.GP.OnlineGP import OGP
-from ocelot.optimizer.GP.bayes_optimization import BayesOpt, HyperParams
+#from itertools import chain
+#import scipy
+#from ocelot.optimizer.GP.OnlineGP import OGP
+#from ocelot.optimizer.GP.bayes_optimization import BayesOpt, HyperParams
 
 
 def test_GP():

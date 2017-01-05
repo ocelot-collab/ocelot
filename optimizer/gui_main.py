@@ -17,6 +17,13 @@ class MainWindow(Ui_Form):
         self.pb_load.clicked.connect(self.load_state_from)
         self.pb_rewrite.clicked.connect(self.rewrite_default)
         self.cb_use_isim.stateChanged.connect(self.change_state_scipy_setup)
+        self.pb_hyper_file.clicked.connect(self.get_hyper_file)
+        #font = self.pb_hyper_file.font()
+        #font.setPointSize(16)
+        #self.pb_hyper_file.setFont(font)
+        #self.pb_hyper_file.setText("test")
+        #self.pb_hyper_file.setStyleSheet("font: 16px, color: red")
+
         #self.window = window
 
     def save_state(self, filename):
@@ -55,6 +62,8 @@ class MainWindow(Ui_Form):
 
         table["isim_rel_step"] = self.sb_isim_rel_step.value()
         table["use_isim"] = self.cb_use_isim.checkState()
+
+        table["hyper_file"] = self.Form.hyper_file
 
         with open(filename, 'w') as f:
             json.dump(table, f)
@@ -102,6 +111,9 @@ class MainWindow(Ui_Form):
             self.sb_isim_rel_step.setValue(table["isim_rel_step"])
             self.cb_use_isim.setCheckState(table["use_isim"])
 
+            self.Form.hyper_file = table["hyper_file"]
+            self.pb_hyper_file.setText(self.Form.hyper_file)
+
         except:
             pass
 
@@ -119,6 +131,14 @@ class MainWindow(Ui_Form):
         if filename:
             self.Form.set_file = filename
             self.restore_state(filename)
+
+    def get_hyper_file(self):
+        filename = QtGui.QFileDialog.getOpenFileName(self.Form, 'Load Hyper Parameters', filter ="txt (*.npy *.)")
+        if filename:
+            self.Form.hyper_file = str(filename)
+            self.pb_hyper_file.setText(self.Form.hyper_file)
+            #print(filename)
+
 
     def rewrite_default(self):
         self.Form.set_file = "default.json"

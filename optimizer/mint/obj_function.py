@@ -15,8 +15,10 @@ class TestTarget_new(Target):
         self.kill = False
         self.pen_max = 100
         self.niter = 0
-        self.y = []
-        self.x = []
+        self.penalties = []
+        self.times = []
+        self.alarms = []
+        self.values = []
 
     def get_penalty(self):
         sase = self.get_value()
@@ -33,8 +35,10 @@ class TestTarget_new(Target):
         if self.debug: print('penalty:', pen)
         self.niter += 1
         print("niter = ", self.niter)
-        self.y.append(pen)
-        self.x.append(time.time())
+        self.penalties.append(pen)
+        self.times.append(time.time())
+        self.values.append(sase)
+        self.alarms.append(alarm)
         return pen
 
     def get_value(self):

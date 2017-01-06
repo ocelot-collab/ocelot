@@ -110,6 +110,7 @@ class MainWindow(Ui_Form):
 
             self.sb_isim_rel_step.setValue(table["isim_rel_step"])
             self.cb_use_isim.setCheckState(table["use_isim"])
+            self.change_state_scipy_setup()
 
             self.Form.hyper_file = table["hyper_file"]
             self.pb_hyper_file.setText(self.Form.hyper_file)

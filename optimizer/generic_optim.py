@@ -37,10 +37,7 @@ from ocelot.optimizer.mint.opt_objects import *
 from ocelot.optimizer.mint import mint
 from ocelot.optimizer.mint import opt_objects as obj
 from ocelot.optimizer.mint import obj_function
-
-
-def func(self):
-    return 0
+from ocelot.utils import db
 
 
 class OcelotInterfaceWindow(QFrame):
@@ -69,6 +66,11 @@ class OcelotInterfaceWindow(QFrame):
         self.objective_func_pv = "test_obj"
 
         self.addPlots()
+
+        # database
+        self.dbname = "./parameters/test.db"
+        # db.create_db(self.dbname)
+        self.db = db.PerfDB(dbname=self.dbname)
 
         #object funciton selectinator (gdet)
         #self.setObFunc()
@@ -155,6 +157,7 @@ class OcelotInterfaceWindow(QFrame):
 
         if self.ui.pb_start_scan.text() == "Stop scan":
             self.opt.opt_ctrl.stop()
+            self.save2db()
             del(self.opt)
             self.ui.pb_start_scan.setStyleSheet("color: rgb(85, 255, 127);")
             self.ui.pb_start_scan.setText("Start scan")
@@ -194,9 +197,11 @@ class OcelotInterfaceWindow(QFrame):
 
         #minimizer = mint.Simplex()
         #minimizer = mint.CustomMinimizer()
-        minimizer.max_iter = self.ui.sb_num_iter.value()
+        self.max_iter = self.ui.sb_num_iter.value()
+        minimizer.max_iter = self.max_iter
 
         self.opt = mint.Optimizer()
+
         self.opt_control = mint.OptControl()
         self.opt_control.m_status = self.m_status
         self.opt.opt_ctrl = self.opt_control
@@ -214,11 +219,48 @@ class OcelotInterfaceWindow(QFrame):
 
     def scan_finished(self):
         try:
-            if not self.opt.isAlive():
+            if not self.opt.isAlive() and self.ui.pb_start_scan.text() == "Stop scan":
                 self.ui.pb_start_scan.setStyleSheet("color: rgb(85, 255, 127);")
                 self.ui.pb_start_scan.setText("Start scan")
+                self.save2db()
         except:
             pass
+
+
+    def save2db(self):
+        d_names = []
+        d_start = []
+        d_stop = []
+        for dev in self.devices:
+            d_names.append(dev.eid + "_val")
+            d_start.append(dev.values[0])
+            d_stop.append(dev.values[1])
+
+            d_names.append(dev.eid + "_lim")
+            d_start.append(dev.get_limits()[0])
+            d_stop.append(dev.get_limits()[1])
+
+        o_names = ["obj_id", "obj_value", "obj_pen", "niter"]
+        o_start = [self.objective_func.eid, self.objective_func.values[0], self.objective_func.penalties[0], self.max_iter]
+        o_stop = [self.objective_func.eid, self.objective_func.values[-1], self.objective_func.penalties[-1],  len(self.objective_func.penalties)]
+
+        self.db.new_tuning({'wl': 13.6, 'charge': 0.1, 'comment': 'test tuning'})
+        tune_id = self.db.current_tuning_id()
+
+        start_sase = self.objective_func.values[0]
+        stop_sase = self.objective_func.values[-1]
+        self.db.new_action(tune_id, start_sase=start_sase, end_sase=stop_sase)
+
+        #print('current actions in tuning', [(t.id, t.tuning_id, t.sase_start, t.sase_end) for t in self.db.get_actions()])
+
+        action_id = self.db.current_action_id()
+
+        self.db.add_action_parameters(tune_id, action_id, param_names=o_names+d_names, start_vals=o_start+d_start,
+                                 end_vals=o_stop+d_stop)
+        print('current actions', [(t.id, t.tuning_id, t.sase_start, t.sase_end) for t in self.db.get_actions()])
+        print('current action parameters', [(p.tuning_id, p.action_id, p.par_name, p.start_value, p.end_value) for p in
+                                            self.db.get_action_parameters(tune_id, action_id)])
+
 
     def is_le_addr_ok(self, line_edit):
         dev = str(line_edit.text())
@@ -286,28 +328,17 @@ class OcelotInterfaceWindow(QFrame):
         """
         Collects data and updates plot on every GUI clock cycle.
         """
-        #get x,y obj func data from the machine interface
-        try:
-            y = self.objective_func.y
-        except:
-            #self.scanFinished()
-            pass
-        #x = np.array(self.thread.mi.data['timestamps'])-self.scanStartTime
+        #get times, penalties obj func data from the machine interface
+        y = self.objective_func.penalties
 
-
-        x = np.array(self.objective_func.x) - self.scanStartTime
-
-        #print("X ==== ", np.array(self.thread.mi.data['timestamps']), x, self.scanStartTime)
-        #set data to liek pg line object
+        x = np.array(self.objective_func.times) - self.scanStartTime
 
         self.obj_func_line.setData(x=x, y=y)
 
         #plot data for all devices being scanned
         for dev in self.devices:
-            y = np.array(dev.data)-self.multiPlotStarts[dev.eid]
-            #print(self.scanStartTime, dev.time)
+            y = np.array(dev.values)-self.multiPlotStarts[dev.eid]
             x = np.array(dev.time) - self.scanStartTime
-            #print(dev.time, self.scanStartTime)
             line = self.multilines[dev.eid]
             line.setData(x=x, y=y)
 
@@ -402,6 +433,7 @@ class OcelotInterfaceWindow(QFrame):
 
     def error_box(self, message):
         QtGui.QMessageBox.about(self, "Error box", message)
+
 
 
 class customLegend(pg.LegendItem):

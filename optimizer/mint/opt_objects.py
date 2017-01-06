@@ -18,7 +18,7 @@ class Device(object):
     def __init__(self, eid=None):
         self.eid = eid
         self.id = eid
-        self.data = []
+        self.values = []
         self.time = []
         self.simplex_step = 0
 
@@ -35,7 +35,7 @@ class Device(object):
         return True
 
     def clean(self):
-        self.data = []
+        self.values = []
         self.time = []
 
 
@@ -43,12 +43,12 @@ class SLACDevice(Device):
    def __init__(self, eid=None):
        super(SLACDevice, self).__init__(eid=eid)
        self.test_value = 0.
-       self.data = []
+       self.values = []
        self.time = []
        self.nsets = 0
 
    def set_value(self, x):
-       self.data.append(x)
+       self.values.append(x)
        self.time.append(time.time())
        mi.set_value(self.eid, x)
 
@@ -66,7 +66,7 @@ class TestDevice(Device):
     def __init__(self, eid=None):
         super(TestDevice, self).__init__(eid=eid)
         self.test_value = 0.
-        self.data = []
+        self.values = []
         self.time = []
         self.nsets = 0
         self.mi = None
@@ -77,7 +77,7 @@ class TestDevice(Device):
         return self.test_value
 
     def set_value(self, value):
-        self.data.append(value)
+        self.values.append(value)
         self.nsets += 1
         self.time.append(time.time())
         self.test_value = value
@@ -105,12 +105,21 @@ class Target(object):
         self.eid = eid
         self.id = eid
 
+        self.penalties = []
+        self.values = []
+        self.alarms = []
+        self.times = []
+
     def get_value(self):
         return 0
 
     def get_penalty(self):
         pen = -self.get_value()
         return pen
+
+    def get_alarm(self):
+        return 0
+
 
 class SLACTarget(Target):
     def __init__(self, mi=None, dp=None, eid=None):
@@ -213,12 +222,15 @@ class TestTarget(Target):
         self.kill = False
         self.pen_max = 100
         self.niter = 0
-        self.y = []
-        self.x = []
+        self.penalties = []
+        self.times = []
+        self.alarms = []
+        self.values = []
 
     def get_penalty(self):
         sase = self.get_value()
         alarm = self.get_alarm()
+
         if self.debug: print('alarm:', alarm)
         if self.debug: print('sase:', sase)
         pen = 0.0
@@ -231,8 +243,10 @@ class TestTarget(Target):
         if self.debug: print('penalty:', pen)
         self.niter += 1
         print("niter = ", self.niter)
-        self.y.append(pen)
-        self.x.append(time.time())
+        self.penalties.append(pen)
+        self.times.append(time.time())
+        self.values.append(sase)
+        self.alarms.append(alarm)
         return pen
 
     def get_value(self):

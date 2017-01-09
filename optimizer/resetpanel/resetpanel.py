@@ -101,7 +101,11 @@ class ResetpanelWindow(QFrame):
     def getStartValues(self):
         """ Initializes start values for the PV list. """
         for dev in self.devices:
-            self.startValues[dev.eid] = dev.get_value()
+            try:
+                self.startValues[dev.eid] = dev.get_value()
+            except:
+                self.startValues[dev.eid] = None
+                print("Get Start Value: ", dev.eid, " not working")
             #print(self.startValues[dev.eid])
             #self.pv_objects[pv].add_callback(callback=self.PvGetCallBack)
 
@@ -184,6 +188,17 @@ class ResetpanelWindow(QFrame):
         self.currentValues = {}
         #print(self.devices)
         for row, dev in enumerate(self.devices):
+            if self.startValues[dev.eid] == None:
+                print(self.ui.tableWidget.item(row, 5))
+                #self.ui.tableWidget.item(row, 5).setBackgroundColor(QtGui.QColor(255, 101, 101))
+                self.ui.tableWidget.cellWidget(row, 5).setStyleSheet("background-color:#ff0000;")
+                #self.ui.tableWidget.item(row, 5).setStyleSheet()
+                self.ui.tableWidget.cellWidget(row, 5).setEnabled(False)
+                continue
+            else:
+                self.ui.tableWidget.cellWidget(row, 5).setEnabled(True)
+                self.ui.tableWidget.cellWidget(row, 5).setStyleSheet("background-color:#595959;")
+
             pv = dev.eid
             self.currentValues[pv] = dev.get_value()
             self.ui.tableWidget.setItem(row, 2, QtGui.QTableWidgetItem(str(self.currentValues[pv])))

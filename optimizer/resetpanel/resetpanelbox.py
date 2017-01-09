@@ -321,6 +321,10 @@ class ResetpanelBoxWindow(ResetpanelWindow):
                 self.ui.tableWidget.resizeColumnsToContents()
                 #self.ui.tableWidget.setItem(row, 3 + i, spin_box)
 
+            checkBoxItem = QtGui.QCheckBox()
+            checkBoxItem.setStyleSheet("background-color:#595959;")
+            self.ui.tableWidget.setCellWidget(row, 5, checkBoxItem)
+            """
             #spin_box
             checkBoxItem = QtGui.QTableWidgetItem()
             #checkBoxItem.setBackgroundColor(QtGui.QColor(100,100,150))
@@ -330,12 +334,13 @@ class ResetpanelBoxWindow(ResetpanelWindow):
             checkBoxItem.setFlags(flags)
             self.ui.tableWidget.setItem(row, 5, checkBoxItem)
             #self.ui.tableWidget.setItem(row, 4, spin_box)
-
+            """
 
     def uncheckBoxes(self):
         """ Method to unchecked all active boxes """
         for row in range(len(self.pvs)):
-            item=self.ui.tableWidget.item(row, 5)
+            #item=self.ui.tableWidget.item(row, 5)
+            item = self.ui.tableWidget.cellWidget(row, 5)
             item.setCheckState(False)
 
     def resetAll(self):
@@ -380,7 +385,7 @@ class ResetpanelBoxWindow(ResetpanelWindow):
         """
         pvs = []
         for row in range(len(self.pvs)):
-            state = self.ui.tableWidget.item(row, 5).checkState()
+            state = self.ui.tableWidget.cellWidget(row, 5).checkState()
             if state == 2:
                 pvs.append(str(self.ui.tableWidget.item(row, 0).text()))
         return pvs

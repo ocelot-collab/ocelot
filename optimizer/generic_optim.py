@@ -1,13 +1,19 @@
 #QT imports
 from __future__ import absolute_import, print_function
+
+import sys
+import os
+path = sys.path[0]
+indx = path.find("ocelot")
+sys.path.append(path[:indx])
+# for pyqtgraph import
+sys.path.append(path[:indx]+"ocelot")
+
 from PyQt4.QtGui import QApplication, QFrame, QPixmap, QMessageBox
 from PyQt4 import QtGui, QtCore
 
 #normal imports
 import numpy as np
-#import epics
-import sys
-import os
 import subprocess
 import platform
 import time

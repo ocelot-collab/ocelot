@@ -169,9 +169,14 @@ class ResetpanelBoxWindow(ResetpanelWindow):
             self.devices.append(dev)
             #self.pv_objects[pv]=epics.PV(pv)
             #self.pv_objects[pv].add_callback(callback=self.PvGetCallBack)
-            val = dev.get_value()
-            self.startValues[pv] = val
-            print(self.pvs)
+            self.getStartValues()
+            #try:
+            #    val = dev.get_value()
+            #except:
+            #    val = None
+
+            #self.startValues[pv] = val
+            #print(self.pvs)
         table = self.get_state()
         self.initTable()
         self.addCheckBoxes()

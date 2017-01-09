@@ -189,7 +189,7 @@ class ResetpanelWindow(QFrame):
         #print(self.devices)
         for row, dev in enumerate(self.devices):
             if self.startValues[dev.eid] == None:
-                print(self.ui.tableWidget.item(row, 5))
+                #print(self.ui.tableWidget.item(row, 5))
                 #self.ui.tableWidget.item(row, 5).setBackgroundColor(QtGui.QColor(255, 101, 101))
                 self.ui.tableWidget.cellWidget(row, 5).setStyleSheet("background-color:#ff0000;")
                 #self.ui.tableWidget.item(row, 5).setStyleSheet()

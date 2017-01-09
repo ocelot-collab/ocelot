@@ -18,7 +18,12 @@ from pylab import *
 import time
 import pickle
 from threading import Thread, Lock
-from ocelot.utils.db import *
+#from ocelot.utils.db import *
+from ocelot.optimizer.mint.opt_objects import Device
+
+class AlarmDevice(Device):
+   def __init__(self, eid=None):
+       super(AlarmDevice, self).__init__(eid=eid)
 
 
 class XFELMachineInterface():
@@ -149,11 +154,11 @@ class XFELMachineInterface():
 
     def get_value(self, device_name):
         #ch = 'XFEL.MAGNETS/MAGNET.ML/' + device_name + '/CURRENT.RBV'
-        ch = 'XFEL.MAGNETS/MAGNET.ML/' + device_name + '/KICK_MRAD.SP'
+        #ch = 'XFEL.MAGNETS/MAGNET.ML/' + device_name + '/KICK_MRAD.SP'
         #print("getting value = ", ch)
 
         #self.mutex.acquire()
-        val = pydoocs.read(ch)
+        val = pydoocs.read(device_name)
         #print(val)
         #['data']
         #self.mutex.release()
@@ -161,10 +166,10 @@ class XFELMachineInterface():
     
     def set_value(self, device_name, val):
         #ch = 'XFEL.MAGNETS/MAGNET.ML/' + device_name + '/CURRENT.SP'
-        ch = 'XFEL.MAGNETS/MAGNET.ML/' + device_name + '/KICK_MRAD.SP'
-        print (ch, val)
+        #ch = 'XFEL.MAGNETS/MAGNET.ML/' + device_name + '/KICK_MRAD.SP'
+        print (device_name, val)
         #self.mutex.acquire()
-        pydoocs.write(ch, str(val))
+        #pydoocs.write(device_name, str(val))
         #self.mutex.release()
         return 0
  
@@ -218,7 +223,7 @@ class XFELDeviceProperties:
 '''
 test interface
 '''
-class TestInterface:
+class TestMachineInterface:
     def __init__(self):
         pass
     def get_alarms(self):
@@ -283,3 +288,39 @@ class TestInterface:
         return 0
     def get_value_ps(self, device_name):
         return 0.
+
+
+class TestDeviceProperties:
+    def __init__(self, ui=None):
+        self.stop_exec = False
+        self.save_machine = False
+        self.patterns = {}
+        self.limits = {}
+        self.ui = ui
+        """
+        self.patterns['launch_steerer'] = re.compile('[HV][0-9]+SMATCH')
+        self.limits['launch_steerer'] = [-4,4]
+
+        self.patterns['intra_steerer'] = re.compile('H3UND[0-9]')
+        self.limits['intra_steerer'] = [-5.0,-2.0]
+
+        self.patterns['QF'] = re.compile('Q5UND1.3.5')
+        self.limits['QF'] = [1,7]
+        """
+
+    def set_limits(self, dev_name, limits):
+        self.patterns[dev_name] = re.compile(dev_name)
+        self.limits[dev_name] = limits
+
+    def get_limits(self, dev_name):
+        if self.ui != None:
+            lims = self.ui.get_limits(dev_name)
+            if lims == None:
+                return [0, 0]
+        return [-100, 100]
+
+    def get_polarity(self, quads):
+        return
+
+    def get_type_magnet(self, quads):
+        return

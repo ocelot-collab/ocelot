@@ -1,9 +1,11 @@
-from ocelot.optimizer.mint.opt_objects import *
+from ocelot.optimizer.mint.opt_objects import Target
+import numpy as np
+import time
 
 
-class TestTarget_new(Target):
+class XFELTarget(Target):
     def __init__(self, mi=None, dp=None, eid=None):
-        super(TestTarget_new, self).__init__(eid=eid)
+        super(XFELTarget, self).__init__(eid=eid)
         """
         :param mi: Machine interface
         :param dp: Device property
@@ -42,9 +44,13 @@ class TestTarget_new(Target):
         return pen
 
     def get_value(self):
+        """
+        changeable
+        :return:
+        """
         values = np.array([dev.get_value() for dev in self.devices])
-        #print("hi4")
         return 2*np.sum(np.exp(-np.power((values - np.ones_like(values)), 2) / 5.))
+        #value = self.mi.get_value(self.eid)
 
     def get_spectrum(self):
         return [0, 0]
@@ -58,6 +64,10 @@ class TestTarget_new(Target):
         return ave, std
 
     def get_alarm(self):
+        """
+        changeable
+        :return:
+        """
         return 0
 
     def get_energy(self):

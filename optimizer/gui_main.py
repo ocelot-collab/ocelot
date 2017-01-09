@@ -1,6 +1,7 @@
 
 from ocelot.optimizer.UIOcelotInterface_gen import *
 import json
+import scipy
 from PyQt4.QtGui import QPixmap, QImage
 from PIL import Image
 
@@ -18,7 +19,14 @@ class MainWindow(Ui_Form):
         self.pb_rewrite.clicked.connect(self.rewrite_default)
         self.cb_use_isim.stateChanged.connect(self.change_state_scipy_setup)
         self.pb_hyper_file.clicked.connect(self.get_hyper_file)
-        #font = self.pb_hyper_file.font()
+        if scipy.__version__ < "0.18":
+            self.g_box_isim.setEnabled(False)
+            self.g_box_isim.setTitle("Initial Simplex does not work: scipy version: " + scipy.__version__)
+            self.g_box_isim.setStyleSheet('QGroupBox  {color: red;}')
+
+        #self.horizontalLayout_2.setStyleSheet("color: red")
+
+            #font = self.pb_hyper_file.font()
         #font.setPointSize(16)
         #self.pb_hyper_file.setFont(font)
         #self.pb_hyper_file.setText("test")
@@ -79,6 +87,7 @@ class MainWindow(Ui_Form):
         # Build the PV list from dev PVs or selected source
         pvs = table["id"]
         print("pvs = ", pvs)
+        self.widget.set_machine_interface(self.Form.mi, self.Form.dp)
         self.widget.getPvList(pvs)
         # set checkbot status
         self.widget.uncheckBoxes()

@@ -3,9 +3,10 @@ Main Ocelot optimization file
 Contains the setup for using the scipy.optimize package run simplex and other algorothms
 Modifiedi for use at LCLS from Ilya's version
 """
-
+from __future__ import print_function, absolute_import
 from time import sleep
 from scipy.optimize import OptimizeResult
+import scipy
 import numpy as np
 from ocelot.optimizer.mint.opt_objects import *
 from scipy import optimize
@@ -69,9 +70,11 @@ class Simplex(Minimizer):
             print("ISIM = ", isim)
         #res = optimize.minimize(error_func, x, method='Nelder-Mead',  tol=self.xtol,
         #                        options = {'disp': False, 'initial_simplex': [0.05, 0.05], 'maxiter': self.max_iter})
-        #res = optimize.fmin(error_func, x, maxiter=self.max_iter, maxfun=self.max_iter, xtol=self.xtol)
+        if scipy.__version__ < "0.18":
+            res = optimize.fmin(error_func, x, maxiter=self.max_iter, maxfun=self.max_iter, xtol=self.xtol)
+        else:
+            res = optimize.fmin(error_func, x, maxiter=self.max_iter, maxfun=self.max_iter, xtol=self.xtol, initial_simplex=isim)
 
-        res = optimize.fmin(error_func, x, maxiter=self.max_iter, maxfun=self.max_iter, xtol=self.xtol, initial_simplex=isim)
         #print("finish seed")
         return res
 
@@ -210,11 +213,16 @@ class OptControl:
         self.m_status = MachineStatus()
         self.pause = False
         self.kill = False
+        self.is_ok = True
+        self.timeout = 0.1
 
     def wait(self):
         while 1:
             if self.m_status.is_ok():
+                self.is_ok = True
                 return 1
+            time.sleep(self.timeout)
+            self.is_ok = False
             print(".",)
 
     def stop(self):

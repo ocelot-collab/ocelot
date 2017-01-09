@@ -46,7 +46,7 @@ class ResetpanelWindow(QFrame):
         #fast timer start
         self.trackTimer = QtCore.QTimer()
         self.trackTimer.timeout.connect(self.updateCurrentValues)
-        self.trackTimer.start(100) #refresh every 100 ms
+        self.trackTimer.start(1000) #refresh every 100 ms
 
         #dark theme
         self.loadStyleSheet()
@@ -101,7 +101,6 @@ class ResetpanelWindow(QFrame):
     def getStartValues(self):
         """ Initializes start values for the PV list. """
         for dev in self.devices:
-            #self.pv_objects[pv] = epics.PV(pv)
             self.startValues[dev.eid] = dev.get_value()
             #print(self.startValues[dev.eid])
             #self.pv_objects[pv].add_callback(callback=self.PvGetCallBack)
@@ -195,6 +194,8 @@ class ResetpanelWindow(QFrame):
                 self.ui.tableWidget.item(row, 2).setForeground(QtGui.QColor(255, 101, 101))#red
             else:
                 self.ui.tableWidget.item(row, 2).setForeground(QtGui.QColor(255, 255, 255))#white
+
+
         QApplication.processEvents()
 
     def resetAll(self):

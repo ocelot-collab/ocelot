@@ -38,7 +38,7 @@ from ocelot.optimizer.mint import mint
 from ocelot.optimizer.mint import opt_objects as obj
 from ocelot.optimizer.mint import obj_function
 from ocelot.utils import db
-
+from ocelot.optimizer.mint.xfel_interface import *
 
 class OcelotInterfaceWindow(QFrame):
     """ Main class for the GUI application """
@@ -55,14 +55,17 @@ class OcelotInterfaceWindow(QFrame):
 
         self.set_file = "./parameters/default.json"
         # initialize
-        self.mi = TestLCLSMachineInterface()
-        self.dp = TestLCLSDeviceProperties()
         QFrame.__init__(self)
 
         # try
         self.ui = MainWindow(self)
 
-        self.objective_func = obj_function.TestTarget()
+        self.mi = TestMachineInterface()
+        #self.mi = XFELMachineInterface()
+        self.dp = TestDeviceProperties(ui=self.ui.widget)
+
+        self.opt_control = mint.OptControl()
+        self.objective_func = obj_function.XFELTarget()
         self.objective_func_pv = "test_obj"
 
         self.addPlots()
@@ -106,6 +109,15 @@ class OcelotInterfaceWindow(QFrame):
         #timer for plots, starts when scan starts
         self.multiPvTimer = QtCore.QTimer()
         self.multiPvTimer.timeout.connect(self.getPlotData)
+
+        self.indicator = QtCore.QTimer()
+        self.indicator.timeout.connect(self.indicate_machine_state)
+        self.indicator.start(100)
+        #self.ui.widget_2.setStyleSheet("background-color:red;")
+        #self.ui.widget_3.setStyleSheet("background-color:red;")
+        #p = w.palette()
+        #p.setColor(w.backgroundRole(), QtCore.red)
+        #w.setPalette(p)
 
     def scan_method_select(self):
         """
@@ -202,7 +214,7 @@ class OcelotInterfaceWindow(QFrame):
 
         self.opt = mint.Optimizer()
 
-        self.opt_control = mint.OptControl()
+        #self.opt_control = mint.OptControl()
         self.opt_control.m_status = self.m_status
         self.opt.opt_ctrl = self.opt_control
         self.opt.timeout = self.ui.sb_tdelay.value()
@@ -226,6 +238,14 @@ class OcelotInterfaceWindow(QFrame):
         except:
             pass
 
+    def indicate_machine_state(self):
+        print(self.opt_control.is_ok)
+        if not self.opt_control.is_ok:
+            self.ui.widget_2.setStyleSheet("background-color:red;")
+            self.ui.widget_3.setStyleSheet("background-color:red;")
+        else:    #time.sleep(0.5)
+            self.ui.widget_2.setStyleSheet("background-color:323232;")
+            self.ui.widget_3.setStyleSheet("background-color:323232;")
 
     def save2db(self):
         d_names = []
@@ -301,7 +321,7 @@ class OcelotInterfaceWindow(QFrame):
                 C = self.objective_func.mi.get_value(c_str)
                 return eval(func)
 
-        self.objective_func = obj_function.TestTarget(mi=self.mi, dp=self.dp)
+        self.objective_func = obj_function.XFELTarget(mi=self.mi, dp=self.dp)
         self.objective_func.devices = []
         if not self.ui.cb_use_predef.checkState():
             self.objective_func.get_value = get_value_exp
@@ -311,13 +331,20 @@ class OcelotInterfaceWindow(QFrame):
 
         state = self.is_le_addr_ok(self.ui.le_alarm)
 
+
         alarm_dev = str(self.ui.le_alarm.text())
+        a_dev = AlarmDevice(alarm_dev)
+        a_dev.mi = self.mi
+
         def is_ok():
             #alarm_dev = str(self.ui.le_alarm.text())
             alarm_min = self.ui.sb_alarm_min.value()
             alarm_max = self.ui.sb_alarm_max.value()
-            alarm_value = self.mi.get_value(alarm_dev)
-            #print("ALARM: ", alarm_value, alarm_min, alarm_max)
+            #alarm_value = self.mi.get_value(alarm_dev)
+
+            alarm_value = a_dev.get_value()
+
+            print("ALARM: ", alarm_value, alarm_min, alarm_max)
             if alarm_min <= alarm_value <= alarm_max:
                 return True
             return False

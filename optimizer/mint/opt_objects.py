@@ -4,12 +4,12 @@ Object function and devices
 """
 
 import numpy as np
-from ocelot.optimizer.mint.lcls_interface import *
+#from ocelot.optimizer.mint.lcls_interface import *
 import time
 
 
-mi = TestLCLSMachineInterface()
-dp = TestLCLSDeviceProperties()
+#mi = TestLCLSMachineInterface()
+#dp = TestLCLSDeviceProperties()
 
 #mi = LCLSMachineInterface()
 #dp = LCLSDeviceProperties()
@@ -21,15 +21,18 @@ class Device(object):
         self.values = []
         self.time = []
         self.simplex_step = 0
+        self.mi = None
+        self.dp = None
 
-    def set_value(self, x):
-        pass
+    def set_value(self, val):
+        self.values.append(val)
+        self.time.append(time.time())
+        self.mi.set_value(self.eid, val)
 
     def get_value(self):
-        return
+        val = self.mi.get_value(self.eid)
 
-    def check_limits(self, value):
-        return False
+        return val
 
     def state(self):
         return True
@@ -37,6 +40,17 @@ class Device(object):
     def clean(self):
         self.values = []
         self.time = []
+
+    def check_limits(self, value):
+        limits = self.get_limits()
+
+        if value < limits[0] or value > limits[1]:
+            print('limits exceeded', value, limits[0], value, limits[1])
+            return True
+        return False
+
+    def get_limits(self):
+        return self.dp.get_limits(self.eid)
 
 
 class SLACDevice(Device):

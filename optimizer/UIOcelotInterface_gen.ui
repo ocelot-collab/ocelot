@@ -1338,7 +1338,10 @@
         </widget>
        </item>
        <item>
-        <widget class="QGroupBox" name="groupBox_9">
+        <widget class="QGroupBox" name="g_box_isim">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
          <property name="title">
           <string>Simplex/Scipy Scanner Setup</string>
          </property>

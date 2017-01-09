@@ -111,7 +111,8 @@ class ResetpanelBoxWindow(ResetpanelWindow):
         self.ui.horizontalLayout.addWidget(self.uncheck)
         self.check.clicked.connect(lambda: self.getRows(2))
         self.uncheck.clicked.connect(lambda: self.getRows(0))
-
+        self.mi = None
+        self.dp = None
 
         #make button text bigger
         #self.check.setStyleSheet('font-size: 18pt; font-family: Courier;')
@@ -190,8 +191,9 @@ class ResetpanelBoxWindow(ResetpanelWindow):
         #self.pvs = self.getPvsFromCbState()
         devices = []
         for pv in pvs:
-            dev = obj.TestDevice(eid=pv)
-            dev.dp = TestLCLSDeviceProperties(self.ui.tableWidget)
+            dev = obj.Device(eid=pv)
+            dev.mi = self.mi
+            dev.dp = self.dp #TestLCLSDeviceProperties(self.ui.tableWidget)
             devices.append(dev)
         return devices
 
@@ -199,6 +201,10 @@ class ResetpanelBoxWindow(ResetpanelWindow):
         d_pvs = [dev.eid for dev in self.devices]
         inxs = [d_pvs.index(pv) for pv in pvs]
         return [self.devices[inx] for inx in inxs]
+
+    def set_machine_interface(self, mi, dp):
+        self.mi = mi
+        self.dp = dp
 
     def getPvList(self, pvs_in=None):
         """
@@ -235,6 +241,13 @@ class ResetpanelBoxWindow(ResetpanelWindow):
             devs["id"].append(name)
             devs["lims"].append([self.ui.tableWidget.cellWidget(row, 3).value(), self.ui.tableWidget.cellWidget(row, 4).value()])
         return devs
+
+    def get_limits(self, pv):
+        for row in range(self.ui.tableWidget.rowCount()):
+            if pv == str(self.ui.tableWidget.item(row, 0).text()):
+                lims = [self.ui.tableWidget.cellWidget(row, 3).value(), self.ui.tableWidget.cellWidget(row, 4).value()]
+                return lims
+        return None
 
     def set_state(self, table):
         for row in range(self.ui.tableWidget.rowCount()):
@@ -294,9 +307,9 @@ class ResetpanelBoxWindow(ResetpanelWindow):
             for i in range(2):
                 spin_box = QtGui.QDoubleSpinBox()
                 if i == 0:
-                    spin_box.setStyleSheet("color: rgb(153,204,255); font-size: 16px")
+                    spin_box.setStyleSheet("color: rgb(153,204,255); font-size: 16px; background-color:#323232;")
                 else:
-                    spin_box.setStyleSheet("color: rgb(255,0,0); font-size: 16px")
+                    spin_box.setStyleSheet("color: rgb(255,0,0); font-size: 16px; background-color:#323232;")
                 spin_box.setLocale(eng)
                 spin_box.setDecimals(3)
                 spin_box.setMaximum(100)

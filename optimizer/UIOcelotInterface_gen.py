@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'UIOcelotInterface_gen.ui'
 #
-# Created: Thu Jan 05 10:00:43 2017
+# Created: Mon Jan 09 09:17:09 2017
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -680,22 +680,23 @@ class Ui_Form(object):
         self.horizontalLayout_5.addLayout(self.verticalLayout_14)
         self.gridLayout_10.addLayout(self.horizontalLayout_5, 0, 0, 1, 1)
         self.verticalLayout_10.addWidget(self.groupBox_6)
-        self.groupBox_9 = QtGui.QGroupBox(self.tab3)
-        self.groupBox_9.setObjectName(_fromUtf8("groupBox_9"))
-        self.verticalLayout_21 = QtGui.QVBoxLayout(self.groupBox_9)
+        self.g_box_isim = QtGui.QGroupBox(self.tab3)
+        self.g_box_isim.setEnabled(True)
+        self.g_box_isim.setObjectName(_fromUtf8("g_box_isim"))
+        self.verticalLayout_21 = QtGui.QVBoxLayout(self.g_box_isim)
         self.verticalLayout_21.setObjectName(_fromUtf8("verticalLayout_21"))
         self.verticalLayout_18 = QtGui.QVBoxLayout()
         self.verticalLayout_18.setObjectName(_fromUtf8("verticalLayout_18"))
         self.horizontalLayout_8 = QtGui.QHBoxLayout()
         self.horizontalLayout_8.setObjectName(_fromUtf8("horizontalLayout_8"))
-        self.label_23 = QtGui.QLabel(self.groupBox_9)
+        self.label_23 = QtGui.QLabel(self.g_box_isim)
         self.label_23.setMaximumSize(QtCore.QSize(16777215, 16777215))
         font = QtGui.QFont()
         font.setPointSize(18)
         self.label_23.setFont(font)
         self.label_23.setObjectName(_fromUtf8("label_23"))
         self.horizontalLayout_8.addWidget(self.label_23)
-        self.sb_isim_rel_step = QtGui.QDoubleSpinBox(self.groupBox_9)
+        self.sb_isim_rel_step = QtGui.QDoubleSpinBox(self.g_box_isim)
         font = QtGui.QFont()
         font.setPointSize(18)
         self.sb_isim_rel_step.setFont(font)
@@ -707,14 +708,14 @@ class Ui_Form(object):
         self.sb_isim_rel_step.setObjectName(_fromUtf8("sb_isim_rel_step"))
         self.horizontalLayout_8.addWidget(self.sb_isim_rel_step)
         self.verticalLayout_18.addLayout(self.horizontalLayout_8)
-        self.cb_use_isim = QtGui.QCheckBox(self.groupBox_9)
+        self.cb_use_isim = QtGui.QCheckBox(self.g_box_isim)
         font = QtGui.QFont()
         font.setPointSize(18)
         self.cb_use_isim.setFont(font)
         self.cb_use_isim.setObjectName(_fromUtf8("cb_use_isim"))
         self.verticalLayout_18.addWidget(self.cb_use_isim)
         self.verticalLayout_21.addLayout(self.verticalLayout_18)
-        self.verticalLayout_10.addWidget(self.groupBox_9)
+        self.verticalLayout_10.addWidget(self.g_box_isim)
         spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.verticalLayout_10.addItem(spacerItem)
         self.tabWidget.addTab(self.tab3, _fromUtf8(""))
@@ -772,7 +773,7 @@ class Ui_Form(object):
         self.label_14.setText(_translate("Form", "Limits:     ", None))
         self.label_17.setText(_translate("Form", "Min   ", None))
         self.label_22.setText(_translate("Form", "           Max    ", None))
-        self.groupBox_9.setTitle(_translate("Form", "Simplex/Scipy Scanner Setup", None))
+        self.g_box_isim.setTitle(_translate("Form", "Simplex/Scipy Scanner Setup", None))
         self.label_23.setText(_translate("Form", "Relative Step in %", None))
         self.cb_use_isim.setText(_translate("Form", "Use Initial Simplex [step =(Max - Min) x RelStep[%]]", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab3), _translate("Form", "Objective Function", None))

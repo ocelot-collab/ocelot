@@ -60,8 +60,8 @@ class OcelotInterfaceWindow(QFrame):
         # try
         self.ui = MainWindow(self)
 
-        self.mi = TestMachineInterface()
-        #self.mi = XFELMachineInterface()
+        #self.mi = TestMachineInterface()
+        self.mi = XFELMachineInterface()
         self.dp = TestDeviceProperties(ui=self.ui.widget)
 
         self.opt_control = mint.OptControl()
@@ -239,7 +239,7 @@ class OcelotInterfaceWindow(QFrame):
             pass
 
     def indicate_machine_state(self):
-        print(self.opt_control.is_ok)
+        #print(self.opt_control.is_ok)
         if not self.opt_control.is_ok:
             self.ui.widget_2.setStyleSheet("background-color:red;")
             self.ui.widget_3.setStyleSheet("background-color:red;")

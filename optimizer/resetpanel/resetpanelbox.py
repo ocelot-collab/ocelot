@@ -123,7 +123,7 @@ class ResetpanelBoxWindow(ResetpanelWindow):
         #make the custom table for middle click
         self.ui.tableWidget.setParent(None) #remove old table
         self.ui.tableWidget = customTW(self) # make new widget
-        self.ui.gridLayout.addWidget(self.ui.tableWidget,0,0)
+        self.ui.gridLayout.addWidget(self.ui.tableWidget, 0, 0)
         #self.ui.tableWidget.itemClicked.connect(self.con)
 
 
@@ -134,7 +134,7 @@ class ResetpanelBoxWindow(ResetpanelWindow):
         Button 4 is the middle click button.
         """
         button = evt.button()
-        print("Release event: ", button, self.parent.enableMiddleClick)
+        #print("Release event: ", button, self.enableMiddleClick)
         if (button == 4) and (self.enableMiddleClick):
             pv = QtGui.QApplication.clipboard().text(mode=QClipboard.Selection)
             self.addPv(pv)
@@ -374,7 +374,7 @@ class ResetpanelBoxWindow(ResetpanelWindow):
             print("STATE")
             if state == 2:
                 self.startValues[pv] = dev.get_value()
-                self.ui.tableWidget.setItem(row, 1, QtGui.QTableWidgetItem(str(self.startValues[pv])))
+                self.ui.tableWidget.setItem(row, 1, QtGui.QTableWidgetItem(str(np.around(self.startValues[pv], 4))))
                 #self.pv_objects[pv] = epics.PV(pv)
                 #self.pv_objects[pv].add_callback(callback=self.PvGetCallBack)
         self.ui.updateReference.setText("Update Reference")

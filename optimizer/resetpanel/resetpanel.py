@@ -115,7 +115,7 @@ class ResetpanelWindow(QFrame):
         self.getStartValues()
         for row in range(len(self.pvs)):
             pv = self.pvs[row]
-            self.ui.tableWidget.setItem(row, 1, QtGui.QTableWidgetItem(str(self.startValues[pv])))
+            self.ui.tableWidget.setItem(row, 1, QtGui.QTableWidgetItem(str(np.around(self.startValues[pv], 4))))
         self.ui.updateReference.setText("Update Reference")
 
     def initTable(self):
@@ -135,7 +135,7 @@ class ResetpanelWindow(QFrame):
 
             #self.ui.tableWidget.item(row, 0).setFont(font)
             #put start val in
-            self.ui.tableWidget.setItem(row, 1, QtGui.QTableWidgetItem(str(self.startValues[pv])))
+            self.ui.tableWidget.setItem(row, 1, QtGui.QTableWidgetItem(str(np.around(self.startValues[pv], 4) )))
 
             #change font size
             # font = QtGui.QFont()
@@ -201,7 +201,7 @@ class ResetpanelWindow(QFrame):
 
             pv = dev.eid
             self.currentValues[pv] = dev.get_value()
-            self.ui.tableWidget.setItem(row, 2, QtGui.QTableWidgetItem(str(self.currentValues[pv])))
+            self.ui.tableWidget.setItem(row, 2, QtGui.QTableWidgetItem(str(np.around(self.currentValues[pv], 4))))
 
             tol  = abs(self.startValues[pv]*percent)
             diff = abs(abs(self.startValues[pv]) - abs(self.currentValues[pv]))

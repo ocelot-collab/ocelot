@@ -282,7 +282,9 @@ class ResetpanelBoxWindow(ResetpanelWindow):
         rows=[]
         for idx in self.ui.tableWidget.selectedIndexes():
             rows.append(idx.row())
-            item = self.ui.tableWidget.item(idx.row(), 5)
+            item = self.ui.tableWidget.cellWidget(idx.row(), 5)
+            if not item.isEnabled:
+                continue
             item.setCheckState(state)
             #print item.text()
         #print rows

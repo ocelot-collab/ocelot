@@ -135,7 +135,10 @@ class ResetpanelWindow(QFrame):
 
             #self.ui.tableWidget.item(row, 0).setFont(font)
             #put start val in
-            self.ui.tableWidget.setItem(row, 1, QtGui.QTableWidgetItem(str(np.around(self.startValues[pv], 4) )))
+            s_val = self.startValues[pv]
+            if s_val != None:
+                s_val = np.around(s_val, 4)
+            self.ui.tableWidget.setItem(row, 1, QtGui.QTableWidgetItem(str(s_val )))
 
             #change font size
             # font = QtGui.QFont()

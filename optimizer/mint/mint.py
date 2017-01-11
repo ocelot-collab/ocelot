@@ -266,7 +266,7 @@ class Optimizer(Thread):
         self.timeout = 0
         self.opt_ctrl = OptControl()
         self.seq = []
-
+        self.set_best_solution = True
         #self.x_data = []
         #self.y_data = []
 
@@ -281,7 +281,6 @@ class Optimizer(Thread):
 
     def exceed_limits(self, x):
         for i in range(len(x)):
-            print('{0} x[{1}]={2}'.format(self.devices[i].id, i, x[i]))
             if self.devices[i].check_limits(x[i]):
                 return True
         return False
@@ -310,7 +309,7 @@ class Optimizer(Thread):
 
         print('sleeping ' + str(self.timeout))
         sleep(self.timeout)
-        print ('done sleeping')
+        #print ('done sleeping')
         pen = self.target.get_penalty()
         print('penalty:', pen)
         if self.debug: print('penalty:', pen)
@@ -344,15 +343,15 @@ class Optimizer(Thread):
             self.logger.log_start(dev_ids, method=self.minimizer.__class__.__name__, x_init=x_init, target_ref=target_ref)
 
         res = self.minimizer.minimize(self.error_func, x)
-        print(res)
+        print("result", res)
+
         # set best solution
-        x = self.opt_ctrl.best_step()
-        #x = res
-        #print("resultat", res["x"])
-        #x = self.x_data[np.argmin(self.y_data)]
-        if self.exceed_limits(x):
-            return self.target.pen_max
-        self.set_values(x)
+        if self.set_best_solution:
+            print("SET the best solution", x)
+            x = self.opt_ctrl.best_step()
+            if self.exceed_limits(x):
+                return self.target.pen_max
+            self.set_values(x)
 
         target_new = self.target.get_penalty()
 

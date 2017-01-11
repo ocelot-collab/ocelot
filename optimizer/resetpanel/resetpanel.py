@@ -46,7 +46,7 @@ class ResetpanelWindow(QFrame):
         #fast timer start
         self.trackTimer = QtCore.QTimer()
         self.trackTimer.timeout.connect(self.updateCurrentValues)
-        self.trackTimer.start(1000) #refresh every 100 ms
+        self.trackTimer.start(500) #refresh every 100 ms
 
         #dark theme
         self.loadStyleSheet()
@@ -138,7 +138,7 @@ class ResetpanelWindow(QFrame):
             s_val = self.startValues[pv]
             if s_val != None:
                 s_val = np.around(s_val, 4)
-            self.ui.tableWidget.setItem(row, 1, QtGui.QTableWidgetItem(str(s_val )))
+            self.ui.tableWidget.setItem(row, 1, QtGui.QTableWidgetItem(str(s_val)))
 
             #change font size
             # font = QtGui.QFont()

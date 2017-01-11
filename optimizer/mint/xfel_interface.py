@@ -169,10 +169,10 @@ class XFELMachineInterface():
         #ch = 'XFEL.MAGNETS/MAGNET.ML/' + device_name + '/KICK_MRAD.SP'
         print (device_name, val)
         #self.mutex.acquire()
-        #pydoocs.write(device_name, str(val))
+        pydoocs.write(device_name, val)
         #self.mutex.release()
         return 0
- 
+
 class XFELDeviceProperties:
     def __init__(self):
         self.stop_exec = False
@@ -182,10 +182,10 @@ class XFELDeviceProperties:
         """
         self.patterns['launch_steerer'] = re.compile('[HV][0-9]+SMATCH')
         self.limits['launch_steerer'] = [-4,4]
-        
+
         self.patterns['intra_steerer'] = re.compile('H3UND[0-9]')
         self.limits['intra_steerer'] = [-5.0,-2.0]
-        
+
         self.patterns['QF'] = re.compile('Q5UND1.3.5')
         self.limits['QF'] = [1,7]
         """
@@ -225,6 +225,7 @@ test interface
 '''
 class TestMachineInterface:
     def __init__(self):
+        self.data = 1
         pass
     def get_alarms(self):
         return np.random.rand(4)#0.0, 0.0, 0.0, 0.0]
@@ -240,10 +241,14 @@ class TestMachineInterface:
         return np.random.rand(1)[0]
 
     def get_value(self, device_name):
-        print("get value", device_name)
-        return np.random.rand(1)[0]
+        #print("get value", device_name)
+        #return np.random.rand(1)[0]
+        if "QUAD" in device_name:
+            return 0
+        return self.data
 
     def set_value(self, device_name, val):
+        self.data += sqrt(val**2)
         return 0.0
 
     def get_quads_current(self, device_names):
@@ -317,7 +322,9 @@ class TestDeviceProperties:
             lims = self.ui.get_limits(dev_name)
             if lims == None:
                 return [0, 0]
-        return [-100, 100]
+        else:
+            return [-100, 100]
+        return lims
 
     def get_polarity(self, quads):
         return

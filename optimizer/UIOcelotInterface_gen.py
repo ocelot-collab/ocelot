@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'UIOcelotInterface_gen.ui'
 #
-# Created: Mon Jan 09 09:17:09 2017
+# Created: Wed Jan 11 14:31:49 2017
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -94,16 +94,17 @@ class Ui_Form(object):
         self.gridLayout_2.setSpacing(5)
         self.gridLayout_2.setMargin(0)
         self.gridLayout_2.setObjectName(_fromUtf8("gridLayout_2"))
-        self.pushButton_5 = QtGui.QPushButton(self.frame)
-        self.pushButton_5.setMinimumSize(QtCore.QSize(0, 20))
+        self.pb_help = QtGui.QPushButton(self.frame)
+        self.pb_help.setMinimumSize(QtCore.QSize(0, 20))
         font = QtGui.QFont()
         font.setPointSize(12)
         font.setBold(True)
         font.setWeight(75)
-        self.pushButton_5.setFont(font)
-        self.pushButton_5.setObjectName(_fromUtf8("pushButton_5"))
-        self.gridLayout_2.addWidget(self.pushButton_5, 2, 0, 1, 1)
+        self.pb_help.setFont(font)
+        self.pb_help.setObjectName(_fromUtf8("pb_help"))
+        self.gridLayout_2.addWidget(self.pb_help, 5, 0, 1, 1)
         self.pushButton_3 = QtGui.QPushButton(self.frame)
+        self.pushButton_3.setEnabled(False)
         self.pushButton_3.setMinimumSize(QtCore.QSize(0, 20))
         self.pushButton_3.setSizeIncrement(QtCore.QSize(0, 0))
         font = QtGui.QFont()
@@ -159,6 +160,7 @@ class Ui_Form(object):
         self.label_2.setObjectName(_fromUtf8("label_2"))
         self.verticalLayout_6.addWidget(self.label_2)
         self.label_6 = QtGui.QLabel(self.groupBox)
+        self.label_6.setEnabled(False)
         self.label_6.setMaximumSize(QtCore.QSize(16777215, 16777215))
         font = QtGui.QFont()
         font.setPointSize(18)
@@ -185,6 +187,7 @@ class Ui_Form(object):
         self.sb_tdelay.setObjectName(_fromUtf8("sb_tdelay"))
         self.verticalLayout_7.addWidget(self.sb_tdelay)
         self.sb_ddelay = QtGui.QDoubleSpinBox(self.groupBox)
+        self.sb_ddelay.setEnabled(False)
         font = QtGui.QFont()
         font.setPointSize(18)
         self.sb_ddelay.setFont(font)
@@ -222,6 +225,7 @@ class Ui_Form(object):
         self.label_9.setObjectName(_fromUtf8("label_9"))
         self.verticalLayout_3.addWidget(self.label_9)
         self.label_8 = QtGui.QLabel(self.groupBox_2)
+        self.label_8.setEnabled(False)
         self.label_8.setMaximumSize(QtCore.QSize(16777215, 16777215))
         font = QtGui.QFont()
         font.setPointSize(18)
@@ -254,7 +258,7 @@ class Ui_Form(object):
         self.pb_hyper_file.setObjectName(_fromUtf8("pb_hyper_file"))
         self.verticalLayout_2.addWidget(self.pb_hyper_file)
         self.lineEdit_4 = QtGui.QLineEdit(self.groupBox_2)
-        self.lineEdit_4.setEnabled(True)
+        self.lineEdit_4.setEnabled(False)
         font = QtGui.QFont()
         font.setPointSize(18)
         self.lineEdit_4.setFont(font)
@@ -597,6 +601,12 @@ class Ui_Form(object):
         self.cb_select_alg.setObjectName(_fromUtf8("cb_select_alg"))
         self.gridLayout_12.addWidget(self.cb_select_alg, 2, 1, 1, 1)
         self.verticalLayout_20.addLayout(self.gridLayout_12)
+        self.cb_set_best_sol = QtGui.QCheckBox(self.groupBox_8)
+        font = QtGui.QFont()
+        font.setPointSize(18)
+        self.cb_set_best_sol.setFont(font)
+        self.cb_set_best_sol.setObjectName(_fromUtf8("cb_set_best_sol"))
+        self.verticalLayout_20.addWidget(self.cb_set_best_sol)
         self.verticalLayout_10.addWidget(self.groupBox_8)
         self.groupBox_6 = QtGui.QGroupBox(self.tab3)
         self.groupBox_6.setEnabled(True)
@@ -727,9 +737,9 @@ class Ui_Form(object):
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(_translate("Form", "Ocelot Interface", None))
-        self.pb_start_scan.setText(_translate("Form", "Start Scan", None))
+        self.pb_start_scan.setText(_translate("Form", "Start Optimization", None))
         self.pb_logbook.setText(_translate("Form", "Logbook", None))
-        self.pushButton_5.setText(_translate("Form", "Help/Docs", None))
+        self.pb_help.setText(_translate("Form", "Help/Docs", None))
         self.pushButton_3.setText(_translate("Form", "GP 2D Heatmap", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("Form", "Optimization Scan Panel", None))
         self.label_3.setText(_translate("Form", "Scanner Setup and Options Panel", None))
@@ -768,6 +778,7 @@ class Ui_Form(object):
         self.groupBox_8.setTitle(_translate("Form", "Scanner Parameters", None))
         self.label_27.setText(_translate("Form", "Select Optimiser Algorithm ", None))
         self.label_25.setText(_translate("Form", "Number Iterations", None))
+        self.cb_set_best_sol.setText(_translate("Form", "Set Best Solution After Optimization", None))
         self.groupBox_6.setTitle(_translate("Form", "Machine Status", None))
         self.label_13.setText(_translate("Form", "Alarm 1", None))
         self.label_14.setText(_translate("Form", "Limits:     ", None))

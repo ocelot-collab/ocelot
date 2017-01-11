@@ -123,7 +123,7 @@ class ResetpanelBoxWindow(ResetpanelWindow):
         #make the custom table for middle click
         self.ui.tableWidget.setParent(None) #remove old table
         self.ui.tableWidget = customTW(self) # make new widget
-        self.ui.gridLayout.addWidget(self.ui.tableWidget, 0, 0)
+        self.ui.gridLayout.addWidget(self.ui.tableWidget,0,0)
         #self.ui.tableWidget.itemClicked.connect(self.con)
 
 
@@ -134,7 +134,7 @@ class ResetpanelBoxWindow(ResetpanelWindow):
         Button 4 is the middle click button.
         """
         button = evt.button()
-        #print("Release event: ", button, self.enableMiddleClick)
+        #print("Release event: ", button, self.parent.enableMiddleClick)
         if (button == 4) and (self.enableMiddleClick):
             pv = QtGui.QApplication.clipboard().text(mode=QClipboard.Selection)
             self.addPv(pv)
@@ -210,6 +210,7 @@ class ResetpanelBoxWindow(ResetpanelWindow):
     def set_machine_interface(self, mi, dp):
         self.mi = mi
         self.dp = dp
+        self.getPvList(self.pvs)
 
     def getPvList(self, pvs_in=None):
         """
@@ -283,7 +284,8 @@ class ResetpanelBoxWindow(ResetpanelWindow):
         for idx in self.ui.tableWidget.selectedIndexes():
             rows.append(idx.row())
             item = self.ui.tableWidget.cellWidget(idx.row(), 5)
-            if not item.isEnabled:
+            if not item.isEnabled():
+                print("item enabled")
                 continue
             item.setCheckState(state)
             #print item.text()
@@ -314,9 +316,9 @@ class ResetpanelBoxWindow(ResetpanelWindow):
             for i in range(2):
                 spin_box = QtGui.QDoubleSpinBox()
                 if i == 0:
-                    spin_box.setStyleSheet("color: rgb(153,204,255); font-size: 16px; background-color:#323232;")
+                    spin_box.setStyleSheet("color: rgb(153,204,255); font-size: 16px; background-color:#595959;")
                 else:
-                    spin_box.setStyleSheet("color: rgb(255,0,0); font-size: 16px; background-color:#323232;")
+                    spin_box.setStyleSheet("color: rgb(255,0,255); font-size: 16px; background-color:#595959;")
                 spin_box.setLocale(eng)
                 spin_box.setDecimals(3)
                 spin_box.setMaximum(100)
@@ -358,7 +360,7 @@ class ResetpanelBoxWindow(ResetpanelWindow):
         """
         for row, dev in enumerate(self.devices):
             val = self.startValues[dev.eid]
-            state = self.ui.tableWidget.item(row, 5).checkState()
+            state = self.ui.tableWidget.cellWidget(row, 5).checkState()
             if state == 2:
                 dev.set_value(val)
                 #epics.caput(pv, val)

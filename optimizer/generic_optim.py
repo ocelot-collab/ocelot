@@ -1,4 +1,16 @@
-#QT imports
+"""
+This is deep modification of SLAC version of the Ocelot GUI for the European XFEL facility.
+
+Sergey Tomin, 2017.
+
+Ocelot GUI, interface for running and testing accelerator optimization methods
+
+This file primarily contains the code for the UI and GUI
+The scanner classes are contained in an external file, scannerThreads.py
+The resetpanel widget is also contained in a separate module, resetpanel
+
+Tyler Cope, 2016
+"""
 from __future__ import absolute_import, print_function
 
 import sys
@@ -6,12 +18,15 @@ import os
 path = sys.path[0]
 indx = path.find("ocelot")
 sys.path.append(path[:indx])
+
 # for pyqtgraph import
-sys.path.append(path[:indx]+"ocelot")
+#sys.path.append(path[:indx]+"ocelot")
+
+
 
 from PyQt4.QtGui import QApplication, QFrame, QPixmap, QMessageBox
 from PyQt4 import QtGui, QtCore
-
+import webbrowser
 #normal imports
 import numpy as np
 import subprocess
@@ -52,24 +67,26 @@ class OcelotInterfaceWindow(QFrame):
         """
         Initialize the GUI and QT UI aspects of the application.
 
-        Create the epicsGet class, to try and get around network errors.
         Initialize the scan parameters.
         Connect start and logbook buttons on the scan panel.
         Initialize the plotting.
-        Make the timer object that updates GUI on clock cycle durring a scan.
+        Make the timer object that updates GUI on clock cycle during a scan.
         """
-
+        path = sys.path[0]
+        indx = path.find("optimizer")
+        self.optimizer_path = path[:indx] + "optimizer\\"
         self.set_file = "./parameters/default.json"
         # initialize
         QFrame.__init__(self)
 
-        # try
         self.ui = MainWindow(self)
-
-        #self.mi = TestMachineInterface()
-        self.mi = XFELMachineInterface()
+        #self.ui.pb_help.clicked.connect(lambda: os.system("firefox file://"+self.optimizer_path+"docs/build/html/index.html"))
+        self.ui.pb_help.clicked.connect(self.open_help)
+        self.mi = TestMachineInterface()
+        #self.mi = XFELMachineInterface()
         self.dp = TestDeviceProperties(ui=self.ui.widget)
 
+        self.total_delay = self.ui.sb_tdelay.value()
         self.opt_control = mint.OptControl()
         self.objective_func = obj_function.XFELTarget()
         self.objective_func_pv = "test_obj"
@@ -80,12 +97,7 @@ class OcelotInterfaceWindow(QFrame):
         self.dbname = "./parameters/test.db"
         # db.create_db(self.dbname)
         self.db = db.PerfDB(dbname=self.dbname)
-
-        #object funciton selectinator (gdet)
-        #self.setObFunc()
-
-        #load in the dark theme style sheet
-        #self.loadStyleSheet()
+        self.scan_params = None
         self.hyper_file = "../parameters/hyperparameters.npy"
 
         self.ui.pb_start_scan.clicked.connect(self.start_scan)
@@ -93,7 +105,6 @@ class OcelotInterfaceWindow(QFrame):
         self.ui.cb_use_predef.stateChanged.connect(self.set_obj_fun)
         self.ui.pb_logbook.clicked.connect(self.ui.logbook)
 
-        #self.opt = mint.Optimizer()
         self.ui.restore_state(self.set_file)
         self.path_to_obj_func = os.path.join(os.path.dirname(sys.modules[__name__].__file__), 'mint/obj_function.py')
 
@@ -112,18 +123,11 @@ class OcelotInterfaceWindow(QFrame):
         self.ui.cb_select_alg.addItem(self.name1)
         self.ui.cb_select_alg.addItem(self.name2)
         self.ui.cb_select_alg.addItem(self.name3)
+
         #timer for plots, starts when scan starts
         self.multiPvTimer = QtCore.QTimer()
         self.multiPvTimer.timeout.connect(self.getPlotData)
 
-        self.indicator = QtCore.QTimer()
-        self.indicator.timeout.connect(self.indicate_machine_state)
-        self.indicator.start(100)
-        #self.ui.widget_2.setStyleSheet("background-color:red;")
-        #self.ui.widget_3.setStyleSheet("background-color:red;")
-        #p = w.palette()
-        #p.setColor(w.backgroundRole(), QtCore.red)
-        #w.setPalette(p)
 
     def scan_method_select(self):
         """
@@ -220,10 +224,13 @@ class OcelotInterfaceWindow(QFrame):
 
         self.opt = mint.Optimizer()
 
+        # set best solution after optimization
+        self.opt.set_best_solution = self.ui.cb_set_best_sol.checkState()
         #self.opt_control = mint.OptControl()
+        self.set_m_status()
         self.opt_control.m_status = self.m_status
         self.opt.opt_ctrl = self.opt_control
-        self.opt.timeout = self.ui.sb_tdelay.value()
+        self.opt.timeout = self.total_delay
 
         self.opt.minimizer = minimizer
 
@@ -245,26 +252,48 @@ class OcelotInterfaceWindow(QFrame):
             pass
 
     def indicate_machine_state(self):
-        #print(self.opt_control.is_ok)
+        """
+        Method to indicate of the machine status. Red frames around graphics means that machine status is not OK.
+        :return:
+        """
         if not self.opt_control.is_ok:
+            if self.ui.widget_3.styleSheet() == "background-color:red;":
+                return
             self.ui.widget_2.setStyleSheet("background-color:red;")
             self.ui.widget_3.setStyleSheet("background-color:red;")
-        else:    #time.sleep(0.5)
+
+        else:
+            if self.ui.widget_3.styleSheet() == "background-color:323232;":
+                return
             self.ui.widget_2.setStyleSheet("background-color:323232;")
             self.ui.widget_3.setStyleSheet("background-color:323232;")
 
+
     def save2db(self):
+        """
+        Save optimization parameters to the Database
+        :return: None
+        """
+        self.scan_params = {"devs": [], "currents": [], "iter":0, "sase": [0,0],"pen":[0,0], "obj":[]}
         d_names = []
         d_start = []
         d_stop = []
         for dev in self.devices:
+            self.scan_params["devs"].append(dev.eid)
             d_names.append(dev.eid + "_val")
             d_start.append(dev.values[0])
-            d_stop.append(dev.values[1])
+            d_stop.append(dev.values[-1])
+
+            self.scan_params["currents"].append([dev.values[0], dev.values[-1]])
 
             d_names.append(dev.eid + "_lim")
             d_start.append(dev.get_limits()[0])
             d_stop.append(dev.get_limits()[1])
+
+        self.scan_params["iter"] = len(self.objective_func.penalties)
+
+        self.scan_params["sase"] = [self.objective_func.values[0], self.objective_func.values[-1]]
+        self.scan_params["pen"] = [self.objective_func.penalties[0], self.objective_func.penalties[-1]]
 
         o_names = ["obj_id", "obj_value", "obj_pen", "niter"]
         o_start = [self.objective_func.eid, self.objective_func.values[0], self.objective_func.penalties[0], self.max_iter]
@@ -288,43 +317,38 @@ class OcelotInterfaceWindow(QFrame):
                                             self.db.get_action_parameters(tune_id, action_id)])
 
 
-    def is_le_addr_ok(self, line_edit):
-        dev = str(line_edit.text())
-        state = True
-        try:
-            self.mi.get_value(dev)
-        except:
-            state = False
-        if state:
-            line_edit.setStyleSheet("color: rgb(85, 255, 0);")
-        else:
-            line_edit.setStyleSheet("color: red")
-        return state
-
     def set_obj_fun(self):
-
+        """
+        Method to set objective function from the GUI (channels A,B,C) or reload module obj_function.py
+        :return: None
+        """
         self.ui.use_predef_fun()
 
         if self.ui.cb_use_predef.checkState():
-            print("RELOAD")
+            print("RELOAD Module Objective Function")
             reload(obj_function)
         else:
             a_str = str(self.ui.le_a.text())
-            self.is_le_addr_ok(self.ui.le_a)
+            state_a = self.ui.is_le_addr_ok(self.ui.le_a)
 
             b_str = str(self.ui.le_b.text())
-            self.is_le_addr_ok(self.ui.le_b)
+            state_b = self.ui.is_le_addr_ok(self.ui.le_b)
 
             c_str = str(self.ui.le_c.text())
-            self.is_le_addr_ok(self.ui.le_c)
+            state_c = self.ui.is_le_addr_ok(self.ui.le_c)
 
             func = str(self.ui.le_obf.text())
-            self.is_le_addr_ok(self.ui.le_obf)
 
             def get_value_exp():
-                A = self.objective_func.mi.get_value(a_str)
-                B = self.objective_func.mi.get_value(b_str)
-                C = self.objective_func.mi.get_value(c_str)
+                A = 0
+                B = 0
+                C = 0
+                if state_a:
+                    A = self.mi.get_value(a_str)
+                if state_b:
+                    B = self.mi.get_value(b_str)
+                if state_c:
+                    C = self.mi.get_value(c_str)
                 return eval(func)
 
         self.objective_func = obj_function.XFELTarget(mi=self.mi, dp=self.dp)
@@ -334,26 +358,40 @@ class OcelotInterfaceWindow(QFrame):
 
 
     def set_m_status(self):
+        """
+        Method to set the MachineStatus method self.is_ok using GUI Alarm channel and limits
 
-        state = self.is_le_addr_ok(self.ui.le_alarm)
-
+        :return: None
+        """
 
         alarm_dev = str(self.ui.le_alarm.text())
+        print("alarm_dev", alarm_dev)
+        if alarm_dev == "":
+            return
+        state = self.ui.is_le_addr_ok(self.ui.le_alarm)
+        #state = False
+
         a_dev = AlarmDevice(alarm_dev)
         a_dev.mi = self.mi
 
-        def is_ok():
-            #alarm_dev = str(self.ui.le_alarm.text())
-            alarm_min = self.ui.sb_alarm_min.value()
-            alarm_max = self.ui.sb_alarm_max.value()
-            #alarm_value = self.mi.get_value(alarm_dev)
-
-            alarm_value = a_dev.get_value()
-
-            print("ALARM: ", alarm_value, alarm_min, alarm_max)
-            if alarm_min <= alarm_value <= alarm_max:
+        if not state:
+            def is_ok():
+                print("ALARM switched off")
                 return True
-            return False
+        else:
+            def is_ok():
+                #alarm_dev = str(self.ui.le_alarm.text())
+                alarm_min = self.ui.sb_alarm_min.value()
+                alarm_max = self.ui.sb_alarm_max.value()
+                #alarm_value = self.mi.get_value(alarm_dev)
+
+                alarm_value = a_dev.get_value()
+
+                print("ALARM: ", alarm_value, alarm_min, alarm_max)
+                if alarm_min <= alarm_value <= alarm_max:
+                    return True
+                return False
+
         self.m_status.is_ok = is_ok
 
 
@@ -452,7 +490,10 @@ class OcelotInterfaceWindow(QFrame):
         return QtGui.QColor(c1,c2,c3)
 
     def run_editor(self):
-        #print(sys.modules[__name__].__file__, path)
+        """
+        Run the editor for edition of the objective function in obj_function.py
+        :return:
+        """
         if platform.system() == 'Darwin':
             subprocess.call(['open', '-a', 'TextEdit', self.path_to_obj_func])
         elif platform.system() == 'Windows':
@@ -463,6 +504,21 @@ class OcelotInterfaceWindow(QFrame):
             print("Unknown platform")
             return
         self.set_obj_fun()
+
+    def open_help(self):
+        url = "file:///"+self.optimizer_path+"docs\\build\\html\\index.html"
+        url = "file:///C:/Users/tomins/Documents/Dropbox/DESY/repository/ocelot/docs/_build/html/index.html"
+        print(url)
+        if sys.platform == 'win32':
+            #os.startfile(url)
+            webbrowser.open(url)
+        elif sys.platform == 'darwin':
+            subprocess.Popen(['open', url])
+        else:
+            try:
+                subprocess.Popen(['xdg-open', url])
+            except OSError:
+                print('Please open a browser on: ' + url)
 
     def error_box(self, message):
         QtGui.QMessageBox.about(self, "Error box", message)
@@ -475,7 +531,7 @@ class customLegend(pg.LegendItem):
     Class responsible for drawing a single item in a LegendItem (sans label).
     This may be subclassed to draw custom graphics in a Legend.
     """
-    def __init__(self,size=None,offset=None):
+    def __init__(self, size=None, offset=None):
         pg.LegendItem.__init__(self, size, offset)
 
     def addItem(self, item, name, color="CCFF00"):
@@ -531,6 +587,10 @@ def main():
     timer = pg.QtCore.QTimer()
     timer.timeout.connect(window.scan_finished)
     timer.start(300)
+
+    indicator = QtCore.QTimer()
+    indicator.timeout.connect(window.indicate_machine_state)
+    indicator.start(10)
 
     #show app
 

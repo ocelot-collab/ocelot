@@ -31,7 +31,6 @@ class Device(object):
 
     def get_value(self):
         val = self.mi.get_value(self.eid)
-
         return val
 
     def state(self):
@@ -43,7 +42,7 @@ class Device(object):
 
     def check_limits(self, value):
         limits = self.get_limits()
-
+        #print("LIMITS", limits)
         if value < limits[0] or value > limits[1]:
             print('limits exceeded', value, limits[0], value, limits[1])
             return True

@@ -121,8 +121,9 @@ class OcelotInterfaceWindow(QFrame):
         self.name4 = "Conjugate Gradient"
         self.name5 = "Powell's Method"
         self.ui.cb_select_alg.addItem(self.name1)
-        self.ui.cb_select_alg.addItem(self.name2)
-        self.ui.cb_select_alg.addItem(self.name3)
+        # switch of GP and custom Mininimizer
+        # self.ui.cb_select_alg.addItem(self.name2)
+        # self.ui.cb_select_alg.addItem(self.name3)
 
         #timer for plots, starts when scan starts
         self.multiPvTimer = QtCore.QTimer()

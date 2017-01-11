@@ -74,7 +74,7 @@ class OcelotInterfaceWindow(QFrame):
         """
         path = sys.path[0]
         indx = path.find("optimizer")
-        self.optimizer_path = path[:indx] + "optimizer\\"
+        self.optimizer_path = path
         self.set_file = "./parameters/default.json"
         # initialize
         QFrame.__init__(self)
@@ -82,8 +82,8 @@ class OcelotInterfaceWindow(QFrame):
         self.ui = MainWindow(self)
         #self.ui.pb_help.clicked.connect(lambda: os.system("firefox file://"+self.optimizer_path+"docs/build/html/index.html"))
         self.ui.pb_help.clicked.connect(self.open_help)
-        self.mi = TestMachineInterface()
-        #self.mi = XFELMachineInterface()
+        #self.mi = TestMachineInterface()
+        self.mi = XFELMachineInterface()
         self.dp = TestDeviceProperties(ui=self.ui.widget)
 
         self.total_delay = self.ui.sb_tdelay.value()
@@ -507,14 +507,18 @@ class OcelotInterfaceWindow(QFrame):
         self.set_obj_fun()
 
     def open_help(self):
-        url = "file:///"+self.optimizer_path+"docs\\build\\html\\index.html"
+        #url = "file:///"+self.optimizer_path+"docs\\build\\html\\index.html"
         #url = "file:///C:/Users/tomins/Documents/Dropbox/DESY/repository/ocelot/docs/_build/html/index.html"
-        print(url)
+        #print(url)
         if sys.platform == 'win32':
+            #url = "file:///"+self.optimizer_path+"\\docs\\build\\html\\index.html"
+            url = self.optimizer_path+"\\docs\\build\\html\\index.html"
             #os.startfile(url)
             webbrowser.open(url)
-        elif sys.platform == 'darwin':
-            subprocess.Popen(['open', url])
+        elif sys.platform == 'darwin' or "linux":
+            url = self.optimizer_path+"/docs/build/html/index.html"
+            webbrowser.open(url)
+            #subprocess.Popen(['open', url])
         else:
             try:
                 subprocess.Popen(['xdg-open', url])
@@ -607,3 +611,4 @@ def main():
 if __name__ == "__main__":
 
     main()
+

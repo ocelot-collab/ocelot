@@ -1,4 +1,3 @@
-
 from ocelot.optimizer.UIOcelotInterface_gen import *
 import json
 import scipy
@@ -7,6 +6,8 @@ from PIL import Image
 import subprocess
 import base64
 from datetime import datetime
+import numpy as np
+
 
 def send_to_desy_elog(author, title, severity, text, elog, image=None):
     """
@@ -59,14 +60,14 @@ def send_to_desy_elog(author, title, severity, text, elog, image=None):
         succeded = False
     return succeded
 
+
 class MainWindow(Ui_Form):
     def __init__(self, Form):
         Ui_Form.__init__(self)
         self.setupUi(Form)
         self.Form = Form
-        #load in the dark theme style sheet
+        # load in the dark theme style sheet
         self.loadStyleSheet()
-
 
         self.pb_save_as.clicked.connect(self.save_state_as)
         self.pb_load.clicked.connect(self.load_state_from)
@@ -79,18 +80,21 @@ class MainWindow(Ui_Form):
             self.g_box_isim.setStyleSheet('QGroupBox  {color: red;}')
 
         self.le_a.textChanged.connect(self.check_address)
+        self.le_b.textChanged.connect(self.check_address)
+        self.le_c.textChanged.connect(self.check_address)
+        self.le_alarm.textChanged.connect(self.check_address)
 
         self.sb_tdelay.valueChanged.connect(self.set_cycle)
         self.sb_ddelay.valueChanged.connect(self.set_cycle)
-        #self.horizontalLayout_2.setStyleSheet("color: red")
+        # self.horizontalLayout_2.setStyleSheet("color: red")
 
-            #font = self.pb_hyper_file.font()
-        #font.setPointSize(16)
-        #self.pb_hyper_file.setFont(font)
-        #self.pb_hyper_file.setText("test")
-        #self.pb_hyper_file.setStyleSheet("font: 16px, color: red")
+        # font = self.pb_hyper_file.font()
+        # font.setPointSize(16)
+        # self.pb_hyper_file.setFont(font)
+        # self.pb_hyper_file.setText("test")
+        # self.pb_hyper_file.setStyleSheet("font: 16px, color: red")
 
-        #self.window = window
+        # self.window = window
 
     def set_cycle(self):
         """
@@ -99,7 +103,7 @@ class MainWindow(Ui_Form):
         Scanner will wait this long to collect new data.
         """
         self.trim_delay = self.sb_tdelay.value()
-        self.label_7.setText("Cycle Period = "+str(self.trim_delay ))
+        self.label_7.setText("Cycle Period = " + str(np.around(self.trim_delay, 3)))
         self.Form.total_delay = self.trim_delay
 
     def check_address(self):
@@ -107,7 +111,6 @@ class MainWindow(Ui_Form):
         self.is_le_addr_ok(self.le_b)
         self.is_le_addr_ok(self.le_c)
         self.is_le_addr_ok(self.le_alarm)
-
 
     def is_le_addr_ok(self, line_edit):
         dev = str(line_edit.text())
@@ -122,9 +125,8 @@ class MainWindow(Ui_Form):
             line_edit.setStyleSheet("color: red")
         return state
 
-
     def save_state(self, filename):
-        #pvs = self.ui.widget.pvs
+        # pvs = self.ui.widget.pvs
         table = self.widget.get_state()
 
         table["use_predef"] = self.cb_use_predef.checkState()
@@ -166,13 +168,13 @@ class MainWindow(Ui_Form):
 
         with open(filename, 'w') as f:
             json.dump(table, f)
-        #pickle.dump(table, filename)
+        # pickle.dump(table, filename)
         print("SAVE State", table)
 
     def restore_state(self, filename):
-        #try:
+        # try:
         with open(filename, 'r') as f:
-            #data_new = pickle.load(f)
+            # data_new = pickle.load(f)
             table = json.load(f)
 
         # Build the PV list from dev PVs or selected source
@@ -219,28 +221,26 @@ class MainWindow(Ui_Form):
         except:
             pass
 
-
         print("RESTORE STATE")
 
     def save_state_as(self):
-        filename = QtGui.QFileDialog.getSaveFileName(self.Form, 'Save State', filter ="txt (*.json *.)")
+        filename = QtGui.QFileDialog.getSaveFileName(self.Form, 'Save State', filter="txt (*.json *.)")
         if filename:
             self.Form.set_file = filename
             self.save_state(filename)
 
     def load_state_from(self):
-        filename = QtGui.QFileDialog.getOpenFileName(self.Form, 'Load State', filter ="txt (*.json *.)")
+        filename = QtGui.QFileDialog.getOpenFileName(self.Form, 'Load State', filter="txt (*.json *.)")
         if filename:
             self.Form.set_file = filename
             self.restore_state(filename)
 
     def get_hyper_file(self):
-        filename = QtGui.QFileDialog.getOpenFileName(self.Form, 'Load Hyper Parameters', filter ="txt (*.npy *.)")
+        filename = QtGui.QFileDialog.getOpenFileName(self.Form, 'Load Hyper Parameters', filter="txt (*.npy *.)")
         if filename:
             self.Form.hyper_file = str(filename)
             self.pb_hyper_file.setText(self.Form.hyper_file)
-            #print(filename)
-
+            # print(filename)
 
     def rewrite_default(self):
         self.Form.set_file = "default.json"
@@ -252,8 +252,8 @@ class MainWindow(Ui_Form):
         self.screenShot(filename, filetype)
         table = self.Form.scan_params
 
-        #curr_time = datetime.now()
-        #timeString = curr_time.strftime("%Y-%m-%dT%H:%M:%S")
+        # curr_time = datetime.now()
+        # timeString = curr_time.strftime("%Y-%m-%dT%H:%M:%S")
         text = ""
         if not self.cb_use_predef.checkState():
             text += "obj func: A   : " + str(self.le_a.text()).split("/")[-1] + "\n"
@@ -264,18 +264,19 @@ class MainWindow(Ui_Form):
             text += "obj func: A   : predefined  " + self.Form.objective_func.eid + "\n"
         if table != None:
             for i, dev in enumerate(table["devs"]):
-                #print(dev.split("/"))
-                text += "dev           : " + dev.split("/")[-1] + "   "+str(table["currents"][i][0]) +" --> " + str(table["currents"][i][1]) + "\n"
+                # print(dev.split("/"))
+                text += "dev           : " + dev.split("/")[-1] + "   " + str(table["currents"][i][0]) + " --> " + str(
+                    table["currents"][i][1]) + "\n"
 
             text += "iterations    : " + str(table["iter"]) + "\n"
             text += "delay         : " + str(self.Form.total_delay) + "\n"
-            text += "START-->STOP  :" + str(table["sase"][0]) +" --> " + str(table["sase"][1]) + "\n"
-        #print(text)
-        screenshot = open(self.Form.optimizer_path+filename+filetype)
-        send_to_desy_elog(author="", title="OCELOT Optimization", severity="", text=text, elog="testlog", image=screenshot)
+            text += "START-->STOP  :" + str(table["sase"][0]) + " --> " + str(table["sase"][1]) + "\n"
+        # print(text)
+        screenshot = open(self.Form.optimizer_path + "/" + filename + "." + filetype)
+        send_to_desy_elog(author="", title="OCELOT Optimization", severity="", text=text, elog="testlog",
+                          image=screenshot)
 
-
-    def screenShot(self,filename,filetype):
+    def screenShot(self, filename, filetype):
         """
         Takes a screenshot of the whole gui window, saves png and ps images to file
 
@@ -283,15 +284,14 @@ class MainWindow(Ui_Form):
                 fileName (str): Directory string of where to save the file
                 filetype (str): String of the filetype to save
         """
-        s = str(filename)+"."+str(filetype)
+        s = str(filename) + "." + str(filetype)
         p = QPixmap.grabWindow(self.Form.winId())
         p.save(s, 'png')
-        #im = Image.open(s)
-        #im.save(s[:-4]+".ps")
+        # im = Image.open(s)
+        # im.save(s[:-4]+".ps")
         p = p.scaled(465, 400)
-        #save again a small image to use for the logbook thumbnail
-        p.save(str(s[:-4])+"_sm.png", 'png')
-
+        # save again a small image to use for the logbook thumbnail
+        p.save(str(s[:-4]) + "_sm.png", 'png')
 
     def loadStyleSheet(self):
         """ Sets the dark GUI theme from a css file."""

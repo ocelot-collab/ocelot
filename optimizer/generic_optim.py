@@ -507,7 +507,7 @@ class OcelotInterfaceWindow(QFrame):
 
     def open_help(self):
         url = "file:///"+self.optimizer_path+"docs\\build\\html\\index.html"
-        url = "file:///C:/Users/tomins/Documents/Dropbox/DESY/repository/ocelot/docs/_build/html/index.html"
+        #url = "file:///C:/Users/tomins/Documents/Dropbox/DESY/repository/ocelot/docs/_build/html/index.html"
         print(url)
         if sys.platform == 'win32':
             #os.startfile(url)

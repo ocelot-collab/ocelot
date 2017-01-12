@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'UIOcelotInterface_gen.ui'
 #
-# Created: Wed Jan 11 14:31:49 2017
+# Created: Thu Jan 12 10:10:25 2017
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!

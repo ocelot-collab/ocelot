@@ -510,13 +510,15 @@ class OcelotInterfaceWindow(QFrame):
         #url = "file:///"+self.optimizer_path+"docs\\build\\html\\index.html"
         #url = "file:///C:/Users/tomins/Documents/Dropbox/DESY/repository/ocelot/docs/_build/html/index.html"
         #print(url)
+
         if sys.platform == 'win32':
             #url = "file:///"+self.optimizer_path+"\\docs\\build\\html\\index.html"
             url = self.optimizer_path+"\\docs\\build\\html\\index.html"
             #os.startfile(url)
             webbrowser.open(url)
-        elif sys.platform == 'darwin' or "linux":
-            url = self.optimizer_path+"/docs/build/html/index.html"
+        elif sys.platform == 'darwin':
+            url = "file://"+self.optimizer_path+"/docs/build/html/index.html"
+            print (url)
             webbrowser.open(url)
             #subprocess.Popen(['open', url])
         else:

@@ -18,7 +18,7 @@ from xml.etree import ElementTree
 
 from datetime import datetime
 
-sys.path.append("..")
+#sys.path.append("..")
 #from ocelot.optimizer.taperThread import Taper
 #import matlog
 

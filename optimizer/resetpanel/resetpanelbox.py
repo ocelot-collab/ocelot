@@ -167,7 +167,6 @@ class ResetpanelBoxWindow(ResetpanelWindow):
         if state:
             self.pvs.append(pv)
             self.devices.append(dev)
-            #self.pv_objects[pv]=epics.PV(pv)
             #self.pv_objects[pv].add_callback(callback=self.PvGetCallBack)
             self.getStartValues()
             #try:
@@ -283,10 +282,11 @@ class ResetpanelBoxWindow(ResetpanelWindow):
         rows=[]
         for idx in self.ui.tableWidget.selectedIndexes():
             rows.append(idx.row())
-            item = self.ui.tableWidget.cellWidget(idx.row(), 5)
-            if not item.isEnabled():
-                print("item enabled")
-                continue
+            #item = self.ui.tableWidget.cellWidget(idx.row(), 5)
+            item = self.ui.tableWidget.item(idx.row(), 5)
+            #if not item.checkState():
+            #    print("item enabled")
+            #    continue
             item.setCheckState(state)
             #print item.text()
         #print rows
@@ -330,26 +330,27 @@ class ResetpanelBoxWindow(ResetpanelWindow):
                 self.ui.tableWidget.resizeColumnsToContents()
                 #self.ui.tableWidget.setItem(row, 3 + i, spin_box)
 
-            checkBoxItem = QtGui.QCheckBox()
-            checkBoxItem.setStyleSheet("background-color:#595959;")
-            self.ui.tableWidget.setCellWidget(row, 5, checkBoxItem)
-            """
+            #checkBoxItem = QtGui.QCheckBox()
+            #checkBoxItem.setStyleSheet("background-color:#595959;")
+            #self.ui.tableWidget.setCellWidget(row, 5, checkBoxItem)
+
             #spin_box
             checkBoxItem = QtGui.QTableWidgetItem()
             #checkBoxItem.setBackgroundColor(QtGui.QColor(100,100,150))
             checkBoxItem.setCheckState(QtCore.Qt.Checked)
             flags = checkBoxItem.flags()
+            #print("FLAG", flags)
             #flags != flags
             checkBoxItem.setFlags(flags)
             self.ui.tableWidget.setItem(row, 5, checkBoxItem)
             #self.ui.tableWidget.setItem(row, 4, spin_box)
-            """
+
 
     def uncheckBoxes(self):
         """ Method to unchecked all active boxes """
         for row in range(len(self.pvs)):
-            #item=self.ui.tableWidget.item(row, 5)
-            item = self.ui.tableWidget.cellWidget(row, 5)
+            item=self.ui.tableWidget.item(row, 5)
+            #item = self.ui.tableWidget.cellWidget(row, 5)
             item.setCheckState(False)
 
     def resetAll(self):
@@ -360,7 +361,7 @@ class ResetpanelBoxWindow(ResetpanelWindow):
         """
         for row, dev in enumerate(self.devices):
             val = self.startValues[dev.eid]
-            state = self.ui.tableWidget.cellWidget(row, 5).checkState()
+            state = self.ui.tableWidget.item(row, 5).checkState()
             if state == 2:
                 dev.set_value(val)
                 #epics.caput(pv, val)
@@ -394,7 +395,7 @@ class ResetpanelBoxWindow(ResetpanelWindow):
         """
         pvs = []
         for row in range(len(self.pvs)):
-            state = self.ui.tableWidget.cellWidget(row, 5).checkState()
+            state = self.ui.tableWidget.item(row, 5).checkState()
             if state == 2:
                 pvs.append(str(self.ui.tableWidget.item(row, 0).text()))
         return pvs

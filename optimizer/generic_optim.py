@@ -26,7 +26,6 @@ sys.path.append(path[:indx])
 
 from PyQt4.QtGui import QApplication, QFrame, QPixmap, QMessageBox
 from PyQt4 import QtGui, QtCore
-import webbrowser
 #normal imports
 import numpy as np
 import subprocess
@@ -61,6 +60,7 @@ from ocelot.optimizer.mint import obj_function
 from ocelot.utils import db
 from ocelot.optimizer.mint.xfel_interface import *
 
+
 class OcelotInterfaceWindow(QFrame):
     """ Main class for the GUI application """
     def __init__(self):
@@ -81,9 +81,9 @@ class OcelotInterfaceWindow(QFrame):
 
         self.ui = MainWindow(self)
         #self.ui.pb_help.clicked.connect(lambda: os.system("firefox file://"+self.optimizer_path+"docs/build/html/index.html"))
-        self.ui.pb_help.clicked.connect(self.open_help)
-        #self.mi = TestMachineInterface()
-        self.mi = XFELMachineInterface()
+        self.ui.pb_help.clicked.connect(self.ui.open_help)
+        self.mi = TestMachineInterface()
+        #self.mi = XFELMachineInterface()
         self.dp = TestDeviceProperties(ui=self.ui.widget)
 
         self.total_delay = self.ui.sb_tdelay.value()
@@ -91,6 +91,7 @@ class OcelotInterfaceWindow(QFrame):
         self.objective_func = obj_function.XFELTarget()
         self.objective_func_pv = "test_obj"
 
+        self.show_obj_value = False
         self.addPlots()
 
         # database
@@ -103,7 +104,6 @@ class OcelotInterfaceWindow(QFrame):
         self.ui.pb_start_scan.clicked.connect(self.start_scan)
         self.ui.pb_edit_obj_func.clicked.connect(self.run_editor)
         self.ui.cb_use_predef.stateChanged.connect(self.set_obj_fun)
-        self.ui.pb_logbook.clicked.connect(self.ui.logbook)
 
         self.ui.restore_state(self.set_file)
         self.path_to_obj_func = os.path.join(os.path.dirname(sys.modules[__name__].__file__), 'mint/obj_function.py')
@@ -115,15 +115,16 @@ class OcelotInterfaceWindow(QFrame):
         self.opt_control = mint.OptControl()
         self.opt_control.m_status = self.m_status
 
-        self.name1 = "Nelder-Mead Simplex"
-        self.name2 = "Gaussian Process"
-        self.name3 = "Custom Minimizer"
+        self.name_simplex = "Nelder-Mead Simplex"
+        self.name_gauss = "Gaussian Process"
+        self.name_custom = "Custom Minimizer"
         self.name4 = "Conjugate Gradient"
         self.name5 = "Powell's Method"
-        self.ui.cb_select_alg.addItem(self.name1)
+        self.ui.cb_select_alg.addItem(self.name_simplex)
+
         # switch of GP and custom Mininimizer
-        # self.ui.cb_select_alg.addItem(self.name2)
-        # self.ui.cb_select_alg.addItem(self.name3)
+        # self.ui.cb_select_alg.addItem(self.name_gauss)
+        # self.ui.cb_select_alg.addItem(self.name_custom)
 
         #timer for plots, starts when scan starts
         self.multiPvTimer = QtCore.QTimer()
@@ -136,18 +137,17 @@ class OcelotInterfaceWindow(QFrame):
 
         This method executes from the runScan() method, when the UI "Start Scan" button is pressed.
 
-        Returns:
-                 Selected scanner object
+        :return: Selected scanner object
                  These objects are contrained in the scannerThreads.py file
         """
-        index = self.ui.cb_select_alg.currentIndex()
+        current_method = self.ui.cb_select_alg.currentText()
 
         #GP Method
-        if index == 1:
+        if current_method == self.name_gauss:
             minimizer = mint.GaussProcess()
 
         # Custom Minimizer
-        elif index == 2:
+        elif current_method == self.name_custom:
             minimizer = mint.CustomMinimizer()
 
         # Conjugate Gradient
@@ -159,7 +159,7 @@ class OcelotInterfaceWindow(QFrame):
         #    scanner = scanner_threads.OcelotScanner(parent=self,method='powell')
 
         #simplex Method
-        else: #index == 0:
+        else:
             minimizer = mint.Simplex()
         return minimizer
 
@@ -168,6 +168,7 @@ class OcelotInterfaceWindow(QFrame):
         self.ui.save_state(self.set_file)
         if self.ui.pb_start_scan.text() == "Stop scan":
             self.opt.opt_ctrl.stop()
+            self.m_status.is_ok = lambda: True
             del(self.opt)
             self.ui.pb_start_scan.setStyleSheet("color: rgb(85, 255, 127);")
             self.ui.pb_start_scan.setText("Start scan")
@@ -175,13 +176,20 @@ class OcelotInterfaceWindow(QFrame):
         QFrame.closeEvent(self, event)
 
     def start_scan(self):
-
+        """
+        Method to start/stop the Optimizer.
+        """
         self.scanStartTime = time.time()
 
         if self.ui.pb_start_scan.text() == "Stop scan":
+            # stop the optimization
             self.opt.opt_ctrl.stop()
+
+            self.m_status.is_ok = lambda: True
+            # Save the optimization parameters to the database
             self.save2db()
             del(self.opt)
+            # Setting the button
             self.ui.pb_start_scan.setStyleSheet("color: rgb(85, 255, 127);")
             self.ui.pb_start_scan.setText("Start scan")
             return 0
@@ -196,10 +204,13 @@ class OcelotInterfaceWindow(QFrame):
         self.setUpMultiPlot(self.devices)
         self.multiPvTimer.start(100)
 
+        # set the Objective function from GUI or from file mint.obj_function.py (reloading)
         self.set_obj_fun()
-        #self.objective_func = obj_function.TestTarget()
+
+        # Set minimizer - the optimization method (Simplex, GP, ...)
         minimizer = self.scan_method_select()
 
+        # configure the Minimizer
         if minimizer.__class__ == mint.GaussProcess:
             minimizer.seed_iter = self.ui.sb_seed_iter.value()
             minimizer.seed_timeout = self.ui.sb_tdelay.value()
@@ -213,21 +224,30 @@ class OcelotInterfaceWindow(QFrame):
                     if dev.simplex_step == 0:
                         lims = dev.get_limits()
                         rel_step = self.ui.sb_isim_rel_step.value()
-                        minimizer.dev_steps.append((lims[1] - lims[0])*rel_step/100.)
-
+                        minimizer.dev_steps.append((lims[1] - lims[0]) * rel_step / 100.)
             else:
                 minimizer.dev_steps = None
 
-        #minimizer = mint.Simplex()
-        #minimizer = mint.CustomMinimizer()
+        elif minimizer.__class__ == mint.CustomMinimizer:
+            minimizer.dev_steps = []
+
+            for dev in self.devices:
+                if dev.simplex_step == 0:
+                    lims = dev.get_limits()
+                    rel_step = self.ui.sb_isim_rel_step.value()
+                    print(dev.id, rel_step)
+                    minimizer.dev_steps.append((lims[1] - lims[0]) * rel_step / 100.)
+            print("MINImizer steps", minimizer.dev_steps)
+
         self.max_iter = self.ui.sb_num_iter.value()
         minimizer.max_iter = self.max_iter
 
+        # Optimizer initialization
         self.opt = mint.Optimizer()
 
-        # set best solution after optimization
+        # Option - set best solution after optimization or not
         self.opt.set_best_solution = self.ui.cb_set_best_sol.checkState()
-        #self.opt_control = mint.OptControl()
+
         self.set_m_status()
         self.opt_control.m_status = self.m_status
         self.opt.opt_ctrl = self.opt_control
@@ -240,6 +260,8 @@ class OcelotInterfaceWindow(QFrame):
 
         #self.opt.eval(seq)
         self.opt.start()
+
+        # Setting the button
         self.ui.pb_start_scan.setText("Stop scan")
         self.ui.pb_start_scan.setStyleSheet("color: red")
 
@@ -255,6 +277,7 @@ class OcelotInterfaceWindow(QFrame):
     def indicate_machine_state(self):
         """
         Method to indicate of the machine status. Red frames around graphics means that machine status is not OK.
+
         :return:
         """
         if not self.opt_control.is_ok:
@@ -273,6 +296,7 @@ class OcelotInterfaceWindow(QFrame):
     def save2db(self):
         """
         Save optimization parameters to the Database
+
         :return: None
         """
         self.scan_params = {"devs": [], "currents": [], "iter":0, "sase": [0,0],"pen":[0,0], "obj":[]}
@@ -321,6 +345,7 @@ class OcelotInterfaceWindow(QFrame):
     def set_obj_fun(self):
         """
         Method to set objective function from the GUI (channels A,B,C) or reload module obj_function.py
+
         :return: None
         """
         self.ui.use_predef_fun()
@@ -329,6 +354,9 @@ class OcelotInterfaceWindow(QFrame):
             print("RELOAD Module Objective Function")
             reload(obj_function)
         else:
+            # disable button "Edit Objective Function"
+            # self.ui.pb_edit_obj_func.setEnabled(False)
+
             a_str = str(self.ui.le_a.text())
             state_a = self.ui.is_le_addr_ok(self.ui.le_a)
 
@@ -406,6 +434,8 @@ class OcelotInterfaceWindow(QFrame):
         x = np.array(self.objective_func.times) - self.scanStartTime
 
         self.obj_func_line.setData(x=x, y=y)
+        if self.show_obj_value:
+            self.obj_func_value.setData(x=x, y=self.objective_func.values)
 
         #plot data for all devices being scanned
         for dev in self.devices:
@@ -429,7 +459,7 @@ class OcelotInterfaceWindow(QFrame):
         layout.addWidget(self.plot1, 0, 0)
 
         #setup plot 2 for device monitor
-        self.plot2 = pg.PlotWidget(title = "Device Monitor",labels={'left': "Device (Current - Start)", 'bottom': "Time (seconds)"})
+        self.plot2 = pg.PlotWidget(title="Device Monitor", labels={'left': "Device (Current - Start)", 'bottom': "Time (seconds)"})
         self.plot2.showGrid(1, 1, 1)
         self.plot2.getAxis('left').enableAutoSIPrefix(enable=False) # stop the auto unit scaling on y axes
         layout = QtGui.QGridLayout()
@@ -444,7 +474,11 @@ class OcelotInterfaceWindow(QFrame):
         color = QtGui.QColor(0, 255, 255)
         pen=pg.mkPen(color, width=3)
         self.obj_func_line = pg.PlotCurveItem(x=[], y=[], pen=pen, antialias=True)
+        self.obj_func_value = pg.PlotCurveItem(x=[], y=[], pen=pg.mkPen(QtGui.QColor(255, 255, 51), width=3),
+                                               antialias=True, name="value")
         self.plot1.addItem(self.obj_func_line)
+        if self.show_obj_value:
+            self.plot1.addItem(self.obj_func_value)
 
     def setUpMultiPlot(self, devices):
         """
@@ -470,7 +504,7 @@ class OcelotInterfaceWindow(QFrame):
                 color = self.randColor()
 
             pen=pg.mkPen(color, width=2)
-            self.multilines[dev.eid]  = pg.PlotCurveItem(x, y, pen=pen, antialias=True, name=str(dev.eid))
+            self.multilines[dev.eid] = pg.PlotCurveItem(x, y, pen=pen, antialias=True, name=str(dev.eid))
             self.multiPvData[dev.eid] = []
             self.multiPlotStarts[dev.eid] = dev.get_value()
             self.plot2.addItem(self.multilines[dev.eid])
@@ -480,8 +514,7 @@ class OcelotInterfaceWindow(QFrame):
         """
         Generate random line color for each device plotted.
 
-        Returns:
-                QColor object of a random color
+        :return: QColor object of a random color
         """
         hi = 255
         lo = 128
@@ -493,6 +526,7 @@ class OcelotInterfaceWindow(QFrame):
     def run_editor(self):
         """
         Run the editor for edition of the objective function in obj_function.py
+
         :return:
         """
         if platform.system() == 'Darwin':
@@ -506,31 +540,9 @@ class OcelotInterfaceWindow(QFrame):
             return
         self.set_obj_fun()
 
-    def open_help(self):
-        #url = "file:///"+self.optimizer_path+"docs\\build\\html\\index.html"
-        #url = "file:///C:/Users/tomins/Documents/Dropbox/DESY/repository/ocelot/docs/_build/html/index.html"
-        #print(url)
-
-        if sys.platform == 'win32':
-            #url = "file:///"+self.optimizer_path+"\\docs\\build\\html\\index.html"
-            url = self.optimizer_path+"\\docs\\build\\html\\index.html"
-            #os.startfile(url)
-            webbrowser.open(url)
-        elif sys.platform == 'darwin':
-            url = "file://"+self.optimizer_path+"/docs/build/html/index.html"
-            print (url)
-            webbrowser.open(url)
-            #subprocess.Popen(['open', url])
-        else:
-            try:
-                subprocess.Popen(['xdg-open', url])
-            except OSError:
-                print('Please open a browser on: ' + url)
-
     def error_box(self, message):
         QtGui.QMessageBox.about(self, "Error box", message)
-
-
+        #QtGui.QMessageBox.critical(self, "Error box", message)
 
 class customLegend(pg.LegendItem):
     """

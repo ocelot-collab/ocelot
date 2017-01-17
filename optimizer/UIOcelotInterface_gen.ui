@@ -1302,6 +1302,9 @@
                   <property name="minimum">
                    <double>-100.000000000000000</double>
                   </property>
+                  <property name="maximum">
+                   <double>100.989999999999995</double>
+                  </property>
                   <property name="singleStep">
                    <double>0.100000000000000</double>
                   </property>
@@ -1346,6 +1349,9 @@
                   </property>
                   <property name="minimum">
                    <double>-100.000000000000000</double>
+                  </property>
+                  <property name="maximum">
+                   <double>100.989999999999995</double>
                   </property>
                   <property name="singleStep">
                    <double>0.100000000000000</double>
@@ -1426,7 +1432,7 @@
                </font>
               </property>
               <property name="text">
-               <string>Use Initial Simplex [step =(Max - Min) x RelStep[%]]</string>
+               <string>Use Initial Simplex/Step [step =(Max - Min) x RelStep[%]]</string>
               </property>
              </widget>
             </item>

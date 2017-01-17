@@ -4,13 +4,19 @@ import time
 
 
 class XFELTarget(Target):
+    """
+    Objective function
+
+    :param mi: Machine interface
+    :param dp: Device property
+    :param pen_max: 100, maximum penalty
+    :param niter: 0, calls number get_penalty()
+    :param penalties: [], appending penalty
+    :param times: [], appending the time evolution of get_penalty()
+    """
     def __init__(self, mi=None, dp=None, eid=None):
         super(XFELTarget, self).__init__(eid=eid)
-        """
-        :param mi: Machine interface
-        :param dp: Device property
-        :param eid: ID
-        """
+
         self.mi = mi
         self.dp = dp
         self.debug = False
@@ -22,7 +28,35 @@ class XFELTarget(Target):
         self.alarms = []
         self.values = []
 
+    def get_alarm(self):
+        """
+        Method to get alarm level (e.g. BLM value).
+
+        alarm level must be normalized: 0 is min, 1 is max
+
+        :return: alarm level
+        """
+        return 0
+
+    def get_value(self):
+        """
+        Method to get signal of target function (e.g. SASE signal).
+
+        :return: value
+        """
+        values = np.array([dev.get_value() for dev in self.devices])
+        return 2*np.sum(np.exp(-np.power((values - np.ones_like(values)), 2) / 5.))
+        #value = self.mi.get_value(self.eid)
+
     def get_penalty(self):
+        """
+        Method to calculate the penalty on the basis of the value and alarm level.
+
+        penalty = -get_value() + alarm()
+
+
+        :return: penalty
+        """
         sase = self.get_value()
         alarm = self.get_alarm()
         if self.debug: print('alarm:', alarm)
@@ -31,26 +65,18 @@ class XFELTarget(Target):
         if alarm > 1.0:
             return self.pen_max
         if alarm > 0.7:
-            return alarm * 50.0
+            return alarm * self.pen_max/2.
         pen += alarm
         pen -= sase
         if self.debug: print('penalty:', pen)
         self.niter += 1
-        print("niter = ", self.niter)
+        #print("niter = ", self.niter)
         self.penalties.append(pen)
         self.times.append(time.time())
         self.values.append(sase)
         self.alarms.append(alarm)
         return pen
 
-    def get_value(self):
-        """
-        changeable
-        :return:
-        """
-        values = np.array([dev.get_value() for dev in self.devices])
-        return 2*np.sum(np.exp(-np.power((values - np.ones_like(values)), 2) / 5.))
-        #value = self.mi.get_value(self.eid)
 
     def get_spectrum(self):
         return [0, 0]
@@ -62,13 +88,6 @@ class XFELTarget(Target):
         ave = self.get_value()
         std = 0.1
         return ave, std
-
-    def get_alarm(self):
-        """
-        changeable
-        :return:
-        """
-        return 0
 
     def get_energy(self):
         return 3

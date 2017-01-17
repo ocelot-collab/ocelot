@@ -7,20 +7,22 @@ import subprocess
 import base64
 from datetime import datetime
 import numpy as np
+import sys
+import webbrowser
 
 
 def send_to_desy_elog(author, title, severity, text, elog, image=None):
     """
     Send information to a supplied electronic logbook.
-    Author Christopher Behrens (DESY)
+    Author: Christopher Behrens (DESY)
     """
 
     # The DOOCS elog expects an XML string in a particular format. This string
     # is beeing generated in the following as an initial list of strings.
     succeded = True  # indicator for a completely successful job
     # list beginning
-    elogXMLStringList = ['<?xml version="1.0" encoding="ISO-8859-1"?>',
-                         '<entry>']
+    elogXMLStringList = ['<?xml version="1.0" encoding="ISO-8859-1"?>', '<entry>']
+
     # author information
     elogXMLStringList.append('<author>')
     elogXMLStringList.append(author)
@@ -74,10 +76,7 @@ class MainWindow(Ui_Form):
         self.pb_rewrite.clicked.connect(self.rewrite_default)
         self.cb_use_isim.stateChanged.connect(self.change_state_scipy_setup)
         self.pb_hyper_file.clicked.connect(self.get_hyper_file)
-        if scipy.__version__ < "0.18":
-            self.g_box_isim.setEnabled(False)
-            self.g_box_isim.setTitle("Initial Simplex does not work: scipy version: " + scipy.__version__)
-            self.g_box_isim.setStyleSheet('QGroupBox  {color: red;}')
+        self.pb_logbook.clicked.connect(self.logbook)
 
         self.le_a.textChanged.connect(self.check_address)
         self.le_b.textChanged.connect(self.check_address)
@@ -86,6 +85,8 @@ class MainWindow(Ui_Form):
 
         self.sb_tdelay.valueChanged.connect(self.set_cycle)
         self.sb_ddelay.valueChanged.connect(self.set_cycle)
+        self.cb_select_alg.currentIndexChanged.connect(self.change_state_scipy_setup)
+
         # self.horizontalLayout_2.setStyleSheet("color: red")
 
         # font = self.pb_hyper_file.font()
@@ -179,7 +180,6 @@ class MainWindow(Ui_Form):
 
         # Build the PV list from dev PVs or selected source
         pvs = table["id"]
-        print("pvs = ", pvs)
         self.widget.set_machine_interface(self.Form.mi, self.Form.dp)
         self.widget.getPvList(pvs)
         # set checkbot status
@@ -247,6 +247,12 @@ class MainWindow(Ui_Form):
         self.save_state(self.Form.set_file)
 
     def logbook(self):
+        """
+        Method to send Optimization parameters + screenshot to eLogboob
+
+        :return:
+        """
+
         filename = "screenshot"
         filetype = "png"
         self.screenShot(filename, filetype)
@@ -277,13 +283,15 @@ class MainWindow(Ui_Form):
                           image=screenshot)
 
     def screenShot(self, filename, filetype):
+
         """
         Takes a screenshot of the whole gui window, saves png and ps images to file
 
-        Args:
-                fileName (str): Directory string of where to save the file
-                filetype (str): String of the filetype to save
+        :param filename: (str) Directory string of where to save the file
+        :param filetype: (str) String of the filetype to save
+        :return:
         """
+
         s = str(filename) + "." + str(filetype)
         p = QPixmap.grabWindow(self.Form.winId())
         p.save(s, 'png')
@@ -294,7 +302,11 @@ class MainWindow(Ui_Form):
         p.save(str(s[:-4]) + "_sm.png", 'png')
 
     def loadStyleSheet(self):
-        """ Sets the dark GUI theme from a css file."""
+        """
+        Sets the dark GUI theme from a css file.
+
+        :return:
+        """
         try:
             self.cssfile = "style.css"
             with open(self.cssfile, "r") as f:
@@ -303,12 +315,39 @@ class MainWindow(Ui_Form):
             print ('No style sheet found!')
 
     def change_state_scipy_setup(self):
+        """
+        Method to enable/disable "Scipy Scanner Setup". If scipy version < "0.18" then QGroup will be disable.
+
+        :return:
+        """
+        print("SCIPY", str(self.cb_select_alg.currentText()))
+        if scipy.__version__ < "0.18" and str(self.cb_select_alg.currentText()) == self.Form.name_simplex:
+            #self.cb_use_isim.setCheckState(False)
+            self.g_box_isim.setEnabled(False)
+            self.g_box_isim.setTitle("Initial Simplex does not work: scipy version: " + scipy.__version__)
+            self.g_box_isim.setStyleSheet('QGroupBox  {color: red;}')
+        elif scipy.__version__ >= "0.18" and self.cb_select_alg.currentText() == self.Form.name_simplex:
+            self.g_box_isim.setEnabled(True)
+            self.g_box_isim.setTitle("Simplex/Scipy Scanner Setup")
+            self.g_box_isim.setStyleSheet('QGroupBox  {color: white;}')
+
         if self.cb_use_isim.checkState():
             self.label_23.setEnabled(True)
             self.sb_isim_rel_step.setEnabled(True)
         else:
             self.label_23.setEnabled(False)
             self.sb_isim_rel_step.setEnabled(False)
+
+        if str(self.cb_select_alg.currentText()) == self.Form.name_custom:
+            self.g_box_isim.setEnabled(True)
+            self.label_23.setEnabled(True)
+            self.sb_isim_rel_step.setEnabled(True)
+            self.g_box_isim.setTitle("Custom Minimizer Scanner Setup")
+            self.g_box_isim.setStyleSheet('QGroupBox  {color: white;}')
+            #self.cb_use_isim.setCheckState(True)
+            self.cb_use_isim.setEnabled(False)
+            self.sb_isim_rel_step.setValue(5)
+
 
     def use_predef_fun(self):
         if self.cb_use_predef.checkState():
@@ -332,3 +371,24 @@ class MainWindow(Ui_Form):
             self.label_20.setEnabled(True)
             self.label_21.setEnabled(True)
 
+    def open_help(self):
+        """
+        method to open the Help in the webbrowser
+
+        :return: None
+        """
+
+        if sys.platform == 'win32':
+            url = self.Form.optimizer_path+"\\docs\\_build\\html\\index.html"
+            #os.startfile(url)
+            webbrowser.open(url)
+        elif sys.platform == 'darwin':
+            url = "file://"+self.Form.optimizer_path+"/docs/_build/html/index.html"
+            webbrowser.open(url)
+            #subprocess.Popen(['open', url])
+        else:
+            url = "file://" + self.Form.optimizer_path + "/docs/_build/html/index.html"
+            try:
+                subprocess.Popen(['xdg-open', url])
+            except OSError:
+                print('Please open a browser on: ' + url)

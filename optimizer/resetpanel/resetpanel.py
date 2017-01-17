@@ -186,32 +186,32 @@ class ResetpanelWindow(QFrame):
         Hard coded to turn Current Value column red at 0.1% differenct from Ref Value.
         It would be better to update the table on a callback, but PyEpics crashes with cb funcitons.
         """
-        #print(self.devices)
         percent = 0.001
         self.currentValues = {}
-        #print(self.devices)
         for row, dev in enumerate(self.devices):
             if self.startValues[dev.eid] == None:
-                #print(self.ui.tableWidget.item(row, 5))
-                #self.ui.tableWidget.item(row, 5).setBackgroundColor(QtGui.QColor(255, 101, 101))
-                self.ui.tableWidget.cellWidget(row, 5).setStyleSheet("background-color:#ff0000;")
-                #self.ui.tableWidget.item(row, 5).setStyleSheet()
-                self.ui.tableWidget.cellWidget(row, 5).setEnabled(False)
+                self.ui.tableWidget.setItem(row, 2, QtGui.QTableWidgetItem(str("None")))
+                for col in [0,1,2, 5]:
+                    self.ui.tableWidget.item(row, col).setFlags(QtCore.Qt.NoItemFlags)
+                    self.ui.tableWidget.item(row, col).setBackground(QtGui.QColor(255, 0, 0))
+
                 continue
-            else:
-                self.ui.tableWidget.cellWidget(row, 5).setEnabled(True)
-                self.ui.tableWidget.cellWidget(row, 5).setStyleSheet("background-color:#595959;")
 
             pv = dev.eid
             self.currentValues[pv] = dev.get_value()
             self.ui.tableWidget.setItem(row, 2, QtGui.QTableWidgetItem(str(np.around(self.currentValues[pv], 4))))
-
+            #print(self.currentValues[pv])
             tol  = abs(self.startValues[pv]*percent)
             diff = abs(abs(self.startValues[pv]) - abs(self.currentValues[pv]))
             if diff > tol:
                 self.ui.tableWidget.item(row, 2).setForeground(QtGui.QColor(255, 101, 101))#red
             else:
                 self.ui.tableWidget.item(row, 2).setForeground(QtGui.QColor(255, 255, 255))#white
+
+            for col in [0, 1,2, 5]:
+                self.ui.tableWidget.item(row, col).setFlags(
+                    QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
+                self.ui.tableWidget.item(row, col).setBackground(QtGui.QColor(89, 89, 89))
 
 
         QApplication.processEvents()

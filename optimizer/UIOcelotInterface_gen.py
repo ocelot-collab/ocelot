@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'UIOcelotInterface_gen.ui'
 #
-# Created: Thu Jan 12 10:10:25 2017
+# Created: Tue Jan 17 13:16:21 2017
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -661,6 +661,7 @@ class Ui_Form(object):
         self.sb_alarm_min.setFont(font)
         self.sb_alarm_min.setLocale(QtCore.QLocale(QtCore.QLocale.English, QtCore.QLocale.UnitedStates))
         self.sb_alarm_min.setMinimum(-100.0)
+        self.sb_alarm_min.setMaximum(100.99)
         self.sb_alarm_min.setSingleStep(0.1)
         self.sb_alarm_min.setProperty("value", 0.0)
         self.sb_alarm_min.setObjectName(_fromUtf8("sb_alarm_min"))
@@ -683,6 +684,7 @@ class Ui_Form(object):
         self.sb_alarm_max.setFont(font)
         self.sb_alarm_max.setLocale(QtCore.QLocale(QtCore.QLocale.English, QtCore.QLocale.UnitedStates))
         self.sb_alarm_max.setMinimum(-100.0)
+        self.sb_alarm_max.setMaximum(100.99)
         self.sb_alarm_max.setSingleStep(0.1)
         self.sb_alarm_max.setObjectName(_fromUtf8("sb_alarm_max"))
         self.horizontalLayout_6.addWidget(self.sb_alarm_max)
@@ -786,7 +788,7 @@ class Ui_Form(object):
         self.label_22.setText(_translate("Form", "           Max    ", None))
         self.g_box_isim.setTitle(_translate("Form", "Simplex/Scipy Scanner Setup", None))
         self.label_23.setText(_translate("Form", "Relative Step in %", None))
-        self.cb_use_isim.setText(_translate("Form", "Use Initial Simplex [step =(Max - Min) x RelStep[%]]", None))
+        self.cb_use_isim.setText(_translate("Form", "Use Initial Simplex/Step [step =(Max - Min) x RelStep[%]]", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab3), _translate("Form", "Objective Function", None))
 
 from resetpanel.resetpanelbox import ResetpanelBoxWindow

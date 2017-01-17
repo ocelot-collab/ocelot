@@ -192,6 +192,7 @@ class ResetpanelWindow(QFrame):
             try:
                 value = dev.get_value()
             except:
+                print("ERROR getting value. Device:", dev.eid)
                 value = None
 
 

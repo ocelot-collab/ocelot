@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'UIOcelotInterface_gen.ui'
 #
-# Created: Tue Jan 17 13:16:21 2017
+# Created: Tue Jan 17 14:24:47 2017
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -635,12 +635,24 @@ class Ui_Form(object):
         self.horizontalLayout_5.addLayout(self.verticalLayout_13)
         self.verticalLayout_14 = QtGui.QVBoxLayout()
         self.verticalLayout_14.setObjectName(_fromUtf8("verticalLayout_14"))
+        self.horizontalLayout_9 = QtGui.QHBoxLayout()
+        self.horizontalLayout_9.setObjectName(_fromUtf8("horizontalLayout_9"))
         self.le_alarm = QtGui.QLineEdit(self.groupBox_6)
         font = QtGui.QFont()
         font.setPointSize(16)
         self.le_alarm.setFont(font)
         self.le_alarm.setObjectName(_fromUtf8("le_alarm"))
-        self.verticalLayout_14.addWidget(self.le_alarm)
+        self.horizontalLayout_9.addWidget(self.le_alarm)
+        self.label_12 = QtGui.QLabel(self.groupBox_6)
+        self.label_12.setObjectName(_fromUtf8("label_12"))
+        self.horizontalLayout_9.addWidget(self.label_12)
+        self.label_alarm = QtGui.QLabel(self.groupBox_6)
+        font = QtGui.QFont()
+        font.setPointSize(16)
+        self.label_alarm.setFont(font)
+        self.label_alarm.setObjectName(_fromUtf8("label_alarm"))
+        self.horizontalLayout_9.addWidget(self.label_alarm)
+        self.verticalLayout_14.addLayout(self.horizontalLayout_9)
         self.horizontalLayout_6 = QtGui.QHBoxLayout()
         self.horizontalLayout_6.setObjectName(_fromUtf8("horizontalLayout_6"))
         self.label_17 = QtGui.QLabel(self.groupBox_6)
@@ -784,6 +796,8 @@ class Ui_Form(object):
         self.groupBox_6.setTitle(_translate("Form", "Machine Status", None))
         self.label_13.setText(_translate("Form", "Alarm 1", None))
         self.label_14.setText(_translate("Form", "Limits:     ", None))
+        self.label_12.setText(_translate("Form", "<html><head/><body><p><span style=\" font-size:16pt;\">Value:    </span></p></body></html>", None))
+        self.label_alarm.setText(_translate("Form", "<html><head/><body><p><span style=\" font-size:16pt;\">0</span></p></body></html>", None))
         self.label_17.setText(_translate("Form", "Min   ", None))
         self.label_22.setText(_translate("Form", "           Max    ", None))
         self.g_box_isim.setTitle(_translate("Form", "Simplex/Scipy Scanner Setup", None))

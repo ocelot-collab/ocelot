@@ -1255,13 +1255,36 @@
             <item>
              <layout class="QVBoxLayout" name="verticalLayout_14">
               <item>
-               <widget class="QLineEdit" name="le_alarm">
-                <property name="font">
-                 <font>
-                  <pointsize>16</pointsize>
-                 </font>
-                </property>
-               </widget>
+               <layout class="QHBoxLayout" name="horizontalLayout_9">
+                <item>
+                 <widget class="QLineEdit" name="le_alarm">
+                  <property name="font">
+                   <font>
+                    <pointsize>16</pointsize>
+                   </font>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="label_12">
+                  <property name="text">
+                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:16pt;&quot;&gt;Value:    &lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="label_alarm">
+                  <property name="font">
+                   <font>
+                    <pointsize>16</pointsize>
+                   </font>
+                  </property>
+                  <property name="text">
+                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:16pt;&quot;&gt;0&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
               </item>
               <item>
                <layout class="QHBoxLayout" name="horizontalLayout_6">

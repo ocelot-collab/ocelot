@@ -86,7 +86,9 @@ class MainWindow(Ui_Form):
         self.sb_tdelay.valueChanged.connect(self.set_cycle)
         self.sb_ddelay.valueChanged.connect(self.set_cycle)
         self.cb_select_alg.currentIndexChanged.connect(self.change_state_scipy_setup)
-
+        self.read_alarm = QtCore.QTimer()
+        self.read_alarm.timeout.connect(self.alarm_value)
+        self.read_alarm.start(1000)
         # self.horizontalLayout_2.setStyleSheet("color: red")
 
         # font = self.pb_hyper_file.font()
@@ -96,6 +98,19 @@ class MainWindow(Ui_Form):
         # self.pb_hyper_file.setStyleSheet("font: 16px, color: red")
 
         # self.window = window
+
+    def alarm_value(self):
+        """
+        reading alarm value
+
+        :return:
+        """
+        dev = str(self.le_alarm.text())
+        try:
+            value = self.Form.mi.get_value(dev)
+            self.label_alarm.setText(str(np.round(value, 2)))
+        except:
+            self.label_alarm.setText(str("None"))
 
     def set_cycle(self):
         """

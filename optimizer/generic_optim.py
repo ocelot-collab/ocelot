@@ -82,8 +82,8 @@ class OcelotInterfaceWindow(QFrame):
         self.ui = MainWindow(self)
         #self.ui.pb_help.clicked.connect(lambda: os.system("firefox file://"+self.optimizer_path+"docs/build/html/index.html"))
         self.ui.pb_help.clicked.connect(self.ui.open_help)
-        self.mi = TestMachineInterface()
-        #self.mi = XFELMachineInterface()
+        #self.mi = TestMachineInterface()
+        self.mi = XFELMachineInterface()
         self.dp = TestDeviceProperties(ui=self.ui.widget)
 
         self.total_delay = self.ui.sb_tdelay.value()

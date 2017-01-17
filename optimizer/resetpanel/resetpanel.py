@@ -189,16 +189,30 @@ class ResetpanelWindow(QFrame):
         percent = 0.001
         self.currentValues = {}
         for row, dev in enumerate(self.devices):
-            if self.startValues[dev.eid] == None:
-                self.ui.tableWidget.setItem(row, 2, QtGui.QTableWidgetItem(str("None")))
-                for col in [0,1,2, 5]:
+            try:
+                value = dev.get_value()
+            except:
+                value = None
+
+
+            if self.startValues[dev.eid] == None or value == None:
+                for col in [0, 5]:
                     self.ui.tableWidget.item(row, col).setFlags(QtCore.Qt.NoItemFlags)
                     self.ui.tableWidget.item(row, col).setBackground(QtGui.QColor(255, 0, 0))
+                if self.startValues[dev.eid] == None:
+                    self.ui.tableWidget.setItem(row, 1, QtGui.QTableWidgetItem(str("None")))
+                    self.ui.tableWidget.item(row, 1).setFlags(QtCore.Qt.NoItemFlags)
+                    self.ui.tableWidget.item(row, 1).setBackground(QtGui.QColor(255, 0, 0))
+                if value == None:
+                    self.ui.tableWidget.setItem(row, 2, QtGui.QTableWidgetItem(str("None")))
+                    self.ui.tableWidget.item(row, 2).setFlags(QtCore.Qt.NoItemFlags)
+                    self.ui.tableWidget.item(row, 2).setBackground(QtGui.QColor(255, 0, 0))
 
                 continue
 
             pv = dev.eid
-            self.currentValues[pv] = dev.get_value()
+
+            self.currentValues[pv] = value #dev.get_value()
             self.ui.tableWidget.setItem(row, 2, QtGui.QTableWidgetItem(str(np.around(self.currentValues[pv], 4))))
             #print(self.currentValues[pv])
             tol  = abs(self.startValues[pv]*percent)

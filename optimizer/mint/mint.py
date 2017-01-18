@@ -223,11 +223,13 @@ class OptControl:
         self.kill = False
         self.is_ok = True
         self.timeout = 0.1
+        self.alarm_timeout = 0
 
     def wait(self):
         while 1:
             if self.m_status.is_ok():
                 self.is_ok = True
+                time.sleep(self.alarm_timeout)
                 return 1
             time.sleep(self.timeout)
             self.is_ok = False

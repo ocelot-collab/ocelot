@@ -186,28 +186,39 @@ class ResetpanelWindow(QFrame):
         Hard coded to turn Current Value column red at 0.1% differenct from Ref Value.
         It would be better to update the table on a callback, but PyEpics crashes with cb funcitons.
         """
+        # TODO: update startValue after device recovery.
         percent = 0.001
         self.currentValues = {}
         for row, dev in enumerate(self.devices):
             try:
                 value = dev.get_value()
             except:
-                print("ERROR getting value. Device:", dev.eid)
+                #print("ERROR getting value. Device:", dev.eid)
                 value = None
 
 
+            if self.startValues[dev.eid] == None and value != None:
+                self.startValues[dev.eid] = value
+
             if self.startValues[dev.eid] == None or value == None:
+                self.ui.tableWidget.item(row, 5).setFlags(QtCore.Qt.NoItemFlags)
                 for col in [0, 5]:
-                    self.ui.tableWidget.item(row, col).setFlags(QtCore.Qt.NoItemFlags)
-                    self.ui.tableWidget.item(row, col).setBackground(QtGui.QColor(255, 0, 0))
+                    self.ui.tableWidget.item(row, col).setBackground(QtGui.QColor(255, 0, 0)) # red
+
                 if self.startValues[dev.eid] == None:
                     self.ui.tableWidget.setItem(row, 1, QtGui.QTableWidgetItem(str("None")))
-                    self.ui.tableWidget.item(row, 1).setFlags(QtCore.Qt.NoItemFlags)
-                    self.ui.tableWidget.item(row, 1).setBackground(QtGui.QColor(255, 0, 0))
+                    self.ui.tableWidget.item(row, 1).setBackground(QtGui.QColor(255, 0, 0))  # red
+                else:
+                    self.ui.tableWidget.setItem(row, 1, QtGui.QTableWidgetItem(str(np.around(value, 4))))
+                    self.ui.tableWidget.item(row, 1).setBackground(QtGui.QColor(89, 89, 89))  # grey
+
                 if value == None:
                     self.ui.tableWidget.setItem(row, 2, QtGui.QTableWidgetItem(str("None")))
-                    self.ui.tableWidget.item(row, 2).setFlags(QtCore.Qt.NoItemFlags)
-                    self.ui.tableWidget.item(row, 2).setBackground(QtGui.QColor(255, 0, 0))
+                    self.ui.tableWidget.item(row, 2).setBackground(QtGui.QColor(255, 0, 0))  # red
+                else:
+                    self.ui.tableWidget.setItem(row, 2,
+                                                QtGui.QTableWidgetItem(str(np.around(self.currentValues[dev.eid], 4))))
+                    self.ui.tableWidget.item(row, 2).setBackground(QtGui.QColor(89, 89, 89))  # grey
 
                 continue
 
@@ -223,9 +234,12 @@ class ResetpanelWindow(QFrame):
             else:
                 self.ui.tableWidget.item(row, 2).setForeground(QtGui.QColor(255, 255, 255))#white
 
-            for col in [0, 1,2, 5]:
-                self.ui.tableWidget.item(row, col).setFlags(
-                    QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
+            self.ui.tableWidget.item(row, 5).setFlags(
+                QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled )
+
+            for col in [0, 1, 2, 5]:
+                #self.ui.tableWidget.item(row, col).setFlags(
+                #    QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
                 self.ui.tableWidget.item(row, col).setBackground(QtGui.QColor(89, 89, 89))
 
 

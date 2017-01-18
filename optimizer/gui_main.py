@@ -171,6 +171,7 @@ class MainWindow(Ui_Form):
         table["alarm_dev"] = alarm_dev
         table["alarm_min"] = alarm_min
         table["alarm_max"] = alarm_max
+        table["alarm_timeout"] = self.sb_alarm_timeout.value()
 
         table["seed_iter"] = self.sb_seed_iter.value()
         table["use_live_seed"] = self.cb_use_live_seed.checkState()
@@ -181,6 +182,7 @@ class MainWindow(Ui_Form):
         table["hyper_file"] = self.Form.hyper_file
 
         table["set_best_sol"] = self.cb_set_best_sol.checkState()
+
 
         with open(filename, 'w') as f:
             json.dump(table, f)
@@ -221,6 +223,7 @@ class MainWindow(Ui_Form):
             self.le_alarm.setText(table["alarm_dev"])
             self.sb_alarm_min.setValue(table["alarm_min"])
             self.sb_alarm_max.setValue(table["alarm_max"])
+            self.sb_alarm_timeout.setValue(table["alarm_timeout"])
 
             self.sb_seed_iter.setValue(table["seed_iter"])
             self.cb_use_live_seed.setCheckState(table["use_live_seed"])

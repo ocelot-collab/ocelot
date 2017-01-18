@@ -56,7 +56,7 @@ from ocelot.optimizer.gui_main import *
 from ocelot.optimizer.mint.opt_objects import *
 from ocelot.optimizer.mint import mint
 from ocelot.optimizer.mint import opt_objects as obj
-from ocelot.optimizer.mint import obj_function
+
 from ocelot.utils import db
 from ocelot.optimizer.mint.xfel_interface import *
 
@@ -82,13 +82,15 @@ class OcelotInterfaceWindow(QFrame):
         self.ui = MainWindow(self)
         #self.ui.pb_help.clicked.connect(lambda: os.system("firefox file://"+self.optimizer_path+"docs/build/html/index.html"))
         self.ui.pb_help.clicked.connect(self.ui.open_help)
-        #self.mi = TestMachineInterface()
-        self.mi = XFELMachineInterface()
+        self.mi = TestMachineInterface()
+        #self.mi = XFELMachineInterface()
         self.dp = TestDeviceProperties(ui=self.ui.widget)
 
         self.total_delay = self.ui.sb_tdelay.value()
         self.opt_control = mint.OptControl()
-        self.objective_func = obj_function.XFELTarget()
+        self.opt_control.alarm_timeout = self.ui.sb_alarm_timeout.value()
+
+        #self.objective_func = obj_function.XFELTarget()
         self.objective_func_pv = "test_obj"
 
         self.show_obj_value = False
@@ -348,11 +350,20 @@ class OcelotInterfaceWindow(QFrame):
 
         :return: None
         """
+        try:
+            from ocelot.optimizer.mint import obj_function
+            reload(obj_function)
+            self.ui.pb_edit_obj_func.setStyleSheet("background: #4e4e4e")
+        except:
+            self.ui.pb_edit_obj_func.setStyleSheet("background: red")
+            self.ui.cb_use_predef.setCheckState(False)
+
         self.ui.use_predef_fun()
 
         if self.ui.cb_use_predef.checkState():
             print("RELOAD Module Objective Function")
-            reload(obj_function)
+            self.objective_func = obj_function.XFELTarget(mi=self.mi, dp=self.dp)
+            self.objective_func.devices = []
         else:
             # disable button "Edit Objective Function"
             # self.ui.pb_edit_obj_func.setEnabled(False)
@@ -380,9 +391,8 @@ class OcelotInterfaceWindow(QFrame):
                     C = self.mi.get_value(c_str)
                 return eval(func)
 
-        self.objective_func = obj_function.XFELTarget(mi=self.mi, dp=self.dp)
-        self.objective_func.devices = []
-        if not self.ui.cb_use_predef.checkState():
+            self.objective_func = obj.Target(eid=a_str)
+            self.objective_func.devices = []
             self.objective_func.get_value = get_value_exp
 
 

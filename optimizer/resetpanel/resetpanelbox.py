@@ -284,9 +284,9 @@ class ResetpanelBoxWindow(ResetpanelWindow):
             rows.append(idx.row())
             #item = self.ui.tableWidget.cellWidget(idx.row(), 5)
             item = self.ui.tableWidget.item(idx.row(), 5)
-            #if not item.checkState():
-            #    print("item enabled")
-            #    continue
+            if item.flags() == QtCore.Qt.NoItemFlags:
+                print("item disabled")
+                continue
             item.setCheckState(state)
             #print item.text()
         #print rows

@@ -127,7 +127,14 @@ class Target(object):
         return 0
 
     def get_penalty(self):
-        pen = -self.get_value()
+        sase = self.get_value()
+        alarm = self.get_alarm()
+        pen = -sase
+
+        self.penalties.append(pen)
+        self.times.append(time.time())
+        self.values.append(sase)
+        self.alarms.append(alarm)
         return pen
 
     def get_alarm(self):

@@ -1,4 +1,4 @@
-from ocelot.optimizer.mint.opt_objects import Target
+﻿from ocelot.optimizer.mint.opt_objects import Target
 import numpy as np
 import time
 
@@ -14,7 +14,6 @@ class XFELTarget(Target):
     :param penalties: [], appending penalty
     :param times: [], appending the time evolution of get_penalty()
     """
-
     def __init__(self, mi=None, dp=None, eid="x57**2 + y57**2 + x59**2 + y59"):
         super(XFELTarget, self).__init__(eid=eid)
 
@@ -50,7 +49,6 @@ class XFELTarget(Target):
         x59 = self.mi.get_value("XFEL.DIAG/ORBIT/BPMA.59.I1/X.SA1")
         y59 = self.mi.get_value("XFEL.DIAG/ORBIT/BPMA.59.I1/Y.SA1")
         return -np.sqrt(x57 ** 2 + y57 ** 2 + x59 ** 2 + y59 ** 2)
-        # return mi.get_value(“”)
 
         # values = np.array([dev.get_value() for dev in self.devices])
         # return 2*np.sum(np.exp(-np.power((values - np.ones_like(values)), 2) / 5.))

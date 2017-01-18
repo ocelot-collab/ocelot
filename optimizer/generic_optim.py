@@ -37,22 +37,9 @@ if sys.version_info[0] == 2:
 else:
     from importlib import reload
 
-##logbook imports
-#from re import sub
-#from xml.etree import ElementTree
-#from shutil import copy
-#from datetime import datetime
-#import Image
-#import json
-#GUI layout file
-#from ocelot.optimizer.UIOcelotInterface_gen import Ui_Form
-from ocelot.optimizer.gui_main import *
-#slac python toolbox imports
-#from ocelot.optimizer.mint.lcls_interface import MatLog
-#from ocelot.optimizer.mint.lcls_interface import TestMatLog as MatLog
-#local imports
 
-#from ocelot.optimizer import scanner_threads
+from ocelot.optimizer.gui_main import *
+
 from ocelot.optimizer.mint.opt_objects import *
 from ocelot.optimizer.mint import mint
 from ocelot.optimizer.mint import opt_objects as obj
@@ -82,8 +69,8 @@ class OcelotInterfaceWindow(QFrame):
         self.ui = MainWindow(self)
         #self.ui.pb_help.clicked.connect(lambda: os.system("firefox file://"+self.optimizer_path+"docs/build/html/index.html"))
         self.ui.pb_help.clicked.connect(self.ui.open_help)
-        self.mi = TestMachineInterface()
-        #self.mi = XFELMachineInterface()
+        #self.mi = TestMachineInterface()
+        self.mi = XFELMachineInterface()
         self.dp = TestDeviceProperties(ui=self.ui.widget)
 
         self.total_delay = self.ui.sb_tdelay.value()
@@ -126,7 +113,7 @@ class OcelotInterfaceWindow(QFrame):
 
         # switch of GP and custom Mininimizer
         # self.ui.cb_select_alg.addItem(self.name_gauss)
-        # self.ui.cb_select_alg.addItem(self.name_custom)
+        self.ui.cb_select_alg.addItem(self.name_custom)
 
         #timer for plots, starts when scan starts
         self.multiPvTimer = QtCore.QTimer()
@@ -394,7 +381,7 @@ class OcelotInterfaceWindow(QFrame):
             self.objective_func = obj.Target(eid=a_str)
             self.objective_func.devices = []
             self.objective_func.get_value = get_value_exp
-
+        self.objective_func.pen_max = self.ui.sb_max_pen.value()
 
     def set_m_status(self):
         """

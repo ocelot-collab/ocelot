@@ -74,14 +74,14 @@
 <span class="sd">        :return: Selected scanner object</span>
 <span class="sd">                 These objects are contrained in the scannerThreads.py file</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">cb_select_alg</span><span class="o">.</span><span class="n">currentIndex</span><span class="p">()</span>
+        <span class="n">current_method</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">cb_select_alg</span><span class="o">.</span><span class="n">currentText</span><span class="p">()</span>
 
         <span class="c1">#GP Method</span>
-        <span class="k">if</span> <span class="n">index</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">current_method</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">name_gauss</span><span class="p">:</span>
             <span class="n">minimizer</span> <span class="o">=</span> <span class="n">mint</span><span class="o">.</span><span class="n">GaussProcess</span><span class="p">()</span>
 
         <span class="c1"># Custom Minimizer</span>
-        <span class="k">elif</span> <span class="n">index</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="n">current_method</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">name_custom</span><span class="p">:</span>
             <span class="n">minimizer</span> <span class="o">=</span> <span class="n">mint</span><span class="o">.</span><span class="n">CustomMinimizer</span><span class="p">()</span>
 
         <span class="c1"># Conjugate Gradient</span>
@@ -93,7 +93,7 @@
         <span class="c1">#    scanner = scanner_threads.OcelotScanner(parent=self,method=&#39;powell&#39;)</span>
 
         <span class="c1">#simplex Method</span>
-        <span class="k">else</span><span class="p">:</span> <span class="c1">#index == 0:</span>
+        <span class="k">else</span><span class="p">:</span>
             <span class="n">minimizer</span> <span class="o">=</span> <span class="n">mint</span><span class="o">.</span><span class="n">Simplex</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">minimizer</span>
 </pre></div>
@@ -109,6 +109,8 @@
 </span>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">pb_start_scan</span><span class="o">.</span><span class="n">text</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;Stop scan&quot;</span><span class="p">:</span>
             <span class="c1"># stop the optimization</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">opt</span><span class="o">.</span><span class="n">opt_ctrl</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">m_status</span><span class="o">.</span><span class="n">is_ok</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span> <span class="bp">True</span>
             <span class="c1"># Save the optimization parameters to the database</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">save2db</span><span class="p">()</span>
             <span class="k">del</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">opt</span><span class="p">)</span>
@@ -134,10 +136,10 @@
         <span class="n">minimizer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scan_method_select</span><span class="p">()</span>
 
         <span class="c1"># configure the Minimizer</span>
-        <span class="k">if</span> <span class="n">minimizer</span><span class="o">.</span><span class="n">__class__</span> <span class="o">==</span> <span class="n">mint</span><span class="o">.</span><span class="n">GaussProcess</span><span class="p">:</span>
-            <span class="n">minimizer</span><span class="o">.</span><span class="n">seed_iter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">sb_seed_iter</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
-<span class="hll">            <span class="n">minimizer</span><span class="o">.</span><span class="n">seed_timeout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">sb_tdelay</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
-</span>            <span class="n">minimizer</span><span class="o">.</span><span class="n">hyper_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hyper_file</span>
+<span class="hll">        <span class="k">if</span> <span class="n">minimizer</span><span class="o">.</span><span class="n">__class__</span> <span class="o">==</span> <span class="n">mint</span><span class="o">.</span><span class="n">GaussProcess</span><span class="p">:</span>
+</span>            <span class="n">minimizer</span><span class="o">.</span><span class="n">seed_iter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">sb_seed_iter</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+            <span class="n">minimizer</span><span class="o">.</span><span class="n">seed_timeout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">sb_tdelay</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+            <span class="n">minimizer</span><span class="o">.</span><span class="n">hyper_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hyper_file</span>
 
         <span class="k">elif</span> <span class="n">minimizer</span><span class="o">.</span><span class="n">__class__</span> <span class="o">==</span> <span class="n">mint</span><span class="o">.</span><span class="n">Simplex</span><span class="p">:</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">cb_use_isim</span><span class="o">.</span><span class="n">checkState</span><span class="p">():</span>
@@ -147,10 +149,20 @@
                     <span class="k">if</span> <span class="n">dev</span><span class="o">.</span><span class="n">simplex_step</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                         <span class="n">lims</span> <span class="o">=</span> <span class="n">dev</span><span class="o">.</span><span class="n">get_limits</span><span class="p">()</span>
                         <span class="n">rel_step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">sb_isim_rel_step</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
-                        <span class="n">minimizer</span><span class="o">.</span><span class="n">dev_steps</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">lims</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">lims</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">*</span><span class="n">rel_step</span><span class="o">/</span><span class="mf">100.</span><span class="p">)</span>
-
+                        <span class="n">minimizer</span><span class="o">.</span><span class="n">dev_steps</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">lims</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">lims</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="n">rel_step</span> <span class="o">/</span> <span class="mf">100.</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">minimizer</span><span class="o">.</span><span class="n">dev_steps</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="k">elif</span> <span class="n">minimizer</span><span class="o">.</span><span class="n">__class__</span> <span class="o">==</span> <span class="n">mint</span><span class="o">.</span><span class="n">CustomMinimizer</span><span class="p">:</span>
+            <span class="n">minimizer</span><span class="o">.</span><span class="n">dev_steps</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="k">for</span> <span class="n">dev</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">dev</span><span class="o">.</span><span class="n">simplex_step</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">lims</span> <span class="o">=</span> <span class="n">dev</span><span class="o">.</span><span class="n">get_limits</span><span class="p">()</span>
+                    <span class="n">rel_step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">sb_isim_rel_step</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+                    <span class="k">print</span><span class="p">(</span><span class="n">dev</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">rel_step</span><span class="p">)</span>
+                    <span class="n">minimizer</span><span class="o">.</span><span class="n">dev_steps</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">lims</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">lims</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="n">rel_step</span> <span class="o">/</span> <span class="mf">100.</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="s2">&quot;MINImizer steps&quot;</span><span class="p">,</span> <span class="n">minimizer</span><span class="o">.</span><span class="n">dev_steps</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">sb_num_iter</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
         <span class="n">minimizer</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span>
@@ -218,6 +230,7 @@ The SASE or objective function measurment is done in a separate method for avera
 <span class="sd">        :param val: value</span>
 <span class="sd">        :return: None</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">#print(&quot;SETTING&quot;)</span>
         <span class="n">pydoocs</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">channel</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
         <span class="k">return</span>
 </pre></div>

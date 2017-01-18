@@ -11,7 +11,7 @@ Welcome to OcelotInterface's documentation
 .. image:: images/ocelot_scan.png
         :width: 600
 
-*The OcelotInterface GUI after a simplex scan of the first four LTU matching quads*
+*The OcelotInterface GUI after a simplex optimization of the beam pointing at the end of the Injector*
 
 
 Contents

@@ -340,14 +340,16 @@ class MainWindow(Ui_Form):
 
         :return:
         """
-        print("SCIPY", str(self.cb_select_alg.currentText()))
+        #print("SCIPY", str(self.cb_select_alg.currentText()))
         if scipy.__version__ < "0.18" and str(self.cb_select_alg.currentText()) == self.Form.name_simplex:
             #self.cb_use_isim.setCheckState(False)
             self.g_box_isim.setEnabled(False)
             self.g_box_isim.setTitle("Initial Simplex does not work: scipy version: " + scipy.__version__)
             self.g_box_isim.setStyleSheet('QGroupBox  {color: red;}')
-        elif scipy.__version__ >= "0.18" and self.cb_select_alg.currentText() == self.Form.name_simplex:
+        elif scipy.__version__ >= "0.18" and str(self.cb_select_alg.currentText()) == self.Form.name_simplex:
+            #print(str(self.cb_select_alg.currentText()))
             self.g_box_isim.setEnabled(True)
+            self.cb_use_isim.setEnabled(True)
             self.g_box_isim.setTitle("Simplex/Scipy Scanner Setup")
             self.g_box_isim.setStyleSheet('QGroupBox  {color: white;}')
 

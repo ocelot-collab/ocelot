@@ -110,6 +110,7 @@
 <span class="sd">        :param val: value</span>
 <span class="sd">        :return: None</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">#print(&quot;SETTING&quot;)</span>
         <span class="n">pydoocs</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">channel</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
         <span class="k">return</span></div>
 
@@ -195,8 +196,8 @@
 <span class="sd">        :param channel: (str) String of the devices name used in doocs</span>
 <span class="sd">        :return: Data from pydoocs.read(), variable data type depending on channel</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="s2">&quot;QUAD&quot;</span> <span class="ow">in</span> <span class="n">device_name</span><span class="p">:</span>
-            <span class="k">return</span> <span class="mi">0</span>
+        <span class="c1">#if &quot;QUAD&quot; in device_name:</span>
+        <span class="c1">#    return 0</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span></div>
 
 <div class="viewcode-block" id="TestMachineInterface.set_value"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.xfel_interface.TestMachineInterface.set_value">[docs]</a>    <span class="k">def</span> <span class="nf">set_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device_name</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
@@ -207,6 +208,7 @@
 <span class="sd">        :param val: value</span>
 <span class="sd">        :return: None</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">#print(&quot;set:&quot;, device_name,  &quot;--&gt;&quot;, val)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">val</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
         <span class="k">return</span> <span class="mf">0.0</span></div>
 

@@ -79,12 +79,14 @@
 <div class="section" id="using-resetpanel-for-pv-device-control">
 <span id="resetpanel-rev"></span><h3>Using Resetpanel for PV device control<a class="headerlink" href="#using-resetpanel-for-pv-device-control" title="Permalink to this headline">¶</a></h3>
 <a class="reference internal image-reference" href="_images/ocelot_resetpanel.png"><img alt="_images/ocelot_resetpanel.png" src="_images/ocelot_resetpanel.png" style="width: 600px;" /></a>
-<p>The resetpanel was build as a standalone PyQT widget used to monitor devices. The table displays a reference value, live readback, and checkboxes to select devices for a scan.</p>
+<p>The resetpanel was build as a standalone PyQT widget used to monitor devices. The table displays a reference value, live readback, min/max thresholds, and checkboxes to select devices for a scan.</p>
 <p>To choose devices for a scan, use the mouse to highlight the desired table rows, then either hit the check button.
 You can also select a device by hitting the checkboxes on at a time.</p>
+<p>Before starting optimization, the setting of the minimum and maximum thresholds for the every checked device must be done.
+The thresholds will be saved and after restarting the program the thresholds will be restored.</p>
 <p>Button Functions:</p>
 <ul class="simple">
-<li>Update referece   Updates the saved value column, using the readback in the current value column. Only effects checked rows.</li>
+<li>Update reference  Updates the saved value column, using the readback in the current value column. Only effects checked rows.</li>
 <li>Reset All:        Trims devices from their current value, back to the the saved value. Only effects checked rows.</li>
 <li>Check:            Command for quickly checking active checkbox for all rows that are highlighted from a mouse click and drag.</li>
 <li>Uncheck:          Reverse command for the check button. Unchecks all highlighted rows.</li>
@@ -111,11 +113,8 @@ You can also select a device by hitting the checkboxes on at a time.</p>
 This funciton does not save data; the is logged automatically after every scan to the physics matlab data daily directory:</dd>
 </dl>
 </li>
-<li><dl class="first docutils">
-<dt>GP Heatmap</dt>
-<dd>This will launch a script to show a 2D heat map for the last GP scan. To use it you must check two PV&#8217;s only from the table, then hit the heatmap button. It will then loop though the last GP scan, showing the algorithms behavior every 5 steps. This heatmap shows three plots. The left is a scatter plot off all points in the 2D space that were chosen by the GP. The middle plot shows the GPs prediction of the (GDET) mean. The right plot shows the GP acquisition function, where the GP wan&#8217;t to sample next.</dd>
-</dl>
-</li>
+</ul>
+<ul class="simple">
 <li><dl class="first docutils">
 <dt>Docs/Help</dt>
 <dd>This button launches this sphinx documentation page.</dd>
@@ -126,8 +125,41 @@ This funciton does not save data; the is logged automatically after every scan t
 </div>
 <div class="section" id="gui-options-panel">
 <h2>GUI Options Panel<a class="headerlink" href="#gui-options-panel" title="Permalink to this headline">¶</a></h2>
-<p>This is the second tabi at the top labeled &#8220;Scan Setup Panel&#8221;. It is used to change scan parameters to non default values depending on the type of optimization you want to run.</p>
-<a class="reference internal image-reference" href="_images/ocelot_options.png"><img alt="_images/ocelot_options.png" src="_images/ocelot_options.png" style="width: 600px;" /></a>
+<p>This is the second tab at the top labeled &#8220;Scan Setup Panel&#8221;.
+It is used to change scan parameters to non default values depending on the type of optimization you want to run.</p>
+<a class="reference internal image-reference" href="_images/ocelot_tab2.png"><img alt="_images/ocelot_tab2.png" src="_images/ocelot_tab2.png" style="width: 600px;" /></a>
+<div class="section" id="scanner-timing">
+<h3>Scanner Timing<a class="headerlink" href="#scanner-timing" title="Permalink to this headline">¶</a></h3>
+<p>The scanner timeing boxes allow configuration for how long each optimizer iterations should be.</p>
+<p><strong>Trim Delay</strong></p>
+<p>The Trim delay line edit determines how long the optimizer will wait after send a trim command to a device.
+It allows the scanner to pause while a magnet or other device has finished moving. Default time is 0.5 seconds.</p>
+<p><strong>Data Delay</strong></p>
+<p>The Data Delay time tells the optimizer how long it should wait to average data. For instance if this is set to two seconds and the gas detector waveform is chosen for the the objective function, it will average 240 of the wavefrom to send to optimizer.</p>
+</div>
+<div class="section" id="gp-scanner-setup">
+<h3>GP Scanner Setup<a class="headerlink" href="#gp-scanner-setup" title="Permalink to this headline">¶</a></h3>
+<p>This box contains settings for controls the GP optimizer.</p>
+<p><strong>GP Hyperparameter File</strong></p>
+<p>This line edit changes the file string for where to load hyperparameters from. The default path is <em>./parameters/simHyps</em>
+The GP scanner will not work if asked to scan devices that do not have entries in the hyperparameter file.
+<em>details on the parameters page</em></p>
+<p><strong>GP Seed File</strong></p>
+<p>This line edit changes the file string for where to load the matrix of data to build the initial GP model.
+<em>details on the parameters page</em></p>
+<p><strong>Iterations of Seed</strong></p>
+<p>This line edit changes the number of scan iterations using in the simplex seeded GP scan.
+It will run the simplex for this may cycles before letting the GP take over.
+This should be an integer entry.</p>
+<p><strong>Use Live Simplex Mode</strong></p>
+<p>This checkbox sets a flag on whether the GP scan should try to load the <em>GP Seed File</em> to build a model, or run in live simplex seed mode.</p>
+</div>
+</div>
+<div class="section" id="objective-function-panel">
+<h2>Objective Function Panel<a class="headerlink" href="#objective-function-panel" title="Permalink to this headline">¶</a></h2>
+<p>This is the third tab at the top labeled &#8220;Objective Function&#8221;.
+It is used to set objective function, select optimization method, set the alarm channel with thresholds</p>
+<a class="reference internal image-reference" href="_images/ocelot_tab3.png"><img alt="_images/ocelot_tab3.png" src="_images/ocelot_tab3.png" style="width: 600px;" /></a>
 <div class="section" id="general-config">
 <h3>General Config<a class="headerlink" href="#general-config" title="Permalink to this headline">¶</a></h3>
 <p><strong>Objective Function PV</strong></p>
@@ -149,15 +181,6 @@ Current options are:</p>
 Simplex, CJ and Powells are all run using the scipy.optimize toolbox, using the OcelotScanner threaded class.
 The GP optimizer was writen here at SLAC  and is still under development.</p>
 </div>
-<div class="section" id="scanner-timing">
-<h3>Scanner Timing<a class="headerlink" href="#scanner-timing" title="Permalink to this headline">¶</a></h3>
-<p>The scanner timeing boxes allow configuration for how long each optimizer iterations should be.</p>
-<p><strong>Trim Delay</strong></p>
-<p>The Trim delay line edit determines how long the optimizer will wait after send a trim command to a device.
-It allows the scanner to pause while a magnet or other device has finished moving. Default time is 0.5 seconds.</p>
-<p><strong>Data Delay</strong></p>
-<p>The Data Delay time tells the optimizer how long it should wait to average data. For instance if this is set to two seconds and the gas detector waveform is chosen for the the objective function, it will average 240 of the wavefrom to send to optimizer.</p>
-</div>
 <div class="section" id="simplex-scipy-scanner-setup">
 <h3>Simplex/Scipy Scanner Setup<a class="headerlink" href="#simplex-scipy-scanner-setup" title="Permalink to this headline">¶</a></h3>
 <p><strong>Use Normalization File</strong></p>
@@ -176,23 +199,6 @@ The line edit to the right allows the user to change the directory location of t
 </ul>
 <p>(Notes here)
 <a class="reference external" href="http://physics-elog.slac.stanford.edu/lclselog/show.jsp?dir=/2016/24/16.06&amp;pos=2016-06-16T01:30:25">http://physics-elog.slac.stanford.edu/lclselog/show.jsp?dir=/2016/24/16.06&amp;pos=2016-06-16T01:30:25</a></p>
-</div>
-<div class="section" id="gp-scanner-setup">
-<h3>GP Scanner Setup<a class="headerlink" href="#gp-scanner-setup" title="Permalink to this headline">¶</a></h3>
-<p>This box contains settings for controls the GP optimizer.</p>
-<p><strong>GP Hyperparameter File</strong></p>
-<p>This line edit changes the file string for where to load hyperparameters from. The default path is <em>./parameters/simHyps</em>
-The GP scanner will not work if asked to scan devices that do not have entries in the hyperparameter file.
-<em>details on the parameters page</em></p>
-<p><strong>GP Seed File</strong></p>
-<p>This line edit changes the file string for where to load the matrix of data to build the initial GP model.
-<em>details on the parameters page</em></p>
-<p><strong>Iterations of Seed</strong></p>
-<p>This line edit changes the number of scan iterations using in the simplex seeded GP scan.
-It will run the simplex for this may cycles before letting the GP take over.
-This should be an integer entry.</p>
-<p><strong>Use Live Simplex Mode</strong></p>
-<p>This checkbox sets a flag on whether the GP scan should try to load the <em>GP Seed File</em> to build a model, or run in live simplex seed mode.</p>
 </div>
 <div class="section" id="dev-ocelot-epics-panel">
 <h3>Dev Ocelot Epics Panel<a class="headerlink" href="#dev-ocelot-epics-panel" title="Permalink to this headline">¶</a></h3>
@@ -227,10 +233,13 @@ This should be an integer entry.</p>
 </ul>
 </li>
 <li><a class="reference internal" href="#gui-options-panel">GUI Options Panel</a><ul>
-<li><a class="reference internal" href="#general-config">General Config</a></li>
 <li><a class="reference internal" href="#scanner-timing">Scanner Timing</a></li>
-<li><a class="reference internal" href="#simplex-scipy-scanner-setup">Simplex/Scipy Scanner Setup</a></li>
 <li><a class="reference internal" href="#gp-scanner-setup">GP Scanner Setup</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#objective-function-panel">Objective Function Panel</a><ul>
+<li><a class="reference internal" href="#general-config">General Config</a></li>
+<li><a class="reference internal" href="#simplex-scipy-scanner-setup">Simplex/Scipy Scanner Setup</a></li>
 <li><a class="reference internal" href="#dev-ocelot-epics-panel">Dev Ocelot Epics Panel</a></li>
 </ul>
 </li>

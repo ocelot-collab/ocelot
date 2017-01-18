@@ -177,7 +177,14 @@
         <span class="k">return</span> <span class="mi">0</span></div>
 
 <div class="viewcode-block" id="Target.get_penalty"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.Target.get_penalty">[docs]</a>    <span class="k">def</span> <span class="nf">get_penalty</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">pen</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
+        <span class="n">sase</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
+        <span class="n">alarm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_alarm</span><span class="p">()</span>
+        <span class="n">pen</span> <span class="o">=</span> <span class="o">-</span><span class="n">sase</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">penalties</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pen</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sase</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alarms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">alarm</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">pen</span></div>
 
 <div class="viewcode-block" id="Target.get_alarm"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.Target.get_alarm">[docs]</a>    <span class="k">def</span> <span class="nf">get_alarm</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>

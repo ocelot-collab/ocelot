@@ -260,7 +260,7 @@ Modifiedi for use at LCLS from Ilya&#8217;s version</p>
 <span id="optimizer-mint-obj-function-module"></span><h2>optimizer.mint.obj_function module<a class="headerlink" href="#module-optimizer.mint.obj_function" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="optimizer.mint.obj_function.XFELTarget">
-<em class="property">class </em><code class="descclassname">optimizer.mint.obj_function.</code><code class="descname">XFELTarget</code><span class="sig-paren">(</span><em>mi=None</em>, <em>dp=None</em>, <em>eid=None</em>, <em>tttttt=4</em>, <em>pppppprprp=3</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/mint/obj_function.html#XFELTarget"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.mint.obj_function.XFELTarget" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">optimizer.mint.obj_function.</code><code class="descname">XFELTarget</code><span class="sig-paren">(</span><em>mi=None</em>, <em>dp=None</em>, <em>eid='x57**2 + y57**2 + x59**2 + y59'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/mint/obj_function.html#XFELTarget"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.mint.obj_function.XFELTarget" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">ocelot.optimizer.mint.opt_objects.Target</span></code></p>
 <p>Objective function</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -282,7 +282,8 @@ Modifiedi for use at LCLS from Ilya&#8217;s version</p>
 <dl class="method">
 <dt id="optimizer.mint.obj_function.XFELTarget.get_alarm">
 <code class="descname">get_alarm</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/mint/obj_function.html#XFELTarget.get_alarm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.mint.obj_function.XFELTarget.get_alarm" title="Permalink to this definition">¶</a></dt>
-<dd><p>changeable</p>
+<dd><p>Method to get alarm level (e.g. BLM value).</p>
+<p>alarm level must be normalized: 0 is min, 1 is max</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -301,7 +302,8 @@ Modifiedi for use at LCLS from Ilya&#8217;s version</p>
 <dl class="method">
 <dt id="optimizer.mint.obj_function.XFELTarget.get_penalty">
 <code class="descname">get_penalty</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/mint/obj_function.html#XFELTarget.get_penalty"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.mint.obj_function.XFELTarget.get_penalty" title="Permalink to this definition">¶</a></dt>
-<dd><p>Method for calculation of the penalty on the basis of the value and allarm level</p>
+<dd><p>Method to calculate the penalty on the basis of the value and alarm level.</p>
+<p>penalty = -get_value() + alarm()</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -325,7 +327,7 @@ Modifiedi for use at LCLS from Ilya&#8217;s version</p>
 <dl class="method">
 <dt id="optimizer.mint.obj_function.XFELTarget.get_value">
 <code class="descname">get_value</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/mint/obj_function.html#XFELTarget.get_value"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.mint.obj_function.XFELTarget.get_value" title="Permalink to this definition">¶</a></dt>
-<dd><p>changeable</p>
+<dd><p>Method to get signal of target function (e.g. SASE signal).</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />

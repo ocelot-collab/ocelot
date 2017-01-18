@@ -71,8 +71,8 @@
     <span class="c1"># is beeing generated in the following as an initial list of strings.</span>
     <span class="n">succeded</span> <span class="o">=</span> <span class="kc">True</span>  <span class="c1"># indicator for a completely successful job</span>
     <span class="c1"># list beginning</span>
-    <span class="n">elogXMLStringList</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;&lt;?xml version=&quot;1.0&quot; encoding=&quot;ISO-8859-1&quot;?&gt;&#39;</span><span class="p">,</span>
-                         <span class="s1">&#39;&lt;entry&gt;&#39;</span><span class="p">]</span>
+    <span class="n">elogXMLStringList</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;&lt;?xml version=&quot;1.0&quot; encoding=&quot;ISO-8859-1&quot;?&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;entry&gt;&#39;</span><span class="p">]</span>
+
     <span class="c1"># author information</span>
     <span class="n">elogXMLStringList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;&lt;author&gt;&#39;</span><span class="p">)</span>
     <span class="n">elogXMLStringList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">author</span><span class="p">)</span>
@@ -127,10 +127,6 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">cb_use_isim</span><span class="o">.</span><span class="n">stateChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">change_state_scipy_setup</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pb_hyper_file</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_hyper_file</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pb_logbook</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">logbook</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">scipy</span><span class="o">.</span><span class="n">__version__</span> <span class="o">&lt;</span> <span class="s2">&quot;0.18&quot;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">g_box_isim</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">g_box_isim</span><span class="o">.</span><span class="n">setTitle</span><span class="p">(</span><span class="s2">&quot;Initial Simplex does not work: scipy version: &quot;</span> <span class="o">+</span> <span class="n">scipy</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">g_box_isim</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s1">&#39;QGroupBox  {color: red;}&#39;</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">le_a</span><span class="o">.</span><span class="n">textChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">check_address</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">le_b</span><span class="o">.</span><span class="n">textChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">check_address</span><span class="p">)</span>
@@ -139,6 +135,10 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">sb_tdelay</span><span class="o">.</span><span class="n">valueChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">set_cycle</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sb_ddelay</span><span class="o">.</span><span class="n">valueChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">set_cycle</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cb_select_alg</span><span class="o">.</span><span class="n">currentIndexChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">change_state_scipy_setup</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">read_alarm</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">QTimer</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">read_alarm</span><span class="o">.</span><span class="n">timeout</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alarm_value</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">read_alarm</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
         <span class="c1"># self.horizontalLayout_2.setStyleSheet(&quot;color: red&quot;)</span>
 
         <span class="c1"># font = self.pb_hyper_file.font()</span>
@@ -148,6 +148,19 @@
         <span class="c1"># self.pb_hyper_file.setStyleSheet(&quot;font: 16px, color: red&quot;)</span>
 
         <span class="c1"># self.window = window</span>
+
+<div class="viewcode-block" id="MainWindow.alarm_value"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.MainWindow.alarm_value">[docs]</a>    <span class="k">def</span> <span class="nf">alarm_value</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        reading alarm value</span>
+
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dev</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_alarm</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">mi</span><span class="o">.</span><span class="n">get_value</span><span class="p">(</span><span class="n">dev</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">label_alarm</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="mi">2</span><span class="p">)))</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">label_alarm</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="s2">&quot;None&quot;</span><span class="p">))</span></div>
 
 <div class="viewcode-block" id="MainWindow.set_cycle"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.MainWindow.set_cycle">[docs]</a>    <span class="k">def</span> <span class="nf">set_cycle</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -208,6 +221,7 @@
         <span class="n">table</span><span class="p">[</span><span class="s2">&quot;alarm_dev&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">alarm_dev</span>
         <span class="n">table</span><span class="p">[</span><span class="s2">&quot;alarm_min&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">alarm_min</span>
         <span class="n">table</span><span class="p">[</span><span class="s2">&quot;alarm_max&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">alarm_max</span>
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;alarm_timeout&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sb_alarm_timeout</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
 
         <span class="n">table</span><span class="p">[</span><span class="s2">&quot;seed_iter&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sb_seed_iter</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
         <span class="n">table</span><span class="p">[</span><span class="s2">&quot;use_live_seed&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cb_use_live_seed</span><span class="o">.</span><span class="n">checkState</span><span class="p">()</span>
@@ -218,6 +232,7 @@
         <span class="n">table</span><span class="p">[</span><span class="s2">&quot;hyper_file&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">hyper_file</span>
 
         <span class="n">table</span><span class="p">[</span><span class="s2">&quot;set_best_sol&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cb_set_best_sol</span><span class="o">.</span><span class="n">checkState</span><span class="p">()</span>
+
 
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
@@ -232,7 +247,6 @@
 
         <span class="c1"># Build the PV list from dev PVs or selected source</span>
         <span class="n">pvs</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;pvs = &quot;</span><span class="p">,</span> <span class="n">pvs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">widget</span><span class="o">.</span><span class="n">set_machine_interface</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">mi</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">dp</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">widget</span><span class="o">.</span><span class="n">getPvList</span><span class="p">(</span><span class="n">pvs</span><span class="p">)</span>
         <span class="c1"># set checkbot status</span>
@@ -259,6 +273,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">le_alarm</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;alarm_dev&quot;</span><span class="p">])</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">sb_alarm_min</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;alarm_min&quot;</span><span class="p">])</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">sb_alarm_max</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;alarm_max&quot;</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sb_alarm_timeout</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;alarm_timeout&quot;</span><span class="p">])</span>
 
             <span class="bp">self</span><span class="o">.</span><span class="n">sb_seed_iter</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;seed_iter&quot;</span><span class="p">])</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">cb_use_live_seed</span><span class="o">.</span><span class="n">setCheckState</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;use_live_seed&quot;</span><span class="p">])</span>
@@ -300,6 +315,12 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">save_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">set_file</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="MainWindow.logbook"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.MainWindow.logbook">[docs]</a>    <span class="k">def</span> <span class="nf">logbook</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Method to send Optimization parameters + screenshot to eLogboob</span>
+
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="n">filename</span> <span class="o">=</span> <span class="s2">&quot;screenshot&quot;</span>
         <span class="n">filetype</span> <span class="o">=</span> <span class="s2">&quot;png&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">screenShot</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">filetype</span><span class="p">)</span>
@@ -324,19 +345,23 @@
             <span class="n">text</span> <span class="o">+=</span> <span class="s2">&quot;iterations    : &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;iter&quot;</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
             <span class="n">text</span> <span class="o">+=</span> <span class="s2">&quot;delay         : &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">total_delay</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
             <span class="n">text</span> <span class="o">+=</span> <span class="s2">&quot;START--&gt;STOP  :&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;sase&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot; --&gt; &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;sase&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
-        <span class="c1"># print(text)</span>
-        <span class="n">screenshot</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">optimizer_path</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">filename</span> <span class="o">+</span> <span class="s2">&quot;.&quot;</span> <span class="o">+</span> <span class="n">filetype</span><span class="p">)</span>
-        <span class="n">send_to_desy_elog</span><span class="p">(</span><span class="n">author</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;OCELOT Optimization&quot;</span><span class="p">,</span> <span class="n">severity</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span> <span class="n">elog</span><span class="o">=</span><span class="s2">&quot;testlog&quot;</span><span class="p">,</span>
-                          <span class="n">image</span><span class="o">=</span><span class="n">screenshot</span><span class="p">)</span></div>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;table&quot;</span><span class="p">,</span> <span class="n">table</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+        <span class="n">screenshot</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">optimizer_path</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">filename</span> <span class="o">+</span> <span class="s2">&quot;.&quot;</span> <span class="o">+</span> <span class="n">filetype</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">screenshot</span><span class="p">)</span>
+        <span class="n">send_to_desy_elog</span><span class="p">(</span><span class="n">author</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;OCELOT Optimization&quot;</span><span class="p">,</span> <span class="n">severity</span><span class="o">=</span><span class="s2">&quot;INFO&quot;</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span> <span class="n">elog</span><span class="o">=</span><span class="s2">&quot;xfellog&quot;</span><span class="p">,</span>
+                          <span class="n">image</span><span class="o">=</span><span class="n">screenshot</span><span class="o">.</span><span class="n">read</span><span class="p">())</span></div>
 
 <div class="viewcode-block" id="MainWindow.screenShot"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.MainWindow.screenShot">[docs]</a>    <span class="k">def</span> <span class="nf">screenShot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">filetype</span><span class="p">):</span>
+
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Takes a screenshot of the whole gui window, saves png and ps images to file</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">                fileName (str): Directory string of where to save the file</span>
-<span class="sd">                filetype (str): String of the filetype to save</span>
+<span class="sd">        :param filename: (str) Directory string of where to save the file</span>
+<span class="sd">        :param filetype: (str) String of the filetype to save</span>
+<span class="sd">        :return:</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="n">s</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;.&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">filetype</span><span class="p">)</span>
         <span class="n">p</span> <span class="o">=</span> <span class="n">QPixmap</span><span class="o">.</span><span class="n">grabWindow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">winId</span><span class="p">())</span>
         <span class="n">p</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="s1">&#39;png&#39;</span><span class="p">)</span>
@@ -347,7 +372,11 @@
         <span class="n">p</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">s</span><span class="p">[:</span><span class="o">-</span><span class="mi">4</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot;_sm.png&quot;</span><span class="p">,</span> <span class="s1">&#39;png&#39;</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="MainWindow.loadStyleSheet"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.MainWindow.loadStyleSheet">[docs]</a>    <span class="k">def</span> <span class="nf">loadStyleSheet</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Sets the dark GUI theme from a css file.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Sets the dark GUI theme from a css file.</span>
+
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">cssfile</span> <span class="o">=</span> <span class="s2">&quot;style.css&quot;</span>
             <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cssfile</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
@@ -356,12 +385,39 @@
             <span class="nb">print</span> <span class="p">(</span><span class="s1">&#39;No style sheet found!&#39;</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="MainWindow.change_state_scipy_setup"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.MainWindow.change_state_scipy_setup">[docs]</a>    <span class="k">def</span> <span class="nf">change_state_scipy_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Method to enable/disable &quot;Scipy Scanner Setup&quot;. If scipy version &lt; &quot;0.18&quot; then QGroup will be disable.</span>
+
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;SCIPY&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cb_select_alg</span><span class="o">.</span><span class="n">currentText</span><span class="p">()))</span>
+        <span class="k">if</span> <span class="n">scipy</span><span class="o">.</span><span class="n">__version__</span> <span class="o">&lt;</span> <span class="s2">&quot;0.18&quot;</span> <span class="ow">and</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cb_select_alg</span><span class="o">.</span><span class="n">currentText</span><span class="p">())</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">name_simplex</span><span class="p">:</span>
+            <span class="c1">#self.cb_use_isim.setCheckState(False)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">g_box_isim</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">g_box_isim</span><span class="o">.</span><span class="n">setTitle</span><span class="p">(</span><span class="s2">&quot;Initial Simplex does not work: scipy version: &quot;</span> <span class="o">+</span> <span class="n">scipy</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">g_box_isim</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s1">&#39;QGroupBox  {color: red;}&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">scipy</span><span class="o">.</span><span class="n">__version__</span> <span class="o">&gt;=</span> <span class="s2">&quot;0.18&quot;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">cb_select_alg</span><span class="o">.</span><span class="n">currentText</span><span class="p">()</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">name_simplex</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">g_box_isim</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">g_box_isim</span><span class="o">.</span><span class="n">setTitle</span><span class="p">(</span><span class="s2">&quot;Simplex/Scipy Scanner Setup&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">g_box_isim</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s1">&#39;QGroupBox  {color: white;}&#39;</span><span class="p">)</span>
+
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cb_use_isim</span><span class="o">.</span><span class="n">checkState</span><span class="p">():</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">label_23</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">sb_isim_rel_step</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">label_23</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">sb_isim_rel_step</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sb_isim_rel_step</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cb_select_alg</span><span class="o">.</span><span class="n">currentText</span><span class="p">())</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">name_custom</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">g_box_isim</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">label_23</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sb_isim_rel_step</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">g_box_isim</span><span class="o">.</span><span class="n">setTitle</span><span class="p">(</span><span class="s2">&quot;Custom Minimizer Scanner Setup&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">g_box_isim</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s1">&#39;QGroupBox  {color: white;}&#39;</span><span class="p">)</span>
+            <span class="c1">#self.cb_use_isim.setCheckState(True)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cb_use_isim</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sb_isim_rel_step</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span></div>
+
 
 <div class="viewcode-block" id="MainWindow.use_predef_fun"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.MainWindow.use_predef_fun">[docs]</a>    <span class="k">def</span> <span class="nf">use_predef_fun</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cb_use_predef</span><span class="o">.</span><span class="n">checkState</span><span class="p">():</span>
@@ -386,18 +442,18 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">label_21</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="MainWindow.open_help"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.MainWindow.open_help">[docs]</a>    <span class="k">def</span> <span class="nf">open_help</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="c1">#url = &quot;file:///&quot;+self.optimizer_path+&quot;docs\\build\\html\\index.html&quot;</span>
-        <span class="c1">#url = &quot;file:///C:/Users/tomins/Documents/Dropbox/DESY/repository/ocelot/docs/_build/html/index.html&quot;</span>
-        <span class="c1">#print(url)</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        method to open the Help in the webbrowser</span>
+
+<span class="sd">        :return: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span> <span class="o">==</span> <span class="s1">&#39;win32&#39;</span><span class="p">:</span>
-            <span class="c1">#url = &quot;file:///&quot;+self.optimizer_path+&quot;\\docs\\build\\html\\index.html&quot;</span>
             <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">optimizer_path</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">docs</span><span class="se">\\</span><span class="s2">_build</span><span class="se">\\</span><span class="s2">html</span><span class="se">\\</span><span class="s2">index.html&quot;</span>
             <span class="c1">#os.startfile(url)</span>
             <span class="n">webbrowser</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span> <span class="o">==</span> <span class="s1">&#39;darwin&#39;</span><span class="p">:</span>
             <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;file://&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">optimizer_path</span><span class="o">+</span><span class="s2">&quot;/docs/_build/html/index.html&quot;</span>
-            <span class="nb">print</span> <span class="p">(</span><span class="n">url</span><span class="p">)</span>
             <span class="n">webbrowser</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
             <span class="c1">#subprocess.Popen([&#39;open&#39;, url])</span>
         <span class="k">else</span><span class="p">:</span>

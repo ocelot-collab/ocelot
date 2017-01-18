@@ -111,12 +111,14 @@ class TestDevice(Device):
 class Target(object):
     def __init__(self,  eid=None):
         """
+
         :param mi: Machine interface
         :param dp: Device property
         :param eid: ID
         """
         self.eid = eid
         self.id = eid
+        self.pen_max = 100
 
         self.penalties = []
         self.values = []

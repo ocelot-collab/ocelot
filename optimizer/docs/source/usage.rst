@@ -29,14 +29,17 @@ ______________________________________
 .. image:: images/ocelot_resetpanel.png
         :width: 600
 
-The resetpanel was build as a standalone PyQT widget used to monitor devices. The table displays a reference value, live readback, and checkboxes to select devices for a scan.
+The resetpanel was build as a standalone PyQT widget used to monitor devices. The table displays a reference value, live readback, min/max thresholds, and checkboxes to select devices for a scan.
 
 To choose devices for a scan, use the mouse to highlight the desired table rows, then either hit the check button.
 You can also select a device by hitting the checkboxes on at a time.
 
+Before starting optimization, the setting of the minimum and maximum thresholds for the every checked device must be done.
+The thresholds will be saved and after restarting the program the thresholds will be restored.
+
 Button Functions:
 
-* Update referece   Updates the saved value column, using the readback in the current value column. Only effects checked rows.
+* Update reference  Updates the saved value column, using the readback in the current value column. Only effects checked rows.
 * Reset All:        Trims devices from their current value, back to the the saved value. Only effects checked rows. 
 * Check:            Command for quickly checking active checkbox for all rows that are highlighted from a mouse click and drag. 
 * Uncheck:          Reverse command for the check button. Unchecks all highlighted rows.
@@ -63,7 +66,7 @@ There are two buttons on the Optimization Scan Panel. One to start the scan, and
         Sends an image to the XFEL physics logboox, showing the whole UI in its current state. 
         This funciton does not save data; the is logged automatically after every scan to the physics matlab data daily directory:
 
-* GP Heatmap
+.. * GP Heatmap
         This will launch a script to show a 2D heat map for the last GP scan. To use it you must check two PV's only from the table, then hit the heatmap button. It will then loop though the last GP scan, showing the algorithms behavior every 5 steps. This heatmap shows three plots. The left is a scatter plot off all points in the 2D space that were chosen by the GP. The middle plot shows the GPs prediction of the (GDET) mean. The right plot shows the GP acquisition function, where the GP wan't to sample next. 
 
 * Docs/Help
@@ -73,10 +76,63 @@ There are two buttons on the Optimization Scan Panel. One to start the scan, and
 GUI Options Panel
 -----------------
 
-This is the second tabi at the top labeled "Scan Setup Panel". It is used to change scan parameters to non default values depending on the type of optimization you want to run.
+This is the second tab at the top labeled "Scan Setup Panel".
+It is used to change scan parameters to non default values depending on the type of optimization you want to run.
 
-.. image:: images/ocelot_options.png
+.. image:: images/ocelot_tab2.png
         :width: 600
+
+Scanner Timing
+______________
+
+The scanner timeing boxes allow configuration for how long each optimizer iterations should be.
+
+**Trim Delay**
+
+The Trim delay line edit determines how long the optimizer will wait after send a trim command to a device.
+It allows the scanner to pause while a magnet or other device has finished moving. Default time is 0.5 seconds.
+
+**Data Delay**
+
+The Data Delay time tells the optimizer how long it should wait to average data. For instance if this is set to two seconds and the gas detector waveform is chosen for the the objective function, it will average 240 of the wavefrom to send to optimizer.
+
+GP Scanner Setup
+________________
+
+This box contains settings for controls the GP optimizer.
+
+**GP Hyperparameter File**
+
+This line edit changes the file string for where to load hyperparameters from. The default path is *./parameters/simHyps*
+The GP scanner will not work if asked to scan devices that do not have entries in the hyperparameter file.
+*details on the parameters page*
+
+**GP Seed File**
+
+This line edit changes the file string for where to load the matrix of data to build the initial GP model.
+*details on the parameters page*
+
+**Iterations of Seed**
+
+This line edit changes the number of scan iterations using in the simplex seeded GP scan.
+It will run the simplex for this may cycles before letting the GP take over.
+This should be an integer entry.
+
+**Use Live Simplex Mode**
+
+This checkbox sets a flag on whether the GP scan should try to load the *GP Seed File* to build a model, or run in live simplex seed mode.
+
+Objective Function Panel
+------------------------
+This is the third tab at the top labeled "Objective Function".
+It is used to set objective function, select optimization method, set the alarm channel with thresholds
+
+
+.. image:: images/ocelot_tab3.png
+        :width: 600
+
+
+
 
 General Config
 ______________
@@ -104,19 +160,6 @@ Simplex, CJ and Powells are all run using the scipy.optimize toolbox, using the 
 The GP optimizer was writen here at SLAC  and is still under development.
 
 
-Scanner Timing
-______________
-
-The scanner timeing boxes allow configuration for how long each optimizer iterations should be. 
-
-**Trim Delay**
-
-The Trim delay line edit determines how long the optimizer will wait after send a trim command to a device.
-It allows the scanner to pause while a magnet or other device has finished moving. Default time is 0.5 seconds.
-
-**Data Delay**
-
-The Data Delay time tells the optimizer how long it should wait to average data. For instance if this is set to two seconds and the gas detector waveform is chosen for the the objective function, it will average 240 of the wavefrom to send to optimizer.
 
 Simplex/Scipy Scanner Setup
 ___________________________
@@ -142,31 +185,6 @@ I modified the default normalizaton parameters to reflect empirical measurments 
 (Notes here)
 http://physics-elog.slac.stanford.edu/lclselog/show.jsp?dir=/2016/24/16.06&pos=2016-06-16T01:30:25
 
-GP Scanner Setup
-________________
-
-This box contains settings for controls the GP optimizer. 
-
-**GP Hyperparameter File**
-
-This line edit changes the file string for where to load hyperparameters from. The default path is *./parameters/simHyps*
-The GP scanner will not work if asked to scan devices that do not have entries in the hyperparameter file. 
-*details on the parameters page*
-
-**GP Seed File**
-
-This line edit changes the file string for where to load the matrix of data to build the initial GP model.
-*details on the parameters page*
-
-**Iterations of Seed**
-
-This line edit changes the number of scan iterations using in the simplex seeded GP scan.
-It will run the simplex for this may cycles before letting the GP take over.
-This should be an integer entry.
-
-**Use Live Simplex Mode**
-
-This checkbox sets a flag on whether the GP scan should try to load the *GP Seed File* to build a model, or run in live simplex seed mode.
 
 Dev Ocelot Epics Panel
 ______________________

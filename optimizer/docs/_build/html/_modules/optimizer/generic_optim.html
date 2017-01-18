@@ -106,7 +106,7 @@
 <span class="kn">from</span> <span class="nn">ocelot.optimizer.mint.opt_objects</span> <span class="k">import</span> <span class="o">*</span>
 <span class="kn">from</span> <span class="nn">ocelot.optimizer.mint</span> <span class="k">import</span> <span class="n">mint</span>
 <span class="kn">from</span> <span class="nn">ocelot.optimizer.mint</span> <span class="k">import</span> <span class="n">opt_objects</span> <span class="k">as</span> <span class="n">obj</span>
-<span class="kn">from</span> <span class="nn">ocelot.optimizer.mint</span> <span class="k">import</span> <span class="n">obj_function</span>
+
 <span class="kn">from</span> <span class="nn">ocelot.utils</span> <span class="k">import</span> <span class="n">db</span>
 <span class="kn">from</span> <span class="nn">ocelot.optimizer.mint.xfel_interface</span> <span class="k">import</span> <span class="o">*</span>
 
@@ -132,15 +132,18 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">ui</span> <span class="o">=</span> <span class="n">MainWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="c1">#self.ui.pb_help.clicked.connect(lambda: os.system(&quot;firefox file://&quot;+self.optimizer_path+&quot;docs/build/html/index.html&quot;))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">pb_help</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">open_help</span><span class="p">)</span>
-        <span class="c1">#self.mi = TestMachineInterface()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">mi</span> <span class="o">=</span> <span class="n">XFELMachineInterface</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mi</span> <span class="o">=</span> <span class="n">TestMachineInterface</span><span class="p">()</span>
+        <span class="c1">#self.mi = XFELMachineInterface()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dp</span> <span class="o">=</span> <span class="n">TestDeviceProperties</span><span class="p">(</span><span class="n">ui</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">widget</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">total_delay</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">sb_tdelay</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">opt_control</span> <span class="o">=</span> <span class="n">mint</span><span class="o">.</span><span class="n">OptControl</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">objective_func</span> <span class="o">=</span> <span class="n">obj_function</span><span class="o">.</span><span class="n">XFELTarget</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">opt_control</span><span class="o">.</span><span class="n">alarm_timeout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">sb_alarm_timeout</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+
+        <span class="c1">#self.objective_func = obj_function.XFELTarget()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">objective_func_pv</span> <span class="o">=</span> <span class="s2">&quot;test_obj&quot;</span>
 
+        <span class="bp">self</span><span class="o">.</span><span class="n">show_obj_value</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addPlots</span><span class="p">()</span>
 
         <span class="c1"># database</span>
@@ -164,16 +167,16 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">opt_control</span> <span class="o">=</span> <span class="n">mint</span><span class="o">.</span><span class="n">OptControl</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">opt_control</span><span class="o">.</span><span class="n">m_status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">m_status</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">name1</span> <span class="o">=</span> <span class="s2">&quot;Nelder-Mead Simplex&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">name2</span> <span class="o">=</span> <span class="s2">&quot;Gaussian Process&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">name3</span> <span class="o">=</span> <span class="s2">&quot;Custom Minimizer&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name_simplex</span> <span class="o">=</span> <span class="s2">&quot;Nelder-Mead Simplex&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name_gauss</span> <span class="o">=</span> <span class="s2">&quot;Gaussian Process&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name_custom</span> <span class="o">=</span> <span class="s2">&quot;Custom Minimizer&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">name4</span> <span class="o">=</span> <span class="s2">&quot;Conjugate Gradient&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">name5</span> <span class="o">=</span> <span class="s2">&quot;Powell&#39;s Method&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">cb_select_alg</span><span class="o">.</span><span class="n">addItem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">cb_select_alg</span><span class="o">.</span><span class="n">addItem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name_simplex</span><span class="p">)</span>
 
         <span class="c1"># switch of GP and custom Mininimizer</span>
-        <span class="c1"># self.ui.cb_select_alg.addItem(self.name2)</span>
-        <span class="c1"># self.ui.cb_select_alg.addItem(self.name3)</span>
+        <span class="c1"># self.ui.cb_select_alg.addItem(self.name_gauss)</span>
+        <span class="c1"># self.ui.cb_select_alg.addItem(self.name_custom)</span>
 
         <span class="c1">#timer for plots, starts when scan starts</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">multiPvTimer</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">QTimer</span><span class="p">()</span>
@@ -189,14 +192,14 @@
 <span class="sd">        :return: Selected scanner object</span>
 <span class="sd">                 These objects are contrained in the scannerThreads.py file</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">cb_select_alg</span><span class="o">.</span><span class="n">currentIndex</span><span class="p">()</span>
+        <span class="n">current_method</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">cb_select_alg</span><span class="o">.</span><span class="n">currentText</span><span class="p">()</span>
 
         <span class="c1">#GP Method</span>
-        <span class="k">if</span> <span class="n">index</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">current_method</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">name_gauss</span><span class="p">:</span>
             <span class="n">minimizer</span> <span class="o">=</span> <span class="n">mint</span><span class="o">.</span><span class="n">GaussProcess</span><span class="p">()</span>
 
         <span class="c1"># Custom Minimizer</span>
-        <span class="k">elif</span> <span class="n">index</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="n">current_method</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">name_custom</span><span class="p">:</span>
             <span class="n">minimizer</span> <span class="o">=</span> <span class="n">mint</span><span class="o">.</span><span class="n">CustomMinimizer</span><span class="p">()</span>
 
         <span class="c1"># Conjugate Gradient</span>
@@ -208,7 +211,7 @@
         <span class="c1">#    scanner = scanner_threads.OcelotScanner(parent=self,method=&#39;powell&#39;)</span>
 
         <span class="c1">#simplex Method</span>
-        <span class="k">else</span><span class="p">:</span> <span class="c1">#index == 0:</span>
+        <span class="k">else</span><span class="p">:</span>
             <span class="n">minimizer</span> <span class="o">=</span> <span class="n">mint</span><span class="o">.</span><span class="n">Simplex</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">minimizer</span></div>
 
@@ -217,6 +220,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">save_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">set_file</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">pb_start_scan</span><span class="o">.</span><span class="n">text</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;Stop scan&quot;</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">opt</span><span class="o">.</span><span class="n">opt_ctrl</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">m_status</span><span class="o">.</span><span class="n">is_ok</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span> <span class="kc">True</span>
             <span class="k">del</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">opt</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">pb_start_scan</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s2">&quot;color: rgb(85, 255, 127);&quot;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">pb_start_scan</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s2">&quot;Start scan&quot;</span><span class="p">)</span>
@@ -232,6 +236,8 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">pb_start_scan</span><span class="o">.</span><span class="n">text</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;Stop scan&quot;</span><span class="p">:</span>
             <span class="c1"># stop the optimization</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">opt</span><span class="o">.</span><span class="n">opt_ctrl</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">m_status</span><span class="o">.</span><span class="n">is_ok</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span> <span class="kc">True</span>
             <span class="c1"># Save the optimization parameters to the database</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">save2db</span><span class="p">()</span>
             <span class="k">del</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">opt</span><span class="p">)</span>
@@ -270,10 +276,20 @@
                     <span class="k">if</span> <span class="n">dev</span><span class="o">.</span><span class="n">simplex_step</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                         <span class="n">lims</span> <span class="o">=</span> <span class="n">dev</span><span class="o">.</span><span class="n">get_limits</span><span class="p">()</span>
                         <span class="n">rel_step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">sb_isim_rel_step</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
-                        <span class="n">minimizer</span><span class="o">.</span><span class="n">dev_steps</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">lims</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">lims</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">*</span><span class="n">rel_step</span><span class="o">/</span><span class="mf">100.</span><span class="p">)</span>
-
+                        <span class="n">minimizer</span><span class="o">.</span><span class="n">dev_steps</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">lims</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">lims</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="n">rel_step</span> <span class="o">/</span> <span class="mf">100.</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">minimizer</span><span class="o">.</span><span class="n">dev_steps</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">elif</span> <span class="n">minimizer</span><span class="o">.</span><span class="n">__class__</span> <span class="o">==</span> <span class="n">mint</span><span class="o">.</span><span class="n">CustomMinimizer</span><span class="p">:</span>
+            <span class="n">minimizer</span><span class="o">.</span><span class="n">dev_steps</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="k">for</span> <span class="n">dev</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">dev</span><span class="o">.</span><span class="n">simplex_step</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">lims</span> <span class="o">=</span> <span class="n">dev</span><span class="o">.</span><span class="n">get_limits</span><span class="p">()</span>
+                    <span class="n">rel_step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">sb_isim_rel_step</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="n">dev</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">rel_step</span><span class="p">)</span>
+                    <span class="n">minimizer</span><span class="o">.</span><span class="n">dev_steps</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">lims</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">lims</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="n">rel_step</span> <span class="o">/</span> <span class="mf">100.</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;MINImizer steps&quot;</span><span class="p">,</span> <span class="n">minimizer</span><span class="o">.</span><span class="n">dev_steps</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">sb_num_iter</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
         <span class="n">minimizer</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span>
@@ -384,12 +400,24 @@
 
 <span class="sd">        :return: None</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">ocelot.optimizer.mint</span> <span class="k">import</span> <span class="n">obj_function</span>
+            <span class="n">reload</span><span class="p">(</span><span class="n">obj_function</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">pb_edit_obj_func</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s2">&quot;background: #4e4e4e&quot;</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">pb_edit_obj_func</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s2">&quot;background: red&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">cb_use_predef</span><span class="o">.</span><span class="n">setCheckState</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">use_predef_fun</span><span class="p">()</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">cb_use_predef</span><span class="o">.</span><span class="n">checkState</span><span class="p">():</span>
             <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;RELOAD Module Objective Function&quot;</span><span class="p">)</span>
-            <span class="n">reload</span><span class="p">(</span><span class="n">obj_function</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">objective_func</span> <span class="o">=</span> <span class="n">obj_function</span><span class="o">.</span><span class="n">XFELTarget</span><span class="p">(</span><span class="n">mi</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mi</span><span class="p">,</span> <span class="n">dp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dp</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">objective_func</span><span class="o">.</span><span class="n">devices</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># disable button &quot;Edit Objective Function&quot;</span>
+            <span class="c1"># self.ui.pb_edit_obj_func.setEnabled(False)</span>
+
             <span class="n">a_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">le_a</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
             <span class="n">state_a</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">is_le_addr_ok</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">le_a</span><span class="p">)</span>
 
@@ -413,9 +441,8 @@
                     <span class="n">C</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mi</span><span class="o">.</span><span class="n">get_value</span><span class="p">(</span><span class="n">c_str</span><span class="p">)</span>
                 <span class="k">return</span> <span class="nb">eval</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">objective_func</span> <span class="o">=</span> <span class="n">obj_function</span><span class="o">.</span><span class="n">XFELTarget</span><span class="p">(</span><span class="n">mi</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mi</span><span class="p">,</span> <span class="n">dp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dp</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">objective_func</span><span class="o">.</span><span class="n">devices</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">cb_use_predef</span><span class="o">.</span><span class="n">checkState</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">objective_func</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">Target</span><span class="p">(</span><span class="n">eid</span><span class="o">=</span><span class="n">a_str</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">objective_func</span><span class="o">.</span><span class="n">devices</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">objective_func</span><span class="o">.</span><span class="n">get_value</span> <span class="o">=</span> <span class="n">get_value_exp</span></div>
 
 
@@ -467,6 +494,8 @@
         <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_func</span><span class="o">.</span><span class="n">times</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">scanStartTime</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">obj_func_line</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">show_obj_value</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">obj_func_value</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_func</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
 
         <span class="c1">#plot data for all devices being scanned</span>
         <span class="k">for</span> <span class="n">dev</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">:</span>
@@ -490,7 +519,7 @@
         <span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">plot1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
 
         <span class="c1">#setup plot 2 for device monitor</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">plot2</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">PlotWidget</span><span class="p">(</span><span class="n">title</span> <span class="o">=</span> <span class="s2">&quot;Device Monitor&quot;</span><span class="p">,</span><span class="n">labels</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;left&#39;</span><span class="p">:</span> <span class="s2">&quot;Device (Current - Start)&quot;</span><span class="p">,</span> <span class="s1">&#39;bottom&#39;</span><span class="p">:</span> <span class="s2">&quot;Time (seconds)&quot;</span><span class="p">})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot2</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">PlotWidget</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;Device Monitor&quot;</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;left&#39;</span><span class="p">:</span> <span class="s2">&quot;Device (Current - Start)&quot;</span><span class="p">,</span> <span class="s1">&#39;bottom&#39;</span><span class="p">:</span> <span class="s2">&quot;Time (seconds)&quot;</span><span class="p">})</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">plot2</span><span class="o">.</span><span class="n">showGrid</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">plot2</span><span class="o">.</span><span class="n">getAxis</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">enableAutoSIPrefix</span><span class="p">(</span><span class="n">enable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="c1"># stop the auto unit scaling on y axes</span>
         <span class="n">layout</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QGridLayout</span><span class="p">()</span>
@@ -505,7 +534,11 @@
         <span class="n">color</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QColor</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">255</span><span class="p">)</span>
         <span class="n">pen</span><span class="o">=</span><span class="n">pg</span><span class="o">.</span><span class="n">mkPen</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">obj_func_line</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">PlotCurveItem</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="p">[],</span> <span class="n">y</span><span class="o">=</span><span class="p">[],</span> <span class="n">pen</span><span class="o">=</span><span class="n">pen</span><span class="p">,</span> <span class="n">antialias</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">plot1</span><span class="o">.</span><span class="n">addItem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj_func_line</span><span class="p">)</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">obj_func_value</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">PlotCurveItem</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="p">[],</span> <span class="n">y</span><span class="o">=</span><span class="p">[],</span> <span class="n">pen</span><span class="o">=</span><span class="n">pg</span><span class="o">.</span><span class="n">mkPen</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QColor</span><span class="p">(</span><span class="mi">255</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">51</span><span class="p">),</span> <span class="n">width</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
+                                               <span class="n">antialias</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;value&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot1</span><span class="o">.</span><span class="n">addItem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj_func_line</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">show_obj_value</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plot1</span><span class="o">.</span><span class="n">addItem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj_func_value</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="OcelotInterfaceWindow.setUpMultiPlot"><a class="viewcode-back" href="../../optimizer.html#optimizer.generic_optim.OcelotInterfaceWindow.setUpMultiPlot">[docs]</a>    <span class="k">def</span> <span class="nf">setUpMultiPlot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">devices</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -531,7 +564,7 @@
                 <span class="n">color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">randColor</span><span class="p">()</span>
 
             <span class="n">pen</span><span class="o">=</span><span class="n">pg</span><span class="o">.</span><span class="n">mkPen</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">multilines</span><span class="p">[</span><span class="n">dev</span><span class="o">.</span><span class="n">eid</span><span class="p">]</span>  <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">PlotCurveItem</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">pen</span><span class="o">=</span><span class="n">pen</span><span class="p">,</span> <span class="n">antialias</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">dev</span><span class="o">.</span><span class="n">eid</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multilines</span><span class="p">[</span><span class="n">dev</span><span class="o">.</span><span class="n">eid</span><span class="p">]</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">PlotCurveItem</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">pen</span><span class="o">=</span><span class="n">pen</span><span class="p">,</span> <span class="n">antialias</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">dev</span><span class="o">.</span><span class="n">eid</span><span class="p">))</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">multiPvData</span><span class="p">[</span><span class="n">dev</span><span class="o">.</span><span class="n">eid</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">multiPlotStarts</span><span class="p">[</span><span class="n">dev</span><span class="o">.</span><span class="n">eid</span><span class="p">]</span> <span class="o">=</span> <span class="n">dev</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">plot2</span><span class="o">.</span><span class="n">addItem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">multilines</span><span class="p">[</span><span class="n">dev</span><span class="o">.</span><span class="n">eid</span><span class="p">])</span>
@@ -557,7 +590,8 @@
 <span class="sd">        :return:</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;Darwin&#39;</span><span class="p">:</span>
-            <span class="n">subprocess</span><span class="o">.</span><span class="n">call</span><span class="p">([</span><span class="s1">&#39;open&#39;</span><span class="p">,</span> <span class="s1">&#39;-a&#39;</span><span class="p">,</span> <span class="s1">&#39;TextEdit&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">path_to_obj_func</span><span class="p">])</span>
+            <span class="c1">#subprocess.call([&#39;open&#39;, &#39;-a&#39;, &#39;TextEdit&#39;, self.path_to_obj_func])</span>
+            <span class="n">subprocess</span><span class="o">.</span><span class="n">call</span><span class="p">([</span><span class="s1">&#39;open&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">path_to_obj_func</span><span class="p">])</span>
         <span class="k">elif</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;Windows&#39;</span><span class="p">:</span>
             <span class="n">subprocess</span><span class="o">.</span><span class="n">call</span><span class="p">([</span><span class="s1">&#39;C:</span><span class="se">\\</span><span class="s1">Windows</span><span class="se">\\</span><span class="s1">System32</span><span class="se">\\</span><span class="s1">notepad.exe&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">path_to_obj_func</span><span class="p">])</span>
         <span class="k">elif</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;Linux&#39;</span><span class="p">:</span>
@@ -568,8 +602,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">set_obj_fun</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="OcelotInterfaceWindow.error_box"><a class="viewcode-back" href="../../optimizer.html#optimizer.generic_optim.OcelotInterfaceWindow.error_box">[docs]</a>    <span class="k">def</span> <span class="nf">error_box</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
-        <span class="c1">#QtGui.QMessageBox.about(self, &quot;Error box&quot;, message)</span>
-        <span class="n">QtGui</span><span class="o">.</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;Error box&quot;</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span></div></div>
+        <span class="n">QtGui</span><span class="o">.</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">about</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;Error box&quot;</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span></div></div>
+        <span class="c1">#QtGui.QMessageBox.critical(self, &quot;Error box&quot;, message)</span>
 
 <div class="viewcode-block" id="customLegend"><a class="viewcode-back" href="../../optimizer.html#optimizer.generic_optim.customLegend">[docs]</a><span class="k">class</span> <span class="nc">customLegend</span><span class="p">(</span><span class="n">pg</span><span class="o">.</span><span class="n">LegendItem</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>

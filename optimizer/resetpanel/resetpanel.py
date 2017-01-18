@@ -186,7 +186,6 @@ class ResetpanelWindow(QFrame):
         Hard coded to turn Current Value column red at 0.1% differenct from Ref Value.
         It would be better to update the table on a callback, but PyEpics crashes with cb funcitons.
         """
-        # TODO: update startValue after device recovery.
         percent = 0.001
         self.currentValues = {}
         for row, dev in enumerate(self.devices):

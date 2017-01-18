@@ -173,6 +173,7 @@ class CustomMinimizer(Minimizer):
             print("inside ", stepsize)
             bestx = x0
             besty = fun(x0)
+            print("BEST", bestx, besty)
             funcalls = 1
             niter = 0
             improved = True

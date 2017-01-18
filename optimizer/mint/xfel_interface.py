@@ -121,9 +121,9 @@ class XFELDeviceProperties:
         if self.ui != None:
             lims = self.ui.get_limits(dev_name)
             if lims == None:
-                return [0, 0]
+                return [0., 0.]
         else:
-            return [-100, 100]
+            return [-100., 100.]
         return lims
 
 
@@ -134,7 +134,7 @@ class TestMachineInterface:
     Machine interface for testing
     """
     def __init__(self):
-        self.data = 1
+        self.data = 1.
         pass
     def get_alarms(self):
         return np.random.rand(4)#0.0, 0.0, 0.0, 0.0]
@@ -196,7 +196,7 @@ class TestDeviceProperties:
         if self.ui != None:
             lims = self.ui.get_limits(dev_name)
             if lims == None:
-                return [0, 0]
+                return [0., 0.]
         else:
-            return [-100, 100]
+            return [-100., 100.]
         return lims

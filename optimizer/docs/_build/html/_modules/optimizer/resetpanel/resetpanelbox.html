@@ -217,7 +217,6 @@
         <span class="k">if</span> <span class="n">state</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">pvs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pv</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dev</span><span class="p">)</span>
-            <span class="c1">#self.pv_objects[pv]=epics.PV(pv)</span>
             <span class="c1">#self.pv_objects[pv].add_callback(callback=self.PvGetCallBack)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">getStartValues</span><span class="p">()</span>
             <span class="c1">#try:</span>
@@ -333,9 +332,10 @@
         <span class="n">rows</span><span class="o">=</span><span class="p">[]</span>
         <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">selectedIndexes</span><span class="p">():</span>
             <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">idx</span><span class="o">.</span><span class="n">row</span><span class="p">())</span>
-            <span class="n">item</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">cellWidget</span><span class="p">(</span><span class="n">idx</span><span class="o">.</span><span class="n">row</span><span class="p">(),</span> <span class="mi">5</span><span class="p">)</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">item</span><span class="o">.</span><span class="n">isEnabled</span><span class="p">():</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;item enabled&quot;</span><span class="p">)</span>
+            <span class="c1">#item = self.ui.tableWidget.cellWidget(idx.row(), 5)</span>
+            <span class="n">item</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="n">idx</span><span class="o">.</span><span class="n">row</span><span class="p">(),</span> <span class="mi">5</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">flags</span><span class="p">()</span> <span class="o">==</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">NoItemFlags</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;item disabled&quot;</span><span class="p">)</span>
                 <span class="k">continue</span>
             <span class="n">item</span><span class="o">.</span><span class="n">setCheckState</span><span class="p">(</span><span class="n">state</span><span class="p">)</span></div>
             <span class="c1">#print item.text()</span>
@@ -380,26 +380,27 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">resizeColumnsToContents</span><span class="p">()</span>
                 <span class="c1">#self.ui.tableWidget.setItem(row, 3 + i, spin_box)</span>
 
-            <span class="n">checkBoxItem</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QCheckBox</span><span class="p">()</span>
-            <span class="n">checkBoxItem</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s2">&quot;background-color:#595959;&quot;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">setCellWidget</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">checkBoxItem</span><span class="p">)</span>
-            <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">            #spin_box</span>
-<span class="sd">            checkBoxItem = QtGui.QTableWidgetItem()</span>
-<span class="sd">            #checkBoxItem.setBackgroundColor(QtGui.QColor(100,100,150))</span>
-<span class="sd">            checkBoxItem.setCheckState(QtCore.Qt.Checked)</span>
-<span class="sd">            flags = checkBoxItem.flags()</span>
-<span class="sd">            #flags != flags</span>
-<span class="sd">            checkBoxItem.setFlags(flags)</span>
-<span class="sd">            self.ui.tableWidget.setItem(row, 5, checkBoxItem)</span>
-<span class="sd">            #self.ui.tableWidget.setItem(row, 4, spin_box)</span>
-<span class="sd">            &quot;&quot;&quot;</span></div>
+            <span class="c1">#checkBoxItem = QtGui.QCheckBox()</span>
+            <span class="c1">#checkBoxItem.setStyleSheet(&quot;background-color:#595959;&quot;)</span>
+            <span class="c1">#self.ui.tableWidget.setCellWidget(row, 5, checkBoxItem)</span>
+
+            <span class="c1">#spin_box</span>
+            <span class="n">checkBoxItem</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QTableWidgetItem</span><span class="p">()</span>
+            <span class="c1">#checkBoxItem.setBackgroundColor(QtGui.QColor(100,100,150))</span>
+            <span class="n">checkBoxItem</span><span class="o">.</span><span class="n">setCheckState</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">Checked</span><span class="p">)</span>
+            <span class="n">flags</span> <span class="o">=</span> <span class="n">checkBoxItem</span><span class="o">.</span><span class="n">flags</span><span class="p">()</span>
+            <span class="c1">#print(&quot;FLAG&quot;, flags)</span>
+            <span class="c1">#flags != flags</span>
+            <span class="n">checkBoxItem</span><span class="o">.</span><span class="n">setFlags</span><span class="p">(</span><span class="n">flags</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">setItem</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">checkBoxItem</span><span class="p">)</span></div>
+            <span class="c1">#self.ui.tableWidget.setItem(row, 4, spin_box)</span>
+
 
 <div class="viewcode-block" id="ResetpanelBoxWindow.uncheckBoxes"><a class="viewcode-back" href="../../../optimizer.resetpanel.html#optimizer.resetpanel.resetpanelbox.ResetpanelBoxWindow.uncheckBoxes">[docs]</a>    <span class="k">def</span> <span class="nf">uncheckBoxes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Method to unchecked all active boxes &quot;&quot;&quot;</span>
         <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pvs</span><span class="p">)):</span>
-            <span class="c1">#item=self.ui.tableWidget.item(row, 5)</span>
-            <span class="n">item</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">cellWidget</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+            <span class="n">item</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+            <span class="c1">#item = self.ui.tableWidget.cellWidget(row, 5)</span>
             <span class="n">item</span><span class="o">.</span><span class="n">setCheckState</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="ResetpanelBoxWindow.resetAll"><a class="viewcode-back" href="../../../optimizer.resetpanel.html#optimizer.resetpanel.resetpanelbox.ResetpanelBoxWindow.resetAll">[docs]</a>    <span class="k">def</span> <span class="nf">resetAll</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -410,7 +411,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">for</span> <span class="n">row</span><span class="p">,</span> <span class="n">dev</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">):</span>
             <span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">startValues</span><span class="p">[</span><span class="n">dev</span><span class="o">.</span><span class="n">eid</span><span class="p">]</span>
-            <span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">cellWidget</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span><span class="o">.</span><span class="n">checkState</span><span class="p">()</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span><span class="o">.</span><span class="n">checkState</span><span class="p">()</span>
             <span class="k">if</span> <span class="n">state</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
                 <span class="n">dev</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">val</span><span class="p">)</span></div>
                 <span class="c1">#epics.caput(pv, val)</span>
@@ -444,7 +445,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">pvs</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pvs</span><span class="p">)):</span>
-            <span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">cellWidget</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span><span class="o">.</span><span class="n">checkState</span><span class="p">()</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span><span class="o">.</span><span class="n">checkState</span><span class="p">()</span>
             <span class="k">if</span> <span class="n">state</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
                 <span class="n">pvs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">text</span><span class="p">()))</span>
         <span class="k">return</span> <span class="n">pvs</span></div>

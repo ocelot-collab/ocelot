@@ -292,10 +292,12 @@ class MainWindow(Ui_Form):
             text += "iterations    : " + str(table["iter"]) + "\n"
             text += "delay         : " + str(self.Form.total_delay) + "\n"
             text += "START-->STOP  :" + str(table["sase"][0]) + " --> " + str(table["sase"][1]) + "\n"
-        # print(text)
-        screenshot = open(self.Form.optimizer_path + "/" + filename + "." + filetype)
-        send_to_desy_elog(author="", title="OCELOT Optimization", severity="", text=text, elog="testlog",
-                          image=screenshot)
+        print("table", table)
+        print(text)
+        screenshot = open(self.Form.optimizer_path + "/" + filename + "." + filetype, 'rb')
+        print(screenshot)
+        send_to_desy_elog(author="", title="OCELOT Optimization", severity="INFO", text=text, elog="xfellog",
+                          image=screenshot.read())
 
     def screenShot(self, filename, filetype):
 

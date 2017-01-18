@@ -530,7 +530,8 @@ class OcelotInterfaceWindow(QFrame):
         :return:
         """
         if platform.system() == 'Darwin':
-            subprocess.call(['open', '-a', 'TextEdit', self.path_to_obj_func])
+            #subprocess.call(['open', '-a', 'TextEdit', self.path_to_obj_func])
+            subprocess.call(['open', self.path_to_obj_func])
         elif platform.system() == 'Windows':
             subprocess.call(['C:\\Windows\\System32\\notepad.exe', self.path_to_obj_func])
         elif platform.system() == 'Linux':

@@ -14,7 +14,8 @@ class XFELTarget(Target):
     :param penalties: [], appending penalty
     :param times: [], appending the time evolution of get_penalty()
     """
-    def __init__(self, mi=None, dp=None, eid=None):
+
+    def __init__(self, mi=None, dp=None, eid="x57**2 + y57**2 + x59**2 + y59"):
         super(XFELTarget, self).__init__(eid=eid)
 
         self.mi = mi
@@ -44,9 +45,16 @@ class XFELTarget(Target):
 
         :return: value
         """
-        values = np.array([dev.get_value() for dev in self.devices])
-        return 2*np.sum(np.exp(-np.power((values - np.ones_like(values)), 2) / 5.))
-        #value = self.mi.get_value(self.eid)
+        x57 = self.mi.get_value("XFEL.DIAG/ORBIT/BPMA.57.I1/X.SA1")
+        y57 = self.mi.get_value("XFEL.DIAG/ORBIT/BPMA.57.I1/Y.SA1")
+        x59 = self.mi.get_value("XFEL.DIAG/ORBIT/BPMA.59.I1/X.SA1")
+        y59 = self.mi.get_value("XFEL.DIAG/ORBIT/BPMA.59.I1/Y.SA1")
+        return -np.sqrt(x57 ** 2 + y57 ** 2 + x59 ** 2 + y59 ** 2)
+        # return mi.get_value(“”)
+
+        # values = np.array([dev.get_value() for dev in self.devices])
+        # return 2*np.sum(np.exp(-np.power((values - np.ones_like(values)), 2) / 5.))
+        # value = self.mi.get_value(self.eid)
 
     def get_penalty(self):
         """
@@ -65,26 +73,25 @@ class XFELTarget(Target):
         if alarm > 1.0:
             return self.pen_max
         if alarm > 0.7:
-            return alarm * self.pen_max/2.
+            return alarm * self.pen_max / 2.
         pen += alarm
         pen -= sase
         if self.debug: print('penalty:', pen)
         self.niter += 1
-        #print("niter = ", self.niter)
+        # print("niter = ", self.niter)
         self.penalties.append(pen)
         self.times.append(time.time())
         self.values.append(sase)
         self.alarms.append(alarm)
         return pen
 
-
     def get_spectrum(self):
         return [0, 0]
 
     def get_stat_params(self):
-        #spetrum = self.get_spectrum()
-        #ave = np.mean(spetrum[(2599 - 5 * 120):-1])
-        #std = np.std(spetrum[(2599 - 5 * 120):-1])
+        # spetrum = self.get_spectrum()
+        # ave = np.mean(spetrum[(2599 - 5 * 120):-1])
+        # std = np.std(spetrum[(2599 - 5 * 120):-1])
         ave = self.get_value()
         std = 0.1
         return ave, std

@@ -87,22 +87,9 @@
 <span class="k">else</span><span class="p">:</span>
     <span class="kn">from</span> <span class="nn">importlib</span> <span class="k">import</span> <span class="n">reload</span>
 
-<span class="c1">##logbook imports</span>
-<span class="c1">#from re import sub</span>
-<span class="c1">#from xml.etree import ElementTree</span>
-<span class="c1">#from shutil import copy</span>
-<span class="c1">#from datetime import datetime</span>
-<span class="c1">#import Image</span>
-<span class="c1">#import json</span>
-<span class="c1">#GUI layout file</span>
-<span class="c1">#from ocelot.optimizer.UIOcelotInterface_gen import Ui_Form</span>
-<span class="kn">from</span> <span class="nn">ocelot.optimizer.gui_main</span> <span class="k">import</span> <span class="o">*</span>
-<span class="c1">#slac python toolbox imports</span>
-<span class="c1">#from ocelot.optimizer.mint.lcls_interface import MatLog</span>
-<span class="c1">#from ocelot.optimizer.mint.lcls_interface import TestMatLog as MatLog</span>
-<span class="c1">#local imports</span>
 
-<span class="c1">#from ocelot.optimizer import scanner_threads</span>
+<span class="kn">from</span> <span class="nn">ocelot.optimizer.gui_main</span> <span class="k">import</span> <span class="o">*</span>
+
 <span class="kn">from</span> <span class="nn">ocelot.optimizer.mint.opt_objects</span> <span class="k">import</span> <span class="o">*</span>
 <span class="kn">from</span> <span class="nn">ocelot.optimizer.mint</span> <span class="k">import</span> <span class="n">mint</span>
 <span class="kn">from</span> <span class="nn">ocelot.optimizer.mint</span> <span class="k">import</span> <span class="n">opt_objects</span> <span class="k">as</span> <span class="n">obj</span>
@@ -132,8 +119,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">ui</span> <span class="o">=</span> <span class="n">MainWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="c1">#self.ui.pb_help.clicked.connect(lambda: os.system(&quot;firefox file://&quot;+self.optimizer_path+&quot;docs/build/html/index.html&quot;))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">pb_help</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">open_help</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">mi</span> <span class="o">=</span> <span class="n">TestMachineInterface</span><span class="p">()</span>
-        <span class="c1">#self.mi = XFELMachineInterface()</span>
+        <span class="c1">#self.mi = TestMachineInterface()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mi</span> <span class="o">=</span> <span class="n">XFELMachineInterface</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dp</span> <span class="o">=</span> <span class="n">TestDeviceProperties</span><span class="p">(</span><span class="n">ui</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">widget</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">total_delay</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">sb_tdelay</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
@@ -176,7 +163,7 @@
 
         <span class="c1"># switch of GP and custom Mininimizer</span>
         <span class="c1"># self.ui.cb_select_alg.addItem(self.name_gauss)</span>
-        <span class="c1"># self.ui.cb_select_alg.addItem(self.name_custom)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">cb_select_alg</span><span class="o">.</span><span class="n">addItem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name_custom</span><span class="p">)</span>
 
         <span class="c1">#timer for plots, starts when scan starts</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">multiPvTimer</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">QTimer</span><span class="p">()</span>
@@ -443,8 +430,8 @@
 
             <span class="bp">self</span><span class="o">.</span><span class="n">objective_func</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">Target</span><span class="p">(</span><span class="n">eid</span><span class="o">=</span><span class="n">a_str</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">objective_func</span><span class="o">.</span><span class="n">devices</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">objective_func</span><span class="o">.</span><span class="n">get_value</span> <span class="o">=</span> <span class="n">get_value_exp</span></div>
-
+            <span class="bp">self</span><span class="o">.</span><span class="n">objective_func</span><span class="o">.</span><span class="n">get_value</span> <span class="o">=</span> <span class="n">get_value_exp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">objective_func</span><span class="o">.</span><span class="n">pen_max</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">sb_max_pen</span><span class="o">.</span><span class="n">value</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="OcelotInterfaceWindow.set_m_status"><a class="viewcode-back" href="../../optimizer.html#optimizer.generic_optim.OcelotInterfaceWindow.set_m_status">[docs]</a>    <span class="k">def</span> <span class="nf">set_m_status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>

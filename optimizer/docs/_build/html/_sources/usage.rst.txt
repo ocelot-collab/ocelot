@@ -96,8 +96,8 @@ It allows the scanner to pause while a magnet or other device has finished movin
 
 The Data Delay time tells the optimizer how long it should wait to average data. For instance if this is set to two seconds and the gas detector waveform is chosen for the the objective function, it will average 240 of the wavefrom to send to optimizer.
 
-GP Scanner Setup
-________________
+GP Scanner Setup *(GP method is not used for now )*
+___________________________________________________
 
 This box contains settings for controls the GP optimizer.
 
@@ -137,13 +137,31 @@ It is used to set objective function, select optimization method, set the alarm 
 General Config
 ______________
 
-**Objective Function PV**
+**Objective Function using GUI**
 
-This line edit can be changed to tell the optimizer to try and maximize on any epics signal, default is gas detector 241
-The type of PV can be a waveform, or single float type data which is given to the optimization algorithm.
-Waveforms are averaged over the "Data Delay" time
-Scalar PVs use the last scalar value collected after the Data Delay time. (would be nice to add an average/integration option for scalars)
-The text should turn green if the PV is found, red if the PV is not found
+To build your own objective function you can use three channels **PV: A**, **PV: B**, **PV: C** and
+LineEdit **Objective Function** for writing expression using letters *A*, *B*, and *C* as variables
+(e.g. **np.sqrt(A**2 +B**2 +C**2)**  ).
+
+.. These line edits can be changed to tell the optimizer to try and maximize/minimize on any doocs signal.
+.. Now we use 3 channel *A*, *B* and *C*. using them you can write your own objective function in LineEdit "Objective Function".
+
+The type of channels can be single float type data (e.g. beam position, BLM level and so on).
+
+.. Waveforms are averaged over the "Data Delay" time
+.. Scalar PVs use the last scalar value collected after the Data Delay time. (would be nice to add an average/integration option for scalars)
+.. The text should turn green if the PV is found, red if the PV is not found
+
+**Objective Function from the file**
+
+To edit your objective function push button "Edit Objective Function" and an editor will be open. You can modify methods
+**get_value()**, **get_alarm()**, and **get_penalty**.
+
+In order to force Optimizer to use this Objective Function you have to check "Use Predefined Objective Function".
+
+Note: if Objective Function will contained the errors the pushbuton will be indicated red color and you can not check
+checkbox "Use Predefined Objective Function".
+
 
 **Select Optimizer Algorithm**
 
@@ -151,61 +169,62 @@ This drop down menu allows selection of the type of algorithm to use for optimiz
 Current options are:
         
 * Nelder-Mead Simplex
-* Conjugate Gradient
-* Powells Method
-* Gaussian Process
+.. * Conjugate Gradient
+.. * Powells Method
+* Custom Minimizer
+* Gaussian Process (switched off for now)
 
-The default selection is the simplex method which seems to work best for most applicaitons.
-Simplex, CJ and Powells are all run using the scipy.optimize toolbox, using the OcelotScanner threaded class.
-The GP optimizer was writen here at SLAC  and is still under development.
-
-
-
-Simplex/Scipy Scanner Setup
-___________________________
-
-**Use Normalization File**
-
-This checkbox flag tells the optimizer if it should use a normalization file to normzlize data input and output from the optimizer.
-The line edit to the right allows the user to change the directory location of the normalization file. 
-*details on the parameters page*
-
-**Normalization Scaling Coeff**
-
-This line edit modifies a scaling coefficent for the strength of the scipy scanner moves. Marking this larger should make the optimizer algorith stronger, and smaller will make it weaker. 
-
-I modified the default normalizaton parameters to reflect empirical measurments for good ranges at high energy, so the value of 1.0 should work with the current normParams file. -TMC 6/29/16
-
-* LI20:     A = 1.50
-* LI21:     A = 1.25
-* LI26_2-5: A = 4.0
-* LI26_6-9: A = 1.5
-* LTU:      A = 2.0
-
-(Notes here)
-http://physics-elog.slac.stanford.edu/lclselog/show.jsp?dir=/2016/24/16.06&pos=2016-06-16T01:30:25
+The default selection is the simplex method which seems to work best for most applications.
+Simplex and Custom Minimizer are all run using the scipy.optimize toolbox, using the OcelotScanner threaded class.
+The GP optimizer was writen at SLAC and is still under development.
 
 
-Dev Ocelot Epics Panel
-______________________
 
-.. image:: images/ocelot_dev_panel.jpg
-        :width: 600
+.. Simplex/Scipy Scanner Setup
+   ___________________________
 
-This button opens up an epics panel used for development.
+   **Use Normalization File**
 
-**Toggle Bypass State** 
+   This checkbox flag tells the optimizer if it should use a normalization file to normzlize data input and output from the optimizer.
+   The line edit to the right allows the user to change the directory location of the normalization file.
+   *details on the parameters page*
 
-Flips a flag that tells the GUI to ignore the trip detection.
+   **Normalization Scaling Coeff**
 
-**Start dev obj func script**
+   This line edit modifies a scaling coefficent for the strength of the scipy scanner moves. Marking this larger should make the optimizer algorith stronger, and smaller will make it weaker.
 
-This button starts the script ./test/yOutTest.py to create a fake linear objection functino written th the PV 'SIOC:SYS0:ML00:CALCOUT993'
+   I modified the default normalizaton parameters to reflect empirical measurments for good ranges at high energy, so the value of 1.0 should work with the current normParams file. -TMC 6/29/16
 
-**Kill obj func script**
+   * LI20:     A = 1.50
+   * LI21:     A = 1.25
+   * LI26_2-5: A = 4.0
+   * LI26_6-9: A = 1.5
+   * LTU:      A = 2.0
 
-Quick kill for the obj func script
+   (Notes here)
+   http://physics-elog.slac.stanford.edu/lclselog/show.jsp?dir=/2016/24/16.06&pos=2016-06-16T01:30:25
 
-**Set dev devices**
 
-This sets the development pvs back to preset values in the ./test/setDevsTest.py script. 
+.. Dev Ocelot Epics Panel
+   ______________________
+
+   .. image:: images/ocelot_dev_panel.jpg
+           :width: 600
+
+   This button opens up an epics panel used for development.
+
+   **Toggle Bypass State**
+
+   Flips a flag that tells the GUI to ignore the trip detection.
+
+   **Start dev obj func script**
+
+   This button starts the script ./test/yOutTest.py to create a fake linear objection functino written th the PV 'SIOC:SYS0:ML00:CALCOUT993'
+
+   **Kill obj func script**
+
+   Quick kill for the obj func script
+
+   **Set dev devices**
+
+   This sets the development pvs back to preset values in the ./test/setDevsTest.py script.

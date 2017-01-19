@@ -1,4 +1,10 @@
-﻿from ocelot.optimizer.mint.opt_objects import Target
+﻿"""
+Objective Function
+
+S.Tomin, 2017
+"""
+
+from ocelot.optimizer.mint.opt_objects import Target
 import numpy as np
 import time
 

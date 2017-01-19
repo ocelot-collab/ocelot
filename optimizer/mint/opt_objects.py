@@ -1,6 +1,6 @@
 """
-S.Tomin
-Object function and devices
+Objective function and devices
+S.Tomin, 2017
 """
 
 import numpy as np

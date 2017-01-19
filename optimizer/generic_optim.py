@@ -69,8 +69,8 @@ class OcelotInterfaceWindow(QFrame):
         self.ui = MainWindow(self)
         #self.ui.pb_help.clicked.connect(lambda: os.system("firefox file://"+self.optimizer_path+"docs/build/html/index.html"))
         self.ui.pb_help.clicked.connect(self.ui.open_help)
-        #self.mi = TestMachineInterface()
-        self.mi = XFELMachineInterface()
+        self.mi = TestMachineInterface()
+        #self.mi = XFELMachineInterface()
         self.dp = TestDeviceProperties(ui=self.ui.widget)
 
         self.total_delay = self.ui.sb_tdelay.value()
@@ -189,7 +189,11 @@ class OcelotInterfaceWindow(QFrame):
         if len(self.devices) == 0:
             self.error_box(message="Check Devices")
             return 0
-
+        for dev in self.devices:
+            val = dev.get_value()
+            if dev.check_limits(val):
+                self.error_box(message="Check the Limits")
+                return 0
         self.setUpMultiPlot(self.devices)
         self.multiPvTimer.start(100)
 
@@ -354,6 +358,7 @@ class OcelotInterfaceWindow(QFrame):
         else:
             # disable button "Edit Objective Function"
             # self.ui.pb_edit_obj_func.setEnabled(False)
+            line_edits = [self.ui.le_a, self.ui.le_b, self.ui.le_c, self.ui.le_d, self.ui.le_e]
 
             a_str = str(self.ui.le_a.text())
             state_a = self.ui.is_le_addr_ok(self.ui.le_a)
@@ -364,18 +369,30 @@ class OcelotInterfaceWindow(QFrame):
             c_str = str(self.ui.le_c.text())
             state_c = self.ui.is_le_addr_ok(self.ui.le_c)
 
+            d_str = str(self.ui.le_d.text())
+            state_d = self.ui.is_le_addr_ok(self.ui.le_d)
+
+            e_str = str(self.ui.le_e.text())
+            state_e = self.ui.is_le_addr_ok(self.ui.le_e)
+
             func = str(self.ui.le_obf.text())
 
             def get_value_exp():
-                A = 0
-                B = 0
-                C = 0
+                A = 0.
+                B = 0.
+                C = 0.
+                D = 0.
+                E = 0.
                 if state_a:
                     A = self.mi.get_value(a_str)
                 if state_b:
                     B = self.mi.get_value(b_str)
                 if state_c:
                     C = self.mi.get_value(c_str)
+                if state_d:
+                    D = self.mi.get_value(d_str)
+                if state_e:
+                    E = self.mi.get_value(e_str)
                 return eval(func)
 
             self.objective_func = obj.Target(eid=a_str)

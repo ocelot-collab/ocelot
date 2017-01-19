@@ -5,6 +5,10 @@ PYQT interface for running OCELOT simplex optimization.
 Created as a QT widget for use in other applications as well.
 
 Tyler Cope, 2016
+
+The class was modified and was introduced new methods.
+
+S. Tomin, 2017
 """
 
 import sys
@@ -195,6 +199,18 @@ class ResetpanelWindow(QFrame):
                 #print("ERROR getting value. Device:", dev.eid)
                 value = None
 
+            if dev.check_limits(value):
+                for col in [3, 4]:
+                    spin_box = self.ui.tableWidget.cellWidget(row, col)
+                    spin_box.setStyleSheet("color: yellow; font-size: 16px; background-color:red;")
+
+            else:
+                for col in [3, 4]:
+                    spin_box = self.ui.tableWidget.cellWidget(row, col)
+                    if col == 3:
+                        spin_box.setStyleSheet("color: rgb(153,204,255); font-size: 16px; background-color:#595959;")
+                    if col == 4:
+                        spin_box.setStyleSheet("color: rgb(255,0,255); font-size: 16px; background-color:#595959;")
 
             if self.startValues[dev.eid] == None and value != None:
                 self.startValues[dev.eid] = value

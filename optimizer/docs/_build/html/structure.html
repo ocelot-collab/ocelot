@@ -125,19 +125,23 @@
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">error_box</span><span class="p">(</span><span class="n">message</span><span class="o">=</span><span class="s2">&quot;Check Devices&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="mi">0</span>
-
+        <span class="k">for</span> <span class="n">dev</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">:</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="n">dev</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">dev</span><span class="o">.</span><span class="n">check_limits</span><span class="p">(</span><span class="n">val</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">error_box</span><span class="p">(</span><span class="n">message</span><span class="o">=</span><span class="s2">&quot;Check the Limits&quot;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="mi">0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setUpMultiPlot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">multiPvTimer</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
 
         <span class="c1"># set the Objective function from GUI or from file mint.obj_function.py (reloading)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">set_obj_fun</span><span class="p">()</span>
 
-        <span class="c1"># Set minimizer - the optimization method (Simplex, GP, ...)</span>
-        <span class="n">minimizer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scan_method_select</span><span class="p">()</span>
+<span class="hll">        <span class="c1"># Set minimizer - the optimization method (Simplex, GP, ...)</span>
+</span>        <span class="n">minimizer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scan_method_select</span><span class="p">()</span>
 
         <span class="c1"># configure the Minimizer</span>
-<span class="hll">        <span class="k">if</span> <span class="n">minimizer</span><span class="o">.</span><span class="n">__class__</span> <span class="o">==</span> <span class="n">mint</span><span class="o">.</span><span class="n">GaussProcess</span><span class="p">:</span>
-</span>            <span class="n">minimizer</span><span class="o">.</span><span class="n">seed_iter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">sb_seed_iter</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">minimizer</span><span class="o">.</span><span class="n">__class__</span> <span class="o">==</span> <span class="n">mint</span><span class="o">.</span><span class="n">GaussProcess</span><span class="p">:</span>
+            <span class="n">minimizer</span><span class="o">.</span><span class="n">seed_iter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">sb_seed_iter</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
             <span class="n">minimizer</span><span class="o">.</span><span class="n">seed_timeout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">sb_tdelay</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
             <span class="n">minimizer</span><span class="o">.</span><span class="n">hyper_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hyper_file</span>
 
@@ -198,17 +202,18 @@
 <div class="line"><a class="reference internal" href="optimizer.html#optimizer.generic_optim.OcelotInterfaceWindow.start_scan" title="optimizer.generic_optim.OcelotInterfaceWindow.start_scan"><code class="xref py py-class docutils literal"><span class="pre">optimizer.generic_optim.OcelotInterfaceWindow.start_scan</span></code></a></div>
 </div>
 </div>
-<div class="section" id="lcls-interface-file">
-<h2>LCLS Interface File<a class="headerlink" href="#lcls-interface-file" title="Permalink to this headline">¶</a></h2>
-<p>This file is used a wrapper to translate between reqeusts by the optimizer and the control system. It also serves to hold the scan data, as well as perform normalization and unformalization for the optimzer class.</p>
+<div class="section" id="xfel-interface-file">
+<h2>XFEL Interface File<a class="headerlink" href="#xfel-interface-file" title="Permalink to this headline">¶</a></h2>
+<p>This file is used a wrapper to translate between requests by the optimizer and the control system.
+.. It also serves to hold the scan data, as well as perform normalization and unformalization for the optimzer class.</p>
 <div class="line-block">
 <div class="line">There are two classes, the MachineInterface and DeviceProperties class.</div>
-<div class="line">For the most part only the MachineInterface is used and DeviceProperties is not used.</div>
+<div class="line">For the most part only the MachineInterface is used. The DeviceProperties is used now for getting limits from the GUI.</div>
 </div>
-<p><code class="xref py py-class docutils literal"><span class="pre">OcelotInterface.mint.lcls_interface</span></code></p>
+<p><code class="xref py py-class docutils literal"><span class="pre">OcelotInterface.mint.xfel_interface</span></code></p>
 <p><strong>Getters and Setters</strong></p>
 <p>Basic getter and setter methods using epics:
-The SASE or objective function measurment is done in a separate method for averageing over the BSA waveform.</p>
+.. The SASE or objective function measurement is done in a separate method for averageing over the BSA waveform.</p>
 <p>Getter function</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span>    <span class="k">def</span> <span class="nf">get_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -235,59 +240,62 @@ The SASE or objective function measurment is done in a separate method for avera
         <span class="k">return</span>
 </pre></div>
 </div>
-<p><em>Saving Data</em></p>
-<p>Durring a scan the XFELMachineInterface is used to save data for evey step in the scan. The function <em>get_sase()</em> is used to trigger a save event. Everytime an optimizer object calls this funciton, data is saved for the setpoint of every devices and the objective funciton. <code class="xref py py-class docutils literal"><span class="pre">OcelotInterface.mint.lcls_interface.get_sase</span></code></p>
-<p>When a scan is finished, the data is written to a file in the matlab data directory using a module &#8220;matlog.py&#8221; imported from the python toolbox.</p>
-<p><strong>Normalization</strong></p>
+<p><strong>Ocelot Optimizer</strong></p>
 <div class="line-block">
-<div class="line">If desired, a normalized value is passed to the optimizer based on an input mean and standrard deviation.</div>
-<div class="line">If not normalizing the simplex, will use a default value of %5 difference from the devices current setpoint.</div>
+<div class="line">The Ocelot Optimizer uses the scipy optimizer fmin function to run an optimization.</div>
+<div class="line">It has an argument to pass in different methods of optimizations that the scipy.optimize.fmin function can run</div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span>    <span class="k">def</span> <span class="nf">normalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">corrector</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Transform to normalized data for optimizer input.</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">                correcter: pv name of the devices</span>
-<span class="sd">                x: the input x val to be normalized</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">                Float normalized value of x</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span><span class="p">(</span><span class="n">Taper</span><span class="p">()</span><span class="o">.</span><span class="n">isTaperPV</span><span class="p">(</span><span class="n">corrector</span><span class="p">)):</span>
-            <span class="n">mu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">taperParams</span><span class="p">[</span><span class="n">corrector</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
-            <span class="n">sig</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">taperParams</span><span class="p">[</span><span class="n">corrector</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
-            <span class="n">y</span> <span class="o">=</span> <span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">-</span><span class="n">mu</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">sig</span><span class="p">)</span>
-            <span class="k">print</span> <span class="p">(</span><span class="s2">&quot;SCALED TAPER&quot;</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">y</span>
-
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_params_bool</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">x</span>
-        <span class="n">mu</span>  <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputNormParams</span><span class="p">[</span><span class="n">corrector</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">sig</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputNormParams</span><span class="p">[</span><span class="n">corrector</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
-        <span class="n">y</span> <span class="o">=</span> <span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">-</span><span class="n">mu</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">sig</span><span class="p">)</span>
-        <span class="k">print</span> <span class="p">(</span><span class="s2">&quot;NORMALIZED&quot;</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">y</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Optimizer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">minimizer</span> <span class="o">=</span> <span class="n">Simplex</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logging</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="c1">#self.kill = False #intructed by tmc to terminate thread of this class</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_file</span> <span class="o">=</span> <span class="s2">&quot;log.txt&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">Logger</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_file</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">devices</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">target</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">opt_ctrl</span> <span class="o">=</span> <span class="n">OptControl</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">seq</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_best_solution</span> <span class="o">=</span> <span class="bp">True</span>
 </pre></div>
 </div>
-<p>In order to caput optimizer output back to the control system, a similar unnormalize funcion is used.</p>
-</div>
-<div class="section" id="scanner-threads-file">
-<h2>Scanner Threads File<a class="headerlink" href="#scanner-threads-file" title="Permalink to this headline">¶</a></h2>
-<div class="line-block">
-<div class="line">This file contains scanner classes that are subclassed from a python thread object.</div>
-<div class="line">When a new scan is started from the GUI, the scanner runs as a separate thread to avoid tying up the GUI</div>
-</div>
-<p><code class="xref py py-class docutils literal"><span class="pre">OcelotInterface.scannerThreads</span></code></p>
-<p><strong>Ocelot Scanner</strong></p>
+<p><strong>Simplex</strong></p>
 <div class="line-block">
 <div class="line">The Ocelot scanner uses the scipy optimizer fmin function to run an optimization.</div>
 <div class="line">It has an argument to pass in different methods of optimizations that the scipy.optimize.fmin function can run</div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span></span>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Simplex</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xtol</span> <span class="o">=</span> <span class="mf">1e-5</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dev_steps</span> <span class="o">=</span> <span class="bp">None</span>
+</pre></div>
 </div>
 <p><strong>GP Scanner</strong></p>
 <div class="line-block">
 <div class="line">This is the threaded object that runs the GP scanner.</div>
 <div class="line">Below shows the initialization for the object, and required arguments.</div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span></span>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">GaussProcess</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">seed_iter</span> <span class="o">=</span> <span class="mi">5</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">seed_timeout</span> <span class="o">=</span> <span class="mf">0.1</span>
+        <span class="c1">#BayesOpt.__init__(self, model=model, target_func=target_func, acq_func=acq_func, xi=xi, alt_param=alt_param,</span>
+        <span class="c1">#                  m=m, bounds=bounds, iter_bound=iter_bound, prior_data=prior_data)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">target</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">devices</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">energy</span> <span class="o">=</span> <span class="mi">3</span>
+        <span class="c1">#GP parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">numBV</span> <span class="o">=</span> <span class="mi">30</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xi</span> <span class="o">=</span> <span class="mf">0.01</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">acq_func</span> <span class="o">=</span> <span class="s1">&#39;EI&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alt_param</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">m</span> <span class="o">=</span> <span class="mi">200</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iter_bound</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hyper_file</span> <span class="o">=</span> <span class="s2">&quot;../parameters/hyperparameters.npy&quot;</span>
+</pre></div>
 </div>
 </div>
 <div class="section" id="reset-panel-module">
@@ -297,94 +305,9 @@ The SASE or objective function measurment is done in a separate method for avera
 <div class="line">More details in the Usage section of this document.</div>
 <div class="line">This is the origonal version of reset panel with checkboxes</div>
 </div>
-<p><code class="xref py py-class docutils literal"><span class="pre">OcelotInterface.resetpanel.resetpanel</span></code>
+<p><a class="reference internal" href="optimizer.resetpanel.html#module-optimizer.resetpanel.resetpanel" title="optimizer.resetpanel.resetpanel"><code class="xref py py-class docutils literal"><span class="pre">optimizer.resetpanel.resetpanel</span></code></a>
 | This version subclasses resetpanel and adds in the active checkbox column
-<code class="xref py py-class docutils literal"><span class="pre">OcelotInterface.resetpanel.resetpanelbox</span></code></p>
-</div>
-<div class="section" id="epicsget-class">
-<h2>epicsGet Class<a class="headerlink" href="#epicsget-class" title="Permalink to this headline">¶</a></h2>
-<div class="line-block">
-<div class="line">The epicsGet class if a very simple wrapper of the epics caget funciton.</div>
-<div class="line">It&#8217;s only purpose is to deal with some issues of network connectivity, and the pyepics.caget function returning None or NaN</div>
-</div>
-</div>
-<div class="section" id="parameters-and-file-io">
-<h2>Parameters and File IO<a class="headerlink" href="#parameters-and-file-io" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="gp-file-io">
-<h3>GP File IO<a class="headerlink" href="#gp-file-io" title="Permalink to this headline">¶</a></h3>
-<p>The program needs to be able to pull information from external files in order to work correctly, based on the input for parameter files and settings in the options panel.</p>
-</div>
-<div class="section" id="ocelot-normalization-parameters">
-<h3>Ocelot Normalization Parameters<a class="headerlink" href="#ocelot-normalization-parameters" title="Permalink to this headline">¶</a></h3>
-<p>The Ocelot scipy based scanners use the normalization parameters located in <em>./parameters/normParams</em></p>
-<p>These parameters are auto generated from the historical ranges of the devices.
-Format: <em>PVNAME,MEAN,STD</em></p>
-<p>Load funciton <code class="xref py py-class docutils literal"><span class="pre">OcelotInterface.scannerThreads.OcelotScanner.loadNormFile</span></code></p>
-<p><strong>Hyperparameters</strong></p>
-<div class="line-block">
-<div class="line">The GP will always need hyperparameter information for all the devices you wish to scan.</div>
-<div class="line">Hyperparameters are calculated from data in a hyperparameter file <em>./parameters/hyperparameters.npy</em></div>
-<div class="line">The file is a numpy biniary with a statistic information for each device, binned by machine L3 end energy in GeV.</div>
-<div class="line">These are calculated outside the ocelot GUI project, in a python module named archiveRetrieve in the python toolbox.</div>
-<div class="line">The format of this file is a nested dictionary object, where keys of the outer dict are beam energy in GeV, and inner are keys are the PVs.</div>
-<div class="line">Load funciton <code class="xref py py-class docutils literal"><span class="pre">OcelotInterface.scannerThreads.GpScanner.loadHyperParams</span></code></div>
-</div>
-<blockquote>
-<div><div class="line-block">
-<div class="line">data[</div>
-<div class="line-block">
-<div class="line">{&#8220;3&#8221;: {&#8220;PV1&#8221;: [AVE,STD], &#8220;PV2&#8221;: [AVE,STD], &#8220;PVN&#8221;: [AVE,STD] }</div>
-<div class="line">{&#8220;4&#8221;: {&#8220;PV1&#8221;: [AVE,STD], &#8220;PV2&#8221;: [AVE,STD], &#8220;PVN&#8221;: [AVE,STD] }</div>
-<div class="line">...</div>
-<div class="line">...</div>
-<div class="line">{&#8220;16&#8221;: {&#8220;PV1&#8221;: [AVE,STD], &#8220;PV2&#8221;: [AVE,STD], &#8220;PVN&#8221;: [AVE,STD] }</div>
-</div>
-<div class="line">]</div>
-</div>
-</div></blockquote>
-<div class="line-block">
-<div class="line">For example when the GUI starts up, it will chooses a dict of parameters based on the current L3 beam energy from <em>BEND:DMP1:400:BDES</em></div>
-<div class="line">Once this data in pulled from the file it is then used to calculate hyperparameters that are input into the GP</div>
-<div class="line"><br /></div>
-<div class="line">Load funciton <code class="xref py py-class docutils literal"><span class="pre">OcelotInterface.scannerThreads.GpScanner.calcLengthScaleHP</span></code></div>
-<div class="line">Load funciton <code class="xref py py-class docutils literal"><span class="pre">OcelotInterface.scannerThreads.GpScanner.calcAmpCoeffHP</span></code></div>
-<div class="line">Load funciton <code class="xref py py-class docutils literal"><span class="pre">OcelotInterface.scannerThreads.GpScanner.calcNoiseHP</span></code></div>
-</div>
-<p>Understanding how these hyperparameters affct the optimizer is a bit tricky. What we have found is that typically the length scales determine the step size that GP will take when choosing a new point. The amplitude coefficent seems to determine how much the scanner will explore versus stay on a local maximum. The noise parameter determines how much of the obj func measured is accounted for by random fluctuation and noise from the beam. We have usually letf this constant, using the log of the GDET standrard deviation.</p>
-<p><strong>Matlab Seed File</strong></p>
-<div class="line-block">
-<div class="line">The GP scanner needs some information to build an initial model.</div>
-<div class="line">One method of initializing this model is loading a matlab file with data from a previous scan.</div>
-<div class="line">The function <em>loadSeedData</em> will load a previous save file from ocelot to build the GP model.</div>
-<div class="line">The most cases this function will not be called to build the GP, but rather we will use the simpelx seeded method.</div>
-<div class="line">This was mostly used in development when we wanted to load pre saved data sets intead of using live data.</div>
-</div>
-<p>Load funciton <code class="xref py py-class docutils literal"><span class="pre">OcelotInterface.scannerThreads.GpScanner.loadSeedData</span></code></p>
-<a class="reference internal image-reference" href="_images/ocelot_savefile.png"><img alt="_images/ocelot_savefile.png" src="_images/ocelot_savefile.png" style="width: 600px;" /></a>
-<p><em>Example of data from a Ocelot Scan. This data is formated into a matrix and feed into the GP</em></p>
-</div>
-</div>
-<div class="section" id="calculating-parameters-with-the-archiveretrieve-module">
-<h2>Calculating Parameters with the archiveRetrieve Module<a class="headerlink" href="#calculating-parameters-with-the-archiveretrieve-module" title="Permalink to this headline">¶</a></h2>
-<p>The mean and standard deviation used in the IO files above are generated in a script named energySeparation.py. More detailed informatino on this is located in the readme file within the module. The module is located in the python toolbox <em>/usr/local/lcls/tools/python/toolbox</em></p>
-<div class="line-block">
-<div class="line">Here are the steps to get usefull information out of this module:</div>
-</div>
-<ul class="simple">
-<li>1). Check out the files from CVS into a directory (or use the existing one in /home/physics/tcope/cvswork/tools/python/toolbox/archiveRetrieve)</li>
-<li>2). Edit the &#8220;parameter.py&#8221; file to add in the PVs and time ranges you want to get history data for</li>
-<li>3). Execute the &#8220;generateDataSet.py&#8221; file. This generates raw data in the &#8221;./data&#8221; folder for the PVs specified.</li>
-<li>4). Edit the &#8220;energySeparation.py&#8221; file to add in PVs you want to generate mean and std data for. Kind of redundant with step 2, but necessary.</li>
-<li>5). Execute the energySeparation.py file to generate the hyperparameter.npy file. Then copy the file into the OcelotInterface/parameter folder.</li>
-</ul>
-</div>
-<div class="section" id="ocelot-developmeng-and-test-mode">
-<h2>Ocelot Developmeng and Test Mode<a class="headerlink" href="#ocelot-developmeng-and-test-mode" title="Permalink to this headline">¶</a></h2>
-<p>This describes the process of running ocelot in development mode, in order to test new algorithms or debugging. To do this 4 dev matlab PVs are used as dummy devices, and te GUI reads in a linear objective function is place of the GDET.</p>
-<p>The main function contains a boolean &#8216;devmode&#8217; to turn the development mode on and off. If devmode is true, the GUI loads up the dev device PVs and reads in the and objective function from the PV <em>&#8220;SIOC:SYS0:ML00:CALCOUT993&#8221;</em>. A script to start this output can be started from the blue button on the edm dev panel.</p>
-<p>This is the function that is executed when you choose dev mode. You can change options here depending on what you are testing.</p>
-<a class="reference internal image-reference" href="_images/ocelot_dev_panel.jpg"><img alt="_images/ocelot_dev_panel.jpg" src="_images/ocelot_dev_panel.jpg" style="width: 400px;" /></a>
-<p>This is the edm development panel that controls the y funciton read in durring dev mode.</p>
+<a class="reference internal" href="optimizer.resetpanel.html#module-optimizer.resetpanel.resetpanelbox" title="optimizer.resetpanel.resetpanelbox"><code class="xref py py-class docutils literal"><span class="pre">optimizer.resetpanel.resetpanelbox</span></code></a></p>
 </div>
 </div>
 
@@ -398,17 +321,8 @@ Format: <em>PVNAME,MEAN,STD</em></p>
   <ul>
 <li><a class="reference internal" href="#">Project Structure</a><ul>
 <li><a class="reference internal" href="#ocelotinterface-main-file">OcelotInterface Main File</a></li>
-<li><a class="reference internal" href="#lcls-interface-file">LCLS Interface File</a></li>
-<li><a class="reference internal" href="#scanner-threads-file">Scanner Threads File</a></li>
+<li><a class="reference internal" href="#xfel-interface-file">XFEL Interface File</a></li>
 <li><a class="reference internal" href="#reset-panel-module">Reset Panel Module</a></li>
-<li><a class="reference internal" href="#epicsget-class">epicsGet Class</a></li>
-<li><a class="reference internal" href="#parameters-and-file-io">Parameters and File IO</a><ul>
-<li><a class="reference internal" href="#gp-file-io">GP File IO</a></li>
-<li><a class="reference internal" href="#ocelot-normalization-parameters">Ocelot Normalization Parameters</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#calculating-parameters-with-the-archiveretrieve-module">Calculating Parameters with the archiveRetrieve Module</a></li>
-<li><a class="reference internal" href="#ocelot-developmeng-and-test-mode">Ocelot Developmeng and Test Mode</a></li>
 </ul>
 </li>
 </ul>

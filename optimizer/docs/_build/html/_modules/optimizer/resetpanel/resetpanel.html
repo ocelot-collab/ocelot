@@ -245,6 +245,18 @@
                 <span class="c1">#print(&quot;ERROR getting value. Device:&quot;, dev.eid)</span>
                 <span class="n">value</span> <span class="o">=</span> <span class="kc">None</span>
 
+            <span class="k">if</span> <span class="n">dev</span><span class="o">.</span><span class="n">check_limits</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]:</span>
+                    <span class="n">spin_box</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">cellWidget</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">)</span>
+                    <span class="n">spin_box</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s2">&quot;color: yellow; font-size: 16px; background-color:red;&quot;</span><span class="p">)</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]:</span>
+                    <span class="n">spin_box</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">cellWidget</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">col</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                        <span class="n">spin_box</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s2">&quot;color: rgb(153,204,255); font-size: 16px; background-color:#595959;&quot;</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">col</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+                        <span class="n">spin_box</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s2">&quot;color: rgb(255,0,255); font-size: 16px; background-color:#595959;&quot;</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">startValues</span><span class="p">[</span><span class="n">dev</span><span class="o">.</span><span class="n">eid</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">value</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">startValues</span><span class="p">[</span><span class="n">dev</span><span class="o">.</span><span class="n">eid</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>

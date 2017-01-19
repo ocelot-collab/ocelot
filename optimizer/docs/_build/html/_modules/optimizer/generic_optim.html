@@ -119,8 +119,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">ui</span> <span class="o">=</span> <span class="n">MainWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="c1">#self.ui.pb_help.clicked.connect(lambda: os.system(&quot;firefox file://&quot;+self.optimizer_path+&quot;docs/build/html/index.html&quot;))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">pb_help</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">open_help</span><span class="p">)</span>
-        <span class="c1">#self.mi = TestMachineInterface()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">mi</span> <span class="o">=</span> <span class="n">XFELMachineInterface</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mi</span> <span class="o">=</span> <span class="n">TestMachineInterface</span><span class="p">()</span>
+        <span class="c1">#self.mi = XFELMachineInterface()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dp</span> <span class="o">=</span> <span class="n">TestDeviceProperties</span><span class="p">(</span><span class="n">ui</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">widget</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">total_delay</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">sb_tdelay</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
@@ -239,7 +239,11 @@
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">error_box</span><span class="p">(</span><span class="n">message</span><span class="o">=</span><span class="s2">&quot;Check Devices&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="mi">0</span>
-
+        <span class="k">for</span> <span class="n">dev</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">:</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="n">dev</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">dev</span><span class="o">.</span><span class="n">check_limits</span><span class="p">(</span><span class="n">val</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">error_box</span><span class="p">(</span><span class="n">message</span><span class="o">=</span><span class="s2">&quot;Check the Limits&quot;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="mi">0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setUpMultiPlot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">multiPvTimer</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
 
@@ -404,6 +408,7 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># disable button &quot;Edit Objective Function&quot;</span>
             <span class="c1"># self.ui.pb_edit_obj_func.setEnabled(False)</span>
+            <span class="n">line_edits</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">le_a</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">le_b</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">le_c</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">le_d</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">le_e</span><span class="p">]</span>
 
             <span class="n">a_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">le_a</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
             <span class="n">state_a</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">is_le_addr_ok</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">le_a</span><span class="p">)</span>
@@ -414,18 +419,30 @@
             <span class="n">c_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">le_c</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
             <span class="n">state_c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">is_le_addr_ok</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">le_c</span><span class="p">)</span>
 
+            <span class="n">d_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">le_d</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
+            <span class="n">state_d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">is_le_addr_ok</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">le_d</span><span class="p">)</span>
+
+            <span class="n">e_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">le_e</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
+            <span class="n">state_e</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">is_le_addr_ok</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">le_e</span><span class="p">)</span>
+
             <span class="n">func</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">le_obf</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
 
             <span class="k">def</span> <span class="nf">get_value_exp</span><span class="p">():</span>
-                <span class="n">A</span> <span class="o">=</span> <span class="mi">0</span>
-                <span class="n">B</span> <span class="o">=</span> <span class="mi">0</span>
-                <span class="n">C</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">A</span> <span class="o">=</span> <span class="mf">0.</span>
+                <span class="n">B</span> <span class="o">=</span> <span class="mf">0.</span>
+                <span class="n">C</span> <span class="o">=</span> <span class="mf">0.</span>
+                <span class="n">D</span> <span class="o">=</span> <span class="mf">0.</span>
+                <span class="n">E</span> <span class="o">=</span> <span class="mf">0.</span>
                 <span class="k">if</span> <span class="n">state_a</span><span class="p">:</span>
                     <span class="n">A</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mi</span><span class="o">.</span><span class="n">get_value</span><span class="p">(</span><span class="n">a_str</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">state_b</span><span class="p">:</span>
                     <span class="n">B</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mi</span><span class="o">.</span><span class="n">get_value</span><span class="p">(</span><span class="n">b_str</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">state_c</span><span class="p">:</span>
                     <span class="n">C</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mi</span><span class="o">.</span><span class="n">get_value</span><span class="p">(</span><span class="n">c_str</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">state_d</span><span class="p">:</span>
+                    <span class="n">D</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mi</span><span class="o">.</span><span class="n">get_value</span><span class="p">(</span><span class="n">d_str</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">state_e</span><span class="p">:</span>
+                    <span class="n">E</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mi</span><span class="o">.</span><span class="n">get_value</span><span class="p">(</span><span class="n">e_str</span><span class="p">)</span>
                 <span class="k">return</span> <span class="nb">eval</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
 
             <span class="bp">self</span><span class="o">.</span><span class="n">objective_func</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">Target</span><span class="p">(</span><span class="n">eid</span><span class="o">=</span><span class="n">a_str</span><span class="p">)</span>

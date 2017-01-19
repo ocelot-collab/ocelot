@@ -1,3 +1,9 @@
+"""
+Most of GUI logic is placed here.
+
+S.Tomin, 2017
+"""
+
 from ocelot.optimizer.UIOcelotInterface_gen import *
 import json
 import scipy
@@ -81,6 +87,8 @@ class MainWindow(Ui_Form):
         self.le_a.textChanged.connect(self.check_address)
         self.le_b.textChanged.connect(self.check_address)
         self.le_c.textChanged.connect(self.check_address)
+        self.le_d.textChanged.connect(self.check_address)
+        self.le_e.textChanged.connect(self.check_address)
         self.le_alarm.textChanged.connect(self.check_address)
 
         self.sb_tdelay.valueChanged.connect(self.set_cycle)
@@ -126,6 +134,8 @@ class MainWindow(Ui_Form):
         self.is_le_addr_ok(self.le_a)
         self.is_le_addr_ok(self.le_b)
         self.is_le_addr_ok(self.le_c)
+        self.is_le_addr_ok(self.le_d)
+        self.is_le_addr_ok(self.le_e)
         self.is_le_addr_ok(self.le_alarm)
 
     def is_le_addr_ok(self, line_edit):
@@ -166,6 +176,8 @@ class MainWindow(Ui_Form):
         table["fun_a"] = fun_a
         table["fun_b"] = fun_b
         table["fun_c"] = fun_c
+        table["fun_d"] = str(self.le_d.text())
+        table["fun_e"] = str(self.le_e.text())
         table["obj_fun"] = obj_fun
 
         table["alarm_dev"] = alarm_dev
@@ -218,6 +230,8 @@ class MainWindow(Ui_Form):
             self.le_a.setText(fun_a)
             self.le_b.setText(fun_b)
             self.le_c.setText(fun_c)
+            self.le_d.setText(table["fun_d"])
+            self.le_e.setText(table["fun_e"])
             self.le_obf.setText(obj_fun)
 
             self.le_alarm.setText(table["alarm_dev"])

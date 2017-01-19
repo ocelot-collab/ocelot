@@ -3,6 +3,10 @@
 Subclass of ResetpanelWindow, used to make a version with check box selction
 
 Tyler Cope, 2016
+
+The class was modified and was introduced new methods.
+
+S. Tomin, 2017
 """
 
 from ocelot.optimizer.resetpanel.resetpanel import ResetpanelWindow

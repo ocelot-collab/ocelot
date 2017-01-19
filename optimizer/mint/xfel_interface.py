@@ -1,7 +1,7 @@
-'''
+"""
 XFEL machine interface
 S.Tomin, 2017
-'''
+"""
 try:
     # in server "doocsdev12" set environment
     #  $ export PYTHONPATH=/home/ttflinac/user/python-2.7/Debian/

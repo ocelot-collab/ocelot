@@ -1,7 +1,11 @@
 """
 Main Ocelot optimization file
 Contains the setup for using the scipy.optimize package run simplex and other algorothms
-Modifiedi for use at LCLS from Ilya's version
+Modified for use at LCLS from Ilya's version
+
+The file was modified and were introduced new Objects and methods.
+S. Tomin, 2017
+
 """
 from __future__ import print_function, absolute_import
 from time import sleep

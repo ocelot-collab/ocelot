@@ -69,8 +69,8 @@ class OcelotInterfaceWindow(QFrame):
         self.ui = MainWindow(self)
         #self.ui.pb_help.clicked.connect(lambda: os.system("firefox file://"+self.optimizer_path+"docs/build/html/index.html"))
         self.ui.pb_help.clicked.connect(self.ui.open_help)
-        self.mi = TestMachineInterface()
-        #self.mi = XFELMachineInterface()
+        #self.mi = TestMachineInterface()
+        self.mi = XFELMachineInterface()
         self.dp = TestDeviceProperties(ui=self.ui.widget)
 
         self.total_delay = self.ui.sb_tdelay.value()
@@ -107,6 +107,7 @@ class OcelotInterfaceWindow(QFrame):
         self.name_simplex = "Nelder-Mead Simplex"
         self.name_gauss = "Gaussian Process"
         self.name_custom = "Custom Minimizer"
+        self.name_simplex_norm = "Simplex Norm."
         self.name4 = "Conjugate Gradient"
         self.name5 = "Powell's Method"
         self.ui.cb_select_alg.addItem(self.name_simplex)
@@ -114,7 +115,7 @@ class OcelotInterfaceWindow(QFrame):
         # switch of GP and custom Mininimizer
         # self.ui.cb_select_alg.addItem(self.name_gauss)
         self.ui.cb_select_alg.addItem(self.name_custom)
-
+        self.ui.cb_select_alg.addItem(self.name_simplex_norm)
         #timer for plots, starts when scan starts
         self.multiPvTimer = QtCore.QTimer()
         self.multiPvTimer.timeout.connect(self.getPlotData)
@@ -139,6 +140,8 @@ class OcelotInterfaceWindow(QFrame):
         elif current_method == self.name_custom:
             minimizer = mint.CustomMinimizer()
 
+        elif current_method == self.name_simplex_norm:
+            minimizer = mint.Simplex()
         # Conjugate Gradient
         #if index == 3:
         #    scanner = scanner_threads.OcelotScanner(parent=self, method='cg')
@@ -238,6 +241,10 @@ class OcelotInterfaceWindow(QFrame):
         # Optimizer initialization
         self.opt = mint.Optimizer()
 
+        if self.ui.cb_select_alg.currentText() == self.name_simplex_norm:
+            self.opt.normalization = True
+            self.opt.norm_coef = self.ui.sb_isim_rel_step.value()*0.01
+            print("OPT", self.opt.norm_coef)
         # Option - set best solution after optimization or not
         self.opt.set_best_solution = self.ui.cb_set_best_sol.checkState()
 
@@ -414,7 +421,14 @@ class OcelotInterfaceWindow(QFrame):
             self.objective_func = obj.Target(eid=a_str)
             self.objective_func.devices = []
             self.objective_func.get_value = get_value_exp
+
+        # set maximum penalty
         self.objective_func.pen_max = self.ui.sb_max_pen.value()
+        # set number of the readings
+        self.objective_func.nreadings = self.ui.sb_nreadings.value()
+        # set interval between readings
+        self.objective_func.interval = self.ui.sb_ddelay.value()
+
 
     def set_m_status(self):
         """

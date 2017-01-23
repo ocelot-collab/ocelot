@@ -282,8 +282,8 @@ class Optimizer(Thread):
         self.opt_ctrl = OptControl()
         self.seq = []
         self.set_best_solution = True
-        #self.x_data = []
-        #self.y_data = []
+        self.normalization = False
+        self.norm_coef = 0.05
 
     def eval(self, seq=None, logging=False, log_file=None):
         """
@@ -306,9 +306,11 @@ class Optimizer(Thread):
             self.devices[i].set_value(x[i])
 
     def error_func(self, x):
+        if self.normalization:
+            delta_x = x
+            delta_x_scaled = delta_x/0.00025*self.norm_coef
+            x = self.x_init + delta_x_scaled
 
-
-        #self.minimizer.kill = self.kill
         if self.opt_ctrl.kill:
             print('Killed from external process')
             # NEW CODE - to kill if run from outside thread
@@ -330,8 +332,6 @@ class Optimizer(Thread):
         if self.debug: print('penalty:', pen)
 
         self.opt_ctrl.save_step(pen, x)
-        #self.x_data.append(x)
-        #self.y_data.append(pen)
         return pen
 
     def max_target_func(self, target, devices, params = {}):
@@ -356,6 +356,10 @@ class Optimizer(Thread):
 
         if self.logging:
             self.logger.log_start(dev_ids, method=self.minimizer.__class__.__name__, x_init=x_init, target_ref=target_ref)
+
+        if self.normalization:
+            self.x_init = x_init
+            x = np.zeros_like(x)
 
         res = self.minimizer.minimize(self.error_func, x)
         print("result", res)

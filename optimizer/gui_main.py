@@ -93,6 +93,7 @@ class MainWindow(Ui_Form):
 
         self.sb_tdelay.valueChanged.connect(self.set_cycle)
         self.sb_ddelay.valueChanged.connect(self.set_cycle)
+        self.sb_nreadings.valueChanged.connect(self.set_cycle)
         self.cb_select_alg.currentIndexChanged.connect(self.change_state_scipy_setup)
         self.read_alarm = QtCore.QTimer()
         self.read_alarm.timeout.connect(self.alarm_value)
@@ -127,7 +128,8 @@ class MainWindow(Ui_Form):
         Scanner will wait this long to collect new data.
         """
         self.trim_delay = self.sb_tdelay.value()
-        self.label_7.setText("Cycle Period = " + str(np.around(self.trim_delay, 3)))
+        data_delay = self.sb_ddelay.value()*self.sb_nreadings.value()
+        self.label_7.setText("Cycle Period = " + str(np.around(self.trim_delay + data_delay, 3)))
         self.Form.total_delay = self.trim_delay
 
     def check_address(self):
@@ -159,6 +161,8 @@ class MainWindow(Ui_Form):
 
         max_pen = self.sb_max_pen.value()
         timeout = self.sb_tdelay.value()
+
+
         max_iter = self.sb_num_iter.value()
         # objective function
         fun_a = str(self.le_a.text())
@@ -172,6 +176,9 @@ class MainWindow(Ui_Form):
 
         table["max_pen"] = max_pen
         table["timeout"] = timeout
+        table["nreadings"] = self.sb_nreadings.value()
+        table["interval"] = self.sb_ddelay.value()
+
         table["max_iter"] = max_iter
         table["fun_a"] = fun_a
         table["fun_b"] = fun_b
@@ -226,6 +233,9 @@ class MainWindow(Ui_Form):
             if "use_predef" in table.keys(): self.cb_use_predef.setCheckState(table["use_predef"])
             self.sb_max_pen.setValue(max_pen)
             self.sb_tdelay.setValue(timeout)
+            self.sb_nreadings.setValue(table["nreadings"])
+            self.sb_ddelay.setValue(table["interval"])
+
             self.sb_num_iter.setValue(max_iter)
             self.le_a.setText(fun_a)
             self.le_b.setText(fun_b)
@@ -379,6 +389,16 @@ class MainWindow(Ui_Form):
             self.label_23.setEnabled(True)
             self.sb_isim_rel_step.setEnabled(True)
             self.g_box_isim.setTitle("Custom Minimizer Scanner Setup")
+            self.g_box_isim.setStyleSheet('QGroupBox  {color: white;}')
+            #self.cb_use_isim.setCheckState(True)
+            self.cb_use_isim.setEnabled(False)
+            self.sb_isim_rel_step.setValue(5)
+
+        if str(self.cb_select_alg.currentText()) == self.Form.name_simplex_norm:
+            self.g_box_isim.setEnabled(True)
+            self.label_23.setEnabled(True)
+            self.sb_isim_rel_step.setEnabled(True)
+            self.g_box_isim.setTitle("Simplex With Normalization")
             self.g_box_isim.setStyleSheet('QGroupBox  {color: white;}')
             #self.cb_use_isim.setCheckState(True)
             self.cb_use_isim.setEnabled(False)

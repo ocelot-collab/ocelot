@@ -19,6 +19,8 @@ class XFELTarget(Target):
     :param niter: 0, calls number get_penalty()
     :param penalties: [], appending penalty
     :param times: [], appending the time evolution of get_penalty()
+    :param nreadings: 1, number of objective function readings
+    :param interval: 0 (secunds), interval between readings
     """
     def __init__(self, mi=None, dp=None, eid="x57**2 + y57**2 + x59**2 + y59"):
         super(XFELTarget, self).__init__(eid=eid)
@@ -33,6 +35,8 @@ class XFELTarget(Target):
         self.times = []
         self.alarms = []
         self.values = []
+        self.nreadings = 1
+        self.interval = 0.0
 
     def get_alarm(self):
         """
@@ -60,6 +64,19 @@ class XFELTarget(Target):
         # return 2*np.sum(np.exp(-np.power((values - np.ones_like(values)), 2) / 5.))
         # value = self.mi.get_value(self.eid)
 
+
+    def get_value_test(self):
+        """
+        For testing
+
+        :return:
+        """
+        values = np.array([dev.get_value() for dev in self.devices])
+        value = 2*np.sum(np.exp(-np.power((values - np.ones_like(values)), 2) / 5.))
+        value = value * (1. + (np.random.rand(1)[0] - 0.5) * 0.01)
+        return value 
+
+
     def get_penalty(self):
         """
         Method to calculate the penalty on the basis of the value and alarm level.
@@ -69,7 +86,12 @@ class XFELTarget(Target):
 
         :return: penalty
         """
-        sase = self.get_value()
+        sase = 0.
+        for i in range(self.nreadings):
+            sase += self.get_value()
+            time.sleep(self.interval)
+        sase = sase/self.nreadings
+        print("SASE", sase)
         alarm = self.get_alarm()
         if self.debug: print('alarm:', alarm)
         if self.debug: print('sase:', sase)

@@ -42,7 +42,7 @@ class Device(object):
 
     def clean(self):
         self.values = []
-        self.time = []
+        self.times = []
 
     def check_limits(self, value):
         limits = self.get_limits()
@@ -56,35 +56,13 @@ class Device(object):
         return self.dp.get_limits(self.eid)
 
 
-class SLACDevice(Device):
-   def __init__(self, eid=None):
-       super(SLACDevice, self).__init__(eid=eid)
-       self.test_value = 0.
-       self.values = []
-       self.time = []
-       self.nsets = 0
-
-   def set_value(self, x):
-       self.values.append(x)
-       self.time.append(time.time())
-       mi.set_value(self.eid, x)
-
-   def get_value(self):
-       return mi.get_value(self.eid)
-
-   def check_limits(self, value):
-       return False
-
-   def state(self):
-       return
-
 # for testing
-class TestDevice(Device):
+class Device_test(Device):
     def __init__(self, eid=None):
-        super(TestDevice, self).__init__(eid=eid)
+        super(Device_test, self).__init__(eid=eid)
         self.test_value = 0.
         self.values = []
-        self.time = []
+        self.times = []
         self.nsets = 0
         self.mi = None
         self.dp = None
@@ -96,20 +74,8 @@ class TestDevice(Device):
     def set_value(self, value):
         self.values.append(value)
         self.nsets += 1
-        self.time.append(time.time())
+        self.times.append(time.time())
         self.test_value = value
-
-    def check_limits(self, value):
-        limits = self.get_limits()
-
-        if value < limits[0] or value > limits[1]:
-            print ('limits exceeded', value, limits[0] , value, limits[1])
-            return True
-        return False
-
-    def get_limits(self):
-        return self.dp.get_limits(self.eid)
-        #return [-100, 100]
 
 
 class Target(object):

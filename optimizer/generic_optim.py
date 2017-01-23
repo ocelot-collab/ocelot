@@ -12,7 +12,7 @@ The resetpanel widget is also contained in a separate module, resetpanel
 Tyler Cope, 2016
 """
 from __future__ import absolute_import, print_function
-
+import json
 import sys
 import os
 path = sys.path[0]
@@ -292,6 +292,7 @@ class OcelotInterfaceWindow(QFrame):
 
         :return: None
         """
+        dump2json = {}
         self.scan_params = {"devs": [], "currents": [], "iter":0, "sase": [0,0],"pen":[0,0], "obj":[]}
         d_names = []
         d_start = []
@@ -307,6 +308,7 @@ class OcelotInterfaceWindow(QFrame):
             d_names.append(dev.eid + "_lim")
             d_start.append(dev.get_limits()[0])
             d_stop.append(dev.get_limits()[1])
+            dump2json[dev.eid] = dev.values
 
         self.scan_params["iter"] = len(self.objective_func.penalties)
 
@@ -334,6 +336,20 @@ class OcelotInterfaceWindow(QFrame):
         print('current action parameters', [(p.tuning_id, p.action_id, p.par_name, p.start_value, p.end_value) for p in
                                             self.db.get_action_parameters(tune_id, action_id)])
 
+        dump2json["dev_times"] = self.devices[0].times
+        dump2json["obj_values"] = self.objective_func.values
+        dump2json["obj_times"] = self.objective_func.times
+
+        path = os.getcwd()
+        indx = path.find("ocelot")
+        path = path[:indx]
+        filename = os.path.join(path, "data", datetime.now().strftime("%Y-%m-%d %H-%M-%S") + ".json")
+        #print(filename)
+        try:
+            with open(filename, 'w+') as f:
+                json.dump(dump2json, f)
+        except:
+            print("Could not write history")
 
     def set_obj_fun(self):
         """
@@ -454,7 +470,7 @@ class OcelotInterfaceWindow(QFrame):
         #plot data for all devices being scanned
         for dev in self.devices:
             y = np.array(dev.values)-self.multiPlotStarts[dev.eid]
-            x = np.array(dev.time) - self.scanStartTime
+            x = np.array(dev.times) - self.scanStartTime
             line = self.multilines[dev.eid]
             line.setData(x=x, y=y)
 

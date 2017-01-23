@@ -4,29 +4,23 @@ S.Tomin, 2017
 """
 
 import numpy as np
-#from ocelot.optimizer.mint.lcls_interface import *
 import time
 
 
-#mi = TestLCLSMachineInterface()
-#dp = TestLCLSDeviceProperties()
-
-#mi = LCLSMachineInterface()
-#dp = LCLSDeviceProperties()
 
 class Device(object):
     def __init__(self, eid=None):
         self.eid = eid
         self.id = eid
         self.values = []
-        self.time = []
+        self.times = []
         self.simplex_step = 0
         self.mi = None
         self.dp = None
 
     def set_value(self, val):
         self.values.append(val)
-        self.time.append(time.time())
+        self.times.append(time.time())
         self.mi.set_value(self.eid, val)
 
     def get_value(self):
@@ -34,7 +28,17 @@ class Device(object):
         return val
 
     def state(self):
-        return True
+        """
+        Check if device is readable
+
+        :return: state, True if readable and False if not
+        """
+        state = True
+        try:
+            self.get_value()
+        except:
+            state = False
+        return state
 
     def clean(self):
         self.values = []
@@ -145,12 +149,13 @@ class Target(object):
 
 class SLACTarget(Target):
     def __init__(self, mi=None, dp=None, eid=None):
-        super(SLACTarget, self).__init__(eid=eid)
         """
+
         :param mi: Machine interface
         :param dp: Device property
         :param eid: ID
         """
+        super(SLACTarget, self).__init__(eid=eid)
         self.secs_to_ave = 2
         self.debug = False
         self.kill = False

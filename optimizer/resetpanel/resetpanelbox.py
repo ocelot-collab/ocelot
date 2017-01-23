@@ -158,14 +158,10 @@ class ResetpanelBoxWindow(ResetpanelWindow):
             #print("try to create dev")
             dev = self.create_devices(pvs=[pv])[0]#obj.TestDevice(eid=pv)
 
-            #dev.get_value()
-            #pv_obj = epics.PV(str(pv))
         except:
             print ("bad string")
             return
-        #state=dev.connect(timeout=0.05)
-        #time.sleep(0.05)
-        #state=dev.connect(timeout=0.05)
+
         state = dev.state()
         print("state=", state)
         if state:
@@ -173,35 +169,25 @@ class ResetpanelBoxWindow(ResetpanelWindow):
             self.devices.append(dev)
             #self.pv_objects[pv].add_callback(callback=self.PvGetCallBack)
             self.getStartValues()
-            #try:
-            #    val = dev.get_value()
-            #except:
-            #    val = None
-
-            #self.startValues[pv] = val
-            #print(self.pvs)
         table = self.get_state()
         self.initTable()
         self.addCheckBoxes()
         self.uncheckBoxes()
         self.set_state(table)
 
-
-    #def get_devices(self, pvs):
-    #    # TODO: method for creation of Device
-    #    devices = []
-    #    for pv in pvs:
-    #        devices.append(SLACDevice(eid=pv))
-    #    return devices
-
     def create_devices(self, pvs):
+        """
+        Method to create devices using only channels (PVs)
+
+        :param pvs: str, device address/channel/PV
+        :return: list of the devices [mint.opt_objects.Device(eid=pv[0]), mint.opt_objects.Device(eid=pv[1]), ... ]
+        """
         # TODO: add new method for creation of devices
-        #self.pvs = self.getPvsFromCbState()
         devices = []
         for pv in pvs:
             dev = obj.Device(eid=pv)
             dev.mi = self.mi
-            dev.dp = self.dp #TestLCLSDeviceProperties(self.ui.tableWidget)
+            dev.dp = self.dp
             devices.append(dev)
         return devices
 
@@ -301,7 +287,7 @@ class ResetpanelBoxWindow(ResetpanelWindow):
 
         Must be called again if the user adds another PV with middle click function.
         """
-        headers = ["PVs","Saved Value","Current Value", "Min","Max", "Active"]
+        headers = ["PVs", "Saved Val.", "Current Val.", "Min", "Max", "Active"]
         self.ui.tableWidget.setColumnCount(len(headers))
         self.ui.tableWidget.setHorizontalHeaderLabels(headers)
         header = self.ui.tableWidget.horizontalHeader()

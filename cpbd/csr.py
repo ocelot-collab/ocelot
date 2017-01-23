@@ -308,7 +308,7 @@ class CSR:
         # another filter
         self.filter_order = 10
         self.n_mesh = 345
-        self.pict_debug = True
+        self.pict_debug = False
         if self.pict_debug:
             self.f = plt.figure(figsize=(12, 9))
             plt.ion()

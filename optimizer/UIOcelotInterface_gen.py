@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'UIOcelotInterface_gen.ui'
 #
-# Created: Thu Jan 19 11:58:01 2017
+# Created: Thu Jan 19 15:13:08 2017
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -52,13 +52,28 @@ class Ui_Form(object):
         self.gridLayout_9.setObjectName(_fromUtf8("gridLayout_9"))
         self.widget = ResetpanelBoxWindow(self.tab)
         self.widget.setEnabled(True)
-        self.widget.setMinimumSize(QtCore.QSize(550, 0))
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.widget.sizePolicy().hasHeightForWidth())
+        self.widget.setSizePolicy(sizePolicy)
+        self.widget.setMinimumSize(QtCore.QSize(600, 0))
         self.widget.setObjectName(_fromUtf8("widget"))
         self.gridLayout_9.addWidget(self.widget, 0, 0, 2, 1)
         self.widget_2 = QtGui.QWidget(self.tab)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.widget_2.sizePolicy().hasHeightForWidth())
+        self.widget_2.setSizePolicy(sizePolicy)
         self.widget_2.setObjectName(_fromUtf8("widget_2"))
         self.gridLayout_9.addWidget(self.widget_2, 0, 1, 1, 1)
         self.widget_3 = QtGui.QWidget(self.tab)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.widget_3.sizePolicy().hasHeightForWidth())
+        self.widget_3.setSizePolicy(sizePolicy)
         self.widget_3.setObjectName(_fromUtf8("widget_3"))
         self.gridLayout_9.addWidget(self.widget_3, 1, 1, 1, 1)
         self.horizontalLayout_2 = QtGui.QHBoxLayout()

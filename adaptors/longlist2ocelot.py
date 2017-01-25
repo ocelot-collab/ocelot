@@ -43,7 +43,7 @@ class StructureConverter:
         #self.longlist_matrix['MOVER']['VKIC'] = {'type': Vcor, 'strength': 'angle'}
 
         self.longlist_matrix['CAVITY'] = {}
-        self.longlist_matrix['CAVITY']['LCAV'] = {'type': Cavity, 'strength': ['v', '1.e-3'], 'e1_lag': ['phi', '360.0'], 'e2_freq': 'f'}
+        self.longlist_matrix['CAVITY']['LCAV'] = {'type': Cavity, 'strength': ['v', '1.e-3'], 'e1_lag': ['phi', '360.0'], 'e2_freq': ['f', '1000']}
 
         self.longlist_matrix['DIAG'] = {}
         if "MONI" in self.types:

@@ -265,18 +265,32 @@ class MainWindow(Ui_Form):
 
         print("RESTORE STATE")
 
+    #def save_state_as(self):
+    #    filename = QtGui.QFileDialog.getSaveFileName(self.Form, 'Save State', filter="txt (*.json *.)")
+    #    if filename:
+    #        self.Form.set_file = filename
+    #        self.save_state(filename)
+    #
+    #def load_state_from(self):
+    #    filename = QtGui.QFileDialog.getOpenFileName(self.Form, 'Load State', filter="txt (*.json *.)")
+    #    if filename:
+    #        self.Form.set_file = filename
+    #        self.restore_state(filename)
+
     def save_state_as(self):
-        filename = QtGui.QFileDialog.getSaveFileName(self.Form, 'Save State', filter="txt (*.json *.)")
+        print(self.Form.optimizer_path+ "/parameters")
+        filename = QtGui.QFileDialog.getSaveFileName(self.Form, 'Save State',
+        self.Form.optimizer_path+ "/parameters", "txt (*.json)", QtGui.QFileDialog.DontUseNativeDialog)
         if filename:
             self.Form.set_file = filename
             self.save_state(filename)
 
     def load_state_from(self):
-        filename = QtGui.QFileDialog.getOpenFileName(self.Form, 'Load State', filter="txt (*.json *.)")
+        filename = QtGui.QFileDialog.getOpenFileName(self.Form, 'Load State',
+        self.Form.optimizer_path+ "/parameters", "txt (*.json)", QtGui.QFileDialog.DontUseNativeDialog)
         if filename:
             self.Form.set_file = filename
             self.restore_state(filename)
-
     def get_hyper_file(self):
         filename = QtGui.QFileDialog.getOpenFileName(self.Form, 'Load Hyper Parameters', filter="txt (*.npy *.)")
         if filename:

@@ -574,7 +574,6 @@ def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=Tr
     plot_disp(ax_top,tws, top_plot, font_size)
 
     plot_betas(ax_b, S, beta_x, beta_y, font_size)
-
     #plot_elems(ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8) # plot elements
     new_plot_elems(fig, ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8)
 
@@ -644,6 +643,14 @@ def plot_trajectory(lat, list_particles):
 
 
 def plot_API(lat, legend=True):
+    """
+    Function creates a picture with lattice on the bottom part of the picture and top part of the picture can be
+    plot arbitrary lines.
+
+    :param lat: MagneticLattice
+    :param legend: True, description of the elements, if False it is switched legend off
+    :return: fig, ax
+    """
     fig = plt.figure()
     plt.rc('axes', grid=True)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
@@ -672,7 +679,7 @@ def plot_API(lat, legend=True):
 
     #plot_elems(ax_el, lat, nturns = 1, legend = True) # plot elements
     new_plot_elems(fig, ax_el, lat, nturns = 1, legend = legend)
-    return ax_xy
+    return fig, ax_xy
 
 
 def plot_traj_pulse(lat, list_particles, list_particles2, U1, U2):

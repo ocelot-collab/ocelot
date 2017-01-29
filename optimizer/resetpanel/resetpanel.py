@@ -20,39 +20,36 @@ from ocelot.optimizer.mint.opt_objects import *
 from ocelot.optimizer.resetpanel.UIresetpanel import Ui_Form
 
 sys.path.append("..")
-#from ocelot.optimizer.mint.lcls_interface import LCLSMachineInterface
-
 
 
 class ResetpanelWindow(QFrame):
     """
     Main GUI class for the resetpanel.
     """
+
     def __init__(self, parent=None):
 
         # initialize
         QFrame.__init__(self)
         self.ui = Ui_Form()
         self.ui.setupUi(self)
-        #epicsGet wrapper
-        #self.epicsGet = mi.getter# epicsGet()
 
-        #blank data
+        # blank data
         self.pvs = []
         self.devices = []
         self.startValues = {}
-        self.pv_objects  = {}
+        self.pv_objects = {}
 
-        #button connections
+        # button connections
         self.ui.updateReference.clicked.connect(self.updateReference)
         self.ui.resetAll.clicked.connect(self.launchPopupAll)
 
-        #fast timer start
+        # fast timer start
         self.trackTimer = QtCore.QTimer()
         self.trackTimer.timeout.connect(self.updateCurrentValues)
-        self.trackTimer.start(500) #refresh every 100 ms
+        self.trackTimer.start(500)  # refresh every 100 ms
 
-        #dark theme
+        # dark theme
         self.loadStyleSheet()
 
     def loadStyleSheet(self):
@@ -62,10 +59,9 @@ class ResetpanelWindow(QFrame):
             with open(self.cssfile, "r") as f:
                 self.setStyleSheet(f.read())
         except IOError:
-            print ('No style sheet found!')
+            print('No style sheet found!')
 
-
-    #def getPvList(self, pvs_in=None):
+    # def getPvList(self, pvs_in=None):
     #    """
     #    Method to build a pv list from file.
     #
@@ -110,8 +106,8 @@ class ResetpanelWindow(QFrame):
             except:
                 self.startValues[dev.eid] = None
                 print("Get Start Value: ", dev.eid, " not working")
-            #print(self.startValues[dev.eid])
-            #self.pv_objects[pv].add_callback(callback=self.PvGetCallBack)
+                # print(self.startValues[dev.eid])
+                # self.pv_objects[pv].add_callback(callback=self.PvGetCallBack)
 
     def updateReference(self):
         """Updates reference values for all PVs on button click."""
@@ -127,35 +123,36 @@ class ResetpanelWindow(QFrame):
         headers = ["PVs", "Reference Value", "Current Value"]
         self.ui.tableWidget.setColumnCount(len(headers))
         self.ui.tableWidget.setHorizontalHeaderLabels(headers)
-        self.ui.tableWidget.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers) #No user edits on talbe
+        self.ui.tableWidget.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)  # No user edits on talbe
         self.ui.tableWidget.horizontalHeader().setResizeMode(QtGui.QHeaderView.Stretch)
         for row in range(len(self.pvs)):
 
-            self.ui.tableWidget.setRowCount(row+1)
+            self.ui.tableWidget.setRowCount(row + 1)
             pv = self.pvs[row]
-            #put PV in the table
+            # put PV in the table
             self.ui.tableWidget.setItem(row, 0, QtGui.QTableWidgetItem(str(pv)))
             self.ui.tableWidget.item(row, 0).setTextColor(QtGui.QColor(0, 255, 255))
 
-            #self.ui.tableWidget.item(row, 0).setFont(font)
-            #put start val in
+            # self.ui.tableWidget.item(row, 0).setFont(font)
+            # put start val in
             s_val = self.startValues[pv]
             if s_val != None:
                 s_val = np.around(s_val, 4)
             self.ui.tableWidget.setItem(row, 1, QtGui.QTableWidgetItem(str(s_val)))
 
-            #change font size
+            # change font size
             # font = QtGui.QFont()
             # font.setPointSize(12)
             # self.ui.tableWidget.item(row, 1).setFont(font)
 
-            #self.pv_objects[pv].run_callbacks()#initialize in the pvs current value
-            #print("init", self.ui.tableWidget.item(row, 0))
-    #update the table on PV change callback
+            # self.pv_objects[pv].run_callbacks()#initialize in the pvs current value
+            # print("init", self.ui.tableWidget.item(row, 0))
+
+    # update the table on PV change callback
     #
     # REMOVED BECAUSE CALLBACK CAUSED SEG FAUTLS.
     #
-    #def PvGetCallBack(self,**kw):
+    # def PvGetCallBack(self,**kw):
 
     #        #get pv info from the callback kw arg
     #        val=kw['value']
@@ -196,7 +193,7 @@ class ResetpanelWindow(QFrame):
             try:
                 value = dev.get_value()
             except:
-                #print("ERROR getting value. Device:", dev.eid)
+                # print("ERROR getting value. Device:", dev.eid)
                 value = None
 
             if self.startValues[dev.eid] == None and value != None:
@@ -205,7 +202,7 @@ class ResetpanelWindow(QFrame):
             if self.startValues[dev.eid] == None or value == None:
                 self.ui.tableWidget.item(row, 5).setFlags(QtCore.Qt.NoItemFlags)
                 for col in [0, 5]:
-                    self.ui.tableWidget.item(row, col).setBackground(QtGui.QColor(255, 0, 0)) # red
+                    self.ui.tableWidget.item(row, col).setBackground(QtGui.QColor(255, 0, 0))  # red
 
                 if self.startValues[dev.eid] == None:
                     self.ui.tableWidget.setItem(row, 1, QtGui.QTableWidgetItem(str("None")))
@@ -224,6 +221,7 @@ class ResetpanelWindow(QFrame):
 
                 continue
 
+            # if value out of the limits
             if dev.check_limits(value):
                 for col in [3, 4]:
                     spin_box = self.ui.tableWidget.cellWidget(row, col)
@@ -239,24 +237,23 @@ class ResetpanelWindow(QFrame):
 
             pv = dev.eid
 
-            self.currentValues[pv] = value #dev.get_value()
+            self.currentValues[pv] = value  # dev.get_value()
             self.ui.tableWidget.setItem(row, 2, QtGui.QTableWidgetItem(str(np.around(self.currentValues[pv], 4))))
-            #print(self.currentValues[pv])
-            tol  = abs(self.startValues[pv]*percent)
+            # print(self.currentValues[pv])
+            tol = abs(self.startValues[pv] * percent)
             diff = abs(abs(self.startValues[pv]) - abs(self.currentValues[pv]))
             if diff > tol:
-                self.ui.tableWidget.item(row, 2).setForeground(QtGui.QColor(255, 101, 101))#red
+                self.ui.tableWidget.item(row, 2).setForeground(QtGui.QColor(255, 101, 101))  # red
             else:
-                self.ui.tableWidget.item(row, 2).setForeground(QtGui.QColor(255, 255, 255))#white
+                self.ui.tableWidget.item(row, 2).setForeground(QtGui.QColor(255, 255, 255))  # white
 
             self.ui.tableWidget.item(row, 5).setFlags(
-                QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled )
+                QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
 
             for col in [0, 1, 2, 5]:
-                #self.ui.tableWidget.item(row, col).setFlags(
+                # self.ui.tableWidget.item(row, col).setFlags(
                 #    QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
                 self.ui.tableWidget.item(row, col).setBackground(QtGui.QColor(89, 89, 89))
-
 
         QApplication.processEvents()
 
@@ -264,7 +261,7 @@ class ResetpanelWindow(QFrame):
         """Set all PVs back to their reference values."""
         for dev in self.devices:
             val = self.startValues[dev.eid]
-            dev.set_value(val) # epics.caput(pv,val)
+            dev.set_value(val)  # epics.caput(pv,val)
 
     def launchPopupAll(self):
         """Launches the ARE YOU SURE popup window for pv reset."""
@@ -274,25 +271,26 @@ class ResetpanelWindow(QFrame):
         self.ui_check.reset.clicked.connect(self.ui_check.close)
         self.ui_check.show()
 
-def main():
 
+def main():
     """
     Main functino to open a resetpanel GUI.
 
     If passed a file name, will try and load PV list from that file.
     Otherwise defaults to a file in the base directory with pre-loaded common tuned PVs.
     """
-    try: #try to get a pv list file name from commandline arg
+    try:  # try to get a pv list file name from commandline arg
         pvs = sys.argv[1]
     except:
         pvs = "./lclsparams"
-    mi = LCLSMachineInterface()
+
     app = QApplication(sys.argv)
-    window = ResetpanelWindow(mi)
+    window = ResetpanelWindow()
     window.setWindowIcon(QtGui.QIcon('/usr/local/lcls/tools/python/toolbox/py_logo.png'))
     window.getPvList(pvs)
     window.show()
     sys.exit(app.exec_())
+
 
 if __name__ == "__main__":
     main()

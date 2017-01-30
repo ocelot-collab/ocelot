@@ -29,6 +29,7 @@ class ActionParameters:
 
 class PerfDB:
     def __init__(self, dbname="flash.db"):
+        print("connecting to database ... ")
         self.db = sqlite3.connect(dbname)
         
     def new_tuning(self, params):
@@ -171,7 +172,7 @@ def test_add_action_parameters(dbname):
 
 if __name__ == "__main__":
     # tests
-    dbname = "test.db"
+    dbname = "test2.db"
     create_db(dbname)
     test_new_tunings(dbname)
     test_new_action(dbname)

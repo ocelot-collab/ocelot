@@ -793,7 +793,7 @@ class Ui_Form(object):
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(_translate("Form", "Ocelot Interface", None))
-        self.pb_start_scan.setText(_translate("Form", "Start Optimization", None))
+        self.pb_start_scan.setText(_translate("Form", "Start optimization", None))
         self.pb_logbook.setText(_translate("Form", "Logbook", None))
         self.pb_help.setText(_translate("Form", "Help/Docs", None))
         self.pushButton_3.setText(_translate("Form", "GP 2D Heatmap", None))

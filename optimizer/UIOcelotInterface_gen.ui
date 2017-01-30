@@ -131,7 +131,7 @@
             <string notr="true">color: rgb(85, 255, 127);</string>
            </property>
            <property name="text">
-            <string>Start Optimization</string>
+            <string>Start optimization</string>
            </property>
           </widget>
          </item>

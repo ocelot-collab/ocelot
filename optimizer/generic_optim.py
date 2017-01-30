@@ -166,12 +166,12 @@ class OcelotInterfaceWindow(QFrame):
 
     def closeEvent(self, event):
         self.ui.save_state(self.set_file)
-        if self.ui.pb_start_scan.text() == "Stop scan":
+        if self.ui.pb_start_scan.text() == "Stop optimization":
             self.opt.opt_ctrl.stop()
             self.m_status.is_ok = lambda: True
             del(self.opt)
             self.ui.pb_start_scan.setStyleSheet("color: rgb(85, 255, 127);")
-            self.ui.pb_start_scan.setText("Start scan")
+            self.ui.pb_start_scan.setText("Start optimization")
             return 0
         QFrame.closeEvent(self, event)
 
@@ -181,7 +181,7 @@ class OcelotInterfaceWindow(QFrame):
         """
         self.scanStartTime = time.time()
 
-        if self.ui.pb_start_scan.text() == "Stop scan":
+        if self.ui.pb_start_scan.text() == "Stop optimization":
             # stop the optimization
             self.opt.opt_ctrl.stop()
 
@@ -191,7 +191,7 @@ class OcelotInterfaceWindow(QFrame):
             del(self.opt)
             # Setting the button
             self.ui.pb_start_scan.setStyleSheet("color: rgb(85, 255, 127);")
-            self.ui.pb_start_scan.setText("Start scan")
+            self.ui.pb_start_scan.setText("Start optimization")
             return 0
 
         self.pvs = self.ui.widget.getPvsFromCbState()
@@ -270,14 +270,14 @@ class OcelotInterfaceWindow(QFrame):
         self.opt.start()
 
         # Setting the button
-        self.ui.pb_start_scan.setText("Stop scan")
+        self.ui.pb_start_scan.setText("Stop optimization")
         self.ui.pb_start_scan.setStyleSheet("color: red")
 
     def scan_finished(self):
         try:
-            if not self.opt.isAlive() and self.ui.pb_start_scan.text() == "Stop scan":
+            if not self.opt.isAlive() and self.ui.pb_start_scan.text() == "Stop optimization":
                 self.ui.pb_start_scan.setStyleSheet("color: rgb(85, 255, 127);")
-                self.ui.pb_start_scan.setText("Start scan")
+                self.ui.pb_start_scan.setText("Start optimization")
                 self.save2db()
         except:
             pass
@@ -363,7 +363,7 @@ class OcelotInterfaceWindow(QFrame):
             print('current action parameters', [(p.tuning_id, p.action_id, p.par_name, p.start_value, p.end_value) for p in
                                                 self.db.get_action_parameters(tune_id, action_id)])
         except:
-            self.error_box(message="Database is not available")
+            self.error_box(message="Database error")
 
         dump2json["dev_times"] = self.devices[0].times
         dump2json["obj_values"] = self.objective_func.values

@@ -1,22 +1,19 @@
 """
 This is deep modification of SLAC version of the Ocelot GUI for the European XFEL facility.
-
 Sergey Tomin, 2017.
-
 Ocelot GUI, interface for running and testing accelerator optimization methods
-
 This file primarily contains the code for the UI and GUI
 The scanner classes are contained in an external file, scannerThreads.py
 The resetpanel widget is also contained in a separate module, resetpanel
-
 Tyler Cope, 2016
 """
 from __future__ import absolute_import, print_function
 import json
 import sys
 import os
-path = sys.path[0]
-indx = path.find("ocelot")
+path = os.path.realpath(__file__)
+indx = path.find("ocelot/optimizer")
+print("PATH", os.path.realpath(__file__))
 sys.path.append(path[:indx])
 
 # for pyqtgraph import
@@ -53,16 +50,20 @@ class OcelotInterfaceWindow(QFrame):
     def __init__(self):
         """
         Initialize the GUI and QT UI aspects of the application.
-
         Initialize the scan parameters.
         Connect start and logbook buttons on the scan panel.
         Initialize the plotting.
         Make the timer object that updates GUI on clock cycle during a scan.
         """
-        path = sys.path[0]
-        indx = path.find("optimizer")
-        self.optimizer_path = path
-        self.set_file = "./parameters/default.json"
+        # PATHS
+        path = os.path.realpath(__file__)
+        indx = path.find("ocelot" + os.sep + "optimizer")
+        self.path2ocelot = path[:indx]
+        self.optimizer_path = self.path2ocelot + "ocelot" + os.sep + "optimizer" + os.sep
+        self.config_dir = self.path2ocelot + "config_optim" +os.sep
+        self.set_file = self.config_dir + "default.json" # ./parameters/default.json"
+        self.obj_func_path = self.optimizer_path + "mint" + os.sep + "obj_function.py"
+        self.obj_save_path = self.config_dir +  "obj_funcs" + os.sep
         # initialize
         QFrame.__init__(self)
 
@@ -84,9 +85,15 @@ class OcelotInterfaceWindow(QFrame):
         self.addPlots()
 
         # database
-        self.dbname = "./parameters/test.db"
+        self.dbname =  self.config_dir + "test.db" #"./parameters/test.db"
         # db.create_db(self.dbname)
-        self.db = db.PerfDB(dbname=self.dbname)
+        print(self.optimizer_path, self.set_file, self.dbname)
+        try:
+            self.db = db.PerfDB(dbname=self.dbname)
+        except:
+            self.db = None
+            self.error_box(message="Database is not available")
+
         self.scan_params = None
         self.hyper_file = "../parameters/hyperparameters.npy"
 
@@ -124,9 +131,7 @@ class OcelotInterfaceWindow(QFrame):
     def scan_method_select(self):
         """
         Sets scanner method from options panel combo box selection.
-
         This method executes from the runScan() method, when the UI "Start Scan" button is pressed.
-
         :return: Selected scanner object
                  These objects are contrained in the scannerThreads.py file
         """
@@ -153,6 +158,9 @@ class OcelotInterfaceWindow(QFrame):
         #simplex Method
         else:
             minimizer = mint.Simplex()
+
+        self.method_name = minimizer.__class__.__name__
+
         return minimizer
 
 
@@ -277,7 +285,6 @@ class OcelotInterfaceWindow(QFrame):
     def indicate_machine_state(self):
         """
         Method to indicate of the machine status. Red frames around graphics means that machine status is not OK.
-
         :return:
         """
         if not self.opt_control.is_ok:
@@ -321,27 +328,42 @@ class OcelotInterfaceWindow(QFrame):
 
         self.scan_params["sase"] = [self.objective_func.values[0], self.objective_func.values[-1]]
         self.scan_params["pen"] = [self.objective_func.penalties[0], self.objective_func.penalties[-1]]
+        self.scan_params["method"] = self.method_name
 
         o_names = ["obj_id", "obj_value", "obj_pen", "niter"]
         o_start = [self.objective_func.eid, self.objective_func.values[0], self.objective_func.penalties[0], self.max_iter]
         o_stop = [self.objective_func.eid, self.objective_func.values[-1], self.objective_func.penalties[-1],  len(self.objective_func.penalties)]
 
-        self.db.new_tuning({'wl': 13.6, 'charge': 0.1, 'comment': 'test tuning'})
-        tune_id = self.db.current_tuning_id()
 
         start_sase = self.objective_func.values[0]
         stop_sase = self.objective_func.values[-1]
-        self.db.new_action(tune_id, start_sase=start_sase, end_sase=stop_sase)
 
         #print('current actions in tuning', [(t.id, t.tuning_id, t.sase_start, t.sase_end) for t in self.db.get_actions()])
 
-        action_id = self.db.current_action_id()
 
-        self.db.add_action_parameters(tune_id, action_id, param_names=o_names+d_names, start_vals=o_start+d_start,
-                                 end_vals=o_stop+d_stop)
-        print('current actions', [(t.id, t.tuning_id, t.sase_start, t.sase_end) for t in self.db.get_actions()])
-        print('current action parameters', [(p.tuning_id, p.action_id, p.par_name, p.start_value, p.end_value) for p in
-                                            self.db.get_action_parameters(tune_id, action_id)])
+        # add new data here START
+        new_data_name =  ["method"]
+        new_data_start = [self.method_name]
+        new_data_end =   [self.method_name]
+        # add new data here END
+        param_names = o_names + d_names + new_data_name
+        start_vals = o_start+d_start + new_data_start
+        end_vals = o_stop+d_stop + new_data_end
+
+        try:
+            self.db.new_tuning({'wl': 13.6, 'charge': self.mi.get_charge(), 'comment': 'test tuning'})
+            tune_id = self.db.current_tuning_id()
+            self.db.new_action(tune_id, start_sase=start_sase, end_sase=stop_sase)
+
+            action_id = self.db.current_action_id()
+            self.db.add_action_parameters(tune_id, action_id, param_names=param_names, start_vals=start_vals,
+                                     end_vals=end_vals)
+
+            print('current actions', [(t.id, t.tuning_id, t.sase_start, t.sase_end) for t in self.db.get_actions()])
+            print('current action parameters', [(p.tuning_id, p.action_id, p.par_name, p.start_value, p.end_value) for p in
+                                                self.db.get_action_parameters(tune_id, action_id)])
+        except:
+            self.error_box(message="Database is not available")
 
         dump2json["dev_times"] = self.devices[0].times
         dump2json["obj_values"] = self.objective_func.values
@@ -361,7 +383,6 @@ class OcelotInterfaceWindow(QFrame):
     def set_obj_fun(self):
         """
         Method to set objective function from the GUI (channels A,B,C) or reload module obj_function.py
-
         :return: None
         """
         try:
@@ -433,7 +454,6 @@ class OcelotInterfaceWindow(QFrame):
     def set_m_status(self):
         """
         Method to set the MachineStatus method self.is_ok using GUI Alarm channel and limits
-
         :return: None
         """
 
@@ -557,7 +577,6 @@ class OcelotInterfaceWindow(QFrame):
     def randColor(self):
         """
         Generate random line color for each device plotted.
-
         :return: QColor object of a random color
         """
         hi = 255
@@ -570,7 +589,6 @@ class OcelotInterfaceWindow(QFrame):
     def run_editor(self):
         """
         Run the editor for edition of the objective function in obj_function.py
-
         :return:
         """
         if platform.system() == 'Darwin':
@@ -613,11 +631,9 @@ def main():
 
     """
     Funciton to start up the main program.
-
     Slecting a PV parameter set:
     If launched from the command line will take an argument with the filename of a parameter file.
     If no argv[1] is provided, the default list in ./parameters/lclsparams is used.
-
     Development mode:
     If devmode == False - GUI defaults to normal parameter list, defaults to nelder mead simplex
     if devmode == True  - GUI uses 4 development matlab PVs and loaded settings in the method "devmode()"
@@ -668,6 +684,4 @@ def main():
     sys.exit(app.exec_())
 
 if __name__ == "__main__":
-
     main()
-

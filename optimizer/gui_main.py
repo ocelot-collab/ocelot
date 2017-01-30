@@ -1,6 +1,5 @@
 """
 Most of GUI logic is placed here.
-
 S.Tomin, 2017
 """
 
@@ -14,7 +13,9 @@ import base64
 from datetime import datetime
 import numpy as np
 import sys
+import os
 import webbrowser
+from shutil import copy
 
 
 def send_to_desy_elog(author, title, severity, text, elog, image=None):
@@ -111,7 +112,6 @@ class MainWindow(Ui_Form):
     def alarm_value(self):
         """
         reading alarm value
-
         :return:
         """
         dev = str(self.le_alarm.text())
@@ -124,7 +124,6 @@ class MainWindow(Ui_Form):
     def set_cycle(self):
         """
         Select time for objective method data collection time.
-
         Scanner will wait this long to collect new data.
         """
         self.trim_delay = self.sb_tdelay.value()
@@ -206,7 +205,7 @@ class MainWindow(Ui_Form):
         with open(filename, 'w') as f:
             json.dump(table, f)
         # pickle.dump(table, filename)
-        print("SAVE State", table)
+        print("SAVE State")
 
     def restore_state(self, filename):
         # try:
@@ -265,34 +264,41 @@ class MainWindow(Ui_Form):
 
         print("RESTORE STATE")
 
-    #def save_state_as(self):
-    #    filename = QtGui.QFileDialog.getSaveFileName(self.Form, 'Save State', filter="txt (*.json *.)")
-    #    if filename:
-    #        self.Form.set_file = filename
-    #        self.save_state(filename)
-    #
-    #def load_state_from(self):
-    #    filename = QtGui.QFileDialog.getOpenFileName(self.Form, 'Load State', filter="txt (*.json *.)")
-    #    if filename:
-    #        self.Form.set_file = filename
-    #        self.restore_state(filename)
 
     def save_state_as(self):
-        print(self.Form.optimizer_path+ "/parameters")
+
         filename = QtGui.QFileDialog.getSaveFileName(self.Form, 'Save State',
-        self.Form.optimizer_path+ "/parameters", "txt (*.json)", QtGui.QFileDialog.DontUseNativeDialog)
+        self.Form.config_dir, "txt (*.json)", QtGui.QFileDialog.DontUseNativeDialog)
         if filename:
+            name = filename.split("/")[-1]
+            parts = name.split(".")
+            #print(parts)
+            body_name = parts[0]
+
+            if len(parts)<2 or parts[1] !="json":
+                part = filename.split(".")[0]
+                filename = part + ".json"
+            copy(self.Form.obj_func_path, self.Form.obj_save_path + body_name +".py")
             self.Form.set_file = filename
             self.save_state(filename)
 
+
     def load_state_from(self):
         filename = QtGui.QFileDialog.getOpenFileName(self.Form, 'Load State',
-        self.Form.optimizer_path+ "/parameters", "txt (*.json)", QtGui.QFileDialog.DontUseNativeDialog)
+        self.Form.config_dir, "txt (*.json)", QtGui.QFileDialog.DontUseNativeDialog)
         if filename:
+            #print(filename)
+            (body_name, extension) = filename.split("/")[-1].split(".")
+            #print(self.Form.obj_save_path + body_name + ".py", self.Form.obj_func_path )
+            copy(self.Form.obj_save_path + body_name + ".py", self.Form.obj_func_path )
             self.Form.set_file = filename
             self.restore_state(filename)
+
+
     def get_hyper_file(self):
-        filename = QtGui.QFileDialog.getOpenFileName(self.Form, 'Load Hyper Parameters', filter="txt (*.npy *.)")
+        #filename = QtGui.QFileDialog.getOpenFileName(self.Form, 'Load Hyper Parameters', filter="txt (*.npy *.)")
+        filename = QtGui.QFileDialog.getOpenFileName(self.Form, 'Load Hyper Parameters',
+        self.Form.optimizer_path  + "parameters", "txt (*.npy)", QtGui.QFileDialog.DontUseNativeDialog)
         if filename:
             self.Form.hyper_file = str(filename)
             self.pb_hyper_file.setText(self.Form.hyper_file)
@@ -305,7 +311,6 @@ class MainWindow(Ui_Form):
     def logbook(self):
         """
         Method to send Optimization parameters + screenshot to eLogboob
-
         :return:
         """
 
@@ -318,16 +323,22 @@ class MainWindow(Ui_Form):
         # timeString = curr_time.strftime("%Y-%m-%dT%H:%M:%S")
         text = ""
         if not self.cb_use_predef.checkState():
-            text += "obj func: A   : " + str(self.le_a.text()).split("/")[-1] + "\n"
-            text += "obj func: B   : " + str(self.le_b.text()).split("/")[-1] + "\n"
-            text += "obj func: C   : " + str(self.le_c.text()).split("/")[-1] + "\n"
+            text += "obj func: A   : " + str(self.le_a.text()).split("/")[-2]  + "/"+ str(self.le_a.text()).split("/")[-1] + "\n"
+            if str(self.le_b.text()) != "":
+                text += "obj func: B   : " + str(self.le_b.text()).split("/")[-2] + "/" + str(self.le_b.text()).split("/")[-1] + "\n"
+            if str(self.le_c.text()) != "":
+                text += "obj func: C   : " + str(self.le_c.text()).split("/")[-2] + "/" + str(self.le_c.text()).split("/")[-1] + "\n"
+            if str(self.le_d.text()) != "":
+                text += "obj func: D   : " + str(self.le_d.text()).split("/")[-2] + "/" + str(self.le_d.text()).split("/")[-1] + "\n"
+            if str(self.le_e.text()) != "":
+                text += "obj func: E   : " + str(self.le_e.text()).split("/")[-2] + "/" + str(self.le_e.text()).split("/")[-1] + "\n"
             text += "obj func: expr: " + str(self.le_obf.text()) + "\n"
         else:
             text += "obj func: A   : predefined  " + self.Form.objective_func.eid + "\n"
         if table != None:
             for i, dev in enumerate(table["devs"]):
                 # print(dev.split("/"))
-                text += "dev           : " + dev.split("/")[-1] + "   " + str(table["currents"][i][0]) + " --> " + str(
+                text += "dev           : " + dev.split("/")[-2] + "/" + dev.split("/")[-1] + "   " + str(table["currents"][i][0]) + " --> " + str(
                     table["currents"][i][1]) + "\n"
 
             text += "iterations    : " + str(table["iter"]) + "\n"
@@ -335,7 +346,7 @@ class MainWindow(Ui_Form):
             text += "START-->STOP  :" + str(table["sase"][0]) + " --> " + str(table["sase"][1]) + "\n"
         print("table", table)
         print(text)
-        screenshot = open(self.Form.optimizer_path + "/" + filename + "." + filetype, 'rb')
+        screenshot = open(self.Form.optimizer_path + filename + "." + filetype, 'rb')
         print(screenshot)
         send_to_desy_elog(author="", title="OCELOT Optimization", severity="INFO", text=text, elog="xfellog",
                           image=screenshot.read())
@@ -344,7 +355,6 @@ class MainWindow(Ui_Form):
 
         """
         Takes a screenshot of the whole gui window, saves png and ps images to file
-
         :param filename: (str) Directory string of where to save the file
         :param filetype: (str) String of the filetype to save
         :return:
@@ -362,7 +372,6 @@ class MainWindow(Ui_Form):
     def loadStyleSheet(self):
         """
         Sets the dark GUI theme from a css file.
-
         :return:
         """
         try:
@@ -375,7 +384,6 @@ class MainWindow(Ui_Form):
     def change_state_scipy_setup(self):
         """
         Method to enable/disable "Scipy Scanner Setup". If scipy version < "0.18" then QGroup will be disable.
-
         :return:
         """
         #print("SCIPY", str(self.cb_select_alg.currentText()))
@@ -452,21 +460,21 @@ class MainWindow(Ui_Form):
     def open_help(self):
         """
         method to open the Help in the webbrowser
-
         :return: None
         """
 
         if sys.platform == 'win32':
-            url = self.Form.optimizer_path+"\\docs\\_build\\html\\index.html"
+            url = self.Form.optimizer_path+"docs\\_build\\html\\index.html"
             #os.startfile(url)
             webbrowser.open(url)
         elif sys.platform == 'darwin':
-            url = "file://"+self.Form.optimizer_path+"/docs/_build/html/index.html"
+            url = "file://"+self.Form.optimizer_path+"docs/_build/html/index.html"
             webbrowser.open(url)
             #subprocess.Popen(['open', url])
         else:
-            url = "file://" + self.Form.optimizer_path + "/docs/_build/html/index.html"
+            url = "file://" + self.Form.optimizer_path + "docs/_build/html/index.html"
             try:
                 subprocess.Popen(['xdg-open', url])
             except OSError:
                 print('Please open a browser on: ' + url)
+

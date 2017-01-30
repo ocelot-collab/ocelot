@@ -1,13 +1,9 @@
 #!/usr/local/lcls/package/python/current/bin/python
 """
 PYQT interface for running OCELOT simplex optimization.
-
 Created as a QT widget for use in other applications as well.
-
 Tyler Cope, 2016
-
 The class was modified and was introduced new methods.
-
 S. Tomin, 2017
 """
 
@@ -182,7 +178,6 @@ class ResetpanelWindow(QFrame):
 
         """
         Method to update the table on every clock cycle.
-
         Loops through the pv list and gets new data, then updates the Current Value column.
         Hard coded to turn Current Value column red at 0.1% differenct from Ref Value.
         It would be better to update the table on a callback, but PyEpics crashes with cb funcitons.
@@ -275,7 +270,6 @@ class ResetpanelWindow(QFrame):
 def main():
     """
     Main functino to open a resetpanel GUI.
-
     If passed a file name, will try and load PV list from that file.
     Otherwise defaults to a file in the base directory with pre-loaded common tuned PVs.
     """
@@ -294,3 +288,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

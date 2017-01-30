@@ -97,6 +97,9 @@ class XFELMachineInterface():
             alarm_vals[i] = val/alarm_val
         return alarm_vals
 
+    def get_charge(self):
+        return self.get_value("XFEL.DIAG/CHARGE.ML/TORA.25.I1/CHARGE.SA1")
+
 
 class XFELDeviceProperties:
     """
@@ -200,3 +203,4 @@ class TestDeviceProperties:
         else:
             return [-100., 100.]
         return lims
+

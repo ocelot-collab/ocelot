@@ -209,7 +209,7 @@ class ResetpanelBoxWindow(ResetpanelWindow):
         """
         print ("LOADING:")
         if pvs_in == None:
-            print ('Exiting', pvs_in)
+            #print ('Exiting', pvs_in)
             return
 
         if type(pvs_in) != list:
@@ -223,7 +223,7 @@ class ResetpanelBoxWindow(ResetpanelWindow):
         else:
             self.pvs = pvs_in
 
-        print ("PVS LOADED", self.pvs)
+        #print ("PVS LOADED", self.pvs)
         self.devices = self.create_devices(self.pvs)
         self.getStartValues()
         self.initTable()

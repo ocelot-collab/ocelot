@@ -256,13 +256,22 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
         print('      energy before interpolation ' + str(dfl.E()))
     #interp_func = rgi((zscale1,yscale1,xscale1), dfl.fld, fill_value=0, bounds_error=False, method='nearest')
     fld2 = []
-    for fslice in dfl.fld:
+    for nslice, fslice in enumerate(dfl.fld):
+        if debug > 1:
+            print('      slice' + str(nslice))
         re_func = interp2d(xscale1, yscale1, np.real(fslice), fill_value=0, bounds_error=False, kind=method)
         im_func = interp2d(xscale1, yscale1, np.imag(fslice), fill_value=0, bounds_error=False, kind=method)
         fslice2 = re_func(xscale2, yscale2) + 1j * im_func(xscale2, yscale2)
         P1 = sum(abs(fslice[iy_min:iy_max, ix_min:ix_max])**2)
         P2 = sum(abs(fslice2)**2)
-        fslice2 = fslice2 * sqrt(P1 / P2)
+        if debug > 1:
+            print('      P1,P2 =' + str(P1) + str(P2))
+        
+        if P2!=0:
+            fslice2 = fslice2 * sqrt(P1 / P2)
+        else:
+            fslice2 = fslice2 * 0
+        
         fld2.append(fslice2)
 
     dfl2 = deepcopy(dfl)
@@ -584,7 +593,7 @@ def save_xhrss_dump_proj(dump_proj, filePath):
 
     f = open(filePath + '.f.txt', 'wb')
     header = 'Wavelength Spectrum Filter_Abs Filter_Ang'
-    np.savetxt(f, np.c_[f_l_scale, f_l_int_a, np.abs(f_l_filt), np.angle(f_l_filt)], header=header, fmt="%e", newline='\n', comments='')
+    np.savetxt(f, np.c_[f_l_scale, f_l_int_a, np.abs(f_l_filt), np.unwrap(np.angle(f_l_filt))], header=header, fmt="%.8e", newline='\n', comments='')
     f.close()
 
 
@@ -596,7 +605,7 @@ def save_trf(trf, attr, flePath):
 
     f = open(flePath, 'wb')
     header = 'Energy[eV] Filter_Abs Filter_Ang'
-    np.savetxt(f, np.c_[trf.ev(), np.abs(trf.tr), np.angle(trf.tr)], header=header, fmt="%e", newline='\n', comments='')
+    np.savetxt(f, np.c_[trf.ev(), np.abs(trf.tr), np.angle(trf.tr)], header=header, fmt="%.8e", newline='\n', comments='')
     f.close()
 
 '''

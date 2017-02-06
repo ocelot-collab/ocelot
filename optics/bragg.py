@@ -362,7 +362,7 @@ def transmissivity_reflectivity(klist, cryst):
     return t, r
 
 
-def get_crystal_filter(cryst, ev_seed, nk=10000, k = None,n_width = 7):
+def get_crystal_filter(cryst, ev_seed, nk=10000, k = None,n_width = 20):
     #import crystal as cry
     #n_width - number of Darwin widths
     lamb=h_eV_s*speed_of_light/ev_seed
@@ -398,6 +398,7 @@ def get_crystal_filter(cryst, ev_seed, nk=10000, k = None,n_width = 7):
         
     f0, fh, fmh =  F_hkl(cryst = cryst, ref_idx = ref_idx, lamb=lamb, temp = 300*K)
     
+    print ('Bragg angle [rad]', thetaB)
     print ('structure factors', f0, fh, fmh)
     #plt.figure()
 

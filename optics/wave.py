@@ -19,9 +19,9 @@ class TransferFunction(object):
     data container for Fourier Optics transfer functions
     '''
     def __init__(self):
-        self.k = None
-        self.tr = None
-        self.ref = None
+        self.k = None # wave vector - 2*pi/wavelength
+        self.tr = None # complex value of transmission - modulus*exp(-i*phase)
+        self.ref = None # .. of reflection
     
     def ev(self):
         return self.k* h_eV_s/2/pi * speed_of_light

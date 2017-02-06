@@ -34,6 +34,27 @@ rcParams.update(params)
 # plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
 # rcParams["savefig.directory"] = os.chdir(os.path.dirname(__file__)) but __file__ appears to be genesis_plot
 
+def plot_gen_out_all_paral(exp_dir, stage=1, savefig='png', debug=1):
+    print('start')
+    from ocelot.utils.xfel_utils import background
+    i = 0
+    dir = exp_dir + 'run_' + str(i) + '/'
+
+    while(os.path.exists(dir)):
+        print(i)
+        file = dir + 'run.' + str(i) + '.s'+str(stage)+'.gout'
+        if(file): 
+            print('good',i)
+            background('''plot_gen_out_all("'''+file+'''", choice=(1,1,1,1,0,0,0,0,0,0,0),debug='''+str(debug)+''')''')
+        
+        i += 1
+        dir = exp_dir + 'run_' + str(i) + '/'
+        print(dir)
+    
+    return
+
+    # plot_gen_stat(proj_dir=exp_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int','energy','r_size_weighted'], z_param_inp=[], dfl_param_inp=[], s_inp=['max'], z_inp=[0,'end'], savefig=1, saveval=1, showfig=0, debug=0)
+
 
 def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1, 1, 6.05, 1, 0, 0, 0, 0, 0), vartype_dfl=complex128, debug=1):
     '''
@@ -111,22 +132,28 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
                     plot_gen_out_z(handle, z=z, savefig=savefig, debug=debug)
         if os.path.isfile(handle.filePath + '.dfl') and any(choice[5:8]):
             dfl = read_dfl_file_out(handle, debug=debug)
-            if choice[5]:
-                f5 = plot_dfl(dfl, savefig=savefig, debug=debug)
-            if choice[6]:
-                f6 = plot_dfl(dfl, far_field=1, freq_domain=0, auto_zoom=0, savefig=savefig, debug=debug)
-            if choice[7]:
-                f7 = plot_dfl(dfl, far_field=0, freq_domain=1, auto_zoom=0, savefig=savefig, debug=debug)
-            if choice[8]:
-                f8 = plot_dfl(dfl, far_field=1, freq_domain=1, auto_zoom=0, savefig=savefig, debug=debug)
+            if dfl.Nz()==0:
+                print('empty dfl, skipping')
+            else:
+                if choice[5]:
+                    f5 = plot_dfl(dfl, savefig=savefig, debug=debug)
+                if choice[6]:
+                    f6 = plot_dfl(dfl, far_field=1, freq_domain=0, auto_zoom=0, savefig=savefig, debug=debug)
+                if choice[7]:
+                    f7 = plot_dfl(dfl, far_field=0, freq_domain=1, auto_zoom=0, savefig=savefig, debug=debug)
+                if choice[8]:
+                    f8 = plot_dfl(dfl, far_field=1, freq_domain=1, auto_zoom=0, savefig=savefig, debug=debug)
         if os.path.isfile(handle.filePath + '.dpa') and (choice[9] or choice[10]) and handle('itdp') == True:
             dpa = read_dpa_file_out(handle, debug=debug)
-            if choice[9]:
-                edist = dpa2edist(handle, dpa, num_part=5e4, smear=1, debug=debug)
-                f9 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=100, debug=debug)
-            if choice[10]:
-                edist = dpa2edist(handle, dpa, num_part=5e4, smear=0, debug=debug)
-                f10 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=(100, 100, 300, 200), debug=debug)
+            if size(dpa.ph)==0:
+                print('empty dpa, skipping')
+            else:
+                if choice[9]:
+                    edist = dpa2edist(handle, dpa, num_part=5e4, smear=1, debug=debug)
+                    f9 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=100, debug=debug)
+                if choice[10]:
+                    edist = dpa2edist(handle, dpa, num_part=5e4, smear=0, debug=debug)
+                    f10 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=(100, 100, 300, 200), debug=debug)
 
     if savefig != False:
         if debug > 0:

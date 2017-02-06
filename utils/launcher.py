@@ -124,6 +124,35 @@ class MpiLauncher(Launcher):
         #os.system('cp ' + inputDir + pattern + ' ' + outputDir)
         pass
 
+class NewLauncher(Launcher):
+    '''
+    for MOGA, tmp?
+    '''
+    def __init__(self):
+        self.id = ''
+        self.host = 'localhost'
+        self.program = ""
+        self.nproc = 0
+        self.mpiParameters = ""
+        
+    def prepare(self):
+        return False
+
+    def launch(self):
+        t1 = time.time()
+        print ('launching job')
+        command = 'mkdir -p '+ self.dir + '; ' + 'cd '+ self.dir + '; ' + self.program
+        print (command)
+        os.system(command)
+        t2 = time.time()
+        print ('execution time ', t2 - t1, ' sec')
+            
+    # collect data to directory
+    def collect(self, inputDir, outputDir, pattern = "*"):
+        #print 'collecting results'
+        #os.system('cp ' + inputDir + pattern + ' ' + outputDir)
+        pass
+        
 class PollableMpiLauncher(Launcher):
     def __init__(self):
         self.id = ''

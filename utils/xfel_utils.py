@@ -378,9 +378,9 @@ def dfl_fft_z(dfl, method='mp', nthread=multiprocessing.cpu_count(), debug=1):  
     if debug > 0:
         t_func = time.time() - start
         if t_func < 60:
-            print('        done in %.2f ' % t_func + 'sec')
+            print('        done in %.2f sec' %(t_func))
         else:
-            print('        done in %.2f ' % t_func / 60 + 'min')
+            print('        done in %.2f min' %(t_func / 60))
     return dfl_fft
 
 

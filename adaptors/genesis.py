@@ -1248,6 +1248,25 @@ def get_genesis_launcher(launcher_program=''):
     #launcher.nproc = nproc
     return launcher
 
+def get_genesis_new_launcher(launcher_program='', mpi_mode=True):
+    '''
+    tmp for moga, to be solved in the future
+    '''
+    host = socket.gethostname()
+
+    launcher = NewLauncher()
+    
+    if launcher_program != '':
+        launcher.program = launcher_program
+    else:
+        if mpi_mode == True:
+            # launcher.program = "`which mpirun`" + ' -x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH ' + '/data/netapp/xfel/products/genesis/genesis < tmp.cmd | tee log'
+            launcher.program = "mpirun" + ' -x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH ' + '/data/netapp/xfel/products/genesis/genesis < tmp.cmd | tee log'
+        else:
+            launcher.program = '/data/netapp/xfel/products/genesis_noparall/genesis_single < tmp.cmd | tee log'
+            # launcher.program = '/data/netapp/xfel/yevgeniy/code/genesis_single < tmp.cmd | tee log'
+
+    return launcher
 
 ''' 
    I/O functions

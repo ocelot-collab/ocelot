@@ -2,8 +2,6 @@ from deap import base
 from deap import creator
 from deap import tools
 
-from ocelot.cpbd.optics import *
-
 import random
 import pickle
 import numpy as np
@@ -18,6 +16,7 @@ try:
 except Exception:
     MPI_SIZE = 1
     MPI_RANK = 0
+    
 
 
 class Moga():
@@ -25,22 +24,22 @@ class Moga():
     docstring for Moga
     """
     
-    def __init__(self, bounds):
+    def __init__(self, bounds, weights=(-1.0, -1.0)):
         
         # population and elite population sizes
-        self.pop_num = 100
-        self.elite_num = int(self.pop_num / 10)
-
-        # cross and mutation probability
-        self.cxpb, self.mutpb = 0.95, 0.95
+        self.n_pop = 100
+        self.elite_num = int(self.n_pop / 10)
 
         # number of generation
-        self.ngen = 10
+        self.n_gen = 10
 
         # infinite value
         self.inf_val = float("inf")
+        
+        self.c_iter = None
 
-        self.weights = (-1.0, -1.0)
+        self.weights = weights
+        self.problem_size = len(self.weights)
 
         self.penalty = None
 
@@ -59,26 +58,24 @@ class Moga():
             self.bounds_max.append(bounds[i][1])
         
 
-    def set_params(self, pop_num=None, elite=None, penalty=None, cxpb=None, mutpb=None, ngen=None, log_print=None, log_file=None, plt_file=None):
+    def set_params(self, n_pop=None, weights=None, elite=None, penalty=None, n_gen=None, log_print=None, log_file=None, plt_file=None):
         
-        if pop_num != None:
-            self.pop_num = pop_num
-            self.elite_num = int(self.pop_num / 10)
+        if n_pop != None:
+            self.n_pop = n_pop
+            self.elite_num = int(self.n_pop / 10)
 
-        if elite != None and elite < self.pop_num:
+        if weights != None:
+            self.weights = weights
+            self.problem_size = len(self.weights)
+
+        if elite != None and elite < self.n_pop:
             self.elite = elite
 
         if penalty != None:
             self.penalty = penalty
 
-        if cxpb != None:
-            self.cxpb = cxpb
-
-        if mutpb != None:
-            self.mutpb = mutpb
-
-        if ngen != None:
-            self.ngen = ngen
+        if n_gen != None:
+            self.n_gen = n_gen
 
         if log_print != None and MPI_RANK == 0:
             self.log_print = True
@@ -109,13 +106,6 @@ class Moga():
         if self.penalty != None:
             toolbox.decorate("evaluate", tools.DeltaPenality(self.feasible, self.inf_val))
 
-        # crossover - mate
-        #toolbox.register("mate", tools.cxTwoPoint)
-        toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=self.bounds_min, up=self.bounds_max, eta=10.0) 
-
-        #toolbox.register("mutate", tools.mutGaussian, mu=0.0, sigma=0.2, indpb=MUTPB)
-        toolbox.register("mutate", tools.mutPolynomialBounded, eta=10.0, low=self.bounds_min, up=self.bounds_max, indpb=self.mutpb)
-
         return toolbox
 
 
@@ -123,57 +113,29 @@ class Moga():
         return True
 
 
-    def nsga2(self, fit_func, fit_func_args=[], init_pop=None):
-        
-        # init
-        random.seed()
-        self.fit_func = fit_func
-        self.fit_func_args = fit_func_args
-        toolbox = self.init_deap_functions()
-        toolbox.register("select", tools.selNSGA2)
-
-        if self.log_print: print("Number of used CPU: %i" % MPI_SIZE)
-
-        # optimization
-        result = self.optimize(toolbox, init_pop)
-        
-        if self.log_print: print("End of (successful) evolution")
-
-        result_nd = self.get_nondominated_inds(toolbox, result)
-
-        if self.log_file: 
-            fh1 = open(self.log_file, 'a')
-            fh1.write("\n-------------------------- End of (successful) evolution --------------------------\n")
-            fh1.write("\nNon dominated individuals\n")
-            for ind in result_nd:
-                fh1.write("ind --> fit_func: " + str(ind) + ' --> ' + str(ind.fitness.values) + '\n')
-            fh1.close()
-
-        return result_nd
-
-
     def optimize(self, toolbox, init_pop):
 
         # Create initial population
         pop = self.init_pop(toolbox, init_pop)
 
-        if self.log_print: print("-- Generation 0 --")
+        if self.log_print: print("-- Iteration 0 --")
         if self.log_file: 
             fh1 = open(self.log_file, 'w')
             fh1.close()
         
         # Evaluate initial population
+        self.c_iter = 0
         pop = self.eval_pop(toolbox, pop)
 
-
         # Begin the evolution
-        for g in range(self.ngen):
+        for g in range(self.n_gen):
 
-            if self.log_print: print("-- Generation %i --" % (g+1))
+            self.c_iter = g+1
+            if self.log_print: print("-- Iteration %i --" % self.c_iter)
 
             if self.log_file: 
                 fh1 = open(self.log_file, 'a')
-                fh1.write("\n-------------------------- Generation %i from %i --------------------------\n" % ((g+1), self.ngen))
+                fh1.write("\n-------------------------- Iteration %i from %i --------------------------\n" % (self.c_iter, self.n_gen))
                 fh1.close()
 
             # Select good and bad individuals
@@ -193,7 +155,7 @@ class Moga():
             if self.plt_file != None:
                 
                 data_file = []
-                data_file.append([g+1,self.ngen])
+                data_file.append([g+1,self.n_gen])
                 
                 val_g = []
                 for ind in good_inds:
@@ -206,7 +168,7 @@ class Moga():
                 data_file.append(val_nd)
                 
                 with open(self.plt_file, 'wb') as fh2:
-                    pickle.dump(data_file, fh2)
+                    pickle.dump(data_file, fh2, protocol=2)
 
             # Select individuals with best solution (best_inds[0] - with best fit_func_1 and best_inds[1] - with best fit_func_2)
             best_inds = self.get_best_inds(toolbox, pop)
@@ -257,6 +219,8 @@ class Moga():
 
             # Replace random individuals by bests
             pop = self.replace_rand_inds(toolbox, pop, best_inds)
+            
+        self.c_iter = None
 
         return pop
 
@@ -265,10 +229,10 @@ class Moga():
 
         if MPI_RANK != 0: return None
 
-        pop = toolbox.population(n=self.pop_num)
+        pop = toolbox.population(n=self.n_pop)
         if init_pop != None:            
             
-            init_pop_len = len(init_pop) if len(init_pop) <= self.pop_num else self.pop_num
+            init_pop_len = len(init_pop) if len(init_pop) <= self.n_pop else self.n_pop
 
             for i in range(init_pop_len):
                 for j in range(len(init_pop[i])):
@@ -278,29 +242,36 @@ class Moga():
 
     
     def eval_pop(self, toolbox, pop):
-
+        
         # Split data
         if MPI_SIZE > 1:
             data_in = None
+            keys = None
             if MPI_RANK == 0:
                 data_in = []
+                keys = []
                 length = int(len(pop) / MPI_SIZE)
                 for i in range(MPI_SIZE):
                     start = i * length
                     stop = start + length
                     data_in.append(pop[start:stop])
+                    keys.append([ii for ii in range(start,stop)])
                     
                 j = 0
                 for i in range(stop, len(pop)):
                     data_in[j] += [pop[i]]
+                    keys[j] += [i]
                     j += 1
-        
+            
             data_in = MPI_COMM.scatter(data_in, root=0)
+            keys = MPI_COMM.scatter(keys, root=0)
         else:
             data_in = pop
+            keys = [ii for ii in range(len(data_in))]
+            
         
         # Evaluate initial population
-        fitnesses = [toolbox.evaluate(x0=x, args=self.fit_func_args) for x in data_in]
+        fitnesses = [toolbox.evaluate(x0=x, iter_data=(key, self.c_iter), args=self.fit_func_args) for key, x in zip(keys, data_in)]
 
         
         # Merge data
@@ -334,12 +305,25 @@ class Moga():
 
         g_inds = []
         gb = [0, 0]
+
         for i in pop:
-            if i.fitness.values[0] != self.inf_val and i.fitness.values[1] != self.inf_val:
+            inf_val_checker = 1
+            for j in range(self.problem_size):
+                if i.fitness.values[j] == self.inf_val:
+                    inf_val_checker *= 0
+                
+            if inf_val_checker == 1:
                 g_inds.append(toolbox.clone(i))
                 gb[0] += 1
             else:
                 gb[1] += 1
+
+#        for i in pop:
+#            if i.fitness.values[0] != self.inf_val and i.fitness.values[1] != self.inf_val:
+#                g_inds.append(toolbox.clone(i))
+#                gb[0] += 1
+#            else:
+#                gb[1] += 1
                 
         if self.log_print: print("good/bad solitions %i / %i" % (gb[0], gb[1]))
 
@@ -359,15 +343,25 @@ class Moga():
 
 
     def get_best_inds(self, toolbox, pop):
-
+        # only for minimization problem
+        
         if MPI_RANK != 0: return None
 
-        best_ind = [pop[0], pop[0]]
+        best_ind = []
+        for j in range(self.problem_size):
+            best_ind.append(pop[0])
+          
         for ind in pop:
-            if ind.fitness.values[0] < best_ind[0].fitness.values[0]:
-                best_ind[0] = ind
-            if ind.fitness.values[1] < best_ind[1].fitness.values[1]:
-                best_ind[1] = ind
+            for j in range(self.problem_size):
+                if ind.fitness.values[j] < best_ind[j].fitness.values[j]:
+                    best_ind[j] = ind
+
+        #best_ind = [pop[0], pop[0]]
+        #for ind in pop:
+        #    if ind.fitness.values[0] < best_ind[0].fitness.values[0]:
+        #        best_ind[0] = ind
+        #    if ind.fitness.values[1] < best_ind[1].fitness.values[1]:
+        #        best_ind[1] = ind
 
         return toolbox.clone(best_ind)
 
@@ -437,8 +431,13 @@ class Moga():
         if MPI_RANK != 0: return None
 
         for i in range(len(pop)):
-            if pop[i].fitness.values[0] == self.inf_val and pop[i].fitness.values[1] == self.inf_val:
-                
+
+            inf_val_checker = 1
+            for j in range(self.problem_size):
+                if pop[i].fitness.values[j] != self.inf_val:
+                    inf_val_checker *= 0
+            
+            if inf_val_checker == 1:
                 if noninf_pop == None:
                     del pop[i].fitness.values
                     pop[i] = toolbox.clone(toolbox.individual())
@@ -456,10 +455,173 @@ class Moga():
         return pop
 
 
-    def spea2(self):
-        pass
+    def nsga2(self, fit_func, fit_func_args=[], init_pop=None, cxpb=0.95, mutpb=0.95):
         
+        # init
+        random.seed()
+        self.fit_func = fit_func
+        self.fit_func_args = fit_func_args
+        self.cxpb = cxpb                            # cross probability
+        self.mutpb = mutpb                          # mutation probability
         
+        toolbox = self.init_deap_functions()        
+        toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=self.bounds_min, up=self.bounds_max, eta=10.0)                     # crossover = mate
+        toolbox.register("mutate", tools.mutPolynomialBounded, eta=10.0, low=self.bounds_min, up=self.bounds_max, indpb=self.mutpb)
+        toolbox.register("select", tools.selNSGA2)
+
+        if self.log_print: print("Number of used CPU: %i" % MPI_SIZE)
+
+        # optimization
+        result = self.optimize(toolbox, init_pop)
+        
+        if self.log_print: print("End of (successful) evolution")
+
+        result_nd = self.get_nondominated_inds(toolbox, result)
+
+        if self.log_file: 
+            fh1 = open(self.log_file, 'a')
+            fh1.write("\n-------------------------- End of (successful) evolution --------------------------\n")
+            fh1.write("\nNon dominated individuals\n")
+            for ind in result_nd:
+                fh1.write("ind --> fit_func: " + str(ind) + ' --> ' + str(ind.fitness.values) + '\n')
+            fh1.close()
+
+        return result_nd
+
+
+    def spea2(self, fit_func, fit_func_args=[], init_pop=None, cxpb=0.95, mutpb=0.95):
+        
+        # init
+        random.seed()
+        self.fit_func = fit_func
+        self.fit_func_args = fit_func_args
+        self.cxpb = cxpb                            # cross probability
+        self.mutpb = mutpb                          # mutation probability
+        
+        toolbox = self.init_deap_functions()        
+        toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=self.bounds_min, up=self.bounds_max, eta=10.0)                     # crossover = mate
+        toolbox.register("mutate", tools.mutPolynomialBounded, eta=10.0, low=self.bounds_min, up=self.bounds_max, indpb=self.mutpb)
+        toolbox.register("select", tools.selSPEA2)
+
+        if self.log_print: print("Number of used CPU: %i" % MPI_SIZE)
+
+        # optimization
+        result = self.optimize(toolbox, init_pop)
+        
+        if self.log_print: print("End of (successful) evolution")
+
+        result_nd = self.get_nondominated_inds(toolbox, result)
+
+        if self.log_file: 
+            fh1 = open(self.log_file, 'a')
+            fh1.write("\n-------------------------- End of (successful) evolution --------------------------\n")
+            fh1.write("\nNon dominated individuals\n")
+            for ind in result_nd:
+                fh1.write("ind --> fit_func: " + str(ind) + ' --> ' + str(ind.fitness.values) + '\n')
+            fh1.close()
+
+        return result_nd        
+        
+
+    def selAnneal(self, individuals, k):
+        
+        solution_min = individuals[0]
+        candidate = individuals[1]
+
+        result = solution_min
+        dE = candidate[0].fitness.values[0] - solution_min[0].fitness.values[0]
+
+        if dE < 0:
+            result = candidate
+        else:
+            h = 1.0 / (1.0 + np.exp(dE / self.temperature))
+            #h = np.exp(-dE / self.temperature)
+
+            if random.random() < h:
+                result = candidate
+        
+        return result
+
+
+    def anneal(self, fit_func, fit_func_args=[], init_pop=None, t_start=1.0, t_stop=0.001):
+        
+        # init
+        random.seed()
+        self.n_pop = 1
+        self.fit_func = fit_func
+        self.fit_func_args = fit_func_args
+        self.temperature_start = t_start
+        self.temperature_stop = t_stop
+        self.temperature = t_start
+
+        toolbox = self.init_deap_functions()
+        toolbox.register("select", self.selAnneal)
+        
+        # Create initial solution
+        solution = self.init_pop(toolbox, init_pop)
+        
+        # Evaluate initial solution
+        self.c_iter = 0
+        solution = self.eval_pop(toolbox, solution)
+        solution_min = toolbox.clone(solution)
+
+        if self.log_print: print("-- Iteration 0 --")
+        if self.log_file: 
+            fh1 = open(self.log_file, 'w')
+            fh1.close()
+        
+        # Begin the evolution
+        for g in range(self.n_gen):
+            
+            self.c_iter = g + 1
+            if self.log_print: print("-- Iteration %i --" % self.c_iter)
+
+            if self.log_file: 
+                fh1 = open(self.log_file, 'a')
+                fh1.write("\n-------------------------- Iteration %i from %i --------------------------\n" % (self.c_iter, self.n_gen))
+                fh1.close()
+            
+            # Update temperature
+            self.temperature = self.temperature_start / self.c_iter
+
+            # Generate new candidate solution
+            z = []
+            for i in range(self.vars_num):           
+                var = solution[0][i] + random.gauss(0.0, (self.bounds_max[i] - self.bounds_min[i])*self.temperature)
+                while(var < self.bounds_min[i] or var > self.bounds_max[i]):             
+                    var = solution[0][i] + random.gauss(0.0, (self.bounds_max[i] - self.bounds_min[i])*self.temperature)
+                z.append(var)
+
+            init_pop = []
+            init_pop.append(z)
+            
+            candidate = self.init_pop(toolbox, init_pop)
+
+            # Evaluate new candidate solution
+            candidate = self.eval_pop(toolbox, candidate)
+
+            # Select the next generation individuals
+            sel_data = []
+            sel_data.append(toolbox.clone(solution_min))
+            sel_data.append(toolbox.clone(candidate))
+
+            solution = self.apply_select(toolbox, sel_data)
+
+            if self.log_file: 
+                fh1 = open(self.log_file, 'a')
+                fh1.write("ind --> fit_func: " + str(solution[0]) + ' --> ' + str(solution[0].fitness.values) + '\n')
+                fh1.close()
+
+            # Save best solution
+            if solution[0].fitness.values[0] < solution_min[0].fitness.values[0]:
+                solution_min = toolbox.clone(solution)
+
+            if self.temperature < self.temperature_stop:
+                break;
+
+        return solution_min
+    
+
     def rwga(self):
         pass
 

@@ -184,12 +184,12 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
         newL = (newL, newL)
 
     if debug > 1:
-        print('newL=', newL)
-        print('newN=', newN)
+        print('      newL=', newL)
+        print('      newN=', newN)
 
     if (interpN == (1, 1) and interpL == (1, 1) and newN == (None, None) and newL == (None, None)) or \
        (interpN == (1, 1) and interpL == (1, 1) and newN == (dfl.Nx(), dfl.Ny()) and newL == (dfl.Lx(), dfl.Ly())):
-        print('      skip (no interpolation required)')
+        print('      skip (no interpolation required, returning original)')
         return dfl
 
     # calculate new mesh parameters only if not defined explicvitly
@@ -203,21 +203,36 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
             print('interpolation values cannot be 0')
             return None
             # place exception
-        elif interpNx == 1 and interpLx == 1 and interpNy == 1 and interpLy == 1:
+        elif interpNx == 1 and interpNy == 1 and interpLx == 1 and interpLy == 1:
             return dfl
-            print('no interpolation required, returning original')
+            print('      skip (no interpolation required, returning original)')
+        
+        # elif interpNx == 1 and interpNy == 1 and interpLx <= 1 and interpLy <= 1:
+            # implement pad or cut if Lx1/Nx1==Lx2/Nx2 and Ly1/Ny1==Ly2/Ny2:
+            # print('      cutting original')
+            # ny1=int((Ny1-Ny2)/2)
+            # ny2=int(Ny1-(Ny1-Ny2)/2)
+            # nx1=int((Nx1-Nx2)/2)
+            # nx2=int(Nx1-(Nx1-Nx2)/2)
+            # dfl.fld=dfl.fld[:,ny1:ny2,nx1:nx2]
+            # return dfl
+        
         else:
+            
             Nx2 = int(dfl.Nx() * interpNx * interpLx)
             if Nx2 % 2 == 0 and Nx2 > dfl.Nx():
                 Nx2 -= 1
             if Nx2 % 2 == 0 and Nx2 < dfl.Nx():
                 Nx2 += 1
+            
+            
             Ny2 = int(dfl.Ny() * interpNy * interpLy)
             if Ny2 % 2 == 0 and Ny2 > dfl.Ny():
                 Ny2 -= 1
             if Ny2 % 2 == 0 and Ny2 < dfl.Ny():
                 Ny2 += 1
 
+            
             Lx2 = dfl.Lx() * interpLx
             Ly2 = dfl.Ly() * interpLy
 
@@ -242,7 +257,14 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
             Ly2 = newL[1]
         else:
             Ly2 = dfl.Ly()
-
+    
+    if debug>0:
+        print('Lx1=%e, Ly1=%e' %(Lx1,Ly1))
+        print('Lx2=%e, Ly2=%e' %(Lx2,Ly2))
+        print('Nx1=%s, Ny1=%s' %(Nx1,Ny1))
+        print('Nx2=%s, Ny2=%s' %(Nx2,Ny2))
+    
+    
     xscale1 = np.linspace(-dfl.Lx() / 2, dfl.Lx() / 2, dfl.Nx())
     yscale1 = np.linspace(-dfl.Ly() / 2, dfl.Ly() / 2, dfl.Ny())
     xscale2 = np.linspace(-Lx2 / 2, Lx2 / 2, Nx2)
@@ -258,14 +280,14 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
     fld2 = []
     for nslice, fslice in enumerate(dfl.fld):
         if debug > 1:
-            print('      slice' + str(nslice))
+            print('      slice %s' %(nslice))
         re_func = interp2d(xscale1, yscale1, np.real(fslice), fill_value=0, bounds_error=False, kind=method)
         im_func = interp2d(xscale1, yscale1, np.imag(fslice), fill_value=0, bounds_error=False, kind=method)
         fslice2 = re_func(xscale2, yscale2) + 1j * im_func(xscale2, yscale2)
         P1 = sum(abs(fslice[iy_min:iy_max, ix_min:ix_max])**2)
         P2 = sum(abs(fslice2)**2)
         if debug > 1:
-            print('      P1,P2 =' + str(P1) + str(P2))
+            print('      P1,P2 = %e %e' %(P1,P2))
         
         if P2!=0:
             fslice2 = fslice2 * sqrt(P1 / P2)
@@ -282,7 +304,7 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
     # dfl2.fileName=dfl.fileName+'i'
     # dfl2.filePath=dfl.filePath+'i'
     if debug > 1:
-        print('      energy after interpolation ' + str(F2.E()))
+        print('      energy after interpolation ' + str(dfl2.E()))
     if debug > 0:
         print('      done in %.2f sec' % (time.time() - start_time))
 

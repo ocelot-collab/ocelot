@@ -462,7 +462,7 @@
        <item>
         <widget class="QGroupBox" name="groupBox_2">
          <property name="enabled">
-          <bool>false</bool>
+          <bool>true</bool>
          </property>
          <property name="maximumSize">
           <size>
@@ -480,6 +480,9 @@
              <layout class="QVBoxLayout" name="verticalLayout_3">
               <item>
                <widget class="QLabel" name="label_9">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
                 <property name="maximumSize">
                  <size>
                   <width>16777215</width>
@@ -535,6 +538,9 @@
              <layout class="QVBoxLayout" name="verticalLayout_2">
               <item>
                <widget class="QPushButton" name="pb_hyper_file">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
                   <horstretch>0</horstretch>
@@ -597,6 +603,9 @@
             </item>
             <item row="1" column="0" colspan="2">
              <widget class="QCheckBox" name="cb_use_live_seed">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
               <property name="font">
                <font>
                 <pointsize>18</pointsize>

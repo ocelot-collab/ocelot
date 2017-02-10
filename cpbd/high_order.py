@@ -810,7 +810,7 @@ def rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=0.):
     cmm = speed_of_light
     massElectron = m_e_eV# 0.510998910e+6 #// rest mass of electron
 
-    u = np.zeros((N*9, len(y0)/6))
+    u = np.zeros((N*9, int(len(y0)/6)))
     px = y0[1::6]
     py = y0[3::6]
     dz = h

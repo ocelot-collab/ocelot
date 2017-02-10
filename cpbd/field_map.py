@@ -68,7 +68,7 @@ def read_tabular_file(field_file):
         # planar undulator or dipol magnet/phase shifter
         # So there is only one possibility - (z_array, By_array)
         z_array = field_data[0, :]
-        Bx_array = field_data[1, :]
+        By_array = field_data[1, :]
     elif ncols == 3:
     # spiral undulator or 2D map
     # So, (z_array, Bx_array, By_array) or  (x_array, z_array, By_array)
@@ -127,7 +127,6 @@ class FieldMap:
 
         elif self.format == "tabular":
             self.x_arr, self.y_arr, self.z_arr, self.Bx_arr, self.By_arr, self.Bz_arr = read_tabular_file(field_file)
-
         self.l = self.z_arr[-1] - self.z_arr[0]
             #return SRWLMagFld3D(locArBx, locArBy, locArBz, xNp, yNp, zNp, xRange, yRange, zRange, 1)
 

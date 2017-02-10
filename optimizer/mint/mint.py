@@ -18,6 +18,10 @@ from ocelot.optimizer.GP.bayes_optimization import *
 from ocelot.optimizer.GP.OnlineGP import OGP
 import pandas as pd
 from threading import Thread
+import sklearn
+sklearn_version = sklearn.__version__
+if sklearn_version >= "0.18":
+    from ocelot.optimizer.GP import gaussian_process as gp_sklearn
 
 class Logger(object):
     def __init__(self, log_file):
@@ -102,9 +106,13 @@ class GaussProcess(Minimizer):
         self.m = 200
         self.iter_bound = False
         self.hyper_file = "../parameters/hyperparameters.npy"
+        self.max_iter = 50
+        self.norm_coef = 0.1
 
     def seed_simplex(self):
         opt_smx = Optimizer()
+        opt_smx.normalization = True
+        opt_smx.norm_coef = self.norm_coef
         opt_smx.timeout = self.seed_timeout
         minimizer = Simplex()
         minimizer.max_iter = self.seed_iter
@@ -138,7 +146,8 @@ class GaussProcess(Minimizer):
             len_sc_hyps.append(hyp_params.calcLengthScaleHP(ave, std))
 
         #hyps = hyp_params.loadHyperParams(energy=self.energy, detector_stat_params=target.get_stat_params())
-        hyps1 = (np.array([len_sc_hyps]), coeff, noise) #(np.array([hyps]), coeff, noise)
+        hyps1 = (np.array([len_sc_hyps]), coeff, noise)
+        #(np.array([hyp_params.calcLengthScaleHP(ave, std)]), coeff=hyp_params.calcAmpCoeffHP(ave, std=0.), noise=hyp_params.calcAmpCoeffHP(ave, std=0.))
         #print("hyps1", hyps1)
         #init model
         dim = len(pvs)
@@ -148,11 +157,85 @@ class GaussProcess(Minimizer):
                            alt_param=self.alt_param, m=self.m, bounds=self.bounds, iter_bound=self.iter_bound,
                                 prior_data=self.prior_data)
 
+        self.scanner.max_iter = self.max_iter
 
     def minimize(self,  error_func, x):
         #self.target_func = error_func
 
         self.seed_simplex()
+        self.preprocess()
+        x = [dev.get_value() for dev in self.devices]
+        print("start GP")
+        self.scanner.minimize(error_func, x)
+        print("finish GP")
+        return
+
+
+class GaussProcessSKLearn(Minimizer):
+    def __init__(self):
+        super(GaussProcessSKLearn, self).__init__()
+        self.seed_iter = 5
+        self.seed_timeout = 0.1
+
+        self.target = None
+        self.devices = []
+
+        self.x_obs = []
+        self.y_obs = []
+        #GP parameters
+
+        self.max_iter = 50
+        self.norm_coef = 0.1
+        self.kill = False
+        self.opt_ctrl = None
+
+    def seed_simplex(self):
+        opt_smx = Optimizer()
+        opt_smx.normalization = True
+        opt_smx.norm_coef = self.norm_coef
+        opt_smx.timeout = self.seed_timeout
+        opt_smx.opt_ctrl = self.opt_ctrl
+        minimizer = Simplex()
+        minimizer.max_iter = self.seed_iter
+        opt_smx.minimizer = minimizer
+        # opt.debug = True
+        seq = [Action(func=opt_smx.max_target_func, args=[self.target, self.devices])]
+        opt_smx.eval(seq)
+        print(opt_smx.opt_ctrl.dev_sets)
+        self.x_obs = np.vstack(opt_smx.opt_ctrl.dev_sets)
+        self.y_obs = np.array(opt_smx.opt_ctrl.penalty)
+        self.y_sigma_obs = np.zeros(len(self.y_obs))
+
+
+    def preprocess(self):
+
+        self.scanner = gp_sklearn.GP()
+        self.scanner.opt_ctrl = self.opt_ctrl
+        devs_std = []
+        devs_search_area = []
+        for dev in self.devices:
+            lims = dev.get_limits()
+            devs_std.append((lims[-1] - lims[0])/2.)
+            x_vec = np.atleast_2d(np.linspace(lims[0], lims[-1], num=50)).T
+            devs_search_area.append(x_vec)
+
+        self.scanner.x_search = np.hstack(devs_search_area)
+        self.scanner.x_obs = self.x_obs
+        self.scanner.y_obs = self.y_obs
+        self.scanner.y_sigma_obs = self.y_sigma_obs
+
+        self.scanner.ck_const_value = (0.5*np.mean(self.scanner.y_obs))**2 + 0.1
+        #self.scanner.ck_const_value_bounds = (self.scanner.ck_const_value,self.scanner.ck_const_value)
+        self.scanner.rbf_length_scale = np.array(devs_std)/2. + 0.01
+        #self.scanner.rbf_length_scale_bounds = (self.scanner.rbf_length_scale, self.scanner.rbf_length_scale)
+        self.scanner.max_iter = self.max_iter
+
+    def minimize(self,  error_func, x):
+        #self.target_func = error_func
+
+        self.seed_simplex()
+        if self.opt_ctrl.kill:
+            return
         self.preprocess()
         x = [dev.get_value() for dev in self.devices]
         print("start GP")
@@ -305,13 +388,29 @@ class Optimizer(Thread):
             print('setting', self.devices[i].id, '->', x[i])
             self.devices[i].set_value(x[i])
 
+    def calc_scales(self):
+        """
+        calculate scales for normalized simplex
+
+        :return: np.array() - device_delta_limits * norm_coef
+        """
+        self.norm_scales = np.zeros(np.size(self.devices))
+        for i, dev in enumerate(self.devices):
+            lims = dev.get_limits()
+            delta = lims[-1] - lims[0]
+            self.norm_scales[i] = delta*self.norm_coef
+
+        return self.norm_scales
+
     def error_func(self, x):
         if self.normalization:
             delta_x = x
-            delta_x_scaled = delta_x/0.00025*self.norm_coef
+            delta_x_scaled = delta_x/0.00025*self.norm_scales
             x = self.x_init + delta_x_scaled
+            print("delta_x = ", delta_x, "delta_x_scaled = ", delta_x_scaled)
 
         if self.opt_ctrl.kill:
+            #self.minimizer.kill = self.opt_ctrl.kill
             print('Killed from external process')
             # NEW CODE - to kill if run from outside thread
             return self.target.pen_max
@@ -339,19 +438,21 @@ class Optimizer(Thread):
         Direct target function optimization with simplex/GP, using Devices as a multiknob
         """
         [dev.clean() for dev in devices]
+        target.clean()
         self.target = target
         #print(self.target)
         self.devices = devices
         # testing
         self.minimizer.devices = devices
         self.minimizer.target = target
+        self.minimizer.opt_ctrl = self.opt_ctrl
         self.target.devices = self.devices
         dev_ids = [dev.eid for dev in self.devices]
         if self.debug: print('starting multiknob optimization, devices = ', dev_ids)
 
         target_ref = self.target.get_penalty()
 
-        x = [dev.get_value() for dev in self.devices] # self.mi.init_corrector_vals(devices)
+        x = [dev.get_value() for dev in self.devices]
         x_init = x
 
         if self.logging:
@@ -360,6 +461,7 @@ class Optimizer(Thread):
         if self.normalization:
             self.x_init = x_init
             x = np.zeros_like(x)
+            self.calc_scales()
 
         res = self.minimizer.minimize(self.error_func, x)
         print("result", res)

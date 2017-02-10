@@ -176,6 +176,8 @@ class TestMachineInterface:
         Y = np.zeros(len(bpms))
         return X, Y
 
+    def get_charge(self):
+        return 0
 
 class TestDeviceProperties:
     def __init__(self, ui=None):

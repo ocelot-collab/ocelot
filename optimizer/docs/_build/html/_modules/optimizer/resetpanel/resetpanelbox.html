@@ -53,6 +53,10 @@
 <span class="sd">Subclass of ResetpanelWindow, used to make a version with check box selction</span>
 
 <span class="sd">Tyler Cope, 2016</span>
+
+<span class="sd">The class was modified and was introduced new methods.</span>
+
+<span class="sd">S. Tomin, 2017</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">from</span> <span class="nn">ocelot.optimizer.resetpanel.resetpanel</span> <span class="k">import</span> <span class="n">ResetpanelWindow</span>
@@ -120,7 +124,11 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">menu</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QMenu</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
             <span class="n">deleteAction</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QAction</span><span class="p">(</span><span class="s1">&#39;Delete&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
             <span class="n">deleteAction</span><span class="o">.</span><span class="n">triggered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">deleteSlot</span><span class="p">(</span><span class="n">rows</span><span class="p">))</span>
+
             <span class="bp">self</span><span class="o">.</span><span class="n">menu</span><span class="o">.</span><span class="n">addAction</span><span class="p">(</span><span class="n">deleteAction</span><span class="p">)</span>
+
+            <span class="c1">#editAction = QtGui.QAction(&#39;Edit&#39;, self)</span>
+            <span class="c1">#self.menu.addAction(editAction)</span>
             <span class="c1"># add other required actions</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">menu</span><span class="o">.</span><span class="n">popup</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QCursor</span><span class="o">.</span><span class="n">pos</span><span class="p">())</span></div>
 
@@ -189,6 +197,9 @@
             <span class="n">pv</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QApplication</span><span class="o">.</span><span class="n">clipboard</span><span class="p">()</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="n">QClipboard</span><span class="o">.</span><span class="n">Selection</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">addPv</span><span class="p">(</span><span class="n">pv</span><span class="p">)</span></div>
 
+<div class="viewcode-block" id="ResetpanelBoxWindow.set_parent"><a class="viewcode-back" href="../../../optimizer.resetpanel.html#optimizer.resetpanel.resetpanelbox.ResetpanelBoxWindow.set_parent">[docs]</a>    <span class="k">def</span> <span class="nf">set_parent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span></div>
+
 <div class="viewcode-block" id="ResetpanelBoxWindow.addPv"><a class="viewcode-back" href="../../../optimizer.resetpanel.html#optimizer.resetpanel.resetpanelbox.ResetpanelBoxWindow.addPv">[docs]</a>    <span class="k">def</span> <span class="nf">addPv</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pv</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Add another PV to the GUI on middle click.</span>
@@ -202,16 +213,12 @@
             <span class="k">return</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="c1">#print(&quot;try to create dev&quot;)</span>
-            <span class="n">dev</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_devices</span><span class="p">(</span><span class="n">pvs</span><span class="o">=</span><span class="p">[</span><span class="n">pv</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span><span class="c1">#obj.TestDevice(eid=pv)</span>
+            <span class="n">dev</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">create_devices</span><span class="p">(</span><span class="n">pvs</span><span class="o">=</span><span class="p">[</span><span class="n">pv</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span><span class="c1">#obj.TestDevice(eid=pv)</span>
 
-            <span class="c1">#dev.get_value()</span>
-            <span class="c1">#pv_obj = epics.PV(str(pv))</span>
         <span class="k">except</span><span class="p">:</span>
             <span class="nb">print</span> <span class="p">(</span><span class="s2">&quot;bad string&quot;</span><span class="p">)</span>
             <span class="k">return</span>
-        <span class="c1">#state=dev.connect(timeout=0.05)</span>
-        <span class="c1">#time.sleep(0.05)</span>
-        <span class="c1">#state=dev.connect(timeout=0.05)</span>
+
         <span class="n">state</span> <span class="o">=</span> <span class="n">dev</span><span class="o">.</span><span class="n">state</span><span class="p">()</span>
         <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;state=&quot;</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">state</span><span class="p">:</span>
@@ -219,13 +226,6 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dev</span><span class="p">)</span>
             <span class="c1">#self.pv_objects[pv].add_callback(callback=self.PvGetCallBack)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">getStartValues</span><span class="p">()</span>
-            <span class="c1">#try:</span>
-            <span class="c1">#    val = dev.get_value()</span>
-            <span class="c1">#except:</span>
-            <span class="c1">#    val = None</span>
-
-            <span class="c1">#self.startValues[pv] = val</span>
-            <span class="c1">#print(self.pvs)</span>
         <span class="n">table</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_state</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">initTable</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addCheckBoxes</span><span class="p">()</span>
@@ -233,23 +233,6 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">set_state</span><span class="p">(</span><span class="n">table</span><span class="p">)</span></div>
 
 
-    <span class="c1">#def get_devices(self, pvs):</span>
-    <span class="c1">#    # TODO: method for creation of Device</span>
-    <span class="c1">#    devices = []</span>
-    <span class="c1">#    for pv in pvs:</span>
-    <span class="c1">#        devices.append(SLACDevice(eid=pv))</span>
-    <span class="c1">#    return devices</span>
-
-<div class="viewcode-block" id="ResetpanelBoxWindow.create_devices"><a class="viewcode-back" href="../../../optimizer.resetpanel.html#optimizer.resetpanel.resetpanelbox.ResetpanelBoxWindow.create_devices">[docs]</a>    <span class="k">def</span> <span class="nf">create_devices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pvs</span><span class="p">):</span>
-        <span class="c1"># TODO: add new method for creation of devices</span>
-        <span class="c1">#self.pvs = self.getPvsFromCbState()</span>
-        <span class="n">devices</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">pv</span> <span class="ow">in</span> <span class="n">pvs</span><span class="p">:</span>
-            <span class="n">dev</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">Device</span><span class="p">(</span><span class="n">eid</span><span class="o">=</span><span class="n">pv</span><span class="p">)</span>
-            <span class="n">dev</span><span class="o">.</span><span class="n">mi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mi</span>
-            <span class="n">dev</span><span class="o">.</span><span class="n">dp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dp</span> <span class="c1">#TestLCLSDeviceProperties(self.ui.tableWidget)</span>
-            <span class="n">devices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dev</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">devices</span></div>
 
 <div class="viewcode-block" id="ResetpanelBoxWindow.get_devices"><a class="viewcode-back" href="../../../optimizer.resetpanel.html#optimizer.resetpanel.resetpanelbox.ResetpanelBoxWindow.get_devices">[docs]</a>    <span class="k">def</span> <span class="nf">get_devices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pvs</span><span class="p">):</span>
         <span class="n">d_pvs</span> <span class="o">=</span> <span class="p">[</span><span class="n">dev</span><span class="o">.</span><span class="n">eid</span> <span class="k">for</span> <span class="n">dev</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">]</span>
@@ -269,7 +252,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">print</span> <span class="p">(</span><span class="s2">&quot;LOADING:&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">pvs_in</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="nb">print</span> <span class="p">(</span><span class="s1">&#39;Exiting&#39;</span><span class="p">,</span> <span class="n">pvs_in</span><span class="p">)</span>
+            <span class="c1">#print (&#39;Exiting&#39;, pvs_in)</span>
             <span class="k">return</span>
 
         <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">pvs_in</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">list</span><span class="p">:</span>
@@ -283,8 +266,8 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">pvs</span> <span class="o">=</span> <span class="n">pvs_in</span>
 
-        <span class="nb">print</span> <span class="p">(</span><span class="s2">&quot;PVS LOADED&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pvs</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">devices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_devices</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pvs</span><span class="p">)</span>
+        <span class="c1">#print (&quot;PVS LOADED&quot;, self.pvs)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">devices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">create_devices</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pvs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">getStartValues</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">initTable</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addCheckBoxes</span><span class="p">()</span></div>
@@ -347,7 +330,7 @@
 
 <span class="sd">        Must be called again if the user adds another PV with middle click function.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">headers</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;PVs&quot;</span><span class="p">,</span><span class="s2">&quot;Saved Value&quot;</span><span class="p">,</span><span class="s2">&quot;Current Value&quot;</span><span class="p">,</span> <span class="s2">&quot;Min&quot;</span><span class="p">,</span><span class="s2">&quot;Max&quot;</span><span class="p">,</span> <span class="s2">&quot;Active&quot;</span><span class="p">]</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;PVs&quot;</span><span class="p">,</span> <span class="s2">&quot;Saved Val.&quot;</span><span class="p">,</span> <span class="s2">&quot;Current Val.&quot;</span><span class="p">,</span> <span class="s2">&quot;Min&quot;</span><span class="p">,</span> <span class="s2">&quot;Max&quot;</span><span class="p">,</span> <span class="s2">&quot;Active&quot;</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">setColumnCount</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">headers</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">setHorizontalHeaderLabels</span><span class="p">(</span><span class="n">headers</span><span class="p">)</span>
         <span class="n">header</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">horizontalHeader</span><span class="p">()</span>
@@ -371,8 +354,8 @@
                     <span class="n">spin_box</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s2">&quot;color: rgb(255,0,255); font-size: 16px; background-color:#595959;&quot;</span><span class="p">)</span>
                 <span class="n">spin_box</span><span class="o">.</span><span class="n">setLocale</span><span class="p">(</span><span class="n">eng</span><span class="p">)</span>
                 <span class="n">spin_box</span><span class="o">.</span><span class="n">setDecimals</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
-                <span class="n">spin_box</span><span class="o">.</span><span class="n">setMaximum</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
-                <span class="n">spin_box</span><span class="o">.</span><span class="n">setMinimum</span><span class="p">(</span><span class="o">-</span><span class="mi">100</span><span class="p">)</span>
+                <span class="n">spin_box</span><span class="o">.</span><span class="n">setMaximum</span><span class="p">(</span><span class="mi">999</span><span class="p">)</span>
+                <span class="n">spin_box</span><span class="o">.</span><span class="n">setMinimum</span><span class="p">(</span><span class="o">-</span><span class="mi">999</span><span class="p">)</span>
                 <span class="n">spin_box</span><span class="o">.</span><span class="n">setSingleStep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
                 <span class="n">spin_box</span><span class="o">.</span><span class="n">setAccelerated</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
                 <span class="c1">#spin_box.setFixedWidth(50)</span>

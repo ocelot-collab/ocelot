@@ -78,9 +78,11 @@
 </div>
 <div class="section" id="module-optimizer.resetpanel.resetpanel">
 <span id="optimizer-resetpanel-resetpanel-module"></span><h2>optimizer.resetpanel.resetpanel module<a class="headerlink" href="#module-optimizer.resetpanel.resetpanel" title="Permalink to this headline">¶</a></h2>
-<p>PYQT interface for running OCELOT simplex optimization.</p>
-<p>Created as a QT widget for use in other applications as well.</p>
-<p>Tyler Cope, 2016</p>
+<p>PYQT interface for running OCELOT simplex optimization.
+Created as a QT widget for use in other applications as well.
+Tyler Cope, 2016
+The class was modified and was introduced new methods.
+S. Tomin, 2017</p>
 <dl class="class">
 <dt id="optimizer.resetpanel.resetpanel.ResetpanelWindow">
 <em class="property">class </em><code class="descclassname">optimizer.resetpanel.resetpanel.</code><code class="descname">ResetpanelWindow</code><span class="sig-paren">(</span><em>parent=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/resetpanel/resetpanel.html#ResetpanelWindow"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.resetpanel.resetpanel.ResetpanelWindow" title="Permalink to this definition">¶</a></dt>
@@ -119,8 +121,8 @@
 <dl class="method">
 <dt id="optimizer.resetpanel.resetpanel.ResetpanelWindow.updateCurrentValues">
 <code class="descname">updateCurrentValues</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/resetpanel/resetpanel.html#ResetpanelWindow.updateCurrentValues"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.resetpanel.resetpanel.ResetpanelWindow.updateCurrentValues" title="Permalink to this definition">¶</a></dt>
-<dd><p>Method to update the table on every clock cycle.</p>
-<p>Loops through the pv list and gets new data, then updates the Current Value column.
+<dd><p>Method to update the table on every clock cycle.
+Loops through the pv list and gets new data, then updates the Current Value column.
 Hard coded to turn Current Value column red at 0.1% differenct from Ref Value.
 It would be better to update the table on a callback, but PyEpics crashes with cb funcitons.</p>
 </dd></dl>
@@ -136,8 +138,8 @@ It would be better to update the table on a callback, but PyEpics crashes with c
 <dl class="function">
 <dt id="optimizer.resetpanel.resetpanel.main">
 <code class="descclassname">optimizer.resetpanel.resetpanel.</code><code class="descname">main</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/resetpanel/resetpanel.html#main"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.resetpanel.resetpanel.main" title="Permalink to this definition">¶</a></dt>
-<dd><p>Main functino to open a resetpanel GUI.</p>
-<p>If passed a file name, will try and load PV list from that file.
+<dd><p>Main functino to open a resetpanel GUI.
+If passed a file name, will try and load PV list from that file.
 Otherwise defaults to a file in the base directory with pre-loaded common tuned PVs.</p>
 </dd></dl>
 
@@ -146,6 +148,10 @@ Otherwise defaults to a file in the base directory with pre-loaded common tuned 
 <span id="optimizer-resetpanel-resetpanelbox-module"></span><h2>optimizer.resetpanel.resetpanelbox module<a class="headerlink" href="#module-optimizer.resetpanel.resetpanelbox" title="Permalink to this headline">¶</a></h2>
 <p>Subclass of ResetpanelWindow, used to make a version with check box selction</p>
 <p>Tyler Cope, 2016</p>
+<p>The class was modified and was introduced new methods.</p>
+<ol class="upperalpha simple" start="19">
+<li>Tomin, 2017</li>
+</ol>
 <dl class="class">
 <dt id="optimizer.resetpanel.resetpanelbox.ResetpanelBoxWindow">
 <em class="property">class </em><code class="descclassname">optimizer.resetpanel.resetpanelbox.</code><code class="descname">ResetpanelBoxWindow</code><span class="sig-paren">(</span><em>parent=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/resetpanel/resetpanelbox.html#ResetpanelBoxWindow"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.resetpanel.resetpanelbox.ResetpanelBoxWindow" title="Permalink to this definition">¶</a></dt>
@@ -167,11 +173,6 @@ Otherwise defaults to a file in the base directory with pre-loaded common tuned 
 <dd>pv (str): String name of the PV to add</dd>
 </dl>
 </dd></dl>
-
-<dl class="method">
-<dt id="optimizer.resetpanel.resetpanelbox.ResetpanelBoxWindow.create_devices">
-<code class="descname">create_devices</code><span class="sig-paren">(</span><em>pvs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/resetpanel/resetpanelbox.html#ResetpanelBoxWindow.create_devices"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.resetpanel.resetpanelbox.ResetpanelBoxWindow.create_devices" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
 
 <dl class="method">
 <dt id="optimizer.resetpanel.resetpanelbox.ResetpanelBoxWindow.getPvList">
@@ -241,6 +242,11 @@ If highlighted, check box is set the the &#8216;state&#8217; input arg.</p>
 <dl class="method">
 <dt id="optimizer.resetpanel.resetpanelbox.ResetpanelBoxWindow.set_machine_interface">
 <code class="descname">set_machine_interface</code><span class="sig-paren">(</span><em>mi</em>, <em>dp</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/resetpanel/resetpanelbox.html#ResetpanelBoxWindow.set_machine_interface"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.resetpanel.resetpanelbox.ResetpanelBoxWindow.set_machine_interface" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="optimizer.resetpanel.resetpanelbox.ResetpanelBoxWindow.set_parent">
+<code class="descname">set_parent</code><span class="sig-paren">(</span><em>parent</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/resetpanel/resetpanelbox.html#ResetpanelBoxWindow.set_parent"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.resetpanel.resetpanelbox.ResetpanelBoxWindow.set_parent" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">

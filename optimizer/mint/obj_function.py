@@ -30,11 +30,7 @@ class XFELTarget(Target):
         self.debug = False
         self.kill = False
         self.pen_max = 100
-        self.niter = 0
-        self.penalties = []
-        self.times = []
-        self.alarms = []
-        self.values = []
+        self.clean()
         self.nreadings = 1
         self.interval = 0.0
 
@@ -73,7 +69,7 @@ class XFELTarget(Target):
         """
         values = np.array([dev.get_value() for dev in self.devices])
         value = 2*np.sum(np.exp(-np.power((values - np.ones_like(values)), 2) / 5.))
-        value = value * (1. + (np.random.rand(1)[0] - 0.5) * 0.01)
+        value = value * (1. + (np.random.rand(1)[0] - 0.5) * 0.001)
         return value 
 
 
@@ -124,3 +120,10 @@ class XFELTarget(Target):
 
     def get_energy(self):
         return 3
+
+    def clean(self):
+        self.niter = 0
+        self.penalties = []
+        self.times = []
+        self.alarms = []
+        self.values = []

@@ -48,10 +48,10 @@
           <div class="body" role="main">
             
   <h1>Source code for optimizer.mint.xfel_interface</h1><div class="highlight"><pre>
-<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">XFEL machine interface</span>
 <span class="sd">S.Tomin, 2017</span>
-<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">&quot;&quot;&quot;</span>
 <span class="k">try</span><span class="p">:</span>
     <span class="c1"># in server &quot;doocsdev12&quot; set environment</span>
     <span class="c1">#  $ export PYTHONPATH=/home/ttflinac/user/python-2.7/Debian/</span>
@@ -145,7 +145,10 @@
             <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">debug</span><span class="p">):</span> <span class="nb">print</span> <span class="p">(</span><span class="s1">&#39;alarm:&#39;</span><span class="p">,</span> <span class="n">alarm_val</span><span class="p">)</span>
             <span class="n">val</span> <span class="o">=</span> <span class="n">pydoocs</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">blm_channel</span><span class="p">)[</span><span class="s1">&#39;data&#39;</span><span class="p">]</span>
             <span class="n">alarm_vals</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span><span class="o">/</span><span class="n">alarm_val</span>
-        <span class="k">return</span> <span class="n">alarm_vals</span></div></div>
+        <span class="k">return</span> <span class="n">alarm_vals</span></div>
+
+<div class="viewcode-block" id="XFELMachineInterface.get_charge"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.xfel_interface.XFELMachineInterface.get_charge">[docs]</a>    <span class="k">def</span> <span class="nf">get_charge</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_value</span><span class="p">(</span><span class="s2">&quot;XFEL.DIAG/CHARGE.ML/TORA.25.I1/CHARGE.SA1&quot;</span><span class="p">)</span></div></div>
 
 
 <div class="viewcode-block" id="XFELDeviceProperties"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.xfel_interface.XFELDeviceProperties">[docs]</a><span class="k">class</span> <span class="nc">XFELDeviceProperties</span><span class="p">:</span>
@@ -221,8 +224,10 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">bpms</span><span class="p">))</span>
         <span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">bpms</span><span class="p">))</span>
-        <span class="k">return</span> <span class="n">X</span><span class="p">,</span> <span class="n">Y</span></div></div>
+        <span class="k">return</span> <span class="n">X</span><span class="p">,</span> <span class="n">Y</span></div>
 
+<div class="viewcode-block" id="TestMachineInterface.get_charge"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.xfel_interface.TestMachineInterface.get_charge">[docs]</a>    <span class="k">def</span> <span class="nf">get_charge</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="mi">0</span></div></div>
 
 <div class="viewcode-block" id="TestDeviceProperties"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.xfel_interface.TestDeviceProperties">[docs]</a><span class="k">class</span> <span class="nc">TestDeviceProperties</span><span class="p">:</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ui</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -250,6 +255,7 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">[</span><span class="o">-</span><span class="mf">100.</span><span class="p">,</span> <span class="mf">100.</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">lims</span></div></div>
+
 </pre></div>
 
           </div>

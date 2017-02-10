@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'UIOcelotInterface_gen.ui'
 #
-# Created: Mon Jan 23 18:03:17 2017
+# Created: Wed Feb 08 15:33:47 2017
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -231,7 +231,7 @@ class Ui_Form(object):
         self.gridLayout_5.addWidget(self.label_7, 1, 0, 1, 1)
         self.verticalLayout_12.addWidget(self.groupBox)
         self.groupBox_2 = QtGui.QGroupBox(self.tab2)
-        self.groupBox_2.setEnabled(False)
+        self.groupBox_2.setEnabled(True)
         self.groupBox_2.setMaximumSize(QtCore.QSize(16777215, 250))
         self.groupBox_2.setObjectName(_fromUtf8("groupBox_2"))
         self.gridLayout_7 = QtGui.QGridLayout(self.groupBox_2)
@@ -241,6 +241,7 @@ class Ui_Form(object):
         self.verticalLayout_3 = QtGui.QVBoxLayout()
         self.verticalLayout_3.setObjectName(_fromUtf8("verticalLayout_3"))
         self.label_9 = QtGui.QLabel(self.groupBox_2)
+        self.label_9.setEnabled(False)
         self.label_9.setMaximumSize(QtCore.QSize(16777215, 16777215))
         font = QtGui.QFont()
         font.setPointSize(18)
@@ -265,6 +266,7 @@ class Ui_Form(object):
         self.verticalLayout_2 = QtGui.QVBoxLayout()
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
         self.pb_hyper_file = QtGui.QPushButton(self.groupBox_2)
+        self.pb_hyper_file.setEnabled(False)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -297,6 +299,7 @@ class Ui_Form(object):
         self.verticalLayout_2.addWidget(self.sb_seed_iter)
         self.gridLayout_3.addLayout(self.verticalLayout_2, 0, 1, 1, 1)
         self.cb_use_live_seed = QtGui.QCheckBox(self.groupBox_2)
+        self.cb_use_live_seed.setEnabled(False)
         font = QtGui.QFont()
         font.setPointSize(18)
         self.cb_use_live_seed.setFont(font)

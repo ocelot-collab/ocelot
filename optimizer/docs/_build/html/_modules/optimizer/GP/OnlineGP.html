@@ -95,6 +95,21 @@
 <div class="viewcode-block" id="OGP"><a class="viewcode-back" href="../../../optimizer.GP.html#optimizer.GP.OnlineGP.OGP">[docs]</a><span class="k">class</span> <span class="nc">OGP</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">hyperparams</span><span class="p">,</span> <span class="n">covar</span><span class="o">=</span><span class="s1">&#39;RBF_ARD&#39;</span><span class="p">,</span> <span class="n">maxBV</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> 
                  <span class="n">prmean</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">prmeanp</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">proj</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">weighted</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">thresh</span><span class="o">=</span><span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">6</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        :param dim:</span>
+<span class="sd">        :param hyperparams: ([hyp_params.calcLengthScaleHP(ave, std)]) - devices,</span>
+<span class="sd">                            coeff=hyp_params.calcAmpCoeffHP(ave, std=0.) - SASE</span>
+<span class="sd">                            noise=hyp_params.calcAmpCoeffHP(ave, std=0.) - SASE)</span>
+
+<span class="sd">        :param covar:</span>
+<span class="sd">        :param maxBV:</span>
+<span class="sd">        :param prmean:</span>
+<span class="sd">        :param prmeanp:</span>
+<span class="sd">        :param proj:</span>
+<span class="sd">        :param weighted:</span>
+<span class="sd">        :param thresh:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">nin</span> <span class="o">=</span> <span class="n">dim</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">maxBV</span> <span class="o">=</span> <span class="n">maxBV</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">numBV</span> <span class="o">=</span> <span class="mi">0</span>
@@ -365,7 +380,7 @@
     
         <span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">hyp_ARD</span><span class="p">)</span>
         <span class="n">coeff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">hyp_coeff</span><span class="p">)</span>
-    
+        <span class="c1">#print(&quot;(hyp_ARD, hyp_coeff) = &quot;, (hyp_ARD, hyp_coeff))</span>
         <span class="c1"># use ARD to scale</span>
         <span class="n">b_sqrt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
         <span class="n">x1</span> <span class="o">=</span> <span class="n">x1</span> <span class="o">*</span> <span class="n">b_sqrt</span>

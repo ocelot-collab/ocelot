@@ -11,6 +11,9 @@ from __future__ import absolute_import, print_function
 import json
 import sys
 import os
+import sklearn
+sklearn_version = sklearn.__version__
+
 path = os.path.realpath(__file__)
 indx = path.find("ocelot/optimizer")
 print("PATH", os.path.realpath(__file__))
@@ -67,11 +70,33 @@ class OcelotInterfaceWindow(QFrame):
         # initialize
         QFrame.__init__(self)
 
+        self.logbook = "xfellog"
+        self.dev_mode = True
+
         self.ui = MainWindow(self)
+
+        self.name_simplex = "Nelder-Mead Simplex"
+        self.name_gauss = "Gaussian Process"
+        self.name_gauss_sklearn = "Gaussian Process sklearn"
+        self.name_custom = "Custom Minimizer"
+        self.name_simplex_norm = "Simplex Norm."
+        # self.name4 = "Conjugate Gradient"
+        # self.name5 = "Powell's Method"
+        # switch of GP and custom Mininimizer
+        self.ui.cb_select_alg.addItem(self.name_simplex)
+        #self.ui.cb_select_alg.addItem(self.name_gauss)
+        self.ui.cb_select_alg.addItem(self.name_custom)
+        self.ui.cb_select_alg.addItem(self.name_simplex_norm)
+        if sklearn_version >= "0.18":
+            self.ui.cb_select_alg.addItem(self.name_gauss_sklearn)
+
+
         #self.ui.pb_help.clicked.connect(lambda: os.system("firefox file://"+self.optimizer_path+"docs/build/html/index.html"))
         self.ui.pb_help.clicked.connect(self.ui.open_help)
-        #self.mi = TestMachineInterface()
-        self.mi = XFELMachineInterface()
+        if self.dev_mode:
+            self.mi = TestMachineInterface()
+        else:
+            self.mi = XFELMachineInterface()
         self.dp = TestDeviceProperties(ui=self.ui.widget)
 
         self.total_delay = self.ui.sb_tdelay.value()
@@ -111,18 +136,7 @@ class OcelotInterfaceWindow(QFrame):
         self.opt_control = mint.OptControl()
         self.opt_control.m_status = self.m_status
 
-        self.name_simplex = "Nelder-Mead Simplex"
-        self.name_gauss = "Gaussian Process"
-        self.name_custom = "Custom Minimizer"
-        self.name_simplex_norm = "Simplex Norm."
-        self.name4 = "Conjugate Gradient"
-        self.name5 = "Powell's Method"
-        self.ui.cb_select_alg.addItem(self.name_simplex)
 
-        # switch of GP and custom Mininimizer
-        # self.ui.cb_select_alg.addItem(self.name_gauss)
-        self.ui.cb_select_alg.addItem(self.name_custom)
-        self.ui.cb_select_alg.addItem(self.name_simplex_norm)
         #timer for plots, starts when scan starts
         self.multiPvTimer = QtCore.QTimer()
         self.multiPvTimer.timeout.connect(self.getPlotData)
@@ -141,19 +155,14 @@ class OcelotInterfaceWindow(QFrame):
         if current_method == self.name_gauss:
             minimizer = mint.GaussProcess()
 
+        elif current_method == self.name_gauss_sklearn:
+            minimizer = mint.GaussProcessSKLearn()
         # Custom Minimizer
         elif current_method == self.name_custom:
             minimizer = mint.CustomMinimizer()
 
         elif current_method == self.name_simplex_norm:
             minimizer = mint.Simplex()
-        # Conjugate Gradient
-        #if index == 3:
-        #    scanner = scanner_threads.OcelotScanner(parent=self, method='cg')
-        #
-        ## Powells Method
-        #if index == 4:
-        #    scanner = scanner_threads.OcelotScanner(parent=self,method='powell')
 
         #simplex Method
         else:
@@ -215,10 +224,11 @@ class OcelotInterfaceWindow(QFrame):
         minimizer = self.scan_method_select()
 
         # configure the Minimizer
-        if minimizer.__class__ == mint.GaussProcess:
+        if minimizer.__class__ in [mint.GaussProcess, mint.GaussProcessSKLearn]:
             minimizer.seed_iter = self.ui.sb_seed_iter.value()
             minimizer.seed_timeout = self.ui.sb_tdelay.value()
             minimizer.hyper_file = self.hyper_file
+            minimizer.norm_coef = self.ui.sb_isim_rel_step.value()/ 100.
 
         elif minimizer.__class__ == mint.Simplex:
             if self.ui.cb_use_isim.checkState():
@@ -275,12 +285,33 @@ class OcelotInterfaceWindow(QFrame):
 
     def scan_finished(self):
         try:
-            if not self.opt.isAlive() and self.ui.pb_start_scan.text() == "Stop optimization":
+            if self.ui.pb_start_scan.text() == "Stop optimization" and not (self.opt.isAlive()):
                 self.ui.pb_start_scan.setStyleSheet("color: rgb(85, 255, 127);")
                 self.ui.pb_start_scan.setText("Start optimization")
                 self.save2db()
+                print("scan_finished: OK")
         except:
-            pass
+            print("scan_finished: ERROR")
+
+    def create_devices(self, pvs):
+        """
+        Method to create devices using only channels (PVs)
+
+        :param pvs: str, device address/channel/PV
+        :return: list of the devices [mint.opt_objects.Device(eid=pv[0]), mint.opt_objects.Device(eid=pv[1]), ... ]
+        """
+        # TODO: add new method for creation of devices
+        devices = []
+        for pv in pvs:
+            if self.dev_mode:
+                dev = obj.TestDevice(eid=pv)
+            else:
+                dev = obj.Device(eid=pv)
+            dev.mi = self.mi
+            dev.dp = self.dp
+            devices.append(dev)
+        return devices
+
 
     def indicate_machine_state(self):
         """
@@ -346,6 +377,7 @@ class OcelotInterfaceWindow(QFrame):
         new_data_start = [self.method_name]
         new_data_end =   [self.method_name]
         # add new data here END
+
         param_names = o_names + d_names + new_data_name
         start_vals = o_start+d_start + new_data_start
         end_vals = o_stop+d_stop + new_data_end
@@ -378,11 +410,12 @@ class OcelotInterfaceWindow(QFrame):
             with open(filename, 'w+') as f:
                 json.dump(dump2json, f)
         except:
-            print("Could not write history")
+            print("ERROR. Could not write history")
 
     def set_obj_fun(self):
         """
         Method to set objective function from the GUI (channels A,B,C) or reload module obj_function.py
+
         :return: None
         """
         try:
@@ -392,6 +425,7 @@ class OcelotInterfaceWindow(QFrame):
         except:
             self.ui.pb_edit_obj_func.setStyleSheet("background: red")
             self.ui.cb_use_predef.setCheckState(False)
+            print("ERROR set objective function")
 
         self.ui.use_predef_fun()
 
@@ -449,7 +483,13 @@ class OcelotInterfaceWindow(QFrame):
         self.objective_func.nreadings = self.ui.sb_nreadings.value()
         # set interval between readings
         self.objective_func.interval = self.ui.sb_ddelay.value()
+        if self.dev_mode:
+            def get_value_dev_mode():
+                values = np.array([dev.get_value() for dev in self.devices])
+                print("I am here!")
+                return np.sum(np.exp(-np.power((values - np.ones_like(values)), 2) / 5.))
 
+            self.objective_func.get_value = get_value_dev_mode
 
     def set_m_status(self):
         """
@@ -493,9 +533,10 @@ class OcelotInterfaceWindow(QFrame):
         Collects data and updates plot on every GUI clock cycle.
         """
         #get times, penalties obj func data from the machine interface
+
         y = self.objective_func.penalties
 
-        x = np.array(self.objective_func.times) - self.scanStartTime
+        x = np.array(self.objective_func.times) - self.objective_func.times[0]
 
         self.obj_func_line.setData(x=x, y=y)
         if self.show_obj_value:
@@ -504,7 +545,7 @@ class OcelotInterfaceWindow(QFrame):
         #plot data for all devices being scanned
         for dev in self.devices:
             y = np.array(dev.values)-self.multiPlotStarts[dev.eid]
-            x = np.array(dev.times) - self.scanStartTime
+            x = np.array(dev.times) - np.array(dev.times)[0]
             line = self.multilines[dev.eid]
             line.setData(x=x, y=y)
 
@@ -641,10 +682,10 @@ def main():
 
     #try to get a pv list file name from commandline arg
     #this goes into initializing the reset panel PVs that show up in the GUI
-    try:
-        pvs = sys.argv[1]   # arg filename of params
-    except:
-        pvs = 'parameters/lcls_short.txt'#default filename
+    #try:
+    #    pvs = sys.argv[1]   # arg filename of params
+    #except:
+    #    pvs = 'parameters/lcls_short.txt'#default filename
 
     #make pyqt threadsafe
     QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_X11InitThreads)

@@ -20,6 +20,14 @@ optimizer.GP.bayes_optimization module
     :undoc-members:
     :show-inheritance:
 
+optimizer.GP.gaussian_process module
+------------------------------------
+
+.. automodule:: optimizer.GP.gaussian_process
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 Module contents
 ---------------

@@ -128,7 +128,8 @@ class ResetpanelWindow(QFrame):
             # put PV in the table
             self.ui.tableWidget.setItem(row, 0, QtGui.QTableWidgetItem(str(pv)))
             self.ui.tableWidget.item(row, 0).setTextColor(QtGui.QColor(0, 255, 255))
-
+            tip = "/".join(str(pv).split("/")[-2:])
+            self.ui.tableWidget.item(row, 0).setToolTip(tip)
             # self.ui.tableWidget.item(row, 0).setFont(font)
             # put start val in
             s_val = self.startValues[pv]

@@ -385,6 +385,75 @@ acquisition function shouldn&#8217;t be used until there is a proper mult.</p>
 </dd></dl>
 
 </div>
+<div class="section" id="module-optimizer.GP.gaussian_process">
+<span id="optimizer-gp-gaussian-process-module"></span><h2>optimizer.GP.gaussian_process module<a class="headerlink" href="#module-optimizer.GP.gaussian_process" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="optimizer.GP.gaussian_process.GP">
+<em class="property">class </em><code class="descclassname">optimizer.GP.gaussian_process.</code><code class="descname">GP</code><a class="reference internal" href="_modules/optimizer/GP/gaussian_process.html#GP"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.GP.gaussian_process.GP" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="optimizer.GP.gaussian_process.GP.acquire">
+<code class="descname">acquire</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/GP/gaussian_process.html#GP.acquire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.GP.gaussian_process.GP.acquire" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="optimizer.GP.gaussian_process.GP.acquire_simplex">
+<code class="descname">acquire_simplex</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/GP/gaussian_process.html#GP.acquire_simplex"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.GP.gaussian_process.GP.acquire_simplex" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="optimizer.GP.gaussian_process.GP.append_new_data">
+<code class="descname">append_new_data</code><span class="sig-paren">(</span><em>x_new</em>, <em>y_obs</em>, <em>sigma_y_obs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/GP/gaussian_process.html#GP.append_new_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.GP.gaussian_process.GP.append_new_data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="optimizer.GP.gaussian_process.GP.fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/GP/gaussian_process.html#GP.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.GP.gaussian_process.GP.fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>RBF(length_scale=1.0, length_scale_bounds=(1e-05, 100000.0))
+k(x_i, x_j) = exp(-1 / 2 d(x_i / length_scale, x_j / length_scale)^2)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="optimizer.GP.gaussian_process.GP.minimize">
+<code class="descname">minimize</code><span class="sig-paren">(</span><em>error_func</em>, <em>x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/GP/gaussian_process.html#GP.minimize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.GP.gaussian_process.GP.minimize" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="optimizer.GP.gaussian_process.f">
+<code class="descclassname">optimizer.GP.gaussian_process.</code><code class="descname">f</code><span class="sig-paren">(</span><em>x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/GP/gaussian_process.html#f"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.GP.gaussian_process.f" title="Permalink to this definition">¶</a></dt>
+<dd><p>The function to predict.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="optimizer.GP.gaussian_process.one_d">
+<code class="descclassname">optimizer.GP.gaussian_process.</code><code class="descname">one_d</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/GP/gaussian_process.html#one_d"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.GP.gaussian_process.one_d" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="optimizer.GP.gaussian_process.seed_simplex">
+<code class="descclassname">optimizer.GP.gaussian_process.</code><code class="descname">seed_simplex</code><span class="sig-paren">(</span><em>error_func</em>, <em>x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/GP/gaussian_process.html#seed_simplex"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.GP.gaussian_process.seed_simplex" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="optimizer.GP.gaussian_process.test">
+<code class="descclassname">optimizer.GP.gaussian_process.</code><code class="descname">test</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/GP/gaussian_process.html#test"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.GP.gaussian_process.test" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="optimizer.GP.gaussian_process.two_d">
+<code class="descclassname">optimizer.GP.gaussian_process.</code><code class="descname">two_d</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/GP/gaussian_process.html#two_d"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.GP.gaussian_process.two_d" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
 <div class="section" id="module-optimizer.GP">
 <span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-optimizer.GP" title="Permalink to this headline">¶</a></h2>
 </div>
@@ -402,6 +471,7 @@ acquisition function shouldn&#8217;t be used until there is a proper mult.</p>
 <li><a class="reference internal" href="#submodules">Submodules</a></li>
 <li><a class="reference internal" href="#module-optimizer.GP.OnlineGP">optimizer.GP.OnlineGP module</a></li>
 <li><a class="reference internal" href="#module-optimizer.GP.bayes_optimization">optimizer.GP.bayes_optimization module</a></li>
+<li><a class="reference internal" href="#module-optimizer.GP.gaussian_process">optimizer.GP.gaussian_process module</a></li>
 <li><a class="reference internal" href="#module-optimizer.GP">Module contents</a></li>
 </ul>
 </li>

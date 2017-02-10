@@ -51,7 +51,11 @@
 <span></span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">Main Ocelot optimization file</span>
 <span class="sd">Contains the setup for using the scipy.optimize package run simplex and other algorothms</span>
-<span class="sd">Modifiedi for use at LCLS from Ilya&#39;s version</span>
+<span class="sd">Modified for use at LCLS from Ilya&#39;s version</span>
+
+<span class="sd">The file was modified and were introduced new Objects and methods.</span>
+<span class="sd">S. Tomin, 2017</span>
+
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">absolute_import</span>
 <span class="kn">from</span> <span class="nn">time</span> <span class="k">import</span> <span class="n">sleep</span>
@@ -64,6 +68,7 @@
 <span class="kn">from</span> <span class="nn">ocelot.optimizer.GP.OnlineGP</span> <span class="k">import</span> <span class="n">OGP</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 <span class="kn">from</span> <span class="nn">threading</span> <span class="k">import</span> <span class="n">Thread</span>
+<span class="kn">from</span> <span class="nn">ocelot.optimizer.GP</span> <span class="k">import</span> <span class="n">gaussian_process</span> <span class="k">as</span> <span class="n">gp_sklearn</span>
 
 <div class="viewcode-block" id="Logger"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.mint.Logger">[docs]</a><span class="k">class</span> <span class="nc">Logger</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">log_file</span><span class="p">):</span>
@@ -148,9 +153,13 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">m</span> <span class="o">=</span> <span class="mi">200</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">iter_bound</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">hyper_file</span> <span class="o">=</span> <span class="s2">&quot;../parameters/hyperparameters.npy&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="mi">50</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">norm_coef</span> <span class="o">=</span> <span class="mf">0.1</span>
 
 <div class="viewcode-block" id="GaussProcess.seed_simplex"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.mint.GaussProcess.seed_simplex">[docs]</a>    <span class="k">def</span> <span class="nf">seed_simplex</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">opt_smx</span> <span class="o">=</span> <span class="n">Optimizer</span><span class="p">()</span>
+        <span class="n">opt_smx</span><span class="o">.</span><span class="n">normalization</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">opt_smx</span><span class="o">.</span><span class="n">norm_coef</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_coef</span>
         <span class="n">opt_smx</span><span class="o">.</span><span class="n">timeout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">seed_timeout</span>
         <span class="n">minimizer</span> <span class="o">=</span> <span class="n">Simplex</span><span class="p">()</span>
         <span class="n">minimizer</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">seed_iter</span>
@@ -184,7 +193,8 @@
             <span class="n">len_sc_hyps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hyp_params</span><span class="o">.</span><span class="n">calcLengthScaleHP</span><span class="p">(</span><span class="n">ave</span><span class="p">,</span> <span class="n">std</span><span class="p">))</span>
 
         <span class="c1">#hyps = hyp_params.loadHyperParams(energy=self.energy, detector_stat_params=target.get_stat_params())</span>
-        <span class="n">hyps1</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">len_sc_hyps</span><span class="p">]),</span> <span class="n">coeff</span><span class="p">,</span> <span class="n">noise</span><span class="p">)</span> <span class="c1">#(np.array([hyps]), coeff, noise)</span>
+        <span class="n">hyps1</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">len_sc_hyps</span><span class="p">]),</span> <span class="n">coeff</span><span class="p">,</span> <span class="n">noise</span><span class="p">)</span>
+        <span class="c1">#(np.array([hyp_params.calcLengthScaleHP(ave, std)]), coeff=hyp_params.calcAmpCoeffHP(ave, std=0.), noise=hyp_params.calcAmpCoeffHP(ave, std=0.))</span>
         <span class="c1">#print(&quot;hyps1&quot;, hyps1)</span>
         <span class="c1">#init model</span>
         <span class="n">dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">pvs</span><span class="p">)</span>
@@ -192,13 +202,87 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">OGP</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">hyps1</span><span class="p">,</span> <span class="n">maxBV</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">numBV</span><span class="p">,</span> <span class="n">weighted</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">scanner</span> <span class="o">=</span> <span class="n">BayesOpt</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">target_func</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">target</span><span class="p">,</span> <span class="n">acq_func</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">acq_func</span><span class="p">,</span> <span class="n">xi</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">xi</span><span class="p">,</span>
                            <span class="n">alt_param</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">alt_param</span><span class="p">,</span> <span class="n">m</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="p">,</span> <span class="n">iter_bound</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">iter_bound</span><span class="p">,</span>
-                                <span class="n">prior_data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">prior_data</span><span class="p">)</span></div>
+                                <span class="n">prior_data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">prior_data</span><span class="p">)</span>
 
+        <span class="bp">self</span><span class="o">.</span><span class="n">scanner</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span></div>
 
 <div class="viewcode-block" id="GaussProcess.minimize"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.mint.GaussProcess.minimize">[docs]</a>    <span class="k">def</span> <span class="nf">minimize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>  <span class="n">error_func</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
         <span class="c1">#self.target_func = error_func</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">seed_simplex</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">preprocess</span><span class="p">()</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="p">[</span><span class="n">dev</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span> <span class="k">for</span> <span class="n">dev</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">]</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;start GP&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scanner</span><span class="o">.</span><span class="n">minimize</span><span class="p">(</span><span class="n">error_func</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;finish GP&quot;</span><span class="p">)</span>
+        <span class="k">return</span></div></div>
+
+
+<div class="viewcode-block" id="GaussProcessSKLearn"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.mint.GaussProcessSKLearn">[docs]</a><span class="k">class</span> <span class="nc">GaussProcessSKLearn</span><span class="p">(</span><span class="n">Minimizer</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">GaussProcessSKLearn</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">seed_iter</span> <span class="o">=</span> <span class="mi">5</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">seed_timeout</span> <span class="o">=</span> <span class="mf">0.1</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">target</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">devices</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_obs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_obs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1">#GP parameters</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="mi">50</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">norm_coef</span> <span class="o">=</span> <span class="mf">0.1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kill</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">opt_ctrl</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="GaussProcessSKLearn.seed_simplex"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.mint.GaussProcessSKLearn.seed_simplex">[docs]</a>    <span class="k">def</span> <span class="nf">seed_simplex</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">opt_smx</span> <span class="o">=</span> <span class="n">Optimizer</span><span class="p">()</span>
+        <span class="n">opt_smx</span><span class="o">.</span><span class="n">normalization</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">opt_smx</span><span class="o">.</span><span class="n">norm_coef</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_coef</span>
+        <span class="n">opt_smx</span><span class="o">.</span><span class="n">timeout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">seed_timeout</span>
+        <span class="n">opt_smx</span><span class="o">.</span><span class="n">opt_ctrl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">opt_ctrl</span>
+        <span class="n">minimizer</span> <span class="o">=</span> <span class="n">Simplex</span><span class="p">()</span>
+        <span class="n">minimizer</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">seed_iter</span>
+        <span class="n">opt_smx</span><span class="o">.</span><span class="n">minimizer</span> <span class="o">=</span> <span class="n">minimizer</span>
+        <span class="c1"># opt.debug = True</span>
+        <span class="n">seq</span> <span class="o">=</span> <span class="p">[</span><span class="n">Action</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">opt_smx</span><span class="o">.</span><span class="n">max_target_func</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">target</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">])]</span>
+        <span class="n">opt_smx</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">opt_smx</span><span class="o">.</span><span class="n">opt_ctrl</span><span class="o">.</span><span class="n">dev_sets</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_obs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">opt_smx</span><span class="o">.</span><span class="n">opt_ctrl</span><span class="o">.</span><span class="n">dev_sets</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_obs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">opt_smx</span><span class="o">.</span><span class="n">opt_ctrl</span><span class="o">.</span><span class="n">penalty</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_sigma_obs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y_obs</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="GaussProcessSKLearn.preprocess"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.mint.GaussProcessSKLearn.preprocess">[docs]</a>    <span class="k">def</span> <span class="nf">preprocess</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">scanner</span> <span class="o">=</span> <span class="n">gp_sklearn</span><span class="o">.</span><span class="n">GP</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scanner</span><span class="o">.</span><span class="n">opt_ctrl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">opt_ctrl</span>
+        <span class="n">devs_std</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">devs_search_area</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">dev</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">:</span>
+            <span class="n">lims</span> <span class="o">=</span> <span class="n">dev</span><span class="o">.</span><span class="n">get_limits</span><span class="p">()</span>
+            <span class="n">devs_std</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">lims</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">lims</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">/</span><span class="mf">2.</span><span class="p">)</span>
+            <span class="n">x_vec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">lims</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">lims</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">num</span><span class="o">=</span><span class="mi">50</span><span class="p">))</span><span class="o">.</span><span class="n">T</span>
+            <span class="n">devs_search_area</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x_vec</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">scanner</span><span class="o">.</span><span class="n">x_search</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">(</span><span class="n">devs_search_area</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scanner</span><span class="o">.</span><span class="n">x_obs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_obs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scanner</span><span class="o">.</span><span class="n">y_obs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_obs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scanner</span><span class="o">.</span><span class="n">y_sigma_obs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_sigma_obs</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">scanner</span><span class="o">.</span><span class="n">ck_const_value</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.5</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scanner</span><span class="o">.</span><span class="n">y_obs</span><span class="p">))</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="mf">0.1</span>
+        <span class="c1">#self.scanner.ck_const_value_bounds = (self.scanner.ck_const_value,self.scanner.ck_const_value)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scanner</span><span class="o">.</span><span class="n">rbf_length_scale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">devs_std</span><span class="p">)</span><span class="o">/</span><span class="mf">2.</span> <span class="o">+</span> <span class="mf">0.01</span>
+        <span class="c1">#self.scanner.rbf_length_scale_bounds = (self.scanner.rbf_length_scale, self.scanner.rbf_length_scale)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scanner</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span></div>
+
+<div class="viewcode-block" id="GaussProcessSKLearn.minimize"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.mint.GaussProcessSKLearn.minimize">[docs]</a>    <span class="k">def</span> <span class="nf">minimize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>  <span class="n">error_func</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="c1">#self.target_func = error_func</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">seed_simplex</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">opt_ctrl</span><span class="o">.</span><span class="n">kill</span><span class="p">:</span>
+            <span class="k">return</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">preprocess</span><span class="p">()</span>
         <span class="n">x</span> <span class="o">=</span> <span class="p">[</span><span class="n">dev</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span> <span class="k">for</span> <span class="n">dev</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">]</span>
         <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;start GP&quot;</span><span class="p">)</span>
@@ -328,8 +412,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">opt_ctrl</span> <span class="o">=</span> <span class="n">OptControl</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">seq</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">set_best_solution</span> <span class="o">=</span> <span class="kc">True</span>
-        <span class="c1">#self.x_data = []</span>
-        <span class="c1">#self.y_data = []</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">normalization</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">norm_coef</span> <span class="o">=</span> <span class="mf">0.05</span>
 
 <div class="viewcode-block" id="Optimizer.eval"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.mint.Optimizer.eval">[docs]</a>    <span class="k">def</span> <span class="nf">eval</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">seq</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">logging</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">log_file</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -351,11 +435,29 @@
             <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;setting&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s1">&#39;-&gt;&#39;</span><span class="p">,</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">])</span></div>
 
+<div class="viewcode-block" id="Optimizer.calc_scales"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.mint.Optimizer.calc_scales">[docs]</a>    <span class="k">def</span> <span class="nf">calc_scales</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        calculate scales for normalized simplex</span>
+
+<span class="sd">        :return: np.array() - device_delta_limits * norm_coef</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">norm_scales</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">dev</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">):</span>
+            <span class="n">lims</span> <span class="o">=</span> <span class="n">dev</span><span class="o">.</span><span class="n">get_limits</span><span class="p">()</span>
+            <span class="n">delta</span> <span class="o">=</span> <span class="n">lims</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">lims</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">norm_scales</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">delta</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">norm_coef</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_scales</span></div>
+
 <div class="viewcode-block" id="Optimizer.error_func"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.mint.Optimizer.error_func">[docs]</a>    <span class="k">def</span> <span class="nf">error_func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalization</span><span class="p">:</span>
+            <span class="n">delta_x</span> <span class="o">=</span> <span class="n">x</span>
+            <span class="n">delta_x_scaled</span> <span class="o">=</span> <span class="n">delta_x</span><span class="o">/</span><span class="mf">0.00025</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">norm_scales</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_init</span> <span class="o">+</span> <span class="n">delta_x_scaled</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;delta_x = &quot;</span><span class="p">,</span> <span class="n">delta_x</span><span class="p">,</span> <span class="s2">&quot;delta_x_scaled = &quot;</span><span class="p">,</span> <span class="n">delta_x_scaled</span><span class="p">)</span>
 
-
-        <span class="c1">#self.minimizer.kill = self.kill</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">opt_ctrl</span><span class="o">.</span><span class="n">kill</span><span class="p">:</span>
+            <span class="c1">#self.minimizer.kill = self.opt_ctrl.kill</span>
             <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Killed from external process&#39;</span><span class="p">)</span>
             <span class="c1"># NEW CODE - to kill if run from outside thread</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">target</span><span class="o">.</span><span class="n">pen_max</span>
@@ -376,8 +478,6 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">debug</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;penalty:&#39;</span><span class="p">,</span> <span class="n">pen</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">opt_ctrl</span><span class="o">.</span><span class="n">save_step</span><span class="p">(</span><span class="n">pen</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
-        <span class="c1">#self.x_data.append(x)</span>
-        <span class="c1">#self.y_data.append(pen)</span>
         <span class="k">return</span> <span class="n">pen</span></div>
 
 <div class="viewcode-block" id="Optimizer.max_target_func"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.mint.Optimizer.max_target_func">[docs]</a>    <span class="k">def</span> <span class="nf">max_target_func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">devices</span><span class="p">,</span> <span class="n">params</span> <span class="o">=</span> <span class="p">{}):</span>
@@ -385,23 +485,30 @@
 <span class="sd">        Direct target function optimization with simplex/GP, using Devices as a multiknob</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="p">[</span><span class="n">dev</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span> <span class="k">for</span> <span class="n">dev</span> <span class="ow">in</span> <span class="n">devices</span><span class="p">]</span>
+        <span class="n">target</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">target</span> <span class="o">=</span> <span class="n">target</span>
         <span class="c1">#print(self.target)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">devices</span> <span class="o">=</span> <span class="n">devices</span>
         <span class="c1"># testing</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">minimizer</span><span class="o">.</span><span class="n">devices</span> <span class="o">=</span> <span class="n">devices</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">minimizer</span><span class="o">.</span><span class="n">target</span> <span class="o">=</span> <span class="n">target</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">minimizer</span><span class="o">.</span><span class="n">opt_ctrl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">opt_ctrl</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">target</span><span class="o">.</span><span class="n">devices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">devices</span>
         <span class="n">dev_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">dev</span><span class="o">.</span><span class="n">eid</span> <span class="k">for</span> <span class="n">dev</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">]</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">debug</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;starting multiknob optimization, devices = &#39;</span><span class="p">,</span> <span class="n">dev_ids</span><span class="p">)</span>
 
         <span class="n">target_ref</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">target</span><span class="o">.</span><span class="n">get_penalty</span><span class="p">()</span>
 
-        <span class="n">x</span> <span class="o">=</span> <span class="p">[</span><span class="n">dev</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span> <span class="k">for</span> <span class="n">dev</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">]</span> <span class="c1"># self.mi.init_corrector_vals(devices)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="p">[</span><span class="n">dev</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span> <span class="k">for</span> <span class="n">dev</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">]</span>
         <span class="n">x_init</span> <span class="o">=</span> <span class="n">x</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">logging</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">log_start</span><span class="p">(</span><span class="n">dev_ids</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">minimizer</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">x_init</span><span class="o">=</span><span class="n">x_init</span><span class="p">,</span> <span class="n">target_ref</span><span class="o">=</span><span class="n">target_ref</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalization</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x_init</span> <span class="o">=</span> <span class="n">x_init</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">calc_scales</span><span class="p">()</span>
 
         <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">minimizer</span><span class="o">.</span><span class="n">minimize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">error_func</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
         <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;result&quot;</span><span class="p">,</span> <span class="n">res</span><span class="p">)</span>

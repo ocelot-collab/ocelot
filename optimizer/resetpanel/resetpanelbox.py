@@ -74,7 +74,11 @@ class customTW(QTableWidget):
             self.menu = QtGui.QMenu(self)
             deleteAction = QtGui.QAction('Delete', self)
             deleteAction.triggered.connect(lambda: self.deleteSlot(rows))
+
             self.menu.addAction(deleteAction)
+
+            #editAction = QtGui.QAction('Edit', self)
+            #self.menu.addAction(editAction)
             # add other required actions
             self.menu.popup(QtGui.QCursor.pos())
 
@@ -143,6 +147,9 @@ class ResetpanelBoxWindow(ResetpanelWindow):
             pv = QtGui.QApplication.clipboard().text(mode=QClipboard.Selection)
             self.addPv(pv)
 
+    def set_parent(self, parent):
+        self.parent = parent
+
     def addPv(self, pv):
         """
         Add another PV to the GUI on middle click.
@@ -156,7 +163,7 @@ class ResetpanelBoxWindow(ResetpanelWindow):
             return
         try:
             #print("try to create dev")
-            dev = self.create_devices(pvs=[pv])[0]#obj.TestDevice(eid=pv)
+            dev = self.parent.create_devices(pvs=[pv])[0]#obj.TestDevice(eid=pv)
 
         except:
             print ("bad string")
@@ -175,21 +182,7 @@ class ResetpanelBoxWindow(ResetpanelWindow):
         self.uncheckBoxes()
         self.set_state(table)
 
-    def create_devices(self, pvs):
-        """
-        Method to create devices using only channels (PVs)
 
-        :param pvs: str, device address/channel/PV
-        :return: list of the devices [mint.opt_objects.Device(eid=pv[0]), mint.opt_objects.Device(eid=pv[1]), ... ]
-        """
-        # TODO: add new method for creation of devices
-        devices = []
-        for pv in pvs:
-            dev = obj.Device(eid=pv)
-            dev.mi = self.mi
-            dev.dp = self.dp
-            devices.append(dev)
-        return devices
 
     def get_devices(self, pvs):
         d_pvs = [dev.eid for dev in self.devices]
@@ -224,7 +217,7 @@ class ResetpanelBoxWindow(ResetpanelWindow):
             self.pvs = pvs_in
 
         #print ("PVS LOADED", self.pvs)
-        self.devices = self.create_devices(self.pvs)
+        self.devices = self.parent.create_devices(self.pvs)
         self.getStartValues()
         self.initTable()
         self.addCheckBoxes()
@@ -311,8 +304,8 @@ class ResetpanelBoxWindow(ResetpanelWindow):
                     spin_box.setStyleSheet("color: rgb(255,0,255); font-size: 16px; background-color:#595959;")
                 spin_box.setLocale(eng)
                 spin_box.setDecimals(3)
-                spin_box.setMaximum(100)
-                spin_box.setMinimum(-100)
+                spin_box.setMaximum(999)
+                spin_box.setMinimum(-999)
                 spin_box.setSingleStep(0.1)
                 spin_box.setAccelerated(True)
                 #spin_box.setFixedWidth(50)

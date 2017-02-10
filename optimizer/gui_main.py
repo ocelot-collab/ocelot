@@ -77,7 +77,7 @@ class MainWindow(Ui_Form):
         self.Form = Form
         # load in the dark theme style sheet
         self.loadStyleSheet()
-
+        self.widget.set_parent(Form)
         self.pb_save_as.clicked.connect(self.save_state_as)
         self.pb_load.clicked.connect(self.load_state_from)
         self.pb_rewrite.clicked.connect(self.rewrite_default)
@@ -201,6 +201,7 @@ class MainWindow(Ui_Form):
 
         table["set_best_sol"] = self.cb_set_best_sol.checkState()
 
+        table["algorithm"] = str(self.cb_select_alg.currentText())
 
         with open(filename, 'w') as f:
             json.dump(table, f)
@@ -220,7 +221,9 @@ class MainWindow(Ui_Form):
         # set checkbot status
         self.widget.uncheckBoxes()
         self.widget.set_state(table)
+
         try:
+
             max_pen = table["max_pen"]
             timeout = table["timeout"]
             max_iter = table["max_iter"]
@@ -259,10 +262,15 @@ class MainWindow(Ui_Form):
             self.pb_hyper_file.setText(self.Form.hyper_file)
 
             self.cb_set_best_sol.setCheckState(table["set_best_sol"])
-        except:
-            pass
 
-        print("RESTORE STATE")
+            if "algorithm" in table.keys():
+                index = self.cb_select_alg.findText(table["algorithm"], QtCore.Qt.MatchFixedString)
+
+                if index >= 0:
+                    self.cb_select_alg.setCurrentIndex(index)
+            print("RESTORE STATE: OK")
+        except:
+            print("RESTORE STATE: ERROR")
 
 
     def save_state_as(self):
@@ -279,7 +287,7 @@ class MainWindow(Ui_Form):
                 part = filename.split(".")[0]
                 filename = part + ".json"
             copy(self.Form.obj_func_path, self.Form.obj_save_path + body_name +".py")
-            self.Form.set_file = filename
+            #self.Form.set_file = filename
             self.save_state(filename)
 
 
@@ -291,7 +299,7 @@ class MainWindow(Ui_Form):
             (body_name, extension) = filename.split("/")[-1].split(".")
             #print(self.Form.obj_save_path + body_name + ".py", self.Form.obj_func_path )
             copy(self.Form.obj_save_path + body_name + ".py", self.Form.obj_func_path )
-            self.Form.set_file = filename
+            #self.Form.set_file = filename
             self.restore_state(filename)
 
 
@@ -305,7 +313,7 @@ class MainWindow(Ui_Form):
             # print(filename)
 
     def rewrite_default(self):
-        self.Form.set_file = "default.json"
+        #self.Form.set_file = "default.json"
         self.save_state(self.Form.set_file)
 
     def logbook(self):
@@ -322,6 +330,7 @@ class MainWindow(Ui_Form):
         # curr_time = datetime.now()
         # timeString = curr_time.strftime("%Y-%m-%dT%H:%M:%S")
         text = ""
+
         if not self.cb_use_predef.checkState():
             text += "obj func: A   : " + str(self.le_a.text()).split("/")[-2]  + "/"+ str(self.le_a.text()).split("/")[-1] + "\n"
             if str(self.le_b.text()) != "":
@@ -343,13 +352,17 @@ class MainWindow(Ui_Form):
 
             text += "iterations    : " + str(table["iter"]) + "\n"
             text += "delay         : " + str(self.Form.total_delay) + "\n"
-            text += "START-->STOP  :" + str(table["sase"][0]) + " --> " + str(table["sase"][1]) + "\n"
-        print("table", table)
-        print(text)
+            text += "START-->STOP  : " + str(table["sase"][0]) + " --> " + str(table["sase"][1]) + "\n"
+            text += "Method        : " + str(table["method"]) + "\n"
+        #print("table", table)
+        #print(text)
         screenshot = open(self.Form.optimizer_path + filename + "." + filetype, 'rb')
-        print(screenshot)
-        send_to_desy_elog(author="", title="OCELOT Optimization", severity="INFO", text=text, elog="xfellog",
+        #print(screenshot)
+        res = send_to_desy_elog(author="", title="OCELOT Optimization", severity="INFO", text=text, elog=self.Form.logbook,
                           image=screenshot.read())
+
+        if not res:
+            self.Form.error_box("error during eLogBook sending")
 
     def screenShot(self, filename, filetype):
 
@@ -416,7 +429,7 @@ class MainWindow(Ui_Form):
             self.cb_use_isim.setEnabled(False)
             self.sb_isim_rel_step.setValue(5)
 
-        if str(self.cb_select_alg.currentText()) == self.Form.name_simplex_norm:
+        if str(self.cb_select_alg.currentText()) in [self.Form.name_simplex_norm, self.Form.name_gauss_sklearn]:
             self.g_box_isim.setEnabled(True)
             self.label_23.setEnabled(True)
             self.sb_isim_rel_step.setEnabled(True)

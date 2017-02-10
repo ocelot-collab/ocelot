@@ -49,34 +49,28 @@
             
   <h1>Source code for optimizer.mint.opt_objects</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">S.Tomin</span>
-<span class="sd">Object function and devices</span>
+<span class="sd">Objective function and devices</span>
+<span class="sd">S.Tomin, 2017</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="c1">#from ocelot.optimizer.mint.lcls_interface import *</span>
 <span class="kn">import</span> <span class="nn">time</span>
 
 
-<span class="c1">#mi = TestLCLSMachineInterface()</span>
-<span class="c1">#dp = TestLCLSDeviceProperties()</span>
-
-<span class="c1">#mi = LCLSMachineInterface()</span>
-<span class="c1">#dp = LCLSDeviceProperties()</span>
 
 <div class="viewcode-block" id="Device"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.Device">[docs]</a><span class="k">class</span> <span class="nc">Device</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eid</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">eid</span> <span class="o">=</span> <span class="n">eid</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">eid</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">values</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">time</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">times</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">simplex_step</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mi</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dp</span> <span class="o">=</span> <span class="kc">None</span>
 
 <div class="viewcode-block" id="Device.set_value"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.Device.set_value">[docs]</a>    <span class="k">def</span> <span class="nf">set_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mi</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eid</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Device.get_value"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.Device.get_value">[docs]</a>    <span class="k">def</span> <span class="nf">get_value</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -84,15 +78,24 @@
         <span class="k">return</span> <span class="n">val</span></div>
 
 <div class="viewcode-block" id="Device.state"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.Device.state">[docs]</a>    <span class="k">def</span> <span class="nf">state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="kc">True</span></div>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Check if device is readable</span>
+
+<span class="sd">        :return: state, True if readable and False if not</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="n">state</span></div>
 
 <div class="viewcode-block" id="Device.clean"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.Device.clean">[docs]</a>    <span class="k">def</span> <span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">values</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">time</span> <span class="o">=</span> <span class="p">[]</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">times</span> <span class="o">=</span> <span class="p">[]</span></div>
 
 <div class="viewcode-block" id="Device.check_limits"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.Device.check_limits">[docs]</a>    <span class="k">def</span> <span class="nf">check_limits</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
         <span class="n">limits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_limits</span><span class="p">()</span>
-        <span class="c1">#print(&quot;LIMITS&quot;, limits)</span>
         <span class="k">if</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="n">limits</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">or</span> <span class="n">value</span> <span class="o">&gt;</span> <span class="n">limits</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
             <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;limits exceeded&#39;</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">limits</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">value</span><span class="p">,</span> <span class="n">limits</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
             <span class="k">return</span> <span class="kc">True</span>
@@ -102,35 +105,13 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dp</span><span class="o">.</span><span class="n">get_limits</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eid</span><span class="p">)</span></div></div>
 
 
-<div class="viewcode-block" id="SLACDevice"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.SLACDevice">[docs]</a><span class="k">class</span> <span class="nc">SLACDevice</span><span class="p">(</span><span class="n">Device</span><span class="p">):</span>
-   <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eid</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-       <span class="nb">super</span><span class="p">(</span><span class="n">SLACDevice</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">eid</span><span class="o">=</span><span class="n">eid</span><span class="p">)</span>
-       <span class="bp">self</span><span class="o">.</span><span class="n">test_value</span> <span class="o">=</span> <span class="mf">0.</span>
-       <span class="bp">self</span><span class="o">.</span><span class="n">values</span> <span class="o">=</span> <span class="p">[]</span>
-       <span class="bp">self</span><span class="o">.</span><span class="n">time</span> <span class="o">=</span> <span class="p">[]</span>
-       <span class="bp">self</span><span class="o">.</span><span class="n">nsets</span> <span class="o">=</span> <span class="mi">0</span>
-
-<div class="viewcode-block" id="SLACDevice.set_value"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.SLACDevice.set_value">[docs]</a>   <span class="k">def</span> <span class="nf">set_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
-       <span class="bp">self</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
-       <span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span>
-       <span class="n">mi</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eid</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="SLACDevice.get_value"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.SLACDevice.get_value">[docs]</a>   <span class="k">def</span> <span class="nf">get_value</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-       <span class="k">return</span> <span class="n">mi</span><span class="o">.</span><span class="n">get_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eid</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="SLACDevice.check_limits"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.SLACDevice.check_limits">[docs]</a>   <span class="k">def</span> <span class="nf">check_limits</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
-       <span class="k">return</span> <span class="kc">False</span></div>
-
-<div class="viewcode-block" id="SLACDevice.state"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.SLACDevice.state">[docs]</a>   <span class="k">def</span> <span class="nf">state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-       <span class="k">return</span></div></div>
-
 <span class="c1"># for testing</span>
 <div class="viewcode-block" id="TestDevice"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.TestDevice">[docs]</a><span class="k">class</span> <span class="nc">TestDevice</span><span class="p">(</span><span class="n">Device</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eid</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">TestDevice</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">eid</span><span class="o">=</span><span class="n">eid</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">test_value</span> <span class="o">=</span> <span class="mf">0.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">values</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">time</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">times</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">nsets</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mi</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dp</span> <span class="o">=</span> <span class="kc">None</span>
@@ -142,20 +123,8 @@
 <div class="viewcode-block" id="TestDevice.set_value"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.TestDevice.set_value">[docs]</a>    <span class="k">def</span> <span class="nf">set_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">nsets</span> <span class="o">+=</span> <span class="mi">1</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">test_value</span> <span class="o">=</span> <span class="n">value</span></div>
-
-<div class="viewcode-block" id="TestDevice.check_limits"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.TestDevice.check_limits">[docs]</a>    <span class="k">def</span> <span class="nf">check_limits</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
-        <span class="n">limits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_limits</span><span class="p">()</span>
-
-        <span class="k">if</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="n">limits</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">or</span> <span class="n">value</span> <span class="o">&gt;</span> <span class="n">limits</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
-            <span class="nb">print</span> <span class="p">(</span><span class="s1">&#39;limits exceeded&#39;</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">limits</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">limits</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-            <span class="k">return</span> <span class="kc">True</span>
-        <span class="k">return</span> <span class="kc">False</span></div>
-
-<div class="viewcode-block" id="TestDevice.get_limits"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.TestDevice.get_limits">[docs]</a>    <span class="k">def</span> <span class="nf">get_limits</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dp</span><span class="o">.</span><span class="n">get_limits</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eid</span><span class="p">)</span></div></div>
-        <span class="c1">#return [-100, 100]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">test_value</span> <span class="o">=</span> <span class="n">value</span></div></div>
 
 
 <div class="viewcode-block" id="Target"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.Target">[docs]</a><span class="k">class</span> <span class="nc">Target</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
@@ -193,14 +162,78 @@
         <span class="k">return</span> <span class="mi">0</span></div></div>
 
 
-<div class="viewcode-block" id="SLACTarget"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.SLACTarget">[docs]</a><span class="k">class</span> <span class="nc">SLACTarget</span><span class="p">(</span><span class="n">Target</span><span class="p">):</span>
+<div class="viewcode-block" id="Target_test"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.Target_test">[docs]</a><span class="k">class</span> <span class="nc">Target_test</span><span class="p">(</span><span class="n">Target</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mi</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dp</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eid</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">SLACTarget</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">eid</span><span class="o">=</span><span class="n">eid</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Target_test</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">eid</span><span class="o">=</span><span class="n">eid</span><span class="p">)</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        :param mi: Machine interface</span>
 <span class="sd">        :param dp: Device property</span>
 <span class="sd">        :param eid: ID</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mi</span> <span class="o">=</span> <span class="n">mi</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dp</span> <span class="o">=</span> <span class="n">dp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kill</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pen_max</span> <span class="o">=</span> <span class="mi">100</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">niter</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">penalties</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">times</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alarms</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">values</span> <span class="o">=</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="Target_test.get_penalty"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.Target_test.get_penalty">[docs]</a>    <span class="k">def</span> <span class="nf">get_penalty</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">sase</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
+        <span class="n">alarm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_alarm</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">debug</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;alarm:&#39;</span><span class="p">,</span> <span class="n">alarm</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">debug</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;sase:&#39;</span><span class="p">,</span> <span class="n">sase</span><span class="p">)</span>
+        <span class="n">pen</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="k">if</span> <span class="n">alarm</span> <span class="o">&gt;</span> <span class="mf">1.0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pen_max</span>
+        <span class="k">if</span> <span class="n">alarm</span> <span class="o">&gt;</span> <span class="mf">0.7</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">alarm</span> <span class="o">*</span> <span class="mf">50.0</span>
+        <span class="n">pen</span> <span class="o">+=</span> <span class="n">alarm</span>
+        <span class="n">pen</span> <span class="o">-=</span> <span class="n">sase</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">debug</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;penalty:&#39;</span><span class="p">,</span> <span class="n">pen</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">niter</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;niter = &quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">niter</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">penalties</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pen</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sase</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alarms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">alarm</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pen</span></div>
+
+<div class="viewcode-block" id="Target_test.get_value"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.Target_test.get_value">[docs]</a>    <span class="k">def</span> <span class="nf">get_value</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">dev</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span> <span class="k">for</span> <span class="n">dev</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">((</span><span class="n">values</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">values</span><span class="p">)),</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="mf">5.</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Target_test.get_spectrum"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.Target_test.get_spectrum">[docs]</a>    <span class="k">def</span> <span class="nf">get_spectrum</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="Target_test.get_stat_params"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.Target_test.get_stat_params">[docs]</a>    <span class="k">def</span> <span class="nf">get_stat_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1">#spetrum = self.get_spectrum()</span>
+        <span class="c1">#ave = np.mean(spetrum[(2599 - 5 * 120):-1])</span>
+        <span class="c1">#std = np.std(spetrum[(2599 - 5 * 120):-1])</span>
+        <span class="n">ave</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
+        <span class="n">std</span> <span class="o">=</span> <span class="mf">0.1</span>
+        <span class="k">return</span> <span class="n">ave</span><span class="p">,</span> <span class="n">std</span></div>
+
+<div class="viewcode-block" id="Target_test.get_alarm"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.Target_test.get_alarm">[docs]</a>    <span class="k">def</span> <span class="nf">get_alarm</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="mi">0</span></div>
+
+<div class="viewcode-block" id="Target_test.get_energy"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.Target_test.get_energy">[docs]</a>    <span class="k">def</span> <span class="nf">get_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="mi">3</span></div></div>
+
+
+<div class="viewcode-block" id="SLACTarget"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.SLACTarget">[docs]</a><span class="k">class</span> <span class="nc">SLACTarget</span><span class="p">(</span><span class="n">Target</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mi</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dp</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eid</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        :param mi: Machine interface</span>
+<span class="sd">        :param dp: Device property</span>
+<span class="sd">        :param eid: ID</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SLACTarget</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">eid</span><span class="o">=</span><span class="n">eid</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">secs_to_ave</span> <span class="o">=</span> <span class="mi">2</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">kill</span> <span class="o">=</span> <span class="kc">False</span>
@@ -280,67 +313,6 @@
         <span class="k">return</span> <span class="n">mi</span><span class="o">.</span><span class="n">get_energy</span><span class="p">()</span></div></div>
 
 
-<div class="viewcode-block" id="TestTarget"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.TestTarget">[docs]</a><span class="k">class</span> <span class="nc">TestTarget</span><span class="p">(</span><span class="n">Target</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mi</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dp</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eid</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">TestTarget</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">eid</span><span class="o">=</span><span class="n">eid</span><span class="p">)</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        :param mi: Machine interface</span>
-<span class="sd">        :param dp: Device property</span>
-<span class="sd">        :param eid: ID</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">mi</span> <span class="o">=</span> <span class="n">mi</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">dp</span> <span class="o">=</span> <span class="n">dp</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">kill</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">pen_max</span> <span class="o">=</span> <span class="mi">100</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">niter</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">penalties</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">times</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">alarms</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">values</span> <span class="o">=</span> <span class="p">[]</span>
-
-<div class="viewcode-block" id="TestTarget.get_penalty"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.TestTarget.get_penalty">[docs]</a>    <span class="k">def</span> <span class="nf">get_penalty</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">sase</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
-        <span class="n">alarm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_alarm</span><span class="p">()</span>
-
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">debug</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;alarm:&#39;</span><span class="p">,</span> <span class="n">alarm</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">debug</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;sase:&#39;</span><span class="p">,</span> <span class="n">sase</span><span class="p">)</span>
-        <span class="n">pen</span> <span class="o">=</span> <span class="mf">0.0</span>
-        <span class="k">if</span> <span class="n">alarm</span> <span class="o">&gt;</span> <span class="mf">1.0</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pen_max</span>
-        <span class="k">if</span> <span class="n">alarm</span> <span class="o">&gt;</span> <span class="mf">0.7</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">alarm</span> <span class="o">*</span> <span class="mf">50.0</span>
-        <span class="n">pen</span> <span class="o">+=</span> <span class="n">alarm</span>
-        <span class="n">pen</span> <span class="o">-=</span> <span class="n">sase</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">debug</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;penalty:&#39;</span><span class="p">,</span> <span class="n">pen</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">niter</span> <span class="o">+=</span> <span class="mi">1</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;niter = &quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">niter</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">penalties</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pen</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sase</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">alarms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">alarm</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">pen</span></div>
-
-<div class="viewcode-block" id="TestTarget.get_value"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.TestTarget.get_value">[docs]</a>    <span class="k">def</span> <span class="nf">get_value</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">dev</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span> <span class="k">for</span> <span class="n">dev</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">])</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">((</span><span class="n">values</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">values</span><span class="p">)),</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="mf">5.</span><span class="p">))</span></div>
-
-<div class="viewcode-block" id="TestTarget.get_spectrum"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.TestTarget.get_spectrum">[docs]</a>    <span class="k">def</span> <span class="nf">get_spectrum</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span></div>
-
-<div class="viewcode-block" id="TestTarget.get_stat_params"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.TestTarget.get_stat_params">[docs]</a>    <span class="k">def</span> <span class="nf">get_stat_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="c1">#spetrum = self.get_spectrum()</span>
-        <span class="c1">#ave = np.mean(spetrum[(2599 - 5 * 120):-1])</span>
-        <span class="c1">#std = np.std(spetrum[(2599 - 5 * 120):-1])</span>
-        <span class="n">ave</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
-        <span class="n">std</span> <span class="o">=</span> <span class="mf">0.1</span>
-        <span class="k">return</span> <span class="n">ave</span><span class="p">,</span> <span class="n">std</span></div>
-
-<div class="viewcode-block" id="TestTarget.get_alarm"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.TestTarget.get_alarm">[docs]</a>    <span class="k">def</span> <span class="nf">get_alarm</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="mi">0</span></div>
-
-<div class="viewcode-block" id="TestTarget.get_energy"><a class="viewcode-back" href="../../../optimizer.mint.html#optimizer.mint.opt_objects.TestTarget.get_energy">[docs]</a>    <span class="k">def</span> <span class="nf">get_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="mi">3</span></div></div>
 </pre></div>
 
           </div>

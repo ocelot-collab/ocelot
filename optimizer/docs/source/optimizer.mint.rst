@@ -4,6 +4,13 @@ optimizer.mint package
 Submodules
 ----------
 
+optimizer.mint.lcls_interface module
+------------------------------------
+
+.. automodule:: optimizer.mint.lcls_interface
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 optimizer.mint.mint module
 --------------------------

@@ -68,7 +68,7 @@ def read_tabular_file(field_file):
         # planar undulator or dipol magnet/phase shifter
         # So there is only one possibility - (z_array, By_array)
         z_array = field_data[0, :]
-        Bx_array = field_data[1, :]
+        By_array = field_data[1, :]
     elif ncols == 3:
     # spiral undulator or 2D map
     # So, (z_array, Bx_array, By_array) or  (x_array, z_array, By_array)

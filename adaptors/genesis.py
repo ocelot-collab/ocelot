@@ -924,7 +924,7 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', debug=1):
         if inp.lat != None:
             if debug > 1:
                 print ('    writing ' + inp_file + '.lat')
-            open(inp_path + '.lat', 'w').write(generate_lattice(inp.lat, unit=inp.xlamd, energy=inp.gamma0 * m_e_GeV))
+            open(inp_path + '.lat', 'w').write(generate_lattice(inp.lat, unit=inp.xlamd*inp.delz, energy=inp.gamma0 * m_e_GeV))
             inp.latticefile = inp_file + '.lat'
 
     if inp.beamfile == None:
@@ -1401,10 +1401,13 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
     if out('dgrid') == 0:
         rbeam = sqrt(out('rxbeam')**2 + out('rybeam')**2)
         ray = sqrt(out('zrayl') * out('xlamds') / np.pi * (1 + (out('zwaist') / out('zrayl')))**2)
-        out.leng = 2 * out('rmax0') * (rbeam + ray)
+        out.leng = out('rmax0') * (rbeam + ray)
     else:
         out.leng = 2 * out('dgrid')
     out.ncar = int(out('ncar'))  # number of mesh points
+    
+    #universal solution?
+    out.leng=out('meshsize')*(out.ncar-1)
 
     if read_level == 0:
         print ('      returning *.out header')
@@ -2637,7 +2640,7 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=False):
 
             l = float(e.nperiods) * float(e.lperiod)
 
-            undLat += 'AW' + '    ' + str(e.Kx * np.sqrt(0.5)) + '   ' + str((l / unit)) + '  ' + str(((pos - prevPos - prevLen) / unit)) + '\n'
+            undLat += 'AW' + '    ' + str(e.Kx * np.sqrt(0.5)) + '   ' + str(round(l / unit, 2)) + '  ' + str(round((pos - prevPos - prevLen) / unit, 2)) + '\n'
 
             if debug:
                 print ('added und ' + 'pos=' + str(pos) + ' prevPos=' + str(prevPos) + ' prevLen=' + str(prevLen))
@@ -2646,7 +2649,7 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=False):
                 #drifts.append([str( (pos - prevPos ) / unit ), str(prevLen / unit)])
                 if debug:
                     print ('appending drift' + str((prevLen) / unit))
-                driftLat += 'AD' + '    ' + str(e.Kx * np.sqrt(0.5)) + '   ' + str(((pos - prevPos - prevLen) / unit)) + '  ' + str((prevLen / unit)) + '\n'
+                driftLat += 'AD' + '    ' + str(e.Kx * np.sqrt(0.5)) + '   ' + str(round((pos - prevPos - prevLen) / unit, 2)) + '  ' + str(round(prevLen / unit, 2)) + '\n'
 
             prevPos = pos
             prevLen = l
@@ -2661,7 +2664,7 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=False):
             k = float(energy) * float(e.k1) / speed_of_light * 1e9
             if debug:
                 print ('DEBUG' + str(e.k1) + ' ' + str(k) + ' ' + str(energy))
-            quadLat += 'QF' + '    ' + str(k) + '   ' + str((e.l / unit)) + '  ' + str(((pos - prevPosQ - prevLenQ) / unit)) + '\n'
+            quadLat += 'QF' + '    ' + str(k) + '   ' + str(round(e.l / unit, 2)) + '  ' + str(round((pos - prevPosQ - prevLenQ) / unit, 2)) + '\n'
             prevPosQ = pos
             prevLenQ = l
             # pass

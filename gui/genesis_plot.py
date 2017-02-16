@@ -24,9 +24,11 @@ from numpy import *
 from ocelot.adaptors.genesis import *
 from ocelot.common.globals import *  # import of constants like "h_eV_s" and
 from ocelot.common.math_op import *  # import of mathematical functions
+from ocelot.utils.xfel_utils import *
 
 # from pylab import rc, rcParams #tmp
 from matplotlib import rc, rcParams
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 fntsz = 4
 params = {'backend': 'ps', 'axes.labelsize': 3 * fntsz, 'font.size': 3 * fntsz, 'legend.fontsize': 4 * fntsz, 'xtick.labelsize': 4 * fntsz,  'ytick.labelsize': 4 * fntsz, 'text.usetex': False}
@@ -1989,6 +1991,130 @@ def plot_beam(beam, figsize=3, showfig=False, savefig=False, fig=None, plot_xy=N
     else:
         plt.close('all')
 
+def plot_wigner(wig_or_out, z=np.inf, p_units='um', s_units='nm', x_lim=(None,None), y_lim=(None,None), cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=False, debug=1):
+    '''
+    plots wigner distribution (WD) with marginals
+    wig_or_out -  may be WignerDistribution() or GenesisOutput() object
+    z - (if isinstance(wig_or_out, GenesisOutput)) location at which WD will be calculated
+    p_units - (um or fs) - units to display power scale
+    s_units - (nm or eV) - units to display spectrum scale
+    x_lim, y_lim - scaling limits in given units, (min,max) or [min,max], e.g: (None,6)
+    abs_value - if True, absolute value of WD is displayed (usually, it has both positive and negative values)
+    cmap - colormar if abs_value==False (http://matplotlib.org/users/colormaps.html)
+    '''
+    if showfig == False and savefig == False:
+        return
+    
+    if debug > 0:
+        print('    plotting Wigner distribution')
+        
+    if isinstance(wig_or_out, GenesisOutput):
+        W=wigner_out(wig_or_out,z)
+    elif isinstance(wig_or_out, WignerDistribution):
+        W=wig_or_out
+    else:
+        raise ValueError('Unknown object for Wigner plot')
+    
+    
+    if fig_name is None:
+        if W.fileName() is '':
+            fig_text = 'Wigner distribution'
+        else:
+            fig_text = 'Wigner distribution ' + W.fileName()
+    else:
+        fig_text = fig_name
+    if W.z!=None:
+        fig_text += ' ' + str(W.z) + 'm'
+        
+    fig = plt.figure(fig_text,figsize=(10,7))
+    plt.clf()
+        
+    power=W.power()
+    spec=W.spectrum()
+    wigner=W.wig
+    wigner_lim=np.amax(abs(W.wig))
+    
+    if p_units=='fs':
+        power_scale=W.s/speed_of_light*1e15
+        p_label_txt='Time [fs]'
+    else:
+        power_scale=W.s*1e6
+        p_label_txt='S [$\mu$m]'
+    
+    if s_units=='eV':
+        spec_scale=speed_of_light*h_eV_s*1e9/W.freq_lamd
+        f_label_txt='ph.energy [eV]'
+    else:
+        spec_scale=W.freq_lamd
+        f_label_txt='Wavelength [nm]'
+    
+    # definitions for the axes
+    left, width = 0.18, 0.57
+    bottom, height = 0.14, 0.55
+    left_h = left + width + 0.02 - 0.02
+    bottom_h = bottom + height + 0.02 - 0.02
+    
+
+    rect_scatter = [left, bottom, width, height]
+    rect_histx = [left, bottom_h, width, 0.2]
+    rect_histy = [left_h, bottom, 0.15, height]
+    
+    axScatter = plt.axes(rect_scatter)
+    axHistx = plt.axes(rect_histx, sharex=axScatter)
+    axHisty = plt.axes(rect_histy, sharey=axScatter)
+    
+    if abs_value:
+        axScatter.pcolormesh(power_scale, spec_scale, abs(wigner))
+    else:
+        # cmap='RdBu_r'
+        axScatter.pcolormesh(power_scale, spec_scale, wigner, cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
+            
+    axHistx.plot(power_scale,power)
+    axHistx.text(0.02, 0.95, r'E= %.2e J' % (W.energy), horizontalalignment='left', verticalalignment='top', transform=axHistx.transAxes)#fontsize=12,
+
+    axHisty.plot(spec,spec_scale)
+    
+    axScatter.axis('tight')
+    axScatter.set_xlabel(p_label_txt)
+    axScatter.set_ylabel(f_label_txt)
+
+    axHistx.set_ylim(ymin=0)
+    axHisty.set_xlim(xmin=0)
+
+    for tl in axHistx.get_xticklabels():
+        tl.set_visible(False)
+
+    for tl in axHisty.get_yticklabels():
+        tl.set_visible(False)
+
+    
+    axHistx.yaxis.major.locator.set_params(nbins=4)
+    axHisty.xaxis.major.locator.set_params(nbins=2)
+    
+    
+    axScatter.set_xlim(x_lim[0], x_lim[1])
+    axScatter.set_ylim(y_lim[0], y_lim[1])
+    
+    if savefig != False:
+        if savefig == True:
+            savefig = 'png'
+            if W.z is None:
+                fig.savefig(W.filePath + '_wig.' + str(savefig), format=savefig)
+            else:
+                fig.savefig(W.filePath + '_wig_' + str(W.z) + 'm.' + str(savefig), format=savefig)
+
+    plt.draw()
+    
+    if showfig == True:
+        dir_lst = W.filePath.split(os.path.sep)
+        dir = os.path.sep.join(dir_lst[0:-1]) + os.path.sep
+        rcParams["savefig.directory"] = dir
+        plt.show()
+    else:
+        plt.close('all')
+        
+    if debug>0: 
+        print('      done')
 
 '''
 tmp for HXRSS

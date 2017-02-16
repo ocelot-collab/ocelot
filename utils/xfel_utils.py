@@ -24,6 +24,29 @@ import pyfftw
 nthread = multiprocessing.cpu_count()
 
 
+class WignerDistribution():
+    '''
+    calculated wigner distribution (spectrogram) of the pulse
+    in time/frequency domain as space/wavelength
+    '''
+    def __init__(self):
+        # self.fld=np.array([]) #(z,y,x)
+        self.wig = []  # (wav,space)
+        self.s = []  # space scale
+        self.z = None # position along undulator (if applicable)
+        self.freq_lamd = []  # frequency scale
+        self.xlamds = 0  # wavelength, [nm]
+        self.filePath = ''
+    
+    def power(self):
+        return np.sum(self.wig,axis=0)
+        
+    def spectrum(self):
+        return np.sum(self.wig,axis=1)
+        
+    def fileName(self):
+        return filename_from_path(self.filePath)
+    
 def background(command):
     '''
     start command as background process
@@ -630,6 +653,80 @@ def save_trf(trf, attr, flePath):
     np.savetxt(f, np.c_[trf.ev(), np.abs(trf.tr), np.angle(trf.tr)], header=header, fmt="%.8e", newline='\n', comments='')
     f.close()
 
+    
+def calc_wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1):    
+    '''
+    calculation of the Wigner distribution
+    input should be an amplitude and phase of the radiation as a complex number with length N
+    output is a real value of wigner distribution
+    '''
+    
+    N0=len(field)    
+    
+    if N0%2: 
+        field=np.append(field,0)
+    N=len(field) 
+
+    field=np.tile(field,(N,1))
+    F1=field
+    F2=deepcopy(F1)
+    
+    if debug>1: 
+        print('fields created')
+    
+    for i in range(N):
+        ind1=int(np.floor((N/2-i)/2))
+        ind2=-int(np.ceil((N/2-i)/2))
+        F1[i]=np.roll(F1[i],ind1)
+        F2[i]=np.roll(F2[i],ind2)
+        if debug>1: 
+            print(i, 'of', N)
+        
+    if debug>1: print('fft_start')
+    
+    wig=np.fft.fftshift(np.conj(F1)*F2,0)
+    
+    if debug>1: print('fft_done')
+    
+    if method == 'np':
+        wig = np.fft.fft(wig, axis=0)
+    elif method == 'mp':
+        fft = pyfftw.builders.fft(wig, axis=0, overwrite_input=False, planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
+        wig = fft()
+    
+    wig=np.fft.fftshift(wig,0)
+    wig=wig[0:N0,0:N0]/N
+
+    return np.real(wig)
+
+def wigner_out(out, z=inf, method='mp', debug=1):
+    import numpy as np
+    
+    if debug>0: 
+        print('    calculating Wigner distribution')
+    
+    if z == inf:
+        z = np.amax(out.z)
+    elif z > np.amax(out.z):
+        z = np.amax(out.z)
+    elif z < np.amin(out.z):
+        z = np.amin(out.z)
+    zi = np.where(out.z >= z)[0][0]
+
+    wig = WignerDistribution()
+    wig.wig = calc_wigner(sqrt(out.p_int[:,zi])*exp(1j*out.phi_mid[:,zi]), method=method, debug=debug)
+    wig.s = out.s
+    wig.freq_lamd = out.freq_lamd
+    wig.xlamds = out('xlamds')
+    wig.filePath = out.filePath
+    wig.z = z
+    wig.energy= np.mean(out.p_int[:, -1], axis=0) * out('xlamds') * out('zsep') * out.nSlices / speed_of_light
+    
+    if debug>0: 
+        print('      done')
+    return wig
+    
+    
 '''
 legacy
 '''

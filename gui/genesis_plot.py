@@ -134,7 +134,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
                     plot_gen_out_z(handle, z=z, savefig=savefig, debug=debug)
             if choice[11]:
                 W=wigner_out(handle)
-                plot_wigner(W, savefig=1, debug=debug)
+                plot_wigner(W, savefig=savefig, debug=debug)
                 
         if os.path.isfile(handle.filePath + '.dfl') and any(choice[5:8]):
             dfl = read_dfl_file_out(handle, debug=debug)

@@ -101,8 +101,8 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
 
     if len(choice) > 12:
         choice = choice[:12]
-    elif len(choice) < 11:
-        choice += tuple((zeros(11 - len(choice)).astype(int)))
+    elif len(choice) < 12:
+        choice += tuple((zeros(12 - len(choice)).astype(int)))
 
     if os.path.isdir(str(handle)):
         handles = []

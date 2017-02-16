@@ -989,7 +989,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend=True, phase=False, far_fi
             F = dfl_fft_xy(F, debug=debug)
         x = F.scale_x() * 1e6
         y = F.scale_y() * 1e6
-
+        
         unit_xy = r'$\mu$m'
         x_label = 'x [' + unit_xy + ']'
         y_label = 'y [' + unit_xy + ']'
@@ -1007,7 +1007,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend=True, phase=False, far_fi
     yz_proj = F.int_zy()
     xz_proj = F.int_zx()
     z_proj = F.int_z()
-
+    
     dx = abs(x[1] - x[0])
     dy = abs(y[1] - y[0])
 

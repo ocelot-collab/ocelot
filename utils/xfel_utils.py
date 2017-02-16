@@ -338,7 +338,7 @@ def dfl_pad_z(dfl, padn):
 
     if padn > 1:
         print('    padding dfl by ' + str(padn))
-        padn_n = (padn - 1) / 2 * dfl.Nz()  # number of slices to add before and after
+        padn_n = int((padn - 1) / 2 * dfl.Nz())  # number of slices to add before and after
         dfl_pad = RadiationField((dfl.Nz() + 2 * padn_n, dfl.Ny(), dfl.Nx()))
         dfl_pad.copy_param(dfl)
         dfl_pad.fld[padn_n:-padn_n, :, :] = dfl.fld

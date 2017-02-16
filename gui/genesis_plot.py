@@ -58,7 +58,7 @@ def plot_gen_out_all_paral(exp_dir, stage=1, savefig='png', debug=1):
     # plot_gen_stat(proj_dir=exp_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int','energy','r_size_weighted'], z_param_inp=[], dfl_param_inp=[], s_inp=['max'], z_inp=[0,'end'], savefig=1, saveval=1, showfig=0, debug=0)
 
 
-def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1, 1, 6.05, 1, 0, 0, 0, 0, 0), vartype_dfl=complex128, debug=1):
+def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1, 1, 6.05, 1, 0, 0, 0, 0, 0, 1), vartype_dfl=complex128, debug=1):
     '''
     plots all possible output from the genesis output
     handle is either:
@@ -95,12 +95,12 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
         savefig = 'png'
 
     if choice == 'all':
-        choice = (1, 1, 1, 1, 6.05, 1, 1, 1, 1, 1, 1)
+        choice = (1, 1, 1, 1, 6.05, 1, 1, 1, 1, 1, 1, 1)
     elif choice == 'gen':
-        choice = (1, 1, 1, 1, 6.05, 0, 0, 0, 0, 0, 0)
+        choice = (1, 1, 1, 1, 6.05, 0, 0, 0, 0, 0, 0, 0)
 
-    if len(choice) > 11:
-        choice = choice[:11]
+    if len(choice) > 12:
+        choice = choice[:12]
     elif len(choice) < 11:
         choice += tuple((zeros(11 - len(choice)).astype(int)))
 
@@ -132,6 +132,10 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
             if choice[4] != 0:
                 for z in arange(choice[4], max(handle.z), choice[4]):
                     plot_gen_out_z(handle, z=z, savefig=savefig, debug=debug)
+            if choice[11]:
+                W=wigner_out(handle)
+                plot_wigner(W, savefig=1, debug=debug)
+                
         if os.path.isfile(handle.filePath + '.dfl') and any(choice[5:8]):
             dfl = read_dfl_file_out(handle, debug=debug)
             if dfl.Nz()==0:
@@ -145,6 +149,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
                     f7 = plot_dfl(dfl, far_field=0, freq_domain=1, auto_zoom=0, savefig=savefig, debug=debug)
                 if choice[8]:
                     f8 = plot_dfl(dfl, far_field=1, freq_domain=1, auto_zoom=0, savefig=savefig, debug=debug)
+        
         if os.path.isfile(handle.filePath + '.dpa') and (choice[9] or choice[10]) and handle('itdp') == True:
             dpa = read_dpa_file_out(handle, debug=debug)
             if size(dpa.ph)==0:
@@ -156,7 +161,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
                 if choice[10]:
                     edist = dpa2edist(handle, dpa, num_part=5e4, smear=0, debug=debug)
                     f10 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=(100, 100, 300, 200), debug=debug)
-
+        
     if savefig != False:
         if debug > 0:
             print('    plots recorded to *.' + str(savefig) + ' files')
@@ -640,6 +645,7 @@ def subfig_rad_spec(ax_spectrum, g, legend, log=1):
     spectrum_lamdwidth_std = np.zeros_like(g.z)
     for zz in range(g.nZ):
         # if np.sum(g.spec[:,zz])!=0:
+        #tmp
         try:
             peak = fwhm3(g.spec[:, zz])
             spectrum_lamdwidth_fwhm[zz] = abs(g.freq_lamd[0] - g.freq_lamd[1]) * peak[1] / g.freq_lamd[peak[0]]  # the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
@@ -2065,14 +2071,18 @@ def plot_wigner(wig_or_out, z=np.inf, p_units='um', s_units='nm', x_lim=(None,No
     
     if abs_value:
         axScatter.pcolormesh(power_scale, spec_scale, abs(wigner))
+        axScatter.text(0.02, 0.98, r'$W_{max}$= %.2e' % (np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes, color='w')
     else:
         # cmap='RdBu_r'
         axScatter.pcolormesh(power_scale, spec_scale, wigner, cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
+        axScatter.text(0.02, 0.98, r'$W_{max}$= %.2e' % (np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes)#fontsize=12,
             
     axHistx.plot(power_scale,power)
-    axHistx.text(0.02, 0.95, r'E= %.2e J' % (W.energy), horizontalalignment='left', verticalalignment='top', transform=axHistx.transAxes)#fontsize=12,
+    axHistx.text(0.02, 0.95, r'E= %.2e J' % (W.energy()), horizontalalignment='left', verticalalignment='top', transform=axHistx.transAxes)#fontsize=12,
+    axHistx.set_ylabel('P [W]')
 
     axHisty.plot(spec,spec_scale)
+    axHisty.set_xlabel('[a.u.]')
     
     axScatter.axis('tight')
     axScatter.set_xlabel(p_label_txt)
@@ -2098,10 +2108,10 @@ def plot_wigner(wig_or_out, z=np.inf, p_units='um', s_units='nm', x_lim=(None,No
     if savefig != False:
         if savefig == True:
             savefig = 'png'
-            if W.z is None:
-                fig.savefig(W.filePath + '_wig.' + str(savefig), format=savefig)
-            else:
-                fig.savefig(W.filePath + '_wig_' + str(W.z) + 'm.' + str(savefig), format=savefig)
+        if W.z is None:
+            fig.savefig(W.filePath + '_wig.' + str(savefig), format=savefig)
+        else:
+            fig.savefig(W.filePath + '_wig_' + str(W.z) + 'm.' + str(savefig), format=savefig)
 
     plt.draw()
     
@@ -2113,8 +2123,6 @@ def plot_wigner(wig_or_out, z=np.inf, p_units='um', s_units='nm', x_lim=(None,No
     else:
         plt.close('all')
         
-    if debug>0: 
-        print('      done')
 
 '''
 tmp for HXRSS

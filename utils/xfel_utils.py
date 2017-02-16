@@ -44,6 +44,9 @@ class WignerDistribution():
     def spectrum(self):
         return np.sum(self.wig,axis=1)
         
+    def energy(self):
+        return np.sum(self.wig)*abs(self.s[1]-self.s[0])
+        
     def fileName(self):
         return filename_from_path(self.filePath)
     
@@ -704,6 +707,7 @@ def wigner_out(out, z=inf, method='mp', debug=1):
     
     if debug>0: 
         print('    calculating Wigner distribution')
+    start_time = time.time()
     
     if z == inf:
         z = np.amax(out.z)
@@ -720,11 +724,12 @@ def wigner_out(out, z=inf, method='mp', debug=1):
     wig.xlamds = out('xlamds')
     wig.filePath = out.filePath
     wig.z = z
-    wig.energy= np.mean(out.p_int[:, -1], axis=0) * out('xlamds') * out('zsep') * out.nSlices / speed_of_light
+#    wig.energy= np.mean(out.p_int[:, -1], axis=0) * out('xlamds') * out('zsep') * out.nSlices / speed_of_light
     
     if debug>0: 
-        print('      done')
-    return wig
+        print('      done in %.2f seconds' % (time.time() - start_time))
+    
+        return wig
     
     
 '''

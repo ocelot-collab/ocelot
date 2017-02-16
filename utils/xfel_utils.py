@@ -45,7 +45,7 @@ class WignerDistribution():
         return np.sum(self.wig,axis=1)
         
     def energy(self):
-        return np.sum(self.wig)*abs(self.s[1]-self.s[0])
+        return np.sum(self.wig)*abs(self.s[1]-self.s[0])/speed_of_light
         
     def fileName(self):
         return filename_from_path(self.filePath)
@@ -678,8 +678,8 @@ def calc_wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1
         print('fields created')
     
     for i in range(N):
-        ind1=int(np.floor((N/2-i)/2))
-        ind2=-int(np.ceil((N/2-i)/2))
+        ind1=-int(np.floor((N/2-i)/2))
+        ind2=int(np.ceil((N/2-i)/2))
         F1[i]=np.roll(F1[i],ind1)
         F2[i]=np.roll(F2[i],ind2)
         if debug>1: 

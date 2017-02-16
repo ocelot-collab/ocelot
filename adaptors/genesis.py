@@ -481,6 +481,7 @@ class GenesisOutput:
 
     def __init__(self):
         self.z = []
+        self.s = []
         self.I = []
         self.n = []
         self.zSlice = []
@@ -504,7 +505,9 @@ class GenesisOutput:
         else:
             p, = self.parameters[name]
             return float(p.replace('D', 'E'))
-
+            
+    def wig(self,z=inf):
+        return wigner_out(self, z=z, method='mp', debug=1)
 
 class GenStatOutput:
 
@@ -1468,7 +1471,7 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
             out.freq_ev = np.fft.fftshift(out.freq_ev, axes=0)
             out.freq_lamd = h_eV_s * speed_of_light * 1e9 / out.freq_ev
             out.sliceKeys_used.append('spec')
-
+            
             phase_fix = 1  # the way to display the phase, without constant slope caused by different radiation wavelength from xlamds. phase is set to 0 at maximum power slice.
             if phase_fix:
                 if debug > 0:
@@ -1564,6 +1567,13 @@ def read_out_file_stat(proj_dir, stage, run_inp=[], param_inp=[], debug=1):
             run_range_good.append(irun)
             # except:
     run_range = run_range_good
+    
+    # check if all gout have the same number of slices nSlice and history records nZ
+    for irun in run_range[1:]:
+        if outlist[irun].nSlices != outlist[run_range[0]].nSlices or outlist[irun].nZ != outlist[run_range[0]].nZ:
+            raise ValueError('Non-uniform out objects (run %s)' %(irun))
+    
+    if debug: print(run_range)
 
     if param_inp == []:
         if debug > 1:
@@ -1582,9 +1592,9 @@ def read_out_file_stat(proj_dir, stage, run_inp=[], param_inp=[], debug=1):
                 param_matrix.append(deepcopy(getattr(outlist[irun], param)))
 
         param_matrix = np.array(param_matrix)
-        if ndim(param_matrix) == 3:
+        if np.ndim(param_matrix) == 3:
             param_matrix = np.swapaxes(param_matrix, 0, 2)
-        elif ndim(param_matrix) == 2 and shape(param_matrix)[1] == outlist[irun].nZ:
+        elif np.ndim(param_matrix) == 2 and shape(param_matrix)[1] == outlist[irun].nZ:
             param_matrix = np.swapaxes(param_matrix, 0, 1)[:, np.newaxis, :]
         else:
             pass
@@ -1598,6 +1608,9 @@ def read_out_file_stat(proj_dir, stage, run_inp=[], param_inp=[], debug=1):
     out_stat.f = outlist[irun].freq_lamd
     out_stat.t = outlist[irun].t
     out_stat.dt = outlist[irun].dt
+    
+    out_stat.xlamds=outlist[irun]('xlamds')
+    out_stat.filePath=proj_dir
 
     if debug > 0:
         print('      done in %.2f seconds' % (time.time() - start_time))

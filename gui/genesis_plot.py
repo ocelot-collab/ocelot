@@ -1219,7 +1219,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend=True, phase=False, far_fi
         return
 
 
-def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int', 'energy', 'r_size_weighted', 'spec', 'error'], z_param_inp=['p_int', 'phi_mid_disp', 'spec', 'bunching'], dfl_param_inp=['dfl_spec'], run_param_inp=['p_int', 'spec', 'energy'], s_inp=['max'], z_inp=['end'], run_s_inp=['max'], run_z_inp=['end'], savefig=1, saveval=1, showfig=0, debug=0):
+def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int', 'energy', 'r_size_weighted', 'spec', 'error'], z_param_inp=['p_int', 'phi_mid_disp', 'spec', 'bunching', 'wigner'], dfl_param_inp=['dfl_spec'], run_param_inp=['p_int', 'spec', 'energy'], s_inp=['max'], z_inp=[0,'end'], run_s_inp=['max'], run_z_inp=['end'], savefig=1, saveval=1, showfig=0, debug=1):
     '''
     The routine for plotting the statistical info of many GENESIS runs
     
@@ -1275,6 +1275,9 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                # except:
                    # print('     could not read '+out_file)
         run_range = run_range_good
+        
+        # if len(run_range)!=0 and debug>0:
+            # print('stage = ', stage)
 
         # check if all gout have the same number of slices nSlice and history records nZ
         for irun in run_range[1:]:
@@ -1310,6 +1313,9 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
         # if s_param_inp==[]:
             # s_param_range=param_range
         # else:
+        
+
+        
         s_param_range = s_param_inp
         if debug > 0:
             print('    processing S parameters ' + str(s_param_range))
@@ -1324,6 +1330,8 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     if not hasattr(outlist[irun], param):
                         continue
                     else:
+                        if debug > 0:
+                            print ('parameter = ', param)
                         param_matrix = copy.deepcopy(getattr(outlist[irun], param))
 
                     if debug > 1:
@@ -1379,6 +1387,22 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
             print('    processing Z parameters ' + str(z_param_range))
         if debug > 1:
             print('      z_inp ' + str(z_inp))
+            
+        if 'wigner' in z_param_range:
+            if debug > 0:
+                print('    processing Wigner')
+                for z_ind in z_inp:
+                    w = np.zeros((outlist[irun].nSlices,outlist[irun].nSlices))
+                    for irun in run_range:
+                        out=outlist[irun]
+                        W=wigner_out(out,z=z_ind,debug=0)
+                        w += W.wig
+                    W.wig= w / len(outlist)
+
+                    W.filePath = proj_dir + 'results' + os.path.sep + 'stage_' + str(stage) + '__WIG__' + str(z_ind) + '__m'
+                    wig_fig_name = 'stage_' + str(stage) + '__WIG__' + str(z_ind) + '__m'
+                    plot_wigner(W, z=z_ind, p_units='um', s_units='eV', fig_name=wig_fig_name, savefig=savefig, debug=0)
+
 
         for param in z_param_range:
             for z_ind in z_inp:
@@ -1388,6 +1412,8 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     if not hasattr(outlist[irun], param):
                         break
                     else:
+                        if debug > 0:
+                            print ('parameter = ', param)
                         param_matrix = copy.deepcopy(getattr(outlist[irun], param))
 
                     if debug > 1:
@@ -1466,6 +1492,8 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                         if not hasattr(outlist[irun], param):
                             break
                         else:
+                            if debug > 0:
+                                print ('parameter = ', param)
                             param_matrix = copy.deepcopy(getattr(outlist[irun], param))
                             if debug > 1:
                                 print('param', param, 'irun', irun, 'z_ind', z_ind, 's_ind', s_ind)
@@ -2032,8 +2060,9 @@ def plot_wigner(wig_or_out, z=np.inf, p_units='um', s_units='nm', x_lim=(None,No
     if W.z!=None:
         fig_text += ' ' + str(W.z) + 'm'
         
-    fig = plt.figure(fig_text,figsize=(10,7))
+    fig = plt.figure(fig_text)
     plt.clf()
+    fig.set_size_inches((18, 13), forward=True)
         
     power=W.power()
     spec=W.spectrum()
@@ -2169,18 +2198,20 @@ def read_plot_dump_proj(exp_dir, stage, run_ids, plot_phase=1, showfig=0, savefi
         f_l_int_mean = f_l_int_arr[:, 0]
     # t_domain,t_norm=plt.figure('t_domain_filtered')
     fig_name = 'stage_' + str(stage) + '__FILT__power'
-    t_domain = plt.figure(fig_name)
+    t_domain = plt.figure(fig_name,figsize=(15,7))
     ax1 = t_domain.add_subplot(2 + plot_phase, 1, 1)
     pulse_average_pos = np.sum(t_l_scale * t_l_int_mean) / np.sum(t_l_int_mean)
     ax1.plot(t_l_scale - pulse_average_pos, t_l_int_arr, '0.5')
     ax1.plot(t_l_scale - pulse_average_pos, t_l_int_mean, 'k', linewidth=1.5)
     ax1.plot([0, 0], [0, np.max(t_l_int_arr)], 'r')
+    ax1.grid(True)
     plt.ylabel(r'$P$ [W]')
 
     ax2 = t_domain.add_subplot(2 + plot_phase, 1, 2, sharex=ax1)
     ax2.semilogy(t_l_scale - pulse_average_pos, t_l_int_arr, '0.5')
     ax2.semilogy(t_l_scale - pulse_average_pos, t_l_int_mean, 'k', linewidth=1.5)
     ax2.plot([0, 0], [np.min(t_l_int_arr), np.max(t_l_int_arr)], 'r')
+    ax2.grid(True)
     plt.ylabel(r'$P$ [W]')
 
     if plot_phase:
@@ -2205,10 +2236,11 @@ def read_plot_dump_proj(exp_dir, stage, run_ids, plot_phase=1, showfig=0, savefi
         plt.close('all')
 
     fig_name = 'stage_' + str(stage) + '__FILT__spectrum'
-    f_domain = plt.figure(fig_name)
+    f_domain = plt.figure(fig_name,figsize=(15,7))
     ax1 = f_domain.add_subplot(2, 1, 1)
     ax1.plot(h_eV_s * speed_of_light / f_l_scale, f_l_int_arr, '0.5')
     ax1.plot(h_eV_s * speed_of_light / f_l_scale, f_l_int_mean, 'k', linewidth=1.5)
+    ax1.grid(True)
 
     plt.ylabel(r'$P(\lambda)$ [a.u.]')
     ax2 = f_domain.add_subplot(2, 1, 2, sharex=ax1)
@@ -2217,6 +2249,7 @@ def read_plot_dump_proj(exp_dir, stage, run_ids, plot_phase=1, showfig=0, savefi
     ax2.plot(h_eV_s * speed_of_light / f_l_scale, f_l_ftlt_abs, 'r')
     ax2_phase = ax2.twinx()
     ax2_phase.plot(h_eV_s * speed_of_light / f_l_scale, f_l_ftlt_ang, 'r--')
+    ax2.grid(True)
     plt.xlabel(r'$E$ [eV]')
     # plt.ylabel(r'$Transm$')
     # ax[1].xlabel(r'$E$ [eV]')

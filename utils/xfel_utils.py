@@ -664,32 +664,35 @@ def calc_wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1
     output is a real value of wigner distribution
     '''
     
-    N0=len(field)    
+    N0 = len(field)
     
-    if N0%2: 
-        field=np.append(field,0)
-    N=len(field) 
+    if np.amin(field) == 0 and np.amax(field) == 0:
+        return np.zeros((N0,N0))
+    
+    if N0 % 2: 
+        field = np.append(field, 0)
+    N = len(field) 
 
-    field=np.tile(field,(N,1))
-    F1=field
-    F2=deepcopy(F1)
+    field = np.tile(field, (N, 1))
+    F1 = field
+    F2 = deepcopy(F1)
     
-    if debug>1: 
+    if debug > 1: 
         print('fields created')
     
     for i in range(N):
-        ind1=-int(np.floor((N/2-i)/2))
-        ind2=int(np.ceil((N/2-i)/2))
-        F1[i]=np.roll(F1[i],ind1)
-        F2[i]=np.roll(F2[i],ind2)
-        if debug>1: 
+        ind1 = -int(np.floor((N/2-i)/2))
+        ind2 = int(np.ceil((N/2-i)/2))
+        F1[i] = np.roll(F1[i],ind1)
+        F2[i] = np.roll(F2[i],ind2)
+        if debug > 1: 
             print(i, 'of', N)
         
-    if debug>1: print('fft_start')
+    if debug > 1: print('fft_start')
     
-    wig=np.fft.fftshift(np.conj(F1)*F2,0)
+    wig = np.fft.fftshift(np.conj(F1)*F2,0)
     
-    if debug>1: print('fft_done')
+    if debug > 1: print('fft_done')
     
     if method == 'np':
         wig = np.fft.fft(wig, axis=0)
@@ -697,19 +700,28 @@ def calc_wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1
         fft = pyfftw.builders.fft(wig, axis=0, overwrite_input=False, planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
         wig = fft()
     
-    wig=np.fft.fftshift(wig,0)
-    wig=wig[0:N0,0:N0]/N
+    wig = np.fft.fftshift(wig, 0)
+    wig = wig[0:N0, 0:N0] / N
 
     return np.real(wig)
 
 def wigner_out(out, z=inf, method='mp', debug=1):
+    '''
+    returns WignerDistribution from GenesisOutput at z
+    '''
+    
+    assert isinstance(out,GenesisOutput)
+    assert len(out.s)>0
+    
     import numpy as np
     
     if debug>0: 
         print('    calculating Wigner distribution')
     start_time = time.time()
     
-    if z == inf:
+    if z == 'end': 
+        z = np.inf
+    if z == np.inf:
         z = np.amax(out.z)
     elif z > np.amax(out.z):
         z = np.amax(out.z)
@@ -729,8 +741,51 @@ def wigner_out(out, z=inf, method='mp', debug=1):
     if debug>0: 
         print('      done in %.2f seconds' % (time.time() - start_time))
     
-        return wig
+    return wig
     
+def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1):
+    '''
+    returns averaged WignerDistribution from GenStatOutput at stage at z
+    '''
+    if isinstance(out_stat,str):
+        if stage == None:
+            raise ValueError('specify stage, since path to folder is provided')
+        out_stat=read_out_file_stat(out_stat, stage, debug=debug)
+    elif isinstance(out_stat,GenStatOutput):
+        pass
+    else:
+        raise ValueError('unknown object used as input')
+    
+    if debug>0: 
+        print('    calculating Wigner distribution')
+    start_time = time.time()
+    
+    if z == inf:
+        z = np.amax(out_stat.z)
+    elif z > np.amax(out_stat.z):
+        z = np.amax(out_stat.z)
+    elif z < np.amin(out_stat.z):
+        z = np.amin(out_stat.z)
+    zi = np.where(out_stat.z >= z)[0][0]
+    
+    WW = np.zeros((shape(out_stat.p_int)[2],shape(out_stat.p_int)[1],shape(out_stat.p_int)[1]))
+    for (i,n) in  enumerate(out_stat.run):
+        field = sqrt(out_stat.p_int[zi,:,i]) * exp(1j*out_stat.phi_mid[zi,:,i])
+        WW[i,:,:] = calc_wigner(field, method=method, debug=debug)
+    
+    wig = WignerDistribution()
+    wig.wig = np.mean(WW,axis=0)
+    wig.s = out_stat.s
+    wig.freq_lamd = out_stat.f
+    wig.xlamds = out_stat.xlamds
+    wig.filePath = out_stat.filePath + 'results' + os.path.sep + 'stage_%s__WIG__' %(stage)
+    wig.z = z
+#    wig.energy= np.mean(out.p_int[:, -1], axis=0) * out('xlamds') * out('zsep') * out.nSlices / speed_of_light
+    
+    if debug>0: 
+        print('      done in %.2f seconds' % (time.time() - start_time))
+    
+        return wig
     
 '''
 legacy

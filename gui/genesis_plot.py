@@ -1904,6 +1904,8 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=False, sc
 
     if scatter:
         ax_curr.set_xlim([np.amin(s), np.amax(s)])
+        
+    ax_curr.set_ylim(ymin=0)
 
     fig.subplots_adjust(wspace=0.4, hspace=0.4)
 

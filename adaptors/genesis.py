@@ -1439,10 +1439,8 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
         output_unsorted = np.array(output_unsorted)  # .astype(precision)
         # print out.sliceKeys
         for i in range(len(out.sliceKeys)):
-            # print (out.sliceKeys)
-            # print ()
-            # exec('out.'+out.sliceKeys[i].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(out.nSlices)+','+str(out.nZ)+'))')
-            # exec('out.'+out.sliceKeys[int(i)].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(int(out('history_records')))+','+str(int(out('entries_per_record')))+'))')
+            if debug > 1: 
+                print ('      assembling',out.sliceKeys[int(i)].replace('-', '_').replace('<', '').replace('>', '')) 
             command = 'out.' + out.sliceKeys[int(i)].replace('-', '_').replace('<', '').replace('>', '') + ' = output_unsorted[:,' + str(i) + '].reshape((' + str(int(out.nSlices)) + ',' + str(int(out.nZ)) + '))'
             # print(command)
             exec(command)
@@ -1459,7 +1457,7 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
         out.beam_charge = np.sum(out.I * out.dt)
         out.sn_Imax = np.argmax(out.I)  # slice number with maximum current
         if read_level == 2:
-            if debug > 1:
+            if debug > 0:
                 print ('      calculating spectrum')
             out.spec = abs(np.fft.fft(np.sqrt(np.array(out.power)) * np.exp(1.j * np.array(out.phi_mid)), axis=0))**2 / sqrt(out.nSlices) / (2 * out.leng / out('ncar'))**2 / 1e10
             if debug > 1:
@@ -1562,7 +1560,8 @@ def read_out_file_stat(proj_dir, stage, run_inp=[], param_inp=[], debug=1):
     for irun in run_range:
         out_file = proj_dir + 'run_' + str(irun) + '/run.' + str(irun) + '.s' + str(stage) + '.gout'
         if os.path.isfile(out_file):
-            # try:
+            if debug > 0:
+                print ('      reading run', irun)
             outlist[irun] = read_out_file(out_file, read_level=2, debug=1)
             run_range_good.append(irun)
             # except:
@@ -1616,7 +1615,91 @@ def read_out_file_stat(proj_dir, stage, run_inp=[], param_inp=[], debug=1):
         print('      done in %.2f seconds' % (time.time() - start_time))
     return out_stat
 
+def read_out_file_stat_u(file_tamplate, run_inp=[], param_inp=[], debug=1):
+    '''
+    reads statistical info of Genesis simulations,
+    universal function for non-standard exp. folder structure
+    returns GenStatOutput() object
 
+    file_tamplate = template of the .out file path with # denoting run number
+    run_inp - list of genesis runs to be looked for [0:1000] by default
+    param_inp - list of genesis output parameters to be processed
+    debug - see read_out_file()
+    '''
+    if debug > 0:
+        print ('    reading stat genesis output')
+    start_time = time.time()
+
+    # if proj_dir[-1] != '/':
+        # proj_dir += '/'
+
+    outlist = [GenesisOutput() for i in range(1000)]
+
+    if run_inp == []:
+        run_range = range(1000)
+    else:
+        run_range = run_inp
+
+    run_range_good = []
+
+    for irun in run_range:
+        out_file = file_tamplate.replace('#',str(irun))
+        if os.path.isfile(out_file):
+            if debug > 0:
+                print ('      reading run', irun)
+            outlist[irun] = read_out_file(out_file, read_level=2, debug=1)
+            run_range_good.append(irun)
+            # except:
+    run_range = run_range_good
+    
+    # check if all gout have the same number of slices nSlice and history records nZ
+    for irun in run_range[1:]:
+        if outlist[irun].nSlices != outlist[run_range[0]].nSlices or outlist[irun].nZ != outlist[run_range[0]].nZ:
+            raise ValueError('Non-uniform out objects (run %s)' %(irun))
+    
+    if debug>0: print(run_range)
+
+    if param_inp == []:
+        if debug > 1:
+            print('      ',outlist[run_range[0]].sliceKeys_used)
+        param_range = outlist[run_range[0]].sliceKeys_used
+    else:
+        param_range = param_inp
+
+    out_stat = GenStatOutput()
+    for param in param_range:
+        param_matrix = []
+        for irun in run_range:
+            if not hasattr(outlist[irun], param):
+                continue
+            else:
+                param_matrix.append(deepcopy(getattr(outlist[irun], param)))
+
+        param_matrix = np.array(param_matrix)
+        if np.ndim(param_matrix) == 3:
+            param_matrix = np.swapaxes(param_matrix, 0, 2)
+        elif np.ndim(param_matrix) == 2 and shape(param_matrix)[1] == outlist[irun].nZ:
+            param_matrix = np.swapaxes(param_matrix, 0, 1)[:, np.newaxis, :]
+        else:
+            pass
+        setattr(out_stat, param, param_matrix)
+
+    out_stat.stage = stage
+    out_stat.dir = proj_dir
+    out_stat.run = run_range
+    out_stat.z = outlist[irun].z
+    out_stat.s = outlist[irun].s
+    out_stat.f = outlist[irun].freq_lamd
+    out_stat.t = outlist[irun].t
+    out_stat.dt = outlist[irun].dt
+    
+    out_stat.xlamds=outlist[irun]('xlamds')
+    out_stat.filePath=proj_dir
+
+    if debug > 0:
+        print('      done in %.2f seconds' % (time.time() - start_time))
+    return out_stat
+    
 '''
     DFL
 '''

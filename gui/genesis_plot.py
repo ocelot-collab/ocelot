@@ -2025,7 +2025,7 @@ def plot_beam(beam, figsize=3, showfig=False, savefig=False, fig=None, plot_xy=N
     else:
         plt.close('all')
 
-def plot_wigner(wig_or_out, z=np.inf, p_units='um', s_units='nm', x_lim=(None,None), y_lim=(None,None), cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=False, debug=1):
+def plot_wigner(wig_or_out, z=np.inf, p_units='um', s_units='nm', x_lim=(None,None), y_lim=(None,None), downsample=1, cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=False, debug=1):
     '''
     plots wigner distribution (WD) with marginals
     wig_or_out -  may be WignerDistribution() or GenesisOutput() object
@@ -2071,17 +2071,17 @@ def plot_wigner(wig_or_out, z=np.inf, p_units='um', s_units='nm', x_lim=(None,No
     
     if p_units=='fs':
         power_scale=W.s/speed_of_light*1e15
-        p_label_txt='Time [fs]'
+        p_label_txt='time [fs]'
     else:
         power_scale=W.s*1e6
-        p_label_txt='S [$\mu$m]'
+        p_label_txt='s [$\mu$m]'
     
     if s_units=='eV':
         spec_scale=speed_of_light*h_eV_s*1e9/W.freq_lamd
         f_label_txt='ph.energy [eV]'
     else:
         spec_scale=W.freq_lamd
-        f_label_txt='Wavelength [nm]'
+        f_label_txt='wavelength [nm]'
     
     # definitions for the axes
     left, width = 0.18, 0.57
@@ -2099,19 +2099,20 @@ def plot_wigner(wig_or_out, z=np.inf, p_units='um', s_units='nm', x_lim=(None,No
     axHisty = plt.axes(rect_histy, sharey=axScatter)
     
     if abs_value:
-        axScatter.pcolormesh(power_scale, spec_scale, abs(wigner))
+        axScatter.pcolormesh(power_scale, spec_scale, abs(wigner)) #change
         axScatter.text(0.02, 0.98, r'$W_{max}$= %.2e' % (np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes, color='w')
     else:
         # cmap='RdBu_r'
-        axScatter.pcolormesh(power_scale, spec_scale, wigner, cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
+        # axScatter.imshow(wigner, cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
+        axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], wigner[::downsample,::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
         axScatter.text(0.02, 0.98, r'$W_{max}$= %.2e' % (np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes)#fontsize=12,
             
     axHistx.plot(power_scale,power)
     axHistx.text(0.02, 0.95, r'E= %.2e J' % (W.energy()), horizontalalignment='left', verticalalignment='top', transform=axHistx.transAxes)#fontsize=12,
-    axHistx.set_ylabel('P [W]')
+    axHistx.set_ylabel('power [W]')
 
     axHisty.plot(spec,spec_scale)
-    axHisty.set_xlabel('[a.u.]')
+    axHisty.set_xlabel('spectrum [a.u.]')
     
     axScatter.axis('tight')
     axScatter.set_xlabel(p_label_txt)

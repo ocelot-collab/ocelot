@@ -3,18 +3,23 @@ statistical analysis functions, fitting, optimization and the like
 '''
 
 import numpy as np
-from numpy import cos, sin, sqrt, log, exp, sum
+from numpy import cos, sin, tan, sqrt, log, exp, sum
 
 def peaks(x, y, n=0):
     '''
     
     '''
     maxs = {}
-    
-    for i in np.arange(1, len(x)-1):
-        if (y[i] - y[i-1]) > 0 and (y[i+1] - y[i]) < 0:
-            maxs[y[i]] = x[i]
-    
+
+    if len((np.where(y == y.max()))[0]) == 1:
+        for i in np.arange(1, len(x)-1):
+            if (y[i] - y[i-1]) > 0 and (y[i+1] - y[i]) < 0:
+                maxs[y[i]] = x[i]
+    else:
+        for i in np.arange(2, len(x)-1):
+            if bool((y[i-1] - y[i-2]) > 0 and (y[i] - y[i-1]) == 0 and (y[i+1] - y[i]) < 0):
+                maxs[y[i]] = x[i]
+
     vals  = sorted(maxs.keys())
     f1 = []
     f2 = []
@@ -185,3 +190,13 @@ def find_saturation(power, z, n_smooth=5):
 def find_nearest(array, value):
     idx = (np.abs(array-value)).argmin()
     return array[idx]
+    
+def n_moment(x, counts, c, n):
+    if np.sum(counts)==0:
+        return 0
+    else:
+        return (np.sum((x-c)**n*counts) / np.sum(counts))**(1./n)
+        
+def std_moment(x, counts):
+    mean=n_moment(x, counts, 0, 1)
+    return n_moment(x, counts, mean, 2)

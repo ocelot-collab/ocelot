@@ -35,7 +35,7 @@ def calculateFelParameters(input):
 
     p.Ia = 17000.0
         
-    a = p.aw0**2 / (2*(2+p.aw0**2))
+    a = p.aw0**2 / (2*(1+p.aw0**2))
     p.fc = sf.j0(a) - sf.j1(a)
     p.N = p.Ip * p.lambda0 / 1.4399644850445153e-10
     p.sigb = 0.5 * (p.rxbeam + p.rybeam)
@@ -57,32 +57,32 @@ def calculateFelParameters(input):
 
 def printFelParameters(input):
     
-    #print input.parameters
+    #print (input.parameters)
     
     p = calculateFelParameters(input)
     
-    print '********    FEL Parameters    ********'
-    print 'ex=', p.ex
-    print 'ey=', p.ey
-    print 'rxbeam=', p.rxbeam, ' [m]'
-    print 'rybeam=', p.rybeam, ' [m]'
-    print 'rel energy spread deta=', p.deta, ' [m]'
-    print 'xlamd=', p.xlamd
-    print 'aw0=', p.aw0
-    print 'gamma0=', p.gamma0
-    print 'Ip=', p.Ip, ' beam peak current [A]'
-    print 'lambda0=', p.lambda0
-    print 'Pb=', p.Pb, ' beam power [W]'
-    print 'N=', p.N
-    print 'rho=', p.rho
-    print 'power=', p.power, ' equivalent shot noise power [W]'
-    print 'coupling parameter fc=', p.fc
-    print 'gain length estimate lg=', p.lg
-    print 'Rayleigh length estimate zr=', p.zr
-    print ''
-    print 'Ming Xie gain reduction estimates:'
-    print 'diffraction parameter etad=', p.xie_etad
-    print 'energy spread parameter etad=', p.xie_etagamma
-    print 'gain length degradation lscale=', p.xie_lscale
-    print '**************************************'
+    print ('********    FEL Parameters    ********')
+    print ('ex=', p.ex)
+    print ('ey=', p.ey)
+    print ('rxbeam=', p.rxbeam, ' [m]')
+    print ('rybeam=', p.rybeam, ' [m]')
+    print ('rel energy spread deta=', p.deta, ' [m]')
+    print ('xlamd=', p.xlamd)
+    print ('aw0=', p.aw0)
+    print ('gamma0=', p.gamma0)
+    print ('Ip=', p.Ip, ' beam peak current [A]')
+    print ('lambda0=', p.lambda0)
+    print ('Pb=', p.Pb, ' beam power [W]')
+    print ('N=', p.N)
+    print ('rho=', p.rho)
+    print ('power=', p.power, ' equivalent shot noise power [W]')
+    print ('coupling parameter fc=', p.fc)
+    print ('gain length estimate lg=', p.lg)
+    print ('Rayleigh length estimate zr=', p.zr)
+    print ('')
+    print ('Ming Xie gain reduction estimates:')
+    print ('diffraction parameter etad=', p.xie_etad)
+    print ('energy spread parameter etad=', p.xie_etagamma)
+    print ('gain length degradation lscale=', p.xie_lscale)
+    print ('**************************************')
     

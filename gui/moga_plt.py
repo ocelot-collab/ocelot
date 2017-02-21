@@ -4,14 +4,14 @@ import datetime, time
 import threading
 
 
-class Graph():
+class ParetoPlot():
 
     def __init__(self):
        
        self.work = False
 
-       self.limx = [0.0, 1.0]
-       self.limy = [0.0, 1.0]
+       self.limx = None
+       self.limy = None
        self.file = 'moga.dat'
 
        self.x = []
@@ -20,6 +20,8 @@ class Graph():
        self.ynd = []
 
        self.title = ''
+       self.xlabel = 'x variable'
+       self.ylabel = 'y variable'
 
        self.fig, self.ax = plt.subplots()
        self.lineF, = self.ax.plot(self.x, self.y, 'ro', ms=3)
@@ -49,7 +51,12 @@ class Graph():
             for ind in data_file[1]:
                 self.x.append(ind[0])
                 self.y.append(ind[1])
-
+            
+            if self.limx == None:
+                self.limx = [0,max(self.x)]
+            if self.limy == None:
+                self.limy = [0,max(self.y)]
+            
             self.xnd = []
             self.ynd = []
             for ind in data_file[2]:
@@ -67,7 +74,13 @@ class Graph():
         t_start = datetime.datetime.now()
 
         plt.title(self.title)
-
+        
+        self.ax.set_xlim(self.limx)
+        self.ax.set_ylim(self.limy)
+        
+        self.ax.set_xlabel(self.xlabel)
+        self.ax.set_ylabel(self.ylabel)
+        
         self.lineF.set_data(self.x, self.y)
         self.lineND.set_data(self.xnd, self.ynd)
         self.fig.canvas.draw()
@@ -77,13 +90,11 @@ class Graph():
     def run(self):
         
         self.work = True
-
-        self.ax.set_xlim(self.limx)
-        self.ax.set_ylim(self.limy)
-
+        
         thread = threading.Thread(target=self.get_data)
         thread.start()
 
+        
         timer = self.fig.canvas.new_timer(interval=self.update_time)
         timer.add_callback(self.plot)
         timer.start()
@@ -94,7 +105,7 @@ class Graph():
 
 
 if __name__ == "__main__":
-    pic = Graph()
+    pic = ParetoPlot()
     pic.limx = [0.0, 20.0]
     pic.limy = [0.0, 10.0e-3]
     pic.file ="../test/moga.dat"

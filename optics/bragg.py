@@ -362,7 +362,7 @@ def transmissivity_reflectivity(klist, cryst):
     return t, r
 
 
-def get_crystal_filter(cryst, ev_seed, nk=10000, k = None, n_width = 30):
+def get_crystal_filter(cryst, ev_seed, nk=10000, k = None, n_width = 100):
     #import crystal as cry
     #n_width - number of Darwin widths
     lamb=h_eV_s*speed_of_light/ev_seed
@@ -440,6 +440,7 @@ def get_crystal_filter(cryst, ev_seed, nk=10000, k = None, n_width = 30):
     f.mid_k = mid_k
     f.dk = dk
     f.xlamds = lamb
+    f.cryst = cryst
     return f
 
 

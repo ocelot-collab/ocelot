@@ -2322,7 +2322,16 @@ def plot_dfl_waistscan(sc_res, fig_name=None, showfig=0, savefig=0, debug=1):
         plt.close(fig)
 
 
-def plot_trf(trf, mode='tr', autoscale=1, showfig=0, savefig=None):
+def plot_trf(trf, mode='tr', autoscale=0, showfig=0, savefig=None):
+    '''
+    plots TransferFunction() object,
+    mode: 
+        'tr' - transmission
+        'ref' - reflection
+    autoscale = scale down to several FWHMma in frequency and several bumps in time
+    showfig - display on screen or not
+    savefig - path to save png (if any)
+    '''
     n_width = 8
     
     l = len(trf.k)
@@ -2345,10 +2354,18 @@ def plot_trf(trf, mode='tr', autoscale=1, showfig=0, savefig=None):
     
     trf_fd /= abs(trf_s_td[-1]) / l
     trf_td = np.fft.ifft(np.fft.fftshift(trf_fd))
+    trf_td = abs(trf_td)**2
     
+    # if hasattr(trf,'cryst'):
+    try:
+        title = trf.cryst.lattice.element_name + ' ' + str(trf.cryst.ref_idx) + ' ' + mode
+    except:
+        title = ''
     
-    trf_fig = plt.figure('Filter')
-    trf_fig.set_size_inches((8, 11), forward=True)
+    trf_fig = plt.figure('Filter '+title)
+    trf_fig.set_size_inches((9, 11), forward=True)
+    if title != '':
+        trf_fig.suptitle(title)
     
     ax_fd_abs = trf_fig.add_subplot(3, 1, 1)
     ax_fd_abs.clear()
@@ -2363,7 +2380,7 @@ def plot_trf(trf, mode='tr', autoscale=1, showfig=0, savefig=None):
     ax_fd_abs.plot(trf_s_fd, np.abs(trf.tr),'k')
     ax_fd_ang.plot(trf_s_fd, np.angle(trf.tr),'g')
     
-    ax_td.semilogy(trf_s_td, abs(trf_td)**2)
+    ax_td.semilogy(trf_s_td, trf_td)
     
     ax_fd_abs.set_ylabel('amplitude')
     ax_fd_ang.set_ylabel('phase')
@@ -2379,6 +2396,8 @@ def plot_trf(trf, mode='tr', autoscale=1, showfig=0, savefig=None):
         ax_fd_abs.set_xlim(trf_s_fd_xlim)
     if autoscale:
         ax_td.set_xlim(-n_width*pi / trf.dk * 1e6, 0)
+        idx = np.argwhere(trf_s_td>-n_width*pi / trf.dk * 1e6)[-1]
+        ax_td.set_ylim(np.amin(trf_td[1:idx]), np.amax(trf_td[1:idx]))
     
     ax_fd_abs.grid(True)
     ax_fd_ang.grid(True)

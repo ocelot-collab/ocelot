@@ -284,11 +284,11 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
         else:
             Ly2 = dfl.Ly()
     
-    if debug>0:
-        print('Lx1=%e, Ly1=%e' %(Lx1,Ly1))
-        print('Lx2=%e, Ly2=%e' %(Lx2,Ly2))
-        print('Nx1=%s, Ny1=%s' %(Nx1,Ny1))
-        print('Nx2=%s, Ny2=%s' %(Nx2,Ny2))
+    # if debug>0:
+        # print('Lx1=%e, Ly1=%e' %(Lx1,Ly1))
+        # print('Lx2=%e, Ly2=%e' %(Lx2,Ly2))
+        # print('Nx1=%s, Ny1=%s' %(Nx1,Ny1))
+        # print('Nx2=%s, Ny2=%s' %(Nx2,Ny2))
     
     
     xscale1 = np.linspace(-dfl.Lx() / 2, dfl.Lx() / 2, dfl.Nx())
@@ -494,10 +494,15 @@ def dfl_trf(dfl, trf, mode):
     if min(dfl_out.scale_z()) > max(filt_lamdscale) or max(dfl_out.scale_z()) < min(filt_lamdscale):
         raise ValueError('frequency scales of dfl and transfer function do not overlap')
 
-    filt_interp_re = np.flipud(np.interp(np.flipud(dfl_out.scale_z()), np.flipud(filt_lamdscale), np.flipud(np.real(filt))))
-    filt_interp_im = np.flipud(np.interp(np.flipud(dfl_out.scale_z()), np.flipud(filt_lamdscale), np.flipud(np.imag(filt))))
-    filt_interp = filt_interp_re - 1j * filt_interp_im
-    del filt_interp_re, filt_interp_im
+    # filt_interp_re = np.flipud(np.interp(np.flipud(dfl_out.scale_z()), np.flipud(filt_lamdscale), np.flipud(np.real(filt))))
+    # filt_interp_im = np.flipud(np.interp(np.flipud(dfl_out.scale_z()), np.flipud(filt_lamdscale), np.flipud(np.imag(filt))))
+    # filt_interp = filt_interp_re - 1j * filt_interp_im
+    # del filt_interp_re, filt_interp_im
+    filt_interp_abs = np.flipud(np.interp(np.flipud(dfl_out.scale_z()), np.flipud(filt_lamdscale), np.flipud(np.abs(filt))))
+    filt_interp_ang = np.flipud(np.interp(np.flipud(dfl_out.scale_z()), np.flipud(filt_lamdscale), np.flipud(np.angle(filt))))
+    filt_interp = filt_interp_abs * exp(-1j*filt_interp_ang)#*(trf.xlamds/dfl.xlamds)
+    del filt_interp_abs, filt_interp_ang
+
     dfl_out.fld = dfl_out.fld * filt_interp[:, np.newaxis, np.newaxis]
 
     t_func = time.time() - start
@@ -540,7 +545,7 @@ def dfl_st_cpl(dfl, theta_b, inp_axis='y', s_start=None):
     return dfl2
 
 
-def dfl_hxrss_filt(dfl, trf, ev_seed, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=6, fft_method='mp', dump_proj=0, debug=1):
+def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=6, fft_method='mp', dump_proj=0, debug=1):
     # needs optimizing?
     # tmp
     import matplotlib.pyplot as plt

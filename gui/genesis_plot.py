@@ -2322,6 +2322,89 @@ def plot_dfl_waistscan(sc_res, fig_name=None, showfig=0, savefig=0, debug=1):
         plt.close(fig)
 
 
+def plot_trf(trf, mode='tr', autoscale=1, showfig=0, savefig=None):
+    n_width = 8
+    
+    l = len(trf.k)
+    L = 2*pi / (trf.k[1] - trf.k[0])
+    trf_s_td = np.linspace(0, -L, l) * 1e6
+    trf_s_fd = trf.ev()
+    #trf_s_fd = trf.k
+    
+    if autoscale:
+        trf_s_fd_xlim = np.array([trf.mid_k - n_width*trf.dk, trf.mid_k + n_width*trf.dk])
+        trf_s_fd_xlim = h_eV_s*speed_of_light / (2*pi / trf_s_fd_xlim)
+        trf_s_fd_xlim = np.sort(trf_s_fd_xlim)
+    
+    if mode == 'tr':
+        trf_fd = deepcopy(trf.tr)
+    elif mode == 'ref':
+        trf_fd = deepcopy(trf.ref)
+    else:
+        raise ValueError('mode argument should be "tr" or "ref"')
+    
+    trf_fd /= abs(trf_s_td[-1]) / l
+    trf_td = np.fft.ifft(np.fft.fftshift(trf_fd))
+    
+    
+    trf_fig = plt.figure('Filter')
+    trf_fig.set_size_inches((8, 11), forward=True)
+    
+    ax_fd_abs = trf_fig.add_subplot(3, 1, 1)
+    ax_fd_abs.clear()
+    ax_fd_ang = trf_fig.add_subplot(3, 1, 2, sharex=ax_fd_abs)
+    ax_fd_ang.clear()
+    ax_td = trf_fig.add_subplot(3, 1, 3)
+    ax_td.clear()
+    
+    trf_fig.subplots_adjust(hspace=0)
+    trf_fig.subplots_adjust(top=0.95, bottom=0.2, right=0.85, left=0.15)
+    
+    ax_fd_abs.plot(trf_s_fd, np.abs(trf.tr),'k')
+    ax_fd_ang.plot(trf_s_fd, np.angle(trf.tr),'g')
+    
+    ax_td.semilogy(trf_s_td, abs(trf_td)**2)
+    
+    ax_fd_abs.set_ylabel('amplitude')
+    ax_fd_ang.set_ylabel('phase')
+    ax_fd_ang.set_xlabel('ph.energy')
+    
+    ax_td.set_ylabel('impulse responce (power)')
+    ax_td.set_xlabel('s [um]')
+    
+    ax_fd_abs.axis('tight')
+    ax_fd_abs.set_ylim([0, 1])
+    ax_fd_ang.set_ylim([-np.pi, np.pi])
+    if autoscale:
+        ax_fd_abs.set_xlim(trf_s_fd_xlim)
+    if autoscale:
+        ax_td.set_xlim(-n_width*pi / trf.dk * 1e6, 0)
+    
+    ax_fd_abs.grid(True)
+    ax_fd_ang.grid(True)
+    ax_td.grid(True)
+    
+    for label in ax_fd_abs.get_xticklabels():
+        label.set_visible(False)
+    
+    #ax_td.axis('tight')
+    
+    pos1 = ax_td.get_position()  # get the original position
+    pos2 = [pos1.x0 + 0, pos1.y0 - 0.1,  pos1.width / 1.0, pos1.height / 0.9]
+    ax_td.set_position(pos2)
+    
+    plt.draw()
+    if savefig != None and savefig.__class__ == str:
+        trf_fig.savefig(savefig, format='png')
+    #    if savefig == True:
+    #        savefig = 'png'
+    #    fig.savefig(g.filePath + '_z_' + str(z) + 'm.' + str(savefig), format=savefig)
+    
+    if showfig:
+        plt.show()
+    else:
+        plt.close(trf_fig)
+        
 '''
     scheduled for removal
 '''

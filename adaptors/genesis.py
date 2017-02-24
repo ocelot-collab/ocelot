@@ -2736,6 +2736,8 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=False):
 
     drifts = []
     quads = []
+    
+    gamma = energy / m_e_GeV
 
     for e in lattice.sequence:
 
@@ -2755,7 +2757,14 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=False):
                 #drifts.append([str( (pos - prevPos ) / unit ), str(prevLen / unit)])
                 if debug:
                     print ('appending drift' + str((prevLen) / unit))
-                driftLat += 'AD' + '    ' + str(e.Kx * np.sqrt(0.5)) + '   ' + str(round((pos - prevPos - prevLen) / unit, 2)) + '  ' + str(round(prevLen / unit, 2)) + '\n'
+                L = pos - prevPos - prevLen #intersection length [m]
+                K_rms = e.Kx * np.sqrt(0.5)
+                xlamds = e.lperiod * (1 + K_rms**2) / (2 * gamma**2)
+                slip=(L / gamma**2) / 2 #free space radiation slippage [m]
+                add_slip = xlamds - slip % xlamds #free-space slippage to compensate with undulator K to bring it to integer number of wavelengths
+                K_rms_add = sqrt(2 * add_slip * gamma**2 / L) #compensational K
+                # driftLat += 'AD' + '    ' + str(e.Kx * np.sqrt(0.5)) + '   ' + str(round((pos - prevPos - prevLen) / unit, 2)) + '  ' + str(round(prevLen / unit, 2)) + '\n'
+                driftLat += 'AD' + '    ' + str(K_rms_add) + '   ' + str(round((L) / unit, 2)) + '  ' + str(round(prevLen / unit, 2)) + '\n'
 
             prevPos = pos
             prevLen = l

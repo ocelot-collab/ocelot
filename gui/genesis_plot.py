@@ -1949,7 +1949,9 @@ def plot_beam(beam, figsize=3, showfig=False, savefig=False, fig=None, plot_xy=N
     ax.set_xlabel(r'$\mu m$')
     p1, = plt.plot(1.e6 * np.array(beam.z), beam.I, 'r', lw=3)
     plt.plot(1.e6 * beam.z[beam.idx_max], beam.I[beam.idx_max], 'bs')
+    ax.set_ylim(ymin=0)
     ax = ax.twinx()
+    
 
     p2, = plt.plot(1.e6 * np.array(beam.z), 1.e-3 * np.array(beam.eloss), 'g', lw=3)
 
@@ -1972,6 +1974,7 @@ def plot_beam(beam, figsize=3, showfig=False, savefig=False, fig=None, plot_xy=N
     p1, = plt.plot(1.e6 * np.array(beam.z), beam.ex * 1e6, 'r', lw=3)
     p2, = plt.plot(1.e6 * np.array(beam.z), beam.ey * 1e6, 'g', lw=3)
     plt.plot(1.e6 * beam.z[beam.idx_max], beam.ex[beam.idx_max] * 1e6, 'bs')
+    ax.set_ylim(ymin=0)
 
     ax.legend([p1, p2], [r'$\varepsilon_x [\mu m]$', r'$\varepsilon_y [\mu m]$'], fontsize=fontsize, loc='best')
     # ax3.legend([p3,p4],[r'$\varepsilon_x$',r'$\varepsilon_y$'])

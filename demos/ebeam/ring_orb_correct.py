@@ -115,7 +115,7 @@ s_bpm_b = np.array([p.s for p in orb.bpms])
 
 p0=Particle(E=beam.E)
 x_bpm_b, y_bpm_b = orb.read_virtual_orbit()
-ax = plot_API(lat)
+fig, ax = plot_API(lat)
 ax.plot(s_bpm_b, x_bpm_b*1000., "ro-")
 ax.plot(s_bpm_b, y_bpm_b*1000., "bo-")
 plt.show()
@@ -131,7 +131,7 @@ p_list = lattice_track(lat, orb.particle0)
 s = [p.s for p in p_list]
 x = [p.x*1000. for p in p_list]
 y = [p.y*1000. for p in p_list]
-ax = plot_API(lat)
+fig, ax = plot_API(lat)
 ax.plot(s_bpm_b, x_bpm*1000., "ro")
 ax.plot(s, x, 'r')
 ax.plot(s_bpm_b, y_bpm*1000., "bo")

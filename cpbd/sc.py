@@ -155,7 +155,7 @@ class SpaceCharge():
         Eref = gamref*m_e_eV
         pref = Eref*betref
         xxstg = p_array.particles.view()
-        npartl = len(xxstg)/6
+        npartl = int(len(xxstg)/6)
         xxstg.shape = (npartl, 6)
         Exyz = self.el_field(np.c_[xxstg[:, 0], xxstg[:, 2], -betref*xxstg[:, 4]], p_array.q_array, gamref, nmesh_xyz)
         cdT = zstep/betref

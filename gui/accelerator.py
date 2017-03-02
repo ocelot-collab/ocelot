@@ -290,7 +290,7 @@ dict_plot = {Quadrupole: {"scale": 0.7, "color": "r",            "edgecolor": "r
              }
 
 
-def  new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legend = True):
+def new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legend = True):
     dict_copy=deepcopy(dict_plot)
     alpha = 1
     ax.set_ylim((-1,1.5))

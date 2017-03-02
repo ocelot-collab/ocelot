@@ -314,8 +314,6 @@ class CSR:
             plt.ion()
             #plt.hold(False)
 
-
-
     def K0_inf_anf(self, i, traj, wmin):
         # function [ w,KS ] = K0_inf_anf( i,traj,wmin )
 
@@ -353,6 +351,7 @@ class CSR:
 
         return w, KS
 
+
     def K0_fin_anf(self, i, traj, wmin, gamma):
         # function [ w,KS ] = K0_inf_anf( i,traj,wmin,gamma )
 
@@ -368,7 +367,7 @@ class CSR:
         R = np.sqrt(np.sum(n**2, axis=0))
         n = np.array([n[0, :]/R, n[1, :]/R, n[2, :]/R])
         w = s + beta*R
-        j = np.where(w<=wmin)[0]
+        j = np.where(w <= wmin)[0]
 
         if len(j) > 0:
             j = j[-1]
@@ -472,14 +471,17 @@ class CSR:
             L_fin = False
         w_range = np.arange(-NdW[0]-1, 0)*NdW[1]
         if L_fin:
-            #start = time.time()
+            # start = time.time()
             w, KS = self.K0_fin_anf(i, traj, w_range[0], gamma)
-            #print("K0_fin_anf = ", time.time() - start)
+            # print("K0_fin_anf = ", time.time() - start)
+            #print(len(w))
         else:
             w, KS = self.K0_inf_anf(i, traj, w_range[0])
 
         KS1 = KS[0]
+
         idx = np.argsort(w)
+        # print(np.array_equal(w, w[idx]))
         w = w[idx]
         KS = KS[idx]
         w, idx = np.unique(w, return_index=True)
@@ -515,7 +517,7 @@ class CSR:
         start = seq_copy[self.indx0]
         stop = seq_copy[self.indx1]
         csr_lat = MagneticLattice(seq_copy, start=start, stop=stop)
-
+        #print(csr_lat.totalLen)
         self.z_csr_start = sum([p.l for p in lat.sequence[:self.indx0]])
         p = Particle()
 
@@ -534,7 +536,9 @@ class CSR:
             else:
                 #B = 0.
                 R_vect = [0, 0, 0.]
+
             self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect )
+            #print("scr_traj = ", self.csr_traj[0, -1], elem.l)
 
         return self.csr_traj
 
@@ -573,6 +577,7 @@ class CSR:
         indx_prev = (np.abs(s_array - (s_cur - delta_s))).argmin()
         gamma = p_array.E/m_e_GeV
         h = max(1., self.apply_step/self.traj_step)
+        #print(indx, indx_prev, h, s_cur, s_array[-1])
         itr_ra = np.unique(-np.round(np.arange(-indx, -indx_prev, h))).astype(np.int)
 
         nit = 0

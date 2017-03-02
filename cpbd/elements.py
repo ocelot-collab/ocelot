@@ -301,6 +301,7 @@ class Cavity(Element):
         self.phi = phi  # in grad # *np.pi/180.
         self.E = 0
         self.volterr = volterr
+        self.coupler_kick = False
 
 
 class Solenoid(Element):

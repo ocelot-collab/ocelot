@@ -16,7 +16,7 @@ logger = Logger()
 def transform_vec_ent(X, dx, dy, tilt):
     n = len(X)
     rotmat = rot_mtx(tilt)
-    x_add = np.add(X.reshape(n / 6, 6), np.array([-dx, 0., -dy, 0., 0., 0.])).transpose()
+    x_add = np.add(X.reshape(int(n/6), 6), np.array([-dx, 0., -dy, 0., 0., 0.])).transpose()
     X[:] = np.dot(rotmat, x_add).transpose().reshape(n)[:]
     return X
 
@@ -24,7 +24,7 @@ def transform_vec_ent(X, dx, dy, tilt):
 def transform_vec_ext(X, dx, dy, tilt):
     n = len(X)
     rotmat = rot_mtx(-tilt)
-    x_tilt = np.dot(rotmat, np.transpose(X.reshape(n / 6, 6))).transpose()
+    x_tilt = np.dot(rotmat, np.transpose(X.reshape(int(n / 6), 6))).transpose()
     X[:] = np.add(x_tilt, np.array([dx, 0., dy, 0., 0., 0.])).reshape(n)[:]
     return X
 
@@ -126,9 +126,9 @@ class TransferMap:
             dyp = self.pulse.kick_y(tau)
             logger.debug('kick ' + str(dxp) + ' ' + str(dyp))
             b = array([0.0, dxp, 0.0, dyp, 0., 0.])
-            a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(n/6, 6)))), b).reshape(n)
+            a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(int(n/6), 6)))), b).reshape(n)
         else:
-            a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(n/6, 6)))), self.B(energy)).reshape(n)
+            a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(int(n/6), 6)))), self.B(energy)).reshape(n)
         particles[:] = a[:]
         logger.debug('return trajectory, array ' + str(len(particles)))
         return particles
@@ -275,7 +275,7 @@ class CorrectorTM(TransferMap):
         #ocelot.logger.debug('invoking kick_b')
         n = len(X)
         b = self.kick_b(z, l, angle_x, angle_y)
-        X1 = np.add(np.transpose(dot(self.R(energy), np.transpose( X.reshape(n/6, 6)))), b).reshape(n)
+        X1 = np.add(np.transpose(dot(self.R(energy), np.transpose( X.reshape(int(n/6), 6)))), b).reshape(n)
         #print(X1)
         X[:] = X1[:]
         return X
@@ -296,6 +296,11 @@ class CavityTM(TransferMap):
         self.v = v
         self.f = f
         self.phi = phi
+        self.coupler_kick = False
+        self.vx_up = 0.
+        self.vy_up = 0.
+        self.vx_down = 0.
+        self.vy_down = 0.
         self.delta_e_z = lambda z: self.v * np.cos(self.phi * np.pi / 180.) * z / self.length
         self.delta_e = self.v * np.cos(self.phi * np.pi / 180.)
         self.map = lambda X, energy: self.map4cav(X, energy,  self.v, self.f, self.phi)
@@ -303,8 +308,16 @@ class CavityTM(TransferMap):
     def map4cav(self, X, E,  V, freq, phi):
         #print("CAVITY")
         phi = phi*np.pi/180.
+        #if self.coupler_kick:
+        if self.coupler_kick:
+            #print("couple_kick")
+            X[1::6] += (self.vx_up* V * np.exp(1j*phi)).real*1e-6 /E
+            X[3::6] += (self.vy_up * V * np.exp(1j * phi)).real * 1e-6 / E
         X = self.mul_p_array(X, energy=E) #t_apply(R, T, X, dx, dy, tilt)
         delta_e = V*np.cos(phi)
+        if self.coupler_kick:
+            X[1::6] += (self.vx_down * V * np.exp(1j * phi)).real * 1e-6 / (E + delta_e)
+            X[3::6] += (self.vy_down * V * np.exp(1j * phi)).real * 1e-6 / (E + delta_e)
         if E + delta_e > 0:
             k = 2.*np.pi*freq/speed_of_light
             #X[5::6] = (X[5::6]*E + V*np.cos(X[4::6]*k + phi) - delta_e)/(E + delta_e)
@@ -462,7 +475,16 @@ class SecondTM(TransferMap):
     def t_apply(self, R, T, X, dx, dy, tilt, U5666=0.):
         #print("t_apply", self.k2, self.T)
         if dx != 0 or dy != 0 or tilt != 0:
-            X = transform_vec_ent(X, dx, dy, -tilt)
+            X = transform_vec_ent(X, dx, dy, tilt)
+
+        # test start
+        #gamma = 0.132729736896 / m_e_GeV
+        #gamma2 = gamma * gamma
+        #igamma2 = 1. / gamma2
+        #
+        #beta = np.sqrt(1. - igamma2)
+        #U5666 = -2./(beta*beta)*igamma2
+        # test end
 
         n = len(X)
         Xr = transpose(dot(R, transpose(X.reshape(int(n / 6), 6)))).reshape(n)
@@ -502,7 +524,7 @@ class SecondTM(TransferMap):
         # X[:] = Xr[:] + Xt[:]
 
         if dx != 0 or dy != 0 or tilt != 0:
-            X = transform_vec_ext(X, dx, dy, -tilt)
+            X = transform_vec_ext(X, dx, dy, tilt)
 
         return X
 
@@ -672,6 +694,18 @@ class MethodTM:
         if element.__class__ == Cavity:
             #print("CAVITY create")
             tm = CavityTM(v=element.v, f=element.f, phi=element.phi)
+            if element.coupler_kick:
+                tm.coupler_kick = element.coupler_kick
+                tm.vx_up = element.vx_up
+                tm.vy_up = element.vy_up
+                tm.vxx_up = element.vxx_up
+                tm.vxy_up = element.vxy_up
+                tm.vx_down = element.vx_down
+                tm.vy_down = element.vy_down
+                tm.vxx_down = element.vxx_down
+                tm.vxy_down = element.vxy_down
+            else:
+                tm.coupler_kick = False
 
         if element.__class__ == Multipole:
             tm = MultipoleTM(kn=element.kn)

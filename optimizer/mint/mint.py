@@ -206,6 +206,13 @@ class GaussProcessSKLearn(Minimizer):
         self.y_obs = np.array(opt_smx.opt_ctrl.penalty)
         self.y_sigma_obs = np.zeros(len(self.y_obs))
 
+    def load_seed(self, x_sets, penalty, sigma_pen=None):
+        self.x_obs = np.vstack(x_sets)
+        self.y_obs = np.array(penalty)
+        if sigma_pen == None:
+            self.y_sigma_obs = np.zeros(len(self.y_obs))
+        else:
+            self.y_sigma_obs = sigma_pen
 
     def preprocess(self):
 
@@ -215,7 +222,7 @@ class GaussProcessSKLearn(Minimizer):
         devs_search_area = []
         for dev in self.devices:
             lims = dev.get_limits()
-            devs_std.append((lims[-1] - lims[0])/2.)
+            devs_std.append((lims[-1] - lims[0])/3.)
             x_vec = np.atleast_2d(np.linspace(lims[0], lims[-1], num=50)).T
             devs_search_area.append(x_vec)
 
@@ -525,7 +532,7 @@ def test_simplex():
     d3.get_limits = get_limits
 
     devices = [d1, d2, d3]
-    target = TestTarget()
+    target = Target_test()
 
     # init Optimizer
     opt = Optimizer()
@@ -655,7 +662,7 @@ def test_GP():
 
 
 if __name__ == "__main__":
-    #test_simplex()
-    test_gauss_process()
+    test_simplex()
+    #test_gauss_process()
     #test_GP()
 

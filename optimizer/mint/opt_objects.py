@@ -111,6 +111,12 @@ class Target(object):
     def get_alarm(self):
         return 0
 
+    def clean(self):
+        self.niter = 0
+        self.penalties = []
+        self.times = []
+        self.alarms = []
+        self.values = []
 
 class Target_test(Target):
     def __init__(self, mi=None, dp=None, eid=None):

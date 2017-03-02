@@ -155,8 +155,37 @@ def create_r_matrix(element):
                                 [0., 0., r21, r22, 0., 0.],
                                 [0., 0., 0., 0., 1., r56],
                                 [0., 0., 0., 0., r65, r66]]).real
-            return cav_matrix
+            if element.coupler_kick:
+                #element.vxx_up = 1.0003 - 0.8132j
+                #element.vxy_up = (3.4075 - 0.41223j)
+                m21 = (element.vxx_up * V * np.exp(1j*phi)).real*1e-3 /E
+                m43 = - m21
+                m23 = (element.vxy_up* V * np.exp(1j*phi)).real*1e-3 /E
 
+                coupl_kick_up = np.array([[1, 0., 0., 0., 0., 0.],
+                                      [m21, 1, m23, 0., 0., 0.],
+                                      [0., 0., 1, 0., 0., 0.],
+                                      [m23, 0., m43, 1, 0., 0.],
+                                      [0., 0., 0., 0., 1., 0.],
+                                      [0., 0., 0., 0., 0., 1]]).real
+
+                #vxx = ((-4.9278 - 2.2112j) * V * np.exp(1j*phi)).real*1e-3 /(E + de)
+                #vyy = - vxx
+                #vxy = ((2.9224 - 0.027228j) * V * np.exp(1j*phi)).real *1e-3 /(E + de)
+
+                #element.vxx_down = (-4.9278 - 2.2112j)
+                #element.vxy_down = (2.9224 - 0.027228j)
+                m21 = (element.vxx_down * V * np.exp(1j*phi)).real*1e-3 /E
+                m43 = - m21
+                m23 = (element.vxy_down* V * np.exp(1j*phi)).real*1e-3 /E
+                coupl_kick_down = np.array([[1, 0., 0., 0., 0., 0.],
+                                      [m21, 1, m23, 0., 0., 0.],
+                                      [0., 0., 1, 0., 0., 0.],
+                                      [m23, 0., m43, 1, 0., 0.],
+                                      [0., 0., 0., 0., 1., 0.],
+                                      [0., 0., 0., 0., 0., 1]]).real
+                return np.dot(np.dot(coupl_kick_up, cav_matrix), coupl_kick_down)
+            return cav_matrix
 
         if element.delta_e == 0. and element.v == 0.:
             r_z_e = lambda z, energy: uni_matrix(z, 0., hx=0., sum_tilts=element.dtilt + element.tilt, energy=energy)

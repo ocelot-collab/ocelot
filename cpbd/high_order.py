@@ -1324,8 +1324,9 @@ def arcline( SREin, Delta_S, dS, R_vect ):
     sre0 = SREin[:,-1]
     N = int(max(1, np.round(Delta_S/dS)))
     #print N
-    dS = Delta_S/N
+    dS = float(Delta_S)/N
     SRE2 = np.zeros((7, N))
+    #print("SRE2", sre0[0], N, dS, Delta_S)
     SRE2[0,:] = sre0[0] + np.arange(1, N+1)*dS
 
     R_vect_valid = False
@@ -1366,6 +1367,7 @@ def arcline( SREin, Delta_S, dS, R_vect ):
         SRE2[7-1, :] = e1[2]*co + e2[2]*si
 
     #print np.shape(np.transpose([SREin])), np.shape(SRE2)
+    #print("arcline: ", SREin[0,-1], SRE2[0, 0], SRE2[0, -1], )
     SRE = np.append(SREin, SRE2, axis=1)
 
     return SRE

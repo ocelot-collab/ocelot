@@ -457,7 +457,7 @@ def tracking_step(lat, particle_list, dz, navi):
     return
 
 
-def track(lattice, p_array, navi, print_progress=True):
+def track(lattice, p_array, navi, print_progress=True, calc_tws=True):
     """
     tracking through the lattice
     :param lattice: Magnetic Lattice
@@ -465,7 +465,7 @@ def track(lattice, p_array, navi, print_progress=True):
     :param navi: Navigator
     :return: twiss list, ParticleArray
     """
-    tw0 = get_envelope(p_array)
+    tw0 = get_envelope(p_array) if calc_tws else Twiss()# get_envelope(p_array)
     #print(tw0)
     tws_track = [tw0]
     L = 0.
@@ -476,7 +476,7 @@ def track(lattice, p_array, navi, print_progress=True):
         for p in proc_list:
             p.z0 = navi.z0
             p.apply(p_array, dz)
-        tw = get_envelope(p_array)
+        tw = get_envelope(p_array) if calc_tws else Twiss()
         L += dz
         tw.s += L
         tws_track.append(tw)
@@ -511,7 +511,7 @@ def merge_drifts(lat):
     new_elem = None
     for elem in lat.sequence:
         #next_elem = lat.sequence[i+1]
-        if elem.type == "drift":
+        if elem.__class__ == Drift:
             L += elem.l
             new_elem = Drift(l=L, eid=elem.id)
         else:

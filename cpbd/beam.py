@@ -4,7 +4,7 @@ definition of particles, beams and trajectories
 import numpy as np
 from numpy.core.umath import sqrt, cos, sin
 from ocelot.common.globals import *
-
+import pickle
 '''
 Note:
 (A) the reference frame (e.g. co-moving or not with the beam is not fixed) 
@@ -215,6 +215,7 @@ class ParticleArray:
     """
     def __init__(self, n=0):
         self.particles = zeros(n*6)
+        self.q_array = np.zeros(n)    # charge
         self.s = 0.0
         self.E = 0.0
 

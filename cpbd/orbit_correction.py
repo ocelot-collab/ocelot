@@ -301,6 +301,7 @@ class Orbit:
         :param lattice: class MagneticLattice
         :return: orbit.bpms
         """
+        particles = []
         X = []
         Y = []
         if p_init == None:
@@ -321,8 +322,10 @@ class Orbit:
             L = bpm.s
             X.append(p.x)
             Y.append(p.y)
+
+            particles.append(copy.copy(p))
         #print("energy = ", p.E)
-        return array(X), array(Y)
+        return array(X), array(Y),
 
     def response_matrix(self, mi, dp, timeout=0.5, delta_i=0.01):
         resp = np.zeros((len(self.bpms)*2, len(self.hcors)+len(self.vcors)))
@@ -426,7 +429,7 @@ class Orbit:
         :param match_ic: matching initial coordinates of particles
         :return:
         """
-        print ("measure = ", p_init.x, p_init.y, p_init.px, p_init.py, p_init.E)
+        #print ("measure = ", p_init.x, p_init.y, p_init.px, p_init.py, p_init.E)
         shift = 0.0001
         m = len(self.bpms)
         nx = len(self.hcors)
@@ -519,6 +522,7 @@ class Orbit:
     def linac_response_matrix(self, tw_init=None):
         """
         calculation of ideal response matrix
+
         :param lattice: class MagneticLattice
         :param tw_init: if tw_init == None, function tries to find periodical solution
         :return: orbit.resp
@@ -559,7 +563,77 @@ class Orbit:
         rmatrix.mode = "radian"
         return rmatrix
 
-    def apply_svd(self, resp_matrix, misallign, weight=None):
+    def disp_measur(self, E0):
+        X0, Y0 = self.read_virtual_orbit(p_init=Particle(p=0.0, E=E0))
+        X1, Y1 = self.read_virtual_orbit(p_init=Particle(p=0.01, E=E0))
+        E = np.array([bpm.E for bpm in self.bpms])
+        Dx0 = (X1 - X0) * E / E0 / 0.01
+        Dy0 = (Y1 - Y0) * E / E0 / 0.01
+        return Dx0, Dy0
+
+    # def disp_measur2(self, E0):
+    #     p_list = np.array(lattice_track(self.lat, Particle(p=0.0, E=E0)))
+    #     p_list2 = np.array(lattice_track(self.lat, Particle(p=0.001, E=E0)))
+    #     s = np.array([bpm.s for bpm in self.bpms])
+    #     p_s = np.array([p.s for p in p_list])
+    #     indces = np.where(np.in1d(p_s, s))[0][::2]
+    #     #print(len(s), len(indces))
+    #     #print(indces)
+    #     E = np.array([p.E for p in p_list[indces]])
+    #     X0 = np.array([p.x for p in p_list[indces]])
+    #     X1 = np.array([p.x for p in p_list2[indces]])
+    #     Y0 = np.array([p.y for p in p_list[indces]])
+    #     Y1 = np.array([p.y for p in p_list2[indces]])
+    #     Dx0 = (X1 - X0) * E / E0 / 0.01
+    #     Dy0 = (Y1 - Y0) * E / E0 / 0.01
+    #     return Dx0, Dy0
+
+    def linac_disp_response_matrix(self, tw_init):
+        """
+        calculation of ideal response matrix
+
+        :param lattice: class MagneticLattice
+        :param tw_init: if tw_init == None, function tries to find periodical solution
+        :return: orbit.resp
+        """
+        #self.optical_func_params(tw_init=tw_init)
+
+        m = len(self.bpms)
+        nx = len(self.hcors)
+        ny = len(self.vcors)
+        #h_resp = zeros((m, nx))
+        #v_resp = zeros((m, ny))
+
+        self.resp = zeros((2 * m, nx + ny))
+        s = [bpm.s for bpm in self.bpms]
+        Dx0, Dy0 = self.disp_measur(E0=tw_init.E)
+        #plt.plot(s, Dx0,"ro-",  s, Dy0,"bo-")
+        #plt.show()
+        D0 = np.append(Dx0, Dy0)
+        for j, cor in enumerate([item for sublist in [self.hcors, self.vcors] for item in sublist]):
+            print(j,"/", nx+ny, cor.id)
+            cor.angle = 0.001
+            self.lat.update_transfer_maps()
+            # cor.transfer_map = self.lat.method.create_tm(cor)
+            start = time()
+            Dx1, Dy1 = self.disp_measur(E0=tw_init.E)
+            print(time() - start)
+            #plt.plot(s, Dx1, "ro-", s, Dy1, "bo-")
+            #plt.show()
+            D1 = np.append(Dx1, Dy1)
+            self.resp[:, j] = (D1 - D0)/cor.angle
+            cor.angle = 0.00
+            # cor.transfer_map = self.lat.method.create_tm(cor)
+
+        rmatrix = Response_matrix()
+        rmatrix.bpm_names = [b.id for b in self.bpms]
+        rmatrix.cor_names = np.append(np.array([c.id for c in self.hcors]), np.array([c.id for c in self.vcors]))
+        rmatrix.matrix = self.resp
+        rmatrix.mode = "radian"
+        return rmatrix
+
+
+    def apply_svd(self, resp_matrix, misallign, weight=None, alpha=1.e-4):
         #print resp_matrix
         if weight is None:
             weight = eye(len(misallign))
@@ -570,7 +644,7 @@ class Orbit:
         s_inv = zeros(len(s))
         for i in range(len(s)):
             #if s[i]<1./max(s):
-            if s[i] < 1.e-4:
+            if s[i] < alpha:
                 s_inv[i] = 0.
             else:
                 s_inv[i] = 1./s[i]
@@ -622,6 +696,37 @@ class Orbit:
                 iy += 1
         """
         #print "ix = ", ix, "iy =", iy, len(angle)
+        self.lat.update_transfer_maps()
+        if p_init is not None:
+            p_init.x = -angle[-4]
+            p_init.px = -angle[-3]
+            p_init.y  = -angle[-2]
+            p_init.py = -angle[-1]
+        return 0
+
+    def disp_correction(self, monitors, p_init=None, alpha=1e-3):
+        m = len(self.bpms)
+        #monitors = zeros(2*m)
+        weights = eye(len(monitors))
+        for i, bpm in enumerate(self.bpms):
+            #monitors[i] = bpm.x
+            #monitors[i+m] = bpm.y
+            weights[i, i] = bpm.weight
+            weights[i+m, i+m] = bpm.weight
+
+        start = time()
+        angle = self.apply_svd(self.resp, monitors, weight=weights, alpha=alpha)
+
+        print("correction = ", time() - start)
+        for i, cor in enumerate(np.append(self.hcors, self.vcors)):
+            if self.mode == "ampere":
+                #print "ampere"
+                cor.dI = -angle[i]
+            else:
+                #print len(np.append(self.hcors, self.vcors)), i, len(angle)
+                cor.angle -= angle[i]
+                print(cor.id, ".angle=", cor.angle)
+
         self.lat.update_transfer_maps()
         if p_init is not None:
             p_init.x = -angle[-4]

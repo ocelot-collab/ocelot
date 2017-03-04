@@ -11,8 +11,6 @@ from __future__ import absolute_import, print_function
 import json
 import sys
 import os
-import sklearn
-sklearn_version = sklearn.__version__
 
 path = os.path.realpath(__file__)
 indx = path.find("ocelot/optimizer")
@@ -21,7 +19,8 @@ sys.path.append(path[:indx])
 
 # for pyqtgraph import
 #sys.path.append(path[:indx]+"ocelot")
-
+import sklearn
+sklearn_version = sklearn.__version__
 
 
 from PyQt4.QtGui import QApplication, QFrame, QPixmap, QMessageBox
@@ -535,7 +534,7 @@ class OcelotInterfaceWindow(QFrame):
         #get times, penalties obj func data from the machine interface
 
         y = self.objective_func.penalties
-
+        #print(self.objective_func.times)
         x = np.array(self.objective_func.times) - self.objective_func.times[0]
 
         self.obj_func_line.setData(x=x, y=y)

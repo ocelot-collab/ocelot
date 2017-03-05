@@ -11,6 +11,8 @@ from __future__ import absolute_import, print_function
 import json
 import sys
 import os
+import sklearn
+sklearn_version = sklearn.__version__
 
 path = os.path.realpath(__file__)
 indx = path.find("ocelot/optimizer")
@@ -19,8 +21,7 @@ sys.path.append(path[:indx])
 
 # for pyqtgraph import
 #sys.path.append(path[:indx]+"ocelot")
-import sklearn
-sklearn_version = sklearn.__version__
+
 
 
 from PyQt4.QtGui import QApplication, QFrame, QPixmap, QMessageBox
@@ -70,7 +71,7 @@ class OcelotInterfaceWindow(QFrame):
         QFrame.__init__(self)
 
         self.logbook = "xfellog"
-        self.dev_mode = True
+        self.dev_mode = False
 
         self.ui = MainWindow(self)
 
@@ -532,9 +533,10 @@ class OcelotInterfaceWindow(QFrame):
         Collects data and updates plot on every GUI clock cycle.
         """
         #get times, penalties obj func data from the machine interface
-
+        if len(self.objective_func.times) == 0:
+            return
         y = self.objective_func.penalties
-        #print(self.objective_func.times)
+
         x = np.array(self.objective_func.times) - self.objective_func.times[0]
 
         self.obj_func_line.setData(x=x, y=y)
@@ -543,6 +545,8 @@ class OcelotInterfaceWindow(QFrame):
 
         #plot data for all devices being scanned
         for dev in self.devices:
+            if len(dev.times) == 0:
+                return
             y = np.array(dev.values)-self.multiPlotStarts[dev.eid]
             x = np.array(dev.times) - np.array(dev.times)[0]
             line = self.multilines[dev.eid]

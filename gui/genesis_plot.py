@@ -1127,8 +1127,14 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend=True, phase=False, far_fi
 
     if column_3d:
         
-        min_xz_proj=xz_proj[xz_proj!=0].min()
-        min_yz_proj=yz_proj[yz_proj!=0].min()
+        if np.amin(xz_proj) == 0:
+            min_xz_proj = 0
+        else:
+            min_xz_proj=xz_proj[xz_proj!=0].min()
+        if np.amin(yz_proj) == 0:
+            min_yz_proj = 0
+        else:
+            min_yz_proj=yz_proj[yz_proj!=0].min()
         
         if phase == True:
             ax_proj_xz = fig.add_subplot(2, 2 + column_3d, 6)

@@ -1024,7 +1024,29 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', debug=1):
         os.system('rm ' + out_path + '.dpa.slice* 2>/dev/null')
         if debug > 1:
             print ('        done in %.2f seconds' % (time.time() - start_time))
-        # if debug>0: print ('      removing temporary files')
+        
+        if debug > 0:
+            print ('      assembling *.fld file')
+        start_time = time.time()
+        if dfl_slipage_incl:
+            os.system('cat ' + out_path + '.fld.slice*  >> ' + out_path + '.fld.tmp')
+            #bytes=os.path.getsize(out_path +'.fld.tmp')
+            command = 'dd if=' + out_path + '.fld.tmp of=' + out_path + '.fld conv=notrunc conv=notrunc 2>/dev/null'  # obs='+str(bytes)+' skip=1
+            os.system(command)
+        else:
+            os.system('cat ' + out_path + '.fld.slice*  > ' + out_path + '.fld')
+        os.system('rm ' + out_path + '.fld.slice* 2>/dev/null')
+        os.system('rm ' + out_path + '.fld.tmp 2>/dev/null')
+        if debug > 1:
+            print ('        done in %.2f seconds' % (time.time() - start_time))
+
+        if debug > 0:
+            print ('      assembling *.par file')
+        start_time = time.time()
+        os.system('cat ' + out_path + '.par.slice* >> ' + out_path + '.par')
+        os.system('rm ' + out_path + '.par.slice* 2>/dev/null')
+        if debug > 1:
+            print ('        done in %.2f seconds' % (time.time() - start_time))
 
     elif assembly_ver == 'pyt':
         # there is a bug with dfl assembly
@@ -1055,6 +1077,25 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', debug=1):
             start_time = time.time()
             assemble(out_path + '.dpa', ram=ram, debug=debug)
             os.system('rm ' + out_path + '.dpa.slice* 2>/dev/null')
+            if debug > 1:
+                print ('        done in %.2f seconds' % (time.time() - start_time))
+                
+        if os.path.isfile(str(out_path + '.fld')):
+            if debug > 0:
+                print ('      assembling *.fld file')
+            start_time = time.time()
+            assemble(out_path + '.fld', overwrite=dfl_slipage_incl, ram=ram, debug=debug)
+            os.system('rm ' + out_path + '.fld.slice* 2>/dev/null')
+            os.system('rm ' + out_path + '.fld.tmp 2>/dev/null')
+            if debug > 1:
+                print ('        done in %.2f seconds' % (time.time() - start_time))
+
+        if os.path.isfile(str(out_path + '.par')):
+            if debug > 0:
+                print ('      assembling *.par file')
+            start_time = time.time()
+            assemble(out_path + '.par', ram=ram, debug=debug)
+            os.system('rm ' + out_path + '.par.slice* 2>/dev/null')
             if debug > 1:
                 print ('        done in %.2f seconds' % (time.time() - start_time))
 
@@ -1734,7 +1775,7 @@ def read_dfl_file_out(out, filePath=None, debug=1):
     return dfl
 
 
-def read_dfl_file(filePath, Nxy, Lxy=None, zsep=None, xlamds=None, vartype=complex, debug=1):
+def read_dfl_file(filePath, Nxy, Lxy=None, zsep=None, xlamds=None, hist_rec=1, vartype=complex, debug=1):
     '''
     Function to read the Genesis output radiation file "dfl".
     Returns RadiationField() object
@@ -1743,6 +1784,7 @@ def read_dfl_file(filePath, Nxy, Lxy=None, zsep=None, xlamds=None, vartype=compl
     Lxy - transverse mesh size (2*dgrid)
     zsep - separation between slices in terms of wavelengths 
     xlamds  - wavelength of the radiation
+    hist_rec - number of dfl records withinb in a single file (*.fld case), not finished!
     '''
     
     if debug > 0:
@@ -1762,18 +1804,25 @@ def read_dfl_file(filePath, Nxy, Lxy=None, zsep=None, xlamds=None, vartype=compl
             print ('        - reading from ' + filePath)
 
         b = np.fromfile(filePath, dtype=complex).astype(vartype)
-        Nz = b.shape[0] / Nxy / Nxy
+        Nz = b.shape[0] / Nxy / Nxy / hist_rec
         assert (Nz % 1 == 0), 'Wrong Nxy or corrupted file'
         Nz = int(Nz)
         
         dfl = RadiationField()
-        dfl.fld = b.reshape(Nz, Nxy, Nxy)
+        if hist_rec > 1:
+            dfl.fld = b.reshape(hist_rec, Nz, Nxy, Nxy)
+            dfl.fld = np.rollaxis(dfl.fld, 0, 4)
+            print(dfl.shape())
+        else:
+            dfl.fld = b.reshape(Nz, Nxy, Nxy)
         dfl.dx = Lxy / dfl.Nx()
         dfl.dy = Lxy / dfl.Ny()
         dfl.dz = xlamds * zsep
         dfl.xlamds = xlamds
         dfl.filePath = filePath
+        
 
+        
         if debug > 0:
             print('      done in %.2f sec' % (time.time() - start_time))
 

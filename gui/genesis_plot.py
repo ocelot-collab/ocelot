@@ -30,8 +30,9 @@ from ocelot.utils.xfel_utils import *
 from matplotlib import rc, rcParams
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+
 fntsz = 4
-params = {'backend': 'ps', 'axes.labelsize': 3 * fntsz, 'font.size': 3 * fntsz, 'legend.fontsize': 4 * fntsz, 'xtick.labelsize': 4 * fntsz,  'ytick.labelsize': 4 * fntsz, 'text.usetex': False}
+params = {'image.cmap': 'viridis', 'backend': 'ps', 'axes.labelsize': 3 * fntsz, 'font.size': 3 * fntsz, 'legend.fontsize': 4 * fntsz, 'xtick.labelsize': 4 * fntsz,  'ytick.labelsize': 4 * fntsz, 'text.usetex': False}
 rcParams.update(params)
 # plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
 # rcParams["savefig.directory"] = os.chdir(os.path.dirname(__file__)) but __file__ appears to be genesis_plot
@@ -58,7 +59,7 @@ def plot_gen_out_all_paral(exp_dir, stage=1, savefig='png', debug=1):
     # plot_gen_stat(proj_dir=exp_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int','energy','r_size_weighted'], z_param_inp=[], dfl_param_inp=[], s_inp=['max'], z_inp=[0,'end'], savefig=1, saveval=1, showfig=0, debug=0)
 
 
-def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1, 1, 6.05, 1, 0, 0, 0, 0, 0, 1), vartype_dfl=complex128, debug=1):
+def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1, 1, 6.05, 1, 0, 0, 0, 0, 0, 1, 0), vartype_dfl=complex128, debug=1):
     '''
     plots all possible output from the genesis output
     handle is either:
@@ -79,6 +80,8 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
         8 -                 inv.space-frequency domain
         9 - dpa as edist at the end, smeared
         10 - dpa as edist at the end, not smeared
+        11 - wigner distribution at end,
+        12 - ebeam bucket at max power
 
     #picks as an input "GenesisOutput" object, file path of directory as strings.
     #plots e-beam evolution, radiation evolution, initial and final simulation window
@@ -95,14 +98,14 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
         savefig = 'png'
 
     if choice == 'all':
-        choice = (1, 1, 1, 1, 6.05, 1, 1, 1, 1, 1, 1, 1)
+        choice = (1, 1, 1, 1, 6.05, 1, 1, 1, 1, 1, 1, 1, 1)
     elif choice == 'gen':
-        choice = (1, 1, 1, 1, 6.05, 0, 0, 0, 0, 0, 0, 0)
+        choice = (1, 1, 1, 1, 6.05, 0, 0, 0, 0, 0, 0, 0, 0)
 
-    if len(choice) > 12:
-        choice = choice[:12]
-    elif len(choice) < 12:
-        choice += tuple((zeros(12 - len(choice)).astype(int)))
+    if len(choice) > 13:
+        choice = choice[:13]
+    elif len(choice) < 13:
+        choice += tuple((zeros(13 - len(choice)).astype(int)))
 
     if os.path.isdir(str(handle)):
         handles = []
@@ -135,6 +138,9 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
             if choice[11]:
                 W=wigner_out(handle)
                 plot_wigner(W, savefig=savefig, debug=debug)
+            if choice[12]:
+                plot_dpa_bucket_out(handle,scatter=0,slice_pos='max_P',repeat=3, savefig=savefig, cmap='viridis')
+            
                 
         if os.path.isfile(handle.filePath + '.dfl') and any(choice[5:8]):
             dfl = read_dfl_file_out(handle, debug=debug)
@@ -873,7 +879,7 @@ def plot_gen_out_scanned_z(g, figsize=(10, 14), legend=True, fig_name=None, z=in
     return fig
 
 
-def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend=True, phase=False, far_field=False, freq_domain=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=False, return_proj=False, log_scale=0, debug=1, vartype_dfl=complex64):
+def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap_int='viridis', legend=True, phase=False, far_field=False, freq_domain=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=False, return_proj=False, log_scale=0, debug=1, vartype_dfl=complex64):
     '''
     Plots dfl radiation object in 3d.
 
@@ -1031,7 +1037,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend=True, phase=False, far_fi
     fig.clf()
     fig.set_size_inches(((3 + 2 * column_3d) * figsize, 3 * figsize), forward=True)
 
-    cmap_int = plt.get_cmap('jet')  # jet inferno viridis #change to convenient
+    # cmap_int = plt.get_cmap('viridis')  # jet inferno viridis #change to convenient
     cmap_ph = plt.get_cmap('hsv')
 
     x_line = xy_proj[:, int((ncar_y - 1) / 2)]
@@ -1738,21 +1744,37 @@ def plot_gen_corr(proj_dir, run_inp=[], p1=(), p2=(), savefig=False, showfig=Fal
 # np.where(out.s>1.8e-6)[0][0]
 
 
-def plot_dpa_bucket_out(out, dpa, slice_pos=None, repeat=1, GeV=1, figsize=4, legend=True, fig_name=None, savefig=False, showfig=False, debug=1):
+def plot_dpa_bucket_out(out, dpa=None, slice_pos=None, repeat=1, GeV=1, figsize=4, cmap='viridis', scatter=True, legend=True, fig_name=None, savefig=False, showfig=False, debug=1):
+    
+    if dpa == None:
+        dpa=read_dpa_file_out(out)
+    
     if out.nSlices > 1:
-        if slice_pos < np.amin(out.s) or slice_pos > np.amax(out.s):
-            raise ValueError('slice_pos outside out.s range')
+        if type(slice_pos) == str:
+            if slice_pos == 'max_I':
+                slice_num = np.argmax(out.I)
+            elif slice_pos == 'max_P':
+                slice_num = np.argmax(out.power)
         else:
-            slice_num = np.where(out.s > slice_pos)[0][0]
-            return plot_dpa_bucket(dpa=dpa, slice_num=slice_num, repeat=repeat, GeV=GeV, figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
+            if slice_pos < np.amin(out.s) or slice_pos > np.amax(out.s):
+                raise ValueError('slice_pos outside out.s range')
+            else:
+                slice_num = np.where(out.s > slice_pos)[0][0]
+        # return plot_dpa_bucket(dpa=dpa, slice_num=slice_num, repeat=repeat, GeV=GeV, figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
     else:
         slice_num = 0
-        return plot_dpa_bucket(dpa=dpa, slice_num=slice_num, repeat=repeat, GeV=GeV, figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
+    slice_pos_act = out.s[slice_num]
+    suffix = '_%.2fum_%2.fm' % (slice_pos_act*1e6,np.amax(out.z))
+    if scatter: suffix = '_scatter' + suffix
+    return plot_dpa_bucket(dpa=dpa, slice_num=slice_num, repeat=repeat, GeV=GeV, figsize=figsize, cmap=cmap, scatter=scatter, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, suffix=suffix, debug=debug)
 
 
-def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, legend=True, fig_name=None, savefig=False, showfig=False, debug=1):
-    part_colors = ['darkred', 'orange', 'g', 'b', 'm']
-
+def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap='viridis', scatter=True, legend=True, fig_name=None, savefig=False, showfig=False, suffix='', debug=1):
+    part_colors = ['darkred', 'orange', 'g', 'b', 'm','c','y']
+    # cmap='BuPu'
+    y_bins = 50
+    z_bins = 50
+    
     if showfig == False and savefig == False:
         return
 
@@ -1771,36 +1793,78 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, legend=True
     fig.clf()
     fig.set_size_inches((5 * figsize, 3 * figsize), forward=True)
 
-    ax_z_hist = plt.subplot2grid((4, 1), (0, 0), rowspan=1)
-    ax_main = plt.subplot2grid((4, 1), (1, 0), rowspan=3, sharex=ax_z_hist)
+    
+    left, width = 0.18, 0.57
+    bottom, height = 0.14, 0.55
+    left_h = left + width + 0.02 - 0.02
+    bottom_h = bottom + height + 0.02 - 0.02
+    
+
+    rect_scatter = [left, bottom, width, height]
+    rect_histx = [left, bottom_h, width, 0.2]
+    rect_histy = [left_h, bottom, 0.15, height]
+    
+    ax_main = plt.axes(rect_scatter)
+    ax_z_hist = plt.axes(rect_histx, sharex=ax_main)
+    ax_y_hist = plt.axes(rect_histy, sharey=ax_main)
+    
+    # ax_z_hist = plt.subplot2grid((4, 1), (0, 0), rowspan=1)
+    # ax_y_hist = plt.subplot2grid((4, 1), (0, 0), rowspan=1)
+    
+    # ax_main = plt.subplot2grid((4, 1), (1, 0), rowspan=3, sharex=ax_z_hist)
 
     nbins = shape(dpa.ph)[1]
-    phase = dpa.ph[slice_num, :, :]
-    energy = dpa.e[slice_num, :, :]
+    phase = deepcopy(dpa.ph[slice_num, :, :])
+    energy = deepcopy(dpa.e[slice_num, :, :])
+
+
+
     if GeV:
         energy *= m_e_MeV
     energy_mean = round(np.mean(energy), 1)
     print(energy_mean)
     energy -= energy_mean
 
-    phase_hist = np.array([])
-    for irep in range(repeat):
-        phase_hist = np.concatenate((phase_hist, np.ravel(phase) + 2 * np.pi * (irep - 1)))
+    phase_flat=phase.flatten()
+    energy_flat=energy.flatten()
+    for irep in range(repeat-1):
+        phase_flat=np.append(phase_flat,phase.flatten() + 2 * np.pi * (irep+1))
+        energy_flat=np.append(energy_flat,energy.flatten())
+    
+    # phase_hist = np.ravel(phase)
+    # for irep in range(repeat-1):
+        # phase_hist = np.concatenate((phase_hist, np.ravel(phase) + 2 * np.pi * (irep+1)))
 
-    hist, edges = np.histogram(phase_hist, bins=30 * repeat)  # calculate current histogram
-    edges = edges[0:-1]  # remove the last bin edge to save equal number of points
-    ax_z_hist.bar(edges, hist, width=edges[1] - edges[0])
+    # hist, edges = np.histogram(phase_hist, bins=50 * repeat)  # calculate current histogram
+    hist_z, edges_z = np.histogram(phase_flat, bins=z_bins * repeat)  # calculate current histogram
+    edges_z = edges_z[0:-1]  # remove the last bin edge to save equal number of points
+    ax_z_hist.bar(edges_z, hist_z, width=edges_z[1] - edges_z[0], color='silver')
     ax_z_hist.set_ylabel('counts')
 
+    hist_y, edges_y = np.histogram(energy_flat, bins=y_bins)  # calculate current histogram
+    edges_y = edges_y[0:-1]  # remove the last bin edge to save equal number of points
+    ax_y_hist.barh(edges_y, hist_y, height=edges_y[1] - edges_y[0], color='silver')
+    ax_y_hist.set_xlabel('counts')
+    
     for label in ax_z_hist.get_xticklabels():
         label.set_visible(False)
+        
+    for label in ax_y_hist.get_yticklabels():
+        label.set_visible(False)
+        
 
-    ax_z_hist.set_xlim([edges[0], edges[-1]])
+    if scatter == True:
+        for irep in range(repeat):
+            for ibin in range(nbins):
+                ax_main.scatter(phase[ibin, :] + 2 * np.pi * (irep), energy[ibin, :], color=part_colors[ibin], marker='.')
 
-    for irep in range(repeat):
-        for ibin in range(nbins):
-            ax_main.scatter(phase[ibin, :] + 2 * np.pi * (irep - 1), energy[ibin, :], color=part_colors[ibin], marker='.')
+        # ax_z_hist.set_xlim([edges[0], edges[-1]])
 
+    elif scatter == False:
+        ax_main.hist2d(phase_flat, energy_flat, bins=[z_bins * repeat, y_bins], cmin=0, cmap=cmap)
+        
+    
+                
     ax_main.set_xlabel('$\phi$ [rad]')
     if GeV:
         ax_main.set_ylabel('E [MeV] + ' + str(energy_mean / 1000) + ' [GeV]')
@@ -1812,8 +1876,8 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, legend=True
         if savefig == True:
             savefig = 'png'
         if debug > 1:
-            print('      saving ' + dpa.fileName() + '.' + savefig)
-        plt.savefig(dpa.filePath + '.' + savefig, format=savefig)
+            print('      saving ' + dpa.fileName() + suffix + '.' + savefig)
+        plt.savefig(dpa.filePath + suffix + '.' + savefig, format=savefig)
 
     if showfig:
         plt.show()

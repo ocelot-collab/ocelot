@@ -1451,7 +1451,7 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
 
     if out('dgrid') == 0:
         rbeam = sqrt(out('rxbeam')**2 + out('rybeam')**2)
-        ray = sqrt(out('zrayl') * out('xlamds') / np.pi * (1 + (out('zwaist') / out('zrayl')))**2)
+        ray = sqrt(out('zrayl') * out('xlamds') / np.pi * (1 + (out('zwaist') / out('zrayl'))**2))
         out.leng = out('rmax0') * (rbeam + ray)
     else:
         out.leng = 2 * out('dgrid')
@@ -1901,6 +1901,44 @@ def read_dpa_file(filePath, nbins=4, npart=None, debug=1):
 
     return dpa
 
+def max_dpa_dens(out, dpa, slice_pos=None, slice_num=None, repeat=1, bins=(50,50), debug=1):
+    y_bins = bins[0]
+    z_bins = bins[1]
+    if slice_pos == slice_num == None:
+        raise ValueError('specify either slice_pos or slice_num')
+
+    if slice_num == None and out.nSlices > 1:
+        if type(slice_pos) == str:
+            if slice_pos == 'max_I':
+                slice_num = np.argmax(out.I)
+            elif slice_pos == 'max_P':
+                slice_num = np.argmax(out.power)
+            elif slice_pos == 'max_B':
+                slice_num = np.argmax(out.bunching[:,-1])
+            else:
+                raise ValueError('slice_pos text should be "max_I" or "max_P"')
+        else:
+            if slice_pos < np.amin(out.s) or slice_pos > np.amax(out.s):
+                raise ValueError('slice_pos outside out.s range')
+            else:
+                slice_num = np.where(out.s > slice_pos)[0][0]
+    else:
+        slice_num = 0
+    nbins = shape(dpa.ph)[1]
+    phase = deepcopy(dpa.ph[slice_num, :, :])
+    gamma = deepcopy(dpa.e[slice_num, :, :])
+    phase_flat=phase.flatten()
+    gamma_flat=gamma.flatten()
+    for irep in range(repeat-1):
+        phase_flat=np.append(phase_flat,phase.flatten() + 2 * np.pi * (irep+1))
+        gamma_flat=np.append(gamma_flat,gamma.flatten())
+    # gamma_flat = energy_flat / m_e_eV
+    
+    hist, phase_scale, gamma_scale = np.histogram2d(phase_flat, gamma_flat, bins=bins)
+    hist_max = np.amax(hist)
+    gamma_idx = np.where(hist == hist_max)
+    gamma_max = gamma_scale[gamma_idx[1]]
+    return gamma_max[0], slice_num
 
 def dpa2edist(out, dpa, num_part=1e5, smear=1, debug=1):
     import random
@@ -3024,7 +3062,7 @@ def transform_beam_file(beam_file=None, out_file='tmp.beam', s=None, transform=[
         beam_new.filePath = beam.filePath
 
         if energy_new != None:
-            gamma_new = energy_new / (0.511e-3)
+            gamma_new = energy_new / m_e_GeV
             energy_scale = gamma_new / np.mean(np.array(beam.g0))
 
         if n_interp == None:
@@ -3276,6 +3314,8 @@ def cut_lattice(lat, n_cells, elem_in_cell=4):
     del lat_new.sequence[0:elem_in_cell * (n_cells)]
     return lat_new
     # returns lattice with #cells elements removed
+
+
 
 '''
 Scheduled for removal

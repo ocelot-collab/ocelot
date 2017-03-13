@@ -185,7 +185,10 @@ __MAGFILE__\n\
 # pradh0 =  __PRADH0__\n\
 
 
-class GenesisInput:  # Genesis input files storage object
+class GenesisInput:  
+    '''
+    Genesis input files storage object
+    '''
 
     def __init__(self):
 
@@ -400,15 +403,15 @@ class GenesisInput:  # Genesis input files storage object
 
         # objects to write into e.g. *.dfl or *.dpa with appropriate names
         # and imported to Genesis
-        self.beam = None
-        self.edist = None
-        self.lat = None
-        self.dfl = None
-        self.dpa = None
-        self.rad = None
+        self.beam = None # GenesisBeam()
+        self.edist = None # GenesisElectronDist()
+        self.lat = None # MagneticLattice()
+        self.dfl = None # RadiationField()
+        self.dpa = None # GenesisParticlesDump()
+        self.rad = None # GenesisRad()
 
-        self.run_dir = None
-        self.exp_dir = None  # if run_dir==None, it is created based on exp_dir
+        self.run_dir = None # directory to run simulation in
+        self.exp_dir = None # if run_dir==None, it is created based on exp_dir
 
     def input(self):
         input = inputTemplate
@@ -514,7 +517,9 @@ class GenesisOutput:
 
 
 class GenStatOutput:
-
+    '''
+    Genesis statistical output storage object
+    '''
     def __init__(self):
         return
 
@@ -1186,6 +1191,17 @@ def assemble(fileName, remove=1, overwrite=0, ram=1, debug=1):
 
 
 def create_exp_dir(exp_dir, run_ids):
+    '''
+    creates the folder structure nested in exp_dir folder.
+    run_ids is a list of run numbers.
+    resulting folder structure would be
+    ..
+    ---exp_dir\
+    ------run_1\
+    ------run_2\
+    ------run_3\
+    ------...
+    '''
     if exp_dir[-1]!=os.path.sep:
         exp_dir+=os.path.sep
     for run_id in run_ids:
@@ -1283,11 +1299,14 @@ def generate_input(up, beam, itdp=False):
     return inp
 
 
-def get_genesis_launcher(launcher_program=''):
+def get_genesis_launcher(launcher_program=None):
+    '''
+    Returns MpiLauncher() object for given program
+    '''
     host = socket.gethostname()
 
     launcher = MpiLauncher()
-    if launcher_program != '':
+    if launcher_program != None:
         launcher.program = launcher_program
     else:
 
@@ -1299,7 +1318,7 @@ def get_genesis_launcher(launcher_program=''):
     #launcher.nproc = nproc
     return launcher
 
-def get_genesis_new_launcher(launcher_program='', mpi_mode=True):
+def get_genesis_new_launcher(launcher_program=None, mpi_mode=True):
     '''
     tmp for moga, to be solved in the future
     '''
@@ -1307,15 +1326,13 @@ def get_genesis_new_launcher(launcher_program='', mpi_mode=True):
 
     launcher = NewLauncher()
     
-    if launcher_program != '':
+    if launcher_program != None:
         launcher.program = launcher_program
     else:
         if mpi_mode == True:
-            # launcher.program = "`which mpirun`" + ' -x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH ' + '/data/netapp/xfel/products/genesis/genesis < tmp.cmd | tee log'
             launcher.program = "mpirun" + ' -x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH ' + '/data/netapp/xfel/products/genesis/genesis < tmp.cmd | tee log'
         else:
             launcher.program = '/data/netapp/xfel/products/genesis_noparall/genesis_single < tmp.cmd | tee log'
-            # launcher.program = '/data/netapp/xfel/yevgeniy/code/genesis_single < tmp.cmd | tee log'
 
     return launcher
 
@@ -1331,6 +1348,7 @@ def get_genesis_new_launcher(launcher_program='', mpi_mode=True):
 def read_out_file(filePath, read_level=2, precision=float, debug=1):
     '''
     reads Genesis output from *.out file.
+    returns GenesisOutput() object
     thanks gods Genesis3 out will be in hdf5!
 
     read_level -    0 = only header is processed. Very fast
@@ -1857,6 +1875,13 @@ def write_dfl_file(dfl, filePath=None, debug=1):
 
 
 def read_dpa_file_out(out, filePath=None, debug=1):
+    '''
+    simplifies running the read_dpa_file() function
+    reads GenesisOutput() object
+    returns GenesisParticlesDump() object
+    no need to set nbins and npart parameters as well as file_path (may be overrun)
+    all automatically picked up from GenesisOutput() object
+    '''
 
     if os.path.isfile(str(out)):
         out = read_out_file(out, read_level=0, debug=0)
@@ -1869,6 +1894,10 @@ def read_dpa_file_out(out, filePath=None, debug=1):
 
 
 def read_dpa_file(filePath, nbins=4, npart=None, debug=1):
+    '''
+    reads genesis particle dump file *.dpa
+    returns GenesisParticlesDump() object
+    '''
     if debug > 0:
         print ('    reading particle file')
     dpa = GenesisParticlesDump()
@@ -1941,6 +1970,11 @@ def max_dpa_dens(out, dpa, slice_pos=None, slice_num=None, repeat=1, bins=(50,50
     return gamma_max[0], slice_num
 
 def dpa2edist(out, dpa, num_part=1e5, smear=1, debug=1):
+    '''
+    reads GenesisParticlesDump() object
+    returns GenesisElectronDist() object
+    smear - whether to shuffle macroparticles smearing microbunching
+    '''
     import random
     start_time = time.time()
     if debug > 0:
@@ -2047,7 +2081,10 @@ def read_edist_file_out(out, debug=1):
 
 
 def read_edist_file(filePath, debug=1):
-
+    '''
+    reads particle distribution file (distfile in genesis input)
+    returns GenesisElectronDist() 
+    '''
     edist = GenesisElectronDist()
     edist.filePath = filePath
 
@@ -2107,6 +2144,9 @@ def cut_edist(edist,
               xp_lim=(-inf, inf),
               y_lim=(-inf, inf),
               yp_lim=(-inf, inf), debug=1):
+    '''
+    cuts GenesisElectronDist() in phase space
+    '''
 
     from numpy import logical_or
 
@@ -2139,6 +2179,10 @@ def cut_edist(edist,
 
 
 def repeat_edist(edist, factor, smear=1):
+    '''
+    dublicates the GenesisElectronDist() by given factor
+    smear - smear new particles by 1e-3 of standard deviation of parameter
+    '''
 
     edist_out = GenesisElectronDist()
 
@@ -2165,7 +2209,9 @@ def repeat_edist(edist, factor, smear=1):
 
 
 def write_edist_file(edist, filePath=None, debug=1):
-
+    '''
+    writes GenesisElectronDist() into filePath folder
+    '''
     # REQUIRES NUMPY 1.7
     # header='? VERSION = 1.0 \n? SIZE = %s \n? CHARGE = %E \n? COLUMNS X XPRIME Y YPRIME T P'%(len(edist.x),charge)
     # np.savetxt(filePath_write, np.c_[edist.x,edist.xp,edist.y,edist.yp,edist.t,edist.g],header=header,fmt="%E", newline='\n',comments='')
@@ -2190,6 +2236,11 @@ def write_edist_file(edist, filePath=None, debug=1):
 
 
 def edist2beam(edist, step=1e-7):
+    '''
+    reads GenesisElectronDist()
+    returns GenesisBeam()
+    step [m] - long. size ob bin to calculate distribution parameters
+    '''
 
     from numpy import mean, std
 
@@ -2282,14 +2333,17 @@ def edist2beam(edist, step=1e-7):
 '''
 
 
-def read_beam_file_out(out, debug=1):
-    return read_beam_file(out.filePath, debug=debug)
+# def read_beam_file_out(out, debug=1):
+    # return read_beam_file(out.filePath, debug=debug)
 
 
 def read_beam_file(filePath, debug=1):
-
+    '''
+    reads beam file from filePath folder
+    returns GenesisBeam()
+    '''
     if debug > 0:
-        print ('    readind beam file')
+        print ('    reading beam file')
     start_time = time.time()
 
     beam = GenesisBeam()
@@ -2357,6 +2411,11 @@ def read_beam_file(filePath, debug=1):
 
 
 def beam_file_str(beam):
+    '''
+    reads GenesisBeam()
+    returns string of electron beam file, suitable for Genesis
+    
+    '''
     # header = "# \n? VERSION = 1.0\n? SIZE ="+str(len(beam.column_values['ZPOS']))+"\n? COLUMNS ZPOS GAMMA0 DELGAM EMITX EMITY BETAX BETAY XBEAM YBEAM PXBEAM PYBEAM ALPHAX ALPHAY CURPEAK ELOSS\n"
     header = "# \n? VERSION = 1.0\n? SIZE =" + str(len(beam.z)) + "\n? COLUMNS"
     # ZPOS GAMMA0 DELGAM EMITX EMITY BETAX BETAY XBEAM YBEAM PXBEAM PYBEAM ALPHAX ALPHAY CURPEAK ELOSS\n"
@@ -2433,6 +2492,15 @@ def beam_file_str(beam):
 
 
 def zero_wake_at_ipk(beamf):
+    '''
+    reads GenesisBeam()
+    shifts the wake pforile so that 
+    at maximum current slice wake is zero
+    returns GenesisBeam()
+    
+    allows to account for wake losses without 
+    additional linear undulator tapering
+    '''
     beamf_new = deepcopy(beamf)
     beamf_new.idx_max_refresh()
     beamf_new.eloss -= beamf_new.eloss[beamf_new.idx_max]
@@ -2440,10 +2508,17 @@ def zero_wake_at_ipk(beamf):
 
 
 def set_beam_energy(beam, E_GeV_new):
-    # sets the beam energy with peak current to E_GeV_new
+    '''
+    reads GenesisBeam()
+    returns GenesisBeam()
+    sets the beam energy with peak current to E_GeV_new
+    '''
     beam_peak = get_beam_peak(beam)
     E_GeV_old = beam_peak.E
-    beam.g0 = beam.g0 / E_GeV_old * E_GeV_new
+    g_e_old = E_GeV_old / m_e_GeV
+    g_e_new = E_GeV_new / m_e_GeV
+    #beam.g0 = beam.g0 / E_GeV_old * E_GeV_new
+    beam.g0 = beam.g0 - g_e_old + g_e_new
     return beam
 
 
@@ -2521,7 +2596,10 @@ def add_alpha_beam(beam):
 
 
 def cut_beam(beam=None, cut_z=[-inf, inf]):
-    # beam = deepcopy(beam)
+    '''
+    cuts GenesisBeam() object longitudinally
+    cut_z [m] - limits of the cut
+    '''
     if np.amin(beam.z) < cut_z[0] or np.amax(beam.z) > cut_z[1]:
 
         condition = (beam.z > cut_z[0]) * (beam.z < cut_z[1])
@@ -3213,16 +3291,22 @@ def test_beam_transform(beta1=10.0, alpha1=-0.1, beta2=20, alpha2=2.2):
 
 
 def read_astra_dist(fileName):
-    # reading astra distribution parameters Parameter x y z px py pz clock macro_charge particle_index status_flag
-    # with units m m m eV/c eV/c eV/c ns nC
+    '''
+    reading astra distribution parameters Parameter x y z px py pz clock macro_charge particle_index status_flag
+    with units m m m eV/c eV/c eV/c ns nC
+    returns numpy array?
+    '''
+    
     adist = np.loadtxt(fileName)
     adist[1:] = adist[1:] + adist[0]  # normalze to reference particle located at 1-st line
     return adist
 
 
 def astra2edist(adist, center=1):
-    # script to convert astra macroparticle file to Genesis
-    # check
+    '''
+    converts astra particle distribution into GenesisElectronDist() object
+    center - centers the distribution transversely
+    '''
     edist = GenesisElectronDist()
     edist.x = adist[:, 0]
     edist.y = adist[:, 1]
@@ -3309,6 +3393,10 @@ def rematch_edist(edist, tws):
 
 
 def cut_lattice(lat, n_cells, elem_in_cell=4):
+    '''
+    reads MagneticLattice()
+    returns MagneticLattice() without first n_cells*elem_in_cell elements
+    '''
     n_cells=np.ceil(n_cells).astype(np.int)
     lat_new = deepcopy(lat)
     del lat_new.sequence[0:elem_in_cell * (n_cells)]

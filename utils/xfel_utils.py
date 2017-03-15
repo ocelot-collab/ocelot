@@ -665,7 +665,7 @@ def save_trf(trf, attr, flePath):
 def calc_wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1):    
     '''
     calculation of the Wigner distribution
-    input should be an amplitude and phase of the radiation as a complex number with length N
+    input should be an amplitude and phase of the radiation as list of complex numbers with length N
     output is a real value of wigner distribution
     '''
     
@@ -737,7 +737,9 @@ def wigner_out(out, z=inf, method='mp', debug=1):
     wig = WignerDistribution()
     wig.wig = calc_wigner(sqrt(out.p_int[:,zi])*exp(1j*out.phi_mid[:,zi]), method=method, debug=debug)
     wig.s = out.s
-    wig.freq_lamd = out.freq_lamd
+    freq_ev = h_eV_s * (np.fft.fftfreq(out.nSlices, d=out('zsep') * out('xlamds') * out('ishsty') / speed_of_light) + speed_of_light / out('xlamds'))
+    freq_ev = np.fft.fftshift(freq_ev, axes=0)
+    wig.freq_lamd = h_eV_s * speed_of_light * 1e9 / freq_ev
     wig.xlamds = out('xlamds')
     wig.filePath = out.filePath
     wig.z = z

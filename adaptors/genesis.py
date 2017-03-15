@@ -506,7 +506,27 @@ class GenesisOutput:
             p, = self.parameters[name]
             return float(p.replace('D', 'E'))
 
+    def calc_spec(self,npad=1):
+        if npad <= 1:
+            return
+        p_int = self.p_int
+        phi_mid = self.phi_mid
 
+        zeros = np.zeros((self.nSlices*npad,self.nZ))
+        p_int = np.vstack((p_int, zeros))
+        phi_mid = np.vstack((phi_mid, zeros))
+
+        spec = abs(np.fft.fft(np.sqrt(np.array(p_int)) * np.exp(1.j * np.array(phi_mid)), axis=0))**2 / (sqrt(self.nSlices) * (2 * self.leng / self('ncar'))**2 * 1e10)
+        e_0 = h_eV_s * speed_of_light / self('xlamds')
+        freq_ev = h_eV_s * np.fft.fftfreq(len(spec), d=self('zsep') * self('xlamds') * self('ishsty') / speed_of_light) + e_0
+
+        spec = np.fft.fftshift(spec, axes=0)
+        freq_ev = np.fft.fftshift(freq_ev, axes=0)
+        freq_lamd = h_eV_s * speed_of_light * 1e9 / freq_ev
+
+        self.spec = spec
+        self.freq_ev = freq_ev
+        self.freq_lamd = freq_lamd
 
             
     def wig(self,z=inf):

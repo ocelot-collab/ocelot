@@ -185,7 +185,10 @@ __MAGFILE__\n\
 # pradh0 =  __PRADH0__\n\
 
 
-class GenesisInput:  # Genesis input files storage object
+class GenesisInput:  
+    '''
+    Genesis input files storage object
+    '''
 
     def __init__(self):
 
@@ -400,15 +403,15 @@ class GenesisInput:  # Genesis input files storage object
 
         # objects to write into e.g. *.dfl or *.dpa with appropriate names
         # and imported to Genesis
-        self.beam = None
-        self.edist = None
-        self.lat = None
-        self.dfl = None
-        self.dpa = None
-        self.rad = None
+        self.beam = None # GenesisBeam()
+        self.edist = None # GenesisElectronDist()
+        self.lat = None # MagneticLattice()
+        self.dfl = None # RadiationField()
+        self.dpa = None # GenesisParticlesDump()
+        self.rad = None # GenesisRad()
 
-        self.run_dir = None
-        self.exp_dir = None  # if run_dir==None, it is created based on exp_dir
+        self.run_dir = None # directory to run simulation in
+        self.exp_dir = None # if run_dir==None, it is created based on exp_dir
 
     def input(self):
         input = inputTemplate
@@ -534,7 +537,9 @@ class GenesisOutput:
 
 
 class GenStatOutput:
-
+    '''
+    Genesis statistical output storage object
+    '''
     def __init__(self):
         return
 
@@ -1044,7 +1049,29 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', debug=1):
         os.system('rm ' + out_path + '.dpa.slice* 2>/dev/null')
         if debug > 1:
             print ('        done in %.2f seconds' % (time.time() - start_time))
-        # if debug>0: print ('      removing temporary files')
+        
+        if debug > 0:
+            print ('      assembling *.fld file')
+        start_time = time.time()
+        if dfl_slipage_incl:
+            os.system('cat ' + out_path + '.fld.slice*  >> ' + out_path + '.fld.tmp')
+            #bytes=os.path.getsize(out_path +'.fld.tmp')
+            command = 'dd if=' + out_path + '.fld.tmp of=' + out_path + '.fld conv=notrunc conv=notrunc 2>/dev/null'  # obs='+str(bytes)+' skip=1
+            os.system(command)
+        else:
+            os.system('cat ' + out_path + '.fld.slice*  > ' + out_path + '.fld')
+        os.system('rm ' + out_path + '.fld.slice* 2>/dev/null')
+        os.system('rm ' + out_path + '.fld.tmp 2>/dev/null')
+        if debug > 1:
+            print ('        done in %.2f seconds' % (time.time() - start_time))
+
+        if debug > 0:
+            print ('      assembling *.par file')
+        start_time = time.time()
+        os.system('cat ' + out_path + '.par.slice* >> ' + out_path + '.par')
+        os.system('rm ' + out_path + '.par.slice* 2>/dev/null')
+        if debug > 1:
+            print ('        done in %.2f seconds' % (time.time() - start_time))
 
     elif assembly_ver == 'pyt':
         # there is a bug with dfl assembly
@@ -1075,6 +1102,25 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', debug=1):
             start_time = time.time()
             assemble(out_path + '.dpa', ram=ram, debug=debug)
             os.system('rm ' + out_path + '.dpa.slice* 2>/dev/null')
+            if debug > 1:
+                print ('        done in %.2f seconds' % (time.time() - start_time))
+                
+        if os.path.isfile(str(out_path + '.fld')):
+            if debug > 0:
+                print ('      assembling *.fld file')
+            start_time = time.time()
+            assemble(out_path + '.fld', overwrite=dfl_slipage_incl, ram=ram, debug=debug)
+            os.system('rm ' + out_path + '.fld.slice* 2>/dev/null')
+            os.system('rm ' + out_path + '.fld.tmp 2>/dev/null')
+            if debug > 1:
+                print ('        done in %.2f seconds' % (time.time() - start_time))
+
+        if os.path.isfile(str(out_path + '.par')):
+            if debug > 0:
+                print ('      assembling *.par file')
+            start_time = time.time()
+            assemble(out_path + '.par', ram=ram, debug=debug)
+            os.system('rm ' + out_path + '.par.slice* 2>/dev/null')
             if debug > 1:
                 print ('        done in %.2f seconds' % (time.time() - start_time))
 
@@ -1165,6 +1211,17 @@ def assemble(fileName, remove=1, overwrite=0, ram=1, debug=1):
 
 
 def create_exp_dir(exp_dir, run_ids):
+    '''
+    creates the folder structure nested in exp_dir folder.
+    run_ids is a list of run numbers.
+    resulting folder structure would be
+    ..
+    ---exp_dir\
+    ------run_1\
+    ------run_2\
+    ------run_3\
+    ------...
+    '''
     if exp_dir[-1]!=os.path.sep:
         exp_dir+=os.path.sep
     for run_id in run_ids:
@@ -1262,11 +1319,14 @@ def generate_input(up, beam, itdp=False):
     return inp
 
 
-def get_genesis_launcher(launcher_program=''):
+def get_genesis_launcher(launcher_program=None):
+    '''
+    Returns MpiLauncher() object for given program
+    '''
     host = socket.gethostname()
 
     launcher = MpiLauncher()
-    if launcher_program != '':
+    if launcher_program != None:
         launcher.program = launcher_program
     else:
 
@@ -1278,7 +1338,7 @@ def get_genesis_launcher(launcher_program=''):
     #launcher.nproc = nproc
     return launcher
 
-def get_genesis_new_launcher(launcher_program='', mpi_mode=True):
+def get_genesis_new_launcher(launcher_program=None, mpi_mode=True):
     '''
     tmp for moga, to be solved in the future
     '''
@@ -1286,15 +1346,13 @@ def get_genesis_new_launcher(launcher_program='', mpi_mode=True):
 
     launcher = NewLauncher()
     
-    if launcher_program != '':
+    if launcher_program != None:
         launcher.program = launcher_program
     else:
         if mpi_mode == True:
-            # launcher.program = "`which mpirun`" + ' -x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH ' + '/data/netapp/xfel/products/genesis/genesis < tmp.cmd | tee log'
             launcher.program = "mpirun" + ' -x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH ' + '/data/netapp/xfel/products/genesis/genesis < tmp.cmd | tee log'
         else:
             launcher.program = '/data/netapp/xfel/products/genesis_noparall/genesis_single < tmp.cmd | tee log'
-            # launcher.program = '/data/netapp/xfel/yevgeniy/code/genesis_single < tmp.cmd | tee log'
 
     return launcher
 
@@ -1310,6 +1368,7 @@ def get_genesis_new_launcher(launcher_program='', mpi_mode=True):
 def read_out_file(filePath, read_level=2, precision=float, debug=1):
     '''
     reads Genesis output from *.out file.
+    returns GenesisOutput() object
     thanks gods Genesis3 out will be in hdf5!
 
     read_level -    0 = only header is processed. Very fast
@@ -1430,7 +1489,7 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
 
     if out('dgrid') == 0:
         rbeam = sqrt(out('rxbeam')**2 + out('rybeam')**2)
-        ray = sqrt(out('zrayl') * out('xlamds') / np.pi * (1 + (out('zwaist') / out('zrayl')))**2)
+        ray = sqrt(out('zrayl') * out('xlamds') / np.pi * (1 + (out('zwaist') / out('zrayl'))**2))
         out.leng = out('rmax0') * (rbeam + ray)
     else:
         out.leng = 2 * out('dgrid')
@@ -1754,7 +1813,7 @@ def read_dfl_file_out(out, filePath=None, debug=1):
     return dfl
 
 
-def read_dfl_file(filePath, Nxy, Lxy=None, zsep=None, xlamds=None, vartype=complex, debug=1):
+def read_dfl_file(filePath, Nxy, Lxy=None, zsep=None, xlamds=None, hist_rec=1, vartype=complex, debug=1):
     '''
     Function to read the Genesis output radiation file "dfl".
     Returns RadiationField() object
@@ -1763,6 +1822,7 @@ def read_dfl_file(filePath, Nxy, Lxy=None, zsep=None, xlamds=None, vartype=compl
     Lxy - transverse mesh size (2*dgrid)
     zsep - separation between slices in terms of wavelengths 
     xlamds  - wavelength of the radiation
+    hist_rec - number of dfl records withinb in a single file (*.fld case), not finished!
     '''
     
     if debug > 0:
@@ -1782,18 +1842,25 @@ def read_dfl_file(filePath, Nxy, Lxy=None, zsep=None, xlamds=None, vartype=compl
             print ('        - reading from ' + filePath)
 
         b = np.fromfile(filePath, dtype=complex).astype(vartype)
-        Nz = b.shape[0] / Nxy / Nxy
+        Nz = b.shape[0] / Nxy / Nxy / hist_rec
         assert (Nz % 1 == 0), 'Wrong Nxy or corrupted file'
         Nz = int(Nz)
         
         dfl = RadiationField()
-        dfl.fld = b.reshape(Nz, Nxy, Nxy)
+        if hist_rec > 1:
+            dfl.fld = b.reshape(hist_rec, Nz, Nxy, Nxy)
+            dfl.fld = np.rollaxis(dfl.fld, 0, 4)
+            print(dfl.shape())
+        else:
+            dfl.fld = b.reshape(Nz, Nxy, Nxy)
         dfl.dx = Lxy / dfl.Nx()
         dfl.dy = Lxy / dfl.Ny()
         dfl.dz = xlamds * zsep
         dfl.xlamds = xlamds
         dfl.filePath = filePath
+        
 
+        
         if debug > 0:
             print('      done in %.2f sec' % (time.time() - start_time))
 
@@ -1828,6 +1895,13 @@ def write_dfl_file(dfl, filePath=None, debug=1):
 
 
 def read_dpa_file_out(out, filePath=None, debug=1):
+    '''
+    simplifies running the read_dpa_file() function
+    reads GenesisOutput() object
+    returns GenesisParticlesDump() object
+    no need to set nbins and npart parameters as well as file_path (may be overrun)
+    all automatically picked up from GenesisOutput() object
+    '''
 
     if os.path.isfile(str(out)):
         out = read_out_file(out, read_level=0, debug=0)
@@ -1840,6 +1914,10 @@ def read_dpa_file_out(out, filePath=None, debug=1):
 
 
 def read_dpa_file(filePath, nbins=4, npart=None, debug=1):
+    '''
+    reads genesis particle dump file *.dpa
+    returns GenesisParticlesDump() object
+    '''
     if debug > 0:
         print ('    reading particle file')
     dpa = GenesisParticlesDump()
@@ -1872,8 +1950,51 @@ def read_dpa_file(filePath, nbins=4, npart=None, debug=1):
 
     return dpa
 
+def max_dpa_dens(out, dpa, slice_pos=None, slice_num=None, repeat=1, bins=(50,50), debug=1):
+    y_bins = bins[0]
+    z_bins = bins[1]
+    if slice_pos == slice_num == None:
+        raise ValueError('specify either slice_pos or slice_num')
+
+    if slice_num == None and out.nSlices > 1:
+        if type(slice_pos) == str:
+            if slice_pos == 'max_I':
+                slice_num = np.argmax(out.I)
+            elif slice_pos == 'max_P':
+                slice_num = np.argmax(out.power)
+            elif slice_pos == 'max_B':
+                slice_num = np.argmax(out.bunching[:,-1])
+            else:
+                raise ValueError('slice_pos text should be "max_I" or "max_P"')
+        else:
+            if slice_pos < np.amin(out.s) or slice_pos > np.amax(out.s):
+                raise ValueError('slice_pos outside out.s range')
+            else:
+                slice_num = np.where(out.s > slice_pos)[0][0]
+    else:
+        slice_num = 0
+    nbins = shape(dpa.ph)[1]
+    phase = deepcopy(dpa.ph[slice_num, :, :])
+    gamma = deepcopy(dpa.e[slice_num, :, :])
+    phase_flat=phase.flatten()
+    gamma_flat=gamma.flatten()
+    for irep in range(repeat-1):
+        phase_flat=np.append(phase_flat,phase.flatten() + 2 * np.pi * (irep+1))
+        gamma_flat=np.append(gamma_flat,gamma.flatten())
+    # gamma_flat = energy_flat / m_e_eV
+    
+    hist, phase_scale, gamma_scale = np.histogram2d(phase_flat, gamma_flat, bins=bins)
+    hist_max = np.amax(hist)
+    gamma_idx = np.where(hist == hist_max)
+    gamma_max = gamma_scale[gamma_idx[1]]
+    return gamma_max[0], slice_num
 
 def dpa2edist(out, dpa, num_part=1e5, smear=1, debug=1):
+    '''
+    reads GenesisParticlesDump() object
+    returns GenesisElectronDist() object
+    smear - whether to shuffle macroparticles smearing microbunching
+    '''
     import random
     start_time = time.time()
     if debug > 0:
@@ -1980,7 +2101,10 @@ def read_edist_file_out(out, debug=1):
 
 
 def read_edist_file(filePath, debug=1):
-
+    '''
+    reads particle distribution file (distfile in genesis input)
+    returns GenesisElectronDist() 
+    '''
     edist = GenesisElectronDist()
     edist.filePath = filePath
 
@@ -2040,6 +2164,9 @@ def cut_edist(edist,
               xp_lim=(-inf, inf),
               y_lim=(-inf, inf),
               yp_lim=(-inf, inf), debug=1):
+    '''
+    cuts GenesisElectronDist() in phase space
+    '''
 
     from numpy import logical_or
 
@@ -2072,6 +2199,10 @@ def cut_edist(edist,
 
 
 def repeat_edist(edist, factor, smear=1):
+    '''
+    dublicates the GenesisElectronDist() by given factor
+    smear - smear new particles by 1e-3 of standard deviation of parameter
+    '''
 
     edist_out = GenesisElectronDist()
 
@@ -2098,7 +2229,9 @@ def repeat_edist(edist, factor, smear=1):
 
 
 def write_edist_file(edist, filePath=None, debug=1):
-
+    '''
+    writes GenesisElectronDist() into filePath folder
+    '''
     # REQUIRES NUMPY 1.7
     # header='? VERSION = 1.0 \n? SIZE = %s \n? CHARGE = %E \n? COLUMNS X XPRIME Y YPRIME T P'%(len(edist.x),charge)
     # np.savetxt(filePath_write, np.c_[edist.x,edist.xp,edist.y,edist.yp,edist.t,edist.g],header=header,fmt="%E", newline='\n',comments='')
@@ -2123,6 +2256,11 @@ def write_edist_file(edist, filePath=None, debug=1):
 
 
 def edist2beam(edist, step=1e-7):
+    '''
+    reads GenesisElectronDist()
+    returns GenesisBeam()
+    step [m] - long. size ob bin to calculate distribution parameters
+    '''
 
     from numpy import mean, std
 
@@ -2215,14 +2353,17 @@ def edist2beam(edist, step=1e-7):
 '''
 
 
-def read_beam_file_out(out, debug=1):
-    return read_beam_file(out.filePath, debug=debug)
+# def read_beam_file_out(out, debug=1):
+    # return read_beam_file(out.filePath, debug=debug)
 
 
 def read_beam_file(filePath, debug=1):
-
+    '''
+    reads beam file from filePath folder
+    returns GenesisBeam()
+    '''
     if debug > 0:
-        print ('    readind beam file')
+        print ('    reading beam file')
     start_time = time.time()
 
     beam = GenesisBeam()
@@ -2290,6 +2431,11 @@ def read_beam_file(filePath, debug=1):
 
 
 def beam_file_str(beam):
+    '''
+    reads GenesisBeam()
+    returns string of electron beam file, suitable for Genesis
+    
+    '''
     # header = "# \n? VERSION = 1.0\n? SIZE ="+str(len(beam.column_values['ZPOS']))+"\n? COLUMNS ZPOS GAMMA0 DELGAM EMITX EMITY BETAX BETAY XBEAM YBEAM PXBEAM PYBEAM ALPHAX ALPHAY CURPEAK ELOSS\n"
     header = "# \n? VERSION = 1.0\n? SIZE =" + str(len(beam.z)) + "\n? COLUMNS"
     # ZPOS GAMMA0 DELGAM EMITX EMITY BETAX BETAY XBEAM YBEAM PXBEAM PYBEAM ALPHAX ALPHAY CURPEAK ELOSS\n"
@@ -2366,6 +2512,15 @@ def beam_file_str(beam):
 
 
 def zero_wake_at_ipk(beamf):
+    '''
+    reads GenesisBeam()
+    shifts the wake pforile so that 
+    at maximum current slice wake is zero
+    returns GenesisBeam()
+    
+    allows to account for wake losses without 
+    additional linear undulator tapering
+    '''
     beamf_new = deepcopy(beamf)
     beamf_new.idx_max_refresh()
     beamf_new.eloss -= beamf_new.eloss[beamf_new.idx_max]
@@ -2373,10 +2528,17 @@ def zero_wake_at_ipk(beamf):
 
 
 def set_beam_energy(beam, E_GeV_new):
-    # sets the beam energy with peak current to E_GeV_new
+    '''
+    reads GenesisBeam()
+    returns GenesisBeam()
+    sets the beam energy with peak current to E_GeV_new
+    '''
     beam_peak = get_beam_peak(beam)
     E_GeV_old = beam_peak.E
-    beam.g0 = beam.g0 / E_GeV_old * E_GeV_new
+    g_e_old = E_GeV_old / m_e_GeV
+    g_e_new = E_GeV_new / m_e_GeV
+    #beam.g0 = beam.g0 / E_GeV_old * E_GeV_new
+    beam.g0 = beam.g0 - g_e_old + g_e_new
     return beam
 
 
@@ -2454,7 +2616,10 @@ def add_alpha_beam(beam):
 
 
 def cut_beam(beam=None, cut_z=[-inf, inf]):
-    # beam = deepcopy(beam)
+    '''
+    cuts GenesisBeam() object longitudinally
+    cut_z [m] - limits of the cut
+    '''
     if np.amin(beam.z) < cut_z[0] or np.amax(beam.z) > cut_z[1]:
 
         condition = (beam.z > cut_z[0]) * (beam.z < cut_z[1])
@@ -2995,7 +3160,7 @@ def transform_beam_file(beam_file=None, out_file='tmp.beam', s=None, transform=[
         beam_new.filePath = beam.filePath
 
         if energy_new != None:
-            gamma_new = energy_new / (0.511e-3)
+            gamma_new = energy_new / m_e_GeV
             energy_scale = gamma_new / np.mean(np.array(beam.g0))
 
         if n_interp == None:
@@ -3146,16 +3311,22 @@ def test_beam_transform(beta1=10.0, alpha1=-0.1, beta2=20, alpha2=2.2):
 
 
 def read_astra_dist(fileName):
-    # reading astra distribution parameters Parameter x y z px py pz clock macro_charge particle_index status_flag
-    # with units m m m eV/c eV/c eV/c ns nC
+    '''
+    reading astra distribution parameters Parameter x y z px py pz clock macro_charge particle_index status_flag
+    with units m m m eV/c eV/c eV/c ns nC
+    returns numpy array?
+    '''
+    
     adist = np.loadtxt(fileName)
     adist[1:] = adist[1:] + adist[0]  # normalze to reference particle located at 1-st line
     return adist
 
 
 def astra2edist(adist, center=1):
-    # script to convert astra macroparticle file to Genesis
-    # check
+    '''
+    converts astra particle distribution into GenesisElectronDist() object
+    center - centers the distribution transversely
+    '''
     edist = GenesisElectronDist()
     edist.x = adist[:, 0]
     edist.y = adist[:, 1]
@@ -3242,11 +3413,17 @@ def rematch_edist(edist, tws):
 
 
 def cut_lattice(lat, n_cells, elem_in_cell=4):
+    '''
+    reads MagneticLattice()
+    returns MagneticLattice() without first n_cells*elem_in_cell elements
+    '''
     n_cells=np.ceil(n_cells).astype(np.int)
     lat_new = deepcopy(lat)
     del lat_new.sequence[0:elem_in_cell * (n_cells)]
     return lat_new
     # returns lattice with #cells elements removed
+
+
 
 '''
 Scheduled for removal

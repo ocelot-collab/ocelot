@@ -1231,7 +1231,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap='jet', legend=True, phase=F
         return
 
 
-def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int', 'energy', 'r_size_weighted', 'spec', 'error'], z_param_inp=['p_int', 'phi_mid_disp', 'spec', 'bunching', 'wigner'], dfl_param_inp=['dfl_spec'], run_param_inp=['p_int', 'spec', 'energy'], s_inp=['max'], z_inp=[0,'end'], run_s_inp=['max'], run_z_inp=['end'], savefig=1, saveval=1, showfig=0, debug=1):
+def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int', 'energy', 'r_size_weighted', 'spec', 'error'], z_param_inp=['p_int', 'phi_mid_disp', 'spec', 'bunching', 'wigner'], dfl_param_inp=['dfl_spec'], run_param_inp=['p_int', 'spec', 'energy'], s_inp=['max'], z_inp=[0,'end'], run_s_inp=['max'], run_z_inp=['end'], spec_pad=1, savefig=1, saveval=1, showfig=0, debug=1):
     '''
     The routine for plotting the statistical info of many GENESIS runs
     
@@ -1283,6 +1283,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
             if os.path.isfile(out_file):
                # try:
                 outlist[irun] = read_out_file(out_file, read_level=2, debug=1)
+                outlist[irun].calc_spec(spec_pad)
                 run_range_good.append(irun)
                # except:
                    # print('     could not read '+out_file)
@@ -1478,7 +1479,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                         if debug > 1:
                             print('      saving ' + z_fig_name + '.txt')
                         if param == 'spec':
-                            np.savetxt(saving_path + z_fig_name + '.txt', vstack([outlist[irun].freq_lamd * 1e9, mean(z_value, 0), z_value]).T, fmt="%E", newline='\n', comments='')
+                            np.savetxt(saving_path + z_fig_name + '.txt', vstack([outlist[irun].freq_lamd, mean(z_value, 0), z_value]).T, fmt="%E", newline='\n', comments='')
                         else:
                             np.savetxt(saving_path + z_fig_name + '.txt', vstack([outlist[irun].s * 1e6, mean(z_value, 0), z_value]).T, fmt="%E", newline='\n', comments='')
                     if not showfig:

@@ -191,7 +191,7 @@ class Response_matrix:
 
 
 class Orbit:
-    def __init__(self, lattice):
+    def __init__(self, lattice, empty=False):
         #self.monitors = []
         #self.correctors = []
         self.lat = lattice
@@ -205,8 +205,9 @@ class Orbit:
         self.resp = []
         self.mode = "radian" # or "ampere"
         #if lattice != None:
-        self.create_BPM()
-        self.create_COR()
+        if not empty:
+            self.create_BPM()
+            self.create_COR()
 
     def create_BPM(self, bpm_list=None):
         """
@@ -216,7 +217,7 @@ class Orbit:
         """
         self.bpms = []
         L = 0.
-        for elem in self.lat.sequence:
+        for i, elem in enumerate(self.lat.sequence):
             if elem.__class__ == Monitor:
                 if bpm_list is None or elem.id in bpm_list:
                     try:
@@ -226,6 +227,7 @@ class Orbit:
                     elem.s = L+elem.l/2.
                     elem.x_ref = 0.
                     elem.y_ref = 0.
+                    elem.lat_inx = i
                     self.bpms.append(elem)
             L += elem.l
         if len(self.bpms) == 0:
@@ -258,14 +260,16 @@ class Orbit:
         self.hcors = []
         self.vcors = []
         L = 0.
-        for elem in self.lat.sequence:
+        for i, elem in enumerate(self.lat.sequence):
             if elem.__class__ == Vcor:
                 if cor_list is None or elem.id in cor_list:
                     elem.s = L+elem.l/2.
+                    elem.lat_inx = i
                     self.vcors.append(elem)
             elif elem.__class__ == Hcor:
                 if cor_list is None or elem.id in cor_list:
                     elem.s = L+elem.l/2.
+                    elem.lat_inx = i
                     self.hcors.append(elem)
             L += elem.l
         if len(self.hcors) == 0:
@@ -274,7 +278,7 @@ class Orbit:
             print("there are not vertical correctors")
 
 
-    def create_types(self, types, remove_elems=[]):
+    def create_types(self, types, remove_elems):
         self.htypes = []
         self.vtypes = []
         L = 0.
@@ -563,6 +567,104 @@ class Orbit:
         rmatrix.mode = "radian"
         return rmatrix
 
+    def linac_response_matrix_r(self, tw_init=None):
+        """
+        calculation of ideal response matrix
+
+        :param lattice: class MagneticLattice
+        :param tw_init: if tw_init == None, function tries to find periodical solution
+        :return: orbit.resp
+        """
+        m = len(self.bpms)
+        nx = len(self.hcors)
+        ny = len(self.vcors)
+        self.resp = zeros((2 * m, nx + ny))
+
+
+        for j, cor in enumerate([item for sublist in [self.hcors, self.vcors] for item in sublist]):
+            print(j,"/", nx+ny, cor.id)
+            Ra = np.eye(6)
+            E = tw_init.E
+            for i, elem in enumerate(self.lat.sequence):
+                if i<cor.lat_inx:
+                    #print(i, cor.lat_inx)
+                    E += elem.transfer_map.delta_e
+                    continue
+                Rb = elem.transfer_map.R(E)
+                Ra = dot(Rb, Ra)
+                E += elem.transfer_map.delta_e
+                if elem in self.bpms:
+                    n = self.bpms.index(elem)
+                    #v_resp[n, j] = Ra[0,1]
+                    #v_resp[n, j] = Ra[0, 1]
+                    if cor.__class__ == Hcor:
+                        self.resp[n, j] = Ra[0,1]
+                    else:
+                        self.resp[n+m, j] = Ra[2, 3]
+
+        rmatrix = Response_matrix()
+        rmatrix.bpm_names = [b.id for b in self.bpms]
+        rmatrix.cor_names = np.append(np.array([c.id for c in self.hcors]), np.array([c.id for c in self.vcors]))
+        rmatrix.matrix = self.resp
+        rmatrix.mode = "radian"
+        return rmatrix
+
+    def linac_response_matrix_meas(self, tw_init=None):
+        """
+        calculation of ideal response matrix
+
+        :param lattice: class MagneticLattice
+        :param tw_init: if tw_init == None, function tries to find periodical solution
+        :return: orbit.resp
+        """
+        #self.optical_func_params(tw_init=tw_init)
+        match_ic = False
+        m = len(self.bpms)
+        nx = len(self.hcors)
+        ny = len(self.vcors)
+        #h_resp = zeros((m, nx))
+        #v_resp = zeros((m, ny))
+        add_i = 0
+        if match_ic:
+            add_i = 4
+        self.resp = zeros((2 * m, nx + ny + add_i))
+        s = [bpm.s for bpm in self.bpms]
+        X0, Y0 = self.read_virtual_orbit(p_init=Particle( E=tw_init.E))
+        #plt.plot(s, X0,"ro-",  s, Y0,"bo-")
+        #plt.show()
+        Or0 = np.append(X0, Y0)
+        for j, cor in enumerate([item for sublist in [self.hcors, self.vcors] for item in sublist]):
+            print(j,"/", nx+ny, cor.id)
+            cor.angle = 0.0001
+            self.lat.update_transfer_maps()
+            start = time()
+            X1, Y1 = self.read_virtual_orbit(p_init=Particle(E=tw_init.E))
+            print(time() - start)
+
+            Or1 = np.append(X1, Y1)
+            self.resp[:, j] = (Or1 - Or0)/cor.angle
+            cor.angle = 0.00
+        self.lat.update_transfer_maps()
+        if match_ic:
+            for i, par in enumerate(["x", "px", "y", "py"]):
+                print(i)
+                p_i = Particle(E = tw_init.E)
+                p_i.__dict__[par] = 0.0001
+                #p2 = copy.deepcopy(p_i)
+                print ("measure = ", p_i.x, p_i.y, p_i.px, p_i.py, p_i.E)
+                X1, Y1 = self.read_virtual_orbit(p_init=p_i)
+                #plt.plot(s, X1, "ro-", s, Y1, "bo-")
+                #plt.show()
+                Or1 = np.append(X1, Y1)
+                self.resp[:, nx + ny + i] = (Or1 - Or0) /0.0001
+        X1, Y1 = self.read_virtual_orbit(p_init=Particle(E=tw_init.E))
+        rmatrix = Response_matrix()
+        rmatrix.bpm_names = [b.id for b in self.bpms]
+        rmatrix.cor_names = np.append(np.array([c.id for c in self.hcors]), np.array([c.id for c in self.vcors]))
+        rmatrix.matrix = self.resp
+        rmatrix.mode = "radian"
+        return rmatrix
+
     def disp_measur(self, E0):
         X0, Y0 = self.read_virtual_orbit(p_init=Particle(p=0.0, E=E0))
         X1, Y1 = self.read_virtual_orbit(p_init=Particle(p=0.01, E=E0))
@@ -664,18 +766,19 @@ class Orbit:
             monitors[i+m] = bpm.y
             weights[i, i] = bpm.weight
             weights[i+m, i+m] = bpm.weight
-
+        print(monitors)
         start = time()
         angle = self.apply_svd(self.resp, monitors, weight=weights)
-
+        #print(len(angle))
         print("correction = ", time() - start)
         for i, cor in enumerate(np.append(self.hcors, self.vcors)):
             if self.mode == "ampere":
                 #print "ampere"
                 cor.dI = -angle[i]
             else:
-                #print len(np.append(self.hcors, self.vcors)), i, len(angle)
+                print("correction", cor.angle*1000, angle[i]*1000, cor.id)
                 cor.angle -= angle[i]
+                #print(cor)
                 #print(cor.angle)
         """
         for i, vcor in enumerate(self.vcors):
@@ -697,6 +800,8 @@ class Orbit:
         """
         #print "ix = ", ix, "iy =", iy, len(angle)
         self.lat.update_transfer_maps()
+        #for i, cor in enumerate(np.append(self.hcors, self.vcors)):
+        #    print(cor.id, cor.angle, cor)
         if p_init is not None:
             p_init.x = -angle[-4]
             p_init.px = -angle[-3]
@@ -743,26 +848,87 @@ class Orbit:
             monitors[i] = bpm.x
             monitors[i+m] = bpm.y
         start = time()
-
+        print(monitors)
+        print(elem_response)
         poss = self.apply_svd(elem_response, monitors)
         print("correction = ", time() - start)
         ix = 0
         iy = 0
         for elem in self.lat.sequence:
             if ix<len(self.htypes) and elem.id == self.htypes[ix].id:
-                print ("quad, ", elem.dx, poss[ix])
-                elem.dx += poss[ix]
+                print ("X: ", elem.__class__.__name__, elem.id, elem.dx, poss[ix])
+                elem.dx = poss[ix]
                 #self.hquads[ix].dx -= poss[ix]
                 ix += 1
 
             if iy<len(self.vtypes) and elem.id == self.vtypes[iy].id:
-                elem.dy += poss[iy+len(self.htypes)]
+                print("Y: ", elem.__class__.__name__, elem.id, elem.dy, poss[iy])
+                elem.dy = poss[iy+len(self.htypes)]
                 #self.vquads[iy].dy -= poss[iy+len(self.hquads)]
                 iy += 1
         p = Particle(x=poss[-4], px=poss[-3], y=poss[-2], py=poss[-1])
         #print poss[-5:]
         self.lat.update_transfer_maps()
         return p
+
+    def misalignment_rm(self, p_init, elem_types, remove_elem):
+        shift = 0.001
+        m = len(self.bpms)
+        self.create_types(elem_types, remove_elem)
+        nx = len(self.htypes)
+        ny = len(self.vtypes)
+        print(nx, ny, m)
+        real_resp = zeros((m * 2, nx + ny + 4))
+        X0, Y0 = self.read_virtual_orbit(p_init=copy.deepcopy(p_init))
+        Or0 = np.append(X0, Y0)
+        #bpms = copy.deepcopy(self.bpms)
+        for ix, hquad in enumerate(self.htypes):
+            print("measure X - ", ix, "/", nx)
+            hquad.dx += shift
+            self.lat.update_transfer_maps()
+            X1, Y1 = self.read_virtual_orbit(p_init=copy.deepcopy(p_init))
+            Or1 = np.append(X1, Y1)
+            real_resp[:, ix] = (Or1 - Or0) / shift
+
+            hquad.dx -= shift
+            self.lat.update_transfer_maps()
+
+        for iy, vquad in enumerate(self.vtypes):
+            print("measure Y - ", iy, "/", ny)
+            vquad.dy += shift
+            self.lat.update_transfer_maps()
+            X1, Y1 = self.read_virtual_orbit(p_init=copy.deepcopy(p_init))
+            Or1 = np.append(X1, Y1)
+            real_resp[:, iy] = (Or1 - Or0) / shift
+            #plt.plot([bpm.s for bpm in self.bpms], [bpm.x for bpm in self.bpms], "r")
+            #plt.plot([bpm.s for bpm in self.bpms], [bpm.y for bpm in self.bpms], "b")
+            #plt.show()
+            vquad.dy -= shift
+            self.lat.update_transfer_maps()
+
+        X1, Y1 = self.read_virtual_orbit(p_init=copy.deepcopy(p_init))
+
+        for i, par in enumerate(["x", "px", "y", "py"]):
+            print(i)
+            p_i = Particle(E=p_init.E)
+            p_i.__dict__[par] = 0.0001
+            # print p_i.x, p_i.px, p_i.y, p_i.py, p_i.E
+            p2 = copy.deepcopy(p_i)
+            X1, Y1 = self.read_virtual_orbit(p_init=p2)
+            Or1 = np.append(X1, Y1)
+            # print ("energy = ", p2.E)
+            # plt.plot([bpm.s for bpm in orbit.bpms], [bpm.x for bpm in orbit.bpms], "r")
+            # plt.plot([bpm.s for bpm in orbit.bpms], [bpm.y for bpm in orbit.bpms], "b")
+            # plt.show()
+            real_resp[:, nx + ny + i] = (Or1 - Or0) / 0.0001
+            #for j, bpm in enumerate(self.bpms):
+            #    real_resp[:, nx + ny + i] = (Or1 - Or0) / 0.0001
+                #real_resp[j + m, nx + ny + i] = (bpm.y - bpms[j].y) / 0.0001
+                # print j+m, nx + ny + i, (bpm.x - bpms[j].x)/0.00001
+        # print real_resp[:,-5:]
+        X1, Y1 = self.read_virtual_orbit(p_init=copy.deepcopy(p_init))
+        return real_resp
+
     """
     def save_rmatrix(self, filename):
         dict_rmatrix = {}

@@ -14,6 +14,7 @@ import sys
 #sys.path.append("../../")
 from ocelot.adaptors.genesis import *
 import ocelot.utils.reswake as w
+from copy import deepcopy
 #try:
 #    import matplotlib.animation as anim
 #except:
@@ -39,23 +40,24 @@ def get_wake_from_file(wakefile):
     return wake
 
 
-def add_wake_to_beamf(beamf, new_beamf):
-    beam = read_beam_file(beamf)
+def add_wake_to_beam(beam):
+    # beam = read_beam_file(beamf)
     # s, bunch, wake = w.xfel_pipe_wake(s=beam.z, current=beam.I[::-1])
     s, bunch, wake = w.xfel_pipe_wake(s=beam.z, current=beam.I)
     print ('read ', len(wake), ' slice values')
-    beam.eloss = wake[::-1]
-
-    f=open(new_beamf,'w')
-    f.write(beam_file_str(beam))
-    f.close()
+    beam1 = deepcopy(beam)
+    beam1.eloss = wake[::-1]
+    # f=open(new_beamf,'w')
+    # f.write(beam_file_str(beam))
+    # f.close()
+    return beam1
 
 if len(sys.argv)>3:
     command = sys.argv[1]
     beamf = sys.argv[2]    
     outf = sys.argv[3]
 else:
-    pass
+    command = ''
     #beamf = '/home/iagapov/tmp/run_2/tmp.beam'
     #command = 'current'
     #outf = 'tmp.beam'
@@ -101,10 +103,9 @@ if command == "add":
     #    command = 'current'
 
     #wake = get_wake_from_file(wakef)
-
-    add_wake_to_beamf(beamf, outf)
-
     beam = read_beam_file(beamf)
+    beam1 = add_wake_to_beam(beam)
+    write_beam_file(outf, beam1)
 
 
 """

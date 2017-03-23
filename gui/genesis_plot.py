@@ -1281,12 +1281,12 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
         for irun in run_range:
             out_file = proj_dir + 'run_' + str(irun) + '/run.' + str(irun) + '.s' + str(stage) + '.gout'
             if os.path.isfile(out_file):
-               # try:
-                outlist[irun] = read_out_file(out_file, read_level=2, debug=1)
-                outlist[irun].calc_spec(spec_pad)
-                run_range_good.append(irun)
-               # except:
-                   # print('     could not read '+out_file)
+                try:
+                    outlist[irun] = read_out_file(out_file, read_level=2, debug=1)
+                    outlist[irun].calc_spec(spec_pad)
+                    run_range_good.append(irun)
+                except:
+                    print('     could not read '+out_file)
         run_range = run_range_good
         
         # if len(run_range)!=0 and debug>0:
@@ -1415,7 +1415,12 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     W.filePath = proj_dir + 'results' + os.path.sep + 'stage_' + str(stage) + '__WIG__' + str(z_ind) + '__m'
                     wig_fig_name = 'stage_' + str(stage) + '__WIG__' + str(z_ind) + '__m'
                     plot_wigner(W, z=z_ind, p_units='um', s_units='eV', fig_name=wig_fig_name, savefig=savefig, debug=0)
-
+                    if saveval != False:
+                        if debug > 1:
+                            print('      saving ' + wig_fig_name + '.txt')
+                        np.savetxt(saving_path + wig_fig_name + '.txt', W.wig, fmt="%E", newline='\n', comments='')
+                        np.savetxt(saving_path + wig_fig_name + '_sc.txt', vstack([W.freq_lamd, W.s]).T, fmt="%E", newline='\n', comments='')
+     
 
         for param in z_param_range:
             for z_ind in z_inp:

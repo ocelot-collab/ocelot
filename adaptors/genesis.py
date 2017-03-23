@@ -10,7 +10,7 @@ import os
 import socket
 import errno
 from ocelot.rad.fel import *
-from ocelot.cpbd.beam import Twiss, Beam, gauss_from_twiss
+from ocelot.cpbd.beam import * # Twiss, Beam, gauss_from_twiss, ParticleArray
 from ocelot.cpbd.elements import *
 import ocelot.utils.reswake as w
 from ocelot.utils.launcher import *
@@ -596,7 +596,7 @@ class GenesisElectronDist:
 
         self.x = []  # position in x in meters
         self.y = []  # position in y in meters
-        self.xp = []  # divergence in x ### rename to xp (xprime == angle)
+        self.xp = []  # divergence in x ### (xprime == angle)
         self.yp = []  # divergence in y
         self.t = []  # longitudinal position in seconds
         self.g = []  # gamma (total energy, normalized mc2) #rename to g?
@@ -645,7 +645,52 @@ class GenesisElectronDist:
         tws.E = mean_g * m_e_GeV
 
         return tws
-    # def twiss(self):#not tested!!!
+
+
+def parray2edist(p_array):
+    
+    edist = GenesisElectronDist()
+    
+    e0 = p_array.E * 1e9 #[eV]
+    p0 = sqrt( (e0**2 - m_e_eV**2) / speed_of_light**2 )
+    
+    p_oc = p_array.particles[5::6] # deltaE / average_impulse / speed_of_light
+    edist.g = (p_oc * p0 * speed_of_light + e0) / m_e_eV
+    edist.x = p_array.particles[::6]  # position in x in meters
+    edist.y = p_array.particles[2::6]  # position in y in meters
+    edist.xp = p_array.particles[1::6]  # divergence in x
+    edist.yp = p_array.particles[3::6]  # divergence in y
+    edist.t = p_array.particles[4::6] / speed_of_light  # longitudinal position in seconds
+
+    edist.part_charge = p_array.q_array[0] #fix for general case  # charge per particle
+    edist.filePath = ''
+    
+    return edist
+    
+def edist2parray(edist):
+
+    p_array = ParticleArray()
+    p_array.particles = np.zeros(edist.len() * 6)
+    p_array.q_array = np.ones(edist.len()) * edist.part_charge
+    
+    g0 = np.mean(edist.g) # average gamma
+    e0 = g0 * m_e_eV
+    p0 = sqrt(g0**2-1) * m_e_eV / speed_of_light # average impulse
+#    p0 = sqrt( (e0**2 - m_e_eV**2) / speed_of_light**2 ) # average impulse
+    p_array.E = g0 * m_e_GeV # average energy in GeV
+    
+    p_array.particles[::6] = edist.x # position in x in meters
+    p_array.particles[1::6] = edist.xp  # divergence in x
+    p_array.particles[2::6] = edist.y # position in x in meters
+    p_array.particles[3::6] = edist.yp  # divergence in x
+    p_array.particles[4::6] = edist.t * speed_of_light
+    p_array.particles[5::6] = (edist.g - g0) * m_e_eV / p0 / speed_of_light
+    
+    return p_array
+    
+    
+        
+        # def twiss(self):#not tested!!!
         # from ocelot.cpbd.beam import Twiss
         # tws=Twiss()
         # tws.x=mean(self.x)

@@ -12,12 +12,13 @@ from numpy import sqrt
 
 pi = 3.141592653589793
 speed_of_light = 299792458.0 #m/s
-m_e_MeV = 0.510998928        # MeV
-m_e_eV = m_e_MeV*1e+6        # eV
-m_e_GeV = m_e_MeV*1.e-3      # GeV
-m_e_kg = 9.10938215e-31      # kg
-
 q_e = 1.6021766208e-19       # C - Elementary charge
+m_e_kg = 9.10938215e-31      # kg
+m_e_eV = m_e_kg * speed_of_light**2 / q_e # MeV (0.510998928)
+m_e_MeV = m_e_eV / 1e+6        # eV
+m_e_GeV = m_e_eV / 1e+9      # GeV
+
+
 mu_0 = 4*pi*1e-7
 epsilon_0 = 8.854187817620e-12 # F/m
 

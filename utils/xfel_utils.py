@@ -69,6 +69,93 @@ SELF-SEEDING - relevant
 '''
 
 
+def generate_dfl(xlamds, shape=(151,151,1000), dgrid=(1e-3,1e-3,None), power_rms=(0.1e-3,0.1e-3,2e-6), power_center=(0,0,None), power_angle=(0,0), power_waistpos=(0,0), wavelength=None, zsep=1, freq_chirp=0, energy=None, power=1e6, debug=1):
+    '''
+    generates RadiationField object
+    xlamds [m] - central wavelength
+    shape (x,y,z) - shape of field matrix (reversed) to dfl.fld
+    dgrid (x,y,z) [m] - size of field matrix
+    power_rms (x,y,z) [m] - rms size of the radiation distribution (gaussian)
+    power_center (x,y,z) [m] - position of the radiation distribution
+    power_angle (x,y) [rad] - angle of further radiation propagation
+    power_waistpos (x,y) [m] downstrean location of the waist of the beam
+    wavelength [m] - central frequency of the radiation, if different from xlamds
+    zsep (integer) - distance between slices in z as zsep*xlamds
+    freq_chirp [(1e9 nm)/(1e6 um)] = [m/m] - requency chirp of the beam around power_center[2]
+    energy,power = total energy or max power of the pulse, use only one
+    '''
+    start = time.time()
+    
+    if shape[2] == None:
+        shape = (shape[0],shape[1],int(dgrid[2]/xlamds/zsep))
+        
+    if debug > 0:
+        print('    generating radiation field', tuple(reversed(shape)))
+    
+    dfl = RadiationField(tuple(reversed(shape)))
+    
+    k = 2*pi / xlamds
+    
+    dfl.xlamds = xlamds
+    dfl.domain_z = 't'
+    dfl.domain_xy = 's'
+    dfl.dx = dgrid[0] / dfl.Nx()
+    dfl.dy = dgrid[1] / dfl.Ny()
+    dfl.dz = xlamds * zsep
+    
+    rms_x, rms_y, rms_z = power_rms # intensity rms [m]
+    xp, yp = power_angle
+    x0, y0, z0 = power_center
+    zx, zy = power_waistpos
+    
+    if z0 == None:
+        z0 = dfl.Lz()/2
+    
+    x = np.linspace(-dfl.Lx()/2, dfl.Lx()/2, dfl.Nx())
+    y = np.linspace(-dfl.Ly()/2, dfl.Ly()/2, dfl.Ny())
+    z = np.linspace(0, dfl.Lz(), dfl.Nz())
+    z, y, x = np.meshgrid(z,y,x, indexing='ij')
+    
+    qx = 1j*pi*(2*rms_x)**2/xlamds + zx
+    qy = 1j*pi*(2*rms_y)**2/xlamds + zy
+    qz = 1j*pi*(2*rms_z)**2/xlamds
+
+      
+    if wavelength == None and xp == 0 and yp == 0:
+        phase_chirp_lin = 0
+    elif wavelength == None:
+        phase_chirp_lin = x*sin(xp) + y*sin(yp)
+    else:
+        phase_chirp_lin = (z-z0)/dfl.dz * (dfl.xlamds-wavelength)/wavelength*xlamds * zsep + x*sin(xp) + y*sin(yp)
+
+    
+    if freq_chirp == 0:
+        phase_chirp_quad = 0
+    else:
+        phase_chirp_quad = freq_chirp *((z-z0)/dfl.dz*zsep)**2 * xlamds / 2 / pi**2
+    
+
+    if qz == 0 or qz == None:
+        dfl.fld = exp(-1j * k * ( (y-x0)**2/2/qx + (x-y0)**2/2/qy + phase_chirp_lin + phase_chirp_quad) )
+    else:
+        dfl.fld = exp(-1j * k * ( (y-x0)**2/2/qx + (x-y0)**2/2/qy + (z-z0)**2/2/qz - phase_chirp_lin + phase_chirp_quad) ) #  - (grid[0]-z0)**2/qz 
+
+    
+    if energy != None and power == None:
+        dfl.fld *= sqrt(energy / dfl.E())
+    elif energy == None and power != None:
+        dfl.fld *= sqrt(power / np.amax(dfl.int_z()))
+    else:
+        raise ValueError('Either energy or power should be defined')
+    
+    dfl.filePath = ''
+    
+    t_func = time.time() - start
+    if debug > 0:
+        print('      done in %.2f ' % t_func + 'sec')
+    
+    return dfl
+
 def dfl_prop(dfl, z, fine=1, debug=1):
     '''
     Fourier propagator for fieldfile
@@ -743,6 +830,36 @@ def wigner_out(out, z=inf, method='mp', debug=1):
     wig.xlamds = out('xlamds')
     wig.filePath = out.filePath
     wig.z = z
+#    wig.energy= np.mean(out.p_int[:, -1], axis=0) * out('xlamds') * out('zsep') * out.nSlices / speed_of_light
+    
+    if debug>0: 
+        print('      done in %.2f seconds' % (time.time() - start_time))
+    
+    return wig
+    
+def wigner_dfl(dfl, method='mp', debug=1):
+    '''
+    returns on-axis WignerDistribution from dfl file
+    '''
+    
+    assert isinstance(dfl,RadiationField)
+    
+    import numpy as np
+    
+    if debug>0: 
+        print('    calculating Wigner distribution')
+    start_time = time.time()
+    
+    field = dfl[:,int(dfl.Ny()/2),int(dfl.Nx()/2)]
+
+    wig = WignerDistribution()
+    wig.wig = calc_wigner(field, method=method, debug=debug)
+    wig.s = dfl.scale_z()
+    freq_ev = h_eV_s * (np.fft.fftfreq(dfl.Nz(), d=dfl.dz / speed_of_light) + speed_of_light / dfl.xlamds)
+    freq_ev = np.fft.fftshift(freq_ev, axes=0)
+    wig.freq_lamd = h_eV_s * speed_of_light * 1e9 / freq_ev
+    wig.xlamds = dfl.xlamds
+    wig.filePath = dfl.filePath
 #    wig.energy= np.mean(out.p_int[:, -1], axis=0) * out('xlamds') * out('zsep') * out.nSlices / speed_of_light
     
     if debug>0: 

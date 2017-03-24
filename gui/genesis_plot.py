@@ -1078,7 +1078,10 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap='jet', legend=True, phase=F
 
     if sum(x_line) != 0:
         x_line_f, rms_x = gauss_fit(x, x_line)  # fit with Gaussian, and return fitted function and rms
-        fwhm_x = fwhm3(x_line)[1] * dx  # measure FWHM
+        try:
+            fwhm_x = fwhm3(x_line)[1] * dx  # measure FWHM
+        except ValueError:
+            fwhm_x = 0
     else:
         x_line_f = np.zeros_like(x_line)
         rms_x = 0
@@ -1104,7 +1107,10 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap='jet', legend=True, phase=F
 
     if sum(y_line) != 0:
         y_line_f, rms_y = gauss_fit(y, y_line)  # fit with Gaussian, and return fitted function and rms
-        fwhm_y = fwhm3(y_line)[1] * dy  # measure FWHM
+        try:
+            fwhm_y = fwhm3(y_line)[1] * dy  # measure FWHM
+        except ValueError:
+            fwhm_y = 0
     else:
         y_line_f = np.zeros_like(y_line)
         rms_y = 0

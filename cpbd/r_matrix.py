@@ -175,9 +175,9 @@ def create_r_matrix(element):
 
                 #element.vxx_down = (-4.9278 - 2.2112j)
                 #element.vxy_down = (2.9224 - 0.027228j)
-                m21 = (element.vxx_down * V * np.exp(1j*phi)).real*1e-3 /E
+                m21 = (element.vxx_down * V * np.exp(1j*phi)).real*1e-3 /(E + de)
                 m43 = - m21
-                m23 = (element.vxy_down* V * np.exp(1j*phi)).real*1e-3 /E
+                m23 = (element.vxy_down* V * np.exp(1j*phi)).real*1e-3 /(E + de)
                 coupl_kick_down = np.array([[1, 0., 0., 0., 0., 0.],
                                       [m21, 1, m23, 0., 0., 0.],
                                       [0., 0., 1, 0., 0., 0.],

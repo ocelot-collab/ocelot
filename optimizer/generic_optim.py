@@ -401,9 +401,11 @@ class OcelotInterfaceWindow(QFrame):
         dump2json["obj_values"] = self.objective_func.values
         dump2json["obj_times"] = self.objective_func.times
 
-        path = os.getcwd()
-        indx = path.find("ocelot")
-        path = path[:indx]
+        #path = os.getcwd()
+        #indx = path.find("ocelot")
+        #path = path[:indx]
+        path = self.path2ocelot
+        print("JSON", path)
         filename = os.path.join(path, "data", datetime.now().strftime("%Y-%m-%d %H-%M-%S") + ".json")
         #print(filename)
         try:

@@ -151,7 +151,7 @@ class TestMachineInterface:
         """
         #if "QUAD" in device_name:
         #    return 0
-        return np.random.rand(1)[0] #self.data
+        return np.random.rand(1)[0]-0.5 #self.data
 
     def set_value(self, device_name, val):
         """

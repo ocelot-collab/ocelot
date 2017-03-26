@@ -129,6 +129,8 @@ class TransferMap:
             a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(int(n/6), 6)))), b).reshape(n)
         else:
             a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(int(n/6), 6)))), self.B(energy)).reshape(n)
+            #a = np.add(np.transpose(dot(self.R(energy), particles.T.reshape(6, int(n/6)))), self.B(energy)).reshape(n)
+
         particles[:] = a[:]
         logger.debug('return trajectory, array ' + str(len(particles)))
         return particles
@@ -485,10 +487,9 @@ class SecondTM(TransferMap):
         #beta = np.sqrt(1. - igamma2)
         #U5666 = -2./(beta*beta)*igamma2
         # test end
-
         n = len(X)
         Xr = transpose(dot(R, transpose(X.reshape(int(n / 6), 6)))).reshape(n)
-
+        #Xr = transpose(dot(R, X.T.reshape(6, int(n / 6)))).reshape(n)
         # Xt = zeros(n)
         x, px, y, py, tau, dp = X[0::6], X[1::6], X[2::6], X[3::6], X[4::6], X[5::6]
         x2 = x * x

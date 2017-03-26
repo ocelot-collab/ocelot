@@ -531,15 +531,20 @@ class CSR:
             step = self.traj_step
             if elem.__class__ in [Bend, RBend, SBend]:
                 R = -elem.l/elem.angle
+                Rx = R * cos(elem.tilt)
+                Ry = R * sin(elem.tilt)
                 #B = energy*1e9*beta/(R*speed_of_light)
-                R_vect = [0, R, 0.]
+                R_vect = [-Ry, Rx, 0]
             else:
                 #B = 0.
                 R_vect = [0, 0, 0.]
 
             self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect )
             #print("scr_traj = ", self.csr_traj[0, -1], elem.l)
-
+        #plt.plot(self.csr_traj[0,:], self.csr_traj[1,:], "r")
+        #plt.plot(self.csr_traj[0, :], self.csr_traj[2, :], "b")
+        #plt.legend(["X", "Y"])
+        #plt.show()
         return self.csr_traj
 
     def apply(self, p_array, delta_s):

@@ -2,21 +2,22 @@ __author__ = 'Sergey'
 
 from numpy.linalg import inv
 from numpy import cosh, sinh
-#from scipy.misc import factorial
+# from scipy.misc import factorial
 from math import factorial
 from ocelot.cpbd.beam import Particle, Twiss, ParticleArray
 from ocelot.cpbd.high_order import *
 from ocelot.cpbd.r_matrix import *
 from copy import deepcopy
-#from numba import jit
+# from numba import jit
 from ocelot.common.logging import Logger
+
 logger = Logger()
 
 
 def transform_vec_ent(X, dx, dy, tilt):
     n = len(X)
     rotmat = rot_mtx(tilt)
-    x_add = np.add(X.reshape(int(n/6), 6), np.array([-dx, 0., -dy, 0., 0., 0.])).transpose()
+    x_add = np.add(X.reshape(int(n / 6), 6), np.array([-dx, 0., -dy, 0., 0., 0.])).transpose()
     X[:] = np.dot(rotmat, x_add).transpose().reshape(n)[:]
     return X
 
@@ -30,7 +31,6 @@ def transform_vec_ext(X, dx, dy, tilt):
 
 
 class TransferMap:
-
     def __init__(self):
         self.dx = 0.
         self.dy = 0.
@@ -46,90 +46,97 @@ class TransferMap:
         self.R_z = lambda z, energy: zeros((6, 6))
         self.B_z = lambda z, energy: dot((eye(6) - self.R_z(z, energy)), array([self.dx, 0., self.dy, 0., 0., 0.]))
         self.B = lambda energy: self.B_z(self.length, energy)
-        #self.B = lambda energy: zeros(6)  # tmp matrix
+        # self.B = lambda energy: zeros(6)  # tmp matrix
         self.map = lambda u, energy: self.mul_p_array(u, energy=energy)
 
     def map_x_twiss(self, tws0):
         E = tws0.E
         M = self.R(E)
-        #print(E, self.delta_e, M)
+        # print(E, self.delta_e, M)
         zero_tol = 1.e-10
         if abs(self.delta_e) > zero_tol:
-            #M = self.R(E + )
+            # M = self.R(E + )
             Ei = tws0.E
-            Ef = tws0.E + self.delta_e #* cos(self.phi)
-            #print "Ei = ", Ei, "Ef = ", Ef
-            k = np.sqrt(Ef/Ei)
-            M[0, 0] = M[0, 0]*k
-            M[0, 1] = M[0, 1]*k
-            M[1, 0] = M[1, 0]*k
-            M[1, 1] = M[1, 1]*k
-            M[2, 2] = M[2, 2]*k
-            M[2, 3] = M[2, 3]*k
-            M[3, 2] = M[3, 2]*k
-            M[3, 3] = M[3, 3]*k
-            #M[4, 5] = M[3, 3]*k
+            Ef = tws0.E + self.delta_e  # * cos(self.phi)
+            # print "Ei = ", Ei, "Ef = ", Ef
+            k = np.sqrt(Ef / Ei)
+            M[0, 0] = M[0, 0] * k
+            M[0, 1] = M[0, 1] * k
+            M[1, 0] = M[1, 0] * k
+            M[1, 1] = M[1, 1] * k
+            M[2, 2] = M[2, 2] * k
+            M[2, 3] = M[2, 3] * k
+            M[3, 2] = M[3, 2] * k
+            M[3, 3] = M[3, 3] * k
+            # M[4, 5] = M[3, 3]*k
             E = Ef
+
         m = tws0
         tws = Twiss(tws0)
         tws.E = E
         tws.p = m.p
-        tws.beta_x = M[0, 0]*M[0, 0]*m.beta_x - 2*M[0, 1]*M[0, 0]*m.alpha_x + M[0, 1]*M[0, 1]*m.gamma_x
+        tws.beta_x = M[0, 0] * M[0, 0] * m.beta_x - 2 * M[0, 1] * M[0, 0] * m.alpha_x + M[0, 1] * M[0, 1] * m.gamma_x
         # tws.beta_x = ((M[0,0]*tws.beta_x - M[0,1]*m.alpha_x)**2 + M[0,1]*M[0,1])/m.beta_x
-        tws.beta_y = M[2, 2]*M[2, 2]*m.beta_y - 2*M[2, 3]*M[2, 2]*m.alpha_y + M[2, 3]*M[2, 3]*m.gamma_y
+        tws.beta_y = M[2, 2] * M[2, 2] * m.beta_y - 2 * M[2, 3] * M[2, 2] * m.alpha_y + M[2, 3] * M[2, 3] * m.gamma_y
         # tws.beta_y = ((M[2,2]*tws.beta_y - M[2,3]*m.alpha_y)**2 + M[2,3]*M[2,3])/m.beta_y
-        tws.alpha_x = -M[0, 0]*M[1, 0]*m.beta_x + (M[0, 1]*M[1, 0]+M[1, 1]*M[0, 0])*m.alpha_x - M[0, 1]*M[1, 1]*m.gamma_x
-        tws.alpha_y = -M[2, 2]*M[3, 2]*m.beta_y + (M[2, 3]*M[3, 2]+M[3, 3]*M[2, 2])*m.alpha_y - M[2, 3]*M[3, 3]*m.gamma_y
+        tws.alpha_x = -M[0, 0] * M[1, 0] * m.beta_x + (M[0, 1] * M[1, 0] + M[1, 1] * M[0, 0]) * m.alpha_x - M[0, 1] * M[
+            1, 1] * m.gamma_x
+        tws.alpha_y = -M[2, 2] * M[3, 2] * m.beta_y + (M[2, 3] * M[3, 2] + M[3, 3] * M[2, 2]) * m.alpha_y - M[2, 3] * M[
+            3, 3] * m.gamma_y
 
-        tws.gamma_x = (1. + tws.alpha_x*tws.alpha_x)/tws.beta_x
-        tws.gamma_y = (1. + tws.alpha_y*tws.alpha_y)/tws.beta_y
+        tws.gamma_x = (1. + tws.alpha_x * tws.alpha_x) / tws.beta_x
+        tws.gamma_y = (1. + tws.alpha_y * tws.alpha_y) / tws.beta_y
 
-        tws.Dx = M[0, 0]*m.Dx + M[0, 1]*m.Dxp + M[0, 5]
-        tws.Dy = M[2, 2]*m.Dy + M[2, 3]*m.Dyp + M[2, 5]
+        tws.Dx = M[0, 0] * m.Dx + M[0, 1] * m.Dxp + M[0, 5]
+        tws.Dy = M[2, 2] * m.Dy + M[2, 3] * m.Dyp + M[2, 5]
 
-        tws.Dxp = M[1, 0]*m.Dx + M[1, 1]*m.Dxp + M[1, 5]
-        tws.Dyp = M[3, 2]*m.Dy + M[3, 3]*m.Dyp + M[3, 5]
-        denom_x = M[0, 0]*m.beta_x - M[0, 1]*m.alpha_x
+        tws.Dxp = M[1, 0] * m.Dx + M[1, 1] * m.Dxp + M[1, 5]
+        tws.Dyp = M[3, 2] * m.Dy + M[3, 3] * m.Dyp + M[3, 5]
+        denom_x = M[0, 0] * m.beta_x - M[0, 1] * m.alpha_x
         if denom_x == 0.:
-            d_mux = np.pi/2.*M[0, 1]/np.abs(M[0, 1])
+            d_mux = np.pi / 2. * M[0, 1] / np.abs(M[0, 1])
         else:
-            d_mux = np.arctan(M[0, 1]/denom_x)
+            d_mux = np.arctan(M[0, 1] / denom_x)
 
         if d_mux < 0:
             d_mux += np.pi
         tws.mux = m.mux + d_mux
-        #print M[0, 0]*m.beta_x - M[0, 1]*m.alpha_x, arctan(M[2, 3]/(M[2, 2]*m.beta_y - M[2, 3]*m.alpha_y))
-        denom_y = M[2, 2]*m.beta_y - M[2, 3]*m.alpha_y
+        # print M[0, 0]*m.beta_x - M[0, 1]*m.alpha_x, arctan(M[2, 3]/(M[2, 2]*m.beta_y - M[2, 3]*m.alpha_y))
+        denom_y = M[2, 2] * m.beta_y - M[2, 3] * m.alpha_y
         if denom_y == 0.:
-            d_muy = np.pi/2.*M[2, 3]/np.abs(M[2, 3])
+            d_muy = np.pi / 2. * M[2, 3] / np.abs(M[2, 3])
         else:
-            d_muy = np.arctan(M[2, 3]/denom_y)
+            d_muy = np.arctan(M[2, 3] / denom_y)
         if d_muy < 0:
             d_muy += np.pi
         tws.muy = m.muy + d_muy
+        # print("new")
+        # print(tws)
         return tws
 
     def mul_p_array(self, particles, energy=0.):
-        #print("linear:", self.R(0.1))
-        #print 'Map: mul_p_array', self.order, order
-        #ocelot.logger.debug('invoking mul_p_array, particle array len ' + str(len(particles)))
-        #ocelot.logger.debug(order)
-        #ocelot.logger.debug(self.method)
+        # print("linear:", self.R(0.1))
+        # print 'Map: mul_p_array', self.order, order
+        # ocelot.logger.debug('invoking mul_p_array, particle array len ' + str(len(particles)))
+        # ocelot.logger.debug(order)
+        # ocelot.logger.debug(self.method)
 
         n = len(particles)
         if 'pulse' in self.__dict__:
             logger.debug('TD transfer map')
-            if n > 6: logger.debug('warning: time-dependent transfer maps not implemented for an array. Using 1st particle value')
+            if n > 6: logger.debug(
+                'warning: time-dependent transfer maps not implemented for an array. Using 1st particle value')
             if n > 6: logger.debug('warning: time-dependent transfer maps not implemented for steps inside element')
             tau = particles[4]
             dxp = self.pulse.kick_x(tau)
             dyp = self.pulse.kick_y(tau)
             logger.debug('kick ' + str(dxp) + ' ' + str(dyp))
             b = array([0.0, dxp, 0.0, dyp, 0., 0.])
-            a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(int(n/6), 6)))), b).reshape(n)
+            a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(int(n / 6), 6)))), b).reshape(n)
         else:
-            a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(int(n/6), 6)))), self.B(energy)).reshape(n)
-            #a = np.add(np.transpose(dot(self.R(energy), particles.T.reshape(6, int(n/6)))), self.B(energy)).reshape(n)
+            a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(int(n / 6), 6)))),
+                       self.B(energy)).reshape(n)
+            # a = np.add(np.transpose(dot(self.R(energy), particles.T.reshape(6, int(n/6)))), self.B(energy)).reshape(n)
 
         particles[:] = a[:]
         logger.debug('return trajectory, array ' + str(len(particles)))
@@ -148,10 +155,11 @@ class TransferMap:
         if m.__class__ in [TransferMap]:
             m2 = TransferMap()
             m2.R = lambda energy: dot(self.R(energy), m.R(energy))
-            m2.B = lambda energy: dot(self.R(energy), m.B(energy)) + self.B(energy)  #+dB #check
+            m2.B = lambda energy: dot(self.R(energy), m.B(energy)) + self.B(energy)  # +dB #check
             m2.length = m.length + self.length
-            #print("B = ", m2.R(0))
-            #m2.delta_e += self.delta_e
+            # m2.delta_e = m.delta_e + self.delta_e
+            # print("B = ", m2.R(0))
+            # m2.delta_e += self.delta_e
 
             return m2
 
@@ -163,8 +171,8 @@ class TransferMap:
 
             tws = self.map_x_twiss(m)
             # trajectory
-            #X0 = array([m.x, m.xp, m.y, m.yp, m.tau, m.p])
-            #tws.x, tws.xp, tws.y, tws.yp, tws.tau, tws.dE = self.mul_p_array(X0, energy=tws.E, order=1)
+            # X0 = array([m.x, m.xp, m.y, m.yp, m.tau, m.p])
+            # tws.x, tws.xp, tws.y, tws.yp, tws.tau, tws.dE = self.mul_p_array(X0, energy=tws.E, order=1)
             tws.s = m.s + self.length
             return tws
 
@@ -219,6 +227,7 @@ class TransferMap:
         m.map = lambda u, energy: m.mul_p_array(u, energy=energy)
         return m
 
+
 class PulseTM(TransferMap):
     def __init__(self, kn):
         TransferMap.__init__(self)
@@ -237,7 +246,7 @@ class MultipoleTM(TransferMap):
         X[1::6] = X[1::6] - np.real(p)
         X[3::6] = X[3::6] + np.imag(p)
         X[4::6] = X[4::6] - kn[0] * X[0::6]
-        #print("multipole 2", X)
+        # print("multipole 2", X)
         return X
 
     def __call__(self, s):
@@ -248,6 +257,7 @@ class MultipoleTM(TransferMap):
         m.delta_e = m.delta_e_z(s)
         m.map = lambda X, energy: m.kick(X, m.kn)
         return m
+
 
 class CorrectorTM(TransferMap):
     def __init__(self, angle_x=0., angle_y=0.):
@@ -272,13 +282,13 @@ class CorrectorTM(TransferMap):
         b = array([dx, dx1, dy, dy1, 0., 0.])
         return b
 
-    def kick(self, X,  z, l, angle_x, angle_y, energy):
-        #print("corrector kick", angle_x, angle_y)
-        #ocelot.logger.debug('invoking kick_b')
+    def kick(self, X, z, l, angle_x, angle_y, energy):
+        # print("corrector kick", angle_x, angle_y)
+        # ocelot.logger.debug('invoking kick_b')
         n = len(X)
         b = self.kick_b(z, l, angle_x, angle_y)
-        X1 = np.add(np.transpose(dot(self.R(energy), np.transpose( X.reshape(int(n/6), 6)))), b).reshape(n)
-        #print(X1)
+        X1 = np.add(np.transpose(dot(self.R(energy), np.transpose(X.reshape(int(n / 6), 6)))), b).reshape(n)
+        # print(X1)
         X[:] = X1[:]
         return X
 
@@ -305,26 +315,26 @@ class CavityTM(TransferMap):
         self.vy_down = 0.
         self.delta_e_z = lambda z: self.v * np.cos(self.phi * np.pi / 180.) * z / self.length
         self.delta_e = self.v * np.cos(self.phi * np.pi / 180.)
-        self.map = lambda X, energy: self.map4cav(X, energy,  self.v, self.f, self.phi)
+        self.map = lambda X, energy: self.map4cav(X, energy, self.v, self.f, self.phi)
 
-    def map4cav(self, X, E,  V, freq, phi):
-        #print("CAVITY")
-        phi = phi*np.pi/180.
-        #if self.coupler_kick:
+    def map4cav(self, X, E, V, freq, phi):
+        # print("CAVITY")
+        phi = phi * np.pi / 180.
+        # if self.coupler_kick:
         if self.coupler_kick:
-            #print("couple_kick")
-            X[1::6] += (self.vx_up* V * np.exp(1j*phi)).real*1e-6 /E
+            # print("couple_kick")
+            X[1::6] += (self.vx_up * V * np.exp(1j * phi)).real * 1e-6 / E
             X[3::6] += (self.vy_up * V * np.exp(1j * phi)).real * 1e-6 / E
-        X = self.mul_p_array(X, energy=E) #t_apply(R, T, X, dx, dy, tilt)
-        delta_e = V*np.cos(phi)
+        X = self.mul_p_array(X, energy=E)  # t_apply(R, T, X, dx, dy, tilt)
+        delta_e = V * np.cos(phi)
         if self.coupler_kick:
             X[1::6] += (self.vx_down * V * np.exp(1j * phi)).real * 1e-6 / (E + delta_e)
             X[3::6] += (self.vy_down * V * np.exp(1j * phi)).real * 1e-6 / (E + delta_e)
         if E + delta_e > 0:
-            k = 2.*np.pi*freq/speed_of_light
-            #X[5::6] = (X[5::6]*E + V*np.cos(X[4::6]*k + phi) - delta_e)/(E + delta_e)
-            E1=E + delta_e
-            X[5::6] = X[5::6] + V/E1*(np.cos(-X[4::6]*k + phi) - np.cos(phi)-k*X[4::6]*np.sin(phi))
+            k = 2. * np.pi * freq / speed_of_light
+            # X[5::6] = (X[5::6]*E + V*np.cos(X[4::6]*k + phi) - delta_e)/(E + delta_e)
+            E1 = E + delta_e
+            X[5::6] = X[5::6] + V / E1 * (np.cos(-X[4::6] * k + phi) - np.cos(phi) - k * X[4::6] * np.sin(phi))
         return X
 
     def __call__(self, s):
@@ -333,7 +343,7 @@ class CavityTM(TransferMap):
         m.R = lambda energy: m.R_z(s, energy)
         m.B = lambda energy: m.B_z(s, energy)
         m.delta_e = m.delta_e_z(s)
-        m.map = lambda X, energy: m.map4cav( X, energy,  m.v*s/self.length, m.f, m.phi)
+        m.map = lambda X, energy: m.map4cav(X, energy, m.v * s / self.length, m.f, m.phi)
         return m
 
 
@@ -352,36 +362,35 @@ class KickTM(TransferMap):
         if gamma != 0:
             gamma2 = gamma * gamma
             beta = 1. - 0.5 / gamma2
-            coef = 1./(beta * beta * gamma2)
-        l = l/nkick
-        angle = angle/nkick
+            coef = 1. / (beta * beta * gamma2)
+        l = l / nkick
+        angle = angle / nkick
 
         dl = l / 2.
-        k1 = k1*dl
-        k2 = k2*dl
-        k3 = k3*dl
+        k1 = k1 * dl
+        k2 = k2 * dl
+        k3 = k3 * dl
 
         for i in range(nkick):
-
             x = X[0::6] + X[1::6] * dl - self.dx
             y = X[2::6] + X[3::6] * dl - self.dy
-            tau = -X[5::6]*dl*coef
+            tau = -X[5::6] * dl * coef
 
-            p = -angle*X[5::6] + 0j
-            #for n in range(1, len(kn)):
-            xy1 = x + 1j*y
-            xy2 = xy1*xy1
-            xy3 = xy2*xy1
-            p += k1*xy1 + k2*xy2 + k3*xy3
+            p = -angle * X[5::6] + 0j
+            # for n in range(1, len(kn)):
+            xy1 = x + 1j * y
+            xy2 = xy1 * xy1
+            xy3 = xy2 * xy1
+            p += k1 * xy1 + k2 * xy2 + k3 * xy3
             X[1::6] = X[1::6] - np.real(p)
             X[3::6] = X[3::6] + np.imag(p)
-            #X[4::6] = X[4::6] - angle*X[0::6]
+            # X[4::6] = X[4::6] - angle*X[0::6]
             X[4::6] = tau - angle * X[0::6]
 
             X[0::6] = x + X[1::6] * dl + self.dx
             X[2::6] = y + X[3::6] * dl + self.dy
-            X[4::6] -= X[5::6]*dl*coef
-            #print X[1], X[3]
+            X[4::6] -= X[5::6] * dl * coef
+            # print X[1], X[3]
         return X
 
     def __call__(self, s):
@@ -390,7 +399,7 @@ class KickTM(TransferMap):
         m.R = lambda energy: m.R_z(s, energy)
         m.B = lambda energy: m.B_z(s, energy)
         m.delta_e = m.delta_e_z(s)
-        m.map = lambda X, energy: m.kick( X, s, self.angle, self.k1, self.k2, self.k3, energy, self.nkick)
+        m.map = lambda X, energy: m.kick(X, s, self.angle, self.k1, self.k2, self.k3, energy, self.nkick)
         return m
 
 
@@ -401,14 +410,15 @@ class UndulatorTestTM(TransferMap):
         self.Kx = Kx
         self.ax = ax
         self.ndiv = ndiv
-        self.map = lambda X, energy: self.map4undulator(X, self.length, self.lperiod, self.Kx, self.ax, energy, self.ndiv)
+        self.map = lambda X, energy: self.map4undulator(X, self.length, self.lperiod, self.Kx, self.ax, energy,
+                                                        self.ndiv)
 
     def map4undulator(self, u, z, lperiod, Kx, ax, energy, ndiv):
         kz = 2. * np.pi / lperiod
         if ax == 0:
             kx = 0
         else:
-            kx = 2. * np.pi/ax
+            kx = 2. * np.pi / ax
         zi = linspace(0., z, num=ndiv)
         h = zi[1] - zi[0]
         kx2 = kx * kx
@@ -431,7 +441,7 @@ class UndulatorTestTM(TransferMap):
             u[1::6] -= h / 2. * chx * shx * (kx * ky2 * chy * chy + kx2 * kx * shy * shy) / (ky2 * kz2) * h02
             u[3::6] -= h / 2. * chy * shy * (ky2 * chx * chx + kx2 * shx * shx) / (ky * kz2) * h02
             u[4::6] -= h / 2. / (1. + u[5::6]) * ((u[1::6] * u[1::6] + u[3::6] * u[3::6]) + chx * chx * chy * chy / (
-                        2. * kz2) * h02 + shx * shx * shy * shy * kx2 / (2. * ky2 * kz2) * h02)
+                2. * kz2) * h02 + shx * shx * shy * shy * kx2 / (2. * ky2 * kz2) * h02)
             u[::6] = x + h * u[1::6]
             u[2::6] = y + h * u[3::6]
         return u
@@ -441,7 +451,7 @@ class UndulatorTestTM(TransferMap):
         m.length = s
         m.R = lambda energy: m.R_z(s, energy)
         m.B = lambda energy: m.B_z(s, energy)
-        #m.T = m.T_z(s)
+        # m.T = m.T_z(s)
         m.delta_e = m.delta_e_z(s)
         # print(m.R_z_no_tilt(s, 0.3))
         m.map = lambda X, energy: m.map4undulator(X, m.length, m.lperiod, m.Kx, m.ax, energy, m.ndiv)
@@ -472,24 +482,25 @@ class SecondTM(TransferMap):
         TransferMap.__init__(self)
         self.r_z_no_tilt = r_z_no_tilt
         self.t_mat_z_e = t_mat_z_e
-        self.map = lambda X, energy: self.t_apply(self.r_z_no_tilt(self.length, energy), self.t_mat_z_e(self.length, energy), X, self.dx, self.dy, self.tilt)
+        self.map = lambda X, energy: self.t_apply(self.r_z_no_tilt(self.length, energy),
+                                                  self.t_mat_z_e(self.length, energy), X, self.dx, self.dy, self.tilt)
 
     def t_apply(self, R, T, X, dx, dy, tilt, U5666=0.):
-        #print("t_apply", self.k2, self.T)
+        # print("t_apply", self.k2, self.T)
         if dx != 0 or dy != 0 or tilt != 0:
             X = transform_vec_ent(X, dx, dy, tilt)
 
         # test start
-        #gamma = 0.132729736896 / m_e_GeV
-        #gamma2 = gamma * gamma
-        #igamma2 = 1. / gamma2
+        # gamma = 0.132729736896 / m_e_GeV
+        # gamma2 = gamma * gamma
+        # igamma2 = 1. / gamma2
         #
-        #beta = np.sqrt(1. - igamma2)
-        #U5666 = -2./(beta*beta)*igamma2
+        # beta = np.sqrt(1. - igamma2)
+        # U5666 = -2./(beta*beta)*igamma2
         # test end
         n = len(X)
         Xr = transpose(dot(R, transpose(X.reshape(int(n / 6), 6)))).reshape(n)
-        #Xr = transpose(dot(R, X.T.reshape(6, int(n / 6)))).reshape(n)
+        # Xr = transpose(dot(R, X.T.reshape(6, int(n / 6)))).reshape(n)
         # Xt = zeros(n)
         x, px, y, py, tau, dp = X[0::6], X[1::6], X[2::6], X[3::6], X[4::6], X[5::6]
         x2 = x * x
@@ -508,20 +519,26 @@ class SecondTM(TransferMap):
         ydp = y * dp
         pydp = py * dp
 
-        X[0::6] = Xr[::6] + T[0, 0, 0] * x2 + T[0, 0, 1] * xpx + T[0, 0, 5] * xdp + T[0, 1, 1] * px2 + T[0, 1, 5] * pxdp + \
+        X[0::6] = Xr[::6] + T[0, 0, 0] * x2 + T[0, 0, 1] * xpx + T[0, 0, 5] * xdp + T[0, 1, 1] * px2 + T[
+                                                                                                           0, 1, 5] * pxdp + \
                   T[0, 5, 5] * dp2 + T[0, 2, 2] * y2 + T[0, 2, 3] * ypy + T[0, 3, 3] * py2
 
-        X[1::6] = Xr[1::6] + T[1, 0, 0] * x2 + T[1, 0, 1] * xpx + T[1, 0, 5] * xdp + T[1, 1, 1] * px2 + T[1, 1, 5] * pxdp + \
+        X[1::6] = Xr[1::6] + T[1, 0, 0] * x2 + T[1, 0, 1] * xpx + T[1, 0, 5] * xdp + T[1, 1, 1] * px2 + T[
+                                                                                                            1, 1, 5] * pxdp + \
                   T[1, 5, 5] * dp2 + T[1, 2, 2] * y2 + T[1, 2, 3] * ypy + T[1, 3, 3] * py2
 
-        X[2::6] = Xr[2::6] + T[2, 0, 2] * xy + T[2, 0, 3] * xpy + T[2, 1, 2] * ypx + T[2, 1, 3] * pxpy + T[2, 2, 5] * ydp + \
+        X[2::6] = Xr[2::6] + T[2, 0, 2] * xy + T[2, 0, 3] * xpy + T[2, 1, 2] * ypx + T[2, 1, 3] * pxpy + T[
+                                                                                                             2, 2, 5] * ydp + \
                   T[2, 3, 5] * pydp
 
-        X[3::6] = Xr[3::6] + T[3, 0, 2] * xy + T[3, 0, 3] * xpy + T[3, 1, 2] * ypx + T[3, 1, 3] * pxpy + T[3, 2, 5] * ydp + \
+        X[3::6] = Xr[3::6] + T[3, 0, 2] * xy + T[3, 0, 3] * xpy + T[3, 1, 2] * ypx + T[3, 1, 3] * pxpy + T[
+                                                                                                             3, 2, 5] * ydp + \
                   T[3, 3, 5] * pydp
 
-        X[4::6] = Xr[4::6] + T[4, 0, 0] * x2 + T[4, 0, 1] * xpx + T[4, 0, 5] * xdp + T[4, 1, 1] * px2 + T[4, 1, 5] * pxdp + \
-                  T[4, 5, 5] * dp2 + T[4, 2, 2] * y2 + T[4, 2, 3] * ypy + T[4, 3, 3] * py2 #+ U5666*dp2*dp    # third order
+        X[4::6] = Xr[4::6] + T[4, 0, 0] * x2 + T[4, 0, 1] * xpx + T[4, 0, 5] * xdp + T[4, 1, 1] * px2 + T[
+                                                                                                            4, 1, 5] * pxdp + \
+                  T[4, 5, 5] * dp2 + T[4, 2, 2] * y2 + T[4, 2, 3] * ypy + T[
+                                                                              4, 3, 3] * py2  # + U5666*dp2*dp    # third order
         # X[:] = Xr[:] + Xt[:]
 
         if dx != 0 or dy != 0 or tilt != 0:
@@ -536,13 +553,13 @@ class SecondTM(TransferMap):
         m.B = lambda energy: m.B_z(s, energy)
         m.T = lambda s, energy: m.t_mat_z_e(s, energy)
         m.delta_e = m.delta_e_z(s)
-        #print(m.R_z_no_tilt(s, 0.3))
+        # print(m.R_z_no_tilt(s, 0.3))
         m.map = lambda X, energy: m.t_apply(m.r_z_no_tilt(s, energy), m.t_mat_z_e(s, energy), X, m.dx, m.dy, m.tilt)
         return m
 
 
 class SlacCavityTM(TransferMap):
-    def __init__(self, l = 0, volt=0, phi=0,freq=0):
+    def __init__(self, l=0, volt=0, phi=0, freq=0):
         TransferMap.__init__(self)
         self.length = l
         self.dx = 0
@@ -554,9 +571,11 @@ class SlacCavityTM(TransferMap):
         self.freq = freq
         self.delta_e_z = lambda z: self.V * np.cos(self.phi * np.pi / 180.) * z / self.length
         self.delta_e = self.V * np.cos(self.phi * np.pi / 180.)
-        self.R_z = lambda z, energy: np.dot( self.slac_cavity_R_z(z, self.V*z/self.length, energy, self.freq, self.phi),
-                                             self.f_entrance(z, self.V*z/self.length, energy, self.phi))
-        self.R = lambda energy: np.dot(self.f_exit(self.length, self.V, energy, self.phi), self.R_z(self.length, energy))
+        self.R_z = lambda z, energy: np.dot(
+            self.slac_cavity_R_z(z, self.V * z / self.length, energy, self.freq, self.phi),
+            self.f_entrance(z, self.V * z / self.length, energy, self.phi))
+        self.R = lambda energy: np.dot(self.f_exit(self.length, self.V, energy, self.phi),
+                                       self.R_z(self.length, energy))
 
     def slac_cavity_R_z(self, z, V, E, freq, phi=0.):
         """
@@ -568,11 +587,11 @@ class SlacCavityTM(TransferMap):
         """
         phi = phi * np.pi / 180.
         de = V * np.cos(phi)
-        #print(de, E, de/E)
-        r12 = z*E/de*np.log(1. + de/E) if de !=0 else z
-        r22 = E/(E + de)
-        #print(E, de, freq)
-        r65 = V*np.sin(phi)/(E + de)*(2*pi/(speed_of_light/freq)) if freq != 0 else 0
+        # print(de, E, de/E)
+        r12 = z * E / de * np.log(1. + de / E) if de != 0 else z
+        r22 = E / (E + de)
+        # print(E, de, freq)
+        r65 = V * np.sin(phi) / (E + de) * (2 * pi / (speed_of_light / freq)) if freq != 0 else 0
         r66 = r22
         cav_matrix = np.array([[1, r12, 0., 0., 0., 0.],
                                [0, r22, 0., 0., 0., 0.],
@@ -623,13 +642,12 @@ class MethodTM:
 
         self.nkick = self.params['nkick'] if 'nkick' in self.params.keys() else 1
 
-
     def create_tm(self, element):
 
         if element.__class__ in self.params.keys():
-            transfer_map = self.set_tm( element, self.params[element.__class__])
+            transfer_map = self.set_tm(element, self.params[element.__class__])
         else:
-            transfer_map = self.set_tm(element, self.global_method )
+            transfer_map = self.set_tm(element, self.global_method)
         return transfer_map
 
     def set_tm(self, element, method):
@@ -645,7 +663,7 @@ class MethodTM:
 
         # global method
         if method == KickTM:
-            #print('kick')
+            # print('kick')
             try:
                 k3 = element.k3
             except:
@@ -663,7 +681,7 @@ class MethodTM:
                     R, T = fringe_ext(h=element.h, k1=element.k1, e=element.edge, h_pole=element.h_pole,
                                       gap=element.gap, fint=element.fint)
                 T_z_e = lambda z, energy: T
-                #print("trm", tilt, element.edge, element.h, r_z_e(0, 130)[1, 0])
+                # print("trm", tilt, element.edge, element.h, r_z_e(0, 130)[1, 0])
             tm = SecondTM(r_z_no_tilt=r_z_e, t_mat_z_e=T_z_e)
 
         elif method == SlacCavityTM:
@@ -693,7 +711,7 @@ class MethodTM:
             tm.mag_field = element.mag_field
 
         if element.__class__ == Cavity:
-            #print("CAVITY create")
+            # print("CAVITY create")
             tm = CavityTM(v=element.v, f=element.f, phi=element.phi)
             if element.coupler_kick:
                 tm.coupler_kick = element.coupler_kick
@@ -707,7 +725,8 @@ class MethodTM:
                 tm.vxy_down = element.vxy_down
             else:
                 tm.coupler_kick = False
-
+        if element.__class__ == Matrix:
+            tm.delta_e = element.delta_e
         if element.__class__ == Multipole:
             tm = MultipoleTM(kn=element.kn)
 
@@ -723,8 +742,8 @@ class MethodTM:
         tm.tilt = tilt
         tm.R_z = lambda z, energy: np.dot(np.dot(rot_mtx(-tilt), r_z_e(z, energy)), rot_mtx(tilt))
         tm.R = lambda energy: tm.R_z(element.l, energy)
-        #tm.B_z = lambda z, energy: dot((eye(6) - tm.R_z(z, energy)), array([dx, 0., dy, 0., 0., 0.]))
-        #tm.B = lambda energy: tm.B_z(element.l, energy)
+        # tm.B_z = lambda z, energy: dot((eye(6) - tm.R_z(z, energy)), array([dx, 0., dy, 0., 0., 0.]))
+        # tm.B = lambda energy: tm.B_z(element.l, energy)
 
         return tm
 
@@ -734,20 +753,22 @@ def sym_matrix(T):
         for j in range(6):
             for k in range(j, 6):
                 if j != k:
-                    a = T[i, j, k]/2.
+                    a = T[i, j, k] / 2.
                     T[i, k, j] = a
                     T[i, j, k] = a
     return T
+
 
 def unsym_matrix(T):
     for i in range(6):
         for j in range(6):
             for k in range(j, 6):
                 if j != k:
-                    a = T[i, j, k]*2.
+                    a = T[i, j, k] * 2.
                     T[i, k, j] = 0
                     T[i, j, k] = a
     return T
+
 
 def lattice_transfer_map(lattice, energy):
     """ transfer map for the whole lattice"""
@@ -767,15 +788,14 @@ def lattice_transfer_map(lattice, energy):
                         t1 = 0.
                         t2 = 0
                         for l in range(6):
-                            t1 += Rb[i, l]*Ta[l, j, k]
+                            t1 += Rb[i, l] * Ta[l, j, k]
 
                             for m in range(6):
-                                t2 += Tb[i, l, m]*Ra[l, j]*Ra[m, k]
+                                t2 += Tb[i, l, m] * Ra[l, j] * Ra[m, k]
                         Tc[i, j, k] = t1 + t2
             Ta = Tc
         Ra = dot(Rb, Ra)
         E += elem.transfer_map.delta_e
-
 
     lattice.T_sym = Ta
     lattice.T = unsym_matrix(deepcopy(Ta))
@@ -795,28 +815,28 @@ def trace_z(lattice, obj0, z_array):
     obj_elem = obj0
     for z in z_array:
         while z > L:
-            #print(lattice.sequence[i].transfer_map, obj_elem)
-            obj_elem = lattice.sequence[i].transfer_map*obj_elem
+            # print(lattice.sequence[i].transfer_map, obj_elem)
+            obj_elem = lattice.sequence[i].transfer_map * obj_elem
             i += 1
             elem = lattice.sequence[i]
             L += elem.l
 
-        obj_z = elem.transfer_map(z - (L - elem.l))*obj_elem
+        obj_z = elem.transfer_map(z - (L - elem.l)) * obj_elem
 
         obj_list.append(obj_z)
     return obj_list
 
 
-def trace_obj(lattice, obj, nPoints = None):
+def trace_obj(lattice, obj, nPoints=None):
     """ track object though lattice
         obj must be Twiss or Particle """
 
     if nPoints == None:
         obj_list = [obj]
         for e in lattice.sequence:
-            #if e.__class__ == Edge:
+            # if e.__class__ == Edge:
             #    print( "EDGE", e.edge)
-            obj = e.transfer_map*obj
+            obj = e.transfer_map * obj
             obj.id = e.id
             obj_list.append(obj)
     else:
@@ -824,43 +844,44 @@ def trace_obj(lattice, obj, nPoints = None):
         obj_list = trace_z(lattice, obj, z_array)
     return obj_list
 
+
 def periodic_twiss(tws, R):
     '''
     initial conditions for a periodic Twiss slution
     '''
     tws = Twiss(tws)
 
-    cosmx = (R[0, 0] + R[1, 1])/2.
-    cosmy = (R[2, 2] + R[3, 3])/2.
+    cosmx = (R[0, 0] + R[1, 1]) / 2.
+    cosmy = (R[2, 2] + R[3, 3]) / 2.
 
     if abs(cosmx) >= 1 or abs(cosmy) >= 1:
         logger.warn("************ periodic solution does not exist. return None ***********")
-        #print("************ periodic solution does not exist. return None ***********")
+        # print("************ periodic solution does not exist. return None ***********")
         return None
-    sinmx = np.sign(R[0, 1])*sqrt(1.-cosmx*cosmx)
-    sinmy = np.sign(R[2, 3])*sqrt(1.-cosmy*cosmy)
+    sinmx = np.sign(R[0, 1]) * sqrt(1. - cosmx * cosmx)
+    sinmy = np.sign(R[2, 3]) * sqrt(1. - cosmy * cosmy)
 
-    tws.beta_x = abs(R[0, 1]/sinmx)
-    tws.beta_y = abs(R[2, 3]/sinmy)
+    tws.beta_x = abs(R[0, 1] / sinmx)
+    tws.beta_y = abs(R[2, 3] / sinmy)
 
-    tws.alpha_x = (R[0, 0] - R[1, 1])/(2.*sinmx)  # X[0,0]
+    tws.alpha_x = (R[0, 0] - R[1, 1]) / (2. * sinmx)  # X[0,0]
 
-    tws.gamma_x = (1. + tws.alpha_x*tws.alpha_x)/tws.beta_x  # X[1,0]
+    tws.gamma_x = (1. + tws.alpha_x * tws.alpha_x) / tws.beta_x  # X[1,0]
 
-    tws.alpha_y = (R[2, 2] - R[3, 3])/(2*sinmy)  # Y[0,0]
-    tws.gamma_y = (1. + tws.alpha_y*tws.alpha_y)/tws.beta_y  # Y[1,0]
+    tws.alpha_y = (R[2, 2] - R[3, 3]) / (2 * sinmy)  # Y[0,0]
+    tws.gamma_y = (1. + tws.alpha_y * tws.alpha_y) / tws.beta_y  # Y[1,0]
 
-    Hx = array([[R[0, 0] - 1, R[0, 1]], [R[1, 0], R[1, 1]-1]])
+    Hx = array([[R[0, 0] - 1, R[0, 1]], [R[1, 0], R[1, 1] - 1]])
     Hhx = array([[R[0, 5]], [R[1, 5]]])
     hh = dot(inv(-Hx), Hhx)
     tws.Dx = hh[0, 0]
     tws.Dxp = hh[1, 0]
-    Hy = array([[R[2, 2] - 1, R[2, 3]], [R[3, 2], R[3, 3]-1]])
+    Hy = array([[R[2, 2] - 1, R[2, 3]], [R[3, 2], R[3, 3] - 1]])
     Hhy = array([[R[2, 5]], [R[3, 5]]])
     hhy = dot(inv(-Hy), Hhy)
     tws.Dy = hhy[0, 0]
     tws.Dyp = hhy[1, 0]
-    #tws.display()
+    # tws.display()
     return tws
 
 
@@ -876,15 +897,15 @@ def twiss(lattice, tws0=None, nPoints=None):
         tws0 = periodic_twiss(tws0, lattice_transfer_map(lattice, energy=0.))
 
     if tws0.__class__ == Twiss:
-        if tws0.beta_x == 0  or tws0.beta_y == 0:
+        if tws0.beta_x == 0 or tws0.beta_y == 0:
             R = lattice_transfer_map(lattice, tws0.E)
             tws0 = periodic_twiss(tws0, R)
             if tws0 == None:
                 print('Twiss: no periodic solution')
                 return None
         else:
-            tws0.gamma_x = (1. + tws0.alpha_x**2)/tws0.beta_x
-            tws0.gamma_y = (1. + tws0.alpha_y**2)/tws0.beta_y
+            tws0.gamma_x = (1. + tws0.alpha_x ** 2) / tws0.beta_x
+            tws0.gamma_y = (1. + tws0.alpha_y ** 2) / tws0.beta_y
 
         twiss_list = trace_obj(lattice, tws0, nPoints)
         return twiss_list
@@ -893,23 +914,56 @@ def twiss(lattice, tws0=None, nPoints=None):
         return None
 
 
+def twiss_fast(lattice, tws0=None):
+    """
+    twiss parameters calculation,
+    :param lattice: lattice, MagneticLattice() object
+    :param tws0: initial twiss parameters, Twiss() object. If None, try to find periodic solution.
+    :param nPoints: number of points per cell. If None, then twiss parameters are calculated at the end of each element.
+    :return: list of Twiss() objects
+    """
+    if tws0 == None:
+        tws0 = periodic_twiss(tws0, lattice_transfer_map(lattice, energy=0.))
+    if tws0.__class__ == Twiss:
+        if tws0.beta_x == 0 or tws0.beta_y == 0:
+            R = lattice_transfer_map(lattice, tws0.E)
+            tws0 = periodic_twiss(tws0, R)
+            if tws0 == None:
+                print('Twiss: no periodic solution')
+                return None
+        else:
+            tws0.gamma_x = (1. + tws0.alpha_x ** 2) / tws0.beta_x
+            tws0.gamma_y = (1. + tws0.alpha_y ** 2) / tws0.beta_y
 
-#class Navigator:
-#    def __init__(self, lattice = None):
-#        if lattice != None:
-#            self.lat = lattice
-#
-#    z0 = 0.             # current position of navigator
-#    n_elem = 0          # current number of the element in lattice
-#    sum_lengths = 0.    # sum_lengths = Sum[lat.sequence[i].l, {i, 0, n_elem-1}]
+        obj_list = [tws0]
+        for e in lattice.fast_seq:
+            e.transfer_map.R = lambda x: e.transfer_map._r
+            tws0 = e.transfer_map * tws0
+            tws0.id = e.id
+            obj_list.append(tws0)
+        return obj_list
+    else:
+        print('Twiss: no periodic solution')
+        return None
 
-    #def check(self, dz):
-    #    '''
-    #    check if next step exceed the bounds of lattice
-    #    '''
-    #    if self.z0+dz>self.lat.totalLen:
-    #        dz = self.lat.totalLen - self.z0
-    #    return dz
+
+        # class Navigator:
+        #    def __init__(self, lattice = None):
+        #        if lattice != None:
+        #            self.lat = lattice
+        #
+        #    z0 = 0.             # current position of navigator
+        #    n_elem = 0          # current number of the element in lattice
+        #    sum_lengths = 0.    # sum_lengths = Sum[lat.sequence[i].l, {i, 0, n_elem-1}]
+
+        # def check(self, dz):
+        #    '''
+        #    check if next step exceed the bounds of lattice
+        #    '''
+        #    if self.z0+dz>self.lat.totalLen:
+        #        dz = self.lat.totalLen - self.z0
+        #    return dz
+
 
 class ProcessTable:
     def __init__(self, lattice):
@@ -919,15 +973,16 @@ class ProcessTable:
     def add_physics_proc(self, physics_proc, elem1, elem2):
         physics_proc.start_elem = elem1
         physics_proc.end_elem = elem2
-        #print(elem1.id, elem2.id, elem1.__hash__(), elem2.__hash__(), self.lat.sequence.index(elem1), self.lat.sequence.index(elem2))
+        # print(elem1.id, elem2.id, elem1.__hash__(), elem2.__hash__(), self.lat.sequence.index(elem1), self.lat.sequence.index(elem2))
         physics_proc.indx0 = self.lat.sequence.index(elem1)
-        #print(self.lat.sequence.index(elem1))
+        # print(self.lat.sequence.index(elem1))
         physics_proc.indx1 = self.lat.sequence.index(elem2)
-        #print(self.lat.sequence.index(elem2))
+        # print(self.lat.sequence.index(elem2))
         physics_proc.counter = physics_proc.step
         physics_proc.prepare(self.lat)
         self.proc_list.append(physics_proc)
-        #print(elem1.__hash__(), elem2.__hash__(), physics_proc.indx0, physics_proc.indx1, self.proc_list)
+        # print(elem1.__hash__(), elem2.__hash__(), physics_proc.indx0, physics_proc.indx1, self.proc_list)
+
 
 class Navigator:
     """
@@ -937,15 +992,16 @@ class Navigator:
         physics_proc - physics process, can be CSR, SpaceCharge or Wake,
         elem1 and elem2 - first and last elements between which the physics process will be applied.
     """
+
     def __init__(self, lattice=None):
         if lattice != None:
             self.lat = lattice
         self.process_table = ProcessTable(lattice)
 
-        self.z0 = 0.             # current position of navigator
-        self.n_elem = 0          # current index of the element in lattice
-        self.sum_lengths = 0.    # sum_lengths = Sum[lat.sequence[i].l, {i, 0, n_elem-1}]
-        self.unit_step = 1       # unit step for physics processes
+        self.z0 = 0.  # current position of navigator
+        self.n_elem = 0  # current index of the element in lattice
+        self.sum_lengths = 0.  # sum_lengths = Sum[lat.sequence[i].l, {i, 0, n_elem-1}]
+        self.unit_step = 1  # unit step for physics processes
 
     def add_physics_proc(self, physics_proc, elem1, elem2):
         self.process_table.add_physics_proc(physics_proc, elem1, elem2)
@@ -959,7 +1015,7 @@ class Navigator:
         return proc_list
 
     def hard_edge_step(self, dz):
-        #self.sum_lengths
+        # self.sum_lengths
         elem1 = self.lat.sequence[self.n_elem]
         L = self.sum_lengths + elem1.l
         if self.z0 + dz > L:
@@ -980,19 +1036,21 @@ class Navigator:
                 p.counter -= step
                 if p.counter == 0:
                     p.counter = p.step
-            dz = step*self.unit_step
+            dz = step * self.unit_step
 
         else:
 
             processes = proc_list
             n_elems = len(self.lat.sequence)
-            if n_elems >= self.n_elem+1:
-                L = np.sum(np.array([elem.l for elem in self.lat.sequence[:self.n_elem+1]]))
+            if n_elems >= self.n_elem + 1:
+                L = np.sum(np.array([elem.l for elem in self.lat.sequence[:self.n_elem + 1]]))
             else:
                 L = self.lat.totalLen
             dz = L - self.z0
-        logger.debug("navi.z0="+str(self.z0) + " navi.n_elem=" + str(self.n_elem) + " navi.sum_lengths=" +str(self.sum_lengths) + " dz=" +str(dz) + '\n' +
-            "element type="+self.lat.sequence[self.n_elem].__class__.__name__ + " element name=" + self.lat.sequence[self.n_elem].id)
+        logger.debug("navi.z0=" + str(self.z0) + " navi.n_elem=" + str(self.n_elem) + " navi.sum_lengths=" + str(
+            self.sum_lengths) + " dz=" + str(dz) + '\n' +
+                     "element type=" + self.lat.sequence[self.n_elem].__class__.__name__ + " element name=" +
+                     self.lat.sequence[self.n_elem].id)
         return dz, processes
 
 
@@ -1002,10 +1060,10 @@ def get_map(lattice, dz, navi):
     i = navi.n_elem
     z1 = navi.z0 + dz
     elem = lattice.sequence[i]
-    #navi.sum_lengths = np.sum([elem.l for elem in lattice.sequence[:i]])
+    # navi.sum_lengths = np.sum([elem.l for elem in lattice.sequence[:i]])
     L = navi.sum_lengths + elem.l
     while z1 + 1e-10 > L:
-        if i >= nelems-1:
+        if i >= nelems - 1:
             break
         dl = L - navi.z0
         TM.append(elem.transfer_map(dl))
@@ -1027,7 +1085,7 @@ def merge_maps(t_maps):
     t_maps_new = []
     for tm in t_maps:
         if tm.__class__ == TransferMap:
-            tm0 = tm*tm0
+            tm0 = tm * tm0
         else:
             t_maps_new.append(tm0)
             t_maps_new.append(tm)
@@ -1038,34 +1096,41 @@ def merge_maps(t_maps):
 
 '''
 returns two solutions for a periodic fodo, given the mean beta
-initial betas are at the center of the focusing quad 
+initial betas are at the center of the focusing quad
 '''
-def fodo_parameters(betaXmean=36.0, L=10.0, verbose = False):
+
+
+def fodo_parameters(betaXmean=36.0, L=10.0, verbose=False):
     lquad = 0.001
-        
-    kap1 = np.sqrt (1.0/2.0 * ((betaXmean/L)*(betaXmean/L) + (betaXmean/L) * np.sqrt(-4.0 + (betaXmean/L)*(betaXmean/L))))
-    kap2 = np.sqrt (1.0/2.0 * ((betaXmean/L)*(betaXmean/L) - (betaXmean/L) * np.sqrt(-4.0 + (betaXmean/L)*(betaXmean/L))))
-    
+
+    kap1 = np.sqrt(1.0 / 2.0 * (
+    (betaXmean / L) * (betaXmean / L) + (betaXmean / L) * np.sqrt(-4.0 + (betaXmean / L) * (betaXmean / L))))
+    kap2 = np.sqrt(1.0 / 2.0 * (
+    (betaXmean / L) * (betaXmean / L) - (betaXmean / L) * np.sqrt(-4.0 + (betaXmean / L) * (betaXmean / L))))
+
     k = 1.0 / (lquad * L * kap2)
-    
-    f = 1.0 / (k*lquad)
-    
-    kappa = f / L    
-    betaMax = np.array(( L * kap1*(kap1+1)/np.sqrt(kap1*kap1-1), L * kap2*(kap2+1)/np.sqrt(kap2*kap2-1)))
-    betaMin = np.array(( L * kap1*(kap1-1)/np.sqrt(kap1*kap1-1), L * kap2*(kap2-1)/np.sqrt(kap2*kap2-1)))
-    betaMean = np.array(( L * kap2*kap2 / (np.sqrt(kap2*kap2 - 1.0)),  L * kap1*kap1 / (np.sqrt(kap1*kap1 - 1.0)) ))
-    k = np.array((1.0 / (lquad * L * kap1), 1.0 / (lquad * L * kap2) ))
-    
+
+    f = 1.0 / (k * lquad)
+
+    kappa = f / L
+    betaMax = np.array(
+        (L * kap1 * (kap1 + 1) / np.sqrt(kap1 * kap1 - 1), L * kap2 * (kap2 + 1) / np.sqrt(kap2 * kap2 - 1)))
+    betaMin = np.array(
+        (L * kap1 * (kap1 - 1) / np.sqrt(kap1 * kap1 - 1), L * kap2 * (kap2 - 1) / np.sqrt(kap2 * kap2 - 1)))
+    betaMean = np.array(
+        (L * kap2 * kap2 / (np.sqrt(kap2 * kap2 - 1.0)), L * kap1 * kap1 / (np.sqrt(kap1 * kap1 - 1.0))))
+    k = np.array((1.0 / (lquad * L * kap1), 1.0 / (lquad * L * kap2)))
+
     if verbose:
         print('********* calculating fodo parameters *********')
         print('fodo parameters:')
-        print('k*l=', k*lquad)
-        print('f=', L * kap1, L*kap2)
+        print('k*l=', k * lquad)
+        print('f=', L * kap1, L * kap2)
         print('kap1=', kap1)
         print('kap2=', kap2)
         print('betaMax=', betaMax)
         print('betaMin=', betaMin)
         print('betaMean=', betaMean)
         print('*********                             *********')
-    
-    return k*lquad, betaMin, betaMax, betaMean
+
+    return k * lquad, betaMin, betaMax, betaMean

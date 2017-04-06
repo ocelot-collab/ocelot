@@ -8,7 +8,7 @@ from ocelot.cpbd.errors import *
 from ocelot.cpbd.elements import *
 from time import time
 from scipy.stats import truncnorm
-from copy import copy
+from copy import copy, deepcopy
 import sys
 
 try:
@@ -524,6 +524,7 @@ def merge_drifts(lat):
         seq.append(new_elem)
     print( "after merging: len(sequence) = ", len(seq) )
     return MagneticLattice(sequence=seq)
+
 
 
 """

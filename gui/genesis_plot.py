@@ -139,7 +139,11 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
                 W=wigner_out(handle)
                 plot_wigner(W, savefig=savefig, debug=debug)
             if choice[12]:
-                plot_dpa_bucket_out(handle,scatter=0,slice_pos='max_P',repeat=3, savefig=savefig, cmap='jet')
+                try:
+                    plot_dpa_bucket_out(handle,scatter=0,slice_pos='max_P',repeat=3, savefig=savefig, cmap='jet')
+                except IOError:
+                    pass
+
             
                 
         if os.path.isfile(handle.filePath + '.dfl') and any(choice[5:8]):

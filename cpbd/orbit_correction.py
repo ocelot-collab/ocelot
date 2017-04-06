@@ -547,6 +547,7 @@ class Orbit:
                     mu_x = (bpm.phi_x - hcor.phi_x)
                     h_resp[i, j] = kx*sqrt(hcor.beta_x)*sin(mu_x)*sqrt(hcor.E/bpm.E)
 
+
             for n, vcor in enumerate(self.vcors):
                 if vcor.s < bpm.s:
                     mu_y = (bpm.phi_y - vcor.phi_y)
@@ -587,18 +588,23 @@ class Orbit:
             E = tw_init.E
             for i, elem in enumerate(self.lat.sequence):
                 if i<cor.lat_inx:
-                    #print(i, cor.lat_inx)
+                    #print(i, cor.lat_inx, E)
                     E += elem.transfer_map.delta_e
                     continue
+
                 Rb = elem.transfer_map.R(E)
+                #print("Rb = ", Rb)
                 Ra = dot(Rb, Ra)
                 E += elem.transfer_map.delta_e
                 if elem in self.bpms:
+                    #print("R12 = ", cor.lat_inx, cor.id, cor.s, Ra[0,1])
+                    #exit(0)
                     n = self.bpms.index(elem)
                     #v_resp[n, j] = Ra[0,1]
                     #v_resp[n, j] = Ra[0, 1]
                     if cor.__class__ == Hcor:
                         self.resp[n, j] = Ra[0,1]
+                        #print(Ra[0,1])
                     else:
                         self.resp[n+m, j] = Ra[2, 3]
 

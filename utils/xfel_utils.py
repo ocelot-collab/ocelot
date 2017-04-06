@@ -280,6 +280,7 @@ def generate_dfl(xlamds, shape=(151,151,1000), dgrid=(1e-3,1e-3,None), power_rms
     if shape[2] == None:
         shape = (shape[0],shape[1],int(dgrid[2]/xlamds/zsep))
         
+        
     if debug > 0:
         print('    generating radiation field', tuple(reversed(shape)))
     
@@ -311,6 +312,13 @@ def generate_dfl(xlamds, shape=(151,151,1000), dgrid=(1e-3,1e-3,None), power_rms
     qy = 1j*pi*(2*rms_y)**2/xlamds + zy
     qz = 1j*pi*(2*rms_z)**2/xlamds
 
+    if wavelength.__class__ in [list, tuple, np.ndarray] and len(wavelength) == 2:
+        freq_chirp = (wavelength[1] - wavelength[0]) / (z[-1,0,0] - z[0,0,0])
+        print('   wavelengths ', wavelength)
+        print('   z ', (z[-1,0,0], z[0,0,0]))
+        print('   calculated chirp ', freq_chirp)
+        wavelength = np.mean([wavelength[0], wavelength[1]])
+        
       
     if wavelength == None and xp == 0 and yp == 0:
         phase_chirp_lin = 0
@@ -323,11 +331,11 @@ def generate_dfl(xlamds, shape=(151,151,1000), dgrid=(1e-3,1e-3,None), power_rms
     if freq_chirp == 0:
         phase_chirp_quad = 0
     else:
-        phase_chirp_quad = freq_chirp *((z-z0)/dfl.dz*zsep)**2 * xlamds / 2 / pi**2
+        phase_chirp_quad = freq_chirp *((z-z0)/dfl.dz*zsep)**2 * xlamds / 2# / pi**2
     
 
     if qz == 0 or qz == None:
-        dfl.fld = exp(-1j * k * ( (y-x0)**2/2/qx + (x-y0)**2/2/qy - phase_chirp_lin + phase_chirp_quad) )
+        dfl.fld = exp(-1j * k * ( (y-x0)**2/2/qx + (x-y0)**2/2/qy - phase_chirp_lin + phase_chirp_quad ) )
     else:
         dfl.fld = exp(-1j * k * ( (y-x0)**2/2/qx + (x-y0)**2/2/qy + (z-z0)**2/2/qz - phase_chirp_lin + phase_chirp_quad) ) #  - (grid[0]-z0)**2/qz 
 

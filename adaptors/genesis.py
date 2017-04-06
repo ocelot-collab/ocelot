@@ -101,13 +101,15 @@ inputTemplate = "\
  ipradi =  __IPRADI__\n\
  isradi =  __ISRADI__\n\
  idump =  __IDUMP__\n\
- iotail =    __IOTAIL__\n\
- nharm =    __NHARM__\n\
+ iotail = __IOTAIL__\n\
+ nharm = __NHARM__\n\
+ iharmsc = __IHARMSC__\n\
+ iallharm = __IALLHARM__\n\
  curpeak =  __CURPEAK__\n\
  curlen =  __CURLEN__\n\
  ntail = __NTAIL__\n\
  nslice = __NSLICE__\n\
- __SHOTNOISE__\n\
+ shotnoise = __SHOTNOISE__\n\
  isntyp =  __ISNTYP__\n\
  iall  =  __IALL__\n\
  __ITDP__\n\
@@ -311,7 +313,7 @@ class GenesisInput:
         self.idmpfld = 0  # Similar to IDUMP but only for the field distribution.
         self.idmppar = 0  # Similar to IDUMP but only for the particle distribution.
         self.lout = [1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        #  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24
+        #            1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24
         # 1. radiation power
         # 2. logarithmic derivative of the power growth
         # 3. power density at the undulator axis
@@ -391,7 +393,9 @@ class GenesisInput:
 
         self.ilog = 0  # Create a log file.
         self.ffspec = 0  # amplitude/phase values for spectrum calculation: 0 - on-axis power/phase along the pulse, -1 - the same in far field, 1 - near field total power
-
+        
+        self.shotnoise = 1
+        
         # paths to files to import
         self.beamfile = None
         self.fieldfile = None
@@ -417,10 +421,10 @@ class GenesisInput:
         input = inputTemplate
 
         if self.type == 'steady':
-            input = input.replace("__SHOTNOISE__", "itdp  =    0")
+            # input = input.replace("__SHOTNOISE__", "itdp  =    0")
             input = input.replace("__ITDP__", "itdp = 0")
         else:
-            input = input.replace("__SHOTNOISE__", "shotnoise=  1.000000E+00")
+            # input = input.replace("__SHOTNOISE__", "shotnoise=  1")
             input = input.replace("__ITDP__", "itdp = 1")
             # self.prad0 = 0
 
@@ -1072,7 +1076,7 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', debug=1):
         if debug > 1:
             print ('        done in %.2f seconds' % (time.time() - start_time))
 
-        if debug > 0:
+        if debug > 0: # no dfln (n-harmonic) support yet
             print ('      assembling *.dfl file')
         start_time = time.time()
         if dfl_slipage_incl:
@@ -1130,16 +1134,19 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', debug=1):
         os.system('rm ' + out_path + '.slice* 2>/dev/null')
         if debug > 1:
             print ('        done in %.2f seconds' % (time.time() - start_time))
-
-        if os.path.isfile(str(out_path + '.dfl')):
-            if debug > 0:
-                print ('      assembling *.dfl file')
-            start_time = time.time()
-            assemble(out_path + '.dfl', overwrite=dfl_slipage_incl, ram=ram, debug=debug)
-            os.system('rm ' + out_path + '.dfl.slice* 2>/dev/null')
-            os.system('rm ' + out_path + '.dfl.tmp 2>/dev/null')
-            if debug > 1:
-                print ('        done in %.2f seconds' % (time.time() - start_time))
+        
+        for i in range(10):        #read all possible harmonics (up to 10 now)
+            ii=str(i)
+            if ii=='0': ii=''
+            if os.path.isfile(str(out_path + '.dfl' + ii)):
+                if debug > 0:
+                    print ('      assembling *.dfl'+ii+' file')
+                start_time = time.time()
+                assemble(out_path + '.dfl'+ii, overwrite=dfl_slipage_incl, ram=ram, debug=debug)
+                os.system('rm ' + out_path + '.dfl'+ii+'.slice* 2>/dev/null')
+                os.system('rm ' + out_path + '.dfl'+ii+'.tmp 2>/dev/null')
+                if debug > 1:
+                    print ('        done in %.2f seconds' % (time.time() - start_time))
 
         if os.path.isfile(str(out_path + '.dpa')):
             if debug > 0:
@@ -1572,9 +1579,12 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
         output_unsorted = np.array(output_unsorted)  # .astype(precision)
         # print out.sliceKeys
         for i in range(len(out.sliceKeys)):
+            key = out.sliceKeys[int(i)]
+            if key[0].isdigit():
+                key='h'+key
             if debug > 1: 
-                print ('      assembling',out.sliceKeys[int(i)].replace('-', '_').replace('<', '').replace('>', '')) 
-            command = 'out.' + out.sliceKeys[int(i)].replace('-', '_').replace('<', '').replace('>', '') + ' = output_unsorted[:,' + str(i) + '].reshape((' + str(int(out.nSlices)) + ',' + str(int(out.nZ)) + '))'
+                print ('      assembling',key.replace('-', '_').replace('<', '').replace('>', '')) 
+            command = 'out.' + key.replace('-', '_').replace('<', '').replace('>', '') + ' = output_unsorted[:,' + str(i) + '].reshape((' + str(int(out.nSlices)) + ',' + str(int(out.nZ)) + '))'
             # print(command)
             exec(command)
         if hasattr(out, 'energy'):
@@ -1963,8 +1973,20 @@ def read_dpa_file(filePath, nbins=4, npart=None, debug=1):
     reads genesis particle dump file *.dpa
     returns GenesisParticlesDump() object
     '''
-    if debug > 0:
-        print ('    reading particle file')
+    
+    if not os.path.isfile(filePath):
+        if debug:
+            raise IOError('      ! dpa file ' + filePath + ' not found !')
+        else:
+            print ('      ! dpa file ' + filePath + ' not found !')
+    else:
+        if debug > 0:
+            print ('    reading particle file')
+            # print ('        - reading from ' + filePath)
+
+    
+    # if debug > 0:
+        # print ('    reading particle file')
     dpa = GenesisParticlesDump()
 
     start_time = time.time()
@@ -2951,7 +2973,7 @@ def rad_file_str(rad):
 '''
 
 
-def generate_lattice(lattice, unit=1.0, energy=None, debug=False):
+def generate_lattice(lattice, unit=1.0, energy=None, debug=False, min_phsh = False):
 
     print ('generating lattice file...')
 
@@ -2993,13 +3015,17 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=False):
                     print ('appending drift' + str((prevLen) / unit))
                 L = pos - prevPos - prevLen #intersection length [m]
                 K_rms = e.Kx * np.sqrt(0.5)
-                xlamds = e.lperiod * (1 + K_rms**2) / (2 * gamma**2)
-                slip=(L / gamma**2) / 2 #free space radiation slippage [m]
-                add_slip = xlamds - slip % xlamds #free-space slippage to compensate with undulator K to bring it to integer number of wavelengths
-                K_rms_add = sqrt(2 * add_slip * gamma**2 / L) #compensational K
-                # driftLat += 'AD' + '    ' + str(e.Kx * np.sqrt(0.5)) + '   ' + str(round((pos - prevPos - prevLen) / unit, 2)) + '  ' + str(round(prevLen / unit, 2)) + '\n'
-                driftLat += 'AD' + '    ' + str(K_rms_add) + '   ' + str(round((L) / unit, 2)) + '  ' + str(round(prevLen / unit, 2)) + '\n'
-
+                
+                if min_phsh:
+                    xlamds = e.lperiod * (1 + K_rms**2) / (2 * gamma**2)
+                    slip=(L / gamma**2) / 2 #free space radiation slippage [m]
+                    add_slip = xlamds - slip % xlamds #free-space slippage to compensate with undulator K to bring it to integer number of wavelengths
+                    K_rms_add = sqrt(2 * add_slip * gamma**2 / L) #compensational K
+                    # driftLat += 'AD' + '    ' + str(e.Kx * np.sqrt(0.5)) + '   ' + str(round((pos - prevPos - prevLen) / unit, 2)) + '  ' + str(round(prevLen / unit, 2)) + '\n'
+                    driftLat += 'AD' + '    ' + str(K_rms_add) + '   ' + str(round((L) / unit, 2)) + '  ' + str(round(prevLen / unit, 2)) + '\n'
+                else:
+                    driftLat += 'AD' + '    ' + str(K_rms) + '   ' + str(round((L) / unit, 2)) + '  ' + str(round(prevLen / unit, 2)) + '\n'
+            
             prevPos = pos
             prevLen = l
 

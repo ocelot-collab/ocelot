@@ -2516,6 +2516,71 @@ def plot_trf(trf, mode='tr', autoscale=0, showfig=0, savefig=None):
     else:
         plt.close(trf_fig)
         
+
+def plot_stokes_values(S,fig=None,s_lin=0, norm=0, gw=1):
+    
+    if type(S) != StokesParameters:
+        raise ValueError('Not a StokesParameters object')
+        
+    if size(S.sc) > 1:
+        if fig == None:
+            plt.figure('Stokes S')
+        else:
+            plt.figure(fig.number)
+        plt.clf()
+        sc = S.sc * 1e6
+        
+        if gw:
+            S.s0 /= 1e9
+            S.s1 /= 1e9
+            S.s2 /= 1e9
+            S.s3 /= 1e9
+            plt.ylabel('$S_0$ [GW]')
+        else:
+            plt.ylabel('$S_0$ [W]')
+        plt.xlabel('s [$\mu$m]')
+        
+        if s_lin:
+            plt.step(sc, np.sqrt(S.s1**2+S.s2**2), linewidth=2, where='mid',color=[0.5,0.5,0.5], linestyle='--')
+ 
+        plt.step(sc, S.s1, linewidth=2, where='mid',color='m')
+        plt.step(sc, S.s2, linewidth=2, where='mid',color='r')
+        plt.step(sc, S.s3, linewidth=2, where='mid',color='c')
+        plt.step(sc, S.s0, linewidth=2, where='mid',color='k')
+        
+        if s_lin:
+            plt.legend(['$\sqrt{S_1^2+S_2^2}$','$S_1$','$S_2$','$S_3$','$S_0$'], loc='lower center', ncol=5, mode="expand", borderaxespad=0.5, frameon=1).get_frame().set_alpha(0.4)
+        else:
+            plt.legend(['$S_1$','$S_2$','$S_3$','$S_0$'], fontsize=13, ncol=4, loc='upper left', frameon=1).get_frame().set_alpha(0.4)
+#            plt.legend(['$S_1$','$S_2$','$S_3$','$S_0$'], loc='lower center', ncol=5, mode="expand", borderaxespad=0.5, frameon=1).get_frame().set_alpha(0.4)
+            
+        plt.show()
+        
+        
+def plot_stokes_angles(S,fig=None):
+    
+    if type(S) != StokesParameters:
+        raise ValueError('Not a StokesParameters object')
+        
+    if size(S.sc) > 1:
+        if fig == None:
+            plt.figure('Stokes angles')
+        else:
+            plt.figure(fig.number)
+        plt.clf()
+        sc = S.sc * 1e6
+        psize = S.s_l()
+        psize /= np.amax(psize)
+#        plt.step(sc, S.chi(), sc, S.psi(),linewidth=2)
+        plt.scatter(sc, S.chi(),psize,linewidth=2,color='g')
+        plt.scatter(sc, S.psi(),psize,linewidth=2,color='b')
+        plt.legend(['$\chi$','$\psi$'])#,loc='best')
+        plt.xlabel('s [$\mu$m]')
+        plt.ylabel('[rad]')
+        plt.ylim([-np.pi/2,np.pi/2])
+        plt.xlim([np.amin(sc),np.amax(sc)])
+        plt.show()
+        
 '''
     scheduled for removal
 '''

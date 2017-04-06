@@ -200,3 +200,31 @@ def n_moment(x, counts, c, n):
 def std_moment(x, counts):
     mean=n_moment(x, counts, 0, 1)
     return n_moment(x, counts, mean, 2)
+    
+def bin_array(array,bin_size):
+    #bining the array by averaging values within bins with size bin_size pixels
+    if bin_size > len(array):
+        return np.mean(array)
+    elif bin_size == 1:
+        return array
+    else:
+        new_shape = (array.shape[0] // bin_size) * bin_size
+        array_av = array[:new_shape]
+        array_av = array_av.reshape(int(new_shape/bin_size), bin_size)
+        array_av = np.mean(array_av, axis=1)
+        return array_av
+
+def bin_scale(scale,bin_size):
+    if bin_size > len(scale):
+        return np.array([0])
+    elif bin_size == 1:
+        return scale
+    else:
+        hbin = np.int(bin_size/2) #halfbin (to pick bin centers)
+        new_shape = (scale.shape[0] // bin_size) * bin_size
+        new_scale = scale[hbin : new_shape+hbin] [ :: bin_size]
+        return new_scale
+
+def index_of(array,value):
+    idx = (np.abs(array-value)).argmin()
+    return idx

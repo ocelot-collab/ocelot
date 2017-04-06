@@ -24,6 +24,197 @@ import pyfftw
 nthread = multiprocessing.cpu_count()
 
 
+class StokesParameters:
+    def __init__(self):
+        self.sc = np.array([])
+        self.s0 = np.array([])
+        self.s1 = np.array([])
+        self.s2 = np.array([])
+        self.s3 = np.array([])
+        
+    def __getitem__(self,i):
+        S = deepcopy(self)
+        if self.s0.ndim == 1:
+            S.sc = self.sc[i]
+        S.s0 = self.s0[i]
+        S.s1 = self.s1[i]
+        S.s2 = self.s2[i]
+        S.s3 = self.s3[i]
+        return S
+        
+    def s_coh(self):
+        #coherent part
+        return np.sqrt(self.s1**2 + self.s2**2 + self.s3**2)
+    def s_l(self):
+        #linearly polarized part
+        return np.sqrt(self.s1**2 + self.s2**2)
+        #        self.s_coh = np.array([])
+    def chi(self):
+        # chi angle (p/4 = circular)
+        return np.arctan(self.s3 / np.sqrt(self.s1**2 + self.s2**2)) / 2
+    def psi(self):
+        # psi angle 0 - horizontal, pi/2 - vertical
+        psi = np.arctan(self.s2 / self.s1) / 2
+
+        idx1 = np.where((self.s1<0) & (self.s2>0))
+        idx2 = np.where((self.s1<0) & (self.s2<0))
+        if size(psi) == 1:
+            # continue
+            # psi = psi
+            if size(idx1): psi += np.pi/2
+            if size(idx2): psi -= np.pi/2
+        else:
+            psi[idx1] += np.pi/2
+            psi[idx2] -= np.pi/2
+        return psi
+        
+def bin_stokes(S, bin_size):
+    
+    if type(S) != StokesParameters:
+        raise ValueError('Not a StokesParameters object')
+    
+    S1 = StokesParameters()
+    S1.sc = bin_scale(S.sc, bin_size)
+    S1.s0 = bin_array(S.s0, bin_size)
+    S1.s1 = bin_array(S.s1, bin_size)
+    S1.s2 = bin_array(S.s2, bin_size)
+    S1.s3 = bin_array(S.s3, bin_size)
+    return S1
+    
+def calc_stokes_out(out1, out2, pol='rl', on_axis=True):
+    if pol != 'rl':
+        raise ValueError('Not implemented yet')
+    
+    if on_axis:
+        a1=np.sqrt(np.array(out1.p_mid[:, -1])) # +
+        a2=np.sqrt(np.array(out2.p_mid[:, -1])) # -
+    else:
+        a1=np.sqrt(np.array(out1.p_int[:, -1])) # +
+        a2=np.sqrt(np.array(out2.p_int[:, -1])) # -
+    
+    f1=np.array(out1.phi_mid[:,-1])
+    f2=np.array(out2.phi_mid[:,-1])
+    if np.equal(out1.s, out2.s).all():
+        s = out2.s
+    else:
+        raise ValueError('Different scales')
+    
+    E1x = a1 * exp(1j * f1)
+    E1y = E1x * 1j
+    E2x = a2 * exp(1j * f2)
+    E2y = E2x * (-1j)
+    
+    Ex = (E1x + E2x) / sqrt(2)
+    Ey = (E1y + E2y) / sqrt(2)
+    
+    S = calc_stokes(Ex,Ey,s)
+    
+    return S
+    
+
+def calc_stokes_dfl(dfl1, dfl2, pol='rl', mode=(0,0)):
+    #mode: (average_longitudinally, sum_transversely)
+    if pol != 'rl':
+        raise ValueError('Not implemented yet')
+    
+    if len(dfl1.fld) != len(dfl2.fld):
+        l1 = len(dfl1.fld)
+        l2 = len(dfl2.fld)
+        if l1 > l2:
+            dfl1.fld = dfl1.fld[:-(l1-l2),:,:]
+        else:
+            dfl2.fld = dfl2.fld[:-(l2-l1),:,:]
+
+    # if np.equal(dfl1.scale_z(), dfl2.scale_z()).all():
+    s = dfl1.scale_z()
+    # else:
+        # raise ValueError('Different scales')
+    
+    Ex = (dfl1.fld + dfl2.fld) / sqrt(2)                #(E1x + E2x) /sqrt(2)
+    Ey = (dfl1.fld * 1j + dfl2.fld * (-1j)) / sqrt(2)   #(E1y + E2y) /sqrt(2)
+    
+    S = calc_stokes(Ex,Ey,s)
+
+    if mode[1]:
+        S = sum_stokes_tr(S)
+        # S.s0 = np.sum(S.s0,axis=(1,2))
+        # S.s1 = np.sum(S.s1,axis=(1,2))
+        # S.s2 = np.sum(S.s2,axis=(1,2))
+        # S.s3 = np.sum(S.s3,axis=(1,2))
+    
+    if mode[0]:
+        S = average_stokes_l(S)
+
+    return S
+
+    
+    
+def calc_stokes(Ex,Ey,s=None):
+    
+    if len(Ex) != len(Ey):
+        raise ValueError('Ex and Ey dimentions do not match')
+        
+    if s is None:
+        s = np.arange(len(Ex))
+    
+    Ex_ = np.conj(Ex)
+    Ey_ = np.conj(Ey)
+    
+    Jxx = Ex * Ex_
+    Jxy = Ex * Ey_
+    Jyx = Ey * Ex_
+    Jyy = Ey * Ey_
+    
+    del (Ex_,Ey_)
+    
+    S = StokesParameters()
+    S.sc = s
+    S.s0 = real(Jxx + Jyy)
+    S.s1 = real(Jxx - Jyy)
+    S.s2 = real(Jxy + Jyx)
+    S.s3 = real(1j * (Jyx - Jxy))
+    
+    return S
+    
+def average_stokes_l(S,sc_range=None):
+    
+    if type(S) != StokesParameters:
+        raise ValueError('Not a StokesParameters object')
+    
+    if sc_range is None:
+        sc_range = [S.sc[0], S.sc[-1]]
+
+    idx1 = np.where(S.sc >= sc_range[0])[0][0]
+    idx2 = np.where(S.sc <= sc_range[-1])[0][-1]
+    
+    if idx1 == idx2:
+        return S[idx1]
+    
+    S1 = StokesParameters()
+    S1.sc = np.mean(S.sc[idx1:idx2], axis=0)
+    S1.s0 = np.mean(S.s0[idx1:idx2], axis=0)
+    S1.s1 = np.mean(S.s1[idx1:idx2], axis=0)
+    S1.s2 = np.mean(S.s2[idx1:idx2], axis=0)
+    S1.s3 = np.mean(S.s3[idx1:idx2], axis=0)
+    return S1
+    
+def sum_stokes_tr(S):
+    
+    if type(S) != StokesParameters:
+        raise ValueError('Not a StokesParameters object')
+    if S.s0.ndim == 1:
+        return S
+    else:
+        S1 = StokesParameters()
+        S1.sc = S.sc
+        S1.s0 = np.sum(S.s0,axis=(-1,-2))
+        S1.s1 = np.sum(S.s1,axis=(-1,-2))
+        S1.s2 = np.sum(S.s2,axis=(-1,-2))
+        S1.s3 = np.sum(S.s3,axis=(-1,-2))
+        
+    return S1
+
+
 class WignerDistribution():
     '''
     calculated wigner distribution (spectrogram) of the pulse
@@ -136,7 +327,7 @@ def generate_dfl(xlamds, shape=(151,151,1000), dgrid=(1e-3,1e-3,None), power_rms
     
 
     if qz == 0 or qz == None:
-        dfl.fld = exp(-1j * k * ( (y-x0)**2/2/qx + (x-y0)**2/2/qy + phase_chirp_lin + phase_chirp_quad) )
+        dfl.fld = exp(-1j * k * ( (y-x0)**2/2/qx + (x-y0)**2/2/qy - phase_chirp_lin + phase_chirp_quad) )
     else:
         dfl.fld = exp(-1j * k * ( (y-x0)**2/2/qx + (x-y0)**2/2/qy + (z-z0)**2/2/qz - phase_chirp_lin + phase_chirp_quad) ) #  - (grid[0]-z0)**2/qz 
 
@@ -155,6 +346,43 @@ def generate_dfl(xlamds, shape=(151,151,1000), dgrid=(1e-3,1e-3,None), power_rms
         print('      done in %.2f ' % t_func + 'sec')
     
     return dfl
+
+def dfl_ap(dfl, ap_x=None, ap_y=None, debug=1):
+    '''
+    aperture the radaition in either domain
+    '''
+    if debug > 0:
+        print('    applying aperture to dfl')
+        
+    if size(ap_x) == 1:
+        ap_x = [-ap_x/2, ap_x/2]
+    if size(ap_y) == 1:
+        ap_y = [-ap_y/2, ap_y/2]
+        
+    idx_x = np.where( (dfl.scale_x() >= ap_x[0]) & (dfl.scale_x() <= ap_x[1]) )[0]
+    idx_x1 = idx_x[0]
+    idx_x2 = idx_x[-1]
+    
+    idx_y = np.where( (dfl.scale_y() >= ap_y[0]) & (dfl.scale_y() <= ap_y[1]) )[0]
+    idx_y1 = idx_y[0]
+    idx_y2 = idx_y[-1]
+    
+    mask = np.zeros_like(dfl.fld[0, :, :])
+    mask[idx_x1:idx_x2, idx_y1:idx_y2] = 1
+    mask_idx = np.where(mask == 0)
+    
+    dfl_out = deepcopy(dfl)
+    dfl_out.fld[:, mask_idx[0], mask_idx[1]] = 0
+    
+    if debug > 0:
+        print('      %.2f%% energy left' %( dfl_out.E() / dfl.E() ))
+    # tmp_fld = dfl.fld[:,idx_x1:idx_x2,idx_y1:idx_y2]
+    
+    # dfl_out.fld[:] = np.zeros_like(dfl_out.fld)
+    # dfl_out.fld[:,idx_x1:idx_x2,idx_y1:idx_y2] = tmp_fld
+    return dfl_out
+    
+    
 
 def dfl_prop(dfl, z, fine=1, debug=1):
     '''
@@ -178,7 +406,11 @@ def dfl_prop(dfl, z, fine=1, debug=1):
     '''
     if debug > 0:
         print('    propagating dfl file by %.2f meters' % (z))
-
+    
+    if z == 0:
+        print('      returning original')
+        return dfl
+    
     start = time.time()
 
     dfl_out = deepcopy(dfl)
@@ -244,8 +476,8 @@ def dfl_waistscan(dfl, z_pos, projection=0, debug=1):
 
         scale_x = dfl.scale_x()
         scale_y = dfl.scale_y()
-        center_x = (shape(I_xy)[0] + 1) / 2
-        center_y = (shape(I_xy)[1] + 1) / 2
+        center_x = np.int((shape(I_xy)[0] + 1) / 2)
+        center_y = np.int((shape(I_xy)[1] + 1) / 2)
 
         if projection:
             I_x = np.sum(I_xy, axis=1)

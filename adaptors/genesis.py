@@ -1968,7 +1968,11 @@ def read_dpa_file(filePath, nbins=4, npart=None, debug=1):
     dpa = GenesisParticlesDump()
 
     start_time = time.time()
-    b = np.fromfile(filePath, dtype=float)
+    
+    if os.path.isfile(filePath):
+        b = np.fromfile(filePath, dtype=float)
+    else:
+        raise IOError('No such file: ' + filePath)
     # if debug: print("     read Particles in %s sec" % (time.time() - start_time))
     assert npart != None, 'number of particles per bin is not defined'
     npart = int(npart)

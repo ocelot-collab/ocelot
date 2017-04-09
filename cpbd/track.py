@@ -471,6 +471,7 @@ def track(lattice, p_array, navi, print_progress=True, calc_tws=True):
     L = 0.
     while np.abs(navi.z0 - lattice.totalLen) > 1e-10:
         dz, proc_list = navi.get_next()
+
         tracking_step(lat=lattice, particle_list=p_array, dz=dz, navi=navi)
 
         for p in proc_list:

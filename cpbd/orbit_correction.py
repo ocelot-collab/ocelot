@@ -13,6 +13,7 @@ from ocelot.cpbd.match import closed_orbit
 from ocelot.cpbd.track import *
 from ocelot.gui.accelerator import *
 import copy
+import json
 
 def show_currents( elems, alpha):
     print( "******* displaying currents - START ********")
@@ -73,21 +74,28 @@ class Response_matrix:
         self.matrix = []
         self.mode = "radian"  # or "ampere"
 
-    def save(self, filename):
+    def dump(self, filename):
         dict_rmatrix = {}
-        dict_rmatrix["cor_names"] = self.cor_names
-        dict_rmatrix["bpm_names"] = self.bpm_names
-        dict_rmatrix["matrix"] = self.matrix
+        dict_rmatrix["cor_names"] = list(self.cor_names)
+        dict_rmatrix["bpm_names"] = list(self.bpm_names)
+        dict_rmatrix["matrix"] = list(self.matrix.flatten())
         dict_rmatrix["mode"] = self.mode
-        pickle.dump(dict_rmatrix, open(filename, "wb"))
+
+        with open(filename, 'w') as f:
+            json.dump(dict_rmatrix, f)
 
     def load(self, filename):
-        dict_rmatrix = pickle.load(open(filename, "rb"))
+        with open(filename, 'r') as f:
+            dict_rmatrix = json.load(f)
         self.cor_names = dict_rmatrix["cor_names"]
         self.bpm_names = dict_rmatrix["bpm_names"]
-        self.matrix = dict_rmatrix["matrix"]
+        print(self.cor_names)
+        print(self.bpm_names)
+
+        r_matrix = np.array(dict_rmatrix["matrix"])
+        self.matrix = r_matrix.reshape(2*len(self.bpm_names),len(self.cor_names))
+        print(self.matrix)
         self.mode = dict_rmatrix["mode"]
-        #print (self.mode)
         return 1
 
     def extract(self, cor_list, bpm_list):
@@ -102,6 +110,7 @@ class Response_matrix:
         c_names = cors1[np.in1d(cors1, cors2)]
 
         c_i1 = np.where(np.in1d(cors1, cors2))[0]
+        print("c_names ", c_names, c_i1)
         c_i2 = np.where(np.in1d(cors2, c_names))[0]
         #print bpms1, np.in1d(bpms1, bpms2)
         b_names = bpms1[np.in1d(bpms1, bpms2)]
@@ -110,11 +119,11 @@ class Response_matrix:
         b_i2 = np.where(np.in1d(bpms2, b_names))[0]
 
         if not np.array_equal(c_names, cor_list):
-            print (" in origin response matrix does not exist correctors:")
+            print (" Origin response matrix has no correctors:")
             #print c_names
             print (cors2[np.in1d(cors2, c_names, invert=True)])
         if not np.array_equal(b_names, bpm_list):
-            print (" in origin response matrix does not exist BPMs:")
+            print (" Origin response matrix has no BPMs:")
             print (bpm_list[b_i2[:]])
 
         extr_matrix = np.zeros((len(b_names)*2, len(c_names)))

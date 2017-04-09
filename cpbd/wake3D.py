@@ -147,6 +147,7 @@ class Wake():
         #self.wake_file = ""
         self.wake_table = None
         self.factor = 1.
+        self.step = 1
 
     def convolution(self, xu, u, xw, w):
         #convolution of equally spaced functions
@@ -321,8 +322,22 @@ class Wake():
         #if (3.0 < ziw <= 5.0):  # or(8.0<ziw<=10.0)or(12.0<ziw<=14.0):
         #    Px, Py, Pz, I00 = self.add_total_wake(Ps[:, 0], Ps[:, 2], Ps[:, 4], p_array.q_array, THh, Ns, NF)
         #print(zi, dz, ziw)
+
         p_array.particles[5::6] = p_array.particles[5::6] + Pz * dz*self.factor / (p_array.E * 1e9)
         p_array.particles[3::6] = p_array.particles[3::6] + Py * dz*self.factor / (p_array.E * 1e9)
         p_array.particles[1::6] = p_array.particles[1::6] + Px * dz*self.factor / (p_array.E * 1e9)
 
 
+class WakeKick(Wake):
+    def __init__(self):
+        Wake.__init__(self)
+
+    def apply(self, p_array, dz):
+        #print("Apply WakeKick")
+        ps = p_array.particles
+        Px, Py, Pz, I00 = self.add_total_wake(ps[0::6], ps[2::6], ps[4::6], p_array.q_array, self.TH, self.w_sampling,
+                                              self.filter_order)
+
+        p_array.particles[5::6] = p_array.particles[5::6] + Pz / (p_array.E * 1e9)
+        p_array.particles[3::6] = p_array.particles[3::6] + Py / (p_array.E * 1e9)
+        p_array.particles[1::6] = p_array.particles[1::6] + Px / (p_array.E * 1e9)

@@ -1028,7 +1028,8 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', debug=1):
         if inp.dpa != None:
             if debug > 1:
                 print ('    writing ' + inp_file + '.dpa')
-            print ('!!!!!!! no write_particle_file() function')
+            # print ('!!!!!!! no write_particle_file() function')
+            write_dpa_file(inp.dpa, inp_path + '.dpa', debug=1)
             inp.partfile = inp_file + '.dpa'
 
     if inp.fieldfile == None:
@@ -2006,7 +2007,7 @@ def read_dpa_file(filePath, nbins=4, npart=None, debug=1):
         print ('        npart' + str(npart))
         print ('        nbins' + str(nbins))
     # print 'b=',nslice*npart*6
-    b = b.reshape(nslice, 6, nbins, npart / nbins)
+    b = b.reshape(nslice, 6, nbins, int(npart / nbins))
     dpa.e = b[:, 0, :, :]  # gamma
     dpa.ph = b[:, 1, :, :]
     dpa.x = b[:, 2, :, :]
@@ -2020,6 +2021,35 @@ def read_dpa_file(filePath, nbins=4, npart=None, debug=1):
         print('      done in %.2f sec' % (time.time() - start_time))
 
     return dpa
+    
+def write_dpa_file(dpa, filePath=None, debug=1):
+    
+    if debug > 0:
+        print ('    writing particle file')
+    start_time = time.time()
+    
+    if dpa.__class__ != GenesisParticlesDump:
+        raise ValueError('wrong particles object: should be GenesisParticlesDump')
+    
+    if filePath == None:
+        filePath = dpa.filePath
+        
+    nslice,nbins,npart = dpa.e.shape
+    b = np.zeros((nslice,6,nbins,npart))
+    
+    b[:, 0, :, :] = dpa.e
+    b[:, 1, :, :] = dpa.ph
+    b[:, 2, :, :] = dpa.x
+    b[:, 3, :, :] = dpa.y
+    b[:, 4, :, :] = dpa.px
+    b[:, 5, :, :] = dpa.py
+    b = b.flatten()
+    b.tofile(filePath)
+    
+    if debug > 0:
+        print('      done in %.2f sec' % (time.time() - start_time))
+
+
 
 def max_dpa_dens(out, dpa, slice_pos=None, slice_num=None, repeat=1, bins=(50,50), debug=1):
     y_bins = bins[0]
@@ -2075,7 +2105,7 @@ def dpa2edist(out, dpa, num_part=1e5, smear=1, debug=1):
 
     npart = int(out('npart'))
     # nslice=int(out('nslice'))
-    nslice = int(out.nSlices) * out('ishsty')
+    nslice = int(out.nSlices * out('ishsty'))
     nbins = int(out('nbins'))
     xlamds = out('xlamds')
     zsep = int(out('zsep'))
@@ -2098,12 +2128,14 @@ def dpa2edist(out, dpa, num_part=1e5, smear=1, debug=1):
     m = np.tile(m, (nbins, npart / nbins, 1))
     m = np.rollaxis(m, 2, 0)
     # print('shape_m='+str(shape(m)))
+    
+    
     if smear:
-        dpa.z = dpa.ph * xlamds / 2 / pi + m * xlamds * zsep + xlamds * zsep * (1 - np.random.random((nslice, nbins, npart / nbins)))
+        z = dpa.ph * xlamds / 2 / pi + m * xlamds * zsep + xlamds * zsep * (1 - np.random.random((nslice, nbins, int(npart / nbins))))
     else:
-        dpa.z = dpa.ph * xlamds / 2 / pi + m * xlamds * zsep
+        z = dpa.ph * xlamds / 2 / pi + m * xlamds * zsep
 
-    dpa.t = np.array(dpa.z / speed_of_light)
+    t = np.array(z / speed_of_light)
 
     t_scale = np.linspace(0, nslice * zsep * xlamds / speed_of_light * 1e15, nslice)
 
@@ -2120,24 +2152,24 @@ def dpa2edist(out, dpa, num_part=1e5, smear=1, debug=1):
     pick_n = pick_n.astype(int)
     # ratio=ceil(num_part/np.sum(pick_n))
     ratio = 1
-
-    dpa.t = np.reshape(dpa.t, (nslice, npart))
-    dpa.e = np.reshape(dpa.e, (nslice, npart))
-    dpa.x = np.reshape(dpa.x, (nslice, npart))
-    dpa.y = np.reshape(dpa.y, (nslice, npart))
-    dpa.px = np.reshape(dpa.px, (nslice, npart))
-    dpa.py = np.reshape(dpa.py, (nslice, npart))
+    
+    t = np.reshape(t, (nslice, npart))
+    e = np.reshape(dpa.e, (nslice, npart))
+    x = np.reshape(dpa.x, (nslice, npart))
+    y = np.reshape(dpa.y, (nslice, npart))
+    px = np.reshape(dpa.px, (nslice, npart))
+    py = np.reshape(dpa.py, (nslice, npart))
 
     edist = GenesisElectronDist()
     for i in np.arange(nslice):
         for ii in np.arange(int(ratio)):
             pick_i = random.sample(range(npart), pick_n[i])
-            edist.t = append(edist.t, dpa.t[i, pick_i])
-            edist.g = append(edist.g, dpa.e[i, pick_i])
-            edist.x = append(edist.x, dpa.x[i, pick_i])
-            edist.y = append(edist.y, dpa.y[i, pick_i])
-            edist.xp = append(edist.xp, dpa.px[i, pick_i])
-            edist.yp = append(edist.yp, dpa.py[i, pick_i])
+            edist.t = append(edist.t, t[i, pick_i])
+            edist.g = append(edist.g, e[i, pick_i])
+            edist.x = append(edist.x, x[i, pick_i])
+            edist.y = append(edist.y, y[i, pick_i])
+            edist.xp = append(edist.xp, px[i, pick_i])
+            edist.yp = append(edist.yp, py[i, pick_i])
 
     edist.t = edist.t * (-1) + max(edist.t)
     edist.xp /= edist.g

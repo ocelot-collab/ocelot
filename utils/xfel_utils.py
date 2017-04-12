@@ -213,15 +213,18 @@ def sum_stokes_tr(S):
         S1.s3 = np.sum(S.s3,axis=(-1,-2))
         
     return S1
-
-
+    
+    
 class WignerDistribution():
     '''
     calculated wigner distribution (spectrogram) of the pulse
     in time/frequency domain as space/wavelength
     '''
+    
+    
     def __init__(self):
         # self.fld=np.array([]) #(z,y,x)
+        self.field = []
         self.wig = []  # (wav,space)
         self.s = []  # space scale
         self.z = None # position along undulator (if applicable)
@@ -240,6 +243,17 @@ class WignerDistribution():
         
     def fileName(self):
         return filename_from_path(self.filePath)
+        
+    def eval(self,method = 'mp'):
+        
+        # from ocelot.utils.xfel_utils import calc_wigner
+        
+        ds = self.s[1] - self.s[0]
+        self.wig = calc_wigner(self.field, method=method, debug=1)
+        freq_ev = h_eV_s * (np.fft.fftfreq(self.s.size, d = ds / speed_of_light) + speed_of_light / self.xlamds)
+        freq_ev = np.fft.fftshift(freq_ev, axes=0)
+        self.freq_lamd = h_eV_s * speed_of_light * 1e9 / freq_ev
+
     
 def background(command):
     '''
@@ -1036,8 +1050,22 @@ def calc_wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1
     wig = wig[0:N0, 0:N0] / N
 
     return np.real(wig)
+    
+def wigner_pad(wig,pad):
+    wig_out = deepcopy(wig)
+    n_add = wig_out.s.size * (pad-1) / 2
+    n_add = int(n_add - n_add%2)
+    ds = (wig_out.s[-1] - wig_out.s[0]) / (wig_out.s.size-1)
+    # pad_array_s_l = np.arange(wig_out.s[0] - ds*n_add, wig_out.s[0], ds)
+    # pad_array_s_r = np.arange(wig_out.s[-1]+ds, wig_out.s[-1] + ds*(n_add+1), ds)
+    pad_array_s_l = np.linspace(wig_out.s[0] - ds*(n_add), wig_out.s[0]-ds, n_add)
+    pad_array_s_r = np.linspace(wig_out.s[-1]+ds, wig_out.s[-1] + ds*(n_add), n_add)
+    wig_out.s = np.concatenate([pad_array_s_l,wig_out.s,pad_array_s_r])
+    wig_out.field = np.concatenate([np.zeros(n_add), wig_out.field, np.zeros(n_add)])
+#    W_out.eval()
+    return wig_out
 
-def wigner_out(out, z=inf, method='mp', debug=1):
+def wigner_out(out, z=inf, method='mp', pad=1, debug=1):
     '''
     returns WignerDistribution from GenesisOutput at z
     '''
@@ -1062,14 +1090,22 @@ def wigner_out(out, z=inf, method='mp', debug=1):
     zi = np.where(out.z >= z)[0][0]
 
     wig = WignerDistribution()
-    wig.wig = calc_wigner(sqrt(out.p_int[:,zi])*exp(1j*out.phi_mid[:,zi]), method=method, debug=debug)
+    wig.field = sqrt(out.p_int[:,zi])*exp(1j*out.phi_mid[:,zi])
     wig.s = out.s
-    freq_ev = h_eV_s * (np.fft.fftfreq(out.nSlices, d=out('zsep') * out('xlamds') * out('ishsty') / speed_of_light) + speed_of_light / out('xlamds'))
-    freq_ev = np.fft.fftshift(freq_ev, axes=0)
-    wig.freq_lamd = h_eV_s * speed_of_light * 1e9 / freq_ev
     wig.xlamds = out('xlamds')
     wig.filePath = out.filePath
     wig.z = z
+    
+    if pad > 1:
+        wig = wigner_pad(wig,pad)
+    
+    wig.eval() #calculate wigner parameters based on its attributes
+    # ds = wig.s[1] - wig.s[0]
+    # wig.wig = calc_wigner(wig.field, method=method, debug=debug)
+    # freq_ev = h_eV_s * (np.fft.fftfreq(wig.s.size, d = ds / speed_of_light) + speed_of_light / wig.xlamds)
+    # freq_ev = np.fft.fftshift(freq_ev, axes=0)
+    # wig.freq_lamd = h_eV_s * speed_of_light * 1e9 / freq_ev
+
 #    wig.energy= np.mean(out.p_int[:, -1], axis=0) * out('xlamds') * out('zsep') * out.nSlices / speed_of_light
     
     if debug>0: 
@@ -1077,11 +1113,10 @@ def wigner_out(out, z=inf, method='mp', debug=1):
     
     return wig
     
-def wigner_dfl(dfl, method='mp', debug=1):
+def wigner_dfl(dfl, method='mp', pad=1, debug=1):
     '''
     returns on-axis WignerDistribution from dfl file
     '''
-    
     assert isinstance(dfl,RadiationField)
     
     import numpy as np
@@ -1090,17 +1125,23 @@ def wigner_dfl(dfl, method='mp', debug=1):
         print('    calculating Wigner distribution')
     start_time = time.time()
     
-    field = dfl[:,int(dfl.Ny()/2),int(dfl.Nx()/2)]
-
     wig = WignerDistribution()
-    wig.wig = calc_wigner(field, method=method, debug=debug)
+    wig.field = dfl[:,int(dfl.Ny()/2),int(dfl.Nx()/2)]
     wig.s = dfl.scale_z()
-    freq_ev = h_eV_s * (np.fft.fftfreq(dfl.Nz(), d=dfl.dz / speed_of_light) + speed_of_light / dfl.xlamds)
-    freq_ev = np.fft.fftshift(freq_ev, axes=0)
-    wig.freq_lamd = h_eV_s * speed_of_light * 1e9 / freq_ev
     wig.xlamds = dfl.xlamds
     wig.filePath = dfl.filePath
-#    wig.energy= np.mean(out.p_int[:, -1], axis=0) * out('xlamds') * out('zsep') * out.nSlices / speed_of_light
+
+    if pad > 1:
+        wig = wigner_pad(wig,pad)
+    
+    wig.eval() #calculate wigner parameters based on its attributes
+
+    # wig.wig = calc_wigner(wig.field, method=method, debug=debug)
+    # freq_ev = h_eV_s * (np.fft.fftfreq(dfl.Nz(), d=dfl.dz / speed_of_light) + speed_of_light / dfl.xlamds)
+    # freq_ev = np.fft.fftshift(freq_ev, axes=0)
+    # wig.freq_lamd = h_eV_s * speed_of_light * 1e9 / freq_ev
+
+    #    wig.energy= np.mean(out.p_int[:, -1], axis=0) * out('xlamds') * out('zsep') * out.nSlices / speed_of_light
     
     if debug>0: 
         print('      done in %.2f seconds' % (time.time() - start_time))

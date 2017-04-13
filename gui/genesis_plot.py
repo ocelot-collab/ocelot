@@ -912,6 +912,9 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap='jet', legend=True, phase=F
     if debug > 0:
         print('    plotting radiation field')
     start_time = time.time()
+    
+    if F.__class__ != RadiationField:
+        raise ValueError('wrong radiation object: should be RadiationField')
 
     suffix = ''
     if F.Nz() != 1:
@@ -1764,6 +1767,7 @@ def plot_dpa_bucket_out(out, dpa=None, slice_pos=None, repeat=1, GeV=1, figsize=
     
     if dpa == None:
         dpa=read_dpa_file_out(out)
+        
     
     if out.nSlices > 1:
         if type(slice_pos) == str:
@@ -1801,6 +1805,9 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap='jet',
     if debug > 0:
         print('    plotting bucket')
     start_time = time.time()
+    
+    if dpa.__class__ != GenesisParticlesDump:
+        raise ValueError('wrong particle object: should be GenesisParticlesDump')
 
     if shape(dpa.ph)[0] == 1:
         slice_num = 0
@@ -1908,7 +1915,7 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap='jet',
         plt.close('all')
 
 
-def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, scatter=False, plot_x_y=True, plot_xy_s=True, bins=(50, 50, 50, 50), flip_t=True, beam_E_plot='ev', cmin=0, cmap='jet', debug=1):
+def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, scatter=False, plot_x_y=True, plot_xy_s=True, bins=(50, 50, 50, 50), flip_t=True, s_units='um', e_units='ev', cmin=0, cmap='jet', debug=1):
 
     if showfig == False and savefig == False:
         return
@@ -1916,6 +1923,8 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
         print('    plotting edist file')
     start_time = time.time()
     # suffix=''
+    if edist.__class__ != GenesisElectronDist:
+        raise ValueError('wrong distribution object: should be GenesisElectronDist')
 
     if size(bins) == 1:
         bins = (bins, bins, bins, bins)  # x,y,t,e
@@ -1926,10 +1935,17 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
     fig.clf()
     fig.set_size_inches(((3 + plot_x_y + plot_xy_s) * figsize, 3 * figsize), forward=True)
 
-    if flip_t:
-        s = -edist.t * speed_of_light * 1e6
-    else:
+    if s_units == 'fs':
+        s = edist.t * 1e15
+        s_label = 't [fs]'
+    elif s_units == 'um':
         s = edist.t * speed_of_light * 1e6
+        s_label = 's [$\mu$m]'
+        
+    # if flip_t:
+        # s = -edist.t * speed_of_light * 1e6
+    # else:
+        # s = edist.t * speed_of_light * 1e6
 
     hist, edges = np.histogram(s, bins=bins[2])  # calculate current histogram
     edges = edges[0:-1]  # remove the last bin edge to save equal number of points
@@ -1939,11 +1955,11 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
     ax_curr = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 1)
     #ax_curr.hist(s, bins,color='b')
     ax_curr.plot(edges, hist, color='b')
-    ax_curr.set_xlabel('s [$\mu$m]')
+    ax_curr.set_xlabel(s_label)
     ax_curr.set_ylabel('I [A]')
 
     ax_se = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 2 + plot_x_y + plot_xy_s, sharex=ax_curr)
-    if beam_E_plot == 'ev':
+    if e_units == 'ev':
         energy = edist.g * m_e_MeV
         energy_av = int(mean(energy))
 
@@ -1951,14 +1967,14 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
             ax_se.scatter(s, energy - energy_av, marker='.')
         else:
             ax_se.hist2d(s, energy - energy_av, [bins[2], bins[3]], cmin=cmin, cmap=cmap)
-        ax_se.set_xlabel('s [$\mu$m]')
+        ax_se.set_xlabel(s_label)
         ax_se.set_ylabel('E + ' + str(energy_av) + ' [MeV]')
     else:  # elif beam_E_plot=='gamma':
         if scatter:
             ax_se.scatter(s, edist.g, marker='.')
         else:
             ax_se.hist2d(s, edist.g, [bins[2], bins[3]], cmin=cmin, cmap=cmap)
-        ax_se.set_xlabel('s [$\mu$m]')
+        ax_se.set_xlabel(s_label)
         ax_se.set_ylabel('$\gamma$')
 
     if plot_xy_s:
@@ -1967,7 +1983,7 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
             ax_xs.scatter(s, 1e6 * edist.x, marker='.')
         else:
             ax_xs.hist2d(s, 1e6 * edist.x, [bins[2], bins[0]], cmin=cmin, cmap=cmap)
-        ax_xs.set_xlabel('s [$\mu$m]')
+        ax_xs.set_xlabel(s_label)
         ax_xs.set_ylabel('x [$\mu$m]')
 
         ax_ys = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 2, sharex=ax_curr)
@@ -1975,7 +1991,7 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
             ax_ys.scatter(s, 1e6 * edist.y, marker='.')
         else:
             ax_ys.hist2d(s, 1e6 * edist.y, [bins[2], bins[1]], cmin=cmin, cmap=cmap)
-        ax_ys.set_xlabel('s [$\mu$m]')
+        ax_ys.set_xlabel(s_label)
         ax_ys.set_ylabel('y [$\mu$m]')
 
     if plot_x_y:
@@ -1995,7 +2011,10 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
         ax_pxpy.set_xlabel('px [$\mu$rad]')
         ax_pxpy.set_ylabel('py [$\mu$rad]')
 
-    if scatter:
+    # if scatter:
+    if flip_t:
+        ax_curr.set_xlim([np.amax(s), np.amin(s)])
+    else:
         ax_curr.set_xlim([np.amin(s), np.amax(s)])
         
     ax_curr.set_ylim(ymin=0)
@@ -2023,7 +2042,10 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
 
     if showfig == False and savefig == False:
         return
-
+    
+    if beam.__class__ != GenesisBeam:
+        raise ValueError('wrong beam object: should be GenesisBeam')
+    
     fontsize = 15
 
     if plot_xy == None:

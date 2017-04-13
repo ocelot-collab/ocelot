@@ -416,63 +416,66 @@ class GenesisInput:
 
         self.run_dir = None # directory to run simulation in
         self.exp_dir = None # if run_dir==None, it is created based on exp_dir
+        
+        self.inp_txt = inputTemplate
 
     def input(self):
-        input = inputTemplate
+        
+        inp_txt = deepcopy(self.inp_txt)
 
         if self.type == 'steady':
-            # input = input.replace("__SHOTNOISE__", "itdp  =    0")
-            input = input.replace("__ITDP__", "itdp = 0")
+            # inp_txt = inp_txt.replace("__SHOTNOISE__", "itdp  =    0")
+            inp_txt = inp_txt.replace("__ITDP__", "itdp = 0")
         else:
-            # input = input.replace("__SHOTNOISE__", "shotnoise=  1")
-            input = input.replace("__ITDP__", "itdp = 1")
+            # inp_txt = inp_txt.replace("__SHOTNOISE__", "shotnoise=  1")
+            inp_txt = inp_txt.replace("__ITDP__", "itdp = 1")
             # self.prad0 = 0
 
         if self.beamfile != None:
-            input = input.replace("__BEAMFILE__", " beamfile  =  '" + str(self.beamfile) + "'")
+            inp_txt = inp_txt.replace("__BEAMFILE__", " beamfile  =  '" + str(self.beamfile) + "'")
         else:
-            input = input.replace("__BEAMFILE__\n", "")
+            inp_txt = inp_txt.replace("__BEAMFILE__\n", "")
 
         if self.fieldfile != None:
-            input = input.replace("__FIELDFILE__", " fieldfile  =  '" + str(self.fieldfile) + "'")
+            inp_txt = inp_txt.replace("__FIELDFILE__", " fieldfile  =  '" + str(self.fieldfile) + "'")
         else:
-            input = input.replace("__FIELDFILE__\n", "")
+            inp_txt = inp_txt.replace("__FIELDFILE__\n", "")
 
         if self.partfile != None:
-            input = input.replace("__PARTFILE__", " partfile  =  '" + str(self.partfile) + "'")
+            inp_txt = inp_txt.replace("__PARTFILE__", " partfile  =  '" + str(self.partfile) + "'")
         else:
-            input = input.replace("__PARTFILE__\n", "")
+            inp_txt = inp_txt.replace("__PARTFILE__\n", "")
 
         if self.edistfile != None:
-            input = input.replace("__DISTFILE__", " distfile  =  '" + str(self.edistfile) + "'")
+            inp_txt = inp_txt.replace("__DISTFILE__", " distfile  =  '" + str(self.edistfile) + "'")
         else:
-            input = input.replace("__DISTFILE__\n", "")
+            inp_txt = inp_txt.replace("__DISTFILE__\n", "")
 
         if self.outputfile != None:
-            input = input.replace("__OUTPUTFILE__", " outputfile  =  '" + str(self.outputfile) + "'")
+            inp_txt = inp_txt.replace("__OUTPUTFILE__", " outputfile  =  '" + str(self.outputfile) + "'")
         else:
-            input = input.replace("__OUTPUTFILE__", " outputfile ='run.__RUNID__.gout'")
+            inp_txt = inp_txt.replace("__OUTPUTFILE__", " outputfile ='run.__RUNID__.gout'")
 
         # print 'self.radfile is equal to ', self.radfile
         if self.radfile != None:
-            input = input.replace("__RADFILE__", " radfile  =  '" + str(self.radfile) + "'")
+            inp_txt = inp_txt.replace("__RADFILE__", " radfile  =  '" + str(self.radfile) + "'")
         else:
-            input = input.replace("__RADFILE__\n", "")
+            inp_txt = inp_txt.replace("__RADFILE__\n", "")
 
         if self.magin == 0:
-            input = input.replace("__MAGFILE__\n", "")
+            inp_txt = inp_txt.replace("__MAGFILE__\n", "")
         else:
-            input = input.replace("__MAGFILE__", " maginfile ='" + str(self.latticefile) + "'")
+            inp_txt = inp_txt.replace("__MAGFILE__", " maginfile ='" + str(self.latticefile) + "'")
 
         # if self.trama == 1:
-            # input = input.replace("__TRAMA__\n", "")
+            # inp_txt = inp_txt.replace("__TRAMA__\n", "")
         # else:
-            # input = input.replace("__TRAMA__\n", "")
+            # inp_txt = inp_txt.replace("__TRAMA__\n", "")
 
         for p in self.__dict__.keys():
-            input = input.replace("__" + str(p).upper() + "__", str(self.__dict__[p]).replace('[', '').replace(']', '').replace(',', ''))
+            inp_txt = inp_txt.replace("__" + str(p).upper() + "__", str(self.__dict__[p]).replace('[', '').replace(']', '').replace(',', ''))
 
-        return input
+        return inp_txt
 
     def __getattr__(self, name):
         if name not in self.__dict__.keys():
@@ -1924,6 +1927,7 @@ def read_dfl_file(filePath, Nxy, Lxy=None, zsep=None, xlamds=None, hist_rec=1, v
         return dfl
 
 
+
 def write_dfl_file(dfl, filePath=None, debug=1):
     '''
     Function to write the RadiationField object into filePath file
@@ -1937,6 +1941,9 @@ def write_dfl_file(dfl, filePath=None, debug=1):
 
     if filePath == None:
         filePath = dfl.filePath
+        
+    if dfl.__class__ != RadiationField:
+        raise ValueError('wrong radiation object: should be RadiationField')
 
     d = dfl.fld.flatten().astype(complex128)
     d.tofile(filePath, format='complex')

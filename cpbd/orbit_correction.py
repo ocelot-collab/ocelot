@@ -15,187 +15,196 @@ from ocelot.gui.accelerator import *
 import copy
 import json
 
-def show_currents( elems, alpha):
-    print( "******* displaying currents - START ********")
-    for elem in elems:
-        if elem.dI == 0:
-            continue
-        n = len(elem.id)
-        n2 = len(str(elem.I + elem.dI))
-        n3 = len(str(elem.I))
-        print( elem.id, " "*(10-n) + "<-- ", elem.I + elem.dI,  " "*(18-n2)+ " was = ", elem.I, " "*(18-n3) + " dI = ", elem.dI, "x", alpha)
-    print ("******* displaying currents - END ********")
-"""
-class BPM(object):
-    def __init__(self, id = None):
-        self.id = id
-        self.type = "monitor"
-        self.__x = 0
-        self.__y = 0
-        self.dx = 0
-        self.dy = 0
-        self.s = 0
-        self.beta_x = 0
-        self.beta_y = 0
-        self.phi_x = 0
-        self.phi_y = 0
-
-    @property
-    def x(self):
-        #print 'getter x'
-        return self.__x
-
-    @x.setter
-    def x(self, value):
-        a = 1.
-        b = c = 0.
-        self.__x = a*value + b + c
-
-    @property
-    def y(self):
-        #print 'getter x'
-        return self.__y
-
-    @y.setter
-    def y(self, value):
-        a = 1.
-        b = c = 0.
-        self.__y = a*value + b + c
-
-    def save(self):
-        self.x0 = self.x
-        self.y0 = self.y
-"""
-
-class Response_matrix:
-    def __init__(self):
-        self.cor_names = []
-        self.bpm_names = []
-        self.matrix = []
-        self.mode = "radian"  # or "ampere"
-
-    def dump(self, filename):
-        dict_rmatrix = {}
-        dict_rmatrix["cor_names"] = list(self.cor_names)
-        dict_rmatrix["bpm_names"] = list(self.bpm_names)
-        dict_rmatrix["matrix"] = list(self.matrix.flatten())
-        dict_rmatrix["mode"] = self.mode
-
-        with open(filename, 'w') as f:
-            json.dump(dict_rmatrix, f)
-
-    def load(self, filename):
-        with open(filename, 'r') as f:
-            dict_rmatrix = json.load(f)
-        self.cor_names = dict_rmatrix["cor_names"]
-        self.bpm_names = dict_rmatrix["bpm_names"]
-        print(self.cor_names)
-        print(self.bpm_names)
-
-        r_matrix = np.array(dict_rmatrix["matrix"])
-        self.matrix = r_matrix.reshape(2*len(self.bpm_names),len(self.cor_names))
-        print(self.matrix)
-        self.mode = dict_rmatrix["mode"]
-        return 1
-
-    def extract(self, cor_list, bpm_list):
-        cor_list = np.array(cor_list)
-        bpm_list = np.array(bpm_list)
-        cors1 = np.array(self.cor_names)
-        cors2 = cor_list
-        bpms1 = np.array(self.bpm_names)
-        bpms2 = bpm_list
-        nb1 = len(bpms1)
-
-        c_names = cors1[np.in1d(cors1, cors2)]
-
-        c_i1 = np.where(np.in1d(cors1, cors2))[0]
-        print("c_names ", c_names, c_i1)
-        c_i2 = np.where(np.in1d(cors2, c_names))[0]
-        #print bpms1, np.in1d(bpms1, bpms2)
-        b_names = bpms1[np.in1d(bpms1, bpms2)]
-        #print b_names
-        b_i1 = np.where(np.in1d(bpms1, bpms2))[0]
-        b_i2 = np.where(np.in1d(bpms2, b_names))[0]
-
-        if not np.array_equal(c_names, cor_list):
-            print (" Origin response matrix has no correctors:")
-            #print c_names
-            print (cors2[np.in1d(cors2, c_names, invert=True)])
-        if not np.array_equal(b_names, bpm_list):
-            print (" Origin response matrix has no BPMs:")
-            print (bpm_list[b_i2[:]])
-
-        extr_matrix = np.zeros((len(b_names)*2, len(c_names)))
-        #plane = ["X", "Y"]
-        for n in range(2):
-            #print "****************   ", plane[n], "   ****************"
-            for i, c in enumerate(c_names):
-                for j, b in enumerate(b_names):
-                    #print b_i1[j],  nb1*n, c_i1[i]
-                    x1 = self.matrix[b_i1[j] + nb1*n, c_i1[i]]
-                    extr_matrix[j + n*len(b_names), i] = x1
-
-        rmatrix = Response_matrix()
-        rmatrix.cor_names = c_names
-        rmatrix.bpm_names = b_names
-        rmatrix.matrix = extr_matrix
-        rmatrix.mode = self.mode
-        return rmatrix
 
 
-    #def measure(self, mi, dp):
-    #    I0 = mi.init_corrector_vals(self.cor_names)
-    #    for cor in self.cor_names:
-    #        I0 = mi.init_corrector_vals([cor])[0]
-    #        print cor, " I0 = ", I0
-    #        I0array.append(I0)
+class OrbitSVD:
+    def __init__(self, resp_matrix, orbit, weights=None, alpha=1.e-4):
+        self.resp_matrix = resp_matrix
+        self.orbit = orbit
+        self.weights = weights
+        self.alpha = alpha
+
+    def apply(self):
+        # print resp_matrix
+        if self.weights is None:
+            self.weights = eye(len(self.orbit))
+        print(np.shape(self.weights), np.shape(self.resp_matrix))
+        resp_matrix_w = dot(self.weights, self.resp_matrix)
+        misallign_w = dot(self.weights, self.orbit)
+        U, s, V = svd(resp_matrix_w)
+        # print (s)
+        s_inv = zeros(len(s))
+        for i in range(len(s)):
+            # if s[i]<1./max(s):
+            if s[i] < self.alpha:
+                s_inv[i] = 0.
+            else:
+                s_inv[i] = 1. / s[i]
+        Sinv = zeros((shape(U)[0], shape(V)[0]))
+        Sinv[:len(s), :len(s)] = diag(s_inv)
+        Sinv = transpose(Sinv)
+        A = dot(transpose(V), dot(Sinv, transpose(U)))
+        angle = dot(A, misallign_w)
+        return angle
 
 
-    def compare(self, rmatrix, absolut = 0.001, relative = 0.1):
-        cors1 = np.array(self.cor_names)
-        cors2 = np.array(rmatrix.cor_names)
-        bpms1 = np.array(self.bpm_names)
-        bpms2 = np.array(rmatrix.bpm_names)
-        nb1 = len(bpms1)
-        nb2 = len(bpms2)
-        #c_names = np.intersect1d(cors1, cors2)
-        c_names = cors1[np.in1d(cors1, cors2)]
-        c_i1 = np.where(np.in1d(cors1, cors2))[0]
-        c_i2 = np.where(np.in1d(cors2, cors1))[0]
-        #b_names = np.intersect1d(bpms1, bpms2)
-        b_names = bpms1[np.in1d(bpms1, bpms2)]
-        b_i1 = np.where(np.in1d(bpms1, bpms2))[0]
-        b_i2 = np.where(np.in1d(bpms2, bpms1))[0]
-        plane = ["X", "Y"]
-        for n in range(2):
-            print ("****************   ", plane[n], "   ****************")
-            counter = 0
-            for i, c in enumerate(c_names):
-                for j, b in enumerate(b_names):
-                    #print b_i1[j],  nb1*n, c_i1[i]
-                    x1 = self.matrix[b_i1[j] + nb1*n, c_i1[i]]
-                    x2 = rmatrix.matrix[b_i2[j] + nb2*n, c_i2[i]]
-                    if abs(x1 - x2) <absolut:
-                        continue
-                    if abs(x1 - x2)/max(np.abs([x1, x2])) < relative:
-                        continue
-                    l_x1 = len(str(x1))
-                    print (plane[n], c, " "*(10 - len(c)), b, " "*(10 - len(b)), "r1: ", x1," "*(18 - l_x1),"r2: ", x2)
-                    counter += 1
-            print("shown", counter, "elements of", len(c_names)*len(b_names))
+class NewOrbit:
+    def __init__(self, lattice, empty=False):
+        self.lat = lattice
+        self.bpms = []
+        self.hcors = []
+        self.vcors = []
+        self.nu_x = 0.
+        self.nu_y = 0.
+        self.response_matrix = None
+        self.disp_response_matrix = None
+        self.mode = "radian" # or "ampere"
+        if not empty:
+            self.create_bpms()
+            self.create_correctors()
 
-    def show(self, list_cor=None, list_bpm=None):
-        print (" "*10,)
-        for bpm in self.bpm_names:
-            print (bpm,)
-        print()
-        for i in range(shape(self.matrix)[1]):
-            print (self.cor_names[i] + " "*(10 - len(self.cor_names[i])),)
-            #print np.array_str(self.matrix[:, i], precision=2, suppress_small=True)
-            for j in range(shape(self.matrix)[0]):
-                print ("%.2f" % self.matrix[j, i],)
-            print()
+    def update_devices_in_RMs(self):
+
+        if self.response_matrix != None:
+            self.response_matrix.hcors = self.hcors
+            self.response_matrix.vcors = self.vcors
+            self.response_matrix.bpms = self.bpms
+
+        if self.disp_response_matrix != None:
+            self.disp_response_matrix.hcors = self.hcors
+            self.disp_response_matrix.vcors = self.vcors
+            self.disp_response_matrix.bpms = self.bpms
+
+    def create_bpms(self, bpm_list=None):
+        """
+        Search bpm in the lattice and create list of bpms
+        :param lattice: class MagneticLattice
+        :return: self.bpms - list of BPMs (class BPM)
+        """
+        self.bpms = []
+        L = 0.
+        for i, elem in enumerate(self.lat.sequence):
+            if elem.__class__ == Monitor:
+                if bpm_list is None or elem.id in bpm_list:
+                    try:
+                        elem.weight
+                    except:
+                        elem.weight = 1.
+                    elem.s = L + elem.l / 2.
+                    elem.x_ref = 0.
+                    elem.y_ref = 0.
+                    elem.Dx = 0.
+                    elem.Dy = 0.
+                    elem.Dx_des = 0.
+                    elem.Dy_des = 0.
+                    elem.lat_inx = i
+                    self.bpms.append(elem)
+            L += elem.l
+        if len(self.bpms) == 0:
+            print("there are not monitors")
+        return self.bpms
+
+    def create_correctors(self, cor_list=None):
+        """
+        Search correctors (horizontal and vertical) in the lattice and create list of hcors and list of vcors
+        :param lattice: class MagneticLattice
+        :return:
+        """
+        self.hcors = []
+        self.vcors = []
+        L = 0.
+        for i, elem in enumerate(self.lat.sequence):
+            if elem.__class__ == Vcor:
+                if cor_list is None or elem.id in cor_list:
+                    elem.s = L+elem.l/2.
+                    elem.lat_inx = i
+                    self.vcors.append(elem)
+            elif elem.__class__ == Hcor:
+                if cor_list is None or elem.id in cor_list:
+                    elem.s = L+elem.l/2.
+                    elem.lat_inx = i
+                    self.hcors.append(elem)
+            L += elem.l
+        if len(self.hcors) == 0:
+            print("there are not horizontal correctors")
+        if len(self.vcors) == 0:
+            print("there are not vertical correctors")
+
+    def get_ref_orbit(self):
+        for bpm in self.bpms:
+            bpm.x_ref = 0.
+            bpm.y_ref = 0.
+
+    def get_orbit(self):
+
+        self.get_ref_orbit()
+
+        m = len(self.bpms)
+        orbit = zeros(2 * m)
+        for i, bpm in enumerate(self.bpms):
+            orbit[i] = bpm.x - bpm.x_ref
+            orbit[i+m] = bpm.y - bpm.y_ref
+        return orbit
+
+
+    def get_dispersion(self):
+        m = len(self.bpms)
+        disp = zeros(2 * m)
+        for i, bpm in enumerate(self.bpms):
+            disp[i] = bpm.Dx - bpm.Dx_des
+            disp[i + m] = bpm.Dy - bpm.Dy_des
+        return disp
+
+    def combine_matrices(self, mat1, mat2):
+        """
+
+        :param mat1:
+        :param mat2:
+        :return:
+        """
+        n1, m1 = np.shape(mat1)
+        n2, m2 = np.shape(mat2)
+        rm = np.zeros((n1+n2, m1+m2))
+        rm[:n1, :m1] = mat1[:, :]
+        rm[n1:, m1:] = mat2[:, :]
+        return rm
+
+    def correction(self, alpha=0,  p_init=None):
+        cor_list = [cor.id for cor in np.append(self.hcors, self.vcors)]
+        bpm_list = [bpm.id for bpm in self.bpms]
+        orbit = (1 - alpha) * self.get_orbit()
+        RM = (1 - alpha) * self.response_matrix.extract(cor_list=cor_list, bpm_list=bpm_list)
+        print("RM = ", np.shape(RM))
+        if alpha != 0:
+            disp = alpha * self.get_dispersion()
+        else:
+            disp = alpha * np.array(orbit)
+        DRM = alpha * self.disp_response_matrix.extract(cor_list=cor_list, bpm_list=bpm_list)
+        print("DRM = ", np.shape(DRM))
+        rmatrix = self.combine_matrices(RM, DRM)
+        print("rmatrix = ", np.shape(rmatrix))
+        orbit = np.append(orbit, disp)
+
+        # bpm weights
+        bpm_weights = np.eye(len(orbit))
+        print("bpm_weights = ", np.shape(bpm_weights), len(orbit))
+        start = time()
+        #rmatrix = self.response_matrix.extract()
+        self.orbit_svd = OrbitSVD(resp_matrix=rmatrix, orbit=orbit, weights=bpm_weights, alpha=1.e-4)
+        angle = self.orbit_svd.apply()
+        print("correction = ", time() - start)
+
+        for i, cor in enumerate(np.append(self.hcors, self.vcors)):
+            print("correction", cor.angle*1000, angle[i]*1000, cor.id)
+            cor.angle -= angle[i]
+
+        self.lat.update_transfer_maps()
+        if p_init is not None:
+            p_init.x = -angle[-4]
+            p_init.px = -angle[-3]
+            p_init.y  = -angle[-2]
+            p_init.py = -angle[-1]
+        return 0
 
 
 
@@ -310,7 +319,7 @@ class Orbit:
 
     def read_virtual_orbit(self, p_init=None):
         """
-        searching closed orbit by function closed_orbit(lattice) and searching coordinates of beam at the bpm possitions
+        searching closed orbit by function closed_orbit(lattice) and searching coordinates of beam at the bpm positions
         :param lattice: class MagneticLattice
         :return: orbit.bpms
         """
@@ -376,7 +385,7 @@ class Orbit:
                     sleep(timeout)
                     X0, Y0 = mi.get_bpms_xy(bpm_names)
                     XY0 = np.append(X0, Y0)
-        rmatrix = Response_matrix()
+        rmatrix = ResponseMatrix()
         rmatrix.bpm_names = [b.id for b in self.bpms]
         rmatrix.cor_names = np.append(np.array([c.id for c in self.hcors]), np.array([c.id for c in self.vcors]))
         rmatrix.matrix = resp
@@ -490,7 +499,7 @@ class Orbit:
                     real_resp[j, nx + ny + i] = (bpm.x - bpms[j].x)/0.0001
                     real_resp[j+m, nx + ny + i] = (bpm.y - bpms[j].y)/0.0001
         self.resp = real_resp
-        rmatrix = Response_matrix()
+        rmatrix = ResponseMatrix()
         rmatrix.bpm_names = [b.id for b in self.bpms]
         rmatrix.cor_names = np.append(np.array([c.id for c in self.hcors]), np.array([c.id for c in self.vcors]))
         rmatrix.matrix = self.resp
@@ -570,7 +579,7 @@ class Orbit:
         self.resp[:m,:kx] = h_resp[:, :]
         self.resp[m:,kx:] = v_resp[:, :]
 
-        rmatrix = Response_matrix()
+        rmatrix = ResponseMatrix()
         rmatrix.bpm_names = [b.id for b in self.bpms]
         rmatrix.cor_names = np.append(np.array([c.id for c in self.hcors]), np.array([c.id for c in self.vcors]))
         rmatrix.matrix = self.resp
@@ -617,7 +626,7 @@ class Orbit:
                     else:
                         self.resp[n+m, j] = Ra[2, 3]
 
-        rmatrix = Response_matrix()
+        rmatrix = ResponseMatrix()
         rmatrix.bpm_names = [b.id for b in self.bpms]
         rmatrix.cor_names = np.append(np.array([c.id for c in self.hcors]), np.array([c.id for c in self.vcors]))
         rmatrix.matrix = self.resp
@@ -673,7 +682,7 @@ class Orbit:
                 Or1 = np.append(X1, Y1)
                 self.resp[:, nx + ny + i] = (Or1 - Or0) /0.0001
         X1, Y1 = self.read_virtual_orbit(p_init=Particle(E=tw_init.E))
-        rmatrix = Response_matrix()
+        rmatrix = ResponseMatrix()
         rmatrix.bpm_names = [b.id for b in self.bpms]
         rmatrix.cor_names = np.append(np.array([c.id for c in self.hcors]), np.array([c.id for c in self.vcors]))
         rmatrix.matrix = self.resp
@@ -742,7 +751,7 @@ class Orbit:
             cor.angle = 0.00
             # cor.transfer_map = self.lat.method.create_tm(cor)
 
-        rmatrix = Response_matrix()
+        rmatrix = ResponseMatrix()
         rmatrix.bpm_names = [b.id for b in self.bpms]
         rmatrix.cor_names = np.append(np.array([c.id for c in self.hcors]), np.array([c.id for c in self.vcors]))
         rmatrix.matrix = self.resp
@@ -1188,6 +1197,17 @@ def test(lattice, errors):
     orbit.read_virtual_orbit(lat_corrected2)
     draw(orbit, lat_corrected2, traject = True)
     plt.show()
+
+#def show_currents( elems, alpha):
+#    print( "******* displaying currents - START ********")
+#    for elem in elems:
+#        if elem.dI == 0:
+#            continue
+#        n = len(elem.id)
+#        n2 = len(str(elem.I + elem.dI))
+#        n3 = len(str(elem.I))
+#        print( elem.id, " "*(10-n) + "<-- ", elem.I + elem.dI,  " "*(18-n2)+ " was = ", elem.I, " "*(18-n3) + " dI = ", elem.dI, "x", alpha)
+#    print ("******* displaying currents - END ********")
 
 
 

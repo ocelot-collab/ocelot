@@ -879,20 +879,40 @@ def twiss(lattice, tws0=None, nPoints=None):
 class ProcessTable:
     def __init__(self, lattice):
         self.proc_list = []
+        self.kick_proc_list = []
         self.lat = lattice
+
+    def searching_kick_proc(self, physics_proc, elem1):
+        """
+        function finds kick physics process. Kick physics process applies kick only ones between two elements
+        with zero length (e.g. Marker), others physics processes are applied during finite lengths.
+        :return:
+        """
+
+        if (physics_proc.indx0 + 1 == physics_proc.indx1) and elem1.l == 0:
+            physics_proc.s = np.sum(np.array([elem.l for elem in self.lat.sequence[:physics_proc.indx0]]))
+            self.kick_proc_list = np.append(self.kick_proc_list, physics_proc)
+            if len(self.kick_proc_list) > 1:
+                pos = np.array([proc.s for proc in self.kick_proc_list])
+                indx = np.argsort(pos)
+                self.kick_proc_list = self.kick_proc_list[indx]
+
 
     def add_physics_proc(self, physics_proc, elem1, elem2):
         physics_proc.start_elem = elem1
         physics_proc.end_elem = elem2
-        #print(elem1.id, elem2.id, elem1.__hash__(), elem2.__hash__(), self.lat.sequence.index(elem1), self.lat.sequence.index(elem2))
+        # print(elem1.id, elem2.id, elem1.__hash__(), elem2.__hash__(), self.lat.sequence.index(elem1), self.lat.sequence.index(elem2))
         physics_proc.indx0 = self.lat.sequence.index(elem1)
-        #print(self.lat.sequence.index(elem1))
+        # print(self.lat.sequence.index(elem1))
         physics_proc.indx1 = self.lat.sequence.index(elem2)
-        #print(self.lat.sequence.index(elem2))
+
+        self.searching_kick_proc(physics_proc, elem1)
+        # print(self.lat.sequence.index(elem2))
         physics_proc.counter = physics_proc.step
         physics_proc.prepare(self.lat)
         self.proc_list.append(physics_proc)
-        #print(elem1.__hash__(), elem2.__hash__(), physics_proc.indx0, physics_proc.indx1, self.proc_list)
+        # print(elem1.__hash__(), elem2.__hash__(), physics_proc.indx0, physics_proc.indx1, self.proc_list)
+
 
 class Navigator:
     """
@@ -902,29 +922,66 @@ class Navigator:
         physics_proc - physics process, can be CSR, SpaceCharge or Wake,
         elem1 and elem2 - first and last elements between which the physics process will be applied.
     """
+
     def __init__(self, lattice=None):
         if lattice != None:
             self.lat = lattice
         self.process_table = ProcessTable(lattice)
 
-        self.z0 = 0.             # current position of navigator
-        self.n_elem = 0          # current index of the element in lattice
-        self.sum_lengths = 0.    # sum_lengths = Sum[lat.sequence[i].l, {i, 0, n_elem-1}]
-        self.unit_step = 1       # unit step for physics processes
+        self.z0 = 0.  # current position of navigator
+        self.n_elem = 0  # current index of the element in lattice
+        self.sum_lengths = 0.  # sum_lengths = Sum[lat.sequence[i].l, {i, 0, n_elem-1}]
+        self.unit_step = 1  # unit step for physics processes
+        self.proc_kick_elems = []
 
     def add_physics_proc(self, physics_proc, elem1, elem2):
         self.process_table.add_physics_proc(physics_proc, elem1, elem2)
 
-    def get_proc_list(self):
+    def check_overjump(self, dz, processes):
+        #print("CHECK OVER JUMP")
+        if len(processes) != 0:
+            nearest_stop_elem = min([proc.indx1 for proc in processes])
+            L_stop = np.sum(np.array([elem.l for elem in self.lat.sequence[:nearest_stop_elem]]))
+            if self.z0 + dz > L_stop:
+               dz = L_stop - self.z0
 
+        # check kick processes
+        kick_list = self.process_table.kick_proc_list
+        kick_pos = np.array([proc.s for proc in kick_list])
+        indx = np.argwhere(self.z0 < kick_pos)
+        #print()
+        #print(kick_pos, indx)
+
+        if len(indx) != 0:
+            kick_process = np.array(kick_list[indx]).flatten()
+            for i, proc in enumerate(kick_process):
+                L_kick_stop = proc.s
+                #print(self.z0, dz, self.z0 + dz > L_kick_stop)
+                if self.z0 + dz > L_kick_stop:
+                    dz = L_kick_stop - self.z0
+                    processes.append(proc)
+                    #print(" ################# added kick proc")
+                    continue
+                elif self.z0 + dz == L_kick_stop:
+                    processes.append(proc)
+                    #print("$$$$$$$$$$$ added kick proc with the same pos")
+                else:
+                    pass
+
+        return dz, processes
+
+
+    def get_proc_list(self):
         proc_list = []
         for p in self.process_table.proc_list:
             if p.indx0 <= self.n_elem < p.indx1:
                 proc_list.append(p)
+
         return proc_list
 
+
     def hard_edge_step(self, dz):
-        #self.sum_lengths
+        # self.sum_lengths
         elem1 = self.lat.sequence[self.n_elem]
         L = self.sum_lengths + elem1.l
         if self.z0 + dz > L:
@@ -934,6 +991,8 @@ class Navigator:
     def get_next(self):
 
         proc_list = self.get_proc_list()
+        logger.show_debug = False
+
         if len(proc_list) > 0:
 
             counters = np.array([p.counter for p in proc_list])
@@ -945,19 +1004,28 @@ class Navigator:
                 p.counter -= step
                 if p.counter == 0:
                     p.counter = p.step
-            dz = step*self.unit_step
+            dz = step * self.unit_step
+            # check if dz overjumps the stop element
+            # dz, processes = self.check_overjump(dz, processes)
 
         else:
 
             processes = proc_list
             n_elems = len(self.lat.sequence)
-            if n_elems >= self.n_elem+1:
-                L = np.sum(np.array([elem.l for elem in self.lat.sequence[:self.n_elem+1]]))
+            if n_elems >= self.n_elem + 1:
+                L = np.sum(np.array([elem.l for elem in self.lat.sequence[:self.n_elem + 1]]))
             else:
                 L = self.lat.totalLen
             dz = L - self.z0
-        logger.debug("navi.z0="+str(self.z0) + " navi.n_elem=" + str(self.n_elem) + " navi.sum_lengths=" +str(self.sum_lengths) + " dz=" +str(dz) + '\n' +
-            "element type="+self.lat.sequence[self.n_elem].__class__.__name__ + " element name=" + self.lat.sequence[self.n_elem].id)
+        # check if dz overjumps the stop element
+        dz, processes = self.check_overjump(dz, processes)
+
+        logger.debug('\n' +
+                     "navi.z0=" + str(self.z0) + " navi.n_elem=" + str(self.n_elem) + " navi.sum_lengths="
+                     + str(self.sum_lengths) + " dz=" + str(dz) + '\n' +
+                     "element type=" + self.lat.sequence[self.n_elem].__class__.__name__ + " element name=" +
+                     self.lat.sequence[self.n_elem].id + '\n' +
+                     "process: " + " ".join([proc.__class__.__name__ for proc in processes]))
         return dz, processes
 
 

@@ -4,7 +4,7 @@ definition of particles, beams and trajectories
 import numpy as np
 from numpy.core.umath import sqrt, cos, sin
 from ocelot.common.globals import *
-
+import pickle
 '''
 Note:
 (A) the reference frame (e.g. co-moving or not with the beam is not fixed) 
@@ -215,6 +215,7 @@ class ParticleArray:
     """
     def __init__(self, n=0):
         self.particles = zeros(n*6)
+        self.q_array = np.zeros(n)    # charge
         self.s = 0.0
         self.E = 0.0
 
@@ -462,12 +463,102 @@ def beam_matching(particles, bounds, x_opt, y_opt):
 
 class BeamTransform:
     def __init__(self, x_opt, y_opt):
+        """
+        Beam matching
+
+        :param x_opt: [alpha, beta, mu (phase advance)]
+        :param y_opt: [alpha, beta, mu (phase advance)]
+        """
         self.bounds = [-5, 5]  # [start, stop] in sigmas
         self.x_opt = x_opt   # [alpha, beta, mu (phase advance)]
         self.y_opt = y_opt   # [alpha, beta, mu (phase advance)]
+        self.step=1
 
     def prepare(self, lat):
         pass
 
     def apply(self, p_array, dz):
-        beam_matching(p_array.particles, self.bounds, self.x_opt, self.y_opt)
+        print()
+        print("BEAM TRANSFORM")
+        self.beam_matching(p_array.particles, self.bounds, self.x_opt, self.y_opt)
+
+    def beam_matching(self, particles, bounds, x_opt, y_opt):
+        pd = zeros((int(len(particles) / 6), 6))
+        pd[:, 0] = particles[0::6]
+        pd[:, 1] = particles[1::6]
+        pd[:, 2] = particles[2::6]
+        pd[:, 3] = particles[3::6]
+        pd[:, 4] = particles[4::6]
+        pd[:, 5] = particles[5::6]
+
+        z0 = np.mean(pd[:, 4])
+        sig0 = np.std(pd[:, 4])
+        # print((z0 + sig0*bounds[0] <= pd[:, 4]) * (pd[:, 4] <= z0 + sig0*bounds[1]))
+        inds = np.argwhere((z0 + sig0 * bounds[0] <= pd[:, 4]) * (pd[:, 4] <= z0 + sig0 * bounds[1]))
+        # print(moments(pd[inds, 0], pd[inds, 1]))
+        mx, mxs, mxx, mxxs, mxsxs, emitx0 = self.moments(pd[inds, 0], pd[inds, 1])
+        beta = mxx / emitx0
+        alpha = -mxxs / emitx0
+        #print(beta, alpha)
+        M = m_from_twiss([alpha, beta, 0], x_opt)
+        #print(M)
+        particles[0::6] = M[0, 0] * pd[:, 0] + M[0, 1] * pd[:, 1]
+        particles[1::6] = M[1, 0] * pd[:, 0] + M[1, 1] * pd[:, 1]
+        [mx, mxs, mxx, mxxs, mxsxs, emitx0] = self.moments(pd[inds, 2], pd[inds, 3])
+        beta = mxx / emitx0
+        alpha = -mxxs / emitx0
+        M = m_from_twiss([alpha, beta, 0], y_opt)
+        particles[2::6] = M[0, 0] * pd[:, 2] + M[0, 1] * pd[:, 3]
+        particles[3::6] = M[1, 0] * pd[:, 2] + M[1, 1] * pd[:, 3]
+        return particles
+
+    def moments(self, x, y, cut=0):
+        n = len(x)
+        inds = np.arange(n)
+        mx = np.mean(x)
+        my = np.mean(y)
+        x = x - mx
+        y = y - my
+        x2 = x * x
+        mxx = sum(x2) / n
+        y2 = y * y
+        myy = sum(y2) / n
+        xy = x * y
+        mxy = sum(xy) / n
+
+        emitt = sqrt(mxx * myy - mxy * mxy)
+
+        if cut > 0:
+            inds = []
+            beta = mxx / emitt
+            gamma = myy / emitt
+            alpha = mxy / emitt
+            emittp = gamma * x2 + 2. * alpha * xy + beta * y2
+            inds0 = np.argsort(emittp)
+            n1 = np.round(n * (100 - cut) / 100)
+            inds = inds0[0:n1]
+            mx = np.mean(x[inds])
+            my = np.mean(y[inds])
+            x1 = x[inds] - mx
+            y1 = y[inds] - my
+            mxx = np.sum(x1 * x1) / n1
+            myy = np.sum(y1 * y1) / n1
+            mxy = np.sum(x1 * y1) / n1
+            emitt = sqrt(mxx * myy - mxy * mxy)
+        return mx, my, mxx, mxy, myy, emitt
+
+class EmptyProc():
+    def __init__(self):
+        self.step=1
+        self.energy = None
+        self.pict_debug = True
+        self.traj_step = 0.0002
+        #if self.pict_debug:
+        #    self.f = plt.figure(figsize=(12, 9))
+        #    plt.ion()
+
+    def prepare(self, lat):
+        pass
+
+    def apply(self, p_array, dz):
+        pass

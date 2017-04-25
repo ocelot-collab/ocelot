@@ -14,8 +14,8 @@ pi = 3.141592653589793
 speed_of_light = 299792458.0 #m/s
 q_e = 1.6021766208e-19       # C - Elementary charge
 m_e_kg = 9.10938215e-31      # kg
-m_e_eV = m_e_kg * speed_of_light**2 / q_e # MeV (0.510998928)
-m_e_MeV = m_e_eV / 1e+6        # eV
+m_e_eV = m_e_kg * speed_of_light**2 / q_e # eV (510998.8671)
+m_e_MeV = m_e_eV / 1e+6        # MeV (0.510998928)
 m_e_GeV = m_e_eV / 1e+9      # GeV
 
 

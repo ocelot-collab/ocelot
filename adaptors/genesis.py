@@ -2220,6 +2220,16 @@ def read_edist_file(filePath, debug=1):
 
     if debug > 0:
         print ('    reading particle distribution file')
+
+    if not os.path.isfile(filePath):
+        if debug:
+            raise IOError('      ! edist file ' + filePath + ' not found !')
+        else:
+            print ('      ! edist file ' + filePath + ' not found !')
+    else:
+        if debug > 1:
+            print ('        - reading from ' + filePath)
+
     start_time = time.time()
 
     dist_column_values = {}

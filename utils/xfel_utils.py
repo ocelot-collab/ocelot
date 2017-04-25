@@ -1428,16 +1428,16 @@ def get_data_dir():
 
 def checkout_run(run_dir, run_id, prefix1, prefix2, save=False, debug=1):
     print ('    checking out run from ' + prefix1 + '.gout to ' + prefix2 + '.gout')
-    old_file = run_dir + '/run.' + str(run_id) + prefix1 + '.gout'
-    new_file = run_dir + '/run.' + str(run_id) + prefix2 + '.gout'
+    old_file = run_dir + 'run.' + str(run_id) + prefix1 + '.gout'
+    new_file = run_dir + 'run.' + str(run_id) + prefix2 + '.gout'
 
     if save:
         os.system('cp ' + old_file + ' ' + new_file)
         os.system('cp ' + old_file + '.dfl ' + new_file + '.dfl 2>/dev/null')  # 2>/dev/null to supress error messages if no such file
         os.system('cp ' + old_file + '.dpa ' + new_file + '.dpa 2>/dev/null')
         os.system('cp ' + old_file + '.beam ' + new_file + '.beam 2>/dev/null')
-        os.system('cp ' + run_dir + '/tmp.gen' + ' ' + run_dir + '/geninp.' + str(run_id) + prefix2 + '.inp 2>/dev/null')
-        os.system('cp ' + run_dir + '/lattice.inp' + ' ' + run_dir + '/lattice.' + str(run_id) + prefix2 + '.inp 2>/dev/null')
+        os.system('cp ' + run_dir + 'tmp.gen' + ' ' + run_dir + 'geninp.' + str(run_id) + prefix2 + '.inp 2>/dev/null')
+        os.system('cp ' + run_dir + 'lattice.inp' + ' ' + run_dir + 'lattice.' + str(run_id) + prefix2 + '.inp 2>/dev/null')
     else:
         if debug > 0:
             print ('      moving *.out file')
@@ -1453,10 +1453,10 @@ def checkout_run(run_dir, run_id, prefix1, prefix2, save=False, debug=1):
         os.system('mv ' + old_file + '.beam ' + new_file + '.beam 2>/dev/null')
         if debug > 0:
             print ('      moving input files')
-        os.system('mv ' + run_dir + '/tmp.gen' + ' ' + run_dir + '/geninp.' + str(run_id) + prefix2 + '.inp 2>/dev/null')
-        os.system('mv ' + run_dir + '/lattice.inp' + ' ' + run_dir + '/lattice.' + str(run_id) + prefix2 + '.inp 2>/dev/null')
+        os.system('mv ' + run_dir + 'tmp.gen' + ' ' + run_dir + 'geninp.' + str(run_id) + prefix2 + '.inp 2>/dev/null')
+        os.system('mv ' + run_dir + 'lattice.inp' + ' ' + run_dir + 'lattice.' + str(run_id) + prefix2 + '.inp 2>/dev/null')
     print ('      done')
-    # os.system('rm ' + run_dir + '/run.' +str(run_id) + '.gout*')
+    # os.system('rm ' + run_dir + 'run.' +str(run_id) + '.gout*')
 
 
 class FelSimulator(object):

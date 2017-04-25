@@ -977,7 +977,7 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', debug=1):
     if inp.run_dir == None:
         if inp.exp_dir[-1]!=os.path.sep:
             inp.exp_dir+=os.path.sep
-        inp.run_dir = inp.exp_dir + 'run_' + str(inp.runid)
+        inp.run_dir = inp.exp_dir + 'run_' + str(inp.runid) + '/'
 
     try:
         os.makedirs(inp.run_dir)
@@ -988,11 +988,11 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', debug=1):
             raise
 
     if inp.stageid == None:
-        inp_path = inp.run_dir + '/run.' + str(inp.runid) + '.inp'
-        out_path = inp.run_dir + '/run.' + str(inp.runid) + '.gout'
+        inp_path = inp.run_dir + 'run.' + str(inp.runid) + '.inp'
+        out_path = inp.run_dir + 'run.' + str(inp.runid) + '.gout'
     else:
-        inp_path = inp.run_dir + '/run.' + str(inp.runid) + '.s' + str(inp.stageid) + '.inp'
-        out_path = inp.run_dir + '/run.' + str(inp.runid) + '.s' + str(inp.stageid) + '.gout'
+        inp_path = inp.run_dir + 'run.' + str(inp.runid) + '.s' + str(inp.stageid) + '.inp'
+        out_path = inp.run_dir + 'run.' + str(inp.runid) + '.s' + str(inp.stageid) + '.gout'
 
     inp_file = filename_from_path(inp_path)
     out_file = filename_from_path(out_path)
@@ -1000,10 +1000,10 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', debug=1):
     # cleaning directory
     if debug > 0:
         print ('    removing old files')
-    os.system('rm -rf ' + inp.run_dir + '/run.' + str(inp.runid) + '.s' + str(inp.stageid) + '*')  # to make sure all stage files are cleaned
+    os.system('rm -rf ' + inp.run_dir + 'run.' + str(inp.runid) + '.s' + str(inp.stageid) + '*')  # to make sure all stage files are cleaned
     # os.system('rm -rf ' + out_path+'*') # to make sure out files are cleaned
     # os.system('rm -rf ' + inp_path+'*') # to make sure inp files are cleaned
-    os.system('rm -rf ' + inp.run_dir + '/tmp.cmd')
+    os.system('rm -rf ' + inp.run_dir + 'tmp.cmd')
 
     # create and fill necessary input files
     if inp.latticefile == None:
@@ -1052,7 +1052,7 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', debug=1):
     if inp.outputfile == None:
         inp.outputfile = out_file
     open(inp_path, 'w').write(inp.input())
-    open(inp.run_dir + '/tmp.cmd', 'w').write(inp_file + '\n')
+    open(inp.run_dir + 'tmp.cmd', 'w').write(inp_file + '\n')
 
     launcher.dir = inp.run_dir
     launcher.prepare()
@@ -1283,7 +1283,7 @@ def create_exp_dir(exp_dir, run_ids):
     for run_id in run_ids:
 
         try:
-            run_dir = exp_dir + 'run_' + str(run_id)
+            run_dir = exp_dir + 'run_' + str(run_id) + '/'
             os.makedirs(run_dir)
         except OSError as exc:
             if exc.errno == errno.EEXIST and os.path.isdir(run_dir):
@@ -2315,6 +2315,7 @@ def repeat_edist(edist, factor, smear=1):
     '''
 
     edist_out = GenesisElectronDist()
+    edist_out.filePath = edist.filePath
 
     edist_out.x = np.repeat(edist.x, factor)
     edist_out.y = np.repeat(edist.y, factor)

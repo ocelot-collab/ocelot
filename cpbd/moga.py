@@ -543,7 +543,7 @@ class Moga():
         return result
 
 
-    def anneal(self, fit_func, fit_func_args=[], init_pop=None, t_start=1.0, t_stop=0.001):
+    def anneal(self, fit_func, fit_func_args=[], init_pop=None, t_start=1.0, t_stop=0.001, t_decay=1.0):
         
         # init
         random.seed()
@@ -582,7 +582,7 @@ class Moga():
                 fh1.close()
             
             # Update temperature
-            self.temperature = self.temperature_start / self.c_iter
+            self.temperature = self.temperature_start / (self.c_iter * t_decay)
 
             # Generate new candidate solution
             z = []

@@ -728,6 +728,27 @@ def dfl_pad_z(dfl, padn):
         print('      done in %.2f ' % t_func / 60 + 'min')
     return dfl_pad
 
+def dfl_cut_z(dfl,z=[-np.inf,np.inf],debug=1):
+    
+    if debug>0:
+        print ('    cutting radiation file')
+        
+    if dfl.__class__ != RadiationField:
+        raise ValueError('wrong radiation object: should be RadiationField')
+
+    z = np.array(z)
+    z.sort()
+    z_sc = dfl.scale_z()
+    idx1 = np.where(z_sc > z[0])[0][0]
+    idx2 = np.where(z_sc < z[1])[0][-1]
+    dfl_cut = RadiationField()
+    dfl_cut.copy_param(dfl)
+    dfl_cut.fld = dfl.fld[idx1:idx2]
+
+    if debug>0:
+        print ('      done')
+
+        return dfl_cut
 
 def dfl_fft_z(dfl, method='mp', nthread=multiprocessing.cpu_count(), debug=1):  # move to somewhere else
     if debug > 0:

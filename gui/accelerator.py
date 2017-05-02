@@ -290,7 +290,7 @@ dict_plot = {Quadrupole: {"scale": 0.7, "color": "r",            "edgecolor": "r
              }
 
 
-def new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legend = True):
+def new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legend = True, font_size=15):
     dict_copy=deepcopy(dict_plot)
     alpha = 1
     ax.set_ylim((-1,1.5))
@@ -427,7 +427,7 @@ def new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale =
 
     on_move_id = fig.canvas.mpl_connect('motion_notify_event', on_move)
     if legend:
-        ax.legend(loc='upper center', ncol=ncols, shadow=False, prop=font_manager.FontProperties(size=15))
+        ax.legend(loc='upper center', ncol=ncols, shadow=False, prop=font_manager.FontProperties(size=font_size))
 
 
 def plot_elems(ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legend = True):
@@ -525,7 +525,7 @@ def plot_betas(ax, S, beta_x, beta_y, font_size):
     leg.get_frame().set_alpha(0.2)
 
 
-def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=True, font_size=18):
+def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=True, font_size=13):
     """
     function for plotting: lattice (bottom section), vertical and horizontal beta-functions (middle section),
     other parameters (top section) such as "Dx", "Dy", "E", "mux", "muy", "alpha_x", "alpha_y", "gamma_x", "gamma_y"
@@ -537,6 +537,7 @@ def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=Tr
     grid=True - grid
     font_size=18 - font size.
     """
+    matplotlib.rcParams.update({'font.size': font_size})
     if fig_name == None:
         fig = plt.figure()
     else:
@@ -575,7 +576,7 @@ def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=Tr
 
     plot_betas(ax_b, S, beta_x, beta_y, font_size)
     #plot_elems(ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8) # plot elements
-    new_plot_elems(fig, ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8)
+    new_plot_elems(fig, ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8, font_size=font_size)
 
 
 

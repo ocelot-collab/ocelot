@@ -470,6 +470,9 @@ class CSR:
         else:
             L_fin = False
         w_range = np.arange(-NdW[0]-1, 0)*NdW[1]
+        # print(w_range[:10])
+        # print(traj[1, :10])
+        # exit()
         if L_fin:
             # start = time.time()
             w, KS = self.K0_fin_anf(i, traj, w_range[0], gamma)
@@ -513,7 +516,7 @@ class CSR:
                                  traj[1,:], traj[2,:], traj[3,:] - rectangular coordinates, \
                                  traj[4,:], traj[5,:], traj[6,:] - tangential unit vectors
         """
-        seq_copy = deepcopy(lat.sequence)
+        seq_copy = copy.deepcopy(lat.sequence)
         start = seq_copy[self.indx0]
         stop = seq_copy[self.indx1]
         csr_lat = MagneticLattice(seq_copy, start=start, stop=stop)
@@ -523,7 +526,7 @@ class CSR:
 
         beta = 1. if self.energy == None else np.sqrt(1. - 1./(self.energy/m_e_GeV)**2)
         self.csr_traj = np.transpose([[0, p.x, p.y, p.s, p.px, p.py, beta]])
-
+        #self.csr_traj = np.transpose([[0, p.s, p.x, p.y, beta, p.px, p.py]])
         for elem in csr_lat.sequence:
             if elem.l == 0 :
                 continue
@@ -541,10 +544,10 @@ class CSR:
 
             self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect )
             #print("scr_traj = ", self.csr_traj[0, -1], elem.l)
-        #plt.plot(self.csr_traj[0,:], self.csr_traj[1,:], "r")
-        #plt.plot(self.csr_traj[0, :], self.csr_traj[2, :], "b")
-        #plt.legend(["X", "Y"])
-        #plt.show()
+        plt.plot(self.csr_traj[0,:], self.csr_traj[1,:], "r")
+        plt.plot(self.csr_traj[0, :], self.csr_traj[2, :], "b")
+        plt.legend(["X", "Y"])
+        plt.show()
         return self.csr_traj
 
     def apply(self, p_array, delta_s):
@@ -581,7 +584,7 @@ class CSR:
         indx = (np.abs(s_array-s_cur)).argmin()
         indx_prev = (np.abs(s_array - (s_cur - delta_s))).argmin()
         gamma = p_array.E/m_e_GeV
-        print(gamma, delta_s)
+        #print(gamma, delta_s)
         h = max(1., self.apply_step/self.traj_step)
         #print(indx, indx_prev, h, s_cur, s_array[-1])
         itr_ra = np.unique(-np.round(np.arange(-indx, -indx_prev, h))).astype(np.int)
@@ -603,7 +606,7 @@ class CSR:
         if self.pict_debug:
             self.f.clear()
             self.f.add_subplot(311)
-            plt.plot(self.csr_traj[3,:], self.csr_traj[1,:], "r",  self.csr_traj[3,itr_ra], self.csr_traj[1,itr_ra], "bo")
+            plt.plot(self.csr_traj[3, :], self.csr_traj[1, :], "r",  self.csr_traj[3,itr_ra], self.csr_traj[1, itr_ra], "bo")
 
             self.f.add_subplot(312)
             plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
@@ -619,7 +622,7 @@ class CSR:
             plt.plot(-bins_start[::-1]*1000, hist_start[::-1], "b", lw=2)
             plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
             #plt.xlim(-3, 3)
-            plt.ylim(0, 7000)
+            #plt.ylim(0, 7000)
             plt.ylabel("I, A")
             #self.f.add_subplot(413)
             ##bins_start, hist_start = get_current(p_array, charge=p_array.q_array[0], num_bins=300)

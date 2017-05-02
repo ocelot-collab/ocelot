@@ -137,11 +137,12 @@ class NewOrbit:
 
     def get_orbit(self):
 
-        self.get_ref_orbit()
+        #self.get_ref_orbit()
 
         m = len(self.bpms)
         orbit = zeros(2 * m)
         for i, bpm in enumerate(self.bpms):
+            print("get_orbit = ",bpm.id, bpm.x,  bpm.x_ref)
             orbit[i] = bpm.x - bpm.x_ref
             orbit[i+m] = bpm.y - bpm.y_ref
         return orbit

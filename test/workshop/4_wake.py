@@ -12,11 +12,16 @@ from ocelot import *
 from ocelot.gui.accelerator import *
 
 from ocelot.adaptors.astra2ocelot import *
+import matplotlib
+font = {'family' : 'normal',
+        #'weight' : 'bold',
+        'size'   : 16}
 
+matplotlib.rc('font', **font)
 # LATTICE
 D00m25 = Drift(l = 0.25)
 D01m = Drift(l = 1)
-D02m = Drift(l = 2)
+D02m = Undulator(lperiod=1, nperiods=2)#Drift(l = 2)
 
 # Create markers for defining places of the wakes applying
 w1_start = Marker()
@@ -48,8 +53,15 @@ method = MethodTM()
 method.global_method = SecondTM
 lat = MagneticLattice(lattice, method=method)
 
+
 # Load beam file
 p_array_init = astraBeam2particleArray(filename='beam_chirper.ast')
+
+tw0 = get_envelope(p_array_init)
+tw = twiss(lat,tw0)
+plot_opt_func(lat, tw, legend=False)
+plt.show()
+
 
 # Initialization of the wakes and the places of their applying
 
@@ -95,7 +107,8 @@ navi.unit_step = 0.2
 # deep copy of the initial beam distribution
 p_array = deepcopy(p_array_init)
 tws_track, p_array = track(lat, p_array, navi)
-
+plot_opt_func(lat, tws_track, legend=False)
+plt.show()
 # Longitudinal beam distribution
 tau0 = p_array_init.tau()
 p0 = p_array_init.p()
@@ -105,9 +118,9 @@ p1 = p_array.p()
 
 plt.figure(1)
 plt.plot(-tau0*1000, p0, "r.", -tau1*1000, p1, "b.")
-plt.legend(["before", "after"], loc=4)
+plt.legend(["before chirper", "after chirper"], loc=4)
 plt.grid(True)
-plt.xlabel(r"$\tau$, mm")
+plt.xlabel(r"$c \cdot \tau$, $mm$")
 plt.ylabel(r"$\frac{\Delta E}{E}$")
 
 # Beam distribution

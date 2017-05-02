@@ -488,6 +488,7 @@ class SecondTM(TransferMap):
     def t_apply(self, R, T, X, dx, dy, tilt, U5666=0.):
         # print("t_apply", self.k2, self.T)
         if dx != 0 or dy != 0 or tilt != 0:
+            # print("TILT")
             X = transform_vec_ent(X, dx, dy, tilt)
 
         # test start
@@ -1038,22 +1039,17 @@ class Navigator:
         kick_list = self.process_table.kick_proc_list
         kick_pos = np.array([proc.s for proc in kick_list])
         indx = np.argwhere(self.z0 < kick_pos)
-        #print()
-        #print(kick_pos, indx)
 
         if len(indx) != 0:
             kick_process = np.array(kick_list[indx]).flatten()
             for i, proc in enumerate(kick_process):
                 L_kick_stop = proc.s
-                #print(self.z0, dz, self.z0 + dz > L_kick_stop)
                 if self.z0 + dz > L_kick_stop:
                     dz = L_kick_stop - self.z0
                     processes.append(proc)
-                    #print(" ################# added kick proc")
                     continue
                 elif self.z0 + dz == L_kick_stop:
                     processes.append(proc)
-                    #print("$$$$$$$$$$$ added kick proc with the same pos")
                 else:
                     pass
 
@@ -1106,6 +1102,11 @@ class Navigator:
             else:
                 L = self.lat.totalLen
             dz = L - self.z0
+
+        # test
+        if (len(processes) == 1) and (processes[0].__class__.__name__ == "CSR") and (self.lat.sequence[self.n_elem].__class__ in [Bend, SBend, RBend]):
+            dz = dz/10.
+
         # check if dz overjumps the stop element
         dz, processes = self.check_overjump(dz, processes)
 

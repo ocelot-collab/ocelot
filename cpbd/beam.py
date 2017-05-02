@@ -5,6 +5,7 @@ import numpy as np
 from numpy.core.umath import sqrt, cos, sin
 from ocelot.common.globals import *
 import pickle
+from scipy import interpolate
 '''
 Note:
 (A) the reference frame (e.g. co-moving or not with the beam is not fixed) 
@@ -212,6 +213,9 @@ class Trajectory:
 class ParticleArray:
     """
     array of particles of fixed size; for optimized performance
+
+    (x, x′ = px/p0),(y, y′ = py/p0),(Δs = c*τ, p = ΔE/(p0*c))
+    p0 - momentum
     """
     def __init__(self, n=0):
         self.particles = zeros(n*6)
@@ -378,7 +382,7 @@ def ellipse_from_twiss(emit, beta, alpha):
 
 def moments(x, y, cut=0):
     n = len(x)
-    inds = np.arange(n)
+    #inds = np.arange(n)
     mx = np.mean(x)
     my = np.mean(y)
     x = x - mx
@@ -393,7 +397,7 @@ def moments(x, y, cut=0):
     emitt = sqrt(mxx*myy - mxy*mxy)
 
     if cut>0:
-        inds=[]
+        #inds=[]
         beta = mxx/emitt
         gamma = myy/emitt
         alpha = mxy/emitt
@@ -560,3 +564,189 @@ class EmptyProc():
 
     def apply(self, p_array, dz):
         pass
+
+
+
+
+def sortrows(x, col):
+    return x[x[:, col].argsort()]
+
+
+def convmode(A, B, mode):
+    C=[]
+    if mode == 2:
+        C = np.convolve(A, B)
+    if mode == 1:
+        i = np.int_(np.floor(len(B)*0.5))
+        n = len(A)
+        C1 = np.convolve(A, B)
+        C[:n] = C1[i:n+i]
+    return C
+
+def s_to_cur(A, sigma, q0, v):
+    #  A - s-coordinates of particles
+    #  sigma -smoothing parameter
+    #  q0 -bunch charge
+    #  v mean velocity
+    Nsigma = 3
+    a = np.min(A) - Nsigma*sigma
+    b = np.max(A) + Nsigma*sigma
+    s = 0.25*sigma
+    #print("s = ", sigma, s)
+    N = int(np.ceil((b-a)/s))
+    s = (b-a)/N
+    #print(a, b, N)
+    B = np.zeros((N+1, 2))
+    C = np.zeros(N+1)
+
+    #print(len(np.arange(0, (N+0.5)*s, s)))
+    B[:, 0] = np.arange(0, (N+0.5)*s, s) + a
+    N = np.shape(B)[0]
+    #print(N)
+    cA = (A - a)/s
+    #print(cA[:10])
+    I = np.int_(np.floor(cA))
+    #print(I)
+    xiA = 1 + I - cA
+    for k in range(len(A)):
+        i = I[k]
+        if i > N-1:
+            i = N-1
+        C[i+0] = C[i+0]+xiA[k]
+        C[i+1] = C[i+1]+(1-xiA[k])
+
+    K = np.floor(Nsigma*sigma/s + 0.5)
+    G = np.exp(-0.5*(np.arange(-K, K+1)*s/sigma)**2)
+    G = G/np.sum(G)
+    B[:, 1] = convmode(C, G, 1)
+    koef = q0*v/(s*np.sum(B[:, 1]))
+    B[:, 1] = koef*B[:, 1]
+    return B
+
+
+def slice_analysis(z, x, xs, M, to_sort):
+    z = np.copy(z)
+    if to_sort:
+        #P=sortrows([z, x, xs])
+        indx = z.argsort()
+        z = z[indx]
+        x = x[indx]
+        xs = xs[indx]
+        P=[]
+    N=len(x)
+    mx = np.zeros(N)
+    mxs= np.zeros(N)
+    mxx = np.zeros(N)
+    mxxs = np.zeros(N)
+    mxsxs = np.zeros(N)
+    emittx = np.zeros(N)
+    m = np.max([np.round(M/2), 1])
+    xc = np.cumsum(x)
+    xsc = np.cumsum(xs)
+    for i in range(N):
+        n1 = int(max(0, i-m))
+        n2 = int(min(N-1, i+m))
+        dq = n2 - n1
+        mx[i] = (xc[n2] - xc[n1])/dq
+        mxs[i] = (xsc[n2] - xsc[n1])/dq
+
+    x = x - mx
+    xs = xs - mxs
+    x2c = np.cumsum(x*x)
+    xs2c = np.cumsum(xs*xs)
+    xxsc = np.cumsum(x*xs)
+    for i in range(N):
+        n1 = int(max(0, i-m))
+        n2 = int(min(N-1, i+m))
+        dq = n2 - n1
+        mxx[i] = (x2c[n2] - x2c[n1])/dq
+        mxsxs[i] = (xs2c[n2] - xs2c[n1])/dq
+        mxxs[i] = (xxsc[n2] - xxsc[n1])/dq
+
+    emittx = np.sqrt(mxx*mxsxs - mxxs*mxxs)
+    return [mx, mxs, mxx, mxxs, mxsxs, emittx]
+
+
+def simple_filter(x, p, iter):
+    n = len(x)
+    if iter == 0:
+        y = x
+        return y
+    for k in range(iter):
+
+        y = np.zeros(n)
+        for i in range(n):
+            i0 = i - p
+            if i0 < 0:
+                i0 = 0
+            i1 = i + p
+            if i1 > n-1:
+                i1 = n-1
+            s = 0
+            for j in range(i0, i1+1):
+                s = s + x[j]
+            y[i] = s / (i1 - i0 + 1)
+
+        x = y
+    return y
+
+def interp1(x, y, xnew, k=1):
+    if len(xnew) > 0:
+        tck = interpolate.splrep(x, y, k=k)
+        ynew = interpolate.splev(xnew, tck, der=0)
+    else:
+        ynew = []
+    return ynew
+
+
+def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
+    # %[s,I,ex,ey,me,se,gamma0,emitxn,emityn]=GlobalSliceAnalysis_Extended(PD,q1,Mslice,Mcur,p,iter)
+
+    q1 = np.sum(parray.q_array)
+    print("charge", q1)
+    n = np.int_(len(parray.particles)/6)
+    PD = parray.particles.reshape(n, 6)
+    PD = sortrows(PD, 4)
+
+    z = np.copy(PD[:, 4])
+    mx, mxs, mxx, mxxs, mxsxs, emittx = slice_analysis(z, PD[:, 0], PD[:, 1], Mslice, True)
+    
+    my, mys, myy, myys, mysys, emitty = slice_analysis(z, PD[:, 2], PD[:, 3], Mslice, True)
+
+    pc_0 = np.sqrt(parray.E**2 - m_e_GeV**2)
+    E1 = PD[:, 5]*pc_0 + parray.E
+    pc_1 = np.sqrt(E1**2 - m_e_GeV**2)
+    #print(pc_1[:10])
+    mE, mEs, mEE, mEEs, mEsEs, emittE = slice_analysis(z, PD[:, 4], pc_1*1e9, Mslice, True)
+
+    #print(mE, mEs, mEE, mEEs, mEsEs, emittE)
+    mE = mEs
+    sE = np.sqrt(mEsEs)
+    sig0 = np.std(z)
+    B = s_to_cur(z, Mcur*sig0, q1, speed_of_light)
+    gamma0 = parray.E/m_e_GeV
+    mm, mm, mm, mm, mm, emitty0 = moments(PD[:, 2], PD[:, 3])
+    emityn = emitty0*gamma0
+    mm, mm, mm, mm, mm, emitt0 = moments(PD[:, 0], PD[:, 1])
+    emitxn = emitt0*gamma0
+
+    z, ind = np.unique(z, return_index=True)
+    emittx = emittx[ind]
+    emitty = emitty[ind]
+    sE = sE[ind]
+    mE = mE[ind]
+    smin = min(z)
+    smax = max(z)
+    n = 1000
+    hs = (smax-smin)/(n-1)
+    s = np.arange(smin, smax + hs, hs)
+    ex = interp1(z, emittx, s)
+    ey = interp1(z, emitty, s)
+    se = interp1(z, sE, s)
+    me = interp1(z, mE, s)
+    ex = simple_filter(ex, p, iter)*gamma0*1e6
+    ey = simple_filter(ey, p, iter)*gamma0*1e6
+    se = simple_filter(se, p, iter)
+    me = simple_filter(me, p, iter)
+    I = interp1(B[:, 0], B[:, 1], s)
+    return [s, I, ex, ey, me, se, gamma0, emitxn, emityn]

@@ -23,8 +23,8 @@ class StructureConverter:
         self.longlist_matrix['MAGNET']['SBEN'] = {'type': SBend, 'strength': 'angle', 'e1_lag': 'e1', 'e2_freq': 'e2'}
         self.longlist_matrix['MAGNET']['RBEN'] = {'type': RBend, 'strength': 'angle'}
         self.longlist_matrix['MAGNET']['QUAD'] = {'type': Quadrupole, 'strength': ['k1', '1./length']}
-        self.longlist_matrix['MAGNET']['SEXT'] = {'type': Sextupole, 'strength': 'k2'}
-        self.longlist_matrix['MAGNET']['OCTU'] = {'type': Octupole, 'strength': 'k3'}
+        self.longlist_matrix['MAGNET']['SEXT'] = {'type': Sextupole, 'strength': ['k2', '1./length']}
+        self.longlist_matrix['MAGNET']['OCTU'] = {'type': Octupole, 'strength': ['k3', '1./length']}
         if "HKIC" in self.types:
             self.longlist_matrix['MAGNET']['HKIC'] = {'type': Hcor, 'strength': 'angle'}
         if "VKIC" in self.types:
@@ -44,7 +44,7 @@ class StructureConverter:
         #self.longlist_matrix['MOVER']['VKIC'] = {'type': Vcor, 'strength': 'angle'}
 
         self.longlist_matrix['CAVITY'] = {}
-        self.longlist_matrix['CAVITY']['LCAV'] = {'type': Cavity, 'strength': ['v', '1.e-3'], 'e1_lag': ['phi', '360.0'], 'e2_freq': ['f', '1000']}
+        self.longlist_matrix['CAVITY']['LCAV'] = {'type': Cavity, 'strength': ['v', '1.e-3'], 'e1_lag': ['phi', '360.0'], 'e2_freq': ['f', '1000000']}
 
         self.longlist_matrix['DIAG'] = {}
         if "MONI" in self.types:

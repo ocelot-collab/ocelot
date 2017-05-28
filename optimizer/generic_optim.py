@@ -71,7 +71,7 @@ class OcelotInterfaceWindow(QFrame):
         QFrame.__init__(self)
 
         self.logbook = "xfellog"
-        self.dev_mode = True
+        self.dev_mode = False
 
         self.ui = MainWindow(self)
 
@@ -106,7 +106,7 @@ class OcelotInterfaceWindow(QFrame):
         #self.objective_func = obj_function.XFELTarget()
         self.objective_func_pv = "test_obj"
 
-        self.show_obj_value = True
+        self.show_obj_value = False
         self.addPlots()
 
         # database
@@ -543,7 +543,7 @@ class OcelotInterfaceWindow(QFrame):
 
         self.obj_func_line.setData(x=x, y=y)
         if self.show_obj_value:
-            self.obj_func_value.setData(x=x, y=-np.array(self.objective_func.values))
+            self.obj_func_value.setData(x=x, y=self.objective_func.values)
 
         #plot data for all devices being scanned
         for dev in self.devices:
@@ -564,11 +564,6 @@ class OcelotInterfaceWindow(QFrame):
         self.plot1 = pg.PlotWidget(title="Objective Function Monitor", labels={'left': str(self.objective_func_pv), 'bottom':"Time (seconds)"})
         self.plot1.showGrid(1, 1, 1)
         self.plot1.getAxis('left').enableAutoSIPrefix(enable=False) # stop the auto unit scaling on y axes
-
-        #legend for plot 1
-        self.leg1 = customLegend(offset=(75, 20))
-        self.leg1.setParentItem(self.plot1.graphicsItem())
-
         layout = QtGui.QGridLayout()
         self.ui.widget_2.setLayout(layout)
         layout.addWidget(self.plot1, 0, 0)
@@ -588,14 +583,12 @@ class OcelotInterfaceWindow(QFrame):
         #create the obj func line object
         color = QtGui.QColor(0, 255, 255)
         pen=pg.mkPen(color, width=3)
-        self.obj_func_line = pg.PlotCurveItem(x=[], y=[], pen=pen, antialias=True, name="pen")
+        self.obj_func_line = pg.PlotCurveItem(x=[], y=[], pen=pen, antialias=True)
         self.obj_func_value = pg.PlotCurveItem(x=[], y=[], pen=pg.mkPen(QtGui.QColor(255, 255, 51), width=3),
                                                antialias=True, name="value")
         self.plot1.addItem(self.obj_func_line)
-        self.leg1.addItem(self.obj_func_line, "penalty", color=str(color.name()))
         if self.show_obj_value:
             self.plot1.addItem(self.obj_func_value)
-            self.leg1.addItem(self.obj_func_value, "value", color=str(QtGui.QColor(255, 255, 51).name()))
 
     def setUpMultiPlot(self, devices):
         """

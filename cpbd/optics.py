@@ -15,18 +15,20 @@ logger = Logger()
 
 
 def transform_vec_ent(X, dx, dy, tilt):
-    n = len(X)
+    #n = len(X)
     rotmat = rot_mtx(tilt)
-    x_add = np.add(X.reshape(int(n / 6), 6), np.array([-dx, 0., -dy, 0., 0., 0.])).transpose()
-    X[:] = np.dot(rotmat, x_add).transpose().reshape(n)[:]
+    #x_add = np.add(X.reshape(int(n / 6), 6), np.array([-dx, 0., -dy, 0., 0., 0.])).transpose()
+    x_add = np.add(X, np.array([[-dx], [0.], [-dy], [0.], [0.], [0.]]))
+    X[:] = np.dot(rotmat, x_add)[:]
     return X
 
 
 def transform_vec_ext(X, dx, dy, tilt):
-    n = len(X)
+    #n = len(X)
     rotmat = rot_mtx(-tilt)
-    x_tilt = np.dot(rotmat, np.transpose(X.reshape(int(n / 6), 6))).transpose()
-    X[:] = np.add(x_tilt, np.array([dx, 0., dy, 0., 0., 0.])).reshape(n)[:]
+    #x_tilt = np.dot(rotmat, np.transpose(X.reshape(int(n / 6), 6))).transpose()
+    x_tilt = np.dot(rotmat, X)
+    X[:] = np.add(x_tilt, np.array([[dx], [0.], [dy], [0.], [0.], [0.]]))[:]
     return X
 
 
@@ -44,7 +46,7 @@ class TransferMap:
 
         self.R = lambda energy: eye(6)
         self.R_z = lambda z, energy: zeros((6, 6))
-        self.B_z = lambda z, energy: dot((eye(6) - self.R_z(z, energy)), array([self.dx, 0., self.dy, 0., 0., 0.]))
+        self.B_z = lambda z, energy: dot((eye(6) - self.R_z(z, energy)), array([[self.dx], [0.], [self.dy], [0.], [0.], [0.]]))
         self.B = lambda energy: self.B_z(self.length, energy)
         # self.B = lambda energy: zeros(6)  # tmp matrix
         self.map = lambda u, energy: self.mul_p_array(u, energy=energy)
@@ -114,33 +116,18 @@ class TransferMap:
         # print(tws)
         return tws
 
-    def mul_p_array(self, particles, energy=0.):
-        # print("linear:", self.R(0.1))
-        # print 'Map: mul_p_array', self.order, order
-        # ocelot.logger.debug('invoking mul_p_array, particle array len ' + str(len(particles)))
-        # ocelot.logger.debug(order)
-        # ocelot.logger.debug(self.method)
+    def mul_p_array(self, rparticles, energy=0.):
 
-        n = len(particles)
-        if 'pulse' in self.__dict__:
-            logger.debug('TD transfer map')
-            if n > 6: logger.debug(
-                'warning: time-dependent transfer maps not implemented for an array. Using 1st particle value')
-            if n > 6: logger.debug('warning: time-dependent transfer maps not implemented for steps inside element')
-            tau = particles[4]
-            dxp = self.pulse.kick_x(tau)
-            dyp = self.pulse.kick_y(tau)
-            logger.debug('kick ' + str(dxp) + ' ' + str(dyp))
-            b = array([0.0, dxp, 0.0, dyp, 0., 0.])
-            a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(int(n / 6), 6)))), b).reshape(n)
-        else:
-            a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(int(n / 6), 6)))),
-                       self.B(energy)).reshape(n)
-            # a = np.add(np.transpose(dot(self.R(energy), particles.T.reshape(6, int(n/6)))), self.B(energy)).reshape(n)
+        #a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(int(n / 6), 6)))),
+        #           self.B(energy)).reshape(n)
 
-        particles[:] = a[:]
-        logger.debug('return trajectory, array ' + str(len(particles)))
-        return particles
+        #print("a=", a)
+        a = np.add(dot(self.R(energy), rparticles), self.B(energy))
+        # a = np.add(np.transpose(dot(self.R(energy), particles.T.reshape(6, int(n/6)))), self.B(energy)).reshape(n)
+
+        rparticles[:] = a[:]
+        logger.debug('return trajectory, array ' + str(len(rparticles)))
+        return rparticles
 
     def __mul__(self, m):
         """
@@ -186,13 +173,13 @@ class TransferMap:
         :return: None
         """
         if prcl_series.__class__ == ParticleArray:
-            self.map(prcl_series.particles, energy=prcl_series.E)
+            self.map(prcl_series.rparticles, energy=prcl_series.E)
             prcl_series.E += self.delta_e
             prcl_series.s += self.length
 
         elif prcl_series.__class__ == Particle:
             p = prcl_series
-            p.x, p.px, p.y, p.py, p.tau, p.p = self.map(array([p.x, p.px, p.y, p.py, p.tau, p.p]), p.E)
+            p.x, p.px, p.y, p.py, p.tau, p.p = self.map(array([[p.x], [p.px], [p.y], [p.py], [p.tau], [p.p]]), p.E)[:,0]
             p.s += self.length
             p.E += self.delta_e
 
@@ -202,14 +189,14 @@ class TransferMap:
             list_e = array([p.E for p in prcl_series])
             if False in (list_e[:] == list_e[0]):
                 for p in prcl_series:
-                    self.map(array([p.x, p.px, p.y, p.py, p.tau, p.p]), energy=p.E)
+                    self.map(array([[p.x], [p.px], [p.y], [p.py], [p.tau], [p.p]]), energy=p.E)
                     p.E += self.delta_e
                     p.s += self.length
             else:
                 pa = ParticleArray()
                 pa.list2array(prcl_series)
                 pa.E = prcl_series[0].E
-                self.map(pa.particles, energy=pa.E)
+                self.map(pa.rparticles, energy=pa.E)
                 pa.E += self.delta_e
                 pa.s += self.length
                 pa.array2ex_list(prcl_series)
@@ -232,6 +219,23 @@ class PulseTM(TransferMap):
     def __init__(self, kn):
         TransferMap.__init__(self)
 
+    def mul_parray(self, rparticles , energy=0.):
+        n = len(rparticles)
+        #if 'pulse' in self.__dict__:
+        logger.debug('TD transfer map')
+        if n > 6: logger.debug(
+                'warning: time-dependent transfer maps not implemented for an array. Using 1st particle value')
+        if n > 6: logger.debug('warning: time-dependent transfer maps not implemented for steps inside element')
+        tau = rparticles[4]
+        dxp = self.pulse.kick_x(tau)
+        dyp = self.pulse.kick_y(tau)
+        logger.debug('kick ' + str(dxp) + ' ' + str(dyp))
+        b = array([0.0, dxp, 0.0, dyp, 0., 0.])
+        #a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(int(n / 6), 6)))), b).reshape(n)
+        a = np.add(dot(self.R(energy), rparticles), b)
+        rparticles[:] = a[:]
+        logger.debug('return trajectory, array ' + str(len(rparticles)))
+        return rparticles
 
 class MultipoleTM(TransferMap):
     def __init__(self, kn):
@@ -240,12 +244,12 @@ class MultipoleTM(TransferMap):
         self.map = lambda X, energy: self.kick(X, self.kn)
 
     def kick(self, X, kn):
-        p = -kn[0] * X[5::6] + 0j
+        p = -kn[0] * X[5] + 0j
         for n in range(1, len(kn)):
-            p += kn[n] * (X[0::6] + 1j * X[2::6]) ** n / factorial(n)
-        X[1::6] = X[1::6] - np.real(p)
-        X[3::6] = X[3::6] + np.imag(p)
-        X[4::6] = X[4::6] - kn[0] * X[0::6]
+            p += kn[n] * (X[0] + 1j * X[2]) ** n / factorial(n)
+        X[1] = X[1] - np.real(p)
+        X[3] = X[3] + np.imag(p)
+        X[4] = X[4] - kn[0] * X[0]
         # print("multipole 2", X)
         return X
 
@@ -279,15 +283,15 @@ class CorrectorTM(TransferMap):
         dy = hy * z * z / 2.
         dx1 = hx * z if l != 0 else angle_x
         dy1 = hy * z if l != 0 else angle_y
-        b = array([dx, dx1, dy, dy1, 0., 0.])
+        b = array([[dx], [dx1], [dy], [dy1], [0.], [0.]])
         return b
 
     def kick(self, X, z, l, angle_x, angle_y, energy):
         # print("corrector kick", angle_x, angle_y)
         # ocelot.logger.debug('invoking kick_b')
-        n = len(X)
+        #n = len(X)
         b = self.kick_b(z, l, angle_x, angle_y)
-        X1 = np.add(np.transpose(dot(self.R(energy), np.transpose(X.reshape(int(n / 6), 6)))), b).reshape(n)
+        X1 = np.add(dot(self.R(energy), X), b)
         # print(X1)
         X[:] = X1[:]
         return X
@@ -323,18 +327,18 @@ class CavityTM(TransferMap):
         # if self.coupler_kick:
         if self.coupler_kick:
             # print("couple_kick")
-            X[1::6] += (self.vx_up * V * np.exp(1j * phi)).real * 1e-6 / E
-            X[3::6] += (self.vy_up * V * np.exp(1j * phi)).real * 1e-6 / E
+            X[1] += (self.vx_up * V * np.exp(1j * phi)).real * 1e-6 / E
+            X[3] += (self.vy_up * V * np.exp(1j * phi)).real * 1e-6 / E
         X = self.mul_p_array(X, energy=E)  # t_apply(R, T, X, dx, dy, tilt)
         delta_e = V * np.cos(phi)
         if self.coupler_kick:
-            X[1::6] += (self.vx_down * V * np.exp(1j * phi)).real * 1e-6 / (E + delta_e)
-            X[3::6] += (self.vy_down * V * np.exp(1j * phi)).real * 1e-6 / (E + delta_e)
+            X[1] += (self.vx_down * V * np.exp(1j * phi)).real * 1e-6 / (E + delta_e)
+            X[3] += (self.vy_down * V * np.exp(1j * phi)).real * 1e-6 / (E + delta_e)
         if E + delta_e > 0:
             k = 2. * np.pi * freq / speed_of_light
             # X[5::6] = (X[5::6]*E + V*np.cos(X[4::6]*k + phi) - delta_e)/(E + delta_e)
             E1 = E + delta_e
-            X[5::6] = X[5::6] + V / E1 * (np.cos(-X[4::6] * k + phi) - np.cos(phi) - k * X[4::6] * np.sin(phi))
+            X[5] = X[5] + V / E1 * (np.cos(-X[4] * k + phi) - np.cos(phi) - k * X[4] * np.sin(phi))
         return X
 
     def __call__(self, s):
@@ -372,24 +376,24 @@ class KickTM(TransferMap):
         k3 = k3 * dl
 
         for i in range(nkick):
-            x = X[0::6] + X[1::6] * dl - self.dx
-            y = X[2::6] + X[3::6] * dl - self.dy
-            tau = -X[5::6] * dl * coef
+            x = X[0] + X[1] * dl - self.dx
+            y = X[2] + X[3] * dl - self.dy
+            tau = -X[5] * dl * coef
 
-            p = -angle * X[5::6] + 0j
+            p = -angle * X[5] + 0j
             # for n in range(1, len(kn)):
             xy1 = x + 1j * y
             xy2 = xy1 * xy1
             xy3 = xy2 * xy1
             p += k1 * xy1 + k2 * xy2 + k3 * xy3
-            X[1::6] = X[1::6] - np.real(p)
-            X[3::6] = X[3::6] + np.imag(p)
+            X[1] = X[1] - np.real(p)
+            X[3] = X[3] + np.imag(p)
             # X[4::6] = X[4::6] - angle*X[0::6]
-            X[4::6] = tau - angle * X[0::6]
+            X[4] = tau - angle * X[0]
 
-            X[0::6] = x + X[1::6] * dl + self.dx
-            X[2::6] = y + X[3::6] * dl + self.dy
-            X[4::6] -= X[5::6] * dl * coef
+            X[0] = x + X[1] * dl + self.dx
+            X[2] = y + X[3] * dl + self.dy
+            X[4] -= X[5] * dl * coef
             # print X[1], X[3]
         return X
 
@@ -430,20 +434,20 @@ class UndulatorTestTM(TransferMap):
         if gamma != 0:
             h0 = 1. / (gamma / Kx / kz)
         h02 = h0 * h0
-        h = h / (1. + u[5::6])
-        x = u[::6]
-        y = u[2::6]
+        h = h / (1. + u[5])
+        x = u[0]
+        y = u[2]
         for z in range(len(zi) - 1):
             chx = np.cosh(kx * x)
             chy = np.cosh(ky * y)
             shx = np.sinh(kx * x)
             shy = np.sinh(ky * y)
-            u[1::6] -= h / 2. * chx * shx * (kx * ky2 * chy * chy + kx2 * kx * shy * shy) / (ky2 * kz2) * h02
-            u[3::6] -= h / 2. * chy * shy * (ky2 * chx * chx + kx2 * shx * shx) / (ky * kz2) * h02
-            u[4::6] -= h / 2. / (1. + u[5::6]) * ((u[1::6] * u[1::6] + u[3::6] * u[3::6]) + chx * chx * chy * chy / (
+            u[1] -= h / 2. * chx * shx * (kx * ky2 * chy * chy + kx2 * kx * shy * shy) / (ky2 * kz2) * h02
+            u[3] -= h / 2. * chy * shy * (ky2 * chx * chx + kx2 * shx * shx) / (ky * kz2) * h02
+            u[4] -= h / 2. / (1. + u[5]) * ((u[1] * u[1] + u[3] * u[3]) + chx * chx * chy * chy / (
                 2. * kz2) * h02 + shx * shx * shy * shy * kx2 / (2. * ky2 * kz2) * h02)
-            u[::6] = x + h * u[1::6]
-            u[2::6] = y + h * u[3::6]
+            u[0] = x + h * u[1]
+            u[2] = y + h * u[3]
         return u
 
     def __call__(self, s):
@@ -486,6 +490,7 @@ class SecondTM(TransferMap):
                                                   self.t_mat_z_e(self.length, energy), X, self.dx, self.dy, self.tilt)
 
     def t_apply(self, R, T, X, dx, dy, tilt, U5666=0.):
+        #print(np.shape(X))
         # print("t_apply", self.k2, self.T)
         if dx != 0 or dy != 0 or tilt != 0:
             # print("TILT")
@@ -500,10 +505,11 @@ class SecondTM(TransferMap):
         # U5666 = -2./(beta*beta)*igamma2
         # test end
         n = len(X)
-        Xr = transpose(dot(R, transpose(X.reshape(int(n / 6), 6)))).reshape(n)
+        #Xr = transpose(dot(R, transpose(X.reshape(int(n / 6), 6)))).reshape(n)
+        Xr = dot(R, X)
         # Xr = transpose(dot(R, X.T.reshape(6, int(n / 6)))).reshape(n)
         # Xt = zeros(n)
-        x, px, y, py, tau, dp = X[0::6], X[1::6], X[2::6], X[3::6], X[4::6], X[5::6]
+        x, px, y, py, tau, dp = X[0], X[1], X[2], X[3], X[4], X[5]
         x2 = x * x
         xpx = x * px
         px2 = px * px
@@ -520,26 +526,20 @@ class SecondTM(TransferMap):
         ydp = y * dp
         pydp = py * dp
 
-        X[0::6] = Xr[::6] + T[0, 0, 0] * x2 + T[0, 0, 1] * xpx + T[0, 0, 5] * xdp + T[0, 1, 1] * px2 + T[
-                                                                                                           0, 1, 5] * pxdp + \
+        X[0] = Xr[0] + T[0, 0, 0] * x2 + T[0, 0, 1] * xpx + T[0, 0, 5] * xdp + T[0, 1, 1] * px2 + T[0, 1, 5] * pxdp + \
                   T[0, 5, 5] * dp2 + T[0, 2, 2] * y2 + T[0, 2, 3] * ypy + T[0, 3, 3] * py2
 
-        X[1::6] = Xr[1::6] + T[1, 0, 0] * x2 + T[1, 0, 1] * xpx + T[1, 0, 5] * xdp + T[1, 1, 1] * px2 + T[
-                                                                                                            1, 1, 5] * pxdp + \
+        X[1] = Xr[1] + T[1, 0, 0] * x2 + T[1, 0, 1] * xpx + T[1, 0, 5] * xdp + T[1, 1, 1] * px2 + T[1, 1, 5] * pxdp + \
                   T[1, 5, 5] * dp2 + T[1, 2, 2] * y2 + T[1, 2, 3] * ypy + T[1, 3, 3] * py2
 
-        X[2::6] = Xr[2::6] + T[2, 0, 2] * xy + T[2, 0, 3] * xpy + T[2, 1, 2] * ypx + T[2, 1, 3] * pxpy + T[
-                                                                                                             2, 2, 5] * ydp + \
+        X[2] = Xr[2] + T[2, 0, 2] * xy + T[2, 0, 3] * xpy + T[2, 1, 2] * ypx + T[2, 1, 3] * pxpy + T[ 2, 2, 5] * ydp + \
                   T[2, 3, 5] * pydp
 
-        X[3::6] = Xr[3::6] + T[3, 0, 2] * xy + T[3, 0, 3] * xpy + T[3, 1, 2] * ypx + T[3, 1, 3] * pxpy + T[
-                                                                                                             3, 2, 5] * ydp + \
+        X[3] = Xr[3] + T[3, 0, 2] * xy + T[3, 0, 3] * xpy + T[3, 1, 2] * ypx + T[3, 1, 3] * pxpy + T[3, 2, 5] * ydp + \
                   T[3, 3, 5] * pydp
 
-        X[4::6] = Xr[4::6] + T[4, 0, 0] * x2 + T[4, 0, 1] * xpx + T[4, 0, 5] * xdp + T[4, 1, 1] * px2 + T[
-                                                                                                            4, 1, 5] * pxdp + \
-                  T[4, 5, 5] * dp2 + T[4, 2, 2] * y2 + T[4, 2, 3] * ypy + T[
-                                                                              4, 3, 3] * py2  # + U5666*dp2*dp    # third order
+        X[4] = Xr[4] + T[4, 0, 0] * x2 + T[4, 0, 1] * xpx + T[4, 0, 5] * xdp + T[4, 1, 1] * px2 + T[4, 1, 5] * pxdp + \
+                  T[4, 5, 5] * dp2 + T[4, 2, 2] * y2 + T[4, 2, 3] * ypy + T[4, 3, 3] * py2  # + U5666*dp2*dp    # third order
         # X[:] = Xr[:] + Xt[:]
 
         if dx != 0 or dy != 0 or tilt != 0:
@@ -1104,8 +1104,8 @@ class Navigator:
             dz = L - self.z0
 
         # test
-        if (len(processes) == 1) and (processes[0].__class__.__name__ == "CSR") and (self.lat.sequence[self.n_elem].__class__ in [Bend, SBend, RBend]):
-            dz = dz/10.
+        #if (len(processes) == 1) and (processes[0].__class__.__name__ == "CSR") and (self.lat.sequence[self.n_elem].__class__ in [Bend, SBend, RBend]):
+        #    dz = dz/10.
 
         # check if dz overjumps the stop element
         dz, processes = self.check_overjump(dz, processes)

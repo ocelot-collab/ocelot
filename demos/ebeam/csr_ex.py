@@ -27,12 +27,12 @@ dp = long_dist[:, 1]
 
 p_array = ParticleArray(n=200000)
 p_array.E = 0.130 # GeV
-p_array.particles[0::6] = x
-p_array.particles[1::6] = px
-p_array.particles[2::6] = y
-p_array.particles[3::6] = py
-p_array.particles[4::6] = tau
-p_array.particles[5::6] = dp
+p_array.rparticles[0] = x
+p_array.rparticles[1] = px
+p_array.rparticles[2] = y
+p_array.rparticles[3] = py
+p_array.rparticles[4] = tau
+p_array.rparticles[5] = dp
 
 Q = 5e-9
 
@@ -49,7 +49,6 @@ plt.grid(True)
 
 plt.figure(2)
 plt.title("current: start")
-
 plt.plot(sI1*1000, I1)
 plt.xlabel("s, mm")
 plt.ylabel("I, A")

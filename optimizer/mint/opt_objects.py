@@ -5,7 +5,7 @@ S.Tomin, 2017
 
 import numpy as np
 import time
-from scipy.optimize import curve_fit
+
 
 
 class Device(object):
@@ -53,47 +53,6 @@ class Device(object):
 
     def get_limits(self):
         return self.dp.get_limits(self.eid)
-
-
-
-class SuperDevice(Device):
-    def __init__(self, eid=None):
-        super(SuperDevice, self).__init__(eid=eid)
-        self.im_devs = [] # Abstract Devices
-        self.re_devs = [] # Real Devices
-
-    def set_value(self, im_vals):
-        for i, rdev in enumerate(self.re_devs):
-            K = self.func_taper(i, n0=7, a=im_vals)
-            rdev.set_value(K)
-        self.values.append(im_vals)
-        self.times.append(time.time())
-
-
-    def func_taper(self, n, n0, a0, a1, a2):
-        """
-        exponential tapering
-        """
-        if n <= n0:
-            return a0
-        return a0 * (1 + a1 * (n - n0) ** a2)
-
-    def calc_im_vals(self, re_vals):
-        # fitting
-        ydata = re_vals
-        xdata = np.arange(len(ydata))
-        popt, pcov = curve_fit(self.func_taper, xdata, ydata, bounds=([1,1, 1,1], [3., 2., 1.]))
-        print("popt = ", popt, " pcov = ", pcov)
-        return [3.5, 0, 1]
-
-    def get_value(self):
-        re_vals = []
-        for rdev in self.re_devs:
-            rval = rdev.get_value()
-            re_vals.append(rval)
-        im_vals = self.calc_im_vals(re_vals)
-        return im_vals
-
 
 
 # for testing

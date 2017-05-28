@@ -317,15 +317,15 @@ class Wake():
         #Pz = 0
         #ziw = zi - dz * 0.5
         #if (1.0 < ziw <= 3.0) or (5.0 < ziw <= 7.0):  # or(10.0<ziw<=12.0):
-        ps = p_array.particles
-        Px, Py, Pz, I00 = self.add_total_wake(ps[0::6], ps[2::6], ps[4::6], p_array.q_array, self.TH, self.w_sampling, self.filter_order)
+        ps = p_array.rparticles
+        Px, Py, Pz, I00 = self.add_total_wake(ps[0], ps[2], ps[4], p_array.q_array, self.TH, self.w_sampling, self.filter_order)
         #if (3.0 < ziw <= 5.0):  # or(8.0<ziw<=10.0)or(12.0<ziw<=14.0):
         #    Px, Py, Pz, I00 = self.add_total_wake(Ps[:, 0], Ps[:, 2], Ps[:, 4], p_array.q_array, THh, Ns, NF)
         #print(zi, dz, ziw)
 
-        p_array.particles[5::6] = p_array.particles[5::6] + Pz * dz*self.factor / (p_array.E * 1e9)
-        p_array.particles[3::6] = p_array.particles[3::6] + Py * dz*self.factor / (p_array.E * 1e9)
-        p_array.particles[1::6] = p_array.particles[1::6] + Px * dz*self.factor / (p_array.E * 1e9)
+        p_array.rparticles[5] = p_array.rparticles[5] + Pz * dz*self.factor / (p_array.E * 1e9)
+        p_array.rparticles[3] = p_array.rparticles[3] + Py * dz*self.factor / (p_array.E * 1e9)
+        p_array.rparticles[1] = p_array.rparticles[1] + Px * dz*self.factor / (p_array.E * 1e9)
 
 
 class WakeKick(Wake):
@@ -334,10 +334,10 @@ class WakeKick(Wake):
 
     def apply(self, p_array, dz):
         #print("Apply WakeKick")
-        ps = p_array.particles
-        Px, Py, Pz, I00 = self.add_total_wake(ps[0::6], ps[2::6], ps[4::6], p_array.q_array, self.TH, self.w_sampling,
+        ps = p_array.rparticles
+        Px, Py, Pz, I00 = self.add_total_wake(ps[0], ps[2], ps[4], p_array.q_array, self.TH, self.w_sampling,
                                               self.filter_order)
 
-        p_array.particles[5::6] = p_array.particles[5::6] + self.factor * Pz / (p_array.E * 1e9)
-        p_array.particles[3::6] = p_array.particles[3::6] + self.factor * Py / (p_array.E * 1e9)
-        p_array.particles[1::6] = p_array.particles[1::6] + self.factor * Px / (p_array.E * 1e9)
+        p_array.particles[5] = p_array.particles[5] + self.factor * Pz / (p_array.E * 1e9)
+        p_array.particles[3] = p_array.particles[3] + self.factor * Py / (p_array.E * 1e9)
+        p_array.particles[1] = p_array.particles[1] + self.factor * Px / (p_array.E * 1e9)

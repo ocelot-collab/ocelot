@@ -218,7 +218,8 @@ class ParticleArray:
     p0 - momentum
     """
     def __init__(self, n=0):
-        self.particles = zeros(n*6)
+        #self.particles = zeros(n*6)
+        self.rparticles = zeros((6, n))#np.transpose(np.zeros(int(n), 6))
         self.q_array = np.zeros(n)    # charge
         self.s = 0.0
         self.E = 0.0
@@ -227,33 +228,33 @@ class ParticleArray:
         """
         comment behaviour and possibly move out of class
         """
-        x = abs(self.particles[::6])
-        px = abs(self.particles[1::6])
-        y = abs(self.particles[2::6])
-        py = abs(self.particles[3::6])
+        x = abs(self.x())
+        px = abs(self.px())
+        y = abs(self.y())
+        py = abs(self.py())
         ind_angles = append(argwhere(px > px_lim), argwhere(py > py_lim))
         p_idxs = unique(append(argwhere(x > xlim), append(argwhere(y > ylim), append(argwhere(x != x), append(argwhere(y!= y), ind_angles)) )))
-        e_idxs = [append([], x) for x in array([6*p_idxs, 6*p_idxs+1, 6*p_idxs+2, 6*p_idxs+3, 6*p_idxs+4, 6*p_idxs+5])]
-        self.particles = delete(self.particles, e_idxs)
+        #e_idxs = [append([], x) for x in array([6*p_idxs, 6*p_idxs+1, 6*p_idxs+2, 6*p_idxs+3, 6*p_idxs+4, 6*p_idxs+5])]
+        self.rparticles = delete(self.rparticles, p_idxs, axis=1)
         return p_idxs
 
     def __getitem__(self, idx):
-        return Particle(x=self.particles[idx*6], px=self.particles[idx*6 + 1],
-                         y=self.particles[idx*6+2], py=self.particles[idx*6+3],
-                         tau=self.particles[idx*6+4], p=self.particles[idx*6+5],
+        return Particle(x=self.rparticles[0, idx], px=self.rparticles[1, idx],
+                         y=self.rparticles[2, idx], py=self.rparticles[3, idx],
+                         tau=self.rparticles[4, idx], p=self.rparticles[5, idx],
                          s=self.s)
 
     def __setitem__(self, idx, p):
-        self.particles[idx*6] = p.x
-        self.particles[idx*6 + 1] = p.px
-        self.particles[idx*6+2] = p.y
-        self.particles[idx*6+3] = p.py
-        self.particles[idx*6+4] = p.tau
-        self.particles[idx*6+5] = p.p
+        self.rparticles[0, idx] = p.x
+        self.rparticles[1, idx] = p.px
+        self.rparticles[2, idx] = p.y
+        self.rparticles[3, idx] = p.py
+        self.rparticles[4, idx] = p.tau
+        self.rparticles[5, idx] = p.p
         self.s = p.s
 
     def list2array(self, p_list):
-        self.particles = zeros(len(p_list)*6)
+        self.rparticles = zeros((6, len(p_list)))
         for i, p in enumerate(p_list):
             self[i] = p
         self.s = p_list[0].s
@@ -268,25 +269,25 @@ class ParticleArray:
     def array2ex_list(self, p_list):
 
         for i, p in enumerate(p_list):
-            p.x = self.particles[i*6]
-            p.px = self.particles[i*6 + 1]
-            p.y = self.particles[i*6+2]
-            p.py = self.particles[i*6+3]
-            p.tau = self.particles[i*6+4]
-            p.p = self.particles[i*6+5]
+            p.x =  self.rparticles[0, i]
+            p.px = self.rparticles[1, i]
+            p.y =  self.rparticles[2, i]
+            p.py = self.rparticles[3, i]
+            p.tau =self.rparticles[4, i]
+            p.p =  self.rparticles[5, i]
             p.E = self.E
             p.s = self.s
         return p_list
 
     def size(self):
-        return len(self.particles) / 6
+        return self.rparticles.size / 6
 
-    def x(self): return self.particles[::6]
-    def px(self): return self.particles[1::6]
-    def y(self): return self.particles[2::6]
-    def py(self): return self.particles[3::6]
-    def tau(self): return self.particles[4::6]
-    def p(self): return self.particles[5::6]
+    def x(self):  return self.rparticles[0]
+    def px(self): return self.rparticles[1]
+    def y(self):  return self.rparticles[2]
+    def py(self): return self.rparticles[3]
+    def tau(self):return self.rparticles[4]
+    def p(self):  return self.rparticles[5]
 
 
 def save_particle_array(p_array, filename):
@@ -300,6 +301,16 @@ def load_particle_array(filename):
     p_array = pickle.load(output)
     output.close()
     return p_array
+
+
+def recalculate_ref_particle(p_array):
+    pref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_eV
+    Enew = p_array.p()[0]*pref + p_array.E
+    s_new = p_array.s - p_array.tau()[0]
+    p_array.rparticles[5, :] -= p_array.p()[0]
+    p_array.rparticles[4, :] -= p_array.tau()[0]
+    p_array.E = Enew
+    p_array.s = s_new
 
 
 def get_envelope(p_array, tws_i=Twiss()):
@@ -345,7 +356,7 @@ def get_current(p_array, charge, num_bins = 200):
     return: hist -  current in A
           : bin_edges - points position
     """
-    z = p_array.particles[4::6]
+    z = p_array.tau()
     hist, bin_edges = np.histogram(z, bins=num_bins)
     delta_Z = max(z) - min(z)
     delta_z = delta_Z/num_bins
@@ -436,12 +447,12 @@ def m_from_twiss(Tw1, Tw2):
 
 def beam_matching(particles, bounds, x_opt, y_opt):
     pd = zeros(( int(len(particles)/6), 6))
-    pd[:, 0] = particles[0::6]
-    pd[:, 1] = particles[1::6]
-    pd[:, 2] = particles[2::6]
-    pd[:, 3] = particles[3::6]
-    pd[:, 4] = particles[4::6]
-    pd[:, 5] = particles[5::6]
+    pd[:, 0] = particles[0]
+    pd[:, 1] = particles[1]
+    pd[:, 2] = particles[2]
+    pd[:, 3] = particles[3]
+    pd[:, 4] = particles[4]
+    pd[:, 5] = particles[5]
 
     z0 = np.mean(pd[:, 4])
     sig0 = np.std(pd[:, 4])
@@ -454,14 +465,14 @@ def beam_matching(particles, bounds, x_opt, y_opt):
     print(beta, alpha)
     M = m_from_twiss([alpha, beta, 0], x_opt)
     print(M)
-    particles[0::6] = M[0, 0]*pd[:, 0] + M[0, 1]*pd[:, 1]
-    particles[1::6] = M[1, 0]*pd[:, 0] + M[1, 1]*pd[:, 1]
+    particles[0] = M[0, 0]*pd[:, 0] + M[0, 1]*pd[:, 1]
+    particles[1] = M[1, 0]*pd[:, 0] + M[1, 1]*pd[:, 1]
     [mx, mxs, mxx, mxxs, mxsxs, emitx0] = moments(pd[inds, 2], pd[inds, 3])
     beta = mxx/emitx0
     alpha = -mxxs/emitx0
     M = m_from_twiss([alpha, beta, 0], y_opt)
-    particles[2::6] = M[0, 0]*pd[:, 2] + M[0, 1]*pd[:, 3]
-    particles[3::6] = M[1, 0]*pd[:, 2] + M[1, 1]*pd[:, 3]
+    particles[2] = M[0, 0]*pd[:, 2] + M[0, 1]*pd[:, 3]
+    particles[3] = M[1, 0]*pd[:, 2] + M[1, 1]*pd[:, 3]
     return particles
 
 
@@ -482,16 +493,16 @@ class BeamTransform:
         pass
 
     def apply(self, p_array, dz):
-        self.beam_matching(p_array.particles, self.bounds, self.x_opt, self.y_opt)
+        self.beam_matching(p_array.rparticles, self.bounds, self.x_opt, self.y_opt)
 
     def beam_matching(self, particles, bounds, x_opt, y_opt):
-        pd = zeros((int(len(particles) / 6), 6))
-        pd[:, 0] = particles[0::6]
-        pd[:, 1] = particles[1::6]
-        pd[:, 2] = particles[2::6]
-        pd[:, 3] = particles[3::6]
-        pd[:, 4] = particles[4::6]
-        pd[:, 5] = particles[5::6]
+        pd = zeros((int(particles.size / 6), 6))
+        pd[:, 0] = particles[0]
+        pd[:, 1] = particles[1]
+        pd[:, 2] = particles[2]
+        pd[:, 3] = particles[3]
+        pd[:, 4] = particles[4]
+        pd[:, 5] = particles[5]
 
         z0 = np.mean(pd[:, 4])
         sig0 = np.std(pd[:, 4])
@@ -504,14 +515,14 @@ class BeamTransform:
         #print(beta, alpha)
         M = m_from_twiss([alpha, beta, 0], x_opt)
         #print(M)
-        particles[0::6] = M[0, 0] * pd[:, 0] + M[0, 1] * pd[:, 1]
-        particles[1::6] = M[1, 0] * pd[:, 0] + M[1, 1] * pd[:, 1]
+        particles[0] = M[0, 0] * pd[:, 0] + M[0, 1] * pd[:, 1]
+        particles[1] = M[1, 0] * pd[:, 0] + M[1, 1] * pd[:, 1]
         [mx, mxs, mxx, mxxs, mxsxs, emitx0] = self.moments(pd[inds, 2], pd[inds, 3])
         beta = mxx / emitx0
         alpha = -mxxs / emitx0
         M = m_from_twiss([alpha, beta, 0], y_opt)
-        particles[2::6] = M[0, 0] * pd[:, 2] + M[0, 1] * pd[:, 3]
-        particles[3::6] = M[1, 0] * pd[:, 2] + M[1, 1] * pd[:, 3]
+        particles[2] = M[0, 0] * pd[:, 2] + M[0, 1] * pd[:, 3]
+        particles[3] = M[1, 0] * pd[:, 2] + M[1, 1] * pd[:, 3]
         return particles
 
     def moments(self, x, y, cut=0):
@@ -704,20 +715,20 @@ def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
 
     q1 = np.sum(parray.q_array)
     print("charge", q1)
-    n = np.int_(len(parray.particles)/6)
-    PD = parray.particles.reshape(n, 6)
-    PD = sortrows(PD, 4)
+    n = np.int_(parray.rparticles.size/6)
+    PD = parray.rparticles
+    PD = sortrows(4, PD)
 
-    z = np.copy(PD[:, 4])
-    mx, mxs, mxx, mxxs, mxsxs, emittx = slice_analysis(z, PD[:, 0], PD[:, 1], Mslice, True)
+    z = np.copy(PD[4])
+    mx, mxs, mxx, mxxs, mxsxs, emittx = slice_analysis(z, PD[0], PD[1], Mslice, True)
     
-    my, mys, myy, myys, mysys, emitty = slice_analysis(z, PD[:, 2], PD[:, 3], Mslice, True)
+    my, mys, myy, myys, mysys, emitty = slice_analysis(z, PD[2], PD[3], Mslice, True)
 
     pc_0 = np.sqrt(parray.E**2 - m_e_GeV**2)
-    E1 = PD[:, 5]*pc_0 + parray.E
+    E1 = PD[5]*pc_0 + parray.E
     pc_1 = np.sqrt(E1**2 - m_e_GeV**2)
     #print(pc_1[:10])
-    mE, mEs, mEE, mEEs, mEsEs, emittE = slice_analysis(z, PD[:, 4], pc_1*1e9, Mslice, True)
+    mE, mEs, mEE, mEEs, mEsEs, emittE = slice_analysis(z, PD[4], pc_1*1e9, Mslice, True)
 
     #print(mE, mEs, mEE, mEEs, mEsEs, emittE)
     mE = mEs
@@ -725,9 +736,9 @@ def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
     sig0 = np.std(z)
     B = s_to_cur(z, Mcur*sig0, q1, speed_of_light)
     gamma0 = parray.E/m_e_GeV
-    mm, mm, mm, mm, mm, emitty0 = moments(PD[:, 2], PD[:, 3])
+    mm, mm, mm, mm, mm, emitty0 = moments(PD[2], PD[3])
     emityn = emitty0*gamma0
-    mm, mm, mm, mm, mm, emitt0 = moments(PD[:, 0], PD[:, 1])
+    mm, mm, mm, mm, mm, emitt0 = moments(PD[0], PD[1])
     emitxn = emitt0*gamma0
 
     z, ind = np.unique(z, return_index=True)

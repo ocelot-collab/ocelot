@@ -171,32 +171,37 @@ class NewOrbit:
         return rm
 
     def correction(self, alpha=0,  p_init=None):
+        #TODO: initial condition for particle was removed. Add it again
         cor_list = [cor.id for cor in np.append(self.hcors, self.vcors)]
         bpm_list = [bpm.id for bpm in self.bpms]
         orbit = (1 - alpha) * self.get_orbit()
         RM = (1 - alpha) * self.response_matrix.extract(cor_list=cor_list, bpm_list=bpm_list)
-        print("RM = ", np.shape(RM))
+        #print("RM = ", np.shape(RM))
         if alpha != 0:
             disp = alpha * self.get_dispersion()
         else:
             disp = alpha * np.array(orbit)
-        DRM = alpha * self.disp_response_matrix.extract(cor_list=cor_list, bpm_list=bpm_list)
-        print("DRM = ", np.shape(DRM))
+
+        if self.disp_response_matrix != None:
+            DRM = alpha * self.disp_response_matrix.extract(cor_list=cor_list, bpm_list=bpm_list)
+        else:
+            DRM = np.zeros_like(RM)
+        #print("DRM = ", np.shape(DRM))
         rmatrix = self.combine_matrices(RM, DRM)
-        print("rmatrix = ", np.shape(rmatrix))
+        #print("rmatrix = ", np.shape(rmatrix))
         orbit = np.append(orbit, disp)
 
         # bpm weights
         bpm_weights = np.eye(len(orbit))
-        print("bpm_weights = ", np.shape(bpm_weights), len(orbit))
+        #print("bpm_weights = ", np.shape(bpm_weights), len(orbit))
         start = time()
         #rmatrix = self.response_matrix.extract()
         self.orbit_svd = OrbitSVD(resp_matrix=rmatrix, orbit=orbit, weights=bpm_weights, alpha=1.e-4)
         angle = self.orbit_svd.apply()
-        print("correction = ", time() - start)
+        #print("correction = ", time() - start)
 
         for i, cor in enumerate(np.append(self.hcors, self.vcors)):
-            print("correction", cor.angle*1000, angle[i]*1000, cor.id)
+            print("correction:", cor.id," angle before: ", cor.angle*1000, "  after:", angle[i]*1000)
             cor.angle -= angle[i]
 
         self.lat.update_transfer_maps()
@@ -348,7 +353,7 @@ class Orbit:
 
             particles.append(copy.copy(p))
         #print("energy = ", p.E)
-        return array(X), array(Y),
+        return array(X), array(Y)
 
     def response_matrix(self, mi, dp, timeout=0.5, delta_i=0.01):
         resp = np.zeros((len(self.bpms)*2, len(self.hcors)+len(self.vcors)))

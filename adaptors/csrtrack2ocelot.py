@@ -82,7 +82,7 @@ def csrtrackBeam2particleArray(filename, orient="H"):
        PD1[:, 4-1] = -PD[1:, 6-1]
        PD1[:, 5-1] =  PD[1:, 5-1]
        PD1[:, 6-1] =  PD[1:, 4-1]
-    print("CSR", PD1[0, :])
+    #print("CSR", PD1[0, :])
     for i in range(6):
         PD1[1:n, i] = PD1[1:n, i] + PD1[0, i]
 
@@ -93,12 +93,12 @@ def csrtrackBeam2particleArray(filename, orient="H"):
     pe = (np.sqrt(m_e_eV**2 + (PD1[:, 3]**2 + PD1[:, 4]**2 + PD1[:, 5]**2)) - Eref) / p_ref
 
     p_array = ParticleArray(n)
-    p_array.particles[::6] = PD1[:, 0] -    0*PD1[0, 0]
-    p_array.particles[2::6] = PD1[:, 1] -   0*PD1[0, 1]
-    p_array.particles[4::6] = -(PD1[:, 2] - PD1[0, 2])
-    p_array.particles[1::6] = px[:]
-    p_array.particles[3::6] = py[:]
-    p_array.particles[5::6] = pe[:]
+    p_array.rparticles[0] = PD1[:, 0] -    0*PD1[0, 0]
+    p_array.rparticles[2] = PD1[:, 1] -   0*PD1[0, 1]
+    p_array.rparticles[4] = -(PD1[:, 2] - PD1[0, 2])
+    p_array.rparticles[1] = px[:]
+    p_array.rparticles[3] = py[:]
+    p_array.rparticles[5] = pe[:]
 
 
     p_array.q_array[:] = PD[1:, 6]

@@ -290,16 +290,17 @@ class ParticleArray:
     def p(self):  return self.rparticles[5]
 
 
-def save_particle_array(p_array, filename):
-    output = open(filename, 'wb')
-    pickle.dump(p_array, output)
-    output.close()
+def save_particle_array(filename, p_array):
+    np.savez_compressed(filename, rparticles=p_array.rparticles,
+                        q_array=p_array.q_array,
+                        E=p_array.E, s=p_array.s)
 
 
 def load_particle_array(filename):
-    output = open(filename, 'rb')
-    p_array = pickle.load(output)
-    output.close()
+    p_array = ParticleArray()
+    with np.load(filename) as data:
+        for key in data.keys():
+            p_array.__dict__[key] = data[key]
     return p_array
 
 

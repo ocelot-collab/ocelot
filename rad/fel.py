@@ -36,7 +36,7 @@ def calculateFelParameters(input):
 
     p.Ia = 17000.0
         
-    a = p.aw0**2 / (2*(2+p.aw0**2))
+    a = p.aw0**2 / (2*(1+p.aw0**2))
     p.fc = sf.j0(a) - sf.j1(a)
     p.N = p.Ip * p.lambda0 / 1.4399644850445153e-10
     p.sigb = 0.5 * (p.rxbeam + p.rybeam)
@@ -58,7 +58,7 @@ def calculateFelParameters(input):
 
 def printFelParameters(input):
     
-    #print input.parameters
+    #print (input.parameters)
     
     p = calculateFelParameters(input)
     

@@ -481,6 +481,7 @@ class GenesisOutput:
 
     def __init__(self):
         self.z = []
+        self.s = []
         self.I = []
         self.n = []
         self.zSlice = []
@@ -504,6 +505,12 @@ class GenesisOutput:
         else:
             p, = self.parameters[name]
             return float(p.replace('D', 'E'))
+
+
+
+            
+    def wig(self,z=inf):
+        return wigner_out(self, z=z, method='mp', debug=1)
 
 
 class GenStatOutput:
@@ -748,6 +755,7 @@ class RadiationField():
     def Ly(self):  # full transverse mesh size, 2*dgrid
         return self.dy * self.Ny()
 
+
     def Lx(self):  # full longitudinal mesh size, nslice*zsep*xlamds
         return self.dx * self.Nx()
 
@@ -870,6 +878,11 @@ class WaistScanResults():
 '''
 
 
+
+
+
+
+
 def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', debug=1):
     '''
     Main function for executing Genesis code
@@ -924,7 +937,425 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', debug=1):
         if inp.lat != None:
             if debug > 1:
                 print ('    writing ' + inp_file + '.lat')
-            open(inp_path + '.lat', 'w').write(generate_lattice(inp.lat, unit=inp.xlamd, energy=inp.gamma0 * m_e_GeV))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            open(inp_path + '.lat', 'w').write(generate_lattice(inp.lat, unit=inp.xlamd*inp.delz, energy=inp.gamma0 * m_e_GeV))
             inp.latticefile = inp_file + '.lat'
 
     if inp.beamfile == None:
@@ -1167,6 +1598,7 @@ def generate_input(up, beam, itdp=False):
 
     # Next line added by GG 27.05.2016: it was in script
 
+
     #beam.emit_xn, beam.emit_yn = beam.emit[beam.C]
     #beam.gamma_rel = beam.E / (0.511e-3)
     #beam.emit_x = beam.emit_xn / beam.gamma_rel
@@ -1398,19 +1830,848 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
     for parm in ['z', 'aw', 'qfld', 'I', 'n']:
         exec('out.' + parm + ' = np.array(out.' + parm + ')')
 
+
+
+
+
+
+
+
+
+
+
+
     if out('dgrid') == 0:
         rbeam = sqrt(out('rxbeam')**2 + out('rybeam')**2)
         ray = sqrt(out('zrayl') * out('xlamds') / np.pi * (1 + (out('zwaist') / out('zrayl')))**2)
-        out.leng = 2 * out('rmax0') * (rbeam + ray)
+        out.leng = out('rmax0') * (rbeam + ray)
     else:
         out.leng = 2 * out('dgrid')
     out.ncar = int(out('ncar'))  # number of mesh points
+    
+    #universal solution?
+    out.leng=out('meshsize')*(out.ncar-1)
+
 
     if read_level == 0:
         print ('      returning *.out header')
         if debug > 0:
             print('      done in %.2f seconds' % (time.time() - start_time))
         return out
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     out.nSlices = len(out.n)
     # int(out('history_records'))#number of slices in the output
@@ -1420,23 +2681,332 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
     assert out('entries_per_record') != None, '.out header is missing!'
     out.nZ = int(out('entries_per_record'))  # number of records along the undulator
 
+
     if debug > 1:
         print ('        nSlices ' + str(out.nSlices))
     if debug > 1:
         print ('        nZ ' + str(out.nZ))
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     assert nSlice != 0, '.out is empty!'
 
     assert(out.n[-1] - out.n[0]) == (len(out.n) - 1) * out('ishsty'), '.out is missing at least ' + str((out.n[-1] - out.n[0]) - (len(out.n) - 1) * out('ishsty')) + ' slices!'
+
 
     if read_level == 2:
         output_unsorted = np.array(output_unsorted)  # .astype(precision)
         # print out.sliceKeys
         for i in range(len(out.sliceKeys)):
-            # print (out.sliceKeys)
-            # print ()
-            # exec('out.'+out.sliceKeys[i].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(out.nSlices)+','+str(out.nZ)+'))')
-            # exec('out.'+out.sliceKeys[int(i)].replace('-','_').replace('<','').replace('>','') + ' = output_unsorted[:,'+str(i)+'].reshape(('+str(int(out('history_records')))+','+str(int(out('entries_per_record')))+'))')
+            if debug > 1: 
+                print ('      assembling',out.sliceKeys[int(i)].replace('-', '_').replace('<', '').replace('>', '')) 
             command = 'out.' + out.sliceKeys[int(i)].replace('-', '_').replace('<', '').replace('>', '') + ' = output_unsorted[:,' + str(i) + '].reshape((' + str(int(out.nSlices)) + ',' + str(int(out.nZ)) + '))'
             # print(command)
             exec(command)
@@ -1444,6 +3014,143 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
             out.energy += out('gamma0')
         out.power_z = np.max(out.power, 0)
         out.sliceKeys_used = out.sliceKeys
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     if out('itdp') == True:
         out.s = out('zsep') * out('xlamds') * (out.n - out.n[0])  # np.arange(0,out.nSlices)
@@ -1453,7 +3160,7 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
         out.beam_charge = np.sum(out.I * out.dt)
         out.sn_Imax = np.argmax(out.I)  # slice number with maximum current
         if read_level == 2:
-            if debug > 1:
+            if debug > 0:
                 print ('      calculating spectrum')
             out.spec = abs(np.fft.fft(np.sqrt(np.array(out.power)) * np.exp(1.j * np.array(out.phi_mid)), axis=0))**2 / sqrt(out.nSlices) / (2 * out.leng / out('ncar'))**2 / 1e10
             if debug > 1:
@@ -1465,7 +3172,7 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
             out.freq_ev = np.fft.fftshift(out.freq_ev, axes=0)
             out.freq_lamd = h_eV_s * speed_of_light * 1e9 / out.freq_ev
             out.sliceKeys_used.append('spec')
-
+            
             phase_fix = 1  # the way to display the phase, without constant slope caused by different radiation wavelength from xlamds. phase is set to 0 at maximum power slice.
             if phase_fix:
                 if debug > 0:
@@ -1556,11 +3263,19 @@ def read_out_file_stat(proj_dir, stage, run_inp=[], param_inp=[], debug=1):
     for irun in run_range:
         out_file = proj_dir + 'run_' + str(irun) + '/run.' + str(irun) + '.s' + str(stage) + '.gout'
         if os.path.isfile(out_file):
-            # try:
+            if debug > 0:
+                print ('      reading run', irun)
             outlist[irun] = read_out_file(out_file, read_level=2, debug=1)
             run_range_good.append(irun)
             # except:
     run_range = run_range_good
+    
+    # check if all gout have the same number of slices nSlice and history records nZ
+    for irun in run_range[1:]:
+        if outlist[irun].nSlices != outlist[run_range[0]].nSlices or outlist[irun].nZ != outlist[run_range[0]].nZ:
+            raise ValueError('Non-uniform out objects (run %s)' %(irun))
+    
+    if debug: print(run_range)
 
     if param_inp == []:
         if debug > 1:
@@ -1579,9 +3294,9 @@ def read_out_file_stat(proj_dir, stage, run_inp=[], param_inp=[], debug=1):
                 param_matrix.append(deepcopy(getattr(outlist[irun], param)))
 
         param_matrix = np.array(param_matrix)
-        if ndim(param_matrix) == 3:
+        if np.ndim(param_matrix) == 3:
             param_matrix = np.swapaxes(param_matrix, 0, 2)
-        elif ndim(param_matrix) == 2 and shape(param_matrix)[1] == outlist[irun].nZ:
+        elif np.ndim(param_matrix) == 2 and shape(param_matrix)[1] == outlist[irun].nZ:
             param_matrix = np.swapaxes(param_matrix, 0, 1)[:, np.newaxis, :]
         else:
             pass
@@ -1595,12 +3310,99 @@ def read_out_file_stat(proj_dir, stage, run_inp=[], param_inp=[], debug=1):
     out_stat.f = outlist[irun].freq_lamd
     out_stat.t = outlist[irun].t
     out_stat.dt = outlist[irun].dt
+    
+    out_stat.xlamds=outlist[irun]('xlamds')
+    out_stat.filePath=proj_dir
 
     if debug > 0:
         print('      done in %.2f seconds' % (time.time() - start_time))
     return out_stat
 
+def read_out_file_stat_u(file_tamplate, run_inp=[], param_inp=[], debug=1):
+    '''
+    reads statistical info of Genesis simulations,
+    universal function for non-standard exp. folder structure
+    returns GenStatOutput() object
 
+    file_tamplate = template of the .out file path with # denoting run number
+    run_inp - list of genesis runs to be looked for [0:1000] by default
+    param_inp - list of genesis output parameters to be processed
+    debug - see read_out_file()
+    '''
+    if debug > 0:
+        print ('    reading stat genesis output')
+    start_time = time.time()
+
+    # if proj_dir[-1] != '/':
+        # proj_dir += '/'
+
+    outlist = [GenesisOutput() for i in range(1000)]
+
+    if run_inp == []:
+        run_range = range(1000)
+    else:
+        run_range = run_inp
+
+    run_range_good = []
+
+    for irun in run_range:
+        out_file = file_tamplate.replace('#',str(irun))
+        if os.path.isfile(out_file):
+            if debug > 0:
+                print ('      reading run', irun)
+            outlist[irun] = read_out_file(out_file, read_level=2, debug=1)
+            run_range_good.append(irun)
+            # except:
+    run_range = run_range_good
+    
+    # check if all gout have the same number of slices nSlice and history records nZ
+    for irun in run_range[1:]:
+        if outlist[irun].nSlices != outlist[run_range[0]].nSlices or outlist[irun].nZ != outlist[run_range[0]].nZ:
+            raise ValueError('Non-uniform out objects (run %s)' %(irun))
+    
+    if debug>0: print(run_range)
+
+    if param_inp == []:
+        if debug > 1:
+            print('      ',outlist[run_range[0]].sliceKeys_used)
+        param_range = outlist[run_range[0]].sliceKeys_used
+    else:
+        param_range = param_inp
+
+    out_stat = GenStatOutput()
+    for param in param_range:
+        param_matrix = []
+        for irun in run_range:
+            if not hasattr(outlist[irun], param):
+                continue
+            else:
+                param_matrix.append(deepcopy(getattr(outlist[irun], param)))
+
+        param_matrix = np.array(param_matrix)
+        if np.ndim(param_matrix) == 3:
+            param_matrix = np.swapaxes(param_matrix, 0, 2)
+        elif np.ndim(param_matrix) == 2 and shape(param_matrix)[1] == outlist[irun].nZ:
+            param_matrix = np.swapaxes(param_matrix, 0, 1)[:, np.newaxis, :]
+        else:
+            pass
+        setattr(out_stat, param, param_matrix)
+
+    out_stat.stage = stage
+    out_stat.dir = proj_dir
+    out_stat.run = run_range
+    out_stat.z = outlist[irun].z
+    out_stat.s = outlist[irun].s
+    out_stat.f = outlist[irun].freq_lamd
+    out_stat.t = outlist[irun].t
+    out_stat.dt = outlist[irun].dt
+    
+    out_stat.xlamds=outlist[irun]('xlamds')
+    out_stat.filePath=proj_dir
+
+    if debug > 0:
+        print('      done in %.2f seconds' % (time.time() - start_time))
+    return out_stat
+    
 '''
     DFL
 '''
@@ -1669,7 +3471,27 @@ def read_dfl_file(filePath, Nxy, Lxy=None, zsep=None, xlamds=None, vartype=compl
         if debug > 0:
             print('      done in %.2f sec' % (time.time() - start_time))
 
+
         return dfl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def write_dfl_file(dfl, filePath=None, debug=1):
@@ -2637,7 +4459,7 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=False):
 
             l = float(e.nperiods) * float(e.lperiod)
 
-            undLat += 'AW' + '    ' + str(e.Kx * np.sqrt(0.5)) + '   ' + str((l / unit)) + '  ' + str(((pos - prevPos - prevLen) / unit)) + '\n'
+            undLat += 'AW' + '    ' + str(e.Kx * np.sqrt(0.5)) + '   ' + str(round(l / unit, 2)) + '  ' + str(round((pos - prevPos - prevLen) / unit, 2)) + '\n'
 
             if debug:
                 print ('added und ' + 'pos=' + str(pos) + ' prevPos=' + str(prevPos) + ' prevLen=' + str(prevLen))
@@ -2646,7 +4468,7 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=False):
                 #drifts.append([str( (pos - prevPos ) / unit ), str(prevLen / unit)])
                 if debug:
                     print ('appending drift' + str((prevLen) / unit))
-                driftLat += 'AD' + '    ' + str(e.Kx * np.sqrt(0.5)) + '   ' + str(((pos - prevPos - prevLen) / unit)) + '  ' + str((prevLen / unit)) + '\n'
+                driftLat += 'AD' + '    ' + str(e.Kx * np.sqrt(0.5)) + '   ' + str(round((pos - prevPos - prevLen) / unit, 2)) + '  ' + str(round(prevLen / unit, 2)) + '\n'
 
             prevPos = pos
             prevLen = l
@@ -2661,7 +4483,7 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=False):
             k = float(energy) * float(e.k1) / speed_of_light * 1e9
             if debug:
                 print ('DEBUG' + str(e.k1) + ' ' + str(k) + ' ' + str(energy))
-            quadLat += 'QF' + '    ' + str(k) + '   ' + str((e.l / unit)) + '  ' + str(((pos - prevPosQ - prevLenQ) / unit)) + '\n'
+            quadLat += 'QF' + '    ' + str(k) + '   ' + str(round(e.l / unit, 2)) + '  ' + str(round((pos - prevPosQ - prevLenQ) / unit, 2)) + '\n'
             prevPosQ = pos
             prevLenQ = l
             # pass
@@ -2684,11 +4506,60 @@ def next_run_id(dir='.'):
 
 ''' 
    standrard post-processing functions
+
 '''
 
 '''
     remove?
 '''
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def get_spectrum(power, phase, smax=1.0):
@@ -2739,6 +4610,16 @@ def get_power_z(g):
     return power_z / nslice
 
 
+
+
+
+
+
+
+
+
+
+
 def transform_beam_file(beam_file=None, out_file='tmp.beam', s=None, transform=[[25.0, 0.1], [21.0, -0.1]], energy_scale=1, energy_new=None, emit_scale=1, n_interp=None):
     if beam_file.__class__ == str:
         beam = read_beam_file(beam_file)
@@ -2746,6 +4627,8 @@ def transform_beam_file(beam_file=None, out_file='tmp.beam', s=None, transform=[
         beam = beam_file
     else:
         print('Wrong beam input!')
+
+
 
     zmax, Imax = peaks(beam.z, beam.I, n=1)
     if s == None:
@@ -2961,11 +4844,21 @@ def test_beam_transform(beta1=10.0, alpha1=-0.1, beta2=20, alpha2=2.2):
     plt.plot([0, u2[0, 0] * np.sqrt(l2[0])], [0, u2[1, 0] * np.sqrt(l2[0])], 'b--', lw=3)
     plt.plot([0, u2[0, 1] * np.sqrt(l2[1])], [0, u2[1, 1] * np.sqrt(l2[1])], 'b--', lw=3)
 
+
+
+
+
+
+
+
+
+
     z1 = M * u1[:, 0] * sqrt(l1[0])
     z2 = M * u1[:, 1] * sqrt(l1[1])
 
     plt.plot([0, z1[0]], [0, z1[1]], color='#000000', lw=5, alpha=0.2)
     plt.plot([0, z2[0]], [0, z2[1]], color='#000000', lw=5, alpha=0.2)
+
 
     plt.show()
 

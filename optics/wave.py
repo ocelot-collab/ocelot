@@ -11,6 +11,7 @@ import scipy.integrate as integrate
 #import matplotlib.animation as animation
 
 from ocelot.optics.elements import *
+from ocelot.common.globals import *
 
 
 class TransferFunction(object):
@@ -18,9 +19,13 @@ class TransferFunction(object):
     data container for Fourier Optics transfer functions
     '''
     def __init__(self):
-        self.k = None
-        self.tr = None
-        self.ref = None
+        self.k = None # wave vector - 2*pi/wavelength
+        self.tr = None # complex value of transmission - modulus*exp(-i*phase)
+        self.ref = None # .. of reflection
+    
+    def ev(self):
+        return self.k* h_eV_s/2/pi * speed_of_light
+    
     def __mul__(self, f):
         if f.__class__ == TransferFunction:
             f2 = TransferFunction()

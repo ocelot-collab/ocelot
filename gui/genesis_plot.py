@@ -24,9 +24,11 @@ from numpy import *
 from ocelot.adaptors.genesis import *
 from ocelot.common.globals import *  # import of constants like "h_eV_s" and
 from ocelot.common.math_op import *  # import of mathematical functions
+from ocelot.utils.xfel_utils import *
 
 # from pylab import rc, rcParams #tmp
 from matplotlib import rc, rcParams
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 fntsz = 4
 params = {'backend': 'ps', 'axes.labelsize': 3 * fntsz, 'font.size': 3 * fntsz, 'legend.fontsize': 4 * fntsz, 'xtick.labelsize': 4 * fntsz,  'ytick.labelsize': 4 * fntsz, 'text.usetex': False}
@@ -56,7 +58,7 @@ def plot_gen_out_all_paral(exp_dir, stage=1, savefig='png', debug=1):
     # plot_gen_stat(proj_dir=exp_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int','energy','r_size_weighted'], z_param_inp=[], dfl_param_inp=[], s_inp=['max'], z_inp=[0,'end'], savefig=1, saveval=1, showfig=0, debug=0)
 
 
-def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1, 1, 6.05, 1, 0, 0, 0, 0, 0), vartype_dfl=complex128, debug=1):
+def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1, 1, 6.05, 1, 0, 0, 0, 0, 0, 1), vartype_dfl=complex128, debug=1):
     '''
     plots all possible output from the genesis output
     handle is either:
@@ -93,14 +95,14 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
         savefig = 'png'
 
     if choice == 'all':
-        choice = (1, 1, 1, 1, 6.05, 1, 1, 1, 1, 1, 1)
+        choice = (1, 1, 1, 1, 6.05, 1, 1, 1, 1, 1, 1, 1)
     elif choice == 'gen':
-        choice = (1, 1, 1, 1, 6.05, 0, 0, 0, 0, 0, 0)
+        choice = (1, 1, 1, 1, 6.05, 0, 0, 0, 0, 0, 0, 0)
 
-    if len(choice) > 11:
-        choice = choice[:11]
-    elif len(choice) < 11:
-        choice += tuple((zeros(11 - len(choice)).astype(int)))
+    if len(choice) > 12:
+        choice = choice[:12]
+    elif len(choice) < 12:
+        choice += tuple((zeros(12 - len(choice)).astype(int)))
 
     if os.path.isdir(str(handle)):
         handles = []
@@ -130,6 +132,10 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
             if choice[4] != 0:
                 for z in arange(choice[4], max(handle.z), choice[4]):
                     plot_gen_out_z(handle, z=z, savefig=savefig, debug=debug)
+            if choice[11]:
+                W=wigner_out(handle)
+                plot_wigner(W, savefig=savefig, debug=debug)
+                
         if os.path.isfile(handle.filePath + '.dfl') and any(choice[5:8]):
             dfl = read_dfl_file_out(handle, debug=debug)
             if dfl.Nz()==0:
@@ -143,6 +149,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
                     f7 = plot_dfl(dfl, far_field=0, freq_domain=1, auto_zoom=0, savefig=savefig, debug=debug)
                 if choice[8]:
                     f8 = plot_dfl(dfl, far_field=1, freq_domain=1, auto_zoom=0, savefig=savefig, debug=debug)
+        
         if os.path.isfile(handle.filePath + '.dpa') and (choice[9] or choice[10]) and handle('itdp') == True:
             dpa = read_dpa_file_out(handle, debug=debug)
             if size(dpa.ph)==0:
@@ -154,7 +161,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
                 if choice[10]:
                     edist = dpa2edist(handle, dpa, num_part=5e4, smear=0, debug=debug)
                     f10 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=(100, 100, 300, 200), debug=debug)
-
+        
     if savefig != False:
         if debug > 0:
             print('    plots recorded to *.' + str(savefig) + ' files')
@@ -638,6 +645,7 @@ def subfig_rad_spec(ax_spectrum, g, legend, log=1):
     spectrum_lamdwidth_std = np.zeros_like(g.z)
     for zz in range(g.nZ):
         # if np.sum(g.spec[:,zz])!=0:
+        #tmp
         try:
             peak = fwhm3(g.spec[:, zz])
             spectrum_lamdwidth_fwhm[zz] = abs(g.freq_lamd[0] - g.freq_lamd[1]) * peak[1] / g.freq_lamd[peak[0]]  # the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
@@ -989,7 +997,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend=True, phase=False, far_fi
             F = dfl_fft_xy(F, debug=debug)
         x = F.scale_x() * 1e6
         y = F.scale_y() * 1e6
-
+        
         unit_xy = r'$\mu$m'
         x_label = 'x [' + unit_xy + ']'
         y_label = 'y [' + unit_xy + ']'
@@ -1007,7 +1015,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend=True, phase=False, far_fi
     yz_proj = F.int_zy()
     xz_proj = F.int_zx()
     z_proj = F.int_z()
-
+    
     dx = abs(x[1] - x[0])
     dy = abs(y[1] - y[0])
 
@@ -1211,7 +1219,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, legend=True, phase=False, far_fi
         return
 
 
-def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int', 'energy', 'r_size_weighted', 'spec', 'error'], z_param_inp=['p_int', 'phi_mid_disp', 'spec', 'bunching'], dfl_param_inp=['dfl_spec'], run_param_inp=['p_int', 'spec', 'energy'], s_inp=['max'], z_inp=['end'], run_s_inp=['max'], run_z_inp=['end'], savefig=1, saveval=1, showfig=0, debug=0):
+def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int', 'energy', 'r_size_weighted', 'spec', 'error'], z_param_inp=['p_int', 'phi_mid_disp', 'spec', 'bunching', 'wigner'], dfl_param_inp=['dfl_spec'], run_param_inp=['p_int', 'spec', 'energy'], s_inp=['max'], z_inp=[0,'end'], run_s_inp=['max'], run_z_inp=['end'], savefig=1, saveval=1, showfig=0, debug=1):
     '''
     The routine for plotting the statistical info of many GENESIS runs
     
@@ -1267,6 +1275,9 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                # except:
                    # print('     could not read '+out_file)
         run_range = run_range_good
+        
+        # if len(run_range)!=0 and debug>0:
+            # print('stage = ', stage)
 
         # check if all gout have the same number of slices nSlice and history records nZ
         for irun in run_range[1:]:
@@ -1302,6 +1313,9 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
         # if s_param_inp==[]:
             # s_param_range=param_range
         # else:
+        
+
+        
         s_param_range = s_param_inp
         if debug > 0:
             print('    processing S parameters ' + str(s_param_range))
@@ -1316,6 +1330,8 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     if not hasattr(outlist[irun], param):
                         continue
                     else:
+                        if debug > 0:
+                            print ('parameter = ', param)
                         param_matrix = copy.deepcopy(getattr(outlist[irun], param))
 
                     if debug > 1:
@@ -1371,6 +1387,22 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
             print('    processing Z parameters ' + str(z_param_range))
         if debug > 1:
             print('      z_inp ' + str(z_inp))
+            
+        if 'wigner' in z_param_range:
+            if debug > 0:
+                print('    processing Wigner')
+                for z_ind in z_inp:
+                    w = np.zeros((outlist[irun].nSlices,outlist[irun].nSlices))
+                    for irun in run_range:
+                        out=outlist[irun]
+                        W=wigner_out(out,z=z_ind,debug=0)
+                        w += W.wig
+                    W.wig= w / len(outlist)
+
+                    W.filePath = proj_dir + 'results' + os.path.sep + 'stage_' + str(stage) + '__WIG__' + str(z_ind) + '__m'
+                    wig_fig_name = 'stage_' + str(stage) + '__WIG__' + str(z_ind) + '__m'
+                    plot_wigner(W, z=z_ind, p_units='um', s_units='eV', fig_name=wig_fig_name, savefig=savefig, debug=0)
+
 
         for param in z_param_range:
             for z_ind in z_inp:
@@ -1380,6 +1412,8 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     if not hasattr(outlist[irun], param):
                         break
                     else:
+                        if debug > 0:
+                            print ('parameter = ', param)
                         param_matrix = copy.deepcopy(getattr(outlist[irun], param))
 
                     if debug > 1:
@@ -1458,6 +1492,8 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                         if not hasattr(outlist[irun], param):
                             break
                         else:
+                            if debug > 0:
+                                print ('parameter = ', param)
                             param_matrix = copy.deepcopy(getattr(outlist[irun], param))
                             if debug > 1:
                                 print('param', param, 'irun', irun, 'z_ind', z_ind, 's_ind', s_ind)
@@ -1868,6 +1904,8 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=False, sc
 
     if scatter:
         ax_curr.set_xlim([np.amin(s), np.amax(s)])
+        
+    ax_curr.set_ylim(ymin=0)
 
     fig.subplots_adjust(wspace=0.4, hspace=0.4)
 
@@ -1989,6 +2027,134 @@ def plot_beam(beam, figsize=3, showfig=False, savefig=False, fig=None, plot_xy=N
     else:
         plt.close('all')
 
+def plot_wigner(wig_or_out, z=np.inf, p_units='um', s_units='nm', x_lim=(None,None), y_lim=(None,None), downsample=1, cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=False, debug=1):
+    '''
+    plots wigner distribution (WD) with marginals
+    wig_or_out -  may be WignerDistribution() or GenesisOutput() object
+    z - (if isinstance(wig_or_out, GenesisOutput)) location at which WD will be calculated
+    p_units - (um or fs) - units to display power scale
+    s_units - (nm or eV) - units to display spectrum scale
+    x_lim, y_lim - scaling limits in given units, (min,max) or [min,max], e.g: (None,6)
+    abs_value - if True, absolute value of WD is displayed (usually, it has both positive and negative values)
+    cmap - colormar if abs_value==False (http://matplotlib.org/users/colormaps.html)
+    '''
+    if showfig == False and savefig == False:
+        return
+    
+    if debug > 0:
+        print('    plotting Wigner distribution')
+        
+    if isinstance(wig_or_out, GenesisOutput):
+        W=wigner_out(wig_or_out,z)
+    elif isinstance(wig_or_out, WignerDistribution):
+        W=wig_or_out
+    else:
+        raise ValueError('Unknown object for Wigner plot')
+    
+    
+    if fig_name is None:
+        if W.fileName() is '':
+            fig_text = 'Wigner distribution'
+        else:
+            fig_text = 'Wigner distribution ' + W.fileName()
+    else:
+        fig_text = fig_name
+    if W.z!=None:
+        fig_text += ' ' + str(W.z) + 'm'
+        
+    fig = plt.figure(fig_text)
+    plt.clf()
+    fig.set_size_inches((18, 13), forward=True)
+        
+    power=W.power()
+    spec=W.spectrum()
+    wigner=W.wig
+    wigner_lim=np.amax(abs(W.wig))
+    
+    if p_units=='fs':
+        power_scale=W.s/speed_of_light*1e15
+        p_label_txt='time [fs]'
+    else:
+        power_scale=W.s*1e6
+        p_label_txt='s [$\mu$m]'
+    
+    if s_units=='eV':
+        spec_scale=speed_of_light*h_eV_s*1e9/W.freq_lamd
+        f_label_txt='ph.energy [eV]'
+    else:
+        spec_scale=W.freq_lamd
+        f_label_txt='wavelength [nm]'
+    
+    # definitions for the axes
+    left, width = 0.18, 0.57
+    bottom, height = 0.14, 0.55
+    left_h = left + width + 0.02 - 0.02
+    bottom_h = bottom + height + 0.02 - 0.02
+    
+
+    rect_scatter = [left, bottom, width, height]
+    rect_histx = [left, bottom_h, width, 0.2]
+    rect_histy = [left_h, bottom, 0.15, height]
+    
+    axScatter = plt.axes(rect_scatter)
+    axHistx = plt.axes(rect_histx, sharex=axScatter)
+    axHisty = plt.axes(rect_histy, sharey=axScatter)
+    
+    if abs_value:
+        axScatter.pcolormesh(power_scale, spec_scale, abs(wigner)) #change
+        axScatter.text(0.02, 0.98, r'$W_{max}$= %.2e' % (np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes, color='w')
+    else:
+        # cmap='RdBu_r'
+        # axScatter.imshow(wigner, cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
+        axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], wigner[::downsample,::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
+        axScatter.text(0.02, 0.98, r'$W_{max}$= %.2e' % (np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes)#fontsize=12,
+            
+    axHistx.plot(power_scale,power)
+    axHistx.text(0.02, 0.95, r'E= %.2e J' % (W.energy()), horizontalalignment='left', verticalalignment='top', transform=axHistx.transAxes)#fontsize=12,
+    axHistx.set_ylabel('power [W]')
+
+    axHisty.plot(spec,spec_scale)
+    axHisty.set_xlabel('spectrum [a.u.]')
+    
+    axScatter.axis('tight')
+    axScatter.set_xlabel(p_label_txt)
+    axScatter.set_ylabel(f_label_txt)
+
+    axHistx.set_ylim(ymin=0)
+    axHisty.set_xlim(xmin=0)
+
+    for tl in axHistx.get_xticklabels():
+        tl.set_visible(False)
+
+    for tl in axHisty.get_yticklabels():
+        tl.set_visible(False)
+
+    
+    axHistx.yaxis.major.locator.set_params(nbins=4)
+    axHisty.xaxis.major.locator.set_params(nbins=2)
+    
+    
+    axScatter.set_xlim(x_lim[0], x_lim[1])
+    axScatter.set_ylim(y_lim[0], y_lim[1])
+    
+    if savefig != False:
+        if savefig == True:
+            savefig = 'png'
+        if W.z is None:
+            fig.savefig(W.filePath + '_wig.' + str(savefig), format=savefig)
+        else:
+            fig.savefig(W.filePath + '_wig_' + str(W.z) + 'm.' + str(savefig), format=savefig)
+
+    plt.draw()
+    
+    if showfig == True:
+        dir_lst = W.filePath.split(os.path.sep)
+        dir = os.path.sep.join(dir_lst[0:-1]) + os.path.sep
+        rcParams["savefig.directory"] = dir
+        plt.show()
+    else:
+        plt.close('all')
+        
 
 '''
 tmp for HXRSS
@@ -2035,18 +2201,20 @@ def read_plot_dump_proj(exp_dir, stage, run_ids, plot_phase=1, showfig=0, savefi
         f_l_int_mean = f_l_int_arr[:, 0]
     # t_domain,t_norm=plt.figure('t_domain_filtered')
     fig_name = 'stage_' + str(stage) + '__FILT__power'
-    t_domain = plt.figure(fig_name)
+    t_domain = plt.figure(fig_name,figsize=(15,7))
     ax1 = t_domain.add_subplot(2 + plot_phase, 1, 1)
     pulse_average_pos = np.sum(t_l_scale * t_l_int_mean) / np.sum(t_l_int_mean)
     ax1.plot(t_l_scale - pulse_average_pos, t_l_int_arr, '0.5')
     ax1.plot(t_l_scale - pulse_average_pos, t_l_int_mean, 'k', linewidth=1.5)
     ax1.plot([0, 0], [0, np.max(t_l_int_arr)], 'r')
+    ax1.grid(True)
     plt.ylabel(r'$P$ [W]')
 
     ax2 = t_domain.add_subplot(2 + plot_phase, 1, 2, sharex=ax1)
     ax2.semilogy(t_l_scale - pulse_average_pos, t_l_int_arr, '0.5')
     ax2.semilogy(t_l_scale - pulse_average_pos, t_l_int_mean, 'k', linewidth=1.5)
     ax2.plot([0, 0], [np.min(t_l_int_arr), np.max(t_l_int_arr)], 'r')
+    ax2.grid(True)
     plt.ylabel(r'$P$ [W]')
 
     if plot_phase:
@@ -2071,10 +2239,11 @@ def read_plot_dump_proj(exp_dir, stage, run_ids, plot_phase=1, showfig=0, savefi
         plt.close('all')
 
     fig_name = 'stage_' + str(stage) + '__FILT__spectrum'
-    f_domain = plt.figure(fig_name)
+    f_domain = plt.figure(fig_name,figsize=(15,7))
     ax1 = f_domain.add_subplot(2, 1, 1)
     ax1.plot(h_eV_s * speed_of_light / f_l_scale, f_l_int_arr, '0.5')
     ax1.plot(h_eV_s * speed_of_light / f_l_scale, f_l_int_mean, 'k', linewidth=1.5)
+    ax1.grid(True)
 
     plt.ylabel(r'$P(\lambda)$ [a.u.]')
     ax2 = f_domain.add_subplot(2, 1, 2, sharex=ax1)
@@ -2083,6 +2252,7 @@ def read_plot_dump_proj(exp_dir, stage, run_ids, plot_phase=1, showfig=0, savefi
     ax2.plot(h_eV_s * speed_of_light / f_l_scale, f_l_ftlt_abs, 'r')
     ax2_phase = ax2.twinx()
     ax2_phase.plot(h_eV_s * speed_of_light / f_l_scale, f_l_ftlt_ang, 'r--')
+    ax2.grid(True)
     plt.xlabel(r'$E$ [eV]')
     # plt.ylabel(r'$Transm$')
     # ax[1].xlabel(r'$E$ [eV]')

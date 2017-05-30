@@ -4,36 +4,37 @@ import datetime, time
 import threading
 
 
-class Graph():
+class ParetoPlot():
 
     def __init__(self):
-         
-        self.work = False
+       
+       self.work = False
 
-        self.limx = [0.0, 1.0]
-        self.limy = [0.0, 1.0]
-        self.file = 'moga_plot.dat'
+       self.limx = None
+       self.limy = None
+       self.file = 'moga.dat'
 
-        self.x = []
-        self.y = []
-        self.xnd = []
-        self.ynd = []
+       self.x = []
+       self.y = []
+       self.xnd = []
+       self.ynd = []
 
-        self.title = ''
+       self.title = ''
+       self.xlabel = 'x variable'
+       self.ylabel = 'y variable'
 
-        self.fig, self.ax = plt.subplots()
-        self.lineF, = self.ax.plot(self.x, self.y, 'ro', ms=3)
-        self.lineND, = self.ax.plot(self.xnd, self.ynd, 'bo', ms=4, alpha=0.75)
-         
-        self.ax.grid(True)
+       self.fig, self.ax = plt.subplots()
+       self.lineF, = self.ax.plot(self.x, self.y, 'ro', ms=3)
+       self.lineND, = self.ax.plot(self.xnd, self.ynd, 'bo', ms=4, alpha=0.75)
+       self.ax.set_xlabel("f1")
+       self.ax.set_xlabel("f2")
+       self.ax.grid(True)
 
-        self.update_time = 1000
-
+       self.update_time = 1000
 
     def get_data(self):
-            
+        
         while(self.work):
-
             t_start = datetime.datetime.now()
 
             try:
@@ -51,6 +52,11 @@ class Graph():
                 self.x.append(ind[0])
                 self.y.append(ind[1])
 
+            if self.limx == None:
+                self.limx = [0,max(self.x)]
+            if self.limy == None:
+                self.limy = [0,max(self.y)]
+
             self.xnd = []
             self.ynd = []
             for ind in data_file[2]:
@@ -67,6 +73,12 @@ class Graph():
 
         plt.title(self.title)
 
+        self.ax.set_xlim(self.limx)
+        self.ax.set_ylim(self.limy)
+
+        self.ax.set_xlabel(self.xlabel)
+        self.ax.set_ylabel(self.ylabel)
+
         self.lineF.set_data(self.x, self.y)
         self.lineND.set_data(self.xnd, self.ynd)
         self.fig.canvas.draw()
@@ -74,14 +86,12 @@ class Graph():
 
 
     def run(self):
-            
-        self.work = True
 
-        self.ax.set_xlim(self.limx)
-        self.ax.set_ylim(self.limy)
+        self.work = True
 
         thread = threading.Thread(target=self.get_data)
         thread.start()
+
 
         timer = self.fig.canvas.new_timer(interval=self.update_time)
         timer.add_callback(self.plot)
@@ -93,9 +103,8 @@ class Graph():
 
 
 if __name__ == "__main__":
-
-    pic = Graph()
-    pic.limx = [0.0, 100.0e-9]
-    pic.limy = [0.0, 5.0e-3]
-    pic.file = "../test/siberia2/moga_plot.dat"
+    pic = ParetoPlot()
+    pic.limx = [0.0, 20.0]
+    pic.limy = [0.0, 10.0e-3]
+    pic.file ="../test/moga.dat"
     pic.run()

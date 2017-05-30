@@ -48,15 +48,17 @@ cells = {}
 lattice_unit_cells['NaCl'] = (np.array([5.6404*A, 0, 0]), np.array([0, 5.6404*A, 0]), np.array([0, 0, 5.6404*A]))
 
 lattice_unit_cells['Si'] = (np.array([5.43*A, 0, 0]), np.array([0, 5.43*A, 0]), np.array([0, 0, 5.43*A]))
-cells['Si'] =(('C',[0,0,0]),('C',[0.5,0.5,0]),('C',[0.5,0,0.5]),('C',[0,0.5,0.5]),
-              ('C',[0.25,0.25,0.25]),('C',[0.75,0.25,0.75]),('C',[0.25,0.75,0.75]),('C',[0.75,0.75,0.25]))
+#error?
+#cells['Si'] =(('C',[0,0,0]),('C',[0.5,0.5,0]),('C',[0.5,0,0.5]),('C',[0,0.5,0.5]),
+#              ('C',[0.25,0.25,0.25]),('C',[0.75,0.25,0.75]),('C',[0.25,0.75,0.75]),('C',[0.75,0.75,0.25])) 
 
 #diamond
 lattice_unit_cells['C'] = (np.array([3.567*A, 0, 0]), np.array([0, 3.567*A, 0]), np.array([0, 0, 3.567*A]))
 cells['C'] =(('C',[0,0,0]),('C',[0.5,0.5,0]),('C',[0.5,0,0.5]),('C',[0,0.5,0.5]),
                      ('C',[0.25,0.25,0.25]),('C',[0.75,0.25,0.75]),('C',[0.25,0.75,0.75]),('C',[0.75,0.75,0.25]))
 
-
+lattice_unit_cells['Ge'] = (np.array([5.658*A, 0, 0]), np.array([0, 5.658*A, 0]), np.array([0, 0, 5.658*A]))
+                     
 class CrystalLattice():
     def __init__(self, element_name):
         self.element_name = element_name
@@ -119,51 +121,51 @@ class CrystalStructureFactors():
 def load_stucture_factors(file_name):
     import pickle
     #sys.modules[]
-    #print 'im in module', __name__
-    #print 'file ', sys.modules[__name__].__file__
+    #print ('im in module', __name__)
+    #print ('file ', sys.modules[__name__].__file__)
     dir_name = os.path.dirname(sys.modules[__name__].__file__)
     #print 'dir ', dir_name 
     abs_file_name = os.path.join(dir_name, 'data', file_name)
-    print 'abs path ', abs_file_name
+    print ('abs path ', abs_file_name)
     cdata = pickle.load(open(abs_file_name, 'rb'))
     return cdata
 
 def save_stucture_factors(cdata, file_name):
     import pickle
-    print 'saving structure factors to', file_name
+    print ('saving structure factors to', file_name)
     pickle.dump(cdata, open(file_name, 'wb'))
 
 
 def F_hkl(cryst, ref_idx, lamb, temp):
     
-    print 'calculating Fhkl', lamb, cryst.lattice.element_name, ref_idx
+    print ('calculating Fhkl', lamb, cryst.lattice.element_name, ref_idx)
     
     file_name = cryst.lattice.element_name + str(ref_idx[0]) + str(ref_idx[1]) + str(ref_idx[2]) + '.dat'
     
     target_ev = 2*pi * hbar * c / lamb
     
-    print 'reading file_name', file_name
+    print ('reading file_name', file_name)
     
     cdata = load_stucture_factors(file_name)
     
     try:
         cdata = load_stucture_factors(file_name)
     except:
-        print 'form factor data not found!!!'
+        print ('form factor data not found!!!')
         sys.exit(0)
         return 0.0, 0.0, 0.0
     
-    print 'searching ', target_ev
+    print ('searching ', target_ev)
 
     if target_ev < cdata.ev[0] or target_ev > cdata.ev[-1]:
-        print 'photon wavelength not covered in data'
+        print ('photon wavelength not covered in data')
         return 0.0, 0.0, 0.0
         
 
     de = cdata.ev[1] - cdata.ev[0]
     i_e = int( (target_ev - cdata.ev[0]) / de )
 
-    print 'using ', cdata.ev[i_e]
+    print ('using ', cdata.ev[i_e])
 
     return cdata.f000[i_e], cdata.fh[i_e], cdata.fhbar[i_e]
 
@@ -174,9 +176,9 @@ def find_bragg(lambd, lattice, ord_max):
     d = {}
     phi = {}
     
-    for h in xrange(0, ord_max+1):
-        for k in xrange(0, ord_max+1):
-            for l in xrange(0, ord_max+1):
+    for h in range(0, ord_max+1):
+        for k in range(0, ord_max+1):
+            for l in range(0, ord_max+1):
                 
                 if h == k == l == 0:
                     continue
@@ -229,7 +231,7 @@ def plot_bragg_reflections(idc = [(0,0,1), (1,1,1), (2,1,1), (3,1,1), (1,2,3), (
     
 def plot_scattering_factors():
     f = StructureFactorFactory().atomic_structure_factor('C')
-    print f(2)
+    print (f(2))
     
 
 def eta(Dtheta, cryst):
@@ -360,20 +362,22 @@ def transmissivity_reflectivity(klist, cryst):
     return t, r
 
 
-def get_crystal_filter(cryst, ray, nk=10, ref_idx = None, k = None):
+def get_crystal_filter(cryst, ev_seed, nk=10000, k = None,n_width = 20):
     #import crystal as cry
-
-
-    kb     = 2*np.pi/ray.lamb
+    #n_width - number of Darwin widths
+    lamb=h_eV_s*speed_of_light/ev_seed
+    ref_idx=cryst.ref_idx
+    print(ref_idx)
+    kb     = 2*np.pi/lamb
     
-    H, d, phi = find_bragg(lambd = ray.lamb, lattice=cryst.lattice, ord_max = 15)
+    H, d, phi = find_bragg(lambd = lamb, lattice=cryst.lattice, ord_max = 15)
     
     polarization = 'sigma'
 
     dhkl = d[ref_idx]
     
     '''
-    print 'lamb=', ray.lamb
+    print 'lamb=', lamb
     print 'thick=', cryst.size[2]
     print 'd_hkl',d[ref_idx]
     print 'theta bragg', phi[ref_idx]
@@ -392,17 +396,18 @@ def get_crystal_filter(cryst, ray, nk=10, ref_idx = None, k = None):
     gammah = np.cos(psih)
     gamma  = gammah/gamma0
         
-    f0, fh, fmh =  F_hkl(cryst = cryst, ref_idx = ref_idx, lamb=ray.lamb, temp = 300*K)
+    f0, fh, fmh =  F_hkl(cryst = cryst, ref_idx = ref_idx, lamb=lamb, temp = 300*K)
     
-    print 'structure factors', f0, fh, fmh
+    print ('Bragg angle [rad]', thetaB)
+    print ('structure factors', f0, fh, fmh)
     #plt.figure()
 
-    n_width = 7 #number of Darwin widths
+     
         
     vcell = ( dhkl * np.sqrt( np.dot(ref_idx,ref_idx) ) ) **3
         
-    delta    = r_el * np.abs(c_pol) * ray.lamb**2 * np.sqrt( np.abs(gamma)*fh*fmh ) / ( np.pi * vcell * np.sin(2*thetaB) )
-    mid_TH = np.real( r_el * ray.lamb**2 * f0 * (1-gamma) / (2*np.pi * vcell * np.sin(2*thetaB)) )
+    delta    = r_el * np.abs(c_pol) * lamb**2 * np.sqrt( np.abs(gamma)*fh*fmh ) / ( np.pi * vcell * np.sin(2*thetaB) )
+    mid_TH = np.real( r_el * lamb**2 * f0 * (1-gamma) / (2*np.pi * vcell * np.sin(2*thetaB)) )
     mid_k  = kb / (- mid_TH * 1/np.tan(thetaB) + 1 )    
     dk  =  ( -2*kb*np.sin(thetaB) + np.sqrt(16*mid_k**2 * np.real(delta)**2 * np.cos(thetaB)**2 + 4*kb**2 * np.sin(thetaB)**2) ) / ( 2 * np.real(delta) * np.cos(thetaB) )
     
@@ -413,7 +418,7 @@ def get_crystal_filter(cryst, ray, nk=10, ref_idx = None, k = None):
         k = np.linspace(ki, kf, nk)    
         
     
-    cryst.lamb = ray.lamb
+    cryst.lamb = lamb
     cryst.kb = kb
     cryst.thetaB = thetaB
     cryst.gamma = gamma
@@ -421,19 +426,18 @@ def get_crystal_filter(cryst, ray, nk=10, ref_idx = None, k = None):
     cryst.gammah = gammah
     cryst.c_pol = c_pol
     
-    cryst.chi0  = - ( r_el * ray.lamb**2 * f0  ) / ( np.pi * vcell )
-    cryst.chih  = - ( r_el * ray.lamb**2 * fh  ) / ( np.pi * vcell )
-    cryst.chimh = - ( r_el * ray.lamb**2 * fmh ) / ( np.pi * vcell )
-    cryst.pl = np.pi * vcell * np.sqrt( gamma0 * np.abs(gammah) ) / ( r_el * ray.lamb * np.abs(c_pol) * np.sqrt( fh*fmh ) )
+    cryst.chi0  = - ( r_el * lamb**2 * f0  ) / ( np.pi * vcell )
+    cryst.chih  = - ( r_el * lamb**2 * fh  ) / ( np.pi * vcell )
+    cryst.chimh = - ( r_el * lamb**2 * fmh ) / ( np.pi * vcell )
+    cryst.pl = np.pi * vcell * np.sqrt( gamma0 * np.abs(gammah) ) / ( r_el * lamb * np.abs(c_pol) * np.sqrt( fh*fmh ) )
     
     f = TransferFunction()
     
     f.tr, f.ref = transmissivity_reflectivity(k, cryst)    
     
-    f.k = k    
-    f.ev = k * hbar * c
-    
-    return f 
+    f.k = k
+    f.thetaB=thetaB
+    return f
 
 
 

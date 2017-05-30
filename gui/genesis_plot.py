@@ -136,8 +136,11 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
                 for z in arange(choice[4], max(handle.z), choice[4]):
                     plot_gen_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug)
             if choice[11]:
-                W=wigner_out(handle)
-                plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug)
+                try:
+                    W=wigner_out(handle)
+                    plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug)
+                except:
+                    pass
             if choice[12]:
                 try:
                     plot_dpa_bucket_out(handle,scatter=0,slice_pos='max_P',repeat=3, showfig=showfig, savefig=savefig, cmap='jet')
@@ -1061,7 +1064,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap='jet', legend=True, phase=F
     ax_int.set_title(xy_title, fontsize=15)
     ax_int.set_xlabel(r'' + x_label)
     ax_int.set_ylabel(y_label)
-    if len(z) > 1 and text_present:
+    if size(z) > 1 and text_present:
         ax_int.text(0.01, 0.01, r'$E_{p}$=%.2e J' % (E_pulse), horizontalalignment='left', verticalalignment='bottom', fontsize=12, color='white', transform=ax_int.transAxes)
 
     if phase == True:
@@ -1970,12 +1973,14 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
         ax_se.set_xlabel(s_label)
         ax_se.set_ylabel('E + ' + str(energy_av) + ' [MeV]')
     else:  # elif beam_E_plot=='gamma':
+        energy = edist.g
+        energy_av = int(mean(energy))
         if scatter:
-            ax_se.scatter(s, edist.g, marker='.')
+            ax_se.scatter(s, energy - energy_av, marker='.')
         else:
-            ax_se.hist2d(s, edist.g, [bins[2], bins[3]], cmin=cmin, cmap=cmap)
+            ax_se.hist2d(s, energy - energy_av, [bins[2], bins[3]], cmin=cmin, cmap=cmap)
         ax_se.set_xlabel(s_label)
-        ax_se.set_ylabel('$\gamma$')
+        ax_se.set_ylabel('$\gamma$ + ' + str(energy_av))
 
     if plot_xy_s:
         ax_xs = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 4 + plot_x_y, sharex=ax_curr)
@@ -2057,35 +2062,40 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
     if fig == None:
         fig = plt.figure()
     fig.clf()
+    
+    g0 = np.mean(beam.g0).astype(int) #mean
+    g0_dev = beam.g0 - g0 #deviation from mean
 
     fig.set_size_inches((4 * figsize, (3 + plot_xy) * figsize), forward=True)
     ax = fig.add_subplot(2 + plot_xy, 2, 1)
     plt.grid(True)
-    ax.set_xlabel(r'$\mu m$')
+    ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
     p1, = plt.plot(1.e6 * np.array(beam.z), beam.I, 'r', lw=3)
-    plt.plot(1.e6 * beam.z[beam.idx_max], beam.I[beam.idx_max], 'bs')
-    ax.set_ylim(ymin=0)
-    ax = ax.twinx()
     
-
-    p2, = plt.plot(1.e6 * np.array(beam.z), 1.e-3 * np.array(beam.eloss), 'g', lw=3)
-
-    ax.legend([p1, p2], [r'$I [A]$', r'Wake $[KV/m]$'], fontsize=fontsize, loc='best')
+    ax.set_ylim(ymin=0)
+    
+    if hasattr(beam,'eloss'):
+        ax = ax.twinx()
+        p2, = plt.plot(1.e6 * np.array(beam.z), 1.e-3 * np.array(beam.eloss), 'g', lw=3)
+        ax.legend([p1, p2], [r'$I [A]$', r'Wake $[KV/m]$'], fontsize=fontsize, loc='best')
+    else:
+        ax.legend([r'$I [A]$'], fontsize=fontsize, loc='best')
+    plt.plot(1.e6 * beam.z[beam.idx_max], beam.I[beam.idx_max], 'bs')
     # ax.set_xlim([np.amin(beam.z),np.amax(beam.x)])
     ax = fig.add_subplot(2 + plot_xy, 2, 2, sharex=ax)
     plt.grid(True)
-    ax.set_xlabel(r'$\mu m$')
+    ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
     #p1,= plt.plot(1.e6 * np.array(beam.z),1.e-3 * np.array(beam.eloss),'r',lw=3)
-    p1, = plt.plot(1.e6 * np.array(beam.z), beam.g0, 'r', lw=3)
-    plt.plot(1.e6 * beam.z[beam.idx_max], beam.g0[beam.idx_max], 'bs')
+    p1, = plt.plot(1.e6 * np.array(beam.z), g0_dev, 'r', lw=3)
+    plt.plot(1.e6 * beam.z[beam.idx_max], g0_dev[beam.idx_max], 'bs')
     ax = ax.twinx()
     p2, = plt.plot(1.e6 * np.array(beam.z), beam.dg, 'g', lw=3)
     plt.plot(1.e6 * beam.z[beam.idx_max], beam.dg[beam.idx_max], 'bs')
-    ax.legend([p1, p2], [r'$\gamma$', r'$\delta \gamma$'], loc='best')
+    ax.legend([p1, p2], [r'$\gamma$ + '+str(g0), r'$\delta \gamma$'], loc='best')
 
     ax = fig.add_subplot(2 + plot_xy, 2, 3, sharex=ax)
     plt.grid(True)
-    ax.set_xlabel(r'$\mu m$')
+    ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
     p1, = plt.plot(1.e6 * np.array(beam.z), beam.ex * 1e6, 'r', lw=3)
     p2, = plt.plot(1.e6 * np.array(beam.z), beam.ey * 1e6, 'g', lw=3)
     plt.plot(1.e6 * beam.z[beam.idx_max], beam.ex[beam.idx_max] * 1e6, 'bs')
@@ -2096,7 +2106,7 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
 
     ax = fig.add_subplot(2 + plot_xy, 2, 4, sharex=ax)
     plt.grid(True)
-    ax.set_xlabel(r'$\mu m$')
+    ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
     p1, = plt.plot(1.e6 * np.array(beam.z), beam.betax, 'r', lw=3)
     p2, = plt.plot(1.e6 * np.array(beam.z), beam.betay, 'g', lw=3)
     plt.plot(1.e6 * beam.z[beam.idx_max], beam.betax[beam.idx_max], 'bs')
@@ -2107,7 +2117,7 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
 
         ax = fig.add_subplot(3, 2, 5, sharex=ax)
         plt.grid(True)
-        ax.set_xlabel(r'$\mu m$')
+        ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
         p1, = plt.plot(1.e6 * np.array(beam.z), 1.e6 * np.array(beam.x), 'r', lw=3)
         p2, = plt.plot(1.e6 * np.array(beam.z), 1.e6 * np.array(beam.y), 'g', lw=3)
 
@@ -2122,7 +2132,7 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
 
         ax = fig.add_subplot(3, 2, 6, sharex=ax)
         plt.grid(True)
-        ax.set_xlabel(r'$\mu m$')
+        ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
         p1, = plt.plot(1.e6 * np.array(beam.z), 1.e6 * np.array(xp), 'r', lw=3)
         p2, = plt.plot(1.e6 * np.array(beam.z), 1.e6 * np.array(yp), 'g', lw=3)
 
@@ -2161,6 +2171,7 @@ def plot_wigner(wig_or_out, z=np.inf, p_units='um', s_units='nm', x_lim=(None,No
     
     if debug > 0:
         print('    plotting Wigner distribution')
+        
         
     if isinstance(wig_or_out, GenesisOutput):
         W=wigner_out(wig_or_out,z)

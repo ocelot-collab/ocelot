@@ -1248,6 +1248,9 @@ def assemble(fileName, remove=1, overwrite=0, ram=1, debug=1):
             # os.remove(fins)
     else:
         for i, n in enumerate(fins):
+            if debug > 1:
+                tot = size(fins)
+                print(i, 'of', tot)
             # if i/N>=index:
                 # sys.stdout.write(str(index)+'%.')
                 # index +=10
@@ -1647,6 +1650,8 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
                     weight = np.ones_like(out.power)
                 out.rad_t_size_weighted = np.average(out.r_size * 1e6, weights=weight, axis=0)
                 out.sliceKeys_used.append('rad_t_size_weighted')
+    else:
+        out.s = [0]
 
     if out('iscan') != 0:
         out.scv = out.I  # scan value
@@ -2318,12 +2323,27 @@ def cut_edist(edist,
     return edist_f
 
 
+def set_edist_energy(edist,E_GeV):
+
+    if not isinstance(edist, GenesisElectronDist):
+        raise ValueError('out is neither GenesisOutput() nor a valid path')
+    
+    edist_out = deepcopy(edist)
+    edist_out.g -= np.mean(edist_out.g)
+    edist_out.g += E_GeV * 1e9 / m_e_eV
+    
+    return edist_out
+    
+    
+    
 def repeat_edist(edist, factor, smear=1):
     '''
     dublicates the GenesisElectronDist() by given factor
     smear - smear new particles by 1e-3 of standard deviation of parameter
     '''
-
+    if not isinstance(edist, GenesisElectronDist):
+        raise ValueError('out is neither GenesisOutput() nor a valid path')
+        
     edist_out = GenesisElectronDist()
     edist_out.filePath = edist.filePath
 

@@ -3,9 +3,9 @@ architecture, releases
 optimizer, x-ray optics
 
 Sergey Tomin sergey.tomin@xfel.eu
-cpbd module, optics functions
-optimizer, SR module, tracking module
-orbit correction module
+cpbd modules, optics functions, CSR,
+tracking module, orbit correction module,
+optimizer, SR module,
 
 Igor Zagorodnov 
 cpbd module, space charge, wakefields

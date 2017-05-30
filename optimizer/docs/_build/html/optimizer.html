@@ -1,0 +1,468 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>optimizer package &#8212; OcelotOptimizer 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="optimizer.GP package" href="optimizer.GP.html" />
+    <link rel="prev" title="optimizer" href="modules.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="optimizer.GP.html" title="optimizer.GP package"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="modules.html" title="optimizer"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">OcelotOptimizer 1.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="modules.html" accesskey="U">optimizer</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="optimizer-package">
+<h1>optimizer package<a class="headerlink" href="#optimizer-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="optimizer.GP.html">optimizer.GP package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="optimizer.GP.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="optimizer.GP.html#module-optimizer.GP.OnlineGP">optimizer.GP.OnlineGP module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="optimizer.GP.html#module-optimizer.GP.bayes_optimization">optimizer.GP.bayes_optimization module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="optimizer.GP.html#module-optimizer.GP.gaussian_process">optimizer.GP.gaussian_process module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="optimizer.GP.html#module-optimizer.GP">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="optimizer.mint.html">optimizer.mint package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="optimizer.mint.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="optimizer.mint.html#module-optimizer.mint.lcls_interface">optimizer.mint.lcls_interface module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="optimizer.mint.html#module-optimizer.mint.mint">optimizer.mint.mint module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="optimizer.mint.html#module-optimizer.mint.obj_function">optimizer.mint.obj_function module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="optimizer.mint.html#module-optimizer.mint.opt_objects">optimizer.mint.opt_objects module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="optimizer.mint.html#module-optimizer.mint.xfel_interface">optimizer.mint.xfel_interface module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="optimizer.mint.html#module-optimizer.mint">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="optimizer.resetpanel.html">optimizer.resetpanel package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="optimizer.resetpanel.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="optimizer.resetpanel.html#module-optimizer.resetpanel.UIresetpanel">optimizer.resetpanel.UIresetpanel module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="optimizer.resetpanel.html#module-optimizer.resetpanel.resetpanel">optimizer.resetpanel.resetpanel module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="optimizer.resetpanel.html#module-optimizer.resetpanel.resetpanelbox">optimizer.resetpanel.resetpanelbox module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="optimizer.resetpanel.html#module-optimizer.resetpanel">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-optimizer.UIOcelotInterface_gen">
+<span id="optimizer-uiocelotinterface-gen-module"></span><h2>optimizer.UIOcelotInterface_gen module<a class="headerlink" href="#module-optimizer.UIOcelotInterface_gen" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="optimizer.UIOcelotInterface_gen.Ui_Form">
+<em class="property">class </em><code class="descclassname">optimizer.UIOcelotInterface_gen.</code><code class="descname">Ui_Form</code><a class="reference internal" href="_modules/optimizer/UIOcelotInterface_gen.html#Ui_Form"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.UIOcelotInterface_gen.Ui_Form" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="optimizer.UIOcelotInterface_gen.Ui_Form.retranslateUi">
+<code class="descname">retranslateUi</code><span class="sig-paren">(</span><em>Form</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/UIOcelotInterface_gen.html#Ui_Form.retranslateUi"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.UIOcelotInterface_gen.Ui_Form.retranslateUi" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="optimizer.UIOcelotInterface_gen.Ui_Form.setupUi">
+<code class="descname">setupUi</code><span class="sig-paren">(</span><em>Form</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/UIOcelotInterface_gen.html#Ui_Form.setupUi"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.UIOcelotInterface_gen.Ui_Form.setupUi" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-optimizer.generic_optim">
+<span id="optimizer-generic-optim-module"></span><h2>optimizer.generic_optim module<a class="headerlink" href="#module-optimizer.generic_optim" title="Permalink to this headline">¶</a></h2>
+<p>This is deep modification of SLAC version of the Ocelot GUI for the European XFEL facility.
+Sergey Tomin, 2017.
+Ocelot GUI, interface for running and testing accelerator optimization methods
+This file primarily contains the code for the UI and GUI
+The scanner classes are contained in an external file, scannerThreads.py
+The resetpanel widget is also contained in a separate module, resetpanel
+Tyler Cope, 2016</p>
+<dl class="class">
+<dt id="optimizer.generic_optim.OcelotInterfaceWindow">
+<em class="property">class </em><code class="descclassname">optimizer.generic_optim.</code><code class="descname">OcelotInterfaceWindow</code><a class="reference internal" href="_modules/optimizer/generic_optim.html#OcelotInterfaceWindow"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.generic_optim.OcelotInterfaceWindow" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">PyQt4.QtGui.QFrame</span></code></p>
+<p>Main class for the GUI application</p>
+<dl class="method">
+<dt id="optimizer.generic_optim.OcelotInterfaceWindow.addPlots">
+<code class="descname">addPlots</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/generic_optim.html#OcelotInterfaceWindow.addPlots"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.generic_optim.OcelotInterfaceWindow.addPlots" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initializes the GUIs plots and labels on startup.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="optimizer.generic_optim.OcelotInterfaceWindow.closeEvent">
+<code class="descname">closeEvent</code><span class="sig-paren">(</span><em>event</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/generic_optim.html#OcelotInterfaceWindow.closeEvent"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.generic_optim.OcelotInterfaceWindow.closeEvent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="optimizer.generic_optim.OcelotInterfaceWindow.create_devices">
+<code class="descname">create_devices</code><span class="sig-paren">(</span><em>pvs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/generic_optim.html#OcelotInterfaceWindow.create_devices"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.generic_optim.OcelotInterfaceWindow.create_devices" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to create devices using only channels (PVs)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>pvs</strong> &#8211; str, device address/channel/PV</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">list of the devices [mint.opt_objects.Device(eid=pv[0]), mint.opt_objects.Device(eid=pv[1]), ... ]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="optimizer.generic_optim.OcelotInterfaceWindow.error_box">
+<code class="descname">error_box</code><span class="sig-paren">(</span><em>message</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/generic_optim.html#OcelotInterfaceWindow.error_box"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.generic_optim.OcelotInterfaceWindow.error_box" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="optimizer.generic_optim.OcelotInterfaceWindow.getPlotData">
+<code class="descname">getPlotData</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/generic_optim.html#OcelotInterfaceWindow.getPlotData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.generic_optim.OcelotInterfaceWindow.getPlotData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Collects data and updates plot on every GUI clock cycle.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="optimizer.generic_optim.OcelotInterfaceWindow.indicate_machine_state">
+<code class="descname">indicate_machine_state</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/generic_optim.html#OcelotInterfaceWindow.indicate_machine_state"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.generic_optim.OcelotInterfaceWindow.indicate_machine_state" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to indicate of the machine status. Red frames around graphics means that machine status is not OK.
+:return:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="optimizer.generic_optim.OcelotInterfaceWindow.randColor">
+<code class="descname">randColor</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/generic_optim.html#OcelotInterfaceWindow.randColor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.generic_optim.OcelotInterfaceWindow.randColor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate random line color for each device plotted.
+:return: QColor object of a random color</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="optimizer.generic_optim.OcelotInterfaceWindow.run_editor">
+<code class="descname">run_editor</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/generic_optim.html#OcelotInterfaceWindow.run_editor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.generic_optim.OcelotInterfaceWindow.run_editor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the editor for edition of the objective function in obj_function.py
+:return:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="optimizer.generic_optim.OcelotInterfaceWindow.save2db">
+<code class="descname">save2db</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/generic_optim.html#OcelotInterfaceWindow.save2db"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.generic_optim.OcelotInterfaceWindow.save2db" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save optimization parameters to the Database</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="optimizer.generic_optim.OcelotInterfaceWindow.scan_finished">
+<code class="descname">scan_finished</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/generic_optim.html#OcelotInterfaceWindow.scan_finished"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.generic_optim.OcelotInterfaceWindow.scan_finished" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="optimizer.generic_optim.OcelotInterfaceWindow.scan_method_select">
+<code class="descname">scan_method_select</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/generic_optim.html#OcelotInterfaceWindow.scan_method_select"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.generic_optim.OcelotInterfaceWindow.scan_method_select" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets scanner method from options panel combo box selection.
+This method executes from the runScan() method, when the UI &#8220;Start Scan&#8221; button is pressed.
+:return: Selected scanner object</p>
+<blockquote>
+<div>These objects are contrained in the scannerThreads.py file</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="optimizer.generic_optim.OcelotInterfaceWindow.setUpMultiPlot">
+<code class="descname">setUpMultiPlot</code><span class="sig-paren">(</span><em>devices</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/generic_optim.html#OcelotInterfaceWindow.setUpMultiPlot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.generic_optim.OcelotInterfaceWindow.setUpMultiPlot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reset plots when a new scan is started.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="optimizer.generic_optim.OcelotInterfaceWindow.set_m_status">
+<code class="descname">set_m_status</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/generic_optim.html#OcelotInterfaceWindow.set_m_status"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.generic_optim.OcelotInterfaceWindow.set_m_status" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to set the MachineStatus method self.is_ok using GUI Alarm channel and limits
+:return: None</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="optimizer.generic_optim.OcelotInterfaceWindow.set_obj_fun">
+<code class="descname">set_obj_fun</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/generic_optim.html#OcelotInterfaceWindow.set_obj_fun"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.generic_optim.OcelotInterfaceWindow.set_obj_fun" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to set objective function from the GUI (channels A,B,C) or reload module obj_function.py</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="optimizer.generic_optim.OcelotInterfaceWindow.start_scan">
+<code class="descname">start_scan</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/generic_optim.html#OcelotInterfaceWindow.start_scan"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.generic_optim.OcelotInterfaceWindow.start_scan" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to start/stop the Optimizer.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="optimizer.generic_optim.customLegend">
+<em class="property">class </em><code class="descclassname">optimizer.generic_optim.</code><code class="descname">customLegend</code><span class="sig-paren">(</span><em>size=None</em>, <em>offset=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/generic_optim.html#customLegend"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.generic_optim.customLegend" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">pyqtgraph.graphicsItems.LegendItem.LegendItem</span></code></p>
+<p>STUFF FOR PG CUSTOM LEGEND (subclassed from pyqtgraph).
+Class responsible for drawing a single item in a LegendItem (sans label).
+This may be subclassed to draw custom graphics in a Legend.</p>
+<dl class="method">
+<dt id="optimizer.generic_optim.customLegend.addItem">
+<code class="descname">addItem</code><span class="sig-paren">(</span><em>item</em>, <em>name</em>, <em>color='CCFF00'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/generic_optim.html#customLegend.addItem"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.generic_optim.customLegend.addItem" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="optimizer.generic_optim.main">
+<code class="descclassname">optimizer.generic_optim.</code><code class="descname">main</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/generic_optim.html#main"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.generic_optim.main" title="Permalink to this definition">¶</a></dt>
+<dd><p>Funciton to start up the main program.
+Slecting a PV parameter set:
+If launched from the command line will take an argument with the filename of a parameter file.
+If no argv[1] is provided, the default list in ./parameters/lclsparams is used.
+Development mode:
+If devmode == False - GUI defaults to normal parameter list, defaults to nelder mead simplex
+if devmode == True  - GUI uses 4 development matlab PVs and loaded settings in the method &#8220;devmode()&#8221;</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-optimizer.gui_main">
+<span id="optimizer-gui-main-module"></span><h2>optimizer.gui_main module<a class="headerlink" href="#module-optimizer.gui_main" title="Permalink to this headline">¶</a></h2>
+<p>Most of GUI logic is placed here.
+S.Tomin, 2017</p>
+<dl class="class">
+<dt id="optimizer.gui_main.MainWindow">
+<em class="property">class </em><code class="descclassname">optimizer.gui_main.</code><code class="descname">MainWindow</code><span class="sig-paren">(</span><em>Form</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/gui_main.html#MainWindow"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.gui_main.MainWindow" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">ocelot.optimizer.UIOcelotInterface_gen.Ui_Form</span></code></p>
+<dl class="method">
+<dt id="optimizer.gui_main.MainWindow.alarm_value">
+<code class="descname">alarm_value</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/gui_main.html#MainWindow.alarm_value"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.gui_main.MainWindow.alarm_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>reading alarm value
+:return:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="optimizer.gui_main.MainWindow.change_state_scipy_setup">
+<code class="descname">change_state_scipy_setup</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/gui_main.html#MainWindow.change_state_scipy_setup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.gui_main.MainWindow.change_state_scipy_setup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to enable/disable &#8220;Scipy Scanner Setup&#8221;. If scipy version &lt; &#8220;0.18&#8221; then QGroup will be disable.
+:return:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="optimizer.gui_main.MainWindow.check_address">
+<code class="descname">check_address</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/gui_main.html#MainWindow.check_address"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.gui_main.MainWindow.check_address" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="optimizer.gui_main.MainWindow.get_hyper_file">
+<code class="descname">get_hyper_file</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/gui_main.html#MainWindow.get_hyper_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.gui_main.MainWindow.get_hyper_file" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="optimizer.gui_main.MainWindow.is_le_addr_ok">
+<code class="descname">is_le_addr_ok</code><span class="sig-paren">(</span><em>line_edit</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/gui_main.html#MainWindow.is_le_addr_ok"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.gui_main.MainWindow.is_le_addr_ok" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="optimizer.gui_main.MainWindow.loadStyleSheet">
+<code class="descname">loadStyleSheet</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/gui_main.html#MainWindow.loadStyleSheet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.gui_main.MainWindow.loadStyleSheet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the dark GUI theme from a css file.
+:return:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="optimizer.gui_main.MainWindow.load_state_from">
+<code class="descname">load_state_from</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/gui_main.html#MainWindow.load_state_from"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.gui_main.MainWindow.load_state_from" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="optimizer.gui_main.MainWindow.logbook">
+<code class="descname">logbook</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/gui_main.html#MainWindow.logbook"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.gui_main.MainWindow.logbook" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to send Optimization parameters + screenshot to eLogboob
+:return:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="optimizer.gui_main.MainWindow.open_help">
+<code class="descname">open_help</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/gui_main.html#MainWindow.open_help"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.gui_main.MainWindow.open_help" title="Permalink to this definition">¶</a></dt>
+<dd><p>method to open the Help in the webbrowser
+:return: None</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="optimizer.gui_main.MainWindow.restore_state">
+<code class="descname">restore_state</code><span class="sig-paren">(</span><em>filename</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/gui_main.html#MainWindow.restore_state"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.gui_main.MainWindow.restore_state" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="optimizer.gui_main.MainWindow.rewrite_default">
+<code class="descname">rewrite_default</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/gui_main.html#MainWindow.rewrite_default"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.gui_main.MainWindow.rewrite_default" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="optimizer.gui_main.MainWindow.save_state">
+<code class="descname">save_state</code><span class="sig-paren">(</span><em>filename</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/gui_main.html#MainWindow.save_state"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.gui_main.MainWindow.save_state" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="optimizer.gui_main.MainWindow.save_state_as">
+<code class="descname">save_state_as</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/gui_main.html#MainWindow.save_state_as"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.gui_main.MainWindow.save_state_as" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="optimizer.gui_main.MainWindow.screenShot">
+<code class="descname">screenShot</code><span class="sig-paren">(</span><em>filename</em>, <em>filetype</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/gui_main.html#MainWindow.screenShot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.gui_main.MainWindow.screenShot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes a screenshot of the whole gui window, saves png and ps images to file
+:param filename: (str) Directory string of where to save the file
+:param filetype: (str) String of the filetype to save
+:return:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="optimizer.gui_main.MainWindow.set_cycle">
+<code class="descname">set_cycle</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/gui_main.html#MainWindow.set_cycle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.gui_main.MainWindow.set_cycle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Select time for objective method data collection time.
+Scanner will wait this long to collect new data.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="optimizer.gui_main.MainWindow.use_predef_fun">
+<code class="descname">use_predef_fun</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/gui_main.html#MainWindow.use_predef_fun"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.gui_main.MainWindow.use_predef_fun" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="optimizer.gui_main.send_to_desy_elog">
+<code class="descclassname">optimizer.gui_main.</code><code class="descname">send_to_desy_elog</code><span class="sig-paren">(</span><em>author</em>, <em>title</em>, <em>severity</em>, <em>text</em>, <em>elog</em>, <em>image=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/optimizer/gui_main.html#send_to_desy_elog"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#optimizer.gui_main.send_to_desy_elog" title="Permalink to this definition">¶</a></dt>
+<dd><p>Send information to a supplied electronic logbook.
+Author: Christopher Behrens (DESY)</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-optimizer">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-optimizer" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">optimizer package</a><ul>
+<li><a class="reference internal" href="#subpackages">Subpackages</a></li>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-optimizer.UIOcelotInterface_gen">optimizer.UIOcelotInterface_gen module</a></li>
+<li><a class="reference internal" href="#module-optimizer.generic_optim">optimizer.generic_optim module</a></li>
+<li><a class="reference internal" href="#module-optimizer.gui_main">optimizer.gui_main module</a></li>
+<li><a class="reference internal" href="#module-optimizer">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="modules.html"
+                        title="previous chapter">optimizer</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="optimizer.GP.html"
+                        title="next chapter">optimizer.GP package</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/optimizer.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="optimizer.GP.html" title="optimizer.GP package"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="modules.html" title="optimizer"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">OcelotOptimizer 1.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="modules.html" >optimizer</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, S.Tomin.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
+    </div>
+  </body>
+</html>

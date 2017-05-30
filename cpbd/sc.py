@@ -154,28 +154,28 @@ class SpaceCharge():
         betref = np.sqrt(betref2)
         Eref = gamref*m_e_eV
         pref = Eref*betref
-        xxstg = p_array.particles.view()
-        npartl = len(xxstg)/6
-        xxstg.shape = (npartl, 6)
-        Exyz = self.el_field(np.c_[xxstg[:, 0], xxstg[:, 2], -betref*xxstg[:, 4]], p_array.q_array, gamref, nmesh_xyz)
+        xxstg = p_array.rparticles.view()
+        #npartl = int(len(xxstg)/6)
+        #xxstg.shape = (npartl, 6)
+        Exyz = self.el_field(np.c_[xxstg[0], xxstg[2], -betref*xxstg[4]], p_array.q_array, gamref, nmesh_xyz)
         cdT = zstep/betref
 
         if self.low_order_kick:
             # -- 0te Ordnung -------------------------------------------------------
-            xxstg[:, 1] = xxstg[:, 1] + (cdT/pref/gamref**2)*Exyz[:, 0]
-            xxstg[:, 3] = xxstg[:, 3] + (cdT/pref/gamref**2)*Exyz[:, 1]
-            xxstg[:, 5] = xxstg[:, 5] + (zstep/Eref)*Exyz[:, 2]
+            xxstg[1] = xxstg[1] + (cdT/pref/gamref**2)*Exyz[:, 0]
+            xxstg[3] = xxstg[3] + (cdT/pref/gamref**2)*Exyz[:, 1]
+            xxstg[5] = xxstg[5] + (zstep/Eref)*Exyz[:, 2]
         else:
             # -- 1te Ordnung -------------------------------------------------------
-            betax = betref*xxstg[:, 1]
-            betay = betref*xxstg[:, 3]
-            betaz = betref*(1+xxstg[:, 5]/(gamref**2-1))
+            betax = betref*xxstg[1]
+            betay = betref*xxstg[3]
+            betaz = betref*(1+xxstg[5]/(gamref**2-1))
             dpxyz_q_pref_x = (cdT/pref)*(1-betref*betaz)*Exyz[:, 0]
             dpxyz_q_pref_y = (cdT/pref)*(1-betref*betaz)*Exyz[:, 1]
             dpxyz_q_pref_z = (cdT/pref)*(Exyz[:, 2] + betref*(betax*Exyz[:, 0] + betay*Exyz[:, 1]))
-            xxstg[:, 1] = (1 - dpxyz_q_pref_z)*(xxstg[:, 1] + dpxyz_q_pref_x)
-            xxstg[:, 3] = (1 - dpxyz_q_pref_z)*(xxstg[:, 3] + dpxyz_q_pref_y)
-            xxstg[:, 5] = xxstg[:, 5] + dpxyz_q_pref_z*betref2
+            xxstg[1] = (1 - dpxyz_q_pref_z)*(xxstg[1] + dpxyz_q_pref_x)
+            xxstg[3] = (1 - dpxyz_q_pref_z)*(xxstg[3] + dpxyz_q_pref_y)
+            xxstg[5] = xxstg[5] + dpxyz_q_pref_z*betref2
         
         
     def SC_xp_update(self, xp, Q, gamref, dS, nxyz):

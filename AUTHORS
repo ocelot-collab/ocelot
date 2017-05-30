@@ -2,7 +2,7 @@ Ilya Agapov ilya.agapov@desy.de
 architecture, releases
 optimizer, x-ray optics
 
-Sergey Tomin 
+Sergey Tomin sergey.tomin@xfel.eu
 cpbd module, optics functions
 optimizer, SR module, tracking module
 orbit correction module

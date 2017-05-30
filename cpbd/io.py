@@ -211,7 +211,24 @@ def rem_drifts(lat):
 
     return lat
 
-def write_lattice(lattice, file_name="lattice.inp", remove_rep_drifts=True):
+def write_power_supply_id(lattice, lines=[]):
+    quads = find_obj_and_create_name(lattice, types = [Quadrupole])
+    sexts = find_obj_and_create_name(lattice, types = [Sextupole])
+    octs = find_obj_and_create_name(lattice, types = [Octupole])
+    cavs = find_obj_and_create_name(lattice, types = [Cavity])
+    bends = find_obj_and_create_name(lattice, types = [Bend, RBend, SBend])
+
+
+    lines.append("\n# power supplies \n")
+    for elem_group in [quads, sexts, octs, cavs, bends]:
+        lines.append("\n#  \n")
+        for elem in elem_group:
+            if "ps_id" in dir(elem):
+                line = elem.name.lower() + ".ps_id = '" + elem.ps_id + "'\n"
+                lines.append(line)
+    return lines
+
+def write_lattice(lattice, file_name="lattice.inp", remove_rep_drifts=True, power_supply=False):
     """
     saves lattice as python imput file
     lattice - MagneticLattice
@@ -220,6 +237,8 @@ def write_lattice(lattice, file_name="lattice.inp", remove_rep_drifts=True):
     """
     lattice = rem_drifts(lattice)
     lines = lat2input(lattice)
+    if power_supply:
+        lines = write_power_supply_id(lattice, lines=lines)
 
     f = open(file_name, 'w')
     f.writelines(lines)

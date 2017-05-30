@@ -36,15 +36,14 @@ for i in range(int(lat.totalLen/dz)):
     P1.append(copy(p1))
     P2.append(copy(p2))
 
-s = [f.s for f in P1]#map(lambda f: f.s, P1)
-x = [f.x for f in P1]#map(lambda f: f.x, P1)
-y = [f.y for f in P1]#map(lambda f: f.y, P1)
-tau = [f.tau for f in P1]# map(lambda f: f.tau, P1)
-#s = map(lambda f: f.s, P1)
-x2 = [f.x for f in P2]#map(lambda f: f.x, P2)
-y2 = [f.y for f in P2]#map(lambda f: f.y, P2)
-tau2 = [f.tau for f in P2]#map(lambda f: f.tau, P1)
+s = [f.s for f in P1]
+x = [f.x for f in P1]
+y = [f.y for f in P1]
+tau = [f.tau for f in P1]
 
+x2 = [f.x for f in P2]
+y2 = [f.y for f in P2]
+tau2 = [f.tau for f in P2]
 
 
 

@@ -1,4 +1,8 @@
 '''
+moga_fit_new.py for cluster
+is the example with comments how to use MOGA for FEL time independent simulations.
+Into this example the nsga2 optimization methos is used and simultaneously bounching and power are optimized.
+
 Example for optimization parameters for FEL time independent simulation
 
 Launch this script as 

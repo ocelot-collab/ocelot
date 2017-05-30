@@ -315,7 +315,7 @@ def closed_orbit(lattice, eps_xy=1.e-7, eps_angle=1.e-7, energy=0):
     P = dot(inv(ME), tm0.B(energy)[:4])
 
     def errf(x):
-
+        #print("x", x)
         p = Particle(x=x[0], px=x[1], y=x[2], py=x[3])
         for tm in t_maps:
             p = tm * p
@@ -324,6 +324,6 @@ def closed_orbit(lattice, eps_xy=1.e-7, eps_angle=1.e-7, energy=0):
 
         return err
 
-    res = fmin(errf, P, xtol=1e-8, maxiter=2.e3, maxfun=2.e3)
+    res = fmin(errf, P, xtol=1e-8, maxiter=2e3, maxfun=2.e3)
 
     return Particle(x=res[0], px=res[1], y=res[2], py=res[3])

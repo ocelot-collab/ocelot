@@ -7,6 +7,13 @@ import scipy.ndimage as ndimage
 import numpy as np
 from time import time
 from ocelot.common.globals import *
+try:
+    from pyfftw.interfaces.numpy_fft import fftn
+    from pyfftw.interfaces.numpy_fft import ifftn
+except:
+    print("module PYFFTW is not install. Install it if you want speed up your calculation")
+    from numpy.fft import ifftn
+    from numpy.fft import fftn
 
 
 def smooth_z(Zin, mslice):
@@ -100,7 +107,7 @@ class SpaceCharge():
         K2[Nx:2*Nx-1, :, :] = K2[Nx-1:0:-1, :, :]             #x-mirror
 
         t0 = time()
-        out = np.real(np.fft.ifftn(np.fft.fftn(out)*np.fft.fftn(K2)))
+        out = np.real(ifftn(fftn(out)*fftn(K2)))
         t1 = time()
         if self.debug: print( 'fft time:', t1-t0, ' sec')
 

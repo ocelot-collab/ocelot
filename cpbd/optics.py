@@ -11,6 +11,14 @@ from copy import deepcopy
 # from numba import jit
 from ocelot.common.logging import Logger
 
+try:
+    import numexpr as ne
+    ne_flag = True
+except:
+    print("optics.py: module NUMEXPR is not installed. Install it if you want higher speed calculation.")
+    ne_flag = False
+
+
 logger = Logger()
 
 
@@ -489,6 +497,29 @@ class SecondTM(TransferMap):
         self.map = lambda X, energy: self.t_apply(self.r_z_no_tilt(self.length, energy),
                                                   self.t_mat_z_e(self.length, energy), X, self.dx, self.dy, self.tilt)
 
+    def numexpr_apply(self, X, Xr, T):
+        x, px, y, py, tau, dp = X[0], X[1], X[2], X[3], X[4], X[5]
+
+        T000, T001, T005, T011, T015, T055, T022, T023, T033 = T[0, 0, 0], T[0, 0, 1], T[0, 0, 5], T[0, 1, 1], T[0, 1, 5], T[0, 5, 5], T[0, 2, 2],T[0, 2, 3], T[0, 3, 3]
+        T100, T101, T105, T111, T115, T155, T122, T123, T133 = T[1, 0, 0], T[1, 0, 1], T[1, 0, 5], T[1, 1, 1], T[1, 1, 5], T[1, 5, 5], T[1, 2, 2],T[1, 2, 3], T[1, 3, 3]
+        T202, T203, T212, T213, T225, T235 = T[2, 0, 2],  T[2, 0, 3],  T[2, 1, 2],  T[2, 1, 3], T[ 2, 2, 5], T[2, 3, 5]
+        T302, T303, T312, T313, T325, T335 = T[3, 0, 2],  T[3, 0, 3],  T[3, 1, 2],  T[3, 1, 3], T[3, 2, 5], T[3, 3, 5]
+        T400, T401, T405, T411, T415, T455, T422, T423, T433 = T[4, 0, 0],T[4, 0, 1],T[4, 0, 5],T[4, 1, 1],T[4, 1, 5], T[4, 5, 5],T[4, 2, 2],T[4, 2, 3],T[4, 3, 3]
+
+        Xr0, Xr1, Xr2, Xr3, Xr4, Xr5 = Xr[0], Xr[1], Xr[2], Xr[3], Xr[4], Xr[5]
+
+
+        X[0] = ne.evaluate('Xr0 + T000 * x*x + T001 * x*px + T005 * x*dp + T011 * px*px + T015 * px*dp + T055 * dp*dp + T022 * y*y + T023 * y*py + T033 * py*py')
+
+        X[1] = ne.evaluate('Xr1 + T100 * x*x + T101 * x*px + T105 * x*dp + T111 * px*px + T115 * px*dp + T155 * dp*dp + T122 * y*y + T123 * y*py + T133 * py*py')
+
+        X[2] = ne.evaluate('Xr2 + T202 * x*y + T203 * x*py + T212 * y*px + T213 * px*py + T225 * y*dp + T235 * py*dp')
+
+        X[3] = ne.evaluate('Xr3 + T302 * x*y + T303 * x*py + T312 * y*px + T313 * px*py + T325 * y*dp + T335 * py*dp')
+
+        X[4] = ne.evaluate('Xr4 + T400 * x*x + T401 * x*px + T405 * x*dp + T411 * px*px + T415 * px*dp + T455 * dp*dp + T422 * y*y + T423 * y*py + T433 * py*py')  # + U5666*dp2*dp    # third order
+        # X[:] = Xr[:] + Xt[:]
+        return X
     def t_apply(self, R, T, X, dx, dy, tilt, U5666=0.):
         #print(np.shape(X))
         # print("t_apply", self.k2, self.T)
@@ -509,6 +540,12 @@ class SecondTM(TransferMap):
         Xr = dot(R, X)
         # Xr = transpose(dot(R, X.T.reshape(6, int(n / 6)))).reshape(n)
         # Xt = zeros(n)
+        if ne_flag:
+            self.numexpr_apply(X, Xr, T)
+            if dx != 0 or dy != 0 or tilt != 0:
+                X = transform_vec_ext(X, dx, dy, tilt)
+
+            return X
         x, px, y, py, tau, dp = X[0], X[1], X[2], X[3], X[4], X[5]
         x2 = x * x
         xpx = x * px

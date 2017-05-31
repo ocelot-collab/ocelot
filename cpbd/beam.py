@@ -6,6 +6,14 @@ from numpy.core.umath import sqrt, cos, sin
 from ocelot.common.globals import *
 import pickle
 from scipy import interpolate
+try:
+    import numexpr as ne
+    ne_flag = True
+except:
+    print("beam.py: module NUMEXPR is not installed. Install it if you want higher speed calculation.")
+    ne_flag = False
+
+
 '''
 Note:
 (A) the reference frame (e.g. co-moving or not with the beam is not fixed) 
@@ -326,19 +334,35 @@ def get_envelope(p_array, tws_i=Twiss()):
 
     y = p_array.y() - dy
     py = p_array.py() - dpy
-    px = px*(1.-0.5*px*px - 0.5*py*py)
-    py = py*(1.-0.5*px*px - 0.5*py*py)
+    if ne_flag:
+        px = ne.evaluate('px * (1. - 0.5 * px * px - 0.5 * py * py)')
+        py = ne.evaluate('py * (1. - 0.5 * px * px - 0.5 * py * py)')
+    else:
+        px = px*(1.-0.5*px*px - 0.5*py*py)
+        py = py*(1.-0.5*px*px - 0.5*py*py)
     tws.x = mean(x)
     tws.y = mean(y)
     tws.px =mean(px)
     tws.py =mean(py)
-    #print tws.x, tws.y, tws.px,tws.py
-    tws.xx = mean((x - tws.x)*(x - tws.x))
-    tws.xpx = mean((x-tws.x)*(px-tws.px))
-    tws.pxpx = mean((px-tws.px)*(px-tws.px))
-    tws.yy = mean((y-tws.y)*(y-tws.y))
-    tws.ypy = mean((y-tws.y)*(py-tws.py))
-    tws.pypy = mean((py-tws.py)*(py-tws.py))
+
+    if ne_flag:
+        tw_x = tws.x
+        tw_y = tws.y
+        tw_px = tws.px
+        tw_py = tws.py
+        tws.xx =  mean(ne.evaluate('(x - tw_x) * (x - tw_x)'))
+        tws.xpx = mean(ne.evaluate('(x - tw_x) * (px - tw_px)'))
+        tws.pxpx =mean(ne.evaluate('(px - tw_px) * (px - tw_px)'))
+        tws.yy =  mean(ne.evaluate('(y - tw_y) * (y - tw_y)'))
+        tws.ypy = mean(ne.evaluate('(y - tw_y) * (py - tw_py)'))
+        tws.pypy =mean(ne.evaluate('(py - tw_py) * (py - tw_py)'))
+    else:
+        tws.xx = mean((x - tws.x)*(x - tws.x))
+        tws.xpx = mean((x-tws.x)*(px-tws.px))
+        tws.pxpx = mean((px-tws.px)*(px-tws.px))
+        tws.yy = mean((y-tws.y)*(y-tws.y))
+        tws.ypy = mean((y-tws.y)*(py-tws.py))
+        tws.pypy = mean((py-tws.py)*(py-tws.py))
     tws.p = mean( p_array.p())
     tws.E = p_array.E
     #tws.de = p_array.de

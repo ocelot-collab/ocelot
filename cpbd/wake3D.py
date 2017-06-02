@@ -338,6 +338,6 @@ class WakeKick(Wake):
         Px, Py, Pz, I00 = self.add_total_wake(ps[0], ps[2], ps[4], p_array.q_array, self.TH, self.w_sampling,
                                               self.filter_order)
 
-        p_array.particles[5] = p_array.particles[5] + self.factor * Pz / (p_array.E * 1e9)
-        p_array.particles[3] = p_array.particles[3] + self.factor * Py / (p_array.E * 1e9)
-        p_array.particles[1] = p_array.particles[1] + self.factor * Px / (p_array.E * 1e9)
+        p_array.rparticles[5] = p_array.rparticles[5] + self.factor * Pz / (p_array.E * 1e9)
+        p_array.rparticles[3] = p_array.rparticles[3] + self.factor * Py / (p_array.E * 1e9)
+        p_array.rparticles[1] = p_array.rparticles[1] + self.factor * Px / (p_array.E * 1e9)

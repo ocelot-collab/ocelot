@@ -119,8 +119,6 @@ orb.response_matrix = ResponseMatrix(method=method)
 orb.response_matrix.calculate()
 
 s_bpm_b = np.array([p.s for p in orb.bpms])
-
-#p0=Particle(E=beam.E)
 x_bpm_b, y_bpm_b = method.read_virtual_orbit()
 fig, ax = plot_API(lat)
 ax.plot(s_bpm_b, x_bpm_b*1000., "ro-")

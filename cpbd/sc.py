@@ -154,15 +154,6 @@ class SpaceCharge():
         Exyz[:, 2] = ndimage.map_coordinates(Ez, np.c_[X[:, 0]+0.5, X[:, 1]+0.5, X[:, 2]].T, order=1)
         return Exyz
 
-    def lorentz_transform(self, p_array, gamref):
-        """
-        MAD coordinates
-        Lorentz transformation with V-axis and gamma_av
-        """
-        xp = np.zeros(p_array.rparticles.shape)
-        xp = xxstg_2_xp_mad(p_array.rparticles, xp, gamref)
-        return xp
-
 
     def apply(self, p_array, zstep):
 
@@ -173,7 +164,8 @@ class SpaceCharge():
 
         # MAD coordinates!!!
         # Lorentz transformation with V-axis and gamma_av
-        xp = self.lorentz_transform(p_array, gamref)
+        xp = np.zeros(p_array.rparticles.shape)
+        xp = xxstg_2_xp_mad(p_array.rparticles, xp, gamref)
 
         # coordinate transformation to the velocity direction
         t3 = np.mean(xp[3:6], axis=1)

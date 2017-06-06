@@ -5,13 +5,25 @@ from numpy import abs, append
 import copy
 from ocelot.cpbd.elements import *
 from ocelot.cpbd.magnetic_lattice import *
-
+import scipy.stats as stats
 class Errors:
     def __init__(self):
         self.sigma_x = 100e-6
         self.sigma_y = 100e-6
 
-def tgauss(mu = 0, sigma = 1, trunc = 2):
+
+def tgauss(mu = 0, sigma = 1, trunc = 2, num=1):
+    lower = -sigma*trunc
+    upper = sigma*trunc
+    X = stats.truncnorm(
+        (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
+    if num == 1:
+        x = X.rvs(1)[0]
+    else:
+        x = X.rvs(num)
+    return x
+
+def tgauss_old(mu = 0, sigma = 1, trunc = 2):
     if sigma == 0:
         return mu
     err = normal(mu, sigma, size = 50)
@@ -47,6 +59,7 @@ def errors_seed(lattice, er_list):
     elem_dx = 0.
     elem_dy = 0.
     elem_dtilt = 0.
+    misal = {}
     for elem in lattice.sequence:
         elem.dx = 0
         elem.dy = 0
@@ -66,8 +79,8 @@ def errors_seed(lattice, er_list):
             elem_dtilt = elem.dtilt
 
         elif elem.__class__ in [SBend, RBend, Bend]:
-            elem.dx = 0
-            elem.dy = 0
+            elem.dx = tgauss(sigma = er_list[elem.__class__]["offset"])
+            elem.dy = tgauss(sigma = er_list[elem.__class__]["offset"])
             if the_same == 1:
                 elem.dtilt = elem_dtilt
                 the_same = 0
@@ -77,7 +90,7 @@ def errors_seed(lattice, er_list):
         #elem_dx = elem.dx
         #elem_dy = elem.dy
         #elem_dtilt = elem.dtilt
-
+        misal[elem.id] = {"dx": elem.dx, "dy": elem.dy, "dtilt":elem.dtilt}
         dx = append(dx, elem.dx)
         dy = append(dy, elem.dy)
         dtilt = append(dtilt, elem.dtilt)
@@ -86,7 +99,7 @@ def errors_seed(lattice, er_list):
         else:
             the_same = 0
 
-    return lattice.update_transfer_maps(), (dx, dy, dtilt)
+    return lattice.update_transfer_maps(), misal
 
 if __name__ == "__main__":
     for i in range(1):

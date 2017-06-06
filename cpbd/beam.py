@@ -221,8 +221,7 @@ class Trajectory:
 class ParticleArray:
     """
     array of particles of fixed size; for optimized performance
-
-    (x, x′ = px/p0),(y, y′ = py/p0),(Δs = c*τ, p = ΔE/(p0*c))
+    (x, x' = px/p0),(y, y' = py/p0),(ds = c*tau, p = dE/(p0*c))
     p0 - momentum
     """
     def __init__(self, n=0):
@@ -742,7 +741,7 @@ def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
     print("charge", q1)
     n = np.int_(parray.rparticles.size/6)
     PD = parray.rparticles
-    PD = sortrows(4, PD)
+    PD = sortrows(PD, col=4)
 
     z = np.copy(PD[4])
     mx, mxs, mxx, mxxs, mxsxs, emittx = slice_analysis(z, PD[0], PD[1], Mslice, True)
@@ -758,7 +757,7 @@ def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
     #print(mE, mEs, mEE, mEEs, mEsEs, emittE)
     mE = mEs
     sE = np.sqrt(mEsEs)
-    sig0 = np.std(z)
+    sig0 = np.std(parray.tau())
     B = s_to_cur(z, Mcur*sig0, q1, speed_of_light)
     gamma0 = parray.E/m_e_GeV
     mm, mm, mm, mm, mm, emitty0 = moments(PD[2], PD[3])

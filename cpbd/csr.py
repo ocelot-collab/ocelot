@@ -302,7 +302,7 @@ def Q2EQUI(q, BS_params, SBINB, NBIN):
                 charge_per_step[k-1] += w * qps
     return z1, z2, Nz, charge_per_step
 
-import matplotlib.pyplot as plt
+
 
 class CSR:
     def __init__(self):

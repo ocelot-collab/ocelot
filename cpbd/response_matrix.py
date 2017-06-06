@@ -6,6 +6,7 @@ import numpy as np
 from scipy.interpolate import splrep, splev
 import json
 import time
+#import matplotlib.pyplot as plt
 
 
 class MeasureResponseMatrix:
@@ -42,6 +43,7 @@ class MeasureResponseMatrix:
             bpm.x = p.x
             bpm.y = p.y
             bpm.E = p.E
+            bpm.p = p.p
             L = bpm.s
             X.append(p.x)
             Y.append(p.y)
@@ -49,6 +51,18 @@ class MeasureResponseMatrix:
             particles.append(copy.copy(p))
         #print("energy = ", p.E)
         return array(X), array(Y),
+
+    def read_virtual_dispersion(self, E0):
+        X0, Y0 = self.read_virtual_orbit(p_init=Particle(p=0.000, E=E0))
+        X1, Y1 = self.read_virtual_orbit(p_init=Particle(p=0.01, E=E0))
+        p = np.array([bpm.p for bpm in self.bpms])
+        Dx0 = (X1 - X0) / 0.01
+        Dy0 = (Y1 - Y0) / 0.01
+        for i, bpm in enumerate(self.bpms):
+            bpm.Dx = Dx0[i]
+            bpm.Dy = Dy0[i]
+
+        return Dx0, Dy0
 
     def optical_func_params(self, tw_init=None):
         """
@@ -299,13 +313,6 @@ class LinacDisperseSimRM(MeasureResponseMatrix):
     def __init__(self, lattice, hcors, vcors, bpms):
         super(LinacDisperseSimRM, self).__init__(lattice, hcors, vcors, bpms)
 
-    def read_virtual_dispersion(self, E0):
-        X0, Y0 = self.read_virtual_orbit(p_init=Particle(p=0.0, E=E0))
-        X1, Y1 = self.read_virtual_orbit(p_init=Particle(p=0.01, E=E0))
-        E = np.array([bpm.E for bpm in self.bpms])
-        Dx0 = (X1 - X0) * E / E0 / 0.01
-        Dy0 = (Y1 - Y0) * E / E0 / 0.01
-        return Dx0, Dy0
 
     def calculate(self, tw_init=None):
         """
@@ -337,6 +344,7 @@ class LinacDisperseSimRM(MeasureResponseMatrix):
 
             D1 = np.append(Dx1, Dy1)
             self.resp[:, j] = (D1 - D0) / cor.angle
+            #print((D1 - D0) / cor.angle)
             cor.angle = 0.00
         #self.lat.update_transfer_maps()
         return self.resp

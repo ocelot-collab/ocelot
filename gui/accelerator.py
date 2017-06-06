@@ -642,7 +642,7 @@ def plot_trajectory(lat, list_particles):
     plt.show()
 
 
-def plot_API(lat, legend=True):
+def plot_API(lat, legend=True, fig_name=1):
     """
     Function creates a picture with lattice on the bottom part of the picture and top part of the picture can be
     plot arbitrary lines.
@@ -651,7 +651,7 @@ def plot_API(lat, legend=True):
     :param legend: True, description of the elements, if False it is switched legend off
     :return: fig, ax
     """
-    fig = plt.figure()
+    fig = plt.figure(fig_name)
     plt.rc('axes', grid=True)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
     left, width = 0.1, 0.85

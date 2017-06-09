@@ -19,7 +19,7 @@ class MeasureResponseMatrix:
     def calculate(self):
         pass
 
-    def read_virtual_orbit(self, p_init=None):
+    def read_virtual_orbit(self, p_init=None, write2bpms=True):
         """
         searching closed orbit by function closed_orbit(lattice) and searching coordinates of beam at the bpm positions
 
@@ -40,10 +40,11 @@ class MeasureResponseMatrix:
             #print("energy = ", p.E)
             dz = bpm.s - L
             tracking_step(self.lat, [p], dz, navi)
-            bpm.x = p.x
-            bpm.y = p.y
-            bpm.E = p.E
-            bpm.p = p.p
+            if write2bpms:
+                bpm.x = p.x
+                bpm.y = p.y
+                bpm.E = p.E
+                bpm.p = p.p
             L = bpm.s
             X.append(p.x)
             Y.append(p.y)
@@ -54,14 +55,13 @@ class MeasureResponseMatrix:
 
     def read_virtual_dispersion(self, E0):
         X0, Y0 = self.read_virtual_orbit(p_init=Particle(p=0.000, E=E0))
-        X1, Y1 = self.read_virtual_orbit(p_init=Particle(p=0.01, E=E0))
-        p = np.array([bpm.p for bpm in self.bpms])
+        X1, Y1 = self.read_virtual_orbit(p_init=Particle(p=0.01, E=E0), write2bpms=False)
+        #p = np.array([bpm.p for bpm in self.bpms])
         Dx0 = (X1 - X0) / 0.01
         Dy0 = (Y1 - Y0) / 0.01
         for i, bpm in enumerate(self.bpms):
             bpm.Dx = Dx0[i]
             bpm.Dy = Dy0[i]
-
         return Dx0, Dy0
 
     def optical_func_params(self, tw_init=None):
@@ -307,6 +307,7 @@ class LinacRmatrixRM(MeasureResponseMatrix):
                         self.resp[n + m, j] = Ra[2, 3]
         return self.resp
 
+#import matplotlib.pyplot as plt
 
 class LinacDisperseSimRM(MeasureResponseMatrix):
 
@@ -332,20 +333,21 @@ class LinacDisperseSimRM(MeasureResponseMatrix):
         self.resp = zeros((2 * m, nx + ny))
         s = [bpm.s for bpm in self.bpms]
         Dx0, Dy0 = self.read_virtual_dispersion(E0=tw_init.E)
-
         D0 = np.append(Dx0, Dy0)
         for j, cor in enumerate([item for sublist in [self.hcors, self.vcors] for item in sublist]):
             print(j, "/", nx + ny, cor.id)
-            cor.angle = 0.001
+            cor.angle = 0.0005
             self.lat.update_transfer_maps()
+            cor.transfer_map = self.lat.method.create_tm(cor)
             start = time.time()
             Dx1, Dy1 = self.read_virtual_dispersion(E0=tw_init.E)
+            #if np.max(Dx1)>1e+100 or np.max(Dy1) > 1e+100:
             print(time.time() - start)
 
             D1 = np.append(Dx1, Dy1)
             self.resp[:, j] = (D1 - D0) / cor.angle
-            #print((D1 - D0) / cor.angle)
             cor.angle = 0.00
+            cor.transfer_map = self.lat.method.create_tm(cor)
         #self.lat.update_transfer_maps()
         return self.resp
 

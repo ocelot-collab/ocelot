@@ -302,7 +302,6 @@ def save_particle_array(filename, p_array):
                         q_array=p_array.q_array,
                         E=p_array.E, s=p_array.s)
 
-
 def load_particle_array(filename):
     p_array = ParticleArray()
     with np.load(filename) as data:

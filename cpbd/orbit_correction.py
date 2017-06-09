@@ -5,39 +5,48 @@ __author__ = 'Sergey Tomin'
 from time import sleep
 
 #import matplotlib.pyplot as plt
+#from ocelot.gui.accelerator import *
 from numpy import diag, shape
 from numpy.linalg import svd
 from scipy.interpolate import splrep, splev
 
 from ocelot.cpbd.match import closed_orbit
 from ocelot.cpbd.track import *
-#from ocelot.gui.accelerator import *
+
+from ocelot.cpbd.response_matrix import *
 import copy
 import json
 
 
 
 class OrbitSVD:
-    def __init__(self, resp_matrix, orbit, weights=None, alpha=1.e-4):
+    def __init__(self, resp_matrix, orbit, weights=None, epsilon_x=0.001, epsilon_y=0.001):
         self.resp_matrix = resp_matrix
         self.orbit = orbit
         self.weights = weights
-        self.alpha = alpha
+        self.epsilon_x = epsilon_x
+        self.epsilon_y = epsilon_y
 
     def apply(self):
         # print resp_matrix
-        #if self.weights is None:
-        #    self.weights = eye(len(self.orbit))
+        if self.weights is None:
+            self.weights = eye(len(self.orbit))
         #print(np.shape(self.weights), np.shape(self.resp_matrix))
-        #resp_matrix_w = dot(self.weights, self.resp_matrix)
-        #misallign_w = dot(self.weights, self.orbit)
+        resp_matrix_w = dot(self.weights, self.resp_matrix)
+        misallign_w = dot(self.weights, self.orbit)
         #U, s, V = svd(resp_matrix_w)
+
         U, s, V = svd(self.resp_matrix)
         # print (s)
         s_inv = zeros(len(s))
+        s_max = max(s)
         for i in range(len(s)):
-            # if s[i]<1./max(s):
-            if s[i] < self.alpha:
+            #print("S[",i,"]=", s[i], "s max = ", s_max)
+            if i < int(len(s)/2.):
+                epsilon = self.epsilon_x
+            else:
+                epsilon = self.epsilon_y
+            if s[i] < s_max * epsilon:
                 s_inv[i] = 0.
             else:
                 s_inv[i] = 1. / s[i]
@@ -54,7 +63,7 @@ class OrbitSVD:
 
 
 class NewOrbit:
-    def __init__(self, lattice, empty=False):
+    def __init__(self, lattice, rm_method=None, disp_rm_method=None, empty=False):
         self.lat = lattice
         self.bpms = []
         self.hcors = []
@@ -64,9 +73,18 @@ class NewOrbit:
         self.response_matrix = None
         self.disp_response_matrix = None
         self.mode = "radian" # or "ampere"
+
         if not empty:
             self.create_bpms()
             self.create_correctors()
+
+        if rm_method != None and (not empty):
+            method = rm_method(lattice=self.lat, hcors=self.hcors, vcors=self.vcors, bpms=self.bpms)
+            self.response_matrix = ResponseMatrix(method=method)
+
+        if disp_rm_method != None and (not empty):
+            method = disp_rm_method(lattice=self.lat, hcors=self.hcors, vcors=self.vcors, bpms=self.bpms)
+            self.disp_response_matrix = ResponseMatrix(method=method)
 
     def update_devices_in_RMs(self):
 
@@ -147,7 +165,7 @@ class NewOrbit:
         m = len(self.bpms)
         orbit = zeros(2 * m)
         for i, bpm in enumerate(self.bpms):
-            print("get_orbit = ",bpm.id, bpm.x,  bpm.x_ref)
+            #print("get_orbit = ",bpm.id, bpm.x,  bpm.x_ref)
             orbit[i] = bpm.x - bpm.x_ref
             orbit[i+m] = bpm.y - bpm.y_ref
         return orbit
@@ -175,11 +193,12 @@ class NewOrbit:
         rm[n1:, m1:] = mat2[:, :]
         return rm
 
-    def correction(self, alpha=0,  p_init=None, print_log=True):
+    def correction(self, alpha=0,  epsilon_x=0.001, epsilon_y=0.001, p_init=None, print_log=True):
         #TODO: initial condition for particle was removed. Add it again
         cor_list = [cor.id for cor in np.append(self.hcors, self.vcors)]
         bpm_list = [bpm.id for bpm in self.bpms]
         orbit = (1 - alpha) * self.get_orbit()
+
         RM = (1 - alpha) * self.response_matrix.extract(cor_list=cor_list, bpm_list=bpm_list)
         #print("RM = ", np.shape(RM))
         if alpha != 0:
@@ -194,22 +213,30 @@ class NewOrbit:
         #print("DRM = ", np.shape(DRM))
 
         rmatrix = self.combine_matrices(RM, DRM)
+
+
+        # trying to minimize strength of the correctors. does not work actually
         #rmatrix = self.combine_matrices(rmatrix, 10*np.eye(np.shape(DRM)[0]))
 
         #print("rmatrix = ", rmatrix)
         orbit = np.append(orbit, disp)
+
+        # trying to minimize strength of the correctors. does not work actually
         #orbit = np.append(orbit, np.zeros(np.shape(DRM)[0]))
+
         # bpm weights
-        bpm_weights = np.eye(len(orbit))
+        #bpm_weights = np.eye(len(orbit))
+        bpm_weights = np.array([bpm.weight for bpm in self.bpms])
+        bpm_weights_diag = np.diag( np.append(bpm_weights, [bpm_weights, bpm_weights, bpm_weights]))
         #print("bpm_weights = ", np.shape(bpm_weights), len(orbit))
-        #start = time()
-        #rmatrix = self.response_matrix.extract()
-        self.orbit_svd = OrbitSVD(resp_matrix=rmatrix, orbit=orbit, weights=bpm_weights, alpha=1.e-4)
+
+        self.orbit_svd = OrbitSVD(resp_matrix=rmatrix, orbit=orbit, weights=bpm_weights_diag, epsilon_x=epsilon_x, epsilon_y=epsilon_x)
         angle = self.orbit_svd.apply()
-        #print("correction = ", time() - start)
+
         ncor = len(cor_list)
         for i, cor in enumerate(np.append(self.hcors, self.vcors)):
-            if print_log: print("correction:", cor.id," angle before: ", cor.angle*1000, "  after:", angle[i]*1000,angle[ncor+i]*1000 )
+            if print_log:
+                print("correction:", cor.id," angle before: ", cor.angle*1000, "  after:", angle[i]*1000,angle[ncor+i]*1000)
             cor.angle -= ((1 - alpha) * angle[i] + alpha* angle[ncor + i])
 
         self.lat.update_transfer_maps()

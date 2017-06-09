@@ -70,6 +70,8 @@ class SpaceCharge():
         self.end_elem = None
         self.debug = False
 
+        self.random_seed = 1 # random seeding number. if None seeding is random
+
     def prepare(self, lat):
         pass
 
@@ -121,10 +123,12 @@ class SpaceCharge():
         return out[:Nx, :Ny, :Nz]
 
     def el_field(self, X, Q, gamma, nxyz):
+        if self.random_seed != None:
+            np.random.seed(self.random_seed)
         N = X.shape[0]
         X[:, 2] = X[:, 2]*gamma
         XX = np.max(X, axis=0)-np.min(X, axis=0)
-        XX = XX*np.random.uniform(low=1.0, high=1.1)
+        #XX = XX*np.random.uniform(low=1.0, high=1.1)
         if self.debug: print( 'mesh steps:', XX)
         # here we use a fast 3D "near-point" interpolation
         # we need a stand-alone module with 1D,2D,3D parricles-to-grid functions

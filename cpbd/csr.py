@@ -303,7 +303,6 @@ def Q2EQUI(q, BS_params, SBINB, NBIN):
     return z1, z2, Nz, charge_per_step
 
 
-
 class CSR:
     def __init__(self):
         # binning parameters

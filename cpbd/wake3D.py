@@ -193,7 +193,8 @@ class Wake():
             W = W-ww[0:nb]/c
         if N1>0:
             x, ww = self.wake_convolution(x, d1_bunch, W1[:, 0], W1[:, 1])
-            W = W - ww[0:nb]
+            #W = W - ww[0:nb]
+            W = W + ww[0:nb]
         if R != 0:
             W = W-bunch*R
         if L != 0:

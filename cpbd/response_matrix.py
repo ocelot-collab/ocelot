@@ -6,6 +6,7 @@ import numpy as np
 from scipy.interpolate import splrep, splev
 import json
 import time
+from threading import Thread
 #import matplotlib.pyplot as plt
 
 
@@ -359,6 +360,9 @@ class ResponseMatrix:
         self.matrix = []
         self.method = method
         self.mode = "radian"  # or "ampere"
+
+        self.tw_init = None   # for self.run()
+        self.filename = None  # for self.run()
 
     def calculate(self, tw_init=None):
         """

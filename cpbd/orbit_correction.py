@@ -70,6 +70,8 @@ class NewOrbit:
         self.vcors = []
         self.nu_x = 0.
         self.nu_y = 0.
+        self.rm_method = rm_method
+        self.disp_rm_method = disp_rm_method
         self.response_matrix = None
         self.disp_response_matrix = None
         self.mode = "radian" # or "ampere"
@@ -79,24 +81,30 @@ class NewOrbit:
             self.create_correctors()
 
         if rm_method != None and (not empty):
-            method = rm_method(lattice=self.lat, hcors=self.hcors, vcors=self.vcors, bpms=self.bpms)
-            self.response_matrix = ResponseMatrix(method=method)
+            self.setup_response_matrix()
 
         if disp_rm_method != None and (not empty):
-            method = disp_rm_method(lattice=self.lat, hcors=self.hcors, vcors=self.vcors, bpms=self.bpms)
-            self.disp_response_matrix = ResponseMatrix(method=method)
+            self.setup_disp_response_matrix()
 
-    def update_devices_in_RMs(self):
+    def setup_response_matrix(self):
+        method = self.rm_method(lattice=self.lat, hcors=self.hcors, vcors=self.vcors, bpms=self.bpms)
+        self.response_matrix = ResponseMatrix(method=method)
 
-        if self.response_matrix != None:
-            self.response_matrix.hcors = self.hcors
-            self.response_matrix.vcors = self.vcors
-            self.response_matrix.bpms = self.bpms
+    def setup_disp_response_matrix(self):
+        method = self.disp_rm_method(lattice=self.lat, hcors=self.hcors, vcors=self.vcors, bpms=self.bpms)
+        self.disp_response_matrix = ResponseMatrix(method=method)
 
-        if self.disp_response_matrix != None:
-            self.disp_response_matrix.hcors = self.hcors
-            self.disp_response_matrix.vcors = self.vcors
-            self.disp_response_matrix.bpms = self.bpms
+    #def update_devices_in_RMs(self):
+    #
+    #    if self.response_matrix != None:
+    #        self.response_matrix.hcors = self.hcors
+    #        self.response_matrix.vcors = self.vcors
+    #        self.response_matrix.bpms = self.bpms
+    #
+    #    if self.disp_response_matrix != None:
+    #        self.disp_response_matrix.hcors = self.hcors
+    #        self.disp_response_matrix.vcors = self.vcors
+    #        self.disp_response_matrix.bpms = self.bpms
 
     def create_bpms(self, bpm_list=None):
         """

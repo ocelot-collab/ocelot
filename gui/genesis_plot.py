@@ -121,6 +121,8 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
     for handle in handles:
 
         if os.path.isfile(str(handle)):
+            print('')
+            print('plotting ',handle)
             handle = read_out_file(handle, read_level=2, debug=debug)
 
         if isinstance(handle, GenesisOutput):
@@ -279,7 +281,7 @@ def plot_gen_out_z(g, figsize=(10, 14), legend=True, fig_name=None, z=inf, savef
     # ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
     ax_energy.ticklabel_format(useOffset=False, style='plain')
     ax_energy.grid(True)
-    plt.yticks(plt.yticks()[0][0:-1])
+    # plt.yticks(plt.yticks()[0][0:-1])
 
     ax_bunching = ax_energy.twinx()
     ax_bunching.plot(s, g.bunching[:, zi], 'grey', linewidth=0.5)
@@ -333,7 +335,7 @@ def plot_gen_out_z(g, figsize=(10, 14), legend=True, fig_name=None, z=inf, savef
     ax_phase.set_ylabel(r'$\phi$ [rad]')
     ax_phase.set_ylim([-pi, pi])
     ax_phase.grid(True)
-    plt.yticks(plt.yticks()[0][0:-1])
+    # plt.yticks(plt.yticks()[0][0:-1])
 
     # ax_spectrum.yaxis.major.locator.set_params(nbins=number_ticks)
 
@@ -700,13 +702,13 @@ def subfig_rad_spec(ax_spectrum, g, legend, log=1):
     ax_spec_bandw.plot(g.z, 2*spectrum_lamdwidth_std * 100, 'm:', label="std")
     ax_spec_bandw.grid(False)
     plt.yticks(plt.yticks()[0][0:-1])
+    # ax_spec_bandw.set_ylim([0, 2*np.amax(spectrum_lamdwidth_fwhm)*100])
     
     if legend:
         ax_spec_bandw.legend()
     ax_spec_bandw.set_ylabel(r'$\Delta\lambda/\lambda, \%$'+'\n'+r'(-- fwhm, $\cdots2\sigma$)')
-    
-    # ax_spec_bandw.text(0.98, 0.98, r'$\Delta\lambda/\lambda_{end}^{fwhm}$= %.2e' % (spectrum_lamdwidth_fwhm[-1]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_spec_bandw)
-    
+    ax_spec_bandw.text(0.98, 0.98, r"$(\Delta\lambda/\lambda)_{end}^{fwhm}$= %.2e"%(spectrum_lamdwidth_fwhm[-1]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_spec_bandw.transAxes)
+
     ax_spectrum.yaxis.label.set_color('r')
     ax_spectrum.tick_params(axis='y', which='both', colors=ax_spectrum.yaxis.label.get_color())
     ax_spectrum.yaxis.get_offset_text().set_color(ax_spectrum.yaxis.label.get_color())
@@ -740,7 +742,8 @@ def subfig_rad_size(ax_size_t, g, legend):
             ax_size_t.plot(g.z, np.average(g.r_size * 2 * 1e6, weights=weight, axis=0), 'b-', linewidth=1.5)
 
     ax_size_t.set_ylim(ymin=0)
-    ax_size_t.set_ylabel(r'$\sim$size$_{transv}$ [$\mu$m]'+'\n'+r'($2\sigma$)')
+    # ax_size_t.set_ylabel(r'$\sim$size$_{transv}$ [$\mu$m]'+'\n'+r'($2\sigma$)')
+    ax_size_t.set_ylabel(r'$\sim$size$_{transv}$ [$\mu$m]'+'\n'+u'(\u2014 $2\sigma$)')
     ax_size_t.grid(True)
     plt.yticks(plt.yticks()[0][0:-1])
     

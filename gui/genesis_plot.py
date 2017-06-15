@@ -293,12 +293,12 @@ def plot_gen_out_z(g, figsize=(10, 14), legend=True, fig_name=None, z=inf, savef
     power = np.pad(g.p_mid, [(int(g.nSlices / 2) * n_pad, (g.nSlices - (int(g.nSlices / 2)))) * n_pad, (0, 0)], mode='constant')
     phase = np.pad(g.phi_mid, [(int(g.nSlices / 2) * n_pad, (g.nSlices - (int(g.nSlices / 2)))) * n_pad, (0, 0)], mode='constant')  # not supported by the numpy 1.6.2
 
-    spectrum = abs(np.fft.fft(np.sqrt(np.array(power)) * np.exp(1.j * np.array(phase)), axis=0))**2 / sqrt(g.nSlices) / (2 * g.leng / g('ncar'))**2 / 1e10
-    e_0 = 1239.8 / g('xlamds') / 1e9
-    g.freq_ev1 = h_eV_s * np.fft.fftfreq(len(spectrum), d=g('zsep') * g('xlamds') * g('ishsty') / speed_of_light) + e_0
-    lamdscale = 1239.8 / g.freq_ev1
+    # spectrum = abs(np.fft.fft(np.sqrt(np.array(power)) * np.exp(1.j * np.array(phase)), axis=0))**2 / sqrt(g.nSlices) / (2 * g.leng / g('ncar'))**2 / 1e10
+    # e_0 = 1239.8 / g('xlamds') / 1e9
+    # g.freq_ev1 = h_eV_s * np.fft.fftfreq(len(spectrum), d=g('zsep') * g('xlamds') * g('ishsty') / speed_of_light) + e_0
+    # lamdscale = 1239.8 / g.freq_ev1
 
-    lamdscale_array = np.swapaxes(np.tile(lamdscale, (g.nZ, 1)), 0, 1)
+    # lamdscale_array = np.swapaxes(np.tile(lamdscale, (g.nZ, 1)), 0, 1)
 
     # for std calculation
     # spectrum_lamdpos=np.sum(spectrum*lamdscale_array/np.sum(spectrum,axis=0),axis=0)
@@ -314,14 +314,22 @@ def plot_gen_out_z(g, figsize=(10, 14), legend=True, fig_name=None, z=inf, savef
     ax_spectrum.get_yaxis().get_major_formatter().set_scientific(True)
     ax_spectrum.get_yaxis().get_major_formatter().set_powerlimits((-3, 4))  # [:,75,75]
     ax_spectrum.grid(True)
-    if np.amin(lamdscale) != np.amax(lamdscale):
-        ax_spectrum.set_xlim([np.amin(lamdscale), np.amax(lamdscale)])
+    if np.amin(g.freq_lamd) != np.amax(g.freq_lamd):
+        ax_spectrum.set_xlim([np.amin(g.freq_lamd), np.amax(g.freq_lamd)])
     ax_phase.set_xlabel(r's [$\mu$m]')
 
-    maxspectrum_index = np.argmax(spectrum[:, zi])
+    maxspectrum_index = np.argmax(g.spec[:, zi])
     maxspower_index = np.argmax(power[:, zi])
-    maxspectrum_wavelength = lamdscale[maxspectrum_index] * 1e-9
-    ax_spectrum.text(0.02, 0.98, r"$\lambda_{max}$= %.3f nm" % (maxspectrum_wavelength * 1e9), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_spectrum.transAxes, color='red')  # horizontalalignment='center', verticalalignment='center',
+    maxspectrum_wavelength = g.freq_lamd[maxspectrum_index] * 1e-9
+    
+    if np.sum(g.spec[:,zi])!=0:
+        pos, width, arr = fwhm3(g.spec[:, zi])
+        if width != None:
+            spectrum_lamdwidth_fwhm = abs(g.freq_lamd[arr[0]] - g.freq_lamd[arr[-1]]) / g.freq_lamd[pos]  # the FWHM of spectral line (error when peakpos is at the edge of lamdscale)
+        else:
+            spectrum_lamdwidth_fwhm = None
+    
+    ax_spectrum.text(0.02, 0.98, r"$\lambda_{max}$= %.3f nm " "\n" "$(\Delta\lambda/\lambda)_{fwhm}$= %.2e" % (maxspectrum_wavelength * 1e9, spectrum_lamdwidth_fwhm), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_spectrum.transAxes, color='red')  # horizontalalignment='center', verticalalignment='center',
 
     phase = unwrap(g.phi_mid[:, zi])
 

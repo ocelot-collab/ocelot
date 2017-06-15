@@ -279,6 +279,7 @@ def plot_gen_out_z(g, figsize=(10, 14), legend=True, fig_name=None, z=inf, savef
     # ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
     ax_energy.ticklabel_format(useOffset=False, style='plain')
     ax_energy.grid(True)
+    plt.yticks(plt.yticks()[0][0:-1])
 
     ax_bunching = ax_energy.twinx()
     ax_bunching.plot(s, g.bunching[:, zi], 'grey', linewidth=0.5)
@@ -332,6 +333,7 @@ def plot_gen_out_z(g, figsize=(10, 14), legend=True, fig_name=None, z=inf, savef
     ax_phase.set_ylabel(r'$\phi$ [rad]')
     ax_phase.set_ylim([-pi, pi])
     ax_phase.grid(True)
+    plt.yticks(plt.yticks()[0][0:-1])
 
     # ax_spectrum.yaxis.major.locator.set_params(nbins=number_ticks)
 
@@ -446,7 +448,15 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_energy', 'el_bunching
         elif param == 'el_bunching':
             subfig_el_bunching(ax[-1], g, legend)
         elif param == 'rad_pow_en':
-            subfig_rad_pow_en(ax[-1], g, legend)
+            if not is_tdp:
+                subfig_rad_pow(ax[-1], g, legend)
+            else:
+                subfig_rad_pow_en(ax[-1], g, legend)
+        elif param == 'rad_pow_en_nolog':
+            if not is_tdp:
+                subfig_rad_pow(ax[-1], g, legend, log=0)
+            else:
+                subfig_rad_pow_en(ax[-1], g, legend, log=0)
         elif param == 'rad_pow':
             subfig_rad_pow(ax[-1], g, legend)
         elif param == 'rad_size':
@@ -454,6 +464,9 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_energy', 'el_bunching
         elif param == 'rad_spec':
             if is_tdp:
                 subfig_rad_spec(ax[-1], g, legend)
+        elif param == 'rad_spec_nolog':
+            if is_tdp:
+                subfig_rad_spec(ax[-1], g, legend, log=0)
         elif param == 'rad_spec_evo_n':
             if is_tdp:
                 subfig_rad_spec_evo(ax[-1], g, legend, norm=1)
@@ -606,6 +619,7 @@ def subfig_rad_pow_en(ax_rad_pow, g, legend, log=1):
     ax_rad_pow.get_yaxis().get_major_formatter().set_scientific(True)
     if np.amax(g.p_int) > 0 and log:
         ax_rad_pow.set_yscale('log')
+    plt.yticks(plt.yticks()[0][0:-1])
 
     ax_rad_en = ax_rad_pow.twinx()
     ax_rad_en.plot(g.z, g.energy, 'k--', linewidth=1.5)
@@ -614,6 +628,7 @@ def subfig_rad_pow_en(ax_rad_pow, g, legend, log=1):
     ax_rad_en.get_yaxis().get_major_formatter().set_scientific(True)
     if np.amax(g.p_int) > 0 and log:
         ax_rad_en.set_yscale('log')
+    plt.yticks(plt.yticks()[0][0:-1])
 
     ax_rad_pow.grid(True)  # , which='minor')
     # ax_rad_pow.grid(False, which="minor")
@@ -636,12 +651,12 @@ def subfig_rad_pow(ax_rad_pow, g, legend, log=1):
     ax_rad_pow.get_yaxis().get_major_formatter().set_scientific(True)
     if np.amax(g.p_int) > 0 and log:
         ax_rad_pow.set_yscale('log')
+    plt.yticks(plt.yticks()[0][0:-1])
 
     ax_rad_pow.grid(False)  # , which='minor')
     ax_rad_pow.tick_params(axis='y', which='both', colors='g')
     ax_rad_pow.yaxis.label.set_color('g')
     ax_rad_pow.yaxis.get_offset_text().set_color(ax_rad_pow.yaxis.label.get_color())
-    # ax_rad_pow.set_ylim([1e5,1e11])
     ax_rad_pow.text(0.98, 0.02, r'$P_{end}$= %.2e W' % (np.amax(g.p_int[:, -1])), fontsize=12, horizontalalignment='right', verticalalignment='bottom', transform=ax_rad_pow.transAxes)
 
 
@@ -649,35 +664,63 @@ def subfig_rad_spec(ax_spectrum, g, legend, log=1):
     ax_spectrum.plot(g.z, np.amax(g.spec, axis=0), 'r-', linewidth=1.5)
     ax_spectrum.text(0.5, 0.98, r"(on axis)", fontsize=10, horizontalalignment='center', verticalalignment='top', transform=ax_spectrum.transAxes)  # horizontalalignment='center', verticalalignment='center',
     ax_spectrum.set_ylabel(r'P$(\lambda)_{max}$ [a.u.]')
-    # if np.amin(np.amax(spectrum,axis=0))>0:
+    plt.yticks(plt.yticks()[0][0:-1])
+    
     if np.amax(np.amax(g.spec, axis=0)) > 0 and log:
         ax_spectrum.set_yscale('log')
     ax_spectrum.grid(True)
-
+    
     spectrum_lamdwidth_fwhm = np.zeros_like(g.z)
     spectrum_lamdwidth_std = np.zeros_like(g.z)
     for zz in range(g.nZ):
-        # if np.sum(g.spec[:,zz])!=0:
-        #tmp
-        try:
-            peak = fwhm3(g.spec[:, zz])
-            spectrum_lamdwidth_fwhm[zz] = abs(g.freq_lamd[0] - g.freq_lamd[1]) * peak[1] / g.freq_lamd[peak[0]]  # the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
-        except:
-            spectrum_lamdwidth_fwhm[zz] = 0
-
-        try:
+        if np.sum(g.spec[:,zz])!=0:
+            pos, width, arr = fwhm3(g.spec[:, zz])
+            if width != None:
+                spectrum_lamdwidth_fwhm[zz] = abs(g.freq_lamd[arr[0]] - g.freq_lamd[arr[-1]]) / g.freq_lamd[pos]  # the FWHM of spectral line (error when peakpos is at the edge of lamdscale)
+            else:
+                spectrum_lamdwidth_fwhm[zz] = None
+            
             spectrum_lamdwidth_std[zz] = std_moment(g.freq_lamd, g.spec[:, zz]) / n_moment(g.freq_lamd, g.spec[:, zz], 0, 1)
-        except:
-            spectrum_lamdwidth_std[zz] = 0
+        else:
+            spectrum_lamdwidth_fwhm[zz] = None
+            spectrum_lamdwidth_std[zz] = None
+        # try:
+            # peak = fwhm3(g.spec[:, zz])
+            # spectrum_lamdwidth_fwhm[zz] = abs(g.freq_lamd[0] - g.freq_lamd[1]) * peak[1] / g.freq_lamd[peak[0]]  # the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
+        # except:
+            # spectrum_lamdwidth_fwhm[zz] = 0
+
+        # try:
+            # spectrum_lamdwidth_std[zz] = std_moment(g.freq_lamd, g.spec[:, zz]) / n_moment(g.freq_lamd, g.spec[:, zz], 0, 1)
+        # except:
+            # spectrum_lamdwidth_std[zz] = 0
 
     ax_spec_bandw = ax_spectrum.twinx()
-    ax_spec_bandw.plot(g.z, spectrum_lamdwidth_fwhm * 100, 'm:', label="fwhm")
-    ax_spec_bandw.plot(g.z, spectrum_lamdwidth_std * 100, 'm--', label="std")
+    ax_spec_bandw.plot(g.z, spectrum_lamdwidth_fwhm * 100, 'm--', label="fwhm")
+    ax_spec_bandw.plot(g.z, 2*spectrum_lamdwidth_std * 100, 'm:', label="std")
     ax_spec_bandw.grid(False)
+    plt.yticks(plt.yticks()[0][0:-1])
+    
     if legend:
         ax_spec_bandw.legend()
-    # ax_spec_bandw.set_ylabel('$2\sigma\lambda$ [nm]')
-    ax_spec_bandw.set_ylabel(r'$\Delta\lambda/\lambda, \%$')
+    ax_spec_bandw.set_ylabel(r'$\Delta\lambda/\lambda, \%$'+'\n'+r'(-- fwhm, $\cdots2\sigma$)')
+    
+    # ax_spec_bandw.text(0.98, 0.98, r'$\Delta\lambda/\lambda_{end}^{fwhm}$= %.2e' % (spectrum_lamdwidth_fwhm[-1]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_spec_bandw)
+    
+    ax_spectrum.yaxis.label.set_color('r')
+    ax_spectrum.tick_params(axis='y', which='both', colors=ax_spectrum.yaxis.label.get_color())
+    ax_spectrum.yaxis.get_offset_text().set_color(ax_spectrum.yaxis.label.get_color())
+    
+    ax_spec_bandw.yaxis.label.set_color('m')
+    ax_spec_bandw.tick_params(axis='y', which='both', colors=ax_spec_bandw.yaxis.label.get_color())
+    ax_spec_bandw.yaxis.get_offset_text().set_color(ax_spec_bandw.yaxis.label.get_color())
+
+    # yticks = ax_spec_bandw.yaxis.get_major_ticks()
+    # # print(yticks)
+    # print (yticks[1].label.get_text())
+    # yticks[1].label.set_text('')
+    # print (yticks[1].label.get_text())
+    
 
 
 def subfig_rad_size(ax_size_t, g, legend):
@@ -697,9 +740,10 @@ def subfig_rad_size(ax_size_t, g, legend):
             ax_size_t.plot(g.z, np.average(g.r_size * 2 * 1e6, weights=weight, axis=0), 'b-', linewidth=1.5)
 
     ax_size_t.set_ylim(ymin=0)
-    ax_size_t.set_ylabel(r'size$_{transv}$ [$\mu$m]')
+    ax_size_t.set_ylabel(r'$\sim$size$_{transv}$ [$\mu$m]'+'\n'+r'($2\sigma$)')
     ax_size_t.grid(True)
-
+    plt.yticks(plt.yticks()[0][0:-1])
+    
     if g.nSlices > 1:
         ax_size_s = ax_size_t.twinx()
         size_long_fwhm = np.zeros_like(g.z)
@@ -707,23 +751,40 @@ def subfig_rad_size(ax_size_t, g, legend):
         s = g.t * speed_of_light * 1.0e-15 * 1e6
         delta_s = (s[1] - s[0])
         for zz in range(g.nZ):
-            # if np.sum(g.spec[:,zz])!=0:
-            try:
-                peak = fwhm3(g.p_int[:, zz])
-                size_long_fwhm[zz] = abs(delta_s) * peak[1]  # the FWHM of spectral line (error when paekpos is at the edge of lamdscale)
-            except:
-                size_long_fwhm[zz] = 0
-
-            try:
+            #size_long_fwhm[zz] = fwhm(g.s,g.p_int[:, zz])
+            if np.sum(g.p_int[:,zz])!=0:
+                # try:
+                _, width, _ = fwhm3(g.p_int[:, zz])
+                if width != None:
+                    size_long_fwhm[zz] = abs(delta_s) * width  # the FWHM of spectral line (error when peakpos is at the edge of lamdscale)
+                else:
+                    size_long_fwhm[zz] = None
+                # except:
+                    # size_long_fwhm[zz] = 0
+                
+                # try:
                 size_long_std[zz] = std_moment(s, g.p_int[:, zz])
-            except:
-                size_long_std[zz] = 0
-
-        ax_size_s.plot(g.z, size_long_fwhm, color='navy', linestyle=':', linewidth=1.0, label="fwhm")
-        ax_size_s.plot(g.z, size_long_std, color='navy', linestyle='--', linewidth=1.0, label="std")
+                # except:
+                    # size_long_std[zz] = 0
+            else:
+                size_long_fwhm[zz] = None
+                size_long_std[zz] = None
+            
+        ax_size_s.plot(g.z, size_long_fwhm, color='navy', linestyle='--', linewidth=1.0, label="fwhm")
+        ax_size_s.plot(g.z, 2*size_long_std, color='navy', linestyle=':', linewidth=1.0, label="std")
         ax_size_s.set_ylim(ymin=0)
-        ax_size_s.set_ylabel(r'size$_{long}$ [$\mu$m]')
+        ax_size_s.set_ylabel(r'size$_{long}$ [$\mu$m]'+'\n'+r'(-- fwhm, $\cdots2\sigma$)')
         ax_size_s.grid(False)
+        plt.yticks(plt.yticks()[0][0:-1])
+        
+        ax_size_t.yaxis.label.set_color('b')
+        ax_size_t.tick_params(axis='y', which='both', colors=ax_size_t.yaxis.label.get_color())
+        ax_size_t.yaxis.get_offset_text().set_color(ax_size_t.yaxis.label.get_color())
+        
+        ax_size_s.yaxis.label.set_color('navy')
+        ax_size_s.tick_params(axis='y', which='both', colors=ax_size_s.yaxis.label.get_color())
+        ax_size_s.yaxis.get_offset_text().set_color(ax_size_s.yaxis.label.get_color())
+        
         if legend:
             ax_size_s.legend()
 #        plt.legend('fwhm','std')

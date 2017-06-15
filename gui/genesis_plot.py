@@ -1918,7 +1918,7 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap='jet',
         plt.close('all')
 
 
-def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, scatter=False, plot_x_y=True, plot_xy_s=True, bins=(50, 50, 50, 50), flip_t=True, s_units='um', e_units='ev', cmin=0, cmap='jet', debug=1):
+def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, scatter=False, plot_x_y=True, plot_xy_s=True, bins=(50, 50, 50, 50), flip_t=True, s_units='um', e_units='ev', cmin=0, e_offset=None, cmap='jet', debug=1):
 
     if showfig == False and savefig == False:
         return
@@ -1939,12 +1939,12 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
     fig.set_size_inches(((3 + plot_x_y + plot_xy_s) * figsize, 3 * figsize), forward=True)
 
     if s_units == 'fs':
-        s = edist.t * 1e15
+        mult = 1e15
         s_label = 't [fs]'
     elif s_units == 'um':
-        s = edist.t * speed_of_light * 1e6
+        mult = speed_of_light * 1e6
         s_label = 's [$\mu$m]'
-        
+    s = edist.t * mult
     # if flip_t:
         # s = -edist.t * speed_of_light * 1e6
     # else:
@@ -1952,35 +1952,33 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
 
     hist, edges = np.histogram(s, bins=bins[2])  # calculate current histogram
     edges = edges[0:-1]  # remove the last bin edge to save equal number of points
-    hist_int = np.trapz(hist, edges) / speed_of_light / 1e6  # normalize
+    hist_int = np.trapz(hist, edges) / mult  # normalize
     hist = np.rint(hist.astype(float) / (hist_int / float(edist.charge())))
 
     ax_curr = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 1)
     #ax_curr.hist(s, bins,color='b')
-    ax_curr.plot(edges, hist, color='b')
+    ax_curr.plot(edges, hist/1000, color='b',linewidth=2)
     ax_curr.set_xlabel(s_label)
-    ax_curr.set_ylabel('I [A]')
+    ax_curr.set_ylabel('I [kA]')
 
     ax_se = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 2 + plot_x_y + plot_xy_s, sharex=ax_curr)
     if e_units == 'ev':
         energy = edist.g * m_e_MeV
-        energy_av = int(mean(energy))
-
-        if scatter:
-            ax_se.scatter(s, energy - energy_av, marker='.')
-        else:
-            ax_se.hist2d(s, energy - energy_av, [bins[2], bins[3]], cmin=cmin, cmap=cmap)
-        ax_se.set_xlabel(s_label)
-        ax_se.set_ylabel('E + ' + str(energy_av) + ' [MeV]')
     else:  # elif beam_E_plot=='gamma':
         energy = edist.g
-        energy_av = int(mean(energy))
-        if scatter:
-            ax_se.scatter(s, energy - energy_av, marker='.')
-        else:
-            ax_se.hist2d(s, energy - energy_av, [bins[2], bins[3]], cmin=cmin, cmap=cmap)
-        ax_se.set_xlabel(s_label)
-        ax_se.set_ylabel('$\gamma$ + ' + str(energy_av))
+        
+    if e_offset == None:
+        e_offset = int(mean(energy))
+    if scatter:
+        ax_se.scatter(s, energy - e_offset, marker='.')
+    else:
+        ax_se.hist2d(s, energy - e_offset, [bins[2], bins[3]], cmin=cmin, cmap=cmap)
+
+    ax_se.set_xlabel(s_label)
+    if e_units == 'ev':
+        ax_se.set_ylabel('E + ' + str(e_offset) + ' [MeV]')
+    else:  # elif beam_E_plot=='gamma':
+        ax_se.set_ylabel('$\gamma$ + ' + str(e_offset))
 
     if plot_xy_s:
         ax_xs = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 4 + plot_x_y, sharex=ax_curr)
@@ -2041,7 +2039,7 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
 
     if debug > 0:
         print(('      done in %.2f seconds' % (time.time() - start_time)))
-
+    return fig
 
 def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=None, debug=0):
 

@@ -1613,7 +1613,7 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
             # p_mid_n = out.p_mid / (2 * out.leng / out('ncar')) #normalized on-axis power per pixel area
             # out.spec = abs(np.fft.fft(np.sqrt(np.array(out.p_mid)) * np.exp(1.j * np.array(out.phi_mid)), axis=0))**2 / (2 * out.leng / out('ncar'))**2 / 1e10 /np.sum(out.p_mid * out.dt, axis=0)#/ sqrt(out.nSlices)
             p_mid_n = out.p_mid / (2 * out.leng / out('ncar'))**2
-            out.spec = abs(np.fft.fft(np.sqrt(np.array(p_mid_n)) * np.exp(1.j * np.array(out.phi_mid)), axis=0))**2 * out.dt**2# * sqrt(2 * out.leng / out('ncar')) * out.dt**2#/ sqrt(out.nSlices)
+            out.spec = abs(np.fft.fft(np.sqrt(np.array(p_mid_n)) * np.exp(1.j * np.array(out.phi_mid)), axis=0))**2 * out.dt**2 * 1e10 #arb.units, normalized to mesh pixel, temporal slice size and slice number.
             if debug > 1:
                 print ('        done')
             

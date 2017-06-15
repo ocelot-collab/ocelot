@@ -1607,11 +1607,16 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
         out.beam_charge = np.sum(out.I * out.dt)
         out.sn_Imax = np.argmax(out.I)  # slice number with maximum current
         if read_level == 2:
+            
             if debug > 0:
                 print ('      calculating spectrum')
-            out.spec = abs(np.fft.fft(np.sqrt(np.array(out.power)) * np.exp(1.j * np.array(out.phi_mid)), axis=0))**2 / sqrt(out.nSlices) / (2 * out.leng / out('ncar'))**2 / 1e10
+            # p_mid_n = out.p_mid / (2 * out.leng / out('ncar')) #normalized on-axis power per pixel area
+            # out.spec = abs(np.fft.fft(np.sqrt(np.array(out.p_mid)) * np.exp(1.j * np.array(out.phi_mid)), axis=0))**2 / (2 * out.leng / out('ncar'))**2 / 1e10 /np.sum(out.p_mid * out.dt, axis=0)#/ sqrt(out.nSlices)
+            p_mid_n = out.p_mid / (2 * out.leng / out('ncar'))**2
+            out.spec = abs(np.fft.fft(np.sqrt(np.array(p_mid_n)) * np.exp(1.j * np.array(out.phi_mid)), axis=0))**2 * out.dt**2# * sqrt(2 * out.leng / out('ncar')) * out.dt**2#/ sqrt(out.nSlices)
             if debug > 1:
                 print ('        done')
+            
             e_0 = h_eV_s * speed_of_light / out('xlamds')
             out.freq_ev = h_eV_s * np.fft.fftfreq(len(out.spec), d=out('zsep') * out('xlamds') * out('ishsty') / speed_of_light) + e_0  # d=out.dt
 

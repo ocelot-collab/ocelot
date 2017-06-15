@@ -322,6 +322,7 @@ def plot_gen_out_z(g, figsize=(10, 14), legend=True, fig_name=None, z=inf, savef
     maxspower_index = np.argmax(power[:, zi])
     maxspectrum_wavelength = g.freq_lamd[maxspectrum_index] * 1e-9
     
+    spectrum_lamdwidth_fwhm = None
     if np.sum(g.spec[:,zi])!=0:
         pos, width, arr = fwhm3(g.spec[:, zi])
         if width != None:
@@ -330,8 +331,7 @@ def plot_gen_out_z(g, figsize=(10, 14), legend=True, fig_name=None, z=inf, savef
             else:
                 dlambda = abs( (g.freq_lamd[arr[0]] - g.freq_lamd[arr[-1]]) / (arr[0] - arr[-1]) )
             spectrum_lamdwidth_fwhm = dlambda * width / g.freq_lamd[pos]  # the FWHM of spectral line (error when peakpos is at the edge of lamdscale)
-        else:
-            spectrum_lamdwidth_fwhm = None
+
     
     ax_spectrum.text(0.02, 0.98, r"$\lambda_{max}$= %.4e m " "\n" "$(\Delta\lambda/\lambda)_{fwhm}$= %.2e" % (maxspectrum_wavelength, spectrum_lamdwidth_fwhm), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_spectrum.transAxes, color='red')  # horizontalalignment='center', verticalalignment='center',
 
@@ -686,7 +686,10 @@ def subfig_rad_spec(ax_spectrum, g, legend, log=1):
     
     spectrum_lamdwidth_fwhm = np.zeros_like(g.z)
     spectrum_lamdwidth_std = np.zeros_like(g.z)
+    
     for zz in range(g.nZ):
+        spectrum_lamdwidth_fwhm[zz] = None
+        spectrum_lamdwidth_std[zz] = None
         if np.sum(g.spec[:,zz])!=0:
             pos, width, arr = fwhm3(g.spec[:, zz])
             if width != None:
@@ -696,13 +699,9 @@ def subfig_rad_spec(ax_spectrum, g, legend, log=1):
                     dlambda = abs( (g.freq_lamd[arr[0]] - g.freq_lamd[arr[-1]]) / (arr[0] - arr[-1]) )
                 spectrum_lamdwidth_fwhm[zz] = dlambda * width / g.freq_lamd[pos]  
                 # spectrum_lamdwidth_fwhm[zz] = abs(g.freq_lamd[arr[0]] - g.freq_lamd[arr[-1]]) / g.freq_lamd[pos]  # the FWHM of spectral line (error when peakpos is at the edge of lamdscale)
-            else:
-                spectrum_lamdwidth_fwhm[zz] = None
             
             spectrum_lamdwidth_std[zz] = std_moment(g.freq_lamd, g.spec[:, zz]) / n_moment(g.freq_lamd, g.spec[:, zz], 0, 1)
-        else:
-            spectrum_lamdwidth_fwhm[zz] = None
-            spectrum_lamdwidth_std[zz] = None
+
         # try:
             # peak = fwhm3(g.spec[:, zz])
             # spectrum_lamdwidth_fwhm[zz] = abs(g.freq_lamd[0] - g.freq_lamd[1]) * peak[1] / g.freq_lamd[peak[0]]  # the FWHM of spectral line (error when paekpos is at the edge of lamdscale)

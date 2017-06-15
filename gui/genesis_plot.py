@@ -325,11 +325,15 @@ def plot_gen_out_z(g, figsize=(10, 14), legend=True, fig_name=None, z=inf, savef
     if np.sum(g.spec[:,zi])!=0:
         pos, width, arr = fwhm3(g.spec[:, zi])
         if width != None:
-            spectrum_lamdwidth_fwhm = abs(g.freq_lamd[arr[0]] - g.freq_lamd[arr[-1]]) / g.freq_lamd[pos]  # the FWHM of spectral line (error when peakpos is at the edge of lamdscale)
+            if arr[0] == arr[-1]:
+                dlambda = abs(g.freq_lamd[pos] - g.freq_lamd[pos-1])
+            else:
+                dlambda = abs( (g.freq_lamd[arr[0]] - g.freq_lamd[arr[-1]]) / (arr[0] - arr[-1]) )
+            spectrum_lamdwidth_fwhm = dlambda * width / g.freq_lamd[pos]  # the FWHM of spectral line (error when peakpos is at the edge of lamdscale)
         else:
             spectrum_lamdwidth_fwhm = None
     
-    ax_spectrum.text(0.02, 0.98, r"$\lambda_{max}$= %.3f nm " "\n" "$(\Delta\lambda/\lambda)_{fwhm}$= %.2e" % (maxspectrum_wavelength * 1e9, spectrum_lamdwidth_fwhm), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_spectrum.transAxes, color='red')  # horizontalalignment='center', verticalalignment='center',
+    ax_spectrum.text(0.02, 0.98, r"$\lambda_{max}$= %.4e m " "\n" "$(\Delta\lambda/\lambda)_{fwhm}$= %.2e" % (maxspectrum_wavelength, spectrum_lamdwidth_fwhm), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_spectrum.transAxes, color='red')  # horizontalalignment='center', verticalalignment='center',
 
     phase = unwrap(g.phi_mid[:, zi])
 
@@ -686,7 +690,12 @@ def subfig_rad_spec(ax_spectrum, g, legend, log=1):
         if np.sum(g.spec[:,zz])!=0:
             pos, width, arr = fwhm3(g.spec[:, zz])
             if width != None:
-                spectrum_lamdwidth_fwhm[zz] = abs(g.freq_lamd[arr[0]] - g.freq_lamd[arr[-1]]) / g.freq_lamd[pos]  # the FWHM of spectral line (error when peakpos is at the edge of lamdscale)
+                if arr[0] == arr[-1]:
+                    dlambda = abs(g.freq_lamd[pos] - g.freq_lamd[pos-1])
+                else:
+                    dlambda = abs( (g.freq_lamd[arr[0]] - g.freq_lamd[arr[-1]]) / (arr[0] - arr[-1]) )
+                spectrum_lamdwidth_fwhm[zz] = dlambda * width / g.freq_lamd[pos]  
+                # spectrum_lamdwidth_fwhm[zz] = abs(g.freq_lamd[arr[0]] - g.freq_lamd[arr[-1]]) / g.freq_lamd[pos]  # the FWHM of spectral line (error when peakpos is at the edge of lamdscale)
             else:
                 spectrum_lamdwidth_fwhm[zz] = None
             
@@ -767,7 +776,7 @@ def subfig_rad_size(ax_size_t, g, legend):
                 # try:
                 _, width, _ = fwhm3(g.p_int[:, zz])
                 if width != None:
-                    size_long_fwhm[zz] = abs(delta_s) * width  # the FWHM of spectral line (error when peakpos is at the edge of lamdscale)
+                    size_long_fwhm[zz] = abs(delta_s) * width
                 else:
                     size_long_fwhm[zz] = None
                 # except:
@@ -2843,14 +2852,17 @@ def gauss_fit(X, Y):
     return (Y1, RMS)
 
 
-def fwhm3(valuelist, height=0.5, peakpos=-1):
+def fwhm3(valuelist, height=0.5, peakpos=-1, total=1):
     """calculates the full width at half maximum (fwhm) of some curve.
-    the function will return the fwhm with sub-pixel interpolation. It will start at the maximum position and 'walk' left and right until it approaches the half values.
+    the function will return the fwhm with sub-pixel interpolation. 
+    It will start at the maximum position and 'walk' left and right until it approaches the half values.
+    if total==1, it will start at the edges and 'walk' towards peak until it approaches the half values.
     INPUT:
     - valuelist: e.g. the list containing the temporal shape of a pulse
     OPTIONAL INPUT:
     -peakpos: position of the peak to examine (list index)
     the global maximum will be used if omitted.
+    if total = 1 - 
     OUTPUT:
     -fwhm (value)
     """
@@ -2861,26 +2873,48 @@ def fwhm3(valuelist, height=0.5, peakpos=-1):
     peakvalue = valuelist[peakpos]
     phalf = peakvalue * height
 
-    # go left and right, starting from peakpos
-    ind1 = peakpos
-    ind2 = peakpos
-
-    while ind1 > 2 and valuelist[ind1] > phalf:
-        ind1 = ind1 - 1
-    while ind2 < len(valuelist) - 1 and valuelist[ind2] > phalf:
-        ind2 = ind2 + 1
-    # ind1 and 2 are now just below phalf
-    grad1 = valuelist[ind1 + 1] - valuelist[ind1]
-    grad2 = valuelist[ind2] - valuelist[ind2 - 1]
-    if grad1 == 0 or grad2 == 0:
-        width = None
+    if total == 0:
+        # go left and right, starting from peakpos
+        ind1 = peakpos
+        ind2 = peakpos
+        while ind1 > 2 and valuelist[ind1] > phalf:
+            ind1 = ind1 - 1
+        while ind2 < len(valuelist) - 1 and valuelist[ind2] > phalf:
+            ind2 = ind2 + 1
+        grad1 = valuelist[ind1 + 1] - valuelist[ind1]
+        grad2 = valuelist[ind2] - valuelist[ind2 - 1]
+        if grad1 == 0 or grad2 == 0:
+            width = None
+        else:
+            # calculate the linear interpolations
+            # print(ind1,ind2)
+            p1interp = ind1 + (phalf - valuelist[ind1]) / grad1
+            p2interp = ind2 + (phalf - valuelist[ind2]) / grad2
+            # calculate the width
+            width = p2interp - p1interp
     else:
-        # calculate the linear interpolations
+        ind1 = 1
+        ind2 = valuelist.size-2
+        # print(peakvalue,phalf)
+        # print(ind1,ind2,valuelist[ind1],valuelist[ind2])
+        while ind1 < peakpos and valuelist[ind1] < phalf:
+            ind1 = ind1 + 1
+        while ind2 > peakpos and valuelist[ind2] < phalf:
+            ind2 = ind2 - 1
         # print(ind1,ind2)
-        p1interp = ind1 + (phalf - valuelist[ind1]) / grad1
-        p2interp = ind2 + (phalf - valuelist[ind2]) / grad2
-        # calculate the width
-        width = p2interp - p1interp
+        # ind1 and 2 are now just above phalf
+        grad1 = valuelist[ind1] - valuelist[ind1 - 1]
+        grad2 = valuelist[ind2 + 1] - valuelist[ind2]
+        if grad1 == 0 or grad2 == 0:
+            width = None
+        else:
+            # calculate the linear interpolations
+            p1interp = ind1 + (phalf - valuelist[ind1]) / grad1
+            p2interp = ind2 + (phalf - valuelist[ind2]) / grad2
+            # calculate the width
+            width = p2interp - p1interp
+        # print(p1interp, p2interp)
+            
     return (peakpos, width, np.array([ind1, ind2]))
 
     # ax_size_l = ax_size_t.twinx() #longitudinal size

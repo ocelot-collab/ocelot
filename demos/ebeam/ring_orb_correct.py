@@ -3,8 +3,8 @@ __author__ = 'Sergey Tomin'
 from ocelot import *
 from ocelot.gui.accelerator import *
 from ocelot.cpbd.orbit_correction import *
-
-
+from ocelot.cpbd.response_matrix import *
+# **************************** LATTICE: START ***********************************************
 D0 = Drift (l = 0., eid= "D0")
 D1 = Drift (l = 1.49, eid= "D1")
 D2 = Drift (l = 0.1035, eid= "D2")
@@ -93,6 +93,8 @@ Q6s = [q6s, M6s, H6s, V6s]
 
 cell = ( D1,SF, D2,Q1,D3, Q2,D2,SD,D4,B1,B2,D5,Q3,D5,B2,B1,D6,Q4,D7,Q5,D8,Q6,D9,Q6s,D8,Q5s,D7,Q4s,D6,B1,B2,D5,Q3s,D5,B2,B1,D4,SD,D2,Q2s,D3,Q1s,D2,SF,D1)
 
+# **************************** LATTICE: END ***********************************************
+
 
 beam = Beam()
 beam.E = 2.5
@@ -109,29 +111,32 @@ tws=twiss(lat, tw0, nPoints=1000)
 plot_opt_func(lat, tws, top_plot=["Dx"])
 plt.show()
 
-orb = Orbit(lat)
+
+orb = NewOrbit(lat)
+
+method = RingRM(lattice=orb.lat, hcors=orb.hcors, vcors=orb.vcors, bpms=orb.bpms)
+orb.response_matrix = ResponseMatrix(method=method)
+orb.response_matrix.calculate()
 
 s_bpm_b = np.array([p.s for p in orb.bpms])
-
-p0=Particle(E=beam.E)
-x_bpm_b, y_bpm_b = orb.read_virtual_orbit()
-ax = plot_API(lat)
+x_bpm_b, y_bpm_b = method.read_virtual_orbit()
+fig, ax = plot_API(lat)
 ax.plot(s_bpm_b, x_bpm_b*1000., "ro-")
 ax.plot(s_bpm_b, y_bpm_b*1000., "bo-")
 plt.show()
 
-resp_mat1 = orb.ring_response_matrix()
+#resp_mat1 = method.ring_response_matrix()
 
 #print(resp_mat1)
 orb.correction()
 
-x_bpm, y_bpm = orb.read_virtual_orbit()
+x_bpm, y_bpm = method.read_virtual_orbit()
 
-p_list = lattice_track(lat, orb.particle0)
+p_list = lattice_track(lat, method.particle0)
 s = [p.s for p in p_list]
 x = [p.x*1000. for p in p_list]
 y = [p.y*1000. for p in p_list]
-ax = plot_API(lat)
+fig, ax = plot_API(lat)
 ax.plot(s_bpm_b, x_bpm*1000., "ro")
 ax.plot(s, x, 'r')
 ax.plot(s_bpm_b, y_bpm*1000., "bo")

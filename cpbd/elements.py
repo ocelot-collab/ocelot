@@ -301,6 +301,7 @@ class Cavity(Element):
         self.phi = phi  # in grad # *np.pi/180.
         self.E = 0
         self.volterr = volterr
+        self.coupler_kick = False
 
 
 class Solenoid(Element):
@@ -332,33 +333,57 @@ class Multipole(Element):
 
 class Matrix(Element):
     def __init__(self, l=0.,
-                 rm11=0., rm12=0., rm13=0., rm14=0.,
-                 rm21=0., rm22=0., rm23=0., rm24=0.,
-                 rm31=0., rm32=0., rm33=0., rm34=0.,
-                 rm41=0., rm42=0., rm43=0., rm44=0.,
-                 eid=None):
+                 rm11=0., rm12=0., rm13=0., rm14=0., rm15=0., rm16=0.,
+                 rm21=0., rm22=0., rm23=0., rm24=0., rm25=0., rm26=0.,
+                 rm31=0., rm32=0., rm33=0., rm34=0., rm35=0., rm36=0.,
+                 rm41=0., rm42=0., rm43=0., rm44=0., rm45=0., rm46=0.,
+                 rm51=0., rm52=0., rm53=0., rm54=0., rm55=0., rm56=0.,
+                 rm61=0., rm62=0., rm63=0., rm64=0., rm65=0., rm66=0.,
+                 delta_e=0, eid=None):
         Element.__init__(self, eid)
         self.l = l
         self.rm11 = rm11
         self.rm12 = rm12
         self.rm13 = rm13
         self.rm14 = rm14
+        self.rm15 = rm15
+        self.rm16 = rm16
 
         self.rm21 = rm21
         self.rm22 = rm22
         self.rm23 = rm23
         self.rm24 = rm24
+        self.rm25 = rm25
+        self.rm26 = rm26
 
         self.rm31 = rm31
         self.rm32 = rm32
         self.rm33 = rm33
         self.rm34 = rm34
+        self.rm35 = rm35
+        self.rm36 = rm36
 
         self.rm41 = rm41
         self.rm42 = rm42
         self.rm43 = rm43
         self.rm44 = rm44
+        self.rm45 = rm45
+        self.rm46 = rm46
 
+        self.rm51 = rm51
+        self.rm52 = rm52
+        self.rm53 = rm53
+        self.rm54 = rm54
+        self.rm55 = rm55
+        self.rm56 = rm56
+
+        self.rm61 = rm61
+        self.rm62 = rm62
+        self.rm63 = rm63
+        self.rm64 = rm64
+        self.rm65 = rm65
+        self.rm66 = rm66
+        self.delta_e = delta_e
 
 class Pulse:
     def __init__(self):

@@ -2,6 +2,7 @@ import sqlite3
 import os, sys
 import datetime, time
 
+
 class Tuning:
     def __init__(self, pars):
         self.time = pars[0]
@@ -27,14 +28,16 @@ class ActionParameters:
 
 
 class PerfDB:
-    def __init__(self, dbname = "flash.db"):
+    def __init__(self, dbname="flash.db"):
+        print("connecting to database ... ")
         self.db = sqlite3.connect(dbname)
         
     def new_tuning(self, params):
         print ('creating new tuning', params)
         with self.db:
             cursor = self.db.cursor()
-            cursor.execute("insert into TUNINGS(TIME,CHARGE,WL, COMMENT) VALUES(?,?,?,?)",(datetime.datetime.now(),params['charge'], params['wl'], "test"))
+            cursor.execute("insert into TUNINGS(TIME,CHARGE,WL, COMMENT) VALUES(?,?,?,?)",
+                           (datetime.datetime.now(), params['charge'], params['wl'], "test"))
         
     def get_tunings(self):
         cursor = self.db.cursor()
@@ -55,7 +58,7 @@ class PerfDB:
     def get_actions(self, tuning_id = None):
         cursor = self.db.cursor()
         if tuning_id == None: tuning_id = self.current_tuning_id()
-        cursor.execute("select * from ACTIONS WHERE TUNING_ID=:Id",{'Id':tuning_id})
+        cursor.execute("select * from ACTIONS WHERE TUNING_ID=:Id", {'Id': tuning_id})
         return [ActionResult(r) for r in cursor.fetchall()]
 
     def current_action_id(self):
@@ -63,17 +66,17 @@ class PerfDB:
 
 
     def add_action_parameters(self, tuning_id, action_id, param_names, start_vals, end_vals):
-        print ('updating action', tuning_id, action_id)
+        print('updating action', tuning_id, action_id)
         with self.db:
             cursor = self.db.cursor()
 
             for i in range(len(param_names)):
                 cursor.execute("insert into PARAMETERS(TUNING_ID,ACTION_ID, PAR_NAME,PAR_START_VALUE,PAR_END_VALUE) VALUES(?,?,?,?,?)",
-                               (tuning_id, action_id, param_names[i], start_vals[i],end_vals[i]))
+                               (tuning_id, action_id, param_names[i], start_vals[i], end_vals[i]))
 
     def get_action_parameters(self, tuning_id, action_id):
         cursor = self.db.cursor()
-        cursor.execute("select * from PARAMETERS WHERE TUNING_ID=:tid and ACTION_ID = :aid",{'tid':tuning_id, 'aid':action_id})
+        cursor.execute("select * from PARAMETERS WHERE TUNING_ID=:tid and ACTION_ID = :aid", {'tid': tuning_id, 'aid': action_id})
         #return cursor.fetchall()
         return [ActionParameters(r) for r in cursor.fetchall()]
 
@@ -93,27 +96,71 @@ class PerfDB:
     def close(self):
         self.db.close()
 
+def create_db(dbname="flash.db"):
 
-def test_new_tunings():
-    db = PerfDB()
+    db = sqlite3.connect(dbname)
+    cursor = db.cursor()
+
+    cursor.execute("drop table if exists TUNINGS")
+    sql = """CREATE TABLE TUNINGS (
+             TIME  DATETIME NOT NULL,
+             ID  INTEGER PRIMARY KEY,
+             WL FLOAT,
+             CHARGE FLOAT,
+             COMMENT  CHAR(20))"""
+
+    cursor.execute(sql)
+
+    cursor.execute("drop table if exists ACTIONS")
+    sql = """CREATE TABLE ACTIONS (
+             TUNING_ID INTEGER,
+             ACTION_ID INTEGER PRIMARY KEY,
+             SASE_START FLOAT,
+             SASE_END FLOAT)"""
+
+    cursor.execute(sql)
+
+    cursor.execute("drop table if exists PARAMETERS")
+    sql = """CREATE TABLE PARAMETERS (
+             TUNING_ID INTEGER,
+             ACTION_ID INTEGER,
+             PAR_NAME CHAR(20),
+             PAR_START_VALUE FLOAT,
+             PAR_END_VALUE FLOAT,
+             PRIMARY KEY(TUNING_ID, ACTION_ID, PAR_NAME) )"""
+
+    cursor.execute(sql)
+
+    cursor.execute("drop table if exists MACHINE_STATE")
+    sql = """CREATE TABLE MACHINE_STATE (
+             TUNING_ID INTEGER,
+             PAR_NAME CHAR(20),
+             PAR_VALUE FLOAT)"""
+
+    cursor.execute(sql)
+
+    db.close()
+
+def test_new_tunings(dbname):
+    db = PerfDB(dbname=dbname)
     db.new_tuning({'wl':13.6, 'charge':0.1,'comment':'test tuning'}) # creates new tuning record (e.g. for each shift); 
     tunings = db.get_tunings()
     print ('current tunings', [(t.id, t.time, t.charge, t.wl) for t in tunings])
     tune_id = db.current_tuning_id()
     print ('current id', tune_id)
-    db.add_machine_parameters(tune_id, params = {"hbar":1.0e-34, "nbunh":20})
+    db.add_machine_parameters(tune_id, params = {"hbar":1.0e-34, "nbunh":"ff"})
     print ('current machine parameters', db.get_machine_parameters(tune_id))
 
 
-def test_new_action():
-    db = PerfDB()
+def test_new_action(dbname):
+    db = PerfDB(dbname=dbname)
     tune_id = db.current_tuning_id()
     print ('new action for tune_id', tune_id)
     db.new_action(tune_id, start_sase = 1.0, end_sase = 150)
     print ('current actions in tuning', [(t.id, t.tuning_id, t.sase_start, t.sase_end) for t in db.get_actions()])
 
-def test_add_action_parameters():
-    db = PerfDB()
+def test_add_action_parameters(dbname):
+    db = PerfDB(dbname=dbname)
     tune_id = db.current_tuning_id()
     action_id = db.current_action_id()
     print ('updating', tune_id, action_id)
@@ -125,8 +172,10 @@ def test_add_action_parameters():
 
 if __name__ == "__main__":
     # tests
-    test_new_tunings()
-    test_new_action()
-    test_add_action_parameters()
-    test_new_action()
-    test_add_action_parameters()
+    dbname = "test2.db"
+    create_db(dbname)
+    test_new_tunings(dbname)
+    test_new_action(dbname)
+    test_add_action_parameters(dbname)
+    test_new_action(dbname)
+    test_add_action_parameters(dbname)

@@ -44,6 +44,9 @@ def x2xgaus(X):
     | - coordinate
     x - new coordinate
     . - removed coordinate |
+
+    :param X: array
+    :return: new array
     """
     sqrt35 = 0.5*np.sqrt(3./5.)
     xnew = [X[0]]
@@ -127,6 +130,7 @@ def energy_loss_und(energy, Kx, lperiod, L, energy_loss = False):
 def sigma_gamma_quat(energy, Kx, lperiod, L):
     """
     rate of energy diffusion
+
     :param energy: electron beam energy
     :param Kx: undulator parameter
     :param lperiod: undulator period
@@ -240,6 +244,20 @@ def track4rad(beam, lat, energy_loss=False, quantum_diff=False, accuracy=1):
 
 #@jit
 def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step, tmp):
+    """
+
+    :param Xscr:
+    :param Yscr:
+    :param Erad:
+    :param motion:
+    :param screen:
+    :param n:
+    :param n_end:
+    :param gamma:
+    :param half_step:
+    :param tmp:
+    :return:
+    """
     Q = 0.5866740802042227#; // (mm*T)^-1
     hc = 1.239841874330e-3 # // mm
     k2q3 = 1.1547005383792517#;//  = 2./sqrt(3)

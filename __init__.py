@@ -2,10 +2,10 @@
 general ocelot description
 '''
 
-__version__ = '16.8.rc'
+__version__ = '17.05.rc'
 
 __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope",  # beam
-            "ellipse_from_twiss", "ParticleArray",  # beam
+            "ellipse_from_twiss", "ParticleArray", "save_particle_array", "load_particle_array",   # beam
            'fodo_parameters', 'lattice_transfer_map', 'TransferMap', 'gauss_from_twiss',  # optics
            "get_map", "MethodTM", "SecondTM", "KickTM", "CavityTM", "UndulatorTestTM",  # optics
            'Element', 'Multipole', 'Quadrupole', 'RBend', "Matrix", "UnknownElement",  # elements
@@ -20,7 +20,7 @@ __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope", 
            "compensate_chromaticity",  # chromaticity
            "EbeamParams",  # e_beam_params
            "write_lattice",  # io
-           "CSR", "SpaceCharge", "Wake", "WakeTable",
+           "CSR", "SpaceCharge", "Wake", "WakeTable", "WakeKick", "BeamTransform",
            "MagneticLattice",
            ]
 

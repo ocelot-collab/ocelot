@@ -123,7 +123,7 @@ class EbeamParams:
         self.I4_IDs = 0.
         self.I5_IDs = 0.
         for elem in self.lat.sequence:
-            if elem.type == "undulator":
+            if elem.__class__ == Undulator:
                 B = K2field(elem.Kx, lu = elem.lperiod)
                 h0 = B*speed_of_light/self.E*1e-9
                 #print h0, B

@@ -45,6 +45,21 @@ from numpy.linalg import solve, inv
 class OGP(object):
     def __init__(self, dim, hyperparams, covar='RBF_ARD', maxBV=200, 
                  prmean=None, prmeanp=None, proj=True, weighted=False, thresh=1e-6):
+        """
+
+        :param dim:
+        :param hyperparams: ([hyp_params.calcLengthScaleHP(ave, std)]) - devices,
+                            coeff=hyp_params.calcAmpCoeffHP(ave, std=0.) - SASE
+                            noise=hyp_params.calcAmpCoeffHP(ave, std=0.) - SASE)
+
+        :param covar:
+        :param maxBV:
+        :param prmean:
+        :param prmeanp:
+        :param proj:
+        :param weighted:
+        :param thresh:
+        """
         self.nin = dim
         self.maxBV = maxBV
         self.numBV = 0
@@ -315,7 +330,7 @@ class OGP(object):
     
         b = np.exp(hyp_ARD)
         coeff = np.exp(hyp_coeff)
-    
+        #print("(hyp_ARD, hyp_coeff) = ", (hyp_ARD, hyp_coeff))
         # use ARD to scale
         b_sqrt = np.sqrt(b)
         x1 = x1 * b_sqrt

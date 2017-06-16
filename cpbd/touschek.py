@@ -86,7 +86,7 @@ def t_touschek(tws, beam):
         B2 += (sigh2**2 * betx**2 * bety**2 * Dxh**2 * Dyh**2) / (beta**4 * gam**4 * sig_x2 * sig_y2)
         
         #print 'B2', B2
-        if B2 < 0: print 'B2 error' 
+        if B2 < 0: print ('B2 error' )
         B2 = sqrt(B2)
         '''
         print 'B1-B2',B1**2 - B2**2

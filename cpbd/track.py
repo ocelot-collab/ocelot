@@ -8,7 +8,7 @@ from ocelot.cpbd.errors import *
 from ocelot.cpbd.elements import *
 from time import time
 from scipy.stats import truncnorm
-from copy import copy
+from copy import copy, deepcopy
 import sys
 
 try:
@@ -104,10 +104,10 @@ def harmonic_position(data1D, nu = None, diap = 0.1, nearest = False):
     """
     freq, ft_shift = spectrum(data1D)
     ft_maxi = arg_peaks(ft_shift)
-    if len(ft_maxi)==0:
+    if len(ft_maxi) == 0:
         return -0.001
-    freq_peaks = freq[ft_maxi][len(ft_maxi)/2:]
-    peaks = ft_shift[ft_maxi][len(ft_maxi)/2:]
+    freq_peaks = freq[ft_maxi][int(len(ft_maxi)/2):]
+    peaks = ft_shift[ft_maxi][int(len(ft_maxi)/2):]
 
     main_3 =  freq_peaks[np.argsort(peaks)]
 
@@ -262,52 +262,24 @@ def track_nturns(lat, nturns, track_list, nsuperperiods=1, save_track=True):
     navi = Navigator()
 
     t_maps = get_map(lat, lat.totalLen, navi)
-    #t_maps = merge_maps(t_maps)
-    #print("TMaps = ", len(t_maps))
-    #for t in t_maps:
-    #    print(t.length, t.__class__, t.R(0) )
-    #print len(t_maps), len(lat.sequence)
-    #if order == 1:
-    #    navi = Navigator()
-    #    t_maps, delta_e = get_map(lat, lat.totalLen, navi)
-    #
-    #    def turn(p_array):
-    #        for tm in t_maps:
-    #            tm.apply(p_array)
-    #else:
-    #    def turn(p_array):
-    #        for elem in lat.sequence:
-    #            elem.transfer_map.map(p_array.particles)
-    #            p_array.s += elem.transfer_map.length
 
     track_list_const = copy(track_list)
     p_array = ParticleArray()
     p_list = [p.particle for p in track_list]
     p_array.list2array(p_list)
-    #p_array = ParticleArray(n = len(track_list))
-    #for i, pxy in enumerate(track_list):
-    #    p_array[i] = pxy.particle
 
     for i in range(nturns):
         print(i)
         for n in range(nsuperperiods):
-            #turn(p_array)
-            #print(p_array.particles[:6])
             for tm in t_maps:
-                #print("track ", tm.__class__)
                 tm.apply(p_array)
-                # for test
-                #p_array.E += tm.delta_e
-                #tm.sym_map(p_array.particles, energy=p_array.E)
-                #p_array.s += tm.length
             p_indx = p_array.rm_tails(xlim, ylim, px_lim, py_lim)
 
             track_list = delete(track_list, p_indx)
         for n, pxy in enumerate(track_list):
             pxy.turn = i
-            #pxy.p_list = append(pxy.p_list, p_array.particles[n*6:n*6+6])
             if save_track:
-                pxy.p_list.append(p_array.particles[n*6:n*6+6])
+                pxy.p_list.append(p_array.rparticles[:, n])
     return np.array(track_list_const)
 
 '''
@@ -457,7 +429,7 @@ def tracking_step(lat, particle_list, dz, navi):
     return
 
 
-def track(lattice, p_array, navi, print_progress=True):
+def track(lattice, p_array, navi, print_progress=True, calc_tws=True):
     """
     tracking through the lattice
     :param lattice: Magnetic Lattice
@@ -465,18 +437,19 @@ def track(lattice, p_array, navi, print_progress=True):
     :param navi: Navigator
     :return: twiss list, ParticleArray
     """
-    tw0 = get_envelope(p_array)
+    tw0 = get_envelope(p_array) if calc_tws else Twiss()# get_envelope(p_array)
     #print(tw0)
     tws_track = [tw0]
     L = 0.
     while np.abs(navi.z0 - lattice.totalLen) > 1e-10:
         dz, proc_list = navi.get_next()
+
         tracking_step(lat=lattice, particle_list=p_array, dz=dz, navi=navi)
 
         for p in proc_list:
             p.z0 = navi.z0
             p.apply(p_array, dz)
-        tw = get_envelope(p_array)
+        tw = get_envelope(p_array) if calc_tws else Twiss()
         L += dz
         tw.s += L
         tws_track.append(tw)
@@ -511,7 +484,7 @@ def merge_drifts(lat):
     new_elem = None
     for elem in lat.sequence:
         #next_elem = lat.sequence[i+1]
-        if elem.type == "drift":
+        if elem.__class__ == Drift:
             L += elem.l
             new_elem = Drift(l=L, eid=elem.id)
         else:
@@ -524,6 +497,7 @@ def merge_drifts(lat):
         seq.append(new_elem)
     print( "after merging: len(sequence) = ", len(seq) )
     return MagneticLattice(sequence=seq)
+
 
 
 """

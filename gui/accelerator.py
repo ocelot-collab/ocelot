@@ -290,7 +290,7 @@ dict_plot = {Quadrupole: {"scale": 0.7, "color": "r",            "edgecolor": "r
              }
 
 
-def  new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legend = True):
+def new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legend = True):
     dict_copy=deepcopy(dict_plot)
     alpha = 1
     ax.set_ylim((-1,1.5))
@@ -574,7 +574,6 @@ def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=Tr
     plot_disp(ax_top,tws, top_plot, font_size)
 
     plot_betas(ax_b, S, beta_x, beta_y, font_size)
-
     #plot_elems(ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8) # plot elements
     new_plot_elems(fig, ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8)
 
@@ -643,8 +642,16 @@ def plot_trajectory(lat, list_particles):
     plt.show()
 
 
-def plot_API(lat, legend=True):
-    fig = plt.figure()
+def plot_API(lat, legend=True, fig_name=1):
+    """
+    Function creates a picture with lattice on the bottom part of the picture and top part of the picture can be
+    plot arbitrary lines.
+
+    :param lat: MagneticLattice
+    :param legend: True, description of the elements, if False it is switched legend off
+    :return: fig, ax
+    """
+    fig = plt.figure(fig_name)
     plt.rc('axes', grid=True)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
     left, width = 0.1, 0.85
@@ -672,7 +679,7 @@ def plot_API(lat, legend=True):
 
     #plot_elems(ax_el, lat, nturns = 1, legend = True) # plot elements
     new_plot_elems(fig, ax_el, lat, nturns = 1, legend = legend)
-    return ax_xy
+    return fig, ax_xy
 
 
 def plot_traj_pulse(lat, list_particles, list_particles2, U1, U2):

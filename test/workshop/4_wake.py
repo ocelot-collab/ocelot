@@ -4,7 +4,7 @@ August 2016.
 """
 # this python library provides generic shallow (copy) and deep copy (deepcopy) operations
 from copy import deepcopy
-
+import time
 # import from Ocelot main modules and functions
 from ocelot import *
 
@@ -51,6 +51,9 @@ lat = MagneticLattice(lattice, method=method)
 # Load beam file
 p_array_init = astraBeam2particleArray(filename='beam_chirper.ast')
 
+#print(p_array_init.particles[:12])
+#print(p_array_init.rparticles[1, :2])
+
 # Initialization of the wakes and the places of their applying
 
 from ocelot.cpbd.wake3D import *
@@ -94,8 +97,9 @@ navi.unit_step = 0.2
 
 # deep copy of the initial beam distribution
 p_array = deepcopy(p_array_init)
+start_time = time.time()
 tws_track, p_array = track(lat, p_array, navi)
-
+print("track exec: ", time.time() - start_time, " sec")
 # Longitudinal beam distribution
 tau0 = p_array_init.tau()
 p0 = p_array_init.p()

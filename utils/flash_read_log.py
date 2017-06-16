@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as md
 import matplotlib
 import sys
-font = {'size'   : 35}
+font = {'size'   : 20}
 matplotlib.rc('font', **font)
 
 
@@ -134,16 +134,23 @@ def plot_dict(dict_data, filename=None, interval=1, mode="%", grid=True):
     ax2 = ax.twinx()
     pict = []
     #devices=['V3DBC3', 'H3DBC3', 'H10SMATCH', 'V14SMATCH', 'H12SMATCH', 'V7SMATCH']
+    lines = []
     for device in devices:
         x = dict_data[device]
         shift = np.around(x[0], decimals=2)
         if mode == "%":
-            ax2.plot( times[::inrv], (x[::inrv] - x[0])/x[0], lw = 2, label = device)
+            line, = ax2.plot( times[::inrv], (x[::inrv] - x[0])/x[0], lw = 2, label = device)
         else:
-            ax2.plot( times[::inrv], x[::inrv] - shift,lw=2,  label = device + ": " + str(shift) )
+            line, = ax2.plot( times[::inrv], x[::inrv] - shift,lw=2,  label = device + ": " + str(shift) )
+        lines.append(line)
     fig.autofmt_xdate()
     pict.append(pax2)
     ax2.legend(loc=4, framealpha=0.5)
+    # Create a legend for the first line.
+    # first_legend = plt.legend(handles=[lines[0], lines[1]], loc=3, framealpha=0.5)
+    # Add the legend manually to the current Axes.
+    # ax2.add_artist(first_legend)
+    # ax2.legend(handles=[lines[2], lines[3], lines[4], lines[5]], loc=4,framealpha=0.5)
     #ax2.legend(loc=4)
     ax2.grid(grid)
     if mode == "%":
@@ -154,7 +161,7 @@ def plot_dict(dict_data, filename=None, interval=1, mode="%", grid=True):
     if filename != None:
         plt.savefig(filename.split(".")[0]+".png")
     #fig.set_size_inches(20, 10)
-    #fig.savefig("optim_vect_pict.svg", format="svg")
+    fig.savefig("figure_2.eps", format="eps")
     plt.show()
 
 def timslot_extract(dict_data, timeslot):

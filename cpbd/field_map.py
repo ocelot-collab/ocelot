@@ -127,7 +127,6 @@ class FieldMap:
 
         elif self.format == "tabular":
             self.x_arr, self.y_arr, self.z_arr, self.Bx_arr, self.By_arr, self.Bz_arr = read_tabular_file(field_file)
-
         self.l = self.z_arr[-1] - self.z_arr[0]
             #return SRWLMagFld3D(locArBx, locArBy, locArBz, xNp, yNp, zNp, xRange, yRange, zRange, 1)
 

@@ -19,7 +19,7 @@ class Logger:
     def __init__(self):
 
         self.show_info = True
-        self.show_warning = True
+        self.show_warning = False
         self.show_debug = False
         self.file = None
 

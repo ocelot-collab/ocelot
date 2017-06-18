@@ -141,18 +141,16 @@ def create_r_matrix(element):
 
             r56 = 0.
             if gamma != 0:
-                #gamma2 = gamma * gamma
-                #beta = np.sqrt(1. - 1 / gamma2)
-                #r56 = -z / (beta * beta * gamma2)
                 #gs = (Ef-Ei)/z
                 #r56 = -(1.0/Ei-1.0/Ef)/gs
-
-                # integration
-                gamma = E/m_e_GeV
-                beta = np.sqrt(1. - 1 / gamma**2)
-                r56 = -1./(beta*gamma)**2 * z*(1 - 1.5*de/m_e_GeV/beta**2/gamma)
-
-
+                #gamma = E/m_e_GeV
+                #beta = np.sqrt(1. - 1 / gamma**2)
+                #r56 = -1./(beta*gamma)**2 * z*(1 - 1.5*de/m_e_GeV/beta**2/gamma)
+                gamma2 = Ei * Ei
+                beta0 = np.sqrt(1. - 1 / gamma2)
+                gamma2 = Ef * Ef
+                beta1 = np.sqrt(1. - 1 / gamma2)
+                r56=(beta0/beta1-1)*Ei/(Ef-Ei)*z
 
             k = 2.*np.pi*freq/speed_of_light
             r66 = Ei/Ef

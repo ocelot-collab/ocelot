@@ -226,15 +226,15 @@ class MagneticLattice:
                         element.l = element.l*0.001
             self.totalLen += element.l
             #print(element.k1)
-            if element.__class__ == Edge:
-                if "_e1" in element.id:
-                    bend = self.sequence[i+1]
-                    self.update_edge(element, bend)
-                elif "_e2" in element.id:
-                    bend = self.sequence[i-1]
-                    self.update_edge(element, bend)
-                else:
-                    print("EDGE is not updated. Use standard function to create and update MagneticLattice")
+            #if element.__class__ == Edge:
+            #    if "_e1" in element.id:
+            #        bend = self.sequence[i+1]
+            #        self.update_edge(element, bend)
+            #    elif "_e2" in element.id:
+            #        bend = self.sequence[i-1]
+            #        self.update_edge(element, bend)
+            #    else:
+            #        print("EDGE is not updated. Use standard function to create and update MagneticLattice")
             element.transfer_map = self.method.create_tm(element)
             logger.debug("update: " + element.transfer_map.__class__.__name__)
             #print("update: ", element.transfer_map.__class__.__name__)

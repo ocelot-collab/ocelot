@@ -203,7 +203,7 @@ class MagneticLattice:
             n += 1
 
     def update_edge(self, edge, bend):
-        edge.l = bend.l
+        edge.l = 0.
         edge.angle = bend.angle
         edge.k1 = bend.k1
         edge.edge = bend.e2
@@ -226,18 +226,18 @@ class MagneticLattice:
                         element.l = element.l*0.001
             self.totalLen += element.l
             #print(element.k1)
-            #if element.__class__ == Edge:
-            #    if "_e1" in element.id:
-            #        bend = self.sequence[i+1]
-            #        self.update_edge(element, bend)
-            #    elif "_e2" in element.id:
-            #        bend = self.sequence[i-1]
-            #        self.update_edge(element, bend)
-            #    else:
-            #        print("EDGE is not updated. Use standard function to create and update MagneticLattice")
+            if element.__class__ == Edge:
+                if "_e1" in element.id:
+                    bend = self.sequence[i+1]
+                    self.update_edge(element, bend)
+                elif "_e2" in element.id:
+                    bend = self.sequence[i-1]
+                    self.update_edge(element, bend)
+                else:
+                    print("EDGE is not updated. Use standard function to create and update MagneticLattice")
             element.transfer_map = self.method.create_tm(element)
             logger.debug("update: " + element.transfer_map.__class__.__name__)
-            #print("update: ", element.transfer_map.__class__.__name__)
+            #print("update: ", element.transfer_map.__class__.__name__, element.l, element.id, element.transfer_map.R(0))
             if 'pulse' in element.__dict__: element.transfer_map.pulse = element.pulse
         return self
 

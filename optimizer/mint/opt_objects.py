@@ -98,7 +98,12 @@ class Target(object):
         return 0
 
     def get_penalty(self):
-        sase = self.get_value()
+        sase = 0.
+        for i in range(self.nreadings):
+            sase += self.get_value()
+            time.sleep(self.interval)
+        sase = sase/self.nreadings
+        #sase = self.get_value()
         alarm = self.get_alarm()
         pen = -sase
 

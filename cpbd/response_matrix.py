@@ -353,6 +353,23 @@ class LinacDisperseSimRM(MeasureResponseMatrix):
         return self.resp
 
 
+class LinacDisperseTmatrixRM(MeasureResponseMatrix):
+
+    def __init__(self, lattice, hcors, vcors, bpms):
+        super(LinacDisperseTmatrixRM, self).__init__(lattice, hcors, vcors, bpms)
+
+
+    def calculate(self, tw_init=None):
+        """
+        calculation of ideal response matrix
+
+        :param lattice: class MagneticLattice
+        :param tw_init: if tw_init == None, function tries to find periodical solution
+        :return: orbit.resp
+        """
+        pass
+
+
 class ResponseMatrix:
     def __init__(self, method=None):
         self.cor_names = []

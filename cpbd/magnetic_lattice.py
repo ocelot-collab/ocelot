@@ -202,10 +202,23 @@ class MagneticLattice:
                 n += 2
             n += 1
 
+    def update_edge(self, edge, bend):
+        edge.l = bend.l
+        edge.angle = bend.angle
+        edge.k1 = bend.k1
+        edge.edge = bend.e2
+        edge.tilt = bend.tilt
+        edge.dtilt = bend.dtilt
+        edge.dx = bend.dx
+        edge.dy = bend.dy
+        edge.h_pole = bend.h_pole2
+        edge.gap = bend.gap
+        edge.fint = bend.fintx
+
     def update_transfer_maps(self):
         #E = self.energy
         self.totalLen = 0
-        for element in self.sequence:
+        for i, element in enumerate(self.sequence):
             if element.__class__ == Undulator:
                 if element.field_file != None:
                     element.l = element.field_map.l * element.field_map.field_file_rep
@@ -213,6 +226,15 @@ class MagneticLattice:
                         element.l = element.l*0.001
             self.totalLen += element.l
             #print(element.k1)
+            if element.__class__ == Edge:
+                if "_e1" in element.id:
+                    bend = self.sequence[i+1]
+                    self.update_edge(element, bend)
+                elif "_e2" in element.id:
+                    bend = self.sequence[i-1]
+                    self.update_edge(element, bend)
+                else:
+                    print("EDGE is not updated. Use standard function to create and update MagneticLattice")
             element.transfer_map = self.method.create_tm(element)
             logger.debug("update: " + element.transfer_map.__class__.__name__)
             #print("update: ", element.transfer_map.__class__.__name__)

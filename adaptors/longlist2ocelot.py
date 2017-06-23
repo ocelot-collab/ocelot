@@ -13,6 +13,7 @@ class StructureConverter:
     
     def __init__(self):
         self.types = []
+        #self.screens = ["OTRC", "OTRA", "OTRB"]
 
     def longlist_matrix_init(self):
         
@@ -22,8 +23,8 @@ class StructureConverter:
         self.longlist_matrix['MAGNET']['SBEN'] = {'type': SBend, 'strength': 'angle', 'e1_lag': 'e1', 'e2_freq': 'e2'}
         self.longlist_matrix['MAGNET']['RBEN'] = {'type': RBend, 'strength': 'angle'}
         self.longlist_matrix['MAGNET']['QUAD'] = {'type': Quadrupole, 'strength': ['k1', '1./length']}
-        self.longlist_matrix['MAGNET']['SEXT'] = {'type': Sextupole, 'strength': 'k2'}
-        self.longlist_matrix['MAGNET']['OCTU'] = {'type': Octupole, 'strength': 'k3'}
+        self.longlist_matrix['MAGNET']['SEXT'] = {'type': Sextupole, 'strength': ['k2', '1./length']}
+        self.longlist_matrix['MAGNET']['OCTU'] = {'type': Octupole, 'strength': ['k3', '1./length']}
         if "HKIC" in self.types:
             self.longlist_matrix['MAGNET']['HKIC'] = {'type': Hcor, 'strength': 'angle'}
         if "VKIC" in self.types:
@@ -43,32 +44,35 @@ class StructureConverter:
         #self.longlist_matrix['MOVER']['VKIC'] = {'type': Vcor, 'strength': 'angle'}
 
         self.longlist_matrix['CAVITY'] = {}
-        self.longlist_matrix['CAVITY']['LCAV'] = {'type': Cavity, 'strength': ['v', '1.e-3'], 'e1_lag': ['phi', '360.0'], 'e2_freq': 'f'}
+        self.longlist_matrix['CAVITY']['LCAV'] = {'type': Cavity, 'strength': ['v', '1.e-3'], 'e1_lag': ['phi', '360.0'], 'e2_freq': ['f', '1000000']}
 
         self.longlist_matrix['DIAG'] = {}
         if "MONI" in self.types:
             self.longlist_matrix['DIAG']['MONI'] = {'type': Monitor}
+
         if "INSTR" in self.types:
-            self.longlist_matrix['DIAG']['INSTR'] = {'type': Monitor}
+            self.longlist_matrix['DIAG']['INSTR'] = {'type': Marker}
+
         if "MARK" in self.types:
             self.longlist_matrix['MARK'] = {}
             self.longlist_matrix['MARK']['MARK'] = {'type': Marker}
 
         self.longlist_matrix['UNDU'] = {}
-        self.longlist_matrix['UNDU']['UNDULATO'] = {'type': Undulator}
+        self.longlist_matrix['UNDU']['UNDULATOR'] = {'type': Undulator}
 
     def longlist_transform(self, row):
         
         # longlist parameters
-        name_pos = 2
-        group_pos = 4
-        class_pos = 5
-        length_pos = 7
-        strength_pos = 8
-        e1_lag_pos = 9
-        e2_freq_pos = 10
-        tilt_pos = 11
-        s_pos = 12
+        name_pos =     1+2
+        ps_id_pos =    1+3
+        group_pos =    1+4
+        class_pos =    1+5
+        length_pos =   1+7
+        strength_pos = 1+8
+        e1_lag_pos =   1+9
+        e2_freq_pos =  1+10
+        tilt_pos =     1+11
+        s_pos =        1+12
 
         if row[0] == '': return None, 0.0
 
@@ -79,6 +83,7 @@ class StructureConverter:
             class_elem = group_elem[row[class_pos]]
             
             element = class_elem['type'](eid=row[name_pos])
+            element.ps_id = row[ps_id_pos]
 
             length = row[length_pos]
             if row[length_pos] != 0.0:

@@ -1,0 +1,494 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>optimizer.GP.bayes_optimization &#8212; OcelotOptimizer 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">OcelotOptimizer 1.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for optimizer.GP.bayes_optimization</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Contains the Bayes optimization class.</span>
+<span class="sd">Initialization parameters:</span>
+<span class="sd">    model: an object with methods &#39;predict&#39;, &#39;fit&#39;, and &#39;update&#39;</span>
+<span class="sd">    interface: an object which supplies the state of the system and</span>
+<span class="sd">        allows for changing the system&#39;s x-value.</span>
+<span class="sd">        Should have methods &#39;(x,y) = intfc.getState()&#39; and &#39;intfc.setX(x_new)&#39;.</span>
+<span class="sd">        Note that this interface system is rough, and used for testing and</span>
+<span class="sd">            as a placeholder for the machine interface.</span>
+<span class="sd">    acq_func: specifies how the optimizer should choose its next point.</span>
+<span class="sd">        &#39;EI&#39;: uses expected improvement. The interface should supply y-values.</span>
+<span class="sd">        &#39;testEI&#39;: uses EI over a finite set of points. This set must be</span>
+<span class="sd">            provided as alt_param, and the interface need not supply</span>
+<span class="sd">            meaningful y-values.</span>
+<span class="sd">    xi: exploration parameter suggested in some Bayesian opt. literature</span>
+<span class="sd">    alt_param: currently only used when acq_func==&#39;testEI&#39;</span>
+<span class="sd">    m: the maximum size of model; can be ignored unless passing an untrained</span>
+<span class="sd">        SPGP or other model which doesn&#39;t already know its own size</span>
+<span class="sd">    bounds: a tuple of (min,max) tuples specifying search bounds for each</span>
+<span class="sd">        input dimension. Generally leads to better performance.</span>
+<span class="sd">        Has a different interpretation when iter_bounds is True.</span>
+<span class="sd">    iter_bounds: if True, bounds the distance that can be moved in a single</span>
+<span class="sd">        iteration in terms of the length scale in each dimension. Uses the</span>
+<span class="sd">        bounds variable as a multiple of the length scales, so bounds==2</span>
+<span class="sd">        with iter_bounds==True limits movement per iteration to two length</span>
+<span class="sd">        scales in each dimension. Generally a good idea for safety, etc.</span>
+<span class="sd">    prior_data: input data to train the model on initially. For convenience,</span>
+<span class="sd">        since the model can be trained externally as well.</span>
+<span class="sd">        Assumed to be a pandas DataFrame of shape (n, dim+1) where the last</span>
+<span class="sd">            column contains y-values.</span>
+
+<span class="sd">Methods:</span>
+<span class="sd">    acquire(): Returns the point that maximizes the acquisition function.</span>
+<span class="sd">        For &#39;testEI&#39;, returns the index of the point instead.</span>
+<span class="sd">        For normal acquisition, currently uses the bounded L-BFGS optimizer.</span>
+<span class="sd">            Haven&#39;t tested alternatives much.</span>
+<span class="sd">    best_seen(): Uses the model to make predictions at every observed point,</span>
+<span class="sd">        returning the best-performing (x,y) pair. This is more robust to noise</span>
+<span class="sd">        than returning the best observation, but could be replaced by other,</span>
+<span class="sd">        faster methods.</span>
+<span class="sd">    OptIter(): The main method for Bayesian optimization. Maximizes the</span>
+<span class="sd">        acquisition function, then uses the interface to test this point and</span>
+<span class="sd">        update the model.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">operator</span> <span class="k">as</span> <span class="nn">op</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="k">import</span> <span class="n">norm</span>
+<span class="kn">from</span> <span class="nn">scipy.optimize</span> <span class="k">import</span> <span class="n">minimize</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="k">import</span> <span class="n">deepcopy</span>
+
+<div class="viewcode-block" id="BayesOpt"><a class="viewcode-back" href="../../../optimizer.GP.html#optimizer.GP.bayes_optimization.BayesOpt">[docs]</a><span class="k">class</span> <span class="nc">BayesOpt</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">target_func</span><span class="p">,</span> <span class="n">acq_func</span><span class="o">=</span><span class="s1">&#39;EI&#39;</span><span class="p">,</span> <span class="n">xi</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">alt_param</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">m</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">iter_bound</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">prior_data</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">m</span> <span class="o">=</span> <span class="n">m</span>
+        <span class="c1">#self.delay = 0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span> <span class="o">=</span> <span class="n">bounds</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iter_bound</span> <span class="o">=</span> <span class="n">iter_bound</span>
+        <span class="c1">#self.interface = interface</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">target_func</span> <span class="o">=</span> <span class="n">target_func</span>
+        <span class="c1">#self.devices = devices</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">acq_func</span> <span class="o">=</span> <span class="p">(</span><span class="n">acq_func</span><span class="p">,</span> <span class="n">xi</span><span class="p">,</span> <span class="n">alt_param</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="mi">100</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="mf">1.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kill</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="c1">#if(acq_func==&#39;testEI&#39;):</span>
+        <span class="c1">#    (x_init, y_init) = np.array(alt_param.iloc[0, :-1],ndmin=2), alt_param.iloc[0, -1]</span>
+        <span class="c1">#else:</span>
+        <span class="c1">#    x_init = np.array([dev.get_value for dev in self.devices], ndmin=2)</span>
+        <span class="c1">#    y_init = np.array([[target_func.get_penalty()]])</span>
+        <span class="c1">#    #(x_init, y_init) = interface.getState()</span>
+        <span class="c1">#</span>
+        <span class="c1">#self.X_obs = np.array(x_init)</span>
+        <span class="c1">#self.Y_obs = [y_init]</span>
+        <span class="c1">#self.current_x = x_init</span>
+
+        <span class="c1"># initialize model on prior data</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">prior_data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">p_X</span> <span class="o">=</span> <span class="n">prior_data</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">p_Y</span> <span class="o">=</span> <span class="n">prior_data</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">num</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">prior_data</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">p_X</span><span class="p">,</span> <span class="n">p_Y</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">num</span><span class="p">))</span>
+
+
+<div class="viewcode-block" id="BayesOpt.terminate"><a class="viewcode-back" href="../../../optimizer.GP.html#optimizer.GP.bayes_optimization.BayesOpt.terminate">[docs]</a>    <span class="k">def</span> <span class="nf">terminate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">devices</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Sets the position back to the location that seems best in hindsight.</span>
+<span class="sd">        It&#39;s a good idea to run this at the end of the optimization, since</span>
+<span class="sd">        Bayesian optimization tries to explore and might not always end in</span>
+<span class="sd">        a good place.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;TERMINATE&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_best</span><span class="p">)</span>
+        <span class="k">if</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">acq_func</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;EI&#39;</span><span class="p">):</span>
+            <span class="c1"># set position back to something reasonable</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">dev</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">devices</span><span class="p">):</span>
+                <span class="n">dev</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_best</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="c1">#error_func(self.x_best)</span>
+        <span class="k">if</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">acq_func</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;UCB&#39;</span><span class="p">):</span>
+            <span class="c1"># UCB doesn&#39;t keep track of x_best, so find it</span>
+            <span class="p">(</span><span class="n">x_best</span><span class="p">,</span> <span class="n">y_best</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_seen</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">dev</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">devices</span><span class="p">):</span>
+                <span class="n">dev</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">x_best</span><span class="p">[</span><span class="n">i</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="BayesOpt.minimize"><a class="viewcode-back" href="../../../optimizer.GP.html#optimizer.GP.bayes_optimization.BayesOpt.minimize">[docs]</a>    <span class="k">def</span> <span class="nf">minimize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">error_func</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="c1"># weighting for exploration vs exploitation in the GP at the end of scan, alpha array goes from 1 to zero</span>
+        <span class="c1">#alpha = [1.0 for i in range(40)]+[np.sqrt(50-i)/3.0 for i in range(41,51)]</span>
+        <span class="n">inverse_sign</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">ndmin</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">X_obs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_x</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Y_obs</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">inverse_sign</span><span class="o">*</span><span class="n">error_func</span><span class="p">(</span><span class="n">x</span><span class="p">)]])]</span>
+        <span class="c1"># iterate though the GP method</span>
+        <span class="c1">#print(&quot;GP minimize&quot;,  error_func, x, error_func(x))</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">):</span>
+            <span class="c1"># get next point to try using acquisition function</span>
+            <span class="n">x_next</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">acquire</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">)</span>
+            <span class="c1">#print(&quot;XNEXT &quot;, x_next)</span>
+            <span class="c1">#check for problems with the beam</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">check</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">check</span><span class="o">.</span><span class="n">errorCheck</span><span class="p">()</span>
+
+            <span class="n">y_new</span> <span class="o">=</span> <span class="n">error_func</span><span class="p">(</span><span class="n">x_next</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">kill</span><span class="p">:</span>
+                <span class="c1">#disable so user does not start another scan while the data is being saved</span>
+                <span class="k">break</span>
+            <span class="n">y_new</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">inverse_sign</span> <span class="o">*</span><span class="n">y_new</span><span class="p">]])</span>
+
+            <span class="c1">#advance the optimizer to the next iteration</span>
+            <span class="c1">#self.opt.OptIter(alpha=alpha[i])</span>
+            <span class="c1">#self.OptIter() # no alpha</span>
+
+            <span class="c1"># change position of interface and get resulting y-value</span>
+
+            <span class="n">x_new</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">x_next</span><span class="p">)</span>
+            <span class="c1">#(x_new, y_new) = self.interface.getState()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_x</span> <span class="o">=</span> <span class="n">x_new</span>
+
+            <span class="c1"># add new entry to observed data</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">X_obs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">X_obs</span><span class="p">,</span> <span class="n">x_new</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Y_obs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y_new</span><span class="p">)</span>
+
+            <span class="c1"># update the model (may want to add noise if using testEI)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">x_new</span><span class="p">,</span> <span class="n">y_new</span><span class="p">)</span><span class="c1"># + .5*np.random.randn())</span></div>
+
+
+<div class="viewcode-block" id="BayesOpt.best_seen"><a class="viewcode-back" href="../../../optimizer.GP.html#optimizer.GP.bayes_optimization.BayesOpt.best_seen">[docs]</a>    <span class="k">def</span> <span class="nf">best_seen</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Checks the observed points to see which is predicted to be best.</span>
+<span class="sd">        Probably safer than just returning the maximum observed, since the</span>
+<span class="sd">        model has noise. It takes longer this way, though; you could</span>
+<span class="sd">        instead take the model&#39;s prediction at the x-value that has</span>
+<span class="sd">        done best if this needs to be faster.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">var</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X_obs</span><span class="p">)</span>
+
+        <span class="p">(</span><span class="n">ind_best</span><span class="p">,</span> <span class="n">mu_best</span><span class="p">)</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="n">mu</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="n">op</span><span class="o">.</span><span class="n">itemgetter</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X_obs</span><span class="p">[</span><span class="n">ind_best</span><span class="p">],</span> <span class="n">mu_best</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="BayesOpt.acquire"><a class="viewcode-back" href="../../../optimizer.GP.html#optimizer.GP.bayes_optimization.BayesOpt.acquire">[docs]</a>    <span class="k">def</span> <span class="nf">acquire</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Computes the next point for the optimizer to try by maximizing</span>
+<span class="sd">        the acquisition function. If movement per iteration is bounded,</span>
+<span class="sd">        starts search at current position.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">acq_func</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;EI&#39;</span><span class="p">):</span>
+            <span class="p">(</span><span class="n">x_best</span><span class="p">,</span> <span class="n">y_best</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_seen</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x_best</span> <span class="o">=</span> <span class="n">x_best</span>
+            <span class="n">x_start</span> <span class="o">=</span> <span class="n">x_best</span>
+
+            <span class="k">if</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">iter_bound</span><span class="p">):</span>
+                <span class="n">x_start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_x</span>
+                <span class="k">if</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bounds</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span> <span class="o">=</span> <span class="mf">1.0</span>
+                <span class="n">lengths</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">covar_params</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+                <span class="n">iter_bounds</span> <span class="o">=</span> <span class="p">[(</span><span class="n">x_start</span><span class="p">[:,</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">*</span><span class="n">lengths</span><span class="p">[:,</span><span class="n">i</span><span class="p">],</span><span class="n">x_start</span><span class="p">[:,</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">*</span><span class="n">lengths</span><span class="p">[:,</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">x_start</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">iter_bounds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span>
+
+            <span class="c1"># maximize the EI (by minimizing negative EI)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">res</span> <span class="o">=</span> <span class="n">minimize</span><span class="p">(</span><span class="n">negExpImprove</span><span class="p">,</span> <span class="n">x_start</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">y_best</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">acq_func</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">alpha</span><span class="p">),</span>
+                                <span class="n">bounds</span><span class="o">=</span><span class="n">iter_bounds</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;L-BFGS-B&#39;</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;maxfun&#39;</span><span class="p">:</span><span class="mi">100</span><span class="p">})</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">raise</span>
+            <span class="c1"># return resulting x value as a (1 x dim) vector</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="n">ndmin</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="k">if</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">acq_func</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;UCB&#39;</span><span class="p">):</span>
+            <span class="n">mult</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="c1">#curr_x = self.interface.getState()[0]</span>
+            <span class="n">curr_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_x</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">minimize</span><span class="p">(</span><span class="n">negUCB</span><span class="p">,</span> <span class="n">curr_x</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">mult</span><span class="p">),</span> <span class="n">bounds</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;L-BFGS-B&#39;</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="n">ndmin</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="k">elif</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">acq_func</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;testEI&#39;</span><span class="p">):</span>
+            <span class="c1"># collect all possible x values</span>
+            <span class="n">options</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">acq_func</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="p">(</span><span class="n">x_best</span><span class="p">,</span> <span class="n">y_best</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_seen</span><span class="p">()</span>
+
+            <span class="c1"># find the option with best EI</span>
+            <span class="n">best_option_score</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="n">e12</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">options</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">negExpImprove</span><span class="p">(</span><span class="n">options</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span><span class="n">y_best</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">acq_func</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">if</span><span class="p">(</span><span class="n">result</span> <span class="o">&lt;</span> <span class="n">best_option_score</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                    <span class="n">best_option_score</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+
+            <span class="c1"># return the index of the best option</span>
+            <span class="k">return</span> <span class="n">best_option_score</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Unknown acquisition function.&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="mi">0</span></div></div>
+
+
+<div class="viewcode-block" id="HyperParams"><a class="viewcode-back" href="../../../optimizer.GP.html#optimizer.GP.bayes_optimization.HyperParams">[docs]</a><span class="k">class</span> <span class="nc">HyperParams</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pvs</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pvs</span> <span class="o">=</span> <span class="n">pvs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">filename</span>
+        <span class="k">pass</span>
+
+<div class="viewcode-block" id="HyperParams.extract_hypdata"><a class="viewcode-back" href="../../../optimizer.GP.html#optimizer.GP.bayes_optimization.HyperParams.extract_hypdata">[docs]</a>    <span class="k">def</span> <span class="nf">extract_hypdata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">energy</span><span class="p">):</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">energy</span><span class="p">)</span>
+        <span class="c1">#energy = str(round(float(self.mi.get_energy())))</span>
+        <span class="c1">#if len(energy) is 3: key = energy[0:1]</span>
+        <span class="c1">#if len(energy) is 4: key = energy[0:2]</span>
+        <span class="c1">#print (&quot;Loading raw data for&quot;, key, &quot;GeV from&quot;, self.filename)</span>
+        <span class="c1">#print()</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="p">),</span> <span class="n">fix_imports</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;latin1&#39;</span><span class="p">)</span>
+        <span class="n">filedata</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">filedata</span></div>
+
+<div class="viewcode-block" id="HyperParams.loadHyperParams"><a class="viewcode-back" href="../../../optimizer.GP.html#optimizer.GP.bayes_optimization.HyperParams.loadHyperParams">[docs]</a>    <span class="k">def</span> <span class="nf">loadHyperParams</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">energy</span><span class="p">,</span> <span class="n">detector_stat_params</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Method to load in the hyperparameters from a .npy file.</span>
+
+<span class="sd">        Sorts data, ordering parameters with this objects pv list.</span>
+<span class="sd">        Formats data into tuple format that the GP model object can accept.</span>
+<span class="sd">        ( [device_1, ..., device_N ], coefficent, noise)</span>
+
+
+<span class="sd">        Args:</span>
+<span class="sd">                filename (str): String for the file directory.</span>
+<span class="sd">                energy:</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">                List of hyperparameters, ordered using the UI&#39;s &quot;self.pvs&quot; list.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1">#Load in a npy file containing hyperparameters binned for every 1 GeV of beam energy</span>
+        <span class="n">extention</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="p">[</span><span class="o">-</span><span class="mi">4</span><span class="p">:]</span>
+        <span class="k">if</span> <span class="n">extention</span> <span class="o">==</span> <span class="s2">&quot;.npy&quot;</span><span class="p">:</span>
+            <span class="n">filedata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">extract_hypdata</span><span class="p">(</span><span class="n">energy</span><span class="p">)</span>
+
+        <span class="c1">#sort list to match the UIs PV list order</span>
+        <span class="c1">#if they are loaded in the wrong order, the optimzer will get the wrong params for a device</span>
+        <span class="n">keys</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">hyps</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">match_count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">pv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pvs</span><span class="p">:</span>
+            <span class="n">names</span> <span class="o">=</span> <span class="n">filedata</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">pv</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+                <span class="n">keys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pv</span><span class="p">)</span>
+                <span class="n">ave</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">filedata</span><span class="p">[</span><span class="n">pv</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">std</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">filedata</span><span class="p">[</span><span class="n">pv</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+                <span class="n">hyp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calcLengthScaleHP</span><span class="p">(</span><span class="n">ave</span><span class="p">,</span> <span class="n">std</span><span class="p">)</span>
+                <span class="n">hyps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hyp</span><span class="p">)</span>
+                <span class="nb">print</span> <span class="p">(</span><span class="s2">&quot;calculate hyper params&quot;</span><span class="p">,</span> <span class="n">pv</span><span class="p">,</span> <span class="n">ave</span><span class="p">,</span> <span class="n">std</span><span class="p">,</span> <span class="n">hyp</span><span class="p">)</span>
+                <span class="n">match_count</span><span class="o">+=</span><span class="mi">1</span>
+
+        <span class="k">if</span> <span class="n">match_count</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pvs</span><span class="p">):</span>
+            <span class="c1"># TODO: what is it?</span>
+            <span class="c1"># self.parent.scanFinished()</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Number of PVs in list does not match PVs found in hyperparameter file&quot;</span><span class="p">)</span>
+
+
+        <span class="n">ave</span><span class="p">,</span> <span class="n">std</span> <span class="o">=</span> <span class="n">detector_stat_params</span>
+        <span class="nb">print</span> <span class="p">(</span><span class="s2">&quot;DETECTOR AVE&quot;</span><span class="p">,</span> <span class="n">ave</span><span class="p">)</span>
+        <span class="nb">print</span> <span class="p">(</span><span class="s2">&quot;DETECTOR STD&quot;</span><span class="p">,</span> <span class="n">std</span><span class="p">)</span>
+
+        <span class="n">coeff</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calcAmpCoeffHP</span><span class="p">(</span><span class="n">ave</span><span class="p">,</span> <span class="n">std</span><span class="p">)</span>
+        <span class="n">noise</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calcNoiseHP</span><span class="p">(</span><span class="n">ave</span><span class="p">,</span> <span class="n">std</span><span class="p">)</span>
+
+        <span class="n">dout</span> <span class="o">=</span> <span class="p">(</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">hyps</span><span class="p">]),</span> <span class="n">coeff</span><span class="p">,</span> <span class="n">noise</span> <span class="p">)</span>
+        <span class="c1">#prints for debug</span>
+        <span class="nb">print</span><span class="p">()</span>
+        <span class="nb">print</span> <span class="p">(</span><span class="s2">&quot;Calculated Hyperparameters ( [device_1, ..., device_N ], amplitude coefficent, noise coefficent)&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">hyps</span><span class="p">)):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pvs</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">hyps</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="nb">print</span> <span class="p">(</span><span class="s2">&quot;AMP COEFF   = &quot;</span><span class="p">,</span> <span class="n">coeff</span><span class="p">)</span>
+        <span class="nb">print</span> <span class="p">(</span><span class="s2">&quot;NOISE COEFF = &quot;</span><span class="p">,</span> <span class="n">noise</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">dout</span></div>
+
+<div class="viewcode-block" id="HyperParams.calcLengthScaleHP"><a class="viewcode-back" href="../../../optimizer.GP.html#optimizer.GP.bayes_optimization.HyperParams.calcLengthScaleHP">[docs]</a>    <span class="k">def</span> <span class="nf">calcLengthScaleHP</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ave</span><span class="p">,</span> <span class="n">std</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">pv</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Method to calculate the GP length scale hyperparameters using history data</span>
+
+<span class="sd">        Formula for hyperparameters are from Mitch and some papers he read on the GP.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">                ave (float): Mean of the device, binned around current machine energy</span>
+<span class="sd">                std (float): Standard deviation of the device</span>
+<span class="sd">                c   (float): Scaling factor to change the output to be larger or smaller, determined empirically</span>
+<span class="sd">                pv  (str): PV input string to scale hyps depending on pv, not currently used</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">                Float of the calculated length scale hyperparameter</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">#for future use</span>
+        <span class="k">if</span> <span class="n">pv</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1">#[pv,val]</span>
+            <span class="k">pass</span>
+        <span class="c1">#+- 1 std around the mean</span>
+        <span class="n">hi</span>  <span class="o">=</span> <span class="n">ave</span><span class="o">+</span><span class="n">std</span>
+        <span class="n">lo</span>  <span class="o">=</span> <span class="n">ave</span><span class="o">-</span><span class="n">std</span>
+        <span class="n">hyp</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span> <span class="p">(</span> <span class="p">(</span> <span class="n">c</span><span class="o">*</span><span class="p">(</span><span class="n">hi</span><span class="o">-</span><span class="n">lo</span><span class="p">)</span> <span class="p">)</span> <span class="o">/</span> <span class="mf">4.0</span> <span class="p">)</span> <span class="o">+</span> <span class="mf">0.01</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="n">hyp</span></div>
+
+<div class="viewcode-block" id="HyperParams.calcAmpCoeffHP"><a class="viewcode-back" href="../../../optimizer.GP.html#optimizer.GP.bayes_optimization.HyperParams.calcAmpCoeffHP">[docs]</a>    <span class="k">def</span> <span class="nf">calcAmpCoeffHP</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ave</span><span class="p">,</span> <span class="n">std</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Method to calculate the GP amplitude hyperparameter</span>
+
+<span class="sd">        Formula for hyperparameters are from Mitch and some papers he read on the GP.</span>
+
+<span class="sd">        First we tried using the standard deviation to calc this but we found it needed to scale with mean instead</span>
+
+
+<span class="sd">        Args:</span>
+<span class="sd">                ave (float): Mean of of the objective function (GDET or something else)</span>
+<span class="sd">                std (float): Standard deviation of the objective function</span>
+<span class="sd">                c (float): Scaling factor to change the output to be larger or smaller, determined empirically</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">                Float of the calculated amplitude hyperparameter</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">#We would c = 0.5 to work well, could get changed at some point</span>
+        <span class="n">hyp2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span> <span class="p">(</span> <span class="p">((</span><span class="n">c</span><span class="o">*</span><span class="n">ave</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="mf">0.1</span> <span class="p">)</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="n">hyp2</span></div>
+
+<div class="viewcode-block" id="HyperParams.calcNoiseHP"><a class="viewcode-back" href="../../../optimizer.GP.html#optimizer.GP.bayes_optimization.HyperParams.calcNoiseHP">[docs]</a>    <span class="k">def</span> <span class="nf">calcNoiseHP</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ave</span><span class="p">,</span> <span class="n">std</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Method to calculate the GP noise hyperparameter</span>
+
+<span class="sd">        Formula for hyperparameters are from Mitch and some papers he read on the GP.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">                ave (float): Mean of of the objective function (GDET or something else)</span>
+<span class="sd">                std (float): Standard deviation of the objective function</span>
+<span class="sd">                c (float): Scaling factor to change the output to be larger or smaller, determined empirically</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">                Float of the calculated noise hyperparameter</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">hyp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">((</span><span class="n">c</span><span class="o">*</span><span class="n">std</span> <span class="o">/</span> <span class="mf">4.0</span><span class="p">)</span> <span class="o">+</span> <span class="mf">0.01</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">hyp</span></div></div>
+
+
+
+<div class="viewcode-block" id="negExpImprove"><a class="viewcode-back" href="../../../optimizer.GP.html#optimizer.GP.bayes_optimization.negExpImprove">[docs]</a><span class="k">def</span> <span class="nf">negExpImprove</span><span class="p">(</span><span class="n">x_new</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">y_best</span><span class="p">,</span> <span class="n">xi</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The common acquisition function, expected improvement. Returns the</span>
+<span class="sd">    negative for the minimizer (so that EI is maximized). Alpha attempts</span>
+<span class="sd">    to control the ratio of exploration to exploitation, but seems to not</span>
+<span class="sd">    work well in practice. The terminate() method is a better choice.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="p">(</span><span class="n">y_new</span><span class="p">,</span> <span class="n">var</span><span class="p">)</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">x_new</span><span class="p">,</span> <span class="n">ndmin</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+    <span class="n">diff</span> <span class="o">=</span> <span class="n">y_new</span> <span class="o">-</span> <span class="n">y_best</span> <span class="o">-</span> <span class="n">xi</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">var</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="k">return</span> <span class="mi">0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">Z</span> <span class="o">=</span> <span class="n">diff</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
+
+    <span class="n">EI</span> <span class="o">=</span> <span class="n">diff</span> <span class="o">*</span> <span class="n">norm</span><span class="o">.</span><span class="n">cdf</span><span class="p">(</span><span class="n">Z</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var</span><span class="p">)</span> <span class="o">*</span> <span class="n">norm</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">Z</span><span class="p">)</span>
+    <span class="c1">#print(x_new, EI)</span>
+    <span class="k">return</span> <span class="n">alpha</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="n">EI</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">alpha</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="n">y_new</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="negUCB"><a class="viewcode-back" href="../../../optimizer.GP.html#optimizer.GP.bayes_optimization.negUCB">[docs]</a><span class="k">def</span> <span class="nf">negUCB</span><span class="p">(</span><span class="n">x_new</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">mult</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The upper confidence bound acquisition function. Currently only partially</span>
+<span class="sd">    implemented. The mult parameter specifies how wide the confidence bound</span>
+<span class="sd">    should be, and there currently is no way to compute this parameter. This</span>
+<span class="sd">    acquisition function shouldn&#39;t be used until there is a proper mult.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="p">(</span><span class="n">y_new</span><span class="p">,</span> <span class="n">var</span><span class="p">)</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">x_new</span><span class="p">,</span><span class="n">ndmin</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+
+    <span class="n">UCB</span> <span class="o">=</span> <span class="n">y_new</span> <span class="o">+</span> <span class="n">mult</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
+    <span class="k">return</span> <span class="o">-</span><span class="n">UCB</span></div>
+
+<div class="viewcode-block" id="negProbImprove"><a class="viewcode-back" href="../../../optimizer.GP.html#optimizer.GP.bayes_optimization.negProbImprove">[docs]</a><span class="k">def</span> <span class="nf">negProbImprove</span><span class="p">(</span><span class="n">x_new</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">y_best</span><span class="p">,</span> <span class="n">xi</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The probability of improvement acquisition function. Untested.</span>
+<span class="sd">    Performs worse than EI according to the literature.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="p">(</span><span class="n">y_new</span><span class="p">,</span> <span class="n">var</span><span class="p">)</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">x_new</span><span class="p">,</span><span class="n">ndmin</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+    <span class="n">diff</span> <span class="o">=</span> <span class="n">y_new</span> <span class="o">-</span> <span class="n">y_best</span> <span class="o">-</span> <span class="n">xi</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">var</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="k">return</span> <span class="mi">0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">Z</span> <span class="o">=</span> <span class="n">diff</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="o">-</span><span class="n">norm</span><span class="o">.</span><span class="n">cdf</span><span class="p">(</span><span class="n">Z</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">OcelotOptimizer 1.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, S.Tomin.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
+    </div>
+  </body>
+</html>

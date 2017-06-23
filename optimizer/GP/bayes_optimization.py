@@ -64,7 +64,7 @@ class BayesOpt:
         self.max_iter = 100
         self.check = None
         self.alpha = 1.
-
+        self.kill = False
         #if(acq_func=='testEI'):
         #    (x_init, y_init) = np.array(alt_param.iloc[0, :-1],ndmin=2), alt_param.iloc[0, -1]
         #else:
@@ -112,10 +112,11 @@ class BayesOpt:
         self.X_obs = np.array(self.current_x)
         self.Y_obs = [np.array([[inverse_sign*error_func(x)]])]
         # iterate though the GP method
+        #print("GP minimize",  error_func, x, error_func(x))
         for i in range(self.max_iter):
             # get next point to try using acquisition function
             x_next = self.acquire(self.alpha)
-
+            #print("XNEXT ", x_next)
             #check for problems with the beam
             if self.check != None: self.check.errorCheck()
 
@@ -129,10 +130,7 @@ class BayesOpt:
             #self.opt.OptIter(alpha=alpha[i])
             #self.OptIter() # no alpha
 
-
-
             # change position of interface and get resulting y-value
-
 
             x_new = deepcopy(x_next)
             #(x_new, y_new) = self.interface.getState()
@@ -228,7 +226,7 @@ class HyperParams:
         #if len(energy) is 4: key = energy[0:2]
         #print ("Loading raw data for", key, "GeV from", self.filename)
         #print()
-        f = np.load(str(self.filename))
+        f = np.load(str(self.filename), fix_imports=True, encoding='latin1')
         filedata = f[0][key]
         return filedata
 

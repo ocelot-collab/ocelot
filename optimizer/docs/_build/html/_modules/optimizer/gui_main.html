@@ -1,0 +1,583 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>optimizer.gui_main &#8212; OcelotOptimizer 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">OcelotOptimizer 1.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for optimizer.gui_main</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Most of GUI logic is placed here.</span>
+<span class="sd">S.Tomin, 2017</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">ocelot.optimizer.UIOcelotInterface_gen</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">scipy</span>
+<span class="kn">from</span> <span class="nn">PyQt4.QtGui</span> <span class="k">import</span> <span class="n">QPixmap</span><span class="p">,</span> <span class="n">QImage</span>
+<span class="kn">from</span> <span class="nn">PIL</span> <span class="k">import</span> <span class="n">Image</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">base64</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="k">import</span> <span class="n">datetime</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">webbrowser</span>
+<span class="kn">from</span> <span class="nn">shutil</span> <span class="k">import</span> <span class="n">copy</span>
+
+
+<div class="viewcode-block" id="send_to_desy_elog"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.send_to_desy_elog">[docs]</a><span class="k">def</span> <span class="nf">send_to_desy_elog</span><span class="p">(</span><span class="n">author</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">severity</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">elog</span><span class="p">,</span> <span class="n">image</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Send information to a supplied electronic logbook.</span>
+<span class="sd">    Author: Christopher Behrens (DESY)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># The DOOCS elog expects an XML string in a particular format. This string</span>
+    <span class="c1"># is beeing generated in the following as an initial list of strings.</span>
+    <span class="n">succeded</span> <span class="o">=</span> <span class="kc">True</span>  <span class="c1"># indicator for a completely successful job</span>
+    <span class="c1"># list beginning</span>
+    <span class="n">elogXMLStringList</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;&lt;?xml version=&quot;1.0&quot; encoding=&quot;ISO-8859-1&quot;?&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;entry&gt;&#39;</span><span class="p">]</span>
+
+    <span class="c1"># author information</span>
+    <span class="n">elogXMLStringList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;&lt;author&gt;&#39;</span><span class="p">)</span>
+    <span class="n">elogXMLStringList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">author</span><span class="p">)</span>
+    <span class="n">elogXMLStringList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;&lt;/author&gt;&#39;</span><span class="p">)</span>
+    <span class="c1"># title information</span>
+    <span class="n">elogXMLStringList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;&lt;title&gt;&#39;</span><span class="p">)</span>
+    <span class="n">elogXMLStringList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">title</span><span class="p">)</span>
+    <span class="n">elogXMLStringList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;&lt;/title&gt;&#39;</span><span class="p">)</span>
+    <span class="c1"># severity information</span>
+    <span class="n">elogXMLStringList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;&lt;severity&gt;&#39;</span><span class="p">)</span>
+    <span class="n">elogXMLStringList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">severity</span><span class="p">)</span>
+    <span class="n">elogXMLStringList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;&lt;/severity&gt;&#39;</span><span class="p">)</span>
+    <span class="c1"># text information</span>
+    <span class="n">elogXMLStringList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;&lt;text&gt;&#39;</span><span class="p">)</span>
+    <span class="n">elogXMLStringList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+    <span class="n">elogXMLStringList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;&lt;/text&gt;&#39;</span><span class="p">)</span>
+    <span class="c1"># image information</span>
+    <span class="k">if</span> <span class="n">image</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">encodedImage</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+            <span class="n">elogXMLStringList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;&lt;image&gt;&#39;</span><span class="p">)</span>
+            <span class="n">elogXMLStringList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">encodedImage</span><span class="o">.</span><span class="n">decode</span><span class="p">())</span>
+            <span class="n">elogXMLStringList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;&lt;/image&gt;&#39;</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>  <span class="c1"># make elog entry anyway, but return error (succeded = False)</span>
+            <span class="n">succeded</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="c1"># list end</span>
+    <span class="n">elogXMLStringList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;&lt;/entry&gt;&#39;</span><span class="p">)</span>
+    <span class="c1"># join list to the final string</span>
+    <span class="n">elogXMLString</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">elogXMLStringList</span><span class="p">)</span>
+    <span class="c1"># open printer process</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">lpr</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">([</span><span class="s1">&#39;/usr/bin/lp&#39;</span><span class="p">,</span> <span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="s1">&#39;raw&#39;</span><span class="p">,</span> <span class="s1">&#39;-d&#39;</span><span class="p">,</span> <span class="n">elog</span><span class="p">],</span>
+                               <span class="n">stdin</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span> <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">)</span>
+        <span class="c1"># send printer job</span>
+        <span class="n">lpr</span><span class="o">.</span><span class="n">communicate</span><span class="p">(</span><span class="n">elogXMLString</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">))</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="n">succeded</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="n">succeded</span></div>
+
+
+<div class="viewcode-block" id="MainWindow"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.MainWindow">[docs]</a><span class="k">class</span> <span class="nc">MainWindow</span><span class="p">(</span><span class="n">Ui_Form</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Form</span><span class="p">):</span>
+        <span class="n">Ui_Form</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setupUi</span><span class="p">(</span><span class="n">Form</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Form</span> <span class="o">=</span> <span class="n">Form</span>
+        <span class="c1"># load in the dark theme style sheet</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loadStyleSheet</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">widget</span><span class="o">.</span><span class="n">set_parent</span><span class="p">(</span><span class="n">Form</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pb_save_as</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">save_state_as</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pb_load</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">load_state_from</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pb_rewrite</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rewrite_default</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cb_use_isim</span><span class="o">.</span><span class="n">stateChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">change_state_scipy_setup</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pb_hyper_file</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_hyper_file</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pb_logbook</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">logbook</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">le_a</span><span class="o">.</span><span class="n">textChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">check_address</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">le_b</span><span class="o">.</span><span class="n">textChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">check_address</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">le_c</span><span class="o">.</span><span class="n">textChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">check_address</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">le_d</span><span class="o">.</span><span class="n">textChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">check_address</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">le_e</span><span class="o">.</span><span class="n">textChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">check_address</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">le_alarm</span><span class="o">.</span><span class="n">textChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">check_address</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sb_tdelay</span><span class="o">.</span><span class="n">valueChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">set_cycle</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sb_ddelay</span><span class="o">.</span><span class="n">valueChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">set_cycle</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sb_nreadings</span><span class="o">.</span><span class="n">valueChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">set_cycle</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cb_select_alg</span><span class="o">.</span><span class="n">currentIndexChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">change_state_scipy_setup</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">read_alarm</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">QTimer</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">read_alarm</span><span class="o">.</span><span class="n">timeout</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alarm_value</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">read_alarm</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
+        <span class="c1"># self.horizontalLayout_2.setStyleSheet(&quot;color: red&quot;)</span>
+
+        <span class="c1"># font = self.pb_hyper_file.font()</span>
+        <span class="c1"># font.setPointSize(16)</span>
+        <span class="c1"># self.pb_hyper_file.setFont(font)</span>
+        <span class="c1"># self.pb_hyper_file.setText(&quot;test&quot;)</span>
+        <span class="c1"># self.pb_hyper_file.setStyleSheet(&quot;font: 16px, color: red&quot;)</span>
+
+        <span class="c1"># self.window = window</span>
+
+<div class="viewcode-block" id="MainWindow.alarm_value"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.MainWindow.alarm_value">[docs]</a>    <span class="k">def</span> <span class="nf">alarm_value</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        reading alarm value</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dev</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_alarm</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">mi</span><span class="o">.</span><span class="n">get_value</span><span class="p">(</span><span class="n">dev</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">label_alarm</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="mi">2</span><span class="p">)))</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">label_alarm</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="s2">&quot;None&quot;</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="MainWindow.set_cycle"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.MainWindow.set_cycle">[docs]</a>    <span class="k">def</span> <span class="nf">set_cycle</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Select time for objective method data collection time.</span>
+<span class="sd">        Scanner will wait this long to collect new data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trim_delay</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sb_tdelay</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+        <span class="n">data_delay</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sb_ddelay</span><span class="o">.</span><span class="n">value</span><span class="p">()</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">sb_nreadings</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">label_7</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s2">&quot;Cycle Period = &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">around</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trim_delay</span> <span class="o">+</span> <span class="n">data_delay</span><span class="p">,</span> <span class="mi">3</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">total_delay</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trim_delay</span></div>
+
+<div class="viewcode-block" id="MainWindow.check_address"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.MainWindow.check_address">[docs]</a>    <span class="k">def</span> <span class="nf">check_address</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_le_addr_ok</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_a</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_le_addr_ok</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_b</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_le_addr_ok</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_c</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_le_addr_ok</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_d</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_le_addr_ok</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_e</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_le_addr_ok</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_alarm</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="MainWindow.is_le_addr_ok"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.MainWindow.is_le_addr_ok">[docs]</a>    <span class="k">def</span> <span class="nf">is_le_addr_ok</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">line_edit</span><span class="p">):</span>
+        <span class="n">dev</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">line_edit</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">mi</span><span class="o">.</span><span class="n">get_value</span><span class="p">(</span><span class="n">dev</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="n">state</span><span class="p">:</span>
+            <span class="n">line_edit</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s2">&quot;color: rgb(85, 255, 0);&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">line_edit</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s2">&quot;color: red&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">state</span></div>
+
+<div class="viewcode-block" id="MainWindow.save_state"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.MainWindow.save_state">[docs]</a>    <span class="k">def</span> <span class="nf">save_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+        <span class="c1"># pvs = self.ui.widget.pvs</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">widget</span><span class="o">.</span><span class="n">get_state</span><span class="p">()</span>
+
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;use_predef&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cb_use_predef</span><span class="o">.</span><span class="n">checkState</span><span class="p">()</span>
+
+        <span class="n">max_pen</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sb_max_pen</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+        <span class="n">timeout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sb_tdelay</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+
+
+        <span class="n">max_iter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sb_num_iter</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+        <span class="c1"># objective function</span>
+        <span class="n">fun_a</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_a</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
+        <span class="n">fun_b</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_b</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
+        <span class="n">fun_c</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_c</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
+        <span class="n">obj_fun</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_obf</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
+        <span class="c1"># alarm</span>
+        <span class="n">alarm_dev</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_alarm</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
+        <span class="n">alarm_min</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sb_alarm_min</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+        <span class="n">alarm_max</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sb_alarm_max</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;max_pen&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">max_pen</span>
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;timeout&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">timeout</span>
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;nreadings&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sb_nreadings</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;interval&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sb_ddelay</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;max_iter&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">max_iter</span>
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;fun_a&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fun_a</span>
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;fun_b&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fun_b</span>
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;fun_c&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fun_c</span>
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;fun_d&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_d</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;fun_e&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_e</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;obj_fun&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">obj_fun</span>
+
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;alarm_dev&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">alarm_dev</span>
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;alarm_min&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">alarm_min</span>
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;alarm_max&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">alarm_max</span>
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;alarm_timeout&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sb_alarm_timeout</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;seed_iter&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sb_seed_iter</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;use_live_seed&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cb_use_live_seed</span><span class="o">.</span><span class="n">checkState</span><span class="p">()</span>
+
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;isim_rel_step&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sb_isim_rel_step</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;use_isim&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cb_use_isim</span><span class="o">.</span><span class="n">checkState</span><span class="p">()</span>
+
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;hyper_file&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">hyper_file</span>
+
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;set_best_sol&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cb_set_best_sol</span><span class="o">.</span><span class="n">checkState</span><span class="p">()</span>
+
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;algorithm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cb_select_alg</span><span class="o">.</span><span class="n">currentText</span><span class="p">())</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+        <span class="c1"># pickle.dump(table, filename)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;SAVE State&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="MainWindow.restore_state"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.MainWindow.restore_state">[docs]</a>    <span class="k">def</span> <span class="nf">restore_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+        <span class="c1"># try:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="c1"># data_new = pickle.load(f)</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+        <span class="c1"># Build the PV list from dev PVs or selected source</span>
+        <span class="n">pvs</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">widget</span><span class="o">.</span><span class="n">set_machine_interface</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">mi</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">dp</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">widget</span><span class="o">.</span><span class="n">getPvList</span><span class="p">(</span><span class="n">pvs</span><span class="p">)</span>
+        <span class="c1"># set checkbot status</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">widget</span><span class="o">.</span><span class="n">uncheckBoxes</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">widget</span><span class="o">.</span><span class="n">set_state</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+
+            <span class="n">max_pen</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;max_pen&quot;</span><span class="p">]</span>
+            <span class="n">timeout</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;timeout&quot;</span><span class="p">]</span>
+            <span class="n">max_iter</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;max_iter&quot;</span><span class="p">]</span>
+            <span class="n">fun_a</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;fun_a&quot;</span><span class="p">]</span>
+            <span class="n">fun_b</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;fun_b&quot;</span><span class="p">]</span>
+            <span class="n">fun_c</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;fun_c&quot;</span><span class="p">]</span>
+            <span class="n">obj_fun</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;obj_fun&quot;</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="s2">&quot;use_predef&quot;</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span> <span class="bp">self</span><span class="o">.</span><span class="n">cb_use_predef</span><span class="o">.</span><span class="n">setCheckState</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;use_predef&quot;</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sb_max_pen</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">max_pen</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sb_tdelay</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">timeout</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sb_nreadings</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;nreadings&quot;</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sb_ddelay</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;interval&quot;</span><span class="p">])</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">sb_num_iter</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">max_iter</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">le_a</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">fun_a</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">le_b</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">fun_b</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">le_c</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">fun_c</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">le_d</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;fun_d&quot;</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">le_e</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;fun_e&quot;</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">le_obf</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">obj_fun</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">le_alarm</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;alarm_dev&quot;</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sb_alarm_min</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;alarm_min&quot;</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sb_alarm_max</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;alarm_max&quot;</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sb_alarm_timeout</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;alarm_timeout&quot;</span><span class="p">])</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">sb_seed_iter</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;seed_iter&quot;</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cb_use_live_seed</span><span class="o">.</span><span class="n">setCheckState</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;use_live_seed&quot;</span><span class="p">])</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">sb_isim_rel_step</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;isim_rel_step&quot;</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cb_use_isim</span><span class="o">.</span><span class="n">setCheckState</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;use_isim&quot;</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">change_state_scipy_setup</span><span class="p">()</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">hyper_file</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;hyper_file&quot;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pb_hyper_file</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">hyper_file</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">cb_set_best_sol</span><span class="o">.</span><span class="n">setCheckState</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;set_best_sol&quot;</span><span class="p">])</span>
+
+            <span class="k">if</span> <span class="s2">&quot;algorithm&quot;</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cb_select_alg</span><span class="o">.</span><span class="n">findText</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;algorithm&quot;</span><span class="p">],</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">MatchFixedString</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">index</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">cb_select_alg</span><span class="o">.</span><span class="n">setCurrentIndex</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;RESTORE STATE: OK&quot;</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;RESTORE STATE: ERROR&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MainWindow.save_state_as"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.MainWindow.save_state_as">[docs]</a>    <span class="k">def</span> <span class="nf">save_state_as</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="n">filename</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QFileDialog</span><span class="o">.</span><span class="n">getSaveFileName</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="p">,</span> <span class="s1">&#39;Save State&#39;</span><span class="p">,</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">config_dir</span><span class="p">,</span> <span class="s2">&quot;txt (*.json)&quot;</span><span class="p">,</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QFileDialog</span><span class="o">.</span><span class="n">DontUseNativeDialog</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">filename</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">filename</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">parts</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span>
+            <span class="c1">#print(parts)</span>
+            <span class="n">body_name</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span><span class="o">&lt;</span><span class="mi">2</span> <span class="ow">or</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span><span class="s2">&quot;json&quot;</span><span class="p">:</span>
+                <span class="n">part</span> <span class="o">=</span> <span class="n">filename</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">filename</span> <span class="o">=</span> <span class="n">part</span> <span class="o">+</span> <span class="s2">&quot;.json&quot;</span>
+            <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">obj_func_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">obj_save_path</span> <span class="o">+</span> <span class="n">body_name</span> <span class="o">+</span><span class="s2">&quot;.py&quot;</span><span class="p">)</span>
+            <span class="c1">#self.Form.set_file = filename</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">save_state</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MainWindow.load_state_from"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.MainWindow.load_state_from">[docs]</a>    <span class="k">def</span> <span class="nf">load_state_from</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">filename</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QFileDialog</span><span class="o">.</span><span class="n">getOpenFileName</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="p">,</span> <span class="s1">&#39;Load State&#39;</span><span class="p">,</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">config_dir</span><span class="p">,</span> <span class="s2">&quot;txt (*.json)&quot;</span><span class="p">,</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QFileDialog</span><span class="o">.</span><span class="n">DontUseNativeDialog</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">filename</span><span class="p">:</span>
+            <span class="c1">#print(filename)</span>
+            <span class="p">(</span><span class="n">body_name</span><span class="p">,</span> <span class="n">extension</span><span class="p">)</span> <span class="o">=</span> <span class="n">filename</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span>
+            <span class="c1">#print(self.Form.obj_save_path + body_name + &quot;.py&quot;, self.Form.obj_func_path )</span>
+            <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">obj_save_path</span> <span class="o">+</span> <span class="n">body_name</span> <span class="o">+</span> <span class="s2">&quot;.py&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">obj_func_path</span> <span class="p">)</span>
+            <span class="c1">#self.Form.set_file = filename</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">restore_state</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MainWindow.get_hyper_file"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.MainWindow.get_hyper_file">[docs]</a>    <span class="k">def</span> <span class="nf">get_hyper_file</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1">#filename = QtGui.QFileDialog.getOpenFileName(self.Form, &#39;Load Hyper Parameters&#39;, filter=&quot;txt (*.npy *.)&quot;)</span>
+        <span class="n">filename</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QFileDialog</span><span class="o">.</span><span class="n">getOpenFileName</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="p">,</span> <span class="s1">&#39;Load Hyper Parameters&#39;</span><span class="p">,</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">optimizer_path</span>  <span class="o">+</span> <span class="s2">&quot;parameters&quot;</span><span class="p">,</span> <span class="s2">&quot;txt (*.npy)&quot;</span><span class="p">,</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QFileDialog</span><span class="o">.</span><span class="n">DontUseNativeDialog</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">filename</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">hyper_file</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pb_hyper_file</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">hyper_file</span><span class="p">)</span></div>
+            <span class="c1"># print(filename)</span>
+
+<div class="viewcode-block" id="MainWindow.rewrite_default"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.MainWindow.rewrite_default">[docs]</a>    <span class="k">def</span> <span class="nf">rewrite_default</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1">#self.Form.set_file = &quot;default.json&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">save_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">set_file</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="MainWindow.logbook"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.MainWindow.logbook">[docs]</a>    <span class="k">def</span> <span class="nf">logbook</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Method to send Optimization parameters + screenshot to eLogboob</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">filename</span> <span class="o">=</span> <span class="s2">&quot;screenshot&quot;</span>
+        <span class="n">filetype</span> <span class="o">=</span> <span class="s2">&quot;png&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">screenShot</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">filetype</span><span class="p">)</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">scan_params</span>
+
+        <span class="c1"># curr_time = datetime.now()</span>
+        <span class="c1"># timeString = curr_time.strftime(&quot;%Y-%m-%dT%H:%M:%S&quot;)</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">cb_use_predef</span><span class="o">.</span><span class="n">checkState</span><span class="p">():</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="s2">&quot;obj func: A   : &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_a</span><span class="o">.</span><span class="n">text</span><span class="p">())</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>  <span class="o">+</span> <span class="s2">&quot;/&quot;</span><span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_a</span><span class="o">.</span><span class="n">text</span><span class="p">())</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_b</span><span class="o">.</span><span class="n">text</span><span class="p">())</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+                <span class="n">text</span> <span class="o">+=</span> <span class="s2">&quot;obj func: B   : &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_b</span><span class="o">.</span><span class="n">text</span><span class="p">())</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_b</span><span class="o">.</span><span class="n">text</span><span class="p">())</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_c</span><span class="o">.</span><span class="n">text</span><span class="p">())</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+                <span class="n">text</span> <span class="o">+=</span> <span class="s2">&quot;obj func: C   : &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_c</span><span class="o">.</span><span class="n">text</span><span class="p">())</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_c</span><span class="o">.</span><span class="n">text</span><span class="p">())</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_d</span><span class="o">.</span><span class="n">text</span><span class="p">())</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+                <span class="n">text</span> <span class="o">+=</span> <span class="s2">&quot;obj func: D   : &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_d</span><span class="o">.</span><span class="n">text</span><span class="p">())</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_d</span><span class="o">.</span><span class="n">text</span><span class="p">())</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_e</span><span class="o">.</span><span class="n">text</span><span class="p">())</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+                <span class="n">text</span> <span class="o">+=</span> <span class="s2">&quot;obj func: E   : &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_e</span><span class="o">.</span><span class="n">text</span><span class="p">())</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_e</span><span class="o">.</span><span class="n">text</span><span class="p">())</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="s2">&quot;obj func: expr: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">le_obf</span><span class="o">.</span><span class="n">text</span><span class="p">())</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="s2">&quot;obj func: A   : predefined  &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">objective_func</span><span class="o">.</span><span class="n">eid</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="k">if</span> <span class="n">table</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">dev</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;devs&quot;</span><span class="p">]):</span>
+                <span class="c1"># print(dev.split(&quot;/&quot;))</span>
+                <span class="n">text</span> <span class="o">+=</span> <span class="s2">&quot;dev           : &quot;</span> <span class="o">+</span> <span class="n">dev</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">dev</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;   &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;currents&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot; --&gt; &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span>
+                    <span class="n">table</span><span class="p">[</span><span class="s2">&quot;currents&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+
+            <span class="n">text</span> <span class="o">+=</span> <span class="s2">&quot;iterations    : &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;iter&quot;</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="s2">&quot;delay         : &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">total_delay</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="s2">&quot;START--&gt;STOP  : &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;sase&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot; --&gt; &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;sase&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="s2">&quot;Method        : &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="c1">#print(&quot;table&quot;, table)</span>
+        <span class="c1">#print(text)</span>
+        <span class="n">screenshot</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">optimizer_path</span> <span class="o">+</span> <span class="n">filename</span> <span class="o">+</span> <span class="s2">&quot;.&quot;</span> <span class="o">+</span> <span class="n">filetype</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span>
+        <span class="c1">#print(screenshot)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">send_to_desy_elog</span><span class="p">(</span><span class="n">author</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;OCELOT Optimization&quot;</span><span class="p">,</span> <span class="n">severity</span><span class="o">=</span><span class="s2">&quot;INFO&quot;</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span> <span class="n">elog</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">logbook</span><span class="p">,</span>
+                          <span class="n">image</span><span class="o">=</span><span class="n">screenshot</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">res</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">error_box</span><span class="p">(</span><span class="s2">&quot;error during eLogBook sending&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="MainWindow.screenShot"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.MainWindow.screenShot">[docs]</a>    <span class="k">def</span> <span class="nf">screenShot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">filetype</span><span class="p">):</span>
+
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Takes a screenshot of the whole gui window, saves png and ps images to file</span>
+<span class="sd">        :param filename: (str) Directory string of where to save the file</span>
+<span class="sd">        :param filetype: (str) String of the filetype to save</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">s</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;.&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">filetype</span><span class="p">)</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">QPixmap</span><span class="o">.</span><span class="n">grabWindow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">winId</span><span class="p">())</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="s1">&#39;png&#39;</span><span class="p">)</span>
+        <span class="c1"># im = Image.open(s)</span>
+        <span class="c1"># im.save(s[:-4]+&quot;.ps&quot;)</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">scaled</span><span class="p">(</span><span class="mi">465</span><span class="p">,</span> <span class="mi">400</span><span class="p">)</span>
+        <span class="c1"># save again a small image to use for the logbook thumbnail</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">s</span><span class="p">[:</span><span class="o">-</span><span class="mi">4</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot;_sm.png&quot;</span><span class="p">,</span> <span class="s1">&#39;png&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="MainWindow.loadStyleSheet"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.MainWindow.loadStyleSheet">[docs]</a>    <span class="k">def</span> <span class="nf">loadStyleSheet</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Sets the dark GUI theme from a css file.</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cssfile</span> <span class="o">=</span> <span class="s2">&quot;style.css&quot;</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cssfile</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+        <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+            <span class="nb">print</span> <span class="p">(</span><span class="s1">&#39;No style sheet found!&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="MainWindow.change_state_scipy_setup"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.MainWindow.change_state_scipy_setup">[docs]</a>    <span class="k">def</span> <span class="nf">change_state_scipy_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Method to enable/disable &quot;Scipy Scanner Setup&quot;. If scipy version &lt; &quot;0.18&quot; then QGroup will be disable.</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">#print(&quot;SCIPY&quot;, str(self.cb_select_alg.currentText()))</span>
+        <span class="k">if</span> <span class="n">scipy</span><span class="o">.</span><span class="n">__version__</span> <span class="o">&lt;</span> <span class="s2">&quot;0.18&quot;</span> <span class="ow">and</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cb_select_alg</span><span class="o">.</span><span class="n">currentText</span><span class="p">())</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">name_simplex</span><span class="p">:</span>
+            <span class="c1">#self.cb_use_isim.setCheckState(False)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">g_box_isim</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">g_box_isim</span><span class="o">.</span><span class="n">setTitle</span><span class="p">(</span><span class="s2">&quot;Initial Simplex does not work: scipy version: &quot;</span> <span class="o">+</span> <span class="n">scipy</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">g_box_isim</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s1">&#39;QGroupBox  {color: red;}&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">scipy</span><span class="o">.</span><span class="n">__version__</span> <span class="o">&gt;=</span> <span class="s2">&quot;0.18&quot;</span> <span class="ow">and</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cb_select_alg</span><span class="o">.</span><span class="n">currentText</span><span class="p">())</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">name_simplex</span><span class="p">:</span>
+            <span class="c1">#print(str(self.cb_select_alg.currentText()))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">g_box_isim</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cb_use_isim</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">g_box_isim</span><span class="o">.</span><span class="n">setTitle</span><span class="p">(</span><span class="s2">&quot;Simplex/Scipy Scanner Setup&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">g_box_isim</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s1">&#39;QGroupBox  {color: white;}&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cb_use_isim</span><span class="o">.</span><span class="n">checkState</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">label_23</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sb_isim_rel_step</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">label_23</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sb_isim_rel_step</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cb_select_alg</span><span class="o">.</span><span class="n">currentText</span><span class="p">())</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">name_custom</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">g_box_isim</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">label_23</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sb_isim_rel_step</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">g_box_isim</span><span class="o">.</span><span class="n">setTitle</span><span class="p">(</span><span class="s2">&quot;Custom Minimizer Scanner Setup&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">g_box_isim</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s1">&#39;QGroupBox  {color: white;}&#39;</span><span class="p">)</span>
+            <span class="c1">#self.cb_use_isim.setCheckState(True)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cb_use_isim</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sb_isim_rel_step</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cb_select_alg</span><span class="o">.</span><span class="n">currentText</span><span class="p">())</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">name_simplex_norm</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">name_gauss_sklearn</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">g_box_isim</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">label_23</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sb_isim_rel_step</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">g_box_isim</span><span class="o">.</span><span class="n">setTitle</span><span class="p">(</span><span class="s2">&quot;Simplex With Normalization&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">g_box_isim</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s1">&#39;QGroupBox  {color: white;}&#39;</span><span class="p">)</span>
+            <span class="c1">#self.cb_use_isim.setCheckState(True)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cb_use_isim</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sb_isim_rel_step</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MainWindow.use_predef_fun"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.MainWindow.use_predef_fun">[docs]</a>    <span class="k">def</span> <span class="nf">use_predef_fun</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cb_use_predef</span><span class="o">.</span><span class="n">checkState</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">le_a</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">le_b</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">le_c</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">le_d</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">le_e</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">le_obf</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">label_16</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">label_19</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">label_20</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">label_21</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">label_28</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">label_29</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">le_a</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">le_b</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">le_c</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">le_d</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">le_e</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">le_obf</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">label_16</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">label_19</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">label_20</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">label_21</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">label_28</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">label_29</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="MainWindow.open_help"><a class="viewcode-back" href="../../optimizer.html#optimizer.gui_main.MainWindow.open_help">[docs]</a>    <span class="k">def</span> <span class="nf">open_help</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        method to open the Help in the webbrowser</span>
+<span class="sd">        :return: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span> <span class="o">==</span> <span class="s1">&#39;win32&#39;</span><span class="p">:</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">optimizer_path</span><span class="o">+</span><span class="s2">&quot;docs</span><span class="se">\\</span><span class="s2">_build</span><span class="se">\\</span><span class="s2">html</span><span class="se">\\</span><span class="s2">index.html&quot;</span>
+            <span class="c1">#os.startfile(url)</span>
+            <span class="n">webbrowser</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span> <span class="o">==</span> <span class="s1">&#39;darwin&#39;</span><span class="p">:</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;file://&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">optimizer_path</span><span class="o">+</span><span class="s2">&quot;docs/_build/html/index.html&quot;</span>
+            <span class="n">webbrowser</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+            <span class="c1">#subprocess.Popen([&#39;open&#39;, url])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;file://&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">optimizer_path</span> <span class="o">+</span> <span class="s2">&quot;docs/_build/html/index.html&quot;</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">([</span><span class="s1">&#39;xdg-open&#39;</span><span class="p">,</span> <span class="n">url</span><span class="p">])</span>
+            <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Please open a browser on: &#39;</span> <span class="o">+</span> <span class="n">url</span><span class="p">)</span></div></div>
+
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">OcelotOptimizer 1.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, S.Tomin.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
+    </div>
+  </body>
+</html>

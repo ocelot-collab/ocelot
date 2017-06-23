@@ -134,7 +134,7 @@ def pipe_wake(z, current, tube_radius, tube_len, conductivity, tau, roughness, d
 
 def xfel_pipe_wake(s, current):
     """
-    :param s:
+    :param s: smaller number (usually negative) is the head
     :param current:
     :return: s, current, wake
     """

@@ -51,12 +51,12 @@ class ParetoPlot():
             for ind in data_file[1]:
                 self.x.append(ind[0])
                 self.y.append(ind[1])
-            
+
             if self.limx == None:
                 self.limx = [0,max(self.x)]
             if self.limy == None:
                 self.limy = [0,max(self.y)]
-            
+
             self.xnd = []
             self.ynd = []
             for ind in data_file[2]:
@@ -70,17 +70,15 @@ class ParetoPlot():
 
 
     def plot(self):
-        
-        t_start = datetime.datetime.now()
 
         plt.title(self.title)
-        
+
         self.ax.set_xlim(self.limx)
         self.ax.set_ylim(self.limy)
-        
+
         self.ax.set_xlabel(self.xlabel)
         self.ax.set_ylabel(self.ylabel)
-        
+
         self.lineF.set_data(self.x, self.y)
         self.lineND.set_data(self.xnd, self.ynd)
         self.fig.canvas.draw()
@@ -88,13 +86,13 @@ class ParetoPlot():
 
 
     def run(self):
-        
+
         self.work = True
-        
+
         thread = threading.Thread(target=self.get_data)
         thread.start()
 
-        
+
         timer = self.fig.canvas.new_timer(interval=self.update_time)
         timer.add_callback(self.plot)
         timer.start()

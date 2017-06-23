@@ -392,7 +392,7 @@ def t_nnn(L, h, k1, k2, energy=0):
     T[4, 0, 5] = T516/beta
     T[4, 1, 1] = T522/beta
     T[4, 1, 5] = T526/beta
-    T[4, 5, 5] = T566/beta + 1.5*L/(beta*beta)*igamma2
+    T[4, 5, 5] = T566/beta + 1.5*L/(beta*beta)*igamma2 # ? beta**3 in Xtrack but beta**2
     T[4, 2, 2] = T533/beta
     T[4, 2, 3] = T534/beta
     T[4, 3, 3] = T544/beta
@@ -810,7 +810,7 @@ def rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=0.):
     cmm = speed_of_light
     massElectron = m_e_eV# 0.510998910e+6 #// rest mass of electron
 
-    u = np.zeros((N*9, len(y0)/6))
+    u = np.zeros((N*9, int(len(y0)/6)))
     px = y0[1::6]
     py = y0[3::6]
     dz = h
@@ -1322,10 +1322,11 @@ def arcline( SREin, Delta_S, dS, R_vect ):
     epsilon = 1e-8
 
     sre0 = SREin[:,-1]
-    N = max(1, np.round(Delta_S/dS))
+    N = int(max(1, np.round(Delta_S/dS)))
     #print N
-    dS = Delta_S/N
+    dS = float(Delta_S)/N
     SRE2 = np.zeros((7, N))
+    #print("SRE2", sre0[0], N, dS, Delta_S)
     SRE2[0,:] = sre0[0] + np.arange(1, N+1)*dS
 
     R_vect_valid = False
@@ -1366,6 +1367,7 @@ def arcline( SREin, Delta_S, dS, R_vect ):
         SRE2[7-1, :] = e1[2]*co + e2[2]*si
 
     #print np.shape(np.transpose([SREin])), np.shape(SRE2)
+    #print("arcline: ", SREin[0,-1], SRE2[0, 0], SRE2[0, -1], )
     SRE = np.append(SREin, SRE2, axis=1)
 
     return SRE

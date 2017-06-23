@@ -9,11 +9,12 @@ def rot_mtx(angle):
     cs = np.cos(angle)
     sn = np.sin(angle)
     return np.array([[cs, 0., sn, 0., 0., 0.],
-                  [0., cs, 0., sn, 0., 0.],
-                  [-sn, 0., cs, 0., 0., 0.],
-                  [0., -sn, 0., cs, 0., 0.],
-                  [0., 0., 0., 0., 1., 0.],
-                  [0., 0., 0., 0., 0., 1.]])
+                    [0.,  cs, 0., sn, 0., 0.],
+                    [-sn, 0., cs, 0., 0., 0.],
+                    [0., -sn, 0., cs, 0., 0.],
+                    [0.,  0., 0., 0., 1., 0.],
+                    [0.,  0., 0., 0., 0., 1.]])
+
 
 def uni_matrix(z, k1, hx, sum_tilts=0., energy=0.):
     # r = element.l/element.angle
@@ -140,11 +141,18 @@ def create_r_matrix(element):
 
             r56 = 0.
             if gamma != 0:
-                gamma2 = gamma * gamma
-                beta = np.sqrt(1. - 1 / gamma2)
+                #gamma2 = gamma * gamma
+                #beta = np.sqrt(1. - 1 / gamma2)
                 #r56 = -z / (beta * beta * gamma2)
-                gs = (Ef-Ei)/z
-                r56 = -(1.0/Ei-1.0/Ef)/gs
+                #gs = (Ef-Ei)/z
+                #r56 = -(1.0/Ei-1.0/Ef)/gs
+
+                # integration
+                gamma = E/m_e_GeV
+                beta = np.sqrt(1. - 1 / gamma**2)
+                r56 = -1./(beta*gamma)**2 * z*(1 - 1.5*de/m_e_GeV/beta**2/gamma)
+
+
 
             k = 2.*np.pi*freq/speed_of_light
             r66 = Ei/Ef
@@ -155,8 +163,37 @@ def create_r_matrix(element):
                                 [0., 0., r21, r22, 0., 0.],
                                 [0., 0., 0., 0., 1., r56],
                                 [0., 0., 0., 0., r65, r66]]).real
-            return cav_matrix
+            if element.coupler_kick:
+                #element.vxx_up = 1.0003 - 0.8132j
+                #element.vxy_up = (3.4075 - 0.41223j)
+                m21 = (element.vxx_up * V * np.exp(1j*phi)).real*1e-3 /E
+                m43 = - m21
+                m23 = (element.vxy_up* V * np.exp(1j*phi)).real*1e-3 /E
 
+                coupl_kick_up = np.array([[1, 0., 0., 0., 0., 0.],
+                                      [m21, 1, m23, 0., 0., 0.],
+                                      [0., 0., 1, 0., 0., 0.],
+                                      [m23, 0., m43, 1, 0., 0.],
+                                      [0., 0., 0., 0., 1., 0.],
+                                      [0., 0., 0., 0., 0., 1]]).real
+
+                #vxx = ((-4.9278 - 2.2112j) * V * np.exp(1j*phi)).real*1e-3 /(E + de)
+                #vyy = - vxx
+                #vxy = ((2.9224 - 0.027228j) * V * np.exp(1j*phi)).real *1e-3 /(E + de)
+
+                #element.vxx_down = (-4.9278 - 2.2112j)
+                #element.vxy_down = (2.9224 - 0.027228j)
+                m21 = (element.vxx_down * V * np.exp(1j*phi)).real*1e-3 /(E + de)
+                m43 = - m21
+                m23 = (element.vxy_down* V * np.exp(1j*phi)).real*1e-3 /(E + de)
+                coupl_kick_down = np.array([[1, 0., 0., 0., 0., 0.],
+                                      [m21, 1, m23, 0., 0., 0.],
+                                      [0., 0., 1, 0., 0., 0.],
+                                      [m23, 0., m43, 1, 0., 0.],
+                                      [0., 0., 0., 0., 1., 0.],
+                                      [0., 0., 0., 0., 0., 1]]).real
+                return np.dot(np.dot(coupl_kick_up, cav_matrix), coupl_kick_down)
+            return cav_matrix
 
         if element.delta_e == 0. and element.v == 0.:
             r_z_e = lambda z, energy: uni_matrix(z, 0., hx=0., sum_tilts=element.dtilt + element.tilt, energy=energy)
@@ -203,23 +240,45 @@ def create_r_matrix(element):
         rm = np.eye(6)
         rm[0, 0] = element.rm11
         rm[0, 1] = element.rm12
-        rm[1, 0] = element.rm21
-        rm[1, 1] = element.rm22
-
-        rm[2, 2] = element.rm33
-        rm[2, 3] = element.rm34
-        rm[3, 2] = element.rm43
-        rm[3, 3] = element.rm44
-
         rm[0, 2] = element.rm13
         rm[0, 3] = element.rm14
+        rm[0, 4] = element.rm15
+        rm[0, 5] = element.rm16
+
+        rm[1, 0] = element.rm21
+        rm[1, 1] = element.rm22
         rm[1, 2] = element.rm23
         rm[1, 3] = element.rm24
+        rm[1, 4] = element.rm25
+        rm[1, 5] = element.rm26
 
         rm[2, 0] = element.rm31
-        rm[3, 0] = element.rm41
         rm[2, 1] = element.rm32
+        rm[2, 2] = element.rm33
+        rm[2, 3] = element.rm34
+        rm[2, 4] = element.rm35
+        rm[2, 5] = element.rm36
+
+        rm[3, 0] = element.rm41
         rm[3, 1] = element.rm42
+        rm[3, 2] = element.rm43
+        rm[3, 3] = element.rm44
+        rm[3, 4] = element.rm45
+        rm[3, 5] = element.rm46
+
+        rm[4, 0] = element.rm51
+        rm[4, 1] = element.rm52
+        rm[4, 2] = element.rm53
+        rm[4, 3] = element.rm54
+        rm[4, 4] = element.rm55
+        rm[4, 5] = element.rm56
+
+        rm[5, 0] = element.rm61
+        rm[5, 1] = element.rm62
+        rm[5, 2] = element.rm63
+        rm[5, 3] = element.rm64
+        rm[5, 4] = element.rm65
+        rm[5, 5] = element.rm66
 
         def r_matrix(z, l, rm):
             if z < l:

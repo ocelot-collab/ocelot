@@ -18,7 +18,7 @@ from xml.etree import ElementTree
 
 from datetime import datetime
 
-sys.path.append("..")
+#sys.path.append("..")
 #from ocelot.optimizer.taperThread import Taper
 #import matlog
 
@@ -694,11 +694,18 @@ class TestLCLSDeviceProperties:
 
     """ Start the device properties class """
 
-    def __init__(self):
+    def __init__(self, widget=None):
         self.getter = EpicsGet()
+        self.widget = widget
 
-    def get_limits(self, device,percent=0.25):
-        return [-10000,10000]
+    def get_limits(self, device, percent=0.25):
+        for row in range(self.widget.rowCount()):
+            if device == str(self.widget.item(row, 0).text()):
+                lims = [self.widget.cellWidget(row, 3).value(), self.widget.cellWidget(row, 4).value()]
+                #print(self.pvs, pv, row, lims)
+                return lims
+
+        #return [-10000,10000]
 
 
     def get_start_values(self, devices,percent=0.25):

@@ -1,0 +1,382 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>optimizer.resetpanel.resetpanel &#8212; OcelotOptimizer 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">OcelotOptimizer 1.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for optimizer.resetpanel.resetpanel</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/local/lcls/package/python/current/bin/python</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">PYQT interface for running OCELOT simplex optimization.</span>
+<span class="sd">Created as a QT widget for use in other applications as well.</span>
+<span class="sd">Tyler Cope, 2016</span>
+<span class="sd">The class was modified and was introduced new methods.</span>
+<span class="sd">S. Tomin, 2017</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="kn">from</span> <span class="nn">PyQt4.QtGui</span> <span class="k">import</span> <span class="n">QApplication</span><span class="p">,</span> <span class="n">QFrame</span>
+<span class="kn">from</span> <span class="nn">PyQt4</span> <span class="k">import</span> <span class="n">QtGui</span><span class="p">,</span> <span class="n">QtCore</span><span class="p">,</span> <span class="n">uic</span>
+<span class="kn">from</span> <span class="nn">ocelot.optimizer.mint.opt_objects</span> <span class="k">import</span> <span class="o">*</span>
+
+<span class="kn">from</span> <span class="nn">ocelot.optimizer.resetpanel.UIresetpanel</span> <span class="k">import</span> <span class="n">Ui_Form</span>
+
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;..&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="ResetpanelWindow"><a class="viewcode-back" href="../../../optimizer.resetpanel.html#optimizer.resetpanel.resetpanel.ResetpanelWindow">[docs]</a><span class="k">class</span> <span class="nc">ResetpanelWindow</span><span class="p">(</span><span class="n">QFrame</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Main GUI class for the resetpanel.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+
+        <span class="c1"># initialize</span>
+        <span class="n">QFrame</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ui</span> <span class="o">=</span> <span class="n">Ui_Form</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">setupUi</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="c1"># blank data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pvs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">devices</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">startValues</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pv_objects</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1"># button connections</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">updateReference</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">updateReference</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">resetAll</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">launchPopupAll</span><span class="p">)</span>
+
+        <span class="c1"># fast timer start</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trackTimer</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">QTimer</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trackTimer</span><span class="o">.</span><span class="n">timeout</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">updateCurrentValues</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trackTimer</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="mi">500</span><span class="p">)</span>  <span class="c1"># refresh every 100 ms</span>
+
+        <span class="c1"># dark theme</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loadStyleSheet</span><span class="p">()</span>
+
+<div class="viewcode-block" id="ResetpanelWindow.loadStyleSheet"><a class="viewcode-back" href="../../../optimizer.resetpanel.html#optimizer.resetpanel.resetpanel.ResetpanelWindow.loadStyleSheet">[docs]</a>    <span class="k">def</span> <span class="nf">loadStyleSheet</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Load in the dark theme style sheet. &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cssfile</span> <span class="o">=</span> <span class="s2">&quot;style.css&quot;</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cssfile</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+        <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;No style sheet found!&#39;</span><span class="p">)</span></div>
+
+    <span class="c1"># def getPvList(self, pvs_in=None):</span>
+    <span class="c1">#    &quot;&quot;&quot;</span>
+    <span class="c1">#    Method to build a pv list from file.</span>
+    <span class="c1">#</span>
+    <span class="c1">#    Can get passed string filename to parse text into a pv list, ex.</span>
+    <span class="c1">#            PV_1</span>
+    <span class="c1">#            PV_2</span>
+    <span class="c1">#            ...</span>
+    <span class="c1">#            PV_N</span>
+    <span class="c1">#</span>
+    <span class="c1">#    Entrys with at &#39;#&#39; in the file are ignored</span>
+    <span class="c1">#    Alternativly can be passed a list of pv strings for build the pv list</span>
+    <span class="c1">#    Saves the PV list as a class varable</span>
+    <span class="c1">#</span>
+    <span class="c1">#    Args:</span>
+    <span class="c1">#            pvs_in: Can be either List of pvs, or string filename</span>
+    <span class="c1">#</span>
+    <span class="c1">#    &quot;&quot;&quot;</span>
+    <span class="c1">#</span>
+    <span class="c1">#    if not pvs_in:</span>
+    <span class="c1">#        return</span>
+    <span class="c1">#</span>
+    <span class="c1">#    if type(pvs_in) != list:</span>
+    <span class="c1">#        self.pvs = []</span>
+    <span class="c1">#        for line in open(pvs_in):</span>
+    <span class="c1">#            l = line.rstrip(&#39;\n&#39;)</span>
+    <span class="c1">#            if l[0] == &#39;#&#39;: #exclude commented PVs</span>
+    <span class="c1">#                continue</span>
+    <span class="c1">#            self.pvs.append(str(l))</span>
+    <span class="c1">#    else:</span>
+    <span class="c1">#        self.pvs = pvs_in</span>
+    <span class="c1">#</span>
+    <span class="c1">#    self.devices = self.create_devices(pvs=self.pvs)</span>
+    <span class="c1">#</span>
+    <span class="c1">#    self.getStartValues()</span>
+    <span class="c1">#    self.initTable()</span>
+
+<div class="viewcode-block" id="ResetpanelWindow.getStartValues"><a class="viewcode-back" href="../../../optimizer.resetpanel.html#optimizer.resetpanel.resetpanel.ResetpanelWindow.getStartValues">[docs]</a>    <span class="k">def</span> <span class="nf">getStartValues</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Initializes start values for the PV list. &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">dev</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">startValues</span><span class="p">[</span><span class="n">dev</span><span class="o">.</span><span class="n">eid</span><span class="p">]</span> <span class="o">=</span> <span class="n">dev</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">startValues</span><span class="p">[</span><span class="n">dev</span><span class="o">.</span><span class="n">eid</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Get Start Value: &quot;</span><span class="p">,</span> <span class="n">dev</span><span class="o">.</span><span class="n">eid</span><span class="p">,</span> <span class="s2">&quot; not working&quot;</span><span class="p">)</span></div>
+                <span class="c1"># print(self.startValues[dev.eid])</span>
+                <span class="c1"># self.pv_objects[pv].add_callback(callback=self.PvGetCallBack)</span>
+
+<div class="viewcode-block" id="ResetpanelWindow.updateReference"><a class="viewcode-back" href="../../../optimizer.resetpanel.html#optimizer.resetpanel.resetpanel.ResetpanelWindow.updateReference">[docs]</a>    <span class="k">def</span> <span class="nf">updateReference</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Updates reference values for all PVs on button click.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">updateReference</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s2">&quot;Getting vals...&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">getStartValues</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pvs</span><span class="p">)):</span>
+            <span class="n">pv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pvs</span><span class="p">[</span><span class="n">row</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">setItem</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QTableWidgetItem</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">around</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">startValues</span><span class="p">[</span><span class="n">pv</span><span class="p">],</span> <span class="mi">4</span><span class="p">))))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">updateReference</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s2">&quot;Update Reference&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ResetpanelWindow.initTable"><a class="viewcode-back" href="../../../optimizer.resetpanel.html#optimizer.resetpanel.resetpanel.ResetpanelWindow.initTable">[docs]</a>    <span class="k">def</span> <span class="nf">initTable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Initialize the UI table object &quot;&quot;&quot;</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;PVs&quot;</span><span class="p">,</span> <span class="s2">&quot;Reference Value&quot;</span><span class="p">,</span> <span class="s2">&quot;Current Value&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">setColumnCount</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">headers</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">setHorizontalHeaderLabels</span><span class="p">(</span><span class="n">headers</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">setEditTriggers</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QAbstractItemView</span><span class="o">.</span><span class="n">NoEditTriggers</span><span class="p">)</span>  <span class="c1"># No user edits on talbe</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">horizontalHeader</span><span class="p">()</span><span class="o">.</span><span class="n">setResizeMode</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QHeaderView</span><span class="o">.</span><span class="n">Stretch</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pvs</span><span class="p">)):</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">setRowCount</span><span class="p">(</span><span class="n">row</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">pv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pvs</span><span class="p">[</span><span class="n">row</span><span class="p">]</span>
+            <span class="c1"># put PV in the table</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">setItem</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QTableWidgetItem</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">pv</span><span class="p">)))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">setTextColor</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QColor</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">255</span><span class="p">))</span>
+            <span class="n">tip</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">pv</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">2</span><span class="p">:])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="n">tip</span><span class="p">)</span>
+            <span class="c1"># self.ui.tableWidget.item(row, 0).setFont(font)</span>
+            <span class="c1"># put start val in</span>
+            <span class="n">s_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">startValues</span><span class="p">[</span><span class="n">pv</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">s_val</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">s_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">around</span><span class="p">(</span><span class="n">s_val</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">setItem</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QTableWidgetItem</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">s_val</span><span class="p">)))</span></div>
+
+            <span class="c1"># change font size</span>
+            <span class="c1"># font = QtGui.QFont()</span>
+            <span class="c1"># font.setPointSize(12)</span>
+            <span class="c1"># self.ui.tableWidget.item(row, 1).setFont(font)</span>
+
+            <span class="c1"># self.pv_objects[pv].run_callbacks()#initialize in the pvs current value</span>
+            <span class="c1"># print(&quot;init&quot;, self.ui.tableWidget.item(row, 0))</span>
+
+    <span class="c1"># update the table on PV change callback</span>
+    <span class="c1">#</span>
+    <span class="c1"># REMOVED BECAUSE CALLBACK CAUSED SEG FAUTLS.</span>
+    <span class="c1">#</span>
+    <span class="c1"># def PvGetCallBack(self,**kw):</span>
+
+    <span class="c1">#        #get pv info from the callback kw arg</span>
+    <span class="c1">#        val=kw[&#39;value&#39;]</span>
+    <span class="c1">#        pv=kw[&#39;pvname&#39;]</span>
+    <span class="c1">#</span>
+    <span class="c1">#        #set current string to red at 0.5 percent difference from initial value</span>
+    <span class="c1">#        percent = 0.005</span>
+
+    <span class="c1">#</span>
+    <span class="c1">#        #find the difference from PV start to current, decide to change table color</span>
+    <span class="c1">#        try:</span>
+    <span class="c1">#                #get row for callback PV in the gui table, set string to pv value</span>
+    <span class="c1">#                row = self.pvs.index(str(pv))</span>
+    <span class="c1">#                self.ui.tableWidget.setItem(row,2,QtGui.QTableWidgetItem(str(val)))</span>
+
+    <span class="c1">#                tol  = abs(self.startValues[pv]*percent)</span>
+    <span class="c1">#                diff = abs(abs(self.startValues[pv]) - abs(val))</span>
+    <span class="c1">#                if diff &gt; tol:</span>
+    <span class="c1">#                        self.ui.tableWidget.item(row,2).setForeground(QtGui.QColor(255,0,0))</span>
+    <span class="c1">#                else:</span>
+    <span class="c1">#                        self.ui.tableWidget.item(row,2).setForeground(QtGui.QColor(255,255,255))</span>
+    <span class="c1">#                QApplication.processEvents()</span>
+    <span class="c1">#        except:</span>
+    <span class="c1">#                pass</span>
+
+<div class="viewcode-block" id="ResetpanelWindow.updateCurrentValues"><a class="viewcode-back" href="../../../optimizer.resetpanel.html#optimizer.resetpanel.resetpanel.ResetpanelWindow.updateCurrentValues">[docs]</a>    <span class="k">def</span> <span class="nf">updateCurrentValues</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Method to update the table on every clock cycle.</span>
+<span class="sd">        Loops through the pv list and gets new data, then updates the Current Value column.</span>
+<span class="sd">        Hard coded to turn Current Value column red at 0.1% differenct from Ref Value.</span>
+<span class="sd">        It would be better to update the table on a callback, but PyEpics crashes with cb funcitons.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">percent</span> <span class="o">=</span> <span class="mf">0.001</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">currentValues</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">row</span><span class="p">,</span> <span class="n">dev</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">dev</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="c1"># print(&quot;ERROR getting value. Device:&quot;, dev.eid)</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="kc">None</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">startValues</span><span class="p">[</span><span class="n">dev</span><span class="o">.</span><span class="n">eid</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">value</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">startValues</span><span class="p">[</span><span class="n">dev</span><span class="o">.</span><span class="n">eid</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">startValues</span><span class="p">[</span><span class="n">dev</span><span class="o">.</span><span class="n">eid</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">value</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span><span class="o">.</span><span class="n">setFlags</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">NoItemFlags</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">]:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">)</span><span class="o">.</span><span class="n">setBackground</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QColor</span><span class="p">(</span><span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>  <span class="c1"># red</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">startValues</span><span class="p">[</span><span class="n">dev</span><span class="o">.</span><span class="n">eid</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">setItem</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QTableWidgetItem</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="s2">&quot;None&quot;</span><span class="p">)))</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">setBackground</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QColor</span><span class="p">(</span><span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>  <span class="c1"># red</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">setItem</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QTableWidgetItem</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">around</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="mi">4</span><span class="p">))))</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">setBackground</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QColor</span><span class="p">(</span><span class="mi">89</span><span class="p">,</span> <span class="mi">89</span><span class="p">,</span> <span class="mi">89</span><span class="p">))</span>  <span class="c1"># grey</span>
+
+                <span class="k">if</span> <span class="n">value</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">setItem</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QTableWidgetItem</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="s2">&quot;None&quot;</span><span class="p">)))</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">setBackground</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QColor</span><span class="p">(</span><span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>  <span class="c1"># red</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">setItem</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span>
+                                                <span class="n">QtGui</span><span class="o">.</span><span class="n">QTableWidgetItem</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">around</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">currentValues</span><span class="p">[</span><span class="n">dev</span><span class="o">.</span><span class="n">eid</span><span class="p">],</span> <span class="mi">4</span><span class="p">))))</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">setBackground</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QColor</span><span class="p">(</span><span class="mi">89</span><span class="p">,</span> <span class="mi">89</span><span class="p">,</span> <span class="mi">89</span><span class="p">))</span>  <span class="c1"># grey</span>
+
+                <span class="k">continue</span>
+
+            <span class="c1"># if value out of the limits</span>
+            <span class="k">if</span> <span class="n">dev</span><span class="o">.</span><span class="n">check_limits</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]:</span>
+                    <span class="n">spin_box</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">cellWidget</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">)</span>
+                    <span class="n">spin_box</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s2">&quot;color: yellow; font-size: 16px; background-color:red;&quot;</span><span class="p">)</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]:</span>
+                    <span class="n">spin_box</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">cellWidget</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">col</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                        <span class="n">spin_box</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s2">&quot;color: rgb(153,204,255); font-size: 16px; background-color:#595959;&quot;</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">col</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+                        <span class="n">spin_box</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s2">&quot;color: rgb(255,0,255); font-size: 16px; background-color:#595959;&quot;</span><span class="p">)</span>
+
+            <span class="n">pv</span> <span class="o">=</span> <span class="n">dev</span><span class="o">.</span><span class="n">eid</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">currentValues</span><span class="p">[</span><span class="n">pv</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>  <span class="c1"># dev.get_value()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">setItem</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QTableWidgetItem</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">around</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">currentValues</span><span class="p">[</span><span class="n">pv</span><span class="p">],</span> <span class="mi">4</span><span class="p">))))</span>
+            <span class="c1"># print(self.currentValues[pv])</span>
+            <span class="n">tol</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">startValues</span><span class="p">[</span><span class="n">pv</span><span class="p">]</span> <span class="o">*</span> <span class="n">percent</span><span class="p">)</span>
+            <span class="n">diff</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">startValues</span><span class="p">[</span><span class="n">pv</span><span class="p">])</span> <span class="o">-</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">currentValues</span><span class="p">[</span><span class="n">pv</span><span class="p">]))</span>
+            <span class="k">if</span> <span class="n">diff</span> <span class="o">&gt;</span> <span class="n">tol</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">setForeground</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QColor</span><span class="p">(</span><span class="mi">255</span><span class="p">,</span> <span class="mi">101</span><span class="p">,</span> <span class="mi">101</span><span class="p">))</span>  <span class="c1"># red</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">setForeground</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QColor</span><span class="p">(</span><span class="mi">255</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">255</span><span class="p">))</span>  <span class="c1"># white</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span><span class="o">.</span><span class="n">setFlags</span><span class="p">(</span>
+                <span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">ItemIsSelectable</span> <span class="o">|</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">ItemIsUserCheckable</span> <span class="o">|</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">ItemIsEnabled</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">]:</span>
+                <span class="c1"># self.ui.tableWidget.item(row, col).setFlags(</span>
+                <span class="c1">#    QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">tableWidget</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">)</span><span class="o">.</span><span class="n">setBackground</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QColor</span><span class="p">(</span><span class="mi">89</span><span class="p">,</span> <span class="mi">89</span><span class="p">,</span> <span class="mi">89</span><span class="p">))</span>
+
+        <span class="n">QApplication</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ResetpanelWindow.resetAll"><a class="viewcode-back" href="../../../optimizer.resetpanel.html#optimizer.resetpanel.resetpanel.ResetpanelWindow.resetAll">[docs]</a>    <span class="k">def</span> <span class="nf">resetAll</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set all PVs back to their reference values.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">dev</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">devices</span><span class="p">:</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">startValues</span><span class="p">[</span><span class="n">dev</span><span class="o">.</span><span class="n">eid</span><span class="p">]</span>
+            <span class="n">dev</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>  <span class="c1"># epics.caput(pv,val)</span></div>
+
+<div class="viewcode-block" id="ResetpanelWindow.launchPopupAll"><a class="viewcode-back" href="../../../optimizer.resetpanel.html#optimizer.resetpanel.resetpanel.ResetpanelWindow.launchPopupAll">[docs]</a>    <span class="k">def</span> <span class="nf">launchPopupAll</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Launches the ARE YOU SURE popup window for pv reset.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ui_check</span> <span class="o">=</span> <span class="n">uic</span><span class="o">.</span><span class="n">loadUi</span><span class="p">(</span><span class="s2">&quot;UIareyousure.ui&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ui_check</span><span class="o">.</span><span class="n">exit</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ui_check</span><span class="o">.</span><span class="n">close</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ui_check</span><span class="o">.</span><span class="n">reset</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">resetAll</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ui_check</span><span class="o">.</span><span class="n">reset</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ui_check</span><span class="o">.</span><span class="n">close</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ui_check</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div></div>
+
+
+<div class="viewcode-block" id="main"><a class="viewcode-back" href="../../../optimizer.resetpanel.html#optimizer.resetpanel.resetpanel.main">[docs]</a><span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Main functino to open a resetpanel GUI.</span>
+<span class="sd">    If passed a file name, will try and load PV list from that file.</span>
+<span class="sd">    Otherwise defaults to a file in the base directory with pre-loaded common tuned PVs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>  <span class="c1"># try to get a pv list file name from commandline arg</span>
+        <span class="n">pvs</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="n">pvs</span> <span class="o">=</span> <span class="s2">&quot;./lclsparams&quot;</span>
+
+    <span class="n">app</span> <span class="o">=</span> <span class="n">QApplication</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span>
+    <span class="n">window</span> <span class="o">=</span> <span class="n">ResetpanelWindow</span><span class="p">()</span>
+    <span class="n">window</span><span class="o">.</span><span class="n">setWindowIcon</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QIcon</span><span class="p">(</span><span class="s1">&#39;/usr/local/lcls/tools/python/toolbox/py_logo.png&#39;</span><span class="p">))</span>
+    <span class="n">window</span><span class="o">.</span><span class="n">getPvList</span><span class="p">(</span><span class="n">pvs</span><span class="p">)</span>
+    <span class="n">window</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">exec_</span><span class="p">())</span></div>
+
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">OcelotOptimizer 1.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, S.Tomin.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
+    </div>
+  </body>
+</html>

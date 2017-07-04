@@ -811,7 +811,7 @@ def lattice_transfer_map(lattice, energy):
     for i, elem in enumerate(lattice.sequence):
 
         Rb = elem.transfer_map.R(E)
-        if lattice.method == SecondTM:
+        if lattice.method.global_method == SecondTM:
             Tc = np.zeros((6, 6, 6))
             Tb = deepcopy(elem.transfer_map.t_mat_z_e(elem.l, E))
             Tb = sym_matrix(Tb)
@@ -819,7 +819,7 @@ def lattice_transfer_map(lattice, energy):
                 for j in range(6):
                     for k in range(6):
                         t1 = 0.
-                        t2 = 0
+                        t2 = 0.
                         for l in range(6):
                             t1 += Rb[i, l] * Ta[l, j, k]
 

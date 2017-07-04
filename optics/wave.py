@@ -22,6 +22,9 @@ class TransferFunction(object):
         self.k = None # wave vector - 2*pi/wavelength
         self.tr = None # complex value of transmission - modulus*exp(-i*phase)
         self.ref = None # .. of reflection
+        self.xlamds = None # carrier wavelength
+        self.mid_k = None # center of feature in spectrum
+        self.dk = None # width of feature in spectrum
     
     def ev(self):
         return self.k* h_eV_s/2/pi * speed_of_light

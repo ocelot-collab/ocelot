@@ -1,4 +1,5 @@
 Accelerator, radiation and x-ray optics simulation framework
+
 # An Introduction to Ocelot
 
 Ocelot is a multiphysics simulation toolkit designed for studying FEL and storage ring based light sources. Ocelot is written in Python. Its central concept is the writing of python's scripts for simulations with the usage of Ocelot's modules and functions and the standard Python libraries. 
@@ -30,3 +31,79 @@ Ocelot is designed for researchers who want to have the flexibility that is give
 However if someone needs a GUI  it can be developed using Python's libraries like a [PyQtGraph](http://www.pyqtgraph.org/) or [PyQt](http://pyqt.sourceforge.net/Docs/PyQt4/). 
 
 For example, you can see GUI for SASE optimization (uncomment and run next block)
+
+## Tutorials
+* Preliminaries: Setup & introduction
+* Beam dynamics
+* [Tutorial N1. Linear optics.](#tutorial1). [Web version](http://nbviewer.jupyter.org/github/iagapov/ocelot/blob/dev/demos/ipython_tutorials/1_introduction.ipynb).
+    - Linear optics. Double Bend Achromat (DBA). Simple example of usage OCELOT functions to get periodic solution for a storage ring cell. 
+* [Tutorial N2. Tracking.](2_tracking.ipynb). [Web version](http://nbviewer.jupyter.org/github/iagapov/ocelot/blob/dev/demos/ipython_tutorials/2_tracking.ipynb).
+    - Linear optics of the European XFEL Injector. 
+    - Tracking. First and second order. 
+* [Tutorial N3. Space Charge.](3_space_charge.ipynb). [Web version](http://nbviewer.jupyter.org/github/iagapov/ocelot/blob/dev/demos/ipython_tutorials/3_space_charge.ipynb).
+    - Tracking through RF cavities with SC effects and RF focusing.
+* [Tutorial N4. Wakefields.](4_wake.ipynb). [Web version](http://nbviewer.jupyter.org/github/iagapov/ocelot/blob/dev/demos/ipython_tutorials/4_wake.ipynb).
+    - Tracking through corrugated structure (energy chirper) with Wakefields
+* [Tutorial N5. CSR.](5_CSR.ipynb). [Web version](http://nbviewer.jupyter.org/github/iagapov/ocelot/blob/dev/demos/ipython_tutorials/5_CSR.ipynb).
+    - Tracking trough bunch compressor with CSR effect.
+* [Tutorial N6. RF Coupler Kick.](6_coupler_kick.ipynb). [Web version](http://nbviewer.jupyter.org/github/iagapov/ocelot/blob/dev/demos/ipython_tutorials/6_coupler_kick.ipynb).
+    - Coupler Kick. Example of RF coupler kick influence on trajjectory and optics.
+* [Tutorial N7. Lattice design.](7_lattice_design.ipynb). [Web version](http://nbviewer.jupyter.org/github/iagapov/ocelot/blob/dev/demos/ipython_tutorials/7_lattice_design.ipynb).
+    - Lattice design, twiss matching, twiss backtracking 
+    
+ ## Preliminaries
+
+The tutorial includes 7 simple examples dediacted to beam dynamics and optics. However, you should have a basic understanding of Computer Programming terminologies. A basic understanding of Python language is a plus.
+
+##### This tutorial requires the following packages:
+
+- Python 3.4-3.6 (python 2.7 can work as well)
+- `numpy` version 1.8 or later: http://www.numpy.org/
+- `scipy` version 0.15 or later: http://www.scipy.org/
+- `matplotlib` version 1.5 or later: http://matplotlib.org/
+- `ipython` version 2.4 or later, with notebook support: http://ipython.org
+
+**Optional** to speed up python 
+- numexpr (version 2.6.1)
+- pyfftw (version 0.10)
+
+The easiest way to get these is to download and install the (very large) [Anaconda software distribution](https://www.continuum.io/).
+
+Alternatively, you can download and install [miniconda](http://conda.pydata.org/miniconda.html).
+The following command will install all required packages:
+```
+$ conda install numpy scipy matplotlib ipython-notebook
+```
+
+##### Ocelot installation
+1. you have to download from GitHub [zip file](https://github.com/iagapov/ocelot/archive/master.zip). 
+2. Unzip ocelot-master.zip to your working folder **/your_working_dir/**. 
+3. Rename folder **../your_working_dir/ocelot-master** to **/your_working_dir/ocelot**. 
+4. Add **../your_working_dir/** to PYTHONPATH
+    - **Windows 7:** go to Control Panel -> System and Security -> System -> Advance System Settings -> Environment Variables.
+    and in User variables add **/your_working_dir/** to PYTHONPATH. If variable PYTHONPATH does not exist, create it
+    
+    Variable name: PYTHONPATH
+    
+    Variable value: ../your_working_dir/
+    - Linux: 
+    ```
+    $ export PYTHONPATH=/your_working_dir/:$PYTHONPATH
+    ```
+    
+#### To launch "ipython notebook" or "jupyter notebook"
+in command line run following commands:
+
+```
+$ ipython notebook
+```
+
+or
+```
+$ ipython notebook --notebook-dir="path_to_your_directory"
+```
+
+or
+```
+$ jupyter notebook --notebook-dir="path_to_your_directory"
+```

@@ -332,7 +332,7 @@ def plot_gen_out_z(g, figsize=(10, 14), legend=True, fig_name=None, z=inf, savef
                 dlambda = abs( (g.freq_lamd[arr[0]] - g.freq_lamd[arr[-1]]) / (arr[0] - arr[-1]) )
             spectrum_lamdwidth_fwhm = dlambda * width / g.freq_lamd[pos]  # the FWHM of spectral line (error when peakpos is at the edge of lamdscale)
 
-    if spectrum_lamdwidth_fwhm != None:
+    if spectrum_lamdwidth_fwhm is not None and maxspectrum_wavelength is not None:
         ax_spectrum.text(0.02, 0.98, r"$\lambda_{max}$= %.4e m " "\n" "$(\Delta\lambda/\lambda)_{fwhm}$= %.2e" % (maxspectrum_wavelength, spectrum_lamdwidth_fwhm), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_spectrum.transAxes, color='red')  # horizontalalignment='center', verticalalignment='center',
 
     phase = unwrap(g.phi_mid[:, zi])
@@ -718,7 +718,7 @@ def subfig_rad_spec(ax_spectrum, g, legend, log=1):
     ax_spec_bandw.plot(g.z, 2*spectrum_lamdwidth_std * 100, 'm:', label="std")
     ax_spec_bandw.grid(False)
     plt.yticks(plt.yticks()[0][0:-1])
-    # ax_spec_bandw.set_ylim([0, 2*np.amax(spectrum_lamdwidth_fwhm)*100])
+    ax_spec_bandw.set_ylim(ymin=0)
     
     if legend:
         ax_spec_bandw.legend()

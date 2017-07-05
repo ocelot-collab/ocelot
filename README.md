@@ -1,7 +1,5 @@
 Accelerator, radiation and x-ray optics simulation framework
 
-Accelerator, radiation and x-ray optics simulation framework
-
 # An Introduction to Ocelot
 
 Ocelot is a multiphysics simulation toolkit designed for studying FEL and storage ring based light sources. Ocelot is written in Python. Its central concept is the writing of python's scripts for simulations with the usage of Ocelot's modules and functions and the standard Python libraries.

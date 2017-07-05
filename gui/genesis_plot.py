@@ -1109,7 +1109,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
     
     F.fld = F.fld.astype(np.complex64)
     xy_proj = F.int_xy()
-    xy_proj_ph = np.zeros_like(xy_proj)  # tmp
+    xy_proj_ph = np.angle(np.sum(F.fld,axis=0))  # tmp  # tmp
     yz_proj = F.int_zy()
     xz_proj = F.int_zx()
     z_proj = F.int_z()
@@ -1879,7 +1879,7 @@ def plot_dpa_bucket_out(out, dpa=None, slice_pos=None, repeat=1, GeV=1, figsize=
     return plot_dpa_bucket(dpa=dpa, slice_num=slice_num, repeat=repeat, GeV=GeV, figsize=figsize, cmap=cmap, scatter=scatter, energy_mean=energy_mean, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, suffix=suffix, bins=bins, debug=debug)
 
 
-def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cmap, scatter=True, energy_mean=None, legend=True, fig_name=None, savefig=False, showfig=True, suffix='', bins=(50,50), debug=1, return_mode_gamma=0):
+def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cmap, scatter=False, energy_mean=None, legend=True, fig_name=None, savefig=False, showfig=True, suffix='', bins=(50,50), debug=1, return_mode_gamma=0):
     part_colors = ['darkred', 'orange', 'g', 'b', 'm','c','y']
     # cmap='BuPu'
     y_bins = bins[0]

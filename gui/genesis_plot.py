@@ -30,9 +30,10 @@ from ocelot.utils.xfel_utils import *
 from matplotlib import rc, rcParams
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+def_cmap = 'viridis'
 
 fntsz = 4
-params = {'image.cmap': 'jet', 'backend': 'ps', 'axes.labelsize': 3 * fntsz, 'font.size': 3 * fntsz, 'legend.fontsize': 4 * fntsz, 'xtick.labelsize': 4 * fntsz,  'ytick.labelsize': 4 * fntsz, 'text.usetex': False}
+params = {'image.cmap': def_cmap, 'backend': 'ps', 'axes.labelsize': 3 * fntsz, 'font.size': 3 * fntsz, 'legend.fontsize': 4 * fntsz, 'xtick.labelsize': 4 * fntsz,  'ytick.labelsize': 4 * fntsz, 'text.usetex': False}
 rcParams.update(params)
 # plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
 # rcParams["savefig.directory"] = os.chdir(os.path.dirname(__file__)) but __file__ appears to be genesis_plot
@@ -145,7 +146,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
                     pass
             if choice[12]:
                 try:
-                    plot_dpa_bucket_out(handle,scatter=0,slice_pos='max_P',repeat=3, showfig=showfig, savefig=savefig, cmap='jet')
+                    plot_dpa_bucket_out(handle,scatter=0,slice_pos='max_P',repeat=3, showfig=showfig, savefig=savefig, cmap=def_cmap)
                 except IOError:
                     pass
 
@@ -967,7 +968,7 @@ def plot_gen_out_scanned_z(g, figsize=(10, 14), legend=True, fig_name=None, z=in
     return fig
 
 
-def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap='jet', legend=True, phase=False, far_field=False, freq_domain=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, log_scale=0, debug=1, vartype_dfl=complex64):
+def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, far_field=False, freq_domain=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, log_scale=0, debug=1, vartype_dfl=complex64):
     '''
     Plots dfl radiation object in 3d.
 
@@ -1128,7 +1129,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap='jet', legend=True, phase=F
     fig.clf()
     fig.set_size_inches(((3 + 2 * column_3d) * figsize, 3 * figsize), forward=True)
 
-    # cmap = plt.get_cmap('viridis')  # jet inferno viridis #change to convenient
+    # cmap = plt.get_cmap(def_cmap)  # jet inferno viridis #change to convenient
     cmap_ph = plt.get_cmap('hsv')
 
     x_line = xy_proj[:, int((ncar_y - 1) / 2)]
@@ -1848,7 +1849,7 @@ def plot_gen_corr(proj_dir, run_inp=[], p1=(), p2=(), savefig=False, showfig=Tru
 # np.where(out.s>1.8e-6)[0][0]
 
 
-def plot_dpa_bucket_out(out, dpa=None, slice_pos=None, repeat=1, GeV=1, figsize=4, cmap='jet', scatter=True, energy_mean=None, legend=True, fig_name=None, savefig=False, showfig=True, bins=[50,50], debug=1):
+def plot_dpa_bucket_out(out, dpa=None, slice_pos=None, repeat=1, GeV=1, figsize=4, cmap=def_cmap, scatter=True, energy_mean=None, legend=True, fig_name=None, savefig=False, showfig=True, bins=[50,50], debug=1):
     
     if dpa == None:
         dpa=read_dpa_file_out(out)
@@ -1878,7 +1879,7 @@ def plot_dpa_bucket_out(out, dpa=None, slice_pos=None, repeat=1, GeV=1, figsize=
     return plot_dpa_bucket(dpa=dpa, slice_num=slice_num, repeat=repeat, GeV=GeV, figsize=figsize, cmap=cmap, scatter=scatter, energy_mean=energy_mean, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, suffix=suffix, bins=bins, debug=debug)
 
 
-def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap='jet', scatter=True, energy_mean=None, legend=True, fig_name=None, savefig=False, showfig=True, suffix='', bins=(50,50), debug=1, return_mode_gamma=0):
+def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cmap, scatter=True, energy_mean=None, legend=True, fig_name=None, savefig=False, showfig=True, suffix='', bins=(50,50), debug=1, return_mode_gamma=0):
     part_colors = ['darkred', 'orange', 'g', 'b', 'm','c','y']
     # cmap='BuPu'
     y_bins = bins[0]
@@ -2000,7 +2001,7 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap='jet',
         plt.close('all')
 
 
-def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, scatter=False, plot_x_y=True, plot_xy_s=True, bins=(50, 50, 50, 50), flip_t=True, s_units='um', e_units='ev', cmin=0, e_offset=None, cmap='jet', debug=1):
+def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, scatter=False, plot_x_y=True, plot_xy_s=True, bins=(50, 50, 50, 50), flip_t=True, s_units='um', e_units='ev', cmin=0, e_offset=None, cmap=def_cmap, debug=1):
 
     if showfig == False and savefig == False:
         return

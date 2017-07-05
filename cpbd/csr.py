@@ -642,7 +642,7 @@ class CSR:
 
     def apply(self, p_array, delta_s):
         s_cur = self.z0 - self.z_csr_start
-        z = -p_array.rparticles[4]
+        z = -p_array.tau()
         ind_z_sort = np.argsort(z)
         SBINB, NBIN = subbin_bound(p_array.q_array, z[ind_z_sort], self.x_qbin, self.n_bin, self.m_bin)
         B_params = [self.x_qbin, self.n_bin, self.m_bin, self.ip_method, self.sp, self.sigma_min]

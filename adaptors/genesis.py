@@ -661,13 +661,13 @@ def parray2edist(p_array):
     e0 = p_array.E * 1e9 #[eV]
     p0 = sqrt( (e0**2 - m_e_eV**2) / speed_of_light**2 )
     
-    p_oc = p_array.particles[5::6] # deltaE / average_impulse / speed_of_light
+    p_oc = p_array.rparticles[5] # deltaE / average_impulse / speed_of_light
     edist.g = (p_oc * p0 * speed_of_light + e0) / m_e_eV
-    edist.x = p_array.particles[::6]  # position in x in meters
-    edist.y = p_array.particles[2::6]  # position in y in meters
-    edist.xp = p_array.particles[1::6]  # divergence in x
-    edist.yp = p_array.particles[3::6]  # divergence in y
-    edist.t = p_array.particles[4::6] / speed_of_light  # longitudinal position in seconds
+    edist.x = p_array.rparticles[0]  # position in x in meters
+    edist.y = p_array.rparticles[2]  # position in y in meters
+    edist.xp = p_array.rparticles[1]  # divergence in x
+    edist.yp = p_array.rparticles[3]  # divergence in y
+    edist.t = p_array.rparticles[4] / speed_of_light  # longitudinal position in seconds
 
     edist.part_charge = p_array.q_array[0] #fix for general case  # charge per particle
     edist.filePath = ''
@@ -677,7 +677,7 @@ def parray2edist(p_array):
 def edist2parray(edist):
 
     p_array = ParticleArray()
-    p_array.particles = np.zeros(edist.len() * 6)
+    p_array.rparticles = np.zeros((6,edist.len()))
     p_array.q_array = np.ones(edist.len()) * edist.part_charge
     
     g0 = np.mean(edist.g) # average gamma
@@ -686,12 +686,12 @@ def edist2parray(edist):
 #    p0 = sqrt( (e0**2 - m_e_eV**2) / speed_of_light**2 ) # average impulse
     p_array.E = g0 * m_e_GeV # average energy in GeV
     
-    p_array.particles[::6] = edist.x # position in x in meters
-    p_array.particles[1::6] = edist.xp  # divergence in x
-    p_array.particles[2::6] = edist.y # position in x in meters
-    p_array.particles[3::6] = edist.yp  # divergence in x
-    p_array.particles[4::6] = edist.t * speed_of_light
-    p_array.particles[5::6] = (edist.g - g0) * m_e_eV / p0 / speed_of_light
+    p_array.rparticles[0] = edist.x # position in x in meters
+    p_array.rparticles[1] = edist.xp  # divergence in x
+    p_array.rparticles[2] = edist.y # position in x in meters
+    p_array.rparticles[3] = edist.yp  # divergence in x
+    p_array.rparticles[4] = edist.t * speed_of_light
+    p_array.rparticles[5] = (edist.g - g0) * m_e_eV / p0 / speed_of_light
     
     return p_array
     

@@ -433,6 +433,7 @@ class Optimizer(Thread):
         print('sleeping ' + str(self.timeout))
         sleep(self.timeout)
         #print ('done sleeping')
+
         pen = self.target.get_penalty()
         print('penalty:', pen)
         if self.debug: print('penalty:', pen)

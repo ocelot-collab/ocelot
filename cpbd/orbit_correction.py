@@ -9,7 +9,7 @@ from time import sleep
 from numpy import diag, shape
 from numpy.linalg import svd
 from scipy.interpolate import splrep, splev
-
+from scipy.optimize import linprog
 from ocelot.cpbd.match import closed_orbit
 from ocelot.cpbd.track import *
 
@@ -60,6 +60,21 @@ class OrbitSVD:
         #print(A)
         #print(angle)
         return angle
+
+class LInfinityNorm(OrbitSVD):
+    def __init__(self, resp_matrix, orbit, weights=None, epsilon_x=0.001, epsilon_y=0.001):
+        OrbitSVD.__init__(self, resp_matrix=resp_matrix, orbit=orbit, weights=weights,
+                          epsilon_x=epsilon_x, epsilon_y=epsilon_y)
+
+    def apply(self):
+        m, n = np.shape(self.resp_matrix)
+        f = np.zeros(n + 1)
+        f[-1] = 1
+        Ane = np.vstack((np.hstack((self.resp_matrix, -np.ones((m, 1)))), np.hstack((-self.resp_matrix, -np.ones((m, 1))))))
+        bne = np.vstack((+self.orbit, -self.orbit))
+        res = linprog(f, A_ub=Ane, b_ub=bne)
+        x = res["x"][:-1]
+        return x
 
 
 class NewOrbit:
@@ -239,8 +254,10 @@ class NewOrbit:
         #print("bpm_weights = ", np.shape(bpm_weights), len(orbit))
 
         self.orbit_svd = OrbitSVD(resp_matrix=rmatrix, orbit=orbit, weights=bpm_weights_diag, epsilon_x=epsilon_x, epsilon_y=epsilon_x)
-        angle = self.orbit_svd.apply()
 
+        #self.orbit_svd = LInfinityNorm(resp_matrix=rmatrix, orbit=orbit, weights=bpm_weights_diag, epsilon_x=epsilon_x,
+        #                          epsilon_y=epsilon_x)
+        angle = self.orbit_svd.apply()
         ncor = len(cor_list)
         for i, cor in enumerate(np.append(self.hcors, self.vcors)):
             if print_log:

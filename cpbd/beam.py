@@ -583,21 +583,7 @@ class BeamTransform:
             emitt = sqrt(mxx * myy - mxy * mxy)
         return mx, my, mxx, mxy, myy, emitt
 
-class EmptyProc():
-    def __init__(self):
-        self.step=1
-        self.energy = None
-        self.pict_debug = True
-        self.traj_step = 0.0002
-        #if self.pict_debug:
-        #    self.f = plt.figure(figsize=(12, 9))
-        #    plt.ion()
 
-    def prepare(self, lat):
-        pass
-
-    def apply(self, p_array, dz):
-        pass
 
 
 

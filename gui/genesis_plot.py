@@ -406,7 +406,7 @@ def plot_gen_out_ph(g, legend=False, figsize=4, fig_name='Radiation', savefig=Fa
     else:
         fig = plot_gen_out_evo(g, params=['rad_pow', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
 
-def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_energy', 'el_bunching', 'rad_pow_en', 'rad_spec', 'rad_size', 'rad_spec_evo_n', 'rad_pow_evo_n'], figsize=4, legend=False, fig_name=None, savefig=False, showfig=False, debug=1):
+def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_energy', 'el_bunching', 'rad_pow_en', 'rad_spec', 'rad_size', 'rad_spec_evo_n', 'rad_pow_evo_n'], figsize=4, legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
     '''
     plots evolution of given parameters from genesis output with undulator length
     '''
@@ -1897,6 +1897,9 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cm
 
     if shape(dpa.ph)[0] == 1:
         slice_num = 0
+    elif slice_num is None:
+        slice_num = int(shape(dpa.ph)[0]/2)
+        print('      no slice number provided, using middle of the distribution - slice number', slice_num)
     else:
         assert (slice_num <= shape(dpa.ph)[0]), 'slice_num larger than the dpa shape'
 

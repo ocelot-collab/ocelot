@@ -1006,12 +1006,15 @@ class ProcessTable:
 
     def searching_kick_proc(self, physics_proc, elem1):
         """
-        function finds kick physics process. Kick physics process applies kick only ones between two elements
-        with zero length (e.g. Marker), others physics processes are applied during finite lengths.
+        function finds kick physics process. Kick physics process applies kick only once between two elements
+        with zero length (e.g. Marker) or at the begining of the element if it is the same element,
+        others physics processes are applied during finite lengths.
         :return:
         """
 
-        if (physics_proc.indx0 + 1 == physics_proc.indx1 or physics_proc.indx0 == physics_proc.indx1) and elem1.l == 0:
+        if (physics_proc.indx0 == physics_proc.indx1 or
+            (physics_proc.indx0 + 1 == physics_proc.indx1 and elem1.l == 0)):
+
             physics_proc.indx1 = physics_proc.indx0
             physics_proc.s = np.sum(np.array([elem.l for elem in self.lat.sequence[:physics_proc.indx0]]))
             self.kick_proc_list = np.append(self.kick_proc_list, physics_proc)

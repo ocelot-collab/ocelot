@@ -1006,12 +1006,16 @@ class ProcessTable:
 
     def searching_kick_proc(self, physics_proc, elem1):
         """
-        function finds kick physics process. Kick physics process applies kick only ones between two elements
-        with zero length (e.g. Marker), others physics processes are applied during finite lengths.
+        function finds kick physics process. Kick physics process applies kick only once between two elements
+        with zero length (e.g. Marker) or at the begining of the element if it is the same element,
+        others physics processes are applied during finite lengths.
         :return:
         """
 
-        if (physics_proc.indx0 + 1 == physics_proc.indx1 or physics_proc.indx0 == physics_proc.indx1) and elem1.l == 0:
+        if (physics_proc.indx0 == physics_proc.indx1 or
+            (physics_proc.indx0 + 1 == physics_proc.indx1 and elem1.l == 0)):
+
+            physics_proc.indx1 = physics_proc.indx0
             physics_proc.s = np.sum(np.array([elem.l for elem in self.lat.sequence[:physics_proc.indx0]]))
             self.kick_proc_list = np.append(self.kick_proc_list, physics_proc)
             if len(self.kick_proc_list) > 1:
@@ -1060,7 +1064,7 @@ class Navigator:
         self.process_table.add_physics_proc(physics_proc, elem1, elem2)
 
     def check_overjump(self, dz, processes):
-        #print("CHECK OVER JUMP")
+        # print("CHECK OVER JUMP")
         if len(processes) != 0:
             nearest_stop_elem = min([proc.indx1 for proc in processes])
             L_stop = np.sum(np.array([elem.l for elem in self.lat.sequence[:nearest_stop_elem]]))
@@ -1071,6 +1075,9 @@ class Navigator:
         kick_list = self.process_table.kick_proc_list
         kick_pos = np.array([proc.s for proc in kick_list])
         indx = np.argwhere(self.z0 < kick_pos)
+
+        if 0 in kick_pos and self.z0 == 0 and self.n_elem == 0:
+            indx = np.append(0, indx)
 
         if len(indx) != 0:
             kick_process = np.array(kick_list[indx]).flatten()

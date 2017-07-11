@@ -20,7 +20,14 @@ from ocelot.common.math_op import *
 from ocelot.adaptors.genesis import *
 
 import multiprocessing
-import pyfftw
+
+import importlib
+fftw_avail = importlib.util.find_spec('pyfftw') is not None
+if fftw_avail:
+    import pyfftw
+else:
+    print("xfel_utils.py: module PYFFTW is not installed. Install it if you want speed up dfl wavefront calculations")
+
 nthread = multiprocessing.cpu_count()
 
 
@@ -761,25 +768,26 @@ def dfl_fft_z(dfl, method='mp', nthread=multiprocessing.cpu_count(), debug=1):  
         method = 'np'
 
     if dfl.domain_z == 't':
-        if method == 'np':
-            dfl_fft.fld = np.fft.fft(dfl.fld, axis=0)
-        elif method == 'mp':
+        if method == 'mp' and fftw_avail:
             fft = pyfftw.builders.fft(dfl.fld, axis=0, overwrite_input=False, planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
             dfl_fft.fld = fft()
         else:
-            raise ValueError('fft method should be "np" or "mp"')
+            dfl_fft.fld = np.fft.fft(dfl.fld, axis=0)
+        # else:
+            # raise ValueError('fft method should be "np" or "mp"')
         dfl_fft.fld = np.fft.ifftshift(dfl_fft.fld, 0)
         dfl_fft.fld /= sqrt(dfl_fft.Nz())
         dfl_fft.domain_z = 'f'
     elif dfl.domain_z == 'f':
         dfl_fft.fld = np.fft.fftshift(dfl.fld, 0)
-        if method == 'np':
-            dfl_fft.fld = np.fft.ifft(dfl_fft.fld, axis=0)
-        elif method == 'mp':
+        if method == 'mp' and fftw_avail:
             fft = pyfftw.builders.ifft(dfl_fft.fld, axis=0, overwrite_input=False, planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
             dfl_fft.fld = fft()
         else:
-            raise ValueError("fft method should be 'np' or 'mp'")
+            dfl_fft.fld = np.fft.ifft(dfl_fft.fld, axis=0)
+
+            # else:
+            # raise ValueError("fft method should be 'np' or 'mp'")
         dfl_fft.fld *= sqrt(dfl_fft.Nz())
         dfl_fft.domain_z = 't'
     else:
@@ -805,25 +813,25 @@ def dfl_fft_xy(dfl, method='mp', nthread=multiprocessing.cpu_count(), debug=1): 
         method = 'np'
 
     if dfl.domain_xy == 's':
-        if method == 'np':
-            dfl_fft.fld = np.fft.fft2(dfl.fld, axes=(1, 2))
-        elif method == 'mp':
+        if method == 'mp' and fftw_avail:
             fft = pyfftw.builders.fft2(dfl.fld, axes=(1, 2), overwrite_input=False, planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
             dfl_fft.fld = fft()
         else:
-            raise ValueError("fft method should be 'np' or 'mp'")
+            dfl_fft.fld = np.fft.fft2(dfl.fld, axes=(1, 2))
+            # else:
+            # raise ValueError("fft method should be 'np' or 'mp'")
         dfl_fft.fld = np.fft.fftshift(dfl_fft.fld, axes=(1, 2))
         dfl_fft.fld /= sqrt(dfl_fft.Nx() * dfl_fft.Ny())
         dfl_fft.domain_xy = 'k'
     elif dfl.domain_xy == 'k':
         dfl_fft.fld = np.fft.ifftshift(dfl.fld, axes=(1, 2))
-        if method == 'np':
-            dfl_fft.fld = np.fft.ifft2(dfl_fft.fld, axes=(1, 2))
-        elif method == 'mp':
+        if method == 'mp' and fftw_avail:
             fft = pyfftw.builders.ifft2(dfl_fft.fld, axes=(1, 2), overwrite_input=False, planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
             dfl_fft.fld = fft()
         else:
-            raise ValueError("fft method should be 'np' or 'mp'")
+            dfl_fft.fld = np.fft.ifft2(dfl_fft.fld, axes=(1, 2))
+        # else:
+            # raise ValueError("fft method should be 'np' or 'mp'")
         dfl_fft.fld *= sqrt(dfl_fft.Nx() * dfl_fft.Ny())
         dfl_fft.domain_xy = 's'
 

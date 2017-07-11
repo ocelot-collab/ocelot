@@ -841,7 +841,7 @@ def dfl_fft_xy(dfl, method='mp', nthread=multiprocessing.cpu_count(), debug=1): 
 
 def dfl_trf(dfl, trf, mode):
     dfl_out = deepcopy(dfl)
-    assert dfl_out.domain_z == 'f', 'dfl_trf works only in frequency domain!'
+    # assert dfl_out.domain_z == 'f', 'dfl_trf works only in frequency domain!'
     print('    multiplying dfl by trf')
     start = time.time()
     # assert trf.__class__==TransferFunction,'Wrong TransferFunction class'
@@ -910,7 +910,7 @@ def dfl_st_cpl(dfl, theta_b, inp_axis='y', s_start=None):
 def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=6, fft_method='mp', dump_proj=0, debug=1):
     # needs optimizing?
     # tmp
-    import matplotlib.pyplot as plt
+    # import matplotlib.pyplot as plt
 
     nthread = multiprocessing.cpu_count()
     if nthread > 8:

@@ -9,6 +9,7 @@ import numpy.fft as fft
 import matplotlib.pyplot as plt
 import scipy.integrate as integrate
 #import matplotlib.animation as animation
+from copy import deepcopy
 
 from ocelot.optics.elements import *
 from ocelot.common.globals import *
@@ -41,6 +42,81 @@ class TransferFunction(object):
             
             return f2
         return None
+
+
+def trf_mult(trf_list, embed_list=True):
+    '''
+    multiply transfer functions
+    trf_list is a list of transfer functions
+    embed_list == True will write the list of input transfer functions into the output transfer function as an trf.trf_list instance
+    
+    returns TransferFunction() object
+    '''
+    # trf_out = deepcopy(trf_list[0])
+    trf_out = TransferFunction()
+    k_lim=[]
+    k_step=[]
+    xlamds=[]
+    
+    for i,trf in enumerate(trf_list):
+        k_lim.append(trf.k) # to calculate limits of new k scale
+        k_step.append( (np.amax(trf.k) - np.amin(trf.k)) / np.size(trf.k) ) # to calculate step of new scale
+        xlamds.append(trf.xlamds)
+    
+    k = np.arange(np.amin(k_lim), np.amax(k_lim), np.amin(k_step))
+    xlamds = np.mean(xlamds)
+    
+    tr=np.ones_like(k)
+    ref=np.ones_like(k)
+    
+    for i,trf in enumerate(trf_list):
+        if trf.xlamds == xlamds:
+            tr_ang = np.unwrap(np.angle(trf.tr))
+            ref_ang = np.unwrap(np.angle(trf.ref))
+        else: #phase is mesured with respect to carrier frequency given by slice separation xlamds
+            tr_ang = np.unwrap(np.angle(trf.tr)) * trf.xlamds / xlamds
+            ref_ang = np.unwrap(np.angle(trf.ref)) * trf.xlamds / xlamds
+            # tr *= np.interp(k, trf.k, abs(trf.tr) * exp(1j*tr_ang))
+            # ref *= np.interp(k, trf.k, abs(trf.ref) * exp(1j*ref_ang))
+        tr = tr * np.interp(k,trf.k, abs(trf.tr)) * exp(1j * np.interp(k, trf.k, tr_ang))
+        ref = ref * np.interp(k,trf.k, abs(trf.ref)) * exp(1j * np.interp(k, trf.k, ref_ang))
+            
+    trf_out.k = k
+    trf_out.tr = tr
+    trf_out.ref = ref
+    trf_out.xlamds = xlamds
+    if embed_list:
+        trf_out.trf_list = trf_list
+    
+    return trf_out
+    
+def trf_mult_mix(trf_list, mode_out='ref'):
+    '''
+    multiply transfer functions in a mixed way:
+    trf_list is list of tulpes, like [(trf1,'ref'),(trf2,'tr')], here 'ref' and 'tr' mean that reflectivity trom transter function trf1 is multiplied by transmissivity of transfer function trf2
+    mode_out is a string 'ref' or 'tr' that specifies into thich instance to write the multiplied output
+    embed_list == True will write the list of input transfer functions into the output transfer function as an trf.trf_list instance
+    
+    returns TransferFunction() object
+    '''
+    
+    if mode_out is not 'ref' and mode_out is not 'tr':
+        raise ValueError('mode_out should be string of either "ref" or "tr"')
+    
+    trf_list_int = []
+    for trf, mode in trf_list:
+        if mode != mode_out:
+            trf.ref, trf.tr = trf.tr, trf.ref
+        trf_list_int.append(trf)
+    
+    trf_out = trf_mult(trf_list_int, embed_list=False)
+    
+    if mode_out is 'ref':
+        del trf_out.tr
+    if mode_out is 'tr':
+        del trf_out.ref
+    
+    return trf_out
 
 
 class WaveFront:

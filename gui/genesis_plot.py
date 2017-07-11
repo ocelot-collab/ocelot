@@ -2558,7 +2558,7 @@ def plot_dfl_waistscan(sc_res, fig_name=None, showfig=True, savefig=0, debug=1):
         plt.close(fig)
 
 
-def plot_trf(trf, mode='tr', autoscale=0, showfig=True, savefig=None):
+def plot_trf(trf, mode='tr', autoscale=0, showfig=True, savefig=None, fig_name=None):
     '''
     plots TransferFunction() object,
     mode: 
@@ -2588,17 +2588,21 @@ def plot_trf(trf, mode='tr', autoscale=0, showfig=True, savefig=None):
     else:
         raise ValueError('mode argument should be "tr" or "ref"')
     
-    trf_fd /= abs(trf_s_td[-1]) / l
-    trf_td = np.fft.ifft(np.fft.fftshift(trf_fd))
+    trf_fd_tmp = trf_fd / (abs(trf_s_td[-1]) / l)
+    trf_td = np.fft.ifft(np.fft.fftshift(trf_fd_tmp))
     trf_td = abs(trf_td)**2
+    del trf_fd_tmp
     
-    # if hasattr(trf,'cryst'):
-    try:
+    if hasattr(trf,'cryst'):
         title = trf.cryst.lattice.element_name + ' ' + str(trf.cryst.ref_idx) + ' ' + mode
-    except:
+    else:
         title = ''
     
-    trf_fig = plt.figure('Filter '+title)
+    if fig_name is None:
+        trf_fig = plt.figure('Filter '+title)
+    else:
+        trf_fig = plt.figure(fig_name)
+    
     trf_fig.set_size_inches((9, 11), forward=True)
     if title != '':
         trf_fig.suptitle(title)
@@ -2613,8 +2617,8 @@ def plot_trf(trf, mode='tr', autoscale=0, showfig=True, savefig=None):
     trf_fig.subplots_adjust(hspace=0)
     trf_fig.subplots_adjust(top=0.95, bottom=0.2, right=0.85, left=0.15)
     
-    ax_fd_abs.plot(trf_s_fd, np.abs(trf.tr),'k')
-    ax_fd_ang.plot(trf_s_fd, np.angle(trf.tr),'g')
+    ax_fd_abs.plot(trf_s_fd, np.abs(trf_fd),'k')
+    ax_fd_ang.plot(trf_s_fd, np.angle(trf_fd),'g')
     
     ax_td.semilogy(trf_s_td, trf_td)
     

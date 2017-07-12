@@ -2194,7 +2194,7 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
     p1, = plt.plot(1.e6 * np.array(beam.z), beam.betax, 'r', lw=3)
     p2, = plt.plot(1.e6 * np.array(beam.z), beam.betay, 'g', lw=3)
     plt.plot(1.e6 * beam.z[beam.idx_max], beam.betax[beam.idx_max], 'bs')
-
+    ax.set_ylim(ymin=0)
     ax.legend([p1, p2], [r'$\beta_x [m]$', r'$\beta_y [m]$'], fontsize=fontsize, loc='best')
 
     if plot_xy:

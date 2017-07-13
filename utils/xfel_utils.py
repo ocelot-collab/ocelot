@@ -20,15 +20,16 @@ from ocelot.common.math_op import *
 from ocelot.adaptors.genesis import *
 
 import multiprocessing
-
-import importlib
-fftw_avail = importlib.util.find_spec('pyfftw') is not None
-if fftw_avail:
-    import pyfftw
-else:
-    print("xfel_utils.py: module PYFFTW is not installed. Install it if you want speed up dfl wavefront calculations")
-
 nthread = multiprocessing.cpu_count()
+
+try:
+    import pyfftw
+    fftw_avail = True
+except ImportError:
+    print("xfel_utils.py: module PYFFTW is not installed. Install it if you want speed up dfl wavefront calculations")
+    fftw_avail = False
+
+
 
 
 class StokesParameters:

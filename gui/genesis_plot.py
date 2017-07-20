@@ -192,8 +192,380 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
     print ('    total plotting time %.2f seconds' % (time.time() - plotting_time))
 
 
-def plot_gen_out_z(g, figsize=(10, 14), x_units='um', y_units='ev', legend=True, fig_name=None, z=inf, savefig=False, showfig=1, debug=1):
+def plot_gen_out_z_new(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espread+el_bunching', 'rad_phase', 'rad_spec'], figsize=4, x_units='um', y_units='ev', legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
+    '''
+    radiation parameters at distance z
+    g/out = GenesisOutput() object
+    z distance along undulator [m]
+    params = parameters of interest:
+        'rad_power+el_current' - radiation power and electron beam current
+        'el_energy+el_espread+el_bunching' - electron beam energy +/- spread and bunching
+        'rad_phase' - phase of radiation
+        'rad_spec' - on-axis spectrum
+    figsize - size of figure (unit-less)
+    x_units - units of time domain ('um' of 'fs')
+    y_units - units of frequency domain ('nm' of 'ev')
+    legend - plot legend - tbd
+    fig_name - override figure name
+    savefig - save figure
+    showfig - show figure
+    '''
+    import matplotlib.ticker as ticker
+    
+    
+    if showfig == False and savefig == False:
+        return
 
+    t_domain = ['rad_power+el_current', 'el_energy+el_espread+el_bunching', 'el_energy+el_espread', 'rad_phase']
+    f_domain = ['rad_spec']
+    # t_domain_i = list(set(t_domain).intersection(params))
+    # f_domain_i = list(set(f_domain).intersection(params))
+    # t_domain_n = len(t_domain_i)
+    # f_domain_n = len(f_domain_i)
+    #add sorting of f_domain to the end params += [params.pop(i)]
+    params_str = str(params).replace("'", '').replace('[', '').replace(']', '').replace(' ', '').replace(',', '--')
+    
+    if z == inf:
+        # print ('Showing profile parameters at the end of undulator')
+        z = np.amax(g.z)
+
+    elif z > np.amax(g.z):
+        # print ('Z parameter too large, setting to the undulator end')
+        z = np.amax(g.z)
+
+    elif z < np.amin(g.z):
+        # print ('Z parameter too small, setting to the undulator entrance')
+        z = np.amin(g.z)
+
+    zi = np.where(g.z >= z)[0][0]
+    z = g.z[zi]
+    
+    if os.path.isfile(str(g)):
+        g = read_out_file(g, read_level=2)
+    # add check for output object
+    if fig_name is None:
+        if g.fileName() is '':
+            fig = plt.figure(params_str)
+            if debug > 0:
+                print('    plotting ' + params_str)
+        else:
+            fig = plt.figure(g.fileName() + '_' + params_str)
+            if debug > 0:
+                print('    plotting ' + g.fileName() + '_' + params_str)
+    else:
+        fig = plt.figure(fig_name)
+        if debug > 0:
+            print('    plotting ' + fig_name)
+    
+    if size(figsize) == 1:
+        figsize = (3 * figsize, (len(params) + 0.5) * figsize)
+    fig.set_size_inches(figsize, forward=True)
+    # plt.rc('axes', grid=True)
+    # plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
+    # left, width = 0.1, 0.85
+    plt.clf()
+    fig.subplots_adjust(hspace=0)
+    ax = []
+    
+    if g('itdp') == False:
+        print('    plotting bunch profile at ' + str(z) + ' [m]')
+        print('!     not applicable for steady-state')
+        return
+    params_t = list(set(params).difference(f_domain))
+    params_t = [v for v in params if v in params_t]
+    params_f = list(set(params).difference(t_domain))
+    params_f = [v for v in params if v in params_f]
+    if debug > 1:
+        print('params_t',params_t)
+        print('params_f',params_f)
+    
+    for index, param in enumerate(params_t):
+        if len(ax) == 0:
+            ax.append(fig.add_subplot(len(params), 1, index + 1))
+        else:
+            ax.append(fig.add_subplot(len(params), 1, index + 1, sharex=ax[0]))
+        
+        if param == 'rad_power+el_current':
+            subfig_z_power_curr(ax[-1], g, zi, x_units, legend)
+        elif param == 'el_energy+el_espread+el_bunching':
+            subfig_z_energy_espread_bunching(ax[-1], g, zi, x_units, legend)
+        elif param == 'el_energy+el_espread':
+            subfig_z_energy_espread(ax[-1], g, zi, x_units, legend)
+        elif param == 'rad_phase':
+            subfig_z_phase(ax[-1], g, zi, x_units ,legend)
+        # elif param == 'el_energy':
+            # subfig_evo_el_energy(ax[-1], g, legend)
+        else:
+            pass
+            # print('! wrong parameter ' + param)
+        
+    for axi in ax:
+        if axi is not ax[-1]:
+            axi.set_xlabel('')
+            for label in axi.get_xticklabels():
+                label.set_visible(False)
+    axt = len(ax)
+        
+    for index, param in enumerate(params_f):
+        if len(ax)-axt == 0:
+            ax.append(fig.add_subplot(len(params), 1, index + axt + 1))
+        else:
+            ax.append(fig.add_subplot(len(params), 1, index + axt + 1, sharex=ax[-1]))
+        if param == 'rad_spec':
+            subfig_z_spec(ax[-1], g, zi, y_units, legend)
+        else:
+            print('! wrong parameter ' + param)
+    axf = len(ax) - axt
+    # ax[0].set_xlim(g.z[0], g.z[-1])
+    # ax[-1].set_xlabel('z [m]')
+    if axt is not 0 and axf is not 0:
+        fig.subplots_adjust(top=0.95, bottom=0.2, right=0.8, left=0.15)
+    else:
+        fig.subplots_adjust(top=0.95, bottom=0.1, right=0.8, left=0.15)
+
+    for axi in ax[axt:]:
+        if axt is not 0:
+            pos1 = axi.get_position()  # get the original position
+            pos2 = [pos1.x0 + 0, pos1.y0 - 0.1,  pos1.width / 1.0, pos1.height / 1.0]
+            axi.set_position(pos2)
+            if axi is not ax[-1]:
+                axi.set_xlabel('')
+                for label in axi.get_xticklabels():
+                    label.set_visible(False)
+
+    if savefig != False:
+        if savefig == True:
+            savefig = 'png'
+        if fig_name == 'Electrons':
+            fig.savefig(g.filePath + '_elec.' + str(savefig), format=savefig)
+        elif fig_name == 'Radiation':
+            fig.savefig(g.filePath + '_rad.' + str(savefig), format=savefig)
+        else:
+            fig.savefig(g.filePath + '_' + params_str + '.' + str(savefig), format=savefig)
+
+    plt.draw()
+    if showfig == True:
+        dir_lst = g.filePath.split(os.path.sep)
+        dir = os.path.sep.join(dir_lst[0:-1]) + os.path.sep
+        rcParams["savefig.directory"] = dir
+        plt.show()
+    else:
+        plt.close('all')
+
+
+def subfig_z_power_curr(ax_curr, g, zi=None, x_units='um', legend=False):
+    ax_curr.clear()
+    number_ticks = 6
+    
+    if x_units == 'um':
+        ax_curr.set_xlabel(r's [$\mu$m]')
+        x = g.t * speed_of_light * 1.0e-15 * 1e6
+    elif x_units == 'fs':
+        ax_curr.set_xlabel(r't [fs]')
+        x = g.t
+    else:
+        raise ValueError('Unknown parameter x_units (should be um or fs)')
+        
+    if zi == None:
+        zi = -1
+    
+    ax_curr.plot(x, g.I / 1e3, 'k--')
+    ax_curr.set_ylabel(r'I [kA]')
+    ax_curr.set_ylim(ymin=0)
+    ax_curr.text(0.02, 0.98, "Q= %.2f pC" % (g.beam_charge * 1e12), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_curr.transAxes, color='black')  # horizontalalignment='center', verticalalignment='center',
+    ax_curr.grid(True)
+    
+    ax_power = ax_curr.twinx()
+    ax_power.grid(False)
+    ax_power.plot(x, g.p_int[:, zi], 'g-', linewidth=1.5)
+    ax_power.set_ylabel(r'Power [W]')
+    ax_power.set_ylim(ymin=0)
+    # if np.amax(g.p_int[:,zi])!=np.amin(g.p_int[:,zi]):
+        # ax_power.set_ylim([0, np.amax(g.p_int[:,zi])])
+    ax_power.get_yaxis().get_major_formatter().set_useOffset(False)
+    ax_power.get_yaxis().get_major_formatter().set_scientific(True)
+    ax_power.get_yaxis().get_major_formatter().set_powerlimits((-3, 4))  # [:,75,75]
+    ax_curr.text(0.98, 0.98, "E= %.2e J" % (g.energy[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
+    
+    ax_curr.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_power.yaxis.major.locator.set_params(nbins=number_ticks)
+    
+    ax_power.tick_params(axis='y', which='both', colors='g')
+    ax_power.yaxis.label.set_color('g')
+    ax_power.yaxis.get_offset_text().set_color(ax_power.yaxis.label.get_color())
+    
+    ax_power.set_xlim([x[0],x[-1]])
+
+
+def subfig_z_energy_espread_bunching(ax_energy, g, zi=None, x_units='um', legend=False):
+    ax_energy.clear()
+    number_ticks = 6
+    
+    if x_units == 'um':
+        ax_energy.set_xlabel(r's [$\mu$m]')
+        x = g.t * speed_of_light * 1.0e-15 * 1e6
+    elif x_units == 'fs':
+        ax_energy.set_xlabel(r't [fs]')
+        x = g.t
+    else:
+        raise ValueError('Unknown parameter x_units (should be um or fs)')
+    
+    if zi == None:
+        zi = -1
+        
+    ax_energy.plot(x, g.el_energy[:, zi] * m_e_GeV, 'b-', x, (g.el_energy[:, zi] + g.el_e_spread[:, zi]) * m_e_GeV, 'r--', x, (g.el_energy[:, zi] - g.el_e_spread[:, zi]) * m_e_GeV, 'r--')
+    ax_energy.set_ylabel(r'$E\pm\sigma_E$ [GeV]')
+    # ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
+    ax_energy.ticklabel_format(useOffset=False, style='plain')
+    ax_energy.grid(True)
+    # plt.yticks(plt.yticks()[0][0:-1])
+
+    ax_bunching = ax_energy.twinx()
+    ax_bunching.plot(x, g.bunching[:, zi], 'grey', linewidth=0.5)
+    ax_bunching.set_ylabel('Bunching')
+    ax_bunching.set_ylim(ymin=0)
+    ax_bunching.grid(False)
+    
+    ax_energy.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_bunching.yaxis.major.locator.set_params(nbins=number_ticks)
+    
+    
+    ax_energy.tick_params(axis='y', which='both', colors='b')
+    ax_energy.yaxis.label.set_color('b')
+
+    ax_bunching.tick_params(axis='y', which='both', colors='grey')
+    ax_bunching.yaxis.label.set_color('grey')
+    
+    ax_energy.set_xlim([x[0],x[-1]])
+
+
+def subfig_z_energy_espread(ax_energy, g, zi=None, x_units='um', legend=False):
+    ax_energy.clear()
+    number_ticks = 6
+    
+    if x_units == 'um':
+        ax_energy.set_xlabel(r's [$\mu$m]')
+        x = g.t * speed_of_light * 1.0e-15 * 1e6
+    elif x_units == 'fs':
+        ax_energy.set_xlabel(r't [fs]')
+        x = g.t
+    else:
+        raise ValueError('Unknown parameter x_units (should be um or fs)')
+    
+    if zi == None:
+        zi = -1
+        
+    ax_energy.plot(x, g.el_energy[:, zi] * m_e_GeV, 'b-', x, (g.el_energy[:, zi] + g.el_e_spread[:, zi]) * m_e_GeV, 'r--', x, (g.el_energy[:, zi] - g.el_e_spread[:, zi]) * m_e_GeV, 'r--')
+    ax_energy.set_ylabel(r'$E\pm\sigma_E$ [GeV]')
+    # ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
+    ax_energy.ticklabel_format(useOffset=False, style='plain')
+    ax_energy.grid(True)
+    # plt.yticks(plt.yticks()[0][0:-1])
+    
+    ax_energy.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_energy.tick_params(axis='y', which='both', colors='b')
+    ax_energy.yaxis.label.set_color('b')
+    
+    ax_energy.set_xlim([x[0],x[-1]])
+
+
+def subfig_z_phase(ax_phase, g, zi=None, x_units='um', legend=False, rewrap=False):
+    ax_phase.clear()
+    number_ticks = 6
+    
+    if x_units == 'um':
+        ax_phase.set_xlabel(r's [$\mu$m]')
+        x = g.t * speed_of_light * 1.0e-15 * 1e6
+    elif x_units == 'fs':
+        ax_phase.set_xlabel(r't [fs]')
+        x = g.t
+    else:
+        raise ValueError('Unknown parameter x_units (should be um or fs)')
+    
+    if zi == None:
+        zi = -1
+    
+    if rewrap:
+        phase = unwrap(g.phi_mid[:, zi])
+        phase_cor = np.arange(g.nSlices) * (maxspectrum_wavelength - g('xlamds')) / g('xlamds') * g('zsep') * 2 * pi
+        phase_fixed = phase + phase_cor
+        phase_fixed -= power[maxspower_index, zi]
+        n = 1
+        phase_fixed = (phase_fixed + n * pi) % (2 * n * pi) - n * pi
+    else:
+        phase_fixed = g.phi_mid[:, zi]
+    ax_phase.plot(x, phase_fixed, 'k-', linewidth=0.5)
+    ax_phase.text(0.98, 0.98, r'(on axis)', fontsize=10, horizontalalignment='right', verticalalignment='top', transform=ax_phase.transAxes)  # horizontalalignment='center', verticalalignment='center',
+    ax_phase.set_ylabel(r'$\phi$ [rad]')
+    ax_phase.set_ylim([-pi, pi])
+    ax_phase.grid(True)
+    
+    ax_phase.yaxis.major.locator.set_params(nbins=number_ticks)
+    
+    ax_phase.set_xlim([x[0],x[-1]])
+
+
+def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', legend=False):
+    
+    number_ticks = 6
+    # n_pad = 1
+    
+    if y_units == 'nm':
+        x = g.freq_lamd
+    elif y_units in ['ev', 'eV']:
+        x = g.freq_ev
+        
+    if zi == None:
+        zi = -1
+    
+    # power = np.pad(g.p_mid, [(int(g.nSlices / 2) * n_pad, (g.nSlices - (int(g.nSlices / 2)))) * n_pad, (0, 0)], mode='constant')
+    # phase = np.pad(g.phi_mid, [(int(g.nSlices / 2) * n_pad, (g.nSlices - (int(g.nSlices / 2)))) * n_pad, (0, 0)], mode='constant')  # not supported by the numpy 1.6.2
+    
+    ax_spectrum.plot(x, g.spec[:, zi], 'r-')
+    ax_spectrum.text(0.98, 0.98, r'(on axis)', fontsize=10, horizontalalignment='right', verticalalignment='top', transform=ax_spectrum.transAxes)  # horizontalalignment='center', verticalalignment='center',
+    
+    ax_spectrum.set_ylim(ymin=0)
+    ax_spectrum.get_yaxis().get_major_formatter().set_useOffset(False)
+    ax_spectrum.get_yaxis().get_major_formatter().set_scientific(True)
+    ax_spectrum.get_yaxis().get_major_formatter().set_powerlimits((-3, 4))  # [:,75,75]
+    ax_spectrum.grid(True)
+    if np.amin(x) != np.amax(x):
+        ax_spectrum.set_xlim([np.amin(x), np.amax(x)])
+    
+    maxspectrum_index = np.argmax(g.spec[:, zi])
+    # maxspower_index = np.argmax(power[:, zi])
+    maxspectrum_value = x[maxspectrum_index]
+    
+    spec_width = None
+    if np.sum(g.spec[:,zi])!=0:
+        pos, width, arr = fwhm3(g.spec[:, zi])
+        if width != None:
+            if arr[0] == arr[-1]:
+                dx = abs(x[pos] - x[pos-1])
+            else:
+                dx = abs( (x[arr[0]] - x[arr[-1]]) / (arr[0] - arr[-1]) )
+            spec_width = dx * width / x[pos]  # the FWHM of spectral line (error when peakpos is at the edge of lamdscale)
+
+    if spec_width is not None and maxspectrum_value is not None:
+            if y_units == 'nm':
+                ax_spectrum.text(0.02, 0.98, r"$\lambda^{max}$= %.4e m " "\n" "$(\Delta\lambda/\lambda)_{fwhm}$= %.2e" % (maxspectrum_value*1e-9, spec_width), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_spectrum.transAxes, color='red')  # horizontalalignment='center', verticalalignment='center',
+                ax_spectrum.set_ylabel(r'P($\lambda$) [a.u.]')
+                ax_spectrum.set_xlabel(r'$\lambda$ [nm]')
+            elif y_units in ['ev', 'eV']:
+                ax_spectrum.text(0.02, 0.98, r"$E_{ph}^{max}$= %.2f eV " "\n" "$(\Delta E/E)_{fwhm}$= %.2e" % (maxspectrum_value, spec_width), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_spectrum.transAxes, color='red')  # horizontalalignment='center', verticalalignment='center',
+                ax_spectrum.set_ylabel(r'P($E_{ph}$) [a.u.]')
+                ax_spectrum.set_xlabel(r'$E_{photon}$ [eV]')
+        # ax_spectrum.text(0.02, 0.98, r"$\lambda_{max}$= %.4e m " "\n" "$(\Delta\lambda/\lambda)_{fwhm}$= %.2e" % (maxspectrum_value, spec_width), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_spectrum.transAxes, color='red')  # horizontalalignment='center', verticalalignment='center',
+    
+    ax_spectrum.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_spectrum.tick_params(axis='y', which='both', colors='r')
+    ax_spectrum.yaxis.label.set_color('r')
+    ax_spectrum.yaxis.get_offset_text().set_color(ax_spectrum.yaxis.label.get_color())
+    
+    
+
+def plot_gen_out_z(g, figsize=(10, 14), x_units='um', y_units='ev', legend=True, fig_name=None, z=inf, savefig=False, showfig=1, debug=1):
+    print('soon this function will be replaced by plot_gen_out_z_new (currently being tested)')
     number_ticks = 6
 
     if showfig == False and savefig == False:
@@ -396,27 +768,28 @@ def plot_gen_out_z(g, figsize=(10, 14), x_units='um', y_units='ev', legend=True,
         plt.close('all')
 
 
+
 def plot_gen_out_e(g, legend=False, figsize=4, fig_name='Electrons', savefig=False, showfig=True, debug=1):
     fig = plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_energy', 'el_bunching'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
 
 
 def plot_gen_out_ph(g, legend=False, figsize=4, fig_name='Radiation', savefig=False, showfig=True, debug=1):
     if g('itdp'):
-        fig = plot_gen_out_evo(g, params=['rad_pow_en', 'rad_spec', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
+        fig = plot_gen_out_evo(g, params=['rad_pow_en_log', 'rad_spec_log', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
     else:
-        fig = plot_gen_out_evo(g, params=['rad_pow', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
+        fig = plot_gen_out_evo(g, params=['rad_pow_log', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
 
-def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_energy', 'el_bunching', 'rad_pow_en', 'rad_spec', 'rad_size', 'rad_spec_evo_n', 'rad_pow_evo_n'], figsize=4, legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
+def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_energy', 'el_bunching', 'rad_pow_en_log', 'rad_pow_en_lin', 'rad_spec_log', 'rad_size', 'rad_spec_evo_n', 'rad_pow_evo_n'], figsize=4, legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
     '''
     plots evolution of given parameters from genesis output with undulator length
     '''
     import matplotlib.ticker as ticker
-
+    
     if showfig == False and savefig == False:
         return
-
+    
     params_str = str(params).replace("'", '').replace('[', '').replace(']', '').replace(' ', '').replace(',', '--')
-
+    
     if os.path.isfile(str(g)):
         g = read_out_file(g, read_level=2)
     # add check for output object
@@ -433,10 +806,10 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_energy', 'el_bunching
         fig = plt.figure(fig_name)
         if debug > 0:
             print('    plotting ' + fig_name)
-
+    
     if size(figsize) == 1:
         figsize = (3 * figsize, (len(params) + 0.5) * figsize)
-
+    
     fig.set_size_inches(figsize, forward=True)
     # plt.rc('axes', grid=True)
     # plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
@@ -453,47 +826,49 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_energy', 'el_bunching
             ax.append(fig.add_subplot(len(params), 1, index + 1, sharex=ax[0]))
         # ax[-1]
         if param == 'und_quad':
-            subfig_und_quad(ax[-1], g, legend)
+            subfig_evo_und_quad(ax[-1], g, legend)
         elif param == 'und':
-            subfig_und(ax[-1], g, legend)
+            subfig_evo_und(ax[-1], g, legend)
         elif param == 'el_size':
-            subfig_el_size(ax[-1], g, legend)
+            subfig_evo_el_size(ax[-1], g, legend)
         elif param == 'el_energy':
-            subfig_el_energy(ax[-1], g, legend)
+            subfig_evo_el_energy(ax[-1], g, legend)
         elif param == 'el_bunching':
-            subfig_el_bunching(ax[-1], g, legend)
-        elif param == 'rad_pow_en':
+            subfig_evo_el_bunching(ax[-1], g, legend)
+        elif param == 'rad_pow_en_log':
             if not is_tdp:
-                subfig_rad_pow(ax[-1], g, legend)
+                subfig_evo_rad_pow(ax[-1], g, legend)
             else:
-                subfig_rad_pow_en(ax[-1], g, legend)
-        elif param == 'rad_pow_en_nolog':
+                subfig_evo_rad_pow_en(ax[-1], g, legend)
+        elif param == 'rad_pow_en_lin':
             if not is_tdp:
-                subfig_rad_pow(ax[-1], g, legend, log=0)
+                subfig_evo_rad_pow(ax[-1], g, legend, log=0)
             else:
-                subfig_rad_pow_en(ax[-1], g, legend, log=0)
-        elif param == 'rad_pow':
-            subfig_rad_pow(ax[-1], g, legend)
+                subfig_evo_rad_pow_en(ax[-1], g, legend, log=0)
+        elif param == 'rad_pow_log':
+            subfig_evo_rad_pow(ax[-1], g, legend)
+        elif param == 'rad_pow_lin':
+            subfig_evo_rad_pow(ax[-1], g, legend, log=0)
         elif param == 'rad_size':
             subfig_rad_size(ax[-1], g, legend)
-        elif param == 'rad_spec':
+        elif param == 'rad_spec_log':
             if is_tdp:
-                subfig_rad_spec(ax[-1], g, legend)
+                subfig_evo_rad_spec(ax[-1], g, legend)
         elif param == 'rad_spec_nolog':
             if is_tdp:
-                subfig_rad_spec(ax[-1], g, legend, log=0)
+                subfig_evo_rad_spec(ax[-1], g, legend, log=0)
         elif param == 'rad_spec_evo_n':
             if is_tdp:
-                subfig_rad_spec_evo(ax[-1], g, legend, norm=1)
+                subfig_evo_rad_spec_sz(ax[-1], g, legend, norm=1)
         elif param == 'rad_pow_evo_n':
             if is_tdp:
-                subfig_rad_pow_evo(ax[-1], g, legend, norm=1)
+                subfig_evo_rad_pow_sz(ax[-1], g, legend, norm=1)
         elif param == 'rad_spec_evo':
             if is_tdp:
-                subfig_rad_spec_evo(ax[-1], g, legend, norm=0)
+                subfig_evo_rad_spec_sz(ax[-1], g, legend, norm=0)
         elif param == 'rad_pow_evo':
             if is_tdp:
-                subfig_rad_pow_evo(ax[-1], g, legend, norm=0)
+                subfig_evo_rad_pow_sz(ax[-1], g, legend, norm=0)
         else:
             print('! wrong parameter ' + param)
 
@@ -504,7 +879,7 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_energy', 'el_bunching
     for axi in ax[0:-1]:
         for label in axi.get_xticklabels():
             label.set_visible(False)
-
+    
     if savefig != False:
         if savefig == True:
             savefig = 'png'
@@ -525,13 +900,13 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_energy', 'el_bunching
         plt.close('all')
 
 
-def subfig_und_quad(ax_und, g, legend):
-
+def subfig_evo_und_quad(ax_und, g, legend):
     number_ticks = 6
+    
     ax_und.plot(g.z, g.aw, 'b-', linewidth=1.5)
     ax_und.set_ylabel('K (rms)')
     ax_und.grid(True)
-
+    
     ax_quad = ax_und.twinx()
     ax_quad.plot(g.z, g.qfld, 'r-', linewidth=1.5)
     ax_quad.set_ylabel('Quad')
@@ -539,7 +914,7 @@ def subfig_und_quad(ax_und, g, legend):
 
     ax_und.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_quad.yaxis.major.locator.set_params(nbins=number_ticks)
-
+    
     if np.amax(g.aw) != 0:
         aw_tmp = np.array(g.aw)[np.array(g.aw) != 0]
         if np.amax(aw_tmp) != np.amin(aw_tmp):
@@ -553,9 +928,9 @@ def subfig_und_quad(ax_und, g, legend):
     ax_quad.yaxis.label.set_color('r')
 
 
-def subfig_und(ax_und, g, legend):
-
+def subfig_evo_und(ax_und, g, legend):
     number_ticks = 6
+    
     ax_und.plot(g.z, g.aw, 'b-', linewidth=1.5)
     ax_und.set_ylabel('K (rms)')
     ax_und.grid(True)
@@ -573,9 +948,9 @@ def subfig_und(ax_und, g, legend):
     ax_und.yaxis.label.set_color('b')
 
 
-def subfig_el_size(ax_size_tpos, g, legend, which='both'):
-
+def subfig_evo_el_size(ax_size_tpos, g, legend, which='both'):
     number_ticks = 6
+    
     if which == 'both' or which == 'averaged':
         ax_size_tpos.plot(g.z, np.average(g.xrms, axis=0, weights=g.I) * 1e6, 'g-', g.z, np.average(g.yrms, axis=0, weights=g.I) * 1e6, 'b-')
     if which == 'both' or which == 'peak_curr':
@@ -588,10 +963,9 @@ def subfig_el_size(ax_size_tpos, g, legend, which='both'):
     ax_size_tpos.grid(True)
 
 
-def subfig_el_energy(ax_energy, g, legend):
-
+def subfig_evo_el_energy(ax_energy, g, legend):
     number_ticks = 6
-
+    
     el_energy = g.el_energy * m_e_MeV
     el_energy_av = int(mean(el_energy))
     ax_energy.plot(g.z, np.average(el_energy - el_energy_av, axis=0), 'b-', linewidth=1.5)
@@ -614,10 +988,9 @@ def subfig_el_energy(ax_energy, g, legend):
     ax_spread.yaxis.label.set_color('r')
 
 
-def subfig_el_bunching(ax_bunching, g, legend):
-
+def subfig_evo_el_bunching(ax_bunching, g, legend):
     number_ticks = 6
-
+    
     ax_bunching.plot(g.z, np.average(g.bunching, weights=g.I, axis=0), 'k-', g.z, np.amax(g.bunching, axis=0), 'grey', linewidth=1.5)
     # ax_bunching.plot(g.z, np.amax(g.bunching, axis=0), 'grey',linewidth=1.5) #only max
     ax_bunching.set_ylabel(r'Bunching')
@@ -627,15 +1000,17 @@ def subfig_el_bunching(ax_bunching, g, legend):
     ax_bunching.grid(True)
 
 
-def subfig_rad_pow_en(ax_rad_pow, g, legend, log=1):
+def subfig_evo_rad_pow_en(ax_rad_pow, g, legend, log=1):
     ax_rad_pow.plot(g.z, np.amax(g.p_int, axis=0), 'g-', linewidth=1.5)
     ax_rad_pow.set_ylabel(r'P [W]')
     ax_rad_pow.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_rad_pow.get_yaxis().get_major_formatter().set_scientific(True)
     if np.amax(g.p_int) > 0 and log:
         ax_rad_pow.set_yscale('log')
+    if not log:
+        ax_rad_pow.set_ylim(ymin=0)
     plt.yticks(plt.yticks()[0][0:-1])
-
+    
     ax_rad_en = ax_rad_pow.twinx()
     ax_rad_en.plot(g.z, g.energy, 'k--', linewidth=1.5)
     ax_rad_en.set_ylabel(r'E [J]')
@@ -643,8 +1018,10 @@ def subfig_rad_pow_en(ax_rad_pow, g, legend, log=1):
     ax_rad_en.get_yaxis().get_major_formatter().set_scientific(True)
     if np.amax(g.p_int) > 0 and log:
         ax_rad_en.set_yscale('log')
+    if not log:
+        ax_rad_en.set_ylim(ymin=0)
     plt.yticks(plt.yticks()[0][0:-1])
-
+    
     ax_rad_pow.grid(True)  # , which='minor')
     # ax_rad_pow.grid(False, which="minor")
     ax_rad_pow.tick_params(axis='y', which='both', colors='g')
@@ -659,7 +1036,7 @@ def subfig_rad_pow_en(ax_rad_pow, g, legend, log=1):
     ax_rad_pow.text(0.98, 0.02, r'$P_{end}$= %.2e W ' '\n' r'$E_{end}$= %.2e J' % (np.amax(g.p_int[:, -1]), np.mean(g.p_int[:, -1], axis=0) * g('xlamds') * g('zsep') * g.nSlices / speed_of_light), fontsize=12, horizontalalignment='right', verticalalignment='bottom', transform=ax_rad_pow.transAxes)
 
 
-def subfig_rad_pow(ax_rad_pow, g, legend, log=1):
+def subfig_evo_rad_pow(ax_rad_pow, g, legend, log=1):
     ax_rad_pow.plot(g.z, np.amax(g.p_int, axis=0), 'g-', linewidth=1.5)
     ax_rad_pow.set_ylabel('P [W]')
     ax_rad_pow.get_yaxis().get_major_formatter().set_useOffset(False)
@@ -675,7 +1052,7 @@ def subfig_rad_pow(ax_rad_pow, g, legend, log=1):
     ax_rad_pow.text(0.98, 0.02, r'$P_{end}$= %.2e W' % (np.amax(g.p_int[:, -1])), fontsize=12, horizontalalignment='right', verticalalignment='bottom', transform=ax_rad_pow.transAxes)
 
 
-def subfig_rad_spec(ax_spectrum, g, legend, log=1):
+def subfig_evo_rad_spec(ax_spectrum, g, legend, log=1):
     ax_spectrum.plot(g.z, np.amax(g.spec, axis=0), 'r-', linewidth=1.5)
     ax_spectrum.text(0.5, 0.98, r"(on axis)", fontsize=10, horizontalalignment='center', verticalalignment='top', transform=ax_spectrum.transAxes)  # horizontalalignment='center', verticalalignment='center',
     ax_spectrum.set_ylabel(r'P$(\lambda)_{max}$ [a.u.]')
@@ -811,7 +1188,7 @@ def subfig_rad_size(ax_size_t, g, legend):
 #        plt.legend('fwhm','std')
 
 
-def subfig_rad_pow_evo(ax_power_evo, g, legend, norm=1):
+def subfig_evo_rad_pow_sz(ax_power_evo, g, legend, norm=1):
     if g.nSlices > 1:
         z = g.z
         s = g.s
@@ -830,7 +1207,7 @@ def subfig_rad_pow_evo(ax_power_evo, g, legend, norm=1):
         pass
 
 
-def subfig_rad_spec_evo(ax_spectrum_evo, g, legend, norm=1):
+def subfig_evo_rad_spec_sz(ax_spectrum_evo, g, legend, norm=1):
     if g.nSlices > 1:
         z = g.z
         l = g.freq_lamd
@@ -995,7 +1372,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
 
     text_present = 1
     if debug > 0:
-        print('    plotting radiation field')
+        print('    plotting radiation field (dfl)')
     start_time = time.time()
     
     if F.__class__ != RadiationField:

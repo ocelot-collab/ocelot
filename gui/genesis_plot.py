@@ -192,7 +192,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
     print ('    total plotting time %.2f seconds' % (time.time() - plotting_time))
 
 
-def plot_gen_out_z(g, figsize=(10, 14), legend=True, fig_name=None, z=inf, savefig=False, showfig=1, debug=1):
+def plot_gen_out_z(g, figsize=(10, 14), x_units='um', y_units='ev', legend=True, fig_name=None, z=inf, savefig=False, showfig=1, debug=1):
 
     number_ticks = 6
 
@@ -1513,7 +1513,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
 
                     W.filePath = proj_dir + 'results' + os.path.sep + 'stage_' + str(stage) + '__WIG__' + str(z_ind) + '__m'
                     wig_fig_name = 'stage_' + str(stage) + '__WIG__' + str(z_ind) + '__m'
-                    plot_wigner(W, z=z_ind, p_units='um', s_units='ev', fig_name=wig_fig_name, savefig=savefig, showfig=showfig, debug=0)
+                    plot_wigner(W, z=z_ind, x_units='um', y_units='ev', fig_name=wig_fig_name, savefig=savefig, showfig=showfig, debug=0)
                     if saveval != False:
                         if debug > 1:
                             print('      saving ' + wig_fig_name + '.txt')
@@ -2004,7 +2004,7 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cm
         plt.close('all')
 
 
-def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, scatter=False, plot_x_y=True, plot_xy_s=True, bins=(50, 50, 50, 50), flip_t=True, s_units='um', e_units='ev', cmin=0, e_offset=None, cmap=def_cmap, debug=1):
+def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, scatter=False, plot_x_y=True, plot_xy_s=True, bins=(50, 50, 50, 50), flip_t=True, x_units='um', y_units='ev', cmin=0, y_offset=None, cmap=def_cmap, debug=1):
 
     if showfig == False and savefig == False:
         return
@@ -2024,10 +2024,10 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
     fig.clf()
     fig.set_size_inches(((3 + plot_x_y + plot_xy_s) * figsize, 3 * figsize), forward=True)
 
-    if s_units == 'fs':
+    if x_units == 'fs':
         mult = 1e15
         s_label = 't [fs]'
-    elif s_units == 'um':
+    elif x_units == 'um':
         mult = speed_of_light * 1e6
         s_label = 's [$\mu$m]'
     s = edist.t * mult
@@ -2048,23 +2048,23 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
     ax_curr.set_ylabel('I [kA]')
 
     ax_se = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 2 + plot_x_y + plot_xy_s, sharex=ax_curr)
-    if e_units == 'ev':
+    if y_units in ['ev', 'eV']:
         energy = edist.g * m_e_MeV
     else:  # elif beam_E_plot=='gamma':
         energy = edist.g
         
-    if e_offset == None:
-        e_offset = int(mean(energy))
+    if y_offset == None:
+        y_offset = int(mean(energy))
     if scatter:
-        ax_se.scatter(s, energy - e_offset, marker='.')
+        ax_se.scatter(s, energy - y_offset, marker='.')
     else:
-        ax_se.hist2d(s, energy - e_offset, [bins[2], bins[3]], cmin=cmin, cmap=cmap)
+        ax_se.hist2d(s, energy - y_offset, [bins[2], bins[3]], cmin=cmin, cmap=cmap)
 
     ax_se.set_xlabel(s_label)
-    if e_units == 'ev':
-        ax_se.set_ylabel('E + ' + str(e_offset) + ' [MeV]')
+    if y_units in ['ev', 'eV']:
+        ax_se.set_ylabel('E + ' + str(y_offset) + ' [MeV]')
     else:  # elif beam_E_plot=='gamma':
-        ax_se.set_ylabel('$\gamma$ + ' + str(e_offset))
+        ax_se.set_ylabel('$\gamma$ + ' + str(y_offset))
 
     if plot_xy_s:
         ax_xs = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 4 + plot_x_y, sharex=ax_curr)
@@ -2239,13 +2239,13 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
     else:
         plt.close('all')
 
-def plot_wigner(wig_or_out, z=np.inf, p_units='um', s_units='nm', x_lim=(None,None), y_lim=(None,None), downsample=1, autoscale=None, cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=True, debug=1):
+def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,None), y_lim=(None,None), downsample=1, autoscale=None, cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=True, debug=1):
     '''
     plots wigner distribution (WD) with marginals
     wig_or_out -  may be WignerDistribution() or GenesisOutput() object
     z - (if isinstance(wig_or_out, GenesisOutput)) location at which WD will be calculated
-    p_units - (um or fs) - units to display power scale
-    s_units - (nm or eV) - units to display spectrum scale
+    x_units - (um or fs) - units to display power scale
+    y_units - (nm or eV) - units to display spectrum scale
     x_lim, y_lim - scaling limits in given units, (min,max) or [min,max], e.g: (None,6)
     abs_value - if True, absolute value of WD is displayed (usually, it has both positive and negative values)
     cmap - colormar if abs_value==False (http://matplotlib.org/users/colormaps.html)
@@ -2287,14 +2287,14 @@ def plot_wigner(wig_or_out, z=np.inf, p_units='um', s_units='nm', x_lim=(None,No
     wigner=W.wig
     wigner_lim=np.amax(abs(W.wig))
     
-    if p_units=='fs':
+    if x_units=='fs':
         power_scale=W.s/speed_of_light*1e15
         p_label_txt='time [fs]'
     else:
         power_scale=W.s*1e6
         p_label_txt='s [$\mu$m]'
     
-    if s_units=='ev':
+    if y_units in ['ev', 'eV']:
         spec_scale=speed_of_light*h_eV_s*1e9/W.freq_lamd
         f_label_txt='ph.energy [eV]'
     else:

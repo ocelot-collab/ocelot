@@ -30,9 +30,10 @@ from ocelot.utils.xfel_utils import *
 from matplotlib import rc, rcParams
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+def_cmap = 'viridis'
 
 fntsz = 4
-params = {'image.cmap': 'jet', 'backend': 'ps', 'axes.labelsize': 3 * fntsz, 'font.size': 3 * fntsz, 'legend.fontsize': 4 * fntsz, 'xtick.labelsize': 4 * fntsz,  'ytick.labelsize': 4 * fntsz, 'text.usetex': False}
+params = {'image.cmap': def_cmap, 'backend': 'ps', 'axes.labelsize': 3 * fntsz, 'font.size': 3 * fntsz, 'legend.fontsize': 4 * fntsz, 'xtick.labelsize': 4 * fntsz,  'ytick.labelsize': 4 * fntsz, 'text.usetex': False}
 rcParams.update(params)
 # plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
 # rcParams["savefig.directory"] = os.chdir(os.path.dirname(__file__)) but __file__ appears to be genesis_plot
@@ -145,7 +146,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
                     pass
             if choice[12]:
                 try:
-                    plot_dpa_bucket_out(handle,scatter=0,slice_pos='max_P',repeat=3, showfig=showfig, savefig=savefig, cmap='jet')
+                    plot_dpa_bucket_out(handle,scatter=0,slice_pos='max_P',repeat=3, showfig=showfig, savefig=savefig, cmap=def_cmap)
                 except IOError:
                     pass
 
@@ -332,8 +333,8 @@ def plot_gen_out_z(g, figsize=(10, 14), legend=True, fig_name=None, z=inf, savef
                 dlambda = abs( (g.freq_lamd[arr[0]] - g.freq_lamd[arr[-1]]) / (arr[0] - arr[-1]) )
             spectrum_lamdwidth_fwhm = dlambda * width / g.freq_lamd[pos]  # the FWHM of spectral line (error when peakpos is at the edge of lamdscale)
 
-    
-    ax_spectrum.text(0.02, 0.98, r"$\lambda_{max}$= %.4e m " "\n" "$(\Delta\lambda/\lambda)_{fwhm}$= %.2e" % (maxspectrum_wavelength, spectrum_lamdwidth_fwhm), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_spectrum.transAxes, color='red')  # horizontalalignment='center', verticalalignment='center',
+    if spectrum_lamdwidth_fwhm is not None and maxspectrum_wavelength is not None:
+        ax_spectrum.text(0.02, 0.98, r"$\lambda_{max}$= %.4e m " "\n" "$(\Delta\lambda/\lambda)_{fwhm}$= %.2e" % (maxspectrum_wavelength, spectrum_lamdwidth_fwhm), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_spectrum.transAxes, color='red')  # horizontalalignment='center', verticalalignment='center',
 
     phase = unwrap(g.phi_mid[:, zi])
 
@@ -405,7 +406,7 @@ def plot_gen_out_ph(g, legend=False, figsize=4, fig_name='Radiation', savefig=Fa
     else:
         fig = plot_gen_out_evo(g, params=['rad_pow', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
 
-def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_energy', 'el_bunching', 'rad_pow_en', 'rad_spec', 'rad_size', 'rad_spec_evo_n', 'rad_pow_evo_n'], figsize=4, legend=False, fig_name=None, savefig=False, showfig=False, debug=1):
+def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_energy', 'el_bunching', 'rad_pow_en', 'rad_spec', 'rad_size', 'rad_spec_evo_n', 'rad_pow_evo_n'], figsize=4, legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
     '''
     plots evolution of given parameters from genesis output with undulator length
     '''
@@ -718,12 +719,13 @@ def subfig_rad_spec(ax_spectrum, g, legend, log=1):
     ax_spec_bandw.plot(g.z, 2*spectrum_lamdwidth_std * 100, 'm:', label="std")
     ax_spec_bandw.grid(False)
     plt.yticks(plt.yticks()[0][0:-1])
-    # ax_spec_bandw.set_ylim([0, 2*np.amax(spectrum_lamdwidth_fwhm)*100])
+    ax_spec_bandw.set_ylim(ymin=0)
     
     if legend:
         ax_spec_bandw.legend()
     ax_spec_bandw.set_ylabel(r'$\Delta\lambda/\lambda, \%$'+'\n'+r'(-- fwhm, $\cdots2\sigma$)')
-    ax_spec_bandw.text(0.98, 0.98, r"$(\Delta\lambda/\lambda)_{end}^{fwhm}$= %.2e"%(spectrum_lamdwidth_fwhm[-1]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_spec_bandw.transAxes)
+    if spectrum_lamdwidth_fwhm[-1] != None:
+        ax_spec_bandw.text(0.98, 0.98, r"$(\Delta\lambda/\lambda)_{end}^{fwhm}$= %.2e"%(spectrum_lamdwidth_fwhm[-1]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_spec_bandw.transAxes)
 
     ax_spectrum.yaxis.label.set_color('r')
     ax_spectrum.tick_params(axis='y', which='both', colors=ax_spectrum.yaxis.label.get_color())
@@ -966,7 +968,7 @@ def plot_gen_out_scanned_z(g, figsize=(10, 14), legend=True, fig_name=None, z=in
     return fig
 
 
-def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap='jet', legend=True, phase=False, far_field=False, freq_domain=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, log_scale=0, debug=1, vartype_dfl=complex64):
+def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, far_field=False, freq_domain=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, log_scale=0, debug=1, vartype_dfl=complex64):
     '''
     Plots dfl radiation object in 3d.
 
@@ -1107,7 +1109,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap='jet', legend=True, phase=F
     
     F.fld = F.fld.astype(np.complex64)
     xy_proj = F.int_xy()
-    xy_proj_ph = np.zeros_like(xy_proj)  # tmp
+    xy_proj_ph = np.angle(np.sum(F.fld,axis=0))  # tmp  # tmp
     yz_proj = F.int_zy()
     xz_proj = F.int_zx()
     z_proj = F.int_z()
@@ -1127,7 +1129,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap='jet', legend=True, phase=F
     fig.clf()
     fig.set_size_inches(((3 + 2 * column_3d) * figsize, 3 * figsize), forward=True)
 
-    # cmap = plt.get_cmap('viridis')  # jet inferno viridis #change to convenient
+    # cmap = plt.get_cmap(def_cmap)  # jet inferno viridis #change to convenient
     cmap_ph = plt.get_cmap('hsv')
 
     x_line = xy_proj[:, int((ncar_y - 1) / 2)]
@@ -1327,7 +1329,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap='jet', legend=True, phase=F
         return
 
 
-def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int', 'energy', 'r_size_weighted', 'spec', 'error'], z_param_inp=['p_int', 'phi_mid_disp', 'spec', 'bunching', 'wigner'], dfl_param_inp=['dfl_spec'], run_param_inp=['p_int', 'spec', 'energy'], s_inp=['max'], z_inp=[0,'end'], run_s_inp=['max'], run_z_inp=['end'], spec_pad=1, savefig=1, saveval=1, showfig=1, debug=1):
+def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int', 'energy', 'r_size_weighted', 'spec', 'error'], z_param_inp=['p_int', 'phi_mid_disp', 'spec', 'bunching', 'wigner'], dfl_param_inp=['dfl_spec'], run_param_inp=['p_int', 'spec', 'energy'], s_inp=['max'], z_inp=[0,'end'], run_s_inp=['max'], run_z_inp=['end'], spec_pad=1, savefig=1, saveval=1, showfig=0, debug=1):
     '''
     The routine for plotting the statistical info of many GENESIS runs
     
@@ -1501,6 +1503,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
             if debug > 0:
                 print('    processing Wigner')
                 for z_ind in z_inp:
+                    print('      z=',z_ind)
                     w = np.zeros((outlist[irun].nSlices,outlist[irun].nSlices))
                     for irun in run_range:
                         out=outlist[irun]
@@ -1510,7 +1513,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
 
                     W.filePath = proj_dir + 'results' + os.path.sep + 'stage_' + str(stage) + '__WIG__' + str(z_ind) + '__m'
                     wig_fig_name = 'stage_' + str(stage) + '__WIG__' + str(z_ind) + '__m'
-                    plot_wigner(W, z=z_ind, p_units='um', s_units='ev', fig_name=wig_fig_name, savefig=savefig, debug=0)
+                    plot_wigner(W, z=z_ind, p_units='um', s_units='ev', fig_name=wig_fig_name, savefig=savefig, showfig=showfig, debug=0)
                     if saveval != False:
                         if debug > 1:
                             print('      saving ' + wig_fig_name + '.txt')
@@ -1846,7 +1849,7 @@ def plot_gen_corr(proj_dir, run_inp=[], p1=(), p2=(), savefig=False, showfig=Tru
 # np.where(out.s>1.8e-6)[0][0]
 
 
-def plot_dpa_bucket_out(out, dpa=None, slice_pos=None, repeat=1, GeV=1, figsize=4, cmap='jet', scatter=True, energy_mean=None, legend=True, fig_name=None, savefig=False, showfig=True, bins=[50,50], debug=1):
+def plot_dpa_bucket_out(out, dpa=None, slice_pos=None, repeat=1, GeV=1, figsize=4, cmap=def_cmap, scatter=True, energy_mean=None, legend=True, fig_name=None, savefig=False, showfig=True, bins=[50,50], debug=1):
     
     if dpa == None:
         dpa=read_dpa_file_out(out)
@@ -1876,7 +1879,7 @@ def plot_dpa_bucket_out(out, dpa=None, slice_pos=None, repeat=1, GeV=1, figsize=
     return plot_dpa_bucket(dpa=dpa, slice_num=slice_num, repeat=repeat, GeV=GeV, figsize=figsize, cmap=cmap, scatter=scatter, energy_mean=energy_mean, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, suffix=suffix, bins=bins, debug=debug)
 
 
-def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap='jet', scatter=True, energy_mean=None, legend=True, fig_name=None, savefig=False, showfig=True, suffix='', bins=(50,50), debug=1, return_mode_gamma=0):
+def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cmap, scatter=False, energy_mean=None, legend=True, fig_name=None, savefig=False, showfig=True, suffix='', bins=(50,50), debug=1, return_mode_gamma=0):
     part_colors = ['darkred', 'orange', 'g', 'b', 'm','c','y']
     # cmap='BuPu'
     y_bins = bins[0]
@@ -1894,6 +1897,9 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap='jet',
 
     if shape(dpa.ph)[0] == 1:
         slice_num = 0
+    elif slice_num is None:
+        slice_num = int(shape(dpa.ph)[0]/2)
+        print('      no slice number provided, using middle of the distribution - slice number', slice_num)
     else:
         assert (slice_num <= shape(dpa.ph)[0]), 'slice_num larger than the dpa shape'
 
@@ -1998,7 +2004,7 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap='jet',
         plt.close('all')
 
 
-def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, scatter=False, plot_x_y=True, plot_xy_s=True, bins=(50, 50, 50, 50), flip_t=True, s_units='um', e_units='ev', cmin=0, e_offset=None, cmap='jet', debug=1):
+def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, scatter=False, plot_x_y=True, plot_xy_s=True, bins=(50, 50, 50, 50), flip_t=True, s_units='um', e_units='ev', cmin=0, e_offset=None, cmap=def_cmap, debug=1):
 
     if showfig == False and savefig == False:
         return

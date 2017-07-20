@@ -105,10 +105,10 @@ def trf_mult_mix(trf_list, mode_out='ref'):
     
     trf_list_int = []
     for trf, mode in trf_list:
+        trf_tmp = deepcopy(trf)
         if mode != mode_out:
-            trf.ref, trf.tr = trf.tr, trf.ref
-        trf_list_int.append(trf)
-    
+            trf_tmp.ref, trf_tmp.tr = trf_tmp.tr, trf_tmp.ref
+        trf_list_int.append(trf_tmp)
     trf_out = trf_mult(trf_list_int, embed_list=False)
     
     if mode_out is 'ref':

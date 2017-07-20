@@ -35,21 +35,21 @@ For example, you can see GUI for SASE optimization (uncomment and run next block
 ## Tutorials
 * Preliminaries: Setup & introduction
 * Beam dynamics
-* [Tutorial N1. Linear optics.](#tutorial1). [Web version](https://github.com/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/1_introduction.ipynb).
+* [Tutorial N1. Linear optics.](#tutorial1). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/1_introduction.ipynb).
     - Linear optics. Double Bend Achromat (DBA). Simple example of usage OCELOT functions to get periodic solution for a storage ring cell.
-* [Tutorial N2. Tracking.](2_tracking.ipynb). [Web version](https://github.com/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/2_tracking.ipynb).
+* [Tutorial N2. Tracking.](2_tracking.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/2_tracking.ipynb).
     - Linear optics of the European XFEL Injector.
     - Tracking. First and second order.
     - Artificial beam matching - BeamTransform
-* [Tutorial N3. Space Charge.](3_space_charge.ipynb). [Web version](https://github.com/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/3_space_charge.ipynb).
+* [Tutorial N3. Space Charge.](3_space_charge.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/3_space_charge.ipynb).
     - Tracking through RF cavities with SC effects and RF focusing.
-* [Tutorial N4. Wakefields.](4_wake.ipynb). [Web version](https://github.com/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/4_wake.ipynb).
+* [Tutorial N4. Wakefields.](4_wake.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/4_wake.ipynb).
     - Tracking through corrugated structure (energy chirper) with Wakefields
-* [Tutorial N5. CSR.](5_CSR.ipynb). [Web version](https://github.com/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/5_CSR.ipynb).
+* [Tutorial N5. CSR.](5_CSR.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/5_CSR.ipynb).
     - Tracking trough bunch compressor with CSR effect.
-* [Tutorial N6. RF Coupler Kick.](6_coupler_kick.ipynb). [Web version](https://github.com/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/6_coupler_kick.ipynb).
+* [Tutorial N6. RF Coupler Kick.](6_coupler_kick.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/6_coupler_kick.ipynb).
     - Coupler Kick. Example of RF coupler kick influence on trajjectory and optics.
-* [Tutorial N7. Lattice design.](7_lattice_design.ipynb). [Web version](https://github.com/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/7_lattice_design.ipynb).
+* [Tutorial N7. Lattice design.](7_lattice_design.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/7_lattice_design.ipynb).
     - Lattice design, twiss matching, twiss backtracking
 
  ## Preliminaries

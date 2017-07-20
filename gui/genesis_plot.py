@@ -2617,12 +2617,12 @@ def plot_trf(trf, mode='tr', autoscale=0, showfig=True, savefig=None, fig_name=N
     trf_fig.subplots_adjust(hspace=0)
     trf_fig.subplots_adjust(top=0.95, bottom=0.2, right=0.85, left=0.15)
     
-    ax_fd_abs.plot(trf_s_fd, np.abs(trf_fd),'k')
+    ax_fd_abs.plot(trf_s_fd, np.abs(trf_fd)**2,'k')
     ax_fd_ang.plot(trf_s_fd, np.angle(trf_fd),'g')
     
     ax_td.semilogy(trf_s_td, trf_td)
     
-    ax_fd_abs.set_ylabel('amplitude')
+    ax_fd_abs.set_ylabel(r'|amplitude|$^2$')
     ax_fd_ang.set_ylabel('phase')
     ax_fd_ang.set_xlabel('ph.energy')
     

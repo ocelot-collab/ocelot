@@ -849,6 +849,15 @@ def dfl_fft_xy(dfl, method='mp', nthread=multiprocessing.cpu_count(), debug=1): 
 
 
 def dfl_trf(dfl, trf, mode):
+    '''
+    Multiplication of radiation field by given transfer function (transmission or ferlection, given by mode)
+    dfl is RadiationField() object
+    trf is TransferFunction() object
+    mode is either 'tr' for transmission
+                or 'ref' for reflection
+    
+    returns a filtered RadiationField() object
+    '''
     dfl_out = deepcopy(dfl)
     # assert dfl_out.domain_z == 'f', 'dfl_trf works only in frequency domain!'
     print('    multiplying dfl by trf')

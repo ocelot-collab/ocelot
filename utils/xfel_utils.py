@@ -848,7 +848,7 @@ def dfl_fft_xy(dfl, method='mp', nthread=multiprocessing.cpu_count(), debug=1): 
     return dfl_fft
 
 
-def dfl_trf(dfl, trf, mode):
+def dfl_trf(dfl, trf, mode, dump_proj=False):
     '''
     Multiplication of radiation field by given transfer function (transmission or ferlection, given by mode)
     dfl is RadiationField() object
@@ -887,8 +887,10 @@ def dfl_trf(dfl, trf, mode):
 
     t_func = time.time() - start
     print('      done in %.2f ' % t_func + 'sec')
-    return dfl_out, filt_interp
-
+    if dump_proj:
+        return dfl_out, filt_interp
+    else:
+        return dfl_out
 
 def dfl_st_cpl(dfl, theta_b, inp_axis='y', s_start=None):
 
@@ -963,7 +965,7 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
         # f_l_int_b=dfl.int_z()
         t4 = time.time()
 
-        dfl, f_l_filt = dfl_trf(dfl, trf, mode='tr')
+        dfl, f_l_filt = dfl_trf(dfl, trf, mode='tr', dump_proj=dump_proj)
 
         t5 = time.time()
         f_l_int_a = dfl.int_z()
@@ -1002,7 +1004,7 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
 
         dfl = dfl_pad_z(dfl, padn)
         dfl = dfl_fft_z(dfl, method=fft_method, nthread=multiprocessing.cpu_count())
-        dfl, _ = dfl_trf(dfl, trf, mode='tr')
+        dfl = dfl_trf(dfl, trf, mode='tr', dump_proj=dump_proj)
         dfl = dfl_fft_z(dfl, method=fft_method, nthread=multiprocessing.cpu_count())
         if st_cpl:
             dfl = dfl_st_cpl(dfl, trf.thetaB)

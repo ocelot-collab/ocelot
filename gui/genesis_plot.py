@@ -1356,7 +1356,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
     legend not used yet
     phase can replace Z projection or spectrum with phase front distribution
     far_field and freq_domain carry out FFT along xy and z dimentions correspondingly
-    fig_name is the desired name of the output figure
+    fig_name is the desired name of the output figure, would be used as suffix to the image filename if savefig==True
     auto_zoom automatically scales xyz the images to the (1%?) of the intensity limits
     column_3d plots top and side views of the radiation distribution
     savefig and showfig allow to save figure to image (savefig='png' (default) or savefig='eps', etc...) or to display it (slower)
@@ -1377,8 +1377,14 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
     
     if F.__class__ != RadiationField:
         raise ValueError('wrong radiation object: should be RadiationField')
-
-    suffix = ''
+    
+    F = deepcopy(F)
+    
+    if fig_name is None:
+        suffix = ''
+    else:
+        suffix = '_'+fig_name
+        
     if F.Nz() != 1:
         # Make sure it is time-dependent
         ncar_z = F.Nz()

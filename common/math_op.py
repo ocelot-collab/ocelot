@@ -171,6 +171,7 @@ def fwhm3(valuelist, height=0.5, peakpos=-1, total=1):
             # calculate the width
             width = p2interp - p1interp
     else:
+        # go to center from edges
         ind1 = 1
         ind2 = valuelist.size-2
         # print(peakvalue,phalf)

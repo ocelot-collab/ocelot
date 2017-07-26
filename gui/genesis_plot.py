@@ -192,7 +192,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
     print ('    total plotting time %.2f seconds' % (time.time() - plotting_time))
 
 
-def plot_gen_out_z_new(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espread+el_bunching', 'rad_phase', 'rad_spec'], figsize=4, x_units='um', y_units='ev', legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
+def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espread+el_bunching', 'rad_phase', 'rad_spec'], figsize=4, x_units='um', y_units='ev', legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
     '''
     radiation parameters at distance z
     g/out = GenesisOutput() object
@@ -243,20 +243,23 @@ def plot_gen_out_z_new(g, z=inf, params=['rad_power+el_current', 'el_energy+el_e
     if os.path.isfile(str(g)):
         g = read_out_file(g, read_level=2)
     # add check for output object
-    if fig_name is None:
-        if g.fileName() is '':
-            fig = plt.figure(params_str)
-            if debug > 0:
-                print('    plotting ' + params_str)
-        else:
-            fig = plt.figure(g.fileName() + '_' + params_str)
-            if debug > 0:
-                print('    plotting ' + g.fileName() + '_' + params_str)
-    else:
-        fig = plt.figure(fig_name)
-        if debug > 0:
-            print('    plotting ' + fig_name)
-    
+
+    # if fig_name is None:
+        # if g.fileName() is '':
+            # fig = plt.figure(params_str)
+            # if debug > 0:
+                # print('    plotting ' + params_str)
+        # else:
+            # fig = plt.figure(g.fileName() + '_' + params_str)
+            # if debug > 0:
+                # print('    plotting ' + g.fileName() + '_' + params_str)
+    # else:
+        # fig = plt.figure(fig_name)
+        # if debug > 0:
+            # print('    plotting ' + fig_name)
+    if debug > 0:
+        print('    plotting bunch profile at ' + str(z) + ' [m]')
+        
     if size(figsize) == 1:
         figsize = (3 * figsize, (len(params) + 0.5) * figsize)
     fig.set_size_inches(figsize, forward=True)
@@ -268,9 +271,9 @@ def plot_gen_out_z_new(g, z=inf, params=['rad_power+el_current', 'el_energy+el_e
     ax = []
     
     if g('itdp') == False:
-        print('    plotting bunch profile at ' + str(z) + ' [m]')
         print('!     not applicable for steady-state')
         return
+    
     params_t = list(set(params).difference(f_domain))
     params_t = [v for v in params if v in params_t]
     params_f = list(set(params).difference(t_domain))
@@ -333,24 +336,16 @@ def plot_gen_out_z_new(g, z=inf, params=['rad_power+el_current', 'el_energy+el_e
                 for label in axi.get_xticklabels():
                     label.set_visible(False)
 
+    plt.draw()
     if savefig != False:
         if savefig == True:
             savefig = 'png'
-        if fig_name == 'Electrons':
-            fig.savefig(g.filePath + '_elec.' + str(savefig), format=savefig)
-        elif fig_name == 'Radiation':
-            fig.savefig(g.filePath + '_rad.' + str(savefig), format=savefig)
-        else:
-            fig.savefig(g.filePath + '_' + params_str + '.' + str(savefig), format=savefig)
+        fig.savefig(g.filePath + '_z_' + str(z) + 'm.' + str(savefig), format=savefig)
 
-    plt.draw()
-    if showfig == True:
-        dir_lst = g.filePath.split(os.path.sep)
-        dir = os.path.sep.join(dir_lst[0:-1]) + os.path.sep
-        rcParams["savefig.directory"] = dir
+    if showfig:
         plt.show()
     else:
-        plt.close('all')
+        plt.close()
 
 
 def subfig_z_power_curr(ax_curr, g, zi=None, x_units='um', legend=False):
@@ -564,7 +559,7 @@ def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', legend=False):
     
     
 
-def plot_gen_out_z(g, figsize=(10, 14), x_units='um', y_units='ev', legend=True, fig_name=None, z=inf, savefig=False, showfig=1, debug=1):
+def plot_gen_out_z_old(g, figsize=(10, 14), x_units='um', y_units='ev', legend=True, fig_name=None, z=inf, savefig=False, showfig=1, debug=1):
     print('soon this function will be replaced by plot_gen_out_z_new (currently being tested)')
     number_ticks = 6
 
@@ -1658,9 +1653,9 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
         size_y = max(abs(x[nonzero(x_line > 0.005)][[0, -1]]))
         size_xy = max(size_x, size_y)
         if phase == True and column_3d == True and z_lim == []:
-            ax_proj_xz.set_xlim(z[nonzero(z_proj > max(z_proj) * 0.01)][[0, -1]])
+            ax_proj_xz.set_xlim(z[nonzero(z_proj > max(z_proj) * 0.005)][[0, -1]])
         elif phase == False and z_lim == []:
-            ax_z.set_xlim(z[nonzero(z_proj > max(z_proj) * 0.01)][[0, -1]])
+            ax_z.set_xlim(z[nonzero(z_proj > max(z_proj) * 0.005)][[0, -1]])
             print ('      scaling xy to', size_xy)
             ax_proj_xz.set_ylim([-size_xy, size_xy])
         elif column_3d == True:
@@ -1704,7 +1699,8 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
             print('      showing dfl')
         plt.show()
     else:
-        plt.close(fig)
+        plt.close()
+        # plt.close(fig)
 
     if return_proj:
         return [xy_proj, yz_proj, xz_proj, x, y, z]
@@ -2542,9 +2538,12 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
     ax.set_ylim(ymin=0)
     
     if hasattr(beam,'eloss'):
-        ax = ax.twinx()
-        p2, = plt.plot(1.e6 * np.array(beam.z), 1.e-3 * np.array(beam.eloss), 'g', lw=3)
-        ax.legend([p1, p2], [r'$I [A]$', r'Wake $[KV/m]$'], fontsize=fontsize, loc='best')
+        if (beam.eloss!=0).any():
+            ax = ax.twinx()
+            p2, = plt.plot(1.e6 * np.array(beam.z), 1.e-3 * np.array(beam.eloss), 'g', lw=3)
+            ax.legend([p1, p2], [r'$I [A]$', r'Wake $[KV/m]$'], fontsize=fontsize, loc='best')
+        else:
+            ax.legend([r'$I [A]$'], fontsize=fontsize, loc='best')
     else:
         ax.legend([r'$I [A]$'], fontsize=fontsize, loc='best')
     plt.plot(1.e6 * beam.z[beam.idx_max], beam.I[beam.idx_max], 'bs')

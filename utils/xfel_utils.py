@@ -1233,6 +1233,28 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1):
     
         return wig
     
+    
+def tap_exp(n, n0, a0, a1, a2):
+    '''
+    exponential tapering
+    '''
+    if n <= n0:
+        return a0
+    
+    return a0 * (  1 + a1 * (n - n0)**a2 )
+
+def tap_pol(n, n0, a0, a1, a2):
+    '''
+    piecewise-quadratic tapering function
+    '''
+    for i in range(1,len(n0)):
+        if n < n0[i]:
+            return a0 + (n-n0[i-1])*a1[i-1] + (n-n0[i-1])**2 * a2[i-1]
+        a0 += (n0[i]-n0[i-1])*a1[i-1] + (n0[i]-n0[i-1])**2 * a2[i-1]
+    
+    return 1.0
+
+
 '''
 legacy
 '''

@@ -777,6 +777,44 @@ class GenesisBeam():
         if hasattr(self, 'alphay'):
             self.alphay = np.delete(self.alphay, indarr)
         return self
+    
+    def __getitem__(self,index):
+        
+        b_slice = deepcopy(self)
+        if index > b_slice.len():
+            raise IndexError('slice index out of range')
+        
+        b_slice.z = b_slice.z[index]
+        if hasattr(b_slice, 'I'):
+            b_slice.I = b_slice.I[index]
+        if hasattr(b_slice, 'g0'):
+            b_slice.g0 = b_slice.g0[index]
+        if hasattr(b_slice, 'dg'):
+            b_slice.dg = b_slice.dg[index]
+        if hasattr(b_slice, 'x'):
+            b_slice.x = b_slice.x[index]
+        if hasattr(b_slice, 'y'):
+            b_slice.y = b_slice.y[index]
+        if hasattr(b_slice, 'px'):
+            b_slice.px = b_slice.px[index]
+        if hasattr(b_slice, 'py'):
+            b_slice.py = b_slice.py[index]
+        if hasattr(b_slice, 'ex'):
+            b_slice.ex = b_slice.ex[index]
+        if hasattr(b_slice, 'ey'):
+            b_slice.ey = b_slice.ey[index]
+        if hasattr(b_slice, 'betax'):
+            b_slice.betax = b_slice.betax[index]
+        if hasattr(b_slice, 'betay'):
+            b_slice.betay = b_slice.betay[index]
+        if hasattr(b_slice, 'alphax'):
+            b_slice.alphax = b_slice.alphax[index]
+        if hasattr(b_slice, 'alphay'):
+            b_slice.alphay = b_slice.alphay[index]
+        
+        return b_slice
+        
+        
 
 
 class GenesisRad():
@@ -2892,6 +2930,31 @@ def get_beam_peak(beam=None):
     else:
         beam_new = beam
     return beam_new
+
+
+def beam2fel(beam,lu,K):
+    '''
+    tmp function to estimate fel parameters slice-wise
+    cross-check and improve
+    '''
+    # p = FelParameters()
+    fel=[]
+    class Tmp():
+        pass
+    for i in range(beam.len()):
+        Tmp.gamma0 = beam[i].g0 
+        Tmp.delgam = beam[i].dg
+        Tmp.xlamd = lu# undulator period
+        Tmp.emitx = beam[i].ex
+        Tmp.emity = beam[i].ey
+        Tmp.rxbeam = np.sqrt(beam[i].ex * beam[i].betax)
+        Tmp.rybeam = np.sqrt(beam[i].ey * beam[i].betay)
+        Tmp.aw0 = K
+        Tmp.curpeak = beam[i].I
+    
+        fel.append(calculateFelParameters(Tmp))
+    
+    return(fel)
 
 
 def find_transform(g1, g2):

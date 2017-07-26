@@ -146,7 +146,7 @@ class Moga():
             # Create elite population (non dominated individuals)
             nond_inds = self.get_nondominated_inds(toolbox, pop)
 
-            if self.log_file:
+            if self.log_file != None and (len(good_inds) > 0):
                 fh1 = open(self.log_file, 'a')
                 fh1.write("\nNon dominated individuals\n")
                 for ind in nond_inds:
@@ -174,13 +174,13 @@ class Moga():
 
             # Select individuals with best solution (best_inds[0] - with best fit_func_1 and best_inds[1] - with best fit_func_2)
             best_inds = self.get_best_inds(toolbox, pop)
-
-            if self.log_file:
-                fh1 = open(self.log_file, 'a')
-                fh1.write("\nBest individuals\n")
-                for ind in best_inds:
-                    fh1.write("ind --> fit_func: " + str(ind) + ' --> ' + str(ind.fitness.values) + '\n')
-                fh1.close()
+            
+            #if self.log_file != None and (len(good_inds) > 0):
+            #    fh1 = open(self.log_file, 'a')
+            #    fh1.write("\nBest individuals\n")
+            #    for ind in best_inds:
+            #        fh1.write("ind --> fit_func: " + str(ind) + ' --> ' + str(ind.fitness.values) + '\n')
+            #    fh1.close()
 
             # Select the next generation individuals
             offspring = self.apply_select(toolbox, pop)
@@ -652,7 +652,7 @@ class Moga():
     #    return result
 
 
-    def de(self, fit_func, fit_func_args=[], init_pop=None, mutpb=0.95, Fpb=0.8, Lpb=0.1):
+    def de_my(self, fit_func, fit_func_args=[], init_pop=None, mutpb=0.95, Fpb=0.8, Lpb=0.1):
 
         # init
         random.seed()
@@ -663,9 +663,125 @@ class Moga():
         self.Lpb = Lpb                              # additional parameter
 
         toolbox = self.init_deap_functions()
-        #toolbox.register("mate", self.crossoverDE)                     # crossover = mate
-        #toolbox.register("mutate", tools.mutPolynomialBounded, eta=10.0, low=self.bounds_min, up=self.bounds_max, indpb=self.mutpb)
-        #toolbox.register("select", self.selDE)
+        #toolbox.register("mate", self.crossoverDE, cr=0.8)                     # crossover = mate
+        #toolbox.register("mutate", self.mutateDE, f=0.8)
+        #toolbox.register("select", self.selDE, k=2)
+
+        if self.log_print: print("Number of used CPU: %i" % MPI_SIZE)
+
+        # Create initial population
+        pop = self.init_pop(toolbox, init_pop)
+
+        if self.log_print: print("-- Iteration 0 --")
+        if self.log_file:
+            fh1 = open(self.log_file, 'w')
+            fh1.close()
+
+        # Evaluate initial population
+        self.c_iter = 0
+        pop = self.eval_pop(toolbox, pop)
+
+        # Begin the evolution
+        for g in range(self.n_gen):
+
+            self.c_iter = g+1
+            if self.log_print: print("-- Iteration %i --" % self.c_iter)
+
+            if self.log_file:
+                fh1 = open(self.log_file, 'a')
+                fh1.write("\n-------------------------- Iteration %i from %i --------------------------\n" % (self.c_iter, self.n_gen))
+                fh1.close()
+
+            # Select individuals with best solution
+            best_ind = self.get_best_inds(toolbox, pop)
+
+            if self.log_file:
+                fh1 = open(self.log_file, 'a')
+                fh1.write("\nBest individuals\n")
+                for ind in best_ind:
+                    fh1.write("ind --> fit_func: " + str(ind) + ' --> ' + str(ind.fitness.values) + '\n')
+                fh1.close()
+
+            # Generate offsprings
+            if MPI_RANK == 0:
+                i_pop = 0
+                offspring = toolbox.clone(pop)
+                for ind in offspring:
+
+                    for j in range(self.vars_num):
+
+                        if random.random() < self.mutpb:
+
+                            a = random.randint(0, self.n_pop-1)
+                            while(pop[a] == ind or pop[a] == best_ind[0]):
+                                a = random.randint(0, self.n_pop-1)
+
+                            b = random.randint(0, self.n_pop-1)
+                            while(b == a or pop[b] == ind or pop[b] == best_ind[0]):
+                                b = random.randint(0, self.n_pop-1)
+
+                            ind[j] = ind[j] + self.Fpb * (pop[a][j] - pop[b][j]) + self.Lpb * (best_ind[0][j] - ind[j])
+
+                            if(ind[j] > self.bounds_max[j]):
+                                ind[j] = self.bounds_max[j]
+                            elif(ind[j] <  self.bounds_min[j]):
+                                ind[j] =  self.bounds_min[j]
+
+                    i_pop += 1
+                    del ind.fitness.values
+            else:
+                offspring = None
+
+            # Evaluate offsprings
+            offspring = self.eval_pop(toolbox, offspring)
+
+            # Select the best of pop and offspring
+            if MPI_RANK == 0:
+                for i_num in range(self.n_pop):
+                    if(pop[i_num].fitness.values > offspring[i_num].fitness.values):
+                        pop[i_num] = toolbox.clone(offspring[i_num])
+            
+            # Replace individuals with invalid (INF) fitness by new random
+            pop = self.replace_bad_inds(toolbox, pop)
+
+            # Select and evaluate individuals with invalid fitness
+            if MPI_RANK == 0:
+                invalid_ind = [ind for ind in pop if not ind.fitness.valid]
+            else:
+                invalid_ind = None
+
+            invalid_ind = self.eval_pop(toolbox, invalid_ind)
+
+
+        self.c_iter = None
+        best_ind = self.get_best_inds(toolbox, pop)
+
+        if self.log_print: print("End of (successful) evolution")
+        if self.log_file:
+            fh1 = open(self.log_file, 'a')
+            fh1.write("\n-------------------------- End of (successful) evolution --------------------------\n")
+            fh1.write("\nBest individual\n")
+            for ind in best_ind:
+                fh1.write("ind --> fit_func: " + str(ind) + ' --> ' + str(ind.fitness.values) + '\n')
+            fh1.close()
+
+        return best_ind
+
+
+    def de(self, fit_func, fit_func_args=[], init_pop=None, mutpb=0.95, Fpb=0.8, Lpb=0.1):
+    
+        # init
+        random.seed()
+        self.fit_func = fit_func
+        self.fit_func_args = fit_func_args
+        self.mutpb = mutpb                          # mutation probability
+        self.Fpb = Fpb                              # mutation strength
+        self.Lpb = Lpb                              # additional parameter
+
+        toolbox = self.init_deap_functions()
+        toolbox.register("mate", self.crossoverDE)                     # crossover = mate
+        toolbox.register("mutate", tools.mutPolynomialBounded, eta=10.0, low=self.bounds_min, up=self.bounds_max, indpb=self.mutpb)
+        toolbox.register("select", self.selDE)
 
         if self.log_print: print("Number of used CPU: %i" % MPI_SIZE)
 
@@ -755,7 +871,7 @@ class Moga():
 
         return best_ind
 
-
+    '''
     def bees(self, fit_func, fit_func_args=[], init_pop=None, best_inds=0.05, best_bees=0.04, good_inds=0.2, good_bees=0.02, best_size=0.1, good_size=0.2):
 
         # init
@@ -857,6 +973,7 @@ class Moga():
 #            fh1.close()
 #
         return 0 #best_ind
+'''
 
 
     def simplex_callback_func(self, xk):
@@ -875,6 +992,10 @@ class Moga():
         
         iter_data = (self.c_ind, self.c_iter)
         self.c_ind += 1
+
+        for i in range(self.problem_size):
+            if x0[i] < self.bounds_min[i]: return self.inf_val
+            if x0[i] > self.bounds_max[i]: return self.inf_val
 
         return self.fit_func(x0, iter_data, args)[0]
 
@@ -942,7 +1063,7 @@ class Moga():
         self.c_iter = 0
 
         # Begin the evolution
-        result = basinhopping(self.user_func_calc, solution, niter=global_n_gen, T=1.0, stepsize=0.5, minimizer_kwargs={'args': self.fit_func_args, 'method': 'BFGS', 'callback':self.sub_bh_callback_func, 'options':{'maxiter': sub_n_gen}}, take_step=None, accept_test=None, callback=self.bh_callback_func, interval=50, disp=False, niter_success=None)
+        result = basinhopping(self.user_func_calc, solution, niter=global_n_gen, T=1.0, stepsize=5000.0, minimizer_kwargs={'args': self.fit_func_args, 'method': 'BFGS', 'callback':self.sub_bh_callback_func, 'options':{'maxiter': sub_n_gen}}, take_step=None, accept_test=None, callback=self.bh_callback_func, interval=10, disp=False, niter_success=None)
 
         # prepare result        
         self.c_iter = None

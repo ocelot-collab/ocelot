@@ -311,13 +311,14 @@ def load_particle_array(filename):
 
 
 def recalculate_ref_particle(p_array):
-    pref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_eV
+    pref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV
     Enew = p_array.p()[0]*pref + p_array.E
     s_new = p_array.s - p_array.tau()[0]
     p_array.rparticles[5, :] -= p_array.p()[0]
     p_array.rparticles[4, :] -= p_array.tau()[0]
     p_array.E = Enew
     p_array.s = s_new
+    return p_array
 
 
 def get_envelope(p_array, tws_i=Twiss()):
@@ -589,7 +590,7 @@ class BeamTransform:
 
 
 def sortrows(x, col):
-    return x[x[:, col].argsort()]
+    return x[:, x[col].argsort()]
 
 
 def convmode(A, B, mode):
@@ -718,9 +719,46 @@ def interp1(x, y, xnew, k=1):
         ynew = []
     return ynew
 
+def slice_analysis_transverse(parray, Mslice, Mcur, p, iter):
+    q1 = np.sum(parray.q_array)
+    print("charge", q1)
+    n = np.int_(parray.rparticles.size / 6)
+    PD = parray.rparticles
+    PD = sortrows(PD, col=4)
+
+    z = np.copy(PD[4])
+    mx, mxs, mxx, mxxs, mxsxs, emittx = slice_analysis(z, PD[0], PD[1], Mslice, True)
+
+    my, mys, myy, myys, mysys, emitty = slice_analysis(z, PD[2], PD[3], Mslice, True)
+
+    mm, mm, mm, mm, mm, emitty0 = moments(PD[2], PD[3])
+    gamma0 = parray.E / m_e_GeV
+    emityn = emitty0*gamma0
+    mm, mm, mm, mm, mm, emitt0 = moments(PD[0], PD[1])
+    emitxn = emitt0*gamma0
+
+    z, ind = np.unique(z, return_index=True)
+    emittx = emittx[ind]
+    emitty = emitty[ind]
+    smin = min(z)
+    smax = max(z)
+    n = 1000
+    hs = (smax-smin)/(n-1)
+    s = np.arange(smin, smax + hs, hs)
+    ex = interp1(z, emittx, s)
+    ey = interp1(z, emitty, s)
+
+    ex = simple_filter(ex, p, iter)*gamma0*1e6
+    ey = simple_filter(ey, p, iter)*gamma0*1e6
+
+    sig0 = np.std(parray.tau())
+    B = s_to_cur(z, Mcur*sig0, q1, speed_of_light)
+    I = interp1(B[:, 0], B[:, 1], s)
+    return [s, I, ex, ey, gamma0, emitxn, emityn]
+
 
 def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
-    # %[s,I,ex,ey,me,se,gamma0,emitxn,emityn]=GlobalSliceAnalysis_Extended(PD,q1,Mslice,Mcur,p,iter)
+    # %[s, I, ex, ey ,me, se, gamma0, emitxn, emityn]=GlobalSliceAnalysis_Extended(PD,q1,Mslice,Mcur,p,iter)
 
     q1 = np.sum(parray.q_array)
     print("charge", q1)

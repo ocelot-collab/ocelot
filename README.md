@@ -35,20 +35,21 @@ For example, you can see GUI for SASE optimization (uncomment and run next block
 ## Tutorials
 * Preliminaries: Setup & introduction
 * Beam dynamics
-* [Tutorial N1. Linear optics.](#tutorial1). [Web version](http://nbviewer.jupyter.org/github/iagapov/ocelot/blob/dev/demos/ipython_tutorials/1_introduction.ipynb).
+* [Tutorial N1. Linear optics.](#tutorial1). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/1_introduction.ipynb).
     - Linear optics. Double Bend Achromat (DBA). Simple example of usage OCELOT functions to get periodic solution for a storage ring cell.
-* [Tutorial N2. Tracking.](2_tracking.ipynb). [Web version](http://nbviewer.jupyter.org/github/iagapov/ocelot/blob/dev/demos/ipython_tutorials/2_tracking.ipynb).
+* [Tutorial N2. Tracking.](2_tracking.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/2_tracking.ipynb).
     - Linear optics of the European XFEL Injector.
     - Tracking. First and second order.
-* [Tutorial N3. Space Charge.](3_space_charge.ipynb). [Web version](http://nbviewer.jupyter.org/github/iagapov/ocelot/blob/dev/demos/ipython_tutorials/3_space_charge.ipynb).
+    - Artificial beam matching - BeamTransform
+* [Tutorial N3. Space Charge.](3_space_charge.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/3_space_charge.ipynb).
     - Tracking through RF cavities with SC effects and RF focusing.
-* [Tutorial N4. Wakefields.](4_wake.ipynb). [Web version](http://nbviewer.jupyter.org/github/iagapov/ocelot/blob/dev/demos/ipython_tutorials/4_wake.ipynb).
+* [Tutorial N4. Wakefields.](4_wake.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/4_wake.ipynb).
     - Tracking through corrugated structure (energy chirper) with Wakefields
-* [Tutorial N5. CSR.](5_CSR.ipynb). [Web version](http://nbviewer.jupyter.org/github/iagapov/ocelot/blob/dev/demos/ipython_tutorials/5_CSR.ipynb).
+* [Tutorial N5. CSR.](5_CSR.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/5_CSR.ipynb).
     - Tracking trough bunch compressor with CSR effect.
-* [Tutorial N6. RF Coupler Kick.](6_coupler_kick.ipynb). [Web version](http://nbviewer.jupyter.org/github/iagapov/ocelot/blob/dev/demos/ipython_tutorials/6_coupler_kick.ipynb).
+* [Tutorial N6. RF Coupler Kick.](6_coupler_kick.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/6_coupler_kick.ipynb).
     - Coupler Kick. Example of RF coupler kick influence on trajjectory and optics.
-* [Tutorial N7. Lattice design.](7_lattice_design.ipynb). [Web version](http://nbviewer.jupyter.org/github/iagapov/ocelot/blob/dev/demos/ipython_tutorials/7_lattice_design.ipynb).
+* [Tutorial N7. Lattice design.](7_lattice_design.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/7_lattice_design.ipynb).
     - Lattice design, twiss matching, twiss backtracking
 
  ## Preliminaries
@@ -57,7 +58,7 @@ The tutorial includes 7 simple examples dediacted to beam dynamics and optics. H
 
 ##### This tutorial requires the following packages:
 
-- Python 3.4-3.6 (python 2.7 can work as well)
+- Python 3.4-3.6 (python 2.7 can work as well but not guaranteed)
 - `numpy` version 1.8 or later: http://www.numpy.org/
 - `scipy` version 0.15 or later: http://www.scipy.org/
 - `matplotlib` version 1.5 or later: http://matplotlib.org/
@@ -76,7 +77,7 @@ $ conda install numpy scipy matplotlib ipython-notebook
 ```
 
 ##### Ocelot installation
-1. you have to download from GitHub [zip file](https://github.com/iagapov/ocelot/archive/master.zip).
+1. you have to download from GitHub [zip file](https://github.com/ocelot-collab/ocelot/archive/master.zip).
 2. Unzip ocelot-master.zip to your working folder **/your_working_dir/**.
 3. Rename folder **../your_working_dir/ocelot-master** to **/your_working_dir/ocelot**.
 4. Add **../your_working_dir/** to PYTHONPATH

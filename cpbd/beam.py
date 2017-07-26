@@ -646,6 +646,12 @@ def s_to_cur(A, sigma, q0, v):
 
 
 def slice_analysis(z, x, xs, M, to_sort):
+    '''
+    returns:
+    <x>,<xs>,<x^2>,<x*xs>,<xs^2>,np.sqrt(<x^2> * <xs^2> - <x*xs>^2)
+    based on M particles in moving window
+    Sergey, check please
+    '''
     z = np.copy(z)
     if to_sort:
         #P=sortrows([z, x, xs])
@@ -667,8 +673,8 @@ def slice_analysis(z, x, xs, M, to_sort):
     for i in range(N):
         n1 = int(max(0, i-m))
         n2 = int(min(N-1, i+m))
-        dq = n2 - n1
-        mx[i] = (xc[n2] - xc[n1])/dq
+        dq = n2 - n1 # window size
+        mx[i] = (xc[n2] - xc[n1])/dq # average for over window per particle
         mxs[i] = (xsc[n2] - xsc[n1])/dq
 
     x = x - mx
@@ -760,7 +766,7 @@ def slice_analysis_transverse(parray, Mslice, Mcur, p, iter):
 def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
     # %[s, I, ex, ey ,me, se, gamma0, emitxn, emityn]=GlobalSliceAnalysis_Extended(PD,q1,Mslice,Mcur,p,iter)
 
-    q1 = np.sum(parray.q_array)
+    q1 = np.sum(parray.q_array) # total charge
     print("charge", q1)
     n = np.int_(parray.rparticles.size/6)
     PD = parray.rparticles
@@ -778,16 +784,16 @@ def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
     mE, mEs, mEE, mEEs, mEsEs, emittE = slice_analysis(z, PD[4], pc_1*1e9, Mslice, True)
 
     #print(mE, mEs, mEE, mEEs, mEsEs, emittE)
-    mE = mEs
-    sE = np.sqrt(mEsEs)
-    sig0 = np.std(parray.tau())
+    mE = mEs #mean energy
+    sE = np.sqrt(mEsEs) #energy spread
+    sig0 = np.std(parray.tau()) # std pulse duration
     B = s_to_cur(z, Mcur*sig0, q1, speed_of_light)
     gamma0 = parray.E/m_e_GeV
-    mm, mm, mm, mm, mm, emitty0 = moments(PD[2], PD[3])
+    _, _, _, _, _, emitty0 = moments(PD[2], PD[3])
     emityn = emitty0*gamma0
-    mm, mm, mm, mm, mm, emitt0 = moments(PD[0], PD[1])
+    _, _, _, _, _, emitt0 = moments(PD[0], PD[1])
     emitxn = emitt0*gamma0
-
+    
     z, ind = np.unique(z, return_index=True)
     emittx = emittx[ind]
     emitty = emitty[ind]

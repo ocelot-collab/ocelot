@@ -54,14 +54,20 @@ def trf_mult(trf_list, embed_list=True):
     '''
     # trf_out = deepcopy(trf_list[0])
     trf_out = TransferFunction()
-    k_lim=[]
-    k_step=[]
-    xlamds=[]
+    k_lim = []
+    k_step = []
+    xlamds = []
+    thetaB = []
+    mid_k = []
+    dk = []
     
     for i,trf in enumerate(trf_list):
         k_lim.append(trf.k) # to calculate limits of new k scale
         k_step.append( (np.amax(trf.k) - np.amin(trf.k)) / np.size(trf.k) ) # to calculate step of new scale
         xlamds.append(trf.xlamds)
+        thetaB.append(trf.thetaB)
+        mid_k.append(trf.mid_k)
+        dk.append(trf.dk)
     
     k = np.arange(np.amin(k_lim), np.amax(k_lim), np.amin(k_step))
     xlamds = np.mean(xlamds)
@@ -85,6 +91,11 @@ def trf_mult(trf_list, embed_list=True):
     trf_out.tr = tr
     trf_out.ref = ref
     trf_out.xlamds = xlamds
+    trf_out.thetaB = np.amax(thetaB)
+    trf_out.mid_k = np.mean(mid_k)
+    trf_out.dk = np.amin(dk)
+    trf_out.compound = True
+    
     if embed_list:
         trf_out.trf_list = trf_list
     

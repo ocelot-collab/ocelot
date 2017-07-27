@@ -938,7 +938,12 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
     print('  HXRSS dfl filtering')
     start = time.time()
     # klpos, krpos, cwidth = FWHM(trf.k, 1.0-np.abs(trf.tr))
+    
     cwidth = fwhm(trf.k, 1.0 - np.abs(trf.tr))
+    if hasattr(trf,'compound'):
+        if trf.compound:
+            cwidth = trf.dk
+    
     dk_old = 2 * pi / dfl.Lz()
     dk = cwidth / res_per_fwhm
     padn = np.ceil(dk_old / dk).astype(int)

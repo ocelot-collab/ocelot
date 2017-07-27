@@ -2947,8 +2947,8 @@ def beam2fel(beam,lu,K):
         Tmp.xlamd = lu# undulator period
         Tmp.emitx = beam[i].ex
         Tmp.emity = beam[i].ey
-        Tmp.rxbeam = np.sqrt(beam[i].ex * beam[i].betax)
-        Tmp.rybeam = np.sqrt(beam[i].ey * beam[i].betay)
+        Tmp.rxbeam = np.sqrt(beam[i].ex * beam[i].betax / beam[i].g0)
+        Tmp.rybeam = np.sqrt(beam[i].ey * beam[i].betay / beam[i].g0)
         Tmp.aw0 = K
         Tmp.curpeak = beam[i].I
     

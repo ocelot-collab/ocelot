@@ -257,6 +257,13 @@ def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espre
         # fig = plt.figure(fig_name)
         # if debug > 0:
             # print('    plotting ' + fig_name)
+    if fig_name is None:
+        if g.fileName() is '':
+            fig = plt.figure('Bunch profile at ' + str(z) + 'm')
+        else:
+            fig = plt.figure('Bunch profile at ' + str(z) + 'm ' + g.fileName())
+    else:
+        fig = plt.figure(fig_name)
     if debug > 0:
         print('    plotting bunch profile at ' + str(z) + ' [m]')
         
@@ -770,7 +777,7 @@ def plot_gen_out_e(g, legend=False, figsize=4, fig_name='Electrons', savefig=Fal
 
 def plot_gen_out_ph(g, legend=False, figsize=4, fig_name='Radiation', savefig=False, showfig=True, debug=1):
     if g('itdp'):
-        fig = plot_gen_out_evo(g, params=['rad_pow_en_log', 'rad_spec_log', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
+        fig = plot_gen_out_evo(g, params=['rad_pow_en_log', 'rad_pow_en_lin', 'rad_spec_log', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
     else:
         fig = plot_gen_out_evo(g, params=['rad_pow_log', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
 
@@ -1007,13 +1014,19 @@ def subfig_evo_rad_pow_en(ax_rad_pow, g, legend, log=1):
     plt.yticks(plt.yticks()[0][0:-1])
     
     ax_rad_en = ax_rad_pow.twinx()
-    ax_rad_en.plot(g.z, g.energy, 'k--', linewidth=1.5)
-    ax_rad_en.set_ylabel(r'E [J]')
     ax_rad_en.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_rad_en.get_yaxis().get_major_formatter().set_scientific(True)
     if np.amax(g.p_int) > 0 and log:
+        ax_rad_en.plot(g.z, g.energy, 'k--', linewidth=1.5)
+        ax_rad_en.set_ylabel(r'E [J]')
         ax_rad_en.set_yscale('log')
     if not log:
+        if np.amax(g.energy) < 1e-4:
+            ax_rad_en.plot(g.z, g.energy*1e6, 'k--', linewidth=1.5)
+            ax_rad_en.set_ylabel(r'E [$\mu$J]')
+        else:
+            ax_rad_en.plot(g.z, g.energy*1e3, 'k--', linewidth=1.5)
+            ax_rad_en.set_ylabel(r'E [mJ]')
         ax_rad_en.set_ylim(ymin=0)
     plt.yticks(plt.yticks()[0][0:-1])
     

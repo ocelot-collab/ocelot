@@ -31,6 +31,7 @@ from matplotlib import rc, rcParams
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 def_cmap = 'viridis'
+# def_cmap = 'Greys'
 
 fntsz = 4
 params = {'image.cmap': def_cmap, 'backend': 'ps', 'axes.labelsize': 3 * fntsz, 'font.size': 3 * fntsz, 'legend.fontsize': 4 * fntsz, 'xtick.labelsize': 4 * fntsz,  'ytick.labelsize': 4 * fntsz, 'text.usetex': False}
@@ -1777,15 +1778,34 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     run_range_good.append(irun)
                 except:
                     print('     could not read '+out_file)
+
+        run_range = run_range_good
+        
+        if len(run_range_good) == 0:
+            continue
+
+        nSlices = np.array([int(outlist[run].nSlices) for run in run_range])
+        nZ = np.array([int(outlist[run].nZ) for run in run_range])
+
+        f_nSlices = np.argmax(np.bincount(nSlices)) #most abundant number of slices
+        f_nZ = np.argmax(np.bincount(nZ)) #most abundant number of z records
+        
+        index = np.where(np.logical_and(nSlices==f_nSlices, nZ==f_nZ))[0]
+        run_range_good = [run_range[i] for i in index]
+        if len(list(set(run_range)-set(run_range_good))) > 0:
+            print('run_range', run_range)
+            print('run_range_good', run_range_good)
+            print('discarding runs',  list(set(run_range)-set(run_range_good)))
+        
         run_range = run_range_good
         
         # if len(run_range)!=0 and debug>0:
             # print('stage = ', stage)
 
         # check if all gout have the same number of slices nSlice and history records nZ
-        for irun in run_range[1:]:
-            if outlist[irun].nSlices != outlist[run_range[0]].nSlices or outlist[irun].nZ != outlist[run_range[0]].nZ:
-                raise ValueError('Non-uniform out objects')
+        # for irun in run_range[1:]:
+            # if outlist[irun].nSlices != outlist[run_range[0]].nSlices or outlist[irun].nZ != outlist[run_range[0]].nZ:
+                # raise ValueError('Non-uniform out objects')
 
         if run_range == [] or len(run_range) == 1:
             continue
@@ -2105,7 +2125,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     if debug > 1:
                         print('      saving ' + dfl_fig_name + '.txt')
                     if param == 'dfl_spec':
-                        np.savetxt(saving_path + dfl_fig_name + '.txt', vstack([freq_scale * 1e9, mean(dfl_value, 0), dfl_value]).T, fmt="%E", newline='\n', comments='')
+                        np.savetxt(saving_path + dfl_fig_name + '.txt', vstack([freq_scale, mean(dfl_value, 0), dfl_value]).T, fmt="%E", newline='\n', comments='')
                 if not showfig:
                     plt.close('all')
     plt.draw()

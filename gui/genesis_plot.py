@@ -2,6 +2,19 @@
 user interface for viewing genesis simulation results
 '''
 
+'''
+MEMO
+
+plt.gcf() to get current figure
+plt.gca() to get current axis
+
+ax.set_xlabel('')
+ax.get_xlim()
+ax.set_xlim([0, 1])
+ax.set_ylim(ymin=0)
+
+'''
+
 import sys
 import os
 import csv
@@ -2435,7 +2448,7 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
 
     ax_curr = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 1)
     #ax_curr.hist(s, bins,color='b')
-    ax_curr.plot(edges, hist/1000, color='b',linewidth=2)
+    ax_curr.plot(edges, hist/1000, color='k',linewidth=2)
     ax_curr.set_xlabel(s_label)
     ax_curr.set_ylabel('I [kA]')
 

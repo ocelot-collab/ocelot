@@ -9,8 +9,8 @@ S. Tomin, 2017
 
 import sys
 
-from PyQt4.QtGui import QApplication, QFrame
-from PyQt4 import QtGui, QtCore, uic
+from PyQt5.QtWidgets import QApplication, QFrame
+from PyQt5 import QtGui, QtCore, uic
 from ocelot.optimizer.mint.opt_objects import *
 
 from ocelot.optimizer.resetpanel.UIresetpanel import Ui_Form
@@ -127,7 +127,8 @@ class ResetpanelWindow(QFrame):
             pv = self.pvs[row]
             # put PV in the table
             self.ui.tableWidget.setItem(row, 0, QtGui.QTableWidgetItem(str(pv)))
-            self.ui.tableWidget.item(row, 0).setTextColor(QtGui.QColor(0, 255, 255))
+            #self.ui.tableWidget.item(row, 0).setTextColor(QtGui.QColor(0, 255, 255))
+            self.ui.tableWidget.item(row, 0).setForeground(QtGui.QColor(0, 255, 255))
             tip = "/".join(str(pv).split("/")[-2:])
             self.ui.tableWidget.item(row, 0).setToolTip(tip)
             # self.ui.tableWidget.item(row, 0).setFont(font)

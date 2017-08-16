@@ -24,8 +24,9 @@ sys.path.append(path[:indx])
 
 
 
-from PyQt4.QtGui import QApplication, QFrame, QPixmap, QMessageBox
-from PyQt4 import QtGui, QtCore
+from PyQt5.QtGui import QPixmap
+from PyQt5 import QtGui, QtCore
+from PyQt5.QtWidgets import QApplication, QFrame, QMessageBox, QMainWindow, QDialog
 #normal imports
 import numpy as np
 import subprocess

@@ -6,7 +6,7 @@ S.Tomin, 2017
 from ocelot.optimizer.UIOcelotInterface_gen import *
 import json
 import scipy
-from PyQt4.QtGui import QPixmap, QImage
+from PyQt5.QtGui import QPixmap, QImage
 from PIL import Image
 import subprocess
 import base64

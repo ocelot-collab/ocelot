@@ -10,8 +10,9 @@ S. Tomin, 2017
 """
 
 from ocelot.optimizer.resetpanel.resetpanel import ResetpanelWindow
-from PyQt4.QtGui import QApplication, QFrame, QPushButton, QClipboard, QTableWidget
-from PyQt4 import QtGui, QtCore, Qt, uic
+from PyQt5.QtWidgets import QApplication, QFrame, QPushButton, QTableWidget
+from PyQt5 import QtGui, QtCore, Qt, uic
+from PyQt5.QtGui import QClipboard
 import sys
 import time
 #from ocelot.optimizer.mint.opt_objects import *

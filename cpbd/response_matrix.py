@@ -437,6 +437,53 @@ class ResponseMatrix:
 
         return extr_matrix
 
+    def inject(self, cor_list, bpm_list, inj_matrix):
+        """
+        Update some elements of the response matrix
+
+        :param cor_list:
+        :param bpm_list:
+        :param inj_matrix:
+        :return:
+        """
+        cor_list = np.array(cor_list)
+        bpm_list = np.array(bpm_list)
+        #print("EXTRACT given: ", cor_list)
+        #print("EXTRACT given: ", bpm_list)
+        cors1 = np.array(self.cor_names)
+        cors2 = cor_list
+        bpms1 = np.array(self.bpm_names)
+        bpms2 = bpm_list
+        nb1 = len(bpms1)
+        #print("EXTRACT self: ", cors1)
+        #print("EXTRACT self: ", bpms1)
+        c_names = cors1[np.in1d(cors1, cors2)]
+
+        c_i1 = np.where(np.in1d(cors1, cors2))[0]
+        c_i2 = np.where(np.in1d(cors2, c_names))[0]
+        b_names = bpms1[np.in1d(bpms1, bpms2)]
+        b_i1 = np.where(np.in1d(bpms1, bpms2))[0]
+        b_i2 = np.where(np.in1d(bpms2, b_names))[0]
+
+        if not np.array_equal(c_names, cor_list):
+            print (" Origin response matrix has no correctors:")
+            print (cors2[np.in1d(cors2, c_names, invert=True)])
+        if not np.array_equal(b_names, bpm_list):
+            print (" Origin response matrix has no BPMs:")
+            print (bpm_list[b_i2[:]])
+
+        #extr_matrix = np.zeros((len(b_names)*2, len(c_names)))
+
+        for n in range(2):
+            for i, c in enumerate(c_names):
+                for j, b in enumerate(b_names):
+                    #print("old matrix elem = ",b_i1[j] + nb1*n,  c_i1[i], self.matrix[b_i1[j] + nb1*n, c_i1[i]],
+                    #      "inj_mat_elem =", j + n*len(b_names), i, inj_matrix[j + n*len(b_names), i])
+                    self.matrix[b_i1[j] + nb1*n, c_i1[i]] = inj_matrix[j + n*len(b_names), i]
+                    #extr_matrix[j + n*len(b_names), i] = x1
+
+        return self.matrix
+
     def dump(self, filename):
         dict_rmatrix = {}
         dict_rmatrix["cor_names"] = list(self.cor_names)

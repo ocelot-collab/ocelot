@@ -242,11 +242,17 @@ class MagneticLattice:
             self.totalLen += element.l
             #print(element.k1)
             if element.__class__ == Edge:
+
                 if "_e1" in element.id:
                     bend = self.sequence[i+1]
+                    if bend.__class__ not in (SBend, RBend, Bend):
+                        bend = self.sequence[i - 1]
+                        print("Backtracking?")
                     self.update_edge_e1(element, bend)
                 elif "_e2" in element.id:
                     bend = self.sequence[i-1]
+                    if bend.__class__ not in (SBend, RBend, Bend):
+                        bend = self.sequence[i + 1]
                     self.update_edge_e2(element, bend)
                 else:
                     print("EDGE is not updated. Use standard function to create and update MagneticLattice")

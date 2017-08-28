@@ -276,7 +276,7 @@ class MainWindow(Ui_Form):
     def save_state_as(self):
 
         filename = QtGui.QFileDialog.getSaveFileName(self.Form, 'Save State',
-        self.Form.config_dir, "txt (*.json)", QtGui.QFileDialog.DontUseNativeDialog)
+        self.Form.config_dir, "txt (*.json)", None, QtGui.QFileDialog.DontUseNativeDialog)[0]
         if filename:
             name = filename.split("/")[-1]
             parts = name.split(".")
@@ -293,7 +293,7 @@ class MainWindow(Ui_Form):
 
     def load_state_from(self):
         filename = QtGui.QFileDialog.getOpenFileName(self.Form, 'Load State',
-        self.Form.config_dir, "txt (*.json)", QtGui.QFileDialog.DontUseNativeDialog)
+        self.Form.config_dir, "txt (*.json)", None, QtGui.QFileDialog.DontUseNativeDialog)[0]
         if filename:
             #print(filename)
             (body_name, extension) = filename.split("/")[-1].split(".")

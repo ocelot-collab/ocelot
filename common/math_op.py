@@ -190,7 +190,7 @@ def find_saturation(power, z, n_smooth=5):
 def find_nearest(array, value):
     idx = (np.abs(array-value)).argmin()
     return array[idx]
-    
+
 def n_moment(x, counts, c, n):
     if np.sum(counts)==0:
         return 0

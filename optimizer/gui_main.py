@@ -7,6 +7,7 @@ from ocelot.optimizer.UIOcelotInterface_gen import *
 import json
 import scipy
 from PyQt5.QtGui import QPixmap, QImage
+from PyQt5.QtWidgets import QWidget
 from PIL import Image
 import subprocess
 import base64
@@ -333,13 +334,13 @@ class MainWindow(Ui_Form):
 
         if not self.cb_use_predef.checkState():
             text += "obj func: A   : " + str(self.le_a.text()).split("/")[-2]  + "/"+ str(self.le_a.text()).split("/")[-1] + "\n"
-            if str(self.le_b.text()) != "":
+            if str(self.le_b.text()) != "" and self.is_le_addr_ok(self.le_b):
                 text += "obj func: B   : " + str(self.le_b.text()).split("/")[-2] + "/" + str(self.le_b.text()).split("/")[-1] + "\n"
-            if str(self.le_c.text()) != "":
+            if str(self.le_c.text()) != "" and self.is_le_addr_ok(self.le_c):
                 text += "obj func: C   : " + str(self.le_c.text()).split("/")[-2] + "/" + str(self.le_c.text()).split("/")[-1] + "\n"
-            if str(self.le_d.text()) != "":
+            if str(self.le_d.text()) != "" and self.is_le_addr_ok(self.le_d):
                 text += "obj func: D   : " + str(self.le_d.text()).split("/")[-2] + "/" + str(self.le_d.text()).split("/")[-1] + "\n"
-            if str(self.le_e.text()) != "":
+            if str(self.le_e.text()) != "" and self.is_le_addr_ok(self.le_e):
                 text += "obj func: E   : " + str(self.le_e.text()).split("/")[-2] + "/" + str(self.le_e.text()).split("/")[-1] + "\n"
             text += "obj func: expr: " + str(self.le_obf.text()) + "\n"
         else:
@@ -374,7 +375,7 @@ class MainWindow(Ui_Form):
         """
 
         s = str(filename) + "." + str(filetype)
-        p = QPixmap.grabWindow(self.Form.winId())
+        p = QWidget.grab(self.Form)
         p.save(s, 'png')
         # im = Image.open(s)
         # im.save(s[:-4]+".ps")

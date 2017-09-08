@@ -32,7 +32,7 @@ def lattice_format_converter(elements):
                     print("************** ERROR! Element " + element[0].id + " has bed position")
                     exit()
 
-        if element_start > s_pos + 1.0e-14:                 # 1.0e-14 is used as crutch for precision of float
+        if element_start > s_pos + 1.0e-12:                 # 1.0e-14 is used as crutch for precision of float
             drift_num += 1
             drift_l = round(element_start - s_pos, 10)      # round() is used as crutch for precision of float
             drift_eid = 'D_' + str(drift_num)

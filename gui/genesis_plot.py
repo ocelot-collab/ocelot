@@ -1787,7 +1787,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
             if os.path.isfile(out_file):
                 try:
                     outlist[irun] = read_out_file(out_file, read_level=2, debug=1)
-                    outlist[irun].calc_spec(spec_pad)
+                    outlist[irun].calc_spec(npad = spec_pad)
                     run_range_good.append(irun)
                 except:
                     print('     could not read '+out_file)

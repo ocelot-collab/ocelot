@@ -252,10 +252,12 @@ def find_saturation(power, z, n_smooth=5):
     #plt.plot(z[ii+1], np.log10(power[ii]), 'rd')
 
     return z[ii+1], ii+1
-
+    
+def find_nearest_idx(array, value):
+    return (np.abs(array-value)).argmin()
+    
 def find_nearest(array, value):
-    idx = (np.abs(array-value)).argmin()
-    return array[idx]
+    return array[find_nearest_idx(array, value)]
     
 def n_moment(x, counts, c, n):
     if np.sum(counts)==0:

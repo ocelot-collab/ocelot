@@ -2,13 +2,14 @@
 crystal optics
 '''
 
-from ocelot.optics.elements import *
+from ocelot.optics.elements import Crystal
 from ocelot.optics.wave import *
 from ocelot.optics.ray import Ray, trace as trace_ray
-from ocelot.gui.optics import *
+# from ocelot.gui.optics import *
 
-from numpy import *
-from pylab import *
+import numpy as np
+# from numpy import *
+# from pylab import *
 import sys, os
 
 m = 1.0
@@ -431,6 +432,7 @@ def get_crystal_filter(cryst, ev_seed, nk=10000, k = None, n_width = 100):
     cryst.chimh = - ( r_el * lamb**2 * fmh ) / ( np.pi * vcell )
     cryst.pl = np.pi * vcell * np.sqrt( gamma0 * np.abs(gammah) ) / ( r_el * lamb * np.abs(c_pol) * np.sqrt( fh*fmh ) )
     
+    from ocelot.optics.wave import TransferFunction #hotfix here
     f = TransferFunction()
     
     f.tr, f.ref = transmissivity_reflectivity(k, cryst)    

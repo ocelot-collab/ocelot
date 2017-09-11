@@ -534,13 +534,18 @@ def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=Tru
     if zi == None:
         zi = -1
     
+    if 'spec' not in dir(g):
+        g.calc_spec()
+    
     if y_units == 'nm':
         x = g.freq_lamd
     elif y_units in ['ev', 'eV']:
         x = g.freq_ev
-        
+    
     if estimate_ph_sp_dens:
-        spec = calc_ph_sp_dens(g.spec[:, zi], x, g.n_photons[zi])
+        y_units = 'ev'
+        spec = g.spec_phot_density[:, zi]
+        # spec = calc_ph_sp_dens(g.spec[:, zi], g.freq_ev, g.n_photons[zi])
     else:
         spec = g.spec[:, zi]
         
@@ -1092,6 +1097,10 @@ def subfig_evo_rad_pow(ax_rad_pow, g, legend, log=1):
 
 
 def subfig_evo_rad_spec(ax_spectrum, g, legend, log=1):
+    
+    if 'spec' not in dir(g):
+        g.calc_spec()
+    
     ax_spectrum.plot(g.z, np.amax(g.spec, axis=0), 'r-', linewidth=1.5)
     ax_spectrum.text(0.5, 0.98, r"(on axis)", fontsize=10, horizontalalignment='center', verticalalignment='top', transform=ax_spectrum.transAxes)  # horizontalalignment='center', verticalalignment='center',
     ax_spectrum.set_ylabel(r'P$(\lambda)_{max}$ [a.u.]')

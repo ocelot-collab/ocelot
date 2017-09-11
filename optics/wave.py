@@ -13,10 +13,10 @@ import scipy.integrate as integrate
 from copy import deepcopy
 import time
 
-from ocelot.optics.elements import *
+# from ocelot.optics.elements import *
 from ocelot.common.globals import *
 from ocelot.common.py_func import filename_from_path
-from ocelot.optics.utils import calc_ph_sp_dens
+# from ocelot.optics.utils import calc_ph_sp_dens
 
 import multiprocessing
 nthread = multiprocessing.cpu_count()
@@ -28,7 +28,7 @@ except ImportError:
     print("xfel_utils.py: module PYFFTW is not installed. Install it if you want speed up dfl wavefront calculations")
     fftw_avail = False
 
-class RadiationField():
+class RadiationField:
     '''
     3d or 2d coherent radiation distribution, *.fld variable is the same as Genesis dfl structure
     '''
@@ -184,7 +184,7 @@ class RadiationField():
         spec = calc_ph_sp_dens(spec0, freq_ev, n_photons)
         return freq_ev, spec
 
-class TransferFunction(object):
+class TransferFunction:
     '''
     data container for Fourier Optics transfer functions
     '''
@@ -850,23 +850,27 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
 def dfl_shift_z(dfl, s, set_zeros=1):
     '''
     shift the radiation within the window in time domain
+    dfl - initial RadiationField object
+    s - longitudinal offset value in meters
+    set_zeros - to set the values outside the time window to zeros
     '''
-    # set_zeros - to set the values from out of initial time window to zeros
+    print('    shifting dfl by %.2f um (%.0f slices)' % (s * 1e6, shift_n))
+    # 
     assert dfl.domain_z == 't', 'dfl_shift_z works only in time domain!'
     shift_n = int(s / dfl.dz)
-    print('    shifting dfl by %.2f um (%.0f slices)' % (s * 1e6, shift_n))
-    start = time.time()
-    dfl.fld = np.roll(dfl.fld, shift_n, axis=0)
-    if set_zeros:
-        if shift_n > 0:
-            dfl.fld[:shift_n, :, :] = 0
-        if shift_n < 0:
-            dfl.fld[shift_n:, :, :] = 0
-
-    t_func = time.time() - start
+    if shift_n == 0:
+        return dfl
+    else:
+        start = time.time()
+        dfl.fld = np.roll(dfl.fld, shift_n, axis=0)
+        if set_zeros:
+            if shift_n > 0:
+                dfl.fld[:shift_n, :, :] = 0
+            if shift_n < 0:
+                dfl.fld[shift_n:, :, :] = 0
+        t_func = time.time() - start
+        return dfl
     print('      done in %.2f ' % t_func + 'sec')
-    return dfl
-
 
 def dfl_pad_z(dfl, padn):
     assert np.mod(padn, 1) == 0, 'pad should be integer'
@@ -1338,6 +1342,18 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1):
         print('      done in %.2f seconds' % (time.time() - start_time))
     
         return wig
+
+
+def calc_ph_sp_dens(spec, freq_ev, n_photons):
+    '''
+    calculates number of photons per electronvolt
+    '''
+    spec_sum = np.trapz(spec, x=freq_ev, axis=0)
+    spec_sum[spec_sum == 0] = np.inf
+    norm_factor = n_photons / spec_sum
+    return spec * norm_factor
+    
+    
 # class WaveFront:
     # def __init__(self):
         # pass

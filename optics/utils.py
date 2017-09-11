@@ -3,7 +3,7 @@ single crystal Bragg reflection
 '''
 
 from ocelot.optics.elements import *
-from ocelot.optics.wave import TransferFunction
+# from ocelot.optics.wave import TransferFunction
 from ocelot.optics.bragg import *
 from ocelot.optics.ray import Ray, trace as trace_ray
 from ocelot.gui.optics import *
@@ -102,10 +102,3 @@ def plot_spec_filt(s, filt, ax):
         
     ax.plot(filt.ev, tr_mod / np.max(tr_mod) * np.max(np.abs(s.sp)), 'r.--')
     print(s.freq_k)
-
-def calc_ph_sp_dens(spec, freq_ev, n_photons):
-    '''
-    calculates number of photons per electronvolt
-    '''
-    norm_factor = n_photons / np.trapz(spec, x=freq_ev, axis=0)
-    return spec * norm_factor

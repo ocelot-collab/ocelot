@@ -18,7 +18,7 @@ from ocelot.common.math_op import *
 from ocelot.common.py_func import background, copy_this_script, filename_from_path
 from ocelot.common.globals import *  # import of constants like "h_eV_s" and "speed_of_light"
 from ocelot.optics.wave import *
-from ocelot.optics.utils import calc_ph_sp_dens
+# from ocelot.optics.utils import calc_ph_sp_dens
 
 import math
 import numpy as np
@@ -562,11 +562,15 @@ class GenesisOutput:
         self.spec_mode = mode
         self.sliceKeys_used.append('spec')
         
-        self.freq_ev_mean = np.sum(self.freq_ev[:,newaxis]*self.spec, axis=0) / np.sum(self.spec, axis=0)
+        sum_spec = np.sum(self.spec, axis=0)
+        sum_spec[sum_spec == 0] = np.inf
+        
+        self.freq_ev_mean = np.sum(self.freq_ev[:,newaxis]*self.spec, axis=0) / sum_spec
+        self.freq_ev_mean[self.freq_ev_mean == 0] = np.inf
         
         self.n_photons = self.pulse_energy / q_e / self.freq_ev_mean
         
-        # self.spec_phot_density = calc_ph_sp_dens(self.spec, self.freq_ev, self.n_photons)
+        self.spec_phot_density = calc_ph_sp_dens(self.spec, self.freq_ev, self.n_photons)
         # self.sliceKeys_used.append('spec_phot_density')
         # print ('        done')
         
@@ -1399,7 +1403,7 @@ def get_genesis_new_launcher(launcher_program=None, mpi_mode=True):
 '''
 
 
-def read_out_file(filePath, read_level=3, precision=float, debug=1):
+def read_out_file(filePath, read_level=2, precision=float, debug=1):
     '''
     reads Genesis output from *.out file.
     returns GenesisOutput() object
@@ -1588,10 +1592,9 @@ def read_out_file(filePath, read_level=3, precision=float, debug=1):
         
         if read_level >= 3:
             
-            out.calc_spec()
-            # out.calc_spec(mode='mid', npad=1)
-            out.phase_fix()
-            out.calc_radsize(weigh_transv=1)
+            out.calc_spec(npad=2)
+            # out.phase_fix()
+            # out.calc_radsize(weigh_transv=1)
             
             # if debug > 0:
                 # print ('      calculating spectrum')

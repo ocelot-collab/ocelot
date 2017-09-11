@@ -3,7 +3,7 @@ single crystal Bragg reflection
 '''
 
 from ocelot.optics.elements import *
-from ocelot.optics.wave import *
+from ocelot.optics.wave import TransferFunction
 from ocelot.optics.bragg import *
 from ocelot.optics.ray import Ray, trace as trace_ray
 from ocelot.gui.optics import *

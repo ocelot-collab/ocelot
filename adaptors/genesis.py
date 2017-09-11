@@ -15,7 +15,9 @@ from ocelot.cpbd.elements import *
 import ocelot.utils.reswake as w
 from ocelot.utils.launcher import *
 from ocelot.common.math_op import *
+from ocelot.common.py_func import background, copy_this_script, filename_from_path
 from ocelot.common.globals import *  # import of constants like "h_eV_s" and "speed_of_light"
+from ocelot.optics.wave import *
 from ocelot.optics.utils import calc_ph_sp_dens
 
 import math
@@ -904,150 +906,6 @@ class GenesisRad():
     def __init__(self):
         self.columns = []
         self.column_values = {}
-
-
-class RadiationField():
-    '''
-    3d or 2d coherent radiation distribution, *.fld variable is the same as Genesis dfl structure
-    '''
-
-    def __init__(self, shape=(0, 0, 0)):
-        # self.fld=np.array([]) #(z,y,x)
-        self.fld = np.zeros(shape, dtype=complex128)  # (z,y,x)
-        self.dx = []
-        self.dy = []
-        self.dz = []
-        self.xlamds = 0  # wavelength, [nm]
-        self.domain_z = 't'  # longitudinal domain (t - time, f - frequency)
-        self.domain_xy = 's'  # transverse domain (s - space, k - inverse space)
-        self.filePath = ''
-
-    def fileName(self):
-        return filename_from_path(self.filePath)
-
-    def copy_param(self, dfl1):
-        self.dx = dfl1.dx
-        self.dy = dfl1.dy
-        self.dz = dfl1.dz
-        self.xlamds = dfl1.xlamds
-        self.domain_z = dfl1.domain_z
-        self.domain_xy = dfl1.domain_xy
-        self.filePath = dfl1.filePath
-
-    def __getitem__(self, i):
-        return self.fld[i]
-
-    def __setitem__(self, i, fld):
-        self.fld[i] = fld
-
-    def shape(self):
-        return shape(self.fld)
-
-    def Lz(self):  # full transverse mesh size, 2*dgrid
-        return self.dz * self.Nz()
-
-    def Ly(self):  # full transverse mesh size, 2*dgrid
-        return self.dy * self.Ny()
-
-
-    def Lx(self):  # full longitudinal mesh size, nslice*zsep*xlamds
-        return self.dx * self.Nx()
-
-    def Nz(self):
-        return shape(self.fld)[0]
-
-    def Ny(self):
-        return shape(self.fld)[1]
-
-    def Nx(self):
-        return shape(self.fld)[2]
-
-    def int(self):  # 3d intensity
-        return self.fld.real**2 + self.fld.imag**2
-
-    def int_z(self):  # intensity projection on z (power [W] or spectral density)
-        return np.sum(self.int(), axis=(1, 2))
-
-    def ang_z_onaxis(self):
-        xn = int((self.Nx() + 1) / 2)
-        yn = int((self.Ny() + 1) / 2)
-        fld = self[:, yn, xn]
-        return np.angle(fld)
-
-    def int_y(self):
-        return np.sum(self.int(), axis=(0, 2))
-
-    def int_x(self):
-        return np.sum(self.int(), axis=(0, 1))
-
-    def int_xy(self):
-        return np.swapaxes(np.sum(self.int(), axis=0), 1, 0)
-
-    def int_zx(self):
-        return np.sum(self.int(), axis=1)
-
-    def int_zy(self):
-        return np.sum(self.int(), axis=2)
-
-    def E(self):  # energy in the pulse [J]
-        if self.Nz() > 1:
-            return np.sum(self.int()) * self.Lz() / self.Nz() / speed_of_light
-        else:
-            return self.int()
-
-    # propper scales in meters or 2 pi / meters
-    def scale_kx(self):  # scale in meters or meters**-1
-        if self.domain_xy == 's':  # space domain
-            return np.linspace(-self.Lx() / 2, self.Lx() / 2, self.Nx())
-        elif self.domain_xy == 'k':  # inverse space domain
-            k = 2 * np.pi / self.dx
-            return np.linspace(-k / 2, k / 2, self.Nx())
-        else:
-            raise AttributeError('Wrong domain_xy attribute')
-
-    def scale_ky(self):  # scale in meters or meters**-1
-        if self.domain_xy == 's':  # space domain
-            return np.linspace(-self.Ly() / 2, self.Ly() / 2, self.Ny())
-        elif self.domain_xy == 'k':  # inverse space domain
-            k = 2 * np.pi / self.dy
-            return np.linspace(-k / 2, k / 2, self.Ny())
-        else:
-            raise AttributeError('Wrong domain_xy attribute')
-
-    def scale_kz(self):  # scale in meters or meters**-1
-        if self.domain_z == 't':  # time domain
-            return np.linspace(0, self.Lz(), self.Nz())
-        elif self.domain_z == 'f':  # frequency domain
-            dk = 2 * pi / self.Lz()
-            k = 2 * pi / self.xlamds
-            return np.linspace(k - dk / 2 * self.Nz(), k + dk / 2 * self.Nz(), self.Nz())
-        else:
-            raise AttributeError('Wrong domain_z attribute')
-
-    def scale_x(self):  # scale in meters or radians
-        if self.domain_xy == 's':  # space domain
-            return self.scale_kx()
-        elif self.domain_xy == 'k':  # inverse space domain
-            return self.scale_kx() * self.xlamds / 2 / np.pi
-        else:
-            raise AttributeError('Wrong domain_xy attribute')
-
-    def scale_y(self):  # scale in meters or radians
-        if self.domain_xy == 's':  # space domain
-            return self.scale_ky()
-        elif self.domain_xy == 'k':  # inverse space domain
-            return self.scale_ky() * self.xlamds / 2 / np.pi
-        else:
-            raise AttributeError('Wrong domain_xy attribute')
-
-    def scale_z(self):  # scale in meters
-        if self.domain_z == 't':  # time domain
-            return self.scale_kz()
-        elif self.domain_z == 'f':  # frequency domain
-            return 2 * pi / self.scale_kz()
-        else:
-            raise AttributeError('Wrong domain_z attribute')
-
 
 class WaistScanResults():
 
@@ -3652,12 +3510,6 @@ def astra2edist_ext(fileName_in, fileName_out='', center=1):
     adist = read_astra_dist(fileName_in)
     edist = astra2edist(adist, center=center)
     write_edist_file(edist, fileName_out, debug=0)
-
-
-def filename_from_path(path_string):
-    # return path_string[-path_string[::-1].find(os.path.sep)::]
-    return path_string.split(os.path.sep)[-1]
-
 
 def rematch_edist(edist, tws):
 

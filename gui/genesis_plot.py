@@ -39,6 +39,7 @@ from ocelot.common.globals import *  # import of constants like "h_eV_s" and
 from ocelot.common.math_op import *  # import of mathematical functions
 from ocelot.utils.xfel_utils import *
 from ocelot.optics.utils import calc_ph_sp_dens
+from ocelot.optics.wave import *
 
 # from pylab import rc, rcParams #tmp
 from matplotlib import rc, rcParams
@@ -2122,30 +2123,8 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                 # read_dfl_file(filePath, Nxy=None, Lxy=None, Lz=None, zsep=None, xlamds=None, vartype=complex,debug=1):
                 # dfl = dfl.fld
                 if dfl.Nz() != 1:
-                    pulse_energy = dfl.E()
-                    dfl = dfl_fft_z(dfl)
-                    spec0 = dfl.int_z()
-                    freq_ev = h_eV_s * speed_of_light / dfl.scale_z()
-                    freq_ev_mean = np.sum(freq_ev*spec0) / np.sum(spec0)
-                    n_photons = pulse_energy / q_e / freq_ev_mean
-                    spec = calc_ph_sp_dens(spec0, freq_ev, n_photons)
+                    freq_scale, spec = dfl.ph_sp_dens()
                     dfl_value.append(spec)
-                    
-                    freq_scale = freq_ev
-                    
-                    # ncar_z = dfl.Nz()
-                    # leng_z = outlist[irun]('xlamds') * outlist[irun]('zsep') * ncar_z
-                    # if param == 'dfl_spec':
-                        # spec = np.fft.ifftshift(np.fft.fft(dfl, axis=0), 0) / sqrt(ncar_z)
-                        # spec = abs(spec)**2
-                        # spec = sum(spec, (1, 2))
-                        # dfl_value.append(spec)
-                        # dk = 2 * pi / leng_z
-                        # k = 2 * pi / outlist[irun]('xlamds')
-                        # freq_scale = 2 * pi / np.linspace(k - dk / 2 * ncar_z, k + dk / 2 * ncar_z, ncar_z) * 1e9
-                        # if debug > 1:
-                            # print('      spectrum calculated')
-
             if dfl_value != []:
                 fig = plt.figure(dfl_fig_name)
                 fig.clf()

@@ -1,4 +1,5 @@
 import inspect
+import os
 
 class bcolors:
     HEADER = '\033[95m'
@@ -24,3 +25,20 @@ def loc_class(obj):
     locates the file where class of the object is defined
     '''
     print(inspect.getfile(obj.__class__))
+
+def background(command):
+    '''
+    start command as background process
+    the argument shohuld preferably be a string in triple quotes '
+    '''
+    import subprocess
+    imports = 'from ocelot.adaptors.genesis import *; from ocelot.gui.genesis_plot import *; from ocelot.utils.xfel_utils import *; '
+    subprocess.Popen(["python3", "-c", imports + command])
+
+def copy_this_script(scriptName, scriptPath, folderPath):
+    cmd = 'cp ' + scriptPath + ' ' + folderPath + 'exec_' + scriptName + ' '
+    os.system(cmd)
+
+def filename_from_path(path_string):
+    # return path_string[-path_string[::-1].find(os.path.sep)::]
+    return path_string.split(os.path.sep)[-1]

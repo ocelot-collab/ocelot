@@ -5,15 +5,28 @@ wave optics
 from numpy import sin, cos, pi, sqrt, log, exp, array, random, sign
 from numpy.linalg import norm
 import numpy as np
+from numpy import inf, complex128, complex64
 import numpy.fft as fft
 import matplotlib.pyplot as plt
 import scipy.integrate as integrate
 #import matplotlib.animation as animation
 from copy import deepcopy
+import time
 
 from ocelot.optics.elements import *
 from ocelot.common.globals import *
+from ocelot.common.py_func import filename_from_path
+from ocelot.optics.utils import calc_ph_sp_dens
 
+import multiprocessing
+nthread = multiprocessing.cpu_count()
+
+try:
+    import pyfftw
+    fftw_avail = True
+except ImportError:
+    print("xfel_utils.py: module PYFFTW is not installed. Install it if you want speed up dfl wavefront calculations")
+    fftw_avail = False
 
 class RadiationField():
     '''
@@ -50,7 +63,7 @@ class RadiationField():
         self.fld[i] = fld
 
     def shape(self):
-        return shape(self.fld)
+        return self.fld.shape
 
     def Lz(self):  # full transverse mesh size, 2*dgrid
         return self.dz * self.Nz()
@@ -63,13 +76,13 @@ class RadiationField():
         return self.dx * self.Nx()
 
     def Nz(self):
-        return shape(self.fld)[0]
+        return self.fld.shape[0]
 
     def Ny(self):
-        return shape(self.fld)[1]
+        return self.fld.shape[1]
 
     def Nx(self):
-        return shape(self.fld)[2]
+        return self.fld.shape[2]
 
     def int(self):  # 3d intensity
         return self.fld.real**2 + self.fld.imag**2

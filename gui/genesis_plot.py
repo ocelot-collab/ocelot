@@ -38,6 +38,7 @@ from ocelot.adaptors.genesis import *
 from ocelot.common.globals import *  # import of constants like "h_eV_s" and
 from ocelot.common.math_op import *  # import of mathematical functions
 from ocelot.utils.xfel_utils import *
+from ocelot.optics.utils import calc_ph_sp_dens
 
 # from pylab import rc, rcParams #tmp
 from matplotlib import rc, rcParams
@@ -310,13 +311,13 @@ def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espre
             ax.append(fig.add_subplot(len(params), 1, index + 1, sharex=ax[0]))
         
         if param == 'rad_power+el_current':
-            subfig_z_power_curr(ax[-1], g, zi, x_units, legend)
+            subfig_z_power_curr(ax[-1], g, zi=zi, x_units=x_units ,legend=legend)
         elif param == 'el_energy+el_espread+el_bunching':
-            subfig_z_energy_espread_bunching(ax[-1], g, zi, x_units, legend)
+            subfig_z_energy_espread_bunching(ax[-1], g, zi=zi, x_units=x_units ,legend=legend)
         elif param == 'el_energy+el_espread':
-            subfig_z_energy_espread(ax[-1], g, zi, x_units, legend)
+            subfig_z_energy_espread(ax[-1], g, zi=zi, x_units=x_units ,legend=legend)
         elif param == 'rad_phase':
-            subfig_z_phase(ax[-1], g, zi, x_units ,legend)
+            subfig_z_phase(ax[-1], g, zi=zi, x_units=x_units ,legend=legend)
         # elif param == 'el_energy':
             # subfig_evo_el_energy(ax[-1], g, legend)
         else:
@@ -336,7 +337,7 @@ def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espre
         else:
             ax.append(fig.add_subplot(len(params), 1, index + axt + 1, sharex=ax[-1]))
         if param == 'rad_spec':
-            subfig_z_spec(ax[-1], g, zi, y_units, legend)
+            subfig_z_spec(ax[-1], g, zi=zi, y_units=y_units, estimate_ph_sp_dens=True, legend=legend)
         else:
             print('! wrong parameter ' + param)
     axf = len(ax) - axt
@@ -401,7 +402,10 @@ def subfig_z_power_curr(ax_curr, g, zi=None, x_units='um', legend=False):
     ax_power.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_power.get_yaxis().get_major_formatter().set_scientific(True)
     ax_power.get_yaxis().get_major_formatter().set_powerlimits((-3, 4))  # [:,75,75]
-    ax_curr.text(0.98, 0.98, "E= %.2e J" % (g.energy[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
+    if 'n_photons' in dir(g):
+        ax_curr.text(0.98, 0.98, "E= %.2e J\nN$_{phot}$= %.2e" % (g.pulse_energy[zi], g.n_photons[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
+    else:
+        ax_curr.text(0.98, 0.98, "E= %.2e J" % (g.pulse_energy[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
     
     ax_curr.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_power.yaxis.major.locator.set_params(nbins=number_ticks)
@@ -521,23 +525,29 @@ def subfig_z_phase(ax_phase, g, zi=None, x_units='um', legend=False, rewrap=Fals
     ax_phase.set_xlim([x[0],x[-1]])
 
 
-def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', legend=False):
+def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=True, legend=False):
     
     number_ticks = 6
     # n_pad = 1
+    
+    if zi == None:
+        zi = -1
     
     if y_units == 'nm':
         x = g.freq_lamd
     elif y_units in ['ev', 'eV']:
         x = g.freq_ev
         
-    if zi == None:
-        zi = -1
-    
+    if estimate_ph_sp_dens:
+        spec = calc_ph_sp_dens(g.spec[:, zi], x, g.n_photons[zi])
+    else:
+        spec = g.spec[:, zi]
+        
+        
     # power = np.pad(g.p_mid, [(int(g.nSlices / 2) * n_pad, (g.nSlices - (int(g.nSlices / 2)))) * n_pad, (0, 0)], mode='constant')
     # phase = np.pad(g.phi_mid, [(int(g.nSlices / 2) * n_pad, (g.nSlices - (int(g.nSlices / 2)))) * n_pad, (0, 0)], mode='constant')  # not supported by the numpy 1.6.2
     
-    ax_spectrum.plot(x, g.spec[:, zi], 'r-')
+    ax_spectrum.plot(x, spec, 'r-')
     ax_spectrum.text(0.98, 0.98, r'(on axis)', fontsize=10, horizontalalignment='right', verticalalignment='top', transform=ax_spectrum.transAxes)  # horizontalalignment='center', verticalalignment='center',
     
     ax_spectrum.set_ylim(ymin=0)
@@ -548,13 +558,13 @@ def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', legend=False):
     if np.amin(x) != np.amax(x):
         ax_spectrum.set_xlim([np.amin(x), np.amax(x)])
     
-    maxspectrum_index = np.argmax(g.spec[:, zi])
+    maxspectrum_index = np.argmax(spec)
     # maxspower_index = np.argmax(power[:, zi])
     maxspectrum_value = x[maxspectrum_index]
     
     spec_width = None
-    if np.sum(g.spec[:,zi])!=0:
-        pos, width, arr = fwhm3(g.spec[:, zi])
+    if np.sum(spec)!=0:
+        pos, width, arr = fwhm3(spec)
         if width != None:
             if arr[0] == arr[-1]:
                 dx = abs(x[pos] - x[pos-1])
@@ -565,11 +575,17 @@ def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', legend=False):
     if spec_width is not None and maxspectrum_value is not None:
             if y_units == 'nm':
                 ax_spectrum.text(0.02, 0.98, r"$\lambda^{max}$= %.4e m " "\n" "$(\Delta\lambda/\lambda)_{fwhm}$= %.2e" % (maxspectrum_value*1e-9, spec_width), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_spectrum.transAxes, color='red')  # horizontalalignment='center', verticalalignment='center',
-                ax_spectrum.set_ylabel(r'P($\lambda$) [a.u.]')
+                if estimate_ph_sp_dens:
+                    ax_spectrum.set_ylabel(r'[$N_{phot}$/nm](estim)')
+                else:
+                    ax_spectrum.set_ylabel(r'P($\lambda$) [a.u.]')
                 ax_spectrum.set_xlabel(r'$\lambda$ [nm]')
             elif y_units in ['ev', 'eV']:
                 ax_spectrum.text(0.02, 0.98, r"$E_{ph}^{max}$= %.2f eV " "\n" "$(\Delta E/E)_{fwhm}$= %.2e" % (maxspectrum_value, spec_width), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_spectrum.transAxes, color='red')  # horizontalalignment='center', verticalalignment='center',
-                ax_spectrum.set_ylabel(r'P($E_{ph}$) [a.u.]')
+                if estimate_ph_sp_dens:
+                    ax_spectrum.set_ylabel(r'[$N_{phot}$/eV] (estim)')
+                else:
+                    ax_spectrum.set_ylabel(r'P($E_{ph}$) [a.u.]')
                 ax_spectrum.set_xlabel(r'$E_{photon}$ [eV]')
         # ax_spectrum.text(0.02, 0.98, r"$\lambda_{max}$= %.4e m " "\n" "$(\Delta\lambda/\lambda)_{fwhm}$= %.2e" % (maxspectrum_value, spec_width), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_spectrum.transAxes, color='red')  # horizontalalignment='center', verticalalignment='center',
     
@@ -649,7 +665,7 @@ def plot_gen_out_z_old(g, figsize=(10, 14), x_units='um', y_units='ev', legend=T
     ax_curr.set_ylabel(r'I [kA]')
     ax_curr.set_ylim(ymin=0)
     ax_curr.text(0.02, 0.98, "Q= %.2f pC" % (g.beam_charge * 1e12), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_curr.transAxes)  # horizontalalignment='center', verticalalignment='center',
-    ax_curr.text(0.98, 0.98, "E= %.2e J" % (g.energy[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
+    ax_curr.text(0.98, 0.98, "E= %.2e J" % (g.pulse_energy[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
     ax_curr.grid(True)
 
     ax_power = ax_curr.twinx()
@@ -1031,15 +1047,15 @@ def subfig_evo_rad_pow_en(ax_rad_pow, g, legend, log=1):
     ax_rad_en.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_rad_en.get_yaxis().get_major_formatter().set_scientific(True)
     if np.amax(g.p_int) > 0 and log:
-        ax_rad_en.plot(g.z, g.energy, 'k--', linewidth=1.5)
+        ax_rad_en.plot(g.z, g.pulse_energy, 'k--', linewidth=1.5)
         ax_rad_en.set_ylabel(r'E [J]')
         ax_rad_en.set_yscale('log')
     if not log:
-        if np.amax(g.energy) < 1e-4:
-            ax_rad_en.plot(g.z, g.energy*1e6, 'k--', linewidth=1.5)
+        if np.amax(g.pulse_energy) < 1e-4:
+            ax_rad_en.plot(g.z, g.pulse_energy*1e6, 'k--', linewidth=1.5)
             ax_rad_en.set_ylabel(r'E [$\mu$J]')
         else:
-            ax_rad_en.plot(g.z, g.energy*1e3, 'k--', linewidth=1.5)
+            ax_rad_en.plot(g.z, g.pulse_energy*1e3, 'k--', linewidth=1.5)
             ax_rad_en.set_ylabel(r'E [mJ]')
         ax_rad_en.set_ylim(ymin=0)
     plt.yticks(plt.yticks()[0][0:-1])
@@ -2104,20 +2120,31 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                 dfl = read_dfl_file_out(outlist[irun], debug=debug)
                 # dfl=read_dfl_file(dfl_filePath, Nxy=outlist[irun]('ncar'),debug=debug)
                 # read_dfl_file(filePath, Nxy=None, Lxy=None, Lz=None, zsep=None, xlamds=None, vartype=complex,debug=1):
-                dfl = dfl.fld
-                if dfl.shape[0] != 1:
-                    ncar_z = dfl.shape[0]
-                    leng_z = outlist[irun]('xlamds') * outlist[irun]('zsep') * ncar_z
-                    if param == 'dfl_spec':
-                        spec = np.fft.ifftshift(np.fft.fft(dfl, axis=0), 0) / sqrt(ncar_z)
-                        spec = abs(spec)**2
-                        spec = sum(spec, (1, 2))
-                        dfl_value.append(spec)
-                        dk = 2 * pi / leng_z
-                        k = 2 * pi / outlist[irun]('xlamds')
-                        freq_scale = 2 * pi / np.linspace(k - dk / 2 * ncar_z, k + dk / 2 * ncar_z, ncar_z) * 1e9
-                        if debug > 1:
-                            print('      spectrum calculated')
+                # dfl = dfl.fld
+                if dfl.Nz() != 1:
+                    pulse_energy = dfl.E()
+                    dfl = dfl_fft_z(dfl)
+                    spec0 = dfl.int_z()
+                    freq_ev = h_eV_s * speed_of_light / dfl.scale_z()
+                    freq_ev_mean = np.sum(freq_ev*spec0) / np.sum(spec0)
+                    n_photons = pulse_energy / q_e / freq_ev_mean
+                    spec = calc_ph_sp_dens(spec0, freq_ev, n_photons)
+                    dfl_value.append(spec)
+                    
+                    freq_scale = freq_ev
+                    
+                    # ncar_z = dfl.Nz()
+                    # leng_z = outlist[irun]('xlamds') * outlist[irun]('zsep') * ncar_z
+                    # if param == 'dfl_spec':
+                        # spec = np.fft.ifftshift(np.fft.fft(dfl, axis=0), 0) / sqrt(ncar_z)
+                        # spec = abs(spec)**2
+                        # spec = sum(spec, (1, 2))
+                        # dfl_value.append(spec)
+                        # dk = 2 * pi / leng_z
+                        # k = 2 * pi / outlist[irun]('xlamds')
+                        # freq_scale = 2 * pi / np.linspace(k - dk / 2 * ncar_z, k + dk / 2 * ncar_z, ncar_z) * 1e9
+                        # if debug > 1:
+                            # print('      spectrum calculated')
 
             if dfl_value != []:
                 fig = plt.figure(dfl_fig_name)
@@ -2127,7 +2154,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     fig = plt.plot(freq_scale, swapaxes(dfl_value, 0, 1), '0.8')
                     fig = plt.plot(freq_scale, dfl_value[0], '0.5', linewidth=1)
                     fig = plt.plot(freq_scale, mean(dfl_value, 0), 'k', linewidth=2)
-                    plt.xlabel('$\lambda$ [nm]')
+                    plt.xlabel('$E_{photon}$ [eV]')
                 plt.ylabel(dict_name.get(param, param) + ' ' + dict_unit.get(param, ''))
                 if savefig != False:
                     if debug > 1:

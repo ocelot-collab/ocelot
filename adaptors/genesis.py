@@ -16,6 +16,7 @@ import ocelot.utils.reswake as w
 from ocelot.utils.launcher import *
 from ocelot.common.math_op import *
 from ocelot.common.globals import *  # import of constants like "h_eV_s" and "speed_of_light"
+from ocelot.optics.utils import calc_ph_sp_dens
 
 import math
 import numpy as np
@@ -558,6 +559,13 @@ class GenesisOutput:
         self.freq_lamd = freq_lamd
         self.spec_mode = mode
         self.sliceKeys_used.append('spec')
+        
+        self.freq_ev_mean = np.sum(self.freq_ev[:,newaxis]*self.spec, axis=0) / np.sum(self.spec, axis=0)
+        
+        self.n_photons = self.pulse_energy / q_e / self.freq_ev_mean
+        
+        # self.spec_phot_density = calc_ph_sp_dens(self.spec, self.freq_ev, self.n_photons)
+        # self.sliceKeys_used.append('spec_phot_density')
         # print ('        done')
         
     def phase_fix(self, wav=None, s=None):
@@ -1716,6 +1724,7 @@ def read_out_file(filePath, read_level=3, precision=float, debug=1):
         # out.dt=out('zsep') * out('xlamds') / speed_of_light
         out.beam_charge = np.sum(out.I * out.dt)
         out.sn_Imax = np.argmax(out.I)  # slice number with maximum current
+        out.pulse_energy = np.sum(out.power * out.dt, axis=0)
         
         # print(dir(out))
         
@@ -1777,11 +1786,11 @@ def read_out_file(filePath, read_level=3, precision=float, debug=1):
                 # out.sliceKeys_used.append('rad_t_size_weighted')
     else:
         out.s = [0]
-
+    
     if out('iscan') != 0:
         out.scv = out.I  # scan value
         out.I = np.linspace(1, 1, len(out.scv))  # because used as a weight
-
+    
     # tmp for back_compatibility
     if read_level >= 2:
         out.power_int = out.power[:, -1]  # remove?
@@ -1798,10 +1807,7 @@ def read_out_file(filePath, read_level=3, precision=float, debug=1):
     #             delattr(out,parm[0])
         out.power = out.p_mid[:, -1]
         out.phi = out.phi_mid[:, -1]
-        # out.energy=np.mean(out.p_int,axis=0)*out('xlamds')*out('zsep')*out.nSlices/speed_of_light
-        if out('itdp'): 
-            out.energy = np.sum(out.p_int * out.dt, axis=0)
-
+    
     if debug > 0:
         print('      done in %.2f seconds' % (time.time() - start_time))
     return out

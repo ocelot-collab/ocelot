@@ -95,11 +95,17 @@ def plot_filters(filt, f_test=None, param='tr', ax= None):
             ax2.plot(f_test.ev, np.angle(data_test), 'g--')
             
 def plot_spec_filt(s, filt, ax):
-    ax.plot(s.freq_ev, np.abs(s.sp), 'b.')    
+    
+    ax.plot(s.freq_ev, np.abs(s.sp), 'b.')
     tr_r, tr_i = np.real(filt.tr), np.imag(filt.tr)
     tr_mod  = np.real(np.sqrt(tr_r*tr_r + tr_i*tr_i)) #modulus of T
         
     ax.plot(filt.ev, tr_mod / np.max(tr_mod) * np.max(np.abs(s.sp)), 'r.--')
     print(s.freq_k)
 
-    
+def calc_ph_sp_dens(spec, freq_ev, n_photons):
+    '''
+    calculates number of photons per electronvolt
+    '''
+    norm_factor = n_photons / np.trapz(spec, x=freq_ev, axis=0)
+    return spec * norm_factor

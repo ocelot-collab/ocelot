@@ -17,6 +17,10 @@ import time
 from ocelot.common.globals import *
 from ocelot.common.py_func import filename_from_path
 # from ocelot.optics.utils import calc_ph_sp_dens
+from ocelot.adaptors.genesis import *
+# import ocelot.adaptors.genesis as genesis_ad
+# GenesisOutput = genesis_ad.GenesisOutput
+ 
 
 import multiprocessing
 nthread = multiprocessing.cpu_count()
@@ -176,7 +180,6 @@ class RadiationField:
         else:
             dfl = self
         pulse_energy = dfl.E()
-        dfl = dfl_fft_z(dfl)
         spec0 = dfl.int_z()
         freq_ev = h_eV_s * speed_of_light / dfl.scale_z()
         freq_ev_mean = np.sum(freq_ev*spec0) / np.sum(spec0)
@@ -1221,7 +1224,7 @@ def wigner_out(out, z=inf, method='mp', pad=1, debug=1):
     returns WignerDistribution from GenesisOutput at z
     '''
     
-    assert isinstance(out,GenesisOutput)
+    # assert isinstance(out,GenesisOutput) #hotfix
     assert len(out.s)>0
     
     import numpy as np
@@ -1349,7 +1352,11 @@ def calc_ph_sp_dens(spec, freq_ev, n_photons):
     calculates number of photons per electronvolt
     '''
     spec_sum = np.trapz(spec, x=freq_ev, axis=0)
-    spec_sum[spec_sum == 0] = np.inf
+    if size(spec_sum) == 1:
+        if spec_sum == 0: #avoid division by zero
+            spec_sum = np.inf 
+    else:
+        spec_sum[spec_sum == 0] = np.inf #avoid division by zero
     norm_factor = n_photons / spec_sum
     return spec * norm_factor
     

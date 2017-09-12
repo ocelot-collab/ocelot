@@ -2156,8 +2156,8 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                         np.savetxt(saving_path + dfl_fig_name + '.txt', vstack([freq_scale, mean(dfl_value, 0), dfl_value]).T, fmt="%E", newline='\n', comments='')
                 if not showfig:
                     plt.close('all')
-    plt.draw()
     if showfig:
+        plt.draw()
         plt.show()
     else:
         plt.close('all')

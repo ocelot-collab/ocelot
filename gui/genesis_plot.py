@@ -2928,11 +2928,14 @@ def read_plot_dump_proj(exp_dir, stage, run_ids, plot_phase=1, showfig=True, sav
     ax2 = f_domain.add_subplot(2, 1, 2, sharex=ax1)
     # plt.xlabel(r'$S [\mu m]$')
 
-    ax2.plot(h_eV_s * speed_of_light / f_l_scale, f_l_ftlt_abs, 'r')
+    ax2.plot(h_eV_s * speed_of_light / f_l_scale, f_l_ftlt_abs**2, 'r')
+    plt.xlabel(r'$E$ [eV]')
+    plt.ylabel(r'Filter (ampl$^2$ & phase )')
     ax2_phase = ax2.twinx()
     ax2_phase.plot(h_eV_s * speed_of_light / f_l_scale, f_l_ftlt_ang, 'r--')
     ax2.grid(True)
-    plt.xlabel(r'$E$ [eV]')
+    
+
     # plt.ylabel(r'$Transm$')
     # ax[1].xlabel(r'$E$ [eV]')
     # ax[0].xlabel(r'$P(\lambda)$ [a.u.]')

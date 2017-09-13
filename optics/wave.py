@@ -857,11 +857,11 @@ def dfl_shift_z(dfl, s, set_zeros=1):
     s - longitudinal offset value in meters
     set_zeros - to set the values outside the time window to zeros
     '''
-    print('    shifting dfl by %.2f um (%.0f slices)' % (s * 1e6, shift_n))
-    # 
     assert dfl.domain_z == 't', 'dfl_shift_z works only in time domain!'
     shift_n = int(s / dfl.dz)
+    print('    shifting dfl by %.2f um (%.0f slices)' % (s * 1e6, shift_n))
     if shift_n == 0:
+        print('      returning original')
         return dfl
     else:
         start = time.time()

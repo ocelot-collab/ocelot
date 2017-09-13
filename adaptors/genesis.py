@@ -1586,65 +1586,15 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
         # out.dt=out('zsep') * out('xlamds') / speed_of_light
         out.beam_charge = np.sum(out.I * out.dt)
         out.sn_Imax = np.argmax(out.I)  # slice number with maximum current
-        out.pulse_energy = np.sum(out.power * out.dt, axis=0)
         
-        # print(dir(out))
+        if read_level >= 2:
+            out.pulse_energy = np.sum(out.power * out.dt, axis=0)
         
         if read_level >= 3:
-            
             out.calc_spec(npad=2)
             # out.phase_fix()
             # out.calc_radsize(weigh_transv=1)
             
-            # if debug > 0:
-                # print ('      calculating spectrum')
-            # # p_mid_n = out.p_mid / (2 * out.leng / out('ncar')) #normalized on-axis power per pixel area
-            # # out.spec = abs(np.fft.fft(np.sqrt(np.array(out.p_mid)) * np.exp(1.j * np.array(out.phi_mid)), axis=0))**2 / (2 * out.leng / out('ncar'))**2 / 1e10 /np.sum(out.p_mid * out.dt, axis=0)#/ sqrt(out.nSlices)
-            # p_mid_n = out.p_mid / (2 * out.leng / out('ncar'))**2
-            # out.spec = abs(np.fft.fft(np.sqrt(np.array(p_mid_n)) * np.exp(1.j * np.array(out.phi_mid)), axis=0))**2 * out.dt**2 * 1e10 #arb.units, normalized to mesh pixel, temporal slice size and slice number.
-            # if debug > 1:
-                # print ('        done')
-            
-            # e_0 = h_eV_s * speed_of_light / out('xlamds')
-            # out.freq_ev = h_eV_s * np.fft.fftfreq(len(out.spec), d=out('zsep') * out('xlamds') * out('ishsty') / speed_of_light) + e_0  # d=out.dt
-
-            # out.spec = np.fft.fftshift(out.spec, axes=0)
-            # out.freq_ev = np.fft.fftshift(out.freq_ev, axes=0)
-            # out.freq_lamd = h_eV_s * speed_of_light * 1e9 / out.freq_ev
-            # out.sliceKeys_used.append('spec')
-            
-            
-            
-            # phase_fix = 1  # the way to display the phase, without constant slope caused by different radiation wavelength from xlamds. phase is set to 0 at maximum power slice.
-            # if phase_fix:
-                # if debug > 0:
-                    # print ('      fixing phase display')
-                # out.phi_mid_disp = deepcopy(out.phi_mid)
-                # for zi in range(shape(out.phi_mid_disp)[1]):
-                    # if debug > 1:
-                        # print ('      fixing phase display: ' + str(zi) + ' of ' + str(range(shape(out.phi_mid_disp)[1])))
-                    # maxspectrum_index = np.argmax(out.spec[:, zi])
-                    # maxspower_index = np.argmax(out.power[:, zi])
-                    # maxspectrum_wavelength = out.freq_lamd[maxspectrum_index] * 1e-9
-                    # phase = np.unwrap(out.phi_mid[:, zi])
-                    # phase_cor = np.arange(out.nSlices) * (maxspectrum_wavelength - out('xlamds')) / out('xlamds') * out('zsep') * 2 * pi
-                    # phase_fixed = phase + phase_cor
-                    # phase_fixed -= phase_fixed[maxspower_index]
-                    # n = 1
-                    # phase_fixed = (phase_fixed + n * pi) % (2 * n * pi) - n * pi
-                    # out.phi_mid_disp[:, zi] = phase_fixed
-                # out.sliceKeys_used.append('phi_mid_disp')
-
-            # rad_t_size_weighted = 1  # to average the radiation size over slices with radiation power as a weight
-            # if rad_t_size_weighted and out.nSlices != 1:
-                # if debug > 1:
-                    # print ('      averaging the radiation size properly')
-                # if np.amax(out.power) > 0:
-                    # weight = out.power + np.amin(out.power[out.power != 0]) / 1e6
-                # else:
-                    # weight = np.ones_like(out.power)
-                # out.rad_t_size_weighted = np.average(out.r_size * 1e6, weights=weight, axis=0)
-                # out.sliceKeys_used.append('rad_t_size_weighted')
     else:
         out.s = [0]
     

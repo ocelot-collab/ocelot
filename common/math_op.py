@@ -3,7 +3,7 @@ statistical analysis functions, fitting, optimization and the like
 '''
 
 import numpy as np
-from numpy import cos, sin, tan, sqrt, log, exp, sum
+from numpy import cos, sin, tan, sqrt, log, exp, sum, inf
 
 def peaks(x, y, n=0):
     '''
@@ -254,6 +254,10 @@ def find_saturation(power, z, n_smooth=5):
     return z[ii+1], ii+1
     
 def find_nearest_idx(array, value):
+    if value == -np.inf:
+        value = np.amin(array)
+    if value == np.inf:
+        value = np.amax(array)
     return (np.abs(array-value)).argmin()
     
 def find_nearest(array, value):

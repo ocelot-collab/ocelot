@@ -2268,7 +2268,7 @@ def cut_edist(edist,
     return edist_f
 
 
-def set_edist_energy(edist,E_GeV,debug=1):
+def set_edist_energy(edist, E_GeV, debug=1):
     '''
     adds energy to the electron beam so that new average energy is E_GeV in [GeV]
     '''
@@ -2283,13 +2283,13 @@ def set_edist_energy(edist,E_GeV,debug=1):
     
     return edist_out
     
-def disperse_edist(edist,R56):
+def disperse_edist(edist, R56, debug=1):
     '''
     Introduces dispersion (good for simulating weak chicanes)
     delays or advances time coordinate of the particles depending on ther energy with respect to the averaged energy
     '''
     if debug > 0:
-        print('    introducing dispersion to particle distribution file with R56 ', R56, ' m)')
+        print('    introducing dispersion to particle distribution file with R56 ', R56, ' m')
     if not isinstance(edist, GenesisElectronDist):
         raise ValueError('out is neither GenesisOutput() nor a valid path')
     

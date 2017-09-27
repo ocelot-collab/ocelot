@@ -2300,24 +2300,28 @@ def disperse_edist(edist, R56, debug=1):
     
     
     
-def repeat_edist(edist, factor, smear=1):
+def repeat_edist(edist, repeats, smear=1):
     '''
     dublicates the GenesisElectronDist() by given factor
+    repeats  - the number of repetitions
     smear - smear new particles by 1e-3 of standard deviation of parameter
     '''
     if not isinstance(edist, GenesisElectronDist):
         raise ValueError('out is neither GenesisOutput() nor a valid path')
         
+    if repeats < 1:
+        raise ValueError('repeats cannot be smaller that 1')
+        
     edist_out = GenesisElectronDist()
     edist_out.filePath = edist.filePath
 
-    edist_out.x = np.repeat(edist.x, factor)
-    edist_out.y = np.repeat(edist.y, factor)
-    edist_out.xp = np.repeat(edist.xp, factor)
-    edist_out.yp = np.repeat(edist.yp, factor)
-    edist_out.t = np.repeat(edist.t, factor)
-    edist_out.g = np.repeat(edist.g, factor)
-    edist_out.part_charge = edist.part_charge / factor
+    edist_out.x = np.repeat(edist.x, repeats)
+    edist_out.y = np.repeat(edist.y, repeats)
+    edist_out.xp = np.repeat(edist.xp, repeats)
+    edist_out.yp = np.repeat(edist.yp, repeats)
+    edist_out.t = np.repeat(edist.t, repeats)
+    edist_out.g = np.repeat(edist.g, repeats)
+    edist_out.part_charge = edist.part_charge / repeats
 
     if smear:
         n_par = edist_out.len()

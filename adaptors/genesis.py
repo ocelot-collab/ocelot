@@ -989,7 +989,7 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', debug=1):
         if inp.lat != None:
             if debug > 1:
                 print ('    writing ' + inp_file + '.lat')
-            open(inp_path + '.lat', 'w').write(generate_lattice(inp.lat, unit=inp.xlamd*inp.delz, energy=inp.gamma0 * m_e_GeV))
+            open(inp_path + '.lat', 'w').write(generate_lattice(inp.lat, unit=inp.xlamd*inp.delz, energy=inp.gamma0 * m_e_GeV, debug = debug))
             inp.latticefile = inp_file + '.lat'
 
     if inp.beamfile == None:
@@ -3032,16 +3032,17 @@ def rad_file_str(rad):
 '''
 
 
-def generate_lattice(lattice, unit=1.0, energy=None, debug=False, min_phsh = False):
-
-    print ('generating lattice file...')
+def generate_lattice(lattice, unit=1.0, energy=None, debug=1, min_phsh = False):
+    if debug > 0:
+        print ('generating lattice file...')
+    if debug > 1:
+        print('minimum phase shift = ',min_phsh)
 
     lat = '# header is included\n? VERSION= 1.00  including new format\n? UNITLENGTH= ' + str(unit) + ' :unit length in header\n'
     undLat = ''
     quadLat = ''
     driftLat = ''
 
-    e0 = lattice.sequence[0]
     prevPos = 0
     prevLen = 0
     prevPosQ = 0
@@ -3055,25 +3056,30 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=False, min_phsh = Fal
     gamma = energy / m_e_GeV
 
     for e in lattice.sequence:
-
+        
+        if debug > 1:
+            print(e.__class__)
+        
         l = float(e.l)
 
         # print e.type, pos, prevPos
         if e.__class__ == Undulator:
-
             l = float(e.nperiods) * float(e.lperiod)
 
             undLat += 'AW' + '    ' + str(e.Kx * np.sqrt(0.5)) + '   ' + str(round(l / unit, 2)) + '  ' + str(round((pos - prevPos - prevLen) / unit, 2)) + '\n'
 
-            if debug:
+            if debug > 1:
                 print ('added und ' + 'pos=' + str(pos) + ' prevPos=' + str(prevPos) + ' prevLen=' + str(prevLen))
-
-            if prevLen > 0:
+            
+            if prevLen <= 0:
+                
+                K_rms = e.Kx * np.sqrt(0.5)
+                
+            else:
                 #drifts.append([str( (pos - prevPos ) / unit ), str(prevLen / unit)])
-                if debug:
+                if debug > 1:
                     print ('appending drift' + str((prevLen) / unit))
                 L = pos - prevPos - prevLen #intersection length [m]
-                K_rms = e.Kx * np.sqrt(0.5)
                 
                 if min_phsh:
                     xlamds = e.lperiod * (1 + K_rms**2) / (2 * gamma**2)
@@ -3084,7 +3090,9 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=False, min_phsh = Fal
                     driftLat += 'AD' + '    ' + str(K_rms_add) + '   ' + str(round((L) / unit, 2)) + '  ' + str(round(prevLen / unit, 2)) + '\n'
                 else:
                     driftLat += 'AD' + '    ' + str(K_rms) + '   ' + str(round((L) / unit, 2)) + '  ' + str(round(prevLen / unit, 2)) + '\n'
-            
+                
+                K_rms = e.Kx * np.sqrt(0.5)
+                
             prevPos = pos
             prevLen = l
 
@@ -3096,7 +3104,7 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=False, min_phsh = Fal
             # k = float(energy) * float(e.k1) / e.l #*  (1 +  e.l / unit - int(e.l / unit) )
             # k = float(energy) * float(e.k1) * 0.2998 / e.l #*  (1 +  e.l / unit - int(e.l / unit) )
             k = float(energy) * float(e.k1) / speed_of_light * 1e9
-            if debug:
+            if debug > 1:
                 print ('DEBUG' + str(e.k1) + ' ' + str(k) + ' ' + str(energy))
             quadLat += 'QF' + '    ' + str(k) + '   ' + str(round(e.l / unit, 2)) + '  ' + str(round((pos - prevPosQ - prevLenQ) / unit, 2)) + '\n'
             prevPosQ = pos

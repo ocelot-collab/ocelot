@@ -2268,14 +2268,33 @@ def cut_edist(edist,
     return edist_f
 
 
-def set_edist_energy(edist,E_GeV):
-
+def set_edist_energy(edist,E_GeV,debug=1):
+    '''
+    adds energy to the electron beam so that new average energy is E_GeV in [GeV]
+    '''
+    if debug > 0:
+        print('    scaling particle distribution file energy to ', E_GeV, ' GeV')
     if not isinstance(edist, GenesisElectronDist):
         raise ValueError('out is neither GenesisOutput() nor a valid path')
     
     edist_out = deepcopy(edist)
     edist_out.g -= np.mean(edist_out.g)
     edist_out.g += E_GeV * 1e9 / m_e_eV
+    
+    return edist_out
+    
+def disperse_edist(edist,R56):
+    '''
+    Introduces dispersion (good for simulating weak chicanes)
+    delays or advances time coordinate of the particles depending on ther energy with respect to the averaged energy
+    '''
+    if debug > 0:
+        print('    introducing dispersion to particle distribution file with R56 ', R56, ' m)')
+    if not isinstance(edist, GenesisElectronDist):
+        raise ValueError('out is neither GenesisOutput() nor a valid path')
+    
+    edist_out = deepcopy(edist)
+    edist_out.t += R56 * (edist_out.g - np.mean(edist_out.g)) / edist_out.g / speed_of_light
     
     return edist_out
     

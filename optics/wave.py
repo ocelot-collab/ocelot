@@ -1370,55 +1370,39 @@ def calc_ph_sp_dens(spec, freq_ev, n_photons, spec_squared=1):
     return spec * norm_factor
     
     
-def model_fel_pulse(spec_center = 500, spec_res = 0.01, spec_width = 2.5, spec_range = (None,None), pulse_length = 6, pulse_energy_av = 1e-3, flattop = 0, events = 1):
+def model_fel_pulse(spec_center = 500, spec_res = 0.01, spec_width = 2.5, spec_range = (None,None), pulse_length = 6, pulse_energy_av = 1e-3, flattop = 0, n_events = 1):
     '''
     Models FEL pulse(s) based on Gaussian statistics
     spec_center - central photon energy in eV
     spec_res - spectral resolution in eV
-    spec_width - width of spectrum in eV
-    spec_range = (E1, E2) - energy range of the spectrum. If not defined, spec_range = (spec_center - spec_width*10, spec_center + spec_width*10)
-    pulse_length - longitudinal size of the pulse in um
+    spec_width - width of spectrum in eV (fwhm of E**2)
+    spec_range = (E1, E2) - energy range of the spectrum. If not defined, spec_range = (spec_center - spec_width*5, spec_center + spec_width*5)
+    pulse_length - longitudinal size of the pulse in um (fwhm of E**2)
     pulse_energy_av - expected average energy of the pulses in Joules
     flattop - if true, flat-top pulse in time domain is generated with length 'pulse_length' in um
-    events - number of spectra to be generated
+    n_events - number of spectra to be generated
 
     return tuple of 4 arguments: (ph_en, fd, s, td)
     ph_en - colunm of photon energies in eV with size (spec_range[2]-spec_range[1])/spec_res
-    fd - matrix of radiation in frequency domain with shape ((spec_range[2]-spec_range[1])/spec_res, events), normalized such that np.sum(abs(fd)**2) is photon spectral density, i.e: np.sum(abs(fd)**2)*spec_res = N_photons
+    fd - matrix of radiation in frequency domain with shape ((spec_range[2]-spec_range[1])/spec_res, n_events), normalized such that np.sum(abs(fd)**2) is photon spectral density, i.e: np.sum(abs(fd)**2)*spec_res = N_photons
     s - colunm of longitudinal positions along the pulse in yime domain in um
-    td - matrix of radiation in time domain with shape ((spec_range[2]-spec_range[1])/spec_res, events), normalized such that abs(td)**2 = radiation_power
+    td - matrix of radiation in time domain with shape ((spec_range[2]-spec_range[1])/spec_res, n_events), normalized such that abs(td)**2 = radiation_power
     '''
-
-
+    
+    spec_extend = 5
+    
     if spec_range == (None,None):
-        spec_range = (spec_center - spec_width*10, spec_center + spec_width*10)
+        spec_range = (spec_center - spec_width*spec_extend, spec_center + spec_width*spec_extend)
+    
+    pulse_length_sigm = pulse_length / (2*sqrt(2*log(2)))
+    spec_width_sigm = spec_width / (2*sqrt(2*log(2)))
     
     ph_en = np.arange(spec_range[0], spec_range[1], spec_res)
-    N = len(ph_en)
-    print('N points = ', N)
-    #spec_int = np.abs(np.random.randn(N))
-    #spec_ph = np.random.uniform(-np.pi,np.pi,N)
-    # single pulse
-    #spec_ampl = np.random.normal(size=N) + 1j * np.random.normal(size=N)
-    # multi events
-    fd_ampl = np.random.randn(N,events) + 1j * np.random.randn(N,events)
-    
-    fd_env = np.exp(-(ph_en - spec_center)**2 / 2 / spec_width**2)
-    #spec_env = np.ones_like(ph_en)
-    fd = fd_ampl * np.sqrt(fd_env[:, np.newaxis])
-    #spec = spec_int * spec_env * exp(1j * spec_ph)
-    
-    #plt.figure(450)
-    #plt.clf()
-    #plt.plot(ph_en,abs(fd)**2)
-    #plt.show()
-    
-    td = np.fft.ifft(fd, axis=0)
-    td = np.fft.ifftshift(td, axes=0)
-    
-    s = np.linspace(0, 2*np.pi / (ph_en[1] - ph_en[0]) * hr_eV_s * speed_of_light * 1e6, N)
-    ds = s[1] - s[0]
-    s0 = np.mean(s)
+    n_points = len(ph_en)
+    print('N_points * N_events = %i * %i'  %(n_points, n_events))
+
+    fd_env = np.exp(-(ph_en - spec_center)**2 / 2 / spec_width_sigm**2)
+    s = np.linspace(0, 2*np.pi / (ph_en[1] - ph_en[0]) * hr_eV_s * speed_of_light * 1e6, n_points)
     
     if flattop:
         td_env = np.zeros_like(s)
@@ -1426,44 +1410,29 @@ def model_fel_pulse(spec_center = 500, spec_res = 0.01, spec_width = 2.5, spec_r
         ir = find_nearest_idx(s, np.mean(s)+pulse_length/2)
         td_env[il:ir]=1
     else:
-        td_env = np.exp(-(s-s0)**2 / 2 / pulse_length**2)
+        s0 = np.mean(s)
+        td_env = np.exp(-(s-s0)**2 / 2 / pulse_length_sigm**2)
+        
+    fd_ampl = np.random.randn(n_points,n_events) + 1j * np.random.randn(n_points,n_events)
     
-    td *= np.sqrt(td_env[:, np.newaxis])
+    fd = fd_ampl * sqrt(fd_env[:, np.newaxis])
+    td = np.fft.ifft(fd, axis=0)
+    td = np.fft.ifftshift(td, axes=0)
+    td *= sqrt(td_env[:, np.newaxis])
+    
     #normalization for average pulse energy
-    
+    ds = s[1] - s[0]
     pulse_energies = np.sum(abs(td)**2, axis=0) * ds * 1e-6 / speed_of_light
     scale_coeff = pulse_energy_av / np.mean(pulse_energies)
     td *= sqrt(scale_coeff)
-    
+
     fd = np.fft.fftshift(td, axes=0)
     fd = np.fft.fft(fd, axis=0)
-    
+
     #normalization for photon spectral density
     n_photons = pulse_energies * scale_coeff / q_e / spec_center
     fd = calc_ph_sp_dens(fd, ph_en, n_photons, spec_squared=0)
     
-    # if show_plots:
-        # p_int = abs(td)**2
-        # plt.figure('Power')
-        # plt.clf()
-        # plt.plot(s, p_int, color=[0.9,0.9,0.9])
-        # plt.plot(s, p_int[:,0], color=[0.5,0.5,0.5])
-        # plt.plot(s, np.mean(p_int, axis = 1),'k',linewidth=3)
-        # plt.ylabel('power')
-        # plt.xlabel('[um]')
-        # del(p_int)
-    
-        # s_int = abs(fd)**2
-        # plt.figure('Spectrum')
-        # plt.clf()
-        # plt.plot(ph_en, s_int, color=[0.9,0.9,0.9])
-        # plt.plot(ph_en, s_int[:,0], color=[0.5,0.5,0.5])
-        # plt.plot(ph_en, np.mean(s_int, axis = 1),'k',linewidth=3)
-        # plt.ylabel('spectral density')
-        # plt.xlabel('[eV]')
-        # del(s_int)
-    
-        # plt.show()
 
     return (ph_en, fd, s, td)
     

@@ -134,7 +134,8 @@ def load_stucture_factors(file_name):
 def save_stucture_factors(cdata, file_name):
     import pickle
     print ('saving structure factors to', file_name)
-    pickle.dump(cdata, open(file_name, 'wb'))
+    # pickle.dump(cdata, open(file_name, 'wb')) #original
+    pickle.dump(cdata, open(file_name, 'wb'), pickle.HIGHEST_PROTOCOL) # fix for "No module named 'ocelot.optics.bragg\r'" error in Windows
 
 
 def F_hkl(cryst, ref_idx, lamb, temp):
@@ -166,9 +167,11 @@ def F_hkl(cryst, ref_idx, lamb, temp):
     de = cdata.ev[1] - cdata.ev[0]
     i_e = int( (target_ev - cdata.ev[0]) / de )
 
-    print ('using ', cdata.ev[i_e])
-
-    return cdata.f000[i_e], cdata.fh[i_e], cdata.fhbar[i_e]
+    # return cdata.f000[i_e], cdata.fh[i_e], cdata.fhbar[i_e]
+    f000 = np.interp(target_ev, cdata.ev, cdata.f000)
+    fh = np.interp(target_ev, cdata.ev, cdata.f000)
+    fhbar = np.interp(target_ev, cdata.ev, cdata.f000)
+    return f000, fh, fhbar
 
 
 

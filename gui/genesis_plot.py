@@ -368,7 +368,7 @@ def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espre
     if showfig:
         plt.show()
     else:
-        plt.close()
+        plt.close('all')
 
 
 def subfig_z_power_curr(ax_curr, g, zi=None, x_units='um', legend=False):
@@ -1752,7 +1752,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
             print('      showing dfl')
         plt.show()
     else:
-        plt.close()
+        plt.close('all')
         # plt.close(fig)
 
     if return_proj:
@@ -3001,7 +3001,7 @@ def plot_dfl_waistscan(sc_res, fig_name=None, showfig=True, savefig=0, debug=1):
             print('      showing fig')
         plt.show()
     else:
-        plt.close(fig)
+        plt.close('all')
 
 
 def plot_trf(trf, mode='tr', autoscale=0, showfig=True, savefig=None, fig_name=None):
@@ -3108,7 +3108,7 @@ def plot_trf(trf, mode='tr', autoscale=0, showfig=True, savefig=None, fig_name=N
     if showfig:
         plt.show()
     else:
-        plt.close(trf_fig)
+        plt.close('all')
         
 
 def plot_stokes_values(S,fig=None,s_lin=0, norm=0, showfig=True, gw=1):
@@ -3156,7 +3156,7 @@ def plot_stokes_values(S,fig=None,s_lin=0, norm=0, showfig=True, gw=1):
         if showfig:
             plt.show()
         else:
-            plt.close()
+            plt.close('all')
         
         
 def plot_stokes_angles(S,fig=None,showfig=True):
@@ -3185,7 +3185,7 @@ def plot_stokes_angles(S,fig=None,showfig=True):
         if showfig:
             plt.show()
         else:
-            plt.close()
+            plt.close('all')
         
 '''
     scheduled for removal

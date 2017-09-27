@@ -2046,8 +2046,10 @@ def max_dpa_dens(out, dpa, slice_pos=None, slice_num=None, repeat=1, bins=(50,50
 
 def dpa2edist(out, dpa, num_part=1e5, smear=1, debug=1):
     '''
+    Convert dpa to edist objects
     reads GenesisParticlesDump() object
     returns GenesisElectronDist() object
+    num_part - desired approximate number of particles in edist
     smear - whether to shuffle macroparticles smearing microbunching
     '''
     import random
@@ -2065,27 +2067,20 @@ def dpa2edist(out, dpa, num_part=1e5, smear=1, debug=1):
     zsep = int(out('zsep'))
     gen_I = out.I
     gen_t = out.t
+    num_part = int(num_part)
 
-    # if dpa==None:
-    # dpa=out.filePath+'.dpa'
-    # if dpa.__class__==str:
-    # try:
-    # dpa=read_dpa_file(dpa, nbins=nbins, npart=npart,debug=debug)
-    # except IOError:
-    # print ('      ERR: no such file "'+dpa+'"')
-    # print ('      ERR: reading "'+out.filePath+'.dpa'+'"')
-    # dpa=read_dpa_file(out.filePath+'.dpa', nbins=nbins, npart=npart,debug=debug)
-    # if dpa.__class__!=GenesisParticles:
-    # print('   could not read particle file')
+    if (npart / nbins) % 1 != 0:
+        raise ValueError('non-integer number of particles per bin')
+    else:
+        npart_per_bin = int(npart / nbins)
 
     m = np.arange(nslice)
-    m = np.tile(m, (nbins, npart / nbins, 1))
+    m = np.tile(m, (nbins, npart_per_bin, 1))
     m = np.rollaxis(m, 2, 0)
     # print('shape_m='+str(shape(m)))
     
-    
     if smear:
-        z = dpa.ph * xlamds / 2 / pi + m * xlamds * zsep + xlamds * zsep * (1 - np.random.random((nslice, nbins, int(npart / nbins))))
+        z = dpa.ph * xlamds / 2 / pi + m * xlamds * zsep + xlamds * zsep * (1 - np.random.random((nslice, nbins, npart_per_bin)))
     else:
         z = dpa.ph * xlamds / 2 / pi + m * xlamds * zsep
 
@@ -2095,18 +2090,18 @@ def dpa2edist(out, dpa, num_part=1e5, smear=1, debug=1):
 
     pick_n = np.interp(t_scale, gen_t, gen_I)
     if debug > 1:
-        print('sum pick_n=' + str(sum(pick_n)))
+        print('sum pick_n = ' + str(sum(pick_n)))
     if debug > 1:
-        print('npart=' + str(npart))
+        print('npart = ' + str(npart))
     if debug > 1:
-        print('num_part=' + str(num_part))
+        print('num_part = ' + str(num_part))
     pick_n = pick_n / sum(pick_n) * num_part
     if max(pick_n) > npart:
         pick_n = pick_n / max(pick_n) * npart
     pick_n = pick_n.astype(int)
     # ratio=ceil(num_part/np.sum(pick_n))
     ratio = 1
-    
+
     t = np.reshape(t, (nslice, npart))
     e = np.reshape(dpa.e, (nslice, npart))
     x = np.reshape(dpa.x, (nslice, npart))
@@ -2137,8 +2132,12 @@ def dpa2edist(out, dpa, num_part=1e5, smear=1, debug=1):
     edist.g = np.flipud(edist.g)
 
     edist.part_charge = out.beam_charge / edist.len()
+    if debug > 1:
+        print('edist.len() = ' + str(edist.len()))
     # edist.charge=out.beam_charge
     edist.filePath = dpa.filePath + '.edist'
+    if debug > 1:
+        print('edist.filePath = ' + edist.filePath)
     # print 'max_y_out', np.amax(t_out)
     # print 'e_out', np.amax(e_out),np.amin(e_out)
 
@@ -2230,7 +2229,8 @@ def cut_edist(edist,
               x_lim=(-inf, inf),
               xp_lim=(-inf, inf),
               y_lim=(-inf, inf),
-              yp_lim=(-inf, inf), debug=1):
+              yp_lim=(-inf, inf), 
+              s_lim=None, debug=1):
     '''
     cuts GenesisElectronDist() in phase space
     '''
@@ -2240,8 +2240,11 @@ def cut_edist(edist,
     if debug > 0:
         print ('    cutting particle distribution file')
     start_time = time.time()
-
-    index_t = logical_or(edist.t < t_lim[0], edist.t > t_lim[1])
+    
+    if s_lim is not None:
+        index_t = logical_or(edist.t < s_lim[0]/speed_of_light, edist.t > s_lim[1]/speed_of_light)
+    else:
+        index_t = logical_or(edist.t < t_lim[0], edist.t > t_lim[1])
     index_e = logical_or(edist.g < g_lim[0], edist.g > g_lim[1])
     index_x = logical_or(edist.x < x_lim[0], edist.x > x_lim[1])
     index_y = logical_or(edist.y < y_lim[0], edist.y > y_lim[1])
@@ -2260,7 +2263,7 @@ def cut_edist(edist,
     if debug > 0:
         print('      %.2f percent cut' % ((edist.charge() - edist_f.charge()) / edist.charge() * 100))
     if debug > 0:
-        print('      done in %s sec' % (time.time() - start_time))
+        print('      done in %.2f sec' % (time.time() - start_time))
 
     return edist_f
 

@@ -190,7 +190,7 @@ def app(environ, start_response):
                 lat = MagneticLattice(sase)
     
                 tw0 = Twiss(beam)
-                print tw0
+                print (tw0)
                 tws=twiss(lat, tw0, nPoints = 1000)
                 p1, = ax.plot(map(lambda p: p.s, tws), map(lambda p: p.beta_x, tws), lw=2.0)
                 p2, = ax.plot(map(lambda p: p.s, tws), map(lambda p: p.beta_y, tws), lw=2.0)

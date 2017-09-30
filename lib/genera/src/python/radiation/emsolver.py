@@ -16,8 +16,6 @@ from os import name as os_name
 from os import environ
 
 
-
-
 #from pylab import *
 flag_pyOCL = True
 try:
@@ -79,7 +77,7 @@ def radiation(em_screen, list_motion, gamma, beam_current,undulator, mode_proc):
             print ("GPU-mode was changed on CPU-mode", max_work_item)
     if flag_pyOCL == False and mode_proc == "GPU":
         mode_proc = "CPU"
-        print "GPU-mode was changed on CPU-mode. pyOpenCL is absent "
+        print ("GPU-mode was changed on CPU-mode. pyOpenCL is absent ")
     em_screen.zerosArray()
     if mode_proc == "CPU":
         if os_name == "nt":

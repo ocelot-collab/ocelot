@@ -26,7 +26,7 @@ def show_output(g, show_field = False, output_file = None, show_slice=0):
     
     nslice = len(g.sliceValues.keys())
     power_s = np.zeros(nslice)
-    for i in xrange( nslice ):
+    for i in range( nslice ):
         power +=  np.array(g.sliceValues[g.sliceValues.keys()[i]]['power']) / nslice
         pend =  g.sliceValues[g.sliceValues.keys()[i]]['power'][-1]
         power_s[i] = pend
@@ -49,7 +49,7 @@ def show_output(g, show_field = False, output_file = None, show_slice=0):
     
     smax = nslice * zsep * xlamds   
                  
-    print 'wavelength ', xlamds
+    print ('wavelength ', xlamds)
     
     if show_field:
         #from mpi4py import MPI
@@ -57,10 +57,10 @@ def show_output(g, show_field = False, output_file = None, show_slice=0):
         #comm = MPI.COMM_WORLD
         #slices = readRadiationFile_mpi(comm=comm, fileName=file+'.dfl', npoints=npoints)
         slices = readRadiationFile(fileName=output_file + '.dfl', npoints=npoints)
-        print 'slices:', slices.shape
+        print ('slices:', slices.shape)
     
         E = np.zeros_like(slices[0,:,:])
-        for i in xrange(slices.shape[0]): E += np.multiply(slices[i,:,:], slices[i,:,:].conjugate())
+        for i in range(slices.shape[0]): E += np.multiply(slices[i,:,:], slices[i,:,:].conjugate())
     
         #Z = E*E.conjugate()
     
@@ -71,7 +71,7 @@ def show_output(g, show_field = False, output_file = None, show_slice=0):
     
         fig = plt.figure()
         P = np.zeros_like(slices[:,0,0])
-        for i in xrange(len(P)):
+        for i in range(len(P)):
             #s = slices[i,int(npoints/2),int(npoints/2)]
             s = sum( np.abs(np.multiply(slices[i,:,:], slices[i,:,:])) )
             P[i] = abs(s*s.conjugate()) * (dgrid**2 / npoints )**2  
@@ -91,7 +91,7 @@ def show_output_old(g, show_field = False, output_file = None):
     
     nslice = len(g.sliceValues.keys())
     power_s = np.zeros(nslice)
-    for i in xrange( nslice ):
+    for i in range( nslice ):
         power +=  np.array(g.sliceValues[g.sliceValues.keys()[i]]['power']) / nslice
         pend =  g.sliceValues[g.sliceValues.keys()[i]]['power'][-1]
         power_s[i] = pend
@@ -112,7 +112,7 @@ def show_output_old(g, show_field = False, output_file = None):
     
     smax = nslice * zsep * xlamds 
                      
-    print 'npoints, nslice', npoints, nslice
+    print ('npoints, nslice', npoints, nslice)
     
     
     if show_field:
@@ -121,7 +121,7 @@ def show_output_old(g, show_field = False, output_file = None):
         #comm = MPI.COMM_WORLD
         #slices = readRadiationFile_mpi(comm=comm, fileName=file+'.dfl', npoints=npoints)
         slices = readRadiationFile(fileName=output_file + '.dfl', npoints=npoints)
-        print 'slices:', slices.shape
+        print ('slices:', slices.shape)
     
         E = np.zeros_like(slices[0,:,:])
         for i in xrange(slices.shape[0]): E += slices[i]
@@ -135,7 +135,7 @@ def show_output_old(g, show_field = False, output_file = None):
     
         fig = plt.figure()
         P = np.zeros_like(slices[:,0,0])
-        for i in xrange(len(P)):
+        for i in range(len(P)):
             s = slices[i,int(npoints/2),int(npoints/2)]
         #s = sum(slices[i,:,:])
             P[i] = abs(s*s.conjugate()) * (dgrid**2 / npoints )**2  
@@ -154,9 +154,9 @@ def show_plots(displays, fig):
     n2 = (len(displays) -1) / n1 +1
     #print n1, n2
     fmt = str(n1)+ str(n2)
-    print fmt
+    print (fmt)
     
-    for i in xrange(len(displays)):
+    for i in range(len(displays)):
         ax = fig.add_subplot(fmt + str(i+1))
         ax.grid(True)
         for f in displays[i].data:

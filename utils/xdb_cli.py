@@ -19,7 +19,7 @@ def test_twiss():
     #rematch(18.0, l_fodo, qdh, lat, extra_fodo, beam, qf, qd) # jeez...
     
     tw0 = Twiss(beam)
-    print tw0
+    print (tw0)
     tws=twiss(lat, tw0, nPoints = 1000)
     
     f=plt.figure()
@@ -36,7 +36,7 @@ def test_twiss():
     
 def create_db(index_file):
     #index_file = '/home/iagapov/data/xdb/test/index.h5'
-    print 'creating database', index_file 
+    print ('creating database', index_file)
     xdb = Xdb(index_file=index_file, mode='w')
     xdb.create_index()
         
@@ -54,15 +54,15 @@ def create_db(index_file):
 
     xdb.file.close()      
 
-    print 'done'
+    print( 'done')
     
     
 def copy_group(in_file, out_file, path, in_group = 'sase', out_group='/FEL'):
-    print in_file, out_file, path
+    print (in_file, out_file, path)
     
     f = h5py.File(out_file, 'r+')
     new_group = out_group + '/' + path
-    print 'creating group', new_group    
+    print ('creating group', new_group    )
     outfile_root = f.create_group(new_group)
 
     f.close()
@@ -85,17 +85,17 @@ def copy_group(in_file, out_file, path, in_group = 'sase', out_group='/FEL'):
         obj_type = h5py.h5i.get_type(obj_id)
         if obj_type == h5py.h5i.DATASET:
             # If its a dataset, make a link to the original file
-            print "Copy object : ",name
+            print ("Copy object : ",name)
             h5py.h5o.copy(infile_root, name, outfile_root, name)
             #outfile_root.links.create_external(name, infilename, name)
         elif obj_type == h5py.h5i.GROUP:
             # If its a group, make corresponding group in the output file
             # (can't use h5ocopy because that would copy the contents too)
-            print "Make group  : ",name
+            print ("Make group  : ",name)
             h5py.h5g.create(outfile_root, name)
         else:
             # Anything else gets copied
-            print "Copy object : ",name
+            print ("Copy object : ",name)
             h5py.h5o.copy(infile_root, name, outfile_root, name)
         return None
     
@@ -136,21 +136,21 @@ def plot_stats(idx='', base='', root='/FEL/'):
     # gauss fit
     mu, sig = fit_gauss_1d(t, p_mean)
     sig2 = fwhm(t, p_mean)
-    print 'pulse duration, fs, (2*rms/ FWHM): ', 2*sig, sig2
+    print ('pulse duration, fs, (2*rms/ FWHM): ', 2*sig, sig2)
     E_pulse = np.sum(p_med) * ( 1.e-15*(t[-1] - t[0]) ) / len(t)
-    print 'Pulse energy [mJ]: ', E_pulse * 1.e3
+    print ('Pulse energy [mJ]: ', E_pulse * 1.e3)
     
-    print 'Peak power (mean) [GW]: ', np.max(p_mean) / 1.e9
-    print 'Peak power (med) [GW]: ', np.max(p_med) / 1.e9
+    print ('Peak power (mean) [GW]: ', np.max(p_mean) / 1.e9)
+    print ('Peak power (med) [GW]: ', np.max(p_med) / 1.e9)
     
     
     try:
         E_gamma = xdb.file[root + base].attrs["e_gamma"]
         Ng = E_pulse / 1.6e-19 / E_gamma  
-        print 'N photons: ', Ng / 1.e12 , ' x 10^12'
+        print ('N photons: ', Ng / 1.e12 , ' x 10^12')
     except:
         E_gamma = 1.e24
-        print 'N photons: photon energy undefined!!!'
+        print ('N photons: photon energy undefined!!!')
          
     sig = sig2 / 2
     #p3, = ax.plot(t, np.max(p_mean) * np.exp(-(t-mu)**2 / (2.*sig**2)), 'r--', lw=4)
@@ -188,17 +188,17 @@ def plot_stats(idx='', base='', root='/FEL/'):
     # gauss fit
     mu, sig = fit_gauss_1d(t, s_mean)
     sig2 = fwhm(t, s_mean)
-    print 'pulse bandwidth, eV, (2*rms/ FWHM): ', 2*sig, sig2, '(', 2 * 100 * sig/E_gamma, 100 * sig2/E_gamma, '%)'
-    print 'Max brightness (mean) [AU]: ', np.max(s_mean) / 1.e8
-    print 'Max brightness (med) [AU]: ', np.max(s_med) / 1.e8
+    print ('pulse bandwidth, eV, (2*rms/ FWHM): ', 2*sig, sig2, '(', 2 * 100 * sig/E_gamma, 100 * sig2/E_gamma, '%)')
+    print ('Max brightness (mean) [AU]: ', np.max(s_mean) / 1.e8)
+    print ('Max brightness (med) [AU]: ', np.max(s_med) / 1.e8)
 	
     X = E_gamma * 1.e-3
-    print '0.1%bw=', X
+    print ('0.1%bw=', X)
     I = np.sum(s_mean) * (t[1] - t[0])
-    print 'I [x 10^12] =', I / 1.e12
+    print ('I [x 10^12] =', I / 1.e12)
     Y = Ng / I
-    print 'Y' , Ng / (I )
-    print 'Max brightness (mean) [N_phot / 0.1% bw]: ', np.max(s_mean) * Y * X
+    print ('Y' , Ng / (I ))
+    print ('Max brightness (mean) [N_phot / 0.1% bw]: ', np.max(s_mean) * Y * X)
     
     sig = sig2 / 2
     #ax.plot(t, np.max(s_mean) * np.exp(-(t-mu)**2 / (2.*sig**2)), 'r--', lw=3)
@@ -215,7 +215,7 @@ def plot_stats(idx='', base='', root='/FEL/'):
     try:
         dgrid = xdb.file[root + base].attrs['dgrid']
     except:
-        print 'dgrid not defined'
+        print ('dgrid not defined')
         dgrid = 1
     
     ax.imshow(np.abs(f_med), extent = [-1.e3*dgrid/2,1.e3*dgrid/2,-1.e3*dgrid/2,1.e3*dgrid/2], aspect='auto', cmap='YlOrRd')
@@ -240,7 +240,7 @@ def plot_stats(idx='', base='', root='/FEL/'):
     mu, sig = fit_gauss_1d(x, P)
     sig2 = fwhm(x,P)
     #sig /= 1.8
-    print 'spot size, mu m, (2*rms / FWHM): ', 2*sig / 1.e-6,'/', sig2 / 1.e-6
+    print ('spot size, mu m, (2*rms / FWHM): ', 2*sig / 1.e-6,'/', sig2 / 1.e-6)
     #p3, = ax.plot(x, np.sum(P) * (x[-1] - x[0]) / len(x) / (np.sqrt(2*pi) * sig) * np.exp(-(x-mu)**2 / (2*sig**2)), 'r--', lw=3)
 
     ax.grid(True)
@@ -261,7 +261,7 @@ def plot_stats(idx='', base='', root='/FEL/'):
     mu, sig = fit_gauss_1d(x, P)
     sig2 = fwhm(x,P)
     #sig /= 1.8
-    print 'divergence, mu rad, (2*rms / FWHM): ', 2*sig / 1.e-6,'/', sig2 / 1.e-6
+    print ('divergence, mu rad, (2*rms / FWHM): ', 2*sig / 1.e-6,'/', sig2 / 1.e-6)
     #p3, = ax.plot(x, np.sum(P) * (x[-1] - x[0]) / len(x) / (np.sqrt(2*pi) * sig) * np.exp(-(x-mu)**2 / (2*sig**2)), 'r--', lw=3)
     
     
@@ -325,7 +325,7 @@ def extract(path, ran, h5_file = None):
         output_file = run_dir + '/run.' + str(run_id) + '.gout'
             
         if rank == 0:
-            print 'extracting run ', run_id 
+            print ('extracting run ', run_id )
             g = readGenesisOutput(output_file)
         else:
             g = None
@@ -334,7 +334,7 @@ def extract(path, ran, h5_file = None):
     
         
         t2 = time.time()
-        if verbose: print 'file reading:', t2-t1, ' sec'
+        if verbose: print ('file reading:', t2-t1, ' sec')
     
         npoints = g('ncar')
         zstop = g('zstop')
@@ -360,7 +360,7 @@ def extract(path, ran, h5_file = None):
         if rank == 0:
             P = np.zeros_like(slices[:,0,0])
             E = np.zeros_like(slices[:,0,0])
-            for i in xrange(len(P)):
+            for i in range(len(P)):
                 P[i] = sum( np.multiply( np.abs(slices[i,:,:]), np.abs(slices[i,:,:]) ) )
                 
                 #s = sum(  np.multiply(slices[i,:,:]slices[i,:,:])
@@ -405,7 +405,7 @@ def extract(path, ran, h5_file = None):
         slices_2d = np.zeros(slices[0,:,:].shape, dtype=complex)
         
         #print slices_2d.shape
-        for i in xrange(slices.shape[0]):
+        for i in range(slices.shape[0]):
             slices_2d[:,:] += slices[i,:,:]
         
         plot(t, p_med, 'g', lw=3)
@@ -435,7 +435,7 @@ def extract(path, ran, h5_file = None):
         bar( bins[1:] - (bins[1]-bins[0])/2.0 , n, width = (bins[1]-bins[0]), alpha=0.5)
     
         if h5_file != None:
-            print 'writing to ', h5_file
+            print ('writing to ', h5_file)
             xdb = Xdb(index_file=h5_file, mode='w')
             
             params = {}
@@ -476,9 +476,9 @@ def test_print_parameters():
     global g
     g = xdb.file['Undulators']
     for u in g.keys():
-        print u
+        print (u)
         for u2 in g[u].keys():
-            print '  ', u2
+            print ('  ', u2)
 
     # available beams
     global s
@@ -491,7 +491,7 @@ def test_print_parameters():
             s = s +  '*' + name + '\n'
     g = xdb.file['Beams']
     g.visit(printname)
-    print s
+    print (s)
     
 
 import argparse
@@ -533,15 +533,15 @@ if args.extract:
 
 
 if args.plot:
-    print args.format
+    print (args.format)
     if args.format == 'genesis':
-        print 'not implemented'
+        print ('not implemented')
     else:
         plot_stats(idx=args.file, base=args.path, root='/')
     
 
 if args.submit:
-    print 'submitting', args.file, args.path, args.dest  
+    print ('submitting', args.file, args.path, args.dest  )
     import h5py, os
     for f in os.listdir(args.path):
         if f.endswith('.h5'):

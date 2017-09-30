@@ -49,14 +49,14 @@ power_av = None
 spec_av = None
 
 
-runs = xrange(run_start, run_end+1)
+runs = range(run_start, run_end+1)
 
 for run_id in runs:
     run_dir = args.path + '/run_' + str(run_id)
     if args.stage in ['1','3','5']:
         run_file = run_dir + '/run.' + str(run_id) + '.s' + str(args.stage) + '.gout'
         if args.stage == '5' : run_file = run_dir + '/run.' + str(run_id) + '.gout'
-        print 'reading', run_file
+        print ('reading', run_file)
         g = readGenesisOutput(run_file)
         field_file = run_file + '.dfl'
         if args.field_file:
@@ -75,12 +75,12 @@ for run_id in runs:
     else:
         run_file = run_dir + '/run.' + str(run_id) + '.s' + str( int(args.stage) - 1) + '.gout'
         field_file = 'tmp' + str(args.stage) + '.dfl'
-        print 'reading', run_file, 'and', field_file
+        print ('reading', run_file, 'and', field_file)
         g = readGenesisOutput(run_file)
         slices = readRadiationFile(fileName=run_dir + '/' + field_file, npoints=g('ncar'))
         P = np.zeros_like(slices[:,0,0])
         spec = np.zeros_like(slices[:,0,0])
-        for i in xrange(len(P)):
+        for i in range(len(P)):
             P[i] = sum( np.abs(np.multiply(slices[i,:,:], slices[i,:,:].conjugate())) )
 
         t = np.linspace(g.t[0], g.t[-1], len(P))

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtGui
 import pyqtgraph.console
@@ -5,7 +6,7 @@ import numpy as np
 from pyqtgraph.dockarea import *
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
-from __future__ import print_function
+
 
 from ocelot import *
 

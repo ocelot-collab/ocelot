@@ -47,7 +47,7 @@ def extract(output_file):
     
     E = np.zeros_like(pulse, dtype=complex)
 
-    for i in xrange(len(E)):
+    for i in range(len(E)):
         E[i] = np.sqrt(pulse[i]) * np.exp(1.j*phi[i])
         
     #slices = readRadiationFile(fileName=output_file + '.dfl', npoints=npoints)
@@ -57,17 +57,17 @@ def extract(output_file):
     return t, pulse, E
     
 if __name__ == "__main__":
-    print 'simple extraction'
+    print ('simple extraction')
 
     f_name = '9kev_20fs_seeded.txt'
 
-    runs = xrange(50,120)
+    runs = range(50,120)
 
     for id in runs:
         path = sys.argv[1] + '/run_'+ str(id) + '/run.' + str(id) + '.gout'
         t, p, E = extract(path)
         f_obj = open(f_name + '.' + str(id), 'w')
-        for i in xrange(len(t)):
+        for i in range(len(t)):
             f_obj.write("{0}\t{1}\t{2}\n".format(t[i], p[i]/1.e9, E[i]))
 
     plt.plot(t,p)

@@ -37,9 +37,9 @@ myfunc = CDLL(pathToDll)
 
 def errorsBlock(error):
     def printOfStars(phrases, error):
-        print '**********************************************'
-        print '*', phrases, error
-        print '**********************************************'
+        print ('**********************************************')
+        print ('*', phrases, error)
+        print ('**********************************************')
     if error>0:
         phrases =  "Errors Block - OK. Error cod = "
     elif error == -100:

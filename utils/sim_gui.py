@@ -55,7 +55,7 @@ class RunStatCanvas(MyMplCanvas):
         self.axes.bar([0,], [0,], width=0.2, color='b')
 
     def update_figure(self):
-        print 'drawing', self.data.run_ids
+        print ('drawing', self.data.run_ids)
 
         stages = []
         for r_id in self.data.run_ids:
@@ -63,7 +63,7 @@ class RunStatCanvas(MyMplCanvas):
 
         rects = self.axes.bar(self.data.run_ids, self.data.max_powers, width=0.2, color='b', alpha=0.5)
 
-        for i in xrange(len(rects)):
+        for i in range(len(rects)):
             rect = rects[i]
             height = rect.get_height()
             self.axes.text(rect.get_x()+rect.get_width()/2., 0.50*height, 'st. %d'%int(stages[i]), ha='center', va='bottom')
@@ -84,9 +84,9 @@ class RunPulseCanvas(MyMplCanvas):
 
     def update_figure(self):
 
-        print 'drawing', self.data.show_run_id
+        print ('drawing', self.data.show_run_id)
         try:
-            print 'have runs', self.data.runs.keys()
+            print ('have runs', self.data.runs.keys())
             r = self.data.runs[self.data.show_run_id]
 
             #self.axes.set_yscale('log')
@@ -98,15 +98,15 @@ class RunPulseCanvas(MyMplCanvas):
                 p2, = self.axes.plot(r.t, r.power_ref, color='black')
                 self.axes.hold(False)
             except:
-                print 'run has no power_ref'
+                print ('run has no power_ref')
                 self.axes.hold(False)
 
             self.axes.legend([p1], ['run ' + str(self.data.show_run_id)])            
             #self.axes.set_yscale('log')
             
             self.draw()
-        except Exception, e:
-            print 'run not ready...'
+        except Exception as e:
+            print ('run not ready...')
             raise(e)
 
 class RunSpecCanvas(MyMplCanvas):
@@ -122,20 +122,20 @@ class RunSpecCanvas(MyMplCanvas):
     def update_figure(self):
 
         try:
-            print 'drawing', self.data.show_run_id
-            print 'have runs', self.data.runs.keys()
+            print ('drawing', self.data.show_run_id)
+            print ('have runs', self.data.runs.keys())
             r = self.data.runs[self.data.show_run_id]
             
             
             si = np.zeros_like( np.abs(r.spec))
-	    start_id = 0
-            for i in xrange(start_id,self.data.show_run_id +1):
-                print 'averaging run', i
+            start_id = 0
+            for i in range(start_id,self.data.show_run_id +1):
+                print ('averaging run', i)
                 si += np.roll( np.abs(self.data.runs[i].spec)**2, len(r.freq_ev)/2) / int(self.data.show_run_id +1 - start_id)
             
 
             x = np.roll(r.freq_ev, len(r.freq_ev)/2)#[ 4*len(r.spec)/10:6*len(r.spec)/10]
-	    y = np.roll( np.abs(r.spec)**2, len(r.freq_ev)/2)#[ 4*len(r.spec)/10:6*len(r.spec)/10]
+            y = np.roll( np.abs(r.spec)**2, len(r.freq_ev)/2)#[ 4*len(r.spec)/10:6*len(r.spec)/10]
 
 
 
@@ -144,15 +144,15 @@ class RunSpecCanvas(MyMplCanvas):
             p2, = self.axes.plot(x, si, color='b')
             self.axes.hold(False)
 
-	    spec_width = fwhm(x, y)
-	    print 'bw = ', spec_width
-	    print np.max(np.abs(x))
+            spec_width = fwhm(x, y)
+            print ('bw = ', spec_width)
+            print (np.max(np.abs(x)))
 
             self.axes.legend([p1], ['run ' + str(self.data.show_run_id) + ' ' + str(spec_width) + ' ev'])            
             
             self.draw()
-        except Exception, e:
-            print 'run not ready...'
+        except Exception as e:
+            print ('run not ready...')
             raise(e)
 
 
@@ -172,15 +172,15 @@ class RunPowerCanvas(MyMplCanvas):
 
         run_id = self.data.show_run_id
 
-        print 'power_z: drawing', run_id
+        print ('power_z: drawing', run_id)
         try:
-            print 'have runs', self.data.runs.keys()
+            print ('have runs', self.data.runs.keys())
             r = self.data.runs[run_id]
             self.axes.plot(r.z, r.power_z, color='b')
             self.axes.set_title('run ' + str(run_id))
             self.draw()
         except:
-            print 'run not ready...'
+            print ('run not ready...')
 
 class ApplicationWindow(QtGui.QMainWindow):
     def __init__(self):
@@ -236,7 +236,7 @@ class ApplicationWindow(QtGui.QMainWindow):
 
 
     def update_data(self):
-        print 'updating...'
+        print ('updating...')
         data = pickle.load(open(data_file, 'rb'))
         self.data.run_ids = data.runs.keys()
         self.data.max_powers = map(lambda i: data.runs[i].max_power, self.data.run_ids)
@@ -250,12 +250,12 @@ class ApplicationWindow(QtGui.QMainWindow):
         self.data.show_run_id = np.min(self.data.runs.keys())
 
 
-        for r_id in xrange(len(self.data.run_ids)):
+        for r_id in range(len(self.data.run_ids)):
             run_id = self.data.run_ids[r_id]
             if run_id > self.data.show_run_id and self.data.stages[r_id] == self.data.stage: self.data.show_run_id = run_id
 
         #self.data.show_run_id = 21
-        print self.data.run_ids
+        print (self.data.run_ids)
     
 
 qApp = QtGui.QApplication(sys.argv)

@@ -20,13 +20,13 @@ zsep = g('zsep')
 
 smax = nslice * zsep * xlamds 
                  
-print 'zstop=', zstop
-print 'delz=', delz
-print 'xlamd=', xlamd
-print 'xlamds=', xlamds
-print 'npoints', npoints
-print 'nslice', nslice
-print 'zsep', zsep
+print ('zstop=', zstop)
+print ('delz=', delz)
+print ('xlamd=', xlamd)
+print ('xlamds=', xlamds)
+print ('npoints', npoints)
+print ('nslice', nslice)
+print ('zsep', zsep)
 
 nZ = len(g.sliceValues[1]['power']) 
 
@@ -89,7 +89,7 @@ def plot_brightness():
     
     fig = plt.figure()
     ax3 = fig.add_subplot(111)
-    print len(ss), len(arange(1, nZ))
+    print (len(ss), len(arange(1, nZ)))
     m3, = plt.plot(delz*xlamd*2*arange(1, nZ), ss, lw = 3)
     ax4 = ax3.twinx()
     m4, = plt.plot(delz*xlamd*2*arange(1, nZ), pp, 'r--', lw = 3)
@@ -117,7 +117,7 @@ def updatefig(*args):
     m2.set_data(np.arange(len(g.sliceValues.keys())), s)
     
     
-    print 2*i*delz*xlamd, np.max(s)
+    print (2*i*delz*xlamd, np.max(s))
     
     ymin, ymax = ax.get_ylim()
     

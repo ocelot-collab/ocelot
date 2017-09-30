@@ -75,7 +75,7 @@ def find_objects(line, info):
             line_test = line.split("#")[0]
             line_test = line_test.split(":")[1]
         except:
-            print 'crashed on', line
+            print ('crashed on', line)
         #print line_test
         if line_test.find("line")>=0 or line_test.find("subroutine")>0:
             return line

@@ -72,9 +72,9 @@ class Xdb:
 
 
     def submit_1d(self, g, params, name):
-        print 'creating dataset ', name
+        print ('creating dataset ', name)
         data = params[name]
-        print data.shape, data.dtype
+        print (data.shape, data.dtype)
 
         if name in g: del g[name]
         #dset = g.create_dataset(name, (len(data),), dtype='f')
@@ -93,7 +93,7 @@ class Xdb:
         # TODO: add validation        
         for p in params.keys(): 
             data = params[p]
-            print data.__class__
+            print (data.__class__)
             if data.__class__ in (str, float, complex, int):
                 gu.attrs[p] = data
             if data.__class__ == numpy.ndarray:

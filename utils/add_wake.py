@@ -143,7 +143,4 @@ if __name__ == "__main__":
     ax2.plot(beam.z, beam.eloss/1000 , "r")
     ax2.set_ylabel('wake, [kV/m]', color='r')
     show()
-
-
-
-
+"""

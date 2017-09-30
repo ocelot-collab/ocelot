@@ -295,6 +295,14 @@ class ParticleArray:
     def py(self): return self.rparticles[3]
     def tau(self):return self.rparticles[4]
     def p(self):  return self.rparticles[5]
+    
+    @property
+    def t(self):
+        return self.rparticles[4]
+    
+    @t.setter
+    def t(self,value):
+        self.rparticles[4] = value
 
 
 def save_particle_array(filename, p_array):

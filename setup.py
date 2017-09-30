@@ -3,7 +3,7 @@ from os.path import join, dirname
 
 setup(
     name='ocelot',
-    version='17.07rc',
+    version='17.09rc',
     description='Accelerator, radiation and x-ray optics simulation framework',
     author='ocelot-collab',
     author_email='tomin.sergey@gmail.com',

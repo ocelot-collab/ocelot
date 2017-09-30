@@ -9,5 +9,8 @@ setup(
     author_email='tomin.sergey@gmail.com',
     url='https://github.com/ocelot-collab/ocelot',
     packages=find_packages(),
+    install_requires=[
+        'numpy', 'scipy', 'matplotlib'
+    ],
     # long_description=open(join(dirname(__file__), 'README.txt')).read(),
 )

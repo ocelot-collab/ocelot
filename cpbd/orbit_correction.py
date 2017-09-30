@@ -1,11 +1,6 @@
 __author__ = 'Sergey Tomin'
 
 
-#import pickle
-from time import sleep
-
-#import matplotlib.pyplot as plt
-#from ocelot.gui.accelerator import *
 from numpy import diag, shape
 from numpy.linalg import svd
 from scipy.interpolate import splrep, splev
@@ -16,6 +11,7 @@ from ocelot.cpbd.track import *
 from ocelot.cpbd.response_matrix import *
 import copy
 import json
+from time import sleep, time
 
 
 
@@ -253,7 +249,7 @@ class NewOrbit:
         bpm_weights_diag = np.diag( np.append(bpm_weights, [bpm_weights, bpm_weights, bpm_weights]))
         #print("bpm_weights = ", np.shape(bpm_weights), len(orbit))
 
-        self.orbit_svd = OrbitSVD(resp_matrix=rmatrix, orbit=orbit, weights=bpm_weights_diag, epsilon_x=epsilon_x, epsilon_y=epsilon_x)
+        self.orbit_svd = OrbitSVD(resp_matrix=rmatrix, orbit=orbit, weights=bpm_weights_diag, epsilon_x=epsilon_x, epsilon_y=epsilon_y)
 
         #self.orbit_svd = LInfinityNorm(resp_matrix=rmatrix, orbit=orbit, weights=bpm_weights_diag, epsilon_x=epsilon_x,
         #                          epsilon_y=epsilon_x)

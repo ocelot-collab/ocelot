@@ -128,12 +128,12 @@ def read_lattice_elegant(file_flo, file_par):
         if pos>n_par-2:
             break
         elem.l=eval(data_par[pos][2])
-        if elem.type=="quadrupole":
+        if elem.__class__ == Quadrupole:
             elem.k1=eval(data_par[pos+1][2])
             elem.tilt = eval(data_par[pos+2][2])
-        elif elem.type=="sextupole":
+        elif elem.__class__ == Sextupole:
             elem.k2=eval(data_par[pos+1][2])
-        elif elem.type=="bend":
+        elif elem.__class__ == Bend:
             elem.angle=eval(data_par[pos+1][2])
             if stype in ['CRBEND', 'CSRCRBEND', 'CSRCSBEND', "CSBEND"]:
                 elem.e1 = eval(data_par[pos+10][2])
@@ -145,10 +145,10 @@ def read_lattice_elegant(file_flo, file_par):
                 elem.e1=eval(data_par[pos+3][2])
                 elem.e2=eval(data_par[pos+4][2])
                 elem.tilt=eval(data_par[pos+5][2])
-        elif elem.type=="rbend":
+        elif elem.__class__ == RBend:
             elem.angle=eval(data_par[pos+1][2])
             elem.tilt=eval(data_par[pos+12][2])
-        elif elem.type=="undulator":
+        elif elem.__class__ == Undulator:
             elem.l=eval(data_par[pos][2])
             #print( elem.l)
             elem.nperiods=eval(data_par[pos+8][2])/2
@@ -156,21 +156,21 @@ def read_lattice_elegant(file_flo, file_par):
             elem.lperiod=elem.l/elem.nperiods
             elem.Kx=eval(data_par[pos+2][2])
             elem.Ky=0
-        elif elem.type=="cavity":
+        elif elem.__class__ == Cavity:
             elem.l=eval(data_par[pos][2])
             elem.v=eval(data_par[pos+1][2])*1e-9  # V -> GV
             elem.phi=(eval(data_par[pos+2][2])-90)#/180.*np.pi
             elem.f=eval(data_par[pos+3][2])
             elem.delta_e=elem.v*cos(elem.phi)  # in GeV
-        elif elem.type=="hcor":
+        elif elem.__class__ == Hcor:
             elem.l=eval(data_par[pos][2])
-        elif elem.type=="vcor":
+        elif elem.__class__ == Vcor:
             elem.l=eval(data_par[pos][2])
-        elif elem.type=="monitor":
+        elif elem.__class__ == Monitor:
             elem.l=eval(data_par[pos][2])
-        elif elem.type=="marker":
+        elif elem.__class__ == Marker:
             elem.l= 0. # eval(data_par[pos][2])
-        elif elem.type=="drift":
+        elif elem.__class__ == Drift:
             elem.l=eval(data_par[pos][2])
         elem.id = elem.id.replace('.','_')
         elem.id = elem.id.replace('[','_')

@@ -809,7 +809,6 @@ def lattice_transfer_map(lattice, energy):
     Ta = np.zeros((6, 6, 6))
     E = energy
     for i, elem in enumerate(lattice.sequence):
-
         Rb = elem.transfer_map.R(E)
         if lattice.method.global_method == SecondTM:
             Tc = np.zeros((6, 6, 6))
@@ -822,7 +821,6 @@ def lattice_transfer_map(lattice, energy):
                         t2 = 0.
                         for l in range(6):
                             t1 += Rb[i, l] * Ta[l, j, k]
-
                             for m in range(6):
                                 t2 += Tb[i, l, m] * Ra[l, j] * Ra[m, k]
                         Tc[i, j, k] = t1 + t2
@@ -834,6 +832,24 @@ def lattice_transfer_map(lattice, energy):
     lattice.T = unsym_matrix(deepcopy(Ta))
     lattice.R = Ra
     return Ra
+
+
+def second_order_mult(Ra, Ta, Rb, Tb, sym_flag=True):
+    Rc = np.dot(Rb, Ra)
+    Tc = np.zeros((6, 6, 6))
+    Tb = sym_matrix(Tb)
+    for i in range(6):
+        for j in range(6):
+            for k in range(6):
+                t1 = 0.
+                t2 = 0.
+                for l in range(6):
+                    t1 += Rb[i, l] * Ta[l, j, k]
+                    for m in range(6):
+                        t2 += Tb[i, l, m] * Ra[l, j] * Ra[m, k]
+                Tc[i, j, k] = t1 + t2
+    Tc = unsym_matrix(deepcopy(Tc))
+    return Rc, Tc
 
 
 def trace_z(lattice, obj0, z_array):

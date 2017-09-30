@@ -367,7 +367,38 @@ class LinacDisperseTmatrixRM(MeasureResponseMatrix):
         :param tw_init: if tw_init == None, function tries to find periodical solution
         :return: orbit.resp
         """
-        pass
+        if tw_init == None:
+            print("ADD INITIAL TWISS TO LinacDisperseTmatrixRM.calculate(tw_init)")
+        m = len(self.bpms)
+        nx = len(self.hcors)
+        ny = len(self.vcors)
+        self.resp = zeros((2 * m, nx + ny))
+
+        for j, cor in enumerate([item for sublist in [self.hcors, self.vcors] for item in sublist]):
+            print(j, "/", nx + ny, cor.id)
+            Ra = np.eye(6)
+            Ta = np.zeros((6, 6, 6))
+            E = tw_init.E
+            for i, elem in enumerate(self.lat.sequence):
+                if i < cor.lat_inx:
+                    E += elem.transfer_map.delta_e
+                    continue
+                #Tc = np.zeros((6, 6, 6))
+                Rb = elem.transfer_map.R(E)
+                Tb = deepcopy(elem.transfer_map.t_mat_z_e(elem.l, E))
+                #Ra = dot(Rb, Ra)
+                Ra, Ta = second_order_mult(Ra, Ta, Rb, Tb)
+                E += elem.transfer_map.delta_e
+                if elem in self.bpms:
+
+                    n = self.bpms.index(elem)
+
+                    if cor.__class__ == Hcor:
+                        self.resp[n, j] = Ta[0, 1, 5]
+
+                    else:
+                        self.resp[n + m, j] = Ra[2, 3, 5]
+        return self.resp
 
 
 class ResponseMatrix:
@@ -493,7 +524,7 @@ class ResponseMatrix:
         dict_rmatrix["method_name"] = self.method.__class__.__name__ if self.method != None else "None"
         dict_rmatrix["mode"] = self.mode
 
-        with open(filename, 'w') as f:
+        with open(filename, 'w+') as f:
             json.dump(dict_rmatrix, f)
 
     def load(self, filename):

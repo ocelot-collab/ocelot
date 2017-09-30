@@ -29,21 +29,21 @@ def plot3D_data(data, x, y):
 
 def beam_sizes_on_screen(beam, screen):
     if beam.emit_x == 0 or beam.emit_y == 0:
-        print "Emittance switched off. One of emittances is zero"
+        print ("Emittance switched off. One of emittances is zero")
         return False
     beam.sizes()
     screen.beam_size_x = sqrt(beam.sigma_x*beam.sigma_x*1e6 + (beam.sigma_xp*screen.Distance)**2) # mm
     screen.beam_size_y = sqrt(beam.sigma_y*beam.sigma_y*1e6 + (beam.sigma_yp*screen.Distance)**2) # mm
 
     if screen.beam_size_x == 0:
-        print "Emittance switched off. Hor. e-beam size projection on screen is zero"
+        print ("Emittance switched off. Hor. e-beam size projection on screen is zero")
         return False
 
     if screen.beam_size_y == 0:
-        print "Emittance switched off. Ver. e-beam size projection on screen is zero"
+        print ("Emittance switched off. Ver. e-beam size projection on screen is zero")
         return False
-    print "Hor. e-beam size projection on screen: ", screen.beam_size_x, " mm"
-    print "Ver. e-beam size projection on screen: ", screen.beam_size_y, " mm"
+    print ("Hor. e-beam size projection on screen: ", screen.beam_size_x, " mm")
+    print ("Ver. e-beam size projection on screen: ", screen.beam_size_y, " mm")
 
     #if beam.beta_x and beam.beta_y:
     #
@@ -109,14 +109,14 @@ def change_sizes_screen(screen, beam):
                 screen.ny, screen.y_step, screen.y_start, screen.ny_add = change_size(screen.ny, screen.y_step, screen.y_start, screen.beam_size_y) # emittance Y
                 screen.ne, screen.e_step, screen.e_start, screen.ne_add = change_size(screen.ne, screen.e_step, screen.e_start, screen.sigma_e*3.) # energy spread
         else:
-            print "Emittance switched off. Screen sizes are wrong. ne >1 and (nx or ny) >1"
+            print ("Emittance switched off. Screen sizes are wrong. ne >1 and (nx or ny) >1")
 
     elif screen.nx ==1 and screen.ny ==1:
         screen.ne, screen.e_step, screen.e_start, screen.ne_add = change_size(screen.ne, screen.e_step, screen.e_start, screen.sigma_e*3.) # energy spread
     elif screen.ne == 1:
         screen.ne, screen.e_step, screen.e_start, screen.ne_add = change_size(screen.ne, screen.e_step, screen.e_start, screen.sigma_e*3.) # energy spread
     else:
-        print "1_ Emittance switched off. Screen sizes are wrong. ne >1 and (nx or ny) >1"
+        print ("1_ Emittance switched off. Screen sizes are wrong. ne >1 and (nx or ny) >1")
 
 
 
@@ -211,7 +211,7 @@ def spread_on(screen, Pi,Sigma):
 def convolution_all(screen):
     #ypoint*xpoint*je + xpoint*jy + jx
     if  not screen.nx_add and not screen.ny_add and not screen.ne_add:
-        print "no convolution"
+        print ("no convolution")
         return 0
 
     if screen.nx_add and screen.ny_add: #emittance switch on!!
@@ -222,7 +222,7 @@ def convolution_all(screen):
         Sigma = reshape(screen.Sigma, (screen.ne, screen.nx*screen.ny))
     #print "shape = ", shape(Pi)
     if screen.ne_add:
-        print "energy spread on"
+        print ("energy spread on")
         spread_on(screen, Pi,Sigma)
         #plot3D_data(screen.Total, screen.Xph, screen.Yph)
         #plt.show()
@@ -269,10 +269,10 @@ if __name__ == "__main__":
     beam.beta_y = 23.218
     beam.alpha_x = 1.219
     beam.alpha_y = -0.842
-    print em_screen.nx, em_screen.x_start, em_screen.x_step
-    print em_screen.ny, em_screen.y_start, em_screen.y_step
-    print em_screen.ne, em_screen.e_start, em_screen.e_step
+    print (em_screen.nx, em_screen.x_start, em_screen.x_step)
+    print (em_screen.ny, em_screen.y_start, em_screen.y_step)
+    print (em_screen.ne, em_screen.e_start, em_screen.e_step)
     change_sizes_screen(em_screen, beam)
-    print em_screen.nx, em_screen.x_start, em_screen.x_step, em_screen.nx_add
-    print em_screen.ny, em_screen.y_start, em_screen.y_step, em_screen.ny_add
-    print em_screen.ne, em_screen.e_start, em_screen.e_step, em_screen.ne_add
+    print (em_screen.nx, em_screen.x_start, em_screen.x_step, em_screen.nx_add)
+    print (em_screen.ny, em_screen.y_start, em_screen.y_step, em_screen.ny_add)
+    print (em_screen.ne, em_screen.e_start, em_screen.e_step, em_screen.ne_add)

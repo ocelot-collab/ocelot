@@ -242,13 +242,13 @@ def madx_seq2ocelot_seq(list_elem_pos, tot_length, exclude_elems = []):
         #print element
         element.id = term[1]
         pos = term[2]
-        drift = Drift(l = pos - element.l/2. - azimuth, id = "drift_" + str(i))
+        drift = Drift(l = pos - element.l/2. - azimuth, eid = "drift_" + str(i))
         azimuth = pos + element.l/2.
         seq.append(drift)
         seq.append(element)
         #print elem[0].l, elem[1], elem[2]
     len_last_drift = tot_length - list_elem_pos[-1][-1] - list_elem_pos[-1][0].l/2.
-    drift = Drift(l = len_last_drift, id = "drift_last")
+    drift = Drift(l = len_last_drift, eid = "drift_last")
     seq.append(drift)
     return seq
 
@@ -274,7 +274,7 @@ if __name__ == "__main__":
     lines = c2py(lines)
     lines = collect_sequence(lines)
     for line in lines:
-        print line
+        print (line)
     f.close()
     part_name = name_file.split(".")
     part_name[0] += ".py"

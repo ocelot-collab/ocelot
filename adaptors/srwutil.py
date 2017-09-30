@@ -13,7 +13,7 @@ import copy
 from ocelot.cpbd.optics import *
 from ocelot.cpbd.beam import *
 from ocelot.cpbd.elements import *
-from ocelot.rad.sr import UndulatorParameters
+from ocelot.rad.undulator_params import UndulatorParameters
 
 from lib.srwlib import *
 #from lib.srwlib import *
@@ -96,9 +96,9 @@ def readTrajectory(filePath):
 
     f=open(filePath,'r')
     f.readline()
-    for line in f: 
-  	if len(line.strip()) > 1:
-            npTraj += 1 
+    for line in f:
+        if len(line.strip()) > 1:
+            npTraj += 1
   
     #traj.allocate(npTraj)
 
@@ -116,16 +116,16 @@ def readTrajectory(filePath):
     f.readline()
     i = 0
     for line in f:
-	if i < npTraj:
-           #ct, traj.arX[i], traj.arXp[i], traj.arY[i], traj.arYp[i], traj.arZ[i], traj.arZp[i] = map(float, line.strip().split('\t'))
-           ct, traj['x'][i], traj['xp'][i], traj['y'][i], traj['yp'][i], traj['z'][i], traj['zp'][i] = map(float, line.strip().split('\t'))
+        if i < npTraj:
+            #ct, traj.arX[i], traj.arXp[i], traj.arY[i], traj.arYp[i], traj.arZ[i], traj.arZp[i] = map(float, line.strip().split('\t'))
+            ct, traj['x'][i], traj['xp'][i], traj['y'][i], traj['yp'][i], traj['z'][i], traj['zp'][i] = map(float, line.strip().split('\t'))
             
-           if i == 0:
-              traj['ctSrart'] = ct
-           if i == npTraj-1:
-              traj['ctEnd'] = ct
+            if i == 0:
+                traj['ctSrart'] = ct
+            if i == npTraj-1:
+                traj['ctEnd'] = ct
 
-           i += 1 
+            i += 1
  
 
     f.close()
@@ -164,70 +164,70 @@ def readIntensity(filePath, type='spectral'):
     
     f=open(filePath,'r')
     for line in f: 
-      if line.strip().startswith("#"):
-          pass
-      elif line.strip().startswith("@"):
+        if line.strip().startswith("#"):
+            pass
+        elif line.strip().startswith("@"):
           
-          token = line.strip().split()[0]
-          #print token
+            token = line.strip().split()[0]
+            #print token
           
-          if token.startswith("@startPhotonEnergy="):
-              w0=parseParameter(token, "@startPhotonEnergy")
-          if token.startswith("@endPhotonEnergy="):
-              wend=parseParameter(token, "@endPhotonEnergy")
-          if token.startswith("@photonEnergyPoints="):
-              nPointsSpectrum=int(parseParameter(token, "@photonEnergyPoints"))
-          if token.startswith("@xPoints="):
-              intens.nx=parseParameter(token, "@xPoints")
-          if token.startswith("@yPoints="):
-              intens.ny=parseParameter(token, "@yPoints")
-          if token.startswith("@startX="):
-              intens.xmin=parseParameter(token, "@startX")
-          if token.startswith("@endX="):
-              intens.xmax=parseParameter(token, "@endX")
-          if token.startswith("@startY="):
-              intens.ymin=parseParameter(token, "@startY")
-          if token.startswith("@endY="):
-              intens.ymax=parseParameter(token, "@endY")
+            if token.startswith("@startPhotonEnergy="):
+                w0=parseParameter(token, "@startPhotonEnergy")
+            if token.startswith("@endPhotonEnergy="):
+                wend=parseParameter(token, "@endPhotonEnergy")
+            if token.startswith("@photonEnergyPoints="):
+                nPointsSpectrum=int(parseParameter(token, "@photonEnergyPoints"))
+            if token.startswith("@xPoints="):
+                intens.nx=parseParameter(token, "@xPoints")
+            if token.startswith("@yPoints="):
+                intens.ny=parseParameter(token, "@yPoints")
+            if token.startswith("@startX="):
+                intens.xmin=parseParameter(token, "@startX")
+            if token.startswith("@endX="):
+                intens.xmax=parseParameter(token, "@endX")
+            if token.startswith("@startY="):
+                intens.ymin=parseParameter(token, "@startY")
+            if token.startswith("@endY="):
+                intens.ymax=parseParameter(token, "@endY")
              
-      else:
-          if startData:
-              if nPointsSpectrum > 1:
-                  dw=(wend - w0)/(nPointsSpectrum-1)
-              w = w0
-              startData = False
-              
-              for i in range(0,nPointsSpectrum):
-                  w = round(w0 + i*dw,4)
-                  intens.intensity[w] = np.zeros([intens.nx, intens.ny])
-              
-              w = w0
-              
-              #print 'spectral points', intens.intensity
-              
-              iSpec = 0
+        else:
+            if startData:
+                if nPointsSpectrum > 1:
+                    dw=(wend - w0)/(nPointsSpectrum-1)
+                w = w0
+                startData = False
 
-          try:
-              if type == 'spectrum':
-                  val.append(float(line.strip()))
-                  s.append(w)
-                  w = w + dw
-                  
-              if type == 'intensity':
-                  
-                  j = int(idx % intens.nx)
-                  i = int(idx / intens.nx)
-                  
-                  intens.intensity[round(w0+iSpec*dw,4)][i,j] = float(line.strip())
+                for i in range(0,nPointsSpectrum):
+                    w = round(w0 + i*dw,4)
+                    intens.intensity[w] = np.zeros([intens.nx, intens.ny])
 
-                  if iSpec == nPointsSpectrum-1:
-                      idx += 1
-                  
-                  iSpec = (iSpec + 1) % nPointsSpectrum
+                w = w0
+
+                #print 'spectral points', intens.intensity
+
+                iSpec = 0
+
+            try:
+                if type == 'spectrum':
+                    val.append(float(line.strip()))
+                    s.append(w)
+                    w = w + dw
+
+                if type == 'intensity':
+
+                    j = int(idx % intens.nx)
+                    i = int(idx / intens.nx)
+
+                    intens.intensity[round(w0+iSpec*dw,4)][i,j] = float(line.strip())
+
+                    if iSpec == nPointsSpectrum-1:
+                        idx += 1
+
+                    iSpec = (iSpec + 1) % nPointsSpectrum
                   
 
-          except ValueError:
-              pass
+            except ValueError:
+                pass
     
     intens.spectrum[(0,0)] = [s,val]
     
@@ -239,7 +239,7 @@ def readIntensity(filePath, type='spectral'):
 def diff(int1,int2):
     int = Intensity(int1)
     int.intensitySlice = int1.intensitySlice - int2.intensitySlice 
-    print int.intensitySlice
+    print (int.intensitySlice)
     return int
 
 def sum(int1,int2):
@@ -367,9 +367,9 @@ def calculateSR_py(lat, beam, screen, runParameters):
     partTraj.ctStart = 0 #Start Time for the calculation
     partTraj.ctEnd = runParameters.ctEnd
 
-    print 'Performing trajectory calculation ... '
+    print ('Performing trajectory calculation ... ')
     partTraj = srwl.CalcPartTraj(partTraj, magFldCnt, arPrecPar)
-    print 'done'
+    print ('done')
 
 
     #**********************Field calculation
@@ -396,14 +396,14 @@ def calculateSR_py(lat, beam, screen, runParameters):
     wfr1.partBeam = elecBeam
 
     
-    print 'Performing Electric Field (spectrum vs photon energy) calculation ... '
+    print ('Performing Electric Field (spectrum vs photon energy) calculation ... ')
     arPrecPar = [runParameters.method, relPrec, zStartInteg, zEndInteg, npTraj, 0, sampFactNxNyForProp]
     srwl.CalcElecFieldSR(wfr1, 0, magFldCnt, arPrecPar)
-    print 'done'
-    print '   Extracting Intensity from calculated Electric Field ... '
+    print ('done')
+    print ('   Extracting Intensity from calculated Electric Field ... ')
     arI1 = array('f', [0]*wfr1.mesh.ne*wfr1.mesh.nx*wfr1.mesh.ny)
     srwl.CalcIntFromElecField(arI1, wfr1, 6, 0, 6, wfr1.mesh.eStart, wfr1.mesh.xStart, wfr1.mesh.yStart)
-    print 'done'
+    print ('done')
     
     intensity = np.array(arI1).reshape(screen.nx, screen.ny,screen.num_energy)
     

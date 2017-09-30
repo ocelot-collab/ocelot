@@ -5,7 +5,7 @@ import numpy as np
 from pyqtgraph.dockarea import *
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
-
+from __future__ import print_function
 
 from ocelot import *
 
@@ -72,7 +72,7 @@ if __knobs__ != None:
         try: 
             if globals()[v].__class__ == Quadrupole: 
                 old_quad_values[globals()[v]] = globals()[v].k1
-                print 'stored value for', globals()[v].id
+                print ('stored value for', globals()[v].id)
         except:
             pass
 
@@ -130,13 +130,13 @@ def save():
     state = area.saveState()
     loadBtn.setEnabled(True)
     
-    print 'saving something...'
+    print ('saving something...')
     
 def load():
     #global state
     #area.restoreState(state)
     filename = QtGui.QFileDialog.getOpenFileName(win, 'Open File', '/')
-    print filename
+    print (filename)
     
     print('loading {}'.format(filename))
     
@@ -211,7 +211,7 @@ def change(param, changes):
     for param, change, data in changes:
         path = p.childPath(param)
         if path is not None:
-            print path
+            print (path)
             childName = '.'.join(path)
             parName = path[1]
             groupName = path[0]

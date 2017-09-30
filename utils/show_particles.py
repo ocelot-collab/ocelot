@@ -5,7 +5,7 @@ from ocelot.adaptors.genesis import *
 try:
     import matplotlib.animation as anim
 except:
-    print 'animation not installed'
+    print ('animation not installed')
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -14,9 +14,9 @@ def show_plots(displays, fig):
     n2 = (len(displays) -1) / n1 +1
     #print n1, n2
     fmt = str(n1)+ str(n2)
-    print fmt
+    print (fmt)
     
-    for i in xrange(len(displays)):
+    for i in range(len(displays)):
         ax = fig.add_subplot(fmt + str(i+1))
         ax.grid(True)
         for f in displays[i].data:
@@ -57,14 +57,14 @@ I = np.array(g.I)
 
 smax = nslice * zsep * xlamds 
                  
-print 'zstop=', zstop
-print 'delz=', delz
-print 'xlamd=', xlamd
-print 'xlamds=', xlamds
-print 'npoints', npoints
-print 'nslice', nslice
-print 'zsep', zsep
-print 'npart', npart
+print('zstop=', zstop)
+print('delz=', delz)
+print('xlamd=', xlamd)
+print('xlamds=', xlamds)
+print('npoints', npoints)
+print('nslice', nslice)
+print('zsep', zsep)
+print('npart', npart)
 
 
 #particles = readParticleFile(fileName=outf + '.dpa', npart=npart, nslice = nslice)
@@ -110,7 +110,7 @@ E = np.zeros(nslice)
 phi = np.zeros(nslice)
 phi_std = np.zeros(nslice)
 
-for i in xrange(nslice):
+for i in range(nslice):
     E[i] = np.mean( np.array(particles[i][0]) )
     phi[i] = np.mean( np.array(particles[i][1]) )
     phi_std[i] = np.std( np.array(particles[i][1]) )

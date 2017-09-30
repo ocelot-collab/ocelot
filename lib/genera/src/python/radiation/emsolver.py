@@ -74,9 +74,9 @@ def radiation(em_screen, list_motion, gamma, beam_current,undulator, mode_proc):
         max_size = max(max_work_item)*2
         if (em_screen.nx > max_size or em_screen.ne > max_size  or em_screen.ny > max_size) and mode_proc != "CPU":
             mode_proc = "CPU"
-            print "MAX_WORK_ITEM_SIZES = ", max_work_item
-            print "[xNstep, yNstep, eNstep] = ", em_screen.nx, em_screen.ny, em_screen.ne
-            print "GPU-mode was changed on CPU-mode", max_work_item
+            print ("MAX_WORK_ITEM_SIZES = ", max_work_item)
+            print ("[xNstep, yNstep, eNstep] = ", em_screen.nx, em_screen.ny, em_screen.ne)
+            print ("GPU-mode was changed on CPU-mode", max_work_item)
     if flag_pyOCL == False and mode_proc == "GPU":
         mode_proc = "CPU"
         print "GPU-mode was changed on CPU-mode. pyOpenCL is absent "
@@ -101,16 +101,16 @@ def radiation(em_screen, list_motion, gamma, beam_current,undulator, mode_proc):
                               c_scrPrm,
                               em_screen.memory_screen.ctypes.data_as(dPtr))
 
-        print "CPU time execution: ", clock() - start
+        print ("CPU time execution: ", clock() - start)
         if ret != 1:
-            print "radiation return = ", ret
+            print ("radiation return = ", ret)
 
 
     elif mode_proc == "GPU" and flag_pyOCL == True:
         em_screen = rad_cl.rad_cl(em_screen, list_motion, gamma, undulator)
 
     else:
-        print " mode - ERROR !! (emsolver.py) "
+        print (" mode - ERROR !! (emsolver.py) ")
     #print "beam current: ", beam_current
     em_screen.distPhoton(gamma, current = beam_current)
     return em_screen
@@ -150,13 +150,13 @@ def solver(screen, cell, beam):
 
 
     #bool_es = energy_spread_analyse(em_screen, beam)
-    print "before x:", em_screen.nx, em_screen.x_start, em_screen.x_step
-    print "before y:", em_screen.ny, em_screen.y_start, em_screen.y_step
-    print "before e:", em_screen.ne, em_screen.e_start, em_screen.e_step
+    print ("before x:", em_screen.nx, em_screen.x_start, em_screen.x_step)
+    print ("before y:", em_screen.ny, em_screen.y_start, em_screen.y_step)
+    print ("before e:", em_screen.ne, em_screen.e_start, em_screen.e_step)
     change_sizes_screen(em_screen, beam)
-    print "after x:", em_screen.nx, em_screen.x_start, em_screen.x_step, em_screen.nx_add
-    print "after y:", em_screen.ny, em_screen.y_start, em_screen.y_step, em_screen.ny_add
-    print "after e:", em_screen.ne, em_screen.e_start, em_screen.e_step, em_screen.ne_add
+    print ("after x:", em_screen.nx, em_screen.x_start, em_screen.x_step, em_screen.nx_add)
+    print ("after y:", em_screen.ny, em_screen.y_start, em_screen.y_step, em_screen.ny_add)
+    print ("after e:", em_screen.ne, em_screen.e_start, em_screen.e_step, em_screen.ne_add)
 
     em_screen = radiation(em_screen, list_motion, beam.gamma, beam_current, undulator, mode_proc = "CPU")
     #print "Ok", shape(em_screen.Total)

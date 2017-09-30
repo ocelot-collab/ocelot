@@ -9,5 +9,5 @@ setup(
     author_email='tomin.sergey@gmail.com',
     url='https://github.com/ocelot-collab/ocelot',
     packages=find_packages(),
-    #long_description=open(join(dirname(__file__), 'README.txt')).read(),
+    # long_description=open(join(dirname(__file__), 'README.txt')).read(),
 )

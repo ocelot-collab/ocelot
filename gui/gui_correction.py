@@ -27,7 +27,7 @@ class SuperOrbit(QObject):
         self.lat_errors,a = errors_seed(self.lat_errors, self.errors)
         #self.orbit = Orbit()
         self.orbit.lattice_analysis(self.lat_errors)
-        print ("len = ", len(self.orbit.bpms))
+        print("len = ", len(self.orbit.bpms))
         self.emit(SIGNAL("resp_off()"))
 
     def read_orbit(self):

@@ -19,7 +19,7 @@ def move_file(source_folder, filename, destin_folder):
 
 def compile(dir_path):
     os.chdir(dir_path)
-    print "platform = ", platform, "  os.name = ", os.name
+    print ("platform = ", platform, "  os.name = ", os.name)
     if os.name == "nt":
         cmd = 'c:/MinGW/bin/mingw32-make -f Makefile'
     else:
@@ -32,14 +32,14 @@ def compile(dir_path):
     #print args
     p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     result = p.communicate()[0]
-    print result
+    print (result)
 
 # clean
 def clean_folder(dir_path):
     """
     it does not need
     """
-    print dir_path
+    print (dir_path)
     os.chdir(dir_path)
     cmd = "make clean"
     if os.name == "nt":
@@ -47,7 +47,7 @@ def clean_folder(dir_path):
     args = shlex.split(cmd)
     p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     result = p.communicate()[0]
-    print result
+    print (result)
 
 # move lib to genera_libs
 home_path = path[0]

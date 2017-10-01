@@ -217,13 +217,13 @@ def track4rad(beam, lat, energy_loss=False, quantum_diff=False, accuracy=1):
                 mag_field = elem.mag_field
             except:
                 if len(elem.field_map.z_arr) != 0:
-                    print("Field_map exist! Creating mag_field(x, y, z)")
+                    #print("Field_map exist! Creating mag_field(x, y, z)")
                     unit_coef = 0.001 if elem.field_map.units == "mm" else 1
                     mag_length = elem.field_map.l*unit_coef
                     z_array = (elem.field_map.z_arr - elem.field_map.z_arr[0])*unit_coef
                     mag_field = field_map2field_func(z=z_array, By=elem.field_map.By_arr)
                 else:
-                    print("Standard undulator field")
+                    #print("Standard undulator field")
                     mag_field = lambda x, y, z: und_field(x, y, z, elem.lperiod, elem.Kx)
             N = int((mag_length*1500 + 100)*accuracy)
 

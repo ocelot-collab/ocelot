@@ -38,7 +38,9 @@ pathToDll = path_to_ocelot + "/lib/genera/build/genera_libs/undulator.so"
 try:
     cundul= CDLL(pathToDll)
 except:
-    exec(open(path_to_ocelot + "/lib/genera/src/cpp/compile.py"))
+    #os.system("python "+ path_to_ocelot + "/lib/genera/src/cpp/compile.py")
+    #execfile(path_to_ocelot + "/lib/genera/src/cpp/compile.py")
+    import ocelot.lib.genera.src.cpp.compile
     os.chdir(home_dir)
     cundul= CDLL(pathToDll)
 

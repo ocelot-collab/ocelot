@@ -21,6 +21,6 @@ setup(
     install_requires=[
         'numpy', 'scipy', 'matplotlib'
     ],
-    package_data={'ocelot.optics': ['data/*.txt', 'data/*.dat']},
+    package_data={'ocelot.optics': ['data/*.dat']},
     # long_description=open(join(dirname(__file__), 'README.txt')).read(),
 )

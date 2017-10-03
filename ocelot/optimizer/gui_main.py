@@ -100,7 +100,7 @@ class MainWindow(Ui_Form):
         self.read_alarm = QtCore.QTimer()
         self.read_alarm.timeout.connect(self.alarm_value)
         self.read_alarm.start(1000)
-        path2preset= self.Form.config_dir + "standard" + os.sep
+        path2preset= self.Form.config_dir + "standard/"
         self.pb_sase1_1.clicked.connect(lambda: self.load_settings(filename=path2preset + "sase1_1.json"))
         self.pb_sase1_2.clicked.connect(lambda: self.load_settings(filename=path2preset + "sase1_2.json"))
         self.pb_disp_1.clicked.connect(lambda: self.load_settings(filename=path2preset + "disp_1.json"))
@@ -304,7 +304,7 @@ class MainWindow(Ui_Form):
             self.load_settings(filename)
 
     def load_settings(self, filename):
-        (body_name, extension) = filename.split(os.sep)[-1].split(".")
+        (body_name, extension) = filename.split("/")[-1].split(".")
         copy(self.Form.obj_save_path + body_name + ".py", self.Form.obj_func_path)
         self.restore_state(filename)
 

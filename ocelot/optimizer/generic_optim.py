@@ -500,16 +500,17 @@ class OcelotInterfaceWindow(QFrame):
         :return: None
         """
 
-        alarm_dev = str(self.ui.le_alarm.text())
+        alarm_dev = str(self.ui.le_alarm.text()).replace(" ", "")
         print("alarm_dev", alarm_dev)
         if alarm_dev == "":
             return
+
         state = self.ui.is_le_addr_ok(self.ui.le_alarm)
         #state = False
 
         a_dev = AlarmDevice(alarm_dev)
         a_dev.mi = self.mi
-
+        print(a_dev)
         if not state:
             def is_ok():
                 print("ALARM switched off")

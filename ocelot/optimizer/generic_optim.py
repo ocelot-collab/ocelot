@@ -1,3 +1,4 @@
+#!/opt/anaconda4/bin/python
 """
 This is deep modification of SLAC version of the Ocelot GUI for the European XFEL facility.
 Sergey Tomin, 2017.

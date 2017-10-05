@@ -44,7 +44,7 @@ class RadiationField:
         self.dx = []
         self.dy = []
         self.dz = []
-        self.xlamds = 0  # wavelength, [nm]
+        self.xlamds = None  # wavelength, [nm]
         self.domain_z = 't'  # longitudinal domain (t - time, f - frequency)
         self.domain_xy = 's'  # transverse domain (s - space, k - inverse space)
         self.filePath = ''

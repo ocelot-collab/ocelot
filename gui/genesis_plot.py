@@ -1393,7 +1393,7 @@ def plot_gen_out_scanned_z(g, figsize=(10, 14), legend=True, fig_name=None, z=in
     return fig
 
 
-def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, far_field=False, freq_domain=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, log_scale=0, debug=1, vartype_dfl=complex64):
+def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, far_field=False, freq_domain=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy = True, log_scale=0, debug=1, vartype_dfl=complex64):
     '''
     Plots dfl radiation object in 3d.
 
@@ -1415,7 +1415,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
     
     if showfig == False and savefig == False:
         return
-    from ocelot.utils.xfel_utils import dfl_fft_xy, dfl_fft_z
+    # from ocelot.utils.xfel_utils import dfl_fft_xy, dfl_fft_z
     filePath = F.filePath
 
     text_present = 1
@@ -1562,10 +1562,16 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
 
     # cmap = plt.get_cmap(def_cmap)  # jet inferno viridis #change to convenient
     cmap_ph = plt.get_cmap('hsv')
-
-    x_line = xy_proj[:, int((ncar_y - 1) / 2)]
-    y_line = xy_proj[int((ncar_x - 1) / 2), :]
-
+    
+    if line_off_xy:
+        x_line = xy_proj[:, int((ncar_y - 1) / 2)]
+        y_line = xy_proj[int((ncar_x - 1) / 2), :]
+        x_title += ' lineoff'
+        y_title += ' lineoff'
+    else:
+        x_line = np.sum(xy_proj,axis=1)
+        y_line = np.sum(xy_proj,axis=0)
+    
     if max(x_line) != 0 and max(y_line) != 0:
         x_line, y_line = x_line / max(x_line), y_line / max(y_line)
 
@@ -1573,7 +1579,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
     if log_scale:
         intplt = ax_int.pcolormesh(x, y, swapaxes(xy_proj, 1, 0), norm=colors.LogNorm(vmin=xy_proj.min(), vmax=xy_proj.max()), cmap=cmap)
     else:
-        intplt = ax_int.pcolormesh(x, y, swapaxes(xy_proj, 1, 0), cmap=cmap)
+        intplt = ax_int.pcolormesh(x, y, swapaxes(xy_proj, 1, 0), cmap=cmap, vmin=0)
     ax_int.set_title(xy_title, fontsize=15)
     ax_int.set_xlabel(r'' + x_label)
     ax_int.set_ylabel(y_label)
@@ -1600,7 +1606,11 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
     ax_proj_x.set_title(x_title, fontsize=15)
 
     if sum(x_line) != 0:
-        x_line_f, rms_x = gauss_fit(x, x_line)  # fit with Gaussian, and return fitted function and rms
+        try:
+            x_line_f, rms_x = gauss_fit(x, x_line)  # fit with Gaussian, and return fitted function and rms
+        except RuntimeWarning:
+            x_line_f = np.zeros_like(x_line)
+            rms_x = 0
         try:
             fwhm_x = fwhm3(x_line)[1] * dx  # measure FWHM
         except ValueError:
@@ -1629,7 +1639,11 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
     ax_proj_y.set_title(y_title, fontsize=15)
 
     if sum(y_line) != 0:
-        y_line_f, rms_y = gauss_fit(y, y_line)  # fit with Gaussian, and return fitted function and rms
+        try:
+            y_line_f, rms_y = gauss_fit(y, y_line)  # fit with Gaussian, and return fitted function and rms
+        except RuntimeWarning:
+            y_line_f = np.zeros_like(y_line)
+            rms_y = 0
         try:
             fwhm_y = fwhm3(y_line)[1] * dy  # measure FWHM
         except ValueError:
@@ -1678,7 +1692,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
         if log_scale:
             ax_proj_xz.pcolormesh(z, x, swapaxes(xz_proj, 1, 0), norm=colors.LogNorm(vmin=min_xz_proj, vmax=xz_proj.max()), cmap=cmap)
         else:
-            ax_proj_xz.pcolormesh(z, x, swapaxes(xz_proj, 1, 0), cmap=cmap)
+            ax_proj_xz.pcolormesh(z, x, swapaxes(xz_proj, 1, 0), cmap=cmap, vmin=0)
         ax_proj_xz.set_title('Top view', fontsize=15)
         ax_proj_xz.set_xlabel(z_label)
         ax_proj_xz.set_ylabel(x_label)
@@ -1688,7 +1702,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
         if log_scale:
             ax_proj_yz.pcolormesh(z, y, swapaxes(yz_proj, 1, 0), norm=colors.LogNorm(vmin=min_yz_proj, vmax=yz_proj.max()), cmap=cmap)
         else:
-            ax_proj_yz.pcolormesh(z, y, swapaxes(yz_proj, 1, 0), cmap=cmap)
+            ax_proj_yz.pcolormesh(z, y, swapaxes(yz_proj, 1, 0), cmap=cmap, vmin=0)
         ax_proj_yz.set_title('Side view', fontsize=15)
         ax_proj_yz.set_xlabel(z_label)
         ax_proj_yz.set_ylabel(y_label)

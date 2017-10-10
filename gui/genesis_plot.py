@@ -1006,7 +1006,6 @@ def subfig_evo_el_pos(ax_size_tpos, g, legend, which='both'):
     number_ticks = 6
     
     if hasattr(g,'x') and hasattr(g,'y'):
-        ax_size_tpos = ax_size_tsize.twinx()
         if which == 'both' or which == 'averaged':
             ax_size_tpos.plot(g.z, np.average(g.x, axis=0, weights=g.I) * 1e6, 'g-', g.z, np.average(g.y, axis=0, weights=g.I) * 1e6, 'b-')
         if which == 'both' or which == 'peak_curr':

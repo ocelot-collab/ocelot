@@ -191,16 +191,34 @@ def tap_exp(n, n0, a0, a1, a2):
     
     return a0 * (  1 + a1 * (n - n0)**a2 )
 
-def tap_pol(n, n0, a0, a1, a2):
+def tap_pol_old(n, n0, a0, a1, a2):
     '''
     piecewise-quadratic tapering function
     '''
+    # if n0.__class__ is int:
+        # n0 = [0, n0]
+    # if a0.__class__ is int:
+        # a0 = [a0]
+    # if a1.__class__ is int:
+        # a1 = [a1]
+    # if a2.__class__ is int:
+        # a2 = [a2]
+        
     for i in range(1,len(n0)):
         if n < n0[i]:
             return a0 + (n-n0[i-1])*a1[i-1] + (n-n0[i-1])**2 * a2[i-1]
         a0 += (n0[i]-n0[i-1])*a1[i-1] + (n0[i]-n0[i-1])**2 * a2[i-1]
     
     return 1.0
+
+def tap_pol(n, n0, a0, a1, a2):
+    '''
+    piecewise-quadratic tapering function
+    '''
+    if n < n0:
+        return a0
+    else:
+        return a0 + (n-n0)*a1 + (n-n0)**2 * a2
 
 
 '''

@@ -1413,7 +1413,7 @@ def model_fel_pulse_like(td_scale, td_env, fd_scale, fd_env, td_phase = None, fd
         fd_scale_i = np.fft.fftshift(fd_scale_i, axes=0)
         fd_env_i = np.interp(fd_scale_i,fd_scale,fd_env, right=0, left=0)
         
-        if fd_phase == None:
+        if fd_phase is None:
             fd_phase_i = np.zeros_like(fd_env_i)
         else:
             fd_phase_i = np.interp(fd_scale_i,fd_scale,fd_phase, right=0, left=0)
@@ -1441,7 +1441,7 @@ def model_fel_pulse_like(td_scale, td_env, fd_scale, fd_env, td_phase = None, fd
         td_scale_i -= np.amin(td_scale_i)
         td_env_i = np.interp(td_scale_i,td_scale,td_env, right=0, left=0)
         
-        if td_phase == None:
+        if td_phase is None:
             td_phase_i = np.zeros_like(td_env_i)
         else:
             td_phase_i = np.interp(td_scale_i,td_scale,td_phase, right=0, left=0)

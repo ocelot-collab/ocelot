@@ -817,7 +817,7 @@ def plot_gen_out_ph(g, legend=False, figsize=4, fig_name='Radiation', savefig=Fa
     else:
         fig = plot_gen_out_evo(g, params=['rad_pow_log', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
 
-def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_energy', 'el_bunching', 'rad_pow_en_log', 'rad_pow_en_lin', 'rad_spec_log', 'rad_size', 'rad_spec_evo_n', 'rad_pow_evo_n'], figsize=4, legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
+def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'el_bunching', 'rad_pow_en_log', 'rad_pow_en_lin', 'rad_spec_log', 'rad_size', 'rad_spec_evo_n', 'rad_pow_evo_n'], figsize=4, legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
     '''
     plots evolution of given parameters from genesis output with undulator length
     '''
@@ -869,6 +869,8 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_energy', 'el_bunching
             subfig_evo_und(ax[-1], g, legend)
         elif param == 'el_size':
             subfig_evo_el_size(ax[-1], g, legend)
+        elif param == 'el_pos':
+            subfig_evo_el_pos(ax[-1], g, legend)
         elif param == 'el_energy':
             subfig_evo_el_energy(ax[-1], g, legend)
         elif param == 'el_bunching':
@@ -986,20 +988,31 @@ def subfig_evo_und(ax_und, g, legend):
     ax_und.yaxis.label.set_color('b')
 
 
-def subfig_evo_el_size(ax_size_tpos, g, legend, which='both'):
+def subfig_evo_el_size(ax_size_tsize, g, legend, which='both'):
     number_ticks = 6
     
     if which == 'both' or which == 'averaged':
-        ax_size_tpos.plot(g.z, np.average(g.xrms, axis=0, weights=g.I) * 1e6, 'g-', g.z, np.average(g.yrms, axis=0, weights=g.I) * 1e6, 'b-')
+        ax_size_tsize.plot(g.z, np.average(g.xrms, axis=0, weights=g.I) * 1e6, 'g-', g.z, np.average(g.yrms, axis=0, weights=g.I) * 1e6, 'b-')
     if which == 'both' or which == 'peak_curr':
         idx_pk = np.where(g.I == np.amax(g.I))[0][0]
-        ax_size_tpos.plot(g.z, g.xrms[idx_pk, :] * 1e6, 'g--', g.z, g.yrms[idx_pk, :] * 1e6, 'b--')
-    ax_size_tpos.set_ylabel(r'$\sigma_{x,y}$ [$\mu$m]')
+        ax_size_tsize.plot(g.z, g.xrms[idx_pk, :] * 1e6, 'g--', g.z, g.yrms[idx_pk, :] * 1e6, 'b--')
+    ax_size_tsize.set_ylabel(r'$\sigma_{x,y}$ [$\mu$m]')
 
-    ax_size_tpos.set_ylim(ymin=0)
-    ax_size_tpos.yaxis.major.locator.set_params(nbins=number_ticks)
-    ax_size_tpos.grid(True)
-
+    ax_size_tsize.set_ylim(ymin=0)
+    ax_size_tsize.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_size_tsize.grid(True)
+    
+def subfig_evo_el_pos(ax_size_tpos, g, legend, which='both'):
+    number_ticks = 6
+    
+    if hasattr(g,'x') and hasattr(g,'y'):
+        ax_size_tpos = ax_size_tsize.twinx()
+        if which == 'both' or which == 'averaged':
+            ax_size_tpos.plot(g.z, np.average(g.x, axis=0, weights=g.I) * 1e6, 'g-', g.z, np.average(g.y, axis=0, weights=g.I) * 1e6, 'b-')
+        if which == 'both' or which == 'peak_curr':
+            idx_pk = np.where(g.I == np.amax(g.I))[0][0]
+            ax_size_tpos.plot(g.z, g.x[idx_pk, :] * 1e6, 'g--', g.z, g.y[idx_pk, :] * 1e6, 'b--')
+        ax_size_tpos.set_ylabel(r'$x,y$ [$\mu$m]')
 
 def subfig_evo_el_energy(ax_energy, g, legend):
     number_ticks = 6

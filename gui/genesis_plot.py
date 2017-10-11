@@ -1787,7 +1787,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
         return
 
 
-def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int', 'energy', 'r_size_weighted', 'spec', 'error'], z_param_inp=['p_int', 'phi_mid_disp', 'spec', 'bunching', 'wigner'], dfl_param_inp=['dfl_spec'], run_param_inp=['p_int', 'spec', 'energy'], s_inp=['max'], z_inp=[0,'end'], run_s_inp=['max'], run_z_inp=['end'], spec_pad=1, savefig=1, saveval=1, showfig=0, debug=1):
+def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int', 'pulse_energy', 'r_size_weighted', 'spec', 'spec_phot_density', 'error'], z_param_inp=['p_int', 'phi_mid_disp', 'spec', 'spec_phot_density', 'bunching', 'wigner'], dfl_param_inp=['dfl_spec'], run_param_inp=['p_int', 'spec', 'spec_phot_density', 'pulse_energy'], s_inp=['max'], z_inp=[0,'end'], run_s_inp=['max'], run_z_inp=['end'], spec_pad=1, savefig=1, saveval=1, showfig=0, debug=1):
     '''
     The routine for plotting the statistical info of many GENESIS runs
     
@@ -1806,8 +1806,8 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
     '''
     import copy
     rc('text', usetex=False)
-    dict_name = {'p_int': 'radiation power', 'energy': 'radiation pulse energy', 'el_e_spread': 'el.beam energy spread', 'el_energy': 'el.beam energy average', 'bunching': 'el.beam bunching', 'spec': 'radiation on-axis spectral density', 'dfl_spec': 'total radiation spectral density', 'r_size': 'radiation transv size', 'r_size_weighted': 'radiation transv size (weighted)', 'xrms': 'el.beam x size', 'yrms': 'el.beam y size', 'error': 'genesis simulation error', 'p_mid': 'radiation power on-axis', 'phi_mid': 'radiation phase on-axis', 'increment': 'radiation power increment'}
-    dict_unit = {'p_int': '[W]', 'energy': '[J]', 'el_e_spread': '(gamma)', 'el_energy': '(gamma)', 'bunching': '', 'spec': '[arb.units]', 'dfl_spec': '[arb.units]', 'r_size': '[m]', 'xrms': '[m]', 'yrms': '[m]', 'error': ''}
+    dict_name = {'p_int': 'radiation power', 'energy': 'radiation pulse energy', 'el_e_spread': 'el.beam energy spread', 'el_energy': 'el.beam energy average', 'bunching': 'el.beam bunching', 'spec': 'radiation on-axis spectral density', 'spec_phot_density': 'radiation spectral photon density', 'dfl_spec': 'total radiation spectral density', 'r_size': 'radiation transv size', 'r_size_weighted': 'radiation transv size (weighted)', 'xrms': 'el.beam x size', 'yrms': 'el.beam y size', 'error': 'genesis simulation error', 'p_mid': 'radiation power on-axis', 'phi_mid': 'radiation phase on-axis', 'increment': 'radiation power increment'}
+    dict_unit = {'p_int': '[W]', 'energy': '[J]', 'el_e_spread': '(gamma)', 'el_energy': '(gamma)', 'bunching': '', 'spec': '[arb.units]', 'spec_phot_density': '(estimation) [ph/eV]', 'dfl_spec': '[arb.units]', 'r_size': '[m]', 'xrms': '[m]', 'yrms': '[m]', 'error': ''}
 
     figsize = (14, 7)
 
@@ -2032,15 +2032,15 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     fig = plt.figure(z_fig_name)
                     fig.clf()
                     fig.set_size_inches(figsize, forward=True)
-                    if param == 'spec':
-                        freq_scale = outlist[irun].freq_lamd  # *1e9
+                    if param in ['spec', 'spec_phot_density']:
+                        freq_scale = outlist[irun].freq_ev  # *1e9
                         if debug > 1:
                             print('plotting array shapes freq', shape(freq_scale), shape(swapaxes(z_value, 0, 1)))
                         fig = plt.plot(freq_scale, swapaxes(z_value, 0, 1), '0.8')
                         fig = plt.plot(freq_scale, z_value[0], '0.5', linewidth=1)
                         fig = plt.plot(freq_scale, mean(z_value, 0), 'k', linewidth=2)
                         plt.xlim([min(freq_scale), max(freq_scale)])
-                        plt.xlabel('$\lambda$ [nm]')
+                        plt.xlabel('$E_{photon}$ [eV]')
                     else:
                         s_scale = outlist[irun].s * 1e6
                         if debug > 1:
@@ -2059,8 +2059,8 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     if saveval != False:
                         if debug > 1:
                             print('      saving ' + z_fig_name + '.txt')
-                        if param == 'spec':
-                            np.savetxt(saving_path + z_fig_name + '.txt', vstack([outlist[irun].freq_lamd, mean(z_value, 0), z_value]).T, fmt="%E", newline='\n', comments='')
+                        if param in ['spec', 'spec_phot_density']:
+                            np.savetxt(saving_path + z_fig_name + '.txt', vstack([outlist[irun].freq_ev, mean(z_value, 0), z_value]).T, fmt="%E", newline='\n', comments='')
                         else:
                             np.savetxt(saving_path + z_fig_name + '.txt', vstack([outlist[irun].s * 1e6, mean(z_value, 0), z_value]).T, fmt="%E", newline='\n', comments='')
                     if not showfig:

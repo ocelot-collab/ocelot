@@ -18,13 +18,12 @@ m_e_eV = m_e_kg * speed_of_light**2 / q_e # eV (510998.8671)
 m_e_MeV = m_e_eV / 1e+6        # MeV (0.510998928)
 m_e_GeV = m_e_eV / 1e+9      # GeV
 
-
-mu_0 = 4*pi*1e-7
-epsilon_0 = 8.854187817620e-12 # F/m
+mu_0 = 4 * pi * 1e-7 # permeability of free space (1.2566370614359173e-06)
+epsilon_0 = 1 / mu_0 / speed_of_light**2 # permittivity of free space (8.854187817620e-12 F/m)
 
 h_eV_s = 4.135667516e-15    #eV s
 hr_eV_s = h_eV_s/2./pi
-ro_e = 2.8179403267e-15     # m
+ro_e = q_e**2/(4*pi*epsilon_0*m_e_kg*speed_of_light**2) # classical electron radius (2.8179403267e-15 m)
 
 Cgamma = 4.*pi/3.*ro_e/m_e_MeV**3
 Cq = 55./(32.*sqrt(3)*2*pi)*h_eV_s*speed_of_light/m_e_eV

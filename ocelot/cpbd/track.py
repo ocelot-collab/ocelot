@@ -499,6 +499,26 @@ def merge_drifts(lat):
     return MagneticLattice(sequence=seq)
 
 
+def update_effective_beta(beam, lat):
+    tws0 = Twiss()
+    beta_x_eff = []
+    beta_y_eff = []
+    for beam_sl in beam:
+        tws0.beta_x = beam_sl.beta_x
+        tws0.beta_y = beam_sl.beta_y
+        tws0.alpha_x = beam_sl.alpha_x
+        tws0.alpha_y = beam_sl.alpha_y
+    
+        tws = twiss(lat, tws0)
+        bx = [tw.beta_x for tw in tws]
+        by = [tw.beta_y for tw in tws]
+        
+        beta_x_eff.append(np.mean(bx))
+        beta_y_eff.append(np.mean(by))
+    
+    beam.beta_x_eff = np.array(beta_x_eff)
+    beam.beta_y_eff = np.array(beta_y_eff)
+
 
 """
 def show_da(out_da, x_array, y_array):

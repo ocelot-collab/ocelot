@@ -1345,7 +1345,7 @@ def generate_input(up, beam, itdp=False):
     inp.emity = beam.emit_yn
 
     felParameters = calculateFelParameters(inp)
-    printFelParameters(inp)
+    printFelParameters(felParameters)
 
     inp.xlamds = felParameters.lambda0
     inp.prad0 = felParameters.power
@@ -2386,6 +2386,77 @@ def write_edist_file(edist, filePath=None, debug=1):
         print('      done in %.2f sec' % (time.time() - start_time))
 
 
+def edist2beam_new(edist, step=1e-7):
+    '''
+    reads GenesisElectronDist()
+    returns BeamArray()
+    step [m] - long. size ob bin to calculate distribution parameters
+    '''
+
+    from numpy import mean, std
+
+    part_c = edist.part_charge
+    t_step = step / speed_of_light
+    t_min = min(edist.t)
+    t_max = max(edist.t)
+    dist_t_window = t_max - t_min
+    npoints = int(dist_t_window / t_step)
+    t_step = dist_t_window / npoints
+    beam = BeamArray()
+    for parm in ['I',
+                 's',
+                 'emit_xn',
+                 'emit_yn',
+                 'beta_x',
+                 'beta_y',
+                 'alpha_x',
+                 'alpha_y',
+                 'x',
+                 'y',
+                 'px',
+                 'py',
+                 'g',
+                 'dg',
+                 ]:
+        setattr(beam, parm, np.zeros((npoints - 1)))
+
+    for i in range(npoints - 1):
+        indices = (edist.t > t_min + t_step * i) * (edist.t < t_min + t_step * (i + 1))
+        beam.s[i] = (t_min + t_step * (i + 0.5)) * speed_of_light
+        dist_mean_g = beam.g[i]
+
+        if sum(indices) > 2:
+            dist_g = edist.g[indices]
+            dist_x = edist.x[indices]
+            dist_y = edist.y[indices]
+            dist_px = edist.xp[indices]
+            dist_py = edist.yp[indices]
+            dist_mean_g = mean(dist_g)
+
+            beam.I[i] = sum(indices) * part_c / t_step
+            beam.g[i] = mean(dist_g)
+            beam.dg[i] = np.std(dist_g)
+            beam.x[i] = mean(dist_x)
+            beam.y[i] = mean(dist_y)
+            beam.px[i] = mean(dist_px)
+            beam.py[i] = mean(dist_py)
+            beam.emit_x[i] = (mean(dist_x**2) * mean(dist_px**2) - mean(dist_x * dist_px)**2)**0.5
+            # if beam.ex[i]==0: beam.ey[i]=1e-10
+            beam.emit_y[i] = (mean(dist_y**2) * mean(dist_py**2) - mean(dist_y * dist_py)**2)**0.5
+            # if beam.ey[i]==0: beam.ey[i]=1e-10
+            beam.beta_x[i] = mean(dist_x**2) / beam.emit_x[i]
+            beam.beta_y[i] = mean(dist_y**2) / beam.emit_y[i]
+            beam.alpha_x[i] = -mean(dist_x * dist_px) / beam.emit_x[i]
+            beam.alpha_y[i] = -mean(dist_y * dist_py) / beam.emit_y[i]
+
+    idx = np.where(np.logical_or.reduce((beam.I == 0, beam.g0 == 0, beam.beta_x > mean(beam.beta_x) * 10, beam.beta_y > mean(beam.beta_y) * 10)))
+    del beam[idx]
+
+    beam.eloss = np.zeros_like(beam.z)
+    beam.filePath = edist.filePath + '.beam'
+
+    return(beam)
+
 def edist2beam(edist, step=1e-7):
     '''
     reads GenesisElectronDist()
@@ -2487,6 +2558,76 @@ def edist2beam(edist, step=1e-7):
 # def read_beam_file_out(out, debug=1):
     # return read_beam_file(out.filePath, debug=debug)
 
+def read_beam_file_new(filePath, debug=1):
+    '''
+    reads beam file from filePath folder
+    returns BeamArray()
+    '''
+    if debug > 0:
+        print ('    reading beam file')
+    start_time = time.time()
+
+    beam = BeamArray()
+    beam.columns = []
+    beam.column_values = {}
+
+    f = open(filePath, 'r')
+    null = f.readline()
+    for line in f:
+        tokens = line.strip().split()
+
+        if len(tokens) < 2:
+            continue
+
+        # print tokens[0:2]
+
+        if tokens[0] == "?" and tokens[1] == "COLUMNS":
+            beam.columns = tokens[2:]
+            for col in beam.columns:
+                beam.column_values[col] = []
+
+            print (beam.columns)
+
+        if tokens[0] != "?":
+            # print tokens
+            for i in range(0, len(tokens)):
+                beam.column_values[beam.columns[i]].append(float(tokens[i]))
+
+    # print beam.columns
+
+    beam.s = np.array(beam.column_values['ZPOS'])
+    beam.I = np.array(beam.column_values['CURPEAK'])
+
+    for parm in [['g', 'GAMMA0'],
+                 ['x', 'XBEAM'],
+                 ['y', 'YBEAM'],
+                 ['px', 'PXBEAM'],
+                 ['py', 'PYBEAM'],
+                 ['dg', 'DELGAM'],
+                 ['emit_xn', 'EMITX'],
+                 ['emit_yn', 'EMITY'],
+                 ['beta_x', 'BETAX'],
+                 ['beta_y', 'BETAY'],
+                 ['alpha_x', 'ALPHAX'],
+                 ['alpha_y', 'ALPHAY'],
+                 ]:
+        if parm[1] in beam.column_values.keys():
+            setattr(beam, parm[0], np.array(beam.column_values[parm[1]]))
+        else:
+            setattr(beam, parm[0], np.zeros_like(beam.z))
+
+    try:
+        beam.eloss = np.array(beam.column_values['ELOSS'])
+    except:
+        beam.eloss = np.zeros_like(beam.I)
+
+    beam.filePath = filePath
+    del(beam.column_values, beam.columns)
+
+    if debug > 0:
+        print('      done in %.2f sec' % (time.time() - start_time))
+
+    return beam
 
 def read_beam_file(filePath, debug=1):
     '''
@@ -2560,6 +2701,68 @@ def read_beam_file(filePath, debug=1):
 
     return beam
 
+def beam_file_str_new(beam):
+    '''
+    reads BeamArray()
+    returns string of electron beam file, suitable for Genesis
+    
+    '''
+    
+    dict = {'s' : 'ZPOS',
+             'I': 'CURPEAK',
+             'emit_xn': 'EMITX',
+             'emit_yn': 'EMITY',
+             'beta_x': 'BETAX',
+             'beta_y': 'BETAY',
+             'alpha_x': 'ALPHAX',
+             'alpha_y': 'ALPHAY',
+             'x': 'XBEAM',
+             'y': 'YBEAM',
+             'px': 'PXBEAM',
+             'py': 'PYBEAM',
+             'g': 'GAMMA0',
+             'dg': 'DELGAM',
+             'eloss': 'ELOSS'}
+    
+    l = beam.len()    
+    attrs=beam.params()
+    
+    f_str = "# \n? VERSION = 1.0\n? SIZE =" + str(l) + "\n? COLUMNS"
+    
+    for attr in attrs:
+        if attr in dict:
+            f_str = f_str + " " + dict[attr]
+    f_str += "\n"
+
+    for parm in [['s', 'ZPOS'],
+                 ['I', 'CURPEAK'],
+                 ['emit_xn', 'EMITX'],
+                 ['emit_yn', 'EMITY'],
+                 ['beta_x', 'BETAX'],
+                 ['beta_y', 'BETAY'],
+                 ['alpha_x', 'ALPHAX'],
+                 ['alpha_y', 'ALPHAY'],
+                 ['x', 'XBEAM'],
+                 ['y', 'YBEAM'],
+                 ['px', 'PXBEAM'],
+                 ['py', 'PYBEAM'],
+                 ['g', 'GAMMA0'],
+                 ['dg', 'DELGAM'],
+                 ['eloss', 'ELOSS'],
+                 ]:
+        try:
+            beam.column_values[parm[1]] = getattr(beam, parm[0])
+        except:
+            pass
+
+    for i in range(beam.len()):
+        for attr in attrs:
+            if attr in dict:
+                buf = str(getattr(beam,attr)[i])
+                f_str = f_str + buf + ' '
+        f_str = f_str.rstrip() + '\n'
+
+    return f_str
 
 def beam_file_str(beam):
     '''
@@ -2642,6 +2845,23 @@ def beam_file_str(beam):
     # f.close()
 
 
+def zero_wake_at_ipk_new(beam):
+    '''
+    reads BeamArray()
+    shifts the wake pforile so that 
+    at maximum current slice wake is zero
+    returns GenesisBeam()
+    
+    allows to account for wake losses without 
+    additional linear undulator tapering
+    '''
+    if 'eloss' in beam.params():
+        beam_new = deepcopy(beam)
+        # beamf_new.idx_max_refresh()
+        beam_new.eloss -= beam_new.eloss[beam_new.idx_max()]
+        return beamf_new
+    else:
+        return beam
 def zero_wake_at_ipk(beamf):
     '''
     reads GenesisBeam()
@@ -2658,6 +2878,18 @@ def zero_wake_at_ipk(beamf):
     return beamf_new
 
 
+def set_beam_energy_new(beam, E_GeV_new):
+    '''
+    reads BeamArray()
+    returns BeamArray()
+    sets the beam energy with peak current to E_GeV_new
+    '''
+    beam_new = deepcopy(beam)
+    idx = beam_new.idx_max()
+    beam_new.E += (E_GeV_new - beam_new.E[idx])
+    
+    return beam_new
+
 def set_beam_energy(beam, E_GeV_new):
     '''
     reads GenesisBeam()
@@ -2671,6 +2903,74 @@ def set_beam_energy(beam, E_GeV_new):
     #beam.g0 = beam.g0 / E_GeV_old * E_GeV_new
     beam.g0 = beam.g0 - g_e_old + g_e_new
     return beam
+
+
+def transform_beam_twiss_new(beam, s=None, transform=None):
+    # transform = [[beta_x,alpha_x],[beta_y, alpha_y]] or Twiss()
+    if transform == None:
+        return beam
+    else:
+        if s == None:
+            idx = beam.idx_max()
+        else:
+            idx = find_nearest_idx(beam.s, s)
+
+        g1x = np.matrix([[beam.beta_x[idx], beam.alpha_x[idx]],
+                         [beam.alpha_x[idx], (1 + beam.alpha_x[idx]**2) / beam.beta_x[idx]]])
+
+        g1y = np.matrix([[beam.beta_y[idx], beam.alpha_y[idx]],
+                         [beam.alpha_y[idx], (1 + beam.alpha_y[idx]**2) / beam.beta_y[idx]]])
+        
+        # temporary legacy support
+        if transform.__class__.__name__ == 'Twiss':
+            b2x = transform.beta_x
+            b2y = transform.beta_y
+            a2x = transform.alpha_x
+            a2y = transform.alpha_y
+        else:
+            b2x = transform[0][0]
+            a2x = transform[0][1]
+            b2y = transform[1][0]
+            a2y = transform[1][1]
+
+        g2x = np.matrix([[b2x, a2x],
+                         [a2x, (1 + a2x**2) / b2x]])
+
+        g2y = np.matrix([[b2y, a2y],
+                         [a2y, (1 + a2y**2) / b2y]])
+
+        Mix, Mx = find_transform(g1x, g2x)
+        Miy, My = find_transform(g1y, g2y)
+
+        # print Mi
+
+        betax_new = []
+        alphax_new = []
+        betay_new = []
+        alphay_new = []
+
+        for i in range(beam.len()):
+            g1x = np.matrix([[beam.beta_x[i], beam.alpha_x[i]],
+                             [beam.alpha_x[i], (1 + beam.alpha_x[i]**2) / beam.beta_x[i]]])
+
+            gx = Mix.T * g1x * Mix
+
+            g1y = np.matrix([[beam.beta_y[i], beam.alpha_y[i]],
+                             [beam.alpha_y[i], (1 + beam.alpha_y[i]**2) / beam.beta_y[i]]])
+
+            gy = Miy.T * g1y * Miy
+
+            # print i, gx[0,1], g1x[0,1]
+
+            betax_new.append(gx[0, 0])
+            alphax_new.append(gx[0, 1])
+            betay_new.append(gy[0, 0])
+            alphay_new.append(gy[0, 1])
+
+        beam.beta_x = betax_new
+        beam.beta_y = betay_new
+        beam.alpha_x = alphax_new
+        beam.alpha_y = alphay_new
 
 
 def transform_beam_twiss(beam, s=None, transform=None):
@@ -2738,12 +3038,22 @@ def transform_beam_twiss(beam, s=None, transform=None):
         return beam
 
 
-def add_alpha_beam(beam):
+# def add_alpha_beam(beam):
 
-    beam.alphax = beam.column_values['ALPHAX'] = np.zeros_like(beam.g0)
-    beam.alphay = beam.column_values['ALPHAY'] = np.zeros_like(beam.g0)
+    # beam.alphax = beam.column_values['ALPHAX'] = np.zeros_like(beam.g0)
+    # beam.alphay = beam.column_values['ALPHAY'] = np.zeros_like(beam.g0)
 
-    beam.columns = list(beam.column_values.keys())
+    # beam.columns = list(beam.column_values.keys())
+
+def cut_beam_new(beam=None, cut_s=[-inf, inf]):
+    '''
+    cuts BeamArray() object longitudinally
+    cut_z [m] - limits of the cut
+    '''
+    beam_new = deepcopy(beam)
+    beam_new.sort()
+    idxl, idxr = find_nearest_idx(beam_new.s, cut_s[0]), find_nearest_idx(beam_new.s, cut_s[1])
+    return beam_new[idxl:idxr]
 
 
 def cut_beam(beam=None, cut_z=[-inf, inf]):
@@ -2792,6 +3102,12 @@ def cut_beam(beam=None, cut_z=[-inf, inf]):
         beam_new = beam
     return beam_new
 
+def get_beam_s_new(beam, s=0):
+    '''
+    obtains values of the beam at s position
+    '''
+    idx = find_nearest_idx(beam.s,s)
+    return(beam[idx])
 
 def get_beam_s(beam=None, s=0):
     '''
@@ -2836,6 +3152,13 @@ def get_beam_s(beam=None, s=0):
     return beam_new
 
 
+def get_beam_peak_new(beam):
+    '''
+    obtains values of the beam at s position
+    '''
+    idx = beam.idx_max()
+    return beam[idx]
+
 def get_beam_peak(beam=None):
     '''
     obtains the peak current values of the beam
@@ -2877,35 +3200,6 @@ def get_beam_peak(beam=None):
     else:
         beam_new = beam
     return beam_new
-
-def beam2fel(beam,lu,K):
-    '''
-    tmp function to estimate fel parameters slice-wise
-    cross-check and improve
-    '''
-    # p = FelParameters()
-    fel=[]
-    class Tmp():
-        pass
-    Tmp.gamma0 = beam.g0 
-    Tmp.delgam = beam.dg
-    Tmp.xlamd = lu# undulator period
-    Tmp.iwityp = 0
-    Tmp.emitx = beam.ex
-    Tmp.emity = beam.ey
-    Tmp.betax = beam.betax
-    Tmp.betay = beam.betay
-    Tmp.rxbeam = beam.rxbeam_eff
-    Tmp.rybeam = beam.rybeam_eff
-    # Tmp.rxbeam = np.sqrt(beam.ex * beam.betax / beam.g0)
-    # Tmp.rybeam = np.sqrt(beam.ey * beam.betay / beam.g0)
-    Tmp.aw0 = K
-    Tmp.curpeak = beam.I
-    
-    fel=calculateFelParameters(Tmp)
-    fel.s = beam.z
-    
-    return(fel)
     
 
 def find_transform(g1, g2):
@@ -2931,6 +3225,18 @@ def find_transform(g1, g2):
 
     return np.linalg.inv(M3 * M2 * M1), M3 * M2d * M1
 
+
+def write_beam_file_new(filePath, beam, debug=0):
+    if debug > 0:
+        print ('    writing beam file')
+    start_time = time.time()
+
+    fd = open(filePath, 'w')
+    fd.write(beam_file_str_new(beam))
+    fd.close()
+
+    if debug > 0:
+        print('      done in %.2f sec' % (time.time() - start_time))
 
 def write_beam_file(filePath, beam, debug=0):
     if debug > 0:

@@ -17,31 +17,37 @@ class FelParameters:
     def __init__(self):
         pass
     
-    def P(self, z=None, dims=3):
+    def P(self, z=None):
         '''
         unfinished
         '''
-        if dims == 1:
-            rho = self.rho1
-            lg = self.lg1
-        elif dims == 3:
-            rho = self.rho3
-            lg = self.lg3
-        else:
-            raise ValueError('dims argument should be either 1 or 3')
+        # if dims == 1:
+            # rho = self.rho1
+            # lg = self.lg1
+        # elif dims == 3:
+            # rho = self.rho3
+            # lg = self.lg3
+        # else:
+            # raise ValueError('dims argument should be either 1 or 3')
         
-        Nc = self.Ip / (q_e * rho * self.k0 * speed_of_light)
-        z_sat = 3 + 1/np.sqrt(3) * np.log(Nc)
-        Psn = (3 * rho * self.Pb) / (Nc * np.sqrt(np.pi * np.log(Nc)))
+        # Nc = self.Ip / (q_e * rho * self.k0 * speed_of_light)
+        # z_sat = 3 + 1/np.sqrt(3) * np.log(Nc)
+        # Psn = (3 * rho * self.Pb) / (Nc * np.sqrt(np.pi * np.log(Nc)))
         
         if z is None:
-            zn = np.amin(z_sat)
+            zn = self.z_sat / (np.sqrt(3) * self.lg3)
         else:
-            zn = z / (np.sqrt(3) * lg)
+            zn = z[:,np.newaxis] / (np.sqrt(3) * self.lg3)
         
-        Pz = Psn * (1 + 1/9 * np.exp(np.sqrt(3) * zn) / np.sqrt(np.pi * zn))
-        
+        Pz = self.P_sn * (1 + 1/9 * np.exp(np.sqrt(3) * zn) / np.sqrt(np.pi * zn))
+        #Pz = p.P_sn * (1 + 1/9 * np.exp(np.sqrt(3) * zn))
         return Pz
+        
+        
+    def E(self, z=None):
+        return np.trapz(self.P(z),self.s / speed_of_light)
+        
+
 
 def calculateFelParameters(input):
     p = FelParameters()
@@ -62,7 +68,7 @@ def calculateFelParameters(input):
     # p.rybeam = np.sqrt(p.betay * p.ey / p.gamma0)
     
     p.aw0 = input.aw0 # rms undulator parameter K
-    p.Ip = input.curpeak
+    p.I = input.curpeak
     
     p.deta =  p.delgam / p.gamma0
     
@@ -73,18 +79,18 @@ def calculateFelParameters(input):
 #    p.Ia = 17000
         
     if p.iwityp == 0:
-        ja = p.aw0**2 / (2*(1+p.aw0**2))
+        ja = p.aw0**2 / (2*(1 + p.aw0**2))
         p.fc = sf.j0(ja) - sf.j1(ja)
     else:
         p.fc = 1.0
     
     # import first, ro_e * m_e_eV = 1.4399643147059695e-09
     
-#    p.N = p.Ip * p.lambda0 / 1.4399644850445153e-10
+#    p.N = p.I * p.lambda0 / 1.4399644850445153e-10
     p.sigb = 0.5 * (p.rxbeam + p.rybeam) # average beam size
     
-    p.rho1 = (0.5 / p.gamma0) * np.power( (p.aw0 * p.fc * p.xlamd / (2.0 * np.pi * p.sigb) )**2 * p.Ip / p.Ia, 1.0/3.0) ## check 8 in denominator
-    p.Pb = p.gamma0 * p.Ip * m_e_eV# beam power [Reiche]
+    p.rho1 = (0.5 / p.gamma0) * np.power( (p.aw0 * p.fc * p.xlamd / (2.0 * np.pi * p.sigb) )**2 * p.I / p.Ia, 1.0/3.0) ## check 8 in denominator
+    p.Pb = p.gamma0 * p.I * m_e_eV# beam power [Reiche]
     
     #p.power = 6.0 * np.sqrt(np.pi) * p.rho1**2 * p.Pb / (p.N * np.log(p.N / p.rho1) ) # shot noise power [W] [Reiche]
     p.lg1 = p.xlamd / (4*np.pi * np.sqrt(3) * p.rho1) #[Xie]
@@ -103,15 +109,50 @@ def calculateFelParameters(input):
     p.lg3 = p.lg1 * (1 + p.xie_lscale)
     p.rho3 = p.xlamd / (4*np.pi * np.sqrt(3) * p.lg3)
     
-
+    p.Nc = p.I / (q_e * p.rho3 * p.k0 * speed_of_light)
+    p.P_sn = (3 * p.rho1 * p.Pb) / (p.Nc * np.sqrt(np.pi * np.log(p.Nc))) # shot noise power [W]
+    
+    p.z_sat_norm = 3 + 1/np.sqrt(3) * np.log(p.Nc) # normalized saturation length for slices
+    p.z_sat_magn = p.z_sat_norm * np.sqrt(3) * p.lg3 # magnetic length to reach saturation
+    
+    p.z_sat = np.amin(p.z_sat_magn)
+    p.idx = p.I.argmax()
+    
     return p
 
 
-def printFelParameters(input):
+def beam2fel(beam, lu, K, iwityp=0):
+    '''
+    tmp function to estimate fel parameters slice-wise
+    cross-check and improve
+    '''
+    # p = FelParameters()
+    fel=[]
+    class Tmp():
+        pass
+    Tmp.gamma0 = beam.g
+    Tmp.delgam = beam.dg
+    Tmp.xlamd = lu# undulator period
+    Tmp.iwityp = iwityp
+    Tmp.emitx = beam.emit_xn
+    Tmp.emity = beam.emit_yn
+    Tmp.betax = beam.beta_x
+    Tmp.betay = beam.beta_y
+    Tmp.rxbeam = beam.rx_eff
+    Tmp.rybeam = beam.ry_eff
+    # Tmp.rxbeam = np.sqrt(beam.ex * beam.betax / beam.g0)
+    # Tmp.rybeam = np.sqrt(beam.ey * beam.betay / beam.g0)
+    Tmp.aw0 = K
+    Tmp.curpeak = beam.I
+    
+    fel=calculateFelParameters(Tmp)
+    fel.s = beam.s
+    return(fel)
+
+
+def printFelParameters(p):
     
     #print (input.parameters)
-    
-    p = calculateFelParameters(input)
     
     print ('********    FEL Parameters    ********')
     print ('ex=', p.ex)
@@ -123,7 +164,7 @@ def printFelParameters(input):
     print ('aw0=', p.aw0)
     print ('coupling parameter fc=', p.fc)
     print ('gamma0=', p.gamma0)
-    print ('Ip=', p.Ip, ' beam peak current [A]')
+    print ('Ip=', p.I, ' beam peak current [A]')
     print ('lambda0=', p.lambda0)
     print ('Pb=', p.Pb, ' beam power [W]')
     # print ('N=', p.N)

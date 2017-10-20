@@ -10,7 +10,7 @@ Ocelot includes following main modules:
     - tracking
     - matching
     - collective effects (description can be found [here](http://vrws.de/ipac2017/papers/wepab031.pdf) )
-        - Space Charge (true 3D Laplace solver)
+        - Space Charge (3D Laplace solver)
         - CSR (Coherent Synchrotron Radiation) (1D model with arbitrary number of dipoles) (under development).
         - Wakefields (Taylor expansion up to second order for arbitrary geometry).
     - MOGA (Multi Objective Genetics Algorithm). (under development but we have already applied it for a storage ring [application](http://accelconf.web.cern.ch/AccelConf/ipac2016/papers/thpmb034.pdf))

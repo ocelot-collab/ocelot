@@ -863,7 +863,7 @@ class GenesisBeam():
             self.alphay = np.delete(self.alphay, indarr)
         return self
     
-    def __getitem__(self,index):
+    def getitemold(self,index):
         
         b_slice = deepcopy(self)
         if index > b_slice.len():
@@ -898,8 +898,26 @@ class GenesisBeam():
             b_slice.alphay = b_slice.alphay[index]
         
         return b_slice
+
+
+    def __getitem__(self,index):
         
+        b_slice = deepcopy(self)
+        if index > b_slice.len():
+            raise IndexError('slice index out of range')
         
+        beam_slice = GenesisBeam()
+        l = self.len()
+        for attr in dir(self):
+            if attr.startswith('__'):
+                continue
+            value = getattr(self,attr)
+            if np.size(value) == l:
+                setattr(beam_slice,attr,value[index])
+            else:
+                setattr(beam_slice,attr,value)
+        
+        return beam_slice
 
 
 class GenesisRad():
@@ -1306,6 +1324,10 @@ def generate_input(up, beam, itdp=False):
     inp.awd = inp.aw0
     inp.delgam = beam.sigma_E / m_e_GeV
     inp.gamma0 = beam.E / m_e_GeV
+    
+    inp.betax = beam.beta_x
+    inp.betay = beam.beta_y
+    
     inp.rxbeam = np.sqrt(beam.emit_x * beam.beta_x)
     inp.rybeam = np.sqrt(beam.emit_y * beam.beta_y)
 
@@ -2775,7 +2797,7 @@ def get_beam_s(beam=None, s=0):
     '''
     obtains values of the beam at s position
     '''
-    if len(beam.I) > 1:  # and np.amax(beam.I)!=np.amin(beam.I):
+    if np.size(beam.I) > 1:  # and np.amax(beam.I)!=np.amin(beam.I):
         slice = np.where(beam.z >= s)[0][0]
 
         # beam_new=deepcopy(beam)
@@ -2818,7 +2840,7 @@ def get_beam_peak(beam=None):
     '''
     obtains the peak current values of the beam
     '''
-    if len(beam.I) > 1:  # and np.amax(beam.I)!=np.amin(beam.I):
+    if np.size(beam.I) > 1:  # and np.amax(beam.I)!=np.amin(beam.I):
         pkslice = np.argmax(beam.I)
 
         # beam_new=deepcopy(beam)
@@ -2856,7 +2878,6 @@ def get_beam_peak(beam=None):
         beam_new = beam
     return beam_new
 
-
 def beam2fel(beam,lu,K):
     '''
     tmp function to estimate fel parameters slice-wise
@@ -2866,21 +2887,26 @@ def beam2fel(beam,lu,K):
     fel=[]
     class Tmp():
         pass
-    for i in range(beam.len()):
-        Tmp.gamma0 = beam[i].g0 
-        Tmp.delgam = beam[i].dg
-        Tmp.xlamd = lu# undulator period
-        Tmp.emitx = beam[i].ex
-        Tmp.emity = beam[i].ey
-        Tmp.rxbeam = np.sqrt(beam[i].ex * beam[i].betax / beam[i].g0)
-        Tmp.rybeam = np.sqrt(beam[i].ey * beam[i].betay / beam[i].g0)
-        Tmp.aw0 = K
-        Tmp.curpeak = beam[i].I
+    Tmp.gamma0 = beam.g0 
+    Tmp.delgam = beam.dg
+    Tmp.xlamd = lu# undulator period
+    Tmp.iwityp = 0
+    Tmp.emitx = beam.ex
+    Tmp.emity = beam.ey
+    Tmp.betax = beam.betax
+    Tmp.betay = beam.betay
+    Tmp.rxbeam = beam.rxbeam_eff
+    Tmp.rybeam = beam.rybeam_eff
+    # Tmp.rxbeam = np.sqrt(beam.ex * beam.betax / beam.g0)
+    # Tmp.rybeam = np.sqrt(beam.ey * beam.betay / beam.g0)
+    Tmp.aw0 = K
+    Tmp.curpeak = beam.I
     
-        fel.append(calculateFelParameters(Tmp))
+    fel=calculateFelParameters(Tmp)
+    fel.s = beam.z
     
     return(fel)
-
+    
 
 def find_transform(g1, g2):
     '''

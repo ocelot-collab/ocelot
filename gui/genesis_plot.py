@@ -2591,8 +2591,8 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
     if showfig == False and savefig == False:
         return
     
-    if beam.__class__ != GenesisBeam:
-        raise ValueError('wrong beam object: should be GenesisBeam')
+    # if beam.__class__ != GenesisBeam:
+        # raise ValueError('wrong beam object: should be GenesisBeam')
     
     fontsize = 15
 

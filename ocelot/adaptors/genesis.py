@@ -1328,8 +1328,8 @@ def generate_input(up, beam, itdp=False):
     inp.betax = beam.beta_x
     inp.betay = beam.beta_y
     
-    inp.rxbeam = np.sqrt(beam.emit_x * beam.beta_x)
-    inp.rybeam = np.sqrt(beam.emit_y * beam.beta_y)
+    # inp.rxbeam = np.sqrt(beam.emit_x * beam.beta_x)
+    # inp.rybeam = np.sqrt(beam.emit_y * beam.beta_y)
 
     inp.alphax = beam.alpha_x
     inp.alphay = beam.alpha_y

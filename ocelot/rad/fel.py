@@ -35,7 +35,7 @@ class FelParameters:
         # Psn = (3 * rho * self.Pb) / (Nc * np.sqrt(np.pi * np.log(Nc)))
         
         if z is None:
-            zn = self.z_sat / (np.sqrt(3) * self.lg3)
+            zn = self.z_sat_min / (np.sqrt(3) * self.lg3)
         else:
             zn = z[:,np.newaxis] / (np.sqrt(3) * self.lg3)
         
@@ -60,12 +60,12 @@ def calculateFelParameters(input):
     
     p.betax = input.betax
     p.betay = input.betay
-    p.ex = input.emitx #normalized emittance
-    p.ey = input.emity
-    p.rxbeam = input.rxbeam
-    p.rybeam = input.rybeam
-    # p.rxbeam = np.sqrt(p.betax * p.ex / p.gamma0)
-    # p.rybeam = np.sqrt(p.betay * p.ey / p.gamma0)
+    p.emitx = input.emitx #normalized emittance
+    p.emity = input.emity
+#    p.rxbeam = input.rxbeam
+#    p.rybeam = input.rybeam
+    p.rxbeam = np.sqrt(p.betax * p.emitx / p.gamma0)
+    p.rybeam = np.sqrt(p.betay * p.emity / p.gamma0)
     
     p.aw0 = input.aw0 # rms undulator parameter K
     p.I = input.curpeak
@@ -99,8 +99,8 @@ def calculateFelParameters(input):
     a = [None, 0.45, 0.57, 0.55, 1.6, 3.0, 2.0, 0.35, 2.9, 2.4, 51.0, 0.95, 3.0, 5.4, 0.7, 1.9, 1140.0, 2.2, 2.9, 3.2]
     
     p.xie_etad = p.lg1 / (2 * p.k0 * p.sigb**2)
-    #p.xie_etae = 4 * pi * p.lg1 / (p.betax*2*pi) * p.k0 * (p.ex / p.gamma0)
-    p.xie_etae = 4 * np.pi * p.lg1 / p.lambda0 * (p.ex / p.gamma0 / p.sigb)**2 # expressed via average x-y beam size
+    #p.xie_etae = 4 * pi * p.lg1 / (p.betax*2*pi) * p.k0 * (p.emitx / p.gamma0)
+    p.xie_etae = 4 * np.pi * p.lg1 / p.lambda0 * (p.emitx / p.gamma0 / p.sigb)**2 # expressed via average x-y beam size
     p.xie_etagamma = p.deta / (p.rho1 * np.sqrt(3))
     p.xie_lscale = (a[1] * p.xie_etad ** a[2] + a[3] * p.xie_etae ** a[4] + a[5] * p.xie_etagamma ** a[6] 
     + a[7] * p.xie_etae ** a[8] * p.xie_etagamma ** a[9] + a[10] * p.xie_etad ** a[11] * p.xie_etagamma ** a[12] + a[13] * p.xie_etad ** a[14] * p.xie_etae ** a[15]
@@ -115,8 +115,11 @@ def calculateFelParameters(input):
     p.z_sat_norm = 3 + 1/np.sqrt(3) * np.log(p.Nc) # normalized saturation length for slices
     p.z_sat_magn = p.z_sat_norm * np.sqrt(3) * p.lg3 # magnetic length to reach saturation
     
-    p.z_sat = np.amin(p.z_sat_magn)
-    p.idx = p.I.argmax()
+    p.z_sat_min = np.amin(p.z_sat_magn)
+    try:
+        p.idx = p.I.argmax()
+    except AttributeError: 
+        p.idx = 0
     
     return p
 
@@ -128,24 +131,27 @@ def beam2fel(beam, lu, K, iwityp=0):
     '''
     # p = FelParameters()
     fel=[]
-    class Tmp():
+    class tmp():
         pass
-    Tmp.gamma0 = beam.g
-    Tmp.delgam = beam.dg
-    Tmp.xlamd = lu# undulator period
-    Tmp.iwityp = iwityp
-    Tmp.emitx = beam.emit_xn
-    Tmp.emity = beam.emit_yn
-    Tmp.betax = beam.beta_x
-    Tmp.betay = beam.beta_y
-    Tmp.rxbeam = beam.rx_eff
-    Tmp.rybeam = beam.ry_eff
-    # Tmp.rxbeam = np.sqrt(beam.ex * beam.betax / beam.g0)
-    # Tmp.rybeam = np.sqrt(beam.ey * beam.betay / beam.g0)
-    Tmp.aw0 = K
-    Tmp.curpeak = beam.I
+    tmp.gamma0 = beam.g
+    tmp.delgam = beam.dg
+    tmp.xlamd = lu# undulator period
+    tmp.iwityp = iwityp
+    tmp.emitx = beam.emit_xn
+    tmp.emity = beam.emit_yn
+    if hasattr(beam,'beta_x_eff') and hasattr(beam,'beta_y_eff'):
+        tmp.betax = beam.beta_x_eff
+        tmp.betay = beam.beta_y_eff
+    else:
+        print('use update_effective_beta() to increase estimation accuracy')
+        tmp.betax = beam.beta_x
+        tmp.betay = beam.beta_y
+    # tmp.rxbeam = np.sqrt(beam.beta_x_eff * beam.emit_x)
+    # tmp.rybeam = np.sqrt(beam.beta_y_eff * beam.emit_y)
+    tmp.aw0 = K
+    tmp.curpeak = beam.I
     
-    fel=calculateFelParameters(Tmp)
+    fel=calculateFelParameters(tmp)
     fel.s = beam.s
     return(fel)
 
@@ -155,8 +161,8 @@ def printFelParameters(p):
     #print (input.parameters)
     
     print ('********    FEL Parameters    ********')
-    print ('ex=', p.ex)
-    print ('ey=', p.ey)
+    print ('ex=', p.emitx)
+    print ('ey=', p.emity)
     print ('rxbeam=', p.rxbeam, ' [m]')
     print ('rybeam=', p.rybeam, ' [m]')
     print ('rel energy spread deta=', p.deta, ' [m]')

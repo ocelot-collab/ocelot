@@ -2614,7 +2614,7 @@ def read_beam_file_new(filePath, debug=1):
         if parm[1] in beam.column_values.keys():
             setattr(beam, parm[0], np.array(beam.column_values[parm[1]]))
         else:
-            setattr(beam, parm[0], np.zeros_like(beam.z))
+            setattr(beam, parm[0], np.zeros_like(beam.s))
 
     try:
         beam.eloss = np.array(beam.column_values['ELOSS'])

@@ -9,6 +9,7 @@ from ocelot.common.py_func import filename_from_path
 from copy import deepcopy
 import pickle
 from scipy import interpolate
+from scipy.signal import savgol_filter
 try:
     import numexpr as ne
     ne_flag = True
@@ -301,7 +302,39 @@ class BeamArray(Beam):
         for attr in self.params():
             values = getattr(self,attr)
             setattr(self,attr,values[inds])
-        
+    
+    def equidist(self):
+        dsarr = (self.s - np.roll(self.s,1))[1:]
+        dsm = np.mean(dsarr)
+        if (np.abs(dsarr-dsm)/dsm > 1/1000).any():
+            s_new = np.linspace(np.amin(self.s), np.amax(self.s), self.len())
+            for attr in self.params():
+                if attr is 's':
+                    continue
+                print(attr)
+                val = getattr(self,attr)
+                val = np.interp(s_new, self.s, val)
+            #    val = convolve(val,spike,mode='same')
+                setattr(self,attr,val)
+            self.s = s_new
+        self.ds = dsm
+    
+    def smear(self,sw):
+        self.equidist()
+        sn = (sw /self.ds).astype(int)
+        if sn<2:
+            return
+        if not sn%2:
+            sn += 1
+
+        for attr in self.params():
+            if attr is 's':
+                continue
+            val = getattr(self,attr)
+            val = savgol_filter(val,sn,2,mode='nearest')
+        #    val = convolve(val,spike,mode='same')
+            setattr(self,attr,val)
+    
     def get_s(self, s):
         idx = find_nearest_idx(self.s, s)
         return self[idx]

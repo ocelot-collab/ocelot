@@ -47,6 +47,12 @@ class FelParameters:
     def E(self, z=None):
         return np.trapz(self.P(z),self.s / speed_of_light)
         
+    def tcoh(self,z=None):
+        #check
+        if z is None:
+            z = self.z_sat_min
+        tcoh = self.lambda0 / (6 * self.rho3 * speed_of_light ) * np.sqrt(z / (2 * np.pi * self.lg3))
+        return tcoh
 
 
 def calculateFelParameters(input):

@@ -2393,7 +2393,7 @@ def edist2beam_new(edist, step=1e-7):
     step [m] - long. size ob bin to calculate distribution parameters
     '''
 
-    from numpy import mean, std
+    from numpy import mean, sum
 
     part_c = edist.part_charge
     t_step = step / speed_of_light
@@ -2405,33 +2405,31 @@ def edist2beam_new(edist, step=1e-7):
     beam = BeamArray()
     for parm in ['I',
                  's',
-                 'emit_xn',
-                 'emit_yn',
+                 'emit_x',
+                 'emit_y',
                  'beta_x',
                  'beta_y',
                  'alpha_x',
                  'alpha_y',
                  'x',
                  'y',
-                 'px',
-                 'py',
-                 'g',
-                 'dg',
+                 'xp',
+                 'yp',
+                 'E',
+                 'sigma_E',
                  ]:
         setattr(beam, parm, np.zeros((npoints - 1)))
 
     for i in range(npoints - 1):
         indices = (edist.t > t_min + t_step * i) * (edist.t < t_min + t_step * (i + 1))
         beam.s[i] = (t_min + t_step * (i + 0.5)) * speed_of_light
-        dist_mean_g = beam.g[i]
-
+        print(sum(indices))
         if sum(indices) > 2:
             dist_g = edist.g[indices]
             dist_x = edist.x[indices]
             dist_y = edist.y[indices]
             dist_px = edist.xp[indices]
             dist_py = edist.yp[indices]
-            dist_mean_g = mean(dist_g)
 
             beam.I[i] = sum(indices) * part_c / t_step
             beam.g[i] = mean(dist_g)
@@ -2449,13 +2447,13 @@ def edist2beam_new(edist, step=1e-7):
             beam.alpha_x[i] = -mean(dist_x * dist_px) / beam.emit_x[i]
             beam.alpha_y[i] = -mean(dist_y * dist_py) / beam.emit_y[i]
 
-    idx = np.where(np.logical_or.reduce((beam.I == 0, beam.g0 == 0, beam.beta_x > mean(beam.beta_x) * 10, beam.beta_y > mean(beam.beta_y) * 10)))
+    idx = np.where(np.logical_or.reduce((beam.I == 0, beam.E == 0)))
     del beam[idx]
 
-    beam.eloss = np.zeros_like(beam.z)
-    beam.filePath = edist.filePath + '.beam'
+    if hasattr(edist,'filePath'):
+        beam.filePath = edist.filePath + '.beam'
 
-    return(beam)
+        return(beam)
 
 def edist2beam(edist, step=1e-7):
     '''

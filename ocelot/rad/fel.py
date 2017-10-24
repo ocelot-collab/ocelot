@@ -37,7 +37,10 @@ class FelParameters:
         if z is None:
             zn = self.z_sat_min / (np.sqrt(3) * self.lg3)
         else:
-            zn = z[:,np.newaxis] / (np.sqrt(3) * self.lg3)
+            if np.size(z) > 1:
+                z = z[:,np.newaxis]
+            zn = z / (np.sqrt(3) * self.lg3)
+            
         
         Pz = self.P_sn * (1 + 1/9 * np.exp(np.sqrt(3) * zn) / np.sqrt(np.pi * zn))
         #Pz = p.P_sn * (1 + 1/9 * np.exp(np.sqrt(3) * zn))
@@ -92,8 +95,8 @@ def calculateFelParameters(input):
     
     # import first, ro_e * m_e_eV = 1.4399643147059695e-09
     
-#    p.N = p.I * p.lambda0 / 1.4399644850445153e-10
-    p.sigb = 0.5 * (p.rxbeam + p.rybeam) # average beam size
+    # p.N = p.I * p.lambda0 / 1.4399644850445153e-10
+    # p.sigb = 0.5 * (p.rxbeam + p.rybeam) # average beam size
     
     p.rho1 = (0.5 / p.gamma0) * np.power( (p.aw0 * p.fc * p.xlamd / (2.0 * np.pi * p.sigb) )**2 * p.I / p.Ia, 1.0/3.0) ## check 8 in denominator
     p.Pb = p.gamma0 * p.I * m_e_eV# beam power [Reiche]
@@ -104,9 +107,9 @@ def calculateFelParameters(input):
   
     a = [None, 0.45, 0.57, 0.55, 1.6, 3.0, 2.0, 0.35, 2.9, 2.4, 51.0, 0.95, 3.0, 5.4, 0.7, 1.9, 1140.0, 2.2, 2.9, 3.2]
     
-    p.xie_etad = p.lg1 / (2 * p.k0 * p.sigb**2)
+    p.xie_etad = p.lg1 / (2 * p.k0 * p.rxbeam * p.rybeam)
     #p.xie_etae = 4 * pi * p.lg1 / (p.betax*2*pi) * p.k0 * (p.emitx / p.gamma0)
-    p.xie_etae = 4 * np.pi * p.lg1 / p.lambda0 * (p.emitx / p.gamma0 / p.sigb)**2 # expressed via average x-y beam size
+    p.xie_etae = 4 * np.pi * p.lg1 * (p.emitx * p.emity) / p.lambda0 / (p.rxbeam * p.rybeam) / p.gamma0**2 # expressed via average x-y beam size
     p.xie_etagamma = p.deta / (p.rho1 * np.sqrt(3))
     p.xie_lscale = (a[1] * p.xie_etad ** a[2] + a[3] * p.xie_etae ** a[4] + a[5] * p.xie_etagamma ** a[6] 
     + a[7] * p.xie_etae ** a[8] * p.xie_etagamma ** a[9] + a[10] * p.xie_etad ** a[11] * p.xie_etagamma ** a[12] + a[13] * p.xie_etad ** a[14] * p.xie_etae ** a[15]

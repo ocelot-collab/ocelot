@@ -478,9 +478,9 @@ class ParticleArray:
         return self.rparticles.size / 6
 
     def x(self):  return self.rparticles[0]
-    def px(self): return self.rparticles[1]
+    def px(self): return self.rparticles[1] # xp
     def y(self):  return self.rparticles[2]
-    def py(self): return self.rparticles[3]
+    def py(self): return self.rparticles[3] # yp
     def tau(self):return self.rparticles[4]
     def p(self):  return self.rparticles[5]
     
@@ -1016,76 +1016,77 @@ beam funcions proposed
 '''
 
 
-# def edist2beam_new(edist, step=1e-7):
-    # '''
-    # reads GenesisElectronDist()
-    # returns BeamArray()
-    # step [m] - long. size ob bin to calculate distribution parameters
-    # '''
+def array2beam(parray, step=1e-7):
+    '''
+    reads ParticleArray()
+    returns BeamArray()
+    step [m] - long. size ob bin to calculate distribution parameters
+    '''
 
-    # from numpy import mean, std
+    from numpy import mean, std
 
-    # part_c = edist.part_charge
-    # t_step = step / speed_of_light
-    # t_min = min(edist.t)
-    # t_max = max(edist.t)
-    # dist_t_window = t_max - t_min
-    # npoints = int(dist_t_window / t_step)
-    # t_step = dist_t_window / npoints
-    # beam = BeamArray()
-    # for parm in ['I',
-                 # 's',
-                 # 'emit_xn',
-                 # 'emit_yn',
-                 # 'beta_x',
-                 # 'beta_y',
-                 # 'alpha_x',
-                 # 'alpha_y',
-                 # 'x',
-                 # 'y',
-                 # 'px',
-                 # 'py',
-                 # 'g',
-                 # 'dg',
-                 # ]:
-        # setattr(beam, parm, np.zeros((npoints - 1)))
+    part_c = parray.q_array[0] #fix for general case  # charge per particle
+    t_step = step / speed_of_light
+    t = parray.tau() / speed_of_light
+    t_min = min(t)
+    t_max = max(t)
+    t_window = t_max - t_min
+    npoints = int(t_window / t_step)
+    t_step = t_window / npoints
+    beam = BeamArray()
+    for parm in ['I',
+                 's',
+                 'emit_x',
+                 'emit_y',
+                 'beta_x',
+                 'beta_y',
+                 'alpha_x',
+                 'alpha_y',
+                 'x',
+                 'y',
+                 'xp',
+                 'yp',
+                 'E',
+                 'sigma_E',
+                 ]:
+        setattr(beam, parm, np.zeros((npoints - 1)))
 
-    # for i in range(npoints - 1):
-        # indices = (edist.t > t_min + t_step * i) * (edist.t < t_min + t_step * (i + 1))
-        # beam.s[i] = (t_min + t_step * (i + 0.5)) * speed_of_light
-        # dist_mean_g = beam.g[i]
+    for i in range(npoints - 1):
+        indices = (t > t_min + t_step * i) * (t < t_min + t_step * (i + 1))
+        beam.s[i] = (t_min + t_step * (i + 0.5)) * speed_of_light
 
-        # if sum(indices) > 2:
-            # dist_g = edist.g[indices]
-            # dist_x = edist.x[indices]
-            # dist_y = edist.y[indices]
-            # dist_px = edist.xp[indices]
-            # dist_py = edist.yp[indices]
-            # dist_mean_g = mean(dist_g)
+        if sum(indices) > 2:
+            e0 = parray.E * 1e9
+            p0 = np.sqrt( (e0**2 - m_e_eV**2) / speed_of_light**2 )
+            p = parray.rparticles[5][indices] # deltaE / average_impulse / speed_of_light
+            dist_e = (p * p0 * speed_of_light + e0)
+            dist_x = parray.rparticles[0][indices]
+            dist_y = parray.rparticles[2][indices]
+            dist_xp = parray.rparticles[1][indices]
+            dist_yp = parray.rparticles[3][indices]
+            
+            beam.I[i] = sum(indices) * part_c / t_step
+            beam.E[i] = mean(dist_e) * 1e-9
+            beam.sigma_E[i] = np.std(dist_e) * 1e-9
+            beam.x[i] = mean(dist_x)
+            beam.y[i] = mean(dist_y)
+            g = beam.E[i] / m_e_GeV
+            p = sqrt(g**2 - 1)
+            beam.xp[i] = mean(dist_xp) #/ p
+            beam.yp[i] = mean(dist_yp) #/ p
+            beam.emit_x[i] = sqrt(mean(dist_x**2) * mean(dist_xp**2) - mean(dist_x * dist_xp)**2)
+            beam.emit_y[i] = sqrt(mean(dist_y**2) * mean(dist_yp**2) - mean(dist_y * dist_yp)**2)
+            beam.beta_x[i] = mean(dist_x**2) / beam.emit_x[i]
+            beam.beta_y[i] = mean(dist_y**2) / beam.emit_y[i]
+            beam.alpha_x[i] = -mean(dist_x * dist_xp) / beam.emit_x[i]
+            beam.alpha_y[i] = -mean(dist_y * dist_yp) / beam.emit_y[i]
 
-            # beam.I[i] = sum(indices) * part_c / t_step
-            # beam.g[i] = mean(dist_g)
-            # beam.dg[i] = np.std(dist_g)
-            # beam.x[i] = mean(dist_x)
-            # beam.y[i] = mean(dist_y)
-            # beam.px[i] = mean(dist_px)
-            # beam.py[i] = mean(dist_py)
-            # beam.emit_x[i] = (mean(dist_x**2) * mean(dist_px**2) - mean(dist_x * dist_px)**2)**0.5
-            # # if beam.ex[i]==0: beam.ey[i]=1e-10
-            # beam.emit_y[i] = (mean(dist_y**2) * mean(dist_py**2) - mean(dist_y * dist_py)**2)**0.5
-            # # if beam.ey[i]==0: beam.ey[i]=1e-10
-            # beam.beta_x[i] = mean(dist_x**2) / beam.emit_x[i]
-            # beam.beta_y[i] = mean(dist_y**2) / beam.emit_y[i]
-            # beam.alpha_x[i] = -mean(dist_x * dist_px) / beam.emit_x[i]
-            # beam.alpha_y[i] = -mean(dist_y * dist_py) / beam.emit_y[i]
-
-    # idx = np.where(np.logical_or.reduce((beam.I == 0, beam.g0 == 0, beam.beta_x > mean(beam.beta_x) * 10, beam.beta_y > mean(beam.beta_y) * 10)))
-    # del beam[idx]
-
-    # beam.eloss = np.zeros_like(beam.z)
-    # beam.filePath = edist.filePath + '.beam'
-
-    # return(beam)
+    idx = np.where(np.logical_or.reduce((beam.I == 0, beam.E == 0, beam.beta_x > mean(beam.beta_x) * 100, beam.beta_y > mean(beam.beta_y) * 100)))
+    del beam[idx]
+    
+    if hasattr(parray,'filePath'):
+        beam.filePath = parray.filePath + '.beam'
+    return(beam)
 
 # def zero_wake_at_ipk_new(beam):
     # '''

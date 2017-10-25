@@ -752,7 +752,7 @@ def parray2edist(p_array):
     edist.y = p_array.rparticles[2]  # position in y in meters
     edist.xp = p_array.rparticles[1]  # divergence in x
     edist.yp = p_array.rparticles[3]  # divergence in y
-    edist.t = p_array.rparticles[4] / speed_of_light  # longitudinal position in seconds
+    edist.t = -1 * p_array.rparticles[4] / speed_of_light  # longitudinal position in seconds
 
     edist.part_charge = p_array.q_array[0] #fix for general case  # charge per particle
     edist.filePath = ''
@@ -775,7 +775,7 @@ def edist2parray(edist):
     p_array.rparticles[1] = edist.xp  # divergence in x
     p_array.rparticles[2] = edist.y # position in x in meters
     p_array.rparticles[3] = edist.yp  # divergence in x
-    p_array.rparticles[4] = edist.t * speed_of_light
+    p_array.rparticles[4] = -1 * edist.t * speed_of_light
     p_array.rparticles[5] = (edist.g - g0) * m_e_eV / p0 / speed_of_light
     
     return p_array

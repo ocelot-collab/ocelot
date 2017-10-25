@@ -39,6 +39,12 @@ class FelParameters:
         else:
             if np.size(z) > 1:
                 z = z[:,np.newaxis]
+                if (z > self.z_sat_min).any():
+                    print('Warning, estimation applicable up to z_sat_min=%.2fm' %(self.z_sat_min))
+            else: 
+                if (z > self.z_sat_min):
+                    print('Warning, estimation applicable up to z_sat_min=%.2fm, while z=%.2fm requested' %(self.z_sat_min, z))
+            
             zn = z / (np.sqrt(3) * self.lg3)
             
         
@@ -54,6 +60,8 @@ class FelParameters:
         #check
         if z is None:
             z = self.z_sat_min
+        elif z > self.z_sat_min:
+            print('Warning, estimation applicable up to z_sat_min=%.2fm, while z=%.2fm requested' %(z_sat_min, z))
         tcoh = self.lambda0 / (6 * self.rho3 * speed_of_light ) * np.sqrt(z / (2 * np.pi * self.lg3))
         return tcoh
 
@@ -98,12 +106,12 @@ def calculateFelParameters(input):
     # p.N = p.I * p.lambda0 / 1.4399644850445153e-10
     # p.sigb = 0.5 * (p.rxbeam + p.rybeam) # average beam size
     
-    p.rho1 = (0.5 / p.gamma0) * np.power( (p.aw0 * p.fc * p.xlamd / (2.0 * np.pi * p.sigb) )**2 * p.I / p.Ia, 1.0/3.0) ## check 8 in denominator
+    p.rho1 = (0.5 / p.gamma0) * np.power( (p.aw0 * p.fc * p.xlamd / 2 / np.pi )**2 / (p.rxbeam * p.rybeam) * p.I / p.Ia, 1.0/3.0) ## check 8 in denominator
     p.Pb = p.gamma0 * p.I * m_e_eV# beam power [Reiche]
     
     #p.power = 6.0 * np.sqrt(np.pi) * p.rho1**2 * p.Pb / (p.N * np.log(p.N / p.rho1) ) # shot noise power [W] [Reiche]
     p.lg1 = p.xlamd / (4*np.pi * np.sqrt(3) * p.rho1) #[Xie]
-    p.zr = 4 * np.pi * p.sigb**2 / p.lambda0
+    p.zr = 4 * np.pi * p.rxbeam * p.rybeam / p.lambda0
   
     a = [None, 0.45, 0.57, 0.55, 1.6, 3.0, 2.0, 0.35, 2.9, 2.4, 51.0, 0.95, 3.0, 5.4, 0.7, 1.9, 1140.0, 2.2, 2.9, 3.2]
     
@@ -133,18 +141,15 @@ def calculateFelParameters(input):
     return p
 
 
-def beam2fel(beam, lu, K, iwityp=0):
+def beam2fel(beam, lu, K_peak, iwityp=0):
     '''
     tmp function to estimate fel parameters slice-wise
-    cross-check and improve
     '''
-    # p = FelParameters()
-    fel=[]
     class tmp():
         pass
     tmp.gamma0 = beam.g
     tmp.delgam = beam.dg
-    tmp.xlamd = lu# undulator period
+    tmp.xlamd = lu # undulator period
     tmp.iwityp = iwityp
     tmp.emitx = beam.emit_xn
     tmp.emity = beam.emit_yn
@@ -152,12 +157,17 @@ def beam2fel(beam, lu, K, iwityp=0):
         tmp.betax = beam.beta_x_eff
         tmp.betay = beam.beta_y_eff
     else:
-        print('use update_effective_beta() to increase estimation accuracy')
+        # print('use update_effective_beta() to increase estimation accuracy')
         tmp.betax = beam.beta_x
         tmp.betay = beam.beta_y
-    # tmp.rxbeam = np.sqrt(beam.beta_x_eff * beam.emit_x)
-    # tmp.rybeam = np.sqrt(beam.beta_y_eff * beam.emit_y)
-    tmp.aw0 = K
+    if K_peak == 0:
+        print('Warning, undulator K=0')
+    
+    if iwityp == 0: #planar
+        tmp.aw0 = K_peak / np.sqrt(2)
+    else: #other
+        tmp.aw0 = K_peak
+    
     tmp.curpeak = beam.I
     
     fel=calculateFelParameters(tmp)
@@ -197,3 +207,25 @@ def printFelParameters(p):
     print ('scaled rho (3D)=', p.rho3)
     print ('**************************************')
     
+    
+# CHECK with Xie paper parameters
+#inp = GenesisInput()
+#inp.curpeak = 3400
+#inp.xlamd = 0.03
+#inp.iwityp = 0
+#inp.gamma0 = 28000
+#inp.delgam = inp.gamma0 * 2e-4
+#inp.betax = 18
+#inp.betay = 18
+#inp.emitx=1.5e-6
+#inp.emity=1.5e-6
+#inp.xlamd=0.03
+#inp.aw0 = 3.7/sqrt(2)
+#
+#p = calculateFelParameters(inp)
+#print(p.xie_lscale,'new')
+#p.lg1
+#p.rho1
+#print(p.xie_etad, 0.0367)
+#print(p.xie_etae, 0.739)
+#print(p.xie_etagamma, 0.248)

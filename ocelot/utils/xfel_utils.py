@@ -22,7 +22,8 @@ from ocelot.adaptors.genesis import *
 import multiprocessing
 nthread = multiprocessing.cpu_count()
 
-
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.elements import *
 
 '''
 SELF-SEEDING - relevant
@@ -221,6 +222,84 @@ def tap_pol(n, n0, a0, a1, a2):
         return a0 + (n-n0)*a1 + (n-n0)**2 * a2
 
 
+def create_fel_lattice(und_N = 35,
+                    und_L = 5,
+                    und_l = 0.04,
+                    und_K = 0.999,
+                    inters_L = 1.08,
+                    quad_L = 0.4,
+                    quad_K = 0,
+                    phs_L = 0.1,
+                    phs_K = 0,
+                    quad_start = 'd',
+                        ):
+    
+    if quad_L > inters_L:
+        raise ValueError('Quarrupole cannot be longer than intersection')
+
+    und_n = np.floor(und_L/und_l).astype(int)
+
+    und= Undulator(nperiods=und_n, lperiod=und_l, Kx=und_K, eid = "und")
+    qf = Quadrupole (l=quad_L, eid = "qf")
+    qd = Quadrupole (l=quad_L, eid = "qd")
+    qfh = Quadrupole (l=qf.l / 2.)
+    qdh = Quadrupole (l=qd.l / 2.)
+
+
+    phs = UnknownElement(l=0) #phase shift
+    phs.phi = 0
+
+    d1 = Drift (l=(inters_L - quad_L) / 2, eid = "d1")
+    d2 = Drift (l=(inters_L - quad_L) / 2, eid = "d2")
+    if und_N < 2:
+        cell_N = 0
+        cell_N_last = 0
+    else:
+        cell_N = np.floor( (und_N - 1)/2 ).astype(int)
+        cell_N_last = int((und_N - 1)/2%1)
+
+    if quad_start == 'd':
+        cell = (und, d1, qf, phs, d2, und, d1, qd, phs, d2) 
+        extra_fodo = (und, d2, qdh)
+        lat = (und, d2, qd, phs) + cell_N * cell + cell_N_last * (und,)
+    elif quad_start == 'f':
+        cell = (und, d1, qd, phs, d2, und, d1, qf, phs, d2) 
+        extra_fodo = (und, d2, qfh)
+        lat = (und, d2, qf, phs) + cell_N * cell + cell_N_last * (und,)
+
+    return (MagneticLattice(lat), extra_fodo, cell)
+
+def create_exfel_sase1_lattice():
+    return create_fel_lattice(und_N = 35,
+                    und_L = 5,
+                    und_l = 0.04,
+                    und_K = 0.999,
+                    inters_L = 1.08,
+                    quad_L = 0.4,
+                    quad_K = 0,
+                    phs_L = 0.1,
+                    phs_K = 0,
+                    quad_start = 'd',
+                        )
+
+def create_exfel_sase2_lattice():
+    return create_exfel_sase1_lattice()
+
+def create_exfel_sase3_lattice():
+    return create_fel_lattice(und_N = 35,
+                    und_L = 5,
+                    und_l = 0.068,
+                    und_K = 0.999,
+                    inters_L = 1.08,
+                    quad_L = 0.4,
+                    quad_K = 0,
+                    phs_L = 0.1,
+                    phs_K = 0,
+                    quad_start = 'd',
+                        )
+
+
+
 '''
 legacy
 '''
@@ -367,13 +446,18 @@ def rematch(beta_mean, l_fodo, qdh, lat, extra_fodo, beam, qf, qd):
     beam.beta_y, beam.alpha_y = tw0m.beta_y, tw0m.alpha_y
 
 
-def rematch_beam_lat(beam, lat, extra_fodo, l_fodo, beta_mean):
+def rematch_beam_lat(beam, lat_pkg, beta_mean):
+    
+    lat, extra_fodo, cell = lat_pkg
+    l_fodo= MagneticLattice(cell).totalLen / 2
+    
+    indx_q = np.where([i.__class__ == Quadrupole for i in lat.sequence])[0]
 
-    isquad = find([i.__class__ == Quadrupole for i in lat.sequence])
-    qd = lat.sequence[isquad[0]]
-    qf = lat.sequence[isquad[1]]
-    qdh = deepcopy(qd)
-    qdh.l /= 2
+    qd = lat.sequence[indx_q[0]]
+    qf = lat.sequence[indx_q[1]]
+    
+    indx_qh = np.where([i.__class__ == Quadrupole for i in extra_fodo])[0]
+    qdh = extra_fodo[indx_qh[-1]]
     '''
     requires l_fodo to be defined in the lattice
     '''

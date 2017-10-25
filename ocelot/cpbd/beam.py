@@ -218,6 +218,9 @@ class Beam:
     @px.setter
     def py(self,value):
         self.yp = value / self.p
+        
+    def len(self):
+        return 1
 
     # def sizes(self):
         # if self.beta_x != 0:
@@ -366,6 +369,9 @@ class BeamArray(Beam):
             value = getattr(self, attr)
             if np.size(value) == l:
                 setattr(self, attr, np.delete(value, index))
+    
+    def pk(self):
+        return self[self.idx_max()]
 
 
 

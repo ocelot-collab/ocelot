@@ -36,6 +36,8 @@ class FelParameters:
         
         if z is None:
             zn = self.z_sat_min / (np.sqrt(3) * self.lg3)
+        elif z == 0:
+            return np.array(np.size(self.P_sn)*(np.NaN,))
         else:
             if np.size(z) > 1:
                 z = z[:,np.newaxis]

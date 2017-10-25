@@ -261,11 +261,11 @@ def create_fel_lattice(und_N = 35,
     if quad_start == 'd':
         cell = (und, d1, qf, phs, d2, und, d1, qd, phs, d2) 
         extra_fodo = (und, d2, qdh)
-        lat = (und, d2, qd, phs) + cell_N * cell + cell_N_last * (und,)
+        lat = (und, d1, qd, phs, d2) + cell_N * cell + cell_N_last * (und,)
     elif quad_start == 'f':
         cell = (und, d1, qd, phs, d2, und, d1, qf, phs, d2) 
         extra_fodo = (und, d2, qfh)
-        lat = (und, d2, qf, phs) + cell_N * cell + cell_N_last * (und,)
+        lat = (und, d1, qf, phs, d2) + cell_N * cell + cell_N_last * (und,)
 
     return (MagneticLattice(lat), extra_fodo, cell)
 
@@ -298,7 +298,25 @@ def create_exfel_sase3_lattice():
                     quad_start = 'd',
                         )
 
-
+def prepare_el_optics(lat_pkg, beam, E_photon, beta_av=30):
+    from ocelot.rad.undulator_params import Ephoton2K
+    beam_pk = beam.pk()
+        
+    # if beamline == 'SASE1':
+         # = create_exfel_sase1_lattice()
+    # elif beamline == 'SASE2':
+        # lat_pkg = create_exfel_sase2_lattice()
+    # elif beamline == 'SASE3':
+        # lat_pkg = create_exfel_sase3_lattice()
+    # else:
+        # raise ValueError('unknown beamline')
+    
+    rematch_beam_lat(beam_pk, lat_pkg, beta_av)
+    transform_beam_twiss(beam, Twiss(beam_pk))
+    lat = lat_pkg[0]
+    indx_und = np.where([i.__class__ == Undulator for i in lat.sequence])[0]
+    und = lat.sequence[indx_und[0]]
+    und.Kx = Ephoton2K(E_photon, und.lperiod, beam_pk.E)
 
 '''
 legacy

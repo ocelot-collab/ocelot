@@ -2,7 +2,7 @@
 ray optics
 '''
 
-from numpy import *
+from numpy import pi
 from ocelot.optics.elements import *
 
 import numpy as np

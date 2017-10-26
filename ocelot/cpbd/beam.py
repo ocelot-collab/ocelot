@@ -24,7 +24,7 @@ Note:
 (B) xp, yp are in [rad] but the meaning is not specified
 '''
 
-from numpy import *
+# from numpy import *
 
 class Twiss:
     """
@@ -193,10 +193,10 @@ class Beam:
     
     @property
     def p(self):
-        return sqrt(self.g**2 - 1)
+        return np.sqrt(self.g**2 - 1)
     @p.setter
     def p(self,value):
-        self.g = sqrt(value**2 + 1)
+        self.g = np.sqrt(value**2 + 1)
     
     @property
     def pz(self):
@@ -233,10 +233,10 @@ class Beam:
         # else:
             # self.gamma_y = 0.
 
-        # self.sigma_x = sqrt((self.sigma_E/self.E*self.Dx)**2 + self.emit_x*self.beta_x)
-        # self.sigma_y = sqrt((self.sigma_E/self.E*self.Dy)**2 + self.emit_y*self.beta_y)
-        # self.sigma_xp = sqrt((self.sigma_E/self.E*self.Dxp)**2 + self.emit_x*self.gamma_x)
-        # self.sigma_yp = sqrt((self.sigma_E/self.E*self.Dyp)**2 + self.emit_y*self.gamma_y)
+        # self.sigma_x = np.sqrt((self.sigma_E/self.E*self.Dx)**2 + self.emit_x*self.beta_x)
+        # self.sigma_y = np.sqrt((self.sigma_E/self.E*self.Dy)**2 + self.emit_y*self.beta_y)
+        # self.sigma_xp = np.sqrt((self.sigma_E/self.E*self.Dxp)**2 + self.emit_x*self.gamma_x)
+        # self.sigma_yp = np.sqrt((self.sigma_E/self.E*self.Dyp)**2 + self.emit_y*self.gamma_y)
 
     # def print_sizes(self):
         # self.sizes()
@@ -541,36 +541,36 @@ def get_envelope(p_array, tws_i=Twiss()):
     else:
         px = px*(1.-0.5*px*px - 0.5*py*py)
         py = py*(1.-0.5*px*px - 0.5*py*py)
-    tws.x = mean(x)
-    tws.y = mean(y)
-    tws.px =mean(px)
-    tws.py =mean(py)
+    tws.x = np.mean(x)
+    tws.y = np.mean(y)
+    tws.px = np.mean(px)
+    tws.py = np.mean(py)
 
     if ne_flag:
         tw_x = tws.x
         tw_y = tws.y
         tw_px = tws.px
         tw_py = tws.py
-        tws.xx =  mean(ne.evaluate('(x - tw_x) * (x - tw_x)'))
-        tws.xpx = mean(ne.evaluate('(x - tw_x) * (px - tw_px)'))
-        tws.pxpx =mean(ne.evaluate('(px - tw_px) * (px - tw_px)'))
-        tws.yy =  mean(ne.evaluate('(y - tw_y) * (y - tw_y)'))
-        tws.ypy = mean(ne.evaluate('(y - tw_y) * (py - tw_py)'))
-        tws.pypy =mean(ne.evaluate('(py - tw_py) * (py - tw_py)'))
+        tws.xx =  np.mean(ne.evaluate('(x - tw_x) * (x - tw_x)'))
+        tws.xpx = np.mean(ne.evaluate('(x - tw_x) * (px - tw_px)'))
+        tws.pxpx =np.mean(ne.evaluate('(px - tw_px) * (px - tw_px)'))
+        tws.yy =  np.mean(ne.evaluate('(y - tw_y) * (y - tw_y)'))
+        tws.ypy = np.mean(ne.evaluate('(y - tw_y) * (py - tw_py)'))
+        tws.pypy =np.mean(ne.evaluate('(py - tw_py) * (py - tw_py)'))
     else:
-        tws.xx = mean((x - tws.x)*(x - tws.x))
-        tws.xpx = mean((x-tws.x)*(px-tws.px))
-        tws.pxpx = mean((px-tws.px)*(px-tws.px))
-        tws.yy = mean((y-tws.y)*(y-tws.y))
-        tws.ypy = mean((y-tws.y)*(py-tws.py))
-        tws.pypy = mean((py-tws.py)*(py-tws.py))
-    tws.p = mean( p_array.p())
+        tws.xx = np.mean((x - tws.x)*(x - tws.x))
+        tws.xpx = np.mean((x-tws.x)*(px-tws.px))
+        tws.pxpx = np.mean((px-tws.px)*(px-tws.px))
+        tws.yy = np.mean((y-tws.y)*(y-tws.y))
+        tws.ypy = np.mean((y-tws.y)*(py-tws.py))
+        tws.pypy = np.mean((py-tws.py)*(py-tws.py))
+    tws.p = np.mean( p_array.p())
     tws.E = p_array.E
     #tws.de = p_array.de
 
-    tws.emit_x = sqrt(tws.xx*tws.pxpx-tws.xpx**2)
-    tws.emit_y = sqrt(tws.yy*tws.pypy-tws.ypy**2)
-    #print tws.emit_x, sqrt(tws.xx*tws.pxpx-tws.xpx**2), tws.emit_y, sqrt(tws.yy*tws.pypy-tws.ypy**2)
+    tws.emit_x = np.sqrt(tws.xx*tws.pxpx-tws.xpx**2)
+    tws.emit_y = np.sqrt(tws.yy*tws.pypy-tws.ypy**2)
+    #print tws.emit_x, np.sqrt(tws.xx*tws.pxpx-tws.xpx**2), tws.emit_y, np.sqrt(tws.yy*tws.pypy-tws.ypy**2)
     tws.beta_x = tws.xx/tws.emit_x
     tws.beta_y = tws.yy/tws.emit_y
     tws.alpha_x = -tws.xpx/tws.emit_x
@@ -595,25 +595,25 @@ def get_current(p_array, charge, num_bins = 200):
 def gauss_from_twiss(emit, beta, alpha):
     phi = 2*pi * np.random.rand()
     u = np.random.rand()
-    a = sqrt(-2*np.log( (1-u)) * emit)
-    x = a * sqrt(beta) * cos(phi)
-    xp = -a / sqrt(beta) * ( sin(phi) + alpha * cos(phi) )
+    a = np.sqrt(-2*np.log( (1-u)) * emit)
+    x = a * np.sqrt(beta) * cos(phi)
+    xp = -a / np.sqrt(beta) * ( sin(phi) + alpha * cos(phi) )
     return (x, xp)
 
 def waterbag_from_twiss(emit, beta, alpha):
     phi = 2*pi * np.random.rand()
-    a = sqrt(emit) * np.random.rand()
-    x = a * sqrt(beta) * cos(phi)
-    xp = -a / sqrt(beta) * ( sin(phi) + alpha * cos(phi) )
+    a = np.sqrt(emit) * np.random.rand()
+    x = a * np.sqrt(beta) * cos(phi)
+    xp = -a / np.sqrt(beta) * ( sin(phi) + alpha * cos(phi) )
     return (x, xp)
 
 def ellipse_from_twiss(emit, beta, alpha):
     phi = 2*pi * np.random.rand()
     #u = np.random.rand()
-    #a = sqrt(-2*np.log( (1-u)) * emit)
-    a = sqrt(emit)
-    x = a * sqrt(beta) * cos(phi)
-    xp = -a / sqrt(beta) * ( sin(phi) + alpha * cos(phi) )
+    #a = np.sqrt(-2*np.log( (1-u)) * emit)
+    a = np.sqrt(emit)
+    x = a * np.sqrt(beta) * cos(phi)
+    xp = -a / np.sqrt(beta) * ( sin(phi) + alpha * cos(phi) )
     return (x, xp)
 
 
@@ -625,13 +625,13 @@ def moments(x, y, cut=0):
     x = x - mx
     y = y - my
     x2 = x*x
-    mxx = sum(x2)/n
+    mxx = np.sum(x2)/n
     y2 = y*y
-    myy = sum(y2)/n
+    myy = np.sum(y2)/n
     xy = x*y
-    mxy = sum(xy)/n
+    mxy = np.sum(xy)/n
 
-    emitt = sqrt(mxx*myy - mxy*mxy)
+    emitt = np.sqrt(mxx*myy - mxy*mxy)
 
     if cut>0:
         #inds=[]
@@ -649,7 +649,7 @@ def moments(x, y, cut=0):
         mxx = np.sum(x1*x1)/n1
         myy = np.sum(y1*y1)/n1
         mxy = np.sum(x1*y1)/n1
-        emitt = sqrt(mxx*myy - mxy*mxy)
+        emitt = np.sqrt(mxx*myy - mxy*mxy)
     return mx, my, mxx, mxy, myy, emitt
 
 def m_from_twiss(Tw1, Tw2):
@@ -665,10 +665,10 @@ def m_from_twiss(Tw1, Tw2):
     cosp = cos(psi)
     sinp = sin(psi)
     M = np.zeros((2, 2))
-    M[0, 0] = sqrt(b2/b1)*(cosp+a1*sinp)
-    M[0, 1] = sqrt(b2*b1)*sinp
-    M[1, 0] = ((a1-a2)*cosp-(1+a1*a2)*sinp)/sqrt(b2*b1)
-    M[1, 1] = sqrt(b1/b2)*(cosp-a2*sinp)
+    M[0, 0] = np.sqrt(b2/b1)*(cosp+a1*sinp)
+    M[0, 1] = np.sqrt(b2*b1)*sinp
+    M[1, 0] = ((a1-a2)*cosp-(1+a1*a2)*sinp)/np.sqrt(b2*b1)
+    M[1, 1] = np.sqrt(b1/b2)*(cosp-a2*sinp)
     return M
 
 def beam_matching(particles, bounds, x_opt, y_opt):
@@ -759,13 +759,13 @@ class BeamTransform:
         x = x - mx
         y = y - my
         x2 = x * x
-        mxx = sum(x2) / n
+        mxx = np.sum(x2) / n
         y2 = y * y
-        myy = sum(y2) / n
+        myy = np.sum(y2) / n
         xy = x * y
-        mxy = sum(xy) / n
+        mxy = np.sum(xy) / n
 
-        emitt = sqrt(mxx * myy - mxy * mxy)
+        emitt = np.sqrt(mxx * myy - mxy * mxy)
 
         if cut > 0:
             inds = []
@@ -783,7 +783,7 @@ class BeamTransform:
             mxx = np.sum(x1 * x1) / n1
             myy = np.sum(y1 * y1) / n1
             mxy = np.sum(x1 * y1) / n1
-            emitt = sqrt(mxx * myy - mxy * mxy)
+            emitt = np.sqrt(mxx * myy - mxy * mxy)
         return mx, my, mxx, mxy, myy, emitt
 
 
@@ -1061,7 +1061,7 @@ def array2beam(parray, step=1e-7):
         indices = (t > t_min + t_step * i) * (t < t_min + t_step * (i + 1))
         beam.s[i] = (t_min + t_step * (i + 0.5)) * speed_of_light
 
-        if sum(indices) > 2:
+        if np.sum(indices) > 2:
             e0 = parray.E * 1e9
             p0 = np.sqrt( (e0**2 - m_e_eV**2) / speed_of_light**2 )
             p = parray.rparticles[5][indices] # deltaE / average_impulse / speed_of_light
@@ -1071,23 +1071,23 @@ def array2beam(parray, step=1e-7):
             dist_xp = parray.rparticles[1][indices]
             dist_yp = parray.rparticles[3][indices]
             
-            beam.I[i] = sum(indices) * part_c / t_step
-            beam.E[i] = mean(dist_e) * 1e-9
+            beam.I[i] = np.sum(indices) * part_c / t_step
+            beam.E[i] = np.mean(dist_e) * 1e-9
             beam.sigma_E[i] = np.std(dist_e) * 1e-9
-            beam.x[i] = mean(dist_x)
-            beam.y[i] = mean(dist_y)
+            beam.x[i] = np.mean(dist_x)
+            beam.y[i] = np.mean(dist_y)
             g = beam.E[i] / m_e_GeV
-            p = sqrt(g**2 - 1)
-            beam.xp[i] = mean(dist_xp) #/ p
-            beam.yp[i] = mean(dist_yp) #/ p
-            beam.emit_x[i] = sqrt(mean(dist_x**2) * mean(dist_xp**2) - mean(dist_x * dist_xp)**2)
-            beam.emit_y[i] = sqrt(mean(dist_y**2) * mean(dist_yp**2) - mean(dist_y * dist_yp)**2)
-            beam.beta_x[i] = mean(dist_x**2) / beam.emit_x[i]
-            beam.beta_y[i] = mean(dist_y**2) / beam.emit_y[i]
-            beam.alpha_x[i] = -mean(dist_x * dist_xp) / beam.emit_x[i]
-            beam.alpha_y[i] = -mean(dist_y * dist_yp) / beam.emit_y[i]
+            p = np.sqrt(g**2 - 1)
+            beam.xp[i] = np.mean(dist_xp) #/ p
+            beam.yp[i] = np.mean(dist_yp) #/ p
+            beam.emit_x[i] = np.sqrt(np.mean(dist_x**2) * np.mean(dist_xp**2) - np.mean(dist_x * dist_xp)**2)
+            beam.emit_y[i] = np.sqrt(np.mean(dist_y**2) * np.mean(dist_yp**2) - np.mean(dist_y * dist_yp)**2)
+            beam.beta_x[i] = np.mean(dist_x**2) / beam.emit_x[i]
+            beam.beta_y[i] = np.mean(dist_y**2) / beam.emit_y[i]
+            beam.alpha_x[i] = -np.mean(dist_x * dist_xp) / beam.emit_x[i]
+            beam.alpha_y[i] = -np.mean(dist_y * dist_yp) / beam.emit_y[i]
 
-    idx = np.where(np.logical_or.reduce((beam.I == 0, beam.E == 0, beam.beta_x > mean(beam.beta_x) * 100, beam.beta_y > mean(beam.beta_y) * 100)))
+    idx = np.where(np.logical_or.reduce((beam.I == 0, beam.E == 0, beam.beta_x > np.mean(beam.beta_x) * 100, beam.beta_y > np.mean(beam.beta_y) * 100)))
     del beam[idx]
     
     if hasattr(parray,'filePath'):

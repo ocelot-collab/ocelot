@@ -33,7 +33,6 @@ import matplotlib
 
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy import *
 from ocelot.adaptors.genesis import *
 from ocelot.common.globals import *  # import of constants like "h_eV_s" and
 from ocelot.common.math_op import *  # import of mathematical functions
@@ -152,7 +151,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
             if choice[3]:
                 f3 = plot_gen_out_z(handle, z=inf, showfig=showfig, savefig=savefig, debug=debug)
             if choice[4] != 0:
-                for z in arange(choice[4], max(handle.z), choice[4]):
+                for z in arange(choice[4], np.amax(handle.z), choice[4]):
                     plot_gen_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug)
             if choice[11]:
                 try:
@@ -1017,7 +1016,7 @@ def subfig_evo_el_energy(ax_energy, g, legend):
     number_ticks = 6
     
     el_energy = g.el_energy * m_e_MeV
-    el_energy_av = int(mean(el_energy))
+    el_energy_av = int(np.mean(el_energy))
     ax_energy.plot(g.z, np.average(el_energy - el_energy_av, axis=0), 'b-', linewidth=1.5)
     ax_energy.set_ylabel('E + ' + str(el_energy_av) + '[MeV]')
     ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
@@ -1584,8 +1583,8 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
         x_line = np.sum(xy_proj,axis=1)
         y_line = np.sum(xy_proj,axis=0)
     
-    if max(x_line) != 0 and max(y_line) != 0:
-        x_line, y_line = x_line / max(x_line), y_line / max(y_line)
+    if np.max(x_line) != 0 and np.max(y_line) != 0:
+        x_line, y_line = x_line / np.max(x_line), y_line / np.max(y_line)
 
     ax_int = fig.add_subplot(2, 2 + column_3d, 1)
     if log_scale:
@@ -1601,7 +1600,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
     if phase == True:
         ax_ph = fig.add_subplot(2, 2 + column_3d, 4 + column_3d, sharex=ax_int, sharey=ax_int)
         ax_ph.pcolormesh(x, y, swapaxes(xy_proj_ph, 1, 0), cmap=cmap_ph)
-        ax_ph.axis([min(x), max(x), min(y), max(y)])
+        ax_ph.axis([np.min(x), np.max(x), np.min(y), np.max(y)])
         ax_ph.set_title('Phase', fontsize=15)
     else:
         ax_z = fig.add_subplot(2, 2 + column_3d, 4 + column_3d)
@@ -1728,13 +1727,13 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
         cbar.set_label(r'a.u.', size=10)
 
     if auto_zoom != False:
-        size_x = max(abs(x[nonzero(x_line > 0.005)][[0, -1]]))
-        size_y = max(abs(x[nonzero(x_line > 0.005)][[0, -1]]))
-        size_xy = max(size_x, size_y)
+        size_x = np.max(abs(x[nonzero(x_line > 0.005)][[0, -1]]))
+        size_y = np.max(abs(x[nonzero(x_line > 0.005)][[0, -1]]))
+        size_xy = np.max(size_x, size_y)
         if phase == True and column_3d == True and z_lim == []:
-            ax_proj_xz.set_xlim(z[nonzero(z_proj > max(z_proj) * 0.005)][[0, -1]])
+            ax_proj_xz.set_xlim(z[nonzero(z_proj > np.max(z_proj) * 0.005)][[0, -1]])
         elif phase == False and z_lim == []:
-            ax_z.set_xlim(z[nonzero(z_proj > max(z_proj) * 0.005)][[0, -1]])
+            ax_z.set_xlim(z[nonzero(z_proj > np.max(z_proj) * 0.005)][[0, -1]])
             print ('      scaling xy to', size_xy)
             ax_proj_xz.set_ylim([-size_xy, size_xy])
         elif column_3d == True:
@@ -1946,8 +1945,8 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                         print('plotting array shapes', shape(outlist[irun].z), shape(swapaxes(s_value, 0, 1)))
                     fig = plt.plot(outlist[irun].z, swapaxes(s_value, 0, 1), '0.8', linewidth=1)
                     fig = plt.plot(outlist[irun].z, s_value[0], '0.5', linewidth=1)
-                    fig = plt.plot(outlist[irun].z, mean(s_value, 0), 'k', linewidth=2)
-                    plt.xlim([min(outlist[irun].z), max(outlist[irun].z)])
+                    fig = plt.plot(outlist[irun].z, np.mean(s_value, 0), 'k', linewidth=2)
+                    plt.xlim([np.min(outlist[irun].z), np.max(outlist[irun].z)])
 
                     # fig[0].axes.get_yaxis().get_major_formatter().set_scientific(True)
                     # plt.ticklabel_format(style='sci')
@@ -1961,7 +1960,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     if saveval != False:
                         if debug > 1:
                             print('      saving ' + s_fig_name + '.txt')
-                        np.savetxt(saving_path + s_fig_name + '.txt', vstack([outlist[irun].z, mean(s_value, 0), s_value]).T, fmt="%E", newline='\n', comments='')
+                        np.savetxt(saving_path + s_fig_name + '.txt', vstack([outlist[irun].z, np.mean(s_value, 0), s_value]).T, fmt="%E", newline='\n', comments='')
                     if not showfig:
                         plt.close('all')
         # if z_param_inp==[]:
@@ -2032,8 +2031,8 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                             print('plotting array shapes freq', shape(freq_scale), shape(swapaxes(z_value, 0, 1)))
                         fig = plt.plot(freq_scale, swapaxes(z_value, 0, 1), '0.8')
                         fig = plt.plot(freq_scale, z_value[0], '0.5', linewidth=1)
-                        fig = plt.plot(freq_scale, mean(z_value, 0), 'k', linewidth=2)
-                        plt.xlim([min(freq_scale), max(freq_scale)])
+                        fig = plt.plot(freq_scale, np.mean(z_value, 0), 'k', linewidth=2)
+                        plt.xlim([np.min(freq_scale), np.max(freq_scale)])
                         plt.xlabel('$E_{photon}$ [eV]')
                     else:
                         s_scale = outlist[irun].s * 1e6
@@ -2041,8 +2040,8 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                             print('plotting array shapes', shape(s_scale), shape(swapaxes(z_value, 0, 1)))
                         fig = plt.plot(s_scale, swapaxes(z_value, 0, 1), '0.8')
                         fig = plt.plot(s_scale, z_value[0], '0.5', linewidth=1)
-                        fig = plt.plot(s_scale, mean(z_value, 0), 'k', linewidth=2)
-                        plt.xlim([min(s_scale), max(s_scale)])
+                        fig = plt.plot(s_scale, np.mean(z_value, 0), 'k', linewidth=2)
+                        plt.xlim([np.min(s_scale), np.max(s_scale)])
                         plt.xlabel('s [um]')
                     plt.ylabel(dict_name.get(param, param) + ' ' + dict_unit.get(param, ''))
                     if savefig != False:
@@ -2054,9 +2053,9 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                         if debug > 1:
                             print('      saving ' + z_fig_name + '.txt')
                         if param in ['spec', 'spec_phot_density']:
-                            np.savetxt(saving_path + z_fig_name + '.txt', vstack([outlist[irun].freq_ev, mean(z_value, 0), z_value]).T, fmt="%E", newline='\n', comments='')
+                            np.savetxt(saving_path + z_fig_name + '.txt', vstack([outlist[irun].freq_ev, np.mean(z_value, 0), z_value]).T, fmt="%E", newline='\n', comments='')
                         else:
-                            np.savetxt(saving_path + z_fig_name + '.txt', vstack([outlist[irun].s * 1e6, mean(z_value, 0), z_value]).T, fmt="%E", newline='\n', comments='')
+                            np.savetxt(saving_path + z_fig_name + '.txt', vstack([outlist[irun].s * 1e6, np.mean(z_value, 0), z_value]).T, fmt="%E", newline='\n', comments='')
                     if not showfig:
                         plt.close('all')
         # if run_param_inp==[]:
@@ -2120,7 +2119,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                         fig.set_size_inches(figsize, forward=True)
 
                         fig = plt.plot(run_range, run_value_arr, 'k')
-                        plt.xlim([min(run_range), max(run_range)])
+                        plt.xlim([np.min(run_range), np.max(run_range)])
                         plt.xlabel('run')
 
                         plt.ylabel(dict_name.get(param, param) + '  ' + dict_unit.get(param, '') + ' (' + str(s_ind) + ' um, ' + str(z_ind) + ' m)')
@@ -2160,7 +2159,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                 if param == 'dfl_spec':
                     fig = plt.plot(freq_scale, swapaxes(dfl_value, 0, 1), '0.8')
                     fig = plt.plot(freq_scale, dfl_value[0], '0.5', linewidth=1)
-                    fig = plt.plot(freq_scale, mean(dfl_value, 0), 'k', linewidth=2)
+                    fig = plt.plot(freq_scale, np.mean(dfl_value, 0), 'k', linewidth=2)
                     plt.xlabel('$E_{photon}$ [eV]')
                 plt.ylabel(dict_name.get(param, param) + ' ' + dict_unit.get(param, ''))
                 if savefig != False:
@@ -2172,7 +2171,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     if debug > 1:
                         print('      saving ' + dfl_fig_name + '.txt')
                     if param == 'dfl_spec':
-                        np.savetxt(saving_path + dfl_fig_name + '.txt', vstack([freq_scale, mean(dfl_value, 0), dfl_value]).T, fmt="%E", newline='\n', comments='')
+                        np.savetxt(saving_path + dfl_fig_name + '.txt', vstack([freq_scale, np.mean(dfl_value, 0), dfl_value]).T, fmt="%E", newline='\n', comments='')
                 if not showfig:
                     plt.close('all')
     if showfig:
@@ -2252,7 +2251,7 @@ def plot_gen_corr(proj_dir, run_inp=[], p1=(), p2=(), savefig=False, showfig=Tru
         var_1 = matrix_1[:, index_z1]
     else:
         if s_1 == 'mean':
-            var_1 = mean(matrix_1[:, :, index_z1], axis=1)
+            var_1 = np.mean(matrix_1[:, :, index_z1], axis=1)
         elif s_1 == 'max':
             var_1 = np.amax(matrix_1[:, :, index_z1], axis=1)
         else:
@@ -2262,7 +2261,7 @@ def plot_gen_corr(proj_dir, run_inp=[], p1=(), p2=(), savefig=False, showfig=Tru
         var_2 = matrix_2[:, index_z2]
     else:
         if s_2 == 'mean':
-            var_2 = mean(matrix_2[:, :, index_z2], axis=1)
+            var_2 = np.mean(matrix_2[:, :, index_z2], axis=1)
         elif s_2 == 'max':
             var_2 = np.amax(matrix_2[:, :, index_z2], axis=1)
         else:
@@ -2513,7 +2512,7 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
         energy = edist.g
         
     if y_offset == None:
-        y_offset = int(mean(energy))
+        y_offset = int(np.mean(energy))
     if scatter:
         ax_se.scatter(s, energy - y_offset, marker='.')
     else:
@@ -2598,7 +2597,7 @@ def plot_beam_new(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_x
     fontsize = 15
 
     if plot_xy == None:
-        if mean(beam.x) == 0 and mean(beam.y) == 0 and mean(beam.xp) == 0 and mean(beam.yp) == 0:
+        if np.mean(beam.x) == 0 and np.mean(beam.y) == 0 and np.mean(beam.xp) == 0 and np.mean(beam.yp) == 0:
             plot_xy = 0
         else:
             plot_xy = 1
@@ -2716,7 +2715,7 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
     fontsize = 15
 
     if plot_xy == None:
-        if mean(beam.x) == 0 and mean(beam.y) == 0 and mean(beam.px) == 0 and mean(beam.py) == 0:
+        if np.mean(beam.x) == 0 and np.mean(beam.y) == 0 and np.mean(beam.px) == 0 and np.mean(beam.py) == 0:
             plot_xy = 0
         else:
             plot_xy = 1
@@ -2788,10 +2787,10 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
 
         ax.legend([p1, p2], [r'$x [\mu m]$', r'$y [\mu m]$'], fontsize=fontsize, loc='best')
 
-        beam_beta = sqrt(1 - (1 / beam.g0**2))
+        beam_beta = np.sqrt(1 - (1 / beam.g0**2))
         beam_p = beam.g0 * beam_beta
         # p=beam.g0*m_e_eV/speed_of_light
-        pz = sqrt(beam_p**2 - beam.px**2 - beam.py**2)
+        pz = np.sqrt(beam_p**2 - beam.px**2 - beam.py**2)
         xp = beam.px / pz
         yp = beam.py / pz
 
@@ -3436,7 +3435,7 @@ def gauss_fit(X, Y):
     def gauss(x, p):  # p[0]==mean, p[1]==stdev p[2]==peak
         return p[2] / (p[1] * np.sqrt(2 * np.pi)) * np.exp(-(x - p[0])**2 / (2 * p[1]**2))
 
-    p0 = [0, max(X) / 2, max(Y)]
+    p0 = [0, np.max(X) / 2, np.max(Y)]
     errfunc = lambda p, x, y: gauss(x, p) - y
     p1, success = opt.leastsq(errfunc, p0[:], args=(X, Y))
     fit_mu, fit_stdev, ampl = p1

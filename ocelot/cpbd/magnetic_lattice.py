@@ -64,7 +64,7 @@ def matrix2Matrix(elem, R):
     elem.rm46, elem.rm56, elem.rm66 = R[3, 5], R[4, 5], R[5, 5]
 
 
-def shrinker(lat, remaining_types, init_energy=0.):
+def shrinker(lat, remaining_types, remaining_elems=[], init_energy=0.):
     """
 
     :param lat: MagneticLattice
@@ -83,7 +83,7 @@ def shrinker(lat, remaining_types, init_energy=0.):
     count = 0
     E = init_energy
     for elem in lat.sequence:
-        if elem.__class__ in remaining_types:
+        if elem.__class__ in remaining_types or elem.id in remaining_elems:
             if count != 0:
                 new_elem.l = length
                 matrix2Matrix(new_elem, _r)

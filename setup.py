@@ -8,6 +8,7 @@ for pkg in find_packages():
     all_packages.append(pkg)
 
 
+
 setup(
     name='ocelot',
     version='17.10',
@@ -20,5 +21,6 @@ setup(
     install_requires=[
         'numpy', 'scipy', 'matplotlib'
     ],
+    package_data={'ocelot.optics': ['data/*.dat']},
     # long_description=open(join(dirname(__file__), 'README.txt')).read(),
 )

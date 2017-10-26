@@ -266,6 +266,10 @@ class MagneticLattice:
         print('\nLattice\n')
         for e in self.sequence:
             print('-->',  e.id, '[', e.l, ']')
+    
+    def find_indices(self, element):
+        indx_elem = np.where([i.__class__ == element for i in self.sequence])[0]
+        return indx_elem
 
 def merge_drifts(cell):
     """

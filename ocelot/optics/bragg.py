@@ -2,13 +2,14 @@
 crystal optics
 '''
 
-from ocelot.optics.elements import *
+from ocelot.optics.elements import Crystal
 from ocelot.optics.wave import *
 from ocelot.optics.ray import Ray, trace as trace_ray
-from ocelot.gui.optics import *
+# from ocelot.gui.optics import *
 
-from numpy import *
-from pylab import *
+import numpy as np
+# from numpy import *
+# from pylab import *
 import sys, os
 
 m = 1.0
@@ -133,7 +134,8 @@ def load_stucture_factors(file_name):
 def save_stucture_factors(cdata, file_name):
     import pickle
     print ('saving structure factors to', file_name)
-    pickle.dump(cdata, open(file_name, 'wb'))
+    # pickle.dump(cdata, open(file_name, 'wb')) #original
+    pickle.dump(cdata, open(file_name, 'wb'), pickle.HIGHEST_PROTOCOL) # fix for "No module named 'ocelot.optics.bragg\r'" error in Windows
 
 
 def F_hkl(cryst, ref_idx, lamb, temp):
@@ -165,9 +167,11 @@ def F_hkl(cryst, ref_idx, lamb, temp):
     de = cdata.ev[1] - cdata.ev[0]
     i_e = int( (target_ev - cdata.ev[0]) / de )
 
-    print ('using ', cdata.ev[i_e])
-
-    return cdata.f000[i_e], cdata.fh[i_e], cdata.fhbar[i_e]
+    # return cdata.f000[i_e], cdata.fh[i_e], cdata.fhbar[i_e]
+    f000 = np.interp(target_ev, cdata.ev, np.real(cdata.f000)) + 1j * np.interp(target_ev, cdata.ev, np.imag(cdata.f000))
+    fh = np.interp(target_ev, cdata.ev, np.real(cdata.fh)) + 1j * np.interp(target_ev, cdata.ev, np.imag(cdata.fh))
+    fhbar = np.interp(target_ev, cdata.ev, np.real(cdata.fhbar)) + 1j * np.interp(target_ev, cdata.ev, np.imag(cdata.fhbar))
+    return f000, fh, fhbar
 
 
 
@@ -408,7 +412,7 @@ def get_crystal_filter(cryst, ev_seed, nk=10000, k = None, n_width = 100):
         
     delta    = r_el * np.abs(c_pol) * lamb**2 * np.sqrt( np.abs(gamma)*fh*fmh ) / ( np.pi * vcell * np.sin(2*thetaB) )
     mid_TH = np.real( r_el * lamb**2 * f0 * (1-gamma) / (2*np.pi * vcell * np.sin(2*thetaB)) )
-    mid_k  = kb / (- mid_TH * 1/np.tan(thetaB) + 1 )    
+    mid_k  = kb / (- mid_TH * 1/np.tan(thetaB) + 1 )
     dk  =  ( -2*kb*np.sin(thetaB) + np.sqrt(16*mid_k**2 * np.real(delta)**2 * np.cos(thetaB)**2 + 4*kb**2 * np.sin(thetaB)**2) ) / ( 2 * np.real(delta) * np.cos(thetaB) )
     
     
@@ -420,6 +424,7 @@ def get_crystal_filter(cryst, ev_seed, nk=10000, k = None, n_width = 100):
     
     cryst.lamb = lamb
     cryst.kb = kb
+    cryst.kb = 2 * kb - mid_k # bugfix
     cryst.thetaB = thetaB
     cryst.gamma = gamma
     cryst.gamma0 = gamma0
@@ -431,6 +436,7 @@ def get_crystal_filter(cryst, ev_seed, nk=10000, k = None, n_width = 100):
     cryst.chimh = - ( r_el * lamb**2 * fmh ) / ( np.pi * vcell )
     cryst.pl = np.pi * vcell * np.sqrt( gamma0 * np.abs(gammah) ) / ( r_el * lamb * np.abs(c_pol) * np.sqrt( fh*fmh ) )
     
+    from ocelot.optics.wave import TransferFunction #hotfix here
     f = TransferFunction()
     
     f.tr, f.ref = transmissivity_reflectivity(k, cryst)    
@@ -465,6 +471,4 @@ def unfold_angles(Phlist):
 if __name__ == "__main__":
     plot_bragg_reflections()
     #plot_scattering_factors()
-
-
-
+    

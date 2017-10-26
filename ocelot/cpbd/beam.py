@@ -2,10 +2,10 @@
 definition of particles, beams and trajectories
 '''
 import numpy as np
-from numpy.core.umath import sqrt, cos, sin
+from numpy import sqrt, cos, sin
 from ocelot.common.globals import *
-import pickle
 from scipy import interpolate
+
 try:
     import numexpr as ne
     ne_flag = True
@@ -20,7 +20,6 @@ Note:
 (B) xp, yp are in [rad] but the meaning is not specified
 '''
 
-from numpy import *
 
 class Twiss:
     """
@@ -226,7 +225,7 @@ class ParticleArray:
     """
     def __init__(self, n=0):
         #self.particles = zeros(n*6)
-        self.rparticles = zeros((6, n))#np.transpose(np.zeros(int(n), 6))
+        self.rparticles = np.zeros((6, n))#np.transpose(np.zeros(int(n), 6))
         self.q_array = np.zeros(n)    # charge
         self.s = 0.0
         self.E = 0.0
@@ -239,10 +238,10 @@ class ParticleArray:
         px = abs(self.px())
         y = abs(self.y())
         py = abs(self.py())
-        ind_angles = append(argwhere(px > px_lim), argwhere(py > py_lim))
-        p_idxs = unique(append(argwhere(x > xlim), append(argwhere(y > ylim), append(argwhere(x != x), append(argwhere(y!= y), ind_angles)) )))
+        ind_angles = np.append(np.argwhere(px > px_lim), np.argwhere(py > py_lim))
+        p_idxs = np.unique(np.append(np.argwhere(x > xlim), np.append(np.argwhere(y > ylim), np.append(np.argwhere(x != x), np.append(np.argwhere(y!= y), ind_angles)) )))
         #e_idxs = [append([], x) for x in array([6*p_idxs, 6*p_idxs+1, 6*p_idxs+2, 6*p_idxs+3, 6*p_idxs+4, 6*p_idxs+5])]
-        self.rparticles = delete(self.rparticles, p_idxs, axis=1)
+        self.rparticles = np.delete(self.rparticles, p_idxs, axis=1)
         return p_idxs
 
     def __getitem__(self, idx):
@@ -261,7 +260,7 @@ class ParticleArray:
         self.s = p.s
 
     def list2array(self, p_list):
-        self.rparticles = zeros((6, len(p_list)))
+        self.rparticles = np.zeros((6, len(p_list)))
         for i, p in enumerate(p_list):
             self[i] = p
         self.s = p_list[0].s
@@ -347,31 +346,31 @@ def get_envelope(p_array, tws_i=Twiss()):
     else:
         px = px*(1.-0.5*px*px - 0.5*py*py)
         py = py*(1.-0.5*px*px - 0.5*py*py)
-    tws.x = mean(x)
-    tws.y = mean(y)
-    tws.px =mean(px)
-    tws.py =mean(py)
+    tws.x = np.mean(x)
+    tws.y = np.mean(y)
+    tws.px =np.mean(px)
+    tws.py =np.mean(py)
 
     if ne_flag:
         tw_x = tws.x
         tw_y = tws.y
         tw_px = tws.px
         tw_py = tws.py
-        tws.xx =  mean(ne.evaluate('(x - tw_x) * (x - tw_x)'))
-        tws.xpx = mean(ne.evaluate('(x - tw_x) * (px - tw_px)'))
-        tws.pxpx =mean(ne.evaluate('(px - tw_px) * (px - tw_px)'))
-        tws.yy =  mean(ne.evaluate('(y - tw_y) * (y - tw_y)'))
-        tws.ypy = mean(ne.evaluate('(y - tw_y) * (py - tw_py)'))
-        tws.pypy =mean(ne.evaluate('(py - tw_py) * (py - tw_py)'))
+        tws.xx =  np.mean(ne.evaluate('(x - tw_x) * (x - tw_x)'))
+        tws.xpx = np.mean(ne.evaluate('(x - tw_x) * (px - tw_px)'))
+        tws.pxpx =np.mean(ne.evaluate('(px - tw_px) * (px - tw_px)'))
+        tws.yy =  np.mean(ne.evaluate('(y - tw_y) * (y - tw_y)'))
+        tws.ypy = np.mean(ne.evaluate('(y - tw_y) * (py - tw_py)'))
+        tws.pypy =np.mean(ne.evaluate('(py - tw_py) * (py - tw_py)'))
     else:
-        tws.xx = mean((x - tws.x)*(x - tws.x))
-        tws.xpx = mean((x-tws.x)*(px-tws.px))
-        tws.pxpx = mean((px-tws.px)*(px-tws.px))
-        tws.yy = mean((y-tws.y)*(y-tws.y))
-        tws.ypy = mean((y-tws.y)*(py-tws.py))
-        tws.pypy = mean((py-tws.py)*(py-tws.py))
-    tws.p = mean( p_array.p())
-    tws.E = p_array.E
+        tws.xx = np.mean((x - tws.x)*(x - tws.x))
+        tws.xpx = np.mean((x-tws.x)*(px-tws.px))
+        tws.pxpx = np.mean((px-tws.px)*(px-tws.px))
+        tws.yy = np.mean((y-tws.y)*(y-tws.y))
+        tws.ypy = np.mean((y-tws.y)*(py-tws.py))
+        tws.pypy = np.mean((py-tws.py)*(py-tws.py))
+    tws.p = np.mean( p_array.p())
+    tws.E = np.copy(p_array.E)
     #tws.de = p_array.de
 
     tws.emit_x = sqrt(tws.xx*tws.pxpx-tws.xpx**2)
@@ -478,7 +477,7 @@ def m_from_twiss(Tw1, Tw2):
     return M
 
 def beam_matching(particles, bounds, x_opt, y_opt):
-    pd = zeros(( int(len(particles)/6), 6))
+    pd = np.zeros(( int(len(particles)/6), 6))
     pd[:, 0] = particles[0]
     pd[:, 1] = particles[1]
     pd[:, 2] = particles[2]
@@ -528,7 +527,7 @@ class BeamTransform:
         self.beam_matching(p_array.rparticles, self.bounds, self.x_opt, self.y_opt)
 
     def beam_matching(self, particles, bounds, x_opt, y_opt):
-        pd = zeros((int(particles.size / 6), 6))
+        pd = np.zeros((int(particles.size / 6), 6))
         pd[:, 0] = particles[0]
         pd[:, 1] = particles[1]
         pd[:, 2] = particles[2]
@@ -769,7 +768,7 @@ def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
     # %[s, I, ex, ey ,me, se, gamma0, emitxn, emityn]=GlobalSliceAnalysis_Extended(PD,q1,Mslice,Mcur,p,iter)
 
     q1 = np.sum(parray.q_array)
-    print("charge", q1)
+    #print("charge", q1)
     n = np.int_(parray.rparticles.size/6)
     PD = parray.rparticles
     PD = sortrows(PD, col=4)

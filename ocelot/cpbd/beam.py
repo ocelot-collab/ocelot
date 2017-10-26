@@ -419,8 +419,8 @@ class ParticleArray:
     p0 - momentum
     """
     def __init__(self, n=0):
-        #self.particles = zeros(n*6)
-        self.rparticles = zeros((6, n))#np.transpose(np.zeros(int(n), 6))
+        #self.particles = np.zeros(n*6)
+        self.rparticles = np.zeros((6, n))#np.transpose(np.zeros(int(n), 6))
         self.q_array = np.zeros(n)    # charge
         self.s = 0.0
         self.E = 0.0
@@ -455,7 +455,7 @@ class ParticleArray:
         self.s = p.s
 
     def list2array(self, p_list):
-        self.rparticles = zeros((6, len(p_list)))
+        self.rparticles = np.zeros((6, len(p_list)))
         for i, p in enumerate(p_list):
             self[i] = p
         self.s = p_list[0].s
@@ -672,7 +672,7 @@ def m_from_twiss(Tw1, Tw2):
     return M
 
 def beam_matching(particles, bounds, x_opt, y_opt):
-    pd = zeros(( int(len(particles)/6), 6))
+    pd = np.zeros(( int(len(particles)/6), 6))
     pd[:, 0] = particles[0]
     pd[:, 1] = particles[1]
     pd[:, 2] = particles[2]
@@ -722,7 +722,7 @@ class BeamTransform:
         self.beam_matching(p_array.rparticles, self.bounds, self.x_opt, self.y_opt)
 
     def beam_matching(self, particles, bounds, x_opt, y_opt):
-        pd = zeros((int(particles.size / 6), 6))
+        pd = np.zeros((int(particles.size / 6), 6))
         pd[:, 0] = particles[0]
         pd[:, 1] = particles[1]
         pd[:, 2] = particles[2]

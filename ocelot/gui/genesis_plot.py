@@ -121,7 +121,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
     if len(choice) > 13:
         choice = choice[:13]
     elif len(choice) < 13:
-        choice += tuple((zeros(13 - len(choice)).astype(int)))
+        choice += tuple((np.zeros(13 - len(choice)).astype(int)))
 
     if os.path.isdir(str(handle)):
         handles = []
@@ -1588,9 +1588,9 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
 
     ax_int = fig.add_subplot(2, 2 + column_3d, 1)
     if log_scale:
-        intplt = ax_int.pcolormesh(x, y, swapaxes(xy_proj, 1, 0), norm=colors.LogNorm(vmin=xy_proj.min(), vmax=xy_proj.max()), cmap=cmap)
+        intplt = ax_int.pcolormesh(x, y, np.swapaxes(xy_proj, 1, 0), norm=colors.LogNorm(vmin=xy_proj.min(), vmax=xy_proj.max()), cmap=cmap)
     else:
-        intplt = ax_int.pcolormesh(x, y, swapaxes(xy_proj, 1, 0), cmap=cmap, vmin=0)
+        intplt = ax_int.pcolormesh(x, y, np.swapaxes(xy_proj, 1, 0), cmap=cmap, vmin=0)
     ax_int.set_title(xy_title, fontsize=15)
     ax_int.set_xlabel(r'' + x_label)
     ax_int.set_ylabel(y_label)
@@ -1599,7 +1599,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
 
     if phase == True:
         ax_ph = fig.add_subplot(2, 2 + column_3d, 4 + column_3d, sharex=ax_int, sharey=ax_int)
-        ax_ph.pcolormesh(x, y, swapaxes(xy_proj_ph, 1, 0), cmap=cmap_ph)
+        ax_ph.pcolormesh(x, y, np.swapaxes(xy_proj_ph, 1, 0), cmap=cmap_ph)
         ax_ph.axis([np.min(x), np.max(x), np.min(y), np.max(y)])
         ax_ph.set_title('Phase', fontsize=15)
     else:
@@ -1701,9 +1701,9 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
         else:
             ax_proj_xz = fig.add_subplot(2, 2 + column_3d, 6, sharex=ax_z)
         if log_scale:
-            ax_proj_xz.pcolormesh(z, x, swapaxes(xz_proj, 1, 0), norm=colors.LogNorm(vmin=min_xz_proj, vmax=xz_proj.max()), cmap=cmap)
+            ax_proj_xz.pcolormesh(z, x, np.swapaxes(xz_proj, 1, 0), norm=colors.LogNorm(vmin=min_xz_proj, vmax=xz_proj.max()), cmap=cmap)
         else:
-            ax_proj_xz.pcolormesh(z, x, swapaxes(xz_proj, 1, 0), cmap=cmap, vmin=0)
+            ax_proj_xz.pcolormesh(z, x, np.swapaxes(xz_proj, 1, 0), cmap=cmap, vmin=0)
         ax_proj_xz.set_title('Top view', fontsize=15)
         ax_proj_xz.set_xlabel(z_label)
         ax_proj_xz.set_ylabel(x_label)
@@ -1711,9 +1711,9 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
 
         ax_proj_yz = fig.add_subplot(2, 2 + column_3d, 3, sharey=ax_int, sharex=ax_proj_xz)
         if log_scale:
-            ax_proj_yz.pcolormesh(z, y, swapaxes(yz_proj, 1, 0), norm=colors.LogNorm(vmin=min_yz_proj, vmax=yz_proj.max()), cmap=cmap)
+            ax_proj_yz.pcolormesh(z, y, np.swapaxes(yz_proj, 1, 0), norm=colors.LogNorm(vmin=min_yz_proj, vmax=yz_proj.max()), cmap=cmap)
         else:
-            ax_proj_yz.pcolormesh(z, y, swapaxes(yz_proj, 1, 0), cmap=cmap, vmin=0)
+            ax_proj_yz.pcolormesh(z, y, np.swapaxes(yz_proj, 1, 0), cmap=cmap, vmin=0)
         ax_proj_yz.set_title('Side view', fontsize=15)
         ax_proj_yz.set_xlabel(z_label)
         ax_proj_yz.set_ylabel(y_label)
@@ -1942,8 +1942,8 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     fig.clf()
                     fig.set_size_inches(figsize, forward=True)
                     if debug > 1:
-                        print('plotting array shapes', shape(outlist[irun].z), shape(swapaxes(s_value, 0, 1)))
-                    fig = plt.plot(outlist[irun].z, swapaxes(s_value, 0, 1), '0.8', linewidth=1)
+                        print('plotting array shapes', shape(outlist[irun].z), shape(np.swapaxes(s_value, 0, 1)))
+                    fig = plt.plot(outlist[irun].z, np.swapaxes(s_value, 0, 1), '0.8', linewidth=1)
                     fig = plt.plot(outlist[irun].z, s_value[0], '0.5', linewidth=1)
                     fig = plt.plot(outlist[irun].z, np.mean(s_value, 0), 'k', linewidth=2)
                     plt.xlim([np.min(outlist[irun].z), np.max(outlist[irun].z)])
@@ -2028,8 +2028,8 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     if param in ['spec', 'spec_phot_density']:
                         freq_scale = outlist[irun].freq_ev  # *1e9
                         if debug > 1:
-                            print('plotting array shapes freq', shape(freq_scale), shape(swapaxes(z_value, 0, 1)))
-                        fig = plt.plot(freq_scale, swapaxes(z_value, 0, 1), '0.8')
+                            print('plotting array shapes freq', shape(freq_scale), shape(np.swapaxes(z_value, 0, 1)))
+                        fig = plt.plot(freq_scale, np.swapaxes(z_value, 0, 1), '0.8')
                         fig = plt.plot(freq_scale, z_value[0], '0.5', linewidth=1)
                         fig = plt.plot(freq_scale, np.mean(z_value, 0), 'k', linewidth=2)
                         plt.xlim([np.min(freq_scale), np.max(freq_scale)])
@@ -2037,8 +2037,8 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     else:
                         s_scale = outlist[irun].s * 1e6
                         if debug > 1:
-                            print('plotting array shapes', shape(s_scale), shape(swapaxes(z_value, 0, 1)))
-                        fig = plt.plot(s_scale, swapaxes(z_value, 0, 1), '0.8')
+                            print('plotting array shapes', shape(s_scale), shape(np.swapaxes(z_value, 0, 1)))
+                        fig = plt.plot(s_scale, np.swapaxes(z_value, 0, 1), '0.8')
                         fig = plt.plot(s_scale, z_value[0], '0.5', linewidth=1)
                         fig = plt.plot(s_scale, np.mean(z_value, 0), 'k', linewidth=2)
                         plt.xlim([np.min(s_scale), np.max(s_scale)])
@@ -2157,7 +2157,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                 fig.clf()
                 fig.set_size_inches(figsize, forward=True)
                 if param == 'dfl_spec':
-                    fig = plt.plot(freq_scale, swapaxes(dfl_value, 0, 1), '0.8')
+                    fig = plt.plot(freq_scale, np.swapaxes(dfl_value, 0, 1), '0.8')
                     fig = plt.plot(freq_scale, dfl_value[0], '0.5', linewidth=1)
                     fig = plt.plot(freq_scale, np.mean(dfl_value, 0), 'k', linewidth=2)
                     plt.xlabel('$E_{photon}$ [eV]')
@@ -2555,8 +2555,8 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
             ax_pxpy.scatter(edist.xp * 1e6, edist.yp * 1e6, marker='.')
         else:
             ax_pxpy.hist2d(edist.xp * 1e6, edist.yp * 1e6, [bins[0], bins[1]], cmin=cmin, cmap=cmap)
-        ax_pxpy.set_xlabel('px [$\mu$rad]')
-        ax_pxpy.set_ylabel('py [$\mu$rad]')
+        ax_pxpy.set_xlabel('xp [$\mu$rad]')
+        ax_pxpy.set_ylabel('yp [$\mu$rad]')
 
     # if scatter:
     if flip_t:
@@ -2586,7 +2586,7 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
     return fig
 
 
-def plot_beam_new(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=None, debug=0):
+def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=None, debug=0):
 
     if showfig == False and savefig == False:
         return
@@ -2687,122 +2687,6 @@ def plot_beam_new(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_x
         ax.legend([p1, p2], [r'$x_p [\mu rad]$', r'$y_p [\mu rad]$'], fontsize=fontsize, loc='best')
 
     ax.set_xlim([1.e6 * np.amin(beam.s), 1e6 * np.amax(beam.s)])
-
-    fig.subplots_adjust(hspace=0.2, wspace=0.3)
-
-    plt.draw()
-    if savefig != False:
-        if savefig == True:
-            savefig = 'png'
-        if debug > 1:
-            print('      saving ' + beam.fileName() + '.' + savefig)
-        plt.savefig(beam.filePath + '.' + savefig, format=savefig)
-
-    if showfig:
-        plt.show()
-    else:
-        plt.close('all')
-
-
-def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=None, debug=0):
-
-    if showfig == False and savefig == False:
-        return
-    
-    # if beam.__class__ != GenesisBeam:
-        # raise ValueError('wrong beam object: should be GenesisBeam')
-    
-    fontsize = 15
-
-    if plot_xy == None:
-        if np.mean(beam.x) == 0 and np.mean(beam.y) == 0 and np.mean(beam.px) == 0 and np.mean(beam.py) == 0:
-            plot_xy = 0
-        else:
-            plot_xy = 1
-
-    if fig == None:
-        fig = plt.figure()
-    fig.clf()
-    
-    g0 = np.mean(beam.g0).astype(int) #mean
-    g0_dev = beam.g0 - g0 #deviation from mean
-
-    fig.set_size_inches((4 * figsize, (3 + plot_xy) * figsize), forward=True)
-    ax = fig.add_subplot(2 + plot_xy, 2, 1)
-    plt.grid(True)
-    ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
-    p1, = plt.plot(1.e6 * np.array(beam.z), beam.I, 'r', lw=3)
-    
-    ax.set_ylim(ymin=0)
-    
-    if hasattr(beam,'eloss'):
-        if (beam.eloss!=0).any():
-            ax = ax.twinx()
-            p2, = plt.plot(1.e6 * np.array(beam.z), 1.e-3 * np.array(beam.eloss), 'g', lw=3)
-            ax.legend([p1, p2], [r'$I [A]$', r'Wake $[KV/m]$'], fontsize=fontsize, loc='best')
-        else:
-            ax.legend([r'$I [A]$'], fontsize=fontsize, loc='best')
-    else:
-        ax.legend([r'$I [A]$'], fontsize=fontsize, loc='best')
-    plt.plot(1.e6 * beam.z[beam.idx_max], beam.I[beam.idx_max], 'bs')
-    # ax.set_xlim([np.amin(beam.z),np.amax(beam.x)])
-    ax = fig.add_subplot(2 + plot_xy, 2, 2, sharex=ax)
-    plt.grid(True)
-    ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
-    #p1,= plt.plot(1.e6 * np.array(beam.z),1.e-3 * np.array(beam.eloss),'r',lw=3)
-    p1, = plt.plot(1.e6 * np.array(beam.z), g0_dev, 'r', lw=3)
-    plt.plot(1.e6 * beam.z[beam.idx_max], g0_dev[beam.idx_max], 'bs')
-    ax = ax.twinx()
-    p2, = plt.plot(1.e6 * np.array(beam.z), beam.dg, 'g', lw=3)
-    plt.plot(1.e6 * beam.z[beam.idx_max], beam.dg[beam.idx_max], 'bs')
-    ax.legend([p1, p2], [r'$\gamma$ + '+str(g0), r'$\delta \gamma$'], loc='best')
-
-    ax = fig.add_subplot(2 + plot_xy, 2, 3, sharex=ax)
-    plt.grid(True)
-    ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
-    p1, = plt.plot(1.e6 * np.array(beam.z), beam.ex * 1e6, 'r', lw=3)
-    p2, = plt.plot(1.e6 * np.array(beam.z), beam.ey * 1e6, 'g', lw=3)
-    plt.plot(1.e6 * beam.z[beam.idx_max], beam.ex[beam.idx_max] * 1e6, 'bs')
-    ax.set_ylim(ymin=0)
-
-    ax.legend([p1, p2], [r'$\varepsilon_x [\mu m]$', r'$\varepsilon_y [\mu m]$'], fontsize=fontsize, loc='best')
-    # ax3.legend([p3,p4],[r'$\varepsilon_x$',r'$\varepsilon_y$'])
-
-    ax = fig.add_subplot(2 + plot_xy, 2, 4, sharex=ax)
-    plt.grid(True)
-    ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
-    p1, = plt.plot(1.e6 * np.array(beam.z), beam.betax, 'r', lw=3)
-    p2, = plt.plot(1.e6 * np.array(beam.z), beam.betay, 'g', lw=3)
-    plt.plot(1.e6 * beam.z[beam.idx_max], beam.betax[beam.idx_max], 'bs')
-    ax.set_ylim(ymin=0)
-    ax.legend([p1, p2], [r'$\beta_x [m]$', r'$\beta_y [m]$'], fontsize=fontsize, loc='best')
-
-    if plot_xy:
-
-        ax = fig.add_subplot(3, 2, 5, sharex=ax)
-        plt.grid(True)
-        ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
-        p1, = plt.plot(1.e6 * np.array(beam.z), 1.e6 * np.array(beam.x), 'r', lw=3)
-        p2, = plt.plot(1.e6 * np.array(beam.z), 1.e6 * np.array(beam.y), 'g', lw=3)
-
-        ax.legend([p1, p2], [r'$x [\mu m]$', r'$y [\mu m]$'], fontsize=fontsize, loc='best')
-
-        beam_beta = np.sqrt(1 - (1 / beam.g0**2))
-        beam_p = beam.g0 * beam_beta
-        # p=beam.g0*m_e_eV/speed_of_light
-        pz = np.sqrt(beam_p**2 - beam.px**2 - beam.py**2)
-        xp = beam.px / pz
-        yp = beam.py / pz
-
-        ax = fig.add_subplot(3, 2, 6, sharex=ax)
-        plt.grid(True)
-        ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
-        p1, = plt.plot(1.e6 * np.array(beam.z), 1.e6 * np.array(xp), 'r', lw=3)
-        p2, = plt.plot(1.e6 * np.array(beam.z), 1.e6 * np.array(yp), 'g', lw=3)
-
-        ax.legend([p1, p2], [r'$x_p [\mu rad]$', r'$y_p [\mu rad]$'], fontsize=fontsize, loc='best')
-
-    ax.set_xlim([1.e6 * np.amin(beam.z), 1e6 * np.amax(beam.z)])
 
     fig.subplots_adjust(hspace=0.2, wspace=0.3)
 

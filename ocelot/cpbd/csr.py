@@ -20,13 +20,14 @@ try:
     import numba as nb
     nb_flag = True
 except:
+    print("csr.py: module NUMBA is not install. Install it if you want speed up your calculation")
     nb_flag = False
 
 try:
     from pyfftw.interfaces.numpy_fft import fft
     from pyfftw.interfaces.numpy_fft import ifft
 except:
-    print("cs.py: module PYFFTW is not install. Install it if you want speed up your calculation")
+    print("csr.py: module PYFFTW is not install. Install it if you want speed up your calculation")
     from numpy.fft import ifft
     from numpy.fft import fft
 
@@ -114,7 +115,8 @@ class Smoothing:
             self.q_per_step_ip2 = self.q_per_step_ip2_py
 
     def q_per_step_ip2_py(self, N_BIN, Q_BIN, BIN0, BIN1, NSIG, RMS, step, Nz, z1):
-        charge_per_step = np.zeros(int(Nz))
+        Nz = int(Nz)
+        charge_per_step = np.zeros(Nz)
 
         for nb in range(N_BIN):
             qbin = Q_BIN[nb]
@@ -125,9 +127,9 @@ class Smoothing:
             aa = mitte - NSIG * sigma
             bb = mitte + NSIG * sigma
             a = aa / step + 1
-            k1 = min(Nz, max(1, np.floor(a)))
+            k1 = int(min(Nz, max(1, np.floor(a))))
             b = bb / step + 1
-            k2 = min(Nz, max(1, np.ceil(b)))
+            k2 = int(min(Nz, max(1, np.ceil(b))))
             fact = step / (np.sqrt(2 * pi) * sigma)
             for k in range(k1, k2):
                 xx = (k - 1) * step
@@ -367,7 +369,6 @@ class K0_fin_anf:
             if self.print_log: print("K0_fin_anf: Python")
             self.eval = K0_fin_anf
 
-
     def K0_1_jit(self, indx, j, R, n, traj4, traj5, traj6, w, gamma):
         g2i = 1. / gamma ** 2
         b2 = 1. - g2i
@@ -383,16 +384,16 @@ class K0_fin_anf:
             t5 = traj5[i]
             t6 = traj6[i]
             x = n0i * t4 + n1i * t5 + n2i * t6
-            K[i-j] = ((beta * (x - n0i * traj4[indx] - n1i * traj5[indx] - n2i * traj6[indx]) -
-                  b2 * (1. - t4 * traj4[indx] - t5 * traj5[indx] - t6 * traj6[indx]) - g2i) / Ri - (1. - beta * x) / w[i-j] * g2i)
+            K[i - j] = ((beta * (x - n0i * traj4[indx] - n1i * traj5[indx] - n2i * traj6[indx]) -
+                         b2 * (1. - t4 * traj4[indx] - t5 * traj5[indx] - t6 * traj6[indx]) - g2i) / Ri - (
+                        1. - beta * x) / w[i - j] * g2i)
         return K
-
 
     def K0_0_jit(self, i, traj0, traj1, traj2, traj3, gamma, s, n, R, w):
         g2i = 1. / gamma ** 2
         b2 = 1. - g2i
         beta = np.sqrt(b2)
-        #i1 = i - 1  # ignore points i1+1:i on linear path to observer
+        # i1 = i - 1  # ignore points i1+1:i on linear path to observer
 
         traj0i = traj0[i]
         traj1i = traj1[i]
@@ -403,18 +404,18 @@ class K0_fin_anf:
             n1 = traj1i - traj1[j]
             n2 = traj2i - traj2[j]
             n3 = traj3i - traj3[j]
-            R[j] = np.sqrt(n1*n1 + n2*n2 + n3*n3)
+            R[j] = np.sqrt(n1 * n1 + n2 * n2 + n3 * n3)
             w[j] = s[j] + beta * R[j]
             n[j, 0] = n1
             n[j, 1] = n2
             n[j, 2] = n3
-    
+
     def K0_fin_anf_opt(self, i, traj, wmin, gamma):
         s = np.zeros(i)
-        n = np.zeros((i,3))
+        n = np.zeros((i, 3))
         R = np.zeros(i)
         w = np.zeros(i)
-        self.K0_0(i,  traj[0], traj[1], traj[2], traj[3], gamma, s, n, R, w)
+        self.K0_0(i, traj[0], traj[1], traj[2], traj[3], gamma, s, n, R, w)
         j = np.where(w <= wmin)[0]
 
         if len(j) > 0:
@@ -424,32 +425,31 @@ class K0_fin_anf:
         else:
             j = 0
         K = self.K0_1(i, j, R, n, traj[4], traj[5], traj[6], w, gamma)
-        
+
         if len(K) > 1:
-            a = np.append(0.5*(K[0:-1] + K[1:])*np.diff(s), 0.5*K[-1]*s[-1])
+            a = np.append(0.5 * (K[0:-1] + K[1:]) * np.diff(s), 0.5 * K[-1] * s[-1])
             KS = np.cumsum(a[::-1])[::-1]
-            #KS = cumsum_inv_jit(a)
-            #KS = cumtrapz(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
+            # KS = cumsum_inv_jit(a)
+            # KS = cumtrapz(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
         else:
-            KS = 0.5*K[-1]*s[-1]
+            KS = 0.5 * K[-1] * s[-1]
         return w, KS
-    
 
     def K0_fin_anf(self, i, traj, wmin, gamma):
         # function [ w,KS ] = K0_inf_anf( i,traj,wmin,gamma )
 
-        g2i = 1./gamma**2
+        g2i = 1. / gamma ** 2
         b2 = 1. - g2i
         beta = np.sqrt(b2)
-        i1 = i-1 # ignore points i1+1:i on linear path to observer
-        ind1 = i1+1
+        i1 = i - 1  # ignore points i1+1:i on linear path to observer
+        ind1 = i1 + 1
         s = traj[0, 0:ind1] - traj[0, i]
         n = np.array([traj[1, i] - traj[1, 0:ind1],
                       traj[2, i] - traj[2, 0:ind1],
                       traj[3, i] - traj[3, 0:ind1]])
-        R = np.sqrt(np.sum(n**2, axis=0))
+        R = np.sqrt(np.sum(n ** 2, axis=0))
 
-        w = s + beta*R
+        w = s + beta * R
         j = np.where(w <= wmin)[0]
 
         if len(j) > 0:
@@ -457,23 +457,23 @@ class K0_fin_anf:
             w = w[j:ind1]
             s = s[j:ind1]
         else:
-            j=0
-        #print(j, i1+1)
+            j = 0
+        # print(j, i1+1)
         R = R[j:ind1]
         n0 = n[0, j:ind1] / R
         n1 = n[1, j:ind1] / R
         n2 = n[2, j:ind1] / R
 
         # kernel
-        t4 = traj[4, j:i1+1]
-        t5 = traj[5, j:i1+1]
-        t6 = traj[6, j:i1+1]
+        t4 = traj[4, j:i1 + 1]
+        t5 = traj[5, j:i1 + 1]
+        t6 = traj[6, j:i1 + 1]
 
-        x = n0*t4 + n1*t5 + n2*t6
-        K = ((beta*(x - n0*traj[4, i] - n1*traj[5, i] - n2*traj[6, i]) -
-            b2*(1. - t4*traj[4, i] - t5*traj[5, i] - t6*traj[6, i]) - g2i)/R - (1. - beta*x)/w*g2i)
+        x = n0 * t4 + n1 * t5 + n2 * t6
+        K = ((beta * (x - n0 * traj[4, i] - n1 * traj[5, i] - n2 * traj[6, i]) -
+              b2 * (1. - t4 * traj[4, i] - t5 * traj[5, i] - t6 * traj[6, i]) - g2i) / R - (1. - beta * x) / w * g2i)
 
-        #K = ((beta*(n0*(t4 - traj[4, i]) +
+        # K = ((beta*(n0*(t4 - traj[4, i]) +
         #            n1*(t5 - traj[5, i]) +
         #            n2*(t6 - traj[6, i])) -
         #    b2*(1. - t4*traj[4, i] - t5*traj[5, i] - t6*traj[6, i]) - g2i)/R[ra] -
@@ -482,23 +482,23 @@ class K0_fin_anf:
         # integrated kernel: KS=int_s^0{K(u)*du}=int_0^{-s}{K(-u)*du}
 
         if len(K) > 1:
-            a = np.append(0.5*(K[0:-1] + K[1:])*np.diff(s), 0.5*K[-1]*s[-1])
+            a = np.append(0.5 * (K[0:-1] + K[1:]) * np.diff(s), 0.5 * K[-1] * s[-1])
             KS = np.cumsum(a[::-1])[::-1]
-            #KS = cumtrapz(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
+            # KS = cumtrapz(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
         else:
-            KS = 0.5*K[-1]*s[-1]
+            KS = 0.5 * K[-1] * s[-1]
 
         return w, KS
 
     def K0_fin_anf_numexpr(self, i, traj, wmin, gamma):
         # function [ w,KS ] = K0_inf_anf( i,traj,wmin,gamma )
 
-        g2i = 1./gamma**2
+        g2i = 1. / gamma ** 2
         b2 = 1. - g2i
         beta = np.sqrt(b2)
-        i1 = i-1 # ignore points i1+1:i on linear path to observer
-        #ra = np.arange(0, i1+1)
-        ind1 = i1+1
+        i1 = i - 1  # ignore points i1+1:i on linear path to observer
+        # ra = np.arange(0, i1+1)
+        ind1 = i1 + 1
         s = traj[0, 0:ind1] - traj[0, i]
         n0 = traj[1, i] - traj[1, 0:ind1]
         n1 = traj[2, i] - traj[2, 0:ind1]
@@ -520,23 +520,24 @@ class K0_fin_anf:
         n2 = n2[j:ind1] / R
 
         # kernel
-        t4 = traj[4, j:i1+1]
-        t5 = traj[5, j:i1+1]
-        t6 = traj[6, j:i1+1]
+        t4 = traj[4, j:i1 + 1]
+        t5 = traj[5, j:i1 + 1]
+        t6 = traj[6, j:i1 + 1]
 
         x = ne.evaluate('n0*t4 + n1*t5 + n2*t6')
 
         t4i = traj[4, i]
         t5i = traj[5, i]
         t6i = traj[6, i]
-        K = ne.evaluate('((beta*(x - n0*t4i- n1*t5i - n2*t6i) - b2*(1. - t4*t4i - t5*t5i - t6*t6i) - g2i)/R - (1. - beta*x)/w*g2i)')
+        K = ne.evaluate(
+            '((beta*(x - n0*t4i- n1*t5i - n2*t6i) - b2*(1. - t4*t4i - t5*t5i - t6*t6i) - g2i)/R - (1. - beta*x)/w*g2i)')
 
         if len(K) > 1:
-            a = np.append(0.5*(K[0:-1] + K[1:])*np.diff(s), 0.5*K[-1]*s[-1])
+            a = np.append(0.5 * (K[0:-1] + K[1:]) * np.diff(s), 0.5 * K[-1] * s[-1])
             KS = np.cumsum(a[::-1])[::-1]
-            #KS = cumtrapz(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
+            # KS = cumtrapz(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
         else:
-            KS = 0.5*K[-1]*s[-1]
+            KS = 0.5 * K[-1] * s[-1]
 
         return w, KS
 
@@ -739,18 +740,15 @@ class CSR:
                                  traj[1,:], traj[2,:], traj[3,:] - rectangular coordinates, \
                                  traj[4,:], traj[5,:], traj[6,:] - tangential unit vectors
         """
-        seq_copy = copy.copy(lat.sequence)
-        start = seq_copy[self.indx0]
-        stop = seq_copy[self.indx1]
-        csr_lat = MagneticLattice(seq_copy, start=start, stop=stop)
+
         self.z_csr_start = sum([p.l for p in lat.sequence[:self.indx0]])
         p = Particle()
 
         beta = 1. if self.energy == None else np.sqrt(1. - 1./(self.energy/m_e_GeV)**2)
         self.csr_traj = np.transpose([[0, p.x, p.y, p.s, p.px, p.py, beta]])
         #self.csr_traj = np.transpose([[0, p.s, p.x, p.y, beta, p.px, p.py]])
-        for elem in csr_lat.sequence:
-            if elem.l == 0 :
+        for elem in lat.sequence[self.indx0:self.indx1+1]:
+            if elem.l == 0:
                 continue
             delta_s = elem.l
             step = self.traj_step
@@ -778,6 +776,9 @@ class CSR:
         s_cur = self.z0 - self.z_csr_start
         z = -p_array.tau()
         ind_z_sort = np.argsort(z)
+        #SBINB, NBIN = subbin_bound(p_array.q_array, z[ind_z_sort], self.x_qbin, self.n_bin, self.m_bin)
+        #B_params = [self.x_qbin, self.n_bin, self.m_bin, self.ip_method, self.sp, self.sigma_min]
+        #s1, s2, Ns, lam_ds = Q2EQUI(p_array.q_array[ind_z_sort], B_params, SBINB, NBIN)
         SBINB, NBIN = self.sub_bin.subbin_bound(p_array.q_array, z[ind_z_sort], self.x_qbin, self.n_bin, self.m_bin)
         B_params = [self.x_qbin, self.n_bin, self.m_bin, self.ip_method, self.sp, self.sigma_min]
         s1, s2, Ns, lam_ds = self.bin_smoth.Q2EQUI(p_array.q_array[ind_z_sort], B_params, SBINB, NBIN)
@@ -795,10 +796,11 @@ class CSR:
 
         nit = 0
         n_iter = len(itr_ra)
-
+        #start = time.time()
         K1 = self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma)
         for nit in range(1, n_iter):
             K1 += self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma=gamma)
+        #print("K1 = ", time.time() - start)
         K1 = K1/n_iter
 
 
@@ -886,7 +888,6 @@ class CSR:
         pc_ref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV
         delta_p = dE * 1e-9 / pc_ref
         p_array.rparticles[5] += delta_p
-
 
 
 

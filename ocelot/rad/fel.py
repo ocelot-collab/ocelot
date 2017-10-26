@@ -207,6 +207,8 @@ def printFelParameters(p):
     print ('gain length degradation lscale=', p.xie_lscale)
     print ('scaled gain length lg (3D)=', p.lg3)
     print ('scaled rho (3D)=', p.rho3)
+    print ('')
+    print ('Saturation magn. length=', p.rho3)
     print ('**************************************')
     
     

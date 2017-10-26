@@ -1385,13 +1385,20 @@ def generate_input(undulator, beam, xlamds = None, itdp=True):
         inp.ipseed = 132
         inp.ncar = 151
         #inp.nslice = 300
-        inp.curlen = beam.tpulse * speed_of_light / 1e15
+        
         inp.zsep = int(math.ceil(0.25 / (4 * pi * felParameters.rho3)))  # 0.25 is the additional factor to be "on the safe side"
 
         # print('zsep = ',inp.zsep)
         # print('xlamds = ',inp.xlamds)
         # inp.zsep = 8 * int(inp.curlen  / inp.nslice / inp.xlamds )
-        inp.nslice = 8 * int(inp.curlen / inp.zsep / inp.xlamds)
+        if not hasattr(inp,'beam'):
+            inp.curlen = beam.tpulse * speed_of_light / 1e15
+            inp.nslice = 8 * int(inp.curlen / inp.zsep / inp.xlamds)
+        else:
+            inp.curlen = 0
+            inp.nslice = 0
+            
+            
 
     # inp.ntail = - int ( inp.nslice / 2 )
     inp.ntail = 0

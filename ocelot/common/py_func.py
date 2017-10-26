@@ -56,6 +56,9 @@ def deep_sim_dir(path, **kwargs):
                        ('beamline_no','sase%i'),
                        ('E_photon','%.0feV')
                        ])
+#    for key in struct:
+#        struct[key] = os.path.sep + struct[key]
+
     
     for parameter, style in struct.items():
         for key, value in kwargs.items():
@@ -65,6 +68,6 @@ def deep_sim_dir(path, **kwargs):
     
     if 'ending' in kwargs:
         path += kwargs['ending']
-        
-    path += os.path.sep
+    
+    path = (path + os.path.sep).replace(os.path.sep + os.path.sep, os.path.sep)
     return path

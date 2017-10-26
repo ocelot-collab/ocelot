@@ -151,7 +151,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
             if choice[3]:
                 f3 = plot_gen_out_z(handle, z=inf, showfig=showfig, savefig=savefig, debug=debug)
             if choice[4] != 0:
-                for z in arange(choice[4], np.amax(handle.z), choice[4]):
+                for z in np.arange(choice[4], np.amax(handle.z), choice[4]):
                     plot_gen_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug)
             if choice[11]:
                 try:
@@ -183,7 +183,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
         
         if os.path.isfile(handle.filePath + '.dpa') and (choice[9] or choice[10]) and handle('itdp') == True:
             dpa = read_dpa_file_out(handle, debug=debug)
-            if size(dpa.ph)==0:
+            if np.size(dpa.ph)==0:
                 print('empty dpa, skipping')
             else:
                 if choice[9]:
@@ -217,7 +217,7 @@ def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espre
         'el_energy+el_espread+el_bunching' - electron beam energy +/- spread and bunching
         'rad_phase' - phase of radiation
         'rad_spec' - on-axis spectrum
-    figsize - size of figure (unit-less)
+    figsize - np.size of figure (unit-less)
     x_units - units of time domain ('um' of 'fs')
     y_units - units of frequency domain ('nm' of 'ev')
     legend - plot legend - tbd
@@ -282,7 +282,7 @@ def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espre
     if debug > 0:
         print('    plotting bunch profile at ' + str(z) + ' [m]')
         
-    if size(figsize) == 1:
+    if np.size(figsize) == 1:
         figsize = (3 * figsize, (len(params) + 0.5) * figsize)
     fig.set_size_inches(figsize, forward=True)
     # plt.rc('axes', grid=True)
@@ -844,7 +844,7 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'e
         if debug > 0:
             print('    plotting ' + fig_name)
     
-    if size(figsize) == 1:
+    if np.size(figsize) == 1:
         figsize = (3 * figsize, (len(params) + 0.5) * figsize)
     
     fig.set_size_inches(figsize, forward=True)
@@ -1594,7 +1594,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
     ax_int.set_title(xy_title, fontsize=15)
     ax_int.set_xlabel(r'' + x_label)
     ax_int.set_ylabel(y_label)
-    if size(z) > 1 and text_present:
+    if np.size(z) > 1 and text_present:
         ax_int.text(0.01, 0.01, r'$E_{p}$=%.2e J' % (E_pulse), horizontalalignment='left', verticalalignment='bottom', fontsize=12, color='white', transform=ax_int.transAxes)
 
     if phase == True:
@@ -2473,7 +2473,7 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
     if edist.__class__ != GenesisElectronDist:
         raise ValueError('wrong distribution object: should be GenesisElectronDist')
 
-    if size(bins) == 1:
+    if np.size(bins) == 1:
         bins = (bins, bins, bins, bins)  # x,y,t,e
 
     if fig_name == None:
@@ -3253,7 +3253,7 @@ def plot_stokes_values(S,fig=None,s_lin=0, norm=0, showfig=True, gw=1):
     if type(S) != StokesParameters:
         raise ValueError('Not a StokesParameters object')
         
-    if size(S.sc) > 1:
+    if np.size(S.sc) > 1:
         if fig == None:
             plt.figure('Stokes S')
         else:
@@ -3301,7 +3301,7 @@ def plot_stokes_angles(S,fig=None,showfig=True):
     if type(S) != StokesParameters:
         raise ValueError('Not a StokesParameters object')
         
-    if size(S.sc) > 1:
+    if np.size(S.sc) > 1:
         if fig == None:
             plt.figure('Stokes angles')
         else:

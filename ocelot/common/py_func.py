@@ -42,3 +42,29 @@ def copy_this_script(scriptName, scriptPath, folderPath):
 def filename_from_path(path_string):
     # return path_string[-path_string[::-1].find(os.path.sep)::]
     return path_string.split(os.path.sep)[-1]
+
+def deep_sim_dir(path, **kwargs):
+    print(kwargs)
+    from collections import OrderedDict
+    import os
+    if 'struct' in kwargs:
+        struct = OrderedDict(kwargs['struct'])
+    else:
+        struct = OrderedDict([
+                       ('beam_filename','%s'),
+                       ('E_beam','%.1fGeV'),
+                       ('beamline_no','sase%i'),
+                       ('E_photon','%.0feV')
+                       ])
+    
+    for parameter, style in struct.items():
+        for key, value in kwargs.items():
+            
+            if key == parameter:
+                path += os.path.sep + (style %(value))
+    
+    if 'ending' in kwargs:
+        path += kwargs['ending']
+        
+    path += os.path.sep
+    return path

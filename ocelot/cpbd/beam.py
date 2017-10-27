@@ -287,13 +287,6 @@ class BeamArray(Beam):
 
         self.eloss = np.empty(0)
 
-    def fileName(self):
-        try:
-            str = filename_from_path(self.filePath)
-        except:
-            str = None
-        return str
-
     def idx_max(self):
         return self.I.argmax()
 

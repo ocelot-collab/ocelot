@@ -2507,8 +2507,17 @@ def read_beam_file(filePath, debug=1):
     start_time = time.time()
 
     beam = BeamArray()
-    beam.columns = []
-    beam.column_values = {}
+    
+    def fileName(self):
+        try:
+            str = filename_from_path(self.filePath)
+        except:
+            str = None
+        return str
+    beam.fileName = fileName
+    
+    columns = []
+    column_values = {}
 
     f = open(filePath, 'r')
     null = f.readline()
@@ -2521,21 +2530,21 @@ def read_beam_file(filePath, debug=1):
         # print tokens[0:2]
 
         if tokens[0] == "?" and tokens[1] == "COLUMNS":
-            beam.columns = tokens[2:]
-            for col in beam.columns:
-                beam.column_values[col] = []
+            columns = tokens[2:]
+            for col in columns:
+                column_values[col] = []
 
-            print (beam.columns)
+            print (columns)
 
         if tokens[0] != "?":
             # print tokens
             for i in range(0, len(tokens)):
-                beam.column_values[beam.columns[i]].append(float(tokens[i]))
+                column_values[columns[i]].append(float(tokens[i]))
 
-    # print beam.columns
+    # print columns
 
-    beam.s = np.array(beam.column_values['ZPOS'])
-    beam.I = np.array(beam.column_values['CURPEAK'])
+    beam.s = np.array(column_values['ZPOS'])
+    beam.I = np.array(column_values['CURPEAK'])
 
     for parm in [['g', 'GAMMA0'],
                  ['x', 'XBEAM'],
@@ -2550,18 +2559,18 @@ def read_beam_file(filePath, debug=1):
                  ['alpha_x', 'ALPHAX'],
                  ['alpha_y', 'ALPHAY'],
                  ]:
-        if parm[1] in beam.column_values.keys():
-            setattr(beam, parm[0], np.array(beam.column_values[parm[1]]))
+        if parm[1] in column_values.keys():
+            setattr(beam, parm[0], np.array(column_values[parm[1]]))
         else:
             setattr(beam, parm[0], np.zeros_like(beam.s))
 
     try:
-        beam.eloss = np.array(beam.column_values['ELOSS'])
+        beam.eloss = np.array(column_values['ELOSS'])
     except:
         beam.eloss = np.zeros_like(beam.I)
 
     beam.filePath = filePath
-    del(beam.column_values, beam.columns)
+    del(column_values, columns)
 
     if debug > 0:
         print('      done in %.2f sec' % (time.time() - start_time))
@@ -2602,26 +2611,26 @@ def beam_file_str(beam):
             f_str = f_str + " " + dict[attr]
     f_str += "\n"
 
-    for parm in [['s', 'ZPOS'],
-                 ['I', 'CURPEAK'],
-                 ['emit_xn', 'EMITX'],
-                 ['emit_yn', 'EMITY'],
-                 ['beta_x', 'BETAX'],
-                 ['beta_y', 'BETAY'],
-                 ['alpha_x', 'ALPHAX'],
-                 ['alpha_y', 'ALPHAY'],
-                 ['x', 'XBEAM'],
-                 ['y', 'YBEAM'],
-                 ['px', 'PXBEAM'],
-                 ['py', 'PYBEAM'],
-                 ['g', 'GAMMA0'],
-                 ['dg', 'DELGAM'],
-                 ['eloss', 'ELOSS'],
-                 ]:
-        try:
-            beam.column_values[parm[1]] = getattr(beam, parm[0])
-        except:
-            pass
+    # for parm in [['s', 'ZPOS'],
+                 # ['I', 'CURPEAK'],
+                 # ['emit_xn', 'EMITX'],
+                 # ['emit_yn', 'EMITY'],
+                 # ['beta_x', 'BETAX'],
+                 # ['beta_y', 'BETAY'],
+                 # ['alpha_x', 'ALPHAX'],
+                 # ['alpha_y', 'ALPHAY'],
+                 # ['x', 'XBEAM'],
+                 # ['y', 'YBEAM'],
+                 # ['px', 'PXBEAM'],
+                 # ['py', 'PYBEAM'],
+                 # ['g', 'GAMMA0'],
+                 # ['dg', 'DELGAM'],
+                 # ['eloss', 'ELOSS'],
+                 # ]:
+        # try:
+            # beam.column_values[parm[1]] = getattr(beam, parm[0])
+        # except:
+            # pass
 
     for i in range(beam.len()):
         for attr in attrs:
@@ -3196,8 +3205,8 @@ def transform_beam_file(beam_file=None, out_file='tmp.beam', s=None, transform=[
 
         # print betax_new
         beam_new = Beam()
-        beam_new.column_values = beam.column_values
-        beam_new.columns = beam.columns
+        # beam_new.column_values = beam.column_values
+        # beam_new.columns = beam.columns
         # for parm in ['filePath']:
         # if hasattr(beam,parm):
         # setattr(beam_new,parm,getattr(beam,parm))

@@ -2419,7 +2419,7 @@ def write_edist_file(edist, filePath=None, debug=1):
         print('      done in %.2f sec' % (time.time() - start_time))
 
 
-def edist2beam(edist, step=1e-7):
+def edist2beam(edist, step=1e-7): #check
     '''
     reads GenesisElectronDist()
     returns BeamArray()
@@ -2456,7 +2456,7 @@ def edist2beam(edist, step=1e-7):
     for i in range(npoints - 1):
         indices = (edist.t > t_min + t_step * i) * (edist.t < t_min + t_step * (i + 1))
         beam.s[i] = (t_min + t_step * (i + 0.5)) * speed_of_light
-        print(sum(indices))
+        # print(sum(indices))
         if sum(indices) > 2:
             dist_g = edist.g[indices]
             dist_x = edist.x[indices]

@@ -8,7 +8,7 @@ from ocelot.common.math_op import *
 # from ocelot.common.math_op import *
 from ocelot.common.py_func import filename_from_path
 from copy import deepcopy
-import pickle
+#import pickle
 from scipy import interpolate
 from scipy.signal import savgol_filter
 try:
@@ -32,8 +32,10 @@ class Twiss:
     """
     def __init__(self, beam = None):
         if beam == None:
-            self.emit_x = 0.0 # ???
-            self.emit_y = 0.0 # ???
+            self.emit_x = 0.0
+            self.emit_y = 0.0
+            self.emit_xn = 0.0
+            self.emit_yn = 0.0
             self.beta_x = 0.0
             self.beta_y = 0.0
             self.alpha_x = 0.0
@@ -59,6 +61,9 @@ class Twiss:
         else:
             self.emit_x = beam.emit_x
             self.emit_y = beam.emit_y
+            self.emit_xn = beam.emit_xn
+            self.emit_yn = beam.emit_yn
+
             self.beta_x = beam.beta_x
             self.beta_y = beam.beta_y
             self.alpha_x = beam.alpha_x

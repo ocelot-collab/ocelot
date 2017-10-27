@@ -53,18 +53,20 @@ def deep_sim_dir(path, **kwargs):
         struct = OrderedDict([
                        ('beam_filename','%s'),
                        ('E_beam','%.1fGeV'),
-                       ('beamline_no','sase%i'),
+                       ('beamline','%s'),
                        ('E_photon','%.0feV')
                        ])
 #    for key in struct:
 #        struct[key] = os.path.sep + struct[key]
-
+    separator = '_'
+    if 'nested' in kwargs:
+        if kwargs['nested'] == True:
+            separator = os.path.sep
     
     for parameter, style in struct.items():
         for key, value in kwargs.items():
-            
             if key == parameter:
-                path += os.path.sep + (style %(value))
+                path += separator + (style %(value))
     
     if 'ending' in kwargs:
         path += kwargs['ending']

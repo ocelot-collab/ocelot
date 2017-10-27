@@ -423,7 +423,9 @@ class GenesisInput:
         self.exp_dir = None # if run_dir==None, it is created based on exp_dir
         
         self.inp_txt = inputTemplate
-
+        
+        self.int_vals = ('npart', 'nbins','ncar', 'zsep', 'nslice', 'ntail') #continue
+        
     def input(self):
         
         inp_txt = deepcopy(self.inp_txt)
@@ -478,7 +480,11 @@ class GenesisInput:
             # inp_txt = inp_txt.replace("__TRAMA__\n", "")
 
         for p in self.__dict__.keys():
-            inp_txt = inp_txt.replace("__" + str(p).upper() + "__", str(self.__dict__[p]).replace('[', '').replace(']', '').replace(',', ''))
+            if p in self.int_vals:
+                val = int(self.__dict__[p])
+            else:
+                val = self.__dict__[p]
+            inp_txt = inp_txt.replace("__" + str(p).upper() + "__", str(val).replace('[', '').replace(']', '').replace(',', ''))
 
         return inp_txt
 
@@ -487,6 +493,82 @@ class GenesisInput:
             return 0.0
         else:
             return self.__dict__[name]
+    
+    def copy(self, inp, params):
+        '''
+        copies list of parameters from another GenesisInput() or GenesisOutput() object
+        '''
+
+        if inp.__class__ is GenesisInput:
+            for param in params:
+                if np.size(param) == 2:
+                    param_r, param_w = param
+                else:
+                    param_r = param_w = param
+                if hasattr(inp, param_r):
+                    value = getattr(inp, param_r)
+                    setattr(self, param_w, value)
+                else:
+                    print('! could not copy ' + param_r)
+        
+        if inp.__class__ is GenesisOutput:
+            for param in params:
+                if np.size(param) == 2:
+                    param_r, param_w = param
+                else:
+                    param_r = param_w = param
+                    
+                if inp(param_r) is not None:
+                    value = inp(param_r)
+                    setattr(self, param_w, value)
+                else:
+                    print('! could not copy ' + param)
+        
+    def copymesh(self, inp, exceptions=()):
+        
+        # if inp.__class__ is GenesisInput:
+        params = ('npart', 'nbins', 'xlamds', 'ncar', 'dgrid', 'zsep', 'nslice', 'ntail')
+        # elif inp.__class__ is GenesisOutput:
+            # params = ('npart', 'nbins', 'xlamds', 'ncar', 'dgrid', 'zsep', 'nslice', 'ntail') #!no nslice in exceptions
+        
+        
+        # if hasattr(inp, 'nslice'):
+            # nslice = getattr(inp, 'nslice')
+            # if nslice == 0:
+                # print('Warning, nslice=0')
+        
+        # if hasattr(inp, 'ndcut'):
+            # ndcut = getattr(inp, 'ndcut')
+            # if ndcut == 0:
+                # print('Warning, ndcut=0')
+        
+        
+        
+        params_exc = list( set(params).difference( set(exceptions) ) )
+        
+        
+        if inp.__class__ is GenesisInput:
+            for param in ['dgrid', 'ndcut', 'nslice']:
+                if param in params_exc + ['ndcut']:
+                    if hasattr(inp, param):
+                        value = getattr(inp, param)
+                        if value == 0:
+                            print('! warning, %s=0' %(param))
+                
+        elif inp.__class__ is GenesisOutput:
+            if ('dgrid' in params_exc) and (inp('meshsize') is not None):
+                self.dgrid = inp('meshsize')*(inp.ncar-1) / 2
+                params_exc.remove('dgrid')
+            if ('nslice' in params_exc) and (inp('history_records') is not None):
+                self.nslice = int(inp('history_records'))
+                params_exc.remove('nslice')
+            if ('ndcut' in params_exc) and hasattr(inp, 'ndcut'):
+                value = getattr(inp, 'ndcut')
+                if value == 0:
+                    print('! warning, %s=0' %('ndcut'))
+        
+        self.copy(inp, params_exc)
+
 
 
 class GenesisOutput:

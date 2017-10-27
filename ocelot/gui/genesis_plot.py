@@ -2690,6 +2690,21 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
 
     fig.subplots_adjust(hspace=0.2, wspace=0.3)
 
+    # if savefig != False:
+        # if hasattr(beam,'filePath'):
+            # if savefig == True:
+                # filetype = 'png'
+            # else:
+            #
+            # path = beam.filePath
+            # name = beam.fileName()
+        # else:
+            # if if savefig == True:
+            
+            # if debug > 1:
+                # print('      saving ' + beam.fileName() + '.' + savefig)
+            # plt.savefig(beam.filePath + '.' + savefig, format=savefig)
+    
     plt.draw()
     if savefig != False:
         if savefig == True:

@@ -9,10 +9,15 @@ import numpy as np
 from time import time
 from ocelot.common.globals import *
 from ocelot.cpbd.coord_transform import *
+import multiprocessing
+
 try:
+    pyfftw_flag = True
     from pyfftw.interfaces.numpy_fft import fftn
     from pyfftw.interfaces.numpy_fft import ifftn
+    import pyfftw
 except:
+    pyfftw_flag = False
     print("cs.py: module PYFFTW is not install. Install it if you want speed up your calculation")
     from numpy.fft import ifftn
     from numpy.fft import fftn
@@ -23,7 +28,6 @@ try:
 except:
     print("sc.py: module NUMEXPR is not installed. Install it if you want higher speed calculation.")
     ne_flag = False
-
 
 def smooth_z(Zin, mslice):
     def myfunc(x, A):
@@ -98,6 +102,7 @@ class SpaceCharge():
                -IG[1:i2+1, 0:j2, 1:k2+1] + IG[0:i2, 0:j2, 1:k2+1]
                -IG[1:i2+1, 1:j2+1, 0:k2] + IG[0:i2, 1:j2+1, 0:k2]
                +IG[1:i2+1, 0:j2, 0:k2] - IG[0:i2, 0:j2, 0:k2])
+
         return kern
 
     def potential(self, q, steps):
@@ -116,7 +121,17 @@ class SpaceCharge():
         K2[0:Nx, Ny:2*Ny-1,:] = K2[0:Nx, Ny-1:0:-1, :]        #y-mirror
         K2[Nx:2*Nx-1, :, :] = K2[Nx-1:0:-1, :, :]             #x-mirror
         t0 = time()
-        out = np.real(ifftn(fftn(out)*fftn(K2)))
+        if pyfftw_flag:
+            nthread = multiprocessing.cpu_count()
+            K2_fft = pyfftw.builders.fftn(K2, axes=None, overwrite_input=False, planner_effort='FFTW_ESTIMATE',
+                                       threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
+            out_fft = pyfftw.builders.fftn(out, axes=None, overwrite_input=False, planner_effort='FFTW_ESTIMATE',
+                                          threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
+            out_ifft = pyfftw.builders.ifftn(out_fft()*K2_fft(), axes=None, overwrite_input=False, planner_effort='FFTW_ESTIMATE',
+                                          threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
+            out = np.real(out_ifft())
+        else:
+            out = np.real(ifftn(fftn(out)*fftn(K2)))
         t1 = time()
         if self.debug: print( 'fft time:', t1-t0, ' sec')
         out[:Nx, :Ny, :Nz] = out[:Nx,:Ny,:Nz]/(4*pi*epsilon_0*hx*hy*hz)
@@ -160,7 +175,9 @@ class SpaceCharge():
 
 
     def apply(self, p_array, zstep):
-
+        if zstep==0:
+            print("SpaceCharge delta_s = 0")
+            return
         nmesh_xyz = np.array(self.nmesh_xyz)
         gamref = p_array.E / m_e_GeV
         betref2 = 1 - gamref ** -2

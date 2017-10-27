@@ -47,7 +47,7 @@ def radiation_integrals(lattice, twiss_0, nsuperperiod = 1):
             Z = []
             h = elem.angle/elem.l
 
-            for z in linspace(0, elem.l,num = n_points_element, endpoint=True):
+            for z in np.linspace(0, elem.l,num = n_points_element, endpoint=True):
                 tws_z = elem.transfer_map(z)*tws_elem
                 Dx.append(tws_z.Dx)
                 Z.append(z)
@@ -56,12 +56,12 @@ def radiation_integrals(lattice, twiss_0, nsuperperiod = 1):
                 Hinvariant.append(Hx)
             #H = array(h)
             H2 = h*h
-            H3 = abs(h*h*h)
-            I1 += h*simps(array(Dx), Z)
+            H3 = np.abs(h*h*h)
+            I1 += h*simps(np.array(Dx), Z)
             I2 += H2*elem.l  #simps(H2, Z)*nsuperperiod
             I3 += H3*elem.l  #simps(H3, Z)*nsuperperiod
-            I4 += h*(2*elem.k1 + H2)*simps(array(Dx), Z)
-            I5 += H3*simps(array(Hinvariant), Z)
+            I4 += h*(2*elem.k1 + H2)*simps(np.array(Dx), Z)
+            I5 += H3*simps(np.array(Hinvariant), Z)
         tws_elem = elem.transfer_map*tws_elem
     #if abs(tws_elem.beta_x - twiss_0.beta_x)>1e-7 or abs(tws_elem.beta_y - twiss_0.beta_y)>1e-7:
     #    print( "WARNING! Results may be wrong! radiation_integral() -> beta functions are not matching. ")

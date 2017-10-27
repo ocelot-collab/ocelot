@@ -2,7 +2,7 @@
 definition of particles, beams and trajectories
 '''
 import numpy as np
-from numpy.core.umath import sqrt, cos, sin
+from numpy import sqrt, cos, sin
 from ocelot.common.globals import *
 # from ocelot.common.math_op import *
 from ocelot.common.py_func import filename_from_path
@@ -24,7 +24,6 @@ Note:
 (B) xp, yp are in [rad] but the meaning is not specified
 '''
 
-# from numpy import *
 
 class Twiss:
     """
@@ -419,7 +418,7 @@ class ParticleArray:
     p0 - momentum
     """
     def __init__(self, n=0):
-        #self.particles = np.zeros(n*6)
+        #self.particles = zeros(n*6)
         self.rparticles = np.zeros((6, n))#np.transpose(np.zeros(int(n), 6))
         self.q_array = np.zeros(n)    # charge
         self.s = 0.0
@@ -433,10 +432,10 @@ class ParticleArray:
         px = abs(self.px())
         y = abs(self.y())
         py = abs(self.py())
-        ind_angles = append(argwhere(px > px_lim), argwhere(py > py_lim))
-        p_idxs = unique(append(argwhere(x > xlim), append(argwhere(y > ylim), append(argwhere(x != x), append(argwhere(y!= y), ind_angles)) )))
+        ind_angles = np.append(np.argwhere(px > px_lim), np.argwhere(py > py_lim))
+        p_idxs = np.unique(np.append(np.argwhere(x > xlim), np.append(np.argwhere(y > ylim), np.append(np.argwhere(x != x), np.append(np.argwhere(y!= y), ind_angles)) )))
         #e_idxs = [append([], x) for x in array([6*p_idxs, 6*p_idxs+1, 6*p_idxs+2, 6*p_idxs+3, 6*p_idxs+4, 6*p_idxs+5])]
-        self.rparticles = delete(self.rparticles, p_idxs, axis=1)
+        self.rparticles = np.delete(self.rparticles, p_idxs, axis=1)
         return p_idxs
 
     def __getitem__(self, idx):
@@ -543,8 +542,8 @@ def get_envelope(p_array, tws_i=Twiss()):
         py = py*(1.-0.5*px*px - 0.5*py*py)
     tws.x = np.mean(x)
     tws.y = np.mean(y)
-    tws.px = np.mean(px)
-    tws.py = np.mean(py)
+    tws.px =np.mean(px)
+    tws.py =np.mean(py)
 
     if ne_flag:
         tw_x = tws.x
@@ -565,7 +564,7 @@ def get_envelope(p_array, tws_i=Twiss()):
         tws.ypy = np.mean((y-tws.y)*(py-tws.py))
         tws.pypy = np.mean((py-tws.py)*(py-tws.py))
     tws.p = np.mean( p_array.p())
-    tws.E = p_array.E
+    tws.E = np.copy(p_array.E)
     #tws.de = p_array.de
 
     tws.emit_x = np.sqrt(tws.xx*tws.pxpx-tws.xpx**2)
@@ -968,8 +967,8 @@ def slice_analysis_transverse(parray, Mslice, Mcur, p, iter):
 def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
     # %[s, I, ex, ey ,me, se, gamma0, emitxn, emityn]=GlobalSliceAnalysis_Extended(PD,q1,Mslice,Mcur,p,iter)
 
-    q1 = np.sum(parray.q_array) # total charge
-    print("charge", q1)
+    q1 = np.sum(parray.q_array)
+    #print("charge", q1)
     n = np.int_(parray.rparticles.size/6)
     PD = parray.rparticles
     PD = sortrows(PD, col=4)

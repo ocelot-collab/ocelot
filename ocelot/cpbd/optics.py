@@ -11,15 +11,103 @@ from copy import deepcopy
 # from numba import jit
 from ocelot.common.logging import Logger
 
+import numpy as np
 try:
     import numexpr as ne
     ne_flag = True
 except:
     print("optics.py: module NUMEXPR is not installed. Install it if you want higher speed calculation.")
     ne_flag = False
-
+try:
+    import numba as nb
+    nb_flag = True
+except:
+    nb_flag = False
 
 logger = Logger()
+
+
+
+class SecondOrderMult:
+    def __init__(self):
+        if ne_flag:
+            #print("SecondTM: NumExpr")
+            self.tmat_multip = self.numexpr_apply
+        elif nb_flag:
+            #print("SecondTM: NUMBA")
+            self.tmat_multip = nb.jit(nopython=True, parallel=True)(self.numba_apply)
+        else:
+            #print("SecondTM: Numpy")
+            self.tmat_multip = self.numpy_apply
+
+    def numba_apply(self, X, R, T):
+        #Xr = np.dot(R, X)
+        #Xo = np.copy(X)
+        N = X.shape[1]
+        for i in range(5):
+            for n in range(N):
+                tmp = 0.
+                r_tmp = 0.
+                for j in range(6):
+                    r_tmp += R[i, j]*X[j, n]
+                    for k in range(6):
+                        tmp += T[i, j, k] * X[j, n] * X[k, n]
+                X[i, n] = r_tmp + tmp
+                #X[i, n] = Xr[i, n] + tmp
+
+    def numexpr_apply(self, X, R, T):
+        Xr = np.dot(R, X)
+        x, px, y, py, tau, dp = np.copy((X[0], X[1], X[2], X[3], X[4], X[5]))
+
+        T000, T001, T005, T011, T015, T055, T022, T023, T033 = T[0, 0, 0], T[0, 0, 1], T[0, 0, 5], T[0, 1, 1], T[0, 1, 5], T[0, 5, 5], T[0, 2, 2],T[0, 2, 3], T[0, 3, 3]
+        T100, T101, T105, T111, T115, T155, T122, T123, T133 = T[1, 0, 0], T[1, 0, 1], T[1, 0, 5], T[1, 1, 1], T[1, 1, 5], T[1, 5, 5], T[1, 2, 2],T[1, 2, 3], T[1, 3, 3]
+        T202, T203, T212, T213, T225, T235 = T[2, 0, 2],  T[2, 0, 3],  T[2, 1, 2],  T[2, 1, 3], T[2, 2, 5], T[2, 3, 5]
+        T302, T303, T312, T313, T325, T335 = T[3, 0, 2],  T[3, 0, 3],  T[3, 1, 2],  T[3, 1, 3], T[3, 2, 5], T[3, 3, 5]
+        T400, T401, T405, T411, T415, T455, T422, T423, T433 = T[4, 0, 0], T[4, 0, 1], T[4, 0, 5], T[4, 1, 1], T[4, 1, 5], T[4, 5, 5], T[4, 2, 2], T[4, 2, 3], T[4, 3, 3]
+
+        Xr0, Xr1, Xr2, Xr3, Xr4, Xr5 = Xr[0], Xr[1], Xr[2], Xr[3], Xr[4], Xr[5]
+
+        X[0] = ne.evaluate('Xr0 + T000 * x*x + T001 * x*px + T005 * x*dp + T011 * px*px + T015 * px*dp + T055 * dp*dp + T022 * y*y + T023 * y*py + T033 * py*py')
+        X[1] = ne.evaluate('Xr1 + T100 * x*x + T101 * x*px + T105 * x*dp + T111 * px*px + T115 * px*dp + T155 * dp*dp + T122 * y*y + T123 * y*py + T133 * py*py')
+        X[2] = ne.evaluate('Xr2 + T202 * x*y + T203 * x*py + T212 * y*px + T213 * px*py + T225 * y*dp + T235 * py*dp')
+        X[3] = ne.evaluate('Xr3 + T302 * x*y + T303 * x*py + T312 * y*px + T313 * px*py + T325 * y*dp + T335 * py*dp')
+        X[4] = ne.evaluate('Xr4 + T400 * x*x + T401 * x*px + T405 * x*dp + T411 * px*px + T415 * px*dp + T455 * dp*dp + T422 * y*y + T423 * y*py + T433 * py*py')  # + U5666*dp2*dp    # third order
+
+
+    def numpy_apply(self, X, R, T):
+        Xr = np.dot(R, X)
+        x, px, y, py, tau, dp = X[0], X[1], X[2], X[3], X[4], X[5]
+        x2 = x * x
+        xpx = x * px
+        px2 = px * px
+        py2 = py * py
+        ypy = y * py
+        y2 = y * y
+        dp2 = dp * dp
+        xdp = x * dp
+        pxdp = px * dp
+        xy = x * y
+        xpy = x * py
+        ypx = px * y
+        pxpy = px * py
+        ydp = y * dp
+        pydp = py * dp
+
+        X[0] = Xr[0] + T[0, 0, 0] * x2 + T[0, 0, 1] * xpx + T[0, 0, 5] * xdp + T[0, 1, 1] * px2 + T[0, 1, 5] * pxdp + \
+                  T[0, 5, 5] * dp2 + T[0, 2, 2] * y2 + T[0, 2, 3] * ypy + T[0, 3, 3] * py2
+
+        X[1] = Xr[1] + T[1, 0, 0] * x2 + T[1, 0, 1] * xpx + T[1, 0, 5] * xdp + T[1, 1, 1] * px2 + T[1, 1, 5] * pxdp + \
+                  T[1, 5, 5] * dp2 + T[1, 2, 2] * y2 + T[1, 2, 3] * ypy + T[1, 3, 3] * py2
+
+        X[2] = Xr[2] + T[2, 0, 2] * xy + T[2, 0, 3] * xpy + T[2, 1, 2] * ypx + T[2, 1, 3] * pxpy + T[ 2, 2, 5] * ydp + \
+                  T[2, 3, 5] * pydp
+
+        X[3] = Xr[3] + T[3, 0, 2] * xy + T[3, 0, 3] * xpy + T[3, 1, 2] * ypx + T[3, 1, 3] * pxpy + T[3, 2, 5] * ydp + \
+                  T[3, 3, 5] * pydp
+
+        X[4] = Xr[4] + T[4, 0, 0] * x2 + T[4, 0, 1] * xpx + T[4, 0, 5] * xdp + T[4, 1, 1] * px2 + T[4, 1, 5] * pxdp + \
+                  T[4, 5, 5] * dp2 + T[4, 2, 2] * y2 + T[4, 2, 3] * ypy + T[4, 3, 3] * py2  # + U5666*dp2*dp    # third order
+        # X[:] = Xr[:] + Xt[:]
 
 
 def transform_vec_ent(X, dx, dy, tilt):
@@ -494,27 +582,12 @@ class SecondTM(TransferMap):
         TransferMap.__init__(self)
         self.r_z_no_tilt = r_z_no_tilt
         self.t_mat_z_e = t_mat_z_e
+
+        self.multiplication = None
         self.map = lambda X, energy: self.t_apply(self.r_z_no_tilt(self.length, energy),
                                                   self.t_mat_z_e(self.length, energy), X, self.dx, self.dy, self.tilt)
 
-    def numexpr_apply(self, X, Xr, T):
-        x, px, y, py, tau, dp = np.copy((X[0], X[1], X[2], X[3], X[4], X[5]))
 
-        T000, T001, T005, T011, T015, T055, T022, T023, T033 = T[0, 0, 0], T[0, 0, 1], T[0, 0, 5], T[0, 1, 1], T[0, 1, 5], T[0, 5, 5], T[0, 2, 2],T[0, 2, 3], T[0, 3, 3]
-        T100, T101, T105, T111, T115, T155, T122, T123, T133 = T[1, 0, 0], T[1, 0, 1], T[1, 0, 5], T[1, 1, 1], T[1, 1, 5], T[1, 5, 5], T[1, 2, 2],T[1, 2, 3], T[1, 3, 3]
-        T202, T203, T212, T213, T225, T235 = T[2, 0, 2],  T[2, 0, 3],  T[2, 1, 2],  T[2, 1, 3], T[2, 2, 5], T[2, 3, 5]
-        T302, T303, T312, T313, T325, T335 = T[3, 0, 2],  T[3, 0, 3],  T[3, 1, 2],  T[3, 1, 3], T[3, 2, 5], T[3, 3, 5]
-        T400, T401, T405, T411, T415, T455, T422, T423, T433 = T[4, 0, 0], T[4, 0, 1], T[4, 0, 5], T[4, 1, 1], T[4, 1, 5], T[4, 5, 5], T[4, 2, 2], T[4, 2, 3], T[4, 3, 3]
-
-        Xr0, Xr1, Xr2, Xr3, Xr4, Xr5 = Xr[0], Xr[1], Xr[2], Xr[3], Xr[4], Xr[5]
-
-        X[0] = ne.evaluate('Xr0 + T000 * x*x + T001 * x*px + T005 * x*dp + T011 * px*px + T015 * px*dp + T055 * dp*dp + T022 * y*y + T023 * y*py + T033 * py*py')
-        X[1] = ne.evaluate('Xr1 + T100 * x*x + T101 * x*px + T105 * x*dp + T111 * px*px + T115 * px*dp + T155 * dp*dp + T122 * y*y + T123 * y*py + T133 * py*py')
-        X[2] = ne.evaluate('Xr2 + T202 * x*y + T203 * x*py + T212 * y*px + T213 * px*py + T225 * y*dp + T235 * py*dp')
-        X[3] = ne.evaluate('Xr3 + T302 * x*y + T303 * x*py + T312 * y*px + T313 * px*py + T325 * y*dp + T335 * py*dp')
-        X[4] = ne.evaluate('Xr4 + T400 * x*x + T401 * x*px + T405 * x*dp + T411 * px*px + T415 * px*dp + T455 * dp*dp + T422 * y*y + T423 * y*py + T433 * py*py')  # + U5666*dp2*dp    # third order
-        # X[:] = Xr[:] + Xt[:]
-        return X
     def t_apply(self, R, T, X, dx, dy, tilt, U5666=0.):
         #print(np.shape(X))
         # print("t_apply", self.k2, self.T)
@@ -530,50 +603,17 @@ class SecondTM(TransferMap):
         # beta = np.sqrt(1. - igamma2)
         # U5666 = -2./(beta*beta)*igamma2
         # test end
-        n = len(X)
+        #n = len(X)
         #Xr = transpose(dot(R, transpose(X.reshape(int(n / 6), 6)))).reshape(n)
-        Xr = dot(R, X)
+        #Xr = dot(R, X)
         # Xr = transpose(dot(R, X.T.reshape(6, int(n / 6)))).reshape(n)
         # Xt = zeros(n)
-        if ne_flag:
-            self.numexpr_apply(X, Xr, T)
-            if dx != 0 or dy != 0 or tilt != 0:
-                X = transform_vec_ext(X, dx, dy, tilt)
-
-            return X
-        x, px, y, py, tau, dp = X[0], X[1], X[2], X[3], X[4], X[5]
-        x2 = x * x
-        xpx = x * px
-        px2 = px * px
-        py2 = py * py
-        ypy = y * py
-        y2 = y * y
-        dp2 = dp * dp
-        xdp = x * dp
-        pxdp = px * dp
-        xy = x * y
-        xpy = x * py
-        ypx = px * y
-        pxpy = px * py
-        ydp = y * dp
-        pydp = py * dp
-
-        X[0] = Xr[0] + T[0, 0, 0] * x2 + T[0, 0, 1] * xpx + T[0, 0, 5] * xdp + T[0, 1, 1] * px2 + T[0, 1, 5] * pxdp + \
-                  T[0, 5, 5] * dp2 + T[0, 2, 2] * y2 + T[0, 2, 3] * ypy + T[0, 3, 3] * py2
-
-        X[1] = Xr[1] + T[1, 0, 0] * x2 + T[1, 0, 1] * xpx + T[1, 0, 5] * xdp + T[1, 1, 1] * px2 + T[1, 1, 5] * pxdp + \
-                  T[1, 5, 5] * dp2 + T[1, 2, 2] * y2 + T[1, 2, 3] * ypy + T[1, 3, 3] * py2
-
-        X[2] = Xr[2] + T[2, 0, 2] * xy + T[2, 0, 3] * xpy + T[2, 1, 2] * ypx + T[2, 1, 3] * pxpy + T[ 2, 2, 5] * ydp + \
-                  T[2, 3, 5] * pydp
-
-        X[3] = Xr[3] + T[3, 0, 2] * xy + T[3, 0, 3] * xpy + T[3, 1, 2] * ypx + T[3, 1, 3] * pxpy + T[3, 2, 5] * ydp + \
-                  T[3, 3, 5] * pydp
-
-        X[4] = Xr[4] + T[4, 0, 0] * x2 + T[4, 0, 1] * xpx + T[4, 0, 5] * xdp + T[4, 1, 1] * px2 + T[4, 1, 5] * pxdp + \
-                  T[4, 5, 5] * dp2 + T[4, 2, 2] * y2 + T[4, 2, 3] * ypy + T[4, 3, 3] * py2  # + U5666*dp2*dp    # third order
-        # X[:] = Xr[:] + Xt[:]
-
+        #if self.advance_optim != None:
+        #    self.advance_optim.tmat_multip(X, T)
+        #else:
+        #    self.numpy_apply(X, T)
+        self.multiplication(X, R, T)
+        #self.t_dot_x(X, Xr, T)
         if dx != 0 or dy != 0 or tilt != 0:
             X = transform_vec_ext(X, dx, dy, tilt)
 
@@ -672,7 +712,7 @@ class MethodTM:
             self.global_method = self.params['global']
         else:
             self.global_method = TransferMap
-
+        self.sec_order_mult = SecondOrderMult()
         self.nkick = self.params['nkick'] if 'nkick' in self.params.keys() else 1
 
     def create_tm(self, element):
@@ -704,6 +744,7 @@ class MethodTM:
             tm = KickTM(angle=element.angle, k1=element.k1, k2=element.k2, k3=k3, nkick=self.nkick)
 
         elif method == SecondTM:
+
             T_z_e = lambda z, energy: t_nnn(z, hx, element.k1, element.k2, energy)
 
             if element.__class__ == Edge:
@@ -716,6 +757,7 @@ class MethodTM:
                 T_z_e = lambda z, energy: T
                 # print("trm", tilt, element.edge, element.h, r_z_e(0, 130)[1, 0])
             tm = SecondTM(r_z_no_tilt=r_z_e, t_mat_z_e=T_z_e)
+            tm.multiplication = self.sec_order_mult.tmat_multip
 
         elif method == SlacCavityTM:
             tm = SlacCavityTM(l=element.l, volt=element.v, phi=element.phi, freq=element.f)
@@ -1075,6 +1117,7 @@ class Navigator:
         self.sum_lengths = 0.  # sum_lengths = Sum[lat.sequence[i].l, {i, 0, n_elem-1}]
         self.unit_step = 1  # unit step for physics processes
         self.proc_kick_elems = []
+        self.kill_process = False # for case when calculations are needed to terminated e.g. from gui
 
     def add_physics_proc(self, physics_proc, elem1, elem2):
         self.process_table.add_physics_proc(physics_proc, elem1, elem2)

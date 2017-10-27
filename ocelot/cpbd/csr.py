@@ -12,12 +12,24 @@ from ocelot.cpbd.beam import *
 from ocelot.cpbd.high_order import *
 from ocelot.cpbd.magnetic_lattice import *
 import time
-#from numba import jit
 from scipy.integrate import cumtrapz
-#from matplotlib import pyplot as plt
 from ocelot.cpbd.wake3D import *
+
 import copy
-#import StringIO
+try:
+    import numba as nb
+    nb_flag = True
+except:
+    print("csr.py: module NUMBA is not install. Install it if you want speed up your calculation")
+    nb_flag = False
+
+try:
+    from pyfftw.interfaces.numpy_fft import fft
+    from pyfftw.interfaces.numpy_fft import ifft
+except:
+    print("csr.py: module PYFFTW is not install. Install it if you want speed up your calculation")
+    from numpy.fft import ifft
+    from numpy.fft import fft
 
 try:
     import numexpr as ne
@@ -25,6 +37,7 @@ try:
 except:
     print("csr.py: module NUMEXPR is not installed. Install it if you want higher speed calculation.")
     ne_flag = False
+
 
 def nextpow2(p):
     i = 0
@@ -42,7 +55,7 @@ def csr_convolution(a, b):
     K = 2 ** nextpow2(L)
     a_pad = np.pad(a, (0, K - P), 'constant', constant_values=(0))
     b_pad = np.pad(b, (0, K - Q), 'constant', constant_values=(0))
-    c = np.fft.ifft(np.fft.fft(a_pad)*np.fft.fft(b_pad))
+    c = ifft(fft(a_pad)*fft(b_pad))
     c = c[0:L-1].real
     return c
 
@@ -90,217 +103,443 @@ def sample_1(i, a, b, c):
         y = y + (x2 - x1) * (x1 + x2) / (2 * (b - a))
     return y
 
-#@jit
-def subbin_bound(q, s, x_qbin, n_bin, m_bin):
-    """
-    input
-        q         = array/scalar with charges of macro particles (sorted)
-        s         = longitudinal vector (time or space) (sorted)
-        B_params  = binning parameters
-                    [X_QBIN,N_BIN,M_BIN]
-                    X_QBIN = length or charge binning
-                             0 ... 1 = length ... charge
-                    N_BIN  = number of bins
-                    M_BIN  = multiple binning (with shifted bins)
-    output
-        SBINB     = array with subbin boundaries
-        NBIN      = particles per subbin
-    particles are sorted!
-    all particles are valid
-    """
-    X_QBIN = x_qbin
-    N_BIN = n_bin
-    M_BIN = m_bin
-    K_BIN = N_BIN*M_BIN          # number of sub-bins
 
-    Ns = len(s)
-    # binning intervalls
-    # aa=monoton "charge" vector
+class Smoothing:
+    def __init__(self):
+        self.print_log = False
+        if nb_flag:
+            if self.print_log: print("Smoothing: NUMBA")
+            self.q_per_step_ip2 = nb.jit()(self.q_per_step_ip2_py)
+        else:
+            if self.print_log: print("Smoothing: Python")
+            self.q_per_step_ip2 = self.q_per_step_ip2_py
 
-    if np.size(q) != 1:
-        q_cumsum = np.cumsum(q)
-        q_cumsum_r = q_cumsum - q_cumsum[0]
-        aa = 0.5 * q_cumsum + 0.5 * np.append([0], q_cumsum_r[1:])
-        #aa = 0.5 * np.cumsum(q) + 0.5 * np.append([0], np.cumsum(q[1:]))
-    else:
-        #% aa(1)=q/2; for n=2:Ns, aa(n)=aa(n-1)+q; end
-        aa = q*(np.arange(1, Ns+1) - 0.5)
+    def q_per_step_ip2_py(self, N_BIN, Q_BIN, BIN0, BIN1, NSIG, RMS, step, Nz, z1):
+        Nz = int(Nz)
+        charge_per_step = np.zeros(Nz)
 
-    if ne_flag:
-        aa0 = aa[0]
-        aaNs = aa[Ns - 1]
-        s0 = s[0]
-        sNs = s[Ns - 1]
-        #aa = ne.evaluate('(aa - aa0) / (aaNs - aa0)')
-        # bb=monoton "length" vector
-        #bb = ne.evaluate('(s - s0) / (sNs - s0)')
-        # aa=LK of "charge" and "length" vector; avoid zero stepwidth
-        aa = ne.evaluate('(aa - aa0) / (aaNs - aa0) * X_QBIN + (s - s0) / (sNs - s0) * (1 - X_QBIN)')
-    else:
-        aa = (aa - aa[0])/(aa[Ns-1] - aa[0])
-        # bb=monoton "length" vector
-        bb = (s - s[0])/(s[Ns-1] - s[0])
-        # aa=LK of "charge" and "length" vector; avoid zero stepwidth
-        aa = aa*X_QBIN + bb*(1 - X_QBIN)
-    if np.min(np.diff(aa)) == 0:
-        aa = 0.999*aa + 0.001*(np.arange(0, Ns))/(Ns-1)
-
-    # vector with bin boundaries
-    SBINB = interp1(aa, s, np.arange(K_BIN+1.)/K_BIN)
-    SBINB[0] = s[0]
-    SBINB[K_BIN] = s[Ns-1]
-    # particles per subbins
-    NBIN = np.zeros(K_BIN)
-    ib = 0
-    for n in arange(Ns):
-        while s[n] >= SBINB[ib+1] and ib < K_BIN-1:
-            ib = ib + 1
-        NBIN[ib] = NBIN[ib] + 1
-    return SBINB, NBIN
-
-#@jit
-def Q2EQUI(q, BS_params, SBINB, NBIN):
-    """
-    input
-    BIN = bin boundaries BIN(N_BIN, 2), in time or space
-    Q_BIN = charges per bin Q_BIN(N_BIN)
-    BS_params = binning and smoothing parameters
-    binning.......................
-    X_QBIN = length or charge binning
-    0... 1 = length...charge
-    N_BIN = number of bins
-    M_BIN = multiple binning(with shifted bins)
-    smoothing.....................
-    IP_method = 0 / 1 / 2 for rectangular / triangular / gauss
-    SP = ? parameter for gauss
-    sigma_min = minimal sigma, if IP_method == 2
-    step_unit = if positive --> step=integer * step_unit
-    output
-    z1, z2, Nz = equidistant mesh(Nz meshlines)
-    charge_per_step = charge per step, charge_per_step(1:Nz)
-    bins might overlapp!
-    """
-    # ......................................................................
-
-    N_BIN = BS_params[1]
-    M_BIN = BS_params[2]
-    K_BIN = N_BIN * M_BIN # number of sub - bins
-    I_BIN = K_BIN - (M_BIN - 1) # number of bin intervalls
-    # put charges to sub - bins
-    Q_BIN = np.zeros(K_BIN)
-    n2 = 0
-    if np.size(q) == 1:
-        for k in range(K_BIN):
-            if NBIN[k] > 0:
-                n1 = n2 + 1
-                n2 = n2 + NBIN[k]
-                Q_BIN[k] = q * (n2 - n1 + 1)
-    else:
-        for k in range(K_BIN):
-            if NBIN[k] > 0:
-                n1 = n2 + 1
-                n2 = n2 + NBIN[k]
-                Q_BIN[k] = np.sum(q[int(n1-1):int(n2)])
-
-    # put sub - bins to bins
-    qsum = np.append([0], np.cumsum(Q_BIN))
-    BIN = [SBINB[0:I_BIN], SBINB[M_BIN + np.arange(I_BIN)]]
-    Q_BIN = (qsum[M_BIN + np.arange(I_BIN)] - qsum[0:I_BIN])/M_BIN
-
-    # ......................................................................
-
-    # interpolation parameters
-    IP_method = BS_params[3]
-    SP = BS_params[4]
-    if SP <= 0:
-        SP = 0.5
-
-    sigma_min = max(0, BS_params[5])
-    if len(BS_params) < 7:
-        step_unit = 0
-    else:
-        step_unit = max(0, BS_params[6])
-
-
-    # define mesh
-    N_BIN = len(BIN[0])
-
-    if IP_method == 1:
-        z1 = np.min(2 * BIN[0][:] - BIN[1][:])
-        z2 = np.max(2 * BIN[1][:] - BIN[0][:])
-        step = 0.5 * min(BIN[1][:] - BIN[:][0])
-    elif IP_method == 2:
-        NSIG = 5
-        #MITTE = 0.5 * (BIN[0][:] + BIN[1][:])
-        #RMS = SP * (BIN[1][:] - BIN[0][:])
-        MITTE = 0.5 * (BIN[0] + BIN[1])
-        RMS = SP * (BIN[1] - BIN[0])
         for nb in range(N_BIN):
-            RMS[nb] = max(RMS[nb], sigma_min)
-        z1 = np.min(MITTE - NSIG * RMS)
-        z2 = np.max(MITTE + NSIG * RMS)
-        step = 0.25 * min(RMS)
-    else:
-        z1 = np.min(BIN[0][:])
-        z2 = np.max(BIN[1][:])
-        step = 0.5 * min(BIN[1][:] - BIN[0][:])
-
-    if step_unit > 0:
-        step = step_unit * max(1, np.round(step / step_unit))
-        z1 = step * np.floor(z1 / step)
-        z2 = step * np.ceil(z2 / step)
-        Nz = np.round((z2 - z1) / step)
-    else:
-        Nz = np.round((z2 - z1) / step)
-        step = (z2 - z1) / Nz
-
-    charge_per_step = np.zeros(int(Nz))
-    if IP_method == 1:
-        for nb in arange(N_BIN):
-            aa = BIN[0][nb] - z1
-            bb = BIN[1][nb] - z1
-            qps = step * Q_BIN(nb) / (bb - aa)
-            a = ((3. * aa - bb) / 2.) / step + 1.
-            k1 = min(Nz, max(1, floor(a)))
-            b = ((aa + bb) / 2.) / step + 1.
-            c = ((3. * bb - aa) / 2.) / step + 1.
-            k2 = min(Nz, max(1, np.ceil(c)))
-            for k in arange(k1, k2):
-                w = sample_1(k, a, b, c)
-                charge_per_step[k-1] += w * qps
-
-    elif IP_method == 2:
-        for nb in arange(N_BIN):
             qbin = Q_BIN[nb]
-            aa = BIN[0][nb] - z1
-            bb = BIN[1][nb] - z1
+            aa = BIN0[nb] - z1
+            bb = BIN1[nb] - z1
             mitte = 0.5 * (aa + bb)
             sigma = RMS[nb]
             aa = mitte - NSIG * sigma
             bb = mitte + NSIG * sigma
             a = aa / step + 1
-            k1 = min(Nz, max(1, floor(a)))
+            k1 = int(min(Nz, max(1, np.floor(a))))
             b = bb / step + 1
-            k2 = min(Nz, max(1, ceil(b)))
+            k2 = int(min(Nz, max(1, np.ceil(b))))
             fact = step / (np.sqrt(2 * pi) * sigma)
-            for k in arange(k1, k2):
+            for k in range(k1, k2):
                 xx = (k - 1) * step
                 yy = fact * np.exp(-0.5 * ((xx - mitte) / sigma) ** 2)
-                charge_per_step[int(k-1)] += yy * qbin
+                charge_per_step[int(k - 1)] += yy * qbin
+        return charge_per_step
 
-    else:
-        for nb in arange(N_BIN):
-            aa = BIN[0][nb] - z1
-            bb = BIN[1][nb] - z1
-            qps = step * Q_BIN[nb] / (bb - aa)
-            a = aa / step + 1
-            k1 = min(Nz, max(1, floor(a)))
-            b = bb / step + 1
-            k2 = min(Nz, max(1, ceil(b)))
-            for k in arange(k1, k2):
-                w = sample_0(k, a, b)
-                charge_per_step[k-1] += w * qps
-    return z1, z2, Nz, charge_per_step
+    def Q2EQUI(self, q, BS_params, SBINB, NBIN):
+        """
+        input
+        BIN = bin boundaries BIN(N_BIN, 2), in time or space
+        Q_BIN = charges per bin Q_BIN(N_BIN)
+        BS_params = binning and smoothing parameters
+        binning.......................
+        X_QBIN = length or charge binning
+        0... 1 = length...charge
+        N_BIN = number of bins
+        M_BIN = multiple binning(with shifted bins)
+        smoothing.....................
+        IP_method = 0 / 1 / 2 for rectangular / triangular / gauss
+        SP = ? parameter for gauss
+        sigma_min = minimal sigma, if IP_method == 2
+        step_unit = if positive --> step=integer * step_unit
+        output
+        z1, z2, Nz = equidistant mesh(Nz meshlines)
+        charge_per_step = charge per step, charge_per_step(1:Nz)
+        bins might overlapp!
+        """
+        # ......................................................................
+
+        N_BIN = BS_params[1]
+        M_BIN = BS_params[2]
+        K_BIN = N_BIN * M_BIN # number of sub - bins
+        I_BIN = K_BIN - (M_BIN - 1) # number of bin intervalls
+        # put charges to sub - bins
+        Q_BIN = np.zeros(K_BIN)
+        n2 = 0
+        if np.size(q) == 1:
+            for k in range(K_BIN):
+                if NBIN[k] > 0:
+                    n1 = n2 + 1
+                    n2 = n2 + NBIN[k]
+                    Q_BIN[k] = q * (n2 - n1 + 1)
+        else:
+            for k in range(K_BIN):
+                if NBIN[k] > 0:
+                    n1 = n2 + 1
+                    n2 = n2 + NBIN[k]
+                    Q_BIN[k] = np.sum(q[int(n1-1):int(n2)])
+
+        # put sub - bins to bins
+        qsum = np.append([0], np.cumsum(Q_BIN))
+        BIN = [SBINB[0:I_BIN], SBINB[M_BIN + np.arange(I_BIN)]]
+        Q_BIN = (qsum[M_BIN + np.arange(I_BIN)] - qsum[0:I_BIN])/M_BIN
+
+        # ......................................................................
+
+        # interpolation parameters
+        IP_method = BS_params[3]
+        SP = BS_params[4]
+        if SP <= 0:
+            SP = 0.5
+
+        sigma_min = max(0, BS_params[5])
+        if len(BS_params) < 7:
+            step_unit = 0
+        else:
+            step_unit = max(0, BS_params[6])
+
+
+        # define mesh
+        N_BIN = len(BIN[0])
+        NSIG = 5
+        RMS = []
+        if IP_method == 1:
+            z1 = np.min(2 * BIN[0][:] - BIN[1][:])
+            z2 = np.max(2 * BIN[1][:] - BIN[0][:])
+            step = 0.5 * min(BIN[1][:] - BIN[:][0])
+        elif IP_method == 2:
+            NSIG = 5
+            #MITTE = 0.5 * (BIN[0][:] + BIN[1][:])
+            #RMS = SP * (BIN[1][:] - BIN[0][:])
+            MITTE = 0.5 * (BIN[0] + BIN[1])
+            RMS = SP * (BIN[1] - BIN[0])
+            for nb in range(N_BIN):
+                RMS[nb] = max(RMS[nb], sigma_min)
+            z1 = np.min(MITTE - NSIG * RMS)
+            z2 = np.max(MITTE + NSIG * RMS)
+            step = 0.25 * min(RMS)
+        else:
+            z1 = np.min(BIN[0][:])
+            z2 = np.max(BIN[1][:])
+            step = 0.5 * min(BIN[1][:] - BIN[0][:])
+
+        if step_unit > 0:
+            step = step_unit * max(1, np.round(step / step_unit))
+            z1 = step * np.floor(z1 / step)
+            z2 = step * np.ceil(z2 / step)
+            Nz = np.round((z2 - z1) / step)
+        else:
+            Nz = np.round((z2 - z1) / step)
+            step = (z2 - z1) / Nz
+
+        charge_per_step = np.zeros(int(Nz))
+        if IP_method == 1:
+            for nb in range(N_BIN):
+                aa = BIN[0][nb] - z1
+                bb = BIN[1][nb] - z1
+                qps = step * Q_BIN(nb) / (bb - aa)
+                a = ((3. * aa - bb) / 2.) / step + 1.
+                k1 = min(Nz, max(1, np.floor(a)))
+                b = ((aa + bb) / 2.) / step + 1.
+                c = ((3. * bb - aa) / 2.) / step + 1.
+                k2 = min(Nz, max(1, np.ceil(c)))
+                for k in range(k1, k2):
+                    w = sample_1(k, a, b, c)
+                    charge_per_step[k-1] += w * qps
+
+        elif IP_method == 2:
+            charge_per_step = self.q_per_step_ip2(N_BIN, Q_BIN, BIN[0], BIN[1], NSIG, RMS, step, Nz, z1)
+            #print(time.time() - t0)
+        else:
+            for nb in range(N_BIN):
+                aa = BIN[0][nb] - z1
+                bb = BIN[1][nb] - z1
+                qps = step * Q_BIN[nb] / (bb - aa)
+                a = aa / step + 1
+                k1 = min(Nz, max(1, np.floor(a)))
+                b = bb / step + 1
+                k2 = min(Nz, max(1, np.ceil(b)))
+                for k in range(k1, k2):
+                    w = sample_0(k, a, b)
+                    charge_per_step[k-1] += w * qps
+        return z1, z2, Nz, charge_per_step
+
+
+class SubBinning:
+    def __init__(self, x_qbin, n_bin, m_bin):
+        self.x_qbin = x_qbin
+        self.n_bin = n_bin
+        self.m_bin = m_bin
+        self.print_log = False
+        if nb_flag:
+            if self.print_log: print("SubBinning: NUMBA")
+            self.p_per_subbins = nb.jit(nb.double[:](nb.double[:], nb.double[:], nb.double))(self.p_per_subbins_py)
+        else:
+            if self.print_log: print("SubBinning: Python")
+            self.p_per_subbins = self.p_per_subbins_py
+
+    def p_per_subbins_py(self, s, SBINB, K_BIN):
+        NBIN = np.zeros(K_BIN)
+        ib = 0
+        Ns = len(s)
+        for n in range(Ns):
+            while s[n] >= SBINB[ib + 1] and ib < K_BIN - 1:
+                ib = ib + 1
+            NBIN[ib] = NBIN[ib] + 1
+        return NBIN
+
+
+    def subbin_bound(self, q, s, x_qbin, n_bin, m_bin):
+        """
+        input
+            q         = array/scalar with charges of macro particles (sorted)
+            s         = longitudinal vector (time or space) (sorted)
+            B_params  = binning parameters
+                        [X_QBIN,N_BIN,M_BIN]
+                        X_QBIN = length or charge binning
+                                 0 ... 1 = length ... charge
+                        N_BIN  = number of bins
+                        M_BIN  = multiple binning (with shifted bins)
+        output
+            SBINB     = array with subbin boundaries
+            NBIN      = particles per subbin
+        particles are sorted!
+        all particles are valid
+        """
+        X_QBIN = x_qbin
+        N_BIN = n_bin
+        M_BIN = m_bin
+        K_BIN = N_BIN * M_BIN  # number of sub-bins
+
+        Ns = len(s)
+        # binning intervalls
+        # aa=monoton "charge" vector
+
+        if np.size(q) != 1:
+            q_cumsum = np.cumsum(q)
+            q_cumsum_r = q_cumsum - q_cumsum[0]
+            aa = 0.5 * q_cumsum + 0.5 * np.append([0], q_cumsum_r[1:])
+            # aa = 0.5 * np.cumsum(q) + 0.5 * np.append([0], np.cumsum(q[1:]))
+        else:
+            # % aa(1)=q/2; for n=2:Ns, aa(n)=aa(n-1)+q; end
+            aa = q * (np.arange(1, Ns + 1) - 0.5)
+
+        if ne_flag:
+            aa0 = aa[0]
+            aaNs = aa[Ns - 1]
+            s0 = s[0]
+            sNs = s[Ns - 1]
+            # aa = ne.evaluate('(aa - aa0) / (aaNs - aa0)')
+            # bb=monoton "length" vector
+            # bb = ne.evaluate('(s - s0) / (sNs - s0)')
+            # aa=LK of "charge" and "length" vector; avoid zero stepwidth
+            aa = ne.evaluate('(aa - aa0) / (aaNs - aa0) * X_QBIN + (s - s0) / (sNs - s0) * (1 - X_QBIN)')
+        else:
+            aa = (aa - aa[0]) / (aa[Ns - 1] - aa[0])
+            # bb=monoton "length" vector
+            bb = (s - s[0]) / (s[Ns - 1] - s[0])
+            # aa=LK of "charge" and "length" vector; avoid zero stepwidth
+            aa = aa * X_QBIN + bb * (1 - X_QBIN)
+        if np.min(np.diff(aa)) == 0:
+            aa = 0.999 * aa + 0.001 * (np.arange(0, Ns)) / (Ns - 1)
+
+        # vector with bin boundaries
+        SBINB = interp1(aa, s, np.arange(K_BIN + 1.) / K_BIN)
+        SBINB[0] = s[0]
+        SBINB[K_BIN] = s[Ns - 1]
+        # particles per subbins
+        NBIN = self.p_per_subbins(s, SBINB, K_BIN)
+
+        return SBINB, NBIN
+
+
+class K0_fin_anf:
+    def __init__(self):
+        self.print_log = False
+        if nb_flag:
+            if self.print_log: print("K0_fin_anf: NUMBA")
+            self.K0_1 = nb.jit()(self.K0_1_jit)
+            self.K0_0 = nb.jit()(self.K0_0_jit)
+            self.eval = self.K0_fin_anf_opt
+        elif ne_flag:
+            if self.print_log: print("K0_fin_anf: NumExpr")
+            self.eval = self.K0_fin_anf_numexpr
+        else:
+            if self.print_log: print("K0_fin_anf: Python")
+            self.eval = K0_fin_anf
+
+    def K0_1_jit(self, indx, j, R, n, traj4, traj5, traj6, w, gamma):
+        g2i = 1. / gamma ** 2
+        b2 = 1. - g2i
+        beta = np.sqrt(b2)
+        K = np.zeros(indx - j)
+        for i in range(j, indx):
+            Ri = R[i]
+            n0i = n[i, 0] / Ri
+            n1i = n[i, 1] / Ri
+            n2i = n[i, 2] / Ri
+            # kernel
+            t4 = traj4[i]
+            t5 = traj5[i]
+            t6 = traj6[i]
+            x = n0i * t4 + n1i * t5 + n2i * t6
+            K[i - j] = ((beta * (x - n0i * traj4[indx] - n1i * traj5[indx] - n2i * traj6[indx]) -
+                         b2 * (1. - t4 * traj4[indx] - t5 * traj5[indx] - t6 * traj6[indx]) - g2i) / Ri - (
+                        1. - beta * x) / w[i - j] * g2i)
+        return K
+
+    def K0_0_jit(self, i, traj0, traj1, traj2, traj3, gamma, s, n, R, w):
+        g2i = 1. / gamma ** 2
+        b2 = 1. - g2i
+        beta = np.sqrt(b2)
+        # i1 = i - 1  # ignore points i1+1:i on linear path to observer
+
+        traj0i = traj0[i]
+        traj1i = traj1[i]
+        traj2i = traj2[i]
+        traj3i = traj3[i]
+        for j in range(i):
+            s[j] = traj0[j] - traj0i
+            n1 = traj1i - traj1[j]
+            n2 = traj2i - traj2[j]
+            n3 = traj3i - traj3[j]
+            R[j] = np.sqrt(n1 * n1 + n2 * n2 + n3 * n3)
+            w[j] = s[j] + beta * R[j]
+            n[j, 0] = n1
+            n[j, 1] = n2
+            n[j, 2] = n3
+
+    def K0_fin_anf_opt(self, i, traj, wmin, gamma):
+        s = np.zeros(i)
+        n = np.zeros((i, 3))
+        R = np.zeros(i)
+        w = np.zeros(i)
+        self.K0_0(i, traj[0], traj[1], traj[2], traj[3], gamma, s, n, R, w)
+        j = np.where(w <= wmin)[0]
+
+        if len(j) > 0:
+            j = j[-1]
+            w = w[j:i]
+            s = s[j:i]
+        else:
+            j = 0
+        K = self.K0_1(i, j, R, n, traj[4], traj[5], traj[6], w, gamma)
+
+        if len(K) > 1:
+            a = np.append(0.5 * (K[0:-1] + K[1:]) * np.diff(s), 0.5 * K[-1] * s[-1])
+            KS = np.cumsum(a[::-1])[::-1]
+            # KS = cumsum_inv_jit(a)
+            # KS = cumtrapz(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
+        else:
+            KS = 0.5 * K[-1] * s[-1]
+        return w, KS
+
+    def K0_fin_anf(self, i, traj, wmin, gamma):
+        # function [ w,KS ] = K0_inf_anf( i,traj,wmin,gamma )
+
+        g2i = 1. / gamma ** 2
+        b2 = 1. - g2i
+        beta = np.sqrt(b2)
+        i1 = i - 1  # ignore points i1+1:i on linear path to observer
+        ind1 = i1 + 1
+        s = traj[0, 0:ind1] - traj[0, i]
+        n = np.array([traj[1, i] - traj[1, 0:ind1],
+                      traj[2, i] - traj[2, 0:ind1],
+                      traj[3, i] - traj[3, 0:ind1]])
+        R = np.sqrt(np.sum(n ** 2, axis=0))
+
+        w = s + beta * R
+        j = np.where(w <= wmin)[0]
+
+        if len(j) > 0:
+            j = j[-1]
+            w = w[j:ind1]
+            s = s[j:ind1]
+        else:
+            j = 0
+        # print(j, i1+1)
+        R = R[j:ind1]
+        n0 = n[0, j:ind1] / R
+        n1 = n[1, j:ind1] / R
+        n2 = n[2, j:ind1] / R
+
+        # kernel
+        t4 = traj[4, j:i1 + 1]
+        t5 = traj[5, j:i1 + 1]
+        t6 = traj[6, j:i1 + 1]
+
+        x = n0 * t4 + n1 * t5 + n2 * t6
+        K = ((beta * (x - n0 * traj[4, i] - n1 * traj[5, i] - n2 * traj[6, i]) -
+              b2 * (1. - t4 * traj[4, i] - t5 * traj[5, i] - t6 * traj[6, i]) - g2i) / R - (1. - beta * x) / w * g2i)
+
+        # K = ((beta*(n0*(t4 - traj[4, i]) +
+        #            n1*(t5 - traj[5, i]) +
+        #            n2*(t6 - traj[6, i])) -
+        #    b2*(1. - t4*traj[4, i] - t5*traj[5, i] - t6*traj[6, i]) - g2i)/R[ra] -
+        #    (1. - beta*(n0*t4 + n1*t5 + n2*t6))/w*g2i)
+
+        # integrated kernel: KS=int_s^0{K(u)*du}=int_0^{-s}{K(-u)*du}
+
+        if len(K) > 1:
+            a = np.append(0.5 * (K[0:-1] + K[1:]) * np.diff(s), 0.5 * K[-1] * s[-1])
+            KS = np.cumsum(a[::-1])[::-1]
+            # KS = cumtrapz(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
+        else:
+            KS = 0.5 * K[-1] * s[-1]
+
+        return w, KS
+
+    def K0_fin_anf_numexpr(self, i, traj, wmin, gamma):
+        # function [ w,KS ] = K0_inf_anf( i,traj,wmin,gamma )
+
+        g2i = 1. / gamma ** 2
+        b2 = 1. - g2i
+        beta = np.sqrt(b2)
+        i1 = i - 1  # ignore points i1+1:i on linear path to observer
+        # ra = np.arange(0, i1+1)
+        ind1 = i1 + 1
+        s = traj[0, 0:ind1] - traj[0, i]
+        n0 = traj[1, i] - traj[1, 0:ind1]
+        n1 = traj[2, i] - traj[2, 0:ind1]
+        n2 = traj[3, i] - traj[3, 0:ind1]
+        R = ne.evaluate("sqrt(n0**2 + n1**2 + n2**2)")
+
+        w = ne.evaluate('s + beta*R')
+        j = np.where(w <= wmin)[0]
+
+        if len(j) > 0:
+            j = j[-1]
+            w = w[j:ind1]
+            s = s[j:ind1]
+        else:
+            j = 0
+        R = R[j:ind1]
+        n0 = n0[j:ind1] / R
+        n1 = n1[j:ind1] / R
+        n2 = n2[j:ind1] / R
+
+        # kernel
+        t4 = traj[4, j:i1 + 1]
+        t5 = traj[5, j:i1 + 1]
+        t6 = traj[6, j:i1 + 1]
+
+        x = ne.evaluate('n0*t4 + n1*t5 + n2*t6')
+
+        t4i = traj[4, i]
+        t5i = traj[5, i]
+        t6i = traj[6, i]
+        K = ne.evaluate(
+            '((beta*(x - n0*t4i- n1*t5i - n2*t6i) - b2*(1. - t4*t4i - t5*t5i - t6*t6i) - g2i)/R - (1. - beta*x)/w*g2i)')
+
+        if len(K) > 1:
+            a = np.append(0.5 * (K[0:-1] + K[1:]) * np.diff(s), 0.5 * K[-1] * s[-1])
+            KS = np.cumsum(a[::-1])[::-1]
+            # KS = cumtrapz(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
+        else:
+            KS = 0.5 * K[-1] * s[-1]
+
+        return w, KS
 
 
 class CSR:
@@ -333,6 +572,11 @@ class CSR:
         self.filter_order = 10
         self.n_mesh = 345
         self.pict_debug = False
+        self.print_log = False
+
+        self.sub_bin = SubBinning(x_qbin=self.x_qbin, n_bin=self.n_bin, m_bin=self.m_bin)
+        self.bin_smoth = Smoothing()
+        self.k0_fin_anf = K0_fin_anf()
         #if self.pict_debug:
         #    self.f = plt.figure(figsize=(12, 9))
         #    plt.ion()
@@ -374,112 +618,6 @@ class CSR:
             KS = 0.5*K[-1]*s[-1]
 
         return w, KS
-
-    def K0_fin_anf_numexpr(self, i, traj, wmin, gamma):
-        # function [ w,KS ] = K0_inf_anf( i,traj,wmin,gamma )
-
-        g2i = 1./gamma**2
-        b2 = 1. - g2i
-        beta = np.sqrt(b2)
-        i1 = i-1 # ignore points i1+1:i on linear path to observer
-        #ra = np.arange(0, i1+1)
-        ind1 = i1+1
-        s = traj[0, 0:ind1] - traj[0, i]
-        n0 = traj[1, i] - traj[1, 0:ind1]
-        n1 = traj[2, i] - traj[2, 0:ind1]
-        n2 = traj[3, i] - traj[3, 0:ind1]
-        R = ne.evaluate("sqrt(n0**2 + n1**2 + n2**2)")
-
-        w = ne.evaluate('s + beta*R')
-        j = np.where(w <= wmin)[0]
-
-        if len(j) > 0:
-            j = j[-1]
-            w = w[j:ind1]
-            s = s[j:ind1]
-        else:
-            j = 0
-        R = R[j:ind1]
-        n0 = n0[j:ind1] / R
-        n1 = n1[j:ind1] / R
-        n2 = n2[j:ind1] / R
-
-        # kernel
-        t4 = traj[4, j:i1+1]
-        t5 = traj[5, j:i1+1]
-        t6 = traj[6, j:i1+1]
-
-        x = ne.evaluate('n0*t4 + n1*t5 + n2*t6')
-
-        t4i = traj[4, i]
-        t5i = traj[5, i]
-        t6i = traj[6, i]
-        K = ne.evaluate('((beta*(x - n0*t4i- n1*t5i - n2*t6i) - b2*(1. - t4*t4i - t5*t5i - t6*t6i) - g2i)/R - (1. - beta*x)/w*g2i)')
-
-        if len(K) > 1:
-            a = np.append(0.5*(K[0:-1] + K[1:])*np.diff(s), 0.5*K[-1]*s[-1])
-            KS = np.cumsum(a[::-1])[::-1]
-            #KS = cumtrapz(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
-        else:
-            KS = 0.5*K[-1]*s[-1]
-
-        return w, KS
-
-    def K0_fin_anf(self, i, traj, wmin, gamma):
-        # function [ w,KS ] = K0_inf_anf( i,traj,wmin,gamma )
-
-        g2i = 1./gamma**2
-        b2 = 1. - g2i
-        beta = np.sqrt(b2)
-        i1 = i-1 # ignore points i1+1:i on linear path to observer
-        ind1 = i1+1
-        s = traj[0, 0:ind1] - traj[0, i]
-        n = np.array([traj[1, i] - traj[1, 0:ind1],
-                      traj[2, i] - traj[2, 0:ind1],
-                      traj[3, i] - traj[3, 0:ind1]])
-        R = np.sqrt(np.sum(n**2, axis=0))
-
-        w = s + beta*R
-        j = np.where(w <= wmin)[0]
-
-        if len(j) > 0:
-            j = j[-1]
-            w = w[j:ind1]
-            s = s[j:ind1]
-        else:
-            j=0
-        #print(j, i1+1)
-        R = R[j:ind1]
-        n0 = n[0, j:ind1] / R
-        n1 = n[1, j:ind1] / R
-        n2 = n[2, j:ind1] / R
-
-        # kernel
-        t4 = traj[4, j:i1+1]
-        t5 = traj[5, j:i1+1]
-        t6 = traj[6, j:i1+1]
-
-        x = n0*t4 + n1*t5 + n2*t6
-        K = ((beta*(x - n0*traj[4, i] - n1*traj[5, i] - n2*traj[6, i]) -
-            b2*(1. - t4*traj[4, i] - t5*traj[5, i] - t6*traj[6, i]) - g2i)/R - (1. - beta*x)/w*g2i)
-
-        #K = ((beta*(n0*(t4 - traj[4, i]) +
-        #            n1*(t5 - traj[5, i]) +
-        #            n2*(t6 - traj[6, i])) -
-        #    b2*(1. - t4*traj[4, i] - t5*traj[5, i] - t6*traj[6, i]) - g2i)/R[ra] -
-        #    (1. - beta*(n0*t4 + n1*t5 + n2*t6))/w*g2i)
-
-        # integrated kernel: KS=int_s^0{K(u)*du}=int_0^{-s}{K(-u)*du}
-
-        if len(K) > 1:
-            a = np.append(0.5*(K[0:-1] + K[1:])*np.diff(s), 0.5*K[-1]*s[-1])
-            KS = np.cumsum(a[::-1])[::-1]
-            #KS = cumtrapz(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
-        else:
-            KS = 0.5*K[-1]*s[-1]
-
-        return w, KS
-
 
     def K0_fin_inf(self, i, traj, w_range, gamma):
         # function [ KS ] = K0_inf_inf( i,traj,w_range,gamma )
@@ -563,13 +701,7 @@ class CSR:
         # print(traj[1, :10])
         # exit()
         if L_fin:
-            # start = time.time()
-            if ne_flag:
-                w, KS = self.K0_fin_anf_numexpr(i, traj, w_range[0], gamma)
-            else:
-                w, KS = self.K0_fin_anf(i, traj, w_range[0], gamma)
-            # print("K0_fin_anf = ", time.time() - start)
-            #print(len(w))
+            w, KS = self.k0_fin_anf.eval(i, traj, w_range[0], gamma)
         else:
             w, KS = self.K0_inf_anf(i, traj, w_range[0])
 
@@ -608,25 +740,22 @@ class CSR:
                                  traj[1,:], traj[2,:], traj[3,:] - rectangular coordinates, \
                                  traj[4,:], traj[5,:], traj[6,:] - tangential unit vectors
         """
-        seq_copy = copy.deepcopy(lat.sequence)
-        start = seq_copy[self.indx0]
-        stop = seq_copy[self.indx1]
-        csr_lat = MagneticLattice(seq_copy, start=start, stop=stop)
+
         self.z_csr_start = sum([p.l for p in lat.sequence[:self.indx0]])
         p = Particle()
 
         beta = 1. if self.energy == None else np.sqrt(1. - 1./(self.energy/m_e_GeV)**2)
         self.csr_traj = np.transpose([[0, p.x, p.y, p.s, p.px, p.py, beta]])
         #self.csr_traj = np.transpose([[0, p.s, p.x, p.y, beta, p.px, p.py]])
-        for elem in csr_lat.sequence:
-            if elem.l == 0 :
+        for elem in lat.sequence[self.indx0:self.indx1+1]:
+            if elem.l == 0:
                 continue
             delta_s = elem.l
             step = self.traj_step
             if elem.__class__ in [Bend, RBend, SBend]:
                 R = -elem.l/elem.angle
-                Rx = R * cos(elem.tilt)
-                Ry = R * sin(elem.tilt)
+                Rx = R * np.cos(elem.tilt)
+                Ry = R * np.sin(elem.tilt)
                 #B = energy*1e9*beta/(R*speed_of_light)
                 R_vect = [-Ry, Rx, 0]
             else:
@@ -641,12 +770,18 @@ class CSR:
         return self.csr_traj
 
     def apply(self, p_array, delta_s):
+        if delta_s < self.traj_step:
+            print("CSR delta_s < self.traj_step")
+            return
         s_cur = self.z0 - self.z_csr_start
         z = -p_array.tau()
         ind_z_sort = np.argsort(z)
-        SBINB, NBIN = subbin_bound(p_array.q_array, z[ind_z_sort], self.x_qbin, self.n_bin, self.m_bin)
+        #SBINB, NBIN = subbin_bound(p_array.q_array, z[ind_z_sort], self.x_qbin, self.n_bin, self.m_bin)
+        #B_params = [self.x_qbin, self.n_bin, self.m_bin, self.ip_method, self.sp, self.sigma_min]
+        #s1, s2, Ns, lam_ds = Q2EQUI(p_array.q_array[ind_z_sort], B_params, SBINB, NBIN)
+        SBINB, NBIN = self.sub_bin.subbin_bound(p_array.q_array, z[ind_z_sort], self.x_qbin, self.n_bin, self.m_bin)
         B_params = [self.x_qbin, self.n_bin, self.m_bin, self.ip_method, self.sp, self.sigma_min]
-        s1, s2, Ns, lam_ds = Q2EQUI(p_array.q_array[ind_z_sort], B_params, SBINB, NBIN)
+        s1, s2, Ns, lam_ds = self.bin_smoth.Q2EQUI(p_array.q_array[ind_z_sort], B_params, SBINB, NBIN)
         st = (s2 - s1) / Ns
         sa = s1 + st / 2.
         Ndw = [Ns - 1, st]
@@ -753,7 +888,6 @@ class CSR:
         pc_ref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV
         delta_p = dE * 1e-9 / pc_ref
         p_array.rparticles[5] += delta_p
-
 
 
 

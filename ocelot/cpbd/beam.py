@@ -2,8 +2,9 @@
 definition of particles, beams and trajectories
 '''
 import numpy as np
-from numpy import sqrt, cos, sin
+from numpy import sqrt, cos, sin, std, mean
 from ocelot.common.globals import *
+from ocelot.common.math_op import *
 # from ocelot.common.math_op import *
 from ocelot.common.py_func import filename_from_path
 from copy import deepcopy
@@ -165,6 +166,7 @@ class Beam:
     @property
     def g(self):
         return self.E / m_e_GeV
+
     @g.setter
     def g(self,value):
         self.E = value * m_e_GeV
@@ -172,6 +174,7 @@ class Beam:
     @property
     def dg(self):
         return self.sigma_E / m_e_GeV
+
     @dg.setter
     def dg(self,value):
         self.sigma_E = value * m_e_GeV
@@ -179,6 +182,7 @@ class Beam:
     @property
     def emit_xn(self):
         return self.emit_x * self.g
+
     @emit_xn.setter
     def emit_xn(self,value):
         self.emit_x = value / self.g
@@ -186,6 +190,7 @@ class Beam:
     @property
     def emit_yn(self):
         return self.emit_y * self.g
+
     @emit_yn.setter
     def emit_yn(self,value):
         self.emit_y = value / self.g
@@ -193,6 +198,7 @@ class Beam:
     @property
     def p(self):
         return sqrt(self.g**2 - 1)
+
     @p.setter
     def p(self,value):
         self.g = sqrt(value**2 + 1)
@@ -200,6 +206,7 @@ class Beam:
     @property
     def pz(self):
         return self.p / (self.xp**2 + self.yp**2 + 1)
+
     @pz.setter
     def pz(self,value):
         self.p = value * (self.xp**2 + self.yp**2 + 1)
@@ -207,6 +214,7 @@ class Beam:
     @property
     def px(self):
         return self.p * self.xp
+
     @px.setter
     def px(self,value):
         self.xp = value / self.p
@@ -214,7 +222,8 @@ class Beam:
     @property
     def py(self):
         return self.p * self.yp
-    @px.setter
+
+    @py.setter
     def py(self,value):
         self.yp = value / self.p
 
@@ -247,6 +256,7 @@ class Beam:
 class BeamArray(Beam):
 
     def __init__(self):
+        super().__init__()
         # initial conditions
         self.s = np.empty(0)
         self.x = np.empty(0)      #[m]
@@ -786,10 +796,6 @@ class BeamTransform:
         return mx, my, mxx, mxy, myy, emitt
 
 
-
-
-
-
 def sortrows(x, col):
     return x[:, x[col].argsort()]
 
@@ -1021,14 +1027,12 @@ beam funcions proposed
 '''
 
 
-def array2beam(parray, step=1e-7):
+def parray2beam(parray, step=1e-7):
     '''
     reads ParticleArray()
     returns BeamArray()
     step [m] - long. size ob bin to calculate distribution parameters
     '''
-
-    from numpy import mean, std
 
     part_c = parray.q_array[0] #fix for general case  # charge per particle
     t_step = step / speed_of_light

@@ -45,13 +45,16 @@ dz = lat1.totalLen
 tracking_step(lat2, plist, dz = dz, navi = navi)  # R + T
 #for e in lat1.sequence:
 #    print("check", e.transfer_map.__class__)
+navi = Navigator()
 tracking_step(lat1, plist_1, dz = dz, navi = navi)  # R only
 
-tau2 = [f.tau for f in plist]
+px2 = [f.px for f in plist]
 x2 = [f.x for f in plist]
+tau2 = [f.tau for f in plist]
 
-tau1 = [f.tau for f in plist_1]
+px1 = [f.px for f in plist_1]
 x1 = [f.x for f in plist_1]
+tau1 = [f.tau for f in plist_1]
 
 plt.suptitle("Tracking w/o 2d order matrices")
 plt.subplot(121)
@@ -62,9 +65,11 @@ plt.ylabel("Xp, rad")
 plt.grid(True)
 
 plt.subplot(122)
-plt.title("$(\Delta l, \Delta p/p)$ plane. End of lattice")
+plt.title("$(X, \delta l)$ plane. End of lattice")
 plt.plot(x2, tau2, "r.-", label="R+T")
 plt.plot(x1, tau1, "b.-", label="R")
+
+
 plt.legend()
 plt.xlabel("X, m")
 plt.ylabel("$\delta l$, m")

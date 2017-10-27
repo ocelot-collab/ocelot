@@ -3,7 +3,7 @@ single crystal Bragg reflection
 '''
 
 from ocelot.optics.elements import *
-from ocelot.optics.wave import *
+# from ocelot.optics.wave import TransferFunction
 from ocelot.optics.bragg import *
 from ocelot.optics.ray import Ray, trace as trace_ray
 from ocelot.gui.optics import *
@@ -95,11 +95,10 @@ def plot_filters(filt, f_test=None, param='tr', ax= None):
             ax2.plot(f_test.ev, np.angle(data_test), 'g--')
             
 def plot_spec_filt(s, filt, ax):
-    ax.plot(s.freq_ev, np.abs(s.sp), 'b.')    
+    
+    ax.plot(s.freq_ev, np.abs(s.sp), 'b.')
     tr_r, tr_i = np.real(filt.tr), np.imag(filt.tr)
     tr_mod  = np.real(np.sqrt(tr_r*tr_r + tr_i*tr_i)) #modulus of T
         
     ax.plot(filt.ev, tr_mod / np.max(tr_mod) * np.max(np.abs(s.sp)), 'r.--')
     print(s.freq_k)
-
-    

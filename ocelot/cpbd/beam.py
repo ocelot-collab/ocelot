@@ -4,8 +4,12 @@ definition of particles, beams and trajectories
 import numpy as np
 from numpy import sqrt, cos, sin
 from ocelot.common.globals import *
+# from ocelot.common.math_op import *
+from ocelot.common.py_func import filename_from_path
+from copy import deepcopy
+import pickle
 from scipy import interpolate
-
+from scipy.signal import savgol_filter
 try:
     import numexpr as ne
     ne_flag = True
@@ -156,28 +160,218 @@ class Beam:
         self.Dxp = 0.0
         self.Dyp = 0.0
 
-    def sizes(self):
-        if self.beta_x != 0:
-            self.gamma_x = (1. + self.alpha_x**2)/self.beta_x
+    properties = ['g','dg','emit_xn','emit_yn','p','pz','px','py']
+
+    @property
+    def g(self):
+        return self.E / m_e_GeV
+    @g.setter
+    def g(self,value):
+        self.E = value * m_e_GeV
+
+    @property
+    def dg(self):
+        return self.sigma_E / m_e_GeV
+    @dg.setter
+    def dg(self,value):
+        self.sigma_E = value * m_e_GeV
+
+    @property
+    def emit_xn(self):
+        return self.emit_x * self.g
+    @emit_xn.setter
+    def emit_xn(self,value):
+        self.emit_x = value / self.g
+
+    @property
+    def emit_yn(self):
+        return self.emit_y * self.g
+    @emit_yn.setter
+    def emit_yn(self,value):
+        self.emit_y = value / self.g
+
+    @property
+    def p(self):
+        return sqrt(self.g**2 - 1)
+    @p.setter
+    def p(self,value):
+        self.g = sqrt(value**2 + 1)
+
+    @property
+    def pz(self):
+        return self.p / (self.xp**2 + self.yp**2 + 1)
+    @pz.setter
+    def pz(self,value):
+        self.p = value * (self.xp**2 + self.yp**2 + 1)
+
+    @property
+    def px(self):
+        return self.p * self.xp
+    @px.setter
+    def px(self,value):
+        self.xp = value / self.p
+
+    @property
+    def py(self):
+        return self.p * self.yp
+    @px.setter
+    def py(self,value):
+        self.yp = value / self.p
+
+    def len(self):
+        return 1
+
+    # def sizes(self):
+        # if self.beta_x != 0:
+            # self.gamma_x = (1. + self.alpha_x**2)/self.beta_x
+        # else:
+            # self.gamma_x = 0.
+
+        # if self.beta_y != 0:
+            # self.gamma_y = (1. + self.alpha_y**2)/self.beta_y
+        # else:
+            # self.gamma_y = 0.
+
+        # self.sigma_x = sqrt((self.sigma_E/self.E*self.Dx)**2 + self.emit_x*self.beta_x)
+        # self.sigma_y = sqrt((self.sigma_E/self.E*self.Dy)**2 + self.emit_y*self.beta_y)
+        # self.sigma_xp = sqrt((self.sigma_E/self.E*self.Dxp)**2 + self.emit_x*self.gamma_x)
+        # self.sigma_yp = sqrt((self.sigma_E/self.E*self.Dyp)**2 + self.emit_y*self.gamma_y)
+
+    # def print_sizes(self):
+        # self.sizes()
+        # print("sigma_E/E and Dx/Dy : ", self.sigma_E/self.E, "  and ", self.Dx, "/",self.Dy, " m")
+        # print("emit_x/emit_y     : ",  self.emit_x*1e9, "/",self.emit_y*1e9, " nm-rad")
+        # print("sigma_x/y         : ", self.sigma_x*1e6, "/", self.sigma_y*1e6, " um")
+        # print("sigma_xp/yp       : ", self.sigma_xp*1e6, "/", self.sigma_yp*1e6, " urad")
+
+class BeamArray(Beam):
+
+    def __init__(self):
+        # initial conditions
+        self.s = np.empty(0)
+        self.x = np.empty(0)      #[m]
+        self.y = np.empty(0)      #[m]
+        self.xp = np.empty(0)    # xprime [rad]
+        self.yp = np.empty(0)    # yprime [rad]
+
+        self.E = np.empty(0)            # electron energy [GeV]
+        self.sigma_E = np.empty(0)      # Energy spread [GeV]
+        self.I = np.empty(0)            # beam current [A]
+        self.emit_x = np.empty(0)       # horizontal emittance [m rad]
+        self.emit_y = np.empty(0)       # horizontal emittance [m rad]
+        # self.tlen = 0.0         # bunch length (rms) in fsec
+
+        # twiss parameters
+        self.beta_x = np.empty(0)
+        self.beta_y = np.empty(0)
+        self.alpha_x = np.empty(0)
+        self.alpha_y = np.empty(0)
+        self.Dx = np.empty(0)
+        self.Dy = np.empty(0)
+        self.Dxp = np.empty(0)
+        self.Dyp = np.empty(0)
+
+        self.eloss = np.empty(0)
+
+    def fileName(self):
+        try:
+            str = filename_from_path(self.filePath)
+        except:
+            str = None
+        return str
+
+    def idx_max(self):
+        return self.I.argmax()
+
+    def len(self):
+        return np.size(self.s)
+
+    def params(self):
+        l = self.len()
+        attrs=[]
+        for attr in dir(self):
+            if attr.startswith('__') or attr in self.properties:
+                continue
+            # if callable(getattr(self,attr)):
+                # print('check')
+                # continue
+            if np.size(getattr(self,attr)) == l:
+                attrs.append(attr)
+        return attrs
+
+    def sort(self):
+        inds = self.s.argsort()
+        for attr in self.params():
+            values = getattr(self,attr)
+            setattr(self,attr,values[inds])
+
+    def equidist(self):
+        dsarr = (self.s - np.roll(self.s,1))[1:]
+        dsm = np.mean(dsarr)
+        if (np.abs(dsarr-dsm)/dsm > 1/1000).any():
+            s_new = np.linspace(np.amin(self.s), np.amax(self.s), self.len())
+            for attr in self.params():
+                if attr is 's':
+                    continue
+                print(attr)
+                val = getattr(self,attr)
+                val = np.interp(s_new, self.s, val)
+            #    val = convolve(val,spike,mode='same')
+                setattr(self,attr,val)
+            self.s = s_new
+        self.ds = dsm
+
+    def smear(self,sw):
+        self.equidist()
+        sn = (sw /self.ds).astype(int)
+        if sn<2:
+            return
+        if not sn%2:
+            sn += 1
+
+        for attr in self.params():
+            if attr is 's':
+                continue
+            val = getattr(self,attr)
+            val = savgol_filter(val,sn,2,mode='nearest')
+        #    val = convolve(val,spike,mode='same')
+            setattr(self,attr,val)
+
+    def get_s(self, s):
+        idx = find_nearest_idx(self.s, s)
+        return self[idx]
+
+    def __getitem__(self,index):
+        l = self.len()
+        if index.__class__ is not slice:
+            if index > l:
+                raise IndexError('slice index out of range')
+            beam_slice = Beam()
         else:
-            self.gamma_x = 0.
+            beam_slice = deepcopy(self)
 
-        if self.beta_y != 0:
-            self.gamma_y = (1. + self.alpha_y**2)/self.beta_y
-        else:
-            self.gamma_y = 0.
+        for attr in dir(self):
+            if attr.startswith('__') or callable(getattr(self,attr)):
+                continue
+            value = getattr(self,attr)
+            if np.size(value) == l:
+                setattr(beam_slice,attr,value[index])
+            else:
+                setattr(beam_slice,attr,value)
+        return beam_slice
 
-        self.sigma_x = sqrt((self.sigma_E/self.E*self.Dx)**2 + self.emit_x*self.beta_x)
-        self.sigma_y = sqrt((self.sigma_E/self.E*self.Dy)**2 + self.emit_y*self.beta_y)
-        self.sigma_xp = sqrt((self.sigma_E/self.E*self.Dxp)**2 + self.emit_x*self.gamma_x)
-        self.sigma_yp = sqrt((self.sigma_E/self.E*self.Dyp)**2 + self.emit_y*self.gamma_y)
+    def __delitem__(self,index):
+        l = self.len()
+        for attr in self.params():
+            if attr.startswith('__') or callable(getattr(self, attr)):
+                continue
+            value = getattr(self, attr)
+            if np.size(value) == l:
+                setattr(self, attr, np.delete(value, index))
 
-    def print_sizes(self):
-        self.sizes()
-        print("sigma_E/E and Dx/Dy : ", self.sigma_E/self.E, "  and ", self.Dx, "/",self.Dy, " m")
-        print("emit_x/emit_y     : ",  self.emit_x*1e9, "/",self.emit_y*1e9, " nm-rad")
-        print("sigma_x/y         : ", self.sigma_x*1e6, "/", self.sigma_y*1e6, " um")
-        print("sigma_xp/yp       : ", self.sigma_xp*1e6, "/", self.sigma_yp*1e6, " urad")
+    def pk(self):
+        return self[self.idx_max()]
+
 
 
 class Trajectory:
@@ -289,9 +483,9 @@ class ParticleArray:
         return self.rparticles.size / 6
 
     def x(self):  return self.rparticles[0]
-    def px(self): return self.rparticles[1]
+    def px(self): return self.rparticles[1] # xp
     def y(self):  return self.rparticles[2]
-    def py(self): return self.rparticles[3]
+    def py(self): return self.rparticles[3] # yp
     def tau(self):return self.rparticles[4]
     def p(self):  return self.rparticles[5]
     
@@ -653,6 +847,12 @@ def s_to_cur(A, sigma, q0, v):
 
 
 def slice_analysis(z, x, xs, M, to_sort):
+    '''
+    returns:
+    <x>,<xs>,<x^2>,<x*xs>,<xs^2>,np.sqrt(<x^2> * <xs^2> - <x*xs>^2)
+    based on M particles in moving window
+    Sergey, check please
+    '''
     z = np.copy(z)
     if to_sort:
         #P=sortrows([z, x, xs])
@@ -674,8 +874,8 @@ def slice_analysis(z, x, xs, M, to_sort):
     for i in range(N):
         n1 = int(max(0, i-m))
         n2 = int(min(N-1, i+m))
-        dq = n2 - n1
-        mx[i] = (xc[n2] - xc[n1])/dq
+        dq = n2 - n1 # window size
+        mx[i] = (xc[n2] - xc[n1])/dq # average for over window per particle
         mxs[i] = (xsc[n2] - xsc[n1])/dq
 
     x = x - mx
@@ -785,14 +985,14 @@ def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
     mE, mEs, mEE, mEEs, mEsEs, emittE = slice_analysis(z, PD[4], pc_1*1e9, Mslice, True)
 
     #print(mE, mEs, mEE, mEEs, mEsEs, emittE)
-    mE = mEs
-    sE = np.sqrt(mEsEs)
-    sig0 = np.std(parray.tau())
+    mE = mEs #mean energy
+    sE = np.sqrt(mEsEs) #energy spread
+    sig0 = np.std(parray.tau()) # std pulse duration
     B = s_to_cur(z, Mcur*sig0, q1, speed_of_light)
     gamma0 = parray.E/m_e_GeV
-    mm, mm, mm, mm, mm, emitty0 = moments(PD[2], PD[3])
+    _, _, _, _, _, emitty0 = moments(PD[2], PD[3])
     emityn = emitty0*gamma0
-    mm, mm, mm, mm, mm, emitt0 = moments(PD[0], PD[1])
+    _, _, _, _, _, emitt0 = moments(PD[0], PD[1])
     emitxn = emitt0*gamma0
 
     z, ind = np.unique(z, return_index=True)
@@ -815,3 +1015,198 @@ def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
     me = simple_filter(me, p, iter)
     I = interp1(B[:, 0], B[:, 1], s)
     return [s, I, ex, ey, me, se, gamma0, emitxn, emityn]
+
+'''
+beam funcions proposed
+'''
+
+
+def array2beam(parray, step=1e-7):
+    '''
+    reads ParticleArray()
+    returns BeamArray()
+    step [m] - long. size ob bin to calculate distribution parameters
+    '''
+
+    from numpy import mean, std
+
+    part_c = parray.q_array[0] #fix for general case  # charge per particle
+    t_step = step / speed_of_light
+    t = parray.tau() / speed_of_light
+    t_min = min(t)
+    t_max = max(t)
+    t_window = t_max - t_min
+    npoints = int(t_window / t_step)
+    t_step = t_window / npoints
+    beam = BeamArray()
+    for parm in ['I',
+                 's',
+                 'emit_x',
+                 'emit_y',
+                 'beta_x',
+                 'beta_y',
+                 'alpha_x',
+                 'alpha_y',
+                 'x',
+                 'y',
+                 'xp',
+                 'yp',
+                 'E',
+                 'sigma_E',
+                 ]:
+        setattr(beam, parm, np.zeros((npoints - 1)))
+
+    for i in range(npoints - 1):
+        indices = (t > t_min + t_step * i) * (t < t_min + t_step * (i + 1))
+        beam.s[i] = (t_min + t_step * (i + 0.5)) * speed_of_light
+
+        if sum(indices) > 2:
+            e0 = parray.E * 1e9
+            p0 = np.sqrt( (e0**2 - m_e_eV**2) / speed_of_light**2 )
+            p = parray.rparticles[5][indices] # deltaE / average_impulse / speed_of_light
+            dist_e = (p * p0 * speed_of_light + e0)
+            dist_x = parray.rparticles[0][indices]
+            dist_y = parray.rparticles[2][indices]
+            dist_xp = parray.rparticles[1][indices]
+            dist_yp = parray.rparticles[3][indices]
+
+            beam.I[i] = sum(indices) * part_c / t_step
+            beam.E[i] = mean(dist_e) * 1e-9
+            beam.sigma_E[i] = np.std(dist_e) * 1e-9
+            beam.x[i] = mean(dist_x)
+            beam.y[i] = mean(dist_y)
+            g = beam.E[i] / m_e_GeV
+            p = sqrt(g**2 - 1)
+            beam.xp[i] = mean(dist_xp) #/ p
+            beam.yp[i] = mean(dist_yp) #/ p
+            beam.emit_x[i] = sqrt(mean(dist_x**2) * mean(dist_xp**2) - mean(dist_x * dist_xp)**2)
+            beam.emit_y[i] = sqrt(mean(dist_y**2) * mean(dist_yp**2) - mean(dist_y * dist_yp)**2)
+            beam.beta_x[i] = mean(dist_x**2) / beam.emit_x[i]
+            beam.beta_y[i] = mean(dist_y**2) / beam.emit_y[i]
+            beam.alpha_x[i] = -mean(dist_x * dist_xp) / beam.emit_x[i]
+            beam.alpha_y[i] = -mean(dist_y * dist_yp) / beam.emit_y[i]
+
+    idx = np.where(np.logical_or.reduce((beam.I == 0, beam.E == 0, beam.beta_x > mean(beam.beta_x) * 100, beam.beta_y > mean(beam.beta_y) * 100)))
+    del beam[idx]
+
+    if hasattr(parray,'filePath'):
+        beam.filePath = parray.filePath + '.beam'
+    return(beam)
+
+# def zero_wake_at_ipk_new(beam):
+    # '''
+    # reads BeamArray()
+    # shifts the wake pforile so that
+    # at maximum current slice wake is zero
+    # returns GenesisBeam()
+
+    # allows to account for wake losses without
+    # additional linear undulator tapering
+    # '''
+    # if 'eloss' in beam.params():
+        # beam_new = deepcopy(beam)
+        # # beamf_new.idx_max_refresh()
+        # beam_new.eloss -= beam_new.eloss[beam_new.idx_max()]
+        # return beamf_new
+    # else:
+        # return beam
+
+# def set_beam_energy_new(beam, E_GeV_new):
+    # '''
+    # reads BeamArray()
+    # returns BeamArray()
+    # sets the beam energy with peak current to E_GeV_new
+    # '''
+    # beam_new = deepcopy(beam)
+    # idx = beam_new.idx_max()
+    # beam_new.E += (E_GeV_new - beam_new.E[idx])
+
+    # return beam_new
+
+
+# def transform_beam_twiss_new(beam, s=None, transform=None):
+    # # transform = [[beta_x,alpha_x],[beta_y, alpha_y]]
+    # if transform == None:
+        # return beam
+    # else:
+        # if s == None:
+            # idx = beam.idx_max()
+        # else:
+            # idx = find_nearest_idx(beam.s, s)
+
+        # g1x = np.matrix([[beam.beta_x[idx], beam.alpha_x[idx]],
+                         # [beam.alpha_x[idx], (1 + beam.alpha_x[idx]**2) / beam.beta_x[idx]]])
+
+        # g1y = np.matrix([[beam.beta_y[idx], beam.alpha_y[idx]],
+                         # [beam.alpha_y[idx], (1 + beam.alpha_y[idx]**2) / beam.beta_y[idx]]])
+
+        # b2x = transform[0][0]
+        # a2x = transform[0][1]
+
+        # b2y = transform[1][0]
+        # a2y = transform[1][1]
+
+        # g2x = np.matrix([[b2x, a2x],
+                         # [a2x, (1 + a2x**2) / b2x]])
+
+        # g2y = np.matrix([[b2y, a2y],
+                         # [a2y, (1 + a2y**2) / b2y]])
+
+        # Mix, Mx = find_transform(g1x, g2x)
+        # Miy, My = find_transform(g1y, g2y)
+
+        # # print Mi
+
+        # betax_new = []
+        # alphax_new = []
+        # betay_new = []
+        # alphay_new = []
+
+        # for i in range(beam.len()):
+            # g1x = np.matrix([[beam.beta_x[i], beam.alpha_x[i]],
+                             # [beam.alpha_x[i], (1 + beam.alpha_x[i]**2) / beam.beta_x[i]]])
+
+            # gx = Mix.T * g1x * Mix
+
+            # g1y = np.matrix([[beam.beta_y[i], beam.alpha_y[i]],
+                             # [beam.alpha_y[i], (1 + beam.alpha_y[i]**2) / beam.beta_y[i]]])
+
+            # gy = Miy.T * g1y * Miy
+
+            # # print i, gx[0,1], g1x[0,1]
+
+            # betax_new.append(gx[0, 0])
+            # alphax_new.append(gx[0, 1])
+            # betay_new.append(gy[0, 0])
+            # alphay_new.append(gy[0, 1])
+
+        # beam.beta_x = betax_new
+        # beam.beta_y = betay_new
+        # beam.alpha_x = alphax_new
+        # beam.alpha_y = alphay_new
+
+        # return beam
+
+# def cut_beam_new(beam=None, cut_s=[-inf, inf]):
+    # '''
+    # cuts BeamArray() object longitudinally
+    # cut_z [m] - limits of the cut
+    # '''
+    # beam_new = deepcopy(beam)
+    # beam_new.sort()
+    # idxl, idxr = find_nearest_idx(beam_new.s, cut_s[0]), find_nearest_idx(beam_new.s, cut_s[1])
+    # return beam_new[idxl:idxr]
+
+# def get_beam_s_new(beam, s=0):
+    # '''
+    # obtains values of the beam at s position
+    # '''
+    # idx = find_nearest_idx(beam.s,s)
+    # return(beam[idx])
+
+# def get_beam_peak_new(beam):
+    # '''
+    # obtains values of the beam at s position
+    # '''
+    # idx = beam.idx_max()
+    # return beam[idx]

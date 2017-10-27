@@ -2,6 +2,19 @@
 user interface for viewing genesis simulation results
 '''
 
+'''
+MEMO
+
+plt.gcf() to get current figure
+plt.gca() to get current axis
+
+ax.set_xlabel('')
+ax.get_xlim()
+ax.set_xlim([0, 1])
+ax.set_ylim(ymin=0)
+
+'''
+
 import sys
 import os
 import csv
@@ -25,12 +38,15 @@ from ocelot.adaptors.genesis import *
 from ocelot.common.globals import *  # import of constants like "h_eV_s" and
 from ocelot.common.math_op import *  # import of mathematical functions
 from ocelot.utils.xfel_utils import *
+from ocelot.optics.utils import calc_ph_sp_dens
+from ocelot.optics.wave import *
 
 # from pylab import rc, rcParams #tmp
 from matplotlib import rc, rcParams
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 def_cmap = 'viridis'
+# def_cmap = 'Greys'
 
 fntsz = 4
 params = {'image.cmap': def_cmap, 'backend': 'ps', 'axes.labelsize': 3 * fntsz, 'font.size': 3 * fntsz, 'legend.fontsize': 4 * fntsz, 'xtick.labelsize': 4 * fntsz,  'ytick.labelsize': 4 * fntsz, 'text.usetex': False}
@@ -192,8 +208,402 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
     print ('    total plotting time %.2f seconds' % (time.time() - plotting_time))
 
 
-def plot_gen_out_z(g, figsize=(10, 14), legend=True, fig_name=None, z=inf, savefig=False, showfig=1, debug=1):
+def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espread+el_bunching', 'rad_phase', 'rad_spec'], figsize=4, x_units='um', y_units='ev', legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
+    '''
+    radiation parameters at distance z
+    g/out = GenesisOutput() object
+    z distance along undulator [m]
+    params = parameters of interest:
+        'rad_power+el_current' - radiation power and electron beam current
+        'el_energy+el_espread+el_bunching' - electron beam energy +/- spread and bunching
+        'rad_phase' - phase of radiation
+        'rad_spec' - on-axis spectrum
+    figsize - size of figure (unit-less)
+    x_units - units of time domain ('um' of 'fs')
+    y_units - units of frequency domain ('nm' of 'ev')
+    legend - plot legend - tbd
+    fig_name - override figure name
+    savefig - save figure
+    showfig - show figure
+    '''
+    import matplotlib.ticker as ticker
+    
+    
+    if showfig == False and savefig == False:
+        return
 
+    t_domain = ['rad_power+el_current', 'el_energy+el_espread+el_bunching', 'el_energy+el_espread', 'rad_phase']
+    f_domain = ['rad_spec']
+    # t_domain_i = list(set(t_domain).intersection(params))
+    # f_domain_i = list(set(f_domain).intersection(params))
+    # t_domain_n = len(t_domain_i)
+    # f_domain_n = len(f_domain_i)
+    #add sorting of f_domain to the end params += [params.pop(i)]
+    params_str = str(params).replace("'", '').replace('[', '').replace(']', '').replace(' ', '').replace(',', '--')
+    
+    if z == inf:
+        # print ('Showing profile parameters at the end of undulator')
+        z = np.amax(g.z)
+
+    elif z > np.amax(g.z):
+        # print ('Z parameter too large, setting to the undulator end')
+        z = np.amax(g.z)
+
+    elif z < np.amin(g.z):
+        # print ('Z parameter too small, setting to the undulator entrance')
+        z = np.amin(g.z)
+
+    zi = np.where(g.z >= z)[0][0]
+    z = g.z[zi]
+    
+    if os.path.isfile(str(g)):
+        g = read_out_file(g, read_level=2)
+    # add check for output object
+
+    # if fig_name is None:
+        # if g.fileName() is '':
+            # fig = plt.figure(params_str)
+            # if debug > 0:
+                # print('    plotting ' + params_str)
+        # else:
+            # fig = plt.figure(g.fileName() + '_' + params_str)
+            # if debug > 0:
+                # print('    plotting ' + g.fileName() + '_' + params_str)
+    # else:
+        # fig = plt.figure(fig_name)
+        # if debug > 0:
+            # print('    plotting ' + fig_name)
+    if fig_name is None:
+        if g.fileName() is '':
+            fig = plt.figure('Bunch profile at ' + str(z) + 'm')
+        else:
+            fig = plt.figure('Bunch profile at ' + str(z) + 'm ' + g.fileName())
+    else:
+        fig = plt.figure(fig_name)
+    if debug > 0:
+        print('    plotting bunch profile at ' + str(z) + ' [m]')
+        
+    if size(figsize) == 1:
+        figsize = (3 * figsize, (len(params) + 0.5) * figsize)
+    fig.set_size_inches(figsize, forward=True)
+    # plt.rc('axes', grid=True)
+    # plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
+    # left, width = 0.1, 0.85
+    plt.clf()
+    fig.subplots_adjust(hspace=0)
+    ax = []
+    
+    if g('itdp') == False:
+        print('!     not applicable for steady-state')
+        return
+    
+    params_t = list(set(params).difference(f_domain))
+    params_t = [v for v in params if v in params_t]
+    params_f = list(set(params).difference(t_domain))
+    params_f = [v for v in params if v in params_f]
+    if debug > 1:
+        print('params_t',params_t)
+        print('params_f',params_f)
+    
+    for index, param in enumerate(params_t):
+        if len(ax) == 0:
+            ax.append(fig.add_subplot(len(params), 1, index + 1))
+        else:
+            ax.append(fig.add_subplot(len(params), 1, index + 1, sharex=ax[0]))
+        
+        if param == 'rad_power+el_current':
+            subfig_z_power_curr(ax[-1], g, zi=zi, x_units=x_units ,legend=legend)
+        elif param == 'el_energy+el_espread+el_bunching':
+            subfig_z_energy_espread_bunching(ax[-1], g, zi=zi, x_units=x_units ,legend=legend)
+        elif param == 'el_energy+el_espread':
+            subfig_z_energy_espread(ax[-1], g, zi=zi, x_units=x_units ,legend=legend)
+        elif param == 'rad_phase':
+            subfig_z_phase(ax[-1], g, zi=zi, x_units=x_units ,legend=legend)
+        # elif param == 'el_energy':
+            # subfig_evo_el_energy(ax[-1], g, legend)
+        else:
+            pass
+            # print('! wrong parameter ' + param)
+        
+    for axi in ax:
+        if axi is not ax[-1]:
+            axi.set_xlabel('')
+            for label in axi.get_xticklabels():
+                label.set_visible(False)
+    axt = len(ax)
+        
+    for index, param in enumerate(params_f):
+        if len(ax)-axt == 0:
+            ax.append(fig.add_subplot(len(params), 1, index + axt + 1))
+        else:
+            ax.append(fig.add_subplot(len(params), 1, index + axt + 1, sharex=ax[-1]))
+        if param == 'rad_spec':
+            subfig_z_spec(ax[-1], g, zi=zi, y_units=y_units, estimate_ph_sp_dens=True, legend=legend)
+        else:
+            print('! wrong parameter ' + param)
+    axf = len(ax) - axt
+    # ax[0].set_xlim(g.z[0], g.z[-1])
+    # ax[-1].set_xlabel('z [m]')
+    if axt is not 0 and axf is not 0:
+        fig.subplots_adjust(top=0.95, bottom=0.2, right=0.8, left=0.15)
+    else:
+        fig.subplots_adjust(top=0.95, bottom=0.1, right=0.8, left=0.15)
+
+    for axi in ax[axt:]:
+        if axt is not 0:
+            pos1 = axi.get_position()  # get the original position
+            pos2 = [pos1.x0 + 0, pos1.y0 - 0.1,  pos1.width / 1.0, pos1.height / 1.0]
+            axi.set_position(pos2)
+            if axi is not ax[-1]:
+                axi.set_xlabel('')
+                for label in axi.get_xticklabels():
+                    label.set_visible(False)
+
+    plt.draw()
+    if savefig != False:
+        if savefig == True:
+            savefig = 'png'
+        fig.savefig(g.filePath + '_z_' + str(z) + 'm.' + str(savefig), format=savefig)
+
+    if showfig:
+        plt.show()
+    else:
+        plt.close('all')
+
+
+def subfig_z_power_curr(ax_curr, g, zi=None, x_units='um', legend=False):
+    ax_curr.clear()
+    number_ticks = 6
+    
+    if x_units == 'um':
+        ax_curr.set_xlabel(r's [$\mu$m]')
+        x = g.t * speed_of_light * 1.0e-15 * 1e6
+    elif x_units == 'fs':
+        ax_curr.set_xlabel(r't [fs]')
+        x = g.t
+    else:
+        raise ValueError('Unknown parameter x_units (should be um or fs)')
+        
+    if zi == None:
+        zi = -1
+    
+    ax_curr.plot(x, g.I / 1e3, 'k--')
+    ax_curr.set_ylabel(r'I [kA]')
+    ax_curr.set_ylim(ymin=0)
+    ax_curr.text(0.02, 0.98, "Q= %.2f pC" % (g.beam_charge * 1e12), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_curr.transAxes, color='black')  # horizontalalignment='center', verticalalignment='center',
+    ax_curr.grid(True)
+    
+    ax_power = ax_curr.twinx()
+    ax_power.grid(False)
+    ax_power.plot(x, g.p_int[:, zi], 'g-', linewidth=1.5)
+    ax_power.set_ylabel(r'Power [W]')
+    ax_power.set_ylim(ymin=0)
+    # if np.amax(g.p_int[:,zi])!=np.amin(g.p_int[:,zi]):
+        # ax_power.set_ylim([0, np.amax(g.p_int[:,zi])])
+    ax_power.get_yaxis().get_major_formatter().set_useOffset(False)
+    ax_power.get_yaxis().get_major_formatter().set_scientific(True)
+    ax_power.get_yaxis().get_major_formatter().set_powerlimits((-3, 4))  # [:,75,75]
+    if 'n_photons' in dir(g):
+        ax_curr.text(0.98, 0.98, "E= %.2e J\nN$_{phot}$= %.2e" % (g.pulse_energy[zi], g.n_photons[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
+    else:
+        ax_curr.text(0.98, 0.98, "E= %.2e J" % (g.pulse_energy[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
+    
+    ax_curr.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_power.yaxis.major.locator.set_params(nbins=number_ticks)
+    
+    ax_power.tick_params(axis='y', which='both', colors='g')
+    ax_power.yaxis.label.set_color('g')
+    ax_power.yaxis.get_offset_text().set_color(ax_power.yaxis.label.get_color())
+    
+    ax_power.set_xlim([x[0],x[-1]])
+
+
+def subfig_z_energy_espread_bunching(ax_energy, g, zi=None, x_units='um', legend=False):
+    ax_energy.clear()
+    number_ticks = 6
+    
+    if x_units == 'um':
+        ax_energy.set_xlabel(r's [$\mu$m]')
+        x = g.t * speed_of_light * 1.0e-15 * 1e6
+    elif x_units == 'fs':
+        ax_energy.set_xlabel(r't [fs]')
+        x = g.t
+    else:
+        raise ValueError('Unknown parameter x_units (should be um or fs)')
+    
+    if zi == None:
+        zi = -1
+        
+    ax_energy.plot(x, g.el_energy[:, zi] * m_e_GeV, 'b-', x, (g.el_energy[:, zi] + g.el_e_spread[:, zi]) * m_e_GeV, 'r--', x, (g.el_energy[:, zi] - g.el_e_spread[:, zi]) * m_e_GeV, 'r--')
+    ax_energy.set_ylabel(r'$E\pm\sigma_E$ [GeV]')
+    # ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
+    ax_energy.ticklabel_format(useOffset=False, style='plain')
+    ax_energy.grid(True)
+    # plt.yticks(plt.yticks()[0][0:-1])
+
+    ax_bunching = ax_energy.twinx()
+    ax_bunching.plot(x, g.bunching[:, zi], 'grey', linewidth=0.5)
+    ax_bunching.set_ylabel('Bunching')
+    ax_bunching.set_ylim(ymin=0)
+    ax_bunching.grid(False)
+    
+    ax_energy.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_bunching.yaxis.major.locator.set_params(nbins=number_ticks)
+    
+    
+    ax_energy.tick_params(axis='y', which='both', colors='b')
+    ax_energy.yaxis.label.set_color('b')
+
+    ax_bunching.tick_params(axis='y', which='both', colors='grey')
+    ax_bunching.yaxis.label.set_color('grey')
+    
+    ax_energy.set_xlim([x[0],x[-1]])
+
+
+def subfig_z_energy_espread(ax_energy, g, zi=None, x_units='um', legend=False):
+    ax_energy.clear()
+    number_ticks = 6
+    
+    if x_units == 'um':
+        ax_energy.set_xlabel(r's [$\mu$m]')
+        x = g.t * speed_of_light * 1.0e-15 * 1e6
+    elif x_units == 'fs':
+        ax_energy.set_xlabel(r't [fs]')
+        x = g.t
+    else:
+        raise ValueError('Unknown parameter x_units (should be um or fs)')
+    
+    if zi == None:
+        zi = -1
+        
+    ax_energy.plot(x, g.el_energy[:, zi] * m_e_GeV, 'b-', x, (g.el_energy[:, zi] + g.el_e_spread[:, zi]) * m_e_GeV, 'r--', x, (g.el_energy[:, zi] - g.el_e_spread[:, zi]) * m_e_GeV, 'r--')
+    ax_energy.set_ylabel(r'$E\pm\sigma_E$ [GeV]')
+    # ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
+    ax_energy.ticklabel_format(useOffset=False, style='plain')
+    ax_energy.grid(True)
+    # plt.yticks(plt.yticks()[0][0:-1])
+    
+    ax_energy.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_energy.tick_params(axis='y', which='both', colors='b')
+    ax_energy.yaxis.label.set_color('b')
+    
+    ax_energy.set_xlim([x[0],x[-1]])
+
+
+def subfig_z_phase(ax_phase, g, zi=None, x_units='um', legend=False, rewrap=False):
+    ax_phase.clear()
+    number_ticks = 6
+    
+    if x_units == 'um':
+        ax_phase.set_xlabel(r's [$\mu$m]')
+        x = g.t * speed_of_light * 1.0e-15 * 1e6
+    elif x_units == 'fs':
+        ax_phase.set_xlabel(r't [fs]')
+        x = g.t
+    else:
+        raise ValueError('Unknown parameter x_units (should be um or fs)')
+    
+    if zi == None:
+        zi = -1
+    
+    if rewrap:
+        phase = unwrap(g.phi_mid[:, zi])
+        phase_cor = np.arange(g.nSlices) * (maxspectrum_wavelength - g('xlamds')) / g('xlamds') * g('zsep') * 2 * pi
+        phase_fixed = phase + phase_cor
+        phase_fixed -= power[maxspower_index, zi]
+        n = 1
+        phase_fixed = (phase_fixed + n * pi) % (2 * n * pi) - n * pi
+    else:
+        phase_fixed = g.phi_mid[:, zi]
+    ax_phase.plot(x, phase_fixed, 'k-', linewidth=0.5)
+    ax_phase.text(0.98, 0.98, r'(on axis)', fontsize=10, horizontalalignment='right', verticalalignment='top', transform=ax_phase.transAxes)  # horizontalalignment='center', verticalalignment='center',
+    ax_phase.set_ylabel(r'$\phi$ [rad]')
+    ax_phase.set_ylim([-pi, pi])
+    ax_phase.grid(True)
+    
+    ax_phase.yaxis.major.locator.set_params(nbins=number_ticks)
+    
+    ax_phase.set_xlim([x[0],x[-1]])
+
+
+def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=True, legend=False):
+    
+    number_ticks = 6
+    # n_pad = 1
+    
+    if zi == None:
+        zi = -1
+    
+    if 'spec' not in dir(g):
+        g.calc_spec()
+    
+    if y_units == 'nm':
+        x = g.freq_lamd
+    elif y_units in ['ev', 'eV']:
+        x = g.freq_ev
+    
+    if estimate_ph_sp_dens:
+        y_units = 'ev'
+        spec = g.spec_phot_density[:, zi]
+        # spec = calc_ph_sp_dens(g.spec[:, zi], g.freq_ev, g.n_photons[zi])
+    else:
+        spec = g.spec[:, zi]
+        
+        
+    # power = np.pad(g.p_mid, [(int(g.nSlices / 2) * n_pad, (g.nSlices - (int(g.nSlices / 2)))) * n_pad, (0, 0)], mode='constant')
+    # phase = np.pad(g.phi_mid, [(int(g.nSlices / 2) * n_pad, (g.nSlices - (int(g.nSlices / 2)))) * n_pad, (0, 0)], mode='constant')  # not supported by the numpy 1.6.2
+    
+    ax_spectrum.plot(x, spec, 'r-')
+    ax_spectrum.text(0.98, 0.98, r'(on axis)', fontsize=10, horizontalalignment='right', verticalalignment='top', transform=ax_spectrum.transAxes)  # horizontalalignment='center', verticalalignment='center',
+    
+    ax_spectrum.set_ylim(ymin=0)
+    ax_spectrum.get_yaxis().get_major_formatter().set_useOffset(False)
+    ax_spectrum.get_yaxis().get_major_formatter().set_scientific(True)
+    ax_spectrum.get_yaxis().get_major_formatter().set_powerlimits((-3, 4))  # [:,75,75]
+    ax_spectrum.grid(True)
+    if np.amin(x) != np.amax(x):
+        ax_spectrum.set_xlim([np.amin(x), np.amax(x)])
+    
+    maxspectrum_index = np.argmax(spec)
+    # maxspower_index = np.argmax(power[:, zi])
+    maxspectrum_value = x[maxspectrum_index]
+    
+    spec_width = None
+    if np.sum(spec)!=0:
+        pos, width, arr = fwhm3(spec)
+        if width != None:
+            if arr[0] == arr[-1]:
+                dx = abs(x[pos] - x[pos-1])
+            else:
+                dx = abs( (x[arr[0]] - x[arr[-1]]) / (arr[0] - arr[-1]) )
+            spec_width = dx * width / x[pos]  # the FWHM of spectral line (error when peakpos is at the edge of lamdscale)
+
+    if spec_width is not None and maxspectrum_value is not None:
+            if y_units == 'nm':
+                ax_spectrum.text(0.02, 0.98, r"$\lambda^{max}$= %.4e m " "\n" "$(\Delta\lambda/\lambda)_{fwhm}$= %.2e" % (maxspectrum_value*1e-9, spec_width), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_spectrum.transAxes, color='red')  # horizontalalignment='center', verticalalignment='center',
+                if estimate_ph_sp_dens:
+                    ax_spectrum.set_ylabel(r'[$N_{phot}$/nm](estim)')
+                else:
+                    ax_spectrum.set_ylabel(r'P($\lambda$) [a.u.]')
+                ax_spectrum.set_xlabel(r'$\lambda$ [nm]')
+            elif y_units in ['ev', 'eV']:
+                ax_spectrum.text(0.02, 0.98, r"$E_{ph}^{max}$= %.2f eV " "\n" "$(\Delta E/E)_{fwhm}$= %.2e" % (maxspectrum_value, spec_width), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_spectrum.transAxes, color='red')  # horizontalalignment='center', verticalalignment='center',
+                if estimate_ph_sp_dens:
+                    ax_spectrum.set_ylabel(r'[$N_{phot}$/eV] (estim)')
+                else:
+                    ax_spectrum.set_ylabel(r'P($E_{ph}$) [a.u.]')
+                ax_spectrum.set_xlabel(r'$E_{photon}$ [eV]')
+        # ax_spectrum.text(0.02, 0.98, r"$\lambda_{max}$= %.4e m " "\n" "$(\Delta\lambda/\lambda)_{fwhm}$= %.2e" % (maxspectrum_value, spec_width), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_spectrum.transAxes, color='red')  # horizontalalignment='center', verticalalignment='center',
+    
+    ax_spectrum.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_spectrum.tick_params(axis='y', which='both', colors='r')
+    ax_spectrum.yaxis.label.set_color('r')
+    ax_spectrum.yaxis.get_offset_text().set_color(ax_spectrum.yaxis.label.get_color())
+    
+    
+
+def plot_gen_out_z_old(g, figsize=(10, 14), x_units='um', y_units='ev', legend=True, fig_name=None, z=inf, savefig=False, showfig=1, debug=1):
+    print('soon this function will be replaced by plot_gen_out_z_new (currently being tested)')
     number_ticks = 6
 
     if showfig == False and savefig == False:
@@ -261,7 +671,7 @@ def plot_gen_out_z(g, figsize=(10, 14), legend=True, fig_name=None, z=inf, savef
     ax_curr.set_ylabel(r'I [kA]')
     ax_curr.set_ylim(ymin=0)
     ax_curr.text(0.02, 0.98, "Q= %.2f pC" % (g.beam_charge * 1e12), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_curr.transAxes)  # horizontalalignment='center', verticalalignment='center',
-    ax_curr.text(0.98, 0.98, "E= %.2e J" % (g.energy[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
+    ax_curr.text(0.98, 0.98, "E= %.2e J" % (g.pulse_energy[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
     ax_curr.grid(True)
 
     ax_power = ax_curr.twinx()
@@ -396,27 +806,28 @@ def plot_gen_out_z(g, figsize=(10, 14), legend=True, fig_name=None, z=inf, savef
         plt.close('all')
 
 
+
 def plot_gen_out_e(g, legend=False, figsize=4, fig_name='Electrons', savefig=False, showfig=True, debug=1):
     fig = plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_energy', 'el_bunching'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
 
 
 def plot_gen_out_ph(g, legend=False, figsize=4, fig_name='Radiation', savefig=False, showfig=True, debug=1):
     if g('itdp'):
-        fig = plot_gen_out_evo(g, params=['rad_pow_en', 'rad_spec', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
+        fig = plot_gen_out_evo(g, params=['rad_pow_en_log', 'rad_pow_en_lin', 'rad_spec_log', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
     else:
-        fig = plot_gen_out_evo(g, params=['rad_pow', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
+        fig = plot_gen_out_evo(g, params=['rad_pow_log', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
 
-def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_energy', 'el_bunching', 'rad_pow_en', 'rad_spec', 'rad_size', 'rad_spec_evo_n', 'rad_pow_evo_n'], figsize=4, legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
+def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'el_bunching', 'rad_pow_en_log', 'rad_pow_en_lin', 'rad_spec_log', 'rad_size', 'rad_spec_evo_n', 'rad_pow_evo_n'], figsize=4, legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
     '''
     plots evolution of given parameters from genesis output with undulator length
     '''
     import matplotlib.ticker as ticker
-
+    
     if showfig == False and savefig == False:
         return
-
+    
     params_str = str(params).replace("'", '').replace('[', '').replace(']', '').replace(' ', '').replace(',', '--')
-
+    
     if os.path.isfile(str(g)):
         g = read_out_file(g, read_level=2)
     # add check for output object
@@ -433,10 +844,10 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_energy', 'el_bunching
         fig = plt.figure(fig_name)
         if debug > 0:
             print('    plotting ' + fig_name)
-
+    
     if size(figsize) == 1:
         figsize = (3 * figsize, (len(params) + 0.5) * figsize)
-
+    
     fig.set_size_inches(figsize, forward=True)
     # plt.rc('axes', grid=True)
     # plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
@@ -453,47 +864,51 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_energy', 'el_bunching
             ax.append(fig.add_subplot(len(params), 1, index + 1, sharex=ax[0]))
         # ax[-1]
         if param == 'und_quad':
-            subfig_und_quad(ax[-1], g, legend)
+            subfig_evo_und_quad(ax[-1], g, legend)
         elif param == 'und':
-            subfig_und(ax[-1], g, legend)
+            subfig_evo_und(ax[-1], g, legend)
         elif param == 'el_size':
-            subfig_el_size(ax[-1], g, legend)
+            subfig_evo_el_size(ax[-1], g, legend)
+        elif param == 'el_pos':
+            subfig_evo_el_pos(ax[-1], g, legend)
         elif param == 'el_energy':
-            subfig_el_energy(ax[-1], g, legend)
+            subfig_evo_el_energy(ax[-1], g, legend)
         elif param == 'el_bunching':
-            subfig_el_bunching(ax[-1], g, legend)
-        elif param == 'rad_pow_en':
+            subfig_evo_el_bunching(ax[-1], g, legend)
+        elif param == 'rad_pow_en_log':
             if not is_tdp:
-                subfig_rad_pow(ax[-1], g, legend)
+                subfig_evo_rad_pow(ax[-1], g, legend)
             else:
-                subfig_rad_pow_en(ax[-1], g, legend)
-        elif param == 'rad_pow_en_nolog':
+                subfig_evo_rad_pow_en(ax[-1], g, legend)
+        elif param == 'rad_pow_en_lin':
             if not is_tdp:
-                subfig_rad_pow(ax[-1], g, legend, log=0)
+                subfig_evo_rad_pow(ax[-1], g, legend, log=0)
             else:
-                subfig_rad_pow_en(ax[-1], g, legend, log=0)
-        elif param == 'rad_pow':
-            subfig_rad_pow(ax[-1], g, legend)
+                subfig_evo_rad_pow_en(ax[-1], g, legend, log=0)
+        elif param == 'rad_pow_log':
+            subfig_evo_rad_pow(ax[-1], g, legend)
+        elif param == 'rad_pow_lin':
+            subfig_evo_rad_pow(ax[-1], g, legend, log=0)
         elif param == 'rad_size':
             subfig_rad_size(ax[-1], g, legend)
-        elif param == 'rad_spec':
+        elif param == 'rad_spec_log':
             if is_tdp:
-                subfig_rad_spec(ax[-1], g, legend)
+                subfig_evo_rad_spec(ax[-1], g, legend)
         elif param == 'rad_spec_nolog':
             if is_tdp:
-                subfig_rad_spec(ax[-1], g, legend, log=0)
+                subfig_evo_rad_spec(ax[-1], g, legend, log=0)
         elif param == 'rad_spec_evo_n':
             if is_tdp:
-                subfig_rad_spec_evo(ax[-1], g, legend, norm=1)
+                subfig_evo_rad_spec_sz(ax[-1], g, legend, norm=1)
         elif param == 'rad_pow_evo_n':
             if is_tdp:
-                subfig_rad_pow_evo(ax[-1], g, legend, norm=1)
+                subfig_evo_rad_pow_sz(ax[-1], g, legend, norm=1)
         elif param == 'rad_spec_evo':
             if is_tdp:
-                subfig_rad_spec_evo(ax[-1], g, legend, norm=0)
+                subfig_evo_rad_spec_sz(ax[-1], g, legend, norm=0)
         elif param == 'rad_pow_evo':
             if is_tdp:
-                subfig_rad_pow_evo(ax[-1], g, legend, norm=0)
+                subfig_evo_rad_pow_sz(ax[-1], g, legend, norm=0)
         else:
             print('! wrong parameter ' + param)
 
@@ -504,7 +919,7 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_energy', 'el_bunching
     for axi in ax[0:-1]:
         for label in axi.get_xticklabels():
             label.set_visible(False)
-
+    
     if savefig != False:
         if savefig == True:
             savefig = 'png'
@@ -525,13 +940,13 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_energy', 'el_bunching
         plt.close('all')
 
 
-def subfig_und_quad(ax_und, g, legend):
-
+def subfig_evo_und_quad(ax_und, g, legend):
     number_ticks = 6
+    
     ax_und.plot(g.z, g.aw, 'b-', linewidth=1.5)
     ax_und.set_ylabel('K (rms)')
     ax_und.grid(True)
-
+    
     ax_quad = ax_und.twinx()
     ax_quad.plot(g.z, g.qfld, 'r-', linewidth=1.5)
     ax_quad.set_ylabel('Quad')
@@ -539,7 +954,7 @@ def subfig_und_quad(ax_und, g, legend):
 
     ax_und.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_quad.yaxis.major.locator.set_params(nbins=number_ticks)
-
+    
     if np.amax(g.aw) != 0:
         aw_tmp = np.array(g.aw)[np.array(g.aw) != 0]
         if np.amax(aw_tmp) != np.amin(aw_tmp):
@@ -553,9 +968,9 @@ def subfig_und_quad(ax_und, g, legend):
     ax_quad.yaxis.label.set_color('r')
 
 
-def subfig_und(ax_und, g, legend):
-
+def subfig_evo_und(ax_und, g, legend):
     number_ticks = 6
+    
     ax_und.plot(g.z, g.aw, 'b-', linewidth=1.5)
     ax_und.set_ylabel('K (rms)')
     ax_und.grid(True)
@@ -573,25 +988,34 @@ def subfig_und(ax_und, g, legend):
     ax_und.yaxis.label.set_color('b')
 
 
-def subfig_el_size(ax_size_tpos, g, legend, which='both'):
-
+def subfig_evo_el_size(ax_size_tsize, g, legend, which='both'):
     number_ticks = 6
+    
     if which == 'both' or which == 'averaged':
-        ax_size_tpos.plot(g.z, np.average(g.xrms, axis=0, weights=g.I) * 1e6, 'g-', g.z, np.average(g.yrms, axis=0, weights=g.I) * 1e6, 'b-')
+        ax_size_tsize.plot(g.z, np.average(g.xrms, axis=0, weights=g.I) * 1e6, 'g-', g.z, np.average(g.yrms, axis=0, weights=g.I) * 1e6, 'b-')
     if which == 'both' or which == 'peak_curr':
         idx_pk = np.where(g.I == np.amax(g.I))[0][0]
-        ax_size_tpos.plot(g.z, g.xrms[idx_pk, :] * 1e6, 'g--', g.z, g.yrms[idx_pk, :] * 1e6, 'b--')
-    ax_size_tpos.set_ylabel(r'$\sigma_{x,y}$ [$\mu$m]')
+        ax_size_tsize.plot(g.z, g.xrms[idx_pk, :] * 1e6, 'g--', g.z, g.yrms[idx_pk, :] * 1e6, 'b--')
+    ax_size_tsize.set_ylabel(r'$\sigma_{x,y}$ [$\mu$m]')
 
-    ax_size_tpos.set_ylim(ymin=0)
-    ax_size_tpos.yaxis.major.locator.set_params(nbins=number_ticks)
-    ax_size_tpos.grid(True)
-
-
-def subfig_el_energy(ax_energy, g, legend):
-
+    ax_size_tsize.set_ylim(ymin=0)
+    ax_size_tsize.yaxis.major.locator.set_params(nbins=number_ticks)
+    ax_size_tsize.grid(True)
+    
+def subfig_evo_el_pos(ax_size_tpos, g, legend, which='both'):
     number_ticks = 6
+    
+    if hasattr(g,'x') and hasattr(g,'y'):
+        if which == 'both' or which == 'averaged':
+            ax_size_tpos.plot(g.z, np.average(g.x, axis=0, weights=g.I) * 1e6, 'g-', g.z, np.average(g.y, axis=0, weights=g.I) * 1e6, 'b-')
+        if which == 'both' or which == 'peak_curr':
+            idx_pk = np.where(g.I == np.amax(g.I))[0][0]
+            ax_size_tpos.plot(g.z, g.x[idx_pk, :] * 1e6, 'g--', g.z, g.y[idx_pk, :] * 1e6, 'b--')
+        ax_size_tpos.set_ylabel(r'$x,y$ [$\mu$m]')
 
+def subfig_evo_el_energy(ax_energy, g, legend):
+    number_ticks = 6
+    
     el_energy = g.el_energy * m_e_MeV
     el_energy_av = int(mean(el_energy))
     ax_energy.plot(g.z, np.average(el_energy - el_energy_av, axis=0), 'b-', linewidth=1.5)
@@ -614,10 +1038,9 @@ def subfig_el_energy(ax_energy, g, legend):
     ax_spread.yaxis.label.set_color('r')
 
 
-def subfig_el_bunching(ax_bunching, g, legend):
-
+def subfig_evo_el_bunching(ax_bunching, g, legend):
     number_ticks = 6
-
+    
     ax_bunching.plot(g.z, np.average(g.bunching, weights=g.I, axis=0), 'k-', g.z, np.amax(g.bunching, axis=0), 'grey', linewidth=1.5)
     # ax_bunching.plot(g.z, np.amax(g.bunching, axis=0), 'grey',linewidth=1.5) #only max
     ax_bunching.set_ylabel(r'Bunching')
@@ -627,24 +1050,34 @@ def subfig_el_bunching(ax_bunching, g, legend):
     ax_bunching.grid(True)
 
 
-def subfig_rad_pow_en(ax_rad_pow, g, legend, log=1):
+def subfig_evo_rad_pow_en(ax_rad_pow, g, legend, log=1):
     ax_rad_pow.plot(g.z, np.amax(g.p_int, axis=0), 'g-', linewidth=1.5)
     ax_rad_pow.set_ylabel(r'P [W]')
     ax_rad_pow.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_rad_pow.get_yaxis().get_major_formatter().set_scientific(True)
     if np.amax(g.p_int) > 0 and log:
         ax_rad_pow.set_yscale('log')
+    if not log:
+        ax_rad_pow.set_ylim(ymin=0)
     plt.yticks(plt.yticks()[0][0:-1])
-
+    
     ax_rad_en = ax_rad_pow.twinx()
-    ax_rad_en.plot(g.z, g.energy, 'k--', linewidth=1.5)
-    ax_rad_en.set_ylabel(r'E [J]')
     ax_rad_en.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_rad_en.get_yaxis().get_major_formatter().set_scientific(True)
     if np.amax(g.p_int) > 0 and log:
+        ax_rad_en.plot(g.z, g.pulse_energy, 'k--', linewidth=1.5)
+        ax_rad_en.set_ylabel(r'E [J]')
         ax_rad_en.set_yscale('log')
+    if not log:
+        if np.amax(g.pulse_energy) < 1e-4:
+            ax_rad_en.plot(g.z, g.pulse_energy*1e6, 'k--', linewidth=1.5)
+            ax_rad_en.set_ylabel(r'E [$\mu$J]')
+        else:
+            ax_rad_en.plot(g.z, g.pulse_energy*1e3, 'k--', linewidth=1.5)
+            ax_rad_en.set_ylabel(r'E [mJ]')
+        ax_rad_en.set_ylim(ymin=0)
     plt.yticks(plt.yticks()[0][0:-1])
-
+    
     ax_rad_pow.grid(True)  # , which='minor')
     # ax_rad_pow.grid(False, which="minor")
     ax_rad_pow.tick_params(axis='y', which='both', colors='g')
@@ -659,7 +1092,7 @@ def subfig_rad_pow_en(ax_rad_pow, g, legend, log=1):
     ax_rad_pow.text(0.98, 0.02, r'$P_{end}$= %.2e W ' '\n' r'$E_{end}$= %.2e J' % (np.amax(g.p_int[:, -1]), np.mean(g.p_int[:, -1], axis=0) * g('xlamds') * g('zsep') * g.nSlices / speed_of_light), fontsize=12, horizontalalignment='right', verticalalignment='bottom', transform=ax_rad_pow.transAxes)
 
 
-def subfig_rad_pow(ax_rad_pow, g, legend, log=1):
+def subfig_evo_rad_pow(ax_rad_pow, g, legend, log=1):
     ax_rad_pow.plot(g.z, np.amax(g.p_int, axis=0), 'g-', linewidth=1.5)
     ax_rad_pow.set_ylabel('P [W]')
     ax_rad_pow.get_yaxis().get_major_formatter().set_useOffset(False)
@@ -675,7 +1108,11 @@ def subfig_rad_pow(ax_rad_pow, g, legend, log=1):
     ax_rad_pow.text(0.98, 0.02, r'$P_{end}$= %.2e W' % (np.amax(g.p_int[:, -1])), fontsize=12, horizontalalignment='right', verticalalignment='bottom', transform=ax_rad_pow.transAxes)
 
 
-def subfig_rad_spec(ax_spectrum, g, legend, log=1):
+def subfig_evo_rad_spec(ax_spectrum, g, legend, log=1):
+    
+    if 'spec' not in dir(g):
+        g.calc_spec()
+    
     ax_spectrum.plot(g.z, np.amax(g.spec, axis=0), 'r-', linewidth=1.5)
     ax_spectrum.text(0.5, 0.98, r"(on axis)", fontsize=10, horizontalalignment='center', verticalalignment='top', transform=ax_spectrum.transAxes)  # horizontalalignment='center', verticalalignment='center',
     ax_spectrum.set_ylabel(r'P$(\lambda)_{max}$ [a.u.]')
@@ -811,7 +1248,7 @@ def subfig_rad_size(ax_size_t, g, legend):
 #        plt.legend('fwhm','std')
 
 
-def subfig_rad_pow_evo(ax_power_evo, g, legend, norm=1):
+def subfig_evo_rad_pow_sz(ax_power_evo, g, legend, norm=1):
     if g.nSlices > 1:
         z = g.z
         s = g.s
@@ -830,7 +1267,7 @@ def subfig_rad_pow_evo(ax_power_evo, g, legend, norm=1):
         pass
 
 
-def subfig_rad_spec_evo(ax_spectrum_evo, g, legend, norm=1):
+def subfig_evo_rad_spec_sz(ax_spectrum_evo, g, legend, norm=1):
     if g.nSlices > 1:
         z = g.z
         l = g.freq_lamd
@@ -968,7 +1405,7 @@ def plot_gen_out_scanned_z(g, figsize=(10, 14), legend=True, fig_name=None, z=in
     return fig
 
 
-def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, far_field=False, freq_domain=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, log_scale=0, debug=1, vartype_dfl=complex64):
+def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, far_field=False, freq_domain=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy = True, log_scale=0, debug=1, vartype_dfl=complex64):
     '''
     Plots dfl radiation object in 3d.
 
@@ -979,7 +1416,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
     legend not used yet
     phase can replace Z projection or spectrum with phase front distribution
     far_field and freq_domain carry out FFT along xy and z dimentions correspondingly
-    fig_name is the desired name of the output figure
+    fig_name is the desired name of the output figure, would be used as suffix to the image filename if savefig==True
     auto_zoom automatically scales xyz the images to the (1%?) of the intensity limits
     column_3d plots top and side views of the radiation distribution
     savefig and showfig allow to save figure to image (savefig='png' (default) or savefig='eps', etc...) or to display it (slower)
@@ -990,18 +1427,24 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
     
     if showfig == False and savefig == False:
         return
-    from ocelot.utils.xfel_utils import dfl_fft_xy, dfl_fft_z
+    # from ocelot.utils.xfel_utils import dfl_fft_xy, dfl_fft_z
     filePath = F.filePath
 
     text_present = 1
     if debug > 0:
-        print('    plotting radiation field')
+        print('    plotting radiation field (dfl)')
     start_time = time.time()
     
     if F.__class__ != RadiationField:
         raise ValueError('wrong radiation object: should be RadiationField')
-
-    suffix = ''
+    
+    F = deepcopy(F)
+    
+    if fig_name is None:
+        suffix = ''
+    else:
+        suffix = '_'+fig_name
+        
     if F.Nz() != 1:
         # Make sure it is time-dependent
         ncar_z = F.Nz()
@@ -1131,10 +1574,16 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
 
     # cmap = plt.get_cmap(def_cmap)  # jet inferno viridis #change to convenient
     cmap_ph = plt.get_cmap('hsv')
-
-    x_line = xy_proj[:, int((ncar_y - 1) / 2)]
-    y_line = xy_proj[int((ncar_x - 1) / 2), :]
-
+    
+    if line_off_xy:
+        x_line = xy_proj[:, int((ncar_y - 1) / 2)]
+        y_line = xy_proj[int((ncar_x - 1) / 2), :]
+        x_title += ' lineoff'
+        y_title += ' lineoff'
+    else:
+        x_line = np.sum(xy_proj,axis=1)
+        y_line = np.sum(xy_proj,axis=0)
+    
     if max(x_line) != 0 and max(y_line) != 0:
         x_line, y_line = x_line / max(x_line), y_line / max(y_line)
 
@@ -1142,7 +1591,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
     if log_scale:
         intplt = ax_int.pcolormesh(x, y, swapaxes(xy_proj, 1, 0), norm=colors.LogNorm(vmin=xy_proj.min(), vmax=xy_proj.max()), cmap=cmap)
     else:
-        intplt = ax_int.pcolormesh(x, y, swapaxes(xy_proj, 1, 0), cmap=cmap)
+        intplt = ax_int.pcolormesh(x, y, swapaxes(xy_proj, 1, 0), cmap=cmap, vmin=0)
     ax_int.set_title(xy_title, fontsize=15)
     ax_int.set_xlabel(r'' + x_label)
     ax_int.set_ylabel(y_label)
@@ -1169,7 +1618,11 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
     ax_proj_x.set_title(x_title, fontsize=15)
 
     if sum(x_line) != 0:
-        x_line_f, rms_x = gauss_fit(x, x_line)  # fit with Gaussian, and return fitted function and rms
+        try:
+            x_line_f, rms_x = gauss_fit(x, x_line)  # fit with Gaussian, and return fitted function and rms
+        except RuntimeWarning:
+            x_line_f = np.zeros_like(x_line)
+            rms_x = 0
         try:
             fwhm_x = fwhm3(x_line)[1] * dx  # measure FWHM
         except ValueError:
@@ -1198,7 +1651,11 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
     ax_proj_y.set_title(y_title, fontsize=15)
 
     if sum(y_line) != 0:
-        y_line_f, rms_y = gauss_fit(y, y_line)  # fit with Gaussian, and return fitted function and rms
+        try:
+            y_line_f, rms_y = gauss_fit(y, y_line)  # fit with Gaussian, and return fitted function and rms
+        except RuntimeWarning:
+            y_line_f = np.zeros_like(y_line)
+            rms_y = 0
         try:
             fwhm_y = fwhm3(y_line)[1] * dy  # measure FWHM
         except ValueError:
@@ -1247,7 +1704,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
         if log_scale:
             ax_proj_xz.pcolormesh(z, x, swapaxes(xz_proj, 1, 0), norm=colors.LogNorm(vmin=min_xz_proj, vmax=xz_proj.max()), cmap=cmap)
         else:
-            ax_proj_xz.pcolormesh(z, x, swapaxes(xz_proj, 1, 0), cmap=cmap)
+            ax_proj_xz.pcolormesh(z, x, swapaxes(xz_proj, 1, 0), cmap=cmap, vmin=0)
         ax_proj_xz.set_title('Top view', fontsize=15)
         ax_proj_xz.set_xlabel(z_label)
         ax_proj_xz.set_ylabel(x_label)
@@ -1257,7 +1714,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
         if log_scale:
             ax_proj_yz.pcolormesh(z, y, swapaxes(yz_proj, 1, 0), norm=colors.LogNorm(vmin=min_yz_proj, vmax=yz_proj.max()), cmap=cmap)
         else:
-            ax_proj_yz.pcolormesh(z, y, swapaxes(yz_proj, 1, 0), cmap=cmap)
+            ax_proj_yz.pcolormesh(z, y, swapaxes(yz_proj, 1, 0), cmap=cmap, vmin=0)
         ax_proj_yz.set_title('Side view', fontsize=15)
         ax_proj_yz.set_xlabel(z_label)
         ax_proj_yz.set_ylabel(y_label)
@@ -1275,9 +1732,9 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
         size_y = max(abs(x[nonzero(x_line > 0.005)][[0, -1]]))
         size_xy = max(size_x, size_y)
         if phase == True and column_3d == True and z_lim == []:
-            ax_proj_xz.set_xlim(z[nonzero(z_proj > max(z_proj) * 0.01)][[0, -1]])
+            ax_proj_xz.set_xlim(z[nonzero(z_proj > max(z_proj) * 0.005)][[0, -1]])
         elif phase == False and z_lim == []:
-            ax_z.set_xlim(z[nonzero(z_proj > max(z_proj) * 0.01)][[0, -1]])
+            ax_z.set_xlim(z[nonzero(z_proj > max(z_proj) * 0.005)][[0, -1]])
             print ('      scaling xy to', size_xy)
             ax_proj_xz.set_ylim([-size_xy, size_xy])
         elif column_3d == True:
@@ -1321,7 +1778,8 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
             print('      showing dfl')
         plt.show()
     else:
-        plt.close(fig)
+        plt.close('all')
+        # plt.close(fig)
 
     if return_proj:
         return [xy_proj, yz_proj, xz_proj, x, y, z]
@@ -1329,7 +1787,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
         return
 
 
-def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int', 'energy', 'r_size_weighted', 'spec', 'error'], z_param_inp=['p_int', 'phi_mid_disp', 'spec', 'bunching', 'wigner'], dfl_param_inp=['dfl_spec'], run_param_inp=['p_int', 'spec', 'energy'], s_inp=['max'], z_inp=[0,'end'], run_s_inp=['max'], run_z_inp=['end'], spec_pad=1, savefig=1, saveval=1, showfig=0, debug=1):
+def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int', 'pulse_energy', 'r_size_weighted', 'spec', 'spec_phot_density', 'error'], z_param_inp=['p_int', 'phi_mid_disp', 'spec', 'spec_phot_density', 'bunching', 'wigner'], dfl_param_inp=['dfl_spec'], run_param_inp=['p_int', 'spec', 'spec_phot_density', 'pulse_energy'], s_inp=['max'], z_inp=[0,'end'], run_s_inp=['max'], run_z_inp=['end'], spec_pad=1, savefig=1, saveval=1, showfig=0, debug=1):
     '''
     The routine for plotting the statistical info of many GENESIS runs
     
@@ -1348,8 +1806,8 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
     '''
     import copy
     rc('text', usetex=False)
-    dict_name = {'p_int': 'radiation power', 'energy': 'radiation pulse energy', 'el_e_spread': 'el.beam energy spread', 'el_energy': 'el.beam energy average', 'bunching': 'el.beam bunching', 'spec': 'radiation on-axis spectral density', 'dfl_spec': 'total radiation spectral density', 'r_size': 'radiation transv size', 'r_size_weighted': 'radiation transv size (weighted)', 'xrms': 'el.beam x size', 'yrms': 'el.beam y size', 'error': 'genesis simulation error', 'p_mid': 'radiation power on-axis', 'phi_mid': 'radiation phase on-axis', 'increment': 'radiation power increment'}
-    dict_unit = {'p_int': '[W]', 'energy': '[J]', 'el_e_spread': '(gamma)', 'el_energy': '(gamma)', 'bunching': '', 'spec': '[arb.units]', 'dfl_spec': '[arb.units]', 'r_size': '[m]', 'xrms': '[m]', 'yrms': '[m]', 'error': ''}
+    dict_name = {'p_int': 'radiation power', 'pulse_energy': 'radiation pulse energy', 'el_e_spread': 'el.beam energy spread', 'el_energy': 'el.beam energy average', 'bunching': 'el.beam bunching', 'spec': 'radiation on-axis spectral density', 'spec_phot_density': 'radiation spectral photon density', 'dfl_spec': 'total radiation photon spectral density (dfl)', 'r_size': 'radiation transv size', 'r_size_weighted': 'radiation transv size (weighted)', 'xrms': 'el.beam x size', 'yrms': 'el.beam y size', 'error': 'genesis simulation error', 'p_mid': 'radiation power on-axis', 'phi_mid': 'radiation phase on-axis', 'increment': 'radiation power increment'}
+    dict_unit = {'p_int': '[W]', 'pulse_energy': '[J]', 'el_e_spread': '(gamma)', 'el_energy': '(gamma)', 'bunching': '', 'spec': '[arb.units]', 'spec_phot_density': '(estimation) [ph/eV]', 'dfl_spec': '[ph/eV]', 'r_size': '[m]', 'xrms': '[m]', 'yrms': '[m]', 'error': ''}
 
     figsize = (14, 7)
 
@@ -1381,19 +1839,38 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
             if os.path.isfile(out_file):
                 try:
                     outlist[irun] = read_out_file(out_file, read_level=2, debug=1)
-                    outlist[irun].calc_spec(spec_pad)
+                    outlist[irun].calc_spec(npad = spec_pad)
                     run_range_good.append(irun)
                 except:
                     print('     could not read '+out_file)
+
+        run_range = run_range_good
+        
+        if len(run_range_good) == 0:
+            continue
+
+        nSlices = np.array([int(outlist[run].nSlices) for run in run_range])
+        nZ = np.array([int(outlist[run].nZ) for run in run_range])
+
+        f_nSlices = np.argmax(np.bincount(nSlices)) #most abundant number of slices
+        f_nZ = np.argmax(np.bincount(nZ)) #most abundant number of z records
+        
+        index = np.where(np.logical_and(nSlices==f_nSlices, nZ==f_nZ))[0]
+        run_range_good = [run_range[i] for i in index]
+        if len(list(set(run_range)-set(run_range_good))) > 0:
+            print('run_range', run_range)
+            print('run_range_good', run_range_good)
+            print('discarding runs',  list(set(run_range)-set(run_range_good)))
+        
         run_range = run_range_good
         
         # if len(run_range)!=0 and debug>0:
             # print('stage = ', stage)
 
         # check if all gout have the same number of slices nSlice and history records nZ
-        for irun in run_range[1:]:
-            if outlist[irun].nSlices != outlist[run_range[0]].nSlices or outlist[irun].nZ != outlist[run_range[0]].nZ:
-                raise ValueError('Non-uniform out objects')
+        # for irun in run_range[1:]:
+            # if outlist[irun].nSlices != outlist[run_range[0]].nSlices or outlist[irun].nZ != outlist[run_range[0]].nZ:
+                # raise ValueError('Non-uniform out objects')
 
         if run_range == [] or len(run_range) == 1:
             continue
@@ -1441,12 +1918,9 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     if not hasattr(outlist[irun], param):
                         continue
                     else:
-                        if debug > 0:
-                            print ('parameter = ', param)
+                        if debug > 1:
+                            print ('parameter = %s; s = %s; run = %s;' %(param, s_ind, irun))
                         param_matrix = copy.deepcopy(getattr(outlist[irun], param))
-
-                    if debug > 1:
-                        print('param', param, 'irun', irun, 's_ind', s_ind)
                     if debug > 1:
                         print('shape param_matrix', shape(param_matrix))
                     if debug > 1:
@@ -1513,7 +1987,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
 
                     W.filePath = proj_dir + 'results' + os.path.sep + 'stage_' + str(stage) + '__WIG__' + str(z_ind) + '__m'
                     wig_fig_name = 'stage_' + str(stage) + '__WIG__' + str(z_ind) + '__m'
-                    plot_wigner(W, z=z_ind, p_units='um', s_units='ev', fig_name=wig_fig_name, savefig=savefig, showfig=showfig, debug=0)
+                    plot_wigner(W, z=z_ind, x_units='um', y_units='ev', fig_name=wig_fig_name, savefig=savefig, showfig=showfig, debug=0)
                     if saveval != False:
                         if debug > 1:
                             print('      saving ' + wig_fig_name + '.txt')
@@ -1529,12 +2003,9 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     if not hasattr(outlist[irun], param):
                         break
                     else:
-                        if debug > 0:
-                            print ('parameter = ', param)
+                        if debug > 1:
+                            print ('parameter = %s; z = %s; run = %s;' %(param, z_ind, irun))
                         param_matrix = copy.deepcopy(getattr(outlist[irun], param))
-
-                    if debug > 1:
-                        print('param', param, 'irun', irun, 'z_ind', z_ind)
                     if debug > 1:
                         print('shape param_matrix', shape(param_matrix))
                     if debug > 1:
@@ -1555,15 +2026,15 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     fig = plt.figure(z_fig_name)
                     fig.clf()
                     fig.set_size_inches(figsize, forward=True)
-                    if param == 'spec':
-                        freq_scale = outlist[irun].freq_lamd  # *1e9
+                    if param in ['spec', 'spec_phot_density']:
+                        freq_scale = outlist[irun].freq_ev  # *1e9
                         if debug > 1:
                             print('plotting array shapes freq', shape(freq_scale), shape(swapaxes(z_value, 0, 1)))
                         fig = plt.plot(freq_scale, swapaxes(z_value, 0, 1), '0.8')
                         fig = plt.plot(freq_scale, z_value[0], '0.5', linewidth=1)
                         fig = plt.plot(freq_scale, mean(z_value, 0), 'k', linewidth=2)
                         plt.xlim([min(freq_scale), max(freq_scale)])
-                        plt.xlabel('$\lambda$ [nm]')
+                        plt.xlabel('$E_{photon}$ [eV]')
                     else:
                         s_scale = outlist[irun].s * 1e6
                         if debug > 1:
@@ -1582,8 +2053,8 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     if saveval != False:
                         if debug > 1:
                             print('      saving ' + z_fig_name + '.txt')
-                        if param == 'spec':
-                            np.savetxt(saving_path + z_fig_name + '.txt', vstack([outlist[irun].freq_lamd, mean(z_value, 0), z_value]).T, fmt="%E", newline='\n', comments='')
+                        if param in ['spec', 'spec_phot_density']:
+                            np.savetxt(saving_path + z_fig_name + '.txt', vstack([outlist[irun].freq_ev, mean(z_value, 0), z_value]).T, fmt="%E", newline='\n', comments='')
                         else:
                             np.savetxt(saving_path + z_fig_name + '.txt', vstack([outlist[irun].s * 1e6, mean(z_value, 0), z_value]).T, fmt="%E", newline='\n', comments='')
                     if not showfig:
@@ -1609,11 +2080,9 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                         if not hasattr(outlist[irun], param):
                             break
                         else:
-                            if debug > 0:
-                                print ('parameter = ', param)
-                            param_matrix = copy.deepcopy(getattr(outlist[irun], param))
                             if debug > 1:
-                                print('param', param, 'irun', irun, 'z_ind', z_ind, 's_ind', s_ind)
+                                print ('parameter = %s; z = %s; s = %s; run = %s' %(param, z_ind, s_ind, irun))
+                            param_matrix = copy.deepcopy(getattr(outlist[irun], param))
                             if debug > 1:
                                 print('shape param_matrix', shape(param_matrix))
                             if debug > 1:
@@ -1677,23 +2146,13 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
             for irun in run_range:
                 dfl_filePath = proj_dir + 'run_' + str(irun) + '/run.' + str(irun) + '.s' + str(stage) + '.gout.dfl'
                 dfl = read_dfl_file_out(outlist[irun], debug=debug)
+                dfl = dfl_pad_z(dfl, spec_pad)
                 # dfl=read_dfl_file(dfl_filePath, Nxy=outlist[irun]('ncar'),debug=debug)
                 # read_dfl_file(filePath, Nxy=None, Lxy=None, Lz=None, zsep=None, xlamds=None, vartype=complex,debug=1):
-                dfl = dfl.fld
-                if dfl.shape[0] != 1:
-                    ncar_z = dfl.shape[0]
-                    leng_z = outlist[irun]('xlamds') * outlist[irun]('zsep') * ncar_z
-                    if param == 'dfl_spec':
-                        spec = np.fft.ifftshift(np.fft.fft(dfl, axis=0), 0) / sqrt(ncar_z)
-                        spec = abs(spec)**2
-                        spec = sum(spec, (1, 2))
-                        dfl_value.append(spec)
-                        dk = 2 * pi / leng_z
-                        k = 2 * pi / outlist[irun]('xlamds')
-                        freq_scale = 2 * pi / np.linspace(k - dk / 2 * ncar_z, k + dk / 2 * ncar_z, ncar_z) * 1e9
-                        if debug > 1:
-                            print('      spectrum calculated')
-
+                # dfl = dfl.fld
+                if dfl.Nz() != 1:
+                    freq_scale, spec = dfl.ph_sp_dens()
+                    dfl_value.append(spec)
             if dfl_value != []:
                 fig = plt.figure(dfl_fig_name)
                 fig.clf()
@@ -1702,7 +2161,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     fig = plt.plot(freq_scale, swapaxes(dfl_value, 0, 1), '0.8')
                     fig = plt.plot(freq_scale, dfl_value[0], '0.5', linewidth=1)
                     fig = plt.plot(freq_scale, mean(dfl_value, 0), 'k', linewidth=2)
-                    plt.xlabel('$\lambda$ [nm]')
+                    plt.xlabel('$E_{photon}$ [eV]')
                 plt.ylabel(dict_name.get(param, param) + ' ' + dict_unit.get(param, ''))
                 if savefig != False:
                     if debug > 1:
@@ -1713,17 +2172,17 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     if debug > 1:
                         print('      saving ' + dfl_fig_name + '.txt')
                     if param == 'dfl_spec':
-                        np.savetxt(saving_path + dfl_fig_name + '.txt', vstack([freq_scale * 1e9, mean(dfl_value, 0), dfl_value]).T, fmt="%E", newline='\n', comments='')
+                        np.savetxt(saving_path + dfl_fig_name + '.txt', vstack([freq_scale, mean(dfl_value, 0), dfl_value]).T, fmt="%E", newline='\n', comments='')
                 if not showfig:
                     plt.close('all')
-    plt.draw()
     if showfig:
+        plt.draw()
         plt.show()
     else:
         plt.close('all')
 
     if debug > 0:
-        print('      done in %.2f seconds' % (time.time() - start_time))
+        print('done in %.2f seconds' % (time.time() - start_time))
 
 
 def plot_gen_corr(proj_dir, run_inp=[], p1=(), p2=(), savefig=False, showfig=True, saveval=False):
@@ -2004,7 +2463,7 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cm
         plt.close('all')
 
 
-def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, scatter=False, plot_x_y=True, plot_xy_s=True, bins=(50, 50, 50, 50), flip_t=True, s_units='um', e_units='ev', cmin=0, e_offset=None, cmap=def_cmap, debug=1):
+def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, scatter=False, plot_x_y=True, plot_xy_s=True, bins=(50, 50, 50, 50), flip_t=True, x_units='um', y_units='ev', cmin=0, y_offset=None, cmap=def_cmap, debug=1):
 
     if showfig == False and savefig == False:
         return
@@ -2024,10 +2483,10 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
     fig.clf()
     fig.set_size_inches(((3 + plot_x_y + plot_xy_s) * figsize, 3 * figsize), forward=True)
 
-    if s_units == 'fs':
+    if x_units == 'fs':
         mult = 1e15
         s_label = 't [fs]'
-    elif s_units == 'um':
+    elif x_units == 'um':
         mult = speed_of_light * 1e6
         s_label = 's [$\mu$m]'
     s = edist.t * mult
@@ -2043,28 +2502,28 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
 
     ax_curr = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 1)
     #ax_curr.hist(s, bins,color='b')
-    ax_curr.plot(edges, hist/1000, color='b',linewidth=2)
+    ax_curr.plot(edges, hist/1000, color='k',linewidth=2)
     ax_curr.set_xlabel(s_label)
     ax_curr.set_ylabel('I [kA]')
 
     ax_se = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 2 + plot_x_y + plot_xy_s, sharex=ax_curr)
-    if e_units == 'ev':
+    if y_units in ['ev', 'eV']:
         energy = edist.g * m_e_MeV
     else:  # elif beam_E_plot=='gamma':
         energy = edist.g
         
-    if e_offset == None:
-        e_offset = int(mean(energy))
+    if y_offset == None:
+        y_offset = int(mean(energy))
     if scatter:
-        ax_se.scatter(s, energy - e_offset, marker='.')
+        ax_se.scatter(s, energy - y_offset, marker='.')
     else:
-        ax_se.hist2d(s, energy - e_offset, [bins[2], bins[3]], cmin=cmin, cmap=cmap)
+        ax_se.hist2d(s, energy - y_offset, [bins[2], bins[3]], cmin=cmin, cmap=cmap)
 
     ax_se.set_xlabel(s_label)
-    if e_units == 'ev':
-        ax_se.set_ylabel('E + ' + str(e_offset) + ' [MeV]')
+    if y_units in ['ev', 'eV']:
+        ax_se.set_ylabel('E + ' + str(y_offset) + ' [MeV]')
     else:  # elif beam_E_plot=='gamma':
-        ax_se.set_ylabel('$\gamma$ + ' + str(e_offset))
+        ax_se.set_ylabel('$\gamma$ + ' + str(y_offset))
 
     if plot_xy_s:
         ax_xs = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 4 + plot_x_y, sharex=ax_curr)
@@ -2127,13 +2586,132 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
         print(('      done in %.2f seconds' % (time.time() - start_time)))
     return fig
 
+
+def plot_beam_new(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=None, debug=0):
+
+    if showfig == False and savefig == False:
+        return
+    
+    # if beam.__class__ != GenesisBeam:
+        # raise ValueError('wrong beam object: should be GenesisBeam')
+    
+    fontsize = 15
+
+    if plot_xy == None:
+        if mean(beam.x) == 0 and mean(beam.y) == 0 and mean(beam.xp) == 0 and mean(beam.yp) == 0:
+            plot_xy = 0
+        else:
+            plot_xy = 1
+
+    if fig == None:
+        fig = plt.figure()
+    fig.clf()
+    
+    idx = beam.idx_max()
+    
+    g0 = np.mean(beam.g).astype(int) #mean
+    g_dev = beam.g - g0 #deviation from mean
+
+    fig.set_size_inches((4 * figsize, (3 + plot_xy) * figsize), forward=True)
+    ax = fig.add_subplot(2 + plot_xy, 2, 1)
+    plt.grid(True)
+    ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
+    p1, = plt.plot(1.e6 * np.array(beam.s), beam.I, 'r', lw=3)
+    
+    ax.set_ylim(ymin=0)
+    
+    if hasattr(beam,'eloss'):
+        if (beam.eloss!=0).any():
+            ax = ax.twinx()
+            p2, = plt.plot(1.e6 * np.array(beam.s), 1.e-3 * np.array(beam.eloss), 'g', lw=3)
+            ax.legend([p1, p2], [r'$I [A]$', r'Wake $[KV/m]$'], fontsize=fontsize, loc='best')
+        else:
+            ax.legend([r'$I [A]$'], fontsize=fontsize, loc='best')
+    else:
+        ax.legend([r'$I [A]$'], fontsize=fontsize, loc='best')
+    plt.plot(1.e6 * beam.s[idx], beam.I[idx], 'bs')
+    # ax.set_xlim([np.amin(beam.s),np.amax(beam.x)])
+    ax = fig.add_subplot(2 + plot_xy, 2, 2, sharex=ax)
+    plt.grid(True)
+    ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
+    #p1,= plt.plot(1.e6 * np.array(beam.s),1.e-3 * np.array(beam.eloss),'r',lw=3)
+    p1, = plt.plot(1.e6 * np.array(beam.s), g_dev, 'r', lw=3)
+    plt.plot(1.e6 * beam.s[idx], g_dev[idx], 'bs')
+    ax = ax.twinx()
+    p2, = plt.plot(1.e6 * np.array(beam.s), beam.dg, 'g', lw=3)
+    plt.plot(1.e6 * beam.s[idx], beam.dg[idx], 'bs')
+    ax.legend([p1, p2], [r'$\gamma$ + '+str(g0), r'$\delta \gamma$'], loc='best')
+
+    ax = fig.add_subplot(2 + plot_xy, 2, 3, sharex=ax)
+    plt.grid(True)
+    ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
+    p1, = plt.plot(1.e6 * np.array(beam.s), beam.emit_xn * 1e6, 'r', lw=3)
+    p2, = plt.plot(1.e6 * np.array(beam.s), beam.emit_yn * 1e6, 'g', lw=3)
+    plt.plot(1.e6 * beam.s[idx], beam.emit_xn[idx] * 1e6, 'bs')
+    ax.set_ylim(ymin=0)
+
+    ax.legend([p1, p2], [r'$\varepsilon_x [\mu m]$', r'$\varepsilon_y [\mu m]$'], fontsize=fontsize, loc='best')
+    # ax3.legend([p3,p4],[r'$\varepsilon_x$',r'$\varepsilon_y$'])
+
+    ax = fig.add_subplot(2 + plot_xy, 2, 4, sharex=ax)
+    plt.grid(True)
+    ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
+    p1, = plt.plot(1.e6 * np.array(beam.s), beam.beta_x, 'r', lw=3)
+    p2, = plt.plot(1.e6 * np.array(beam.s), beam.beta_y, 'g', lw=3)
+    plt.plot(1.e6 * beam.s[idx], beam.beta_x[idx], 'bs')
+    ax.set_ylim(ymin=0)
+    ax.legend([p1, p2], [r'$\beta_x [m]$', r'$\beta_y [m]$'], fontsize=fontsize, loc='best')
+
+    if plot_xy:
+
+        ax = fig.add_subplot(3, 2, 5, sharex=ax)
+        plt.grid(True)
+        ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
+        p1, = plt.plot(1.e6 * np.array(beam.s), 1.e6 * np.array(beam.x), 'r', lw=3)
+        p2, = plt.plot(1.e6 * np.array(beam.s), 1.e6 * np.array(beam.y), 'g', lw=3)
+
+        ax.legend([p1, p2], [r'$x [\mu m]$', r'$y [\mu m]$'], fontsize=fontsize, loc='best')
+
+        # beam_beta = sqrt(1 - (1 / beam.g0**2))
+        # beam_p = beam.g0 * beam_beta
+        # # p=beam.g0*m_e_eV/speed_of_light
+        # pz = sqrt(beam_p**2 - beam.px**2 - beam.py**2)
+        # xp = beam.px / pz
+        # yp = beam.py / pz
+
+        ax = fig.add_subplot(3, 2, 6, sharex=ax)
+        plt.grid(True)
+        ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
+        p1, = plt.plot(1.e6 * np.array(beam.s), 1.e6 * np.array(beam.xp), 'r', lw=3)
+        p2, = plt.plot(1.e6 * np.array(beam.s), 1.e6 * np.array(beam.yp), 'g', lw=3)
+
+        ax.legend([p1, p2], [r'$x_p [\mu rad]$', r'$y_p [\mu rad]$'], fontsize=fontsize, loc='best')
+
+    ax.set_xlim([1.e6 * np.amin(beam.s), 1e6 * np.amax(beam.s)])
+
+    fig.subplots_adjust(hspace=0.2, wspace=0.3)
+
+    plt.draw()
+    if savefig != False:
+        if savefig == True:
+            savefig = 'png'
+        if debug > 1:
+            print('      saving ' + beam.fileName() + '.' + savefig)
+        plt.savefig(beam.filePath + '.' + savefig, format=savefig)
+
+    if showfig:
+        plt.show()
+    else:
+        plt.close('all')
+
+
 def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=None, debug=0):
 
     if showfig == False and savefig == False:
         return
     
-    if beam.__class__ != GenesisBeam:
-        raise ValueError('wrong beam object: should be GenesisBeam')
+    # if beam.__class__ != GenesisBeam:
+        # raise ValueError('wrong beam object: should be GenesisBeam')
     
     fontsize = 15
 
@@ -2159,9 +2737,12 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
     ax.set_ylim(ymin=0)
     
     if hasattr(beam,'eloss'):
-        ax = ax.twinx()
-        p2, = plt.plot(1.e6 * np.array(beam.z), 1.e-3 * np.array(beam.eloss), 'g', lw=3)
-        ax.legend([p1, p2], [r'$I [A]$', r'Wake $[KV/m]$'], fontsize=fontsize, loc='best')
+        if (beam.eloss!=0).any():
+            ax = ax.twinx()
+            p2, = plt.plot(1.e6 * np.array(beam.z), 1.e-3 * np.array(beam.eloss), 'g', lw=3)
+            ax.legend([p1, p2], [r'$I [A]$', r'Wake $[KV/m]$'], fontsize=fontsize, loc='best')
+        else:
+            ax.legend([r'$I [A]$'], fontsize=fontsize, loc='best')
     else:
         ax.legend([r'$I [A]$'], fontsize=fontsize, loc='best')
     plt.plot(1.e6 * beam.z[beam.idx_max], beam.I[beam.idx_max], 'bs')
@@ -2194,7 +2775,7 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
     p1, = plt.plot(1.e6 * np.array(beam.z), beam.betax, 'r', lw=3)
     p2, = plt.plot(1.e6 * np.array(beam.z), beam.betay, 'g', lw=3)
     plt.plot(1.e6 * beam.z[beam.idx_max], beam.betax[beam.idx_max], 'bs')
-
+    ax.set_ylim(ymin=0)
     ax.legend([p1, p2], [r'$\beta_x [m]$', r'$\beta_y [m]$'], fontsize=fontsize, loc='best')
 
     if plot_xy:
@@ -2239,13 +2820,13 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
     else:
         plt.close('all')
 
-def plot_wigner(wig_or_out, z=np.inf, p_units='um', s_units='nm', x_lim=(None,None), y_lim=(None,None), downsample=1, autoscale=None, cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=True, debug=1):
+def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,None), y_lim=(None,None), downsample=1, autoscale=None, cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=True, debug=1):
     '''
     plots wigner distribution (WD) with marginals
     wig_or_out -  may be WignerDistribution() or GenesisOutput() object
     z - (if isinstance(wig_or_out, GenesisOutput)) location at which WD will be calculated
-    p_units - (um or fs) - units to display power scale
-    s_units - (nm or eV) - units to display spectrum scale
+    x_units - (um or fs) - units to display power scale
+    y_units - (nm or eV) - units to display spectrum scale
     x_lim, y_lim - scaling limits in given units, (min,max) or [min,max], e.g: (None,6)
     abs_value - if True, absolute value of WD is displayed (usually, it has both positive and negative values)
     cmap - colormar if abs_value==False (http://matplotlib.org/users/colormaps.html)
@@ -2287,14 +2868,14 @@ def plot_wigner(wig_or_out, z=np.inf, p_units='um', s_units='nm', x_lim=(None,No
     wigner=W.wig
     wigner_lim=np.amax(abs(W.wig))
     
-    if p_units=='fs':
+    if x_units=='fs':
         power_scale=W.s/speed_of_light*1e15
         p_label_txt='time [fs]'
     else:
         power_scale=W.s*1e6
         p_label_txt='s [$\mu$m]'
     
-    if s_units=='ev':
+    if y_units in ['ev', 'eV']:
         spec_scale=speed_of_light*h_eV_s*1e9/W.freq_lamd
         f_label_txt='ph.energy [eV]'
     else:
@@ -2485,11 +3066,14 @@ def read_plot_dump_proj(exp_dir, stage, run_ids, plot_phase=1, showfig=True, sav
     ax2 = f_domain.add_subplot(2, 1, 2, sharex=ax1)
     # plt.xlabel(r'$S [\mu m]$')
 
-    ax2.plot(h_eV_s * speed_of_light / f_l_scale, f_l_ftlt_abs, 'r')
+    ax2.plot(h_eV_s * speed_of_light / f_l_scale, f_l_ftlt_abs**2, 'r')
+    plt.xlabel(r'$E$ [eV]')
+    plt.ylabel(r'Filter (ampl$^2$ & phase )')
     ax2_phase = ax2.twinx()
     ax2_phase.plot(h_eV_s * speed_of_light / f_l_scale, f_l_ftlt_ang, 'r--')
     ax2.grid(True)
-    plt.xlabel(r'$E$ [eV]')
+    
+
     # plt.ylabel(r'$Transm$')
     # ax[1].xlabel(r'$E$ [eV]')
     # ax[0].xlabel(r'$P(\lambda)$ [a.u.]')
@@ -2555,10 +3139,10 @@ def plot_dfl_waistscan(sc_res, fig_name=None, showfig=True, savefig=0, debug=1):
             print('      showing fig')
         plt.show()
     else:
-        plt.close(fig)
+        plt.close('all')
 
 
-def plot_trf(trf, mode='tr', autoscale=0, showfig=True, savefig=None):
+def plot_trf(trf, mode='tr', autoscale=0, showfig=True, savefig=None, fig_name=None):
     '''
     plots TransferFunction() object,
     mode: 
@@ -2588,17 +3172,21 @@ def plot_trf(trf, mode='tr', autoscale=0, showfig=True, savefig=None):
     else:
         raise ValueError('mode argument should be "tr" or "ref"')
     
-    trf_fd /= abs(trf_s_td[-1]) / l
-    trf_td = np.fft.ifft(np.fft.fftshift(trf_fd))
+    trf_fd_tmp = trf_fd / (abs(trf_s_td[-1]) / l)
+    trf_td = np.fft.ifft(np.fft.fftshift(trf_fd_tmp))
     trf_td = abs(trf_td)**2
+    del trf_fd_tmp
     
-    # if hasattr(trf,'cryst'):
-    try:
+    if hasattr(trf,'cryst'):
         title = trf.cryst.lattice.element_name + ' ' + str(trf.cryst.ref_idx) + ' ' + mode
-    except:
+    else:
         title = ''
     
-    trf_fig = plt.figure('Filter '+title)
+    if fig_name is None:
+        trf_fig = plt.figure('Filter '+title)
+    else:
+        trf_fig = plt.figure(fig_name)
+    
     trf_fig.set_size_inches((9, 11), forward=True)
     if title != '':
         trf_fig.suptitle(title)
@@ -2613,12 +3201,12 @@ def plot_trf(trf, mode='tr', autoscale=0, showfig=True, savefig=None):
     trf_fig.subplots_adjust(hspace=0)
     trf_fig.subplots_adjust(top=0.95, bottom=0.2, right=0.85, left=0.15)
     
-    ax_fd_abs.plot(trf_s_fd, np.abs(trf.tr),'k')
-    ax_fd_ang.plot(trf_s_fd, np.angle(trf.tr),'g')
+    ax_fd_abs.plot(trf_s_fd, np.abs(trf_fd)**2,'k')
+    ax_fd_ang.plot(trf_s_fd, np.angle(trf_fd),'g')
     
     ax_td.semilogy(trf_s_td, trf_td)
     
-    ax_fd_abs.set_ylabel('amplitude')
+    ax_fd_abs.set_ylabel(r'|amplitude|$^2$')
     ax_fd_ang.set_ylabel('phase')
     ax_fd_ang.set_xlabel('ph.energy')
     
@@ -2658,7 +3246,7 @@ def plot_trf(trf, mode='tr', autoscale=0, showfig=True, savefig=None):
     if showfig:
         plt.show()
     else:
-        plt.close(trf_fig)
+        plt.close('all')
         
 
 def plot_stokes_values(S,fig=None,s_lin=0, norm=0, showfig=True, gw=1):
@@ -2706,7 +3294,7 @@ def plot_stokes_values(S,fig=None,s_lin=0, norm=0, showfig=True, gw=1):
         if showfig:
             plt.show()
         else:
-            plt.close()
+            plt.close('all')
         
         
 def plot_stokes_angles(S,fig=None,showfig=True):
@@ -2735,7 +3323,7 @@ def plot_stokes_angles(S,fig=None,showfig=True):
         if showfig:
             plt.show()
         else:
-            plt.close()
+            plt.close('all')
         
 '''
     scheduled for removal
@@ -2857,70 +3445,7 @@ def gauss_fit(X, Y):
     return (Y1, RMS)
 
 
-def fwhm3(valuelist, height=0.5, peakpos=-1, total=1):
-    """calculates the full width at half maximum (fwhm) of some curve.
-    the function will return the fwhm with sub-pixel interpolation. 
-    It will start at the maximum position and 'walk' left and right until it approaches the half values.
-    if total==1, it will start at the edges and 'walk' towards peak until it approaches the half values.
-    INPUT:
-    - valuelist: e.g. the list containing the temporal shape of a pulse
-    OPTIONAL INPUT:
-    -peakpos: position of the peak to examine (list index)
-    the global maximum will be used if omitted.
-    if total = 1 - 
-    OUTPUT:
-    -fwhm (value)
-    """
-    if peakpos == -1:  # no peakpos given -> take maximum
-        peak = np.max(valuelist)
-        peakpos = np.min(np.nonzero(valuelist == peak))
 
-    peakvalue = valuelist[peakpos]
-    phalf = peakvalue * height
-
-    if total == 0:
-        # go left and right, starting from peakpos
-        ind1 = peakpos
-        ind2 = peakpos
-        while ind1 > 2 and valuelist[ind1] > phalf:
-            ind1 = ind1 - 1
-        while ind2 < len(valuelist) - 1 and valuelist[ind2] > phalf:
-            ind2 = ind2 + 1
-        grad1 = valuelist[ind1 + 1] - valuelist[ind1]
-        grad2 = valuelist[ind2] - valuelist[ind2 - 1]
-        if grad1 == 0 or grad2 == 0:
-            width = None
-        else:
-            # calculate the linear interpolations
-            # print(ind1,ind2)
-            p1interp = ind1 + (phalf - valuelist[ind1]) / grad1
-            p2interp = ind2 + (phalf - valuelist[ind2]) / grad2
-            # calculate the width
-            width = p2interp - p1interp
-    else:
-        ind1 = 1
-        ind2 = valuelist.size-2
-        # print(peakvalue,phalf)
-        # print(ind1,ind2,valuelist[ind1],valuelist[ind2])
-        while ind1 < peakpos and valuelist[ind1] < phalf:
-            ind1 = ind1 + 1
-        while ind2 > peakpos and valuelist[ind2] < phalf:
-            ind2 = ind2 - 1
-        # print(ind1,ind2)
-        # ind1 and 2 are now just above phalf
-        grad1 = valuelist[ind1] - valuelist[ind1 - 1]
-        grad2 = valuelist[ind2 + 1] - valuelist[ind2]
-        if grad1 == 0 or grad2 == 0:
-            width = None
-        else:
-            # calculate the linear interpolations
-            p1interp = ind1 + (phalf - valuelist[ind1]) / grad1
-            p2interp = ind2 + (phalf - valuelist[ind2]) / grad2
-            # calculate the width
-            width = p2interp - p1interp
-        # print(p1interp, p2interp)
-            
-    return (peakpos, width, np.array([ind1, ind2]))
 
     # ax_size_l = ax_size_t.twinx() #longitudinal size
     # ax_size_l.plot(g.z, rad_longit_size*2, color='indigo', linestyle='dashed',linewidth=1.5)

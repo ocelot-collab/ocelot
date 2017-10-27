@@ -51,6 +51,7 @@ class FelParameters:
             
         
         Pz = self.P_sn * (1 + 1/9 * np.exp(np.sqrt(3) * zn) / np.sqrt(np.pi * zn))
+        # Pz = self.P_sn * (1 + 1/9 * np.exp(np.sqrt(3) * zn))
         #Pz = p.P_sn * (1 + 1/9 * np.exp(np.sqrt(3) * zn))
         return Pz
         
@@ -208,7 +209,7 @@ def printFelParameters(p):
     print ('scaled gain length lg (3D)=', p.lg3)
     print ('scaled rho (3D)=', p.rho3)
     print ('')
-    print ('Saturation magn. length=', p.rho3)
+    print ('Saturation magn. length=', p.z_sat_min)
     print ('**************************************')
     
     

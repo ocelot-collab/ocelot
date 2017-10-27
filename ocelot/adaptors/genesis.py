@@ -567,7 +567,7 @@ class GenesisOutput:
         sum_spec = np.sum(self.spec, axis=0)
         sum_spec[sum_spec == 0] = np.inf
         
-        self.freq_ev_mean = np.sum(self.freq_ev[:,newaxis]*self.spec, axis=0) / sum_spec
+        self.freq_ev_mean = np.sum(self.freq_ev[:,np.newaxis]*self.spec, axis=0) / sum_spec
         self.freq_ev_mean[self.freq_ev_mean == 0] = np.inf
         
         self.n_photons = self.pulse_energy / q_e / self.freq_ev_mean
@@ -755,7 +755,7 @@ def parray2edist(p_array):
     edist.xp = p_array.rparticles[1]  # divergence in x
     edist.yp = p_array.rparticles[3]  # divergence in y
     edist.t = -1 * p_array.rparticles[4] / speed_of_light  # longitudinal position in seconds
-
+    
     edist.part_charge = p_array.q_array[0] #fix for general case  # charge per particle
     edist.filePath = ''
     
@@ -1009,7 +1009,7 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', debug=1):
         if inp.lat != None:
             if debug > 1:
                 print ('    writing ' + inp_file + '.lat')
-            open(inp_path + '.lat', 'w').write(generate_lattice(inp.lat, unit=inp.xlamd*inp.delz, energy=inp.gamma0 * m_e_GeV, debug = debug))
+            open(inp_path + '.lat', 'w').write(generate_lattice(inp.lat, unit=inp.xlamd*inp.delz, energy=inp.gamma0 * m_e_GeV, debug = debug, min_phsh = False))
             inp.latticefile = inp_file + '.lat'
 
     if inp.beamfile == None:
@@ -2675,7 +2675,7 @@ def set_beam_energy(beam, E_GeV_new):
     return beam_new
 
 
-def transform_beam_twiss(beam, s=None, transform=None):
+def transform_beam_twiss(beam, transform=None, s=None):
     # transform = [[beta_x,alpha_x],[beta_y, alpha_y]] or Twiss()
     if transform == None:
         return beam

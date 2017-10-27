@@ -11,7 +11,7 @@ Ocelot includes following main modules:
     - matching
     - collective effects (description can be found [here](http://vrws.de/ipac2017/papers/wepab031.pdf) )
         - Space Charge (3D Laplace solver)
-        - CSR (Coherent Synchrotron Radiation) (1D model with arbitrary number of dipoles) (under development).
+        - CSR (Coherent Synchrotron Radiation) (1D model with arbitrary number of dipoles).
         - Wakefields (Taylor expansion up to second order for arbitrary geometry).
     - MOGA (Multi Objective Genetics Algorithm). (under development but we have already applied it for a storage ring [application](http://accelconf.web.cern.ch/AccelConf/ipac2016/papers/thpmb034.pdf))
 * **Native module for spontaneous radiation calculation**
@@ -64,11 +64,12 @@ The tutorial includes 7 simple examples dediacted to beam dynamics and optics. H
 - `matplotlib` version 1.5 or later: http://matplotlib.org/
 - `ipython` version 2.4 or later, with notebook support: http://ipython.org
 
-**Optional** to speed up python
+**Optional**, but highly recommended for speeding up calculations
 - numexpr (version 2.6.1)
 - pyfftw (version 0.10)
+- numba
 
-The easiest way to get these is to download and install the (very large) [Anaconda software distribution](https://www.continuum.io/).
+The easiest way to get these is to download and install the (large) [Anaconda software distribution](https://www.continuum.io/).
 
 Alternatively, you can download and install [miniconda](http://conda.pydata.org/miniconda.html).
 The following command will install all required packages:
@@ -77,6 +78,11 @@ $ conda install numpy scipy matplotlib ipython-notebook
 ```
 
 ##### Ocelot installation
+The easiest way to install OCELOT is to use Anaconda cloud. In that case use command:
+    ```
+    $ conda install -c ocelot-collab ocelot
+    ```
+Another way is download ocelot from [GitHub](https://github.com/ocelot-collab/ocelot)
 1. you have to download from GitHub [zip file](https://github.com/ocelot-collab/ocelot/archive/master.zip).
 2. Unzip ocelot-master.zip to your working folder **/your_working_dir/**.
 3. Rename folder **../your_working_dir/ocelot-master** to **/your_working_dir/ocelot**.

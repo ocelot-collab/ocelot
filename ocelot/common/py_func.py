@@ -38,6 +38,12 @@ def background(command):
 def copy_this_script(scriptName, scriptPath, folderPath):
     cmd = 'cp ' + scriptPath + ' ' + folderPath + 'exec_' + scriptName + ' '
     os.system(cmd)
+    
+def copy_this_script2(file, folderPath):
+    scriptName = os.path.basename(file)
+    scriptPath = os.path.realpath(file)
+    cmd = 'cp ' + scriptPath + ' ' + folderPath + 'exec_' + scriptName + ' '
+    os.system(cmd)
 
 def filename_from_path(path_string):
     # return path_string[-path_string[::-1].find(os.path.sep)::]
@@ -62,6 +68,9 @@ def deep_sim_dir(path, **kwargs):
     if 'nested' in kwargs:
         if kwargs['nested'] == True:
             separator = os.path.sep
+            
+    if 'separator' in kwargs:
+            separator = kwargs['separator']
     
     for parameter, style in struct.items():
         for key, value in kwargs.items():

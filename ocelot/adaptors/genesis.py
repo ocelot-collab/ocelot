@@ -490,7 +490,7 @@ class GenesisInput:
 
     def __getattr__(self, name):
         if name not in self.__dict__.keys():
-            return 0.0
+            return None
         else:
             return self.__dict__[name]
     
@@ -524,7 +524,7 @@ class GenesisInput:
                 else:
                     print('! could not copy ' + param)
         
-    def copymesh(self, inp, exceptions=()):
+    def copymesh(self, inp, expt=()):
         
         # if inp.__class__ is GenesisInput:
         params = ('npart', 'nbins', 'xlamds', 'ncar', 'dgrid', 'zsep', 'nslice', 'ntail')
@@ -544,7 +544,7 @@ class GenesisInput:
         
         
         
-        params_exc = list( set(params).difference( set(exceptions) ) )
+        params_exc = list( set(params).difference( set(expt) ) )
         
         
         if inp.__class__ is GenesisInput:
@@ -1262,10 +1262,9 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', debug=1):
                 print ('        done in %.2f seconds' % (time.time() - start_time))
 
     else:
-        raise ValueError('assembly_ver should be either "sys" or "pyt"')
-    # start_time = time.time()
+        # raise ValueError('assembly_ver should be either "sys" or "pyt"')
+        pass
 
-    # print ('        done in %.2f seconds' % (time.time() - start_time))
     if debug > 0:
         print ('      total time %.2f seconds' % (time.time() - assembly_time))
 
@@ -1385,8 +1384,7 @@ def create_exp_dir(exp_dir, run_ids):
             raise
 
 
-def generate_input(undulator, beam, xlamds = None, itdp=True):
-    
+def generate_input(undulator, beam, E_photon = None, itdp=True):
     '''
     Create Genesis inp object with default input parameters
     '''
@@ -1447,11 +1445,11 @@ def generate_input(undulator, beam, xlamds = None, itdp=True):
     inp.emity = beam.emit_yn
 
     felParameters = calculateFelParameters(inp)
-    printFelParameters(felParameters)
-    if xlamds is None:
+
+    if E_photon is None:
         inp.xlamds = felParameters.lambda0
     else:
-        inp.xlamds = xlamds
+        inp.xlamds = h_eV_s * speed_of_light / E_photon
     
     if itdp:
         inp.prad0 = 0
@@ -1463,32 +1461,23 @@ def generate_input(undulator, beam, xlamds = None, itdp=True):
 
     if itdp:
         inp.type = "tdp"
-        # inp.DUMP_FIELDS = 1
-        inp.ipseed = 132
-        inp.ncar = 151
-        #inp.nslice = 300
         
+        inp.ipseed = 99999
+        inp.ncar = 151
         inp.zsep = int(math.ceil(0.25 / (4 * pi * felParameters.rho3)))  # 0.25 is the additional factor to be "on the safe side"
-
-        # print('zsep = ',inp.zsep)
-        # print('xlamds = ',inp.xlamds)
-        # inp.zsep = 8 * int(inp.curlen  / inp.nslice / inp.xlamds )
+        
         if not hasattr(inp,'beam'):
             inp.curlen = beam.tpulse * speed_of_light / 1e15
             inp.nslice = 8 * int(inp.curlen / inp.zsep / inp.xlamds)
         else:
             inp.curlen = 0
             inp.nslice = 0
-            
-            
-
-    # inp.ntail = - int ( inp.nslice / 2 )
+    
     inp.ntail = 0
-    inp.npart = 2048
+    inp.npart = 4096
     inp.rmax0 = 9
-
     inp.delz = 1
-
+    inp.felParameters = felParameters
     # print out FEL parameter estimates
     # printFelParameters(inp)
     return inp
@@ -1504,9 +1493,6 @@ def get_genesis_launcher(launcher_program=None):
     if launcher_program != None:
         launcher.program = launcher_program
     else:
-
-        if host.startswith('kolmogorov'):
-            launcher.program = '/home/iagapov/workspace/xcode/codes/genesis/genesis < tmp.cmd | tee log'
         if host.startswith('max'):
             launcher.program = '/data/netapp/xfel/products/genesis/genesis < tmp.cmd | tee log'
         launcher.mpiParameters = '-x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH'  # added -n
@@ -2584,6 +2570,8 @@ def read_beam_file(filePath, debug=1):
     reads beam file from filePath folder
     returns BeamArray()
     '''
+    # import types
+    
     if debug > 0:
         print ('    reading beam file')
     start_time = time.time()
@@ -2596,7 +2584,11 @@ def read_beam_file(filePath, debug=1):
         except:
             str = None
         return str
-    beam.fileName = fileName
+        
+    # setattr(beam, 'fileName', classmethod(fileName))
+    # beam.fileName = fileName
+    # beam.fileName = types.MethodType( fileName, beam )
+    beam.fileName = fileName.__get__(beam)
     
     columns = []
     column_values = {}
@@ -2746,9 +2738,8 @@ def zero_wake_at_ipk(beam):
     '''
     if 'eloss' in beam.params():
         beam_new = deepcopy(beam)
-        # beamf_new.idx_max_refresh()
         beam_new.eloss -= beam_new.eloss[beam_new.idx_max()]
-        return beamf_new
+        return beam_new
     else:
         return beam
 

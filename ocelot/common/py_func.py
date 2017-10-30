@@ -34,12 +34,8 @@ def background(command):
     import subprocess
     imports = 'from ocelot.adaptors.genesis import *; from ocelot.gui.genesis_plot import *; from ocelot.utils.xfel_utils import *; '
     subprocess.Popen(["python3", "-c", imports + command])
-
-def copy_this_script(scriptName, scriptPath, folderPath):
-    cmd = 'cp ' + scriptPath + ' ' + folderPath + 'exec_' + scriptName + ' '
-    os.system(cmd)
     
-def copy_this_script2(file, folderPath):
+def copy_this_script(file, folderPath):
     scriptName = os.path.basename(file)
     scriptPath = os.path.realpath(file)
     cmd = 'cp ' + scriptPath + ' ' + folderPath + 'exec_' + scriptName + ' '
@@ -50,9 +46,14 @@ def filename_from_path(path_string):
     return path_string.split(os.path.sep)[-1]
 
 def deep_sim_dir(path, **kwargs):
-    print(kwargs)
     from collections import OrderedDict
     import os
+    pathsep = os.path.sep
+    path_g = ''  #generated path
+    
+    if not path.endswith(pathsep):
+        path += pathsep
+    
     if 'struct' in kwargs:
         struct = OrderedDict(kwargs['struct'])
     else:
@@ -62,12 +63,11 @@ def deep_sim_dir(path, **kwargs):
                        ('beamline','%s'),
                        ('E_photon','%.0feV')
                        ])
-#    for key in struct:
-#        struct[key] = os.path.sep + struct[key]
-    separator = '_'
+
+    separator = '__'
     if 'nested' in kwargs:
         if kwargs['nested'] == True:
-            separator = os.path.sep
+            separator = pathsep
             
     if 'separator' in kwargs:
             separator = kwargs['separator']
@@ -75,10 +75,13 @@ def deep_sim_dir(path, **kwargs):
     for parameter, style in struct.items():
         for key, value in kwargs.items():
             if key == parameter:
-                path += separator + (style %(value))
+                path_g += separator + (style %(value))
     
     if 'ending' in kwargs:
-        path += kwargs['ending']
+        path_end = kwargs['ending']
+    else:
+        path_end = ''
     
-    path = (path + os.path.sep).replace(os.path.sep + os.path.sep, os.path.sep)
+    path = (path + pathsep + path_g + pathsep + path_end + pathsep).replace(pathsep + separator, pathsep)
+    
     return path

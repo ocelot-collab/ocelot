@@ -1,3 +1,6 @@
+"""
+S.Tomin. Interface between device obgect and GUI
+"""
 from PyQt5 import  QtCore, QtGui
 import numpy as np
 

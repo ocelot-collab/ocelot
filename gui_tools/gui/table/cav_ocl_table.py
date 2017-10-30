@@ -1,3 +1,6 @@
+"""
+S.Tomin. Table for cavities
+"""
 import sys
 from PyQt5.QtWidgets import QCheckBox, QHBoxLayout, QHeaderView, QApplication,QMenu, QWidget, QAction, QTableWidget, QTableWidgetItem, QDoubleSpinBox
 

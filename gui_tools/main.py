@@ -1,3 +1,7 @@
+"""
+Tool for S2E simulation.
+S.Tomin. XFEL/DESY. 2017
+"""
 import sys, os
 path = os.path.realpath(__file__)
 indx = path.find("gui_tools")
@@ -108,9 +112,13 @@ class S2ETool:
         self.load_sections()
         self.load_s2e_table()
         self.load_quads()
-        self.load_cavities(cav_names=["A1", "AH1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9", "A10",
-                                      "A11", "A12", "A13", "A14", "A15", "A16", "A17","A18", "A19", "A20",
-                                      "A21", "A22", "A23", "A24", "A25"])
+        cav_names = ["A1", "AH1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9", "A10",
+                     "A11", "A12", "A13", "A14", "A15", "A16", "A17", "A18", "A19", "A20",
+                     "A21", "A22", "A23", "A24", "A25"]
+        self.create_super_cavs(cav_names)
+
+        self.load_super_cavs()
+        self.set_cavs()
 
         self.mi = XFELMachineInterface()
         self.magnets = MIMagnets()
@@ -132,6 +140,39 @@ class S2ETool:
         self.track_thread = TrackTread(self.sections, self.phys_procs, self.check_header, self.gui)
         self.track_thread.start()
 
+    def set_cavs(self):
+        for cav in self.cavs:
+            if cav.id == "A1":
+                v_i1 = 0.02118205
+                phi_i1 = +28.4961 - 0.13965
+                cav.v = v_i1*8
+                cav.phi = phi_i1
+            elif cav.id == "AH1":
+                v3_i1 = 0.003552325 + 0.00004
+                phi3_i1 = -153.5425 + 0.1 + 0 * 1.059098
+                cav.v = v3_i1*8
+                cav.phi = phi3_i1
+            elif cav.id == "A2":
+                v_l1 = 0.02005201875
+                phi_l1 = 27.5615 - 0.0041
+                cav.v = v_l1*32
+                cav.phi = phi_l1
+            elif cav.id in ["A3", "A4", "A5"]:
+                v_l2 = 0.01913229167
+                phi_l2 = 21.8576 + 0.0833
+                cav.v = v_l2*32
+                cav.phi = phi_l2
+            elif cav.id in ["A6", "A7", "A8", "A9", "A10",
+                                      "A11", "A12", "A13", "A14", "A15", "A16", "A17","A18", "A19", "A20",
+                                      "A21", "A22", "A23", "A24", "A25"]:
+                v_l3 = 0.02248065476
+                phi_l3 = 0.0
+                cav.v = v_l3*32
+                cav.phi = phi_l3
+            cav.ui.set_volt(cav.v)
+            cav.ui.set_phi(cav.phi)
+
+
     def load_s2e_table(self):
         all_phys_procs = [proc.__name__ for proc in self.phys_procs]
 
@@ -150,12 +191,14 @@ class S2ETool:
         for sec in self.sections:
             sec.lattice.update_transfer_maps()
 
-    def load_cavities(self, cav_names):
+    def create_super_cavs(self, cav_names):
         self.cavs = []
         for cav_name in cav_names:
-            cav  = BigCavity(eid=cav_name)
+            cav = BigCavity(eid=cav_name)
             self.cavs.append(cav)
 
+
+    def load_super_cavs(self):
         for sec in self.sections:
 
             for elem in sec.lattice.sequence:
@@ -254,6 +297,8 @@ class S2ETool:
     def load_particles(self):
         pass
 
+    def estimate_fel(self):
+        pass
 
     def load_sections(self):
         blank_sections = sections.sections

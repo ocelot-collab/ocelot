@@ -1,3 +1,7 @@
+"""
+Online optics monitor.
+S.Tomin. XFEL/DESY. 2017
+"""
 import sys, os
 path = os.path.realpath(__file__)
 indx = path.find("gui_tools")

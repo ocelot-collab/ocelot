@@ -1,8 +1,12 @@
+"""
+Section class for s2e tracking.
+S.Tomin. XFEL/DESY. 2017
+"""
 from ocelot import *
 import numpy as np
 
 class SectionTrack:
-    def __init__(self, sc_flag=True, csr_flag=True, wake_flag=True):
+    def __init__(self, sc_flag=True, csr_flag=True, wake_flag=True, bt_flag=True):
 
         self.lattice_name = ""
         self.lattice = None
@@ -21,7 +25,7 @@ class SectionTrack:
         self.sc_flag = sc_flag
         self.csr_flag = csr_flag
         self.wake_flag = wake_flag
-        self.bt_flag = True
+        self.bt_flag = bt_flag
 
         self.print_progress = True
         self.calc_tws = True

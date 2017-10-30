@@ -1,5 +1,5 @@
 """
-S.Tomin Table for sections
+S.Tomin Matplotlib widget
 """
 
 import sys, os

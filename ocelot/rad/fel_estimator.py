@@ -35,7 +35,7 @@ def beamlat2fel(beam, lat):
     return fel
 
 
-def parraylat2fel(parray, lat, step = 1e-7):
+def parraylat2fel(parray, lat, step=1e-7):
 
     beam = parray2beam(parray, step = step)
     

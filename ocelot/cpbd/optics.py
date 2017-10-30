@@ -44,7 +44,7 @@ class SecondOrderMult:
         #Xr = np.dot(R, X)
         #Xo = np.copy(X)
         N = X.shape[1]
-        for i in range(5):
+        for i in range(6):
             for n in range(N):
                 tmp = 0.
                 r_tmp = 0.

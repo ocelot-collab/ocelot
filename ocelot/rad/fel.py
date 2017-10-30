@@ -175,7 +175,7 @@ def beam2fel(beam, lu, K_peak, iwityp=0):
     
     fel=calculateFelParameters(tmp)
     fel.s = beam.s
-    return(fel)
+    return (fel)
 
 
 def printFelParameters(p):

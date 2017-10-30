@@ -269,36 +269,36 @@ def create_fel_lattice(und_N = 35,
 
     return (MagneticLattice(lat), extra_fodo, cell)
 
-def create_exfel_sase1_lattice():
-    return create_fel_lattice(und_N = 35,
-                    und_L = 5,
-                    und_l = 0.04,
-                    und_K = 0.999,
-                    inters_L = 1.08,
-                    quad_L = 0.4,
-                    quad_K = 0,
-                    phs_L = 0.1,
-                    phs_K = 0,
-                    quad_start = 'd',
-                        )
 
-def create_exfel_sase2_lattice():
-    return create_exfel_sase1_lattice()
+def create_exfel_lattice(beamline = 'sase1'):
+    if beamline in ['sase1', 1, 'sase2', 2]:
+        return create_fel_lattice(und_N = 35,
+                        und_L = 5,
+                        und_l = 0.04,
+                        und_K = 0,
+                        inters_L = 1.08,
+                        quad_L = 0.4,
+                        quad_K = 0,
+                        phs_L = 0.1,
+                        phs_K = 0,
+                        quad_start = 'd',
+                            )
+    elif beamline in ['sase3', 3]:
+        return create_fel_lattice(und_N = 21,
+                        und_L = 5,
+                        und_l = 0.068,
+                        und_K = 0,
+                        inters_L = 1.08,
+                        quad_L = 0.4,
+                        quad_K = 0,
+                        phs_L = 0.1,
+                        phs_K = 0,
+                        quad_start = 'd',
+                            )
+    else:
+        raise ValueError('Unknown beamline')
 
-def create_exfel_sase3_lattice():
-    return create_fel_lattice(und_N = 35,
-                    und_L = 5,
-                    und_l = 0.068,
-                    und_K = 0.999,
-                    inters_L = 1.08,
-                    quad_L = 0.4,
-                    quad_K = 0,
-                    phs_L = 0.1,
-                    phs_K = 0,
-                    quad_start = 'd',
-                        )
-
-def prepare_el_optics(lat_pkg, beam, E_photon, beta_av=30):
+def prepare_el_optics(beam, lat_pkg, E_photon=None, beta_av=30):
     from ocelot.rad.undulator_params import Ephoton2K
     beam_pk = beam.pk()
         
@@ -316,7 +316,8 @@ def prepare_el_optics(lat_pkg, beam, E_photon, beta_av=30):
     lat = lat_pkg[0]
     indx_und = np.where([i.__class__ == Undulator for i in lat.sequence])[0]
     und = lat.sequence[indx_und[0]]
-    und.Kx = Ephoton2K(E_photon, und.lperiod, beam_pk.E)
+    if E_photon is not None:
+        und.Kx = Ephoton2K(E_photon, und.lperiod, beam_pk.E)
 
 '''
 legacy

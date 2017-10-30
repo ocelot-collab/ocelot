@@ -4,7 +4,7 @@ __author__ = 'Svitozar Serkez'
 from ocelot.rad.fel import FelParameters, calculateFelParameters, beam2fel
 # from ocelot.adaptors.genesis import *
 # from ocelot.rad.undulator_params import Ephoton2K
-from ocelot.cpbd.beam import array2beam
+from ocelot.cpbd.beam import parray2beam
 from ocelot.cpbd.track import update_effective_beta
 from ocelot.cpbd.elements import *
 import numpy as np
@@ -37,7 +37,7 @@ def beamlat2fel(beam, lat):
 
 def parraylat2fel(parray, lat, step = 1e-7):
 
-    beam = array2beam(parray, step = step)
+    beam = parray2beam(parray, step = step)
     
     return beamlat2fel(beam, lat)
     

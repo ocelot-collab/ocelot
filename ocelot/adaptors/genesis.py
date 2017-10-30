@@ -567,7 +567,7 @@ class GenesisOutput:
         sum_spec = np.sum(self.spec, axis=0)
         sum_spec[sum_spec == 0] = np.inf
         
-        self.freq_ev_mean = np.sum(self.freq_ev[:,newaxis]*self.spec, axis=0) / sum_spec
+        self.freq_ev_mean = np.sum(self.freq_ev[:,np.newaxis]*self.spec, axis=0) / sum_spec
         self.freq_ev_mean[self.freq_ev_mean == 0] = np.inf
         
         self.n_photons = self.pulse_energy / q_e / self.freq_ev_mean
@@ -755,7 +755,7 @@ def parray2edist(p_array):
     edist.xp = p_array.rparticles[1]  # divergence in x
     edist.yp = p_array.rparticles[3]  # divergence in y
     edist.t = -1 * p_array.rparticles[4] / speed_of_light  # longitudinal position in seconds
-
+    
     edist.part_charge = p_array.q_array[0] #fix for general case  # charge per particle
     edist.filePath = ''
     
@@ -1009,7 +1009,7 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', debug=1):
         if inp.lat != None:
             if debug > 1:
                 print ('    writing ' + inp_file + '.lat')
-            open(inp_path + '.lat', 'w').write(generate_lattice(inp.lat, unit=inp.xlamd*inp.delz, energy=inp.gamma0 * m_e_GeV, debug = debug))
+            open(inp_path + '.lat', 'w').write(generate_lattice(inp.lat, unit=inp.xlamd*inp.delz, energy=inp.gamma0 * m_e_GeV, debug = debug, min_phsh = False))
             inp.latticefile = inp_file + '.lat'
 
     if inp.beamfile == None:
@@ -2419,7 +2419,7 @@ def write_edist_file(edist, filePath=None, debug=1):
         print('      done in %.2f sec' % (time.time() - start_time))
 
 
-def edist2beam(edist, step=1e-7):
+def edist2beam(edist, step=1e-7): #check
     '''
     reads GenesisElectronDist()
     returns BeamArray()
@@ -2456,7 +2456,7 @@ def edist2beam(edist, step=1e-7):
     for i in range(npoints - 1):
         indices = (edist.t > t_min + t_step * i) * (edist.t < t_min + t_step * (i + 1))
         beam.s[i] = (t_min + t_step * (i + 0.5)) * speed_of_light
-        print(sum(indices))
+        # print(sum(indices))
         if sum(indices) > 2:
             dist_g = edist.g[indices]
             dist_x = edist.x[indices]
@@ -2507,8 +2507,17 @@ def read_beam_file(filePath, debug=1):
     start_time = time.time()
 
     beam = BeamArray()
-    beam.columns = []
-    beam.column_values = {}
+    
+    def fileName(self):
+        try:
+            str = filename_from_path(self.filePath)
+        except:
+            str = None
+        return str
+    beam.fileName = fileName
+    
+    columns = []
+    column_values = {}
 
     f = open(filePath, 'r')
     null = f.readline()
@@ -2521,21 +2530,21 @@ def read_beam_file(filePath, debug=1):
         # print tokens[0:2]
 
         if tokens[0] == "?" and tokens[1] == "COLUMNS":
-            beam.columns = tokens[2:]
-            for col in beam.columns:
-                beam.column_values[col] = []
+            columns = tokens[2:]
+            for col in columns:
+                column_values[col] = []
 
-            print (beam.columns)
+            print (columns)
 
         if tokens[0] != "?":
             # print tokens
             for i in range(0, len(tokens)):
-                beam.column_values[beam.columns[i]].append(float(tokens[i]))
+                column_values[columns[i]].append(float(tokens[i]))
 
-    # print beam.columns
+    # print columns
 
-    beam.s = np.array(beam.column_values['ZPOS'])
-    beam.I = np.array(beam.column_values['CURPEAK'])
+    beam.s = np.array(column_values['ZPOS'])
+    beam.I = np.array(column_values['CURPEAK'])
 
     for parm in [['g', 'GAMMA0'],
                  ['x', 'XBEAM'],
@@ -2550,18 +2559,18 @@ def read_beam_file(filePath, debug=1):
                  ['alpha_x', 'ALPHAX'],
                  ['alpha_y', 'ALPHAY'],
                  ]:
-        if parm[1] in beam.column_values.keys():
-            setattr(beam, parm[0], np.array(beam.column_values[parm[1]]))
+        if parm[1] in column_values.keys():
+            setattr(beam, parm[0], np.array(column_values[parm[1]]))
         else:
             setattr(beam, parm[0], np.zeros_like(beam.s))
 
     try:
-        beam.eloss = np.array(beam.column_values['ELOSS'])
+        beam.eloss = np.array(column_values['ELOSS'])
     except:
         beam.eloss = np.zeros_like(beam.I)
 
     beam.filePath = filePath
-    del(beam.column_values, beam.columns)
+    del(column_values, columns)
 
     if debug > 0:
         print('      done in %.2f sec' % (time.time() - start_time))
@@ -2602,26 +2611,26 @@ def beam_file_str(beam):
             f_str = f_str + " " + dict[attr]
     f_str += "\n"
 
-    for parm in [['s', 'ZPOS'],
-                 ['I', 'CURPEAK'],
-                 ['emit_xn', 'EMITX'],
-                 ['emit_yn', 'EMITY'],
-                 ['beta_x', 'BETAX'],
-                 ['beta_y', 'BETAY'],
-                 ['alpha_x', 'ALPHAX'],
-                 ['alpha_y', 'ALPHAY'],
-                 ['x', 'XBEAM'],
-                 ['y', 'YBEAM'],
-                 ['px', 'PXBEAM'],
-                 ['py', 'PYBEAM'],
-                 ['g', 'GAMMA0'],
-                 ['dg', 'DELGAM'],
-                 ['eloss', 'ELOSS'],
-                 ]:
-        try:
-            beam.column_values[parm[1]] = getattr(beam, parm[0])
-        except:
-            pass
+    # for parm in [['s', 'ZPOS'],
+                 # ['I', 'CURPEAK'],
+                 # ['emit_xn', 'EMITX'],
+                 # ['emit_yn', 'EMITY'],
+                 # ['beta_x', 'BETAX'],
+                 # ['beta_y', 'BETAY'],
+                 # ['alpha_x', 'ALPHAX'],
+                 # ['alpha_y', 'ALPHAY'],
+                 # ['x', 'XBEAM'],
+                 # ['y', 'YBEAM'],
+                 # ['px', 'PXBEAM'],
+                 # ['py', 'PYBEAM'],
+                 # ['g', 'GAMMA0'],
+                 # ['dg', 'DELGAM'],
+                 # ['eloss', 'ELOSS'],
+                 # ]:
+        # try:
+            # beam.column_values[parm[1]] = getattr(beam, parm[0])
+        # except:
+            # pass
 
     for i in range(beam.len()):
         for attr in attrs:
@@ -2675,7 +2684,7 @@ def set_beam_energy(beam, E_GeV_new):
     return beam_new
 
 
-def transform_beam_twiss(beam, s=None, transform=None):
+def transform_beam_twiss(beam, transform=None, s=None):
     # transform = [[beta_x,alpha_x],[beta_y, alpha_y]] or Twiss()
     if transform == None:
         return beam
@@ -3196,8 +3205,8 @@ def transform_beam_file(beam_file=None, out_file='tmp.beam', s=None, transform=[
 
         # print betax_new
         beam_new = Beam()
-        beam_new.column_values = beam.column_values
-        beam_new.columns = beam.columns
+        # beam_new.column_values = beam.column_values
+        # beam_new.columns = beam.columns
         # for parm in ['filePath']:
         # if hasattr(beam,parm):
         # setattr(beam_new,parm,getattr(beam,parm))

@@ -99,6 +99,10 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
     if enforce_padn!=None:
         padn=enforce_padn
         
+    dfl_z = dfl.scale_z()
+    dfl_z_mesh = dfl_z[-1]-dfl_z[0]
+    if s_delay > dfl_z_mesh * padn:
+        raise Exception('s_delay %.2e is larger that the padded dfl %.2e Consider using enforce_padn > %.2f' %(s_delay, dfl_z_mesh * padn, s_delay / dfl_z_mesh))
         
     if dump_proj:
 

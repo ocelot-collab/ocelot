@@ -876,23 +876,52 @@ def dfl_shift_z(dfl, s, set_zeros=1):
         return dfl
     print('      done in %.2f ' % t_func + 'sec')
 
+# def dfl_pad_z_old(dfl, padn):
+    # assert np.mod(padn, 1) == 0, 'pad should be integer'
+    # start = time.time()
+
+    # if padn > 1:
+        # print('    padding dfl by ' + str(padn))
+        # padn_n = int((padn - 1) / 2 * dfl.Nz())  # number of slices to add before and after
+        # dfl_pad = RadiationField((dfl.Nz() + 2 * padn_n, dfl.Ny(), dfl.Nx()))
+        # dfl_pad.copy_param(dfl)
+        # dfl_pad.fld[padn_n:-padn_n, :, :] = dfl.fld
+    # elif padn < -1:
+        # padn = abs(padn)
+        # print('    de-padding dfl by ' + str(padn))
+        # padn_n = dfl.Nz() / padn * ((padn - 1) / 2)
+        # dfl_pad = RadiationField()
+        # dfl_pad.copy_param(dfl)
+        # dfl_pad.fld = dfl.fld[padn_n:-padn_n, :, :]
+    # else:
+        # print('    padding dfl by ' + str(padn))
+        # print('      pass')
+        # return dfl
+
+    # t_func = time.time() - start
+    # if t_func < 60:
+        # print('      done in %.2f ' % t_func + 'sec')
+    # else:
+        # print('      done in %.2f ' % t_func / 60 + 'min')
+    # return dfl_pad
+
 def dfl_pad_z(dfl, padn):
     assert np.mod(padn, 1) == 0, 'pad should be integer'
     start = time.time()
 
     if padn > 1:
         print('    padding dfl by ' + str(padn))
-        padn_n = int((padn - 1) / 2 * dfl.Nz())  # number of slices to add before and after
-        dfl_pad = RadiationField((dfl.Nz() + 2 * padn_n, dfl.Ny(), dfl.Nx()))
+        padn_n = int(padn  * dfl.Nz())  # new number of slices
+        dfl_pad = RadiationField( (padn_n, dfl.Ny(), dfl.Nx()) )
         dfl_pad.copy_param(dfl)
-        dfl_pad.fld[padn_n:-padn_n, :, :] = dfl.fld
+        dfl_pad.fld[-dfl.Nz():, :, :] = dfl.fld
     elif padn < -1:
         padn = abs(padn)
         print('    de-padding dfl by ' + str(padn))
-        padn_n = dfl.Nz() / padn * ((padn - 1) / 2)
+        padn_n = int(dfl.Nz() / padn)  # new number of slices
         dfl_pad = RadiationField()
         dfl_pad.copy_param(dfl)
-        dfl_pad.fld = dfl.fld[padn_n:-padn_n, :, :]
+        dfl_pad.fld = dfl.fld[-padn_n:, :, :]
     else:
         print('    padding dfl by ' + str(padn))
         print('      pass')

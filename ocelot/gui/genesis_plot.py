@@ -1546,8 +1546,6 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
         xy_title = 'Intensity'
         x_y_color = 'blue'
     
-    if log_scale:
-        suffix += '_log'
     
     F.fld = F.fld.astype(np.complex64)
     xy_proj = F.int_xy()
@@ -1555,6 +1553,14 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
     yz_proj = F.int_zy()
     xz_proj = F.int_zx()
     z_proj = F.int_z()
+    
+    if log_scale:
+        suffix += '_log'
+        xy_proj[xy_proj == 0] = None
+        # yz_proj[yz_proj == 0] = None
+        # xz_proj[xz_proj == 0] = None
+        z_proj[z_proj == 0] = None
+        
     
     dx = abs(x[1] - x[0])
     dy = abs(y[1] - y[0])
@@ -1631,19 +1637,24 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
         rms_x = 0
         fwhm_x = 0
     
+    
+    
+    
     if log_scale:
         ax_proj_x.semilogy(x, x_line, linewidth=2, color=x_y_color)
         ax_proj_x.semilogy(x, x_line_f, color='grey')
+        ax_proj_x.set_ylim(ymin = np.amin(x_line), ymax=1)
     else:
         ax_proj_x.plot(x, x_line, linewidth=2, color=x_y_color)
         ax_proj_x.plot(x, x_line_f, color='grey')
-
+        ax_proj_x.set_ylim(ymin=0, ymax=1)
+    
     if text_present:
         try:
             ax_proj_x.text(0.95, 0.95, 'fwhm= \n' + str(round_sig(fwhm_x, 3)) + r' [' + unit_xy + ']\nrms= \n' + str(round_sig(rms_x, 3)) + r' [' + unit_xy + ']', horizontalalignment='right', verticalalignment='top', transform=ax_proj_x.transAxes, fontsize=12)
         except:
             pass
-    ax_proj_x.set_ylim(ymin=0, ymax=1)
+    
     ax_proj_x.set_xlabel(x_label)
 
     ax_proj_y = fig.add_subplot(2, 2 + column_3d, 2, sharey=ax_int)
@@ -1667,16 +1678,18 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
     if log_scale:
         ax_proj_y.semilogx(y_line, y, linewidth=2, color=x_y_color)
         ax_proj_y.semilogx(y_line_f, y, color='grey')
+        ax_proj_y.set_xlim(xmin=np.amin(y_line), xmax=1)
     else:
         ax_proj_y.plot(y_line, y, linewidth=2, color=x_y_color)
         ax_proj_y.plot(y_line_f, y, color='grey')
+        ax_proj_y.set_xlim(xmin=0, xmax=1)
     
     if text_present:
         try:
             ax_proj_y.text(0.95, 0.95, 'fwhm= ' + str(round_sig(fwhm_y, 3)) + r' [' + unit_xy + ']\nrms= ' + str(round_sig(rms_y, 3)) + r' [' + unit_xy + ']', horizontalalignment='right', verticalalignment='top', transform=ax_proj_y.transAxes, fontsize=12)
         except:
             pass
-    ax_proj_y.set_xlim(xmin=0, xmax=1)
+    
     ax_proj_y.set_ylabel(y_label)
     
     # if log_scale:
@@ -1687,14 +1700,25 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
 
     if column_3d:
         
-        if np.amin(xz_proj) == 0:
-            min_xz_proj = 0
-        else:
+        if log_scale:
+            cut_off = 1e-6
+            yz_proj[yz_proj < yz_proj.max() * cut_off] = 0
+            xz_proj[xz_proj < xz_proj.max() * cut_off] = 0
+            # cut-off = np.amin([yz_proj[yz_proj!=0].min(), xz_proj[xz_proj!=0].min()]) / 10
+            # yz_proj += minmin
+            # xz_proj += minmin
             min_xz_proj=xz_proj[xz_proj!=0].min()
-        if np.amin(yz_proj) == 0:
-            min_yz_proj = 0
-        else:
             min_yz_proj=yz_proj[yz_proj!=0].min()
+            
+        
+        # if np.amin(xz_proj) == 0:
+            # min_xz_proj = 0
+        # else:
+            # min_xz_proj=xz_proj[xz_proj!=0].min()
+        # if np.amin(yz_proj) == 0:
+            # min_yz_proj = 0
+        # else:
+            # min_yz_proj=yz_proj[yz_proj!=0].min()
         
         if phase == True:
             ax_proj_xz = fig.add_subplot(2, 2 + column_3d, 6)

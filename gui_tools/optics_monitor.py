@@ -17,6 +17,10 @@ from accelerator.lattice.xfel_l3_no_cl_mode_B import *
 from accelerator.lattice.xfel_cl_mode_B import *
 from accelerator.lattice.xfel_sase1_mode_B import *
 from accelerator.lattice.xfel_sase3_mode_B import *
+try:
+    from accelerator.lattice.xfel_t4 import *
+except:
+    print("NO lattice file xfel_t4.py")
 from mint.devices_mi import *
 from gui_tools.gui.gui_optics_mon import OcelotOpticsWindow
 from PyQt5.QtGui import QIcon

@@ -22,6 +22,8 @@ class OcelotInterfaceWindow(QMainWindow):
         self.master = master
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.ui.menuBar.setNativeMenuBar(False)
+        self.ui.mainToolBar.setVisible(False)
         self.loadStyleSheet()
         self.ui.gridLayout_6.setContentsMargins(0,0,0,0)
 

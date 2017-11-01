@@ -21,6 +21,8 @@ class OcelotOpticsWindow(QMainWindow):
         self.master = master
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.ui.menuBar.setNativeMenuBar(False)
+        self.ui.mainToolBar.setVisible(False)
         self.loadStyleSheet()
         self.ui.gridLayout_6.setContentsMargins(0,0,0,0)
         self.ui.pb_hide_show.clicked.connect(self.hide_show_quads)

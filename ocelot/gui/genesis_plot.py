@@ -53,6 +53,8 @@ rcParams.update(params)
 # plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
 # rcParams["savefig.directory"] = os.chdir(os.path.dirname(__file__)) but __file__ appears to be genesis_plot
 
+plt.ioff() #turn off interactive mode
+
 def plot_gen_out_all_paral(exp_dir, stage=1, savefig='png', debug=1):
     print('start')
     from ocelot.utils.xfel_utils import background
@@ -150,15 +152,15 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
                 f2 = plot_gen_out_z(handle, z=0, showfig=showfig, savefig=savefig, debug=debug)
             if choice[3]:
                 f3 = plot_gen_out_z(handle, z=inf, showfig=showfig, savefig=savefig, debug=debug)
+            if choice[11]:
+                try:
+                    W=wigner_out(handle, pad=2)
+                    plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug, downsample=2)
+                except:
+                    pass
             if choice[4] != 0:
                 for z in np.arange(choice[4], np.amax(handle.z), choice[4]):
                     plot_gen_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug)
-            if choice[11]:
-                try:
-                    W=wigner_out(handle)
-                    plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug)
-                except:
-                    pass
             if choice[12]:
                 try:
                     plot_dpa_bucket_out(handle,scatter=0,slice_pos='max_P',repeat=3, showfig=showfig, savefig=savefig, cmap=def_cmap)
@@ -1984,7 +1986,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     if saveval != False:
                         if debug > 1:
                             print('      saving ' + s_fig_name + '.txt')
-                        np.savetxt(saving_path + s_fig_name + '.txt', vstack([outlist[irun].z, np.mean(s_value, 0), s_value]).T, fmt="%E", newline='\n', comments='')
+                        np.savetxt(saving_path + s_fig_name + '.txt', np.vstack([outlist[irun].z, np.mean(s_value, 0), s_value]).T, fmt="%E", newline='\n', comments='')
                     if not showfig:
                         plt.close('all')
         # if z_param_inp==[]:
@@ -1997,25 +1999,26 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
             print('      z_inp ' + str(z_inp))
             
         if 'wigner' in z_param_range:
+            wig_pad = 2
             if debug > 0:
                 print('    processing Wigner')
-                for z_ind in z_inp:
-                    print('      z=',z_ind)
-                    w = np.zeros((outlist[irun].nSlices,outlist[irun].nSlices))
-                    for irun in run_range:
-                        out=outlist[irun]
-                        W=wigner_out(out,z=z_ind,debug=0)
-                        w += W.wig
-                    W.wig= w / len(outlist)
+            for z_ind in z_inp:
+                print('      z=', z_ind)
+                w = np.zeros((outlist[irun].nSlices * wig_pad, outlist[irun].nSlices * wig_pad))
+                for irun in run_range:
+                    out=outlist[irun]
+                    W=wigner_out(out, z=z_ind, debug=0, pad=wig_pad)
+                    w += W.wig
+                W.wig= w / len(outlist)
 
-                    W.filePath = proj_dir + 'results' + os.path.sep + 'stage_' + str(stage) + '__WIG__' + str(z_ind) + '__m'
-                    wig_fig_name = 'stage_' + str(stage) + '__WIG__' + str(z_ind) + '__m'
-                    plot_wigner(W, z=z_ind, x_units='um', y_units='ev', fig_name=wig_fig_name, savefig=savefig, showfig=showfig, debug=0)
-                    if saveval != False:
-                        if debug > 1:
-                            print('      saving ' + wig_fig_name + '.txt')
-                        np.savetxt(saving_path + wig_fig_name + '.txt', W.wig, fmt="%E", newline='\n', comments='')
-                        np.savetxt(saving_path + wig_fig_name + '_sc.txt', vstack([W.freq_lamd, W.s]).T, fmt="%E", newline='\n', comments='')
+                W.filePath = proj_dir + 'results' + os.path.sep + 'stage_' + str(stage) + '__WIG__' + str(z_ind) + '__m'
+                wig_fig_name = 'stage_' + str(stage) + '__WIG__' + str(z_ind) + '__m'
+                plot_wigner(W, z=z_ind, x_units='um', y_units='ev', fig_name=wig_fig_name, savefig=savefig, showfig=showfig, debug=0)
+                if saveval != False:
+                    if debug > 1:
+                        print('      saving ' + wig_fig_name + '.txt')
+                    np.savetxt(saving_path + wig_fig_name + '.txt', W.wig, fmt="%E", newline='\n', comments='')
+                    np.savetxt(saving_path + wig_fig_name + '_sc.txt', np.vstack([W.freq_lamd, W.s]).T, fmt="%E", newline='\n', comments='')
      
 
         for param in z_param_range:
@@ -2077,9 +2080,9 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                         if debug > 1:
                             print('      saving ' + z_fig_name + '.txt')
                         if param in ['spec', 'spec_phot_density']:
-                            np.savetxt(saving_path + z_fig_name + '.txt', vstack([outlist[irun].freq_ev, np.mean(z_value, 0), z_value]).T, fmt="%E", newline='\n', comments='')
+                            np.savetxt(saving_path + z_fig_name + '.txt', np.vstack([outlist[irun].freq_ev, np.mean(z_value, 0), z_value]).T, fmt="%E", newline='\n', comments='')
                         else:
-                            np.savetxt(saving_path + z_fig_name + '.txt', vstack([outlist[irun].s * 1e6, np.mean(z_value, 0), z_value]).T, fmt="%E", newline='\n', comments='')
+                            np.savetxt(saving_path + z_fig_name + '.txt', np.vstack([outlist[irun].s * 1e6, np.mean(z_value, 0), z_value]).T, fmt="%E", newline='\n', comments='')
                     if not showfig:
                         plt.close('all')
         # if run_param_inp==[]:
@@ -2155,7 +2158,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                         if saveval != False:
                             if debug > 1:
                                 print('      saving ' + run_fig_name + '.txt')
-                            np.savetxt(saving_path + run_fig_name + '.txt', vstack([run_range, run_value_arr]).T, fmt="%E", newline='\n', comments='')
+                            np.savetxt(saving_path + run_fig_name + '.txt', np.vstack([run_range, run_value_arr]).T, fmt="%E", newline='\n', comments='')
                         if not showfig:
                             plt.close('all')
 
@@ -2195,7 +2198,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     if debug > 1:
                         print('      saving ' + dfl_fig_name + '.txt')
                     if param == 'dfl_spec':
-                        np.savetxt(saving_path + dfl_fig_name + '.txt', vstack([freq_scale, np.mean(dfl_value, 0), dfl_value]).T, fmt="%E", newline='\n', comments='')
+                        np.savetxt(saving_path + dfl_fig_name + '.txt', np.vstack([freq_scale, np.mean(dfl_value, 0), dfl_value]).T, fmt="%E", newline='\n', comments='')
                 if not showfig:
                     plt.close('all')
     if showfig:
@@ -2319,7 +2322,7 @@ def plot_gen_corr(proj_dir, run_inp=[], p1=(), p2=(), savefig=False, showfig=Tru
         plt.savefig(saving_path + corr_fig_name + '.' + savefig, format=savefig)
     if saveval != False:
         print('      saving ' + corr_fig_name + '.txt')
-        np.savetxt(saving_path + corr_fig_name + '.txt', vstack([var_1, var_2]).T, fmt="%E", newline='\n', comments=param_1 + '_s' + str(stage_1) + '_at' + str(z_1) + '_' + str(s_1) + ' ' + param_2 + '_s' + str(stage_2) + '_at' + str(z_2) + '_' + str(s_2))
+        np.savetxt(saving_path + corr_fig_name + '.txt', np.vstack([var_1, var_2]).T, fmt="%E", newline='\n', comments=param_1 + '_s' + str(stage_1) + '_at' + str(z_1) + '_' + str(s_1) + ' ' + param_2 + '_s' + str(stage_2) + '_at' + str(z_2) + '_' + str(s_2))
 
     if showfig:
         plt.show()

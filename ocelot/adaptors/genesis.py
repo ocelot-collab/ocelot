@@ -2656,7 +2656,6 @@ def beam_file_str(beam):
     '''
     reads BeamArray()
     returns string of electron beam file, suitable for Genesis
-    
     '''
     
     dict = {'s' : 'ZPOS',
@@ -2675,8 +2674,8 @@ def beam_file_str(beam):
              'dg': 'DELGAM',
              'eloss': 'ELOSS'}
     
-    l = beam.len()    
-    attrs=beam.params()
+    l = beam.len()
+    attrs = beam.params() + beam.properties
     
     f_str = "# \n? VERSION = 1.0\n? SIZE =" + str(l) + "\n? COLUMNS"
     

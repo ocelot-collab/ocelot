@@ -1238,14 +1238,15 @@ def calc_wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1
 def wigner_pad(wig,pad):
     wig_out = deepcopy(wig)
     n_add = wig_out.s.size * (pad-1) / 2
-    n_add = int(n_add - n_add%2)
+    n_add_l = int(n_add - n_add%2)
+    n_add_r = int(n_add + n_add%2)
     ds = (wig_out.s[-1] - wig_out.s[0]) / (wig_out.s.size-1)
     # pad_array_s_l = np.arange(wig_out.s[0] - ds*n_add, wig_out.s[0], ds)
     # pad_array_s_r = np.arange(wig_out.s[-1]+ds, wig_out.s[-1] + ds*(n_add+1), ds)
-    pad_array_s_l = np.linspace(wig_out.s[0] - ds*(n_add), wig_out.s[0]-ds, n_add)
-    pad_array_s_r = np.linspace(wig_out.s[-1]+ds, wig_out.s[-1] + ds*(n_add), n_add)
+    pad_array_s_l = np.linspace(wig_out.s[0] - ds*(n_add_l), wig_out.s[0]-ds, n_add_l)
+    pad_array_s_r = np.linspace(wig_out.s[-1]+ds, wig_out.s[-1] + ds*(n_add_r), n_add_r)
     wig_out.s = np.concatenate([pad_array_s_l,wig_out.s,pad_array_s_r])
-    wig_out.field = np.concatenate([np.zeros(n_add), wig_out.field, np.zeros(n_add)])
+    wig_out.field = np.concatenate([np.zeros(n_add_l), wig_out.field, np.zeros(n_add_r)])
 #    W_out.eval()
     return wig_out
 

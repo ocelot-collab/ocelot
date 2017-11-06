@@ -2495,7 +2495,7 @@ def edist2beam(edist, step=1e-7): #check
     '''
 
     from numpy import mean, sum
-
+    
     part_c = edist.part_charge
     t_step = step / speed_of_light
     t_min = min(edist.t)
@@ -2503,23 +2503,7 @@ def edist2beam(edist, step=1e-7): #check
     dist_t_window = t_max - t_min
     npoints = int(dist_t_window / t_step)
     t_step = dist_t_window / npoints
-    beam = BeamArray()
-    for parm in ['I',
-                 's',
-                 'emit_x',
-                 'emit_y',
-                 'beta_x',
-                 'beta_y',
-                 'alpha_x',
-                 'alpha_y',
-                 'x',
-                 'y',
-                 'xp',
-                 'yp',
-                 'E',
-                 'sigma_E',
-                 ]:
-        setattr(beam, parm, np.zeros((npoints - 1)))
+    beam = BeamArray(npoints-1)
 
     for i in range(npoints - 1):
         indices = (edist.t > t_min + t_step * i) * (edist.t < t_min + t_step * (i + 1))
@@ -2527,18 +2511,23 @@ def edist2beam(edist, step=1e-7): #check
         # print(sum(indices))
         if sum(indices) > 2:
             dist_g = edist.g[indices]
+            dist_E = dist_g * m_e_GeV
             dist_x = edist.x[indices]
             dist_y = edist.y[indices]
             dist_px = edist.xp[indices]
             dist_py = edist.yp[indices]
-
+            dist_sigma_E = np.std(dist_g) * m_e_GeV
+            dist_p = np.sqrt(dist_g**2 - 1)
+            dist_xp = dist_px / dist_p
+            dist_yp = dist_py / dist_p
+            
             beam.I[i] = sum(indices) * part_c / t_step
-            beam.g[i] = mean(dist_g)
-            beam.dg[i] = np.std(dist_g)
+            beam.E[i] = mean(dist_E)
+            beam.sigma_E[i] = dist_sigma_E
             beam.x[i] = mean(dist_x)
             beam.y[i] = mean(dist_y)
-            beam.px[i] = mean(dist_px)
-            beam.py[i] = mean(dist_py)
+            beam.xp[i] = mean(dist_xp)
+            beam.yp[i] = mean(dist_yp)
             beam.emit_x[i] = (mean(dist_x**2) * mean(dist_px**2) - mean(dist_x * dist_px)**2)**0.5
             # if beam.ex[i]==0: beam.ey[i]=1e-10
             beam.emit_y[i] = (mean(dist_y**2) * mean(dist_py**2) - mean(dist_y * dist_py)**2)**0.5
@@ -2547,14 +2536,14 @@ def edist2beam(edist, step=1e-7): #check
             beam.beta_y[i] = mean(dist_y**2) / beam.emit_y[i]
             beam.alpha_x[i] = -mean(dist_x * dist_px) / beam.emit_x[i]
             beam.alpha_y[i] = -mean(dist_y * dist_py) / beam.emit_y[i]
-
-    idx = np.where(np.logical_or.reduce((beam.I == 0, beam.E == 0)))
+    
+    idx = np.where(np.logical_or.reduce((beam.I == 0, beam.g == 0)))
     del beam[idx]
-
+    
     if hasattr(edist,'filePath'):
         beam.filePath = edist.filePath + '.beam'
-
-        return(beam)
+    
+    return(beam)
 
 
 '''

@@ -82,8 +82,8 @@ def calculateFelParameters(input):
     p.betay = input.betay
     p.emitx = input.emitx #normalized emittance
     p.emity = input.emity
-#    p.rxbeam = input.rxbeam
-#    p.rybeam = input.rybeam
+    #    p.rxbeam = input.rxbeam
+    #    p.rybeam = input.rybeam
     p.rxbeam = np.sqrt(p.betax * p.emitx / p.gamma0)
     p.rybeam = np.sqrt(p.betay * p.emity / p.gamma0)
     
@@ -94,9 +94,9 @@ def calculateFelParameters(input):
     
     p.lambda0 = p.xlamd / (2.0 * p.gamma0**2) * (1.0 + p.aw0**2) # resonant wavelength
     p.k0 = 2 * np.pi / p.lambda0 
-
+    
     p.Ia = 4 * np.pi * epsilon_0 * m_e_kg * speed_of_light**3 / q_e # Alfven (Budker) current (~17kA)
-#    p.Ia = 17000
+    #    p.Ia = 17000
         
     if p.iwityp == 0:
         ja = p.aw0**2 / (2*(1 + p.aw0**2))
@@ -115,7 +115,7 @@ def calculateFelParameters(input):
     #p.power = 6.0 * np.sqrt(np.pi) * p.rho1**2 * p.Pb / (p.N * np.log(p.N / p.rho1) ) # shot noise power [W] [Reiche]
     p.lg1 = p.xlamd / (4*np.pi * np.sqrt(3) * p.rho1) #[Xie]
     p.zr = 4 * np.pi * p.rxbeam * p.rybeam / p.lambda0
-  
+      
     a = [None, 0.45, 0.57, 0.55, 1.6, 3.0, 2.0, 0.35, 2.9, 2.4, 51.0, 0.95, 3.0, 5.4, 0.7, 1.9, 1140.0, 2.2, 2.9, 3.2]
     
     p.xie_etad = p.lg1 / (2 * p.k0 * p.rxbeam * p.rybeam)
@@ -125,7 +125,7 @@ def calculateFelParameters(input):
     p.xie_lscale = (a[1] * p.xie_etad ** a[2] + a[3] * p.xie_etae ** a[4] + a[5] * p.xie_etagamma ** a[6] 
     + a[7] * p.xie_etae ** a[8] * p.xie_etagamma ** a[9] + a[10] * p.xie_etad ** a[11] * p.xie_etagamma ** a[12] + a[13] * p.xie_etad ** a[14] * p.xie_etae ** a[15]
     + a[16] * p.xie_etad ** a[17] * p.xie_etae ** a[18] * p.xie_etagamma ** a[19])
-
+    
     p.lg3 = p.lg1 * (1 + p.xie_lscale)
     p.rho3 = p.xlamd / (4*np.pi * np.sqrt(3) * p.lg3)
     
@@ -148,6 +148,9 @@ def beam2fel(beam, lu, K_peak, iwityp=0):
     '''
     tmp function to estimate fel parameters slice-wise
     '''
+    if beam.len() is 0:
+        raise ValueError('Beam length shoul not be zero')
+    
     class tmp():
         pass
     tmp.gamma0 = beam.g

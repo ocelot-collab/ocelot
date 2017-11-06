@@ -259,33 +259,33 @@ class Beam:
 
 class BeamArray(Beam):
 
-    def __init__(self):
+    def __init__(self, nslice=0):
         super().__init__()
         # initial conditions
-        self.s = np.empty(0)
-        self.x = np.empty(0)      #[m]
-        self.y = np.empty(0)      #[m]
-        self.xp = np.empty(0)    # xprime [rad]
-        self.yp = np.empty(0)    # yprime [rad]
+        self.s = np.empty(nslice)
+        self.x = np.empty(nslice)      #[m]
+        self.y = np.empty(nslice)      #[m]
+        self.xp = np.empty(nslice)    # xprime [rad]
+        self.yp = np.empty(nslice)    # yprime [rad]
 
-        self.E = np.empty(0)            # electron energy [GeV]
-        self.sigma_E = np.empty(0)      # Energy spread [GeV]
-        self.I = np.empty(0)            # beam current [A]
-        self.emit_x = np.empty(0)       # horizontal emittance [m rad]
-        self.emit_y = np.empty(0)       # horizontal emittance [m rad]
+        self.E = np.empty(nslice)            # electron energy [GeV]
+        self.sigma_E = np.empty(nslice)      # Energy spread [GeV]
+        self.I = np.empty(nslice)            # beam current [A]
+        self.emit_x = np.empty(nslice)       # horizontal emittance [m rad]
+        self.emit_y = np.empty(nslice)       # horizontal emittance [m rad]
         # self.tlen = 0.0         # bunch length (rms) in fsec
 
         # twiss parameters
-        self.beta_x = np.empty(0)
-        self.beta_y = np.empty(0)
-        self.alpha_x = np.empty(0)
-        self.alpha_y = np.empty(0)
-        self.Dx = np.empty(0)
-        self.Dy = np.empty(0)
-        self.Dxp = np.empty(0)
-        self.Dyp = np.empty(0)
+        self.beta_x = np.empty(nslice)
+        self.beta_y = np.empty(nslice)
+        self.alpha_x = np.empty(nslice)
+        self.alpha_y = np.empty(nslice)
+        self.Dx = np.empty(nslice)
+        self.Dy = np.empty(nslice)
+        self.Dxp = np.empty(nslice)
+        self.Dyp = np.empty(nslice)
 
-        self.eloss = np.empty(0)
+        self.eloss = np.empty(nslice)
 
     def idx_max(self):
         return self.I.argmax()

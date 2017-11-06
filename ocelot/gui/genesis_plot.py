@@ -1815,6 +1815,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
 def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int', 'pulse_energy', 'r_size_weighted', 'spec', 'spec_phot_density', 'error'], z_param_inp=['p_int', 'phi_mid_disp', 'spec', 'spec_phot_density', 'bunching', 'wigner'], dfl_param_inp=['dfl_spec'], run_param_inp=['p_int', 'spec', 'spec_phot_density', 'pulse_energy'], s_inp=['max'], z_inp=[0,'end'], run_s_inp=['max'], run_z_inp=['end'], spec_pad=1, savefig=1, saveval=1, showfig=0, debug=1):
     '''
     The routine for plotting the statistical info of many GENESIS runs
+    --- Will be rewritten and split in several separate modules ---
     
     proj_dir is the directory path in which \run_xxx folders are located.
     run_inp=[1,2,3] number of runs to be processed, default - all possible up to run 1000
@@ -2017,8 +2018,8 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                 if saveval != False:
                     if debug > 1:
                         print('      saving ' + wig_fig_name + '.txt')
-                    np.savetxt(saving_path + wig_fig_name + '.txt', W.wig, fmt="%E", newline='\n', comments='')
-                    np.savetxt(saving_path + wig_fig_name + '_sc.txt', np.vstack([W.freq_lamd, W.s]).T, fmt="%E", newline='\n', comments='')
+                    np.savetxt(saving_path + wig_fig_name + '.txt', W.wig, fmt='%E ', newline='\n')
+                    np.savetxt(saving_path + wig_fig_name + '_sc.txt', np.vstack([speed_of_light*h_eV_s*1e9/W.freq_lamd, W.s]).T, fmt='%E ', newline='\n', header=' E[eV], s[m]')
      
 
         for param in z_param_range:

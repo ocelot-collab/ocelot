@@ -264,10 +264,24 @@ def find_nearest(array, value):
     return array[find_nearest_idx(array, value)]
 
 def n_moment(x, counts, c, n):
+    x = np.squeeze(x)
+    if x.ndim is not 1:
+        raise ValueError("scale of x should be 1-dimensional")
+    if x.size not in counts.shape:
+        raise ValueError("operands could not be broadcast together with shapes %s %s" %(str(x.shape), str(counts.shape)))
+    
     if np.sum(counts)==0:
         return 0
     else:
-        return (np.sum((x-c)**n*counts) / np.sum(counts))**(1./n)
+        if x.ndim == 1 and counts.ndim == 1:
+            return (np.sum((x-c)**n*counts) / np.sum(counts))**(1./n)
+        else:
+            
+            if x.size in counts.shape:
+                dim_ = [i for i, v in enumerate(counts.shape) if v == x.size]
+                counts = np.moveaxis(counts, dim_, -1)
+                return (np.sum((x-c)**n*counts, axis=-1) / np.sum(counts, axis=-1))**(1./n)
+                
         
 def std_moment(x, counts):
     mean=n_moment(x, counts, 0, 1)

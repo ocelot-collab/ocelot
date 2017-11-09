@@ -42,8 +42,12 @@ def copy_this_script(file, folderPath):
     os.system(cmd)
 
 def filename_from_path(path_string):
-    # return path_string[-path_string[::-1].find(os.path.sep)::]
-    return path_string.split(os.path.sep)[-1]
+    tree = path_string.split(os.path.sep)
+    return tree[-1]
+    
+def directory_from_path(path_string):
+    tree = path_string.split(os.path.sep)
+    return os.path.sep.join(tree[:-1]) + os.path.sep
 
 def deep_sim_dir(path, **kwargs):
     from collections import OrderedDict

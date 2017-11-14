@@ -19,7 +19,8 @@ class ACC1(SectionTrack):
         self.lattice_name = 'Injector ACC1'
         self.unit_step = 0.01
 
-        self.input_beam_file = 'track_data/particles/particles0_Injector_Gun_end_200kp.npz'
+        #self.input_beam_file = 'track_data/particles/particles0_Injector_Gun_end_200kp.npz'
+        self.input_beam_file = 'track_data/particles/Exfel.0320.ast'
         self.output_beam_file = 'track_data/particles/particles1_Injector_ACC1_end.npz'
         self.tws_file = "track_data/tws/tws1_Injector_ACC1_end.npz"
 
@@ -143,15 +144,27 @@ class ST2(SectionTrack):
         st2_stop = id_90904668_
         self.lattice = MagneticLattice(cell_i1 + cell_l1, start=lhm_stop, stop=st2_stop, method=self.method)
 
+        
         # init physics processes
-        bt = BeamTransform(x_opt=[0.010627616729, 1.063601468, 0], y_opt=[2.157218065, 15.9609948, 0])
-        bt.bounds = [-4.0, 4.0]
+        #bt = BeamTransform(x_opt=[0.010627616729, 1.063601468, 0], y_opt=[2.157218065, 15.9609948, 0])
+        #bt.bounds = [-4.0, 4.0]
 
         sc = SpaceCharge()
         sc.step = 1
         sc.nmesh_xyz = [63, 63, 63]
         match_st2 = lhm_stop
-        self.add_physics_process(bt, start=match_st2, stop=match_st2)
+
+        tws = Twiss()
+        tws.beta_x = 2.36238404123
+        tws.beta_y = 2.90712039319
+        tws.alpha_x = 1.23079453323
+        tws.alpha_y = -1.45354874634
+        tws.E = 0.130
+        
+        bt = BeamTransform(tws=tws)
+        bt.bounds = [-4.0, 4.0]
+        self.add_physics_process(bt, start=otrc_55_i1, stop=otrc_55_i1)
+        #self.add_physics_process(bt, start=match_st2, stop=match_st2)
         self.add_physics_process(sc, start=match_st2, stop=st2_stop)
 
 

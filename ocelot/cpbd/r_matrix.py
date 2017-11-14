@@ -1,8 +1,12 @@
 __author__ = 'Sergey Tomin'
 
+import logging
 import numpy as np
 from ocelot.common.globals import m_e_GeV, speed_of_light
 from ocelot.cpbd.elements import *
+
+
+logger = logging.getLogger(__name__)
 
 
 def rot_mtx(angle):
@@ -131,7 +135,7 @@ def create_r_matrix(element):
             Ef = (E + de) / m_e_GeV
             Ep = (Ef - Ei) / z  # energy derivative
             if Ei == 0:
-                print("Warning! Initial energy is zero and cavity.delta_e != 0! Change Ei or cavity.delta_e must be 0")
+                logger.warning("cavity: Warning! Initial energy is zero and cavity.delta_e != 0! Change Ei or cavity.delta_e must be 0")
 
             cos_phi = np.cos(phi)
             alpha = np.sqrt(eta / 8.) / cos_phi * np.log(Ef / Ei)

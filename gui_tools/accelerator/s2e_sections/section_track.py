@@ -3,6 +3,7 @@ Section class for s2e tracking.
 S.Tomin. XFEL/DESY. 2017
 """
 from ocelot import *
+from ocelot.adaptors.astra2ocelot import *
 import numpy as np
 
 class SectionTrack:
@@ -63,11 +64,22 @@ class SectionTrack:
 
         particles = None
         #print(self.input_beam_file)
-        try:
-            particles = load_particle_array(self.input_beam_file)
-
-        except:
-            print(self.lattice_name + ' - #### ERROR #### - NO START PARTICLES FILE.')
+        extension = self.input_beam_file.split(".")[-1]
+        #print(extension)
+        if extension == "ast":
+        
+            try:
+                particles = astraBeam2particleArray(filename=self.input_beam_file)
+            except:
+                print(self.lattice_name + ' - #### ERROR #### - NO START PARTICLES FILE.')
+        
+        else:
+            
+            try:
+                particles = load_particle_array(self.input_beam_file)
+        
+            except:
+                print(self.lattice_name + ' - #### ERROR #### - NO START PARTICLES FILE.')
 
         return particles
 
@@ -102,7 +114,7 @@ class SectionTrack:
         # read beam file
         if particles == None:
             particles = self.read_beam_file()
-
+            #print("Particle.s", particles.s, particles.q_array)
             if particles == None:
                 return None
 

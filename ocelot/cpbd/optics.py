@@ -8,9 +8,7 @@ from ocelot.cpbd.beam import Particle, Twiss, ParticleArray
 from ocelot.cpbd.high_order import *
 from ocelot.cpbd.r_matrix import *
 from copy import deepcopy
-# from numba import jit
-from ocelot.common.logging import Logger
-
+import logging
 import numpy as np
 try:
     import numexpr as ne
@@ -24,7 +22,7 @@ try:
 except:
     nb_flag = False
 
-logger = Logger()
+logger = logging.getLogger(__name__)
 
 
 
@@ -156,7 +154,6 @@ class TransferMap:
             # M = self.R(E + )
             Ei = tws0.E
             Ef = tws0.E + self.delta_e  # * cos(self.phi)
-            # print "Ei = ", Ei, "Ef = ", Ef
             k = np.sqrt(Ef / Ei)
             M[0, 0] = M[0, 0] * k
             M[0, 1] = M[0, 1] * k
@@ -222,7 +219,7 @@ class TransferMap:
         # a = np.add(np.transpose(dot(self.R(energy), particles.T.reshape(6, int(n/6)))), self.B(energy)).reshape(n)
 
         rparticles[:] = a[:]
-        logger.debug('return trajectory, array ' + str(len(rparticles)))
+        #logger.debug('return trajectory, array ' + str(len(rparticles)))
         return rparticles
 
     def __mul__(self, m):
@@ -946,7 +943,7 @@ def periodic_twiss(tws, R):
     cosmy = (R[2, 2] + R[3, 3]) / 2.
 
     if abs(cosmx) >= 1 or abs(cosmy) >= 1:
-        logger.warn("************ periodic solution does not exist. return None ***********")
+        logger.warning("************ periodic solution does not exist. return None ***********")
         # print("************ periodic solution does not exist. return None ***********")
         return None
     sinmx = np.sign(R[0, 1]) * sqrt(1. - cosmx * cosmx)
@@ -1020,7 +1017,7 @@ def twiss_fast(lattice, tws0=None):
             R = lattice_transfer_map(lattice, tws0.E)
             tws0 = periodic_twiss(tws0, R)
             if tws0 == None:
-                print('Twiss: no periodic solution')
+                logger.warning('twiss_fast: Twiss: no periodic solution')
                 return None
         else:
             tws0.gamma_x = (1. + tws0.alpha_x ** 2) / tws0.beta_x
@@ -1034,7 +1031,7 @@ def twiss_fast(lattice, tws0=None):
             obj_list.append(tws0)
         return obj_list
     else:
-        print('Twiss: no periodic solution')
+        logger.warning('twiss_fast: Twiss: no periodic solution')
         return None
 
 
@@ -1174,7 +1171,7 @@ class Navigator:
     def get_next(self):
 
         proc_list = self.get_proc_list()
-        logger.show_debug = False
+        #logger.show_debug = False
 
         if len(proc_list) > 0:
 
@@ -1208,7 +1205,7 @@ class Navigator:
         # check if dz overjumps the stop element
         dz, processes = self.check_overjump(dz, processes)
 
-        logger.debug('\n' +
+        logger.debug(" Navigator.get_next: " +'\n' +
                      "navi.z0=" + str(self.z0) + " navi.n_elem=" + str(self.n_elem) + " navi.sum_lengths="
                      + str(self.sum_lengths) + " dz=" + str(dz) + '\n' +
                      "element type=" + self.lat.sequence[self.n_elem].__class__.__name__ + " element name=" +

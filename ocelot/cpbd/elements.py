@@ -3,8 +3,6 @@ definition of magnetic lattice
 linear dimensions in [m]
 """
 from ocelot.cpbd.field_map import FieldMap
-#from ocelot.cpbd.optics import create_transfer_map
-#from ocelot.common.globals import *
 import numpy as np
 from numpy import pi
 

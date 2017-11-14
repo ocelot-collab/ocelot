@@ -21,6 +21,8 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from ocelot.cpbd.beam import global_slice_analysis_extended
 from ocelot import *
+from scripts.io import *
+
 
 class MpltMonitor(QWidget):
     def __init__(self, parent=None):
@@ -91,13 +93,13 @@ class MpltMonitor(QWidget):
         #if current_file in self.p_arrays.keys() and current_file in self.slices.keys():
         #    print("Already loaded")
         #    return
-        self.p_arrays[current_file] = load_particle_array(self.p_dict + current_file)
+        self.p_arrays[current_file] = read_beam_file(self.p_dict + current_file)
         self.slices[current_file] = self.calculate_slaice_params(self.p_arrays[current_file])
         #s, I, ex, ey, me, se, gamma0, emitxn, emityn = slice_params
 
     def update_slice_plot(self):
         #s, I, ex, ey, me, se, gamma0, emitxn, emityn = self.slice_params
-        print(self.slice_params[6:])
+        #print(self.slice_params[6:])
         current_slice_param = self.ui.cb_slice_params.currentText()
         self.ax_l.clear()
         if current_slice_param == "Current":

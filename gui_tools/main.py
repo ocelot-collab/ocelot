@@ -20,6 +20,11 @@ from copy import deepcopy
 from threading import Thread, Event
 from ocelot.optimizer.mint.xfel_interface import *
 from mint.devices_mi import *
+import logging
+ilename="logs/main.log"
+logging.basicConfig( level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 
 tws_i1 = Twiss()
 tws_i1.E = 0.005000000

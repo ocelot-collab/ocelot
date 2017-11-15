@@ -146,32 +146,42 @@ class S2ETool:
         self.track_thread.start()
 
     def set_cavs(self):
+        V_A1 = 19.688724956445860 * 1e-3;
+        phi_A1 = 21.796390202384082;
+        V_AH1 = 3.120690031438794 * 1e-3;
+        phi_AH1 = 203.9886553950048;
+        V_L1 = 21.0435 * 1e-3;
+        phi_L1 = 32.2481;
+        V_L2 = 18.8189 * 1e-3;
+        phi_L2 = 19.8343;
+        V_L3 = 15.0613 * 1e-3;
+        phi_L3 = 4.5307;
         for cav in self.cavs:
             if cav.id == "A1":
-                v_i1 = 0.02118205
-                phi_i1 = +28.4961 - 0.13965
+                v_i1 = V_A1 # 0.02118205
+                phi_i1 = phi_A1 # +28.4961 - 0.13965
                 cav.v = v_i1*8
                 cav.phi = phi_i1
             elif cav.id == "AH1":
-                v3_i1 = 0.003552325 + 0.00004
-                phi3_i1 = -153.5425 + 0.1 + 0 * 1.059098
+                v3_i1 = V_AH1 # 0.003552325 + 0.00004
+                phi3_i1 = phi_AH1 # -153.5425 + 0.1 + 0 * 1.059098
                 cav.v = v3_i1*8
                 cav.phi = phi3_i1
             elif cav.id == "A2":
-                v_l1 = 0.02005201875
-                phi_l1 = 27.5615 - 0.0041
+                v_l1 = V_L1 # 0.02005201875
+                phi_l1 = phi_L1 # 27.5615 - 0.0041
                 cav.v = v_l1*32
                 cav.phi = phi_l1
             elif cav.id in ["A3", "A4", "A5"]:
-                v_l2 = 0.01913229167
-                phi_l2 = 21.8576 + 0.0833
+                v_l2 = V_L2 # 0.01913229167
+                phi_l2 = phi_L2 # 21.8576 + 0.0833
                 cav.v = v_l2*32
                 cav.phi = phi_l2
             elif cav.id in ["A6", "A7", "A8", "A9", "A10",
                                       "A11", "A12", "A13", "A14", "A15", "A16", "A17","A18", "A19", "A20",
                                       "A21", "A22", "A23", "A24", "A25"]:
-                v_l3 = 0.02248065476
-                phi_l3 = 0.0
+                v_l3 = V_L3 # 0.02248065476
+                phi_l3 = phi_L3 #0.0
                 cav.v = v_l3*32
                 cav.phi = phi_l3
             cav.ui.set_volt(cav.v)

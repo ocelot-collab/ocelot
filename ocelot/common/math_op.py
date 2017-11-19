@@ -5,6 +5,15 @@ statistical analysis functions, fitting, optimization and the like
 import numpy as np
 from numpy import cos, sin, tan, sqrt, log, exp, sum, inf
 
+try:
+    import numba as nb
+    from numba import jit
+    numba_avail = True
+except ImportError:
+    print("math_op.py: module Numba is not installed. Install it if you want speed up correlation calculations")
+    numba_avail = False
+
+
 def peaks(x, y, n=0):
     '''
     
@@ -314,3 +323,135 @@ def bin_scale(scale,bin_size):
 def index_of(array,value):
     idx = (np.abs(array-value)).argmin()
     return idx
+
+
+@jit('void(double[:,:], double[:,:], int32, int32)', nopython=True, nogil=True)
+def corr_f_nb(corr, val, n_skip=1, norm=1):
+    n_val = corr.shape[0]
+    n_event = val.shape[1]
+    for i in range(n_val):
+        for j in range(n_val):
+            means = 0
+            meanl = 0
+            meanr = 0
+            for k in range(n_event):
+                means += val[i*n_skip,k] * val[j*n_skip,k]
+                meanl += val[i*n_skip,k]
+                meanr += val[j*n_skip,k]
+            means /= n_event
+            meanl /= n_event
+            meanr /= n_event
+            if meanl == 0 or meanr == 0:
+                if norm:
+                    corr[i,j] = 1
+                else:
+                    corr[i,j] = 0
+            else:
+                if norm:
+                    corr[i,j] = means / meanl / meanr
+                else:
+                    corr[i,j] = means - meanl * meanr
+
+
+
+def corr_f_np(corr, val, n_skip=1, norm=1, count=0):
+    n_val = corr.shape[0]
+    for i in range(n_val):
+        if count:
+            sys.stdout.write('\r')
+            sys.stdout.write('slice %i of %i' %(i, n_val-1))
+            sys.stdout.flush()
+        for j in range(n_val):
+            means = np.mean(val[i*n_skip,:] * val[j*n_skip,:])
+            meanl = np.mean(val[i*n_skip,:])
+            meanr = np.mean(val[j*n_skip,:])
+            if norm:
+                corr[i,j] = means / meanl / meanr
+            else:
+                corr[i,j] = means - meanl * meanr
+    
+    if norm:
+        corr[np.isnan(corr)] = 1
+    else:
+        corr[np.isnan(corr)] = 0
+
+             
+def correlation2d(val, norm=0, n_skip=1, use_numba=numba_avail):
+    N = int(val.shape[0] / n_skip)
+    corr = np.zeros([N,N])
+    if use_numba:
+        corr_f_nb(corr, val, n_skip, norm)        
+    else:        
+        corr_f_np(corr, val, n_skip, norm)
+    return corr
+
+@jit('void(double[:,:], int32, double[:,:], int32)', nopython=True, nogil=True)
+def corr_c_nb(corr, n_corr, val, norm):
+    n_event = len(val[0])
+    n_val = len(val) - n_corr*2
+    for i in range(n_val):
+        for j in range(n_corr):
+            if not j%2:
+                ind_l = int(i - j/2 + n_corr)
+                ind_r = int(i + j/2 + n_corr)
+            else:
+                ind_l = int(i - (j-1)/2 + n_corr)
+                ind_r = int(i + (j-1)/2 + 1 + n_corr)                          
+            means = 0
+            meanl = 0
+            meanr = 0
+            for k in range(n_event):
+                means += val[ind_l, k] * val[ind_r, k]
+                meanl += val[ind_l, k]
+                meanr += val[ind_r, k]
+            means /= n_event
+            meanl /= n_event
+            meanr /= n_event
+
+            if meanl == 0 or meanr == 0:
+                if norm:
+                    corr[i,j] = 1
+                else:
+                    corr[i,j] = 0
+            else:
+                if norm:
+                    corr[i,j] = means / meanl / meanr
+                else:
+                    corr[i,j] = means - meanl * meanr
+
+
+def corr_c_np(corr, n_corr, val, norm):
+    for i in range(n_val):
+        for j in range(n_corr):
+            if not j%2:
+                ind_l = int(i - j/2 + n_corr)
+                ind_r = int(i + j/2 + n_corr)
+            else:
+                ind_l = int(i - (j-1)/2 + n_corr)
+                ind_r = int(i + (j-1)/2 + 1 + n_corr)
+            means = np.mean(val[ind_l,:] * val[ind_r,:])
+            meanl = np.mean(val[ind_l,:])
+            meanr = np.mean(val[ind_r,:])
+
+            if meanl == 0 or meanr == 0:
+                corr[i,j] = 0
+            else:
+                if norm:
+                    corr[i,j] = means / meanl / meanr
+                else:
+                    corr[i,j] = means - meanl * meanr
+
+
+def correlation2d_center(n_corr, val, norm=0, use_numba=1):
+    n_val, n_event = val.shape
+    zeros = np.zeros((n_corr, n_event))
+    val = np.r_[zeros, val, zeros]
+    corr = np.zeros([n_val, n_corr])
+    
+    if use_numba:
+        corr_c_nb(corr, n_corr, val, norm)
+        
+    else:        
+        corr_c_np(corr, n_corr, val, norm)
+
+    return corr

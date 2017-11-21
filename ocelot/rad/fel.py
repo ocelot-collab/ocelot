@@ -7,7 +7,7 @@ basic fel calculations
 import numpy as np
 import numpy.fft as fft
 import scipy.special as sf
-from ocelot.common.globals import m_e_eV, epsilon_0, m_e_kg, speed_of_light, q_e
+from ocelot.common.globals import m_e_eV, epsilon_0, speed_of_light, q_e, hr_eV_s
 #from matplotlib.figure import Figure
 #from mpl_toolkits.mplot3d import Axes3D
 
@@ -57,7 +57,9 @@ class FelParameters:
         
         
     def E(self, z=None):
-        return np.trapz(self.P(z),self.s / speed_of_light)
+        P = self.P(z)
+        P[np.isnan(P)] = 0
+        return np.trapz(P, self.s / speed_of_light)
         
     def tcoh(self,z=None):
         #check
@@ -67,10 +69,34 @@ class FelParameters:
             print('Warning, estimation applicable up to z_sat_min=%.2fm, while z=%.2fm requested' %(z_sat_min, z))
         tcoh = self.lambda0 / (6 * self.rho3 * speed_of_light ) * np.sqrt(z / (2 * np.pi * self.lg3))
         return tcoh
+    
+    def P_sat(self):
+        return self.P[self.z_sat_min]
+        
+    @property
+    def phen0(self):
+        return 2 * np.pi / self.lambda0 * hr_eV_s * speed_of_light
 
+class FelParametersArray(FelParameters):
+    def __init__(self):
+        super().__init__()
+    
+    @property
+    def idx(self):
+        try:
+            idx = self.I.argmax()
+        except AttributeError: 
+            idx = None
+        return idx
+    
+    
 
-def calculateFelParameters(input):
-    p = FelParameters()
+def calculateFelParameters(input, array=False):
+    
+    if array:
+        p = FelParametersArray()
+    else:
+        p = FelParameters()
     
     p.iwityp = input.iwityp # undulator type: 0 == planar, other == helical
     
@@ -95,7 +121,7 @@ def calculateFelParameters(input):
     p.lambda0 = p.xlamd / (2.0 * p.gamma0**2) * (1.0 + p.aw0**2) # resonant wavelength
     p.k0 = 2 * np.pi / p.lambda0 
     
-    p.Ia = 4 * np.pi * epsilon_0 * m_e_kg * speed_of_light**3 / q_e # Alfven (Budker) current (~17kA)
+    p.Ia = 4 * np.pi * epsilon_0 * m_e_eV * speed_of_light # Alfven (Budker) current (~17kA)
     #    p.Ia = 17000
         
     if p.iwityp == 0:
@@ -135,11 +161,11 @@ def calculateFelParameters(input):
     p.z_sat_norm = 3 + 1/np.sqrt(3) * np.log(p.Nc) # normalized saturation length for slices
     p.z_sat_magn = p.z_sat_norm * np.sqrt(3) * p.lg3 # magnetic length to reach saturation
     
-    p.z_sat_min = np.amin(p.z_sat_magn)
-    try:
-        p.idx = p.I.argmax()
-    except AttributeError: 
-        p.idx = 0
+    p.z_sat_min = np.nanmin(p.z_sat_magn)
+    # try:
+        # p.idx = p.I.argmax()
+    # except AttributeError: 
+        # p.idx = 0
     
     return p
 
@@ -176,7 +202,7 @@ def beam2fel(beam, lu, K_peak, iwityp=0):
     
     tmp.curpeak = beam.I
     
-    fel=calculateFelParameters(tmp)
+    fel=calculateFelParameters(tmp, array=True)
     fel.s = beam.s
     return(fel)
 

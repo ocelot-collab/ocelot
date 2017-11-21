@@ -320,15 +320,15 @@ class BeamArray(Beam):
             for attr in self.params():
                 if attr is 's':
                     continue
-                print(attr)
+                #print(attr)
                 val = getattr(self,attr)
                 val = np.interp(s_new, self.s, val)
-            #    val = convolve(val,spike,mode='same')
                 setattr(self,attr,val)
             self.s = s_new
         self.ds = dsm
 
     def smear(self,sw):
+        print('smearing the beam by {:.2e} m'.format(sw))
         self.equidist()
         sn = (sw /self.ds).astype(int)
         if sn<2:
@@ -341,6 +341,10 @@ class BeamArray(Beam):
                 continue
             val = getattr(self,attr)
             val = savgol_filter(val,sn,2,mode='nearest')
+            
+            if attr in ['E', 'I', 'beta_x', 'beta_y', 'emit_x', 'emit_y', 'sigma_E']:
+                print('attribute {:s} < 0, setting to 0'.format(attr))
+                val[val < 0] = 0
         #    val = convolve(val,spike,mode='same')
             setattr(self,attr,val)
 

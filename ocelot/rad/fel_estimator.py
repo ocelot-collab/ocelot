@@ -9,9 +9,10 @@ from ocelot.cpbd.track import update_effective_beta
 from ocelot.cpbd.elements import *
 import numpy as np
 from ocelot.common.globals import *
+from copy import deepcopy
 
 
-def beamlat2fel(beam, lat):
+def beamlat2fel(beam, lat, smear_um=1):
     
     beam_pk = beam[beam.idx_max()]
     
@@ -24,13 +25,14 @@ def beamlat2fel(beam, lat):
     # und.Kx = Ephoton2K(E_photon, und.lperiod, E_beam)
     K_peak = und.Kx
     
-    tcoh = beam2fel(beam_pk, l_period, K_peak).tcoh()
-    
-    sw = tcoh * speed_of_light * 2 #smear window
-    beam.smear(sw)
-    
-    update_effective_beta(beam, lat)
-    fel = beam2fel(beam, l_period, K_peak)
+    if smear_um is None:
+        tcoh = beam2fel(beam_pk, l_period, K_peak).tcoh()
+        smear_um = tcoh * speed_of_light * 2 #smear window
+
+    beam_tmp = deepcopy(beam)
+    beam_tmp.smear(smear_um)
+    update_effective_beta(beam_tmp, lat)
+    fel = beam2fel(beam_tmp, l_period, K_peak)
     
     return fel
 

@@ -82,6 +82,6 @@ def deep_sim_dir(path, **kwargs):
     else:
         path_end = ''
     
-    path = (path + pathsep + path_g + pathsep + path_end + pathsep).replace(pathsep + separator, pathsep)
+    path = (path + pathsep + path_g + separator + path_end + pathsep).replace(pathsep + separator, pathsep)
     
     return path

@@ -407,6 +407,23 @@ def sum_stokes_tr(S):
     return S1
     
     
+class Spectrogram()
+    '''
+    spectrogram of the pulse
+    (always positive!)
+    '''
+    def __init(self):
+        self.spec = []
+        self.s = []
+        self.phen = []
+        self.E = [] #pulse energy
+        
+    # def power(self):
+        # return
+        
+    # def spectrum(self):
+    
+    
 class WignerDistribution():
     '''
     calculated wigner distribution (spectrogram) of the pulse

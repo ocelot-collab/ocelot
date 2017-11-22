@@ -2891,7 +2891,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
     plt.draw()
     
     if showfig == True:
-        dir = directory_from_path(W.filePath)
+        dir = os.path.dirname(W.filePath)
         rcParams["savefig.directory"] = dir
         plt.show()
     else:

@@ -241,10 +241,12 @@ class Beam:
         if self.tlen in [None, 0] and window_len is None:
             raise ValueError('both self.tlen and window_len are not set')
         if window_len is None:
-            if self.shape == 'gaussian':
+            if self.shape is 'gaussian':
                 window_len = self.tlen * 1e-15 * speed_of_light * 6 #sigmas
-            elif self.shape == 'flattop':
+            elif self.shape is 'flattop':
                 window_len = self.tlen * 1e-15 * speed_of_light * 2 #fwhm
+            else:
+                raise ValueError('Beam() shape can be either "gaussian" or "flattop"')
         
         beam_arr = BeamArray(nslice)
         for param in beam_arr.params():
@@ -258,7 +260,7 @@ class Beam:
             if self.shape is 'gaussian':
                 beam_arr.I = self.I * np.exp(-(beam_arr.s - Ipeak_pos)**2 / (2 * beam_slen**2))
             elif self.shape is 'flattop':
-                beam_arr.I = np.ones_like(beam_arr.s)
+                beam_arr.I = np.ones_like(beam_arr.s) * self.I
                 beam_arr.I[abs(beam_arr.s - Ipeak_pos) > beam_slen/2] = 0
         return beam_arr
 
@@ -315,6 +317,8 @@ class BeamArray(Beam):
         self.Dyp = np.zeros(nslice)
 
         self.eloss = np.zeros(nslice)
+        
+        del self.shape #inherited
 
     def idx_max(self):
         return self.I.argmax()
@@ -1138,3 +1142,48 @@ def parray2beam(parray, step=1e-7):
     if hasattr(parray,'filePath'):
         beam.filePath = parray.filePath + '.beam'
     return(beam)
+
+
+def generate_beam(E, I, l_beam=3e-6, **kwargs):
+    '''
+    generates BeamArray object
+    accepts arguments with the same names as BeamArray().parameters(), i.e. 'I','E',emit_x
+    l_beam [m]
+    l_window [m] - window length in um
+        by default: l_beam * 2 if flattop,
+                    l_beam * 6 if gaussian,
+    nslice
+    '''
+
+    beam = Beam()
+    beam.E = E
+    beam.tlen = l_beam / speed_of_light * 1e15
+    beam.I = I
+    nslice=100
+
+    for key, value in kwargs.items():
+        if (key in beam.__dict__ or key in beam.properties) and (key not in ['s', 'E', 'tlen', 'I']):
+            setattr(beam, key, value)
+        if key is 'emit':
+            beam.emit_x = value
+            beam.emit_y = value
+        if key is 'emit_n':
+            beam.emit_xn = value
+            beam.emit_yn = value
+        if key is 'nslice':
+            nslice = value
+            
+    if 'l_window' not in kwargs:
+        if beam.shape is 'gaussian':
+            l_window = l_beam * 6
+        elif beam.shape is 'flattop':
+            l_window = l_beam * 2
+        else:
+            raise ValueError('Beam() shape can be either "gaussian" or "flattop"')
+    
+    beam_arr = beam.to_array(nslice, l_window)
+    
+    if 'chirp' in kwargs:
+        beam_arr.add_chirp(kwargs['chirp'])
+    
+    return beam_arr

@@ -142,7 +142,7 @@ class Particle:
         return val
 
 class Beam:
-    def __init__(self,x=0,xp=0,y=0,yp=0):
+    def __init__(self, x=0, xp=0, y=0, yp=0):
         # initial conditions
         self.x = x      #[m]
         self.y = y      #[m]
@@ -165,6 +165,8 @@ class Beam:
         self.Dy = 0.0
         self.Dxp = 0.0
         self.Dyp = 0.0
+        
+        self.shape = 'gaussian' # of 'flattop'
 
     properties = ['g','dg','emit_xn','emit_yn','p','pz','px','py']
 
@@ -233,6 +235,33 @@ class Beam:
 
     def len(self):
         return 1
+        
+    def to_array(self, nslice=100, window_len=None):
+        
+        if self.tlen in [None, 0] and window_len is None:
+            raise ValueError('both self.tlen and window_len are not set')
+        if window_len is None:
+            if self.shape == 'gaussian':
+                window_len = self.tlen * 1e-15 * speed_of_light * 6 #sigmas
+            elif self.shape == 'flattop':
+                window_len = self.tlen * 1e-15 * speed_of_light * 2 #fwhm
+        
+        beam_arr = BeamArray(nslice)
+        for param in beam_arr.params():
+            if hasattr(self,param) and len(getattr(beam_arr,param)) == nslice:
+                setattr(beam_arr, param, np.ones(nslice) * getattr(self,param))
+        beam_arr.s = np.linspace(0,window_len,nslice)
+        
+        if self.tlen not in [None, 0, np.inf]:
+            beam_slen = self.tlen * 1e-15 * speed_of_light
+            Ipeak_pos = (np.amax(beam_arr.s) - np.amin(beam_arr.s)) / 2
+            if self.shape is 'gaussian':
+                beam_arr.I = self.I * np.exp(-(beam_arr.s - Ipeak_pos)**2 / (2 * beam_slen**2))
+            elif self.shape is 'flattop':
+                beam_arr.I = np.ones_like(beam_arr.s)
+                beam_arr.I[abs(beam_arr.s - Ipeak_pos) > beam_slen/2] = 0
+        return beam_arr
+
 
     # def sizes(self):
         # if self.beta_x != 0:
@@ -262,30 +291,30 @@ class BeamArray(Beam):
     def __init__(self, nslice=0):
         super().__init__()
         # initial conditions
-        self.s = np.empty(nslice)
-        self.x = np.empty(nslice)      #[m]
-        self.y = np.empty(nslice)      #[m]
-        self.xp = np.empty(nslice)    # xprime [rad]
-        self.yp = np.empty(nslice)    # yprime [rad]
+        self.s = np.zeros(nslice)
+        self.x = np.zeros(nslice)      #[m]
+        self.y = np.zeros(nslice)      #[m]
+        self.xp = np.zeros(nslice)    # xprime [rad]
+        self.yp = np.zeros(nslice)    # yprime [rad]
 
-        self.E = np.empty(nslice)            # electron energy [GeV]
-        self.sigma_E = np.empty(nslice)      # Energy spread [GeV]
-        self.I = np.empty(nslice)            # beam current [A]
-        self.emit_x = np.empty(nslice)       # horizontal emittance [m rad]
-        self.emit_y = np.empty(nslice)       # horizontal emittance [m rad]
+        self.E = np.zeros(nslice)            # electron energy [GeV]
+        self.sigma_E = np.zeros(nslice)      # Energy spread [GeV]
+        self.I = np.zeros(nslice)            # beam current [A]
+        self.emit_x = np.zeros(nslice)       # horizontal emittance [m rad]
+        self.emit_y = np.zeros(nslice)       # horizontal emittance [m rad]
         # self.tlen = 0.0         # bunch length (rms) in fsec
 
         # twiss parameters
-        self.beta_x = np.empty(nslice)
-        self.beta_y = np.empty(nslice)
-        self.alpha_x = np.empty(nslice)
-        self.alpha_y = np.empty(nslice)
-        self.Dx = np.empty(nslice)
-        self.Dy = np.empty(nslice)
-        self.Dxp = np.empty(nslice)
-        self.Dyp = np.empty(nslice)
+        self.beta_x = np.zeros(nslice)
+        self.beta_y = np.zeros(nslice)
+        self.alpha_x = np.zeros(nslice)
+        self.alpha_y = np.zeros(nslice)
+        self.Dx = np.zeros(nslice)
+        self.Dy = np.zeros(nslice)
+        self.Dxp = np.zeros(nslice)
+        self.Dyp = np.zeros(nslice)
 
-        self.eloss = np.empty(nslice)
+        self.eloss = np.zeros(nslice)
 
     def idx_max(self):
         return self.I.argmax()
@@ -382,7 +411,19 @@ class BeamArray(Beam):
 
     def pk(self):
         return self[self.idx_max()]
-
+        
+    def add_chirp(self, chirp=0):
+        '''
+        adds linear energy chirp to the beam
+        chirp = dE/E/s[um] = dg/g/s[um]
+        '''
+        if chirp not in [None, 0]:
+            center = (np.amax(self.s) - np.amin(self.s)) / 2
+            E_center = self.E[find_nearest_idx(self.s, center)]
+            self.E += (self.s - center) * chirp * E_center * 1e6
+        
+    def to_array(self, *args, **kwargs):
+        raise NotImplementedError('Method inherited from Beam() class, not applicable for BeamArray objects')
 
 
 class Trajectory:
@@ -1097,121 +1138,3 @@ def parray2beam(parray, step=1e-7):
     if hasattr(parray,'filePath'):
         beam.filePath = parray.filePath + '.beam'
     return(beam)
-
-# def zero_wake_at_ipk_new(beam):
-    # '''
-    # reads BeamArray()
-    # shifts the wake pforile so that
-    # at maximum current slice wake is zero
-    # returns GenesisBeam()
-
-    # allows to account for wake losses without
-    # additional linear undulator tapering
-    # '''
-    # if 'eloss' in beam.params():
-        # beam_new = deepcopy(beam)
-        # # beamf_new.idx_max_refresh()
-        # beam_new.eloss -= beam_new.eloss[beam_new.idx_max()]
-        # return beamf_new
-    # else:
-        # return beam
-
-# def set_beam_energy_new(beam, E_GeV_new):
-    # '''
-    # reads BeamArray()
-    # returns BeamArray()
-    # sets the beam energy with peak current to E_GeV_new
-    # '''
-    # beam_new = deepcopy(beam)
-    # idx = beam_new.idx_max()
-    # beam_new.E += (E_GeV_new - beam_new.E[idx])
-
-    # return beam_new
-
-
-# def transform_beam_twiss_new(beam, s=None, transform=None):
-    # # transform = [[beta_x,alpha_x],[beta_y, alpha_y]]
-    # if transform == None:
-        # return beam
-    # else:
-        # if s == None:
-            # idx = beam.idx_max()
-        # else:
-            # idx = find_nearest_idx(beam.s, s)
-
-        # g1x = np.matrix([[beam.beta_x[idx], beam.alpha_x[idx]],
-                         # [beam.alpha_x[idx], (1 + beam.alpha_x[idx]**2) / beam.beta_x[idx]]])
-
-        # g1y = np.matrix([[beam.beta_y[idx], beam.alpha_y[idx]],
-                         # [beam.alpha_y[idx], (1 + beam.alpha_y[idx]**2) / beam.beta_y[idx]]])
-
-        # b2x = transform[0][0]
-        # a2x = transform[0][1]
-
-        # b2y = transform[1][0]
-        # a2y = transform[1][1]
-
-        # g2x = np.matrix([[b2x, a2x],
-                         # [a2x, (1 + a2x**2) / b2x]])
-
-        # g2y = np.matrix([[b2y, a2y],
-                         # [a2y, (1 + a2y**2) / b2y]])
-
-        # Mix, Mx = find_transform(g1x, g2x)
-        # Miy, My = find_transform(g1y, g2y)
-
-        # # print Mi
-
-        # betax_new = []
-        # alphax_new = []
-        # betay_new = []
-        # alphay_new = []
-
-        # for i in range(beam.len()):
-            # g1x = np.matrix([[beam.beta_x[i], beam.alpha_x[i]],
-                             # [beam.alpha_x[i], (1 + beam.alpha_x[i]**2) / beam.beta_x[i]]])
-
-            # gx = Mix.T * g1x * Mix
-
-            # g1y = np.matrix([[beam.beta_y[i], beam.alpha_y[i]],
-                             # [beam.alpha_y[i], (1 + beam.alpha_y[i]**2) / beam.beta_y[i]]])
-
-            # gy = Miy.T * g1y * Miy
-
-            # # print i, gx[0,1], g1x[0,1]
-
-            # betax_new.append(gx[0, 0])
-            # alphax_new.append(gx[0, 1])
-            # betay_new.append(gy[0, 0])
-            # alphay_new.append(gy[0, 1])
-
-        # beam.beta_x = betax_new
-        # beam.beta_y = betay_new
-        # beam.alpha_x = alphax_new
-        # beam.alpha_y = alphay_new
-
-        # return beam
-
-# def cut_beam_new(beam=None, cut_s=[-inf, inf]):
-    # '''
-    # cuts BeamArray() object longitudinally
-    # cut_z [m] - limits of the cut
-    # '''
-    # beam_new = deepcopy(beam)
-    # beam_new.sort()
-    # idxl, idxr = find_nearest_idx(beam_new.s, cut_s[0]), find_nearest_idx(beam_new.s, cut_s[1])
-    # return beam_new[idxl:idxr]
-
-# def get_beam_s_new(beam, s=0):
-    # '''
-    # obtains values of the beam at s position
-    # '''
-    # idx = find_nearest_idx(beam.s,s)
-    # return(beam[idx])
-
-# def get_beam_peak_new(beam):
-    # '''
-    # obtains values of the beam at s position
-    # '''
-    # idx = beam.idx_max()
-    # return beam[idx]

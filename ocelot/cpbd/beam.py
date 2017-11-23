@@ -318,10 +318,14 @@ class BeamArray(Beam):
 
         self.eloss = np.zeros(nslice)
         
-        del self.shape #inherited
+        del self.shape #inherited, not applicable
 
     def idx_max(self):
-        return self.I.argmax()
+        idx = np.where(self.I == np.nanmax(self.I))[0]
+        if len(idx) == 1:
+            return idx[0]
+        else:
+            return idx[int(len(idx)/2)]
 
     def len(self):
         return np.size(self.s)

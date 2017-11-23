@@ -710,6 +710,9 @@ class GenesisOutput:
         
     def wig(self,z=inf):
         return wigner_out(self, z=z, method='mp', debug=1)
+        
+    def re_read(self, read_level=2):
+        self = read_out_file(self.filePath, read_level=read_level)
 
 
 class GenStatOutput:
@@ -1068,12 +1071,15 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', debug=1):
         else:
             raise
 
-    if inp.stageid == None:
+    if inp.stageid is None:
         inp_path = inp.run_dir + 'run.' + str(inp.runid) + '.inp'
         out_path = inp.run_dir + 'run.' + str(inp.runid) + '.gout'
+        inp.stageid = ''
+        stage_string = ''
     else:
         inp_path = inp.run_dir + 'run.' + str(inp.runid) + '.s' + str(inp.stageid) + '.inp'
         out_path = inp.run_dir + 'run.' + str(inp.runid) + '.s' + str(inp.stageid) + '.gout'
+        stage_string = '.s' + str(inp.stageid)
 
     inp_file = filename_from_path(inp_path)
     out_file = filename_from_path(out_path)
@@ -1081,7 +1087,7 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', debug=1):
     # cleaning directory
     if debug > 0:
         print ('    removing old files')
-    os.system('rm -rf ' + inp.run_dir + 'run.' + str(inp.runid) + '.s' + str(inp.stageid) + '*')  # to make sure all stage files are cleaned
+    os.system('rm -rf ' + inp.run_dir + 'run.' + str(inp.runid) + stage_string + '*')  # to make sure all stage files are cleaned
     # os.system('rm -rf ' + out_path+'*') # to make sure out files are cleaned
     # os.system('rm -rf ' + inp_path+'*') # to make sure inp files are cleaned
     os.system('rm -rf ' + inp.run_dir + 'tmp.cmd')
@@ -2866,11 +2872,9 @@ def write_beam_file(filePath, beam, debug=0):
     if debug > 0:
         print ('    writing beam file')
     start_time = time.time()
-
     fd = open(filePath, 'w')
-    fd.write(beam_file_str_new(beam))
+    fd.write(beam_file_str(beam))
     fd.close()
-
     if debug > 0:
         print('      done in %.2f sec' % (time.time() - start_time))
 

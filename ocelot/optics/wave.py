@@ -407,7 +407,7 @@ def sum_stokes_tr(S):
     return S1
     
     
-class Spectrogram()
+class Spectrogram():
     '''
     spectrogram of the pulse
     (always positive!)

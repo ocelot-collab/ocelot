@@ -12,7 +12,7 @@ from ocelot.common.globals import *
 from copy import deepcopy
 
 
-def beamlat2fel(beam, lat, smear_um=1):
+def beamlat2fel(beam, lat, smear_m=1):
     
     beam_pk = beam[beam.idx_max()]
     
@@ -25,12 +25,12 @@ def beamlat2fel(beam, lat, smear_um=1):
     # und.Kx = Ephoton2K(E_photon, und.lperiod, E_beam)
     K_peak = und.Kx
     
-    if smear_um is None:
+    if smear_m is None:
         tcoh = beam2fel(beam_pk, l_period, K_peak).tcoh()
-        smear_um = tcoh * speed_of_light * 2 #smear window
+        smear_m = tcoh * speed_of_light * 2 #smear window
 
     beam_tmp = deepcopy(beam)
-    beam_tmp.smear(smear_um)
+    beam_tmp.smear(smear_m)
     update_effective_beta(beam_tmp, lat)
     fel = beam2fel(beam_tmp, l_period, K_peak)
     

@@ -1144,15 +1144,19 @@ def parray2beam(parray, step=1e-7):
     return(beam)
 
 
-def generate_beam(E, I, l_beam=3e-6, **kwargs):
+def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
     '''
-    generates BeamArray object
-    accepts arguments with the same names as BeamArray().parameters(), i.e. 'I','E',emit_x
-    l_beam [m]
+    Generates BeamArray object
+    accepts arguments with the same names as BeamArray().parameters()
+    I - current in Amps
+    E - beam ebergy in GeV
+    emit_x, emit_n(both normalized), emit_xn, etc.
+    shape - beam shape ('gaussian' of 'flattop')
+    l_beam [m] - beam length in meters
     l_window [m] - window length in um
         by default: l_beam * 2 if flattop,
                     l_beam * 6 if gaussian,
-    nslice
+    nslice - number of slices in the beam
     '''
 
     beam = Beam()
@@ -1170,6 +1174,9 @@ def generate_beam(E, I, l_beam=3e-6, **kwargs):
         if key is 'emit_n':
             beam.emit_xn = value
             beam.emit_yn = value
+        if key is 'beta':
+            beam.beta_x = value
+            beam.beta_y = value
         if key is 'nslice':
             nslice = value
             
@@ -1180,6 +1187,8 @@ def generate_beam(E, I, l_beam=3e-6, **kwargs):
             l_window = l_beam * 2
         else:
             raise ValueError('Beam() shape can be either "gaussian" or "flattop"')
+    else:
+        l_window = kwargs['l_window']
     
     beam_arr = beam.to_array(nslice, l_window)
     

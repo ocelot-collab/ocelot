@@ -30,7 +30,7 @@ try:
     import pyfftw
     fftw_avail = True
 except ImportError:
-    print("xfel_utils.py: module PYFFTW is not installed. Install it if you want speed up dfl wavefront calculations")
+    print("wave.py: module PYFFTW is not installed. Install it if you want speed up dfl wavefront calculations")
     fftw_avail = False
 
 class RadiationField:
@@ -1240,12 +1240,13 @@ def calc_wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1
     wig = np.fft.fftshift(np.conj(F1)*F2,0)
     
     if debug > 1: print('fft_done')
-    
-    if method == 'np':
-        wig = np.fft.fft(wig, axis=0)
-    elif method == 'mp':
+
+    if method == 'mp' and fftw_avail:
         fft = pyfftw.builders.fft(wig, axis=0, overwrite_input=False, planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
         wig = fft()
+    else:
+        wig = np.fft.fft(wig, axis=0)
+
     
     wig = np.fft.fftshift(wig, 0)
     wig = wig[0:N0, 0:N0] / N
@@ -1301,7 +1302,7 @@ def wigner_out(out, z=inf, method='mp', pad=1, debug=1):
     if pad > 1:
         wig = wigner_pad(wig,pad)
     
-    wig.eval() #calculate wigner parameters based on its attributes
+    wig.eval(method) #calculate wigner parameters based on its attributes
     # ds = wig.s[1] - wig.s[0]
     # wig.wig = calc_wigner(wig.field, method=method, debug=debug)
     # freq_ev = h_eV_s * (np.fft.fftfreq(wig.s.size, d = ds / speed_of_light) + speed_of_light / wig.xlamds)
@@ -1336,7 +1337,7 @@ def wigner_dfl(dfl, method='mp', pad=1, debug=1):
     if pad > 1:
         wig = wigner_pad(wig,pad)
     
-    wig.eval() #calculate wigner parameters based on its attributes
+    wig.eval(method) #calculate wigner parameters based on its attributes
 
     # wig.wig = calc_wigner(wig.field, method=method, debug=debug)
     # freq_ev = h_eV_s * (np.fft.fftfreq(dfl.Nz(), d=dfl.dz / speed_of_light) + speed_of_light / dfl.xlamds)

@@ -437,9 +437,17 @@ class WignerDistribution():
         self.wig = []  # (wav,space)
         self.s = []  # space scale
         self.z = None # position along undulator (if applicable)
-        self.freq_lamd = []  # frequency scale
+        self.phen = []  # photon energy
         self.xlamds = 0  # wavelength, [nm]
         self.filePath = ''
+    
+    @property
+    def freq_lamd(self):
+        return h_eV_s * speed_of_light * 1e9 / self.phen
+    
+    @freq_lamd.setter
+    def freq_lamd(self,value):
+        self.phen = h_eV_s * speed_of_light * 1e9 / value
     
     def power(self):
         return np.sum(self.wig,axis=0)
@@ -459,9 +467,9 @@ class WignerDistribution():
         
         ds = self.s[1] - self.s[0]
         self.wig = calc_wigner(self.field, method=method, debug=1)
-        freq_ev = h_eV_s * (np.fft.fftfreq(self.s.size, d = ds / speed_of_light) + speed_of_light / self.xlamds)
-        freq_ev = np.fft.fftshift(freq_ev, axes=0)
-        self.freq_lamd = h_eV_s * speed_of_light * 1e9 / freq_ev
+        phen = h_eV_s * (np.fft.fftfreq(self.s.size, d = ds / speed_of_light) + speed_of_light / self.xlamds)
+        self.phen = np.fft.fftshift(phen, axes=0)
+        # self.freq_lamd = h_eV_s * speed_of_light * 1e9 / freq_ev
 
 
 def generate_dfl(xlamds, shape=(151,151,1000), dgrid=(1e-3,1e-3,None), power_rms=(0.1e-3,0.1e-3,2e-6), power_center=(0,0,None), power_angle=(0,0), power_waistpos=(0,0), wavelength=None, zsep=1, freq_chirp=0, energy=None, power=1e6, debug=1):
@@ -1419,11 +1427,11 @@ def calc_ph_sp_dens(spec, freq_ev, n_photons, spec_squared=1):
 def model_fel_pulse_like(td_scale, td_env, fd_scale, fd_env, td_phase = None, fd_phase = None, phen0 = None, en_pulse = None, fit_scale = 'td', n_events = 1):
     '''
     Models FEL pulse(s) based on Gaussian statistics
-    td_scale - scale of the pulse on time domain [um]
+    td_scale - scale of the pulse on time domain [m]
     td_env - expected pulse envelope in time domain [W] fd_scale - scale of the pulse in frequency domain [eV]
     fd_env - expected pulse envelope in frequency domain [a.u.]
     td_phase - additional phase chirp to be added in time domain
-    fd_phase - additional phase chirp to be added in time domain
+    fd_phase - additional phase chirp to be added in frequency domain
     phen0 - sampling wavelength expressed in photon energy [eV]
     en_pulse - expected average energy of the pulses [J]
     fit_scale - defines the scale in which outputs should be returned:
@@ -1434,7 +1442,6 @@ def model_fel_pulse_like(td_scale, td_env, fd_scale, fd_env, td_phase = None, fd
     returns tuple of 4 arguments: (ph_en, fd, s, td)
     fd_scale - colunm of photon energies in eV
     fd - matrix of radiation in frequency domain with shape, normalized such that np.sum(abs(fd)**2) is photon spectral density, i.e: np.sum(abs(fd)**2)*fd_scale = N_photons
-    td_scale - colunm of longitudinal positions along the pulse in yime domain in um
     td - matrix of radiation in time domain, normalized such that abs(td)**2 = radiation_power in [w]
     '''
     
@@ -1447,8 +1454,9 @@ def model_fel_pulse_like(td_scale, td_env, fd_scale, fd_env, td_phase = None, fd
         
         td = np.random.randn(n_points,n_events) + 1j * np.random.randn(n_points,n_events)
         td *= sqrt(td_env[:, np.newaxis])
-        fd = np.fft.ifft(td, axis=0)
-        fd = np.fft.fftshift(fd, axes=0)
+        fd = np.fft.ifftshift(np.fft.fft(np.fft.fftshift(td, axes=0), axis=0), axes=0) 
+        # fd = np.fft.ifft(td, axis=0)
+        # fd = np.fft.fftshift(fd, axes=0)
         
         if phen0 is not None:
             e_0 = phen0
@@ -1467,8 +1475,9 @@ def model_fel_pulse_like(td_scale, td_env, fd_scale, fd_env, td_phase = None, fd
         
         fd *= sqrt(fd_env_i[:, np.newaxis]) * np.exp(1j * fd_phase_i[:, np.newaxis])
         
-        td = np.fft.ifftshift(fd, axes=0) 
-        td = np.fft.fft(td, axis=0)
+        # td = np.fft.ifftshift(fd, axes=0) 
+        # td = np.fft.fft(td, axis=0)
+        td = np.fft.ifftshift(np.fft.ifft(np.fft.fftshift(fd, axes=0), axis=0), axes=0)
         
         td_scale_i = td_scale
         
@@ -1480,23 +1489,21 @@ def model_fel_pulse_like(td_scale, td_env, fd_scale, fd_env, td_phase = None, fd
              
         fd = np.random.randn(n_points,n_events) + 1j * np.random.randn(n_points,n_events)
         fd *= sqrt(fd_env[:, np.newaxis])
-        td = np.fft.ifft(fd, axis=0)
-        td = np.fft.fftshift(td, axes=0)
+        td = np.fft.ifftshift(np.fft.ifft(np.fft.fftshift(fd, axes=0), axis=0), axes=0)
         
         td_scale_i = np.fft.fftfreq(n_points, d=df) * speed_of_light
         td_scale_i = np.fft.fftshift(td_scale_i, axes=0)
         td_scale_i -= np.amin(td_scale_i)
-        td_env_i = np.interp(td_scale_i,td_scale,td_env, right=0, left=0)
+        td_env_i = np.interp(td_scale_i, td_scale, td_env, right=0, left=0)
         
         if td_phase is None:
             td_phase_i = np.zeros_like(td_env_i)
         else:
-            td_phase_i = np.interp(td_scale_i,td_scale,td_phase, right=0, left=0)
+            td_phase_i = np.interp(td_scale_i, td_scale, td_phase, right=0, left=0)
         
         td *= sqrt(td_env_i[:, np.newaxis]) * np.exp(1j * td_phase_i[:, np.newaxis])
 
-        fd = np.fft.fftshift(td, axes=0) 
-        fd = np.fft.fft(fd, axis=0)
+        fd = np.fft.ifftshift(np.fft.fft(np.fft.fftshift(td, axes=0), axis=0), axes=0) 
 
         fd_scale_i = fd_scale
         
@@ -1505,13 +1512,13 @@ def model_fel_pulse_like(td_scale, td_env, fd_scale, fd_env, td_phase = None, fd
     
     #normalization for pulse energy
     if en_pulse == None:
-        en_pulse = np.trapz(td_env_i,td_scale_i*1e-6/speed_of_light)
-    pulse_energies = np.trapz(abs(td)**2, td_scale_i*1e-6/speed_of_light, axis=0)
+        en_pulse = np.trapz(td_env_i, td_scale_i / speed_of_light)
+    pulse_energies = np.trapz(abs(td)**2, td_scale_i / speed_of_light, axis=0)
     scale_coeff = en_pulse / np.mean(pulse_energies)
     td *= sqrt(scale_coeff)
 
     #normalization for photon spectral density
-    spec = np.mean(np.abs(fd)**2,axis=1)
+    spec = np.mean(np.abs(fd)**2, axis=1)
     spec_center = np.sum(spec * fd_scale_i) / np.sum(spec)
     
     n_photons = pulse_energies * scale_coeff / q_e / spec_center
@@ -1556,18 +1563,18 @@ def model_fel_pulse(spec_center = 500, spec_res = 0.01, spec_width = 2.5, spec_r
     print('N_points * N_events = %i * %i'  %(n_points, n_events))
 
     fd_env = np.exp(-(fd_scale - spec_center)**2 / 2 / spec_width_sigm**2)
-    td_scale = np.linspace(0, 2*np.pi / (fd_scale[1] - fd_scale[0]) * hr_eV_s * speed_of_light * 1e6, n_points)
+    td_scale = np.linspace(0, 2*np.pi / (fd_scale[1] - fd_scale[0]) * hr_eV_s * speed_of_light, n_points)
     
     if flattop:
         td_env = np.zeros_like(td_scale)
-        il = find_nearest_idx(td_scale, np.mean(td_scale)-pulse_length/2)
-        ir = find_nearest_idx(td_scale, np.mean(td_scale)+pulse_length/2)
+        il = find_nearest_idx(td_scale, np.mean(td_scale)-pulse_length * 1e-6 / 2)
+        ir = find_nearest_idx(td_scale, np.mean(td_scale)+pulse_length * 1e-6 / 2)
         td_env[il:ir]=1
     else:
         s0 = np.mean(td_scale)
-        td_env = np.exp(-(td_scale-s0)**2 / 2 / pulse_length_sigm**2)
+        td_env = np.exp(-(td_scale-s0)**2 / 2 / (pulse_length_sigm * 1e-6)**2)
         
-    result = model_fel_pulse_like(td_scale*1e-6, td_env, fd_scale, fd_env, phen0 = spec_center, en_pulse = en_pulse, fit_scale = 'fd', n_events = n_events)
+    result = model_fel_pulse_like(td_scale, td_env, fd_scale, fd_env, phen0 = spec_center, en_pulse = en_pulse, fit_scale = 'fd', n_events = n_events)
     
     return result
 

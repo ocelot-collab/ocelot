@@ -12,7 +12,7 @@ from ocelot.common.globals import *
 from copy import deepcopy
 
 
-def beamlat2fel(beam, lat, smear_m=1):
+def beamlat2fel(beam, lat, smear_m=1e-6):
     
     beam_pk = beam[beam.idx_max()]
     

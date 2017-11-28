@@ -380,7 +380,7 @@ class BeamArray(Beam):
             val = savgol_filter(val,sn,2,mode='nearest')
             
             if attr in ['E', 'I', 'beta_x', 'beta_y', 'emit_x', 'emit_y', 'sigma_E']:
-                print('attribute {:s} < 0, setting to 0'.format(attr))
+                # print('attribute {:s} < 0, setting to 0'.format(attr))
                 val[val < 0] = 0
         #    val = convolve(val,spike,mode='same')
             setattr(self,attr,val)

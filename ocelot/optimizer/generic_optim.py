@@ -198,7 +198,10 @@ class OcelotInterfaceWindow(QFrame):
 
             self.m_status.is_ok = lambda: True
             # Save the optimization parameters to the database
-            self.save2db()
+            try:
+                self.save2db()
+            except:
+                print("ERROR start_scan: can not save to db")
             del(self.opt)
             # Setting the button
             self.ui.pb_start_scan.setStyleSheet("color: rgb(85, 255, 127);")
@@ -502,12 +505,12 @@ class OcelotInterfaceWindow(QFrame):
         """
 
         alarm_dev = str(self.ui.le_alarm.text()).replace(" ", "")
-        print("alarm_dev", alarm_dev)
+        print("set_m_status: alarm_dev", alarm_dev)
         if alarm_dev == "":
             return
 
         state = self.ui.is_le_addr_ok(self.ui.le_alarm)
-        #state = False
+        print("alarm device", self.ui.le_alarm, state)
 
         a_dev = AlarmDevice(alarm_dev)
         a_dev.mi = self.mi

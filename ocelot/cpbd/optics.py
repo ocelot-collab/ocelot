@@ -1,7 +1,7 @@
 __author__ = 'Sergey'
 
 from numpy.linalg import inv
-from numpy import cosh, sinh
+# from numpy import cosh, sinh
 # from scipy.misc import factorial
 from math import factorial
 from ocelot.cpbd.beam import Particle, Twiss, ParticleArray
@@ -138,9 +138,9 @@ class TransferMap:
         self.delta_e_z = lambda z: 0.0
         # 6x6 linear transfer matrix
 
-        self.R = lambda energy: eye(6)
-        self.R_z = lambda z, energy: zeros((6, 6))
-        self.B_z = lambda z, energy: dot((eye(6) - self.R_z(z, energy)), array([[self.dx], [0.], [self.dy], [0.], [0.], [0.]]))
+        self.R = lambda energy: np.eye(6)
+        self.R_z = lambda z, energy: np.zeros((6, 6))
+        self.B_z = lambda z, energy: np.dot((np.eye(6) - self.R_z(z, energy)), np.array([[self.dx], [0.], [self.dy], [0.], [0.], [0.]]))
         self.B = lambda energy: self.B_z(self.length, energy)
         # self.B = lambda energy: zeros(6)  # tmp matrix
         self.map = lambda u, energy: self.mul_p_array(u, energy=energy)
@@ -234,8 +234,8 @@ class TransferMap:
 
         if m.__class__ in [TransferMap]:
             m2 = TransferMap()
-            m2.R = lambda energy: dot(self.R(energy), m.R(energy))
-            m2.B = lambda energy: dot(self.R(energy), m.B(energy)) + self.B(energy)  # +dB #check
+            m2.R = lambda energy: np.dot(self.R(energy), m.R(energy))
+            m2.B = lambda energy: np.dot(self.R(energy), m.B(energy)) + self.B(energy)  # +dB #check
             m2.length = m.length + self.length
             # m2.delta_e = m.delta_e + self.delta_e
             # print("B = ", m2.R(0))

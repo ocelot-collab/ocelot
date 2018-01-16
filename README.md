@@ -22,7 +22,8 @@ Ocelot extensively  uses Python's [NumPy (Numerical Python)](http://numpy.org) a
 
 It is an open source project and it is being developed by physicists from  [The European XFEL](http://www.xfel.eu/), [DESY](http://www.desy.de/) (Germany), [NRC Kurchatov Institute](http://www.nrcki.ru/) (Russia).
 
-We still have no documentation but you can find a lot of examples in ocelot/demos/
+We still have no documentation but you can find a lot of examples in /demos/ folder including this tutorial
+
 
 
 ## Ocelot user profile
@@ -77,25 +78,26 @@ The following command will install all required packages:
 $ conda install numpy scipy matplotlib ipython-notebook
 ```
 
-##### Ocelot installation
+## Ocelot installation
+##### Anaconda Cloud
 The easiest way to install OCELOT is to use Anaconda cloud. In that case use command:
     ```
     $ conda install -c ocelot-collab ocelot
     ```
+##### Explicit installation
 Another way is download ocelot from [GitHub](https://github.com/ocelot-collab/ocelot)
 1. you have to download from GitHub [zip file](https://github.com/ocelot-collab/ocelot/archive/master.zip).
 2. Unzip ocelot-master.zip to your working folder **/your_working_dir/**.
-3. Rename folder **../your_working_dir/ocelot-master** to **/your_working_dir/ocelot**.
-4. Add **../your_working_dir/** to PYTHONPATH
+3. Add **../your_working_dir/ocelot-master** to PYTHONPATH
     - **Windows 7:** go to Control Panel -> System and Security -> System -> Advance System Settings -> Environment Variables.
-    and in User variables add **/your_working_dir/** to PYTHONPATH. If variable PYTHONPATH does not exist, create it
+    and in User variables add **/your_working_dir/ocelot-master/** to PYTHONPATH. If variable PYTHONPATH does not exist, create it
 
     Variable name: PYTHONPATH
 
-    Variable value: ../your_working_dir/
+    Variable value: ../your_working_dir/ocelot-master/
     - Linux:
     ```
-    $ export PYTHONPATH=/your_working_dir/:$PYTHONPATH
+    $ export PYTHONPATH=/your_working_dir/ocelot-master:$PYTHONPATH
     ```
 
 #### To launch "ipython notebook" or "jupyter notebook"

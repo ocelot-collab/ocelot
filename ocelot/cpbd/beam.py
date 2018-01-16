@@ -712,9 +712,11 @@ def beam_matching(particles, bounds, x_opt, y_opt):
 
 
 class BeamTransform:
+    """
+    Beam matching
+    """
     def __init__(self, tws=None, x_opt=None, y_opt=None):
         """
-        Beam matching
         :param tws : Twiss object
         :param x_opt (obsolete): [alpha, beta, mu (phase advance)]
         :param y_opt (obsolete): [alpha, beta, mu (phase advance)]

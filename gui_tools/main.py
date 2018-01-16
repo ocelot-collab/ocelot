@@ -22,7 +22,7 @@ from ocelot.optimizer.mint.xfel_interface import *
 from mint.devices_mi import *
 import logging
 ilename="logs/main.log"
-logging.basicConfig( level=logging.DEBUG)
+logging.basicConfig( level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 

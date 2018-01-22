@@ -203,6 +203,10 @@ class MagneticLattice:
             n += 1
 
     def update_edge_e1(self, edge, bend):
+        if bend.l != 0.:
+            edge.h = bend.angle/bend.l
+        else:
+            edge.h = 0
         edge.l = 0.
         edge.angle = bend.angle
         edge.k1 = bend.k1
@@ -217,6 +221,10 @@ class MagneticLattice:
         edge.pos = 1
 
     def update_edge_e2(self, edge, bend):
+        if bend.l != 0.:
+            edge.h = bend.angle/bend.l
+        else:
+            edge.h = 0
         edge.l = 0.
         edge.angle = bend.angle
         edge.k1 = bend.k1
@@ -253,6 +261,7 @@ class MagneticLattice:
                     bend = self.sequence[i-1]
                     if bend.__class__ not in (SBend, RBend, Bend):
                         bend = self.sequence[i + 1]
+                        print("Backtracking?")
                     self.update_edge_e2(element, bend)
                 else:
                     print("EDGE is not updated. Use standard function to create and update MagneticLattice")

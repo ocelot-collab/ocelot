@@ -218,6 +218,7 @@ class SpaceCharge:
         xp[3] = xp[3] + cdT * (1 - beta0 * betaz) * Exyz[:, 0]
         xp[4] = xp[4] + cdT * (1 - beta0 * betaz) * Exyz[:, 1]
         xp[5] = xp[5] + cdT * (Exyz[:, 2] + beta0 * (betax * Exyz[:, 0] + betay * Exyz[:, 1]))
+        #xp[5] = xp[5] + cdT * (1 - beta0 * betaz)*Exyz[:, 2]*gamma0*gamma0
         T = np.transpose(T)
         xp[3:6] = np.dot(xp[3:6].T, T).T
         xp_2_xxstg_mad(xp, p_array.rparticles, gamref)

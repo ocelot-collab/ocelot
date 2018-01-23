@@ -301,6 +301,16 @@ class Cavity(Element):
         self.volterr = volterr
         self.coupler_kick = False
 
+class TDCavity(Element):
+    """
+    Transverse deflecting cavity
+    """
+    def __init__(self, l=0., freq=0.0, phi=0.0, v=0., eid=None):
+        Element.__init__(self, eid)
+        self.l = l
+        self.v = v   # in GV
+        self.f = freq   # Hz
+        self.phi = phi  # in grad # *np.pi/180.
 
 class Solenoid(Element):
     """

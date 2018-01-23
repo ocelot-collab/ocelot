@@ -22,7 +22,7 @@ def rot_mtx(angle):
 
 def uni_matrix(z, k1, hx, sum_tilts=0., energy=0.):
     # r = element.l/element.angle
-    # - K - focusing lens , +K - defoc
+    #  +K - focusing lens , -K - defoc
     gamma = energy/m_e_GeV
 
     kx2 = (k1 + hx*hx)
@@ -135,7 +135,7 @@ def create_r_matrix(element):
             Ef = (E + de) / m_e_GeV
             Ep = (Ef - Ei) / z  # energy derivative
             if Ei == 0:
-                logger.warning("cavity: Warning! Initial energy is zero and cavity.delta_e != 0! Change Ei or cavity.delta_e must be 0")
+                logger.warning("cavity: Warning! Initial energy is zero and cavity.v != 0!n\ Change Ei (ParticleArray.E or Twiss.E) or cavity.v must be 0")
 
             cos_phi = np.cos(phi)
             alpha = np.sqrt(eta / 8.) / cos_phi * np.log(Ef / Ei)
@@ -251,6 +251,47 @@ def create_r_matrix(element):
             return sol_matrix
 
         r_z_e = lambda z, energy: sol(z, k=element.k, energy=energy)
+
+    elif element.__class__ == TDCavity:
+        """
+        R - matrix for TDS - NOT TESTED
+        """
+        def tds_R_z(z, energy, k0, v, phi):
+            """
+
+            :param z:  length
+            :param k0: strength of TDS
+            :param v: voltage in GeV
+            :param phi: phase
+            :param energy: Energy in GeV
+            :return:
+            """
+            phi = phi * np.pi / 180.
+
+            gamma = energy / m_e_GeV
+            igamma2 = 0.
+            if gamma != 0:
+                igamma2 = 1. / (gamma * gamma)
+            if gamma > 1:
+                pref = m_e_GeV * np.sqrt(gamma**2 - 1)
+                K = v * k0 / pref
+            else:
+                K = 0.
+            cos_phi = np.cos(phi)
+            cos2_phi = np.cos(2*phi)
+
+            rm = np.eye(6)
+
+            rm[0, 1] = z
+            rm[0, 4] = -z * K * cos_phi / 2.
+            rm[1, 4] = -K * cos_phi
+            rm[2, 3] = z
+            rm[4, 5] = - z * igamma2 / (1. - igamma2)
+            rm[5, 0] = rm[1, 4]
+            rm[5, 1] = rm[0, 4]
+            rm[5, 4] = -z* K ** 2 * cos2_phi / 6
+            return rm
+        r_z_e = lambda z, energy: tds_R_z(z, energy, k0=0, v=element.v, phi=element.phi)
 
     elif element.__class__ == Matrix:
         rm = np.eye(6)

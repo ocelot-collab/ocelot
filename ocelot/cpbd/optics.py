@@ -657,10 +657,8 @@ class SlacCavityTM(TransferMap):
         """
         phi = phi * np.pi / 180.
         de = V * np.cos(phi)
-        # print(de, E, de/E)
         r12 = z * E / de * np.log(1. + de / E) if de != 0 else z
         r22 = E / (E + de)
-        # print(E, de, freq)
         r65 = V * np.sin(phi) / (E + de) * (2 * pi / (speed_of_light / freq)) if freq != 0 else 0
         r66 = r22
         cav_matrix = np.array([[1, r12, 0., 0., 0., 0.],
@@ -751,6 +749,7 @@ class MethodTM:
                 else:
                     R, T = fringe_ext(h=element.h, k1=element.k1, e=element.edge, h_pole=element.h_pole,
                                       gap=element.gap, fint=element.fint)
+                #r_z_e = lambda z, energy: R
                 T_z_e = lambda z, energy: T
                 # print("trm", tilt, element.edge, element.h, r_z_e(0, 130)[1, 0])
             tm = SecondTM(r_z_no_tilt=r_z_e, t_mat_z_e=T_z_e)

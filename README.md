@@ -13,10 +13,10 @@ Ocelot includes following main modules:
         - Space Charge (3D Laplace solver)
         - CSR (Coherent Synchrotron Radiation) (1D model with arbitrary number of dipoles).
         - Wakefields (Taylor expansion up to second order for arbitrary geometry).
-    - MOGA (Multi Objective Genetics Algorithm). ([work1](http://accelconf.web.cern.ch/AccelConf/ipac2016/papers/thpmb034.pdf))
+    - MOGA (Multi Objective Genetics Algorithm). ([ref1](http://accelconf.web.cern.ch/AccelConf/ipac2016/papers/thpmb034.pdf))
 * **Native module for spontaneous radiation calculation**
 * **FEL calculations: interface to GENESIS and pre/post-processing**
-* **Modules for online beam control and online optimization of accelerator performances.** [Work1](http://accelconf.web.cern.ch/accelconf/IPAC2014/papers/mopro086.pdf), [work2](https://jacowfs.jlab.org/conf/y15/ipac15/prepress/TUPWA037.PDF), [work3](http://accelconf.web.cern.ch/AccelConf/ipac2016/papers/wepoy036.pdf), [work4](https://arxiv.org/pdf/1704.02335.pdf).
+* **Modules for online beam control and online optimization of accelerator performances.** [ref1](http://accelconf.web.cern.ch/accelconf/IPAC2014/papers/mopro086.pdf), [ref2](https://jacowfs.jlab.org/conf/y15/ipac15/prepress/TUPWA037.PDF), [ref3](http://accelconf.web.cern.ch/AccelConf/ipac2016/papers/wepoy036.pdf), [ref4](https://arxiv.org/pdf/1704.02335.pdf).
 
 Ocelot extensively  uses Python's [NumPy (Numerical Python)](http://numpy.org) and [SciPy (Scientific Python)](http://scipy.org) libraries, which enable efficient in-core numerical and scientific computation within Python and give you access to various mathematical and optimization techniques and algorithms. To produce high quality figures Python's [matplotlib](http://matplotlib.org/index.html) library is used.
 

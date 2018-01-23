@@ -1,7 +1,7 @@
 __author__ = 'Sergey Tomin'
 """
 module contains lat2input function which creates python input string
-(ocelot natice) for a lattice object
+(ocelot lattice) for a lattice object
 author sergey.tomin
 """
 

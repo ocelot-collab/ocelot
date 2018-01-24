@@ -208,7 +208,7 @@ def create_r_matrix(element):
                                       [m23, 0., m43, 1, 0., 0.],
                                       [0., 0., 0., 0., 1., 0.],
                                       [0., 0., 0., 0., 0., 1]]).real
-                return np.dot(np.dot(coupl_kick_up, cav_matrix), coupl_kick_down)
+                return np.dot(np.dot(coupl_kick_down, cav_matrix), coupl_kick_up)
             return cav_matrix
 
         if element.delta_e == 0. and element.v == 0.:

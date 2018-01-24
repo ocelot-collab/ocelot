@@ -147,8 +147,7 @@ def exact_xxstg_2_xp_de(xxstg, gamref):
     return xp
 
 
-# from pylab import *
-def astraBeam2particleArray(filename,s_ref=-1,Eref=-1):
+def astraBeam2particleArray(filename, s_ref=-1, Eref=-1):
     """
     function convert Astra beam distribution to Ocelot format - ParticleArray
     :type filename: str
@@ -175,8 +174,8 @@ def astraBeam2particleArray(filename,s_ref=-1,Eref=-1):
     else:
         Pref = np.sqrt(Eref ** 2 / m_e_GeV ** 2 - 1) * m_e_eV
         P0 = xp[0, 5]
-        xp[0, 5]=0.
-        xp[:,5]=xp[:,5]+P0-Pref
+        xp[0, 5] = 0.
+        xp[:,5] = xp[:,5] + P0 - Pref
 
     #    print(xp[1:, 2])
     #    plot(xp[1:, 2], xp[1:, 5]/Pref, "b.")

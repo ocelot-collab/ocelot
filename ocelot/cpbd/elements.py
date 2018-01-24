@@ -59,6 +59,7 @@ class Marker(Element):
 
 class Quadrupole(Element):
     """
+    quadrupole
     l - length of lens in [m],
     k1 - strength of quadrupole lens in [1/m^2],
     k2 - strength of sextupole lens in [1/m^3],
@@ -75,6 +76,7 @@ class Quadrupole(Element):
 
 class Sextupole(Element):
     """
+    sextupole
     l - length of lens in [m],
     k2 - strength of sextupole lens in [1/m^3].
     """
@@ -87,6 +89,7 @@ class Sextupole(Element):
 
 class Octupole(Element):
     """
+    octupole
     k3 - strength of sextupole lens in [1/m^4],
     l - length of lens in [m].
     """
@@ -99,6 +102,7 @@ class Octupole(Element):
 
 class Drift(Element):
     """
+    drift - free space
     l - length of drift in [m]
     """
     def __init__(self, l=0., eid=None):
@@ -290,7 +294,7 @@ class Cavity(Element):
     f - frequency [Hz]
     phi - phase in [grad]
     """
-    def __init__(self, l=0., delta_e=0.0, freq=0.0, phi=0.0, eid=None, v=0., volterr=0.):
+    def __init__(self, l=0.,  v=0., phi=0., freq=0., eid=None, delta_e=0., volterr=0.):
         Element.__init__(self, eid)
         self.l = l
         self.v = v   # in GV

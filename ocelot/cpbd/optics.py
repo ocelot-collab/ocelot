@@ -1097,16 +1097,19 @@ class ProcessTable:
 class Navigator:
     """
     Navigator defines step (dz) of tracking and which physical process will be applied during each step.
+    lattice - MagneticLattice
+    Attributes:
+        unit_step = 1 [m] - unit step for all physics processes
     Methods:
-    add_physics_proc(physics_proc, elem1, elem2)
-        physics_proc - physics process, can be CSR, SpaceCharge or Wake,
-        elem1 and elem2 - first and last elements between which the physics process will be applied.
+        add_physics_proc(physics_proc, elem1, elem2)
+            physics_proc - physics process, can be CSR, SpaceCharge or Wake,
+            elem1 and elem2 - first and last elements between which the physics process will be applied.
     """
 
-    def __init__(self, lattice=None):
-        if lattice != None:
-            self.lat = lattice
-        self.process_table = ProcessTable(lattice)
+    def __init__(self, lattice):
+
+        self.lat = lattice
+        self.process_table = ProcessTable(self.lat)
 
         self.z0 = 0.  # current position of navigator
         self.n_elem = 0  # current index of the element in lattice

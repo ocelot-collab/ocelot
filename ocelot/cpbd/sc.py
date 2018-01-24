@@ -57,7 +57,14 @@ def smooth_z(Zin, mslice):
 
 class SpaceCharge:
     """
-    The space charge forces are calculated by solving the Poisson equation in the bunch frame.
+    Space Charge physics process
+
+    Attributes:
+        self.step = 1 [in Navigator.unit_step] - step of the Space Charge kick applying
+        self.nmesh_xyz = [63, 63, 63] - 3D mesh
+
+    Description:
+        The space charge forces are calculated by solving the Poisson equation in the bunch frame.
     Then the Lorentz transformed electromagnetic field is applied as a kick in the laboratory frame.
     For the solution of the Poisson equation we use an integral representation of the electrostatic potential
     by convolution of the free-space Green's function with the charge distribution.

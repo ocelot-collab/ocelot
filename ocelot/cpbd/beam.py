@@ -586,11 +586,17 @@ def get_envelope(p_array, tws_i=Twiss()):
     tws.alpha_y = -tws.ypy/tws.emit_y
     return tws
 
-def get_current(p_array, charge, num_bins = 200):
+def get_current(p_array, charge=None, num_bins = 200):
     """
-    return: hist -  current in A
-          : bin_edges - points position
+    Function calculates beam current from particleArray
+    :param p_array: particleArray
+    :param charge: - None, charge of the one macro-particle.
+                    If None, charge of the first macro-particle is used
+    :param num_bins: number of bins
+    :return s, I -  (np.array, np.array) - beam positions [m] and currents in [A]
     """
+    if charge == None:
+        charge = p_array.q_array[0]
     z = p_array.tau()
     hist, bin_edges = np.histogram(z, bins=num_bins)
     delta_Z = max(z) - min(z)

@@ -292,7 +292,7 @@ class Cavity(Element):
     RF cavity
     v - voltage [GV/m]
     f - frequency [Hz]
-    phi - phase in [grad]
+    phi - phase in [deg]
     """
     def __init__(self, l=0.,  v=0., phi=0., freq=0., eid=None, delta_e=0., volterr=0.):
         Element.__init__(self, eid)

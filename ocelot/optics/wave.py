@@ -1367,10 +1367,10 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1):
         if stage == None:
             raise ValueError('specify stage, since path to folder is provided')
         out_stat=read_out_file_stat(out_stat, stage, debug=debug)
-    elif isinstance(out_stat,GenStatOutput):
-        pass
-    else:
-        raise ValueError('unknown object used as input')
+    # elif isinstance(out_stat,GenStatOutput):
+        # pass
+    # else:
+        # raise ValueError('unknown object used as input')
     
     if debug>0: 
         print('    calculating Wigner distribution')
@@ -1384,7 +1384,7 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1):
         z = np.amin(out_stat.z)
     zi = np.where(out_stat.z >= z)[0][0]
     
-    WW = np.zeros((shape(out_stat.p_int)[2],shape(out_stat.p_int)[1],shape(out_stat.p_int)[1]))
+    WW = np.zeros((out_stat.p_int.shape[2], out_stat.p_int.shape[1], out_stat.p_int.shape[1]))
     for (i,n) in  enumerate(out_stat.run):
         field = sqrt(out_stat.p_int[zi,:,i]) * exp(1j*out_stat.phi_mid[zi,:,i])
         WW[i,:,:] = calc_wigner(field, method=method, debug=debug)

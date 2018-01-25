@@ -603,19 +603,19 @@ class GenesisOutput:
             p, = self.parameters[name]
             return float(p.replace('D', 'E'))
 
-    def calc_spec(self, mode='mid', npad=1):
+    def calc_spec(self, mode='mid', npad=0):
         '''
         calculates the on-axis spectrum at every position along the undulator and writes it into "spec" attirube
         
         if mode = "mid" then on-axis power is used for calculation
         if mode = "int" then transversely integrated power is used
-        npad (integer) if > 1 pads the power with zeros in order to increase resolution of spectrum.
+        npad (integer) if > 0 pads the power with zeros in order to increase resolution of spectrum.
         '''
         if self.nSlices == 1:
             raise AssertionError('Cannot calculate spectrum from steady-state simulation')
         
-        if (npad%1 is not 0) or npad < 1:
-            raise ValueError('npad should be integer larger than zero')
+        if (npad%1 is not 0) or npad < 0:
+            raise ValueError('npad should be positive integer')
             
         if mode == 'mid':
             power = self.p_mid
@@ -628,7 +628,7 @@ class GenesisOutput:
         power = power / (2 * self.leng / self('ncar'))**2
         phi_mid = self.phi_mid
         
-        zeros = np.zeros((self.nSlices*npad,self.nZ))
+        zeros = np.zeros((self.nSlices * npad, self.nZ))
         power = np.vstack((power, zeros))
         phi_mid = np.vstack((phi_mid, zeros))
         
@@ -649,7 +649,7 @@ class GenesisOutput:
         sum_spec = np.sum(self.spec, axis=0)
         sum_spec[sum_spec == 0] = np.inf
         
-        self.freq_ev_mean = np.sum(self.freq_ev[:,np.newaxis]*self.spec, axis=0) / sum_spec
+        self.freq_ev_mean = np.sum(self.freq_ev[:,np.newaxis] * self.spec, axis=0) / sum_spec
         self.freq_ev_mean[self.freq_ev_mean == 0] = np.inf
         
         self.n_photons = self.pulse_energy / q_e / self.freq_ev_mean
@@ -1591,13 +1591,13 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
             chunk = 'slice'
             if len(out.sliceKeys) == 0:  # to record the first instance
                 out.sliceKeys = list(copy(tokens))
-                if debug > 0:
+                if debug > 1:
                     print ('      reading slice values ')
             continue
 
         if tokens[0] == '$newrun':
             chunk = 'input1'
-            if debug > 0:
+            if debug > 1:
                 print ('      reading input parameters')
             continue
 
@@ -1607,7 +1607,7 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
 
         if tokens == ['z[m]', 'aw', 'qfld']:
             chunk = 'magnetic optics'
-            if debug > 0:
+            if debug > 1:
                 print ('      reading magnetic optics ')
             continue
 
@@ -1785,7 +1785,8 @@ def read_out_file_stat(proj_dir, stage, run_inp=[], param_inp=[], debug=1):
         if os.path.isfile(out_file):
             if debug > 0:
                 print ('      reading run', irun)
-            outlist[irun] = read_out_file(out_file, read_level=2, debug=1)
+            outlist[irun] = read_out_file(out_file, read_level=2, debug=debug)
+            outlist[irun].calc_spec()
             run_range_good.append(irun)
             # except:
     run_range = run_range_good
@@ -1871,6 +1872,7 @@ def read_out_file_stat_u(file_tamplate, run_inp=[], param_inp=[], debug=1):
             if debug > 0:
                 print ('      reading run', irun)
             outlist[irun] = read_out_file(out_file, read_level=2, debug=1)
+            outlist[irun].calc_spec()
             run_range_good.append(irun)
             # except:
     run_range = run_range_good
@@ -2351,6 +2353,21 @@ def read_edist_file(filePath, debug=1):
 
     return edist
 
+def cut_edist_std(edist, x_sigmas=2, y_sigmas=2, xp_sigmas=2, yp_sigmas=2):
+    x_std = np.std(edist.x)
+    y_std = np.std(edist.y)
+    xp_std = np.std(edist.xp)
+    yp_std = np.std(edist.yp)
+    
+    x_lim = x_std * x_sigmas
+    y_lim = y_std * y_sigmas
+    
+    xp_lim = xp_std * xp_sigmas
+    yp_lim = yp_std * yp_sigmas
+    
+    return cut_edist(edist, x_lim=(-x_lim, x_lim), y_lim=(-y_lim, y_lim), xp_lim=(-xp_lim, xp_lim), yp_lim=(-yp_lim, yp_lim))
+    
+    
 
 def cut_edist(edist,
               t_lim=(-inf, inf),

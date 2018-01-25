@@ -1836,6 +1836,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
     dict_unit = {'p_int': '[W]', 'pulse_energy': '[J]', 'el_e_spread': '(gamma)', 'el_energy': '(gamma)', 'bunching': '', 'spec': '[arb.units]', 'spec_phot_density': '(estimation) [ph/eV]', 'dfl_spec': '[ph/eV]', 'r_size': '[m]', 'xrms': '[m]', 'yrms': '[m]', 'error': ''}
 
     figsize = (14, 7)
+    figsize = (8, 6)
 
     if debug > 0:
         print ('statistical postprocessing started')

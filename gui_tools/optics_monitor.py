@@ -1,3 +1,7 @@
+"""
+Online optics monitor.
+S.Tomin. XFEL/DESY. 2017
+"""
 import sys, os
 path = os.path.realpath(__file__)
 indx = path.find("gui_tools")
@@ -13,6 +17,10 @@ from accelerator.lattice.xfel_l3_no_cl_mode_B import *
 from accelerator.lattice.xfel_cl_mode_B import *
 from accelerator.lattice.xfel_sase1_mode_B import *
 from accelerator.lattice.xfel_sase3_mode_B import *
+try:
+    from accelerator.lattice.xfel_t4 import *
+except:
+    print("NO lattice file xfel_t4.py")
 from mint.devices_mi import *
 from gui_tools.gui.gui_optics_mon import OcelotOpticsWindow
 from PyQt5.QtGui import QIcon

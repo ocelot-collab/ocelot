@@ -1,16 +1,14 @@
 __author__ = 'Sergey'
 
 from numpy.linalg import inv
-from numpy import cosh, sinh
+# from numpy import cosh, sinh
 # from scipy.misc import factorial
 from math import factorial
 from ocelot.cpbd.beam import Particle, Twiss, ParticleArray
 from ocelot.cpbd.high_order import *
 from ocelot.cpbd.r_matrix import *
 from copy import deepcopy
-# from numba import jit
-from ocelot.common.logging import Logger
-
+import logging
 import numpy as np
 try:
     import numexpr as ne
@@ -24,7 +22,7 @@ try:
 except:
     nb_flag = False
 
-logger = Logger()
+logger = logging.getLogger(__name__)
 
 
 
@@ -44,7 +42,7 @@ class SecondOrderMult:
         #Xr = np.dot(R, X)
         #Xo = np.copy(X)
         N = X.shape[1]
-        for i in range(5):
+        for i in range(6):
             for n in range(N):
                 tmp = 0.
                 r_tmp = 0.
@@ -140,9 +138,9 @@ class TransferMap:
         self.delta_e_z = lambda z: 0.0
         # 6x6 linear transfer matrix
 
-        self.R = lambda energy: eye(6)
-        self.R_z = lambda z, energy: zeros((6, 6))
-        self.B_z = lambda z, energy: dot((eye(6) - self.R_z(z, energy)), array([[self.dx], [0.], [self.dy], [0.], [0.], [0.]]))
+        self.R = lambda energy: np.eye(6)
+        self.R_z = lambda z, energy: np.zeros((6, 6))
+        self.B_z = lambda z, energy: np.dot((np.eye(6) - self.R_z(z, energy)), np.array([[self.dx], [0.], [self.dy], [0.], [0.], [0.]]))
         self.B = lambda energy: self.B_z(self.length, energy)
         # self.B = lambda energy: zeros(6)  # tmp matrix
         self.map = lambda u, energy: self.mul_p_array(u, energy=energy)
@@ -156,7 +154,6 @@ class TransferMap:
             # M = self.R(E + )
             Ei = tws0.E
             Ef = tws0.E + self.delta_e  # * cos(self.phi)
-            # print "Ei = ", Ei, "Ef = ", Ef
             k = np.sqrt(Ef / Ei)
             M[0, 0] = M[0, 0] * k
             M[0, 1] = M[0, 1] * k
@@ -222,7 +219,7 @@ class TransferMap:
         # a = np.add(np.transpose(dot(self.R(energy), particles.T.reshape(6, int(n/6)))), self.B(energy)).reshape(n)
 
         rparticles[:] = a[:]
-        logger.debug('return trajectory, array ' + str(len(rparticles)))
+        #logger.debug('return trajectory, array ' + str(len(rparticles)))
         return rparticles
 
     def __mul__(self, m):
@@ -237,8 +234,8 @@ class TransferMap:
 
         if m.__class__ in [TransferMap]:
             m2 = TransferMap()
-            m2.R = lambda energy: dot(self.R(energy), m.R(energy))
-            m2.B = lambda energy: dot(self.R(energy), m.B(energy)) + self.B(energy)  # +dB #check
+            m2.R = lambda energy: np.dot(self.R(energy), m.R(energy))
+            m2.B = lambda energy: np.dot(self.R(energy), m.B(energy)) + self.B(energy)  # +dB #check
             m2.length = m.length + self.length
             # m2.delta_e = m.delta_e + self.delta_e
             # print("B = ", m2.R(0))
@@ -660,10 +657,8 @@ class SlacCavityTM(TransferMap):
         """
         phi = phi * np.pi / 180.
         de = V * np.cos(phi)
-        # print(de, E, de/E)
         r12 = z * E / de * np.log(1. + de / E) if de != 0 else z
         r22 = E / (E + de)
-        # print(E, de, freq)
         r65 = V * np.sin(phi) / (E + de) * (2 * pi / (speed_of_light / freq)) if freq != 0 else 0
         r66 = r22
         cav_matrix = np.array([[1, r12, 0., 0., 0., 0.],
@@ -754,6 +749,7 @@ class MethodTM:
                 else:
                     R, T = fringe_ext(h=element.h, k1=element.k1, e=element.edge, h_pole=element.h_pole,
                                       gap=element.gap, fint=element.fint)
+                #r_z_e = lambda z, energy: R
                 T_z_e = lambda z, energy: T
                 # print("trm", tilt, element.edge, element.h, r_z_e(0, 130)[1, 0])
             tm = SecondTM(r_z_no_tilt=r_z_e, t_mat_z_e=T_z_e)
@@ -946,7 +942,7 @@ def periodic_twiss(tws, R):
     cosmy = (R[2, 2] + R[3, 3]) / 2.
 
     if abs(cosmx) >= 1 or abs(cosmy) >= 1:
-        logger.warn("************ periodic solution does not exist. return None ***********")
+        logger.warning("************ periodic solution does not exist. return None ***********")
         # print("************ periodic solution does not exist. return None ***********")
         return None
     sinmx = np.sign(R[0, 1]) * sqrt(1. - cosmx * cosmx)
@@ -1020,7 +1016,7 @@ def twiss_fast(lattice, tws0=None):
             R = lattice_transfer_map(lattice, tws0.E)
             tws0 = periodic_twiss(tws0, R)
             if tws0 == None:
-                print('Twiss: no periodic solution')
+                logger.warning('twiss_fast: Twiss: no periodic solution')
                 return None
         else:
             tws0.gamma_x = (1. + tws0.alpha_x ** 2) / tws0.beta_x
@@ -1034,7 +1030,7 @@ def twiss_fast(lattice, tws0=None):
             obj_list.append(tws0)
         return obj_list
     else:
-        print('Twiss: no periodic solution')
+        logger.warning('twiss_fast: Twiss: no periodic solution')
         return None
 
 
@@ -1101,16 +1097,19 @@ class ProcessTable:
 class Navigator:
     """
     Navigator defines step (dz) of tracking and which physical process will be applied during each step.
+    lattice - MagneticLattice
+    Attributes:
+        unit_step = 1 [m] - unit step for all physics processes
     Methods:
-    add_physics_proc(physics_proc, elem1, elem2)
-        physics_proc - physics process, can be CSR, SpaceCharge or Wake,
-        elem1 and elem2 - first and last elements between which the physics process will be applied.
+        add_physics_proc(physics_proc, elem1, elem2)
+            physics_proc - physics process, can be CSR, SpaceCharge or Wake,
+            elem1 and elem2 - first and last elements between which the physics process will be applied.
     """
 
-    def __init__(self, lattice=None):
-        if lattice != None:
-            self.lat = lattice
-        self.process_table = ProcessTable(lattice)
+    def __init__(self, lattice):
+
+        self.lat = lattice
+        self.process_table = ProcessTable(self.lat)
 
         self.z0 = 0.  # current position of navigator
         self.n_elem = 0  # current index of the element in lattice
@@ -1174,7 +1173,7 @@ class Navigator:
     def get_next(self):
 
         proc_list = self.get_proc_list()
-        logger.show_debug = False
+        #logger.show_debug = False
 
         if len(proc_list) > 0:
 
@@ -1208,7 +1207,7 @@ class Navigator:
         # check if dz overjumps the stop element
         dz, processes = self.check_overjump(dz, processes)
 
-        logger.debug('\n' +
+        logger.debug(" Navigator.get_next: " +'\n' +
                      "navi.z0=" + str(self.z0) + " navi.n_elem=" + str(self.n_elem) + " navi.sum_lengths="
                      + str(self.sum_lengths) + " dz=" + str(dz) + '\n' +
                      "element type=" + self.lat.sequence[self.n_elem].__class__.__name__ + " element name=" +

@@ -1,5 +1,4 @@
 from scipy.optimize import *
-
 from ocelot.cpbd.e_beam_params import radiation_integrals
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.cpbd.optics import *

@@ -543,6 +543,14 @@ class K0_fin_anf:
 
 
 class CSR:
+    """
+    coherent synchrotron radiation
+    Attributes:
+        self.step = 1 [in Navigator.unit_step] - step of the CSR kick applying for beam (ParticleArray)
+        self.sigma_min = 1.e-4  - minimal sigma if gauss filtering applied
+        self.traj_step = 0.0002 [m] - trajectory step or, other words, integration step for calculation of the CSR-wake
+        self.apply_step = 0.0005 [m] - step of the calculation CSR kick, to calculate average CSR kick
+    """
     def __init__(self):
         # binning parameters
         self.x_qbin = 0             # length or charge binning; 0... 1 = length...charge

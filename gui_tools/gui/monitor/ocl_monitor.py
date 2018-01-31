@@ -1,5 +1,5 @@
 """
-S.Tomin Table for sections
+S.Tomin PyQtGraph monitor
 """
 
 import sys

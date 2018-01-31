@@ -13,16 +13,17 @@ Ocelot includes following main modules:
         - Space Charge (3D Laplace solver)
         - CSR (Coherent Synchrotron Radiation) (1D model with arbitrary number of dipoles).
         - Wakefields (Taylor expansion up to second order for arbitrary geometry).
-    - MOGA (Multi Objective Genetics Algorithm). (under development but we have already applied it for a storage ring [application](http://accelconf.web.cern.ch/AccelConf/ipac2016/papers/thpmb034.pdf))
+    - MOGA (Multi Objective Genetics Algorithm). ([ref1](http://accelconf.web.cern.ch/AccelConf/ipac2016/papers/thpmb034.pdf))
 * **Native module for spontaneous radiation calculation**
 * **FEL calculations: interface to GENESIS and pre/post-processing**
-* **Modules for online beam control and online optimization of accelerator performances.** [Work1](http://accelconf.web.cern.ch/accelconf/IPAC2014/papers/mopro086.pdf), [work2](https://jacowfs.jlab.org/conf/y15/ipac15/prepress/TUPWA037.PDF), [work3](http://accelconf.web.cern.ch/AccelConf/ipac2016/papers/wepoy036.pdf), [work4](https://arxiv.org/pdf/1704.02335.pdf).
+* **Modules for online beam control and online optimization of accelerator performances.** [ref1](http://accelconf.web.cern.ch/accelconf/IPAC2014/papers/mopro086.pdf), [ref2](https://jacowfs.jlab.org/conf/y15/ipac15/prepress/TUPWA037.PDF), [ref3](http://accelconf.web.cern.ch/AccelConf/ipac2016/papers/wepoy036.pdf), [ref4](https://arxiv.org/pdf/1704.02335.pdf).
 
 Ocelot extensively  uses Python's [NumPy (Numerical Python)](http://numpy.org) and [SciPy (Scientific Python)](http://scipy.org) libraries, which enable efficient in-core numerical and scientific computation within Python and give you access to various mathematical and optimization techniques and algorithms. To produce high quality figures Python's [matplotlib](http://matplotlib.org/index.html) library is used.
 
 It is an open source project and it is being developed by physicists from  [The European XFEL](http://www.xfel.eu/), [DESY](http://www.desy.de/) (Germany), [NRC Kurchatov Institute](http://www.nrcki.ru/) (Russia).
 
-We still have no documentation but you can find a lot of examples in ocelot/demos/
+We still have no documentation but you can find a lot of examples in /demos/ folder including this tutorial
+
 
 
 ## Ocelot user profile
@@ -77,25 +78,26 @@ The following command will install all required packages:
 $ conda install numpy scipy matplotlib ipython-notebook
 ```
 
-##### Ocelot installation
+## Ocelot installation
+##### Anaconda Cloud
 The easiest way to install OCELOT is to use Anaconda cloud. In that case use command:
     ```
     $ conda install -c ocelot-collab ocelot
     ```
+##### Explicit installation
 Another way is download ocelot from [GitHub](https://github.com/ocelot-collab/ocelot)
 1. you have to download from GitHub [zip file](https://github.com/ocelot-collab/ocelot/archive/master.zip).
 2. Unzip ocelot-master.zip to your working folder **/your_working_dir/**.
-3. Rename folder **../your_working_dir/ocelot-master** to **/your_working_dir/ocelot**.
-4. Add **../your_working_dir/** to PYTHONPATH
+3. Add **../your_working_dir/ocelot-master** to PYTHONPATH
     - **Windows 7:** go to Control Panel -> System and Security -> System -> Advance System Settings -> Environment Variables.
-    and in User variables add **/your_working_dir/** to PYTHONPATH. If variable PYTHONPATH does not exist, create it
+    and in User variables add **/your_working_dir/ocelot-master/** to PYTHONPATH. If variable PYTHONPATH does not exist, create it
 
     Variable name: PYTHONPATH
 
-    Variable value: ../your_working_dir/
+    Variable value: ../your_working_dir/ocelot-master/
     - Linux:
     ```
-    $ export PYTHONPATH=/your_working_dir/:$PYTHONPATH
+    $ export PYTHONPATH=/your_working_dir/ocelot-master:$PYTHONPATH
     ```
 
 #### To launch "ipython notebook" or "jupyter notebook"

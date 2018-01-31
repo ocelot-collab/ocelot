@@ -875,3 +875,77 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones = None ):
     plt.grid(True)
     cb.set_label('Qy')
     plt.show()
+
+from ocelot.cpbd.beam import global_slice_analysis_extended
+
+def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=100, nbins_y=100):
+    """
+    Shows e-beam slice parameters (current, emittances, energy spread)
+    and beam distributions (dE/(p0 c), X, Y) against long. coordinate (S)
+
+    :param p_array: ParticleArray
+    :param nparts_in_slice: number of particles per slice
+    :param nbins_x: number of bins for 2D hist. in horz. plane
+    :param nbins_y: number of bins for 2D hist. in vertical plane
+    :return:
+    """
+    slice_params = global_slice_analysis_extended(p_array, nparts_in_slice, 0.01, 2, 2)
+
+    fig = plt.figure(40)
+
+    ax_sp = plt.subplot(325)
+    plt.title("Energy Spread")
+    plt.plot(slice_params[0] * 1e3, slice_params[5], "b", label="Energy Spread")
+    plt.legend()
+    plt.xlabel("s, mm")
+    plt.ylabel("dE, eV")
+    plt.grid(True)
+
+    ax_em = plt.subplot(323, sharex=ax_sp)
+    plt.title("Emittances")
+    plt.plot(slice_params[0] * 1e3, slice_params[2], "r", label="emit_x")
+    plt.plot(slice_params[0] * 1e3, slice_params[3], "b", label="emit_y")
+    plt.legend()
+    # plt.xlabel("s, mm")
+    plt.setp(ax_em.get_xticklabels(), visible=False)
+    plt.ylabel("emit, mm*mrad")
+    plt.grid(True)
+
+    ax_c = plt.subplot(321, sharex=ax_sp)
+    plt.title("Current")
+    plt.plot(slice_params[0] * 1e3, slice_params[1], "r", label="Current")
+    plt.legend()
+    # plt.xlabel("s, mm")
+    plt.setp(ax_c.get_xticklabels(), visible=False)
+    plt.ylabel("I, A")
+    plt.grid(True)
+
+    # plt.subplot(322)
+    ##plt.title("Energy")
+    # plt.plot(slice_params[0] * 1e3, slice_params[4], "r", label="Energy")
+    # plt.legend()
+    # plt.xlabel("s, mm")
+    # plt.ylabel("E, eV")
+    # plt.grid(True)
+
+
+    ax_ys = plt.subplot(326)
+    plt.title("Vertical Distribution")
+    ax_ys.hist2d(p_array.tau() * 1e3, p_array.y() * 1e3, [nbins_x, nbins_y], cmin=0, cmap='viridis',
+                 label="Y-S distrib")
+    ax_ys.set_xlabel('s, mm')
+    ax_ys.set_ylabel('y, mm')
+
+
+    ax_xs = plt.subplot(324, sharex=ax_ys)
+    plt.title("Horiz. Distribution")
+    # fig, ax_xy = plt.subplots()
+    ax_xs.hist2d(p_array.tau() * 1e3, p_array.x() * 1e3, [nbins_x, nbins_y], cmin=0, cmap='viridis')
+    ax_xs.set_ylabel('x, mm')
+    plt.setp(ax_xs.get_xticklabels(), visible=False)
+
+    ax_ps = plt.subplot(322, sharex=ax_ys)
+    plt.title("Energy Distribution")
+    ax_ps.hist2d(p_array.tau() * 1e3, p_array.p() * 1e3, [nbins_x, nbins_y], cmin=0, cmap='viridis')
+    ax_ps.set_ylabel('dE/pc')
+    plt.setp(ax_ps.get_xticklabels(), visible=False)

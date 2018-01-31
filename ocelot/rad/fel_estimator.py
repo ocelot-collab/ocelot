@@ -39,7 +39,7 @@ def beamlat2fel(beam, lat, smear_m=1e-6):
 
 def parraylat2fel(parray, lat, step = 1e-7):
 
-    beam = parray2beam(parray, step = step)
+    beam = parray2beam(parray, step = 2 * step)
     
-    return beamlat2fel(beam, lat)
+    return beamlat2fel(beam, lat, smear_m = step)
     

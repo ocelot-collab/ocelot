@@ -71,7 +71,7 @@ class FelParameters:
         return tcoh
     
     def P_sat(self):
-        return self.P[self.z_sat_min]
+        return self.P(self.z_sat_min)
         
     @property
     def phen0(self):

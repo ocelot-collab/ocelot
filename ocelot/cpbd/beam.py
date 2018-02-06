@@ -237,21 +237,21 @@ class Beam:
     def len(self):
         return 1
 
-    # def sizes(self):
-        # if self.beta_x != 0:
-            # self.gamma_x = (1. + self.alpha_x**2)/self.beta_x
-        # else:
-            # self.gamma_x = 0.
-
-        # if self.beta_y != 0:
-            # self.gamma_y = (1. + self.alpha_y**2)/self.beta_y
-        # else:
-            # self.gamma_y = 0.
-
-        # self.sigma_x = np.sqrt((self.sigma_E/self.E*self.Dx)**2 + self.emit_x*self.beta_x)
-        # self.sigma_y = np.sqrt((self.sigma_E/self.E*self.Dy)**2 + self.emit_y*self.beta_y)
-        # self.sigma_xp = np.sqrt((self.sigma_E/self.E*self.Dxp)**2 + self.emit_x*self.gamma_x)
-        # self.sigma_yp = np.sqrt((self.sigma_E/self.E*self.Dyp)**2 + self.emit_y*self.gamma_y)
+    #def sizes(self):
+    #    if self.beta_x != 0:
+    #        self.gamma_x = (1. + self.alpha_x**2)/self.beta_x
+    #    else:
+    #        self.gamma_x = 0.
+#
+    #    if self.beta_y != 0:
+    #        self.gamma_y = (1. + self.alpha_y**2)/self.beta_y
+    #    else:
+    #        self.gamma_y = 0.
+#
+    #    self.sigma_x = np.sqrt((self.sigma_E/self.E*self.Dx)**2 + self.emit_x*self.beta_x)
+    #    self.sigma_y = np.sqrt((self.sigma_E/self.E*self.Dy)**2 + self.emit_y*self.beta_y)
+    #    self.sigma_xp = np.sqrt((self.sigma_E/self.E*self.Dxp)**2 + self.emit_x*self.gamma_x)
+    #    self.sigma_yp = np.sqrt((self.sigma_E/self.E*self.Dyp)**2 + self.emit_y*self.gamma_y)
 
     # def print_sizes(self):
         # self.sizes()

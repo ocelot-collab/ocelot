@@ -1,4 +1,4 @@
-
+from ocelot.cpbd.beam import save_particle_array, load_particle_array
 
 class PhysProc:
     def __init__(self):
@@ -25,3 +25,17 @@ class EmptyProc(PhysProc):
 
     def apply(self, p_array, dz):
         pass
+
+
+class SaveBeam(PhysProc):
+    def __init__(self, filename):
+        PhysProc.__init__(self)
+        self.step=1
+        self.energy = None
+        self.filename = filename
+
+    def prepare(self, lat):
+        pass
+
+    def apply(self, p_array, dz):
+        save_particle_array(filename=self.filename, p_array=p_array)

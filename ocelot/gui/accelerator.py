@@ -895,10 +895,10 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=100, nbins_y=100):
 
     ax_sp = plt.subplot(325)
     plt.title("Energy Spread")
-    plt.plot(slice_params[0] * 1e3, slice_params[5], "b", label="Energy Spread")
+    plt.plot(slice_params[0] * 1e3, slice_params[5]*1e-3, "b", label="Energy Spread")
     plt.legend()
     plt.xlabel("s, mm")
-    plt.ylabel("dE, eV")
+    plt.ylabel("dE, keV")
     plt.grid(True)
 
     ax_em = plt.subplot(323, sharex=ax_sp)

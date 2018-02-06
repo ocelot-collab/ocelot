@@ -37,7 +37,7 @@ screen.start_energy = 7900 #eV
 screen.end_energy = 8200 #eV
 screen.num_energy = 1000
 
-print_rad_props(beam, K=und.Kx, lu=und.lperiod, L=und.l, distance=screen.z)
+#print_rad_props(beam, K=und.Kx, lu=und.lperiod, L=und.l, distance=screen.z)
 
 
 screen = calculate_radiation(lat, screen, beam)

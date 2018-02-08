@@ -313,16 +313,14 @@ class TDCavity(Element):
     v - voltage [GV/m]
     freq - frequency [Hz]
     phi - phase in [deg]
-    k - strength in [1/m]
     tilt - tilt of cavity in [rad]
     """
-    def __init__(self, l=0., freq=0.0, phi=0.0, v=0., k=0, tilt=0.0, eid=None):
+    def __init__(self, l=0., freq=0.0, phi=0.0, v=0., tilt=0.0, eid=None):
         Element.__init__(self, eid)
         self.l = l
         self.v = v   # in GV
         self.f = freq   # Hz
         self.phi = phi  # in deg # *np.pi/180.
-        self.k = k
         self.tilt = tilt
 
 class Solenoid(Element):

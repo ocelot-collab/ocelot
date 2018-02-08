@@ -256,11 +256,11 @@ def create_r_matrix(element):
         """
         R - matrix for TDS - NOT TESTED
         """
-        def tds_R_z(z, energy, k0, v, phi):
+        def tds_R_z(z, energy, freq, v, phi):
             """
 
             :param z:  length [m]
-            :param k0: strength of TDS [1/m]
+            :param freq: freq [Hz]
             :param v: voltage in [GeV]
             :param phi: phase [deg]
             :param energy: Energy in [GeV]
@@ -270,6 +270,7 @@ def create_r_matrix(element):
 
             gamma = energy / m_e_GeV
             igamma2 = 0.
+            k0 = 2*np.pi*freq/speed_of_light
             if gamma != 0:
                 igamma2 = 1. / (gamma * gamma)
             if gamma > 1:
@@ -291,7 +292,7 @@ def create_r_matrix(element):
             rm[5, 1] = rm[0, 4]
             rm[5, 4] = -z* K ** 2 * cos2_phi / 6
             return rm
-        r_z_e = lambda z, energy: tds_R_z(z, energy, k0=element.k, v=element.v * z / element.l, phi=element.phi)
+        r_z_e = lambda z, energy: tds_R_z(z, energy, freq=element.f, v=element.v * z / element.l, phi=element.phi)
 
     elif element.__class__ == Matrix:
         rm = np.eye(6)

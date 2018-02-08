@@ -259,11 +259,11 @@ def create_r_matrix(element):
         def tds_R_z(z, energy, k0, v, phi):
             """
 
-            :param z:  length
-            :param k0: strength of TDS
-            :param v: voltage in GeV
-            :param phi: phase
-            :param energy: Energy in GeV
+            :param z:  length [m]
+            :param k0: strength of TDS [1/m]
+            :param v: voltage in [GeV]
+            :param phi: phase [deg]
+            :param energy: Energy in [GeV]
             :return:
             """
             phi = phi * np.pi / 180.
@@ -291,7 +291,7 @@ def create_r_matrix(element):
             rm[5, 1] = rm[0, 4]
             rm[5, 4] = -z* K ** 2 * cos2_phi / 6
             return rm
-        r_z_e = lambda z, energy: tds_R_z(z, energy, k0=0, v=element.v, phi=element.phi)
+        r_z_e = lambda z, energy: tds_R_z(z, energy, k0=element.k, v=element.v * z / element.l, phi=element.phi)
 
     elif element.__class__ == Matrix:
         rm = np.eye(6)

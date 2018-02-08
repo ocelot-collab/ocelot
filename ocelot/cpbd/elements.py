@@ -291,7 +291,7 @@ class Cavity(Element):
     """
     RF cavity
     v - voltage [GV/m]
-    f - frequency [Hz]
+    freq - frequency [Hz]
     phi - phase in [deg]
     """
     def __init__(self, l=0.,  v=0., phi=0., freq=0., eid=None, delta_e=0., volterr=0.):
@@ -307,14 +307,23 @@ class Cavity(Element):
 
 class TDCavity(Element):
     """
-    Transverse deflecting cavity
+    Transverse deflecting cavity - by default kick in horizontal plane
+
+    l - length [m]
+    v - voltage [GV/m]
+    freq - frequency [Hz]
+    phi - phase in [deg]
+    k - strength in [1/m]
+    tilt - tilt of cavity in [rad]
     """
-    def __init__(self, l=0., freq=0.0, phi=0.0, v=0., eid=None):
+    def __init__(self, l=0., freq=0.0, phi=0.0, v=0., k=0, tilt=0.0, eid=None):
         Element.__init__(self, eid)
         self.l = l
         self.v = v   # in GV
         self.f = freq   # Hz
-        self.phi = phi  # in grad # *np.pi/180.
+        self.phi = phi  # in deg # *np.pi/180.
+        self.k = k
+        self.tilt = tilt
 
 class Solenoid(Element):
     """

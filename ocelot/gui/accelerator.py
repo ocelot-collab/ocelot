@@ -286,14 +286,15 @@ dict_plot = {Quadrupole: {"scale": 0.7, "color": "r",            "edgecolor": "r
              Marker:     {"scale": 0.,  "color": "k",            "edgecolor": "k",          "label": "mark"},
              Edge:       {"scale": 0.,  "color": "k",            "edgecolor": "k",          "label": ""},
              Solenoid:   {"scale": 0.7, "color": "g",            "edgecolor": "g",          "label": "sol"},
-             UnknownElement:{"scale": 0.7, "color": "g",            "edgecolor": "g",          "label": "unk"},
+             TDCavity:   {"scale": 0.7, "color": "magenta",      "edgecolor": "g",          "label": "tds"},
+             UnknownElement:{"scale": 0.7, "color": "g",         "edgecolor": "g",          "label": "unk"},
              }
 
 
-def new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legend = True):
+def new_plot_elems(fig, ax, lat, s_point=0, nturns=1, y_lim = None,y_scale=1, legend=True):
     dict_copy=deepcopy(dict_plot)
     alpha = 1
-    ax.set_ylim((-1,1.5))
+    ax.set_ylim((-1, 1.5))
     if y_lim != None:
         ax.set_ylim(y_lim)
     points_with_annotation = []
@@ -320,12 +321,12 @@ def new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale =
             rf.append(elem.v )
         elif elem.__class__ == Multipole:
             m.append(sum(np.abs(elem.kn)))
-    q_max = np.max(np.abs(q))if len(q) !=0 else 0
-    b_max = np.max(np.abs(b))if len(b) !=0 else 0
-    s_max = np.max(np.abs(s))if len(s) !=0 else 0
-    c_max = np.max(np.abs(c))if len(c) !=0 else 0
-    u_max = np.max(np.abs(u))if len(u) !=0 else 0
-    rf_max = np.max(np.abs(rf))if len(rf) !=0 else 0
+    q_max = np.max(np.abs(q)) if len(q) !=0 else 0
+    b_max = np.max(np.abs(b)) if len(b) !=0 else 0
+    s_max = np.max(np.abs(s)) if len(s) !=0 else 0
+    c_max = np.max(np.abs(c)) if len(c) !=0 else 0
+    u_max = np.max(np.abs(u)) if len(u) !=0 else 0
+    rf_max = np.max(np.abs(rf)) if len(rf) !=0 else 0
     m_max = np.max(m) if len(m) !=0 else 0
     ncols = np.sign(len(q)) + np.sign(len(b)) + np.sign(len(s)) + np.sign(len(c)) + np.sign(len(u)) + np.sign(len(rf))+ np.sign(len(m))
 
@@ -334,7 +335,7 @@ def new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale =
         labels_dict[elem] = dict_copy[elem]["label"]
     for elem in lat.sequence:
         if elem.__class__ in [Marker, Edge]:
-            L +=elem.l
+            L += elem.l
             continue
         l = elem.l
         if l == 0:
@@ -348,7 +349,7 @@ def new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale =
         s_coord = np.array([L + elem.l/2. - l/2., L + elem.l/2. - l/2., L + elem.l/2. +l/2., L + elem.l/2. +l/2., L + elem.l/2.- l/2.]) + s_point
         if elem.__class__ == Quadrupole:
             ampl = elem.k1/q_max if q_max != 0 else 1
-            point, = ax.fill(s_coord,  (np.array([-1, 1, 1, -1, -1])+1)*ampl*scale*y_scale, color, edgecolor=ecolor,
+            point, = ax.fill(s_coord,  (np.array([-1, 1, 1, -1, -1]) + 1)*ampl*scale*y_scale, color, edgecolor=ecolor,
                              alpha = alpha, label=dict_copy[elem.__class__]["label"])
             dict_copy[elem.__class__]["label"] = ""
 
@@ -409,15 +410,13 @@ def new_plot_elems(fig, ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale =
             )
         # by default, disable the annotation visibility
         annotation.set_visible(False)
-        L +=elem.l
+        L += elem.l
         points_with_annotation.append([point, annotation])
 
     def on_move(event):
-
         visibility_changed = False
         for point, annotation in points_with_annotation:
             should_be_visible = (point.contains(event)[0] == True)
-
             if should_be_visible != annotation.get_visible():
                 visibility_changed = True
                 annotation.set_visible(should_be_visible)
@@ -477,7 +476,7 @@ def plot_elems(ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legen
     if legend:
         ax.legend(loc='upper center', ncol=n, shadow=False, prop=font_manager.FontProperties(size=15))
 
-def plot_disp(ax,tws, top_plot, font_size):
+def plot_disp(ax, tws, top_plot, font_size):
     S = [p.s for p in tws]#map(lambda p:p.s, tws)
     d_Ftop = []
     Fmin = []
@@ -499,6 +498,8 @@ def plot_disp(ax,tws, top_plot, font_size):
         ax.set_ylim(( min(Fmin)-d_Dx*0.1, max(Fmax)+d_Dx*0.1))
     if top_plot[0] == "E":
         top_ylabel = r"$"+"/".join(top_plot) +"$"+ ", GeV"
+    elif top_plot[0] in ["mux", 'muy']:
+        top_ylabel = r"$" + "/".join(top_plot) + "$" + ", rad"
     else:
         top_ylabel = r"$"+"/".join(top_plot) +"$"+ ", m"
 
@@ -878,7 +879,7 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones = None ):
 
 from ocelot.cpbd.beam import global_slice_analysis_extended
 
-def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=100, nbins_y=100):
+def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpolation="bilinear", nfig=40):
     """
     Shows e-beam slice parameters (current, emittances, energy spread)
     and beam distributions (dE/(p0 c), X, Y) against long. coordinate (S)
@@ -887,11 +888,14 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=100, nbins_y=100):
     :param nparts_in_slice: number of particles per slice
     :param nbins_x: number of bins for 2D hist. in horz. plane
     :param nbins_y: number of bins for 2D hist. in vertical plane
+    :param interpolation: "bilinear", and acceptable values are 'none’, ‘nearest’, ‘bilinear’, ‘bicubic’, ‘spline16’,
+                        ‘spline36’, ‘hanning’, ‘hamming’, ‘hermite’, ‘kaiser’, ‘quadric’, ‘catrom’, ‘gaussian’, ‘bessel’
+    :param nfig: number of the figure
     :return:
     """
     slice_params = global_slice_analysis_extended(p_array, nparts_in_slice, 0.01, 2, 2)
 
-    fig = plt.figure(40)
+    fig = plt.figure(nfig)
 
     ax_sp = plt.subplot(325)
     plt.title("Energy Spread")
@@ -906,7 +910,6 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=100, nbins_y=100):
     plt.plot(slice_params[0] * 1e3, slice_params[2], "r", label="emit_x")
     plt.plot(slice_params[0] * 1e3, slice_params[3], "b", label="emit_y")
     plt.legend()
-    # plt.xlabel("s, mm")
     plt.setp(ax_em.get_xticklabels(), visible=False)
     plt.ylabel("emit, mm*mrad")
     plt.grid(True)
@@ -915,37 +918,78 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=100, nbins_y=100):
     plt.title("Current")
     plt.plot(slice_params[0] * 1e3, slice_params[1], "r", label="Current")
     plt.legend()
-    # plt.xlabel("s, mm")
     plt.setp(ax_c.get_xticklabels(), visible=False)
     plt.ylabel("I, A")
     plt.grid(True)
 
-    # plt.subplot(322)
-    ##plt.title("Energy")
-    # plt.plot(slice_params[0] * 1e3, slice_params[4], "r", label="Energy")
-    # plt.legend()
-    # plt.xlabel("s, mm")
-    # plt.ylabel("E, eV")
-    # plt.grid(True)
 
+    my_rainbow = deepcopy(plt.get_cmap('rainbow'))
+    my_rainbow.set_under('w')
 
     ax_ys = plt.subplot(326)
     plt.title("Vertical Distribution")
-    ax_ys.hist2d(p_array.tau() * 1e3, p_array.y() * 1e3, [nbins_x, nbins_y], cmin=0, cmap='viridis',
-                 label="Y-S distrib")
+
+    H, xedges, yedges = np.histogram2d(p_array.tau() * 1e3, p_array.y() * 1e3, bins=(nbins_x, nbins_y))
+    H = H.T
+    vmin = np.min(H) + (np.max(H) - np.min(H)) * 0.0001
+    ax_ys.imshow(H, interpolation=interpolation, aspect='auto', origin='low',
+               extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], vmin=vmin, cmap=my_rainbow)
+
+    #ax_ys.hist2d(p_array.tau() * 1e3, p_array.y() * 1e3, [nbins_x, nbins_y], cmin=0, cmap='viridis',
+    #             label="Y-S distrib")
     ax_ys.set_xlabel('s, mm')
     ax_ys.set_ylabel('y, mm')
 
 
     ax_xs = plt.subplot(324, sharex=ax_ys)
     plt.title("Horiz. Distribution")
-    # fig, ax_xy = plt.subplots()
-    ax_xs.hist2d(p_array.tau() * 1e3, p_array.x() * 1e3, [nbins_x, nbins_y], cmin=0, cmap='viridis')
+    H, xedges, yedges = np.histogram2d(p_array.tau() * 1e3, p_array.x() * 1e3, bins=(nbins_x, nbins_y))
+    H = H.T
+    vmin = np.min(H) + (np.max(H) - np.min(H)) * 0.0001
+    ax_xs.imshow(H, interpolation=interpolation, aspect='auto', origin='low',
+               extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], vmin=vmin, cmap=my_rainbow)
+
     ax_xs.set_ylabel('x, mm')
     plt.setp(ax_xs.get_xticklabels(), visible=False)
 
     ax_ps = plt.subplot(322, sharex=ax_ys)
     plt.title("Energy Distribution")
-    ax_ps.hist2d(p_array.tau() * 1e3, p_array.p() * 1e3, [nbins_x, nbins_y], cmin=0, cmap='viridis')
-    ax_ps.set_ylabel('dE/pc')
+    H, xedges, yedges = np.histogram2d(p_array.tau() * 1e3, p_array.p()*100, bins=(nbins_x, nbins_y))
+    H = H.T
+    vmin = np.min(H) + (np.max(H) - np.min(H)) * 0.0001
+    ax_ps.imshow(H, interpolation=interpolation, aspect='auto', origin='low',
+               extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], vmin=vmin, cmap=my_rainbow)
+    ax_ps.set_ylabel('dE/pc, %')
     plt.setp(ax_ps.get_xticklabels(), visible=False)
+
+
+def show_density(x, y, nbins_x=250, nbins_y=250, interpolation="bilinear", xlabel=None, ylabel=None, nfig=50, title=None):
+    """
+    Function shows density
+
+    :param x: np.array
+    :param y: np.array
+    :param nbins_x: 250, number of bins for 2D hist. in horz. plane
+    :param nbins_y: 250, number of bins for 2D hist. in vertical plane
+    :param interpolation: "bilinear". Acceptable values are 'none’, ‘nearest’, ‘bilinear’, ‘bicubic’, ‘spline16’,
+                        ‘spline36’, ‘hanning’, ‘hamming’, ‘hermite’, ‘kaiser’, ‘quadric’, ‘catrom’, ‘gaussian’, ‘bessel’
+    :param xlabel: None, otherwise "string"
+    :param ylabel: None, otherwise "string"
+    :param nfig: number of the figure
+    :param title: title of the figure
+    :return:
+    """
+    plt.figure(nfig)
+    if title != None: plt.title(title)
+    my_rainbow = deepcopy(plt.get_cmap('rainbow'))
+    my_rainbow.set_under('w')
+
+    H, xedges, yedges = np.histogram2d(x, y, bins=(nbins_x, nbins_y))
+    H = H.T
+    vmin = np.min(H) + (np.max(H) - np.min(H)) * 0.0001
+
+    plt.imshow(H, interpolation=interpolation, aspect='auto', origin='low',
+               extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], vmin=vmin, cmap=my_rainbow)
+    if xlabel != None: plt.xlabel(xlabel)
+    if ylabel != None: plt.ylabel(ylabel)
+    plt.grid(True)

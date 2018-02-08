@@ -12,7 +12,7 @@ __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope", 
            'Element', 'Multipole', 'Quadrupole', 'RBend', "Matrix", "UnknownElement",  # elements
            'SBend', 'Bend', 'Drift', 'Undulator', 'Hcor',  # elements
            'Vcor', "Sextupole", "Monitor", "Marker", "Octupole", "Cavity", "Edge",  # elements
-           "Sequence", "Solenoid",  # elements
+           "Sequence", "Solenoid", "TDCavity", # elements
            "match", "match_tunes",  # match
            "Navigator", "tracking_step", "create_track_list", "track_nturns", "freq_analysis",  # track
             "contour_da", "track_nturns_mpi", "nearest_particle", "stable_particles",  # track

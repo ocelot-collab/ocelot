@@ -113,7 +113,7 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
         # t_l_int_b=dfl.int_z()
         t2 = time.time()
 
-        dfl = dfl_fft_z(dfl, method=fft_method, nthread=multiprocessing.cpu_count())
+        dfl.fft_z(method=fft_method, nthread=multiprocessing.cpu_count())
 
         t3 = time.time()
         f_l_scale = dfl.scale_z()  # frequency_large_scale (wavelength in m)
@@ -126,7 +126,7 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
         f_l_int_a = dfl.int_z()
         t6 = time.time()
 
-        dfl = dfl_fft_z(dfl, method=fft_method, nthread=multiprocessing.cpu_count())
+        dfl.fft_z(method=fft_method, nthread=multiprocessing.cpu_count())
 
         t7 = time.time()
         t_l_int_a = dfl.int_z()
@@ -158,9 +158,9 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
     else:
 
         dfl = dfl_pad_z(dfl, padn)
-        dfl = dfl_fft_z(dfl, method=fft_method, nthread=multiprocessing.cpu_count())
+        dfl.fft_z(method=fft_method, nthread=multiprocessing.cpu_count())
         dfl = dfl_trf(dfl, trf, mode='tr', dump_proj=dump_proj)
-        dfl = dfl_fft_z(dfl, method=fft_method, nthread=multiprocessing.cpu_count())
+        dfl.fft_z(method=fft_method, nthread=multiprocessing.cpu_count())
         if st_cpl:
             dfl = dfl_st_cpl(dfl, trf.thetaB)
         dfl = dfl_shift_z(dfl, s_delay, set_zeros=0)

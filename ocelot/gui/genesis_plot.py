@@ -1428,7 +1428,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
     
     if showfig == False and savefig == False:
         return
-    # from ocelot.utils.xfel_utils import dfl_fft_xy, dfl_fft_z
+    
     filePath = F.filePath
 
     text_present = 1
@@ -1468,7 +1468,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
     if F.Nz() != 1:
         if freq_domain:
             if F.domain_z == 't':
-                F = dfl_fft_z(F, debug=debug)
+                F.fft_z(debug=debug)
             z = F.scale_z() * 1e9
 
             F.fld = F.fld[::-1, :, :]
@@ -1482,7 +1482,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
             suffix += '_fd'
         else:
             if F.domain_z == 'f':
-                F = dfl_fft_z(F, debug=debug)
+                F.fft_z(debug=debug)
             z = F.scale_z() * 1e6
 
             unit_z = r'$\mu$m'
@@ -1521,7 +1521,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
 
     if far_field:
         if F.domain_xy == 's':
-            F = dfl_fft_xy(F, debug=debug)
+            F.fft_xy(debug=debug)
         x = F.scale_x() * 1e6
         y = F.scale_y() * 1e6
 
@@ -1536,7 +1536,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
         # if debug>1: print('        done in %.2f seconds' %(time.time()-calc_time))
     else:
         if F.domain_xy == 'k':
-            F = dfl_fft_xy(F, debug=debug)
+            F.fft_xy(debug=debug)
         x = F.scale_x() * 1e6
         y = F.scale_y() * 1e6
         

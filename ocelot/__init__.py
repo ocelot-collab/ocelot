@@ -2,7 +2,7 @@
 general ocelot description
 '''
 
-__version__ = '18.02'
+__version__ = '18.02.0'
 
 
 __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope",  # beam

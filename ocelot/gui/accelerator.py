@@ -883,6 +883,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpo
     """
     Shows e-beam slice parameters (current, emittances, energy spread)
     and beam distributions (dE/(p0 c), X, Y) against long. coordinate (S)
+    Note: beam head is on the left side
 
     :param p_array: ParticleArray
     :param nparts_in_slice: number of particles per slice

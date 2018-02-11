@@ -75,7 +75,7 @@ The easiest way to get these is to download and install the (large) [Anaconda so
 Alternatively, you can download and install [miniconda](http://conda.pydata.org/miniconda.html).
 The following command will install all required packages:
 ```
-$ conda install numpy scipy matplotlib ipython-notebook
+$ conda install numpy scipy matplotlib jupyter
 ```
 
 ## Ocelot installation
@@ -116,3 +116,7 @@ or
 ```
 $ jupyter notebook --notebook-dir="path_to_your_directory"
 ```
+
+#### OCELOT jupyter tutorials
+You can download OCELOT jupyter tutorials (release v18.02) using GitHub link [zip file](https://github.com/ocelot-collab/ocelot/releases/download/v18.02.0/ocelot_jupyter_tutorial.zip).
+

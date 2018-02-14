@@ -18,7 +18,7 @@ from ocelot.common.globals import *
 from ocelot.common.math_op import find_nearest_idx
 from ocelot.common.py_func import filename_from_path
 # from ocelot.optics.utils import calc_ph_sp_dens
-from ocelot.adaptors.genesis import *
+#from ocelot.adaptors.genesis import *   #commented
 # import ocelot.adaptors.genesis as genesis_ad
 # GenesisOutput = genesis_ad.GenesisOutput
  
@@ -188,7 +188,52 @@ class RadiationField:
         spec = calc_ph_sp_dens(spec0, freq_ev, n_photons)
         return freq_ev, spec
         
-    def curve_wavefront(self, r):
+#    def curve_wavefront(self, r, fine=0):
+#        '''
+#        introduction of the additional 
+#        wavefront curvature with radius r
+#        
+#        r can be scalar or vector with self.Nz() points
+#        r>0 -> converging wavefront
+#        '''
+#        domain_o_z, domain_o_xy = self.domain_z, self.domain_xy
+#
+#        if fine == 1:
+#            self.to_domain('f','s')
+#            x, y = np.meshgrid(self.scale_x(), self.scale_y())
+#            arg2 = x**2 + y**2
+#            k = 2 * np.pi / self.scale_z()
+#            if np.size(r) == 1:
+#                self.fld *= np.exp(-1j * k[:,np.newaxis,np.newaxis] / 2 * arg2[np.newaxis,:,:] / r)
+#            elif np.size(r) == self.Nz():
+#                self.fld *= np.exp(-1j * k[:,np.newaxis,np.newaxis] / 2 * arg2[np.newaxis,:,:] / r[:,np.newaxis,np.newaxis])
+##            self.fft_z()
+#
+#        elif fine == 0:
+#            self.to_domain('s')
+#            x, y = np.meshgrid(self.scale_x(), self.scale_y())
+#            arg2 = x**2 + y**2
+#            k = 2 * np.pi / self.xlamds
+#            if np.size(r) == 1:
+#                self.fld *= np.exp(-1j * k / 2 * arg2 / r)[np.newaxis,:,:]
+#            elif np.size(r) == self.Nz():
+#                self.fld *= np.exp(-1j * k / 2 * arg2[np.newaxis,:,:] / r[:,np.newaxis,np.newaxis])
+#            else: 
+#                raise ValueError('wrong dimensions of radius of curvature')
+#                
+#        elif fine == -1:
+#            self.to_domain('t','s')
+#            x, y = np.meshgrid(self.scale_x(), self.scale_y())
+#            arg2 = x**2 + y**2
+#            k = 2 * np.pi / self.scale_z()
+#            if np.size(r) == 1:
+#                self.fld *= np.exp(-1j * k[:,np.newaxis,np.newaxis] / 2 * arg2[np.newaxis,:,:] / r)
+#            elif np.size(r) == self.Nz():
+#                self.fld *= np.exp(-1j * k[:,np.newaxis,np.newaxis] / 2 * arg2[np.newaxis,:,:] / r[:,np.newaxis,np.newaxis])
+##            self.fft_z()
+
+
+    def curve_wavefront(self, r, domain_z=None):
         '''
         introduction of the additional 
         wavefront curvature with radius r
@@ -196,17 +241,67 @@ class RadiationField:
         r can be scalar or vector with self.Nz() points
         r>0 -> converging wavefront
         '''
-        x, y = np.meshgrid(self.scale_x(),self.scale_y())
-        arg2 = x**2 + y**2
-        
-        k = 2 * np.pi / self.xlamds
-        if np.size(r) == 1:
-            self.fld *= np.exp(-1j * k / 2 * arg2 / r)[np.newaxis,:,:]
-        elif np.size(r) == self.Nz():
-            self.fld *= np.exp(-1j * k / 2 * arg2[np.newaxis,:,:] / r[:,np.newaxis,np.newaxis])
-        else: 
-            raise ValueError('wrong dimensions of radius of curvature')
-        
+        domain_o_z, domain_o_xy = self.domain_z, self.domain_xy
+
+        if domain_z == None:
+            domain_z = domain_o_z
+
+        if domain_z == 'f':
+            self.to_domain('f')
+            x, y = np.meshgrid(self.scale_x(), self.scale_y())
+            arg2 = x**2 + y**2
+            k = 2 * np.pi / self.scale_z()
+            if np.size(r) == 1:
+                self.fld *= np.exp(-1j * k[:,np.newaxis,np.newaxis] / 2 * arg2[np.newaxis,:,:] / r)
+            elif np.size(r) == self.Nz():
+                self.fld *= np.exp(-1j * k[:,np.newaxis,np.newaxis] / 2 * arg2[np.newaxis,:,:] / r[:,np.newaxis,np.newaxis])
+#            self.fft_z()
+
+        elif domain_z=='t':
+            self.to_domain('t')
+            x, y = np.meshgrid(self.scale_x(), self.scale_y())
+            arg2 = x**2 + y**2
+            k = 2 * np.pi / self.xlamds
+            if np.size(r) == 1:
+                self.fld *= np.exp(-1j * k / 2 * arg2 / r)[np.newaxis,:,:]
+            elif np.size(r) == self.Nz():
+                self.fld *= np.exp(-1j * k / 2 * arg2[np.newaxis,:,:] / r[:,np.newaxis,np.newaxis])
+            else: 
+                raise ValueError('wrong dimensions of radius of curvature')
+                
+        self.to_domain(domain_o_z, domain_o_xy)
+    
+    def to_domain(self, *domains):
+        '''
+        tranfers radiation to specified domains
+        *domains may be one or two strings
+        't' (time); 'f' (frequency); 's' (space); 'k' (inverse space); 
+        't','s'; 't','k'; 'k','f'; etc.
+        '''
+        if len(domains) == 1:
+            if domains[0] not in ['t', 'f', 's', 'k']:
+                raise ValueError('domain should be a string: "t" or "f" or "s" or "k"')
+        elif len(domains) == 2:
+            D = [['t', 'f'], ['s', 'k']]
+            if domains[0] not in ['t', 'f', 's', 'k'] or domains[1] not in ['t', 'f', 's', 'k'] :
+                raise ValueError('domain should be a string: "t" or "f" or "s" or "k"')
+            for d in D:
+                if domains[0] in d and domains[1] in d:
+                    raise ValueError('2 arguments can be: ("t" or "f") and ("s" or "k")')
+        elif len(domains) > 2:
+            raise ValueError('maximum 2 arguments can be provided: ("t" or "f") and ("s" or "k")')
+#        if domains[0] == domains[1]:
+#            raise ValueError()
+
+#        domain_z='t', domain_xy='k'
+#        if domain_z not in ['t','f'] or domain_xy not in ['s','k']:
+#            raise ValueError('dfl domains may be ("t" or "f") and ("s" or "k")')
+        for domain in domains:
+            domain_o_z, domain_o_xy = self.domain_z, self.domain_xy
+            if domain in ['t', 'f'] and domain is not domain_o_z:
+                self.fft_z()
+            if domain in ['s', 'k'] and domain is not domain_o_xy:
+                self.fft_xy()
     
     def fft_z(self, method='mp', nthread=multiprocessing.cpu_count(), debug=1):  # move to another domain ( time<->frequency )
         if debug > 0:
@@ -305,14 +400,14 @@ class RadiationField:
     
         dfl is the RadiationField() object
         z is the propagation distance in [m] 
-        fine==0 is a flag for ~2x faster propagation. 
+        fine=1 is a flag for ~2x faster propagation. 
             no Fourier transform to frequency domain is done
             assumes no angular dispersion (true for plain FEL radiation)
             assumes narrow spectrum at center of xlamds (true for plain FEL radiation)
         
         return_result does not modify self, but returns result
         
-        z>0 ==> forward
+        z>0 -> forward direction
         '''
         if debug > 0:
             print('    propagating dfl file by %.2f meters' % (z))
@@ -366,24 +461,24 @@ class RadiationField:
             copydfl, self = self, copydfl
             return copydfl
             
-    def propm(self, z, m=1, fine=1, return_result=0, debug=1):
+    def prop_m(self, z, m=1, fine=1, return_result=0, debug=1):
         '''
         Angular-spectrum propagation for fieldfile
         
-    
         can handle wide spectrum
           (every slice in freq.domain is propagated 
            according to its frequency)
         no kx**2+ky**2<<k0**2 limitation
     
         dfl is the RadiationField() object
-        z is the propagation distance in [m] 
+        z is the propagation distance in [m]
+        m is the output mesh size in terms of input mesh size (m = L_out/L_inp)
         fine==0 is a flag for ~2x faster propagation. 
             no Fourier transform to frequency domain is done
             assumes no angular dispersion (true for plain FEL radiation)
             assumes narrow spectrum at center of xlamds (true for plain FEL radiation)
     
-        z>0 ==> forward
+        z>0 -> forward direction
         '''
         if debug > 0:
             print('    propagating dfl file by %.2f meters' % (z))
@@ -681,10 +776,9 @@ class Spectrogram():
     
 class WignerDistribution():
     '''
-    calculated wigner distribution (spectrogram) of the pulse
+    calculated Wigner distribution (spectrogram) of the pulse
     in time/frequency domain as space/wavelength
     '''
-    
     
     def __init__(self):
         # self.fld=np.array([]) #(z,y,x)
@@ -729,7 +823,9 @@ class WignerDistribution():
 
 def generate_dfl(xlamds, shape=(151,151,1000), dgrid=(1e-3,1e-3,None), power_rms=(0.1e-3,0.1e-3,2e-6), power_center=(0,0,None), power_angle=(0,0), power_waistpos=(0,0), wavelength=None, zsep=1, freq_chirp=0, energy=None, power=1e6, debug=1):
     '''
-    generates RadiationField object
+    generates RadiationField object 
+    narrow-bandwidth, paraxial approximations
+    
     xlamds [m] - central wavelength
     shape (x,y,z) - shape of field matrix (reversed) to dfl.fld
     dgrid (x,y,z) [m] - size of field matrix
@@ -801,10 +897,10 @@ def generate_dfl(xlamds, shape=(151,151,1000), dgrid=(1e-3,1e-3,None), power_rms
         phase_chirp_quad = freq_chirp *((z-z0)/dfl.dz*zsep)**2 * xlamds / 2# / pi**2
 
 
-    if qz == 0 or qz == None:
-        dfl.fld = np.exp(-1j * k * ( (y-x0)**2/2/qx + (x-y0)**2/2/qy - phase_chirp_lin + phase_chirp_quad ) )
-    else:
-        dfl.fld = np.exp(-1j * k * ( (y-x0)**2/2/qx + (x-y0)**2/2/qy + (z-z0)**2/2/qz - phase_chirp_lin + phase_chirp_quad) ) #  - (grid[0]-z0)**2/qz 
+    # if qz == 0 or qz == None:
+        # dfl.fld = np.exp(-1j * k * ( (x-x0)**2/2/qx + (y-y0)**2/2/qy - phase_chirp_lin + phase_chirp_quad ) )
+    # else:
+    dfl.fld = np.exp(-1j * k * ( (x-x0)**2/2/qx + (y-y0)**2/2/qy + (z-z0)**2/2/qz - phase_chirp_lin + phase_chirp_quad) ) #  - (grid[0]-z0)**2/qz 
 
 
     if energy != None and power == None:
@@ -929,7 +1025,7 @@ def dfl_waistscan(dfl, z_pos, projection=0, debug=1):
     propagates the RadaitionField object dfl 
     through the sequence of positions z_pos
     and calculates transverse distribution parameters
-    such as peak photon density and sizes in both dimentions
+    such as peak photon density and sizes in both dimensions
 
     if projection==1, then size of projection is calculated
         otherwise - size across the central line passing through the mesh center
@@ -994,7 +1090,7 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
         print ('    interpolating radiation file')
     start_time = time.time()
 
-    # in case if interpolation is the same in toth dimentions
+    # in case if interpolation is the same in both dimentions
     if np.size(interpN) == 1:
         interpN = (interpN, interpN)
     if np.size(interpL) == 1:
@@ -1501,16 +1597,15 @@ def calc_wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1
         
     if debug > 1: print('fft_start')
     
-    wig = np.fft.fftshift(np.conj(F1)*F2,0)
+    wig = np.fft.fftshift(np.conj(F1) * F2, 0)
     
-    if debug > 1: print('fft_done')
-
     if method == 'mp' and fftw_avail:
         fft = pyfftw.builders.fft(wig, axis=0, overwrite_input=False, planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
         wig = fft()
     else:
         wig = np.fft.fft(wig, axis=0)
-
+    
+    if debug > 1: print('fft_done')
     
     wig = np.fft.fftshift(wig, 0)
     wig = wig[0:N0, 0:N0] / N
@@ -1523,20 +1618,16 @@ def wigner_pad(wig,pad):
     n_add_l = int(n_add - n_add%2)
     n_add_r = int(n_add + n_add%2)
     ds = (wig_out.s[-1] - wig_out.s[0]) / (wig_out.s.size-1)
-    # pad_array_s_l = np.arange(wig_out.s[0] - ds*n_add, wig_out.s[0], ds)
-    # pad_array_s_r = np.arange(wig_out.s[-1]+ds, wig_out.s[-1] + ds*(n_add+1), ds)
     pad_array_s_l = np.linspace(wig_out.s[0] - ds*(n_add_l), wig_out.s[0]-ds, n_add_l)
     pad_array_s_r = np.linspace(wig_out.s[-1]+ds, wig_out.s[-1] + ds*(n_add_r), n_add_r)
     wig_out.s = np.concatenate([pad_array_s_l,wig_out.s,pad_array_s_r])
     wig_out.field = np.concatenate([np.zeros(n_add_l), wig_out.field, np.zeros(n_add_r)])
-#    W_out.eval()
     return wig_out
 
 def wigner_out(out, z=inf, method='mp', pad=1, debug=1):
     '''
     returns WignerDistribution from GenesisOutput at z
     '''
-    
     # assert isinstance(out,GenesisOutput) #hotfix
     assert len(out.s)>0
     

@@ -11,6 +11,9 @@ from copy import deepcopy
 #import pickle
 from scipy import interpolate
 from scipy.signal import savgol_filter
+import logging
+
+logger = logging.getLogger(__name__)
 try:
     import numexpr as ne
     ne_flag = True
@@ -636,11 +639,17 @@ def get_envelope(p_array, tws_i=Twiss()):
     tws.alpha_y = -tws.ypy/tws.emit_y
     return tws
 
-def get_current(p_array, charge, num_bins = 200):
+def get_current(p_array, charge=None, num_bins = 200):
     """
-    return: hist -  current in A
-          : bin_edges - points position
+    Function calculates beam current from particleArray
+    :param p_array: particleArray
+    :param charge: - None, charge of the one macro-particle.
+                    If None, charge of the first macro-particle is used
+    :param num_bins: number of bins
+    :return s, I -  (np.array, np.array) - beam positions [m] and currents in [A]
     """
+    if charge == None:
+        charge = p_array.q_array[0]
     z = p_array.tau()
     hist, bin_edges = np.histogram(z, bins=num_bins)
     delta_Z = max(z) - min(z)
@@ -747,9 +756,9 @@ def beam_matching(particles, bounds, x_opt, y_opt):
     mx, mxs, mxx, mxxs, mxsxs, emitx0 = moments(pd[inds, 0], pd[inds, 1])
     beta = mxx/emitx0
     alpha = -mxxs/emitx0
-    print(beta, alpha)
+    #print(beta, alpha)
     M = m_from_twiss([alpha, beta, 0], x_opt)
-    print(M)
+    #print(M)
     particles[0] = M[0, 0]*pd[:, 0] + M[0, 1]*pd[:, 1]
     particles[1] = M[1, 0]*pd[:, 0] + M[1, 1]*pd[:, 1]
     [mx, mxs, mxx, mxxs, mxsxs, emitx0] = moments(pd[inds, 2], pd[inds, 3])
@@ -762,22 +771,40 @@ def beam_matching(particles, bounds, x_opt, y_opt):
 
 
 class BeamTransform:
-    def __init__(self, x_opt, y_opt):
+    """
+    Beam matching
+    """
+    def __init__(self, tws=None, x_opt=None, y_opt=None):
         """
-        Beam matching
-
-        :param x_opt: [alpha, beta, mu (phase advance)]
-        :param y_opt: [alpha, beta, mu (phase advance)]
+        :param tws : Twiss object
+        :param x_opt (obsolete): [alpha, beta, mu (phase advance)]
+        :param y_opt (obsolete): [alpha, beta, mu (phase advance)]
         """
         self.bounds = [-5, 5]  # [start, stop] in sigmas
+        self.tws = tws       # Twiss
         self.x_opt = x_opt   # [alpha, beta, mu (phase advance)]
         self.y_opt = y_opt   # [alpha, beta, mu (phase advance)]
-        self.step=1
+        self.step = 1
+
+    @property
+    def twiss(self):
+        if self.tws == None:
+            logger.warning("BeamTransform: x_opt and y_opt are obsolete, use Twiss")
+            tws = Twiss()
+            tws.alpha_x, tws.beta_x, tws.mux = self.x_opt
+            tws.alpha_y, tws.beta_y, tws.muy = self.y_opt
+        else:
+            tws = self.tws
+        return tws
+
 
     def prepare(self, lat):
         pass
 
     def apply(self, p_array, dz):
+        logger.debug("BeamTransform: apply")
+        self.x_opt = [self.twiss.alpha_x, self.twiss.beta_x, self.twiss.mux]
+        self.y_opt = [self.twiss.alpha_y, self.twiss.beta_y, self.twiss.muy]
         self.beam_matching(p_array.rparticles, self.bounds, self.x_opt, self.y_opt)
 
     def beam_matching(self, particles, bounds, x_opt, y_opt):
@@ -984,7 +1011,7 @@ def interp1(x, y, xnew, k=1):
 
 def slice_analysis_transverse(parray, Mslice, Mcur, p, iter):
     q1 = np.sum(parray.q_array)
-    print("charge", q1)
+    logger.debug("slice_analysis_transverse: charge = " + str(q1))
     n = np.int_(parray.rparticles.size / 6)
     PD = parray.rparticles
     PD = sortrows(PD, col=4)

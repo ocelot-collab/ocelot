@@ -71,7 +71,7 @@ class FelParameters:
         return tcoh
     
     def P_sat(self):
-        return self.P[self.z_sat_min]
+        return self.P(self.z_sat_min)
         
     @property
     def phen0(self):
@@ -204,7 +204,7 @@ def beam2fel(beam, lu, K_peak, iwityp=0):
     
     fel=calculateFelParameters(tmp, array=True)
     fel.s = beam.s
-    return(fel)
+    return (fel)
 
 
 def printFelParameters(p):

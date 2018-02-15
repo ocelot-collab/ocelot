@@ -141,13 +141,13 @@ class Wake():
     wake_table = None - wake table [WakeTable()]
     factor = 1. - scaling coefficient
     """
-    def __init__(self):
+    def __init__(self, step=1):
         self.w_sampling = 500  # wake sampling
         self.filter_order = 20   # smoothing filter order
         #self.wake_file = ""
         self.wake_table = None
         self.factor = 1.
-        self.step = 1
+        self.step = step
 
     def convolution(self, xu, u, xw, w):
         #convolution of equally spaced functions
@@ -330,8 +330,9 @@ class Wake():
 
 
 class WakeKick(Wake):
-    def __init__(self):
+    def __init__(self, factor=1):
         Wake.__init__(self)
+        self.factor = factor
 
     def apply(self, p_array, dz):
         #print("Apply WakeKick")

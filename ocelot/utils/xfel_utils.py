@@ -41,15 +41,15 @@ def dfl_st_cpl(dfl, theta_b, inp_axis='y', s_start=None):
     if s_start == None:
         s_start = n_moment(dfl.scale_z(), dfl.int_z(), 0, 1)
 
-    dfl2 = deepcopy(dfl)
-    shift_z_scale = dfl2.scale_z() - s_start
+    # dfl = deepcopy(dfl)
+    shift_z_scale = dfl.scale_z() - s_start
     shift_m_scale = shift_z_scale / tan(theta_b)
     shift_m_scale[np.where(shift_m_scale > 0)] = 0
-    shift_pix_scale = np.floor(shift_m_scale / dfl2.dx).astype(int)
+    shift_pix_scale = np.floor(shift_m_scale / dfl.dx).astype(int)
 
     # pix_start=np.where(shift_m_scale==0)[0][0]
 
-    fld = dfl2.fld
+    fld = dfl.fld
     if inp_axis == 'y':
         for i in np.where(shift_m_scale != 0)[0]:
             fld[i, :, :] = np.roll(fld[i, :, :], -direction * shift_pix_scale[i], axis=0)
@@ -62,15 +62,14 @@ def dfl_st_cpl(dfl, theta_b, inp_axis='y', s_start=None):
             # if direction==1:
                 # fld[i,:,:abs(shift_pix_scale[i])]=0
 
-    dfl2.fld = fld
+    dfl.fld = fld
     t_func = time.time() - start
     print('      done in %.2f ' % t_func + 'sec')
-    return dfl2
+    return dfl
 
 
 def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=6, fft_method='mp', dump_proj=0, debug=1):
     # needs optimizing?
-    # tmp
     # import matplotlib.pyplot as plt
 
     nthread = multiprocessing.cpu_count()
@@ -90,6 +89,7 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
         if trf.compound:
             cwidth = trf.dk
     
+    dfl.to_domain('t', 's')
     dk_old = 2 * pi / dfl.Lz()
     dk = cwidth / res_per_fwhm
     padn = np.ceil(dk_old / dk).astype(int)
@@ -99,6 +99,7 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
     if enforce_padn!=None:
         padn=enforce_padn
         
+    
     dfl_z = dfl.scale_z()
     dfl_z_mesh = dfl_z[-1]-dfl_z[0]
     if s_delay > dfl_z_mesh * padn:
@@ -106,69 +107,58 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
         
     if dump_proj:
 
-        dfl = dfl_pad_z(dfl, padn)
+        dfl_pad_z(dfl, padn)
 
         t1 = time.time()
         t_l_scale = dfl.scale_z()
         # t_l_int_b=dfl.int_z()
         t2 = time.time()
 
-        dfl = dfl_fft_z(dfl, method=fft_method, nthread=multiprocessing.cpu_count())
+        dfl.fft_z(method=fft_method, nthread=multiprocessing.cpu_count())
 
         t3 = time.time()
         f_l_scale = dfl.scale_z()  # frequency_large_scale (wavelength in m)
         # f_l_int_b=dfl.int_z()
         t4 = time.time()
 
-        dfl, f_l_filt = dfl_trf(dfl, trf, mode='tr', dump_proj=dump_proj)
+        f_l_filt = dfl_trf(dfl, trf, mode='tr', dump_proj=dump_proj)
 
         t5 = time.time()
         f_l_int_a = dfl.int_z()
         t6 = time.time()
 
-        dfl = dfl_fft_z(dfl, method=fft_method, nthread=multiprocessing.cpu_count())
+        dfl.fft_z(method=fft_method, nthread=multiprocessing.cpu_count())
 
         t7 = time.time()
         t_l_int_a = dfl.int_z()
         t_l_pha_a = dfl.ang_z_onaxis()
         t8 = time.time()
 
-        # if debug>2:###
-            # plt.figure('before st-c')
-            # plt.plot(dfl.scale_z(),dfl.ang_z_onaxis())
-            # plt.show()
-
         if st_cpl:
-            dfl = dfl_st_cpl(dfl, trf.thetaB)
+            dfl_st_cpl(dfl, trf.thetaB)
 
-        # if debug>2:###
-           # plt.figure('after st-c')
-           # plt.plot(dfl.scale_z(),dfl.ang_z_onaxis())
-           # plt.show()
-
-        dfl = dfl_shift_z(dfl, s_delay, set_zeros=0)
-
-        dfl = dfl_pad_z(dfl, -padn)
+        dfl_shift_z(dfl, s_delay, set_zeros=0)
+        dfl_pad_z(dfl, -padn)
 
         t_func = time.time() - start
         t_proj = t2 + t4 + t6 + t8 - (t1 + t3 + t5 + t7)
         print('    done in %.2f sec, (inkl. %.2f sec for proj calc)' % (t_func, t_proj))
-        return dfl, ((t_l_scale, None, t_l_int_a, t_l_pha_a), (f_l_scale, f_l_filt, None, f_l_int_a))  # f_l_int_b,t_l_int_b,
+        return ((t_l_scale, None, t_l_int_a, t_l_pha_a), (f_l_scale, f_l_filt, None, f_l_int_a))  # f_l_int_b,t_l_int_b,
 
     else:
 
-        dfl = dfl_pad_z(dfl, padn)
-        dfl = dfl_fft_z(dfl, method=fft_method, nthread=multiprocessing.cpu_count())
-        dfl = dfl_trf(dfl, trf, mode='tr', dump_proj=dump_proj)
-        dfl = dfl_fft_z(dfl, method=fft_method, nthread=multiprocessing.cpu_count())
+        dfl_pad_z(dfl, padn)
+        dfl.fft_z(method=fft_method, nthread=multiprocessing.cpu_count())
+        dfl_trf(dfl, trf, mode='tr', dump_proj=dump_proj)
+        dfl.fft_z(method=fft_method, nthread=multiprocessing.cpu_count())
         if st_cpl:
-            dfl = dfl_st_cpl(dfl, trf.thetaB)
-        dfl = dfl_shift_z(dfl, s_delay, set_zeros=0)
-        dfl = dfl_pad_z(dfl, -padn)
+            dfl_st_cpl(dfl, trf.thetaB)
+        dfl_shift_z(dfl, s_delay, set_zeros=0)
+        dfl_pad_z(dfl, -padn)
 
         t_func = time.time() - start
         print('    done in %.2f ' % t_func + 'sec')
-        return dfl, ()
+        return ()
 
 
 def save_xhrss_dump_proj(dump_proj, filePath):
@@ -302,9 +292,13 @@ def create_exfel_lattice(beamline = 'sase1'):
     else:
         raise ValueError('Unknown beamline')
 
-def prepare_el_optics(beam, lat_pkg, E_photon=None, beta_av=30):
+def prepare_el_optics(beam, lat_pkg, E_photon=None, beta_av=30, s=None):
     from ocelot.rad.undulator_params import Ephoton2K
-    beam_pk = beam.pk()
+    if s is None:
+        jj = beam.I / (beam.beta_x * beam.beta_y * beam.emit_x * beam.emit_y)
+        s = beam.s[jj.argmax()]
+    
+    beam_match = beam.get_s(s)
         
     # if beamline == 'SASE1':
          # = create_exfel_sase1_lattice()
@@ -315,13 +309,13 @@ def prepare_el_optics(beam, lat_pkg, E_photon=None, beta_av=30):
     # else:
         # raise ValueError('unknown beamline')
     
-    rematch_beam_lat(beam_pk, lat_pkg, beta_av)
-    transform_beam_twiss(beam, Twiss(beam_pk))
+    rematch_beam_lat(beam_match, lat_pkg, beta_av)
+    transform_beam_twiss(beam, Twiss(beam_match), s=s)
     lat = lat_pkg[0]
     indx_und = np.where([i.__class__ == Undulator for i in lat.sequence])[0]
     und = lat.sequence[indx_und[0]]
     if E_photon is not None:
-        und.Kx = Ephoton2K(E_photon, und.lperiod, beam_pk.E)
+        und.Kx = Ephoton2K(E_photon, und.lperiod, beam_match.E)
 
 '''
 legacy

@@ -1,3 +1,6 @@
+"""
+S.Tomin. Table for quadrupoles and other magnets
+"""
 import sys
 from PyQt5.QtWidgets import QCheckBox, QHBoxLayout, QHeaderView, QApplication,QMenu, QWidget, QAction, QTableWidget, QTableWidgetItem, QDoubleSpinBox
 

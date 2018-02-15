@@ -55,19 +55,26 @@ def smooth_z(Zin, mslice):
     return Zout
 
 
-class SpaceCharge():
+class SpaceCharge:
     """
-    The space charge forces are calculated by solving the Poisson equation in the bunch frame.
+    Space Charge physics process
+
+    Attributes:
+        self.step = 1 [in Navigator.unit_step] - step of the Space Charge kick applying
+        self.nmesh_xyz = [63, 63, 63] - 3D mesh
+
+    Description:
+        The space charge forces are calculated by solving the Poisson equation in the bunch frame.
     Then the Lorentz transformed electromagnetic field is applied as a kick in the laboratory frame.
     For the solution of the Poisson equation we use an integral representation of the electrostatic potential
     by convolution of the free-space Green's function with the charge distribution.
     The convolution equation is solved with the help of the Fast Fourier Transform (FFT). The same algorithm for
     solution of the 3D Poisson equation is used, for example, in ASTRA
     """
-    def __init__(self):
+    def __init__(self, step=1):
         #PhysicsProcess.__init__(self)
-        self.step = 1 # in unit step
-        self.nmesh_xyz = [31, 31, 31]
+        self.step = step # in unit step
+        self.nmesh_xyz = [63, 63, 63]
         self.low_order_kick = True
 
         self.start_elem = None
@@ -214,9 +221,11 @@ class SpaceCharge():
         betay = xp[4] / Energy
         betaz = xp[5] / Energy
         cdT = zstep / betref
+
         xp[3] = xp[3] + cdT * (1 - beta0 * betaz) * Exyz[:, 0]
         xp[4] = xp[4] + cdT * (1 - beta0 * betaz) * Exyz[:, 1]
         xp[5] = xp[5] + cdT * (Exyz[:, 2] + beta0 * (betax * Exyz[:, 0] + betay * Exyz[:, 1]))
+        #xp[5] = xp[5] + cdT * (1 - beta0 * betaz)*Exyz[:, 2]*gamma0*gamma0
         T = np.transpose(T)
         xp[3:6] = np.dot(xp[3:6].T, T).T
         xp_2_xxstg_mad(xp, p_array.rparticles, gamref)
@@ -235,6 +244,61 @@ class SpaceCharge():
         xp[:,3] = xp[:, 3] + cdT*(1-betref*u[:, 2])*Exyz[:, 0]
         xp[:,4] = xp[:, 4] + cdT*(1-betref*u[:, 2])*Exyz[:, 1]
         xp[:,5] = xp[:, 5] + cdT*(Exyz[:, 2] + betref*(u[:, 0]*Exyz[:, 0] + u[:, 1]*Exyz[:, 1]))
+
+
+class SpaceChargeSimplify(SpaceCharge):
+    def __init__(self, step=1):
+        SpaceCharge.__init__(self, step=step)
+
+    def apply(self, p_array, zstep):
+        if zstep==0:
+            print("SpaceCharge delta_s = 0")
+            return
+        nmesh_xyz = np.array(self.nmesh_xyz)
+        gamref = p_array.E / m_e_GeV
+        betref2 = 1 - gamref ** -2
+        betref = np.sqrt(betref2)
+
+        # MAD coordinates!!!
+        # Lorentz transformation with V-axis and gamma_av
+        xp = np.zeros(p_array.rparticles.shape)
+        xp = xxstg_2_xp_mad(p_array.rparticles, xp, gamref)
+
+        # coordinate transformation to the velocity direction
+        t3 = np.mean(xp[3:6], axis=1)
+        Pav = np.linalg.norm(t3)
+        t3 = t3 / Pav
+        ey = np.array([0, 1, 0])
+        t1 = np.cross(ey, t3)
+        t1 = t1 / np.linalg.norm(t1)
+        t2 = np.cross(t3, t1)
+        T = np.c_[t1, t2, t3]
+        xyz = np.dot(xp[0:3].T, T)
+        xp[3:6] = np.dot(xp[3:6].T, T).T
+
+        # electric field in the rest frame of bunch
+        gamma0 = sqrt((Pav / m_e_eV) ** 2 + 1)
+        beta02 = 1 - gamma0 ** -2
+        beta0 = np.sqrt(beta02)
+
+        Exyz = self.el_field(xyz, p_array.q_array, gamma0, nmesh_xyz)
+
+        # equations of motion in the lab system
+        gamma = gamref * (1 + p_array.rparticles[5] * betref)
+        Energy = m_e_eV * gamma
+        betax = xp[3] / Energy
+        betay = xp[4] / Energy
+        betaz = xp[5] / Energy
+        cdT = zstep / betref
+        # testing SC
+        betaz = beta0 # for testing!
+        k = 0. # for testing !
+        xp[3] = xp[3] + cdT * (1 - beta02) * Exyz[:, 0]
+        xp[4] = xp[4] + cdT * (1 - beta02) * Exyz[:, 1]
+        xp[5] = xp[5] + cdT * (Exyz[:, 2])
+        T = np.transpose(T)
+        xp[3:6] = np.dot(xp[3:6].T, T).T
+        xp_2_xxstg_mad(xp, p_array.rparticles, gamref)
 
 
 """

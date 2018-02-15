@@ -47,7 +47,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.w_q_table.sizePolicy().hasHeightForWidth())
         self.w_q_table.setSizePolicy(sizePolicy)
-        self.w_q_table.setMinimumSize(QtCore.QSize(400, 200))
+        self.w_q_table.setMinimumSize(QtCore.QSize(0, 200))
         self.w_q_table.setMaximumSize(QtCore.QSize(400, 16777215))
         self.w_q_table.setObjectName("w_q_table")
         self.gridLayout_6.addWidget(self.w_q_table, 0, 3, 1, 1)

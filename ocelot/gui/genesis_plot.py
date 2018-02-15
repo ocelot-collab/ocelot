@@ -1405,8 +1405,18 @@ def plot_gen_out_scanned_z(g, figsize=(10, 14), legend=True, fig_name=None, z=in
 
     return fig
 
+def plot_dfl_all(dfl, **kwargs):
+    
+    plot_dfl(dfl, **kwargs)
+    dfl.fft_z()
+    plot_dfl(dfl, **kwargs)
+    dfl.fft_xy()
+    plot_dfl(dfl, **kwargs)
+    dfl.fft_z()
+    plot_dfl(dfl, **kwargs)
+    dfl.fft_xy()
 
-def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, far_field=False, freq_domain=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy = True, log_scale=0, debug=1, vartype_dfl=complex64):
+def plot_dfl(F, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy = True, log_scale=0, debug=1, vartype_dfl=complex64):
     '''
     Plots dfl radiation object in 3d.
 
@@ -1416,7 +1426,7 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
     figsize rescales the size of the figure
     legend not used yet
     phase can replace Z projection or spectrum with phase front distribution
-    far_field and freq_domain carry out FFT along xy and z dimentions correspondingly
+    ---------------far_field and freq_domain carry out FFT along xy and z dimentions correspondingly
     fig_name is the desired name of the output figure, would be used as suffix to the image filename if savefig==True
     auto_zoom automatically scales xyz the images to the (1%?) of the intensity limits
     column_3d plots top and side views of the radiation distribution
@@ -1440,6 +1450,20 @@ def plot_dfl(F, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phas
         raise ValueError('wrong radiation object: should be RadiationField')
     
     F = deepcopy(F)
+    
+    if domains == None:
+        domains = F.domains()
+    else:
+        dfldomain_check(domains)
+        
+    if 'k' in domains:
+        far_field = True
+    else:
+        far_field = False
+    if 'f' in domains:
+        freq_domain = True
+    else:
+        freq_domain = False
     
     if fig_name is None:
         suffix = ''

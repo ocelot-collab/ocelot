@@ -191,51 +191,6 @@ class RadiationField:
         spec = calc_ph_sp_dens(spec0, freq_ev, n_photons)
         return freq_ev, spec
         
-#    def curve_wavefront(self, r, fine=0):
-#        '''
-#        introduction of the additional 
-#        wavefront curvature with radius r
-#        
-#        r can be scalar or vector with self.Nz() points
-#        r>0 -> converging wavefront
-#        '''
-#        domain_o_z, domain_o_xy = self.domain_z, self.domain_xy
-#
-#        if fine == 1:
-#            self.to_domain('f','s')
-#            x, y = np.meshgrid(self.scale_x(), self.scale_y())
-#            arg2 = x**2 + y**2
-#            k = 2 * np.pi / self.scale_z()
-#            if np.size(r) == 1:
-#                self.fld *= np.exp(-1j * k[:,np.newaxis,np.newaxis] / 2 * arg2[np.newaxis,:,:] / r)
-#            elif np.size(r) == self.Nz():
-#                self.fld *= np.exp(-1j * k[:,np.newaxis,np.newaxis] / 2 * arg2[np.newaxis,:,:] / r[:,np.newaxis,np.newaxis])
-##            self.fft_z()
-#
-#        elif fine == 0:
-#            self.to_domain('s')
-#            x, y = np.meshgrid(self.scale_x(), self.scale_y())
-#            arg2 = x**2 + y**2
-#            k = 2 * np.pi / self.xlamds
-#            if np.size(r) == 1:
-#                self.fld *= np.exp(-1j * k / 2 * arg2 / r)[np.newaxis,:,:]
-#            elif np.size(r) == self.Nz():
-#                self.fld *= np.exp(-1j * k / 2 * arg2[np.newaxis,:,:] / r[:,np.newaxis,np.newaxis])
-#            else: 
-#                raise ValueError('wrong dimensions of radius of curvature')
-#                
-#        elif fine == -1:
-#            self.to_domain('t','s')
-#            x, y = np.meshgrid(self.scale_x(), self.scale_y())
-#            arg2 = x**2 + y**2
-#            k = 2 * np.pi / self.scale_z()
-#            if np.size(r) == 1:
-#                self.fld *= np.exp(-1j * k[:,np.newaxis,np.newaxis] / 2 * arg2[np.newaxis,:,:] / r)
-#            elif np.size(r) == self.Nz():
-#                self.fld *= np.exp(-1j * k[:,np.newaxis,np.newaxis] / 2 * arg2[np.newaxis,:,:] / r[:,np.newaxis,np.newaxis])
-##            self.fft_z()
-
-
     def curve_wavefront(self, r, domain_z=None):
         '''
         introduction of the additional 
@@ -244,13 +199,13 @@ class RadiationField:
         r can be scalar or vector with self.Nz() points
         r>0 -> converging wavefront
         '''
-        domain_o_z, domain_o_xy = self.domain_z, self.domain_xy
-
+        domains = domain_o_z, domain_o_xy = self.domain_z, self.domain_xy
+        
         if domain_z == None:
             domain_z = domain_o_z
 
         if domain_z == 'f':
-            self.to_domain('f')
+            self.to_domain('fs')
             x, y = np.meshgrid(self.scale_x(), self.scale_y())
             arg2 = x**2 + y**2
             k = 2 * np.pi / self.scale_z()
@@ -259,9 +214,9 @@ class RadiationField:
             elif np.size(r) == self.Nz():
                 self.fld *= np.exp(-1j * k[:,np.newaxis,np.newaxis] / 2 * arg2[np.newaxis,:,:] / r[:,np.newaxis,np.newaxis])
 #            self.fft_z()
-
+        
         elif domain_z=='t':
-            self.to_domain('t')
+            self.to_domain('ts')
             x, y = np.meshgrid(self.scale_x(), self.scale_y())
             arg2 = x**2 + y**2
             k = 2 * np.pi / self.xlamds
@@ -271,28 +226,23 @@ class RadiationField:
                 self.fld *= np.exp(-1j * k / 2 * arg2[np.newaxis,:,:] / r[:,np.newaxis,np.newaxis])
             else: 
                 raise ValueError('wrong dimensions of radius of curvature')
-                
-        self.to_domain(domain_o_z, domain_o_xy)
+        
+        self.to_domain(domains)
     
-    def to_domain(self, *domains, **kwargs):
+    def to_domain(self, domains='ts', **kwargs):
         '''
         tranfers radiation to specified domains
-        *domains may be one or two strings
-        't' (time); 'f' (frequency); 's' (space); 'k' (inverse space); 
-        't','s'; 't','k'; 'k','f'; etc.
+        *domains is a string with one or two letters: 
+            ("t" or "f") and ("s" or "k")
+        where 
+            't' (time); 'f' (frequency); 's' (space); 'k' (inverse space); 
+        e.g.
+            't'; 'f'; 's'; 'k'; 'ts'; 'fs'; 'tk'; 'fk'
+        order does not matter
+        
+        **kwargs are passed down to self.fft_z and self.fft_xy
         '''
-        if len(domains) == 1:
-            if domains[0] not in ['t', 'f', 's', 'k']:
-                raise ValueError('domain should be a string: "t" or "f" or "s" or "k"')
-        elif len(domains) == 2:
-            D = [['t', 'f'], ['s', 'k']]
-            if domains[0] not in ['t', 'f', 's', 'k'] or domains[1] not in ['t', 'f', 's', 'k'] :
-                raise ValueError('domain should be a string: "t" or "f" or "s" or "k"')
-            for d in D:
-                if domains[0] in d and domains[1] in d:
-                    raise ValueError('2 arguments can be: ("t" or "f") and ("s" or "k")')
-        elif len(domains) > 2:
-            raise ValueError('maximum 2 arguments can be provided: ("t" or "f") and ("s" or "k")')
+        dfldomain_check(domains)
 #        if domains[0] == domains[1]:
 #            raise ValueError()
 
@@ -302,9 +252,9 @@ class RadiationField:
         for domain in domains:
             domain_o_z, domain_o_xy = self.domain_z, self.domain_xy
             if domain in ['t', 'f'] and domain is not domain_o_z:
-                self.fft_z()
+                self.fft_z(**kwargs)
             if domain in ['s', 'k'] and domain is not domain_o_xy:
-                self.fft_xy()
+                self.fft_xy(**kwargs)
     
     def fft_z(self, method='mp', nthread=multiprocessing.cpu_count(), debug=1):  # move to another domain ( time<->frequency )
         if debug > 0:
@@ -432,9 +382,9 @@ class RadiationField:
 #        domain_z = self.domain_z
     
         if fine==1:
-            self.to_domain('k', 'f')
+            self.to_domain('kf')
         elif fine==-1:
-            self.to_domain('k', 't')
+            self.to_domain('kt')
         else:
             self.to_domain('k')
         # switch to inv-space/freq domain
@@ -507,7 +457,7 @@ class RadiationField:
             copydfl = deepcopy(self)
             copydfl, self = self, copydfl
         
-        domain_xy = self.domain_xy
+#        domain_xy = self.domain_xy
         domain_z = self.domain_z
         
         #q_multiply(dfl_out, (1-m) / z)
@@ -515,9 +465,9 @@ class RadiationField:
             self.curve_wavefront(-z / (1-m))
         
         if fine==1:
-            self.to_domain('k', 'f')
+            self.to_domain('kf')
         elif fine==-1:
-            self.to_domain('k', 't')
+            self.to_domain('kt')
         else:
             self.to_domain('k')
 #        if domain_xy == 's':
@@ -941,9 +891,9 @@ def dfl_ap(dfl, ap_x=None, ap_y=None, debug=1):
     if debug > 0:
         print('    applying aperture to dfl')
         
-    if size(ap_x) == 1:
+    if np.size(ap_x) == 1:
         ap_x = [-ap_x/2, ap_x/2]
-    if size(ap_y) == 1:
+    if np.size(ap_y) == 1:
         ap_y = [-ap_y/2, ap_y/2]
         
     idx_x = np.where( (dfl.scale_x() >= ap_x[0]) & (dfl.scale_x() <= ap_x[1]) )[0]
@@ -1935,3 +1885,39 @@ def imitate_1d_sase(spec_center = 500, spec_res = 0.01, spec_width = 2.5, spec_r
     result = imitate_1d_sase_like(td_scale, td_env, fd_scale, fd_env, phen0 = spec_center, en_pulse = en_pulse, fit_scale = 'fd', n_events = n_events)
     
     return result
+
+def dfldomain_check(domains, both_req=False):
+    
+    err = ValueError('domains should be a string with one or two letters from ("t" or "f") and ("s" or "k")')
+    
+    if type(domains) is not str:
+        raise err
+    if len(domains) < 1 or len(domains) > 2:
+        raise err
+    if len(domains) < 2 and both_req == True:
+        raise ValueError('please provide both domains, e.g. "ts" "fs" "tk" "fk"')
+    
+    domains_avail = ['t', 'f', 's', 'k']
+    for letter in domains:
+        if letter not in domains_avail:
+            raise err
+
+    if len(domains) == 2:
+        D = [['t', 'f'], ['s', 'k']]
+        for d in D:
+            if domains[0] in d and domains[1] in d:
+                raise err
+    
+
+        '''
+        tranfers radiation to specified domains
+        *domains is a string with one or two letters: 
+            ("t" or "f") and ("s" or "k")
+        where 
+            't' (time); 'f' (frequency); 's' (space); 'k' (inverse space); 
+        e.g.
+            't'; 'f'; 's'; 'k'; 'ts'; 'fs'; 'tk'; 'fk'
+        order does not matter
+        
+        **kwargs are passed down to self.fft_z and self.fft_xy
+        '''

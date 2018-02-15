@@ -1489,7 +1489,7 @@ def generate_input(undulator, beam, E_photon = None, itdp=True):
     return inp
 
 
-def get_genesis_launcher(launcher_program=None):
+def get_genesis_launcher(launcher_program=None, launcher_argument=''):
     '''
     Returns MpiLauncher() object for given program
     '''
@@ -1500,7 +1500,8 @@ def get_genesis_launcher(launcher_program=None):
         launcher.program = launcher_program
     else:
         if host.startswith('max'):
-            launcher.program = '/data/netapp/xfel/products/genesis/genesis < tmp.cmd | tee log'
+            launcher.program = '/data/netapp/xfel/products/genesis/genesis'
+            launcher.argument = ' < tmp.cmd | tee log'
         launcher.mpiParameters = '-x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH'  # added -n
     #launcher.nproc = nproc
     return launcher

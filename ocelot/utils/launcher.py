@@ -100,8 +100,8 @@ class LocalLauncher(Launcher):
 class MpiLauncher(Launcher):
     def __init__(self):
         self.id = ''
-        self.host = 'localhost'
         self.program = ""
+        self.argument = ""
         self.nproc = 0
         self.mpiParameters = ""
         
@@ -111,7 +111,7 @@ class MpiLauncher(Launcher):
     def launch(self):
         t1 = time.time()
         print ('launching mpi job')
-        command = 'mkdir -p '+ self.dir + '; ' + 'cd '+ self.dir + '; '+ "`which mpirun` " + str(self.mpiParameters) + " " + self.program
+        command = 'mkdir -p '+ self.dir + '; ' + 'cd '+ self.dir + '; '+ "`which mpirun` " + str(self.mpiParameters) + " " + self.program + self.argument
         print (command)
         os.system(command)
         t2 = time.time()

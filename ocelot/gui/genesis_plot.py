@@ -1416,17 +1416,17 @@ def plot_dfl_all(dfl, **kwargs):
     plot_dfl(dfl, **kwargs)
     dfl.fft_xy()
 
-def plot_dfl(F, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy = True, log_scale=0, debug=1, vartype_dfl=complex64):
+def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy = True, log_scale=0, debug=1, vartype_dfl=complex64):
     '''
     Plots dfl radiation object in 3d.
 
-    F is RadiationField() object
+    dfl is RadiationField() object
     z_lim sets the boundaries to CUT the dfl object in z to ranges of e.g. [2,5] um or nm depending on freq_domain=False of True
     xy_lim sets the boundaries to SCALE the dfl object in x and y to ranges of e.g. [2,5] um or urad depending on far_field=False of True
     figsize rescales the size of the figure
     legend not used yet
     phase can replace Z projection or spectrum with phase front distribution
-    ---------------far_field and freq_domain carry out FFT along xy and z dimentions correspondingly
+    z dimentions correspondingly
     fig_name is the desired name of the output figure, would be used as suffix to the image filename if savefig==True
     auto_zoom automatically scales xyz the images to the (1%?) of the intensity limits
     column_3d plots top and side views of the radiation distribution
@@ -1439,20 +1439,20 @@ def plot_dfl(F, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, leg
     if showfig == False and savefig == False:
         return
     
-    filePath = F.filePath
+    filePath = dfl.filePath
 
     text_present = 1
     if debug > 0:
         print('    plotting radiation field (dfl)')
     start_time = time.time()
     
-    if F.__class__ != RadiationField:
+    if dfl.__class__ != RadiationField:
         raise ValueError('wrong radiation object: should be RadiationField')
     
-    F = deepcopy(F)
+    dfl = deepcopy(dfl)
     
     if domains == None:
-        domains = F.domains()
+        domains = dfl.domains()
     else:
         dfldomain_check(domains)
         
@@ -1470,32 +1470,32 @@ def plot_dfl(F, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, leg
     else:
         suffix = '_'+fig_name
         
-    if F.Nz() != 1:
+    if dfl.Nz() != 1:
         # Make sure it is time-dependent
-        ncar_z = F.Nz()
-        leng_z = F.Lz()
+        ncar_z = dfl.Nz()
+        leng_z = dfl.Lz()
         z = np.linspace(0, leng_z, ncar_z)
     else:
         column_3d = False
         phase = True
         freq_domain = False
         z_lim = []
-    xlamds = F.xlamds
+    xlamds = dfl.xlamds
 
     # number of mesh points
-    ncar_x = F.Nx()
-    leng_x = F.Lx()  # transverse size of mesh [m]
-    ncar_y = F.Ny()
-    leng_y = F.Ly()
-    E_pulse = F.E()
+    ncar_x = dfl.Nx()
+    leng_x = dfl.Lx()  # transverse size of mesh [m]
+    ncar_y = dfl.Ny()
+    leng_y = dfl.Ly()
+    E_pulse = dfl.E()
 
-    if F.Nz() != 1:
+    if dfl.Nz() != 1:
         if freq_domain:
-            if F.domain_z == 't':
-                F.fft_z(debug=debug)
-            z = F.scale_z() * 1e9
+            if dfl.domain_z == 't':
+                dfl.fft_z(debug=debug)
+            z = dfl.scale_z() * 1e9
 
-            F.fld = F.fld[::-1, :, :]
+            dfl.fld = dfl.fld[::-1, :, :]
             z = z[::-1]
 
             unit_z = r'nm'
@@ -1505,9 +1505,9 @@ def plot_dfl(F, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, leg
             z_color = 'red'
             suffix += '_fd'
         else:
-            if F.domain_z == 'f':
-                F.fft_z(debug=debug)
-            z = F.scale_z() * 1e6
+            if dfl.domain_z == 'f':
+                dfl.fft_z(debug=debug)
+            z = dfl.scale_z() * 1e6
 
             unit_z = r'$\mu$m'
             z_label = '$s$ [' + unit_z + ']'
@@ -1538,16 +1538,16 @@ def plot_dfl(F, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, leg
             z_lim_2 = z_lim_1 + 1
         elif z_lim_1 == z_lim_2 and z_lim_1 != 0:
             z_lim_1 = z_lim_2 - 1
-        F.fld = F.fld[z_lim_1:z_lim_2, :, :]
+        dfl.fld = dfl.fld[z_lim_1:z_lim_2, :, :]
         z = z[z_lim_1:z_lim_2]
         ncar_z = dfl.shape[0]
         suffix += '_zoom_%.2f-%.2f' % (np.amin(z), np.amax(z))
 
     if far_field:
-        if F.domain_xy == 's':
-            F.fft_xy(debug=debug)
-        x = F.scale_x() * 1e6
-        y = F.scale_y() * 1e6
+        if dfl.domain_xy == 's':
+            dfl.fft_xy(debug=debug)
+        x = dfl.scale_x() * 1e6
+        y = dfl.scale_y() * 1e6
 
         unit_xy = r'$\mu$rad'
         x_label = r'$\theta_x$ [' + unit_xy + ']'
@@ -1559,10 +1559,10 @@ def plot_dfl(F, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, leg
         x_y_color = 'green'
         # if debug>1: print('        done in %.2f seconds' %(time.time()-calc_time))
     else:
-        if F.domain_xy == 'k':
-            F.fft_xy(debug=debug)
-        x = F.scale_x() * 1e6
-        y = F.scale_y() * 1e6
+        if dfl.domain_xy == 'k':
+            dfl.fft_xy(debug=debug)
+        x = dfl.scale_x() * 1e6
+        y = dfl.scale_y() * 1e6
         
         unit_xy = r'$\mu$m'
         x_label = 'x [' + unit_xy + ']'
@@ -1573,12 +1573,12 @@ def plot_dfl(F, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, leg
         x_y_color = 'blue'
     
     
-    F.fld = F.fld.astype(np.complex64)
-    xy_proj = F.int_xy()
-    xy_proj_ph = np.angle(np.sum(F.fld,axis=0))  # tmp  # tmp
-    yz_proj = F.int_zy()
-    xz_proj = F.int_zx()
-    z_proj = F.int_z()
+    dfl.fld = dfl.fld.astype(np.complex64)
+    xy_proj = dfl.int_xy()
+    xy_proj_ph = np.angle(np.sum(dfl.fld,axis=0))  # tmp  # tmp
+    yz_proj = dfl.int_zy()
+    xz_proj = dfl.int_zx()
+    z_proj = dfl.int_z()
     
     if log_scale:
         suffix += '_log'
@@ -1592,13 +1592,13 @@ def plot_dfl(F, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, leg
     dy = abs(y[1] - y[0])
 
     if fig_name is None:
-        if F.fileName() is '':
+        if dfl.fileName() is '':
             fig = plt.figure('Radiation distribution' + suffix)
         else:
-            fig = plt.figure('Radiation distribution' + suffix + ' ' + F.fileName())
+            fig = plt.figure('Radiation distribution' + suffix + ' ' + dfl.fileName())
     else:
         fig = plt.figure(fig_name + suffix)
-    del F
+    del dfl
 
     fig.clf()
     fig.set_size_inches(((3 + 2 * column_3d) * figsize, 3 * figsize), forward=True)

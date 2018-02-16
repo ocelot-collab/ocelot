@@ -7,7 +7,7 @@ from numpy.linalg import norm
 import numpy as np
 from numpy import inf, complex128, complex64
 import numpy.fft as fft
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import scipy.integrate as integrate
 #import matplotlib.animation as animation
 from copy import deepcopy
@@ -1717,10 +1717,15 @@ def calc_ph_sp_dens(spec, freq_ev, n_photons, spec_squared=1):
     '''
     calculates number of photons per electronvolt
     '''
-    if spec_squared:
-        spec_sum = np.trapz(spec, x=freq_ev, axis=0)
+    if spec.ndim == 2:
+        axis=1
     else:
-        spec_sum = np.trapz(abs(spec)**2, x=freq_ev, axis=0)
+        axis=0
+        
+    if spec_squared:
+        spec_sum = np.trapz(spec, x=freq_ev, axis=axis)
+    else:
+        spec_sum = np.trapz(abs(spec)**2, x=freq_ev, axis=axis)
         
     if np.size(spec_sum) == 1:
         if spec_sum == 0: #avoid division by zero
@@ -1732,6 +1737,10 @@ def calc_ph_sp_dens(spec, freq_ev, n_photons, spec_squared=1):
         norm_factor = n_photons / spec_sum
     else:
         norm_factor = np.sqrt(n_photons / spec_sum)
+    
+    if spec.ndim == 2:
+        norm_factor = norm_factor[:,np.newaxis]
+    
     return spec * norm_factor
     
 def imitate_1d_sase_like(td_scale, td_env, fd_scale, fd_env, td_phase = None, fd_phase = None, phen0 = None, en_pulse = None, fit_scale = 'td', n_events = 1):

@@ -574,15 +574,15 @@ def subfig_z_spec(ax_spectrum, out, zi=None, loc='near', y_units='ev', estimate_
     
 
 
-def plot_gen_out_e(out, legend=False, figsize=4, fig_name='Electrons', savefig=False, showfig=True, debug=1):
-    fig = plot_gen_out_evo(out, params=['und_quad', 'el_size', 'el_energy', 'el_bunching'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
+def plot_gen4_out_e(out, legend=False, figsize=4, fig_name='Electrons', savefig=False, showfig=True, debug=1):
+    fig = plot_gen4_out_evo(out, params=['und_quad', 'el_size', 'el_energy', 'el_bunching'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
 
 
-def plot_gen_out_ph(out, legend=False, figsize=4, fig_name='Radiation', savefig=False, showfig=True, debug=1):
-    if out('itdp'):
-        fig = plot_gen_out_evo(out, params=['rad_pow_en_log', 'rad_pow_en_lin', 'rad_spec_log', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
+def plot_gen4_out_ph(out, legend=False, figsize=4, fig_name='Radiation', savefig=False, showfig=True, debug=1):
+    if out.tdp:
+        fig = plot_gen4_out_evo(out, params=['rad_pow_en_log', 'rad_pow_en_lin', 'rad_spec_log', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
     else:
-        fig = plot_gen_out_evo(out, params=['rad_pow_log', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
+        fig = plot_gen4_out_evo(out, params=['rad_pow_log', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
 
 def plot_gen4_out_evo(out, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'el_bunching', 'rad_pow_en_log', 'rad_pow_en_lin', 'rad_spec_log', 'rad_size', 'rad_spec_evo_n', 'rad_pow_evo_n'], figsize=4, legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
     '''
@@ -713,12 +713,14 @@ def subfig_evo_und_quad(ax_und, out, legend):
     qf = out.h5['Lattice/qf']
     z = out.h5['Lattice/z']
     
-    ax_und.plot(z, aw, 'b-', linewidth=1.5)
+    ax_und.step(z, aw, 'b-', where='post', linewidth=1.5)
+#    ax_und.scatter(z, aw)
     ax_und.set_ylabel('K (rms)')
     ax_und.grid(True)
     
     ax_quad = ax_und.twinx()
-    ax_quad.plot(z, qf, 'r-', linewidth=1.5)
+    ax_quad.step(z, qf, 'r-', where='post', linewidth=1.5)
+#    ax_quad.scatter(z, qf)
     ax_quad.set_ylabel('Quad')
     ax_quad.grid(False)
 
@@ -744,7 +746,7 @@ def subfig_evo_und(ax_und, out, legend):
     qf = out.h5['Lattice/qf']
     z = out.h5['Lattice/z']
     
-    ax_und.plot(z, aw, 'b-', linewidth=1.5)
+    ax_und.step(z, aw, 'b-', where='post', linewidth=1.5)
     ax_und.set_ylabel('K (rms)')
     ax_und.grid(True)
 
@@ -806,7 +808,7 @@ def subfig_evo_el_energy(ax_energy, out, legend):
     el_energy_spread = out.h5['Beam/energyspread'][:]
     
     ax_energy.plot(z, np.average(el_energy - el_energy_av, axis=1), 'b-', linewidth=1.5)
-    ax_energy.set_ylabel('E + ' + str(el_energy_av) + '[MeV]')
+    ax_energy.set_ylabel('<E> + ' + str(el_energy_av) + '[MeV]')
     ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
     ax_energy.grid(True)
 
@@ -842,7 +844,15 @@ def subfig_evo_el_bunching(ax_bunching, out, legend):
 
 def subfig_evo_rad_pow_en(ax_rad_pow, out, legend, log=1):
     
-    ax_rad_pow.plot(out.z, np.amax(out.rad_power, axis=1), 'g-', linewidth=1.5)
+    if log:
+        e = out.rad_energy
+        e[e==0] = e[e!=0].min()/10
+        growth = np.divide(np.roll(e,-1), e)
+        idx = growth<2
+    else:
+        idx = np.ones_like(out.z).astype(bool)
+    
+    ax_rad_pow.plot(out.z[idx], np.amax(out.rad_power[idx,:], axis=1), 'g-', linewidth=1.5)
     ax_rad_pow.set_ylabel(r'P [W]')
     ax_rad_pow.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_rad_pow.get_yaxis().get_major_formatter().set_scientific(True)
@@ -856,15 +866,15 @@ def subfig_evo_rad_pow_en(ax_rad_pow, out, legend, log=1):
     ax_rad_en.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_rad_en.get_yaxis().get_major_formatter().set_scientific(True)
     if np.amax(out.rad_power) > 0 and log:
-        ax_rad_en.plot(out.z, out.rad_energy, 'k--', linewidth=1.5)
+        ax_rad_en.plot(out.z[idx], out.rad_energy[idx], 'k--', linewidth=1.5)
         ax_rad_en.set_ylabel(r'E [J]')
         ax_rad_en.set_yscale('log')
     if not log:
         if np.amax(out.rad_energy) < 1e-4:
-            ax_rad_en.plot(out.z, out.rad_energy*1e6, 'k--', linewidth=1.5)
+            ax_rad_en.plot(out.z[idx], out.rad_energy[idx]*1e6, 'k--', linewidth=1.5)
             ax_rad_en.set_ylabel(r'E [$\mu$J]')
         else:
-            ax_rad_en.plot(out.z, out.rad_energy*1e3, 'k--', linewidth=1.5)
+            ax_rad_en.plot(out.z[idx], out.rad_energy*1e3[idx], 'k--', linewidth=1.5)
             ax_rad_en.set_ylabel(r'E [mJ]')
         ax_rad_en.set_ylim(ymin=0)
     plt.yticks(plt.yticks()[0][0:-1])
@@ -1200,18 +1210,18 @@ def subfig_evo_rad_spec_sz(ax_spectrum_evo, out, legend, norm=1):
 #
 #    return fig
 
-def plot_dfl_all(dfl, **kwargs):
+def plot_dfl4_all(dfl, **kwargs):
     
-    plot_dfl(dfl, **kwargs)
+    plot_dfl4(dfl, **kwargs)
     dfl.fft_z()
-    plot_dfl(dfl, **kwargs)
+    plot_dfl4(dfl, **kwargs)
     dfl.fft_xy()
-    plot_dfl(dfl, **kwargs)
+    plot_dfl4(dfl, **kwargs)
     dfl.fft_z()
-    plot_dfl(dfl, **kwargs)
+    plot_dfl4(dfl, **kwargs)
     dfl.fft_xy()
 
-def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy = True, log_scale=0, debug=1, vartype_dfl=complex64):
+def plot_dfl4(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy = True, log_scale=0, debug=1, vartype_dfl=complex64):
     '''
     Plots dfl radiation object in 3d.
 
@@ -1288,13 +1298,16 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         if freq_domain:
             if dfl.domain_z == 't':
                 dfl.fft_z(debug=debug)
-            z = dfl.scale_z() * 1e9
+            z = speed_of_light*h_eV_s / dfl.scale_z()
+#            z = dfl.scale_z() * 1e9
 
-            dfl.fld = dfl.fld[::-1, :, :]
-            z = z[::-1]
+#            dfl.fld = dfl.fld[::-1, :, :]
+#            z = z[::-1]
+            unit_z = r'eV'
+            z_label = r'$E_{ph}$ [' + unit_z + ']'
 
-            unit_z = r'nm'
-            z_label = r'$\lambda$ [' + unit_z + ']'
+#            unit_z = r'nm'
+#            z_label = r'$\lambda$ [' + unit_z + ']'
             z_labelv = r'[arb. units]'
             z_title = 'Spectrum'
             z_color = 'red'

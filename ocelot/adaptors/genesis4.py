@@ -15,7 +15,7 @@ class Genesis4Input:
         pass
     
 
-class GenesisParticlesDump:
+class Genesis4ParticlesDump:
     '''
     Genesis particle *.dpa files storage object
     Each particle record in z starts with the energy of all particles 
@@ -182,94 +182,212 @@ def read_gout4(file_path):
 
 def read_dfl4(file_path):
     
-    fld = h5py.File(file_path, 'r')
-    
-    nslice = fld.get('slicecount')[0]
-    lambdaref = fld.get('wavelength')[0]
-    sepslice = fld.get('slicespacing')[0]
-    gridsize = fld.get('gridsize')[0]
-    N = int(np.sqrt(fld.get('slice000001/field-real').size))
-    
-    field_real = []
-    field_imag = []
-    for dset in fld:
-        if dset.startswith('slice0'):
-            field_real.append(fld[dset]['field-real'][:].reshape(N,N))
-            field_imag.append(fld[dset]['field-imag'][:].reshape(N,N))
-    
-    dfl = RadiationField()
-    dfl.fld = np.array(field_real) + 1j * np.array(field_imag)
-    dfl.dx = gridsize
-    dfl.dy = gridsize
-    dfl.dz = sepslice
-    dfl.xlamds = lambdaref
-    dfl.domain_z = 't'  # longitudinal domain (t - time, f - frequency)
-    dfl.domain_xy = 's'  # transverse domain (s - space, k - inverse space)
-    dfl.filePath = fld.filename
+    with h5py.File(file_path, 'r') as h5:
+        
+        nslice = h5.get('slicecount')[0]
+        lambdaref = h5.get('wavelength')[0]
+        sepslice = h5.get('slicespacing')[0]
+        gridsize = h5.get('gridsize')[0]
+        N = int(np.sqrt(h5.get('slice000001/field-real').size))
+        
+        field_real = []
+        field_imag = []
+        for dset in h5:
+            if dset.startswith('slice0'):
+                field_real.append(h5[dset]['field-real'][:].reshape(N,N))
+                field_imag.append(h5[dset]['field-imag'][:].reshape(N,N))
+        
+        dfl = RadiationField()
+        dfl.fld = np.array(field_real) + 1j * np.array(field_imag)
+        dfl.dx = gridsize
+        dfl.dy = gridsize
+        dfl.dz = sepslice
+        dfl.xlamds = lambdaref
+        dfl.domain_z = 't'  # longitudinal domain (t - time, f - frequency)
+        dfl.domain_xy = 's'  # transverse domain (s - space, k - inverse space)
+#        dfl.h5 = h5
+        dfl.filePath = h5.filename
     
     return dfl
 
 
 
 
-#def read_dpa4(file_path):
-#par = h5py.File(file_path, 'r')
-#
-#nslice = par.get('slicecount')[0]
-#lslice = par.get('slicelength')[0]
-#sepslice = par.get('slicespacing')[0]
-#npart = par.get('slice000001/gamma').size
-#zsep = int(sepslice / lslice)
-#
-##fill_gaps=1
-#
-#x = []
-#y = []
-#px=[]
-#py=[]
-#g=[]
-#ph = []
-#s0 = 0
-#s = []
-#I = out.I
-#
-#for dset in par:
-#        if dset.startswith('slice0'):
-#            I.append(par[dset]['current'][:])
-#
-##if fill_gaps:
-##    for dset in par:
-##        if dset.startswith('slice0'):
-##            ts = par[dset]['theta'][:]
-##            t.append(ts.repeat(zsep))
-##            x.append(par[dset]['x'][:].repeat(zsep))
-##            px.append(par[dset]['px'][:].repeat(zsep))
-##            y.append(par[dset]['y'][:].repeat(zsep))
-##            py.append(par[dset]['py'][:].repeat(zsep))
-##            g.append(par[dset]['gamma'][:].repeat(zsep))
-##            for sl in range(zsep):
-##                s.append(s0 + ts / 2 / np.pi * lslice)            
-##                s0 =+ lslice
-##else:
-#for dset in par:
-#    if dset.startswith('slice0'):
-#        ph0 = par[dset]['theta'][:]
-#        s.append(s0 + ts / 2 / np.pi * lslice)
-#        x.append(par[dset]['x'][:])
-#        px.append(par[dset]['px'][:])
-#        y.append(par[dset]['y'][:])
-#        py.append(par[dset]['py'][:])
-#        g.append(par[dset]['gamma'][:])
-#        ph.append(ph0)
-#        s0 += sepslice
-#
-#nbins=4
-#npartpb=int(npart/nbins)
-#dpa.x = np.reshape(x, (nslice, nbins, npartpb), order='F')
-#dpa.px = np.reshape(px, (nslice, nbins, npartpb), order='F')
-#dpa.y = np.reshape(y, (nslice, nbins, npartpb), order='F')
-#dpa.py = np.reshape(py, (nslice, nbins, npartpb), order='F')
-#dpa.ph = np.reshape(py, (nslice, nbins, npartpb), order='F')
-#dpa.e = np.reshape(g, (nslice, nbins, npartpb), order='F')
-#
-#dpa.filePath = par.filename
+def read_dpa4(file_path):
+    h5 = h5py.File(file_path, 'r')
+    
+    nslice = int(h5.get('slicecount')[0])
+    lslice = h5.get('slicelength')[0]
+    sepslice = h5.get('slicespacing')[0]
+    npart = int(h5.get('slice000001/gamma').size)
+    nbins = int(h5.get('beamletsize')[0])
+    zsep = int(sepslice / lslice)
+    
+    fill_gaps=0
+    
+    x = []
+    y = []
+    px=[]
+    py=[]
+    g=[]
+    ph = []
+    s0 = []
+    s = []
+    I = []
+    
+    for dset in h5:
+            if dset.startswith('slice0'):
+                I.append(h5[dset]['current'][:])
+    
+    #if fill_gaps:
+    #    for dset in h5:
+    #        if dset.startswith('slice0'):
+    #            ph0 = h5[dset]['theta'][:]
+    #            ph.append(ph0.repeat(zsep))
+    #            x.append(h5[dset]['x'][:].repeat(zsep))
+    #            px.append(h5[dset]['px'][:].repeat(zsep))
+    #            y.append(h5[dset]['y'][:].repeat(zsep))
+    #            py.append(h5[dset]['py'][:].repeat(zsep))
+    #            g.append(h5[dset]['gamma'][:].repeat(zsep))
+    #            for sl in range(zsep):
+    #                s.append(s0 + ph0 / 2 / np.pi * lslice)            
+    #                s0 =+ lslice
+    else:
+        for dset in h5:
+            if dset.startswith('slice0'):
+                ph0 = h5[dset]['theta'][:]
+    #            s.append(s0 + ph0 / 2 / np.pi * lslice)
+                x.append(h5[dset]['x'][:])
+                px.append(h5[dset]['px'][:])
+                y.append(h5[dset]['y'][:])
+                py.append(h5[dset]['py'][:])
+                g.append(h5[dset]['gamma'][:])
+                ph.append(ph0)
+                s0 += sepslice
+            
+    
+    npartpb=int(npart/nbins)
+    
+    dpa = Genesis4ParticlesDump()
+    
+    dpa.x = np.reshape(x, (nslice, nbins, npartpb), order='F')
+    dpa.px = np.reshape(px, (nslice, nbins, npartpb), order='F')
+    dpa.y = np.reshape(y, (nslice, nbins, npartpb), order='F')
+    dpa.py = np.reshape(py, (nslice, nbins, npartpb), order='F')
+    dpa.ph = np.reshape(ph, (nslice, nbins, npartpb), order='F')
+    dpa.g = np.reshape(g, (nslice, nbins, npartpb), order='F')
+    dpa.I = np.array(I).flatten()
+    #dpa.s = np.array(s).flatten()
+    dpa.nslice = nslice
+    dpa.lslice = lslice
+    dpa.npart = npart
+    dpa.nbins = nbins
+    dpa.zsep = zsep
+    dpa.filePath = h5.filename
+    
+    return dpa
+
+
+
+
+
+def dpa42edist(dpa, n_part=None, fill_gaps=1, debug=1):
+    fill_gaps = 0
+    '''
+    Convert dpa to edist objects
+    reads GenesisParticlesDump() object
+    returns GenesisElectronDist() object
+    num_part - desired approximate number of particles in edist
+    smear - whether to shuffle macroparticles smearing microbunching
+    '''
+    import random
+    start_time = time.time()
+    #if debug > 0:
+    #    print ('    transforming particle to distribution file')
+    
+    #assert out('itdp') == True, '! steadystate Genesis simulation, dpa2dist() not implemented yet!'
+    
+    npart = dpa.npart
+    # nslice=int(out('nslice'))
+    nslice = dpa.nslice
+    nbins = dpa.nbins
+    xlamds = dpa.lslice
+    zsep = dpa.zsep
+    gen_I = dpa.I
+    
+#    npart_bin = int(npart / nbins)
+        
+    
+    if fill_gaps:
+        s0 = np.linspace(0, nslice * zsep * xlamds, nslice)
+        s = np.linspace(0, nslice * zsep * xlamds, nslice * zsep)
+        I = np.interp(s, s0, dpa.I)
+        dt = (s[1] - s[0]) / speed_of_light
+    else:
+        s = np.linspace(0, nslice * zsep * xlamds, nslice)
+        I = dpa.I
+        dt = (s[1] - s[0]) / speed_of_light
+        
+    C = np.sum(I) * dt
+        
+    n_part_max = np.sum(I / I.max() * dpa.npart)
+#    print(n_part)
+    
+    if n_part is not None:
+        if n_part > n_part_max:
+            n_part = n_part_max
+    else:
+        n_part = int(np.floor(n_part_max))
+#    print(n_part)
+    
+    
+    #n_part_bin = (I / np.sum(I) * n_part / nbins).astype(int)
+    #n_part_bin[n_part_bin > npart_bin] = npart_bin
+    #print(n_part_bin.max())
+    n_part_slice = (I / np.sum(I) * n_part).astype(int)
+    n_part_slice[n_part_slice > npart] = npart
+#    print(n_part_slice.max())
+    
+    
+    #pick_i = random.sample(range(n_part), n_part_slice[i])
+
+    g = np.reshape(dpa.g, (nslice, npart))
+    x = np.reshape(dpa.x, (nslice, npart))
+    y = np.reshape(dpa.y, (nslice, npart))
+    px = np.reshape(dpa.px, (nslice, npart)) / g
+    py = np.reshape(dpa.py, (nslice, npart)) / g
+    ph = np.reshape(dpa.ph, (nslice, npart))
+    t1 = ph * xlamds / speed_of_light
+    t0 = np.arange(nslice)[:,np.newaxis] * xlamds * zsep / speed_of_light
+    t = t1+t0
+    
+    
+    
+    edist = GenesisElectronDist()
+    #g1 = np.array([])
+    #x1 = np.array([])
+    #y1 = np.array([])
+    
+    
+    for i in np.arange(I.size):
+    #    for ii in np.arange(nbins):
+    #    pick_i = random.sample(range(npart_bin), n_part_bin[i])
+        pick_i = random.sample(range(npart), n_part_slice[i])
+    
+    #    t.append(dpa.t, t[i, pick_i])
+    #    g = np.append(g, dpa.e[i, ii, pick_i])
+        
+        edist.g = np.append(edist.g, g[i, pick_i])
+        edist.xp = np.append(edist.xp, px[i, pick_i])
+        edist.yp = np.append(edist.yp, py[i, pick_i])
+        edist.x = np.append(edist.x, x[i, pick_i])  
+        edist.y = np.append(edist.y, y[i, pick_i])
+        edist.t = np.append(edist.t, t[i, pick_i])
+        
+    #    if fill_gaps and zsep>1:
+    #        for ii in range(zsep):
+                
+    
+    edist.part_charge = C / n_part
+    
+    return edist

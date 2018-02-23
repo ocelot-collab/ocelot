@@ -4,6 +4,7 @@ import socket
 import copy
 import h5py
 import numpy as np
+from ocelot import ParticleArray
 from ocelot.optics.wave import calc_ph_sp_dens, RadiationField
 from ocelot.common.globals import *
 
@@ -391,3 +392,90 @@ def dpa42edist(dpa, n_part=None, fill_gaps=1, debug=1):
     edist.part_charge = C / n_part
     
     return edist
+
+def read_dpa42parray(file_path, N_part=None, fill_gaps=True):
+    import random
+    import h5py 
+    N_part = None
+    #N_part = 100000
+    fill_gaps=True
+    
+    h5 = h5py.File(file_path, 'r')
+    
+    nslice = int(h5.get('slicecount')[0])
+    lslice = h5.get('slicelength')[0]
+    sepslice = h5.get('slicespacing')[0]
+    npart = int(h5.get('slice000001/gamma').size)
+    nbins = int(h5.get('beamletsize')[0])
+    zsep = int(sepslice / lslice)
+    
+    I = []
+    for dset in h5:
+            if dset.startswith('slice0'):
+                I.append(h5[dset]['current'][0])
+    I = np.array(I)
+    
+    dt = zsep * lslice / speed_of_light
+    
+        
+    N_part_max = np.sum(I / I.max() * npart) # total maximum reasonable number of macroparticles of the same charge that can be extracted
+    
+    if N_part is not None:
+        if N_part > N_part_max:
+            N_part = int(np.floor(N_part_max))
+    else:
+        N_part = int(np.floor(N_part_max))
+    
+    n_part_slice = (I / np.sum(I) * N_part).astype(int) #array of number of particles per new bin
+    n_part_slice[n_part_slice > npart] = npart
+    
+    N_part_act = np.sum(n_part_slice) #actual number of particles
+    
+    dt = zsep * lslice / speed_of_light
+    C = np.sum(I) * dt #total charge
+    c = C / N_part_act # particle charge
+    
+    pick_i = [random.sample(range(npart), n_part_slice[i]) for i in range(nslice)]
+    
+    x = []
+    y = []
+    px = []
+    py = []
+    g = []
+    ph = []
+    s = []
+    
+    for dset in h5:
+        if dset.startswith('slice0'):
+            i = int(dset.strip('/slice'))-1
+            if len(pick_i[i]) > 0:
+                ph0 = h5[dset]['theta'].value[pick_i[i]]
+                s.append(i*zsep*lslice + ph0 / 2 / np.pi * lslice)
+                x.append(np.array(h5[dset]['x'].value[pick_i[i]]))
+                px.append(np.array(h5[dset]['px'].value[pick_i[i]]))
+                y.append(np.array(h5[dset]['y'].value[pick_i[i]]))
+                py.append(np.array(h5[dset]['py'].value[pick_i[i]]))
+                g.append(np.array(h5[dset]['gamma'].value[pick_i[i]]))
+    
+    p_array = ParticleArray()
+    p_array.rparticles = np.empty((6, N_part_act))
+    
+    g = np.concatenate(g).ravel()
+    g0 = np.mean(g) # average gamma
+    p_array.E = g0 * m_e_GeV # average energy in GeV
+    p0 = sqrt(g0**2-1) * m_e_eV / speed_of_light
+    
+    p_array.rparticles[0] = np.concatenate(x).ravel() # position in x in meters
+    p_array.rparticles[1] = np.concatenate(px).ravel() / g0  # divergence in x
+    p_array.rparticles[2] = np.concatenate(y).ravel() # position in x in meters
+    p_array.rparticles[3] = np.concatenate(py).ravel() / g0  # divergence in x
+    p_array.rparticles[4] = -np.concatenate(s).ravel()
+    p_array.rparticles[5] = (g - g0) * m_e_eV / p0 / speed_of_light
+    
+    if fill_gaps:
+        p_array.rparticles[4] -= np.random.randint(0, zsep, N_part_act) * lslice
+    
+    p_array.q_array = np.ones(N_part_act) * c
+    
+    h5.close()
+    return p_array

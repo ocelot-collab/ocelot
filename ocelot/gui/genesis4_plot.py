@@ -39,13 +39,18 @@ from ocelot.common.math_op import *  # import of mathematical functions
 from ocelot.utils.xfel_utils import *
 from ocelot.optics.utils import calc_ph_sp_dens
 from ocelot.optics.wave import *
+from copy import deepcopy
 
 # from pylab import rc, rcParams #tmp
 from matplotlib import rc, rcParams
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-def_cmap = 'viridis'
-# def_cmap = 'Greys'
+my_viridis = deepcopy(plt.get_cmap('viridis')) 
+my_viridis.set_under('w')
+def_cmap = my_viridis
+
+#def_cmap = 'viridis'
+#def_cmap = 'Greys'
 
 fntsz = 4
 params = {'image.cmap': def_cmap, 'backend': 'ps', 'axes.labelsize': 3 * fntsz, 'font.size': 3 * fntsz, 'legend.fontsize': 4 * fntsz, 'xtick.labelsize': 4 * fntsz,  'ytick.labelsize': 4 * fntsz, 'text.usetex': False}

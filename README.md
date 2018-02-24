@@ -86,18 +86,18 @@ The easiest way to install OCELOT is to use Anaconda cloud. In that case use com
     $ conda install -c ocelot-collab ocelot
     ```
     
-##### 
+##### GitHub
 You can download Source code v18.02 (zip file) and unzip it or if you want to have latest version, clone OCELOT from GitHub:
-'''
+```
 $ git clone https://github.com/ocelot-collab/ocelot.git
-'''
+```
 or download last release [zip file] (https://github.com/ocelot-collab/ocelot/archive/v18.02.0.zip).
 Now you can install pyqtgraph from the source:
-'''
+```
 $ python setup.py install
-'''
+```
 
-##### Explicit installation
+##### PythonPath
 Another way is download ocelot from [GitHub](https://github.com/ocelot-collab/ocelot)
 1. you have to download from GitHub [zip file](https://github.com/ocelot-collab/ocelot/archive/master.zip).
 2. Unzip ocelot-master.zip to your working folder **/your_working_dir/**.

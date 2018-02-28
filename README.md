@@ -2,7 +2,7 @@ Accelerator, radiation and x-ray optics simulation framework
 
 # An Introduction to Ocelot
 
-Ocelot is a multiphysics simulation toolkit designed for studying FEL and storage ring based light sources. Ocelot is written in Python. Its central concept is the writing of python's scripts for simulations with the usage of Ocelot's modules and functions and the standard Python libraries.
+Ocelot is a multiphysics simulation toolkit designed for studying FEL and storage ring-based light sources. Ocelot is written in Python. Its central concept is the writing of python's scripts for simulations with the usage of Ocelot's modules and functions and the standard Python libraries.
 
 Ocelot includes following main modules:
 * **Charged particle beam dynamics module (CPBD)**
@@ -33,26 +33,6 @@ However if someone needs a GUI  it can be developed using Python's libraries lik
 
 For example, you can see GUI for SASE optimization (uncomment and run next block)
 
-## Tutorials
-* Preliminaries: Setup & introduction
-* Beam dynamics
-* [Tutorial N1. Linear optics.](#tutorial1). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/1_introduction.ipynb).
-    - Linear optics. Double Bend Achromat (DBA). Simple example of usage OCELOT functions to get periodic solution for a storage ring cell.
-* [Tutorial N2. Tracking.](2_tracking.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/2_tracking.ipynb).
-    - Linear optics of the European XFEL Injector.
-    - Tracking. First and second order.
-    - Artificial beam matching - BeamTransform
-* [Tutorial N3. Space Charge.](3_space_charge.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/3_space_charge.ipynb).
-    - Tracking through RF cavities with SC effects and RF focusing.
-* [Tutorial N4. Wakefields.](4_wake.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/4_wake.ipynb).
-    - Tracking through corrugated structure (energy chirper) with Wakefields
-* [Tutorial N5. CSR.](5_CSR.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/5_CSR.ipynb).
-    - Tracking trough bunch compressor with CSR effect.
-* [Tutorial N6. RF Coupler Kick.](6_coupler_kick.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/6_coupler_kick.ipynb).
-    - Coupler Kick. Example of RF coupler kick influence on trajjectory and optics.
-* [Tutorial N7. Lattice design.](7_lattice_design.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/7_lattice_design.ipynb).
-    - Lattice design, twiss matching, twiss backtracking
-
  ## Preliminaries
 
 The tutorial includes 7 simple examples dediacted to beam dynamics and optics. However, you should have a basic understanding of Computer Programming terminologies. A basic understanding of Python language is a plus.
@@ -81,10 +61,21 @@ $ conda install numpy scipy matplotlib jupyter
 ## Ocelot installation
 ##### Anaconda Cloud
 The easiest way to install OCELOT is to use Anaconda cloud. In that case use command:
-    ```
-    $ conda install -c ocelot-collab ocelot
-    ```
-##### Explicit installation
+ ```
+ $ conda install -c ocelot-collab ocelot
+ ``` 
+##### GitHub
+Clone OCELOT from GitHub:
+```
+$ git clone https://github.com/ocelot-collab/ocelot.git
+```
+or download last release [zip file](https://github.com/ocelot-collab/ocelot/archive/v18.02.0.zip) - recomended.
+Now you can install pyqtgraph from the source:
+```
+$ python setup.py install
+```
+
+##### PythonPath
 Another way is download ocelot from [GitHub](https://github.com/ocelot-collab/ocelot)
 1. you have to download from GitHub [zip file](https://github.com/ocelot-collab/ocelot/archive/master.zip).
 2. Unzip ocelot-master.zip to your working folder **/your_working_dir/**.
@@ -119,4 +110,25 @@ $ jupyter notebook --notebook-dir="path_to_your_directory"
 
 #### OCELOT jupyter tutorials
 You can download OCELOT jupyter tutorials (release v18.02) using GitHub link [zip file](https://github.com/ocelot-collab/ocelot/releases/download/v18.02.0/ocelot_jupyter_tutorial.zip).
+
+## Tutorials
+* Preliminaries: Setup & introduction
+* Beam dynamics
+* [Tutorial N1. Linear optics.](#tutorial1). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/1_introduction.ipynb).
+    - Linear optics. Double Bend Achromat (DBA). Simple example of usage OCELOT functions to get periodic solution for a storage ring cell.
+* [Tutorial N2. Tracking.](2_tracking.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/2_tracking.ipynb).
+    - Linear optics of the European XFEL Injector.
+    - Tracking. First and second order.
+    - Artificial beam matching - BeamTransform
+* [Tutorial N3. Space Charge.](3_space_charge.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/3_space_charge.ipynb).
+    - Tracking through RF cavities with SC effects and RF focusing.
+* [Tutorial N4. Wakefields.](4_wake.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/4_wake.ipynb).
+    - Tracking through corrugated structure (energy chirper) with Wakefields
+* [Tutorial N5. CSR.](5_CSR.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/5_CSR.ipynb).
+    - Tracking trough bunch compressor with CSR effect.
+* [Tutorial N6. RF Coupler Kick.](6_coupler_kick.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/6_coupler_kick.ipynb).
+    - Coupler Kick. Example of RF coupler kick influence on trajjectory and optics.
+* [Tutorial N7. Lattice design.](7_lattice_design.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/7_lattice_design.ipynb).
+    - Lattice design, twiss matching, twiss backtracking
+
 

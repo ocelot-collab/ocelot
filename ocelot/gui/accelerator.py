@@ -879,7 +879,7 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones = None ):
 
 from ocelot.cpbd.beam import global_slice_analysis_extended
 
-def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpolation="bilinear", nfig=40):
+def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpolation="bilinear", inverse_tau=False, nfig=40, title=None):
     """
     Shows e-beam slice parameters (current, emittances, energy spread)
     and beam distributions (dE/(p0 c), X, Y) against long. coordinate (S)
@@ -891,13 +891,20 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpo
     :param nbins_y: number of bins for 2D hist. in vertical plane
     :param interpolation: "bilinear", and acceptable values are 'none’, ‘nearest’, ‘bilinear’, ‘bicubic’, ‘spline16’,
                         ‘spline36’, ‘hanning’, ‘hamming’, ‘hermite’, ‘kaiser’, ‘quadric’, ‘catrom’, ‘gaussian’, ‘bessel’
+    :param inverse_tau: False, inverse tau - head will be on the right side of figure
     :param nfig: number of the figure
+    :param title: None or string - title of the figure
     :return:
     """
-    slice_params = global_slice_analysis_extended(p_array, nparts_in_slice, 0.01, 2, 2)
+    p_array_copy = deepcopy(p_array)
+    if inverse_tau:
+        p_array_copy.tau()[:] *= -1
+
+    slice_params = global_slice_analysis_extended(p_array_copy, nparts_in_slice, 0.01, 2, 2)
 
     fig = plt.figure(nfig)
-
+    if title != None:
+        fig.suptitle(title)
     ax_sp = plt.subplot(325)
     plt.title("Energy Spread")
     plt.plot(slice_params[0] * 1e3, slice_params[5]*1e-3, "b", label="Energy Spread")
@@ -930,7 +937,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpo
     ax_ys = plt.subplot(326)
     plt.title("Vertical Distribution")
 
-    H, xedges, yedges = np.histogram2d(p_array.tau() * 1e3, p_array.y() * 1e3, bins=(nbins_x, nbins_y))
+    H, xedges, yedges = np.histogram2d(p_array_copy.tau() * 1e3, p_array_copy.y() * 1e3, bins=(nbins_x, nbins_y))
     H = H.T
     vmin = np.min(H) + (np.max(H) - np.min(H)) * 0.0001
     ax_ys.imshow(H, interpolation=interpolation, aspect='auto', origin='low',
@@ -944,7 +951,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpo
 
     ax_xs = plt.subplot(324, sharex=ax_ys)
     plt.title("Horiz. Distribution")
-    H, xedges, yedges = np.histogram2d(p_array.tau() * 1e3, p_array.x() * 1e3, bins=(nbins_x, nbins_y))
+    H, xedges, yedges = np.histogram2d(p_array_copy.tau() * 1e3, p_array_copy.x() * 1e3, bins=(nbins_x, nbins_y))
     H = H.T
     vmin = np.min(H) + (np.max(H) - np.min(H)) * 0.0001
     ax_xs.imshow(H, interpolation=interpolation, aspect='auto', origin='low',
@@ -955,7 +962,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpo
 
     ax_ps = plt.subplot(322, sharex=ax_ys)
     plt.title("Energy Distribution")
-    H, xedges, yedges = np.histogram2d(p_array.tau() * 1e3, p_array.p()*100, bins=(nbins_x, nbins_y))
+    H, xedges, yedges = np.histogram2d(p_array_copy.tau() * 1e3, p_array_copy.p()*100, bins=(nbins_x, nbins_y))
     H = H.T
     vmin = np.min(H) + (np.max(H) - np.min(H)) * 0.0001
     ax_ps.imshow(H, interpolation=interpolation, aspect='auto', origin='low',

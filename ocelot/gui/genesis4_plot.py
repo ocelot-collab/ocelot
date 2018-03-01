@@ -211,7 +211,7 @@ plt.ioff() #turn off interactive mode
     # print ('    total plotting time %.2f seconds' % (time.time() - plotting_time))
 
 
-def plot_gen4_out_z(out, z=1e5, params=['rad_power+el_current', 'el_energy+el_espread+el_bunching', 'rad_phase', 'rad_spec'], figsize=4, x_units='um', y_units='ev', legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
+def plot_gen4_out_z(out, z=1e5, params=['rad_power+el_current', 'el_energy+el_espread+el_bunching', 'rad_phase', 'rad_spec'], figsize=3, x_units='um', y_units='ev', legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
     '''
     radiation parameters at distance z
     out/out = GenesisOutput() object
@@ -579,17 +579,17 @@ def subfig_z_spec(ax_spectrum, out, zi=None, loc='near', y_units='ev', estimate_
     
 
 
-def plot_gen4_out_e(out, legend=False, figsize=4, fig_name='Electrons', savefig=False, showfig=True, debug=1):
+def plot_gen4_out_e(out, legend=False, figsize=3, fig_name='Electrons', savefig=False, showfig=True, debug=1):
     fig = plot_gen4_out_evo(out, params=['und_quad', 'el_size', 'el_energy', 'el_bunching'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
 
 
-def plot_gen4_out_ph(out, legend=False, figsize=4, fig_name='Radiation', savefig=False, showfig=True, debug=1):
+def plot_gen4_out_ph(out, legend=False, figsize=3, fig_name='Radiation', savefig=False, showfig=True, debug=1):
     if out.tdp:
         fig = plot_gen4_out_evo(out, params=['rad_pow_en_log', 'rad_pow_en_lin', 'rad_spec_log', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
     else:
         fig = plot_gen4_out_evo(out, params=['rad_pow_log', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
 
-def plot_gen4_out_evo(out, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'el_bunching', 'rad_pow_en_log', 'rad_pow_en_lin', 'rad_spec_log', 'rad_size', 'rad_spec_evo_n', 'rad_pow_evo_n'], figsize=4, legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
+def plot_gen4_out_evo(out, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'el_bunching', 'rad_pow_en_log', 'rad_pow_en_lin', 'rad_spec_log', 'rad_size', 'rad_spec_evo_n', 'rad_pow_evo_n'], figsize=3, legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
     '''
     plots evolution of given parameters from genesis output with undulator length
     '''
@@ -879,7 +879,7 @@ def subfig_evo_rad_pow_en(ax_rad_pow, out, legend, log=1):
             ax_rad_en.plot(out.z[idx], out.rad_energy[idx]*1e6, 'k--', linewidth=1.5)
             ax_rad_en.set_ylabel(r'E [$\mu$J]')
         else:
-            ax_rad_en.plot(out.z[idx], out.rad_energy*1e3[idx], 'k--', linewidth=1.5)
+            ax_rad_en.plot(out.z[idx], out.rad_energy[idx]*1e3, 'k--', linewidth=1.5)
             ax_rad_en.set_ylabel(r'E [mJ]')
         ax_rad_en.set_ylim(ymin=0)
     plt.yticks(plt.yticks()[0][0:-1])
@@ -1226,7 +1226,7 @@ def plot_dfl4_all(dfl, **kwargs):
     plot_dfl4(dfl, **kwargs)
     dfl.fft_xy()
 
-def plot_dfl4(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy = True, log_scale=0, debug=1, vartype_dfl=complex64):
+def plot_dfl4(dfl, domains=None, z_lim=[], xy_lim=[], figsize=3, cmap=def_cmap, legend=True, phase=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy = True, log_scale=0, debug=1, vartype_dfl=complex64):
     '''
     Plots dfl radiation object in 3d.
 

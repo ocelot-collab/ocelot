@@ -12,6 +12,8 @@ import scipy.integrate as integrate
 #import matplotlib.animation as animation
 from copy import deepcopy
 import time
+import os
+
 
 # from ocelot.optics.elements import *
 from ocelot.common.globals import *
@@ -1717,10 +1719,17 @@ def calc_ph_sp_dens(spec, freq_ev, n_photons, spec_squared=1):
     '''
     calculates number of photons per electronvolt
     '''
-    if spec.ndim == 2:
-        axis=1
-    else:
+    if spec.ndim == 1:
         axis=0
+    else:
+        if spec.shape[0] == freq_ev.shape[0]:
+            spec = spec.T
+        axis=1
+            # axis=0
+        # elif spec.shape[1] == freq_ev.shape[0]:
+            # axis=1
+        # else:
+            # raise ValueError('operands could not be broadcast together with shapes ', spec.shape, ' and ', freq_ev.shape)
         
     if spec_squared:
         spec_sum = np.trapz(spec, x=freq_ev, axis=axis)
@@ -1739,6 +1748,7 @@ def calc_ph_sp_dens(spec, freq_ev, n_photons, spec_squared=1):
         norm_factor = np.sqrt(n_photons / spec_sum)
     
     if spec.ndim == 2:
+        
         norm_factor = norm_factor[:,np.newaxis]
     
     return spec * norm_factor

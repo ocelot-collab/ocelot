@@ -6,6 +6,7 @@ import h5py
 import numpy as np
 from ocelot.optics.wave import calc_ph_sp_dens, RadiationField
 from ocelot.common.globals import *
+from ocelot.adaptors.genesis import GenesisElectronDist #tmp
 
 class Genesis4Input:
     '''

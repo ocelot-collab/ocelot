@@ -2771,7 +2771,7 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
     else:
         plt.close('all')
 
-def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,None), y_lim=(None,None), downsample=1, autoscale=None, cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=True, debug=1):
+def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,None), y_lim=(None,None), downsample=1, autoscale=None, cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=True, plot_proj=1, debug=1):
     '''
     plots wigner distribution (WD) with marginals
     wig_or_out -  may be WignerDistribution() or GenesisOutput() object
@@ -2821,32 +2821,35 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
     
     if x_units=='fs':
         power_scale=W.s/speed_of_light*1e15
-        p_label_txt='time [fs]'
+        p_label_txt='t [fs]'
     else:
         power_scale=W.s*1e6
         p_label_txt='s [$\mu$m]'
     
     if y_units in ['ev', 'eV']:
         spec_scale=speed_of_light*h_eV_s*1e9/W.freq_lamd
-        f_label_txt='ph.energy [eV]'
+        f_label_txt='$E_{photon}$ [eV]'
     else:
         spec_scale=W.freq_lamd
-        f_label_txt='wavelength [nm]'
+        f_label_txt='$\lambda& [nm]'
     
-    # definitions for the axes
-    left, width = 0.18, 0.57
-    bottom, height = 0.14, 0.55
-    left_h = left + width + 0.02 - 0.02
-    bottom_h = bottom + height + 0.02 - 0.02
-    
+    if plot_proj:
+        # definitions for the axes
+        left, width = 0.18, 0.57
+        bottom, height = 0.14, 0.55
+        left_h = left + width + 0.02 - 0.02
+        bottom_h = bottom + height + 0.02 - 0.02
+        
 
-    rect_scatter = [left, bottom, width, height]
-    rect_histx = [left, bottom_h, width, 0.2]
-    rect_histy = [left_h, bottom, 0.15, height]
-    
-    axScatter = plt.axes(rect_scatter)
-    axHistx = plt.axes(rect_histx, sharex=axScatter)
-    axHisty = plt.axes(rect_histy, sharey=axScatter)
+        rect_scatter = [left, bottom, width, height]
+        rect_histx = [left, bottom_h, width, 0.2]
+        rect_histy = [left_h, bottom, 0.15, height]
+        
+        axScatter = plt.axes(rect_scatter)
+        axHistx = plt.axes(rect_histx, sharex=axScatter)
+        axHisty = plt.axes(rect_histy, sharey=axScatter)
+    else:
+        axScatter = plt.axes()
     
     if abs_value:
         axScatter.pcolormesh(power_scale, spec_scale, abs(wigner)) #change
@@ -2857,29 +2860,36 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
         axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], wigner[::downsample,::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
         axScatter.text(0.02, 0.98, r'$W_{max}$= %.2e' % (np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes)#fontsize=12,
             
-    axHistx.plot(power_scale,power)
-    axHistx.text(0.02, 0.95, r'E= %.2e J' % (W.energy()), horizontalalignment='left', verticalalignment='top', transform=axHistx.transAxes)#fontsize=12,
-    axHistx.set_ylabel('power [W]')
+    if plot_proj:
+        axHistx.plot(power_scale,power)
+        axHistx.text(0.02, 0.95, r'E= %.2e J' % (W.energy()), horizontalalignment='left', verticalalignment='top', transform=axHistx.transAxes)#fontsize=12,
+        axHistx.set_ylabel('power [W]')
 
-    axHisty.plot(spec,spec_scale)
-    axHisty.set_xlabel('spectrum [a.u.]')
-    
-    axScatter.axis('tight')
-    axScatter.set_xlabel(p_label_txt)
-    axScatter.set_ylabel(f_label_txt)
+        axHisty.plot(spec/spec.max(), spec_scale)
+        axHisty.set_xlabel('spectrum [a.u.]')
+        
+        axScatter.axis('tight')
+        axScatter.set_xlabel(p_label_txt)
+        axScatter.set_ylabel(f_label_txt)
 
-    axHistx.set_ylim(ymin=0)
-    axHisty.set_xlim(xmin=0)
+        axHistx.set_ylim(ymin=0)
+        axHisty.set_xlim(xmin=0)
 
-    for tl in axHistx.get_xticklabels():
-        tl.set_visible(False)
+        for tl in axHistx.get_xticklabels():
+            tl.set_visible(False)
 
-    for tl in axHisty.get_yticklabels():
-        tl.set_visible(False)
-
-    
-    axHistx.yaxis.major.locator.set_params(nbins=4)
-    axHisty.xaxis.major.locator.set_params(nbins=2)
+        for tl in axHisty.get_yticklabels():
+            tl.set_visible(False)
+        
+        axHistx.yaxis.major.locator.set_params(nbins=4)
+        axHisty.xaxis.major.locator.set_params(nbins=2)
+        
+        axHistx.set_xlim(x_lim[0], x_lim[1])
+        axHisty.set_ylim(y_lim[0], y_lim[1])
+    else:
+        axScatter.axis('tight')
+        axScatter.set_xlabel(p_label_txt)
+        axScatter.set_ylabel(f_label_txt)
     
     if autoscale == 1:
         autoscale = 1e-2
@@ -2902,8 +2912,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
     
     # axScatter.set_xlim(x_lim[0], x_lim[1])
     # axScatter.set_ylim(y_lim[0], y_lim[1])
-    axHistx.set_xlim(x_lim[0], x_lim[1])
-    axHisty.set_ylim(y_lim[0], y_lim[1])
+
     
     if savefig != False:
         if savefig == True:

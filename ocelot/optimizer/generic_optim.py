@@ -73,7 +73,7 @@ class OcelotInterfaceWindow(QFrame):
         QFrame.__init__(self)
 
         self.logbook = "xfellog"
-        self.dev_mode = False
+        self.dev_mode = True
 
         self.ui = MainWindow(self)
 

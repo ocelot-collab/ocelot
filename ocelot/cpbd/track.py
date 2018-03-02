@@ -257,9 +257,9 @@ def ellipse_track_list(beam, n_t_sigma = 3, num = 1000, type = "contour"):
 
 
 
-def track_nturns(lat, nturns, track_list, nsuperperiods=1, save_track=True):
+def track_nturns(lat, nturns, track_list, nsuperperiods=1, save_track=True, print_progress=True):
     xlim, ylim, px_lim, py_lim = aperture_limit(lat, xlim = 1, ylim = 1)
-    navi = Navigator()
+    navi = Navigator(lat)
 
     t_maps = get_map(lat, lat.totalLen, navi)
 
@@ -269,7 +269,7 @@ def track_nturns(lat, nturns, track_list, nsuperperiods=1, save_track=True):
     p_array.list2array(p_list)
 
     for i in range(nturns):
-        print(i)
+        if print_progress: print(i)
         for n in range(nsuperperiods):
             for tm in t_maps:
                 tm.apply(p_array)

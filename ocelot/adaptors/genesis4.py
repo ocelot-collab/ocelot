@@ -479,3 +479,58 @@ def read_dpa42parray(file_path, N_part=None, fill_gaps=True):
     
     h5.close()
     return p_array
+
+
+def write_gen4_lat(lat, file_path, line_name='LINE', l=np.inf):
+
+    #inp_path = 
+    #l=15
+    
+    
+    lat_str = []
+    beamline = []
+    ll=0
+    
+    #line_name = 'SASE3'
+    
+    lat_str.append('# generated with Ocelot\n')
+    
+    for element in lat1.sequence[:50]:
+        
+        if ll >= l:
+            break
+        
+        element_num = str(len(beamline) + 1).zfill(3)
+        
+        if hasattr(element,'l'):
+            ll += element.l
+        
+        if isinstance(element, Undulator):
+            element_name = element_num + 'UND'
+            s = '{:}: UNDULATOR = {{lambdau = {:}, nwig = {:}, aw = {:.6f}}};'.format(element_name, element.lperiod, element.nperiods, element.Kx/sqrt(2))
+#            print(s)
+    
+        elif isinstance(element, Drift):
+            element_name = element_num + 'DR'
+            s = '{:}: DRIFT = {{l={:}}};'.format(element_name, element.l)
+    
+        elif isinstance(element, Quadrupole):
+            if element.k1>=0:
+                element_name = element_num + 'QF'
+            else:
+                element_name =  element_num + 'QD'
+            s = '{:}: QUADRUPOLE = {{l = {:}, k1 = {:.6f} }};'.format(element_name, element.l, element.k1)
+    
+        else:
+#            print('unknown element with length '+ str(element.l))
+            continue
+        
+        beamline.append(element_name)
+        lat_str.append(s)
+        
+    lat_str.append('')
+    lat_str.append('{:}: LINE = {{{:}}};'.format(line_name, ','.join(beamline)))
+    lat_str.append('\n# end of file\n')
+                   
+    with open(inp_path + '.lat', 'w') as f:
+        f.write("\n".join(lat_str))

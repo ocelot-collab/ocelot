@@ -482,16 +482,10 @@ def read_dpa42parray(file_path, N_part=None, fill_gaps=True):
 
 
 def write_gen4_lat(lat, file_path, line_name='LINE', l=np.inf):
-
-    #inp_path = 
-    #l=15
-    
     
     lat_str = []
     beamline = []
     ll=0
-    
-    #line_name = 'SASE3'
     
     lat_str.append('# generated with Ocelot\n')
     
@@ -522,7 +516,7 @@ def write_gen4_lat(lat, file_path, line_name='LINE', l=np.inf):
             s = '{:}: QUADRUPOLE = {{l = {:}, k1 = {:.6f} }};'.format(element_name, element.l, element.k1)
     
         else:
-#            print('unknown element with length '+ str(element.l))
+#            logger.warning('warn: unknown element with length '+ str(element.l))
             continue
         
         beamline.append(element_name)

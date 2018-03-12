@@ -17,7 +17,7 @@ try:
 except:
     extrema_chk = 0
 
-
+_logger = logging.getLogger('ocelot.track')
 #c0=299792458
 #E_ele_eV=5.109986258350895e+05
 
@@ -424,7 +424,7 @@ def tracking_step(lat, particle_list, dz, navi):
     for tm in t_maps:
         start = time()
         tm.apply(particle_list)
-        logger.debug("tm: l="+  str(tm.length) +"  class=" + tm.__class__.__name__ + " \n"
+        _logger.debug("tm: l="+  str(tm.length) +"  class=" + tm.__class__.__name__ + " \n"
             "tracking_step -> apply: time exec = " + str(time() - start) + "  sec")
     return
 

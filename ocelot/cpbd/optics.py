@@ -22,7 +22,7 @@ try:
 except:
     nb_flag = False
 
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger('ocelot.optics')
 
 
 
@@ -218,7 +218,7 @@ class TransferMap:
         # a = np.add(np.transpose(dot(self.R(energy), particles.T.reshape(6, int(n/6)))), self.B(energy)).reshape(n)
 
         rparticles[:] = a[:]
-        #logger.debug('return trajectory, array ' + str(len(rparticles)))
+        #_logger.debug('return trajectory, array ' + str(len(rparticles)))
         return rparticles
 
     def __mul__(self, m):
@@ -314,19 +314,19 @@ class PulseTM(TransferMap):
     def mul_parray(self, rparticles , energy=0.):
         n = len(rparticles)
         #if 'pulse' in self.__dict__:
-        logger.debug('TD transfer map')
-        if n > 6: logger.debug(
+        _logger.debug('TD transfer map')
+        if n > 6: _logger.debug(
                 'warning: time-dependent transfer maps not implemented for an array. Using 1st particle value')
-        if n > 6: logger.debug('warning: time-dependent transfer maps not implemented for steps inside element')
+        if n > 6: _logger.debug('warning: time-dependent transfer maps not implemented for steps inside element')
         tau = rparticles[4]
         dxp = self.pulse.kick_x(tau)
         dyp = self.pulse.kick_y(tau)
-        logger.debug('kick ' + str(dxp) + ' ' + str(dyp))
+        _logger.debug('kick ' + str(dxp) + ' ' + str(dyp))
         b = array([0.0, dxp, 0.0, dyp, 0., 0.])
         #a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(int(n / 6), 6)))), b).reshape(n)
         a = np.add(dot(self.R(energy), rparticles), b)
         rparticles[:] = a[:]
-        logger.debug('return trajectory, array ' + str(len(rparticles)))
+        _logger.debug('return trajectory, array ' + str(len(rparticles)))
         return rparticles
 
 class MultipoleTM(TransferMap):
@@ -928,7 +928,7 @@ def periodic_twiss(tws, R):
     cosmy = (R[2, 2] + R[3, 3]) / 2.
 
     if abs(cosmx) >= 1 or abs(cosmy) >= 1:
-        logger.warning("************ periodic solution does not exist. return None ***********")
+        _logger.warning("************ periodic solution does not exist. return None ***********")
         # print("************ periodic solution does not exist. return None ***********")
         return None
     sinmx = np.sign(R[0, 1]) * sqrt(1. - cosmx * cosmx)
@@ -1002,7 +1002,7 @@ def twiss_fast(lattice, tws0=None):
             R = lattice_transfer_map(lattice, tws0.E)
             tws0 = periodic_twiss(tws0, R)
             if tws0 == None:
-                logger.warning('twiss_fast: Twiss: no periodic solution')
+                _logger.warning('twiss_fast: Twiss: no periodic solution')
                 return None
         else:
             tws0.gamma_x = (1. + tws0.alpha_x ** 2) / tws0.beta_x
@@ -1016,7 +1016,7 @@ def twiss_fast(lattice, tws0=None):
             obj_list.append(tws0)
         return obj_list
     else:
-        logger.warning('twiss_fast: Twiss: no periodic solution')
+        _logger.warning('twiss_fast: Twiss: no periodic solution')
         return None
 
 
@@ -1159,7 +1159,7 @@ class Navigator:
     def get_next(self):
 
         proc_list = self.get_proc_list()
-        #logger.show_debug = False
+        #_logger.show_debug = False
 
         if len(proc_list) > 0:
 
@@ -1193,7 +1193,7 @@ class Navigator:
         # check if dz overjumps the stop element
         dz, processes = self.check_overjump(dz, processes)
 
-        logger.debug(" Navigator.get_next: " +'\n' +
+        _logger.debug(" Navigator.get_next: " +'\n' +
                      "navi.z0=" + str(self.z0) + " navi.n_elem=" + str(self.n_elem) + " navi.sum_lengths="
                      + str(self.sum_lengths) + " dz=" + str(dz) + '\n' +
                      "element type=" + self.lat.sequence[self.n_elem].__class__.__name__ + " element name=" +

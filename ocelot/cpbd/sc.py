@@ -18,7 +18,7 @@ try:
     import pyfftw
 except:
     pyfftw_flag = False
-    print("cs.py: module PYFFTW is not install. Install it if you want speed up your calculation")
+    print("cs.py: module PYFFTW is not installed. Install it to speed up calculation.")
     from numpy.fft import ifftn
     from numpy.fft import fftn
 
@@ -26,7 +26,7 @@ try:
     import numexpr as ne
     ne_flag = True
 except:
-    print("sc.py: module NUMEXPR is not installed. Install it if you want higher speed calculation.")
+    print("sc.py: module NUMEXPR is not installed. Install it to speed up calculation.")
     ne_flag = False
 
 def smooth_z(Zin, mslice):

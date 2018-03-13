@@ -20,14 +20,14 @@ try:
     import numba as nb
     nb_flag = True
 except:
-    print("csr.py: module NUMBA is not install. Install it if you want speed up your calculation")
+    print("csr.py: module NUMBA is not installed. Install it to speed up calculation")
     nb_flag = False
 
 try:
     from pyfftw.interfaces.numpy_fft import fft
     from pyfftw.interfaces.numpy_fft import ifft
 except:
-    print("csr.py: module PYFFTW is not install. Install it if you want speed up your calculation")
+    print("csr.py: module PYFFTW is not installed. Install it to speed up calculation.")
     from numpy.fft import ifft
     from numpy.fft import fft
 
@@ -35,7 +35,7 @@ try:
     import numexpr as ne
     ne_flag = True
 except:
-    print("csr.py: module NUMEXPR is not installed. Install it if you want higher speed calculation.")
+    print("csr.py: module NUMEXPR is not installed. Install it to speed up calculation")
     ne_flag = False
 
 
@@ -761,7 +761,10 @@ class CSR:
             delta_s = elem.l
             step = self.traj_step
             if elem.__class__ in [Bend, RBend, SBend]:
-                R = -elem.l/elem.angle
+                if elem.angle != 0:
+                    R = -elem.l/elem.angle
+                else:
+                    R = 0
                 Rx = R * np.cos(elem.tilt)
                 Ry = R * np.sin(elem.tilt)
                 #B = energy*1e9*beta/(R*speed_of_light)
@@ -771,6 +774,8 @@ class CSR:
                 R_vect = [0, 0, 0.]
 
             self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect )
+        #import matplotlib.pyplot as plt
+        #plt.figure(10)
         #plt.plot(self.csr_traj[0,:], self.csr_traj[1,:], "r")
         #plt.plot(self.csr_traj[0, :], self.csr_traj[2, :], "b")
         #plt.legend(["X", "Y"])

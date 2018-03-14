@@ -13,21 +13,23 @@ from ocelot.cpbd.high_order import *
 from ocelot.cpbd.magnetic_lattice import *
 import time
 from scipy.integrate import cumtrapz
-from ocelot.cpbd.wake3D import *
-
+from ocelot.cpbd.physics_proc import PhysProc
 import copy
+import logging
+logger = logging.getLogger(__name__)
+
 try:
     import numba as nb
     nb_flag = True
 except:
-    print("csr.py: module NUMBA is not installed. Install it to speed up calculation")
+    logger.info("csr.py: module NUMBA is not installed. Install it to speed up calculation")
     nb_flag = False
 
 try:
     from pyfftw.interfaces.numpy_fft import fft
     from pyfftw.interfaces.numpy_fft import ifft
 except:
-    print("csr.py: module PYFFTW is not installed. Install it to speed up calculation.")
+    logger.info("csr.py: module PYFFTW is not installed. Install it to speed up calculation.")
     from numpy.fft import ifft
     from numpy.fft import fft
 
@@ -35,7 +37,7 @@ try:
     import numexpr as ne
     ne_flag = True
 except:
-    print("csr.py: module NUMEXPR is not installed. Install it to speed up calculation")
+    logger.info("csr.py: module NUMEXPR is not installed. Install it to speed up calculation")
     ne_flag = False
 
 
@@ -108,10 +110,10 @@ class Smoothing:
     def __init__(self):
         self.print_log = False
         if nb_flag:
-            if self.print_log: print("Smoothing: NUMBA")
+            logger.debug("Smoothing: NUMBA")
             self.q_per_step_ip2 = nb.jit()(self.q_per_step_ip2_py)
         else:
-            if self.print_log: print("Smoothing: Python")
+            logger.debug("Smoothing: Python")
             self.q_per_step_ip2 = self.q_per_step_ip2_py
 
     def q_per_step_ip2_py(self, N_BIN, Q_BIN, BIN0, BIN1, NSIG, RMS, step, Nz, z1):
@@ -273,10 +275,10 @@ class SubBinning:
         self.m_bin = m_bin
         self.print_log = False
         if nb_flag:
-            if self.print_log: print("SubBinning: NUMBA")
+            logger.debug("SubBinning: NUMBA")
             self.p_per_subbins = nb.jit(nb.double[:](nb.double[:], nb.double[:], nb.double))(self.p_per_subbins_py)
         else:
-            if self.print_log: print("SubBinning: Python")
+            logger.debug("SubBinning: Python")
             self.p_per_subbins = self.p_per_subbins_py
 
     def p_per_subbins_py(self, s, SBINB, K_BIN):
@@ -358,15 +360,15 @@ class K0_fin_anf:
     def __init__(self):
         self.print_log = False
         if nb_flag:
-            if self.print_log: print("K0_fin_anf: NUMBA")
+            logger.debug("K0_fin_anf: NUMBA")
             self.K0_1 = nb.jit()(self.K0_1_jit)
             self.K0_0 = nb.jit()(self.K0_0_jit)
             self.eval = self.K0_fin_anf_opt
         elif ne_flag:
-            if self.print_log: print("K0_fin_anf: NumExpr")
+            logger.debug("K0_fin_anf: NumExpr")
             self.eval = self.K0_fin_anf_numexpr
         else:
-            if self.print_log: print("K0_fin_anf: Python")
+            logger.debug("K0_fin_anf: Python")
             self.eval = self.K0_fin_anf
 
     def K0_1_jit(self, indx, j, R, n, traj4, traj5, traj6, w, gamma):
@@ -542,7 +544,7 @@ class K0_fin_anf:
         return w, KS
 
 
-class CSR:
+class CSR(PhysProc):
     """
     coherent synchrotron radiation
     Attributes:
@@ -552,6 +554,7 @@ class CSR:
         self.apply_step = 0.0005 [m] - step of the calculation CSR kick, to calculate average CSR kick
     """
     def __init__(self):
+        PhysProc.__init__(self)
         # binning parameters
         self.x_qbin = 0             # length or charge binning; 0... 1 = length...charge
         self.n_bin = 100            # number of bins
@@ -580,7 +583,7 @@ class CSR:
         self.filter_order = 10
         self.n_mesh = 345
         self.pict_debug = False
-        self.print_log = False
+        #self.print_log = False
 
         self.sub_bin = SubBinning(x_qbin=self.x_qbin, n_bin=self.n_bin, m_bin=self.m_bin)
         self.bin_smoth = Smoothing()
@@ -748,7 +751,6 @@ class CSR:
                                  traj[1,:], traj[2,:], traj[3,:] - rectangular coordinates, \
                                  traj[4,:], traj[5,:], traj[6,:] - tangential unit vectors
         """
-
         self.z_csr_start = sum([p.l for p in lat.sequence[:self.indx0]])
         p = Particle()
 
@@ -784,7 +786,7 @@ class CSR:
 
     def apply(self, p_array, delta_s):
         if delta_s < self.traj_step:
-            print("CSR delta_s < self.traj_step")
+            logger.debug("CSR delta_s < self.traj_step")
             return
         s_cur = self.z0 - self.z_csr_start
         z = -p_array.tau()

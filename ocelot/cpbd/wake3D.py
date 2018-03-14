@@ -5,6 +5,9 @@ Created on 17.05.2016
 
 from ocelot.adaptors import *
 from ocelot.adaptors.astra2ocelot import *
+from ocelot.cpbd.physics_proc import PhysProc
+import logging
+logger = logging.getLogger(__name__)
 
 def triang_filter(x, filter_order):
     Ns = x.shape[0]
@@ -125,7 +128,7 @@ class WakeTable:
         return (T, H)
 
 
-class Wake():
+class Wake(PhysProc):
     """
     The wake field impact on the beam is included as series of kicks.
     In order to take into account the impact of the wake field on the beam the longitudinal wake function
@@ -142,6 +145,7 @@ class Wake():
     factor = 1. - scaling coefficient
     """
     def __init__(self, step=1):
+        PhysProc.__init__(self)
         self.w_sampling = 500  # wake sampling
         self.filter_order = 20   # smoothing filter order
         #self.wake_file = ""
@@ -173,7 +177,7 @@ class Wake():
     def add_wake(self, I, T):
         """
         [x, W] = AddWake(I, T)
-        :param I: wake table in V/C, W in V (R,L,Cinv,nm,W0,N0,W1,N1)
+        :param I: wake table in V/C, W in V (R, L, Cinv, nm, W0, N0, W1, N1)
         :param T:
         :return:
         """
@@ -307,7 +311,7 @@ class Wake():
         #pass
         #self.TH = self.load_wake_table(self.wake_file)
         if self.wake_table == None:
-            print("Wake.wake_table is None! Please specify the WakeTable()")
+            logger.info("Wake.wake_table is None! Please specify the WakeTable()")
         else:
             self.TH = self.wake_table.TH
 

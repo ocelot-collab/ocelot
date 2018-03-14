@@ -1,8 +1,8 @@
-'''
+"""
 @author: Igor Zagorodnov @ Martin Dohlus
 Created on 27.03.2015
 Revision on 01.06.2017: coordinate transform to the velocity direction
-'''
+"""
 
 import scipy.ndimage as ndimage
 import numpy as np
@@ -10,6 +10,10 @@ from time import time
 from ocelot.common.globals import *
 from ocelot.cpbd.coord_transform import *
 import multiprocessing
+from ocelot.cpbd.physics_proc import PhysProc
+import logging
+
+logger = logging.getLogger(__name__)
 
 try:
     pyfftw_flag = True
@@ -18,7 +22,7 @@ try:
     import pyfftw
 except:
     pyfftw_flag = False
-    print("cs.py: module PYFFTW is not installed. Install it to speed up calculation.")
+    logger.info("cs.py: module PYFFTW is not installed. Install it to speed up calculation.")
     from numpy.fft import ifftn
     from numpy.fft import fftn
 
@@ -26,16 +30,18 @@ try:
     import numexpr as ne
     ne_flag = True
 except:
-    print("sc.py: module NUMEXPR is not installed. Install it to speed up calculation.")
+    logger.info("sc.py: module NUMEXPR is not installed. Install it to speed up calculation.")
     ne_flag = False
 
 def smooth_z(Zin, mslice):
+
     def myfunc(x, A):
         if x < 2*A:
-            y = x-x*x/(4*A)
+            y = x - x*x/(4*A)
         else:
             y = A
         return y
+
     inds = np.argsort(Zin, axis=0)
     Zout = np.sort(Zin, axis=0)
     N = Zin.shape[0]
@@ -49,13 +55,13 @@ def smooth_z(Zin, mslice):
     Zout2[0] = Zout[0]
     for i in range(1, N-1):
         m = min(i, N-i+1)
-        m = np.floor(myfunc(0.5*m, 0.5*mslice)+0.500001)
-        Zout2[i] = (S[i+m+1]-S[i-m])/(2*m+1)
+        m = np.floor(myfunc(0.5*m, 0.5*mslice) + 0.500001)
+        Zout2[i] = (S[i+m+1] - S[i-m])/(2*m + 1)
     Zout[inds] = Zout2
     return Zout
 
 
-class SpaceCharge:
+class SpaceCharge(PhysProc):
     """
     Space Charge physics process
 
@@ -72,7 +78,7 @@ class SpaceCharge:
     solution of the 3D Poisson equation is used, for example, in ASTRA
     """
     def __init__(self, step=1):
-        #PhysicsProcess.__init__(self)
+        PhysProc.__init__(self)
         self.step = step # in unit step
         self.nmesh_xyz = [63, 63, 63]
         self.low_order_kick = True
@@ -80,11 +86,12 @@ class SpaceCharge:
         self.start_elem = None
         self.end_elem = None
         self.debug = False
-
-        self.random_seed = 1 # random seeding number. if None seeding is random
+        self.random_mesh = True  # random mesh if True
+        self.random_seed = 10    # random seeding number. if None seeding is random
 
     def prepare(self, lat):
-        pass
+        if self.random_seed != None:
+            np.random.seed(self.random_seed)
 
     def sym_kernel(self, ijk2, hxyz):
         i2 = ijk2[0]
@@ -140,18 +147,17 @@ class SpaceCharge:
         else:
             out = np.real(ifftn(fftn(out)*fftn(K2)))
         t1 = time()
-        if self.debug: print( 'fft time:', t1-t0, ' sec')
+        logger.debug('fft time:' + str(t1-t0) + ' sec')
         out[:Nx, :Ny, :Nz] = out[:Nx,:Ny,:Nz]/(4*pi*epsilon_0*hx*hy*hz)
         return out[:Nx, :Ny, :Nz]
 
     def el_field(self, X, Q, gamma, nxyz):
-        if self.random_seed != None:
-            np.random.seed(self.random_seed)
         N = X.shape[0]
         X[:, 2] = X[:, 2]*gamma
         XX = np.max(X, axis=0)-np.min(X, axis=0)
-        #XX = XX*np.random.uniform(low=1.0, high=1.1)
-        if self.debug: print( 'mesh steps:', XX)
+        if self.random_mesh:
+            XX = XX*np.random.uniform(low=1, high=1.1)
+        logger.debug( 'mesh steps:' + str(XX))
         # here we use a fast 3D "near-point" interpolation
         # we need a stand-alone module with 1D,2D,3D parricles-to-grid functions
         steps = XX/(nxyz-3)
@@ -182,8 +188,8 @@ class SpaceCharge:
 
 
     def apply(self, p_array, zstep):
-        if zstep==0:
-            print("SpaceCharge delta_s = 0")
+        if zstep == 0:
+            logger.debug("SpaceCharge delta_s = 0")
             return
         nmesh_xyz = np.array(self.nmesh_xyz)
         gamref = p_array.E / m_e_GeV
@@ -224,8 +230,8 @@ class SpaceCharge:
 
         xp[3] = xp[3] + cdT * (1 - beta0 * betaz) * Exyz[:, 0]
         xp[4] = xp[4] + cdT * (1 - beta0 * betaz) * Exyz[:, 1]
-        xp[5] = xp[5] + cdT * (Exyz[:, 2] + beta0 * (betax * Exyz[:, 0] + betay * Exyz[:, 1]))
-        #xp[5] = xp[5] + cdT * (1 - beta0 * betaz)*Exyz[:, 2]*gamma0*gamma0
+        #xp[5] = xp[5] + cdT * (Exyz[:, 2] + beta0 * (betax * Exyz[:, 0] + betay * Exyz[:, 1]))
+        xp[5] = xp[5] + cdT * (1 - beta0 * betaz)*Exyz[:, 2]*gamma0*gamma0
         T = np.transpose(T)
         xp[3:6] = np.dot(xp[3:6].T, T).T
         xp_2_xxstg_mad(xp, p_array.rparticles, gamref)
@@ -251,8 +257,8 @@ class SpaceChargeSimplify(SpaceCharge):
         SpaceCharge.__init__(self, step=step)
 
     def apply(self, p_array, zstep):
-        if zstep==0:
-            print("SpaceCharge delta_s = 0")
+        if zstep == 0:
+            logger.debug("SpaceCharge delta_s = 0")
             return
         nmesh_xyz = np.array(self.nmesh_xyz)
         gamref = p_array.E / m_e_GeV

@@ -1060,7 +1060,10 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', debug=1):
     dfl_slipage_incl  - whether to dedicate time in order to keep the dfl slices, slipped out of the simulation window. if zero, reduces assembly time by ~30%
     assembly_ver      - version of the assembly script: 'sys' - system based, 'pyt' - python based
     '''
-
+    import traceback
+    _logger.info('starting genesis v2 preparation')
+    _logger.warning(len(traceback.extract_stack()))
+    
     # create experimental directory
     if inp.run_dir == None and inp.exp_dir == None:
         raise ValueError('run_dir and exp_dir are not specified!')
@@ -2585,15 +2588,14 @@ def edist2beam(edist, step=1e-7): #check
 # def read_beam_file_out(out, debug=1):
     # return read_beam_file(out.filePath, debug=debug)
 
-def read_beam_file(filePath, debug=1):
+def read_beam_file(filePath, *args, **kwargs):
     '''
     reads beam file from filePath folder
     returns BeamArray()
     '''
     # import types
     
-    if debug > 0:
-        print ('    reading beam file')
+    _logger.info('reading beam file')
     start_time = time.time()
 
     beam = BeamArray()
@@ -2628,7 +2630,7 @@ def read_beam_file(filePath, debug=1):
             for col in columns:
                 column_values[col] = []
 
-            print (columns)
+            _logger.debug(str(columns))
 
         if tokens[0] != "?":
             # print tokens
@@ -2666,8 +2668,7 @@ def read_beam_file(filePath, debug=1):
     beam.filePath = filePath
     del(column_values, columns)
 
-    if debug > 0:
-        print('      done in %.2f sec' % (time.time() - start_time))
+    _logger.debug('  done in %.2f sec' % (time.time() - start_time))
 
     return beam
 

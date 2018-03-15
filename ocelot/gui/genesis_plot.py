@@ -33,6 +33,8 @@ import matplotlib
 
 import matplotlib.pyplot as plt
 import numpy as np
+import logging
+
 from ocelot.adaptors.genesis import *
 from ocelot.common.globals import *  # import of constants like "h_eV_s" and
 from ocelot.common.math_op import *  # import of mathematical functions
@@ -43,6 +45,8 @@ from ocelot.optics.wave import *
 # from pylab import rc, rcParams #tmp
 from matplotlib import rc, rcParams
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+_logger = logging.getLogger('ocelot.genesis_plot')
 
 def_cmap = 'viridis'
 # def_cmap = 'Greys'
@@ -2641,6 +2645,8 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
 
 def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=None, debug=0):
 
+    _logger.info('plotting beam')
+    
     if showfig == False and savefig == False:
         return
     

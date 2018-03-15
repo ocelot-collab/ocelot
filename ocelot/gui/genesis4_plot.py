@@ -49,7 +49,7 @@ my_viridis = deepcopy(plt.get_cmap('viridis'))
 my_viridis.set_under('w')
 def_cmap = my_viridis
 
-#def_cmap = 'viridis'
+def_cmap = 'viridis'
 #def_cmap = 'Greys'
 
 fntsz = 4
@@ -339,7 +339,7 @@ def plot_gen4_out_z(out, z=1e5, params=['rad_power+el_current', 'el_energy+el_es
     if savefig != False:
         if savefig == True:
             savefig = 'png'
-        fig.savefig(out.filepath + '_z_' + str(z) + 'm.' + str(savefig), format=savefig)
+        fig.savefig(out.filePath + '_z_' + str(z) + 'm.' + str(savefig), format=savefig)
     
     if showfig:
         plt.show()

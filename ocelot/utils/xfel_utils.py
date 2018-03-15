@@ -11,7 +11,7 @@ import numpy as np
 from numpy import inf, complex128, complex64
 from copy import copy, deepcopy
 import ocelot
-from ocelot import *
+import logging
 from ocelot.common.math_op import *
 
 # from ocelot.optics.utils import *
@@ -24,6 +24,9 @@ nthread = multiprocessing.cpu_count()
 
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.cpbd.elements import *
+from ocelot.cpbd.optics import *
+
+_logger = logging.getLogger('ocelot.xfel_utils') 
 
 '''
 SELF-SEEDING - relevant
@@ -34,8 +37,8 @@ SELF-SEEDING - relevant
 
 
 def dfl_st_cpl(dfl, theta_b, inp_axis='y', s_start=None):
-
-    print('    introducing spatio-temporal coupling')
+    _logger.info('introducing spatio-temporal coupling')
+    # print('    introducing spatio-temporal coupling')
     start = time.time()
     direction = 1
     if s_start == None:
@@ -76,6 +79,7 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
     if nthread > 8:
         nthread = int(nthread * 0.9)  # not to occupy all CPUs on login server
     print('  HXRSS dfl filtering')
+    _logger.info('HXRSS dfl filtering')
     start = time.time()
     # klpos, krpos, cwidth = FWHM(trf.k, 1.0-np.abs(trf.tr))
     
@@ -415,6 +419,7 @@ def update_beam(beam_new, g, n_interp):
     beam_new.py = np.interp(beam_new.z, beam.z, beam.py)
 
 
+#old one
 def rematch(beta_mean, l_fodo, qdh, lat, extra_fodo, beam, qf, qd):
     '''
     requires l_fodo to be defined in the lattice
@@ -425,8 +430,9 @@ def rematch(beta_mean, l_fodo, qdh, lat, extra_fodo, beam, qf, qd):
     k1 = k[0] / qdh.l
 
     tw0 = Twiss(beam)
-
-    print('before rematching k=%f %f   beta=%f %f alpha=%f %f' % (qf.k1, qd.k1, tw0.beta_x, tw0.beta_y, tw0.alpha_x, tw0.alpha_y))
+    
+    _logger.debug('before rematching k=%f %f   beta=%f %f alpha=%f %f' % (qf.k1, qd.k1, tw0.beta_x, tw0.beta_y, tw0.alpha_x, tw0.alpha_y))
+    # print('before rematching k=%f %f   beta=%f %f alpha=%f %f' % (qf.k1, qd.k1, tw0.beta_x, tw0.beta_y, tw0.alpha_x, tw0.alpha_y))
 
     extra = MagneticLattice(extra_fodo)
     tws = twiss(extra, tw0)
@@ -457,7 +463,8 @@ def rematch(beta_mean, l_fodo, qdh, lat, extra_fodo, beam, qf, qd):
     m1.R = lambda e: Rinv
 
     tw0m = m1.map_x_twiss(tw2m)
-    print ('after rematching k=%f %f   beta=%f %f alpha=%f %f' % (qf.k1, qd.k1, tw0m.beta_x, tw0m.beta_y, tw0m.alpha_x, tw0m.alpha_y))
+    _logger.debug('after rematching k=%f %f   beta=%f %f alpha=%f %f' % (qf.k1, qd.k1, tw0m.beta_x, tw0m.beta_y, tw0m.alpha_x, tw0m.alpha_y))
+    # print ('after rematching k=%f %f   beta=%f %f alpha=%f %f' % (qf.k1, qd.k1, tw0m.beta_x, tw0m.beta_y, tw0m.alpha_x, tw0m.alpha_y))
 
     beam.beta_x, beam.alpha_x = tw0m.beta_x, tw0m.alpha_x
     beam.beta_y, beam.alpha_y = tw0m.beta_y, tw0m.alpha_y
@@ -485,7 +492,8 @@ def rematch_beam_lat(beam, lat_pkg, beta_mean):
 
     tw0 = Twiss(beam)
 
-    print('before rematching k=%f %f   beta=%f %f alpha=%f %f' % (qf.k1, qd.k1, tw0.beta_x, tw0.beta_y, tw0.alpha_x, tw0.alpha_y))
+    _logger.debug('before rematching k=%f %f   beta=%f %f alpha=%f %f' % (qf.k1, qd.k1, tw0.beta_x, tw0.beta_y, tw0.alpha_x, tw0.alpha_y))
+    # print('before rematching k=%f %f   beta=%f %f alpha=%f %f' % (qf.k1, qd.k1, tw0.beta_x, tw0.beta_y, tw0.alpha_x, tw0.alpha_y))
 
     extra = MagneticLattice(extra_fodo)
     tws = twiss(extra, tw0)
@@ -516,7 +524,8 @@ def rematch_beam_lat(beam, lat_pkg, beta_mean):
     m1.R = lambda e: Rinv
 
     tw0m = m1.map_x_twiss(tw2m)
-    print ('after rematching k=%f %f   beta=%f %f alpha=%f %f' % (qf.k1, qd.k1, tw0m.beta_x, tw0m.beta_y, tw0m.alpha_x, tw0m.alpha_y))
+    _logger.debug('after rematching k=%f %f   beta=%f %f alpha=%f %f' % (qf.k1, qd.k1, tw0m.beta_x, tw0m.beta_y, tw0m.alpha_x, tw0m.alpha_y))
+    # print ('after rematching k=%f %f   beta=%f %f alpha=%f %f' % (qf.k1, qd.k1, tw0m.beta_x, tw0m.beta_y, tw0m.alpha_x, tw0m.alpha_y))
 
     beam.beta_x, beam.alpha_x = tw0m.beta_x, tw0m.alpha_x
     beam.beta_y, beam.alpha_y = tw0m.beta_y, tw0m.alpha_y

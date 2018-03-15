@@ -22,7 +22,7 @@ try:
 except:
     nb_flag = False
 
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger('ocelot.optics')
 
 
 
@@ -137,7 +137,6 @@ class TransferMap:
         self.delta_e = 0.0
         self.delta_e_z = lambda z: 0.0
         # 6x6 linear transfer matrix
-
         self.R = lambda energy: np.eye(6)
         self.R_z = lambda z, energy: np.zeros((6, 6))
         self.B_z = lambda z, energy: np.dot((np.eye(6) - self.R_z(z, energy)), np.array([[self.dx], [0.], [self.dy], [0.], [0.], [0.]]))
@@ -219,7 +218,7 @@ class TransferMap:
         # a = np.add(np.transpose(dot(self.R(energy), particles.T.reshape(6, int(n/6)))), self.B(energy)).reshape(n)
 
         rparticles[:] = a[:]
-        #logger.debug('return trajectory, array ' + str(len(rparticles)))
+        #_logger.debug('return trajectory, array ' + str(len(rparticles)))
         return rparticles
 
     def __mul__(self, m):
@@ -315,19 +314,19 @@ class PulseTM(TransferMap):
     def mul_parray(self, rparticles , energy=0.):
         n = len(rparticles)
         #if 'pulse' in self.__dict__:
-        logger.debug('TD transfer map')
-        if n > 6: logger.debug(
+        _logger.debug('TD transfer map')
+        if n > 6: _logger.debug(
                 'warning: time-dependent transfer maps not implemented for an array. Using 1st particle value')
-        if n > 6: logger.debug('warning: time-dependent transfer maps not implemented for steps inside element')
+        if n > 6: _logger.debug('warning: time-dependent transfer maps not implemented for steps inside element')
         tau = rparticles[4]
         dxp = self.pulse.kick_x(tau)
         dyp = self.pulse.kick_y(tau)
-        logger.debug('kick ' + str(dxp) + ' ' + str(dyp))
+        _logger.debug('kick ' + str(dxp) + ' ' + str(dyp))
         b = array([0.0, dxp, 0.0, dyp, 0., 0.])
         #a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(int(n / 6), 6)))), b).reshape(n)
         a = np.add(dot(self.R(energy), rparticles), b)
         rparticles[:] = a[:]
-        logger.debug('return trajectory, array ' + str(len(rparticles)))
+        _logger.debug('return trajectory, array ' + str(len(rparticles)))
         return rparticles
 
 class MultipoleTM(TransferMap):
@@ -586,31 +585,9 @@ class SecondTM(TransferMap):
 
 
     def t_apply(self, R, T, X, dx, dy, tilt, U5666=0.):
-        #print(np.shape(X))
-        # print("t_apply", self.k2, self.T)
         if dx != 0 or dy != 0 or tilt != 0:
-            # print("TILT")
             X = transform_vec_ent(X, dx, dy, tilt)
-
-        # test start
-        # gamma = 0.132729736896 / m_e_GeV
-        # gamma2 = gamma * gamma
-        # igamma2 = 1. / gamma2
-        #
-        # beta = np.sqrt(1. - igamma2)
-        # U5666 = -2./(beta*beta)*igamma2
-        # test end
-        #n = len(X)
-        #Xr = transpose(dot(R, transpose(X.reshape(int(n / 6), 6)))).reshape(n)
-        #Xr = dot(R, X)
-        # Xr = transpose(dot(R, X.T.reshape(6, int(n / 6)))).reshape(n)
-        # Xt = zeros(n)
-        #if self.advance_optim != None:
-        #    self.advance_optim.tmat_multip(X, T)
-        #else:
-        #    self.numpy_apply(X, T)
         self.multiplication(X, R, T)
-        #self.t_dot_x(X, Xr, T)
         if dx != 0 or dy != 0 or tilt != 0:
             X = transform_vec_ext(X, dx, dy, tilt)
 
@@ -636,7 +613,6 @@ class SlacCavityTM(TransferMap):
         self.dy = 0
         self.tilt = 0
         self.V = volt
-
         self.phi = phi
         self.freq = freq
         self.delta_e_z = lambda z: self.V * np.cos(self.phi * np.pi / 180.) * z / self.length
@@ -848,7 +824,7 @@ def lattice_transfer_map(lattice, energy):
     E = energy
     for i, elem in enumerate(lattice.sequence):
         Rb = elem.transfer_map.R(E)
-        if lattice.method.global_method == SecondTM:
+        if elem.transfer_map.__class__ == SecondTM:
             Tc = np.zeros((6, 6, 6))
             Tb = deepcopy(elem.transfer_map.t_mat_z_e(elem.l, E))
             Tb = sym_matrix(Tb)
@@ -862,6 +838,16 @@ def lattice_transfer_map(lattice, energy):
                             for m in range(6):
                                 t2 += Tb[i, l, m] * Ra[l, j] * Ra[m, k]
                         Tc[i, j, k] = t1 + t2
+            Ta = Tc
+        else:
+            Tc = np.zeros((6, 6, 6))
+            for i in range(6):
+                for j in range(6):
+                    for k in range(6):
+                        t1 = 0.
+                        for l in range(6):
+                            t1 += Rb[i, l] * Ta[l, j, k]
+                        Tc[i, j, k] = t1
             Ta = Tc
         Ra = dot(Rb, Ra)
         E += elem.transfer_map.delta_e
@@ -942,7 +928,7 @@ def periodic_twiss(tws, R):
     cosmy = (R[2, 2] + R[3, 3]) / 2.
 
     if abs(cosmx) >= 1 or abs(cosmy) >= 1:
-        logger.warning("************ periodic solution does not exist. return None ***********")
+        _logger.warning("************ periodic solution does not exist. return None ***********")
         # print("************ periodic solution does not exist. return None ***********")
         return None
     sinmx = np.sign(R[0, 1]) * sqrt(1. - cosmx * cosmx)
@@ -1016,7 +1002,7 @@ def twiss_fast(lattice, tws0=None):
             R = lattice_transfer_map(lattice, tws0.E)
             tws0 = periodic_twiss(tws0, R)
             if tws0 == None:
-                logger.warning('twiss_fast: Twiss: no periodic solution')
+                _logger.warning('twiss_fast: Twiss: no periodic solution')
                 return None
         else:
             tws0.gamma_x = (1. + tws0.alpha_x ** 2) / tws0.beta_x
@@ -1030,7 +1016,7 @@ def twiss_fast(lattice, tws0=None):
             obj_list.append(tws0)
         return obj_list
     else:
-        logger.warning('twiss_fast: Twiss: no periodic solution')
+        _logger.warning('twiss_fast: Twiss: no periodic solution')
         return None
 
 
@@ -1173,7 +1159,7 @@ class Navigator:
     def get_next(self):
 
         proc_list = self.get_proc_list()
-        #logger.show_debug = False
+        #_logger.show_debug = False
 
         if len(proc_list) > 0:
 
@@ -1207,7 +1193,7 @@ class Navigator:
         # check if dz overjumps the stop element
         dz, processes = self.check_overjump(dz, processes)
 
-        logger.debug(" Navigator.get_next: " +'\n' +
+        _logger.debug(" Navigator.get_next: " +'\n' +
                      "navi.z0=" + str(self.z0) + " navi.n_elem=" + str(self.n_elem) + " navi.sum_lengths="
                      + str(self.sum_lengths) + " dz=" + str(dz) + '\n' +
                      "element type=" + self.lat.sequence[self.n_elem].__class__.__name__ + " element name=" +

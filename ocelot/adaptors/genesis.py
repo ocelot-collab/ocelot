@@ -3,12 +3,19 @@
 interface to genesis
 '''
 
+
+
 import struct
 from copy import copy, deepcopy
 import time
 import os
 import socket
 import errno
+import math
+import numpy as np
+from numpy import mean, std, inf, shape, append, complex128, complex64
+
+
 from ocelot.rad.fel import *
 from ocelot.cpbd.beam import * # Twiss, Beam, gauss_from_twiss, ParticleArray
 from ocelot.cpbd.elements import *
@@ -22,9 +29,8 @@ from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.rad.undulator_params import UndulatorParameters
 # from ocelot.optics.utils import calc_ph_sp_dens
 
-import math
-import numpy as np
-from numpy import mean, std, inf, shape, append, complex128, complex64
+
+_logger = logging.getLogger('ocelot.gen2') 
 
 inputTemplate = "\
  $newrun \n\

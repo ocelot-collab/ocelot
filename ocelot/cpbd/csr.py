@@ -367,7 +367,7 @@ class K0_fin_anf:
             self.eval = self.K0_fin_anf_numexpr
         else:
             if self.print_log: print("K0_fin_anf: Python")
-            self.eval = K0_fin_anf
+            self.eval = self.K0_fin_anf
 
     def K0_1_jit(self, indx, j, R, n, traj4, traj5, traj6, w, gamma):
         g2i = 1. / gamma ** 2

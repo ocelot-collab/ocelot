@@ -13,7 +13,8 @@ from scipy import interpolate
 from scipy.signal import savgol_filter
 import logging
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
+_logger = logging.getLogger('ocelot.beam')
 try:
     import numexpr as ne
     ne_flag = True
@@ -268,21 +269,21 @@ class Beam:
         return beam_arr
 
 
-    # def sizes(self):
-        # if self.beta_x != 0:
-            # self.gamma_x = (1. + self.alpha_x**2)/self.beta_x
-        # else:
-            # self.gamma_x = 0.
-
-        # if self.beta_y != 0:
-            # self.gamma_y = (1. + self.alpha_y**2)/self.beta_y
-        # else:
-            # self.gamma_y = 0.
-
-        # self.sigma_x = np.sqrt((self.sigma_E/self.E*self.Dx)**2 + self.emit_x*self.beta_x)
-        # self.sigma_y = np.sqrt((self.sigma_E/self.E*self.Dy)**2 + self.emit_y*self.beta_y)
-        # self.sigma_xp = np.sqrt((self.sigma_E/self.E*self.Dxp)**2 + self.emit_x*self.gamma_x)
-        # self.sigma_yp = np.sqrt((self.sigma_E/self.E*self.Dyp)**2 + self.emit_y*self.gamma_y)
+    #def sizes(self):
+    #    if self.beta_x != 0:
+    #        self.gamma_x = (1. + self.alpha_x**2)/self.beta_x
+    #    else:
+    #        self.gamma_x = 0.
+#
+    #    if self.beta_y != 0:
+    #        self.gamma_y = (1. + self.alpha_y**2)/self.beta_y
+    #    else:
+    #        self.gamma_y = 0.
+#
+    #    self.sigma_x = np.sqrt((self.sigma_E/self.E*self.Dx)**2 + self.emit_x*self.beta_x)
+    #    self.sigma_y = np.sqrt((self.sigma_E/self.E*self.Dy)**2 + self.emit_y*self.beta_y)
+    #    self.sigma_xp = np.sqrt((self.sigma_E/self.E*self.Dxp)**2 + self.emit_x*self.gamma_x)
+    #    self.sigma_yp = np.sqrt((self.sigma_E/self.E*self.Dyp)**2 + self.emit_y*self.gamma_y)
 
     # def print_sizes(self):
         # self.sizes()
@@ -789,7 +790,7 @@ class BeamTransform:
     @property
     def twiss(self):
         if self.tws == None:
-            logger.warning("BeamTransform: x_opt and y_opt are obsolete, use Twiss")
+            _logger.warning("BeamTransform: x_opt and y_opt are obsolete, use Twiss")
             tws = Twiss()
             tws.alpha_x, tws.beta_x, tws.mux = self.x_opt
             tws.alpha_y, tws.beta_y, tws.muy = self.y_opt
@@ -802,7 +803,7 @@ class BeamTransform:
         pass
 
     def apply(self, p_array, dz):
-        logger.debug("BeamTransform: apply")
+        _logger.debug("BeamTransform: apply")
         self.x_opt = [self.twiss.alpha_x, self.twiss.beta_x, self.twiss.mux]
         self.y_opt = [self.twiss.alpha_y, self.twiss.beta_y, self.twiss.muy]
         self.beam_matching(p_array.rparticles, self.bounds, self.x_opt, self.y_opt)
@@ -1011,7 +1012,7 @@ def interp1(x, y, xnew, k=1):
 
 def slice_analysis_transverse(parray, Mslice, Mcur, p, iter):
     q1 = np.sum(parray.q_array)
-    logger.debug("slice_analysis_transverse: charge = " + str(q1))
+    _logger.debug("slice_analysis_transverse: charge = " + str(q1))
     n = np.int_(parray.rparticles.size / 6)
     PD = parray.rparticles
     PD = sortrows(PD, col=4)
@@ -1110,6 +1111,7 @@ def parray2beam(parray, step=1e-7):
     returns BeamArray()
     step [m] - long. size ob bin to calculate distribution parameters
     '''
+    _logger.info('calculating electron beam distribution from particle array')
 
     part_c = parray.q_array[0] #fix for general case  # charge per particle
     t_step = step / speed_of_light
@@ -1189,7 +1191,8 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
                     l_beam * 6 if gaussian,
     nslice - number of slices in the beam
     '''
-
+    _logger.info('generating electron beam distribution')
+    
     beam = Beam()
     beam.E = E
     beam.tlen = l_beam / speed_of_light * 1e15

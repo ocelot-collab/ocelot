@@ -1,6 +1,5 @@
 __author__ = 'Svitozar Serkez'
 
-# from ocelot import *
 from ocelot.rad.fel import FelParameters, calculateFelParameters, beam2fel
 # from ocelot.adaptors.genesis import *
 # from ocelot.rad.undulator_params import Ephoton2K
@@ -10,7 +9,6 @@ from ocelot.cpbd.elements import *
 import numpy as np
 from ocelot.common.globals import *
 from copy import deepcopy
-
 
 def beamlat2fel(beam, lat, smear_m=1e-6):
     

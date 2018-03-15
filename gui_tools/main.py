@@ -23,8 +23,8 @@ from mint.devices_mi import *
 import logging
 ilename="logs/main.log"
 logging.basicConfig( level=logging.INFO)
-logger = logging.getLogger(__name__)
-
+logger = logging.getLogger(__name__) 
+# _logger = logging.getLogger('ocelot.main')
 
 tws_i1 = Twiss()
 tws_i1.E = 0.005000000

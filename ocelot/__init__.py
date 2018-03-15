@@ -2,7 +2,7 @@
 general ocelot description
 '''
 
-__version__ = '18.01.rc'
+__version__ = '18.02.1'
 
 
 __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope",  # beam
@@ -12,7 +12,7 @@ __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope", 
            'Element', 'Multipole', 'Quadrupole', 'RBend', "Matrix", "UnknownElement",  # elements
            'SBend', 'Bend', 'Drift', 'Undulator', 'Hcor',  # elements
            'Vcor', "Sextupole", "Monitor", "Marker", "Octupole", "Cavity", "Edge",  # elements
-           "Sequence", "Solenoid",  # elements
+           "Sequence", "Solenoid", "TDCavity", # elements
            "match", "match_tunes",  # match
            "Navigator", "tracking_step", "create_track_list", "track_nturns", "freq_analysis",  # track
             "contour_da", "track_nturns_mpi", "nearest_particle", "stable_particles",  # track
@@ -24,6 +24,7 @@ __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope", 
            "CSR", "SpaceCharge", "Wake", "WakeTable", "WakeKick", "BeamTransform",
            "EmptyProc",
            "MagneticLattice",
+           "ocelog"
            ]
 
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
@@ -33,7 +34,7 @@ from ocelot.cpbd.elements import *
 from ocelot.cpbd.match import *
 from ocelot.cpbd.track import *
 from ocelot.common.globals import *
-from ocelot.common.logging import Logger
+from ocelot.common.logging import *
 from ocelot.cpbd.chromaticity import *
 from ocelot.cpbd.e_beam_params import *
 from ocelot.cpbd.io import *
@@ -41,6 +42,9 @@ from ocelot.cpbd.sc import *
 from ocelot.cpbd.csr import *
 from ocelot.cpbd.wake3D import *
 from ocelot.cpbd.physics_proc import *
+import logging
+_logger = logging.getLogger('ocelot.init')
+_logger.info('initializing ocelot...')
 print('initializing ocelot...')
-logger = Logger()
+# logger = Logger()
 #xrange=range

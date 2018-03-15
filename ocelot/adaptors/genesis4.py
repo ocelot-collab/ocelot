@@ -8,6 +8,10 @@ from ocelot import ParticleArray
 from ocelot.optics.wave import calc_ph_sp_dens, RadiationField
 from ocelot.common.globals import *
 from ocelot.adaptors.genesis import GenesisElectronDist #tmp
+import logging
+# from ocelot import ocelog
+_logger = logging.getLogger('ocelot.gen4') 
+
 
 class Genesis4Input:
     '''
@@ -395,11 +399,14 @@ def dpa42edist(dpa, n_part=None, fill_gaps=1, debug=1):
     return edist
 
 def read_dpa42parray(file_path, N_part=None, fill_gaps=True):
+    _logger.info('reading genesis4dpa from '+ file_path +' into parray')
     import random
     import h5py 
     N_part = None
+    
     #N_part = 100000
     fill_gaps=True
+    _logger.debug('fill_gaps = ' + str(fill_gaps))
     
     h5 = h5py.File(file_path, 'r')
     
@@ -410,6 +417,13 @@ def read_dpa42parray(file_path, N_part=None, fill_gaps=True):
     nbins = int(h5.get('beamletsize')[0])
     zsep = int(sepslice / lslice)
     
+    _logger.debug('nslice = ' + str(nslice))
+    _logger.debug('lslice = ' + str(lslice) + 'm')
+    _logger.debug('sepslice = ' + str(sepslice)+'m')
+    _logger.debug('zsep = ' + str(zsep))
+    _logger.debug('npart = ' + str(npart))
+    _logger.debug('nbins = ' + str(nbins))
+    
     I = []
     for dset in h5:
             if dset.startswith('slice0'):
@@ -417,7 +431,7 @@ def read_dpa42parray(file_path, N_part=None, fill_gaps=True):
     I = np.array(I)
     
     dt = zsep * lslice / speed_of_light
-    
+    _logger.debug('dt = ' + str(dt) + 'sec')
         
     N_part_max = np.sum(I / I.max() * npart) # total maximum reasonable number of macroparticles of the same charge that can be extracted
     
@@ -426,11 +440,13 @@ def read_dpa42parray(file_path, N_part=None, fill_gaps=True):
             N_part = int(np.floor(N_part_max))
     else:
         N_part = int(np.floor(N_part_max))
+    _logger.debug('Number of particles max= ' + str(N_part))
     
     n_part_slice = (I / np.sum(I) * N_part).astype(int) #array of number of particles per new bin
     n_part_slice[n_part_slice > npart] = npart
     
     N_part_act = np.sum(n_part_slice) #actual number of particles
+    _logger.debug('Number of particles actual= ' + str(N_part_act))
     
     dt = zsep * lslice / speed_of_light
     C = np.sum(I) * dt #total charge
@@ -480,3 +496,54 @@ def read_dpa42parray(file_path, N_part=None, fill_gaps=True):
     
     h5.close()
     return p_array
+
+
+def write_gen4_lat(lat, file_path, line_name='LINE', l=np.inf):
+    from ocelot.cpbd.elements import Undulator, Drift, Quadrupole, UnknownElement
+    _logger.info('writing genesis4 lattice to '+ file_path)
+    
+    lat_str = []
+    beamline = []
+    ll=0
+    
+    lat_str.append('# generated with Ocelot\n')
+    
+    for element in lat.sequence:
+        
+        if ll >= l:
+            break
+        
+        element_num = str(len(beamline) + 1).zfill(3)
+        
+        if hasattr(element,'l'):
+            ll += element.l
+        
+        if isinstance(element, Undulator):
+            element_name = element_num + 'UND'
+            s = '{:}: UNDULATOR = {{lambdau = {:}, nwig = {:}, aw = {:.6f}}};'.format(element_name, element.lperiod, element.nperiods, element.Kx/sqrt(2))
+#            print(s)
+    
+        elif isinstance(element, Drift):
+            element_name = element_num + 'DR'
+            s = '{:}: DRIFT = {{l={:}}};'.format(element_name, element.l)
+    
+        elif isinstance(element, Quadrupole):
+            if element.k1>=0:
+                element_name = element_num + 'QF'
+            else:
+                element_name =  element_num + 'QD'
+            s = '{:}: QUADRUPOLE = {{l = {:}, k1 = {:.6f} }};'.format(element_name, element.l, element.k1)
+    
+        else:
+            _logger.debug('Unknown element with length '+ str(element.l))
+            continue
+        
+        beamline.append(element_name)
+        lat_str.append(s)
+        
+    lat_str.append('')
+    lat_str.append('{:}: LINE = {{{:}}};'.format(line_name, ','.join(beamline)))
+    lat_str.append('\n# end of file\n')
+                   
+    with open(file_path, 'w') as f:
+        f.write("\n".join(lat_str))

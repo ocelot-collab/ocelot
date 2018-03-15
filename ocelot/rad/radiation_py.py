@@ -188,7 +188,7 @@ def track4rad(beam, lat, energy_loss=False, quantum_diff=False, accuracy=1):
                 #print elem.type, elem.l, L
                 lat_el = MagneticLattice(non_u)
                 if lat_el.totalLen != 0:
-                    navi = Navigator()
+                    navi = Navigator(lat)
                     u = []
                     N = 500
                     for z in linspace(L, lat_el.totalLen + L, num=N):

@@ -93,20 +93,37 @@ class Target(object):
         self.values = []
         self.alarms = []
         self.times = []
+        self.nreadings = 1
+        self.interval = 0
 
     def get_value(self):
         return 0
 
     def get_penalty(self):
+        """
+        Method to calculate the penalty on the basis of the value and alarm level.
+
+        penalty = -get_value() + alarm()
+
+
+        :return: penalty
+        """
         sase = 0.
         for i in range(self.nreadings):
             sase += self.get_value()
             time.sleep(self.interval)
         sase = sase/self.nreadings
-        #sase = self.get_value()
+        print("SASE", sase)
         alarm = self.get_alarm()
-        pen = -sase
-
+        pen = 0.0
+        if alarm >= 0.95:
+            alarm = self.pen_max
+        if alarm > 0.7:
+            alarm = self.pen_max / 2.
+        pen += alarm
+        pen -= sase
+        self.niter += 1
+        # print("niter = ", self.niter)
         self.penalties.append(pen)
         self.times.append(time.time())
         self.values.append(sase)

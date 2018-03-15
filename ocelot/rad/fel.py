@@ -136,6 +136,7 @@ def calculateFelParameters(input, array=False):
     # p.sigb = 0.5 * (p.rxbeam + p.rybeam) # average beam size
     
     p.rho1 = (0.5 / p.gamma0) * np.power( (p.aw0 * p.fc * p.xlamd / 2 / np.pi )**2 / (p.rxbeam * p.rybeam) * p.I / p.Ia, 1.0/3.0) ## check 8 in denominator
+    
     p.Pb = p.gamma0 * p.I * m_e_eV# beam power [Reiche]
     
     #p.power = 6.0 * np.sqrt(np.pi) * p.rho1**2 * p.Pb / (p.N * np.log(p.N / p.rho1) ) # shot noise power [W] [Reiche]
@@ -174,8 +175,8 @@ def beam2fel(beam, lu, K_peak, iwityp=0):
     '''
     tmp function to estimate fel parameters slice-wise
     '''
-    if beam.len() is 0:
-        raise ValueError('Beam length shoul not be zero')
+    if beam.len() == 0:
+        raise ValueError('Beam length should not be zero')
     
     class tmp():
         pass
@@ -192,6 +193,7 @@ def beam2fel(beam, lu, K_peak, iwityp=0):
         # print('use update_effective_beta() to increase estimation accuracy')
         tmp.betax = beam.beta_x
         tmp.betay = beam.beta_y
+    
     if K_peak == 0:
         print('Warning, undulator K=0')
     

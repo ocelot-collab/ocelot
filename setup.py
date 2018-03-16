@@ -8,7 +8,6 @@ for pkg in find_packages():
     all_packages.append(pkg)
 
 
-
 setup(
     name='ocelot',
     version='18.02.2',

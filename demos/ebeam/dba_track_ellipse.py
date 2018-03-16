@@ -37,7 +37,7 @@ for xi, xpi in zip(x, xp):
 
 
 plot(x, xp)
-navi = Navigator()
+navi = Navigator(lat)
 dz = 10.
 tracking_step(lat, plist, dz=dz, navi=navi)
 
@@ -74,7 +74,7 @@ for xi, xpi in zip(x,xp):
     plist.append(Particle(x = xi, px= xpi))
 
 plot(x, xp)
-navi = Navigator()
+navi = Navigator(lat)
 dz = 10.
 tracking_step(lat, plist, dz = dz, navi = navi)
 

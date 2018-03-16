@@ -7,11 +7,13 @@ from scipy.interpolate import splrep, splev
 from scipy.optimize import linprog
 from ocelot.cpbd.match import closed_orbit
 from ocelot.cpbd.track import *
-
 from ocelot.cpbd.response_matrix import *
 import copy
 import json
 from time import sleep, time
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -54,7 +56,7 @@ class OrbitSVD:
         #angle = dot(A, misallign_w)
         angle = dot(A, self.orbit)
         #print(A)
-        #print(angle)
+        logger.debug("max(abs(angle)) = " + str(np.max(np.abs(angle))) + " min(abs(angle)) = " + str(np.min(np.abs(angle))))
         return angle
 
 class LInfinityNorm(OrbitSVD):
@@ -168,9 +170,9 @@ class NewOrbit:
                     self.hcors.append(elem)
             L += elem.l
         if len(self.hcors) == 0:
-            print("there are not horizontal correctors")
+            logger.warning(" create_correctors: there are not horizontal correctors")
         if len(self.vcors) == 0:
-            print("there are not vertical correctors")
+            logging.warning(" create_correctors: there are not vertical correctors")
 
     def get_ref_orbit(self):
         for bpm in self.bpms:
@@ -212,14 +214,25 @@ class NewOrbit:
         rm[n1:, m1:] = mat2[:, :]
         return rm
 
-    def correction(self, alpha=0,  epsilon_x=0.001, epsilon_y=0.001, p_init=None, print_log=True):
+    def correction(self, alpha=0,  epsilon_x=0.001, epsilon_y=0.001, beta=0, p_init=None, print_log=True):
+        """
+        Method to find corrector kicks using SVD. bpm weights are ignored for a moment but everything ready to immplement.
+
+        :param alpha: 0 - 1, trade off between orbit and dispersion correction, 0 - only orbit, 1 - only dispersion
+        :param epsilon_x: cut s-matrix diag for x-plane, if s[i] < s_max * epsilon: s_inv[i] = 0. else s_inv[i] = 1/s[i]
+        :param epsilon_y: cut s-matrix diag for y-plane, if s[i] < s_max * epsilon: s_inv[i] = 0. else s_inv[i] = 1/s[i]
+        :param beta: weight for suppress large kicks
+        :param p_init: particle initial conditions. Removed in that version.
+        :param print_log:
+        :return:
+        """
         #TODO: initial condition for particle was removed. Add it again
         cor_list = [cor.id for cor in np.append(self.hcors, self.vcors)]
         bpm_list = [bpm.id for bpm in self.bpms]
         orbit = (1 - alpha) * self.get_orbit()
 
         RM = (1 - alpha) * self.response_matrix.extract(cor_list=cor_list, bpm_list=bpm_list)
-        #print("RM = ", np.shape(RM))
+        logger.debug(" shape(RM) = " + str(np.shape(RM)))
         if alpha != 0:
             disp = alpha * self.get_dispersion()
         else:
@@ -229,26 +242,31 @@ class NewOrbit:
             DRM = alpha * self.disp_response_matrix.extract(cor_list=cor_list, bpm_list=bpm_list)
         else:
             DRM = np.zeros_like(RM)
-        #print("DRM = ", np.shape(DRM))
+        logger.debug(" shape(DRM) = " + str(np.shape(DRM)))
 
         rmatrix = self.combine_matrices(RM, DRM)
 
-
+        logger.debug(" shape(RM + DRM): " + str(np.shape(rmatrix)))
         # trying to minimize strength of the correctors. does not work actually
-        #rmatrix = self.combine_matrices(rmatrix, 10*np.eye(np.shape(DRM)[0]))
-
+        if beta > 0:
+            rmatrix = self.combine_matrices(rmatrix, beta*np.eye(np.shape(DRM)[0]))
+            logging.debug(" beta > 0: shape(rmatrix) = " + str(np.shape(rmatrix)))
         #print("rmatrix = ", rmatrix)
         orbit = np.append(orbit, disp)
 
         # trying to minimize strength of the correctors. does not work actually
-        #orbit = np.append(orbit, np.zeros(np.shape(DRM)[0]))
-
+        logging.debug(" shape(orbit + disp): " + str(np.shape(orbit)))
+        if beta > 0:
+            orbit = np.append(orbit, np.zeros(np.shape(DRM)[0]))
+            logger.debug(" beta > 0: shape(orbit)" + str(np.shape(orbit)))
         # bpm weights
         #bpm_weights = np.eye(len(orbit))
         bpm_weights = np.array([bpm.weight for bpm in self.bpms])
         bpm_weights_diag = np.diag( np.append(bpm_weights, [bpm_weights, bpm_weights, bpm_weights]))
-        #print("bpm_weights = ", np.shape(bpm_weights), len(orbit))
-
+        logger.debug(" shape(bpm weight) = " + str(np.shape(bpm_weights_diag)))
+        if beta > 0:
+            bpm_weights_diag = self.combine_matrices(bpm_weights_diag, np.diag(np.append(bpm_weights, [bpm_weights] )))
+            logger.debug(" beta > 0: shape(bpm weight) = " + str(np.shape(bpm_weights_diag)))
         self.orbit_svd = OrbitSVD(resp_matrix=rmatrix, orbit=orbit, weights=bpm_weights_diag, epsilon_x=epsilon_x, epsilon_y=epsilon_y)
 
         #self.orbit_svd = LInfinityNorm(resp_matrix=rmatrix, orbit=orbit, weights=bpm_weights_diag, epsilon_x=epsilon_x,

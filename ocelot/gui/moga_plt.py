@@ -40,6 +40,7 @@ class ParetoPlot():
                 data_file = pickle.load(f)
         except Exception:
             time.sleep(0.1)
+            print(" can not open file:", self.file)
             return
 
         self.title = 'Iteration ' + str(data_file[0][0]) + ' from ' + str(data_file[0][1])
@@ -119,7 +120,7 @@ class ParetoPlot():
 
 if __name__ == "__main__":
     pic = ParetoPlot()
-    pic.limx = [0.0, 20.0]
-    pic.limy = [0.0, 10.0e-3]
-    pic.file ="../test/moga.dat"
+    #pic.limx = [0.0, 20.0]
+    #pic.limy = [0.0, 10.0]
+    pic.file ="../../demos/ebeam/moga_plot.dat"
     pic.run()

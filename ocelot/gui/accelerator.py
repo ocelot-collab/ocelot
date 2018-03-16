@@ -879,7 +879,7 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones = None ):
 
 from ocelot.cpbd.beam import global_slice_analysis_extended
 
-def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpolation="bilinear", inverse_tau=False, nfig=40, title=None):
+def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpolation="bilinear", inverse_tau=False, nfig=40, title=None, figsize=None):
     """
     Shows e-beam slice parameters (current, emittances, energy spread)
     and beam distributions (dE/(p0 c), X, Y) against long. coordinate (S)
@@ -894,6 +894,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpo
     :param inverse_tau: False, inverse tau - head will be on the right side of figure
     :param nfig: number of the figure
     :param title: None or string - title of the figure
+    :param figsize: None or e.g. (8, 6)
     :return:
     """
     p_array_copy = deepcopy(p_array)
@@ -902,7 +903,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpo
 
     slice_params = global_slice_analysis_extended(p_array_copy, nparts_in_slice, 0.01, 2, 2)
 
-    fig = plt.figure(nfig)
+    fig = plt.figure(nfig, figsize=figsize)
     if title != None:
         fig.suptitle(title)
     ax_sp = plt.subplot(325)
@@ -971,7 +972,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpo
     plt.setp(ax_ps.get_xticklabels(), visible=False)
 
 
-def show_density(x, y, nbins_x=250, nbins_y=250, interpolation="bilinear", xlabel=None, ylabel=None, nfig=50, title=None):
+def show_density(x, y, nbins_x=250, nbins_y=250, interpolation="bilinear", xlabel=None, ylabel=None, nfig=50, title=None, figsize=None):
     """
     Function shows density
 
@@ -985,9 +986,10 @@ def show_density(x, y, nbins_x=250, nbins_y=250, interpolation="bilinear", xlabe
     :param ylabel: None, otherwise "string"
     :param nfig: number of the figure
     :param title: title of the figure
+    :param figsize: None or e.g. (8, 6)
     :return:
     """
-    plt.figure(nfig)
+    plt.figure(nfig, figsize=figsize)
     if title != None: plt.title(title)
     my_rainbow = deepcopy(plt.get_cmap('rainbow'))
     my_rainbow.set_under('w')

@@ -35,7 +35,7 @@ class MeasureResponseMatrix:
         else:
             self.particle0 = p_init
         p = copy.copy(self.particle0)
-        navi = Navigator()
+        navi = Navigator(self.lat)
         L = 0.
         for bpm in self.bpms:
             #print("energy = ", p.E)

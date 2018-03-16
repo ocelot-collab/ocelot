@@ -294,7 +294,7 @@ def closed_orbit(lattice, eps_xy=1.e-7, eps_angle=1.e-7, energy=0):
     :return: class Particle
     """
     #R = lattice_transfer_map(lattice, energy)
-    navi = Navigator()
+    navi = Navigator(lattice)
     t_maps = get_map(lattice, lattice.totalLen, navi)
 
     tm0 = TransferMap()

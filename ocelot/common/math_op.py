@@ -421,6 +421,7 @@ def corr_c_nb(corr, n_corr, val, norm):
 
 
 def corr_c_np(corr, n_corr, val, norm):
+    n_val = len(val) - n_corr*2
     for i in range(n_val):
         for j in range(n_corr):
             if not j%2:

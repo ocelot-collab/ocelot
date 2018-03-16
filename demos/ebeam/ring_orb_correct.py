@@ -4,6 +4,9 @@ from ocelot import *
 from ocelot.gui.accelerator import *
 from ocelot.cpbd.orbit_correction import *
 from ocelot.cpbd.response_matrix import *
+import logging
+logging.basicConfig(level=logging.INFO)
+
 # **************************** LATTICE: START ***********************************************
 D0 = Drift (l = 0., eid= "D0")
 D1 = Drift (l = 1.49, eid= "D1")
@@ -128,7 +131,7 @@ plt.show()
 #resp_mat1 = method.ring_response_matrix()
 
 #print(resp_mat1)
-orb.correction()
+orb.correction(beta=5000)
 
 x_bpm, y_bpm = method.read_virtual_orbit()
 

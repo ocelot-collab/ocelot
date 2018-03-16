@@ -27,7 +27,7 @@ compensate_chromaticity(lat, ksi_x_comp=0, ksi_y_comp=0)
 p1 = Particle(x = -0.0001)
 p2 = Particle(x = 0.001)
 
-navi = Navigator()
+navi = Navigator(lat)
 dz = 1.
 P1 = []
 P2 = []

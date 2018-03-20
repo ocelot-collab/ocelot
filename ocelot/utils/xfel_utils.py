@@ -300,6 +300,7 @@ def prepare_el_optics(beam, lat_pkg, E_photon=None, beta_av=30, s=None):
     from ocelot.rad.undulator_params import Ephoton2K
     if s is None:
         jj = beam.I / (beam.beta_x * beam.beta_y * beam.emit_x * beam.emit_y)
+        jj = beam.I
         s = beam.s[jj.argmax()]
     
     beam_match = beam.get_s(s)

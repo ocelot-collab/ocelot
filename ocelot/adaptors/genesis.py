@@ -798,13 +798,34 @@ class GenesisElectronDist:
     def len(self):
         return len(self.t)
 
-    def center(self):
-        edist_out = deepcopy(self)
-        edist_out.x -= np.mean(edist_out.x)
-        edist_out.y -= np.mean(edist_out.y)
-        edist_out.xp -= np.mean(edist_out.xp)
-        edist_out.yp -= np.mean(edist_out.yp)
-        return edist_out
+    def center(self, s='com'):
+        _logger.info('centering edist to '+str(s))
+        if isinstance(s,str):
+            if s == 'com': #center of mass
+                self.x -= np.mean(self.x)
+                self.y -= np.mean(self.y)
+                self.xp -= np.mean(self.xp)
+                self.yp -= np.mean(self.yp)
+            else:
+                _logger.error('unknown s string value')
+        else:
+            beam = edist2beam(self, 1e-7)
+            beam_s = beam.get_s(s)
+            self.x -= beam_s.x
+            self.y -= beam_s.y
+            self.xp -= beam_s.xp
+            self.yp -= beam_s.yp
+        
+        # # edist_out = deepcopy(self)
+        # edist_out.x -= np.mean(edist_out.x)
+        # edist_out.y -= np.mean(edist_out.y)
+        # edist_out.xp -= np.mean(edist_out.xp)
+        # edist_out.yp -= np.mean(edist_out.yp)
+        # return edist_out
+        
+    @property
+    def s(self):
+        return self.t * speed_of_light
 
     def twiss(self):
         tws = Twiss()
@@ -867,8 +888,8 @@ def edist2parray(edist):
     
     p_array.rparticles[0] = edist.x # position in x in meters
     p_array.rparticles[1] = edist.xp  # divergence in x
-    p_array.rparticles[2] = edist.y # position in x in meters
-    p_array.rparticles[3] = edist.yp  # divergence in x
+    p_array.rparticles[2] = edist.y # position in y in meters
+    p_array.rparticles[3] = edist.yp  # divergence in y
     p_array.rparticles[4] = -1 * edist.t * speed_of_light
     p_array.rparticles[5] = (edist.g - g0) * m_e_eV / p0 / speed_of_light
     
@@ -1712,7 +1733,7 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
             if debug > 1: 
                 print ('      assembling',key.replace('-', '_').replace('<', '').replace('>', '')) 
             command = 'out.' + key.replace('-', '_').replace('<', '').replace('>', '') + ' = output_unsorted[:,' + str(i) + '].reshape((' + str(int(out.nSlices)) + ',' + str(int(out.nZ)) + '))'
-            # print(command)
+            _logger.debug(command)
             exec(command)
         if hasattr(out, 'energy'):
             out.energy += out('gamma0')
@@ -2262,7 +2283,8 @@ def dpa2edist(out, dpa, num_part=1e5, smear=1, debug=1):
             edist.xp = append(edist.xp, px[i, pick_i])
             edist.yp = append(edist.yp, py[i, pick_i])
 
-    edist.t = edist.t * (-1) + max(edist.t)
+    # edist.t = edist.t * (-1) + max(edist.t)
+    edist.t -= edist.t.min()
     edist.xp /= edist.g
     edist.yp /= edist.g
 
@@ -2298,7 +2320,8 @@ def read_edist_file_out(out, debug=1):
     return read_dist_file(out.filePath + '.edist', debug=debug)
 
 
-def read_edist_file(filePath, debug=1):
+def read_edist_file(filePath, **kwargs):
+    ### MODIFIED, NOT TESTED
     '''
     reads particle distribution file (distfile in genesis input)
     returns GenesisElectronDist() 
@@ -2306,22 +2329,27 @@ def read_edist_file(filePath, debug=1):
     edist = GenesisElectronDist()
     edist.filePath = filePath
 
-    if debug > 0:
-        print ('    reading particle distribution file')
+    # if debug > 0:
+    _logger.info('reading particle distribution file')
+    _logger.debug(filePath)
+        # print ('    reading particle distribution file')
 
-    if not os.path.isfile(filePath):
-        if debug:
-            raise IOError('      ! edist file ' + filePath + ' not found !')
-        else:
-            print ('      ! edist file ' + filePath + ' not found !')
-    else:
-        if debug > 1:
-            print ('        - reading from ' + filePath)
+    try:
+        f = open(filePath, 'r')
+    except Exception:
+        _logger.exception('edist file ' + filePath + ' not found !')
+        raise
+    # if not os.path.isfile(filePath):
+        # if debug:
+            # raise IOError('      ! edist file ' + filePath + ' not found !')
+        # else:
+            # _logger.error('      ! edist file ' + filePath + ' not found !')
+    # else:
+        # if debug > 1:
+            # print ('        - reading from ' + filePath)
 
     start_time = time.time()
-
     dist_column_values = {}
-    f = open(filePath, 'r')
     null = f.readline()
     for line in f:
         tokens = line.strip().split()
@@ -2331,36 +2359,68 @@ def read_edist_file(filePath, debug=1):
 
         if tokens[0] == "?" and tokens[1] == "CHARGE":
             charge = float(tokens[3])
+            _logger.debug('Charge= '+str(charge))
 
         if tokens[0] == "?" and tokens[1] == "COLUMNS":
             dist_columns = tokens[2:]
             for col in dist_columns:
                 dist_column_values[col] = []
-            if debug > 1:
-                print(''.join(str(i) + ' ' for i in dist_columns))
+            _logger.debug(''.join(str(i) + ' ' for i in dist_columns))
 
         if tokens[0] != "?":
             for i in range(0, len(tokens)):
                 dist_column_values[dist_columns[i]].append(float(tokens[i]))
-
-    edist.x = np.array(dist_column_values['X'])
-    edist.y = np.array(dist_column_values['Y'])
-    edist.xp = np.array(dist_column_values['XPRIME'])
-    edist.yp = np.array(dist_column_values['YPRIME'])
-    edist.t = np.array(dist_column_values['T'])
-    edist.g = np.array(dist_column_values['P'])
-
-    edist.x = np.flipud(edist.x)
-    edist.y = np.flipud(edist.y)
-    edist.xp = np.flipud(edist.xp)
-    edist.yp = np.flipud(edist.yp)
-    edist.t = np.flipud(edist.t)
-    edist.g = np.flipud(edist.g)
+    
+    if 'P' in dist_column_values.keys():
+        edist.g = np.sqrt(np.array(dist_column_values.get('P'))**2 + 1)
+    elif 'GAMMA' in dist_column_values.keys():
+        edist.g = np.array(dist_column_values.get('GAMMA'))
+    else:
+        _logger.warning('Neither P nor GAMMA found in edist')
+    
+    p = np.sqrt(edist.g**2 - 1)
+    
+    if 'XPRIME' in dist_column_values.keys():
+        edist.xp = np.array(dist_column_values.get('XPRIME'))
+    elif 'PX' in dist_column_values.keys():
+        edist.xp = np.array(dist_column_values.get('PX')) / p
+    else:
+        _logger.warning('Neither XPRIME nor PX found in edist')
+        
+    if 'YPRIME' in dist_column_values.keys():
+        edist.yp = np.array(dist_column_values.get('YPRIME'))
+    elif 'PY' in dist_column_values.keys():
+        edist.yp = np.array(dist_column_values.get('PY')) / p
+    else:
+        _logger.warning('Neither YPRIME nor PY found in edist')
+        
+    edist.x = np.array(dist_column_values.get('X'))
+    edist.y = np.array(dist_column_values.get('Y'))
+    # edist.y = np.array(dist_column_values['Y'])
+    # edist.xp = np.array(dist_column_values['XPRIME'])
+    # edist.yp = np.array(dist_column_values['YPRIME'])
+    
+    if 'T' in dist_column_values.keys():
+        edist.t = -np.array(dist_column_values.get('T'))
+    elif 'Z' in dist_column_values.keys():
+        edist.t = np.array(dist_column_values.get('Z')) / speed_of_light
+    else:
+        _logger.warning('Neither T nor Z found in edist')
+    
+    # edist.t = np.array(dist_column_values['T'])
+    
+    # edist.x = np.flipud(edist.x)
+    # edist.y = np.flipud(edist.y)
+    # edist.xp = np.flipud(edist.xp)
+    # edist.yp = np.flipud(edist.yp)
+    # edist.t = np.flipud(edist.t)
+    # edist.g = np.flipud(edist.g)
 
     edist.part_charge = charge / edist.len()
-
-    if debug > 0:
-        print('      done in %.2f sec' % (time.time() - start_time))
+    
+    _logger.debug('part_n = {:}'.format(edist.len()))
+    _logger.debug('part_charge = {:} C'.format(edist.part_charge))
+    _logger.debug('  done in %.2f sec' % (time.time() - start_time))
 
     return edist
 
@@ -2509,19 +2569,19 @@ def write_edist_file(edist, filePath=None, debug=1):
     if filePath == None:
         filePath = edist.filePath
 
-    header = '? VERSION = 1.0 \n? SIZE = %s \n? CHARGE = %E \n? COLUMNS X XPRIME Y YPRIME T P\n' % (edist.len(), edist.charge())
+    header = '? VERSION = 1.0 \n? SIZE = %s \n? CHARGE = %E \n? COLUMNS X XPRIME Y YPRIME Z GAMMA\n' % (edist.len(), edist.charge())
     f = open(filePath, 'w')
     f.write(header)
     f.close()
     f = open(filePath, 'ab')
-    np.savetxt(f, np.c_[edist.x, edist.xp, edist.y, edist.yp, edist.t, edist.g], fmt="%e", newline='\n')
+    np.savetxt(f, np.c_[edist.x, edist.xp, edist.y, edist.yp, edist.s, edist.g], fmt="%e", newline='\n')
     f.close()
 
     if debug > 0:
         print('      done in %.2f sec' % (time.time() - start_time))
 
 
-def edist2beam(edist, step=1e-7): #check
+def edist2beam(edist, step=2e-7): #check
     '''
     reads GenesisElectronDist()
     returns BeamArray()
@@ -2548,28 +2608,40 @@ def edist2beam(edist, step=1e-7): #check
             dist_E = dist_g * m_e_GeV
             dist_x = edist.x[indices]
             dist_y = edist.y[indices]
-            dist_px = edist.xp[indices]
-            dist_py = edist.yp[indices]
+            dist_xp = edist.xp[indices]
+            dist_yp = edist.yp[indices]
             dist_sigma_E = np.std(dist_g) * m_e_GeV
             dist_p = np.sqrt(dist_g**2 - 1)
-            dist_xp = dist_px / dist_p
-            dist_yp = dist_py / dist_p
+            dist_px = dist_xp * dist_p
+            dist_py = dist_yp * dist_p
             
             beam.I[i] = sum(indices) * part_c / t_step
             beam.E[i] = mean(dist_E)
             beam.sigma_E[i] = dist_sigma_E
-            beam.x[i] = mean(dist_x)
-            beam.y[i] = mean(dist_y)
-            beam.xp[i] = mean(dist_xp)
-            beam.yp[i] = mean(dist_yp)
-            beam.emit_x[i] = (mean(dist_x**2) * mean(dist_px**2) - mean(dist_x * dist_px)**2)**0.5
+            
+            dist_x_m = np.mean(dist_x)
+            dist_y_m = np.mean(dist_y)
+            dist_xp_m = np.mean(dist_xp)
+            dist_yp_m = np.mean(dist_yp)
+            
+            beam.x[i] = dist_x_m
+            beam.y[i] = dist_y_m
+            beam.xp[i] = dist_xp_m
+            beam.yp[i] = dist_yp_m
+            
+            dist_x -= dist_x_m
+            dist_y -= dist_y_m
+            dist_xp -= dist_xp_m
+            dist_yp -= dist_yp_m
+            
+            beam.emit_x[i] = (mean(dist_x**2) * mean(dist_xp**2) - mean(dist_x * dist_xp)**2)**0.5
             # if beam.ex[i]==0: beam.ey[i]=1e-10
-            beam.emit_y[i] = (mean(dist_y**2) * mean(dist_py**2) - mean(dist_y * dist_py)**2)**0.5
+            beam.emit_y[i] = (mean(dist_y**2) * mean(dist_yp**2) - mean(dist_y * dist_yp)**2)**0.5
             # if beam.ey[i]==0: beam.ey[i]=1e-10
             beam.beta_x[i] = mean(dist_x**2) / beam.emit_x[i]
             beam.beta_y[i] = mean(dist_y**2) / beam.emit_y[i]
-            beam.alpha_x[i] = -mean(dist_x * dist_px) / beam.emit_x[i]
-            beam.alpha_y[i] = -mean(dist_y * dist_py) / beam.emit_y[i]
+            beam.alpha_x[i] = -mean(dist_x * dist_xp) / beam.emit_x[i]
+            beam.alpha_y[i] = -mean(dist_y * dist_yp) / beam.emit_y[i]
     
     idx = np.where(np.logical_or.reduce((beam.I == 0, beam.g == 0)))
     del beam[idx]
@@ -2849,9 +2921,14 @@ def cut_beam(beam=None, cut_s=[-inf, inf]):
     cuts BeamArray() object longitudinally
     cut_z [m] - limits of the cut
     '''
+    _logger.info('cutting beam file between {:.2e} and {:.2e}'.format(cut_s[0], cut_s[1]))
     beam_new = deepcopy(beam)
     beam_new.sort()
     idxl, idxr = find_nearest_idx(beam_new.s, cut_s[0]), find_nearest_idx(beam_new.s, cut_s[1])
+    _logger.debug(' slice numbers {:.2e} and {:.2e}'.format(idxl, idxr))
+    if idxl==idxr:
+        _logger.warning(' slice numbers {:.2e} and {:.2e} are the same'.format(idxl, idxr))
+    
     return beam_new[idxl:idxr]
 
 
@@ -3496,8 +3573,7 @@ def astra2edist_ext(fileName_in, fileName_out='', center=1):
     edist = astra2edist(adist, center=center)
     write_edist_file(edist, fileName_out, debug=0)
 
-def rematch_edist(edist, tws):
-
+def rematch_edist(edist, tws, s=None):
     from numpy import mean
 
     betax_n = tws.beta_x
@@ -3506,7 +3582,7 @@ def rematch_edist(edist, tws):
     alphay_n = tws.alpha_y
 
     edist_out = deepcopy(edist)
-    edist_out = edist_out.center()
+    # edist_out.center()
 
     x = edist_out.x
     y = edist_out.y
@@ -3520,13 +3596,27 @@ def rematch_edist(edist, tws):
     mean_xpx = mean(x * xp)
     mean_ypy = mean(y * yp)
     mean_g = mean(edist_out.g)
-
-    emitx = mean_g * (mean_x2 * mean_px2 - mean_xpx**2)**0.5
-    emity = mean_g * (mean_y2 * mean_py2 - mean_ypy**2)**0.5
-    betax = mean_g * mean_x2 / emitx
-    betay = mean_g * mean_y2 / emity
-    alphax = -mean_g * mean_xpx / emitx
-    alphay = -mean_g * mean_ypy / emity
+    
+    beam = edist2beam(edist_out)
+    
+    if s is None:
+        tws0 = Twiss(beam.pk())
+    else:
+        tws0 = Twiss(beam.get_s(s))
+        
+    
+    
+    # emitx = mean_g * (mean_x2 * mean_px2 - mean_xpx**2)**0.5
+    # emity = mean_g * (mean_y2 * mean_py2 - mean_ypy**2)**0.5
+    # betax = mean_g * mean_x2 / emitx
+    # betay = mean_g * mean_y2 / emity
+    # alphax = -mean_g * mean_xpx / emitx
+    # alphay = -mean_g * mean_ypy / emity
+    
+    betax = tws0.beta_x
+    betay = tws0.beta_y
+    alphax = tws0.alpha_x
+    alphay = tws0.alpha_y
 
     # remove correlation
     xp = xp + x * alphax / betax

@@ -2050,1166 +2050,1166 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
         print('done in %.2f seconds' % (time.time() - start_time))
 
 
-def plot_gen_corr(proj_dir, run_inp=[], p1=(), p2=(), savefig=False, showfig=True, saveval=False):
-    # param (parameter[str], stage[int], z_position[double], s_position [double or 'max'/'mean' stings])
-    # e.g. ('p_int',1,inf,'max') , ('spec',1,inf,'max')
+# def plot_gen_corr(proj_dir, run_inp=[], p1=(), p2=(), savefig=False, showfig=True, saveval=False):
+    # # param (parameter[str], stage[int], z_position[double], s_position [double or 'max'/'mean' stings])
+    # # e.g. ('p_int',1,inf,'max') , ('spec',1,inf,'max')
 
-    figsize = (7, 7)
+    # figsize = (7, 7)
 
-    if proj_dir[-1] != '/':
-        proj_dir += '/'
+    # if proj_dir[-1] != '/':
+        # proj_dir += '/'
 
-    param_1, stage_1, z_1, s_1 = p1
-    param_2, stage_2, z_2, s_2 = p2
+    # param_1, stage_1, z_1, s_1 = p1
+    # param_2, stage_2, z_2, s_2 = p2
 
-    outlist_1 = [GenesisOutput() for i in range(1000)]
-    outlist_2 = [GenesisOutput() for i in range(1000)]
-    if run_inp == []:
-        run_range = range(1000)
-    else:
-        run_range = run_inp
+    # outlist_1 = [GenesisOutput() for i in range(1000)]
+    # outlist_2 = [GenesisOutput() for i in range(1000)]
+    # if run_inp == []:
+        # run_range = range(1000)
+    # else:
+        # run_range = run_inp
 
-    run_range_good_1 = []
-    run_range_good_2 = []
+    # run_range_good_1 = []
+    # run_range_good_2 = []
 
-    if param_1 not in []:
-        for irun in run_range:
-            out_file_1 = proj_dir + 'run_' + str(irun) + '/run.' + str(irun) + '.s' + str(stage_1) + '.gout'
-            if os.path.isfile(out_file_1):
-                outlist_1[irun] = read_out_file(out_file_1, read_level=2)
-                run_range_good_1.append(irun)
+    # if param_1 not in []:
+        # for irun in run_range:
+            # out_file_1 = proj_dir + 'run_' + str(irun) + '/run.' + str(irun) + '.s' + str(stage_1) + '.gout'
+            # if os.path.isfile(out_file_1):
+                # outlist_1[irun] = read_out_file(out_file_1, read_level=2)
+                # run_range_good_1.append(irun)
 
-    if param_2 not in []:
-        for irun in run_range:
-            out_file_2 = proj_dir + 'run_' + str(irun) + '/run.' + str(irun) + '.s' + str(stage_2) + '.gout'
-            if os.path.isfile(out_file_2):
-                outlist_2[irun] = read_out_file(out_file_2, read_level=2)
-                run_range_good_2.append(irun)
+    # if param_2 not in []:
+        # for irun in run_range:
+            # out_file_2 = proj_dir + 'run_' + str(irun) + '/run.' + str(irun) + '.s' + str(stage_2) + '.gout'
+            # if os.path.isfile(out_file_2):
+                # outlist_2[irun] = read_out_file(out_file_2, read_level=2)
+                # run_range_good_2.append(irun)
 
-    run_range_good = [val for val in run_range_good_1 if val in run_range_good_2]
+    # run_range_good = [val for val in run_range_good_1 if val in run_range_good_2]
 
-    if param_1 not in []:
-        irun = run_range_good[0]
-        if isinstance(s_1, (int, long, float)):
-            index_s1 = np.where(outlist_1[irun].s <= s_1)[-1][-1]
+    # if param_1 not in []:
+        # irun = run_range_good[0]
+        # if isinstance(s_1, (int, long, float)):
+            # index_s1 = np.where(outlist_1[irun].s <= s_1)[-1][-1]
 
-        if isinstance(z_1, (int, long, float)):
-            index_z1 = np.where(outlist_1[irun].z <= z_1)[-1][-1]
+        # if isinstance(z_1, (int, long, float)):
+            # index_z1 = np.where(outlist_1[irun].z <= z_1)[-1][-1]
 
-    if param_2 not in []:
-        if isinstance(s_2, (int, long, float)):
-            index_s2 = np.where(outlist_2[irun].s <= s_2)[-1][-1]
+    # if param_2 not in []:
+        # if isinstance(s_2, (int, long, float)):
+            # index_s2 = np.where(outlist_2[irun].s <= s_2)[-1][-1]
 
-        if isinstance(z_2, (int, long, float)):
-            index_z2 = np.where(outlist_2[irun].z <= z_2)[-1][-1]
+        # if isinstance(z_2, (int, long, float)):
+            # index_z2 = np.where(outlist_2[irun].z <= z_2)[-1][-1]
 
-    matrix_1 = []
-    matrix_2 = []
+    # matrix_1 = []
+    # matrix_2 = []
 
-    for i in run_range_good:
-        matrix_1.append(getattr(outlist_1[i], param_1))
-        matrix_2.append(getattr(outlist_2[i], param_2))
+    # for i in run_range_good:
+        # matrix_1.append(getattr(outlist_1[i], param_1))
+        # matrix_2.append(getattr(outlist_2[i], param_2))
 
-    matrix_1 = np.array(matrix_1)
-    matrix_2 = np.array(matrix_2)
+    # matrix_1 = np.array(matrix_1)
+    # matrix_2 = np.array(matrix_2)
 
-    if ndim(matrix_1) == 2:
-        var_1 = matrix_1[:, index_z1]
-    else:
-        if s_1 == 'mean':
-            var_1 = np.mean(matrix_1[:, :, index_z1], axis=1)
-        elif s_1 == 'max':
-            var_1 = np.amax(matrix_1[:, :, index_z1], axis=1)
-        else:
-            var_1 = matrix_1[:, index_s1, index_z1]
+    # if ndim(matrix_1) == 2:
+        # var_1 = matrix_1[:, index_z1]
+    # else:
+        # if s_1 == 'mean':
+            # var_1 = np.mean(matrix_1[:, :, index_z1], axis=1)
+        # elif s_1 == 'max':
+            # var_1 = np.amax(matrix_1[:, :, index_z1], axis=1)
+        # else:
+            # var_1 = matrix_1[:, index_s1, index_z1]
 
-    if ndim(matrix_2) == 2:
-        var_2 = matrix_2[:, index_z2]
-    else:
-        if s_2 == 'mean':
-            var_2 = np.mean(matrix_2[:, :, index_z2], axis=1)
-        elif s_2 == 'max':
-            var_2 = np.amax(matrix_2[:, :, index_z2], axis=1)
-        else:
-            var_2 = matrix_2[:, index_s2, index_z2]
+    # if ndim(matrix_2) == 2:
+        # var_2 = matrix_2[:, index_z2]
+    # else:
+        # if s_2 == 'mean':
+            # var_2 = np.mean(matrix_2[:, :, index_z2], axis=1)
+        # elif s_2 == 'max':
+            # var_2 = np.amax(matrix_2[:, :, index_z2], axis=1)
+        # else:
+            # var_2 = matrix_2[:, index_s2, index_z2]
 
-    corr_fig_name = 'corr_' + param_1 + '_s' + str(stage_1) + '_at' + str(z_1) + '_' + str(s_1) + '__' + param_2 + '_s' + str(stage_2) + '_at' + str(z_2) + '_' + str(s_2)
+    # corr_fig_name = 'corr_' + param_1 + '_s' + str(stage_1) + '_at' + str(z_1) + '_' + str(s_1) + '__' + param_2 + '_s' + str(stage_2) + '_at' + str(z_2) + '_' + str(s_2)
 
-    fig = plt.figure(corr_fig_name)
-    fig.clf()
-    fig.set_size_inches(figsize, forward=True)
-    fig = plt.scatter(var_1, var_2)
+    # fig = plt.figure(corr_fig_name)
+    # fig.clf()
+    # fig.set_size_inches(figsize, forward=True)
+    # fig = plt.scatter(var_1, var_2)
 
-    label1 = param_1 + '_s' + str(stage_1) + '_z=' + str(z_1) + '_s=' + str(s_1)
-    label2 = param_2 + '_s' + str(stage_2) + '_z=' + str(z_2) + '_s=' + str(s_2)
-    label1 = label1.replace('_', ' ')
-    label2 = label2.replace('_', ' ')
-    plt.xlabel(label1)
-    plt.ylabel(label2)
+    # label1 = param_1 + '_s' + str(stage_1) + '_z=' + str(z_1) + '_s=' + str(s_1)
+    # label2 = param_2 + '_s' + str(stage_2) + '_z=' + str(z_2) + '_s=' + str(s_2)
+    # label1 = label1.replace('_', ' ')
+    # label2 = label2.replace('_', ' ')
+    # plt.xlabel(label1)
+    # plt.ylabel(label2)
 
-    plt.xlim(np.amin(var_1), np.amax(var_1))
-    plt.ylim(np.amin(var_2), np.amax(var_2))
+    # plt.xlim(np.amin(var_1), np.amax(var_1))
+    # plt.ylim(np.amin(var_2), np.amax(var_2))
 
-    plt.xlim(0, np.amax(var_1) * 1.05)
-    plt.ylim(0, np.amax(var_2) * 1.05)
+    # plt.xlim(0, np.amax(var_1) * 1.05)
+    # plt.ylim(0, np.amax(var_2) * 1.05)
 
-    saving_path = proj_dir + 'results/'
+    # saving_path = proj_dir + 'results/'
 
-    plt.draw()
-    if savefig != False:
-        print('      saving ' + corr_fig_name + '.' + savefig)
-        plt.savefig(saving_path + corr_fig_name + '.' + savefig, format=savefig)
-    if saveval != False:
-        print('      saving ' + corr_fig_name + '.txt')
-        np.savetxt(saving_path + corr_fig_name + '.txt', np.vstack([var_1, var_2]).T, fmt="%E", newline='\n', comments=param_1 + '_s' + str(stage_1) + '_at' + str(z_1) + '_' + str(s_1) + ' ' + param_2 + '_s' + str(stage_2) + '_at' + str(z_2) + '_' + str(s_2))
+    # plt.draw()
+    # if savefig != False:
+        # print('      saving ' + corr_fig_name + '.' + savefig)
+        # plt.savefig(saving_path + corr_fig_name + '.' + savefig, format=savefig)
+    # if saveval != False:
+        # print('      saving ' + corr_fig_name + '.txt')
+        # np.savetxt(saving_path + corr_fig_name + '.txt', np.vstack([var_1, var_2]).T, fmt="%E", newline='\n', comments=param_1 + '_s' + str(stage_1) + '_at' + str(z_1) + '_' + str(s_1) + ' ' + param_2 + '_s' + str(stage_2) + '_at' + str(z_2) + '_' + str(s_2))
 
-    if showfig:
-        plt.show()
-    else:
-        plt.close('all')
+    # if showfig:
+        # plt.show()
+    # else:
+        # plt.close('all')
 
-    return fig
+    # return fig
 
-# np.where(out.s>1.8e-6)[0][0]
+# # np.where(out.s>1.8e-6)[0][0]
 
 
-def plot_dpa_bucket_out(out, dpa=None, slice_pos=None, repeat=1, GeV=1, figsize=4, cmap=def_cmap, scatter=True, energy_mean=None, legend=True, fig_name=None, savefig=False, showfig=True, bins=[50,50], debug=1):
+# def plot_dpa_bucket_out(out, dpa=None, slice_pos=None, repeat=1, GeV=1, figsize=4, cmap=def_cmap, scatter=True, energy_mean=None, legend=True, fig_name=None, savefig=False, showfig=True, bins=[50,50], debug=1):
     
-    if dpa == None:
-        dpa=read_dpa_file_out(out)
+    # if dpa == None:
+        # dpa=read_dpa_file_out(out)
         
     
-    if out.nSlices > 1:
-        if type(slice_pos) == str:
-            if slice_pos == 'max_I':
-                slice_num = np.argmax(out.I)
-            elif slice_pos == 'max_P':
-                slice_num = np.argmax(out.power)
-            elif slice_pos == 'max_B':
-                slice_num = np.argmax(out.bunching[:,-1])
-            else:
-                raise ValueError('slice_pos text should be "max_I" or "max_P"')
-        else:
-            if slice_pos < np.amin(out.s) or slice_pos > np.amax(out.s):
-                raise ValueError('slice_pos outside out.s range')
-            else:
-                slice_num = np.where(out.s > slice_pos)[0][0]
-        # return plot_dpa_bucket(dpa=dpa, slice_num=slice_num, repeat=repeat, GeV=GeV, figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
-    else:
-        slice_num = 0
-    slice_pos_act = out.s[slice_num]
-    suffix = '_%.2fum_%2.fm' % (slice_pos_act*1e6,np.amax(out.z))
-    if scatter: suffix = '_scatter' + suffix
-    return plot_dpa_bucket(dpa=dpa, slice_num=slice_num, repeat=repeat, GeV=GeV, figsize=figsize, cmap=cmap, scatter=scatter, energy_mean=energy_mean, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, suffix=suffix, bins=bins, debug=debug)
+    # if out.nSlices > 1:
+        # if type(slice_pos) == str:
+            # if slice_pos == 'max_I':
+                # slice_num = np.argmax(out.I)
+            # elif slice_pos == 'max_P':
+                # slice_num = np.argmax(out.power)
+            # elif slice_pos == 'max_B':
+                # slice_num = np.argmax(out.bunching[:,-1])
+            # else:
+                # raise ValueError('slice_pos text should be "max_I" or "max_P"')
+        # else:
+            # if slice_pos < np.amin(out.s) or slice_pos > np.amax(out.s):
+                # raise ValueError('slice_pos outside out.s range')
+            # else:
+                # slice_num = np.where(out.s > slice_pos)[0][0]
+        # # return plot_dpa_bucket(dpa=dpa, slice_num=slice_num, repeat=repeat, GeV=GeV, figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
+    # else:
+        # slice_num = 0
+    # slice_pos_act = out.s[slice_num]
+    # suffix = '_%.2fum_%2.fm' % (slice_pos_act*1e6,np.amax(out.z))
+    # if scatter: suffix = '_scatter' + suffix
+    # return plot_dpa_bucket(dpa=dpa, slice_num=slice_num, repeat=repeat, GeV=GeV, figsize=figsize, cmap=cmap, scatter=scatter, energy_mean=energy_mean, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, suffix=suffix, bins=bins, debug=debug)
 
 
-def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cmap, scatter=False, energy_mean=None, legend=True, fig_name=None, savefig=False, showfig=True, suffix='', bins=(50,50), debug=1, return_mode_gamma=0):
-    part_colors = ['darkred', 'orange', 'g', 'b', 'm','c','y']
-    # cmap='BuPu'
-    y_bins = bins[0]
-    z_bins = bins[1]
+# def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cmap, scatter=False, energy_mean=None, legend=True, fig_name=None, savefig=False, showfig=True, suffix='', bins=(50,50), debug=1, return_mode_gamma=0):
+    # part_colors = ['darkred', 'orange', 'g', 'b', 'm','c','y']
+    # # cmap='BuPu'
+    # y_bins = bins[0]
+    # z_bins = bins[1]
     
-    if showfig == False and savefig == False:
-        return
+    # if showfig == False and savefig == False:
+        # return
 
-    if debug > 0:
-        print('    plotting bucket')
-    start_time = time.time()
+    # if debug > 0:
+        # print('    plotting bucket')
+    # start_time = time.time()
     
-    if dpa.__class__ != GenesisParticlesDump:
-        raise ValueError('wrong particle object: should be GenesisParticlesDump')
+    # if dpa.__class__ != GenesisParticlesDump:
+        # raise ValueError('wrong particle object: should be GenesisParticlesDump')
 
-    if shape(dpa.ph)[0] == 1:
-        slice_num = 0
-    elif slice_num is None:
-        slice_num = int(shape(dpa.ph)[0]/2)
-        print('      no slice number provided, using middle of the distribution - slice number', slice_num)
-    else:
-        assert (slice_num <= shape(dpa.ph)[0]), 'slice_num larger than the dpa shape'
+    # if shape(dpa.ph)[0] == 1:
+        # slice_num = 0
+    # elif slice_num is None:
+        # slice_num = int(shape(dpa.ph)[0]/2)
+        # print('      no slice number provided, using middle of the distribution - slice number', slice_num)
+    # else:
+        # assert (slice_num <= shape(dpa.ph)[0]), 'slice_num larger than the dpa shape'
 
-    if fig_name == None:
-        fig_name = 'Electron phase space ' + dpa.fileName()
-    fig = plt.figure(fig_name)
-    fig.clf()
-    fig.set_size_inches((5 * figsize, 3 * figsize), forward=True)
+    # if fig_name == None:
+        # fig_name = 'Electron phase space ' + dpa.fileName()
+    # fig = plt.figure(fig_name)
+    # fig.clf()
+    # fig.set_size_inches((5 * figsize, 3 * figsize), forward=True)
 
     
-    left, width = 0.18, 0.57
-    bottom, height = 0.14, 0.55
-    left_h = left + width + 0.02 - 0.02
-    bottom_h = bottom + height + 0.02 - 0.02
+    # left, width = 0.18, 0.57
+    # bottom, height = 0.14, 0.55
+    # left_h = left + width + 0.02 - 0.02
+    # bottom_h = bottom + height + 0.02 - 0.02
     
 
-    rect_scatter = [left, bottom, width, height]
-    rect_histx = [left, bottom_h, width, 0.2]
-    rect_histy = [left_h, bottom, 0.15, height]
+    # rect_scatter = [left, bottom, width, height]
+    # rect_histx = [left, bottom_h, width, 0.2]
+    # rect_histy = [left_h, bottom, 0.15, height]
     
-    ax_main = plt.axes(rect_scatter)
-    ax_z_hist = plt.axes(rect_histx, sharex=ax_main)
-    ax_y_hist = plt.axes(rect_histy, sharey=ax_main)
+    # ax_main = plt.axes(rect_scatter)
+    # ax_z_hist = plt.axes(rect_histx, sharex=ax_main)
+    # ax_y_hist = plt.axes(rect_histy, sharey=ax_main)
     
-    # ax_z_hist = plt.subplot2grid((4, 1), (0, 0), rowspan=1)
-    # ax_y_hist = plt.subplot2grid((4, 1), (0, 0), rowspan=1)
+    # # ax_z_hist = plt.subplot2grid((4, 1), (0, 0), rowspan=1)
+    # # ax_y_hist = plt.subplot2grid((4, 1), (0, 0), rowspan=1)
     
-    # ax_main = plt.subplot2grid((4, 1), (1, 0), rowspan=3, sharex=ax_z_hist)
+    # # ax_main = plt.subplot2grid((4, 1), (1, 0), rowspan=3, sharex=ax_z_hist)
 
-    nbins = shape(dpa.ph)[1]
-    phase = deepcopy(dpa.ph[slice_num, :, :])
-    energy = deepcopy(dpa.e[slice_num, :, :])
+    # nbins = shape(dpa.ph)[1]
+    # phase = deepcopy(dpa.ph[slice_num, :, :])
+    # energy = deepcopy(dpa.e[slice_num, :, :])
 
 
 
-    if GeV:
-        energy *= m_e_MeV
-        if energy_mean == None: 
-            energy_mean = round(np.mean(energy), 0)
-    else:
-        if energy_mean == None: 
-            energy_mean = round(np.mean(energy), 1)
-    energy -= energy_mean
+    # if GeV:
+        # energy *= m_e_MeV
+        # if energy_mean == None: 
+            # energy_mean = round(np.mean(energy), 0)
+    # else:
+        # if energy_mean == None: 
+            # energy_mean = round(np.mean(energy), 1)
+    # energy -= energy_mean
 
-    phase_flat=phase.flatten()
-    energy_flat=energy.flatten()
-    for irep in range(repeat-1):
-        phase_flat=np.append(phase_flat,phase.flatten() + 2 * np.pi * (irep+1))
-        energy_flat=np.append(energy_flat,energy.flatten())
-    
-    # phase_hist = np.ravel(phase)
+    # phase_flat=phase.flatten()
+    # energy_flat=energy.flatten()
     # for irep in range(repeat-1):
-        # phase_hist = np.concatenate((phase_hist, np.ravel(phase) + 2 * np.pi * (irep+1)))
-
-    # hist, edges = np.histogram(phase_hist, bins=50 * repeat)  # calculate current histogram
-    hist_z, edges_z = np.histogram(phase_flat, bins=z_bins * repeat)  # calculate current histogram
-    edges_z = edges_z[0:-1]  # remove the last bin edge to save equal number of points
-    ax_z_hist.bar(edges_z, hist_z, width=edges_z[1] - edges_z[0], color='silver')
-    ax_z_hist.set_ylabel('counts')
-
-    hist_y, edges_y = np.histogram(energy_flat, bins=y_bins)  # calculate current histogram
-    edges_y = edges_y[0:-1]  # remove the last bin edge to save equal number of points
-    ax_y_hist.barh(edges_y, hist_y, height=edges_y[1] - edges_y[0], color='silver')
-    ax_y_hist.set_xlabel('counts')
+        # phase_flat=np.append(phase_flat,phase.flatten() + 2 * np.pi * (irep+1))
+        # energy_flat=np.append(energy_flat,energy.flatten())
     
-    for label in ax_z_hist.get_xticklabels():
-        label.set_visible(False)
+    # # phase_hist = np.ravel(phase)
+    # # for irep in range(repeat-1):
+        # # phase_hist = np.concatenate((phase_hist, np.ravel(phase) + 2 * np.pi * (irep+1)))
+
+    # # hist, edges = np.histogram(phase_hist, bins=50 * repeat)  # calculate current histogram
+    # hist_z, edges_z = np.histogram(phase_flat, bins=z_bins * repeat)  # calculate current histogram
+    # edges_z = edges_z[0:-1]  # remove the last bin edge to save equal number of points
+    # ax_z_hist.bar(edges_z, hist_z, width=edges_z[1] - edges_z[0], color='silver')
+    # ax_z_hist.set_ylabel('counts')
+
+    # hist_y, edges_y = np.histogram(energy_flat, bins=y_bins)  # calculate current histogram
+    # edges_y = edges_y[0:-1]  # remove the last bin edge to save equal number of points
+    # ax_y_hist.barh(edges_y, hist_y, height=edges_y[1] - edges_y[0], color='silver')
+    # ax_y_hist.set_xlabel('counts')
+    
+    # for label in ax_z_hist.get_xticklabels():
+        # label.set_visible(False)
         
-    for label in ax_y_hist.get_yticklabels():
-        label.set_visible(False)
+    # for label in ax_y_hist.get_yticklabels():
+        # label.set_visible(False)
         
 
-    if scatter == True:
-        for irep in range(repeat):
-            for ibin in range(nbins):
-                ax_main.scatter(phase[ibin, :] + 2 * np.pi * (irep), energy[ibin, :], color=part_colors[ibin], marker='.')
+    # if scatter == True:
+        # for irep in range(repeat):
+            # for ibin in range(nbins):
+                # ax_main.scatter(phase[ibin, :] + 2 * np.pi * (irep), energy[ibin, :], color=part_colors[ibin], marker='.')
 
-        # ax_z_hist.set_xlim([edges[0], edges[-1]])
+        # # ax_z_hist.set_xlim([edges[0], edges[-1]])
 
-    elif scatter == False:
-        ax_main.hist2d(phase_flat, energy_flat, bins=[z_bins * repeat, y_bins], cmin=0, cmap=cmap)
+    # elif scatter == False:
+        # ax_main.hist2d(phase_flat, energy_flat, bins=[z_bins * repeat, y_bins], cmin=0, cmap=cmap)
         
     
                 
-    ax_main.set_xlabel('$\phi$ [rad]')
-    if GeV:
-        ax_main.set_ylabel('E [MeV] + ' + str(energy_mean / 1000) + ' [GeV]')
-    else:
-        ax_main.set_ylabel('$\gamma$ + ' + str(energy_mean))
-
-    plt.draw()
-    if savefig != False:
-        if savefig == True:
-            savefig = 'png'
-        if debug > 1:
-            print('      saving ' + dpa.fileName() + suffix + '.' + savefig)
-        plt.savefig(dpa.filePath + suffix + '.' + savefig, format=savefig)
-
-    if showfig:
-        plt.show()
-    else:
-        plt.close('all')
-
-
-def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, scatter=False, plot_x_y=True, plot_xy_s=True, bins=(50, 50, 50, 50), flip_t=True, x_units='um', y_units='ev', cmin=0, y_offset=None, cmap=def_cmap, debug=1):
-
-    if showfig == False and savefig == False:
-        return
-    if debug > 0:
-        print('    plotting edist file')
-    start_time = time.time()
-    # suffix=''
-    if edist.__class__ != GenesisElectronDist:
-        raise ValueError('wrong distribution object: should be GenesisElectronDist')
-
-    if np.size(bins) == 1:
-        bins = (bins, bins, bins, bins)  # x,y,t,e
-
-    if fig_name == None:
-        fig_name = 'Electron distribution ' + edist.fileName()
-    fig = plt.figure(fig_name)
-    fig.clf()
-    fig.set_size_inches(((3 + plot_x_y + plot_xy_s) * figsize, 3 * figsize), forward=True)
-
-    if x_units == 'fs':
-        mult = 1e15
-        s_label = 't [fs]'
-    elif x_units == 'um':
-        mult = speed_of_light * 1e6
-        s_label = 's [$\mu$m]'
-    s = edist.t * mult
-    # if flip_t:
-        # s = -edist.t * speed_of_light * 1e6
+    # ax_main.set_xlabel('$\phi$ [rad]')
+    # if GeV:
+        # ax_main.set_ylabel('E [MeV] + ' + str(energy_mean / 1000) + ' [GeV]')
     # else:
-        # s = edist.t * speed_of_light * 1e6
+        # ax_main.set_ylabel('$\gamma$ + ' + str(energy_mean))
 
-    hist, edges = np.histogram(s, bins=bins[2])  # calculate current histogram
-    edges = edges[0:-1]  # remove the last bin edge to save equal number of points
-    hist_int = np.trapz(hist, edges) / mult  # normalize
-    hist = np.rint(hist.astype(float) / (hist_int / float(edist.charge())))
-
-    ax_curr = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 1)
-    #ax_curr.hist(s, bins,color='b')
-    ax_curr.plot(edges, hist/1000, color='k',linewidth=2)
-    ax_curr.set_xlabel(s_label)
-    ax_curr.set_ylabel('I [kA]')
-
-    ax_se = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 2 + plot_x_y + plot_xy_s, sharex=ax_curr)
-    if y_units in ['ev', 'eV']:
-        energy = edist.g * m_e_MeV
-    else:  # elif beam_E_plot=='gamma':
-        energy = edist.g
-        
-    if y_offset == None:
-        y_offset = int(np.mean(energy))
-    if scatter:
-        ax_se.scatter(s, energy - y_offset, marker='.')
-    else:
-        ax_se.hist2d(s, energy - y_offset, [bins[2], bins[3]], cmin=cmin, cmap=cmap)
-
-    ax_se.set_xlabel(s_label)
-    if y_units in ['ev', 'eV']:
-        ax_se.set_ylabel('E + ' + str(y_offset) + ' [MeV]')
-    else:  # elif beam_E_plot=='gamma':
-        ax_se.set_ylabel('$\gamma$ + ' + str(y_offset))
-
-    if plot_xy_s:
-        ax_xs = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 4 + plot_x_y, sharex=ax_curr)
-        if scatter:
-            ax_xs.scatter(s, 1e6 * edist.x, marker='.')
-        else:
-            ax_xs.hist2d(s, 1e6 * edist.x, [bins[2], bins[0]], cmin=cmin, cmap=cmap)
-        ax_xs.set_xlabel(s_label)
-        ax_xs.set_ylabel('x [$\mu$m]')
-
-        ax_ys = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 2, sharex=ax_curr)
-        if scatter:
-            ax_ys.scatter(s, 1e6 * edist.y, marker='.')
-        else:
-            ax_ys.hist2d(s, 1e6 * edist.y, [bins[2], bins[1]], cmin=cmin, cmap=cmap)
-        ax_ys.set_xlabel(s_label)
-        ax_ys.set_ylabel('y [$\mu$m]')
-
-    if plot_x_y:
-        ax_xy = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 2 + plot_xy_s)
-        if scatter:
-            ax_xy.scatter(edist.x * 1e6, edist.y * 1e6, marker='.')
-        else:
-            ax_xy.hist2d(edist.x * 1e6, edist.y * 1e6, [bins[0], bins[1]], cmin=cmin, cmap=cmap)
-        ax_xy.set_xlabel('x [$\mu$m]')
-        ax_xy.set_ylabel('y [$\mu$m]')
-
-        ax_pxpy = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 4 + 2 * plot_xy_s)
-        if scatter:
-            ax_pxpy.scatter(edist.xp * 1e6, edist.yp * 1e6, marker='.')
-        else:
-            ax_pxpy.hist2d(edist.xp * 1e6, edist.yp * 1e6, [bins[0], bins[1]], cmin=cmin, cmap=cmap)
-        ax_pxpy.set_xlabel('xp [$\mu$rad]')
-        ax_pxpy.set_ylabel('yp [$\mu$rad]')
-
-    # if scatter:
-    if flip_t:
-        ax_curr.set_xlim([np.amax(s), np.amin(s)])
-    else:
-        ax_curr.set_xlim([np.amin(s), np.amax(s)])
-        
-    ax_curr.set_ylim(ymin=0)
-
-    fig.subplots_adjust(wspace=0.4, hspace=0.4)
-
-    plt.draw()
-    if savefig != False:
-        if savefig == True:
-            savefig = 'png'
-        if debug > 1:
-            print('      saving ' + edist.fileName() + '.' + savefig)
-        plt.savefig(edist.filePath + '.' + savefig, format=savefig)
-
-    if showfig:
-        plt.show()
-    else:
-        plt.close('all')
-
-    if debug > 0:
-        print(('      done in %.2f seconds' % (time.time() - start_time)))
-    return fig
-
-
-def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=None, debug=0):
-
-    if showfig == False and savefig == False:
-        return
-    
-    # if beam.__class__ != GenesisBeam:
-        # raise ValueError('wrong beam object: should be GenesisBeam')
-    
-    fontsize = 15
-
-    if plot_xy == None:
-        if np.mean(beam.x) == 0 and np.mean(beam.y) == 0 and np.mean(beam.xp) == 0 and np.mean(beam.yp) == 0:
-            plot_xy = 0
-        else:
-            plot_xy = 1
-
-    if fig == None:
-        fig = plt.figure()
-    fig.clf()
-    
-    idx = beam.idx_max()
-    
-    g0 = np.mean(beam.g).astype(int) #mean
-    g_dev = beam.g - g0 #deviation from mean
-
-    fig.set_size_inches((4 * figsize, (3 + plot_xy) * figsize), forward=True)
-    ax = fig.add_subplot(2 + plot_xy, 2, 1)
-    plt.grid(True)
-    ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
-    p1, = plt.plot(1.e6 * np.array(beam.s), beam.I, 'r', lw=3)
-    
-    ax.set_ylim(ymin=0)
-    
-    if hasattr(beam,'eloss'):
-        if (beam.eloss!=0).any():
-            ax = ax.twinx()
-            p2, = plt.plot(1.e6 * np.array(beam.s), 1.e-3 * np.array(beam.eloss), 'g', lw=3)
-            ax.legend([p1, p2], [r'$I [A]$', r'Wake $[KV/m]$'], fontsize=fontsize, loc='best')
-        else:
-            ax.legend([r'$I [A]$'], fontsize=fontsize, loc='best')
-    else:
-        ax.legend([r'$I [A]$'], fontsize=fontsize, loc='best')
-    plt.plot(1.e6 * beam.s[idx], beam.I[idx], 'bs')
-    # ax.set_xlim([np.amin(beam.s),np.amax(beam.x)])
-    ax = fig.add_subplot(2 + plot_xy, 2, 2, sharex=ax)
-    plt.grid(True)
-    ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
-    #p1,= plt.plot(1.e6 * np.array(beam.s),1.e-3 * np.array(beam.eloss),'r',lw=3)
-    p1, = plt.plot(1.e6 * np.array(beam.s), g_dev, 'r', lw=3)
-    plt.plot(1.e6 * beam.s[idx], g_dev[idx], 'bs')
-    ax = ax.twinx()
-    p2, = plt.plot(1.e6 * np.array(beam.s), beam.dg, 'g', lw=3)
-    plt.plot(1.e6 * beam.s[idx], beam.dg[idx], 'bs')
-    ax.legend([p1, p2], [r'$\gamma$ + '+str(g0), r'$\delta \gamma$'], loc='best')
-
-    ax = fig.add_subplot(2 + plot_xy, 2, 3, sharex=ax)
-    plt.grid(True)
-    ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
-    p1, = plt.plot(1.e6 * np.array(beam.s), beam.emit_xn * 1e6, 'r', lw=3)
-    p2, = plt.plot(1.e6 * np.array(beam.s), beam.emit_yn * 1e6, 'g', lw=3)
-    plt.plot(1.e6 * beam.s[idx], beam.emit_xn[idx] * 1e6, 'bs')
-    ax.set_ylim(ymin=0)
-
-    ax.legend([p1, p2], [r'$\varepsilon_x [\mu m]$', r'$\varepsilon_y [\mu m]$'], fontsize=fontsize, loc='best')
-    # ax3.legend([p3,p4],[r'$\varepsilon_x$',r'$\varepsilon_y$'])
-
-    ax = fig.add_subplot(2 + plot_xy, 2, 4, sharex=ax)
-    plt.grid(True)
-    ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
-    p1, = plt.plot(1.e6 * np.array(beam.s), beam.beta_x, 'r', lw=3)
-    p2, = plt.plot(1.e6 * np.array(beam.s), beam.beta_y, 'g', lw=3)
-    plt.plot(1.e6 * beam.s[idx], beam.beta_x[idx], 'bs')
-    ax.set_ylim(ymin=0)
-    ax.legend([p1, p2], [r'$\beta_x [m]$', r'$\beta_y [m]$'], fontsize=fontsize, loc='best')
-
-    if plot_xy:
-
-        ax = fig.add_subplot(3, 2, 5, sharex=ax)
-        plt.grid(True)
-        ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
-        p1, = plt.plot(1.e6 * np.array(beam.s), 1.e6 * np.array(beam.x), 'r', lw=3)
-        p2, = plt.plot(1.e6 * np.array(beam.s), 1.e6 * np.array(beam.y), 'g', lw=3)
-
-        ax.legend([p1, p2], [r'$x [\mu m]$', r'$y [\mu m]$'], fontsize=fontsize, loc='best')
-
-        # beam_beta = sqrt(1 - (1 / beam.g0**2))
-        # beam_p = beam.g0 * beam_beta
-        # # p=beam.g0*m_e_eV/speed_of_light
-        # pz = sqrt(beam_p**2 - beam.px**2 - beam.py**2)
-        # xp = beam.px / pz
-        # yp = beam.py / pz
-
-        ax = fig.add_subplot(3, 2, 6, sharex=ax)
-        plt.grid(True)
-        ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
-        p1, = plt.plot(1.e6 * np.array(beam.s), 1.e6 * np.array(beam.xp), 'r', lw=3)
-        p2, = plt.plot(1.e6 * np.array(beam.s), 1.e6 * np.array(beam.yp), 'g', lw=3)
-
-        ax.legend([p1, p2], [r'$x_p [\mu rad]$', r'$y_p [\mu rad]$'], fontsize=fontsize, loc='best')
-
-    ax.set_xlim([1.e6 * np.amin(beam.s), 1e6 * np.amax(beam.s)])
-
-    fig.subplots_adjust(hspace=0.2, wspace=0.3)
-
+    # plt.draw()
     # if savefig != False:
-        # if hasattr(beam,'filePath'):
-            # if savefig == True:
-                # filetype = 'png'
-            # else:
-            #
-            # path = beam.filePath
-            # name = beam.fileName()
+        # if savefig == True:
+            # savefig = 'png'
+        # if debug > 1:
+            # print('      saving ' + dpa.fileName() + suffix + '.' + savefig)
+        # plt.savefig(dpa.filePath + suffix + '.' + savefig, format=savefig)
+
+    # if showfig:
+        # plt.show()
+    # else:
+        # plt.close('all')
+
+
+# def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, scatter=False, plot_x_y=True, plot_xy_s=True, bins=(50, 50, 50, 50), flip_t=True, x_units='um', y_units='ev', cmin=0, y_offset=None, cmap=def_cmap, debug=1):
+
+    # if showfig == False and savefig == False:
+        # return
+    # if debug > 0:
+        # print('    plotting edist file')
+    # start_time = time.time()
+    # # suffix=''
+    # if edist.__class__ != GenesisElectronDist:
+        # raise ValueError('wrong distribution object: should be GenesisElectronDist')
+
+    # if np.size(bins) == 1:
+        # bins = (bins, bins, bins, bins)  # x,y,t,e
+
+    # if fig_name == None:
+        # fig_name = 'Electron distribution ' + edist.fileName()
+    # fig = plt.figure(fig_name)
+    # fig.clf()
+    # fig.set_size_inches(((3 + plot_x_y + plot_xy_s) * figsize, 3 * figsize), forward=True)
+
+    # if x_units == 'fs':
+        # mult = 1e15
+        # s_label = 't [fs]'
+    # elif x_units == 'um':
+        # mult = speed_of_light * 1e6
+        # s_label = 's [$\mu$m]'
+    # s = edist.t * mult
+    # # if flip_t:
+        # # s = -edist.t * speed_of_light * 1e6
+    # # else:
+        # # s = edist.t * speed_of_light * 1e6
+
+    # hist, edges = np.histogram(s, bins=bins[2])  # calculate current histogram
+    # edges = edges[0:-1]  # remove the last bin edge to save equal number of points
+    # hist_int = np.trapz(hist, edges) / mult  # normalize
+    # hist = np.rint(hist.astype(float) / (hist_int / float(edist.charge())))
+
+    # ax_curr = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 1)
+    # #ax_curr.hist(s, bins,color='b')
+    # ax_curr.plot(edges, hist/1000, color='k',linewidth=2)
+    # ax_curr.set_xlabel(s_label)
+    # ax_curr.set_ylabel('I [kA]')
+
+    # ax_se = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 2 + plot_x_y + plot_xy_s, sharex=ax_curr)
+    # if y_units in ['ev', 'eV']:
+        # energy = edist.g * m_e_MeV
+    # else:  # elif beam_E_plot=='gamma':
+        # energy = edist.g
+        
+    # if y_offset == None:
+        # y_offset = int(np.mean(energy))
+    # if scatter:
+        # ax_se.scatter(s, energy - y_offset, marker='.')
+    # else:
+        # ax_se.hist2d(s, energy - y_offset, [bins[2], bins[3]], cmin=cmin, cmap=cmap)
+
+    # ax_se.set_xlabel(s_label)
+    # if y_units in ['ev', 'eV']:
+        # ax_se.set_ylabel('E + ' + str(y_offset) + ' [MeV]')
+    # else:  # elif beam_E_plot=='gamma':
+        # ax_se.set_ylabel('$\gamma$ + ' + str(y_offset))
+
+    # if plot_xy_s:
+        # ax_xs = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 4 + plot_x_y, sharex=ax_curr)
+        # if scatter:
+            # ax_xs.scatter(s, 1e6 * edist.x, marker='.')
         # else:
-            # if if savefig == True:
+            # ax_xs.hist2d(s, 1e6 * edist.x, [bins[2], bins[0]], cmin=cmin, cmap=cmap)
+        # ax_xs.set_xlabel(s_label)
+        # ax_xs.set_ylabel('x [$\mu$m]')
+
+        # ax_ys = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 2, sharex=ax_curr)
+        # if scatter:
+            # ax_ys.scatter(s, 1e6 * edist.y, marker='.')
+        # else:
+            # ax_ys.hist2d(s, 1e6 * edist.y, [bins[2], bins[1]], cmin=cmin, cmap=cmap)
+        # ax_ys.set_xlabel(s_label)
+        # ax_ys.set_ylabel('y [$\mu$m]')
+
+    # if plot_x_y:
+        # ax_xy = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 2 + plot_xy_s)
+        # if scatter:
+            # ax_xy.scatter(edist.x * 1e6, edist.y * 1e6, marker='.')
+        # else:
+            # ax_xy.hist2d(edist.x * 1e6, edist.y * 1e6, [bins[0], bins[1]], cmin=cmin, cmap=cmap)
+        # ax_xy.set_xlabel('x [$\mu$m]')
+        # ax_xy.set_ylabel('y [$\mu$m]')
+
+        # ax_pxpy = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 4 + 2 * plot_xy_s)
+        # if scatter:
+            # ax_pxpy.scatter(edist.xp * 1e6, edist.yp * 1e6, marker='.')
+        # else:
+            # ax_pxpy.hist2d(edist.xp * 1e6, edist.yp * 1e6, [bins[0], bins[1]], cmin=cmin, cmap=cmap)
+        # ax_pxpy.set_xlabel('xp [$\mu$rad]')
+        # ax_pxpy.set_ylabel('yp [$\mu$rad]')
+
+    # # if scatter:
+    # if flip_t:
+        # ax_curr.set_xlim([np.amax(s), np.amin(s)])
+    # else:
+        # ax_curr.set_xlim([np.amin(s), np.amax(s)])
+        
+    # ax_curr.set_ylim(ymin=0)
+
+    # fig.subplots_adjust(wspace=0.4, hspace=0.4)
+
+    # plt.draw()
+    # if savefig != False:
+        # if savefig == True:
+            # savefig = 'png'
+        # if debug > 1:
+            # print('      saving ' + edist.fileName() + '.' + savefig)
+        # plt.savefig(edist.filePath + '.' + savefig, format=savefig)
+
+    # if showfig:
+        # plt.show()
+    # else:
+        # plt.close('all')
+
+    # if debug > 0:
+        # print(('      done in %.2f seconds' % (time.time() - start_time)))
+    # return fig
+
+
+# def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=None, debug=0):
+
+    # if showfig == False and savefig == False:
+        # return
+    
+    # # if beam.__class__ != GenesisBeam:
+        # # raise ValueError('wrong beam object: should be GenesisBeam')
+    
+    # fontsize = 15
+
+    # if plot_xy == None:
+        # if np.mean(beam.x) == 0 and np.mean(beam.y) == 0 and np.mean(beam.xp) == 0 and np.mean(beam.yp) == 0:
+            # plot_xy = 0
+        # else:
+            # plot_xy = 1
+
+    # if fig == None:
+        # fig = plt.figure()
+    # fig.clf()
+    
+    # idx = beam.idx_max()
+    
+    # g0 = np.mean(beam.g).astype(int) #mean
+    # g_dev = beam.g - g0 #deviation from mean
+
+    # fig.set_size_inches((4 * figsize, (3 + plot_xy) * figsize), forward=True)
+    # ax = fig.add_subplot(2 + plot_xy, 2, 1)
+    # plt.grid(True)
+    # ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
+    # p1, = plt.plot(1.e6 * np.array(beam.s), beam.I, 'r', lw=3)
+    
+    # ax.set_ylim(ymin=0)
+    
+    # if hasattr(beam,'eloss'):
+        # if (beam.eloss!=0).any():
+            # ax = ax.twinx()
+            # p2, = plt.plot(1.e6 * np.array(beam.s), 1.e-3 * np.array(beam.eloss), 'g', lw=3)
+            # ax.legend([p1, p2], [r'$I [A]$', r'Wake $[KV/m]$'], fontsize=fontsize, loc='best')
+        # else:
+            # ax.legend([r'$I [A]$'], fontsize=fontsize, loc='best')
+    # else:
+        # ax.legend([r'$I [A]$'], fontsize=fontsize, loc='best')
+    # plt.plot(1.e6 * beam.s[idx], beam.I[idx], 'bs')
+    # # ax.set_xlim([np.amin(beam.s),np.amax(beam.x)])
+    # ax = fig.add_subplot(2 + plot_xy, 2, 2, sharex=ax)
+    # plt.grid(True)
+    # ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
+    # #p1,= plt.plot(1.e6 * np.array(beam.s),1.e-3 * np.array(beam.eloss),'r',lw=3)
+    # p1, = plt.plot(1.e6 * np.array(beam.s), g_dev, 'r', lw=3)
+    # plt.plot(1.e6 * beam.s[idx], g_dev[idx], 'bs')
+    # ax = ax.twinx()
+    # p2, = plt.plot(1.e6 * np.array(beam.s), beam.dg, 'g', lw=3)
+    # plt.plot(1.e6 * beam.s[idx], beam.dg[idx], 'bs')
+    # ax.legend([p1, p2], [r'$\gamma$ + '+str(g0), r'$\delta \gamma$'], loc='best')
+
+    # ax = fig.add_subplot(2 + plot_xy, 2, 3, sharex=ax)
+    # plt.grid(True)
+    # ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
+    # p1, = plt.plot(1.e6 * np.array(beam.s), beam.emit_xn * 1e6, 'r', lw=3)
+    # p2, = plt.plot(1.e6 * np.array(beam.s), beam.emit_yn * 1e6, 'g', lw=3)
+    # plt.plot(1.e6 * beam.s[idx], beam.emit_xn[idx] * 1e6, 'bs')
+    # ax.set_ylim(ymin=0)
+
+    # ax.legend([p1, p2], [r'$\varepsilon_x [\mu m]$', r'$\varepsilon_y [\mu m]$'], fontsize=fontsize, loc='best')
+    # # ax3.legend([p3,p4],[r'$\varepsilon_x$',r'$\varepsilon_y$'])
+
+    # ax = fig.add_subplot(2 + plot_xy, 2, 4, sharex=ax)
+    # plt.grid(True)
+    # ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
+    # p1, = plt.plot(1.e6 * np.array(beam.s), beam.beta_x, 'r', lw=3)
+    # p2, = plt.plot(1.e6 * np.array(beam.s), beam.beta_y, 'g', lw=3)
+    # plt.plot(1.e6 * beam.s[idx], beam.beta_x[idx], 'bs')
+    # ax.set_ylim(ymin=0)
+    # ax.legend([p1, p2], [r'$\beta_x [m]$', r'$\beta_y [m]$'], fontsize=fontsize, loc='best')
+
+    # if plot_xy:
+
+        # ax = fig.add_subplot(3, 2, 5, sharex=ax)
+        # plt.grid(True)
+        # ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
+        # p1, = plt.plot(1.e6 * np.array(beam.s), 1.e6 * np.array(beam.x), 'r', lw=3)
+        # p2, = plt.plot(1.e6 * np.array(beam.s), 1.e6 * np.array(beam.y), 'g', lw=3)
+
+        # ax.legend([p1, p2], [r'$x [\mu m]$', r'$y [\mu m]$'], fontsize=fontsize, loc='best')
+
+        # # beam_beta = sqrt(1 - (1 / beam.g0**2))
+        # # beam_p = beam.g0 * beam_beta
+        # # # p=beam.g0*m_e_eV/speed_of_light
+        # # pz = sqrt(beam_p**2 - beam.px**2 - beam.py**2)
+        # # xp = beam.px / pz
+        # # yp = beam.py / pz
+
+        # ax = fig.add_subplot(3, 2, 6, sharex=ax)
+        # plt.grid(True)
+        # ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
+        # p1, = plt.plot(1.e6 * np.array(beam.s), 1.e6 * np.array(beam.xp), 'r', lw=3)
+        # p2, = plt.plot(1.e6 * np.array(beam.s), 1.e6 * np.array(beam.yp), 'g', lw=3)
+
+        # ax.legend([p1, p2], [r'$x_p [\mu rad]$', r'$y_p [\mu rad]$'], fontsize=fontsize, loc='best')
+
+    # ax.set_xlim([1.e6 * np.amin(beam.s), 1e6 * np.amax(beam.s)])
+
+    # fig.subplots_adjust(hspace=0.2, wspace=0.3)
+
+    # # if savefig != False:
+        # # if hasattr(beam,'filePath'):
+            # # if savefig == True:
+                # # filetype = 'png'
+            # # else:
+            # #
+            # # path = beam.filePath
+            # # name = beam.fileName()
+        # # else:
+            # # if if savefig == True:
             
-            # if debug > 1:
-                # print('      saving ' + beam.fileName() + '.' + savefig)
-            # plt.savefig(beam.filePath + '.' + savefig, format=savefig)
+            # # if debug > 1:
+                # # print('      saving ' + beam.fileName() + '.' + savefig)
+            # # plt.savefig(beam.filePath + '.' + savefig, format=savefig)
     
-    plt.draw()
-    if savefig != False:
-        if savefig == True:
-            savefig = 'png'
-        if debug > 1:
-            print('      saving ' + beam.fileName() + '.' + savefig)
-        plt.savefig(beam.filePath + '.' + savefig, format=savefig)
+    # plt.draw()
+    # if savefig != False:
+        # if savefig == True:
+            # savefig = 'png'
+        # if debug > 1:
+            # print('      saving ' + beam.fileName() + '.' + savefig)
+        # plt.savefig(beam.filePath + '.' + savefig, format=savefig)
 
-    if showfig:
-        plt.show()
-    else:
-        plt.close('all')
+    # if showfig:
+        # plt.show()
+    # else:
+        # plt.close('all')
 
-def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,None), y_lim=(None,None), downsample=1, autoscale=None, cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=True, debug=1):
-    '''
-    plots wigner distribution (WD) with marginals
-    wig_or_out -  may be WignerDistribution() or GenesisOutput() object
-    z - (if isinstance(wig_or_out, GenesisOutput)) location at which WD will be calculated
-    x_units - (um or fs) - units to display power scale
-    y_units - (nm or eV) - units to display spectrum scale
-    x_lim, y_lim - scaling limits in given units, (min,max) or [min,max], e.g: (None,6)
-    abs_value - if True, absolute value of WD is displayed (usually, it has both positive and negative values)
-    cmap - colormar if abs_value==False (http://matplotlib.org/users/colormaps.html)
-    '''
-    if showfig == False and savefig == False:
-        return
+# def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,None), y_lim=(None,None), downsample=1, autoscale=None, cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=True, debug=1):
+    # '''
+    # plots wigner distribution (WD) with marginals
+    # wig_or_out -  may be WignerDistribution() or GenesisOutput() object
+    # z - (if isinstance(wig_or_out, GenesisOutput)) location at which WD will be calculated
+    # x_units - (um or fs) - units to display power scale
+    # y_units - (nm or eV) - units to display spectrum scale
+    # x_lim, y_lim - scaling limits in given units, (min,max) or [min,max], e.g: (None,6)
+    # abs_value - if True, absolute value of WD is displayed (usually, it has both positive and negative values)
+    # cmap - colormar if abs_value==False (http://matplotlib.org/users/colormaps.html)
+    # '''
+    # if showfig == False and savefig == False:
+        # return
     
-    if debug > 0:
-        print('    plotting Wigner distribution')
+    # if debug > 0:
+        # print('    plotting Wigner distribution')
         
         
-    if isinstance(wig_or_out, GenesisOutput):
-        W=wigner_out(wig_or_out,z)
-    elif isinstance(wig_or_out, WignerDistribution):
-        W=wig_or_out
-    else:
-        raise ValueError('Unknown object for Wigner plot')
+    # if isinstance(wig_or_out, GenesisOutput):
+        # W=wigner_out(wig_or_out,z)
+    # elif isinstance(wig_or_out, WignerDistribution):
+        # W=wig_or_out
+    # else:
+        # raise ValueError('Unknown object for Wigner plot')
     
     
-    if fig_name is None:
-        if W.fileName() is '':
-            fig_text = 'Wigner distribution'
-        else:
-            fig_text = 'Wigner distribution ' + W.fileName()
-    else:
-        fig_text = fig_name
-    if W.z!=None:
-        fig_text += ' ' + str(W.z) + 'm'
+    # if fig_name is None:
+        # if W.fileName() is '':
+            # fig_text = 'Wigner distribution'
+        # else:
+            # fig_text = 'Wigner distribution ' + W.fileName()
+    # else:
+        # fig_text = fig_name
+    # if W.z!=None:
+        # fig_text += ' ' + str(W.z) + 'm'
         
-    if autoscale:
-        fig_text += ' autsc'
+    # if autoscale:
+        # fig_text += ' autsc'
         
-    fig = plt.figure(fig_text)
-    plt.clf()
-    fig.set_size_inches((18, 13), forward=True)
+    # fig = plt.figure(fig_text)
+    # plt.clf()
+    # fig.set_size_inches((18, 13), forward=True)
         
-    power=W.power()
-    spec=W.spectrum()
-    wigner=W.wig
-    wigner_lim=np.amax(abs(W.wig))
+    # power=W.power()
+    # spec=W.spectrum()
+    # wigner=W.wig
+    # wigner_lim=np.amax(abs(W.wig))
     
-    if x_units=='fs':
-        power_scale=W.s/speed_of_light*1e15
-        p_label_txt='time [fs]'
-    else:
-        power_scale=W.s*1e6
-        p_label_txt='s [$\mu$m]'
+    # if x_units=='fs':
+        # power_scale=W.s/speed_of_light*1e15
+        # p_label_txt='time [fs]'
+    # else:
+        # power_scale=W.s*1e6
+        # p_label_txt='s [$\mu$m]'
     
-    if y_units in ['ev', 'eV']:
-        spec_scale=speed_of_light*h_eV_s*1e9/W.freq_lamd
-        f_label_txt='ph.energy [eV]'
-    else:
-        spec_scale=W.freq_lamd
-        f_label_txt='wavelength [nm]'
+    # if y_units in ['ev', 'eV']:
+        # spec_scale=speed_of_light*h_eV_s*1e9/W.freq_lamd
+        # f_label_txt='ph.energy [eV]'
+    # else:
+        # spec_scale=W.freq_lamd
+        # f_label_txt='wavelength [nm]'
     
-    # definitions for the axes
-    left, width = 0.18, 0.57
-    bottom, height = 0.14, 0.55
-    left_h = left + width + 0.02 - 0.02
-    bottom_h = bottom + height + 0.02 - 0.02
+    # # definitions for the axes
+    # left, width = 0.18, 0.57
+    # bottom, height = 0.14, 0.55
+    # left_h = left + width + 0.02 - 0.02
+    # bottom_h = bottom + height + 0.02 - 0.02
     
 
-    rect_scatter = [left, bottom, width, height]
-    rect_histx = [left, bottom_h, width, 0.2]
-    rect_histy = [left_h, bottom, 0.15, height]
+    # rect_scatter = [left, bottom, width, height]
+    # rect_histx = [left, bottom_h, width, 0.2]
+    # rect_histy = [left_h, bottom, 0.15, height]
     
-    axScatter = plt.axes(rect_scatter)
-    axHistx = plt.axes(rect_histx, sharex=axScatter)
-    axHisty = plt.axes(rect_histy, sharey=axScatter)
+    # axScatter = plt.axes(rect_scatter)
+    # axHistx = plt.axes(rect_histx, sharex=axScatter)
+    # axHisty = plt.axes(rect_histy, sharey=axScatter)
     
-    if abs_value:
-        axScatter.pcolormesh(power_scale, spec_scale, abs(wigner)) #change
-        axScatter.text(0.02, 0.98, r'$W_{max}$= %.2e' % (np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes, color='w')
-    else:
-        # cmap='RdBu_r'
-        # axScatter.imshow(wigner, cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
-        axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], wigner[::downsample,::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
-        axScatter.text(0.02, 0.98, r'$W_{max}$= %.2e' % (np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes)#fontsize=12,
+    # if abs_value:
+        # axScatter.pcolormesh(power_scale, spec_scale, abs(wigner)) #change
+        # axScatter.text(0.02, 0.98, r'$W_{max}$= %.2e' % (np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes, color='w')
+    # else:
+        # # cmap='RdBu_r'
+        # # axScatter.imshow(wigner, cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
+        # axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], wigner[::downsample,::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
+        # axScatter.text(0.02, 0.98, r'$W_{max}$= %.2e' % (np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes)#fontsize=12,
             
-    axHistx.plot(power_scale,power)
-    axHistx.text(0.02, 0.95, r'E= %.2e J' % (W.energy()), horizontalalignment='left', verticalalignment='top', transform=axHistx.transAxes)#fontsize=12,
-    axHistx.set_ylabel('power [W]')
+    # axHistx.plot(power_scale,power)
+    # axHistx.text(0.02, 0.95, r'E= %.2e J' % (W.energy()), horizontalalignment='left', verticalalignment='top', transform=axHistx.transAxes)#fontsize=12,
+    # axHistx.set_ylabel('power [W]')
 
-    axHisty.plot(spec,spec_scale)
-    axHisty.set_xlabel('spectrum [a.u.]')
+    # axHisty.plot(spec,spec_scale)
+    # axHisty.set_xlabel('spectrum [a.u.]')
     
-    axScatter.axis('tight')
-    axScatter.set_xlabel(p_label_txt)
-    axScatter.set_ylabel(f_label_txt)
+    # axScatter.axis('tight')
+    # axScatter.set_xlabel(p_label_txt)
+    # axScatter.set_ylabel(f_label_txt)
 
-    axHistx.set_ylim(ymin=0)
-    axHisty.set_xlim(xmin=0)
+    # axHistx.set_ylim(ymin=0)
+    # axHisty.set_xlim(xmin=0)
 
-    for tl in axHistx.get_xticklabels():
-        tl.set_visible(False)
+    # for tl in axHistx.get_xticklabels():
+        # tl.set_visible(False)
 
-    for tl in axHisty.get_yticklabels():
-        tl.set_visible(False)
+    # for tl in axHisty.get_yticklabels():
+        # tl.set_visible(False)
 
     
-    axHistx.yaxis.major.locator.set_params(nbins=4)
-    axHisty.xaxis.major.locator.set_params(nbins=2)
+    # axHistx.yaxis.major.locator.set_params(nbins=4)
+    # axHisty.xaxis.major.locator.set_params(nbins=2)
     
-    if autoscale == 1:
-        autoscale = 1e-2
+    # if autoscale == 1:
+        # autoscale = 1e-2
     
-    if autoscale != None:
-        max_power = np.amax(power)
-        max_spectrum = np.amax(spec)
-        idx_p = np.where(power > max_power*autoscale)[0]
-        # print(max_spectrum*autoscale)
-        # print(spectrum)
-        idx_s = np.where(spec > max_spectrum*autoscale)[0]
+    # if autoscale != None:
+        # max_power = np.amax(power)
+        # max_spectrum = np.amax(spec)
+        # idx_p = np.where(power > max_power*autoscale)[0]
+        # # print(max_spectrum*autoscale)
+        # # print(spectrum)
+        # idx_s = np.where(spec > max_spectrum*autoscale)[0]
         
-        x_lim = [ power_scale[idx_p[0]], power_scale[idx_p[-1]] ]
-        y_lim = [ spec_scale[idx_s[0]], spec_scale[idx_s[-1]] ]
+        # x_lim = [ power_scale[idx_p[0]], power_scale[idx_p[-1]] ]
+        # y_lim = [ spec_scale[idx_s[0]], spec_scale[idx_s[-1]] ]
         
-        x_lim = np.array(x_lim)
-        y_lim = np.array(y_lim)
-        x_lim.sort()
-        y_lim.sort()
+        # x_lim = np.array(x_lim)
+        # y_lim = np.array(y_lim)
+        # x_lim.sort()
+        # y_lim.sort()
     
-    # axScatter.set_xlim(x_lim[0], x_lim[1])
-    # axScatter.set_ylim(y_lim[0], y_lim[1])
-    axHistx.set_xlim(x_lim[0], x_lim[1])
-    axHisty.set_ylim(y_lim[0], y_lim[1])
+    # # axScatter.set_xlim(x_lim[0], x_lim[1])
+    # # axScatter.set_ylim(y_lim[0], y_lim[1])
+    # axHistx.set_xlim(x_lim[0], x_lim[1])
+    # axHisty.set_ylim(y_lim[0], y_lim[1])
     
-    if savefig != False:
-        if savefig == True:
-            savefig = 'png'
-        if W.z is None:
-            fig.savefig(W.filePath + '_wig.' + str(savefig), format=savefig)
-        else:
-            fig.savefig(W.filePath + '_wig_' + str(W.z) + 'm.' + str(savefig), format=savefig)
+    # if savefig != False:
+        # if savefig == True:
+            # savefig = 'png'
+        # if W.z is None:
+            # fig.savefig(W.filePath + '_wig.' + str(savefig), format=savefig)
+        # else:
+            # fig.savefig(W.filePath + '_wig_' + str(W.z) + 'm.' + str(savefig), format=savefig)
 
-    plt.draw()
+    # plt.draw()
     
-    if showfig == True:
-        dir = os.path.dirname(W.filePath)
-        rcParams["savefig.directory"] = dir
-        plt.show()
-    else:
-        plt.close('all')
+    # if showfig == True:
+        # dir = os.path.dirname(W.filePath)
+        # rcParams["savefig.directory"] = dir
+        # plt.show()
+    # else:
+        # plt.close('all')
         
 
-'''
-tmp for HXRSS
-'''
-def read_plot_dump_proj(exp_dir, stage, run_ids, plot_phase=1, showfig=True, savefig=0, debug=1):
+# '''
+# tmp for HXRSS
+# '''
+# def read_plot_dump_proj(exp_dir, stage, run_ids, plot_phase=1, showfig=True, savefig=0, debug=1):
 
-    if showfig == 0 and savefig == 0:
-        return None
+    # if showfig == 0 and savefig == 0:
+        # return None
 
-    t_l_int_arr = []
-    t_l_pha_arr = []
-    f_l_int_arr = []
-    for run_id in run_ids:
+    # t_l_int_arr = []
+    # t_l_pha_arr = []
+    # f_l_int_arr = []
+    # for run_id in run_ids:
 
-        array = np.loadtxt(exp_dir + 'run_' + str(run_id) + '/run.' + str(run_id) + '.s' + str(stage) + '.dfl.t.txt', skiprows=1)
-        array = np.rollaxis(array, 1)
-        t_l_scale, t_l_int_a, t_l_pha_a = array[0], array[1], array[2]
+        # array = np.loadtxt(exp_dir + 'run_' + str(run_id) + '/run.' + str(run_id) + '.s' + str(stage) + '.dfl.t.txt', skiprows=1)
+        # array = np.rollaxis(array, 1)
+        # t_l_scale, t_l_int_a, t_l_pha_a = array[0], array[1], array[2]
 
-        array = np.loadtxt(exp_dir + 'run_' + str(run_id) + '/run.' + str(run_id) + '.s' + str(stage) + '.dfl.f.txt', skiprows=1)
-        array = np.rollaxis(array, 1)
-        f_l_scale, f_l_int_a, f_l_ftlt_abs, f_l_ftlt_ang = array[0], array[1], array[2], array[3]
+        # array = np.loadtxt(exp_dir + 'run_' + str(run_id) + '/run.' + str(run_id) + '.s' + str(stage) + '.dfl.f.txt', skiprows=1)
+        # array = np.rollaxis(array, 1)
+        # f_l_scale, f_l_int_a, f_l_ftlt_abs, f_l_ftlt_ang = array[0], array[1], array[2], array[3]
 
-        t_l_int_arr.append(t_l_int_a)
-        t_l_pha_arr.append(t_l_pha_a)
-        f_l_int_arr.append(f_l_int_a)
+        # t_l_int_arr.append(t_l_int_a)
+        # t_l_pha_arr.append(t_l_pha_a)
+        # f_l_int_arr.append(f_l_int_a)
 
-    t_l_scale *= 1e6
-    t_l_int_arr = np.array(t_l_int_arr)
-    t_l_pha_arr = np.array(t_l_pha_arr)
-    f_l_int_arr = np.array(f_l_int_arr)
-    t_l_int_arr = np.rollaxis(t_l_int_arr, 1)
-    t_l_pha_arr = np.rollaxis(t_l_pha_arr, 1)
-    f_l_int_arr = np.rollaxis(f_l_int_arr, 1)
+    # t_l_scale *= 1e6
+    # t_l_int_arr = np.array(t_l_int_arr)
+    # t_l_pha_arr = np.array(t_l_pha_arr)
+    # f_l_int_arr = np.array(f_l_int_arr)
+    # t_l_int_arr = np.rollaxis(t_l_int_arr, 1)
+    # t_l_pha_arr = np.rollaxis(t_l_pha_arr, 1)
+    # f_l_int_arr = np.rollaxis(f_l_int_arr, 1)
 
-    t_l_pha_arr = np.unwrap(t_l_pha_arr, axis=0)
+    # t_l_pha_arr = np.unwrap(t_l_pha_arr, axis=0)
 
-    if len(run_ids) > 1:
-        t_l_int_mean = np.mean(t_l_int_arr, axis=1)
-        t_l_pha_mean = np.mean(t_l_pha_arr, axis=1)
-        f_l_int_mean = np.mean(f_l_int_arr, axis=1)
-    else:
-        t_l_int_mean = t_l_int_arr[:, 0]
-        t_l_pha_mean = t_l_pha_arr[:, 0]
-        f_l_int_mean = f_l_int_arr[:, 0]
-    # t_domain,t_norm=plt.figure('t_domain_filtered')
-    fig_name = 'stage_' + str(stage) + '__FILT__power'
-    t_domain = plt.figure(fig_name,figsize=(15,7))
-    ax1 = t_domain.add_subplot(2 + plot_phase, 1, 1)
-    pulse_average_pos = np.sum(t_l_scale * t_l_int_mean) / np.sum(t_l_int_mean)
-    ax1.plot(t_l_scale - pulse_average_pos, t_l_int_arr, '0.5')
-    ax1.plot(t_l_scale - pulse_average_pos, t_l_int_mean, 'k', linewidth=1.5)
-    ax1.plot([0, 0], [0, np.max(t_l_int_arr)], 'r')
-    ax1.grid(True)
-    plt.ylabel(r'$P$ [W]')
+    # if len(run_ids) > 1:
+        # t_l_int_mean = np.mean(t_l_int_arr, axis=1)
+        # t_l_pha_mean = np.mean(t_l_pha_arr, axis=1)
+        # f_l_int_mean = np.mean(f_l_int_arr, axis=1)
+    # else:
+        # t_l_int_mean = t_l_int_arr[:, 0]
+        # t_l_pha_mean = t_l_pha_arr[:, 0]
+        # f_l_int_mean = f_l_int_arr[:, 0]
+    # # t_domain,t_norm=plt.figure('t_domain_filtered')
+    # fig_name = 'stage_' + str(stage) + '__FILT__power'
+    # t_domain = plt.figure(fig_name,figsize=(15,7))
+    # ax1 = t_domain.add_subplot(2 + plot_phase, 1, 1)
+    # pulse_average_pos = np.sum(t_l_scale * t_l_int_mean) / np.sum(t_l_int_mean)
+    # ax1.plot(t_l_scale - pulse_average_pos, t_l_int_arr, '0.5')
+    # ax1.plot(t_l_scale - pulse_average_pos, t_l_int_mean, 'k', linewidth=1.5)
+    # ax1.plot([0, 0], [0, np.max(t_l_int_arr)], 'r')
+    # ax1.grid(True)
+    # plt.ylabel(r'$P$ [W]')
 
-    ax2 = t_domain.add_subplot(2 + plot_phase, 1, 2, sharex=ax1)
-    ax2.semilogy(t_l_scale - pulse_average_pos, t_l_int_arr, '0.5')
-    ax2.semilogy(t_l_scale - pulse_average_pos, t_l_int_mean, 'k', linewidth=1.5)
-    ax2.plot([0, 0], [np.min(t_l_int_arr), np.max(t_l_int_arr)], 'r')
-    ax2.grid(True)
-    plt.ylabel(r'$P$ [W]')
+    # ax2 = t_domain.add_subplot(2 + plot_phase, 1, 2, sharex=ax1)
+    # ax2.semilogy(t_l_scale - pulse_average_pos, t_l_int_arr, '0.5')
+    # ax2.semilogy(t_l_scale - pulse_average_pos, t_l_int_mean, 'k', linewidth=1.5)
+    # ax2.plot([0, 0], [np.min(t_l_int_arr), np.max(t_l_int_arr)], 'r')
+    # ax2.grid(True)
+    # plt.ylabel(r'$P$ [W]')
 
-    if plot_phase:
-        ax3 = t_domain.add_subplot(2 + plot_phase, 1, 3, sharex=ax1)
-        ax3.plot(t_l_scale - pulse_average_pos, t_l_pha_arr, '0.5')
-        ax3.plot(t_l_scale - pulse_average_pos, t_l_pha_mean, 'k', linewidth=1.5)
-        plt.ylabel(r'$\phi [rad]$')
-    plt.xlabel(r'$S [\mu m]$')
-
-    plt.draw()
-
-    if savefig != False:
-        if savefig == True:
-            savefig = 'png'
-        if debug > 1:
-            print('      saving ' + fig_name + '.' + savefig)
-        plt.savefig(exp_dir + 'results/' + fig_name + '.' + savefig, format=savefig)
-
-    if showfig:
-        plt.show()
-    else:
-        plt.close('all')
-
-    fig_name = 'stage_' + str(stage) + '__FILT__spectrum'
-    f_domain = plt.figure(fig_name,figsize=(15,7))
-    ax1 = f_domain.add_subplot(2, 1, 1)
-    ax1.plot(h_eV_s * speed_of_light / f_l_scale, f_l_int_arr, '0.5')
-    ax1.plot(h_eV_s * speed_of_light / f_l_scale, f_l_int_mean, 'k', linewidth=1.5)
-    ax1.grid(True)
-
-    plt.ylabel(r'$P(\lambda)$ [a.u.]')
-    ax2 = f_domain.add_subplot(2, 1, 2, sharex=ax1)
+    # if plot_phase:
+        # ax3 = t_domain.add_subplot(2 + plot_phase, 1, 3, sharex=ax1)
+        # ax3.plot(t_l_scale - pulse_average_pos, t_l_pha_arr, '0.5')
+        # ax3.plot(t_l_scale - pulse_average_pos, t_l_pha_mean, 'k', linewidth=1.5)
+        # plt.ylabel(r'$\phi [rad]$')
     # plt.xlabel(r'$S [\mu m]$')
 
-    ax2.plot(h_eV_s * speed_of_light / f_l_scale, f_l_ftlt_abs**2, 'r')
-    plt.xlabel(r'$E$ [eV]')
-    plt.ylabel(r'Filter (ampl$^2$ & phase )')
-    ax2_phase = ax2.twinx()
-    ax2_phase.plot(h_eV_s * speed_of_light / f_l_scale, f_l_ftlt_ang, 'r--')
-    ax2.grid(True)
+    # plt.draw()
+
+    # if savefig != False:
+        # if savefig == True:
+            # savefig = 'png'
+        # if debug > 1:
+            # print('      saving ' + fig_name + '.' + savefig)
+        # plt.savefig(exp_dir + 'results/' + fig_name + '.' + savefig, format=savefig)
+
+    # if showfig:
+        # plt.show()
+    # else:
+        # plt.close('all')
+
+    # fig_name = 'stage_' + str(stage) + '__FILT__spectrum'
+    # f_domain = plt.figure(fig_name,figsize=(15,7))
+    # ax1 = f_domain.add_subplot(2, 1, 1)
+    # ax1.plot(h_eV_s * speed_of_light / f_l_scale, f_l_int_arr, '0.5')
+    # ax1.plot(h_eV_s * speed_of_light / f_l_scale, f_l_int_mean, 'k', linewidth=1.5)
+    # ax1.grid(True)
+
+    # plt.ylabel(r'$P(\lambda)$ [a.u.]')
+    # ax2 = f_domain.add_subplot(2, 1, 2, sharex=ax1)
+    # # plt.xlabel(r'$S [\mu m]$')
+
+    # ax2.plot(h_eV_s * speed_of_light / f_l_scale, f_l_ftlt_abs**2, 'r')
+    # plt.xlabel(r'$E$ [eV]')
+    # plt.ylabel(r'Filter (ampl$^2$ & phase )')
+    # ax2_phase = ax2.twinx()
+    # ax2_phase.plot(h_eV_s * speed_of_light / f_l_scale, f_l_ftlt_ang, 'r--')
+    # ax2.grid(True)
     
 
-    # plt.ylabel(r'$Transm$')
-    # ax[1].xlabel(r'$E$ [eV]')
-    # ax[0].xlabel(r'$P(\lambda)$ [a.u.]')
-    # ax[1].xlabel(r'$abs(TrF)$')
+    # # plt.ylabel(r'$Transm$')
+    # # ax[1].xlabel(r'$E$ [eV]')
+    # # ax[0].xlabel(r'$P(\lambda)$ [a.u.]')
+    # # ax[1].xlabel(r'$abs(TrF)$')
 
-    plt.draw()
+    # plt.draw()
 
-    if savefig != False:
-        if savefig == True:
-            savefig = 'png'
-        if debug > 1:
-            print('      saving ' + fig_name + '.' + savefig)
-        plt.savefig(exp_dir + 'results/' + fig_name + '.' + savefig, format=savefig)
+    # if savefig != False:
+        # if savefig == True:
+            # savefig = 'png'
+        # if debug > 1:
+            # print('      saving ' + fig_name + '.' + savefig)
+        # plt.savefig(exp_dir + 'results/' + fig_name + '.' + savefig, format=savefig)
 
-    if showfig:
-        plt.show()
-    else:
-        plt.close('all')
-
-
-def plot_dfl_waistscan(sc_res, fig_name=None, showfig=True, savefig=0, debug=1):
-
-    if showfig == False and savefig == False:
-        return
-
-    if fig_name is None:
-        if sc_res.fileName() is '':
-            fig = plt.figure('Waist scan')
-        else:
-            fig = plt.figure(sc_res.fileName() + ' waist scan')
-    else:
-        fig = plt.figure(fig_name)
-
-    plt.clf()
-    ax_int = fig.add_subplot(1, 1, 1)
-    ax_int.plot(sc_res.z_pos, sc_res.phdens_max, 'k', label='max', linewidth=2)
-    ax_int.plot(sc_res.z_pos, sc_res.phdens_onaxis, 'grey', label='on-axis')
-    ax_int.set_xlabel('z [m]')
-    ax_int.set_ylabel('photon density [arb.units]')
-    ax_int.legend(loc='lower left')
-    ax_size = ax_int.twinx()
-    ax_size.plot(sc_res.z_pos, sc_res.fwhm_x * 1e6, 'g--', label='fwhm_x')
-    ax_size.plot(sc_res.z_pos, sc_res.fwhm_y * 1e6, 'b--', label='fwhm_y')
-    ax_size.plot(sc_res.z_pos, sc_res.std_x * 1e6, 'g:', label='std_x')
-    ax_size.plot(sc_res.z_pos, sc_res.std_y * 1e6, 'b:', label='std_y')
-
-    ax_size.set_ylabel('size [um]')
-    ax_size.legend(loc='lower right')
-
-    plt.draw()
-
-    if savefig != False:
-        if savefig == True:
-            savefig = 'png'
-        if debug > 0:
-            print('      saving *.' + savefig)
-        if debug > 1:
-            print('        to ' + sc_res.filePath + '_%.2fm-%.2fm-waistscan.' % (sc_res.z_pos[0], sc_res.z_pos[-1]) + str(savefig))
-        fig.savefig(sc_res.filePath + '_%.2fm-%.2fm-waistscan.' % (sc_res.z_pos[0], sc_res.z_pos[-1]) + str(savefig), format=savefig)
-    # if debug>0: print('      done in %.2f seconds' % (time.time() - start_time))
-    if showfig:
-        if debug > 0:
-            print('      showing fig')
-        plt.show()
-    else:
-        plt.close('all')
+    # if showfig:
+        # plt.show()
+    # else:
+        # plt.close('all')
 
 
-def plot_trf(trf, mode='tr', autoscale=0, showfig=True, savefig=None, fig_name=None):
-    '''
-    plots TransferFunction() object,
-    mode: 
-        'tr' - transmission
-        'ref' - reflection
-    autoscale = scale down to several FWHMma in frequency and several bumps in time
-    showfig - display on screen or not
-    savefig - path to save png (if any)
-    '''
-    n_width = 8
+# def plot_dfl_waistscan(sc_res, fig_name=None, showfig=True, savefig=0, debug=1):
+
+    # if showfig == False and savefig == False:
+        # return
+
+    # if fig_name is None:
+        # if sc_res.fileName() is '':
+            # fig = plt.figure('Waist scan')
+        # else:
+            # fig = plt.figure(sc_res.fileName() + ' waist scan')
+    # else:
+        # fig = plt.figure(fig_name)
+
+    # plt.clf()
+    # ax_int = fig.add_subplot(1, 1, 1)
+    # ax_int.plot(sc_res.z_pos, sc_res.phdens_max, 'k', label='max', linewidth=2)
+    # ax_int.plot(sc_res.z_pos, sc_res.phdens_onaxis, 'grey', label='on-axis')
+    # ax_int.set_xlabel('z [m]')
+    # ax_int.set_ylabel('photon density [arb.units]')
+    # ax_int.legend(loc='lower left')
+    # ax_size = ax_int.twinx()
+    # ax_size.plot(sc_res.z_pos, sc_res.fwhm_x * 1e6, 'g--', label='fwhm_x')
+    # ax_size.plot(sc_res.z_pos, sc_res.fwhm_y * 1e6, 'b--', label='fwhm_y')
+    # ax_size.plot(sc_res.z_pos, sc_res.std_x * 1e6, 'g:', label='std_x')
+    # ax_size.plot(sc_res.z_pos, sc_res.std_y * 1e6, 'b:', label='std_y')
+
+    # ax_size.set_ylabel('size [um]')
+    # ax_size.legend(loc='lower right')
+
+    # plt.draw()
+
+    # if savefig != False:
+        # if savefig == True:
+            # savefig = 'png'
+        # if debug > 0:
+            # print('      saving *.' + savefig)
+        # if debug > 1:
+            # print('        to ' + sc_res.filePath + '_%.2fm-%.2fm-waistscan.' % (sc_res.z_pos[0], sc_res.z_pos[-1]) + str(savefig))
+        # fig.savefig(sc_res.filePath + '_%.2fm-%.2fm-waistscan.' % (sc_res.z_pos[0], sc_res.z_pos[-1]) + str(savefig), format=savefig)
+    # # if debug>0: print('      done in %.2f seconds' % (time.time() - start_time))
+    # if showfig:
+        # if debug > 0:
+            # print('      showing fig')
+        # plt.show()
+    # else:
+        # plt.close('all')
+
+
+# def plot_trf(trf, mode='tr', autoscale=0, showfig=True, savefig=None, fig_name=None):
+    # '''
+    # plots TransferFunction() object,
+    # mode: 
+        # 'tr' - transmission
+        # 'ref' - reflection
+    # autoscale = scale down to several FWHMma in frequency and several bumps in time
+    # showfig - display on screen or not
+    # savefig - path to save png (if any)
+    # '''
+    # n_width = 8
     
-    l = len(trf.k)
-    L = 2*pi / (trf.k[1] - trf.k[0])
-    trf_s_td = np.linspace(0, -L, l) * 1e6
-    trf_s_fd = trf.ev()
-    #trf_s_fd = trf.k
+    # l = len(trf.k)
+    # L = 2*pi / (trf.k[1] - trf.k[0])
+    # trf_s_td = np.linspace(0, -L, l) * 1e6
+    # trf_s_fd = trf.ev()
+    # #trf_s_fd = trf.k
     
-    if autoscale:
-        trf_s_fd_xlim = np.array([trf.mid_k - n_width*trf.dk, trf.mid_k + n_width*trf.dk])
-        trf_s_fd_xlim = h_eV_s*speed_of_light / (2*pi / trf_s_fd_xlim)
-        trf_s_fd_xlim = np.sort(trf_s_fd_xlim)
+    # if autoscale:
+        # trf_s_fd_xlim = np.array([trf.mid_k - n_width*trf.dk, trf.mid_k + n_width*trf.dk])
+        # trf_s_fd_xlim = h_eV_s*speed_of_light / (2*pi / trf_s_fd_xlim)
+        # trf_s_fd_xlim = np.sort(trf_s_fd_xlim)
     
-    if mode == 'tr':
-        trf_fd = deepcopy(trf.tr)
-    elif mode == 'ref':
-        trf_fd = deepcopy(trf.ref)
-    else:
-        raise ValueError('mode argument should be "tr" or "ref"')
+    # if mode == 'tr':
+        # trf_fd = deepcopy(trf.tr)
+    # elif mode == 'ref':
+        # trf_fd = deepcopy(trf.ref)
+    # else:
+        # raise ValueError('mode argument should be "tr" or "ref"')
     
-    trf_fd_tmp = trf_fd / (abs(trf_s_td[-1]) / l)
-    trf_td = np.fft.ifft(np.fft.fftshift(trf_fd_tmp))
-    trf_td = abs(trf_td)**2
-    del trf_fd_tmp
+    # trf_fd_tmp = trf_fd / (abs(trf_s_td[-1]) / l)
+    # trf_td = np.fft.ifft(np.fft.fftshift(trf_fd_tmp))
+    # trf_td = abs(trf_td)**2
+    # del trf_fd_tmp
     
-    if hasattr(trf,'cryst'):
-        title = trf.cryst.lattice.element_name + ' ' + str(trf.cryst.ref_idx) + ' ' + mode
-    else:
-        title = ''
+    # if hasattr(trf,'cryst'):
+        # title = trf.cryst.lattice.element_name + ' ' + str(trf.cryst.ref_idx) + ' ' + mode
+    # else:
+        # title = ''
     
-    if fig_name is None:
-        trf_fig = plt.figure('Filter '+title)
-    else:
-        trf_fig = plt.figure(fig_name)
+    # if fig_name is None:
+        # trf_fig = plt.figure('Filter '+title)
+    # else:
+        # trf_fig = plt.figure(fig_name)
     
-    trf_fig.set_size_inches((9, 11), forward=True)
-    if title != '':
-        trf_fig.suptitle(title)
+    # trf_fig.set_size_inches((9, 11), forward=True)
+    # if title != '':
+        # trf_fig.suptitle(title)
     
-    ax_fd_abs = trf_fig.add_subplot(3, 1, 1)
-    ax_fd_abs.clear()
-    ax_fd_ang = trf_fig.add_subplot(3, 1, 2, sharex=ax_fd_abs)
-    ax_fd_ang.clear()
-    ax_td = trf_fig.add_subplot(3, 1, 3)
-    ax_td.clear()
+    # ax_fd_abs = trf_fig.add_subplot(3, 1, 1)
+    # ax_fd_abs.clear()
+    # ax_fd_ang = trf_fig.add_subplot(3, 1, 2, sharex=ax_fd_abs)
+    # ax_fd_ang.clear()
+    # ax_td = trf_fig.add_subplot(3, 1, 3)
+    # ax_td.clear()
     
-    trf_fig.subplots_adjust(hspace=0)
-    trf_fig.subplots_adjust(top=0.95, bottom=0.2, right=0.85, left=0.15)
+    # trf_fig.subplots_adjust(hspace=0)
+    # trf_fig.subplots_adjust(top=0.95, bottom=0.2, right=0.85, left=0.15)
     
-    ax_fd_abs.plot(trf_s_fd, np.abs(trf_fd)**2,'k')
-    ax_fd_ang.plot(trf_s_fd, np.angle(trf_fd),'g')
+    # ax_fd_abs.plot(trf_s_fd, np.abs(trf_fd)**2,'k')
+    # ax_fd_ang.plot(trf_s_fd, np.angle(trf_fd),'g')
     
-    ax_td.semilogy(trf_s_td, trf_td)
+    # ax_td.semilogy(trf_s_td, trf_td)
     
-    ax_fd_abs.set_ylabel(r'|amplitude|$^2$')
-    ax_fd_ang.set_ylabel('phase')
-    ax_fd_ang.set_xlabel('ph.energy')
+    # ax_fd_abs.set_ylabel(r'|amplitude|$^2$')
+    # ax_fd_ang.set_ylabel('phase')
+    # ax_fd_ang.set_xlabel('ph.energy')
     
-    ax_td.set_ylabel('impulse responce (power)')
-    ax_td.set_xlabel('s [um]')
+    # ax_td.set_ylabel('impulse responce (power)')
+    # ax_td.set_xlabel('s [um]')
     
-    ax_fd_abs.axis('tight')
-    ax_fd_abs.set_ylim([0, 1])
-    ax_fd_ang.set_ylim([-np.pi, np.pi])
-    if autoscale:
-        ax_fd_abs.set_xlim(trf_s_fd_xlim)
-    if autoscale:
-        ax_td.set_xlim(-n_width*pi / trf.dk * 1e6, 0)
-        idx = np.argwhere(trf_s_td>-n_width*pi / trf.dk * 1e6)[-1]
-        ax_td.set_ylim(np.amin(trf_td[1:idx]), np.amax(trf_td[1:idx]))
+    # ax_fd_abs.axis('tight')
+    # ax_fd_abs.set_ylim([0, 1])
+    # ax_fd_ang.set_ylim([-np.pi, np.pi])
+    # if autoscale:
+        # ax_fd_abs.set_xlim(trf_s_fd_xlim)
+    # if autoscale:
+        # ax_td.set_xlim(-n_width*pi / trf.dk * 1e6, 0)
+        # idx = np.argwhere(trf_s_td>-n_width*pi / trf.dk * 1e6)[-1]
+        # ax_td.set_ylim(np.amin(trf_td[1:idx]), np.amax(trf_td[1:idx]))
     
-    ax_fd_abs.grid(True)
-    ax_fd_ang.grid(True)
-    ax_td.grid(True)
+    # ax_fd_abs.grid(True)
+    # ax_fd_ang.grid(True)
+    # ax_td.grid(True)
     
-    for label in ax_fd_abs.get_xticklabels():
-        label.set_visible(False)
+    # for label in ax_fd_abs.get_xticklabels():
+        # label.set_visible(False)
     
-    #ax_td.axis('tight')
+    # #ax_td.axis('tight')
     
-    pos1 = ax_td.get_position()  # get the original position
-    pos2 = [pos1.x0 + 0, pos1.y0 - 0.1,  pos1.width / 1.0, pos1.height / 0.9]
-    ax_td.set_position(pos2)
+    # pos1 = ax_td.get_position()  # get the original position
+    # pos2 = [pos1.x0 + 0, pos1.y0 - 0.1,  pos1.width / 1.0, pos1.height / 0.9]
+    # ax_td.set_position(pos2)
     
-    plt.draw()
-    if savefig != None and savefig.__class__ == str:
-        trf_fig.savefig(savefig, format='png')
-    #    if savefig == True:
-    #        savefig = 'png'
-    #    fig.savefig(g.filePath + '_z_' + str(z) + 'm.' + str(savefig), format=savefig)
+    # plt.draw()
+    # if savefig != None and savefig.__class__ == str:
+        # trf_fig.savefig(savefig, format='png')
+    # #    if savefig == True:
+    # #        savefig = 'png'
+    # #    fig.savefig(g.filePath + '_z_' + str(z) + 'm.' + str(savefig), format=savefig)
     
-    if showfig:
-        plt.show()
-    else:
-        plt.close('all')
+    # if showfig:
+        # plt.show()
+    # else:
+        # plt.close('all')
         
 
-def plot_stokes_values(S,fig=None,s_lin=0, norm=0, showfig=True, gw=1):
+# def plot_stokes_values(S,fig=None,s_lin=0, norm=0, showfig=True, gw=1):
     
-    if type(S) != StokesParameters:
-        raise ValueError('Not a StokesParameters object')
+    # if type(S) != StokesParameters:
+        # raise ValueError('Not a StokesParameters object')
         
-    if np.size(S.sc) > 1:
-        if fig == None:
-            plt.figure('Stokes S')
-        else:
-            plt.figure(fig.number)
-        plt.clf()
-        sc = S.sc * 1e6
+    # if np.size(S.sc) > 1:
+        # if fig == None:
+            # plt.figure('Stokes S')
+        # else:
+            # plt.figure(fig.number)
+        # plt.clf()
+        # sc = S.sc * 1e6
         
-        if gw:
-            S.s0 /= 1e9
-            S.s1 /= 1e9
-            S.s2 /= 1e9
-            S.s3 /= 1e9
-            plt.ylabel('$S_0$ [GW]')
-        else:
-            plt.ylabel('$S_0$ [W]')
-        plt.xlabel('s [$\mu$m]')
+        # if gw:
+            # S.s0 /= 1e9
+            # S.s1 /= 1e9
+            # S.s2 /= 1e9
+            # S.s3 /= 1e9
+            # plt.ylabel('$S_0$ [GW]')
+        # else:
+            # plt.ylabel('$S_0$ [W]')
+        # plt.xlabel('s [$\mu$m]')
         
-        if s_lin:
-            # plt.step(sc, np.sqrt(S.s1**2+S.s2**2), linewidth=2, where='mid',color=[0.5,0.5,0.5], linestyle='--')
-            plt.step(sc, np.sqrt(S.s1**2+S.s2**2), linewidth=2, where='mid',color='m', linestyle='--')
+        # if s_lin:
+            # # plt.step(sc, np.sqrt(S.s1**2+S.s2**2), linewidth=2, where='mid',color=[0.5,0.5,0.5], linestyle='--')
+            # plt.step(sc, np.sqrt(S.s1**2+S.s2**2), linewidth=2, where='mid',color='m', linestyle='--')
  
-        plt.step(sc, S.s1, linewidth=2, where='mid',color='g')
-        plt.step(sc, S.s2, linewidth=2, where='mid',color='r')
-        plt.step(sc, S.s3, linewidth=2, where='mid',color='c')
-        plt.step(sc, S.s0, linewidth=2, where='mid',color='b')
-        # plt.step(sc, S.s1, linewidth=2, where='mid',color='m')
+        # plt.step(sc, S.s1, linewidth=2, where='mid',color='g')
         # plt.step(sc, S.s2, linewidth=2, where='mid',color='r')
         # plt.step(sc, S.s3, linewidth=2, where='mid',color='c')
-        # plt.step(sc, S.s0, linewidth=2, where='mid',color='k')
+        # plt.step(sc, S.s0, linewidth=2, where='mid',color='b')
+        # # plt.step(sc, S.s1, linewidth=2, where='mid',color='m')
+        # # plt.step(sc, S.s2, linewidth=2, where='mid',color='r')
+        # # plt.step(sc, S.s3, linewidth=2, where='mid',color='c')
+        # # plt.step(sc, S.s0, linewidth=2, where='mid',color='k')
         
-        if s_lin:
-            plt.legend(['$\sqrt{S_1^2+S_2^2}$','$S_1$','$S_2$','$S_3$','$S_0$'], loc='lower center', ncol=5, mode="expand", borderaxespad=0.5, frameon=1).get_frame().set_alpha(0.4)
-        else:
-            plt.legend(['$S_1$','$S_2$','$S_3$','$S_0$'], fontsize=13, ncol=4, loc='upper left', frameon=1).get_frame().set_alpha(0.4)
-#            plt.legend(['$S_1$','$S_2$','$S_3$','$S_0$'], loc='lower center', ncol=5, mode="expand", borderaxespad=0.5, frameon=1).get_frame().set_alpha(0.4)
+        # if s_lin:
+            # plt.legend(['$\sqrt{S_1^2+S_2^2}$','$S_1$','$S_2$','$S_3$','$S_0$'], loc='lower center', ncol=5, mode="expand", borderaxespad=0.5, frameon=1).get_frame().set_alpha(0.4)
+        # else:
+            # plt.legend(['$S_1$','$S_2$','$S_3$','$S_0$'], fontsize=13, ncol=4, loc='upper left', frameon=1).get_frame().set_alpha(0.4)
+# #            plt.legend(['$S_1$','$S_2$','$S_3$','$S_0$'], loc='lower center', ncol=5, mode="expand", borderaxespad=0.5, frameon=1).get_frame().set_alpha(0.4)
         
-        if showfig:
-            plt.show()
-        else:
-            plt.close('all')
+        # if showfig:
+            # plt.show()
+        # else:
+            # plt.close('all')
         
         
-def plot_stokes_angles(S,fig=None,showfig=True):
+# def plot_stokes_angles(S,fig=None,showfig=True):
     
-    if type(S) != StokesParameters:
-        raise ValueError('Not a StokesParameters object')
+    # if type(S) != StokesParameters:
+        # raise ValueError('Not a StokesParameters object')
         
-    if np.size(S.sc) > 1:
-        if fig == None:
-            plt.figure('Stokes angles')
-        else:
-            plt.figure(fig.number)
-        plt.clf()
-        sc = S.sc * 1e6
-        psize = S.s_l()
-        psize /= np.amax(psize)
-#        plt.step(sc, S.chi(), sc, S.psi(),linewidth=2)
-        plt.scatter(sc, S.chi(),psize,linewidth=2,color='g')
-        plt.scatter(sc, S.psi(),psize,linewidth=2,color='b')
-        plt.legend(['$\chi$','$\psi$'])#,loc='best')
-        plt.xlabel('s [$\mu$m]')
-        plt.ylabel('[rad]')
-        plt.ylim([-np.pi/2,np.pi/2])
-        plt.xlim([np.amin(sc),np.amax(sc)])
+    # if np.size(S.sc) > 1:
+        # if fig == None:
+            # plt.figure('Stokes angles')
+        # else:
+            # plt.figure(fig.number)
+        # plt.clf()
+        # sc = S.sc * 1e6
+        # psize = S.s_l()
+        # psize /= np.amax(psize)
+# #        plt.step(sc, S.chi(), sc, S.psi(),linewidth=2)
+        # plt.scatter(sc, S.chi(),psize,linewidth=2,color='g')
+        # plt.scatter(sc, S.psi(),psize,linewidth=2,color='b')
+        # plt.legend(['$\chi$','$\psi$'])#,loc='best')
+        # plt.xlabel('s [$\mu$m]')
+        # plt.ylabel('[rad]')
+        # plt.ylim([-np.pi/2,np.pi/2])
+        # plt.xlim([np.amin(sc),np.amax(sc)])
         
-        if showfig:
-            plt.show()
-        else:
-            plt.close('all')
+        # if showfig:
+            # plt.show()
+        # else:
+            # plt.close('all')
         
-'''
-    scheduled for removal
-'''
+# '''
+    # scheduled for removal
+# '''
 
 
-def show_output(out, show_field=False, show_slice=0):
+# def show_output(out, show_field=False, show_slice=0):
 
-    print ('plotting slice', show_slice)
+    # print ('plotting slice', show_slice)
 
-    h = 4.135667516e-15
-    c = 299792458.0
-    xrms = np.array(out.sliceValues[out.sliceValues.keys()[show_slice]]['xrms'])
-    yrms = np.array(out.sliceValues[out.sliceValues.keys()[show_slice]]['yrms'])
+    # h = 4.135667516e-15
+    # c = 299792458.0
+    # xrms = np.array(out.sliceValues[out.sliceValues.keys()[show_slice]]['xrms'])
+    # yrms = np.array(out.sliceValues[out.sliceValues.keys()[show_slice]]['yrms'])
 
-    f = plt.figure()
-    f.add_subplot(131), plt.plot(out.z, xrms, lw=3), plt.plot(out.z, yrms, lw=3), plt.grid(True)
-    f.add_subplot(132), plt.plot(out.z, out.power_z, lw=3), plt.grid(True)
-    t = 1.0e+15 * float(out('zsep')) * float(out.lambdaref) * np.arange(0, len(out.I)) / c
+    # f = plt.figure()
+    # f.add_subplot(131), plt.plot(out.z, xrms, lw=3), plt.plot(out.z, yrms, lw=3), plt.grid(True)
+    # f.add_subplot(132), plt.plot(out.z, out.power_z, lw=3), plt.grid(True)
+    # t = 1.0e+15 * float(out('zsep')) * float(out.lambdaref) * np.arange(0, len(out.I)) / c
 
-    f.add_subplot(133)
-    plt.plot(out.t, out.power_int, lw=3)
-    plt.plot(t, out.I * np.max(out.power_int) / np.max(out.I), lw=3)
-    plt.grid(True)
+    # f.add_subplot(133)
+    # plt.plot(out.t, out.power_int, lw=3)
+    # plt.plot(t, out.I * np.max(out.power_int) / np.max(out.I), lw=3)
+    # plt.grid(True)
 
-    npoints = out('ncar')
-    zstop = out('zstop')
-    delz = out('delz')
-    xlamd = out('xlamd')
-    xlamds = out.lambdaref
-    nslice = out('nslice')
-    zsep = out('zsep')
-    dgrid = out('dgrid')
+    # npoints = out('ncar')
+    # zstop = out('zstop')
+    # delz = out('delz')
+    # xlamd = out('xlamd')
+    # xlamds = out.lambdaref
+    # nslice = out('nslice')
+    # zsep = out('zsep')
+    # dgrid = out('dgrid')
 
-    smax = nslice * zsep * xlamds
+    # smax = nslice * zsep * xlamds
 
-    print ('wavelength ', xlamds)
+    # print ('wavelength ', xlamds)
 
-    if show_field:
-        #from mpi4py import MPI
+    # if show_field:
+        # #from mpi4py import MPI
 
-        #comm = MPI.COMM_WORLD
-        #slices = readRadiationFile_mpi(comm=comm, fileName=file+'.dfl', npoints=npoints)
-        slices = readRadiationFile(fileName=out.path + '.dfl', npoints=npoints)
-        print ('slices:', slices.shape)
+        # #comm = MPI.COMM_WORLD
+        # #slices = readRadiationFile_mpi(comm=comm, fileName=file+'.dfl', npoints=npoints)
+        # slices = readRadiationFile(fileName=out.path + '.dfl', npoints=npoints)
+        # print ('slices:', slices.shape)
 
-        E = np.zeros_like(slices[0, :, :])
-        for i in range(slices.shape[0]):
-            E += np.multiply(slices[i, :, :], slices[i, :, :].conjugate())
+        # E = np.zeros_like(slices[0, :, :])
+        # for i in range(slices.shape[0]):
+            # E += np.multiply(slices[i, :, :], slices[i, :, :].conjugate())
 
-        fig = plt.figure()
-        fig.add_subplot(131)
-        m = plt.imshow(abs(E), cmap='YlOrRd')
-        z = abs(slices[100, :, :])
+        # fig = plt.figure()
+        # fig.add_subplot(131)
+        # m = plt.imshow(abs(E), cmap='YlOrRd')
+        # z = abs(slices[100, :, :])
 
-        fig.add_subplot(132)
-        P = np.zeros_like(slices[:, 0, 0])
-        for i in range(len(P)):
-            s = sum(np.abs(np.multiply(slices[i, :, :], slices[i, :, :])))
-            P[i] = abs(s * s.conjugate()) * (dgrid**2 / npoints)**2
+        # fig.add_subplot(132)
+        # P = np.zeros_like(slices[:, 0, 0])
+        # for i in range(len(P)):
+            # s = sum(np.abs(np.multiply(slices[i, :, :], slices[i, :, :])))
+            # P[i] = abs(s * s.conjugate()) * (dgrid**2 / npoints)**2
 
-        t = 1.0e+15 * float(out('zsep')) * float(out.lambdaref) * np.arange(0, len(P)) / c
-        plt.plot(t, P)
-        plt.title('Pulse/axis')
+        # t = 1.0e+15 * float(out('zsep')) * float(out.lambdaref) * np.arange(0, len(P)) / c
+        # plt.plot(t, P)
+        # plt.title('Pulse/axis')
 
-        fig.add_subplot(133)
-        spec = np.abs(np.fft.fft(slices[:, int(npoints / 2), int(npoints / 2)]))**2
-        freq_ev = h * fftfreq(len(spec), d=zsep * xlamds / c)
-        plt.plot(freq_ev, spec)
-        plt.title('Spectrum/axis')
-
-
-def show_plots(displays, fig):
-    '''
-    putting arbitrarily many plots on single figure
-    '''
-    n1 = (len(displays) - 1) / 2 + 1
-    n2 = (len(displays) - 1) / n1 + 1
-    # print n1, n2
-    fmt = str(n1) + str(n2)
-    print (fmt)
-
-    for i in range(len(displays)):
-        ax = fig.add_subplot(fmt + str(i + 1))
-        ax.grid(True)
-        for f in displays[i].data:
-            x, y = f(x=np.linspace(-10, 10, 100))
-            ax.plot(x, y, '.')
-
-    show()
+        # fig.add_subplot(133)
+        # spec = np.abs(np.fft.fft(slices[:, int(npoints / 2), int(npoints / 2)]))**2
+        # freq_ev = h * fftfreq(len(spec), d=zsep * xlamds / c)
+        # plt.plot(freq_ev, spec)
+        # plt.title('Spectrum/axis')
 
 
-class Display:
+# def show_plots(displays, fig):
+    # '''
+    # putting arbitrarily many plots on single figure
+    # '''
+    # n1 = (len(displays) - 1) / 2 + 1
+    # n2 = (len(displays) - 1) / n1 + 1
+    # # print n1, n2
+    # fmt = str(n1) + str(n2)
+    # print (fmt)
 
-    def __init__(self, data=lambda x: (x, 0 * x), xlabel='', ylabel=''):
-        self.data = (data,)
-        self.xlabel = xlabel
-        self.ylabel = ylabel
+    # for i in range(len(displays)):
+        # ax = fig.add_subplot(fmt + str(i + 1))
+        # ax.grid(True)
+        # for f in displays[i].data:
+            # x, y = f(x=np.linspace(-10, 10, 100))
+            # ax.plot(x, y, '.')
 
-
-def round_sig(x, sig=2):
-    from math import log10, floor
-    return round(x, sig - int(floor(log10(x))) - 1)
-
-
-def gauss_fit(X, Y):
-    import numpy as np
-    import scipy.optimize as opt
-
-    def gauss(x, p):  # p[0]==mean, p[1]==stdev p[2]==peak
-        return p[2] / (p[1] * np.sqrt(2 * np.pi)) * np.exp(-(x - p[0])**2 / (2 * p[1]**2))
-
-    p0 = [0, np.max(X) / 2, np.max(Y)]
-    errfunc = lambda p, x, y: gauss(x, p) - y
-    p1, success = opt.leastsq(errfunc, p0[:], args=(X, Y))
-    fit_mu, fit_stdev, ampl = p1
-    Y1 = gauss(X, p1)
-    RMS = fit_stdev
-    return (Y1, RMS)
+    # show()
 
 
+# class Display:
+
+    # def __init__(self, data=lambda x: (x, 0 * x), xlabel='', ylabel=''):
+        # self.data = (data,)
+        # self.xlabel = xlabel
+        # self.ylabel = ylabel
 
 
-    # ax_size_l = ax_size_t.twinx() #longitudinal size
-    # ax_size_l.plot(out.z, rad_longit_size*2, color='indigo', linestyle='dashed',linewidth=1.5)
-    # ax_size_l.set_ylabel('longitudinal [$\mu$m]')
+# def round_sig(x, sig=2):
+    # from math import log10, floor
+    # return round(x, sig - int(floor(log10(x))) - 1)
+
+
+# def gauss_fit(X, Y):
+    # import numpy as np
+    # import scipy.optimize as opt
+
+    # def gauss(x, p):  # p[0]==mean, p[1]==stdev p[2]==peak
+        # return p[2] / (p[1] * np.sqrt(2 * np.pi)) * np.exp(-(x - p[0])**2 / (2 * p[1]**2))
+
+    # p0 = [0, np.max(X) / 2, np.max(Y)]
+    # errfunc = lambda p, x, y: gauss(x, p) - y
+    # p1, success = opt.leastsq(errfunc, p0[:], args=(X, Y))
+    # fit_mu, fit_stdev, ampl = p1
+    # Y1 = gauss(X, p1)
+    # RMS = fit_stdev
+    # return (Y1, RMS)
+
+
+
+
+    # # ax_size_l = ax_size_t.twinx() #longitudinal size
+    # # ax_size_l.plot(out.z, rad_longit_size*2, color='indigo', linestyle='dashed',linewidth=1.5)
+    # # ax_size_l.set_ylabel('longitudinal [$\mu$m]')

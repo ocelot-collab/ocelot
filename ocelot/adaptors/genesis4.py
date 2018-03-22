@@ -400,7 +400,6 @@ def dpa42edist(dpa, n_part=None, fill_gaps=1, debug=1):
 def read_dpa42parray(file_path, N_part=None, fill_gaps=True):
     _logger.info('reading genesis4dpa from '+ file_path +' into parray')
     import random
-    import h5py 
     N_part = None
     
     #N_part = 100000
@@ -546,3 +545,15 @@ def write_gen4_lat(lat, file_path, line_name='LINE', l=np.inf):
                    
     with open(file_path, 'w') as f:
         f.write("\n".join(lat_str))
+
+def write_edist_hdf5(edist, filepath):
+    f = h5py.File(filepath, 'w')
+    f.create_dataset('p', data=edist.g)
+    f.create_dataset('t', data=edist.t)
+    f.create_dataset('x', data=edist.x)
+    f.create_dataset('y', data=edist.y)
+    f.create_dataset('xp', data=edist.xp)
+    f.create_dataset('yp', data=edist.yp)
+    f.close()
+    
+    

@@ -402,6 +402,19 @@ class BeamArray(Beam):
         self.xp -= beam_s.xp
         self.y -= beam_s.y
         self.yp -= beam_s.yp
+    
+    def cut_empty_I(self, thresh=0.01):
+        idx = np.where(self.I <= self.I.max()*thresh)
+        del self[idx]
+    
+    def start_at_0(self):
+        self.s -= self.s.min()
+    
+    def cleanup(self):
+        self.cut_empty_I()
+        self.sort()
+        self.equidist()
+        self.start_at_0()
 
     def __getitem__(self,index):
         l = self.len()

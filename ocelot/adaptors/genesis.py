@@ -4,7 +4,6 @@ interface to genesis
 '''
 
 
-
 import struct
 from copy import copy, deepcopy
 import time

@@ -110,8 +110,9 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
     #If folder path is provided, all *.gout and *.out files are plotted
     '''
 
-    if debug > 0:
-        print('  plotting genesis output')
+
+    _logger.info('plotting all genesis output')
+    _logger.debug('choice = ' + str(choice))
     plotting_time = time.time()
 
     # plt.ioff()
@@ -135,16 +136,14 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
             for name in files:
                 if name.endswith('.gout') or name.endswith('.out'):
                     handles.append(os.path.join(root, name))
-        if debug > 0:
-            print('\n  plotting all files in ' + str(handle))
+        _logger.info('\n  plotting all files in ' + str(handle))
     else:
         handles = [handle]
 
     for handle in handles:
 
         if os.path.isfile(str(handle)):
-            print('')
-            print('plotting ',handle)
+            _logger.info('plotting '+str(handle))
             handle = read_out_file(handle, read_level=2, debug=debug)
 
         if isinstance(handle, GenesisOutput):
@@ -161,22 +160,22 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
                     W=wigner_out(handle, pad=2)
                     plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug, downsample=2)
                 except:
-                    pass
+                    _logger.warning('could not plot wigner')
             if choice[4] != 0:
                 for z in np.arange(choice[4], np.amax(handle.z), choice[4]):
                     plot_gen_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug)
             if choice[12]:
                 try:
                     plot_dpa_bucket_out(handle,scatter=0,slice_pos='max_P',repeat=3, showfig=showfig, savefig=savefig, cmap=def_cmap)
-                except IOError:
-                    pass
+                except:
+                    _logger.warning('could not plot particle buckets')
 
             
                 
         if os.path.isfile(handle.filePath + '.dfl') and any(choice[5:8]):
             dfl = read_dfl_file_out(handle, debug=debug)
             if dfl.Nz()==0:
-                print('empty dfl, skipping')
+                _logger.warning('empty dfl, skipping')
             else:
                 if choice[5]:
                     f5 = plot_dfl(dfl, showfig=showfig, savefig=savefig, debug=debug)
@@ -190,7 +189,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
         if os.path.isfile(handle.filePath + '.dpa') and (choice[9] or choice[10]) and handle('itdp') == True:
             dpa = read_dpa_file_out(handle, debug=debug)
             if np.size(dpa.ph)==0:
-                print('empty dpa, skipping')
+                _logger.warning('empty dpa, skipping')
             else:
                 if choice[9]:
                     edist = dpa2edist(handle, dpa, num_part=5e4, smear=1, debug=debug)
@@ -200,17 +199,15 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
                     f10 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=(100, 100, 300, 200), debug=debug)
         
     if savefig != False:
-        if debug > 0:
-            print('    plots recorded to *.' + str(savefig) + ' files')
+        _logger.info('    plots recorded to *.' + str(savefig) + ' files')
 
     if showfig:
-        if debug > 0:
-            print('    showing plots, close all to proceed')
+        _logger.info('    showing plots, close all to proceed')
         plt.show()
     # else:
         # plt.close('all')
 
-    print ('    total plotting time %.2f seconds' % (time.time() - plotting_time))
+    _logger.info('    total plotting time %.2f seconds' % (time.time() - plotting_time))
 
 
 def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espread+el_bunching', 'rad_phase', 'rad_spec'], figsize=4, x_units='um', y_units='ev', legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
@@ -1446,8 +1443,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     filePath = dfl.filePath
 
     text_present = 1
-    if debug > 0:
-        print('    plotting radiation field (dfl)')
+    _logger.info('plotting radiation field (dfl)')
     start_time = time.time()
     
     if dfl.__class__ != RadiationField:
@@ -1818,17 +1814,14 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     if savefig != False:
         if savefig == True:
             savefig = 'png'
-        if debug > 0:
-            print('      saving *' + suffix + '.' + savefig)
+        _logger.debug('    saving *' + suffix + '.' + savefig)
         fig.savefig(filePath + suffix + '.' + str(savefig), format=savefig)
 
-    if debug > 0:
-        print('      done in %.2f seconds' % (time.time() - start_time))
+    _logger.info('    done in %.2f seconds' % (time.time() - start_time))
 
     plt.draw()
     if showfig == True:
-        if debug > 0:
-            print('      showing dfl')
+        _logger.debug('    showing dfl')
         plt.show()
     else:
         plt.close('all')
@@ -2523,12 +2516,11 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
 
     if showfig == False and savefig == False:
         return
-    if debug > 0:
-        print('    plotting edist file')
+    _logger.info('plotting edist file')
     start_time = time.time()
     # suffix=''
-    if edist.__class__ != GenesisElectronDist:
-        raise ValueError('wrong distribution object: should be GenesisElectronDist')
+    # if edist.__class__ != GenesisElectronDist:
+        # raise ValueError('wrong distribution object: should be GenesisElectronDist')
 
     if np.size(bins) == 1:
         bins = (bins, bins, bins, bins)  # x,y,t,e
@@ -2629,8 +2621,7 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
     if savefig != False:
         if savefig == True:
             savefig = 'png'
-        if debug > 1:
-            print('      saving ' + edist.fileName() + '.' + savefig)
+        _logger.debug('  saving ' + edist.fileName() + '.' + savefig)
         plt.savefig(edist.filePath + '.' + savefig, format=savefig)
 
     if showfig:
@@ -2638,8 +2629,7 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
     else:
         plt.close('all')
 
-    if debug > 0:
-        print(('      done in %.2f seconds' % (time.time() - start_time)))
+    _logger.info(('  done in %.2f seconds' % (time.time() - start_time)))
     return fig
 
 

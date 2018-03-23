@@ -8,8 +8,8 @@ from ocelot import ParticleArray
 from ocelot.optics.wave import calc_ph_sp_dens, RadiationField
 from ocelot.common.globals import *
 from ocelot.adaptors.genesis import GenesisElectronDist #tmp
-import logging
-# from ocelot import ocelog
+from ocelot.common.logging import *
+
 _logger = logging.getLogger('ocelot.gen4') 
 
 
@@ -162,9 +162,13 @@ def get_genesis4_launcher(launcher_program='genesis4', launcher_argument=''):
     
     return launcher
 
-def read_gout4(file_path):
+def read_gout4(filePath):
+    
+    _logger.info('reading gen4 .out file')
+    _logger.debug(ind_str + 'reading from ' + filePath)
+    
     out = Genesis4Output()
-    out.h5 = h5py.File(file_path, 'r')
+    out.h5 = h5py.File(filePath, 'r')
     
     out.z = out.h5['Lattice/zplot'][:]
     out.zlat = out.h5['Lattice/z'][:]
@@ -172,10 +176,13 @@ def read_gout4(file_path):
     
     if 'time' in out.h5['Global'] and out.h5['Global/time'][0] == 1:
         out.tdp = True
+        _logger.debug(ind_str + 'tdp=True')
     else:
         out.tdp = False
+        _logger.debug(ind_str + 'tdp=False')
     
     if out.tdp:
+        
         if 's0' in out.h5['Global']:
             s0 = out.h5['Global/s0']
         else:
@@ -184,17 +191,23 @@ def read_gout4(file_path):
         sn = out.h5['Beam/current'].size
         out.s = np.linspace(s0, out.h5['Global/slen'][()]+s0, sn)
     
+    _logger.debug(ind_str + 'done')
+    
     return out
 
-def read_dfl4(file_path):
+def read_dfl4(filePath):
     
-    with h5py.File(file_path, 'r') as h5:
+    _logger.info('reading gen4 .dfl file')
+    _logger.debug(ind_str + 'reading from ' + filePath)
+    
+    with h5py.File(filePath, 'r') as h5:
         
         nslice = h5.get('slicecount')[0]
         lambdaref = h5.get('wavelength')[0]
         sepslice = h5.get('slicespacing')[0]
         gridsize = h5.get('gridsize')[0]
         N = int(np.sqrt(h5.get('slice000001/field-real').size))
+        _logger.warn(ind_str + 'tbd')
         
         field_real = []
         field_imag = []
@@ -214,13 +227,19 @@ def read_dfl4(file_path):
 #        dfl.h5 = h5
         dfl.filePath = h5.filename
     
+    _logger.debug(ind_str + 'done')
+    
     return dfl
 
 
 
 
-def read_dpa4(file_path):
-    h5 = h5py.File(file_path, 'r')
+def read_dpa4(filePath):
+
+    _logger.info('reading gen4 .dpa file')
+    _logger.debug(ind_str + 'reading from ' + filePath)
+    
+    h5 = h5py.File(filePath, 'r')
     
     nslice = int(h5.get('slicecount')[0])
     lslice = h5.get('slicelength')[0]
@@ -228,6 +247,7 @@ def read_dpa4(file_path):
     npart = int(h5.get('slice000001/gamma').size)
     nbins = int(h5.get('beamletsize')[0])
     zsep = int(sepslice / lslice)
+    _logger.warn(ind_str + 'tbd')
     
     fill_gaps=0
     
@@ -291,6 +311,10 @@ def read_dpa4(file_path):
     dpa.zsep = zsep
     dpa.filePath = h5.filename
     
+    h5.close()
+    
+    _logger.debug(ind_str + 'done')
+    
     return dpa
 
 
@@ -306,6 +330,9 @@ def dpa42edist(dpa, n_part=None, fill_gaps=1, debug=1):
     num_part - desired approximate number of particles in edist
     smear - whether to shuffle macroparticles smearing microbunching
     '''
+    
+    _logger.info('converting gen4 .dpa to edist')
+    
     import random
     start_time = time.time()
     #if debug > 0:
@@ -398,8 +425,11 @@ def dpa42edist(dpa, n_part=None, fill_gaps=1, debug=1):
     
     return edist
 
-def read_dpa42parray(file_path, N_part=None, fill_gaps=True):
-    _logger.info('reading genesis4dpa from '+ file_path +' into parray')
+def read_dpa42parray(filePath, N_part=None, fill_gaps=True):
+    
+    _logger.info('reading gen4 .dpa file into parray')
+    _logger.debug(ind_str + 'reading from ' + filePath)
+    
     import random
     import h5py 
     N_part = None
@@ -408,7 +438,7 @@ def read_dpa42parray(file_path, N_part=None, fill_gaps=True):
     fill_gaps=True
     _logger.debug('fill_gaps = ' + str(fill_gaps))
     
-    h5 = h5py.File(file_path, 'r')
+    h5 = h5py.File(filePath, 'r')
     
     nslice = int(h5.get('slicecount')[0])
     lslice = h5.get('slicelength')[0]
@@ -498,9 +528,10 @@ def read_dpa42parray(file_path, N_part=None, fill_gaps=True):
     return p_array
 
 
-def write_gen4_lat(lat, file_path, line_name='LINE', l=np.inf):
+def write_gen4_lat(lat, filePath, line_name='LINE', l=np.inf):
     from ocelot.cpbd.elements import Undulator, Drift, Quadrupole, UnknownElement
-    _logger.info('writing genesis4 lattice to '+ file_path)
+    _logger.info('writing genesis4 lattice')
+    _logger.debug(ind_str + 'writing to ' + filePath)
     
     lat_str = []
     beamline = []
@@ -545,5 +576,5 @@ def write_gen4_lat(lat, file_path, line_name='LINE', l=np.inf):
     lat_str.append('{:}: LINE = {{{:}}};'.format(line_name, ','.join(beamline)))
     lat_str.append('\n# end of file\n')
                    
-    with open(file_path, 'w') as f:
+    with open(filePath, 'w') as f:
         f.write("\n".join(lat_str))

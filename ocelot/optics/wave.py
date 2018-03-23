@@ -12,16 +12,19 @@ import scipy.integrate as integrate
 #import matplotlib.animation as animation
 from copy import deepcopy
 import time
+import os
+
 
 # from ocelot.optics.elements import *
 from ocelot.common.globals import *
-from ocelot.common.math_op import find_nearest_idx
+from ocelot.common.math_op import find_nearest_idx, fwhm, std_moment
 from ocelot.common.py_func import filename_from_path
 # from ocelot.optics.utils import calc_ph_sp_dens
 #from ocelot.adaptors.genesis import *   #commented
 # import ocelot.adaptors.genesis as genesis_ad
 # GenesisOutput = genesis_ad.GenesisOutput
- 
+from ocelot.common.logging import *
+_logger = logging.getLogger('ocelot.wave') 
 
 import multiprocessing
 nthread = multiprocessing.cpu_count()
@@ -213,7 +216,6 @@ class RadiationField:
                 self.fld *= np.exp(-1j * k[:,np.newaxis,np.newaxis] / 2 * arg2[np.newaxis,:,:] / r)
             elif np.size(r) == self.Nz():
                 self.fld *= np.exp(-1j * k[:,np.newaxis,np.newaxis] / 2 * arg2[np.newaxis,:,:] / r[:,np.newaxis,np.newaxis])
-#            self.fft_z()
         
         elif domain_z=='t':
             self.to_domain('ts')
@@ -230,6 +232,9 @@ class RadiationField:
         self.to_domain(domains)
     
     def to_domain(self, domains='ts', **kwargs):
+        
+        _logger.info('transforming radiation field to {} domain'.format(str(domains)))
+        
         '''
         tranfers radiation to specified domains
         *domains is a string with one or two letters: 
@@ -243,12 +248,7 @@ class RadiationField:
         **kwargs are passed down to self.fft_z and self.fft_xy
         '''
         dfldomain_check(domains)
-#        if domains[0] == domains[1]:
-#            raise ValueError()
 
-#        domain_z='t', domain_xy='k'
-#        if domain_z not in ['t','f'] or domain_xy not in ['s','k']:
-#            raise ValueError('dfl domains may be ("t" or "f") and ("s" or "k")')
         for domain in domains:
             domain_o_z, domain_o_xy = self.domain_z, self.domain_xy
             if domain in ['t', 'f'] and domain is not domain_o_z:
@@ -257,8 +257,7 @@ class RadiationField:
                 self.fft_xy(**kwargs)
     
     def fft_z(self, method='mp', nthread=multiprocessing.cpu_count(), debug=1):  # move to another domain ( time<->frequency )
-        if debug > 0:
-            print('      calculating fft_z from ' + self.domain_z + ' domain with ' + method)
+        _logger.debug('calculating dfl fft_z from ' + self.domain_z + ' domain with ' + method)
         start = time.time()
         orig_domain = self.domain_z
     
@@ -291,17 +290,15 @@ class RadiationField:
         else:
             raise ValueError("domain_z value should be 't' or 'f'")
     
-        if debug > 0:
-            t_func = time.time() - start
-            if t_func < 60:
-                print('        done in %.2f sec' %(t_func))
-            else:
-                print('        done in %.2f min' %(t_func / 60))
+        t_func = time.time() - start
+        if t_func < 60:
+            _logger.debug(ind_str + 'done in %.2f sec' % (t_func))
+        else:
+            _logger.debug(ind_str + 'done in %.2f min' % (t_func / 60))
     
     
     def fft_xy(self, method='mp', nthread=multiprocessing.cpu_count(), debug=1):  # move to another domain ( spce<->inverse_space )
-        if debug > 0:
-            print('      calculating fft_xy from ' + self.domain_xy + ' domain with ' + method)
+        _logger.debug('calculating fft_xy from ' + self.domain_xy + ' domain with ' + method)
         start = time.time()
         domain_orig = self.domain_xy
     
@@ -334,12 +331,11 @@ class RadiationField:
         else:
             raise ValueError("domain_xy value should be 's' or 'k'")
     
-        if debug > 0:
-            t_func = time.time() - start
-            if t_func < 60:
-                print('        done in %.2f ' % t_func + 'sec')
-            else:
-                print('        done in %.2f ' % t_func / 60 + 'min')
+        t_func = time.time() - start
+        if t_func < 60:
+            _logger.debug(ind_str + 'done in %.2f sec' % (t_func))
+        else:
+            _logger.debug(ind_str + 'done in %.2f min' % (t_func / 60))
     
     
     def prop(self, z, fine=0, return_result=0, debug=1):
@@ -362,11 +358,10 @@ class RadiationField:
         
         z>0 -> forward direction
         '''
-        if debug > 0:
-            print('    propagating dfl file by %.2f meters' % (z))
+        _logger.info('propagating dfl file by %.2f meters' % (z))
         
         if z == 0:
-            print('      returning original')
+            _logger.debug(ind_str + 'z=0, returning original')
             if return_result:
                 return self
             else:
@@ -378,8 +373,8 @@ class RadiationField:
             copydfl = deepcopy(self)
             copydfl, self = self, copydfl
         
-#        domain_xy = self.domain_xy
-#        domain_z = self.domain_z
+       # domain_xy = self.domain_xy
+       # domain_z = self.domain_z
     
         if fine==1:
             self.to_domain('kf')
@@ -388,10 +383,10 @@ class RadiationField:
         else:
             self.to_domain('k')
         # switch to inv-space/freq domain
-#        if self.domain_xy == 's':
-#            self.fft_xy(debug=debug)
-#        if self.domain_z == 't' and fine:
-#            self.fft_z(debug=debug)
+       # if self.domain_xy == 's':
+           # self.fft_xy(debug=debug)
+       # if self.domain_z == 't' and fine:
+           # self.fft_z(debug=debug)
     
         if self.domain_z == 'f':
             k_x, k_y = np.meshgrid(self.scale_kx(), self.scale_ky())
@@ -406,15 +401,10 @@ class RadiationField:
             for i in range(self.Nz()):
                 self.fld[i, :, :] *= H
     
-        # switch to original domain
-#        if domain_xy == 's':
-#            self.fft_xy(debug=debug)
-#        if domain_z == 't' and fine:
-#            self.fft_z(debug=debug)
+
     
         t_func = time.time() - start
-        if debug > 0:
-            print('      done in %.2f ' % t_func + 'sec')
+        _logger.debug(ind_str + 'done in %.2f sec' % t_func)
         
         if return_result:
             copydfl, self = self, copydfl
@@ -439,11 +429,10 @@ class RadiationField:
     
         z>0 -> forward direction
         '''
-        if debug > 0:
-            print('    propagating dfl file by %.2f meters' % (z))
+        _logger.info('propagating dfl file by %.2f meters' % (z))
         
         if z == 0 and m == 1:
-            print('      returning original')
+            _logger.debug(ind_str + 'z=0, returning original')
             if return_result:
                 return self
             else:
@@ -470,10 +459,10 @@ class RadiationField:
             self.to_domain('kt')
         else:
             self.to_domain('k')
-#        if domain_xy == 's':
-#            self.fft_xy(debug=debug)
-#        if domain_z == 't' and fine:
-#            self.fft_z(debug=debug)
+       # if domain_xy == 's':
+           # self.fft_xy(debug=debug)
+       # if domain_z == 't' and fine:
+           # self.fft_z(debug=debug)
             
         if z != 0:
             if self.domain_z == 'f':
@@ -486,24 +475,40 @@ class RadiationField:
         self.dy *= m
         
         # switch to original domain
-#        if domain_xy == 's':
-#            self.fft_xy(debug=debug)
-#        if domain_z == 't' and fine:
-#            self.fft_z(debug=debug)
+       # if domain_xy == 's':
+           # self.fft_xy(debug=debug)
+       # if domain_z == 't' and fine:
+           # self.fft_z(debug=debug)
         self.to_domain('s')
         
         if m != 1:
             self.curve_wavefront(-m * z / (m-1))
         
         t_func = time.time() - start
-        if debug > 0:
-            print('      done in %.2f ' % t_func + 'sec')
+        _logger.debug(ind_str + 'done in %.2f sec' % (t_func))
         
         if return_result:
             copydfl, self = self, copydfl
             return copydfl
     
+class WaistScanResults():
 
+    def __init__(self):
+        self.filePath = ''
+        self.xlamds = None
+        self.z_pos = np.array([])
+        self.phdens_max = np.array([])
+        self.phdens_onaxis = np.array([])
+        self.fwhm_x = np.array([])
+        self.fwhm_y = np.array([])
+        self.std_x = np.array([])
+        self.std_y = np.array([])
+        self.z_maxint = None
+
+    def fileName(self):
+        return filename_from_path(self.filePath)
+    
+    
 class TransferFunction:
     '''
     data container for Fourier Optics transfer functions
@@ -810,8 +815,7 @@ def generate_dfl(xlamds, shape=(151,151,1000), dgrid=(1e-3,1e-3,None), power_rms
         shape = (shape[0],shape[1],int(dgrid[2]/xlamds/zsep))
         
         
-    if debug > 0:
-        print('    generating radiation field', tuple(reversed(shape)))
+    _logger.info('generating radiation field of shape' + str(tuple(reversed(shape))))
 
     dfl = RadiationField(tuple(reversed(shape)))
 
@@ -843,9 +847,9 @@ def generate_dfl(xlamds, shape=(151,151,1000), dgrid=(1e-3,1e-3,None), power_rms
 
     if wavelength.__class__ in [list, tuple, np.ndarray] and len(wavelength) == 2:
         freq_chirp = (wavelength[1] - wavelength[0]) / (z[-1,0,0] - z[0,0,0])
-        print('   wavelengths ', wavelength)
-        print('   z ', (z[-1,0,0], z[0,0,0]))
-        print('   calculated chirp ', freq_chirp)
+        _logger.debug(ind_str + 'wavelengths ', wavelength)
+        _logger.debug(ind_str + 'z ', (z[-1,0,0], z[0,0,0]))
+        _logger.debug(ind_str + 'calculated chirp ', freq_chirp)
         wavelength = np.mean([wavelength[0], wavelength[1]])
         
       
@@ -879,8 +883,7 @@ def generate_dfl(xlamds, shape=(151,151,1000), dgrid=(1e-3,1e-3,None), power_rms
     dfl.filePath = ''
 
     t_func = time.time() - start
-    if debug > 0:
-        print('      done in %.2f ' % t_func + 'sec')
+    _logger.debug(ind_str + 'done in %.2f sec' % (t_func))
     
     return dfl
 
@@ -888,8 +891,7 @@ def dfl_ap(dfl, ap_x=None, ap_y=None, debug=1):
     '''
     aperture the radaition in either domain
     '''
-    if debug > 0:
-        print('    applying aperture to dfl')
+    _logger.info('applying aperture to dfl')
         
     if np.size(ap_x) == 1:
         ap_x = [-ap_x/2, ap_x/2]
@@ -912,8 +914,7 @@ def dfl_ap(dfl, ap_x=None, ap_y=None, debug=1):
     dfl_energy_orig = dfl.E()
     dfl.fld[:, mask_idx[0], mask_idx[1]] = 0
     
-    if debug > 0:
-        print('      %.2f%% energy left' %( dfl.E() / dfl_energy_orig ))
+    _logger.info(ind_str + 'done, %.2f%% energy lost' %( (dfl_energy_orig - dfl.E()) / dfl_energy_orig * 100 ))
     # tmp_fld = dfl.fld[:,idx_x1:idx_x2,idx_y1:idx_y2]
     
     # dfl_out.fld[:] = np.zeros_like(dfl_out.fld)
@@ -944,8 +945,12 @@ def dfl_prop(dfl, z, fine=1, debug=1):
 
     z>0 ==> forward
     '''
-    if debug > 0:
-        print('    propagating dfl file by %.2f meters' % (z))
+    
+    
+    
+    print('propagating dfl file by %.2f meters' % (z))
+    
+    _logger.warning(ind_str + 'dfl_prop will be deprecated, use method instead')
     
     if z == 0:
         print('      returning original')
@@ -999,8 +1004,7 @@ def dfl_waistscan(dfl, z_pos, projection=0, debug=1):
     if projection==1, then size of projection is calculated
         otherwise - size across the central line passing through the mesh center
     '''
-    if debug > 0:
-        print('    scanning dfl waist in range %s meters' % (z_pos))
+    _logger.info('scanning dfl waist in range %s meters' % (str(z_pos)))
     start = time.time()
 
     sc_res = WaistScanResults()
@@ -1009,16 +1013,15 @@ def dfl_waistscan(dfl, z_pos, projection=0, debug=1):
 
     for z in z_pos:
 
-        if debug > 0:
-            print('      scanning at z = %.2f m' % (z))
+        _logger.info(ind_str + 'scanning at z = %.2f m' % (z))
         
         I_xy = dfl.prop(z, fine=0, debug=0, return_result=1).int_xy()  # integrated xy intensity
         
 
         scale_x = dfl.scale_x()
         scale_y = dfl.scale_y()
-        center_x = np.int((shape(I_xy)[0] + 1) / 2)
-        center_y = np.int((shape(I_xy)[1] + 1) / 2)
+        center_x = np.int((I_xy.shape[0] + 1) / 2)
+        center_y = np.int((I_xy.shape[1] + 1) / 2)
 
         if projection:
             I_x = np.sum(I_xy, axis=1)
@@ -1029,6 +1032,9 @@ def dfl_waistscan(dfl, z_pos, projection=0, debug=1):
 
         sc_res.z_pos = np.append(sc_res.z_pos, z)
         sc_res.phdens_max = np.append(sc_res.phdens_max, np.amax(I_xy))
+        
+        _logger.debug(ind_str + 'phdens_max = %.2e' % (np.amax(I_xy)))
+        
         sc_res.phdens_onaxis = np.append(sc_res.phdens_onaxis, I_xy[center_x, center_y])
         sc_res.fwhm_x = np.append(sc_res.fwhm_x, fwhm(scale_x, I_x))
         sc_res.fwhm_y = np.append(sc_res.fwhm_y, fwhm(scale_y, I_y))
@@ -1038,8 +1044,7 @@ def dfl_waistscan(dfl, z_pos, projection=0, debug=1):
         sc_res.z_max_phdens = sc_res.z_pos[np.argmax(sc_res.phdens_max)]
 
     t_func = time.time() - start
-    if debug > 0:
-        print('      done in %.2f ' % t_func + 'sec')
+    _logger.debug(ind_str + 'done in %.2f sec' % t_func)
 
     return sc_res
 
@@ -1055,9 +1060,10 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
     '''
     from scipy.interpolate import interp2d
 
-    if debug > 0:
-        print ('    interpolating radiation file')
+    _logger.info('interpolating radiation file')
     start_time = time.time()
+    
+    E1 = dfl.E()
 
     # in case if interpolation is the same in both dimentions
     if np.size(interpN) == 1:
@@ -1069,14 +1075,10 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
     if np.size(newL) == 1:
         newL = (newL, newL)
 
-    if debug > 1:
-        print('      newL=', newL)
-        print('      newN=', newN)
-
     if (interpN == (1, 1) and interpL == (1, 1) and newN == (None, None) and newL == (None, None)) or \
        (interpN == (1, 1) and interpL == (1, 1) and newN == (dfl.Nx(), dfl.Ny()) and newL == (dfl.Lx(), dfl.Ly())):
-        print('      skip (no interpolation required, returning original)')
-        return dfl
+        _logger.info(ind_str + 'no interpolation required')
+        return
 
     # calculate new mesh parameters only if not defined explicvitly
     if newN == (None, None) and newL == (None, None):
@@ -1086,12 +1088,12 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
         interpLy = interpL[1]
 
         if interpNx == 0 or interpLx == 0 or interpNy == 0 or interpLy == 0:
-            print('interpolation values cannot be 0')
-            return None
+            raise ValueError(ind_str + 'interpolation values cannot be 0')
             # place exception
         elif interpNx == 1 and interpNy == 1 and interpLx == 1 and interpLy == 1:
-            return dfl
-            print('      skip (no interpolation required, returning original)')
+            _logger.info(ind_str + 'no interpolation required, returning original')
+            return
+            
         
         # elif interpNx == 1 and interpNy == 1 and interpLx <= 1 and interpLy <= 1:
             # implement pad or cut if Lx1/Nx1==Lx2/Nx2 and Ly1/Ny1==Ly2/Ny2:
@@ -1143,16 +1145,23 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
             Ly2 = newL[1]
         else:
             Ly2 = dfl.Ly()
+            
+    Lx1, Ly1 = dfl.Lx(), dfl.Ly()
+    Nx1, Ny1 = dfl.Nx(), dfl.Ny()
     
-    # if debug>0:
-        # print('Lx1=%e, Ly1=%e' %(Lx1,Ly1))
-        # print('Lx2=%e, Ly2=%e' %(Lx2,Ly2))
-        # print('Nx1=%s, Ny1=%s' %(Nx1,Ny1))
-        # print('Nx2=%s, Ny2=%s' %(Nx2,Ny2))
+    # _logger.debug(ind_str + 'old L=' + str((dfl.Lx(), dfl.Ly())))
+    # _logger.debug(ind_str + 'new L=' + str(newL))
+    # _logger.debug(ind_str + 'old N=' + str((dfl.Nx(), dfl.Ny())))
+    # _logger.debug(ind_str + 'new N=' + str(newN))
+    
+    _logger.debug(ind_str + 'Lx1=%e, Ly1=%e' %(Lx1,Ly1))
+    _logger.debug(ind_str + 'Lx2=%e, Ly2=%e' %(Lx2,Ly2))
+    _logger.debug(ind_str + 'Nx1=%s, Ny1=%s' %(Nx1,Ny1))
+    _logger.debug(ind_str + 'Nx2=%s, Ny2=%s' %(Nx2,Ny2))
     
     
-    xscale1 = np.linspace(-dfl.Lx() / 2, dfl.Lx() / 2, dfl.Nx())
-    yscale1 = np.linspace(-dfl.Ly() / 2, dfl.Ly() / 2, dfl.Ny())
+    xscale1 = np.linspace(-Lx1 / 2, Lx1 / 2, Nx1)
+    yscale1 = np.linspace(-Ly1 / 2, Ly1 / 2, Ny1)
     xscale2 = np.linspace(-Lx2 / 2, Lx2 / 2, Nx2)
     yscale2 = np.linspace(-Ly2 / 2, Ly2 / 2, Ny2)
 
@@ -1160,20 +1169,18 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
     ix_max = np.where(xscale1 <= xscale2[-1])[-1][-1]
     iy_min = np.where(yscale1 >= yscale2[0])[0][0]
     iy_max = np.where(yscale1 <= yscale2[-1])[-1][-1]
-    if debug > 1:
-        print('      energy before interpolation ' + str(dfl.E()))
+    _logger.debug(ind_str + 'energy before interpolation ' + str(dfl.E()))
     #interp_func = rgi((zscale1,yscale1,xscale1), dfl.fld, fill_value=0, bounds_error=False, method='nearest')
     fld2 = []
     for nslice, fslice in enumerate(dfl.fld):
-        if debug > 1:
-            print('      slice %s' %(nslice))
+        _logger.log(5, ind_str + 'slice %s' %(nslice))
         re_func = interp2d(xscale1, yscale1, np.real(fslice), fill_value=0, bounds_error=False, kind=method)
         im_func = interp2d(xscale1, yscale1, np.imag(fslice), fill_value=0, bounds_error=False, kind=method)
         fslice2 = re_func(xscale2, yscale2) + 1j * im_func(xscale2, yscale2)
-        P1 = sum(abs(fslice[iy_min:iy_max, ix_min:ix_max])**2)
-        P2 = sum(abs(fslice2)**2)
-        if debug > 1:
-            print('      P1,P2 = %e %e' %(P1,P2))
+        P1 = sum(sum(abs(fslice[iy_min:iy_max, ix_min:ix_max])**2))
+        P2 = sum(sum(abs(fslice2)**2))
+        # print(P1, P2)
+        _logger.log(5, ind_str + 'P1,P2 = %e %e' %(P1,P2))
         
         if P2!=0:
             fslice2 = fslice2 * np.sqrt(P1 / P2)
@@ -1184,15 +1191,18 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
 
     # dfl2 = deepcopy(dfl)
     # dfl2=RadiationField()
+    
+    _logger.debug(ind_str + 'new shape = (%i %i %i)' %(len(fld2), fslice2.shape[0], fslice2.shape[1]))
+    
     dfl.fld = np.array(fld2)
     dfl.dx = Lx2 / dfl.Nx()
     dfl.dy = Ly2 / dfl.Ny()
     # dfl2.fileName=dfl.fileName+'i'
     # dfl2.filePath=dfl.filePath+'i'
-    if debug > 1:
-        print('      energy after interpolation ' + str(dfl.E()))
-    if debug > 0:
-        print('      done in %.2f sec' % (time.time() - start_time))
+    E2 = dfl.E()
+    _logger.info(ind_str + '%.2f%% energy cut' %( (E1-E2) / E1 * 100 ))
+    _logger.debug(ind_str + 'energy after interpolation ' + str(E2))
+    _logger.debug(ind_str + 'done in %.2f sec' % (time.time() - start_time))
 
     # return dfl
 
@@ -1206,10 +1216,10 @@ def dfl_shift_z(dfl, s, set_zeros=1):
     '''
     assert dfl.domain_z == 't', 'dfl_shift_z works only in time domain!'
     shift_n = int(s / dfl.dz)
-    print('    shifting dfl by %.2f um (%.0f slices)' % (s * 1e6, shift_n))
+    _logger.info('shifting dfl forward by %.2f um (%.0f slices)' % (s * 1e6, shift_n))
     if shift_n == 0:
-        print('      returning original')
-        return dfl
+        _logger.info(ind_str + 's=0, returning original')
+        return
     else:
         start = time.time()
         dfl.fld = np.roll(dfl.fld, shift_n, axis=0)
@@ -1220,7 +1230,7 @@ def dfl_shift_z(dfl, s, set_zeros=1):
                 dfl.fld[shift_n:, :, :] = 0
         t_func = time.time() - start
         # return dfl
-    print('      done in %.2f ' % t_func + 'sec')
+    _logger.debug(ind_str + 'done in %.2f ' % t_func + 'sec')
 
 # def dfl_pad_z_old(dfl, padn):
     # assert np.mod(padn, 1) == 0, 'pad should be integer'
@@ -1257,7 +1267,7 @@ def dfl_pad_z(dfl, padn):
 
     if padn > 1:
         padn_n = int(padn  * dfl.Nz())  # new number of slices
-        print('    padding dfl by ', padn, 'from', dfl.Nz(), 'to', padn_n)
+        _logger.info('padding dfl by ', padn, 'from', dfl.Nz(), 'to', padn_n)
         dfl_pad = RadiationField( (padn_n, dfl.Ny(), dfl.Nx()) )
         dfl_pad.copy_param(dfl)
         dfl_pad.fld[-dfl.Nz():, :, :] = dfl.fld
@@ -1265,27 +1275,25 @@ def dfl_pad_z(dfl, padn):
     elif padn < -1:
         padn = abs(padn)
         padn_n = int(dfl.Nz() / padn)  # new number of slices
-        print('    de-padding dfl by ', padn, 'from', dfl.Nz(), 'to', padn_n)
+        _logger.info('de-padding dfl by ', padn, 'from', dfl.Nz(), 'to', padn_n)
         dfl_pad = RadiationField()
         dfl_pad.copy_param(dfl)
         dfl_pad.fld = dfl.fld[-padn_n:, :, :]
         dfl = dfl_pad
     else:
-        print('    padding dfl by ' + str(padn))
-        print('      pass')
-        # return dfl
+        _logger.info('padding dfl by ' + str(padn))
+        _logger.info(ind_str + 'padn=1, passing')
 
     t_func = time.time() - start
     if t_func < 60:
-        print('      done in %.2f ' % t_func + 'sec')
+        _logger.debug(ind_str + 'done in %.2f ' % t_func + 'sec')
     else:
-        print('      done in %.2f ' % t_func / 60 + 'min')
+        _logger.debug(ind_str + 'done in %.2f ' % t_func / 60 + 'min')
     # return dfl_pad
 
 def dfl_cut_z(dfl,z=[-np.inf,np.inf],debug=1):
     
-    if debug>0:
-        print ('    cutting radiation file')
+    _logger.info('cutting radiation file')
         
     if dfl.__class__ != RadiationField:
         raise ValueError('wrong radiation object: should be RadiationField')
@@ -1299,8 +1307,7 @@ def dfl_cut_z(dfl,z=[-np.inf,np.inf],debug=1):
     # dfl_cut.copy_param(dfl)
     dfl.fld = dfl.fld[idx1:idx2]
 
-    if debug>0:
-        print ('      done')
+    _logger.debug(ind_str + 'done')
 
 def dfl_fft_z(dfl, method='mp', nthread=multiprocessing.cpu_count(), debug=1):  # move to another domain ( time<->frequency )
     '''
@@ -1308,6 +1315,9 @@ def dfl_fft_z(dfl, method='mp', nthread=multiprocessing.cpu_count(), debug=1):  
     '''
     if debug > 0:
         print('      calculating fft_z from ' + dfl.domain_z + ' domain with ' + method)
+    
+    _logger.warning(ind_str + 'dfl_fft_z will be deprecated, use method instead')
+    
     start = time.time()
     dfl_fft = RadiationField(dfl.shape())
     dfl_fft.copy_param(dfl)
@@ -1356,6 +1366,9 @@ def dfl_fft_xy(dfl, method='mp', nthread=multiprocessing.cpu_count(), debug=1): 
     '''
     if debug > 0:
         print('      calculating fft_xy from ' + dfl.domain_xy + ' domain with ' + method)
+    
+    _logger.warning(ind_str + 'dfl_fft_xy will be deprecated, use method instead')
+    
     start = time.time()
     dfl_fft = RadiationField(dfl.shape())
     dfl_fft.copy_param(dfl)
@@ -1407,7 +1420,7 @@ def dfl_trf(dfl, trf, mode, dump_proj=False):
                 or 'ref' for reflection
     '''
     # assert dfl.domain_z == 'f', 'dfl_trf works only in frequency domain!'
-    print('    multiplying dfl by trf')
+    _logger.info('multiplying dfl by trf')
     start = time.time()
     # assert trf.__class__==TransferFunction,'Wrong TransferFunction class'
     assert dfl.domain_z == 'f', 'wrong dfl domain (must be frequency)!'
@@ -1433,7 +1446,7 @@ def dfl_trf(dfl, trf, mode, dump_proj=False):
     dfl.fld = dfl.fld * filt_interp[:, np.newaxis, np.newaxis]
 
     t_func = time.time() - start
-    print('      done in %.2f ' % t_func + 'sec')
+    _logger.debug(ind_str + 'done in %.2f sec' % t_func)
     if dump_proj:
         return filt_interp
 
@@ -1541,6 +1554,8 @@ def calc_wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1
     output is a real value of wigner distribution
     '''
     
+    _logging.debug('calc_wigner start')
+    
     N0 = len(field)
     
     if np.amin(field) == 0 and np.amax(field) == 0:
@@ -1554,8 +1569,7 @@ def calc_wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1
     F1 = field
     F2 = deepcopy(F1)
     
-    if debug > 1: 
-        print('fields created')
+    _logging.debug(ind_str + 'fields created, rolling multiplication')
     
     # speed-up with numba?
     for i in range(N):
@@ -1566,7 +1580,7 @@ def calc_wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1
         if debug > 1: 
             print(i, 'of', N)
         
-    if debug > 1: print('fft_start')
+    _logging.debug(ind_str + 'starting fft')
     
     wig = np.fft.fftshift(np.conj(F1) * F2, 0)
     
@@ -1576,17 +1590,19 @@ def calc_wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1
     else:
         wig = np.fft.fft(wig, axis=0)
     
-    if debug > 1: print('fft_done')
-    
     wig = np.fft.fftshift(wig, 0)
     wig = wig[0:N0, 0:N0] / N
-
+    
+    _logging.debug(ind_str + 'done')
     return np.real(wig)
     
 def wigner_pad(wig, pad):
     '''
     pads WignerDistribution with zeros in time domain 
     '''
+    
+    _logging.debug('padding Wigner with zeros in time domain')
+    
     wig_out = deepcopy(wig)
     n_add = wig_out.s.size * (pad-1) / 2
     n_add_l = int(n_add - n_add%2)
@@ -1596,6 +1612,8 @@ def wigner_pad(wig, pad):
     pad_array_s_r = np.linspace(wig_out.s[-1]+ds, wig_out.s[-1] + ds*(n_add_r), n_add_r)
     wig_out.s = np.concatenate([pad_array_s_l,wig_out.s,pad_array_s_r])
     wig_out.field = np.concatenate([np.zeros(n_add_l), wig_out.field, np.zeros(n_add_r)])
+    
+    _logging.debug(ind_str + 'done')
     return wig_out
 
 def wigner_out(out, z=inf, method='mp', pad=1, debug=1):
@@ -1607,8 +1625,7 @@ def wigner_out(out, z=inf, method='mp', pad=1, debug=1):
     
     import numpy as np
     
-    if debug>0: 
-        print('    calculating Wigner distribution')
+    _logging.info('calculating Wigner distribution from .out at z = {}'.format(str(z)))
     start_time = time.time()
     
     if z == 'end': 
@@ -1633,8 +1650,7 @@ def wigner_out(out, z=inf, method='mp', pad=1, debug=1):
     
     wig.eval(method) #calculate wigner parameters based on its attributes
 
-    if debug>0: 
-        print('      done in %.2f seconds' % (time.time() - start_time))
+    _logging.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
     
     return wig
     
@@ -1646,8 +1662,7 @@ def wigner_dfl(dfl, method='mp', pad=1, debug=1):
     
     import numpy as np
     
-    if debug>0: 
-        print('    calculating Wigner distribution')
+    _logging.info('calculating Wigner distribution from dfl')
     start_time = time.time()
     
     wig = WignerDistribution()
@@ -1661,8 +1676,7 @@ def wigner_dfl(dfl, method='mp', pad=1, debug=1):
     
     wig.eval(method) #calculate wigner parameters based on its attributes
 
-    if debug>0: 
-        print('      done in %.2f seconds' % (time.time() - start_time))
+    _logging.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
     
     return wig
     
@@ -1680,8 +1694,7 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1):
         # raise ValueError('unknown object used as input')
 
     
-    if debug>0: 
-        print('    calculating Wigner distribution')
+    _logging.info('calculating Wigner distribution from out_stat at z = {}'.format(str(z)))
     start_time = time.time()
     
     if z == inf:
@@ -1694,7 +1707,8 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1):
     
     WW = np.zeros((out_stat.p_int.shape[2], out_stat.p_int.shape[1], out_stat.p_int.shape[1]))
 
-    for (i,n) in  enumerate(out_stat.run):
+    for (i,n) in enumerate(out_stat.run):
+        _logger.debug(ind_str + 'run {} of {}'.format(i, len(out_stat.run)))
         field = np.sqrt(out_stat.p_int[zi,:,i]) * np.exp(1j*out_stat.phi_mid[zi,:,i])
         WW[i,:,:] = calc_wigner(field, method=method, debug=debug)
     
@@ -1707,20 +1721,26 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1):
     wig.z = z
 #    wig.energy= np.mean(out.p_int[:, -1], axis=0) * out('xlamds') * out('zsep') * out.nSlices / speed_of_light
     
-    if debug>0: 
-        print('      done in %.2f seconds' % (time.time() - start_time))
+    _logging.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
     
-        return wig
+    return wig
 
 
 def calc_ph_sp_dens(spec, freq_ev, n_photons, spec_squared=1):
     '''
     calculates number of photons per electronvolt
     '''
-    if spec.ndim == 2:
-        axis=1
-    else:
+    if spec.ndim == 1:
         axis=0
+    else:
+        if spec.shape[0] == freq_ev.shape[0]:
+            spec = spec.T
+        axis=1
+            # axis=0
+        # elif spec.shape[1] == freq_ev.shape[0]:
+            # axis=1
+        # else:
+            # raise ValueError('operands could not be broadcast together with shapes ', spec.shape, ' and ', freq_ev.shape)
         
     if spec_squared:
         spec_sum = np.trapz(spec, x=freq_ev, axis=axis)
@@ -1739,6 +1759,7 @@ def calc_ph_sp_dens(spec, freq_ev, n_photons, spec_squared=1):
         norm_factor = np.sqrt(n_photons / spec_sum)
     
     if spec.ndim == 2:
+        
         norm_factor = norm_factor[:,np.newaxis]
     
     return spec * norm_factor
@@ -1763,6 +1784,8 @@ def imitate_1d_sase_like(td_scale, td_env, fd_scale, fd_env, td_phase = None, fd
     fd - matrix of radiation in frequency domain with shape, normalized such that np.sum(abs(fd)**2) is photon spectral density, i.e: np.sum(abs(fd)**2)*fd_scale = N_photons
     td - matrix of radiation in time domain, normalized such that abs(td)**2 = radiation_power in [w]
     '''
+    
+    _logger.info('generating 1d radiation field imitating SASE')
     
     if fit_scale == 'td':
         
@@ -1879,7 +1902,7 @@ def imitate_1d_sase(spec_center = 500, spec_res = 0.01, spec_width = 2.5, spec_r
     
     fd_scale = np.arange(spec_range[0], spec_range[1], spec_res)
     n_points = len(fd_scale)
-    print('N_points * N_events = %i * %i'  %(n_points, n_events))
+    _logger.debug(ind_str + 'N_points * N_events = %i * %i' %(n_points, n_events))
 
     fd_env = np.exp(-(fd_scale - spec_center)**2 / 2 / spec_width_sigm**2)
     td_scale = np.linspace(0, 2*np.pi / (fd_scale[1] - fd_scale[0]) * hr_eV_s * speed_of_light, n_points)

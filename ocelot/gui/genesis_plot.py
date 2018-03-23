@@ -33,6 +33,8 @@ import matplotlib
 
 import matplotlib.pyplot as plt
 import numpy as np
+import logging
+
 from ocelot.adaptors.genesis import *
 from ocelot.common.globals import *  # import of constants like "h_eV_s" and
 from ocelot.common.math_op import *  # import of mathematical functions
@@ -43,6 +45,8 @@ from ocelot.optics.wave import *
 # from pylab import rc, rcParams #tmp
 from matplotlib import rc, rcParams
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+_logger = logging.getLogger('ocelot.genesis_plot')
 
 def_cmap = 'viridis'
 # def_cmap = 'Greys'
@@ -106,8 +110,9 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
     #If folder path is provided, all *.gout and *.out files are plotted
     '''
 
-    if debug > 0:
-        print('  plotting genesis output')
+
+    _logger.info('plotting all genesis output')
+    _logger.debug('choice = ' + str(choice))
     plotting_time = time.time()
 
     # plt.ioff()
@@ -131,16 +136,14 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
             for name in files:
                 if name.endswith('.gout') or name.endswith('.out'):
                     handles.append(os.path.join(root, name))
-        if debug > 0:
-            print('\n  plotting all files in ' + str(handle))
+        _logger.info('\n  plotting all files in ' + str(handle))
     else:
         handles = [handle]
 
     for handle in handles:
 
         if os.path.isfile(str(handle)):
-            print('')
-            print('plotting ',handle)
+            _logger.info('plotting '+str(handle))
             handle = read_out_file(handle, read_level=2, debug=debug)
 
         if isinstance(handle, GenesisOutput):
@@ -157,36 +160,36 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
                     W=wigner_out(handle, pad=2)
                     plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug, downsample=2)
                 except:
-                    pass
+                    _logger.warning('could not plot wigner')
             if choice[4] != 0:
                 for z in np.arange(choice[4], np.amax(handle.z), choice[4]):
                     plot_gen_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug)
             if choice[12]:
                 try:
                     plot_dpa_bucket_out(handle,scatter=0,slice_pos='max_P',repeat=3, showfig=showfig, savefig=savefig, cmap=def_cmap)
-                except IOError:
-                    pass
+                except:
+                    _logger.warning('could not plot particle buckets')
 
             
                 
         if os.path.isfile(handle.filePath + '.dfl') and any(choice[5:8]):
             dfl = read_dfl_file_out(handle, debug=debug)
             if dfl.Nz()==0:
-                print('empty dfl, skipping')
+                _logger.warning('empty dfl, skipping')
             else:
                 if choice[5]:
                     f5 = plot_dfl(dfl, showfig=showfig, savefig=savefig, debug=debug)
                 if choice[6]:
-                    f6 = plot_dfl(dfl, far_field=1, freq_domain=0, auto_zoom=0, showfig=showfig, savefig=savefig, debug=debug)
+                    f6 = plot_dfl(dfl, domains='tk', auto_zoom=0, showfig=showfig, savefig=savefig, debug=debug)
                 if choice[7]:
-                    f7 = plot_dfl(dfl, far_field=0, freq_domain=1, auto_zoom=0, showfig=showfig, savefig=savefig, debug=debug)
+                    f7 = plot_dfl(dfl, domains='sf', auto_zoom=0, showfig=showfig, savefig=savefig, debug=debug)
                 if choice[8]:
-                    f8 = plot_dfl(dfl, far_field=1, freq_domain=1, auto_zoom=0, showfig=showfig, savefig=savefig, debug=debug)
+                    f8 = plot_dfl(dfl, domains='kf', auto_zoom=0, showfig=showfig, savefig=savefig, debug=debug)
         
         if os.path.isfile(handle.filePath + '.dpa') and (choice[9] or choice[10]) and handle('itdp') == True:
             dpa = read_dpa_file_out(handle, debug=debug)
             if np.size(dpa.ph)==0:
-                print('empty dpa, skipping')
+                _logger.warning('empty dpa, skipping')
             else:
                 if choice[9]:
                     edist = dpa2edist(handle, dpa, num_part=5e4, smear=1, debug=debug)
@@ -196,17 +199,15 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
                     f10 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=(100, 100, 300, 200), debug=debug)
         
     if savefig != False:
-        if debug > 0:
-            print('    plots recorded to *.' + str(savefig) + ' files')
+        _logger.info('    plots recorded to *.' + str(savefig) + ' files')
 
     if showfig:
-        if debug > 0:
-            print('    showing plots, close all to proceed')
+        _logger.info('    showing plots, close all to proceed')
         plt.show()
     # else:
         # plt.close('all')
 
-    print ('    total plotting time %.2f seconds' % (time.time() - plotting_time))
+    _logger.info('    total plotting time %.2f seconds' % (time.time() - plotting_time))
 
 
 def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espread+el_bunching', 'rad_phase', 'rad_spec'], figsize=4, x_units='um', y_units='ev', legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
@@ -1442,8 +1443,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     filePath = dfl.filePath
 
     text_present = 1
-    if debug > 0:
-        print('    plotting radiation field (dfl)')
+    _logger.info('plotting radiation field (dfl)')
     start_time = time.time()
     
     # print('dfl type is ',type(dfl))
@@ -1816,17 +1816,14 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     if savefig != False:
         if savefig == True:
             savefig = 'png'
-        if debug > 0:
-            print('      saving *' + suffix + '.' + savefig)
+        _logger.debug('    saving *' + suffix + '.' + savefig)
         fig.savefig(filePath + suffix + '.' + str(savefig), format=savefig)
 
-    if debug > 0:
-        print('      done in %.2f seconds' % (time.time() - start_time))
+    _logger.info('    done in %.2f seconds' % (time.time() - start_time))
 
     plt.draw()
     if showfig == True:
-        if debug > 0:
-            print('      showing dfl')
+        _logger.debug('    showing dfl')
         plt.show()
     else:
         plt.close('all')
@@ -2517,16 +2514,15 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cm
         plt.close('all')
 
 
-def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, scatter=False, plot_x_y=True, plot_xy_s=True, bins=(50, 50, 50, 50), flip_t=True, x_units='um', y_units='ev', cmin=0, y_offset=None, cmap=def_cmap, debug=1):
+def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, scatter=False, plot_x_y=True, plot_xy_s=True, bins=(50, 50, 50, 50), flip_t=False, x_units='um', y_units='ev', cmin=0, y_offset=None, cmap=def_cmap, debug=1):
 
     if showfig == False and savefig == False:
         return
-    if debug > 0:
-        print('    plotting edist file')
+    _logger.info('plotting edist file')
     start_time = time.time()
     # suffix=''
-    if edist.__class__ != GenesisElectronDist:
-        raise ValueError('wrong distribution object: should be GenesisElectronDist')
+    # if edist.__class__ != GenesisElectronDist:
+        # raise ValueError('wrong distribution object: should be GenesisElectronDist')
 
     if np.size(bins) == 1:
         bins = (bins, bins, bins, bins)  # x,y,t,e
@@ -2627,8 +2623,7 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
     if savefig != False:
         if savefig == True:
             savefig = 'png'
-        if debug > 1:
-            print('      saving ' + edist.fileName() + '.' + savefig)
+        _logger.debug('  saving ' + edist.fileName() + '.' + savefig)
         plt.savefig(edist.filePath + '.' + savefig, format=savefig)
 
     if showfig:
@@ -2636,13 +2631,14 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
     else:
         plt.close('all')
 
-    if debug > 0:
-        print(('      done in %.2f seconds' % (time.time() - start_time)))
+    _logger.info(('  done in %.2f seconds' % (time.time() - start_time)))
     return fig
 
 
 def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=None, debug=0):
 
+    _logger.info('plotting beam')
+    
     if showfig == False and savefig == False:
         return
     
@@ -2773,7 +2769,7 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
     else:
         plt.close('all')
 
-def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,None), y_lim=(None,None), downsample=1, autoscale=None, cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=True, debug=1):
+def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,None), y_lim=(None,None), downsample=1, autoscale=None, cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=True, plot_proj=1, debug=1):
     '''
     plots wigner distribution (WD) with marginals
     wig_or_out -  may be WignerDistribution() or GenesisOutput() object
@@ -2823,32 +2819,35 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
     
     if x_units=='fs':
         power_scale=W.s/speed_of_light*1e15
-        p_label_txt='time [fs]'
+        p_label_txt='t [fs]'
     else:
         power_scale=W.s*1e6
         p_label_txt='s [$\mu$m]'
     
     if y_units in ['ev', 'eV']:
         spec_scale=speed_of_light*h_eV_s*1e9/W.freq_lamd
-        f_label_txt='ph.energy [eV]'
+        f_label_txt='$E_{photon}$ [eV]'
     else:
         spec_scale=W.freq_lamd
-        f_label_txt='wavelength [nm]'
+        f_label_txt='$\lambda& [nm]'
     
-    # definitions for the axes
-    left, width = 0.18, 0.57
-    bottom, height = 0.14, 0.55
-    left_h = left + width + 0.02 - 0.02
-    bottom_h = bottom + height + 0.02 - 0.02
-    
+    if plot_proj:
+        # definitions for the axes
+        left, width = 0.18, 0.57
+        bottom, height = 0.14, 0.55
+        left_h = left + width + 0.02 - 0.02
+        bottom_h = bottom + height + 0.02 - 0.02
+        
 
-    rect_scatter = [left, bottom, width, height]
-    rect_histx = [left, bottom_h, width, 0.2]
-    rect_histy = [left_h, bottom, 0.15, height]
-    
-    axScatter = plt.axes(rect_scatter)
-    axHistx = plt.axes(rect_histx, sharex=axScatter)
-    axHisty = plt.axes(rect_histy, sharey=axScatter)
+        rect_scatter = [left, bottom, width, height]
+        rect_histx = [left, bottom_h, width, 0.2]
+        rect_histy = [left_h, bottom, 0.15, height]
+        
+        axScatter = plt.axes(rect_scatter)
+        axHistx = plt.axes(rect_histx, sharex=axScatter)
+        axHisty = plt.axes(rect_histy, sharey=axScatter)
+    else:
+        axScatter = plt.axes()
     
     if abs_value:
         axScatter.pcolormesh(power_scale, spec_scale, abs(wigner)) #change
@@ -2859,29 +2858,36 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
         axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], wigner[::downsample,::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
         axScatter.text(0.02, 0.98, r'$W_{max}$= %.2e' % (np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes)#fontsize=12,
             
-    axHistx.plot(power_scale,power)
-    axHistx.text(0.02, 0.95, r'E= %.2e J' % (W.energy()), horizontalalignment='left', verticalalignment='top', transform=axHistx.transAxes)#fontsize=12,
-    axHistx.set_ylabel('power [W]')
+    if plot_proj:
+        axHistx.plot(power_scale,power)
+        axHistx.text(0.02, 0.95, r'E= %.2e J' % (W.energy()), horizontalalignment='left', verticalalignment='top', transform=axHistx.transAxes)#fontsize=12,
+        axHistx.set_ylabel('power [W]')
 
-    axHisty.plot(spec,spec_scale)
-    axHisty.set_xlabel('spectrum [a.u.]')
-    
-    axScatter.axis('tight')
-    axScatter.set_xlabel(p_label_txt)
-    axScatter.set_ylabel(f_label_txt)
+        axHisty.plot(spec/spec.max(), spec_scale)
+        axHisty.set_xlabel('spectrum [a.u.]')
+        
+        axScatter.axis('tight')
+        axScatter.set_xlabel(p_label_txt)
+        axScatter.set_ylabel(f_label_txt)
 
-    axHistx.set_ylim(ymin=0)
-    axHisty.set_xlim(xmin=0)
+        axHistx.set_ylim(ymin=0)
+        axHisty.set_xlim(xmin=0)
 
-    for tl in axHistx.get_xticklabels():
-        tl.set_visible(False)
+        for tl in axHistx.get_xticklabels():
+            tl.set_visible(False)
 
-    for tl in axHisty.get_yticklabels():
-        tl.set_visible(False)
-
-    
-    axHistx.yaxis.major.locator.set_params(nbins=4)
-    axHisty.xaxis.major.locator.set_params(nbins=2)
+        for tl in axHisty.get_yticklabels():
+            tl.set_visible(False)
+        
+        axHistx.yaxis.major.locator.set_params(nbins=4)
+        axHisty.xaxis.major.locator.set_params(nbins=2)
+        
+        axHistx.set_xlim(x_lim[0], x_lim[1])
+        axHisty.set_ylim(y_lim[0], y_lim[1])
+    else:
+        axScatter.axis('tight')
+        axScatter.set_xlabel(p_label_txt)
+        axScatter.set_ylabel(f_label_txt)
     
     if autoscale == 1:
         autoscale = 1e-2
@@ -2904,8 +2910,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
     
     # axScatter.set_xlim(x_lim[0], x_lim[1])
     # axScatter.set_ylim(y_lim[0], y_lim[1])
-    axHistx.set_xlim(x_lim[0], x_lim[1])
-    axHisty.set_ylim(y_lim[0], y_lim[1])
+
     
     if savefig != False:
         if savefig == True:

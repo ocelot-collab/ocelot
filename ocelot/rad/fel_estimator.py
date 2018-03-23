@@ -9,8 +9,13 @@ from ocelot.cpbd.elements import *
 import numpy as np
 from ocelot.common.globals import *
 from copy import deepcopy
+import logging
+
+_logger = logging.getLogger('ocelot.fel_estimator')
 
 def beamlat2fel(beam, lat, smear_m=1e-6):
+    
+    _logger.info('estimating fel from beam and lat')
     
     beam_pk = beam[beam.idx_max()]
     
@@ -30,13 +35,16 @@ def beamlat2fel(beam, lat, smear_m=1e-6):
     beam_tmp = deepcopy(beam)
     beam_tmp.smear(smear_m)
     update_effective_beta(beam_tmp, lat)
+    beam_tmp.I[beam_tmp.I==0] = np.nan
     fel = beam2fel(beam_tmp, l_period, K_peak)
     
     return fel
 
 
 def parraylat2fel(parray, lat, step=1e-7):
-
+    
+    _logger.info('estimating fel from parray and lat')
+    
     beam = parray2beam(parray, step = 2 * step)
     
     return beamlat2fel(beam, lat, smear_m = step)

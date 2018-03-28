@@ -1,7 +1,6 @@
 __author__ = 'Sergey Tomin'
 
 from numpy.random import normal
-from numpy import abs, append
 import copy
 from ocelot.cpbd.elements import *
 from ocelot.cpbd.magnetic_lattice import *
@@ -91,9 +90,9 @@ def errors_seed(lattice, er_list):
         #elem_dy = elem.dy
         #elem_dtilt = elem.dtilt
         misal[elem.id] = {"dx": elem.dx, "dy": elem.dy, "dtilt":elem.dtilt}
-        dx = append(dx, elem.dx)
-        dy = append(dy, elem.dy)
-        dtilt = append(dtilt, elem.dtilt)
+        dx = np.append(dx, elem.dx)
+        dy = np.append(dy, elem.dy)
+        dtilt = np.append(dtilt, elem.dtilt)
         if elem.l == 0:
             the_same = 1
         else:

@@ -1,6 +1,6 @@
 from ocelot.cpbd.beam import save_particle_array, load_particle_array
 import numpy as np
-np.sin
+
 
 class PhysProc:
     """

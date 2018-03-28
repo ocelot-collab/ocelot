@@ -1,5 +1,6 @@
-
-import numpy as np
+"""
+S.Tomin and I.Zagorodnov, 2017, DESY/XFEL
+"""
 from ocelot.common.globals import *
 try:
     import numexpr as ne

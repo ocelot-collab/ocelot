@@ -4,8 +4,6 @@ module contains lat2input function which creates python input string
 (ocelot lattice) for a lattice object
 author sergey.tomin
 """
-
-from numpy import around, pi
 from ocelot.cpbd.elements import *
 
 
@@ -14,7 +12,7 @@ def find_drifts(lat):
     drifts = []
     for elem in lat.sequence:
         if elem.__class__ == Drift:
-            elem_l = around(elem.l, decimals=6)
+            elem_l = np.around(elem.l, decimals=6)
             if elem_l not in drift_lengs:
                 drifts.append(elem)
                 drift_lengs.append(elem_l)

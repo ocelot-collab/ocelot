@@ -202,7 +202,8 @@ class Wake(PhysProc):
         if R != 0:
             W = W-bunch*R
         if L != 0:
-            W = W-d1_bunch*L*c
+            #W = W - d1_bunch*L*c
+            W = W + d1_bunch*L*c
         if Cinv != 0:
           int_bunch = Int1(x, bunch)
           W = W - int_bunch*Cinv/c

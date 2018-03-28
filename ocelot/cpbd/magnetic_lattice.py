@@ -1,7 +1,6 @@
 from ocelot.cpbd.optics import MethodTM
 from ocelot.cpbd.elements import *
 from ocelot.common.logging import *
-import numpy as np
 from copy import deepcopy
 logger = Logger()
 
@@ -68,7 +67,7 @@ def shrinker(lat, remaining_types, remaining_elems=[], init_energy=0.):
     """
 
     :param lat: MagneticLattice
-    :param remaining_types: the type of the elements which needed to be untoched
+    :param remaining_types: list, the type of the elements which needed to be untoched
                             others will be "compress" to Matrix element
                             e.g. [Monitor, Quadrupole, Bend, Hcor]
     :param init_energy: initial energy
@@ -280,23 +279,21 @@ class MagneticLattice:
         indx_elem = np.where([i.__class__ == element for i in self.sequence])[0]
         return indx_elem
 
+
 def merge_drifts(cell):
     """
     Merge neighboring Drifts in one Drift
 
-    input: cell - list of element
-    return: new_cell - new list of elements
+    :param cell: list of element
+    :return: new list of elements
     """
-
     new_cell = []
     L = 0.
     for elem in cell:
 
         if elem.__class__ in [Drift, UnknownElement]:
             L += elem.l
-            #print(L)
         else:
-            #print("new")
             if L != 0:
                 new_elem = Drift(l=L)
                 new_cell.append(new_elem)
@@ -306,15 +303,19 @@ def merge_drifts(cell):
     print("Merge drift -> Element numbers: before -> after: ", len(cell), "->", len(new_cell))
     return new_cell
 
-def exclude_zero_length_element(cell, elem_type=[UnknownElement, Marker]):
+
+def exclude_zero_length_element(cell, elem_type=[UnknownElement, Marker], except_elems=[]):
     """
     Exclude zero length elements some types in elem_type
-    input: cell
-    return: new cell
+
+    :param cell: list, sequence of elements
+    :param elem_type: list, types of Elements which should be excluded
+    :param except_elems: list, except elements
+    :return: list, new sequence of elements
     """
     new_cell = []
     for elem in cell:
-        if elem.__class__ in elem_type and elem.l == 0:
+        if elem.__class__ in elem_type and elem.l == 0 and elem not in except_elems:
             continue
         new_cell.append(elem)
     print("Exclude elements -> Element numbers: before -> after: ", len(cell), "->", len(new_cell))

@@ -2,7 +2,6 @@
 @ authors Martin Dohlus DESY, 2015, Sergey Tomin XFEL, 2016
 """
 
-import numpy as np
 from scipy import interpolate
 from ocelot.common.globals import *
 from ocelot.common import math_op

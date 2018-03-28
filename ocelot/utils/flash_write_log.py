@@ -64,7 +64,7 @@ while True:
     #print time()
     values = [mi.get_value(name) for name in names]
 
-    values.append( mi.get_sase(detector = 'gmd_fl1_slow'))
+    values.append( mi.get_sase(detector='gmd_fl1_slow'))
     pos = mi.get_sase_pos()
     values.append(pos[0][0])
     values.append(pos[0][1])

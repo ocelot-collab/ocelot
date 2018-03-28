@@ -2,7 +2,6 @@ __author__ = 'Sergey Tomin'
 
 import numpy as np
 from scipy.integrate import odeint
-from numpy import cos, sin, sqrt, sqrt, zeros, eye, tan, dot, empty_like, array, transpose, linspace
 from ocelot.common.globals import m_e_GeV, m_e_eV, speed_of_light
 from copy import copy
 from numpy.linalg import norm
@@ -104,13 +103,13 @@ def t_nnn(L, h, k1, k2, energy=0):
     ky2 = -k1
     kx4 = kx2*kx2
     ky4 = ky2*ky2
-    kx = sqrt(kx2 + 0.j)
-    ky = sqrt(ky2 + 0.j)
-    cx = cos(kx*L).real
-    sx = (sin(kx*L)/kx).real if kx != 0 else L
-    cy = cos(ky*L).real
+    kx = np.sqrt(kx2 + 0.j)
+    ky = np.sqrt(ky2 + 0.j)
+    cx = np.cos(kx*L).real
+    sx = (np.sin(kx*L)/kx).real if kx != 0 else L
+    cy = np.cos(ky*L).real
 
-    sy = (sin(ky*L)/ky).real if ky != 0 else L
+    sy = (np.sin(ky*L)/ky).real if ky != 0 else L
 
     sx2 = sx*sx
     sy2 = sy*sy
@@ -312,7 +311,7 @@ def t_nnn(L, h, k1, k2, energy=0):
     cy_1 = -ky2*sy
     sy_1 = cy
     dx_1 = h*sx
-    T = zeros((6, 6, 6))
+    T = np.zeros((6, 6, 6))
     T[0, 0, 0] = t111
     T[0, 0, 1] = t112 + h*sx
     T[0, 0, 5] = t116
@@ -487,18 +486,18 @@ def t_nnn(L, h, k1, k2, energy=0):
 
 def fringe_ent(h, k1, e, h_pole=0., gap=0., fint=0.):
 
-    sec_e = 1./cos(e)
+    sec_e = 1./np.cos(e)
     sec_e2 = sec_e*sec_e
     sec_e3 = sec_e2*sec_e
-    tan_e = tan(e)
+    tan_e = np.tan(e)
     tan_e2 = tan_e*tan_e
-    phi = fint*h*gap*sec_e*(1. + sin(e)**2)
-    R = eye(6)
+    phi = fint*h*gap*sec_e*(1. + np.sin(e)**2)
+    R = np.eye(6)
     R[1,0] = h*tan_e
-    R[3,2] = -h*tan(e - phi)
+    R[3,2] = -h*np.tan(e - phi)
     #print R
 
-    T = zeros((6,6,6))
+    T = np.zeros((6,6,6))
     T[0, 0, 0] = -h/2.*tan_e2
     T[0, 2, 2] = h/2.*sec_e2
     T[1, 0, 0] = h/2.*h_pole*sec_e3 + k1*tan_e
@@ -510,7 +509,7 @@ def fringe_ent(h, k1, e, h_pole=0., gap=0., fint=0.):
     T[3, 0, 2] = -h*h_pole*sec_e3 - 2*k1*tan_e
     T[3, 0, 3] = -h*tan_e2
     T[3, 1, 2] = -h*sec_e2
-    T[3, 2, 5] = h*tan_e - h*phi/cos(e - phi)**2
+    T[3, 2, 5] = h*tan_e - h*phi/np.cos(e - phi)**2
     # MAD
     if __MAD__:
         T[1, 0, 5] = 0
@@ -521,19 +520,19 @@ def fringe_ent(h, k1, e, h_pole=0., gap=0., fint=0.):
 
 def fringe_ext(h, k1, e, h_pole=0., gap=0., fint=0.):
 
-    sec_e = 1./cos(e)
+    sec_e = 1./np.cos(e)
     sec_e2 = sec_e*sec_e
     sec_e3 = sec_e2*sec_e
-    tan_e = tan(e)
+    tan_e = np.tan(e)
     tan_e2 = tan_e*tan_e
-    phi = fint*h*gap*sec_e*(1. + sin(e)**2)
-    R = eye(6)
+    phi = fint*h*gap*sec_e*(1. + np.sin(e)**2)
+    R = np.eye(6)
 
     R[1,0] = h*tan_e
-    R[3,2] = -h*tan(e - phi)
+    R[3,2] = -h*np.tan(e - phi)
     #print R
 
-    T = zeros((6,6,6))
+    T = np.zeros((6,6,6))
     T[0, 0, 0] = h/2.*tan_e2
     T[0, 2, 2] = -h/2.*sec_e2
     T[1, 0, 0] = h/2.*h_pole*sec_e3 - (-k1 + h*h/2.*tan_e2)*tan_e
@@ -666,8 +665,8 @@ def sym_map(z, X, h, k1, k2, energy=0.):
     beta = 1.
     if gamma != 0.:
         g_inv = 1./gamma
-        beta = sqrt(1. - g_inv*g_inv)
-    z_array = linspace(0., z, num=n)
+        beta = np.sqrt(1. - g_inv*g_inv)
+    z_array = np.linspace(0., z, num=n)
     step = z_array[1] - z_array[0]
 
     x =     X[0::6]
@@ -920,7 +919,7 @@ def scipy_track_in_field(y0, l, N, energy, mag_field):# y0, l, N, energy, mag_fi
         mx = k*(by*Bz - By*(1.+bx2) + bxy*Bx)
         my = -k*(bx*Bz - Bx*(1.+by2) + bxy*By)
         y = np.append(bx, (mx, by, my))
-        return array(y) #[y[1],mx, y[3], my]
+        return np.array(y) #[y[1],mx, y[3], my]
 
     n = len(y0)/6
     x = y0[0::6]
@@ -970,7 +969,7 @@ def track_und_weave(y0, z, kz, kx ,Kx, energy):
     m0 = m_e_eV
     B0 = Kx*m0*kz/c
     #y = array(y0)
-    ky = sqrt(kz*kz - kx*kx)
+    ky = np.sqrt(kz*kz - kx*kx)
     #print "B0 = ", B0
     #print "rho = ", rho
     #print "kz = ", kz
@@ -980,10 +979,10 @@ def track_und_weave(y0, z, kz, kx ,Kx, energy):
     N = len(z)
     #Ax =  1/kz * np.cos(kx*y0[0])*np.cosh(ky*y0[2])*np.sin(kz*z[0])
     #Ay =  kx/(ky*kz) * np.sin(kx*y0[0])*np.sinh(ky*y0[2])*np.sin(kz*z[0])
-    q = array([y0[0],y0[1] ,y0[2],y0[3], y0[4], y0[5], kx, ky, kz, h, N, B0, gamma*(1+y0[5])])
+    q = np.array([y0[0],y0[1] ,y0[2],y0[3], y0[4], y0[5], kx, ky, kz, h, N, B0, gamma*(1+y0[5])])
     #print N
 
-    u = zeros(N*6)
+    u = np.zeros(N*6)
     support_code = """
     extern "C" {
     void fields(double x, double y, double z, double kx, double ky, double kz, double B0, double *Bx, double *By, double *Bz)
@@ -1142,13 +1141,13 @@ def track_und_weave_openmp(u, l, N, kz, kx ,Kx, energy):
     m0 = m_e_eV
     B0 = Kx*m0*kz/c
 
-    ky = sqrt(kz*kz - kx*kx)
-    z = linspace(0, l, num=N)
+    ky = np.sqrt(kz*kz - kx*kx)
+    z = np.linspace(0, l, num=N)
     h = z[1]-z[0]
     N = len(z)
 
     nparticles = len(u)/6
-    q = array([ kx, ky, kz, h, N, B0, gamma, nparticles])
+    q = np.array([ kx, ky, kz, h, N, B0, gamma, nparticles])
     code = """
     double charge = 1;
     double mass = 1; //in electron mass

@@ -1,6 +1,6 @@
 ___author__ = 'Sergey Tomin'
 
-from numpy import sqrt
+import numpy as np
 
 # alternative way to get constants
 #import scipy.constants as const
@@ -26,7 +26,7 @@ hr_eV_s = h_eV_s/2./pi
 ro_e = q_e**2/(4*pi*epsilon_0*m_e_kg*speed_of_light**2) # classical electron radius (2.8179403267e-15 m)
 
 Cgamma = 4.*pi/3.*ro_e/m_e_MeV**3
-Cq = 55./(32.*sqrt(3)*2*pi)*h_eV_s*speed_of_light/m_e_eV
+Cq = 55./(32.*np.sqrt(3)*2*pi)*h_eV_s*speed_of_light/m_e_eV
 
 Z0 = 1./(speed_of_light*epsilon_0)  # Ohm - impedance of free space
 

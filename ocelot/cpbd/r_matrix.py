@@ -1,7 +1,6 @@
 __author__ = 'Sergey Tomin'
 
 import logging
-import numpy as np
 from ocelot.common.globals import m_e_GeV, speed_of_light
 from ocelot.cpbd.elements import *
 
@@ -130,7 +129,7 @@ def create_r_matrix(element):
             de = V * np.cos(phi)
             # pure pi-standing-wave case
             eta = 1.0
-            #gamma = (E + 0.5 * de) / m_e_GeV
+            # gamma = (E + 0.5 * de) / m_e_GeV
             Ei = E / m_e_GeV
             Ef = (E + de) / m_e_GeV
             Ep = (Ef - Ei) / z  # energy derivative

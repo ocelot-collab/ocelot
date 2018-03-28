@@ -35,7 +35,7 @@ def integ_beta2(x, y):
         b2 += h*(d*d + h*(c*d + h*(1./3.* (c*c + 2*b*d) + h*(0.5*(b*c + a*d) + h*(0.2*(b*b + 2*a*c) + h*(1./3.*a*b + (a*a*h)/7.))))))
         beta2.append( b2)
         #print beta2
-    return array(beta2)
+    return np.array(beta2)
 
 def x2xgaus(X):
     """
@@ -227,7 +227,7 @@ def track4rad(beam, lat, energy_loss=False, quantum_diff=False, accuracy=1):
                     mag_field = lambda x, y, z: und_field(x, y, z, elem.lperiod, elem.Kx)
             N = int((mag_length*1500 + 100)*accuracy)
 
-            u = rk_track_in_field(array([p.x, p.px, p.y, p.py, 0, 0]), mag_length, N, energy, mag_field)
+            u = rk_track_in_field(np.array([p.x, p.px, p.y, p.py, 0, 0]), mag_length, N, energy, mag_field)
             p.x = u[-9, 0]
             p.px =u[-8, 0]
             p.y = u[-7, 0]

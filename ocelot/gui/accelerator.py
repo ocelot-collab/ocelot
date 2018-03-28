@@ -790,21 +790,19 @@ def plot_resonance_diag(ax, Qx, Qy, order):
             lw = 0.3
         #print array(X[i])+Qx
         #print array([i])+Qy
-        plt.plot(array(X[i])+Qx, array(Y[i])+Qy, color, lw = lw, picker=True)
+        plt.plot(np.array(X[i])+Qx, np.array(Y[i])+Qy, color, lw = lw, picker=True)
         plt.xlim(Qx,Qx+1)
         plt.ylim(Qy,Qy+1)
         #plt.xticks(x, labels, rotation='vertical')
 
 
 def show_da(out_da, x_array, y_array, title=""):
-    from matplotlib import pyplot as plt
-    from numpy import linspace, max, min
     #print "time execution = ", time() - start , " s"
     nx = len(x_array)
     ny = len(y_array)
     #print(nx, ny, len(out_da))
     out_da = out_da.reshape(ny,nx)
-    xmin, xmax, ymin, ymax = min(x_array), max(x_array), min(y_array), max(y_array)
+    xmin, xmax, ymin, ymax = np.min(x_array), np.max(x_array), np.min(y_array), np.max(y_array)
     #plt.subplot(111, axisbg='darkslategray')
     extent = xmin, xmax, ymin, ymax
     #print extent
@@ -829,7 +827,7 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones = None ):
 
     nx = len(x_array)
     ny = len(y_array)
-    t= linspace(0,3.14, num = 100)
+    t= np.linspace(0,3.14, num = 100)
     contour_da = contour_da.reshape(ny,nx)
     mux = mux.reshape(ny,nx)
     muy = muy.reshape(ny,nx)
@@ -847,10 +845,10 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones = None ):
     if zones != None:
         x_zone = zones[0]
         y_zone = zones[1]
-        plt.plot(x_zone*cos(t), y_zone*sin(t), "g", lw = 2)
-        plt.plot(2*x_zone*cos(t), 2*y_zone*sin(t), "b", lw = 2)
-        plt.plot(3*x_zone*cos(t), 3*y_zone*sin(t), "r", lw = 2)
-        plt.plot(4*x_zone*cos(t), 4*y_zone*sin(t), "y", lw = 2)
+        plt.plot(x_zone*np.cos(t), y_zone*np.sin(t), "g", lw = 2)
+        plt.plot(2*x_zone*np.cos(t), 2*y_zone*np.sin(t), "b", lw = 2)
+        plt.plot(3*x_zone*np.cos(t), 3*y_zone*np.sin(t), "r", lw = 2)
+        plt.plot(4*x_zone*np.cos(t), 4*y_zone*np.sin(t), "y", lw = 2)
     plt.grid(True)
     #plt.figure(figsize=(10, 7))
     plt.xlabel("X, m")
@@ -863,10 +861,10 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones = None ):
     if zones != None:
         x_zone = zones[0]
         y_zone = zones[1]
-        plt.plot(x_zone*cos(t), y_zone*sin(t), "g", lw = 2)
-        plt.plot(2*x_zone*cos(t), 2*y_zone*sin(t), "b", lw = 2)
-        plt.plot(3*x_zone*cos(t), 3*y_zone*sin(t), "r", lw = 2)
-        plt.plot(4*x_zone*cos(t), 4*y_zone*sin(t), "y", lw = 2)
+        plt.plot(x_zone*np.cos(t), y_zone*np.sin(t), "g", lw = 2)
+        plt.plot(2*x_zone*np.cos(t), 2*y_zone*np.sin(t), "b", lw = 2)
+        plt.plot(3*x_zone*np.cos(t), 3*y_zone*np.sin(t), "r", lw = 2)
+        plt.plot(4*x_zone*np.cos(t), 4*y_zone*np.sin(t), "y", lw = 2)
     #x = np.linspace(-, 0.01, 0.0001)
     #plt.plot()
     cb = plt.colorbar(cmap=my_cmap)
@@ -877,9 +875,54 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones = None ):
     cb.set_label('Qy')
     plt.show()
 
+
+def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinear", xlabel=None, ylabel=None, nfig=50,
+                 title=None, figsize=None, grid=True, show_xtick_label=True):
+    """
+    Function shows density
+
+    :param x: np.array
+    :param y: np.array
+    :param ax: None, subplot axis, if None creates standalone plot.
+    :param nbins_x: 250, number of bins for 2D hist. in horz. plane
+    :param nbins_y: 250, number of bins for 2D hist. in vertical plane
+    :param interpolation: "bilinear". Acceptable values are 'none’, ‘nearest’, ‘bilinear’, ‘bicubic’, ‘spline16’,
+                        ‘spline36’, ‘hanning’, ‘hamming’, ‘hermite’, ‘kaiser’, ‘quadric’, ‘catrom’, ‘gaussian’, ‘bessel’
+    :param xlabel: None, otherwise "string"
+    :param ylabel: None, otherwise "string"
+    :param nfig: number of the figure
+    :param title: title of the figure
+    :param figsize: None or e.g. (8, 6)
+    :param grid: True, show grid
+    :param show_xtick_label: True
+    :return:
+    """
+
+    if ax == None:
+        fig = plt.figure(nfig, figsize=figsize)
+        ax = plt.subplot(111)
+    if title != None: plt.title(title)
+    my_rainbow = deepcopy(plt.get_cmap('rainbow'))
+    my_rainbow.set_under('w')
+
+    H, xedges, yedges = np.histogram2d(x, y, bins=(nbins_x, nbins_y))
+    H = H.T
+    vmin = np.min(H) + (np.max(H) - np.min(H)) * 0.0001
+
+    ax.imshow(H, interpolation=interpolation, aspect='auto', origin='low',
+               extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], vmin=vmin, cmap=my_rainbow)
+    if xlabel != None: ax.set_xlabel(xlabel)
+    if ylabel != None: ax.set_ylabel(ylabel)
+    ax.grid(grid)
+
+    plt.setp(ax.get_xticklabels(), visible=show_xtick_label)
+
+
 from ocelot.cpbd.beam import global_slice_analysis_extended
 
-def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpolation="bilinear", inverse_tau=False, nfig=40, title=None, figsize=None):
+
+def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpolation="bilinear", inverse_tau=False,
+                nfig=40, title=None, figsize=None, grid=True):
     """
     Shows e-beam slice parameters (current, emittances, energy spread)
     and beam distributions (dE/(p0 c), X, Y) against long. coordinate (S)
@@ -895,6 +938,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpo
     :param nfig: number of the figure
     :param title: None or string - title of the figure
     :param figsize: None or e.g. (8, 6)
+    :param grid: True, show grid
     :return:
     """
     p_array_copy = deepcopy(p_array)
@@ -931,6 +975,99 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpo
     plt.ylabel("I, A")
     plt.grid(True)
 
+    ax_ys = plt.subplot(326)
+
+    show_density(p_array_copy.tau() * 1e3, p_array_copy.y() * 1e3, ax=ax_ys, nbins_x=nbins_x, nbins_y=nbins_y, interpolation=interpolation, xlabel='s, mm', ylabel='y, mm', nfig=50,
+                 title="Vertical Distribution", figsize=None, grid=grid)
+
+    ax_xs = plt.subplot(324, sharex=ax_ys)
+
+    show_density(p_array_copy.tau() * 1e3, p_array_copy.x() * 1e3, ax=ax_xs, nbins_x=nbins_x, nbins_y=nbins_y,
+                 interpolation=interpolation, ylabel='x, mm',
+                 title="Horiz. Distribution", grid=grid, show_xtick_label=False)
+
+    ax_ps = plt.subplot(322, sharex=ax_ys)
+
+    show_density(p_array_copy.tau() * 1e3, p_array_copy.p() * 1e2, ax=ax_ps, nbins_x=nbins_x, nbins_y=nbins_y,
+                 interpolation=interpolation, ylabel='dE/pc, %',
+                 title="Energy Distribution", grid=grid, show_xtick_label=False)
+
+
+def compare_beams(p_array_1, p_array_2, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpolation="bilinear",
+                  inverse_tau=False, nfig=40, title=None, figsize=None, legend_beam1=None, legend_beam2=None):
+    """
+    Shows e-beam slice parameters (current, emittances, energy spread)
+    and beam distributions (dE/(p0 c), X, Y) against long. coordinate (S)
+    Note: beam head is on the left side
+
+    :param p_array_1: ParticleArray
+    :param p_array_2: ParticleArray
+    :param nparts_in_slice: number of particles per slice
+    :param nbins_x: number of bins for 2D hist. in horz. plane
+    :param nbins_y: number of bins for 2D hist. in vertical plane
+    :param interpolation: "bilinear", and acceptable values are 'none’, ‘nearest’, ‘bilinear’, ‘bicubic’, ‘spline16’,
+                        ‘spline36’, ‘hanning’, ‘hamming’, ‘hermite’, ‘kaiser’, ‘quadric’, ‘catrom’, ‘gaussian’, ‘bessel’
+    :param inverse_tau: False, inverse tau - head will be on the right side of figure
+    :param nfig: number of the figure
+    :param title: None or string - title of the figure
+    :param figsize: None or e.g. (8, 6)
+    :param legend_beam1: None, legend for beam N1
+    :param legend_beam2: None, legend for beam N1
+    :return:
+    """
+    if legend_beam1 == None:
+        legend_beam1 = "beam1"
+    if legend_beam2 == None:
+        legend_beam2 = "beam2"
+    p_array_copy1 = deepcopy(p_array_1)
+    p_array_copy2 = deepcopy(p_array_2)
+    if inverse_tau:
+        p_array_copy1.tau()[:] *= -1
+        p_array_copy2.tau()[:] *= -1
+
+    slice_params1 = global_slice_analysis_extended(p_array_copy1, nparts_in_slice, 0.01, 2, 2)
+    slice_params2 = global_slice_analysis_extended(p_array_copy2, nparts_in_slice, 0.01, 2, 2)
+    # s, I, ex, ey ,me, se, gamma0, emitxn, emityn]
+
+    fig = plt.figure(nfig, figsize=figsize)
+    if title != None:
+        fig.suptitle(title)
+    ax_sp = plt.subplot(325)
+    plt.title("Energy Spread")
+    plt.plot(slice_params1[0] * 1e3, slice_params1[5] * 1e-3, "b", label=r"$\sigma_E$: " + legend_beam1)
+    plt.plot(slice_params2[0] * 1e3, slice_params2[5] * 1e-3, "r", label=r"$\sigma_E$: " + legend_beam2)
+    plt.legend()
+    plt.xlabel("s, mm")
+    plt.ylabel("dE, keV")
+    plt.grid(True)
+
+    ax_em = plt.subplot(323, sharex=ax_sp)
+    plt.title("Hor. Emittances")
+    plt.plot(slice_params1[0] * 1e3, slice_params1[2], "r", label=r"$\varepsilon_x$: " + legend_beam1)
+    plt.plot(slice_params2[0] * 1e3, slice_params2[2], "b", label=r"$\varepsilon_x$: " + legend_beam2)
+    plt.legend()
+    plt.setp(ax_em.get_xticklabels(), visible=False)
+    plt.ylabel("emit, mm*mrad")
+    plt.grid(True)
+
+    ax_em = plt.subplot(324, sharex=ax_sp)
+    plt.title("Ver. Emittances")
+    plt.plot(slice_params1[0] * 1e3, slice_params1[3], "r", label=r"$\varepsilon_x$: " + legend_beam1)
+    plt.plot(slice_params2[0] * 1e3, slice_params2[3], "b", label=r"$\varepsilon_x$: " + legend_beam2)
+    plt.legend()
+    plt.setp(ax_em.get_xticklabels(), visible=False)
+    plt.ylabel("emit, mm*mrad")
+    plt.grid(True)
+
+    ax_c = plt.subplot(321, sharex=ax_sp)
+    plt.title("Current")
+    plt.plot(slice_params1[0] * 1e3, slice_params1[1], "r", label="I: " + legend_beam1)
+    plt.plot(slice_params2[0] * 1e3, slice_params2[1], "b", label="I: " + legend_beam2)
+    plt.legend()
+    plt.setp(ax_c.get_xticklabels(), visible=False)
+    plt.ylabel("I, A")
+    plt.grid(True)
+
 
     my_rainbow = deepcopy(plt.get_cmap('rainbow'))
     my_rainbow.set_under('w')
@@ -938,7 +1075,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpo
     ax_ys = plt.subplot(326)
     plt.title("Vertical Distribution")
 
-    H, xedges, yedges = np.histogram2d(p_array_copy.tau() * 1e3, p_array_copy.y() * 1e3, bins=(nbins_x, nbins_y))
+    H, xedges, yedges = np.histogram2d(p_array_copy1.tau() * 1e3, p_array_copy1.y() * 1e3, bins=(nbins_x, nbins_y))
     H = H.T
     vmin = np.min(H) + (np.max(H) - np.min(H)) * 0.0001
     ax_ys.imshow(H, interpolation=interpolation, aspect='auto', origin='low',
@@ -950,56 +1087,32 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpo
     ax_ys.set_ylabel('y, mm')
 
 
-    ax_xs = plt.subplot(324, sharex=ax_ys)
-    plt.title("Horiz. Distribution")
-    H, xedges, yedges = np.histogram2d(p_array_copy.tau() * 1e3, p_array_copy.x() * 1e3, bins=(nbins_x, nbins_y))
-    H = H.T
-    vmin = np.min(H) + (np.max(H) - np.min(H)) * 0.0001
-    ax_xs.imshow(H, interpolation=interpolation, aspect='auto', origin='low',
-               extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], vmin=vmin, cmap=my_rainbow)
+    #ax_xs = plt.subplot(324, sharex=ax_ys)
+    #plt.title("Horiz. Distribution")
+    #H, xedges, yedges = np.histogram2d(p_array_copy.tau() * 1e3, p_array_copy.x() * 1e3, bins=(nbins_x, nbins_y))
+    #H = H.T
+    #vmin = np.min(H) + (np.max(H) - np.min(H)) * 0.0001
+    #ax_xs.imshow(H, interpolation=interpolation, aspect='auto', origin='low',
+    #           extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], vmin=vmin, cmap=my_rainbow)
+#
+    #ax_xs.set_ylabel('x, mm')
+    #plt.setp(ax_xs.get_xticklabels(), visible=False)
 
-    ax_xs.set_ylabel('x, mm')
-    plt.setp(ax_xs.get_xticklabels(), visible=False)
-
-    ax_ps = plt.subplot(322, sharex=ax_ys)
+    ax_e = plt.subplot(322, sharex=ax_sp)
     plt.title("Energy Distribution")
-    H, xedges, yedges = np.histogram2d(p_array_copy.tau() * 1e3, p_array_copy.p()*100, bins=(nbins_x, nbins_y))
-    H = H.T
-    vmin = np.min(H) + (np.max(H) - np.min(H)) * 0.0001
-    ax_ps.imshow(H, interpolation=interpolation, aspect='auto', origin='low',
-               extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], vmin=vmin, cmap=my_rainbow)
-    ax_ps.set_ylabel('dE/pc, %')
-    plt.setp(ax_ps.get_xticklabels(), visible=False)
-
-
-def show_density(x, y, nbins_x=250, nbins_y=250, interpolation="bilinear", xlabel=None, ylabel=None, nfig=50, title=None, figsize=None):
-    """
-    Function shows density
-
-    :param x: np.array
-    :param y: np.array
-    :param nbins_x: 250, number of bins for 2D hist. in horz. plane
-    :param nbins_y: 250, number of bins for 2D hist. in vertical plane
-    :param interpolation: "bilinear". Acceptable values are 'none’, ‘nearest’, ‘bilinear’, ‘bicubic’, ‘spline16’,
-                        ‘spline36’, ‘hanning’, ‘hamming’, ‘hermite’, ‘kaiser’, ‘quadric’, ‘catrom’, ‘gaussian’, ‘bessel’
-    :param xlabel: None, otherwise "string"
-    :param ylabel: None, otherwise "string"
-    :param nfig: number of the figure
-    :param title: title of the figure
-    :param figsize: None or e.g. (8, 6)
-    :return:
-    """
-    plt.figure(nfig, figsize=figsize)
-    if title != None: plt.title(title)
-    my_rainbow = deepcopy(plt.get_cmap('rainbow'))
-    my_rainbow.set_under('w')
-
-    H, xedges, yedges = np.histogram2d(x, y, bins=(nbins_x, nbins_y))
-    H = H.T
-    vmin = np.min(H) + (np.max(H) - np.min(H)) * 0.0001
-
-    plt.imshow(H, interpolation=interpolation, aspect='auto', origin='low',
-               extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], vmin=vmin, cmap=my_rainbow)
-    if xlabel != None: plt.xlabel(xlabel)
-    if ylabel != None: plt.ylabel(ylabel)
+    plt.plot(slice_params1[0] * 1e3, slice_params1[4], "r", label=r"$\Delta_E/E$: " + legend_beam1)
+    plt.plot(slice_params2[0] * 1e3, slice_params2[4], "b", label=r"$\Delta_E/E$: " + legend_beam2)
+    plt.legend()
+    plt.setp(ax_e.get_xticklabels(), visible=False)
+    plt.ylabel("dE/E")
     plt.grid(True)
+
+    #ax_ps = plt.subplot(322, sharex=ax_ys)
+    #plt.title("Energy Distribution")
+    #H, xedges, yedges = np.histogram2d(p_array_copy1.tau() * 1e3, p_array_copy1.p()*100, bins=(nbins_x, nbins_y))
+    #H = H.T
+    #vmin = np.min(H) + (np.max(H) - np.min(H)) * 0.0001
+    #ax_ps.imshow(H, interpolation=interpolation, aspect='auto', origin='low',
+    #           extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], vmin=vmin, cmap=my_rainbow)
+    #ax_ps.set_ylabel('dE/pc, %')
+    #plt.setp(ax_ps.get_xticklabels(), visible=False)

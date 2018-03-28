@@ -2,7 +2,6 @@
 definition of particles, beams and trajectories
 '''
 import numpy as np
-from numpy import sqrt, cos, sin, std, mean
 from ocelot.common.globals import *
 from ocelot.common.math_op import *
 # from ocelot.common.math_op import *
@@ -343,7 +342,7 @@ class BeamArray(Beam):
             if attr is 's':
                 continue
             val = getattr(self,attr)
-            val = savgol_filter(val,sn,2,mode='nearest')
+            val = savgol_filter(val, sn, 2, mode='nearest')
         #    val = convolve(val,spike,mode='same')
             setattr(self,attr,val)
 
@@ -611,15 +610,15 @@ def gauss_from_twiss(emit, beta, alpha):
     phi = 2*pi * np.random.rand()
     u = np.random.rand()
     a = np.sqrt(-2*np.log( (1-u)) * emit)
-    x = a * np.sqrt(beta) * cos(phi)
-    xp = -a / np.sqrt(beta) * ( sin(phi) + alpha * cos(phi) )
+    x = a * np.sqrt(beta) * np.cos(phi)
+    xp = -a / np.sqrt(beta) * ( np.sin(phi) + alpha * np.cos(phi) )
     return (x, xp)
 
 def waterbag_from_twiss(emit, beta, alpha):
     phi = 2*pi * np.random.rand()
     a = np.sqrt(emit) * np.random.rand()
-    x = a * np.sqrt(beta) * cos(phi)
-    xp = -a / np.sqrt(beta) * ( sin(phi) + alpha * cos(phi) )
+    x = a * np.sqrt(beta) * np.cos(phi)
+    xp = -a / np.sqrt(beta) * ( np.sin(phi) + alpha * np.cos(phi) )
     return (x, xp)
 
 def ellipse_from_twiss(emit, beta, alpha):
@@ -627,8 +626,8 @@ def ellipse_from_twiss(emit, beta, alpha):
     #u = np.random.rand()
     #a = np.sqrt(-2*np.log( (1-u)) * emit)
     a = np.sqrt(emit)
-    x = a * np.sqrt(beta) * cos(phi)
-    xp = -a / np.sqrt(beta) * ( sin(phi) + alpha * cos(phi) )
+    x = a * np.sqrt(beta) * np.cos(phi)
+    xp = -a / np.sqrt(beta) * ( np.sin(phi) + alpha * np.cos(phi) )
     return (x, xp)
 
 
@@ -677,8 +676,8 @@ def m_from_twiss(Tw1, Tw2):
     psi2 = Tw2[2]
 
     psi = psi2-psi1
-    cosp = cos(psi)
-    sinp = sin(psi)
+    cosp = np.cos(psi)
+    sinp = np.sin(psi)
     M = np.zeros((2, 2))
     M[0, 0] = np.sqrt(b2/b1)*(cosp+a1*sinp)
     M[0, 1] = np.sqrt(b2*b1)*sinp

@@ -3,7 +3,6 @@ __author__ = 'Sergey Tomin'
 from ocelot.cpbd.optics import *
 from ocelot.cpbd.beam import *
 #from mpi4py import MPI
-from numpy import delete, array, linspace, sqrt
 from ocelot.cpbd.errors import *
 from ocelot.cpbd.elements import *
 from time import time
@@ -91,7 +90,7 @@ def nearest_particle(track_list, xi,yi):
     for pxy in track_list:
         if pxy.y == yi:
             x_array_i.append(pxy.x)
-    xi = find_nearest(array(x_array_i), xi)
+    xi = find_nearest(np.array(x_array_i), xi)
 
     #print "inside nearest_particle, xi, yi : ", xi, yi
     for pxy in track_list:
@@ -242,7 +241,7 @@ def ellipse_track_list(beam, n_t_sigma = 3, num = 1000, type = "contour"):
     #sigma_x = sqrt((sigma_e*tws0.Dx)**2 + emit*tws0.beta_x)
     #sigma_xp = sqrt((sigma_e*tws0.Dxp)**2 + emit*tws0.gamma_x)
     if type == "contour":
-        t = linspace(0,2*pi, num)
+        t = np.linspace(0,2*pi, num)
         x = n_t_sigma*beam.sigma_x*np.cos(t)
         y = n_t_sigma*beam.sigma_xp*np.sin(t)
     else:
@@ -278,7 +277,7 @@ def track_nturns(lat, nturns, track_list, nsuperperiods=1, save_track=True, prin
                 tm.apply(p_array)
             p_indx = p_array.rm_tails(xlim, ylim, px_lim, py_lim)
 
-            track_list = delete(track_list, p_indx)
+            track_list = np.delete(track_list, p_indx)
         for n, pxy in enumerate(track_list):
             pxy.turn = i
             if save_track:
@@ -391,8 +390,8 @@ def fma(lat, nturns, x_array, y_array, nsuperperiods = 1):
         ctr_da = contour_da(track_list, nturns)
         #ctr_da = tra.countour_da()
         track_list = freq_analysis(track_list, lat, nturns, harm = True)
-        da_mux = array(map(lambda pxy: pxy.mux, track_list))
-        da_muy = array(map(lambda pxy: pxy.muy, track_list))
+        da_mux = np.array(map(lambda pxy: pxy.mux, track_list))
+        da_muy = np.array(map(lambda pxy: pxy.muy, track_list))
         return ctr_da.reshape(ny,nx), da_mux.reshape(ny,nx), da_muy.reshape(ny,nx)
 
 
@@ -405,7 +404,7 @@ def da_mpi(lat, nturns, x_array, y_array, errors = None, nsuperperiods = 1):
     track_list = track_nturns_mpi(mpi_comm, lat, nturns, track_list, errors = errors, nsuperperiods = nsuperperiods, save_track=False)
 
     if rank == 0:
-        da = array(map(lambda track: track.turn, track_list))#.reshape((len(y_array), len(x_array)))
+        da = np.array(map(lambda track: track.turn, track_list))#.reshape((len(y_array), len(x_array)))
         nx = len(x_array)
         ny = len(y_array)
         return da.reshape(ny, nx)

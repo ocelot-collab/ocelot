@@ -1,7 +1,6 @@
 __author__ = 'Sergey'
 
 from numpy.linalg import inv
-# from numpy import cosh, sinh
 # from scipy.misc import factorial
 from math import factorial
 from ocelot.cpbd.beam import Particle, Twiss, ParticleArray
@@ -214,7 +213,7 @@ class TransferMap:
         #           self.B(energy)).reshape(n)
 
         #print("a=", a)
-        a = np.add(dot(self.R(energy), rparticles), self.B(energy))
+        a = np.add(np.dot(self.R(energy), rparticles), self.B(energy))
         # a = np.add(np.transpose(dot(self.R(energy), particles.T.reshape(6, int(n/6)))), self.B(energy)).reshape(n)
 
         rparticles[:] = a[:]
@@ -271,17 +270,17 @@ class TransferMap:
 
         elif prcl_series.__class__ == Particle:
             p = prcl_series
-            p.x, p.px, p.y, p.py, p.tau, p.p = self.map(array([[p.x], [p.px], [p.y], [p.py], [p.tau], [p.p]]), p.E)[:,0]
+            p.x, p.px, p.y, p.py, p.tau, p.p = self.map(np.array([[p.x], [p.px], [p.y], [p.py], [p.tau], [p.p]]), p.E)[:,0]
             p.s += self.length
             p.E += self.delta_e
 
         elif prcl_series.__class__ == list and prcl_series[0].__class__ == Particle:
             # If the energy is not the same (p.E) for all Particles in the list of Particles
             # in that case cycle is applied. For particles with the same energy p.E
-            list_e = array([p.E for p in prcl_series])
+            list_e = np.array([p.E for p in prcl_series])
             if False in (list_e[:] == list_e[0]):
                 for p in prcl_series:
-                    self.map(array([[p.x], [p.px], [p.y], [p.py], [p.tau], [p.p]]), energy=p.E)
+                    self.map(np.array([[p.x], [p.px], [p.y], [p.py], [p.tau], [p.p]]), energy=p.E)
                     p.E += self.delta_e
                     p.s += self.length
             else:
@@ -322,9 +321,9 @@ class PulseTM(TransferMap):
         dxp = self.pulse.kick_x(tau)
         dyp = self.pulse.kick_y(tau)
         logger.debug('kick ' + str(dxp) + ' ' + str(dyp))
-        b = array([0.0, dxp, 0.0, dyp, 0., 0.])
+        b = np.array([0.0, dxp, 0.0, dyp, 0., 0.])
         #a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(int(n / 6), 6)))), b).reshape(n)
-        a = np.add(dot(self.R(energy), rparticles), b)
+        a = np.add(np.dot(self.R(energy), rparticles), b)
         rparticles[:] = a[:]
         logger.debug('return trajectory, array ' + str(len(rparticles)))
         return rparticles
@@ -375,7 +374,7 @@ class CorrectorTM(TransferMap):
         dy = hy * z * z / 2.
         dx1 = hx * z if l != 0 else angle_x
         dy1 = hy * z if l != 0 else angle_y
-        b = array([[dx], [dx1], [dy], [dy1], [0.], [0.]])
+        b = np.array([[dx], [dx1], [dy], [dy1], [0.], [0.]])
         return b
 
     def kick(self, X, z, l, angle_x, angle_y, energy):
@@ -383,7 +382,7 @@ class CorrectorTM(TransferMap):
         # ocelot.logger.debug('invoking kick_b')
         #n = len(X)
         b = self.kick_b(z, l, angle_x, angle_y)
-        X1 = np.add(dot(self.R(energy), X), b)
+        X1 = np.add(np.dot(self.R(energy), X), b)
         # print(X1)
         X[:] = X1[:]
         return X
@@ -515,7 +514,7 @@ class UndulatorTestTM(TransferMap):
             kx = 0
         else:
             kx = 2. * np.pi / ax
-        zi = linspace(0., z, num=ndiv)
+        zi = np.linspace(0., z, num=ndiv)
         h = zi[1] - zi[0]
         kx2 = kx * kx
         kz2 = kz * kz
@@ -849,7 +848,7 @@ def lattice_transfer_map(lattice, energy):
                             t1 += Rb[i, l] * Ta[l, j, k]
                         Tc[i, j, k] = t1
             Ta = Tc
-        Ra = dot(Rb, Ra)
+        Ra = np.dot(Rb, Ra)
         E += elem.transfer_map.delta_e
 
     lattice.T_sym = Ta
@@ -913,7 +912,7 @@ def trace_obj(lattice, obj, nPoints=None):
             obj.id = e.id
             obj_list.append(obj)
     else:
-        z_array = linspace(0, lattice.totalLen, nPoints, endpoint=True)
+        z_array = np.linspace(0, lattice.totalLen, nPoints, endpoint=True)
         obj_list = trace_z(lattice, obj, z_array)
     return obj_list
 
@@ -931,8 +930,8 @@ def periodic_twiss(tws, R):
         logger.warning("************ periodic solution does not exist. return None ***********")
         # print("************ periodic solution does not exist. return None ***********")
         return None
-    sinmx = np.sign(R[0, 1]) * sqrt(1. - cosmx * cosmx)
-    sinmy = np.sign(R[2, 3]) * sqrt(1. - cosmy * cosmy)
+    sinmx = np.sign(R[0, 1]) * np.sqrt(1. - cosmx * cosmx)
+    sinmy = np.sign(R[2, 3]) * np.sqrt(1. - cosmy * cosmy)
 
     tws.beta_x = abs(R[0, 1] / sinmx)
     tws.beta_y = abs(R[2, 3] / sinmy)
@@ -944,14 +943,14 @@ def periodic_twiss(tws, R):
     tws.alpha_y = (R[2, 2] - R[3, 3]) / (2 * sinmy)  # Y[0,0]
     tws.gamma_y = (1. + tws.alpha_y * tws.alpha_y) / tws.beta_y  # Y[1,0]
 
-    Hx = array([[R[0, 0] - 1, R[0, 1]], [R[1, 0], R[1, 1] - 1]])
-    Hhx = array([[R[0, 5]], [R[1, 5]]])
-    hh = dot(inv(-Hx), Hhx)
+    Hx = np.array([[R[0, 0] - 1, R[0, 1]], [R[1, 0], R[1, 1] - 1]])
+    Hhx = np.array([[R[0, 5]], [R[1, 5]]])
+    hh = np.dot(inv(-Hx), Hhx)
     tws.Dx = hh[0, 0]
     tws.Dxp = hh[1, 0]
-    Hy = array([[R[2, 2] - 1, R[2, 3]], [R[3, 2], R[3, 3] - 1]])
-    Hhy = array([[R[2, 5]], [R[3, 5]]])
-    hhy = dot(inv(-Hy), Hhy)
+    Hy = np.array([[R[2, 2] - 1, R[2, 3]], [R[3, 2], R[3, 3] - 1]])
+    Hhy = np.array([[R[2, 5]], [R[3, 5]]])
+    hhy = np.dot(inv(-Hy), Hhy)
     tws.Dy = hhy[0, 0]
     tws.Dyp = hhy[1, 0]
     # tws.display()

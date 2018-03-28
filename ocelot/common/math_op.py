@@ -3,7 +3,7 @@ statistical analysis functions, fitting, optimization and the like
 '''
 
 import numpy as np
-from numpy import cos, sin, tan, sqrt, log, exp, sum, inf
+#from numpy import cos, sin, tan, sqrt, log, exp, sum, inf
 
 def peaks(x, y, n=0):
     '''
@@ -97,9 +97,9 @@ def fit_gauss_2d(x,y,F):
     
     sig12 /= sum(F[:,:])
 
-    rho = sig12 / sqrt(sig1*sig2)
+    rho = sig12 / np.sqrt(sig1*sig2)
     
-    return mu1, mu2, sqrt(sig1), sqrt(sig2), rho
+    return mu1, mu2, np.sqrt(sig1), np.sqrt(sig2), rho
 
 def fit_gauss_1d(x,F):
     
@@ -115,7 +115,7 @@ def fit_gauss_1d(x,F):
     for i in range( n1 ): sig1 += (x[i]-mu1)**2*F[i]
     sig1 /= sum(F[:])
     
-    return mu1, sqrt(sig1)
+    return mu1, np.sqrt(sig1)
 
 def fwhm(x,F):
     m = np.max(F) / 2.0

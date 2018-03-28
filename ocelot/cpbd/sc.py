@@ -5,7 +5,6 @@ Revision on 01.06.2017: coordinate transform to the velocity direction
 """
 
 import scipy.ndimage as ndimage
-import numpy as np
 from time import time
 from ocelot.common.globals import *
 from ocelot.cpbd.coord_transform import *
@@ -214,7 +213,7 @@ class SpaceCharge(PhysProc):
         xp[3:6] = np.dot(xp[3:6].T, T).T
 
         # electric field in the rest frame of bunch
-        gamma0 = sqrt((Pav / m_e_eV) ** 2 + 1)
+        gamma0 = np.sqrt((Pav / m_e_eV) ** 2 + 1)
         beta02 = 1 - gamma0 ** -2
         beta0 = np.sqrt(beta02)
 
@@ -283,7 +282,7 @@ class SpaceChargeSimplify(SpaceCharge):
         xp[3:6] = np.dot(xp[3:6].T, T).T
 
         # electric field in the rest frame of bunch
-        gamma0 = sqrt((Pav / m_e_eV) ** 2 + 1)
+        gamma0 = np.sqrt((Pav / m_e_eV) ** 2 + 1)
         beta02 = 1 - gamma0 ** -2
         beta0 = np.sqrt(beta02)
 

@@ -310,8 +310,8 @@ def closed_orbit(lattice, eps_xy=1.e-7, eps_angle=1.e-7, energy=0):
 
     R = tm0.R(energy)[:4, :4]
 
-    ME = eye(4) - R
-    P = dot(inv(ME), tm0.B(energy)[:4])
+    ME = np.eye(4) - R
+    P = np.dot(inv(ME), tm0.B(energy)[:4])
 
     def errf(x):
         #print("x", x)

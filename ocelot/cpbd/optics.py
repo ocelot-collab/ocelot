@@ -9,11 +9,15 @@ from ocelot.cpbd.r_matrix import *
 from copy import deepcopy
 import logging
 import numpy as np
+
+logger = logging.getLogger(__name__)
+logger_navi = logging.getLogger(__name__ + ".navi")
+
 try:
     import numexpr as ne
     ne_flag = True
 except:
-    print("optics.py: module NUMEXPR is not installed. Install it if you want higher speed calculation.")
+    logger.info(" import: module NUMEXPR is not installed. Install it if you want higher speed calculation.")
     ne_flag = False
 try:
     import numba as nb
@@ -21,7 +25,6 @@ try:
 except:
     nb_flag = False
 
-logger = logging.getLogger(__name__)
 
 
 
@@ -255,8 +258,8 @@ class TransferMap:
             return tws
 
         else:
-            print(m.__class__)
-            exit("unknown object in transfer map multiplication (TransferMap.__mul__)")
+            logger.error(" TransferMap.__mul__: unknown object in transfer map multiplication: " + str(m.__class__.__name__))
+            raise Exception(" TransferMap.__mul__: unknown object in transfer map multiplication: " + str(m.__class__.__name__))
 
     def apply(self, prcl_series):
         """
@@ -293,8 +296,8 @@ class TransferMap:
                 pa.array2ex_list(prcl_series)
 
         else:
-            print(prcl_series)
-            exit("Unknown type of Particle_series. class TransferMap.apply()")
+            logger.error(" TransferMap.apply(): Unknown type of Particle_series: " + str(prcl_series.__class__.__name))
+            raise Exception(" TransferMap.apply(): Unknown type of Particle_series: " + str(prcl_series.__class__.__name))
 
     def __call__(self, s):
         m = copy(self)
@@ -927,7 +930,7 @@ def periodic_twiss(tws, R):
     cosmy = (R[2, 2] + R[3, 3]) / 2.
 
     if abs(cosmx) >= 1 or abs(cosmy) >= 1:
-        logger.warning("************ periodic solution does not exist. return None ***********")
+        logger.warning(" ************ periodic solution does not exist. return None ***********")
         # print("************ periodic solution does not exist. return None ***********")
         return None
     sinmx = np.sign(R[0, 1]) * np.sqrt(1. - cosmx * cosmx)
@@ -973,7 +976,7 @@ def twiss(lattice, tws0=None, nPoints=None):
             R = lattice_transfer_map(lattice, tws0.E)
             tws0 = periodic_twiss(tws0, R)
             if tws0 == None:
-                print('Twiss: no periodic solution')
+                logger.info(' twiss: Twiss: no periodic solution')
                 return None
         else:
             tws0.gamma_x = (1. + tws0.alpha_x ** 2) / tws0.beta_x
@@ -982,7 +985,7 @@ def twiss(lattice, tws0=None, nPoints=None):
         twiss_list = trace_obj(lattice, tws0, nPoints)
         return twiss_list
     else:
-        print('Twiss: no periodic solution')
+        logger.warning(' Twiss: no periodic solution. return None')
         return None
 
 
@@ -1001,7 +1004,7 @@ def twiss_fast(lattice, tws0=None):
             R = lattice_transfer_map(lattice, tws0.E)
             tws0 = periodic_twiss(tws0, R)
             if tws0 == None:
-                logger.warning('twiss_fast: Twiss: no periodic solution')
+                logger.warning(' twiss_fast: Twiss: no periodic solution')
                 return None
         else:
             tws0.gamma_x = (1. + tws0.alpha_x ** 2) / tws0.beta_x
@@ -1015,7 +1018,7 @@ def twiss_fast(lattice, tws0=None):
             obj_list.append(tws0)
         return obj_list
     else:
-        logger.warning('twiss_fast: Twiss: no periodic solution')
+        logger.warning(' twiss_fast: Twiss: no periodic solution')
         return None
 
 
@@ -1055,12 +1058,14 @@ class ProcessTable:
             (physics_proc.indx0 + 1 == physics_proc.indx1 and elem1.l == 0)):
 
             physics_proc.indx1 = physics_proc.indx0
-            physics_proc.s = np.sum(np.array([elem.l for elem in self.lat.sequence[:physics_proc.indx0]]))
+            physics_proc.s_stop = physics_proc.s_start
+            #physics_proc.s = np.sum(np.array([elem.l for elem in self.lat.sequence[:physics_proc.indx0]]))
             self.kick_proc_list = np.append(self.kick_proc_list, physics_proc)
             if len(self.kick_proc_list) > 1:
-                pos = np.array([proc.s for proc in self.kick_proc_list])
+                pos = np.array([proc.s_start for proc in self.kick_proc_list])
                 indx = np.argsort(pos)
                 self.kick_proc_list = self.kick_proc_list[indx]
+        logger_navi.debug(" searching_kick_proc: self.kick_proc_list.append(): " + str([p.__class__.__name__ for p in self.kick_proc_list]))
 
 
     def add_physics_proc(self, physics_proc, elem1, elem2):
@@ -1070,12 +1075,15 @@ class ProcessTable:
         physics_proc.indx0 = self.lat.sequence.index(elem1)
         # print(self.lat.sequence.index(elem1))
         physics_proc.indx1 = self.lat.sequence.index(elem2)
-
+        physics_proc.s_start = np.sum(np.array([elem.l for elem in self.lat.sequence[:physics_proc.indx0]]))
+        physics_proc.s_stop = np.sum(np.array([elem.l for elem in self.lat.sequence[:physics_proc.indx1]]))
         self.searching_kick_proc(physics_proc, elem1)
         # print(self.lat.sequence.index(elem2))
         physics_proc.counter = physics_proc.step
         physics_proc.prepare(self.lat)
         self.proc_list.append(physics_proc)
+        logger_navi.debug(" add_physics_proc: self.proc_list.append(): " + physics_proc.__class__.__name__ +
+                          " lat elem indx: start: " + str(physics_proc.indx0 ) + " stop: " + str(physics_proc.indx1))
         # print(elem1.__hash__(), elem2.__hash__(), physics_proc.indx0, physics_proc.indx1, self.proc_list)
 
 
@@ -1104,19 +1112,30 @@ class Navigator:
         self.kill_process = False # for case when calculations are needed to terminated e.g. from gui
 
     def add_physics_proc(self, physics_proc, elem1, elem2):
+        logger_navi.debug(" add_physics_proc: phys proc: " + physics_proc.__class__.__name__)
         self.process_table.add_physics_proc(physics_proc, elem1, elem2)
 
     def check_overjump(self, dz, processes):
-        # print("CHECK OVER JUMP")
         if len(processes) != 0:
             nearest_stop_elem = min([proc.indx1 for proc in processes])
             L_stop = np.sum(np.array([elem.l for elem in self.lat.sequence[:nearest_stop_elem]]))
             if self.z0 + dz > L_stop:
                dz = L_stop - self.z0
 
+            # check if inside step dz there is another phys process
+
+            proc_list_rest = [p for p in self.process_table.proc_list if p not in processes]
+            start_pos_of_rest = np.array([proc.s_start for proc in proc_list_rest])
+            start_pos = [pos for pos in start_pos_of_rest if self.z0 < pos < self.z0 + dz]
+            if len(start_pos) > 0:
+                start_pos.sort()
+                dz = start_pos[0] - self.z0
+                logger_navi.debug(" check_overjump: there is phys proc inside step -> dz was decreased: dz = " + str(dz))
+
+
         # check kick processes
         kick_list = self.process_table.kick_proc_list
-        kick_pos = np.array([proc.s for proc in kick_list])
+        kick_pos = np.array([proc.s_start for proc in kick_list])
         indx = np.argwhere(self.z0 < kick_pos)
 
         if 0 in kick_pos and self.z0 == 0 and self.n_elem == 0:
@@ -1125,7 +1144,7 @@ class Navigator:
         if len(indx) != 0:
             kick_process = np.array(kick_list[indx]).flatten()
             for i, proc in enumerate(kick_process):
-                L_kick_stop = proc.s
+                L_kick_stop = proc.s_start
                 if self.z0 + dz > L_kick_stop:
                     dz = L_kick_stop - self.z0
                     processes.append(proc)
@@ -1143,7 +1162,6 @@ class Navigator:
         for p in self.process_table.proc_list:
             if p.indx0 <= self.n_elem < p.indx1:
                 proc_list.append(p)
-
         return proc_list
 
 
@@ -1158,8 +1176,6 @@ class Navigator:
     def get_next(self):
 
         proc_list = self.get_proc_list()
-        #logger.show_debug = False
-
         if len(proc_list) > 0:
 
             counters = np.array([p.counter for p in proc_list])
@@ -1185,19 +1201,17 @@ class Navigator:
                 L = self.lat.totalLen
             dz = L - self.z0
 
-        # test
-        #if (len(processes) == 1) and (processes[0].__class__.__name__ == "CSR") and (self.lat.sequence[self.n_elem].__class__ in [Bend, SBend, RBend]):
-        #    dz = dz/10.
-
         # check if dz overjumps the stop element
         dz, processes = self.check_overjump(dz, processes)
 
-        logger.debug(" Navigator.get_next: " +'\n' +
-                     "navi.z0=" + str(self.z0) + " navi.n_elem=" + str(self.n_elem) + " navi.sum_lengths="
-                     + str(self.sum_lengths) + " dz=" + str(dz) + '\n' +
-                     "element type=" + self.lat.sequence[self.n_elem].__class__.__name__ + " element name=" +
-                     self.lat.sequence[self.n_elem].id + '\n' +
-                     "process: " + " ".join([proc.__class__.__name__ for proc in processes]))
+        logger_navi.debug(" Navigator.get_next: process: " + " ".join([proc.__class__.__name__ for proc in processes]))
+
+        logger_navi.debug(" Navigator.get_next: navi.z0=" + str(self.z0) + " navi.n_elem=" + str(self.n_elem) + " navi.sum_lengths="
+                     + str(self.sum_lengths) + " dz=" + str(dz))
+
+        logger_navi.debug(" Navigator.get_next: element type=" + self.lat.sequence[self.n_elem].__class__.__name__ + " element name=" +
+                     str(self.lat.sequence[self.n_elem].id))
+
         return dz, processes
 
 

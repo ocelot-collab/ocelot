@@ -5,7 +5,7 @@ Revision on 01.06.2017: coordinate transform to the velocity direction
 """
 
 import scipy.ndimage as ndimage
-from time import time
+import time
 from ocelot.common.globals import *
 from ocelot.cpbd.coord_transform import *
 import multiprocessing
@@ -21,7 +21,7 @@ try:
     import pyfftw
 except:
     pyfftw_flag = False
-    logger.info("cs.py: module PYFFTW is not installed. Install it to speed up calculation.")
+    logger.debug("cs.py: module PYFFTW is not installed. Install it to speed up calculation")
     from numpy.fft import ifftn
     from numpy.fft import fftn
 
@@ -29,7 +29,7 @@ try:
     import numexpr as ne
     ne_flag = True
 except:
-    logger.info("sc.py: module NUMEXPR is not installed. Install it to speed up calculation.")
+    logger.debug("sc.py: module NUMEXPR is not installed. Install it to speed up calculation")
     ne_flag = False
 
 def smooth_z(Zin, mslice):
@@ -54,7 +54,7 @@ def smooth_z(Zin, mslice):
     Zout2[0] = Zout[0]
     for i in range(1, N-1):
         m = min(i, N-i+1)
-        m = np.floor(myfunc(0.5*m, 0.5*mslice) + 0.500001)
+        m = np.floor(myfunc(0.5*m, 0.5*mslice) + 0.500001).astype(int)
         Zout2[i] = (S[i+m+1] - S[i-m])/(2*m + 1)
     Zout[inds] = Zout2
     return Zout
@@ -133,7 +133,7 @@ class SpaceCharge(PhysProc):
         K2[0:Nx, 0:Ny, Nz:2*Nz-1] = K2[0:Nx, 0:Ny, Nz-1:0:-1] #z-mirror
         K2[0:Nx, Ny:2*Ny-1,:] = K2[0:Nx, Ny-1:0:-1, :]        #y-mirror
         K2[Nx:2*Nx-1, :, :] = K2[Nx-1:0:-1, :, :]             #x-mirror
-        t0 = time()
+        t0 = time.time()
         if pyfftw_flag:
             nthread = multiprocessing.cpu_count()
             K2_fft = pyfftw.builders.fftn(K2, axes=None, overwrite_input=False, planner_effort='FFTW_ESTIMATE',
@@ -145,7 +145,7 @@ class SpaceCharge(PhysProc):
             out = np.real(out_ifft())
         else:
             out = np.real(ifftn(fftn(out)*fftn(K2)))
-        t1 = time()
+        t1 = time.time()
         logger.debug('fft time:' + str(t1-t0) + ' sec')
         out[:Nx, :Ny, :Nz] = out[:Nx,:Ny,:Nz]/(4*pi*epsilon_0*hx*hy*hz)
         return out[:Nx, :Ny, :Nz]

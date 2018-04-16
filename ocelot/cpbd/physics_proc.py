@@ -1,4 +1,4 @@
-from ocelot.cpbd.beam import save_particle_array, load_particle_array
+from ocelot.cpbd.io import save_particle_array
 import numpy as np
 
 

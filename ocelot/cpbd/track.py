@@ -445,7 +445,7 @@ def track(lattice, p_array, navi, print_progress=True, calc_tws=True):
     L = 0.
     while np.abs(navi.z0 - lattice.totalLen) > 1e-10:
         if navi.kill_process:
-            print("Killing tracking ... ")
+            logger.info("Killing tracking ... ")
             return tws_track, p_array
         dz, proc_list = navi.get_next()
 
@@ -461,6 +461,7 @@ def track(lattice, p_array, navi, print_progress=True, calc_tws=True):
 
         if print_progress:
             poc_names = [p.__class__.__name__ for p in proc_list]
+            sys.stdout.write("\033[K")
             sys.stdout.write( "\r" + "z = " + str(navi.z0)+" / "+str(lattice.totalLen) + " : applied: " + ", ".join(poc_names)  )
             sys.stdout.flush()
 

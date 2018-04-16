@@ -6,7 +6,9 @@ __version__ = '18.02.2'
 
 
 __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope",  # beam
-            "ellipse_from_twiss", "ParticleArray", "save_particle_array", "load_particle_array",   # beam
+            "ellipse_from_twiss", "ParticleArray",    # beam
+           "global_slice_analysis",  # beam
+           "save_particle_array", "load_particle_array",            # io
            'fodo_parameters', 'lattice_transfer_map', 'TransferMap', 'gauss_from_twiss',  # optics
            "get_map", "MethodTM", "SecondTM", "KickTM", "CavityTM", "UndulatorTestTM",  # optics
            'Element', 'Multipole', 'Quadrupole', 'RBend', "Matrix", "UnknownElement",  # elements
@@ -21,7 +23,7 @@ __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope", 
            "compensate_chromaticity",  # chromaticity
            "EbeamParams",  # e_beam_params
            "write_lattice",  # io
-           "CSR", "SpaceCharge", "Wake", "WakeTable", "WakeKick", "BeamTransform",
+           "CSR", "SpaceCharge", "Wake", "WakeTable", "WakeKick", "BeamTransform", "SmoothBeam",
            "EmptyProc",
            "MagneticLattice",
            ]
@@ -42,4 +44,21 @@ from ocelot.cpbd.csr import *
 from ocelot.cpbd.wake3D import *
 from ocelot.cpbd.physics_proc import *
 print('initializing ocelot...')
+
+try:
+    import numba
+except:
+    print("import: module NUMBA is not installed. Install it to speed up calculation")
+
+try:
+    import pyfftw
+except:
+    print("import: module PYFFTW is not installed. Install it to speed up calculation")
+
+try:
+    import numexpr
+except:
+    print("import: module NUMEXPR is not installed. Install it to speed up calculation")
+
+
 logger = Logger()

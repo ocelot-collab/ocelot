@@ -918,7 +918,7 @@ def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinea
     plt.setp(ax.get_xticklabels(), visible=show_xtick_label)
 
 
-from ocelot.cpbd.beam import global_slice_analysis_extended
+from ocelot.cpbd.beam import global_slice_analysis
 
 
 def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpolation="bilinear", inverse_tau=False,
@@ -945,14 +945,14 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpo
     if inverse_tau:
         p_array_copy.tau()[:] *= -1
 
-    slice_params = global_slice_analysis_extended(p_array_copy, nparts_in_slice, 0.01, 2, 2)
+    slice_params = global_slice_analysis(p_array_copy, nparts_in_slice, 0.01, 2, 2)
 
     fig = plt.figure(nfig, figsize=figsize)
     if title != None:
         fig.suptitle(title)
     ax_sp = plt.subplot(325)
     plt.title("Energy Spread")
-    plt.plot(slice_params[0] * 1e3, slice_params[5]*1e-3, "b", label="Energy Spread")
+    plt.plot(slice_params.s * 1e3, slice_params.se*1e-3, "b", label="Energy Spread")
     plt.legend()
     plt.xlabel("s, mm")
     plt.ylabel("dE, keV")
@@ -960,8 +960,8 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpo
 
     ax_em = plt.subplot(323, sharex=ax_sp)
     plt.title("Emittances")
-    plt.plot(slice_params[0] * 1e3, slice_params[2], "r", label="emit_x")
-    plt.plot(slice_params[0] * 1e3, slice_params[3], "b", label="emit_y")
+    plt.plot(slice_params.s * 1e3, slice_params.ex, "r", label="emit_x")
+    plt.plot(slice_params.s * 1e3, slice_params.ey, "b", label="emit_y")
     plt.legend()
     plt.setp(ax_em.get_xticklabels(), visible=False)
     plt.ylabel("emit, mm*mrad")
@@ -969,7 +969,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpo
 
     ax_c = plt.subplot(321, sharex=ax_sp)
     plt.title("Current")
-    plt.plot(slice_params[0] * 1e3, slice_params[1], "r", label="Current")
+    plt.plot(slice_params.s * 1e3, slice_params.I, "r", label="Current")
     plt.legend()
     plt.setp(ax_c.get_xticklabels(), visible=False)
     plt.ylabel("I, A")
@@ -979,18 +979,24 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpo
 
     show_density(p_array_copy.tau() * 1e3, p_array_copy.y() * 1e3, ax=ax_ys, nbins_x=nbins_x, nbins_y=nbins_y, interpolation=interpolation, xlabel='s, mm', ylabel='y, mm', nfig=50,
                  title="Vertical Distribution", figsize=None, grid=grid)
+    plt.plot(slice_params.s * 1e3, slice_params.my * 1e3, "k", lw=2)
+    plt.plot(slice_params.s * 1e3, (slice_params.my + slice_params.sig_y) * 1e3, "w", lw=1)
+    plt.plot(slice_params.s * 1e3, (slice_params.my - slice_params.sig_y) * 1e3, "w", lw=1)
 
     ax_xs = plt.subplot(324, sharex=ax_ys)
 
     show_density(p_array_copy.tau() * 1e3, p_array_copy.x() * 1e3, ax=ax_xs, nbins_x=nbins_x, nbins_y=nbins_y,
                  interpolation=interpolation, ylabel='x, mm',
                  title="Horiz. Distribution", grid=grid, show_xtick_label=False)
-
+    plt.plot(slice_params.s * 1e3, slice_params.mx * 1e3, "k", lw=2)
+    plt.plot(slice_params.s * 1e3, (slice_params.mx + slice_params.sig_x) * 1e3, "w", lw=1)
+    plt.plot(slice_params.s * 1e3, (slice_params.mx - slice_params.sig_x) * 1e3, "w", lw=1)
     ax_ps = plt.subplot(322, sharex=ax_ys)
 
     show_density(p_array_copy.tau() * 1e3, p_array_copy.p() * 1e2, ax=ax_ps, nbins_x=nbins_x, nbins_y=nbins_y,
                  interpolation=interpolation, ylabel='dE/pc, %',
                  title="Energy Distribution", grid=grid, show_xtick_label=False)
+    #plt.plot(slice_params.s * 1e3, slice_params.mp * 1e2, "k", lw=2)
 
 
 def compare_beams(p_array_1, p_array_2, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpolation="bilinear",
@@ -1025,8 +1031,8 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice=5000, nbins_x=200, nbins
         p_array_copy1.tau()[:] *= -1
         p_array_copy2.tau()[:] *= -1
 
-    slice_params1 = global_slice_analysis_extended(p_array_copy1, nparts_in_slice, 0.01, 2, 2)
-    slice_params2 = global_slice_analysis_extended(p_array_copy2, nparts_in_slice, 0.01, 2, 2)
+    slice_params1 = global_slice_analysis(p_array_copy1, nparts_in_slice, 0.01, 2, 2)
+    slice_params2 = global_slice_analysis(p_array_copy2, nparts_in_slice, 0.01, 2, 2)
     # s, I, ex, ey ,me, se, gamma0, emitxn, emityn]
 
     fig = plt.figure(nfig, figsize=figsize)
@@ -1034,8 +1040,8 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice=5000, nbins_x=200, nbins
         fig.suptitle(title)
     ax_sp = plt.subplot(325)
     plt.title("Energy Spread")
-    plt.plot(slice_params1[0] * 1e3, slice_params1[5] * 1e-3, "b", label=r"$\sigma_E$: " + legend_beam1)
-    plt.plot(slice_params2[0] * 1e3, slice_params2[5] * 1e-3, "r", label=r"$\sigma_E$: " + legend_beam2)
+    plt.plot(slice_params1.s * 1e3, slice_params1.se * 1e-3, "b", label=r"$\sigma_E$: " + legend_beam1)
+    plt.plot(slice_params2.s * 1e3, slice_params2.se * 1e-3, "r", label=r"$\sigma_E$: " + legend_beam2)
     plt.legend()
     plt.xlabel("s, mm")
     plt.ylabel("dE, keV")
@@ -1043,8 +1049,8 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice=5000, nbins_x=200, nbins
 
     ax_em = plt.subplot(323, sharex=ax_sp)
     plt.title("Hor. Emittances")
-    plt.plot(slice_params1[0] * 1e3, slice_params1[2], "r", label=r"$\varepsilon_x$: " + legend_beam1)
-    plt.plot(slice_params2[0] * 1e3, slice_params2[2], "b", label=r"$\varepsilon_x$: " + legend_beam2)
+    plt.plot(slice_params1.s * 1e3, slice_params1.ex, "r", label=r"$\varepsilon_x$: " + legend_beam1)
+    plt.plot(slice_params2.s * 1e3, slice_params2.ex, "b", label=r"$\varepsilon_x$: " + legend_beam2)
     plt.legend()
     plt.setp(ax_em.get_xticklabels(), visible=False)
     plt.ylabel("emit, mm*mrad")
@@ -1052,8 +1058,8 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice=5000, nbins_x=200, nbins
 
     ax_em = plt.subplot(324, sharex=ax_sp)
     plt.title("Ver. Emittances")
-    plt.plot(slice_params1[0] * 1e3, slice_params1[3], "r", label=r"$\varepsilon_x$: " + legend_beam1)
-    plt.plot(slice_params2[0] * 1e3, slice_params2[3], "b", label=r"$\varepsilon_x$: " + legend_beam2)
+    plt.plot(slice_params1.s * 1e3, slice_params1.ey, "r", label=r"$\varepsilon_x$: " + legend_beam1)
+    plt.plot(slice_params2.s * 1e3, slice_params2.ey, "b", label=r"$\varepsilon_x$: " + legend_beam2)
     plt.legend()
     plt.setp(ax_em.get_xticklabels(), visible=False)
     plt.ylabel("emit, mm*mrad")
@@ -1061,8 +1067,8 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice=5000, nbins_x=200, nbins
 
     ax_c = plt.subplot(321, sharex=ax_sp)
     plt.title("Current")
-    plt.plot(slice_params1[0] * 1e3, slice_params1[1], "r", label="I: " + legend_beam1)
-    plt.plot(slice_params2[0] * 1e3, slice_params2[1], "b", label="I: " + legend_beam2)
+    plt.plot(slice_params1.s * 1e3, slice_params1.I, "r", label="I: " + legend_beam1)
+    plt.plot(slice_params2.s * 1e3, slice_params2.I, "b", label="I: " + legend_beam2)
     plt.legend()
     plt.setp(ax_c.get_xticklabels(), visible=False)
     plt.ylabel("I, A")

@@ -17,12 +17,13 @@ try:
     import numexpr as ne
     ne_flag = True
 except:
-    logger.info(" import: module NUMEXPR is not installed. Install it if you want higher speed calculation.")
+    logger.debug(" optics.py: module NUMEXPR is not installed. Install it to speed up calculation")
     ne_flag = False
 try:
     import numba as nb
     nb_flag = True
 except:
+    logger.debug(" optics.py: module NUMBA is not installed. Install it to speed up calculation")
     nb_flag = False
 
 

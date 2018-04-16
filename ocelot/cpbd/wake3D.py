@@ -1,12 +1,13 @@
-'''
+"""
 Created on 17.05.2016
 @author: Igor Zagorodnov
-'''
+"""
 
 from ocelot.adaptors import *
 from ocelot.adaptors.astra2ocelot import *
 from ocelot.cpbd.physics_proc import PhysProc
 import logging
+
 logger = logging.getLogger(__name__)
 
 def triang_filter(x, filter_order):
@@ -317,7 +318,7 @@ class Wake(PhysProc):
             self.TH = self.wake_table.TH
 
     def apply(self, p_array, dz):
-        #print("apply: WAKE")
+        logger.debug(" Wake: apply: dz = " + str(dz))
         #Px = 0
         #Py = 0
         #Pz = 0
@@ -340,7 +341,7 @@ class WakeKick(Wake):
         self.factor = factor
 
     def apply(self, p_array, dz):
-        #print("Apply WakeKick")
+        logger.debug(" WakeKick: apply")
         ps = p_array.rparticles
         Px, Py, Pz, I00 = self.add_total_wake(ps[0], ps[2], ps[4], p_array.q_array, self.TH, self.w_sampling,
                                               self.filter_order)

@@ -1,14 +1,111 @@
-'''
+"""
 statistical analysis functions, fitting, optimization and the like
-'''
+"""
 
 import numpy as np
-#from numpy import cos, sin, tan, sqrt, log, exp, sum, inf
+from scipy import fftpack, integrate, interpolate
+
+
+def invert_cdf(y, x):
+    """
+    Invert cumulative distribution function of the probability distribution
+
+    Example:
+    --------
+    # analytical formula for the beam distribution
+    f = lambda x: A * np.exp(-(x - mu) ** 2 / (2. * sigma ** 2))
+
+    # we are interesting in range from -30 to 30 e.g. [um]
+    x = np.linspace(-30, 30, num=100)
+
+    # Inverted cumulative distribution function
+    i_cdf = invert_cdf(y=f(x), x=x)
+
+    # get beam distribution (200 000 coordinates)
+    tau = i_cdf(np.random.rand(200000))
+
+
+    :param y: array, [y0, y1, y2, ... yn] yi = y(xi)
+    :param x: array, [x0, x1, x2, ... xn] xi
+    :return: function
+    """
+
+    cum_int = integrate.cumtrapz(y, x, initial=0)
+    #print("invert", np.max(cum_int), np.min(cum_int))
+    cdf = cum_int / (np.max(cum_int) - np.min(cum_int))
+    inv_cdf = interpolate.interp1d(cdf, x)
+    return inv_cdf
+
+
+def rolling_mean(x, window):
+    """
+    Fat method for rolling mean
+
+    Example:
+    --------
+    X = np.random.rand(10000)
+
+    X_mean = rolling_mean(X, 500)
+
+    :param x: np.array, len(a) must be larger than window
+    :param window: int, length of the window
+    :return: np.array, len = len(x) + 1 - window
+    """
+    cumsum = np.cumsum(np.insert(x, 0, 0))
+    return (cumsum[window:] - cumsum[:-window]) / float(window)
+
+
+def rolling_window(x, window):
+    """
+    Function return x-array slices with length of the window, which can be used for rolling analysis.
+
+    Example:
+    --------
+    X = np.random.rand(10000)
+
+    X_std = np.std(rolling_window(X, 500), 1)
+    X_mean = np.mean(rolling_window(X, 500), 1)
+
+
+    :param x: np.array, len(a) must be larger than window
+    :param window: int, length of the window
+    :return: np.array, shape: (len(a) + 1 - window, window)
+    """
+    shape = x.shape[:-1] + (x.shape[-1] - window + 1, window)
+    strides = x.strides + (x.strides[-1],)
+    return np.lib.stride_tricks.as_strided(x, shape=shape, strides=strides)
+
+
+def convolve(f, g):
+    """
+    FFT based convolution
+
+    :param f: array
+    :param g: array
+    :return: array, (f * g)[n]
+    """
+    f_fft = fftpack.fftshift(fftpack.fftn(f))
+    g_fft = fftpack.fftshift(fftpack.fftn(g))
+    return fftpack.fftshift(fftpack.ifftn(fftpack.ifftshift(f_fft*g_fft)))
+
+
+def deconvolve(f, g):
+    """
+    FFT based deconvolution
+
+    :param f: array
+    :param g: array
+    :return: array,
+    """
+    f_fft = fftpack.fftshift(fftpack.fftn(f))
+    g_fft = fftpack.fftshift(fftpack.fftn(g))
+    return fftpack.fftshift(fftpack.ifftn(fftpack.ifftshift(f_fft/g_fft)))
+
 
 def peaks(x, y, n=0):
-    '''
-    
-    '''
+    """
+
+    """
     maxs = {}
 
     if len((np.where(y == y.max()))[0]) == 1:

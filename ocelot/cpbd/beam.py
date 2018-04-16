@@ -1,13 +1,12 @@
-'''
+"""
 definition of particles, beams and trajectories
-'''
+"""
 import numpy as np
 from ocelot.common.globals import *
 from ocelot.common.math_op import *
 # from ocelot.common.math_op import *
 from ocelot.common.py_func import filename_from_path
 from copy import deepcopy
-#import pickle
 from scipy import interpolate
 from scipy.signal import savgol_filter
 import logging
@@ -17,7 +16,7 @@ try:
     import numexpr as ne
     ne_flag = True
 except:
-    print("beam.py: module NUMEXPR is not installed. Install it if you want higher speed calculation.")
+    logger.debug("beam.py: module NUMEXPR is not installed. Install it to speed up calculation")
     ne_flag = False
 
 
@@ -507,19 +506,6 @@ class ParticleArray:
         self.rparticles[4] = value
 
 
-def save_particle_array(filename, p_array):
-    np.savez_compressed(filename, rparticles=p_array.rparticles,
-                        q_array=p_array.q_array,
-                        E=p_array.E, s=p_array.s)
-
-def load_particle_array(filename):
-    p_array = ParticleArray()
-    with np.load(filename) as data:
-        for key in data.keys():
-            p_array.__dict__[key] = data[key]
-    return p_array
-
-
 def recalculate_ref_particle(p_array):
     pref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV
     Enew = p_array.p()[0]*pref + p_array.E
@@ -876,12 +862,12 @@ def s_to_cur(A, sigma, q0, v):
 
 
 def slice_analysis(z, x, xs, M, to_sort):
-    '''
+    """
     returns:
-    <x>,<xs>,<x^2>,<x*xs>,<xs^2>,np.sqrt(<x^2> * <xs^2> - <x*xs>^2)
+    <x>, <xs>, <x^2>, <x*xs>, <xs^2>, np.sqrt(<x^2> * <xs^2> - <x*xs>^2)
     based on M particles in moving window
     Sergey, check please
-    '''
+    """
     z = np.copy(z)
     if to_sort:
         #P=sortrows([z, x, xs])
@@ -993,8 +979,39 @@ def slice_analysis_transverse(parray, Mslice, Mcur, p, iter):
     return [s, I, ex, ey, gamma0, emitxn, emityn]
 
 
+class SliceParameters:
+
+    def __init__(self):
+        self.s = None
+        self.I = None
+        self.ex = None
+        self.ey = None
+        self.me = None
+        self.se = None
+        self.gamma0 = None
+        self.emitxn = None
+        self.emityn = None
+
+        # additional moments <x>, <xp>, <y>, <yp>, <p>
+        self.mx = None
+        self.mxp = None
+        self.my = None
+        self.myp = None
+        self.mp = None
+
+
 def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
-    # %[s, I, ex, ey ,me, se, gamma0, emitxn, emityn]=GlobalSliceAnalysis_Extended(PD,q1,Mslice,Mcur,p,iter)
+    """
+    Function to calculate slice parameters
+
+    :param parray: ParticleArray
+    :param Mslice: 5000, nparticles in the slice
+    :param Mcur: 0.01, smoothing parameters to calculate the beam current: smooth_param = m_std * np.std(p_array.tau())
+    :param p: 2, filter parameter in the func: simple_filter
+    :param iter: 2, filter parameter in the func: simple_filter
+    :return: s, I, ex, ey, me, se, gamma0, emitxn, emityn
+    """
+
 
     q1 = np.sum(parray.q_array)
     #print("charge", q1)
@@ -1042,8 +1059,112 @@ def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
     ey = simple_filter(ey, p, iter)*gamma0*1e6
     se = simple_filter(se, p, iter)
     me = simple_filter(me, p, iter)
+
     I = interp1(B[:, 0], B[:, 1], s)
+
     return [s, I, ex, ey, me, se, gamma0, emitxn, emityn]
+
+
+def global_slice_analysis(parray, Mslice=5000, Mcur=0.01, p=2, iter=2):
+    """
+    Function to calculate slice parameters
+
+    :param parray: ParticleArray
+    :param Mslice: 5000, nparticles in the slice
+    :param Mcur: 0.01, smoothing parameters to calculate the beam current: smooth_param = m_std * np.std(p_array.tau())
+    :param p: 2, filter parameter in the func: simple_filter
+    :param iter: 2, filter parameter in the func: simple_filter
+    :return: SliceParameters,
+    """
+
+    slc = SliceParameters()
+
+    q1 = np.sum(parray.q_array)
+    # print("charge", q1)
+    n = np.int_(parray.rparticles.size / 6)
+    PD = parray.rparticles
+    PD = sortrows(PD, col=4)
+
+    z = np.copy(PD[4])
+    mx, mxs, mxx, mxxs, mxsxs, emittx = slice_analysis(z, PD[0], PD[1], Mslice, True)
+
+    my, mys, myy, myys, mysys, emitty = slice_analysis(z, PD[2], PD[3], Mslice, True)
+
+    pc_0 = np.sqrt(parray.E ** 2 - m_e_GeV ** 2)
+    E1 = PD[5] * pc_0 + parray.E
+    pc_1 = np.sqrt(E1 ** 2 - m_e_GeV ** 2)
+    # print(pc_1[:10])
+    mE, mEs, mEE, mEEs, mEsEs, emittE = slice_analysis(z, PD[4], pc_1 * 1e9, Mslice, True)
+
+    # print(mE, mEs, mEE, mEEs, mEsEs, emittE)
+    mE = mEs  # mean energy
+    sE = np.sqrt(mEsEs)  # energy spread
+    sig0 = np.std(parray.tau())  # std pulse duration
+    B = s_to_cur(z, Mcur * sig0, q1, speed_of_light)
+    gamma0 = parray.E / m_e_GeV
+    _, _, _, _, _, emitty0 = moments(PD[2], PD[3])
+    slc.emityn = emitty0 * gamma0
+    _, _, _, _, _, emitt0 = moments(PD[0], PD[1])
+    slc.emitxn = emitt0 * gamma0
+
+    z, ind = np.unique(z, return_index=True)
+    emittx = emittx[ind]
+    emitty = emitty[ind]
+    sE = sE[ind]
+    mE = mE[ind]
+    sig_x = np.sqrt(mxx[ind])
+    sig_y = np.sqrt(myy[ind])
+
+    sig_xp = np.sqrt(mxsxs[ind])
+    sig_yp = np.sqrt(mysys[ind])
+
+    smin = min(z)
+    smax = max(z)
+    n = 1000
+    hs = (smax - smin) / (n - 1)
+    s = np.arange(smin, smax + hs, hs)
+    ex = interp1(z, emittx, s)
+    ey = interp1(z, emitty, s)
+    se = interp1(z, sE, s)
+    me = interp1(z, mE, s)
+    slc.ex = simple_filter(ex, p, iter) * gamma0 * 1e6
+    slc.ey = simple_filter(ey, p, iter) * gamma0 * 1e6
+    slc.se = simple_filter(se, p, iter)
+    slc.me = simple_filter(me, p, iter)
+
+    slc.I = interp1(B[:, 0], B[:, 1], s)
+
+    # additional moments <x>, <xp>, <y>, <yp>, <p>
+    xm = interp1(z, mx, s)
+    xpm = interp1(z, mxs, s)
+    ym = interp1(z, my, s)
+    ypm = interp1(z, mys, s)
+
+    sig_x = interp1(z, sig_x, s)
+    sig_y = interp1(z, sig_y, s)
+
+    sig_xp = interp1(z, sig_xp, s)
+    sig_yp = interp1(z, sig_yp, s)
+
+    slc.mx = simple_filter(xm, p, iter)
+    slc.mxp = simple_filter(xpm, p, iter)
+    slc.my = simple_filter(ym, p, iter)
+    slc.myp = simple_filter(ypm, p, iter)
+
+    slc.sig_x = simple_filter(sig_x, p, iter)
+    slc.sig_y = simple_filter(sig_y, p, iter)
+
+    slc.sig_xp = simple_filter(sig_xp, p, iter)
+    slc.sig_yp = simple_filter(sig_yp, p, iter)
+
+    _, mp, _, _, _, _ = slice_analysis(z, PD[4], PD[5], Mslice, True)
+    mp = interp1(z, mp, s)
+    slc.mp = simple_filter(mp, p, iter)
+
+    slc.s = s
+    slc.gamma0 = gamma0
+    return slc
+
 
 '''
 beam funcions proposed

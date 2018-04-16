@@ -5,6 +5,63 @@ module contains lat2input function which creates python input string
 author sergey.tomin
 """
 from ocelot.cpbd.elements import *
+import os
+from ocelot.adaptors.astra2ocelot import astraBeam2particleArray, particleArray2astraBeam
+from ocelot.cpbd.beam import ParticleArray
+
+
+def save_particle_array2npz(filename, p_array):
+    np.savez_compressed(filename, rparticles=p_array.rparticles,
+                        q_array=p_array.q_array,
+                        E=p_array.E, s=p_array.s)
+
+
+def load_particle_array_from_npz(filename):
+    """
+    Load beam file in npz format and return ParticleArray
+
+    :param filename:
+    :return:
+    """
+    p_array = ParticleArray()
+    with np.load(filename) as data:
+        for key in data.keys():
+            p_array.__dict__[key] = data[key]
+    return p_array
+
+
+
+def load_particle_array(filename):
+    """
+    Universal function to load beam file, *.ast or *.npz format
+
+    :param filename: path to file, filename.ast or filename.npz
+    :return: ParticleArray
+    """
+    name, file_extension = os.path.splitext(filename)
+    if file_extension == ".npz":
+        return load_particle_array_from_npz(filename)
+    elif file_extension == ".ast":
+        return astraBeam2particleArray(filename, s_ref=-1, Eref=-1)
+    else:
+        raise Exception("Unknown format of the beam file: " + file_extension + " but must be *.ast or *.npz ")
+
+
+def save_particle_array(filename, p_array):
+    """
+    Universal function to load beam file, *.ast or *.npz format
+
+    :param filename: path to file, filename.ast or filename.npz
+    :return: ParticleArray
+    """
+    name, file_extension = os.path.splitext(filename)
+    if file_extension == ".npz":
+        save_particle_array2npz(filename, p_array)
+    elif file_extension == ".ast":
+        particleArray2astraBeam(p_array, filename)
+    else:
+        raise Exception("Unknown format of the beam file: " + file_extension + " but must be *.ast or *.npz")
+
 
 
 def find_drifts(lat):

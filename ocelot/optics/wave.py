@@ -183,7 +183,8 @@ class RadiationField:
 
     def ph_sp_dens(self):
         if self.domain_z == 't':
-            dfl = self.fft_z(return_result=1)
+            dfl = deepcopy(self)
+            dfl.fft_z()
         else:
             dfl = self
         pulse_energy = dfl.E()
@@ -1267,7 +1268,7 @@ def dfl_pad_z(dfl, padn):
 
     if padn > 1:
         padn_n = int(padn  * dfl.Nz())  # new number of slices
-        _logger.info('padding dfl by ', padn, 'from', dfl.Nz(), 'to', padn_n)
+        _logger.info('padding dfl by {:} from {:} to {:}'.format(padn, dfl.Nz(), padn_n))
         dfl_pad = RadiationField( (padn_n, dfl.Ny(), dfl.Nx()) )
         dfl_pad.copy_param(dfl)
         dfl_pad.fld[-dfl.Nz():, :, :] = dfl.fld
@@ -1275,20 +1276,20 @@ def dfl_pad_z(dfl, padn):
     elif padn < -1:
         padn = abs(padn)
         padn_n = int(dfl.Nz() / padn)  # new number of slices
-        _logger.info('de-padding dfl by ', padn, 'from', dfl.Nz(), 'to', padn_n)
+        _logger.info('de-padding dfl by {:} from {:} to {:}'.format(padn, dfl.Nz(), padn_n))
         dfl_pad = RadiationField()
         dfl_pad.copy_param(dfl)
         dfl_pad.fld = dfl.fld[-padn_n:, :, :]
         dfl = dfl_pad
     else:
-        _logger.info('padding dfl by ' + str(padn))
+        _logger.info('padding dfl by {:}'.format(padn))
         _logger.info(ind_str + 'padn=1, passing')
 
     t_func = time.time() - start
     if t_func < 60:
-        _logger.debug(ind_str + 'done in %.2f ' % t_func + 'sec')
+        _logger.debug(ind_str + 'done in {:.2f} sec'.format(t_func))
     else:
-        _logger.debug(ind_str + 'done in %.2f ' % t_func / 60 + 'min')
+        _logger.debug(ind_str + 'done in {:.2f} min'.format(t_func/60))
     # return dfl_pad
 
 def dfl_cut_z(dfl,z=[-np.inf,np.inf],debug=1):
@@ -1554,7 +1555,7 @@ def calc_wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1
     output is a real value of wigner distribution
     '''
     
-    _logging.debug('calc_wigner start')
+    _logger.debug('calc_wigner start')
     
     N0 = len(field)
     
@@ -1569,7 +1570,7 @@ def calc_wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1
     F1 = field
     F2 = deepcopy(F1)
     
-    _logging.debug(ind_str + 'fields created, rolling multiplication')
+    _logger.debug(ind_str + 'fields created, rolling multiplication')
     
     # speed-up with numba?
     for i in range(N):
@@ -1580,7 +1581,7 @@ def calc_wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1
         if debug > 1: 
             print(i, 'of', N)
         
-    _logging.debug(ind_str + 'starting fft')
+    _logger.debug(ind_str + 'starting fft')
     
     wig = np.fft.fftshift(np.conj(F1) * F2, 0)
     
@@ -1593,7 +1594,7 @@ def calc_wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1
     wig = np.fft.fftshift(wig, 0)
     wig = wig[0:N0, 0:N0] / N
     
-    _logging.debug(ind_str + 'done')
+    _logger.debug(ind_str + 'done')
     return np.real(wig)
     
 def wigner_pad(wig, pad):
@@ -1601,7 +1602,7 @@ def wigner_pad(wig, pad):
     pads WignerDistribution with zeros in time domain 
     '''
     
-    _logging.debug('padding Wigner with zeros in time domain')
+    _logger.debug('padding Wigner with zeros in time domain')
     
     wig_out = deepcopy(wig)
     n_add = wig_out.s.size * (pad-1) / 2
@@ -1613,7 +1614,7 @@ def wigner_pad(wig, pad):
     wig_out.s = np.concatenate([pad_array_s_l,wig_out.s,pad_array_s_r])
     wig_out.field = np.concatenate([np.zeros(n_add_l), wig_out.field, np.zeros(n_add_r)])
     
-    _logging.debug(ind_str + 'done')
+    _logger.debug(ind_str + 'done')
     return wig_out
 
 def wigner_out(out, z=inf, method='mp', pad=1, debug=1):
@@ -1625,7 +1626,7 @@ def wigner_out(out, z=inf, method='mp', pad=1, debug=1):
     
     import numpy as np
     
-    _logging.info('calculating Wigner distribution from .out at z = {}'.format(str(z)))
+    _logger.info('calculating Wigner distribution from .out at z = {}'.format(str(z)))
     start_time = time.time()
     
     if z == 'end': 
@@ -1650,7 +1651,7 @@ def wigner_out(out, z=inf, method='mp', pad=1, debug=1):
     
     wig.eval(method) #calculate wigner parameters based on its attributes
 
-    _logging.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
+    _logger.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
     
     return wig
     
@@ -1662,7 +1663,7 @@ def wigner_dfl(dfl, method='mp', pad=1, debug=1):
     
     import numpy as np
     
-    _logging.info('calculating Wigner distribution from dfl')
+    _logger.info('calculating Wigner distribution from dfl')
     start_time = time.time()
     
     wig = WignerDistribution()
@@ -1676,7 +1677,7 @@ def wigner_dfl(dfl, method='mp', pad=1, debug=1):
     
     wig.eval(method) #calculate wigner parameters based on its attributes
 
-    _logging.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
+    _logger.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
     
     return wig
     
@@ -1694,7 +1695,7 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1):
         # raise ValueError('unknown object used as input')
 
     
-    _logging.info('calculating Wigner distribution from out_stat at z = {}'.format(str(z)))
+    _logger.info('calculating Wigner distribution from out_stat at z = {}'.format(str(z)))
     start_time = time.time()
     
     if z == inf:
@@ -1721,7 +1722,7 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1):
     wig.z = z
 #    wig.energy= np.mean(out.p_int[:, -1], axis=0) * out('xlamds') * out('zsep') * out.nSlices / speed_of_light
     
-    _logging.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
+    _logger.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
     
     return wig
 

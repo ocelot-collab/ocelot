@@ -183,7 +183,8 @@ class RadiationField:
 
     def ph_sp_dens(self):
         if self.domain_z == 't':
-            dfl = self.fft_z(return_result=1)
+            dfl = deepcopy(self)
+            dfl.fft_z()
         else:
             dfl = self
         pulse_energy = dfl.E()
@@ -1273,7 +1274,7 @@ def dfl_pad_z(dfl, padn):
 
     if padn > 1:
         padn_n = int(padn  * dfl.Nz())  # new number of slices
-        _logger.info('padding dfl by ', padn, 'from', dfl.Nz(), 'to', padn_n)
+        _logger.info('padding dfl by {:} from {:} to {:}'.format(padn, dfl.Nz(), padn_n))
         dfl_pad = RadiationField( (padn_n, dfl.Ny(), dfl.Nx()) )
         dfl_pad.copy_param(dfl)
         dfl_pad.fld[-dfl.Nz():, :, :] = dfl.fld
@@ -1281,20 +1282,20 @@ def dfl_pad_z(dfl, padn):
     elif padn < -1:
         padn = abs(padn)
         padn_n = int(dfl.Nz() / padn)  # new number of slices
-        _logger.info('de-padding dfl by ', padn, 'from', dfl.Nz(), 'to', padn_n)
+        _logger.info('de-padding dfl by {:} from {:} to {:}'.format(padn, dfl.Nz(), padn_n))
         dfl_pad = RadiationField()
         dfl_pad.copy_param(dfl)
         dfl_pad.fld = dfl.fld[-padn_n:, :, :]
         dfl = dfl_pad
     else:
-        _logger.info('padding dfl by ' + str(padn))
+        _logger.info('padding dfl by {:}'.format(padn))
         _logger.info(ind_str + 'padn=1, passing')
 
     t_func = time.time() - start
     if t_func < 60:
-        _logger.debug(ind_str + 'done in %.2f ' % t_func + 'sec')
+        _logger.debug(ind_str + 'done in {:.2f} sec'.format(t_func))
     else:
-        _logger.debug(ind_str + 'done in %.2f ' % t_func / 60 + 'min')
+        _logger.debug(ind_str + 'done in {:.2f} min'.format(t_func/60))
     # return dfl_pad
 
 def dfl_cut_z(dfl,z=[-np.inf,np.inf],debug=1):

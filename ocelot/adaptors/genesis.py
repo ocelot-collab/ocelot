@@ -513,7 +513,7 @@ class GenesisInput:
                     value = getattr(inp, param_r)
                     setattr(self, param_w, value)
                 else:
-                    _logger.warn(ind_str + 'could not copy ' + param_r)
+                    _logger.warning(ind_str + 'could not copy ' + param_r)
         
         if inp.__class__ is GenesisOutput:
             for param in params:
@@ -526,7 +526,7 @@ class GenesisInput:
                     value = inp(param_r)
                     setattr(self, param_w, value)
                 else:
-                    _logger.warn(ind_str + 'could not copy ' + param)
+                    _logger.warning(ind_str + 'could not copy ' + param)
         
     def copymesh(self, inp, expt=()):
         
@@ -558,7 +558,7 @@ class GenesisInput:
                     if hasattr(inp, param):
                         value = getattr(inp, param)
                         if value == 0:
-                            _logger.warn('  warning, %s=0' %(param))
+                            _logger.warning('  warning, %s=0' %(param))
                 
         elif inp.__class__ is GenesisOutput:
             if ('dgrid' in params_exc) and (inp('meshsize') is not None):
@@ -570,7 +570,7 @@ class GenesisInput:
             if ('ndcut' in params_exc) and hasattr(inp, 'ndcut'):
                 value = getattr(inp, 'ndcut')
                 if value == 0:
-                    _logger.warn((ind_str + 'warning, %s=0' %('ndcut')))
+                    _logger.warning((ind_str + 'warning, %s=0' %('ndcut')))
         
         self.copy(inp, params_exc)
 
@@ -612,8 +612,8 @@ class GenesisOutput:
         '''
         calculates the on-axis spectrum at every position along the undulator and writes it into "spec" attirube
         
-        if mode = "mid" then on-axis power is used for calculation
-        if mode = "int" then transversely integrated power is used
+        if mode = "mid" then on-axis power with on-axis phases is used for calculation
+        if mode = "int" then transversely integrated power with on-axis phases is used (strictly speaking inaccurate, but informative)
         npad (integer) if > 0 pads the power with zeros in order to increase resolution of spectrum.
         '''
         if self.nSlices == 1:
@@ -659,9 +659,9 @@ class GenesisOutput:
         
         self.n_photons = self.pulse_energy / q_e / self.freq_ev_mean
         
-        # self.spec_phot_density = calc_ph_sp_dens(self.spec, self.freq_ev, self.n_photons)
-        self.spec_phot_density = self.spec #tmp
-        # self.sliceKeys_used.append('spec_phot_density')
+        self.spec_phot_density = calc_ph_sp_dens(self.spec, self.freq_ev, self.n_photons).T
+        # self.spec_phot_density = self.spec #tmp
+        self.sliceKeys_used.append('spec_phot_density')
         # print ('        done')
         
     def phase_fix(self, wav=None, s=None):
@@ -1636,12 +1636,12 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
             try:
                 vals = list(map(precision, tokens))
             except ValueError:
-                _logger.debug(ind_str + 'wrong E value, fixing')
-                _logger.debug(ind_str + str(tokens))
+                _logger.log(5, ind_str + 'wrong E value, fixing')
+                _logger.log(5, ind_str + str(tokens))
                 tokens_fixed = re.sub(r'([0-9])\-([0-9])', r'\g<1>E-\g<2>', ' '.join(tokens))
                 tokens_fixed = re.sub(r'([0-9])\+([0-9])', r'\g<1>E+\g<2>', tokens_fixed)
                 tokens_fixed = tokens_fixed.split()
-                _logger.debug(ind_str + str(tokens_fixed))
+                _logger.log(5, ind_str + str(tokens_fixed))
                 vals = list(map(precision, tokens_fixed))
 
             output_unsorted.append(vals)
@@ -2079,9 +2079,9 @@ def read_dpa_file(filePath, nbins=4, npart=None, debug=1):
     nslice = int(len(b) / npart / 6)
     nbins = int(nbins)
 
-    _logger.debug(ind_str + 'nslice' + str(nslice))
-    _logger.debug(ind_str + 'npart' + str(npart))
-    _logger.debug(ind_str + 'nbins' + str(nbins))
+    _logger.debug(ind_str + 'nslice = ' + str(nslice))
+    _logger.debug(ind_str + 'npart = ' + str(npart))
+    _logger.debug(ind_str + 'nbins = ' + str(nbins))
     # print 'b=',nslice*npart*6
     b = b.reshape(nslice, 6, nbins, int(npart / nbins))
     dpa.e = b[:, 0, :, :]  # gamma
@@ -2872,10 +2872,10 @@ def transform_beam_twiss(beam, transform=None, s=None):
             betay_new.append(gy[0, 0])
             alphay_new.append(gy[0, 1])
 
-        beam.beta_x = betax_new
-        beam.beta_y = betay_new
-        beam.alpha_x = alphax_new
-        beam.alpha_y = alphay_new
+        beam.beta_x = np.array(betax_new)
+        beam.beta_y = np.array(betay_new)
+        beam.alpha_x = np.array(alphax_new)
+        beam.alpha_y = np.array(alphay_new)
 
 def cut_beam(beam=None, cut_s=[-inf, inf]):
     '''
@@ -3072,7 +3072,7 @@ def rad_file_str(rad):
 
 def generate_lattice(lattice, unit=1.0, energy=None, debug=1, min_phsh = False):
     _logger.info('generating lattice file...')
-    _logger.debug(ind_str + 'minimum phase shift = ',min_phsh)
+    _logger.debug(ind_str + 'minimum phase shift = {:}'.format(min_phsh))
 
     lat = '# header is included\n? VERSION= 1.00  including new format\n? UNITLENGTH= ' + str(unit) + ' :unit length in header\n'
     undLat = ''
@@ -3093,7 +3093,7 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=1, min_phsh = False):
 
     for e in lattice.sequence:
         
-        _logger.log(5, ind_str + e.__class__)
+        _logger.log(5, ind_str + str(e.__class__))
         
         l = float(e.l)
 
@@ -3147,7 +3147,7 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=1, min_phsh = False):
         
     full_lat = lat + undLat + driftLat + quadLat
     
-    _logger.debug(ind_str + 'full lattice' + full_lat)
+    _logger.debug(ind_str + 'full lattice' + str(full_lat))
     return full_lat
 
 

@@ -5,7 +5,7 @@ Launches simulations on various remote configurations
 import os
 import time
 import subprocess
-import logging
+from ocelot.common.logging import *
 
 _logger = logging.getLogger('ocelot.launcher') 
 
@@ -116,11 +116,11 @@ class MpiLauncher(Launcher):
         t1 = time.time()
         _logger.info('launching mpi job')
         command = 'mkdir -p '+ self.dir + '; ' + 'cd '+ self.dir + '; '+ "`which mpirun` " + str(self.mpiParameters) + " " + self.program + self.argument
-        _logger.debug('  launcher command "{}"'.format(command))
+        _logger.debug(ind_str + 'launcher command "{}"'.format(command))
         # print (command)
         os.system(command)
         t2 = time.time()
-        _logger.debug('  execution time ', t2 - t1, ' sec')
+        _logger.debug(ind_str + 'execution time {:} sec'.format(t2 - t1))
             
     # collect data to directory
     def collect(self, inputDir, outputDir, pattern = "*"):

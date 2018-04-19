@@ -126,7 +126,7 @@ class RadiationField:
         if self.Nz() > 1:
             return np.sum(self.intensity()) * self.Lz() / self.Nz() / speed_of_light
         else:
-            return self.intensity()
+            return np.sum(self.intensity())
 
     # propper scales in meters or 2 pi / meters
     def scale_kx(self):  # scale in meters or meters**-1
@@ -338,7 +338,7 @@ class RadiationField:
             _logger.debug(ind_str + 'done in %.2f min' % (t_func / 60))
     
     
-    def prop(self, z, fine=0, return_result=0, debug=1):
+    def prop(self, z, fine=0, return_result=0, return_orig_domains=1, debug=1):
         '''
         Angular-spectrum propagation for fieldfile
     
@@ -368,6 +368,8 @@ class RadiationField:
                 return
         
         start = time.time()
+        
+        domains = self.domains()
         
         if return_result:
             copydfl = deepcopy(self)
@@ -401,7 +403,8 @@ class RadiationField:
             for i in range(self.Nz()):
                 self.fld[i, :, :] *= H
     
-
+        if return_orig_domains:
+            self.to_domain(domains)
     
         t_func = time.time() - start
         _logger.debug(ind_str + 'done in %.2f sec' % t_func)
@@ -410,7 +413,7 @@ class RadiationField:
             copydfl, self = self, copydfl
             return copydfl
             
-    def prop_m(self, z, m=1, fine=0, return_result=0, debug=1):
+    def prop_m(self, z, m=1, fine=0, return_result=0, return_orig_domains=1, debug=1):
         '''
         Angular-spectrum propagation for fieldfile
         
@@ -441,6 +444,7 @@ class RadiationField:
 #            pass
         
         start = time.time()
+        domains = self.domains()
         
         if return_result:
             copydfl = deepcopy(self)
@@ -479,7 +483,9 @@ class RadiationField:
            # self.fft_xy(debug=debug)
        # if domain_z == 't' and fine:
            # self.fft_z(debug=debug)
-        self.to_domain('s')
+#        self.to_domain('s')
+        if return_orig_domains:
+            self.to_domain(domains)
         
         if m != 1:
             self.curve_wavefront(-m * z / (m-1))
@@ -1554,7 +1560,7 @@ def calc_wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1
     output is a real value of wigner distribution
     '''
     
-    _logging.debug('calc_wigner start')
+    _logger.debug('calc_wigner start')
     
     N0 = len(field)
     
@@ -1569,7 +1575,7 @@ def calc_wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1
     F1 = field
     F2 = deepcopy(F1)
     
-    _logging.debug(ind_str + 'fields created, rolling multiplication')
+    _logger.debug(ind_str + 'fields created, rolling multiplication')
     
     # speed-up with numba?
     for i in range(N):
@@ -1580,7 +1586,7 @@ def calc_wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1
         if debug > 1: 
             print(i, 'of', N)
         
-    _logging.debug(ind_str + 'starting fft')
+    _logger.debug(ind_str + 'starting fft')
     
     wig = np.fft.fftshift(np.conj(F1) * F2, 0)
     
@@ -1593,7 +1599,7 @@ def calc_wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1
     wig = np.fft.fftshift(wig, 0)
     wig = wig[0:N0, 0:N0] / N
     
-    _logging.debug(ind_str + 'done')
+    _logger.debug(ind_str + 'done')
     return np.real(wig)
     
 def wigner_pad(wig, pad):
@@ -1601,7 +1607,7 @@ def wigner_pad(wig, pad):
     pads WignerDistribution with zeros in time domain 
     '''
     
-    _logging.debug('padding Wigner with zeros in time domain')
+    _logger.debug('padding Wigner with zeros in time domain')
     
     wig_out = deepcopy(wig)
     n_add = wig_out.s.size * (pad-1) / 2
@@ -1613,7 +1619,7 @@ def wigner_pad(wig, pad):
     wig_out.s = np.concatenate([pad_array_s_l,wig_out.s,pad_array_s_r])
     wig_out.field = np.concatenate([np.zeros(n_add_l), wig_out.field, np.zeros(n_add_r)])
     
-    _logging.debug(ind_str + 'done')
+    _logger.debug(ind_str + 'done')
     return wig_out
 
 def wigner_out(out, z=inf, method='mp', pad=1, debug=1):
@@ -1625,7 +1631,7 @@ def wigner_out(out, z=inf, method='mp', pad=1, debug=1):
     
     import numpy as np
     
-    _logging.info('calculating Wigner distribution from .out at z = {}'.format(str(z)))
+    _logger.info('calculating Wigner distribution from .out at z = {}'.format(str(z)))
     start_time = time.time()
     
     if z == 'end': 
@@ -1650,7 +1656,7 @@ def wigner_out(out, z=inf, method='mp', pad=1, debug=1):
     
     wig.eval(method) #calculate wigner parameters based on its attributes
 
-    _logging.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
+    _logger.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
     
     return wig
     
@@ -1662,7 +1668,7 @@ def wigner_dfl(dfl, method='mp', pad=1, debug=1):
     
     import numpy as np
     
-    _logging.info('calculating Wigner distribution from dfl')
+    _logger.info('calculating Wigner distribution from dfl')
     start_time = time.time()
     
     wig = WignerDistribution()
@@ -1676,7 +1682,7 @@ def wigner_dfl(dfl, method='mp', pad=1, debug=1):
     
     wig.eval(method) #calculate wigner parameters based on its attributes
 
-    _logging.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
+    _logger.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
     
     return wig
     
@@ -1694,7 +1700,7 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1):
         # raise ValueError('unknown object used as input')
 
     
-    _logging.info('calculating Wigner distribution from out_stat at z = {}'.format(str(z)))
+    _logger.info('calculating Wigner distribution from out_stat at z = {}'.format(str(z)))
     start_time = time.time()
     
     if z == inf:
@@ -1721,7 +1727,7 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1):
     wig.z = z
 #    wig.energy= np.mean(out.p_int[:, -1], axis=0) * out('xlamds') * out('zsep') * out.nSlices / speed_of_light
     
-    _logging.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
+    _logger.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
     
     return wig
 
@@ -1922,10 +1928,10 @@ def imitate_1d_sase(spec_center = 500, spec_res = 0.01, spec_width = 2.5, spec_r
 
 def dfldomain_check(domains, both_req=False):
     
-    err = ValueError('domains should be a string with one or two letters from ("t" or "f") and ("s" or "k")')
+    err = ValueError('domains should be a string with one or two letters from ("t" or "f") and ("s" or "k"), not {}'.format(str(domains)))
     
-    if type(domains) is not str:
-        raise err
+#    if type(domains) is not str:
+#        raise err
     if len(domains) < 1 or len(domains) > 2:
         raise err
     if len(domains) < 2 and both_req == True:

@@ -168,7 +168,11 @@ def read_gout4(filePath):
     _logger.debug(ind_str + 'reading from ' + filePath)
     
     out = Genesis4Output()
-    out.h5 = h5py.File(filePath, 'r')
+    try:
+        out.h5 = h5py.File(filePath, 'r')
+    except Exception:
+        _logger.error(ind_str + 'no such file ' + filePath)
+        raise
     
     out.z = out.h5['Lattice/zplot'][:]
     out.zlat = out.h5['Lattice/z'][:]

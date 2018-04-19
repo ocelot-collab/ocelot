@@ -8,7 +8,6 @@ from ocelot.optics.ray import Ray, trace as trace_ray
 # from ocelot.gui.optics import *
 
 import numpy as np
-# from numpy import *
 # from pylab import *
 import sys, os
 

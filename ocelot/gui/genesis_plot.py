@@ -390,7 +390,7 @@ def subfig_z_power_curr(ax_curr, g, zi=None, x_units='um', legend=False):
     ax_curr.plot(x, g.I / 1e3, 'k--')
     ax_curr.set_ylabel(r'I [kA]')
     ax_curr.set_ylim(ymin=0)
-    ax_curr.text(0.02, 0.98, "Q= %.2f pC" % (g.beam_charge * 1e12), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_curr.transAxes, color='black')  # horizontalalignment='center', verticalalignment='center',
+    ax_curr.text(0.02, 0.98, "Q= {:.2f} pC".format(g.beam_charge * 1e12), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_curr.transAxes, color='black')  # horizontalalignment='center', verticalalignment='center',
     ax_curr.grid(True)
     
     ax_power = ax_curr.twinx()
@@ -404,9 +404,9 @@ def subfig_z_power_curr(ax_curr, g, zi=None, x_units='um', legend=False):
     ax_power.get_yaxis().get_major_formatter().set_scientific(True)
     ax_power.get_yaxis().get_major_formatter().set_powerlimits((-3, 4))  # [:,75,75]
     if 'n_photons' in dir(g):
-        ax_curr.text(0.98, 0.98, "E= %.2e J\nN$_{phot}$= %.2e" % (g.pulse_energy[zi], g.n_photons[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
+        ax_curr.text(0.98, 0.98, "E= {:.2e} J\nN$_{phot}$= {:.2e}".format(g.pulse_energy[zi], g.n_photons[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
     else:
-        ax_curr.text(0.98, 0.98, "E= %.2e J" % (g.pulse_energy[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
+        ax_curr.text(0.98, 0.98, "E= {:.2e} J".format(g.pulse_energy[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
     
     ax_curr.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_power.yaxis.major.locator.set_params(nbins=number_ticks)

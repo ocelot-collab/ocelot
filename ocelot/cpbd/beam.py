@@ -11,7 +11,7 @@ from copy import deepcopy
 #import pickle
 from scipy import interpolate
 from scipy.signal import savgol_filter
-import logging
+from ocelot.common.logging import *
 
 # logger = logging.getLogger(__name__)
 _logger = logging.getLogger('ocelot.beam')
@@ -348,9 +348,12 @@ class BeamArray(Beam):
         return attrs
 
     def sort(self):
+        _logger.debug('sorting beam slices')
         inds = self.s.argsort()
         for attr in self.params():
+            _logger.log(5, ind_str + 'sorting {:}'.format(str(attr)))
             values = getattr(self,attr)
+            _logger.log(5, ind_str + 'size {:}'.format(values.size))
             setattr(self,attr,values[inds])
 
     def equidist(self):
@@ -368,8 +371,8 @@ class BeamArray(Beam):
             self.s = s_new
         self.ds = dsm
 
-    def smear(self,sw):
-        print('smearing the beam by {:.2e} m'.format(sw))
+    def smear(self, sw):
+        _logger.debug('smearing the beam by {:.2e} m'.format(sw))
         self.equidist()
         sn = (sw /self.ds).astype(int)
         if sn<2:

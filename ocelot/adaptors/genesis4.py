@@ -168,7 +168,11 @@ def read_gout4(filePath):
     _logger.debug(ind_str + 'reading from ' + filePath)
     
     out = Genesis4Output()
-    out.h5 = h5py.File(filePath, 'r')
+    try:
+        out.h5 = h5py.File(filePath, 'r')
+    except Exception:
+        _logger.error(ind_str + 'no such file ' + filePath)
+        raise
     
     out.z = out.h5['Lattice/zplot'][:]
     out.zlat = out.h5['Lattice/z'][:]
@@ -431,7 +435,6 @@ def read_dpa42parray(filePath, N_part=None, fill_gaps=True):
     _logger.debug(ind_str + 'reading from ' + filePath)
     
     import random
-    import h5py 
     N_part = None
     
     #N_part = 100000
@@ -578,3 +581,15 @@ def write_gen4_lat(lat, filePath, line_name='LINE', l=np.inf):
                    
     with open(filePath, 'w') as f:
         f.write("\n".join(lat_str))
+
+def write_edist_hdf5(edist, filepath):
+    f = h5py.File(filepath, 'w')
+    f.create_dataset('p', data=edist.g)
+    f.create_dataset('t', data=edist.t)
+    f.create_dataset('x', data=edist.x)
+    f.create_dataset('y', data=edist.y)
+    f.create_dataset('xp', data=edist.xp)
+    f.create_dataset('yp', data=edist.yp)
+    f.close()
+    
+    

@@ -127,17 +127,19 @@ def fit_gauss_1d(x,F):
     return mu1, sqrt(sig1)
 
 def fwhm(x,F):
-    m = np.max(F) / 2.0
-    ups = []
-    downs = []
-    for i in range(len(x)-1):
-        if F[i] <  m and F[i+1] > m:
-            ups.append(i)
-        if F[i] >=  m and F[i+1] < m:
-            downs.append(i)
-            
-    #print ups, downs
-    return x[downs[-1]] - x[ups[0]]
+    ff = fwhm3(np.array(F))
+    return x[ff[2][1]]- x[ff[2][0]]
+#    m = np.max(F) / 2.0
+#    ups = []
+#    downs = []
+#    for i in range(len(x)-1):
+#        if F[i] <  m and F[i+1] > m:
+#            ups.append(i)
+#        if F[i] >=  m and F[i+1] < m:
+#            downs.append(i)
+#            
+#    #print ups, downs
+#    return x[downs[-1]] - x[ups[0]]
 
 def fwhm3(valuelist, height=0.5, peakpos=-1, total=1):
     """calculates the full width at half maximum (fwhm) of some curve.
@@ -421,6 +423,7 @@ def corr_c_nb(corr, n_corr, val, norm):
 
 
 def corr_c_np(corr, n_corr, val, norm):
+    n_val = len(val) - n_corr*2
     for i in range(n_val):
         for j in range(n_corr):
             if not j%2:

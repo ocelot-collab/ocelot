@@ -126,7 +126,7 @@ class RadiationField:
         if self.Nz() > 1:
             return np.sum(self.intensity()) * self.Lz() / self.Nz() / speed_of_light
         else:
-            return self.intensity()
+            return np.sum(self.intensity())
 
     # propper scales in meters or 2 pi / meters
     def scale_kx(self):  # scale in meters or meters**-1
@@ -339,7 +339,7 @@ class RadiationField:
             _logger.debug(ind_str + 'done in %.2f min' % (t_func / 60))
     
     
-    def prop(self, z, fine=0, return_result=0, debug=1):
+    def prop(self, z, fine=0, return_result=0, return_orig_domains=1, debug=1):
         '''
         Angular-spectrum propagation for fieldfile
     
@@ -369,6 +369,8 @@ class RadiationField:
                 return
         
         start = time.time()
+        
+        domains = self.domains()
         
         if return_result:
             copydfl = deepcopy(self)
@@ -402,7 +404,8 @@ class RadiationField:
             for i in range(self.Nz()):
                 self.fld[i, :, :] *= H
     
-
+        if return_orig_domains:
+            self.to_domain(domains)
     
         t_func = time.time() - start
         _logger.debug(ind_str + 'done in %.2f sec' % t_func)
@@ -411,7 +414,7 @@ class RadiationField:
             copydfl, self = self, copydfl
             return copydfl
             
-    def prop_m(self, z, m=1, fine=0, return_result=0, debug=1):
+    def prop_m(self, z, m=1, fine=0, return_result=0, return_orig_domains=1, debug=1):
         '''
         Angular-spectrum propagation for fieldfile
         
@@ -442,6 +445,7 @@ class RadiationField:
 #            pass
         
         start = time.time()
+        domains = self.domains()
         
         if return_result:
             copydfl = deepcopy(self)
@@ -480,7 +484,9 @@ class RadiationField:
            # self.fft_xy(debug=debug)
        # if domain_z == 't' and fine:
            # self.fft_z(debug=debug)
-        self.to_domain('s')
+#        self.to_domain('s')
+        if return_orig_domains:
+            self.to_domain(domains)
         
         if m != 1:
             self.curve_wavefront(-m * z / (m-1))
@@ -1923,10 +1929,10 @@ def imitate_1d_sase(spec_center = 500, spec_res = 0.01, spec_width = 2.5, spec_r
 
 def dfldomain_check(domains, both_req=False):
     
-    err = ValueError('domains should be a string with one or two letters from ("t" or "f") and ("s" or "k")')
+    err = ValueError('domains should be a string with one or two letters from ("t" or "f") and ("s" or "k"), not {}'.format(str(domains)))
     
-    if type(domains) is not str:
-        raise err
+#    if type(domains) is not str:
+#        raise err
     if len(domains) < 1 or len(domains) > 2:
         raise err
     if len(domains) < 2 and both_req == True:

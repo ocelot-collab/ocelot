@@ -24,22 +24,24 @@ from copy import copy
 import logging
 from logging import Formatter
 
+# import traceback
+# len(traceback.extract_stack())
 import inspect
 _indent0 = len(inspect.stack())
-_indent0 = 10
+# print('indent=', _indent0)
 
 ind_str = ': '
 
-import traceback
-# len(traceback.extract_stack())
+
 
 _log_colored = True
-_log_indented = True
+_log_indented = False
 _log_debugging = True
 
 
 _MAPPING = {
-'INFO'   : '0;37', # white
+'INFO'   : '0', # default
+# 'INFO'   : '0;37', # white
 'DEBUG'    : '0;36', # cyan
 'WARNING' : '1;33', # yellow
 'ERROR'   : '0;31', # red
@@ -63,7 +65,7 @@ class OcelogFormatter(Formatter):
         ocelog_record = copy(record)
         
         if _log_colored:
-            seq = _MAPPING.get(ocelog_record.levelname, 37) # default white
+            seq = _MAPPING.get(ocelog_record.levelname, '0') # default
             ocelog_record.msg = ('{0}{1}m{2}{3}').format(_PREFIX, seq, ocelog_record.msg, _SUFFIX)
             # ocelog_record.levelname = ('{0}{1}m{2}{3}').format(_PREFIX, seq, ocelog_record.levelname, _SUFFIX)
             
@@ -72,8 +74,7 @@ class OcelogFormatter(Formatter):
             # print('_indent0 ', _indent0)
             # if hasattr(ocelog, 'indent0'):
                 # print('ocelog.indent0', ocelog.indent0)
-            # indent = len(inspect.stack())
-            indent = len(traceback.extract_stack())
+            indent = len(inspect.stack())
             ind_space = ind_str * (indent - _indent0)
             ocelog_record.msg = ind_space + ocelog_record.msg
             

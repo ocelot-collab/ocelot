@@ -1453,8 +1453,10 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     _logger.info('plotting radiation field (dfl)')
     start_time = time.time()
     
-    if dfl.__class__ != RadiationField:
-        raise ValueError('wrong radiation object: should be RadiationField')
+    # print('dfl type is ',type(dfl))
+    # if isinstance(dfl, RadiationField):
+    # # if dfl.__class__ != RadiationField:
+        # raise ValueError('wrong radiation object: should be RadiationField')
     
     dfl = deepcopy(dfl)
     

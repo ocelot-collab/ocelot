@@ -142,19 +142,17 @@ def calculateFelParameters(input, array=False):
     # p.sigb = 0.5 * (p.rxbeam + p.rybeam) # average beam size
     
 
-    h_eV_s * speed_of_light / p.lambda0
+    # h_eV_s * speed_of_light / p.lambda0
     
-    p.rho1 = (0.5 / p.gamma0) * np.power( (p.aw0 * p.fc * p.xlamd / 2 / np.pi )**2 / (p.rxbeam * p.rybeam) * p.I / p.Ia, 1.0/3.0) ## check 8 in denominator
-    
+    p.rho1 = (0.5 / p.gamma0) * np.power( (p.aw0 * p.fc * p.xlamd / 2 / np.pi )**2 / (p.rxbeam * p.rybeam) * p.I / p.Ia, 1.0/3.0)
     
     #p.power = 6.0 * np.sqrt(np.pi) * p.rho1**2 * p.Pb / (p.N * np.log(p.N / p.rho1) ) # shot noise power [W] [Reiche]
     p.lg1 = p.xlamd / (4*np.pi * np.sqrt(3) * p.rho1) #[Xie]
     
-    
     p.zr = 4 * np.pi * p.rxbeam * p.rybeam / p.lambda0
     
     
-      
+    
     a = [None, 0.45, 0.57, 0.55, 1.6, 3.0, 2.0, 0.35, 2.9, 2.4, 51.0, 0.95, 3.0, 5.4, 0.7, 1.9, 1140.0, 2.2, 2.9, 3.2]
     
     p.xie_etad = p.lg1 / (2 * p.k0 * p.rxbeam * p.rybeam)
@@ -165,7 +163,7 @@ def calculateFelParameters(input, array=False):
     + a[7] * p.xie_etae ** a[8] * p.xie_etagamma ** a[9] + a[10] * p.xie_etad ** a[11] * p.xie_etagamma ** a[12] + a[13] * p.xie_etad ** a[14] * p.xie_etae ** a[15]
     + a[16] * p.xie_etad ** a[17] * p.xie_etae ** a[18] * p.xie_etagamma ** a[19])
     
-
+    
     
     p.lg3 = p.lg1 * (1 + p.xie_lscale)
     p.rho3 = p.xlamd / (4*np.pi * np.sqrt(3) * p.lg3)
@@ -173,12 +171,14 @@ def calculateFelParameters(input, array=False):
 
     
     p.Nc = p.I / (q_e * p.rho3 * p.k0 * speed_of_light)
+    # p.P_sn = (3 * p.rho1 * p.Pb) / (p.Nc * np.sqrt(np.pi * np.log(p.Nc))) # shot noise power [W]
     p.P_sn = (3 * p.rho1 * p.Pb) / (p.Nc * np.sqrt(np.pi * np.log(p.Nc))) # shot noise power [W]
     
     
     p.z_sat_norm = 3 + 1/np.sqrt(3) * np.log(p.Nc) # normalized saturation length for slices
     p.z_sat_magn = p.z_sat_norm * np.sqrt(3) * p.lg3 # magnetic length to reach saturation
     
+    p.theta_c = np.sqrt(p.lambda0 / p.lg3) #critical angle
     # _logger.debug('L_sat_norm = {}'.format(p.z_sat_norm))
     
     
@@ -214,10 +214,10 @@ def calculateFelParameters(input, array=False):
     # _logger.debug('beam py = {}'.format(p.pybeam))
     _logger.debug('beam rx = {}'.format(p.rxbeam))
     _logger.debug('beam ry = {}'.format(p.rybeam))
-    _logger.debug('Rho 1D = {}'.format(p.rho1))
     _logger.debug('')
     _logger.debug('Estimation results')
-    _logger.debug('FEL_wavelength = {} m'.format(p.lambda0))
+    _logger.debug('Rho 1D = {}'.format(p.rho1))
+    _logger.debug('FEL_wavelength = {:.5e} m'.format(p.lambda0))
     _logger.debug('FEL_E_photon   = {} eV'.format(h_eV_s * speed_of_light / p.lambda0))
     _logger.debug('Lg  1D = {} m'.format(p.lg1))
     _logger.debug('Z_Rayl = {} m'.format(p.zr))
@@ -230,6 +230,8 @@ def calculateFelParameters(input, array=False):
     _logger.debug('P_shnoise = {}'.format(p.P_sn))
     _logger.debug('L_sat_magn = {}'.format(p.z_sat_magn))
     _logger.debug('L_sat_min = {}'.format(p.z_sat_min))
+    _logger.debug('Theta_critical = {:.5e} rad'.format(p.theta_c))
+    
     # try:
         # p.idx = p.I.argmax()
     # except AttributeError: 
@@ -292,7 +294,7 @@ def printFelParameters(p):
     print ('gamma0=', p.gamma0)
     print ('Ip=', p.I, ' beam peak current [A]')
     print ('lambda0=', p.lambda0)
-    print ('Pb=', p.Pb, ' beam power [W]')
+    print ('Pb= %.3e beam power [W]'%(p.Pb))
     # print ('N=', p.N)
     print ('rho (1D)=', p.rho1)
     print ('gain length estimate lg (1D)=', p.lg1)

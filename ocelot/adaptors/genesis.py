@@ -558,7 +558,7 @@ class GenesisInput:
                     if hasattr(inp, param):
                         value = getattr(inp, param)
                         if value == 0:
-                            _logger.warning('  warning, %s=0' %(param))
+                            _logger.info(ind_str + 'warning, %s=0' %(param))
                 
         elif inp.__class__ is GenesisOutput:
             if ('dgrid' in params_exc) and (inp('meshsize') is not None):
@@ -570,7 +570,7 @@ class GenesisInput:
             if ('ndcut' in params_exc) and hasattr(inp, 'ndcut'):
                 value = getattr(inp, 'ndcut')
                 if value == 0:
-                    _logger.warning((ind_str + 'warning, %s=0' %('ndcut')))
+                    _logger.warning((ind_str + 'warning, {:}=0'.format('ndcut')))
         
         self.copy(inp, params_exc)
 

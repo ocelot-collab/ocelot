@@ -89,8 +89,8 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
         path to genesis output file
         path to folders with genesis output files
 
-    choice=(1,1,1,1,[],1,0,0,0,0,0)
-            0 1 2 3 4  5 6 7 8 9 10
+    choice=(1,1,1,1,6.05,1,0,0,0,0,0)
+            0 1 2 3 4    5 6 7 8 9 10
         0 - electron evolution
         1 - radiation evolution
         2 - profile at z=0m
@@ -161,7 +161,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
                     plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug, downsample=2)
                 except:
                     _logger.warning('could not plot wigner')
-            if choice[4] != 0:
+            if choice[4] != 0 and  choice[4] != []:
                 for z in np.arange(choice[4], np.amax(handle.z), choice[4]):
                     plot_gen_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug)
             if choice[12]:
@@ -368,7 +368,8 @@ def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espre
     if showfig:
         plt.show()
     else:
-        plt.close('all')
+        # plt.close('all')
+        plt.close(fig)
 
 
 def subfig_z_power_curr(ax_curr, g, zi=None, x_units='um', legend=False):
@@ -404,7 +405,7 @@ def subfig_z_power_curr(ax_curr, g, zi=None, x_units='um', legend=False):
     ax_power.get_yaxis().get_major_formatter().set_scientific(True)
     ax_power.get_yaxis().get_major_formatter().set_powerlimits((-3, 4))  # [:,75,75]
     if 'n_photons' in dir(g):
-        ax_curr.text(0.98, 0.98, "E= {:.2e} J\nN$_{phot}$= {:.2e}".format(g.pulse_energy[zi], g.n_photons[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
+        ax_curr.text(0.98, 0.98, "E= {:.2e} J\nN$_{{phot}}$= {:.2e}".format(g.pulse_energy[zi], g.n_photons[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
     else:
         ax_curr.text(0.98, 0.98, "E= {:.2e} J".format(g.pulse_energy[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
     
@@ -946,7 +947,8 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'e
         rcParams["savefig.directory"] = dir
         plt.show()
     else:
-        plt.close('all')
+        # plt.close('all')
+        plt.close(fig)
 
 
 def subfig_evo_und_quad(ax_und, g, legend):
@@ -1833,8 +1835,8 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         _logger.debug(ind_str + 'showing dfl')
         plt.show()
     else:
-        plt.close('all')
-        # plt.close(fig)
+        # plt.close('all')
+        plt.close(fig)
 
     if return_proj:
         return [xy_proj, yz_proj, xz_proj, x, y, z]
@@ -2517,7 +2519,8 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cm
     if showfig:
         plt.show()
     else:
-        plt.close('all')
+        # plt.close('all')
+        plt.close(fig)
 
 
 def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, scatter=False, plot_x_y=True, plot_xy_s=True, bins=(50, 50, 50, 50), flip_t=False, x_units='um', y_units='ev', cmin=0, y_offset=None, cmap=def_cmap, debug=1):
@@ -2635,10 +2638,11 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
     if showfig:
         plt.show()
     else:
-        plt.close('all')
+        # plt.close('all')
+        plt.close(fig)
 
     _logger.info(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
-    return fig
+    # return fig
 
 
 def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=None, debug=0):
@@ -2772,7 +2776,8 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
     if showfig:
         plt.show()
     else:
-        plt.close('all')
+        # plt.close('all')
+        plt.close(fig)
 
     _logger.debug(ind_str + 'done')
 
@@ -2856,12 +2861,12 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
     
     if abs_value:
         axScatter.pcolormesh(power_scale, spec_scale, abs(wigner)) #change
-        axScatter.text(0.02, 0.98, r'$W_{max}$= {:.2e}'.format(np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes, color='w')
+        axScatter.text(0.02, 0.98, r'$W_{{max}}$= {:.2e}'.format(np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes, color='w')
     else:
         # cmap='RdBu_r'
         # axScatter.imshow(wigner, cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
         axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], wigner[::downsample,::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
-        axScatter.text(0.02, 0.98, r'$W_{max}$= {:.2e}'.format(np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes)#fontsize=12,
+        axScatter.text(0.02, 0.98, r'$W_{{max}}$= {:.2e}'.format(np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes)#fontsize=12,
             
     if plot_proj:
         axHistx.plot(power_scale,power)
@@ -2935,7 +2940,8 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
         rcParams["savefig.directory"] = dir
         plt.show()
     else:
-        plt.close('all')
+        # plt.close('all')
+        plt.close(fig)
         
 
 '''

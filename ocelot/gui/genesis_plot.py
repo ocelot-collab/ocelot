@@ -1426,7 +1426,7 @@ def plot_dfl_all(dfl, **kwargs):
     plot_dfl(dfl, **kwargs)
     dfl.fft_xy()
 
-def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy = True, log_scale=0, debug=1, vartype_dfl=complex64):
+def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=my_cmap, legend=True, phase=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy = True, log_scale=0, debug=1, cmin=1e-3, vartype_dfl=complex64):
     '''
     Plots dfl radiation object in 3d.
 
@@ -1591,14 +1591,6 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     xz_proj = dfl.int_zx()
     z_proj = dfl.int_z()
     
-    if log_scale:
-        suffix += '_log'
-        xy_proj[xy_proj == 0] = None
-        # yz_proj[yz_proj == 0] = None
-        # xz_proj[xz_proj == 0] = None
-        z_proj[z_proj == 0] = None
-        
-    
     dx = abs(x[1] - x[0])
     dy = abs(y[1] - y[0])
 
@@ -1628,6 +1620,21 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     
     if np.max(x_line) != 0 and np.max(y_line) != 0:
         x_line, y_line = x_line / np.max(x_line), y_line / np.max(y_line)
+        
+        
+    if cmin not in [None, False, 0]:
+        cmap = matplotlib.cm.get_cmap(cmap)
+        cmap.set_under("w")
+        xy_proj[xy_proj < xy_proj.max() * cmin] = -1e-10
+        yz_proj[yz_proj < yz_proj.max() * cmin] = -1e-10
+        xz_proj[xz_proj < xz_proj.max() * cmin] = -1e-10
+
+    if log_scale:
+        suffix += '_log'
+        xy_proj[xy_proj <= 0] = None
+        yz_proj[yz_proj <= 0] = None
+        xz_proj[xz_proj <= 0] = None
+        z_proj[z_proj <= 0] = None
 
     ax_int = fig.add_subplot(2, 2 + column_3d, 1)
     if log_scale:

@@ -592,4 +592,17 @@ def write_edist_hdf5(edist, filepath):
     f.create_dataset('yp', data=edist.yp)
     f.close()
     
+def read_edist_hdf5(filepath, charge):
     
+    edist = GenesisElectronDist()
+    with h5py.File(filepath, 'r') as h5:
+        
+        edist.g =  h5.get('p')[:]
+        edist.t =  h5.get('t')[:]
+        edist.x =  h5.get('x')[:]
+        edist.y =  h5.get('y')[:]
+        edist.xp =  h5.get('xp')[:]
+        edist.yp =  h5.get('yp')[:]
+    
+    edist.part_charge = charge / edist.g.size
+    return edist

@@ -13,9 +13,12 @@ def lattice_format_converter(elements):
     drift_num = 0
     s_pos = 0.0
     for element in elements:
+        if element[0].__class__ == Edge:
+            continue
         element_start = element[1] - element[0].l / 2.0
         if element_start < s_pos - 1.0e-14:                 # 1.0e-14 is used as crutch for precision of float
             if element[0].l == 0.0:
+
                 if s_pos - element_start > 1.0e-2:
                     print("************** WARNING! Element " + element[0].id + " was deleted")
                     continue

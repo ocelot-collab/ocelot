@@ -34,8 +34,8 @@ def show_flux(screen, show = 'Total', xlim = (0,0), ylim = (0,0),  file_name = N
 
         D1(data, X, distance =  screen.Distance, xlabel = xlabel, xlim = xlim, ylim = ylim,  file_name = file_name, unit = unit, status = status)
     else:
-        if screen.ne!=1:
-            print (" ******** ERROR into show.screen ! *********** ")
+        if screen.ne != 1:
+            print (" ******** Can not display 4D plot. Change number of points Screen.num_energy = 1 ! *********** ")
             return
         D3(screen, data, distance =  screen.Distance, file_name = file_name, unit = unit)
 

@@ -139,6 +139,7 @@ def lat2input(lat):
     cors = find_obj_and_create_name(lat, types=[Hcor, Vcor])
     bends = find_obj_and_create_name(lat, types=[Bend, RBend, SBend])
     unkns = find_obj_and_create_name(lat, types=[UnknownElement])
+    tcavs = find_obj_and_create_name(lat, types=[TDCavity])
     # end find objects
 
     lines = ["from ocelot import * \n"]
@@ -156,11 +157,11 @@ def lat2input(lat):
     lines.append("\n# bending magnets \n")
     for bend in bends:
         if bend.__class__ == RBend:
-            type = " = RBend(l = "
+            type = " = RBend(l="
         elif bend.__class__ == SBend:
-            type = " = SBend(l = "
+            type = " = SBend(l="
         else:
-            type = " = Bend(l = "
+            type = " = Bend(l="
         if bend.k1 == 0 or bend.k1 == None:
             k = ''
         else:
@@ -214,6 +215,12 @@ def lat2input(lat):
     for cav in cavs:
         line = cav.name.lower() + " = Cavity(l=" + str(cav.l) + ", v=" + str(cav.v) + \
                ", freq=" + str(cav.f) + ", phi=" + str(cav.phi) + ", eid='" + cav.id + "')\n"
+        lines.append(line)
+
+    lines.append("\n# tdcavity \n")
+    for tcav in tcavs:
+        line = tcav.name.lower() + " = Cavity(l=" + str(tcav.l) + ", v=" + str(tcav.v) + \
+               ", freq=" + str(tcav.f) + ", phi=" + str(tcav.phi) + ", eid='" + tcav.id + "')\n"
         lines.append(line)
 
     lines.append("\n# UnknowElement \n")

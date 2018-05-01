@@ -21,7 +21,7 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from ocelot.cpbd.beam import global_slice_analysis_extended
 from ocelot import *
-from scripts.io import *
+#from scripts.io import *
 import ocelot.gui.accelerator as ogu
 
 class MpltMonitor(QWidget):

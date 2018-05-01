@@ -877,7 +877,7 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones = None ):
 
 
 def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinear", xlabel=None, ylabel=None, nfig=50,
-                 title=None, figsize=None, grid=True, show_xtick_label=True):
+                 title=None, figsize=None, grid=True, show_xtick_label=True, plot_label=None):
     """
     Function shows density
 
@@ -895,6 +895,7 @@ def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinea
     :param figsize: None or e.g. (8, 6)
     :param grid: True, show grid
     :param show_xtick_label: True
+    :param plot_label, None or string.
     :return:
     """
 
@@ -910,7 +911,8 @@ def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinea
     vmin = np.min(H) + (np.max(H) - np.min(H)) * 0.0001
 
     ax.imshow(H, interpolation=interpolation, aspect='auto', origin='low',
-               extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], vmin=vmin, cmap=my_rainbow)
+               extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], vmin=vmin, cmap=my_rainbow, label=plot_label)
+    ax.legend()
     if xlabel != None: ax.set_xlabel(xlabel)
     if ylabel != None: ax.set_ylabel(ylabel)
     ax.grid(grid)

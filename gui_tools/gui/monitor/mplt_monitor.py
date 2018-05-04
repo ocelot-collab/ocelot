@@ -37,7 +37,7 @@ class MpltMonitor(QWidget):
         #mypath = "C:/Users/tomins/Documents/Dropbox/DESY/repository/ocelot/gui_tools/track_data/particles"
         path = os.path.realpath(__file__)
         indx = path.find("gui_tools")
-        self.p_dict = path[:indx] + "gui_tools"+ os.sep + "track_data"+os.sep + "particles"+os.sep
+        self.p_dict = path[:indx] + "gui_tools"+ os.sep + "accelerator" + os.sep + "particles"+os.sep
         self.add_files(self.p_dict)
         #print("PATH",self.p_dict) # os.path.realpath(__file__), path[:indx])
         self.p_arrays = {}
@@ -73,6 +73,7 @@ class MpltMonitor(QWidget):
 
     def add_files(self, p_path):
         self.p_files = [f for f in listdir(p_path) if isfile(join(p_path, f))]
+
         #self.ui.cb_p_file.currentIndexChanged.connect(lambda: 0)
         try:
             self.ui.cb_p_file.currentIndexChanged.disconnect()
@@ -80,7 +81,10 @@ class MpltMonitor(QWidget):
             pass
         self.ui.cb_p_file.clear()
         for path in self.p_files:
-            self.ui.cb_p_file.addItem(path)
+            filename, file_extension = os.path.splitext(path)
+            #print(filename, file_extension)
+            if file_extension in [".npz", ".ast"]:
+                self.ui.cb_p_file.addItem(path)
         #self.ui.cb_p_file.setCurrentIndex(0)
         self.ui.cb_p_file.currentIndexChanged.connect(self.plot)
 
@@ -150,8 +154,7 @@ class MpltMonitor(QWidget):
             #self.ax_r.set_ylabel("Y, mm")
             ogu.show_density(self.p_array.tau()*1e3, self.p_array.y()*1e3, ax=self.ax_r, nbins_x=250, nbins_y=250, interpolation="bilinear",
                              xlabel="tau, mm", ylabel="Y, mm",
-                         nfig=50,
-                         title=None, figsize=None, grid=True, show_xtick_label=True)
+                         nfig=50, title=None, figsize=None, grid=True, show_xtick_label=True)
         elif current_dist == "X-S":
             #self.ax_r.plot(self.p_array.tau()*1e3, self.p_array.x()*1e3, "b.", label=current_dist)
             #self.ax_r.set_xlabel("tau, mm")
@@ -176,7 +179,7 @@ class MpltMonitor(QWidget):
                              xlabel="py/p0, mrad", ylabel="Y, mm",
                          nfig=50, title=None, figsize=None, grid=True, show_xtick_label=True)
         self.ax_r.grid(True)
-        self.ax_r.legend()
+        plt.legend()
         self.canvas.draw()
 
     def add_plot(self):

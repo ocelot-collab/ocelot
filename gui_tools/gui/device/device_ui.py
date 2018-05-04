@@ -161,7 +161,75 @@ class DeviceUI:
         #else:
         #    self.check()
         self.tableWidget.setRowHidden(self.row, hide)
-        
+
+class VirtualUI:
+    def __init__(self, ui=None):
+        self.tableWidget = {}
+        self.row = 0
+        self.col = 0
+        self.alarm = False
+
+
+    def get_value(self):
+        return self.tableWidget[self.row, self.col]
+
+    def set_value(self, val):
+        self.tableWidget[self.row, self.col] = val
+
+    def set_init_value(self, val):
+        #val = np.round(val, 4) # "{:1.4e}".format(val)
+        self.tableWidget[self.row, 1] = val
+
+    def get_init_value(self):
+        return self.tableWidget[self.row, 1]
+
+    def uncheck(self):
+        self.tableWidget[self.row, 3] = False
+        #item.setCheckState(False)
+
+    def check(self):
+        self.tableWidget[self.row, 3] = True
+        #item.setCheckState(QtCore.Qt.Checked)
+
+    def state(self):
+        state = self.tableWidget[self.row, 3]
+        return state
+
+    def set_alarm(self, flag):
+        pass
+        #if flag:
+        #    self.tableWidget.item(self.row, 0).setBackground(QtGui.QColor(255, 0, 0))  # red
+        #else:
+        #    self.tableWidget.item(self.row, 0).setBackground(QtGui.QColor(89, 89, 89))  # grey
+
+    def check_values(self, val, lims, warn=False):
+        pass
+        #if warn:
+        #    self.tableWidget.item(self.row, 0).setBackground(QtGui.QColor(255, 255, 0))  # yellow
+        #else:
+        #    #print("grey")
+        #    self.tableWidget.item(self.row, 0).setBackground(QtGui.QColor(89, 89, 89))  # grey
+        #self.alarm = False
+        #if not(lims[0]<= val <= lims[1]):
+        #    self.tableWidget.item(self.row, 0).setBackground(QtGui.QColor(255, 0, 0))  # red
+        #    self.alarm = True
+
+    def value_was_changed(self, flag):
+        pass
+        #if flag:
+        #    # self.r_items[elem.ui.row].setBrush(pg.mkBrush("r"))
+        #    self.tableWidget.item(self.row, 1).setForeground(QtGui.QColor(255, 101, 101))  # red
+        #else:
+        #    self.tableWidget.item(self.row, 1).setForeground(QtGui.QColor(255, 255, 255))  # white
+
+    def set_hide(self, hide):
+        pass
+        #if hide and uncheck:
+        #    self.uncheck()
+        #else:
+        #    self.check()
+        #self.tableWidget.setRowHidden(self.row, hide)
+
 class CavityUI:
     def __init__(self, ui=None):
         self.tableWidget = None

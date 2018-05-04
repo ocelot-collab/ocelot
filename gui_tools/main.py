@@ -117,6 +117,7 @@ class S2ETool:
         self.load_sections()
         self.load_s2e_table()
         self.load_quads()
+        self.load_bends()
         cav_names = ["A1", "AH1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9", "A10",
                      "A11", "A12", "A13", "A14", "A15", "A16", "A17", "A18", "A19", "A20",
                      "A21", "A22", "A23", "A24", "A25"]
@@ -199,8 +200,17 @@ class S2ETool:
             for elem in sec.lattice.sequence:
                 if elem.__class__ == Quadrupole:
                     self.quads.append(elem)
-
+                #if elem.__class__ == SBend and "BB" in elem.id:
+                #    self.quads.append(elem)
         self.gui.init_quad_table(self.quads, calc_obj=self.calc_twiss)
+
+    def load_bends(self):
+        self.bends = []
+        for sec in self.sections:
+            for elem in sec.lattice.sequence:
+                if elem.__class__ == SBend and "BB" in elem.id:
+                    self.bends.append(elem)
+        self.gui.init_bend_table(self.bends, calc_obj=self.calc_twiss)
 
     def update_lat(self):
         for sec in self.sections:
@@ -234,8 +244,7 @@ class S2ETool:
         # L = 0
         tws0 = deepcopy(self.tws0)
         tws_all = []
-        self.table2cavs()
-        self.table2quads()
+        self.update_lattice_from_tables()
         for sec in self.sections:
         #    for elem in sec.lattice.sequence:
         #        if elem.__class__ in [Quadrupole]:
@@ -275,6 +284,13 @@ class S2ETool:
             elem.k1 = k1
             elem.ui.value_was_changed(np.abs(np.abs(elem.ui.get_init_value() - k1)) > 0.1)
 
+    def table2bends(self):
+        for elem in self.bends:
+            angle = elem.ui.get_value()
+            elem.angle = angle*np.pi/180
+            elem.ui.value_was_changed(np.abs(np.abs(elem.ui.get_init_value() - angle)) > 0.01)
+
+
     def table2cavs(self):
         for elem in self.cavs:
             v = elem.ui.get_volt()
@@ -288,12 +304,14 @@ class S2ETool:
 
     def update_lattice_from_tables(self):
         self.table2quads()
+        self.table2bends()
         self.table2cavs()
         self.update_lat()
 
     def read_from_doocs(self):
         self.online_calc = False
         self.magnets.get_magnets(self.quads)
+        self.magnets.get_magnets(self.bends)
         self.mi_cav_obj.get_cavities(self.cavs)
         self.update_lattice_from_tables()
         self.online_calc = True

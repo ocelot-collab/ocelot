@@ -1878,13 +1878,13 @@ def imitate_1d_sase_like(td_scale, td_env, fd_scale, fd_env, td_phase = None, fd
     return (td_scale, td, fd_scale, fd)
     
 
-def imitate_1d_sase(spec_center = 500, spec_res = 0.01, spec_width = 2.5, spec_range = (None,None), pulse_length = 6, en_pulse = 1e-3, flattop = 0, n_events = 1):
+def imitate_1d_sase(spec_center = 500, spec_res = 0.01, spec_width = 2.5, spec_range = (None,None), pulse_length = 6, en_pulse = 1e-3, flattop = 0, n_events = 1, spec_extend = 5):
     '''
     Models FEL pulse(s) based on Gaussian statistics
     spec_center - central photon energy in eV
     spec_res - spectral resolution in eV
     spec_width - width of spectrum in eV (fwhm of E**2)
-    spec_range = (E1, E2) - energy range of the spectrum. If not defined, spec_range = (spec_center - spec_width*5, spec_center + spec_width*5)
+    spec_range = (E1, E2) - energy range of the spectrum. If not defined, spec_range = (spec_center - spec_width * spec_extend, spec_center + spec_width * spec_extend)
     pulse_length - longitudinal size of the pulse in um (fwhm of E**2)
     en_pulse - expected average energy of the pulses in Joules
     flattop - if true, flat-top pulse in time domain is generated with length 'pulse_length' in um
@@ -1897,7 +1897,6 @@ def imitate_1d_sase(spec_center = 500, spec_res = 0.01, spec_width = 2.5, spec_r
     td - matrix of radiation in time domain with shape ((spec_range[2]-spec_range[1])/spec_res, n_events), normalized such that abs(td)**2 = radiation_power
     '''
     
-    spec_extend = 5
     
     if spec_range == (None,None):
         spec_range = (spec_center - spec_width*spec_extend, spec_center + spec_width*spec_extend)

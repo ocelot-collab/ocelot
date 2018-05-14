@@ -1426,7 +1426,7 @@ def plot_dfl_all(dfl, **kwargs):
     plot_dfl(dfl, **kwargs)
     dfl.fft_xy()
 
-def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=my_cmap, legend=True, phase=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy = True, log_scale=0, debug=1, cmin=1e-3, vartype_dfl=complex64):
+def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy = True, log_scale=0, debug=1, cmin=0, vartype_dfl=complex64):
     '''
     Plots dfl radiation object in 3d.
 

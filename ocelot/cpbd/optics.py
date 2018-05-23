@@ -1070,6 +1070,7 @@ class ProcessTable:
 
 
     def add_physics_proc(self, physics_proc, elem1, elem2):
+        #logger_navi.debug(" add_physics_proc: self.proc_list = " + str([p.__class__.__name__ for p in self.proc_list]) + " -> add -> " + physics_proc.__class__.__name__)
         physics_proc.start_elem = elem1
         physics_proc.end_elem = elem2
         # print(elem1.id, elem2.id, elem1.__hash__(), elem2.__hash__(), self.lat.sequence.index(elem1), self.lat.sequence.index(elem2))
@@ -1082,9 +1083,11 @@ class ProcessTable:
         # print(self.lat.sequence.index(elem2))
         physics_proc.counter = physics_proc.step
         physics_proc.prepare(self.lat)
+
+        logger_navi.debug(" add_physics_proc: self.proc_list = " + str([p.__class__.__name__ for p in self.proc_list]) + ".append(" + physics_proc.__class__.__name__ + ")" +
+                          "; start: " + str(physics_proc.indx0 ) + " stop: " + str(physics_proc.indx1))
+
         self.proc_list.append(physics_proc)
-        logger_navi.debug(" add_physics_proc: self.proc_list.append(): " + physics_proc.__class__.__name__ +
-                          " lat elem indx: start: " + str(physics_proc.indx0 ) + " stop: " + str(physics_proc.indx1))
         # print(elem1.__hash__(), elem2.__hash__(), physics_proc.indx0, physics_proc.indx1, self.proc_list)
 
 
@@ -1113,7 +1116,7 @@ class Navigator:
         self.kill_process = False # for case when calculations are needed to terminated e.g. from gui
 
     def add_physics_proc(self, physics_proc, elem1, elem2):
-        logger_navi.debug(" add_physics_proc: phys proc: " + physics_proc.__class__.__name__)
+        #logger_navi.debug(" add_physics_proc: phys proc: " + physics_proc.__class__.__name__)
         self.process_table.add_physics_proc(physics_proc, elem1, elem2)
 
     def check_overjump(self, dz, processes):
@@ -1157,8 +1160,8 @@ class Navigator:
 
         return dz, processes
 
-
     def get_proc_list(self):
+        logger_navi.debug(" get_proc_list: all phys proc = " + str([p.__class__.__name__ for p in self.process_table.proc_list]))
         proc_list = []
         for p in self.process_table.proc_list:
             if p.indx0 <= self.n_elem < p.indx1:
@@ -1201,10 +1204,8 @@ class Navigator:
             else:
                 L = self.lat.totalLen
             dz = L - self.z0
-
         # check if dz overjumps the stop element
         dz, processes = self.check_overjump(dz, processes)
-
         logger_navi.debug(" Navigator.get_next: process: " + " ".join([proc.__class__.__name__ for proc in processes]))
 
         logger_navi.debug(" Navigator.get_next: navi.z0=" + str(self.z0) + " navi.n_elem=" + str(self.n_elem) + " navi.sum_lengths="

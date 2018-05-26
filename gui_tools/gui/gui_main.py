@@ -14,6 +14,7 @@ from gui.device.device_ui import *
 from ocelot import *
 import os
 import importlib.util
+import numpy as np
 
 class OcelotInterfaceWindow(QMainWindow):
     """ Main class for the GUI application """
@@ -79,6 +80,7 @@ class OcelotInterfaceWindow(QMainWindow):
                         elem.ui.set_value(new_cell[elem.id].k1)
                 for elem in self.master.bends:
                     if elem.id in new_cell.keys():
+                        #print("bend", elem.id, new_cell[elem.id].angle)
                         elem.ui.set_value(new_cell[elem.id].angle)
                 for elem in self.master.cavs:
                     #print(elem.cavs[0].id, elem.cavs[0].id in new_cell.keys())
@@ -86,8 +88,8 @@ class OcelotInterfaceWindow(QMainWindow):
                         elem.ui.set_volt(new_cell[elem.cavs[0].id].v*len(elem.cavs))
                         elem.ui.set_phi(new_cell[elem.cavs[0].id].phi)
 
-                        print("set cav: ", elem.id, new_cell[elem.cavs[0].id].v*len(elem.cavs))
-                        print("set cav: ", elem.id, new_cell[elem.cavs[0].id].phi)
+                        #print("set cav: ", elem.id, new_cell[elem.cavs[0].id].v*len(elem.cavs))
+                        #print("set cav: ", elem.id, new_cell[elem.cavs[0].id].phi)
             self.master.update_lattice_from_tables()
 
     def save_lattice(self):

@@ -1,4 +1,5 @@
 from ocelot.cpbd.io import save_particle_array
+from ocelot.common.globals import *
 import numpy as np
 
 
@@ -116,3 +117,32 @@ class SmoothBeam(PhysProc):
         Zout[inds] = Zout2
         p_array.tau()[:] = Zout[:]
         #return Zout
+
+
+class LaserHeater(PhysProc):
+    def __init__(self, step=1):
+        PhysProc.__init__(self, step)
+        # amplitude of energy modulation on axis
+        self.dE = 12500e-9 / 0.5  # GeV
+        self.Ku = 1.294  # undulator parameter
+        self.Lu = 0.74  # [m] - undulator length
+        self.lperiod = 0.074  # [m] - undulator period length
+        self.sigma_l = 300e-6  # [m]
+        self.sigma_x = self.sigma_l
+        self.sigma_y = self.sigma_l
+        self.x_mean = 0
+        self.y_mean = 0
+
+    def apply(self, p_array, dz):
+        gamma = p_array.E / m_e_GeV
+        lbda_ph = self.lperiod / (2 * gamma ** 2) * (1 + self.Ku ** 2 / 2)
+        k_ph = 2 * np.pi / lbda_ph
+        pc = np.sqrt(p_array.E ** 2 - m_e_GeV ** 2)
+
+        A = self.dE / (pc) * dz / self.Lu
+        dx = p_array.x()[:] - self.x_mean
+        dy = p_array.y()[:] - self.y_mean
+        p_array.p()[:] += A * np.cos(k_ph * p_array.tau()[:]) * np.exp(
+            -0.25 * dx ** 2 / self.sigma_x ** 2
+            - 0.25 * dy ** 2 / self.sigma_y ** 2)
+

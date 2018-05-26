@@ -21,10 +21,11 @@ from threading import Thread, Event
 from ocelot.optimizer.mint.xfel_interface import *
 from mint.devices_mi import *
 import logging
+from ocelot.cpbd import optics
 ilename="logs/main.log"
 logging.basicConfig( level=logging.INFO)
 logger = logging.getLogger(__name__)
-
+#logging.getLogger(optics.__name__+".navi").setLevel(logging.DEBUG)
 
 tws_i1 = Twiss()
 tws_i1.E = 0.005000000
@@ -94,11 +95,15 @@ class TrackTread(Thread):
                 flag = sec.ui.get_status(proc=proc.__name__)
                 flag_name = sec.translator[proc]
                 sec.__dict__[flag_name] = flag
+                #print()
                 #print(proc.__name__, flag_name, flag)
+                #print()
             if sec.ui.get_status(proc=self.check_header):
                 #print("tracking trough "+sec.__class__.__name__ + " ....")
                 #sec.calc_tws = False
                 particles = sec.tracking(particles)
+                print()
+                print("section: ", sec.__class__.__name__, "  Energy = ", particles.E)
                 #sec.calculated = True
                 sec.ui.calculated(True)
                 self.gui.plot_s2e(particles)
@@ -287,7 +292,7 @@ class S2ETool:
     def table2bends(self):
         for elem in self.bends:
             angle = elem.ui.get_value()
-            elem.angle = angle*np.pi/180
+            elem.angle = angle
             elem.ui.value_was_changed(np.abs(np.abs(elem.ui.get_init_value() - angle)) > 0.01)
 
 
@@ -338,8 +343,8 @@ class S2ETool:
         self.sections = []
         for sec in blank_sections:
             self.sections.append(sec())
-        #for sec in self.sections:
-        #    print(sec.__class__.__name__)
+        for sec in self.sections:
+            print(sec.__class__.__name__)
         return self.sections
 
     def get_whole_lat(self):

@@ -265,6 +265,7 @@ class SectionTrack:
 
         # init physics processes
         for physics_process in self.physics_processes_array:
+
             if physics_process[0].__class__ == SpaceCharge and self.sc_flag:
                 self.navigator.add_physics_proc(physics_process[0], physics_process[1], physics_process[2])
 
@@ -353,9 +354,6 @@ class SectionTrack:
         self.init_navigator()
 
         # tracking
-        print()
-        print(self.lattice_name + ' TRACKING')
-        print("std = ", np.std(particles.tau()))
         tws_track, particles = track(self.lattice, particles, self.navigator,
                                      print_progress=self.print_progress, calc_tws=self.calc_tws)
         self.tws_track = tws_track

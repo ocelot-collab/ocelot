@@ -25,7 +25,9 @@ class A1(SectionTrack):
         self.lattice_name = 'A1'
         self.unit_step = 0.02
 
-        self.input_beam_file = self.particle_dir + 'Exfel.0320.ast'
+        #self.input_beam_file = self.particle_dir + 'Exfel.0320_200k.ast'
+        self.input_beam_file = self.particle_dir + 'Exfel.0320_250pC.ast'
+        #self.input_beam_file = self.particle_dir + 'XFEL_500pC_setup_D_03p2_1M.ast'
         self.output_beam_file = self.particle_dir + 'section_A1.npz'
         self.tws_file = self.tws_dir + "tws_section_A1.npz"
 
@@ -130,7 +132,15 @@ class LH(SectionTrack):
         sc = SpaceCharge()
         sc.step = 50
         sc.nmesh_xyz = [63, 63, 63]
+        tws = Twiss()
+        tws.beta_x = 2.36238404123
+        tws.beta_y = 2.90712039319
+        tws.alpha_x = 1.23079453323
+        tws.alpha_y = -1.45354874634
+        tws.E = 0.13
 
+        bt = BeamTransform(tws=tws)
+        self.add_physics_process(bt, start=i1.match_55_i1, stop=i1.match_55_i1)
         self.add_physics_process(sc, start=acc39_stop, stop=lhm_stop)
         self.add_physics_process(csr, start=acc39_stop, stop=lhm_stop)
 

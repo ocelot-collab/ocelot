@@ -447,13 +447,13 @@ def track(lattice, p_array, navi, print_progress=True, calc_tws=True):
         if navi.kill_process:
             logger.info("Killing tracking ... ")
             return tws_track, p_array
-        dz, proc_list = navi.get_next()
+        dz, proc_list, phys_steps = navi.get_next()
 
         tracking_step(lat=lattice, particle_list=p_array, dz=dz, navi=navi)
 
-        for p in proc_list:
+        for p, z_step in zip(proc_list, phys_steps):
             p.z0 = navi.z0
-            p.apply(p_array, dz)
+            p.apply(p_array, z_step)
         tw = get_envelope(p_array) if calc_tws else Twiss()
         L += dz
         tw.s += L
@@ -462,6 +462,7 @@ def track(lattice, p_array, navi, print_progress=True, calc_tws=True):
         if print_progress:
             poc_names = [p.__class__.__name__ for p in proc_list]
             #sys.stdout.write("\033[K")
+            #print("z = " + str(navi.z0)+" / "+str(lattice.totalLen) + " : applied: " + ", ".join(poc_names) )
             sys.stdout.write( "\r" + "z = " + str(navi.z0)+" / "+str(lattice.totalLen) + " : applied: " + ", ".join(poc_names)  )
             sys.stdout.flush()
 

@@ -1,6 +1,8 @@
 from ocelot.cpbd.io import save_particle_array
 from ocelot.common.globals import *
 import numpy as np
+import logging
+logger = logging.getLogger(__name__)
 
 
 class PhysProc:
@@ -54,6 +56,7 @@ class SaveBeam(PhysProc):
         self.filename = filename
 
     def apply(self, p_array, dz):
+        logger.debug(" SaveBeam applied, dz =", dz)
         save_particle_array(filename=self.filename, p_array=p_array)
 
 
@@ -88,7 +91,7 @@ class SmoothBeam(PhysProc):
         :return:
         """
 
-        print("SMOOTH")
+        logger.debug(" SmoothBeam applied, dz =", dz)
         def myfunc(x, A):
             if x < 2 * A:
                 y = x - x * x / (4 * A)
@@ -123,9 +126,9 @@ class LaserHeater(PhysProc):
     def __init__(self, step=1):
         PhysProc.__init__(self, step)
         # amplitude of energy modulation on axis
-        self.dE = 12500e-9 / 0.5  # GeV
+        self.dE = 12500e-9  # GeV
         self.Ku = 1.294  # undulator parameter
-        self.Lu = 0.74  # [m] - undulator length
+        self.Lu = 0.8  # [m] - undulator length
         self.lperiod = 0.074  # [m] - undulator period length
         self.sigma_l = 300e-6  # [m]
         self.sigma_x = self.sigma_l
@@ -134,6 +137,7 @@ class LaserHeater(PhysProc):
         self.y_mean = 0
 
     def apply(self, p_array, dz):
+        logger.debug(" LH applied, dz =", dz)
         gamma = p_array.E / m_e_GeV
         lbda_ph = self.lperiod / (2 * gamma ** 2) * (1 + self.Ku ** 2 / 2)
         k_ph = 2 * np.pi / lbda_ph

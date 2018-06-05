@@ -187,8 +187,9 @@ class SpaceCharge(PhysProc):
 
 
     def apply(self, p_array, zstep):
+        logger.debug(" apply: zstep = " + str(zstep))
         if zstep == 0:
-            logger.debug("SpaceCharge delta_s = 0")
+            logger.debug(" apply: zstep = 0 -> return ")
             return
         nmesh_xyz = np.array(self.nmesh_xyz)
         gamref = p_array.E / m_e_GeV

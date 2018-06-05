@@ -1119,7 +1119,8 @@ class Navigator:
         #logger_navi.debug(" add_physics_proc: phys proc: " + physics_proc.__class__.__name__)
         self.process_table.add_physics_proc(physics_proc, elem1, elem2)
 
-    def check_overjump(self, dz, processes):
+    def check_overjump(self, dz, processes, phys_steps):
+        phys_steps_red = phys_steps - dz
         if len(processes) != 0:
             nearest_stop_elem = min([proc.indx1 for proc in processes])
             L_stop = np.sum(np.array([elem.l for elem in self.lat.sequence[:nearest_stop_elem]]))
@@ -1136,6 +1137,7 @@ class Navigator:
                 dz = start_pos[0] - self.z0
                 logger_navi.debug(" check_overjump: there is phys proc inside step -> dz was decreased: dz = " + str(dz))
 
+        phys_steps = phys_steps_red + dz
 
         # check kick processes
         kick_list = self.process_table.kick_proc_list
@@ -1151,14 +1153,17 @@ class Navigator:
                 L_kick_stop = proc.s_start
                 if self.z0 + dz > L_kick_stop:
                     dz = L_kick_stop - self.z0
+                    phys_steps = phys_steps_red + dz
                     processes.append(proc)
+                    phys_steps = np.append(phys_steps, 0)
                     continue
                 elif self.z0 + dz == L_kick_stop:
                     processes.append(proc)
+                    phys_steps = np.append(phys_steps, 0)
                 else:
                     pass
 
-        return dz, processes
+        return dz, processes, phys_steps
 
     def get_proc_list(self):
         logger_navi.debug(" get_proc_list: all phys proc = " + str([p.__class__.__name__ for p in self.process_table.proc_list]))
@@ -1183,10 +1188,14 @@ class Navigator:
         if len(proc_list) > 0:
 
             counters = np.array([p.counter for p in proc_list])
+            #print("counters = ", counters)
             step = counters.min()
 
             inxs = np.where(counters == step)
+            #print(inxs)
             processes = [proc_list[i] for i in inxs[0]]
+            phys_steps = np.array([p.step for p in processes])*self.unit_step
+            #print("steps = ", dzs)
             for p in proc_list:
                 p.counter -= step
                 if p.counter == 0:
@@ -1204,8 +1213,11 @@ class Navigator:
             else:
                 L = self.lat.totalLen
             dz = L - self.z0
+            phys_steps = np.array([dz])
         # check if dz overjumps the stop element
-        dz, processes = self.check_overjump(dz, processes)
+        #dzs_red = dzs - dz
+        dz, processes, phys_steps = self.check_overjump(dz, processes, phys_steps)
+        #dzs = dzs_red
         logger_navi.debug(" Navigator.get_next: process: " + " ".join([proc.__class__.__name__ for proc in processes]))
 
         logger_navi.debug(" Navigator.get_next: navi.z0=" + str(self.z0) + " navi.n_elem=" + str(self.n_elem) + " navi.sum_lengths="
@@ -1214,7 +1226,7 @@ class Navigator:
         logger_navi.debug(" Navigator.get_next: element type=" + self.lat.sequence[self.n_elem].__class__.__name__ + " element name=" +
                      str(self.lat.sequence[self.n_elem].id))
 
-        return dz, processes
+        return dz, processes, phys_steps
 
 
 def get_map(lattice, dz, navi):

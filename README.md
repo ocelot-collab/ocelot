@@ -130,5 +130,7 @@ You can download OCELOT jupyter tutorials (release v18.02) using GitHub link [zi
     - Coupler Kick. Example of RF coupler kick influence on trajjectory and optics.
 * [Tutorial N7. Lattice design.](7_lattice_design.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/7_lattice_design.ipynb).
     - Lattice design, twiss matching, twiss backtracking
+* [Tutorial N8. Physics process addition. Laser heater](8_laser_heater.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/8_laser_heater.ipynb).
+    - Theory of Laser Heater, implementation of new Physics Process, track particles w/o laser heater effect.  
 
 

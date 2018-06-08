@@ -131,7 +131,7 @@ plt.show()
 #resp_mat1 = method.ring_response_matrix()
 
 #print(resp_mat1)
-orb.correction(beta=5000)
+orb.correction(beta=500)
 
 x_bpm, y_bpm = method.read_virtual_orbit()
 

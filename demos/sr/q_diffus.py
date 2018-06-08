@@ -1,11 +1,10 @@
 __author__ = 'Sergey Tomin'
 
-from time import time
 from pylab import *
 from ocelot.rad import *
 from ocelot import *
 from copy import deepcopy
-
+from time import time
 font = {'size': 20}
 matplotlib.rc('font', **font)
 

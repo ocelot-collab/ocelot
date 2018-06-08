@@ -877,7 +877,7 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones = None ):
 
 
 def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinear", xlabel=None, ylabel=None, nfig=50,
-                 title=None, figsize=None, grid=True, show_xtick_label=True, label=None):
+                 title=None, figsize=None, grid=True, show_xtick_label=True):
     """
     Function shows density
 
@@ -911,8 +911,7 @@ def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinea
     vmin = np.min(H) + (np.max(H) - np.min(H)) * 0.0001
 
     ax.imshow(H, interpolation=interpolation, aspect='auto', origin='low',
-               extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], vmin=vmin, cmap=my_rainbow, label=label)
-    ax.legend()
+               extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], vmin=vmin, cmap=my_rainbow)
     if xlabel != None: ax.set_xlabel(xlabel)
     if ylabel != None: ax.set_ylabel(ylabel)
     ax.grid(grid)

@@ -7,7 +7,6 @@ from scipy.interpolate import splrep, splev
 import json
 import time
 from threading import Thread
-#import matplotlib.pyplot as plt
 
 
 class MeasureResponseMatrix:
@@ -85,8 +84,8 @@ class MeasureResponseMatrix:
 
         beta_x = np.array([tw.beta_x for tw in tws])
         beta_y = np.array([tw.beta_y for tw in tws])
-        self.nu_x = tws[-1].mux / 2. / pi
-        self.nu_y = tws[-1].muy / 2. / pi
+        self.nu_x = tws[-1].mux / 2. / np.pi
+        self.nu_y = tws[-1].muy / 2. / np.pi
 
         tck_bx = splrep(s, beta_x)
         tck_by = splrep(s, beta_y)
@@ -138,17 +137,17 @@ class RingRM(MeasureResponseMatrix):
         ny = len(self.vcors)
         h_resp = np.zeros((m, nx))
         v_resp = np.zeros((m, ny))
-        sin_pnu_x = np.sin(pi * self.nu_x)
-        sin_pnu_y = np.sin(pi * self.nu_y)
+        sin_pnu_x = np.sin(np.pi * self.nu_x)
+        sin_pnu_y = np.sin(np.pi * self.nu_y)
         for i, bpm in enumerate(self.bpms):
             kx = np.sqrt(bpm.beta_x) / (2. * sin_pnu_x)
             ky = np.sqrt(bpm.beta_y) / (2. * sin_pnu_y)
             for j, hcor in enumerate(self.hcors):
                 mu_x = abs(bpm.phi_x - hcor.phi_x)
-                h_resp[i, j] = kx * np.sqrt(hcor.beta_x) * np.cos(mu_x - pi * self.nu_x)
+                h_resp[i, j] = kx * np.sqrt(hcor.beta_x) * np.cos(mu_x - np.pi * self.nu_x)
             for n, vcor in enumerate(self.vcors):
                 mu_y = abs(bpm.phi_y - vcor.phi_y)
-                v_resp[i, n] = ky * np.sqrt(vcor.beta_y) * np.cos(mu_y - pi * self.nu_y)
+                v_resp[i, n] = ky * np.sqrt(vcor.beta_y) * np.cos(mu_y - np.pi * self.nu_y)
         m = len(self.bpms)
         kx = len(self.hcors)
         ky = len(self.vcors)

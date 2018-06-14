@@ -1687,7 +1687,7 @@ def wigner_dfl(dfl, method='mp', pad=1, debug=1):
     
     return wig
     
-def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1):
+def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1):
     '''
     returns averaged WignerDistribution from GenStatOutput at stage at z
     '''
@@ -1713,16 +1713,32 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1):
     zi = np.where(out_stat.z >= z)[0][0]
     
     WW = np.zeros((out_stat.p_int.shape[2], out_stat.p_int.shape[1], out_stat.p_int.shape[1]))
-
+    
+    if pad > 1:
+        n_add = out_stat.s.size * (pad-1) / 2
+        n_add_l = int(n_add - n_add%2)
+        n_add_r = int(n_add + n_add%2)
+        ds = (out_stat.s[-1] - out_stat.s[0]) / (out_stat.s.size-1)
+        pad_array_s_l = np.linspace(out_stat.s[0] - ds*(n_add_l), out_stat.s[0]-ds, n_add_l)
+        pad_array_s_r = np.linspace(out_stat.s[-1]+ds, out_stat.s[-1] + ds*(n_add_r), n_add_r)
+        WW = np.zeros((out_stat.p_int.shape[2], out_stat.p_int.shape[1] + n_add, out_stat.p_int.shape[1] + n_add))
+        s = np.concatenate([pad_array_s_l, out_stat.s, pad_array_s_r])
+    else:
+        WW = np.zeros((out_stat.p_int.shape[2], out_stat.p_int.shape[1], out_stat.p_int.shape[1]))
+        s = out_stat.s
+        
+    
     for (i,n) in enumerate(out_stat.run):
         _logger.debug(ind_str + 'run {} of {}'.format(i, len(out_stat.run)))
         field = np.sqrt(out_stat.p_int[zi,:,i]) * np.exp(1j*out_stat.phi_mid[zi,:,i])
+        if pad > 1:
+            field = np.concatenate([np.zeros(n_add_l), field, np.zeros(n_add_r)])
         WW[i,:,:] = calc_wigner(field, method=method, debug=debug)
     
     wig = WignerDistribution()
     wig.wig = np.mean(WW,axis=0)
-    wig.s = out_stat.s
-    wig.freq_lamd = out_stat.f
+    wig.s = s
+    # wig.freq_lamd = out_stat.f
     wig.xlamds = out_stat.xlamds
     wig.filePath = out_stat.filePath + 'results' + os.path.sep + 'stage_%s__WIG__' %(stage)
     wig.z = z

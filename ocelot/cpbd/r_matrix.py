@@ -152,26 +152,20 @@ def create_r_matrix(element):
             r22 = Ei / Ef * (cos_alpha + np.sqrt(2. / eta) * cos_phi * sin_alpha)
 
             r56 = 0.
-            if V != 0 and E != 0:
-                #gamma2 = gamma * gamma
-                #beta = np.sqrt(1. - 1 / gamma2)
-                #r56 = -z / (beta * beta * gamma2)
-                #gs = (Ef-Ei)/z
-                #r56 = -(1.0/Ei-1.0/Ef)/gs
+            beta0 = 1
+            beta1 = 1
 
+            if V != 0 and E != 0:
                 gamma2 = Ei * Ei
                 beta0 = np.sqrt(1. - 1 / gamma2)
                 gamma2 = Ef * Ef
                 beta1 = np.sqrt(1. - 1 / gamma2)
+
                 r56 = (beta0 / beta1 - 1) * Ei / (Ef - Ei) * z
-                # the same equation:
-                # gamma = E/m_e_GeV
-                # beta = np.sqrt(1. - 1 / gamma**2)
-                # r56 = -1./(beta*gamma)**2 * z*(1 - 1.5*de/m_e_GeV/beta**2/gamma)
 
             k = 2.*np.pi*freq/speed_of_light
-            r66 = Ei/Ef
-            r65 = k*np.sin(phi)*V/(Ef*m_e_GeV)
+            r66 = Ei/Ef*beta0/beta1
+            r65 = k*np.sin(phi)*V/(Ef*beta1*m_e_GeV)
             cav_matrix = np.array([[r11, r12, 0., 0., 0., 0.],
                                 [r21, r22, 0., 0., 0., 0.],
                                 [0., 0., r11, r12, 0., 0.],

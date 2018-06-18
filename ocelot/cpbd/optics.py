@@ -387,7 +387,6 @@ class CorrectorTM(TransferMap):
         #n = len(X)
         b = self.kick_b(z, l, angle_x, angle_y)
         X1 = np.add(np.dot(self.R(energy), X), b)
-        # print(X1)
         X[:] = X1[:]
         return X
 
@@ -424,16 +423,28 @@ class CavityTM(TransferMap):
             # print("couple_kick")
             X[1] += (self.vx_up * V * np.exp(1j * phi)).real * 1e-6 / E
             X[3] += (self.vy_up * V * np.exp(1j * phi)).real * 1e-6 / E
+        X4 = np.copy(X[4])
+        X5 = np.copy(X[5])
         X = self.mul_p_array(X, energy=E)  # t_apply(R, T, X, dx, dy, tilt)
         delta_e = V * np.cos(phi)
         if self.coupler_kick:
             X[1] += (self.vx_down * V * np.exp(1j * phi)).real * 1e-6 / (E + delta_e)
             X[3] += (self.vy_down * V * np.exp(1j * phi)).real * 1e-6 / (E + delta_e)
+
         if E + delta_e > 0:
             k = 2. * np.pi * freq / speed_of_light
             # X[5::6] = (X[5::6]*E + V*np.cos(X[4::6]*k + phi) - delta_e)/(E + delta_e)
             E1 = E + delta_e
-            X[5] = X[5] + V / E1 * (np.cos(-X[4] * k + phi) - np.cos(phi) - k * X[4] * np.sin(phi))
+            gamma = E1 / m_e_GeV
+            beta1 = np.sqrt(1. - 1. / (gamma * gamma))
+
+            beta0 = 1
+            if E != 0:
+                gamma = E/ m_e_GeV
+                beta0 = np.sqrt(1. - 1. / (gamma * gamma))
+
+            X[5] = X5 * E*beta0/(E1*beta1) + V*beta0 / (E1*beta1) * (np.cos(-X4*beta0 * k + phi) - np.cos(phi))
+
         return X
 
     def __call__(self, s):
@@ -1238,10 +1249,12 @@ def get_map(lattice, dz, navi):
     # navi.sum_lengths = np.sum([elem.l for elem in lattice.sequence[:i]])
     L = navi.sum_lengths + elem.l
     while z1 + 1e-10 > L:
-        if i >= nelems - 1:
-            break
         dl = L - navi.z0
         TM.append(elem.transfer_map(dl))
+
+        if i >= nelems - 1:
+            break
+
         navi.z0 = L
         dz -= dl
         i += 1

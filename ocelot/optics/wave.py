@@ -24,7 +24,7 @@ from ocelot.common.py_func import filename_from_path
 # import ocelot.adaptors.genesis as genesis_ad
 # GenesisOutput = genesis_ad.GenesisOutput
 from ocelot.common.logging import *
-_logger = logging.getLogger('ocelot.wave') 
+_logger = logging.getLogger(__name__) 
 
 import multiprocessing
 nthread = multiprocessing.cpu_count()
@@ -799,7 +799,7 @@ class WignerDistribution():
         # self.freq_lamd = h_eV_s * speed_of_light * 1e9 / freq_ev
 
 
-def generate_dfl(xlamds, shape=(151,151,1000), dgrid=(1e-3,1e-3,None), power_rms=(0.1e-3,0.1e-3,2e-6), power_center=(0,0,None), power_angle=(0,0), power_waistpos=(0,0), wavelength=None, zsep=1, freq_chirp=0, energy=None, power=1e6, debug=1):
+def generate_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), power_rms=(0.1e-3,0.1e-3,5e-6), power_center=(0,0,None), power_angle=(0,0), power_waistpos=(0,0), wavelength=None, zsep=None, freq_chirp=0, en_pulse=None, power=1e6, **kwargs):
     '''
     generates RadiationField object 
     narrow-bandwidth, paraxial approximations
@@ -814,16 +814,19 @@ def generate_dfl(xlamds, shape=(151,151,1000), dgrid=(1e-3,1e-3,None), power_rms
     wavelength [m] - central frequency of the radiation, if different from xlamds
     zsep (integer) - distance between slices in z as zsep*xlamds
     freq_chirp [(1e9 nm)/(1e6 um)] = [m/m] - requency chirp of the beam around power_center[2]
-    energy,power = total energy or max power of the pulse, use only one
+    en_pulse, power = total energy or max power of the pulse, use only one
     '''
+    
     start = time.time()
 
     if shape[2] == None:
         shape = (shape[0],shape[1],int(dgrid[2]/xlamds/zsep))
-        
-        
+    
     _logger.info('generating radiation field of shape' + str(tuple(reversed(shape))))
-
+    if 'energy' in kwargs:
+        _logger.warn(ind_str + 'rename energy to en_pulse, soon arg energy will be deprecated')
+        en_pulse = kwargs.pop('energy', 1)
+    
     dfl = RadiationField(tuple(reversed(shape)))
 
     k = 2 * np.pi / xlamds
@@ -833,7 +836,16 @@ def generate_dfl(xlamds, shape=(151,151,1000), dgrid=(1e-3,1e-3,None), power_rms
     dfl.domain_xy = 's'
     dfl.dx = dgrid[0] / dfl.Nx()
     dfl.dy = dgrid[1] / dfl.Ny()
-    dfl.dz = xlamds * zsep
+    if dgrid[2] is not None and zsep is not None:
+        _logger.error('dgrid[2] or zsep should be None, since either determines longiduninal grid size')
+    if dgrid[2] is not None:
+        dz = dgrid[2] / dfl.Nz()
+        zsep = int(dz/xlamds)
+        dfl.dz = xlamds * zsep
+    elif zsep is not None:
+        dfl.dz = xlamds * zsep
+    else:
+        _logger.error('dgrid[2] or zsep should be not None, since they determine longiduninal grid size')
 
     rms_x, rms_y, rms_z = power_rms # intensity rms [m]
     xp, yp = power_angle
@@ -843,15 +855,15 @@ def generate_dfl(xlamds, shape=(151,151,1000), dgrid=(1e-3,1e-3,None), power_rms
     if z0 == None:
         z0 = dfl.Lz()/2
 
-    x = np.linspace(-dfl.Lx()/2, dfl.Lx()/2, dfl.Nx())
-    y = np.linspace(-dfl.Ly()/2, dfl.Ly()/2, dfl.Ny())
-    z = np.linspace(0, dfl.Lz(), dfl.Nz())
-    z, y, x = np.meshgrid(z,y,x, indexing='ij')
+    xl = np.linspace(-dfl.Lx()/2, dfl.Lx()/2, dfl.Nx())
+    yl = np.linspace(-dfl.Ly()/2, dfl.Ly()/2, dfl.Ny())
+    zl = np.linspace(0, dfl.Lz(), dfl.Nz())
+    z, y, x = np.meshgrid(zl,yl,xl, indexing='ij')
 
     qx = 1j * np.pi * (2 * rms_x)**2 / xlamds + zx
     qy = 1j * np.pi * (2 * rms_y)**2 / xlamds + zy
     qz = 1j * np.pi * (2 * rms_z)**2 / xlamds
-
+    
     if wavelength.__class__ in [list, tuple, np.ndarray] and len(wavelength) == 2:
         freq_chirp = (wavelength[1] - wavelength[0]) / (z[-1,0,0] - z[0,0,0])
         _logger.debug(ind_str + 'wavelengths ', wavelength)
@@ -877,15 +889,34 @@ def generate_dfl(xlamds, shape=(151,151,1000), dgrid=(1e-3,1e-3,None), power_rms
     # if qz == 0 or qz == None:
         # dfl.fld = np.exp(-1j * k * ( (x-x0)**2/2/qx + (y-y0)**2/2/qy - phase_chirp_lin + phase_chirp_quad ) )
     # else:
-    dfl.fld = np.exp(-1j * k * ( (x-x0)**2/2/qx + (y-y0)**2/2/qy + (z-z0)**2/2/qz - phase_chirp_lin + phase_chirp_quad) ) #  - (grid[0]-z0)**2/qz 
+    arg = np.zeros_like(z).astype('complex128')
+    if qx != 0:
+        arg += (x-x0)**2/2/qx
+    if qy != 0:
+        arg += (y-y0)**2/2/qy
+    if abs(qz) == 0:
+        idx = abs(zl-z0).argmin()
+        zz = -1j * np.ones_like(arg)
+        zz[idx,:,:] = 0
+        arg += zz
+    else:
+        arg += (z-z0)**2/2/qz
+        # print(zz[:,25,25])
+        
+    if phase_chirp_lin != 0:
+        arg -= phase_chirp_lin
+    if phase_chirp_quad != 0:
+        arg += phase_chirp_quad
+    dfl.fld = np.exp(-1j * k * arg) #  - (grid[0]-z0)**2/qz 
+    # dfl.fld = np.exp(-1j * k * ( (x-x0)**2/2/qx + (y-y0)**2/2/qy + (z-z0)**2/2/qz - phase_chirp_lin + phase_chirp_quad) ) #  - (grid[0]-z0)**2/qz 
 
 
-    if energy != None and power == None:
-        dfl.fld *= np.sqrt(energy / dfl.E())
-    elif energy == None and power != None:
+    if en_pulse != None and power == None:
+        dfl.fld *= np.sqrt(en_pulse / dfl.E())
+    elif en_pulse == None and power != None:
         dfl.fld *= np.sqrt(power / np.amax(dfl.int_z()))
     else:
-        raise ValueError('Either energy or power should be defined')
+        raise ValueError('Either en_pulse or power should be defined')
 
     dfl.filePath = ''
 
@@ -893,6 +924,47 @@ def generate_dfl(xlamds, shape=(151,151,1000), dgrid=(1e-3,1e-3,None), power_rms
     _logger.debug(ind_str + 'done in %.2f sec' % (t_func))
     
     return dfl
+
+
+def imitate_sase_dfl(xlamds, rho=2e-4, **kwargs):
+    '''
+    imitation of SASE radiation in 3D
+    
+    xlamds - wavelength of the substracted fast-varying component
+    rho - half of the expected FEL bandwidth
+    **kwargs identical to generate_dfl()
+    
+    returns RadiationField object
+    '''
+    
+    _logger.info('imitating SASE radiation')
+    if kwargs.pop('wavelength', None) is not None:
+        E0 = h_eV_s * speed_of_light / kwargs.pop('wavelength')
+        _logger.debug(ind_str + 'using wavelength')
+    else:
+        E0 = h_eV_s * speed_of_light / xlamds
+        _logger.debug(ind_str + 'using xlamds')
+    dE = E0 * 2 * rho
+    _logger.debug(ind_str + 'E0 = {}'.format(E0))
+    _logger.debug(ind_str + 'dE = {}'.format(dE))
+    dfl = generate_dfl(xlamds, **kwargs)
+    
+    _logger.debug(ind_str + 'dfl.shape = {}'.format(dfl.shape()))
+    td_scale = dfl.scale_z()
+    _logger.debug(ind_str + 'time domain range = [{},  {}]m'.format(td_scale[0],td_scale[-1]))
+    
+    dk = 2 * np.pi / dfl.Lz()
+    k = 2 * np.pi / dfl.xlamds
+    fd_scale_ev = h_eV_s * speed_of_light * (np.linspace(k - dk / 2 * dfl.Nz(), k + dk / 2 * dfl.Nz(), dfl.Nz())) / 2 / np.pi
+    fd_env = np.exp(-(fd_scale_ev - E0)**2 / 2 / (dE)**2)
+    _logger.debug(ind_str + 'frequency domain range = [{},  {}]eV'.format(fd_scale_ev[0],fd_scale_ev[-1]))
+    
+    _, td_envelope, _, _ = imitate_1d_sase_like(td_scale=td_scale, td_env=np.ones_like(td_scale), fd_scale=fd_scale_ev, fd_env=fd_env, td_phase = None, fd_phase = None, phen0 = None, en_pulse = 1, fit_scale = 'td', n_events = 1)
+ 
+    dfl.fld *= td_envelope[:, :, np.newaxis]
+    
+    return dfl
+
 
 def dfl_ap(dfl, ap_x=None, ap_y=None, debug=1):
     '''
@@ -1753,6 +1825,7 @@ def calc_ph_sp_dens(spec, freq_ev, n_photons, spec_squared=1):
     '''
     calculates number of photons per electronvolt
     '''
+    # _logger.debug('spec.shape = {}'.format(spec.shape))
     if spec.ndim == 1:
         axis=0
     else:
@@ -1764,7 +1837,7 @@ def calc_ph_sp_dens(spec, freq_ev, n_photons, spec_squared=1):
             # axis=1
         # else:
             # raise ValueError('operands could not be broadcast together with shapes ', spec.shape, ' and ', freq_ev.shape)
-        
+    # _logger.debug('spec.shape = {}'.format(spec.shape))
     if spec_squared:
         spec_sum = np.trapz(spec, x=freq_ev, axis=axis)
     else:
@@ -1782,10 +1855,14 @@ def calc_ph_sp_dens(spec, freq_ev, n_photons, spec_squared=1):
         norm_factor = np.sqrt(n_photons / spec_sum)
     
     if spec.ndim == 2:
-        
         norm_factor = norm_factor[:,np.newaxis]
-    
-    return spec * norm_factor
+    # _logger.debug('spec.shape = {}'.format(spec.shape))
+    # _logger.debug('norm_factor.shape = {}'.format(norm_factor.shape))
+    spec = spec * norm_factor
+    if axis==1:
+        spec = spec.T
+    # _logger.debug('spec.shape = {}'.format(spec.shape))
+    return spec
     
 def imitate_1d_sase_like(td_scale, td_env, fd_scale, fd_env, td_phase = None, fd_phase = None, phen0 = None, en_pulse = None, fit_scale = 'td', n_events = 1):
     '''
@@ -1877,7 +1954,7 @@ def imitate_1d_sase_like(td_scale, td_env, fd_scale, fd_env, td_phase = None, fd
     
     #normalization for pulse energy
     if en_pulse == None:
-        en_pulse = np.trapz(td_env_i, td_scale_i / speed_of_light)
+        en_pulse = np.trapz(td_env_i, td_scale_i / speed_of_light) # CALCULATE FOR fit_scale == 'td' !!!!!!!!!!
     pulse_energies = np.trapz(abs(td)**2, td_scale_i / speed_of_light, axis=0)
     scale_coeff = en_pulse / np.mean(pulse_energies)
     td *= np.sqrt(scale_coeff)
@@ -1888,7 +1965,6 @@ def imitate_1d_sase_like(td_scale, td_env, fd_scale, fd_env, td_phase = None, fd
     
     n_photons = pulse_energies * scale_coeff / q_e / spec_center
     fd = calc_ph_sp_dens(fd, fd_scale_i, n_photons, spec_squared=0)
-    
     td_scale, fd_scale = td_scale_i, fd_scale_i
     
     return (td_scale, td, fd_scale, fd)

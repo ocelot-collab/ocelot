@@ -659,7 +659,7 @@ class GenesisOutput:
         
         self.n_photons = self.pulse_energy / q_e / self.freq_ev_mean
         
-        self.spec_phot_density = calc_ph_sp_dens(self.spec, self.freq_ev, self.n_photons).T
+        self.spec_phot_density = calc_ph_sp_dens(self.spec, self.freq_ev, self.n_photons)
         # self.spec_phot_density = self.spec #tmp
         self.sliceKeys_used.append('spec_phot_density')
         # print ('        done')

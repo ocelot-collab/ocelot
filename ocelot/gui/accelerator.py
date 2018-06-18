@@ -946,7 +946,6 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpo
     p_array_copy = deepcopy(p_array)
     if inverse_tau:
         p_array_copy.tau()[:] *= -1
-
     slice_params = global_slice_analysis(p_array_copy, nparts_in_slice, 0.01, 2, 2)
 
     fig = plt.figure(nfig, figsize=figsize)

@@ -1505,13 +1505,17 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         if freq_domain:
             if dfl.domain_z == 't':
                 dfl.fft_z(debug=debug)
-            z = dfl.scale_z() * 1e9
+            
+#            z = dfl.scale_z() * 1e9
+#            dfl.fld = dfl.fld[::-1, :, :]
+#            z = z[::-1]
+#            unit_z = r'nm'
+#            z_label = r'$\lambda$ [' + unit_z + ']'
 
-            dfl.fld = dfl.fld[::-1, :, :]
-            z = z[::-1]
-
-            unit_z = r'nm'
-            z_label = r'$\lambda$ [' + unit_z + ']'
+            z = h_eV_s * speed_of_light / dfl.scale_z()
+            unit_z = r'eV'
+            z_label = r'$E_{{ph}}$ [{}]'.format(unit_z)
+            
             z_labelv = r'[arb. units]'
             z_title = 'Spectrum'
             z_color = 'red'
@@ -1594,6 +1598,9 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     
     dx = abs(x[1] - x[0])
     dy = abs(y[1] - y[0])
+    
+    if log_scale:
+        suffix += '_log'
 
     if fig_name is None:
         if dfl.fileName() is '':
@@ -1631,7 +1638,6 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         xz_proj[xz_proj < xz_proj.max() * cmin] = -1e-10
 
     if log_scale:
-        suffix += '_log'
         xy_proj[xy_proj <= 0] = None
         yz_proj[yz_proj <= 0] = None
         xz_proj[xz_proj <= 0] = None

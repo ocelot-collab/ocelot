@@ -399,6 +399,10 @@ class BeamArray(Beam):
     def get_E(self):
         return self.E[self.idx_max()]
     
+    def set_E(self, E_GeV):
+        idx = self.idx_max()
+        self.E += (E_GeV - self.get_E())
+    
     def center(self, s):
         beam_s = self.get_s(s)
         self.x -= beam_s.x

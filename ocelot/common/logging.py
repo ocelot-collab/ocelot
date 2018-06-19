@@ -23,19 +23,17 @@ import sys
 from copy import copy
 import logging
 from logging import Formatter
+import inspect
 
 # import traceback
 # len(traceback.extract_stack())
-import inspect
-_indent0 = len(inspect.stack())
-# print('indent=', _indent0)
 
 ind_str = ': '
 
 
 
 _log_colored = True
-_log_indented = False
+_log_indented = True
 _log_debugging = True
 
 
@@ -53,6 +51,8 @@ _SUFFIX = '\033[0m'
 
 
 ocelog = logging.getLogger('ocelot')
+
+ocelog.indent0 = len(inspect.stack())
 
 class OcelogFormatter(Formatter):
     
@@ -74,8 +74,13 @@ class OcelogFormatter(Formatter):
             # print('_indent0 ', _indent0)
             # if hasattr(ocelog, 'indent0'):
                 # print('ocelog.indent0', ocelog.indent0)
+            # print('logging.indent0_before = ' + str(logging.indent0))
             indent = len(inspect.stack())
-            ind_space = ind_str * (indent - _indent0)
+            if indent < ocelog.indent0:
+                ocelog.indent0 = indent
+            # print('indent = ' + str(indent - logging.indent0))
+            # print('logging.indent0_after = ' + str(logging.indent0))
+            ind_space = ind_str * (indent - ocelog.indent0)
             ocelog_record.msg = ind_space + ocelog_record.msg
             
         if _log_debugging:
@@ -99,8 +104,9 @@ def ocelog_indentate():
 
 # _console_format = "[%(levelname)s]  %(message)s [%(name)s] \033[37m(%(filename)s:%(lineno)d)\033[0m"
 
-
-ocelog.console_format = "[%(levelname)-8s] %(message)s"
+# ocelog.console_format = "[%(levelname)-8s]  %(message)s (%(filename)s:%(lineno)d)  [%(name)s]" # full
+# ocelog.console_format = "[%(levelname)-8s] %(message)s [%(name)s]" # with name
+ocelog.console_format = "[%(levelname)-8s] %(message)s" # minimum
 ocelog.file_format = '%(asctime)s - [%(levelname)-8s] - %(message)s - %(name)s - %(filename)s:%(lineno)d'
 
 ocelog.handlers=[]

@@ -1476,10 +1476,11 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     else:
         freq_domain = False
     
-    if fig_name is None:
-        suffix = ''
-    else:
-        suffix = '_'+fig_name
+    suffix = ''
+#    if fig_name is None:
+#        suffix = ''
+#    else:
+#        suffix = '_'+fig_name
         
     if dfl.Nz() != 1:
         # Make sure it is time-dependent

@@ -29,7 +29,7 @@ from ocelot.rad.undulator_params import UndulatorParameters
 # from ocelot.optics.utils import calc_ph_sp_dens
 from ocelot.common.logging import *
 
-_logger = logging.getLogger('ocelot.gen2') 
+_logger = logging.getLogger(__name__) 
 
 inputTemplate = "\
  $newrun \n\

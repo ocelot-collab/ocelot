@@ -5,6 +5,9 @@ crystal optics
 from ocelot.optics.elements import Crystal
 from ocelot.optics.wave import *
 from ocelot.optics.ray import Ray, trace as trace_ray
+from ocelot.common.logging import *
+import logging
+_logger = logging.getLogger(__name__) 
 # from ocelot.gui.optics import *
 
 import numpy as np
@@ -119,6 +122,7 @@ class CrystalStructureFactors():
         pass
 
 def load_stucture_factors(file_name):
+    _logger.debug('loading structure factors {}'.format(file_name))   
     import pickle
     #sys.modules[]
     #print ('im in module', __name__)
@@ -126,7 +130,8 @@ def load_stucture_factors(file_name):
     dir_name = os.path.dirname(sys.modules[__name__].__file__)
     #print 'dir ', dir_name 
     abs_file_name = os.path.join(dir_name, 'data', file_name)
-    print ('abs path ', abs_file_name)
+    _logger.debug(ind_str + 'full path {}'.format(abs_file_name))   
+#    print ('abs path ', abs_file_name)
     cdata = pickle.load(open(abs_file_name, 'rb'))
     return cdata
 
@@ -139,30 +144,32 @@ def save_stucture_factors(cdata, file_name):
 
 def F_hkl(cryst, ref_idx, lamb, temp):
     
-    print ('calculating Fhkl', lamb, cryst.lattice.element_name, ref_idx)
+    _logger.debug('calculating Fhkl {} {} {}'.format(lamb, cryst.lattice.element_name, ref_idx))
     
     file_name = cryst.lattice.element_name + str(ref_idx[0]) + str(ref_idx[1]) + str(ref_idx[2]) + '.dat'
     
     target_ev = 2*pi * hbar * c / lamb
     
-    print ('reading file_name', file_name)
-    
-    cdata = load_stucture_factors(file_name)
+    #print ('reading file_name', file_name)
+    #_logger.debug(ind_str + 'loading structure factors from {}'.format(file_name))    
+#    cdata = load_stucture_factors(file_name)
     
     try:
         cdata = load_stucture_factors(file_name)
     except:
-        print ('form factor data not found!!!')
+#        print ('form factor data not found!!!')
+        _logger.error(ind_str + 'form factor data not found')
         sys.exit(0)
         return 0.0, 0.0, 0.0
     
-    print ('searching ', target_ev)
-
+#    print ('searching ', target_ev)
+    _logger.debug(ind_str + 'searching Bragg condition for photon energy {} eV'.format(target_ev))
+    
     if target_ev < cdata.ev[0] or target_ev > cdata.ev[-1]:
-        print ('photon wavelength not covered in data')
+        _logger.error(2*ind_str + 'photon wavelength not covered in data (target_ev > cdata.ev)')
+#        print ('photon wavelength not covered in data')
         return 0.0, 0.0, 0.0
         
-
     de = cdata.ev[1] - cdata.ev[0]
     i_e = int( (target_ev - cdata.ev[0]) / de )
 
@@ -170,6 +177,9 @@ def F_hkl(cryst, ref_idx, lamb, temp):
     f000 = np.interp(target_ev, cdata.ev, np.real(cdata.f000)) + 1j * np.interp(target_ev, cdata.ev, np.imag(cdata.f000))
     fh = np.interp(target_ev, cdata.ev, np.real(cdata.fh)) + 1j * np.interp(target_ev, cdata.ev, np.imag(cdata.fh))
     fhbar = np.interp(target_ev, cdata.ev, np.real(cdata.fhbar)) + 1j * np.interp(target_ev, cdata.ev, np.imag(cdata.fhbar))
+    _logger.debug(ind_str + 'f000 {}'.format(f000))
+    _logger.debug(ind_str + 'fh {}'.format(fh))
+    _logger.debug(ind_str + 'hbar {}'.format(fhbar))
     return f000, fh, fhbar
 
 
@@ -366,11 +376,13 @@ def transmissivity_reflectivity(klist, cryst):
 
 
 def get_crystal_filter(cryst, ev_seed, nk=10000, k = None, n_width = 100):
+    _logger.debug('getting crystal filter')
     #import crystal as cry
+    
     #n_width - number of Darwin widths
     lamb=h_eV_s*speed_of_light/ev_seed
     ref_idx=cryst.ref_idx
-    print(ref_idx)
+    _logger.debug(ind_str + 'index = {}'.format(ref_idx))
     kb     = 2*np.pi/lamb
     
     H, d, phi = find_bragg(lambd = lamb, lattice=cryst.lattice, ord_max = 15)
@@ -401,8 +413,8 @@ def get_crystal_filter(cryst, ev_seed, nk=10000, k = None, n_width = 100):
         
     f0, fh, fmh =  F_hkl(cryst = cryst, ref_idx = ref_idx, lamb=lamb, temp = 300*K)
     
-    print ('Bragg angle [rad]', thetaB)
-    print ('structure factors', f0, fh, fmh)
+    _logger.debug(ind_str + 'Bragg angle {} [rad]'.format(thetaB))
+#    _logger.debug(ind_str + 'structure factors {} {} {}'.format(f0, fh, fmh))
     #plt.figure()
 
      

@@ -1538,6 +1538,8 @@ def trf_mult(trf_list, embed_list=True):
     
     returns TransferFunction() object
     '''
+    _logger.debug('Multiplying transfer functions')
+    _logger.debug(ind_str + str(trf_list))
     # trf_out = deepcopy(trf_list[0])
     trf_out = TransferFunction()
     k_lim = []
@@ -1547,13 +1549,28 @@ def trf_mult(trf_list, embed_list=True):
     mid_k = []
     dk = []
     
-    for i,trf in enumerate(trf_list):
-        k_lim.append(trf.k) # to calculate limits of new k scale
-        k_step.append( (np.amax(trf.k) - np.amin(trf.k)) / np.size(trf.k) ) # to calculate step of new scale
-        xlamds.append(trf.xlamds)
-        thetaB.append(trf.thetaB)
-        mid_k.append(trf.mid_k)
-        dk.append(trf.dk)
+    for i, trf in enumerate(trf_list):
+        _k = trf.k
+        _k_step = (np.amax(trf.k) - np.amin(trf.k)) / np.size(trf.k)
+        _xlamds = trf.xlamds
+        _thetaB = trf.thetaB
+        _mid_k = trf.mid_k
+        _dk = trf.dk
+        
+        _logger.debug(ind_str + 'trf nr {}: {}'.format(i, trf))
+        _logger.debug(2 * ind_str + 'k_lims {}-{}'.format(_k[0], _k[-1]))
+        _logger.debug(2 * ind_str + 'k_step {}'.format(_k_step))
+        _logger.debug(2 * ind_str + 'xlamds {}'.format(_xlamds))
+        _logger.debug(2 * ind_str + 'thetaB {}'.format(_thetaB))
+        _logger.debug(2 * ind_str + 'mid_k {}'.format(_mid_k))
+        _logger.debug(2 * ind_str + 'dk {}'.format(_dk))
+        
+        k_lim.append(_k) # to calculate limits of new k scale
+        k_step.append(_k_step) # to calculate step of new scale
+        xlamds.append(_xlamds)
+        thetaB.append(_thetaB)
+        mid_k.append(_mid_k)
+        dk.append(_dk)
     
     k = np.arange(np.amin(k_lim), np.amax(k_lim), np.amin(k_step))
     xlamds = np.mean(xlamds)
@@ -1578,9 +1595,12 @@ def trf_mult(trf_list, embed_list=True):
     trf_out.ref = ref
     trf_out.xlamds = xlamds
     trf_out.thetaB = np.amax(thetaB)
-    trf_out.mid_k = np.mean(mid_k)
-    trf_out.dk = np.amin(dk)
+    trf_out.mid_k = np.mean([k[-1], k[0]])
+    trf_out.dk = np.amin(k_step)
     trf_out.compound = True
+    
+    _logger.debug(ind_str + 'k_final_lims {}-{}'.format(k[0], k[-1]))
+    _logger.debug(2 * ind_str + 'k_final_step {}'.format(k[1] - k[0]))
     
     if embed_list:
         trf_out.trf_list = trf_list

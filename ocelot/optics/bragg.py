@@ -368,10 +368,13 @@ def D0_Dh(Dtheta, cryst):
 
 
 def transmissivity_reflectivity(klist, cryst):
+    _logger.debug('calculating transmissivity and reflectivity')
     t  = np.zeros(len(klist),'complex')
     r  = np.zeros(len(klist),'complex')
     for i in range(len(klist)):
-        t[i], r[i] = D0_Dh( -(cryst.kb - klist[i]) / ( cryst.kb * (1/np.tan(cryst.thetaB)) ) , cryst) 
+        t[i], r[i] = D0_Dh( -(cryst.kb - klist[i]) / ( cryst.kb * (1/np.tan(cryst.thetaB)) ) , cryst)
+    _logger.debug(ind_str + 'abs(tr) = {}-{}'.format(abs(t[0]), abs(t[-1])))
+    _logger.debug(ind_str + 'abs(ref) = {}-{}'.format(abs(r[0]), abs(r[-1])))
     return t, r
 
 
@@ -450,7 +453,7 @@ def get_crystal_filter(cryst, ev_seed, nk=10000, k = None, n_width = 100):
     from ocelot.optics.wave import TransferFunction #hotfix here
     f = TransferFunction()
     
-    f.tr, f.ref = transmissivity_reflectivity(k, cryst)    
+    f.tr, f.ref = transmissivity_reflectivity(k, cryst)   
     
     f.k = k
     f.thetaB = thetaB

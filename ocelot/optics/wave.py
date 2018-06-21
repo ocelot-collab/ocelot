@@ -1579,7 +1579,9 @@ def trf_mult(trf_list, embed_list=True):
     ref=np.ones_like(k)
     
     for i,trf in enumerate(trf_list):
+        _logger.debug(ind_str + 'trf nr {}: {}'.format(i, trf))
         if trf.xlamds == xlamds:
+            _logger.debug(2 * ind_str + 'trf.xlamds == xlamds')
             tr_ang = np.unwrap(np.angle(trf.tr))
             ref_ang = np.unwrap(np.angle(trf.ref))
         else: #phase is mesured with respect to carrier frequency given by slice separation xlamds
@@ -1587,8 +1589,12 @@ def trf_mult(trf_list, embed_list=True):
             ref_ang = np.unwrap(np.angle(trf.ref)) * trf.xlamds / xlamds
             # tr *= np.interp(k, trf.k, abs(trf.tr) * np.exp(1j*tr_ang))
             # ref *= np.interp(k, trf.k, abs(trf.ref) * np.exp(1j*ref_ang))
+        _logger.debug(2 * ind_str + 'tr_ang = {}-{}'.format(tr_ang[0], tr_ang[-1]))
+        _logger.debug(2 * ind_str + 'ref_ang = {}-{}'.format(ref_ang[0], ref_ang[-1]))
         tr = tr * np.interp(k,trf.k, abs(trf.tr)) * np.exp(1j * np.interp(k, trf.k, tr_ang))
         ref = ref * np.interp(k,trf.k, abs(trf.ref)) * np.exp(1j * np.interp(k, trf.k, ref_ang))
+        _logger.debug(2 * ind_str + 'abs(tr) = {}-{}'.format(abs(tr[0]), abs(tr[-1])))
+        _logger.debug(2 * ind_str + 'abs(ref) = {}-{}'.format(abs(ref[0]), abs(ref[-1])))
             
     trf_out.k = k
     trf_out.tr = tr

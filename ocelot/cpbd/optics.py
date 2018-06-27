@@ -413,10 +413,17 @@ class CavityTM(TransferMap):
         self.vy_down = 0.
         self.delta_e_z = lambda z: self.v * np.cos(self.phi * np.pi / 180.) * z / self.length
         self.delta_e = self.v * np.cos(self.phi * np.pi / 180.)
-        self.map = lambda X, energy: self.map4cav(X, energy, self.v, self.f, self.phi)
+        self.map = lambda X, energy: self.map4cav(X, energy, self.v, self.f, self.phi, self.length)
 
-    def map4cav(self, X, E, V, freq, phi):
-        # print("CAVITY")
+    def map4cav(self, X, E, V, freq, phi, z=0):
+        beta0 = 1
+        igamma2 = 0
+        g0 = 1e10
+        if E != 0:
+            g0 = E / m_e_GeV
+            igamma2 = 1. / (g0 * g0)
+            beta0 = np.sqrt(1. - igamma2)
+
         phi = phi * np.pi / 180.
         # if self.coupler_kick:
         if self.coupler_kick:
@@ -430,21 +437,24 @@ class CavityTM(TransferMap):
         if self.coupler_kick:
             X[1] += (self.vx_down * V * np.exp(1j * phi)).real * 1e-6 / (E + delta_e)
             X[3] += (self.vy_down * V * np.exp(1j * phi)).real * 1e-6 / (E + delta_e)
-
+        T566 = 1.5 * z*igamma2/(beta0**3)
+        T556 = 0.
+        T555 = 0.
         if E + delta_e > 0:
             k = 2. * np.pi * freq / speed_of_light
-            # X[5::6] = (X[5::6]*E + V*np.cos(X[4::6]*k + phi) - delta_e)/(E + delta_e)
             E1 = E + delta_e
-            gamma = E1 / m_e_GeV
-            beta1 = np.sqrt(1. - 1. / (gamma * gamma))
-
-            beta0 = 1
-            if E != 0:
-                gamma = E/ m_e_GeV
-                beta0 = np.sqrt(1. - 1. / (gamma * gamma))
+            g1 = E1 / m_e_GeV
+            beta1 = np.sqrt(1. - 1. / (g1 * g1))
 
             X[5] = X5 * E*beta0/(E1*beta1) + V*beta0 / (E1*beta1) * (np.cos(-X4*beta0 * k + phi) - np.cos(phi))
 
+            dgamma = V / m_e_GeV
+            if delta_e > 0:
+                T566 = z * (beta0**3*g0**3 - beta1**3*g1**3)/(2*beta0*beta1**3*g0*(g0 - g1)*g1**3)
+                T556 = beta0 * k * z * dgamma *g0 * (beta1**3*g1**3 + beta0 * (g0 - g1**3)) * np.sin(phi)/ (beta1**3 * g1**3 * (g0 - g1)**2)
+                T555 = beta0**2 * k**2 * z * dgamma/2.*(dgamma*(2*g0*g1**3*(beta0*beta1**3 - 1) + g0**2 + 3*g1**2 - 2)/(beta1**3*g1**3*(g0 - g1)**3)*np.sin(phi)**2 -
+                                                    (g1*g0*(beta1*beta0 - 1) + 1)/(beta1*g1*(g0 - g1)**2)*np.cos(phi))
+        X[4] +=  T566 * X5*X5 + T556*X4*X5 + T555 * X4*X4
         return X
 
     def __call__(self, s):
@@ -453,7 +463,7 @@ class CavityTM(TransferMap):
         m.R = lambda energy: m.R_z(s, energy)
         m.B = lambda energy: m.B_z(s, energy)
         m.delta_e = m.delta_e_z(s)
-        m.map = lambda X, energy: m.map4cav(X, energy, m.v * s / self.length, m.f, m.phi)
+        m.map = lambda X, energy: m.map4cav(X, energy, m.v * s / self.length, m.f, m.phi, s)
         return m
 
 

@@ -41,7 +41,7 @@ def load_particle_array(filename):
     name, file_extension = os.path.splitext(filename)
     if file_extension == ".npz":
         return load_particle_array_from_npz(filename)
-    elif file_extension == ".ast":
+    elif file_extension in [".ast", ".001"]:
         return astraBeam2particleArray(filename, s_ref=-1, Eref=-1)
     else:
         raise Exception("Unknown format of the beam file: " + file_extension + " but must be *.ast or *.npz ")

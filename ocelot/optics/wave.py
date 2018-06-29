@@ -17,7 +17,7 @@ import os
 
 # from ocelot.optics.elements import *
 from ocelot.common.globals import *
-from ocelot.common.math_op import find_nearest_idx, fwhm, std_moment
+from ocelot.common.math_op import find_nearest_idx, fwhm, std_moment, bin_scale, bin_array
 from ocelot.common.py_func import filename_from_path
 # from ocelot.optics.utils import calc_ph_sp_dens
 #from ocelot.adaptors.genesis import *   #commented
@@ -578,11 +578,11 @@ class StokesParameters:
 
         idx1 = np.where((self.s1<0) & (self.s2>0))
         idx2 = np.where((self.s1<0) & (self.s2<0))
-        if size(psi) == 1:
+        if np.size(psi) == 1:
             # continue
             # psi = psi
-            if size(idx1): psi += np.pi/2
-            if size(idx2): psi -= np.pi/2
+            if np.size(idx1): psi += np.pi/2
+            if np.size(idx2): psi -= np.pi/2
         else:
             psi[idx1] += np.pi/2
             psi[idx2] -= np.pi/2
@@ -689,10 +689,10 @@ def calc_stokes(Ex,Ey,s=None):
     
     S = StokesParameters()
     S.sc = s
-    S.s0 = real(Jxx + Jyy)
-    S.s1 = real(Jxx - Jyy)
-    S.s2 = real(Jxy + Jyx)
-    S.s3 = real(1j * (Jyx - Jxy))
+    S.s0 = np.real(Jxx + Jyy)
+    S.s1 = np.real(Jxx - Jyy)
+    S.s2 = np.real(Jxy + Jyx)
+    S.s3 = np.real(1j * (Jyx - Jxy))
     
     return S
     
@@ -1542,6 +1542,8 @@ def trf_mult(trf_list, embed_list=True):
     _logger.debug(ind_str + str(trf_list))
     # trf_out = deepcopy(trf_list[0])
     trf_out = TransferFunction()
+    k_min = []
+    k_max = []
     k_lim = []
     k_step = []
     xlamds = []
@@ -1565,14 +1567,22 @@ def trf_mult(trf_list, embed_list=True):
         _logger.debug(2 * ind_str + 'mid_k {}'.format(_mid_k))
         _logger.debug(2 * ind_str + 'dk {}'.format(_dk))
         
-        k_lim.append(_k) # to calculate limits of new k scale
+#        k_lim.append(_k) # to calculate limits of new k scale
         k_step.append(_k_step) # to calculate step of new scale
+        k_min.append(np.amin(_k))
+        k_max.append(np.amax(_k))
         xlamds.append(_xlamds)
         thetaB.append(_thetaB)
         mid_k.append(_mid_k)
         dk.append(_dk)
+#    k_lim = np.array(k_lim)
+    k_min = np.amin(k_min)
+    k_max = np.amax(k_max)
     
-    k = np.arange(np.amin(k_lim), np.amax(k_lim), np.amin(k_step))
+    _logger.debug(ind_str + 'min_k = {}'.format(k_min))
+    _logger.debug(ind_str + 'max_k = {}'.format(k_max))
+    
+    k = np.arange(k_min, k_max, np.amin(k_step))
     xlamds = np.mean(xlamds)
     
     tr=np.ones_like(k)
@@ -1589,12 +1599,12 @@ def trf_mult(trf_list, embed_list=True):
             ref_ang = np.unwrap(np.angle(trf.ref)) * trf.xlamds / xlamds
             # tr *= np.interp(k, trf.k, abs(trf.tr) * np.exp(1j*tr_ang))
             # ref *= np.interp(k, trf.k, abs(trf.ref) * np.exp(1j*ref_ang))
-        _logger.debug(2 * ind_str + 'tr_ang = {}-{}'.format(tr_ang[0], tr_ang[-1]))
-        _logger.debug(2 * ind_str + 'ref_ang = {}-{}'.format(ref_ang[0], ref_ang[-1]))
+        _logger.debug(2 * ind_str + 'tr_ang = {} - {}'.format(tr_ang[0], tr_ang[-1]))
+        _logger.debug(2 * ind_str + 'ref_ang = {} - {}'.format(ref_ang[0], ref_ang[-1]))
         tr = tr * np.interp(k,trf.k, abs(trf.tr)) * np.exp(1j * np.interp(k, trf.k, tr_ang))
         ref = ref * np.interp(k,trf.k, abs(trf.ref)) * np.exp(1j * np.interp(k, trf.k, ref_ang))
-        _logger.debug(2 * ind_str + 'abs(tr) = {}-{}'.format(abs(tr[0]), abs(tr[-1])))
-        _logger.debug(2 * ind_str + 'abs(ref) = {}-{}'.format(abs(ref[0]), abs(ref[-1])))
+        _logger.debug(2 * ind_str + 'abs(tr) = {} - {}'.format(abs(tr[0]), abs(tr[-1])))
+        _logger.debug(2 * ind_str + 'abs(ref) = {} - {}'.format(abs(ref[0]), abs(ref[-1])))
             
     trf_out.k = k
     trf_out.tr = tr
@@ -1605,8 +1615,8 @@ def trf_mult(trf_list, embed_list=True):
     trf_out.dk = np.amin(k_step)
     trf_out.compound = True
     
-    _logger.debug(ind_str + 'k_final_lims {}-{}'.format(k[0], k[-1]))
-    _logger.debug(2 * ind_str + 'k_final_step {}'.format(k[1] - k[0]))
+    _logger.debug(ind_str + 'E_final_lims {} - {} [eV]'.format(k[0] * hr_eV_s * speed_of_light, k[-1] * hr_eV_s * speed_of_light))
+    _logger.debug(ind_str + 'E_final_step {} [eV]'.format((k[1] - k[0]) * hr_eV_s * speed_of_light))
     
     if embed_list:
         trf_out.trf_list = trf_list

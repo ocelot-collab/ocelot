@@ -214,13 +214,14 @@ def find_bragg(lambd, lattice, ord_max):
    
 def plot_bragg_reflections(idc = [(0,0,1), (1,1,1), (2,1,1), (3,1,1), (1,2,3), (4,0,0)]):
     HH = {}
-    
+    import matplotlib.pyplot as plt
     lambds = np.linspace(0.5e-10 * m, 1.3e-9 * m, 50)
     
     for lambd in lambds:
         H, d, phi = find_bragg(lambd = lambd, lattice=g1.lattice, ord_max = 5)
         HH[lambd] = (H, d, phi) 
     
+    plt.figure()
     plt.grid()
     lines = []; labels=[]
     
@@ -228,7 +229,7 @@ def plot_bragg_reflections(idc = [(0,0,1), (1,1,1), (2,1,1), (3,1,1), (1,2,3), (
         y = []
         lambds = []
         
-        for l in sort(HH.keys()):
+        for l in HH.keys(): #sort(HH.keys()):
             try:    
                 y.append(HH[l][2][idx])
                 lambds.append(l)
@@ -373,8 +374,14 @@ def transmissivity_reflectivity(klist, cryst):
     r  = np.zeros(len(klist),'complex')
     for i in range(len(klist)):
         t[i], r[i] = D0_Dh( -(cryst.kb - klist[i]) / ( cryst.kb * (1/np.tan(cryst.thetaB)) ) , cryst)
-    _logger.debug(ind_str + 'abs(tr) = {}-{}'.format(abs(t[0]), abs(t[-1])))
-    _logger.debug(ind_str + 'abs(ref) = {}-{}'.format(abs(r[0]), abs(r[-1])))
+    abs_r = abs(r)
+    abs_t = abs(t)
+    if np.nan in abs_t or np.nan in abs_r:
+        _logger.error(ind_str + 'abs(tr) = {}-{}'.format(abs(t[0]), abs(t[-1])))
+        _logger.error(ind_str + 'abs(ref) = {}-{}'.format(abs(r[0]), abs(r[-1])))
+    else:
+        _logger.debug(ind_str + 'abs(tr) = {}-{}'.format(abs(t[0]), abs(t[-1])))
+        _logger.debug(ind_str + 'abs(ref) = {}-{}'.format(abs(r[0]), abs(r[-1])))
     return t, r
 
 

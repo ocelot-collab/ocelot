@@ -264,7 +264,6 @@ def track_nturns(lat, nturns, track_list, nsuperperiods=1, save_track=True, prin
     navi = Navigator(lat)
 
     t_maps = get_map(lat, lat.totalLen, navi)
-
     track_list_const = copy(track_list)
     p_array = ParticleArray()
     p_list = [p.particle for p in track_list]

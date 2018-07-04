@@ -128,6 +128,37 @@ def transform_vec_ext(X, dx, dy, tilt):
     X[:] = np.add(x_tilt, np.array([[dx], [0.], [dy], [0.], [0.], [0.]]))[:]
     return X
 
+def transfer_maps_mult(Ra, Ta, Rb, Tb, sym_flag=True):
+    """
+    cell = [A, B]
+    Rc = Rb * Ra
+    :param Ra:
+    :param Ta:
+    :param Rb:
+    :param Tb:
+    :param sym_flag:
+    :return:
+    """
+    Rc = np.dot(Rb, Ra)
+    Tc = np.zeros((6, 6, 6))
+    for i in range(6):
+        for j in range(6):
+            for k in range(6):
+                t1 = 0.
+                t2 = 0.
+                for l in range(6):
+                    t1 += Rb[i, l] * Ta[l, j, k]
+                    for m in range(6):
+                        t2 += Tb[i, l, m] * Ra[l, j] * Ra[m, k]
+                Tc[i, j, k] = t1 + t2
+    return Rc, Tc
+
+
+def transfer_map_rotation(R, T, tilt):
+    rotmat = rot_mtx(tilt)
+    Rc, Tc = transfer_maps_mult(Ra=rotmat, Ta=np.zeros((6, 6, 6)), Rb=R, Tb=T)
+    R, T = transfer_maps_mult(Ra=Rc, Ta=Tc, Rb=rot_mtx(-tilt), Tb=np.zeros((6, 6, 6)))
+    return R, T
 
 class TransferMap:
     def __init__(self):
@@ -607,6 +638,9 @@ class SecondTM(TransferMap):
         self.map = lambda X, energy: self.t_apply(self.r_z_no_tilt(self.length, energy),
                                                   self.t_mat_z_e(self.length, energy), X, self.dx, self.dy, self.tilt)
 
+        self.R_tilt = lambda energy: np.dot(np.dot(rot_mtx(-self.tilt), self.r_z_no_tilt(self.length, energy)), rot_mtx(self.tilt))
+        self.T_tilt = lambda energy: transfer_map_rotation(self.r_z_no_tilt(self.length, energy),
+                                                             self.t_mat_z_e(self.length, energy), self.tilt)[1]
 
     def t_apply(self, R, T, X, dx, dy, tilt, U5666=0.):
         if dx != 0 or dy != 0 or tilt != 0:
@@ -659,7 +693,7 @@ class SlacCavityTM(TransferMap):
         de = V * np.cos(phi)
         r12 = z * E / de * np.log(1. + de / E) if de != 0 else z
         r22 = E / (E + de)
-        r65 = V * np.sin(phi) / (E + de) * (2 * pi / (speed_of_light / freq)) if freq != 0 else 0
+        r65 = V * np.sin(phi) / (E + de) * (2 * np.pi / (speed_of_light / freq)) if freq != 0 else 0
         r66 = r22
         cav_matrix = np.array([[1, r12, 0., 0., 0., 0.],
                                [0, r22, 0., 0., 0., 0.],
@@ -850,7 +884,8 @@ def lattice_transfer_map(lattice, energy):
         Rb = elem.transfer_map.R(E)
         if elem.transfer_map.__class__ == SecondTM:
             Tc = np.zeros((6, 6, 6))
-            Tb = deepcopy(elem.transfer_map.t_mat_z_e(elem.l, E))
+            #Tb = deepcopy(elem.transfer_map.t_mat_z_e(elem.l, E))
+            Tb = deepcopy(elem.transfer_map.T_tilt(E))
             Tb = sym_matrix(Tb)
             for i in range(6):
                 for j in range(6):
@@ -882,22 +917,7 @@ def lattice_transfer_map(lattice, energy):
     return Ra
 
 
-def second_order_mult(Ra, Ta, Rb, Tb, sym_flag=True):
-    Rc = np.dot(Rb, Ra)
-    Tc = np.zeros((6, 6, 6))
-    Tb = sym_matrix(Tb)
-    for i in range(6):
-        for j in range(6):
-            for k in range(6):
-                t1 = 0.
-                t2 = 0.
-                for l in range(6):
-                    t1 += Rb[i, l] * Ta[l, j, k]
-                    for m in range(6):
-                        t2 += Tb[i, l, m] * Ra[l, j] * Ra[m, k]
-                Tc[i, j, k] = t1 + t2
-    Tc = unsym_matrix(deepcopy(Tc))
-    return Rc, Tc
+
 
 
 def trace_z(lattice, obj0, z_array):
@@ -1259,14 +1279,15 @@ def get_map(lattice, dz, navi):
     # navi.sum_lengths = np.sum([elem.l for elem in lattice.sequence[:i]])
     L = navi.sum_lengths + elem.l
     while z1 + 1e-10 > L:
+
         dl = L - navi.z0
         TM.append(elem.transfer_map(dl))
 
+        navi.z0 = L
+        dz -= dl
         if i >= nelems - 1:
             break
 
-        navi.z0 = L
-        dz -= dl
         i += 1
         elem = lattice.sequence[i]
         L += elem.l

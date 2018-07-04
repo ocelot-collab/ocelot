@@ -493,8 +493,8 @@ def fringe_ent(h, k1, e, h_pole=0., gap=0., fint=0.):
     tan_e2 = tan_e*tan_e
     phi = fint*h*gap*sec_e*(1. + np.sin(e)**2)
     R = np.eye(6)
-    R[1,0] = h*tan_e
-    R[3,2] = -h*np.tan(e - phi)
+    R[1, 0] = h*tan_e
+    R[3, 2] = -h*np.tan(e - phi)
     #print R
 
     T = np.zeros((6,6,6))
@@ -512,10 +512,30 @@ def fringe_ent(h, k1, e, h_pole=0., gap=0., fint=0.):
     T[3, 2, 5] = h*tan_e - h*phi/np.cos(e - phi)**2
     # MAD
     if __MAD__:
-        T[1, 0, 5] = 0
-        T[3, 2, 5] = 0
+        #T[0, 0, 0] = T[1, 2, 3] = T[3, 0, 3] = -h / 2. * tan_e2
+        #T[2, 0, 2] = h/2. * tan_e2
+        #T[3, 1, 2] = -h/2 * sec_e2
+        #T[1, 2, 2] = (-k1 + h*h/2. + h*h*sec_e2)*tan_e - h/2.*h_pole*sec_e3
+
+        #T[1, 0, 5] = 0
+        #T[3, 2, 5] = 0
+        T = np.zeros((6, 6, 6))
+
+        T[0, 0, 0] = -0.5 * h * tan_e2
+        T[1, 0, 1] = 0.5 * h *  tan_e2
+        T[0, 2, 2] = 0.5 * h *  sec_e2
+        T[3, 1, 2] = -0.5 * h * sec_e2
+        T[1, 0, 0] = 0.5 * h * h_pole *  sec_e3
+        T[1, 2, 2] = -0.5 * h * h_pole * sec_e3 + 0.5 * h ** 2 * tan_e * (tan_e2 + sec_e2)
+        T[3, 0, 2] = -0.5 * h * h_pole * sec_e3
+        T[1, 2, 3] = T[0, 0, 0]
+        T[3, 0, 3] = T[0, 0, 0]
+        T[2, 0, 2] = T[1, 0, 1]
+
     #if e == 0:
     #   T = zeros((6,6,6))
+    #T = np.zeros((6, 6, 6))
+    #R = np.eye(6)
     return R, T
 
 def fringe_ext(h, k1, e, h_pole=0., gap=0., fint=0.):
@@ -525,11 +545,13 @@ def fringe_ext(h, k1, e, h_pole=0., gap=0., fint=0.):
     sec_e3 = sec_e2*sec_e
     tan_e = np.tan(e)
     tan_e2 = tan_e*tan_e
+    tan_e3 = tan_e2 * tan_e
     phi = fint*h*gap*sec_e*(1. + np.sin(e)**2)
+    h2 = h*h
     R = np.eye(6)
 
-    R[1,0] = h*tan_e
-    R[3,2] = -h*np.tan(e - phi)
+    R[1, 0] = h*tan_e
+    R[3, 2] = -h*np.tan(e - phi)
     #print R
 
     T = np.zeros((6,6,6))
@@ -537,7 +559,7 @@ def fringe_ext(h, k1, e, h_pole=0., gap=0., fint=0.):
     T[0, 2, 2] = -h/2.*sec_e2
     T[1, 0, 0] = h/2.*h_pole*sec_e3 - (-k1 + h*h/2.*tan_e2)*tan_e
     T[1, 0, 1] = -h*tan_e2
-    T[1,0,5] = -h*tan_e
+    T[1, 0, 5] = -h*tan_e
     T[1, 2, 2] = (-k1 - h*h/2.*tan_e2)*tan_e - h/2.*h_pole*sec_e3
     T[1, 2, 3] = h*tan_e2
     T[2, 0, 2] = -h*tan_e2
@@ -547,10 +569,28 @@ def fringe_ext(h, k1, e, h_pole=0., gap=0., fint=0.):
     #T[3,2,5] = h*tan_e - h*phi/cos(e - phi)**2
     # MAD
     if __MAD__:
-        T[1,0,5] = 0
-        T[3,2,5] = 0
+        # T[0, 0, 0] = T[1, 2, 3] = T[3, 0, 3] = h / 2. * tan_e2
+        # T[2, 0, 2] = -h/2. * tan_e2
+        # T[3, 1, 2] = h/2 * sec_e2
+        # T[1, 2, 2] = (-k1 - h * h * tan_e2) * tan_e - h / 2. * h_pole * sec_e3
+        # T[1, 0, 5] = 0
+        # T[3, 2, 5] = 0
+        T = np.zeros((6, 6, 6))
+
+        T[0, 0, 0] = 0.5 * h * tan_e2
+        T[1, 0, 1] = -0.5 * h * tan_e2
+        T[0, 2, 2] = -0.5 * h * sec_e2
+        T[3, 1, 2] = 0.5 * h * sec_e2
+        T[1, 0, 0] = 0.5 * h * h_pole * sec_e3 - 0.5 * h2* tan_e3
+        T[1, 2, 2] = -0.5 * h * h_pole * sec_e3 - 0.5 * h2 * tan_e3
+        T[3, 0, 2] = -0.5 * h * h_pole * sec_e3 + 0.5 * h2 * tan_e * sec_e2
+        T[1, 2, 3] = T[0, 0, 0]
+        T[3, 0, 3] = T[0, 0, 0]
+        T[2, 0, 2] = T[1, 0, 1]
     #if e == 0:
     #    T = zeros((6,6,6))
+    #T = np.zeros((6, 6, 6))
+    #R = np.eye(6)
     return R, T
 
 def H23(vec_x, h, k1, k2, beta=1., g_inv=0.):

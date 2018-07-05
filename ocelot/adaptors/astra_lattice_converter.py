@@ -1,6 +1,4 @@
-'''
-Astra <--> Ocelot lattice converter
-'''
+"""Astra <--> Ocelot lattice converter"""
 
 import re
 
@@ -9,7 +7,7 @@ from ocelot.cpbd.elements import *
 from ocelot.cpbd.io import *
 
 
-class AstraStructureConverter:
+class AstraLatticeConverter:
 
     def __init__(self):
 
@@ -27,9 +25,9 @@ class AstraStructureConverter:
 
 
     def astra2ocelot(self, filename):
-        '''
-        filename - input Astra lattice filename
-        '''
+        """
+        :filename - input Astra lattice filename
+        """
 
         with open(filename) as fp:
             lines = fp.read().split("\n")
@@ -94,11 +92,11 @@ class AstraStructureConverter:
 
 
     def ocelot2astra(self, lattice, pos_start=0.0, filename='lattice.in'):
-        '''
-        lattice - Ocelot lattice object
-        pos_start - longitudinal position of the beginning of the first element
-        filename - output Astra lattice filename
-        '''
+        """
+        :lattice - Ocelot lattice object
+        :pos_start - longitudinal position of the beginning of the first element
+        :filename - output Astra lattice filename
+        """
 
         lines_arr = {}
         for key in self.astra_matrix:
@@ -160,21 +158,19 @@ class AstraStructureConverter:
 
 if __name__ == '__main__':
     pass
-
+    
     '''
     # example of Astra - Ocelot convertion
-    SC = AstraStructureConverter()
+    SC = AstraLatticeConverter()
     cell = SC.astra2ocelot('astra_test.in')
-
     lattice = MagneticLattice(cell)
     write_lattice(lattice)
     '''
-
+    
     '''
     # example of Ocelot - Astra convertion
     from lattice import *
     lattice = MagneticLattice(cell)
-
-    SC = AstraStructureConverter()
+    SC = AstraLatticeConverter()
     SC.ocelot2astra(lattice)
     '''

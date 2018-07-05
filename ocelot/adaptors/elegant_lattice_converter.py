@@ -1,6 +1,4 @@
-'''
-Elegant <--> Ocelot lattice converter
-'''
+"""Elegant <--> Ocelot lattice converter"""
 
 import re
 import sys
@@ -10,26 +8,25 @@ from ocelot.cpbd.elements import *
 from ocelot.cpbd.io import *
 
 
-class ElegantStructureConverter:
-    '''
-    Main Elegant <--> Ocelot lattice converter class
-    '''
+class ElegantLatticeConverter:
+    """Main Elegant <--> Ocelot lattice converter class"""
 
     def __init__(self):
 
         # elements for conversion matrix
         self.elegant_matrix = {}
         self.elegant_matrix['DRIF'] = {'type':Drift, 'params':{'L':'l'}}
-        self.elegant_matrix['SBEN'] = {'type':SBend, 'params':{'L':'l', 'ANGLE':'angle', 'E1':'e1', 'E2':'e2'}}
+        self.elegant_matrix['SBEN'] = {'type':SBend, 'params':{'L':'l', 'ANGLE':'angle', 'E1':'e1', 'E2':'e2', 'TILT':'tilt'}}
         self.elegant_matrix['QUAD'] = {'type':Quadrupole, 'params':{'L':'l', 'K1':'k1', 'TILT':'tilt'}}
         self.elegant_matrix['SEXT'] = {'type':Sextupole, 'params':{'L':'l', 'K2':'k2'}}
         self.elegant_matrix['MONI'] = {'type':Marker, 'params':{}}
+        self.elegant_matrix['RFCA'] = {'type':Cavity, 'params':{'L':'l', 'VOLT':['v','1.0e-9'], 'FREQ':'f', 'PHASE':'phi'}}
 
 
     def elegant2ocelot(self, file_name):
-        '''
-        filename - input Elegant lattice filename
-        '''
+        """
+        :filename - input Elegant lattice filename
+        """
 
         with open(file_name) as file_link:
             data = file_link.read()
@@ -114,7 +111,14 @@ class ElegantStructureConverter:
                         result = data.split('=')
                         if result[0] in self.elegant_matrix[param[0]]['params']:
                             tmp = self.elegant_matrix[param[0]]['params'][result[0]]
-                            elements_list[elem].__dict__[tmp] = float(result[1])
+                            
+                            if tmp.__class__ == list:
+                                elements_list[elem].__dict__[tmp[0]] = float(result[1]) * float(tmp[1])
+                            else:
+                                # fix for phi cavity
+                                if elements_list[elem].__class__ == Cavity and tmp == 'phi':
+                                    result[1] = str(90.0 - float(result[1]))
+                                elements_list[elem].__dict__[tmp] = float(result[1])
 
                 # replace element by Drift (if it has L) or skip
                 else:
@@ -140,9 +144,7 @@ class ElegantStructureConverter:
 
 
     def replace_s_multiplications(self, line):
-        '''
-        Replace single multiplication of elements
-        '''
+        """Replace single multiplication of elements"""
 
         rep_data = re.findall(r'(\d+)\*([\w]+)', line)
 
@@ -155,9 +157,7 @@ class ElegantStructureConverter:
 
 
     def replace_multiplications(self, line):
-        '''
-        Replace multiplication with brackets of elements
-        '''
+        """Replace multiplication with brackets of elements"""
 
         rep_data = re.findall(r'(\d+)\*\(([\w\,]+)\)', line)
 
@@ -174,9 +174,7 @@ class ElegantStructureConverter:
 
 
     def replace_cells(self, cell, elements_dict):
-        '''
-        Replace cells by elements
-        '''
+        """Replace cells by elements"""
 
         if cell[0:4] != 'LINE':
             return [cell]
@@ -218,10 +216,10 @@ class ElegantStructureConverter:
 
 
     def ocelot2elegant(self, lattice, file_name='lattice.lte'):
-        '''
-        lattice - Ocelot lattice objectl
-        filename - output Elegant lattice filename
-        '''
+        """
+        :lattice - Ocelot lattice objectl
+        :filename - output Elegant lattice filename
+        """
 
         reverse_matrix = {}
         elements_arr = {}
@@ -267,7 +265,14 @@ class ElegantStructureConverter:
                     if param == 'L':
                         continue
                     tmp = self.elegant_matrix[reverse_matrix[element_class]]['params'][param]
-                    lines += ',' + param + '=' + str(elem.__dict__[tmp])
+                    if tmp.__class__ == list:
+                        lines += ',' + param + '=' + str(elem.__dict__[tmp[0]]/float(tmp[1]))
+                    else:
+                        # fix for phi cavity
+                        if elem.__class__ == Cavity and tmp == 'phi':
+                            lines += ',' + param + '=' + str(90.0 - elem.__dict__[tmp])
+                        else:
+                            lines += ',' + param + '=' + str(elem.__dict__[tmp])
                 lines += '\n'
 
         # save cell
@@ -285,19 +290,19 @@ class ElegantStructureConverter:
 
 if __name__ == '__main__':
     pass
+    
     '''
     # example of Elegant - Ocelot convertion
-    SC = ElegantStructureConverter()
-    read_cell = SC.elegant2ocelot('elegant_test.lte')
-
+    SC = ElegantLatticeConverter()
+    read_cell = SC.elegant2ocelot('elbe.lte')
     lattice = MagneticLattice(read_cell)
     write_lattice(lattice, remove_rep_drifts=False)
     '''
+    
     '''
     # example of Ocelot - Elegant convertion
     from lattice import *
     lattice = MagneticLattice(cell)
-
-    SC = ElegantStructureConverter()
+    SC = ElegantLatticeConverter()
     SC.ocelot2elegant(lattice)
     '''

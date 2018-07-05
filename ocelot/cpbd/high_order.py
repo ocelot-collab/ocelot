@@ -512,30 +512,8 @@ def fringe_ent(h, k1, e, h_pole=0., gap=0., fint=0.):
     T[3, 2, 5] = h*tan_e - h*phi/np.cos(e - phi)**2
     # MAD
     if __MAD__:
-        #T[0, 0, 0] = T[1, 2, 3] = T[3, 0, 3] = -h / 2. * tan_e2
-        #T[2, 0, 2] = h/2. * tan_e2
-        #T[3, 1, 2] = -h/2 * sec_e2
-        #T[1, 2, 2] = (-k1 + h*h/2. + h*h*sec_e2)*tan_e - h/2.*h_pole*sec_e3
-
-        #T[1, 0, 5] = 0
-        #T[3, 2, 5] = 0
-        T = np.zeros((6, 6, 6))
-
-        T[0, 0, 0] = -0.5 * h * tan_e2
-        T[1, 0, 1] = 0.5 * h *  tan_e2
-        T[0, 2, 2] = 0.5 * h *  sec_e2
-        T[3, 1, 2] = -0.5 * h * sec_e2
-        T[1, 0, 0] = 0.5 * h * h_pole *  sec_e3
-        T[1, 2, 2] = -0.5 * h * h_pole * sec_e3 + 0.5 * h ** 2 * tan_e * (tan_e2 + sec_e2)
-        T[3, 0, 2] = -0.5 * h * h_pole * sec_e3
-        T[1, 2, 3] = T[0, 0, 0]
-        T[3, 0, 3] = T[0, 0, 0]
-        T[2, 0, 2] = T[1, 0, 1]
-
-    #if e == 0:
-    #   T = zeros((6,6,6))
-    #T = np.zeros((6, 6, 6))
-    #R = np.eye(6)
+        T[1, 0, 5] = 0
+        T[3, 2, 5] = 0
     return R, T
 
 def fringe_ext(h, k1, e, h_pole=0., gap=0., fint=0.):
@@ -569,28 +547,8 @@ def fringe_ext(h, k1, e, h_pole=0., gap=0., fint=0.):
     #T[3,2,5] = h*tan_e - h*phi/cos(e - phi)**2
     # MAD
     if __MAD__:
-        # T[0, 0, 0] = T[1, 2, 3] = T[3, 0, 3] = h / 2. * tan_e2
-        # T[2, 0, 2] = -h/2. * tan_e2
-        # T[3, 1, 2] = h/2 * sec_e2
-        # T[1, 2, 2] = (-k1 - h * h * tan_e2) * tan_e - h / 2. * h_pole * sec_e3
-        # T[1, 0, 5] = 0
-        # T[3, 2, 5] = 0
-        T = np.zeros((6, 6, 6))
-
-        T[0, 0, 0] = 0.5 * h * tan_e2
-        T[1, 0, 1] = -0.5 * h * tan_e2
-        T[0, 2, 2] = -0.5 * h * sec_e2
-        T[3, 1, 2] = 0.5 * h * sec_e2
-        T[1, 0, 0] = 0.5 * h * h_pole * sec_e3 - 0.5 * h2* tan_e3
-        T[1, 2, 2] = -0.5 * h * h_pole * sec_e3 - 0.5 * h2 * tan_e3
-        T[3, 0, 2] = -0.5 * h * h_pole * sec_e3 + 0.5 * h2 * tan_e * sec_e2
-        T[1, 2, 3] = T[0, 0, 0]
-        T[3, 0, 3] = T[0, 0, 0]
-        T[2, 0, 2] = T[1, 0, 1]
-    #if e == 0:
-    #    T = zeros((6,6,6))
-    #T = np.zeros((6, 6, 6))
-    #R = np.eye(6)
+        T[1, 0, 5] = 0
+        T[3, 2, 5] = 0
     return R, T
 
 def H23(vec_x, h, k1, k2, beta=1., g_inv=0.):

@@ -368,7 +368,7 @@ class K0_fin_anf:
             self.eval = self.K0_fin_anf_numexpr
         else:
             logger.debug("K0_fin_anf: Python")
-            self.eval = self.K0_fin_anf
+            self.eval = self.K0_fin_anf_np
 
     def K0_1_jit(self, indx, j, R, n, traj4, traj5, traj6, w, gamma):
         g2i = 1. / gamma ** 2
@@ -436,7 +436,7 @@ class K0_fin_anf:
             KS = 0.5 * K[-1] * s[-1]
         return w, KS
 
-    def K0_fin_anf(self, i, traj, wmin, gamma):
+    def K0_fin_anf_np(self, i, traj, wmin, gamma):
         # function [ w,KS ] = K0_inf_anf( i,traj,wmin,gamma )
 
         g2i = 1. / gamma ** 2

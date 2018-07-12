@@ -154,7 +154,7 @@ def track_nturns_wrapper(lattice):
         ksi_x, ksi_y, nsuperperiods = compensate_chromaticity_wrapper(lattice)
         pxy_list = create_track_list_wrapper()
         
-        pytest.srda_pxy_list = track_nturns(lattice, nturns, pxy_list, nsuperperiods=nsuperperiods, save_track=True)
+        pytest.srda_pxy_list = track_nturns(lattice, nturns, pxy_list, nsuperperiods=nsuperperiods, save_track=True, print_progress=False)
         pytest.srda_istracked = True
 
     return pytest.srda_pxy_list, nturns

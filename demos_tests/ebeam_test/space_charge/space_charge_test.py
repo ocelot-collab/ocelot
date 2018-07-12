@@ -12,7 +12,7 @@ from demos_tests.params import *
 from space_charge_conf import *
 
 
-def test_track_without_sp(lattice, p_array, parametr=None, update_ref_values=False):
+def test_track_without_sp(lattice, p_array, parameter=None, update_ref_values=False):
     """track function test without space charge"""
 
     tws_track, p = track_wrapper(lattice, p_array, 0)
@@ -25,12 +25,12 @@ def test_track_without_sp(lattice, p_array, parametr=None, update_ref_values=Fal
 
     tws_track_p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
 
-    result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
+    result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, tolerance_type='relative', assert_info=' tws_track - ')
     result2 = check_dict(p, tws_track_p_array_ref['p_array'], TOL, assert_info=' p_array - ')
     assert check_result(result1+result2)
 
 
-def test_track_with_sp(lattice, p_array, parametr=None, update_ref_values=False):
+def test_track_with_sp(lattice, p_array, parameter=None, update_ref_values=False):
     """track function test with space charge"""
 
     tws_track, p = track_wrapper(lattice, p_array, 1)
@@ -44,25 +44,25 @@ def test_track_with_sp(lattice, p_array, parametr=None, update_ref_values=False)
     tws_track_p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
     
     result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
-    result2 = check_dict(p, tws_track_p_array_ref['p_array'], TOL, assert_info=' p_array - ')
+    result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=1e-12, tolerance_type='absolute', assert_info=' p_array - ')
     assert check_result(result1+result2)
 
 
-@pytest.mark.parametrize('parametr', [0, 1])
-def test_get_current(lattice, p_array, parametr, update_ref_values=False):
+@pytest.mark.parametrize('parameter', [0, 1])
+def test_get_current(lattice, p_array, parameter, update_ref_values=False):
     """Get current function test
     :parametr=0 - tracking was done without space charge
     :parametr=1 - tracking was done with space charge
     """
 
-    tws_track, p = track_wrapper(lattice, p_array, parametr)
+    tws_track, p = track_wrapper(lattice, p_array, parameter)
     
     sI1, I1 = get_current(p, charge=p.q_array[0], num_bins=200)
 
     if update_ref_values:
         return numpy2json([sI1, I1])
     
-    I_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parametr) +'.json'))
+    I_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) +'.json'))
 
     result1 = check_matrix(sI1, I_ref[0], TOL, assert_info=' sI1 - ')
     result2 = check_matrix(I1, I_ref[1], TOL, assert_info=' I1 - ')

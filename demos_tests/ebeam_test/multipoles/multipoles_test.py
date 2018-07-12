@@ -95,7 +95,7 @@ def test_track_nturns(lattice, update_ref_values=False):
     compensate_chromaticity_wrapper(lattice)
         
     track_list = create_track_list_wrapper()
-    track_list = track_nturns(lattice, nturns, track_list, save_track=True)
+    track_list = track_nturns(lattice, nturns, track_list, save_track=True, print_progress=False)
     track_list_stable = stable_particles(track_list, nturns)
 
     track_list_stable = obj2dict(track_list_stable, unpack=['particle'])

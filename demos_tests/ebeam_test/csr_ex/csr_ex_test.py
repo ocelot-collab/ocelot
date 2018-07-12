@@ -12,7 +12,7 @@ from demos_tests.params import *
 from csr_ex_conf import *
 
 
-def test_lattice_transfer_map(lattice, p_array, parametr=None, update_ref_values=False):
+def test_lattice_transfer_map(lattice, p_array, parameter=None, update_ref_values=False):
     """R maxtrix calculation test"""
 
     r_matrix = lattice_transfer_map(lattice, 0.0)
@@ -25,13 +25,19 @@ def test_lattice_transfer_map(lattice, p_array, parametr=None, update_ref_values
     result = check_matrix(r_matrix, r_matrix_ref, TOL, assert_info=' r_matrix - ')
     assert check_result(result)
 
+# @pytest.mark.parametrize('parameter', [4, 5])
+# def test_idiot(lattice, p_array, parameter, update_ref_values=False):
+#     """idiot test"""
+#
+#     x = 2 + 2
+#     result = check_value(x, parameter,  assert_info=" X = 2 + 2 is ")
+#     assert check_result(result)
 
-def test_track_without_csr(lattice, p_array, parametr=None, update_ref_values=False):
+def test_track_without_csr(lattice, p_array, parameter=None, update_ref_values=False):
     """track function test without CSR"""
     
     navi = Navigator(lattice)
     navi.unit_step = 0.05
-
     pytest.tws_track_wo, pytest.p_array_wo = track(lattice, p_array, navi)
 
     pytest.istracked_wo = True
@@ -49,7 +55,36 @@ def test_track_without_csr(lattice, p_array, parametr=None, update_ref_values=Fa
     assert check_result(result1+result2)
 
 
-def test_track_with_csr(lattice, p_array, parametr=None, update_ref_values=False):
+def test_track_without_csr_tilted(lattice, p_array, parameter=None, update_ref_values=False):
+    """track function test without CSR"""
+    lattice = copy.deepcopy(lattice)
+    navi = Navigator(lattice)
+    navi.unit_step = 0.05
+
+    for elem in lattice.sequence:
+        if elem == Bend:
+            elem.tilt = np.pi / 2
+
+    lattice.update_transfer_maps()
+
+    pytest.tws_track_wo, pytest.p_array_wo = track(lattice, p_array, navi)
+
+    pytest.istracked_wo = True
+
+    tws_track = obj2dict(pytest.tws_track_wo)
+    p = obj2dict(pytest.p_array_wo)
+
+    if update_ref_values:
+        return {'tws_track': tws_track, 'p_array': p}
+
+    tws_track_p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
+
+    result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
+    result2 = check_dict(p, tws_track_p_array_ref['p_array'], TOL, assert_info=' p - ')
+    assert check_result(result1 + result2)
+
+
+def test_track_with_csr(lattice, p_array, parameter=None, update_ref_values=False):
     """track function test with CSR"""
     
     csr = CSR()
@@ -73,18 +108,50 @@ def test_track_with_csr(lattice, p_array, parametr=None, update_ref_values=False
     tws_track_p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
 
     result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
-    result2 = check_dict(p, tws_track_p_array_ref['p_array'], TOL, assert_info=' p - ')
+    result2 = check_dict(p, tws_track_p_array_ref['p_array'], TOL, assert_info=' p_array - ')
     assert check_result(result1+result2)
 
 
-@pytest.mark.parametrize('parametr', [0, 1])
-def test_get_current(lattice, p_array, parametr, update_ref_values=False):
+def test_track_with_csr_tilted(lattice, p_array, parameter=None, update_ref_values=False):
+    """track function test with CSR"""
+    lattice = copy.deepcopy(lattice)
+
+    csr = CSR()
+    csr.traj_step = 0.0002
+    csr.apply_step = 0.0005
+
+    navi = Navigator(lattice)
+    navi.add_physics_proc(csr, lattice.sequence[0], lattice.sequence[-1])
+    navi.unit_step = 0.05
+    for elem in lattice.sequence:
+        if elem == Bend:
+            elem.tilt = np.pi / 2
+
+    lattice.update_transfer_maps()
+    pytest.tws_track_w, pytest.p_array_w = track(lattice, p_array, navi)
+
+    pytest.istracked_w = True
+
+    tws_track = obj2dict(pytest.tws_track_w)
+    p = obj2dict(pytest.p_array_w)
+
+    if update_ref_values:
+        return {'tws_track': tws_track, 'p_array': p}
+
+    tws_track_p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
+
+    result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
+    result2 = check_dict(p, tws_track_p_array_ref['p_array'], TOL, assert_info=' p_array - ')
+    assert check_result(result1 + result2)
+
+@pytest.mark.parametrize('parameter', [0, 1])
+def test_get_current(lattice, p_array, parameter, update_ref_values=False):
     """Get current function test
     :parametr=0 - tracking was done without CSR
     :parametr=1 - tracking was done with CSR
     """
 
-    if parametr == 0:
+    if parameter == 0:
         if not hasattr(pytest, 'istracked_wo') or not pytest.istracked_wo:
             test_track_without_csr(lattice, p_array, None, True)
 
@@ -100,7 +167,7 @@ def test_get_current(lattice, p_array, parametr, update_ref_values=False):
     if update_ref_values:
         return numpy2json([sI1, I1])
     
-    I_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parametr) +'.json'))
+    I_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) +'.json'))
     
     result1 = check_matrix(sI1, I_ref[0], TOL, assert_info=' sI1 - ')
     result2 = check_matrix(I1, I_ref[1], TOL, assert_info=' I1 - ')
@@ -142,7 +209,10 @@ def test_update_ref_values(lattice, p_array, cmdopt):
     update_functions = []
     update_functions.append('test_lattice_transfer_map')
     update_functions.append('test_track_without_csr')
+    update_functions.append('test_track_without_csr_tilted')
     update_functions.append('test_track_with_csr')
+    update_functions.append('test_track_with_csr_tilted')
+
     update_functions.append('test_get_current')
     
     update_function_parameters = {}

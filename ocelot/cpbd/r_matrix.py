@@ -162,7 +162,7 @@ def create_r_matrix(element):
                 beta1 = np.sqrt(1. - 1 / gamma2)
 
                 #r56 = (beta0 / beta1 - 1) * Ei / (Ef - Ei) * z
-                r56 = - z/(Ef*Ef*Ei*beta1)*(Ef + Ei)/(beta1+beta0)
+                r56 = - z/(Ef * Ef * Ei * beta1) * (Ef + Ei)/(beta1 + beta0)
                 g0 = Ei
                 g1 = Ef
                 r55_cor = k * z * beta0 * V / m_e_GeV * np.sin(phi) * (g0 * g1 * (beta0 * beta1 - 1) + 1) / (

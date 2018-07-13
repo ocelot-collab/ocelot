@@ -56,7 +56,7 @@ def test_track_without_csr(lattice, p_array, parameter=None, update_ref_values=F
 
 
 def test_track_without_csr_tilted(lattice, p_array, parameter=None, update_ref_values=False):
-    """track function test without CSR"""
+    """track function test without CSR in vertical plane """
     lattice = copy.deepcopy(lattice)
     navi = Navigator(lattice)
     navi.unit_step = 0.05
@@ -83,6 +83,43 @@ def test_track_without_csr_tilted(lattice, p_array, parameter=None, update_ref_v
     result2 = check_dict(p, tws_track_p_array_ref['p_array'], TOL, assert_info=' p - ')
     assert check_result(result1 + result2)
 
+
+def test_track_without_csr_rotated(lattice, p_array, parameter=None, update_ref_values=False):
+    """track function test without CSR, comparison between the rotated beam and track in vertical plane"""
+    lattice_copy = copy.deepcopy(lattice)
+    p_array_copy = copy.deepcopy(p_array)
+    navi = Navigator(lattice_copy)
+    navi.unit_step = 0.05
+    tilt = np.pi / 2
+    for elem in lattice_copy.sequence:
+        if elem.__class__ == Bend:
+            elem.tilt = tilt
+
+    lattice_copy.update_transfer_maps()
+
+    tws_track_tilted, p_array_wo_tilted = track(lattice_copy, p_array_copy, navi)
+
+    p_array.rparticles[:] = np.dot(rot_mtx(tilt), p_array.rparticles)[:]
+    navi = Navigator(lattice)
+    navi.unit_step = 0.05
+    tws_track_rot, p_array = track(lattice, p_array, navi)
+    p_array.rparticles[:] = np.dot(rot_mtx(-tilt), p_array.rparticles)[:]
+    #pytest.istracked_wo = True
+
+    #tws_track = obj2dict(pytest.tws_track_wo)
+    #p = obj2dict(pytest.p_array_wo)
+
+    #if update_ref_values:
+    #    return {'tws_track': tws_track, 'p_array': p}
+
+    #tws_track_p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
+
+    #result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
+    p1 = obj2dict(p_array_wo_tilted)
+
+    p2 = obj2dict(p_array)
+    result2 = check_dict(p1, p2, TOL, assert_info=' p - ')
+    assert check_result(result2)
 
 def test_track_with_csr(lattice, p_array, parameter=None, update_ref_values=False):
     """track function test with CSR"""

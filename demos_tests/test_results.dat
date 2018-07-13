@@ -1,35 +1,9 @@
-### SPATIAL START ###
+### CSR_EX START ###
 
-test_calculate_radiation [PASSED]
+test_track_without_csr_rotated [PASSED]
 
- execution time is 4.309 sec
+ execution time is 9.526 sec
 
-test_calculate_radiation [PASSED]
-
- execution time is 4.219 sec
-
-test_calculate_radiation [PASSED]
-
- execution time is 2.236 sec
-
-### SPATIAL END ###
-
-
-### SPECT_MAG_FILE START ###
-
-test_calculate_radiation [PASSED]
-
- execution time is 3.467 sec
-
-### SPECT_MAG_FILE END ###
-
-
-### SPECTRUM START ###
-
-test_calculate_radiation [PASSED]
-
- execution time is 1.524 sec
-
-### SPATIAL END ###
+### CSR_EX END ###
 
 

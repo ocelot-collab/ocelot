@@ -203,10 +203,13 @@ class RadiationField:
         r can be scalar or vector with self.Nz() points
         r>0 -> converging wavefront
         '''
+        
         domains = domain_o_z, domain_o_xy = self.domain_z, self.domain_xy
         
         if domain_z == None:
             domain_z = domain_o_z
+        
+        _logger.debug('curving radiation wavefront by {}m in {} domain'.format(r, domain_z))
 
         if domain_z == 'f':
             self.to_domain('fs')
@@ -230,6 +233,9 @@ class RadiationField:
             else: 
                 raise ValueError('wrong dimensions of radius of curvature')
         
+        else:
+            ValueError('domain_z should be in ["f", "t", None]')
+            
         self.to_domain(domains)
     
     def to_domain(self, domains='ts', **kwargs):
@@ -393,15 +399,18 @@ class RadiationField:
     
         if self.domain_z == 'f':
             k_x, k_y = np.meshgrid(self.scale_kx(), self.scale_ky())
-            for i in range(self.Nz()):
-                k = self.scale_kz()[i]
-                H = np.exp(1j * z * (np.sqrt(k**2 - k_x**2 - k_y**2) - k))
+            k = self.scale_kz()
+            # H = np.exp(1j * z * (np.sqrt((k**2)[:,np.newaxis,np.newaxis] - (k_x**2)[np.newaxis,:,:] - (k_y**2)[np.newaxis,:,:]) - k[:,np.newaxis,np.newaxis]))
+            # self.fld *= H
+            for i in range(self.Nz()): # more memory efficient
+                H = np.exp(1j * z * (np.sqrt(k[i]**2 - k_x**2 - k_y**2) - k[i]))
                 self.fld[i, :, :] *= H
         else:
             k_x, k_y = np.meshgrid(self.scale_kx(), self.scale_ky())
             k = 2 * np.pi / self.xlamds
             H = np.exp(1j * z * (np.sqrt(k**2 - k_x**2 - k_y**2) - k))
-            for i in range(self.Nz()):
+            # self.fld *= H[np.newaxis,:,:]
+            for i in range(self.Nz()): # more memory efficient
                 self.fld[i, :, :] *= H
     
         if return_orig_domains:
@@ -471,10 +480,28 @@ class RadiationField:
             
         if z != 0:
             if self.domain_z == 'f':
-                k = 2 * np.pi / self.xlamds
-                self.curve_wavefront(m / z * (self.scale_kz() / k))
+                k_x, k_y = np.meshgrid(self.scale_kx(), self.scale_ky())
+                k = self.scale_kz()
+                # H = np.exp(1j * z * (np.sqrt((k**2)[:,np.newaxis,np.newaxis] - (k_x**2)[np.newaxis,:,:] - (k_y**2)[np.newaxis,:,:]) - k[:,np.newaxis,np.newaxis]))
+                # self.fld *= H
+                for i in range(self.Nz()):
+                    H = np.exp(1j * z / m * (np.sqrt(k[i]**2 - k_x**2 - k_y**2) - k[i]))
+                    self.fld[i, :, :] *= H
             else:
-                self.curve_wavefront(m / z)
+                k_x, k_y = np.meshgrid(self.scale_kx(), self.scale_ky())
+                k = 2 * np.pi / self.xlamds
+                H = np.exp(1j * z / m * (np.sqrt(k**2 - k_x**2 - k_y**2) - k))
+                # self.fld *= H[np.newaxis,:,:]
+                for i in range(self.Nz()): # more memory efficient
+                    self.fld[i, :, :] *= H
+            
+            
+            # if self.domain_z == 'f':
+                # k = 2 * np.pi / self.xlamds
+                # self.curve_wavefront(m / z * (self.scale_kz() / k))#, domain_z='f')
+            # else:
+                # self.curve_wavefront(m / z)#, domain_z='f')
+                # print(m / z)
         
         self.dx *= m
         self.dy *= m
@@ -822,12 +849,12 @@ def generate_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), power_rms=(
     if shape[2] == None:
         shape = (shape[0],shape[1],int(dgrid[2]/xlamds/zsep))
     
-    _logger.info('generating radiation field of shape' + str(tuple(reversed(shape))))
+    _logger.info('generating radiation field of shape' + str((shape[2], shape[0], shape[1])))
     if 'energy' in kwargs:
         _logger.warn(ind_str + 'rename energy to en_pulse, soon arg energy will be deprecated')
         en_pulse = kwargs.pop('energy', 1)
     
-    dfl = RadiationField(tuple(reversed(shape)))
+    dfl = RadiationField((shape[2], shape[0], shape[1]))
 
     k = 2 * np.pi / xlamds
 
@@ -837,10 +864,13 @@ def generate_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), power_rms=(
     dfl.dx = dgrid[0] / dfl.Nx()
     dfl.dy = dgrid[1] / dfl.Ny()
     if dgrid[2] is not None and zsep is not None:
-        _logger.error('dgrid[2] or zsep should be None, since either determines longiduninal grid size')
+        _logger.error(ind_str + 'dgrid[2] or zsep should be None, since either determines longiduninal grid size')
     if dgrid[2] is not None:
         dz = dgrid[2] / dfl.Nz()
         zsep = int(dz/xlamds)
+        if zsep == 0:
+            _logger.warning(ind_str + 'dgrid[2]/dfl.Nz() = dz = {}, which is smaller than xlamds = {}. zsep set to 1'.format(dz, xlamds))
+            zsep = 1
         dfl.dz = xlamds * zsep
     elif zsep is not None:
         dfl.dz = xlamds * zsep
@@ -848,6 +878,7 @@ def generate_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), power_rms=(
         _logger.error('dgrid[2] or zsep should be not None, since they determine longiduninal grid size')
 
     rms_x, rms_y, rms_z = power_rms # intensity rms [m]
+    _logger.debug(ind_str + 'rms sizes = [{}, {}, {}]m (x,y,z)'.format(rms_x, rms_y, rms_z))
     xp, yp = power_angle
     x0, y0, z0 = power_center
     zx, zy = power_waistpos

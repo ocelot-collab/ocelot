@@ -2,7 +2,14 @@ import time
 import os
 import socket
 import copy
-import h5py
+    
+try:
+    import h5py
+    h5py_avail = True
+except ImportError:
+    print("wave.py: module h5py is not installed. Install it if you want to use genesis4 adaptor")
+    h5py_avail = False
+
 import numpy as np
 from ocelot import ParticleArray
 from ocelot.optics.wave import calc_ph_sp_dens, RadiationField

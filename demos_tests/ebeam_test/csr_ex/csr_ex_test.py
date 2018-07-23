@@ -13,7 +13,7 @@ from csr_ex_conf import *
 
 
 def test_lattice_transfer_map(lattice, p_array, parameter=None, update_ref_values=False):
-    """R maxtrix calculation test"""
+    """R matrix calculation test"""
 
     r_matrix = lattice_transfer_map(lattice, 0.0)
     
@@ -25,13 +25,25 @@ def test_lattice_transfer_map(lattice, p_array, parameter=None, update_ref_value
     result = check_matrix(r_matrix, r_matrix_ref, TOL, assert_info=' r_matrix - ')
     assert check_result(result)
 
-# @pytest.mark.parametrize('parameter', [4, 5])
-# def test_idiot(lattice, p_array, parameter, update_ref_values=False):
-#     """idiot test"""
-#
-#     x = 2 + 2
-#     result = check_value(x, parameter,  assert_info=" X = 2 + 2 is ")
-#     assert check_result(result)
+@pytest.mark.parametrize('parameter', [0, 1])
+def test_lattice_transfer_map_RT(lattice, p_array, parameter, update_ref_values=False):
+    """test R56 and T566 of the chicane"""
+
+    r56, t566, u5666, Sref = chicane_RTU(yoke_len=b1.l/b1.angle*np.sin(b1.angle), dip_dist=d1.l*np.cos(b1.angle), r=b1.l/b1.angle, type='c')
+    lattice = copy.deepcopy(lattice)
+
+    if parameter == 1:
+        for elem in lattice.sequence:
+            if elem == Bend:
+                elem.tilt = np.pi / 2
+
+        lattice.update_transfer_maps()
+
+    r_matrix = lattice_transfer_map(lattice, 0.0)
+    result1 = check_value(r_matrix[4, 5], r56, tolerance=1.0e-14, assert_info=" R56 ")
+    result2 = check_value(lattice.T[4, 5, 5], t566, tolerance=1.0e-14, assert_info=" T566 ")
+
+    assert check_result([result1, result2])
 
 def test_track_without_csr(lattice, p_array, parameter=None, update_ref_values=False):
     """track function test without CSR"""
@@ -103,18 +115,9 @@ def test_track_without_csr_rotated(lattice, p_array, parameter=None, update_ref_
     navi = Navigator(lattice)
     navi.unit_step = 0.05
     tws_track_rot, p_array = track(lattice, p_array, navi)
+
     p_array.rparticles[:] = np.dot(rot_mtx(-tilt), p_array.rparticles)[:]
-    #pytest.istracked_wo = True
 
-    #tws_track = obj2dict(pytest.tws_track_wo)
-    #p = obj2dict(pytest.p_array_wo)
-
-    #if update_ref_values:
-    #    return {'tws_track': tws_track, 'p_array': p}
-
-    #tws_track_p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
-
-    #result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
     p1 = obj2dict(p_array_wo_tilted)
 
     p2 = obj2dict(p_array)

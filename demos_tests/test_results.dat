@@ -1,45 +1,35 @@
-### CSR_EX START ###
+### SPATIAL START ###
 
-test_lattice_transfer_map [PASSED]
+test_calculate_radiation [PASSED]
 
- execution time is 0.392 sec
+ execution time is 4.535 sec
 
-test_lattice_transfer_map_RT [PASSED]
+test_calculate_radiation [PASSED]
 
- execution time is 0.324 sec
+ execution time is 4.124 sec
 
-test_lattice_transfer_map_RT [PASSED]
+test_calculate_radiation [PASSED]
 
- execution time is 0.323 sec
+ execution time is 2.312 sec
 
-test_track_without_csr [PASSED]
+### SPATIAL END ###
 
- execution time is 7.789 sec
 
-test_track_without_csr_tilted [PASSED]
+### SPECT_MAG_FILE START ###
 
- execution time is 7.723 sec
+test_calculate_radiation [PASSED]
 
-test_track_without_csr_rotated [PASSED]
+ execution time is 3.566 sec
 
- execution time is 9.027 sec
+### SPECT_MAG_FILE END ###
 
-test_track_with_csr [PASSED]
 
- execution time is 27.255 sec
+### SPECTRUM START ###
 
-test_track_with_csr_tilted [PASSED]
+test_calculate_radiation [PASSED]
 
- execution time is 27.846 sec
+ execution time is 1.518 sec
 
-test_get_current [PASSED]
-
- execution time is 0.088 sec
-
-test_get_current [PASSED]
-
- execution time is 0.069 sec
-
-### CSR_EX END ###
+### SPATIAL END ###
 
 

@@ -433,6 +433,7 @@ def tracking_step(lat, particle_list, dz, navi):
 def track(lattice, p_array, navi, print_progress=True, calc_tws=True):
     """
     tracking through the lattice
+
     :param lattice: Magnetic Lattice
     :param p_array: ParticleArray
     :param navi: Navigator

@@ -120,8 +120,8 @@ class ID_radiation:
         return brightness
 
 def print_rad_props(beam, K, lu, L, distance):
-    print("********* e beam ***********")
-    beam.print_sizes()
+    #print("********* e beam ***********")
+    beam.sizes()
 
 
     def f_n(n, Ku):
@@ -175,9 +175,9 @@ def print_rad_props(beam, K, lu, L, distance):
     print ("Nperiods     : ", L/lu)
     print ("distance     : ", distance, " m")
     print ("flux tot     : ", flux_tot, " ph/sec")
-    print ("flux density : ", F, " ph/sec/mrad^2;   ", F/distance/distance, " ph/sec/mm^2")
+    print ("flux density : ", "{0:.2E}".format(F), " ph/sec/mrad^2;   ", "{0:.2E}".format(F/distance/distance), " ph/sec/mm^2")
     #print "flux density : ", F/distance/distance, " ph/sec/mm^2"
-    print ("brilliance   : ", brightness, " ph/sec/mrad^2/mm^2")
+    print ("brilliance   : ", "{0:.2E}".format(brightness), " ph/sec/mrad^2/mm^2")
 
 
 

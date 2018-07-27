@@ -63,7 +63,7 @@ def D1(data, X, distance, xlabel, xlim, ylim,  file_name, unit, status ):
     ax.set_xlabel(xlabel)
     ax.set_ylabel(r"$I$, $\frac{ph}{sec \cdot mm^2 10^{-3}BW}$")
     if unit == "mrad":
-        ax.set_ylabel(r"$I$, $\frac{ph}{sec mrad^2 10^{-3}BW}$")
+        ax.set_ylabel(r"$I$, $\frac{ph}{sec \cdot mrad^2 10^{-3}BW}$")
     ax.grid(True)
 
     ax.annotate('$\epsilon_1 = ' + str(int(energy*10)/10.) +'$', xy=(0.9, 0.85),
@@ -73,7 +73,7 @@ def D1(data, X, distance, xlabel, xlim, ylim,  file_name, unit, status ):
 
     power = np.floor(np.log10(maxS))
     intensity = np.around(maxS*10**(-power), 2)*10**power
-    ax.annotate('I = ' + str(intensity) , xy=(0.9, 0.93),
+    ax.annotate('I = ' + str("{0:.2E}".format(intensity)) , xy=(0.9, 0.93),
                xycoords='axes fraction',
                horizontalalignment='right', verticalalignment='top',
                fontsize=15)

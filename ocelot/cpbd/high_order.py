@@ -798,35 +798,38 @@ def rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=0.):
             [x, x', y, y', z, z', Bx, By, Bz, ...
             xn, xn', yn, yn', zn, zn', Bxn, Byn, Bzn]
     """
+
+    #pc_ref = np.sqrt(energy**2 - m_e_GeV**2)
     z = np.linspace(s_start, s_stop, num=N)
     h = z[1] - z[0]
     N = len(z)
-    gamma = energy/m_e_GeV
+    gamma0 = energy/m_e_GeV
     charge = 1
     mass = 1 #in electron mass
     cmm = speed_of_light
     massElectron = m_e_eV# 0.510998910e+6 #// rest mass of electron
-
-    u = np.zeros((N*9, int(len(y0)/6)))
-    px = y0[1::6]
-    py = y0[3::6]
+    u = np.zeros((N*9, np.shape(y0)[1]))
+    px = y0[1]
+    py = y0[3]
     dz = h
-    #dGamma2 = 1. - 0.5/(gamma*gamma)
-    beta = np.sqrt(1. - 1./(gamma*gamma))
+    beta0 = np.sqrt(1. - 1./(gamma0*gamma0))
+    gammai = gamma0*(1 + y0[5]*beta0)
     #pz = dGamma2 - (px*px + py*py)/2.
-    betaz = beta/np.sqrt(1 + px*px + py*py)
-    k = charge*cmm/(massElectron*mass*gamma)
-    u[0, :] = y0[0::6]
-    u[1, :] = y0[1::6]
-    u[2, :] = y0[2::6]
-    u[3, :] = y0[3::6]
-    u[4, :] = z[0]
+    betai = np.sqrt(1 - 1/gammai**2) #
+    betaz = np.sqrt(betai**2 - px*px - py*py)
+    k = charge*cmm/(massElectron*mass*gammai)
+    u[0, :] = y0[0]
+    u[1, :] = y0[1]
+    u[2, :] = y0[2]
+    u[3, :] = y0[3]
+    u[4, :] = y0[4]
     u[5, :] = betaz
     dzk = dz*k
+    Z_n = y0[4]
     for i in range(N-1):
         X = u[i*9 + 0]
         Y = u[i*9 + 2]
-        Z = u[i*9 + 4]
+        Z = Z_n #u[i*9 + 4]
         bxconst = u[i*9 + 1]
         byconst = u[i*9 + 3]
         #bz = u[i*6 + 5]
@@ -866,30 +869,27 @@ def rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=0.):
         u[(i+1)*9 + 1] = bxconst + 1/6.*(mx1 + 2.*(mx2 + mx3) + mx4) #// conversion in mrad
         u[(i+1)*9 + 2] = Y + 1/6.*(ky1 + 2.*(ky2 + ky3) + ky4)
         u[(i+1)*9 + 3] = byconst + 1/6.*(my1 + 2.*(my2 + my3) + my4)
-        u[(i+1)*9 + 4] = Z_n
-        u[(i+1)*9 + 5] = beta/np.sqrt(1 + u[(i+1)*9 + 1]*u[(i+1)*9 + 1] + u[(i+1)*9 + 3]*u[(i+1)*9 + 3])#dGamma2 - (u[(i+1)*9 + 1]*u[(i+1)*9 + 1] + u[(i+1)*9 + 3]*u[(i+1)*9 + 3])/2.
+        u[(i+1)*9 + 4] = u[i*9 + 4] + dz*np.sqrt(1 + u[(i+1)*9 + 1]**2 + u[(i+1)*9 + 3]**2) - dz
+        u[(i + 1) * 9 + 5] = y0[5]
+        # beta_z as 6-th coordinate
+        #u[(i+1)*9 + 5] = betai/np.sqrt(1 + u[(i+1)*9 + 1]*u[(i+1)*9 + 1] + u[(i+1)*9 + 3]*u[(i+1)*9 + 3])#dGamma2 - (u[(i+1)*9 + 1]*u[(i+1)*9 + 1] + u[(i+1)*9 + 3]*u[(i+1)*9 + 3])/2.
 
     u[(N-1)*9 + 6], u[(N-1)*9 + 7], u[(N-1)*9 + 8] = mag_field(u[(N-1)*9 + 0], u[(N-1)*9 + 2], u[(N-1)*9 + 4])
     return u
 
 
 def rk_field(y0, s_start, s_stop, N, energy, mag_field):
-    #z = linspace(0, l, num=N)
-    #h = z[1]-z[0]
-    #N = len(z)
-    #print(mag_field(0,0,0))
     if s_start > s_stop:
         print("rk_field: s_start > s_stop. Setup s_start = 0")
         s_start = 0.
     traj_data = rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=s_start)
-    #print np.shape(traj_data), np.shape(y0)
-    #print traj_data
-    y0[0::6] = traj_data[(N-1)*9 + 0, :]
-    y0[1::6] = traj_data[(N-1)*9 + 1, :]
-    y0[2::6] = traj_data[(N-1)*9 + 2, :]
-    y0[3::6] = traj_data[(N-1)*9 + 3, :]
-    #y0[4::6] = traj_data[(N-1)*9 + 4,:]
-    #y0[5::6] = traj_data[(N-1)*9 + 5,:]
+
+    y0[0, :] = traj_data[(N-1)*9 + 0, :]
+    y0[1, :] = traj_data[(N-1)*9 + 1, :]
+    y0[2, :] = traj_data[(N-1)*9 + 2, :]
+    y0[3, :] = traj_data[(N-1)*9 + 3, :]
+    y0[4, :] = traj_data[(N-1)*9 + 4, :]
+    y0[5, :] = traj_data[(N-1)*9 + 5, :]
     return y0
 
 

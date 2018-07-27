@@ -623,7 +623,6 @@ class RungeKuttaTM(TransferMap):
         m.R = lambda energy: m.R_z(s, energy)
         m.B = lambda energy: m.B_z(s, energy)
         m.delta_e = m.delta_e_z(s)
-        # print(m.R_z_no_tilt(s, 0.3))
         m.map = lambda X, energy: rk_field(X, m.s_start, s, m.npoints, energy, m.mag_field)
         return m
 

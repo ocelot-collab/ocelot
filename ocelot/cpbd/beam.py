@@ -505,8 +505,14 @@ class ParticleArray:
     def t(self,value):
         self.rparticles[4] = value
 
-    def thin_out(self, ntimes=10):
-        ntimes = int(ntimes)
+    def thin_out(self, n=10):
+        """
+        Method to thin out the particle array in n-th times. Means every n-th particle will be saved in new Particle array
+
+        :param ntimes: 10, every n-th particle will be taken to new Particle array
+        :return: New ParticleArray
+        """
+        ntimes = int(n)
         if ntimes <= 1:
             print("Nothing to do. ntames must be bigger 1")
             return self

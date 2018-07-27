@@ -973,7 +973,7 @@ def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinea
 from ocelot.cpbd.beam import global_slice_analysis
 
 
-def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpolation="bilinear", inverse_tau=False,
+def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, nbins_y=200, interpolation="bilinear", inverse_tau=False,
                 show_moments=False, nfig=40, title=None, figsize=None, grid=True):
     """
     Shows e-beam slice parameters (current, emittances, energy spread)
@@ -982,6 +982,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpo
 
     :param p_array: ParticleArray
     :param nparts_in_slice: number of particles per slice
+    :param smoth_param: 0.05, smoothing parameters to calculate the beam current: sigma = smoth_param * np.std(p_array.tau())
     :param nbins_x: number of bins for 2D hist. in horz. plane
     :param nbins_y: number of bins for 2D hist. in vertical plane
     :param interpolation: "bilinear", and acceptable values are 'none’, ‘nearest’, ‘bilinear’, ‘bicubic’, ‘spline16’,
@@ -997,7 +998,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpo
     p_array_copy = deepcopy(p_array)
     if inverse_tau:
         p_array_copy.tau()[:] *= -1
-    slice_params = global_slice_analysis(p_array_copy, nparts_in_slice, 0.01, 2, 2)
+    slice_params = global_slice_analysis(p_array_copy, nparts_in_slice, smooth_param, 2, 2)
 
     fig = plt.figure(nfig, figsize=figsize)
     if title != None:
@@ -1018,7 +1019,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpo
     plt.plot(slice_params.s * 1e3, slice_params.ey, "b", label=r"$\varepsilon_y = $" + str(emityn_mm_mrad) + r" $mm\cdot mrad$")
     plt.legend()
     plt.setp(ax_em.get_xticklabels(), visible=False)
-    plt.ylabel(r"$\varepsilon_{x,y}$, $mm\cdot mrad")
+    plt.ylabel(r"$\varepsilon_{x,y}$, $mm\cdot mrad$")
     plt.grid(True)
 
     ax_c = plt.subplot(321, sharex=ax_sp)
@@ -1055,7 +1056,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpo
     #plt.plot(slice_params.s * 1e3, slice_params.mp * 1e2, "k", lw=2)
 
 
-def compare_beams(p_array_1, p_array_2, nparts_in_slice=5000,
+def compare_beams(p_array_1, p_array_2, nparts_in_slice=5000, smoth_param=0.05,
                   inverse_tau=False, nfig=40, title=None, figsize=None, legend_beam1=None, legend_beam2=None):
     """
     Shows e-beam slice parameters (current, emittances, energy spread)
@@ -1065,6 +1066,7 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice=5000,
     :param p_array_1: ParticleArray
     :param p_array_2: ParticleArray
     :param nparts_in_slice: number of particles per slice
+    :param smoth_param: 0.05, smoothing parameters to calculate the beam current: sigma = smoth_param * np.std(p_array.tau())
     :param inverse_tau: False, inverse tau - head will be on the right side of figure
     :param nfig: number of the figure
     :param title: None or string - title of the figure
@@ -1083,8 +1085,8 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice=5000,
         p_array_copy1.tau()[:] *= -1
         p_array_copy2.tau()[:] *= -1
 
-    slice_params1 = global_slice_analysis(p_array_copy1, nparts_in_slice, 0.01, 2, 2)
-    slice_params2 = global_slice_analysis(p_array_copy2, nparts_in_slice, 0.01, 2, 2)
+    slice_params1 = global_slice_analysis(p_array_copy1, nparts_in_slice, smoth_param, 2, 2)
+    slice_params2 = global_slice_analysis(p_array_copy2, nparts_in_slice, smoth_param, 2, 2)
 
     fig = plt.figure(nfig, figsize=figsize)
     if title != None:
@@ -1112,8 +1114,10 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice=5000,
 
     ax_c = plt.subplot(321, sharex=ax_sp)
     plt.title("Current")
-    plt.plot(slice_params1.s * 1e6, slice_params1.I, "r", label="I: " + legend_beam1)
-    plt.plot(slice_params2.s * 1e6, slice_params2.I, "b", label="I: " + legend_beam2)
+    I1max = np.round(np.max(slice_params1.I), 0)
+    I2max = np.round(np.max(slice_params2.I), 0)
+    plt.plot(slice_params1.s * 1e6, slice_params1.I, "r", label=r"$I_{max}=$" + str(I1max) + " A " + legend_beam1)
+    plt.plot(slice_params2.s * 1e6, slice_params2.I, "b", label=r"$I_{max}=$" + str(I2max) + " A " + legend_beam2)
     plt.legend()
     plt.setp(ax_c.get_xticklabels(), visible=False)
     plt.ylabel("I, A")

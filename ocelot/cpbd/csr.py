@@ -159,7 +159,6 @@ class Smoothing:
         charge_per_step = charge per step, charge_per_step(1:Nz)
         bins might overlapp!
         """
-        # ......................................................................
 
         N_BIN = BS_params[1]
         M_BIN = BS_params[2]
@@ -233,7 +232,6 @@ class Smoothing:
         else:
             Nz = np.round((z2 - z1) / step)
             step = (z2 - z1) / Nz
-
         charge_per_step = np.zeros(int(Nz))
         if IP_method == 1:
             for nb in range(N_BIN):
@@ -251,7 +249,6 @@ class Smoothing:
 
         elif IP_method == 2:
             charge_per_step = self.q_per_step_ip2(N_BIN, Q_BIN, BIN[0], BIN[1], NSIG, RMS, step, Nz, z1)
-            #print(time.time() - t0)
         else:
             for nb in range(N_BIN):
                 aa = BIN[0][nb] - z1
@@ -459,7 +456,6 @@ class K0_fin_anf:
             s = s[j:ind1]
         else:
             j = 0
-        # print(j, i1+1)
         R = R[j:ind1]
         n0 = n[0, j:ind1] / R
         n1 = n[1, j:ind1] / R
@@ -652,15 +648,16 @@ class CSR(PhysProc):
         winf = s1 + winfms1
         s = winf + gamma*(gamma*(w_range - winf)-beta*np.sqrt(g2*(w_range-winf)**2+a2))
         R = (w_range-s)/beta
+
         if a2/R[1]**2 > 1e-7:
             KS = (beta*(1. - np.dot(ev1, evo))*np.log(R[0]/R) - beta*np.dot(uup, evo)*(np.arctan((s[0] - winf)/a) - np.arctan((s-winf)/a))
                - (b2*np.dot(ev1, evo) - 1)*np.log((winf - s + R)/(winf-s[0] + R[0]))
                + g2i*np.log(w_range[0]/w_range))
+
         else:
             KS = (beta*(1. - np.dot(ev1, evo))*np.log(R[0]/R)
                - (b2*np.dot(ev1, evo) - 1.)*np.log((winf - s + R)/(winf - s[0] + R[0]))
                + g2i*np.log(w_range[0]/w_range))
-
         return KS
 
     def K0_inf_inf(self, i, traj, w_range):
@@ -706,10 +703,9 @@ class CSR(PhysProc):
             L_fin = True
         else:
             L_fin = False
+
         w_range = np.arange(-NdW[0]-1, 0)*NdW[1]
-        # print(w_range[:10])
-        # print(traj[1, :10])
-        # exit()
+
         if L_fin:
             w, KS = self.k0_fin_anf.eval(i, traj, w_range[0], gamma)
         else:
@@ -718,7 +714,6 @@ class CSR(PhysProc):
         KS1 = KS[0]
 
         idx = np.argsort(w)
-        # print(np.array_equal(w, w[idx]))
         w = w[idx]
         KS = KS[idx]
         w, idx = np.unique(w, return_index=True)
@@ -728,17 +723,18 @@ class CSR(PhysProc):
         if w_range[0] < w[0]:
             m = np.where(w_range < w[0])[0][-1]
             if L_fin:
-                #start = time.time()
                 KS2 = self.K0_fin_inf(i, traj, np.append(w_range[0:m+1], w[0]), gamma)
-                #print("K0_fin_inf = ", time.time() - start)
             else:
                 KS2 = self.K0_inf_inf(i, traj, np.append(w_range[0:m+1], w[0]))
+
             KS2 = (KS2[-1] - KS2) + KS1
             KS = np.append(KS2[0:-1], interp1(w, KS, w_range[m+1:]))
+
         else:
             KS = interp1(w, KS, w_range)
         four_pi_eps0 = 1./(1e-7*speed_of_light**2)
         K1 = np.diff(np.append(np.diff(np.append(KS, 0)), 0))/NdW[1]/four_pi_eps0
+
         return K1
 
     def prepare(self, lat):
@@ -752,8 +748,8 @@ class CSR(PhysProc):
         """
         self.z_csr_start = sum([p.l for p in lat.sequence[:self.indx0]])
         p = Particle()
-
         beta = 1. if self.energy == None else np.sqrt(1. - 1./(self.energy/m_e_GeV)**2)
+        igamma = np.sqrt(1 - beta**2)
         self.csr_traj = np.transpose([[0, p.x, p.y, p.s, p.px, p.py, beta]])
         #self.csr_traj = np.transpose([[0, p.s, p.x, p.y, beta, p.px, p.py]])
         for elem in lat.sequence[self.indx0:self.indx1+1]:
@@ -770,11 +766,41 @@ class CSR(PhysProc):
                 Ry = R * np.sin(elem.tilt)
                 #B = energy*1e9*beta/(R*speed_of_light)
                 R_vect = [-Ry, Rx, 0]
+                self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect)
+
+            elif elem.__class__ == Undulator:
+
+                ku = 2*np.pi/elem.lperiod
+                L = elem.lperiod*elem.nperiods
+                By = elem.Kx * m_e_eV * 2. * pi / (elem.lperiod * speed_of_light)
+                Bx = elem.Ky * m_e_eV * 2. * pi / (elem.lperiod * speed_of_light)
+                sre0 = self.csr_traj[:, -1]
+                N = int(max(1, np.round(delta_s / step)))
+                #dS = float(delta_s) / N
+                SRE2 = np.zeros((7, N))
+                #s = np.arange(1, N + 1) * dS
+
+                mag_field = lambda x, y, z: (0, By*np.cos(ku*z), 0)
+                y0 = np.array([self.csr_traj[1, -1], self.csr_traj[4, -1], self.csr_traj[2, -1], self.csr_traj[5, -1],
+                      0, self.csr_traj[6, -1]])
+                #y0 = np.zeros(6)
+                traj = rk_track_in_field(y0, s_stop=L, N=N+1, energy=self.energy, mag_field=mag_field, s_start=0)
+
+                dz = traj[4+9::9].T - traj[4:-9:9].T
+
+                SRE2[0, :] = sre0[0] + np.cumsum(dz*np.sqrt(1+(traj[1+9::9].T)**2 + +(traj[3+9::9].T)**2))
+                SRE2[1, :] = sre0[1] + traj[0+9::9].T
+                SRE2[2, :] = sre0[2] + traj[2+9::9].T
+                SRE2[3, :] = sre0[3] + traj[4+9::9].T
+                SRE2[4, :] = sre0[4] + traj[1+9::9].T
+                SRE2[5, :] = sre0[5] + traj[3+9::9].T
+                SRE2[6, :] = traj[5+9::9].T
+
+                self.csr_traj = np.append(self.csr_traj, SRE2, axis=1)
             else:
                 #B = 0.
                 R_vect = [0, 0, 0.]
-
-            self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect )
+                self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect )
         #import matplotlib.pyplot as plt
         #plt.figure(10)
         #plt.plot(self.csr_traj[0,:], self.csr_traj[1,:], "r")
@@ -812,9 +838,9 @@ class CSR(PhysProc):
         n_iter = len(itr_ra)
         #start = time.time()
         K1 = self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma)
+
         for nit in range(1, n_iter):
             K1 += self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma=gamma)
-        #print("K1 = ", time.time() - start)
         K1 = K1/n_iter
 
 
@@ -874,7 +900,6 @@ class CSR(PhysProc):
         sa = s1 + st / 2.
         Ndw = [self.n_mesh, st]
         lam_ds = I[:, 1] / speed_of_light * st
-        # print("ST = ", st, s2 - s1, len(lam_ds), Ns)
 
         s_array = self.csr_traj[0, :]
         indx = (np.abs(s_array - s_cur)).argmin()
@@ -885,11 +910,9 @@ class CSR(PhysProc):
 
         nit = 0
         n_iter = len(itr_ra)
-        # start = time.time()
         K1 = self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma)
         for nit in range(1, n_iter):
             K1 += self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma=gamma)
-        # print("K1 = ", time.time() - start)
         K1 = K1 / n_iter
 
 

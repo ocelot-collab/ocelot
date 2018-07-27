@@ -235,21 +235,21 @@ class Beam:
     def len(self):
         return 1
 
-    #def sizes(self):
-    #    if self.beta_x != 0:
-    #        self.gamma_x = (1. + self.alpha_x**2)/self.beta_x
-    #    else:
-    #        self.gamma_x = 0.
-#
-    #    if self.beta_y != 0:
-    #        self.gamma_y = (1. + self.alpha_y**2)/self.beta_y
-    #    else:
-    #        self.gamma_y = 0.
-#
-    #    self.sigma_x = np.sqrt((self.sigma_E/self.E*self.Dx)**2 + self.emit_x*self.beta_x)
-    #    self.sigma_y = np.sqrt((self.sigma_E/self.E*self.Dy)**2 + self.emit_y*self.beta_y)
-    #    self.sigma_xp = np.sqrt((self.sigma_E/self.E*self.Dxp)**2 + self.emit_x*self.gamma_x)
-    #    self.sigma_yp = np.sqrt((self.sigma_E/self.E*self.Dyp)**2 + self.emit_y*self.gamma_y)
+    def sizes(self):
+        if self.beta_x != 0:
+            self.gamma_x = (1. + self.alpha_x**2)/self.beta_x
+        else:
+            self.gamma_x = 0.
+
+        if self.beta_y != 0:
+            self.gamma_y = (1. + self.alpha_y**2)/self.beta_y
+        else:
+            self.gamma_y = 0.
+
+        self.sigma_x = np.sqrt((self.sigma_E/self.E*self.Dx)**2 + self.emit_x*self.beta_x)
+        self.sigma_y = np.sqrt((self.sigma_E/self.E*self.Dy)**2 + self.emit_y*self.beta_y)
+        self.sigma_xp = np.sqrt((self.sigma_E/self.E*self.Dxp)**2 + self.emit_x*self.gamma_x)
+        self.sigma_yp = np.sqrt((self.sigma_E/self.E*self.Dyp)**2 + self.emit_y*self.gamma_y)
 
     # def print_sizes(self):
         # self.sizes()
@@ -504,6 +504,39 @@ class ParticleArray:
     @t.setter
     def t(self,value):
         self.rparticles[4] = value
+
+    def thin_out(self, ntimes=10):
+        ntimes = int(ntimes)
+        if ntimes <= 1:
+            print("Nothing to do. ntames must be bigger 1")
+            return self
+        if ntimes > np.shape(self.rparticles)[1]:
+            print("ntimes is too big")
+        n = int(np.shape(self.rparticles)[1]/ntimes +1)
+        p = ParticleArray(n)
+        p.rparticles[:, :] = self.rparticles[:,::ntimes]
+        p.q_array[:] = self.q_array[::ntimes]*ntimes
+        p.s = self.s
+        p.E = self.E
+        return p
+
+    def rescale2energy(self, energy):
+        """
+        Method to rescale beam coordinates with new energy
+
+        :param energy: new energy
+        :return:
+        """
+        Ei = self.E
+        betai = np.sqrt(1 - (m_e_GeV / Ei) ** 2)
+        Ef = energy
+        betaf = np.sqrt(1 - (m_e_GeV / Ef) ** 2)
+
+        self.E = Ef
+        Rnn = Ei * betai / (Ef * betaf)
+        self.px()[:] = Rnn * self.px()[:]
+        self.py()[:] = Rnn * self.py()[:]
+        self.p()[:] = Rnn * self.p()[:]
 
 
 def recalculate_ref_particle(p_array):
@@ -1240,6 +1273,43 @@ def parray2beam(parray, step=1e-7):
     if hasattr(parray,'filePath'):
         beam.filePath = parray.filePath + '.beam'
     return(beam)
+
+def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
+                    sigma_tau=1e-3, sigma_p=1e-4, tau_p_cor=0.1, charge=5e-9, nparticles=200000, energy=0.13):
+    if sigma_y is None:
+        sigma_y = sigma_x
+    if sigma_py is None:
+        sigma_py = sigma_px
+
+    x = np.random.randn(nparticles) * sigma_x
+    px = np.random.randn(nparticles) * sigma_px
+    y = np.random.randn(nparticles) * sigma_y
+    py = np.random.randn(nparticles) * sigma_py
+    tau = np.random.randn(nparticles) * sigma_tau
+    dp = np.random.randn(nparticles) * sigma_p
+    dp += tau_p_cor*tau
+    # covariance matrix for [tau, p] for beam compression in BC
+    #cov_t_p = [[1.30190131e-06, 2.00819771e-05],
+    #           [2.00819771e-05, 3.09815718e-04]]
+    #k = tau_p_cor*sigma_tau*sigma_p
+    #cov_t_p = [[sigma_tau**2, k],
+    #           [k, sigma_p**2]]
+    #long_dist = np.random.multivariate_normal((0, 0), cov_t_p, nparticles)
+    #tau = long_dist[:, 0]
+    #dp = long_dist[:, 1]
+
+    p_array = ParticleArray(n=nparticles)
+    p_array.E = energy # GeV
+    p_array.rparticles[0] = x
+    p_array.rparticles[1] = px
+    p_array.rparticles[2] = y
+    p_array.rparticles[3] = py
+    p_array.rparticles[4] = tau
+    p_array.rparticles[5] = dp
+
+
+    p_array.q_array = np.ones(nparticles) * charge / nparticles
+    return p_array
 
 # def zero_wake_at_ipk_new(beam):
     # '''

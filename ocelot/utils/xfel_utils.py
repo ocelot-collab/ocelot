@@ -22,7 +22,7 @@ from ocelot.gui import *
 # from ocelot.rad.undulator_params import *
 # from ocelot.rad.fel import *
 from ocelot.adaptors.genesis import *
-from ocelot.adaptors.genesis4 import *
+# from ocelot.adaptors.genesis4 import *
 
 import multiprocessing
 nthread = multiprocessing.cpu_count()

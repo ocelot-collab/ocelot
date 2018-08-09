@@ -22,6 +22,7 @@ class FelParameters:
     
     def P(self, z=None):
         '''
+        returns sase power at distance z
         unfinished
         '''
         # if dims == 1:
@@ -45,14 +46,16 @@ class FelParameters:
             if np.size(z) > 1:
                 z = z[:,np.newaxis]
                 if (z > self.z_sat_min).any():
-                    print('Warning, estimation applicable up to z_sat_min=%.2fm' %(self.z_sat_min))
+                    _logger.warning('Estimation applicable up to z_sat_min=%.2fm, limiting power to saturation level' %(self.z_sat_min))
+                    idx = z > self.z_sat_min[:,np.newaxis]
+                    z[idx] = self.z_sat_min[:,np.newaxis][idx]
             else: 
                 if (z > self.z_sat_min):
-                    print('Warning, estimation applicable up to z_sat_min=%.2fm, while z=%.2fm requested' %(self.z_sat_min, z))
+                    _logger.warning('Estimation applicable up to z_sat_min=%.2fm, while z=%.2fm requested, returning saturation power' %(self.z_sat_min, z))
+                    z = self.z_sat_min
             
             zn = z / (np.sqrt(3) * self.lg3)
             
-        
         Pz = self.P_sn * (1 + 1/9 * np.exp(np.sqrt(3) * zn) / np.sqrt(np.pi * zn))
         # Pz = self.P_sn * (1 + 1/9 * np.exp(np.sqrt(3) * zn))
         #Pz = p.P_sn * (1 + 1/9 * np.exp(np.sqrt(3) * zn))
@@ -69,7 +72,7 @@ class FelParameters:
         if z is None:
             z = self.z_sat_min
         elif z > self.z_sat_min:
-            print('Warning, estimation applicable up to z_sat_min=%.2fm, while z=%.2fm requested' %(z_sat_min, z))
+            _logger.warning('estimation applicable up to z_sat_min=%.2fm, while z=%.2fm requested' %(z_sat_min, z))
         tcoh = self.lambda0 / (6 * self.rho3 * speed_of_light ) * np.sqrt(z / (2 * np.pi * self.lg3))
         return tcoh
     
@@ -131,8 +134,10 @@ def calculateFelParameters(input, array=False):
         p.fc = sf.j0(ja) - sf.j1(ja)
     else:
         p.fc = 1.0
-        
+    
+    
     p.Pb = p.gamma0 * p.I * m_e_eV# beam power [Reiche]
+    
     
 
     
@@ -166,13 +171,18 @@ def calculateFelParameters(input, array=False):
     
     
     p.lg3 = p.lg1 * (1 + p.xie_lscale)
+    if hasattr(input,'lg_mult'):
+        p.lg_mult = input.lg_mult
+        if p.lg_mult is not None:
+            p.lg3 *= p.lg_mult
+            _logger.info('lg3 multiplied by lg_mult ({})'.format(p.lg_mult))
     p.rho3 = p.xlamd / (4*np.pi * np.sqrt(3) * p.lg3)
     
 
     
     p.Nc = p.I / (q_e * p.rho3 * p.k0 * speed_of_light)
     # p.P_sn = (3 * p.rho1 * p.Pb) / (p.Nc * np.sqrt(np.pi * np.log(p.Nc))) # shot noise power [W]
-    p.P_sn = (3 * p.rho1 * p.Pb) / (p.Nc * np.sqrt(np.pi * np.log(p.Nc))) # shot noise power [W]
+    p.P_sn = (3 * p.rho3 * p.Pb) / (p.Nc * np.sqrt(np.pi * np.log(p.Nc))) # shot noise power [W]
     
     
     p.z_sat_norm = 3 + 1/np.sqrt(3) * np.log(p.Nc) # normalized saturation length for slices

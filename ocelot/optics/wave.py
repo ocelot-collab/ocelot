@@ -215,7 +215,7 @@ class RadiationField:
             self.to_domain('fs')
             x, y = np.meshgrid(self.scale_x(), self.scale_y())
             if plane == 'xy' or plane == 'yx':
-            arg2 = x**2 + y**2
+                arg2 = x**2 + y**2
             elif plane == 'x':
                 arg2 = x**2
             elif plane == 'y':
@@ -233,7 +233,7 @@ class RadiationField:
             self.to_domain('ts')
             x, y = np.meshgrid(self.scale_x(), self.scale_y())
             if plane == 'xy' or plane == 'yx':
-            arg2 = x**2 + y**2
+                arg2 = x**2 + y**2
             elif plane == 'x':
                 arg2 = x**2
             elif plane == 'y':
@@ -589,7 +589,9 @@ class TransferFunction:
 
 class StokesParameters:
     def __init__(self):
-        self.sc = np.array([])
+        self.sc_z = np.empty(0)
+        self.sc_x = np.empty(0)
+        self.sc_y = np.empty(0)
         self.s0 = np.array([])
         self.s1 = np.array([])
         self.s2 = np.array([])
@@ -598,7 +600,7 @@ class StokesParameters:
     def __getitem__(self,i):
         S = deepcopy(self)
         if self.s0.ndim == 1:
-            S.sc = self.sc[i]
+            S.sc = self.sc_z[i]
         S.s0 = self.s0[i]
         S.s1 = self.s1[i]
         S.s2 = self.s2[i]
@@ -632,12 +634,14 @@ class StokesParameters:
         return psi
         
 def bin_stokes(S, bin_size):
-    
+    '''
+    needs fix for 3d!!!
+    '''
     if type(S) != StokesParameters:
         raise ValueError('Not a StokesParameters object')
     
     S1 = StokesParameters()
-    S1.sc = bin_scale(S.sc, bin_size)
+    S1.sc = bin_scale(S.sc_z, bin_size)
     S1.s0 = bin_array(S.s0, bin_size)
     S1.s1 = bin_array(S.s1, bin_size)
     S1.s2 = bin_array(S.s2, bin_size)
@@ -658,7 +662,7 @@ def calc_stokes_out(out1, out2, pol='rl', on_axis=True):
     f1=np.array(out1.phi_mid[:,-1])
     f2=np.array(out2.phi_mid[:,-1])
     if np.equal(out1.s, out2.s).all():
-        s = out2.s
+        scale_s = out2.s
     else:
         raise ValueError('Different scales')
     
@@ -667,14 +671,19 @@ def calc_stokes_out(out1, out2, pol='rl', on_axis=True):
     E2x = a2 * np.exp(1j * f2)
     E2y = E2x * (-1j)
     
-    Ex = (E1x + E2x) / np.sqrt(2)
+    Ex = (E1x + E2x) / np.sqrt(2) #?
     Ey = (E1y + E2y) / np.sqrt(2)
     
-    S = calc_stokes(Ex,Ey,s)
+    S = calc_stokes(Ex, Ey)
+    S.sc_z = out2.s
     
     return S
     
 
+# def calc_stokes_dfl(*args, **kwargs):
+    # # _logger.warning('calc_stokes_dfl will de deprecated, use calc_stokes_dfl_l instead')
+    # return(calc_stokes_dfl_l(*args, **kwargs))
+    
 def calc_stokes_dfl(dfl1, dfl2, pol='rl', mode=(0,0)):
     #mode: (average_longitudinally, sum_transversely)
     if pol != 'rl':
@@ -689,7 +698,7 @@ def calc_stokes_dfl(dfl1, dfl2, pol='rl', mode=(0,0)):
             dfl2.fld = dfl2.fld[:-(l2-l1),:,:]
 
     # if np.equal(dfl1.scale_z(), dfl2.scale_z()).all():
-    s = dfl1.scale_z()
+    s = (dfl1.scale_z(), dfl1.scale_x(), dfl1.scale_y())
     # else:
         # raise ValueError('Different scales')
     
@@ -697,6 +706,7 @@ def calc_stokes_dfl(dfl1, dfl2, pol='rl', mode=(0,0)):
     Ey = (dfl1.fld * 1j + dfl2.fld * (-1j)) / np.sqrt(2)   #(E1y + E2y) /np.sqrt(2)
     
     S = calc_stokes(Ex,Ey,s)
+    # S.sc_z, S.sc_x, S.sc_y = dfl1.scale_z(), dfl1.scale_x(), dfl1.scale_y()
 
     if mode[1]:
         S = sum_stokes_tr(S)
@@ -710,27 +720,129 @@ def calc_stokes_dfl(dfl1, dfl2, pol='rl', mode=(0,0)):
 
     return S
 
+
+# def calc_stokes_dfl_tr(dfl1, dfl2, pol='rl', dir='v', mode=(0,0)):
+    # #mode: (average_longitudinally, sum_transversely)
+    # if pol != 'rl':
+        # raise ValueError('Not implemented yet')
     
-    
-def calc_stokes(Ex,Ey,s=None):
-    
-    if len(Ex) != len(Ey):
-        raise ValueError('Ex and Ey dimentions do not match')
+    # if len(dfl1.fld) != len(dfl2.fld):
+        # l1 = len(dfl1.fld)
+        # l2 = len(dfl2.fld)
         
-    if s is None:
-        s = np.arange(len(Ex))
+        # if l1 > l2:
+            # dfl1.fld = dfl1.fld[:-(l1-l2),:,:]
+        # else:
+            # dfl2.fld = dfl2.fld[:-(l2-l1),:,:]
     
-    Ex_ = np.conj(Ex)
-    Ey_ = np.conj(Ey)
+    # # if dir == 'v':
+        
     
-    Jxx = Ex * Ex_
-    Jxy = Ex * Ey_
-    Jyx = Ey * Ex_
-    Jyy = Ey * Ey_
+    # # if np.equal(dfl1.scale_z(), dfl2.scale_z()).all():
+    # s = dfl1.scale_z()
+    # # else:
+        # # raise ValueError('Different scales')
     
-    del (Ex_,Ey_)
+    # Ex = (dfl1.fld + dfl2.fld) / np.sqrt(2)                #(E1x + E2x) /np.sqrt(2)
+    # Ey = (dfl1.fld * 1j + dfl2.fld * (-1j)) / np.sqrt(2)   #(E1y + E2y) /np.sqrt(2)
+    
+    # S = calc_stokes(Ex,Ey,s)
+
+    # if mode[1]:
+        # S = sum_stokes_tr(S)
+        # # S.s0 = np.sum(S.s0,axis=(1,2))
+        # # S.s1 = np.sum(S.s1,axis=(1,2))
+        # # S.s2 = np.sum(S.s2,axis=(1,2))
+        # # S.s3 = np.sum(S.s3,axis=(1,2))
+    
+    # if mode[0]:
+        # S = average_stokes_l(S)
+
+    # return S
+
+    
+# def calc_stokes(Ex, Ey, s=None):
+    
+    # if len(Ex) != len(Ey):
+        # raise ValueError('Ex and Ey dimentions do not match')
+
+    # S = StokesParameters()
+    # if s is None:
+        # if Ex.ndim > 1:
+            # S.sc_z = np.arange(Ex.shape[0])
+            # S.sc_x = np.arange(Ex.shape[1])
+            # S.sc_y = np.arange(Ex.shape[2])
+        # else:
+            # S.sc_z = np.arange(Ex.shape[0])
+        # # s = np.arange(len(Ex))
+    # else:
+        # S.sc_z = s[0]
+        # S.sc_x = s[1]
+        # S.sc_y = s[2]
+    
+    # Ex_ = np.conj(Ex)
+    # Ey_ = np.conj(Ey)
+    
+    # Jxx = Ex * Ex_
+    # Jxy = Ex * Ey_
+    # Jyx = Ey * Ex_
+    # Jyy = Ey * Ey_
+    
+    # del (Ex_,Ey_)
+
+    # S.s0 = np.real(Jxx + Jyy)
+    # S.s1 = np.real(Jxx - Jyy)
+    # S.s2 = np.real(Jxy + Jyx)
+    # S.s3 = np.real(1j * (Jyx - Jxy))
+    
+    # return S
+    
+def calc_stokes(E1, E2, s=None, basis='xy'):
+    
+    if E1.shape != E2.shape:
+        raise ValueError('Ex and Ey dimentions do not match')
     
     S = StokesParameters()
+    
+    if s is None:
+        s = np.arange(E1.size)
+    
+    if basis == 'lr' or basis == 'rl': 
+        if basis == 'lr':
+            Er, El = El, Er
+        Er, El = E1, E2
+        
+        Er_ = np.conj(Er)
+        El_ = np.conj(El)
+        
+        Jxx = Er*Er_ + El*El_ + Er*El_ + El*Er_ 
+        Jyy = Er*Er_ + El*El_ - Er*El_ - El*Er_
+        Jxy = (-1j)*(Er*Er_ - El*El_ - Er*El_ + El*Er_)
+        Jyx = np.conj(Jxy)
+        
+        del (Er_, El_, Er, El)
+    
+    elif basis == 'yx' or basis == 'xy': 
+        if basis == 'yx':
+            Ex, Ey = Ey, Ex
+        Ex, Ey = E1, E2
+        
+        Ex_ = np.conj(Ex)
+        Ey_ = np.conj(Ey)
+        
+        Jxx = Ex * Ex_
+        Jxy = Ex * Ey_
+        Jyx = Ey * Ex_
+        Jyy = Ey * Ey_
+        
+        del (Ex_, Ey_, Ex, Ey)
+        
+    else:
+        msg = 'basis should be in ["lr", "rl", "xy", "yx"]'
+        _logger.error(msg)
+        raise ValueError(msg)
+        
+    
     S.sc = s
     S.s0 = np.real(Jxx + Jyy)
     S.s1 = np.real(Jxx - Jyy)
@@ -739,22 +851,22 @@ def calc_stokes(Ex,Ey,s=None):
     
     return S
     
-def average_stokes_l(S,sc_range=None):
+def average_stokes_l(S, sc_range=None):
     
     if type(S) != StokesParameters:
         raise ValueError('Not a StokesParameters object')
     
     if sc_range is None:
-        sc_range = [S.sc[0], S.sc[-1]]
+        sc_range = [S.sc_z[0], S.sc_z[-1]]
 
-    idx1 = np.where(S.sc >= sc_range[0])[0][0]
-    idx2 = np.where(S.sc <= sc_range[-1])[0][-1]
+    idx1 = np.where(S.sc_z >= sc_range[0])[0][0]
+    idx2 = np.where(S.sc_z <= sc_range[-1])[0][-1]
     
     if idx1 == idx2:
         return S[idx1]
     
     S1 = StokesParameters()
-    S1.sc = np.mean(S.sc[idx1:idx2], axis=0)
+    S1.sc = np.mean(S.sc_z[idx1:idx2], axis=0)
     S1.s0 = np.mean(S.s0[idx1:idx2], axis=0)
     S1.s1 = np.mean(S.s1[idx1:idx2], axis=0)
     S1.s2 = np.mean(S.s2[idx1:idx2], axis=0)
@@ -769,7 +881,9 @@ def sum_stokes_tr(S):
         return S
     else:
         S1 = StokesParameters()
-        S1.sc = S.sc
+        S1.sc_x = np.empty(0)
+        S1.sc_y = np.empty(0)
+        S1.sc_z = S.sc_z
         S1.s0 = np.sum(S.s0,axis=(-1,-2))
         S1.s1 = np.sum(S.s1,axis=(-1,-2))
         S1.s2 = np.sum(S.s2,axis=(-1,-2))
@@ -1421,8 +1535,8 @@ def dfl_cut_z(dfl,z=[-np.inf,np.inf],debug=1):
     
     _logger.info('cutting radiation file')
         
-    if dfl.__class__ != RadiationField:
-        raise ValueError('wrong radiation object: should be RadiationField')
+#    if dfl.__class__ != RadiationField:
+#        raise ValueError('wrong radiation object: should be RadiationField')
 
     z = np.array(z)
     z.sort()

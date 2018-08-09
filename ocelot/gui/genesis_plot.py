@@ -78,8 +78,7 @@ def plot_gen_out_all_paral(exp_dir, stage=1, savefig='png', debug=1):
     
     return
 
-    # plot_gen_stat(proj_dir=exp_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int','energy','r_size_weighted'], z_param_inp=[], dfl_param_inp=[], s_inp=['max'], z_inp=[0,'end'], savefig=1, saveval=1, showfig=0, debug=0)
-
+# plot_gen_stat(proj_dir=exp_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int','energy','r_size_weighted'], z_param_inp=[], dfl_param_inp=[], s_inp=['max'], z_inp=[0,'end'], savefig=1, saveval=1, showfig=0, debug=0)
 
 def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1, 1, 6.05, 1, 0, 0, 0, 0, 0, 1, 1), vartype_dfl=complex128, debug=1):
     '''
@@ -3234,37 +3233,44 @@ def plot_trf(trf, mode='tr', autoscale=0, showfig=True, savefig=None, fig_name=N
         plt.close('all')
         
 
-def plot_stokes_values(S,fig=None,s_lin=0, norm=0, showfig=True, gw=1):
+def plot_stokes_values(S, fig=None, s_lin=0, norm=0, showfig=True, gw=1):#, direction='z'):
     
-    if type(S) != StokesParameters:
-        raise ValueError('Not a StokesParameters object')
-        
-    if np.size(S.sc) > 1:
+    # if type(S) != StokesParameters:
+        # raise ValueError('Not a StokesParameters object')
+#    if direction == 'z':
+#        sc = S.sc_z
+#    elif direction == 'x':
+#        sc = S.sc_x
+#    elif direction == 'y':        
+#        sc = S.sc_y
+    sc = S.sc * 1e6
+    
+    
+    if np.size(sc) > 1:
         if fig == None:
             plt.figure('Stokes S')
-        else:
+        elif type(fig) == matplotlib.figure.Figure:
             plt.figure(fig.number)
+        else:
+            plt.figure(fig)
         plt.clf()
-        sc = S.sc * 1e6
         
         if gw:
-            S.s0 /= 1e9
-            S.s1 /= 1e9
-            S.s2 /= 1e9
-            S.s3 /= 1e9
+            mult = 1e-9
             plt.ylabel('$S_0$ [GW]')
         else:
+            mult = 1
             plt.ylabel('$S_0$ [W]')
         plt.xlabel('s [$\mu$m]')
         
         if s_lin:
             # plt.step(sc, np.sqrt(S.s1**2+S.s2**2), linewidth=2, where='mid',color=[0.5,0.5,0.5], linestyle='--')
-            plt.step(sc, np.sqrt(S.s1**2+S.s2**2), linewidth=2, where='mid',color='m', linestyle='--')
+            plt.step(sc, np.sqrt(S.s1**2+S.s2**2)*mult, linewidth=2, where='mid',color='m', linestyle='--')
  
-        plt.step(sc, S.s1, linewidth=2, where='mid',color='g')
-        plt.step(sc, S.s2, linewidth=2, where='mid',color='r')
-        plt.step(sc, S.s3, linewidth=2, where='mid',color='c')
-        plt.step(sc, S.s0, linewidth=2, where='mid',color='b')
+        plt.step(sc, S.s1*mult, linewidth=2, where='mid',color='g')
+        plt.step(sc, S.s2*mult, linewidth=2, where='mid',color='r')
+        plt.step(sc, S.s3*mult, linewidth=2, where='mid',color='c')
+        plt.step(sc, S.s0*mult, linewidth=2, where='mid',color='b')
         # plt.step(sc, S.s1, linewidth=2, where='mid',color='m')
         # plt.step(sc, S.s2, linewidth=2, where='mid',color='r')
         # plt.step(sc, S.s3, linewidth=2, where='mid',color='c')
@@ -3282,18 +3288,24 @@ def plot_stokes_values(S,fig=None,s_lin=0, norm=0, showfig=True, gw=1):
             plt.close('all')
         
         
-def plot_stokes_angles(S,fig=None,showfig=True):
+def plot_stokes_angles(S, fig=None, showfig=True):#, direction='z'):
     
-    if type(S) != StokesParameters:
-        raise ValueError('Not a StokesParameters object')
-        
-    if np.size(S.sc) > 1:
+#    if type(S) != StokesParameters:
+#        raise ValueError('Not a StokesParameters object')
+    # if direction == 'z':
+        # sc = S.sc_z
+    # elif direction == 'x':
+        # sc = S.sc_x
+    # elif direction == 'y':        
+        # sc = S.sc_y
+    sc = S.sc * 1e6
+    
+    if np.size(sc) > 1:
         if fig == None:
             plt.figure('Stokes angles')
         else:
             plt.figure(fig.number)
         plt.clf()
-        sc = S.sc * 1e6
         psize = S.s_l()
         psize /= np.amax(psize)
 #        plt.step(sc, S.chi(), sc, S.psi(),linewidth=2)

@@ -195,7 +195,7 @@ class RadiationField:
         spec = calc_ph_sp_dens(spec0, freq_ev, n_photons)
         return freq_ev, spec
         
-    def curve_wavefront(self, r, domain_z=None):
+    def curve_wavefront(self, r, plane='xy', domain_z=None):
         '''
         introduction of the additional 
         wavefront curvature with radius r
@@ -214,7 +214,15 @@ class RadiationField:
         if domain_z == 'f':
             self.to_domain('fs')
             x, y = np.meshgrid(self.scale_x(), self.scale_y())
+            if plane == 'xy' or plane == 'yx':
             arg2 = x**2 + y**2
+            elif plane == 'x':
+                arg2 = x**2
+            elif plane == 'y':
+                arg2 = y**2
+            else:
+                _logger.error('"plane" should be in ["x", "y", "xy"]')
+                raise ValueError()
             k = 2 * np.pi / self.scale_z()
             if np.size(r) == 1:
                 self.fld *= np.exp(-1j * k[:,np.newaxis,np.newaxis] / 2 * arg2[np.newaxis,:,:] / r)
@@ -224,7 +232,15 @@ class RadiationField:
         elif domain_z=='t':
             self.to_domain('ts')
             x, y = np.meshgrid(self.scale_x(), self.scale_y())
+            if plane == 'xy' or plane == 'yx':
             arg2 = x**2 + y**2
+            elif plane == 'x':
+                arg2 = x**2
+            elif plane == 'y':
+                arg2 = y**2
+            else:
+                _logger.error('"plane" should be in ["x", "y", "xy"]')
+                raise ValueError()
             k = 2 * np.pi / self.xlamds
             if np.size(r) == 1:
                 self.fld *= np.exp(-1j * k / 2 * arg2 / r)[np.newaxis,:,:]

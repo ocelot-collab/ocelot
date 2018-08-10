@@ -645,7 +645,7 @@ def bin_stokes(S, bin_size):
         raise ValueError('Not a StokesParameters object')
     
     S1 = StokesParameters()
-    S1.sc = bin_scale(S.sc_z, bin_size)
+    S1.sc_z = bin_scale(S.sc_z, bin_size)
     S1.s0 = bin_array(S.s0, bin_size)
     S1.s1 = bin_array(S.s1, bin_size)
     S1.s2 = bin_array(S.s2, bin_size)

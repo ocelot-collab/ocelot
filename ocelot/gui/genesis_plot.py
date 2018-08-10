@@ -3306,7 +3306,7 @@ def plot_stokes_angles(S, fig=None, showfig=True, direction='z'):
         else:
             plt.figure(fig.number)
         plt.clf()
-        psize = S.s_l()
+        psize = S.P_pol()
         psize /= np.amax(psize)
 #        plt.step(sc, S.chi(), sc, S.psi(),linewidth=2)
         plt.scatter(sc, S.chi(),psize,linewidth=2,color='g')

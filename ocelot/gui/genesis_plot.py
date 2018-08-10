@@ -3233,17 +3233,17 @@ def plot_trf(trf, mode='tr', autoscale=0, showfig=True, savefig=None, fig_name=N
         plt.close('all')
         
 
-def plot_stokes_values(S, fig=None, s_lin=0, norm=0, showfig=True, gw=1):#, direction='z'):
+def plot_stokes_values(S, fig=None, s_lin=0, norm=0, showfig=True, gw=1, direction='z'):
     
     # if type(S) != StokesParameters:
         # raise ValueError('Not a StokesParameters object')
-#    if direction == 'z':
-#        sc = S.sc_z
-#    elif direction == 'x':
-#        sc = S.sc_x
-#    elif direction == 'y':        
-#        sc = S.sc_y
-    sc = S.sc * 1e6
+    if direction == 'z':
+       sc = S.sc_z * 1e6
+    elif direction == 'x':
+       sc = S.sc_x * 1e6
+    elif direction == 'y':
+       sc = S.sc_y * 1e6
+    # sc = S.sc * 1e6
     
     
     if np.size(sc) > 1:
@@ -3288,17 +3288,17 @@ def plot_stokes_values(S, fig=None, s_lin=0, norm=0, showfig=True, gw=1):#, dire
             plt.close('all')
         
         
-def plot_stokes_angles(S, fig=None, showfig=True):#, direction='z'):
+def plot_stokes_angles(S, fig=None, showfig=True, direction='z'):
     
 #    if type(S) != StokesParameters:
 #        raise ValueError('Not a StokesParameters object')
-    # if direction == 'z':
-        # sc = S.sc_z
-    # elif direction == 'x':
-        # sc = S.sc_x
-    # elif direction == 'y':        
-        # sc = S.sc_y
-    sc = S.sc * 1e6
+    if direction == 'z':
+        sc = S.sc_z * 1e6
+    elif direction == 'x':
+        sc = S.sc_x * 1e6
+    elif direction == 'y':
+        sc = S.sc_y * 1e6
+    # sc = S.sc * 1e6
     
     if np.size(sc) > 1:
         if fig == None:

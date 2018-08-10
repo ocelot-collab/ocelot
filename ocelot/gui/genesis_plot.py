@@ -3288,7 +3288,7 @@ def plot_stokes_values(S, fig=None, s_lin=0, norm=0, showfig=True, gw=1, directi
             plt.close('all')
         
         
-def plot_stokes_angles(S, fig=None, showfig=True, direction='z'):
+def plot_stokes_angles(S, fig=None, showfig=True, direction='z', scatter=True):
     
 #    if type(S) != StokesParameters:
 #        raise ValueError('Not a StokesParameters object')
@@ -3306,11 +3306,16 @@ def plot_stokes_angles(S, fig=None, showfig=True, direction='z'):
         else:
             plt.figure(fig.number)
         plt.clf()
-        psize = S.P_pol()
-        psize /= np.amax(psize)
+
 #        plt.step(sc, S.chi(), sc, S.psi(),linewidth=2)
-        plt.scatter(sc, S.chi(),psize,linewidth=2,color='g')
-        plt.scatter(sc, S.psi(),psize,linewidth=2,color='b')
+        if scatter:
+            psize = S.P_pol()
+            psize /= np.amax(psize)
+            plt.scatter(sc, S.chi(),psize,linewidth=2,color='g')
+            plt.scatter(sc, S.psi(),psize,linewidth=2,color='b')
+        else:
+            plt.step(sc, S.chi(), linewidth=2, where='mid', color='g')
+            plt.step(sc, S.psi(), linewidth=2, where='mid', color='b')
         plt.legend(['$\chi$','$\psi$'])#,loc='best')
         plt.xlabel('s [$\mu$m]')
         plt.ylabel('[rad]')

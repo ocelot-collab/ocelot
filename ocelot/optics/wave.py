@@ -607,12 +607,16 @@ class StokesParameters:
         S.s3 = self.s3[i]
         return S
         
-    def s_coh(self):
+    def P_pol(self):
         #coherent part
         return np.sqrt(self.s1**2 + self.s2**2 + self.s3**2)
-    def s_l(self):
+    def P_pol_l(self):
         #linearly polarized part
         return np.sqrt(self.s1**2 + self.s2**2)
+    def deg_pol(self):
+        return self.P_pol() / self.s0
+    def deg_pol_l(self):
+        return self.P_pol_l() / self.s0
         #        self.s_coh = np.array([])
     def chi(self):
         # chi angle (p/4 = circular)
@@ -685,7 +689,9 @@ def calc_stokes_out(out1, out2, pol='rl', on_axis=True):
     # return(calc_stokes_dfl_l(*args, **kwargs))
     
 def calc_stokes_dfl(dfl1, dfl2, basis='xy', mode=(0,0)):
-    #mode: (average_longitudinally, sum_transversely)
+    '''
+    mode: (average_longitudinally, sum_transversely)
+    '''
     # if basis != 'xy':
         # raise ValueError('Not implemented yet')
     
@@ -693,9 +699,9 @@ def calc_stokes_dfl(dfl1, dfl2, basis='xy', mode=(0,0)):
         l1 = dfl1.fld.Nz()
         l2 = dfl2.fld.Nz()
         if l1 > l2:
-            dfl1.fld = dfl1.fld[:-(l1-l2),:,:]
+            dfl1.fld = dfl1.fld[:-(l1-l2), :, :]
         else:
-            dfl2.fld = dfl2.fld[:-(l2-l1),:,:]
+            dfl2.fld = dfl2.fld[:-(l2-l1), :, :]
 
     # if np.equal(dfl1.scale_z(), dfl2.scale_z()).all():
     s = (dfl1.scale_z(), dfl1.scale_x(), dfl1.scale_y())
@@ -705,9 +711,10 @@ def calc_stokes_dfl(dfl1, dfl2, basis='xy', mode=(0,0)):
     # Ex = (dfl1.fld + dfl2.fld) / np.sqrt(2)                #(E1x + E2x) /np.sqrt(2)
     # Ey = (dfl1.fld * 1j + dfl2.fld * (-1j)) / np.sqrt(2)   #(E1y + E2y) /np.sqrt(2)
     
-    S = calc_stokes(dfl1.fld, dfl2.fld, basis=basis, s=s)
+    S = calc_stokes(dfl1.fld, dfl2.fld, basis=basis)
+    S.sc = None
     S.sc_z, S.sc_x, S.sc_y = dfl1.scale_z(), dfl1.scale_x(), dfl1.scale_y()
-
+    
     if mode[1]:
         S = sum_stokes_tr(S)
         # S.s0 = np.sum(S.s0,axis=(1,2))
@@ -866,7 +873,9 @@ def average_stokes_l(S, sc_range=None):
         return S[idx1]
     
     S1 = StokesParameters()
-    S1.sc = np.mean(S.sc_z[idx1:idx2], axis=0)
+    S1.sc_z = np.mean(S.sc_z[idx1:idx2], axis=0)
+    S1.sc_x = S.sc_x
+    S1.sc_y = S.sc_y
     S1.s0 = np.mean(S.s0[idx1:idx2], axis=0)
     S1.s1 = np.mean(S.s1[idx1:idx2], axis=0)
     S1.s2 = np.mean(S.s2[idx1:idx2], axis=0)

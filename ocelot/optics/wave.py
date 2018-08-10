@@ -684,14 +684,14 @@ def calc_stokes_out(out1, out2, pol='rl', on_axis=True):
     # # _logger.warning('calc_stokes_dfl will de deprecated, use calc_stokes_dfl_l instead')
     # return(calc_stokes_dfl_l(*args, **kwargs))
     
-def calc_stokes_dfl(dfl1, dfl2, pol='rl', mode=(0,0)):
+def calc_stokes_dfl(dfl1, dfl2, basis='xy', mode=(0,0)):
     #mode: (average_longitudinally, sum_transversely)
-    if pol != 'rl':
-        raise ValueError('Not implemented yet')
+    # if basis != 'xy':
+        # raise ValueError('Not implemented yet')
     
-    if len(dfl1.fld) != len(dfl2.fld):
-        l1 = len(dfl1.fld)
-        l2 = len(dfl2.fld)
+    if dfl1.Nz() != dfl2.Nz():
+        l1 = dfl1.fld.Nz()
+        l2 = dfl2.fld.Nz()
         if l1 > l2:
             dfl1.fld = dfl1.fld[:-(l1-l2),:,:]
         else:
@@ -702,11 +702,11 @@ def calc_stokes_dfl(dfl1, dfl2, pol='rl', mode=(0,0)):
     # else:
         # raise ValueError('Different scales')
     
-    Ex = (dfl1.fld + dfl2.fld) / np.sqrt(2)                #(E1x + E2x) /np.sqrt(2)
-    Ey = (dfl1.fld * 1j + dfl2.fld * (-1j)) / np.sqrt(2)   #(E1y + E2y) /np.sqrt(2)
+    # Ex = (dfl1.fld + dfl2.fld) / np.sqrt(2)                #(E1x + E2x) /np.sqrt(2)
+    # Ey = (dfl1.fld * 1j + dfl2.fld * (-1j)) / np.sqrt(2)   #(E1y + E2y) /np.sqrt(2)
     
-    S = calc_stokes(Ex,Ey,s)
-    # S.sc_z, S.sc_x, S.sc_y = dfl1.scale_z(), dfl1.scale_x(), dfl1.scale_y()
+    S = calc_stokes(dfl1.fld, dfl2.fld, basis=basis, s=s)
+    S.sc_z, S.sc_x, S.sc_y = dfl1.scale_z(), dfl1.scale_x(), dfl1.scale_y()
 
     if mode[1]:
         S = sum_stokes_tr(S)
@@ -809,7 +809,7 @@ def calc_stokes(E1, E2, s=None, basis='xy'):
     
     if basis == 'lr' or basis == 'rl': 
         if basis == 'lr':
-            Er, El = El, Er
+            E1, E2 = E2, E1
         Er, El = E1, E2
         
         Er_ = np.conj(Er)
@@ -824,7 +824,7 @@ def calc_stokes(E1, E2, s=None, basis='xy'):
     
     elif basis == 'yx' or basis == 'xy': 
         if basis == 'yx':
-            Ex, Ey = Ey, Ex
+            E1, E2 = E2, E1
         Ex, Ey = E1, E2
         
         Ex_ = np.conj(Ex)

@@ -769,44 +769,49 @@ class CSR(PhysProc):
                 self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect)
 
             elif elem.__class__ == Undulator:
-
+                """
+                rk_track_in_field accepts initial conditions (initial coordinates) in the ParticleArray.rparticles format
+                from another hand the csr module use trajectory in another format (see csr.py)
+                to calculate trajectory we take reference particle with dp/p = 0 
+                tau = 0 in initial condition because we shift it afterwards. 
+                """
                 ku = 2*np.pi/elem.lperiod
                 L = elem.lperiod*elem.nperiods
                 By = elem.Kx * m_e_eV * 2. * pi / (elem.lperiod * speed_of_light)
                 Bx = elem.Ky * m_e_eV * 2. * pi / (elem.lperiod * speed_of_light)
                 sre0 = self.csr_traj[:, -1]
                 N = int(max(1, np.round(delta_s / step)))
-                #dS = float(delta_s) / N
                 SRE2 = np.zeros((7, N))
-                #s = np.arange(1, N + 1) * dS
 
                 mag_field = lambda x, y, z: (0, By*np.cos(ku*z), 0)
-                y0 = np.array([self.csr_traj[1, -1], self.csr_traj[4, -1], self.csr_traj[2, -1], self.csr_traj[5, -1],
-                      0, self.csr_traj[6, -1]])
-                #y0 = np.zeros(6)
-                traj = rk_track_in_field(y0, s_stop=L, N=N+1, energy=self.energy, mag_field=mag_field, s_start=0)
+
+                rparticle0 = np.array([[self.csr_traj[1, -1]], [self.csr_traj[4, -1]], [self.csr_traj[2, -1]], [self.csr_traj[5, -1]],
+                      [0], [0]])
+
+                traj = rk_track_in_field(rparticle0, s_stop=L, N=N+1, energy=self.energy, mag_field=mag_field, s_start=0)
+                betaz = np.sqrt(beta*beta - traj[1+9::9].T*traj[1+9::9].T - traj[3+9::9].T*traj[3+9::9].T)
 
                 dz = traj[4+9::9].T - traj[4:-9:9].T
 
-                SRE2[0, :] = sre0[0] + np.cumsum(dz*np.sqrt(1+(traj[1+9::9].T)**2 + +(traj[3+9::9].T)**2))
+                SRE2[0, :] = sre0[0] + np.cumsum(dz*np.sqrt(1+(traj[1+9::9].T)**2 + (traj[3+9::9].T)**2))
                 SRE2[1, :] = sre0[1] + traj[0+9::9].T
                 SRE2[2, :] = sre0[2] + traj[2+9::9].T
                 SRE2[3, :] = sre0[3] + traj[4+9::9].T
                 SRE2[4, :] = sre0[4] + traj[1+9::9].T
                 SRE2[5, :] = sre0[5] + traj[3+9::9].T
-                SRE2[6, :] = traj[5+9::9].T
+                SRE2[6, :] = betaz# traj[5+9::9].T
 
                 self.csr_traj = np.append(self.csr_traj, SRE2, axis=1)
             else:
                 #B = 0.
                 R_vect = [0, 0, 0.]
                 self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect )
-        #import matplotlib.pyplot as plt
-        #plt.figure(10)
-        #plt.plot(self.csr_traj[0,:], self.csr_traj[1,:], "r")
-        #plt.plot(self.csr_traj[0, :], self.csr_traj[2, :], "b")
-        #plt.legend(["X", "Y"])
-        #plt.show()
+        # import matplotlib.pyplot as plt
+        # plt.figure(10)
+        # plt.plot(self.csr_traj[0,:], self.csr_traj[1,:], "r")
+        # plt.plot(self.csr_traj[0, :], self.csr_traj[2, :], "b")
+        # plt.legend(["X", "Y"])
+        # plt.show()
         return self.csr_traj
 
     def apply(self, p_array, delta_s):

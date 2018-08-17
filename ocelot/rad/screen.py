@@ -185,6 +185,19 @@ class Screen:
         self.arPhase = self.memory_screen[4*Nscr:5*Nscr]
 
     def create_like(self, em_screen):
+        # added new check is needed
+        # self.x = em_screen.x
+        # self.y = em_screen.y
+        # self.z = em_screen.z
+        # self.size_x = em_screen.size_x
+        # self.size_y = em_screen.size_y
+        # self.nx = em_screen.nx
+        # self.ny = em_screen.ny
+        # self.start_energy = em_screen.start_energy
+        # self.end_energy = em_screen.end_energy
+        # self.num_energy = em_screen.num_energy
+        # added new check is needed
+
         self.x_step = em_screen.x_step
         self.x_start = em_screen.x_start
         self.nx = em_screen.nx
@@ -202,7 +215,7 @@ class Screen:
         self.Distance = em_screen.Distance
         #self.current = em_screen.current
         Nscr = self.ne*self.nx*self.ny
-        self.memory_screen = np.empty_like(em_screen.memory_screen)
+        self.memory_screen = np.zeros(len(em_screen.memory_screen))
 
         self.arReEx = self.memory_screen[0:Nscr]
         self.arImEx = self.memory_screen[Nscr:2*Nscr]
@@ -272,6 +285,43 @@ class Screen:
         self.arImEy = self.memory_screen[3*Nscr:4*Nscr]
         self.arPhase = self.memory_screen[4*Nscr:5*Nscr]
 
+    def screen2dict(self):
+        new_dict = {}
+        new_dict["memory_screen"] = list(self.memory_screen)
+        new_dict["x_step"] = self.x_step
+        new_dict["x_start"] = self.x_start
+        new_dict["nx"] = self.nx
+        new_dict["y_step"] = self.y_step
+        new_dict["y_start"] = self.y_start
+        new_dict["ny"] = self.ny
+        new_dict["e_step"] = self.e_step
+        new_dict["e_start"] = self.e_start
+        new_dict["ne"] = self.ne
+        new_dict["Zstart"] = self.Zstart
+        new_dict["Distance"] = self.Distance
+
+        new_dict["x"] = self.x
+        new_dict["y"] = self.y
+        new_dict["z"] = self.z
+        new_dict["size_x"] = self.size_x
+        new_dict["size_y"] = self.size_y
+        new_dict["nx"] = self.nx
+        new_dict["ny"] = self.ny
+        new_dict["start_energy"] = self.start_energy
+        new_dict["end_energy"] = self.end_energy
+        new_dict["num_energy"] = self.num_energy
+        return new_dict
+
+    def dict2screen(self, dictionaty):
+        for key in dictionaty.keys():
+            self.__dict__[key] = dictionaty[key]
+        Nscr = self.nx * self.ny * self.ne
+        self.memory_screen = np.array(self.memory_screen)
+        self.arReEx = self.memory_screen[0:Nscr]
+        self.arImEx = self.memory_screen[Nscr:2*Nscr]
+        self.arReEy = self.memory_screen[2*Nscr:3*Nscr]
+        self.arImEy = self.memory_screen[3*Nscr:4*Nscr]
+        self.arPhase = self.memory_screen[4*Nscr:5*Nscr]
 
 
 

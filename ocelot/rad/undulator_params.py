@@ -15,7 +15,7 @@ def eV2lambda(Ephoton):
 
 def Ephoton2K(Eph, lu = 0.04, Eeb = 14):
     gamma = Eeb/m_e_GeV
-    K = sqrt(4.*gamma*gamma/lu*h_eV_s*speed_of_light/Eph - 2)
+    K = np.sqrt(4.*gamma*gamma/lu*h_eV_s*speed_of_light/Eph - 2)
     return K
 
 def K2Ephoton(K, lu = 0.04, E=14):
@@ -157,24 +157,24 @@ def print_rad_props(beam, K, lu, L, distance):
     brightness = flux_tot/(4*pi*pi*Sigma_x*Sigma_y*Sigma_x1*Sigma_y1)*1e-12
 
     print ("********* ph beam ***********")
-    print ("Ebeam        : ", beam.E)
+    print ("Ebeam        : ", beam.E, " GeV")
     print ("K            : ", K)
-    print ("B            : ", B, " T")
-    print ("lambda       : ", Lambda, " m ")
-    print ("Eph          : ", K2Ephoton(K, lu, beam.E), " eV")
-    print ("1/gamma      : ", 1./gamma *1e6, " um")
-    print ("sigma_r      : ", sigma_r*1e6, " um")
-    print ("sigma_r'     : ", sigma_r1*1e6, " urad")
-    print ("Sigma_x      : ", Sigma_x *1e6, " um")
-    print ("Sigma_y      : ", Sigma_y *1e6, " um")
-    print ("Sigma_x'     : ", Sigma_x1*1e6, "urad")
-    print ("Sigma_y'     : ", Sigma_y1*1e6, "urad")
-    print ("H. spot size : ", size_x*1000., "/", size_x/distance*1000., " mm/mrad")
-    print ("V. spot size : ", size_y*1000., "/", size_y/distance*1000., " mm/mrad")
+    print ("B            : ", np.round(B, 4), " T")
+    print ("lambda       : ", "{0:.5E}".format(Lambda), " m ")
+    print ("Eph          : ", "{0:.5E}".format(K2Ephoton(K, lu, beam.E)), " eV")
+    print ("1/gamma      : ", np.round(1./gamma *1e6, 4), " um")
+    print ("sigma_r      : ", np.round(sigma_r *1e6, 4), " um")
+    print ("sigma_r'     : ", np.round(sigma_r1*1e6, 4), " urad")
+    print ("Sigma_x      : ", np.round(Sigma_x *1e6, 4), " um")
+    print ("Sigma_y      : ", np.round(Sigma_y *1e6, 4), " um")
+    print ("Sigma_x'     : ", np.round(Sigma_x1*1e6, 4), "urad")
+    print ("Sigma_y'     : ", np.round(Sigma_y1*1e6, 4), "urad")
+    print ("H. spot size : ", np.round(size_x*1000., 4), "/", np.round(size_x/distance*1000., 4), " mm/mrad")
+    print ("V. spot size : ", np.round(size_y*1000., 4), "/", np.round(size_y/distance*1000., 4), " mm/mrad")
     print ("I            : ", beam.I, " A")
     print ("Nperiods     : ", L/lu)
     print ("distance     : ", distance, " m")
-    print ("flux tot     : ", flux_tot, " ph/sec")
+    print ("flux tot     : ", "{0:.2E}".format(flux_tot), " ph/sec")
     print ("flux density : ", "{0:.2E}".format(F), " ph/sec/mrad^2;   ", "{0:.2E}".format(F/distance/distance), " ph/sec/mm^2")
     #print "flux density : ", F/distance/distance, " ph/sec/mm^2"
     print ("brilliance   : ", "{0:.2E}".format(brightness), " ph/sec/mrad^2/mm^2")

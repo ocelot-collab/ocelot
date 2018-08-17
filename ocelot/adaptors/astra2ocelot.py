@@ -147,7 +147,7 @@ def exact_xxstg_2_xp_de(xxstg, gamref):
     return xp
 
 
-def astraBeam2particleArray(filename, s_ref=-1, Eref=-1):
+def astraBeam2particleArray(filename, s_ref=-1, Eref=-1, print_params=True):
     """
     function convert Astra beam distribution to Ocelot format - ParticleArray
     :type filename: str
@@ -155,8 +155,7 @@ def astraBeam2particleArray(filename, s_ref=-1, Eref=-1):
     """
     P0 = np.loadtxt(filename)
     charge_array = -P0[:, 7] * 1e-9  # charge in nC -> in C
-    print("Astra to Ocelot: charge = ", sum(charge_array))
-    print("Astra to Ocelot: particles number = ", len(charge_array))
+
     
     xp = P0[:, :6]
 
@@ -186,8 +185,6 @@ def astraBeam2particleArray(filename, s_ref=-1, Eref=-1):
     p_array = ParticleArray(len(charge_array))
     p_array.s = s_ref
     p_array.E = np.sqrt((Pref / m_e_eV) ** 2 + 1) * m_e_GeV
-    print("Astra to Ocelot: energy = ", p_array.E)
-    print("Astra to Ocelot: s pos = ", p_array.s)
     p_array.rparticles[0] = xxstg[:, 0]
     p_array.rparticles[1] = xxstg[:, 1]
     p_array.rparticles[2] = xxstg[:, 2]
@@ -195,6 +192,13 @@ def astraBeam2particleArray(filename, s_ref=-1, Eref=-1):
     p_array.rparticles[4] = xxstg[:, 4]
     p_array.rparticles[5] = xxstg[:, 5]
     p_array.q_array = charge_array
+
+    if print_params:
+        print("Astra to Ocelot: charge = ", sum(charge_array))
+        print("Astra to Ocelot: particles number = ", len(charge_array))
+        print("Astra to Ocelot: energy = ", p_array.E)
+        print("Astra to Ocelot: s pos = ", p_array.s)
+
     return p_array
 
 

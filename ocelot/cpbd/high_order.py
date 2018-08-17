@@ -2,6 +2,7 @@ __author__ = 'Sergey Tomin'
 
 import numpy as np
 from scipy.integrate import odeint
+from scipy import optimize
 from ocelot.common.globals import m_e_GeV, m_e_eV, speed_of_light
 from copy import copy
 from numpy.linalg import norm
@@ -783,7 +784,7 @@ def rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=0.):
     y'' = -v/(dz/dt)*e/p*(x'*Bz - Bx*(1.+y'^2) + x'*y'*By)
     v/(dz/dt) = sqrt(1 + y'^2 + x'^2)
     z' is not needed in the initial conditions and z' is not used for SR calculation
-        therefore z' can be arbitrary defined in the returning array. z' = beta_z
+        therefore z' can be arbitrary defined in the returning array. z' = dE/(ps*c)
 
     :param y0: array n*6; initial coordinates of n particles
                 [x0, x0'=dx/dz, y0, y0=dy/dz, 0, 0,
@@ -816,16 +817,16 @@ def rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=0.):
     gammai = gamma0*(1 + y0[5]*beta0)
     #pz = dGamma2 - (px*px + py*py)/2.
     betai = np.sqrt(1 - 1/gammai**2) #
-    betaz = np.sqrt(betai**2 - px*px - py*py)
+    #betaz = np.sqrt(betai**2 - px*px - py*py)
     k = charge*cmm/(massElectron*mass*gammai)
     u[0, :] = y0[0]
     u[1, :] = y0[1]
     u[2, :] = y0[2]
     u[3, :] = y0[3]
-    u[4, :] = y0[4]
-    u[5, :] = betaz
+    u[4, :] = y0[4] #+ z[0]
+    u[5, :] = y0[5]
     dzk = dz*k
-    Z_n = y0[4]
+    Z_n = y0[4] #+ s_start
     for i in range(N-1):
         X = u[i*9 + 0]
         Y = u[i*9 + 2]
@@ -865,11 +866,11 @@ def rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=0.):
         Bx, By, Bz = mag_field(X + kx3, Y + ky3, Z_n)
         mx4, my4 = moments(bx, by, Bx, By, Bz, dzk)
 
-        u[(i+1)*9 + 0] = X + 1/6.*(kx1 + 2.*(kx2 + kx3) + kx4)
-        u[(i+1)*9 + 1] = bxconst + 1/6.*(mx1 + 2.*(mx2 + mx3) + mx4) #// conversion in mrad
-        u[(i+1)*9 + 2] = Y + 1/6.*(ky1 + 2.*(ky2 + ky3) + ky4)
-        u[(i+1)*9 + 3] = byconst + 1/6.*(my1 + 2.*(my2 + my3) + my4)
-        u[(i+1)*9 + 4] = u[i*9 + 4] + dz*np.sqrt(1 + u[(i+1)*9 + 1]**2 + u[(i+1)*9 + 3]**2) - dz
+        u[(i + 1) * 9 + 0] = X + 1/6.*(kx1 + 2.*(kx2 + kx3) + kx4)
+        u[(i + 1) * 9 + 1] = bxconst + 1/6.*(mx1 + 2.*(mx2 + mx3) + mx4) #// conversion in mrad
+        u[(i + 1) * 9 + 2] = Y + 1/6.*(ky1 + 2.*(ky2 + ky3) + ky4)
+        u[(i + 1) * 9 + 3] = byconst + 1/6.*(my1 + 2.*(my2 + my3) + my4)
+        u[(i + 1) * 9 + 4] = Z_n #u[i*9 + 4] + dz*np.sqrt(1 + u[(i+1)*9 + 1]**2 + u[(i+1)*9 + 3]**2)
         u[(i + 1) * 9 + 5] = y0[5]
         # beta_z as 6-th coordinate
         #u[(i+1)*9 + 5] = betai/np.sqrt(1 + u[(i+1)*9 + 1]*u[(i+1)*9 + 1] + u[(i+1)*9 + 3]*u[(i+1)*9 + 3])#dGamma2 - (u[(i+1)*9 + 1]*u[(i+1)*9 + 1] + u[(i+1)*9 + 3]*u[(i+1)*9 + 3])/2.
@@ -878,19 +879,41 @@ def rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=0.):
     return u
 
 
-def rk_field(y0, s_start, s_stop, N, energy, mag_field):
+def rk_field(rparticles, s_start, s_stop, N, energy, mag_field):
+    """
+    Method to track particles through mag field
+
+    :param rparticles: initial coordinates of the particles shape (6xN), N number of particles (e.g. ParticleArray.rparticles)
+    :param s_start:
+    :param s_stop:
+    :param N: number of points on the trajectory
+    :param energy: in GeV
+    :param mag_field: must be function e.g. lambda x, y, z: (Bx, By, Bz)
+    :return:
+    """
     if s_start > s_stop:
         print("rk_field: s_start > s_stop. Setup s_start = 0")
         s_start = 0.
-    traj_data = rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=s_start)
 
-    y0[0, :] = traj_data[(N-1)*9 + 0, :]
-    y0[1, :] = traj_data[(N-1)*9 + 1, :]
-    y0[2, :] = traj_data[(N-1)*9 + 2, :]
-    y0[3, :] = traj_data[(N-1)*9 + 3, :]
-    y0[4, :] = traj_data[(N-1)*9 + 4, :]
-    y0[5, :] = traj_data[(N-1)*9 + 5, :]
-    return y0
+    traj_ref = rk_track_in_field(np.array([[0], [0], [0], [0], [0], [0]]), s_stop, N, energy, mag_field, s_start=s_start)
+    x1 = traj_ref[1+9::9]
+    y1 = traj_ref[3+9::9]
+    dz = traj_ref[4+9::9] - traj_ref[4:-9:9]
+    ref_path = np.sum(dz*np.sqrt(1 + x1*x1 + y1*y1))
+
+    traj_data = rk_track_in_field(rparticles, s_stop, N, energy, mag_field, s_start=s_start)
+
+    x1 = traj_data[1+9::9, :]
+    y1 = traj_data[3+9::9, :]
+    dz = traj_data[4+9::9, :] - traj_data[4:-9:9, :]
+    z_fin = traj_data[4, :] + np.sum(dz*np.sqrt(1 + x1*x1 + y1*y1), axis=0) - ref_path
+    rparticles[0, :] = traj_data[(N-1)*9 + 0, :]
+    rparticles[1, :] = traj_data[(N-1)*9 + 1, :]
+    rparticles[2, :] = traj_data[(N-1)*9 + 2, :]
+    rparticles[3, :] = traj_data[(N-1)*9 + 3, :]
+    rparticles[4, :] = z_fin #traj_data[(N-1)*9 + 4, :]
+    rparticles[5, :] = traj_data[(N-1)*9 + 5, :]
+    return rparticles
 
 
 def scipy_track_in_field(y0, l, N, energy, mag_field):# y0, l, N, energy, mag_field

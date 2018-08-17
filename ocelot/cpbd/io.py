@@ -16,7 +16,7 @@ def save_particle_array2npz(filename, p_array):
                         E=p_array.E, s=p_array.s)
 
 
-def load_particle_array_from_npz(filename):
+def load_particle_array_from_npz(filename, print_params=False):
     """
     Load beam file in npz format and return ParticleArray
 
@@ -31,7 +31,7 @@ def load_particle_array_from_npz(filename):
 
 
 
-def load_particle_array(filename):
+def load_particle_array(filename, print_params=False):
     """
     Universal function to load beam file, *.ast or *.npz format
 
@@ -40,9 +40,9 @@ def load_particle_array(filename):
     """
     name, file_extension = os.path.splitext(filename)
     if file_extension == ".npz":
-        return load_particle_array_from_npz(filename)
+        return load_particle_array_from_npz(filename, print_params=print_params)
     elif file_extension in [".ast", ".001"]:
-        return astraBeam2particleArray(filename, s_ref=-1, Eref=-1)
+        return astraBeam2particleArray(filename, s_ref=-1, Eref=-1, print_params=print_params)
     else:
         raise Exception("Unknown format of the beam file: " + file_extension + " but must be *.ast or *.npz ")
 

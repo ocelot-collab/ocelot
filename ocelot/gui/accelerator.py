@@ -1024,7 +1024,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
 
     ax_c = plt.subplot(321, sharex=ax_sp)
     plt.title("Current")
-    plt.plot(slice_params.s * 1e3, slice_params.I, "r", label="Current")
+    plt.plot(slice_params.s * 1e3, slice_params.I, "r", label=r"$I_{max}=$" + str(np.round(np.max(slice_params.I), 2)) + " $A$")
     plt.legend()
     plt.setp(ax_c.get_xticklabels(), visible=False)
     plt.ylabel("I, A")

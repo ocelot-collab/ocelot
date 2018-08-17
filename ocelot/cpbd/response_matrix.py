@@ -7,7 +7,8 @@ from scipy.interpolate import splrep, splev
 import json
 import time
 from threading import Thread
-
+import logging
+logger = logging.getLogger(__name__)
 
 class MeasureResponseMatrix:
     def __init__(self, lattice, hcors, vcors, bpms):
@@ -496,10 +497,10 @@ class ResponseMatrix:
         b_i2 = np.where(np.in1d(bpms2, b_names))[0]
 
         if not np.array_equal(c_names, cor_list):
-            print (" Origin response matrix has no correctors:")
+            logger.warning(" ResponseMatrix.inject: Origin response matrix has no correctors:")
             print (cors2[np.in1d(cors2, c_names, invert=True)])
         if not np.array_equal(b_names, bpm_list):
-            print (" Origin response matrix has no BPMs:")
+            logger.warning(" ResponseMatrix.inject: Origin response matrix has no BPMs:")
             print (bpm_list[b_i2[:]])
 
         #extr_matrix = np.zeros((len(b_names)*2, len(c_names)))

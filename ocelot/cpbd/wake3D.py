@@ -337,6 +337,7 @@ class Wake(PhysProc):
 
 class WakeKick(Wake):
     def __init__(self, factor=1):
+        print("WakeKick physics process is obsolete. Use Wake.")
         Wake.__init__(self)
         self.factor = factor
 

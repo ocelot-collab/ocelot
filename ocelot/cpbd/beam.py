@@ -116,11 +116,11 @@ class Twiss:
 
             
 class Particle:
-    '''
+    """
     particle
     to be used for tracking
-    '''
-    def __init__(self, x=0.0, y=0.0, px=0.0, py=0.0, s=0.0, p=0.0,  tau=0.0, E=0.0):
+    """
+    def __init__(self, x=0.0, y=0.0, px=0.0, py=0.0, s=0.0, p=0.0,  tau=0.0, E=0.0, q=0.0):
         self.x = x
         self.y = y
         self.px = px       # horizontal (generalized) momentum
@@ -128,7 +128,8 @@ class Particle:
         self.p = p         # longitudinal momentum
         self.s = s
         self.tau = tau     # time-like coordinate wrt reference particle in the bunch (e.g phase)
-        self.E = E        # energy
+        self.E = E         # energy
+        self.q = q         # charge in C
 
     def __str__(self):
         val = ""
@@ -141,6 +142,7 @@ class Particle:
         val = val + "E = " + str(self.E) + "\n"
         val = val + "s = " + str(self.s)
         return val
+
 
 class Beam:
     def __init__(self,x=0,xp=0,y=0,yp=0):
@@ -463,6 +465,7 @@ class ParticleArray:
 
     def list2array(self, p_list):
         self.rparticles = np.zeros((6, len(p_list)))
+        self.q_array = np.zeros(len(p_list))
         for i, p in enumerate(p_list):
             self[i] = p
         self.s = p_list[0].s
@@ -505,23 +508,29 @@ class ParticleArray:
     def t(self,value):
         self.rparticles[4] = value
 
-    def thin_out(self, n=10):
+    @property
+    def n(self):
+        return np.shape(self.rparticles)[1]
+
+    def thin_out(self, nth=10, n0=0):
         """
         Method to thin out the particle array in n-th times. Means every n-th particle will be saved in new Particle array
 
-        :param ntimes: 10, every n-th particle will be taken to new Particle array
+        :param nth: 10, every n-th particle will be taken to new Particle array
+        :param n0: start from n0 particle
         :return: New ParticleArray
         """
-        ntimes = int(n)
-        if ntimes <= 1:
-            print("Nothing to do. ntames must be bigger 1")
+        nth = int(nth)
+        if nth <= 1:
+            print("Nothing to do. nth number must be bigger 1")
             return self
-        if ntimes > np.shape(self.rparticles)[1]:
-            print("ntimes is too big")
-        n = int(np.shape(self.rparticles)[1]/ntimes +1)
+        if nth > np.shape(self.rparticles)[1]:
+            print("nth number is too big")
+        n = int((np.shape(self.rparticles)[1] - n0)/nth)
+
         p = ParticleArray(n)
-        p.rparticles[:, :] = self.rparticles[:,::ntimes]
-        p.q_array[:] = self.q_array[::ntimes]*ntimes
+        p.rparticles[:, :] = self.rparticles[:, n0::nth]
+        p.q_array[:] = self.q_array[n0::nth]*nth
         p.s = self.s
         p.E = self.E
         return p
@@ -1280,8 +1289,9 @@ def parray2beam(parray, step=1e-7):
         beam.filePath = parray.filePath + '.beam'
     return(beam)
 
+
 def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
-                    sigma_tau=1e-3, sigma_p=1e-4, tau_p_cor=0.1, charge=5e-9, nparticles=200000, energy=0.13):
+                    sigma_tau=1e-3, sigma_p=1e-4, tau_p_cor=0.01, charge=5e-9, nparticles=200000, energy=0.13):
     if sigma_y is None:
         sigma_y = sigma_x
     if sigma_py is None:
@@ -1293,7 +1303,8 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
     py = np.random.randn(nparticles) * sigma_py
     tau = np.random.randn(nparticles) * sigma_tau
     dp = np.random.randn(nparticles) * sigma_p
-    dp += tau_p_cor*tau
+    if sigma_tau != 0:
+        dp += tau_p_cor*tau/sigma_tau
     # covariance matrix for [tau, p] for beam compression in BC
     #cov_t_p = [[1.30190131e-06, 2.00819771e-05],
     #           [2.00819771e-05, 3.09815718e-04]]

@@ -574,9 +574,9 @@ def get_envelope(p_array, tws_i=Twiss()):
     dpy = tws_i.Dyp*p
     x = p_array.x() - dx
     px = p_array.px() - dpx
-
     y = p_array.y() - dy
     py = p_array.py() - dpy
+    tau = p_array.tau()
     if ne_flag:
         px = ne.evaluate('px * (1. - 0.5 * px * px - 0.5 * py * py)')
         py = ne.evaluate('py * (1. - 0.5 * px * px - 0.5 * py * py)')
@@ -585,20 +585,23 @@ def get_envelope(p_array, tws_i=Twiss()):
         py = py*(1.-0.5*px*px - 0.5*py*py)
     tws.x = np.mean(x)
     tws.y = np.mean(y)
-    tws.px =np.mean(px)
-    tws.py =np.mean(py)
+    tws.px = np.mean(px)
+    tws.py = np.mean(py)
+    tws.tau = np.mean(tau)
 
     if ne_flag:
         tw_x = tws.x
         tw_y = tws.y
         tw_px = tws.px
         tw_py = tws.py
+        tw_tau = tws.tau
         tws.xx =  np.mean(ne.evaluate('(x - tw_x) * (x - tw_x)'))
         tws.xpx = np.mean(ne.evaluate('(x - tw_x) * (px - tw_px)'))
         tws.pxpx =np.mean(ne.evaluate('(px - tw_px) * (px - tw_px)'))
         tws.yy =  np.mean(ne.evaluate('(y - tw_y) * (y - tw_y)'))
         tws.ypy = np.mean(ne.evaluate('(y - tw_y) * (py - tw_py)'))
         tws.pypy =np.mean(ne.evaluate('(py - tw_py) * (py - tw_py)'))
+        tws.tautau = np.mean(ne.evaluate('(tau - tw_tau) * (tau - tw_tau)'))
     else:
         tws.xx = np.mean((x - tws.x)*(x - tws.x))
         tws.xpx = np.mean((x-tws.x)*(px-tws.px))
@@ -606,6 +609,7 @@ def get_envelope(p_array, tws_i=Twiss()):
         tws.yy = np.mean((y-tws.y)*(y-tws.y))
         tws.ypy = np.mean((y-tws.y)*(py-tws.py))
         tws.pypy = np.mean((py-tws.py)*(py-tws.py))
+        tws.tautau = np.mean((tau - tws.tau)*(tau - tws.tau))
     tws.p = np.mean( p_array.p())
     tws.E = np.copy(p_array.E)
     #tws.de = p_array.de

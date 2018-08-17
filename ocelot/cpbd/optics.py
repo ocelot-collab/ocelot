@@ -962,9 +962,9 @@ def trace_obj(lattice, obj, nPoints=None):
 
 
 def periodic_twiss(tws, R):
-    '''
+    """
     initial conditions for a periodic Twiss slution
-    '''
+    """
     tws = Twiss(tws)
 
     cosmx = (R[0, 0] + R[1, 1]) / 2.
@@ -972,7 +972,6 @@ def periodic_twiss(tws, R):
 
     if abs(cosmx) >= 1 or abs(cosmy) >= 1:
         logger.warning(" ************ periodic solution does not exist. return None ***********")
-        #print("************ periodic solution does not exist. return None ***********")
         return None
     sinmx = np.sign(R[0, 1]) * np.sqrt(1. - cosmx * cosmx)
     sinmy = np.sign(R[2, 3]) * np.sqrt(1. - cosmy * cosmy)

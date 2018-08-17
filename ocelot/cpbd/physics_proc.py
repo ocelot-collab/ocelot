@@ -80,7 +80,7 @@ class SmoothBeam(PhysProc):
     """
     def __init__(self):
         PhysProc.__init__(self)
-        self.mslice = 5000
+        self.mslice = 1000
 
     def apply(self, p_array, dz):
         """
@@ -91,7 +91,7 @@ class SmoothBeam(PhysProc):
         :return:
         """
 
-        logger.debug(" SmoothBeam applied, dz =", dz)
+        logger.debug(" SmoothBeam applied, dz =" + str(dz))
         def myfunc(x, A):
             if x < 2 * A:
                 y = x - x * x / (4 * A)
@@ -99,10 +99,10 @@ class SmoothBeam(PhysProc):
                 y = A
             return y
 
+        #Zin = np.copy(p_array.tau())
         Zin = p_array.tau()
-
         inds = np.argsort(Zin, axis=0)
-        Zout = np.sort(Zin, axis=0)
+        Zout = np.copy(Zin[inds])
         N = Zin.shape[0]
         S = np.zeros(N + 1)
         S[N] = 0
@@ -117,9 +117,9 @@ class SmoothBeam(PhysProc):
             m = np.int(np.floor(myfunc(0.5 * m, 0.5 * self.mslice) + 0.500001))
             #print(m)
             Zout2[i] = (S[i + m + 1] - S[i - m]) / (2 * m + 1)
-        Zout[inds] = Zout2
-        p_array.tau()[:] = Zout[:]
-        #return Zout
+        #Zout[inds] = Zout2
+        p_array.tau()[inds] = Zout2
+
 
 
 class LaserHeater(PhysProc):
@@ -150,3 +150,19 @@ class LaserHeater(PhysProc):
             -0.25 * dx ** 2 / self.sigma_x ** 2
             - 0.25 * dy ** 2 / self.sigma_y ** 2)
 
+class Apperture(PhysProc):
+    def __init__(self, step=1):
+        PhysProc.__init__(self, step)
+        self.zmin = -5
+        self.zmax = 5
+
+    def apply(self, p_array, dz):
+        logger.debug(" Apperture applied")
+        tau = p_array.tau()[:]
+        tau0 = np.mean(tau)
+        tau = tau - tau0
+        sig = np.std(tau)
+        inds = np.argwhere(np.logical_or(tau < sig * self.zmin, tau > sig * self.zmax))
+        inds = inds.reshape(inds.shape[0])
+        p_array.rparticles = np.delete(p_array.rparticles, inds, 1)
+        p_array.q_array = np.delete(p_array.q_array, inds, 0)

@@ -7,12 +7,16 @@ from ocelot.adaptors.astra2ocelot import *
 import numpy as np
 import copy
 
+#data_dir = "N:/4all/xxl/zagor/mpy_xxl"
+data_dir = "/Users/zagor"
+data_dir = "/Users/tomins/ownCloud/DESY/repository/forSergey"
+#data_dir = "/Volumes/Promise RAID/UserFolders/zagor_xxl"
 
 class SectionLattice:
     """
     High level class to work with SectionTrack()
     """
-    def __init__(self, sequence, tws0=None):
+    def __init__(self, sequence, tws0=None, data_dir="."):
         """
 
         :param sequence: list of SectionTrack()
@@ -20,7 +24,7 @@ class SectionLattice:
         self.sec_seq = sequence
         self.elem_seq = None
         self.tws = None
-
+        self.data_dir = data_dir
         self.initialize(tws0=tws0)
 
     def initialize(self, tws0=None):
@@ -37,7 +41,9 @@ class SectionLattice:
         self.dict_sections = {}
         self.elem_seq = []
         for sec in self.sec_seq:
-            s = sec()
+            s = sec(self.data_dir)
+            #s.data_dir = self.data_dir
+            #s.update()
             self.dict_sections[sec] = s
             self.elem_seq.append(s.lattice.sequence)
         return self.dict_sections
@@ -115,8 +121,9 @@ class SectionLattice:
             by = np.append(by, tws["beta_y"])
         return s, bx, by
 
+
 class SectionTrack:
-    def __init__(self, sc_flag=True, csr_flag=True, wake_flag=True, bt_flag=True):
+    def __init__(self, data_dir):
 
         self.lattice_name = ""
         self.lattice = None
@@ -131,26 +138,29 @@ class SectionTrack:
         self.input_beam_file = None
         self.output_beam_file = None
         self.tws_file = None
-        self.particle_dir = "accelerator/particles/"
-        self.tws_dir = "accelerator/tws/"
-        self.physics_processes_array = []  # list of physics process
+        #self.data_dir = "."
+        self.particle_dir = data_dir + "/particles/"
+        self.tws_dir = data_dir + "/tws/"
 
+        self.physics_processes_array = []  # list of physics process
         self.method = MethodTM()
         self.method.global_method = SecondTM
         self.translator = {SpaceCharge: "sc_flag", CSR: "csr_flag",
-                           WakeKick:"wake_flag", BeamTransform:"bt_flag"}
-        self.sc_flag = sc_flag
-        self.csr_flag = csr_flag
-        self.wake_flag = wake_flag
-        self.bt_flag = bt_flag
+                           Wake: "wake_flag", BeamTransform:"bt_flag", SmoothBeam: "smooth_flag"}
+        self.sc_flag = True
+        self.csr_flag = True
+        self.wake_flag = True
+        self.bt_flag = True
         self.smooth_flag = True
 
         self.print_progress = True
         self.calc_tws = True
         self.kill_track = False
+        #self.update()
 
-        #if self.dipoles != None:
-        #    self.bc_analysis()
+    #def update(self):
+    #    self.particle_dir = self.data_dir + "/particles/"
+    #    self.tws_dir = self.data_dir + "/tws/"
 
     def apply_matching(self):
         if self.tws0 == None:
@@ -265,7 +275,6 @@ class SectionTrack:
 
         # init physics processes
         for physics_process in self.physics_processes_array:
-            #print(physics_process)
             if physics_process[0].__class__ == SpaceCharge and self.sc_flag:
                 self.navigator.add_physics_proc(physics_process[0], physics_process[1], physics_process[2])
 
@@ -360,7 +369,6 @@ class SectionTrack:
         print("std1 = ", np.std(particles.tau()))
         tws_track, particles = track(self.lattice, particles, self.navigator,
                                      print_progress=self.print_progress, calc_tws=self.calc_tws)
-        print("std2 = ", np.std(particles.tau()))
         self.tws_track = tws_track
         # save tracking results
         if self.output_beam_file != None and not self.kill_track:
@@ -369,4 +377,5 @@ class SectionTrack:
 
         return particles
 
+ 
 

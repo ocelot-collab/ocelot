@@ -768,12 +768,12 @@ class CSR(PhysProc):
                 R_vect = [-Ry, Rx, 0]
                 self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect)
 
-            elif elem.__class__ == Undulator:
+            elif elem.__class__ == Undulator and self.energy is not None:
                 """
                 rk_track_in_field accepts initial conditions (initial coordinates) in the ParticleArray.rparticles format
                 from another hand the csr module use trajectory in another format (see csr.py)
-                to calculate trajectory we take reference particle with dp/p = 0 
-                tau = 0 in initial condition because we shift it afterwards. 
+                to calculate trajectory inside an undulator we take reference particle with zero initial condition,
+                we shift obtained trajectory to initial one afterwards. 
                 """
                 ku = 2*np.pi/elem.lperiod
                 L = elem.lperiod*elem.nperiods
@@ -785,8 +785,7 @@ class CSR(PhysProc):
 
                 mag_field = lambda x, y, z: (0, By*np.cos(ku*z), 0)
 
-                rparticle0 = np.array([[self.csr_traj[1, -1]], [self.csr_traj[4, -1]], [self.csr_traj[2, -1]], [self.csr_traj[5, -1]],
-                      [0], [0]])
+                rparticle0 = np.array([[0], [0], [0], [0], [0], [0]])
 
                 traj = rk_track_in_field(rparticle0, s_stop=L, N=N+1, energy=self.energy, mag_field=mag_field, s_start=0)
                 betaz = np.sqrt(beta*beta - traj[1+9::9].T*traj[1+9::9].T - traj[3+9::9].T*traj[3+9::9].T)

@@ -4,8 +4,10 @@ import pytest
 import numpy as np
 
 from ocelot import *
+from ocelot.cpbd.r_matrix import rot_mtx
+from ocelot.utils.acc_utils import chicane_RTU
 
-"""Lattice elements defenition"""
+"""Lattice elements definition"""
 
 b1 = Bend(l=0.501471, angle=0.132729704703, e1=0.0, e2=0.132729704703,   tilt=0.0, eid="b")
 b2 = Bend(l=0.501471, angle=-0.132729704703, e1=-0.132729704703, e2=0.0,  tilt=0.0, eid="b")
@@ -15,7 +17,7 @@ d1 = Drift(l=1.0)
 d2 = Drift(l=1.5)
 
 
-"""pytest fixtures defenition"""
+"""pytest fixtures definition"""
 
 @pytest.fixture(scope='module')
 def cell():

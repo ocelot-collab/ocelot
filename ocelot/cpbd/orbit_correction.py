@@ -29,11 +29,13 @@ class OrbitSVD:
         if self.weights is None:
             self.weights = np.eye(len(self.orbit))
         #print(np.shape(self.weights), np.shape(self.resp_matrix))
-        resp_matrix_w = np.dot(self.weights, self.resp_matrix)
-        misallign_w = np.dot(self.weights, self.orbit)
+        resp_matrix = np.dot(self.weights, self.resp_matrix)
+        misallign = np.dot(self.weights, self.orbit)
+        # resp_matrix = self.resp_matrix
+        # misallign = self.orbit
         #U, s, V = svd(resp_matrix_w)
 
-        U, s, V = svd(self.resp_matrix)
+        U, s, V = svd(resp_matrix)
         # print (s)
         s_inv = np.zeros(len(s))
         s_max = max(s)
@@ -53,7 +55,7 @@ class OrbitSVD:
         Sinv = np.transpose(Sinv)
         A = np.dot(np.transpose(V), np.dot(Sinv, np.transpose(U)))
         #angle = np.dot(A, misallign_w)
-        angle = np.dot(A, self.orbit)
+        angle = np.dot(A, misallign)
         #print(A)
         logger.debug("max(abs(angle)) = " + str(np.max(np.abs(angle))) + " min(abs(angle)) = " + str(np.min(np.abs(angle))))
         return angle

@@ -128,6 +128,37 @@ def transform_vec_ext(X, dx, dy, tilt):
     X[:] = np.add(x_tilt, np.array([[dx], [0.], [dy], [0.], [0.], [0.]]))[:]
     return X
 
+def transfer_maps_mult(Ra, Ta, Rb, Tb, sym_flag=True):
+    """
+    cell = [A, B]
+    Rc = Rb * Ra
+    :param Ra:
+    :param Ta:
+    :param Rb:
+    :param Tb:
+    :param sym_flag:
+    :return:
+    """
+    Rc = np.dot(Rb, Ra)
+    Tc = np.zeros((6, 6, 6))
+    for i in range(6):
+        for j in range(6):
+            for k in range(6):
+                t1 = 0.
+                t2 = 0.
+                for l in range(6):
+                    t1 += Rb[i, l] * Ta[l, j, k]
+                    for m in range(6):
+                        t2 += Tb[i, l, m] * Ra[l, j] * Ra[m, k]
+                Tc[i, j, k] = t1 + t2
+    return Rc, Tc
+
+
+def transfer_map_rotation(R, T, tilt):
+    rotmat = rot_mtx(tilt)
+    Rc, Tc = transfer_maps_mult(Ra=rotmat, Ta=np.zeros((6, 6, 6)), Rb=R, Tb=T)
+    R, T = transfer_maps_mult(Ra=Rc, Ta=Tc, Rb=rot_mtx(-tilt), Tb=np.zeros((6, 6, 6)))
+    return R, T
 
 class TransferMap:
     def __init__(self):
@@ -413,10 +444,17 @@ class CavityTM(TransferMap):
         self.vy_down = 0.
         self.delta_e_z = lambda z: self.v * np.cos(self.phi * np.pi / 180.) * z / self.length
         self.delta_e = self.v * np.cos(self.phi * np.pi / 180.)
-        self.map = lambda X, energy: self.map4cav(X, energy, self.v, self.f, self.phi)
+        self.map = lambda X, energy: self.map4cav(X, energy, self.v, self.f, self.phi, self.length)
 
-    def map4cav(self, X, E, V, freq, phi):
-        # print("CAVITY")
+    def map4cav(self, X, E, V, freq, phi, z=0):
+        beta0 = 1
+        igamma2 = 0
+        g0 = 1e10
+        if E != 0:
+            g0 = E / m_e_GeV
+            igamma2 = 1. / (g0 * g0)
+            beta0 = np.sqrt(1. - igamma2)
+
         phi = phi * np.pi / 180.
         # if self.coupler_kick:
         if self.coupler_kick:
@@ -430,21 +468,24 @@ class CavityTM(TransferMap):
         if self.coupler_kick:
             X[1] += (self.vx_down * V * np.exp(1j * phi)).real * 1e-6 / (E + delta_e)
             X[3] += (self.vy_down * V * np.exp(1j * phi)).real * 1e-6 / (E + delta_e)
-
+        T566 = 1.5 * z*igamma2/(beta0**3)
+        T556 = 0.
+        T555 = 0.
         if E + delta_e > 0:
             k = 2. * np.pi * freq / speed_of_light
-            # X[5::6] = (X[5::6]*E + V*np.cos(X[4::6]*k + phi) - delta_e)/(E + delta_e)
             E1 = E + delta_e
-            gamma = E1 / m_e_GeV
-            beta1 = np.sqrt(1. - 1. / (gamma * gamma))
-
-            beta0 = 1
-            if E != 0:
-                gamma = E/ m_e_GeV
-                beta0 = np.sqrt(1. - 1. / (gamma * gamma))
+            g1 = E1 / m_e_GeV
+            beta1 = np.sqrt(1. - 1. / (g1 * g1))
 
             X[5] = X5 * E*beta0/(E1*beta1) + V*beta0 / (E1*beta1) * (np.cos(-X4*beta0 * k + phi) - np.cos(phi))
 
+            dgamma = V / m_e_GeV
+            if delta_e > 0:
+                T566 = z * (beta0**3*g0**3 - beta1**3*g1**3)/(2*beta0*beta1**3*g0*(g0 - g1)*g1**3)
+                T556 = beta0 * k * z * dgamma *g0 * (beta1**3*g1**3 + beta0 * (g0 - g1**3)) * np.sin(phi)/ (beta1**3 * g1**3 * (g0 - g1)**2)
+                T555 = beta0**2 * k**2 * z * dgamma/2.*(dgamma*(2*g0*g1**3*(beta0*beta1**3 - 1) + g0**2 + 3*g1**2 - 2)/(beta1**3*g1**3*(g0 - g1)**3)*np.sin(phi)**2 -
+                                                    (g1*g0*(beta1*beta0 - 1) + 1)/(beta1*g1*(g0 - g1)**2)*np.cos(phi))
+        X[4] +=  T566 * X5*X5 + T556*X4*X5 + T555 * X4*X4
         return X
 
     def __call__(self, s):
@@ -453,7 +494,7 @@ class CavityTM(TransferMap):
         m.R = lambda energy: m.R_z(s, energy)
         m.B = lambda energy: m.B_z(s, energy)
         m.delta_e = m.delta_e_z(s)
-        m.map = lambda X, energy: m.map4cav(X, energy, m.v * s / self.length, m.f, m.phi)
+        m.map = lambda X, energy: m.map4cav(X, energy, m.v * s / self.length, m.f, m.phi, s)
         return m
 
 
@@ -582,7 +623,6 @@ class RungeKuttaTM(TransferMap):
         m.R = lambda energy: m.R_z(s, energy)
         m.B = lambda energy: m.B_z(s, energy)
         m.delta_e = m.delta_e_z(s)
-        # print(m.R_z_no_tilt(s, 0.3))
         m.map = lambda X, energy: rk_field(X, m.s_start, s, m.npoints, energy, m.mag_field)
         return m
 
@@ -597,6 +637,9 @@ class SecondTM(TransferMap):
         self.map = lambda X, energy: self.t_apply(self.r_z_no_tilt(self.length, energy),
                                                   self.t_mat_z_e(self.length, energy), X, self.dx, self.dy, self.tilt)
 
+        self.R_tilt = lambda energy: np.dot(np.dot(rot_mtx(-self.tilt), self.r_z_no_tilt(self.length, energy)), rot_mtx(self.tilt))
+        self.T_tilt = lambda energy: transfer_map_rotation(self.r_z_no_tilt(self.length, energy),
+                                                             self.t_mat_z_e(self.length, energy), self.tilt)[1]
 
     def t_apply(self, R, T, X, dx, dy, tilt, U5666=0.):
         if dx != 0 or dy != 0 or tilt != 0:
@@ -649,7 +692,7 @@ class SlacCavityTM(TransferMap):
         de = V * np.cos(phi)
         r12 = z * E / de * np.log(1. + de / E) if de != 0 else z
         r22 = E / (E + de)
-        r65 = V * np.sin(phi) / (E + de) * (2 * pi / (speed_of_light / freq)) if freq != 0 else 0
+        r65 = V * np.sin(phi) / (E + de) * (2 * np.pi / (speed_of_light / freq)) if freq != 0 else 0
         r66 = r22
         cav_matrix = np.array([[1, r12, 0., 0., 0., 0.],
                                [0, r22, 0., 0., 0., 0.],
@@ -840,7 +883,8 @@ def lattice_transfer_map(lattice, energy):
         Rb = elem.transfer_map.R(E)
         if elem.transfer_map.__class__ == SecondTM:
             Tc = np.zeros((6, 6, 6))
-            Tb = deepcopy(elem.transfer_map.t_mat_z_e(elem.l, E))
+            #Tb = deepcopy(elem.transfer_map.t_mat_z_e(elem.l, E))
+            Tb = deepcopy(elem.transfer_map.T_tilt(E))
             Tb = sym_matrix(Tb)
             for i in range(6):
                 for j in range(6):
@@ -872,22 +916,7 @@ def lattice_transfer_map(lattice, energy):
     return Ra
 
 
-def second_order_mult(Ra, Ta, Rb, Tb, sym_flag=True):
-    Rc = np.dot(Rb, Ra)
-    Tc = np.zeros((6, 6, 6))
-    Tb = sym_matrix(Tb)
-    for i in range(6):
-        for j in range(6):
-            for k in range(6):
-                t1 = 0.
-                t2 = 0.
-                for l in range(6):
-                    t1 += Rb[i, l] * Ta[l, j, k]
-                    for m in range(6):
-                        t2 += Tb[i, l, m] * Ra[l, j] * Ra[m, k]
-                Tc[i, j, k] = t1 + t2
-    Tc = unsym_matrix(deepcopy(Tc))
-    return Rc, Tc
+
 
 
 def trace_z(lattice, obj0, z_array):
@@ -933,9 +962,9 @@ def trace_obj(lattice, obj, nPoints=None):
 
 
 def periodic_twiss(tws, R):
-    '''
+    """
     initial conditions for a periodic Twiss slution
-    '''
+    """
     tws = Twiss(tws)
 
     cosmx = (R[0, 0] + R[1, 1]) / 2.
@@ -943,7 +972,6 @@ def periodic_twiss(tws, R):
 
     if abs(cosmx) >= 1 or abs(cosmy) >= 1:
         logger.warning(" ************ periodic solution does not exist. return None ***********")
-        #print("************ periodic solution does not exist. return None ***********")
         return None
     sinmx = np.sign(R[0, 1]) * np.sqrt(1. - cosmx * cosmx)
     sinmy = np.sign(R[2, 3]) * np.sqrt(1. - cosmy * cosmy)
@@ -1249,14 +1277,15 @@ def get_map(lattice, dz, navi):
     # navi.sum_lengths = np.sum([elem.l for elem in lattice.sequence[:i]])
     L = navi.sum_lengths + elem.l
     while z1 + 1e-10 > L:
+
         dl = L - navi.z0
         TM.append(elem.transfer_map(dl))
 
+        navi.z0 = L
+        dz -= dl
         if i >= nelems - 1:
             break
 
-        navi.z0 = L
-        dz -= dl
         i += 1
         elem = lattice.sequence[i]
         L += elem.l

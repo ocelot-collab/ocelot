@@ -67,7 +67,7 @@ def test_moga_nsga2(lattice, update_ref_values=False):
 
     result1 = check_value(result['iteration'], result_ref['iteration'], TOL, assert_info=' iterations number\n')
     result2 = check_dict(result['data'], result_ref['data'], TOL, assert_info=' data - ')
-    assert check_result([result1]+result2)
+    assert check_result(result1+result2)
 
 
 def fit_func(x0, iter_data, args):

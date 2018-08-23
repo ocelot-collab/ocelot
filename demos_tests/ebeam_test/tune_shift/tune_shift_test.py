@@ -48,7 +48,7 @@ def test_twiss(lattice, update_ref_values=False):
 
     result1 = check_value(mu_y_no_u, mu_y_ref, TOL, assert_info=' mu_y_no_u - \n')
     result2 = check_dict(tws, tws_ref, TOL, 'absotute', assert_info=' tws - ')
-    assert check_result([result1]+result2)
+    assert check_result(result1+result2)
 
 
 #@pytest.mark.skip(reason='TOO LONG')
@@ -100,7 +100,7 @@ def test_freq_analysis(lattice, update_ref_values=False):
     mu_y_sim = mu_y_no_u - mu_y_h
     result4 = check_value(mu_y_sim, mu_y_sim_ref, TOL, assert_info=' mu_y_sim - \n')
     
-    assert check_result(result1+[result2, result3, result4])
+    assert check_result(result1+result2+result3+result4)
 
 
 def dft(sample, freqs):

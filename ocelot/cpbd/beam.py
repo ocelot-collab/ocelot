@@ -116,11 +116,11 @@ class Twiss:
 
             
 class Particle:
-    '''
+    """
     particle
     to be used for tracking
-    '''
-    def __init__(self, x=0.0, y=0.0, px=0.0, py=0.0, s=0.0, p=0.0,  tau=0.0, E=0.0):
+    """
+    def __init__(self, x=0.0, y=0.0, px=0.0, py=0.0, s=0.0, p=0.0,  tau=0.0, E=0.0, q=0.0):
         self.x = x
         self.y = y
         self.px = px       # horizontal (generalized) momentum
@@ -128,7 +128,8 @@ class Particle:
         self.p = p         # longitudinal momentum
         self.s = s
         self.tau = tau     # time-like coordinate wrt reference particle in the bunch (e.g phase)
-        self.E = E        # energy
+        self.E = E         # energy
+        self.q = q         # charge in C
 
     def __str__(self):
         val = ""
@@ -141,6 +142,7 @@ class Particle:
         val = val + "E = " + str(self.E) + "\n"
         val = val + "s = " + str(self.s)
         return val
+
 
 class Beam:
     def __init__(self,x=0,xp=0,y=0,yp=0):
@@ -235,21 +237,21 @@ class Beam:
     def len(self):
         return 1
 
-    #def sizes(self):
-    #    if self.beta_x != 0:
-    #        self.gamma_x = (1. + self.alpha_x**2)/self.beta_x
-    #    else:
-    #        self.gamma_x = 0.
-#
-    #    if self.beta_y != 0:
-    #        self.gamma_y = (1. + self.alpha_y**2)/self.beta_y
-    #    else:
-    #        self.gamma_y = 0.
-#
-    #    self.sigma_x = np.sqrt((self.sigma_E/self.E*self.Dx)**2 + self.emit_x*self.beta_x)
-    #    self.sigma_y = np.sqrt((self.sigma_E/self.E*self.Dy)**2 + self.emit_y*self.beta_y)
-    #    self.sigma_xp = np.sqrt((self.sigma_E/self.E*self.Dxp)**2 + self.emit_x*self.gamma_x)
-    #    self.sigma_yp = np.sqrt((self.sigma_E/self.E*self.Dyp)**2 + self.emit_y*self.gamma_y)
+    def sizes(self):
+        if self.beta_x != 0:
+            self.gamma_x = (1. + self.alpha_x**2)/self.beta_x
+        else:
+            self.gamma_x = 0.
+
+        if self.beta_y != 0:
+            self.gamma_y = (1. + self.alpha_y**2)/self.beta_y
+        else:
+            self.gamma_y = 0.
+
+        self.sigma_x = np.sqrt((self.sigma_E/self.E*self.Dx)**2 + self.emit_x*self.beta_x)
+        self.sigma_y = np.sqrt((self.sigma_E/self.E*self.Dy)**2 + self.emit_y*self.beta_y)
+        self.sigma_xp = np.sqrt((self.sigma_E/self.E*self.Dxp)**2 + self.emit_x*self.gamma_x)
+        self.sigma_yp = np.sqrt((self.sigma_E/self.E*self.Dyp)**2 + self.emit_y*self.gamma_y)
 
     # def print_sizes(self):
         # self.sizes()
@@ -463,6 +465,7 @@ class ParticleArray:
 
     def list2array(self, p_list):
         self.rparticles = np.zeros((6, len(p_list)))
+        self.q_array = np.zeros(len(p_list))
         for i, p in enumerate(p_list):
             self[i] = p
         self.s = p_list[0].s
@@ -505,6 +508,51 @@ class ParticleArray:
     def t(self,value):
         self.rparticles[4] = value
 
+    @property
+    def n(self):
+        return np.shape(self.rparticles)[1]
+
+    def thin_out(self, nth=10, n0=0):
+        """
+        Method to thin out the particle array in n-th times. Means every n-th particle will be saved in new Particle array
+
+        :param nth: 10, every n-th particle will be taken to new Particle array
+        :param n0: start from n0 particle
+        :return: New ParticleArray
+        """
+        nth = int(nth)
+        if nth <= 1:
+            print("Nothing to do. nth number must be bigger 1")
+            return self
+        if nth > np.shape(self.rparticles)[1]:
+            print("nth number is too big")
+        n = int((np.shape(self.rparticles)[1] - n0)/nth)
+
+        p = ParticleArray(n)
+        p.rparticles[:, :] = self.rparticles[:, n0::nth]
+        p.q_array[:] = self.q_array[n0::nth]*nth
+        p.s = self.s
+        p.E = self.E
+        return p
+
+    def rescale2energy(self, energy):
+        """
+        Method to rescale beam coordinates with new energy
+
+        :param energy: new energy
+        :return:
+        """
+        Ei = self.E
+        betai = np.sqrt(1 - (m_e_GeV / Ei) ** 2)
+        Ef = energy
+        betaf = np.sqrt(1 - (m_e_GeV / Ef) ** 2)
+
+        self.E = Ef
+        Rnn = Ei * betai / (Ef * betaf)
+        self.px()[:] = Rnn * self.px()[:]
+        self.py()[:] = Rnn * self.py()[:]
+        self.p()[:] = Rnn * self.p()[:]
+
 
 def recalculate_ref_particle(p_array):
     pref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV
@@ -526,9 +574,9 @@ def get_envelope(p_array, tws_i=Twiss()):
     dpy = tws_i.Dyp*p
     x = p_array.x() - dx
     px = p_array.px() - dpx
-
     y = p_array.y() - dy
     py = p_array.py() - dpy
+    tau = p_array.tau()
     if ne_flag:
         px = ne.evaluate('px * (1. - 0.5 * px * px - 0.5 * py * py)')
         py = ne.evaluate('py * (1. - 0.5 * px * px - 0.5 * py * py)')
@@ -537,20 +585,23 @@ def get_envelope(p_array, tws_i=Twiss()):
         py = py*(1.-0.5*px*px - 0.5*py*py)
     tws.x = np.mean(x)
     tws.y = np.mean(y)
-    tws.px =np.mean(px)
-    tws.py =np.mean(py)
+    tws.px = np.mean(px)
+    tws.py = np.mean(py)
+    tws.tau = np.mean(tau)
 
     if ne_flag:
         tw_x = tws.x
         tw_y = tws.y
         tw_px = tws.px
         tw_py = tws.py
+        tw_tau = tws.tau
         tws.xx =  np.mean(ne.evaluate('(x - tw_x) * (x - tw_x)'))
         tws.xpx = np.mean(ne.evaluate('(x - tw_x) * (px - tw_px)'))
         tws.pxpx =np.mean(ne.evaluate('(px - tw_px) * (px - tw_px)'))
         tws.yy =  np.mean(ne.evaluate('(y - tw_y) * (y - tw_y)'))
         tws.ypy = np.mean(ne.evaluate('(y - tw_y) * (py - tw_py)'))
         tws.pypy =np.mean(ne.evaluate('(py - tw_py) * (py - tw_py)'))
+        tws.tautau = np.mean(ne.evaluate('(tau - tw_tau) * (tau - tw_tau)'))
     else:
         tws.xx = np.mean((x - tws.x)*(x - tws.x))
         tws.xpx = np.mean((x-tws.x)*(px-tws.px))
@@ -558,6 +609,7 @@ def get_envelope(p_array, tws_i=Twiss()):
         tws.yy = np.mean((y-tws.y)*(y-tws.y))
         tws.ypy = np.mean((y-tws.y)*(py-tws.py))
         tws.pypy = np.mean((py-tws.py)*(py-tws.py))
+        tws.tautau = np.mean((tau - tws.tau)*(tau - tws.tau))
     tws.p = np.mean( p_array.p())
     tws.E = np.copy(p_array.E)
     #tws.de = p_array.de
@@ -1240,6 +1292,45 @@ def parray2beam(parray, step=1e-7):
     if hasattr(parray,'filePath'):
         beam.filePath = parray.filePath + '.beam'
     return(beam)
+
+
+def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
+                    sigma_tau=1e-3, sigma_p=1e-4, tau_p_cor=0.01, charge=5e-9, nparticles=200000, energy=0.13):
+    if sigma_y is None:
+        sigma_y = sigma_x
+    if sigma_py is None:
+        sigma_py = sigma_px
+
+    x = np.random.randn(nparticles) * sigma_x
+    px = np.random.randn(nparticles) * sigma_px
+    y = np.random.randn(nparticles) * sigma_y
+    py = np.random.randn(nparticles) * sigma_py
+    tau = np.random.randn(nparticles) * sigma_tau
+    dp = np.random.randn(nparticles) * sigma_p
+    if sigma_tau != 0:
+        dp += tau_p_cor*tau/sigma_tau
+    # covariance matrix for [tau, p] for beam compression in BC
+    #cov_t_p = [[1.30190131e-06, 2.00819771e-05],
+    #           [2.00819771e-05, 3.09815718e-04]]
+    #k = tau_p_cor*sigma_tau*sigma_p
+    #cov_t_p = [[sigma_tau**2, k],
+    #           [k, sigma_p**2]]
+    #long_dist = np.random.multivariate_normal((0, 0), cov_t_p, nparticles)
+    #tau = long_dist[:, 0]
+    #dp = long_dist[:, 1]
+
+    p_array = ParticleArray(n=nparticles)
+    p_array.E = energy # GeV
+    p_array.rparticles[0] = x
+    p_array.rparticles[1] = px
+    p_array.rparticles[2] = y
+    p_array.rparticles[3] = py
+    p_array.rparticles[4] = tau
+    p_array.rparticles[5] = dp
+
+
+    p_array.q_array = np.ones(nparticles) * charge / nparticles
+    return p_array
 
 # def zero_wake_at_ipk_new(beam):
     # '''

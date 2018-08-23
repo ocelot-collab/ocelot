@@ -264,7 +264,6 @@ def track_nturns(lat, nturns, track_list, nsuperperiods=1, save_track=True, prin
     navi = Navigator(lat)
 
     t_maps = get_map(lat, lat.totalLen, navi)
-
     track_list_const = copy(track_list)
     p_array = ParticleArray()
     p_list = [p.particle for p in track_list]
@@ -434,6 +433,7 @@ def tracking_step(lat, particle_list, dz, navi):
 def track(lattice, p_array, navi, print_progress=True, calc_tws=True):
     """
     tracking through the lattice
+
     :param lattice: Magnetic Lattice
     :param p_array: ParticleArray
     :param navi: Navigator

@@ -291,7 +291,7 @@ dict_plot = {Quadrupole: {"scale": 0.7, "color": "r",            "edgecolor": "r
              }
 
 
-def new_plot_elems(fig, ax, lat, s_point=0, nturns=1, y_lim = None,y_scale=1, legend=True):
+def new_plot_elems(fig, ax, lat, s_point=0, nturns=1, y_lim=None, y_scale=1, legend=True):
     dict_copy=deepcopy(dict_plot)
     alpha = 1
     ax.set_ylim((-1, 1.5))
@@ -579,7 +579,6 @@ def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=Tr
     new_plot_elems(fig, ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8)
 
 
-
 def plot_xy(ax, S, X, Y, font_size):
     ax.set_ylabel(r"$X, Y$, m")
     ax.plot(S, X,'r', lw = 2, label=r"$X$")
@@ -611,22 +610,6 @@ def body_trajectory(fig, ax_xy, ax_el, lat, plist):
 
     plot_elems(ax_el, lat, nturns = 1, legend = False) # plot elements
 
-"""
-def plot_current(p_array, charge, num_bins = 200):
-    z = p_array.particles[4::6]
-    hist, bin_edges = np.histogram(z, bins=num_bins)
-    delta_Z = max(z) - min(z)
-    delta_z = delta_Z/num_bins
-    t_bins = delta_z/speed_of_light
-    print "Imax = ", max(hist)*charge/t_bins
-    hist = np.append(hist, hist[-1])
-    plt.plot(bin_edges, hist*charge/t_bins)
-    plt.grid(True)
-    plt.title("current")
-    plt.xlabel("s, m")
-    plt.ylabel("I, A")
-    plt.show()
-"""
 
 def plot_trajectory(lat, list_particles):
     fig = plt.figure()
@@ -643,7 +626,7 @@ def plot_trajectory(lat, list_particles):
     plt.show()
 
 
-def plot_API(lat, legend=True, fig_name=1):
+def plot_API(lat, legend=True, fig_name=1, grid=True):
     """
     Function creates a picture with lattice on the bottom part of the picture and top part of the picture can be
     plot arbitrary lines.
@@ -653,7 +636,7 @@ def plot_API(lat, legend=True, fig_name=1):
     :return: fig, ax
     """
     fig = plt.figure(fig_name)
-    plt.rc('axes', grid=True)
+    plt.rc('axes', grid=grid)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
     left, width = 0.1, 0.85
     rect2 = [left, 0.2, width, 0.7]
@@ -662,7 +645,6 @@ def plot_API(lat, legend=True, fig_name=1):
     ax_xy = fig.add_axes(rect2)  #left, bottom, width, height
     ax_el = fig.add_axes(rect3, sharex=ax_xy)
 
-    font_size = 16
 
     for ax in ax_xy, ax_el:
         if ax!=ax_el:
@@ -679,8 +661,77 @@ def plot_API(lat, legend=True, fig_name=1):
     #plot_xy(ax_xy, S, X, Y, font_size)
 
     #plot_elems(ax_el, lat, nturns = 1, legend = True) # plot elements
-    new_plot_elems(fig, ax_el, lat, nturns = 1, legend = legend)
+    #new_plot_elems(fig, ax_el, lat, nturns = 1, legend = legend)
+    new_plot_elems(fig, ax_el, lat, legend = legend, y_scale=0.8)
+
     return fig, ax_xy
+
+def compare_betas(lat, tws1, tws2, prefix1="beam1", prefix2="beam2", legend=True, fig_name=None, grid=True, font_size=18):
+    """
+    function for plotting: lattice (bottom section), vertical and horizontal beta-functions (middle section),
+    other parameters (top section) such as "Dx", "Dy", "E", "mux", "muy", "alpha_x", "alpha_y", "gamma_x", "gamma_y"
+    lat - MagneticLattice,
+    tws - list if Twiss objects,
+    top_plot=["Dx"] - parameters which displayed in top section. Example top_plot=["Dx", "Dy", "alpha_x"]
+    legend=True - displaying legend of element types in bottom section,
+    fig_name=None - name of figure,
+    grid=True - grid
+    font_size=18 - font size.
+    """
+    #fig, ax_xy = plot_API(lat, legend=legend, fig_name=fig_name, grid=grid)
+    if fig_name == None:
+        fig = plt.figure()
+    else:
+        fig = plt.figure(fig_name)
+
+    plt.rc('axes', grid=grid)
+    plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
+    left, width = 0.1, 0.85
+
+    rect1 = [left, 0.55, width, 0.37]
+    rect2 = [left, 0.18, width, 0.37]
+    rect3 = [left, 0.05, width, 0.13]
+
+    ax_top = fig.add_axes(rect1)
+    ax_b = fig.add_axes(rect2, sharex=ax_top)  # left, bottom, width, height
+    ax_el = fig.add_axes(rect3, sharex=ax_top)
+    for ax in ax_b, ax_el, ax_top:
+        if ax != ax_el:
+            for label in ax.get_xticklabels():
+                label.set_visible(False)
+
+    ax_b.grid(grid)
+    ax_top.grid(grid)
+    ax_el.set_yticks([])
+    ax_el.grid(grid)
+
+    fig.subplots_adjust(hspace=0)
+    beta_x1 = [p.beta_x for p in tws1]
+    beta_y1 = [p.beta_y for p in tws1]
+    beta_x2 = [p.beta_x for p in tws2]
+    beta_y2 = [p.beta_y for p in tws2]
+    s1 = [p.s for p in tws1]
+    s2 = [p.s for p in tws2]
+    # plt.plot(S, beta_x)
+
+    plt.xlim(s1[0], s1[-1])
+
+    #plot_disp(ax_top, tws, top_plot, font_size)
+    ax_top.plot(s1, beta_y1,'r', lw = 2, label=prefix1 + r"  $\beta_{y}$")
+    ax_top.plot(s2, beta_y2, 'b--', lw=2, label=prefix2 + r"  $\beta_{y}$")
+
+    leg = ax_top.legend(shadow=False, fancybox=True, prop=font_manager.FontProperties(size=font_size))
+    leg.get_frame().set_alpha(0.2)
+
+    ax_b.set_ylabel(r"$\beta_{x,y}$, m")
+    ax_b.plot(s1, beta_x1,'r', lw = 2, label=prefix1 + r"  $\beta_{x}$")
+
+    ax_b.plot(s2, beta_x2, 'b--', lw=2, label=prefix2 + r"  $\beta_{x}$")
+    leg = ax_b.legend(shadow=False, fancybox=True, prop=font_manager.FontProperties(size=font_size))
+    leg.get_frame().set_alpha(0.2)
+
+    new_plot_elems(fig, ax_el, lat, s_point=s1[0], legend=legend, y_scale=0.8)
+
 
 
 def plot_traj_pulse(lat, list_particles, list_particles2, U1, U2):
@@ -922,7 +973,7 @@ def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinea
 from ocelot.cpbd.beam import global_slice_analysis
 
 
-def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpolation="bilinear", inverse_tau=False,
+def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, nbins_y=200, interpolation="bilinear", inverse_tau=False,
                 show_moments=False, nfig=40, title=None, figsize=None, grid=True):
     """
     Shows e-beam slice parameters (current, emittances, energy spread)
@@ -931,6 +982,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpo
 
     :param p_array: ParticleArray
     :param nparts_in_slice: number of particles per slice
+    :param smoth_param: 0.05, smoothing parameters to calculate the beam current: sigma = smoth_param * np.std(p_array.tau())
     :param nbins_x: number of bins for 2D hist. in horz. plane
     :param nbins_y: number of bins for 2D hist. in vertical plane
     :param interpolation: "bilinear", and acceptable values are 'none’, ‘nearest’, ‘bilinear’, ‘bicubic’, ‘spline16’,
@@ -946,7 +998,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpo
     p_array_copy = deepcopy(p_array)
     if inverse_tau:
         p_array_copy.tau()[:] *= -1
-    slice_params = global_slice_analysis(p_array_copy, nparts_in_slice, 0.01, 2, 2)
+    slice_params = global_slice_analysis(p_array_copy, nparts_in_slice, smooth_param, 2, 2)
 
     fig = plt.figure(nfig, figsize=figsize)
     if title != None:
@@ -967,12 +1019,12 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpo
     plt.plot(slice_params.s * 1e3, slice_params.ey, "b", label=r"$\varepsilon_y = $" + str(emityn_mm_mrad) + r" $mm\cdot mrad$")
     plt.legend()
     plt.setp(ax_em.get_xticklabels(), visible=False)
-    plt.ylabel(r"$\varepsilon_{x,y}$, $mm\cdot mrad")
+    plt.ylabel(r"$\varepsilon_{x,y}$, $mm\cdot mrad$")
     plt.grid(True)
 
     ax_c = plt.subplot(321, sharex=ax_sp)
     plt.title("Current")
-    plt.plot(slice_params.s * 1e3, slice_params.I, "r", label="Current")
+    plt.plot(slice_params.s * 1e3, slice_params.I, "r", label=r"$I_{max}=$" + str(np.round(np.max(slice_params.I), 2)) + " $A$")
     plt.legend()
     plt.setp(ax_c.get_xticklabels(), visible=False)
     plt.ylabel("I, A")
@@ -1004,7 +1056,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, nbins_x=200, nbins_y=200, interpo
     #plt.plot(slice_params.s * 1e3, slice_params.mp * 1e2, "k", lw=2)
 
 
-def compare_beams(p_array_1, p_array_2, nparts_in_slice=5000,
+def compare_beams(p_array_1, p_array_2, nparts_in_slice=5000, smoth_param=0.05,
                   inverse_tau=False, nfig=40, title=None, figsize=None, legend_beam1=None, legend_beam2=None):
     """
     Shows e-beam slice parameters (current, emittances, energy spread)
@@ -1014,6 +1066,7 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice=5000,
     :param p_array_1: ParticleArray
     :param p_array_2: ParticleArray
     :param nparts_in_slice: number of particles per slice
+    :param smoth_param: 0.05, smoothing parameters to calculate the beam current: sigma = smoth_param * np.std(p_array.tau())
     :param inverse_tau: False, inverse tau - head will be on the right side of figure
     :param nfig: number of the figure
     :param title: None or string - title of the figure
@@ -1032,8 +1085,8 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice=5000,
         p_array_copy1.tau()[:] *= -1
         p_array_copy2.tau()[:] *= -1
 
-    slice_params1 = global_slice_analysis(p_array_copy1, nparts_in_slice, 0.01, 2, 2)
-    slice_params2 = global_slice_analysis(p_array_copy2, nparts_in_slice, 0.01, 2, 2)
+    slice_params1 = global_slice_analysis(p_array_copy1, nparts_in_slice, smoth_param, 2, 2)
+    slice_params2 = global_slice_analysis(p_array_copy2, nparts_in_slice, smoth_param, 2, 2)
 
     fig = plt.figure(nfig, figsize=figsize)
     if title != None:
@@ -1061,8 +1114,10 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice=5000,
 
     ax_c = plt.subplot(321, sharex=ax_sp)
     plt.title("Current")
-    plt.plot(slice_params1.s * 1e6, slice_params1.I, "r", label="I: " + legend_beam1)
-    plt.plot(slice_params2.s * 1e6, slice_params2.I, "b", label="I: " + legend_beam2)
+    I1max = np.round(np.max(slice_params1.I), 0)
+    I2max = np.round(np.max(slice_params2.I), 0)
+    plt.plot(slice_params1.s * 1e6, slice_params1.I, "r", label=r"$I_{max}=$" + str(I1max) + " A " + legend_beam1)
+    plt.plot(slice_params2.s * 1e6, slice_params2.I, "b", label=r"$I_{max}=$" + str(I2max) + " A " + legend_beam2)
     plt.legend()
     plt.setp(ax_c.get_xticklabels(), visible=False)
     plt.ylabel("I, A")

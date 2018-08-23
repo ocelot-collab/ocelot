@@ -68,7 +68,6 @@ def check_matrix(matrix, matrix_ref, tolerance=1.0e-15, tolerance_type='relative
     """Matrix with reference matrix check function"""
 
     delta_matrix = np.abs(matrix - matrix_ref)
-
     if tolerance_type == 'relative':
         tol_matrix = tolerance * np.abs(matrix_ref)
     else:
@@ -98,14 +97,20 @@ def check_dict(dict_t, dict_ref, tolerance=1.0e-15, tolerance_type='relative', a
                 continue
             
             if isinstance(elem[key], list):
-                result += check_matrix(np.asarray(elem[key]), np.asarray(elem_ref[key]), tolerance, tolerance_type, assert_info=assert_info+' line is '+str(line)+' key is '+str(key)+'\n')
+                result += check_matrix(np.asarray(elem[key]), np.asarray(elem_ref[key]),
+                                       tolerance, tolerance_type, assert_info=assert_info+
+                                                                              ' line is '+str(line)+ "/" + str(len(dict_t)) +' key is '+str(key)+'\n')
                 continue
 
             if isinstance(elem[key], dict):
-                result += check_dict([elem[key]], [elem_ref[key]], tolerance, tolerance_type, assert_info=assert_info+' line is '+str(line)+' key is '+str(key)+'\n')
+                result += check_dict([elem[key]], [elem_ref[key]],
+                                     tolerance, tolerance_type, assert_info=assert_info+
+                                                                            ' line is '+str(line)+ "/" + str(len(dict_t)) + ' key is '+str(key)+'\n')
                 continue
 
-            result.append(check_value(elem[key], elem_ref[key], tolerance, tolerance_type, assert_info=assert_info+'line is '+str(line)+' key is '+str(key)+'\n'))
+            result.append(check_value(elem[key], elem_ref[key],
+                                      tolerance, tolerance_type, assert_info=assert_info+
+                                                                             'line is '+str(line)+ "/" + str(len(dict_t)) +' key is '+str(key)+'\n'))
     
     return result
 

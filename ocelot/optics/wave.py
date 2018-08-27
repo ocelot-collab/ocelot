@@ -1073,9 +1073,10 @@ def generate_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), power_rms=(
         arg += (z-z0)**2/2/qz
         # print(zz[:,25,25])
         
-    if phase_chirp_lin != 0:
+
+    if np.size(phase_chirp_lin) > 1:
         arg -= phase_chirp_lin
-    if phase_chirp_quad != 0:
+    if np.size(phase_chirp_quad) > 1:
         arg += phase_chirp_quad
     dfl.fld = np.exp(-1j * k * arg) #  - (grid[0]-z0)**2/qz 
     # dfl.fld = np.exp(-1j * k * ( (x-x0)**2/2/qx + (y-y0)**2/2/qy + (z-z0)**2/2/qz - phase_chirp_lin + phase_chirp_quad) ) #  - (grid[0]-z0)**2/qz 

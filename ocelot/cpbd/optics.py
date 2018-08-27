@@ -30,27 +30,35 @@ except:
 
 
 class SecondOrderMult:
+    """
+    The class includes three different methods transforming the particles coordinates:
+    1. based on NUMEXPR module - gives the better performance
+    2. NUMBA module (switched off) - slowest method (around 2-3 times slower) but used full matrix for transformation
+                        (in the future can be more preferable for usage)
+    3. NUMPY module - gives a bit slower performance then NUMEXPR and identical to the first one on the algorithm level.
+    """
     def __init__(self):
+        self.full_matrix = False
         if ne_flag:
-            #print("SecondTM: NumExpr")
+            # print("SecondTM: NumExpr")
             self.tmat_multip = self.numexpr_apply
-        elif nb_flag:
-            #print("SecondTM: NUMBA")
+        elif nb_flag and self.full_matrix:
+            # print("SecondTM: NUMBA")
             self.tmat_multip = nb.jit(nopython=True, parallel=True)(self.numba_apply)
         else:
-            #print("SecondTM: Numpy")
+            # print("SecondTM: Numpy")
             self.tmat_multip = self.numpy_apply
 
     def numba_apply(self, X, R, T):
         #Xr = np.dot(R, X)
-        #Xo = np.copy(X)
+        Xcopy = np.copy(X)
         N = X.shape[1]
         for i in range(6):
             for n in range(N):
                 tmp = 0.
                 r_tmp = 0.
                 for j in range(6):
-                    r_tmp += R[i, j]*X[j, n]
+                    r_tmp += R[i, j]*Xcopy[j, n]
                     for k in range(6):
                         tmp += T[i, j, k] * X[j, n] * X[k, n]
                 X[i, n] = r_tmp + tmp

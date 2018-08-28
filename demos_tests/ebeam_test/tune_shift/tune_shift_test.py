@@ -120,7 +120,7 @@ def track_nturns_wrapper(lattice):
 
     if not hasattr(pytest, 'ts_pxy_list'):
         pytest.ts_pxy_list = [Track_info(Particle(y=0.0001, E=2.0), 0.00, 0.0001)]
-        pytest.ts_pxy_list = track_nturns(lattice, nturns, pytest.ts_pxy_list, nsuperperiods=1, save_track=True)
+        pytest.ts_pxy_list = track_nturns(lattice, nturns, pytest.ts_pxy_list, nsuperperiods=1, save_track=True, print_progress=False)
 
     return pytest.ts_pxy_list, nturns
 

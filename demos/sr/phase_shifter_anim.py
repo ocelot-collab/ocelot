@@ -3,6 +3,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.animation
+from matplotlib import animation
 import numpy as np
 from ocelot.rad import *
 from ocelot import *
@@ -10,6 +11,10 @@ from ocelot.gui import *
 
 font = {'size'   : 10}
 matplotlib.rc('font', **font)
+
+# Set up formatting for the movie files
+#Writer = animation.writers['ffmpeg']
+#writer = Writer(fps=30, metadata=dict(artist='Me'), bitrate=1800)
 
 beam = Beam()
 beam.E = 17.5
@@ -97,4 +102,7 @@ z, x, eph, total = phase_shifter(0)
 #plt.show()
 
 ani = matplotlib.animation.FuncAnimation(fig, animate, init_func=init_animation, frames=60)
-ani.save('animation.gif', writer='imagemagick', fps=30)
+# worked for windows
+#ani.save('animation.gif',writer='imagemagick', fps=30)
+ani.save('animation.html', fps=30)
+#ani.save('animation.mp4', writer=writer)

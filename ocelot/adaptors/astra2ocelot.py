@@ -147,7 +147,7 @@ def exact_xxstg_2_xp_de(xxstg, gamref):
     return xp
 
 
-def astraBeam2particleArray(filename, s_ref=-1, Eref=-1):
+def astraBeam2particleArray(filename, s_ref=-1, Eref=-1, print_params=True):
     """
     function convert Astra beam distribution to Ocelot format - ParticleArray
     :type filename: str
@@ -155,18 +155,17 @@ def astraBeam2particleArray(filename, s_ref=-1, Eref=-1):
     """
     P0 = np.loadtxt(filename)
     charge_array = -P0[:, 7] * 1e-9  # charge in nC -> in C
-    print("Astra to Ocelot: charge = ", sum(charge_array))
-    print("Astra to Ocelot: particles number = ", len(charge_array))
+
     
     xp = P0[:, :6]
 
-    if s_ref<0:
+    if s_ref < 0:
         s_ref = xp[0, 2]
         xp[0, 2] = 0.
     else:
         s0 = xp[0, 2]
-        xp[0, 2]=0.
-        xp[:,2]=xp[:,2]+s0-s_ref
+        xp[0, 2] = 0.
+        xp[:, 2] = xp[:, 2] + s0 - s_ref
    
     if Eref<0:
         Pref = xp[0, 5]
@@ -175,7 +174,7 @@ def astraBeam2particleArray(filename, s_ref=-1, Eref=-1):
         Pref = np.sqrt(Eref ** 2 / m_e_GeV ** 2 - 1) * m_e_eV
         P0 = xp[0, 5]
         xp[0, 5] = 0.
-        xp[:,5] = xp[:,5] + P0 - Pref
+        xp[:, 5] = xp[:, 5] + P0 - Pref
 
     #    print(xp[1:, 2])
     #    plot(xp[1:, 2], xp[1:, 5]/Pref, "b.")
@@ -186,8 +185,6 @@ def astraBeam2particleArray(filename, s_ref=-1, Eref=-1):
     p_array = ParticleArray(len(charge_array))
     p_array.s = s_ref
     p_array.E = np.sqrt((Pref / m_e_eV) ** 2 + 1) * m_e_GeV
-    print("Astra to Ocelot: energy = ", p_array.E)
-    print("Astra to Ocelot: s pos = ", p_array.s)
     p_array.rparticles[0] = xxstg[:, 0]
     p_array.rparticles[1] = xxstg[:, 1]
     p_array.rparticles[2] = xxstg[:, 2]
@@ -195,6 +192,13 @@ def astraBeam2particleArray(filename, s_ref=-1, Eref=-1):
     p_array.rparticles[4] = xxstg[:, 4]
     p_array.rparticles[5] = xxstg[:, 5]
     p_array.q_array = charge_array
+
+    if print_params:
+        print("Astra to Ocelot: charge = ", sum(charge_array))
+        print("Astra to Ocelot: particles number = ", len(charge_array))
+        print("Astra to Ocelot: energy = ", p_array.E)
+        print("Astra to Ocelot: s pos = ", p_array.s)
+
     return p_array
 
 
@@ -217,10 +221,76 @@ def particleArray2astraBeam(p_array, filename="tytest.ast"):
     xp[1:Np, 2] = xp[1:Np, 2] - xp[0, 2]
 
     charge_array = -p_array.q_array.reshape(len(p_array.q_array), 1) * 1e+9  # charge in C -> in nC
-    flag = np.zeros((len(charge_array), 1))
-    astra = np.append(xp, flag, axis=1)
+    flag = np.ones((len(charge_array), 1))
+    astra = np.append(xp, flag*0, axis=1)               # time in [ns]
     astra = np.append(astra, charge_array, axis=1)
-    astra = np.append(astra, flag, axis=1)
-    astra = np.append(astra, flag, axis=1)
+    astra = np.append(astra, flag, axis=1)              # 1 - electron, 2 - positron, 3 - protons and 4 - hydrogen ions.
+    astra = np.append(astra, flag*5, axis=1)            # 5 - standard particle
     print("SAVE")
     np.savetxt(filename, astra, fmt='%.7e')
+
+
+def emittance_analysis(fileprefix="Exfel", trace_space=True, s_offset=None):
+    """
+    To calculate emittance in the trace space the flag "Tr_EmitS=.T" is needed.
+
+    The phase space is (x, px, y, py, z, pz)
+    The trace space is (x, x’, y, y’, z, z’)
+    :param fileprefix: file prefix to read files:   fileprefix + '.Xemit.001',
+                                                    fileprefix + '.Yemit.001',
+                                                    fileprefix + '.Zemit.001',
+                                                    fileprefix + '.TRemit.001'
+    :param trace_space: True, to calculate emittance in the trace space
+    :param s_offset: None, if None use s coordinates from a file, if not None the s coordinate starts from "s_offset"
+    :return: list of the twiss objects
+    """
+
+    optx = np.loadtxt(fileprefix + '.Xemit.001')
+    opty = np.loadtxt(fileprefix + '.Yemit.001')
+    optz = np.loadtxt(fileprefix + '.Zemit.001')
+
+    r_E = optz[:, 2]*1e6 + m_e_eV
+    gamma = r_E/m_e_eV
+    emitx = optx[:, 5]*1e-6
+    sigmax = optx[:, 3]*1e-3
+    betax = sigmax**2/emitx*gamma
+    emity = opty[:, 5]*1e-6
+    sigmay = opty[:, 3]*1e-3
+    betay = sigmay**2/emity*gamma
+    corx = optx[:, 6]*1e-3 * sigmax
+    alphax = -corx/emitx*gamma
+    cory = opty[:, 6]*1e-3 * sigmay
+    alphay = -cory/emity*gamma
+
+    if trace_space:
+        optTS = np.loadtxt(fileprefix + '.TRemit.001')
+        emitxTS = optTS[:, 3 - 1]*1e-6
+        emityTS = optTS[:, 4 - 1]*1e-6
+        betaxTS = sigmax**2/emitxTS*gamma
+        betayTS = sigmay**2/emityTS*gamma
+        betax = betaxTS
+        betay = betayTS
+        emitx = emitxTS
+        emity = emityTS
+
+    tws = []
+    for i in range(len(optx[:, 0])):
+        tw = Twiss()
+        tw.beta_x = betax[i]
+        tw.beta_y = betay[i]
+        tw.alpha_x = alphax[i]
+        tw.alpha_y = alphay[i]
+        tw.gamma_x = (1 + tw.alpha_x * tw.alpha_x) / tw.beta_x
+        tw.gamma_y = (1 + tw.alpha_y * tw.alpha_y) / tw.beta_y
+        tw.emit_x = emitx[i]
+        tw.emit_y = emity[i]
+        tw.E = r_E*1e-9 # in GeV
+
+        if s_offset != None:
+            tw.s = optx[i, 0] - optx[0, 0] + s_offset
+        else:
+            tw.s = optx[i, 0]
+
+        tws.append(tw)
+
+    return tws

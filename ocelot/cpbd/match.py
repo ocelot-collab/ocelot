@@ -13,7 +13,7 @@ def weights_default(val):
     if val == 'tau': return 10000004.0
     if val == 'i5': return 1.e14
     if val == 'negative_length': return 1.5e6
-    if val in ['alpha_x', 'alpha_y']: return 100005.0
+    if val in ['alpha_x', 'alpha_y']: return 100007.0
     if val in ['mux', 'muy']: return 10000006.0
     if val in ['beta_x', 'beta_y']: return 100007.0
     return 0.0001
@@ -119,7 +119,7 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
             if e in constr.keys():
 
                 for k in constr[e].keys():
-                    #print k
+                    # print(k)
                     if constr[e][k].__class__ == list:                    
                         v1 = constr[e][k][1]
 
@@ -212,7 +212,7 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                 x[i] = vars[i].k1
 
     print("initial value: x = ", x)
-    if method == 'simplex': res = fmin(errf, x, xtol=1e-4, maxiter=max_iter, maxfun=max_iter)
+    if method == 'simplex': res = fmin(errf, x, xtol=1e-5, maxiter=max_iter, maxfun=max_iter)
     if method == 'cg': res = fmin_cg(errf, x, gtol=1.e-5, epsilon=1.e-5, maxiter=max_iter)
     if method == 'bfgs': res = fmin_bfgs(errf, x, gtol=1.e-5, epsilon=1.e-5, maxiter=max_iter)
 
@@ -262,12 +262,12 @@ def match_tunes(lat, tw0, quads, nu_x, nu_y, ncells=1, print_proc=0):
     # tw0.E = lat.energy
     tws = twiss(lat, tw0, nPoints=None)
 
-    nu_x_old = tws[-1].mux / 2 / pi * ncells
-    nu_y_old = tws[-1].muy / 2 / pi * ncells
+    nu_x_old = tws[-1].mux / 2 / np.pi * ncells
+    nu_y_old = tws[-1].muy / 2 / np.pi * ncells
     # print nu_y, nu_y_old
     strengths1 = [p.k1 for p in quads]
 
-    constr = {end: {'mux': 2 * pi * nu_x / ncells, 'muy': 2. * pi * nu_y / ncells}, 'periodic': True}
+    constr = {end: {'mux': 2 * np.pi * nu_x / ncells, 'muy': 2. * np.pi * nu_y / ncells}, 'periodic': True}
     # print constr
     vars = quads
 
@@ -276,8 +276,8 @@ def match_tunes(lat, tw0, quads, nu_x, nu_y, ncells=1, print_proc=0):
         print(q.id, ".k1: before: ", strengths1[i], "  after: ", q.k1)
     lat = MagneticLattice(lat.sequence[:-1])
     tws = twiss(lat, tw0, nPoints=None)
-    print("nu_x: before: ", nu_x_old, "after: ", tws[-1].mux / 2 / pi * ncells)
-    print("nu_y: before: ", nu_y_old, "after: ", tws[-1].muy / 2 / pi * ncells)
+    print("nu_x: before: ", nu_x_old, "after: ", tws[-1].mux / 2 / np.pi * ncells)
+    print("nu_y: before: ", nu_y_old, "after: ", tws[-1].muy / 2 / np.pi * ncells)
     print("matching end.")
     return lat
 
@@ -294,7 +294,7 @@ def closed_orbit(lattice, eps_xy=1.e-7, eps_angle=1.e-7, energy=0):
     :return: class Particle
     """
     #R = lattice_transfer_map(lattice, energy)
-    navi = Navigator()
+    navi = Navigator(lattice)
     t_maps = get_map(lattice, lattice.totalLen, navi)
 
     tm0 = TransferMap()
@@ -310,8 +310,8 @@ def closed_orbit(lattice, eps_xy=1.e-7, eps_angle=1.e-7, energy=0):
 
     R = tm0.R(energy)[:4, :4]
 
-    ME = eye(4) - R
-    P = dot(inv(ME), tm0.B(energy)[:4])
+    ME = np.eye(4) - R
+    P = np.dot(inv(ME), tm0.B(energy)[:4])
 
     def errf(x):
         #print("x", x)

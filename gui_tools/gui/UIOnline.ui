@@ -323,7 +323,7 @@
      <x>0</x>
      <y>0</y>
      <width>1222</width>
-     <height>26</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -338,10 +338,10 @@
    </widget>
    <widget class="QMenu" name="menuGolden_Orbit">
     <property name="title">
-     <string>Golden Orbit</string>
+     <string>Lattice</string>
     </property>
-    <addaction name="actionLoad_Golden_Orbit"/>
-    <addaction name="actionSave_Golden_Orbit"/>
+    <addaction name="actionLoad_Lattice"/>
+    <addaction name="actionSave_Lattice"/>
     <addaction name="actionLoad_GO_from_Orbit_Display"/>
    </widget>
    <widget class="QMenu" name="menuFile">
@@ -369,14 +369,14 @@
     <string>Parameters</string>
    </property>
   </action>
-  <action name="actionLoad_Golden_Orbit">
+  <action name="actionLoad_Lattice">
    <property name="text">
-    <string>Load Golden Orbit</string>
+    <string>Load Lattice</string>
    </property>
   </action>
-  <action name="actionSave_Golden_Orbit">
+  <action name="actionSave_Lattice">
    <property name="text">
-    <string>Save Golden Orbit</string>
+    <string>Save Lattice</string>
    </property>
   </action>
   <action name="actionRead_BPMs_Corrs">

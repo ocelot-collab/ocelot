@@ -1,7 +1,6 @@
 from ocelot import *
-from pylab import *
 from scipy.special import kn
-
+import numpy as np
 
 def B1():
     pass
@@ -12,21 +11,21 @@ def B2():
 
 def F(tm, B1, B2):
     #print B1, B2
-    Fi = 2. * sqrt(pi * (B1**2 - B2**2)) 
+    Fi = 2. * np.sqrt(pi * (B1**2 - B2**2))
     
-    km = arctan( sqrt(tm) )
+    km = np.arctan( np.sqrt(tm) )
     
     I2 = 0.0
     Nk = 5000
-    ks = linspace(km, pi/2, Nk)
+    ks = np.linspace(km, pi/2, Nk)
     dk = ks[1] - ks[0]
     for k in ks:
-        t = tan(k)**2
-        dI = (2*t+1)**2 * (t/tm/(1+t)-1.)/t + t - sqrt(t*tm*(1+t)) - (2 + 0.5/t) * log(t/tm/(1+t))
+        t = np.tan(k)**2
+        dI = (2*t+1)**2 * (t/tm/(1+t)-1.)/t + t - np.sqrt(t*tm*(1+t)) - (2 + 0.5/t) * np.log(t/tm/(1+t))
         #print t, kn(0, B2*t), B1, B2, B2*t, dI 
         #print -B1*t
         #print t, B1, ':', exp(-B1*t)
-        dI *= exp(-B1*t) * kn(0,B2*t) * sqrt(1 + t)
+        dI *= np.exp(-B1*t) * kn(0,B2*t) * np.sqrt(1 + t)
         I2 += dI * dk
     
     return Fi * I2
@@ -38,7 +37,7 @@ def t_touschek(tws, beam):
     '''
     rp2c = 2.380588258494943e-21    
     gam  = beam.E / 0.000511
-    beta = sqrt(1 - 1./gam**2)
+    beta = np.sqrt(1 - 1./gam**2)
     c = 299792458.0
     
     tm = beta**2 * beam.sigma_e_cut **2
@@ -56,8 +55,8 @@ def t_touschek(tws, beam):
     
     for i in range(len(tws)-1):
         
-        sig_x = sqrt(ex * tws[i].beta_x)
-        sig_y = sqrt(ey * tws[i].beta_y)
+        sig_x = np.sqrt(ex * tws[i].beta_x)
+        sig_y = np.sqrt(ey * tws[i].beta_y)
         
         sig_x2 = ex * tws[i].beta_x
         sig_y2 = ey * tws[i].beta_y
@@ -87,14 +86,14 @@ def t_touschek(tws, beam):
         
         #print 'B2', B2
         if B2 < 0: print ('B2 error' )
-        B2 = sqrt(B2)
+        B2 = np.sqrt(B2)
         '''
         print 'B1-B2',B1**2 - B2**2
         if B1**2 - B2**2 < 0:
             print tws[i]
         '''
         
-        I1 += F(tm, B1, B2) / ( sqrt(sig_x2 * sig_y2 - sig_e**4 * Dx**2 * Dy**2) ) * (tws[i+1].s - tws[i].s)
+        I1 += F(tm, B1, B2) / ( np.sqrt(sig_x2 * sig_y2 - sig_e**4 * Dx**2 * Dy**2) ) * (tws[i+1].s - tws[i].s)
     
     
     return 1. / (  rp2c * beam.Np * I1 / (8. * pi * gam**2 * beam.sigma_s) / tws[-1].s ) 

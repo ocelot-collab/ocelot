@@ -1,12 +1,11 @@
 __author__ = 'Sergey Tomin'
 
-from numpy import zeros, array, argwhere, loadtxt, shape, linspace
-
+import numpy as np
 
 def length_array(xyz_array):
     inds = xyz_array[xyz_array[:-1]>xyz_array[1:]]
     if len(inds)>0:
-        nxyz = argwhere(xyz_array == inds[0])[0][0]+1
+        nxyz = np.argwhere(xyz_array == inds[0])[0][0]+1
     else:
         nxyz = len(xyz_array)
     return nxyz
@@ -27,9 +26,9 @@ def read_flat_file(field_file, sCom = "#"):
     z_np = int(f.readline().split(sCom, 2)[1]) #10th line: number of points vs Z
     tot_np = x_np*y_np*z_np
 
-    Bx_array = zeros([tot_np])
-    By_array = zeros([tot_np])
-    Bz_array = zeros([tot_np])
+    Bx_array = np.zeros([tot_np])
+    By_array = np.zeros([tot_np])
+    Bz_array = np.zeros([tot_np])
 
     for i in range(tot_np):
         curLineParts = f.readline().split('\t')
@@ -39,30 +38,30 @@ def read_flat_file(field_file, sCom = "#"):
 
     f.close()
 
-    x_array = linspace(x_start, x_start + x_step*x_np, num=x_np, endpoint=False)
-    y_array = linspace(y_start, y_start + y_step*y_np, num=y_np, endpoint=False)
-    z_array = linspace(z_start, z_start + z_step*z_np, num=z_np, endpoint=False)
+    x_array = np.linspace(x_start, x_start + x_step*x_np, num=x_np, endpoint=False)
+    y_array = np.linspace(y_start, y_start + y_step*y_np, num=y_np, endpoint=False)
+    z_array = np.linspace(z_start, z_start + z_step*z_np, num=z_np, endpoint=False)
     return x_array, y_array, z_array, Bx_array, By_array, Bz_array
 
 
 def read_tabular_file(field_file):
     try:
-        field_data = loadtxt(field_file, delimiter=' ', unpack = True)
+        field_data = np.loadtxt(field_file, delimiter=' ', unpack = True)
     except:
         try:
             print( "read_map: try to use delimiter = ','")
-            field_data = loadtxt(field_file, delimiter=',', unpack = True)
+            field_data = np.loadtxt(field_file, delimiter=',', unpack = True)
         except:
-            field_data = loadtxt(field_file, unpack=True)
+            field_data = np.loadtxt(field_file, unpack=True)
 
-    ncols = shape(field_data)[0]
+    ncols = np.shape(field_data)[0]
 
-    Bx_array = array([])
-    By_array = array([])
-    Bz_array = array([])
-    x_array = array([])
-    y_array = array([])
-    z_array = array([])
+    Bx_array = np.array([])
+    By_array = np.array([])
+    Bz_array = np.array([])
+    x_array = np.array([])
+    y_array = np.array([])
+    z_array = np.array([])
 
     if ncols == 2:
         # planar undulator or dipol magnet/phase shifter
@@ -105,12 +104,12 @@ class FieldMap:
         self.format = format
         self.units = "mm"
         self.field_file_rep = 1
-        self.Bx_arr = array([])
-        self.By_arr = array([])
-        self.Bz_arr = array([])
-        self.x_arr = array([])
-        self.y_arr = array([])
-        self.z_arr = array([])
+        self.Bx_arr = np.array([])
+        self.By_arr = np.array([])
+        self.Bz_arr = np.array([])
+        self.x_arr = np.array([])
+        self.y_arr = np.array([])
+        self.z_arr = np.array([])
         if self.field_file != None:
             try:
                 self.format = "flat"

@@ -4,7 +4,7 @@ linear dimensions in [m]
 """
 from ocelot.cpbd.field_map import FieldMap
 import numpy as np
-from numpy import pi
+#from numpy import pi
 
 
 class Element(object):
@@ -240,7 +240,7 @@ class Vcor(RBend):
         RBend.__init__(self, l=l, angle=angle, eid=eid)
         self.l = l
         self.angle = angle
-        self.tilt = pi/2.
+        self.tilt = np.pi/2.
 
 
 class Undulator(Element):

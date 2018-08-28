@@ -1,12 +1,14 @@
-'''
+"""
 general ocelot description
-'''
+"""
 
-__version__ = '18.02.1'
+__version__ = '18.06.3'
 
 
 __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope",  # beam
-            "ellipse_from_twiss", "ParticleArray", "save_particle_array", "load_particle_array",   # beam
+            "ellipse_from_twiss", "ParticleArray",    # beam
+           "global_slice_analysis",  # beam
+           "save_particle_array", "load_particle_array",            # io
            'fodo_parameters', 'lattice_transfer_map', 'TransferMap', 'gauss_from_twiss',  # optics
            "get_map", "MethodTM", "SecondTM", "KickTM", "CavityTM", "UndulatorTestTM",  # optics
            'Element', 'Multipole', 'Quadrupole', 'RBend', "Matrix", "UnknownElement",  # elements
@@ -21,8 +23,8 @@ __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope", 
            "compensate_chromaticity",  # chromaticity
            "EbeamParams",  # e_beam_params
            "write_lattice",  # io
-           "CSR", "SpaceCharge", "Wake", "WakeTable", "WakeKick", "BeamTransform",
-           "EmptyProc",
+           "CSR", "SpaceCharge", "Wake", "WakeTable", "WakeKick", "BeamTransform", "SmoothBeam",
+           "EmptyProc", "PhysProc", "LaserHeater",
            "MagneticLattice",
            "ocelog"
            ]
@@ -48,3 +50,19 @@ import logging
 print('initializing ocelot...')
 # logger = Logger()
 #xrange=range
+
+try:
+    import numba
+except:
+    print("import: module NUMBA is not installed. Install it to speed up calculation")
+
+try:
+    import pyfftw
+except:
+    print("import: module PYFFTW is not installed. Install it to speed up calculation")
+
+try:
+    import numexpr
+except:
+    print("import: module NUMEXPR is not installed. Install it to speed up calculation")
+

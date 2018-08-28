@@ -2,7 +2,7 @@ __author__ = 'Sergey Tomin'
 
 import numpy as np
 from scipy.integrate import odeint
-from numpy import cos, sin, sqrt, sqrt, zeros, eye, tan, dot, empty_like, array, transpose, linspace
+from scipy import optimize
 from ocelot.common.globals import m_e_GeV, m_e_eV, speed_of_light
 from copy import copy
 from numpy.linalg import norm
@@ -104,13 +104,13 @@ def t_nnn(L, h, k1, k2, energy=0):
     ky2 = -k1
     kx4 = kx2*kx2
     ky4 = ky2*ky2
-    kx = sqrt(kx2 + 0.j)
-    ky = sqrt(ky2 + 0.j)
-    cx = cos(kx*L).real
-    sx = (sin(kx*L)/kx).real if kx != 0 else L
-    cy = cos(ky*L).real
+    kx = np.sqrt(kx2 + 0.j)
+    ky = np.sqrt(ky2 + 0.j)
+    cx = np.cos(kx*L).real
+    sx = (np.sin(kx*L)/kx).real if kx != 0 else L
+    cy = np.cos(ky*L).real
 
-    sy = (sin(ky*L)/ky).real if ky != 0 else L
+    sy = (np.sin(ky*L)/ky).real if ky != 0 else L
 
     sx2 = sx*sx
     sy2 = sy*sy
@@ -312,7 +312,7 @@ def t_nnn(L, h, k1, k2, energy=0):
     cy_1 = -ky2*sy
     sy_1 = cy
     dx_1 = h*sx
-    T = zeros((6, 6, 6))
+    T = np.zeros((6, 6, 6))
     T[0, 0, 0] = t111
     T[0, 0, 1] = t112 + h*sx
     T[0, 0, 5] = t116
@@ -392,7 +392,7 @@ def t_nnn(L, h, k1, k2, energy=0):
     T[4, 0, 5] = T516/beta
     T[4, 1, 1] = T522/beta
     T[4, 1, 5] = T526/beta
-    T[4, 5, 5] = T566/beta + 1.5*L/(beta*beta)*igamma2 # ? beta**3 in Xtrack but beta**2
+    T[4, 5, 5] = T566/beta + 1.5*L/(beta*beta*beta)*igamma2
     T[4, 2, 2] = T533/beta
     T[4, 2, 3] = T534/beta
     T[4, 3, 3] = T544/beta
@@ -487,18 +487,18 @@ def t_nnn(L, h, k1, k2, energy=0):
 
 def fringe_ent(h, k1, e, h_pole=0., gap=0., fint=0.):
 
-    sec_e = 1./cos(e)
+    sec_e = 1./np.cos(e)
     sec_e2 = sec_e*sec_e
     sec_e3 = sec_e2*sec_e
-    tan_e = tan(e)
+    tan_e = np.tan(e)
     tan_e2 = tan_e*tan_e
-    phi = fint*h*gap*sec_e*(1. + sin(e)**2)
-    R = eye(6)
-    R[1,0] = h*tan_e
-    R[3,2] = -h*tan(e - phi)
+    phi = fint*h*gap*sec_e*(1. + np.sin(e)**2)
+    R = np.eye(6)
+    R[1, 0] = h*tan_e
+    R[3, 2] = -h*np.tan(e - phi)
     #print R
 
-    T = zeros((6,6,6))
+    T = np.zeros((6,6,6))
     T[0, 0, 0] = -h/2.*tan_e2
     T[0, 2, 2] = h/2.*sec_e2
     T[1, 0, 0] = h/2.*h_pole*sec_e3 + k1*tan_e
@@ -510,35 +510,35 @@ def fringe_ent(h, k1, e, h_pole=0., gap=0., fint=0.):
     T[3, 0, 2] = -h*h_pole*sec_e3 - 2*k1*tan_e
     T[3, 0, 3] = -h*tan_e2
     T[3, 1, 2] = -h*sec_e2
-    T[3, 2, 5] = h*tan_e - h*phi/cos(e - phi)**2
+    T[3, 2, 5] = h*tan_e - h*phi/np.cos(e - phi)**2
     # MAD
     if __MAD__:
         T[1, 0, 5] = 0
         T[3, 2, 5] = 0
-    #if e == 0:
-    #   T = zeros((6,6,6))
     return R, T
 
 def fringe_ext(h, k1, e, h_pole=0., gap=0., fint=0.):
 
-    sec_e = 1./cos(e)
+    sec_e = 1./np.cos(e)
     sec_e2 = sec_e*sec_e
     sec_e3 = sec_e2*sec_e
-    tan_e = tan(e)
+    tan_e = np.tan(e)
     tan_e2 = tan_e*tan_e
-    phi = fint*h*gap*sec_e*(1. + sin(e)**2)
-    R = eye(6)
+    tan_e3 = tan_e2 * tan_e
+    phi = fint*h*gap*sec_e*(1. + np.sin(e)**2)
+    h2 = h*h
+    R = np.eye(6)
 
-    R[1,0] = h*tan_e
-    R[3,2] = -h*tan(e - phi)
+    R[1, 0] = h*tan_e
+    R[3, 2] = -h*np.tan(e - phi)
     #print R
 
-    T = zeros((6,6,6))
+    T = np.zeros((6,6,6))
     T[0, 0, 0] = h/2.*tan_e2
     T[0, 2, 2] = -h/2.*sec_e2
     T[1, 0, 0] = h/2.*h_pole*sec_e3 - (-k1 + h*h/2.*tan_e2)*tan_e
     T[1, 0, 1] = -h*tan_e2
-    T[1,0,5] = -h*tan_e
+    T[1, 0, 5] = -h*tan_e
     T[1, 2, 2] = (-k1 - h*h/2.*tan_e2)*tan_e - h/2.*h_pole*sec_e3
     T[1, 2, 3] = h*tan_e2
     T[2, 0, 2] = -h*tan_e2
@@ -548,10 +548,8 @@ def fringe_ext(h, k1, e, h_pole=0., gap=0., fint=0.):
     #T[3,2,5] = h*tan_e - h*phi/cos(e - phi)**2
     # MAD
     if __MAD__:
-        T[1,0,5] = 0
-        T[3,2,5] = 0
-    #if e == 0:
-    #    T = zeros((6,6,6))
+        T[1, 0, 5] = 0
+        T[3, 2, 5] = 0
     return R, T
 
 def H23(vec_x, h, k1, k2, beta=1., g_inv=0.):
@@ -666,8 +664,8 @@ def sym_map(z, X, h, k1, k2, energy=0.):
     beta = 1.
     if gamma != 0.:
         g_inv = 1./gamma
-        beta = sqrt(1. - g_inv*g_inv)
-    z_array = linspace(0., z, num=n)
+        beta = np.sqrt(1. - g_inv*g_inv)
+    z_array = np.linspace(0., z, num=n)
     step = z_array[1] - z_array[0]
 
     x =     X[0::6]
@@ -786,7 +784,7 @@ def rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=0.):
     y'' = -v/(dz/dt)*e/p*(x'*Bz - Bx*(1.+y'^2) + x'*y'*By)
     v/(dz/dt) = sqrt(1 + y'^2 + x'^2)
     z' is not needed in the initial conditions and z' is not used for SR calculation
-        therefore z' can be arbitrary defined in the returning array. z' = beta_z
+        therefore z' can be arbitrary defined in the returning array. z' = dE/(ps*c)
 
     :param y0: array n*6; initial coordinates of n particles
                 [x0, x0'=dx/dz, y0, y0=dy/dz, 0, 0,
@@ -801,35 +799,38 @@ def rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=0.):
             [x, x', y, y', z, z', Bx, By, Bz, ...
             xn, xn', yn, yn', zn, zn', Bxn, Byn, Bzn]
     """
+
+    #pc_ref = np.sqrt(energy**2 - m_e_GeV**2)
     z = np.linspace(s_start, s_stop, num=N)
     h = z[1] - z[0]
     N = len(z)
-    gamma = energy/m_e_GeV
+    gamma0 = energy/m_e_GeV
     charge = 1
     mass = 1 #in electron mass
-    cmm = speed_of_light
-    massElectron = m_e_eV# 0.510998910e+6 #// rest mass of electron
-
-    u = np.zeros((N*9, int(len(y0)/6)))
-    px = y0[1::6]
-    py = y0[3::6]
+    #cmm = speed_of_light
+    #massElectron = m_e_eV# 0.510998910e+6 #// rest mass of electron
+    u = np.zeros((N*9, np.shape(y0)[1]))
+    px = y0[1]
+    py = y0[3]
     dz = h
-    #dGamma2 = 1. - 0.5/(gamma*gamma)
-    beta = np.sqrt(1. - 1./(gamma*gamma))
+    beta0 = np.sqrt(1. - 1./(gamma0*gamma0))
+    gammai = gamma0*(1 + y0[5]*beta0)
     #pz = dGamma2 - (px*px + py*py)/2.
-    betaz = beta/np.sqrt(1 + px*px + py*py)
-    k = charge*cmm/(massElectron*mass*gamma)
-    u[0, :] = y0[0::6]
-    u[1, :] = y0[1::6]
-    u[2, :] = y0[2::6]
-    u[3, :] = y0[3::6]
-    u[4, :] = z[0]
-    u[5, :] = betaz
+    betai = np.sqrt(1 - 1/gammai**2) #
+    #betaz = np.sqrt(betai**2 - px*px - py*py)
+    k = charge*speed_of_light/(m_e_eV*mass*gammai)
+    u[0, :] = y0[0]
+    u[1, :] = y0[1]
+    u[2, :] = y0[2]
+    u[3, :] = y0[3]
+    u[4, :] = y0[4] #+ z[0]
+    u[5, :] = y0[5]
     dzk = dz*k
+    Z_n = y0[4] #+ s_start
     for i in range(N-1):
         X = u[i*9 + 0]
         Y = u[i*9 + 2]
-        Z = u[i*9 + 4]
+        Z = Z_n #u[i*9 + 4]
         bxconst = u[i*9 + 1]
         byconst = u[i*9 + 3]
         #bz = u[i*6 + 5]
@@ -865,35 +866,54 @@ def rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=0.):
         Bx, By, Bz = mag_field(X + kx3, Y + ky3, Z_n)
         mx4, my4 = moments(bx, by, Bx, By, Bz, dzk)
 
-        u[(i+1)*9 + 0] = X + 1/6.*(kx1 + 2.*(kx2 + kx3) + kx4)
-        u[(i+1)*9 + 1] = bxconst + 1/6.*(mx1 + 2.*(mx2 + mx3) + mx4) #// conversion in mrad
-        u[(i+1)*9 + 2] = Y + 1/6.*(ky1 + 2.*(ky2 + ky3) + ky4)
-        u[(i+1)*9 + 3] = byconst + 1/6.*(my1 + 2.*(my2 + my3) + my4)
-        u[(i+1)*9 + 4] = Z_n
-        u[(i+1)*9 + 5] = beta/np.sqrt(1 + u[(i+1)*9 + 1]*u[(i+1)*9 + 1] + u[(i+1)*9 + 3]*u[(i+1)*9 + 3])#dGamma2 - (u[(i+1)*9 + 1]*u[(i+1)*9 + 1] + u[(i+1)*9 + 3]*u[(i+1)*9 + 3])/2.
+        u[(i + 1) * 9 + 0] = X + 1/6.*(kx1 + 2.*(kx2 + kx3) + kx4)
+        u[(i + 1) * 9 + 1] = bxconst + 1/6.*(mx1 + 2.*(mx2 + mx3) + mx4) #// conversion in mrad
+        u[(i + 1) * 9 + 2] = Y + 1/6.*(ky1 + 2.*(ky2 + ky3) + ky4)
+        u[(i + 1) * 9 + 3] = byconst + 1/6.*(my1 + 2.*(my2 + my3) + my4)
+        u[(i + 1) * 9 + 4] = Z_n #u[i*9 + 4] + dz*np.sqrt(1 + u[(i+1)*9 + 1]**2 + u[(i+1)*9 + 3]**2)
+        u[(i + 1) * 9 + 5] = y0[5]
+        # beta_z as 6-th coordinate
+        #u[(i+1)*9 + 5] = betai/np.sqrt(1 + u[(i+1)*9 + 1]*u[(i+1)*9 + 1] + u[(i+1)*9 + 3]*u[(i+1)*9 + 3])#dGamma2 - (u[(i+1)*9 + 1]*u[(i+1)*9 + 1] + u[(i+1)*9 + 3]*u[(i+1)*9 + 3])/2.
 
     u[(N-1)*9 + 6], u[(N-1)*9 + 7], u[(N-1)*9 + 8] = mag_field(u[(N-1)*9 + 0], u[(N-1)*9 + 2], u[(N-1)*9 + 4])
     return u
 
 
-def rk_field(y0, s_start, s_stop, N, energy, mag_field):
-    #z = linspace(0, l, num=N)
-    #h = z[1]-z[0]
-    #N = len(z)
-    #print(mag_field(0,0,0))
+def rk_field(rparticles, s_start, s_stop, N, energy, mag_field):
+    """
+    Method to track particles through mag field
+
+    :param rparticles: initial coordinates of the particles shape (6xN), N number of particles (e.g. ParticleArray.rparticles)
+    :param s_start:
+    :param s_stop:
+    :param N: number of points on the trajectory
+    :param energy: in GeV
+    :param mag_field: must be function e.g. lambda x, y, z: (Bx, By, Bz)
+    :return:
+    """
     if s_start > s_stop:
         print("rk_field: s_start > s_stop. Setup s_start = 0")
         s_start = 0.
-    traj_data = rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=s_start)
-    #print np.shape(traj_data), np.shape(y0)
-    #print traj_data
-    y0[0::6] = traj_data[(N-1)*9 + 0, :]
-    y0[1::6] = traj_data[(N-1)*9 + 1, :]
-    y0[2::6] = traj_data[(N-1)*9 + 2, :]
-    y0[3::6] = traj_data[(N-1)*9 + 3, :]
-    #y0[4::6] = traj_data[(N-1)*9 + 4,:]
-    #y0[5::6] = traj_data[(N-1)*9 + 5,:]
-    return y0
+
+    traj_ref = rk_track_in_field(np.array([[0], [0], [0], [0], [0], [0]]), s_stop, N, energy, mag_field, s_start=s_start)
+    x1 = traj_ref[1+9::9]
+    y1 = traj_ref[3+9::9]
+    dz = traj_ref[4+9::9] - traj_ref[4:-9:9]
+    ref_path = np.sum(dz*np.sqrt(1 + x1*x1 + y1*y1))
+
+    traj_data = rk_track_in_field(rparticles, s_stop, N, energy, mag_field, s_start=s_start)
+
+    x1 = traj_data[1+9::9, :]
+    y1 = traj_data[3+9::9, :]
+    dz = traj_data[4+9::9, :] - traj_data[4:-9:9, :]
+    z_fin = traj_data[4, :] + np.sum(dz*np.sqrt(1 + x1*x1 + y1*y1), axis=0) - ref_path
+    rparticles[0, :] = traj_data[(N-1)*9 + 0, :]
+    rparticles[1, :] = traj_data[(N-1)*9 + 1, :]
+    rparticles[2, :] = traj_data[(N-1)*9 + 2, :]
+    rparticles[3, :] = traj_data[(N-1)*9 + 3, :]
+    rparticles[4, :] = z_fin #traj_data[(N-1)*9 + 4, :]
+    rparticles[5, :] = traj_data[(N-1)*9 + 5, :]
+    return rparticles
 
 
 def scipy_track_in_field(y0, l, N, energy, mag_field):# y0, l, N, energy, mag_field
@@ -920,7 +940,7 @@ def scipy_track_in_field(y0, l, N, energy, mag_field):# y0, l, N, energy, mag_fi
         mx = k*(by*Bz - By*(1.+bx2) + bxy*Bx)
         my = -k*(bx*Bz - Bx*(1.+by2) + bxy*By)
         y = np.append(bx, (mx, by, my))
-        return array(y) #[y[1],mx, y[3], my]
+        return np.array(y) #[y[1],mx, y[3], my]
 
     n = len(y0)/6
     x = y0[0::6]
@@ -970,7 +990,7 @@ def track_und_weave(y0, z, kz, kx ,Kx, energy):
     m0 = m_e_eV
     B0 = Kx*m0*kz/c
     #y = array(y0)
-    ky = sqrt(kz*kz - kx*kx)
+    ky = np.sqrt(kz*kz - kx*kx)
     #print "B0 = ", B0
     #print "rho = ", rho
     #print "kz = ", kz
@@ -980,10 +1000,10 @@ def track_und_weave(y0, z, kz, kx ,Kx, energy):
     N = len(z)
     #Ax =  1/kz * np.cos(kx*y0[0])*np.cosh(ky*y0[2])*np.sin(kz*z[0])
     #Ay =  kx/(ky*kz) * np.sin(kx*y0[0])*np.sinh(ky*y0[2])*np.sin(kz*z[0])
-    q = array([y0[0],y0[1] ,y0[2],y0[3], y0[4], y0[5], kx, ky, kz, h, N, B0, gamma*(1+y0[5])])
+    q = np.array([y0[0],y0[1] ,y0[2],y0[3], y0[4], y0[5], kx, ky, kz, h, N, B0, gamma*(1+y0[5])])
     #print N
 
-    u = zeros(N*6)
+    u = np.zeros(N*6)
     support_code = """
     extern "C" {
     void fields(double x, double y, double z, double kx, double ky, double kz, double B0, double *Bx, double *By, double *Bz)
@@ -1142,13 +1162,13 @@ def track_und_weave_openmp(u, l, N, kz, kx ,Kx, energy):
     m0 = m_e_eV
     B0 = Kx*m0*kz/c
 
-    ky = sqrt(kz*kz - kx*kx)
-    z = linspace(0, l, num=N)
+    ky = np.sqrt(kz*kz - kx*kx)
+    z = np.linspace(0, l, num=N)
     h = z[1]-z[0]
     N = len(z)
 
     nparticles = len(u)/6
-    q = array([ kx, ky, kz, h, N, B0, gamma, nparticles])
+    q = np.array([ kx, ky, kz, h, N, B0, gamma, nparticles])
     code = """
     double charge = 1;
     double mass = 1; //in electron mass

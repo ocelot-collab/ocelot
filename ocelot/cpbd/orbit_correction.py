@@ -1,17 +1,18 @@
 __author__ = 'Sergey Tomin'
 
-
-from numpy import diag, shape
+import numpy as np
 from numpy.linalg import svd
 from scipy.interpolate import splrep, splev
 from scipy.optimize import linprog
 from ocelot.cpbd.match import closed_orbit
 from ocelot.cpbd.track import *
-
 from ocelot.cpbd.response_matrix import *
 import copy
 import json
 from time import sleep, time
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -26,15 +27,17 @@ class OrbitSVD:
     def apply(self):
         # print resp_matrix
         if self.weights is None:
-            self.weights = eye(len(self.orbit))
+            self.weights = np.eye(len(self.orbit))
         #print(np.shape(self.weights), np.shape(self.resp_matrix))
-        resp_matrix_w = dot(self.weights, self.resp_matrix)
-        misallign_w = dot(self.weights, self.orbit)
+        resp_matrix = np.dot(self.weights, self.resp_matrix)
+        misallign = np.dot(self.weights, self.orbit)
+        # resp_matrix = self.resp_matrix
+        # misallign = self.orbit
         #U, s, V = svd(resp_matrix_w)
 
-        U, s, V = svd(self.resp_matrix)
+        U, s, V = svd(resp_matrix)
         # print (s)
-        s_inv = zeros(len(s))
+        s_inv = np.zeros(len(s))
         s_max = max(s)
         for i in range(len(s)):
             #print("S[",i,"]=", s[i], "s max = ", s_max)
@@ -47,14 +50,14 @@ class OrbitSVD:
             else:
                 s_inv[i] = 1. / s[i]
         #print(s_inv)
-        Sinv = zeros((shape(U)[0], shape(V)[0]))
-        Sinv[:len(s), :len(s)] = diag(s_inv)
-        Sinv = transpose(Sinv)
-        A = dot(transpose(V), dot(Sinv, transpose(U)))
-        #angle = dot(A, misallign_w)
-        angle = dot(A, self.orbit)
+        Sinv = np.zeros((np.shape(U)[0], np.shape(V)[0]))
+        Sinv[:len(s), :len(s)] = np.diag(s_inv)
+        Sinv = np.transpose(Sinv)
+        A = np.dot(np.transpose(V), np.dot(Sinv, np.transpose(U)))
+        #angle = np.dot(A, misallign_w)
+        angle = np.dot(A, misallign)
         #print(A)
-        #print(angle)
+        logger.debug("max(abs(angle)) = " + str(np.max(np.abs(angle))) + " min(abs(angle)) = " + str(np.min(np.abs(angle))))
         return angle
 
 class LInfinityNorm(OrbitSVD):
@@ -168,9 +171,9 @@ class NewOrbit:
                     self.hcors.append(elem)
             L += elem.l
         if len(self.hcors) == 0:
-            print("there are not horizontal correctors")
+            logger.warning(" create_correctors: there are not horizontal correctors")
         if len(self.vcors) == 0:
-            print("there are not vertical correctors")
+            logging.warning(" create_correctors: there are not vertical correctors")
 
     def get_ref_orbit(self):
         for bpm in self.bpms:
@@ -182,7 +185,7 @@ class NewOrbit:
         #self.get_ref_orbit()
 
         m = len(self.bpms)
-        orbit = zeros(2 * m)
+        orbit = np.zeros(2 * m)
         for i, bpm in enumerate(self.bpms):
             #print("get_orbit = ",bpm.id, bpm.x,  bpm.x_ref)
             orbit[i] = bpm.x - bpm.x_ref
@@ -192,7 +195,7 @@ class NewOrbit:
 
     def get_dispersion(self):
         m = len(self.bpms)
-        disp = zeros(2 * m)
+        disp = np.zeros(2 * m)
         for i, bpm in enumerate(self.bpms):
             disp[i] = bpm.Dx - bpm.Dx_des
             disp[i + m] = bpm.Dy - bpm.Dy_des
@@ -212,14 +215,25 @@ class NewOrbit:
         rm[n1:, m1:] = mat2[:, :]
         return rm
 
-    def correction(self, alpha=0,  epsilon_x=0.001, epsilon_y=0.001, p_init=None, print_log=True):
+    def correction(self, alpha=0,  epsilon_x=0.001, epsilon_y=0.001, beta=0, p_init=None, print_log=True):
+        """
+        Method to find corrector kicks using SVD. bpm weights are ignored for a moment but everything ready to immplement.
+
+        :param alpha: 0 - 1, trade off between orbit and dispersion correction, 0 - only orbit, 1 - only dispersion
+        :param epsilon_x: cut s-matrix diag for x-plane, if s[i] < s_max * epsilon: s_inv[i] = 0. else s_inv[i] = 1/s[i]
+        :param epsilon_y: cut s-matrix diag for y-plane, if s[i] < s_max * epsilon: s_inv[i] = 0. else s_inv[i] = 1/s[i]
+        :param beta: weight for suppress large kicks
+        :param p_init: particle initial conditions. Removed in that version.
+        :param print_log:
+        :return:
+        """
         #TODO: initial condition for particle was removed. Add it again
         cor_list = [cor.id for cor in np.append(self.hcors, self.vcors)]
         bpm_list = [bpm.id for bpm in self.bpms]
         orbit = (1 - alpha) * self.get_orbit()
 
         RM = (1 - alpha) * self.response_matrix.extract(cor_list=cor_list, bpm_list=bpm_list)
-        #print("RM = ", np.shape(RM))
+        logger.debug(" shape(RM) = " + str(np.shape(RM)))
         if alpha != 0:
             disp = alpha * self.get_dispersion()
         else:
@@ -229,26 +243,31 @@ class NewOrbit:
             DRM = alpha * self.disp_response_matrix.extract(cor_list=cor_list, bpm_list=bpm_list)
         else:
             DRM = np.zeros_like(RM)
-        #print("DRM = ", np.shape(DRM))
+        logger.debug(" shape(DRM) = " + str(np.shape(DRM)))
 
         rmatrix = self.combine_matrices(RM, DRM)
 
-
+        logger.debug(" shape(RM + DRM): " + str(np.shape(rmatrix)))
         # trying to minimize strength of the correctors. does not work actually
-        #rmatrix = self.combine_matrices(rmatrix, 10*np.eye(np.shape(DRM)[0]))
-
+        if beta > 0:
+            rmatrix = self.combine_matrices(rmatrix, beta*np.eye(np.shape(DRM)[0]))
+            logging.debug(" beta > 0: shape(rmatrix) = " + str(np.shape(rmatrix)))
         #print("rmatrix = ", rmatrix)
         orbit = np.append(orbit, disp)
 
         # trying to minimize strength of the correctors. does not work actually
-        #orbit = np.append(orbit, np.zeros(np.shape(DRM)[0]))
-
+        logging.debug(" shape(orbit + disp): " + str(np.shape(orbit)))
+        if beta > 0:
+            orbit = np.append(orbit, np.zeros(np.shape(DRM)[0]))
+            logger.debug(" beta > 0: shape(orbit)" + str(np.shape(orbit)))
         # bpm weights
         #bpm_weights = np.eye(len(orbit))
         bpm_weights = np.array([bpm.weight for bpm in self.bpms])
         bpm_weights_diag = np.diag( np.append(bpm_weights, [bpm_weights, bpm_weights, bpm_weights]))
-        #print("bpm_weights = ", np.shape(bpm_weights), len(orbit))
-
+        logger.debug(" shape(bpm weight) = " + str(np.shape(bpm_weights_diag)))
+        if beta > 0:
+            bpm_weights_diag = self.combine_matrices(bpm_weights_diag, np.diag(np.append(bpm_weights, [bpm_weights] )))
+            logger.debug(" beta > 0: shape(bpm weight) = " + str(np.shape(bpm_weights_diag)))
         self.orbit_svd = OrbitSVD(resp_matrix=rmatrix, orbit=orbit, weights=bpm_weights_diag, epsilon_x=epsilon_x, epsilon_y=epsilon_y)
 
         #self.orbit_svd = LInfinityNorm(resp_matrix=rmatrix, orbit=orbit, weights=bpm_weights_diag, epsilon_x=epsilon_x,
@@ -394,7 +413,7 @@ class Orbit:
             self.particle0 = p_init
         #print "particle2 = ", self.particle0.s, self.particle0.x
         p = copy.copy(self.particle0)
-        navi = Navigator()
+        navi = Navigator(self.lat)
         L = 0.
         for bpm in self.bpms:
             #print("energy = ", p.E)
@@ -409,7 +428,7 @@ class Orbit:
 
             particles.append(copy.copy(p))
         #print("energy = ", p.E)
-        return array(X), array(Y)
+        return np.array(X), np.array(Y)
 
     def response_matrix(self, mi, dp, timeout=0.5, delta_i=0.01):
         resp = np.zeros((len(self.bpms)*2, len(self.hcors)+len(self.vcors)))
@@ -467,12 +486,12 @@ class Orbit:
             tw_init = Twiss()
 
         tws = twiss(self.lat, tw_init, nPoints=int(self.lat.totalLen/0.05))
-        s = array([tw.s for tw in tws])
-        tck_mux = splrep(s, array([tw.mux for tw in tws]))
-        tck_muy = splrep(s, array([tw.muy for tw in tws]))
+        s = np.array([tw.s for tw in tws])
+        tck_mux = splrep(s, np.array([tw.mux for tw in tws]))
+        tck_muy = splrep(s, np.array([tw.muy for tw in tws]))
 
-        beta_x = array([tw.beta_x for tw in tws])
-        beta_y = array([tw.beta_y for tw in tws])
+        beta_x = np.array([tw.beta_x for tw in tws])
+        beta_y = np.array([tw.beta_y for tw in tws])
         self.nu_x = tws[-1].mux/2./pi
         self.nu_y = tws[-1].muy/2./pi
 
@@ -519,9 +538,9 @@ class Orbit:
         nx = len(self.hcors)
         ny = len(self.vcors)
         if match_ic:
-            real_resp = zeros((m*2, nx + ny+4))
+            real_resp = np.zeros((m*2, nx + ny+4))
         else:
-            real_resp = zeros((m*2, nx + ny))
+            real_resp = np.zeros((m*2, nx + ny))
         self.read_virtual_orbit(p_init=copy.deepcopy(p_init))
         bpms = copy.deepcopy(self.bpms)
 
@@ -580,8 +599,8 @@ class Orbit:
         m = len(self.bpms)
         nx = len(self.hcors)
         ny = len(self.vcors)
-        h_resp = zeros((m, nx))
-        v_resp = zeros((m, ny))
+        h_resp = np.zeros((m, nx))
+        v_resp = np.zeros((m, ny))
         sin_pnu_x = sin(pi*self.nu_x)
         sin_pnu_y = sin(pi*self.nu_y)
         for i, bpm in enumerate(self.bpms):
@@ -597,7 +616,7 @@ class Orbit:
         m = len(self.bpms)
         kx = len(self.hcors)
         ky = len(self.vcors)
-        self.resp = zeros((2*m, kx + ky))
+        self.resp = np.zeros((2*m, kx + ky))
         self.resp[:m,:kx] = h_resp[:,:]
         self.resp[m:,kx:] = v_resp[:,:]
         #print "shape = ", shape(self.resp)
@@ -616,8 +635,8 @@ class Orbit:
         m = len(self.bpms)
         nx = len(self.hcors)
         ny = len(self.vcors)
-        h_resp = zeros((m, nx))
-        v_resp = zeros((m, ny))
+        h_resp = np.zeros((m, nx))
+        v_resp = np.zeros((m, ny))
 
         for i, bpm in enumerate(self.bpms):
             kx = sqrt(bpm.beta_x)#/(2.*sin_pnu_x)
@@ -637,7 +656,7 @@ class Orbit:
         kx = len(self.hcors)
         ky = len(self.vcors)
 
-        self.resp = zeros((2*m, kx + ky))
+        self.resp = np.zeros((2*m, kx + ky))
         self.resp[:m,:kx] = h_resp[:, :]
         self.resp[m:,kx:] = v_resp[:, :]
 
@@ -659,7 +678,7 @@ class Orbit:
         m = len(self.bpms)
         nx = len(self.hcors)
         ny = len(self.vcors)
-        self.resp = zeros((2 * m, nx + ny))
+        self.resp = np.zeros((2 * m, nx + ny))
 
 
         for j, cor in enumerate([item for sublist in [self.hcors, self.vcors] for item in sublist]):
@@ -674,7 +693,7 @@ class Orbit:
 
                 Rb = elem.transfer_map.R(E)
                 #print("Rb = ", Rb)
-                Ra = dot(Rb, Ra)
+                Ra = np.dot(Rb, Ra)
                 E += elem.transfer_map.delta_e
                 if elem in self.bpms:
                     #print("R12 = ", cor.lat_inx, cor.id, cor.s, Ra[0,1])
@@ -713,7 +732,7 @@ class Orbit:
         add_i = 0
         if match_ic:
             add_i = 4
-        self.resp = zeros((2 * m, nx + ny + add_i))
+        self.resp = np.zeros((2 * m, nx + ny + add_i))
         s = [bpm.s for bpm in self.bpms]
         X0, Y0 = self.read_virtual_orbit(p_init=Particle( E=tw_init.E))
         #plt.plot(s, X0,"ro-",  s, Y0,"bo-")
@@ -792,7 +811,7 @@ class Orbit:
         #h_resp = zeros((m, nx))
         #v_resp = zeros((m, ny))
 
-        self.resp = zeros((2 * m, nx + ny))
+        self.resp = np.zeros((2 * m, nx + ny))
         s = [bpm.s for bpm in self.bpms]
         Dx0, Dy0 = self.disp_measur(E0=tw_init.E)
         #plt.plot(s, Dx0,"ro-",  s, Dy0,"bo-")
@@ -824,29 +843,29 @@ class Orbit:
     def apply_svd(self, resp_matrix, misallign, weight=None, alpha=1.e-4):
         #print resp_matrix
         if weight is None:
-            weight = eye(len(misallign))
-        resp_matrix_w = dot(weight, resp_matrix)
-        misallign_w = dot(weight, misallign)
+            weight = np.eye(len(misallign))
+        resp_matrix_w = np.dot(weight, resp_matrix)
+        misallign_w = np.dot(weight, misallign)
         U, s, V = svd(resp_matrix_w)
         #print (s)
-        s_inv = zeros(len(s))
+        s_inv = np.zeros(len(s))
         for i in range(len(s)):
             #if s[i]<1./max(s):
             if s[i] < alpha:
                 s_inv[i] = 0.
             else:
                 s_inv[i] = 1./s[i]
-        Sinv = zeros((shape(U)[0], shape(V)[0]))
-        Sinv[:len(s), :len(s)] = diag(s_inv)
-        Sinv = transpose(Sinv)
-        A = dot(transpose(V), dot(Sinv, transpose(U)))
-        angle = dot(A, misallign_w)
+        Sinv = np.zeros((np.shape(U)[0], np.shape(V)[0]))
+        Sinv[:len(s), :len(s)] = np.diag(s_inv)
+        Sinv = np.transpose(Sinv)
+        A = np.dot(np.transpose(V), np.dot(Sinv, np.transpose(U)))
+        angle = np.dot(A, misallign_w)
         return angle
 
     def correction(self, p_init=None):
         m = len(self.bpms)
-        monitors = zeros(2*m)
-        weights = eye(len(monitors))
+        monitors = np.zeros(2*m)
+        weights = np.eye(len(monitors))
         for i, bpm in enumerate(self.bpms):
             monitors[i] = bpm.x
             monitors[i+m] = bpm.y
@@ -898,7 +917,7 @@ class Orbit:
     def disp_correction(self, monitors, p_init=None, alpha=1e-3):
         m = len(self.bpms)
         #monitors = zeros(2*m)
-        weights = eye(len(monitors))
+        weights = np.eye(len(monitors))
         for i, bpm in enumerate(self.bpms):
             #monitors[i] = bpm.x
             #monitors[i+m] = bpm.y
@@ -928,7 +947,7 @@ class Orbit:
 
     def elem_correction(self, elem_response, elem_types,  remove_elems=[]):
         m = len(self.bpms)
-        monitors = zeros(2*m)
+        monitors = np.zeros(2*m)
         self.create_types( elem_types, remove_elems=remove_elems)
         for i, bpm in enumerate(self.bpms):
             monitors[i] = bpm.x
@@ -964,7 +983,7 @@ class Orbit:
         nx = len(self.htypes)
         ny = len(self.vtypes)
         print(nx, ny, m)
-        real_resp = zeros((m * 2, nx + ny + 4))
+        real_resp = np.zeros((m * 2, nx + ny + 4))
         X0, Y0 = self.read_virtual_orbit(p_init=copy.deepcopy(p_init))
         Or0 = np.append(X0, Y0)
         #bpms = copy.deepcopy(self.bpms)
@@ -1115,7 +1134,7 @@ def change_quad_position(quad, lattice, dx=0., dy=0.):
 def measure_response_matrix(orbit, lattice):
 
     m = len(orbit.bpms)
-    real_resp = zeros((m*2, len(orbit.hcors)+len(orbit.vcors)))
+    real_resp = np.zeros((m*2, len(orbit.hcors)+len(orbit.vcors)))
     orbit.read_virtual_orbit( lattice)
     bpms = copy.deepcopy(orbit.bpms)
     for ix, hcor in enumerate(orbit.hcors):
@@ -1148,7 +1167,7 @@ def quad_response_matrix(orbit, lattice):
     nx = len(orbit.hquads)
     ny = len(orbit.vquads)
     print(nx, ny, m)
-    real_resp = zeros((m*2, nx + ny))
+    real_resp = np.zeros((m*2, nx + ny))
     orbit.read_virtual_orbit(lattice)
     bpms = copy.deepcopy(orbit.bpms)
     for ix, hquad in enumerate(orbit.hquads):
@@ -1185,7 +1204,7 @@ def elem_response_matrix(orbit, lattice, p_init, elem_types, remove_elem):
     nx = len(orbit.htypes)
     ny = len(orbit.vtypes)
     print(nx, ny, m)
-    real_resp = zeros((m*2, nx + ny +4))
+    real_resp = np.zeros((m*2, nx + ny +4))
     orbit.read_virtual_orbit(lattice, p_init=copy.deepcopy(p_init))
     bpms = copy.deepcopy(orbit.bpms)
     for ix, hquad in enumerate(orbit.htypes):

@@ -2,7 +2,6 @@
 @ authors Martin Dohlus DESY, 2015, Sergey Tomin XFEL, 2016
 """
 
-import numpy as np
 from scipy import interpolate
 from ocelot.common.globals import *
 from ocelot.common import math_op
@@ -13,21 +12,23 @@ from ocelot.cpbd.high_order import *
 from ocelot.cpbd.magnetic_lattice import *
 import time
 from scipy.integrate import cumtrapz
-from ocelot.cpbd.wake3D import *
-
+from ocelot.cpbd.physics_proc import PhysProc
 import copy
+import logging
+logger = logging.getLogger(__name__)
+
 try:
     import numba as nb
     nb_flag = True
 except:
-    print("csr.py: module NUMBA is not install. Install it if you want speed up your calculation")
+    logger.info("csr.py: module NUMBA is not installed. Install it to speed up calculation")
     nb_flag = False
 
 try:
     from pyfftw.interfaces.numpy_fft import fft
     from pyfftw.interfaces.numpy_fft import ifft
 except:
-    print("csr.py: module PYFFTW is not install. Install it if you want speed up your calculation")
+    logger.info("csr.py: module PYFFTW is not installed. Install it to speed up calculation.")
     from numpy.fft import ifft
     from numpy.fft import fft
 
@@ -35,7 +36,7 @@ try:
     import numexpr as ne
     ne_flag = True
 except:
-    print("csr.py: module NUMEXPR is not installed. Install it if you want higher speed calculation.")
+    logger.info("csr.py: module NUMEXPR is not installed. Install it to speed up calculation")
     ne_flag = False
 
 
@@ -108,10 +109,10 @@ class Smoothing:
     def __init__(self):
         self.print_log = False
         if nb_flag:
-            if self.print_log: print("Smoothing: NUMBA")
+            logger.debug("Smoothing: NUMBA")
             self.q_per_step_ip2 = nb.jit()(self.q_per_step_ip2_py)
         else:
-            if self.print_log: print("Smoothing: Python")
+            logger.debug("Smoothing: Python")
             self.q_per_step_ip2 = self.q_per_step_ip2_py
 
     def q_per_step_ip2_py(self, N_BIN, Q_BIN, BIN0, BIN1, NSIG, RMS, step, Nz, z1):
@@ -158,7 +159,6 @@ class Smoothing:
         charge_per_step = charge per step, charge_per_step(1:Nz)
         bins might overlapp!
         """
-        # ......................................................................
 
         N_BIN = BS_params[1]
         M_BIN = BS_params[2]
@@ -232,7 +232,6 @@ class Smoothing:
         else:
             Nz = np.round((z2 - z1) / step)
             step = (z2 - z1) / Nz
-
         charge_per_step = np.zeros(int(Nz))
         if IP_method == 1:
             for nb in range(N_BIN):
@@ -250,7 +249,6 @@ class Smoothing:
 
         elif IP_method == 2:
             charge_per_step = self.q_per_step_ip2(N_BIN, Q_BIN, BIN[0], BIN[1], NSIG, RMS, step, Nz, z1)
-            #print(time.time() - t0)
         else:
             for nb in range(N_BIN):
                 aa = BIN[0][nb] - z1
@@ -273,10 +271,10 @@ class SubBinning:
         self.m_bin = m_bin
         self.print_log = False
         if nb_flag:
-            if self.print_log: print("SubBinning: NUMBA")
+            logger.debug("SubBinning: NUMBA")
             self.p_per_subbins = nb.jit(nb.double[:](nb.double[:], nb.double[:], nb.double))(self.p_per_subbins_py)
         else:
-            if self.print_log: print("SubBinning: Python")
+            logger.debug("SubBinning: Python")
             self.p_per_subbins = self.p_per_subbins_py
 
     def p_per_subbins_py(self, s, SBINB, K_BIN):
@@ -358,16 +356,16 @@ class K0_fin_anf:
     def __init__(self):
         self.print_log = False
         if nb_flag:
-            if self.print_log: print("K0_fin_anf: NUMBA")
+            logger.debug("K0_fin_anf: NUMBA")
             self.K0_1 = nb.jit()(self.K0_1_jit)
             self.K0_0 = nb.jit()(self.K0_0_jit)
             self.eval = self.K0_fin_anf_opt
         elif ne_flag:
-            if self.print_log: print("K0_fin_anf: NumExpr")
+            logger.debug("K0_fin_anf: NumExpr")
             self.eval = self.K0_fin_anf_numexpr
         else:
-            if self.print_log: print("K0_fin_anf: Python")
-            self.eval = self.K0_fin_anf
+            logger.debug("K0_fin_anf: Python")
+            self.eval = self.K0_fin_anf_np
 
     def K0_1_jit(self, indx, j, R, n, traj4, traj5, traj6, w, gamma):
         g2i = 1. / gamma ** 2
@@ -435,7 +433,7 @@ class K0_fin_anf:
             KS = 0.5 * K[-1] * s[-1]
         return w, KS
 
-    def K0_fin_anf(self, i, traj, wmin, gamma):
+    def K0_fin_anf_np(self, i, traj, wmin, gamma):
         # function [ w,KS ] = K0_inf_anf( i,traj,wmin,gamma )
 
         g2i = 1. / gamma ** 2
@@ -458,7 +456,6 @@ class K0_fin_anf:
             s = s[j:ind1]
         else:
             j = 0
-        # print(j, i1+1)
         R = R[j:ind1]
         n0 = n[0, j:ind1] / R
         n1 = n[1, j:ind1] / R
@@ -542,7 +539,7 @@ class K0_fin_anf:
         return w, KS
 
 
-class CSR:
+class CSR(PhysProc):
     """
     coherent synchrotron radiation
     Attributes:
@@ -552,6 +549,7 @@ class CSR:
         self.apply_step = 0.0005 [m] - step of the calculation CSR kick, to calculate average CSR kick
     """
     def __init__(self):
+        PhysProc.__init__(self)
         # binning parameters
         self.x_qbin = 0             # length or charge binning; 0... 1 = length...charge
         self.n_bin = 100            # number of bins
@@ -580,7 +578,7 @@ class CSR:
         self.filter_order = 10
         self.n_mesh = 345
         self.pict_debug = False
-        self.print_log = False
+        #self.print_log = False
 
         self.sub_bin = SubBinning(x_qbin=self.x_qbin, n_bin=self.n_bin, m_bin=self.m_bin)
         self.bin_smoth = Smoothing()
@@ -650,15 +648,16 @@ class CSR:
         winf = s1 + winfms1
         s = winf + gamma*(gamma*(w_range - winf)-beta*np.sqrt(g2*(w_range-winf)**2+a2))
         R = (w_range-s)/beta
+
         if a2/R[1]**2 > 1e-7:
             KS = (beta*(1. - np.dot(ev1, evo))*np.log(R[0]/R) - beta*np.dot(uup, evo)*(np.arctan((s[0] - winf)/a) - np.arctan((s-winf)/a))
                - (b2*np.dot(ev1, evo) - 1)*np.log((winf - s + R)/(winf-s[0] + R[0]))
                + g2i*np.log(w_range[0]/w_range))
+
         else:
             KS = (beta*(1. - np.dot(ev1, evo))*np.log(R[0]/R)
                - (b2*np.dot(ev1, evo) - 1.)*np.log((winf - s + R)/(winf - s[0] + R[0]))
                + g2i*np.log(w_range[0]/w_range))
-
         return KS
 
     def K0_inf_inf(self, i, traj, w_range):
@@ -704,10 +703,9 @@ class CSR:
             L_fin = True
         else:
             L_fin = False
+
         w_range = np.arange(-NdW[0]-1, 0)*NdW[1]
-        # print(w_range[:10])
-        # print(traj[1, :10])
-        # exit()
+
         if L_fin:
             w, KS = self.k0_fin_anf.eval(i, traj, w_range[0], gamma)
         else:
@@ -716,7 +714,6 @@ class CSR:
         KS1 = KS[0]
 
         idx = np.argsort(w)
-        # print(np.array_equal(w, w[idx]))
         w = w[idx]
         KS = KS[idx]
         w, idx = np.unique(w, return_index=True)
@@ -726,17 +723,18 @@ class CSR:
         if w_range[0] < w[0]:
             m = np.where(w_range < w[0])[0][-1]
             if L_fin:
-                #start = time.time()
                 KS2 = self.K0_fin_inf(i, traj, np.append(w_range[0:m+1], w[0]), gamma)
-                #print("K0_fin_inf = ", time.time() - start)
             else:
                 KS2 = self.K0_inf_inf(i, traj, np.append(w_range[0:m+1], w[0]))
+
             KS2 = (KS2[-1] - KS2) + KS1
             KS = np.append(KS2[0:-1], interp1(w, KS, w_range[m+1:]))
+
         else:
             KS = interp1(w, KS, w_range)
         four_pi_eps0 = 1./(1e-7*speed_of_light**2)
         K1 = np.diff(np.append(np.diff(np.append(KS, 0)), 0))/NdW[1]/four_pi_eps0
+
         return K1
 
     def prepare(self, lat):
@@ -748,11 +746,10 @@ class CSR:
                                  traj[1,:], traj[2,:], traj[3,:] - rectangular coordinates, \
                                  traj[4,:], traj[5,:], traj[6,:] - tangential unit vectors
         """
-
         self.z_csr_start = sum([p.l for p in lat.sequence[:self.indx0]])
         p = Particle()
-
         beta = 1. if self.energy == None else np.sqrt(1. - 1./(self.energy/m_e_GeV)**2)
+        igamma = np.sqrt(1 - beta**2)
         self.csr_traj = np.transpose([[0, p.x, p.y, p.s, p.px, p.py, beta]])
         #self.csr_traj = np.transpose([[0, p.s, p.x, p.y, beta, p.px, p.py]])
         for elem in lat.sequence[self.indx0:self.indx1+1]:
@@ -761,25 +758,64 @@ class CSR:
             delta_s = elem.l
             step = self.traj_step
             if elem.__class__ in [Bend, RBend, SBend]:
-                R = -elem.l/elem.angle
+                if elem.angle != 0:
+                    R = -elem.l/elem.angle
+                else:
+                    R = 0
                 Rx = R * np.cos(elem.tilt)
                 Ry = R * np.sin(elem.tilt)
                 #B = energy*1e9*beta/(R*speed_of_light)
                 R_vect = [-Ry, Rx, 0]
+                self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect)
+
+            elif elem.__class__ == Undulator and self.energy is not None:
+                """
+                rk_track_in_field accepts initial conditions (initial coordinates) in the ParticleArray.rparticles format
+                from another hand the csr module use trajectory in another format (see csr.py)
+                to calculate trajectory inside an undulator we take reference particle with zero initial condition,
+                we shift obtained trajectory to initial one afterwards. 
+                """
+                ku = 2*np.pi/elem.lperiod
+                L = elem.lperiod*elem.nperiods
+                By = elem.Kx * m_e_eV * 2. * pi / (elem.lperiod * speed_of_light)
+                Bx = elem.Ky * m_e_eV * 2. * pi / (elem.lperiod * speed_of_light)
+                sre0 = self.csr_traj[:, -1]
+                N = int(max(1, np.round(delta_s / step)))
+                SRE2 = np.zeros((7, N))
+
+                mag_field = lambda x, y, z: (0, By*np.cos(ku*z), 0)
+
+                rparticle0 = np.array([[0], [0], [0], [0], [0], [0]])
+
+                traj = rk_track_in_field(rparticle0, s_stop=L, N=N+1, energy=self.energy, mag_field=mag_field, s_start=0)
+                betaz = np.sqrt(beta*beta - traj[1+9::9].T*traj[1+9::9].T - traj[3+9::9].T*traj[3+9::9].T)
+
+                dz = traj[4+9::9].T - traj[4:-9:9].T
+
+                SRE2[0, :] = sre0[0] + np.cumsum(dz*np.sqrt(1+(traj[1+9::9].T)**2 + (traj[3+9::9].T)**2))
+                SRE2[1, :] = sre0[1] + traj[0+9::9].T
+                SRE2[2, :] = sre0[2] + traj[2+9::9].T
+                SRE2[3, :] = sre0[3] + traj[4+9::9].T
+                SRE2[4, :] = sre0[4] + traj[1+9::9].T
+                SRE2[5, :] = sre0[5] + traj[3+9::9].T
+                SRE2[6, :] = betaz# traj[5+9::9].T
+
+                self.csr_traj = np.append(self.csr_traj, SRE2, axis=1)
             else:
                 #B = 0.
                 R_vect = [0, 0, 0.]
-
-            self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect )
-        #plt.plot(self.csr_traj[0,:], self.csr_traj[1,:], "r")
-        #plt.plot(self.csr_traj[0, :], self.csr_traj[2, :], "b")
-        #plt.legend(["X", "Y"])
-        #plt.show()
+                self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect )
+        # import matplotlib.pyplot as plt
+        # plt.figure(10)
+        # plt.plot(self.csr_traj[0,:], self.csr_traj[1,:], "r")
+        # plt.plot(self.csr_traj[0, :], self.csr_traj[2, :], "b")
+        # plt.legend(["X", "Y"])
+        # plt.show()
         return self.csr_traj
 
     def apply(self, p_array, delta_s):
         if delta_s < self.traj_step:
-            print("CSR delta_s < self.traj_step")
+            logger.debug("CSR delta_s < self.traj_step")
             return
         s_cur = self.z0 - self.z_csr_start
         z = -p_array.tau()
@@ -806,9 +842,9 @@ class CSR:
         n_iter = len(itr_ra)
         #start = time.time()
         K1 = self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma)
+
         for nit in range(1, n_iter):
             K1 += self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma=gamma)
-        #print("K1 = ", time.time() - start)
         K1 = K1/n_iter
 
 
@@ -868,7 +904,6 @@ class CSR:
         sa = s1 + st / 2.
         Ndw = [self.n_mesh, st]
         lam_ds = I[:, 1] / speed_of_light * st
-        # print("ST = ", st, s2 - s1, len(lam_ds), Ns)
 
         s_array = self.csr_traj[0, :]
         indx = (np.abs(s_array - s_cur)).argmin()
@@ -879,11 +914,9 @@ class CSR:
 
         nit = 0
         n_iter = len(itr_ra)
-        # start = time.time()
         K1 = self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma)
         for nit in range(1, n_iter):
             K1 += self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma=gamma)
-        # print("K1 = ", time.time() - start)
         K1 = K1 / n_iter
 
 

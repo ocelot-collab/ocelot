@@ -7,8 +7,8 @@ from scipy.interpolate import splrep, splev
 import json
 import time
 from threading import Thread
-#import matplotlib.pyplot as plt
-
+import logging
+logger = logging.getLogger(__name__)
 
 class MeasureResponseMatrix:
     def __init__(self, lattice, hcors, vcors, bpms):
@@ -35,7 +35,7 @@ class MeasureResponseMatrix:
         else:
             self.particle0 = p_init
         p = copy.copy(self.particle0)
-        navi = Navigator()
+        navi = Navigator(self.lat)
         L = 0.
         for bpm in self.bpms:
             #print("energy = ", p.E)
@@ -52,7 +52,7 @@ class MeasureResponseMatrix:
 
             particles.append(copy.copy(p))
         #print("energy = ", p.E)
-        return array(X), array(Y),
+        return np.array(X), np.array(Y),
 
     def read_virtual_dispersion(self, E0):
         X0, Y0 = self.read_virtual_orbit(p_init=Particle(p=0.000, E=E0))
@@ -79,14 +79,14 @@ class MeasureResponseMatrix:
             tw_init = Twiss()
 
         tws = twiss(self.lat, tw_init, nPoints=int(self.lat.totalLen / 0.05))
-        s = array([tw.s for tw in tws])
-        tck_mux = splrep(s, array([tw.mux for tw in tws]))
-        tck_muy = splrep(s, array([tw.muy for tw in tws]))
+        s = np.array([tw.s for tw in tws])
+        tck_mux = splrep(s, np.array([tw.mux for tw in tws]))
+        tck_muy = splrep(s, np.array([tw.muy for tw in tws]))
 
-        beta_x = array([tw.beta_x for tw in tws])
-        beta_y = array([tw.beta_y for tw in tws])
-        self.nu_x = tws[-1].mux / 2. / pi
-        self.nu_y = tws[-1].muy / 2. / pi
+        beta_x = np.array([tw.beta_x for tw in tws])
+        beta_y = np.array([tw.beta_y for tw in tws])
+        self.nu_x = tws[-1].mux / 2. / np.pi
+        self.nu_y = tws[-1].muy / 2. / np.pi
 
         tck_bx = splrep(s, beta_x)
         tck_by = splrep(s, beta_y)
@@ -136,23 +136,23 @@ class RingRM(MeasureResponseMatrix):
         m = len(self.bpms)
         nx = len(self.hcors)
         ny = len(self.vcors)
-        h_resp = zeros((m, nx))
-        v_resp = zeros((m, ny))
-        sin_pnu_x = sin(pi * self.nu_x)
-        sin_pnu_y = sin(pi * self.nu_y)
+        h_resp = np.zeros((m, nx))
+        v_resp = np.zeros((m, ny))
+        sin_pnu_x = np.sin(np.pi * self.nu_x)
+        sin_pnu_y = np.sin(np.pi * self.nu_y)
         for i, bpm in enumerate(self.bpms):
-            kx = sqrt(bpm.beta_x) / (2. * sin_pnu_x)
-            ky = sqrt(bpm.beta_y) / (2. * sin_pnu_y)
+            kx = np.sqrt(bpm.beta_x) / (2. * sin_pnu_x)
+            ky = np.sqrt(bpm.beta_y) / (2. * sin_pnu_y)
             for j, hcor in enumerate(self.hcors):
                 mu_x = abs(bpm.phi_x - hcor.phi_x)
-                h_resp[i, j] = kx * sqrt(hcor.beta_x) * cos(mu_x - pi * self.nu_x)
+                h_resp[i, j] = kx * np.sqrt(hcor.beta_x) * np.cos(mu_x - np.pi * self.nu_x)
             for n, vcor in enumerate(self.vcors):
                 mu_y = abs(bpm.phi_y - vcor.phi_y)
-                v_resp[i, n] = ky * sqrt(vcor.beta_y) * cos(mu_y - pi * self.nu_y)
+                v_resp[i, n] = ky * np.sqrt(vcor.beta_y) * np.cos(mu_y - np.pi * self.nu_y)
         m = len(self.bpms)
         kx = len(self.hcors)
         ky = len(self.vcors)
-        self.resp = zeros((2 * m, kx + ky))
+        self.resp = np.zeros((2 * m, kx + ky))
         self.resp[:m, :kx] = h_resp[:, :]
         self.resp[m:, kx:] = v_resp[:, :]
         # print "shape = ", shape(self.resp)
@@ -177,28 +177,28 @@ class LinacOpticalRM(MeasureResponseMatrix):
         m = len(self.bpms)
         nx = len(self.hcors)
         ny = len(self.vcors)
-        h_resp = zeros((m, nx))
-        v_resp = zeros((m, ny))
+        h_resp = np.zeros((m, nx))
+        v_resp = np.zeros((m, ny))
 
         for i, bpm in enumerate(self.bpms):
-            kx = sqrt(bpm.beta_x)#/(2.*sin_pnu_x)
-            ky = sqrt(bpm.beta_y)#/(2.*sin_pnu_y)
+            kx = np.sqrt(bpm.beta_x)#/(2.*sin_pnu_x)
+            ky = np.sqrt(bpm.beta_y)#/(2.*sin_pnu_y)
             for j, hcor in enumerate(self.hcors):
                 if hcor.s < bpm.s:
                     mu_x = (bpm.phi_x - hcor.phi_x)
-                    h_resp[i, j] = kx*sqrt(hcor.beta_x)*sin(mu_x)*sqrt(hcor.E/bpm.E)
+                    h_resp[i, j] = kx*np.sqrt(hcor.beta_x)*np.sin(mu_x)*np.sqrt(hcor.E/bpm.E)
 
 
             for n, vcor in enumerate(self.vcors):
                 if vcor.s < bpm.s:
                     mu_y = (bpm.phi_y - vcor.phi_y)
-                    v_resp[i, n] = ky*sqrt(vcor.beta_y)*sin(mu_y)*sqrt(vcor.E/bpm.E)
+                    v_resp[i, n] = ky*np.sqrt(vcor.beta_y)*np.sin(mu_y)*np.sqrt(vcor.E/bpm.E)
 
         m = len(self.bpms)
         kx = len(self.hcors)
         ky = len(self.vcors)
 
-        self.resp = zeros((2*m, kx + ky))
+        self.resp = np.zeros((2*m, kx + ky))
         self.resp[:m,:kx] = h_resp[:, :]
         self.resp[m:,kx:] = v_resp[:, :]
 
@@ -232,7 +232,7 @@ class LinacSimRM(MeasureResponseMatrix):
         add_i = 0
         if match_ic:
             add_i = 4
-        self.resp = zeros((2 * m, nx + ny + add_i))
+        self.resp = np.zeros((2 * m, nx + ny + add_i))
         s = [bpm.s for bpm in self.bpms]
         X0, Y0 = self.read_virtual_orbit(p_init=Particle( E=tw_init.E))
 
@@ -283,7 +283,7 @@ class LinacRmatrixRM(MeasureResponseMatrix):
         m = len(self.bpms)
         nx = len(self.hcors)
         ny = len(self.vcors)
-        self.resp = zeros((2 * m, nx + ny))
+        self.resp = np.zeros((2 * m, nx + ny))
 
         for j, cor in enumerate([item for sublist in [self.hcors, self.vcors] for item in sublist]):
             print(j, "/", nx + ny, cor.id)
@@ -295,7 +295,7 @@ class LinacRmatrixRM(MeasureResponseMatrix):
                     continue
 
                 Rb = elem.transfer_map.R(E)
-                Ra = dot(Rb, Ra)
+                Ra = np.dot(Rb, Ra)
                 E += elem.transfer_map.delta_e
                 if elem in self.bpms:
 
@@ -331,7 +331,7 @@ class LinacDisperseSimRM(MeasureResponseMatrix):
         nx = len(self.hcors)
         ny = len(self.vcors)
 
-        self.resp = zeros((2 * m, nx + ny))
+        self.resp = np.zeros((2 * m, nx + ny))
         s = [bpm.s for bpm in self.bpms]
         Dx0, Dy0 = self.read_virtual_dispersion(E0=tw_init.E)
         D0 = np.append(Dx0, Dy0)
@@ -372,7 +372,7 @@ class LinacDisperseTmatrixRM(MeasureResponseMatrix):
         m = len(self.bpms)
         nx = len(self.hcors)
         ny = len(self.vcors)
-        self.resp = zeros((2 * m, nx + ny))
+        self.resp = np.zeros((2 * m, nx + ny))
 
         for j, cor in enumerate([item for sublist in [self.hcors, self.vcors] for item in sublist]):
             print(j, "/", nx + ny, cor.id)
@@ -497,10 +497,10 @@ class ResponseMatrix:
         b_i2 = np.where(np.in1d(bpms2, b_names))[0]
 
         if not np.array_equal(c_names, cor_list):
-            print (" Origin response matrix has no correctors:")
+            logger.warning(" ResponseMatrix.inject: Origin response matrix has no correctors:")
             print (cors2[np.in1d(cors2, c_names, invert=True)])
         if not np.array_equal(b_names, bpm_list):
-            print (" Origin response matrix has no BPMs:")
+            logger.warning(" ResponseMatrix.inject: Origin response matrix has no BPMs:")
             print (bpm_list[b_i2[:]])
 
         #extr_matrix = np.zeros((len(b_names)*2, len(c_names)))

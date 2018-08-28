@@ -1,11 +1,10 @@
 from ocelot.cpbd.optics import MethodTM
 from ocelot.cpbd.elements import *
 import logging
-# from ocelot.common.logging import *
 import numpy as np
 from copy import deepcopy
 # logger = Logger()
-_logger = logging.getLogger('ocelot.lattice')
+_logger = logging.getLogger(__name__)
 
 def lattice_format_converter(elements):
     """
@@ -16,9 +15,12 @@ def lattice_format_converter(elements):
     drift_num = 0
     s_pos = 0.0
     for element in elements:
+        if element[0].__class__ == Edge:
+            continue
         element_start = element[1] - element[0].l / 2.0
         if element_start < s_pos - 1.0e-14:                 # 1.0e-14 is used as crutch for precision of float
             if element[0].l == 0.0:
+
                 if s_pos - element_start > 1.0e-2:
                     print("************** WARNING! Element " + element[0].id + " was deleted")
                     continue
@@ -70,7 +72,7 @@ def shrinker(lat, remaining_types, remaining_elems=[], init_energy=0.):
     """
 
     :param lat: MagneticLattice
-    :param remaining_types: the type of the elements which needed to be untoched
+    :param remaining_types: list, the type of the elements which needed to be untoched
                             others will be "compress" to Matrix element
                             e.g. [Monitor, Quadrupole, Bend, Hcor]
     :param init_energy: initial energy
@@ -268,7 +270,7 @@ class MagneticLattice:
                 else:
                     print("EDGE is not updated. Use standard function to create and update MagneticLattice")
             element.transfer_map = self.method.create_tm(element)
-            # logger.debug("update: " + element.transfer_map.__class__.__name__)
+            _logger.debug("update: " + element.transfer_map.__class__.__name__)
             #print("update: ", element.transfer_map.__class__.__name__, element.l, element.id, element.transfer_map.R(0))
             if 'pulse' in element.__dict__: element.transfer_map.pulse = element.pulse
         return self
@@ -282,23 +284,21 @@ class MagneticLattice:
         indx_elem = np.where([i.__class__ == element for i in self.sequence])[0]
         return indx_elem
 
+
 def merge_drifts(cell):
     """
     Merge neighboring Drifts in one Drift
 
-    input: cell - list of element
-    return: new_cell - new list of elements
+    :param cell: list of element
+    :return: new list of elements
     """
-
     new_cell = []
     L = 0.
     for elem in cell:
 
         if elem.__class__ in [Drift, UnknownElement]:
             L += elem.l
-            #print(L)
         else:
-            #print("new")
             if L != 0:
                 new_elem = Drift(l=L)
                 new_cell.append(new_elem)
@@ -308,15 +308,19 @@ def merge_drifts(cell):
     print("Merge drift -> Element numbers: before -> after: ", len(cell), "->", len(new_cell))
     return new_cell
 
-def exclude_zero_length_element(cell, elem_type=[UnknownElement, Marker]):
+
+def exclude_zero_length_element(cell, elem_type=[UnknownElement, Marker], except_elems=[]):
     """
     Exclude zero length elements some types in elem_type
-    input: cell
-    return: new cell
+
+    :param cell: list, sequence of elements
+    :param elem_type: list, types of Elements which should be excluded
+    :param except_elems: list, except elements
+    :return: list, new sequence of elements
     """
     new_cell = []
     for elem in cell:
-        if elem.__class__ in elem_type and elem.l == 0:
+        if elem.__class__ in elem_type and elem.l == 0 and elem not in except_elems:
             continue
         new_cell.append(elem)
     print("Exclude elements -> Element numbers: before -> after: ", len(cell), "->", len(new_cell))

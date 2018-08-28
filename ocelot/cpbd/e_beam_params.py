@@ -96,7 +96,7 @@ class EbeamParams:
         self.Jx = 1 - I4/I2
         self.Jy = 1
         self.gamma = self.E/m_e_GeV
-        self.sigma_e = self.gamma*sqrt(Cq * self.I3/(self.Je*I2))
+        self.sigma_e = self.gamma*np.sqrt(Cq * self.I3/(self.Je*I2))
         self.emittance = Cq*self.gamma*self.gamma * self.I5/(self.Jx* self.I2)
         self.U0 = Cgamma*(beam.E*1000)**4*self.I2/(2*pi)
         #print "*********  ", twiss_0.Energy
@@ -110,10 +110,10 @@ class EbeamParams:
         self.coupl = coupling
         self.emitt_x = self.emittance/(1 + self.coupl)
         self.emitt_y = self.emittance*self.coupl/(1 + self.coupl)
-        self.sigma_x = sqrt((self.sigma_e*self.tws0.Dx)**2 + self.emitt_x*self.tws0.beta_x)
-        self.sigma_y = sqrt((self.sigma_e*self.tws0.Dy)**2 + self.emitt_y*self.tws0.beta_y)
-        self.sigma_xp = sqrt((self.sigma_e*self.tws0.Dxp)**2 + self.emitt_x*self.tws0.gamma_x)
-        self.sigma_yp = sqrt((self.sigma_e*self.tws0.Dyp)**2 + self.emitt_y*self.tws0.gamma_y)
+        self.sigma_x = np.sqrt((self.sigma_e*self.tws0.Dx)**2 + self.emitt_x*self.tws0.beta_x)
+        self.sigma_y = np.sqrt((self.sigma_e*self.tws0.Dy)**2 + self.emitt_y*self.tws0.beta_y)
+        self.sigma_xp = np.sqrt((self.sigma_e*self.tws0.Dxp)**2 + self.emitt_x*self.tws0.gamma_x)
+        self.sigma_yp = np.sqrt((self.sigma_e*self.tws0.Dyp)**2 + self.emitt_y*self.tws0.gamma_y)
 
 
     def integrals_id(self):
@@ -147,7 +147,7 @@ class EbeamParams:
                 #print elem.type, elem.id, "I5_ID = ", i5
             L += elem.l
         self.emit_ID = self.emittance * (1.+self.I5_IDs/self.I5)/(1+(self.I2_IDs  - self.I4_IDs)/(self.I2 - self.I4))
-        self.sigma_e_ID = self.sigma_e * sqrt((1.+ self.I3_IDs / self.I3)/(1 + (2*self.I2_IDs + self.I4_IDs)/(2.*self.I2 + self.I4) ) )
+        self.sigma_e_ID = self.sigma_e * np.sqrt((1.+ self.I3_IDs / self.I3)/(1 + (2*self.I2_IDs + self.I4_IDs)/(2.*self.I2 + self.I4) ) )
         self.U0_ID = Cgamma*(self.E*1000)**4.*self.I2_IDs/(2.*pi)
         print("emittance with IDs = ", self.emit_ID*1e9, " nm*rad")
         print("sigma_e with IDs =   ", self.sigma_e_ID)

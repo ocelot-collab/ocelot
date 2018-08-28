@@ -92,10 +92,10 @@ class XFELTarget(Target):
         if self.debug: print('alarm:', alarm)
         if self.debug: print('sase:', sase)
         pen = 0.0
-        if alarm >= 0.95:
-            alarm = self.pen_max
+        if alarm > 1.0:
+            return self.pen_max
         if alarm > 0.7:
-            alarm = self.pen_max / 2.
+            return alarm * self.pen_max / 2.
         pen += alarm
         pen -= sase
         if self.debug: print('penalty:', pen)

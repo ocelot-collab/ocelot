@@ -4,9 +4,64 @@ module contains lat2input function which creates python input string
 (ocelot lattice) for a lattice object
 author sergey.tomin
 """
-
-from numpy import around, pi
 from ocelot.cpbd.elements import *
+import os
+from ocelot.adaptors.astra2ocelot import astraBeam2particleArray, particleArray2astraBeam
+from ocelot.cpbd.beam import ParticleArray
+
+
+def save_particle_array2npz(filename, p_array):
+    np.savez_compressed(filename, rparticles=p_array.rparticles,
+                        q_array=p_array.q_array,
+                        E=p_array.E, s=p_array.s)
+
+
+def load_particle_array_from_npz(filename, print_params=False):
+    """
+    Load beam file in npz format and return ParticleArray
+
+    :param filename:
+    :return:
+    """
+    p_array = ParticleArray()
+    with np.load(filename) as data:
+        for key in data.keys():
+            p_array.__dict__[key] = data[key]
+    return p_array
+
+
+
+def load_particle_array(filename, print_params=False):
+    """
+    Universal function to load beam file, *.ast or *.npz format
+
+    :param filename: path to file, filename.ast or filename.npz
+    :return: ParticleArray
+    """
+    name, file_extension = os.path.splitext(filename)
+    if file_extension == ".npz":
+        return load_particle_array_from_npz(filename, print_params=print_params)
+    elif file_extension in [".ast", ".001"]:
+        return astraBeam2particleArray(filename, s_ref=-1, Eref=-1, print_params=print_params)
+    else:
+        raise Exception("Unknown format of the beam file: " + file_extension + " but must be *.ast or *.npz ")
+
+
+def save_particle_array(filename, p_array):
+    """
+    Universal function to load beam file, *.ast or *.npz format
+
+    :param filename: path to file, filename.ast or filename.npz
+    :return: ParticleArray
+    """
+    name, file_extension = os.path.splitext(filename)
+    if file_extension == ".npz":
+        save_particle_array2npz(filename, p_array)
+    elif file_extension == ".ast":
+        particleArray2astraBeam(p_array, filename)
+    else:
+        raise Exception("Unknown format of the beam file: " + file_extension + " but must be *.ast or *.npz")
+
 
 
 def find_drifts(lat):
@@ -14,7 +69,7 @@ def find_drifts(lat):
     drifts = []
     for elem in lat.sequence:
         if elem.__class__ == Drift:
-            elem_l = around(elem.l, decimals=6)
+            elem_l = np.around(elem.l, decimals=6)
             if elem_l not in drift_lengs:
                 drifts.append(elem)
                 drift_lengs.append(elem_l)
@@ -84,6 +139,7 @@ def lat2input(lat):
     cors = find_obj_and_create_name(lat, types=[Hcor, Vcor])
     bends = find_obj_and_create_name(lat, types=[Bend, RBend, SBend])
     unkns = find_obj_and_create_name(lat, types=[UnknownElement])
+    tcavs = find_obj_and_create_name(lat, types=[TDCavity])
     # end find objects
 
     lines = ["from ocelot import * \n"]
@@ -101,11 +157,11 @@ def lat2input(lat):
     lines.append("\n# bending magnets \n")
     for bend in bends:
         if bend.__class__ == RBend:
-            type = " = RBend(l = "
+            type = " = RBend(l="
         elif bend.__class__ == SBend:
-            type = " = SBend(l = "
+            type = " = SBend(l="
         else:
-            type = " = Bend(l = "
+            type = " = Bend(l="
         if bend.k1 == 0 or bend.k1 == None:
             k = ''
         else:
@@ -159,6 +215,12 @@ def lat2input(lat):
     for cav in cavs:
         line = cav.name.lower() + " = Cavity(l=" + str(cav.l) + ", v=" + str(cav.v) + \
                ", freq=" + str(cav.f) + ", phi=" + str(cav.phi) + ", eid='" + cav.id + "')\n"
+        lines.append(line)
+
+    lines.append("\n# tdcavity \n")
+    for tcav in tcavs:
+        line = tcav.name.lower() + " = Cavity(l=" + str(tcav.l) + ", v=" + str(tcav.v) + \
+               ", freq=" + str(tcav.f) + ", phi=" + str(tcav.phi) + ", eid='" + tcav.id + "')\n"
         lines.append(line)
 
     lines.append("\n# UnknowElement \n")

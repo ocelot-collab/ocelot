@@ -3,7 +3,8 @@ __author__ = 'Sergey Tomin'
 
 #import convolution as conv
 from ctypes import c_double
-from numpy import zeros, empty_like, linspace, array, sin, cos
+#from numpy import zeros, empty_like, linspace, array, sin, cos
+import numpy as np
 #from ocelot.common.screen import Screen
 
 
@@ -65,15 +66,15 @@ class Screen:
 
         Nscr = self.ne*self.nx*self.ny
 
-        self.memory_screen = zeros(Nscr*5)
+        self.memory_screen = np.zeros(Nscr*5)
         self.arReEx = self.memory_screen[0:Nscr]
         self.arImEx = self.memory_screen[Nscr:2*Nscr]
         self.arReEy = self.memory_screen[2*Nscr:3*Nscr]
         self.arImEy = self.memory_screen[3*Nscr:4*Nscr]
         self.arPhase = self.memory_screen[4*Nscr:5*Nscr]
-        self.Xph = linspace(self.x_start, self.x_start + self.x_step*(self.nx -1), self.nx)
-        self.Yph = linspace(self.y_start, self.y_start + self.y_step*(self.ny -1), self.ny)
-        self.Eph = linspace(self.e_start, self.e_start + self.e_step*(self.ne -1), self.ne)
+        self.Xph = np.linspace(self.x_start, self.x_start + self.x_step*(self.nx -1), self.nx)
+        self.Yph = np.linspace(self.y_start, self.y_start + self.y_step*(self.ny -1), self.ny)
+        self.Eph = np.linspace(self.e_start, self.e_start + self.e_step*(self.ne -1), self.ne)
 
 
         #class EMScreen():
@@ -130,15 +131,15 @@ class Screen:
 
         Nscr = self.ne*self.nx*self.ny
         #self.current = 1
-        self.memory_screen = zeros(Nscr*5)
+        self.memory_screen = np.zeros(Nscr*5)
         self.arReEx = self.memory_screen[0:Nscr]
         self.arImEx = self.memory_screen[Nscr:2*Nscr]
         self.arReEy = self.memory_screen[2*Nscr:3*Nscr]
         self.arImEy = self.memory_screen[3*Nscr:4*Nscr]
         self.arPhase = self.memory_screen[4*Nscr:5*Nscr]
-        self.Xph = linspace(self.x_start, self.x_start + self.x_step*(self.nx -1), self.nx)
-        self.Yph = linspace(self.y_start, self.y_start + self.y_step*(self.ny -1), self.ny)
-        self.Eph = linspace(self.e_start, self.e_start + self.e_step*(self.ne -1), self.ne)
+        self.Xph = np.linspace(self.x_start, self.x_start + self.x_step*(self.nx -1), self.nx)
+        self.Yph = np.linspace(self.y_start, self.y_start + self.y_step*(self.ny -1), self.ny)
+        self.Eph = np.linspace(self.e_start, self.e_start + self.e_step*(self.ne -1), self.ne)
 
         # additional
         #self.fund_harm_eV = screen.fund_harm_eV
@@ -165,7 +166,7 @@ class Screen:
         self.theta_y = 0.
 
         Nscr = self.ne*self.nx*self.ny
-        self.memory_screen = zeros(Nscr)
+        self.memory_screen = np.zeros(Nscr)
 
         self.arReEx = self.memory_screen[0:Nscr]
         self.arImEx = self.memory_screen[Nscr:2*Nscr]
@@ -176,7 +177,7 @@ class Screen:
     def nullify(self):
         Nscr = self.ne*self.nx*self.ny
         #self.current = 1
-        self.memory_screen = zeros(Nscr*5)
+        self.memory_screen = np.zeros(Nscr*5)
         self.arReEx = self.memory_screen[0:Nscr]
         self.arImEx = self.memory_screen[Nscr:2*Nscr]
         self.arReEy = self.memory_screen[2*Nscr:3*Nscr]
@@ -184,6 +185,19 @@ class Screen:
         self.arPhase = self.memory_screen[4*Nscr:5*Nscr]
 
     def create_like(self, em_screen):
+        # added new check is needed
+        # self.x = em_screen.x
+        # self.y = em_screen.y
+        # self.z = em_screen.z
+        # self.size_x = em_screen.size_x
+        # self.size_y = em_screen.size_y
+        # self.nx = em_screen.nx
+        # self.ny = em_screen.ny
+        # self.start_energy = em_screen.start_energy
+        # self.end_energy = em_screen.end_energy
+        # self.num_energy = em_screen.num_energy
+        # added new check is needed
+
         self.x_step = em_screen.x_step
         self.x_start = em_screen.x_start
         self.nx = em_screen.nx
@@ -201,7 +215,7 @@ class Screen:
         self.Distance = em_screen.Distance
         #self.current = em_screen.current
         Nscr = self.ne*self.nx*self.ny
-        self.memory_screen = empty_like(em_screen.memory_screen)
+        self.memory_screen = np.zeros(len(em_screen.memory_screen))
 
         self.arReEx = self.memory_screen[0:Nscr]
         self.arImEx = self.memory_screen[Nscr:2*Nscr]
@@ -211,7 +225,7 @@ class Screen:
 
     def screenPy2C(self, lperiod, nperiods, status):
 
-        scrPrm = zeros(14)
+        scrPrm = np.zeros(14)
         
         scrPrm[0] = self.ne
         scrPrm[1] = self.e_start
@@ -245,16 +259,16 @@ class Screen:
     def distPhoton(self, gamma, current):
         LenPntrConst = self.Distance - self.Zstart
         constQuant = 3.461090202456155e+9*current*gamma*gamma/LenPntrConst/LenPntrConst
-        Ex2r = array(self.arReEx)*array(self.arReEx)
-        Ex2i = array(self.arImEx)*array(self.arImEx)
+        Ex2r = np.array(self.arReEx)*np.array(self.arReEx)
+        Ex2i = np.array(self.arImEx)*np.array(self.arImEx)
         self.Sigma = (Ex2r + Ex2i)*constQuant
-        Ey2r = array(self.arReEy)*array(self.arReEy)
-        Ey2i = array(self.arImEy)*array(self.arImEy)
+        Ey2r = np.array(self.arReEy)*np.array(self.arReEy)
+        Ey2i = np.array(self.arImEy)*np.array(self.arImEy)
         self.Pi = (Ey2r + Ey2i)*constQuant
         self.Total = self.Pi + self.Sigma
-        self.Xph = linspace(self.x_start, self.x_start + self.x_step*(self.nx -1), self.nx)
-        self.Yph = linspace(self.y_start, self.y_start + self.y_step*(self.ny -1), self.ny)
-        self.Eph = linspace(self.e_start, self.e_start + self.e_step*(self.ne -1), self.ne)
+        self.Xph = np.linspace(self.x_start, self.x_start + self.x_step*(self.nx -1), self.nx)
+        self.Yph = np.linspace(self.y_start, self.y_start + self.y_step*(self.ny -1), self.ny)
+        self.Eph = np.linspace(self.e_start, self.e_start + self.e_step*(self.ne -1), self.ne)
     """
     def convolution(self, sigma_x, sigma_y):
         data = numpy.reshape(self.Total,(len(self.Xph), len(self.Xph)))
@@ -264,13 +278,50 @@ class Screen:
         
     def zerosArray(self):
         Nscr = self.nx*self.ny*self.ne
-        self.memory_screen = zeros(Nscr*5)
+        self.memory_screen = np.zeros(Nscr*5)
         self.arReEx = self.memory_screen[0:Nscr]
         self.arImEx = self.memory_screen[Nscr:2*Nscr]
         self.arReEy = self.memory_screen[2*Nscr:3*Nscr]
         self.arImEy = self.memory_screen[3*Nscr:4*Nscr]
         self.arPhase = self.memory_screen[4*Nscr:5*Nscr]
 
+    def screen2dict(self):
+        new_dict = {}
+        new_dict["memory_screen"] = list(self.memory_screen)
+        new_dict["x_step"] = self.x_step
+        new_dict["x_start"] = self.x_start
+        new_dict["nx"] = self.nx
+        new_dict["y_step"] = self.y_step
+        new_dict["y_start"] = self.y_start
+        new_dict["ny"] = self.ny
+        new_dict["e_step"] = self.e_step
+        new_dict["e_start"] = self.e_start
+        new_dict["ne"] = self.ne
+        new_dict["Zstart"] = self.Zstart
+        new_dict["Distance"] = self.Distance
+
+        new_dict["x"] = self.x
+        new_dict["y"] = self.y
+        new_dict["z"] = self.z
+        new_dict["size_x"] = self.size_x
+        new_dict["size_y"] = self.size_y
+        new_dict["nx"] = self.nx
+        new_dict["ny"] = self.ny
+        new_dict["start_energy"] = self.start_energy
+        new_dict["end_energy"] = self.end_energy
+        new_dict["num_energy"] = self.num_energy
+        return new_dict
+
+    def dict2screen(self, dictionaty):
+        for key in dictionaty.keys():
+            self.__dict__[key] = dictionaty[key]
+        Nscr = self.nx * self.ny * self.ne
+        self.memory_screen = np.array(self.memory_screen)
+        self.arReEx = self.memory_screen[0:Nscr]
+        self.arImEx = self.memory_screen[Nscr:2*Nscr]
+        self.arReEy = self.memory_screen[2*Nscr:3*Nscr]
+        self.arImEy = self.memory_screen[3*Nscr:4*Nscr]
+        self.arPhase = self.memory_screen[4*Nscr:5*Nscr]
 
 
 
@@ -284,8 +335,8 @@ def sum_screens(screen_down, screen_up):
     screen = Screen()
     screen.create_like(screen_down)
 
-    sinfa = sin(screen_down.arPhase)
-    cosfa = cos(screen_down.arPhase)
+    sinfa = np.sin(screen_down.arPhase)
+    cosfa = np.cos(screen_down.arPhase)
     screen.arReEx = screen_down.arReEx + screen_up.arReEx*cosfa - screen_up.arImEx*sinfa
     screen.arImEx = screen_down.arImEx + screen_up.arImEx*cosfa + screen_up.arReEx*sinfa
     screen.arReEy = screen_down.arReEy + screen_up.arReEy*cosfa - screen_up.arImEy*sinfa

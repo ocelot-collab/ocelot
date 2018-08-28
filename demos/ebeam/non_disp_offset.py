@@ -46,8 +46,8 @@ p1 = Particle(x=0.00, p=0.02)
 p2 = Particle(x=0.00, p=0.02)
 P1 = [cp.copy(p1)]
 P2 = [cp.copy(p2)]
-navi1 = Navigator()
-navi2 = Navigator()
+navi1 = Navigator(lat1)
+navi2 = Navigator(lat2)
 dz = 0.01
 for i in range(int(lat1.totalLen/dz)):
     tracking_step(lat1, [p1], dz = dz, navi = navi1)  # R only
@@ -74,10 +74,10 @@ for xi, xpi in zip(x,xp):
     plist.append(Particle(x = xi, px= xpi))
 
 plist_1 = cp.deepcopy(plist)
-navi = Navigator()
-
-tracking_step(lat1, plist_1, dz=lat1.totalLen, navi=cp.copy(navi))
-tracking_step(lat2, plist, dz=lat2.totalLen, navi=cp.copy(navi))
+navi1 = Navigator(lat1)
+navi2 = Navigator(lat2)
+tracking_step(lat1, plist_1, dz=lat1.totalLen, navi=navi1)
+tracking_step(lat2, plist, dz=lat2.totalLen, navi=navi2)
 x2 = [f.x for f in plist]
 xp2 = [f.px for f in plist]
 

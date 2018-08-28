@@ -1,11 +1,16 @@
-
-import numpy as np
+"""
+S.Tomin and I.Zagorodnov, 2017, DESY/XFEL
+"""
 from ocelot.common.globals import *
+import logging
+
+logger = logging.getLogger(__name__)
+
 try:
     import numexpr as ne
     ne_flag = True
 except:
-    print("coord_transform.py: module NUMEXPR is not installed. Install it if you want higher speed calculation.")
+    logger.debug("coord_transform.py: module NUMEXPR is not installed. Install it to speed up calculation")
     ne_flag = False
 
 def xp_2_xxstg_mad(xp, xxstg, gamref):

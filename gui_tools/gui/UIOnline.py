@@ -175,7 +175,7 @@ class Ui_MainWindow(object):
         self.statusBar.setObjectName("statusBar")
         MainWindow.setStatusBar(self.statusBar)
         self.menuBar = QtWidgets.QMenuBar(MainWindow)
-        self.menuBar.setGeometry(QtCore.QRect(0, 0, 1222, 26))
+        self.menuBar.setGeometry(QtCore.QRect(0, 0, 1222, 22))
         self.menuBar.setObjectName("menuBar")
         self.menu_File = QtWidgets.QMenu(self.menuBar)
         self.menu_File.setObjectName("menu_File")
@@ -189,10 +189,10 @@ class Ui_MainWindow(object):
         MainWindow.addToolBar(QtCore.Qt.TopToolBarArea, self.mainToolBar)
         self.action_Parameters = QtWidgets.QAction(MainWindow)
         self.action_Parameters.setObjectName("action_Parameters")
-        self.actionLoad_Golden_Orbit = QtWidgets.QAction(MainWindow)
-        self.actionLoad_Golden_Orbit.setObjectName("actionLoad_Golden_Orbit")
-        self.actionSave_Golden_Orbit = QtWidgets.QAction(MainWindow)
-        self.actionSave_Golden_Orbit.setObjectName("actionSave_Golden_Orbit")
+        self.actionLoad_Lattice = QtWidgets.QAction(MainWindow)
+        self.actionLoad_Lattice.setObjectName("actionLoad_Lattice")
+        self.actionSave_Lattice = QtWidgets.QAction(MainWindow)
+        self.actionSave_Lattice.setObjectName("actionSave_Lattice")
         self.actionRead_BPMs_Corrs = QtWidgets.QAction(MainWindow)
         self.actionRead_BPMs_Corrs.setObjectName("actionRead_BPMs_Corrs")
         self.actionCalculate_RM = QtWidgets.QAction(MainWindow)
@@ -212,8 +212,8 @@ class Ui_MainWindow(object):
         self.menu_File.addAction(self.actionCalculate_RM)
         self.menu_File.addAction(self.actionRead_BPMs_Corrs)
         self.menu_File.addAction(self.actionAdaptive_Feedback)
-        self.menuGolden_Orbit.addAction(self.actionLoad_Golden_Orbit)
-        self.menuGolden_Orbit.addAction(self.actionSave_Golden_Orbit)
+        self.menuGolden_Orbit.addAction(self.actionLoad_Lattice)
+        self.menuGolden_Orbit.addAction(self.actionSave_Lattice)
         self.menuGolden_Orbit.addAction(self.actionLoad_GO_from_Orbit_Display)
         self.menuFile.addAction(self.actionSave_corrs)
         self.menuFile.addAction(self.actionLoad_corrs)
@@ -239,11 +239,11 @@ class Ui_MainWindow(object):
         self.pb_hide_cav_pan.setText(_translate("MainWindow", "Hide Cavity Panel"))
         self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.tab), _translate("MainWindow", "Longitudinal plane"))
         self.menu_File.setTitle(_translate("MainWindow", "&Expert Panel"))
-        self.menuGolden_Orbit.setTitle(_translate("MainWindow", "Golden Orbit"))
+        self.menuGolden_Orbit.setTitle(_translate("MainWindow", "Lattice"))
         self.menuFile.setTitle(_translate("MainWindow", "Correctors"))
         self.action_Parameters.setText(_translate("MainWindow", "Parameters"))
-        self.actionLoad_Golden_Orbit.setText(_translate("MainWindow", "Load Golden Orbit"))
-        self.actionSave_Golden_Orbit.setText(_translate("MainWindow", "Save Golden Orbit"))
+        self.actionLoad_Lattice.setText(_translate("MainWindow", "Load Lattice"))
+        self.actionSave_Lattice.setText(_translate("MainWindow", "Save Lattice"))
         self.actionRead_BPMs_Corrs.setText(_translate("MainWindow", "Read BPMs and Corrs"))
         self.actionCalculate_RM.setText(_translate("MainWindow", "Calculate ORM and DRM"))
         self.actionCalculate_ORM.setText(_translate("MainWindow", "Calculate ORM"))
@@ -257,3 +257,13 @@ from gui.monitor.ocl_monitor import OclMonitor
 from gui.table.cav_ocl_table import CavOclTable
 from gui.table.ocl_table import OclTable
 from gui.table.v_ocl_table import VOclTable
+
+if __name__ == "__main__":
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+    MainWindow = QtWidgets.QMainWindow()
+    ui = Ui_MainWindow()
+    ui.setupUi(MainWindow)
+    MainWindow.show()
+    sys.exit(app.exec_())
+

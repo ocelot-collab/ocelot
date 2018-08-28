@@ -1,10 +1,14 @@
-'''
+"""
 Created on 17.05.2016
 @author: Igor Zagorodnov
-'''
+"""
 
 from ocelot.adaptors import *
 from ocelot.adaptors.astra2ocelot import *
+from ocelot.cpbd.physics_proc import PhysProc
+import logging
+
+logger = logging.getLogger(__name__)
 
 def triang_filter(x, filter_order):
     Ns = x.shape[0]
@@ -125,7 +129,7 @@ class WakeTable:
         return (T, H)
 
 
-class Wake():
+class Wake(PhysProc):
     """
     The wake field impact on the beam is included as series of kicks.
     In order to take into account the impact of the wake field on the beam the longitudinal wake function
@@ -142,6 +146,7 @@ class Wake():
     factor = 1. - scaling coefficient
     """
     def __init__(self, step=1):
+        PhysProc.__init__(self)
         self.w_sampling = 500  # wake sampling
         self.filter_order = 20   # smoothing filter order
         #self.wake_file = ""
@@ -173,7 +178,7 @@ class Wake():
     def add_wake(self, I, T):
         """
         [x, W] = AddWake(I, T)
-        :param I: wake table in V/C, W in V (R,L,Cinv,nm,W0,N0,W1,N1)
+        :param I: wake table in V/C, W in V (R, L, Cinv, nm, W0, N0, W1, N1)
         :param T:
         :return:
         """
@@ -198,7 +203,8 @@ class Wake():
         if R != 0:
             W = W-bunch*R
         if L != 0:
-            W = W-d1_bunch*L*c
+            #W = W - d1_bunch*L*c
+            W = W + d1_bunch*L*c
         if Cinv != 0:
           int_bunch = Int1(x, bunch)
           W = W - int_bunch*Cinv/c
@@ -307,35 +313,36 @@ class Wake():
         #pass
         #self.TH = self.load_wake_table(self.wake_file)
         if self.wake_table == None:
-            print("Wake.wake_table is None! Please specify the WakeTable()")
+            logger.info("Wake.wake_table is None! Please specify the WakeTable()")
         else:
             self.TH = self.wake_table.TH
 
     def apply(self, p_array, dz):
-        #print("apply: WAKE")
-        #Px = 0
-        #Py = 0
-        #Pz = 0
-        #ziw = zi - dz * 0.5
-        #if (1.0 < ziw <= 3.0) or (5.0 < ziw <= 7.0):  # or(10.0<ziw<=12.0):
+        logger.debug(" Wake: apply: dz = " + str(dz))
+
         ps = p_array.rparticles
         Px, Py, Pz, I00 = self.add_total_wake(ps[0], ps[2], ps[4], p_array.q_array, self.TH, self.w_sampling, self.filter_order)
-        #if (3.0 < ziw <= 5.0):  # or(8.0<ziw<=10.0)or(12.0<ziw<=14.0):
-        #    Px, Py, Pz, I00 = self.add_total_wake(Ps[:, 0], Ps[:, 2], Ps[:, 4], p_array.q_array, THh, Ns, NF)
-        #print(zi, dz, ziw)
+
+        L = self.s_stop - self.s_start
+        if L == 0:
+            dz = 1.0
+        else:
+            dz = dz/L
 
         p_array.rparticles[5] = p_array.rparticles[5] + Pz * dz*self.factor / (p_array.E * 1e9)
         p_array.rparticles[3] = p_array.rparticles[3] + Py * dz*self.factor / (p_array.E * 1e9)
         p_array.rparticles[1] = p_array.rparticles[1] + Px * dz*self.factor / (p_array.E * 1e9)
 
 
+
 class WakeKick(Wake):
     def __init__(self, factor=1):
+        print("WakeKick physics process is obsolete. Use Wake.")
         Wake.__init__(self)
         self.factor = factor
 
     def apply(self, p_array, dz):
-        #print("Apply WakeKick")
+        logger.debug(" WakeKick: apply")
         ps = p_array.rparticles
         Px, Py, Pz, I00 = self.add_total_wake(ps[0], ps[2], ps[4], p_array.q_array, self.TH, self.w_sampling,
                                               self.filter_order)

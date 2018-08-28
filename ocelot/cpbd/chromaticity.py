@@ -1,6 +1,5 @@
 __author__ = 'Sergey Tomin'
 
-from numpy import tan, linspace, array, pi, matrix
 from ocelot.cpbd.optics import trace_z, twiss
 from scipy.integrate import simps
 from numpy.linalg import inv
@@ -58,7 +57,7 @@ def natural_chromaticity(lattice, tws_0, nsuperperiod = 1):
             k = []
             h = []
             Z = []
-            for z in linspace(0, elem.l,num = 5, endpoint=True):
+            for z in np.linspace(0, elem.l,num = 5, endpoint=True):
                 twiss_z = elem.transfer_map(z)*tws_elem
                 bx.append(twiss_z.beta_x)
                 by.append(twiss_z.beta_y)
@@ -70,9 +69,9 @@ def natural_chromaticity(lattice, tws_0, nsuperperiod = 1):
                     h.append(0.)
                 Z.append(z)
 
-            H2 = array(h)*array(h)
-            X = array(bx)*(array(k)+ H2)
-            Y = -array(by)*array(k)
+            H2 = np.array(h)*np.array(h)
+            X = np.array(bx)*(np.array(k)+ H2)
+            Y = -np.array(by)*np.array(k)
             integr_x += simps(X, Z)
             integr_y += simps(Y, Z)
         elif elem.__class__ == Multipole:
@@ -98,7 +97,7 @@ def sextupole_chromaticity(lattice, tws0, nsuperperiod = 1):
             Dx = []
             Z = []
 
-            for z in linspace(0, elem.l, num = 5, endpoint=True):
+            for z in np.linspace(0, elem.l, num = 5, endpoint=True):
                 twiss_z = elem.transfer_map(z)*tws_elem
                 bx.append(twiss_z.beta_x)
                 by.append(twiss_z.beta_y)
@@ -106,8 +105,8 @@ def sextupole_chromaticity(lattice, tws0, nsuperperiod = 1):
 
                 Z.append(z)
 
-            X = array(bx)*array(Dx)
-            Y = array(by)*array(Dx)
+            X = np.array(bx)*np.array(Dx)
+            Y = np.array(by)*np.array(Dx)
             integr_x += simps(X, Z)*elem.k2
             integr_y += simps(Y, Z)*elem.k2
 
@@ -165,8 +164,8 @@ def calculate_sex_strength(lattice, tws_0, ksi, ksi_comp, nsuperperiod):
             m2x += tws_elem.Dx*tws_elem.beta_x/(4*pi)*nsuperperiod
             m2y -= tws_elem.Dx*tws_elem.beta_y/(4*pi)*nsuperperiod
         tws_elem = element.transfer_map*tws_elem
-    M = matrix([ [m1x, m2x], [m1y, m2y] ])
-    ksi = matrix([ [ksi_x_comp - ksi_x], [ksi_y_comp - ksi_y] ])
+    M = np.matrix([ [m1x, m2x], [m1y, m2y] ])
+    ksi = np.matrix([ [ksi_x_comp - ksi_x], [ksi_y_comp - ksi_y] ])
     KSI = inv(M)*ksi
     sex_dict_stg[sex_name[0]] = KSI[0,0]
     sex_dict_stg[sex_name[1]] = KSI[1,0]
@@ -214,14 +213,14 @@ def DZ(lattice, energy):
     R = lattice_transfer_map(lattice, energy)
     #print np.array(R[:4, :4])- np.eye(4),R[:4, 5]
 
-    x = dot(R, [1,1,1,1,0,0])
-    x2 = dot(R, [1,1,1,1,0,0.001])
+    x = np.dot(R, [1,1,1,1,0,0])
+    x2 = np.dot(R, [1,1,1,1,0,0.001])
     #print (x2 - x)/0.001
     #print R
 
     w, v = eig(R)
     #print R
-    v1 = dot(R,v[0].real)
+    v1 = np.dot(R,v[0].real)
     #print "v0 = ", v[0].real
     #print "v*R = ", v1
     DZ = np.dot(inv(-R[:4, :4] + np.eye(4)), R[:4, 5])
@@ -234,7 +233,7 @@ def DZ(lattice, energy):
     R_lat = np.eye(6)
     for elem in lattice.sequence:
         R = elem.transfer_map.R(energy)
-        R_lat = dot(R, R_lat)
+        R_lat = np.dot(R, R_lat)
         #cosmx = (R[0, 0] + R[1, 1])/2.
         #cosmy = (R[2, 2] + R[3, 3])/2.
 
@@ -245,7 +244,7 @@ def DZ(lattice, energy):
         # nsinmx = np.sign(R[0, 1])*sqrt(R[0,1]*R[1, 0] - (R[0, 0]*R[1,1])/4.)
         # nsinmy = np.sign(R[2, 3])*sqrt(R[2,3]*R[3, 2] - (R[2, 2]*R[3,3])/4.)
 
-        DZ = dot(R_lat, DZ0)
+        DZ = np.dot(R_lat, DZ0)
         DR = np.zeros((6,6))
         T = elem.transfer_map.t_mat_z_e(elem.l, energy)
         for i in range(6):

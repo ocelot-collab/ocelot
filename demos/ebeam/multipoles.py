@@ -14,7 +14,7 @@ Qd = Multipole(kn=[0., -0.02], eid="Qd")
 B = Multipole(kn=2.*pi/Nbends)
 Sf = Multipole(kn=(0., 0., 0.0), eid="Sf")
 Sd = Multipole(kn=(0., 0., -0.0), eid="Sd")
-F = Multipole(kn=[0., 0., 0., 0., 0.1])
+F = Multipole(kn=[0., 0., 0., 0.3, 0.5])
 cell = (Qf,Sf, D,F,B, D, Qd, Sd, D, B, D, Sf, Qf)
 
 lat = MagneticLattice(Ncells*cell)
@@ -27,7 +27,7 @@ compensate_chromaticity(lat, ksi_x_comp=0, ksi_y_comp=0)
 p1 = Particle(x = -0.0001)
 p2 = Particle(x = 0.001)
 
-navi = Navigator()
+navi = Navigator(lat)
 dz = 1.
 P1 = []
 P2 = []
@@ -54,7 +54,7 @@ plt.ylabel("x1/x2, m")
 plt.legend()
 plt.show()
 nturns = 1000
-x_array = np.linspace(0.4, 0.60, num=100)
+x_array = np.linspace(0.4, 0.70, num=200)
 track_list = create_track_list(x_array, [0.], [0.], energy=0.)
 track_list = track_nturns(lat, nturns, track_list, save_track=True)
 track_list = stable_particles(track_list, nturns)

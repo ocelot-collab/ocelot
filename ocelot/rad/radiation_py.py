@@ -242,7 +242,7 @@ def track4rad(beam, lat, energy_loss=False, quantum_diff=False, accuracy=1):
                     mag_field = field_map2field_func(z=z_array, By=elem.field_map.By_arr)
                 else:
                     #print("Standard undulator field")
-                    mag_field = lambda x, y, z: und_field(x, y, z, elem.lperiod, elem.Kx, nperiods=None)
+                    mag_field = lambda x, y, z: und_field(x, y, z, elem.lperiod, elem.Kx, nperiods=elem.nperiods)
             N = int((mag_length*1500 + 100)*accuracy)
             p_array = ParticleArray()
             p_array.list2array([p])
@@ -276,13 +276,12 @@ def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step):
     :param half_step:
     :return:
     """
-    Q = 0.5866740802042227#; // (mm*T)^-1
-    hc = 1.239841874330e-3 # // mm
+    Q = speed_of_light/m_e_eV/1000 #0.5866740802042227#; // e/mc = (mm*T)^-1
+    hc = h_eV_s*speed_of_light*1000# 1.239841874330e-3 # // mm
     k2q3 = 1.1547005383792517#;//  = 2./sqrt(3)
     gamma2 = gamma*gamma
     w = [0.5555555555555556*half_step, 0.8888888888888889*half_step, 0.5555555555555556*half_step]
     LenPntrConst = screen.Distance - motion.z[0]#; // I have to pay attention to this
-    #print("Z init = ", motion.z[0])
     phaseConst = np.pi*Erad/(gamma2*hc)
     for p in range(3):# // Gauss integration
         i = n*3 + p + 1
@@ -320,9 +319,13 @@ def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step):
         phaseConstCur = (prX*prX + prY*prY)/LenPntrZ
         #// string below is for case direct accumulation
         #//double phase = screen->Phase[ypoint*xpoint*je + xpoint*jy + jx] + faseConst*(ZZ - motion->Z[0]  + gamma2*(IbetX2 + IbetY2 + phaseConstCur - phaseConstIn));
-        
-        phase = phaseConst*(ZZ - motion.z[0] + gamma2*(IbetX2 + IbetY2 + phaseConstCur - phaseConstIn)) + screen.arPhase
 
+        # original
+        phase = phaseConst*(ZZ - motion.z[0] + gamma2*(IbetX2 + IbetY2 + phaseConstCur - 0*phaseConstIn)) + screen.arPhase
+        # TODO: test
+        #phase = phaseConst * (
+        #            ZZ - motion.z[0] + gamma2 * (IbetX2 + IbetY2 + ((Xscr - XX)**2 + (Yscr - YY)**2)/LenPntrZ -
+        #                                         0*((Xscr - motion.x[0]) ** 2 + (Yscr - motion.y[0]) **2 ) / LenPntrConst)) + screen.arPhase
         #print screen.arPhase
         #phase = (phase/2./pi - floor(phase/2./pi))*2.*pi
         cosf = np.cos(phase)
@@ -342,12 +345,7 @@ def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step):
             prY = Yscr - motion.y[-1] # //for pointer ny(z)
             IbetX2 = motion.XbetaI2[-1]
             IbetY2 = motion.YbetaI2[-1]
-            phase = phaseConst*(motion.z[-1] - motion.z[0]  + gamma2*(IbetX2 + IbetY2 + prX*prX/LenPntrZ + prY*prY/LenPntrZ - phaseConstIn))
-            #print "1part = ", (gamma2*(IbetX2 + IbetY2 + prX*prX/LenPntrZ + prY*prY/LenPntrZ - phaseConstIn))
-            #print "phasw = ", phase[600]/2./pi
-            #print "delta = ", motion.z[-1] - motion.z[0]
-            #print "phaseConst = ", phaseConst[0]
-            #print gamma2, EreX[0]
+            phase = phaseConst*(motion.z[-1] - motion.z[0]  + gamma2*(IbetX2 + IbetY2 + prX*prX/LenPntrZ + prY*prY/LenPntrZ - 0*phaseConstIn))
             screen.arPhase = screen.arPhase + phase
     return screen
 
@@ -435,7 +433,7 @@ def radiation_py(gamma, traj, screen):
     #print "reshape = ", time() - start3
 
     return 1
-
+#from ocelot.gui import *
 #import matplotlib.pyplot as plt
 def calculate_radiation(lat, screen, beam, energy_loss=False, quantum_diff=False, accuracy=1):
     screen.update()
@@ -446,11 +444,11 @@ def calculate_radiation(lat, screen, beam, energy_loss=False, quantum_diff=False
     screen.nullify()
     U, E = track4rad(beam, lat, energy_loss=energy_loss, quantum_diff=quantum_diff, accuracy=accuracy)
     for u, e in zip(U, E):
-        #plt.plot(u[4::9], u[1::9],"r.")
-        #plt.plot(u[4::9], u[2::9], "b")
+        # plt.plot(u[4::9], u[0::9], "r")
+        # plt.plot(u[4::9], u[2::9], "b")
         radiation_py(e/m_e_GeV, u, screen)
-    #plt.show()
-    screen.distPhoton( gamma, current = b_current)
+    # plt.show()
+    screen.distPhoton(gamma, current=b_current)
     screen.Ef_electron = E[-1]
     screen.motion = U
     return screen
@@ -531,7 +529,7 @@ def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy
                     mag_field = field_map2field_func(z=z_array, By=elem.field_map.By_arr)
                 else:
                     #print("Standard undulator field")
-                    mag_field = lambda x, y, z: und_field(x, y, z, elem.lperiod, elem.Kx)
+                    mag_field = lambda x, y, z: und_field(x, y, z, elem.lperiod, elem.Kx, nperiods=elem.nperiods)
             N = int((mag_length*1500 + 100)*accuracy)
             u = rk_track_in_field(p_array.rparticles, mag_length, N, energy, mag_field)
 
@@ -568,26 +566,46 @@ def calculate_beam_radiation(lat, screen, p_array, energy_loss=False, quantum_di
     screen.nullify()
     #U, E = track4rad_beam(p_array, lat, energy_loss=energy_loss, quantum_diff=quantum_diff, accuracy=accuracy)
     #print("DONE tracking")
+    screen2 = copy.deepcopy(screen)
     for i in range(len(p_array.x())):
-        screen_copy = copy.deepcopy(screen)
+        screen_copy = copy.deepcopy(screen2)
         screen_copy.nullify()
         wlengthes = h_eV_s*speed_of_light/screen_copy.Eph
         screen_copy.arPhase[:] = tau0[i]/wlengthes*2*np.pi
         #screen_copy.arPhase[:] = U[0][4, i]/wlengthes*2*np.pi
-        #print(U[0][4, i], screen_copy.arPhase)
+        # print(U[0][4, i], screen_copy.arPhase[0])
         for u, e in zip(U, E):
-            #plt.plot(u[4::9, i], u[0::9, i])
+            #shift_x = (max(u[0::9, i]) + min(u[0::9, i]))/2
+            #u[0::9, i] -= shift_x
+            # plt.plot(u[4::9, i], u[0::9, i])
+            # plt.show()
             u[4::9, i] -= U[0][4, i]
             gamma = (1 + p_array.p()[i]) * e / m_e_GeV
-            print(i, gamma)
+            # print(i, gamma, p_array.p()[i], screen_copy.Distance)
 
             radiation_py(gamma, u[:, i], screen_copy)
-            #print("phase = ", i, screen_copy.arPhase)
+            #screen_copy.distPhoton(gamma, current=b_current)
+            #show_flux(screen_copy, unit="mrad", title=str(i), nfig=i)
+            #plt.plot(screen_copy.arReEx**2 + screen_copy.arImEx**2, label="Re " + str(i))
+            #plt.plot(screen_copy.arImEx**2, label="Im " + str(i))
+            # plt.title("90 periods, 20 km, Eph = 8.5044 meV")
+            # plt.plot(screen_copy.Xph/1000, screen_copy.arPhase % 2*np.pi, label=r"$\phi \% 2 \pi$")
+            # plt.plot(screen_copy.Xph/1000, np.arctan(screen_copy.arImEx/screen_copy.arReEx), label=r"$\arctan\left(\frac{Im(E_x)}{Re(E_x)}\right)$")
+            #plt.plot(screen_copy.Yph/1000, screen_copy.arReEy, label=r"$Re(E_x)$")
+            # plt.plot(screen_copy.Xph/1000, screen_copy.arImEx, label=r"$Im(E_x)$")
+            # plt.plot(screen_copy.Xph/1000, np.sqrt(screen_copy.arImEx**2 + screen_copy.arReEx**2), label=r"$\sqrt{Re(E_x)^2 + Im(E_x)^2}$")
+            # plt.grid(True)
+            # plt.xlabel("m")
+            # plt.legend()
+            # plt.show()
             screen.arReEx += screen_copy.arReEx
             screen.arImEx += screen_copy.arImEx
             screen.arReEy += screen_copy.arReEy
             screen.arImEy += screen_copy.arImEy
             # screen.arPhase[0:10]/2./pi
+    #plt.plot(screen.arReEx ** 2 + screen.arImEx ** 2, label="Re " + str(i))
+
+    #plt.legend()
     #plt.show()
     screen.distPhoton(gamma, current = b_current)
     screen.Ef_electron = E[-1]
@@ -617,7 +635,6 @@ def calculate_beam_radiation_check(lat, screen, p_array, energy_loss=False, quan
         p_array_i.q_array = p_array.q_array[i]
         p_array_i.rparticles[:, 0] = p_array.rparticles[:, i]
         p_array_i.rparticles[4] = 0
-        print(lat.sequence[0].l)
         U, E = track4rad_beam(p_array_i, lat, energy_loss=energy_loss, quantum_diff=quantum_diff, accuracy=accuracy)
         #for u in U:
         #    plt.plot(u[4::9, :], u[0::9, :])

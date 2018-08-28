@@ -21,34 +21,80 @@
 #  SOFTWARE.
 import sys
 from copy import copy
+import logging
 from logging import Formatter
+import inspect
 
-MAPPING = {
-    'DEBUG'   : '0;37', # white
-    'INFO'    : '0;36', # cyan
-    'WARNING' : '1;33', # yellow
-    'ERROR'   : '0;31', # red
-    'CRITICAL': '0;41', # white on red bg
+# import traceback
+# len(traceback.extract_stack())
+
+ind_str = ': '
+
+
+
+_log_colored = True
+_log_indented = True
+_log_debugging = True
+
+
+_MAPPING = {
+'INFO'   : '0', # default
+# 'INFO'   : '0;37', # white
+'DEBUG'    : '0;36', # cyan
+'WARNING' : '1;33', # yellow
+'ERROR'   : '0;31', # red
+'CRITICAL': '0;41', # white on red bg
 }
 #yellow: print('\033[33myellow\033[0m')
-PREFIX = '\033['
-SUFFIX = '\033[0m'
+_PREFIX = '\033['
+_SUFFIX = '\033[0m'
 
-class ColoredFormatter(Formatter):
 
+ocelog = logging.getLogger('ocelot')
+
+ocelog.indent0 = len(inspect.stack())
+
+class OcelogFormatter(Formatter):
+    
+    
     def __init__(self, patern):
         Formatter.__init__(self, patern)
-
+        
     def format(self, record):
-        colored_record = copy(record)
-        levelname = colored_record.levelname
-        seq = MAPPING.get(levelname, 37) # default white
-        colored_levelname = ('{0}{1}m{2}{3}') \
-            .format(PREFIX, seq, levelname, SUFFIX)
-        colored_record.levelname = colored_levelname
-        return Formatter.format(self, colored_record)
+        fmt_orig = self._style._fmt
+        ocelog_record = copy(record)
+        
+        if _log_colored:
+            seq = _MAPPING.get(ocelog_record.levelname, '0') # default
+            ocelog_record.msg = ('{0}{1}m{2}{3}').format(_PREFIX, seq, ocelog_record.msg, _SUFFIX)
+            # ocelog_record.levelname = ('{0}{1}m{2}{3}').format(_PREFIX, seq, ocelog_record.levelname, _SUFFIX)
+            
+        if _log_indented:
+            # print('stack ',len(inspect.stack()))
+            # print('_indent0 ', _indent0)
+            # if hasattr(ocelog, 'indent0'):
+                # print('ocelog.indent0', ocelog.indent0)
+            # print('logging.indent0_before = ' + str(logging.indent0))
+            indent = len(inspect.stack())
+            if indent < ocelog.indent0:
+                ocelog.indent0 = indent
+            # print('indent = ' + str(indent - logging.indent0))
+            # print('logging.indent0_after = ' + str(logging.indent0))
+            ind_space = ind_str * (indent - ocelog.indent0)
+            ocelog_record.msg = ind_space + ocelog_record.msg
+            
+        if _log_debugging:
+            if ocelog_record.levelname != 'INFO':
+                self._style._fmt += ' \033[37m(%(filename)s:%(lineno)d)\033[0m'
+        
+        result = Formatter.format(self, ocelog_record)
+        self._style._fmt = fmt_orig
+        return result
 
-import logging
+def ocelog_indentate():
+    import inspect
+    ocelog.indent0 = len(inspect.stack())
+    print('ocelog.indent0.init', ocelog.indent0)
 
 # logging.basicConfig(stream=sys.stdout) #test
 
@@ -56,27 +102,28 @@ import logging
 # _console_format = "[%(name)s][%(levelname)s]  %(message)s (%(filename)s:%(lineno)d)"
 # _file_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 
-_console_format = "[%(levelname)s]  %(message)s [%(name)s] \033[37m(%(filename)s:%(lineno)d)\033[0m"
-_file_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s - %(filename)s:%(lineno)d'
-_logtofile = False
+# _console_format = "[%(levelname)s]  %(message)s [%(name)s] \033[37m(%(filename)s:%(lineno)d)\033[0m"
 
-ocelog = logging.getLogger('ocelot')
+# ocelog.console_format = "[%(levelname)-8s]  %(message)s (%(filename)s:%(lineno)d)  [%(name)s]" # full
+# ocelog.console_format = "[%(levelname)-8s] %(message)s [%(name)s]" # with name
+ocelog.console_format = "[%(levelname)-8s] %(message)s" # minimum
+ocelog.file_format = '%(asctime)s - [%(levelname)-8s] - %(message)s - %(name)s - %(filename)s:%(lineno)d'
+
 ocelog.handlers=[]
 # Add console handler
-
 if True:
     ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-    cf = ColoredFormatter(_console_format)
+    # ch.setLevel(logging.DEBUG)
+    cf = OcelogFormatter(ocelog.console_format)
     ch.setFormatter(cf)
     ocelog.addHandler(ch)
 
 
-if _logtofile:
+if False:
     # Add file handler
     fh = logging.FileHandler('ocelot.log')
-    fh.setLevel(logging.DEBUG)
-    ff = logging.Formatter(_file_format)
+    # fh.setLevel(logging.DEBUG)
+    ff = logging.Formatter(ocelog.file_format)
     fh.setFormatter(ff)
     ocelog.addHandler(fh)
     

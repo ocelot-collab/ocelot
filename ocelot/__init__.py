@@ -45,8 +45,8 @@ from ocelot.cpbd.csr import *
 from ocelot.cpbd.wake3D import *
 from ocelot.cpbd.physics_proc import *
 import logging
-_logger = logging.getLogger('ocelot.init')
-_logger.info('initializing ocelot...')
+# _logger = logging.getLogger('ocelot.init')
+# _logger.info('initializing ocelot...')
 print('initializing ocelot...')
 # logger = Logger()
 #xrange=range

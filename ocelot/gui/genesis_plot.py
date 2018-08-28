@@ -78,8 +78,7 @@ def plot_gen_out_all_paral(exp_dir, stage=1, savefig='png', debug=1):
     
     return
 
-    # plot_gen_stat(proj_dir=exp_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int','energy','r_size_weighted'], z_param_inp=[], dfl_param_inp=[], s_inp=['max'], z_inp=[0,'end'], savefig=1, saveval=1, showfig=0, debug=0)
-
+# plot_gen_stat(proj_dir=exp_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int','energy','r_size_weighted'], z_param_inp=[], dfl_param_inp=[], s_inp=['max'], z_inp=[0,'end'], savefig=1, saveval=1, showfig=0, debug=0)
 
 def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1, 1, 6.05, 1, 0, 0, 0, 0, 0, 1, 1), vartype_dfl=complex128, debug=1):
     '''
@@ -89,8 +88,8 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
         path to genesis output file
         path to folders with genesis output files
 
-    choice=(1,1,1,1,[],1,0,0,0,0,0)
-            0 1 2 3 4  5 6 7 8 9 10
+    choice=(1,1,1,1,6.05,1,0,0,0,0,0)
+            0 1 2 3 4    5 6 7 8 9 10
         0 - electron evolution
         1 - radiation evolution
         2 - profile at z=0m
@@ -110,8 +109,9 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
     #If folder path is provided, all *.gout and *.out files are plotted
     '''
 
-    if debug > 0:
-        print('  plotting genesis output')
+
+    _logger.info('plotting all genesis output')
+    _logger.debug('choice = ' + str(choice))
     plotting_time = time.time()
 
     # plt.ioff()
@@ -135,16 +135,14 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
             for name in files:
                 if name.endswith('.gout') or name.endswith('.out'):
                     handles.append(os.path.join(root, name))
-        if debug > 0:
-            print('\n  plotting all files in ' + str(handle))
+        _logger.info('\n  plotting all files in ' + str(handle))
     else:
         handles = [handle]
 
     for handle in handles:
 
         if os.path.isfile(str(handle)):
-            print('')
-            print('plotting ',handle)
+            _logger.info('plotting '+str(handle))
             handle = read_out_file(handle, read_level=2, debug=debug)
 
         if isinstance(handle, GenesisOutput):
@@ -161,36 +159,36 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
                     W=wigner_out(handle, pad=2)
                     plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug, downsample=2)
                 except:
-                    pass
-            if choice[4] != 0:
+                    _logger.warning('could not plot wigner')
+            if choice[4] != 0 and  choice[4] != []:
                 for z in np.arange(choice[4], np.amax(handle.z), choice[4]):
                     plot_gen_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug)
             if choice[12]:
                 try:
                     plot_dpa_bucket_out(handle,scatter=0,slice_pos='max_P',repeat=3, showfig=showfig, savefig=savefig, cmap=def_cmap)
-                except IOError:
-                    pass
+                except:
+                    _logger.warning('could not plot particle buckets')
 
             
                 
         if os.path.isfile(handle.filePath + '.dfl') and any(choice[5:8]):
             dfl = read_dfl_file_out(handle, debug=debug)
             if dfl.Nz()==0:
-                print('empty dfl, skipping')
+                _logger.warning('empty dfl, skipping')
             else:
                 if choice[5]:
                     f5 = plot_dfl(dfl, showfig=showfig, savefig=savefig, debug=debug)
                 if choice[6]:
-                    f6 = plot_dfl(dfl, far_field=1, freq_domain=0, auto_zoom=0, showfig=showfig, savefig=savefig, debug=debug)
+                    f6 = plot_dfl(dfl, domains='tk', auto_zoom=0, showfig=showfig, savefig=savefig, debug=debug)
                 if choice[7]:
-                    f7 = plot_dfl(dfl, far_field=0, freq_domain=1, auto_zoom=0, showfig=showfig, savefig=savefig, debug=debug)
+                    f7 = plot_dfl(dfl, domains='sf', auto_zoom=0, showfig=showfig, savefig=savefig, debug=debug)
                 if choice[8]:
-                    f8 = plot_dfl(dfl, far_field=1, freq_domain=1, auto_zoom=0, showfig=showfig, savefig=savefig, debug=debug)
+                    f8 = plot_dfl(dfl, domains='kf', auto_zoom=0, showfig=showfig, savefig=savefig, debug=debug)
         
         if os.path.isfile(handle.filePath + '.dpa') and (choice[9] or choice[10]) and handle('itdp') == True:
             dpa = read_dpa_file_out(handle, debug=debug)
             if np.size(dpa.ph)==0:
-                print('empty dpa, skipping')
+                _logger.warning('empty dpa, skipping')
             else:
                 if choice[9]:
                     edist = dpa2edist(handle, dpa, num_part=5e4, smear=1, debug=debug)
@@ -200,20 +198,18 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
                     f10 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=(100, 100, 300, 200), debug=debug)
         
     if savefig != False:
-        if debug > 0:
-            print('    plots recorded to *.' + str(savefig) + ' files')
+        _logger.info(ind_str + 'plots recorded to *.' + str(savefig) + ' files')
 
     if showfig:
-        if debug > 0:
-            print('    showing plots, close all to proceed')
+        _logger.info(ind_str + 'showing plots, close all to proceed')
         plt.show()
     # else:
         # plt.close('all')
 
-    print ('    total plotting time %.2f seconds' % (time.time() - plotting_time))
+    _logger.info(ind_str + 'total plotting time {:.2f} seconds'.format(time.time() - plotting_time))
 
 
-def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espread+el_bunching', 'rad_phase', 'rad_spec'], figsize=4, x_units='um', y_units='ev', legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
+def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espread+el_bunching', 'rad_spec'], figsize=3.5, x_units='um', y_units='ev', legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
     '''
     radiation parameters at distance z
     g/out = GenesisOutput() object
@@ -280,13 +276,12 @@ def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espre
             # print('    plotting ' + fig_name)
     if fig_name is None:
         if g.fileName() is '':
-            fig = plt.figure('Bunch profile at ' + str(z) + 'm')
+            fig = plt.figure('Bunch profile at {:} [m]'.format(z))
         else:
-            fig = plt.figure('Bunch profile at ' + str(z) + 'm ' + g.fileName())
+            fig = plt.figure('Bunch profile at {:} [m]'.format(z) + g.fileName())
     else:
         fig = plt.figure(fig_name)
-    if debug > 0:
-        print('    plotting bunch profile at ' + str(z) + ' [m]')
+    _logger.info('plotting bunch profile at {:} [m]'.format(z))
         
     if np.size(figsize) == 1:
         figsize = (3 * figsize, (len(params) + 0.5) * figsize)
@@ -299,16 +294,15 @@ def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espre
     ax = []
     
     if g('itdp') == False:
-        print('!     not applicable for steady-state')
+        _logger.error('plotting bunch profile is not applicable for steady-state')
         return
     
     params_t = list(set(params).difference(f_domain))
     params_t = [v for v in params if v in params_t]
     params_f = list(set(params).difference(t_domain))
     params_f = [v for v in params if v in params_f]
-    if debug > 1:
-        print('params_t',params_t)
-        print('params_f',params_f)
+    _logger.debug(ind_str + 'params_t: {:}'.format(params_t))
+    _logger.debug(ind_str + 'params_f: {:}'.format(params_f))
     
     for index, param in enumerate(params_t):
         if len(ax) == 0:
@@ -373,7 +367,8 @@ def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espre
     if showfig:
         plt.show()
     else:
-        plt.close('all')
+        # plt.close('all')
+        plt.close(fig)
 
 
 def subfig_z_power_curr(ax_curr, g, zi=None, x_units='um', legend=False):
@@ -395,7 +390,7 @@ def subfig_z_power_curr(ax_curr, g, zi=None, x_units='um', legend=False):
     ax_curr.plot(x, g.I / 1e3, 'k--')
     ax_curr.set_ylabel(r'I [kA]')
     ax_curr.set_ylim(ymin=0)
-    ax_curr.text(0.02, 0.98, "Q= %.2f pC" % (g.beam_charge * 1e12), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_curr.transAxes, color='black')  # horizontalalignment='center', verticalalignment='center',
+    ax_curr.text(0.02, 0.98, "Q= {:.2f} pC".format(g.beam_charge * 1e12), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_curr.transAxes, color='black')  # horizontalalignment='center', verticalalignment='center',
     ax_curr.grid(True)
     
     ax_power = ax_curr.twinx()
@@ -409,9 +404,9 @@ def subfig_z_power_curr(ax_curr, g, zi=None, x_units='um', legend=False):
     ax_power.get_yaxis().get_major_formatter().set_scientific(True)
     ax_power.get_yaxis().get_major_formatter().set_powerlimits((-3, 4))  # [:,75,75]
     if 'n_photons' in dir(g):
-        ax_curr.text(0.98, 0.98, "E= %.2e J\nN$_{phot}$= %.2e" % (g.pulse_energy[zi], g.n_photons[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
+        ax_curr.text(0.98, 0.98, "E= {:.2e} J\nN$_{{phot}}$= {:.2e}".format(g.pulse_energy[zi], g.n_photons[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
     else:
-        ax_curr.text(0.98, 0.98, "E= %.2e J" % (g.pulse_energy[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
+        ax_curr.text(0.98, 0.98, "E= {:.2e} J".format(g.pulse_energy[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
     
     ax_curr.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_power.yaxis.major.locator.set_params(nbins=number_ticks)
@@ -531,13 +526,22 @@ def subfig_z_phase(ax_phase, g, zi=None, x_units='um', legend=False, rewrap=Fals
     ax_phase.set_xlim([x[0],x[-1]])
 
 
-def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=True, legend=False):
+def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=True, legend=False, mode='mid'):
     
     number_ticks = 6
     # n_pad = 1
     
     if zi == None:
         zi = -1
+    
+    if hasattr(g,'spec'):
+        if g.spec_mode != mode:
+            g.calc_spec(mode = mode)
+    else:
+        g.calc_spec(mode = mode)
+    #TMP
+    # g.calc_spec(mode='int')
+    
     
     if 'spec' not in dir(g):
         g.calc_spec()
@@ -559,7 +563,10 @@ def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=Tru
     # phase = np.pad(g.phi_mid, [(int(g.nSlices / 2) * n_pad, (g.nSlices - (int(g.nSlices / 2)))) * n_pad, (0, 0)], mode='constant')  # not supported by the numpy 1.6.2
     
     ax_spectrum.plot(x, spec, 'r-')
-    ax_spectrum.text(0.98, 0.98, r'(on axis)', fontsize=10, horizontalalignment='right', verticalalignment='top', transform=ax_spectrum.transAxes)  # horizontalalignment='center', verticalalignment='center',
+    if mode == 'mid':
+        ax_spectrum.text(0.98, 0.98, r'(on axis)', fontsize=10, horizontalalignment='right', verticalalignment='top', transform=ax_spectrum.transAxes)  # horizontalalignment='center', verticalalignment='center',
+    else:
+        ax_spectrum.text(0.98, 0.98, r'(integrated assuming on-axis phases)', fontsize=10, horizontalalignment='right', verticalalignment='top', transform=ax_spectrum.transAxes)  # horizontalalignment='center', verticalalignment='center',
     
     ax_spectrum.set_ylim(ymin=0)
     ax_spectrum.get_yaxis().get_major_formatter().set_useOffset(False)
@@ -839,16 +846,13 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'e
     if fig_name is None:
         if g.fileName() is '':
             fig = plt.figure(params_str)
-            if debug > 0:
-                print('    plotting ' + params_str)
+            _logger.info('plotting ' + params_str)
         else:
             fig = plt.figure(g.fileName() + '_' + params_str)
-            if debug > 0:
-                print('    plotting ' + g.fileName() + '_' + params_str)
+            _logger.info('plotting ' + g.fileName() + '_' + params_str)
     else:
         fig = plt.figure(fig_name)
-        if debug > 0:
-            print('    plotting ' + fig_name)
+        _logger.info('plotting ' + fig_name)
     
     if np.size(figsize) == 1:
         figsize = (3 * figsize, (len(params) + 0.5) * figsize)
@@ -942,7 +946,8 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'e
         rcParams["savefig.directory"] = dir
         plt.show()
     else:
-        plt.close('all')
+        # plt.close('all')
+        plt.close(fig)
 
 
 def subfig_evo_und_quad(ax_und, g, legend):
@@ -1420,7 +1425,7 @@ def plot_dfl_all(dfl, **kwargs):
     plot_dfl(dfl, **kwargs)
     dfl.fft_xy()
 
-def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy = True, log_scale=0, debug=1, vartype_dfl=complex64):
+def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy = True, log_scale=0, debug=1, cmin=0, vartype_dfl=complex64):
     '''
     Plots dfl radiation object in 3d.
 
@@ -1446,12 +1451,13 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     filePath = dfl.filePath
 
     text_present = 1
-    if debug > 0:
-        print('    plotting radiation field (dfl)')
+    _logger.info('plotting radiation field (dfl)')
     start_time = time.time()
     
-    if dfl.__class__ != RadiationField:
-        raise ValueError('wrong radiation object: should be RadiationField')
+    # print('dfl type is ',type(dfl))
+    # if isinstance(dfl, RadiationField):
+    # # if dfl.__class__ != RadiationField:
+        # raise ValueError('wrong radiation object: should be RadiationField')
     
     dfl = deepcopy(dfl)
     
@@ -1469,10 +1475,11 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     else:
         freq_domain = False
     
-    if fig_name is None:
-        suffix = ''
-    else:
-        suffix = '_'+fig_name
+    suffix = ''
+#    if fig_name is None:
+#        suffix = ''
+#    else:
+#        suffix = '_'+fig_name
         
     if dfl.Nz() != 1:
         # Make sure it is time-dependent
@@ -1497,13 +1504,17 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         if freq_domain:
             if dfl.domain_z == 't':
                 dfl.fft_z(debug=debug)
-            z = dfl.scale_z() * 1e9
+            
+#            z = dfl.scale_z() * 1e9
+#            dfl.fld = dfl.fld[::-1, :, :]
+#            z = z[::-1]
+#            unit_z = r'nm'
+#            z_label = r'$\lambda$ [' + unit_z + ']'
 
-            dfl.fld = dfl.fld[::-1, :, :]
-            z = z[::-1]
-
-            unit_z = r'nm'
-            z_label = r'$\lambda$ [' + unit_z + ']'
+            z = h_eV_s * speed_of_light / dfl.scale_z()
+            unit_z = r'eV'
+            z_label = r'$E_{{ph}}$ [{}]'.format(unit_z)
+            
             z_labelv = r'[arb. units]'
             z_title = 'Spectrum'
             z_color = 'red'
@@ -1584,16 +1595,11 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     xz_proj = dfl.int_zx()
     z_proj = dfl.int_z()
     
-    if log_scale:
-        suffix += '_log'
-        xy_proj[xy_proj == 0] = None
-        # yz_proj[yz_proj == 0] = None
-        # xz_proj[xz_proj == 0] = None
-        z_proj[z_proj == 0] = None
-        
-    
     dx = abs(x[1] - x[0])
     dy = abs(y[1] - y[0])
+    
+    if log_scale:
+        suffix += '_log'
 
     if fig_name is None:
         if dfl.fileName() is '':
@@ -1621,6 +1627,20 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     
     if np.max(x_line) != 0 and np.max(y_line) != 0:
         x_line, y_line = x_line / np.max(x_line), y_line / np.max(y_line)
+        
+        
+    if cmin not in [None, False, 0]:
+        cmap = matplotlib.cm.get_cmap(cmap)
+        cmap.set_under("w")
+        xy_proj[xy_proj < xy_proj.max() * cmin] = -1e-10
+        yz_proj[yz_proj < yz_proj.max() * cmin] = -1e-10
+        xz_proj[xz_proj < xz_proj.max() * cmin] = -1e-10
+
+    if log_scale:
+        xy_proj[xy_proj <= 0] = None
+        yz_proj[yz_proj <= 0] = None
+        xz_proj[xz_proj <= 0] = None
+        z_proj[z_proj <= 0] = None
 
     ax_int = fig.add_subplot(2, 2 + column_3d, 1)
     if log_scale:
@@ -1788,7 +1808,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
             ax_proj_xz.set_xlim(z[nonzero(z_proj > np.max(z_proj) * 0.005)][[0, -1]])
         elif phase == False and z_lim == []:
             ax_z.set_xlim(z[nonzero(z_proj > np.max(z_proj) * 0.005)][[0, -1]])
-            print ('      scaling xy to', size_xy)
+            _logger.debug(ind_str + 'scaling xy to {:}'.format(size_xy))
             ax_proj_xz.set_ylim([-size_xy, size_xy])
         elif column_3d == True:
             ax_proj_xz.set_ylim([-size_xy, size_xy])
@@ -1818,21 +1838,18 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     if savefig != False:
         if savefig == True:
             savefig = 'png'
-        if debug > 0:
-            print('      saving *' + suffix + '.' + savefig)
+        _logger.debug(ind_str + 'saving *{:}.{:}'.format(suffix,savefig))
         fig.savefig(filePath + suffix + '.' + str(savefig), format=savefig)
 
-    if debug > 0:
-        print('      done in %.2f seconds' % (time.time() - start_time))
+    _logger.info(ind_str + 'done in {:.2f} seconds'.format(time.time() - start_time))
 
     plt.draw()
     if showfig == True:
-        if debug > 0:
-            print('      showing dfl')
+        _logger.debug(ind_str + 'showing dfl')
         plt.show()
     else:
-        plt.close('all')
-        # plt.close(fig)
+        # plt.close('all')
+        plt.close(fig)
 
     if return_proj:
         return [xy_proj, yz_proj, xz_proj, x, y, z]
@@ -2202,7 +2219,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
             for irun in run_range:
                 dfl_filePath = proj_dir + 'run_' + str(irun) + '/run.' + str(irun) + '.s' + str(stage) + '.gout.dfl'
                 dfl = read_dfl_file_out(outlist[irun], debug=debug)
-                dfl = dfl_pad_z(dfl, spec_pad)
+                dfl_pad_z(dfl, spec_pad)
                 # dfl=read_dfl_file(dfl_filePath, Nxy=outlist[irun]('ncar'),debug=debug)
                 # read_dfl_file(filePath, Nxy=None, Lxy=None, Lz=None, zsep=None, xlamds=None, vartype=complex,debug=1):
                 # dfl = dfl.fld
@@ -2403,8 +2420,7 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cm
     if showfig == False and savefig == False:
         return
 
-    if debug > 0:
-        print('    plotting bucket')
+    _logger.info('plotting dpa bucket')
     start_time = time.time()
     
     if dpa.__class__ != GenesisParticlesDump:
@@ -2516,19 +2532,19 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cm
     if showfig:
         plt.show()
     else:
-        plt.close('all')
+        # plt.close('all')
+        plt.close(fig)
 
 
-def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, scatter=False, plot_x_y=True, plot_xy_s=True, bins=(50, 50, 50, 50), flip_t=True, x_units='um', y_units='ev', cmin=0, y_offset=None, cmap=def_cmap, debug=1):
+def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, scatter=False, plot_x_y=True, plot_xy_s=True, bins=(50, 50, 50, 50), flip_t=False, x_units='um', y_units='ev', cmin=0, y_offset=None, cmap=def_cmap, debug=1):
 
     if showfig == False and savefig == False:
         return
-    if debug > 0:
-        print('    plotting edist file')
+    _logger.info('plotting edist file')
     start_time = time.time()
     # suffix=''
-    if edist.__class__ != GenesisElectronDist:
-        raise ValueError('wrong distribution object: should be GenesisElectronDist')
+    # if edist.__class__ != GenesisElectronDist:
+        # raise ValueError('wrong distribution object: should be GenesisElectronDist')
 
     if np.size(bins) == 1:
         bins = (bins, bins, bins, bins)  # x,y,t,e
@@ -2629,18 +2645,17 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
     if savefig != False:
         if savefig == True:
             savefig = 'png'
-        if debug > 1:
-            print('      saving ' + edist.fileName() + '.' + savefig)
+        _logger.debug(ind_str + 'saving ' + edist.filePath + '.' + savefig)
         plt.savefig(edist.filePath + '.' + savefig, format=savefig)
 
     if showfig:
         plt.show()
     else:
-        plt.close('all')
+        # plt.close('all')
+        plt.close(fig)
 
-    if debug > 0:
-        print(('      done in %.2f seconds' % (time.time() - start_time)))
-    return fig
+    _logger.info(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
+    # return fig
 
 
 def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=None, debug=0):
@@ -2763,19 +2778,21 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
             # if debug > 1:
                 # print('      saving ' + beam.fileName() + '.' + savefig)
             # plt.savefig(beam.filePath + '.' + savefig, format=savefig)
-    
+        
     plt.draw()
     if savefig != False:
         if savefig == True:
             savefig = 'png'
-        if debug > 1:
-            print('      saving ' + beam.fileName() + '.' + savefig)
+        _logger.debug(ind_str + 'saving ' + beam.filePath + '.' + savefig)
         plt.savefig(beam.filePath + '.' + savefig, format=savefig)
 
     if showfig:
         plt.show()
     else:
-        plt.close('all')
+        # plt.close('all')
+        plt.close(fig)
+
+    _logger.debug(ind_str + 'done')
 
 def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,None), y_lim=(None,None), downsample=1, autoscale=None, cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=True, plot_proj=1, debug=1):
     '''
@@ -2791,9 +2808,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
     if showfig == False and savefig == False:
         return
     
-    if debug > 0:
-        print('    plotting Wigner distribution')
-        
+    _logger.info('plotting Wigner distribution')
         
     if isinstance(wig_or_out, GenesisOutput):
         W=wigner_out(wig_or_out,z)
@@ -2859,19 +2874,22 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
     
     if abs_value:
         axScatter.pcolormesh(power_scale, spec_scale, abs(wigner)) #change
-        axScatter.text(0.02, 0.98, r'$W_{max}$= %.2e' % (np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes, color='w')
+        axScatter.text(0.02, 0.98, r'$W_{{max}}$= {:.2e}'.format(np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes, color='w')
     else:
         # cmap='RdBu_r'
         # axScatter.imshow(wigner, cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
         axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], wigner[::downsample,::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
-        axScatter.text(0.02, 0.98, r'$W_{max}$= %.2e' % (np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes)#fontsize=12,
+        axScatter.text(0.02, 0.98, r'$W_{{max}}$= {:.2e}'.format(np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes)#fontsize=12,
             
     if plot_proj:
         axHistx.plot(power_scale,power)
-        axHistx.text(0.02, 0.95, r'E= %.2e J' % (W.energy()), horizontalalignment='left', verticalalignment='top', transform=axHistx.transAxes)#fontsize=12,
+        axHistx.text(0.02, 0.95, r'E= {:.2e} J'.format(W.energy()), horizontalalignment='left', verticalalignment='top', transform=axHistx.transAxes)#fontsize=12,
         axHistx.set_ylabel('power [W]')
-
-        axHisty.plot(spec/spec.max(), spec_scale)
+        
+        if spec.max() <= 0:
+            axHisty.plot(spec, spec_scale)
+        else:
+            axHisty.plot(spec/spec.max(), spec_scale)
         axHisty.set_xlabel('spectrum [a.u.]')
         
         axScatter.axis('tight')
@@ -2935,7 +2953,8 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
         rcParams["savefig.directory"] = dir
         plt.show()
     else:
-        plt.close('all')
+        # plt.close('all')
+        plt.close(fig)
         
 
 '''
@@ -3096,8 +3115,8 @@ def plot_dfl_waistscan(sc_res, fig_name=None, showfig=True, savefig=0, debug=1):
         if debug > 0:
             print('      saving *.' + savefig)
         if debug > 1:
-            print('        to ' + sc_res.filePath + '_%.2fm-%.2fm-waistscan.' % (sc_res.z_pos[0], sc_res.z_pos[-1]) + str(savefig))
-        fig.savefig(sc_res.filePath + '_%.2fm-%.2fm-waistscan.' % (sc_res.z_pos[0], sc_res.z_pos[-1]) + str(savefig), format=savefig)
+            print('        to ' + sc_res.filePath + '_{:.2f}m-{:.2f}m-waistscan.'.format(sc_res.z_pos[0], sc_res.z_pos[-1]) + str(savefig))
+        fig.savefig(sc_res.filePath + '_{:.2f}m-{:.2f}m-waistscan.'.format(sc_res.z_pos[0], sc_res.z_pos[-1]) + str(savefig), format=savefig)
     # if debug>0: print('      done in %.2f seconds' % (time.time() - start_time))
     if showfig:
         if debug > 0:
@@ -3214,37 +3233,44 @@ def plot_trf(trf, mode='tr', autoscale=0, showfig=True, savefig=None, fig_name=N
         plt.close('all')
         
 
-def plot_stokes_values(S,fig=None,s_lin=0, norm=0, showfig=True, gw=1):
+def plot_stokes_values(S, fig=None, s_lin=0, norm=0, showfig=True, gw=1, direction='z'):
     
-    if type(S) != StokesParameters:
-        raise ValueError('Not a StokesParameters object')
-        
-    if np.size(S.sc) > 1:
+    # if type(S) != StokesParameters:
+        # raise ValueError('Not a StokesParameters object')
+    if direction == 'z':
+       sc = S.sc_z * 1e6
+    elif direction == 'x':
+       sc = S.sc_x * 1e6
+    elif direction == 'y':
+       sc = S.sc_y * 1e6
+    # sc = S.sc * 1e6
+    
+    
+    if np.size(sc) > 1:
         if fig == None:
             plt.figure('Stokes S')
-        else:
+        elif type(fig) == matplotlib.figure.Figure:
             plt.figure(fig.number)
+        else:
+            plt.figure(fig)
         plt.clf()
-        sc = S.sc * 1e6
         
         if gw:
-            S.s0 /= 1e9
-            S.s1 /= 1e9
-            S.s2 /= 1e9
-            S.s3 /= 1e9
+            mult = 1e-9
             plt.ylabel('$S_0$ [GW]')
         else:
+            mult = 1
             plt.ylabel('$S_0$ [W]')
         plt.xlabel('s [$\mu$m]')
         
         if s_lin:
             # plt.step(sc, np.sqrt(S.s1**2+S.s2**2), linewidth=2, where='mid',color=[0.5,0.5,0.5], linestyle='--')
-            plt.step(sc, np.sqrt(S.s1**2+S.s2**2), linewidth=2, where='mid',color='m', linestyle='--')
+            plt.step(sc, np.sqrt(S.s1**2+S.s2**2)*mult, linewidth=2, where='mid',color='m', linestyle='--')
  
-        plt.step(sc, S.s1, linewidth=2, where='mid',color='g')
-        plt.step(sc, S.s2, linewidth=2, where='mid',color='r')
-        plt.step(sc, S.s3, linewidth=2, where='mid',color='c')
-        plt.step(sc, S.s0, linewidth=2, where='mid',color='b')
+        plt.step(sc, S.s1*mult, linewidth=2, where='mid',color='g')
+        plt.step(sc, S.s2*mult, linewidth=2, where='mid',color='r')
+        plt.step(sc, S.s3*mult, linewidth=2, where='mid',color='c')
+        plt.step(sc, S.s0*mult, linewidth=2, where='mid',color='b')
         # plt.step(sc, S.s1, linewidth=2, where='mid',color='m')
         # plt.step(sc, S.s2, linewidth=2, where='mid',color='r')
         # plt.step(sc, S.s3, linewidth=2, where='mid',color='c')
@@ -3262,23 +3288,34 @@ def plot_stokes_values(S,fig=None,s_lin=0, norm=0, showfig=True, gw=1):
             plt.close('all')
         
         
-def plot_stokes_angles(S,fig=None,showfig=True):
+def plot_stokes_angles(S, fig=None, showfig=True, direction='z', scatter=True):
     
-    if type(S) != StokesParameters:
-        raise ValueError('Not a StokesParameters object')
-        
-    if np.size(S.sc) > 1:
+#    if type(S) != StokesParameters:
+#        raise ValueError('Not a StokesParameters object')
+    if direction == 'z':
+        sc = S.sc_z * 1e6
+    elif direction == 'x':
+        sc = S.sc_x * 1e6
+    elif direction == 'y':
+        sc = S.sc_y * 1e6
+    # sc = S.sc * 1e6
+    
+    if np.size(sc) > 1:
         if fig == None:
             plt.figure('Stokes angles')
         else:
             plt.figure(fig.number)
         plt.clf()
-        sc = S.sc * 1e6
-        psize = S.s_l()
-        psize /= np.amax(psize)
+
 #        plt.step(sc, S.chi(), sc, S.psi(),linewidth=2)
-        plt.scatter(sc, S.chi(),psize,linewidth=2,color='g')
-        plt.scatter(sc, S.psi(),psize,linewidth=2,color='b')
+        if scatter:
+            psize = S.P_pol()
+            psize /= np.amax(psize)
+            plt.scatter(sc, S.chi(),psize,linewidth=2,color='g')
+            plt.scatter(sc, S.psi(),psize,linewidth=2,color='b')
+        else:
+            plt.step(sc, S.chi(), linewidth=2, where='mid', color='g')
+            plt.step(sc, S.psi(), linewidth=2, where='mid', color='b')
         plt.legend(['$\chi$','$\psi$'])#,loc='best')
         plt.xlabel('s [$\mu$m]')
         plt.ylabel('[rad]')

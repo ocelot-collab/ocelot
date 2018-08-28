@@ -30,8 +30,7 @@ We still have no documentation but you can find a lot of examples in /demos/ fol
 
 Ocelot is designed for researchers who want to have the flexibility that is given by high-level languages such as Matlab, Python (with Numpy and SciPy) or Mathematica.
 However if someone needs a GUI  it can be developed using Python's libraries like a [PyQtGraph](http://www.pyqtgraph.org/) or [PyQt](http://pyqt.sourceforge.net/Docs/PyQt4/).
-
-For example, you can see GUI for SASE optimization (uncomment and run next block)
+ 
 
  ## Preliminaries
 
@@ -70,7 +69,7 @@ Clone OCELOT from GitHub:
 $ git clone https://github.com/ocelot-collab/ocelot.git
 ```
 or download last release [zip file](https://github.com/ocelot-collab/ocelot/archive/v18.02.0.zip) - recomended.
-Now you can install pyqtgraph from the source:
+Now you can install OCELOT from the source:
 ```
 $ python setup.py install
 ```
@@ -130,5 +129,7 @@ You can download OCELOT jupyter tutorials (release v18.02) using GitHub link [zi
     - Coupler Kick. Example of RF coupler kick influence on trajjectory and optics.
 * [Tutorial N7. Lattice design.](7_lattice_design.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/7_lattice_design.ipynb).
     - Lattice design, twiss matching, twiss backtracking
+* [Tutorial N8. Physics process addition. Laser heater](8_laser_heater.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/8_laser_heater.ipynb).
+    - Theory of Laser Heater, implementation of new Physics Process, track particles w/o laser heater effect.  
 
 

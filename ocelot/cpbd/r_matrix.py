@@ -1,7 +1,6 @@
 __author__ = 'Sergey Tomin'
 
 import logging
-import numpy as np
 from ocelot.common.globals import m_e_GeV, speed_of_light
 from ocelot.cpbd.elements import *
 
@@ -108,7 +107,6 @@ def create_r_matrix(element):
 
                 r[4, 5] = - z / (gamma * beta) ** 2 * (1 + 0.5 * (Kx * beta) ** 2)
 
-                #print("here", r[2, 2], r[2, 3], r[3, 2], r[3, 3])
             else:
                 r[2, 3] = z
             return r
@@ -129,8 +127,8 @@ def create_r_matrix(element):
             phi = phi * np.pi / 180.
             de = V * np.cos(phi)
             # pure pi-standing-wave case
-            eta = 1.0
-            #gamma = (E + 0.5 * de) / m_e_GeV
+            eta = 1#np.cos(phi)**2
+            # gamma = (E + 0.5 * de) / m_e_GeV
             Ei = E / m_e_GeV
             Ef = (E + de) / m_e_GeV
             Ep = (Ef - Ei) / z  # energy derivative
@@ -139,7 +137,6 @@ def create_r_matrix(element):
 
             cos_phi = np.cos(phi)
             alpha = np.sqrt(eta / 8.) / cos_phi * np.log(Ef / Ei)
-
             sin_alpha = np.sin(alpha)
             cos_alpha = np.cos(alpha)
             r11 = (cos_alpha - np.sqrt(2. / eta) * cos_phi * sin_alpha)
@@ -153,31 +150,32 @@ def create_r_matrix(element):
             r22 = Ei / Ef * (cos_alpha + np.sqrt(2. / eta) * cos_phi * sin_alpha)
 
             r56 = 0.
-            if V != 0 and E != 0:
-                #gamma2 = gamma * gamma
-                #beta = np.sqrt(1. - 1 / gamma2)
-                #r56 = -z / (beta * beta * gamma2)
-                #gs = (Ef-Ei)/z
-                #r56 = -(1.0/Ei-1.0/Ef)/gs
+            beta0 = 1
+            beta1 = 1
 
+            k = 2. * np.pi * freq / speed_of_light
+            r55_cor = 0.
+            if V != 0 and E != 0:
                 gamma2 = Ei * Ei
                 beta0 = np.sqrt(1. - 1 / gamma2)
                 gamma2 = Ef * Ef
                 beta1 = np.sqrt(1. - 1 / gamma2)
-                r56 = (beta0 / beta1 - 1) * Ei / (Ef - Ei) * z
-                # the same equation:
-                # gamma = E/m_e_GeV
-                # beta = np.sqrt(1. - 1 / gamma**2)
-                # r56 = -1./(beta*gamma)**2 * z*(1 - 1.5*de/m_e_GeV/beta**2/gamma)
 
-            k = 2.*np.pi*freq/speed_of_light
-            r66 = Ei/Ef
-            r65 = k*np.sin(phi)*V/(Ef*m_e_GeV)
+                #r56 = (beta0 / beta1 - 1) * Ei / (Ef - Ei) * z
+                r56 = - z/(Ef * Ef * Ei * beta1) * (Ef + Ei)/(beta1 + beta0)
+                g0 = Ei
+                g1 = Ef
+                r55_cor = k * z * beta0 * V / m_e_GeV * np.sin(phi) * (g0 * g1 * (beta0 * beta1 - 1) + 1) / (
+                            beta1 * g1 * (g0 - g1) ** 2)
+
+
+            r66 = Ei/Ef*beta0/beta1
+            r65 = k*np.sin(phi)*V/(Ef*beta1*m_e_GeV)
             cav_matrix = np.array([[r11, r12, 0., 0., 0., 0.],
                                 [r21, r22, 0., 0., 0., 0.],
                                 [0., 0., r11, r12, 0., 0.],
                                 [0., 0., r21, r22, 0., 0.],
-                                [0., 0., 0., 0., 1., r56],
+                                [0., 0., 0., 0., 1. + r55_cor, r56],
                                 [0., 0., 0., 0., r65, r66]]).real
             if element.coupler_kick:
                 #element.vxx_up = 1.0003 - 0.8132j

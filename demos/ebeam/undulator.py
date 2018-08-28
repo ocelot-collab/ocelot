@@ -31,7 +31,7 @@ plt.show()
 
 p1 = Particle(x=0.001, y=0.002)
 p1.E = beam.E
-navi = Navigator()
+navi = Navigator(lat)
 dz = 0.01
 P1 = []
 for i in range(int(lat.totalLen/dz)):
@@ -52,7 +52,7 @@ lat = MagneticLattice(line)
 
 p1 = Particle(x=0.001, y=0.002)
 p1.E = beam.E
-navi = Navigator()
+navi = Navigator(lat)
 dz = 0.01
 P1 = []
 for i in range(int(lat.totalLen/dz)):

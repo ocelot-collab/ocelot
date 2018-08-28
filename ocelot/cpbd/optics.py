@@ -1,8 +1,6 @@
 __author__ = 'Sergey'
 
 from numpy.linalg import inv
-# from numpy import cosh, sinh
-# from scipy.misc import factorial
 from math import factorial
 from ocelot.cpbd.beam import Particle, Twiss, ParticleArray
 from ocelot.cpbd.high_order import *
@@ -10,44 +8,56 @@ from ocelot.cpbd.r_matrix import *
 from copy import deepcopy
 import logging
 import numpy as np
+
+_logger = logging.getLogger(__name__)
+_logger_navi = logging.getLogger(__name__ + ".navi")
+
 try:
     import numexpr as ne
     ne_flag = True
 except:
-    print("optics.py: module NUMEXPR is not installed. Install it if you want higher speed calculation.")
+    _logger.debug(" optics.py: module NUMEXPR is not installed. Install it to speed up calculation")
     ne_flag = False
 try:
     import numba as nb
     nb_flag = True
 except:
+    _logger.debug(" optics.py: module NUMBA is not installed. Install it to speed up calculation")
     nb_flag = False
 
-_logger = logging.getLogger('ocelot.optics')
 
 
 
 class SecondOrderMult:
+    """
+    The class includes three different methods transforming the particles coordinates:
+    1. based on NUMEXPR module - gives the better performance
+    2. NUMBA module (switched off) - slowest method (around 2-3 times slower) but used full matrix for transformation
+                        (in the future can be more preferable for usage)
+    3. NUMPY module - gives a bit slower performance then NUMEXPR and identical to the first one on the algorithm level.
+    """
     def __init__(self):
+        self.full_matrix = False
         if ne_flag:
-            #print("SecondTM: NumExpr")
+            # print("SecondTM: NumExpr")
             self.tmat_multip = self.numexpr_apply
-        elif nb_flag:
-            #print("SecondTM: NUMBA")
+        elif nb_flag and self.full_matrix:
+            # print("SecondTM: NUMBA")
             self.tmat_multip = nb.jit(nopython=True, parallel=True)(self.numba_apply)
         else:
-            #print("SecondTM: Numpy")
+            # print("SecondTM: Numpy")
             self.tmat_multip = self.numpy_apply
 
     def numba_apply(self, X, R, T):
         #Xr = np.dot(R, X)
-        #Xo = np.copy(X)
+        Xcopy = np.copy(X)
         N = X.shape[1]
         for i in range(6):
             for n in range(N):
                 tmp = 0.
                 r_tmp = 0.
                 for j in range(6):
-                    r_tmp += R[i, j]*X[j, n]
+                    r_tmp += R[i, j]*Xcopy[j, n]
                     for k in range(6):
                         tmp += T[i, j, k] * X[j, n] * X[k, n]
                 X[i, n] = r_tmp + tmp
@@ -125,6 +135,37 @@ def transform_vec_ext(X, dx, dy, tilt):
     X[:] = np.add(x_tilt, np.array([[dx], [0.], [dy], [0.], [0.], [0.]]))[:]
     return X
 
+def transfer_maps_mult(Ra, Ta, Rb, Tb, sym_flag=True):
+    """
+    cell = [A, B]
+    Rc = Rb * Ra
+    :param Ra:
+    :param Ta:
+    :param Rb:
+    :param Tb:
+    :param sym_flag:
+    :return:
+    """
+    Rc = np.dot(Rb, Ra)
+    Tc = np.zeros((6, 6, 6))
+    for i in range(6):
+        for j in range(6):
+            for k in range(6):
+                t1 = 0.
+                t2 = 0.
+                for l in range(6):
+                    t1 += Rb[i, l] * Ta[l, j, k]
+                    for m in range(6):
+                        t2 += Tb[i, l, m] * Ra[l, j] * Ra[m, k]
+                Tc[i, j, k] = t1 + t2
+    return Rc, Tc
+
+
+def transfer_map_rotation(R, T, tilt):
+    rotmat = rot_mtx(tilt)
+    Rc, Tc = transfer_maps_mult(Ra=rotmat, Ta=np.zeros((6, 6, 6)), Rb=R, Tb=T)
+    R, T = transfer_maps_mult(Ra=Rc, Ta=Tc, Rb=rot_mtx(-tilt), Tb=np.zeros((6, 6, 6)))
+    return R, T
 
 class TransferMap:
     def __init__(self):
@@ -214,11 +255,11 @@ class TransferMap:
         #           self.B(energy)).reshape(n)
 
         #print("a=", a)
-        a = np.add(dot(self.R(energy), rparticles), self.B(energy))
+        a = np.add(np.dot(self.R(energy), rparticles), self.B(energy))
         # a = np.add(np.transpose(dot(self.R(energy), particles.T.reshape(6, int(n/6)))), self.B(energy)).reshape(n)
 
         rparticles[:] = a[:]
-        #_logger.debug('return trajectory, array ' + str(len(rparticles)))
+        #logger.debug('return trajectory, array ' + str(len(rparticles)))
         return rparticles
 
     def __mul__(self, m):
@@ -256,8 +297,8 @@ class TransferMap:
             return tws
 
         else:
-            print(m.__class__)
-            exit("unknown object in transfer map multiplication (TransferMap.__mul__)")
+            _logger.error(" TransferMap.__mul__: unknown object in transfer map multiplication: " + str(m.__class__.__name__))
+            raise Exception(" TransferMap.__mul__: unknown object in transfer map multiplication: " + str(m.__class__.__name__))
 
     def apply(self, prcl_series):
         """
@@ -271,17 +312,17 @@ class TransferMap:
 
         elif prcl_series.__class__ == Particle:
             p = prcl_series
-            p.x, p.px, p.y, p.py, p.tau, p.p = self.map(array([[p.x], [p.px], [p.y], [p.py], [p.tau], [p.p]]), p.E)[:,0]
+            p.x, p.px, p.y, p.py, p.tau, p.p = self.map(np.array([[p.x], [p.px], [p.y], [p.py], [p.tau], [p.p]]), p.E)[:,0]
             p.s += self.length
             p.E += self.delta_e
 
         elif prcl_series.__class__ == list and prcl_series[0].__class__ == Particle:
             # If the energy is not the same (p.E) for all Particles in the list of Particles
             # in that case cycle is applied. For particles with the same energy p.E
-            list_e = array([p.E for p in prcl_series])
+            list_e = np.array([p.E for p in prcl_series])
             if False in (list_e[:] == list_e[0]):
                 for p in prcl_series:
-                    self.map(array([[p.x], [p.px], [p.y], [p.py], [p.tau], [p.p]]), energy=p.E)
+                    self.map(np.array([[p.x], [p.px], [p.y], [p.py], [p.tau], [p.p]]), energy=p.E)
                     p.E += self.delta_e
                     p.s += self.length
             else:
@@ -294,8 +335,8 @@ class TransferMap:
                 pa.array2ex_list(prcl_series)
 
         else:
-            print(prcl_series)
-            exit("Unknown type of Particle_series. class TransferMap.apply()")
+            _logger.error(" TransferMap.apply(): Unknown type of Particle_series: " + str(prcl_series.__class__.__name))
+            raise Exception(" TransferMap.apply(): Unknown type of Particle_series: " + str(prcl_series.__class__.__name))
 
     def __call__(self, s):
         m = copy(self)
@@ -322,9 +363,9 @@ class PulseTM(TransferMap):
         dxp = self.pulse.kick_x(tau)
         dyp = self.pulse.kick_y(tau)
         _logger.debug('kick ' + str(dxp) + ' ' + str(dyp))
-        b = array([0.0, dxp, 0.0, dyp, 0., 0.])
+        b = np.array([0.0, dxp, 0.0, dyp, 0., 0.])
         #a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(int(n / 6), 6)))), b).reshape(n)
-        a = np.add(dot(self.R(energy), rparticles), b)
+        a = np.add(np.dot(self.R(energy), rparticles), b)
         rparticles[:] = a[:]
         _logger.debug('return trajectory, array ' + str(len(rparticles)))
         return rparticles
@@ -375,7 +416,7 @@ class CorrectorTM(TransferMap):
         dy = hy * z * z / 2.
         dx1 = hx * z if l != 0 else angle_x
         dy1 = hy * z if l != 0 else angle_y
-        b = array([[dx], [dx1], [dy], [dy1], [0.], [0.]])
+        b = np.array([[dx], [dx1], [dy], [dy1], [0.], [0.]])
         return b
 
     def kick(self, X, z, l, angle_x, angle_y, energy):
@@ -383,8 +424,7 @@ class CorrectorTM(TransferMap):
         # ocelot.logger.debug('invoking kick_b')
         #n = len(X)
         b = self.kick_b(z, l, angle_x, angle_y)
-        X1 = np.add(dot(self.R(energy), X), b)
-        # print(X1)
+        X1 = np.add(np.dot(self.R(energy), X), b)
         X[:] = X1[:]
         return X
 
@@ -411,26 +451,48 @@ class CavityTM(TransferMap):
         self.vy_down = 0.
         self.delta_e_z = lambda z: self.v * np.cos(self.phi * np.pi / 180.) * z / self.length
         self.delta_e = self.v * np.cos(self.phi * np.pi / 180.)
-        self.map = lambda X, energy: self.map4cav(X, energy, self.v, self.f, self.phi)
+        self.map = lambda X, energy: self.map4cav(X, energy, self.v, self.f, self.phi, self.length)
 
-    def map4cav(self, X, E, V, freq, phi):
-        # print("CAVITY")
+    def map4cav(self, X, E, V, freq, phi, z=0):
+        beta0 = 1
+        igamma2 = 0
+        g0 = 1e10
+        if E != 0:
+            g0 = E / m_e_GeV
+            igamma2 = 1. / (g0 * g0)
+            beta0 = np.sqrt(1. - igamma2)
+
         phi = phi * np.pi / 180.
         # if self.coupler_kick:
         if self.coupler_kick:
             # print("couple_kick")
             X[1] += (self.vx_up * V * np.exp(1j * phi)).real * 1e-6 / E
             X[3] += (self.vy_up * V * np.exp(1j * phi)).real * 1e-6 / E
+        X4 = np.copy(X[4])
+        X5 = np.copy(X[5])
         X = self.mul_p_array(X, energy=E)  # t_apply(R, T, X, dx, dy, tilt)
         delta_e = V * np.cos(phi)
         if self.coupler_kick:
             X[1] += (self.vx_down * V * np.exp(1j * phi)).real * 1e-6 / (E + delta_e)
             X[3] += (self.vy_down * V * np.exp(1j * phi)).real * 1e-6 / (E + delta_e)
+        T566 = 1.5 * z*igamma2/(beta0**3)
+        T556 = 0.
+        T555 = 0.
         if E + delta_e > 0:
             k = 2. * np.pi * freq / speed_of_light
-            # X[5::6] = (X[5::6]*E + V*np.cos(X[4::6]*k + phi) - delta_e)/(E + delta_e)
             E1 = E + delta_e
-            X[5] = X[5] + V / E1 * (np.cos(-X[4] * k + phi) - np.cos(phi) - k * X[4] * np.sin(phi))
+            g1 = E1 / m_e_GeV
+            beta1 = np.sqrt(1. - 1. / (g1 * g1))
+
+            X[5] = X5 * E*beta0/(E1*beta1) + V*beta0 / (E1*beta1) * (np.cos(-X4*beta0 * k + phi) - np.cos(phi))
+
+            dgamma = V / m_e_GeV
+            if delta_e > 0:
+                T566 = z * (beta0**3*g0**3 - beta1**3*g1**3)/(2*beta0*beta1**3*g0*(g0 - g1)*g1**3)
+                T556 = beta0 * k * z * dgamma *g0 * (beta1**3*g1**3 + beta0 * (g0 - g1**3)) * np.sin(phi)/ (beta1**3 * g1**3 * (g0 - g1)**2)
+                T555 = beta0**2 * k**2 * z * dgamma/2.*(dgamma*(2*g0*g1**3*(beta0*beta1**3 - 1) + g0**2 + 3*g1**2 - 2)/(beta1**3*g1**3*(g0 - g1)**3)*np.sin(phi)**2 -
+                                                    (g1*g0*(beta1*beta0 - 1) + 1)/(beta1*g1*(g0 - g1)**2)*np.cos(phi))
+        X[4] +=  T566 * X5*X5 + T556*X4*X5 + T555 * X4*X4
         return X
 
     def __call__(self, s):
@@ -439,7 +501,7 @@ class CavityTM(TransferMap):
         m.R = lambda energy: m.R_z(s, energy)
         m.B = lambda energy: m.B_z(s, energy)
         m.delta_e = m.delta_e_z(s)
-        m.map = lambda X, energy: m.map4cav(X, energy, m.v * s / self.length, m.f, m.phi)
+        m.map = lambda X, energy: m.map4cav(X, energy, m.v * s / self.length, m.f, m.phi, s)
         return m
 
 
@@ -515,7 +577,7 @@ class UndulatorTestTM(TransferMap):
             kx = 0
         else:
             kx = 2. * np.pi / ax
-        zi = linspace(0., z, num=ndiv)
+        zi = np.linspace(0., z, num=ndiv)
         h = zi[1] - zi[0]
         kx2 = kx * kx
         kz2 = kz * kz
@@ -568,7 +630,6 @@ class RungeKuttaTM(TransferMap):
         m.R = lambda energy: m.R_z(s, energy)
         m.B = lambda energy: m.B_z(s, energy)
         m.delta_e = m.delta_e_z(s)
-        # print(m.R_z_no_tilt(s, 0.3))
         m.map = lambda X, energy: rk_field(X, m.s_start, s, m.npoints, energy, m.mag_field)
         return m
 
@@ -583,6 +644,9 @@ class SecondTM(TransferMap):
         self.map = lambda X, energy: self.t_apply(self.r_z_no_tilt(self.length, energy),
                                                   self.t_mat_z_e(self.length, energy), X, self.dx, self.dy, self.tilt)
 
+        self.R_tilt = lambda energy: np.dot(np.dot(rot_mtx(-self.tilt), self.r_z_no_tilt(self.length, energy)), rot_mtx(self.tilt))
+        self.T_tilt = lambda energy: transfer_map_rotation(self.r_z_no_tilt(self.length, energy),
+                                                             self.t_mat_z_e(self.length, energy), self.tilt)[1]
 
     def t_apply(self, R, T, X, dx, dy, tilt, U5666=0.):
         if dx != 0 or dy != 0 or tilt != 0:
@@ -635,7 +699,7 @@ class SlacCavityTM(TransferMap):
         de = V * np.cos(phi)
         r12 = z * E / de * np.log(1. + de / E) if de != 0 else z
         r22 = E / (E + de)
-        r65 = V * np.sin(phi) / (E + de) * (2 * pi / (speed_of_light / freq)) if freq != 0 else 0
+        r65 = V * np.sin(phi) / (E + de) * (2 * np.pi / (speed_of_light / freq)) if freq != 0 else 0
         r66 = r22
         cav_matrix = np.array([[1, r12, 0., 0., 0., 0.],
                                [0, r22, 0., 0., 0., 0.],
@@ -826,7 +890,8 @@ def lattice_transfer_map(lattice, energy):
         Rb = elem.transfer_map.R(E)
         if elem.transfer_map.__class__ == SecondTM:
             Tc = np.zeros((6, 6, 6))
-            Tb = deepcopy(elem.transfer_map.t_mat_z_e(elem.l, E))
+            #Tb = deepcopy(elem.transfer_map.t_mat_z_e(elem.l, E))
+            Tb = deepcopy(elem.transfer_map.T_tilt(E))
             Tb = sym_matrix(Tb)
             for i in range(6):
                 for j in range(6):
@@ -849,31 +914,13 @@ def lattice_transfer_map(lattice, energy):
                             t1 += Rb[i, l] * Ta[l, j, k]
                         Tc[i, j, k] = t1
             Ta = Tc
-        Ra = dot(Rb, Ra)
+        Ra = np.dot(Rb, Ra)
         E += elem.transfer_map.delta_e
 
     lattice.T_sym = Ta
     lattice.T = unsym_matrix(deepcopy(Ta))
     lattice.R = Ra
     return Ra
-
-
-def second_order_mult(Ra, Ta, Rb, Tb, sym_flag=True):
-    Rc = np.dot(Rb, Ra)
-    Tc = np.zeros((6, 6, 6))
-    Tb = sym_matrix(Tb)
-    for i in range(6):
-        for j in range(6):
-            for k in range(6):
-                t1 = 0.
-                t2 = 0.
-                for l in range(6):
-                    t1 += Rb[i, l] * Ta[l, j, k]
-                    for m in range(6):
-                        t2 += Tb[i, l, m] * Ra[l, j] * Ra[m, k]
-                Tc[i, j, k] = t1 + t2
-    Tc = unsym_matrix(deepcopy(Tc))
-    return Rc, Tc
 
 
 def trace_z(lattice, obj0, z_array):
@@ -913,26 +960,25 @@ def trace_obj(lattice, obj, nPoints=None):
             obj.id = e.id
             obj_list.append(obj)
     else:
-        z_array = linspace(0, lattice.totalLen, nPoints, endpoint=True)
+        z_array = np.linspace(0, lattice.totalLen, nPoints, endpoint=True)
         obj_list = trace_z(lattice, obj, z_array)
     return obj_list
 
 
 def periodic_twiss(tws, R):
-    '''
+    """
     initial conditions for a periodic Twiss slution
-    '''
+    """
     tws = Twiss(tws)
 
     cosmx = (R[0, 0] + R[1, 1]) / 2.
     cosmy = (R[2, 2] + R[3, 3]) / 2.
 
     if abs(cosmx) >= 1 or abs(cosmy) >= 1:
-        _logger.warning("************ periodic solution does not exist. return None ***********")
-        # print("************ periodic solution does not exist. return None ***********")
+        _logger.warning(" ************ periodic solution does not exist. return None ***********")
         return None
-    sinmx = np.sign(R[0, 1]) * sqrt(1. - cosmx * cosmx)
-    sinmy = np.sign(R[2, 3]) * sqrt(1. - cosmy * cosmy)
+    sinmx = np.sign(R[0, 1]) * np.sqrt(1. - cosmx * cosmx)
+    sinmy = np.sign(R[2, 3]) * np.sqrt(1. - cosmy * cosmy)
 
     tws.beta_x = abs(R[0, 1] / sinmx)
     tws.beta_y = abs(R[2, 3] / sinmy)
@@ -944,14 +990,14 @@ def periodic_twiss(tws, R):
     tws.alpha_y = (R[2, 2] - R[3, 3]) / (2 * sinmy)  # Y[0,0]
     tws.gamma_y = (1. + tws.alpha_y * tws.alpha_y) / tws.beta_y  # Y[1,0]
 
-    Hx = array([[R[0, 0] - 1, R[0, 1]], [R[1, 0], R[1, 1] - 1]])
-    Hhx = array([[R[0, 5]], [R[1, 5]]])
-    hh = dot(inv(-Hx), Hhx)
+    Hx = np.array([[R[0, 0] - 1, R[0, 1]], [R[1, 0], R[1, 1] - 1]])
+    Hhx = np.array([[R[0, 5]], [R[1, 5]]])
+    hh = np.dot(inv(-Hx), Hhx)
     tws.Dx = hh[0, 0]
     tws.Dxp = hh[1, 0]
-    Hy = array([[R[2, 2] - 1, R[2, 3]], [R[3, 2], R[3, 3] - 1]])
-    Hhy = array([[R[2, 5]], [R[3, 5]]])
-    hhy = dot(inv(-Hy), Hhy)
+    Hy = np.array([[R[2, 2] - 1, R[2, 3]], [R[3, 2], R[3, 3] - 1]])
+    Hhy = np.array([[R[2, 5]], [R[3, 5]]])
+    hhy = np.dot(inv(-Hy), Hhy)
     tws.Dy = hhy[0, 0]
     tws.Dyp = hhy[1, 0]
     # tws.display()
@@ -974,7 +1020,7 @@ def twiss(lattice, tws0=None, nPoints=None):
             R = lattice_transfer_map(lattice, tws0.E)
             tws0 = periodic_twiss(tws0, R)
             if tws0 == None:
-                print('Twiss: no periodic solution')
+                _logger.info(' twiss: Twiss: no periodic solution')
                 return None
         else:
             tws0.gamma_x = (1. + tws0.alpha_x ** 2) / tws0.beta_x
@@ -983,7 +1029,7 @@ def twiss(lattice, tws0=None, nPoints=None):
         twiss_list = trace_obj(lattice, tws0, nPoints)
         return twiss_list
     else:
-        print('Twiss: no periodic solution')
+        _logger.warning(' Twiss: no periodic solution. return None')
         return None
 
 
@@ -1002,7 +1048,7 @@ def twiss_fast(lattice, tws0=None):
             R = lattice_transfer_map(lattice, tws0.E)
             tws0 = periodic_twiss(tws0, R)
             if tws0 == None:
-                _logger.warning('twiss_fast: Twiss: no periodic solution')
+                _logger.warning(' twiss_fast: Twiss: no periodic solution')
                 return None
         else:
             tws0.gamma_x = (1. + tws0.alpha_x ** 2) / tws0.beta_x
@@ -1016,7 +1062,7 @@ def twiss_fast(lattice, tws0=None):
             obj_list.append(tws0)
         return obj_list
     else:
-        _logger.warning('twiss_fast: Twiss: no periodic solution')
+        _logger.warning(' twiss_fast: Twiss: no periodic solution')
         return None
 
 
@@ -1056,26 +1102,34 @@ class ProcessTable:
             (physics_proc.indx0 + 1 == physics_proc.indx1 and elem1.l == 0)):
 
             physics_proc.indx1 = physics_proc.indx0
-            physics_proc.s = np.sum(np.array([elem.l for elem in self.lat.sequence[:physics_proc.indx0]]))
+            physics_proc.s_stop = physics_proc.s_start
+            #physics_proc.s = np.sum(np.array([elem.l for elem in self.lat.sequence[:physics_proc.indx0]]))
             self.kick_proc_list = np.append(self.kick_proc_list, physics_proc)
             if len(self.kick_proc_list) > 1:
-                pos = np.array([proc.s for proc in self.kick_proc_list])
+                pos = np.array([proc.s_start for proc in self.kick_proc_list])
                 indx = np.argsort(pos)
                 self.kick_proc_list = self.kick_proc_list[indx]
+        _logger_navi.debug(" searching_kick_proc: self.kick_proc_list.append(): " + str([p.__class__.__name__ for p in self.kick_proc_list]))
 
 
     def add_physics_proc(self, physics_proc, elem1, elem2):
+        #logger_navi.debug(" add_physics_proc: self.proc_list = " + str([p.__class__.__name__ for p in self.proc_list]) + " -> add -> " + physics_proc.__class__.__name__)
         physics_proc.start_elem = elem1
         physics_proc.end_elem = elem2
         # print(elem1.id, elem2.id, elem1.__hash__(), elem2.__hash__(), self.lat.sequence.index(elem1), self.lat.sequence.index(elem2))
         physics_proc.indx0 = self.lat.sequence.index(elem1)
         # print(self.lat.sequence.index(elem1))
         physics_proc.indx1 = self.lat.sequence.index(elem2)
-
+        physics_proc.s_start = np.sum(np.array([elem.l for elem in self.lat.sequence[:physics_proc.indx0]]))
+        physics_proc.s_stop = np.sum(np.array([elem.l for elem in self.lat.sequence[:physics_proc.indx1]]))
         self.searching_kick_proc(physics_proc, elem1)
         # print(self.lat.sequence.index(elem2))
         physics_proc.counter = physics_proc.step
         physics_proc.prepare(self.lat)
+
+        _logger_navi.debug(" add_physics_proc: self.proc_list = " + str([p.__class__.__name__ for p in self.proc_list]) + ".append(" + physics_proc.__class__.__name__ + ")" +
+                          "; start: " + str(physics_proc.indx0 ) + " stop: " + str(physics_proc.indx1))
+
         self.proc_list.append(physics_proc)
         # print(elem1.__hash__(), elem2.__hash__(), physics_proc.indx0, physics_proc.indx1, self.proc_list)
 
@@ -1105,19 +1159,32 @@ class Navigator:
         self.kill_process = False # for case when calculations are needed to terminated e.g. from gui
 
     def add_physics_proc(self, physics_proc, elem1, elem2):
+        #logger_navi.debug(" add_physics_proc: phys proc: " + physics_proc.__class__.__name__)
         self.process_table.add_physics_proc(physics_proc, elem1, elem2)
 
-    def check_overjump(self, dz, processes):
-        # print("CHECK OVER JUMP")
+    def check_overjump(self, dz, processes, phys_steps):
+        phys_steps_red = phys_steps - dz
         if len(processes) != 0:
             nearest_stop_elem = min([proc.indx1 for proc in processes])
             L_stop = np.sum(np.array([elem.l for elem in self.lat.sequence[:nearest_stop_elem]]))
             if self.z0 + dz > L_stop:
                dz = L_stop - self.z0
 
+            # check if inside step dz there is another phys process
+
+            proc_list_rest = [p for p in self.process_table.proc_list if p not in processes]
+            start_pos_of_rest = np.array([proc.s_start for proc in proc_list_rest])
+            start_pos = [pos for pos in start_pos_of_rest if self.z0 < pos < self.z0 + dz]
+            if len(start_pos) > 0:
+                start_pos.sort()
+                dz = start_pos[0] - self.z0
+                logger_navi.debug(" check_overjump: there is phys proc inside step -> dz was decreased: dz = " + str(dz))
+
+        phys_steps = phys_steps_red + dz
+
         # check kick processes
         kick_list = self.process_table.kick_proc_list
-        kick_pos = np.array([proc.s for proc in kick_list])
+        kick_pos = np.array([proc.s_start for proc in kick_list])
         indx = np.argwhere(self.z0 < kick_pos)
 
         if 0 in kick_pos and self.z0 == 0 and self.n_elem == 0:
@@ -1126,25 +1193,27 @@ class Navigator:
         if len(indx) != 0:
             kick_process = np.array(kick_list[indx]).flatten()
             for i, proc in enumerate(kick_process):
-                L_kick_stop = proc.s
+                L_kick_stop = proc.s_start
                 if self.z0 + dz > L_kick_stop:
                     dz = L_kick_stop - self.z0
+                    phys_steps = phys_steps_red + dz
                     processes.append(proc)
+                    phys_steps = np.append(phys_steps, 0)
                     continue
                 elif self.z0 + dz == L_kick_stop:
                     processes.append(proc)
+                    phys_steps = np.append(phys_steps, 0)
                 else:
                     pass
 
-        return dz, processes
-
+        return dz, processes, phys_steps
 
     def get_proc_list(self):
+        logger_navi.debug(" get_proc_list: all phys proc = " + str([p.__class__.__name__ for p in self.process_table.proc_list]))
         proc_list = []
         for p in self.process_table.proc_list:
             if p.indx0 <= self.n_elem < p.indx1:
                 proc_list.append(p)
-
         return proc_list
 
 
@@ -1159,15 +1228,17 @@ class Navigator:
     def get_next(self):
 
         proc_list = self.get_proc_list()
-        #_logger.show_debug = False
-
         if len(proc_list) > 0:
 
             counters = np.array([p.counter for p in proc_list])
+            #print("counters = ", counters)
             step = counters.min()
 
             inxs = np.where(counters == step)
+            #print(inxs)
             processes = [proc_list[i] for i in inxs[0]]
+            phys_steps = np.array([p.step for p in processes])*self.unit_step
+            #print("steps = ", dzs)
             for p in proc_list:
                 p.counter -= step
                 if p.counter == 0:
@@ -1185,21 +1256,20 @@ class Navigator:
             else:
                 L = self.lat.totalLen
             dz = L - self.z0
-
-        # test
-        #if (len(processes) == 1) and (processes[0].__class__.__name__ == "CSR") and (self.lat.sequence[self.n_elem].__class__ in [Bend, SBend, RBend]):
-        #    dz = dz/10.
-
+            phys_steps = np.array([dz])
         # check if dz overjumps the stop element
-        dz, processes = self.check_overjump(dz, processes)
+        #dzs_red = dzs - dz
+        dz, processes, phys_steps = self.check_overjump(dz, processes, phys_steps)
+        #dzs = dzs_red
+        _logger_navi.debug(" Navigator.get_next: process: " + " ".join([proc.__class__.__name__ for proc in processes]))
 
-        _logger.debug(" Navigator.get_next: " +'\n' +
-                     "navi.z0=" + str(self.z0) + " navi.n_elem=" + str(self.n_elem) + " navi.sum_lengths="
-                     + str(self.sum_lengths) + " dz=" + str(dz) + '\n' +
-                     "element type=" + self.lat.sequence[self.n_elem].__class__.__name__ + " element name=" +
-                     self.lat.sequence[self.n_elem].id + '\n' +
-                     "process: " + " ".join([proc.__class__.__name__ for proc in processes]))
-        return dz, processes
+        _logger_navi.debug(" Navigator.get_next: navi.z0=" + str(self.z0) + " navi.n_elem=" + str(self.n_elem) + " navi.sum_lengths="
+                     + str(self.sum_lengths) + " dz=" + str(dz))
+
+        _logger_navi.debug(" Navigator.get_next: element type=" + self.lat.sequence[self.n_elem].__class__.__name__ + " element name=" +
+                     str(self.lat.sequence[self.n_elem].id))
+
+        return dz, processes, phys_steps
 
 
 def get_map(lattice, dz, navi):
@@ -1211,12 +1281,15 @@ def get_map(lattice, dz, navi):
     # navi.sum_lengths = np.sum([elem.l for elem in lattice.sequence[:i]])
     L = navi.sum_lengths + elem.l
     while z1 + 1e-10 > L:
-        if i >= nelems - 1:
-            break
+
         dl = L - navi.z0
         TM.append(elem.transfer_map(dl))
+
         navi.z0 = L
         dz -= dl
+        if i >= nelems - 1:
+            break
+
         i += 1
         elem = lattice.sequence[i]
         L += elem.l

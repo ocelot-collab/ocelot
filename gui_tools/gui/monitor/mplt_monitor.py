@@ -21,8 +21,8 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from ocelot.cpbd.beam import global_slice_analysis_extended
 from ocelot import *
-from scripts.io import *
-
+#from scripts.io import *
+import ocelot.gui.accelerator as ogu
 
 class MpltMonitor(QWidget):
     def __init__(self, parent=None):
@@ -37,7 +37,7 @@ class MpltMonitor(QWidget):
         #mypath = "C:/Users/tomins/Documents/Dropbox/DESY/repository/ocelot/gui_tools/track_data/particles"
         path = os.path.realpath(__file__)
         indx = path.find("gui_tools")
-        self.p_dict = path[:indx] + "gui_tools"+ os.sep + "track_data"+os.sep + "particles"+os.sep
+        self.p_dict = path[:indx] + "gui_tools"+ os.sep + "accelerator" + os.sep + "particles"+os.sep
         self.add_files(self.p_dict)
         #print("PATH",self.p_dict) # os.path.realpath(__file__), path[:indx])
         self.p_arrays = {}
@@ -73,6 +73,7 @@ class MpltMonitor(QWidget):
 
     def add_files(self, p_path):
         self.p_files = [f for f in listdir(p_path) if isfile(join(p_path, f))]
+
         #self.ui.cb_p_file.currentIndexChanged.connect(lambda: 0)
         try:
             self.ui.cb_p_file.currentIndexChanged.disconnect()
@@ -80,12 +81,15 @@ class MpltMonitor(QWidget):
             pass
         self.ui.cb_p_file.clear()
         for path in self.p_files:
-            self.ui.cb_p_file.addItem(path)
+            filename, file_extension = os.path.splitext(path)
+            #print(filename, file_extension)
+            if file_extension in [".npz", ".ast"]:
+                self.ui.cb_p_file.addItem(path)
         #self.ui.cb_p_file.setCurrentIndex(0)
         self.ui.cb_p_file.currentIndexChanged.connect(self.plot)
 
     def calculate_slaice_params(self, p_array):
-        slice_params = global_slice_analysis_extended(p_array, 5000, 0.01, 2, 2)
+        slice_params = global_slice_analysis(p_array, 5000, 0.01, 2, 2)
         return slice_params
 
     def load_particles(self):
@@ -93,7 +97,7 @@ class MpltMonitor(QWidget):
         #if current_file in self.p_arrays.keys() and current_file in self.slices.keys():
         #    print("Already loaded")
         #    return
-        self.p_arrays[current_file] = read_beam_file(self.p_dict + current_file)
+        self.p_arrays[current_file] = load_particle_array(self.p_dict + current_file)
         self.slices[current_file] = self.calculate_slaice_params(self.p_arrays[current_file])
         #s, I, ex, ey, me, se, gamma0, emitxn, emityn = slice_params
 
@@ -103,20 +107,20 @@ class MpltMonitor(QWidget):
         current_slice_param = self.ui.cb_slice_params.currentText()
         self.ax_l.clear()
         if current_slice_param == "Current":
-            self.ax_l.plot(self.slice_params[0]*1e3, self.slice_params[1], "r", label="Current")
+            self.ax_l.plot(self.slice_params.s*1e3, self.slice_params.I, "r", label="Current")
             self.ax_l.set_xlabel("s, mm")
             self.ax_l.set_ylabel("I, A")
         elif current_slice_param == "Emittance":
-            self.ax_l.plot(self.slice_params[0]*1e3, self.slice_params[2], "r", label="emit_x")
-            self.ax_l.plot(self.slice_params[0]*1e3, self.slice_params[3], "b", label="emit_y")
+            self.ax_l.plot(self.slice_params.s*1e3, self.slice_params.ex, "r", label="emit_x")
+            self.ax_l.plot(self.slice_params.s*1e3, self.slice_params.ey, "b", label="emit_y")
             self.ax_l.set_xlabel("s, mm")
             self.ax_l.set_ylabel("emit, mm*mrad")
         elif current_slice_param == "Energy":
-            self.ax_l.plot(self.slice_params[0]*1e3, self.slice_params[4], "r", label="Energy")
+            self.ax_l.plot(self.slice_params.s*1e3, self.slice_params.me, "r", label="Energy")
             self.ax_l.set_xlabel("s, mm")
             self.ax_l.set_ylabel("E, eV")
         else:
-            self.ax_l.plot(self.slice_params[0]*1e3, self.slice_params[5], "b", label="Energy Spread")
+            self.ax_l.plot(self.slice_params.s*1e3, self.slice_params.se, "b", label="Energy Spread")
             self.ax_l.set_xlabel("s, mm")
             self.ax_l.set_ylabel("dE, eV")
         self.ax_l.grid(True)
@@ -129,31 +133,53 @@ class MpltMonitor(QWidget):
         #print(self.p_array.x())
         self.ax_r.clear()
         if current_dist == "E-S":
-            self.ax_r.plot(self.p_array.tau()*1e3, self.p_array.p(), "r.", label=current_dist)
-            self.ax_r.set_xlabel("S, mm")
-            self.ax_r.set_ylabel("dE/E")
+            #self.ax_r.plot(self.p_array.tau()*1e3, self.p_array.p(), "r.", label=current_dist)
+            #self.ax_r.set_xlabel("S, mm")
+            #self.ax_r.set_ylabel("dE/E")
+            ogu.show_density(self.p_array.tau()*1e3, self.p_array.p(), ax=self.ax_r, nbins_x=250, nbins_y=250, interpolation="bilinear",
+                             xlabel="S, mm", ylabel="dE/E",
+                         nfig=50, title=None, figsize=None, grid=True, show_xtick_label=True)
+
         elif current_dist == "Y-X":
-            self.ax_r.plot(self.p_array.x()*1e3, self.p_array.y()*1e3, "b.", label=current_dist)
-            self.ax_r.set_xlabel("X, mm")
-            self.ax_r.set_ylabel("Y, mm")
+            #self.ax_r.plot(self.p_array.x()*1e3, self.p_array.y()*1e3, "b.", label=current_dist)
+            #self.ax_r.set_xlabel("X, mm")
+            #self.ax_r.set_ylabel("Y, mm")
+            ogu.show_density(self.p_array.x()*1e3, self.p_array.y()*1e3, ax=self.ax_r, nbins_x=250, nbins_y=250, interpolation="bilinear",
+                             xlabel="X, mm", ylabel="Y, mm",
+                         nfig=50, title=None, figsize=None, grid=True, show_xtick_label=True)
+
         elif current_dist == "Y-S":
-            self.ax_r.plot(self.p_array.tau()*1e3, self.p_array.y()*1e3, "b.", label=current_dist)
-            self.ax_r.set_xlabel("tau, mm")
-            self.ax_r.set_ylabel("Y, mm")
+            #self.ax_r.plot(self.p_array.tau()*1e3, self.p_array.y()*1e3, "b.", label=current_dist)
+            #self.ax_r.set_xlabel("tau, mm")
+            #self.ax_r.set_ylabel("Y, mm")
+            ogu.show_density(self.p_array.tau()*1e3, self.p_array.y()*1e3, ax=self.ax_r, nbins_x=250, nbins_y=250, interpolation="bilinear",
+                             xlabel="tau, mm", ylabel="Y, mm",
+                         nfig=50, title=None, figsize=None, grid=True, show_xtick_label=True)
         elif current_dist == "X-S":
-            self.ax_r.plot(self.p_array.tau()*1e3, self.p_array.x()*1e3, "b.", label=current_dist)
-            self.ax_r.set_xlabel("tau, mm")
-            self.ax_r.set_ylabel("Y, mm")
+            #self.ax_r.plot(self.p_array.tau()*1e3, self.p_array.x()*1e3, "b.", label=current_dist)
+            #self.ax_r.set_xlabel("tau, mm")
+            #self.ax_r.set_ylabel("Y, mm")
+            ogu.show_density(self.p_array.tau()*1e3, self.p_array.x()*1e3, ax=self.ax_r, nbins_x=250, nbins_y=250, interpolation="bilinear",
+                             xlabel="tau, mm", ylabel="X, mm",
+                         nfig=50, title=None, figsize=None, grid=True, show_xtick_label=True)
+
         elif current_dist == "Px-X":
-            self.ax_r.plot(self.p_array.px(), self.p_array.x()*1e3, "b.", label=current_dist)
-            self.ax_r.set_xlabel("px/p0")
-            self.ax_r.set_ylabel("X, mm")
+            #self.ax_r.plot(self.p_array.px(), self.p_array.x()*1e3, "b.", label=current_dist)
+            #self.ax_r.set_xlabel("px/p0")
+            #self.ax_r.set_ylabel("X, mm")
+            ogu.show_density(self.p_array.px()*1e3, self.p_array.x()*1e3, ax=self.ax_r, nbins_x=250, nbins_y=250, interpolation="bilinear",
+                             xlabel="px/p0, mrad", ylabel="X, mm",
+                         nfig=50, title=None, figsize=None, grid=True, show_xtick_label=True)
+
         else:
-            self.ax_r.plot(self.p_array.py(), self.p_array.y()*1e3, "b.", label=current_dist)
-            self.ax_r.set_xlabel("py/p0")
-            self.ax_r.set_ylabel("Y, mm")
+            #self.ax_r.plot(self.p_array.py(), self.p_array.y()*1e3, "b.", label=current_dist)
+            #self.ax_r.set_xlabel("py/p0")
+            #self.ax_r.set_ylabel("Y, mm")
+            ogu.show_density(self.p_array.py()*1e3, self.p_array.y()*1e3, ax=self.ax_r, nbins_x=250, nbins_y=250, interpolation="bilinear",
+                             xlabel="py/p0, mrad", ylabel="Y, mm",
+                         nfig=50, title=None, figsize=None, grid=True, show_xtick_label=True)
         self.ax_r.grid(True)
-        self.ax_r.legend()
+        plt.legend()
         self.canvas.draw()
 
     def add_plot(self):

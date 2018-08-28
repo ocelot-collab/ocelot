@@ -40,12 +40,12 @@ for xi, pxi in zip(x, px):
 
 plist_1 = copy.deepcopy(plist)
 
-navi = Navigator()
+navi = Navigator(lat2)
 dz = lat1.totalLen
 tracking_step(lat2, plist, dz = dz, navi = navi)  # R + T
 #for e in lat1.sequence:
 #    print("check", e.transfer_map.__class__)
-navi = Navigator()
+navi = Navigator(lat1)
 tracking_step(lat1, plist_1, dz = dz, navi = navi)  # R only
 
 px2 = [f.px for f in plist]
@@ -82,8 +82,8 @@ p1 = Particle(x = 0.01, p = 0.02)
 p2 = Particle(x = 0.01, p = 0.02)
 P1 = [copy.copy(p1)]
 P2 = [copy.copy(p2)]
-navi1 = Navigator()
-navi2 = Navigator()
+navi1 = Navigator(lat1)
+navi2 = Navigator(lat2)
 dz = 0.01
 
 for i in range(int(lat1.totalLen/dz)):

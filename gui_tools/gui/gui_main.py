@@ -1,13 +1,20 @@
+"""
+This class takes care about GUI functionality.
+S.Tomin, 2018
+"""
+
 from gui.UIOnline import *
 #from table_test import *
 import sys
-from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QAction, QTableWidget, QTableWidgetItem, QVBoxLayout
+from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QAction, QTableWidget, QTableWidgetItem, QVBoxLayout, QFileDialog
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import pyqtSlot
 from PyQt5 import QtCore
 from gui.device.device_ui import *
 from ocelot import *
 import os
+import importlib.util
+import numpy as np
 
 class OcelotInterfaceWindow(QMainWindow):
     """ Main class for the GUI application """
@@ -19,6 +26,7 @@ class OcelotInterfaceWindow(QMainWindow):
 
         #self.logbook = "xfellog"
         #self.dev_mode = False
+        self.lattice_dir_root = "accelerator/lattice"
         self.master = master
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -42,7 +50,69 @@ class OcelotInterfaceWindow(QMainWindow):
         #self.stop_track_timer = QtCore.QTimer()
         #self.stop_track_timer.timeout.connect(self.check_tread_is_alive)
 
+        self.ui.actionLoad_Lattice.triggered.connect(self.load_lattice)
+        self.ui.actionSave_Lattice.triggered.connect(self.save_lattice)
 
+
+    def load_lattice(self):
+        filename = QFileDialog.getExistingDirectory(self, 'Load Lattice',
+                                               self.lattice_dir_root,
+                                               QFileDialog.DontUseNativeDialog)
+
+        if filename:
+            print(filename)
+            for sec in self.master.sections:
+                new_cell = {}
+                fname = filename + os.sep + sec.lattice_name + ".py"
+
+
+                spec = importlib.util.spec_from_file_location(sec.lattice_name, fname)
+                foo = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(foo)
+                #print(foo.cell)
+                for elem in foo.cell:
+
+                    new_cell[elem.id] = elem
+                #print(self.master.quads)
+                for elem in self.master.quads:
+                    #print(elem.id, elem.id in new_cell.keys())
+                    if elem.id in new_cell.keys():
+                        elem.ui.set_value(new_cell[elem.id].k1)
+                for elem in self.master.bends:
+                    if elem.id in new_cell.keys():
+                        #print("bend", elem.id, new_cell[elem.id].angle)
+                        elem.ui.set_value(new_cell[elem.id].angle)
+                for elem in self.master.cavs:
+                    #print(elem.cavs[0].id, elem.cavs[0].id in new_cell.keys())
+                    if elem.cavs[0].id in new_cell.keys():
+                        elem.ui.set_volt(new_cell[elem.cavs[0].id].v*len(elem.cavs))
+                        elem.ui.set_phi(new_cell[elem.cavs[0].id].phi)
+
+                        #print("set cav: ", elem.id, new_cell[elem.cavs[0].id].v*len(elem.cavs))
+                        #print("set cav: ", elem.id, new_cell[elem.cavs[0].id].phi)
+            self.master.update_lattice_from_tables()
+
+    def save_lattice(self):
+        #print(self.master.gold_orbits_dir)
+        filename = QFileDialog.getExistingDirectory(self, 'Save Lattice',
+                                               self.lattice_dir_root,
+                                               QFileDialog.DontUseNativeDialog)
+        print(filename)
+
+        if filename:
+            for sec in self.master.sections:
+                fname = filename + os.sep + sec.lattice_name + ".py"
+                write_lattice(sec.lattice, file_name=fname, remove_rep_drifts=True, power_supply=False)
+
+        #    name = filename.split("/")[-1]
+        #    parts = name.split(".")
+        #    body_name = parts[0]
+        #
+        #    if len(parts) < 2 or parts[1] != "json":
+        #        part = filename.split(".")[0]
+        #        filename = part + ".json"
+        #
+        #    self.save_golden_orbit(filename)
 
     def ui_start_s2e(self):
         if self.ui.pb_start_tracking.text() == "Stop Tracking":
@@ -121,6 +191,17 @@ class OcelotInterfaceWindow(QMainWindow):
 
     def init_quad_table(self, devs, calc_obj):
         self.ui.w_q_table.init_table(devs=devs, device_iface=DeviceUI, calc_obj=calc_obj, spin_params=[-5000, 5000, 0.1])
+
+    def init_bend_table(self, devs, calc_obj):
+        for row, dev in enumerate(devs):
+            ui = VirtualUI()
+            #ui.tableWidget = self.ui.tableWidget
+            ui.row = row
+            ui.col = 2
+            ui.set_value(dev.angle)
+            ui.set_init_value(dev.angle)
+
+            dev.ui = ui
 
     def init_s2e_table(self, sections, check_header="", phys_proc_names=[]):
         self.ui.w_s2e.init_table(sections=sections, check_header=check_header,

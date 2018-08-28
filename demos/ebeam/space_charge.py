@@ -90,7 +90,7 @@ py = np.random.randn(200000)*sigma_py
 # >> print("cov=", c)
 
 cov_t_p =  [[  6.89508231e-07,  -2.98688604e-07],
- [ -2.98688604e-07,   1.87434257e-07]]
+            [ -2.98688604e-07,   1.87434257e-07]]
 
 long_dist = np.random.multivariate_normal((0, 0), cov_t_p, 200000)
 tau = long_dist[:, 0]
@@ -110,13 +110,14 @@ Q = 5e-10
 p_array_init.q_array = np.ones(200000)*Q/200000
 
 # beam transformation
-beta_x  = 1.59966676201
-beta_y  = 1.60018325757
-alpha_x = -0.995487979563
-alpha_y = -0.996116091572
-mux = 0
-muy = 0
-bt = BeamTransform([alpha_x, beta_x, mux], [alpha_y, beta_y, muy])
+tws = Twiss()
+tws.beta_x  = 1.59966676201
+tws.beta_y  = 1.60018325757
+tws.alpha_x = -0.995487979563
+tws.alpha_y = -0.996116091572
+tws.mux = 0
+tws.muy = 0
+bt = BeamTransform(tws=tws)
 bt.apply(p_array_init,dz=0)
 
 sI1, I1 = get_current(p_array_init, charge=p_array_init.q_array[0], num_bins=200)

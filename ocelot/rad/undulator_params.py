@@ -1,6 +1,5 @@
 
-from numpy import sqrt
-import numpy as np
+
 import scipy.special as sf
 from scipy.special import jn
 from ocelot.common.globals import *
@@ -16,7 +15,7 @@ def eV2lambda(Ephoton):
 
 def Ephoton2K(Eph, lu = 0.04, Eeb = 14):
     gamma = Eeb/m_e_GeV
-    K = sqrt(4.*gamma*gamma/lu*h_eV_s*speed_of_light/Eph - 2)
+    K = np.sqrt(4.*gamma*gamma/lu*h_eV_s*speed_of_light/Eph - 2)
     return K
 
 def K2Ephoton(K, lu = 0.04, E=14):
@@ -52,7 +51,7 @@ def Ephoton2field(energy, lu = 0.04, Eeb = 14):
     return field
 
 def lambda2Ebeam(Lambda = 10.4e-9, lu=0.0272, K=1.2392):
-    gamma = sqrt(lu/(2.*Lambda)*(1. + K*K/2.))
+    gamma = np.sqrt(lu/(2.*Lambda)*(1. + K*K/2.))
     return gamma*m_e_GeV
 
 class ID_radiation:
@@ -91,12 +90,12 @@ class ID_radiation:
         #self.beam.sizes()
         Lambda = K2Lambda(K, self.undul.lperiod, self.beam.E)
         L = self.undul.l
-        self.sigma_r = sqrt(Lambda*L/(2*4.*pi*pi))
-        self.sigma_r1 = sqrt(Lambda/L/2.)
-        self.Sigma_x = sqrt(self.beam.sigma_x**2 + self.sigma_r**2)
-        self.Sigma_y = sqrt(self.beam.sigma_y**2 + self.sigma_r**2)
-        self.Sigma_x1 = sqrt(self.beam.sigma_xp**2 + self.sigma_r1**2)
-        self.Sigma_y1 = sqrt(self.beam.sigma_yp**2 + self.sigma_r1**2)
+        self.sigma_r = np.sqrt(Lambda*L/(2*4.*pi*pi))
+        self.sigma_r1 = np.sqrt(Lambda/L/2.)
+        self.Sigma_x = np.sqrt(self.beam.sigma_x**2 + self.sigma_r**2)
+        self.Sigma_y = np.sqrt(self.beam.sigma_y**2 + self.sigma_r**2)
+        self.Sigma_x1 = np.sqrt(self.beam.sigma_xp**2 + self.sigma_r1**2)
+        self.Sigma_y1 = np.sqrt(self.beam.sigma_yp**2 + self.sigma_r1**2)
         #self.size_x = sqrt(self.Sigma_x**2 + (self.Sigma_x1*self.distance)**2)
         #self.size_y = sqrt(self.Sigma_y**2 + (self.Sigma_y1*self.distance)**2)
 
@@ -121,8 +120,8 @@ class ID_radiation:
         return brightness
 
 def print_rad_props(beam, K, lu, L, distance):
-    print("********* e beam ***********")
-    beam.print_sizes()
+    #print("********* e beam ***********")
+    beam.sizes()
 
 
     def f_n(n, Ku):
@@ -142,14 +141,14 @@ def print_rad_props(beam, K, lu, L, distance):
         return F
     gamma = beam.E/m_e_GeV
     Lambda = K2Lambda(K, lu, beam.E)
-    sigma_r = sqrt(Lambda*L/(2*4.*pi*pi))
-    sigma_r1 = sqrt(Lambda/L/2.)
-    Sigma_x = sqrt(beam.sigma_x**2 + sigma_r**2)
-    Sigma_y = sqrt(beam.sigma_y**2 + sigma_r**2)
-    Sigma_x1 = sqrt(beam.sigma_xp**2 + sigma_r1**2)
-    Sigma_y1 = sqrt(beam.sigma_yp**2 + sigma_r1**2)
-    size_x = sqrt(Sigma_x**2 + (Sigma_x1*distance)**2)
-    size_y = sqrt(Sigma_y**2 + (Sigma_y1*distance)**2)
+    sigma_r = np.sqrt(Lambda*L/(2*4.*pi*pi))
+    sigma_r1 = np.sqrt(Lambda/L/2.)
+    Sigma_x = np.sqrt(beam.sigma_x**2 + sigma_r**2)
+    Sigma_y = np.sqrt(beam.sigma_y**2 + sigma_r**2)
+    Sigma_x1 = np.sqrt(beam.sigma_xp**2 + sigma_r1**2)
+    Sigma_y1 = np.sqrt(beam.sigma_yp**2 + sigma_r1**2)
+    size_x = np.sqrt(Sigma_x**2 + (Sigma_x1*distance)**2)
+    size_y = np.sqrt(Sigma_y**2 + (Sigma_y1*distance)**2)
     B = K2field(K, lu = lu)
     F = flux(beam.I, K, m = 1)
     N = L/lu
@@ -158,27 +157,27 @@ def print_rad_props(beam, K, lu, L, distance):
     brightness = flux_tot/(4*pi*pi*Sigma_x*Sigma_y*Sigma_x1*Sigma_y1)*1e-12
 
     print ("********* ph beam ***********")
-    print ("Ebeam        : ", beam.E)
+    print ("Ebeam        : ", beam.E, " GeV")
     print ("K            : ", K)
-    print ("B            : ", B, " T")
-    print ("lambda       : ", Lambda, " m ")
-    print ("Eph          : ", K2Ephoton(K, lu, beam.E), " eV")
-    print ("1/gamma      : ", 1./gamma *1e6, " um")
-    print ("sigma_r      : ", sigma_r*1e6, " um")
-    print ("sigma_r'     : ", sigma_r1*1e6, " urad")
-    print ("Sigma_x      : ", Sigma_x *1e6, " um")
-    print ("Sigma_y      : ", Sigma_y *1e6, " um")
-    print ("Sigma_x'     : ", Sigma_x1*1e6, "urad")
-    print ("Sigma_y'     : ", Sigma_y1*1e6, "urad")
-    print ("H. spot size : ", size_x*1000., "/", size_x/distance*1000., " mm/mrad")
-    print ("V. spot size : ", size_y*1000., "/", size_y/distance*1000., " mm/mrad")
+    print ("B            : ", np.round(B, 4), " T")
+    print ("lambda       : ", "{0:.5E}".format(Lambda), " m ")
+    print ("Eph          : ", "{0:.5E}".format(K2Ephoton(K, lu, beam.E)), " eV")
+    print ("1/gamma      : ", np.round(1./gamma *1e6, 4), " um")
+    print ("sigma_r      : ", np.round(sigma_r *1e6, 4), " um")
+    print ("sigma_r'     : ", np.round(sigma_r1*1e6, 4), " urad")
+    print ("Sigma_x      : ", np.round(Sigma_x *1e6, 4), " um")
+    print ("Sigma_y      : ", np.round(Sigma_y *1e6, 4), " um")
+    print ("Sigma_x'     : ", np.round(Sigma_x1*1e6, 4), "urad")
+    print ("Sigma_y'     : ", np.round(Sigma_y1*1e6, 4), "urad")
+    print ("H. spot size : ", np.round(size_x*1000., 4), "/", np.round(size_x/distance*1000., 4), " mm/mrad")
+    print ("V. spot size : ", np.round(size_y*1000., 4), "/", np.round(size_y/distance*1000., 4), " mm/mrad")
     print ("I            : ", beam.I, " A")
     print ("Nperiods     : ", L/lu)
     print ("distance     : ", distance, " m")
-    print ("flux tot     : ", flux_tot, " ph/sec")
-    print ("flux density : ", F, " ph/sec/mrad^2;   ", F/distance/distance, " ph/sec/mm^2")
+    print ("flux tot     : ", "{0:.2E}".format(flux_tot), " ph/sec")
+    print ("flux density : ", "{0:.2E}".format(F), " ph/sec/mrad^2;   ", "{0:.2E}".format(F/distance/distance), " ph/sec/mm^2")
     #print "flux density : ", F/distance/distance, " ph/sec/mm^2"
-    print ("brilliance   : ", brightness, " ph/sec/mrad^2/mm^2")
+    print ("brilliance   : ", "{0:.2E}".format(brightness), " ph/sec/mrad^2/mm^2")
 
 
 
@@ -208,7 +207,7 @@ class UndulatorParameters:
         self.L = self.Nw*self.lw
         self.B = 2.0*pi * self.K * m_e_eV / (self.lw * speed_of_light)
         self.kw = 2.0*pi / self.lw
-        self.beta = sqrt(1.0 - 1.0 / (self.gamma*self.gamma) )
+        self.beta = np.sqrt(1.0 - 1.0 / (self.gamma*self.gamma) )
         self.beta_z = self.beta * (1.0 - (self.K*self.K)/ (4.0*self.gamma*self.gamma))
         #self.w1, _, _ = self.computeRadiationAnalytical(200.0, 0.0, 0)
         self.w1 = 1.0 / ( (1.0 + self.K*self.K/2.0 ) / (2*self.kw*speed_of_light*self.gamma**2) )

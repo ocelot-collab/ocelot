@@ -224,17 +224,19 @@ def fit_gauss_1d(x,F):
     return mu1, np.sqrt(sig1)
 
 def fwhm(x,F):
-    m = np.max(F) / 2.0
-    ups = []
-    downs = []
-    for i in range(len(x)-1):
-        if F[i] <  m and F[i+1] > m:
-            ups.append(i)
-        if F[i] >=  m and F[i+1] < m:
-            downs.append(i)
-            
-    #print ups, downs
-    return x[downs[-1]] - x[ups[0]]
+    ff = fwhm3(np.array(F))
+    return x[ff[2][1]]- x[ff[2][0]]
+#    m = np.max(F) / 2.0
+#    ups = []
+#    downs = []
+#    for i in range(len(x)-1):
+#        if F[i] <  m and F[i+1] > m:
+#            ups.append(i)
+#        if F[i] >=  m and F[i+1] < m:
+#            downs.append(i)
+#            
+#    #print ups, downs
+#    return x[downs[-1]] - x[ups[0]]
 
 def fwhm3(valuelist, height=0.5, peakpos=-1, total=1):
     """calculates the full width at half maximum (fwhm) of some curve.
@@ -421,33 +423,33 @@ def index_of(array,value):
     idx = (np.abs(array-value)).argmin()
     return idx
 
-
-@jit('void(double[:,:], double[:,:], int32, int32)', nopython=True, nogil=True)
-def corr_f_nb(corr, val, n_skip=1, norm=1):
-    n_val = corr.shape[0]
-    n_event = val.shape[1]
-    for i in range(n_val):
-        for j in range(n_val):
-            means = 0
-            meanl = 0
-            meanr = 0
-            for k in range(n_event):
-                means += val[i*n_skip,k] * val[j*n_skip,k]
-                meanl += val[i*n_skip,k]
-                meanr += val[j*n_skip,k]
-            means /= n_event
-            meanl /= n_event
-            meanr /= n_event
-            if meanl == 0 or meanr == 0:
-                if norm:
-                    corr[i,j] = 1
+if numba_avail:
+    @jit('void(double[:,:], double[:,:], int32, int32)', nopython=True, nogil=True)
+    def corr_f_nb(corr, val, n_skip=1, norm=1):
+        n_val = corr.shape[0]
+        n_event = val.shape[1]
+        for i in range(n_val):
+            for j in range(n_val):
+                means = 0
+                meanl = 0
+                meanr = 0
+                for k in range(n_event):
+                    means += val[i*n_skip,k] * val[j*n_skip,k]
+                    meanl += val[i*n_skip,k]
+                    meanr += val[j*n_skip,k]
+                means /= n_event
+                meanl /= n_event
+                meanr /= n_event
+                if meanl == 0 or meanr == 0:
+                    if norm:
+                        corr[i,j] = 1
+                    else:
+                        corr[i,j] = 0
                 else:
-                    corr[i,j] = 0
-            else:
-                if norm:
-                    corr[i,j] = means / meanl / meanr
-                else:
-                    corr[i,j] = means - meanl * meanr
+                    if norm:
+                        corr[i,j] = means / meanl / meanr
+                    else:
+                        corr[i,j] = means - meanl * meanr
 
 
 
@@ -482,42 +484,44 @@ def correlation2d(val, norm=0, n_skip=1, use_numba=numba_avail):
         corr_f_np(corr, val, n_skip, norm)
     return corr
 
-@jit('void(double[:,:], int32, double[:,:], int32)', nopython=True, nogil=True)
-def corr_c_nb(corr, n_corr, val, norm):
-    n_event = len(val[0])
-    n_val = len(val) - n_corr*2
-    for i in range(n_val):
-        for j in range(n_corr):
-            if not j%2:
-                ind_l = int(i - j/2 + n_corr)
-                ind_r = int(i + j/2 + n_corr)
-            else:
-                ind_l = int(i - (j-1)/2 + n_corr)
-                ind_r = int(i + (j-1)/2 + 1 + n_corr)                          
-            means = 0
-            meanl = 0
-            meanr = 0
-            for k in range(n_event):
-                means += val[ind_l, k] * val[ind_r, k]
-                meanl += val[ind_l, k]
-                meanr += val[ind_r, k]
-            means /= n_event
-            meanl /= n_event
-            meanr /= n_event
+if numba_avail:
+    @jit('void(double[:,:], int32, double[:,:], int32)', nopython=True, nogil=True)
+    def corr_c_nb(corr, n_corr, val, norm):
+        n_event = len(val[0])
+        n_val = len(val) - n_corr*2
+        for i in range(n_val):
+            for j in range(n_corr):
+                if not j%2:
+                    ind_l = int(i - j/2 + n_corr)
+                    ind_r = int(i + j/2 + n_corr)
+                else:
+                    ind_l = int(i - (j-1)/2 + n_corr)
+                    ind_r = int(i + (j-1)/2 + 1 + n_corr)                          
+                means = 0
+                meanl = 0
+                meanr = 0
+                for k in range(n_event):
+                    means += val[ind_l, k] * val[ind_r, k]
+                    meanl += val[ind_l, k]
+                    meanr += val[ind_r, k]
+                means /= n_event
+                meanl /= n_event
+                meanr /= n_event
 
-            if meanl == 0 or meanr == 0:
-                if norm:
-                    corr[i,j] = 1
+                if meanl == 0 or meanr == 0:
+                    if norm:
+                        corr[i,j] = 1
+                    else:
+                        corr[i,j] = 0
                 else:
-                    corr[i,j] = 0
-            else:
-                if norm:
-                    corr[i,j] = means / meanl / meanr
-                else:
-                    corr[i,j] = means - meanl * meanr
+                    if norm:
+                        corr[i,j] = means / meanl / meanr
+                    else:
+                        corr[i,j] = means - meanl * meanr
 
 
 def corr_c_np(corr, n_corr, val, norm):
+    n_val = len(val) - n_corr*2
     for i in range(n_val):
         for j in range(n_corr):
             if not j%2:

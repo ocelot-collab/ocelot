@@ -9,7 +9,7 @@ from ocelot.common.py_func import filename_from_path
 from copy import deepcopy
 from scipy import interpolate
 from scipy.signal import savgol_filter
-import logging
+from ocelot.common.logging import *
 
 _logger = logging.getLogger(__name__)
 #_logger = logging.getLogger('ocelot.beam')
@@ -347,9 +347,12 @@ class BeamArray(Beam):
         return attrs
 
     def sort(self):
+        _logger.debug('sorting beam slices')
         inds = self.s.argsort()
         for attr in self.params():
+            _logger.log(5, ind_str + 'sorting {:}'.format(str(attr)))
             values = getattr(self,attr)
+            _logger.log(5, ind_str + 'size {:}'.format(values.size))
             setattr(self,attr,values[inds])
 
     def equidist(self):
@@ -367,8 +370,8 @@ class BeamArray(Beam):
             self.s = s_new
         self.ds = dsm
 
-    def smear(self,sw):
-        print('smearing the beam by {:.2e} m'.format(sw))
+    def smear(self, sw):
+        _logger.debug('smearing the beam by {:.2e} m'.format(sw))
         self.equidist()
         sn = (sw /self.ds).astype(int)
         if sn<2:
@@ -391,6 +394,33 @@ class BeamArray(Beam):
     def get_s(self, s):
         idx = find_nearest_idx(self.s, s)
         return self[idx]
+    
+    def get_E(self):
+        return self.E[self.idx_max()]
+    
+    def set_E(self, E_GeV):
+        idx = self.idx_max()
+        self.E += (E_GeV - self.get_E())
+    
+    def center(self, s):
+        beam_s = self.get_s(s)
+        self.x -= beam_s.x
+        self.xp -= beam_s.xp
+        self.y -= beam_s.y
+        self.yp -= beam_s.yp
+    
+    def cut_empty_I(self, thresh=0.01):
+        idx = np.where(self.I <= self.I.max()*thresh)
+        del self[idx]
+    
+    def start_at_0(self):
+        self.s -= self.s.min()
+    
+    def cleanup(self):
+        self.cut_empty_I()
+        self.sort()
+        self.equidist()
+        self.start_at_0()
 
     def __getitem__(self,index):
         l = self.len()
@@ -1328,12 +1358,24 @@ def parray2beam(parray, step=1e-7):
             beam.I[i] = np.sum(indices) * part_c / t_step
             beam.E[i] = np.mean(dist_e) * 1e-9
             beam.sigma_E[i] = np.std(dist_e) * 1e-9
-            beam.x[i] = np.mean(dist_x)
-            beam.y[i] = np.mean(dist_y)
-            g = beam.E[i] / m_e_GeV
-            p = np.sqrt(g**2 - 1)
-            beam.xp[i] = np.mean(dist_xp) #/ p
-            beam.yp[i] = np.mean(dist_yp) #/ p
+            
+            dist_x_m = np.mean(dist_x)
+            dist_y_m = np.mean(dist_y)
+            dist_xp_m = np.mean(dist_xp)
+            dist_yp_m = np.mean(dist_yp)
+            
+            beam.x[i] = dist_x_m
+            beam.y[i] = dist_y_m
+            # g = beam.E[i] / m_e_GeV
+            # p = np.sqrt(g**2 - 1)
+            beam.xp[i] = dist_xp_m
+            beam.yp[i] = dist_yp_m
+            
+            dist_x -= dist_x_m
+            dist_y -= dist_y_m
+            dist_xp -= dist_xp_m
+            dist_yp -= dist_yp_m
+            
             beam.emit_x[i] = np.sqrt(np.mean(dist_x**2) * np.mean(dist_xp**2) - np.mean(dist_x * dist_xp)**2)
             beam.emit_y[i] = np.sqrt(np.mean(dist_y**2) * np.mean(dist_yp**2) - np.mean(dist_y * dist_yp)**2)
             beam.beta_x[i] = np.mean(dist_x**2) / beam.emit_x[i]

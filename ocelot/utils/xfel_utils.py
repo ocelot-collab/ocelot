@@ -11,13 +11,18 @@ import numpy as np
 from numpy import inf, complex128, complex64
 from copy import copy, deepcopy
 import ocelot
-import logging
+from ocelot import ocelog 
+from ocelot.common.globals import *  #import of constants like "h_eV_s" and "speed_of_light" 
+from ocelot.common.py_func import * 
 from ocelot.common.math_op import *
+
+from ocelot.gui import *
 
 # from ocelot.optics.utils import *
 # from ocelot.rad.undulator_params import *
 # from ocelot.rad.fel import *
 from ocelot.adaptors.genesis import *
+# from ocelot.adaptors.genesis4 import *
 
 import multiprocessing
 nthread = multiprocessing.cpu_count()
@@ -298,11 +303,15 @@ def create_exfel_lattice(beamline = 'sase1'):
 
 def prepare_el_optics(beam, lat_pkg, E_photon=None, beta_av=30, s=None):
     from ocelot.rad.undulator_params import Ephoton2K
-    if s is None:
-        jj = beam.I / (beam.beta_x * beam.beta_y * beam.emit_x * beam.emit_y)
-        s = beam.s[jj.argmax()]
+    # if s is None:
+        # jj = beam.I / (beam.beta_x * beam.beta_y * beam.emit_x * beam.emit_y)
+        # jj = beam.I
+        # s = beam.s[jj.argmax()]
     
-    beam_match = beam.get_s(s)
+    if s is None:
+        beam_match = get_beam_peak(beam)
+    else:
+        beam_match = beam.get_s(s)
         
     # if beamline == 'SASE1':
          # = create_exfel_sase1_lattice()

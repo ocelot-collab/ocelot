@@ -117,8 +117,8 @@ def und_field(x, y, z, lperiod, Kx, nperiods=None):
     kx_x = kx*x
     ky_y = ky*y
     kz_z = kz*z
-    cosx = 1#np.cos(kx_x)
-    sinhy = 0#np.sinh(ky_y)
+    cosx = np.cos(kx_x)
+    sinhy = np.sinh(ky_y)
     cosz = np.cos(kz_z + ph_shift)*z_coef
     Bx = k1*np.sin(kx_x)*sinhy*cosz #// here kx is only real
     By = B0*cosx*np.cosh(ky_y)*cosz
@@ -320,14 +320,8 @@ def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step):
         #// string below is for case direct accumulation
         #//double phase = screen->Phase[ypoint*xpoint*je + xpoint*jy + jx] + faseConst*(ZZ - motion->Z[0]  + gamma2*(IbetX2 + IbetY2 + phaseConstCur - phaseConstIn));
 
-        # original
-        phase = phaseConst*(ZZ - motion.z[0] + gamma2*(IbetX2 + IbetY2 + phaseConstCur - 0*phaseConstIn)) + screen.arPhase
-        # TODO: test
-        #phase = phaseConst * (
-        #            ZZ - motion.z[0] + gamma2 * (IbetX2 + IbetY2 + ((Xscr - XX)**2 + (Yscr - YY)**2)/LenPntrZ -
-        #                                         0*((Xscr - motion.x[0]) ** 2 + (Yscr - motion.y[0]) **2 ) / LenPntrConst)) + screen.arPhase
-        #print screen.arPhase
-        #phase = (phase/2./pi - floor(phase/2./pi))*2.*pi
+        phase = phaseConst*(ZZ - motion.z[0] + gamma2*(IbetX2 + IbetY2 + phaseConstCur - phaseConstIn)) + screen.arPhase
+
         cosf = np.cos(phase)
         sinf = np.sin(phase)
         EreX = radX*cosf #//(cosf *cos(fase0) - sinf*sin(fase0));
@@ -345,7 +339,7 @@ def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step):
             prY = Yscr - motion.y[-1] # //for pointer ny(z)
             IbetX2 = motion.XbetaI2[-1]
             IbetY2 = motion.YbetaI2[-1]
-            phase = phaseConst*(motion.z[-1] - motion.z[0]  + gamma2*(IbetX2 + IbetY2 + prX*prX/LenPntrZ + prY*prY/LenPntrZ - 0*phaseConstIn))
+            phase = phaseConst*(motion.z[-1] - motion.z[0]  + gamma2*(IbetX2 + IbetY2 + prX*prX/LenPntrZ + prY*prY/LenPntrZ - phaseConstIn))
             screen.arPhase = screen.arPhase + phase
     return screen
 
@@ -355,47 +349,34 @@ def radiation_py(gamma, traj, screen):
     """
     screen format     screen->ReEx[ypoint*xpoint*je + xpoint*jy + jx] += EreX;
     """
-    #start = time()
+
     motion = traj2motion(traj)
-    #Z = motion.z
-    #plt.plot(motion.z, motion.YbetaI2)
-    #plt.show()
-
-
-    #gamma = gamma
 
     size = len(motion.z)
     Nmotion = int((size + 1)/3)
     half_step = (motion.z[-1]-motion.z[0])/2./(Nmotion-1)
-    #plot(motion.z, motion.x, "r.-")
-    #show()
+
     n_end = len(motion.z)-2
-    #start3 = time()
     Xscr = np.linspace(screen.x_start, screen.x_start+screen.x_step*(screen.nx-1), num = screen.nx)
     Yscr = np.linspace(screen.y_start, screen.y_start+screen.y_step*(screen.ny-1), num = screen.ny)
     Yscr = Yscr.reshape((screen.ny, 1))
     Erad = np.linspace(screen.e_start, screen.e_start+screen.e_step*(screen.ne-1), num = screen.ne)
     Erad = Erad.reshape((screen.ne, 1))
-    #print Xscr
-    #print Yscr
+
     shape_array = [screen.ne, screen.ny, screen.nx]
-    #print shape(Xscr), shape(Yscr), shape(Erad)
     if 1 in shape_array:
-        #ind = shape_array.index(1)
         if screen.ny >1 and screen.ne>1:
             Yscr = Yscr.reshape((1, screen.ny))
         shape_array.remove(1)
-        #print shape_array
         screen.arReEx = screen.arReEx.reshape(shape_array)
         screen.arImEx = screen.arImEx.reshape(shape_array)
         screen.arReEy = screen.arReEy.reshape(shape_array)
         screen.arImEy = screen.arImEy.reshape(shape_array)
         screen.arPhase = screen.arPhase.reshape(shape_array)
-        #print screen.arPhase
-        for n in range(Nmotion-1):
-            #print "n = ", n
 
+        for n in range(Nmotion-1):
             screen = gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step)
+
         screen.arReEx = screen.arReEx.flatten()
         screen.arImEx = screen.arImEx.flatten()
         screen.arReEy = screen.arReEy.flatten()
@@ -424,15 +405,14 @@ def radiation_py(gamma, traj, screen):
             arReEy = np.append(arReEy,screen.arReEy.flatten())
             arImEy = np.append(arImEy,screen.arImEy.flatten())
             arPhase= np.append(arPhase,screen.arPhase.flatten())
-                #print arPhase
         screen.arReEx = arReEx
         screen.arImEx = arImEx
         screen.arReEy = arReEy
         screen.arImEy = arImEy
         screen.arPhase = arPhase
-    #print "reshape = ", time() - start3
-
     return 1
+
+
 #from ocelot.gui import *
 #import matplotlib.pyplot as plt
 def calculate_radiation(lat, screen, beam, energy_loss=False, quantum_diff=False, accuracy=1):
@@ -471,9 +451,7 @@ def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy
     L = 0.
     U = []
     E = []
-    #n = 0
     non_u = []
-    #K = 4
     for elem in lat.sequence:
         if elem.l == 0:
             continue
@@ -482,11 +460,9 @@ def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy
             U0 = 0.
         else:
             if len(non_u) != 0:
-                #print elem.type, elem.l, L
                 lat_el = MagneticLattice(non_u)
                 if lat_el.totalLen != 0:
                     navi = Navigator(lat)
-                    #u = []
 
                     N = 500
                     u = np.zeros((N * 9, np.shape(p_array.rparticles)[1]))
@@ -507,16 +483,10 @@ def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy
                 L += lat_el.totalLen
             non_u = []
 
-
-
             U0 = energy_loss_und(energy, elem.Kx, elem.lperiod, elem.l, energy_loss)
             Uq = quantum_diffusion(energy, elem.Kx, elem.lperiod, elem.l, quantum_diff)
-            #print U0, Uq
             U0 = U0 + Uq
-            #U0 = 8889.68503061*1e-9
-            #print "U0 = ", U0*1e9," eV"
-            #if energy_loss  == False:
-            #    U0 = 0.
+
             mag_length = elem.l
             try:
                 mag_field = elem.mag_field
@@ -541,19 +511,16 @@ def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy
             u[4::9] += L
             L += s
             U.append(u)
-
             E.append(energy)
         energy = energy - U0
-        #print energy
     #for u in U:
     #    print("here", len(u[4::9, 0]))
     #    plt.plot(u[4::9, :], u[7::9, :])
     #plt.show()
     return U, E
 
+
 def calculate_beam_radiation(lat, screen, p_array, energy_loss=False, quantum_diff=False, accuracy=1, freq=1):
-
-
     screen.update()
     b_current = p_array.q_array[0]*1000.*freq # b_current - beam current must be in [mA], but beam.I in [A]
     energy = p_array.E
@@ -564,16 +531,15 @@ def calculate_beam_radiation(lat, screen, p_array, energy_loss=False, quantum_di
     U, E = track4rad_beam(p_array, lat, energy_loss=energy_loss, quantum_diff=quantum_diff, accuracy=accuracy)
 
     screen.nullify()
-    #U, E = track4rad_beam(p_array, lat, energy_loss=energy_loss, quantum_diff=quantum_diff, accuracy=accuracy)
-    #print("DONE tracking")
+
     screen2 = copy.deepcopy(screen)
     for i in range(len(p_array.x())):
         screen_copy = copy.deepcopy(screen2)
         screen_copy.nullify()
+
         wlengthes = h_eV_s*speed_of_light/screen_copy.Eph
         screen_copy.arPhase[:] = tau0[i]/wlengthes*2*np.pi
-        #screen_copy.arPhase[:] = U[0][4, i]/wlengthes*2*np.pi
-        # print(U[0][4, i], screen_copy.arPhase[0])
+
         for u, e in zip(U, E):
             #shift_x = (max(u[0::9, i]) + min(u[0::9, i]))/2
             #u[0::9, i] -= shift_x
@@ -611,6 +577,7 @@ def calculate_beam_radiation(lat, screen, p_array, energy_loss=False, quantum_di
     screen.Ef_electron = E[-1]
     screen.motion = U
     return screen
+
 
 def calculate_beam_radiation_check(lat, screen, p_array, energy_loss=False, quantum_diff=False, accuracy=1, freq=1):
 

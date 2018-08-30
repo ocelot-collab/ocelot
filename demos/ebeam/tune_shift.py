@@ -65,7 +65,7 @@ start = time()
 
 pxy_list = [Track_info(Particle(y=0.0001, E=2), 0.00, 0.0001)]
 
-pxy_list = track_nturns( lat, nturns, pxy_list,  nsuperperiods = 1, save_track=True)
+pxy_list = track_nturns( lat, nturns, pxy_list,  nsuperperiods=1, save_track=True)
 y = [p[2] for p in pxy_list[0].p_list]
 py = [p[3] for p in pxy_list[0].p_list]
 

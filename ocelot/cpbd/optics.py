@@ -1178,7 +1178,7 @@ class Navigator:
             if len(start_pos) > 0:
                 start_pos.sort()
                 dz = start_pos[0] - self.z0
-                logger_navi.debug(" check_overjump: there is phys proc inside step -> dz was decreased: dz = " + str(dz))
+                _logger_navi.debug(" check_overjump: there is phys proc inside step -> dz was decreased: dz = " + str(dz))
 
         phys_steps = phys_steps_red + dz
 
@@ -1209,7 +1209,7 @@ class Navigator:
         return dz, processes, phys_steps
 
     def get_proc_list(self):
-        logger_navi.debug(" get_proc_list: all phys proc = " + str([p.__class__.__name__ for p in self.process_table.proc_list]))
+        _logger_navi.debug(" get_proc_list: all phys proc = " + str([p.__class__.__name__ for p in self.process_table.proc_list]))
         proc_list = []
         for p in self.process_table.proc_list:
             if p.indx0 <= self.n_elem < p.indx1:

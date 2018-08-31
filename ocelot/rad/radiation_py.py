@@ -415,20 +415,51 @@ def radiation_py(gamma, traj, screen):
 
 #from ocelot.gui import *
 #import matplotlib.pyplot as plt
+
 def calculate_radiation(lat, screen, beam, energy_loss=False, quantum_diff=False, accuracy=1):
     screen.update()
-    b_current = beam.I*1000. # b_current - beam current must be in [mA], but beam.I in [A]
-    energy = beam.E
-    gamma = energy/m_e_GeV
+
+    if beam.__class__ is Beam:
+        b_current = beam.I*1000. # b_current - beam current must be in [mA], but beam.I in [A]
+        p = Particle(x=beam.x, y=beam.y, px=beam.xp, py=beam.yp, E=beam.E)
+        p_array = ParticleArray()
+        p_array.list2array([p])
+
+    elif beam.__class__ is ParticleArray:
+        b_current = beam.q_array[0] * 1000.
+        p_array = beam
+
+    else:
+        raise TypeError("'beam' object must be Beam or ParticleArray class")
+
+    if b_current == 0:
+        print("Beam charge or beam current is 0. Default current I=100 mA is used")
+        b_current = 100 # mA
+
+    tau0 = np.copy(p_array.tau())
+    p_array.tau()[:] = 0
 
     screen.nullify()
-    U, E = track4rad(beam, lat, energy_loss=energy_loss, quantum_diff=quantum_diff, accuracy=accuracy)
-    for u, e in zip(U, E):
-        # plt.plot(u[4::9], u[0::9], "r")
-        # plt.plot(u[4::9], u[2::9], "b")
-        radiation_py(e/m_e_GeV, u, screen)
-    # plt.show()
-    screen.distPhoton(gamma, current=b_current)
+    U, E = track4rad_beam(p_array, lat, energy_loss=energy_loss, quantum_diff=quantum_diff, accuracy=accuracy)
+
+    for i in range(p_array.n):
+        print("%i/%i" % (i, p_array.n))
+        screen_copy = copy.deepcopy(screen)
+        screen_copy.nullify()
+
+        wlengthes = h_eV_s*speed_of_light/screen_copy.Eph
+        screen_copy.arPhase[:] = tau0[i]/wlengthes*2*np.pi
+        for u, e in zip(U, E):
+            gamma = (1 + p_array.p()[i]) * e / m_e_GeV
+
+            radiation_py(gamma, u[:, i], screen_copy)
+
+            screen.arReEx += screen_copy.arReEx
+            screen.arImEx += screen_copy.arImEx
+            screen.arReEy += screen_copy.arReEy
+            screen.arImEy += screen_copy.arImEy
+    gamma_mean = (1 + np.mean(p_array.p())) * p_array.E / m_e_GeV
+    screen.distPhoton(gamma_mean, current=b_current)
     screen.Ef_electron = E[-1]
     screen.motion = U
     return screen
@@ -499,7 +530,7 @@ def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy
                     mag_field = field_map2field_func(z=z_array, By=elem.field_map.By_arr)
                 else:
                     #print("Standard undulator field")
-                    mag_field = lambda x, y, z: und_field(x, y, z, elem.lperiod, elem.Kx, nperiods=elem.nperiods)
+                    mag_field = lambda x, y, z: und_field(x, y, z, elem.lperiod, elem.Kx, nperiods=None)
             N = int((mag_length*1500 + 100)*accuracy)
             u = rk_track_in_field(p_array.rparticles, mag_length, N, energy, mag_field)
 

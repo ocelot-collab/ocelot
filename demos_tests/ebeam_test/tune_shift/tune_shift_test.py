@@ -86,7 +86,6 @@ def test_freq_analysis(lattice, update_ref_values=False):
         return pxy_list
     
     pxy_list_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
-
     result1 = check_dict(pxy_list, pxy_list_ref, TOL, 'absolute', assert_info=' pxy_list freq_analysis- ')
     result2 = check_value(pxy_list[0]['muy'], mu_y_ref, TOL, assert_info=' muy - \n')
 

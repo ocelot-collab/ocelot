@@ -277,9 +277,6 @@ class TransferMap:
             m2.R = lambda energy: np.dot(self.R(energy), m.R(energy))
             m2.B = lambda energy: np.dot(self.R(energy), m.B(energy)) + self.B(energy)  # +dB #check
             m2.length = m.length + self.length
-            # m2.delta_e = m.delta_e + self.delta_e
-            # print("B = ", m2.R(0))
-            # m2.delta_e += self.delta_e
 
             return m2
 
@@ -439,10 +436,10 @@ class CorrectorTM(TransferMap):
 
 
 class CavityTM(TransferMap):
-    def __init__(self, v=0, f=0., phi=0.):
+    def __init__(self, v=0, freq=0., phi=0.):
         TransferMap.__init__(self)
         self.v = v
-        self.f = f
+        self.freq = freq
         self.phi = phi
         self.coupler_kick = False
         self.vx_up = 0.
@@ -451,7 +448,7 @@ class CavityTM(TransferMap):
         self.vy_down = 0.
         self.delta_e_z = lambda z: self.v * np.cos(self.phi * np.pi / 180.) * z / self.length
         self.delta_e = self.v * np.cos(self.phi * np.pi / 180.)
-        self.map = lambda X, energy: self.map4cav(X, energy, self.v, self.f, self.phi, self.length)
+        self.map = lambda X, energy: self.map4cav(X, energy, self.v, self.freq, self.phi, self.length)
 
     def map4cav(self, X, E, V, freq, phi, z=0):
         beta0 = 1
@@ -501,7 +498,7 @@ class CavityTM(TransferMap):
         m.R = lambda energy: m.R_z(s, energy)
         m.B = lambda energy: m.B_z(s, energy)
         m.delta_e = m.delta_e_z(s)
-        m.map = lambda X, energy: m.map4cav(X, energy, m.v * s / self.length, m.f, m.phi, s)
+        m.map = lambda X, energy: m.map4cav(X, energy, m.v * s / self.length, m.freq, m.phi, s)
         return m
 
 
@@ -796,7 +793,7 @@ class MethodTM:
             tm.multiplication = self.sec_order_mult.tmat_multip
 
         elif method == SlacCavityTM:
-            tm = SlacCavityTM(l=element.l, volt=element.v, phi=element.phi, freq=element.f)
+            tm = SlacCavityTM(l=element.l, volt=element.v, phi=element.phi, freq=element.freq)
             return tm
 
         else:
@@ -822,8 +819,7 @@ class MethodTM:
             tm.mag_field = element.mag_field
 
         if element.__class__ == Cavity:
-            # print("CAVITY create")
-            tm = CavityTM(v=element.v, f=element.f, phi=element.phi)
+            tm = CavityTM(v=element.v, freq=element.freq, phi=element.phi)
             if element.coupler_kick:
                 tm.coupler_kick = element.coupler_kick
                 tm.vx_up = element.vx_up

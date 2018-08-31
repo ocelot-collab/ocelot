@@ -242,7 +242,7 @@ def track4rad(beam, lat, energy_loss=False, quantum_diff=False, accuracy=1):
                     mag_field = field_map2field_func(z=z_array, By=elem.field_map.By_arr)
                 else:
                     #print("Standard undulator field")
-                    mag_field = lambda x, y, z: und_field(x, y, z, elem.lperiod, elem.Kx, nperiods=elem.nperiods)
+                    mag_field = lambda x, y, z: und_field(x, y, z, elem.lperiod, elem.Kx, nperiods=None)
             N = int((mag_length*1500 + 100)*accuracy)
             p_array = ParticleArray()
             p_array.list2array([p])
@@ -276,8 +276,8 @@ def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step):
     :param half_step:
     :return:
     """
-    Q = speed_of_light/m_e_eV/1000 #0.5866740802042227#; // e/mc = (mm*T)^-1
-    hc = h_eV_s*speed_of_light*1000# 1.239841874330e-3 # // mm
+    Q = 0.5866740802042227 #speed_of_light/m_e_eV/1000  // e/mc = (mm*T)^-1
+    hc = 1.239841874330e-3 # h_eV_s*speed_of_light*1000  // mm
     k2q3 = 1.1547005383792517#;//  = 2./sqrt(3)
     gamma2 = gamma*gamma
     w = [0.5555555555555556*half_step, 0.8888888888888889*half_step, 0.5555555555555556*half_step]

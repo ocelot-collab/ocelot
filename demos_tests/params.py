@@ -59,9 +59,9 @@ def check_value(value, value_ref, tolerance=1.0e-15, tolerance_type='relative', 
         abs_value_ref = 1.0
 
     if np.abs(value - value_ref) <= tolerance * abs_value_ref:
-        return None
+        return [None]
     else:
-        return assert_info + ' value is "' + str(value) + '"\n reference value is "' + str(value_ref) + '"\n tolerance is "' + str(tolerance) + '"\n tolerance type is "' + tolerance_type + '"\n\n'
+        return [assert_info + ' value is "' + str(value) + '"\n reference value is "' + str(value_ref) + '"\n tolerance is "' + str(tolerance) + '"\n tolerance type is "' + tolerance_type + '"\n\n']
 
 
 def check_matrix(matrix, matrix_ref, tolerance=1.0e-15, tolerance_type='relative', assert_info=''):

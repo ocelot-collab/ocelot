@@ -62,7 +62,7 @@ def test_lattice_transfer_map_after_matching(lattice, update_ref_values=False):
     result1 = check_value(tws[0].Dx, 0.0, match_tol, 'absotute', assert_info=' tws[0].Dx after matching\n')
     result2 = check_value(tws[0].Dxp, 0.0, match_tol, 'absotute', assert_info=' tws[0].Dxp after matching\n')
     result3 = check_matrix(r_matrix, r_matrix_ref, TOL, assert_info=' r_matrix after matching - ')
-    assert check_result([result1,result2]+result3)
+    assert check_result(result1+result2+result3)
 
 
 def test_twiss_after_matching(lattice, update_ref_values=False):

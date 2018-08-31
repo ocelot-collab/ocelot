@@ -65,7 +65,7 @@ def test_compensate_chromaticity(lattice, tws, update_ref_values=False):
 
     result1 = check_value(ksi[0], ksi_x, match_tolerance, 'absotute', assert_info=' ksi_x - \n')
     result2 = check_value(ksi[1], ksi_y, match_tolerance, 'absotute', assert_info=' ksi_y - \n')
-    assert check_result([result1, result2])
+    assert check_result(result1+result2)
 
 
 def test_create_track_list(lattice, tws=None, update_ref_values=False):

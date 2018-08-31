@@ -1,27 +1,327 @@
+### CSR_EX START ###
+
+test_lattice_transfer_map [PASSED]
+
+ execution time is 0.412 sec
+
+test_lattice_transfer_map_RT [PASSED]
+
+ execution time is 0.343 sec
+
+test_lattice_transfer_map_RT [PASSED]
+
+ execution time is 0.379 sec
+
+test_track_without_csr [PASSED]
+
+ execution time is 8.797 sec
+
+test_track_without_csr [PASSED]
+
+ execution time is 9.003 sec
+
+test_track_without_csr_tilted [PASSED]
+
+ execution time is 8.976 sec
+
+test_track_without_csr_rotated [PASSED]
+
+ execution time is 9.802 sec
+
+test_track_with_csr [PASSED]
+
+ execution time is 28.238 sec
+
+test_track_with_csr [PASSED]
+
+ execution time is 28.440 sec
+
+test_get_current [PASSED]
+
+ execution time is 0.087 sec
+
+test_get_current [PASSED]
+
+ execution time is 0.071 sec
+
+### CSR_EX END ###
+
+
+### DBA START ###
+
+test_lattice_transfer_map [PASSED]
+
+ execution time is 0.023 sec
+
+test_twiss [PASSED]
+
+ execution time is 0.183 sec
+
+test_lattice_transfer_map_after_matching [PASSED]
+
+ execution time is 0.797 sec
+
+test_twiss_after_matching [PASSED]
+
+ execution time is 0.172 sec
+
+### DBA END ###
+
+
+### DBA_TRACK_ELLIPSE START ###
+
+test_lattice_transfer_map [PASSED]
+
+ execution time is 0.483 sec
+
+test_tracking_step [PASSED]
+
+ execution time is 0.021 sec
+
+test_tracking_step [PASSED]
+
+ execution time is 0.018 sec
+
+### DBA_TRACK_ELLIPSE END ###
+
+
+### DBA_TRACKING START ###
+
+test_lattice_transfer_map [PASSED]
+
+ execution time is 0.023 sec
+
+test_twiss [PASSED]
+
+ execution time is 0.175 sec
+
+test_tracking_step [PASSED]
+
+ execution time is 0.299 sec
+
+test_tracking_step [PASSED]
+
+ execution time is 0.290 sec
+
+test_tracking_step [PASSED]
+
+ execution time is 0.291 sec
+
+### DBA_TRACKING END ###
+
+
+### MULTIPOLES START ###
+
+test_lattice_transfer_map [PASSED]
+
+ execution time is 0.134 sec
+
+test_natural_chromaticity [PASSED]
+
+ execution time is 0.151 sec
+
+test_tracking_step [PASSED]
+
+ execution time is 0.382 sec
+
+test_create_track_list [PASSED]
+
+ execution time is 0.020 sec
+
+test_track_nturns [PASSED]
+
+ execution time is 14.590 sec
+
+### MULTIPOLES END ###
+
+
+### NON_DISP_OFFCET START ###
+
+test_lattice_transfer_map [PASSED]
+
+ execution time is 0.009 sec
+
+test_twiss [PASSED]
+
+ execution time is 0.120 sec
+
+test_tracking_step_energy_offset [PASSED]
+
+ execution time is 0.207 sec
+
+test_tracking_step_energy_offset [PASSED]
+
+ execution time is 0.436 sec
+
+test_tracking_step_phase_space [PASSED]
+
+ execution time is 0.009 sec
+
+test_tracking_step_phase_space [PASSED]
+
+ execution time is 0.012 sec
+
+### NON_DISP_OFFCET END ###
+
+
+### RF_TWISS START ###
+
+test_lattice_transfer_map [PASSED]
+
+ execution time is 0.044 sec
+
+test_twiss [PASSED]
+
+ execution time is 0.013 sec
+
+### RF_TWISS END ###
+
+
+### DBA START ###
+
+test_lattice_transfer_map [PASSED]
+
+ execution time is 0.066 sec
+
+test_twiss [PASSED]
+
+ execution time is 0.242 sec
+
+test_responce_matrix [PASSED]
+
+ execution time is 0.104 sec
+
+test_correction [PASSED]
+
+ execution time is 2.366 sec
+
+test_lattice_track [PASSED]
+
+ execution time is 1.392 sec
+
+### DBA END ###
+
+
+### SPACE_CHARGE START ###
+
+test_track_without_sp [PASSED]
+
+ execution time is 9.982 sec
+
+test_track_with_sp [PASSED]
+
+ execution time is 89.658 sec
+
+test_get_current [PASSED]
+
+ execution time is 0.120 sec
+
+test_get_current [PASSED]
+
+ execution time is 0.100 sec
+
+### SPACE_CHARGE END ###
+
+
+### STORAGE_RING START ###
+
+test_lattice_transfer_map [PASSED]
+
+ execution time is 0.021 sec
+
+test_twiss [PASSED]
+
+ execution time is 0.191 sec
+
+test_match_tunes [PASSED]
+
+ execution time is 3.665 sec
+
+test_lattice_transfer_map_after_matching [PASSED]
+
+ execution time is 0.022 sec
+
+test_twiss_after_matching [PASSED]
+
+ execution time is 0.196 sec
+
+test_e_beam_params [PASSED]
+
+ execution time is 0.028 sec
+
+### STORAGE_RING END ###
+
+
+### STORAGE_RING_DA START ###
+
+test_lattice_transfer_map [PASSED]
+
+ execution time is 0.022 sec
+
+test_natural_chromaticity [PASSED]
+
+ execution time is 0.031 sec
+
+test_chromaticity [PASSED]
+
+ execution time is 0.013 sec
+
+test_compensate_chromaticity [PASSED]
+
+ execution time is 0.041 sec
+
+test_create_track_list [PASSED]
+
+ execution time is 0.994 sec
+
+test_track_nturns [PASSED]
+
+ execution time is 27.680 sec
+
+test_freq_analysis [PASSED]
+
+ execution time is 0.744 sec
+
+### STORAGE_RING_DA END ###
+
+
+### TRIPLET START ###
+
+test_lattice_transfer_map [PASSED]
+
+ execution time is 0.010 sec
+
+test_twiss [PASSED]
+
+ execution time is 0.004 sec
+
+test_tracking_step_phase_space [PASSED]
+
+ execution time is 0.011 sec
+
+test_tracking_step_phase_space [PASSED]
+
+ execution time is 0.015 sec
+
+test_tracking_step_energy_offset [PASSED]
+
+ execution time is 0.070 sec
+
+test_tracking_step_energy_offset [PASSED]
+
+ execution time is 0.137 sec
+
+### TRIPLET END ###
+
+
 ### TUNE_SHIFT START ###
 
 test_lattice_transfer_map [PASSED]
 
- execution time is 0.263 sec
+ execution time is 0.237 sec
 
 test_twiss [PASSED]
 
- execution time is 0.382 sec
+ execution time is 0.407 sec
 
-test_track_nturns [PASSED]
-
- execution time is 387.930 sec
-
-test_freq_analysis [FAILED]
- pxy_list freq_analysis- line is 0/1 key is mux
- value is "0.2255859375"
- reference value is "0.224609375"
- tolerance is "1e-07"
- tolerance type is "absolute"
-
-
- execution time is 0.398 sec
-
-### TUNE_SHIFT END ###
-
-
+test_track_nturns

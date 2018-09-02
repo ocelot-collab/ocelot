@@ -1,41 +1,53 @@
-### LASER HEATER START ###
+### CSR_EX START ###
 
-test_generate_parray [PASSED]
+test_lattice_transfer_map [PASSED]
 
- execution time is 0.809 sec
+ execution time is 0.364 sec
 
-test_chicane_trajectory [PASSED]
+test_lattice_transfer_map_RT [PASSED]
 
- execution time is 1.231 sec
+ execution time is 0.301 sec
 
-test_chicane_trajectory [PASSED]
+test_lattice_transfer_map_RT [PASSED]
 
- execution time is 1.146 sec
+ execution time is 0.298 sec
 
-test_track_chicane_und_wo_csr [PASSED]
+test_track_without_csr [PASSED]
 
- execution time is 1.026 sec
+ execution time is 0.919 sec
 
-test_track_chicane_und_wo_csr [PASSED]
+test_track_without_csr [PASSED]
 
- execution time is 1.016 sec
+ execution time is 0.936 sec
 
-test_track_chicane_und_csr [PASSED]
+test_track_without_csr_tilted [PASSED]
 
- execution time is 6.039 sec
+ execution time is 0.906 sec
 
-test_track_chicane_und_csr [PASSED]
+test_track_without_csr_rotated [PASSED]
 
- execution time is 5.704 sec
+ execution time is 1.004 sec
 
-test_track_with_laser_heater [PASSED]
+test_track_with_csr [PASSED]
 
- execution time is 1.033 sec
+ execution time is 12.955 sec
 
-test_track_with_laser_heater [PASSED]
+test_track_with_csr [PASSED]
 
- execution time is 0.995 sec
+ execution time is 12.569 sec
 
-### LASER HEATER END ###
+test_get_current [PASSED]
+
+ execution time is 0.019 sec
+
+test_get_current [PASSED]
+
+ execution time is 0.014 sec
+
+test_track_undulator_with_csr [PASSED]
+
+ execution time is 6.708 sec
+
+### CSR_EX END ###
 
 

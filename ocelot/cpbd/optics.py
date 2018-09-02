@@ -167,6 +167,7 @@ def transfer_map_rotation(R, T, tilt):
     R, T = transfer_maps_mult(Ra=Rc, Ta=Tc, Rb=rot_mtx(-tilt), Tb=np.zeros((6, 6, 6)))
     return R, T
 
+
 class TransferMap:
     def __init__(self):
         self.dx = 0.
@@ -618,8 +619,10 @@ class RungeKuttaTM(TransferMap):
         TransferMap.__init__(self)
         self.s_start = s_start
         self.npoints = npoints
+        self.long_dynamics = True
         self.mag_field = lambda x, y, z: (0, 0, 0)
-        self.map = lambda X, energy: rk_field(X, self.s_start, self.length, self.npoints, energy, self.mag_field)
+        self.map = lambda X, energy: rk_field(X, self.s_start, self.length, self.npoints, energy, self.mag_field,
+                                              self.long_dynamics)
 
     def __call__(self, s):
         m = copy(self)
@@ -627,8 +630,14 @@ class RungeKuttaTM(TransferMap):
         m.R = lambda energy: m.R_z(s, energy)
         m.B = lambda energy: m.B_z(s, energy)
         m.delta_e = m.delta_e_z(s)
-        m.map = lambda X, energy: rk_field(X, m.s_start, s, m.npoints, energy, m.mag_field)
+        m.map = lambda X, energy: rk_field(X, m.s_start, s, m.npoints, energy, m.mag_field, m.long_dynamics)
         return m
+
+
+class RungeKuttaTrTM(RungeKuttaTM):
+    def __init__(self, s_start=0, npoints=200):
+        RungeKuttaTM.__init__(self, s_start=s_start, npoints=npoints)
+        self.long_dynamics = False
 
 
 class SecondTM(TransferMap):
@@ -806,7 +815,7 @@ class MethodTM:
                 ndiv = 5
             tm = UndulatorTestTM(lperiod=element.lperiod, Kx=element.Kx, ax=element.ax, ndiv=ndiv)
 
-        if method == RungeKuttaTM:
+        if method in [RungeKuttaTM, RungeKuttaTrTM]:
             try:
                 s_start = element.s_start
             except:
@@ -815,7 +824,7 @@ class MethodTM:
                 npoints = element.npoints
             except:
                 npoints = 200
-            tm = RungeKuttaTM(s_start=s_start, npoints=npoints)
+            tm = method(s_start=s_start, npoints=npoints)
             tm.mag_field = element.mag_field
 
         if element.__class__ == Cavity:

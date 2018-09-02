@@ -1,21 +1,41 @@
-### TUNE_SHIFT START ###
+### LASER HEATER START ###
 
-test_lattice_transfer_map [PASSED]
+test_generate_parray [PASSED]
 
- execution time is 0.279 sec
+ execution time is 0.809 sec
 
-test_twiss [PASSED]
+test_chicane_trajectory [PASSED]
 
- execution time is 0.399 sec
+ execution time is 1.231 sec
 
-test_track_nturns [PASSED]
+test_chicane_trajectory [PASSED]
 
- execution time is 210.794 sec
+ execution time is 1.146 sec
 
-test_freq_analysis [PASSED]
+test_track_chicane_und_wo_csr [PASSED]
 
- execution time is 0.406 sec
+ execution time is 1.026 sec
 
-### TUNE_SHIFT END ###
+test_track_chicane_und_wo_csr [PASSED]
+
+ execution time is 1.016 sec
+
+test_track_chicane_und_csr [PASSED]
+
+ execution time is 6.039 sec
+
+test_track_chicane_und_csr [PASSED]
+
+ execution time is 5.704 sec
+
+test_track_with_laser_heater [PASSED]
+
+ execution time is 1.033 sec
+
+test_track_with_laser_heater [PASSED]
+
+ execution time is 0.995 sec
+
+### LASER HEATER END ###
 
 

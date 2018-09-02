@@ -48,14 +48,14 @@ def test_calculate_radiation(lattice, screen, beam, parameter, update_ref_values
 def setup_module(module):
 
     f = open(pytest.TEST_RESULTS_FILE, 'a')
-    f.write('### SPATIAL START ###\n\n')
+    f.write('### RAD BEAM START ###\n\n')
     f.close()
 
 
 def teardown_module(module):
 
     f = open(pytest.TEST_RESULTS_FILE, 'a')
-    f.write('### SPATIAL END ###\n\n\n')
+    f.write('### RAD BEAM END ###\n\n\n')
     f.close()
 
 

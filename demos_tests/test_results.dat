@@ -1,17 +1,21 @@
-### SPATIAL START ###
+### TUNE_SHIFT START ###
 
-test_calculate_radiation [PASSED]
+test_lattice_transfer_map [PASSED]
 
- execution time is 8.162 sec
+ execution time is 0.279 sec
 
-test_calculate_radiation [PASSED]
+test_twiss [PASSED]
 
- execution time is 7.902 sec
+ execution time is 0.399 sec
 
-test_calculate_radiation [PASSED]
+test_track_nturns [PASSED]
 
- execution time is 7.928 sec
+ execution time is 210.794 sec
 
-### SPATIAL END ###
+test_freq_analysis [PASSED]
+
+ execution time is 0.406 sec
+
+### TUNE_SHIFT END ###
 
 

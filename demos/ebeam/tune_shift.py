@@ -6,7 +6,7 @@ import numpy as np
 from time import time
 from ocelot.cpbd.track import *
 from ocelot.rad.radiation_py import und_field
-
+from ocelot.cpbd.optics import *
 D0 = Drift(l=0., eid= "D0")
 D1 = Drift(l=1.49, eid= "D1")
 D2 = Drift(l=0.1035, eid= "D2")
@@ -47,7 +47,7 @@ ring = 3*cell + cell_u + 2*cell
 method = MethodTM()
 method.params[Sextupole] = KickTM
 #method.params[Undulator] = UndulatorTestTM
-method.params[Undulator] = RungeKuttaTM
+method.params[Undulator] = RungeKuttaTrTM
 method.global_method = TransferMap
 lat = MagneticLattice(ring, method=method)
 beam = Beam()

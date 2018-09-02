@@ -871,7 +871,7 @@ def rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=0.):
     return u
 
 
-def rk_field(rparticles, s_start, s_stop, N, energy, mag_field):
+def rk_field(rparticles, s_start, s_stop, N, energy, mag_field, long_dynamics=True):
     """
     Method to track particles through mag field
 
@@ -881,29 +881,37 @@ def rk_field(rparticles, s_start, s_stop, N, energy, mag_field):
     :param N: number of points on the trajectory
     :param energy: in GeV
     :param mag_field: must be function e.g. lambda x, y, z: (Bx, By, Bz)
+    :param long_dynamics: True, if True, includes longitudinal dynamics, otherwise only transverse
     :return:
     """
     if s_start > s_stop:
         print("rk_field: s_start > s_stop. Setup s_start = 0")
         s_start = 0.
 
-    traj_ref = rk_track_in_field(np.array([[0], [0], [0], [0], [0], [0]]), s_stop, N, energy, mag_field, s_start=s_start)
-    x1 = traj_ref[1+9::9]
-    y1 = traj_ref[3+9::9]
-    dz = traj_ref[4+9::9] - traj_ref[4:-9:9]
-    ref_path = np.sum(dz*np.sqrt(1 + x1*x1 + y1*y1))
+    ref_path = 0
+
+    if long_dynamics:
+        traj_ref = rk_track_in_field(np.array([[0], [0], [0], [0], [0], [0]]), s_stop, N, energy, mag_field, s_start=s_start)
+        x1 = traj_ref[1+9::9]
+        y1 = traj_ref[3+9::9]
+        dz = traj_ref[4+9::9] - traj_ref[4:-9:9]
+        ref_path = np.sum(dz*np.sqrt(1 + x1*x1 + y1*y1))
 
     traj_data = rk_track_in_field(rparticles, s_stop, N, energy, mag_field, s_start=s_start)
 
-    x1 = traj_data[1+9::9, :]
-    y1 = traj_data[3+9::9, :]
-    dz = traj_data[4+9::9, :] - traj_data[4:-9:9, :]
-    z_fin = traj_data[4, :] + np.sum(dz*np.sqrt(1 + x1*x1 + y1*y1), axis=0) - ref_path
+    z_fin = rparticles[4, :]
+
+    if long_dynamics:
+        x1 = traj_data[1+9::9, :]
+        y1 = traj_data[3+9::9, :]
+        dz = traj_data[4+9::9, :] - traj_data[4:-9:9, :]
+        z_fin += traj_data[4, :] + np.sum(dz*np.sqrt(1 + x1*x1 + y1*y1), axis=0) - ref_path
+
     rparticles[0, :] = traj_data[(N-1)*9 + 0, :]
     rparticles[1, :] = traj_data[(N-1)*9 + 1, :]
     rparticles[2, :] = traj_data[(N-1)*9 + 2, :]
     rparticles[3, :] = traj_data[(N-1)*9 + 3, :]
-    rparticles[4, :] = z_fin #traj_data[(N-1)*9 + 4, :]
+    rparticles[4, :] = z_fin
     rparticles[5, :] = traj_data[(N-1)*9 + 5, :]
     return rparticles
 

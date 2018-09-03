@@ -635,6 +635,17 @@ class ParticleArray:
         self.px()[:] = Rnn * self.px()[:]
         self.py()[:] = Rnn * self.py()[:]
         self.p()[:] = Rnn * self.p()[:]
+        
+    # def save_particle_array(filename, p_array):
+        # np.savez_compressed(filename, rparticles=p_array.rparticles, q_array=p_array.q_array, E=p_array.E, s=p_array.s)
+    
+    # def load_particle_array(filename):
+        # p_array = ParticleArray()
+        # with np.load(filename) as data:
+            # for key in data.keys():
+                # p_array.__dict__[key] = data[key]
+        # return p_array
+
 
 
 def recalculate_ref_particle(p_array):

@@ -43,7 +43,6 @@ SELF-SEEDING - relevant
 
 def dfl_st_cpl(dfl, theta_b, inp_axis='y', s_start=None):
     _logger.info('introducing spatio-temporal coupling')
-    # print('    introducing spatio-temporal coupling')
     start = time.time()
     direction = 1
     if s_start == None:
@@ -72,7 +71,8 @@ def dfl_st_cpl(dfl, theta_b, inp_axis='y', s_start=None):
 
     dfl.fld = fld
     t_func = time.time() - start
-    print('      done in %.2f ' % t_func + 'sec')
+    _logger.debug(ind_str + 'done in {:.2f} sec'.format(t_func))
+    # print('      done in %.2f ' % t_func + 'sec')
     return dfl
 
 
@@ -83,7 +83,7 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
     nthread = multiprocessing.cpu_count()
     if nthread > 8:
         nthread = int(nthread * 0.9)  # not to occupy all CPUs on login server
-    print('  HXRSS dfl filtering')
+    # print('  HXRSS dfl filtering')
     _logger.info('HXRSS dfl filtering')
     start = time.time()
     # klpos, krpos, cwidth = FWHM(trf.k, 1.0-np.abs(trf.tr))
@@ -105,8 +105,10 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
     if np.mod(padn, 2) == 0 and padn != 0:  # check for odd
         padn = int(padn + 1)
     
+    _logger.debug(ind_str + 'calculated pad_n = {}'.format(pad_n))
     if enforce_padn!=None:
         padn=enforce_padn
+        _logger.debug(ind_str + 'enforced pad_n = {}'.format(pad_n))
         
     
     dfl_z = dfl.scale_z()
@@ -115,9 +117,9 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
         raise Exception('s_delay %.2e is larger that the padded dfl %.2e Consider using enforce_padn > %.2f' %(s_delay, dfl_z_mesh * padn, s_delay / dfl_z_mesh))
         
     if dump_proj:
-
+        _logger.debug(ind_str + 'shape_before '+str(dfl.shape()))
         dfl_pad_z(dfl, padn)
-
+        _logger.debug(ind_str + 'shape_after '+str(dfl.shape()))
         t1 = time.time()
         t_l_scale = dfl.scale_z()
         # t_l_int_b=dfl.int_z()
@@ -147,11 +149,13 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
             dfl_st_cpl(dfl, trf.thetaB)
 
         dfl_shift_z(dfl, s_delay, set_zeros=0)
+        _logger.debug(ind_str + 'shape_before '+str(dfl.shape()))
         dfl_pad_z(dfl, -padn)
+        _logger.debug(ind_str + 'shape_after '+str(dfl.shape()))
 
         t_func = time.time() - start
         t_proj = t2 + t4 + t6 + t8 - (t1 + t3 + t5 + t7)
-        print('    done in %.2f sec, (inkl. %.2f sec for proj calc)' % (t_func, t_proj))
+        _logger.debug(ind_str + 'done in {:.2f} sec, (inkl. {:.2f} sec for proj calc)'.format(t_func, t_proj))
         return ((t_l_scale, None, t_l_int_a, t_l_pha_a), (f_l_scale, f_l_filt, None, f_l_int_a))  # f_l_int_b,t_l_int_b,
 
     else:
@@ -166,7 +170,7 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
         dfl_pad_z(dfl, -padn)
 
         t_func = time.time() - start
-        print('    done in %.2f ' % t_func + 'sec')
+        _logger.debug(ind_str + 'done in {:.2f} sec'.format(t_func))
         return ()
 
 

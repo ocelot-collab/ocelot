@@ -80,7 +80,7 @@ def plot_gen_out_all_paral(exp_dir, stage=1, savefig='png', debug=1):
 
 # plot_gen_stat(proj_dir=exp_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int','energy','r_size_weighted'], z_param_inp=[], dfl_param_inp=[], s_inp=['max'], z_inp=[0,'end'], savefig=1, saveval=1, showfig=0, debug=0)
 
-def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1, 1, 6.05, 1, 0, 0, 0, 0, 0, 1, 1), vartype_dfl=complex128, debug=1):
+def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice='all', vartype_dfl=complex128, debug=1):
     '''
     plots all possible output from the genesis output
     handle is either:
@@ -120,9 +120,9 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
         savefig = 'png'
 
     if choice == 'all':
-        choice = (1, 1, 1, 1, 6.05, 1, 1, 1, 1, 1, 1, 1, 1)
+        choice = (1, 1, 1, 1, 5, 1, 1, 1, 1, 1, 1, -1, 1)
     elif choice == 'gen':
-        choice = (1, 1, 1, 1, 6.05, 0, 0, 0, 0, 0, 0, 0, 0)
+        choice = (1, 1, 1, 1, 5, 0, 0, 0, 0, 0, 0, 0, 0)
 
     if len(choice) > 13:
         choice = choice[:13]
@@ -154,12 +154,22 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1,
                 f2 = plot_gen_out_z(handle, z=0, showfig=showfig, savefig=savefig, debug=debug)
             if choice[3]:
                 f3 = plot_gen_out_z(handle, z=inf, showfig=showfig, savefig=savefig, debug=debug)
-            if choice[11]:
-                try:
-                    W=wigner_out(handle, pad=2)
-                    plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug, downsample=2)
-                except:
-                    _logger.warning('could not plot wigner')
+            if choice[11] != 0:
+                if choice[11] == -1:
+                    try:
+                        W=wigner_out(handle, pad=2)
+                        plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug, downsample=2)
+                    except:
+                        _logger.warning('could not plot wigner')
+                else:
+                    if choice[11] == 1:
+                        _logger.warning('choice[11] in plot_gen_out_all defines interval of Wigner plotting. To plot at the end set to "-1"')
+                    try:
+                        for z in np.arange(0, np.amax(handle.z), choice[11]):
+                            W=wigner_out(handle, z=z, pad=2)
+                            plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug, downsample=2)
+                    except:
+                        _logger.warning('could not plot wigner')
             if choice[4] != 0 and  choice[4] != []:
                 for z in np.arange(choice[4], np.amax(handle.z), choice[4]):
                     plot_gen_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug)
@@ -490,7 +500,7 @@ def subfig_z_energy_espread(ax_energy, g, zi=None, x_units='um', legend=False):
     ax_energy.set_xlim([x[0],x[-1]])
 
 
-def subfig_z_phase(ax_phase, g, zi=None, x_units='um', legend=False, rewrap=False):
+def subfig_z_phase(ax_phase, g, zi=None, x_units='um', legend=False, **kwargs):
     ax_phase.clear()
     number_ticks = 6
     
@@ -506,17 +516,28 @@ def subfig_z_phase(ax_phase, g, zi=None, x_units='um', legend=False, rewrap=Fals
     if zi == None:
         zi = -1
     
-    if rewrap:
-        phase = unwrap(g.phi_mid[:, zi])
-        phase_cor = np.arange(g.nSlices) * (maxspectrum_wavelength - g('xlamds')) / g('xlamds') * g('zsep') * 2 * pi
-        phase_fixed = phase + phase_cor
-        phase_fixed -= power[maxspower_index, zi]
-        n = 1
-        phase_fixed = (phase_fixed + n * pi) % (2 * n * pi) - n * pi
+    if "rewrap" in kwargs:
+        _logger.warning(ind_str + '"rewrap" argument is obsolete')
+    
+    if hasattr(g, 'phi_mid_disp'):
+        phase_disp = g.phi_mid_disp[:, zi]
+    
     else:
-        phase_fixed = g.phi_mid[:, zi]
-    ax_phase.plot(x, phase_fixed, 'k-', linewidth=0.5)
-    ax_phase.text(0.98, 0.98, r'(on axis)', fontsize=10, horizontalalignment='right', verticalalignment='top', transform=ax_phase.transAxes)  # horizontalalignment='center', verticalalignment='center',
+        phase_disp = g.phi_mid[:, zi]
+        # phase = unwrap(g.phi_mid[:, zi])
+        # phase_cor = np.arange(g.nSlices) * (maxspectrum_wavelength - g('xlamds')) / g('xlamds') * g('zsep') * 2 * pi
+        # phase_fixed = phase + phase_cor
+        # phase_fixed -= power[maxspower_index, zi]
+        # n = 1
+        # phase_fixed = (phase_fixed + n * pi) % (2 * n * pi) - n * pi
+    # else:
+        # phase_fixed = g.phi_mid[:, zi]
+    ax_phase.plot(x, phase_disp, 'k-', linewidth=0.5)
+    if hasattr(g, 'phi_mid_disp'):
+        _txt = r'(on axis, rewrapped)'
+    else:
+        _txt = r'(on axis)'
+        ax_phase.text(0.98, 0.98, _txt, fontsize=10, horizontalalignment='right', verticalalignment='top', transform=ax_phase.transAxes)  # horizontalalignment='center', verticalalignment='center',
     ax_phase.set_ylabel(r'$\phi$ [rad]')
     ax_phase.set_ylim([-pi, pi])
     ax_phase.grid(True)
@@ -1255,7 +1276,6 @@ def subfig_rad_size(ax_size_t, g, legend):
         
         if legend:
             ax_size_s.legend()
-#        plt.legend('fwhm','std')
 
 
 def subfig_evo_rad_pow_sz(ax_power_evo, g, legend, norm=1):
@@ -1425,7 +1445,7 @@ def plot_dfl_all(dfl, **kwargs):
     plot_dfl(dfl, **kwargs)
     dfl.fft_xy()
 
-def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy = True, log_scale=0, debug=1, cmin=0, vartype_dfl=complex64):
+def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy = True, log_scale=0, debug=1, cmin=0, vartype_dfl=np.complex64):
     '''
     Plots dfl radiation object in 3d.
 
@@ -1476,10 +1496,10 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         freq_domain = False
     
     suffix = ''
-#    if fig_name is None:
-#        suffix = ''
-#    else:
-#        suffix = '_'+fig_name
+   # if fig_name is None:
+       # suffix = ''
+   # else:
+       # suffix = '_'+fig_name
         
     if dfl.Nz() != 1:
         # Make sure it is time-dependent
@@ -1505,11 +1525,11 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
             if dfl.domain_z == 't':
                 dfl.fft_z(debug=debug)
             
-#            z = dfl.scale_z() * 1e9
-#            dfl.fld = dfl.fld[::-1, :, :]
-#            z = z[::-1]
-#            unit_z = r'nm'
-#            z_label = r'$\lambda$ [' + unit_z + ']'
+           # z = dfl.scale_z() * 1e9
+           # dfl.fld = dfl.fld[::-1, :, :]
+           # z = z[::-1]
+           # unit_z = r'nm'
+           # z_label = r'$\lambda$ [' + unit_z + ']'
 
             z = h_eV_s * speed_of_light / dfl.scale_z()
             unit_z = r'eV'
@@ -2378,10 +2398,8 @@ def plot_gen_corr(proj_dir, run_inp=[], p1=(), p2=(), savefig=False, showfig=Tru
 
     return fig
 
-# np.where(out.s>1.8e-6)[0][0]
 
-
-def plot_dpa_bucket_out(out, dpa=None, slice_pos=None, repeat=1, GeV=1, figsize=4, cmap=def_cmap, scatter=True, energy_mean=None, legend=True, fig_name=None, savefig=False, showfig=True, bins=[50,50], debug=1):
+def plot_dpa_bucket_out(out, dpa=None, slice_pos='max_I', repeat=1, GeV=1, figsize=4, cmap=def_cmap, scatter=True, energy_mean=None, legend=True, fig_name=None, savefig=False, showfig=True, bins=[50,50], debug=1):
     
     if dpa == None:
         dpa=read_dpa_file_out(out)
@@ -2396,7 +2414,7 @@ def plot_dpa_bucket_out(out, dpa=None, slice_pos=None, repeat=1, GeV=1, figsize=
             elif slice_pos == 'max_B':
                 slice_num = np.argmax(out.bunching[:,-1])
             else:
-                raise ValueError('slice_pos text should be "max_I" or "max_P"')
+                raise ValueError('slice_pos text should be "max_I" or "max_P" or "max_B"')
         else:
             if slice_pos < np.amin(out.s) or slice_pos > np.amax(out.s):
                 raise ValueError('slice_pos outside out.s range')
@@ -2412,7 +2430,7 @@ def plot_dpa_bucket_out(out, dpa=None, slice_pos=None, repeat=1, GeV=1, figsize=
 
 
 def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cmap, scatter=False, energy_mean=None, legend=True, fig_name=None, savefig=False, showfig=True, suffix='', bins=(50,50), debug=1, return_mode_gamma=0):
-    part_colors = ['darkred', 'orange', 'g', 'b', 'm','c','y']
+    part_colors = ['darkred', 'orange', 'g', 'b', 'm', 'c', 'y']
     # cmap='BuPu'
     y_bins = bins[0]
     z_bins = bins[1]
@@ -2428,9 +2446,9 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cm
 
     if shape(dpa.ph)[0] == 1:
         slice_num = 0
-    elif slice_num is None:
+    if slice_num is None:
         slice_num = int(shape(dpa.ph)[0]/2)
-        print('      no slice number provided, using middle of the distribution - slice number', slice_num)
+        _logger.debug(ind_str + 'no slice number provided, using middle of the distribution - slice number {}'.format(slice_num))
     else:
         assert (slice_num <= shape(dpa.ph)[0]), 'slice_num larger than the dpa shape'
 
@@ -2463,6 +2481,7 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cm
     nbins = shape(dpa.ph)[1]
     phase = deepcopy(dpa.ph[slice_num, :, :])
     energy = deepcopy(dpa.e[slice_num, :, :])
+    _logger.debug(ind_str + 'nbins =  {}'.format(nbins))
 
 
 
@@ -2525,8 +2544,7 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cm
     if savefig != False:
         if savefig == True:
             savefig = 'png'
-        if debug > 1:
-            print('      saving ' + dpa.fileName() + suffix + '.' + savefig)
+        _logger.debug(ind_str + 'saving to {}'.format(dpa.fileName() + suffix + '.' + savefig))
         plt.savefig(dpa.filePath + suffix + '.' + savefig, format=savefig)
 
     if showfig:
@@ -3280,7 +3298,7 @@ def plot_stokes_values(S, fig=None, s_lin=0, norm=0, showfig=True, gw=1, directi
             plt.legend(['$\sqrt{S_1^2+S_2^2}$','$S_1$','$S_2$','$S_3$','$S_0$'], loc='lower center', ncol=5, mode="expand", borderaxespad=0.5, frameon=1).get_frame().set_alpha(0.4)
         else:
             plt.legend(['$S_1$','$S_2$','$S_3$','$S_0$'], fontsize=13, ncol=4, loc='upper left', frameon=1).get_frame().set_alpha(0.4)
-#            plt.legend(['$S_1$','$S_2$','$S_3$','$S_0$'], loc='lower center', ncol=5, mode="expand", borderaxespad=0.5, frameon=1).get_frame().set_alpha(0.4)
+           # plt.legend(['$S_1$','$S_2$','$S_3$','$S_0$'], loc='lower center', ncol=5, mode="expand", borderaxespad=0.5, frameon=1).get_frame().set_alpha(0.4)
         
         if showfig:
             plt.show()
@@ -3290,8 +3308,8 @@ def plot_stokes_values(S, fig=None, s_lin=0, norm=0, showfig=True, gw=1, directi
         
 def plot_stokes_angles(S, fig=None, showfig=True, direction='z', scatter=True):
     
-#    if type(S) != StokesParameters:
-#        raise ValueError('Not a StokesParameters object')
+   # if type(S) != StokesParameters:
+       # raise ValueError('Not a StokesParameters object')
     if direction == 'z':
         sc = S.sc_z * 1e6
     elif direction == 'x':
@@ -3307,7 +3325,7 @@ def plot_stokes_angles(S, fig=None, showfig=True, direction='z', scatter=True):
             plt.figure(fig.number)
         plt.clf()
 
-#        plt.step(sc, S.chi(), sc, S.psi(),linewidth=2)
+       # plt.step(sc, S.chi(), sc, S.psi(),linewidth=2)
         if scatter:
             psize = S.P_pol()
             psize /= np.amax(psize)

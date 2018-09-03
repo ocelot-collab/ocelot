@@ -1299,7 +1299,7 @@ def dfl_waistscan(dfl, z_pos, projection=0, debug=1):
     return sc_res
 
 
-def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(None, None), method='cubic', debug=1):
+def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(None, None), method='cubic', debug=1, return_result=1):
     ''' 
     2d interpolation of the coherent radiation distribution 
     interpN and interpL define the desired interpolation coefficients for  
@@ -1328,7 +1328,10 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
     if (interpN == (1, 1) and interpL == (1, 1) and newN == (None, None) and newL == (None, None)) or \
        (interpN == (1, 1) and interpL == (1, 1) and newN == (dfl.Nx(), dfl.Ny()) and newL == (dfl.Lx(), dfl.Ly())):
         _logger.info(ind_str + 'no interpolation required')
-        return
+        if return_result:
+            return dfl
+        else:
+            return
 
     # calculate new mesh parameters only if not defined explicvitly
     if newN == (None, None) and newL == (None, None):
@@ -1342,7 +1345,10 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
             # place exception
         elif interpNx == 1 and interpNy == 1 and interpLx == 1 and interpLy == 1:
             _logger.info(ind_str + 'no interpolation required, returning original')
-            return
+            if return_result:
+                return dfl
+            else:
+                return
             
         
         # elif interpNx == 1 and interpNy == 1 and interpLx <= 1 and interpLy <= 1:
@@ -1454,10 +1460,13 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
     _logger.debug(ind_str + 'energy after interpolation ' + str(E2))
     _logger.debug(ind_str + 'done in %.2f sec' % (time.time() - start_time))
 
-    # return dfl
+    if return_result:
+        return dfl
+    else:
+        return
 
 
-def dfl_shift_z(dfl, s, set_zeros=1):
+def dfl_shift_z(dfl, s, set_zeros=1, return_result=1):
     '''
     shift the radiation within the window in time domain
     dfl - initial RadiationField object
@@ -1469,7 +1478,7 @@ def dfl_shift_z(dfl, s, set_zeros=1):
     _logger.info('shifting dfl forward by %.2f um (%.0f slices)' % (s * 1e6, shift_n))
     if shift_n == 0:
         _logger.info(ind_str + 's=0, returning original')
-        return
+        # return
     else:
         start = time.time()
         dfl.fld = np.roll(dfl.fld, shift_n, axis=0)
@@ -1481,6 +1490,10 @@ def dfl_shift_z(dfl, s, set_zeros=1):
         t_func = time.time() - start
         # return dfl
     _logger.debug(ind_str + 'done in %.2f ' % t_func + 'sec')
+    if return_result:
+        return dfl
+    else:
+        return
 
 # def dfl_pad_z_old(dfl, padn):
     # assert np.mod(padn, 1) == 0, 'pad should be integer'
@@ -1511,25 +1524,27 @@ def dfl_shift_z(dfl, s, set_zeros=1):
         # print('      done in %.2f ' % t_func / 60 + 'min')
     # return dfl_pad
 
-def dfl_pad_z(dfl, padn):
+def dfl_pad_z(dfl, padn, return_result=1):
     assert np.mod(padn, 1) == 0, 'pad should be integer'
     start = time.time()
 
     if padn > 1:
         padn_n = int(padn  * dfl.Nz())  # new number of slices
         _logger.info('padding dfl by {:} from {:} to {:}'.format(padn, dfl.Nz(), padn_n))
-        dfl_pad = RadiationField( (padn_n, dfl.Ny(), dfl.Nx()) )
-        dfl_pad.copy_param(dfl)
-        dfl_pad.fld[-dfl.Nz():, :, :] = dfl.fld
-        dfl = dfl_pad
+        fld = dfl.fld
+        dfl.fld = np.zeros((padn_n, dfl.Ny(), dfl.Nx()), dtype=fld.dtype)
+        # dfl_pad = RadiationField( (padn_n, dfl.Ny(), dfl.Nx()) )
+        # dfl_pad.copy_param(dfl)
+        dfl.fld[-fld.shape[0]:, :, :] = fld
+        # dfl, dfl_pad = dfl_pad, dfl
     elif padn < -1:
         padn = abs(padn)
         padn_n = int(dfl.Nz() / padn)  # new number of slices
         _logger.info('de-padding dfl by {:} from {:} to {:}'.format(padn, dfl.Nz(), padn_n))
-        dfl_pad = RadiationField()
-        dfl_pad.copy_param(dfl)
-        dfl_pad.fld = dfl.fld[-padn_n:, :, :]
-        dfl = dfl_pad
+        # dfl_pad = RadiationField()
+        # dfl_pad.copy_param(dfl)
+        dfl.fld = dfl.fld[-padn_n:, :, :]
+        # dfl, dfl_pad = dfl_pad, dfl
     else:
         _logger.info('padding dfl by {:}'.format(padn))
         _logger.info(ind_str + 'padn=1, passing')
@@ -1539,7 +1554,9 @@ def dfl_pad_z(dfl, padn):
         _logger.debug(ind_str + 'done in {:.2f} sec'.format(t_func))
     else:
         _logger.debug(ind_str + 'done in {:.2f} min'.format(t_func/60))
-    # return dfl_pad
+    
+    if return_result:
+        return dfl
 
 def dfl_cut_z(dfl,z=[-np.inf,np.inf],debug=1):
     
@@ -1991,7 +2008,7 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1):
         z = np.amin(out_stat.z)
     zi = np.where(out_stat.z >= z)[0][0]
     
-    WW = np.zeros((out_stat.p_int.shape[2], out_stat.p_int.shape[1], out_stat.p_int.shape[1]))
+    # WW = np.zeros((out_stat.p_int.shape[2], out_stat.p_int.shape[1], out_stat.p_int.shape[1]))
     
     if pad > 1:
         n_add = out_stat.s.size * (pad-1) / 2
@@ -2000,12 +2017,17 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1):
         ds = (out_stat.s[-1] - out_stat.s[0]) / (out_stat.s.size-1)
         pad_array_s_l = np.linspace(out_stat.s[0] - ds*(n_add_l), out_stat.s[0]-ds, n_add_l)
         pad_array_s_r = np.linspace(out_stat.s[-1]+ds, out_stat.s[-1] + ds*(n_add_r), n_add_r)
-        WW = np.zeros((out_stat.p_int.shape[2], out_stat.p_int.shape[1] + n_add, out_stat.p_int.shape[1] + n_add))
+        WW = np.zeros((out_stat.p_int.shape[2], out_stat.p_int.shape[1] + n_add*2, out_stat.p_int.shape[1] + n_add*2))
         s = np.concatenate([pad_array_s_l, out_stat.s, pad_array_s_r])
     else:
         WW = np.zeros((out_stat.p_int.shape[2], out_stat.p_int.shape[1], out_stat.p_int.shape[1]))
         s = out_stat.s
         
+    # _logger.debug('n_add {}'.format(n_add))
+    # _logger.debug('n_add_l {}'.format(n_add_l))
+    # _logger.debug('n_add_r {}'.format(n_add_r))
+    # _logger.debug('field {}'.format(field.shape))
+    # _logger.debug('wig {}'.format(WW.shape))
     
     for (i,n) in enumerate(out_stat.run):
         _logger.debug(ind_str + 'run {} of {}'.format(i, len(out_stat.run)))
@@ -2016,12 +2038,16 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1):
     
     wig = WignerDistribution()
     wig.wig = np.mean(WW,axis=0)
+    wig.wig_stat = WW
     wig.s = s
     # wig.freq_lamd = out_stat.f
     wig.xlamds = out_stat.xlamds
     wig.filePath = out_stat.filePath + 'results' + os.path.sep + 'stage_%s__WIG__' %(stage)
     wig.z = z
-#    wig.energy= np.mean(out.p_int[:, -1], axis=0) * out('xlamds') * out('zsep') * out.nSlices / speed_of_light
+   # wig.energy= np.mean(out.p_int[:, -1], axis=0) * out('xlamds') * out('zsep') * out.nSlices / speed_of_light
+    ds = wig.s[1] - wig.s[0]
+    phen = h_eV_s * (np.fft.fftfreq(wig.s.size, d = ds / speed_of_light) + speed_of_light / wig.xlamds)
+    wig.phen = np.fft.fftshift(phen, axes=0)
     
     _logger.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
     

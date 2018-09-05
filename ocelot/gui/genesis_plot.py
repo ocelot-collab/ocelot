@@ -1866,6 +1866,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     plt.draw()
     if showfig == True:
         _logger.debug(ind_str + 'showing dfl')
+        rcParams["savefig.directory"] = os.path.dirname(dfl.filePath)
         plt.show()
     else:
         # plt.close('all')
@@ -2548,6 +2549,7 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cm
         plt.savefig(dpa.filePath + suffix + '.' + savefig, format=savefig)
 
     if showfig:
+        rcParams["savefig.directory"] = os.path.dirname(dpa.filePath)
         plt.show()
     else:
         # plt.close('all')
@@ -2667,6 +2669,7 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
         plt.savefig(edist.filePath + '.' + savefig, format=savefig)
 
     if showfig:
+        rcParams["savefig.directory"] = os.path.dirname(edist.filePath)
         plt.show()
     else:
         # plt.close('all')
@@ -2805,6 +2808,7 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
         plt.savefig(beam.filePath + '.' + savefig, format=savefig)
 
     if showfig:
+        rcParams["savefig.directory"] = os.path.dirname(beam.filePath)
         plt.show()
     else:
         # plt.close('all')
@@ -2812,7 +2816,7 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
 
     _logger.debug(ind_str + 'done')
 
-def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,None), y_lim=(None,None), downsample=1, autoscale=None, cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=True, plot_proj=1, debug=1):
+def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,None), y_lim=(None,None), downsample=1, autoscale=None, figsize=4, cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=True, plot_proj=1, plot_text=1, debug=1):
     '''
     plots wigner distribution (WD) with marginals
     wig_or_out -  may be WignerDistribution() or GenesisOutput() object
@@ -2851,7 +2855,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
         
     fig = plt.figure(fig_text)
     plt.clf()
-    fig.set_size_inches((18, 13), forward=True)
+    fig.set_size_inches((4.5*figsize, 3.25*figsize), forward=True)
         
     power=W.power()
     spec=W.spectrum()
@@ -2891,24 +2895,27 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
         axScatter = plt.axes()
     
     if abs_value:
-        axScatter.pcolormesh(power_scale, spec_scale, abs(wigner)) #change
-        axScatter.text(0.02, 0.98, r'$W_{{max}}$= {:.2e}'.format(np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes, color='w')
+        axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], abs(wigner[::downsample,::downsample]))
+        if plot_text:
+            axScatter.text(0.02, 0.98, r'$W_{{max}}$= {:.2e}'.format(np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes, color='w')
     else:
         # cmap='RdBu_r'
         # axScatter.imshow(wigner, cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
         axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], wigner[::downsample,::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
-        axScatter.text(0.02, 0.98, r'$W_{{max}}$= {:.2e}'.format(np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes)#fontsize=12,
+        if plot_text:
+            axScatter.text(0.02, 0.98, r'$W_{{max}}$= {:.2e}'.format(np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes)#fontsize=12,
             
     if plot_proj:
         axHistx.plot(power_scale,power)
-        axHistx.text(0.02, 0.95, r'E= {:.2e} J'.format(W.energy()), horizontalalignment='left', verticalalignment='top', transform=axHistx.transAxes)#fontsize=12,
-        axHistx.set_ylabel('power [W]')
+        if plot_text:
+            axHistx.text(0.02, 0.95, r'E= {:.2e} J'.format(W.energy()), horizontalalignment='left', verticalalignment='top', transform=axHistx.transAxes)#fontsize=12,
+        axHistx.set_ylabel('Power [W]')
         
         if spec.max() <= 0:
             axHisty.plot(spec, spec_scale)
         else:
             axHisty.plot(spec/spec.max(), spec_scale)
-        axHisty.set_xlabel('spectrum [a.u.]')
+        axHisty.set_xlabel('Spectrum [a.u.]')
         
         axScatter.axis('tight')
         axScatter.set_xlabel(p_label_txt)

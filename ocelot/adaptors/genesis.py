@@ -1092,13 +1092,13 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', dfl_slipage_inc
             raise
 
     if inp.stageid is None:
-        inp_path = inp.run_dir + 'run.' + str(inp.runid) + inp.suffix +  + '.inp'
-        out_path = inp.run_dir + 'run.' + str(inp.runid) + inp.suffix +  + '.gout'
+        inp_path = inp.run_dir + 'run.' + str(inp.runid) + inp.suffix + '.inp'
+        out_path = inp.run_dir + 'run.' + str(inp.runid) + inp.suffix + '.gout'
         inp.stageid = ''
         stage_string = ''
     else:
-        inp_path = inp.run_dir + 'run.' + str(inp.runid) + '.s' + str(inp.stageid) + inp.suffix +  + '.inp'
-        out_path = inp.run_dir + 'run.' + str(inp.runid) + '.s' + str(inp.stageid) + inp.suffix +  + '.gout'
+        inp_path = inp.run_dir + 'run.' + str(inp.runid) + '.s' + str(inp.stageid) + inp.suffix + '.inp'
+        out_path = inp.run_dir + 'run.' + str(inp.runid) + '.s' + str(inp.stageid) + inp.suffix + '.gout'
         stage_string = '.s' + str(inp.stageid)
 
     inp_file = filename_from_path(inp_path)
@@ -1106,7 +1106,7 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', dfl_slipage_inc
 
     # cleaning directory
     _logger.debug(ind_str + 'removing old files')
-    os.system('rm -rf ' + inp.run_dir + 'run.' + str(inp.runid) + stage_string + inp.suffix +  + '*')  # to make sure all stage files are cleaned
+    os.system('rm -rf ' + inp.run_dir + 'run.' + str(inp.runid) + stage_string + inp.suffix + '*')  # to make sure all stage files are cleaned
     # os.system('rm -rf ' + out_path+'*') # to make sure out files are cleaned
     # os.system('rm -rf ' + inp_path+'*') # to make sure inp files are cleaned
     os.system('rm -rf ' + inp.run_dir + 'tmp.cmd')
@@ -1557,7 +1557,7 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
     out.filePath = filePath
     # out.fileName = filename_from_path(filePath)
 
-    _logger.info('reading gen2 .out file')
+    _logger.info('reading gen2 {} file'.format(os.path.basename(filePath)))
     _logger.debug(ind_str + 'reading from ' + filePath)
 #    print '        - reading from ', fileName
 

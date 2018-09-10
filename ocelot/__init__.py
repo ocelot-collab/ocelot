@@ -26,6 +26,7 @@ __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope", 
            "CSR", "SpaceCharge", "Wake", "WakeTable", "WakeKick", "BeamTransform", "SmoothBeam",
            "EmptyProc", "PhysProc", "LaserHeater",
            "MagneticLattice",
+           "ocelog"
            ]
 
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
@@ -35,7 +36,7 @@ from ocelot.cpbd.elements import *
 from ocelot.cpbd.match import *
 from ocelot.cpbd.track import *
 from ocelot.common.globals import *
-from ocelot.common.logging import Logger
+from ocelot.common.logging import *
 from ocelot.cpbd.chromaticity import *
 from ocelot.cpbd.e_beam_params import *
 from ocelot.cpbd.io import *
@@ -43,7 +44,12 @@ from ocelot.cpbd.sc import *
 from ocelot.cpbd.csr import *
 from ocelot.cpbd.wake3D import *
 from ocelot.cpbd.physics_proc import *
+import logging
+# _logger = logging.getLogger('ocelot.init')
+# _logger.info('initializing ocelot...')
 print('initializing ocelot...')
+# logger = Logger()
+#xrange=range
 
 try:
     import numba
@@ -60,5 +66,3 @@ try:
 except:
     print("import: module NUMEXPR is not installed. Install it to speed up calculation")
 
-
-logger = Logger()

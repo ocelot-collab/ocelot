@@ -54,7 +54,7 @@ def test_match_tunes(lattice, beam, update_ref_values=False):
 
     result1 = check_value(new_nu_x, nu_x, match_tolerance, assert_info=' nu_x - \n')
     result2 = check_value(new_nu_y, nu_y, match_tolerance, assert_info=' nu_y - \n')
-    assert check_result(result1+result2)
+    assert check_result([result1, result2])
 
 
 def test_lattice_transfer_map_after_matching(lattice, beam, update_ref_values=False):

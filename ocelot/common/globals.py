@@ -14,6 +14,8 @@ pi = 3.141592653589793
 speed_of_light = 299792458.0 #m/s
 q_e = 1.6021766208e-19       # C - Elementary charge
 m_e_kg = 9.10938215e-31      # kg
+h_J_s = 6.626070040e-34      # Plancks constant [J*s]
+
 m_e_eV = m_e_kg * speed_of_light**2 / q_e # eV (510998.8671)
 m_e_MeV = m_e_eV / 1e+6        # MeV (0.510998928)
 m_e_GeV = m_e_eV / 1e+9      # GeV
@@ -21,7 +23,7 @@ m_e_GeV = m_e_eV / 1e+9      # GeV
 mu_0 = 4 * pi * 1e-7 # permeability of free space (1.2566370614359173e-06)
 epsilon_0 = 1 / mu_0 / speed_of_light**2 # permittivity of free space (8.854187817620e-12 F/m)
 
-h_eV_s = 4.135667516e-15    #eV s
+h_eV_s = h_J_s / q_e    # [eV*s]
 hr_eV_s = h_eV_s/2./pi
 ro_e = q_e**2/(4*pi*epsilon_0*m_e_kg*speed_of_light**2) # classical electron radius (2.8179403267e-15 m)
 

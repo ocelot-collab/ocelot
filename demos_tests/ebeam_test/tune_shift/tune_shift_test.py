@@ -48,7 +48,7 @@ def test_twiss(lattice, update_ref_values=False):
 
     result1 = check_value(mu_y_no_u, mu_y_ref, TOL, assert_info=' mu_y_no_u - \n')
     result2 = check_dict(tws, tws_ref, TOL, 'absotute', assert_info=' tws - ')
-    assert check_result(result1+result2)
+    assert check_result([result1]+result2)
 
 
 #@pytest.mark.skip(reason='TOO LONG')
@@ -86,7 +86,6 @@ def test_freq_analysis(lattice, update_ref_values=False):
         return pxy_list
     
     pxy_list_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
-
     result1 = check_dict(pxy_list, pxy_list_ref, TOL, 'absolute', assert_info=' pxy_list freq_analysis- ')
     result2 = check_value(pxy_list[0]['muy'], mu_y_ref, TOL, assert_info=' muy - \n')
 
@@ -100,7 +99,7 @@ def test_freq_analysis(lattice, update_ref_values=False):
     mu_y_sim = mu_y_no_u - mu_y_h
     result4 = check_value(mu_y_sim, mu_y_sim_ref, TOL, assert_info=' mu_y_sim - \n')
     
-    assert check_result(result1+result2+result3+result4)
+    assert check_result(result1+[result2, result3, result4])
 
 
 def dft(sample, freqs):
@@ -120,7 +119,7 @@ def track_nturns_wrapper(lattice):
 
     if not hasattr(pytest, 'ts_pxy_list'):
         pytest.ts_pxy_list = [Track_info(Particle(y=0.0001, E=2.0), 0.00, 0.0001)]
-        pytest.ts_pxy_list = track_nturns(lattice, nturns, pytest.ts_pxy_list, nsuperperiods=1, save_track=True)
+        pytest.ts_pxy_list = track_nturns(lattice, nturns, pytest.ts_pxy_list, nsuperperiods=1, save_track=True, print_progress=False)
 
     return pytest.ts_pxy_list, nturns
 

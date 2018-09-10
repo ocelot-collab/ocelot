@@ -43,7 +43,7 @@ def check_value(value, value_ref, tolerance=1.0e-15, tolerance_type='relative', 
     """Value with reference value check function
 
     if relative_tolerance='relative' then tolerance is relative (this is default value)
-    if relative_tolerance='absotute' then tolerance is absotute
+    if relative_tolerance='absolute' then tolerance is absolute
     there is no tolerance for string values
     """
 
@@ -59,9 +59,9 @@ def check_value(value, value_ref, tolerance=1.0e-15, tolerance_type='relative', 
         abs_value_ref = 1.0
 
     if np.abs(value - value_ref) <= tolerance * abs_value_ref:
-        return [None]
+        return None
     else:
-        return [assert_info + ' value is "' + str(value) + '"\n reference value is "' + str(value_ref) + '"\n tolerance is "' + str(tolerance) + '"\n tolerance type is "' + tolerance_type + '"\n\n']
+        return assert_info + ' value is "' + str(value) + '"\n reference value is "' + str(value_ref) + '"\n tolerance is "' + str(tolerance) + '"\n tolerance type is "' + tolerance_type + '"\n\n'
 
 
 def check_matrix(matrix, matrix_ref, tolerance=1.0e-15, tolerance_type='relative', assert_info=''):

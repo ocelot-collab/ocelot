@@ -6,7 +6,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib
 from matplotlib import cm
 
-def show_flux(screen, show = 'Total', xlim = (0,0), ylim = (0,0),  file_name = None, unit = "mm", title=None):
+def show_flux(screen, show = 'Total', xlim = (0,0), ylim = (0,0),  file_name = None, unit = "mm", title=None, nfig=1):
     if show == 'Total':
         data = screen.Total
     elif show == 'Sigma':
@@ -33,15 +33,15 @@ def show_flux(screen, show = 'Total', xlim = (0,0), ylim = (0,0),  file_name = N
             status = "spatial"
 
         D1(data, X, distance=screen.Distance, xlabel=xlabel, xlim=xlim, ylim=ylim,  file_name=file_name,
-           unit=unit, status=status, title=title)
+           unit=unit, status=status, title=title, nfig=nfig)
     else:
         if screen.ne != 1:
             print (" ******** Can not display 4D plot. Change number of points Screen.num_energy = 1 ! *********** ")
             return
-        D3(screen, data, distance=screen.Distance, file_name=file_name, unit=unit, title=title)
+        D3(screen, data, distance=screen.Distance, file_name=file_name, unit=unit, title=title, nfig=nfig)
 
 
-def D1(data, X, distance, xlabel, xlim, ylim,  file_name, unit, status, title=None):
+def D1(data, X, distance, xlabel, xlim, ylim,  file_name, unit, status, title=None, nfig=1):
     # distance in [mm]
     if unit == "mrad":
         data = data*distance*distance*1e-6
@@ -52,17 +52,19 @@ def D1(data, X, distance, xlabel, xlim, ylim,  file_name, unit, status, title=No
     index = np.where(data== max(data))[0][0]
     energy = X[index]
 
-    fig = plt.figure()
+    fig = plt.figure(nfig)
+
     if title is not None:
-        plt.title(title)
+        fig.suptitle(title, fontsize=15)
+
     ax = fig.add_subplot(111)
+
     ax.plot(X, data)
 
-    if xlim != (0,0):
+    if xlim != (0, 0):
         ax.set_xlim(xlim)
-    if ylim != (0,0):
+    if ylim != (0, 0):
         ax.set_ylim(ylim)
-    #ax.set_title()
     ax.set_xlabel(xlabel)
     ax.set_ylabel(r"$I$, $\frac{ph}{sec \cdot mm^2 10^{-3}BW}$")
     if unit == "mrad":
@@ -88,17 +90,16 @@ def D1(data, X, distance, xlabel, xlim, ylim,  file_name, unit, status, title=No
         figg.savefig(file_name)
     else:
         plt.show()
-    plt.show()
 
 
-def D3(screen,Data, distance, file_name = None , unit = "mm", title=None):
+def D3(screen,Data, distance, file_name = None , unit = "mm", title=None, nfig=1):
     #print " showme.any = ", np.shape(Data)
     X,Y = np.meshgrid(screen.Xph, screen.Yph)
     if unit == "mrad":
         Data = Data*distance*distance*1e-6
         X = X/distance*1e6
         Y = Y/distance*1e6
-    fig = plt.figure()
+    fig = plt.figure(nfig)
     if title is not None:
         plt.title(title)
     ax = fig.add_subplot(111, projection='3d')

@@ -164,12 +164,12 @@ class callbackElement(QtGui.QGraphicsRectItem):
             color = QtGui.QColor(255, 250, 250)
             pg.QtGui.QGraphicsRectItem.setBrush(self, color)
         
-        self.mw.statusBar().showMessage(message)
+        self.mw.statusBar.showMessage(message)
 
 
     def hoverLeaveEvent(self, event):
         
-        self.mw.statusBar().showMessage('')
+        self.mw.statusBar.showMessage('')
 
         brush = pg.mkBrush(self.color)
         pg.QtGui.QGraphicsRectItem.setBrush(self, brush)

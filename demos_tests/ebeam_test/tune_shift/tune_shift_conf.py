@@ -59,7 +59,7 @@ def method():
 
     mmm = MethodTM()
     mmm.params[Sextupole] = KickTM
-    mmm.params[Undulator] = RungeKuttaTM
+    mmm.params[Undulator] = RungeKuttaTrTM
     mmm.global_method = TransferMap
 
     return mmm

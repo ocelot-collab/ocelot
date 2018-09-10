@@ -1,7 +1,6 @@
 __author__ = 'Sergey'
 
 from numpy.linalg import inv
-# from scipy.misc import factorial
 from math import factorial
 from ocelot.cpbd.beam import Particle, Twiss, ParticleArray
 from ocelot.cpbd.high_order import *
@@ -10,47 +9,55 @@ from copy import deepcopy
 import logging
 import numpy as np
 
-logger = logging.getLogger(__name__)
-logger_navi = logging.getLogger(__name__ + ".navi")
+_logger = logging.getLogger(__name__)
+_logger_navi = logging.getLogger(__name__ + ".navi")
 
 try:
     import numexpr as ne
     ne_flag = True
 except:
-    logger.debug(" optics.py: module NUMEXPR is not installed. Install it to speed up calculation")
+    _logger.debug(" optics.py: module NUMEXPR is not installed. Install it to speed up calculation")
     ne_flag = False
 try:
     import numba as nb
     nb_flag = True
 except:
-    logger.debug(" optics.py: module NUMBA is not installed. Install it to speed up calculation")
+    _logger.debug(" optics.py: module NUMBA is not installed. Install it to speed up calculation")
     nb_flag = False
 
 
 
 
 class SecondOrderMult:
+    """
+    The class includes three different methods transforming the particles coordinates:
+    1. based on NUMEXPR module - gives the better performance
+    2. NUMBA module (switched off) - slowest method (around 2-3 times slower) but used full matrix for transformation
+                        (in the future can be more preferable for usage)
+    3. NUMPY module - gives a bit slower performance then NUMEXPR and identical to the first one on the algorithm level.
+    """
     def __init__(self):
+        self.full_matrix = False
         if ne_flag:
-            #print("SecondTM: NumExpr")
+            # print("SecondTM: NumExpr")
             self.tmat_multip = self.numexpr_apply
-        elif nb_flag:
-            #print("SecondTM: NUMBA")
+        elif nb_flag and self.full_matrix:
+            # print("SecondTM: NUMBA")
             self.tmat_multip = nb.jit(nopython=True, parallel=True)(self.numba_apply)
         else:
-            #print("SecondTM: Numpy")
+            # print("SecondTM: Numpy")
             self.tmat_multip = self.numpy_apply
 
     def numba_apply(self, X, R, T):
         #Xr = np.dot(R, X)
-        #Xo = np.copy(X)
+        Xcopy = np.copy(X)
         N = X.shape[1]
         for i in range(6):
             for n in range(N):
                 tmp = 0.
                 r_tmp = 0.
                 for j in range(6):
-                    r_tmp += R[i, j]*X[j, n]
+                    r_tmp += R[i, j]*Xcopy[j, n]
                     for k in range(6):
                         tmp += T[i, j, k] * X[j, n] * X[k, n]
                 X[i, n] = r_tmp + tmp
@@ -159,6 +166,7 @@ def transfer_map_rotation(R, T, tilt):
     Rc, Tc = transfer_maps_mult(Ra=rotmat, Ta=np.zeros((6, 6, 6)), Rb=R, Tb=T)
     R, T = transfer_maps_mult(Ra=Rc, Ta=Tc, Rb=rot_mtx(-tilt), Tb=np.zeros((6, 6, 6)))
     return R, T
+
 
 class TransferMap:
     def __init__(self):
@@ -270,9 +278,6 @@ class TransferMap:
             m2.R = lambda energy: np.dot(self.R(energy), m.R(energy))
             m2.B = lambda energy: np.dot(self.R(energy), m.B(energy)) + self.B(energy)  # +dB #check
             m2.length = m.length + self.length
-            # m2.delta_e = m.delta_e + self.delta_e
-            # print("B = ", m2.R(0))
-            # m2.delta_e += self.delta_e
 
             return m2
 
@@ -290,7 +295,7 @@ class TransferMap:
             return tws
 
         else:
-            logger.error(" TransferMap.__mul__: unknown object in transfer map multiplication: " + str(m.__class__.__name__))
+            _logger.error(" TransferMap.__mul__: unknown object in transfer map multiplication: " + str(m.__class__.__name__))
             raise Exception(" TransferMap.__mul__: unknown object in transfer map multiplication: " + str(m.__class__.__name__))
 
     def apply(self, prcl_series):
@@ -328,7 +333,7 @@ class TransferMap:
                 pa.array2ex_list(prcl_series)
 
         else:
-            logger.error(" TransferMap.apply(): Unknown type of Particle_series: " + str(prcl_series.__class__.__name))
+            _logger.error(" TransferMap.apply(): Unknown type of Particle_series: " + str(prcl_series.__class__.__name))
             raise Exception(" TransferMap.apply(): Unknown type of Particle_series: " + str(prcl_series.__class__.__name))
 
     def __call__(self, s):
@@ -348,19 +353,19 @@ class PulseTM(TransferMap):
     def mul_parray(self, rparticles , energy=0.):
         n = len(rparticles)
         #if 'pulse' in self.__dict__:
-        logger.debug('TD transfer map')
-        if n > 6: logger.debug(
+        _logger.debug('TD transfer map')
+        if n > 6: _logger.debug(
                 'warning: time-dependent transfer maps not implemented for an array. Using 1st particle value')
-        if n > 6: logger.debug('warning: time-dependent transfer maps not implemented for steps inside element')
+        if n > 6: _logger.debug('warning: time-dependent transfer maps not implemented for steps inside element')
         tau = rparticles[4]
         dxp = self.pulse.kick_x(tau)
         dyp = self.pulse.kick_y(tau)
-        logger.debug('kick ' + str(dxp) + ' ' + str(dyp))
+        _logger.debug('kick ' + str(dxp) + ' ' + str(dyp))
         b = np.array([0.0, dxp, 0.0, dyp, 0., 0.])
         #a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(int(n / 6), 6)))), b).reshape(n)
         a = np.add(np.dot(self.R(energy), rparticles), b)
         rparticles[:] = a[:]
-        logger.debug('return trajectory, array ' + str(len(rparticles)))
+        _logger.debug('return trajectory, array ' + str(len(rparticles)))
         return rparticles
 
 class MultipoleTM(TransferMap):
@@ -432,10 +437,10 @@ class CorrectorTM(TransferMap):
 
 
 class CavityTM(TransferMap):
-    def __init__(self, v=0, f=0., phi=0.):
+    def __init__(self, v=0, freq=0., phi=0.):
         TransferMap.__init__(self)
         self.v = v
-        self.f = f
+        self.freq = freq
         self.phi = phi
         self.coupler_kick = False
         self.vx_up = 0.
@@ -444,7 +449,7 @@ class CavityTM(TransferMap):
         self.vy_down = 0.
         self.delta_e_z = lambda z: self.v * np.cos(self.phi * np.pi / 180.) * z / self.length
         self.delta_e = self.v * np.cos(self.phi * np.pi / 180.)
-        self.map = lambda X, energy: self.map4cav(X, energy, self.v, self.f, self.phi, self.length)
+        self.map = lambda X, energy: self.map4cav(X, energy, self.v, self.freq, self.phi, self.length)
 
     def map4cav(self, X, E, V, freq, phi, z=0):
         beta0 = 1
@@ -494,7 +499,7 @@ class CavityTM(TransferMap):
         m.R = lambda energy: m.R_z(s, energy)
         m.B = lambda energy: m.B_z(s, energy)
         m.delta_e = m.delta_e_z(s)
-        m.map = lambda X, energy: m.map4cav(X, energy, m.v * s / self.length, m.f, m.phi, s)
+        m.map = lambda X, energy: m.map4cav(X, energy, m.v * s / self.length, m.freq, m.phi, s)
         return m
 
 
@@ -614,8 +619,10 @@ class RungeKuttaTM(TransferMap):
         TransferMap.__init__(self)
         self.s_start = s_start
         self.npoints = npoints
+        self.long_dynamics = True
         self.mag_field = lambda x, y, z: (0, 0, 0)
-        self.map = lambda X, energy: rk_field(X, self.s_start, self.length, self.npoints, energy, self.mag_field)
+        self.map = lambda X, energy: rk_field(X, self.s_start, self.length, self.npoints, energy, self.mag_field,
+                                              self.long_dynamics)
 
     def __call__(self, s):
         m = copy(self)
@@ -623,8 +630,14 @@ class RungeKuttaTM(TransferMap):
         m.R = lambda energy: m.R_z(s, energy)
         m.B = lambda energy: m.B_z(s, energy)
         m.delta_e = m.delta_e_z(s)
-        m.map = lambda X, energy: rk_field(X, m.s_start, s, m.npoints, energy, m.mag_field)
+        m.map = lambda X, energy: rk_field(X, m.s_start, s, m.npoints, energy, m.mag_field, m.long_dynamics)
         return m
+
+
+class RungeKuttaTrTM(RungeKuttaTM):
+    def __init__(self, s_start=0, npoints=200):
+        RungeKuttaTM.__init__(self, s_start=s_start, npoints=npoints)
+        self.long_dynamics = False
 
 
 class SecondTM(TransferMap):
@@ -789,7 +802,7 @@ class MethodTM:
             tm.multiplication = self.sec_order_mult.tmat_multip
 
         elif method == SlacCavityTM:
-            tm = SlacCavityTM(l=element.l, volt=element.v, phi=element.phi, freq=element.f)
+            tm = SlacCavityTM(l=element.l, volt=element.v, phi=element.phi, freq=element.freq)
             return tm
 
         else:
@@ -802,7 +815,7 @@ class MethodTM:
                 ndiv = 5
             tm = UndulatorTestTM(lperiod=element.lperiod, Kx=element.Kx, ax=element.ax, ndiv=ndiv)
 
-        if method == RungeKuttaTM:
+        if method in [RungeKuttaTM, RungeKuttaTrTM]:
             try:
                 s_start = element.s_start
             except:
@@ -811,12 +824,11 @@ class MethodTM:
                 npoints = element.npoints
             except:
                 npoints = 200
-            tm = RungeKuttaTM(s_start=s_start, npoints=npoints)
+            tm = method(s_start=s_start, npoints=npoints)
             tm.mag_field = element.mag_field
 
         if element.__class__ == Cavity:
-            # print("CAVITY create")
-            tm = CavityTM(v=element.v, f=element.f, phi=element.phi)
+            tm = CavityTM(v=element.v, freq=element.freq, phi=element.phi)
             if element.coupler_kick:
                 tm.coupler_kick = element.coupler_kick
                 tm.vx_up = element.vx_up
@@ -916,9 +928,6 @@ def lattice_transfer_map(lattice, energy):
     return Ra
 
 
-
-
-
 def trace_z(lattice, obj0, z_array):
     """ Z-dependent tracer (twiss(z) and particle(z))
         usage: twiss = trace_z(lattice,twiss_0, [1.23, 2.56, ...]) ,
@@ -971,7 +980,7 @@ def periodic_twiss(tws, R):
     cosmy = (R[2, 2] + R[3, 3]) / 2.
 
     if abs(cosmx) >= 1 or abs(cosmy) >= 1:
-        logger.warning(" ************ periodic solution does not exist. return None ***********")
+        _logger.warning(" ************ periodic solution does not exist. return None ***********")
         return None
     sinmx = np.sign(R[0, 1]) * np.sqrt(1. - cosmx * cosmx)
     sinmy = np.sign(R[2, 3]) * np.sqrt(1. - cosmy * cosmy)
@@ -1016,7 +1025,7 @@ def twiss(lattice, tws0=None, nPoints=None):
             R = lattice_transfer_map(lattice, tws0.E)
             tws0 = periodic_twiss(tws0, R)
             if tws0 == None:
-                logger.info(' twiss: Twiss: no periodic solution')
+                _logger.info(' twiss: Twiss: no periodic solution')
                 return None
         else:
             tws0.gamma_x = (1. + tws0.alpha_x ** 2) / tws0.beta_x
@@ -1025,7 +1034,7 @@ def twiss(lattice, tws0=None, nPoints=None):
         twiss_list = trace_obj(lattice, tws0, nPoints)
         return twiss_list
     else:
-        logger.warning(' Twiss: no periodic solution. return None')
+        _logger.warning(' Twiss: no periodic solution. return None')
         return None
 
 
@@ -1044,7 +1053,7 @@ def twiss_fast(lattice, tws0=None):
             R = lattice_transfer_map(lattice, tws0.E)
             tws0 = periodic_twiss(tws0, R)
             if tws0 == None:
-                logger.warning(' twiss_fast: Twiss: no periodic solution')
+                _logger.warning(' twiss_fast: Twiss: no periodic solution')
                 return None
         else:
             tws0.gamma_x = (1. + tws0.alpha_x ** 2) / tws0.beta_x
@@ -1058,7 +1067,7 @@ def twiss_fast(lattice, tws0=None):
             obj_list.append(tws0)
         return obj_list
     else:
-        logger.warning(' twiss_fast: Twiss: no periodic solution')
+        _logger.warning(' twiss_fast: Twiss: no periodic solution')
         return None
 
 
@@ -1105,7 +1114,7 @@ class ProcessTable:
                 pos = np.array([proc.s_start for proc in self.kick_proc_list])
                 indx = np.argsort(pos)
                 self.kick_proc_list = self.kick_proc_list[indx]
-        logger_navi.debug(" searching_kick_proc: self.kick_proc_list.append(): " + str([p.__class__.__name__ for p in self.kick_proc_list]))
+        _logger_navi.debug(" searching_kick_proc: self.kick_proc_list.append(): " + str([p.__class__.__name__ for p in self.kick_proc_list]))
 
 
     def add_physics_proc(self, physics_proc, elem1, elem2):
@@ -1123,7 +1132,7 @@ class ProcessTable:
         physics_proc.counter = physics_proc.step
         physics_proc.prepare(self.lat)
 
-        logger_navi.debug(" add_physics_proc: self.proc_list = " + str([p.__class__.__name__ for p in self.proc_list]) + ".append(" + physics_proc.__class__.__name__ + ")" +
+        _logger_navi.debug(" add_physics_proc: self.proc_list = " + str([p.__class__.__name__ for p in self.proc_list]) + ".append(" + physics_proc.__class__.__name__ + ")" +
                           "; start: " + str(physics_proc.indx0 ) + " stop: " + str(physics_proc.indx1))
 
         self.proc_list.append(physics_proc)
@@ -1174,7 +1183,7 @@ class Navigator:
             if len(start_pos) > 0:
                 start_pos.sort()
                 dz = start_pos[0] - self.z0
-                logger_navi.debug(" check_overjump: there is phys proc inside step -> dz was decreased: dz = " + str(dz))
+                _logger_navi.debug(" check_overjump: there is phys proc inside step -> dz was decreased: dz = " + str(dz))
 
         phys_steps = phys_steps_red + dz
 
@@ -1205,7 +1214,7 @@ class Navigator:
         return dz, processes, phys_steps
 
     def get_proc_list(self):
-        logger_navi.debug(" get_proc_list: all phys proc = " + str([p.__class__.__name__ for p in self.process_table.proc_list]))
+        _logger_navi.debug(" get_proc_list: all phys proc = " + str([p.__class__.__name__ for p in self.process_table.proc_list]))
         proc_list = []
         for p in self.process_table.proc_list:
             if p.indx0 <= self.n_elem < p.indx1:
@@ -1257,12 +1266,12 @@ class Navigator:
         #dzs_red = dzs - dz
         dz, processes, phys_steps = self.check_overjump(dz, processes, phys_steps)
         #dzs = dzs_red
-        logger_navi.debug(" Navigator.get_next: process: " + " ".join([proc.__class__.__name__ for proc in processes]))
+        _logger_navi.debug(" Navigator.get_next: process: " + " ".join([proc.__class__.__name__ for proc in processes]))
 
-        logger_navi.debug(" Navigator.get_next: navi.z0=" + str(self.z0) + " navi.n_elem=" + str(self.n_elem) + " navi.sum_lengths="
+        _logger_navi.debug(" Navigator.get_next: navi.z0=" + str(self.z0) + " navi.n_elem=" + str(self.n_elem) + " navi.sum_lengths="
                      + str(self.sum_lengths) + " dz=" + str(dz))
 
-        logger_navi.debug(" Navigator.get_next: element type=" + self.lat.sequence[self.n_elem].__class__.__name__ + " element name=" +
+        _logger_navi.debug(" Navigator.get_next: element type=" + self.lat.sequence[self.n_elem].__class__.__name__ + " element name=" +
                      str(self.lat.sequence[self.n_elem].id))
 
         return dz, processes, phys_steps

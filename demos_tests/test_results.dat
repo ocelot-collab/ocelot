@@ -2,47 +2,51 @@
 
 test_lattice_transfer_map [PASSED]
 
- execution time is 0.418 sec
+ execution time is 0.364 sec
 
 test_lattice_transfer_map_RT [PASSED]
 
- execution time is 0.354 sec
+ execution time is 0.301 sec
 
 test_lattice_transfer_map_RT [PASSED]
 
- execution time is 0.380 sec
+ execution time is 0.298 sec
 
 test_track_without_csr [PASSED]
 
- execution time is 7.556 sec
+ execution time is 0.919 sec
 
 test_track_without_csr [PASSED]
 
- execution time is 7.766 sec
+ execution time is 0.936 sec
 
 test_track_without_csr_tilted [PASSED]
 
- execution time is 7.720 sec
+ execution time is 0.906 sec
 
 test_track_without_csr_rotated [PASSED]
 
- execution time is 8.500 sec
+ execution time is 1.004 sec
 
 test_track_with_csr [PASSED]
 
- execution time is 26.842 sec
+ execution time is 12.955 sec
 
 test_track_with_csr [PASSED]
 
- execution time is 27.073 sec
+ execution time is 12.569 sec
 
 test_get_current [PASSED]
 
- execution time is 0.080 sec
+ execution time is 0.019 sec
 
 test_get_current [PASSED]
 
- execution time is 0.067 sec
+ execution time is 0.014 sec
+
+test_track_undulator_with_csr [PASSED]
+
+ execution time is 6.708 sec
 
 ### CSR_EX END ###
 

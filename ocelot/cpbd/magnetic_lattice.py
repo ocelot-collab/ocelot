@@ -1,8 +1,10 @@
 from ocelot.cpbd.optics import MethodTM
 from ocelot.cpbd.elements import *
-from ocelot.common.logging import *
+import logging
+import numpy as np
 from copy import deepcopy
-logger = Logger()
+# logger = Logger()
+_logger = logging.getLogger(__name__)
 
 def lattice_format_converter(elements):
     """
@@ -268,7 +270,7 @@ class MagneticLattice:
                 else:
                     print("EDGE is not updated. Use standard function to create and update MagneticLattice")
             element.transfer_map = self.method.create_tm(element)
-            logger.debug("update: " + element.transfer_map.__class__.__name__)
+            _logger.debug("update: " + element.transfer_map.__class__.__name__)
             #print("update: ", element.transfer_map.__class__.__name__, element.l, element.id, element.transfer_map.R(0))
             if 'pulse' in element.__dict__: element.transfer_map.pulse = element.pulse
         return self

@@ -6,7 +6,7 @@ import numpy as np
 from time import time
 from ocelot.cpbd.track import *
 from ocelot.rad.radiation_py import und_field
-
+from ocelot.cpbd.optics import *
 D0 = Drift(l=0., eid= "D0")
 D1 = Drift(l=1.49, eid= "D1")
 D2 = Drift(l=0.1035, eid= "D2")
@@ -47,7 +47,7 @@ ring = 3*cell + cell_u + 2*cell
 method = MethodTM()
 method.params[Sextupole] = KickTM
 #method.params[Undulator] = UndulatorTestTM
-method.params[Undulator] = RungeKuttaTM
+method.params[Undulator] = RungeKuttaTrTM
 method.global_method = TransferMap
 lat = MagneticLattice(ring, method=method)
 beam = Beam()
@@ -63,14 +63,16 @@ nturns = 2048*1-1
 
 start = time()
 
-pxy_list = [Track_info(Particle(y=0.0001, E=2), 0.00, 0.0001)]
+pxy_list = [Track_info(Particle(y=0.0001, x=0.0001, E=2), 0.0001, 0.0001)]
 
-pxy_list = track_nturns( lat, nturns, pxy_list,  nsuperperiods = 1, save_track=True)
+pxy_list = track_nturns( lat, nturns, pxy_list,  nsuperperiods=1, save_track=True)
+x = [p[0] for p in pxy_list[0].p_list]
 y = [p[2] for p in pxy_list[0].p_list]
 py = [p[3] for p in pxy_list[0].p_list]
 
 print("time exec = ", time() - start)
 pxy_list = freq_analysis(pxy_list, lat, nturns, harm = True)
+print("low resolution: mu_x = ", pxy_list[0].mux)
 print("low resolution: mu_y = ", pxy_list[0].muy)
 
 
@@ -83,11 +85,18 @@ def dft(sample, freqs):
         transf += ai*np.exp(-2*np.pi*i/n*1j*x_freq)
     return transf
 
-x = np.linspace(0.3, 0.31, 2048+1)
+qx = np.linspace(0.22, 0.23, 2048+1)
 
-f = np.abs(dft(y, x))
-mu_y_h = x[np.argmax(f)]
+fx = np.abs(dft(x, qx))
+mu_x_h = qx[np.argmax(fx)]
+print("high resolution: mu_x = ", mu_x_h)
+
+qy = np.linspace(0.3, 0.31, 2048+1)
+
+fy = np.abs(dft(y, qy))
+mu_y_h = qy[np.argmax(fy)]
 print("high resolution: mu_y = ", mu_y_h)
+
 
 print("simulation: dQy = ", mu_y_no_u - mu_y_h)
 

@@ -20,7 +20,7 @@ py = np.random.randn(200000)*sigma_py
 # covariance matrix for [tau, p] for beam compression in BC
 cov_t_p = [[1.30190131e-06, 2.00819771e-05],
        [2.00819771e-05, 3.09815718e-04]]
-long_dist = np.random.multivariate_normal((0,0), cov_t_p, 200000)
+long_dist = np.random.multivariate_normal((0, 0), cov_t_p, 200000)
 tau = long_dist[:, 0]
 dp = long_dist[:, 1]
 

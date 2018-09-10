@@ -7,7 +7,10 @@ basic fel calculations
 import numpy as np
 import numpy.fft as fft
 import scipy.special as sf
-from ocelot.common.globals import m_e_eV, epsilon_0, m_e_kg, speed_of_light, q_e
+from ocelot.common.globals import m_e_eV, epsilon_0, speed_of_light, q_e, h_eV_s
+import logging
+
+_logger = logging.getLogger('ocelot.fel')
 #from matplotlib.figure import Figure
 #from mpl_toolkits.mplot3d import Axes3D
 
@@ -19,6 +22,7 @@ class FelParameters:
     
     def P(self, z=None):
         '''
+        returns sase power at distance z
         unfinished
         '''
         # if dims == 1:
@@ -42,14 +46,16 @@ class FelParameters:
             if np.size(z) > 1:
                 z = z[:,np.newaxis]
                 if (z > self.z_sat_min).any():
-                    print('Warning, estimation applicable up to z_sat_min=%.2fm' %(self.z_sat_min))
+                    _logger.warning('Estimation applicable up to z_sat_min=%.2fm, limiting power to saturation level' %(self.z_sat_min))
+                    idx = z > self.z_sat_min[:,np.newaxis]
+                    z[idx] = self.z_sat_min[:,np.newaxis][idx]
             else: 
                 if (z > self.z_sat_min):
-                    print('Warning, estimation applicable up to z_sat_min=%.2fm, while z=%.2fm requested' %(self.z_sat_min, z))
+                    _logger.warning('Estimation applicable up to z_sat_min=%.2fm, while z=%.2fm requested, returning saturation power' %(self.z_sat_min, z))
+                    z = self.z_sat_min
             
             zn = z / (np.sqrt(3) * self.lg3)
             
-        
         Pz = self.P_sn * (1 + 1/9 * np.exp(np.sqrt(3) * zn) / np.sqrt(np.pi * zn))
         # Pz = self.P_sn * (1 + 1/9 * np.exp(np.sqrt(3) * zn))
         #Pz = p.P_sn * (1 + 1/9 * np.exp(np.sqrt(3) * zn))
@@ -57,20 +63,46 @@ class FelParameters:
         
         
     def E(self, z=None):
-        return np.trapz(self.P(z),self.s / speed_of_light)
+        P = self.P(z)
+        P[np.isnan(P)] = 0
+        return np.trapz(P, self.s / speed_of_light)
         
     def tcoh(self,z=None):
         #check
         if z is None:
             z = self.z_sat_min
         elif z > self.z_sat_min:
-            print('Warning, estimation applicable up to z_sat_min=%.2fm, while z=%.2fm requested' %(z_sat_min, z))
+            _logger.warning('estimation applicable up to z_sat_min=%.2fm, while z=%.2fm requested' %(z_sat_min, z))
         tcoh = self.lambda0 / (6 * self.rho3 * speed_of_light ) * np.sqrt(z / (2 * np.pi * self.lg3))
         return tcoh
+    
+    def P_sat(self):
+        return self.P(self.z_sat_min)
+        
+    @property
+    def phen0(self):
+        return h_eV_s * speed_of_light / self.lambda0
 
+class FelParametersArray(FelParameters):
+    def __init__(self):
+        super().__init__()
+    
+    @property
+    def idx(self):
+        try:
+            idx = self.I.argmax()
+        except AttributeError: 
+            idx = None
+        return idx
+    
+    
 
-def calculateFelParameters(input):
-    p = FelParameters()
+def calculateFelParameters(input, array=False):
+    
+    if array:
+        p = FelParametersArray()
+    else:
+        p = FelParameters()
     
     p.iwityp = input.iwityp # undulator type: 0 == planar, other == helical
     
@@ -82,8 +114,8 @@ def calculateFelParameters(input):
     p.betay = input.betay
     p.emitx = input.emitx #normalized emittance
     p.emity = input.emity
-#    p.rxbeam = input.rxbeam
-#    p.rybeam = input.rybeam
+    #    p.rxbeam = input.rxbeam
+    #    p.rybeam = input.rybeam
     p.rxbeam = np.sqrt(p.betax * p.emitx / p.gamma0)
     p.rybeam = np.sqrt(p.betay * p.emity / p.gamma0)
     
@@ -94,9 +126,8 @@ def calculateFelParameters(input):
     
     p.lambda0 = p.xlamd / (2.0 * p.gamma0**2) * (1.0 + p.aw0**2) # resonant wavelength
     p.k0 = 2 * np.pi / p.lambda0 
-
-    p.Ia = 4 * np.pi * epsilon_0 * m_e_kg * speed_of_light**3 / q_e # Alfven (Budker) current (~17kA)
-#    p.Ia = 17000
+    
+    p.Ia = 4 * np.pi * epsilon_0 * m_e_eV * speed_of_light # Alfven (Budker) current (~17kA)
         
     if p.iwityp == 0:
         ja = p.aw0**2 / (2*(1 + p.aw0**2))
@@ -104,18 +135,29 @@ def calculateFelParameters(input):
     else:
         p.fc = 1.0
     
+    
+    p.Pb = p.gamma0 * p.I * m_e_eV# beam power [Reiche]
+    
+    
+
+    
     # import first, ro_e * m_e_eV = 1.4399643147059695e-09
     
     # p.N = p.I * p.lambda0 / 1.4399644850445153e-10
     # p.sigb = 0.5 * (p.rxbeam + p.rybeam) # average beam size
     
-    p.rho1 = (0.5 / p.gamma0) * np.power( (p.aw0 * p.fc * p.xlamd / 2 / np.pi )**2 / (p.rxbeam * p.rybeam) * p.I / p.Ia, 1.0/3.0) ## check 8 in denominator
-    p.Pb = p.gamma0 * p.I * m_e_eV# beam power [Reiche]
+
+    # h_eV_s * speed_of_light / p.lambda0
+    
+    p.rho1 = (0.5 / p.gamma0) * np.power( (p.aw0 * p.fc * p.xlamd / 2 / np.pi )**2 / (p.rxbeam * p.rybeam) * p.I / p.Ia, 1.0/3.0)
     
     #p.power = 6.0 * np.sqrt(np.pi) * p.rho1**2 * p.Pb / (p.N * np.log(p.N / p.rho1) ) # shot noise power [W] [Reiche]
     p.lg1 = p.xlamd / (4*np.pi * np.sqrt(3) * p.rho1) #[Xie]
+    
     p.zr = 4 * np.pi * p.rxbeam * p.rybeam / p.lambda0
-  
+    
+    
+    
     a = [None, 0.45, 0.57, 0.55, 1.6, 3.0, 2.0, 0.35, 2.9, 2.4, 51.0, 0.95, 3.0, 5.4, 0.7, 1.9, 1140.0, 2.2, 2.9, 3.2]
     
     p.xie_etad = p.lg1 / (2 * p.k0 * p.rxbeam * p.rybeam)
@@ -125,21 +167,85 @@ def calculateFelParameters(input):
     p.xie_lscale = (a[1] * p.xie_etad ** a[2] + a[3] * p.xie_etae ** a[4] + a[5] * p.xie_etagamma ** a[6] 
     + a[7] * p.xie_etae ** a[8] * p.xie_etagamma ** a[9] + a[10] * p.xie_etad ** a[11] * p.xie_etagamma ** a[12] + a[13] * p.xie_etad ** a[14] * p.xie_etae ** a[15]
     + a[16] * p.xie_etad ** a[17] * p.xie_etae ** a[18] * p.xie_etagamma ** a[19])
-
+    
+    
+    
     p.lg3 = p.lg1 * (1 + p.xie_lscale)
+    if hasattr(input,'lg_mult'):
+        p.lg_mult = input.lg_mult
+        if p.lg_mult is not None:
+            p.lg3 *= p.lg_mult
+            _logger.info('lg3 multiplied by lg_mult ({})'.format(p.lg_mult))
     p.rho3 = p.xlamd / (4*np.pi * np.sqrt(3) * p.lg3)
     
+
+    
     p.Nc = p.I / (q_e * p.rho3 * p.k0 * speed_of_light)
-    p.P_sn = (3 * p.rho1 * p.Pb) / (p.Nc * np.sqrt(np.pi * np.log(p.Nc))) # shot noise power [W]
+    # p.P_sn = (3 * p.rho1 * p.Pb) / (p.Nc * np.sqrt(np.pi * np.log(p.Nc))) # shot noise power [W]
+    p.P_sn = (3 * p.rho3 * p.Pb) / (p.Nc * np.sqrt(np.pi * np.log(p.Nc))) # shot noise power [W]
+    
     
     p.z_sat_norm = 3 + 1/np.sqrt(3) * np.log(p.Nc) # normalized saturation length for slices
     p.z_sat_magn = p.z_sat_norm * np.sqrt(3) * p.lg3 # magnetic length to reach saturation
     
-    p.z_sat_min = np.amin(p.z_sat_magn)
-    try:
-        p.idx = p.I.argmax()
-    except AttributeError: 
-        p.idx = 0
+    p.theta_c = np.sqrt(p.lambda0 / p.lg3) #critical angle
+    # _logger.debug('L_sat_norm = {}'.format(p.z_sat_norm))
+    
+    
+    p.z_sat_min = np.nanmin(p.z_sat_magn)
+    
+    
+    if array:
+        log_func = _logger.log
+    else:
+        log_func = _logger.debug
+    
+    _logger.debug('Calculating FEL parameters')
+    if not array:
+        _logger.debug('undulator period = {}'.format(p.xlamd))
+        _logger.debug('undulator K (rms) = {}'.format(p.aw0))
+        if p.iwityp == 0:
+            _logger.debug('undulator type - planar')
+        else:
+            _logger.debug('undulator type - helical')
+        # _logger.debug('beam E GeV = {}'.format(beam.E))
+        _logger.debug('beam gamma = {}'.format(p.gamma0))
+        _logger.debug('beam dgamma= {}'.format(p.delgam))
+        _logger.debug('beam current = {}'.format(p.I))
+        _logger.debug('beam power = {}'.format(p.Pb))
+        # _logger.debug('beam alphax = {}'.format(p.alphax))
+        # _logger.debug('beam alphay = {}'.format(p.alphay))
+        _logger.debug('beam betax = {}'.format(p.betax))
+        _logger.debug('beam betay = {}'.format(p.betay))
+        _logger.debug('beam emitx = {}'.format(p.emitx))
+        _logger.debug('beam emity = {}'.format(p.emity))
+        # _logger.debug('beam x = {}'.format(p.xbeam))
+        # _logger.debug('beam y = {}'.format(p.ybeam))
+        # _logger.debug('beam px = {}'.format(p.pxbeam))
+        # _logger.debug('beam py = {}'.format(p.pybeam))
+        _logger.debug('beam rx = {}'.format(p.rxbeam))
+        _logger.debug('beam ry = {}'.format(p.rybeam))
+        _logger.debug('')
+        _logger.debug('Estimation results')
+        _logger.debug('Rho 1D = {}'.format(p.rho1))
+        _logger.debug('FEL_wavelength = {:.5e} m'.format(p.lambda0))
+        _logger.debug('FEL_E_photon   = {} eV'.format(h_eV_s * speed_of_light / p.lambda0))
+        _logger.debug('Lg  1D = {} m'.format(p.lg1))
+        _logger.debug('Z_Rayl = {} m'.format(p.zr))
+        _logger.debug('xie_eta_d = {}'.format(p.xie_etad))
+        _logger.debug('xie_eta_e = {}'.format(p.xie_etae))
+        _logger.debug('xie_eta_gamma = {}'.format(p.xie_etagamma))
+        _logger.debug('xie_scaling_tot = {}'.format(p.xie_lscale))
+        _logger.debug('Lg  3D = {}'.format(p.lg3))
+        _logger.debug('Rho 3D = {}'.format(p.rho3))
+        _logger.debug('P_shnoise = {}'.format(p.P_sn))
+        _logger.debug('L_sat_magn = {}'.format(p.z_sat_magn))
+        _logger.debug('L_sat_min = {}'.format(p.z_sat_min))
+        _logger.debug('Theta_critical = {:.5e} rad'.format(p.theta_c))
+    # try:
+        # p.idx = p.I.argmax()
+    # except AttributeError: 
+        # p.idx = 0
     
     return p
 
@@ -148,6 +254,9 @@ def beam2fel(beam, lu, K_peak, iwityp=0):
     '''
     tmp function to estimate fel parameters slice-wise
     '''
+    if beam.len() == 0:
+        raise ValueError('Beam length should not be zero')
+    
     class tmp():
         pass
     tmp.gamma0 = beam.g
@@ -163,6 +272,7 @@ def beam2fel(beam, lu, K_peak, iwityp=0):
         # print('use update_effective_beta() to increase estimation accuracy')
         tmp.betax = beam.beta_x
         tmp.betay = beam.beta_y
+    
     if K_peak == 0:
         print('Warning, undulator K=0')
     
@@ -173,7 +283,7 @@ def beam2fel(beam, lu, K_peak, iwityp=0):
     
     tmp.curpeak = beam.I
     
-    fel=calculateFelParameters(tmp)
+    fel=calculateFelParameters(tmp, array=True)
     fel.s = beam.s
     return (fel)
 
@@ -194,7 +304,7 @@ def printFelParameters(p):
     print ('gamma0=', p.gamma0)
     print ('Ip=', p.I, ' beam peak current [A]')
     print ('lambda0=', p.lambda0)
-    print ('Pb=', p.Pb, ' beam power [W]')
+    print ('Pb= %.3e beam power [W]'%(p.Pb))
     # print ('N=', p.N)
     print ('rho (1D)=', p.rho1)
     print ('gain length estimate lg (1D)=', p.lg1)

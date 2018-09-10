@@ -2,7 +2,6 @@ __author__ = 'Sergey Tomin'
 
 from ocelot.cpbd.optics import *
 from ocelot.cpbd.beam import *
-#from mpi4py import MPI
 from ocelot.cpbd.errors import *
 from ocelot.cpbd.elements import *
 from time import time
@@ -11,17 +10,13 @@ from copy import copy, deepcopy
 import sys
 import logging
 
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 try:
     from scipy.signal import argrelextrema
     extrema_chk = 1
 except:
     extrema_chk = 0
-
-
-#c0=299792458
-#E_ele_eV=5.109986258350895e+05
 
 def aperture_limit(lat, xlim = 1, ylim = 1):
     tws=twiss(lat, Twiss(), nPoints=1000)
@@ -126,18 +121,18 @@ def harmonic_position(data1D, nu = None, diap = 0.1, nearest = False):
     return nearest_nu
 
 
-def freq_analysis(track_list, lat, nturns, harm = True, diap = 0.10, nearest = False, nsuperperiods = 1):
+def freq_analysis(track_list, lat, nturns, harm=True, diap=0.10, nearest=False, nsuperperiods=1):
 
     def beta_freq(lat):
 
         tws = twiss(lat, Twiss())
         nux = tws[-1].mux/2./pi*nsuperperiods
         nuy = tws[-1].muy/2./pi*nsuperperiods
-        print ("freq. analysis: Qx = ",nux, " Qy = ", nuy)
+        print ("freq. analysis: Qx = ", nux, " Qy = ", nuy)
         nux = abs(int(nux+0.5) - nux)
         nuy = abs(int(nuy+0.5) - nuy)
-        print ("freq. analysis: nux = ", nux)
-        print ("freq. analysis: nuy = ", nuy)
+        print("freq. analysis: nux = ", nux)
+        print("freq. analysis: nuy = ", nuy)
         return nux, nuy
 
     nux, nuy = None, None
@@ -425,8 +420,8 @@ def tracking_step(lat, particle_list, dz, navi):
     for tm in t_maps:
         start = time()
         tm.apply(particle_list)
-        logger.debug(" tracking_step -> tm.class: " + tm.__class__.__name__  + "  l= "+  str(tm.length))
-        logger.debug(" tracking_step -> tm.apply: time exec = " + str(time() - start) + "  sec")
+        _logger.debug(" tracking_step -> tm.class: " + tm.__class__.__name__  + "  l= "+  str(tm.length))
+        _logger.debug(" tracking_step -> tm.apply: time exec = " + str(time() - start) + "  sec")
     return
 
 
@@ -445,7 +440,7 @@ def track(lattice, p_array, navi, print_progress=True, calc_tws=True):
     L = 0.
     while np.abs(navi.z0 - lattice.totalLen) > 1e-10:
         if navi.kill_process:
-            logger.info("Killing tracking ... ")
+            _logger.info("Killing tracking ... ")
             return tws_track, p_array
         dz, proc_list, phys_steps = navi.get_next()
 

@@ -24,7 +24,7 @@ import logging
 from ocelot.cpbd import optics
 ilename="logs/main.log"
 logging.basicConfig( level=logging.INFO)
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 #logging.getLogger(optics.__name__+".navi").setLevel(logging.DEBUG)
 
 tws_i1 = Twiss()
@@ -97,13 +97,10 @@ class TrackTread(Thread):
                 sec.__dict__[flag_name] = flag
                 #print()
                 #print(proc.__name__, flag_name, flag)
-                #print()
             if sec.ui.get_status(proc=self.check_header):
                 #print("tracking trough "+sec.__class__.__name__ + " ....")
                 #sec.calc_tws = False
                 particles = sec.tracking(particles)
-                print()
-                print("section: ", sec.__class__.__name__, "  Energy = ", particles.E)
                 #sec.calculated = True
                 sec.ui.calculated(True)
                 self.gui.plot_s2e(particles)

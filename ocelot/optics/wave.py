@@ -17,7 +17,7 @@ import os
 
 # from ocelot.optics.elements import *
 from ocelot.common.globals import *
-from ocelot.common.math_op import find_nearest_idx, fwhm, std_moment, bin_scale, bin_array
+from ocelot.common.math_op import find_nearest_idx, fwhm, std_moment, bin_scale, bin_array#, mut_coh_func
 from ocelot.common.py_func import filename_from_path
 # from ocelot.optics.utils import calc_ph_sp_dens
 #from ocelot.adaptors.genesis import *   #commented
@@ -114,7 +114,8 @@ class RadiationField:
         return np.sum(self.intensity(), axis=(0, 1))
 
     def int_xy(self):
-        return np.swapaxes(np.sum(self.intensity(), axis=0), 1, 0)
+        # return np.swapaxes(np.sum(self.intensity(), axis=0), 1, 0)
+        return np.sum(self.intensity(), axis=0)
 
     def int_zx(self):
         return np.sum(self.intensity(), axis=1)
@@ -995,12 +996,12 @@ def generate_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), power_rms=(
     if shape[2] == None:
         shape = (shape[0],shape[1],int(dgrid[2]/xlamds/zsep))
     
-    _logger.info('generating radiation field of shape' + str((shape[2], shape[0], shape[1])))
+    _logger.info('generating radiation field of shape (nz,ny,nx): ' + str(shape))
     if 'energy' in kwargs:
         _logger.warn(ind_str + 'rename energy to en_pulse, soon arg energy will be deprecated')
         en_pulse = kwargs.pop('energy', 1)
     
-    dfl = RadiationField((shape[2], shape[0], shape[1]))
+    dfl = RadiationField((shape[2], shape[1], shape[0]))
 
     k = 2 * np.pi / xlamds
 
@@ -1277,22 +1278,22 @@ def dfl_waistscan(dfl, z_pos, projection=0, debug=1):
 
         scale_x = dfl.scale_x()
         scale_y = dfl.scale_y()
-        center_x = np.int((I_xy.shape[0] + 1) / 2)
-        center_y = np.int((I_xy.shape[1] + 1) / 2)
+        center_x = np.int((I_xy.shape[1] + 1) / 2)
+        center_y = np.int((I_xy.shape[0] + 1) / 2)
 
         if projection:
-            I_x = np.sum(I_xy, axis=1)
-            I_y = np.sum(I_xy, axis=0)
+            I_x = np.sum(I_xy, axis=0)
+            I_y = np.sum(I_xy, axis=1)
         else:
-            I_x = I_xy[:, center_y]
-            I_y = I_xy[center_x, :]
+            I_y = I_xy[:, center_x]
+            I_x = I_xy[center_y, :]
 
         sc_res.z_pos = np.append(sc_res.z_pos, z)
         sc_res.phdens_max = np.append(sc_res.phdens_max, np.amax(I_xy))
         
         _logger.debug(ind_str + 'phdens_max = %.2e' % (np.amax(I_xy)))
         
-        sc_res.phdens_onaxis = np.append(sc_res.phdens_onaxis, I_xy[center_x, center_y])
+        sc_res.phdens_onaxis = np.append(sc_res.phdens_onaxis, I_xy[center_y, center_x])
         sc_res.fwhm_x = np.append(sc_res.fwhm_x, fwhm(scale_x, I_x))
         sc_res.fwhm_y = np.append(sc_res.fwhm_y, fwhm(scale_y, I_y))
         sc_res.std_x = np.append(sc_res.std_x, std_moment(scale_x, I_x))

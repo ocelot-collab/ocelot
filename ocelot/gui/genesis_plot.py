@@ -1637,13 +1637,13 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     cmap_ph = plt.get_cmap('hsv')
     
     if line_off_xy:
-        x_line = xy_proj[:, int((ncar_y - 1) / 2)]
-        y_line = xy_proj[int((ncar_x - 1) / 2), :]
+        x_line = xy_proj[int((ncar_y - 1) / 2), :]
+        y_line = xy_proj[:, int((ncar_x - 1) / 2)]
         x_title += ' lineoff'
         y_title += ' lineoff'
     else:
-        x_line = np.sum(xy_proj,axis=1)
-        y_line = np.sum(xy_proj,axis=0)
+        x_line = np.sum(xy_proj, axis=0)
+        y_line = np.sum(xy_proj, axis=1)
     
     if np.max(x_line) != 0 and np.max(y_line) != 0:
         x_line, y_line = x_line / np.max(x_line), y_line / np.max(y_line)
@@ -1664,9 +1664,9 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
 
     ax_int = fig.add_subplot(2, 2 + column_3d, 1)
     if log_scale:
-        intplt = ax_int.pcolormesh(x, y, np.swapaxes(xy_proj, 1, 0), norm=colors.LogNorm(vmin=xy_proj.min(), vmax=xy_proj.max()), cmap=cmap)
+        intplt = ax_int.pcolormesh(x, y, xy_proj, norm=colors.LogNorm(vmin=xy_proj.min(), vmax=xy_proj.max()), cmap=cmap)
     else:
-        intplt = ax_int.pcolormesh(x, y, np.swapaxes(xy_proj, 1, 0), cmap=cmap, vmin=0)
+        intplt = ax_int.pcolormesh(x, y, xy_proj, cmap=cmap, vmin=0)
     ax_int.set_title(xy_title, fontsize=15)
     ax_int.set_xlabel(r'' + x_label)
     ax_int.set_ylabel(y_label)
@@ -1675,7 +1675,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
 
     if phase == True:
         ax_ph = fig.add_subplot(2, 2 + column_3d, 4 + column_3d, sharex=ax_int, sharey=ax_int)
-        ax_ph.pcolormesh(x, y, np.swapaxes(xy_proj_ph, 1, 0), cmap=cmap_ph)
+        ax_ph.pcolormesh(x, y, xy_proj_ph, cmap=cmap_ph)
         ax_ph.axis([np.min(x), np.max(x), np.min(y), np.max(y)])
         ax_ph.set_title('Phase', fontsize=15)
     else:
@@ -1821,18 +1821,26 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         cbar.set_label(r'a.u.', size=10)
 
     if auto_zoom != False:
-        size_x = np.max(abs(x[nonzero(x_line > 0.005)][[0, -1]]))
-        size_y = np.max(abs(x[nonzero(x_line > 0.005)][[0, -1]]))
-        size_xy = np.max(size_x, size_y)
-        if phase == True and column_3d == True and z_lim == []:
-            ax_proj_xz.set_xlim(z[nonzero(z_proj > np.max(z_proj) * 0.005)][[0, -1]])
-        elif phase == False and z_lim == []:
-            ax_z.set_xlim(z[nonzero(z_proj > np.max(z_proj) * 0.005)][[0, -1]])
-            _logger.debug(ind_str + 'scaling xy to {:}'.format(size_xy))
-            ax_proj_xz.set_ylim([-size_xy, size_xy])
-        elif column_3d == True:
-            ax_proj_xz.set_ylim([-size_xy, size_xy])
-        ax_int.axis('equal')
+        size_x = np.max(abs(x[np.nonzero(x_line > 0.005)][[0, -1]]))
+        size_y = np.max(abs(x[np.nonzero(x_line > 0.005)][[0, -1]]))
+        size_xy = np.max([size_x, size_y])
+        # print(size_xy) #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        
+        # print(zlim_calc) #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        if z_lim == []:
+            zlim_calc = z[np.nonzero(z_proj > np.max(z_proj) * 0.005)][[0, -1]]
+            if column_3d == True:
+                ax_proj_xz.set_xlim(zlim_calc)
+                ax_proj_xz.set_ylim([-size_xy, size_xy])
+            if phase == False:
+                # _logger.debug(ind_str + 'scaling z to {:}'.format(zlim_calc))
+                ax_z.set_xlim(zlim_calc)
+        # elif phase == False and z_lim == []:
+            # ax_z.set_xlim(zlim_calc)
+            # _logger.debug(ind_str + 'scaling xy to {:}'.format(size_xy))
+        # elif column_3d == True:
+        
+        # ax_int.axis('equal')
         ax_int.axis([-size_xy, size_xy, -size_xy, size_xy])
         suffix += '_zmd'
     else:
@@ -1841,7 +1849,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
             ax_proj_yz.axis('tight')
         elif column_3d == False and phase == False:
             ax_z.axis('tight')
-        ax_int.set_aspect('equal')
+        # ax_int.set_aspect('equal')
         ax_int.autoscale(tight=True)
 
     if len(xy_lim) == 2:

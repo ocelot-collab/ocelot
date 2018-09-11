@@ -98,17 +98,17 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
         if trf.compound:
             cwidth = trf.dk
     
-    dfl.to_domain('t', 's')
+    dfl.to_domain('st')
     dk_old = 2 * pi / dfl.Lz()
     dk = cwidth / res_per_fwhm
     padn = np.ceil(dk_old / dk).astype(int)
     if np.mod(padn, 2) == 0 and padn != 0:  # check for odd
         padn = int(padn + 1)
     
-    _logger.debug(ind_str + 'calculated pad_n = {}'.format(pad_n))
+    _logger.debug(ind_str + 'calculated padn = {}'.format(padn))
     if enforce_padn!=None:
         padn=enforce_padn
-        _logger.debug(ind_str + 'enforced pad_n = {}'.format(pad_n))
+        _logger.debug(ind_str + 'enforced padn = {}'.format(padn))
         
     
     dfl_z = dfl.scale_z()

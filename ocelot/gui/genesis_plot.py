@@ -1866,7 +1866,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     plt.draw()
     if showfig == True:
         _logger.debug(ind_str + 'showing dfl')
-        rcParams["savefig.directory"] = os.path.dirname(dfl.filePath)
+        rcParams["savefig.directory"] = os.path.dirname(filePath)
         plt.show()
     else:
         # plt.close('all')

@@ -155,7 +155,7 @@ def sigma_gamma_quat(energy, Kx, lperiod, L):
     return sigma_Eq
 
 
-def quantum_diffusion(energy, Kx, lperiod, L, quantum_diff = False):
+def quantum_diffusion(energy, Kx, lperiod, L, quantum_diff=False):
     if quantum_diff:
         # gamma = energy/m_e_GeV
         # lambda_compt = 2.4263102389e-12 # h_eV_s/m_e_eV*speed_of_light
@@ -163,7 +163,6 @@ def quantum_diffusion(energy, Kx, lperiod, L, quantum_diff = False):
         # f = lambda K: 1.2 + 1./(K + 1.33*K*K + 0.4*K**3)
         # delta_Eq2 = 56.*pi**3/15.*lambda_compt_r*ro_e*gamma**4/lperiod**3*Kx**3*f(Kx)*L
         sigma_Eq = sigma_gamma_quat(energy, Kx, lperiod, L) # sqrt(delta_Eq2/(gamma*gamma))
-        # print "sigma_q = ", sigma_Eq, energy
         U = sigma_Eq*np.random.randn()*energy
     else:
         U = 0.
@@ -175,18 +174,18 @@ def field_map2field_func(z, By):
     func = lambda x, y, z: (0, interpolate.splev(z, tck, der=0), 0)
     return func
 
-
+"""
 def track4rad(beam, lat, energy_loss=False, quantum_diff=False, accuracy=1):
-    """
-    Function calculates the electron trajectory
-
-    :param beam: Beam class
-    :param lat: MagneticLattice class
-    :param energy_loss: False, flag to calculate energy loss
-    :param quantum_diff: False, flag to calculate quantum diffusion
-    :param accuracy: 1, accuracy
-    :return: U, E; U - list of u, u is 9xN array (6 coordinates and 3 mag field), E - list of energies
-    """
+    #
+    #Function calculates the electron trajectory
+    #
+    #:param beam: Beam class
+    #:param lat: MagneticLattice class
+    #:param energy_loss: False, flag to calculate energy loss
+    #:param quantum_diff: False, flag to calculate quantum diffusion
+    #:param accuracy: 1, accuracy
+    #:return: U, E; U - list of u, u is 9xN array (6 coordinates and 3 mag field), E - list of energies
+    #
     energy = beam.E
     #Y0 = [beam.x, beam.xp, beam.y, beam.yp, 0, 0]
     p = Particle(x=beam.x, px=beam.xp, y=beam.yp, py=beam.yp, E=beam.E)
@@ -260,7 +259,7 @@ def track4rad(beam, lat, energy_loss=False, quantum_diff=False, accuracy=1):
         energy = energy - U0
         #print energy
     return U, E
-
+"""
 
 def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step):
     """
@@ -417,6 +416,19 @@ def radiation_py(gamma, traj, screen):
 #import matplotlib.pyplot as plt
 
 def calculate_radiation(lat, screen, beam, energy_loss=False, quantum_diff=False, accuracy=1):
+    """
+    Function to calculate radation from the electron beam.
+
+    :param lat: MagneticLattice should include element Undulator
+    :param screen: Screen class
+    :param beam: if Beam - the radiation is calculated from one electron,  if ParticleArray - the radiation
+                    is calculated for the each particles in the ParticleArray and field components is summing up afterwards.
+    :param energy_loss: False, if True includes energy loss after each period
+    :param quantum_diff: False, if True introduces random energy kick
+    :param accuracy: 1
+    :return:
+    """
+
     screen.update()
 
     if beam.__class__ is Beam:
@@ -550,7 +562,7 @@ def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy
     #plt.show()
     return U, E
 
-
+"""
 def calculate_beam_radiation(lat, screen, p_array, energy_loss=False, quantum_diff=False, accuracy=1, freq=1):
     screen.update()
     b_current = p_array.q_array[0]*1000.*freq # b_current - beam current must be in [mA], but beam.I in [A]
@@ -656,7 +668,7 @@ def calculate_beam_radiation_check(lat, screen, p_array, energy_loss=False, quan
     screen.motion = U
     return screen
 
-
+"""
 """
 void sum_screens(Screen *screen, Screen screen_up)
 {

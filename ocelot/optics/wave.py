@@ -466,8 +466,8 @@ class RadiationField:
                 return self
             else:
                 return
-#        elif z == 0 and m != 1:
-#            pass
+       # elif z == 0 and m != 1:
+           # pass
         
         start = time.time()
         domains = self.domains()
@@ -476,7 +476,7 @@ class RadiationField:
             copydfl = deepcopy(self)
             copydfl, self = self, copydfl
         
-#        domain_xy = self.domain_xy
+       # domain_xy = self.domain_xy
         domain_z = self.domain_z
         
         #q_multiply(dfl_out, (1-m) / z)
@@ -527,7 +527,7 @@ class RadiationField:
            # self.fft_xy(debug=debug)
        # if domain_z == 't' and fine:
            # self.fft_z(debug=debug)
-#        self.to_domain('s')
+       # self.to_domain('s')
         if return_orig_domains:
             self.to_domain(domains)
         
@@ -540,6 +540,13 @@ class RadiationField:
         if return_result:
             copydfl, self = self, copydfl
             return copydfl
+            
+    def coh(self):
+        J = np.zeros([self.Nx(), self.Ny(), self.Nx(), self.Ny()]).astype(np.complex128)
+        mut_coh_func(J, self.fld, norm=1)
+        I = np.mean(self.intensity(), axis=0)
+        coh = np.sum(abs(J)**2 * I[np.newaxis,np.newaxis,:,:] * I[:,:,np.newaxis,np.newaxis]) / np.sum(I)**2
+        return coh
     
 class WaistScanResults():
 

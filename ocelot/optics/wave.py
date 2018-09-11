@@ -17,7 +17,7 @@ import os
 
 # from ocelot.optics.elements import *
 from ocelot.common.globals import *
-from ocelot.common.math_op import find_nearest_idx, fwhm, std_moment, bin_scale, bin_array#, mut_coh_func
+from ocelot.common.math_op import find_nearest_idx, fwhm, std_moment, bin_scale, bin_array, mut_coh_func
 from ocelot.common.py_func import filename_from_path
 # from ocelot.optics.utils import calc_ph_sp_dens
 #from ocelot.adaptors.genesis import *   #commented
@@ -541,12 +541,26 @@ class RadiationField:
         if return_result:
             copydfl, self = self, copydfl
             return copydfl
-            
-    def coh(self):
-        J = np.zeros([self.Nx(), self.Ny(), self.Nx(), self.Ny()]).astype(np.complex128)
-        mut_coh_func(J, self.fld, norm=1)
-        I = np.mean(self.intensity(), axis=0)
-        coh = np.sum(abs(J)**2 * I[np.newaxis,np.newaxis,:,:] * I[:,:,np.newaxis,np.newaxis]) / np.sum(I)**2
+    
+    def mut_coh_func(self, norm=1, jit=1):
+        if jit:
+            J = np.zeros([self.Ny(), self.Nx(), self.Ny(), self.Nx()]).astype(np.complex128)
+            mut_coh_func(J, self.fld, norm=norm)
+        else:
+            I = self.int_xy() / self.Nz()
+            J = np.mean(self.fld[:,:,:,np.newaxis,np.newaxis].conjugate() * self.fld[:,np.newaxis,np.newaxis,:,:], axis=0)
+            if norm:
+                J /= (I[:,:,np.newaxis,np.newaxis] * I[np.newaxis,np.newaxis,:,:])
+        return J
+        
+    def coh(self, jit=0):
+        I = self.int_xy() / self.Nz()
+        J = self.mut_coh_func(norm=0, jit=jit)
+        # if jit:
+            # J = self.mut_coh_func(norm=0)
+        # else:
+            # J = np.mean(self.fld[:,:,:,np.newaxis,np.newaxis].conjugate() * self.fld[:,np.newaxis,np.newaxis,:,:], axis=0)
+        coh = np.sum(abs(J)**2) / np.sum(I)**2
         return coh
     
 class WaistScanResults():

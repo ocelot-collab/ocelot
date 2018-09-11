@@ -563,9 +563,9 @@ if numba_avail:
         """
         Mutual Coherence function
         """
-        n_x = len(fld[1])
-        n_y = len(fld[2])
-        n_z = len(fld[0])
+        n_x = len(fld[0,0,:])
+        n_y = len(fld[0,:,0])
+        n_z = len(fld[:,0,0])
         
         for i_x1 in range(n_x):
             for i_y1 in range(n_y):                      
@@ -573,14 +573,13 @@ if numba_avail:
                         for i_y2 in range(n_y):
                             j = 0
                             for k in range(n_z):
-                                j += fld[k,i_x1,i_y1].conjugate() * fld[k,i_x2,i_y2]
-                            j /= n_z
+                                j += (fld[k, i_y1, i_x1] * fld[k, i_y2, i_x2].conjugate())
                             if norm:
                                 AbsE1 = 0
                                 AbsE2 = 0
                                 for k in range(n_z):
-                                    AbsE1 += abs(fld[k,i_x1,i_y1])
-                                    AbsE2 += abs(fld[k,i_x2,i_y2])
-                                j /= (AbsE1 * AbsE2 / n_z**2)
-                            
-                            J[i_x1, i_y1, i_x2, i_y2] = j
+                                    AbsE1 += abs(fld[k, i_y1, i_x1])
+                                    AbsE2 += abs(fld[k, i_y2, i_x2])
+                                J[i_y1, i_x1, i_y2, i_x2] = j / (AbsE1 * AbsE2 / n_z**2) / n_z
+                            else:
+                                J[i_y1, i_x1, i_y2, i_x2] = j / n_z

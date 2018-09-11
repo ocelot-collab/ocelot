@@ -8,6 +8,7 @@ from ocelot.common.py_func import filename_from_path
 from copy import deepcopy
 from scipy import interpolate
 from scipy.signal import savgol_filter
+from scipy.stats import truncnorm
 from ocelot.common.logging import *
 
 _logger = logging.getLogger(__name__)
@@ -1287,7 +1288,8 @@ def parray2beam(parray, step=1e-7):
     return(beam)
 
 def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
-                    sigma_tau=1e-3, sigma_p=1e-4, tau_p_cor=0.01, charge=5e-9, nparticles=200000, energy=0.13):
+                    sigma_tau=1e-3, sigma_p=1e-4, tau_p_cor=0.01, charge=5e-9, nparticles=200000, energy=0.13,
+                    tue_trunc=None):
 
     if sigma_y is None:
         sigma_y = sigma_x
@@ -1298,7 +1300,11 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
     px = np.random.randn(nparticles) * sigma_px
     y = np.random.randn(nparticles) * sigma_y
     py = np.random.randn(nparticles) * sigma_py
-    tau = np.random.randn(nparticles) * sigma_tau
+    if tue_trunc is None:
+        tau = np.random.randn(nparticles) * sigma_tau
+    else:
+        tau = truncnorm.rvs(tue_trunc, -tue_trunc, loc=0, scale=sigma_tau, size=nparticles)
+    #
     dp = np.random.randn(nparticles) * sigma_p
     if sigma_tau != 0:
         dp += tau_p_cor*tau/sigma_tau

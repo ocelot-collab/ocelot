@@ -556,10 +556,6 @@ class RadiationField:
     def coh(self, jit=0):
         I = self.int_xy() / self.Nz()
         J = self.mut_coh_func(norm=0, jit=jit)
-        # if jit:
-            # J = self.mut_coh_func(norm=0)
-        # else:
-            # J = np.mean(self.fld[:,:,:,np.newaxis,np.newaxis].conjugate() * self.fld[:,np.newaxis,np.newaxis,:,:], axis=0)
         coh = np.sum(abs(J)**2) / np.sum(I)**2
         return coh
     
@@ -2123,7 +2119,8 @@ def imitate_1d_sase_like(td_scale, td_env, fd_scale, fd_env, td_phase = None, fd
     '''
     Models FEL pulse(s) based on Gaussian statistics
     td_scale - scale of the pulse on time domain [m]
-    td_env - expected pulse envelope in time domain [W] fd_scale - scale of the pulse in frequency domain [eV]
+    td_env - expected pulse envelope in time domain [W] 
+    fd_scale - scale of the pulse in frequency domain [eV]
     fd_env - expected pulse envelope in frequency domain [a.u.]
     td_phase - additional phase chirp to be added in time domain
     fd_phase - additional phase chirp to be added in frequency domain
@@ -2209,7 +2206,9 @@ def imitate_1d_sase_like(td_scale, td_env, fd_scale, fd_env, td_phase = None, fd
     
     #normalization for pulse energy
     if en_pulse == None:
-        en_pulse = np.trapz(td_env_i, td_scale_i / speed_of_light) # CALCULATE FOR fit_scale == 'td' !!!!!!!!!!
+        _logger.debug(ind_str + 'no en_pulse provided, calculating from integral of td_env')
+        en_pulse = np.trapz(td_env, td_scale / speed_of_light)
+
     pulse_energies = np.trapz(abs(td)**2, td_scale_i / speed_of_light, axis=0)
     scale_coeff = en_pulse / np.mean(pulse_energies)
     td *= np.sqrt(scale_coeff)

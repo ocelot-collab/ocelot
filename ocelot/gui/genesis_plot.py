@@ -2896,9 +2896,9 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
         rect_histx = [left, bottom_h, width, 0.2]
         rect_histy = [left_h, bottom, 0.15, height]
         
-        axScatter = plt.axes(rect_scatter)
-        axHistx = plt.axes(rect_histx, sharex=axScatter)
-        axHisty = plt.axes(rect_histy, sharey=axScatter)
+        axHistx = plt.axes(rect_histx)
+        axHisty = plt.axes(rect_histy)
+        axScatter = plt.axes(rect_scatter, sharex=axHistx, sharey=axHisty)
     else:
         axScatter = plt.axes()
     

@@ -961,10 +961,10 @@ class WignerDistribution():
         self.phen = h_eV_s * speed_of_light * 1e9 / value
     
     def power(self):
-        return np.sum(self.wig,axis=0)
+        return np.sum(self.wig, axis=0)
         
     def spectrum(self):
-        return np.sum(self.wig,axis=1)
+        return np.sum(self.wig, axis=1)
         
     def energy(self):
         return np.sum(self.wig)*abs(self.s[1]-self.s[0])/speed_of_light
@@ -972,7 +972,7 @@ class WignerDistribution():
     def fileName(self):
         return filename_from_path(self.filePath)
         
-    def eval(self,method = 'mp'):
+    def eval(self, method = 'mp'):
         
         # from ocelot.utils.xfel_utils import calc_wigner
         
@@ -981,6 +981,12 @@ class WignerDistribution():
         phen = h_eV_s * (np.fft.fftfreq(self.s.size, d = ds / speed_of_light) + speed_of_light / self.xlamds)
         self.phen = np.fft.fftshift(phen, axes=0)
         # self.freq_lamd = h_eV_s * speed_of_light * 1e9 / freq_ev
+    
+    def inst_freq(self):
+        return np.sum(self.wig * self.phen[:, np.newaxis], axis=0) / self.power()
+        
+    def group_delay(self):
+        return np.sum(self.wig * self.s[np.newaxis, :], axis=1) / self.spectrum()
 
 
 def generate_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), power_rms=(0.1e-3,0.1e-3,5e-6), power_center=(0,0,None), power_angle=(0,0), power_waistpos=(0,0), wavelength=None, zsep=None, freq_chirp=0, en_pulse=None, power=1e6, **kwargs):

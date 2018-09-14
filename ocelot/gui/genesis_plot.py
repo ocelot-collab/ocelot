@@ -42,6 +42,8 @@ from ocelot.utils.xfel_utils import *
 from ocelot.optics.utils import calc_ph_sp_dens
 from ocelot.optics.wave import *
 
+from ocelot.gui.colormaps2d.colormap2d import *
+
 # from pylab import rc, rcParams #tmp
 from matplotlib import rc, rcParams
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -3375,7 +3377,192 @@ def plot_stokes_angles(S, fig=None, showfig=True, direction='z', scatter=True):
             plt.show()
         else:
             plt.close('all')
-        
+
+def plot_stokes_3d(stk_params, interpolation=None, cmap2d='brightwheel', figsize=4,
+                fig_name='Visualization Stokes parameters', cbars=0, savefig=False, showfig=True, debug=1, **kwargs):
+    '''
+    Plot 6 images with normalized Stokes parameters on them
+
+    :param stk_params: 3d ocelot.optics.wave.StokesParameters() type object
+    :param interpolation: str type variable wich responds for interpolation before plotting linear polarized part
+    :param cmap2d: numpy array with shape (nwidth, nheight, 4) that contains the 4 rgba values in hue (width)
+                    and lightness (height).
+                    Can be obtained by a call to get_cmap2d(name).
+                    or:
+                    name where name is one of the following strings:
+                    'brightwheel', 'darkwheel', 'hardwheel', 'newwheel',
+                    'smoothwheel', 'wheel'
+    :param figsize: size of the figure
+    :param fig_name: name of the figure
+    :param cbars: bool type variable which responds for showing of colorbars
+    :param savefig: bool type variable which responds for saving of the figure
+    :param showfig: bool type variable which responds for showing of the figure
+    :param debug:
+    :param kwargs:
+    '''
+
+    if showfig == False and savefig == False:
+        return
+
+    'Normalization'
+    s3_norm = stk_params.s3 / np.amax(stk_params.s0)
+    pol_lin_inten = stk_params.P_pol_l() / np.amax(stk_params.s0)        #polarization intensity
+    psi_norm = 2 * stk_params.psi() / np.pi
+    fig = plt.figure(fig_name)
+
+    'Getting intersections of stk_params for ploting data'
+    z, y, x = s3_norm.shape
+    lin_pol_plane_zy = np.zeros((z, y))
+    psi_plane_zy = np.zeros((z, y))
+    lin_pol_plane_zx = np.zeros((z, x))
+    psi_plane_zx = np.zeros((z, x))
+    lin_pol_plane_yx = np.zeros((y, x))
+    psi_plane_yx = np.zeros((y, x))
+    for i in range(z):
+        for j in range(y):
+            lin_pol_plane_zy[i][j] = pol_lin_inten[i][j][int(x/2)]
+            psi_plane_zy[i][j] = psi_norm[i][j][int(x/2)]
+    for i in range(z):
+        for j in range(x):
+            lin_pol_plane_zx[i][j] = pol_lin_inten[i][int(y/2)][j]
+            psi_plane_zx[i][j] = psi_norm[i][int(y/2)][j]
+    for i in range(y):
+        for j in range(x):
+            lin_pol_plane_yx[i][j] = pol_lin_inten[int(z/2)][i][j]
+            psi_plane_yx[i][j] = psi_norm[int(z/2)][i][j]
+
+    s3_plane_zy = np.zeros((z, y))
+    s3_plane_zx = np.zeros((z, x))
+    s3_plane_yx = np.zeros((y, x))
+    for i in range(z):
+        for j in range(y):
+            s3_plane_zy[i][j] = s3_norm[i][j][int(x/2)]
+    for i in range(z):
+        for j in range(x):
+            s3_plane_zx[i][j] = s3_norm[i][int(y/2)][j]
+    for i in range(y):
+        for j in range(x):
+            s3_plane_yx[i][j] = s3_norm[int(z/2)][i][j]
+
+    'Plotting data'
+    fig.clf()
+    fig.set_size_inches((5 * figsize, 3 * figsize), forward=True)
+    ax1 = fig.add_subplot(2, 3, 1)
+    linear_plt = plot_stokes_sbfg_lin(lin_pol_plane_zy, psi_plane_zy, ax1, cmap2d=cmap2d,
+                                    plot_title='Linear polarization y vs z', x_label='y', y_label='z', result=1,
+                                    interpolation=interpolation, **kwargs)
+    'Plotting colorbar'
+    if cbars:
+        cbaxes1 = fig.add_axes([0.01, 0.56, 0.02, 0.32])  # This is the position for the colorbar [x, y, width, height]
+        cb1 = plt.colorbar(linear_plt, cax=cbaxes1)
+        cb1.set_label('Normalized linear\npolarization intensity')
+        cbaxes1.tick_params(axis='both', which='major', labelsize=10)
+
+    ax2 = fig.add_subplot(2, 3, 2)
+    plot_stokes_sbfg_lin(lin_pol_plane_zx, psi_plane_zx, ax2, cmap2d=cmap2d, plot_title='Linear polarization x vs z',
+                       x_label='x',y_label='z', interpolation=interpolation, **kwargs)
+
+    ax3 = fig.add_subplot(2, 3, 3)
+    plot_stokes_sbfg_lin(lin_pol_plane_yx, psi_plane_yx, ax3, cmap2d=cmap2d, plot_title='Linear polarization x vs y',
+                       x_label='x', y_label='y', interpolation=interpolation, **kwargs)
+
+    ax4 = fig.add_subplot(2, 3, 4)
+    circular_plt = plot_stokes_sbfg_circ(s3_plane_zy, ax4, plot_title='Circular polarization y vs z', x_label='y',
+                                      y_label='z', interpolation=interpolation, result=1, **kwargs)
+    if cbars:
+        cbaxes4 = fig.add_axes([0.01, 0.111, 0.02, 0.32])  # This is the position for the colorbar [x, y, width, height]
+        cb4 = plt.colorbar(circular_plt, cax=cbaxes4)
+        cb4.set_label('Normalized S3 (S3/S0)')
+        cbaxes4.tick_params(axis='both', which='major', labelsize=10)
+
+    ax5 = fig.add_subplot(2, 3, 5)
+    plot_stokes_sbfg_circ(s3_plane_zx, ax5, plot_title='Circular polarization x vs z', x_label='x', y_label='z',
+                        interpolation=interpolation, **kwargs)
+
+    ax6 = fig.add_subplot(2, 3, 6)
+    plot_stokes_sbfg_circ(s3_plane_yx, ax6, plot_title='Circular polarization x vs y', x_label='x', y_label='y',
+                        interpolation=interpolation, **kwargs)
+
+    fig.subplots_adjust(wspace=0.4, hspace=0.4)
+    plt.draw()
+    if savefig != False:
+        if savefig == True:
+            savefig = 'png'
+        if debug > 1:
+            print('      saving ' + fig_name + '.' + savefig)
+        plt.savefig()
+
+    if showfig:
+        plt.show()
+    else:
+        plt.close('all')
+
+def plot_stokes_sbfg_lin(lin_pol_plane, psi_plane, ax, cmap2d='brightwheel', plot_title='', x_label='', y_label='',
+                       result=0, interpolation=None, **kwargs):
+    '''
+    Plot normalized intensity and angle of the linear polarization of the light
+
+    :param lin_pol_plane: numpy 2d array with normalized intensity of the linear polarization of the light
+    :param psi_plane: numpy 2d array with normalized angle  of the linear polarization of the light
+    :param ax: matplotlib.pyplot.AxesSubplot on which the data will be plotted
+    :param plot_title: title of the plot
+    :param x_label: label of the x axis
+    :param y_label: label of the y axis
+    :param result: a bool type variable; if bool == True the function will return linear_plt of AxesImage type
+    :param kwargs:
+    '''
+    if psi_plane.shape != lin_pol_plane.shape:
+        raise TypeError
+    n, m = psi_plane.shape
+
+    # 'Transform to rgb'
+    # ax.set_facecolor((0, 0, 0))
+    # psi_plane = (psi_plane + 1)/2
+    # rgb_data = np.zeros((n, m, 4))
+    # for i in range(n):
+    #     for j in range(m):
+    #         rgb_data[i][j][0] = psi_plane[i][j]
+    #         rgb_data[i][j][1] = psi_plane[i][j]
+    #         rgb_data[i][j][2] = 1
+    #         if lin_pol_plane[i][j] > 1:
+    #             rgb_data[i][j][3] = 1
+    #         else:
+    #             rgb_data[i][j][3] = lin_pol_plane[i][j]
+    # linear_plt = ax.imshow(rgb_data, interpolation=interpolation, **kwargs)
+    linear_plt = imshow2d(np.array([psi_plane, lin_pol_plane]), ax=ax, cmap2d=cmap2d,
+                          interpolation=interpolation, **kwargs)
+    ax.set_ylim(0, n)
+    ax.set_xlim(0, m)
+    ax.set_title(plot_title, fontsize=15)
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    if result:
+        return linear_plt
+
+def plot_stokes_sbfg_circ(s3_plane, ax, cmap='seismic', plot_title='', x_label='', y_label='', result=0, **kwargs):
+    '''
+    Plot normalized Stokes parameter S3
+
+    :param s3_plane: numpy 2d array with normalized Stokes parameter S3
+    :param ax: matplotlib.pyplot.AxesSubplot on which the data will be plotted
+    :param cmap: colormap which will be used for plotting data
+    :param plot_title: title of the plot
+    :param x_label: label of the x axis
+    :param y_label: label of the y axis
+    :param result: a bool type variable; if bool == True the function will return circular_plt of matplotlib.collections.QuadMesh
+    :param kwargs:
+    '''
+
+    n, m = s3_plane.shape
+    circular_plt = ax.imshow(s3_plane, cmap=cmap, vmin=-1, vmax=1, **kwargs)
+    ax.set_ylim(0, n)
+    ax.set_xlim(0, m)
+    ax.set_title(plot_title, fontsize=15)
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    if result:
+        return circular_plt
+
 '''
     scheduled for removal
 '''

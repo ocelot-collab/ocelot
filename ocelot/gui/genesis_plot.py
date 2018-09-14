@@ -2824,7 +2824,7 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
 
     _logger.debug(ind_str + 'done')
 
-def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,None), y_lim=(None,None), downsample=1, autoscale=None, figsize=4, cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=True, plot_proj=1, plot_text=1, debug=1):
+def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,None), y_lim=(None,None), downsample=1, autoscale=None, figsize=4, cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=True, plot_proj=1, plot_text=1, plot_moments=0, debug=1):
     '''
     plots wigner distribution (WD) with marginals
     wig_or_out -  may be WignerDistribution() or GenesisOutput() object
@@ -2865,24 +2865,30 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
     plt.clf()
     fig.set_size_inches((4.5*figsize, 3.25*figsize), forward=True)
         
-    power=W.power()
-    spec=W.spectrum()
-    wigner=W.wig
-    wigner_lim=np.amax(abs(W.wig))
+    power = W.power()
+    spec = W.spectrum()
+    wigner = W.wig
+    wigner_lim = np.amax(abs(W.wig))
+    inst_freq = W.inst_freq()
+    group_delay = W.group_delay()
     
     if x_units=='fs':
-        power_scale=W.s/speed_of_light*1e15
-        p_label_txt='t [fs]'
+        power_scale = W.s / speed_of_light * 1e15
+        p_label_txt = 't [fs]'
+        group_delay = group_delay / speed_of_light * 1e15
     else:
-        power_scale=W.s*1e6
-        p_label_txt='s [$\mu$m]'
+        power_scale = W.s*1e6
+        p_label_txt = 's [$\mu$m]'
+        group_delay = group_delay*1e6
     
     if y_units in ['ev', 'eV']:
-        spec_scale=speed_of_light*h_eV_s*1e9/W.freq_lamd
-        f_label_txt='$E_{photon}$ [eV]'
+        spec_scale = W.phen
+        f_label_txt = '$E_{photon}$ [eV]'
+        inst_freq = inst_freq
     else:
-        spec_scale=W.freq_lamd
-        f_label_txt='$\lambda& [nm]'
+        spec_scale = W.freq_lamd
+        f_label_txt = '$\lambda& [nm]'
+        inst_freq = h_eV_s * speed_of_light * 1e9 / inst_freq
     
     if plot_proj:
         # definitions for the axes
@@ -2903,16 +2909,43 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
         axScatter = plt.axes()
     
     if abs_value:
-        axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], abs(wigner[::downsample,::downsample]))
+        wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], abs(wigner[::downsample,::downsample]))
         if plot_text:
             axScatter.text(0.02, 0.98, r'$W_{{max}}$= {:.2e}'.format(np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes, color='w')
     else:
         # cmap='RdBu_r'
         # axScatter.imshow(wigner, cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
-        axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], wigner[::downsample,::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
+        wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], wigner[::downsample,::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
         if plot_text:
             axScatter.text(0.02, 0.98, r'$W_{{max}}$= {:.2e}'.format(np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes)#fontsize=12,
             
+    if plot_moments:
+        axScatter.plot(power_scale[::downsample], inst_freq[::downsample], "-k")
+        axScatter.plot(group_delay[::downsample], spec_scale[::downsample], "-g")
+
+        
+    if autoscale == 1:
+        autoscale = 1e-2
+    
+    if autoscale != None:
+        max_power = np.amax(power)
+        max_spectrum = np.amax(spec)
+        idx_p = np.where(power > max_power*autoscale)[0]
+        # print(max_spectrum*autoscale)
+        # print(spectrum)
+        idx_s = np.where(spec > max_spectrum*autoscale)[0]
+        
+        x_lim = [ power_scale[idx_p[0]], power_scale[idx_p[-1]] ]
+        y_lim = [ spec_scale[idx_s[0]], spec_scale[idx_s[-1]] ]
+        
+        x_lim = np.array(x_lim)
+        y_lim = np.array(y_lim)
+        x_lim.sort()
+        y_lim.sort()
+    else:
+        x_lim = (np.amin(power_scale), np.amax(power_scale))
+        y_lim = (np.amin(spec_scale), np.amax(spec_scale))
+        
     if plot_proj:
         axHistx.plot(power_scale,power)
         if plot_text:
@@ -2948,24 +2981,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
         axScatter.set_xlabel(p_label_txt)
         axScatter.set_ylabel(f_label_txt)
     
-    if autoscale == 1:
-        autoscale = 1e-2
-    
-    if autoscale != None:
-        max_power = np.amax(power)
-        max_spectrum = np.amax(spec)
-        idx_p = np.where(power > max_power*autoscale)[0]
-        # print(max_spectrum*autoscale)
-        # print(spectrum)
-        idx_s = np.where(spec > max_spectrum*autoscale)[0]
-        
-        x_lim = [ power_scale[idx_p[0]], power_scale[idx_p[-1]] ]
-        y_lim = [ spec_scale[idx_s[0]], spec_scale[idx_s[-1]] ]
-        
-        x_lim = np.array(x_lim)
-        y_lim = np.array(y_lim)
-        x_lim.sort()
-        y_lim.sort()
+
     
     # axScatter.set_xlim(x_lim[0], x_lim[1])
     # axScatter.set_ylim(y_lim[0], y_lim[1])

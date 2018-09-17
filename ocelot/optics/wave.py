@@ -655,51 +655,96 @@ class StokesParameters:
             psi[idx2] -= np.pi/2
         return psi
 
-    def slice_2d(self, cut, axis=None):
+
+    def slice_2d(self, loc, plane='z'):
+        _logger.debug('slicing stokes matrix at location {} over {} plane'.format(loc, plane))
+        if plane in ['x', 2]:
+            plane = 2
+            scale = self.sc_x
+        elif plane == ['y', 1]:
+            plane = 1
+            scale = self.sc_y
+        elif plane == ['z', 0]:
+            plane = 0
+            scale = self.sc_z
+        else:
+            _logger.error(ind_str + 'argument "plane" should be in ["x","y","z",0,1,2]')
+            raise ValueError('argument "plane" should be in ["x","y","z",0,1,2]')
+        idx = find_nearest_idx(scale, loc)
+        return slice_2d_idx(self, idx, plane)
+
+
+    def slice_2d_idx(self, idx, plane='z'):
+        _logger.debug('slicing stokes matrix at index {} over {} plane'.format(idx, plane))
         S = deepcopy(self)
-        if axis == 0:
-            S.s0 = self.s0[cut, :, :]
-            S.s1 = self.s1[cut, :, :]
-            S.s2 = self.s2[cut, :, :]
-            S.s3 = self.s3[cut, :, :]
-        elif axis == 1:
-            S.s0 = self.s0[:, cut, :]
-            S.s1 = self.s1[:, cut, :]
-            S.s2 = self.s2[:, cut, :]
-            S.s3 = self.s3[:, cut, :]
-        elif axis == 2:
-            S.s0 = self.s0[:, :, cut]
-            S.s1 = self.s1[:, :, cut]
-            S.s2 = self.s2[:, :, cut]
-            S.s3 = self.s3[:, :, cut]
+        if plane in ['x', 2]:
+            plane = 2
+        elif plane in ['y', 1]:
+            plane = 1
+        elif plane in ['z', 0]:
+            plane = 0
+        else:
+            _logger.error(ind_str + 'argument "plane" should be in ["x","y","z",0,1,2]')
+            raise ValueError('argument "plane" should be in ["x","y","z",0,1,2]')
+        if plane == 0:
+            S.s0 = S.s0[np.newaxis, idx, :, :]
+            S.s1 = S.s1[np.newaxis, idx, :, :]
+            S.s2 = S.s2[np.newaxis, idx, :, :]
+            S.s3 = S.s3[np.newaxis, idx, :, :]
+            S.sc_z = np.arange(1)
+        elif plane == 1:
+            S.s0 = S.s0[:, np.newaxis, idx, :]
+            S.s1 = S.s1[:, np.newaxis, idx, :]
+            S.s2 = S.s2[:, np.newaxis, idx, :]
+            S.s3 = S.s3[:, np.newaxis, idx, :]
+            S.sc_y = np.arange(1)
+        elif plane == 2:
+            S.s0 = S.s0[:, :, np.newaxis, idx]
+            S.s1 = S.s1[:, :, np.newaxis, idx]
+            S.s2 = S.s2[:, :, np.newaxis, idx]
+            S.s3 = S.s3[:, :, np.newaxis, idx]
+            S.sc_x = np.arange(1)
+        else:
+            _logger.error(ind_str + 'argument "axis" is not defined')
+            raise ValueError('argument "axis" is not defined')
         return S
 
-    def proj(self, dir='x', sum=False):
+    def proj(self, plane='x', mode='sum'):
+        _logger.debug('calculating projection of stokes matrix over {} plane'.format(plane))
         S = deepcopy(self)
-        z, y, x = self.s0.shape
-        amount = 0
-        axis = 0
-        if dir == 'x':
-            axis = 2
-            amount = x
-        elif dir == 'y':
-            axis = 1
-            amount = y
-        elif dir == 'z':
-            axis = 0
-            amount = z
-        S.s0 = np.sum(self.s0, axis=axis)
-        S.s1 = np.sum(self.s1, axis=axis)
-        S.s2 = np.sum(self.s2, axis=axis)
-        S.s3 = np.sum(self.s3, axis=axis)
-        if sum:
+        nz, ny, nx = self.s0.shape
+        if plane in ['x', 2]:
+            plane = 2
+            n_points = nx
+            S.sc_x = np.arange(1)
+        elif plane in ['y', 1]:
+            plane = 1
+            n_points = ny
+            S.sc_y = np.arange(1)
+        elif plane in ['z', 0]:
+            plane = 0
+            n_points = nz
+            S.sc_z = np.arange(1)
+        else:
+            _logger.error(ind_str + 'argument "plane" should be in ["x","y","z",0,1,2]')
+            raise ValueError('argument "plane" should be in ["x","y","z",0,1,2]')
+        
+        S.s0 = np.sum(self.s0, axis=plane, keepdims=1)
+        S.s1 = np.sum(self.s1, axis=plane, keepdims=1)
+        S.s2 = np.sum(self.s2, axis=plane, keepdims=1)
+        S.s3 = np.sum(self.s3, axis=plane, keepdims=1)
+        
+        if mode == 'sum':
+            return S
+        elif mode == 'mean':
+            S.s0 = S.s0 / n_points
+            S.s1 = S.s1 / n_points
+            S.s2 = S.s2 / n_points
+            S.s3 = S.s3 / n_points
             return S
         else:
-            S.s0 = S.s0 / amount
-            S.s1 = S.s1 / amount
-            S.s2 = S.s2 / amount
-            S.s3 = S.s3 / amount
-            return S
+            _logger.error(ind_str + 'argument "mode" should be in ["sum", "mean"]')
+            raise ValueError('argument "mode" should be in ["sum", "mean"]')
         
 def bin_stokes(S, bin_size):
     '''

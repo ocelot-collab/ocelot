@@ -3379,7 +3379,7 @@ def plot_stokes_angles(S, fig=None, showfig=True, direction='z', scatter=True):
             plt.close('all')
 
 def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane='max_slice', interpolation=None,
-                   cmap2d='brightwheel', figsize=4, fig_name='Visualization Stokes parameters', cbars=0, savefig=False,
+                   cmap_lin='brightwheel', cmap_circ='seismic', figsize=4, fig_name='Visualization Stokes parameters', cbars=0, savefig=False,
                    showfig=True, text_present=True, debug=1, **kwargs):
     '''
     Plot 6 images with normalized Stokes parameters on them
@@ -3401,13 +3401,14 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
                     'proj': at the third subplot will be shown the projection of 3d stk_params in z direction
                     <number> in [m]: the position of intersection on z-axis
     :param interpolation: str type variable wich responds for interpolation before plotting linear polarized part
-    :param cmap2d: numpy array with shape (nwidth, nheight, 4) that contains the 4 rgba values in hue (width)
+    :param cmap_lin: numpy array with shape (nwidth, nheight, 4) that contains the 4 rgba values in hue (width)
                     and lightness (height).
                     Can be obtained by a call to get_cmap2d(name).
                     or:
                     name where name is one of the following strings:
                     'brightwheel', 'darkwheel', 'hardwheel', 'newwheel',
                     'smoothwheel', 'wheel'
+    :param cmap_circ:--------------------
     :param figsize: size of the figure
     :param fig_name: name of the figure
     :param cbars: bool type variable which responds for showing of colorbars
@@ -3481,7 +3482,7 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
     fig.set_size_inches((5 * figsize, 3 * figsize), forward=True)
 
     ax1 = fig.add_subplot(2, 3, 1)
-    linear_plt = plot_stokes_sbfg_lin(ax1, lin_pol_plane_yx, psi_plane_yx, cmap2d=cmap2d,
+    linear_plt = plot_stokes_sbfg_lin(ax1, lin_pol_plane_yx, psi_plane_yx, cmap2d=cmap_lin,
                                       plot_title=None, x_label='x', y_label='y',
                                       interpolation=interpolation, result=1, **kwargs)
 
@@ -3493,15 +3494,15 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
     #     cbaxes1.tick_params(axis='both', which='major', labelsize=10)
 
     ax2 = fig.add_subplot(2, 3, 2)
-    plot_stokes_sbfg_lin(ax2, lin_pol_plane_zy, psi_plane_zy, cmap2d=cmap2d, plot_title='Linear polarization',
+    plot_stokes_sbfg_lin(ax2, lin_pol_plane_zy, psi_plane_zy, cmap2d=cmap_lin, plot_title='Linear polarization',
                          x_label='y', y_label='z', interpolation=interpolation, **kwargs)
 
     ax3 = fig.add_subplot(2, 3, 3)
-    plot_stokes_sbfg_lin(ax3, lin_pol_plane_zx, psi_plane_zx, cmap2d=cmap2d, plot_title=None,
+    plot_stokes_sbfg_lin(ax3, lin_pol_plane_zx, psi_plane_zx, cmap2d=cmap_lin, plot_title=None,
                          x_label='x', y_label='z', interpolation=interpolation, **kwargs)
 
     ax4 = fig.add_subplot(2, 3, 4, sharex=ax1, sharey=ax1)
-    circular_plt = plot_stokes_sbfg_circ(ax4, s3_plane_yx, plot_title=None, x_label='x',
+    circular_plt = plot_stokes_sbfg_circ(ax4, s3_plane_yx, cmap=cmap_circ, plot_title=None, x_label='x',
                                          y_label='y', result=1, interpolation=interpolation, **kwargs)
     if cbars:
         cbaxes4 = fig.add_axes([0.0, 0.111, 0.02, 0.32])  # This is the position for the colorbar [x, y, width, height]
@@ -3510,11 +3511,11 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
         cbaxes4.tick_params(axis='both', which='major', labelsize=10)
 
     ax5 = fig.add_subplot(2, 3, 5, sharex=ax2, sharey=ax2)
-    plot_stokes_sbfg_circ(ax5, s3_plane_zy, plot_title='Circular polarization', x_label='y', y_label='z',
+    plot_stokes_sbfg_circ(ax5, s3_plane_zy, cmap=cmap_circ, plot_title='Circular polarization', x_label='y', y_label='z',
                           interpolation=interpolation, **kwargs)
 
     ax6 = fig.add_subplot(2, 3, 6, sharex=ax3, sharey=ax3)
-    plot_stokes_sbfg_circ(ax6, s3_plane_zx, plot_title=None, x_label='x', y_label='z',
+    plot_stokes_sbfg_circ(ax6, s3_plane_zx, cmap=cmap_circ, plot_title=None, x_label='x', y_label='z',
                           interpolation=interpolation, **kwargs)
 
     if text_present:

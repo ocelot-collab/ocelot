@@ -614,7 +614,7 @@ class StokesParameters:
         self.s1 = np.array([])
         self.s2 = np.array([])
         self.s3 = np.array([])
-        
+
     def __getitem__(self,i):
         S = deepcopy(self)
         if self.s0.ndim == 1:
@@ -624,7 +624,7 @@ class StokesParameters:
         S.s2 = self.s2[i]
         S.s3 = self.s3[i]
         return S
-        
+
     def P_pol(self):
         #coherent part
         return np.sqrt(self.s1**2 + self.s2**2 + self.s3**2)
@@ -654,6 +654,52 @@ class StokesParameters:
             psi[idx1] += np.pi/2
             psi[idx2] -= np.pi/2
         return psi
+
+    def slice_2d(self, cut, axis=None):
+        S = deepcopy(self)
+        if axis == 0:
+            S.s0 = self.s0[cut, :, :]
+            S.s1 = self.s1[cut, :, :]
+            S.s2 = self.s2[cut, :, :]
+            S.s3 = self.s3[cut, :, :]
+        elif axis == 1:
+            S.s0 = self.s0[:, cut, :]
+            S.s1 = self.s1[:, cut, :]
+            S.s2 = self.s2[:, cut, :]
+            S.s3 = self.s3[:, cut, :]
+        elif axis == 2:
+            S.s0 = self.s0[:, :, cut]
+            S.s1 = self.s1[:, :, cut]
+            S.s2 = self.s2[:, :, cut]
+            S.s3 = self.s3[:, :, cut]
+        return S
+
+    def proj(self, dir='x', sum=False):
+        S = deepcopy(self)
+        z, y, x = self.s0.shape
+        amount = 0
+        axis = 0
+        if dir == 'x':
+            axis = 2
+            amount = x
+        elif dir == 'y':
+            axis = 1
+            amount = y
+        elif dir == 'z':
+            axis = 0
+            amount = z
+        S.s0 = np.sum(self.s0, axis=axis)
+        S.s1 = np.sum(self.s1, axis=axis)
+        S.s2 = np.sum(self.s2, axis=axis)
+        S.s3 = np.sum(self.s3, axis=axis)
+        if sum:
+            return S
+        else:
+            S.s0 = S.s0 / amount
+            S.s1 = S.s1 / amount
+            S.s2 = S.s2 / amount
+            S.s3 = S.s3 / amount
+            return S
         
 def bin_stokes(S, bin_size):
     '''

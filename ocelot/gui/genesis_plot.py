@@ -3379,7 +3379,7 @@ def plot_stokes_angles(S, fig=None, showfig=True, direction='z', scatter=True):
             plt.close('all')
 
 def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane='max_slice', interpolation=None,
-                   cmap2d='brightwheel', figsize=4, fig_name='Visualization Stokes parameters', cbars=0, savefig=False,
+                   cmap_lin='brightwheel', cmap_circ='seismic', figsize=4, fig_name='Visualization Stokes parameters', cbars=0, savefig=False,
                    showfig=True, text_present=True, debug=1, **kwargs):
     '''
     Plot 6 images with normalized Stokes parameters on them
@@ -3401,13 +3401,14 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
                     'proj': at the third subplot will be shown the projection of 3d stk_params in z direction
                     <number> in [m]: the position of intersection on z-axis
     :param interpolation: str type variable wich responds for interpolation before plotting linear polarized part
-    :param cmap2d: numpy array with shape (nwidth, nheight, 4) that contains the 4 rgba values in hue (width)
+    :param cmap_lin: numpy array with shape (nwidth, nheight, 4) that contains the 4 rgba values in hue (width)
                     and lightness (height).
                     Can be obtained by a call to get_cmap2d(name).
                     or:
                     name where name is one of the following strings:
                     'brightwheel', 'darkwheel', 'hardwheel', 'newwheel',
                     'smoothwheel', 'wheel'
+    :param cmap_circ:--------------------
     :param figsize: size of the figure
     :param fig_name: name of the figure
     :param cbars: bool type variable which responds for showing of colorbars
@@ -3421,41 +3422,45 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
     if showfig == False and savefig == False:
         return
     # z, y, x = stk_params.sc_z, stk_params.sc_y, stk_params.sc_x
-
+    _logger.info('plotting stokes parameters')
+    
     # Getting intersections of stk_params for ploting data
     z_max, y_max, x_max = np.unravel_index(stk_params.s0.argmax(), stk_params.s0.shape)  # getting max element position
-    x_plane_pos, y_plane_pos, z_plane_pos = 0, 0, 0
+    # x_plane_pos, y_plane_pos, z_plane_pos = 0, 0, 0
     if x_plane == 'max_slice':
         x_plane_pos = x_max
-        stk_params_zy = stk_params.slice_2d(x_plane_pos, axis=2)
+        stk_params_zy = stk_params.slice_2d_idx(x_plane_pos, plane='x')[:, :, 0]
         x_plane_pos = stk_params.sc_x[0] + x_max*(stk_params.sc_x[-1] - stk_params.sc_x[0])/stk_params.s0.shape[2]
     elif x_plane == 'proj':
-        stk_params_zy = stk_params.proj(dir='x', sum=False)
+        stk_params_zy = stk_params.proj(plane='x', mode='mean')[:, :, 0]
+        x_plane_pos = 0
     else:
-        x_plane_pos = int(((x_plane - stk_params.sc_x[0]) / (stk_params.sc_x[-1] - stk_params.sc_x[0])) * stk_params.s0.shape[2])
-        stk_params_zy = stk_params.slice_2d(x_plane_pos, axis=2)
+        x_plane_pos = find_nearest_idx(stk_params.sc_x, x_plane) # <----   !!!!!
+        stk_params_zy = stk_params.slice_2d_idx(x_plane_pos, plane='x')[:, :, 0]
         x_plane_pos = x_plane
 
     if y_plane == 'max_slice':
         y_plane_pos = y_max
-        stk_params_zx = stk_params.slice_2d(y_plane_pos, axis=1)
+        stk_params_zx = stk_params.slice_2d_idx(y_plane_pos, plane='y')[:, 0, :]
         y_plane_pos = stk_params.sc_y[0] + y_max*(stk_params.sc_y[-1] - stk_params.sc_y[0])/stk_params.s0.shape[1]
     elif y_plane == 'proj':
-        stk_params_zx = stk_params.proj(dir='y', sum=False)
+        stk_params_zx = stk_params.proj(plane='y', mode='mean')[:, 0, :]
+        y_plane_pos = 0
     else:
         y_plane_pos = int(((y_plane - stk_params.sc_y[0]) / (stk_params.sc_y[-1] - stk_params.sc_y[0])) * stk_params.s0.shape[1])
-        stk_params_zx = stk_params.slice_2d(y_plane_pos, axis=1)
+        stk_params_zx = stk_params.slice_2d_idx(y_plane_pos, plane='y')[:, 0, :]
         y_plane_pos = y_plane
 
     if z_plane == 'max_slice':
         z_plane_pos = z_max
-        stk_params_yx = stk_params.slice_2d(z_plane_pos, axis=0)
+        stk_params_yx = stk_params.slice_2d_idx(z_plane_pos, plane='z')[0, :, :]
         z_plane_pos = stk_params.sc_z[0] + z_max*(stk_params.sc_z[-1] - stk_params.sc_z[0])/stk_params.s0.shape[0]
     elif z_plane == 'proj':
-        stk_params_yx = stk_params.proj(dir='z', sum=False)
+        stk_params_yx = stk_params.proj(plane='z', mode='mean')[0, :, :]
+        z_plane_pos = 0
     else:
         z_plane_pos = int(((z_plane - stk_params.sc_z[0]) / (stk_params.sc_z[-1] - stk_params.sc_z[0])) * stk_params.s0.shape[0])
-        stk_params_yx = stk_params.slice_2d(z_plane_pos, axis=0)
+        stk_params_yx = stk_params.slice_2d_idx(z_plane_pos, plane='z')[0, :, :]
         z_plane_pos = z_plane
 
     # Normalization
@@ -3477,8 +3482,8 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
     fig.set_size_inches((5 * figsize, 3 * figsize), forward=True)
 
     ax1 = fig.add_subplot(2, 3, 1)
-    linear_plt = plot_stokes_sbfg_lin(lin_pol_plane_yx, psi_plane_yx, ax1, cmap2d=cmap2d,
-                                      plot_title='Linear polarization x vs y', x_label='x', y_label='y',
+    linear_plt = plot_stokes_sbfg_lin(ax1, lin_pol_plane_yx, psi_plane_yx, cmap2d=cmap_lin,
+                                      plot_title=None, x_label='x', y_label='y',
                                       interpolation=interpolation, result=1, **kwargs)
 
     # # Plotting colorbar
@@ -3489,15 +3494,15 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
     #     cbaxes1.tick_params(axis='both', which='major', labelsize=10)
 
     ax2 = fig.add_subplot(2, 3, 2)
-    plot_stokes_sbfg_lin(lin_pol_plane_zy, psi_plane_zy, ax2, cmap2d=cmap2d, plot_title='Linear polarization y vs z',
+    plot_stokes_sbfg_lin(ax2, lin_pol_plane_zy, psi_plane_zy, cmap2d=cmap_lin, plot_title='Linear polarization',
                          x_label='y', y_label='z', interpolation=interpolation, **kwargs)
 
     ax3 = fig.add_subplot(2, 3, 3)
-    plot_stokes_sbfg_lin(lin_pol_plane_zx, psi_plane_zx, ax3, cmap2d=cmap2d, plot_title='Linear polarization x vs z',
+    plot_stokes_sbfg_lin(ax3, lin_pol_plane_zx, psi_plane_zx, cmap2d=cmap_lin, plot_title=None,
                          x_label='x', y_label='z', interpolation=interpolation, **kwargs)
 
     ax4 = fig.add_subplot(2, 3, 4, sharex=ax1, sharey=ax1)
-    circular_plt = plot_stokes_sbfg_circ(s3_plane_yx, ax4, plot_title='Circular polarization x vs y', x_label='x',
+    circular_plt = plot_stokes_sbfg_circ(ax4, s3_plane_yx, cmap=cmap_circ, plot_title=None, x_label='x',
                                          y_label='y', result=1, interpolation=interpolation, **kwargs)
     if cbars:
         cbaxes4 = fig.add_axes([0.0, 0.111, 0.02, 0.32])  # This is the position for the colorbar [x, y, width, height]
@@ -3506,11 +3511,11 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
         cbaxes4.tick_params(axis='both', which='major', labelsize=10)
 
     ax5 = fig.add_subplot(2, 3, 5, sharex=ax2, sharey=ax2)
-    plot_stokes_sbfg_circ(s3_plane_zy, ax5, plot_title='Circular polarization y vs z', x_label='y', y_label='z',
+    plot_stokes_sbfg_circ(ax5, s3_plane_zy, cmap=cmap_circ, plot_title='Circular polarization', x_label='y', y_label='z',
                           interpolation=interpolation, **kwargs)
 
     ax6 = fig.add_subplot(2, 3, 6, sharex=ax3, sharey=ax3)
-    plot_stokes_sbfg_circ(s3_plane_zx, ax6, plot_title='Circular polarization x vs z', x_label='x', y_label='z',
+    plot_stokes_sbfg_circ(ax6, s3_plane_zx, cmap=cmap_circ, plot_title=None, x_label='x', y_label='z',
                           interpolation=interpolation, **kwargs)
 
     if text_present:
@@ -3533,9 +3538,8 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
     if savefig != False:
         if savefig == True:
             savefig = 'png'
-        if debug > 1:
-            print('      saving ' + fig_name + '.' + savefig)
-        plt.savefig()
+        _logger.debug(ind_str + 'saving *{:}.{:}'.format(suffix,savefig))
+        fig.savefig()
 
     if showfig:
         plt.show()
@@ -3543,7 +3547,7 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
         plt.close('all')
 
 
-def plot_stokes_sbfg_lin(lin_pol_plane, psi_plane, ax, cmap2d='brightwheel', plot_title='', x_label='', y_label='',
+def plot_stokes_sbfg_lin(ax, lin_pol_plane, psi_plane, cmap2d='brightwheel', plot_title=None, x_label='', y_label='',
                          result=0, interpolation=None, **kwargs):
     '''
     Plot normalized intensity and angle of the linear polarization of the light
@@ -3576,18 +3580,19 @@ def plot_stokes_sbfg_lin(lin_pol_plane, psi_plane, ax, cmap2d='brightwheel', plo
     #             rgb_data[i][j][3] = lin_pol_plane[i][j]
     # linear_plt = ax.imshow(rgb_data, interpolation=interpolation, **kwargs)
     linear_plt = imshow2d(np.array([psi_plane, lin_pol_plane]), ax=ax, cmap2d=cmap2d,
-                          interpolation=interpolation, aspect='auto', **kwargs)
+                          interpolation=interpolation, aspect='auto', lightvmin=0, lightvmax=1, **kwargs)
     n = max(m, n)
     ax.set_ylim(0, m)
     ax.set_xlim(0, n)
-    ax.set_title(plot_title, fontsize=15)
+    if plot_title is not None:
+        ax.set_title(plot_title, fontsize=15)
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
     if result:
         return linear_plt
 
 
-def plot_stokes_sbfg_circ(s3_plane, ax, cmap='seismic', plot_title='', x_label='', y_label='', result=0,
+def plot_stokes_sbfg_circ(ax, s3_plane, cmap='seismic', plot_title=None, x_label='', y_label='', result=0,
                           interpolation=None, **kwargs):
     '''
     Plot normalized Stokes parameter S3
@@ -3606,7 +3611,8 @@ def plot_stokes_sbfg_circ(s3_plane, ax, cmap='seismic', plot_title='', x_label='
     circular_plt = ax.imshow(s3_plane, cmap=cmap, vmin=-1, vmax=1, interpolation=interpolation, aspect='auto', **kwargs)
     ax.set_ylim(0, m)
     ax.set_xlim(0, n)
-    ax.set_title(plot_title, fontsize=15)
+    if plot_title is not None:
+        ax.set_title(plot_title, fontsize=15)
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
     if result:

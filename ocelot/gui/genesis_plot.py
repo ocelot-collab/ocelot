@@ -3379,8 +3379,8 @@ def plot_stokes_angles(S, fig=None, showfig=True, direction='z', scatter=True):
             plt.close('all')
 
 def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane='max_slice', interpolation=None,
-                   cmap_lin='brightwheel', cmap_circ='seismic', figsize=4, fig_name='Visualization Stokes parameters', cbars=0, savefig=False,
-                   showfig=True, text_present=True, debug=1, **kwargs):
+                   cmap_lin='brightwheel', cmap_circ='seismic', figsize=4, fig_name='Visualization Stokes parameters',
+                   cbars=True, savefig=False, showfig=True, text_present=True, debug=1, **kwargs):
     '''
     Plot 6 images with normalized Stokes parameters on them
 
@@ -3424,6 +3424,21 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
     _logger.info('plotting stokes parameters')
     start_time = time.time()
 
+    # Plotting colorbars
+    if cbars:
+        _logger.info('plotting colorbars for stokes parameters')
+        package_dir = os.path.dirname(__file__)
+        cbar_lin_path = os.path.join(package_dir, 'colorbars', 'colorbar_linear_polarization.npy')
+        _logger.info('loading ' + cbar_lin_path)
+        cbar_lin = np.load(cbar_lin_path)
+
+        cbfig = plt.figure('cbars_stokes_parameters_visualization')
+        cbfig.set_size_inches((2 * figsize, 2 * figsize), forward=True)
+        cbax1 = cbfig.add_subplot(111)
+        cbar_lin_im = imshow2d(cbar_lin, ax=cbax1, origin='lower', cmap2d=cmap_lin ,interpolation=interpolation,
+                               extent=[-1, 1, -1, 1], aspect='equal')
+        cbax1.set_title('colorbar of the visualization of linear polarization')
+
     # Plotting data
     fig = plt.figure(fig_name)
     fig.clf()
@@ -3434,44 +3449,33 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
     linear_plt = plot_stokes_sbfg_lin(ax1, stk_params, slice=z_plane, plane='z', cmap2d=cmap_lin,
                                       plot_title=None, x_label='x', y_label='y', text_present=text_present,
                                       interpolation=interpolation, result=1, **kwargs)
-    # # Plotting colorbar
-    # if cbars:
-    #     cbaxes1 = fig.add_axes([0.0, 0.56, 0.02, 0.32])  # This is the position for the colorbar [x, y, width, height]
-    #     cb1 = plt.colorbar(linear_plt, cax=cbaxes1)
-    #     cb1.set_label('Normalized linear\npolarization intensity')
-    #     cbaxes1.tick_params(axis='both', which='major', labelsize=10)
 
     ax2 = fig.add_subplot(2, 3, 2)
     plot_stokes_sbfg_lin(ax2, stk_params, slice=x_plane, plane='x', cmap2d=cmap_lin, plot_title='Linear polarization',
-                         x_label='z', y_label='x', text_present=text_present, interpolation=interpolation, **kwargs)
+                         x_label='z', y_label='y', text_present=text_present, interpolation=interpolation, **kwargs)
 
     ax3 = fig.add_subplot(2, 3, 3)
     plot_stokes_sbfg_lin(ax3, stk_params, slice=y_plane, plane='y', cmap2d=cmap_lin, plot_title=None,
-                         x_label='x', y_label='z', text_present=text_present, interpolation=interpolation, **kwargs)
+                         x_label='z', y_label='x', text_present=text_present, interpolation=interpolation, **kwargs)
 
     ax4 = fig.add_subplot(2, 3, 4, sharex=ax1, sharey=ax1)
-    circular_plt = plot_stokes_sbfg_circ(ax4, stk_params, slice=z_plane, plane='z', cmap=cmap_circ, plot_title=None, x_label='x',
-                                         y_label='y', text_present=text_present, result=1, interpolation=interpolation, **kwargs)
-    ax4.set_ylim(0, y)
-    ax4.set_xlim(0, x)
+    circular_plt = plot_stokes_sbfg_circ(ax4, stk_params, slice=z_plane, plane='z', cmap=cmap_circ, plot_title=None,
+                                         x_label='x', y_label='y', text_present=text_present, result=1,
+                                         interpolation=interpolation, **kwargs)
 
     if cbars:
-        cbaxes4 = fig.add_axes([0.0, 0.111, 0.02, 0.32])  # This is the position for the colorbar [x, y, width, height]
-        cb4 = plt.colorbar(circular_plt, cax=cbaxes4)
-        cb4.set_label('Normalized S3 (S3/S0)')
-        cbaxes4.tick_params(axis='both', which='major', labelsize=10)
+        cbax2 = fig.add_axes([0.93, 0.111, 0.02, 0.32])  # This is the position for the colorbar [x, y, width, height]
+        cbar_circ_im = plt.colorbar(circular_plt, cax=cbax2)
+        cbax2.set_label('Normalized S3 (S3/S0)')
+        cbax2.tick_params(axis='both', which='major', labelsize=10)
 
     ax5 = fig.add_subplot(2, 3, 5, sharex=ax2, sharey=ax2)
-    plot_stokes_sbfg_circ(ax5, stk_params, slice=x_plane, plane='x', cmap=cmap_circ, plot_title='Circular polarization', x_label='y', y_label='z', text_present=text_present,
-                          interpolation=interpolation, **kwargs)
-    ax5.set_ylim(0, z)
-    ax5.set_xlim(0, y)
+    plot_stokes_sbfg_circ(ax5, stk_params, slice=x_plane, plane='x', cmap=cmap_circ, plot_title='Circular polarization',
+                          x_label='z', y_label='y', text_present=text_present, interpolation=interpolation, **kwargs)
 
     ax6 = fig.add_subplot(2, 3, 6, sharex=ax3, sharey=ax3)
-    plot_stokes_sbfg_circ(ax6, stk_params, slice=y_plane, plane='y', cmap=cmap_circ, plot_title=None, x_label='x', y_label='z', text_present=text_present,
-                          interpolation=interpolation, **kwargs)
-    ax6.set_ylim(0, z)
-    ax6.set_xlim(0, x)
+    plot_stokes_sbfg_circ(ax6, stk_params, slice=y_plane, plane='y', cmap=cmap_circ, plot_title=None, x_label='z',
+                          y_label='x', text_present=text_present, interpolation=interpolation, **kwargs)
 
     fig.subplots_adjust(wspace=0.4, hspace=0.4)
     _logger.info(ind_str + 'done in {:.2f} seconds'.format(time.time() - start_time))
@@ -3488,25 +3492,64 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
     else:
         plt.close('all')
 
+    # if cbar:
+    #     _logger.info('plotting colorbars for stokes parameters')
+    #     package_dir = os.path.dirname(__file__)
+    #     cbar_lin_path = os.path.join(package_dir, 'colorbars', 'colorbar_linear_polarization.npy')
+    #     _logger.info('loading' + cbar_lin_path)
+    #     cbar_lin = np.load(cbar_lin_path)
+    #
+    #     cbfig = plt.figure('cbars_stokes_parameters_visualization')
+    #     cbfig.set_size_inches((5 * figsize, 3 * figsize), forward=True)
+    #     cbax1 = cbfig.add_subplot(111)
+    #     cbar_lin_im = imshow2d(cbar_lin, ax=cbax1, origin='lower', cmap2d=cmap_lin, interpolation=interpolation,
+    #                            extent=[-1, 1, -1, 1], aspect='equal')
+    #     cbax1.set_title('colorbar of the visualization of linear polarization')
+    #     # cbax2 = cbfig.add_axes([0.85, 0.1, 0.02, 0.8])  # This is the position for the colorbar [x, y, width, height]
+    #     # cbax2.set_label('colorbar of the visualization of circular polarization')
+    #     # cbar_circ_im = plt.colorbar(circular_plt, cax=cbax2)
+    #     # cbar_circ_im.set_label('Normalized S3 (S3/S0)')
+    #     # cbax2.tick_params(axis='both', which='major', labelsize=10)
+    #     plt.draw()
+    #     plt.show()
+
+
 
 def plot_stokes_sbfg_lin(ax, stk_params, slice, plane, cmap2d='brightwheel', plot_title=None, x_label='', y_label='',
                          result=0, text_present=True, interpolation=None, **kwargs):
     '''
     Plot normalized intensity and angle of the linear polarization of the light
 
-    :param lin_pol_plane: numpy 2d array with normalized intensity of the linear polarization of the light
-    :param psi_plane: numpy 2d array with normalized angle  of the linear polarization of the light
     :param ax: matplotlib.pyplot.AxesSubplot on which the data will be plotted
+    :param stk_params: 3d ocelot.optics.wave.StokesParameters() type object
+    :param plane: the direction in which the projection/intersection of {stk_params} will be done
+    :param slice: this variable responds on which value on {plane} direction the 3d stk_params will intersect.
+                    It can take 3 different recognition:
+                    'max_slice': the intersection of 3d stk_params will contain the max value s0 in stk_params
+                    'proj': at the third subplot will be shown the projection of 3d stk_params in {plane} direction
+                    <number> in [m]: the position of intersection on {plane} direction
+    :param cmap2d: numpy array with shape (nwidth, nheight, 4) that contains the 4 rgba values in hue (width)
+                    and lightness (height).
+                    Can be obtained by a call to get_cmap2d(name).
+                    or:
+                    name where name is one of the following strings:
+                    'brightwheel', 'darkwheel', 'hardwheel', 'newwheel',
+                    'smoothwheel', 'wheel'
     :param plot_title: title of the plot
     :param x_label: label of the x axis
     :param y_label: label of the y axis
     :param result: a bool type variable; if bool == True the function will return linear_plt of AxesImage type
+    :param text_present: bool type variable which responds for showing text on subplots
+    :param interpolation: str type variable wich responds for interpolation before plotting linear polarized part
     :param kwargs:
+    :return:
     '''
     # Getting intersections of stk_params for ploting data
     z_max, y_max, x_max = np.unravel_index(stk_params.s0.argmax(), stk_params.s0.shape)  # getting max element position
 
     if plane in ['x', 2]:
+        swap_axes = True
+        extent = [stk_params.sc_z[0]*1e6, stk_params.sc_z[-1]*1e6, stk_params.sc_y[0]*1e6, stk_params.sc_y[-1]*1e6]
         if slice == 'max_slice':
             stk_params_plane = stk_params.slice_2d_idx(x_max, plane=plane)[:, :, 0]
             slice_pos = stk_params.sc_x[x_max]
@@ -3518,6 +3561,8 @@ def plot_stokes_sbfg_lin(ax, stk_params, slice, plane, cmap2d='brightwheel', plo
             stk_params_plane = stk_params.slice_2d_idx(slice_pos, plane=plane)[:, :, 0]
             slice_pos = stk_params.sc_x[slice_pos]
     elif plane in ['y', 1]:
+        swap_axes = True
+        extent = [stk_params.sc_z[0]*1e6, stk_params.sc_z[-1]*1e6, stk_params.sc_x[0]*1e6, stk_params.sc_x[-1]*1e6]
         if slice == 'max_slice':
             stk_params_plane = stk_params.slice_2d_idx(y_max, plane=plane)[:, 0, :]
             slice_pos = stk_params.sc_y[y_max]
@@ -3529,6 +3574,8 @@ def plot_stokes_sbfg_lin(ax, stk_params, slice, plane, cmap2d='brightwheel', plo
             stk_params_plane = stk_params.slice_2d_idx(slice_pos, plane=plane)[:, 0, :]
             slice_pos = stk_params.sc_y[slice_pos]
     elif plane in ['z', 0]:
+        swap_axes = False
+        extent = [stk_params.sc_x[0]*1e6, stk_params.sc_x[-1]*1e6, stk_params.sc_y[0]*1e6, stk_params.sc_y[-1]*1e6]
         if slice == 'max_slice':
             stk_params_plane = stk_params.slice_2d_idx(z_max, plane=plane)[0, :, :]
             slice_pos = stk_params.sc_z[z_max]
@@ -3545,43 +3592,58 @@ def plot_stokes_sbfg_lin(ax, stk_params, slice, plane, cmap2d='brightwheel', plo
 
     # Normalization
     max_s0 = np.amax(stk_params.s0)
-    lin_pol_plane = stk_params_plane.P_pol_l() / max_s0
-    psi_plane = 2 * stk_params_plane.psi() / np.pi
+    if swap_axes:
+        lin_pol_plane = np.swapaxes((stk_params_plane.P_pol_l() / max_s0), 0, 1)
+        psi_plane = np.swapaxes((2 * stk_params_plane.psi() / np.pi), 0, 1)
+    else:
+        lin_pol_plane = stk_params_plane.P_pol_l() / max_s0
+        psi_plane = 2 * stk_params_plane.psi() / np.pi
 
     m, n = psi_plane.shape
-    linear_plt = imshow2d(np.array([psi_plane, lin_pol_plane]), ax=ax, cmap2d=cmap2d,
-                          interpolation=interpolation, aspect='auto', lightvmin=0, lightvmax=1, **kwargs)
+    linear_plt = imshow2d(np.array([psi_plane, lin_pol_plane]), ax=ax, cmap2d=cmap2d, extent=extent,
+                          interpolation=interpolation, aspect='auto', lightvmin=0, lightvmax=1, origin='lower', **kwargs)
     if plot_title is not None:
         ax.set_title(plot_title, fontsize=15)
-    ax.set_xlabel(x_label)
-    ax.set_ylabel(y_label)
+    ax.set_xlabel(x_label + ' [$\mu$m]')
+    ax.set_ylabel(y_label + ' [$\mu$m]')
     if text_present:
-        dic = {'proj': 'projection', 'max_slice': 'slice at {:.3f} um (max int)'}
-        ax.text(0.97, 0.97, dic.get(slice, 'slice at {:.3f} um').format(slice_pos*1e6), horizontalalignment='right',
+        dic = {'proj': 'projection', 'max_slice': 'slice at {:.3f} $\mu$m (max int)'}
+        ax.text(0.97, 0.97, dic.get(slice, 'slice at {:.3f} $\mu$m').format(slice_pos*1e6), horizontalalignment='right',
                   verticalalignment='top', transform=ax.transAxes, fontsize=10)
     if result:
         return linear_plt
 
 
-def plot_stokes_sbfg_circ(ax, stk_params, slice, plane, cmap='seismic', plot_title=None, x_label='', y_label='', result=0,
-                         text_present=True, interpolation=None, **kwargs):
+def plot_stokes_sbfg_circ(ax, stk_params, slice, plane, cmap='seismic', plot_title=None, x_label='', y_label='',
+                          result=0, text_present=True, interpolation=None, **kwargs):
     '''
     Plot normalized Stokes parameter S3
 
-    :param s3_plane: numpy 2d array with normalized Stokes parameter S3
     :param ax: matplotlib.pyplot.AxesSubplot on which the data will be plotted
+    :param stk_params: 3d ocelot.optics.wave.StokesParameters() type object
+    :param plane: the direction in which the projection/intersection of {stk_params} will be done
+    :param slice: this variable responds on which value on {plane} direction the 3d stk_params will intersect.
+                    It can take 3 different recognition:
+                    'max_slice': the intersection of 3d stk_params will contain the max value s0 in stk_params
+                    'proj': at the third subplot will be shown the projection of 3d stk_params in {plane} direction
+                    <number> in [m]: the position of intersection on {plane} direction
     :param cmap: colormap which will be used for plotting data
     :param plot_title: title of the plot
     :param x_label: label of the x axis
     :param y_label: label of the y axis
-    :param result: a bool type variable; if bool == True the function will return circular_plt of matplotlib.collections.QuadMesh
+    :param result: a bool type variable; if bool == True the function will return linear_plt of AxesImage type
+    :param text_present: bool type variable which responds for showing text on subplots
+    :param interpolation: str type variable wich responds for interpolation before plotting linear polarized part
     :param kwargs:
+    :return:
     '''
 
     # Getting intersections of stk_params for ploting data
     z_max, y_max, x_max = np.unravel_index(stk_params.s0.argmax(), stk_params.s0.shape)  # getting max element position
 
     if plane in ['x', 2]:
+        swap_axes = True
+        extent = [stk_params.sc_z[0]*1e6, stk_params.sc_z[-1]*1e6, stk_params.sc_y[0]*1e6, stk_params.sc_y[-1]*1e6]
         if slice == 'max_slice':
             stk_params_plane = stk_params.slice_2d_idx(x_max, plane=plane)[:, :, 0]
             slice_pos = stk_params.sc_x[x_max]
@@ -3593,6 +3655,8 @@ def plot_stokes_sbfg_circ(ax, stk_params, slice, plane, cmap='seismic', plot_tit
             stk_params_plane = stk_params.slice_2d_idx(slice_pos, plane=plane)[:, :, 0]
             slice_pos = stk_params.sc_x[slice_pos]
     elif plane in ['y', 1]:
+        swap_axes = True
+        extent = [stk_params.sc_z[0]*1e6, stk_params.sc_z[-1]*1e6, stk_params.sc_x[0]*1e6, stk_params.sc_x[-1]*1e6]
         if slice == 'max_slice':
             stk_params_plane = stk_params.slice_2d_idx(y_max, plane=plane)[:, 0, :]
             slice_pos = stk_params.sc_y[y_max]
@@ -3604,6 +3668,8 @@ def plot_stokes_sbfg_circ(ax, stk_params, slice, plane, cmap='seismic', plot_tit
             stk_params_plane = stk_params.slice_2d_idx(slice_pos, plane=plane)[:, 0, :]
             slice_pos = stk_params.sc_y[slice_pos]
     elif plane in ['z', 0]:
+        swap_axes = False
+        extent = [stk_params.sc_x[0]*1e6, stk_params.sc_x[-1]*1e6, stk_params.sc_y[0]*1e6, stk_params.sc_y[-1]*1e6]
         if slice == 'max_slice':
             stk_params_plane = stk_params.slice_2d_idx(z_max, plane=plane)[0, :, :]
             slice_pos = stk_params.sc_z[z_max]
@@ -3620,17 +3686,21 @@ def plot_stokes_sbfg_circ(ax, stk_params, slice, plane, cmap='seismic', plot_tit
 
     # Normalization
     max_s0 = np.amax(stk_params.s0)
-    s3_plane = stk_params_plane.s3 / max_s0
+    if swap_axes:
+        s3_plane = np.swapaxes((stk_params_plane.s3 / max_s0), 0, 1)
+    else:
+        s3_plane = stk_params_plane.s3 / max_s0
 
     m, n = s3_plane.shape
-    circular_plt = ax.imshow(s3_plane, cmap=cmap, vmin=-1, vmax=1, interpolation=interpolation, aspect='auto', **kwargs)
+    circular_plt = ax.imshow(s3_plane, cmap=cmap, vmin=-1, vmax=1, interpolation=interpolation, aspect='auto',
+                             extent=extent, origin='lower', **kwargs)
     if plot_title is not None:
         ax.set_title(plot_title, fontsize=15)
-    ax.set_xlabel(x_label)
-    ax.set_ylabel(y_label)
+    ax.set_xlabel(x_label + ' [$\mu$m]')
+    ax.set_ylabel(y_label + ' [$\mu$m]')
     if text_present:
-        dic = {'proj': 'projection', 'max_slice': 'slice at {:.3f} um (max int)'}
-        ax.text(0.97, 0.97, dic.get(slice, 'slice at {:.3f} um').format(slice_pos*1e6), horizontalalignment='right',
+        dic = {'proj': 'projection', 'max_slice': 'slice at {:.3f} $\mu$m (max int)'}
+        ax.text(0.97, 0.97, dic.get(slice, 'slice at {:.3f} $\mu$m').format(slice_pos*1e6), horizontalalignment='right',
                   verticalalignment='top', transform=ax.transAxes, fontsize=10)
     if result:
         return circular_plt

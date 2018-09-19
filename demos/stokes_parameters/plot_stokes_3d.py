@@ -42,5 +42,5 @@ plot_dfl(dflR, cmap='Greys')
 
 S = calc_stokes_dfl(dflR, dflL, basis = 'rl')
 
-plot_stokes_3d(S, x_plane='max_slice', y_plane='max_slice', z_plane='max_slice', fig_name = 'slice_properties')
-plot_stokes_3d(S, x_plane='proj', y_plane='proj', z_plane='proj', fig_name = 'projected_properties')
+plot_stokes_3d(S, x_plane='max_slice', y_plane='max_slice', z_plane='max_slice', fig_name='slice_properties', cbars=True)
+plot_stokes_3d(S, x_plane='proj', y_plane='proj', z_plane='proj', fig_name='projected_properties', cbars=False)

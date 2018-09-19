@@ -3421,71 +3421,19 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
 
     if showfig == False and savefig == False:
         return
-    # z, y, x = stk_params.sc_z, stk_params.sc_y, stk_params.sc_x
     _logger.info('plotting stokes parameters')
-    
-    # Getting intersections of stk_params for ploting data
-    z_max, y_max, x_max = np.unravel_index(stk_params.s0.argmax(), stk_params.s0.shape)  # getting max element position
-    # x_plane_pos, y_plane_pos, z_plane_pos = 0, 0, 0
-    if x_plane == 'max_slice':
-        x_plane_pos = x_max
-        stk_params_zy = stk_params.slice_2d_idx(x_plane_pos, plane='x')[:, :, 0]
-        x_plane_pos = stk_params.sc_x[0] + x_max*(stk_params.sc_x[-1] - stk_params.sc_x[0])/stk_params.s0.shape[2]
-    elif x_plane == 'proj':
-        stk_params_zy = stk_params.proj(plane='x', mode='mean')[:, :, 0]
-        x_plane_pos = 0
-    else:
-        x_plane_pos = find_nearest_idx(stk_params.sc_x, x_plane) # <----   !!!!!
-        stk_params_zy = stk_params.slice_2d_idx(x_plane_pos, plane='x')[:, :, 0]
-        x_plane_pos = x_plane
-
-    if y_plane == 'max_slice':
-        y_plane_pos = y_max
-        stk_params_zx = stk_params.slice_2d_idx(y_plane_pos, plane='y')[:, 0, :]
-        y_plane_pos = stk_params.sc_y[0] + y_max*(stk_params.sc_y[-1] - stk_params.sc_y[0])/stk_params.s0.shape[1]
-    elif y_plane == 'proj':
-        stk_params_zx = stk_params.proj(plane='y', mode='mean')[:, 0, :]
-        y_plane_pos = 0
-    else:
-        y_plane_pos = int(((y_plane - stk_params.sc_y[0]) / (stk_params.sc_y[-1] - stk_params.sc_y[0])) * stk_params.s0.shape[1])
-        stk_params_zx = stk_params.slice_2d_idx(y_plane_pos, plane='y')[:, 0, :]
-        y_plane_pos = y_plane
-
-    if z_plane == 'max_slice':
-        z_plane_pos = z_max
-        stk_params_yx = stk_params.slice_2d_idx(z_plane_pos, plane='z')[0, :, :]
-        z_plane_pos = stk_params.sc_z[0] + z_max*(stk_params.sc_z[-1] - stk_params.sc_z[0])/stk_params.s0.shape[0]
-    elif z_plane == 'proj':
-        stk_params_yx = stk_params.proj(plane='z', mode='mean')[0, :, :]
-        z_plane_pos = 0
-    else:
-        z_plane_pos = int(((z_plane - stk_params.sc_z[0]) / (stk_params.sc_z[-1] - stk_params.sc_z[0])) * stk_params.s0.shape[0])
-        stk_params_yx = stk_params.slice_2d_idx(z_plane_pos, plane='z')[0, :, :]
-        z_plane_pos = z_plane
-
-    # Normalization
-    max_s0 = np.amax(stk_params.s0)
-    lin_pol_plane_zy = stk_params_zy.P_pol_l() / max_s0
-    psi_plane_zy = 2 * stk_params_zy.psi() / np.pi
-    lin_pol_plane_zx = stk_params_zx.P_pol_l() / max_s0
-    psi_plane_zx = 2 * stk_params_zx.psi() / np.pi
-    lin_pol_plane_yx = stk_params_yx.P_pol_l() / max_s0
-    psi_plane_yx = 2 * stk_params_yx.psi() / np.pi
-
-    s3_plane_zy = stk_params_zy.s3 / max_s0
-    s3_plane_zx = stk_params_zx.s3 / max_s0
-    s3_plane_yx = stk_params_yx.s3 / max_s0
+    start_time = time.time()
 
     # Plotting data
     fig = plt.figure(fig_name)
     fig.clf()
     fig.set_size_inches((5 * figsize, 3 * figsize), forward=True)
 
+    z, y, x = stk_params.s0.shape
     ax1 = fig.add_subplot(2, 3, 1)
-    linear_plt = plot_stokes_sbfg_lin(ax1, lin_pol_plane_yx, psi_plane_yx, cmap2d=cmap_lin,
-                                      plot_title=None, x_label='x', y_label='y',
+    linear_plt = plot_stokes_sbfg_lin(ax1, stk_params, slice=z_plane, plane='z', cmap2d=cmap_lin,
+                                      plot_title=None, x_label='x', y_label='y', text_present=text_present,
                                       interpolation=interpolation, result=1, **kwargs)
-
     # # Plotting colorbar
     # if cbars:
     #     cbaxes1 = fig.add_axes([0.0, 0.56, 0.02, 0.32])  # This is the position for the colorbar [x, y, width, height]
@@ -3494,16 +3442,19 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
     #     cbaxes1.tick_params(axis='both', which='major', labelsize=10)
 
     ax2 = fig.add_subplot(2, 3, 2)
-    plot_stokes_sbfg_lin(ax2, lin_pol_plane_zy, psi_plane_zy, cmap2d=cmap_lin, plot_title='Linear polarization',
-                         x_label='y', y_label='z', interpolation=interpolation, **kwargs)
+    plot_stokes_sbfg_lin(ax2, stk_params, slice=x_plane, plane='x', cmap2d=cmap_lin, plot_title='Linear polarization',
+                         x_label='z', y_label='x', text_present=text_present, interpolation=interpolation, **kwargs)
 
     ax3 = fig.add_subplot(2, 3, 3)
-    plot_stokes_sbfg_lin(ax3, lin_pol_plane_zx, psi_plane_zx, cmap2d=cmap_lin, plot_title=None,
-                         x_label='x', y_label='z', interpolation=interpolation, **kwargs)
+    plot_stokes_sbfg_lin(ax3, stk_params, slice=y_plane, plane='y', cmap2d=cmap_lin, plot_title=None,
+                         x_label='x', y_label='z', text_present=text_present, interpolation=interpolation, **kwargs)
 
     ax4 = fig.add_subplot(2, 3, 4, sharex=ax1, sharey=ax1)
-    circular_plt = plot_stokes_sbfg_circ(ax4, s3_plane_yx, cmap=cmap_circ, plot_title=None, x_label='x',
-                                         y_label='y', result=1, interpolation=interpolation, **kwargs)
+    circular_plt = plot_stokes_sbfg_circ(ax4, stk_params, slice=z_plane, plane='z', cmap=cmap_circ, plot_title=None, x_label='x',
+                                         y_label='y', text_present=text_present, result=1, interpolation=interpolation, **kwargs)
+    ax4.set_ylim(0, y)
+    ax4.set_xlim(0, x)
+
     if cbars:
         cbaxes4 = fig.add_axes([0.0, 0.111, 0.02, 0.32])  # This is the position for the colorbar [x, y, width, height]
         cb4 = plt.colorbar(circular_plt, cax=cbaxes4)
@@ -3511,44 +3462,35 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
         cbaxes4.tick_params(axis='both', which='major', labelsize=10)
 
     ax5 = fig.add_subplot(2, 3, 5, sharex=ax2, sharey=ax2)
-    plot_stokes_sbfg_circ(ax5, s3_plane_zy, cmap=cmap_circ, plot_title='Circular polarization', x_label='y', y_label='z',
+    plot_stokes_sbfg_circ(ax5, stk_params, slice=x_plane, plane='x', cmap=cmap_circ, plot_title='Circular polarization', x_label='y', y_label='z', text_present=text_present,
                           interpolation=interpolation, **kwargs)
+    ax5.set_ylim(0, z)
+    ax5.set_xlim(0, y)
 
     ax6 = fig.add_subplot(2, 3, 6, sharex=ax3, sharey=ax3)
-    plot_stokes_sbfg_circ(ax6, s3_plane_zx, cmap=cmap_circ, plot_title=None, x_label='x', y_label='z',
+    plot_stokes_sbfg_circ(ax6, stk_params, slice=y_plane, plane='y', cmap=cmap_circ, plot_title=None, x_label='x', y_label='z', text_present=text_present,
                           interpolation=interpolation, **kwargs)
-
-    if text_present:
-        dic = {'proj': 'projection', 'max_slice': 'slice at {:.3f} um (max int)'}
-        ax1.text(0.97, 0.97, dic.get(z_plane, 'slice at {:.3f} um').format(z_plane_pos*1e6), horizontalalignment='right',
-                 verticalalignment='top', transform=ax1.transAxes, fontsize=10)
-        ax4.text(0.97, 0.97, dic.get(z_plane, 'slice at {:.3f} um').format(z_plane_pos*1e6), horizontalalignment='right',
-                 verticalalignment='top', transform=ax4.transAxes, fontsize=10)
-        ax2.text(0.97, 0.97, dic.get(x_plane, 'slice at {:.3f} um').format(x_plane_pos*1e6), horizontalalignment='right',
-                 verticalalignment='top', transform=ax2.transAxes, fontsize=10)
-        ax5.text(0.97, 0.97, dic.get(x_plane, 'slice at {:.3f} um').format(x_plane_pos*1e6), horizontalalignment='right',
-                 verticalalignment='top', transform=ax5.transAxes, fontsize=10)
-        ax3.text(0.97, 0.97, dic.get(y_plane, 'slice at {:.3f} um').format(y_plane_pos*1e6), horizontalalignment='right',
-                 verticalalignment='top', transform=ax3.transAxes, fontsize=10)
-        ax6.text(0.97, 0.97, dic.get(y_plane, 'slice at {:.3f} um').format(y_plane_pos*1e6), horizontalalignment='right',
-                 verticalalignment='top', transform=ax6.transAxes, fontsize=10)
+    ax6.set_ylim(0, z)
+    ax6.set_xlim(0, x)
 
     fig.subplots_adjust(wspace=0.4, hspace=0.4)
+    _logger.info(ind_str + 'done in {:.2f} seconds'.format(time.time() - start_time))
     plt.draw()
     if savefig != False:
         if savefig == True:
             savefig = 'png'
-        _logger.debug(ind_str + 'saving *{:}.{:}'.format(suffix,savefig))
+        _logger.debug(ind_str + 'saving figure')
         fig.savefig()
 
     if showfig:
+        _logger.debug(ind_str + 'showing Stokes Parameters')
         plt.show()
     else:
         plt.close('all')
 
 
-def plot_stokes_sbfg_lin(ax, lin_pol_plane, psi_plane, cmap2d='brightwheel', plot_title=None, x_label='', y_label='',
-                         result=0, interpolation=None, **kwargs):
+def plot_stokes_sbfg_lin(ax, stk_params, slice, plane, cmap2d='brightwheel', plot_title=None, x_label='', y_label='',
+                         result=0, text_present=True, interpolation=None, **kwargs):
     '''
     Plot normalized intensity and angle of the linear polarization of the light
 
@@ -3561,39 +3503,68 @@ def plot_stokes_sbfg_lin(ax, lin_pol_plane, psi_plane, cmap2d='brightwheel', plo
     :param result: a bool type variable; if bool == True the function will return linear_plt of AxesImage type
     :param kwargs:
     '''
-    if psi_plane.shape != lin_pol_plane.shape:
-        raise TypeError
-    m, n = psi_plane.shape
+    # Getting intersections of stk_params for ploting data
+    z_max, y_max, x_max = np.unravel_index(stk_params.s0.argmax(), stk_params.s0.shape)  # getting max element position
 
-    # 'Transform to rgb'
-    # ax.set_facecolor((0, 0, 0))
-    # psi_plane = (psi_plane + 1)/2
-    # rgb_data = np.zeros((n, m, 4))
-    # for i in range(n):
-    #     for j in range(m):
-    #         rgb_data[i][j][0] = psi_plane[i][j]
-    #         rgb_data[i][j][1] = psi_plane[i][j]
-    #         rgb_data[i][j][2] = 1
-    #         if lin_pol_plane[i][j] > 1:
-    #             rgb_data[i][j][3] = 1
-    #         else:
-    #             rgb_data[i][j][3] = lin_pol_plane[i][j]
-    # linear_plt = ax.imshow(rgb_data, interpolation=interpolation, **kwargs)
+    if plane in ['x', 2]:
+        if slice == 'max_slice':
+            stk_params_plane = stk_params.slice_2d_idx(x_max, plane=plane)[:, :, 0]
+            slice_pos = stk_params.sc_x[x_max]
+        elif slice == 'proj':
+            stk_params_plane = stk_params.proj(plane=plane, mode='mean')[:, :, 0]
+            slice_pos = 0
+        else:
+            slice_pos = find_nearest_idx(stk_params.sc_x, slice)
+            stk_params_plane = stk_params.slice_2d_idx(slice_pos, plane=plane)[:, :, 0]
+            slice_pos = stk_params.sc_x[slice_pos]
+    elif plane in ['y', 1]:
+        if slice == 'max_slice':
+            stk_params_plane = stk_params.slice_2d_idx(y_max, plane=plane)[:, 0, :]
+            slice_pos = stk_params.sc_y[y_max]
+        elif slice == 'proj':
+            stk_params_plane = stk_params.proj(plane=plane, mode='mean')[:, 0, :]
+            slice_pos = 0
+        else:
+            slice_pos = find_nearest_idx(stk_params.sc_y, slice)
+            stk_params_plane = stk_params.slice_2d_idx(slice_pos, plane=plane)[:, 0, :]
+            slice_pos = stk_params.sc_y[slice_pos]
+    elif plane in ['z', 0]:
+        if slice == 'max_slice':
+            stk_params_plane = stk_params.slice_2d_idx(z_max, plane=plane)[0, :, :]
+            slice_pos = stk_params.sc_z[z_max]
+        elif slice == 'proj':
+            stk_params_plane = stk_params.proj(plane=plane, mode='mean')[0, :, :]
+            slice_pos = 0
+        else:
+            slice_pos = find_nearest_idx(stk_params.sc_z, slice)
+            stk_params_plane = stk_params.slice_2d_idx(slice_pos, plane=plane)[0, :, :]
+            slice_pos = stk_params.sc_z[slice_pos]
+    else:
+        _logger.error(ind_str + 'argument "plane" should be in ["x","y","z",0,1,2]')
+        raise ValueError('argument "plane" should be in ["x","y","z",0,1,2]')
+
+    # Normalization
+    max_s0 = np.amax(stk_params.s0)
+    lin_pol_plane = stk_params_plane.P_pol_l() / max_s0
+    psi_plane = 2 * stk_params_plane.psi() / np.pi
+
+    m, n = psi_plane.shape
     linear_plt = imshow2d(np.array([psi_plane, lin_pol_plane]), ax=ax, cmap2d=cmap2d,
                           interpolation=interpolation, aspect='auto', lightvmin=0, lightvmax=1, **kwargs)
-    n = max(m, n)
-    ax.set_ylim(0, m)
-    ax.set_xlim(0, n)
     if plot_title is not None:
         ax.set_title(plot_title, fontsize=15)
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
+    if text_present:
+        dic = {'proj': 'projection', 'max_slice': 'slice at {:.3f} um (max int)'}
+        ax.text(0.97, 0.97, dic.get(slice, 'slice at {:.3f} um').format(slice_pos*1e6), horizontalalignment='right',
+                  verticalalignment='top', transform=ax.transAxes, fontsize=10)
     if result:
         return linear_plt
 
 
-def plot_stokes_sbfg_circ(ax, s3_plane, cmap='seismic', plot_title=None, x_label='', y_label='', result=0,
-                          interpolation=None, **kwargs):
+def plot_stokes_sbfg_circ(ax, stk_params, slice, plane, cmap='seismic', plot_title=None, x_label='', y_label='', result=0,
+                         text_present=True, interpolation=None, **kwargs):
     '''
     Plot normalized Stokes parameter S3
 
@@ -3607,16 +3578,63 @@ def plot_stokes_sbfg_circ(ax, s3_plane, cmap='seismic', plot_title=None, x_label
     :param kwargs:
     '''
 
+    # Getting intersections of stk_params for ploting data
+    z_max, y_max, x_max = np.unravel_index(stk_params.s0.argmax(), stk_params.s0.shape)  # getting max element position
+
+    if plane in ['x', 2]:
+        if slice == 'max_slice':
+            stk_params_plane = stk_params.slice_2d_idx(x_max, plane=plane)[:, :, 0]
+            slice_pos = stk_params.sc_x[x_max]
+        elif slice == 'proj':
+            stk_params_plane = stk_params.proj(plane=plane, mode='mean')[:, :, 0]
+            slice_pos = 0
+        else:
+            slice_pos = find_nearest_idx(stk_params.sc_x, slice)
+            stk_params_plane = stk_params.slice_2d_idx(slice_pos, plane=plane)[:, :, 0]
+            slice_pos = stk_params.sc_x[slice_pos]
+    elif plane in ['y', 1]:
+        if slice == 'max_slice':
+            stk_params_plane = stk_params.slice_2d_idx(y_max, plane=plane)[:, 0, :]
+            slice_pos = stk_params.sc_y[y_max]
+        elif slice == 'proj':
+            stk_params_plane = stk_params.proj(plane=plane, mode='mean')[:, 0, :]
+            slice_pos = 0
+        else:
+            slice_pos = find_nearest_idx(stk_params.sc_y, slice)
+            stk_params_plane = stk_params.slice_2d_idx(slice_pos, plane=plane)[:, 0, :]
+            slice_pos = stk_params.sc_y[slice_pos]
+    elif plane in ['z', 0]:
+        if slice == 'max_slice':
+            stk_params_plane = stk_params.slice_2d_idx(z_max, plane=plane)[0, :, :]
+            slice_pos = stk_params.sc_z[z_max]
+        elif slice == 'proj':
+            stk_params_plane = stk_params.proj(plane=plane, mode='mean')[0, :, :]
+            slice_pos = 0
+        else:
+            slice_pos = find_nearest_idx(stk_params.sc_z, slice)
+            stk_params_plane = stk_params.slice_2d_idx(slice_pos, plane=plane)[0, :, :]
+            slice_pos = stk_params.sc_z[slice_pos]
+    else:
+        _logger.error(ind_str + 'argument "plane" should be in ["x","y","z",0,1,2]')
+        raise ValueError('argument "plane" should be in ["x","y","z",0,1,2]')
+
+    # Normalization
+    max_s0 = np.amax(stk_params.s0)
+    s3_plane = stk_params_plane.s3 / max_s0
+
     m, n = s3_plane.shape
     circular_plt = ax.imshow(s3_plane, cmap=cmap, vmin=-1, vmax=1, interpolation=interpolation, aspect='auto', **kwargs)
-    ax.set_ylim(0, m)
-    ax.set_xlim(0, n)
     if plot_title is not None:
         ax.set_title(plot_title, fontsize=15)
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
+    if text_present:
+        dic = {'proj': 'projection', 'max_slice': 'slice at {:.3f} um (max int)'}
+        ax.text(0.97, 0.97, dic.get(slice, 'slice at {:.3f} um').format(slice_pos*1e6), horizontalalignment='right',
+                  verticalalignment='top', transform=ax.transAxes, fontsize=10)
     if result:
         return circular_plt
+
 
 '''
     scheduled for removal

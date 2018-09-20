@@ -661,10 +661,10 @@ class StokesParameters:
         if plane in ['x', 2]:
             plane = 2
             scale = self.sc_x
-        elif plane == ['y', 1]:
+        elif plane in ['y', 1]:
             plane = 1
             scale = self.sc_y
-        elif plane == ['z', 0]:
+        elif plane in ['z', 0]:
             plane = 0
             scale = self.sc_z
         else:

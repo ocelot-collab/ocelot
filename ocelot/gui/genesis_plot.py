@@ -850,6 +850,10 @@ def plot_gen_out_ph(g, legend=False, figsize=4, fig_name='Radiation', savefig=Fa
     else:
         fig = plot_gen_out_evo(g, params=['rad_pow_log', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
 
+def plot_gen_out_slip(g, legend=False, figsize=4, fig_name='Slippage', savefig=False, showfig=True, debug=1):
+    if g('itdp'):
+        fig = plot_gen_out_evo(g, params=['rad_spec_evo_n', 'rad_pow_evo_n'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
+
 def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'el_bunching', 'rad_pow_en_log', 'rad_pow_en_lin', 'rad_spec_log', 'rad_size', 'rad_spec_evo_n', 'rad_pow_evo_n'], figsize=4, legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
     '''
     plots evolution of given parameters from genesis output with undulator length

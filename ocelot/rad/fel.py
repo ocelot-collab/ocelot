@@ -7,7 +7,7 @@ basic fel calculations
 import numpy as np
 import numpy.fft as fft
 import scipy.special as sf
-from ocelot.common.globals import m_e_eV, epsilon_0, speed_of_light, q_e, h_eV_s
+from ocelot.common.globals import m_e_eV, epsilon_0, speed_of_light, q_e, h_eV_s, lambda_C_r, I_Alfven, ro_e
 import logging
 from scipy.optimize import fmin
 from copy import deepcopy
@@ -42,7 +42,7 @@ class FelParameters:
         
         self.lambda0 = self.xlamd / (2.0 * self.gamma0**2) * (1.0 + self.aw0**2) # resonant wavelength
         self.k0 = 2 * np.pi / self.lambda0
-        self.Ia = 4 * np.pi * epsilon_0 * m_e_eV * speed_of_light # Alfven (Budker) current (~17kA)
+        # self.Ia = I_Alfven #remove
             
         if self.iwityp == 0: #planar undulator
             ja = self.aw0**2 / (2*(1 + self.aw0**2))
@@ -59,25 +59,53 @@ class FelParameters:
         
 
         # h_eV_s * speed_of_light / self.lambda0
+        if method == 'mxie':
+            '''
+            M. Xie, “Exact and variational solutions of 3D eigenmodes in high gain FELs,” Nucl. Instruments Methods Phys. Res. Sect. A Accel. Spectrometers, Detect. Assoc. Equip., vol. 445, no. 1–3, pp. 59–66, 2000.
+            '''
+            self.rho1 = (0.5 / self.gamma0) * np.power( (self.aw0 * self.fc * self.xlamd / 2 / np.pi )**2 / (self.rxbeam * self.rybeam) * self.I / I_Alfven, 1.0/3.0) 
+            
+            #self.power = 6.0 * np.sqrt(np.pi) * self.rho1**2 * self.Pb / (self.N * np.log(self.N / self.rho1) ) # shot noise power [W] [Reiche]
+            self.lg1 = self.xlamd / (4*np.pi * np.sqrt(3) * self.rho1) #power gain length [Xie]
+            
+            self.zr = 4 * np.pi * self.rxbeam * self.rybeam / self.lambda0
+            
+            a = [None, 0.45, 0.57, 0.55, 1.6, 3.0, 2.0, 0.35, 2.9, 2.4, 51.0, 0.95, 3.0, 5.4, 0.7, 1.9, 1140.0, 2.2, 2.9, 3.2]
+            
+            self.xie_etad = self.lg1 / (2 * self.k0 * self.rxbeam * self.rybeam)
+            #self.xie_etae = 4 * pi * self.lg1 / (self.betax*2*pi) * self.k0 * (self.emitx / self.gamma0)
+            self.xie_etae = 4 * np.pi * self.lg1 * (self.emitx * self.emity) / self.lambda0 / (self.rxbeam * self.rybeam) / self.gamma0**2 # expressed via average x-y beam size
+            self.xie_etagamma = self.deta / (self.rho1 * np.sqrt(3))
+            self.xie_lscale = (a[1] * self.xie_etad ** a[2] + a[3] * self.xie_etae ** a[4] + a[5] * self.xie_etagamma ** a[6] 
+            + a[7] * self.xie_etae ** a[8] * self.xie_etagamma ** a[9] + a[10] * self.xie_etad ** a[11] * self.xie_etagamma ** a[12] + a[13] * self.xie_etad ** a[14] * self.xie_etae ** a[15]
+            + a[16] * self.xie_etad ** a[17] * self.xie_etae ** a[18] * self.xie_etagamma ** a[19])
+            
+            self.lg3 = self.lg1 * (1 + self.xie_lscale)
+            self.method = 'mxie'
+            
+        elif method == 'ssy_opt':
+            '''
+            E. L. Saldin, E. A. Schneidmiller, and M. V. Yurkov, “Design formulas for short-wavelength FELs,” Opt. Commun., vol. 235, no. 4–6, pp. 415–420, May 2004.
+            '''
+            emit_n = np.sqrt(self.emitx * self.emity)
+            
+            if self.iwityp == 0: #planar undulator
+                F_aw = 1.7 * self.aw0 + 1 / (1 + 1.88 * self.aw0 + 0.8 * self.aw0**2)
+            else: #helical undulator
+                F_aw = 1.42 * self.aw0 + 1 / (1 + 1.5 * self.aw0 + 0.95 * self.aw0**2)
+                
+            self.lg1 = 0.5 * 1.67 * np.sqrt(I_Alfven / self.I) * (emit_n * self.xlamd)**(5/6) / self.lambda0**(2/3) * (1 + self.aw0**2)**(1/3) / (self.aw0 * self.fc) # power gain length = 0.5 * field gain length
+            self.delta = 131 * (I_Alfven / self.I) * emit_n**(5/4) / (self.lambda0 * self.xlamd**9)**(1/8) * self.delgam**2 / (self.aw0 * self.fc)**2 / (1 + self.aw0**2)**(1/8)
+            self.lg3 = self.lg1 * (1 + self.delta)
+            self.delta_q = 5.5e-4 * (I_Alfven / self.I)**(3/2) * lambda_C_r * ro_e * emit_n**2 / self.lambda0**(11/4) / self.xlamd**(5/4) * (1 + self.aw0**2)**(9/4) * F_aw / (self.aw0 * self.fc**3)
+            self.delta_eff = (self.delta + self.delta_q) / (1 - self.delta_q)
+            self.beta_opt_calc = 11.2 * (I_Alfven / self.I)**(1/2) * (emit_n**3 * self.xlamd)**(1/2) / (self.lambda0 * self.aw0 * self.fc) / (1 + 8 * self.delta_eff)**(1/3)
+            
+            self.method = 'ssy_opt'
+        else:
+            _logger.error('method should be in ["mxie", "ssy_opt"]')
+            raise ValueError('method should be in ["mxie", "ssy_opt"]')
         
-        self.rho1 = (0.5 / self.gamma0) * np.power( (self.aw0 * self.fc * self.xlamd / 2 / np.pi )**2 / (self.rxbeam * self.rybeam) * self.I / self.Ia, 1.0/3.0)
-        
-        #self.power = 6.0 * np.sqrt(np.pi) * self.rho1**2 * self.Pb / (self.N * np.log(self.N / self.rho1) ) # shot noise power [W] [Reiche]
-        self.lg1 = self.xlamd / (4*np.pi * np.sqrt(3) * self.rho1) #[Xie]
-        
-        self.zr = 4 * np.pi * self.rxbeam * self.rybeam / self.lambda0
-        
-        a = [None, 0.45, 0.57, 0.55, 1.6, 3.0, 2.0, 0.35, 2.9, 2.4, 51.0, 0.95, 3.0, 5.4, 0.7, 1.9, 1140.0, 2.2, 2.9, 3.2]
-        
-        self.xie_etad = self.lg1 / (2 * self.k0 * self.rxbeam * self.rybeam)
-        #self.xie_etae = 4 * pi * self.lg1 / (self.betax*2*pi) * self.k0 * (self.emitx / self.gamma0)
-        self.xie_etae = 4 * np.pi * self.lg1 * (self.emitx * self.emity) / self.lambda0 / (self.rxbeam * self.rybeam) / self.gamma0**2 # expressed via average x-y beam size
-        self.xie_etagamma = self.deta / (self.rho1 * np.sqrt(3))
-        self.xie_lscale = (a[1] * self.xie_etad ** a[2] + a[3] * self.xie_etae ** a[4] + a[5] * self.xie_etagamma ** a[6] 
-        + a[7] * self.xie_etae ** a[8] * self.xie_etagamma ** a[9] + a[10] * self.xie_etad ** a[11] * self.xie_etagamma ** a[12] + a[13] * self.xie_etad ** a[14] * self.xie_etae ** a[15]
-        + a[16] * self.xie_etad ** a[17] * self.xie_etae ** a[18] * self.xie_etagamma ** a[19])
-        
-        self.lg3 = self.lg1 * (1 + self.xie_lscale)
         self.lg3 *= self.lg_mult
         if self.lg_mult != 1:
             _logger.info('lg3 multiplied by lg_mult ({})'.format(self.lg_mult))
@@ -96,27 +124,35 @@ class FelParameters:
         self.z_sat_min = np.nanmin(self.z_sat_magn)
         
     def beta_opt(self, method='mxie', apply=False, **kwargs):
-        beta_orig_x, beta_orig_y = self.betax, self.betay
-        beta_orig = np.mean([beta_orig_x, beta_orig_y])
+        if method == 'mxie':
+            beta_orig_x, beta_orig_y = self.betax, self.betay
+            beta_orig = np.mean([beta_orig_x, beta_orig_y])
+            
+            fel_copy = deepcopy(self)
+            def f(x, method=method):
+                fel_copy.betax = fel_copy.betay = x
+                fel_copy.eval(method=method)
+                return fel_copy.lg3
+            
+            err_dict = np.geterr()
+            np.seterr(all='ignore')
+            beta_opt = fmin(f, beta_orig, disp=0, **kwargs)
+            np.seterr(**err_dict)
+            
+        elif method == 'ssy_opt':
+            beta_opt = self.beta_opt_calc
         
-        fel_copy = deepcopy(self)
-        def f(x, method=method):
-            fel_copy.betax = fel_copy.betay = x
-            fel_copy.eval(method=method)
-            return fel_copy.lg3
-        
-        err_dict = np.geterr()
-        np.seterr(all='ignore')
-        beta_opt = fmin(f, beta_orig, disp=0, **kwargs)
-        np.seterr(**err_dict)
-        
+        else:
+            _logger.error('method should be in ["mxie", "ssy_opt"]')
+            raise ValueError('method should be in ["mxie", "ssy_opt"]')
+            
         if apply:
             self.betax = beta_opt
             self.betay = beta_opt
-            self.eval()
+            self.eval(method)
         else:
             return beta_opt[0]
-        
+            
     
     def log(self, type='debug'):
     
@@ -142,8 +178,8 @@ class FelParameters:
         # _log_func('beam alphay = {}'.format(self.alphay))
         _log_func('beam betax = {}'.format(self.betax))
         _log_func('beam betay = {}'.format(self.betay))
-        _log_func('beam emitx = {}'.format(self.emitx))
-        _log_func('beam emity = {}'.format(self.emity))
+        _log_func('beam emitx_norm = {}'.format(self.emitx))
+        _log_func('beam emity_norm = {}'.format(self.emity))
         # _log_func('beam x = {}'.format(self.xbeam))
         # _log_func('beam y = {}'.format(self.ybeam))
         # _log_func('beam px = {}'.format(self.pxbeam))
@@ -275,10 +311,10 @@ def calculateFelParameters(input, array=False, method='mxie'):
     
     p.eval(method)
     
-    if array:
-        p.log('log')
-    else:
-        pass
+    # if array:
+        # p.log('log')
+    # else:
+        # pass
         # p.log('debug')
     
     

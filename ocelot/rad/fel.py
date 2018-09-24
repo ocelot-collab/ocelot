@@ -311,10 +311,10 @@ def calculateFelParameters(input, array=False, method='mxie'):
     
     p.eval(method)
     
-    if array:
-        p.log('log')
-    else:
-        pass
+    # if array:
+        # p.log('log')
+    # else:
+        # pass
         # p.log('debug')
     
     

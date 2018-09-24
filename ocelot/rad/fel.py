@@ -25,7 +25,7 @@ class FelParameters:
     def eval(self, method='mxie'):
         _logger.debug('Calculating FEL parameters')
         
-        if self.betax <=0 or self.betay <=0:
+        if np.any(self.betax <= 0) or np.any(self.betay <= 0):
             _logger.warning('betax or betay <= 0, returning lg3=np.nan')
             self.lg3 = np.nan
             return
@@ -33,7 +33,7 @@ class FelParameters:
         self.rxbeam = np.sqrt(self.betax * self.emitx / self.gamma0)
         self.rybeam = np.sqrt(self.betay * self.emity / self.gamma0)
         
-        if self.rxbeam <=0 or self.rybeam <=0:
+        if np.any(self.rxbeam <= 0) or np.any(self.rybeam <= 0):
             _logger.warning('rxbeam or rybeam <= 0, returning lg3=np.nan')
             self.lg3 = np.nan
             return

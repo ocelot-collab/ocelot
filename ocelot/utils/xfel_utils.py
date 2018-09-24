@@ -336,7 +336,7 @@ def prepare_el_optics(beam, lat_pkg, E_photon=None, beta_av=None, s=None):
         if beta_av <= l_fodo * 2:
             beta_av = l_fodo * 2 * 1.001
         raise_min_beta = True
-        _logger.info('optimal minimal average beta function was estimated and set to {}m'.format(beta_av))
+        _logger.info('optimal minimal average beta function was estimated and set to {:.3f}m'.format(beta_av))
     else:
         raise_min_beta = False
         

@@ -221,6 +221,7 @@ class FelParameters:
         # Nc = self.Ip / (q_e * rho * self.k0 * speed_of_light)
         # z_sat = 3 + 1/np.sqrt(3) * np.log(Nc)
         # Psn = (3 * rho * self.Pb) / (Nc * np.sqrt(np.pi * np.log(Nc)))
+        my_fit_coeff = 0.5
         
         if z is None:
             zn = self.z_sat_min / (np.sqrt(3) * self.lg3)
@@ -240,7 +241,7 @@ class FelParameters:
             
             zn = z / (np.sqrt(3) * self.lg3)
             
-        Pz = self.P_sn * (1 + 1/9 * np.exp(np.sqrt(3) * zn) / np.sqrt(np.pi * zn))
+        Pz = self.P_sn * (1 + 1/9 * np.exp(np.sqrt(3) * zn) / np.sqrt(np.pi * zn)) * my_fit_coeff
         # Pz = self.P_sn * (1 + 1/9 * np.exp(np.sqrt(3) * zn))
         #Pz = p.P_sn * (1 + 1/9 * np.exp(np.sqrt(3) * zn))
         return Pz

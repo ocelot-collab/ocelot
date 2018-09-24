@@ -3434,10 +3434,17 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
 
         cbfig = plt.figure('cbars_stokes_parameters_visualization')
         cbfig.set_size_inches((2 * figsize, 2 * figsize), forward=True)
-        cbax1 = cbfig.add_subplot(111)
+        cbax1 = cbfig.add_axes([0.1, 0.1, 0.8, 0.8])
+        cbax1.set_title('Сolorbar of linear polarization')
+        cbax1.axis('off')
         cbar_lin_im = imshow2d(cbar_lin, ax=cbax1, origin='lower', cmap2d=cmap_lin ,interpolation=interpolation,
                                extent=[-1, 1, -1, 1], aspect='equal')
-        cbax1.set_title('colorbar of the visualization of linear polarization')
+        cbax_polar = cbfig.add_axes([0.15, 0.15, 0.7, 0.7], polar=True, frameon=False)
+        cbax_polar.set_rmax(1.0)
+        cbax_polar.set_yticklabels([])
+        cbax_polar.set_xticklabels(['0',r'$\frac{\pi}{8}$',r'$\frac{\pi}{4}$',r'$\frac{3\pi}{8}$',
+                                    r'$\frac{\pi}{2}$',r'$\frac{5\pi}{8}$',r'$\frac{3\pi}{4}$',r'$\frac{7\pi}{8}$'], fontsize=16)
+        cbax_polar.grid(True)
 
     # Plotting data
     fig = plt.figure(fig_name)
@@ -3464,9 +3471,9 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
                                          interpolation=interpolation, **kwargs)
 
     if cbars:
-        cbax2 = fig.add_axes([0.93, 0.111, 0.02, 0.32])  # This is the position for the colorbar [x, y, width, height]
+        cbax2 = fig.add_axes([0.93, 0.11, 0.02, 0.323])  # This is the position for the colorbar [x, y, width, height]
         cbar_circ_im = plt.colorbar(circular_plt, cax=cbax2)
-        cbax2.set_label('Normalized S3 (S3/S0)')
+        cbax2.set_ylabel('Normalized S3 (S3/S0)')
         cbax2.tick_params(axis='both', which='major', labelsize=10)
 
     ax5 = fig.add_subplot(2, 3, 5, sharex=ax2, sharey=ax2)

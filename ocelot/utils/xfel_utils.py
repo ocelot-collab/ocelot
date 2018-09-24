@@ -305,7 +305,7 @@ def create_exfel_lattice(beamline = 'sase1'):
     else:
         raise ValueError('Unknown beamline')
 
-def prepare_el_optics(beam, lat_pkg, E_photon=None, beta_av=30, s=None):
+def prepare_el_optics(beam, lat_pkg, E_photon=None, beta_av=None, s=None):
     from ocelot.rad.undulator_params import Ephoton2K
     # if s is None:
         # jj = beam.I / (beam.beta_x * beam.beta_y * beam.emit_x * beam.emit_y)
@@ -316,21 +316,34 @@ def prepare_el_optics(beam, lat_pkg, E_photon=None, beta_av=30, s=None):
         beam_match = get_beam_peak(beam)
     else:
         beam_match = beam.get_s(s)
-        
-    # if beamline == 'SASE1':
-         # = create_exfel_sase1_lattice()
-    # elif beamline == 'SASE2':
-        # lat_pkg = create_exfel_sase2_lattice()
-    # elif beamline == 'SASE3':
-        # lat_pkg = create_exfel_sase3_lattice()
-    # else:
-        # raise ValueError('unknown beamline')
     
-    rematch_beam_lat(beam_match, lat_pkg, beta_av)
-    transform_beam_twiss(beam, Twiss(beam_match), s=s)
-    lat = lat_pkg[0]
+    lat, extra_fodo, cell = lat_pkg
     indx_und = np.where([i.__class__ == Undulator for i in lat.sequence])[0]
     und = lat.sequence[indx_und[0]]
+    l_fodo= MagneticLattice(cell).totalLen / 2
+    
+    if beta_av is None:
+        l_period = und.lperiod
+        K_peak = np.max([und.Kx, und.Ky])
+        if und.Kx != und.Ky:
+            iwityp = 0 # planar undulator
+        elif und.Kx == und.Ky:
+            iwityp = 1 # helical undulator
+        else:
+            raise ValueError('unknown undulator: neither planar nor helical, estimation method not applicable')
+        fel = beam2fel(beam_match, l_period, K_peak, iwityp=iwityp)
+        beta_av = fel.beta_opt(apply=0, method=fel.method)
+        if beta_av <= l_fodo * 2:
+            beta_av = l_fodo * 2 * 1.001
+        raise_min_beta = True
+        _logger.info('optimal minimal average beta function was estimated and set to {}m'.format(beta_av))
+    else:
+        raise_min_beta = False
+        
+
+    rematch_beam_lat(beam_match, lat_pkg, beta_av, raise_min_beta=raise_min_beta)
+    transform_beam_twiss(beam, Twiss(beam_match), s=s)
+
     if E_photon is not None:
         und.Kx = Ephoton2K(E_photon, und.lperiod, beam_match.E)
 
@@ -483,11 +496,19 @@ def rematch(beta_mean, l_fodo, qdh, lat, extra_fodo, beam, qf, qd):
     beam.beta_y, beam.alpha_y = tw0m.beta_y, tw0m.alpha_y
 
 
-def rematch_beam_lat(beam, lat_pkg, beta_mean):
+def rematch_beam_lat(beam, lat_pkg, beta_mean, raise_min_beta=False):
     
     lat, extra_fodo, cell = lat_pkg
     l_fodo= MagneticLattice(cell).totalLen / 2
     
+    if beta_mean <= 2 * l_fodo:
+        if raise_min_beta:
+            _logger.warning('Desired average beta function {}m was not larger that cell length and was set to that length {}m'.format(beta_mean, 2*l_fodo*1.001))
+            beta_mean = 2 * l_fodo * 1.001
+        else:
+            _logger.error('Desired average beta function {}m should be larger that cell length {}m'.format(beta_mean, 2*l_fodo))
+            raise ValueError('Desired average beta function {}m should be larger that cell length {}m'.format(beta_mean, 2*l_fodo))
+
     indx_q = np.where([i.__class__ == Quadrupole for i in lat.sequence])[0]
 
     qd = lat.sequence[indx_q[0]]

@@ -42,6 +42,8 @@ from ocelot.utils.xfel_utils import *
 from ocelot.optics.utils import calc_ph_sp_dens
 from ocelot.optics.wave import *
 
+from ocelot.gui.colormaps2d.colormap2d import *
+
 # from pylab import rc, rcParams #tmp
 from matplotlib import rc, rcParams
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -2828,7 +2830,7 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
 
     _logger.debug(ind_str + 'done')
 
-def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,None), y_lim=(None,None), downsample=1, autoscale=None, figsize=4, cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=True, plot_proj=1, plot_text=1, debug=1):
+def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,None), y_lim=(None,None), downsample=1, autoscale=None, figsize=4, cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=True, plot_proj=1, plot_text=1, plot_moments=0, debug=1):
     '''
     plots wigner distribution (WD) with marginals
     wig_or_out -  may be WignerDistribution() or GenesisOutput() object
@@ -2869,24 +2871,30 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
     plt.clf()
     fig.set_size_inches((4.5*figsize, 3.25*figsize), forward=True)
         
-    power=W.power()
-    spec=W.spectrum()
-    wigner=W.wig
-    wigner_lim=np.amax(abs(W.wig))
+    power = W.power()
+    spec = W.spectrum()
+    wigner = W.wig
+    wigner_lim = np.amax(abs(W.wig))
+    inst_freq = W.inst_freq()
+    group_delay = W.group_delay()
     
     if x_units=='fs':
-        power_scale=W.s/speed_of_light*1e15
-        p_label_txt='t [fs]'
+        power_scale = W.s / speed_of_light * 1e15
+        p_label_txt = 't [fs]'
+        group_delay = group_delay / speed_of_light * 1e15
     else:
-        power_scale=W.s*1e6
-        p_label_txt='s [$\mu$m]'
+        power_scale = W.s*1e6
+        p_label_txt = 's [$\mu$m]'
+        group_delay = group_delay*1e6
     
     if y_units in ['ev', 'eV']:
-        spec_scale=speed_of_light*h_eV_s*1e9/W.freq_lamd
-        f_label_txt='$E_{photon}$ [eV]'
+        spec_scale = W.phen
+        f_label_txt = '$E_{photon}$ [eV]'
+        inst_freq = inst_freq
     else:
-        spec_scale=W.freq_lamd
-        f_label_txt='$\lambda& [nm]'
+        spec_scale = W.freq_lamd
+        f_label_txt = '$\lambda& [nm]'
+        inst_freq = h_eV_s * speed_of_light * 1e9 / inst_freq
     
     if plot_proj:
         # definitions for the axes
@@ -2900,23 +2908,50 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
         rect_histx = [left, bottom_h, width, 0.2]
         rect_histy = [left_h, bottom, 0.15, height]
         
-        axScatter = plt.axes(rect_scatter)
-        axHistx = plt.axes(rect_histx, sharex=axScatter)
-        axHisty = plt.axes(rect_histy, sharey=axScatter)
+        axHistx = plt.axes(rect_histx)
+        axHisty = plt.axes(rect_histy)
+        axScatter = plt.axes(rect_scatter, sharex=axHistx, sharey=axHisty)
     else:
         axScatter = plt.axes()
     
     if abs_value:
-        axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], abs(wigner[::downsample,::downsample]))
+        wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], abs(wigner[::downsample,::downsample]))
         if plot_text:
             axScatter.text(0.02, 0.98, r'$W_{{max}}$= {:.2e}'.format(np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes, color='w')
     else:
         # cmap='RdBu_r'
         # axScatter.imshow(wigner, cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
-        axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], wigner[::downsample,::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
+        wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], wigner[::downsample,::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
         if plot_text:
             axScatter.text(0.02, 0.98, r'$W_{{max}}$= {:.2e}'.format(np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes)#fontsize=12,
             
+    if plot_moments:
+        axScatter.plot(power_scale[::downsample], inst_freq[::downsample], "-k")
+        axScatter.plot(group_delay[::downsample], spec_scale[::downsample], "-g")
+
+        
+    if autoscale == 1:
+        autoscale = 1e-2
+    
+    if autoscale != None:
+        max_power = np.amax(power)
+        max_spectrum = np.amax(spec)
+        idx_p = np.where(power > max_power*autoscale)[0]
+        # print(max_spectrum*autoscale)
+        # print(spectrum)
+        idx_s = np.where(spec > max_spectrum*autoscale)[0]
+        
+        x_lim = [ power_scale[idx_p[0]], power_scale[idx_p[-1]] ]
+        y_lim = [ spec_scale[idx_s[0]], spec_scale[idx_s[-1]] ]
+        
+        x_lim = np.array(x_lim)
+        y_lim = np.array(y_lim)
+        x_lim.sort()
+        y_lim.sort()
+    else:
+        x_lim = (np.amin(power_scale), np.amax(power_scale))
+        y_lim = (np.amin(spec_scale), np.amax(spec_scale))
+        
     if plot_proj:
         axHistx.plot(power_scale,power)
         if plot_text:
@@ -2952,24 +2987,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
         axScatter.set_xlabel(p_label_txt)
         axScatter.set_ylabel(f_label_txt)
     
-    if autoscale == 1:
-        autoscale = 1e-2
-    
-    if autoscale != None:
-        max_power = np.amax(power)
-        max_spectrum = np.amax(spec)
-        idx_p = np.where(power > max_power*autoscale)[0]
-        # print(max_spectrum*autoscale)
-        # print(spectrum)
-        idx_s = np.where(spec > max_spectrum*autoscale)[0]
-        
-        x_lim = [ power_scale[idx_p[0]], power_scale[idx_p[-1]] ]
-        y_lim = [ spec_scale[idx_s[0]], spec_scale[idx_s[-1]] ]
-        
-        x_lim = np.array(x_lim)
-        y_lim = np.array(y_lim)
-        x_lim.sort()
-        y_lim.sort()
+
     
     # axScatter.set_xlim(x_lim[0], x_lim[1])
     # axScatter.set_ylim(y_lim[0], y_lim[1])
@@ -3363,7 +3381,342 @@ def plot_stokes_angles(S, fig=None, showfig=True, direction='z', scatter=True):
             plt.show()
         else:
             plt.close('all')
-        
+
+def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane='max_slice', interpolation=None,
+                   cmap_lin='brightwheel', cmap_circ='seismic', figsize=4, fig_name='Visualization Stokes parameters',
+                   cbars=True, savefig=False, showfig=True, text_present=True, debug=1, **kwargs):
+    '''
+    Plot 6 images with normalized Stokes parameters on them
+
+    :param stk_params: 3d ocelot.optics.wave.StokesParameters() type object
+    :param x_plane: this variable responds on which value on x-axis the 3d stk_params will intersect.
+                    It can take 3 different recognition:
+                    'max_slice': the intersection of 3d stk_params will contain the max value s0 in stk_params
+                    'proj': at the third subplot will be shown the projection of 3d stk_params in x direction
+                    <number> in [m]: the position of intersection on x-axis
+    :param y_plane: this variable responds on which value on y-axis the 3d stk_params will intersect.
+                    It can take 3 different recognition:
+                    'max_slice': the intersection of 3d stk_params will contain the max value s0 in stk_params
+                    'proj': at the third subplot will be shown the projection of 3d stk_params in y direction
+                    <number> in [m]: the position of intersection on y-axis
+    :param z_plane: this variable responds on which value on z-axis the 3d stk_params will intersect.
+                    It can take 3 different recognition:
+                    'max_slice': the intersection of 3d stk_params will contain the max value s0 in stk_params
+                    'proj': at the third subplot will be shown the projection of 3d stk_params in z direction
+                    <number> in [m]: the position of intersection on z-axis
+    :param interpolation: str type variable wich responds for interpolation before plotting linear polarized part
+    :param cmap_lin: numpy array with shape (nwidth, nheight, 4) that contains the 4 rgba values in hue (width)
+                    and lightness (height).
+                    Can be obtained by a call to get_cmap2d(name).
+                    or:
+                    name where name is one of the following strings:
+                    'brightwheel', 'darkwheel', 'hardwheel', 'newwheel',
+                    'smoothwheel', 'wheel'
+    :param cmap_circ:--------------------
+    :param figsize: size of the figure
+    :param fig_name: name of the figure
+    :param cbars: bool type variable which responds for showing of colorbars
+    :param savefig: bool type variable which responds for saving of the figure
+    :param showfig: bool type variable which responds for showing of the figure
+    :param text_present: bool type variable which responds for showing text on subplots
+    :param debug:
+    :param kwargs:
+    '''
+
+    if showfig == False and savefig == False:
+        return
+    _logger.info('plotting stokes parameters')
+    start_time = time.time()
+
+    # Plotting colorbars
+    if cbars:
+        _logger.info('plotting colorbars for stokes parameters')
+        package_dir = os.path.dirname(__file__)
+        cbar_lin_path = os.path.join(package_dir, 'colorbars', 'colorbar_linear_polarization.npy')
+        _logger.info('loading ' + cbar_lin_path)
+        cbar_lin = np.load(cbar_lin_path)
+
+        cbfig = plt.figure('cbars_stokes_parameters_visualization')
+        cbfig.set_size_inches((2 * figsize, 2 * figsize), forward=True)
+        cbax1 = cbfig.add_axes([0.1, 0.1, 0.8, 0.8])
+        cbax1.set_title('Сolorbar of linear polarization')
+        cbax1.axis('off')
+        cbar_lin_im = imshow2d(cbar_lin, ax=cbax1, origin='lower', cmap2d=cmap_lin ,interpolation=interpolation,
+                               extent=[-1, 1, -1, 1], aspect='equal')
+        cbax_polar = cbfig.add_axes([0.15, 0.15, 0.7, 0.7], polar=True, frameon=False)
+        cbax_polar.set_rmax(1.0)
+        cbax_polar.set_yticklabels([])
+        cbax_polar.set_xticklabels(['0',r'$\frac{\pi}{8}$',r'$\frac{\pi}{4}$',r'$\frac{3\pi}{8}$',
+                                    r'$\frac{\pi}{2}$',r'$\frac{5\pi}{8}$',r'$\frac{3\pi}{4}$',r'$\frac{7\pi}{8}$'], fontsize=16)
+        cbax_polar.grid(True)
+
+    # Plotting data
+    fig = plt.figure(fig_name)
+    fig.clf()
+    fig.set_size_inches((5 * figsize, 3 * figsize), forward=True)
+
+    z, y, x = stk_params.s0.shape
+    ax1 = fig.add_subplot(2, 3, 1)
+    linear_plt = plot_stokes_sbfg_lin(ax1, stk_params, slice=z_plane, plane='z', cmap2d=cmap_lin,
+                                      plot_title=None, x_label='x', y_label='y', text_present=text_present,
+                                      interpolation=interpolation, result=1, **kwargs)
+
+    ax2 = fig.add_subplot(2, 3, 2)
+    plot_stokes_sbfg_lin(ax2, stk_params, slice=x_plane, plane='x', cmap2d=cmap_lin, plot_title='Linear polarization',
+                         x_label='z', y_label='y', text_present=text_present, interpolation=interpolation, **kwargs)
+
+    ax3 = fig.add_subplot(2, 3, 3)
+    plot_stokes_sbfg_lin(ax3, stk_params, slice=y_plane, plane='y', cmap2d=cmap_lin, plot_title=None,
+                         x_label='z', y_label='x', text_present=text_present, interpolation=interpolation, **kwargs)
+
+    ax4 = fig.add_subplot(2, 3, 4, sharex=ax1, sharey=ax1)
+    circular_plt = plot_stokes_sbfg_circ(ax4, stk_params, slice=z_plane, plane='z', cmap=cmap_circ, plot_title=None,
+                                         x_label='x', y_label='y', text_present=text_present, result=1,
+                                         interpolation=interpolation, **kwargs)
+
+    if cbars:
+        cbax2 = fig.add_axes([0.93, 0.11, 0.02, 0.323])  # This is the position for the colorbar [x, y, width, height]
+        cbar_circ_im = plt.colorbar(circular_plt, cax=cbax2)
+        cbax2.set_ylabel('Normalized S3 (S3/S0)')
+        cbax2.tick_params(axis='both', which='major', labelsize=10)
+
+    ax5 = fig.add_subplot(2, 3, 5, sharex=ax2, sharey=ax2)
+    plot_stokes_sbfg_circ(ax5, stk_params, slice=x_plane, plane='x', cmap=cmap_circ, plot_title='Circular polarization',
+                          x_label='z', y_label='y', text_present=text_present, interpolation=interpolation, **kwargs)
+
+    ax6 = fig.add_subplot(2, 3, 6, sharex=ax3, sharey=ax3)
+    plot_stokes_sbfg_circ(ax6, stk_params, slice=y_plane, plane='y', cmap=cmap_circ, plot_title=None, x_label='z',
+                          y_label='x', text_present=text_present, interpolation=interpolation, **kwargs)
+
+    fig.subplots_adjust(wspace=0.4, hspace=0.4)
+    _logger.info(ind_str + 'done in {:.2f} seconds'.format(time.time() - start_time))
+    plt.draw()
+    if savefig != False:
+        if savefig == True:
+            savefig = 'png'
+        _logger.debug(ind_str + 'saving figure')
+        fig.savefig()
+
+    if showfig:
+        _logger.debug(ind_str + 'showing Stokes Parameters')
+        plt.show()
+    else:
+        plt.close('all')
+
+    # if cbar:
+    #     _logger.info('plotting colorbars for stokes parameters')
+    #     package_dir = os.path.dirname(__file__)
+    #     cbar_lin_path = os.path.join(package_dir, 'colorbars', 'colorbar_linear_polarization.npy')
+    #     _logger.info('loading' + cbar_lin_path)
+    #     cbar_lin = np.load(cbar_lin_path)
+    #
+    #     cbfig = plt.figure('cbars_stokes_parameters_visualization')
+    #     cbfig.set_size_inches((5 * figsize, 3 * figsize), forward=True)
+    #     cbax1 = cbfig.add_subplot(111)
+    #     cbar_lin_im = imshow2d(cbar_lin, ax=cbax1, origin='lower', cmap2d=cmap_lin, interpolation=interpolation,
+    #                            extent=[-1, 1, -1, 1], aspect='equal')
+    #     cbax1.set_title('colorbar of the visualization of linear polarization')
+    #     # cbax2 = cbfig.add_axes([0.85, 0.1, 0.02, 0.8])  # This is the position for the colorbar [x, y, width, height]
+    #     # cbax2.set_label('colorbar of the visualization of circular polarization')
+    #     # cbar_circ_im = plt.colorbar(circular_plt, cax=cbax2)
+    #     # cbar_circ_im.set_label('Normalized S3 (S3/S0)')
+    #     # cbax2.tick_params(axis='both', which='major', labelsize=10)
+    #     plt.draw()
+    #     plt.show()
+
+
+
+def plot_stokes_sbfg_lin(ax, stk_params, slice, plane, cmap2d='brightwheel', plot_title=None, x_label='', y_label='',
+                         result=0, text_present=True, interpolation=None, **kwargs):
+    '''
+    Plot normalized intensity and angle of the linear polarization of the light
+
+    :param ax: matplotlib.pyplot.AxesSubplot on which the data will be plotted
+    :param stk_params: 3d ocelot.optics.wave.StokesParameters() type object
+    :param plane: the direction in which the projection/intersection of {stk_params} will be done
+    :param slice: this variable responds on which value on {plane} direction the 3d stk_params will intersect.
+                    It can take 3 different recognition:
+                    'max_slice': the intersection of 3d stk_params will contain the max value s0 in stk_params
+                    'proj': at the third subplot will be shown the projection of 3d stk_params in {plane} direction
+                    <number> in [m]: the position of intersection on {plane} direction
+    :param cmap2d: numpy array with shape (nwidth, nheight, 4) that contains the 4 rgba values in hue (width)
+                    and lightness (height).
+                    Can be obtained by a call to get_cmap2d(name).
+                    or:
+                    name where name is one of the following strings:
+                    'brightwheel', 'darkwheel', 'hardwheel', 'newwheel',
+                    'smoothwheel', 'wheel'
+    :param plot_title: title of the plot
+    :param x_label: label of the x axis
+    :param y_label: label of the y axis
+    :param result: a bool type variable; if bool == True the function will return linear_plt of AxesImage type
+    :param text_present: bool type variable which responds for showing text on subplots
+    :param interpolation: str type variable wich responds for interpolation before plotting linear polarized part
+    :param kwargs:
+    :return:
+    '''
+    # Getting intersections of stk_params for ploting data
+    z_max, y_max, x_max = np.unravel_index(stk_params.s0.argmax(), stk_params.s0.shape)  # getting max element position
+
+    if plane in ['x', 2]:
+        swap_axes = True
+        extent = [stk_params.sc_z[0]*1e6, stk_params.sc_z[-1]*1e6, stk_params.sc_y[0]*1e6, stk_params.sc_y[-1]*1e6]
+        if slice == 'max_slice':
+            stk_params_plane = stk_params.slice_2d_idx(x_max, plane=plane)[:, :, 0]
+            slice_pos = stk_params.sc_x[x_max]
+        elif slice == 'proj':
+            stk_params_plane = stk_params.proj(plane=plane, mode='mean')[:, :, 0]
+            slice_pos = 0
+        else:
+            slice_pos = find_nearest_idx(stk_params.sc_x, slice)
+            stk_params_plane = stk_params.slice_2d_idx(slice_pos, plane=plane)[:, :, 0]
+            slice_pos = stk_params.sc_x[slice_pos]
+    elif plane in ['y', 1]:
+        swap_axes = True
+        extent = [stk_params.sc_z[0]*1e6, stk_params.sc_z[-1]*1e6, stk_params.sc_x[0]*1e6, stk_params.sc_x[-1]*1e6]
+        if slice == 'max_slice':
+            stk_params_plane = stk_params.slice_2d_idx(y_max, plane=plane)[:, 0, :]
+            slice_pos = stk_params.sc_y[y_max]
+        elif slice == 'proj':
+            stk_params_plane = stk_params.proj(plane=plane, mode='mean')[:, 0, :]
+            slice_pos = 0
+        else:
+            slice_pos = find_nearest_idx(stk_params.sc_y, slice)
+            stk_params_plane = stk_params.slice_2d_idx(slice_pos, plane=plane)[:, 0, :]
+            slice_pos = stk_params.sc_y[slice_pos]
+    elif plane in ['z', 0]:
+        swap_axes = False
+        extent = [stk_params.sc_x[0]*1e6, stk_params.sc_x[-1]*1e6, stk_params.sc_y[0]*1e6, stk_params.sc_y[-1]*1e6]
+        if slice == 'max_slice':
+            stk_params_plane = stk_params.slice_2d_idx(z_max, plane=plane)[0, :, :]
+            slice_pos = stk_params.sc_z[z_max]
+        elif slice == 'proj':
+            stk_params_plane = stk_params.proj(plane=plane, mode='mean')[0, :, :]
+            slice_pos = 0
+        else:
+            slice_pos = find_nearest_idx(stk_params.sc_z, slice)
+            stk_params_plane = stk_params.slice_2d_idx(slice_pos, plane=plane)[0, :, :]
+            slice_pos = stk_params.sc_z[slice_pos]
+    else:
+        _logger.error(ind_str + 'argument "plane" should be in ["x","y","z",0,1,2]')
+        raise ValueError('argument "plane" should be in ["x","y","z",0,1,2]')
+
+    # Normalization
+    max_s0 = np.amax(stk_params.s0)
+    if swap_axes:
+        lin_pol_plane = np.swapaxes((stk_params_plane.P_pol_l() / max_s0), 0, 1)
+        psi_plane = np.swapaxes((2 * stk_params_plane.psi() / np.pi), 0, 1)
+    else:
+        lin_pol_plane = stk_params_plane.P_pol_l() / max_s0
+        psi_plane = 2 * stk_params_plane.psi() / np.pi
+
+    m, n = psi_plane.shape
+    linear_plt = imshow2d(np.array([psi_plane, lin_pol_plane]), ax=ax, cmap2d=cmap2d, extent=extent,
+                          interpolation=interpolation, aspect='auto', lightvmin=0, lightvmax=1, origin='lower', **kwargs)
+    if plot_title is not None:
+        ax.set_title(plot_title, fontsize=15)
+    ax.set_xlabel(x_label + ' [$\mu$m]')
+    ax.set_ylabel(y_label + ' [$\mu$m]')
+    if text_present:
+        dic = {'proj': 'projection', 'max_slice': 'slice at {:.3f} $\mu$m (max int)'}
+        ax.text(0.97, 0.97, dic.get(slice, 'slice at {:.3f} $\mu$m').format(slice_pos*1e6), horizontalalignment='right',
+                  verticalalignment='top', transform=ax.transAxes, fontsize=10)
+    if result:
+        return linear_plt
+
+
+def plot_stokes_sbfg_circ(ax, stk_params, slice, plane, cmap='seismic', plot_title=None, x_label='', y_label='',
+                          result=0, text_present=True, interpolation=None, **kwargs):
+    '''
+    Plot normalized Stokes parameter S3
+
+    :param ax: matplotlib.pyplot.AxesSubplot on which the data will be plotted
+    :param stk_params: 3d ocelot.optics.wave.StokesParameters() type object
+    :param plane: the direction in which the projection/intersection of {stk_params} will be done
+    :param slice: this variable responds on which value on {plane} direction the 3d stk_params will intersect.
+                    It can take 3 different recognition:
+                    'max_slice': the intersection of 3d stk_params will contain the max value s0 in stk_params
+                    'proj': at the third subplot will be shown the projection of 3d stk_params in {plane} direction
+                    <number> in [m]: the position of intersection on {plane} direction
+    :param cmap: colormap which will be used for plotting data
+    :param plot_title: title of the plot
+    :param x_label: label of the x axis
+    :param y_label: label of the y axis
+    :param result: a bool type variable; if bool == True the function will return linear_plt of AxesImage type
+    :param text_present: bool type variable which responds for showing text on subplots
+    :param interpolation: str type variable wich responds for interpolation before plotting linear polarized part
+    :param kwargs:
+    :return:
+    '''
+
+    # Getting intersections of stk_params for ploting data
+    z_max, y_max, x_max = np.unravel_index(stk_params.s0.argmax(), stk_params.s0.shape)  # getting max element position
+
+    if plane in ['x', 2]:
+        swap_axes = True
+        extent = [stk_params.sc_z[0]*1e6, stk_params.sc_z[-1]*1e6, stk_params.sc_y[0]*1e6, stk_params.sc_y[-1]*1e6]
+        if slice == 'max_slice':
+            stk_params_plane = stk_params.slice_2d_idx(x_max, plane=plane)[:, :, 0]
+            slice_pos = stk_params.sc_x[x_max]
+        elif slice == 'proj':
+            stk_params_plane = stk_params.proj(plane=plane, mode='mean')[:, :, 0]
+            slice_pos = 0
+        else:
+            slice_pos = find_nearest_idx(stk_params.sc_x, slice)
+            stk_params_plane = stk_params.slice_2d_idx(slice_pos, plane=plane)[:, :, 0]
+            slice_pos = stk_params.sc_x[slice_pos]
+    elif plane in ['y', 1]:
+        swap_axes = True
+        extent = [stk_params.sc_z[0]*1e6, stk_params.sc_z[-1]*1e6, stk_params.sc_x[0]*1e6, stk_params.sc_x[-1]*1e6]
+        if slice == 'max_slice':
+            stk_params_plane = stk_params.slice_2d_idx(y_max, plane=plane)[:, 0, :]
+            slice_pos = stk_params.sc_y[y_max]
+        elif slice == 'proj':
+            stk_params_plane = stk_params.proj(plane=plane, mode='mean')[:, 0, :]
+            slice_pos = 0
+        else:
+            slice_pos = find_nearest_idx(stk_params.sc_y, slice)
+            stk_params_plane = stk_params.slice_2d_idx(slice_pos, plane=plane)[:, 0, :]
+            slice_pos = stk_params.sc_y[slice_pos]
+    elif plane in ['z', 0]:
+        swap_axes = False
+        extent = [stk_params.sc_x[0]*1e6, stk_params.sc_x[-1]*1e6, stk_params.sc_y[0]*1e6, stk_params.sc_y[-1]*1e6]
+        if slice == 'max_slice':
+            stk_params_plane = stk_params.slice_2d_idx(z_max, plane=plane)[0, :, :]
+            slice_pos = stk_params.sc_z[z_max]
+        elif slice == 'proj':
+            stk_params_plane = stk_params.proj(plane=plane, mode='mean')[0, :, :]
+            slice_pos = 0
+        else:
+            slice_pos = find_nearest_idx(stk_params.sc_z, slice)
+            stk_params_plane = stk_params.slice_2d_idx(slice_pos, plane=plane)[0, :, :]
+            slice_pos = stk_params.sc_z[slice_pos]
+    else:
+        _logger.error(ind_str + 'argument "plane" should be in ["x","y","z",0,1,2]')
+        raise ValueError('argument "plane" should be in ["x","y","z",0,1,2]')
+
+    # Normalization
+    max_s0 = np.amax(stk_params.s0)
+    if swap_axes:
+        s3_plane = np.swapaxes((stk_params_plane.s3 / max_s0), 0, 1)
+    else:
+        s3_plane = stk_params_plane.s3 / max_s0
+
+    m, n = s3_plane.shape
+    circular_plt = ax.imshow(s3_plane, cmap=cmap, vmin=-1, vmax=1, interpolation=interpolation, aspect='auto',
+                             extent=extent, origin='lower', **kwargs)
+    if plot_title is not None:
+        ax.set_title(plot_title, fontsize=15)
+    ax.set_xlabel(x_label + ' [$\mu$m]')
+    ax.set_ylabel(y_label + ' [$\mu$m]')
+    if text_present:
+        dic = {'proj': 'projection', 'max_slice': 'slice at {:.3f} $\mu$m (max int)'}
+        ax.text(0.97, 0.97, dic.get(slice, 'slice at {:.3f} $\mu$m').format(slice_pos*1e6), horizontalalignment='right',
+                  verticalalignment='top', transform=ax.transAxes, fontsize=10)
+    if result:
+        return circular_plt
+
+
 '''
     scheduled for removal
 '''

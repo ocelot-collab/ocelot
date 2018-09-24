@@ -556,10 +556,6 @@ class RadiationField:
     def coh(self, jit=0):
         I = self.int_xy() / self.Nz()
         J = self.mut_coh_func(norm=0, jit=jit)
-        # if jit:
-            # J = self.mut_coh_func(norm=0)
-        # else:
-            # J = np.mean(self.fld[:,:,:,np.newaxis,np.newaxis].conjugate() * self.fld[:,np.newaxis,np.newaxis,:,:], axis=0)
         coh = np.sum(abs(J)**2) / np.sum(I)**2
         return coh
     
@@ -618,7 +614,7 @@ class StokesParameters:
         self.s1 = np.array([])
         self.s2 = np.array([])
         self.s3 = np.array([])
-        
+
     def __getitem__(self,i):
         S = deepcopy(self)
         if self.s0.ndim == 1:
@@ -628,7 +624,7 @@ class StokesParameters:
         S.s2 = self.s2[i]
         S.s3 = self.s3[i]
         return S
-        
+
     def P_pol(self):
         #coherent part
         return np.sqrt(self.s1**2 + self.s2**2 + self.s3**2)
@@ -658,6 +654,97 @@ class StokesParameters:
             psi[idx1] += np.pi/2
             psi[idx2] -= np.pi/2
         return psi
+
+
+    def slice_2d(self, loc, plane='z'):
+        _logger.debug('slicing stokes matrix at location {} over {} plane'.format(loc, plane))
+        if plane in ['x', 2]:
+            plane = 2
+            scale = self.sc_x
+        elif plane in ['y', 1]:
+            plane = 1
+            scale = self.sc_y
+        elif plane in ['z', 0]:
+            plane = 0
+            scale = self.sc_z
+        else:
+            _logger.error(ind_str + 'argument "plane" should be in ["x","y","z",0,1,2]')
+            raise ValueError('argument "plane" should be in ["x","y","z",0,1,2]')
+        idx = find_nearest_idx(scale, loc)
+        return slice_2d_idx(self, idx, plane)
+
+
+    def slice_2d_idx(self, idx, plane='z'):
+        _logger.debug('slicing stokes matrix at index {} over {} plane'.format(idx, plane))
+        S = deepcopy(self)
+        if plane in ['x', 2]:
+            plane = 2
+        elif plane in ['y', 1]:
+            plane = 1
+        elif plane in ['z', 0]:
+            plane = 0
+        else:
+            _logger.error(ind_str + 'argument "plane" should be in ["x","y","z",0,1,2]')
+            raise ValueError('argument "plane" should be in ["x","y","z",0,1,2]')
+        if plane == 0:
+            S.s0 = S.s0[np.newaxis, idx, :, :]
+            S.s1 = S.s1[np.newaxis, idx, :, :]
+            S.s2 = S.s2[np.newaxis, idx, :, :]
+            S.s3 = S.s3[np.newaxis, idx, :, :]
+            S.sc_z = np.arange(1)
+        elif plane == 1:
+            S.s0 = S.s0[:, np.newaxis, idx, :]
+            S.s1 = S.s1[:, np.newaxis, idx, :]
+            S.s2 = S.s2[:, np.newaxis, idx, :]
+            S.s3 = S.s3[:, np.newaxis, idx, :]
+            S.sc_y = np.arange(1)
+        elif plane == 2:
+            S.s0 = S.s0[:, :, np.newaxis, idx]
+            S.s1 = S.s1[:, :, np.newaxis, idx]
+            S.s2 = S.s2[:, :, np.newaxis, idx]
+            S.s3 = S.s3[:, :, np.newaxis, idx]
+            S.sc_x = np.arange(1)
+        else:
+            _logger.error(ind_str + 'argument "axis" is not defined')
+            raise ValueError('argument "axis" is not defined')
+        return S
+
+    def proj(self, plane='x', mode='sum'):
+        _logger.debug('calculating projection of stokes matrix over {} plane'.format(plane))
+        S = deepcopy(self)
+        nz, ny, nx = self.s0.shape
+        if plane in ['x', 2]:
+            plane = 2
+            n_points = nx
+            S.sc_x = np.arange(1)
+        elif plane in ['y', 1]:
+            plane = 1
+            n_points = ny
+            S.sc_y = np.arange(1)
+        elif plane in ['z', 0]:
+            plane = 0
+            n_points = nz
+            S.sc_z = np.arange(1)
+        else:
+            _logger.error(ind_str + 'argument "plane" should be in ["x","y","z",0,1,2]')
+            raise ValueError('argument "plane" should be in ["x","y","z",0,1,2]')
+        
+        S.s0 = np.sum(self.s0, axis=plane, keepdims=1)
+        S.s1 = np.sum(self.s1, axis=plane, keepdims=1)
+        S.s2 = np.sum(self.s2, axis=plane, keepdims=1)
+        S.s3 = np.sum(self.s3, axis=plane, keepdims=1)
+        
+        if mode == 'sum':
+            return S
+        elif mode == 'mean':
+            S.s0 = S.s0 / n_points
+            S.s1 = S.s1 / n_points
+            S.s2 = S.s2 / n_points
+            S.s3 = S.s3 / n_points
+            return S
+        else:
+            _logger.error(ind_str + 'argument "mode" should be in ["sum", "mean"]')
+            raise ValueError('argument "mode" should be in ["sum", "mean"]')
         
 def bin_stokes(S, bin_size):
     '''
@@ -965,10 +1052,10 @@ class WignerDistribution():
         self.phen = h_eV_s * speed_of_light * 1e9 / value
     
     def power(self):
-        return np.sum(self.wig,axis=0)
+        return np.sum(self.wig, axis=0)
         
     def spectrum(self):
-        return np.sum(self.wig,axis=1)
+        return np.sum(self.wig, axis=1)
         
     def energy(self):
         return np.sum(self.wig)*abs(self.s[1]-self.s[0])/speed_of_light
@@ -976,7 +1063,7 @@ class WignerDistribution():
     def fileName(self):
         return filename_from_path(self.filePath)
         
-    def eval(self,method = 'mp'):
+    def eval(self, method = 'mp'):
         
         # from ocelot.utils.xfel_utils import calc_wigner
         
@@ -985,6 +1072,12 @@ class WignerDistribution():
         phen = h_eV_s * (np.fft.fftfreq(self.s.size, d = ds / speed_of_light) + speed_of_light / self.xlamds)
         self.phen = np.fft.fftshift(phen, axes=0)
         # self.freq_lamd = h_eV_s * speed_of_light * 1e9 / freq_ev
+    
+    def inst_freq(self):
+        return np.sum(self.wig * self.phen[:, np.newaxis], axis=0) / self.power()
+        
+    def group_delay(self):
+        return np.sum(self.wig * self.s[np.newaxis, :], axis=1) / self.spectrum()
 
 
 def generate_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), power_rms=(0.1e-3,0.1e-3,5e-6), power_center=(0,0,None), power_angle=(0,0), power_waistpos=(0,0), wavelength=None, zsep=None, freq_chirp=0, en_pulse=None, power=1e6, **kwargs):
@@ -2123,7 +2216,8 @@ def imitate_1d_sase_like(td_scale, td_env, fd_scale, fd_env, td_phase = None, fd
     '''
     Models FEL pulse(s) based on Gaussian statistics
     td_scale - scale of the pulse on time domain [m]
-    td_env - expected pulse envelope in time domain [W] fd_scale - scale of the pulse in frequency domain [eV]
+    td_env - expected pulse envelope in time domain [W] 
+    fd_scale - scale of the pulse in frequency domain [eV]
     fd_env - expected pulse envelope in frequency domain [a.u.]
     td_phase - additional phase chirp to be added in time domain
     fd_phase - additional phase chirp to be added in frequency domain
@@ -2209,7 +2303,9 @@ def imitate_1d_sase_like(td_scale, td_env, fd_scale, fd_env, td_phase = None, fd
     
     #normalization for pulse energy
     if en_pulse == None:
-        en_pulse = np.trapz(td_env_i, td_scale_i / speed_of_light) # CALCULATE FOR fit_scale == 'td' !!!!!!!!!!
+        _logger.debug(ind_str + 'no en_pulse provided, calculating from integral of td_env')
+        en_pulse = np.trapz(td_env, td_scale / speed_of_light)
+
     pulse_energies = np.trapz(abs(td)**2, td_scale_i / speed_of_light, axis=0)
     scale_coeff = en_pulse / np.mean(pulse_energies)
     td *= np.sqrt(scale_coeff)

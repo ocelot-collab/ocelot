@@ -106,9 +106,9 @@ class FelParameters:
             _logger.error('method should be in ["mxie", "ssy_opt"]')
             raise ValueError('method should be in ["mxie", "ssy_opt"]')
         
-        self.lg3 *= self.lg_mult
-        if self.lg_mult != 1:
-            _logger.info('lg3 multiplied by lg_mult ({})'.format(self.lg_mult))
+        self.lg3 *= self.Lg_mult
+        if self.Lg_mult != 1:
+            _logger.info('lg3 multiplied by Lg_mult ({})'.format(self.Lg_mult))
         self.rho3 = self.xlamd / (4*np.pi * np.sqrt(3) * self.lg3)
         
         self.Nc = self.I / (q_e * self.rho3 * self.k0 * speed_of_light)
@@ -209,19 +209,9 @@ class FelParameters:
         returns sase power at distance z
         unfinished
         '''
-        # if dims == 1:
-            # rho = self.rho1
-            # lg = self.lg1
-        # elif dims == 3:
-            # rho = self.rho3
-            # lg = self.lg3
-        # else:
-            # raise ValueError('dims argument should be either 1 or 3')
-        
         # Nc = self.Ip / (q_e * rho * self.k0 * speed_of_light)
         # z_sat = 3 + 1/np.sqrt(3) * np.log(Nc)
         # Psn = (3 * rho * self.Pb) / (Nc * np.sqrt(np.pi * np.log(Nc)))
-        my_fit_coeff = 0.5
         
         if z is None:
             zn = self.z_sat_min / (np.sqrt(3) * self.lg3)
@@ -241,9 +231,12 @@ class FelParameters:
             
             zn = z / (np.sqrt(3) * self.lg3)
             
-        Pz = self.P_sn * (1 + 1/9 * np.exp(np.sqrt(3) * zn) / np.sqrt(np.pi * zn)) * my_fit_coeff
+        Pz = self.P_sn * (1 + 1/9 * np.exp(np.sqrt(3) * zn) / np.sqrt(np.pi * zn))
         # Pz = self.P_sn * (1 + 1/9 * np.exp(np.sqrt(3) * zn))
         #Pz = p.P_sn * (1 + 1/9 * np.exp(np.sqrt(3) * zn))
+        if hasattr(self,'P_mult'):
+            if self.P_mult is not None:
+                Pz *= self.P_mult
         return Pz
         
         
@@ -300,10 +293,14 @@ def calculateFelParameters(input, array=False, method='mxie'):
     p.emitx = input.emitx #normalized emittance
     p.emity = input.emity
     
-    p.lg_mult = 1
-    if hasattr(input,'lg_mult'):
-        if p.lg_mult is None:
-            p.lg_mult = input.lg_mult
+    p.Lg_mult = 1
+    if hasattr(input,'Lg_mult'):
+        if input.Lg_mult is not None:
+            p.Lg_mult = input.Lg_mult
+    p.P_mult = 1
+    if hasattr(input,'P_mult'):
+        if input.P_mult is not None:
+            p.P_mult = input.P_mult
     #    p.rxbeam = input.rxbeam
     #    p.rybeam = input.rybeam
 

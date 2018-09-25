@@ -2029,7 +2029,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                             print ('parameter = %s; s = %s; run = %s;' %(param, s_ind, irun))
                         param_matrix = copy.deepcopy(getattr(outlist[irun], param))
                     if debug > 1:
-                        print('shape param_matrix', shape(param_matrix))
+                        print('shape param_matrix', np.shape(param_matrix))
                     if debug > 1:
                         print('length', len(param_matrix), len(outlist[irun].z))
 
@@ -2050,7 +2050,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     fig.clf()
                     fig.set_size_inches(figsize, forward=True)
                     if debug > 1:
-                        print('plotting array shapes', shape(outlist[irun].z), shape(np.swapaxes(s_value, 0, 1)))
+                        print('plotting array shapes', np.shape(outlist[irun].z), np.shape(np.swapaxes(s_value, 0, 1)))
                     fig = plt.plot(outlist[irun].z, np.swapaxes(s_value, 0, 1), '0.8', linewidth=1)
                     fig = plt.plot(outlist[irun].z, s_value[0], '0.5', linewidth=1)
                     fig = plt.plot(outlist[irun].z, np.mean(s_value, 0), 'k', linewidth=2)
@@ -2115,7 +2115,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                             print ('parameter = %s; z = %s; run = %s;' %(param, z_ind, irun))
                         param_matrix = copy.deepcopy(getattr(outlist[irun], param))
                     if debug > 1:
-                        print('shape param_matrix', shape(param_matrix))
+                        print('shape param_matrix', np.shape(param_matrix))
                     if debug > 1:
                         print('length', len(param_matrix), len(outlist[irun].z))
 
@@ -2137,7 +2137,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     if param in ['spec', 'spec_phot_density']:
                         freq_scale = outlist[irun].freq_ev  # *1e9
                         if debug > 1:
-                            print('plotting array shapes freq', shape(freq_scale), shape(np.swapaxes(z_value, 0, 1)))
+                            print('plotting array shapes freq', np.shape(freq_scale), np.shape(np.swapaxes(z_value, 0, 1)))
                         fig = plt.plot(freq_scale, np.swapaxes(z_value, 0, 1), '0.8')
                         fig = plt.plot(freq_scale, z_value[0], '0.5', linewidth=1)
                         fig = plt.plot(freq_scale, np.mean(z_value, 0), 'k', linewidth=2)
@@ -2146,7 +2146,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     else:
                         s_scale = outlist[irun].s * 1e6
                         if debug > 1:
-                            print('plotting array shapes', shape(s_scale), shape(np.swapaxes(z_value, 0, 1)))
+                            print('plotting array shapes', np.shape(s_scale), np.shape(np.swapaxes(z_value, 0, 1)))
                         fig = plt.plot(s_scale, np.swapaxes(z_value, 0, 1), '0.8')
                         fig = plt.plot(s_scale, z_value[0], '0.5', linewidth=1)
                         fig = plt.plot(s_scale, np.mean(z_value, 0), 'k', linewidth=2)
@@ -2192,7 +2192,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                                 print ('parameter = %s; z = %s; s = %s; run = %s' %(param, z_ind, s_ind, irun))
                             param_matrix = copy.deepcopy(getattr(outlist[irun], param))
                             if debug > 1:
-                                print('shape param_matrix', shape(param_matrix))
+                                print('shape param_matrix', np.shape(param_matrix))
                             if debug > 1:
                                 print('length', len(param_matrix), len(outlist[irun].z))
 
@@ -2459,13 +2459,13 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cm
     if dpa.__class__ != GenesisParticlesDump:
         raise ValueError('wrong particle object: should be GenesisParticlesDump')
 
-    if shape(dpa.ph)[0] == 1:
+    if np.shape(dpa.ph)[0] == 1:
         slice_num = 0
     if slice_num is None:
-        slice_num = int(shape(dpa.ph)[0]/2)
+        slice_num = int(np.shape(dpa.ph)[0]/2)
         _logger.debug(ind_str + 'no slice number provided, using middle of the distribution - slice number {}'.format(slice_num))
     else:
-        assert (slice_num <= shape(dpa.ph)[0]), 'slice_num larger than the dpa shape'
+        assert (slice_num <= np.shape(dpa.ph)[0]), 'slice_num larger than the dpa shape'
 
     if fig_name == None:
         fig_name = 'Electron phase space ' + dpa.fileName()
@@ -2493,7 +2493,7 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cm
     
     # ax_main = plt.subplot2grid((4, 1), (1, 0), rowspan=3, sharex=ax_z_hist)
 
-    nbins = shape(dpa.ph)[1]
+    nbins = np.shape(dpa.ph)[1]
     phase = deepcopy(dpa.ph[slice_num, :, :])
     energy = deepcopy(dpa.e[slice_num, :, :])
     _logger.debug(ind_str + 'nbins =  {}'.format(nbins))
@@ -2875,26 +2875,31 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
     spec = W.spectrum()
     wigner = W.wig
     wigner_lim = np.amax(abs(W.wig))
-    inst_freq = W.inst_freq()
-    group_delay = W.group_delay()
+    if plot_moments:
+        inst_freq = W.inst_freq()
+        group_delay = W.group_delay()
     
     if x_units=='fs':
         power_scale = W.s / speed_of_light * 1e15
         p_label_txt = 't [fs]'
-        group_delay = group_delay / speed_of_light * 1e15
+        if plot_moments:
+            group_delay = group_delay / speed_of_light * 1e15
     else:
         power_scale = W.s*1e6
         p_label_txt = 's [$\mu$m]'
-        group_delay = group_delay*1e6
+        if plot_moments:
+            group_delay = group_delay*1e6
     
     if y_units in ['ev', 'eV']:
         spec_scale = W.phen
         f_label_txt = '$E_{photon}$ [eV]'
-        inst_freq = inst_freq
+        if plot_moments:
+            inst_freq = inst_freq
     else:
         spec_scale = W.freq_lamd
         f_label_txt = '$\lambda& [nm]'
-        inst_freq = h_eV_s * speed_of_light * 1e9 / inst_freq
+        if plot_moments:
+            inst_freq = h_eV_s * speed_of_light * 1e9 / inst_freq
     
     if plot_proj:
         # definitions for the axes

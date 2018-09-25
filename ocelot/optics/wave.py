@@ -1074,10 +1074,18 @@ class WignerDistribution():
         # self.freq_lamd = h_eV_s * speed_of_light * 1e9 / freq_ev
     
     def inst_freq(self):
-        return np.sum(self.wig * self.phen[:, np.newaxis], axis=0) / self.power()
+        p = self.power()
+        if np.all(p==0):
+            return p
+        else:
+            return np.sum(self.wig * self.phen[:, np.newaxis], axis=0) / self.power()
         
     def group_delay(self):
-        return np.sum(self.wig * self.s[np.newaxis, :], axis=1) / self.spectrum()
+        s = self.spectrum()
+        if np.all(s==0):
+            return s
+        else:
+            return np.sum(self.wig * self.s[np.newaxis, :], axis=1) / self.spectrum()
 
 
 def generate_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), power_rms=(0.1e-3,0.1e-3,5e-6), power_center=(0,0,None), power_angle=(0,0), power_waistpos=(0,0), wavelength=None, zsep=None, freq_chirp=0, en_pulse=None, power=1e6, **kwargs):

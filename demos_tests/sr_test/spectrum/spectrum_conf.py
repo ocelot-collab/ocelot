@@ -42,6 +42,6 @@ def screen():
     s.ny = 1
     s.start_energy = 7300
     s.end_energy = 7900
-    s.num_energy = 1000
+    s.num_energy = 101
 
     return s

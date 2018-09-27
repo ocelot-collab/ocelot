@@ -13,27 +13,28 @@ from rad_beam_conf import *
 
 
 @pytest.mark.parametrize('parameter', [0, 1, 2])
-def test_calculate_radiation(lattice, screen, beam, parameter, update_ref_values=False):
+def test_coherent_radiation(lattice, screen, beam, parameter, update_ref_values=False):
     """calculate_radiation fucntion test"""
     screen.nullify()
     accuracy = 1
-    beam = copy.deepcopy(beam)
+    beam_c = copy.deepcopy(beam)
     if parameter == 0:
-        p_array = beam
+        p_array = beam_c
 
     elif parameter == 1:
-        p_array = beam
+        p_array = beam_c
         p_array.tau()[:] *= -1
 
     elif parameter == 2:
-        p_array = beam
+        p_array = beam_c
         p_array.tau()[:] = 0
 
-    screen = calculate_radiation(lattice, screen, p_array, accuracy=accuracy)
-    print(screen.Total[:2])
+    screen = coherent_radiation(lattice, screen, p_array, accuracy=accuracy)
+
     if update_ref_values:
-        return {'Eph':screen.Eph.tolist(), 'Yph':screen.Yph.tolist(), 'Xph':screen.Xph.tolist(), 'Total':screen.Total.tolist(), 'Sigma':screen.Sigma.tolist(), 'Pi':screen.Pi.tolist()}
-    
+        return {'Eph': screen.Eph.tolist(), 'Yph': screen.Yph.tolist(), 'Xph': screen.Xph.tolist(),
+                'Total': screen.Total.tolist(), 'Sigma': screen.Sigma.tolist(), 'Pi': screen.Pi.tolist()}
+
     screen_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) + '.json')
 
     result1 = check_matrix(screen.Eph, screen_ref['Eph'], TOL, assert_info=' Eph - ')
@@ -78,11 +79,10 @@ def teardown_function(function):
 def test_update_ref_values(lattice, screen, beam, cmdopt):
     
     update_functions = []
-    update_functions.append('test_calculate_radiation')
+    update_functions.append('test_coherent_radiation')
     
     update_function_parameters = {}
-    update_function_parameters['test_calculate_radiation'] = [0, 1, 2]
-    
+    update_function_parameters['test_coherent_radiation'] = [0, 1, 2]
     parameter = update_function_parameters[cmdopt] if cmdopt in update_function_parameters.keys() else ['']
 
     if cmdopt in update_functions:

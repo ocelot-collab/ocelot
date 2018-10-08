@@ -203,6 +203,17 @@ class RadiationField:
         
         r can be scalar or vector with self.Nz() points
         r>0 -> converging wavefront
+        
+        plane is the plane in which wavefront is curved:
+            'x' - horizontal focusing
+            'y' - vertical focusing
+            'xy' - focusing in both planes
+        
+        domain_z is the domain in which wavefront curvature is introduced
+            'f' - frequency
+            't' - time
+            None - original domain (default)
+            
         '''
         
         domains = domain_o_z, domain_o_xy = self.domain_z, self.domain_xy
@@ -211,7 +222,17 @@ class RadiationField:
             domain_z = domain_o_z
         
         _logger.debug('curving radiation wavefront by {}m in {} domain'.format(r, domain_z))
-
+        
+        if np.size(r) == 1:
+            if r == 0:
+                _logger.error(ind_str + 'radius of curvature should not be zero')
+                raise ValueError('radius of curvature should not be zero')
+            elif r == np.inf:
+                _logger.debug(ind_str + 'radius of curvature is infinite, skipping')
+                return
+            else:
+                pass
+        
         if domain_z == 'f':
             self.to_domain('fs')
             x, y = np.meshgrid(self.scale_x(), self.scale_y())
@@ -249,16 +270,12 @@ class RadiationField:
                 self.fld *= np.exp(-1j * k / 2 * arg2[np.newaxis,:,:] / r[:,np.newaxis,np.newaxis])
             else: 
                 raise ValueError('wrong dimensions of radius of curvature')
-        
         else:
             ValueError('domain_z should be in ["f", "t", None]')
             
         self.to_domain(domains)
     
     def to_domain(self, domains='ts', **kwargs):
-        
-        _logger.info('transforming radiation field to {} domain'.format(str(domains)))
-        
         '''
         tranfers radiation to specified domains
         *domains is a string with one or two letters: 
@@ -271,6 +288,7 @@ class RadiationField:
         
         **kwargs are passed down to self.fft_z and self.fft_xy
         '''
+        _logger.info('transforming radiation field to {} domain'.format(str(domains)))
         dfldomain_check(domains)
 
         for domain in domains:
@@ -365,12 +383,12 @@ class RadiationField:
     def prop(self, z, fine=0, return_result=0, return_orig_domains=1, debug=1):
         '''
         Angular-spectrum propagation for fieldfile
-    
+        
         can handle wide spectrum
           (every slice in freq.domain is propagated 
            according to its frequency)
         no kx**2+ky**2<<k0**2 limitation
-    
+        
         dfl is the RadiationField() object
         z is the propagation distance in [m] 
         fine=1 is a flag for ~2x faster propagation. 
@@ -1087,8 +1105,11 @@ class WignerDistribution():
         else:
             return np.sum(self.wig * self.s[np.newaxis, :], axis=1) / self.spectrum()
 
+def generate_dfl(*args, **kwargs):
+    _logger.warning('"generate_dfl" will be deprecated, use "generate_gaussian_dfl" instead')
+    return generate_gaussian_dfl(*args, **kwargs)
 
-def generate_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), power_rms=(0.1e-3,0.1e-3,5e-6), power_center=(0,0,None), power_angle=(0,0), power_waistpos=(0,0), wavelength=None, zsep=None, freq_chirp=0, en_pulse=None, power=1e6, **kwargs):
+def generate_gaussian_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), power_rms=(0.1e-3,0.1e-3,5e-6), power_center=(0,0,None), power_angle=(0,0), power_waistpos=(0,0), wavelength=None, zsep=None, freq_chirp=0, en_pulse=None, power=1e6, **kwargs):
     '''
     generates RadiationField object 
     narrow-bandwidth, paraxial approximations
@@ -1393,8 +1414,9 @@ def dfl_waistscan(dfl, z_pos, projection=0, debug=1):
 
         scale_x = dfl.scale_x()
         scale_y = dfl.scale_y()
-        center_x = np.int((I_xy.shape[1] + 1) / 2)
-        center_y = np.int((I_xy.shape[0] + 1) / 2)
+        center_x = np.int((I_xy.shape[1] - 1) / 2)
+        center_y = np.int((I_xy.shape[0] - 1) / 2)
+        _logger.debug(ind_str + 'center_pixels = {}, {}'.format(center_x, center_y))
 
         if projection:
             I_x = np.sum(I_xy, axis=0)
@@ -2088,7 +2110,7 @@ def wigner_dfl(dfl, method='mp', pad=1, debug=1):
     
     import numpy as np
     
-    _logger.info('calculating Wigner distribution from dfl')
+    _logger.info('calculating Wigner distribution from dfl (on-axis fillament)')
     start_time = time.time()
     
     wig = WignerDistribution()

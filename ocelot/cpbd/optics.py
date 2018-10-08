@@ -119,18 +119,14 @@ class SecondOrderMult:
 
 
 def transform_vec_ent(X, dx, dy, tilt):
-    #n = len(X)
     rotmat = rot_mtx(tilt)
-    #x_add = np.add(X.reshape(int(n / 6), 6), np.array([-dx, 0., -dy, 0., 0., 0.])).transpose()
     x_add = np.add(X, np.array([[-dx], [0.], [-dy], [0.], [0.], [0.]]))
     X[:] = np.dot(rotmat, x_add)[:]
     return X
 
 
 def transform_vec_ext(X, dx, dy, tilt):
-    #n = len(X)
     rotmat = rot_mtx(-tilt)
-    #x_tilt = np.dot(rotmat, np.transpose(X.reshape(int(n / 6), 6))).transpose()
     x_tilt = np.dot(rotmat, X)
     X[:] = np.add(x_tilt, np.array([[dx], [0.], [dy], [0.], [0.], [0.]]))[:]
     return X
@@ -635,6 +631,9 @@ class RungeKuttaTM(TransferMap):
 
 
 class RungeKuttaTrTM(RungeKuttaTM):
+    """
+    THe same method as RungeKuttaTM but only transverse dynamics is included, longitudinal dynamics is skipped
+    """
     def __init__(self, s_start=0, npoints=200):
         RungeKuttaTM.__init__(self, s_start=s_start, npoints=npoints)
         self.long_dynamics = False

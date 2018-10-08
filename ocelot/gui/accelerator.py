@@ -1,6 +1,6 @@
-'''
+"""
 user interface for viewing/editing electron optics layouts
-'''
+"""
 
 import sys, os, csv
 

@@ -607,13 +607,18 @@ class ParticleArray:
         if nth <= 1:
             print("Nothing to do. nth number must be bigger 1")
             return self
-        if nth > np.shape(self.rparticles)[1]:
-            print("nth number is too big")
-        n = int((np.shape(self.rparticles)[1] - n0)/nth)
+        if nth > self.n:
+            raise ValueError("nth number is bigger of particles number")
+        if n0 > self.n:
+            raise ValueError("n0 number is bigger of particles number")
+        n = int((self.n - n0)/nth)
+        if n < 1:
+            raise ValueError("Number of particles in new ParticleArray is less then 1")
 
+        n_end = n0 + nth*n
         p = ParticleArray(n)
-        p.rparticles[:, :] = self.rparticles[:, n0::nth]
-        p.q_array[:] = self.q_array[n0::nth]*nth
+        p.rparticles[:, :] = self.rparticles[:, n0:n_end:nth]
+        p.q_array[:] = self.q_array[n0:n_end:nth]*nth
         p.s = self.s
         p.E = self.E
         return p

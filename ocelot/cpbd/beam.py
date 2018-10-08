@@ -171,7 +171,7 @@ class Beam:
         self.Dyp = 0.0
 
         self.shape = 'gaussian' # of 'flattop'
-
+        self.filePath = ''
     properties = ['g','dg','emit_xn','emit_yn','p','pz','px','py']
 
     @property

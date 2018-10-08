@@ -317,10 +317,14 @@ def prepare_el_optics(beam, lat_pkg, E_photon=None, beta_av=None, s=None):
     else:
         beam_match = beam.get_s(s)
     
+    
     lat, extra_fodo, cell = lat_pkg
     indx_und = np.where([i.__class__ == Undulator for i in lat.sequence])[0]
     und = lat.sequence[indx_und[0]]
     l_fodo= MagneticLattice(cell).totalLen / 2
+    
+    if E_photon is not None:
+        und.Kx = Ephoton2K(E_photon, und.lperiod, beam_match.E)
     
     if beta_av is None:
         l_period = und.lperiod
@@ -344,8 +348,7 @@ def prepare_el_optics(beam, lat_pkg, E_photon=None, beta_av=None, s=None):
     rematch_beam_lat(beam_match, lat_pkg, beta_av, raise_min_beta=raise_min_beta)
     transform_beam_twiss(beam, Twiss(beam_match), s=s)
 
-    if E_photon is not None:
-        und.Kx = Ephoton2K(E_photon, und.lperiod, beam_match.E)
+
 
 '''
 legacy

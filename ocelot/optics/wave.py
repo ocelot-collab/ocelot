@@ -805,8 +805,8 @@ def calc_stokes_dfl(dfl1, dfl2, basis='xy', mode=(0,0)):
         # raise ValueError('Not implemented yet')
     
     if dfl1.Nz() != dfl2.Nz():
-        l1 = dfl1.fld.Nz()
-        l2 = dfl2.fld.Nz()
+        l1 = dfl1.Nz()
+        l2 = dfl2.Nz()
         if l1 > l2:
             dfl1.fld = dfl1.fld[:-(l1-l2), :, :]
         else:

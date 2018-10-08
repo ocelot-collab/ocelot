@@ -3299,16 +3299,19 @@ def plot_stokes_values(S, fig=None, s_lin=0, norm=0, showfig=True, gw=1, directi
         # raise ValueError('Not a StokesParameters object')
     if direction == 'z':
        sc = S.sc_z * 1e6
+       Scp = S[:,0,0] ##### tbd: calculate middle?
     elif direction == 'x':
        sc = S.sc_x * 1e6
+       Scp = S[0,0,:]
     elif direction == 'y':
        sc = S.sc_y * 1e6
-    # sc = S.sc * 1e6
+       Scp = S[0,:,0]
     
     
     if np.size(sc) > 1:
         if fig == None:
             plt.figure('Stokes S')
+            plt.clf()
         elif type(fig) == matplotlib.figure.Figure:
             plt.figure(fig.number)
         else:
@@ -3325,12 +3328,12 @@ def plot_stokes_values(S, fig=None, s_lin=0, norm=0, showfig=True, gw=1, directi
         
         if s_lin:
             # plt.step(sc, np.sqrt(S.s1**2+S.s2**2), linewidth=2, where='mid',color=[0.5,0.5,0.5], linestyle='--')
-            plt.step(sc, np.sqrt(S.s1**2+S.s2**2)*mult, linewidth=2, where='mid',color='m', linestyle='--')
+            plt.step(sc, Scp.P_pol_l()*mult, linewidth=2, where='mid',color='m', linestyle='--')
  
-        plt.step(sc, S.s1*mult, linewidth=2, where='mid',color='g')
-        plt.step(sc, S.s2*mult, linewidth=2, where='mid',color='r')
-        plt.step(sc, S.s3*mult, linewidth=2, where='mid',color='c')
-        plt.step(sc, S.s0*mult, linewidth=2, where='mid',color='b')
+        plt.step(sc, Scp.s1*mult, linewidth=2, where='mid',color='g')
+        plt.step(sc, Scp.s2*mult, linewidth=2, where='mid',color='r')
+        plt.step(sc, Scp.s3*mult, linewidth=2, where='mid',color='c')
+        plt.step(sc, Scp.s0*mult, linewidth=2, where='mid',color='b')
         # plt.step(sc, S.s1, linewidth=2, where='mid',color='m')
         # plt.step(sc, S.s2, linewidth=2, where='mid',color='r')
         # plt.step(sc, S.s3, linewidth=2, where='mid',color='c')
@@ -3341,7 +3344,7 @@ def plot_stokes_values(S, fig=None, s_lin=0, norm=0, showfig=True, gw=1, directi
         else:
             plt.legend(['$S_1$','$S_2$','$S_3$','$S_0$'], fontsize=13, ncol=4, loc='upper left', frameon=1).get_frame().set_alpha(0.4)
            # plt.legend(['$S_1$','$S_2$','$S_3$','$S_0$'], loc='lower center', ncol=5, mode="expand", borderaxespad=0.5, frameon=1).get_frame().set_alpha(0.4)
-        
+        plt.draw()
         if showfig:
             plt.show()
         else:
@@ -3353,42 +3356,46 @@ def plot_stokes_angles(S, fig=None, showfig=True, direction='z', scatter=True):
    # if type(S) != StokesParameters:
        # raise ValueError('Not a StokesParameters object')
     if direction == 'z':
-        sc = S.sc_z * 1e6
+       sc = S.sc_z * 1e6
+       Scp = S[:,0,0]
     elif direction == 'x':
-        sc = S.sc_x * 1e6
+       sc = S.sc_x * 1e6
+       Scp = S[0,0,:]
     elif direction == 'y':
-        sc = S.sc_y * 1e6
+       sc = S.sc_y * 1e6
+       Scp = S[0,:,0]
     # sc = S.sc * 1e6
     
     if np.size(sc) > 1:
         if fig == None:
             plt.figure('Stokes angles')
+            plt.clf()
         else:
             plt.figure(fig.number)
         plt.clf()
 
        # plt.step(sc, S.chi(), sc, S.psi(),linewidth=2)
         if scatter:
-            psize = S.P_pol()
+            psize = Scp.P_pol()
             psize /= np.amax(psize)
-            plt.scatter(sc, S.chi(),psize,linewidth=2,color='g')
-            plt.scatter(sc, S.psi(),psize,linewidth=2,color='b')
+            plt.scatter(sc, Scp.chi(),psize,linewidth=2,color='g')
+            plt.scatter(sc, Scp.psi(),psize,linewidth=2,color='b')
         else:
-            plt.step(sc, S.chi(), linewidth=2, where='mid', color='g')
-            plt.step(sc, S.psi(), linewidth=2, where='mid', color='b')
+            plt.step(sc, Scp.chi(), linewidth=2, where='mid', color='g')
+            plt.step(sc, Scp.psi(), linewidth=2, where='mid', color='b')
         plt.legend(['$\chi$','$\psi$'])#,loc='best')
         plt.xlabel('s [$\mu$m]')
         plt.ylabel('[rad]')
         plt.ylim([-np.pi/2,np.pi/2])
         plt.xlim([np.amin(sc),np.amax(sc)])
-        
+        plt.draw()
         if showfig:
             plt.show()
         else:
             plt.close('all')
 
 def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane='max_slice', interpolation=None,
-                   cmap_lin='brightwheel', cmap_circ='seismic', figsize=4, fig_name='Visualization Stokes parameters',
+                   cmap_lin='brightwheel', cmap_circ='seismic', figsize=4, fig_name='Visualization Stokes parameters', normalization='s0_max',
                    cbars=True, savefig=False, showfig=True, text_present=True, debug=1, **kwargs):
     '''
     Plot 6 images with normalized Stokes parameters on them
@@ -3433,66 +3440,83 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
     _logger.info('plotting stokes parameters')
     start_time = time.time()
 
-    # Plotting colorbars
-    if cbars:
-        _logger.info('plotting colorbars for stokes parameters')
-        package_dir = os.path.dirname(__file__)
-        cbar_lin_path = os.path.join(package_dir, 'colorbars', 'colorbar_linear_polarization.npy')
-        _logger.info('loading ' + cbar_lin_path)
-        cbar_lin = np.load(cbar_lin_path)
-
-        cbfig = plt.figure('cbars_stokes_parameters_visualization')
-        cbfig.set_size_inches((2 * figsize, 2 * figsize), forward=True)
-        cbax1 = cbfig.add_axes([0.1, 0.1, 0.8, 0.8])
-        cbax1.set_title('Сolorbar of linear polarization')
-        cbax1.axis('off')
-        cbar_lin_im = imshow2d(cbar_lin, ax=cbax1, origin='lower', cmap2d=cmap_lin ,interpolation=interpolation,
-                               extent=[-1, 1, -1, 1], aspect='equal')
-        cbax_polar = cbfig.add_axes([0.15, 0.15, 0.7, 0.7], polar=True, frameon=False)
-        cbax_polar.set_rmax(1.0)
-        cbax_polar.set_yticklabels([])
-        cbax_polar.set_xticklabels(['0',r'$\frac{\pi}{8}$',r'$\frac{\pi}{4}$',r'$\frac{3\pi}{8}$',
-                                    r'$\frac{\pi}{2}$',r'$\frac{5\pi}{8}$',r'$\frac{3\pi}{4}$',r'$\frac{7\pi}{8}$'], fontsize=16)
-        cbax_polar.grid(True)
-
+    
+    ny_plots = 2
     # Plotting data
     fig = plt.figure(fig_name)
     fig.clf()
     fig.set_size_inches((5 * figsize, 3 * figsize), forward=True)
 
     z, y, x = stk_params.s0.shape
-    ax1 = fig.add_subplot(2, 3, 1)
+    ax1 = fig.add_subplot(ny_plots, 3, 1)
     linear_plt = plot_stokes_sbfg_lin(ax1, stk_params, slice=z_plane, plane='z', cmap2d=cmap_lin,
                                       plot_title=None, x_label='x', y_label='y', text_present=text_present,
-                                      interpolation=interpolation, result=1, **kwargs)
-
-    ax2 = fig.add_subplot(2, 3, 2)
+                                      interpolation=interpolation, normalization=normalization, result=1, **kwargs)
+    
+    ax2 = fig.add_subplot(ny_plots, 3, 2)
     plot_stokes_sbfg_lin(ax2, stk_params, slice=x_plane, plane='x', cmap2d=cmap_lin, plot_title='Linear polarization',
-                         x_label='z', y_label='y', text_present=text_present, interpolation=interpolation, **kwargs)
-
-    ax3 = fig.add_subplot(2, 3, 3)
+                         x_label='z', y_label='y', text_present=text_present, interpolation=interpolation, normalization=normalization, **kwargs)
+    
+    ax3 = fig.add_subplot(ny_plots, 3, 3)
     plot_stokes_sbfg_lin(ax3, stk_params, slice=y_plane, plane='y', cmap2d=cmap_lin, plot_title=None,
-                         x_label='z', y_label='x', text_present=text_present, interpolation=interpolation, **kwargs)
-
-    ax4 = fig.add_subplot(2, 3, 4, sharex=ax1, sharey=ax1)
-    circular_plt = plot_stokes_sbfg_circ(ax4, stk_params, slice=z_plane, plane='z', cmap=cmap_circ, plot_title=None,
-                                         x_label='x', y_label='y', text_present=text_present, result=1,
-                                         interpolation=interpolation, **kwargs)
-
-    if cbars:
-        cbax2 = fig.add_axes([0.93, 0.11, 0.02, 0.323])  # This is the position for the colorbar [x, y, width, height]
-        cbar_circ_im = plt.colorbar(circular_plt, cax=cbax2)
-        cbax2.set_ylabel('Normalized S3 (S3/S0)')
-        cbax2.tick_params(axis='both', which='major', labelsize=10)
-
-    ax5 = fig.add_subplot(2, 3, 5, sharex=ax2, sharey=ax2)
+                         x_label='z', y_label='x', text_present=text_present, interpolation=interpolation, normalization=normalization, **kwargs)
+        
+    ax4 = fig.add_subplot(ny_plots, 3, 4, sharex=ax1, sharey=ax1)
+    circular_plt = plot_stokes_sbfg_circ(ax4, stk_params, slice=z_plane, plane='z', cmap=cmap_circ, plot_title=None, x_label='x', y_label='y', text_present=text_present, result=1, interpolation=interpolation, normalization=normalization, **kwargs)
+    
+    ax5 = fig.add_subplot(ny_plots, 3, 5, sharex=ax2, sharey=ax2)
     plot_stokes_sbfg_circ(ax5, stk_params, slice=x_plane, plane='x', cmap=cmap_circ, plot_title='Circular polarization',
-                          x_label='z', y_label='y', text_present=text_present, interpolation=interpolation, **kwargs)
-
-    ax6 = fig.add_subplot(2, 3, 6, sharex=ax3, sharey=ax3)
+                          x_label='z', y_label='y', text_present=text_present, interpolation=interpolation, normalization=normalization, **kwargs)
+    
+    ax6 = fig.add_subplot(ny_plots, 3, 6, sharex=ax3, sharey=ax3)
     plot_stokes_sbfg_circ(ax6, stk_params, slice=y_plane, plane='y', cmap=cmap_circ, plot_title=None, x_label='z',
-                          y_label='x', text_present=text_present, interpolation=interpolation, **kwargs)
-
+                          y_label='x', text_present=text_present, interpolation=interpolation, normalization=normalization, **kwargs)
+    cbax1_dir = 2
+    if cbars:
+        cbax1 = fig.add_axes([0.91, 0.56, 0.04, 0.321])
+        
+        if cbax1_dir == 1:
+            ph = np.ones((100,100))*np.linspace(1,-1,100)[:,np.newaxis]
+            I = np.ones((100,100))*np.linspace(0,1,100)[np.newaxis,:]
+            imshow2d(np.array([ph,I]), ax=cbax1, cmap2d=cmap_lin, huevmin=-1, huevmax=1, lightvmin=0, lightvmax=1, extent = [-1,1,np.pi/2, -np.pi/2], aspect='auto')
+            plt.yticks(np.linspace(-np.pi/2, np.pi/2, 3),['$-\pi/2$','0','$\pi/2$'])#['0','$\pi/2$','$\pi$','$3\pi/2$','$2\pi$']
+            cbax1.yaxis.set_label_position("right")
+            cbax1.yaxis.tick_right()
+            cbax1.set_ylabel('$\psi$')
+            if normalization == 's0':
+                cbax1.set_xlabel('$ \sqrt{S_1^2+S_2^2} / S_0$')
+            elif normalization == 's0_max':
+                cbax1.set_xlabel('$ \sqrt{S_1^2+S_2^2} / max(S_0)$')
+            else:
+                cbax1.set_xlabel('$ \sqrt{S_1^2+S_2^2}$')
+            cbax1.tick_params(axis='both', which='major', labelsize=10)
+        
+        else:
+            ph = np.ones((100,100))*np.linspace(1,-1,100)[np.newaxis,:]
+            I = np.ones((100,100))*np.linspace(0,1,100)[:,np.newaxis]
+            imshow2d(np.array([ph,I]), ax=cbax1, cmap2d=cmap_lin, huevmin=-1, huevmax=1, lightvmin=0, lightvmax=1, extent = [np.pi/2, -np.pi/2, 1, 0], aspect='auto')
+            plt.xticks(np.linspace(-np.pi/2, np.pi/2, 3),['$-\pi/2$','0','$\pi/2$'])#['0','$\pi/2$','$\pi$','$3\pi/2$','$2\pi$']
+            cbax1.yaxis.set_label_position("right")
+            cbax1.yaxis.tick_right()
+            cbax1.set_xlabel('$\psi$')
+            if normalization == 's0':
+                cbax1.set_ylabel('$ \sqrt{S_1^2+S_2^2} / S_0$')
+            elif normalization == 's0_max':
+                cbax1.set_ylabel('$ \sqrt{S_1^2+S_2^2} / max(S_0)$')
+            else:
+                cbax1.set_ylabel('$ \sqrt{S_1^2+S_2^2}$')
+            cbax1.tick_params(axis='both', which='major', labelsize=10)
+        
+        cbax2 = fig.add_axes([0.91, 0.11, 0.04, 0.321])  # This is the position for the colorbar [x, y, width, height]
+        cbar_circ_im = plt.colorbar(circular_plt, cax=cbax2)
+        if normalization == 's0':
+            cbax2.set_ylabel('$S_3 / S_0$')
+        elif normalization == 's0_max':
+            cbax2.set_ylabel('$S_3 / max(S_0)$')
+        else:
+            cbax2.set_ylabel('S3')
+        cbax2.tick_params(axis='both', which='major', labelsize=10)
+        
     fig.subplots_adjust(wspace=0.4, hspace=0.4)
     _logger.info(ind_str + 'done in {:.2f} seconds'.format(time.time() - start_time))
     plt.draw()
@@ -3508,31 +3532,9 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
     else:
         plt.close('all')
 
-    # if cbar:
-    #     _logger.info('plotting colorbars for stokes parameters')
-    #     package_dir = os.path.dirname(__file__)
-    #     cbar_lin_path = os.path.join(package_dir, 'colorbars', 'colorbar_linear_polarization.npy')
-    #     _logger.info('loading' + cbar_lin_path)
-    #     cbar_lin = np.load(cbar_lin_path)
-    #
-    #     cbfig = plt.figure('cbars_stokes_parameters_visualization')
-    #     cbfig.set_size_inches((5 * figsize, 3 * figsize), forward=True)
-    #     cbax1 = cbfig.add_subplot(111)
-    #     cbar_lin_im = imshow2d(cbar_lin, ax=cbax1, origin='lower', cmap2d=cmap_lin, interpolation=interpolation,
-    #                            extent=[-1, 1, -1, 1], aspect='equal')
-    #     cbax1.set_title('colorbar of the visualization of linear polarization')
-    #     # cbax2 = cbfig.add_axes([0.85, 0.1, 0.02, 0.8])  # This is the position for the colorbar [x, y, width, height]
-    #     # cbax2.set_label('colorbar of the visualization of circular polarization')
-    #     # cbar_circ_im = plt.colorbar(circular_plt, cax=cbax2)
-    #     # cbar_circ_im.set_label('Normalized S3 (S3/S0)')
-    #     # cbax2.tick_params(axis='both', which='major', labelsize=10)
-    #     plt.draw()
-    #     plt.show()
-
-
 
 def plot_stokes_sbfg_lin(ax, stk_params, slice, plane, cmap2d='brightwheel', plot_title=None, x_label='', y_label='',
-                         result=0, text_present=True, interpolation=None, **kwargs):
+                         result=0, text_present=True, interpolation=None, normalization='s0_max', **kwargs):
     '''
     Plot normalized intensity and angle of the linear polarization of the light
 
@@ -3607,17 +3609,25 @@ def plot_stokes_sbfg_lin(ax, stk_params, slice, plane, cmap2d='brightwheel', plo
         raise ValueError('argument "plane" should be in ["x","y","z",0,1,2]')
 
     # Normalization
-    max_s0 = np.amax(stk_params.s0)
+    if normalization is None:
+        norm = 1
+    elif normalization == 's0':
+        norm = stk_params_plane.s0
+    elif normalization == 's0_max':
+        norm = np.amax(stk_params.s0)
+    else:
+        raise ValueError('"normalization" should be in [None, "s0", "s0_max"]')
+        
     if swap_axes:
-        lin_pol_plane = np.swapaxes((stk_params_plane.P_pol_l() / max_s0), 0, 1)
+        lin_pol_plane = np.swapaxes((stk_params_plane.P_pol_l() / norm), 0, 1)
         psi_plane = np.swapaxes((2 * stk_params_plane.psi() / np.pi), 0, 1)
     else:
-        lin_pol_plane = stk_params_plane.P_pol_l() / max_s0
+        lin_pol_plane = stk_params_plane.P_pol_l() / norm
         psi_plane = 2 * stk_params_plane.psi() / np.pi
 
     m, n = psi_plane.shape
     linear_plt = imshow2d(np.array([psi_plane, lin_pol_plane]), ax=ax, cmap2d=cmap2d, extent=extent,
-                          interpolation=interpolation, aspect='auto', lightvmin=0, lightvmax=1, origin='lower', **kwargs)
+                          interpolation=interpolation, aspect='auto', huevmin=-1, huevmax=1, lightvmin=0, lightvmax=1, origin='lower', **kwargs)
     if plot_title is not None:
         ax.set_title(plot_title, fontsize=15)
     ax.set_xlabel(x_label + ' [$\mu$m]')
@@ -3631,7 +3641,7 @@ def plot_stokes_sbfg_lin(ax, stk_params, slice, plane, cmap2d='brightwheel', plo
 
 
 def plot_stokes_sbfg_circ(ax, stk_params, slice, plane, cmap='seismic', plot_title=None, x_label='', y_label='',
-                          result=0, text_present=True, interpolation=None, **kwargs):
+                          result=0, text_present=True, interpolation=None, normalization='s0_max', **kwargs):
     '''
     Plot normalized Stokes parameter S3
 
@@ -3701,11 +3711,19 @@ def plot_stokes_sbfg_circ(ax, stk_params, slice, plane, cmap='seismic', plot_tit
         raise ValueError('argument "plane" should be in ["x","y","z",0,1,2]')
 
     # Normalization
-    max_s0 = np.amax(stk_params.s0)
-    if swap_axes:
-        s3_plane = np.swapaxes((stk_params_plane.s3 / max_s0), 0, 1)
+    if normalization is None:
+        norm = 1
+    elif normalization == 's0':
+        norm = stk_params_plane.s0
+    elif normalization == 's0_max':
+        norm = np.amax(stk_params.s0)
     else:
-        s3_plane = stk_params_plane.s3 / max_s0
+        raise ValueError('"normalization" should be in [None, "s0", "s0_max"]')
+        
+    if swap_axes:
+        s3_plane = np.swapaxes((stk_params_plane.s3 / norm), 0, 1)
+    else:
+        s3_plane = stk_params_plane.s3 / norm
 
     m, n = s3_plane.shape
     circular_plt = ax.imshow(s3_plane, cmap=cmap, vmin=-1, vmax=1, interpolation=interpolation, aspect='auto',

@@ -1,53 +1,21 @@
-### CSR_EX START ###
+### TUNE_SHIFT START ###
 
 test_lattice_transfer_map [PASSED]
 
- execution time is 0.364 sec
+ execution time is 0.265 sec
 
-test_lattice_transfer_map_RT [PASSED]
+test_twiss [PASSED]
 
- execution time is 0.301 sec
+ execution time is 0.392 sec
 
-test_lattice_transfer_map_RT [PASSED]
+test_track_nturns [PASSED]
 
- execution time is 0.298 sec
+ execution time is 208.408 sec
 
-test_track_without_csr [PASSED]
+test_freq_analysis [PASSED]
 
- execution time is 0.919 sec
+ execution time is 0.397 sec
 
-test_track_without_csr [PASSED]
-
- execution time is 0.936 sec
-
-test_track_without_csr_tilted [PASSED]
-
- execution time is 0.906 sec
-
-test_track_without_csr_rotated [PASSED]
-
- execution time is 1.004 sec
-
-test_track_with_csr [PASSED]
-
- execution time is 12.955 sec
-
-test_track_with_csr [PASSED]
-
- execution time is 12.569 sec
-
-test_get_current [PASSED]
-
- execution time is 0.019 sec
-
-test_get_current [PASSED]
-
- execution time is 0.014 sec
-
-test_track_undulator_with_csr [PASSED]
-
- execution time is 6.708 sec
-
-### CSR_EX END ###
+### TUNE_SHIFT END ###
 
 

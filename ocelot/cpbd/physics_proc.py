@@ -185,6 +185,7 @@ class BeamTransform(PhysProc):
         self.x_opt = x_opt   # [alpha, beta, mu (phase advance)]
         self.y_opt = y_opt   # [alpha, beta, mu (phase advance)]
         self.step = 1
+        self.remove_offsets = True
 
     @property
     def twiss(self):
@@ -204,11 +205,22 @@ class BeamTransform(PhysProc):
         self.beam_matching(p_array.rparticles, self.bounds, self.x_opt, self.y_opt)
 
     def beam_matching(self, particles, bounds, x_opt, y_opt):
+        #the beam is centered in the phase space
         pd = np.zeros((int(particles.size / 6), 6))
-        pd[:, 0] = particles[0]
-        pd[:, 1] = particles[1]
-        pd[:, 2] = particles[2]
-        pd[:, 3] = particles[3]
+        dx = 0
+        dxp = 0
+        dy = 0
+        dyp = 0
+        if self.remove_offsets:
+            dx = np.mean(particles[0])
+            dxp = np.mean(particles[1])
+            dy = np.mean(particles[2])
+            dyp = np.mean(particles[3])
+
+        pd[:, 0] = particles[0] - dx
+        pd[:, 1] = particles[1] - dxp
+        pd[:, 2] = particles[2] - dy
+        pd[:, 3] = particles[3] - dyp
         pd[:, 4] = particles[4]
         pd[:, 5] = particles[5]
 
@@ -220,6 +232,8 @@ class BeamTransform(PhysProc):
         beta = mxx / emitx0
         alpha = -mxxs / emitx0
         M = self.m_from_twiss([alpha, beta, 0], x_opt)
+
+
 
         particles[0] = M[0, 0] * pd[:, 0] + M[0, 1] * pd[:, 1]
         particles[1] = M[1, 0] * pd[:, 0] + M[1, 1] * pd[:, 1]

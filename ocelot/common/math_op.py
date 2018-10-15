@@ -239,7 +239,7 @@ def fwhm(x,F):
 #    return x[downs[-1]] - x[ups[0]]
 
 def fwhm3(valuelist, height=0.5, peakpos=-1, total=1):
-    """calculates the full width at half maximum (fwhm) of some curve.
+    """calculates the full width at half maximum (fwhm) of the array.
     the function will return the fwhm with sub-pixel interpolation. 
     It will start at the maximum position and 'walk' left and right until it approaches the half values.
     if total==1, it will start at the edges and 'walk' towards peak until it approaches the half values.
@@ -250,7 +250,7 @@ def fwhm3(valuelist, height=0.5, peakpos=-1, total=1):
     the global maximum will be used if omitted.
     if total = 1 - 
     OUTPUT:
-    -fwhm (value)
+    - peakpos(index), interpolated_width(npoints), [index_l, index_r]
     """
     if peakpos == -1:  # no peakpos given -> take maximum
         peak = np.max(valuelist)

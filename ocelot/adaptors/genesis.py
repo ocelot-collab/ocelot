@@ -3096,10 +3096,12 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=1, min_phsh = False):
     quadLat = ''
     driftLat = ''
 
-    prevPos = 0
-    prevLen = 0
+    prevPosU = 0
+    prevLenU = 0
     prevPosQ = 0
     prevLenQ = 0
+    prevPosD = 0
+    prevLenD = 0
 
     pos = 0
 
@@ -3114,37 +3116,94 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=1, min_phsh = False):
         
         l = float(e.l)
 
-        # print e.type, pos, prevPos
+        # print e.type, pos, prevPosU
         if e.__class__ == Undulator:
-            l = float(e.nperiods) * float(e.lperiod)
-
-            undLat += 'AW' + '    ' + str(e.Kx * np.sqrt(0.5)) + '   ' + str(round(l / unit, 2)) + '  ' + str(round((pos - prevPos - prevLen) / unit, 2)) + '\n'
-
-            _logger.log(5, ind_str + 'added und ' + 'pos=' + str(pos) + ' prevPos=' + str(prevPos) + ' prevLen=' + str(prevLen))
+            l = float(e.nperiods) * float(e.lperiod) #remove?
+            K_rms = sqrt(e.Kx**2 + e.Ky**2) / np.sqrt(2)
+            undLat += 'AW' + '    ' + str(K_rms) + '   ' + str(round(l / unit, 2)) + '  ' + str(round((pos - prevPosU - prevLenU) / unit, 2)) + '\n'
+            _logger.log(5, ind_str + 'added UND:   pos= {}, len={}, prevPosU={}, prevLenU={}, K_rms={}'.format(pos,l, prevPosU, prevLenU, K_rms))
             
-            if prevLen <= 0:
+            
+            prevPosU = pos
+            prevLenU = l
+            l_period = e.lperiod
+            # if prevLenU <= 0:
                 
-                K_rms = e.Kx * np.sqrt(0.5)
+                # K_rms = e.Kx * np.sqrt(0.5)
                 
-            else:
-                #drifts.append([str( (pos - prevPos ) / unit ), str(prevLen / unit)])
-                _logger.log(5, ind_str + 'appending drift' + str((prevLen) / unit))
-                L = pos - prevPos - prevLen #intersection length [m]
-                
-                if min_phsh:
-                    xlamds = e.lperiod * (1 + K_rms**2) / (2 * gamma**2)
-                    slip=(L / gamma**2) / 2 #free space radiation slippage [m]
-                    add_slip = xlamds - slip % xlamds #free-space slippage to compensate with undulator K to bring it to integer number of wavelengths
-                    K_rms_add = np.sqrt(2 * add_slip * gamma**2 / L) #compensational K
-                    # driftLat += 'AD' + '    ' + str(e.Kx * np.sqrt(0.5)) + '   ' + str(round((pos - prevPos - prevLen) / unit, 2)) + '  ' + str(round(prevLen / unit, 2)) + '\n'
-                    driftLat += 'AD' + '    ' + str(K_rms_add) + '   ' + str(round((L) / unit, 2)) + '  ' + str(round(prevLen / unit, 2)) + '\n'
+            # else:
+                # #drifts.append([str( (pos - prevPosU ) / unit ), str(prevLenU / unit)])
+                # _logger.log(5, ind_str + 'appending drift' + str((prevLenU) / unit))
+                # L = pos - prevPosU - prevLenU #intersection length [m]
+        
+        elif e.__class__ == Drift:
+            l_drift = e.l
+            xlamds = l_period * (1 + K_rms**2) / (2 * gamma**2)
+            slip=(l_drift / gamma**2) / 2 # free-space radiation slippage [m]
+            phi_frsp = slip / xlamds # free-space phase shift [m]
+            
+            if not hasattr(e, 'K'):
+                e.K = None
+            
+            if e.K is not None:
+            
+                if hasattr(e, 'phi'):
+                    phi_phsh = e.phi
                 else:
-                    driftLat += 'AD' + '    ' + str(K_rms) + '   ' + str(round((L) / unit, 2)) + '  ' + str(round(prevLen / unit, 2)) + '\n'
+                    _logger.debug('no phase shifter values in Drift, assuming minimum to bring to n*2pi')
+                    phi_phsh = None
                 
-                K_rms = e.Kx * np.sqrt(0.5)
+                if phi_phsh is None:
+                    slip_add = xlamds - slip % xlamds #free-space slippage to compensate with undulator K to bring it to integer number of wavelengths
+                elif phi_phsh > phi_frsp:
+                    phi_add = phi_phsh - phi_frsp
+                    slip_add = phi_add * xlamds
+                    
+                elif phi_phsh < phi_frsp:
+                    phi_frsp_overpi = phi_frsp // (2*np.pi)
+                    phi_phsh_overpi = phi_phsh % (2*np.pi)
+                    phi_phsh1 = 2*np.pi * phi_frsp_overpi + phi_phsh_overpi
+                    phi_add = phi_phsh1 - phi_frsp
+                    _logger.debug('phi phase shifter {} < phi free space {}, adding {} pi '.format(phi_phsh, phi_frsp, phi_frsp_overpi))
+                    slip_add = phi_add * xlamds
+                    
+                    # slip_add = xlamds - slip % xlamds #free-space slippage to compensate with undulator K to bring it to integer number of wavelengths
+                        # K_rms_add = np.sqrt(2 * slip_add * gamma**2 / L) #compensational K
+                K_rms_add = np.sqrt(2 * slip_add * gamma**2 / l_drift) #compensational K
+            
+            else:
+                K_rms_add = e.K
+            
+            driftLat += 'AD' + '    ' + str(K_rms_add) + '   ' + str(round((l_drift) / unit, 2)) + '  ' + str(round(pos-prevPosD-prevLenD / unit, 2)) + '\n'
+            
+            _logger.log(5, ind_str + 'added DRIFT: pos= {}, len={}, prevPosD={}, prevLenD={}, K_rms={}'.format(pos, l_drift, prevPosD, prevLenD, K_rms_add))
+            
+            prevPosD = pos
+            prevLenD = l
+            
+            
+            # if prevLenU <= 0:
                 
-            prevPos = pos
-            prevLen = l
+                # K_rms = e.Kx * np.sqrt(0.5)
+                
+            # else:
+                # #drifts.append([str( (pos - prevPosU ) / unit ), str(prevLenU / unit)])
+                # _logger.log(5, ind_str + 'appending drift' + str((prevLenU) / unit))
+                # L = pos - prevPosU - prevLenU #intersection length [m]
+                
+                # if min_phsh:
+                    # xlamds = e.lperiod * (1 + K_rms**2) / (2 * gamma**2)
+                    # slip=(L / gamma**2) / 2 #free space radiation slippage [m]
+                    # add_slip = xlamds - slip % xlamds #free-space slippage to compensate with undulator K to bring it to integer number of wavelengths
+                    # K_rms_add = np.sqrt(2 * add_slip * gamma**2 / L) #compensational K
+                    # # driftLat += 'AD' + '    ' + str(e.Kx * np.sqrt(0.5)) + '   ' + str(round((pos - prevPosU - prevLenU) / unit, 2)) + '  ' + str(round(prevLenU / unit, 2)) + '\n'
+                    # driftLat += 'AD' + '    ' + str(K_rms_add) + '   ' + str(round((L) / unit, 2)) + '  ' + str(round(prevLenU / unit, 2)) + '\n'
+                # else:
+                    # driftLat += 'AD' + '    ' + str(K_rms) + '   ' + str(round((L) / unit, 2)) + '  ' + str(round(prevLenU / unit, 2)) + '\n'
+                
+                # K_rms = e.Kx * np.sqrt(0.5)
+                
+
 
         elif e.__class__ in [RBend, SBend, Drift]:
             pass
@@ -3153,9 +3212,9 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=1, min_phsh = False):
             #k = energy/0.2998 * float(e.k1) *  ( e.l / unit - int(e.l / unit) )
             # k = float(energy) * float(e.k1) / e.l #*  (1 +  e.l / unit - int(e.l / unit) )
             # k = float(energy) * float(e.k1) * 0.2998 / e.l #*  (1 +  e.l / unit - int(e.l / unit) )
-            k = float(energy) * float(e.k1) / speed_of_light * 1e9
-            _logger.log(5, ind_str + str(e.k1) + ' ' + str(k) + ' ' + str(energy))
-            quadLat += 'QF' + '    ' + str(k) + '   ' + str(round(e.l / unit, 2)) + '  ' + str(round((pos - prevPosQ - prevLenQ) / unit, 2)) + '\n'
+            k_quad = float(energy) * float(e.k1) / speed_of_light * 1e9
+            _logger.log(5, ind_str + 'added QUAD:  pos= {}, len={}, prevPosQ={}, prevLenQ={}, K={}'.format(pos,l, prevPosQ, prevLenQ, k_quad))
+            quadLat += 'QF' + '    ' + str(k_quad) + '   ' + str(round(e.l / unit, 2)) + '  ' + str(round((pos - prevPosQ - prevLenQ) / unit, 2)) + '\n'
             prevPosQ = pos
             prevLenQ = l
             # pass

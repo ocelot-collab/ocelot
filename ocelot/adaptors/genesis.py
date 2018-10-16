@@ -3119,7 +3119,7 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=1, min_phsh = False):
         # print e.type, pos, prevPosU
         if e.__class__ == Undulator:
             l = float(e.nperiods) * float(e.lperiod) #remove?
-            K_rms = sqrt(e.Kx**2 + e.Ky**2) / np.sqrt(2)
+            K_rms = np.sqrt(e.Kx**2 + e.Ky**2) / np.sqrt(2)
             undLat += 'AW' + '    ' + str(K_rms) + '   ' + str(round(l / unit, 2)) + '  ' + str(round((pos - prevPosU - prevLenU) / unit, 2)) + '\n'
             _logger.log(5, ind_str + 'added UND:   pos= {}, len={}, prevPosU={}, prevLenU={}, K_rms={}'.format(pos,l, prevPosU, prevLenU, K_rms))
             
@@ -3145,7 +3145,7 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=1, min_phsh = False):
             if not hasattr(e, 'K'):
                 e.K = None
             
-            if e.K is not None:
+            if e.K is None:
             
                 if hasattr(e, 'phi'):
                     phi_phsh = e.phi

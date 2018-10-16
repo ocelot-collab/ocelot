@@ -232,37 +232,42 @@ def tap_pol(n, n0, a0, a1, a2):
 def create_fel_lattice(und_N = 35,
                     und_L = 5,
                     und_l = 0.04,
-                    und_K = 0.999,
+                    und_Kx = 0,
+                    und_Ky = 0,
                     inters_L = 1.08,
                     quad_L = 0.4,
                     quad_K = 0,
                     phs_L = 0.1,
-                    phs_K = 0,
+                    phs_K = None,
+                    phs_phi=0,
                     quad_start = 'd',
-                        ):
-    
+                    **kwargs):
     if quad_L > inters_L:
         raise ValueError('Quarrupole cannot be longer than intersection')
 
     und_n = np.floor(und_L/und_l).astype(int)
 
-    und= Undulator(nperiods=und_n, lperiod=und_l, Kx=und_K, eid = "und")
+    und= Undulator(nperiods=und_n, lperiod=und_l, Kx=und_Kx, Ky=und_Ky, eid = "und")
     qf = Quadrupole (l=quad_L, eid = "qf")
     qd = Quadrupole (l=quad_L, eid = "qd")
     qfh = Quadrupole (l=qf.l / 2.)
     qdh = Quadrupole (l=qd.l / 2.)
 
 
-    phs = UnknownElement(l=0) #phase shift
-    phs.phi = 0
+    phs = UnknownElement(l=0) #phase shifter (legacy)
 
-    d1 = Drift (l=(inters_L - quad_L) / 2, eid = "d1")
-    d2 = Drift (l=(inters_L - quad_L) / 2, eid = "d2")
+    d1 = Drift(l=(inters_L - quad_L) / 2, eid = "d1") #drift with phase shifter
+    d1.phi = phs_phi
+    d1.K = phs_K
+    d2 = Drift(l=(inters_L - quad_L) / 2, eid = "d2")
+    d2.phi = phs_phi
+    d2.K = phs_K
+    
     if und_N < 2:
         cell_N = 0
         cell_N_last = 0
     else:
-        cell_N = np.floor( (und_N - 1)/2 ).astype(int)
+        cell_N = np.floor((und_N - 1)/2).astype(int)
         cell_N_last = int((und_N - 1)/2%1)
 
     if quad_start == 'd':
@@ -282,24 +287,26 @@ def create_exfel_lattice(beamline = 'sase1'):
         return create_fel_lattice(und_N = 35,
                         und_L = 5,
                         und_l = 0.04,
-                        und_K = 0,
+                        und_Kx = 0,
+                        und_Ky = 0,
                         inters_L = 1.08,
                         quad_L = 0.4,
                         quad_K = 0,
                         phs_L = 0.1,
-                        phs_K = 0,
+                        phs_K = None,
                         quad_start = 'd',
                             )
     elif beamline in ['sase3', 3]:
         return create_fel_lattice(und_N = 21,
                         und_L = 5,
                         und_l = 0.068,
-                        und_K = 0,
+                        und_Kx = 0,
+                        und_Ky = 0,
                         inters_L = 1.08,
                         quad_L = 0.4,
                         quad_K = 0,
                         phs_L = 0.1,
-                        phs_K = 0,
+                        phs_K = None,
                         quad_start = 'd',
                             )
     else:

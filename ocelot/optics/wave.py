@@ -1603,16 +1603,15 @@ def dfl_shift_z(dfl, s, set_zeros=1, return_result=1):
         _logger.info(ind_str + 's=0, returning original')
         # return
     else:
-        start = time.time()
+        t_start = time.time()
         dfl.fld = np.roll(dfl.fld, shift_n, axis=0)
         if set_zeros:
             if shift_n > 0:
                 dfl.fld[:shift_n, :, :] = 0
             if shift_n < 0:
                 dfl.fld[shift_n:, :, :] = 0
-        t_func = time.time() - start
-        # return dfl
-    _logger.debug(ind_str + 'done in %.2f ' % t_func + 'sec')
+        t_func = time.time() - t_start
+        _logger.debug(ind_str + 'done in %.2f ' % t_func + 'sec')
     if return_result:
         return dfl
     else:

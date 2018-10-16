@@ -177,7 +177,8 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice='all', va
                     plot_gen_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug)
             if choice[12]:
                 try:
-                    plot_dpa_bucket_out(handle,scatter=0,slice_pos='max_P',repeat=3, showfig=showfig, savefig=savefig, cmap=def_cmap)
+                    dpa = read_dpa_file_out(handle)
+                    plot_dpa_bucket_out(dpa,scatter=0,slice_pos='max_P',repeat=3, showfig=showfig, savefig=savefig, cmap=def_cmap)
                 except:
                     _logger.warning('could not plot particle buckets')
 
@@ -2721,25 +2722,26 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
     g_dev = beam.g - g0 #deviation from mean
 
     fig.set_size_inches((4 * figsize, (3 + plot_xy) * figsize), forward=True)
-    ax = fig.add_subplot(2 + plot_xy, 2, 1)
+    ax_I = fig.add_subplot(2 + plot_xy, 2, 1)
     plt.grid(True)
-    ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
+    ax_I.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
     p1, = plt.plot(1.e6 * np.array(beam.s), beam.I, 'r', lw=3)
-    
-    ax.set_ylim(ymin=0)
+    plt.plot(1.e6 * beam.s[idx], beam.I[idx], 'bs')
+    ax_I.set_ylim(ymin=0)
     
     if hasattr(beam,'eloss'):
         if (beam.eloss!=0).any():
-            ax = ax.twinx()
+            ax_loss = ax_I.twinx()
             p2, = plt.plot(1.e6 * np.array(beam.s), 1.e-3 * np.array(beam.eloss), 'g', lw=3)
-            ax.legend([p1, p2], [r'$I [A]$', r'Wake $[KV/m]$'], fontsize=fontsize, loc='best')
+            ax_loss.legend([p1, p2], [r'$I [A]$', r'Wake $[KV/m]$'], fontsize=fontsize, loc='best')
+            ax_loss.set_ylim(auto=True)
         else:
-            ax.legend([r'$I [A]$'], fontsize=fontsize, loc='best')
+            ax_I.legend([r'$I [A]$'], fontsize=fontsize, loc='best')
     else:
-        ax.legend([r'$I [A]$'], fontsize=fontsize, loc='best')
-    plt.plot(1.e6 * beam.s[idx], beam.I[idx], 'bs')
+        ax_I.legend([r'$I [A]$'], fontsize=fontsize, loc='best')
+    
     # ax.set_xlim([np.amin(beam.s),np.amax(beam.x)])
-    ax = fig.add_subplot(2 + plot_xy, 2, 2, sharex=ax)
+    ax = fig.add_subplot(2 + plot_xy, 2, 2, sharex=ax_I)
     plt.grid(True)
     ax.set_xlabel(r'$s [\mu m]$',fontsize=fontsize)
     #p1,= plt.plot(1.e6 * np.array(beam.s),1.e-3 * np.array(beam.eloss),'r',lw=3)

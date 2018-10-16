@@ -1990,6 +1990,7 @@ def read_dfl_file(filePath, Nxy, Lxy=None, zsep=None, xlamds=None, hist_rec=1, v
     assert (Nxy % 1 == 0), 'Nxy nust be an integer'
     Nxy = int(Nxy)
     if not os.path.isfile(filePath):
+        _logger.warning(ind_str + 'dfl file ' + filePath + ' not found')
         raise IOError('dfl file ' + filePath + ' not found !')
         
     b = np.fromfile(filePath, dtype=complex).astype(vartype)
@@ -2075,6 +2076,7 @@ def read_dpa_file(filePath, nbins=4, npart=None, debug=1):
     _logger.debug(ind_str + 'filePath = {}'.format(filePath))
     
     if not os.path.isfile(filePath):
+        _logger.warning(ind_str + 'dpa file ' + filePath + ' not found')
         raise IOError('dpa file ' + filePath + ' not found !')
 
             # print ('        - reading from ' + filePath)

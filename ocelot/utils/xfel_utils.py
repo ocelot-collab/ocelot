@@ -235,11 +235,11 @@ def create_fel_lattice(und_N = 35,
                     und_Kx = 0,
                     und_Ky = 0,
                     inters_L = 1.08,
+                    inters_K = None,
+                    inters_phi=0,
                     quad_L = 0.4,
                     quad_K = 0,
-                    phs_L = 0.1,
-                    phs_K = None,
-                    phs_phi=0,
+                    phs_L = 0.0,
                     quad_start = 'd',
                     **kwargs):
     if quad_L > inters_L:
@@ -254,14 +254,12 @@ def create_fel_lattice(und_N = 35,
     qdh = Quadrupole (l=qd.l / 2.)
 
 
-    phs = UnknownElement(l=0) #phase shifter (legacy)
+    phs = UnknownElement(l=0) #phase shifter (defines expected retardation of electrons in intersections between undulators)
+    phs.phi = inters_phi
+    phs.K = inters_K #overrides phi, would be K of free space, identical to rms K_und if "K_und"
 
-    d1 = Drift(l=(inters_L - quad_L) / 2, eid = "d1") #drift with phase shifter
-    d1.phi = phs_phi
-    d1.K = phs_K
+    d1 = Drift(l=(inters_L - quad_L) / 2, eid = "d1") #drift
     d2 = Drift(l=(inters_L - quad_L) / 2, eid = "d2")
-    d2.phi = phs_phi
-    d2.K = phs_K
     
     if und_N < 2:
         cell_N = 0
@@ -282,7 +280,7 @@ def create_fel_lattice(und_N = 35,
     return (MagneticLattice(lat), extra_fodo, cell)
 
 
-def create_exfel_lattice(beamline = 'sase1'):
+def create_exfel_lattice(beamline = 'sase1', inters_phi=0, inters_K = "K_und"):
     if beamline in ['sase1', 1, 'sase2', 2]:
         return create_fel_lattice(und_N = 35,
                         und_L = 5,
@@ -290,10 +288,11 @@ def create_exfel_lattice(beamline = 'sase1'):
                         und_Kx = 0,
                         und_Ky = 0,
                         inters_L = 1.08,
+                        inters_K = inters_K,
+                        inters_phi=inters_phi,
                         quad_L = 0.4,
                         quad_K = 0,
-                        phs_L = 0.1,
-                        phs_K = None,
+                        phs_L = 0.0,
                         quad_start = 'd',
                             )
     elif beamline in ['sase3', 3]:
@@ -303,10 +302,13 @@ def create_exfel_lattice(beamline = 'sase1'):
                         und_Kx = 0,
                         und_Ky = 0,
                         inters_L = 1.08,
+                        inters_K = inters_K,
+                        inters_phi=inters_phi,
                         quad_L = 0.4,
                         quad_K = 0,
-                        phs_L = 0.1,
-                        phs_K = None,
+                        phs_L = 0.0,
+                        phs_K = phs_K,
+                        phs_phi=phs_phi,
                         quad_start = 'd',
                             )
     else:

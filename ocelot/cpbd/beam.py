@@ -10,6 +10,7 @@ from copy import deepcopy
 from scipy import interpolate
 from scipy.signal import savgol_filter
 from ocelot.common.logging import *
+from ocelot.utils.reswake import pipe_wake
 
 _logger = logging.getLogger(__name__)
 #_logger = logging.getLogger('ocelot.beam')
@@ -462,6 +463,9 @@ class BeamArray(Beam):
             center = (np.amax(self.s) - np.amin(self.s)) / 2
             E_center = self.E[find_nearest_idx(self.s, center)]
             self.E += (self.s - center) * chirp * E_center * 1e6
+    
+    def add_wake(self, tube_radius=5e-3, tube_len=1, conductivity=3.66e+7, tau=7.1e-15, roughness=600e-9, d_oxid=5e-9):
+        self.eloss = pipe_wake(self.s, self.I, tube_radius, tube_len, conductivity, tau, roughness, d_oxid)[1][1][::-1]
 
     def to_array(self, *args, **kwargs):
         raise NotImplementedError('Method inherited from Beam() class, not applicable for BeamArray objects')

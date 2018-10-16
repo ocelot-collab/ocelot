@@ -89,7 +89,7 @@ def data2d_to_rgb(data, cmap2d='brightwheel', huenorm=None, huevmin=None,
 
 
 def imshow2d(data, ax=None, cmap2d='brightwheel', huenorm=None, huevmin=None,
-             huevmax=None, lightnorm=None, lightvmin=None, lightvmax=None,
+             huevmax=None, lightnorm=None, lightvmin=None, lightvmax=None, aspect='auto',
              **kwargs):
     """
     Plot 2 parameter 2D data array to current axis.

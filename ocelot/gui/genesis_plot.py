@@ -1671,7 +1671,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
 
     ax_int = fig.add_subplot(2, 2 + column_3d, 1)
     if log_scale:
-        intplt = ax_int.pcolormesh(x, y, xy_proj, norm=colors.LogNorm(vmin=xy_proj.min(), vmax=xy_proj.max()), cmap=cmap)
+        intplt = ax_int.pcolormesh(x, y, xy_proj, norm=colors.LogNorm(vmin=np.nanmin(xy_proj), vmax=np.nanmax(xy_proj)), cmap=cmap)
     else:
         intplt = ax_int.pcolormesh(x, y, xy_proj, cmap=cmap, vmin=0)
     ax_int.set_title(xy_title, fontsize=15)
@@ -1755,7 +1755,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     if log_scale:
         ax_proj_y.semilogx(y_line, y, linewidth=2, color=x_y_color)
         ax_proj_y.semilogx(y_line_f, y, color='grey')
-        ax_proj_y.set_xlim(xmin=np.amin(y_line), xmax=1)
+        ax_proj_y.set_xlim(xmin=np.nanmin(y_line), xmax=1)
     else:
         ax_proj_y.plot(y_line, y, linewidth=2, color=x_y_color)
         ax_proj_y.plot(y_line_f, y, color='grey')
@@ -1779,13 +1779,13 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         
         if log_scale:
             cut_off = 1e-6
-            yz_proj[yz_proj < yz_proj.max() * cut_off] = 0
-            xz_proj[xz_proj < xz_proj.max() * cut_off] = 0
+            yz_proj[yz_proj < np.nanmax(yz_proj) * cut_off] = 0
+            xz_proj[xz_proj < np.nanmax(xz_proj) * cut_off] = 0
             # cut-off = np.amin([yz_proj[yz_proj!=0].min(), xz_proj[xz_proj!=0].min()]) / 10
             # yz_proj += minmin
             # xz_proj += minmin
-            min_xz_proj=xz_proj[xz_proj!=0].min()
-            min_yz_proj=yz_proj[yz_proj!=0].min()
+            min_xz_proj=np.nanmin(xz_proj[xz_proj!=0])
+            min_yz_proj=np.nanmin(yz_proj[yz_proj!=0])
             
         
         # if np.amin(xz_proj) == 0:
@@ -1802,7 +1802,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         else:
             ax_proj_xz = fig.add_subplot(2, 2 + column_3d, 6, sharex=ax_z)
         if log_scale:
-            ax_proj_xz.pcolormesh(z, x, np.swapaxes(xz_proj, 1, 0), norm=colors.LogNorm(vmin=min_xz_proj, vmax=xz_proj.max()), cmap=cmap)
+            ax_proj_xz.pcolormesh(z, x, np.swapaxes(xz_proj, 1, 0), norm=colors.LogNorm(vmin=min_xz_proj, vmax=np.nanmax(xz_proj)), cmap=cmap)
         else:
             ax_proj_xz.pcolormesh(z, x, np.swapaxes(xz_proj, 1, 0), cmap=cmap, vmin=0)
         ax_proj_xz.set_title('Top view', fontsize=15)
@@ -1812,7 +1812,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
 
         ax_proj_yz = fig.add_subplot(2, 2 + column_3d, 3, sharey=ax_int, sharex=ax_proj_xz)
         if log_scale:
-            ax_proj_yz.pcolormesh(z, y, np.swapaxes(yz_proj, 1, 0), norm=colors.LogNorm(vmin=min_yz_proj, vmax=yz_proj.max()), cmap=cmap)
+            ax_proj_yz.pcolormesh(z, y, np.swapaxes(yz_proj, 1, 0), norm=colors.LogNorm(vmin=min_yz_proj, vmax=np.nanmax(yz_proj)), cmap=cmap)
         else:
             ax_proj_yz.pcolormesh(z, y, np.swapaxes(yz_proj, 1, 0), cmap=cmap, vmin=0)
         ax_proj_yz.set_title('Side view', fontsize=15)
@@ -2848,9 +2848,9 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
     
     _logger.info('plotting Wigner distribution')
         
-    if isinstance(wig_or_out, GenesisOutput):
-        W=wigner_out(wig_or_out,z)
-    elif isinstance(wig_or_out, WignerDistribution):
+    if not hasattr(wig_or_out, 'wig') and hasattr(wig_or_out, 'calc_radsize'):
+        W=wigner_out(wig_or_out, z)
+    elif hasattr(wig_or_out, 'wig'):
         W=wig_or_out
     else:
         raise ValueError('Unknown object for Wigner plot')
@@ -2899,7 +2899,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
             inst_freq = inst_freq
     else:
         spec_scale = W.freq_lamd
-        f_label_txt = '$\lambda& [nm]'
+        f_label_txt = '$\lambda$ [nm]'
         if plot_moments:
             inst_freq = h_eV_s * speed_of_light * 1e9 / inst_freq
     
@@ -3140,7 +3140,7 @@ def read_plot_dump_proj(exp_dir, stage, run_ids, plot_phase=1, showfig=True, sav
         plt.close('all')
 
 
-def plot_dfl_waistscan(sc_res, fig_name=None, showfig=True, savefig=0, debug=1):
+def plot_dfl_waistscan(sc_res, fig_name=None, showfig=True, savefig=False, debug=1):
 
     if showfig == False and savefig == False:
         return

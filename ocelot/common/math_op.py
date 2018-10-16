@@ -224,7 +224,7 @@ def fit_gauss_1d(x,F):
     return mu1, np.sqrt(sig1)
 
 def fwhm(x,F):
-    ff = fwhm3(np.array(F))
+    ff = fwhm3(np.array(F), height=0.5, peakpos=-1, total=1)
     return x[ff[2][1]]- x[ff[2][0]]
 #    m = np.max(F) / 2.0
 #    ups = []

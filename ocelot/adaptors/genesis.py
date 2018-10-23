@@ -1115,7 +1115,7 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', dfl_slipage_inc
     if inp.latticefile == None:
         if inp.lat != None:
             _logger.debug(ind_str + 'writing ' + inp_file + '.lat')
-            open(inp_path + '.lat', 'w').write(generate_lattice(inp.lat, unit=inp.xlamd*inp.delz, energy=inp.gamma0 * m_e_GeV, debug = debug, min_phsh = min_phsh))
+            open(inp_path + '.lat', 'w').write(generate_lattice(inp.lat, unit=inp.xlamd, energy=inp.gamma0 * m_e_GeV, debug = debug, min_phsh = min_phsh))
             inp.latticefile = inp_file + '.lat'
 
     if inp.beamfile == None:
@@ -1715,7 +1715,7 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
                 else:
                     pass
                 key='h{:}_'.format(hn)+key
-            _logger.log(5, ind_str + 'assembling',key.replace('-', '_').replace('<', '').replace('>', '')) 
+            _logger.log(5, ind_str + 'assembling') 
             command = 'out.' + key.replace('-', '_').replace('<', '').replace('>', '') + ' = output_unsorted[:,' + str(i) + '].reshape((' + str(int(out.nSlices)) + ',' + str(int(out.nZ)) + '))'
             _logger.log(5, ind_str + command)
             exec(command)
@@ -3164,9 +3164,22 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=1, min_phsh = False):
                 
             L_und = float(e.nperiods) * float(e.lperiod) #remove?
             K_rms = np.sqrt(e.Kx**2 + e.Ky**2) / np.sqrt(2)
-            undLat += 'AW' + '    ' + str(K_rms) + '   ' + str(round(L_und / unit, 2)) + '  ' + str(round((pos - prevPosU - prevLenU) / unit, 2)) + '\n'
-            _logger.log(5, ind_str + 'added UND:   pos= {}, len={}, prevPosU={}, prevLenU={}, K_rms={}'.format(pos,l, prevPosU, prevLenU, K_rms))
             
+            if not hasattr(e, 'K_err'):
+                e.K_err = None
+            
+            if e.K_err is None:
+                undLat += 'AW' + '    ' + str(K_rms) + '   ' + str(round(L_und / unit, 2)) + '  ' + str(round((pos - prevPosU - prevLenU) / unit, 2)) + '\n'
+                _logger.log(5, ind_str + 'added UND:   pos= {}, len={}, prevPosU={}, prevLenU={}, K_rms={}'.format(pos,l, prevPosU, prevLenU, K_rms))
+            else:
+                for period in range(e.nperiods):
+                    if period == 0:
+                        undLat += 'AW' + '    ' + str(K_rms) + '   ' + str(1) + '  ' + str(round((pos - prevPosU - prevLenU) / unit, 2)) + '\n' #some bug in Genesis kick the beam if first period has non-resonant K_rms
+                    elif period == e.nperiods:
+                        undLat += 'AW' + '    ' + str(K_rms) + '   ' + str(1) + '  ' + str(round((pos - prevPosU - prevLenU) / unit, 2)) + '\n' #some bug in Genesis kick the beam if first period has non-resonant K_rms
+                    else:
+                        undLat += 'AW' + '    ' + str(K_rms + e.K_err[period]) + '   ' + str(1) + '  ' + str(0) + '\n'
+                
             
             prevPosU = pos
             prevLenU = L_und

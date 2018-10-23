@@ -965,7 +965,7 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'e
         elif fig_name == 'Radiation':
             fig.savefig(g.filePath + '_rad.' + str(savefig), format=savefig)
         else:
-            fig.savefig(g.filePath + '_' + params_str + '.' + str(savefig), format=savefig)
+            fig.savefig(g.filePath + '_' + fig_name + '.' + str(savefig), format=savefig)
 
     plt.draw()
     if showfig == True:
@@ -2832,7 +2832,7 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
 
     _logger.debug(ind_str + 'done')
 
-def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,None), y_lim=(None,None), downsample=1, autoscale=None, figsize=4, cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=True, plot_proj=1, plot_text=1, plot_moments=0, debug=1):
+def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,None), y_lim=(None,None), downsample=1, autoscale=None, figsize=3, cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=True, plot_proj=1, plot_text=1, plot_moments=0, debug=1):
     '''
     plots wigner distribution (WD) with marginals
     wig_or_out -  may be WignerDistribution() or GenesisOutput() object

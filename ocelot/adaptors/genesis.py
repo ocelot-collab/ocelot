@@ -1115,7 +1115,7 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', dfl_slipage_inc
     if inp.latticefile == None:
         if inp.lat != None:
             _logger.debug(ind_str + 'writing ' + inp_file + '.lat')
-            open(inp_path + '.lat', 'w').write(generate_lattice(inp.lat, unit=inp.xlamd, energy=inp.gamma0 * m_e_GeV, debug = debug, min_phsh = min_phsh))
+            open(inp_path + '.lat', 'w').write(generate_lattice(inp.lat, unit=inp.xlamd/2, energy=inp.gamma0 * m_e_GeV, debug = debug, min_phsh = min_phsh))
             inp.latticefile = inp_file + '.lat'
 
     if inp.beamfile == None:
@@ -3172,18 +3172,23 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=1, min_phsh = False):
                 undLat += 'AW' + '    ' + str(K_rms) + '   ' + str(round(L_und / unit, 2)) + '  ' + str(round((pos - prevPosU - prevLenU) / unit, 2)) + '\n'
                 _logger.log(5, ind_str + 'added UND:   pos= {}, len={}, prevPosU={}, prevLenU={}, K_rms={}'.format(pos,l, prevPosU, prevLenU, K_rms))
             else:
-                for period in range(e.nperiods):
+                unit_len_mult = e.nperiods / len(e.K_err)
+                for period, K_err_i in enumerate(e.K_err):
                     if period == 0:
-                        undLat += 'AW' + '    ' + str(K_rms) + '   ' + str(1) + '  ' + str(round((pos - prevPosU - prevLenU) / unit, 2)) + '\n' #some bug in Genesis kick the beam if first period has non-resonant K_rms
-                    elif period == e.nperiods:
-                        undLat += 'AW' + '    ' + str(K_rms) + '   ' + str(1) + '  ' + str(round((pos - prevPosU - prevLenU) / unit, 2)) + '\n' #some bug in Genesis kick the beam if first period has non-resonant K_rms
+                        undLat += 'AW' + '    ' + str(K_rms) + '   ' + str(1 * e.lperiod / unit * unit_len_mult) + '  ' + str(round((pos - prevPosU - prevLenU) / unit, 2)) + '\n' # some bug in Genesis kick the beam if first period has non-resonant K_rms
+                    elif period == len(e.K_err):
+                        undLat += 'AW' + '    ' + str(K_rms) + '   ' + str(1 * e.lperiod / unit * unit_len_mult) + '  ' + str(round(0)) + '\n' # some bug in Genesis kick the beam if first period has non-resonant K_rms
                     else:
-                        undLat += 'AW' + '    ' + str(K_rms + e.K_err[period]) + '   ' + str(1) + '  ' + str(0) + '\n'
+                        undLat += 'AW' + '    ' + str(K_rms + K_err_i) + '   ' + str(1 * e.lperiod / unit * unit_len_mult) + '  ' + str(0) + '\n'
+                
                 
             
             prevPosU = pos
             prevLenU = L_und
             l_period = e.lperiod
+            _logger.log(5, 'prevPosU = {}'.format(prevPosU))
+            _logger.log(5, 'prevLenU = {}'.format(prevLenU))
+            _logger.log(5, 'l_period = {}'.format(l_period))
         
         elif e.__class__ == UnknownElement and hasattr(e, 'phi'):
             phi_inters = e.phi

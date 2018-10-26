@@ -174,6 +174,8 @@ class MagneticLattice:
         """
         if there are edges on the ends of dipoles return True, else False
         """
+        if len(self.sequence) < 3:
+            return False
         for i in range(len(self.sequence)-2):
             prob_edge1 = self.sequence[i]
             elem = self.sequence[i+1]

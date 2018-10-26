@@ -49,11 +49,12 @@ def uni_matrix(z, k1, hx, sum_tilts=0., energy=0.):
         r56 = hx*hx*z**3/6./beta**2
 
     r56 -= z/(beta*beta)*igamma2
+
     u_matrix = np.array([[cx, sx, 0., 0., 0., dx/beta],
                         [-kx2*sx, cx, 0., 0., 0., sx*hx/beta],
                         [0., 0., cy, sy, 0., 0.],
                         [0., 0., -ky2*sy, cy, 0., 0.],
-                        [hx*sx, dx, 0., 0., 1., r56],
+                        [hx*sx/beta, dx/beta, 0., 0., 1., r56],
                         [0., 0., 0., 0., 0., 1.]])
     if sum_tilts != 0:
         u_matrix = np.dot(np.dot(rot_mtx(-sum_tilts), u_matrix), rot_mtx(sum_tilts))

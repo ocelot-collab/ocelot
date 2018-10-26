@@ -420,6 +420,7 @@ def tracking_step(lat, particle_list, dz, navi):
     for tm in t_maps:
         start = time()
         tm.apply(particle_list)
+        #print("tracking_step ", particle_list.rparticles[:,-1], "   TM = ", tm.length)
         _logger.debug(" tracking_step -> tm.class: " + tm.__class__.__name__  + "  l= "+  str(tm.length))
         _logger.debug(" tracking_step -> tm.apply: time exec = " + str(time() - start) + "  sec")
     return
@@ -445,7 +446,6 @@ def track(lattice, p_array, navi, print_progress=True, calc_tws=True):
         dz, proc_list, phys_steps = navi.get_next()
 
         tracking_step(lat=lattice, particle_list=p_array, dz=dz, navi=navi)
-
         for p, z_step in zip(proc_list, phys_steps):
             p.z0 = navi.z0
             p.apply(p_array, z_step)

@@ -1019,8 +1019,8 @@ def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinea
     x_max = np.max(x)
     y_min = np.min(y)
     y_max = np.max(y)
-
-    H, xedges, yedges = np.histogram2d(x, y, bins=(nbins_x, nbins_y),range=[[x_min*1, x_max*1], [y_min*1, y_max*1.1]])
+    dy = y_max - y_min
+    H, xedges, yedges = np.histogram2d(x, y, bins=(nbins_x, nbins_y), range=[[x_min*1, x_max*1], [y_min - dy*0.05, y_max + dy*0.05]])
     H = H.T
     vmin = np.min(H) + (np.max(H) - np.min(H)) * 0.0001
 

@@ -1,21 +1,33 @@
-### TUNE_SHIFT START ###
+### DOGLEG START ###
 
 test_lattice_transfer_map [PASSED]
 
- execution time is 0.265 sec
+ execution time is 2.712 sec
 
-test_twiss [PASSED]
+test_track_with_energy_shift [PASSED]
 
- execution time is 0.392 sec
+ execution time is 0.756 sec
 
-test_track_nturns [PASSED]
+test_track_with_energy_shift [PASSED]
 
- execution time is 208.408 sec
+ execution time is 0.610 sec
 
-test_freq_analysis [PASSED]
+test_track_with_energy_shift [PASSED]
 
- execution time is 0.397 sec
+ execution time is 0.609 sec
 
-### TUNE_SHIFT END ###
+test_track_with_energy_shift_tilted [PASSED]
+
+ execution time is 0.610 sec
+
+test_track_with_energy_shift_tilted [PASSED]
+
+ execution time is 0.598 sec
+
+test_track_with_energy_shift_tilted [PASSED]
+
+ execution time is 0.587 sec
+
+### DOGLEG END ###
 
 

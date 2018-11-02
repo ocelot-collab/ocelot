@@ -243,9 +243,10 @@ def create_fel_lattice(und_N = 35,
                     quad_start = 'd',
                     **kwargs):
     if quad_L > inters_L:
-        raise ValueError('Quarrupole cannot be longer than intersection')
+        _logger.warning('Quarrupole cannot be longer than intersection')
 
-    und_n = np.floor(und_L/und_l).astype(int)
+    # und_n = np.floor(und_L/und_l).astype(int)
+    und_n = und_L/und_l
 
     und= Undulator(nperiods=und_n, lperiod=und_l, Kx=und_Kx, Ky=und_Ky, eid = "und")
     qf = Quadrupole (l=quad_L, eid = "qf")
@@ -297,18 +298,16 @@ def create_exfel_lattice(beamline = 'sase1', inters_phi=0, inters_K = "K_und"):
                             )
     elif beamline in ['sase3', 3]:
         return create_fel_lattice(und_N = 21,
-                        und_L = 5,
+                        und_L = 4.964,#5
                         und_l = 0.068,
                         und_Kx = 0,
                         und_Ky = 0,
-                        inters_L = 1.08,
+                        inters_L = 1.156,#1.08,
                         inters_K = inters_K,
                         inters_phi=inters_phi,
                         quad_L = 0.4,
                         quad_K = 0,
                         phs_L = 0.0,
-                        phs_K = phs_K,
-                        phs_phi=phs_phi,
                         quad_start = 'd',
                             )
     else:

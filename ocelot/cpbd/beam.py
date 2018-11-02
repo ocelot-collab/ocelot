@@ -4,16 +4,16 @@ definition of particles, beams and trajectories
 import numpy as np
 from ocelot.common.globals import *
 from ocelot.common.math_op import *
-# from ocelot.common.math_op import *
 from ocelot.common.py_func import filename_from_path
 from copy import deepcopy
 from scipy import interpolate
 from scipy.signal import savgol_filter
+from scipy.stats import truncnorm
 from ocelot.common.logging import *
 from ocelot.utils.reswake import pipe_wake
 
 _logger = logging.getLogger(__name__)
-#_logger = logging.getLogger('ocelot.beam')
+
 try:
     import numexpr as ne
     ne_flag = True
@@ -33,7 +33,7 @@ class Twiss:
     """
     class - container for twiss parameters
     """
-    def __init__(self, beam = None):
+    def __init__(self, beam=None):
         if beam == None:
             self.emit_x = 0.0
             self.emit_y = 0.0
@@ -611,13 +611,18 @@ class ParticleArray:
         if nth <= 1:
             print("Nothing to do. nth number must be bigger 1")
             return self
-        if nth > np.shape(self.rparticles)[1]:
-            print("nth number is too big")
-        n = int((np.shape(self.rparticles)[1] - n0)/nth)
+        if nth > self.n:
+            raise ValueError("nth number is bigger of particles number")
+        if n0 > self.n:
+            raise ValueError("n0 number is bigger of particles number")
+        n = int((self.n - n0)/nth)
+        if n < 1:
+            raise ValueError("Number of particles in new ParticleArray is less then 1")
 
+        n_end = n0 + nth*n
         p = ParticleArray(n)
-        p.rparticles[:, :] = self.rparticles[:, n0::nth]
-        p.q_array[:] = self.q_array[n0::nth]*nth
+        p.rparticles[:, :] = self.rparticles[:, n0:n_end:nth]
+        p.q_array[:] = self.q_array[n0:n_end:nth]*nth
         p.s = self.s
         p.E = self.E
         return p
@@ -701,6 +706,7 @@ def get_envelope(p_array, tws_i=Twiss()):
         tws.ypy = np.mean(ne.evaluate('(y - tw_y) * (py - tw_py)'))
         tws.pypy =np.mean(ne.evaluate('(py - tw_py) * (py - tw_py)'))
         tws.tautau = np.mean(ne.evaluate('(tau - tw_tau) * (tau - tw_tau)'))
+        tws.xy = np.mean(ne.evaluate('(x - tw_x) * (y - tw_y)'))
     else:
         tws.xx = np.mean((x - tws.x)*(x - tws.x))
         tws.xpx = np.mean((x-tws.x)*(px-tws.px))
@@ -709,6 +715,7 @@ def get_envelope(p_array, tws_i=Twiss()):
         tws.ypy = np.mean((y-tws.y)*(py-tws.py))
         tws.pypy = np.mean((py-tws.py)*(py-tws.py))
         tws.tautau = np.mean((tau - tws.tau)*(tau - tws.tau))
+        tws.xy = np.mean((x - tws.x) * (y - tws.y))
     tws.p = np.mean( p_array.p())
     tws.E = np.copy(p_array.E)
     #tws.de = p_array.de
@@ -851,109 +858,6 @@ def beam_matching(particles, bounds, x_opt, y_opt):
     particles[2] = M[0, 0]*pd[:, 2] + M[0, 1]*pd[:, 3]
     particles[3] = M[1, 0]*pd[:, 2] + M[1, 1]*pd[:, 3]
     return particles
-
-
-class BeamTransform:
-    """
-    Beam matching
-    """
-    def __init__(self, tws=None, x_opt=None, y_opt=None):
-        """
-        :param tws : Twiss object
-        :param x_opt (obsolete): [alpha, beta, mu (phase advance)]
-        :param y_opt (obsolete): [alpha, beta, mu (phase advance)]
-        """
-        self.bounds = [-5, 5]  # [start, stop] in sigmas
-        self.tws = tws       # Twiss
-        self.x_opt = x_opt   # [alpha, beta, mu (phase advance)]
-        self.y_opt = y_opt   # [alpha, beta, mu (phase advance)]
-        self.step = 1
-
-    @property
-    def twiss(self):
-        if self.tws == None:
-            _logger.warning("BeamTransform: x_opt and y_opt are obsolete, use Twiss")
-            tws = Twiss()
-            tws.alpha_x, tws.beta_x, tws.mux = self.x_opt
-            tws.alpha_y, tws.beta_y, tws.muy = self.y_opt
-        else:
-            tws = self.tws
-        return tws
-
-
-    def prepare(self, lat):
-        pass
-
-    def apply(self, p_array, dz):
-        _logger.debug("BeamTransform: apply")
-        self.x_opt = [self.twiss.alpha_x, self.twiss.beta_x, self.twiss.mux]
-        self.y_opt = [self.twiss.alpha_y, self.twiss.beta_y, self.twiss.muy]
-        self.beam_matching(p_array.rparticles, self.bounds, self.x_opt, self.y_opt)
-
-    def beam_matching(self, particles, bounds, x_opt, y_opt):
-        pd = np.zeros((int(particles.size / 6), 6))
-        pd[:, 0] = particles[0]
-        pd[:, 1] = particles[1]
-        pd[:, 2] = particles[2]
-        pd[:, 3] = particles[3]
-        pd[:, 4] = particles[4]
-        pd[:, 5] = particles[5]
-
-        z0 = np.mean(pd[:, 4])
-        sig0 = np.std(pd[:, 4])
-        # print((z0 + sig0*bounds[0] <= pd[:, 4]) * (pd[:, 4] <= z0 + sig0*bounds[1]))
-        inds = np.argwhere((z0 + sig0 * bounds[0] <= pd[:, 4]) * (pd[:, 4] <= z0 + sig0 * bounds[1]))
-        # print(moments(pd[inds, 0], pd[inds, 1]))
-        mx, mxs, mxx, mxxs, mxsxs, emitx0 = self.moments(pd[inds, 0], pd[inds, 1])
-        beta = mxx / emitx0
-        alpha = -mxxs / emitx0
-        #print(beta, alpha)
-        M = m_from_twiss([alpha, beta, 0], x_opt)
-        #print(M)
-        particles[0] = M[0, 0] * pd[:, 0] + M[0, 1] * pd[:, 1]
-        particles[1] = M[1, 0] * pd[:, 0] + M[1, 1] * pd[:, 1]
-        [mx, mxs, mxx, mxxs, mxsxs, emitx0] = self.moments(pd[inds, 2], pd[inds, 3])
-        beta = mxx / emitx0
-        alpha = -mxxs / emitx0
-        M = m_from_twiss([alpha, beta, 0], y_opt)
-        particles[2] = M[0, 0] * pd[:, 2] + M[0, 1] * pd[:, 3]
-        particles[3] = M[1, 0] * pd[:, 2] + M[1, 1] * pd[:, 3]
-        return particles
-
-    def moments(self, x, y, cut=0):
-        n = len(x)
-        inds = np.arange(n)
-        mx = np.mean(x)
-        my = np.mean(y)
-        x = x - mx
-        y = y - my
-        x2 = x * x
-        mxx = np.sum(x2) / n
-        y2 = y * y
-        myy = np.sum(y2) / n
-        xy = x * y
-        mxy = np.sum(xy) / n
-
-        emitt = np.sqrt(mxx * myy - mxy * mxy)
-
-        if cut > 0:
-            inds = []
-            beta = mxx / emitt
-            gamma = myy / emitt
-            alpha = mxy / emitt
-            emittp = gamma * x2 + 2. * alpha * xy + beta * y2
-            inds0 = np.argsort(emittp)
-            n1 = np.round(n * (100 - cut) / 100)
-            inds = inds0[0:n1]
-            mx = np.mean(x[inds])
-            my = np.mean(y[inds])
-            x1 = x[inds] - mx
-            y1 = y[inds] - my
-            mxx = np.sum(x1 * x1) / n1
-            myy = np.sum(y1 * y1) / n1
-            mxy = np.sum(x1 * y1) / n1
-            emitt = np.sqrt(mxx * myy - mxy * mxy)
-        return mx, my, mxx, mxy, myy, emitt
 
 
 def sortrows(x, col):
@@ -1406,7 +1310,8 @@ def parray2beam(parray, step=1e-7):
     return(beam)
 
 def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
-                    sigma_tau=1e-3, sigma_p=1e-4, tau_p_cor=0.01, charge=5e-9, nparticles=200000, energy=0.13):
+                    sigma_tau=1e-3, sigma_p=1e-4, tau_p_cor=0.01, charge=5e-9, nparticles=200000, energy=0.13,
+                    tue_trunc=None):
 
     if sigma_y is None:
         sigma_y = sigma_x
@@ -1417,7 +1322,11 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
     px = np.random.randn(nparticles) * sigma_px
     y = np.random.randn(nparticles) * sigma_y
     py = np.random.randn(nparticles) * sigma_py
-    tau = np.random.randn(nparticles) * sigma_tau
+    if tue_trunc is None:
+        tau = np.random.randn(nparticles) * sigma_tau
+    else:
+        tau = truncnorm.rvs(tue_trunc, -tue_trunc, loc=0, scale=sigma_tau, size=nparticles)
+    #
     dp = np.random.randn(nparticles) * sigma_p
     if sigma_tau != 0:
         dp += tau_p_cor*tau/sigma_tau

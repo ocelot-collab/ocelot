@@ -49,11 +49,12 @@ def uni_matrix(z, k1, hx, sum_tilts=0., energy=0.):
         r56 = hx*hx*z**3/6./beta**2
 
     r56 -= z/(beta*beta)*igamma2
+
     u_matrix = np.array([[cx, sx, 0., 0., 0., dx/beta],
                         [-kx2*sx, cx, 0., 0., 0., sx*hx/beta],
                         [0., 0., cy, sy, 0., 0.],
                         [0., 0., -ky2*sy, cy, 0., 0.],
-                        [hx*sx, dx, 0., 0., 1., r56],
+                        [hx*sx/beta, dx/beta, 0., 0., 1., r56],
                         [0., 0., 0., 0., 0., 1.]])
     if sum_tilts != 0:
         u_matrix = np.dot(np.dot(rot_mtx(-sum_tilts), u_matrix), rot_mtx(sum_tilts))
@@ -62,9 +63,6 @@ def uni_matrix(z, k1, hx, sum_tilts=0., energy=0.):
 
 def create_r_matrix(element):
 
-    #dx = element.dx
-    #dy = element.dy
-    #tilt = element.dtilt + element.tilt
     k1 = element.k1
     if element.l == 0:
         hx = 0.
@@ -127,7 +125,7 @@ def create_r_matrix(element):
             phi = phi * np.pi / 180.
             de = V * np.cos(phi)
             # pure pi-standing-wave case
-            eta = 1#np.cos(phi)**2
+            eta = 1
             # gamma = (E + 0.5 * de) / m_e_GeV
             Ei = E / m_e_GeV
             Ef = (E + de) / m_e_GeV
@@ -209,16 +207,11 @@ def create_r_matrix(element):
                 return np.dot(np.dot(coupl_kick_down, cav_matrix), coupl_kick_up)
             return cav_matrix
 
-        if element.delta_e == 0. and element.v == 0.:
+        if element.v == 0.:
             r_z_e = lambda z, energy: uni_matrix(z, 0., hx=0., sum_tilts=element.dtilt + element.tilt, energy=energy)
         else:
-            r_z_e = lambda z, energy: cavity_R_z(z, V=element.v * z / element.l, E=energy, freq=element.f,
+            r_z_e = lambda z, energy: cavity_R_z(z, V=element.v * z / element.l, E=energy, freq=element.freq,
                                                phi=element.phi)
-
-        #delta_e_z = lambda z: element.v * np.cos(element.phi * np.pi / 180.) * z / element.l
-        #delta_e = element.v * np.cos(element.phi * np.pi / 180.)
-
-
 
     elif element.__class__ == Solenoid:
         def sol(l, k, energy):
@@ -290,7 +283,7 @@ def create_r_matrix(element):
             rm[5, 1] = rm[0, 4]
             rm[5, 4] = -z* K ** 2 * cos2_phi / 6
             return rm
-        r_z_e = lambda z, energy: tds_R_z(z, energy, freq=element.f, v=element.v * z / element.l, phi=element.phi)
+        r_z_e = lambda z, energy: tds_R_z(z, energy, freq=element.freq, v=element.v * z / element.l, phi=element.phi)
 
     elif element.__class__ == Matrix:
         rm = np.eye(6)

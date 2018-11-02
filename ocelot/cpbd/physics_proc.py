@@ -1,8 +1,9 @@
 from ocelot.cpbd.io import save_particle_array
 from ocelot.common.globals import *
 import numpy as np
-import logging
-logger = logging.getLogger(__name__)
+from ocelot.cpbd.beam import Twiss
+from ocelot.common.logging import *
+_logger = logging.getLogger(__name__)
 
 
 class PhysProc:
@@ -56,7 +57,7 @@ class SaveBeam(PhysProc):
         self.filename = filename
 
     def apply(self, p_array, dz):
-        logger.debug(" SaveBeam applied, dz =", dz)
+        _logger.debug(" SaveBeam applied, dz =", dz)
         save_particle_array(filename=self.filename, p_array=p_array)
 
 
@@ -91,7 +92,7 @@ class SmoothBeam(PhysProc):
         :return:
         """
 
-        logger.debug(" SmoothBeam applied, dz =" + str(dz))
+        _logger.debug(" SmoothBeam applied, dz =" + str(dz))
         def myfunc(x, A):
             if x < 2 * A:
                 y = x - x * x / (4 * A)
@@ -121,7 +122,6 @@ class SmoothBeam(PhysProc):
         p_array.tau()[inds] = Zout2
 
 
-
 class LaserHeater(PhysProc):
     def __init__(self, step=1):
         PhysProc.__init__(self, step)
@@ -137,7 +137,7 @@ class LaserHeater(PhysProc):
         self.y_mean = 0
 
     def apply(self, p_array, dz):
-        logger.debug(" LH applied, dz =", dz)
+        _logger.debug(" LH applied, dz =", dz)
         gamma = p_array.E / m_e_GeV
         lbda_ph = self.lperiod / (2 * gamma ** 2) * (1 + self.Ku ** 2 / 2)
         k_ph = 2 * np.pi / lbda_ph
@@ -150,6 +150,7 @@ class LaserHeater(PhysProc):
             -0.25 * dx ** 2 / self.sigma_x ** 2
             - 0.25 * dy ** 2 / self.sigma_y ** 2)
 
+
 class Apperture(PhysProc):
     def __init__(self, step=1):
         PhysProc.__init__(self, step)
@@ -157,7 +158,7 @@ class Apperture(PhysProc):
         self.zmax = 5
 
     def apply(self, p_array, dz):
-        logger.debug(" Apperture applied")
+        _logger.debug(" Apperture applied")
         tau = p_array.tau()[:]
         tau0 = np.mean(tau)
         tau = tau - tau0
@@ -166,3 +167,134 @@ class Apperture(PhysProc):
         inds = inds.reshape(inds.shape[0])
         p_array.rparticles = np.delete(p_array.rparticles, inds, 1)
         p_array.q_array = np.delete(p_array.q_array, inds, 0)
+
+
+class BeamTransform(PhysProc):
+    """
+    Beam matching
+    """
+    def __init__(self, tws=None, x_opt=None, y_opt=None):
+        """
+        :param tws : Twiss object
+        :param x_opt (obsolete): [alpha, beta, mu (phase advance)]
+        :param y_opt (obsolete): [alpha, beta, mu (phase advance)]
+        """
+        PhysProc.__init__(self)
+        self.bounds = [-5, 5]  # [start, stop] in sigmas
+        self.tws = tws       # Twiss
+        self.x_opt = x_opt   # [alpha, beta, mu (phase advance)]
+        self.y_opt = y_opt   # [alpha, beta, mu (phase advance)]
+        self.step = 1
+        self.remove_offsets = True
+
+    @property
+    def twiss(self):
+        if self.tws == None:
+            _logger.warning("BeamTransform: x_opt and y_opt are obsolete, use Twiss")
+            tws = Twiss()
+            tws.alpha_x, tws.beta_x, tws.mux = self.x_opt
+            tws.alpha_y, tws.beta_y, tws.muy = self.y_opt
+        else:
+            tws = self.tws
+        return tws
+
+    def apply(self, p_array, dz):
+        _logger.debug("BeamTransform: apply")
+        self.x_opt = [self.twiss.alpha_x, self.twiss.beta_x, self.twiss.mux]
+        self.y_opt = [self.twiss.alpha_y, self.twiss.beta_y, self.twiss.muy]
+        self.beam_matching(p_array.rparticles, self.bounds, self.x_opt, self.y_opt)
+
+    def beam_matching(self, particles, bounds, x_opt, y_opt):
+        #the beam is centered in the phase space
+        pd = np.zeros((int(particles.size / 6), 6))
+        dx = 0
+        dxp = 0
+        dy = 0
+        dyp = 0
+        if self.remove_offsets:
+            dx = np.mean(particles[0])
+            dxp = np.mean(particles[1])
+            dy = np.mean(particles[2])
+            dyp = np.mean(particles[3])
+
+        pd[:, 0] = particles[0] - dx
+        pd[:, 1] = particles[1] - dxp
+        pd[:, 2] = particles[2] - dy
+        pd[:, 3] = particles[3] - dyp
+        pd[:, 4] = particles[4]
+        pd[:, 5] = particles[5]
+
+        z0 = np.mean(pd[:, 4])
+        sig0 = np.std(pd[:, 4])
+        inds = np.argwhere((z0 + sig0 * bounds[0] <= pd[:, 4]) * (pd[:, 4] <= z0 + sig0 * bounds[1]))
+
+        mx, mxs, mxx, mxxs, mxsxs, emitx0 = self.moments(pd[inds, 0], pd[inds, 1])
+        beta = mxx / emitx0
+        alpha = -mxxs / emitx0
+        M = self.m_from_twiss([alpha, beta, 0], x_opt)
+
+
+
+        particles[0] = M[0, 0] * pd[:, 0] + M[0, 1] * pd[:, 1]
+        particles[1] = M[1, 0] * pd[:, 0] + M[1, 1] * pd[:, 1]
+        [mx, mxs, mxx, mxxs, mxsxs, emitx0] = self.moments(pd[inds, 2], pd[inds, 3])
+        beta = mxx / emitx0
+        alpha = -mxxs / emitx0
+        M = self.m_from_twiss([alpha, beta, 0], y_opt)
+        particles[2] = M[0, 0] * pd[:, 2] + M[0, 1] * pd[:, 3]
+        particles[3] = M[1, 0] * pd[:, 2] + M[1, 1] * pd[:, 3]
+        return particles
+
+    def moments(self, x, y, cut=0):
+        n = len(x)
+        inds = np.arange(n)
+        mx = np.mean(x)
+        my = np.mean(y)
+        x = x - mx
+        y = y - my
+        x2 = x * x
+        mxx = np.sum(x2) / n
+        y2 = y * y
+        myy = np.sum(y2) / n
+        xy = x * y
+        mxy = np.sum(xy) / n
+
+        emitt = np.sqrt(mxx * myy - mxy * mxy)
+
+        if cut > 0:
+            inds = []
+            beta = mxx / emitt
+            gamma = myy / emitt
+            alpha = mxy / emitt
+            emittp = gamma * x2 + 2. * alpha * xy + beta * y2
+            inds0 = np.argsort(emittp)
+            n1 = np.round(n * (100 - cut) / 100)
+            inds = inds0[0:n1]
+            mx = np.mean(x[inds])
+            my = np.mean(y[inds])
+            x1 = x[inds] - mx
+            y1 = y[inds] - my
+            mxx = np.sum(x1 * x1) / n1
+            myy = np.sum(y1 * y1) / n1
+            mxy = np.sum(x1 * y1) / n1
+            emitt = np.sqrt(mxx * myy - mxy * mxy)
+        return mx, my, mxx, mxy, myy, emitt
+
+    def m_from_twiss(self, Tw1, Tw2):
+        # Transport matrix M for two sets of Twiss parameters (alpha,beta,psi)
+        b1 = Tw1[1]
+        a1 = Tw1[0]
+        psi1 = Tw1[2]
+        b2 = Tw2[1]
+        a2 = Tw2[0]
+        psi2 = Tw2[2]
+
+        psi = psi2-psi1
+        cosp = np.cos(psi)
+        sinp = np.sin(psi)
+        M = np.zeros((2, 2))
+        M[0, 0] = np.sqrt(b2/b1)*(cosp+a1*sinp)
+        M[0, 1] = np.sqrt(b2*b1)*sinp
+        M[1, 0] = ((a1-a2)*cosp-(1+a1*a2)*sinp)/np.sqrt(b2*b1)
+        M[1, 1] = np.sqrt(b1/b2)*(cosp-a2*sinp)
+        return M

@@ -53,16 +53,18 @@ def D1(data, X, distance, xlabel, xlim, ylim,  file_name, unit, status, title=No
     energy = X[index]
 
     fig = plt.figure(nfig)
+
     if title is not None:
-        plt.title(title)
+        fig.suptitle(title, fontsize=15)
+
     ax = fig.add_subplot(111)
+
     ax.plot(X, data)
 
-    if xlim != (0,0):
+    if xlim != (0, 0):
         ax.set_xlim(xlim)
-    if ylim != (0,0):
+    if ylim != (0, 0):
         ax.set_ylim(ylim)
-    #ax.set_title()
     ax.set_xlabel(xlabel)
     ax.set_ylabel(r"$I$, $\frac{ph}{sec \cdot mm^2 10^{-3}BW}$")
     if unit == "mrad":
@@ -88,7 +90,6 @@ def D1(data, X, distance, xlabel, xlim, ylim,  file_name, unit, status, title=No
         figg.savefig(file_name)
     else:
         plt.show()
-    plt.show()
 
 
 def D3(screen,Data, distance, file_name = None , unit = "mm", title=None, nfig=1):

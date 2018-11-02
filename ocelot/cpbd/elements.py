@@ -2,9 +2,9 @@
 definition of magnetic lattice
 linear dimensions in [m]
 """
+
 from ocelot.cpbd.field_map import FieldMap
 import numpy as np
-#from numpy import pi
 
 
 class Element(object):
@@ -181,11 +181,6 @@ class SBend(Bend):
         Bend.__init__(self, l=l, angle=angle, k1=k1, k2=k2, e1=e1, e2=e2, tilt=tilt,
                       gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, fintx=fintx, eid=eid)
 
-        #self.fint = fint
-        #self.fintx = fint
-        #if fintx > 0:
-        #    self.fintx = fintx
-
 
 class RBend(Bend):
     """
@@ -212,10 +207,6 @@ class RBend(Bend):
         Bend.__init__(self, l=l, angle=angle, e1=e1, e2=e2, k1=k1, k2=k2, tilt=tilt,
                       gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, fintx=fintx, eid=eid)
 
-        #self.fint = fint
-        #self.fintx = fint
-        #if fintx > 0:
-        #    self.fintx = fintx
 
 class Hcor(RBend):
     """
@@ -294,13 +285,12 @@ class Cavity(Element):
     freq - frequency [Hz]
     phi - phase in [deg]
     """
-    def __init__(self, l=0.,  v=0., phi=0., freq=0., eid=None, delta_e=0., volterr=0.):
+    def __init__(self, l=0., v=0., phi=0., freq=0., eid=None, volterr=0.):
         Element.__init__(self, eid)
         self.l = l
         self.v = v   # in GV
-        self.delta_e = delta_e
-        self.f = freq   # Hz
-        self.phi = phi  # in grad # *np.pi/180.
+        self.freq = freq   # Hz
+        self.phi = phi  # in grad
         self.E = 0
         self.volterr = volterr
         self.coupler_kick = False
@@ -319,8 +309,8 @@ class TDCavity(Element):
         Element.__init__(self, eid)
         self.l = l
         self.v = v   # in GV
-        self.f = freq   # Hz
-        self.phi = phi  # in deg # *np.pi/180.
+        self.freq = freq   # Hz
+        self.phi = phi  # in deg
         self.tilt = tilt
 
 class Solenoid(Element):
@@ -403,6 +393,7 @@ class Matrix(Element):
         self.rm65 = rm65
         self.rm66 = rm66
         self.delta_e = delta_e
+
 
 class Pulse:
     def __init__(self):

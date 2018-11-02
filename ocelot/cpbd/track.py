@@ -121,18 +121,18 @@ def harmonic_position(data1D, nu = None, diap = 0.1, nearest = False):
     return nearest_nu
 
 
-def freq_analysis(track_list, lat, nturns, harm = True, diap = 0.10, nearest = False, nsuperperiods = 1):
+def freq_analysis(track_list, lat, nturns, harm=True, diap=0.10, nearest=False, nsuperperiods=1):
 
     def beta_freq(lat):
 
         tws = twiss(lat, Twiss())
         nux = tws[-1].mux/2./pi*nsuperperiods
         nuy = tws[-1].muy/2./pi*nsuperperiods
-        print ("freq. analysis: Qx = ",nux, " Qy = ", nuy)
+        print ("freq. analysis: Qx = ", nux, " Qy = ", nuy)
         nux = abs(int(nux+0.5) - nux)
         nuy = abs(int(nuy+0.5) - nuy)
-        print ("freq. analysis: nux = ", nux)
-        print ("freq. analysis: nuy = ", nuy)
+        print("freq. analysis: nux = ", nux)
+        print("freq. analysis: nuy = ", nuy)
         return nux, nuy
 
     nux, nuy = None, None
@@ -420,6 +420,7 @@ def tracking_step(lat, particle_list, dz, navi):
     for tm in t_maps:
         start = time()
         tm.apply(particle_list)
+        #print("tracking_step ", particle_list.rparticles[:,-1], "   TM = ", tm.length)
         _logger.debug(" tracking_step -> tm.class: " + tm.__class__.__name__  + "  l= "+  str(tm.length))
         _logger.debug(" tracking_step -> tm.apply: time exec = " + str(time() - start) + "  sec")
     return
@@ -445,7 +446,6 @@ def track(lattice, p_array, navi, print_progress=True, calc_tws=True):
         dz, proc_list, phys_steps = navi.get_next()
 
         tracking_step(lat=lattice, particle_list=p_array, dz=dz, navi=navi)
-
         for p, z_step in zip(proc_list, phys_steps):
             p.z0 = navi.z0
             p.apply(p_array, z_step)

@@ -1413,9 +1413,9 @@ def generate_input(undulator, beam, E_photon = None, itdp=True):
         # from ocelot.cpbd.elements import Undulator
         lat = undulator
         indx_u = lat.find_indices(Undulator)
-        und = [lat.sequence[i] for i in indx_u if lat.sequence[i].Kx != 0][0] #first undulator can be opened
+        und = [lat.sequence[i] for i in indx_u if np.any(lat.sequence[i].Kx != 0)][0] #first undulator can be opened
         inp.xlamd = und.lperiod
-        inp.aw0 = und.Kx / np.sqrt(2)
+        inp.aw0 = np.mean(und.Kx) / np.sqrt(2)
         inp.lat = lat
     
     
@@ -1699,9 +1699,11 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
 
     if read_level >= 2:
         output_unsorted = np.array(output_unsorted)  # .astype(precision)
-        # print out.sliceKeys
+        _logger.debug('output_unsorted.shape = ' + str(output_unsorted.shape))
+        _logger.debug(ind_str + 'out.sliceKeys' + str(out.sliceKeys))
         for i in range(len(out.sliceKeys)):
             key = out.sliceKeys[int(i)]
+            _logger.debug(ind_str + 'key = ' + str(key))
             if key[0].isdigit():
                 hn = key[0]
                 if 'bunch' in key:
@@ -1715,9 +1717,12 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
                 else:
                     pass
                 key='h{:}_'.format(hn)+key
+                _logger.debug(2*ind_str + 'key_new = ' + str(key))
+                
             _logger.log(5, ind_str + 'assembling') 
+            # _logger.debug('output_unsorted[:,' + str(i) + '].shape = ' + str(output_unsorted[:,i].shape))
             command = 'out.' + key.replace('-', '_').replace('<', '').replace('>', '') + ' = output_unsorted[:,' + str(i) + '].reshape((' + str(int(out.nSlices)) + ',' + str(int(out.nZ)) + '))'
-            _logger.log(5, ind_str + command)
+            _logger.debug(ind_str + command)
             exec(command)
         if hasattr(out, 'energy'):
             out.energy += out('gamma0')
@@ -3123,7 +3128,7 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=1, min_phsh = False):
         if e.__class__ == Undulator:
             
             if L_inters > 0:
-                xlamds = l_period * (1 + K_rms**2) / (2 * gamma**2)
+                xlamds = l_period * (1 + np.mean(K_rms)**2) / (2 * gamma**2)
                 _logger.log(5, 'xlamds = {}'.format(xlamds))
                 _logger.log(5, 'gamma = {}'.format(gamma))
                 slip=(L_inters / gamma**2) / 2 # free-space radiation slippage [m]
@@ -3150,7 +3155,7 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=1, min_phsh = False):
                         _logger.log(5, '   difference to add {} rad or {} m'.format(phi_add, slip_add))
                     K_rms_add = np.sqrt(2 * slip_add * gamma**2 / L_inters) #compensational K
                 else:
-                    K_rms_add = K_inters
+                    K_rms_add = np.mean(K_inters)
                     _logger.log(5, '   compensational K {}'.format(K_rms_add))
                 
                 driftLat += 'AD' + '    ' + str(K_rms_add) + '   ' + str(round((L_inters) / unit, 2)) + '  ' + str(round(prevLenU / unit, 2)) + '\n'
@@ -3165,21 +3170,25 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=1, min_phsh = False):
             L_und = float(e.nperiods) * float(e.lperiod) #remove?
             K_rms = np.sqrt(e.Kx**2 + e.Ky**2) / np.sqrt(2)
             
-            if not hasattr(e, 'K_err'):
-                e.K_err = None
+            # if not hasattr(e, 'K_err'):
+                # e.K_err = None
             
-            if e.K_err is None:
+            if np.size(K_rms) == 1:
                 undLat += 'AW' + '    ' + str(K_rms) + '   ' + str(round(L_und / unit, 2)) + '  ' + str(round((pos - prevPosU - prevLenU) / unit, 2)) + '\n'
                 _logger.log(5, ind_str + 'added UND:   pos= {}, len={}, prevPosU={}, prevLenU={}, K_rms={}'.format(pos,l, prevPosU, prevLenU, K_rms))
             else:
-                unit_len_mult = e.nperiods / len(e.K_err)
-                for period, K_err_i in enumerate(e.K_err):
+                unit_len_mult = e.nperiods / len(K_rms)
+                _logger.log(5, ind_str + 'nperiods = {}, lperiod = {}, unit_len_mult = {}'.format(e.nperiods, e.lperiod, unit_len_mult))
+                for period, K_rms_i in enumerate(K_rms):
                     if period == 0:
-                        undLat += 'AW' + '    ' + str(K_rms) + '   ' + str(1 * e.lperiod / unit * unit_len_mult) + '  ' + str(round((pos - prevPosU - prevLenU) / unit, 2)) + '\n' # some bug in Genesis kick the beam if first period has non-resonant K_rms
-                    elif period == len(e.K_err):
-                        undLat += 'AW' + '    ' + str(K_rms) + '   ' + str(1 * e.lperiod / unit * unit_len_mult) + '  ' + str(round(0)) + '\n' # some bug in Genesis kick the beam if first period has non-resonant K_rms
+                        # undLat += 'AW' + '    ' + str(K_rms) + '   ' + str(1 * e.lperiod / unit * unit_len_mult) + '  ' + str(round((pos - prevPosU - prevLenU) / unit, 2)) + '\n' 
+                        undLat += 'AW' + '    ' + str(K_rms_i) + '   ' + str(1 * e.lperiod / unit * unit_len_mult) + '  ' + str(round((pos - prevPosU - prevLenU) / unit, 2)) + '\n' # 
+                        
+                        # some bug in Genesis kick the beam if first period has non-resonant K_rms
+                    elif period == len(K_rms):
+                        undLat += 'AW' + '    ' + str(K_rms_i) + '   ' + str(1 * e.lperiod / unit * unit_len_mult) + '  ' + str(round(0)) + '\n' # some bug in Genesis kick the beam if first period has non-resonant K_rms
                     else:
-                        undLat += 'AW' + '    ' + str(K_rms + K_err_i) + '   ' + str(1 * e.lperiod / unit * unit_len_mult) + '  ' + str(0) + '\n'
+                        undLat += 'AW' + '    ' + str(K_rms_i) + '   ' + str(1 * e.lperiod / unit * unit_len_mult) + '  ' + str(0) + '\n'
                 
                 
             

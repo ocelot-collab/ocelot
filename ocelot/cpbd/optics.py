@@ -49,7 +49,6 @@ class SecondOrderMult:
             self.tmat_multip = self.numpy_apply
 
     def numba_apply(self, X, R, T):
-        #Xr = np.dot(R, X)
         Xcopy = np.copy(X)
         N = X.shape[1]
         for i in range(6):
@@ -59,9 +58,8 @@ class SecondOrderMult:
                 for j in range(6):
                     r_tmp += R[i, j]*Xcopy[j, n]
                     for k in range(6):
-                        tmp += T[i, j, k] * X[j, n] * X[k, n]
+                        tmp += T[i, j, k] * Xcopy[j, n] * Xcopy[k, n]
                 X[i, n] = r_tmp + tmp
-                #X[i, n] = Xr[i, n] + tmp
 
     def numexpr_apply(self, X, R, T):
         Xr = np.dot(R, X)
@@ -115,22 +113,17 @@ class SecondOrderMult:
 
         X[4] = Xr[4] + T[4, 0, 0] * x2 + T[4, 0, 1] * xpx + T[4, 0, 5] * xdp + T[4, 1, 1] * px2 + T[4, 1, 5] * pxdp + \
                   T[4, 5, 5] * dp2 + T[4, 2, 2] * y2 + T[4, 2, 3] * ypy + T[4, 3, 3] * py2  # + U5666*dp2*dp    # third order
-        # X[:] = Xr[:] + Xt[:]
 
 
 def transform_vec_ent(X, dx, dy, tilt):
-    #n = len(X)
     rotmat = rot_mtx(tilt)
-    #x_add = np.add(X.reshape(int(n / 6), 6), np.array([-dx, 0., -dy, 0., 0., 0.])).transpose()
     x_add = np.add(X, np.array([[-dx], [0.], [-dy], [0.], [0.], [0.]]))
     X[:] = np.dot(rotmat, x_add)[:]
     return X
 
 
 def transform_vec_ext(X, dx, dy, tilt):
-    #n = len(X)
     rotmat = rot_mtx(-tilt)
-    #x_tilt = np.dot(rotmat, np.transpose(X.reshape(int(n / 6), 6))).transpose()
     x_tilt = np.dot(rotmat, X)
     X[:] = np.add(x_tilt, np.array([[dx], [0.], [dy], [0.], [0.], [0.]]))[:]
     return X
@@ -167,6 +160,7 @@ def transfer_map_rotation(R, T, tilt):
     R, T = transfer_maps_mult(Ra=Rc, Ta=Tc, Rb=rot_mtx(-tilt), Tb=np.zeros((6, 6, 6)))
     return R, T
 
+
 class TransferMap:
     def __init__(self):
         self.dx = 0.
@@ -174,7 +168,6 @@ class TransferMap:
         self.tilt = 0.
         self.length = 0
         self.hx = 0.
-        # test RF
         self.delta_e = 0.0
         self.delta_e_z = lambda z: 0.0
         # 6x6 linear transfer matrix
@@ -182,18 +175,15 @@ class TransferMap:
         self.R_z = lambda z, energy: np.zeros((6, 6))
         self.B_z = lambda z, energy: np.dot((np.eye(6) - self.R_z(z, energy)), np.array([[self.dx], [0.], [self.dy], [0.], [0.], [0.]]))
         self.B = lambda energy: self.B_z(self.length, energy)
-        # self.B = lambda energy: zeros(6)  # tmp matrix
         self.map = lambda u, energy: self.mul_p_array(u, energy=energy)
 
     def map_x_twiss(self, tws0):
         E = tws0.E
         M = self.R(E)
-        # print(E, self.delta_e, M)
         zero_tol = 1.e-10
         if abs(self.delta_e) > zero_tol:
-            # M = self.R(E + )
             Ei = tws0.E
-            Ef = tws0.E + self.delta_e  # * cos(self.phi)
+            Ef = tws0.E + self.delta_e
             k = np.sqrt(Ef / Ei)
             M[0, 0] = M[0, 0] * k
             M[0, 1] = M[0, 1] * k
@@ -203,7 +193,6 @@ class TransferMap:
             M[2, 3] = M[2, 3] * k
             M[3, 2] = M[3, 2] * k
             M[3, 3] = M[3, 3] * k
-            # M[4, 5] = M[3, 3]*k
             E = Ef
 
         m = tws0
@@ -236,7 +225,6 @@ class TransferMap:
         if d_mux < 0:
             d_mux += np.pi
         tws.mux = m.mux + d_mux
-        # print M[0, 0]*m.beta_x - M[0, 1]*m.alpha_x, arctan(M[2, 3]/(M[2, 2]*m.beta_y - M[2, 3]*m.alpha_y))
         denom_y = M[2, 2] * m.beta_y - M[2, 3] * m.alpha_y
         if denom_y == 0.:
             d_muy = np.pi / 2. * M[2, 3] / np.abs(M[2, 3])
@@ -245,21 +233,12 @@ class TransferMap:
         if d_muy < 0:
             d_muy += np.pi
         tws.muy = m.muy + d_muy
-        # print("new")
-        # print(tws)
+
         return tws
 
     def mul_p_array(self, rparticles, energy=0.):
-
-        #a = np.add(np.transpose(dot(self.R(energy), np.transpose(particles.reshape(int(n / 6), 6)))),
-        #           self.B(energy)).reshape(n)
-
-        #print("a=", a)
         a = np.add(np.dot(self.R(energy), rparticles), self.B(energy))
-        # a = np.add(np.transpose(dot(self.R(energy), particles.T.reshape(6, int(n/6)))), self.B(energy)).reshape(n)
-
         rparticles[:] = a[:]
-        #logger.debug('return trajectory, array ' + str(len(rparticles)))
         return rparticles
 
     def __mul__(self, m):
@@ -277,9 +256,6 @@ class TransferMap:
             m2.R = lambda energy: np.dot(self.R(energy), m.R(energy))
             m2.B = lambda energy: np.dot(self.R(energy), m.B(energy)) + self.B(energy)  # +dB #check
             m2.length = m.length + self.length
-            # m2.delta_e = m.delta_e + self.delta_e
-            # print("B = ", m2.R(0))
-            # m2.delta_e += self.delta_e
 
             return m2
 
@@ -401,8 +377,19 @@ class CorrectorTM(TransferMap):
         TransferMap.__init__(self)
         self.angle_x = angle_x
         self.angle_y = angle_y
+        self.multiplication = None
+        self.t_mat_z_e = None
         self.map = lambda X, energy: self.kick(X, self.length, self.length, self.angle_x, self.angle_y, energy)
         self.B_z = lambda z, energy: self.kick_b(z, self.length, angle_x, angle_y)
+
+    def t_apply(self, R, T, X, dx=0, dy=0, tilt=0, U5666=0.):
+        if dx != 0 or dy != 0 or tilt != 0:
+            X = transform_vec_ent(X, dx, dy, tilt)
+        self.multiplication(X, R, T)
+        if dx != 0 or dy != 0 or tilt != 0:
+            X = transform_vec_ext(X, dx, dy, tilt)
+
+        return X
 
     def kick_b(self, z, l, angle_x, angle_y):
         if l == 0:
@@ -420,11 +407,13 @@ class CorrectorTM(TransferMap):
         return b
 
     def kick(self, X, z, l, angle_x, angle_y, energy):
-        # print("corrector kick", angle_x, angle_y)
-        # ocelot.logger.debug('invoking kick_b')
-        #n = len(X)
+        _logger.debug('invoking kick_b')
         b = self.kick_b(z, l, angle_x, angle_y)
-        X1 = np.add(np.dot(self.R(energy), X), b)
+        if self.multiplication is not None and self.t_mat_z_e is not None:
+            X1 = self.t_apply(R=self.R(energy), T=self.t_mat_z_e(z, energy), X=X)
+        else:
+            X1 = np.dot(self.R(energy), X)
+        X1 = np.add(X1, b)
         X[:] = X1[:]
         return X
 
@@ -439,10 +428,10 @@ class CorrectorTM(TransferMap):
 
 
 class CavityTM(TransferMap):
-    def __init__(self, v=0, f=0., phi=0.):
+    def __init__(self, v=0, freq=0., phi=0.):
         TransferMap.__init__(self)
         self.v = v
-        self.f = f
+        self.freq = freq
         self.phi = phi
         self.coupler_kick = False
         self.vx_up = 0.
@@ -451,7 +440,7 @@ class CavityTM(TransferMap):
         self.vy_down = 0.
         self.delta_e_z = lambda z: self.v * np.cos(self.phi * np.pi / 180.) * z / self.length
         self.delta_e = self.v * np.cos(self.phi * np.pi / 180.)
-        self.map = lambda X, energy: self.map4cav(X, energy, self.v, self.f, self.phi, self.length)
+        self.map = lambda X, energy: self.map4cav(X, energy, self.v, self.freq, self.phi, self.length)
 
     def map4cav(self, X, E, V, freq, phi, z=0):
         beta0 = 1
@@ -463,9 +452,7 @@ class CavityTM(TransferMap):
             beta0 = np.sqrt(1. - igamma2)
 
         phi = phi * np.pi / 180.
-        # if self.coupler_kick:
         if self.coupler_kick:
-            # print("couple_kick")
             X[1] += (self.vx_up * V * np.exp(1j * phi)).real * 1e-6 / E
             X[3] += (self.vy_up * V * np.exp(1j * phi)).real * 1e-6 / E
         X4 = np.copy(X[4])
@@ -501,12 +488,12 @@ class CavityTM(TransferMap):
         m.R = lambda energy: m.R_z(s, energy)
         m.B = lambda energy: m.B_z(s, energy)
         m.delta_e = m.delta_e_z(s)
-        m.map = lambda X, energy: m.map4cav(X, energy, m.v * s / self.length, m.f, m.phi, s)
+        m.map = lambda X, energy: m.map4cav(X, energy, m.v * s / self.length, m.freq, m.phi, s)
         return m
 
 
 class KickTM(TransferMap):
-    def __init__(self, angle=0., k1=0., k2=0., k3=0., nkick=0.):
+    def __init__(self, angle=0., k1=0., k2=0., k3=0., nkick=1):
         TransferMap.__init__(self)
         self.angle = angle
         self.k1 = k1
@@ -535,7 +522,6 @@ class KickTM(TransferMap):
             tau = -X[5] * dl * coef
 
             p = -angle * X[5] + 0j
-            # for n in range(1, len(kn)):
             xy1 = x + 1j * y
             xy2 = xy1 * xy1
             xy3 = xy2 * xy1
@@ -548,8 +534,17 @@ class KickTM(TransferMap):
             X[0] = x + X[1] * dl + self.dx
             X[2] = y + X[3] * dl + self.dy
             X[4] -= X[5] * dl * coef
-            # print X[1], X[3]
         return X
+
+    def kick_apply(self, X, l, angle, k1, k2, k3, energy, nkick, dx, dy, tilt):
+        if dx != 0 or dy != 0 or tilt != 0:
+            X = transform_vec_ent(X, dx, dy, tilt)
+        self.kick(X, l, angle, k1, k2, k3, energy, nkick=nkick)
+        if dx != 0 or dy != 0 or tilt != 0:
+            X = transform_vec_ext(X, dx, dy, tilt)
+
+        return X
+
 
     def __call__(self, s):
         m = copy(self)
@@ -557,7 +552,7 @@ class KickTM(TransferMap):
         m.R = lambda energy: m.R_z(s, energy)
         m.B = lambda energy: m.B_z(s, energy)
         m.delta_e = m.delta_e_z(s)
-        m.map = lambda X, energy: m.kick(X, s, self.angle, self.k1, self.k2, self.k3, energy, self.nkick)
+        m.map = lambda X, energy: m.kick_apply(X, s, m.angle, m.k1, m.k2, m.k3, energy, m.nkick, m.dx, m.dy, m.tilt)
         return m
 
 
@@ -609,9 +604,7 @@ class UndulatorTestTM(TransferMap):
         m.length = s
         m.R = lambda energy: m.R_z(s, energy)
         m.B = lambda energy: m.B_z(s, energy)
-        # m.T = m.T_z(s)
         m.delta_e = m.delta_e_z(s)
-        # print(m.R_z_no_tilt(s, 0.3))
         m.map = lambda X, energy: m.map4undulator(X, m.length, m.lperiod, m.Kx, m.ax, energy, m.ndiv)
         return m
 
@@ -621,8 +614,10 @@ class RungeKuttaTM(TransferMap):
         TransferMap.__init__(self)
         self.s_start = s_start
         self.npoints = npoints
+        self.long_dynamics = True
         self.mag_field = lambda x, y, z: (0, 0, 0)
-        self.map = lambda X, energy: rk_field(X, self.s_start, self.length, self.npoints, energy, self.mag_field)
+        self.map = lambda X, energy: rk_field(X, self.s_start, self.length, self.npoints, energy, self.mag_field,
+                                              self.long_dynamics)
 
     def __call__(self, s):
         m = copy(self)
@@ -630,8 +625,17 @@ class RungeKuttaTM(TransferMap):
         m.R = lambda energy: m.R_z(s, energy)
         m.B = lambda energy: m.B_z(s, energy)
         m.delta_e = m.delta_e_z(s)
-        m.map = lambda X, energy: rk_field(X, m.s_start, s, m.npoints, energy, m.mag_field)
+        m.map = lambda X, energy: rk_field(X, m.s_start, s, m.npoints, energy, m.mag_field, m.long_dynamics)
         return m
+
+
+class RungeKuttaTrTM(RungeKuttaTM):
+    """
+    THe same method as RungeKuttaTM but only transverse dynamics is included, longitudinal dynamics is skipped
+    """
+    def __init__(self, s_start=0, npoints=200):
+        RungeKuttaTM.__init__(self, s_start=s_start, npoints=npoints)
+        self.long_dynamics = False
 
 
 class SecondTM(TransferMap):
@@ -664,7 +668,6 @@ class SecondTM(TransferMap):
         m.B = lambda energy: m.B_z(s, energy)
         m.T = lambda s, energy: m.t_mat_z_e(s, energy)
         m.delta_e = m.delta_e_z(s)
-        # print(m.R_z_no_tilt(s, 0.3))
         m.map = lambda X, energy: m.t_apply(m.r_z_no_tilt(s, energy), m.t_mat_z_e(s, energy), X, m.dx, m.dy, m.tilt)
         return m
 
@@ -766,12 +769,10 @@ class MethodTM:
             hx = 0.
         else:
             hx = element.angle / element.l
-
         r_z_e = create_r_matrix(element)
 
         # global method
         if method == KickTM:
-            # print('kick')
             try:
                 k3 = element.k3
             except:
@@ -789,14 +790,12 @@ class MethodTM:
                 else:
                     R, T = fringe_ext(h=element.h, k1=element.k1, e=element.edge, h_pole=element.h_pole,
                                       gap=element.gap, fint=element.fint)
-                #r_z_e = lambda z, energy: R
                 T_z_e = lambda z, energy: T
-                # print("trm", tilt, element.edge, element.h, r_z_e(0, 130)[1, 0])
             tm = SecondTM(r_z_no_tilt=r_z_e, t_mat_z_e=T_z_e)
             tm.multiplication = self.sec_order_mult.tmat_multip
 
         elif method == SlacCavityTM:
-            tm = SlacCavityTM(l=element.l, volt=element.v, phi=element.phi, freq=element.f)
+            tm = SlacCavityTM(l=element.l, volt=element.v, phi=element.phi, freq=element.freq)
             return tm
 
         else:
@@ -809,7 +808,7 @@ class MethodTM:
                 ndiv = 5
             tm = UndulatorTestTM(lperiod=element.lperiod, Kx=element.Kx, ax=element.ax, ndiv=ndiv)
 
-        if method == RungeKuttaTM:
+        if method in [RungeKuttaTM, RungeKuttaTrTM]:
             try:
                 s_start = element.s_start
             except:
@@ -818,12 +817,11 @@ class MethodTM:
                 npoints = element.npoints
             except:
                 npoints = 200
-            tm = RungeKuttaTM(s_start=s_start, npoints=npoints)
+            tm = method(s_start=s_start, npoints=npoints)
             tm.mag_field = element.mag_field
 
         if element.__class__ == Cavity:
-            # print("CAVITY create")
-            tm = CavityTM(v=element.v, f=element.f, phi=element.phi)
+            tm = CavityTM(v=element.v, freq=element.freq, phi=element.phi)
             if element.coupler_kick:
                 tm.coupler_kick = element.coupler_kick
                 tm.vx_up = element.vx_up
@@ -836,16 +834,22 @@ class MethodTM:
                 tm.vxy_down = element.vxy_down
             else:
                 tm.coupler_kick = False
+
         if element.__class__ == Matrix:
             tm.delta_e = element.delta_e
+
         if element.__class__ == Multipole:
             tm = MultipoleTM(kn=element.kn)
 
         if element.__class__ == Hcor:
             tm = CorrectorTM(angle_x=element.angle, angle_y=0.)
+            tm.multiplication = self.sec_order_mult.tmat_multip
+            tm.t_mat_z_e = lambda z, energy: t_nnn(z, 0, 0, 0, energy)
 
         if element.__class__ == Vcor:
             tm = CorrectorTM(angle_x=0, angle_y=element.angle)
+            tm.multiplication = self.sec_order_mult.tmat_multip
+            tm.t_mat_z_e = lambda z, energy: t_nnn(z, 0, 0, 0, energy)
 
         tm.length = element.l
         tm.dx = dx
@@ -882,7 +886,9 @@ def unsym_matrix(T):
 
 
 def lattice_transfer_map(lattice, energy):
-    """ transfer map for the whole lattice"""
+    """
+    transfer map for the whole lattice
+    """
     Ra = np.eye(6)
     Ta = np.zeros((6, 6, 6))
     E = energy
@@ -924,9 +930,10 @@ def lattice_transfer_map(lattice, energy):
 
 
 def trace_z(lattice, obj0, z_array):
-    """ Z-dependent tracer (twiss(z) and particle(z))
-        usage: twiss = trace_z(lattice,twiss_0, [1.23, 2.56, ...]) ,
-        to calculate Twiss params at 1.23m, 2.56m etc.
+    """
+    Z-dependent tracer (twiss(z) and particle(z))
+    usage: twiss = trace_z(lattice,twiss_0, [1.23, 2.56, ...]) ,
+    to calculate Twiss params at 1.23m, 2.56m etc.
     """
     obj_list = []
     i = 0
@@ -948,14 +955,14 @@ def trace_z(lattice, obj0, z_array):
 
 
 def trace_obj(lattice, obj, nPoints=None):
-    """ track object though lattice
-        obj must be Twiss or Particle """
+    """
+    track object though lattice
+    obj must be Twiss or Particle
+    """
 
     if nPoints == None:
         obj_list = [obj]
         for e in lattice.sequence:
-            # if e.__class__ == Edge:
-            #    print( "EDGE", e.edge)
             obj = e.transfer_map * obj
             obj.id = e.id
             obj_list.append(obj)
@@ -1000,13 +1007,13 @@ def periodic_twiss(tws, R):
     hhy = np.dot(inv(-Hy), Hhy)
     tws.Dy = hhy[0, 0]
     tws.Dyp = hhy[1, 0]
-    # tws.display()
     return tws
 
 
 def twiss(lattice, tws0=None, nPoints=None):
     """
-    twiss parameters calculation,
+    twiss parameters calculation
+
     :param lattice: lattice, MagneticLattice() object
     :param tws0: initial twiss parameters, Twiss() object. If None, try to find periodic solution.
     :param nPoints: number of points per cell. If None, then twiss parameters are calculated at the end of each element.
@@ -1035,7 +1042,8 @@ def twiss(lattice, tws0=None, nPoints=None):
 
 def twiss_fast(lattice, tws0=None):
     """
-    twiss parameters calculation,
+    twiss parameters calculation
+
     :param lattice: lattice, MagneticLattice() object
     :param tws0: initial twiss parameters, Twiss() object. If None, try to find periodic solution.
     :param nPoints: number of points per cell. If None, then twiss parameters are calculated at the end of each element.
@@ -1064,24 +1072,6 @@ def twiss_fast(lattice, tws0=None):
     else:
         _logger.warning(' twiss_fast: Twiss: no periodic solution')
         return None
-
-
-        # class Navigator:
-        #    def __init__(self, lattice = None):
-        #        if lattice != None:
-        #            self.lat = lattice
-        #
-        #    z0 = 0.             # current position of navigator
-        #    n_elem = 0          # current number of the element in lattice
-        #    sum_lengths = 0.    # sum_lengths = Sum[lat.sequence[i].l, {i, 0, n_elem-1}]
-
-        # def check(self, dz):
-        #    '''
-        #    check if next step exceed the bounds of lattice
-        #    '''
-        #    if self.z0+dz>self.lat.totalLen:
-        #        dz = self.lat.totalLen - self.z0
-        #    return dz
 
 
 class ProcessTable:
@@ -1178,7 +1168,7 @@ class Navigator:
             if len(start_pos) > 0:
                 start_pos.sort()
                 dz = start_pos[0] - self.z0
-                logger_navi.debug(" check_overjump: there is phys proc inside step -> dz was decreased: dz = " + str(dz))
+                _logger_navi.debug(" check_overjump: there is phys proc inside step -> dz was decreased: dz = " + str(dz))
 
         phys_steps = phys_steps_red + dz
 
@@ -1209,7 +1199,7 @@ class Navigator:
         return dz, processes, phys_steps
 
     def get_proc_list(self):
-        logger_navi.debug(" get_proc_list: all phys proc = " + str([p.__class__.__name__ for p in self.process_table.proc_list]))
+        _logger_navi.debug(" get_proc_list: all phys proc = " + str([p.__class__.__name__ for p in self.process_table.proc_list]))
         proc_list = []
         for p in self.process_table.proc_list:
             if p.indx0 <= self.n_elem < p.indx1:

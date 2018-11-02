@@ -43,7 +43,7 @@ def check_value(value, value_ref, tolerance=1.0e-15, tolerance_type='relative', 
     """Value with reference value check function
 
     if relative_tolerance='relative' then tolerance is relative (this is default value)
-    if relative_tolerance='absotute' then tolerance is absotute
+    if relative_tolerance='absolute' then tolerance is absolute
     there is no tolerance for string values
     """
 

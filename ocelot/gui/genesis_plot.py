@@ -20,17 +20,6 @@ import os
 import csv
 import time
 import matplotlib
-
-# check if Xserver is connected
-# havedisplay = "DISPLAY" in os.environ
-# if not havedisplay:
-# # re-check
-# exitval = os.system('python -c "import matplotlib.pyplot as plt; plt.figure()"')
-# havedisplay = (exitval == 0)
-# if not havedisplay:
-# # force matplotlib not ot use Xwindows backend. plots may still be plotted into e.g. *.png
-# matplotlib.use('Agg')
-
 import matplotlib.pyplot as plt
 import numpy as np
 import logging
@@ -48,6 +37,9 @@ from ocelot.gui.colormaps2d.colormap2d import *
 from matplotlib import rc, rcParams
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+#in order to run decorators properly
+import functools
+
 _logger = logging.getLogger('ocelot.genesis_plot')
 
 def_cmap = 'viridis'
@@ -58,9 +50,52 @@ params = {'image.cmap': def_cmap, 'backend': 'ps', 'axes.labelsize': 3 * fntsz, 
 rcParams.update(params)
 # plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
 # rcParams["savefig.directory"] = os.chdir(os.path.dirname(__file__)) but __file__ appears to be genesis_plot
-
 plt.ioff() #turn off interactive mode
 
+# check if Xserver is connected
+plotting_error=None
+try:
+    import _tkinter
+    _tkinter.create()
+except:
+    if not "DISPLAY" in os.environ:
+        plotting_error = 'Cannot plot figures: Xserver is not connected (Putty -> X11 forwarding)'
+        # _logger.error('Cannot plot figures: Xserver is not connected (Putty -> X11 forwarding)')
+    else:
+        plotting_error = 'Cannot plot figures: Unable to connect to forwarded X server (?)'
+        # _logger.error('Cannot plot figures: Unable to connect to forwarded X server (?)')
+
+if plotting_error is not None:
+    _logger.error(plotting_error)
+
+# # re-check
+# exitval = os.system('python -c "import matplotlib.pyplot as plt; plt.figure()"')
+# havedisplay = (exitval == 0)
+# if not havedisplay:
+# # force matplotlib not ot use Xwindows backend. plots may still be plotted into e.g. *.png
+# matplotlib.use('Agg')
+
+#decorator
+def if_plottable(plotting_func):
+    
+    def empty_func(*args, **kwargs):
+        return
+    
+    @functools.wraps(plotting_func)
+    def wrapper(*args, **kwargs):
+        if plotting_error is None:
+            fig = plotting_func(*args, **kwargs)
+            return fig
+        else:
+            _logger.warning(plotting_error)
+            return empty_func()
+
+    return wrapper
+
+
+
+
+@if_plottable
 def plot_gen_out_all_paral(exp_dir, stage=1, savefig='png', debug=1):
     print('start')
     from ocelot.utils.xfel_utils import background
@@ -80,8 +115,10 @@ def plot_gen_out_all_paral(exp_dir, stage=1, savefig='png', debug=1):
     
     return
 
+
 # plot_gen_stat(proj_dir=exp_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int','energy','r_size_weighted'], z_param_inp=[], dfl_param_inp=[], s_inp=['max'], z_inp=[0,'end'], savefig=1, saveval=1, showfig=0, debug=0)
 
+@if_plottable
 def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice='all', vartype_dfl=complex128, debug=1):
     '''
     plots all possible output from the genesis output
@@ -208,7 +245,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice='all', va
                     f9 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=100, debug=debug)
                 if choice[10]:
                     edist = dpa2edist(handle, dpa, num_part=5e4, smear=0, debug=debug)
-                    f10 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=(100, 100, 300, 200), debug=debug)
+                    f10 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=(100, 100, 100, 100), debug=debug)
         
     if savefig != False:
         _logger.info(ind_str + 'plots recorded to *.' + str(savefig) + ' files')
@@ -221,7 +258,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice='all', va
 
     _logger.info(ind_str + 'total plotting time {:.2f} seconds'.format(time.time() - plotting_time))
 
-
+@if_plottable
 def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espread+el_bunching', 'rad_spec'], figsize=3.5, x_units='um', y_units='ev', legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
     '''
     radiation parameters at distance z
@@ -383,7 +420,7 @@ def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espre
         # plt.close('all')
         plt.close(fig)
 
-
+@if_plottable
 def subfig_z_power_curr(ax_curr, g, zi=None, x_units='um', legend=False):
     ax_curr.clear()
     number_ticks = 6
@@ -430,7 +467,7 @@ def subfig_z_power_curr(ax_curr, g, zi=None, x_units='um', legend=False):
     
     ax_power.set_xlim([x[0],x[-1]])
 
-
+@if_plottable
 def subfig_z_energy_espread_bunching(ax_energy, g, zi=None, x_units='um', legend=False):
     ax_energy.clear()
     number_ticks = 6
@@ -472,7 +509,7 @@ def subfig_z_energy_espread_bunching(ax_energy, g, zi=None, x_units='um', legend
     
     ax_energy.set_xlim([x[0],x[-1]])
 
-
+@if_plottable
 def subfig_z_energy_espread(ax_energy, g, zi=None, x_units='um', legend=False):
     ax_energy.clear()
     number_ticks = 6
@@ -502,7 +539,7 @@ def subfig_z_energy_espread(ax_energy, g, zi=None, x_units='um', legend=False):
     
     ax_energy.set_xlim([x[0],x[-1]])
 
-
+@if_plottable
 def subfig_z_phase(ax_phase, g, zi=None, x_units='um', legend=False, **kwargs):
     ax_phase.clear()
     number_ticks = 6
@@ -549,7 +586,7 @@ def subfig_z_phase(ax_phase, g, zi=None, x_units='um', legend=False, **kwargs):
     
     ax_phase.set_xlim([x[0],x[-1]])
 
-
+@if_plottable
 def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=True, legend=False, mode='mid'):
     
     number_ticks = 6
@@ -637,7 +674,7 @@ def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=Tru
     ax_spectrum.yaxis.get_offset_text().set_color(ax_spectrum.yaxis.label.get_color())
     
     
-
+@if_plottable
 def plot_gen_out_z_old(g, figsize=(10, 14), x_units='um', y_units='ev', legend=True, fig_name=None, z=inf, savefig=False, showfig=1, debug=1):
     print('soon this function will be replaced by plot_gen_out_z_new (currently being tested)')
     number_ticks = 6
@@ -842,21 +879,23 @@ def plot_gen_out_z_old(g, figsize=(10, 14), x_units='um', y_units='ev', legend=T
         plt.close('all')
 
 
-
+@if_plottable
 def plot_gen_out_e(g, legend=False, figsize=4, fig_name='Electrons', savefig=False, showfig=True, debug=1):
     fig = plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_energy', 'el_bunching'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
 
-
+@if_plottable
 def plot_gen_out_ph(g, legend=False, figsize=4, fig_name='Radiation', savefig=False, showfig=True, debug=1):
     if g('itdp'):
         fig = plot_gen_out_evo(g, params=['rad_pow_en_log', 'rad_pow_en_lin', 'rad_spec_log', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
     else:
         fig = plot_gen_out_evo(g, params=['rad_pow_log', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
 
+@if_plottable
 def plot_gen_out_slip(g, legend=False, figsize=4, fig_name='Slippage', savefig=False, showfig=True, debug=1):
     if g('itdp'):
         fig = plot_gen_out_evo(g, params=['rad_spec_evo_n', 'rad_pow_evo_n'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
 
+@if_plottable
 def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'el_bunching', 'rad_pow_en_log', 'rad_pow_en_lin', 'rad_spec_log', 'rad_size', 'rad_spec_evo_n', 'rad_pow_evo_n'], figsize=4, legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
     '''
     plots evolution of given parameters from genesis output with undulator length
@@ -977,7 +1016,7 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'e
         # plt.close('all')
         plt.close(fig)
 
-
+@if_plottable
 def subfig_evo_und_quad(ax_und, g, legend):
     number_ticks = 6
     
@@ -1005,7 +1044,7 @@ def subfig_evo_und_quad(ax_und, g, legend):
     ax_quad.tick_params(axis='y', which='both', colors='r')
     ax_quad.yaxis.label.set_color('r')
 
-
+@if_plottable
 def subfig_evo_und(ax_und, g, legend):
     number_ticks = 6
     
@@ -1025,7 +1064,7 @@ def subfig_evo_und(ax_und, g, legend):
     ax_und.tick_params(axis='y', which='both', colors='b')
     ax_und.yaxis.label.set_color('b')
 
-
+@if_plottable
 def subfig_evo_el_size(ax_size_tsize, g, legend, which='both'):
     number_ticks = 6
     
@@ -1040,6 +1079,7 @@ def subfig_evo_el_size(ax_size_tsize, g, legend, which='both'):
     ax_size_tsize.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_size_tsize.grid(True)
     
+@if_plottable
 def subfig_evo_el_pos(ax_size_tpos, g, legend, which='both'):
     number_ticks = 6
     
@@ -1051,6 +1091,7 @@ def subfig_evo_el_pos(ax_size_tpos, g, legend, which='both'):
             ax_size_tpos.plot(g.z, g.x[idx_pk, :] * 1e6, 'g--', g.z, g.y[idx_pk, :] * 1e6, 'b--')
         ax_size_tpos.set_ylabel(r'$x,y$ [$\mu$m]')
 
+@if_plottable
 def subfig_evo_el_energy(ax_energy, g, legend):
     number_ticks = 6
     
@@ -1075,7 +1116,7 @@ def subfig_evo_el_energy(ax_energy, g, legend):
     ax_spread.tick_params(axis='y', which='both', colors='r')
     ax_spread.yaxis.label.set_color('r')
 
-
+@if_plottable
 def subfig_evo_el_bunching(ax_bunching, g, legend):
     number_ticks = 6
     
@@ -1087,7 +1128,7 @@ def subfig_evo_el_bunching(ax_bunching, g, legend):
     ax_bunching.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_bunching.grid(True)
 
-
+@if_plottable
 def subfig_evo_rad_pow_en(ax_rad_pow, g, legend, log=1):
     ax_rad_pow.plot(g.z, np.amax(g.p_int, axis=0), 'g-', linewidth=1.5)
     ax_rad_pow.set_ylabel(r'P [W]')
@@ -1129,7 +1170,7 @@ def subfig_evo_rad_pow_en(ax_rad_pow, g, legend, log=1):
 
     ax_rad_pow.text(0.98, 0.02, r'$P_{end}$= %.2e W ' '\n' r'$E_{end}$= %.2e J' % (np.amax(g.p_int[:, -1]), np.mean(g.p_int[:, -1], axis=0) * g('xlamds') * g('zsep') * g.nSlices / speed_of_light), fontsize=12, horizontalalignment='right', verticalalignment='bottom', transform=ax_rad_pow.transAxes)
 
-
+@if_plottable
 def subfig_evo_rad_pow(ax_rad_pow, g, legend, log=1):
     ax_rad_pow.plot(g.z, np.amax(g.p_int, axis=0), 'g-', linewidth=1.5)
     ax_rad_pow.set_ylabel('P [W]')
@@ -1145,7 +1186,7 @@ def subfig_evo_rad_pow(ax_rad_pow, g, legend, log=1):
     ax_rad_pow.yaxis.get_offset_text().set_color(ax_rad_pow.yaxis.label.get_color())
     ax_rad_pow.text(0.98, 0.02, r'$P_{end}$= %.2e W' % (np.amax(g.p_int[:, -1])), fontsize=12, horizontalalignment='right', verticalalignment='bottom', transform=ax_rad_pow.transAxes)
 
-
+@if_plottable
 def subfig_evo_rad_spec(ax_spectrum, g, legend, log=1):
     
     if 'spec' not in dir(g):
@@ -1217,7 +1258,7 @@ def subfig_evo_rad_spec(ax_spectrum, g, legend, log=1):
     # print (yticks[1].label.get_text())
     
 
-
+@if_plottable
 def subfig_rad_size(ax_size_t, g, legend):
     if g.nSlices == 1:
         ax_size_t.plot(g.z, g.r_size.T * 2 * 1e6, 'b-', linewidth=1.5)
@@ -1284,7 +1325,7 @@ def subfig_rad_size(ax_size_t, g, legend):
         if legend:
             ax_size_s.legend()
 
-
+@if_plottable
 def subfig_evo_rad_pow_sz(ax_power_evo, g, legend, norm=1):
     if g.nSlices > 1:
         z = g.z
@@ -1303,7 +1344,7 @@ def subfig_evo_rad_pow_sz(ax_power_evo, g, legend, norm=1):
     else:
         pass
 
-
+@if_plottable
 def subfig_evo_rad_spec_sz(ax_spectrum_evo, g, legend, norm=1):
     if g.nSlices > 1:
         z = g.z
@@ -1322,7 +1363,7 @@ def subfig_evo_rad_spec_sz(ax_spectrum_evo, g, legend, norm=1):
     else:
         pass
 
-
+@if_plottable
 def plot_gen_out_scanned_z(g, figsize=(10, 14), legend=True, fig_name=None, z=inf, savefig=False):
 
     if g('itdp') == True:
@@ -1441,6 +1482,7 @@ def plot_gen_out_scanned_z(g, figsize=(10, 14), legend=True, fig_name=None, z=in
 
     return fig
 
+@if_plottable
 def plot_dfl_all(dfl, **kwargs):
     
     plot_dfl(dfl, **kwargs)
@@ -1452,6 +1494,7 @@ def plot_dfl_all(dfl, **kwargs):
     plot_dfl(dfl, **kwargs)
     dfl.fft_xy()
 
+@if_plottable
 def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy = True, log_scale=0, debug=1, cmin=0, vartype_dfl=np.complex64):
     '''
     Plots dfl radiation object in 3d.
@@ -1892,7 +1935,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     else:
         return
 
-
+@if_plottable
 def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int', 'pulse_energy', 'r_size_weighted', 'spec', 'spec_phot_density', 'error'], z_param_inp=['p_int', 'phi_mid_disp', 'spec', 'spec_phot_density', 'bunching', 'wigner'], dfl_param_inp=['dfl_spec'], run_param_inp=['p_int', 'spec', 'spec_phot_density', 'pulse_energy'], s_inp=['max'], z_inp=[0,'end'], run_s_inp=['max'], run_z_inp=['end'], spec_pad=1, savefig=1, saveval=1, showfig=0, debug=1):
     '''
     The routine for plotting the statistical info of many GENESIS runs
@@ -2293,7 +2336,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
     if debug > 0:
         print('done in %.2f seconds' % (time.time() - start_time))
 
-
+@if_plottable
 def plot_gen_corr(proj_dir, run_inp=[], p1=(), p2=(), savefig=False, showfig=True, saveval=False):
     # param (parameter[str], stage[int], z_position[double], s_position [double or 'max'/'mean' stings])
     # e.g. ('p_int',1,inf,'max') , ('spec',1,inf,'max')
@@ -2444,7 +2487,7 @@ def plot_dpa_bucket_out(out, dpa=None, slice_pos='max_I', repeat=1, GeV=1, figsi
     if scatter: suffix = '_scatter' + suffix
     return plot_dpa_bucket(dpa=dpa, slice_num=slice_num, repeat=repeat, GeV=GeV, figsize=figsize, cmap=cmap, scatter=scatter, energy_mean=energy_mean, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, suffix=suffix, bins=bins, debug=debug)
 
-
+@if_plottable
 def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cmap, scatter=False, energy_mean=None, legend=True, fig_name=None, savefig=False, showfig=True, suffix='', bins=(50,50), debug=1, return_mode_gamma=0):
     part_colors = ['darkred', 'orange', 'g', 'b', 'm', 'c', 'y']
     # cmap='BuPu'
@@ -2570,7 +2613,7 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cm
         # plt.close('all')
         plt.close(fig)
 
-
+@if_plottable
 def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, scatter=False, plot_x_y=True, plot_xy_s=True, bins=(50, 50, 50, 50), flip_t=False, x_units='um', y_units='ev', cmin=0, y_offset=None, cmap=def_cmap, debug=1):
 
     if showfig == False and savefig == False:
@@ -2693,7 +2736,7 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
     _logger.info(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
     # return fig
 
-
+@if_plottable
 def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=None, debug=0):
 
     _logger.info('plotting beam')
@@ -2832,6 +2875,7 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
 
     _logger.debug(ind_str + 'done')
 
+@if_plottable
 def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,None), y_lim=(None,None), downsample=1, autoscale=None, figsize=3, cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=True, plot_proj=1, plot_text=1, plot_moments=0, debug=1):
     '''
     plots wigner distribution (WD) with marginals
@@ -3022,6 +3066,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
 '''
 tmp for HXRSS
 '''
+@if_plottable
 def read_plot_dump_proj(exp_dir, stage, run_ids, plot_phase=1, showfig=True, savefig=0, debug=1):
 
     if showfig == 0 and savefig == 0:
@@ -3139,7 +3184,7 @@ def read_plot_dump_proj(exp_dir, stage, run_ids, plot_phase=1, showfig=True, sav
     else:
         plt.close('all')
 
-
+@if_plottable
 def plot_dfl_waistscan(sc_res, fig_name=None, showfig=True, savefig=False, debug=1):
 
     if showfig == False and savefig == False:
@@ -3187,7 +3232,7 @@ def plot_dfl_waistscan(sc_res, fig_name=None, showfig=True, savefig=False, debug
     else:
         plt.close('all')
 
-
+@if_plottable
 def plot_trf(trf, mode='tr', autoscale=0, showfig=True, savefig=None, fig_name=None):
     '''
     plots TransferFunction() object,
@@ -3293,8 +3338,8 @@ def plot_trf(trf, mode='tr', autoscale=0, showfig=True, savefig=None, fig_name=N
         plt.show()
     else:
         plt.close('all')
-        
 
+@if_plottable
 def plot_stokes_values(S, fig=None, s_lin=0, norm=0, showfig=True, gw=1, direction='z'):
     
     # if type(S) != StokesParameters:
@@ -3352,7 +3397,7 @@ def plot_stokes_values(S, fig=None, s_lin=0, norm=0, showfig=True, gw=1, directi
         else:
             plt.close('all')
         
-        
+@if_plottable
 def plot_stokes_angles(S, fig=None, showfig=True, direction='z', scatter=True):
     
    # if type(S) != StokesParameters:
@@ -3396,6 +3441,7 @@ def plot_stokes_angles(S, fig=None, showfig=True, direction='z', scatter=True):
         else:
             plt.close('all')
 
+@if_plottable
 def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane='max_slice', interpolation=None,
                    cmap_lin='brightwheel', cmap_circ='seismic', figsize=4, fig_name='Visualization Stokes parameters', normalization='s0_max',
                    cbars=True, savefig=False, showfig=True, text_present=True, debug=1, **kwargs):
@@ -3534,7 +3580,7 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
     else:
         plt.close('all')
 
-
+@if_plottable
 def plot_stokes_sbfg_lin(ax, stk_params, slice, plane, cmap2d='brightwheel', plot_title=None, x_label='', y_label='',
                          result=0, text_present=True, interpolation=None, normalization='s0_max', **kwargs):
     '''
@@ -3641,7 +3687,7 @@ def plot_stokes_sbfg_lin(ax, stk_params, slice, plane, cmap2d='brightwheel', plo
     if result:
         return linear_plt
 
-
+@if_plottable
 def plot_stokes_sbfg_circ(ax, stk_params, slice, plane, cmap='seismic', plot_title=None, x_label='', y_label='',
                           result=0, text_present=True, interpolation=None, normalization='s0_max', **kwargs):
     '''

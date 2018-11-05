@@ -791,6 +791,8 @@ class MethodTM:
                     R, T = fringe_ext(h=element.h, k1=element.k1, e=element.edge, h_pole=element.h_pole,
                                       gap=element.gap, fint=element.fint)
                 T_z_e = lambda z, energy: T
+            if element.__class__ == XYQuadrupole:
+                T = np.zeros((6, 6, 6))
             tm = SecondTM(r_z_no_tilt=r_z_e, t_mat_z_e=T_z_e)
             tm.multiplication = self.sec_order_mult.tmat_multip
 

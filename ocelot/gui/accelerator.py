@@ -288,6 +288,7 @@ dict_plot = {Quadrupole: {"scale": 0.7, "color": "r",            "edgecolor": "r
              Solenoid:   {"scale": 0.7, "color": "g",            "edgecolor": "g",          "label": "sol"},
              TDCavity:   {"scale": 0.7, "color": "magenta",      "edgecolor": "g",          "label": "tds"},
              UnknownElement:{"scale": 0.7, "color": "g",         "edgecolor": "g",          "label": "unk"},
+             XYQuadrupole: {"scale": 0.7, "color": "r",          "edgecolor": "r",          "label": "xyquad"},
              }
 
 
@@ -1072,7 +1073,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     #plt.legend()
     plt.xlabel("s [mm]")
     plt.ylabel("$\sigma_E$ [keV]")
-    #plt.grid(True)
+    plt.grid(grid)
 
     ax_em = plt.subplot(323, sharex=ax_sp)
     plt.title("Emittances")
@@ -1083,7 +1084,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     plt.legend()
     plt.setp(ax_em.get_xticklabels(), visible=False)
     plt.ylabel(r"$\varepsilon_{x,y}$ [$\mu m$]")
-    #plt.grid(True)
+    plt.grid(grid)
 
     ax_c = plt.subplot(321, sharex=ax_sp)
     plt.title("Current")
@@ -1091,7 +1092,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     #plt.legend()
     plt.setp(ax_c.get_xticklabels(), visible=False)
     plt.ylabel("I [A]")
-    #plt.grid(True)
+    plt.grid(grid)
 
     ax_ys = plt.subplot(326)
 

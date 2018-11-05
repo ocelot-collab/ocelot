@@ -2,7 +2,7 @@
 general ocelot description
 """
 
-__version__ = '18.06.3'
+__version__ = '18.11.0'
 
 
 __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope",  # beam
@@ -48,8 +48,6 @@ import logging
 # _logger = logging.getLogger('ocelot.init')
 # _logger.info('initializing ocelot...')
 print('initializing ocelot...')
-# logger = Logger()
-#xrange=range
 
 try:
     import numba

@@ -208,6 +208,24 @@ class RBend(Bend):
                       gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, fintx=fintx, eid=eid)
 
 
+class XYQuadrupole(SBend):
+    """
+    Quadrupole with offsets (linear element),
+    l - length of magnet in [m],
+    k1 - strength of quadrupole lens in [1/m^2],
+    x_offs - offset in horizontal direction in [m]
+    y_offs - offset in vertical direction in [m]
+    tilt - tilt of lens in [rad],
+    """
+    def __init__(self, l=0., x_offs=0.0, y_offs=0.0, k1=0.0, tilt=0.0, eid=None):
+        Element.__init__(self, eid)
+        self.l = l
+        self.k1 = k1
+        self.x_offs = x_offs
+        self.y_offs = y_offs
+        self.tilt = tilt
+
+
 class Hcor(RBend):
     """
     horizontal corrector,

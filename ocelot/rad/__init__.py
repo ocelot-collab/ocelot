@@ -1,5 +1,5 @@
 __all__ = ["Screen",
-           "calculate_radiation", "sigma_gamma_quat",
+           "calculate_radiation", "coherent_radiation", "sigma_gamma_quat",
            "print_rad_props"]
 
 from ocelot.rad.screen import *

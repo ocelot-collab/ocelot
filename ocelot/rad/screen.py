@@ -1,11 +1,9 @@
 __author__ = 'Sergey Tomin'
 
 
-#import convolution as conv
 from ctypes import c_double
-#from numpy import zeros, empty_like, linspace, array, sin, cos
 import numpy as np
-#from ocelot.common.screen import Screen
+from ocelot.common.globals import *
 
 
 def Py2C(array):
@@ -255,10 +253,23 @@ class Screen:
         self.arImEy = c_screen[3*Nscr:4*Nscr]
         self.arPhase = c_screen[4*Nscr:5*Nscr]
 
-
     def distPhoton(self, gamma, current):
+        """
+        On the area ds during 1 sec falls dN photons in spectral width (dlambda/lambda)
+        dN = ds/Distance**2 * (dlambda/lambda) * (I/qe) * 3*alpha*gamma**2/(4*pi**2) * |Eul(lambda, Xscreen)|**2
+        Eul(lambda, Xscreen) is unitless electric field: Eul(lambda, Xscreen) = - (c/qe) * D/(sqrt(3)*gamma**2) * (E(lambda, Xscreen))
+
+        :param gamma:
+        :param current: in A
+        :return:
+        """
+
         LenPntrConst = self.Distance - self.Zstart
-        constQuant = 3.461090202456155e+9*current*gamma*gamma/LenPntrConst/LenPntrConst
+
+        # old constant with current in [mA]
+        # constQuant = 3.461090202456155e+9*current*gamma*gamma/LenPntrConst/LenPntrConst
+
+        constQuant = 3*alpha/q_e/(4*pi**2)*1e-3 * current * gamma * gamma / LenPntrConst / LenPntrConst
         Ex2r = np.array(self.arReEx)*np.array(self.arReEx)
         Ex2i = np.array(self.arImEx)*np.array(self.arImEx)
         self.Sigma = (Ex2r + Ex2i)*constQuant
@@ -269,6 +280,35 @@ class Screen:
         self.Xph = np.linspace(self.x_start, self.x_start + self.x_step*(self.nx -1), self.nx)
         self.Yph = np.linspace(self.y_start, self.y_start + self.y_step*(self.ny -1), self.ny)
         self.Eph = np.linspace(self.e_start, self.e_start + self.e_step*(self.ne -1), self.ne)
+
+    def coherent_photon_dist(self):
+        """
+        On the area ds during 1 sec falls dN photons in spectral width (dlambda/lambda)
+        dN = ds/Distance**2 * (dlambda/lambda) * (I/qe) * 3*alpha*gamma**2/(4*pi**2) * |Eul(lambda, Xscreen)|**2
+        Eul(lambda, Xscreen) is unitless electric field: Eul(lambda, Xscreen) = - (c/qe) * D/(sqrt(3)*gamma**2) * (E(lambda, Xscreen))
+
+        For coherent radiation calculation:
+        I = qe
+        dN = ds/Distance**2 * (dlambda/lambda) * 3*alpha/(4*pi**2) * |Eul(lambda, Xscreen) * gamma * n_e|**2
+        |Eul(lambda, Xscreen) * gamma * n_e| is calculated in function coherent_radiation()
+
+        :return:
+        """
+
+        LenPntrConst = self.Distance - self.Zstart
+
+        constQuant = 3*alpha/(4*pi**2)*1e-3/LenPntrConst / LenPntrConst
+        Ex2r = np.array(self.arReEx) * np.array(self.arReEx)
+        Ex2i = np.array(self.arImEx) * np.array(self.arImEx)
+        self.Sigma = (Ex2r + Ex2i) * constQuant
+        Ey2r = np.array(self.arReEy) * np.array(self.arReEy)
+        Ey2i = np.array(self.arImEy) * np.array(self.arImEy)
+        self.Pi = (Ey2r + Ey2i) * constQuant
+        self.Total = self.Pi + self.Sigma
+        self.Xph = np.linspace(self.x_start, self.x_start + self.x_step * (self.nx - 1), self.nx)
+        self.Yph = np.linspace(self.y_start, self.y_start + self.y_step * (self.ny - 1), self.ny)
+        self.Eph = np.linspace(self.e_start, self.e_start + self.e_step * (self.ne - 1), self.ne)
+
     """
     def convolution(self, sigma_x, sigma_y):
         data = numpy.reshape(self.Total,(len(self.Xph), len(self.Xph)))

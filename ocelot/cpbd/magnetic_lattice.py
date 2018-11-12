@@ -6,6 +6,7 @@ from copy import deepcopy
 # logger = Logger()
 _logger = logging.getLogger(__name__)
 
+
 def lattice_format_converter(elements):
     """
     :param elements: lattice in the format: [[elem1, center_pos1], [elem2, center_pos2], [elem3, center_pos3], ... ]
@@ -25,7 +26,8 @@ def lattice_format_converter(elements):
                     print("************** WARNING! Element " + element[0].id + " was deleted")
                     continue
                 element[1] = s_pos
-                print("************** WARNING! Element " + element[0].id + " was moved from " + str(element_start) + " to " + str(s_pos))
+                print("************** WARNING! Element " + element[0].id + " was moved from " + str(element_start) +
+                      " to " + str(s_pos))
             else:
                 dl = element[0].l / 2.0  - element[1] + s_pos
                 if cell[-1].__class__ == Marker and cell[-2].__class__ == Drift and cell[-2].l > dl:
@@ -75,6 +77,7 @@ def shrinker(lat, remaining_types, remaining_elems=[], init_energy=0.):
     :param remaining_types: list, the type of the elements which needed to be untoched
                             others will be "compress" to Matrix element
                             e.g. [Monitor, Quadrupole, Bend, Hcor]
+    :param remaining_elems: list of elements
     :param init_energy: initial energy
     :return: New MagneticLattice
     """
@@ -105,7 +108,7 @@ def shrinker(lat, remaining_types, remaining_elems=[], init_energy=0.):
             continue
         else:
             _r = np.dot(elem.transfer_map.R(E), _r)
-            _b =  np.dot(elem.transfer_map.R(E), _b) + elem.transfer_map.B(E)  #+dB #check
+            _b = np.dot(elem.transfer_map.R(E), _b) + elem.transfer_map.B(E)  # +dB #check
             length = elem.l + length
             new_elem.delta_e = elem.transfer_map.delta_e + new_elem.delta_e
             count += 1
@@ -171,6 +174,8 @@ class MagneticLattice:
         """
         if there are edges on the ends of dipoles return True, else False
         """
+        if len(self.sequence) < 3:
+            return False
         for i in range(len(self.sequence)-2):
             prob_edge1 = self.sequence[i]
             elem = self.sequence[i+1]
@@ -271,14 +276,13 @@ class MagneticLattice:
                     print("EDGE is not updated. Use standard function to create and update MagneticLattice")
             element.transfer_map = self.method.create_tm(element)
             _logger.debug("update: " + element.transfer_map.__class__.__name__)
-            #print("update: ", element.transfer_map.__class__.__name__, element.l, element.id, element.transfer_map.R(0))
             if 'pulse' in element.__dict__: element.transfer_map.pulse = element.pulse
         return self
 
     def printElements(self):
         print('\nLattice\n')
         for e in self.sequence:
-            print('-->',  e.id, '[', e.l, ']')
+            print('-->', e.id, '[', e.l, ']')
     
     def find_indices(self, element):
         indx_elem = np.where([i.__class__ == element for i in self.sequence])[0]

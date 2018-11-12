@@ -8,6 +8,7 @@ from ocelot.common.py_func import filename_from_path
 from copy import deepcopy
 from scipy import interpolate
 from scipy.signal import savgol_filter
+from scipy.stats import truncnorm
 from ocelot.common.logging import *
 
 _logger = logging.getLogger(__name__)
@@ -606,13 +607,18 @@ class ParticleArray:
         if nth <= 1:
             print("Nothing to do. nth number must be bigger 1")
             return self
-        if nth > np.shape(self.rparticles)[1]:
-            print("nth number is too big")
-        n = int((np.shape(self.rparticles)[1] - n0)/nth)
+        if nth > self.n:
+            raise ValueError("nth number is bigger of particles number")
+        if n0 > self.n:
+            raise ValueError("n0 number is bigger of particles number")
+        n = int((self.n - n0)/nth)
+        if n < 1:
+            raise ValueError("Number of particles in new ParticleArray is less then 1")
 
+        n_end = n0 + nth*n
         p = ParticleArray(n)
-        p.rparticles[:, :] = self.rparticles[:, n0::nth]
-        p.q_array[:] = self.q_array[n0::nth]*nth
+        p.rparticles[:, :] = self.rparticles[:, n0:n_end:nth]
+        p.q_array[:] = self.q_array[n0:n_end:nth]*nth
         p.s = self.s
         p.E = self.E
         return p
@@ -685,6 +691,7 @@ def get_envelope(p_array, tws_i=Twiss()):
         tws.ypy = np.mean(ne.evaluate('(y - tw_y) * (py - tw_py)'))
         tws.pypy =np.mean(ne.evaluate('(py - tw_py) * (py - tw_py)'))
         tws.tautau = np.mean(ne.evaluate('(tau - tw_tau) * (tau - tw_tau)'))
+        tws.xy = np.mean(ne.evaluate('(x - tw_x) * (y - tw_y)'))
     else:
         tws.xx = np.mean((x - tws.x)*(x - tws.x))
         tws.xpx = np.mean((x-tws.x)*(px-tws.px))
@@ -693,6 +700,7 @@ def get_envelope(p_array, tws_i=Twiss()):
         tws.ypy = np.mean((y-tws.y)*(py-tws.py))
         tws.pypy = np.mean((py-tws.py)*(py-tws.py))
         tws.tautau = np.mean((tau - tws.tau)*(tau - tws.tau))
+        tws.xy = np.mean((x - tws.x) * (y - tws.y))
     tws.p = np.mean( p_array.p())
     tws.E = np.copy(p_array.E)
     #tws.de = p_array.de
@@ -1287,7 +1295,8 @@ def parray2beam(parray, step=1e-7):
     return(beam)
 
 def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
-                    sigma_tau=1e-3, sigma_p=1e-4, tau_p_cor=0.01, charge=5e-9, nparticles=200000, energy=0.13):
+                    sigma_tau=1e-3, sigma_p=1e-4, tau_p_cor=0.01, charge=5e-9, nparticles=200000, energy=0.13,
+                    tue_trunc=None):
 
     if sigma_y is None:
         sigma_y = sigma_x
@@ -1298,7 +1307,11 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
     px = np.random.randn(nparticles) * sigma_px
     y = np.random.randn(nparticles) * sigma_y
     py = np.random.randn(nparticles) * sigma_py
-    tau = np.random.randn(nparticles) * sigma_tau
+    if tue_trunc is None:
+        tau = np.random.randn(nparticles) * sigma_tau
+    else:
+        tau = truncnorm.rvs(tue_trunc, -tue_trunc, loc=0, scale=sigma_tau, size=nparticles)
+    #
     dp = np.random.randn(nparticles) * sigma_p
     if sigma_tau != 0:
         dp += tau_p_cor*tau/sigma_tau

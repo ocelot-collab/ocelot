@@ -79,7 +79,7 @@ I34  = Gy * sy    = (sy - s*cy)/(2*ky2)
 I346 = Gy * dx*sy = h/kx2*(I34 - I314)
 """
 
-def t_nnn(L, h, k1, k2, energy=0):
+def t_nnn_transport(L, h, k1, k2, energy=0):
     """
     :param L:
     :param angle:
@@ -397,46 +397,6 @@ def t_nnn(L, h, k1, k2, energy=0):
     T[4, 2, 3] = T534/beta
     T[4, 3, 3] = T544/beta
 
-    # MAD START
-    if __MAD__:
-        beta2 = beta*beta
-        d2y = (2 - 2*cy*cy)/ky2 if ky2 != 0 else 2*L2
-        s2y = sy*cy
-        fx = (L - sx)/kx2 if kx2 != 0 else L3/6.
-        f2y = (L - s2y)/ky2 if ky2 != 0 else 2./3.*L3
-        J1 = (L - sx)/kx2 if kx2 != 0 else L**3/6.
-        J2 = (3.*L - 4.*sx + sx*cx)/(2*kx4) if kx != 0 else L**5/20.
-        J3 = (15*L - 22*sx +9*sx*cx - 2*sx*cx*cx)/(6*kx4*kx2) if kx != 0 else L**7/56.
-        Jd = (d2y - dx_h)*(kx2 - 4*ky2)
-        Jf = (f2y - fx)*(kx2 - 4*ky2)
-        T[1, 0, 5] = -h*h/6./beta*(K2 - 2.*h*ky2)*(3.*cx*J1 + sx*dx_h) - 1./2./beta*-ky2*(sx - L*cx)
-        T[0, 1, 5] = -h*h/6./beta*(K2 - 2.*h*ky2)*(sx*dx_h*dx_h - 2.*cx*J2) + h2/2/beta*(sx*dx_h + cx*J1) - 1./2./beta*(sx + L*cx)
-        T[0, 3, 3] = K2*Jd - h/2.*dx_h
-        T[1, 1, 5] = -h*h/6./beta*(K2 - 2.*h*ky2)*(3.*sx*J1 + dx_h*dx_h) + 1./2./beta*-ky2*L*sx
-        T[1, 5, 5] = -h*h/6./(beta2)*(K2 - 2.*h*ky2)*(sx*dx_h*dx_h - 2.*cx*J2) - h/2./beta2*-ky2*(cx*J1 - sx*dx_h) - h*igamma2/(2.*beta2)*sx
-        T[2, 3, 5] = h/beta*K2*(sy*Jd - 2*cy*Jf) + h2/beta*J1*cy - 1./2./beta*(sy + L*cy)
-        T[2, 2, 5] = h/beta*K2*(sy*Jd - 2*-ky2*cy*Jf) + h2/beta*-ky2*J1*sy - 0.5/beta*-ky2*L*sy
-        # only T436 gives the different value for Quad in comparison with MAD, but it was checked and it is correct
-        T[3, 2, 5] = h/beta*-ky2*K2*(2*cy*Jf - sy*Jd) + h/beta*(K2 + h*-ky2)*J1*cy + 0.5/beta*-ky2*(sy - L*cy)
-        T[3, 3, 5] = h/beta*K2*(2*-ky2*sy*Jf - cy*Jd) + h/beta*(K2 + h*-ky2)*J1*sy - 0.5/beta*-ky2*sy*L
-        #print("beta = ", beta, " T436 = ", T[3, 2, 5], "K1 = ", -ky2, "sy = ", sy, "L = ", L, " cy = ", cy, "rest = ", 0.5*beta*-ky2*(sy - L*cy) )
-        T[4, 0, 1] = -(h/6./beta*(K2 + 2*h*-ky2)*dx_h*dx_h + 1/2./beta*-ky2*sx2)
-        T[4, 1, 5] = -(h/6./beta*(K2 + 2*h*-ky2)*(dx_h**3 - 2*sx*J2) + h/2./beta*-ky2*sx*J1 + h*igamma2/beta2*dx_h)
-        T[4, 5, 5] = -h2/6.*(h*(beta2*beta)*(K2 + 2*h*-ky2)*(3*J3 - 2*dx_h*J2) + -ky2*(sx*dx_h*dx_h - J2*(1 + 2*cx))) - 1.5/beta**3*igamma2*(h**2*J1-L)
-        #print((K2 + 2*h*-ky2)*(3*J3 - 2*dx_h*J2), -ky2*(sx*dx_h*dx_h - J2*(1 + 2*cx)))
-        T[4, 0, 5] = -sx*h/(beta**2)*igamma2
-
-        # 07.09.2016
-        T[0, 0, 5] = 2.*(-h/12./beta*(K2 + 2*h*-ky2)*(3*sx*J1 - dx_h*dx_h) + 0.5*h2/beta*sx2 + 0.25/beta*-ky2*L*sx)
-
-        T[4, 0, 0] = -(h/12./beta*(K2 + 2*h*-ky2)*(sx*dx_h + 3*J1) - 0.25/beta*-ky2*(L - sx*cx))
-        T[4, 1, 1] = -(h/6./beta*(K2 + 2*h*-ky2)*J2 - 0.5/beta*sx - 0.25/beta*-ky2*(J1 - sx*dx_h))
-        T[4, 2, 2] = -(-h/beta*-ky2*K2*Jf - 0.5*h/beta*(K2 + h*-ky2)*J1 + 0.25/beta*-ky2*(L - cy*sy))
-        T[4, 2, 3] = -2*(-0.5*h/beta*K2*Jd - 0.25/beta*-ky2*sy*sy)
-        T[4, 3, 3] = -(-h/beta*K2*Jf - 0.5*h2/beta*J1 -0.25/beta*(L + cy*sy))
-        #print(dx_h, igamma2, beta2, h)
-        #print(igamma2)
-    # MAD STOP
 
     """
     #print("T511 = ", T511)
@@ -485,6 +445,174 @@ def t_nnn(L, h, k1, k2, energy=0):
     return T
 
 
+def t_nnn_mad(L, h, k1, k2, energy=0):
+    """
+    :param L:
+    :param angle:
+    :param k1:
+    :param k2:
+    :return:
+
+    here is used the following set of variables:
+    x, dx/ds, y, dy/ds, delta_l, dp/p0
+    """
+
+    igamma2 = 0.
+    if energy != 0:
+        gamma = energy/m_e_GeV
+        gamma2 = gamma*gamma
+        igamma2 = 1./gamma2
+
+    beta = np.sqrt(1. - igamma2)
+    beta2 = beta * beta
+    beta3 = beta2*beta
+    h2 = h*h
+    h3 = h2*h
+    kx2 = (k1 + h*h)
+    ky2 = -k1
+    kx4 = kx2*kx2
+    ky4 = ky2*ky2
+    kx = np.sqrt(kx2 + 0.j)
+    ky = np.sqrt(-k1 + 0.j)
+    cx = np.cos(kx*L).real
+    sx = (np.sin(kx*L)/kx).real if kx != 0 else L
+    cy = np.cos(ky*L).real
+
+    sy = (np.sin(ky*L)/ky).real if ky != 0 else L
+
+    sx2 = sx*sx
+    sy2 = sy*sy
+    L2 = L*L
+    L3 = L2*L
+    L4 = L3*L
+    L5 = L4*L
+    dx = (1. - cx)/kx2 if kx != 0. else L*L/2.
+    dx2 = dx * dx
+    K1 = k1
+    K2 = k2
+
+    d2y = 0.5 * sy * sy
+    s2y = sy * cy
+    c2x = np.cos(2 * kx * L).real
+    c2y = np.cos(2 * ky * L).real
+    fx = (L - sx) / kx2 if kx2 != 0 else L3 / 6.
+    f2y = (L - s2y) / ky2 if ky2 != 0 else L3 / 6
+    J1 = (L - sx) / kx2 if kx2 != 0 else L3 / 6.
+    J2 = (3. * L - 4. * sx + sx * cx) / (2 * kx4) if kx != 0 else L ** 5 / 20.
+    J3 = (15 * L - 22.5 * sx + 9 * sx * cx - 1.5 * sx * cx * cx + kx2 * sx2 * sx) / (
+                6 * kx4 * kx2) if kx != 0 else L ** 7 / 56.
+    #J3 = (15 * L - 22 * sx + 9 * sx * cx - 2 * sx * cx * cx ) / (
+    #        6 * kx4 * kx2) if kx != 0 else L ** 7 / 56.
+    J_denom = kx2 - 4 * ky2
+    Jc = (c2y - cx) / J_denom if J_denom != 0 else 0.5 * L2
+    Js = (cy * sy - sx) / J_denom if J_denom != 0 else L3 / 6
+    Jd = (d2y - dx) / J_denom if J_denom != 0 else L4 / 24
+    Jf = (f2y - fx) / J_denom if J_denom != 0 else L5 / 120
+
+    khk = K2 + 2*h*K1
+    T = np.zeros((6,6,6))
+
+    T111 = -1/6*khk*(sx2 + dx) - 0.5*h*kx2*sx2
+    T112 = -1/6*khk*sx*dx + 0.5*h*sx*cx
+    T122 = -1 / 6 * khk * dx2 + 0.5 * h * dx * cx
+    T116 = -h / 12/beta * khk * (3*sx*J1 - dx2) + 0.5 * h2/beta * sx2 + 0.25/beta*K1*L*sx
+    T126 = -h / 12 / beta * khk * (
+                sx*dx2 - 2*cx*J2) + 0.25 * h2 / beta * (sx*dx + cx*J1) - 0.25 / beta * (sx + L*cx)
+    T166 = -h2 / 6 / beta2 * khk * (
+                dx2*dx - 2*sx*J2) + 0.5 * h3 / beta2 * sx*J1 - 0.5*h / beta2 * L*sx  - 0.5*h/(beta2)*igamma2*dx
+    T133 = K1*K2*Jd + 0.5*(K2 + h * K1)*dx
+    T134 = 0.5*K2*Js
+    T144 = K2*Jd - 0.5*h*dx
+
+    T211 = -1/6*khk*sx*(1 + 2*cx)
+    T212 = -1 / 6 * khk * dx * (1 + 2 * cx)
+    T222 = -1 / 3 * khk * sx*dx  - 0.5*h*sx
+    T216 = -h / 12/beta * khk * (3*cx * J1 + sx*dx) - 0.25/beta * K1 * (sx - L*cx)
+    T226 = -h / 12/beta * khk * (3*sx * J1 + dx2) + 0.25/beta * K1 *L*sx
+    T266 = -h2 / 6 / beta2 * khk * (sx * dx2 - 2*cx*J2) - 0.5 *h/ beta2 * K1 * (cx*J1 - sx*dx) - 0.5*h/beta2*igamma2*sx
+    T233 = K1*K2*Js + 0.5*(K2 + h*K1)*sx
+    T234 = 0.5*K2*Jc
+    T244 = K2 * Js - 0.5*h*sx
+
+    T313 = 0.5*K2*(cy*Jc - 2*K1*sy*Js) + 0.5*h*K1*sx*sy
+    T314 = 0.5 * K2 * (sy * Jc - 2* cy * Js) + 0.5 * h * sx * cy
+    T323 = 0.5 * K2 * (cy * Js - 2 *K1* sy * Jd) + 0.5 * h *K1 * dx * sy
+    T324 = 0.5 * K2 * (sy * Js - 2 * cy * Jd) + 0.5 * h * dx * cy
+    T336 = 0.5 * h/beta * K2 * (cy * Jd - 2 * K1 * sy * Jf) + 0.5 * h2/beta * K1 * J1 * sy - 0.25/beta*K1*L*sy
+    T346 = 0.5 * h / beta * K2 * (sy * Jd - 2 * cy * Jf) + 0.5 * h2 / beta * J1 * cy - 0.25 / beta * (sy + L * cy)
+
+    T413 = 0.5*K1*K2*(2*cy*Js - sy*Jc) + 0.5*(K2 + h*K1)*sx*cy
+    T414 = 0.5 * K2 * (2 * K1*sy * Js - cy * Jc) + 0.5 * (K2 + h * K1) * sx * sy
+    T423 = 0.5*K1*K2*(2*cy*Jd - sy*Js) + 0.5*(K2 + h*K1)*dx*cy
+    T424 = 0.5 * K2 * (2 * K1 * sy * Jd - cy * Js) + 0.5 * (K2 + h * K1) * dx * sy
+    T436 = 0.5 * h/beta * K1 * K2 * (2 * cy * Jf - sy * Jd) + 0.5 *h/beta* (K2 + h * K1) * J1 * cy + 0.25/beta*K1*(sy - L*cy)
+    T446 = 0.5 *h/beta * K2 * (2 * K1 * sy * Jf - cy * Jd) + 0.5 *h/beta* (K2 + h * K1) * J1 * sy - 0.25/beta*K1*L*sy
+
+    T511 = h/12/beta*khk*(sx*dx + 3*J1) - 0.25/beta*K1*(L - sx*cx)
+    T512 = h / 12 / beta * khk * dx2 + 0.25 / beta * K1 * sx2
+    T522 = h/6/beta*khk*J2 - 0.5/beta*sx - 0.25/beta*K1*(J1 - sx*dx)
+
+    T516 = h2/12/beta2*khk*(3*dx*J1 - 4*J2) + 0.25*h/beta2*K1*J1*(1 + cx) + 0.5*h/beta2*igamma2*sx
+
+    T526 = h2 / 12 / beta2 * khk * (dx * dx2 - 2 *sx * J2) + 0.25 * h / beta2 * K1*sx * J1 + 0.5 * h / beta2 * igamma2 * dx
+    T566 = h3 / 6 / beta3 * khk * (3*J3 - 2 *dx * J2) + h2/6 / beta3 * K1*(sx*dx2 - J2*(1 + 2*cx)) + 1.5 / beta3 * igamma2 * (h2*J1 - L)
+    T533 = - h/beta*K1*K2*Jf - 0.5*h/beta*(K2 + h*K1)*J1 + 0.25/beta*K1*(L - cy*sy)
+    T534 = - 0.5*h/beta*K2*Jd - 0.25/beta*K1*sy2
+    T544 = -h/beta * K2*Jf + 0.5*h2/beta*J1  - 0.25/beta*(L + cy*sy)
+
+    T[0, 0, 0] = T111
+    T[0, 0, 1] = T112*2
+    T[0, 1, 1] = T122
+    T[0, 0, 5] = T116*2
+    T[0, 1, 5] = T126*2
+    T[0, 5, 5] = T166
+    T[0, 2, 2] = T133
+    T[0, 2, 3] = T134*2
+    T[0, 3, 3] = T144
+
+    T[1, 0, 0] = T211
+    T[1, 0, 1] = T212*2
+    T[1, 1, 1] = T222
+    T[1, 0, 5] = T216*2
+    T[1, 1, 5] = T226*2
+    T[1, 5, 5] = T266
+    T[1, 2, 2] = T233
+    T[1, 2, 3] = T234*2
+    T[1, 3, 3] = T244
+
+    T[2, 0, 2] = T313*2
+    T[2, 0, 3] = T314*2
+    T[2, 1, 2] = T323*2
+    T[2, 1, 3] = T324*2
+    T[2, 2, 5] = T336*2
+    T[2, 3, 5] = T346*2
+
+
+    T[3, 0, 2] = T413*2
+    T[3, 0, 3] = T414*2
+    T[3, 1, 2] = T423*2
+    T[3, 1, 3] = T424*2
+    T[3, 2, 5] = T436*2
+    T[3, 3, 5] = T446*2
+
+    T[4, 0, 0] = -T511
+    T[4, 0, 1] = -T512*2
+    T[4, 1, 1] = -T522
+    T[4, 0, 5] = -T516*2
+    T[4, 1, 5] = -T526*2
+    T[4, 5, 5] = -T566
+    T[4, 2, 2] = -T533
+    T[4, 2, 3] = -T534*2
+    T[4, 3, 3] = -T544
+    return T
+
+def t_nnn(L, h, k1, k2, energy=0):
+    if __MAD__:
+        T = t_nnn_mad(L, h, k1, k2, energy)
+    else:
+        T = t_nnn_transport(L, h, k1, k2, energy)
+    return T
+
 def fringe_ent(h, k1, e, h_pole=0., gap=0., fint=0.):
 
     sec_e = 1./np.cos(e)
@@ -504,15 +632,16 @@ def fringe_ent(h, k1, e, h_pole=0., gap=0., fint=0.):
     T[1, 0, 0] = h/2.*h_pole*sec_e3 + k1*tan_e
     T[1, 0, 1] = h*tan_e2
     T[1, 0, 5] = -h*tan_e
-    T[1, 2, 2] = (-k1 + h*h/2. + h*h*tan_e2)*tan_e - h/2.*h_pole*sec_e3
+    T[1, 2, 2] = (-k1 + h * h / 2. + h * h * tan_e2) * tan_e - h / 2. * h_pole * sec_e3
     T[1, 2, 3] = -h*tan_e2
     T[2, 0, 2] = h*tan_e2
     T[3, 0, 2] = -h*h_pole*sec_e3 - 2*k1*tan_e
     T[3, 0, 3] = -h*tan_e2
     T[3, 1, 2] = -h*sec_e2
     T[3, 2, 5] = h*tan_e - h*phi/np.cos(e - phi)**2
-    # MAD
+    # MADx
     if __MAD__:
+        T[1, 2, 2] = (-k1 + h * h / 2. * (1 + h * h * sec_e2)) * tan_e - h / 2. * h_pole * sec_e3
         T[1, 0, 5] = 0
         T[3, 2, 5] = 0
     return R, T
@@ -542,12 +671,13 @@ def fringe_ext(h, k1, e, h_pole=0., gap=0., fint=0.):
     T[1, 2, 2] = (-k1 - h*h/2.*tan_e2)*tan_e - h/2.*h_pole*sec_e3
     T[1, 2, 3] = h*tan_e2
     T[2, 0, 2] = -h*tan_e2
-    T[3, 0, 2] = -h*h_pole*sec_e3 +(-k1 + h*h*sec_e2)*tan_e
+    T[3, 0, 2] = -h * h_pole * sec_e3 + (-k1 + h * h * sec_e2) * tan_e
     T[3, 0, 3] = h*tan_e2
     T[3, 1, 2] = h*sec_e2
-    #T[3,2,5] = h*tan_e - h*phi/cos(e - phi)**2
+    T[3, 2, 5] = h*tan_e - h*phi/np.cos(e - phi)**2
     # MAD
     if __MAD__:
+        T[3, 0, 2] = -h * h_pole * sec_e3 + (-2 * k1 + h * h * sec_e2) * tan_e
         T[1, 0, 5] = 0
         T[3, 2, 5] = 0
     return R, T

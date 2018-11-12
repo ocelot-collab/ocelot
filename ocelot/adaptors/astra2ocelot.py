@@ -156,7 +156,7 @@ def astraBeam2particleArray(filename, s_ref=-1, Eref=-1, print_params=True):
     P0 = np.loadtxt(filename)
     charge_array = -P0[:, 7] * 1e-9  # charge in nC -> in C
 
-    
+
     xp = P0[:, :6]
 
     if s_ref < 0:
@@ -166,7 +166,7 @@ def astraBeam2particleArray(filename, s_ref=-1, Eref=-1, print_params=True):
         s0 = xp[0, 2]
         xp[0, 2] = 0.
         xp[:, 2] = xp[:, 2] + s0 - s_ref
-   
+
     if Eref<0:
         Pref = xp[0, 5]
         xp[0, 5] = 0.
@@ -202,11 +202,12 @@ def astraBeam2particleArray(filename, s_ref=-1, Eref=-1, print_params=True):
     return p_array
 
 
-def particleArray2astraBeam(p_array, filename="tytest.ast"):
+def particleArray2astraBeam(p_array, filename="tytest.ast", ref_index=0):
     """
     function convert  Ocelot's ParticleArray to Astra beam distribution and save to "filename".
     :param p_array:
     :param filename:
+    :param ref_index: index of the reference particle
     :return:
     """
     gamref = p_array.E / m_e_GeV
@@ -217,15 +218,21 @@ def particleArray2astraBeam(p_array, filename="tytest.ast"):
     Pref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_eV
     xp[:, 5] = xp[:, 5] + Pref
     xp[:, 2] = xp[:, 2] + s0
+
+    if ref_index > 0:
+        p0 = deepcopy(xp[ref_index, :])
+        xp[ref_index, :] = xp[0, :]
+        xp[0, :] = p0
+
     xp[1:Np, 5] = xp[1:Np, 5] - xp[0, 5]
     xp[1:Np, 2] = xp[1:Np, 2] - xp[0, 2]
 
     charge_array = -p_array.q_array.reshape(len(p_array.q_array), 1) * 1e+9  # charge in C -> in nC
     flag = np.ones((len(charge_array), 1))
-    astra = np.append(xp, flag*0, axis=1)               # time in [ns]
+    astra = np.append(xp, flag * 0, axis=1)  # time in [ns]
     astra = np.append(astra, charge_array, axis=1)
-    astra = np.append(astra, flag, axis=1)              # 1 - electron, 2 - positron, 3 - protons and 4 - hydrogen ions.
-    astra = np.append(astra, flag*5, axis=1)            # 5 - standard particle
+    astra = np.append(astra, flag, axis=1)  # 1 - electron, 2 - positron, 3 - protons and 4 - hydrogen ions.
+    astra = np.append(astra, flag * 5, axis=1)  # 5 - standard particle
     print("SAVE")
     np.savetxt(filename, astra, fmt='%.7e')
 
@@ -249,25 +256,25 @@ def emittance_analysis(fileprefix="Exfel", trace_space=True, s_offset=None):
     opty = np.loadtxt(fileprefix + '.Yemit.001')
     optz = np.loadtxt(fileprefix + '.Zemit.001')
 
-    r_E = optz[:, 2]*1e6 + m_e_eV
-    gamma = r_E/m_e_eV
-    emitx = optx[:, 5]*1e-6
-    sigmax = optx[:, 3]*1e-3
-    betax = sigmax**2/emitx*gamma
-    emity = opty[:, 5]*1e-6
-    sigmay = opty[:, 3]*1e-3
-    betay = sigmay**2/emity*gamma
-    corx = optx[:, 6]*1e-3 * sigmax
-    alphax = -corx/emitx*gamma
-    cory = opty[:, 6]*1e-3 * sigmay
-    alphay = -cory/emity*gamma
+    r_E = optz[:, 2] * 1e6 + m_e_eV
+    gamma = r_E / m_e_eV
+    emitx = optx[:, 5] * 1e-6
+    sigmax = optx[:, 3] * 1e-3
+    betax = sigmax ** 2 / emitx * gamma
+    emity = opty[:, 5] * 1e-6
+    sigmay = opty[:, 3] * 1e-3
+    betay = sigmay ** 2 / emity * gamma
+    corx = optx[:, 6] * 1e-3 * sigmax
+    alphax = -corx / emitx * gamma
+    cory = opty[:, 6] * 1e-3 * sigmay
+    alphay = -cory / emity * gamma
 
     if trace_space:
         optTS = np.loadtxt(fileprefix + '.TRemit.001')
-        emitxTS = optTS[:, 3 - 1]*1e-6
-        emityTS = optTS[:, 4 - 1]*1e-6
-        betaxTS = sigmax**2/emitxTS*gamma
-        betayTS = sigmay**2/emityTS*gamma
+        emitxTS = optTS[:, 3 - 1] * 1e-6
+        emityTS = optTS[:, 4 - 1] * 1e-6
+        betaxTS = sigmax ** 2 / emitxTS * gamma
+        betayTS = sigmay ** 2 / emityTS * gamma
         betax = betaxTS
         betay = betayTS
         emitx = emitxTS
@@ -284,7 +291,7 @@ def emittance_analysis(fileprefix="Exfel", trace_space=True, s_offset=None):
         tw.gamma_y = (1 + tw.alpha_y * tw.alpha_y) / tw.beta_y
         tw.emit_x = emitx[i]
         tw.emit_y = emity[i]
-        tw.E = r_E*1e-9 # in GeV
+        tw.E = r_E * 1e-9  # in GeV
 
         if s_offset != None:
             tw.s = optx[i, 0] - optx[0, 0] + s_offset

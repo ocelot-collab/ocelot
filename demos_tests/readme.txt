@@ -31,8 +31,7 @@ Run single test from specific file
     python3 -m pytest -v path/filename_test.py::test_function
     
 
-
 How to update reference values
-  
+
 Update reference values is possible only for one specific test function per one run
     python3 -m pytest -v path/filename_test.py --update=test_function

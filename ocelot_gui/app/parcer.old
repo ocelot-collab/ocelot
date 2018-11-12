@@ -1,0 +1,190 @@
+
+class LatticeRead():
+    
+    def __init__(self):
+        pass
+
+
+    def parsing(self, lines):
+
+        proc_lines = self.del_comments(lines)
+        
+        tws = self.parsing_twiss(proc_lines)
+        beam = self.parsing_beam(proc_lines)
+        elements = self.parsing_elements(proc_lines)
+        cells, cells_order = self.parsing_cells(proc_lines, elements)
+
+        return tws, beam, elements, cells, cells_order
+
+    
+    def del_comments(self, lines):
+
+        # remove 3*" and 3*' in one line comments
+        lines = re.sub(r'\"{3}(.*)?\"{3}', '', lines)
+        lines = re.sub(r'\'{3}(.*)?\'{3}', '', lines)
+        
+        proc_lines0 = []
+        lines = lines.split("\n")
+        for line in lines:
+            proc_lines0.append(line.strip())
+
+        # remove """ multiline comments
+        proc_lines1 = []
+        in_comment = False
+        for line in proc_lines0:
+            result = re.findall(r'(.*)\"{3}(.*)', line)
+            if len(result) == 0:
+                if not in_comment:
+                    proc_lines1.append(line)
+            else:
+                if not in_comment:
+                    proc_lines1.append(result[0][0])
+                    in_comment = True
+                else:
+                    proc_lines1.append(result[0][1])
+                    in_comment = False
+
+        # remove 3*' multiline comments
+        proc_lines2 = []
+        in_comment = False
+        for line in proc_lines1:
+            result = re.findall(r'(.*)\'{3}(.*)', line)
+            if len(result) == 0:
+                if not in_comment:
+                    proc_lines2.append(line)
+            else:
+                if not in_comment:
+                    proc_lines2.append(result[0][0])
+                    in_comment = True
+                else:
+                    proc_lines2.append(result[0][1])
+                    in_comment = False
+        
+        # remove # comments, empty lines, glue lines
+        tmp = ''
+        proc_lines3 = []
+        for line in proc_lines2:
+
+            # skip empty and comment line
+            if line == '': continue
+            if line[0] == '#': continue
+
+            # glue lines
+            if tmp != '':
+                line = tmp + line
+                tmp = ''
+            if line[-1] == '\\':
+                tmp = line[:-1]
+                continue
+            
+            proc_lines3.append(line)
+        
+        return proc_lines3
+
+
+    def parsing_twiss(self, lines):
+        """parsing twiss parameters (only the first Twiss() defenition)"""
+
+        tws = Twiss()
+        tws_name = ''
+        for line in lines:
+            if tws_name == '':
+                # find Twiss() variable name
+                result = re.findall(r'(^[a-zA-Z]{1}[a-zA-Z0-9_]*)\s*=\s*Twiss\s*\(\s*\)', line)
+                if len(result) != 0:
+                    tws_name = result[0]
+            else:
+                # find twiss values
+                result = re.findall(r'^' + str(tws_name) + r'\.([a-zA-Z]{1}[a-zA-Z0-9_]*)\s*=\s*([\+\-]?\d+\.?\d*)', line)
+                if len(result) != 0 and hasattr(tws, result[0][0]):
+                    tws.__dict__[result[0][0]] = float(result[0][1])
+        
+        return tws
+
+
+    def parsing_beam(self, lines):
+        """parsing beam parameters (only the first Beam() defenition)"""
+
+        beam = Beam()
+        beam_name = ''
+        for line in lines:
+            if beam_name == '':
+                # find Beam() variable name
+                result = re.findall(r'(^[a-zA-Z]{1}[a-zA-Z0-9_]*)\s*=\s*Beam\s*\(\s*\)', line)
+                if len(result) != 0:
+                    beam_name = result[0]
+            else:
+                # find beam values
+                result = re.findall(r'^' + str(beam_name) + r'\.([a-zA-Z]{1}[a-zA-Z0-9_]*)\s*=\s*([\+\-]?\d+\.?\d*)', line)
+                if len(result) != 0 and hasattr(beam, result[0][0]):
+                    beam.__dict__[result[0][0]] = float(result[0][1])
+
+        return beam
+
+
+    def parsing_elements(self, lines):
+        
+        elements = {}
+        for line in lines:
+            result = re.findall(r'(^[a-zA-Z]{1}[a-zA-Z0-9_]*)\s*=\s*([a-zA-Z]+)\s*\((.*)\)', line)
+            if len(result) != 0 and issubclass(getattr(sys.modules[__name__], result[0][1]), Element):
+                elements[result[0][0]] = eval(result[0][1] + '(' + result[0][2] + ')')
+
+        return elements
+    
+
+    def parsing_cells(self, lines, elements):
+        """parsing sequences of elements"""
+
+        cells = {}
+        cells_order = []
+        for line in lines:
+            # find sequences of elements
+            result = re.findall(r'(^[a-zA-Z]{1}[a-zA-Z0-9_]*)\s*=\s*\(([a-zA-Z0-9_\,\s]+)\)$', line)
+            if len(result) != 0:
+
+                cells[result[0][0]] = ()
+                cells_order.append(result[0][0])
+
+                sequence = result[0][1].split(",")
+                for elem in sequence:
+                    elem = elem.strip()
+                    
+                    if elem in elements.keys():
+                        cells[result[0][0]] += (elem,)
+                    
+                    if elem in cells.keys():
+                        cells[result[0][0]] += (elem,)
+                continue
+
+            #find reassignment of elements or sequences
+            result = re.findall(r'(^[a-zA-Z]{1}[a-zA-Z0-9_]*)\s*=\s*[\(]?([a-zA-Z]{1}[a-zA-Z0-9_]*)[\)]?$', line)
+            if len(result) != 0:
+                
+                if result[0][1] in elements.keys():
+                    cells_order.append(result[0][0])
+                    cells[result[0][0]] = (result[0][1],)
+                    
+                if result[0][1] in cells.keys():
+                    cells_order.append(result[0][0])
+                    cells[result[0][0]] = (result[0][1],)
+
+        return (cells, cells_order)
+
+        
+class LatticeSave():
+
+    def parsing_cells(self, cells, cells_order):
+        lines = ''
+
+        for cell in cells_order:
+            lines += str(cell) + ' = ('
+
+            for elem in cells[cell]:
+                lines += str(elem) + ', '
+
+            lines = lines[0:-2]
+            lines += ')\n'
+
+        lines += '\n'
+        return lines

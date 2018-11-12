@@ -2,9 +2,6 @@ from PyQt5 import QtGui
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 
-from ocelot.cpbd.e_beam_params import *
-from ocelot.cpbd.chromaticity import *
-
 
 class EbeamTable():
 

@@ -55,8 +55,8 @@ class LatticeSave():
         self.param_list['Sextupole'] = ('l', 'k2')
         self.param_list['Octupole'] = ('l', 'k3')
         self.param_list['Undulator'] = ('lperiod', 'nperiods', 'Kx', 'Ky', 'l', 'ax') # 'l' and 'ax' are used only for fix
-        self.param_list['Cavity'] = ('l', 'v', 'freq', 'phi', 'f')   # 'f' is used only for fix
-        self.param_list['TDCavity'] = ('l', 'v', 'freq', 'phi', 'f') # 'f' is used only for fix
+        self.param_list['Cavity'] = ('l', 'v', 'freq', 'phi')
+        self.param_list['TDCavity'] = ('l', 'v', 'freq', 'phi')
         self.param_list['Solenoid'] = ('l', 'k')
         self.param_list['Multipole'] = ('kn',)
         self.param_list['Matrix'] = ('l',)
@@ -107,12 +107,7 @@ class LatticeSave():
                 
                 # prepare parameters from self.param_list
                 for param in self.param_list[element_type]:
-                    # Cavity, Vcor, Undulator fix
-                    if element_type in ['Cavity', 'TDCavity'] and param == 'freq':
-                        lines += str(param) + '=' + str(element.__dict__['f']) + ', '
-                    elif element_type in ['Cavity', 'TDCavity'] and param == 'f':
-                        pass
-                    elif element_type in ['Vcor'] and param == 'tilt':
+                    if element_type in ['Vcor'] and param == 'tilt':
                         pass
                     elif element_type in ['Undulator'] and (param == 'l' or param == 'ax'):
                         pass
@@ -159,7 +154,8 @@ class LatticeSave():
         for param in beam.__dict__:
             if beam.__dict__[param] != 0.0 and \
                 beam.__dict__[param] != 0 and \
-                beam.__dict__[param] != '':
+                beam.__dict__[param] != '' and \
+                param != 'shape':
 
                 lines += 'beam.' + str(param) + ' = ' + str(beam.__dict__[param]) + '\n'
 

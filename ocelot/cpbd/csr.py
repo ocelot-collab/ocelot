@@ -583,9 +583,11 @@ class CSR(PhysProc):
         self.sub_bin = SubBinning(x_qbin=self.x_qbin, n_bin=self.n_bin, m_bin=self.m_bin)
         self.bin_smoth = Smoothing()
         self.k0_fin_anf = K0_fin_anf()
+        #self.napply = 0
         #if self.pict_debug:
-        #    self.f = plt.figure(figsize=(12, 9))
-        #    plt.ion()
+        #    self.napply = 0
+        #    #self.f = plt.figure(figsize=(12, 9))
+        #    #plt.ion()
         #    #plt.hold(False)
 
     def K0_inf_anf(self, i, traj, wmin):
@@ -856,27 +858,42 @@ class CSR(PhysProc):
         delta_p = dE * 1e-9 / pc_ref
         p_array.rparticles[5] += delta_p
 
-
-        #if self.pict_debug:
-        #    self.f.clear()
-        #    self.f.add_subplot(311)
-        #    plt.plot(self.csr_traj[3, :], self.csr_traj[1, :], "r",  self.csr_traj[3,itr_ra], self.csr_traj[1, itr_ra], "bo")
-        #    self.f.add_subplot(312)
-        #    plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
-        #    plt.plot(np.linspace(s1, s1+st*len(lam_K1), len(lam_K1))*1000, lam_K1/delta_s/1000.)
-        #    #plt.ylim(-2500, 2500)
-        #    plt.ylabel("dE, keV/m")
+        #self.napply += 1
+        #if self.pict_debug and self.napply%2 == 0:
+        #    from ocelot.gui.accelerator import show_density
+        #    fig = plt.figure(figsize=(10, 7))
+        #    ax1 = plt.subplot(311)
         #
-        #    self.f.add_subplot(313)
-        #    bins_start, hist_start = get_current(p_array, charge=p_array.q_array[0], num_bins=300)
-        #    plt.plot(-bins_start[::-1]*1000, hist_start[::-1], "b", lw=2)
-        #    plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
-        #    plt.ylabel("I, A")
-        #    x = str(int(int(np.around(s_cur, decimals=3)*1000)/10))
-        #    z = "0"*(3 - len(x))
-        #    plt.savefig( x + '.png')
-        #    plt.draw()
-        #    plt.pause(0.01)
+        #    ax1.plot(self.csr_traj[3, :], self.csr_traj[2, :], "r",  self.csr_traj[3,itr_ra], self.csr_traj[2, itr_ra], "bo")
+        #
+        #    # CSR wake
+        #    # plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
+        #    # plt.plot(np.linspace(s1, s1+st*len(lam_K1), len(lam_K1))*1000, lam_K1/delta_s/1000.)
+        #    # #plt.ylim(-2500, 2500)
+        #    # plt.ylabel("dE, keV/m")
+        #    # Energy profile
+        #    ax2 = plt.subplot(312)
+        #    #plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
+        #    show_density(-p_array.tau() * 1e3, p_array.p() * 1e2, ax=ax2, nbins_x=400, nbins_y=400,
+        #                 interpolation="bilinear", ylabel='$\delta_E$ [%]',
+        #                 title="Longitudinal phase space", grid=False, show_xtick_label=False)
+        #
+        #    #self.f.add_subplot(313)
+        #    ax3 = plt.subplot(313, sharex=ax2)
+        #    ax3.set_title("Beam current")
+        #    B = s_to_cur(p_array.tau(), sigma=np.std(p_array.tau())*0.05, q0=np.sum(p_array.q_array), v=speed_of_light)
+        #    ax3.plot(-B[:, 0]*1000, B[:, 1], lw=2)
+        #    ax3.set_ylabel("I, [A]")
+        #    ax3.set_xlabel("s, [mm]")
+        #    ax3.set_ylim(0, 8000)
+        #    plt.subplots_adjust(hspace=0.3)
+        #
+        #    dig = str(self.napply)
+        #    name = "0" * (4 - len(dig)) + dig
+        #    plt.savefig( name + '.png')
+        #
+        #    #plt.draw()
+        #    #plt.pause(0.01)
         #
         #if self.debug:
         #    fig, ax1 = plt.subplots()

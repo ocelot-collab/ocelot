@@ -215,13 +215,13 @@ def lat2input(lat):
     lines.append("\n# cavity \n")
     for cav in cavs:
         line = cav.name.lower() + " = Cavity(l=" + str(cav.l) + ", v=" + str(cav.v) + \
-               ", freq=" + str(cav.f) + ", phi=" + str(cav.phi) + ", eid='" + cav.id + "')\n"
+               ", freq=" + str(cav.freq) + ", phi=" + str(cav.phi) + ", eid='" + cav.id + "')\n"
         lines.append(line)
 
     lines.append("\n# tdcavity \n")
     for tcav in tcavs:
         line = tcav.name.lower() + " = Cavity(l=" + str(tcav.l) + ", v=" + str(tcav.v) + \
-               ", freq=" + str(tcav.f) + ", phi=" + str(tcav.phi) + ", eid='" + tcav.id + "')\n"
+               ", freq=" + str(tcav.freq) + ", phi=" + str(tcav.phi) + ", eid='" + tcav.id + "')\n"
         lines.append(line)
 
     lines.append("\n# UnknowElement \n")

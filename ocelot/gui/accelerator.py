@@ -987,7 +987,7 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones = None ):
 
 
 def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinear", xlabel=None, ylabel=None, nfig=50,
-                 title=None, figsize=None, grid=True, show_xtick_label=True):
+                 title=None, figsize=None, grid=True, show_xtick_label=True, limits=None):
     """
     Function shows density
 
@@ -1006,6 +1006,7 @@ def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinea
     :param grid: True, show grid
     :param show_xtick_label: True
     :param label, None or string.
+    :param limits,  None or [[xmin, xmax], [ymin, ymax]]
     :return:
     """
 
@@ -1021,7 +1022,13 @@ def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinea
     y_min = np.min(y)
     y_max = np.max(y)
     dy = y_max - y_min
-    H, xedges, yedges = np.histogram2d(x, y, bins=(nbins_x, nbins_y), range=[[x_min*1, x_max*1], [y_min - dy*0.05, y_max + dy*0.05]])
+
+    if limits is None:
+        range = [[x_min*1, x_max*1], [y_min - dy*0.05, y_max + dy*0.05]]
+    else:
+        range = limits
+
+    H, xedges, yedges = np.histogram2d(x, y, bins=(nbins_x, nbins_y), range=range)
     H = H.T
     vmin = np.min(H) + (np.max(H) - np.min(H)) * 0.0001
 
@@ -1094,7 +1101,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     plt.ylabel("I [A]")
     plt.grid(grid)
 
-    ax_ys = plt.subplot(326)
+    ax_ys = plt.subplot(326, sharex=ax_sp)
 
     show_density(p_array_copy.tau() * 1e3, p_array_copy.y() * 1e3, ax=ax_ys, nbins_x=nbins_x, nbins_y=nbins_y,
                  interpolation=interpolation, xlabel='s [mm]', ylabel='y [mm]', nfig=50,
@@ -1104,7 +1111,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
         plt.plot(slice_params.s * 1e3, (slice_params.my + slice_params.sig_y) * 1e3, "w", lw=1)
         plt.plot(slice_params.s * 1e3, (slice_params.my - slice_params.sig_y) * 1e3, "w", lw=1)
 
-    ax_xs = plt.subplot(324, sharex=ax_ys)
+    ax_xs = plt.subplot(324, sharex=ax_sp)
 
     show_density(p_array_copy.tau() * 1e3, p_array_copy.x() * 1e3, ax=ax_xs, nbins_x=nbins_x, nbins_y=nbins_y,
                  interpolation=interpolation, ylabel='x [mm]',
@@ -1114,12 +1121,83 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
         plt.plot(slice_params.s * 1e3, (slice_params.mx + slice_params.sig_x) * 1e3, "w", lw=1)
         plt.plot(slice_params.s * 1e3, (slice_params.mx - slice_params.sig_x) * 1e3, "w", lw=1)
 
-    ax_ps = plt.subplot(322, sharex=ax_ys)
+    ax_ps = plt.subplot(322, sharex=ax_sp)
 
     show_density(p_array_copy.tau() * 1e3, p_array_copy.p() * 1e2, ax=ax_ps, nbins_x=nbins_x, nbins_y=nbins_y,
                  interpolation=interpolation, ylabel='$\delta_E$ [%]',
                  title="Longitudinal phase space", grid=grid, show_xtick_label=False)
 
+
+def show_phase_space(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, nbins_y=200, interpolation="bilinear", inverse_tau=False,
+                show_moments=False, nfig=40, title=None, figsize=None, grid=True):
+    """
+    Shows e-beam slice parameters (current, emittances, energy spread)
+    and beam distributions (dE/(p0 c), X, Y) against long. coordinate (S)
+    Note: beam head is on the left side
+
+    :param p_array: ParticleArray
+    :param nparts_in_slice: number of particles per slice
+    :param smoth_param: 0.05, smoothing parameters to calculate the beam current: sigma = smoth_param * np.std(p_array.tau())
+    :param nbins_x: number of bins for 2D hist. in horz. plane
+    :param nbins_y: number of bins for 2D hist. in vertical plane
+    :param interpolation: "bilinear", and acceptable values are 'none’, ‘nearest’, ‘bilinear’, ‘bicubic’, ‘spline16’,
+                        ‘spline36’, ‘hanning’, ‘hamming’, ‘hermite’, ‘kaiser’, ‘quadric’, ‘catrom’, ‘gaussian’, ‘bessel’
+    :param inverse_tau: False, inverse tau - head will be on the right side of figure
+    :param show_moments: False, show moments (X_mean_slice and Y_mean_slice) in the density distribution
+    :param nfig: number of the figure
+    :param title: None or string - title of the figure
+    :param figsize: None or e.g. (8, 6)
+    :param grid: True, show grid
+    :return:
+    """
+    p_array_copy = deepcopy(p_array)
+    if inverse_tau:
+        p_array_copy.tau()[:] *= -1
+    slice_params = global_slice_analysis(p_array_copy, nparts_in_slice, smooth_param, 2, 2)
+
+    fig = plt.figure(nfig, figsize=figsize)
+    if title != None:
+        fig.suptitle(title)
+    ax_sp = plt.subplot(224)
+    show_density(p_array_copy.tau() * 1e3, p_array_copy.py() * 1e3, ax=ax_sp, nbins_x=nbins_x, nbins_y=nbins_y,
+                 interpolation=interpolation, xlabel='s [mm]', ylabel=r'$p_y$ [mrad]', nfig=50,
+                 title="", figsize=None, grid=grid, show_xtick_label=True)
+    if show_moments:
+        plt.plot(slice_params.s * 1e3, slice_params.myp * 1e3, "k", lw=2)
+        plt.plot(slice_params.s * 1e3, (slice_params.myp + slice_params.sig_yp) * 1e3, "w", lw=1)
+        plt.plot(slice_params.s * 1e3, (slice_params.myp - slice_params.sig_yp) * 1e3, "w", lw=1)
+
+    ax_ys = plt.subplot(222, sharex=ax_sp)
+
+    show_density(p_array_copy.tau() * 1e3, p_array_copy.y() * 1e3, ax=ax_ys, nbins_x=nbins_x, nbins_y=nbins_y,
+                 interpolation=interpolation, ylabel='y [mm]', nfig=50,
+                 title="Side view", figsize=None, grid=grid, show_xtick_label=False)
+    if show_moments:
+        plt.plot(slice_params.s * 1e3, slice_params.my * 1e3, "k", lw=2)
+        plt.plot(slice_params.s * 1e3, (slice_params.my + slice_params.sig_y) * 1e3, "w", lw=1)
+        plt.plot(slice_params.s * 1e3, (slice_params.my - slice_params.sig_y) * 1e3, "w", lw=1)
+
+    ax_xs = plt.subplot(221, sharex=ax_sp)
+
+    show_density(p_array_copy.tau() * 1e3, p_array_copy.x() * 1e3, ax=ax_xs, nbins_x=nbins_x, nbins_y=nbins_y,
+                 interpolation=interpolation, ylabel='x [mm]',
+                 title="Top view", grid=grid, show_xtick_label=False)
+    if show_moments:
+        plt.plot(slice_params.s * 1e3, slice_params.mx * 1e3, "k", lw=2)
+        plt.plot(slice_params.s * 1e3, (slice_params.mx + slice_params.sig_x) * 1e3, "w", lw=1)
+        plt.plot(slice_params.s * 1e3, (slice_params.mx - slice_params.sig_x) * 1e3, "w", lw=1)
+
+    ax_xp = plt.subplot(223, sharex=ax_sp)
+
+    show_density(p_array_copy.tau() * 1e3, p_array_copy.px() * 1e3, ax=ax_xp, nbins_x=nbins_x, nbins_y=nbins_y,
+                 interpolation=interpolation, xlabel='s [mm]', ylabel=r'$p_x$ [mrad]',
+                 title="", grid=grid, show_xtick_label=True)
+    if show_moments:
+        plt.plot(slice_params.s * 1e3, slice_params.mxp * 1e3, "k", lw=2)
+        plt.plot(slice_params.s * 1e3, (slice_params.mxp + slice_params.sig_xp) * 1e3, "w", lw=1)
+        plt.plot(slice_params.s * 1e3, (slice_params.mxp - slice_params.sig_xp) * 1e3, "w", lw=1)
+
+    return slice_params.s, slice_params.myp
 
 
 def compare_beams(p_array_1, p_array_2, nparts_in_slice=5000, smoth_param=0.05,
@@ -1302,8 +1380,66 @@ def compare_beams_reduced(p_array_1, p_array_2, nparts_in_slice=5000, smoth_para
     plt.ylabel("I [A]")
 
 
+from scipy import stats
+from ocelot.cpbd.physics_proc import *
 
 
+class Save3DBeamDensity(PhysProc):
+    def __init__(self):
+        PhysProc.__init__(self)
+        self.energy = None
+        self.napply = 0
 
+    def apply_3d(self, p_array, dz):
+        #_logger.debug(" SaveBeam applied, dz =", dz)
 
+        my_rainbow = copy.deepcopy(plt.get_cmap('rainbow'))
+        my_rainbow.set_under('w')
+
+        y = p_array.x()[::50] * 1e6  # 10*np.random.normal(mu, sigma, 5000)
+        z = p_array.y()[::50] * 1e6  # 10*np.random.normal(mu, sigma, 5000)
+        x = p_array.tau()[::50] * 1e6  # 10*np.random.normal(mu, sigma, 5000)
+
+        xyz = np.vstack([x, y, z])
+        density = stats.gaussian_kde(xyz)(xyz)
+
+        idx = density.argsort()
+        x, y, z, density = x[idx], y[idx], z[idx], density[idx]
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(x, y, z, c=density, cmap=my_rainbow)
+        ax.set_xlim(20, 70)
+        ax.set_ylim(-1500, 1500)
+        ax.set_zlim(-1500, 1500)
+
+        dig = str(self.napply)
+        name = "0"*(4 - len(dig)) + dig
+
+        plt.savefig(name)
+        self.napply += 1
+        plt.clf()
+
+    def apply(self,  p_array, dz):
+        nbins_x = 400
+        nbins_y = 400
+        interpolation = "bilinear"
+        fig = plt.figure( figsize=None)
+        ax_xs = plt.subplot(211)
+
+        show_density(p_array.tau() * 1e3, p_array.x() * 1e3, ax=ax_xs, nbins_x=nbins_x, nbins_y=nbins_y,
+                     interpolation=interpolation, ylabel='x [mm]',
+                     title="Top view", grid=True, show_xtick_label=False, limits=[[0.025, 0.075], [-2, 2]])
+        ax_ys = plt.subplot(212, sharex=ax_xs)
+
+        show_density(p_array.tau() * 1e3, p_array.y() * 1e3, ax=ax_ys, nbins_x=nbins_x, nbins_y=nbins_y,
+                     interpolation=interpolation, xlabel="s, [mm]", ylabel='y [mm]', nfig=50,
+                     title="Side view", figsize=None, grid=True, show_xtick_label=True,limits=[[0.025, 0.075], [-2, 2]])
+
+        dig = str(self.napply)      
+        name = "0"*(4 - len(dig)) + dig
+
+        plt.savefig(name)
+        self.napply += 1
+        plt.clf()
 

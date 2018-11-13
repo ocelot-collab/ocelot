@@ -152,6 +152,9 @@ class LaserHeater(PhysProc):
 
 
 class Apperture(PhysProc):
+    """
+    Method to cut beam in longitudinal direction (for now)
+    """
     def __init__(self, step=1):
         PhysProc.__init__(self, step)
         self.zmin = -5

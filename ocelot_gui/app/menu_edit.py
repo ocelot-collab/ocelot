@@ -1,6 +1,8 @@
 """Menu Edit description"""
 
-from app.forms.edit_field import *
+from copy import deepcopy
+
+from app.action_edit_lattice import *
 
 
 class GUIMenuEdit():
@@ -13,5 +15,5 @@ class GUIMenuEdit():
         
         self.mw.init_central_widget()
         
-        elements_editor = EditField(self.mw)
-        self.mw.layout.addWidget(elements_editor, 0, 0)
+        edit_lattice_form = EditLattice(self.mw)
+        self.mw.layout.addWidget(edit_lattice_form, 0, 0)

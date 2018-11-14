@@ -41,7 +41,7 @@ class CalcParameters(QWidget):
     def calc_twiss(self):
 
         if self.mw.lattice.periodic_solution:
-            tws0 = periodic_twiss(Twiss(), lattice_transfer_map(self.mw.lattice.lattice, self.mw.lattice.beam.E))
+            tws0 = periodic_twiss(Twiss(), lattice_transfer_map(self.mw.lattice.lattice, self.mw.lattice.tws0.E))
         else:
             tws0 = self.mw.lattice.tws0
 
@@ -95,15 +95,15 @@ class CalcParameters(QWidget):
         self.ebp[8][1] = round(alpha, self.ebp[8][2])
         self.ebp[11][1] = str(round(Jx, self.ebp[11][2])) + ' / ' + str(round(Jy, self.ebp[11][2])) + ' / ' + str(round(Je, self.ebp[11][2]))
 
-        if self.mw.lattice.beam.E > 0.0:
+        if self.mw.lattice.tws0.E > 0.0:
             
-            gamma = self.mw.lattice.beam.E/m_e_GeV
+            gamma = self.mw.lattice.tws0.E/m_e_GeV
             emittance = Cq * gamma**2 * I5 / Jx / I2 * 1.0e12
-            u0 = Cgamma * (self.mw.lattice.beam.E * 1000.0)**4 * I2 / 2.0 / np.pi
+            u0 = Cgamma * (self.mw.lattice.tws0.E * 1000.0)**4 * I2 / 2.0 / np.pi
             sigma_e = gamma * np.sqrt(Cq * I3 / Je / I2) * 1.0e3
-            tau0 = 2.0 * self.mw.lattice.beam.E * 1000.0 * self.mw.lattice.nsuperperiods * self.mw.lattice.lattice.totalLen / speed_of_light / u0 * 1.0e3
+            tau0 = 2.0 * self.mw.lattice.tws0.E * 1000.0 * self.mw.lattice.nsuperperiods * self.mw.lattice.lattice.totalLen / speed_of_light / u0 * 1.0e3
 
-            self.ebp[1][1] = round(self.mw.lattice.beam.E, self.ebp[1][2])
+            self.ebp[1][1] = round(self.mw.lattice.tws0.E, self.ebp[1][2])
             self.ebp[2][1] = round(gamma, self.ebp[12][2])
             self.ebp[5][1] = round(emittance, self.ebp[5][2])
             self.ebp[9][1] = round(sigma_e, self.ebp[9][2])

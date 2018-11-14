@@ -60,7 +60,7 @@ class TwissMonitor(QtWidgets.QWidget):
     def calc_twiss(self):
 
         if self.mw.work_lattice.periodic_solution:
-            tws0 = periodic_twiss(Twiss(), lattice_transfer_map(self.mw.work_lattice.lattice, self.mw.work_lattice.beam.E))
+            tws0 = periodic_twiss(Twiss(), lattice_transfer_map(self.mw.work_lattice.lattice, self.mw.work_lattice.tws0.E))
         else:
             tws0 = self.mw.work_lattice.tws0
 

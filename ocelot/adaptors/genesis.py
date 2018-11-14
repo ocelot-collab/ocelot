@@ -657,7 +657,6 @@ class GenesisOutput:
         self.freq_ev_mean[self.freq_ev_mean == 0] = np.inf
         
         self.n_photons = self.pulse_energy / q_e / self.freq_ev_mean
-        
         self.spec_phot_density = calc_ph_sp_dens(self.spec, self.freq_ev, self.n_photons)
         # self.spec_phot_density = self.spec #tmp
         self.sliceKeys_used.append('spec_phot_density')
@@ -667,7 +666,7 @@ class GenesisOutput:
         '''
         the way to display the phase, without constant slope caused by different radiation wavelength from xlamds. phase is set to 0 at maximum power slice
         '''
-        _logger.debug('normalizing phase from {} to {}'.format(self('xlamds'), wav))
+        _logger.debug('rewrapping phase')
         
         if 'spec' not in self.sliceKeys_used:
             raise AssertionError('first spectrum should be calculated')
@@ -680,6 +679,8 @@ class GenesisOutput:
             spec_idx = np.argmax(self.spec[:, -1])
         else:
             spec_idx = find_nearest_idx(self.freq_lamd, wav)
+        
+        _logger.debug(ind_str + 'from {}m to {}m carrier'.format(self('xlamds'), wav))
         
         if s == None:
             pow_idx = np.argmax(self.p_mid[:, -1])
@@ -1570,15 +1571,19 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
     nSlice = 0
 
     wait_attempt = 3
-    wait_time = 1
+    wait_time = 0.5
     while os.path.isfile(out.filePath) != True:
         _logger.warning(ind_str + 'waiting for "' + out.fileName() + '" ' + str(wait_time) + 's [' + str(wait_attempt) + ']')
         time.sleep(wait_time)  # wait for the .out file to be assembled
         wait_attempt -= 1
         if wait_attempt == 0:
             _logger.error(ind_str + 'file "' + out.filePath + '" not found')
-            raise Exception('File ' + out.filePath + ' not found')
+            raise IOError('File ' + out.filePath + ' not found')
 
+    if os.path.getsize(out.filePath) == 0:
+        _logger.error(ind_str + 'file "' + out.filePath + '" has zero size')
+        raise IOError('File ' + out.filePath + ' has zero size')
+    
     start_time = time.time()
     f = open(out.filePath, 'r')
 
@@ -1661,6 +1666,11 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
                 out.I.append(float(tokens[0]))
                 out.n.append(nSlice)
 
+    #check for consistency
+    if chunk == '':
+        _logger.error(ind_str + 'File "' + out.filePath + '" has no genesis output information or is corrupted')
+        raise ValueError('File "' + out.filePath + '" has no genesis output information or is corrupted')
+    
     for parm in ['z', 'aw', 'qfld', 'I', 'n']:
         exec('out.' + parm + ' = np.array(out.' + parm + ')')
 
@@ -1674,29 +1684,31 @@ def read_out_file(filePath, read_level=2, precision=float, debug=1):
     
     #universal solution?
     out.leng=out('meshsize')*(out.ncar-1)
-
-
+    
+    
     if read_level == 0:
         _logger.debug(ind_str + 'read_level=0, returning *.out header')
         _logger.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
         return out
 
     out.nSlices = len(out.n)
-    # int(out('history_records'))#number of slices in the output
-    # print(nSlice)
-    # print(out.nSlices)
-    # if out.nSlices
-    assert out('entries_per_record') != None, '.out header is missing!'
+    if out('entries_per_record') is None:
+        _logger.error(ind_str + 'In file "' + out.filePath + '" file header is missing')
+        raise ValueError('In file "' + out.filePath + '" file header is missing')
+    
     out.nZ = int(out('entries_per_record'))  # number of records along the undulator
-
     _logger.debug(ind_str + 'nSlices ' + str(out.nSlices))
     _logger.debug(ind_str + 'nZ ' + str(out.nZ))
 
-    assert nSlice != 0, '.out is empty!'
+    if nSlice == 0:
+        _logger.error(ind_str + 'In file "' + out.filePath + '" number of recorded slices is zero')
+        raise ValueError('In file "' + out.filePath + '" number of recorded slices is zero')
 
-    assert(out.n[-1] - out.n[0]) == (len(out.n) - 1) * out('ishsty'), '.out is missing at least ' + str((out.n[-1] - out.n[0]) - (len(out.n) - 1) * out('ishsty')) + ' slices!'
-
-
+    n_missing = (out.n[-1] - out.n[0]) - (len(out.n) - 1) * out('ishsty')
+    if n_missing != 0:
+        _logger.error(ind_str + 'File "' + out.filePath + '" is missing at least ' + str(n_missing) + ' slices')
+        raise ValueError('File "' + out.filePath + '" is missing at least ' + str(n_missing) + ' slices')
+    
     if read_level >= 2:
         output_unsorted = np.array(output_unsorted)  # .astype(precision)
         _logger.debug('output_unsorted.shape = ' + str(output_unsorted.shape))
@@ -2275,7 +2287,8 @@ def dpa2edist(out, dpa, num_part=1e5, smear=1, debug=1):
     edist.part_charge = out.beam_charge / edist.len()
     _logger.debug(ind_str + 'edist.len() = ' + str(edist.len()))
     # edist.charge=out.beam_charge
-    edist.filePath = dpa.filePath + '.edist'
+    if hasattr(dpa, 'filePath'):
+        edist.filePath = dpa.filePath + '.edist'
     _logger.debug(ind_str + 'edist.filePath = ' + edist.filePath)
     # print 'max_y_out', np.amax(t_out)
     # print 'e_out', np.amax(e_out),np.amin(e_out)

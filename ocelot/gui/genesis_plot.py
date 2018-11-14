@@ -119,7 +119,7 @@ def plot_gen_out_all_paral(exp_dir, stage=1, savefig='png', debug=1):
 # plot_gen_stat(proj_dir=exp_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int','energy','r_size_weighted'], z_param_inp=[], dfl_param_inp=[], s_inp=['max'], z_inp=[0,'end'], savefig=1, saveval=1, showfig=0, debug=0)
 
 @if_plottable
-def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice='all', vartype_dfl=complex128, debug=1):
+def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice='all', vartype_dfl=complex128, debug=1, *args, **kwargs):
     '''
     plots all possible output from the genesis output
     handle is either:
@@ -181,18 +181,22 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice='all', va
     for handle in handles:
 
         if os.path.isfile(str(handle)):
+             # if os.path.getsize(str(handle)) > 0:
             _logger.info('plotting '+str(handle))
-            handle = read_out_file(handle, read_level=2, debug=debug)
+            try:
+                handle = read_out_file(handle, read_level=2, debug=debug)
+            except (IOError, ValueError):
+                continue
 
         if isinstance(handle, GenesisOutput):
             if choice[0]:
-                f0 = plot_gen_out_e(handle, showfig=showfig, savefig=savefig, debug=debug)
+                f0 = plot_gen_out_e(handle, showfig=showfig, savefig=savefig, debug=debug, *args, **kwargs)
             if choice[1]:
-                f1 = plot_gen_out_ph(handle, showfig=showfig, savefig=savefig, debug=debug)
+                f1 = plot_gen_out_ph(handle, showfig=showfig, savefig=savefig, debug=debug, *args, **kwargs)
             if choice[2]:
-                f2 = plot_gen_out_z(handle, z=0, showfig=showfig, savefig=savefig, debug=debug)
+                f2 = plot_gen_out_z(handle, z=0, showfig=showfig, savefig=savefig, debug=debug, *args, **kwargs)
             if choice[3]:
-                f3 = plot_gen_out_z(handle, z=inf, showfig=showfig, savefig=savefig, debug=debug)
+                f3 = plot_gen_out_z(handle, z=inf, showfig=showfig, savefig=savefig, debug=debug, *args, **kwargs)
             if choice[11] != 0:
                 if choice[11] == -1:
                     try:
@@ -211,11 +215,11 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice='all', va
                         _logger.warning('could not plot wigner')
             if choice[4] != 0 and  choice[4] != []:
                 for z in np.arange(choice[4], np.amax(handle.z), choice[4]):
-                    plot_gen_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug)
+                    plot_gen_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug, *args, **kwargs)
             if choice[12]:
                 try:
                     dpa = read_dpa_file_out(handle)
-                    plot_dpa_bucket_out(dpa,scatter=0,slice_pos='max_P',repeat=3, showfig=showfig, savefig=savefig, cmap=def_cmap)
+                    plot_dpa_bucket_out(handle, dpa,scatter=0,slice_pos='max_P',repeat=3, showfig=showfig, savefig=savefig, cmap=def_cmap)
                 except:
                     _logger.warning('could not plot particle buckets')
 
@@ -259,7 +263,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice='all', va
     _logger.info(ind_str + 'total plotting time {:.2f} seconds'.format(time.time() - plotting_time))
 
 @if_plottable
-def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espread+el_bunching', 'rad_spec'], figsize=3.5, x_units='um', y_units='ev', legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
+def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espread+el_bunching', 'rad_spec'], figsize=3.5, x_units='um', y_units='ev', legend=False, fig_name=None, savefig=False, showfig=True, debug=1, *args, **kwargs):
     '''
     radiation parameters at distance z
     g/out = GenesisOutput() object
@@ -269,6 +273,7 @@ def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espre
         'el_energy+el_espread+el_bunching' - electron beam energy +/- spread and bunching
         'rad_phase' - phase of radiation
         'rad_spec' - on-axis spectrum
+    out_z_params overrides params
     figsize - np.size of figure (unit-less)
     x_units - units of time domain ('um' of 'fs')
     y_units - units of frequency domain ('nm' of 'ev')
@@ -277,6 +282,7 @@ def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espre
     savefig - save figure
     showfig - show figure
     '''
+    
     import matplotlib.ticker as ticker
     
     
@@ -290,6 +296,10 @@ def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espre
     # t_domain_n = len(t_domain_i)
     # f_domain_n = len(f_domain_i)
     #add sorting of f_domain to the end params += [params.pop(i)]
+    
+    if 'out_z_params' in kwargs:
+        params = kwargs['out_z_params']
+    
     params_str = str(params).replace("'", '').replace('[', '').replace(']', '').replace(' ', '').replace(',', '--')
     
     if z == inf:
@@ -361,13 +371,13 @@ def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espre
             ax.append(fig.add_subplot(len(params), 1, index + 1, sharex=ax[0]))
         
         if param == 'rad_power+el_current':
-            subfig_z_power_curr(ax[-1], g, zi=zi, x_units=x_units ,legend=legend)
+            subfig_z_power_curr(ax[-1], g, zi=zi, x_units=x_units ,legend=legend, *args, **kwargs)
         elif param == 'el_energy+el_espread+el_bunching':
-            subfig_z_energy_espread_bunching(ax[-1], g, zi=zi, x_units=x_units ,legend=legend)
+            subfig_z_energy_espread_bunching(ax[-1], g, zi=zi, x_units=x_units ,legend=legend, *args, **kwargs)
         elif param == 'el_energy+el_espread':
-            subfig_z_energy_espread(ax[-1], g, zi=zi, x_units=x_units ,legend=legend)
+            subfig_z_energy_espread(ax[-1], g, zi=zi, x_units=x_units ,legend=legend, *args, **kwargs)
         elif param == 'rad_phase':
-            subfig_z_phase(ax[-1], g, zi=zi, x_units=x_units ,legend=legend)
+            subfig_z_phase(ax[-1], g, zi=zi, x_units=x_units ,legend=legend, *args, **kwargs)
         # elif param == 'el_energy':
             # subfig_evo_el_energy(ax[-1], g, legend)
         else:
@@ -387,7 +397,7 @@ def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espre
         else:
             ax.append(fig.add_subplot(len(params), 1, index + axt + 1, sharex=ax[-1]))
         if param == 'rad_spec':
-            subfig_z_spec(ax[-1], g, zi=zi, y_units=y_units, estimate_ph_sp_dens=True, legend=legend)
+            subfig_z_spec(ax[-1], g, zi=zi, y_units=y_units, estimate_ph_sp_dens=True, legend=legend, *args, **kwargs)
         else:
             print('! wrong parameter ' + param)
     axf = len(ax) - axt
@@ -421,7 +431,7 @@ def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espre
         plt.close(fig)
 
 @if_plottable
-def subfig_z_power_curr(ax_curr, g, zi=None, x_units='um', legend=False):
+def subfig_z_power_curr(ax_curr, g, zi=None, x_units='um', legend=False, *args, **kwargs):
     ax_curr.clear()
     number_ticks = 6
     
@@ -468,7 +478,7 @@ def subfig_z_power_curr(ax_curr, g, zi=None, x_units='um', legend=False):
     ax_power.set_xlim([x[0],x[-1]])
 
 @if_plottable
-def subfig_z_energy_espread_bunching(ax_energy, g, zi=None, x_units='um', legend=False):
+def subfig_z_energy_espread_bunching(ax_energy, g, zi=None, x_units='um', legend=False, *args, **kwargs):
     ax_energy.clear()
     number_ticks = 6
     
@@ -510,7 +520,7 @@ def subfig_z_energy_espread_bunching(ax_energy, g, zi=None, x_units='um', legend
     ax_energy.set_xlim([x[0],x[-1]])
 
 @if_plottable
-def subfig_z_energy_espread(ax_energy, g, zi=None, x_units='um', legend=False):
+def subfig_z_energy_espread(ax_energy, g, zi=None, x_units='um', legend=False, *args, **kwargs):
     ax_energy.clear()
     number_ticks = 6
     
@@ -540,7 +550,7 @@ def subfig_z_energy_espread(ax_energy, g, zi=None, x_units='um', legend=False):
     ax_energy.set_xlim([x[0],x[-1]])
 
 @if_plottable
-def subfig_z_phase(ax_phase, g, zi=None, x_units='um', legend=False, **kwargs):
+def subfig_z_phase(ax_phase, g, zi=None, x_units='um', legend=False, *args, **kwargs):
     ax_phase.clear()
     number_ticks = 6
     
@@ -558,6 +568,13 @@ def subfig_z_phase(ax_phase, g, zi=None, x_units='um', legend=False, **kwargs):
     
     if "rewrap" in kwargs:
         _logger.warning(ind_str + '"rewrap" argument is obsolete')
+    
+    if 'subfig_z_phase_Ephase' in kwargs:
+        Ephase = kwargs['subfig_z_phase_Ephase']
+        if not hasattr(g, 'spec'):
+            g.calc_spec()
+        g.phase_fix(phen = Ephase) #creates phi_mid_disp attribute wrt. photon energy Ephase
+    
     
     if hasattr(g, 'phi_mid_disp'):
         phase_disp = g.phi_mid_disp[:, zi]
@@ -587,7 +604,7 @@ def subfig_z_phase(ax_phase, g, zi=None, x_units='um', legend=False, **kwargs):
     ax_phase.set_xlim([x[0],x[-1]])
 
 @if_plottable
-def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=True, legend=False, mode='mid'):
+def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=True, legend=False, mode='mid', *args, **kwargs):
     
     number_ticks = 6
     # n_pad = 1
@@ -880,23 +897,23 @@ def plot_gen_out_z_old(g, figsize=(10, 14), x_units='um', y_units='ev', legend=T
 
 
 @if_plottable
-def plot_gen_out_e(g, legend=False, figsize=4, fig_name='Electrons', savefig=False, showfig=True, debug=1):
+def plot_gen_out_e(g, legend=False, figsize=4, fig_name='Electrons', savefig=False, showfig=True, debug=1, *args, **kwargs):
     fig = plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_energy', 'el_bunching'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
 
 @if_plottable
-def plot_gen_out_ph(g, legend=False, figsize=4, fig_name='Radiation', savefig=False, showfig=True, debug=1):
+def plot_gen_out_ph(g, legend=False, figsize=4, fig_name='Radiation', savefig=False, showfig=True, debug=1, *args, **kwargs):
     if g('itdp'):
         fig = plot_gen_out_evo(g, params=['rad_pow_en_log', 'rad_pow_en_lin', 'rad_spec_log', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
     else:
         fig = plot_gen_out_evo(g, params=['rad_pow_log', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
 
 @if_plottable
-def plot_gen_out_slip(g, legend=False, figsize=4, fig_name='Slippage', savefig=False, showfig=True, debug=1):
+def plot_gen_out_slip(g, legend=False, figsize=4, fig_name='Slippage', savefig=False, showfig=True, debug=1,  *args, **kwargs):
     if g('itdp'):
-        fig = plot_gen_out_evo(g, params=['rad_spec_evo_n', 'rad_pow_evo_n'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
+        fig = plot_gen_out_evo(g, params=['rad_spec_evo_n', 'rad_pow_evo_n'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug, *args, **kwargs)
 
 @if_plottable
-def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'el_bunching', 'rad_pow_en_log', 'rad_pow_en_lin', 'rad_spec_log', 'rad_size', 'rad_spec_evo_n', 'rad_pow_evo_n'], figsize=4, legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
+def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'el_bunching', 'rad_pow_en_log', 'rad_pow_en_lin', 'rad_spec_log', 'rad_size', 'rad_spec_evo_n', 'rad_pow_evo_n'], figsize=4, legend=False, fig_name=None, savefig=False, showfig=True, debug=1, *args, **kwargs):
     '''
     plots evolution of given parameters from genesis output with undulator length
     '''

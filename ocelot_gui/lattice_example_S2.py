@@ -14,10 +14,6 @@ tws0.Dyp = 0.0
 tws0.E = 2.5
 
 
-beam = Beam()
-beam.E = 2.5
-
-
 Q1 = Quadrupole(l = 0.2931, k1 = 2.62, eid = "Q1")
 Q2 = Quadrupole(l = 0.2931, k1 = -3.1, eid = "Q2")
 Q3 = Quadrupole(l = 0.3268, k1 = 2.8, eid = "Q3")

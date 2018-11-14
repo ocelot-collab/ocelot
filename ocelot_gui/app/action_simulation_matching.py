@@ -76,7 +76,7 @@ class Matching(QtWidgets.QWidget):
         self.vars_elements[elem_id] = {}
         self.vars_elements[elem_id]['element'] = element_data
         
-        type = self.mw.matchable_elements[eclass]
+        type = self.mw.matchable_elements[eclass][0]
  
         # init panel
         form_vars_panel = QtWidgets.QWidget()

@@ -2215,6 +2215,7 @@ def calc_ph_sp_dens(spec, freq_ev, n_photons, spec_squared=1):
         # else:
             # raise ValueError('operands could not be broadcast together with shapes ', spec.shape, ' and ', freq_ev.shape)
     # _logger.debug('spec.shape = {}'.format(spec.shape))
+    
     if spec_squared:
         spec_sum = np.trapz(spec, x=freq_ev, axis=axis)
     else:

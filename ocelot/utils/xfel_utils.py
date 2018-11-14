@@ -50,7 +50,7 @@ def dfl_st_cpl(dfl, theta_b, inp_axis='y', s_start=None):
 
     # dfl = deepcopy(dfl)
     shift_z_scale = dfl.scale_z() - s_start
-    shift_m_scale = shift_z_scale / tan(theta_b)
+    shift_m_scale = shift_z_scale / np.tan(theta_b)
     shift_m_scale[np.where(shift_m_scale > 0)] = 0
     shift_pix_scale = np.floor(shift_m_scale / dfl.dx).astype(int)
 
@@ -284,11 +284,11 @@ def create_fel_lattice(und_N = 35,
 def create_exfel_lattice(beamline = 'sase1', inters_phi=0, inters_K = "K_und"):
     if beamline in ['sase1', 1, 'sase2', 2]:
         return create_fel_lattice(und_N = 35,
-                        und_L = 5,
+                        und_L = 5-0.04,
                         und_l = 0.04,
                         und_Kx = 0,
                         und_Ky = 0,
-                        inters_L = 1.08,
+                        inters_L = 1.08+0.04,
                         inters_K = inters_K,
                         inters_phi=inters_phi,
                         quad_L = 0.4,
@@ -298,14 +298,14 @@ def create_exfel_lattice(beamline = 'sase1', inters_phi=0, inters_K = "K_und"):
                             )
     elif beamline in ['sase3', 3]:
         return create_fel_lattice(und_N = 21,
-                        und_L = 4.964,#5
+                        und_L = 5.032,#5
                         und_l = 0.068,
                         und_Kx = 0,
                         und_Ky = 0,
-                        inters_L = 1.156,#1.08,
+                        inters_L = 1.088,#1.08,
                         inters_K = inters_K,
                         inters_phi=inters_phi,
-                        quad_L = 0.4,
+                        quad_L = 0.408,
                         quad_K = 0,
                         phs_L = 0.0,
                         quad_start = 'd',

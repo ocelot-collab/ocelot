@@ -2507,11 +2507,11 @@ def disperse_edist(edist, R56, debug=1):
     
     
     
-def repeat_edist(edist, repeats, smear=1):
+def repeat_edist(edist, repeats, smear=1e-3, not_smear=[]):
     '''
     dublicates the GenesisElectronDist() by given factor
     repeats  - the number of repetitions
-    smear - smear new particles by 1e-3 of standard deviation of parameter
+    smear - smear new particles by x of global standard deviation of parameter
     '''
     
     _logger.info('repeating edist by factor of {}'.format(repeats))
@@ -2536,13 +2536,18 @@ def repeat_edist(edist, repeats, smear=1):
     if smear:
         n_par = edist_out.len()
         smear_factor = 1e-3  # smear new particles by smear_factor of standard deviation of parameter
-
-        edist_out.x += np.random.normal(scale=np.std(edist_out.x) * smear_factor, size=n_par)
-        edist_out.y += np.random.normal(scale=np.std(edist_out.y) * smear_factor, size=n_par)
-        edist_out.xp += np.random.normal(scale=np.std(edist_out.xp) * smear_factor, size=n_par)
-        edist_out.yp += np.random.normal(scale=np.std(edist_out.yp) * smear_factor, size=n_par)
-        edist_out.t += np.random.normal(scale=np.std(edist_out.t) * smear_factor, size=n_par)
-        edist_out.g += np.random.normal(scale=np.std(edist_out.g) * smear_factor, size=n_par)
+        
+        for attr in ['x','y','xp','yp','t','g']:
+            if attr not in not_smear:
+                val = getattr(edist_out, attr)
+                val += np.random.normal(scale=np.std(val) * smear_factor, size=n_par)
+                setattr(edist_out, attr, val)
+        # edist_out.x += np.random.normal(scale=np.std(edist_out.x) * smear_factor, size=n_par)
+        # edist_out.y += np.random.normal(scale=np.std(edist_out.y) * smear_factor, size=n_par)
+        # edist_out.xp += np.random.normal(scale=np.std(edist_out.xp) * smear_factor, size=n_par)
+        # edist_out.yp += np.random.normal(scale=np.std(edist_out.yp) * smear_factor, size=n_par)
+        # edist_out.t += np.random.normal(scale=np.std(edist_out.t) * smear_factor, size=n_par)
+        # edist_out.g += np.random.normal(scale=np.std(edist_out.g) * smear_factor, size=n_par)
 
     return edist_out
 

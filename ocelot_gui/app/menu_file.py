@@ -36,11 +36,11 @@ class GUIMenuFile():
         except Exception as err:
             self.mw.error_window('Open Lattice File Error', str(err))
         
-        # parsing elements and sequences
+        # parsing sequences and create elements list from cell
         if 'cell' in loc_dict:
             self.mw.lattice.cell = deepcopy(loc_dict['cell'])
-            lp = LatticeRead()
-            self.mw.lattice.elements = lp.parsing_elements(self.mw.lattice.cell)
+            lp = Parser()
+            self.mw.lattice.elements = lp.get_elements(self.mw.lattice.cell)
         else:
             self.mw.error_window('Open Lattice File Error', 'NO secuence named "cell"')
         
@@ -66,8 +66,8 @@ class GUIMenuFile():
         if filename[0] == '':
             return 0
 
-        ls = LatticeSave()
-        lines = ls.parsing(self.mw.lattice, split=True)
+        lp = Parser()
+        lines = lp.gui_lattice2input(self.mw.lattice, split=True)
 
         if filename[1] == 'Python Files (*.py)' and filename[0][-3:] != '.py':
             filename = filename[0] + '.py'
@@ -75,4 +75,4 @@ class GUIMenuFile():
             filename = filename[0]
 
         with open(filename, 'w') as fp:
-            fp.write(lines)
+            fp.writelines(lines)

@@ -123,39 +123,65 @@ def find_obj_and_create_name(lat, types):
     return objects
 
 
-def lat2input(lat):
+def lat2input(lattice):
     """
     returns python input string for the lattice in the lat object
     """
-    drifts = find_obj_and_create_name(lat, types=[Drift])
-    quads = find_obj_and_create_name(lat, types=[Quadrupole])
-    sexts = find_obj_and_create_name(lat, types=[Sextupole])
-    octs = find_obj_and_create_name(lat, types=[Octupole])
-    cavs = find_obj_and_create_name(lat, types=[Cavity])
-    sols = find_obj_and_create_name(lat, types=[Solenoid])
-    matrices = find_obj_and_create_name(lat, types=[Matrix])
-    marks = find_obj_and_create_name(lat, types=[Marker])
-    mons = find_obj_and_create_name(lat, types=[Monitor])
-    unds = find_obj_and_create_name(lat, types=[Undulator])
-    cors = find_obj_and_create_name(lat, types=[Hcor, Vcor])
-    bends = find_obj_and_create_name(lat, types=[Bend, RBend, SBend])
-    unkns = find_obj_and_create_name(lat, types=[UnknownElement])
-    tcavs = find_obj_and_create_name(lat, types=[TDCavity])
-    # end find objects
 
-    lines = ["from ocelot import * \n"]
-    lines.append("\n# drifts \n")
+    lines = ['from ocelot import * \n']
+
+    # prepare elements list
+    lines.append('\n')
+    lines.extend(elements2input(lattice))
+
+    # prepare cell list
+    lines.append('\n# Lattice \n')
+    lines.extend(cell2input(lattice, True))
+
+    lines.append('\n')
+
+    return lines
+
+
+def elements2input(lattice):
+
+    # find objects
+    drifts = find_obj_and_create_name(lattice, types=[Drift])
+    quads = find_obj_and_create_name(lattice, types=[Quadrupole])
+    sexts = find_obj_and_create_name(lattice, types=[Sextupole])
+    octs = find_obj_and_create_name(lattice, types=[Octupole])
+    cavs = find_obj_and_create_name(lattice, types=[Cavity])
+    sols = find_obj_and_create_name(lattice, types=[Solenoid])
+    matrices = find_obj_and_create_name(lattice, types=[Matrix])
+    marks = find_obj_and_create_name(lattice, types=[Marker])
+    mons = find_obj_and_create_name(lattice, types=[Monitor])
+    unds = find_obj_and_create_name(lattice, types=[Undulator])
+    cors = find_obj_and_create_name(lattice, types=[Hcor, Vcor])
+    bends = find_obj_and_create_name(lattice, types=[Bend, RBend, SBend])
+    unkns = find_obj_and_create_name(lattice, types=[UnknownElement])
+    tcavs = find_obj_and_create_name(lattice, types=[TDCavity])
+
+    # prepare txt elements list
+    lines = []
+
+    if len(drifts) != 0:
+        lines.append("\n# drifts \n")
+    
     for drift in drifts:
         line = drift.name.lower() + " = Drift(l=" + str(drift.l) + ", eid='" + drift.id + "')\n"
         lines.append(line)
 
-    lines.append("\n# quadrupoles \n")
+    if len(quads) != 0:
+        lines.append("\n# quadrupoles \n")
+    
     for quad in quads:
         line = quad.name.lower() + " = Quadrupole(l=" + str(quad.l) + ", k1=" + str(quad.k1) + ", tilt=" + str(
             quad.tilt) + ", eid='" + quad.id + "')\n"
         lines.append(line)
 
-    lines.append("\n# bending magnets \n")
+    if len(bends) != 0:
+        lines.append("\n# bending magnets \n")
+    
     for bend in bends:
         if bend.__class__ == RBend:
             type = " = RBend(l="
@@ -174,7 +200,9 @@ def lat2input(lat):
             bend.fintx) + ", eid='" + bend.id + "')\n"
         lines.append(line)
 
-    lines.append("\n# correctors \n")
+    if len(cors) != 0:
+        lines.append("\n# correctors \n")
+    
     for cor in cors:
         if cor.__class__ == Hcor:
             type = " = Hcor(l="
@@ -184,58 +212,70 @@ def lat2input(lat):
         line = cor.name.lower() + type + str(cor.l) + ", angle=" + str(cor.angle) + ", eid='" + cor.id + "')\n"
         lines.append(line)
 
-    lines.append("\n# markers \n")
+    if len(marks) != 0:
+        lines.append("\n# markers \n")
+    
     for mark in marks:
         line = mark.name.lower() + " = Marker(eid='" + mark.id + "')\n"
         lines.append(line)
 
-    lines.append("\n# monitor \n")
+    if len(mons) != 0:
+        lines.append("\n# monitors \n")
+    
     for mon in mons:
         line = mon.name.lower() + " = Monitor(eid='" + mon.id + "')\n"
         lines.append(line)
 
-    lines.append("\n# sextupoles \n")
+    if len(sexts) != 0:
+        lines.append("\n# sextupoles \n")
+    
     for sext in sexts:
         line = sext.name.lower() + " = Sextupole(l=" + str(sext.l) + ", k2=" + str(sext.k2) + ", tilt=" + str(
             sext.tilt) + ", eid='" + sext.id + "')\n"
         lines.append(line)
 
-    lines.append("\n# octupole \n")
+    if len(octs) != 0:
+        lines.append("\n# octupoles \n")
+    
     for oct in octs:
         line = oct.name.lower() + " = Octupole(l=" + str(oct.l) + ", k3=" + str(oct.k3) + ", tilt=" + str(
             oct.tilt) + ", eid='" + oct.id + "')\n"
         lines.append(line)
 
-    lines.append("\n# undulator \n")
+    if len(unds) != 0:
+        lines.append("\n# undulators \n")
+    
     for und in unds:
         line = und.name.lower() + " = Undulator(lperiod=" + str(und.lperiod) + ", nperiods=" + str(
             und.nperiods) + ", Kx=" + str(und.Kx) + ", Ky=" + str(und.Ky) + ", eid='" + und.id + "')\n"
         lines.append(line)
 
-    lines.append("\n# cavity \n")
+    if len(cavs) != 0:
+        lines.append("\n# cavities \n")
+    
     for cav in cavs:
         line = cav.name.lower() + " = Cavity(l=" + str(cav.l) + ", v=" + str(cav.v) + \
                ", freq=" + str(cav.freq) + ", phi=" + str(cav.phi) + ", eid='" + cav.id + "')\n"
         lines.append(line)
 
-    lines.append("\n# tdcavity \n")
+    if len(tcavs) != 0:
+        lines.append("\n# tdcavities \n")
+    
     for tcav in tcavs:
         line = tcav.name.lower() + " = Cavity(l=" + str(tcav.l) + ", v=" + str(tcav.v) + \
                ", freq=" + str(tcav.freq) + ", phi=" + str(tcav.phi) + ", eid='" + tcav.id + "')\n"
         lines.append(line)
 
-    lines.append("\n# UnknowElement \n")
+    if len(unkns) != 0:
+        lines.append("\n# UnknowElements \n")
+    
     for unkn in unkns:
         line = unkn.name.lower() + " = UnknownElement(l=" + str(unkn.l) + ", eid='" + unkn.id + "')\n"
         lines.append(line)
-    # lines.append("\n# rfcavity \n")
-    # for rfcav in rfcavs:
-    #    line = rfcav.id.replace('.','_') + " = RFcavity(l = " + str(rfcav.l) +", volt = "+ str(rfcav.volt) +", lag = "+ str(rfcav.lag)+\
-    #           ", harmon = "+ str(rfcav.harmon) +", eid = '"+ rfcav.id+ "')\n"
-    #    lines.append(line)
 
-    lines.append("\n# Matrices \n")
-
+    if len(matrices) != 0:
+        lines.append("\n# Matrices \n")
+    
     for mat in matrices:
         line = mat.name.lower() + " = Matrix(l=" + str(mat.l) + \
                ", rm11=" + str(mat.rm11) + ", rm12=" + str(mat.rm12) + ", rm13=" + str(mat.rm13) + ", rm14=" + str(
@@ -249,26 +289,65 @@ def lat2input(lat):
                ", eid = '" + mat.id + "')\n"
         lines.append(line)
 
-    lines.append("\n# Solenoids \n")
+    if len(sols) != 0:
+        lines.append("\n# Solenoids \n")
 
     for sol in sols:
         line = sol.name.lower() + " = Solenoid(l=" + str(sol.l) + ", k=" + str(sol.k) + ", eid='" + sol.id + "')\n"
         lines.append(line)
 
-    lines.append("\n# lattice \n")
+    lines[0] = lines[0][1:]
+    return lines
+
+
+def cell2input(lattice, split=False):
+    
+    lines = []
     names = []
-    for elem in lat.sequence:
+    for elem in lattice.sequence:
         if elem.__class__ != Edge:
             names.append(elem.name.lower())
-    # names = map(lambda p: p.id, lat.sequence)
+
     new_names = []
     for i, name in enumerate(names):
-        if i % 8 == 7:
+        if split and i % 8 == 7:
             new_names.append("\n" + name)
         else:
             new_names.append(name)
-    line = "cell = (" + ", ".join(new_names) + ")"
-    lines.append(line)
+
+    lines.append("cell = (" + ", ".join(new_names) + ")")
+    
+    return lines
+
+
+def twiss2input(tws):
+
+    lines = []
+
+    lines.append('tws0 = Twiss()\n')
+    for param in tws.__dict__:
+        if tws.__dict__[param] != 0.0 and \
+            tws.__dict__[param] != 0 and \
+            tws.__dict__[param] != '':
+
+            lines.append('tws0.' + str(param) + ' = ' + str(tws.__dict__[param]) + '\n')
+
+    return lines
+
+
+def beam2input(beam):
+    
+    lines = []
+
+    lines.append('beam = Beam()\n')
+    for param in beam.__dict__:
+        if beam.__dict__[param] != 0.0 and \
+            beam.__dict__[param] != 0 and \
+            beam.__dict__[param] != '' and \
+            param != 'shape':
+
+            lines.append('beam.' + str(param) + ' = ' + str(beam.__dict__[param]) + '\n')
+
     return lines
 
 
@@ -279,7 +358,6 @@ def rem_drifts(lat):
             if not (elem.l in drifts.keys()):
                 drifts[elem.l] = elem
             else:
-                # print(cell[i],  drifts[elem.l])
                 lat.sequence[i] = drifts[elem.l]
 
     return lat

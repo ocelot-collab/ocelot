@@ -333,6 +333,11 @@ def prepare_el_optics(beam, lat_pkg, E_photon=None, beta_av=None, s=None):
     
     if E_photon is not None:
         und.Kx = Ephoton2K(E_photon, und.lperiod, beam_match.E)
+        if np.isnan(und.Kx):
+            gamma = beam_match.E/m_e_GeV
+            Emax=2*gamma**2/und.lperiod*h_eV_s*speed_of_light
+            _logger.error('requested photon energy {}eV is beyond reach for given lperiod {}m and beam energy {}GeV\nmax energy for given parameters is {}'.format(E_photon, und.lperiod, beam_match.E, Emax))
+            raise ValueError('requested photon energy is beyond reach for given parameters')
     
     if beta_av is None:
         l_period = und.lperiod

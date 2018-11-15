@@ -109,7 +109,6 @@ class EditLattice(QtWidgets.QWidget):
         else:
             self.mw.lattice.tws0 = Twiss()
         
-
         # number of superperiods
         try:
             val = int(self.ui.edit_nsuperperiods.value())

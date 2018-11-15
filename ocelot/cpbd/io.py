@@ -302,7 +302,7 @@ def write_power_supply_id(lattice, lines=[]):
     return lines
 
 
-def write_lattice(lattice, file_name="lattice.inp", remove_rep_drifts=True, power_supply=False):
+def write_lattice(lattice, file_name="lattice.py", remove_rep_drifts=True, power_supply=False):
     """
     saves lattice as python imput file
     lattice - MagneticLattice

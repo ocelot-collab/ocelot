@@ -45,7 +45,7 @@ def test_original_twiss(lattice, tws0, method, update_ref_values=False):
 
 def test_lat2input(lattice, tws0, method, update_ref_values=False):
     """Twiss parameters calculation function test"""
-
+    
     lines_arr = lat2input(lattice)
     lines = ''.join(lines_arr)
 
@@ -122,8 +122,6 @@ def test_update_ref_values(lattice, tws0, method, cmdopt):
     update_functions.append('test_original_lattice_transfer_map')
     update_functions.append('test_original_twiss')
     update_functions.append('test_lat2input')
-    #update_functions.append('test_lattice_transfer_map_after_matching')
-    #update_functions.append('test_twiss_after_matching')
     
     if cmdopt in update_functions:
         result = eval(cmdopt)(lattice, tws0, method, True)

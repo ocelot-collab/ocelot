@@ -2,15 +2,9 @@
 
 test_lat2input [PASSED]
 
- [FAILED]
- tws for new lattice - line is 0/505 key is emit_yn
- value is "0.0"
- reference value is "10.0"
- tolerance is "1e-07"
- tolerance type is "absotute"
+ [PASSED]
 
-
- execution time is 8.994 sec
+ execution time is 9.211 sec
 
 ### IO Lattice END ###
 

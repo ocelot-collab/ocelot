@@ -6,12 +6,12 @@ import time
 
 from generate_gaussian_dfl_conf import *
 
-import ocelot.optics.wave as wave
-from demos_tests.params import *
-
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 REF_RES_DIR = FILE_DIR + '/ref_results/'
-sys.path.append(os.path.dirname(os.path.dirname(FILE_DIR)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(FILE_DIR))))
+
+from params import *
+import ocelot.optics.wave as wave
 
 
 @pytest.mark.parametrize('parameter', range(4))
@@ -64,7 +64,7 @@ def teardown_function(function):
 #
 #     if cmdopt in update_functions:
 #         for p in parametr:
-#             p_arr = copy.deepcopy(p_array)
+#             args_array = copy.deepcopy(args_array_ref)
 #             result = eval(cmdopt)(lattice, p_arr, p, True)
 #
 #             if os.path.isfile(REF_RES_DIR + cmdopt + str(p) + '.npy'):

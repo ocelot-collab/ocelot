@@ -3,7 +3,7 @@
 import pytest
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='function')
 def args_array_ref():
     args_array_ref = [ret_args(1e-10, shape=(30, 30, 5), dgrid=(1e-3, 1e-3, None),
                                power_rms=(0.2e-3, 0.2e-3, 0.1e-6), power_center=(0, 0, None),

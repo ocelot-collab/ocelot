@@ -2,6 +2,8 @@
 
 from copy import deepcopy
 
+from ocelot.cpbd.io import *
+
 from app.ui_forms.edit_lattice import *
 from app.parser import *
 
@@ -27,30 +29,26 @@ class EditLattice(QtWidgets.QWidget):
     def load_parameters(self):
         """Load all parameters to window"""
 
-        parcer = LatticeSave()
+        self.mw.lattice.init_lattice()
 
         # elements
-        lines = parcer.parsing_elements(self.mw.lattice.elements)
-        lines = lines[0:-2]
-        self.ui.edit_elements.setText(lines)
+        lines = elements2input(self.mw.lattice.lattice)
+        self.ui.edit_elements.setText(''.join(lines))
 
         # sequences
-        lines = parcer.parsing_cell(self.mw.lattice.cell)
-        lines = lines[0:-2]
-        self.ui.edit_cells.setText(lines)
+        lines = cell2input(self.mw.lattice.lattice)
+        self.ui.edit_cells.setText(''.join(lines))
 
         # number of superperiods
         self.ui.edit_nsuperperiods.setValue(self.mw.lattice.nsuperperiods)
 
         # beam
-        lines = parcer.parsing_beam(self.mw.lattice.beam)
-        lines = lines[0:-2]
-        self.ui.edit_beam.setText(lines)
+        lines = beam2input(self.mw.lattice.beam)
+        self.ui.edit_beam.setText(''.join(lines))
 
         # tws
-        lines = parcer.parsing_twiss(self.mw.lattice.tws0)
-        lines = lines[0:-2]
-        self.ui.edit_twiss.setText(lines)
+        lines = twiss2input(self.mw.lattice.tws0)
+        self.ui.edit_twiss.setText(''.join(lines))
         
         # periodic solution
         if self.mw.lattice.periodic_solution:
@@ -58,8 +56,6 @@ class EditLattice(QtWidgets.QWidget):
             
             
     def action_update_parameters(self):
-        
-        parcer = LatticeRead()
         
         # elements and sequences
         lines = self.ui.edit_elements.toPlainText()
@@ -75,7 +71,8 @@ class EditLattice(QtWidgets.QWidget):
             
         if 'cell' in loc_dict:
             self.mw.lattice.cell = deepcopy(loc_dict['cell'])
-            self.mw.lattice.elements = parcer.parsing_elements(self.mw.lattice.cell)
+            lp = Parser()
+            self.mw.lattice.elements = lp.get_elements(self.mw.lattice.cell)
         else:
             self.mw.lattice.cell = ()
             self.mw.lattice.elements = {}
@@ -109,7 +106,6 @@ class EditLattice(QtWidgets.QWidget):
         else:
             self.mw.lattice.tws0 = Twiss()
         
-
         # number of superperiods
         try:
             val = int(self.ui.edit_nsuperperiods.value())

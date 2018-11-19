@@ -67,7 +67,8 @@ class Matching(QtWidgets.QWidget):
     
     def add_tune_block(self, element_data):
 
-        elem_id = convert_elem_id(element_data.id)
+        p = Parser()
+        elem_id = p.convert_elem_id(element_data.id)
         eclass = element_data.__class__.__name__
         
         if elem_id in self.vars_elements or eclass not in self.mw.matchable_elements:

@@ -1,21 +1,360 @@
-### TUNE_SHIFT START ###
+### CSR_EX START ###
 
 test_lattice_transfer_map [PASSED]
 
- execution time is 0.265 sec
+ execution time is 0.379 sec
+
+test_lattice_transfer_map_RT [PASSED]
+
+ execution time is 0.305 sec
+
+test_lattice_transfer_map_RT [PASSED]
+
+ execution time is 0.327 sec
+
+test_track_without_csr [PASSED]
+
+ execution time is 0.975 sec
+
+test_track_without_csr [PASSED]
+
+ execution time is 0.914 sec
+
+test_track_without_csr_tilted [PASSED]
+
+ execution time is 0.942 sec
+
+test_track_without_csr_rotated [PASSED]
+
+ execution time is 1.034 sec
+
+test_track_with_csr [PASSED]
+
+ execution time is 13.179 sec
+
+test_track_with_csr [PASSED]
+
+ execution time is 12.731 sec
+
+test_get_current [PASSED]
+
+ execution time is 0.012 sec
+
+test_get_current [PASSED]
+
+ execution time is 0.013 sec
+
+test_track_undulator_with_csr [PASSED]
+
+ execution time is 6.729 sec
+
+### CSR_EX END ###
+
+
+### DBA START ###
+
+test_lattice_transfer_map [PASSED]
+
+ execution time is 0.022 sec
 
 test_twiss [PASSED]
 
- execution time is 0.392 sec
+ execution time is 0.252 sec
+
+test_lattice_transfer_map_after_matching [PASSED]
+
+ execution time is 0.860 sec
+
+test_twiss_after_matching [PASSED]
+
+ execution time is 0.176 sec
+
+### DBA END ###
+
+
+### DBA_TRACK_ELLIPSE START ###
+
+test_lattice_transfer_map [PASSED]
+
+ execution time is 0.472 sec
+
+test_tracking_step [PASSED]
+
+ execution time is 0.017 sec
+
+test_tracking_step [PASSED]
+
+ execution time is 0.017 sec
+
+### DBA_TRACK_ELLIPSE END ###
+
+
+### DBA_TRACKING START ###
+
+test_lattice_transfer_map [PASSED]
+
+ execution time is 0.023 sec
+
+test_twiss [PASSED]
+
+ execution time is 0.174 sec
+
+test_tracking_step [PASSED]
+
+ execution time is 0.292 sec
+
+test_tracking_step [PASSED]
+
+ execution time is 0.282 sec
+
+test_tracking_step [PASSED]
+
+ execution time is 0.289 sec
+
+### DBA_TRACKING END ###
+
+
+### DOGLEG START ###
+
+test_lattice_transfer_map [PASSED]
+
+ execution time is 2.569 sec
+
+test_track_with_energy_shift [PASSED]
+
+ execution time is 0.621 sec
+
+test_track_with_energy_shift [PASSED]
+
+ execution time is 0.650 sec
+
+test_track_with_energy_shift [PASSED]
+
+ execution time is 0.629 sec
+
+test_track_with_energy_shift_tilted [PASSED]
+
+ execution time is 0.632 sec
+
+test_track_with_energy_shift_tilted [PASSED]
+
+ execution time is 0.619 sec
+
+test_track_with_energy_shift_tilted [PASSED]
+
+ execution time is 0.620 sec
+
+### DOGLEG END ###
+
+
+### IO Lattice START ###
+
+test_original_lattice_transfer_map [PASSED]
+
+ execution time is 6.614 sec
+
+test_original_twiss [PASSED]
+
+ execution time is 0.079 sec
+
+test_lat2input [PASSED]
+
+ [PASSED]
+
+ execution time is 6.605 sec
+
+test_write_lattice [PASSED]
+
+ [PASSED]
+
+ execution time is 6.737 sec
+
+### IO Lattice END ###
+
+
+### LASER HEATER START ###
+
+test_generate_parray [PASSED]
+
+ execution time is 0.859 sec
+
+test_chicane_trajectory [PASSED]
+
+ execution time is 1.202 sec
+
+test_chicane_trajectory [PASSED]
+
+ execution time is 1.189 sec
+
+test_track_chicane_und_wo_csr [PASSED]
+
+ execution time is 1.015 sec
+
+test_track_chicane_und_wo_csr [PASSED]
+
+ execution time is 1.026 sec
+
+test_track_chicane_und_csr [PASSED]
+
+ execution time is 5.625 sec
+
+test_track_chicane_und_csr [PASSED]
+
+ execution time is 5.679 sec
+
+test_track_with_laser_heater [PASSED]
+
+ execution time is 0.954 sec
+
+test_track_with_laser_heater [PASSED]
+
+ execution time is 0.979 sec
+
+### LASER HEATER END ###
+
+
+### MULTIPOLES START ###
+
+test_lattice_transfer_map [PASSED]
+
+ execution time is 0.184 sec
+
+test_natural_chromaticity [PASSED]
+
+ execution time is 0.154 sec
+
+test_tracking_step [PASSED]
+
+ execution time is 0.412 sec
+
+test_create_track_list [PASSED]
+
+ execution time is 0.011 sec
 
 test_track_nturns [PASSED]
 
- execution time is 208.408 sec
+ execution time is 13.457 sec
 
-test_freq_analysis [PASSED]
-
- execution time is 0.397 sec
-
-### TUNE_SHIFT END ###
+### MULTIPOLES END ###
 
 
+### NON_DISP_OFFCET START ###
+
+test_lattice_transfer_map [PASSED]
+
+ execution time is 0.010 sec
+
+test_twiss [PASSED]
+
+ execution time is 0.080 sec
+
+test_tracking_step_energy_offset [PASSED]
+
+ execution time is 0.191 sec
+
+test_tracking_step_energy_offset [PASSED]
+
+ execution time is 0.383 sec
+
+test_tracking_step_phase_space [PASSED]
+
+ execution time is 0.009 sec
+
+test_tracking_step_phase_space [PASSED]
+
+ execution time is 0.011 sec
+
+### NON_DISP_OFFCET END ###
+
+
+### PHYS PROC START ###
+
+test_generate_parray [PASSED]
+
+ execution time is 0.851 sec
+
+test_track_smooth [PASSED]
+
+ execution time is 0.925 sec
+
+test_track_smooth [PASSED]
+
+ execution time is 1.009 sec
+
+test_track_beam_transform [PASSED]
+
+ execution time is 0.942 sec
+
+test_track_smooth_csr [PASSED]
+
+ execution time is 6.824 sec
+
+test_track_smooth_csr_sc [PASSED]
+
+ execution time is 10.715 sec
+
+### PHYS PROC END ###
+
+
+### RF_TWISS START ###
+
+test_lattice_transfer_map [PASSED]
+
+ execution time is 0.043 sec
+
+test_twiss [PASSED]
+
+ execution time is 0.012 sec
+
+### RF_TWISS END ###
+
+
+### DBA START ###
+
+test_lattice_transfer_map [PASSED]
+
+ execution time is 0.064 sec
+
+test_twiss [PASSED]
+
+ execution time is 0.237 sec
+
+test_responce_matrix [PASSED]
+
+ execution time is 0.100 sec
+
+test_correction [PASSED]
+
+ execution time is 3.528 sec
+
+test_lattice_track [PASSED]
+
+ execution time is 2.119 sec
+
+### DBA END ###
+
+
+### RK TRACK START ###
+
+test_generate_parray [PASSED]
+
+ execution time is 0.888 sec
+
+test_track_undulator_with_diff_chirp [PASSED]
+
+ execution time is 22.090 sec
+
+test_track_undulator_with_diff_chirp [PASSED]
+
+ execution time is 20.276 sec
+
+test_track_undulator_with_diff_chirp [PASSED]
+
+ execution time is 22.996 sec
+
+### RK TRACK END ###
+
+
+### SPACE_CHARGE START ###
+
+test_track_without_sp

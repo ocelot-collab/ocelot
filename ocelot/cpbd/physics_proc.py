@@ -122,7 +122,7 @@ class SmoothBeam(PhysProc):
         p_array.tau()[inds] = Zout2
 
 
-class LaserHeater(PhysProc):
+class LaserModulator(PhysProc):
     def __init__(self, step=1):
         PhysProc.__init__(self, step)
         # amplitude of energy modulation on axis
@@ -151,7 +151,15 @@ class LaserHeater(PhysProc):
             - 0.25 * dy ** 2 / self.sigma_y ** 2)
 
 
+class LaserHeater(LaserModulator):
+    def __init__(self, step=1):
+        LaserModulator.__init__(self, step)
+        _logger.info("LaserHeater physics process is obsolete. Use 'LaserModulator' instead.")
+
 class Apperture(PhysProc):
+    """
+    Method to cut beam in longitudinal direction (for now)
+    """
     def __init__(self, step=1):
         PhysProc.__init__(self, step)
         self.zmin = -5
@@ -298,3 +306,66 @@ class BeamTransform(PhysProc):
         M[1, 0] = ((a1-a2)*cosp-(1+a1*a2)*sinp)/np.sqrt(b2*b1)
         M[1, 1] = np.sqrt(b1/b2)*(cosp-a2*sinp)
         return M
+
+
+class SpontanRadEffects(PhysProc):
+    """
+    Effects of the spontaneous radiation:
+    energy loss and quantum diffusion
+    """
+    def __init__(self, K, lperiod, type="planar"):
+        """
+
+        :param Kx: Undulator deflection parameter
+        :param lperiod: undulator period in [m]
+        :param type:
+        """
+        PhysProc.__init__(self)
+        self.K = K
+        self.lperiod = lperiod
+        self.type = type
+        self.energy_loss = False
+        self.quant_diff = True
+
+    def apply(self, p_array, dz):
+        _logger.debug("BeamTransform: apply")
+        mean_p = np.mean(p_array.p())
+        energy = p_array.E*(1 + mean_p)
+
+        if self.quant_diff:
+            sigma_Eq = self.sigma_gamma_quant(energy, dz)
+            p_array.p()[:] += sigma_Eq * np.random.randn(p_array.n)
+
+        if self.energy_loss:
+            dE = self.energy_loss_und(energy, dz)
+            p_array.p()[:] -= dE/energy
+
+    def energy_loss_und(self, energy, dz):
+        k = 4. * np.pi * np.pi / 3. * ro_e / m_e_GeV
+        U = k * energy ** 2 * self.K ** 2 * dz / self.lperiod ** 2
+        return U
+
+    def sigma_gamma_quant(self, energy, dz):
+        """
+        rate of energy diffusion
+
+        :param energy: electron beam energy
+        :param Kx: undulator parameter
+        :param lperiod: undulator period
+        :param dz: length of the
+        :return: sigma_gamma/gamma
+        """
+        gamma = energy / m_e_GeV
+        k = 2*np.pi/self.lperiod
+
+        lambda_compt = h_eV_s/m_e_eV*speed_of_light # m
+        lambda_compt_r = lambda_compt / 2. / pi
+        if self.type == "helical":
+            f = lambda K: 1.42*K + 1./(1 + 1.5*K + 0.95*K*K)
+        else:
+            f = lambda K: 0.6*K + 1. / (2 + 2.66 * K + 0.8 * K ** 2)
+
+        delta_Eq2 = 14/15.*lambda_compt_r*ro_e*gamma**4*k**3*self.K**2*f(self.K)*dz
+        sigma_Eq = np.sqrt(delta_Eq2 / (gamma * gamma))
+        return sigma_Eq
+

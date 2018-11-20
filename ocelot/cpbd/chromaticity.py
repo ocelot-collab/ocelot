@@ -131,7 +131,7 @@ def sextupole_id(lattice):
             if element.id == None:
                 print("Please add ID to sextupole")
             sex[element.id] = element.kn[2]
-    sex_name = sex.keys()
+    sex_name = sex
 
     if len(sex_name)<2:
         exit("Only " + str(len(sex_name))+" families of sextupole are found")
@@ -146,7 +146,7 @@ def calculate_sex_strength(lattice, tws_0, ksi, ksi_comp, nsuperperiod):
     ksi_x, ksi_y = ksi
     ksi_x_comp, ksi_y_comp = ksi_comp
     sex = sextupole_id(lattice)
-    sex_name = list(sex.keys())
+    sex_name = list(sex)
     print("Chromaticity compensation: Before: ", sex)
     m1x = 0.
     m1y = 0.
@@ -186,7 +186,7 @@ def compensate_chromaticity(lattice,  ksi_x_comp=0, ksi_y_comp=0,  nsuperperiod=
     sex_dict_stg = calculate_sex_strength(lattice, tws_0, ksi, ksi_comp, nsuperperiod)
     print("Chromaticity compensatation: After:  ", sex_dict_stg)
     #print sex_dict_stg
-    sex_name = list(sex_dict_stg.keys())
+    sex_name = list(sex_dict_stg)
     for element in lattice.sequence:
         if element.__class__ == Sextupole:
             if element.id == sex_name[0]:

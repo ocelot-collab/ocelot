@@ -345,6 +345,62 @@ def create_r_matrix(element):
         r[1, 5] = element.kn[0]
         r_z_e = lambda z, energy: r
 
+    elif element.__class__ == XYQuadrupole:
+        k1 = element.k1
+
+        if element.l == 0:
+            hx = 0.
+            hy = 0.
+        else:
+            hx = k1 * element.x_offs
+            hy = -k1 * element.y_offs
+
+
+        def r_mtx(z, k1, hx, hy, sum_tilts=0., energy=0.):
+            # r = element.l/element.angle
+            #  +K - focusing lens , -K - defoc
+            gamma = energy / m_e_GeV
+
+            kx2 = (k1 + hx * hx)
+            ky2 = hy*hy - k1
+            kx = np.sqrt(kx2 + 0.j)
+            ky = np.sqrt(ky2 + 0.j)
+            cx = np.cos(z * kx).real
+            cy = np.cos(z * ky).real
+            sy = (np.sin(ky * z) / ky).real if ky != 0 else z
+
+            igamma2 = 0.
+
+            if gamma != 0:
+                igamma2 = 1. / (gamma * gamma)
+
+            beta = np.sqrt(1. - igamma2)
+
+            if kx != 0:
+                sx = (np.sin(kx * z) / kx).real
+                dx = hx / kx2 * (1. - cx)
+                dy = hy / ky2 * (1. - cy)
+                r56 = hx * hx * (z - sx) / kx2 / beta ** 2 + hy * hy * (z - sy) / ky2 / beta ** 2
+            else:
+                sx = z
+                dx = z * z * hx / 2.
+                dy = z * z * hy / 2.
+                r56 = hx * hx * z ** 3 / 6. / beta ** 2 + hy * hy * z ** 3 / 6. / beta ** 2
+
+            r56 -= z / (beta * beta) * igamma2
+
+            u_matrix = np.array([[cx, sx, 0., 0., 0., dx / beta],
+                                 [-kx2 * sx, cx, 0., 0., 0., sx * hx / beta],
+                                 [0., 0., cy, sy, 0., dy / beta],
+                                 [0., 0., -ky2 * sy, cy, 0.,sy * hy / beta],
+                                 [hx * sx / beta, dx / beta, hy * sy / beta, dy / beta, 1., r56],
+                                 [0., 0., 0., 0., 0., 1.]])
+            if sum_tilts != 0:
+                u_matrix = np.dot(np.dot(rot_mtx(-sum_tilts), u_matrix), rot_mtx(sum_tilts))
+            return u_matrix
+
+        r_z_e = lambda z, energy: r_mtx(z, k1, hx=hx, hy=hy, sum_tilts=0, energy=energy)
+
     # else:
     #    print (element.__class__, " : unknown type of magnetic element. Cannot create transfer map ")
 

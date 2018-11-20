@@ -221,116 +221,15 @@ class SpaceCharge(PhysProc):
         Exyz = self.el_field(xyz, p_array.q_array, gamma0, nmesh_xyz)
 
         # equations of motion in the lab system
-        gamma = gamref * (1 + p_array.rparticles[5] * betref)
-        Energy = m_e_eV * gamma
-        betax = xp[3] / Energy
-        betay = xp[4] / Energy
-        betaz = xp[5] / Energy
         cdT = zstep / betref
 
-        xp[3] = xp[3] + cdT * (1 - beta0 * betaz) * Exyz[:, 0]
-        xp[4] = xp[4] + cdT * (1 - beta0 * betaz) * Exyz[:, 1]
-        #xp[5] = xp[5] + cdT * (Exyz[:, 2] + beta0 * (betax * Exyz[:, 0] + betay * Exyz[:, 1]))
-        xp[5] = xp[5] + cdT * (1 - beta0 * betaz)*Exyz[:, 2]*gamma0*gamma0
+        xp[3] = xp[3] + cdT * (1 - beta0 * beta0) * Exyz[:, 0]
+        xp[4] = xp[4] + cdT * (1 - beta0 * beta0) * Exyz[:, 1]
+        xp[5] = xp[5] + cdT *  Exyz[:, 2]
         T = np.transpose(T)
         xp[3:6] = np.dot(xp[3:6].T, T).T
         xp_2_xxstg_mad(xp, p_array.rparticles, gamref)
 
-    def SC_xp_update(self, xp, Q, gamref, dS, nxyz):
-        #Lorentz transformation with z-axis and gamref
-        betref2 = 1 - gamref**-2
-        betref = np.sqrt(betref2)
-        Eref = gamref*m_e_eV
-        pref = Eref*betref
-        Exyz = self.el_field(np.c_[xp[:, 0], xp[:, 1], xp[:, 2]], Q, gamref, nxyz)
-        u = np.c_[xp[:, 3], xp[:, 4], xp[:, 5] + pref]
-        gamma = np.sqrt(1+np.sum(u*u, 1)/m_e_eV**2).reshape((xp.shape[0], 1))
-        cdT = dS/betref
-        u = u/(gamma*m_e_eV)
-        xp[:,3] = xp[:, 3] + cdT*(1-betref*u[:, 2])*Exyz[:, 0]
-        xp[:,4] = xp[:, 4] + cdT*(1-betref*u[:, 2])*Exyz[:, 1]
-        xp[:,5] = xp[:, 5] + cdT*(Exyz[:, 2] + betref*(u[:, 0]*Exyz[:, 0] + u[:, 1]*Exyz[:, 1]))
-
-
-class SpaceChargeSimplify(SpaceCharge):
-    def __init__(self, step=1):
-        SpaceCharge.__init__(self, step=step)
-
-    def apply(self, p_array, zstep):
-        if zstep == 0:
-            logger.debug("SpaceCharge delta_s = 0")
-            return
-        nmesh_xyz = np.array(self.nmesh_xyz)
-        gamref = p_array.E / m_e_GeV
-        betref2 = 1 - gamref ** -2
-        betref = np.sqrt(betref2)
-
-        # MAD coordinates!!!
-        # Lorentz transformation with V-axis and gamma_av
-        xp = np.zeros(p_array.rparticles.shape)
-        xp = xxstg_2_xp_mad(p_array.rparticles, xp, gamref)
-
-        # coordinate transformation to the velocity direction
-        t3 = np.mean(xp[3:6], axis=1)
-        Pav = np.linalg.norm(t3)
-        t3 = t3 / Pav
-        ey = np.array([0, 1, 0])
-        t1 = np.cross(ey, t3)
-        t1 = t1 / np.linalg.norm(t1)
-        t2 = np.cross(t3, t1)
-        T = np.c_[t1, t2, t3]
-        xyz = np.dot(xp[0:3].T, T)
-        xp[3:6] = np.dot(xp[3:6].T, T).T
-
-        # electric field in the rest frame of bunch
-        gamma0 = np.sqrt((Pav / m_e_eV) ** 2 + 1)
-        beta02 = 1 - gamma0 ** -2
-        beta0 = np.sqrt(beta02)
-
-        Exyz = self.el_field(xyz, p_array.q_array, gamma0, nmesh_xyz)
-
-        # equations of motion in the lab system
-        gamma = gamref * (1 + p_array.rparticles[5] * betref)
-        Energy = m_e_eV * gamma
-        betax = xp[3] / Energy
-        betay = xp[4] / Energy
-        betaz = xp[5] / Energy
-        cdT = zstep / betref
-        # testing SC
-        betaz = beta0 # for testing!
-        k = 0. # for testing !
-        xp[3] = xp[3] + cdT * (1 - beta02) * Exyz[:, 0]
-        xp[4] = xp[4] + cdT * (1 - beta02) * Exyz[:, 1]
-        xp[5] = xp[5] + cdT * (Exyz[:, 2])
-        T = np.transpose(T)
-        xp[3:6] = np.dot(xp[3:6].T, T).T
-        xp_2_xxstg_mad(xp, p_array.rparticles, gamref)
-
-
-"""
-def sc_track(lattice):
-    navi = Navigator(lattice=lattice)
-    #start = time.time()
-
-    for i, zi in enumerate(Z[1:]):
-        print zi
-        dz = zi - Z[i]
-        step(lat=lat, particle_list=p_array, dz=dz, navi=navi, order=order)
-        if SC:
-            #SC_xxstg_update(P, Q, p_array.E / 0.000511, dz, True, nxnynz)
-            #sc.sc_apply(p_array, Q, dz, True, nxnynz)
-            sc.sc_apply(p_array, q_array=Q, zstep=dz, nmesh_xyz=[63, 63, 63], low_order_kick=True)
-        tw = get_envelope(p_array)
-        tw.s = navi.z0
-        tws_track.append(tw)
-        #f.add_subplot(211)
-        #plt.plot(p_array.particles[::6], p_array.particles[2::6], '.')
-        #f.add_subplot(212)
-        #plt.plot(p_array.particles[4::6],p_array.particles[5::6],'.')
-        #plt.draw()
-        #plt.pause(0.1)
-    print "time exc = ", time.time() - start
-"""
         
 
     

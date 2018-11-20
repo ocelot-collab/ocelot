@@ -50,7 +50,7 @@ class Matching(QtWidgets.QWidget):
         
         self.mw.lattice.init_lattice()
         
-        de = DrawElements(self.mw, self.add_tune_block, self.mw.matchable_elements)
+        de = DrawElements(self.mw, self.add_tune_block)
         data4 = de.draw_lattice_elements(self.mw.lattice)
         for r in data4:
             self.lattice_plot.plot_lattice.addItem(r)

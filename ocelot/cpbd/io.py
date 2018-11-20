@@ -7,7 +7,7 @@ author sergey.tomin
 from ocelot.cpbd.elements import *
 import os
 from ocelot.adaptors.astra2ocelot import astraBeam2particleArray, particleArray2astraBeam
-from ocelot.cpbd.beam import ParticleArray
+from ocelot.cpbd.beam import ParticleArray, Twiss, Beam
 
 
 def save_particle_array2npz(filename, p_array):
@@ -123,12 +123,17 @@ def find_obj_and_create_name(lat, types):
     return objects
 
 
-def lat2input(lattice):
+def lat2input(lattice, tws0=None):
     """
     returns python input string for the lattice in the lat object
     """
 
     lines = ['from ocelot import * \n']
+
+    # prepare initial Twiss parameters
+    if tws0 is not None and isinstance(tws0, Twiss):
+        lines.append('\n#Initial Twiss parameters\n')
+        lines.extend(twiss2input(tws0))
 
     # prepare elements list
     lines.append('\n')
@@ -296,7 +301,9 @@ def elements2input(lattice):
         line = sol.name.lower() + " = Solenoid(l=" + str(sol.l) + ", k=" + str(sol.k) + ", eid='" + sol.id + "')\n"
         lines.append(line)
 
-    lines[0] = lines[0][1:]
+    if lines != []:
+        lines[0] = lines[0][1:]
+        
     return lines
 
 
@@ -323,13 +330,10 @@ def cell2input(lattice, split=False):
 def twiss2input(tws):
 
     lines = []
-
+    tws_ref = Twiss()
     lines.append('tws0 = Twiss()\n')
     for param in tws.__dict__:
-        if tws.__dict__[param] != 0.0 and \
-            tws.__dict__[param] != 0 and \
-            tws.__dict__[param] != '':
-
+        if tws.__dict__[param] != tws_ref.__dict__[param]:
             lines.append('tws0.' + str(param) + ' = ' + str(tws.__dict__[param]) + '\n')
 
     return lines
@@ -338,14 +342,10 @@ def twiss2input(tws):
 def beam2input(beam):
     
     lines = []
-
+    beam_ref = Beam()
     lines.append('beam = Beam()\n')
     for param in beam.__dict__:
-        if beam.__dict__[param] != 0.0 and \
-            beam.__dict__[param] != 0 and \
-            beam.__dict__[param] != '' and \
-            param != 'shape':
-
+        if beam.__dict__[param] != beam_ref.__dict__[param]:
             lines.append('beam.' + str(param) + ' = ' + str(beam.__dict__[param]) + '\n')
 
     return lines
@@ -380,7 +380,7 @@ def write_power_supply_id(lattice, lines=[]):
     return lines
 
 
-def write_lattice(lattice, file_name="lattice.py", remove_rep_drifts=True, power_supply=False):
+def write_lattice(lattice, tws0=None, file_name="lattice.py", remove_rep_drifts=True, power_supply=False):
     """
     saves lattice as python imput file
     lattice - MagneticLattice
@@ -390,7 +390,7 @@ def write_lattice(lattice, file_name="lattice.py", remove_rep_drifts=True, power
     if remove_rep_drifts:
         lattice = rem_drifts(lattice)
 
-    lines = lat2input(lattice)
+    lines = lat2input(lattice, tws0=tws0)
 
     if power_supply:
         lines = write_power_supply_id(lattice, lines=lines)

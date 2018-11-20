@@ -5,12 +5,13 @@ import pyqtgraph as pg
 class TwissPlot():
 
     def __init__(self):
-
-        self.lattice_curves = []
-        self.scale = 0.2
         
         pg.setConfigOptions(antialias=True)
         self.twiss_plot = pg.GraphicsLayoutWidget()
+
+        # Switch to using white background and black foreground
+        #pg.setConfigOption('background', 'w')
+        #pg.setConfigOption('foreground', 'k')
 
         self.plot_disp_x = self.twiss_plot.addPlot(row=0, col=0)
         self.plot_disp_x.showGrid(x=True, y=True)
@@ -20,9 +21,8 @@ class TwissPlot():
 
         self.plot_lattice = self.twiss_plot.addPlot(row=3, col=0)
         self.plot_lattice.showGrid(x=False, y=False)
-        self.plot_lattice.setYRange(-self.scale*1.5, self.scale*1.5)
-        self.plot_lattice.hideAxis('left')
-        #self.plot_lattice.setMenuEnabled(enableMenu=False)
+        #self.plot_lattice.hideAxis('left')
+        self.plot_lattice.setMenuEnabled(enableMenu=False)
 
         self.plot_disp_x.setXLink(self.plot_lattice)
         self.plot_disp_x.addLegend()

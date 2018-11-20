@@ -53,6 +53,9 @@ class TwissMonitor(QtWidgets.QWidget):
         self.mw.work_lattice = deepcopy(self.mw.lattice)
         self.mw.work_lattice.init_lattice()
         
+        self.twiss_plot.plot_lattice.setYRange(-0.3, 0.3, padding=0)
+        self.twiss_plot.plot_lattice.setXRange(0.0, self.mw.work_lattice.lattice.totalLen, padding=0)
+
         self.calc_twiss()
         self.update_plot()
         
@@ -77,10 +80,8 @@ class TwissMonitor(QtWidgets.QWidget):
         
         if self.tws is None:
             return
-
-        for cur in self.twiss_plot.lattice_curves:
-            self.twiss_plot.plot_lattice.removeItem(cur)
-
+        
+        # redraw twiss functions
         s = [p.s for p in self.tws]
         beta_x = [p.beta_x for p in self.tws]
         beta_y = [p.beta_y for p in self.tws]
@@ -90,11 +91,19 @@ class TwissMonitor(QtWidgets.QWidget):
         self.twiss_plot.curv2.setData(s, beta_x)
         self.twiss_plot.curv3.setData(s, beta_y)
 
-        de = DrawElements(self.mw, self.add_tune_block, self.mw.tunable_elements)
+        # redraw lattice elements
+        axX = self.twiss_plot.plot_lattice.getAxis('bottom')
+        axY = self.twiss_plot.plot_lattice.getAxis('left')
+
+        self.twiss_plot.plot_lattice.setYRange(axY.range[0], axY.range[1], padding=0)
+        self.twiss_plot.plot_lattice.setXRange(axX.range[0], axX.range[1], padding=0)
+
+        de = DrawElements(self.mw, self.add_tune_block)
         data4 = de.draw_lattice_elements(self.mw.work_lattice)
+        
+        self.twiss_plot.plot_lattice.clear()
         for r in data4:
-            self.twiss_plot.lattice_curves.append(r)
-            self.twiss_plot.plot_lattice.addItem(r)     
+            self.twiss_plot.plot_lattice.addItem(r)
     
     
     def change_tws_step(self):

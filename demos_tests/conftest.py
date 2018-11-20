@@ -27,6 +27,6 @@ def cmdopt(request):
 
 
 # file with test results
-pytest.TEST_RESULTS_FILE = os.path.dirname(os.path.abspath(__file__)) + '/test_results.dat'
+pytest.TEST_RESULTS_FILE = os.path.dirname(os.path.abspath(__file__)) + '/test_results.log'
 f = open(pytest.TEST_RESULTS_FILE, 'w')
 f.close()

@@ -130,11 +130,10 @@ def lat2input(lattice, tws0=None):
 
     lines = ['from ocelot import * \n']
 
-
+    # prepare initial Twiss parameters
     if tws0 is not None and isinstance(tws0, Twiss):
         lines.append('\n#Initial Twiss parameters\n')
         lines.extend(twiss2input(tws0))
-
 
     # prepare elements list
     lines.append('\n')
@@ -302,7 +301,9 @@ def elements2input(lattice):
         line = sol.name.lower() + " = Solenoid(l=" + str(sol.l) + ", k=" + str(sol.k) + ", eid='" + sol.id + "')\n"
         lines.append(line)
 
-    lines[0] = lines[0][1:]
+    if lines != []:
+        lines[0] = lines[0][1:]
+        
     return lines
 
 
@@ -345,7 +346,6 @@ def beam2input(beam):
     lines.append('beam = Beam()\n')
     for param in beam.__dict__:
         if beam.__dict__[param] != beam_ref.__dict__[param]:
-
             lines.append('beam.' + str(param) + ' = ' + str(beam.__dict__[param]) + '\n')
 
     return lines

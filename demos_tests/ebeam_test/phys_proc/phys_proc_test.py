@@ -79,8 +79,9 @@ def test_track_beam_transform(lattice, p_array, parameter=None, update_ref_value
     tws.beta_x = 20.0
     tws.beta_y = 15.0
 
-    smb = BeamTransform(tws=tws)
-    navi.add_physics_proc(smb, lattice.sequence[-1], lattice.sequence[-1])
+    bt = BeamTransform(tws=tws)
+    bt.remove_offsets = True
+    navi.add_physics_proc(bt, lattice.sequence[-1], lattice.sequence[-1])
 
     tws_track_wo, p_array_wo = track(lattice, p_array_track, navi)
 
@@ -94,7 +95,7 @@ def test_track_beam_transform(lattice, p_array, parameter=None, update_ref_value
     tws_track_p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
 
 
-    result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
+    result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], tolerance=1.0e-12, tolerance_type='absolute', assert_info=' tws_track - ')
     result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=TOL, assert_info=' p - ')
     assert check_result(result1 + result2)
 
@@ -180,6 +181,112 @@ def test_track_smooth_csr_sc(lattice, p_array, parameter=None, update_ref_values
     assert check_result(result1 + result2)
 
 
+def test_track_laser_modulator(lattice, p_array, parameter=None, update_ref_values=False):
+    """
+    test PhysicsProc LaserModulator
+
+    0 - tracking of the electron beam with positive energy chirp trough undulator
+    1 - tracking of the electron beam with negative energy chirp trough undulator
+    """
+
+    p_array_track = copy.deepcopy(p_array)
+
+    navi = Navigator(lattice)
+    navi.unit_step = 0.1
+
+    lm = LaserModulator()
+    lm.dE = 12500e-9  # GeV
+    lm.Ku = 1.294  # undulator parameter
+    lm.Lu = 0.8  # [m] - undulator length
+    lm.lperiod = 0.074  # [m] - undulator period length
+    lm.sigma_l = 300e-6  # [m]
+    lm.sigma_x = 300e-6  # [m]
+    lm.sigma_y = 300e-6  # [m]
+    lm.x_mean = 0
+    lm.y_mean = 0
+
+    navi.add_physics_proc(lm, m1, m2)
+
+    tws_track_wo, p_array_wo = track(lattice, p_array_track, navi)
+
+    tws_track = obj2dict(tws_track_wo)
+    p = obj2dict(p_array_wo)
+
+    if update_ref_values:
+        return {'tws_track': tws_track, 'p_array': p}
+
+    tws_track_p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
+
+    result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
+    result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=TOL, assert_info=' p - ')
+    assert check_result(result1 + result2)
+
+def test_track_lsc(lattice, p_array, parameter=None, update_ref_values=False):
+    """
+    test PhysicsProc LaserModulator
+
+    0 - tracking of the electron beam with positive energy chirp trough undulator
+    1 - tracking of the electron beam with negative energy chirp trough undulator
+    """
+
+    p_array_track = copy.deepcopy(p_array)
+
+    navi = Navigator(lattice)
+    navi.unit_step = 0.1
+
+    lsc = LSC()
+    lsc.smooth_param = 0.1
+
+    navi.add_physics_proc(lsc, lattice.sequence[0], lattice.sequence[-1])
+
+    tws_track_wo, p_array_wo = track(lattice, p_array_track, navi)
+
+    tws_track = obj2dict(tws_track_wo)
+    p = obj2dict(p_array_wo)
+
+    if update_ref_values:
+        return {'tws_track': tws_track, 'p_array': p}
+
+    tws_track_p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
+
+    result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
+    result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=TOL, assert_info=' p - ')
+    assert check_result(result1 + result2)
+
+def test_track_spontan_rad_effects(lattice, p_array, parameter=None, update_ref_values=False):
+    """
+    test PhysicsProc LaserModulator
+
+    0 - tracking of the electron beam with positive energy chirp trough undulator
+    1 - tracking of the electron beam with negative energy chirp trough undulator
+    """
+    p_array_track = copy.deepcopy(p_array)
+
+    navi = Navigator(lattice)
+    navi.unit_step = 0.1
+
+    rad = SpontanRadEffects(K=4, lperiod=0.05)
+    rad.type = "planar"
+    rad.energy_loss = True
+    rad.quant_diff = True
+
+    navi.add_physics_proc(rad, m1, m2)
+
+    tws_track_wo, p_array_wo = track(lattice, p_array_track, navi)
+
+    tws_track = obj2dict(tws_track_wo)
+    p = obj2dict(p_array_wo)
+
+    if update_ref_values:
+        return {'tws_track': tws_track, 'p_array': p}
+
+    tws_track_p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
+
+    result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
+    result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=TOL, assert_info=' p - ')
+    assert check_result(result1 + result2)
+
+
 def setup_module(module):
 
     f = open(pytest.TEST_RESULTS_FILE, 'a')
@@ -218,7 +325,9 @@ def test_update_ref_values(lattice, p_array, cmdopt):
     update_functions.append('test_track_beam_transform')
     update_functions.append('test_track_smooth_csr')
     update_functions.append('test_track_smooth_csr_sc')
-
+    update_functions.append('test_track_laser_modulator')
+    update_functions.append('test_track_lsc')
+    update_functions.append('test_track_spontan_rad_effects')
 
     update_function_parameters = {}
     update_function_parameters['test_track_smooth'] = [0, 1]

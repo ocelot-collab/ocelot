@@ -6,6 +6,7 @@ import numpy as np
 from ocelot import *
 from ocelot.cpbd.beam import generate_parray
 from ocelot.utils.acc_utils import chicane_RTU
+from ocelot.cpbd.sc import LSC
 
 """Lattice elements definition"""
 
@@ -13,7 +14,8 @@ D0 = Drift(l=0.1, eid='D0')
 D1 = Drift(l=0.1, eid='D1')
 D2 = Drift(l=1.5)
 D3 = Drift(l=1.)
-
+m1 = Marker()
+m2 = Marker()
 BL_48I_I1 = SBend(l=0.200330283531, angle=-0.099484, e1=0.0, e2 = -0.099484, tilt=0.0, fint=0.0, eid='BL.48I.I1')
 BL_48II_I1 = SBend(l=0.200330283531, angle=0.099484, e1=0.099484, e2 = 0.0, tilt=0.0, fint=0.0, eid='BL.48II.I1')
 BL_50I_I1 = SBend(l=0.200330283531, angle=0.099484, e1=0.0, e2 = 0.099484, tilt=0.0, fint=0.0, eid='BL.50I.I1')
@@ -26,7 +28,7 @@ stop = Marker()
 
 @pytest.fixture(scope='module')
 def cell():
-    return (start, D0, BL_48I_I1, D1, BL_48II_I1, D2, BL_50I_I1, D1, BL_50II_I1, D3, stop)
+    return (start, D0, BL_48I_I1, D1, BL_48II_I1, m1, D2,m2, BL_50I_I1, D1, BL_50II_I1, D3, stop)
 
 
 @pytest.fixture(scope='module')

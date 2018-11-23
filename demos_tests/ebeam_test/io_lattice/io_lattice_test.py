@@ -13,7 +13,7 @@ from demos_tests.params import *
 from io_lattice_conf import *
 
 
-def test_original_lattice_transfer_map(lattice, tws0, method, update_ref_values=False):
+def test_original_lattice_transfer_map(lattice, tws0, method, parametr=None, update_ref_values=False):
     """R maxtrix calculation test"""
 
     r_matrix = lattice_transfer_map(lattice, tws0.E)
@@ -27,7 +27,7 @@ def test_original_lattice_transfer_map(lattice, tws0, method, update_ref_values=
     assert check_result(result)
 
 
-def test_original_twiss(lattice, tws0, method, update_ref_values=False):
+def test_original_twiss(lattice, tws0, method, parametr=None, update_ref_values=False):
     """Twiss parameters calculation function test"""
 
     tws = twiss(lattice, tws0, nPoints=None)
@@ -43,43 +43,26 @@ def test_original_twiss(lattice, tws0, method, update_ref_values=False):
     assert check_result(result)
 
 
-def test_lat2input(lattice, tws0, method, update_ref_values=False):
-    """Twiss parameters calculation function test"""
-    
-    lines_arr = lat2input(lattice)
-    lines = ''.join(lines_arr)
-
-    loc_dict = {}
-    try:
-        exec(lines, globals(), loc_dict)
-    except Exception as err:
-        assert check_result(['Exception error during the lattice file execution'])
-            
-    if 'cell' in loc_dict:
-        lattice_new = MagneticLattice(loc_dict['cell'], method=method)
-        
-        lattice_new_transfer_map_check(lattice_new, tws0)
-        twiss_new_check(lattice_new, tws0)
-    else:
-        assert check_result(['No cell variable in the lattice file'])
-
-
-def test_write_lattice(lattice, tws0, method, update_ref_values=False):
-    """Twiss parameters calculation function test"""
+@pytest.mark.parametrize('parametr', [False, True])
+def test_lat2input(lattice, tws0, method, parametr, update_ref_values=False):
+    """lat2input with tws0 saving function test"""
 
     lines_arr = lat2input(lattice, tws0=tws0)
     lines = ''.join(lines_arr)
-
+    
     loc_dict = {}
     try:
         exec(lines, globals(), loc_dict)
     except Exception as err:
-        assert check_result(['Exception error during the lattice file execution'])
+        assert check_result(['Exception error during the lattice file execution, parametr is ' + str(parametr)])
 
-    if "tws0" in loc_dict:
-        tws0_new = loc_dict['tws0']
+    if parametr:
+        if "tws0" in loc_dict:
+            tws0_new = loc_dict['tws0']
+        else:
+            assert check_result(['No tws0 in the lattice file, parametr is ' + str(parametr)])
     else:
-        assert check_result(['No tws0 in the lattice file'])
+        tws0_new = tws0
 
     if 'cell' in loc_dict:
         lattice_new = MagneticLattice(loc_dict['cell'], method=method)
@@ -87,9 +70,9 @@ def test_write_lattice(lattice, tws0, method, update_ref_values=False):
         lattice_new_transfer_map_check(lattice_new, tws0_new)
         twiss_new_check(lattice_new, tws0_new)
     else:
-        assert check_result(['No cell variable in the lattice file'])
-
-
+        assert check_result(['No cell variable in the lattice file, parametr is ' + str(parametr)])
+    
+        
 def lattice_new_transfer_map_check(lattice, tws0):
 
     r_matrix = lattice_transfer_map(lattice, tws0.E)
@@ -147,11 +130,12 @@ def test_update_ref_values(lattice, tws0, method, cmdopt):
     update_functions = []
     update_functions.append('test_original_lattice_transfer_map')
     update_functions.append('test_original_twiss')
-    update_functions.append('test_lat2input')
-    update_functions.append('test_write_lattice')
     
+    # function test_lat2input function need not be added here.
+    # It is used reference results from test_original_lattice_transfer_map and test_original_twiss functions
+
     if cmdopt in update_functions:
-        result = eval(cmdopt)(lattice, tws0, method, True)
+        result = eval(cmdopt)(lattice, tws0, method, None, True)
         if result is None:
             return
         

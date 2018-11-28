@@ -454,15 +454,18 @@ class BeamArray(Beam):
     def pk(self):
         return self[self.idx_max()]
 
-    def add_chirp(self, chirp=0):
+    def add_chirp(self, chirp=0, order=1, s0=None):
         '''
-        adds linear energy chirp to the beam
-        chirp = dE/E/s[um] = dg/g/s[um]
+        adds energy chirp of given "order" to the beam around "center" position [m]
+        chirp = dE/E0/ds[um]**order = dg/g0/s[um]**order
+        so that
+        g_new = g0 + dg = g0 + g0 (s-s0)**order * chirp
         '''
         if chirp not in [None, 0]:
-            center = (np.amax(self.s) - np.amin(self.s)) / 2
-            E_center = self.E[find_nearest_idx(self.s, center)]
-            self.E += (self.s - center) * chirp * E_center * 1e6
+            if s0 is None:
+                s0 = (np.amax(self.s) - np.amin(self.s)) / 2
+            E_center = self.E[find_nearest_idx(self.s, s0)]
+            self.E += (self.s - s0)**order * chirp * E_center * 1e6
     
     def add_wake(self, tube_radius=5e-3, tube_len=1, conductivity=3.66e+7, tau=7.1e-15, roughness=600e-9, d_oxid=5e-9):
         self.eloss = pipe_wake(self.s, self.I, tube_radius, tube_len, conductivity, tau, roughness, d_oxid)[1][1][::-1]

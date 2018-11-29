@@ -20,12 +20,18 @@ except:
     _logger.debug("beam.py: module NUMEXPR is not installed. Install it to speed up calculation")
     ne_flag = False
 
+try:
+    import numba as nb
+    nb_flag = True
+except:
+    _logger.info("csr.py: module NUMBA is not installed. Install it to speed up calculation")
+    nb_flag = False
 
-'''
+"""
 Note:
 (A) the reference frame (e.g. co-moving or not with the beam is not fixed) 
 (B) xp, yp are in [rad] but the meaning is not specified
-'''
+"""
 
 
 class Twiss:
@@ -759,7 +765,6 @@ def ellipse_from_twiss(emit, beta, alpha):
     xp = -a / np.sqrt(beta) * ( np.sin(phi) + alpha * np.cos(phi) )
     return (x, xp)
 
-
 def moments(x, y, cut=0):
     n = len(x)
     #inds = np.arange(n)
@@ -850,17 +855,19 @@ def sortrows(x, col):
 
 
 def convmode(A, B, mode):
-    C=[]
+
     if mode == 2:
         C = np.convolve(A, B)
-    if mode == 1:
+    else: # if mode == 1:
         i = np.int_(np.floor(len(B)*0.5))
         n = len(A)
+        C = np.zeros(n)
         C1 = np.convolve(A, B)
         C[:n] = C1[i:n+i]
     return C
 
-def s_to_cur(A, sigma, q0, v):
+
+def s_to_cur_py(A, sigma, q0, v):
     #  A - s-coordinates of particles
     #  sigma -smoothing parameter
     #  q0 -bunch charge
@@ -869,28 +876,22 @@ def s_to_cur(A, sigma, q0, v):
     a = np.min(A) - Nsigma*sigma
     b = np.max(A) + Nsigma*sigma
     s = 0.25*sigma
-    #print("s = ", sigma, s)
     N = int(np.ceil((b-a)/s))
     s = (b-a)/N
-    #print(a, b, N)
     B = np.zeros((N+1, 2))
     C = np.zeros(N+1)
 
-    #print(len(np.arange(0, (N+0.5)*s, s)))
     B[:, 0] = np.arange(0, (N+0.5)*s, s) + a
-    N = np.shape(B)[0]
-    #print(N)
+    N = N+1 #np.shape(B)[0]
     cA = (A - a)/s
-    #print(cA[:10])
     I = np.int_(np.floor(cA))
-    #print(I)
     xiA = 1 + I - cA
     for k in range(len(A)):
         i = I[k]
         if i > N-1:
             i = N-1
-        C[i+0] = C[i+0]+xiA[k]
-        C[i+1] = C[i+1]+(1-xiA[k])
+        C[i] = C[i] + xiA[k]
+        C[i+1] = C[i+1] + (1 - xiA[k])
 
     K = np.floor(Nsigma*sigma/s + 0.5)
     G = np.exp(-0.5*(np.arange(-K, K+1)*s/sigma)**2)
@@ -900,8 +901,9 @@ def s_to_cur(A, sigma, q0, v):
     B[:, 1] = koef*B[:, 1]
     return B
 
+s_to_cur = s_to_cur_py if not nb_flag else nb.jit(s_to_cur_py)
 
-def slice_analysis(z, x, xs, M, to_sort):
+def slice_analysis_py(z, x, xs, M, to_sort):
     """
     returns:
     <x>, <xs>, <x^2>, <x*xs>, <xs^2>, np.sqrt(<x^2> * <xs^2> - <x*xs>^2)
@@ -948,6 +950,8 @@ def slice_analysis(z, x, xs, M, to_sort):
 
     emittx = np.sqrt(mxx*mxsxs - mxxs*mxxs)
     return [mx, mxs, mxx, mxxs, mxsxs, emittx]
+
+slice_analysis = slice_analysis_py if not nb_flag else nb.jit(slice_analysis_py)
 
 
 def simple_filter(x, p, iter):
@@ -1103,7 +1107,6 @@ def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
     I = interp1(B[:, 0], B[:, 1], s)
 
     return [s, I, ex, ey, me, se, gamma0, emitxn, emityn]
-
 
 def global_slice_analysis(parray, Mslice=5000, Mcur=0.01, p=2, iter=2):
     """

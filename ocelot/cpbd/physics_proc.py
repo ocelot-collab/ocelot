@@ -313,7 +313,7 @@ class SpontanRadEffects(PhysProc):
     Effects of the spontaneous radiation:
     energy loss and quantum diffusion
     """
-    def __init__(self, K, lperiod, type="planar"):
+    def __init__(self, K=0.0, lperiod=0.0, type="planar"):
         """
 
         :param Kx: Undulator deflection parameter
@@ -324,8 +324,9 @@ class SpontanRadEffects(PhysProc):
         self.K = K
         self.lperiod = lperiod
         self.type = type
-        self.energy_loss = False
+        self.energy_loss = True
         self.quant_diff = True
+        self.filling_koef = 1.0
 
     def apply(self, p_array, dz):
         _logger.debug("BeamTransform: apply")
@@ -334,11 +335,11 @@ class SpontanRadEffects(PhysProc):
 
         if self.quant_diff:
             sigma_Eq = self.sigma_gamma_quant(energy, dz)
-            p_array.p()[:] += sigma_Eq * np.random.randn(p_array.n)
+            p_array.p()[:] += sigma_Eq * np.random.randn(p_array.n)*self.filling_koef
 
         if self.energy_loss:
             dE = self.energy_loss_und(energy, dz)
-            p_array.p()[:] -= dE/energy
+            p_array.p()[:] -= dE/energy*self.filling_koef
 
     def energy_loss_und(self, energy, dz):
         k = 4. * np.pi * np.pi / 3. * ro_e / m_e_GeV

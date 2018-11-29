@@ -24,7 +24,7 @@ __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope", 
            "EbeamParams",  # e_beam_params
            "write_lattice",  # io
            "CSR", "SpaceCharge", "Wake", "WakeTable", "WakeKick", "BeamTransform", "SmoothBeam",
-           "EmptyProc", "PhysProc", "LaserHeater", "LaserModulator", "SpontanRadEffects",
+           "EmptyProc", "PhysProc", "LaserHeater", "LaserModulator", "SpontanRadEffects", "LSC",
            "MagneticLattice",
            "ocelog"
            ]

@@ -174,8 +174,15 @@ def test_track_with_laser_heater(lattice, p_array, parameter, update_ref_values=
     navi = Navigator(lattice)
     navi.unit_step = 0.05
 
-    lh = LaserHeater()
+    lh = LaserModulator()
     lh.step = 2
+    lh.dE = 12500e-9  # GeV
+    lh.Ku = 1.294  # undulator parameter
+    lh.Lu = 0.8  # [m] - undulator length
+    lh.lperiod = 0.074  # [m] - undulator period length
+    lh.sigma_l = 30000e-2  # [m]
+    lh.sigma_x = 300e-6
+    lh.sigma_y = 300e-6
     navi.add_physics_proc(lh, und_start, und_stop)
 
     tws_track_wo, p_array_wo = track(lattice, p_array, navi)

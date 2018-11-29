@@ -10,7 +10,7 @@ from ocelot.common.globals import *
 from ocelot.cpbd.coord_transform import *
 from scipy import interpolate
 import multiprocessing
-from scipy.special import exp1
+from scipy.special import exp1, k1
 from ocelot.cpbd.physics_proc import PhysProc
 from ocelot.common.math_op import conj_sym
 from ocelot.cpbd.beam import s_to_cur
@@ -214,6 +214,7 @@ class SpaceCharge(PhysProc):
         t1 = t1 / np.linalg.norm(t1)
         t2 = np.cross(t3, t1)
         T = np.c_[t1, t2, t3]
+
         xyz = np.dot(xp[0:3].T, T)
         xp[3:6] = np.dot(xp[3:6].T, T).T
 
@@ -239,6 +240,8 @@ class LSC(PhysProc):
     def __init__(self, step=1):
         PhysProc.__init__(self, step)
         self.smooth_param = 0.1
+        self.step_profile = False
+        self.napply = 0
 
     def imp_lsc(self, gamma, sigma, w, dz):
         """
@@ -256,19 +259,32 @@ class LSC(PhysProc):
         Z[indx] = 0
         return Z * 1e-12  # --> V/pC
 
+    def imp_step_lsc(self, gamma, rb, w, dz):
+        """
+        longitudinal space-charge impedance in case of a stepped profile bunch
+
+        gamma - energy
+        rb - transverse radius of the beam
+        w - omega = 2*pi*f
+        """
+        indx = np.where(w < 1e-7)[0]
+        w[indx] = 1e-7
+        x = w*rb/(speed_of_light*gamma)
+        Z = 1j*Z0 * speed_of_light / (4 * w * rb*rb) * dz * (1 - x*k1(x))
+        Z[indx] = 0
+        return Z * 1e-12  # --> V/pC
+
     def wake2impedance(self, s, w):
         """
         Fourier transform with exp(iwt)
-        s    - Meter
-        w -    V/C
-        f -    Hz
-        y -    Om
+        s - Meter
+        w - V/C
+        f - Hz
+        y - Om
         """
-        t0 = s[0] / speed_of_light
         ds = s[1] - s[0]
         dt = ds / speed_of_light
         n = len(s)
-        t = s / speed_of_light
         f = 1 / dt * np.arange(0, n) / n
         shift = 1#np.exp(1j * f * t0 * 2 * np.pi)
         y = dt * np.fft.fft(w, n) * shift
@@ -296,7 +312,11 @@ class LSC(PhysProc):
         nb = len(s)
         n = nb * 2
         f = 1 / dt * np.arange(0, n) /n
-        Za = self.imp_lsc(gamma, sigma, w=f[0:nb] * 2 * np.pi, dz=dz)
+        if self.step_profile:
+            # space charge impedance of transverse step profile
+            Za = self.imp_step_lsc(gamma, rb=sigma, w=f[0:nb] * 2 * np.pi, dz=dz)
+        else:
+            Za = self.imp_lsc(gamma, sigma, w=f[0:nb] * 2 * np.pi, dz=dz)
 
         sb1 = s[0] + np.cumsum(np.ones(n)) * ds
 
@@ -320,29 +340,57 @@ class LSC(PhysProc):
         :param dz:
         :return:
         """
-        logger.debug(" LSC applied, dz =", dz)
+        if dz < 1e-10:
+            logger.debug(" LSC applied, dz < 1e-10, dz = " + str(dz))
+            return
+        logger.debug(" LSC applied, dz =" + str(dz))
         mean_b = np.mean(p_array.tau())
         sigma_tau = np.std(p_array.tau())
         slice_min = mean_b - sigma_tau / 10
         slice_max = mean_b + sigma_tau / 10
         indx = np.where(np.logical_and(np.greater_equal(p_array.tau(), slice_min), np.less(p_array.tau(), slice_max)))
 
-        sigma = min(np.std(p_array.x()[indx]), np.std(p_array.y()[indx]))
+        if self.step_profile:
+            rb = min(np.max(p_array.x()[indx]) - np.min(p_array.x()[indx]),
+                     np.max(p_array.y()[indx]) - np.min(p_array.y()[indx]))/2
+            sigma = rb
+        else:
+            sigma = min(np.std(p_array.x()[indx]), np.std(p_array.y()[indx]))
         q = np.sum(p_array.q_array)
         gamma = p_array.E / m_e_GeV
         v = np.sqrt(1 - 1 / gamma ** 2) * speed_of_light
         B = s_to_cur(p_array.tau(), sigma_tau * self.smooth_param, q, v)
-
-
         bunch = B[:, 1] / (q * speed_of_light)
         x = B[:, 0]
 
         W = - self.wake_lsc(x, bunch, gamma, sigma, dz) * 1e12 * q
 
-        tck = interpolate.splrep(x, W, k=1)
-        dE = interpolate.splev(p_array.tau(), tck, der=0)
+        indx = np.argsort(p_array.tau(), kind="quicksort")
+        tau_sort = p_array.tau()[indx]
+        dE = np.interp(tau_sort, x, W)
 
         pc_ref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV
         delta_p = dE * 1e-9 / pc_ref
+        p_array.rparticles[5][indx] += delta_p
 
-        p_array.rparticles[5] += delta_p
+
+        #fig, axs = plt.subplots(3, 1, sharex=True)
+        ##ax = plt.subplot(211)
+        #axs[0].plot(-B[:, 0]*1e3, B[:, 1])
+        #axs[0].set_ylabel("I, [A]")
+        #axs[1].plot(-p_array.tau()[::10]*1e3, p_array.p()[::10], ".")
+        #axs[1].set_ylim(-0.01, 0.01)
+        #axs[1].set_ylabel("dE/E")
+        ##plt.subplot(212)
+        #axs[2].plot(-x*1e3, W, label="s = "+str(p_array.s) + "  m")
+        #axs[2].set_ylabel("W, [V]")
+        #axs[2].set_xlabel("s, [mm]")
+        #plt.legend()
+        #plt.show()
+        ##plt.ylim(-0.5e6, 0.5e6)
+        #dig = str(self.napply)
+        #name = "0"*(4 - len(dig)) + dig
+        #plt.savefig(name)
+        #plt.clf()
+        #self.napply += 1
+        ##plt.show()

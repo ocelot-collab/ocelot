@@ -13,6 +13,10 @@ class GUIMenuFile():
         self.mw = MainWindow
 
 
+    def __del__(self):
+        pass
+
+
     def new_lattice(self):
         """Reset and init new lattice"""
         

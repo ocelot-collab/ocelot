@@ -38,7 +38,7 @@ from ocelot.cpbd.track import *
 from ocelot.common.globals import *
 from ocelot.common.logging import *
 from ocelot.cpbd.chromaticity import *
-from ocelot.cpbd.e_beam_params import *
+from ocelot.cpbd.beam_params import *
 from ocelot.cpbd.io import *
 from ocelot.cpbd.sc import *
 from ocelot.cpbd.csr import *

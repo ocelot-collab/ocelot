@@ -135,9 +135,11 @@ class LaserModulator(PhysProc):
         self.sigma_y = self.sigma_l
         self.x_mean = 0
         self.y_mean = 0
+        self.laser_peak_pos = 0 # relative to the beam center, if 0 laser_peak_pos == mean(p_array.tau()) - laser_peak_pos
+
 
     def apply(self, p_array, dz):
-        _logger.debug(" LH applied, dz =", dz)
+        _logger.debug(" LH applied, dz =" + str(dz))
         gamma = p_array.E / m_e_GeV
         lbda_ph = self.lperiod / (2 * gamma ** 2) * (1 + self.Ku ** 2 / 2)
         k_ph = 2 * np.pi / lbda_ph
@@ -146,7 +148,11 @@ class LaserModulator(PhysProc):
         A = self.dE / (pc) * dz / self.Lu
         dx = p_array.x()[:] - self.x_mean
         dy = p_array.y()[:] - self.y_mean
-        p_array.p()[:] += A * np.cos(k_ph * p_array.tau()[:]) * np.exp(
+
+        tau_mean = np.mean(p_array.tau()) + self.laser_peak_pos
+        dtau = p_array.tau()[:] - tau_mean
+
+        p_array.p()[:] += A * np.exp(-dtau**2/(2*self.sigma_l**2))*np.cos(k_ph * p_array.tau()[:]) * np.exp(
             -0.25 * dx ** 2 / self.sigma_x ** 2
             - 0.25 * dy ** 2 / self.sigma_y ** 2)
 
@@ -313,7 +319,7 @@ class SpontanRadEffects(PhysProc):
     Effects of the spontaneous radiation:
     energy loss and quantum diffusion
     """
-    def __init__(self, K, lperiod, type="planar"):
+    def __init__(self, K=0.0, lperiod=0.0, type="planar"):
         """
 
         :param Kx: Undulator deflection parameter
@@ -324,8 +330,9 @@ class SpontanRadEffects(PhysProc):
         self.K = K
         self.lperiod = lperiod
         self.type = type
-        self.energy_loss = False
+        self.energy_loss = True
         self.quant_diff = True
+        self.filling_koef = 1.0
 
     def apply(self, p_array, dz):
         _logger.debug("BeamTransform: apply")
@@ -334,11 +341,11 @@ class SpontanRadEffects(PhysProc):
 
         if self.quant_diff:
             sigma_Eq = self.sigma_gamma_quant(energy, dz)
-            p_array.p()[:] += sigma_Eq * np.random.randn(p_array.n)
+            p_array.p()[:] += sigma_Eq * np.random.randn(p_array.n)*self.filling_koef
 
         if self.energy_loss:
             dE = self.energy_loss_und(energy, dz)
-            p_array.p()[:] -= dE/energy
+            p_array.p()[:] -= dE/energy*self.filling_koef
 
     def energy_loss_und(self, energy, dz):
         k = 4. * np.pi * np.pi / 3. * ro_e / m_e_GeV

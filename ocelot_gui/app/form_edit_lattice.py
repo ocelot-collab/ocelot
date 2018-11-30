@@ -3,6 +3,7 @@
 from copy import deepcopy
 
 from ocelot.cpbd.io import *
+from ocelot.cpbd.elements import *
 
 from app.ui_forms.edit_lattice import *
 from app.parser import *
@@ -25,6 +26,10 @@ class EditLattice(QtWidgets.QWidget):
         
         self.load_parameters()
     
+
+    def __del__(self):
+        pass
+
     
     def load_parameters(self):
         """Load all parameters to window"""
@@ -122,5 +127,5 @@ class EditLattice(QtWidgets.QWidget):
             
             
     def action_cancel(self):
-        self.mw.init_central_widget()
+        self.mw.clean_central_widget()
     

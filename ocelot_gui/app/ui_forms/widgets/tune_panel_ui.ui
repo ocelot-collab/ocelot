@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Form_TunePanel_Top</class>
- <widget class="QWidget" name="Form_TunePanel_Top">
+ <class>Form_TunePanel</class>
+ <widget class="QWidget" name="Form_TunePanel">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
     <width>285</width>
-    <height>65</height>
+    <height>70</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -19,13 +19,13 @@
   <property name="minimumSize">
    <size>
     <width>285</width>
-    <height>65</height>
+    <height>70</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
     <width>285</width>
-    <height>65</height>
+    <height>70</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -40,13 +40,13 @@
   <property name="locale">
    <locale language="English" country="UnitedStates"/>
   </property>
-  <widget class="QWidget" name="">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>284</width>
-     <height>63</height>
+     <width>288</width>
+     <height>69</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -59,8 +59,11 @@
     <property name="topMargin">
      <number>6</number>
     </property>
+    <property name="rightMargin">
+     <number>5</number>
+    </property>
     <property name="bottomMargin">
-     <number>0</number>
+     <number>6</number>
     </property>
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_6">
@@ -96,13 +99,13 @@
         </property>
         <property name="minimumSize">
          <size>
-          <width>140</width>
+          <width>115</width>
           <height>23</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>140</width>
+          <width>115</width>
           <height>23</height>
          </size>
         </property>
@@ -146,27 +149,33 @@
        </widget>
       </item>
       <item>
-       <widget class="QLineEdit" name="factor">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
+       <widget class="QDoubleSpinBox" name="factor">
         <property name="minimumSize">
          <size>
-          <width>50</width>
-          <height>23</height>
+          <width>65</width>
+          <height>0</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>50</width>
-          <height>23</height>
+          <width>65</width>
+          <height>16777215</height>
          </size>
         </property>
-        <property name="text">
-         <string>0.01</string>
+        <property name="decimals">
+         <number>3</number>
+        </property>
+        <property name="minimum">
+         <double>-99999999.000000000000000</double>
+        </property>
+        <property name="maximum">
+         <double>99999999.000000000000000</double>
+        </property>
+        <property name="singleStep">
+         <double>0.010000000000000</double>
+        </property>
+        <property name="value">
+         <double>0.010000000000000</double>
         </property>
        </widget>
       </item>
@@ -289,10 +298,10 @@
          <number>6</number>
         </property>
         <property name="minimum">
-         <double>-1000000000000000.000000000000000</double>
+         <double>-9999.000000000000000</double>
         </property>
         <property name="maximum">
-         <double>10000000000000000.000000000000000</double>
+         <double>9999.000000000000000</double>
         </property>
         <property name="singleStep">
          <double>0.010000000000000</double>

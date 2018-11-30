@@ -1,17 +1,27 @@
 from PyQt5 import QtGui
 import pyqtgraph as pg
 
-from ocelot.cpbd.optics import *
+from ocelot.cpbd.elements import *
+from app.parser import *
+from app.ui_forms.widgets.tune_panel import *
 
-class DrawElements():
 
-    def __init__(self, MainWindow, add_tune_block_func):
-        self.mw = MainWindow
-        self.add_tune_block = add_tune_block_func
-        self.scale = 0.2
+class LatticeElementsPics():
+
+    def __init__(self, lattice):
         
+        self.scale = 1.0
+        self.h_drift = 0.01
 
-    def draw_lattice_elements(self, lattice):
+        self.lattice = lattice
+        self.elements_pics = []
+
+    
+    def __del__(self):
+        pass
+
+
+    def calc_lattice_elements_pics(self):
         '''prepare lattice elements to draw them on PG plot'''
 
         elements = {'bends': [], 'cors': [], 'quads': [], 'sexts': [], 'octs': [], 'mults': [], 'cavs': [], 'unduls': [], 'monits': [], 'drifts': []}
@@ -19,9 +29,8 @@ class DrawElements():
         colors = {'bends':(135,206,250), 'cors':(0,255,55), 'quads':(255,0,0), 'sexts':(0,128,0), 'octs':(0,128,0), 'mults':(0,128,0), 'cavs':(255,165,0), 'unduls':(255,192,203), 'monits':(255,165,0), 'drifts':(255,255,255)}
         color_white = QtGui.QColor(255, 255, 255)
 
-        y_drift = 0.005
         pos = 0.0
-        for elem in lattice.lattice.sequence:
+        for elem in self.lattice.lattice.sequence:
 
             if elem.l != 0.0:
                 l = elem.l
@@ -77,7 +86,7 @@ class DrawElements():
                     e_max['mults'] = np.abs(elem.kn)
             
             elif elem.__class__ == Cavity:
-                elements['cavs'].append([2.0, pos-d_pos, -1.0-y_drift, l, elem])
+                elements['cavs'].append([2.0, pos-d_pos, -1.0-self.h_drift, l, elem])
             
             elif elem.__class__ == Undulator:
                 h = np.abs(elem.Kx)
@@ -90,67 +99,81 @@ class DrawElements():
                 elements['monits'].append([0.1, pos-d_pos, -0.05, l, elem])
             
             else:
-                elements['drifts'].append([2.0*y_drift, pos-d_pos, -y_drift, l, elem])
+                elements['drifts'].append([2.0*self.h_drift, pos-d_pos, -self.h_drift, l, elem])
 
             pos += elem.l
 
-        result = []
+        self.elements_pics = []
+        zero_h = []
+
         for elem_class in elements:
             if elem_class in ['drifts', 'monits']:
                 continue
             for elem in elements[elem_class]:
-                dy = y_drift if elem[2] == 0.0 else -y_drift
+                dy = self.h_drift if elem[2] == 0.0 else -self.h_drift
                 y = elem[2]/e_max[elem_class] - dy
                 h = elem[0]/e_max[elem_class]
+                if h == 0.0:
+                    zero_h.append(elem)
+                    continue
                 item = callbackElement(elem[1], y*self.scale, elem[3], h*self.scale)
                 item.element = elem[4]
-                item.mw = self.mw
-                item.add_tune_block = self.add_tune_block
-                item.color = colors[elem_class]
                 item.setAcceptHoverEvents(True)
+                item.color = colors[elem_class]
                 item.setPen(pg.mkPen(colors[elem_class], width=0.0))
                 item.setBrush(pg.mkBrush(colors[elem_class]))
-                result.append(item)
-
+                self.elements_pics.append(item)
+        
         # add white line
-        item = callbackElement(0.0, -y_drift*self.scale, lattice.lattice.totalLen, 2.0*y_drift*self.scale)
+        item = callbackElement(0.0, -self.h_drift*self.scale, self.lattice.lattice.totalLen, 2.0*self.h_drift*self.scale)
+        item.color = color_white
         item.setPen(pg.mkPen(color_white, width=0.0))
-        item.color = colors['drifts']
         item.setBrush(pg.mkBrush(color_white))
-        result.append(item)
+        self.elements_pics.append(item)
 
         # add drifts
         for elem in elements['drifts']:
             item = callbackElement(elem[1], elem[2]*self.scale, elem[3], elem[0]*self.scale)
             item.element = elem[4]
-            item.mw = self.mw
-            item.add_tune_block = self.add_tune_block
-            item.color = colors['drifts']
             item.setAcceptHoverEvents(True)
+            item.color = colors['drifts']
             item.setPen(pg.mkPen(colors['drifts'], width=0.0))
             item.setBrush(pg.mkBrush(colors['drifts']))
-            result.append(item)
+            self.elements_pics.append(item)
 
         # add monitors
         for elem in elements['monits']:
             item = callbackElement(elem[1], elem[2]*self.scale, elem[3], elem[0]*self.scale)
             item.element = elem[4]
-            item.mw = self.mw
-            item.add_tune_block = self.add_tune_block
-            item.color = colors['monits']
             item.setAcceptHoverEvents(True)
+            item.color = colors['monits']
             item.setPen(pg.mkPen(colors['monits'], width=0.0))
             item.setBrush(pg.mkBrush(colors['monits']))
-            result.append(item)
+            self.elements_pics.append(item)
 
-        return result
-
+        # add zero strength elements
+        for elem in zero_h:
+            item = callbackElement(elem[1], -self.h_drift*self.scale, elem[3], 2.0*self.h_drift*self.scale)
+            item.element = elem[4]
+            item.setAcceptHoverEvents(True)
+            item.color = colors['drifts']
+            item.setPen(pg.mkPen(colors['drifts'], width=0.0))
+            item.setBrush(pg.mkBrush(colors['drifts']))
+            self.elements_pics.append(item)
+        
 
 class callbackElement(QtGui.QGraphicsRectItem):
-    """Element call-back"""
-    
+    '''Element call-back'''
+
+    def add_tune_block(self):
+        pass
+
+
     def mouseDoubleClickEvent(self, event):
         
+        if not self.element.is_tuneable:
+            return
+
         brush = pg.mkBrush(self.color)
         pg.QtGui.QGraphicsRectItem.setBrush(self, brush)
         
@@ -165,18 +188,18 @@ class callbackElement(QtGui.QGraphicsRectItem):
         
         message = 'Element: ' + self.element.id
         
-        if self.element.__class__.__name__ in self.mw.tunable_elements:
+        if self.element.is_tuneable:
             message += '  (double click to select element)'
 
             color = QtGui.QColor(255, 250, 250)
             pg.QtGui.QGraphicsRectItem.setBrush(self, color)
         
-        self.mw.statusBar.showMessage(message)
+        self.statusBar.showMessage(message)
 
 
     def hoverLeaveEvent(self, event):
         
-        self.mw.statusBar.showMessage('')
+        self.statusBar.showMessage('')
 
         brush = pg.mkBrush(self.color)
         pg.QtGui.QGraphicsRectItem.setBrush(self, brush)

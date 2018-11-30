@@ -38,6 +38,6 @@ class TwissPlot():
         pen_aqua = pg.mkPen(color_aqua, width=2)
 
         self.curv1 = self.plot_disp_x.plot(pen=pen_aqua, name='Dx')
-        self.curv2 = self.plot_beta.plot(pen=pen_blue, name='betaX')
+        self.curv2 = self.plot_beta.plot(pen=pen_aqua, name='betaX')
         self.curv3 = self.plot_beta.plot(pen=pen_red, name='betaY')
         

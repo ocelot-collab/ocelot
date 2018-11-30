@@ -162,6 +162,7 @@ class LaserHeater(LaserModulator):
         LaserModulator.__init__(self, step)
         _logger.info("LaserHeater physics process is obsolete. Use 'LaserModulator' instead.")
 
+
 class Apperture(PhysProc):
     """
     Method to cut beam in longitudinal direction (for now)
@@ -332,7 +333,7 @@ class SpontanRadEffects(PhysProc):
         self.type = type
         self.energy_loss = True
         self.quant_diff = True
-        self.filling_koef = 1.0
+        self.filling_coeff = 1.0
 
     def apply(self, p_array, dz):
         _logger.debug("BeamTransform: apply")
@@ -341,11 +342,11 @@ class SpontanRadEffects(PhysProc):
 
         if self.quant_diff:
             sigma_Eq = self.sigma_gamma_quant(energy, dz)
-            p_array.p()[:] += sigma_Eq * np.random.randn(p_array.n)*self.filling_koef
+            p_array.p()[:] += sigma_Eq * np.random.randn(p_array.n)*self.filling_coeff
 
         if self.energy_loss:
             dE = self.energy_loss_und(energy, dz)
-            p_array.p()[:] -= dE/energy*self.filling_koef
+            p_array.p()[:] -= dE/energy*self.filling_coeff
 
     def energy_loss_und(self, energy, dz):
         k = 4. * np.pi * np.pi / 3. * ro_e / m_e_GeV

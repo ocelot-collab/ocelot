@@ -133,8 +133,6 @@ def test_track_without_csr_rotated(lattice, p_array, parameter=None, update_ref_
 
     lattice_copy.update_transfer_maps()
 
-
-
     tws_track_tilted, p_array_wo_tilted = track(lattice_copy, p_array_copy, navi)
 
     tilt = np.pi / 2
@@ -272,6 +270,42 @@ def test_track_undulator_with_csr(lattice, p_array, parameter=None, update_ref_v
     assert check_result(result1 + result2)
 
 
+def test_csr_arcline_rk_traj(lattice, p_array, parameter=None, update_ref_values=False):
+    """track function test without CSR, comparison between the rotated beam and track in vertical plane"""
+    lattice_copy = copy.deepcopy(lattice)
+    p_array_copy = copy.deepcopy(p_array)
+
+    navi = Navigator(lattice_copy)
+    navi.unit_step = 0.05
+
+    csr = CSR()
+    csr.energy = p_array_copy.E
+    navi.add_physics_proc(csr, lattice_copy.sequence[0], lattice_copy.sequence[-1])
+
+    tws_track_arc, p_array_arc = track(lattice_copy, p_array_copy, navi)
+
+    lattice_copy = copy.deepcopy(lattice)
+    p_array_copy = copy.deepcopy(p_array)
+
+    navi = Navigator(lattice_copy)
+    navi.unit_step = 0.05
+
+    csr = CSR()
+    csr.energy = p_array_copy.E
+    csr.rk_traj = True
+    navi.add_physics_proc(csr, lattice_copy.sequence[0], lattice_copy.sequence[-1])
+
+    tws_track_rk, p_array_rk = track(lattice_copy, p_array_copy, navi)
+
+
+    p1 = obj2dict(p_array_arc)
+
+    p2 = obj2dict(p_array_rk)
+
+    result2 = check_dict(p1, p2, TOL, assert_info=' p - ')
+    assert check_result(result2)
+
+
 def setup_module(module):
 
     f = open(pytest.TEST_RESULTS_FILE, 'a')
@@ -315,6 +349,7 @@ def test_update_ref_values(lattice, p_array, cmdopt):
     update_function_parameters['test_get_current'] = [0, 1]
 
     update_functions.append('test_track_undulator_with_csr')
+    update_functions.append("test_csr_arcline_rk_traj")
 
     parametr = update_function_parameters[cmdopt] if cmdopt in update_function_parameters.keys() else ['']
 

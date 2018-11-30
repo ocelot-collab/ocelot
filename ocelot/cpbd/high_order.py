@@ -1459,6 +1459,7 @@ def track_und_weave_openmp(u, l, N, kz, kx ,Kx, energy):
 def arcline( SREin, Delta_S, dS, R_vect ):
     """
     Martin Dohlus DESY, 2015
+
     :param SREin: trajectory. traj[0,:] - longitudinal coordinate (s),
                              traj[1,:],traj[2,:],traj[3,:] - rectangular coordinates, (x, y, z)\
                              traj[4,:],traj[5,:],traj[6,:] - tangential unit vectors, (x', y', z')
@@ -1467,31 +1468,26 @@ def arcline( SREin, Delta_S, dS, R_vect ):
     :param R_vect: radius
     :return:
     """
-    #%arcline( sre0,Delta_S,dS,R_vect )
 
     epsilon = 1e-8
 
-    sre0 = SREin[:,-1]
+    sre0 = SREin[:, -1]
     N = int(max(1, np.round(Delta_S/dS)))
-    #print N
     dS = float(Delta_S)/N
     SRE2 = np.zeros((7, N))
-    #print("SRE2", sre0[0], N, dS, Delta_S)
     SRE2[0,:] = sre0[0] + np.arange(1, N+1)*dS
 
     R_vect_valid = False
-    # if nargin==4 && isequal(size(R_vect),[3 1]):
 
     if True:
-        #print np.all(np.equal(R_vect, np.zeros((3,1))))
-        R_vect_valid = np.all(np.isfinite(R_vect)) and not np.all(np.equal(R_vect, np.zeros((3,1))))
+        R_vect_valid = np.all(np.isfinite(R_vect)) and not np.all(np.equal(R_vect, np.zeros((3, 1))))
         if R_vect_valid:
             R = norm(R_vect)
             n_vect = R_vect/R
-            e1=sre0[4:7]
+            e1 = sre0[4:7]
             if np.abs(np.dot(n_vect, e1)) > epsilon:
                 R_vect_valid = False
-                print('*** error in arcline: invalid R_vect --> using line')
+                print('*** error in arcline: invalid R_vect --> using Drift. Consider to use Ruge-Kutta integrator')
 
     if not R_vect_valid:
         SRE2[2-1, :] = sre0[2-1] + sre0[5-1]*np.arange(1, N+1)*dS
@@ -1516,8 +1512,6 @@ def arcline( SREin, Delta_S, dS, R_vect ):
         SRE2[6-1, :] = e1[1]*co + e2[1]*si
         SRE2[7-1, :] = e1[2]*co + e2[2]*si
 
-    #print np.shape(np.transpose([SREin])), np.shape(SRE2)
-    #print("arcline: ", SREin[0,-1], SRE2[0, 0], SRE2[0, -1], )
     SRE = np.append(SREin, SRE2, axis=1)
 
     return SRE

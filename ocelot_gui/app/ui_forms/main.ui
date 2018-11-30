@@ -17,7 +17,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Ocelot GUI</string>
   </property>
   <widget class="QWidget" name="central_widget"/>
   <widget class="QStatusBar" name="statusBar"/>
@@ -27,7 +27,7 @@
      <x>0</x>
      <y>0</y>
      <width>1200</width>
-     <height>20</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -50,8 +50,6 @@
      <string>Simulations</string>
     </property>
     <addaction name="action_calc_twiss"/>
-    <addaction name="action_calc_params"/>
-    <addaction name="action_calc_matching"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -91,19 +89,6 @@
    </property>
    <property name="toolTip">
     <string>Twiss Functions</string>
-   </property>
-  </action>
-  <action name="action_calc_matching">
-   <property name="text">
-    <string>Matching</string>
-   </property>
-  </action>
-  <action name="action_calc_params">
-   <property name="text">
-    <string>Main Parameters</string>
-   </property>
-   <property name="toolTip">
-    <string>Main Parameters Calculation</string>
    </property>
   </action>
  </widget>

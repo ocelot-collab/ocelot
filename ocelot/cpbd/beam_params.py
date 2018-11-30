@@ -7,7 +7,9 @@ from ocelot.cpbd.optics import trace_z, twiss
 from ocelot.cpbd.beam import *
 from ocelot.cpbd.elements import *
 from ocelot.rad.undulator_params import *
+from ocelot.common.logging import *
 
+_logger = logging.getLogger(__name__)
 
 def I2_ID(L, h0):
     return L/2.*h0*h0
@@ -38,7 +40,7 @@ def radiation_integrals(lattice, twiss_0, nsuperperiod = 1):
     n_points_element = 20
     
     tws_elem = twiss_0
-    (I1, I2, I3,I4, I5) = (0., 0., 0., 0., 0.)
+    (I1, I2, I3, I4, I5) = (0., 0., 0., 0., 0.)
     h = 0.
     for elem in lattice.sequence:
         if elem.__class__ in (SBend, RBend, Bend) and elem.l != 0:
@@ -47,7 +49,7 @@ def radiation_integrals(lattice, twiss_0, nsuperperiod = 1):
             Z = []
             h = elem.angle/elem.l
 
-            for z in np.linspace(0, elem.l,num = n_points_element, endpoint=True):
+            for z in np.linspace(0, elem.l, num=n_points_element, endpoint=True):
                 tws_z = elem.transfer_map(z)*tws_elem
                 Dx.append(tws_z.Dx)
                 Z.append(z)
@@ -66,50 +68,42 @@ def radiation_integrals(lattice, twiss_0, nsuperperiod = 1):
     #if abs(tws_elem.beta_x - twiss_0.beta_x)>1e-7 or abs(tws_elem.beta_y - twiss_0.beta_y)>1e-7:
     #    print( "WARNING! Results may be wrong! radiation_integral() -> beta functions are not matching. ")
         #return None
-    return (I1*nsuperperiod,I2*nsuperperiod,I3*nsuperperiod, I4*nsuperperiod, I5*nsuperperiod)
+    return (I1*nsuperperiod, I2*nsuperperiod, I3*nsuperperiod, I4*nsuperperiod, I5*nsuperperiod)
 
 class EbeamParams:
-    def __init__(self, lattice, beam,  coupling = 0.01, nsuperperiod = 1, tws0 = None):
-        if beam.E == 0:
-            exit("beam.E must be non zero!")
-        self.E = beam.E
-        if tws0 == None: 
-            tws = twiss(lattice, Twiss(beam))
-            self.tws0 = tws[0]
-        else:
-            #tws0.E = lattice.energy
-            self.tws0 = tws0 
-            tws = twiss(lattice, tws0)
+    def __init__(self, lattice, tws0, coupling=0.01, nsuperperiod=1):
+
+        self.tws0 = tws0
+        self.E = tws0.E
+
+        if self.E == 0.0:
+            _logger.info("tws0.E is 0. Some parameters will be NaN")
             
         self.lat = lattice
-        (I1,I2,I3, I4, I5) = radiation_integrals(lattice, self.tws0 , nsuperperiod)
+        (I1, I2, I3, I4, I5) = radiation_integrals(lattice, self.tws0, nsuperperiod)
         self.I1 = I1
         self.I2 = I2
         self.I3 = I3
         self.I4 = I4
         self.I5 = I5
-        #print "I2 = ", I2
-        #print "I3 = ", I3
-        #print "I4 = ", I4
-        #print "I5 = ", I5
-        self.Je = 2 + I4/I2
-        self.Jx = 1 - I4/I2
-        self.Jy = 1
+        self.Je = 2.0 + I4/I2
+        self.Jx = 1.0 - I4/I2
+        self.Jy = 1.0
         self.gamma = self.E/m_e_GeV
         self.sigma_e = self.gamma*np.sqrt(Cq * self.I3/(self.Je*I2))
         self.emittance = Cq*self.gamma*self.gamma * self.I5/(self.Jx* self.I2)
-        self.U0 = Cgamma*(beam.E*1000)**4*self.I2/(2*pi)
-        #print "*********  ", twiss_0.Energy
+        self.U0 = Cgamma*(self.E*1000.0)**4*self.I2/(2.0*np.pi)
+
         self.Tperiod = nsuperperiod*lattice.totalLen/speed_of_light
         self.Length = nsuperperiod*lattice.totalLen
-        self.tau0 = 2*self.E*1000*self.Tperiod/self.U0
+        self.tau0 = 2.0*self.E*1000.0*self.Tperiod/self.U0 if self.U0 != 0.0 else np.nan
         self.tau_e = self.tau0/self.Je
         self.tau_x = self.tau0/self.Jx
         self.tau_y = self.tau0/self.Jy
         self.alpha = self.I1/(speed_of_light*self.Tperiod)
         self.coupl = coupling
-        self.emitt_x = self.emittance/(1 + self.coupl)
-        self.emitt_y = self.emittance*self.coupl/(1 + self.coupl)
+        self.emitt_x = self.emittance/(1.0 + self.coupl)
+        self.emitt_y = self.emittance*self.coupl/(1.0 + self.coupl)
         self.sigma_x = np.sqrt((self.sigma_e*self.tws0.Dx)**2 + self.emitt_x*self.tws0.beta_x)
         self.sigma_y = np.sqrt((self.sigma_e*self.tws0.Dy)**2 + self.emitt_y*self.tws0.beta_y)
         self.sigma_xp = np.sqrt((self.sigma_e*self.tws0.Dxp)**2 + self.emitt_x*self.tws0.gamma_x)
@@ -126,29 +120,19 @@ class EbeamParams:
             if elem.__class__ == Undulator:
                 B = K2field(elem.Kx, lu = elem.lperiod)
                 h0 = B*speed_of_light/self.E*1e-9
-                #print h0, B
                 tws = trace_z(self.lat, self.tws0, [L, L + elem.l/2.])
-                i2 = I2_ID(elem.l,h0)
-                i3 = I3_ID(elem.l,h0)
-                i4 = I4_ID(elem.l,h0,elem.lperiod)
-                i5 = I5_ID(elem.l,h0,elem.lperiod,tws[1].beta_x,tws[0].Dx, tws[0].Dxp)
+                i2 = I2_ID(elem.l, h0)
+                i3 = I3_ID(elem.l, h0)
+                i4 = I4_ID(elem.l, h0, elem.lperiod)
+                i5 = I5_ID(elem.l, h0, elem.lperiod, tws[1].beta_x, tws[0].Dx, tws[0].Dxp)
                 self.I2_IDs += i2
                 self.I3_IDs += i3
                 self.I4_IDs += i4
                 self.I5_IDs += i5
-                #print elem.type, elem.id, "B0 =  ", B, " T"
-                #print elem.type, elem.id, "rho = ", 1./h0, " m"
-                #print elem.type, elem.id, "L =   ", elem.l, " m"
-                #print elem.type, elem.id, "beta_x cntr: ", tws[1].beta_x
-                #print elem.type, elem.id, "Dx0 / Dxp0:  ", tws[0].Dx, "/", tws[0].Dxp
-                #print elem.type, elem.id, "I2_ID = ", i2
-                #print elem.type, elem.id, "I3_ID = ", i3
-                #print elem.type, elem.id, "I4_ID = ", i4
-                #print elem.type, elem.id, "I5_ID = ", i5
             L += elem.l
-        self.emit_ID = self.emittance * (1.+self.I5_IDs/self.I5)/(1+(self.I2_IDs  - self.I4_IDs)/(self.I2 - self.I4))
+        self.emit_ID = self.emittance * (1.+self.I5_IDs/self.I5)/(1+(self.I2_IDs - self.I4_IDs)/(self.I2 - self.I4))
         self.sigma_e_ID = self.sigma_e * np.sqrt((1.+ self.I3_IDs / self.I3)/(1 + (2*self.I2_IDs + self.I4_IDs)/(2.*self.I2 + self.I4) ) )
-        self.U0_ID = Cgamma*(self.E*1000)**4.*self.I2_IDs/(2.*pi)
+        self.U0_ID = Cgamma*(self.E*1000)**4.*self.I2_IDs/(2.*np.pi)
         print("emittance with IDs = ", self.emit_ID*1e9, " nm*rad")
         print("sigma_e with IDs =   ", self.sigma_e_ID)
         print("U0 from IDs =        ", self.U0_ID,  "  MeV")
@@ -187,4 +171,3 @@ class EbeamParams:
         val += ( "\nsigma_y' =  " + str(self.sigma_yp*1e6) + " urad\n")
         return val
         
-    

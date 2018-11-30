@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'app/ui_forms/widgets/tune_panel_bottom.ui'
+# Form implementation generated from reading ui file 'app/ui_forms/widgets/tune_panel_ui.ui'
 #
 # Created by: PyQt5 UI code generator 5.10.1
 #
@@ -8,26 +8,26 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-class Ui_Form_TunePanel_Bottom(object):
-    def setupUi(self, Form_TunePanel_Bottom):
-        Form_TunePanel_Bottom.setObjectName("Form_TunePanel_Bottom")
-        Form_TunePanel_Bottom.resize(285, 65)
+class Ui_Form_TunePanel(object):
+    def setupUi(self, Form_TunePanel):
+        Form_TunePanel.setObjectName("Form_TunePanel")
+        Form_TunePanel.resize(285, 70)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(Form_TunePanel_Bottom.sizePolicy().hasHeightForWidth())
-        Form_TunePanel_Bottom.setSizePolicy(sizePolicy)
-        Form_TunePanel_Bottom.setMinimumSize(QtCore.QSize(285, 65))
-        Form_TunePanel_Bottom.setMaximumSize(QtCore.QSize(285, 65))
-        Form_TunePanel_Bottom.setAutoFillBackground(False)
-        Form_TunePanel_Bottom.setStyleSheet(".QWidget {background-color: rgb(238, 238, 236);}")
-        Form_TunePanel_Bottom.setLocale(QtCore.QLocale(QtCore.QLocale.English, QtCore.QLocale.UnitedStates))
-        self.layoutWidget = QtWidgets.QWidget(Form_TunePanel_Bottom)
-        self.layoutWidget.setGeometry(QtCore.QRect(0, 0, 284, 63))
+        sizePolicy.setHeightForWidth(Form_TunePanel.sizePolicy().hasHeightForWidth())
+        Form_TunePanel.setSizePolicy(sizePolicy)
+        Form_TunePanel.setMinimumSize(QtCore.QSize(285, 70))
+        Form_TunePanel.setMaximumSize(QtCore.QSize(285, 70))
+        Form_TunePanel.setAutoFillBackground(False)
+        Form_TunePanel.setStyleSheet(".QWidget {background-color: rgb(238, 238, 236); border-top: 2px solid rgb(255, 255, 255);}")
+        Form_TunePanel.setLocale(QtCore.QLocale(QtCore.QLocale.English, QtCore.QLocale.UnitedStates))
+        self.layoutWidget = QtWidgets.QWidget(Form_TunePanel)
+        self.layoutWidget.setGeometry(QtCore.QRect(0, 0, 288, 69))
         self.layoutWidget.setObjectName("layoutWidget")
         self.verticalLayout = QtWidgets.QVBoxLayout(self.layoutWidget)
         self.verticalLayout.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
-        self.verticalLayout.setContentsMargins(0, 6, 0, 0)
+        self.verticalLayout.setContentsMargins(0, 6, 5, 6)
         self.verticalLayout.setSpacing(6)
         self.verticalLayout.setObjectName("verticalLayout")
         self.horizontalLayout_6 = QtWidgets.QHBoxLayout()
@@ -42,8 +42,8 @@ class Ui_Form_TunePanel_Bottom(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.check.sizePolicy().hasHeightForWidth())
         self.check.setSizePolicy(sizePolicy)
-        self.check.setMinimumSize(QtCore.QSize(140, 23))
-        self.check.setMaximumSize(QtCore.QSize(140, 23))
+        self.check.setMinimumSize(QtCore.QSize(115, 23))
+        self.check.setMaximumSize(QtCore.QSize(115, 23))
         self.check.setAutoFillBackground(False)
         self.check.setStyleSheet("background-color: rgb(238, 238, 236)")
         self.check.setText("")
@@ -60,18 +60,28 @@ class Ui_Form_TunePanel_Bottom(object):
         self.label_f.setStyleSheet("background-color: rgb(238, 238, 236)")
         self.label_f.setObjectName("label_f")
         self.horizontalLayout_6.addWidget(self.label_f)
-        self.factor = QtWidgets.QLineEdit(self.layoutWidget)
+        self.factor = QtWidgets.QDoubleSpinBox(self.layoutWidget)
+        self.factor.setMinimumSize(QtCore.QSize(65, 0))
+        self.factor.setMaximumSize(QtCore.QSize(65, 16777215))
+        self.factor.setDecimals(3)
+        self.factor.setMinimum(-99999999.0)
+        self.factor.setMaximum(99999999.0)
+        self.factor.setSingleStep(0.01)
+        self.factor.setProperty("value", 0.01)
+        self.factor.setObjectName("factor")
+        self.horizontalLayout_6.addWidget(self.factor)
+        spacerItem1 = QtWidgets.QSpacerItem(15, 23, QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_6.addItem(spacerItem1)
+        self.xbutton = QtWidgets.QPushButton(self.layoutWidget)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.factor.sizePolicy().hasHeightForWidth())
-        self.factor.setSizePolicy(sizePolicy)
-        self.factor.setMinimumSize(QtCore.QSize(50, 23))
-        self.factor.setMaximumSize(QtCore.QSize(50, 23))
-        self.factor.setObjectName("factor")
-        self.horizontalLayout_6.addWidget(self.factor)
-        spacerItem1 = QtWidgets.QSpacerItem(40, 23, QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout_6.addItem(spacerItem1)
+        sizePolicy.setHeightForWidth(self.xbutton.sizePolicy().hasHeightForWidth())
+        self.xbutton.setSizePolicy(sizePolicy)
+        self.xbutton.setMinimumSize(QtCore.QSize(23, 23))
+        self.xbutton.setMaximumSize(QtCore.QSize(23, 23))
+        self.xbutton.setObjectName("xbutton")
+        self.horizontalLayout_6.addWidget(self.xbutton)
         self.verticalLayout.addLayout(self.horizontalLayout_6)
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
@@ -99,8 +109,8 @@ class Ui_Form_TunePanel_Bottom(object):
         self.curval.setMinimumSize(QtCore.QSize(88, 23))
         self.curval.setMaximumSize(QtCore.QSize(88, 23))
         self.curval.setDecimals(6)
-        self.curval.setMinimum(-1000000000000000.0)
-        self.curval.setMaximum(1e+16)
+        self.curval.setMinimum(-9999.0)
+        self.curval.setMaximum(9999.0)
         self.curval.setSingleStep(0.01)
         self.curval.setObjectName("curval")
         self.horizontalLayout.addWidget(self.curval)
@@ -131,24 +141,24 @@ class Ui_Form_TunePanel_Bottom(object):
         self.horizontalLayout.addWidget(self.oldval)
         self.verticalLayout.addLayout(self.horizontalLayout)
 
-        self.retranslateUi(Form_TunePanel_Bottom)
-        QtCore.QMetaObject.connectSlotsByName(Form_TunePanel_Bottom)
+        self.retranslateUi(Form_TunePanel)
+        QtCore.QMetaObject.connectSlotsByName(Form_TunePanel)
 
-    def retranslateUi(self, Form_TunePanel_Bottom):
+    def retranslateUi(self, Form_TunePanel):
         _translate = QtCore.QCoreApplication.translate
-        Form_TunePanel_Bottom.setWindowTitle(_translate("Form_TunePanel_Bottom", "Form"))
-        self.label_f.setText(_translate("Form_TunePanel_Bottom", "factor:"))
-        self.factor.setText(_translate("Form_TunePanel_Bottom", "0.01"))
-        self.label_c.setText(_translate("Form_TunePanel_Bottom", "value:"))
-        self.label_o.setText(_translate("Form_TunePanel_Bottom", "old value:"))
+        Form_TunePanel.setWindowTitle(_translate("Form_TunePanel", "Form"))
+        self.label_f.setText(_translate("Form_TunePanel", "factor:"))
+        self.xbutton.setText(_translate("Form_TunePanel", "x"))
+        self.label_c.setText(_translate("Form_TunePanel", "value:"))
+        self.label_o.setText(_translate("Form_TunePanel", "old value:"))
 
 
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
-    Form_TunePanel_Bottom = QtWidgets.QWidget()
-    ui = Ui_Form_TunePanel_Bottom()
-    ui.setupUi(Form_TunePanel_Bottom)
-    Form_TunePanel_Bottom.show()
+    Form_TunePanel = QtWidgets.QWidget()
+    ui = Ui_Form_TunePanel()
+    ui.setupUi(Form_TunePanel)
+    Form_TunePanel.show()
     sys.exit(app.exec_())
 

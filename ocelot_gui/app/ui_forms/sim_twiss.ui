@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Form</class>
- <widget class="QWidget" name="Form">
+ <class>Form_Twiss</class>
+ <widget class="QWidget" name="Form_Twiss">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -19,10 +19,19 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
+  <property name="locale">
+   <locale language="English" country="UnitedStates"/>
+  </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="1" column="1">
     <layout class="QVBoxLayout" name="verticalLayout_5">
      <property name="spacing">
+      <number>6</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
       <number>0</number>
      </property>
      <item>
@@ -73,7 +82,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="edit_delta">
+             <widget class="QDoubleSpinBox" name="edit_delta">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -82,15 +91,24 @@
               </property>
               <property name="maximumSize">
                <size>
-                <width>50</width>
+                <width>100</width>
                 <height>16777215</height>
                </size>
               </property>
-              <property name="text">
-               <string>0.0</string>
+              <property name="decimals">
+               <number>3</number>
               </property>
-              <property name="alignment">
-               <set>Qt::AlignCenter</set>
+              <property name="minimum">
+               <double>-9999999999.000000000000000</double>
+              </property>
+              <property name="maximum">
+               <double>9999999999.989999771118164</double>
+              </property>
+              <property name="singleStep">
+               <double>0.100000000000000</double>
+              </property>
+              <property name="value">
+               <double>1.000000000000000</double>
               </property>
              </widget>
             </item>
@@ -147,7 +165,7 @@
                <x>0</x>
                <y>0</y>
                <width>284</width>
-               <height>601</height>
+               <height>534</height>
               </rect>
              </property>
              <property name="autoFillBackground">
@@ -201,27 +219,47 @@
            </widget>
           </item>
           <item>
-           <widget class="QLineEdit" name="edit_tws_step">
+           <widget class="QDoubleSpinBox" name="edit_tws_step">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
-            <property name="text">
-             <string>0.0</string>
+            <property name="maximumSize">
+             <size>
+              <width>100</width>
+              <height>16777215</height>
+             </size>
             </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
+            <property name="decimals">
+             <number>6</number>
+            </property>
+            <property name="maximum">
+             <double>9999999999.000000000000000</double>
+            </property>
+            <property name="singleStep">
+             <double>0.100000000000000</double>
             </property>
            </widget>
           </item>
          </layout>
         </item>
        </layout>
-       <zorder>horizontalLayoutWidget</zorder>
-       <zorder>verticalLayoutWidget_6</zorder>
-       <zorder>horizontalLayoutWidget_3</zorder>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="calc_params">
+       <property name="text">
+        <string>Calculate Main Parameters</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="calc_matching">
+       <property name="text">
+        <string>Matching</string>
+       </property>
       </widget>
      </item>
      <item>
@@ -230,7 +268,7 @@
         <number>6</number>
        </property>
        <property name="topMargin">
-        <number>6</number>
+        <number>0</number>
        </property>
        <property name="rightMargin">
         <number>0</number>
@@ -300,6 +338,7 @@
          <height>700</height>
         </size>
        </property>
+       <zorder></zorder>
       </widget>
      </item>
     </layout>

@@ -823,7 +823,7 @@ class CSR(PhysProc):
                 By = self.energy * 1e9 * beta * hx /  speed_of_light
                 Bx = -self.energy * 1e9 * beta * hy / speed_of_light
                 sre0 = self.csr_traj[:, -1]
-                N = int(max(1, np.round(delta_z / step)))
+                N = int(max(1, np.round(delta_s / step)))
                 SRE2 = np.zeros((7, N))
 
                 mag_field = lambda x, y, z: (Bx, By, 0)

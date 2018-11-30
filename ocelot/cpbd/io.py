@@ -165,7 +165,7 @@ def elements2input(lattice):
     bends = find_obj_and_create_name(lattice, types=[Bend, RBend, SBend])
     unkns = find_obj_and_create_name(lattice, types=[UnknownElement])
     tcavs = find_obj_and_create_name(lattice, types=[TDCavity])
-
+    xyquads = find_obj_and_create_name(lattice, types=[XYQuadrupole])
     # prepare txt elements list
     lines = []
 
@@ -181,6 +181,15 @@ def elements2input(lattice):
     
     for quad in quads:
         line = quad.name.lower() + " = Quadrupole(l=" + str(quad.l) + ", k1=" + str(quad.k1) + ", tilt=" + str(
+            quad.tilt) + ", eid='" + quad.id + "')\n"
+        lines.append(line)
+
+    if len(quads) != 0:
+        lines.append("\n# quadrupoles with offsets \n")
+
+    for quad in xyquads:
+        line = quad.name.lower() + " = XYQuadrupole(l=" + str(quad.l) + ", k1=" + str(quad.k1) + \
+               ", x_offs=" + str(quad.x_offs) + ", y_offs=" + str(quad.y_offs) + ", tilt=" + str(
             quad.tilt) + ", eid='" + quad.id + "')\n"
         lines.append(line)
 

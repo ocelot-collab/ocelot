@@ -3,7 +3,6 @@
 import os
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QDesktopWidget, QMainWindow, QAction
-
 from app.ui_forms.main import *
 
 from app.menu_file import *
@@ -16,22 +15,23 @@ class GUIWindow(QMainWindow, Ui_MainWindow):
 
     def __init__(self):
 
-        super().__init__()
+        super(GUIWindow, self).__init__()
 
         self.setupUi(self)
         self.initUI()
         #self.loadStyleSheet()
 
-        self.tunable_elements = {'Bend':['angle', 'k1'],'SBend':['angle', 'k1'], 'RBend':['angle', 'k1'], 'Quadrupole':['k1'], 'Drift':['l']}
-        self.matchable_elements = {'Bend':['k1'],'SBend':['k1'], 'RBend':['k1'], 'Quadrupole':['k1'], 'Drift':['l']}
         self.lattice = GUILattice()
+
+
+    def __del__(self):
+        pass
 
 
     def initUI(self):
 
         # Init main window
         self.statusBar.showMessage('')
-        self.setWindowTitle('Ocelot GUI')
         self.menuBar.setNativeMenuBar(False)
 
         # Init menu actions
@@ -43,6 +43,7 @@ class GUIWindow(QMainWindow, Ui_MainWindow):
 
         # Centering main window
         self.centering_window()
+        self.init_central_widget()
 
 
     def centering_window(self):
@@ -66,16 +67,21 @@ class GUIWindow(QMainWindow, Ui_MainWindow):
 
         # Simulation menu
         self.action_calc_twiss.triggered.connect(self.menu_sim.calc_twiss)
-        self.action_calc_params.triggered.connect(self.menu_sim.calc_params)
-        self.action_calc_matching.triggered.connect(self.menu_sim.matching)
 
 
     def init_central_widget(self):
         """Central widget - grid layout"""
 
-        self.central_widget = QtWidgets.QWidget()
-        self.setCentralWidget(self.central_widget)
-        self.layout = QtWidgets.QGridLayout(self.central_widget)
+        self.layout = QtWidgets.QGridLayout()
+        self.central_widget.setLayout(self.layout)
+
+
+    def clean_central_widget(self):
+
+        while self.layout.count():
+            child = self.layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
 
 
     def loadStyleSheet(self, filename="colinDark.css"):
@@ -104,4 +110,3 @@ class GUIWindow(QMainWindow, Ui_MainWindow):
         window.setWindowTitle(title)
         window.exec()
         
-

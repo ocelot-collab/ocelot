@@ -917,20 +917,20 @@ def rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=0.):
         therefore z' can be arbitrary defined in the returning array. z' = dE/(ps*c)
 
     :param y0: array n*6; initial coordinates of n particles
-                [x0, x0'=dx/dz, y0, y0=dy/dz, 0, 0,
-                x1, x1', y1, y1', 0, 0, ...
-                xn, xn', yn, yn', 0, 0]
+                [x0, x0'=dx/dz, y0, y0=dy/dz, 0, dE0/pc,
+                x1, x1', y1, y1', 0, dE1/pc, ...
+                xn, xn', yn, yn', 0, dEn/pc]
     :param s_stop: longitudinal coordinate of stop
     :param N: number of steps
     :param energy: energy of particle in [GeV]
     :param mag_field: function. Bx, By, Bz = mag_field(X, Y, Z)
     :param s_start: starting longitudinal coordinate
     :return: array with length N*9- coordinates and magnetic fields on the trajectory
-            [x, x', y, y', z, z', Bx, By, Bz, ...
+            [x, x', y, y', z, dE/pc, Bx, By, Bz, ...
             xn, xn', yn, yn', zn, zn', Bxn, Byn, Bzn]
     """
 
-    #pc_ref = np.sqrt(energy**2 - m_e_GeV**2)
+    # pc_ref = np.sqrt(energy**2 - m_e_GeV**2)
     z = np.linspace(s_start, s_stop, num=N)
     h = z[1] - z[0]
     N = len(z)
@@ -1487,7 +1487,7 @@ def arcline( SREin, Delta_S, dS, R_vect ):
             e1 = sre0[4:7]
             if np.abs(np.dot(n_vect, e1)) > epsilon:
                 R_vect_valid = False
-                print('*** error in arcline: invalid R_vect --> using Drift. Consider to use Ruge-Kutta integrator')
+                print('*** error in arcline: invalid R_vect --> using Drift. Consider to use Runge-Kutta integrator')
 
     if not R_vect_valid:
         SRE2[2-1, :] = sre0[2-1] + sre0[5-1]*np.arange(1, N+1)*dS

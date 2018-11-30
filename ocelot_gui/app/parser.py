@@ -7,8 +7,7 @@ from ocelot import *
 from ocelot.cpbd.io import *
 
 
-flatten = lambda *n: (e for a in n
-                      for e in (flatten(*a) if isinstance(a, (tuple, list)) else (a,)))
+flatten = lambda *n: (e for a in n for e in (flatten(*a) if isinstance(a, (tuple, list)) else (a,)))
 
 
 class Parser():

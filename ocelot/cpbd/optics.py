@@ -62,8 +62,13 @@ class SecondOrderMult:
                 X[i, n] = r_tmp + tmp
 
     def numexpr_apply(self, X, R, T):
-        Xr = np.dot(R, X)
         x, px, y, py, tau, dp = np.copy((X[0], X[1], X[2], X[3], X[4], X[5]))
+        R00, R01, R02, R03, R04, R05 = R[0, 0], R[0, 1], R[0, 2], R[0, 3], R[0, 4], R[0, 5]
+        R10, R11, R12, R13, R14, R15 = R[1, 0], R[1, 1], R[1, 2], R[1, 3], R[1, 4], R[1, 5]
+        R20, R21, R22, R23, R24, R25 = R[2, 0], R[2, 1], R[2, 2], R[2, 3], R[2, 4], R[2, 5]
+        R30, R31, R32, R33, R34, R35 = R[3, 0], R[3, 1], R[3, 2], R[3, 3], R[3, 4], R[3, 5]
+        R40, R41, R42, R43, R44, R45 = R[4, 0], R[4, 1], R[4, 2], R[4, 3], R[4, 4], R[4, 5]
+        R50, R51, R52, R53, R54, R55 = R[5, 0], R[5, 1], R[5, 2], R[5, 3], R[5, 4], R[5, 5]
 
         T000, T001, T005, T011, T015, T055, T022, T023, T033 = T[0, 0, 0], T[0, 0, 1], T[0, 0, 5], T[0, 1, 1], T[0, 1, 5], T[0, 5, 5], T[0, 2, 2],T[0, 2, 3], T[0, 3, 3]
         T100, T101, T105, T111, T115, T155, T122, T123, T133 = T[1, 0, 0], T[1, 0, 1], T[1, 0, 5], T[1, 1, 1], T[1, 1, 5], T[1, 5, 5], T[1, 2, 2],T[1, 2, 3], T[1, 3, 3]
@@ -71,13 +76,11 @@ class SecondOrderMult:
         T302, T303, T312, T313, T325, T335 = T[3, 0, 2],  T[3, 0, 3],  T[3, 1, 2],  T[3, 1, 3], T[3, 2, 5], T[3, 3, 5]
         T400, T401, T405, T411, T415, T455, T422, T423, T433 = T[4, 0, 0], T[4, 0, 1], T[4, 0, 5], T[4, 1, 1], T[4, 1, 5], T[4, 5, 5], T[4, 2, 2], T[4, 2, 3], T[4, 3, 3]
 
-        Xr0, Xr1, Xr2, Xr3, Xr4, Xr5 = Xr[0], Xr[1], Xr[2], Xr[3], Xr[4], Xr[5]
-
-        X[0] = ne.evaluate('Xr0 + T000 * x*x + T001 * x*px + T005 * x*dp + T011 * px*px + T015 * px*dp + T055 * dp*dp + T022 * y*y + T023 * y*py + T033 * py*py')
-        X[1] = ne.evaluate('Xr1 + T100 * x*x + T101 * x*px + T105 * x*dp + T111 * px*px + T115 * px*dp + T155 * dp*dp + T122 * y*y + T123 * y*py + T133 * py*py')
-        X[2] = ne.evaluate('Xr2 + T202 * x*y + T203 * x*py + T212 * y*px + T213 * px*py + T225 * y*dp + T235 * py*dp')
-        X[3] = ne.evaluate('Xr3 + T302 * x*y + T303 * x*py + T312 * y*px + T313 * px*py + T325 * y*dp + T335 * py*dp')
-        X[4] = ne.evaluate('Xr4 + T400 * x*x + T401 * x*px + T405 * x*dp + T411 * px*px + T415 * px*dp + T455 * dp*dp + T422 * y*y + T423 * y*py + T433 * py*py')  # + U5666*dp2*dp    # third order
+        X[0] = ne.evaluate('R00 * x + R01 * px + R02 * y + R03 * py + R04 * tau + R05 * dp + T000 * x*x + T001 * x*px + T005 * x*dp + T011 * px*px + T015 * px*dp + T055 * dp*dp + T022 * y*y + T023 * y*py + T033 * py*py')
+        X[1] = ne.evaluate('R10 * x + R11 * px + R12 * y + R13 * py + R14 * tau + R15 * dp + T100 * x*x + T101 * x*px + T105 * x*dp + T111 * px*px + T115 * px*dp + T155 * dp*dp + T122 * y*y + T123 * y*py + T133 * py*py')
+        X[2] = ne.evaluate('R20 * x + R21 * px + R22 * y + R23 * py + R24 * tau + R25 * dp + T202 * x*y + T203 * x*py + T212 * y*px + T213 * px*py + T225 * y*dp + T235 * py*dp')
+        X[3] = ne.evaluate('R30 * x + R31 * px + R32 * y + R33 * py + R34 * tau + R35 * dp + T302 * x*y + T303 * x*py + T312 * y*px + T313 * px*py + T325 * y*dp + T335 * py*dp')
+        X[4] = ne.evaluate('R40 * x + R41 * px + R42 * y + R43 * py + R44 * tau + R45 * dp + T400 * x*x + T401 * x*px + T405 * x*dp + T411 * px*px + T415 * px*dp + T455 * dp*dp + T422 * y*y + T423 * y*py + T433 * py*py')  # + U5666*dp2*dp    # third order
 
 
     def numpy_apply(self, X, R, T):

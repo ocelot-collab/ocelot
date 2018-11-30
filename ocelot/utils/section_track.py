@@ -277,7 +277,7 @@ class SectionTrack:
 
         # init physics processes
         for physics_process in self.physics_processes_array:
-            if physics_process[0].__class__ == SpaceCharge and self.sc_flag:
+            if (physics_process[0].__class__ == SpaceCharge or physics_process[0].__class__ == LSC) and self.sc_flag:
                 self.navigator.add_physics_proc(physics_process[0], physics_process[1], physics_process[2])
 
             if physics_process[0].__class__ == CSR and self.csr_flag:
@@ -292,7 +292,7 @@ class SectionTrack:
             if physics_process[0].__class__ == SmoothBeam and self.smooth_flag:
                 self.navigator.add_physics_proc(physics_process[0], physics_process[1], physics_process[2])
 
-            if physics_process[0].__class__ not in [SpaceCharge, CSR, Wake, WakeKick, BeamTransform, SmoothBeam]:
+            if physics_process[0].__class__ not in [SpaceCharge, CSR, Wake, WakeKick, BeamTransform, SmoothBeam, LSC]:
                 #print(physics_process, " ADDED")
                 self.navigator.add_physics_proc(physics_process[0], physics_process[1], physics_process[2])
 

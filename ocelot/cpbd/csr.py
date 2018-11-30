@@ -563,7 +563,7 @@ class CSR(PhysProc):
 
         # trajectory
         self.traj_step = 0.0002     # [m] step of the trajectory
-        self.energy = None          # [GeV], if None, beta = 1
+        self.energy = None          # [GeV], if None, beta = 1 and calculation of the trajectory with RK is not possible
 
         # CSR kick
         self.apply_step = 0.0005    # [m] step of the calculation CSR kick: csr_kick += csr(apply_step)
@@ -583,6 +583,7 @@ class CSR(PhysProc):
         self.sub_bin = SubBinning(x_qbin=self.x_qbin, n_bin=self.n_bin, m_bin=self.m_bin)
         self.bin_smoth = Smoothing()
         self.k0_fin_anf = K0_fin_anf()
+        self.rk_traj = False
         #self.napply = 0
         #if self.pict_debug:
         #    self.napply = 0
@@ -680,7 +681,6 @@ class CSR(PhysProc):
             Nvalid = Nvalid[0]
             w = w_range[Nvalid:]
             s = (winf+w)/2. + a2/2./(winf-w)
-            #K =(1-ev1'*evo)*((winf-s)./(w-s)-1)./(w-s)+aup'*evo./(w-s).^2;
             KS = (1. - np.dot(ev1, evo))*np.log(0.5*a2/(w-winf)/(w-s)) + np.dot(uup, evo)*(np.arctan((s-winf)/a) + np.pi/2.)
             KS = np.append(np.zeros(Nvalid), KS)
         else:
@@ -753,13 +753,12 @@ class CSR(PhysProc):
         beta = 1. if self.energy == None else np.sqrt(1. - 1./(self.energy/m_e_GeV)**2)
         igamma = np.sqrt(1 - beta**2)
         self.csr_traj = np.transpose([[0, p.x, p.y, p.s, p.px, p.py, beta]])
-        #self.csr_traj = np.transpose([[0, p.s, p.x, p.y, beta, p.px, p.py]])
         for elem in lat.sequence[self.indx0:self.indx1+1]:
             if elem.l == 0:
                 continue
             delta_s = elem.l
             step = self.traj_step
-            if elem.__class__ in [Bend, RBend, SBend]:
+            if elem.__class__ in [Bend, RBend, SBend] and not self.rk_traj:
                 if elem.angle != 0:
                     R = -elem.l/elem.angle
                 else:
@@ -803,13 +802,55 @@ class CSR(PhysProc):
                 SRE2[6, :] = betaz# traj[5+9::9].T
 
                 self.csr_traj = np.append(self.csr_traj, SRE2, axis=1)
+
+            elif elem.__class__ in [Bend, RBend, SBend, XYQuadrupole] and self.energy is not None and self.rk_traj:
+                """
+                rk_track_in_field accepts initial conditions (initial coordinates) in the ParticleArray.rparticles format
+                from another hand the csr module use trajectory in another format (see csr.py)
+                """
+                if elem.l < 1e-10:
+                    continue
+                L = elem.l
+
+                if elem.__class__ is XYQuadrupole:
+
+                    hx = elem.k1 * elem.x_offs
+                    hy = -elem.k1 * elem.y_offs
+
+                else:
+                    hx = elem.angle / elem.l * np.cos(elem.tilt)
+                    hy = elem.angle / elem.l * np.sin(elem.tilt)
+
+                By = self.energy * 1e9 * beta * hx /  speed_of_light
+                Bx = -self.energy * 1e9 * beta * hy / speed_of_light
+                sre0 = self.csr_traj[:, -1]
+                N = int(max(1, np.round(delta_s / step)))
+                SRE2 = np.zeros((7, N))
+
+                mag_field = lambda x, y, z: (Bx, By, 0)
+                rparticle0 = np.array([[self.csr_traj[1,-1]], [self.csr_traj[4,-1]], [self.csr_traj[2,-1]], [self.csr_traj[5,-1]], [0], [0]])
+                traj = rk_track_in_field(rparticle0, s_stop=L, N=N+1, energy=self.energy, mag_field=mag_field, s_start=0)
+                betaz = np.sqrt(beta*beta - traj[1+9::9].T*traj[1+9::9].T - traj[3+9::9].T*traj[3+9::9].T)
+
+                dz = traj[4+9::9].T - traj[4:-9:9].T
+
+                SRE2[0, :] = sre0[0] + np.cumsum(dz*np.sqrt(1+(traj[1+9::9].T)**2 + (traj[3+9::9].T)**2))
+                SRE2[1, :] = traj[0+9::9].T
+                SRE2[2, :] = traj[2+9::9].T
+                SRE2[3, :] = traj[4+9::9].T
+                SRE2[4, :] = traj[1+9::9].T
+                SRE2[5, :] = traj[3+9::9].T
+                SRE2[6, :] = betaz# traj[5+9::9].T
+
+                self.csr_traj = np.append(self.csr_traj, SRE2, axis=1)
+
             else:
                 #B = 0.
                 R_vect = [0, 0, 0.]
                 self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect )
         # import matplotlib.pyplot as plt
         # plt.figure(10)
-        # plt.plot(self.csr_traj[0,:], self.csr_traj[1,:], "r")
+        # plt.plot(self.csr_traj[0, :], self.csr_traj[1, :], "r")
         # plt.plot(self.csr_traj[0, :], self.csr_traj[2, :], "b")
         # plt.legend(["X", "Y"])
         # plt.show()
@@ -851,12 +892,13 @@ class CSR(PhysProc):
 
 
         lam_K1 = csr_convolution(lam_ds, K1[::-1]) / st * delta_s
-        tck = interpolate.splrep(np.arange(len(lam_K1)), lam_K1, k=1)
-        dE = interpolate.splev(z*(1./st)+(0.-sa/st), tck, der=0)
+
+        z_sort = z[ind_z_sort]
+        dE = np.interp(z_sort*(1./st)+(0.-sa/st), np.arange(len(lam_K1)), lam_K1)
 
         pc_ref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV
         delta_p = dE * 1e-9 / pc_ref
-        p_array.rparticles[5] += delta_p
+        p_array.rparticles[5][ind_z_sort] += delta_p
 
         #self.napply += 1
         #if self.pict_debug and self.napply%2 == 0:

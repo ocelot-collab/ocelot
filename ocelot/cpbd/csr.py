@@ -810,13 +810,12 @@ class CSR(PhysProc):
                 """
                 if elem.l < 1e-10:
                     continue
-                L = elem.l
+                delta_z = delta_s if elem.angle != 0 else delta_s * np.sin(elem.angle) / elem.angle
 
                 if elem.__class__ is XYQuadrupole:
 
                     hx = elem.k1 * elem.x_offs
                     hy = -elem.k1 * elem.y_offs
-
                 else:
                     hx = elem.angle / elem.l * np.cos(elem.tilt)
                     hy = elem.angle / elem.l * np.sin(elem.tilt)
@@ -828,8 +827,9 @@ class CSR(PhysProc):
                 SRE2 = np.zeros((7, N))
 
                 mag_field = lambda x, y, z: (Bx, By, 0)
-                rparticle0 = np.array([[self.csr_traj[1,-1]], [self.csr_traj[4,-1]], [self.csr_traj[2,-1]], [self.csr_traj[5,-1]], [0], [0]])
-                traj = rk_track_in_field(rparticle0, s_stop=L, N=N+1, energy=self.energy, mag_field=mag_field, s_start=0)
+                rparticle0 = np.array([[self.csr_traj[1, -1]], [self.csr_traj[4, -1]],
+                                       [self.csr_traj[2, -1]], [self.csr_traj[5, -1]], [0], [0]])
+                traj = rk_track_in_field(rparticle0, s_stop=delta_z, N=N+1, energy=self.energy, mag_field=mag_field, s_start=0)
                 betaz = np.sqrt(beta*beta - traj[1+9::9].T*traj[1+9::9].T - traj[3+9::9].T*traj[3+9::9].T)
 
                 dz = traj[4+9::9].T - traj[4:-9:9].T
@@ -837,7 +837,7 @@ class CSR(PhysProc):
                 SRE2[0, :] = sre0[0] + np.cumsum(dz*np.sqrt(1+(traj[1+9::9].T)**2 + (traj[3+9::9].T)**2))
                 SRE2[1, :] = traj[0+9::9].T
                 SRE2[2, :] = traj[2+9::9].T
-                SRE2[3, :] = traj[4+9::9].T
+                SRE2[3, :] = sre0[3] + traj[4+9::9].T
                 SRE2[4, :] = traj[1+9::9].T
                 SRE2[5, :] = traj[3+9::9].T
                 SRE2[6, :] = betaz# traj[5+9::9].T
@@ -850,8 +850,8 @@ class CSR(PhysProc):
                 self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect )
         # import matplotlib.pyplot as plt
         # plt.figure(10)
-        # plt.plot(self.csr_traj[0, :], self.csr_traj[1, :], "r")
-        # plt.plot(self.csr_traj[0, :], self.csr_traj[2, :], "b")
+        # plt.plot(self.csr_traj[3, :], self.csr_traj[1, :], "r")
+        # plt.plot(self.csr_traj[3, :], self.csr_traj[2, :], "b")
         # plt.legend(["X", "Y"])
         # plt.show()
         return self.csr_traj

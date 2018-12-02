@@ -5,7 +5,7 @@ module contains lat2input function which creates python input string
 author sergey.tomin
 """
 from ocelot.cpbd.elements import *
-import os
+import os, sys
 from ocelot.adaptors.astra2ocelot import astraBeam2particleArray, particleArray2astraBeam
 from ocelot.cpbd.beam import ParticleArray, Twiss, Beam
 
@@ -112,7 +112,7 @@ def create_var_name(objects):
             name = name.replace('.', '_')
             name = name.replace(':', '_')
             ids[j] = name
-        obj.name = ids[j]
+        obj.name = ids[j].lower()
 
     return objects
 
@@ -148,171 +148,151 @@ def lat2input(lattice, tws0=None):
     return lines
 
 
-def elements2input(lattice):
+def get_elements(lattice):
 
-    # find objects
-    drifts = find_obj_and_create_name(lattice, types=[Drift])
-    quads = find_obj_and_create_name(lattice, types=[Quadrupole])
-    sexts = find_obj_and_create_name(lattice, types=[Sextupole])
-    octs = find_obj_and_create_name(lattice, types=[Octupole])
-    cavs = find_obj_and_create_name(lattice, types=[Cavity])
-    sols = find_obj_and_create_name(lattice, types=[Solenoid])
-    matrices = find_obj_and_create_name(lattice, types=[Matrix])
-    marks = find_obj_and_create_name(lattice, types=[Marker])
-    mons = find_obj_and_create_name(lattice, types=[Monitor])
-    unds = find_obj_and_create_name(lattice, types=[Undulator])
-    cors = find_obj_and_create_name(lattice, types=[Hcor, Vcor])
-    bends = find_obj_and_create_name(lattice, types=[Bend, RBend, SBend])
-    unkns = find_obj_and_create_name(lattice, types=[UnknownElement])
-    tcavs = find_obj_and_create_name(lattice, types=[TDCavity])
-    xyquads = find_obj_and_create_name(lattice, types=[XYQuadrupole])
-    # prepare txt elements list
+    elements = []
+        
+    for element in lattice.sequence:
+        element_type = element.__class__.__name__
+        
+        if element_type == 'Edge':
+            continue
+
+        if element not in elements:
+            elements.append(element)
+
+    elements = create_var_name(elements)
+
+    return elements
+
+
+def element_def_string(element):
+
+    params = []
+
+    element_type = element.__class__.__name__
+    element_ref = getattr(sys.modules[__name__], element_type)()
+    params_order = element_ref.__init__.__code__.co_varnames
+
+    for param in params_order:
+        if param == 'self':
+            continue
+        
+        # fix for parameter 'eid'
+        if param == 'eid':
+            params.append('eid=\'' + element.id + '\'')
+            continue
+
+        if isinstance(element.__dict__[param], np.ndarray):
+
+            if not np.array_equal(element.__dict__[param], element_ref.__dict__[param]):
+                params.append(param + '=' + np.array2string(element.__dict__[param], separator=', '))
+            continue
+
+        if isinstance(element.__dict__[param], (int, float)):
+
+            # fix for parameters 'e1' and 'e2' in RBend element
+            if element_type == 'RBend' and param in ('e1', 'e2'):
+                val = element.__dict__[param] - element.angle/2.0
+                if val != 0.0:
+                    params.append(param + '=' + str(val))
+                continue
+
+            if element.__dict__[param] != element_ref.__dict__[param]:
+                params.append(param + '=' + str(element.__dict__[param]))
+            continue
+
+        if isinstance(element.__dict__[param], str):
+
+            if element.__dict__[param] != element_ref.__dict__[param]:
+                params.append(param + '=\'' + element.__dict__[param] + '\'')
+            continue
+
+    # join all paramaters to element defenition
+    string = element.name + ' = ' + element_type + '(' + ', '.join(params) + ')\n'
+
+    return string
+
+
+def print_elements(elements_dict):
+    
+    elements_order = []
+    elements_order.append('Drift')
+    elements_order.append('Quadrupole')
+    elements_order.append('SBend')
+    elements_order.append('RBend')
+    elements_order.append('Bend')
+    elements_order.append('Sextupole')
+    elements_order.append('Octupole')
+    elements_order.append('Multipole')
+    elements_order.append('Hcor')
+    elements_order.append('Vcor')
+    elements_order.append('Undulator')
+    elements_order.append('Cavity')
+    elements_order.append('TDCavity')
+    elements_order.append('Solenoid')
+    elements_order.append('Monitor')
+    elements_order.append('Marker')
+    elements_order.append('Matrix')
+
     lines = []
+    ordered_dict = {}
+    unordered_dict = {}
 
-    if len(drifts) != 0:
-        lines.append("\n# drifts \n")
-    
-    for drift in drifts:
-        line = drift.name.lower() + " = Drift(l=" + str(drift.l) + ", eid='" + drift.id + "')\n"
-        lines.append(line)
-
-    if len(quads) != 0:
-        lines.append("\n# quadrupoles \n")
-    
-    for quad in quads:
-        line = quad.name.lower() + " = Quadrupole(l=" + str(quad.l) + ", k1=" + str(quad.k1) + ", tilt=" + str(
-            quad.tilt) + ", eid='" + quad.id + "')\n"
-        lines.append(line)
-
-    if len(quads) != 0:
-        lines.append("\n# quadrupoles with offsets \n")
-
-    for quad in xyquads:
-        line = quad.name.lower() + " = XYQuadrupole(l=" + str(quad.l) + ", k1=" + str(quad.k1) + \
-               ", x_offs=" + str(quad.x_offs) + ", y_offs=" + str(quad.y_offs) + ", tilt=" + str(
-            quad.tilt) + ", eid='" + quad.id + "')\n"
-        lines.append(line)
-
-    if len(bends) != 0:
-        lines.append("\n# bending magnets \n")
-    
-    for bend in bends:
-        if bend.__class__ == RBend:
-            type = " = RBend(l="
-        elif bend.__class__ == SBend:
-            type = " = SBend(l="
+    # sort on ordered and unordered elements dicts
+    for type in elements_dict:
+        if type in elements_order:
+            ordered_dict[type] = elements_dict[type]
         else:
-            type = " = Bend(l="
-        if bend.k1 == 0 or bend.k1 == None:
-            k = ''
-        else:
-            k = ", k1 = " + str(bend.k1)
+            unordered_dict[type] = elements_dict[type]
 
-        line = bend.name.lower() + type + str(bend.l) + k + ", angle=" + str(bend.angle) + \
-               ", e1=" + str(bend.e1) + ", e2=" + str(bend.e2) + ", gap=" + str(bend.gap) + \
-               ", tilt=" + str(bend.tilt) + ", fint=" + str(bend.fint) + ", fintx=" + str(
-            bend.fintx) + ", eid='" + bend.id + "')\n"
-        lines.append(line)
+    # print ordered elements
+    for type in elements_order:
 
-    if len(cors) != 0:
-        lines.append("\n# correctors \n")
-    
-    for cor in cors:
-        if cor.__class__ == Hcor:
-            type = " = Hcor(l="
-        else:
-            type = " = Vcor(l="
+        if type in ordered_dict:
 
-        line = cor.name.lower() + type + str(cor.l) + ", angle=" + str(cor.angle) + ", eid='" + cor.id + "')\n"
-        lines.append(line)
+            lines.append('\n# ' + type + 's\n')
 
-    if len(marks) != 0:
-        lines.append("\n# markers \n")
-    
-    for mark in marks:
-        line = mark.name.lower() + " = Marker(eid='" + mark.id + "')\n"
-        lines.append(line)
+            for element in ordered_dict[type]:
+                string = element_def_string(element)
+                lines.append(string)
 
-    if len(mons) != 0:
-        lines.append("\n# monitors \n")
-    
-    for mon in mons:
-        line = mon.name.lower() + " = Monitor(eid='" + mon.id + "')\n"
-        lines.append(line)
+    # print remaining unordered elements
+    for type in unordered_dict:
+        
+        lines.append('\n# ' + type + 's\n')
 
-    if len(sexts) != 0:
-        lines.append("\n# sextupoles \n")
-    
-    for sext in sexts:
-        line = sext.name.lower() + " = Sextupole(l=" + str(sext.l) + ", k2=" + str(sext.k2) + ", tilt=" + str(
-            sext.tilt) + ", eid='" + sext.id + "')\n"
-        lines.append(line)
+        for element in unordered_dict[type]:
+            string = element_def_string(element)
+            lines.append(string)
 
-    if len(octs) != 0:
-        lines.append("\n# octupoles \n")
-    
-    for oct in octs:
-        line = oct.name.lower() + " = Octupole(l=" + str(oct.l) + ", k3=" + str(oct.k3) + ", tilt=" + str(
-            oct.tilt) + ", eid='" + oct.id + "')\n"
-        lines.append(line)
-
-    if len(unds) != 0:
-        lines.append("\n# undulators \n")
-    
-    for und in unds:
-        line = und.name.lower() + " = Undulator(lperiod=" + str(und.lperiod) + ", nperiods=" + str(
-            und.nperiods) + ", Kx=" + str(und.Kx) + ", Ky=" + str(und.Ky) + ", eid='" + und.id + "')\n"
-        lines.append(line)
-
-    if len(cavs) != 0:
-        lines.append("\n# cavities \n")
-    
-    for cav in cavs:
-        line = cav.name.lower() + " = Cavity(l=" + str(cav.l) + ", v=" + str(cav.v) + \
-               ", freq=" + str(cav.freq) + ", phi=" + str(cav.phi) + ", eid='" + cav.id + "')\n"
-        lines.append(line)
-
-    if len(tcavs) != 0:
-        lines.append("\n# tdcavities \n")
-    
-    for tcav in tcavs:
-        line = tcav.name.lower() + " = Cavity(l=" + str(tcav.l) + ", v=" + str(tcav.v) + \
-               ", freq=" + str(tcav.freq) + ", phi=" + str(tcav.phi) + ", eid='" + tcav.id + "')\n"
-        lines.append(line)
-
-    if len(unkns) != 0:
-        lines.append("\n# UnknowElements \n")
-    
-    for unkn in unkns:
-        line = unkn.name.lower() + " = UnknownElement(l=" + str(unkn.l) + ", eid='" + unkn.id + "')\n"
-        lines.append(line)
-
-    if len(matrices) != 0:
-        lines.append("\n# Matrices \n")
-    
-    for mat in matrices:
-        line = mat.name.lower() + " = Matrix(l=" + str(mat.l) + \
-               ", rm11=" + str(mat.rm11) + ", rm12=" + str(mat.rm12) + ", rm13=" + str(mat.rm13) + ", rm14=" + str(
-            mat.rm14) + \
-               ", rm21=" + str(mat.rm21) + ", rm22=" + str(mat.rm22) + ", rm23=" + str(mat.rm23) + ", rm24=" + str(
-            mat.rm24) + \
-               ", rm31=" + str(mat.rm31) + ", rm32=" + str(mat.rm32) + ", rm33=" + str(mat.rm33) + ", rm34=" + str(
-            mat.rm34) + \
-               ", rm41=" + str(mat.rm41) + ", rm42=" + str(mat.rm42) + ", rm43=" + str(mat.rm43) + ", rm44=" + str(
-            mat.rm44) + \
-               ", eid = '" + mat.id + "')\n"
-        lines.append(line)
-
-    if len(sols) != 0:
-        lines.append("\n# Solenoids \n")
-
-    for sol in sols:
-        line = sol.name.lower() + " = Solenoid(l=" + str(sol.l) + ", k=" + str(sol.k) + ", eid='" + sol.id + "')\n"
-        lines.append(line)
-
+    # delete new line symbol from the first line
     if lines != []:
         lines[0] = lines[0][1:]
-        
+
+    return lines
+
+
+def sort_elements(elements):
+
+    elements_dict = {}
+    for element in elements:
+        element_type = element.__class__.__name__
+
+        if element_type not in elements_dict:
+            elements_dict[element_type] = []
+
+        elements_dict[element_type].append(element)
+
+    return elements_dict
+
+
+def elements2input(lattice):
+
+    elements = get_elements(lattice)
+    elements_dict = sort_elements(elements)
+    lines = print_elements(elements_dict)
+
     return lines
 
 
@@ -322,16 +302,16 @@ def cell2input(lattice, split=False):
     names = []
     for elem in lattice.sequence:
         if elem.__class__ != Edge:
-            names.append(elem.name.lower())
+            names.append(elem.name)
 
     new_names = []
     for i, name in enumerate(names):
-        if split and i % 8 == 7:
-            new_names.append("\n" + name)
+        if split and i % 10 == 9:
+            new_names.append('\n' + name)
         else:
             new_names.append(name)
 
-    lines.append("cell = (" + ", ".join(new_names) + ")")
+    lines.append('cell = (' + ', '.join(new_names) + ')')
     
     return lines
 

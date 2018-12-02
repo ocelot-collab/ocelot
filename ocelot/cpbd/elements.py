@@ -80,7 +80,7 @@ class Sextupole(Element):
     l - length of lens in [m],
     k2 - strength of sextupole lens in [1/m^3].
     """
-    def __init__(self, l=0., k2=0., eid=None, tilt=0.):
+    def __init__(self, l=0., k2=0., tilt=0., eid=None):
         Element.__init__(self, eid)
         self.l = l
         self.k2 = k2
@@ -93,7 +93,7 @@ class Octupole(Element):
     k3 - strength of sextupole lens in [1/m^4],
     l - length of lens in [m].
     """
-    def __init__(self, l=0., k3=0., eid=None, tilt=0.):
+    def __init__(self, l=0., k3=0., tilt=0., eid=None):
         Element.__init__(self, eid)
         self.l = l
         self.k3 = k3
@@ -123,7 +123,7 @@ class Bend(Element):
     fint - fringe field integral
     fintx - allows (fintx > 0) to set fint at the element exit different from its entry value.
     """
-    def __init__(self, l=0., angle=0., k1=0., k2=0., tilt=0.0, e1=0., e2=0.,
+    def __init__(self, l=0., angle=0., k1=0., k2=0., e1=0., e2=0., tilt=0.0,
                  gap=0., h_pole1=0., h_pole2=0., fint=0., fintx=0., eid=None):
         Element.__init__(self, eid)
         self.l = l
@@ -193,7 +193,7 @@ class RBend(Bend):
     e1 - entrance angle in [rad],
     e2 - exit angle in [rad].
     """
-    def __init__(self, l=0., angle=0., tilt=0, k1=0., k2=0.,  e1=None, e2=None,
+    def __init__(self, l=0., angle=0., k1=0., k2=0., e1=None, e2=None, tilt=0.,
                  gap=0, h_pole1=0., h_pole2=0., fint=0., fintx=0., eid=None):
         if e1 == None:
             e1 = angle/2.
@@ -303,7 +303,7 @@ class Cavity(Element):
     freq - frequency [Hz]
     phi - phase in [deg]
     """
-    def __init__(self, l=0., v=0., phi=0., freq=0., eid=None, volterr=0.):
+    def __init__(self, l=0., v=0., phi=0., freq=0., volterr=0., eid=None):
         Element.__init__(self, eid)
         self.l = l
         self.v = v   # in GV

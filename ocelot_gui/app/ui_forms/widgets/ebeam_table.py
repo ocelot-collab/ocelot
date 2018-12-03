@@ -18,13 +18,13 @@ class EbeamWindow(QtWidgets.QWidget):
         self.ui.setupUi(self)
 
         self.ebp_desc = []
-        self.ebp_desc.append(['Energy, GeV', 2])
-        self.ebp_desc.append(['Gamma', 2])
+        self.ebp_desc.append(['Energy, GeV', 3])
+        self.ebp_desc.append(['Gamma', 3])
         self.ebp_desc.append(['Periods', 0])
         self.ebp_desc.append(['Tolal length, m', 3])
-        self.ebp_desc.append(['Emittance, pm*rad', 2])
+        self.ebp_desc.append(['Emittance, pm*rad', 3])
         self.ebp_desc.append(['Tune X / Y', 4])
-        self.ebp_desc.append(['Natural chromaticity', 2])
+        self.ebp_desc.append(['Natural chromaticity', 3])
         self.ebp_desc.append(['Alpha, 1.0e-3', 3])
         self.ebp_desc.append(['Energy spread, 1.0e-3', 3])
         self.ebp_desc.append(['Energy loss, MeV', 3])

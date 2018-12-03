@@ -1096,14 +1096,22 @@ class WignerDistribution():
         if np.all(p==0):
             return p
         else:
-            return np.sum(self.wig * self.phen[:, np.newaxis], axis=0) / self.power()
+            return np.sum(self.wig * self.phen[:, np.newaxis], axis=0) / p
         
     def group_delay(self):
         s = self.spectrum()
         if np.all(s==0):
             return s
         else:
-            return np.sum(self.wig * self.s[np.newaxis, :], axis=1) / self.spectrum()
+            return np.sum(self.wig * self.s[np.newaxis, :], axis=1) / s
+            
+    def inst_bandwidth(self):
+        # check, gives strange tilt. physics?
+        p = self.power()
+        if np.all(p==0):
+            return p
+        else:
+            return np.sum(self.wig * (self.phen[:, np.newaxis]-self.inst_freq()[np.newaxis,:])**2, axis=0) / p
 
 def generate_dfl(*args, **kwargs):
     _logger.warning('"generate_dfl" will be deprecated, use "generate_gaussian_dfl" instead')

@@ -913,7 +913,7 @@ def plot_gen_out_slip(g, legend=False, figsize=4, fig_name='Slippage', savefig=F
         fig = plot_gen_out_evo(g, params=['rad_spec_evo_n', 'rad_pow_evo_n'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug, *args, **kwargs)
 
 @if_plottable
-def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'el_bunching', 'rad_pow_en_log', 'rad_pow_en_lin', 'rad_spec_log', 'rad_size', 'rad_spec_evo_n', 'rad_pow_evo_n'], figsize=4, legend=False, fig_name=None, savefig=False, showfig=True, debug=1, *args, **kwargs):
+def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'el_bunching', 'rad_pow_en_log', 'rad_pow_en_lin', 'rad_spec_log', 'rad_size', 'rad_spec_evo_n', 'rad_pow_evo_n'], figsize=4, legend=False, fig_name='', savefig=False, showfig=True, debug=1, *args, **kwargs):
     '''
     plots evolution of given parameters from genesis output with undulator length
     '''
@@ -927,7 +927,7 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'e
     if os.path.isfile(str(g)):
         g = read_out_file(g, read_level=2)
     # add check for output object
-    if fig_name is None:
+    if fig_name is '':
         if g.fileName() is '':
             fig = plt.figure(params_str)
             _logger.info('plotting ' + params_str)
@@ -1017,11 +1017,15 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'e
         if savefig == True:
             savefig = 'png'
         if fig_name == 'Electrons':
-            fig.savefig(g.filePath + '_elec.' + str(savefig), format=savefig)
+            savepath = g.filePath + '_elec.' + str(savefig)
         elif fig_name == 'Radiation':
-            fig.savefig(g.filePath + '_rad.' + str(savefig), format=savefig)
+            savepath = g.filePath + '_rad.' + str(savefig)
+        elif fig_name == '':
+            savepath = g.filePath + '_' + params_str + '.' + str(savefig)
         else:
-            fig.savefig(g.filePath + '_' + fig_name + '.' + str(savefig), format=savefig)
+            savepath = g.filePath + '_' + fig_name + '.' + str(savefig)
+        _logger.debug('saving figure to {}'.format(savepath))
+        fig.savefig(savepath, format=savefig)
 
     plt.draw()
     if showfig == True:
@@ -1098,7 +1102,6 @@ def subfig_evo_el_size(ax_size_tsize, g, legend, which='both'):
     
 @if_plottable
 def subfig_evo_el_pos(ax_size_tpos, g, legend, which='both'):
-    number_ticks = 6
     
     if hasattr(g,'x') and hasattr(g,'y'):
         if which == 'both' or which == 'averaged':
@@ -1107,6 +1110,7 @@ def subfig_evo_el_pos(ax_size_tpos, g, legend, which='both'):
             idx_pk = np.where(g.I == np.amax(g.I))[0][0]
             ax_size_tpos.plot(g.z, g.x[idx_pk, :] * 1e6, 'g--', g.z, g.y[idx_pk, :] * 1e6, 'b--')
         ax_size_tpos.set_ylabel(r'$x,y$ [$\mu$m]')
+        ax_size_tpos.grid(True)
 
 @if_plottable
 def subfig_evo_el_energy(ax_energy, g, legend):
@@ -1206,7 +1210,7 @@ def subfig_evo_rad_pow(ax_rad_pow, g, legend, log=1):
 @if_plottable
 def subfig_evo_rad_spec(ax_spectrum, g, legend, log=1):
     
-    if 'spec' not in dir(g):
+    if not hasattr(g, 'spec'):
         g.calc_spec()
     
     ax_spectrum.plot(g.z, np.amax(g.spec, axis=0), 'r-', linewidth=1.5)
@@ -1343,29 +1347,43 @@ def subfig_rad_size(ax_size_t, g, legend):
             ax_size_s.legend()
 
 @if_plottable
-def subfig_evo_rad_pow_sz(ax_power_evo, g, legend, norm=1):
+def subfig_evo_rad_pow_sz(ax_power_evo, g, legend, y_units='um', norm=1):
     if g.nSlices > 1:
         z = g.z
-        s = g.s
+        if y_units in ['um']:
+            s = g.s * 1e6
+            y_label = 's [$\mu$m]'
+        elif y_units in ['fs']:
+            s = g.s/speed_of_light*1e15
+            y_label = 't [fs]'
         power = g.p_int
         if norm == 1:
             max_power = np.max(power, 0)[np.newaxis, :]
             max_power[max_power == 0] = 1  # avoid division by zero
             power = power / max_power
             # power[isnan(power)]=0
-        ax_power_evo.pcolormesh(z, s * 1e6, power)
+        ax_power_evo.pcolormesh(z, s, power)
         ax_power_evo.set_xlabel('z [m]')
-        ax_power_evo.set_ylabel('s [$\mu$m]')
+        ax_power_evo.set_ylabel(y_label)
         ax_power_evo.axis('tight')
         ax_power_evo.grid(True)
     else:
         pass
 
 @if_plottable
-def subfig_evo_rad_spec_sz(ax_spectrum_evo, g, legend, norm=1):
+def subfig_evo_rad_spec_sz(ax_spectrum_evo, g, legend, y_units='ev', norm=1):
+    
+    if not hasattr(g, 'spec'):
+        g.calc_spec()
+    
     if g.nSlices > 1:
         z = g.z
-        l = g.freq_lamd
+        if y_units in ['ev', 'eV', 'phen']:
+            l = g.freq_ev
+            y_label = '$E_{photon}$ [eV]'
+        else:
+            l = g.freq_lamd
+            y_label = '$\lambda$ [nm]'
         spectrum = g.spec
         if norm == 1:
             max_spectrum = np.max(spectrum, 0)[np.newaxis, :]
@@ -1374,7 +1392,7 @@ def subfig_evo_rad_spec_sz(ax_spectrum_evo, g, legend, norm=1):
             # spectrum[isnan(spectrum)]=0
         ax_spectrum_evo.pcolormesh(z, l, spectrum)
         ax_spectrum_evo.set_xlabel('z [m]')
-        ax_spectrum_evo.set_ylabel('$\lambda$ [nm]')
+        ax_spectrum_evo.set_ylabel(y_label)
         ax_spectrum_evo.axis('tight')
         ax_spectrum_evo.grid(True)
     else:

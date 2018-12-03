@@ -42,5 +42,5 @@ plot_opt_func(lat, tws)
 plt.show()
 
 
-eb = EbeamParams(lat, beam, nsuperperiod=8)
+eb = EbeamParams(lat, tw0, nsuperperiod=8)
 print(eb)

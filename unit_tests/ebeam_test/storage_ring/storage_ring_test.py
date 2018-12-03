@@ -95,8 +95,8 @@ def test_e_beam_params(lattice, beam, update_ref_values=False):
     """Ebeam parameters calculation function test"""
 
     nu_x, nu_y, ncells = match_tunes_wrapper(lattice, beam)
-
-    ebp = EbeamParams(lattice, beam, nsuperperiod=8)
+    tws = Twiss(beam)
+    ebp = EbeamParams(lattice, tws0=tws, nsuperperiod=8)
 
     ebp = obj2dict([ebp])
      

@@ -9,7 +9,7 @@ from ocelot.adaptors.elegant_lattice_converter import *
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 REF_RES_DIR = FILE_DIR + '/ref_results/'
 
-from demos_tests.params import *
+from unit_tests.params import *
 from elegant_lattice_conf import *
 
 

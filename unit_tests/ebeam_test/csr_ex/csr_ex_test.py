@@ -291,7 +291,7 @@ def test_csr_arcline_rk_traj(lattice, p_array, parameter=None, update_ref_values
     navi.unit_step = 0.05
 
     csr = CSR()
-    csr.energy = p_array_copy.E
+    csr.energy = 40
     csr.rk_traj = True
     navi.add_physics_proc(csr, lattice_copy.sequence[0], lattice_copy.sequence[-1])
 
@@ -302,7 +302,7 @@ def test_csr_arcline_rk_traj(lattice, p_array, parameter=None, update_ref_values
 
     p2 = obj2dict(p_array_rk)
 
-    result2 = check_dict(p1, p2, TOL, assert_info=' p - ')
+    result2 = check_dict(p1, p2, tolerance=1.0e-8,tolerance_type='absolute', assert_info=' p - ')
     assert check_result(result2)
 
 

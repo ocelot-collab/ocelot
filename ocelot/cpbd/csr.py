@@ -577,7 +577,7 @@ class CSR(PhysProc):
         # another filter
         self.filter_order = 10
         self.n_mesh = 345
-        self.pict_debug = False
+        self.pict_debug = True
         #self.print_log = False
 
         self.sub_bin = SubBinning(x_qbin=self.x_qbin, n_bin=self.n_bin, m_bin=self.m_bin)
@@ -751,9 +751,11 @@ class CSR(PhysProc):
         self.z_csr_start = sum([p.l for p in lat.sequence[:self.indx0]])
         p = Particle()
         beta = 1. if self.energy == None else np.sqrt(1. - 1./(self.energy/m_e_GeV)**2)
-        igamma = np.sqrt(1 - beta**2)
-        self.csr_traj = np.transpose([[0, p.x, p.y, p.s, p.px, p.py, beta]])
+        self.csr_traj = np.transpose([[0, p.x, p.y, p.s, p.px, p.py, 1.]])
+        if Undulator in [elem.__class__ for elem in lat.sequence[self.indx0:self.indx1+1]]:
+            self.rk_traj = True
         for elem in lat.sequence[self.indx0:self.indx1+1]:
+
             if elem.l == 0:
                 continue
             delta_s = elem.l
@@ -769,90 +771,94 @@ class CSR(PhysProc):
                 R_vect = [-Ry, Rx, 0]
                 self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect)
 
-            elif elem.__class__ == Undulator and self.energy is not None:
-                """
-                rk_track_in_field accepts initial conditions (initial coordinates) in the ParticleArray.rparticles format
-                from another hand the csr module use trajectory in another format (see csr.py)
-                to calculate trajectory inside an undulator we take reference particle with zero initial condition,
-                we shift obtained trajectory to initial one afterwards. 
-                """
-                ku = 2*np.pi/elem.lperiod
-                L = elem.lperiod*elem.nperiods
-                By = elem.Kx * m_e_eV * 2. * pi / (elem.lperiod * speed_of_light)
-                Bx = elem.Ky * m_e_eV * 2. * pi / (elem.lperiod * speed_of_light)
-                sre0 = self.csr_traj[:, -1]
-                N = int(max(1, np.round(delta_s / step)))
-                SRE2 = np.zeros((7, N))
-
-                mag_field = lambda x, y, z: (0, By*np.cos(ku*z), 0)
-
-                rparticle0 = np.array([[0], [0], [0], [0], [0], [0]])
-
-                traj = rk_track_in_field(rparticle0, s_stop=L, N=N+1, energy=self.energy, mag_field=mag_field, s_start=0)
-                betaz = np.sqrt(beta*beta - traj[1+9::9].T*traj[1+9::9].T - traj[3+9::9].T*traj[3+9::9].T)
-
-                dz = traj[4+9::9].T - traj[4:-9:9].T
-
-                SRE2[0, :] = sre0[0] + np.cumsum(dz*np.sqrt(1+(traj[1+9::9].T)**2 + (traj[3+9::9].T)**2))
-                SRE2[1, :] = sre0[1] + traj[0+9::9].T
-                SRE2[2, :] = sre0[2] + traj[2+9::9].T
-                SRE2[3, :] = sre0[3] + traj[4+9::9].T
-                SRE2[4, :] = sre0[4] + traj[1+9::9].T
-                SRE2[5, :] = sre0[5] + traj[3+9::9].T
-                SRE2[6, :] = betaz# traj[5+9::9].T
-
-                self.csr_traj = np.append(self.csr_traj, SRE2, axis=1)
-
-            elif elem.__class__ in [Bend, RBend, SBend, XYQuadrupole] and self.energy is not None and self.rk_traj:
+            elif elem.__class__ in [Bend, RBend, SBend, XYQuadrupole, Undulator] and self.energy is not None and self.rk_traj:
                 """
                 rk_track_in_field accepts initial conditions (initial coordinates) in the ParticleArray.rparticles format
                 from another hand the csr module use trajectory in another format (see csr.py)
                 """
+
                 if elem.l < 1e-10:
                     continue
-                delta_z = delta_s if elem.angle != 0 else delta_s * np.sin(elem.angle) / elem.angle
-
+                delta_z = delta_s
                 if elem.__class__ is XYQuadrupole:
-
                     hx = elem.k1 * elem.x_offs
                     hy = -elem.k1 * elem.y_offs
+                    By = self.energy * 1e9 * beta * hx / speed_of_light
+                    Bx = -self.energy * 1e9 * beta * hy / speed_of_light
+                    mag_field = lambda x, y, z: (Bx, By, 0)
+
+                elif elem.__class__ == Undulator:
+                    gamma = self.energy/m_e_GeV
+                    ku = 2 * np.pi / elem.lperiod
+                    delta_z = elem.lperiod * elem.nperiods
+
+                    delta_s += delta_z / (gamma ) ** 2 * (1 + 0.5 * (elem.Kx ) ** 2)
+
+                    By = elem.Kx * m_e_eV * 2. * pi / (elem.lperiod * speed_of_light)
+                    Bx = elem.Ky * m_e_eV * 2. * pi / (elem.lperiod * speed_of_light)
+                    mag_field = lambda x, y, z: (0, By * np.cos(ku * z), 0)
+
                 else:
+                    delta_z = delta_s * np.sin(elem.angle) / elem.angle if elem.angle != 0 else delta_s
                     hx = elem.angle / elem.l * np.cos(elem.tilt)
                     hy = elem.angle / elem.l * np.sin(elem.tilt)
+                    By = self.energy * 1e9 * beta * hx / speed_of_light
+                    Bx = -self.energy * 1e9 * beta * hy / speed_of_light
+                    mag_field = lambda x, y, z: (Bx, By , 0)
 
-                By = self.energy * 1e9 * beta * hx /  speed_of_light
-                Bx = -self.energy * 1e9 * beta * hy / speed_of_light
                 sre0 = self.csr_traj[:, -1]
                 N = int(max(1, np.round(delta_s / step)))
                 SRE2 = np.zeros((7, N))
 
-                mag_field = lambda x, y, z: (Bx, By, 0)
-                rparticle0 = np.array([[self.csr_traj[1, -1]], [self.csr_traj[4, -1]],
-                                       [self.csr_traj[2, -1]], [self.csr_traj[5, -1]], [0], [0]])
-                traj = rk_track_in_field(rparticle0, s_stop=delta_z, N=N+1, energy=self.energy, mag_field=mag_field, s_start=0)
-                betaz = np.sqrt(beta*beta - traj[1+9::9].T*traj[1+9::9].T - traj[3+9::9].T*traj[3+9::9].T)
+                rparticle0 = np.array([[self.csr_traj[1, -1]], [self.csr_traj[4, -1] / self.csr_traj[6, -1]],
+                                       [self.csr_traj[2, -1]], [self.csr_traj[5, -1] / self.csr_traj[6, -1]], [0], [0]])
+                traj = rk_track_in_field(rparticle0, s_stop=delta_z, N=N + 1, energy=self.energy, mag_field=mag_field,
+                                         s_start=0)
 
-                dz = traj[4+9::9].T - traj[4:-9:9].T
+                x = traj[0::9].flatten()
+                y = traj[2::9].flatten()
+                xp = traj[1::9].flatten()
+                yp = traj[3::9].flatten()
+                z = traj[4::9].flatten()
+                print(xp[-1])
+                xp2 = xp * xp
+                yp2 = yp * yp
+                zp = np.sqrt(1./(1. + xp2 + yp2))
 
-                SRE2[0, :] = sre0[0] + np.cumsum(dz*np.sqrt(1+(traj[1+9::9].T)**2 + (traj[3+9::9].T)**2))
-                SRE2[1, :] = traj[0+9::9].T
-                SRE2[2, :] = traj[2+9::9].T
-                SRE2[3, :] = sre0[3] + traj[4+9::9].T
-                SRE2[4, :] = traj[1+9::9].T
-                SRE2[5, :] = traj[3+9::9].T
-                SRE2[6, :] = betaz# traj[5+9::9].T
+                dS = float(delta_s) / N
 
+                s = cumtrapz(np.sqrt(1. + xp2 + yp2), z, initial=0)
+
+                s_unif = np.arange(0, N + 1) * dS
+
+                z_s = np.interp(s_unif, s, z)
+
+                x = np.interp(z_s, z, x)
+                y = np.interp(z_s, z, y)
+                zp_s = np.interp(z_s, z, zp)
+
+                xp = np.interp(z_s, z, xp*zp)
+                yp = np.interp(z_s, z, yp*zp)
+
+                SRE2[0, :] = sre0[0] + s_unif[1:]
+                SRE2[1, :] = x[1:]
+                SRE2[2, :] = y[1:]
+                SRE2[3, :] = sre0[3] + z_s[1:]
+                SRE2[4, :] = xp[1:]
+                SRE2[5, :] = yp[1:]
+                SRE2[6, :] = zp_s[1:]
                 self.csr_traj = np.append(self.csr_traj, SRE2, axis=1)
-
             else:
-                #B = 0.
                 R_vect = [0, 0, 0.]
                 self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect )
+
         # import matplotlib.pyplot as plt
         # plt.figure(10)
-        # plt.plot(self.csr_traj[3, :], self.csr_traj[1, :], "r")
-        # plt.plot(self.csr_traj[3, :], self.csr_traj[2, :], "b")
+        # plt.plot(self.csr_traj[0, :], self.csr_traj[1+3, :], "r")
+        # plt.plot(self.csr_traj[0, :], self.csr_traj[2+3, :], "b")
         # plt.legend(["X", "Y"])
+        # #plt.plot( self.csr_traj[3, :] - csr_traj_arc[3, :], "r.")
+        # #plt.plot(csr_traj_arc[0, :], csr_traj_arc[4, :]  - self.csr_traj[4, :], "b.")
         # plt.show()
         return self.csr_traj
 
@@ -885,7 +891,6 @@ class CSR(PhysProc):
         n_iter = len(itr_ra)
         #start = time.time()
         K1 = self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma)
-
         for nit in range(1, n_iter):
             K1 += self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma=gamma)
         K1 = K1/n_iter
@@ -900,44 +905,42 @@ class CSR(PhysProc):
         delta_p = dE * 1e-9 / pc_ref
         p_array.rparticles[5][ind_z_sort] += delta_p
 
-        #self.napply += 1
-        #if self.pict_debug and self.napply%2 == 0:
-        #    from ocelot.gui.accelerator import show_density
-        #    fig = plt.figure(figsize=(10, 7))
-        #    ax1 = plt.subplot(311)
+        # self.napply += 1
+        # if self.pict_debug:# and self.napply%2 == 0:
+        # from matplotlib import pyplot as plt
+        # #from ocelot.gui.accelerator import show_density
+        # fig = plt.figure(figsize=(10, 7))
+        # ax1 = plt.subplot(311)
+        # ax1.plot(self.csr_traj[3, :], self.csr_traj[1, :], "r",  self.csr_traj[3,itr_ra], self.csr_traj[1, itr_ra], "bo")
+        # ax2 = plt.subplot(312)
+        # # CSR wake
+        # # plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
+        # ax2.plot(np.linspace(s1, s1+st*len(lam_K1), len(lam_K1))*1000, lam_K1/delta_s/1000.)
+        # # #plt.ylim(-2500, 2500)
+        # # plt.ylabel("dE, keV/m")
+        # # Energy profil
+        # #plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
+        # #show_density(-p_array.tau() * 1e3, p_array.p() * 1e2, ax=ax2, nbins_x=400, nbins_y=400,
+        # #             interpolation="bilinear", ylabel='$\delta_E$ [%]',
+        # #             title="Longitudinal phase space", grid=False, show_xtick_label=False
+        # #self.f.add_subplot(313)
+        # ax3 = plt.subplot(313, sharex=ax2)
+        # ax3.set_title("Beam current")
+        # B = s_to_cur(p_array.tau(), sigma=np.std(p_array.tau())*0.05, q0=np.sum(p_array.q_array), v=speed_of_light)
+        # ax3.plot(-B[:, 0]*1000, B[:, 1], lw=2)
+        # ax3.set_ylabel("I, [A]")
+        # ax3.set_xlabel("s, [mm]")
+        # ax3.set_ylim(0, 8000)
+        # plt.subplots_adjust(hspace=0.3)
+
+        # dig = str(self.napply)
+        # name = "0" * (4 - len(dig)) + dig
+        # plt.show()
+        # plt.savefig( name + '.png')
+        # plt.draw()
+        # plt.pause(0.01)
         #
-        #    ax1.plot(self.csr_traj[3, :], self.csr_traj[2, :], "r",  self.csr_traj[3,itr_ra], self.csr_traj[2, itr_ra], "bo")
-        #
-        #    # CSR wake
-        #    # plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
-        #    # plt.plot(np.linspace(s1, s1+st*len(lam_K1), len(lam_K1))*1000, lam_K1/delta_s/1000.)
-        #    # #plt.ylim(-2500, 2500)
-        #    # plt.ylabel("dE, keV/m")
-        #    # Energy profile
-        #    ax2 = plt.subplot(312)
-        #    #plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
-        #    show_density(-p_array.tau() * 1e3, p_array.p() * 1e2, ax=ax2, nbins_x=400, nbins_y=400,
-        #                 interpolation="bilinear", ylabel='$\delta_E$ [%]',
-        #                 title="Longitudinal phase space", grid=False, show_xtick_label=False)
-        #
-        #    #self.f.add_subplot(313)
-        #    ax3 = plt.subplot(313, sharex=ax2)
-        #    ax3.set_title("Beam current")
-        #    B = s_to_cur(p_array.tau(), sigma=np.std(p_array.tau())*0.05, q0=np.sum(p_array.q_array), v=speed_of_light)
-        #    ax3.plot(-B[:, 0]*1000, B[:, 1], lw=2)
-        #    ax3.set_ylabel("I, [A]")
-        #    ax3.set_xlabel("s, [mm]")
-        #    ax3.set_ylim(0, 8000)
-        #    plt.subplots_adjust(hspace=0.3)
-        #
-        #    dig = str(self.napply)
-        #    name = "0" * (4 - len(dig)) + dig
-        #    plt.savefig( name + '.png')
-        #
-        #    #plt.draw()
-        #    #plt.pause(0.01)
-        #
-        #if self.debug:
+        # if self.debug:
         #    fig, ax1 = plt.subplots()
         #    #ax1.plot(-I[::-1, 0]*(1/st)+(1. - sa/st), I[:, 1], "r")
         #    ax1.plot(lam_ds, "r")

@@ -72,9 +72,15 @@ def radiation_integrals(lattice, twiss_0, nsuperperiod = 1):
 
 class EbeamParams:
     def __init__(self, lattice, tws0, coupling=0.01, nsuperperiod=1):
-
+        if tws0.__class__ is not Twiss:
+            _logger.info(" EbeamParams: tws0 is not Twiss class.")
+            return
         self.tws0 = tws0
         self.E = tws0.E
+
+        if tws0.beta_x == 0 and tws0.beta_y == 0:
+            tws = twiss(lattice, tws0)
+            self.tws0 = tws[0]
 
         if self.E == 0.0:
             _logger.info("tws0.E is 0. Some parameters will be NaN")

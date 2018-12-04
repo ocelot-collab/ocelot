@@ -810,7 +810,8 @@ class CSR(PhysProc):
                 """
                 if elem.l < 1e-10:
                     continue
-                delta_z = delta_s if elem.angle != 0 else delta_s * np.sin(elem.angle) / elem.angle
+                #print(" elem.angle=", elem.angle)
+                delta_z = delta_s if elem.angle == 0 else delta_s * np.sin(elem.angle) / elem.angle
 
                 if elem.__class__ is XYQuadrupole:
 

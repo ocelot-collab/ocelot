@@ -195,7 +195,7 @@ class BeamTransform(PhysProc):
         :param y_opt (obsolete): [alpha, beta, mu (phase advance)]
         """
         PhysProc.__init__(self)
-        self.bounds = [-5, 5]  # [start, stop] in sigmas
+        self.bounds = [-0.5, 0.5]  # [start, stop] in sigmas
         self.tws = tws       # Twiss
         self.x_opt = x_opt   # [alpha, beta, mu (phase advance)]
         self.y_opt = y_opt   # [alpha, beta, mu (phase advance)]

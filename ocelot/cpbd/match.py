@@ -293,34 +293,17 @@ def closed_orbit(lattice, eps_xy=1.e-7, eps_angle=1.e-7, energy=0):
     :param eps_angle: tolerance on the angles of beam in the start and end of lattice
     :return: class Particle
     """
-    #R = lattice_transfer_map(lattice, energy)
-    navi = Navigator(lattice)
-    t_maps = get_map(lattice, lattice.totalLen, navi)
+    R = lattice_transfer_map(lattice, energy)
+    smult = SecondOrderMult()
 
-    tm0 = TransferMap()
-    for tm in t_maps:
-        tm0 = tm * tm0
-        #if tm.order != 2:
-        #    tm0 = tm * tm0
-        #else:
-        #    sex = TransferMap()
-        #    sex.R[0, 1] = tm.length
-        #    sex.R[2, 3] = tm.length
-        #    tm0 = sex * tm0
-
-    R = tm0.R(energy)[:4, :4]
-
-    ME = np.eye(4) - R
-    P = np.dot(inv(ME), tm0.B(energy)[:4])
+    ME = np.eye(4) - R[:4, :4]
+    P = np.dot(inv(ME), lattice.B[:4])
 
     def errf(x):
-        #print("x", x)
-        p = Particle(x=x[0], px=x[1], y=x[2], py=x[3])
-        for tm in t_maps:
-            p = tm * p
-        err = 1000. * (p.x - x[0]) ** 2 + 1000. * (p.px - x[1]) ** 2 + 1000. * (p.y - x[2]) ** 2 + 1000. * (p.py - x[
-            3]) ** 2
-
+        X = np.array([[x[0]], [x[1]], [x[2]], [x[3]], [0], [0]] )
+        smult.numpy_apply(X, R, lattice.T)
+        X += lattice.B
+        err = np.sum([1000*(X[i, 0] - x[i])**2 for i in range(4)])
         return err
 
     res = fmin(errf, P, xtol=1e-8, maxiter=2e3, maxfun=2.e3)

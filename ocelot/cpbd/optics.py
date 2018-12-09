@@ -896,9 +896,11 @@ def lattice_transfer_map(lattice, energy):
     """
     Ra = np.eye(6)
     Ta = np.zeros((6, 6, 6))
+    Ba = np.zeros((6, 1))
     E = energy
     for i, elem in enumerate(lattice.sequence):
         Rb = elem.transfer_map.R(E)
+        Bb = elem.transfer_map.B(E)
         if elem.transfer_map.__class__ == SecondTM:
             Tc = np.zeros((6, 6, 6))
             #Tb = deepcopy(elem.transfer_map.t_mat_z_e(elem.l, E))
@@ -925,12 +927,15 @@ def lattice_transfer_map(lattice, energy):
                             t1 += Rb[i, l] * Ta[l, j, k]
                         Tc[i, j, k] = t1
             Ta = Tc
+        Ba = np.dot(Rb, Ba) + Bb
         Ra = np.dot(Rb, Ra)
+
         E += elem.transfer_map.delta_e
 
     lattice.T_sym = Ta
     lattice.T = unsym_matrix(deepcopy(Ta))
     lattice.R = Ra
+    lattice.B = Ba
     return Ra
 
 

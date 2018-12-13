@@ -16,6 +16,7 @@ from ocelot.optics.wave import calc_ph_sp_dens, RadiationField
 from ocelot.common.globals import *
 from ocelot.adaptors.genesis import GenesisElectronDist #tmp
 from ocelot.common.logging import *
+from ocelot.utils.launcher import *
 
 _logger = logging.getLogger('ocelot.gen4') 
 
@@ -597,9 +598,10 @@ def write_edist_hdf5(edist, filepath):
     f.create_dataset('y', data=edist.y)
     f.create_dataset('xp', data=edist.xp)
     f.create_dataset('yp', data=edist.yp)
+    f.create_dataset('charge', data = edist.charge())
     f.close()
     
-def read_edist_hdf5(filepath, charge):
+def read_edist_hdf5(filepath, charge=None):
     
     edist = GenesisElectronDist()
     with h5py.File(filepath, 'r') as h5:
@@ -610,6 +612,9 @@ def read_edist_hdf5(filepath, charge):
         edist.y =  h5.get('y')[:]
         edist.xp =  h5.get('xp')[:]
         edist.yp =  h5.get('yp')[:]
+        
+        if charge is not None:
+            charge = h5.get('charge')[:]
     
     edist.part_charge = charge / edist.g.size
     return edist

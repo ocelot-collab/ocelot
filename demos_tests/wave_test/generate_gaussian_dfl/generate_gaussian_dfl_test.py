@@ -9,24 +9,26 @@ import numpy as np
 from generate_gaussian_dfl_conf import *
 
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
-REF_RES_DIR = FILE_DIR + '/ref_results/'
+REF_RES_DIR = FILE_DIR + os.path.sep + 'ref_results' + os.path.sep
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(FILE_DIR))))
 
 from params import *
 import ocelot.optics.wave as wave
 
 
-@pytest.mark.parametrize('parameter', range(4))
+@pytest.mark.parametrize('parameter', range(3))
 def test_generate_gaussian_dfl(args_array_ref, parameter, update_ref_values=False):
     """generate_gaussian_dfl() function testing"""
 
-    dfl_array_ref = np.load(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) + '.npy')
     (args_ref, kwargs_ref) = args_array_ref[parameter]
-    dfl_ref = dfl_array_ref
     dfl = wave.generate_gaussian_dfl(*args_ref, **kwargs_ref).fld
 
     if update_ref_values:
         return dfl
+    else:
+        dfl_array_ref = np.load(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) + '.npy')
+        
+        dfl_ref = dfl_array_ref
 
     result = check_matrix(dfl, dfl_ref, TOL, tolerance_type='relative',
                           assert_info=f'- generate_gaussian_dfl(){parameter}')
@@ -65,7 +67,7 @@ def test_update_ref_values(args_array_ref, cmdopt):
     update_functions.append('test_generate_gaussian_dfl')
 
     update_function_parameters = {}
-    update_function_parameters['test_generate_gaussian_dfl'] = range(4)
+    update_function_parameters['test_generate_gaussian_dfl'] = range(3)
 
     parameter = update_function_parameters[cmdopt] if cmdopt in update_function_parameters.keys() else ['']
 

@@ -3150,7 +3150,7 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=1, min_phsh = False):
 
     for e in lattice.sequence:
         l = e.l
-        _logger.log(5, 'L_inters = {}'.format(L_inters))
+        _logger.log(5, 'L from previous undulator = {}'.format(L_inters))
         _logger.log(5, 'element {} with length {}'.format(e.__class__, l))
         
         if e.__class__ == Undulator:
@@ -3159,14 +3159,14 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=1, min_phsh = False):
                 xlamds = l_period * (1 + np.mean(K_rms)**2) / (2 * gamma**2)
                 _logger.log(5, 'xlamds = {}'.format(xlamds))
                 _logger.log(5, 'gamma = {}'.format(gamma))
-                slip=(L_inters / gamma**2) / 2 # free-space radiation slippage [m]
-                phi_frsp = slip / xlamds * 2 * np.pi # free-space phase shift [m]
+                slip_frsp=(L_inters / gamma**2) / 2 # free-space radiation slippage [m]
+                phi_frsp = slip_frsp / xlamds * 2 * np.pi # free-space phase shift [m]
                 _logger.log(5, 'free-space phase drift is {} rad'.format(phi_frsp))
                 
                 if K_inters is None:
                     if phi_inters is None:
                         _logger.log(5, 'no phase shifter values in Drift, assuming minimum to bring to n*2pi')
-                        slip_add = xlamds - slip % xlamds #free-space slippage to compensate with undulator K to bring it to integer number of wavelengths
+                        slip_add = xlamds - slip_frsp % xlamds #free-space slippage to compensate with undulator K to bring it to integer number of wavelengths
                     elif phi_inters > phi_frsp:
                         _logger.log(5, 'phi intersection {} rad> phi free space {} rad'.format(phi_inters, phi_frsp))
                         phi_add = phi_inters - phi_frsp

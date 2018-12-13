@@ -1239,6 +1239,7 @@ def generate_gaussian_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), po
     elif en_pulse == None and power != None:
         dfl.fld *= np.sqrt(power / np.amax(dfl.int_z()))
     else:
+        _logger.error('Either en_pulse or power should be defined')
         raise ValueError('Either en_pulse or power should be defined')
 
     dfl.filePath = ''

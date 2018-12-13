@@ -992,16 +992,16 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'e
                 subfig_evo_rad_spec(ax[-1], g, legend, log=0)
         elif param == 'rad_spec_evo_n':
             if is_tdp:
-                subfig_evo_rad_spec_sz(ax[-1], g, legend, norm=1)
+                subfig_evo_rad_spec_sz(ax[-1], g, legend, norm=1, **kwargs)
         elif param == 'rad_pow_evo_n':
             if is_tdp:
-                subfig_evo_rad_pow_sz(ax[-1], g, legend, norm=1)
+                subfig_evo_rad_pow_sz(ax[-1], g, legend, norm=1, **kwargs)
         elif param == 'rad_spec_evo':
             if is_tdp:
-                subfig_evo_rad_spec_sz(ax[-1], g, legend, norm=0)
+                subfig_evo_rad_spec_sz(ax[-1], g, legend, norm=0, **kwargs)
         elif param == 'rad_pow_evo':
             if is_tdp:
-                subfig_evo_rad_pow_sz(ax[-1], g, legend, norm=0)
+                subfig_evo_rad_pow_sz(ax[-1], g, legend, norm=0, **kwargs)
         else:
             print('! wrong parameter ' + param)
 
@@ -1347,8 +1347,11 @@ def subfig_rad_size(ax_size_t, g, legend):
             ax_size_s.legend()
 
 @if_plottable
-def subfig_evo_rad_pow_sz(ax_power_evo, g, legend, y_units='um', norm=1):
+def subfig_evo_rad_pow_sz(ax_power_evo, g, legend, norm=1, **kwargs):
     if g.nSlices > 1:
+        
+        y_units = kwargs.get('subfig_evo_rad_pow_sz_yunits','um')
+        dgrid = kwargs.get('subfig_evo_rad_pow_sz_dgrid',True)
         z = g.z
         if y_units in ['um']:
             s = g.s * 1e6
@@ -1366,18 +1369,23 @@ def subfig_evo_rad_pow_sz(ax_power_evo, g, legend, y_units='um', norm=1):
         ax_power_evo.set_xlabel('z [m]')
         ax_power_evo.set_ylabel(y_label)
         ax_power_evo.axis('tight')
-        ax_power_evo.grid(True)
+        
+        ax_power_evo.grid(dgrid)
     else:
         pass
 
 @if_plottable
-def subfig_evo_rad_spec_sz(ax_spectrum_evo, g, legend, y_units='ev', norm=1):
+def subfig_evo_rad_spec_sz(ax_spectrum_evo, g, legend, norm=1, **kwargs):
     
     if not hasattr(g, 'spec'):
         g.calc_spec()
     
     if g.nSlices > 1:
         z = g.z
+        
+        y_units = kwargs.get('subfig_evo_rad_spec_sz_yunits','ev')
+        dgrid = kwargs.get('subfig_evo_rad_spec_sz_dgrid',True)
+        
         if y_units in ['ev', 'eV', 'phen']:
             l = g.freq_ev
             y_label = '$E_{photon}$ [eV]'
@@ -1394,7 +1402,7 @@ def subfig_evo_rad_spec_sz(ax_spectrum_evo, g, legend, y_units='ev', norm=1):
         ax_spectrum_evo.set_xlabel('z [m]')
         ax_spectrum_evo.set_ylabel(y_label)
         ax_spectrum_evo.axis('tight')
-        ax_spectrum_evo.grid(True)
+        ax_spectrum_evo.grid(dgrid)
     else:
         pass
 

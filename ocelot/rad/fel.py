@@ -64,11 +64,13 @@ class FelParameters:
             jah = self.hn * self.aw0**2 / (2*(1 + self.aw0**2))
             self.fch = sf.jv((self.hn-1)/2, jah) - sf.jv((self.hn+1)/2, jah)
         else: #helical undulator
-            self.fc = 1.0 
+            self.fc = 1
             if self.hn !=1:
                 _logger.warning('harmonic number != 1 and undulator is helical. Not implemented! Retunrning zero coupling at harmonic!')
                 self.inaccurate = True 
                 self.fch = 0
+            else:
+                self.fch = 1
         
         self.Pb = self.gamma0 * self.I * m_e_eV# beam power [Reiche]
         
@@ -86,12 +88,13 @@ class FelParameters:
             self.inaccurate = True 
             #Eq.6, DOI:10.1103/PhysRevSTAB.15.080702
         
-        if self.iwityp == 0: #planar undulator
-            F_aw = 1.7 * self.aw0 + 1 / (1 + 1.88 * self.aw0 + 0.8 * self.aw0**2) 
-            #eq.B2, DOI:10.1103/PhysRevSTAB.15.080702, 
-            #eq.11 DOI:10.1016/j.optcom.2004.02.071
-        else: #helical undulator
-            F_aw = 1.42 * self.aw0 + 1 / (1 + 1.5 * self.aw0 + 0.95 * self.aw0**2)
+        if self.qf == 1: #account for quantum fluctuations
+            if self.iwityp == 0: #planar undulator
+                F_aw = 1.7 * self.aw0 + 1 / (1 + 1.88 * self.aw0 + 0.8 * self.aw0**2) 
+                #eq.B2, DOI:10.1103/PhysRevSTAB.15.080702, 
+                #eq.11 DOI:10.1016/j.optcom.2004.02.071
+            else: #helical undulator
+                F_aw = 1.42 * self.aw0 + 1 / (1 + 1.5 * self.aw0 + 0.95 * self.aw0**2)
         
         if method == 'mxie':
             '''
@@ -116,9 +119,10 @@ class FelParameters:
             self.xie_etae = 4 * np.pi * self.lg1 * (self.emitx * self.emity) / self.lambda0 / (self.rxbeam * self.rybeam) / self.gamma0**2 * ((self.fc/self.fch)**2 / self.hn)**(1/3) / self.hn # expressed via average x-y beam size
             self.xie_etagamma = self.deta / (self.rho1 * np.sqrt(3))
             
-            self.xie_etad *= ((self.fc/self.fch)**2 / self.hn)**(1/3) / self.hn 
-            self.xie_etae *= ((self.fc/self.fch)**2 / self.hn)**(1/3) * self.hn
-            self.xie_etagamma *= ((self.fc/self.fch)**2 / self.hn)**(1/3) * self.hn #eq C2+ DOI:10.1103/PhysRevSTAB.15.080702
+            if self.hn !=1:
+                self.xie_etad *= ((self.fc/self.fch)**2 / self.hn)**(1/3) / self.hn 
+                self.xie_etae *= ((self.fc/self.fch)**2 / self.hn)**(1/3) * self.hn
+                self.xie_etagamma *= ((self.fc/self.fch)**2 / self.hn)**(1/3) * self.hn #eq C2+ DOI:10.1103/PhysRevSTAB.15.080702
             
             self.delta = (a[1] * self.xie_etad ** a[2] + a[3] * self.xie_etae ** a[4] + a[5] * self.xie_etagamma ** a[6] 
             + a[7] * self.xie_etae ** a[8] * self.xie_etagamma ** a[9] + a[10] * self.xie_etad ** a[11] * self.xie_etagamma ** a[12] + a[13] * self.xie_etad ** a[14] * self.xie_etae ** a[15]

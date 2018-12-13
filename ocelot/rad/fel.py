@@ -20,10 +20,15 @@ _logger = logging.getLogger('ocelot.fel')
 
 class FelParameters:
     def __init__(self):
+        self.qf = 0
+        self.inaccurate = False # True if fitting formulas do not promise good accuracy
         pass
         
     def eval(self, method='mxie'):
         _logger.debug('Calculating FEL parameters')
+        
+        if not hasattr(self, 'hn'):
+            self.hn=1 #harmonic number
         
         if np.any(self.betax <= 0) or np.any(self.betay <= 0):
             _logger.warning('betax or betay <= 0, returning lg3=np.nan')
@@ -40,15 +45,32 @@ class FelParameters:
         
         self.deta =  self.delgam / self.gamma0
         
+        if np.isnan(self.aw0):
+            _logger.warning('aw0 is nan')
+            self.inaccurate = True 
+            
         self.lambda0 = self.xlamd / (2.0 * self.gamma0**2) * (1.0 + self.aw0**2) # resonant wavelength
+        if self.lambda0 < 0:
+            _logger.error('wavelength is not reachable with und_period {} gamma {} and K {}'.format(self.xlamd,self.gamma0,self.aw0))
+            self.inaccurate = True 
+        self.lambdah = self.lambda0 / self.hn
         self.k0 = 2 * np.pi / self.lambda0
         # self.Ia = I_Alfven #remove
             
         if self.iwityp == 0: #planar undulator
             ja = self.aw0**2 / (2*(1 + self.aw0**2))
             self.fc = sf.j0(ja) - sf.j1(ja)
+            # if self.hn != 1:
+            jah = self.hn * self.aw0**2 / (2*(1 + self.aw0**2))
+            self.fch = sf.jv((self.hn-1)/2, jah) - sf.jv((self.hn+1)/2, jah)
         else: #helical undulator
-            self.fc = 1.0 
+            self.fc = 1
+            if self.hn !=1:
+                _logger.warning('harmonic number != 1 and undulator is helical. Not implemented! Retunrning zero coupling at harmonic!')
+                self.inaccurate = True 
+                self.fch = 0
+            else:
+                self.fch = 1
         
         self.Pb = self.gamma0 * self.I * m_e_eV# beam power [Reiche]
         
@@ -57,12 +79,31 @@ class FelParameters:
         # self.N = self.I * self.lambda0 / 1.4399644850445153e-10
         # self.sigb = 0.5 * (self.rxbeam + self.rybeam) # average beam size
         
-
+        emit_n = np.sqrt(self.emitx * self.emity)
         # h_eV_s * speed_of_light / self.lambda0
+        self.emit_nn = 2 * np.pi * emit_n / self.lambdah / self.gamma0 ## emittance normalized as in Eq.6, 10.1103/PhysRevSTAB.15.080702
+        
+        if self.emit_nn < 1 or self.emit_nn > 5:
+            _logger.warning('1 <! emittance ({}) <! 5, SSY approx. might be incorrect'.format(self.emit_nn))
+            self.inaccurate = True 
+            #Eq.6, DOI:10.1103/PhysRevSTAB.15.080702
+        
+        if self.qf == 1: #account for quantum fluctuations
+            if self.iwityp == 0: #planar undulator
+                F_aw = 1.7 * self.aw0 + 1 / (1 + 1.88 * self.aw0 + 0.8 * self.aw0**2) 
+                #eq.B2, DOI:10.1103/PhysRevSTAB.15.080702, 
+                #eq.11 DOI:10.1016/j.optcom.2004.02.071
+            else: #helical undulator
+                F_aw = 1.42 * self.aw0 + 1 / (1 + 1.5 * self.aw0 + 0.95 * self.aw0**2)
+        
         if method == 'mxie':
             '''
             M. Xie, “Exact and variational solutions of 3D eigenmodes in high gain FELs,” Nucl. Instruments Methods Phys. Res. Sect. A Accel. Spectrometers, Detect. Assoc. Equip., vol. 445, no. 1–3, pp. 59–66, 2000.
             '''
+            
+            # if self.hn != 1:
+                # _logger.warning('MXie estimation not implemented for harmonic radaition')
+            
             self.rho1 = (0.5 / self.gamma0) * np.power( (self.aw0 * self.fc * self.xlamd / 2 / np.pi )**2 / (self.rxbeam * self.rybeam) * self.I / I_Alfven, 1.0/3.0) 
             
             #self.power = 6.0 * np.sqrt(np.pi) * self.rho1**2 * self.Pb / (self.N * np.log(self.N / self.rho1) ) # shot noise power [W] [Reiche]
@@ -73,38 +114,68 @@ class FelParameters:
             a = [None, 0.45, 0.57, 0.55, 1.6, 3.0, 2.0, 0.35, 2.9, 2.4, 51.0, 0.95, 3.0, 5.4, 0.7, 1.9, 1140.0, 2.2, 2.9, 3.2]
             
             self.xie_etad = self.lg1 / (2 * self.k0 * self.rxbeam * self.rybeam)
+            
             #self.xie_etae = 4 * pi * self.lg1 / (self.betax*2*pi) * self.k0 * (self.emitx / self.gamma0)
-            self.xie_etae = 4 * np.pi * self.lg1 * (self.emitx * self.emity) / self.lambda0 / (self.rxbeam * self.rybeam) / self.gamma0**2 # expressed via average x-y beam size
+            self.xie_etae = 4 * np.pi * self.lg1 * (self.emitx * self.emity) / self.lambda0 / (self.rxbeam * self.rybeam) / self.gamma0**2 * ((self.fc/self.fch)**2 / self.hn)**(1/3) / self.hn # expressed via average x-y beam size
             self.xie_etagamma = self.deta / (self.rho1 * np.sqrt(3))
-            self.xie_lscale = (a[1] * self.xie_etad ** a[2] + a[3] * self.xie_etae ** a[4] + a[5] * self.xie_etagamma ** a[6] 
+            
+            if self.hn !=1:
+                self.xie_etad *= ((self.fc/self.fch)**2 / self.hn)**(1/3) / self.hn 
+                self.xie_etae *= ((self.fc/self.fch)**2 / self.hn)**(1/3) * self.hn
+                self.xie_etagamma *= ((self.fc/self.fch)**2 / self.hn)**(1/3) * self.hn #eq C2+ DOI:10.1103/PhysRevSTAB.15.080702
+            
+            self.delta = (a[1] * self.xie_etad ** a[2] + a[3] * self.xie_etae ** a[4] + a[5] * self.xie_etagamma ** a[6] 
             + a[7] * self.xie_etae ** a[8] * self.xie_etagamma ** a[9] + a[10] * self.xie_etad ** a[11] * self.xie_etagamma ** a[12] + a[13] * self.xie_etad ** a[14] * self.xie_etae ** a[15]
             + a[16] * self.xie_etad ** a[17] * self.xie_etae ** a[18] * self.xie_etagamma ** a[19])
             
-            self.lg3 = self.lg1 * (1 + self.xie_lscale)
+            # self.lg3 = self.lg1 * (1 + self.xie_lscale)
             self.method = 'mxie'
             
         elif method == 'ssy_opt':
             '''
             E. L. Saldin, E. A. Schneidmiller, and M. V. Yurkov, “Design formulas for short-wavelength FELs,” Opt. Commun., vol. 235, no. 4–6, pp. 415–420, May 2004.
             '''
-            emit_n = np.sqrt(self.emitx * self.emity)
             
-            if self.iwityp == 0: #planar undulator
-                F_aw = 1.7 * self.aw0 + 1 / (1 + 1.88 * self.aw0 + 0.8 * self.aw0**2)
-            else: #helical undulator
-                F_aw = 1.42 * self.aw0 + 1 / (1 + 1.5 * self.aw0 + 0.95 * self.aw0**2)
+            
+            self.lg1 = 0.5 * 1.67 * np.sqrt(I_Alfven / self.I) * (emit_n * self.xlamd)**(5/6) / self.lambdah**(2/3) * (1 + self.aw0**2)**(1/3) / (self.hn**(5/6) * self.aw0 * self.fch) 
+            #eq.4, DOI:10.1103/PhysRevSTAB.15.080702
+            # it is power gain length = 0.5 * field gain length
+            
+            self.delta = 131 * (I_Alfven / self.I) * emit_n**(5/4) / (self.lambdah * self.xlamd**9)**(1/8) * self.hn**(9/8) * self.delgam**2 / (self.aw0 * self.fch)**2 / (1 + self.aw0**2)**(1/8) #eq.5, DOI:10.1103/PhysRevSTAB.15.080702
+            
                 
-            self.lg1 = 0.5 * 1.67 * np.sqrt(I_Alfven / self.I) * (emit_n * self.xlamd)**(5/6) / self.lambda0**(2/3) * (1 + self.aw0**2)**(1/3) / (self.aw0 * self.fc) # power gain length = 0.5 * field gain length
-            self.delta = 131 * (I_Alfven / self.I) * emit_n**(5/4) / (self.lambda0 * self.xlamd**9)**(1/8) * self.delgam**2 / (self.aw0 * self.fc)**2 / (1 + self.aw0**2)**(1/8)
-            self.lg3 = self.lg1 * (1 + self.delta)
-            self.delta_q = 5.5e-4 * (I_Alfven / self.I)**(3/2) * lambda_C_r * ro_e * emit_n**2 / self.lambda0**(11/4) / self.xlamd**(5/4) * (1 + self.aw0**2)**(9/4) * F_aw / (self.aw0 * self.fc**3)
-            self.delta_eff = (self.delta + self.delta_q) / (1 - self.delta_q)
-            self.beta_opt_calc = 11.2 * (I_Alfven / self.I)**(1/2) * (emit_n**3 * self.xlamd)**(1/2) / (self.lambda0 * self.aw0 * self.fc) / (1 + 8 * self.delta_eff)**(1/3)
+            
+            # if hasattr(self, 'qf'):
+                # if self.qf==1:
+                    # self.lg3 = self.lg1 * (1 + self.delta_eff)
             
             self.method = 'ssy_opt'
         else:
             _logger.error('method should be in ["mxie", "ssy_opt"]')
             raise ValueError('method should be in ["mxie", "ssy_opt"]')
+
+        if self.qf == 1:
+            self.delta_q = 5.5e4 * (I_Alfven / self.I)**(3/2) * lambda_C_r * ro_e * emit_n**2 / self.lambda0**(11/4) / self.xlamd**(5/4) * (1 + self.aw0**2)**(9/4) * F_aw / (self.aw0 * self.fch**3 * self.hn**(5/3))
+            
+            if self.delta_q >= 1:
+                _logger.warning('quantum fluctuation effect exceeds 1, estimation not applicable anymore')
+                self.delta_q = 0.999
+                self.inaccurate = True
+        else:
+            self.delta_q = 0
+            
+        self.delta_eff = (self.delta + self.delta_q) / (1 - self.delta_q)
+        
+        self.delta_criterion = 2.5 * (1 - np.exp(-0.5 * self.emit_nn**2))
+        if self.delta_eff > self.delta_criterion:
+            _logger.warning('delta_eff ({}) > {}; SSY approx. might be incorrect'.format(self.delta_eff, self.delta_criterion))
+            self.inaccurate = True
+                #Eq.7, DOI:10.1103/PhysRevSTAB.15.080702
+                #Eq.14+text, DOI:10.1016/j.optcom.2004.02.071
+        
+        self.beta_opt_calc = 11.2 * (I_Alfven / self.I)**(1/2) * (emit_n**3 * self.xlamd)**(1/2) / (self.lambdah* self.hn**(1/2) * self.aw0 * self.fch) / (1 + 8 * self.delta_eff)**(1/3)
+        
+        self.lg3 = self.lg1 * (1 + self.delta_eff)
         
         self.lg3 *= self.Lg_mult
         if self.Lg_mult != 1:
@@ -118,7 +189,7 @@ class FelParameters:
         self.z_sat_norm = 3 + 1/np.sqrt(3) * np.log(self.Nc) # normalized saturation length for slices
         self.z_sat_magn = self.z_sat_norm * np.sqrt(3) * self.lg3 # magnetic length to reach saturation
         
-        self.theta_c = np.sqrt(self.lambda0 / self.lg3) #critical angle
+        self.theta_c = np.sqrt(self.lambdah / self.lg3) #critical angle
         # _logger.debug('L_sat_norm = {}'.format(self.z_sat_norm))
         
         self.z_sat_min = np.nanmin(self.z_sat_magn)
@@ -260,6 +331,10 @@ class FelParameters:
     @property
     def phen0(self):
         return h_eV_s * speed_of_light / self.lambda0
+    
+    @property
+    def phenh(self):
+        return h_eV_s * speed_of_light / self.lambdah
 
 class FelParametersArray(FelParameters):
     def __init__(self):
@@ -292,6 +367,12 @@ def calculateFelParameters(input, array=False, method='mxie'):
     p.betay = input.betay
     p.emitx = input.emitx #normalized emittance
     p.emity = input.emity
+    
+    if hasattr(input,'hn'):
+        p.hn = input.hn
+    
+    if hasattr(input,'qf'):
+        p.qf = input.qf
     
     p.Lg_mult = 1
     if hasattr(input,'Lg_mult'):

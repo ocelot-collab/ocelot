@@ -131,7 +131,8 @@ def transform_vec_ext(X, dx, dy, tilt):
     X[:] = np.add(x_tilt, np.array([[dx], [0.], [dy], [0.], [0.], [0.]]))[:]
     return X
 
-def transfer_maps_mult(Ra, Ta, Rb, Tb, sym_flag=True):
+
+def transfer_maps_mult_py(Ra, Ta, Rb, Tb):
     """
     cell = [A, B]
     Rc = Rb * Ra
@@ -155,6 +156,9 @@ def transfer_maps_mult(Ra, Ta, Rb, Tb, sym_flag=True):
                         t2 += Tb[i, l, m] * Ra[l, j] * Ra[m, k]
                 Tc[i, j, k] = t1 + t2
     return Rc, Tc
+
+
+transfer_maps_mult = transfer_maps_mult_py if nb_flag is not True else nb.jit(transfer_maps_mult_py)
 
 
 def transfer_map_rotation(R, T, tilt):
@@ -902,34 +906,13 @@ def lattice_transfer_map(lattice, energy):
         Rb = elem.transfer_map.R(E)
         Bb = elem.transfer_map.B(E)
         if elem.transfer_map.__class__ == SecondTM:
-            Tc = np.zeros((6, 6, 6))
-            #Tb = deepcopy(elem.transfer_map.t_mat_z_e(elem.l, E))
-            Tb = deepcopy(elem.transfer_map.T_tilt(E))
+            Tb = np.copy(elem.transfer_map.T_tilt(E))
             Tb = sym_matrix(Tb)
-            for i in range(6):
-                for j in range(6):
-                    for k in range(6):
-                        t1 = 0.
-                        t2 = 0.
-                        for l in range(6):
-                            t1 += Rb[i, l] * Ta[l, j, k]
-                            for m in range(6):
-                                t2 += Tb[i, l, m] * Ra[l, j] * Ra[m, k]
-                        Tc[i, j, k] = t1 + t2
-            Ta = Tc
+            Ra, Ta = transfer_maps_mult(Ra, Ta, Rb, Tb)
         else:
-            Tc = np.zeros((6, 6, 6))
-            for i in range(6):
-                for j in range(6):
-                    for k in range(6):
-                        t1 = 0.
-                        for l in range(6):
-                            t1 += Rb[i, l] * Ta[l, j, k]
-                        Tc[i, j, k] = t1
-            Ta = Tc
-        Ba = np.dot(Rb, Ba) + Bb
-        Ra = np.dot(Rb, Ra)
 
+            Ra, Ta = transfer_maps_mult(Ra, Ta, Rb, Tb=np.zeros((6,6,6)))
+        Ba = np.dot(Rb, Ba) + Bb
         E += elem.transfer_map.delta_e
 
     lattice.T_sym = Ta
@@ -984,7 +967,7 @@ def trace_obj(lattice, obj, nPoints=None):
 
 def periodic_twiss(tws, R):
     """
-    initial conditions for a periodic Twiss slution
+    initial conditions for a periodic Twiss solution
     """
     tws = Twiss(tws)
 

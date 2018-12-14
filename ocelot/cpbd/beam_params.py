@@ -146,7 +146,7 @@ class EbeamParams:
     def __str__(self):
         val = ""
         val += ( "I1 =        " + str(self.I1) )
-        val += ( "I2 =        " + str(self.I2) )
+        val += ( "\nI2 =        " + str(self.I2) )
         val += ( "\nI3 =        " + str(self.I3) )
         val += ( "\nI4 =        " + str(self.I4) )
         val += ( "\nI5 =        " + str(self.I5) )

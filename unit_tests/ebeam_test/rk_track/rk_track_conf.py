@@ -46,6 +46,6 @@ def p_array():
 
     p_array = generate_parray(sigma_x=0, sigma_px=0, sigma_y=None, sigma_py=None,
                               sigma_tau=100e-6 / 2.36, sigma_p=0, tau_p_cor=0.01 / 2.36, charge=0.5e-9,
-                              nparticles=20000, energy=0.6)
+                              nparticles=10000, energy=0.6)
 
     return p_array

@@ -55,7 +55,7 @@ def test_chicane_trajectory(lattice, p_array, parameter, update_ref_values=False
 
     traj_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) + '.json'))
 
-    result = check_matrix(csr.csr_traj, traj_ref, TOL, assert_info=' trajectory - ')
+    result = check_matrix(csr.csr_traj, traj_ref, tolerance=1.0e-14, tolerance_type='absolute', assert_info=' trajectory - ')
 
     assert check_result(result)
 

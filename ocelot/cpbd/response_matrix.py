@@ -2,6 +2,7 @@ from ocelot.cpbd.optics import *
 from ocelot.cpbd.match import closed_orbit
 from ocelot.cpbd.track import tracking_step
 import copy
+import os
 import numpy as np
 from scipy.interpolate import splrep, splev
 import json
@@ -523,6 +524,10 @@ class ResponseMatrix:
 
         dict_rmatrix["method_name"] = self.method.__class__.__name__ if self.method != None else "None"
         dict_rmatrix["mode"] = self.mode
+
+        directory = os.path.dirname(filename)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
 
         with open(filename, 'w+') as f:
             json.dump(dict_rmatrix, f)

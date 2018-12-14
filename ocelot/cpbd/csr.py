@@ -272,7 +272,7 @@ class SubBinning:
         self.print_log = False
         if nb_flag:
             logger.debug("SubBinning: NUMBA")
-            self.p_per_subbins = nb.jit(nb.double[:](nb.double[:], nb.double[:], nb.double))(self.p_per_subbins_py)
+            self.p_per_subbins = nb.jit(nb.double[:](nb.double[:], nb.double[:], nb.int64))(self.p_per_subbins_py)
         else:
             logger.debug("SubBinning: Python")
             self.p_per_subbins = self.p_per_subbins_py

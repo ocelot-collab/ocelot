@@ -715,9 +715,6 @@ class CSR(PhysProc):
 
         KS1 = KS[0]
 
-        idx = np.argsort(w)
-        w = w[idx]
-        KS = KS[idx]
         w, idx = np.unique(w, return_index=True)
         KS = KS[idx]
 

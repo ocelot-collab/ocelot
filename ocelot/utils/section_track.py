@@ -169,6 +169,7 @@ class SectionTrack:
         self.tws0.mux = 0
         self.tws0.muy = 0
         bt = BeamTransform(tws=self.tws0)
+        bt.bounds = [-0.5, 0.5]
         self.add_physics_process(bt, self.lattice.sequence[0], self.lattice.sequence[0])
 
 

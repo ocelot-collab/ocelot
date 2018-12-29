@@ -157,24 +157,25 @@ class SpaceCharge(PhysProc):
     def el_field(self, X, Q, gamma, nxyz):
         N = X.shape[0]
         X[:, 2] = X[:, 2]*gamma
-        XX = np.max(X, axis=0)-np.min(X, axis=0)
+        X_min = np.amin(X, axis=0)
+        XX = np.amax(X, axis=0) - X_min
         if self.random_mesh:
             XX = XX*np.random.uniform(low=1, high=1.1)
-        logger.debug( 'mesh steps:' + str(XX))
+        logger.debug('mesh steps:' + str(XX))
         # here we use a fast 3D "near-point" interpolation
-        # we need a stand-alone module with 1D,2D,3D parricles-to-grid functions
+        # we need a stand-alone module with 1D, 2D, 3D particles-to-grid functions
         steps = XX/(nxyz-3)
         X = X/steps
-        X_min = np.min(X, axis=0)
+        X_min = X_min/steps
         X_mid = np.dot(Q, X)/np.sum(Q)
-        X_off = np.floor(X_min-X_mid) + X_mid
+        X_off = np.floor(X_min - X_mid) + X_mid
         X = X - X_off
         nx = nxyz[0]
         ny = nxyz[1]
         nz = nxyz[2]
         nzny = nz*ny
         Xi = np.int_(np.floor(X)+1)
-        inds = np.int_(Xi[:, 0]*nzny+Xi[:, 1]*nz+Xi[:, 2])  # 3d -> 1d
+        inds = np.int_(Xi[:, 0]*nzny + Xi[:, 1]*nz + Xi[:, 2])  # 3d -> 1d
         q = np.bincount(inds, Q, nzny*nx).reshape(nxyz)
         p = self.potential(q, steps)
         Ex = np.zeros(p.shape)

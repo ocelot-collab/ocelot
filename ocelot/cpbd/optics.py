@@ -679,25 +679,25 @@ class SecondTM(TransferMap):
         return m
 
 
-class SlacCavityTM(TransferMap):
-    def __init__(self, l=0, volt=0, phi=0, freq=0):
+class TWCavityTM(TransferMap):
+    def __init__(self, l=0, v=0, phi=0, freq=0):
         TransferMap.__init__(self)
         self.length = l
         self.dx = 0
         self.dy = 0
         self.tilt = 0
-        self.V = volt
+        self.v = v
         self.phi = phi
         self.freq = freq
-        self.delta_e_z = lambda z: self.V * np.cos(self.phi * np.pi / 180.) * z / self.length
-        self.delta_e = self.V * np.cos(self.phi * np.pi / 180.)
+        self.delta_e_z = lambda z: self.v * np.cos(self.phi * np.pi / 180.) * z / self.length
+        self.delta_e = self.v * np.cos(self.phi * np.pi / 180.)
         self.R_z = lambda z, energy: np.dot(
-            self.slac_cavity_R_z(z, self.V * z / self.length, energy, self.freq, self.phi),
-            self.f_entrance(z, self.V * z / self.length, energy, self.phi))
-        self.R = lambda energy: np.dot(self.f_exit(self.length, self.V, energy, self.phi),
+            self.tw_cavity_R_z(z, self.v * z / self.length, energy, self.freq, self.phi),
+            self.f_entrance(z, self.v * z / self.length, energy, self.phi))
+        self.R = lambda energy: np.dot(self.f_exit(self.length, self.v, energy, self.phi),
                                        self.R_z(self.length, energy))
 
-    def slac_cavity_R_z(self, z, V, E, freq, phi=0.):
+    def tw_cavity_R_z(self, z, V, E, freq, phi=0.):
         """
         :param z: length
         :param de: delta E
@@ -803,8 +803,8 @@ class MethodTM:
             tm = SecondTM(r_z_no_tilt=r_z_e, t_mat_z_e=T_z_e)
             tm.multiplication = self.sec_order_mult.tmat_multip
 
-        elif method == SlacCavityTM:
-            tm = SlacCavityTM(l=element.l, volt=element.v, phi=element.phi, freq=element.freq)
+        elif method == TWCavityTM:
+            tm = TWCavityTM(l=element.l, v=element.v, phi=element.phi, freq=element.freq)
             return tm
 
         else:
@@ -843,6 +843,9 @@ class MethodTM:
                 tm.vxy_down = element.vxy_down
             else:
                 tm.coupler_kick = False
+
+        if element.__class__ == TWCavity:
+            tm = TWCavityTM(v=element.v, freq=element.freq, phi=element.phi)
 
         if element.__class__ == Matrix:
             tm.delta_e = element.delta_e

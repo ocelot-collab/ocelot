@@ -213,6 +213,59 @@ def create_r_matrix(element):
             r_z_e = lambda z, energy: cavity_R_z(z, V=element.v * z / element.l, E=energy, freq=element.freq,
                                                phi=element.phi)
 
+    elif element.__class__ == TWCavity:
+
+        def tw_cavity_R_z(z, V, E, freq, phi=0.):
+            """
+            :param z: length
+            :param de: delta E
+            :param f: frequency
+            :param E: initial energy
+            :return: matrix
+            """
+            phi = phi * np.pi / 180.
+            de = V * np.cos(phi)
+            r12 = z * E / de * np.log(1. + de / E) if de != 0 else z
+            r22 = E / (E + de)
+            r65 = V * np.sin(phi) / (E + de) * (2 * np.pi / (speed_of_light / freq)) if freq != 0 else 0
+            r66 = r22
+            cav_matrix = np.array([[1, r12, 0., 0., 0., 0.],
+                                   [0, r22, 0., 0., 0., 0.],
+                                   [0., 0., 1, r12, 0., 0.],
+                                   [0., 0., 0, r22, 0., 0.],
+                                   [0., 0., 0., 0., 1., 0],
+                                   [0., 0., 0., 0., r65, r66]]).real
+            return cav_matrix
+
+        def f_entrance(z, V, E, phi=0.):
+            phi = phi * np.pi / 180.
+            de = V * np.cos(phi)
+            r = np.eye(6)
+            r[1, 0] = -de / z / 2. / E
+            print(r[1, 0])
+            r[3, 2] = r[1, 0]
+            return r
+
+        def f_exit( z, V, E, phi=0.):
+            phi = phi * np.pi / 180.
+            de = V * np.cos(phi)
+            r = np.eye(6)
+            r[1, 0] = +de / z / 2. / (E + de)
+            r[3, 2] = r[1, 0]
+            return r
+
+        def cav(z, V, E, freq, phi):
+            R_z = np.dot(tw_cavity_R_z(z, V, E, freq, phi), f_entrance(z, V, E, phi))
+            R = np.dot(f_exit(z, V, E, phi), R_z)
+            return R
+
+        if element.v == 0.:
+            r_z_e = lambda z, energy: uni_matrix(z, 0., hx=0., sum_tilts=element.dtilt + element.tilt, energy=energy)
+        else:
+            r_z_e = lambda z, energy: cav(z, V=element.v * z / element.l, E=energy, freq=element.freq,
+                                               phi=element.phi)
+
+
     elif element.__class__ == Solenoid:
         def sol(l, k, energy):
             """

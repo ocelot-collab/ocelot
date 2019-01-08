@@ -298,7 +298,7 @@ class Undulator(Element):
 
 class Cavity(Element):
     """
-    RF cavity
+    Standing wave RF cavity
     v - voltage [GV/m]
     freq - frequency [Hz]
     phi - phase in [deg]
@@ -312,6 +312,24 @@ class Cavity(Element):
         self.E = 0
         self.volterr = volterr
         self.coupler_kick = False
+
+
+class TWCavity(Element):
+    """
+    Traveling wave cavity
+    v - voltage [GV/m]
+    freq - frequency [Hz]
+    phi - phase in [deg]
+    """
+    def __init__(self, l=0., v=0., phi=0., freq=0., eid=None):
+        Element.__init__(self, eid)
+        self.l = l
+        self.v = v   # in GV
+        self.freq = freq   # Hz
+        self.phi = phi  # in grad
+        self.E = 0
+        self.coupler_kick = False
+
 
 class TDCavity(Element):
     """
@@ -330,6 +348,7 @@ class TDCavity(Element):
         self.freq = freq   # Hz
         self.phi = phi  # in deg
         self.tilt = tilt
+
 
 class Solenoid(Element):
     """

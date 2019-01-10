@@ -293,7 +293,10 @@ dict_plot = {Quadrupole: {"scale": 0.7, "color": "r",            "edgecolor": "r
              }
 
 
-def new_plot_elems(fig, ax, lat, s_point=0, nturns=1, y_lim=None, y_scale=1, legend=True, font_size=18):
+def new_plot_elems(fig, ax, lat, s_point=0, nturns=1, y_lim=None, y_scale=1, legend=True, font_size=18, excld_legend=None):
+    if excld_legend is None:
+        excld_legend = []
+
     dict_copy=deepcopy(dict_plot)
     alpha = 1
     ax.set_ylim((-1, 1.5))
@@ -338,6 +341,10 @@ def new_plot_elems(fig, ax, lat, s_point=0, nturns=1, y_lim=None, y_scale=1, leg
     for elem in dict_copy.keys():
         labels_dict[elem] = dict_copy[elem]["label"]
     for elem in lat.sequence:
+        if elem.__class__ in excld_legend:
+            L += elem.l
+            continue
+
         if elem.__class__ in [Marker, Edge]:
             L += elem.l
             continue
@@ -405,6 +412,7 @@ def new_plot_elems(fig, ax, lat, s_point=0, nturns=1, y_lim=None, y_scale=1, leg
         else:
             point, = ax.fill(s_coord, rect*ampl*scale*y_scale, color, edgecolor=ecolor,
                              alpha=alpha)
+
         annotation = ax.annotate(elem.__class__.__name__+": " + elem.id,
             xy=(L+l/2., 0), #xycoords='data',
             #xytext=(i + 1, i), textcoords='data',
@@ -533,17 +541,20 @@ def plot_betas(ax, S, beta_x, beta_y, font_size):
     leg.get_frame().set_alpha(0.2)
 
 
-def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=True, font_size=18):
+def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=True, font_size=14, excld_legend=None):
     """
     function for plotting: lattice (bottom section), vertical and horizontal beta-functions (middle section),
     other parameters (top section) such as "Dx", "Dy", "E", "mux", "muy", "alpha_x", "alpha_y", "gamma_x", "gamma_y"
-    lat - MagneticLattice,
-    tws - list if Twiss objects,
-    top_plot=["Dx"] - parameters which displayed in top section. Example top_plot=["Dx", "Dy", "alpha_x"]
-    legend=True - displaying legend of element types in bottom section,
-    fig_name=None - name of figure,
-    grid=True - grid
-    font_size=18 - font size.
+
+    :param lat: MagneticLattice,
+    :param tws: list if Twiss objects,
+    :param top_plot:  ["Dx"] - parameters which displayed in top section. Can be any attribute of Twiss class, e.g. top_plot=["Dx", "Dy", "alpha_x"]
+    :param legend: True - displaying legend of element types in bottom section,
+    :param fig_name: None - name of figure,
+    :param grid: True - grid
+    :param font_size: 16 - font size for any element of plot
+    :param excld_legend: None, exclude type of element from the legend, e.g. excld_legend=[Hcor, Vcor]
+    :return:
     """
     if fig_name is None:
         fig = plt.figure()
@@ -554,9 +565,9 @@ def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=Tr
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
     left, width = 0.1, 0.85
 
-    rect1 = [left, 0.63, width, 0.3]
-    rect2 = [left, 0.18, width, 0.45]
-    rect3 = [left, 0.06, width, 0.12]
+    rect1 = [left, 0.64, width, 0.3]
+    rect2 = [left, 0.19, width, 0.46]
+    rect3 = [left, 0.07, width, 0.12]
 
     ax_top = fig.add_axes(rect1)
     ax_b = fig.add_axes(rect2, sharex=ax_top)  #left, bottom, width, height
@@ -582,7 +593,7 @@ def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=Tr
 
     plot_betas(ax_b, S, beta_x, beta_y, font_size)
     #plot_elems(ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8) # plot elements
-    new_plot_elems(fig, ax_el, lat, s_point=S[0], legend=legend, y_scale=0.8, font_size=font_size)
+    new_plot_elems(fig, ax_el, lat, s_point=S[0], legend=legend, y_scale=0.8, font_size=font_size, excld_legend=excld_legend)
 
 
 def plot_opt_func_reduced(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=False, font_size=18):

@@ -189,12 +189,9 @@ class Wake(PhysProc):
         """
         [x, W] = AddWake(I, T)
         :param I: wake table in V/C, W in V (R, L, Cinv, nm, W0, N0, W1, N1)
-        :param T:
+        :param T: wake table in V/C, W in V
         :return:
         """
-        """[x, W] =AddWake (I,T)
-            T - wake table in V/C, W in V
-            (R,L,Cinv,nm,W0,N0,W1,N1)"""
         R, L, Cinv, nm, W0, N0, W1, N1 = T
         c = speed_of_light
         x = I[:, 0]
@@ -221,10 +218,8 @@ class Wake(PhysProc):
         return x, W
 
     def add_total_wake(self, X, Y, Z, q, TH, Ns, NF):
-        #function [Px Py Pz I00]=AddTotalWake (P,q,wakeFile,Ns,NF)
         T, H = TH
         c = speed_of_light
-        #Z=-Z
         Np=X.shape[0]
         X2 = X**2
         Y2 = Y**2

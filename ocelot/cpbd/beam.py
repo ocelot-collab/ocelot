@@ -24,7 +24,7 @@ try:
     import numba as nb
     nb_flag = True
 except:
-    _logger.info("csr.py: module NUMBA is not installed. Install it to speed up calculation")
+    _logger.info("beam.py: module NUMBA is not installed. Install it to speed up calculation")
     nb_flag = False
 
 """
@@ -868,10 +868,16 @@ def convmode(A, B, mode):
 
 
 def s_to_cur_py(A, sigma, q0, v):
-    #  A - s-coordinates of particles
-    #  sigma -smoothing parameter
-    #  q0 -bunch charge
-    #  v mean velocity
+    """
+    Function to calculate beam current
+
+    :param A: s-coordinates of particles
+    :param sigma: smoothing parameter
+    :param q0: bunch charge
+    :param v: mean velocity
+    :return: [s, I]
+    """
+
     Nsigma = 3
     a = np.min(A) - Nsigma*sigma
     b = np.max(A) + Nsigma*sigma
@@ -1108,6 +1114,7 @@ def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
 
     return [s, I, ex, ey, me, se, gamma0, emitxn, emityn]
 
+
 def global_slice_analysis(parray, Mslice=5000, Mcur=0.01, p=2, iter=2):
     """
     Function to calculate slice parameters
@@ -1151,6 +1158,7 @@ def global_slice_analysis(parray, Mslice=5000, Mcur=0.01, p=2, iter=2):
     slc.emitxn = emitt0 * gamma0
 
     z, ind = np.unique(z, return_index=True)
+
     emittx = emittx[ind]
     emitty = emitty[ind]
     sE = sE[ind]
@@ -1178,6 +1186,11 @@ def global_slice_analysis(parray, Mslice=5000, Mcur=0.01, p=2, iter=2):
     slc.I = interp1(B[:, 0], B[:, 1], s)
 
     # additional moments <x>, <xp>, <y>, <yp>, <p>
+    mx = mx[ind]
+    mxs = mxs[ind]
+    my = my[ind]
+    mys = mys[ind]
+
     xm = interp1(z, mx, s)
     xpm = interp1(z, mxs, s)
     ym = interp1(z, my, s)
@@ -1201,6 +1214,7 @@ def global_slice_analysis(parray, Mslice=5000, Mcur=0.01, p=2, iter=2):
     slc.sig_yp = simple_filter(sig_yp, p, iter)
 
     _, mp, _, _, _, _ = slice_analysis(z, PD[4], PD[5], Mslice, True)
+    mp = mp[ind]
     mp = interp1(z, mp, s)
     slc.mp = simple_filter(mp, p, iter)
 
@@ -1296,6 +1310,7 @@ def parray2beam(parray, step=1e-7):
     if hasattr(parray,'filePath'):
         beam.filePath = parray.filePath + '.beam'
     return(beam)
+
 
 def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
                     sigma_tau=1e-3, sigma_p=1e-4, tau_p_cor=0.01, charge=5e-9, nparticles=200000, energy=0.13,

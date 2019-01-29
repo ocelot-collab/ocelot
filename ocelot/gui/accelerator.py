@@ -294,6 +294,8 @@ dict_plot = {Quadrupole: {"scale": 0.7, "color": "r",            "edgecolor": "r
 
 
 def new_plot_elems(fig, ax, lat, s_point=0, nturns=1, y_lim=None, y_scale=1, legend=True, font_size=18, excld_legend=None):
+    legend_font_size = font_size
+
     if excld_legend is None:
         excld_legend = []
 
@@ -419,7 +421,7 @@ def new_plot_elems(fig, ax, lat, s_point=0, nturns=1, y_lim=None, y_scale=1, leg
             horizontalalignment="left",
             arrowprops=dict(arrowstyle="simple", connectionstyle="arc3,rad=+0.2"),
             bbox=dict(boxstyle="round", facecolor="w", edgecolor="0.5", alpha=0.9),
-                                 fontsize=16
+                                 fontsize=legend_font_size
             )
         # by default, disable the annotation visibility
         annotation.set_visible(False)
@@ -440,7 +442,7 @@ def new_plot_elems(fig, ax, lat, s_point=0, nturns=1, y_lim=None, y_scale=1, leg
 
     on_move_id = fig.canvas.mpl_connect('motion_notify_event', on_move)
     if legend:
-        ax.legend(loc='upper center', ncol=ncols, shadow=False, prop=font_manager.FontProperties(size=15))
+        ax.legend(loc='upper center', ncol=ncols, shadow=False, prop=font_manager.FontProperties(size=legend_font_size))
 
 
 def plot_elems(ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legend = True):
@@ -541,7 +543,7 @@ def plot_betas(ax, S, beta_x, beta_y, font_size):
     leg.get_frame().set_alpha(0.2)
 
 
-def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=True, font_size=14, excld_legend=None):
+def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=True, font_size=12, excld_legend=None):
     """
     function for plotting: lattice (bottom section), vertical and horizontal beta-functions (middle section),
     other parameters (top section) such as "Dx", "Dy", "E", "mux", "muy", "alpha_x", "alpha_y", "gamma_x", "gamma_y"

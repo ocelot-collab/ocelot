@@ -1144,6 +1144,14 @@ class Navigator:
         self.proc_kick_elems = []
         self.kill_process = False # for case when calculations are needed to terminated e.g. from gui
 
+    def get_phys_procs(self):
+        """
+        method return list of all physics processes which were added
+
+        :return: list, list of PhysProc(s)
+        """
+        return self.process_table.proc_list
+
     def add_physics_proc(self, physics_proc, elem1, elem2):
         #logger_navi.debug(" add_physics_proc: phys proc: " + physics_proc.__class__.__name__)
         self.process_table.add_physics_proc(physics_proc, elem1, elem2)

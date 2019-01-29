@@ -238,6 +238,11 @@ class SpaceCharge(PhysProc):
 
 
 class LSC(PhysProc):
+    """
+    Longitudinal Space Charge
+    smooth_param - 0.1 smoothing parameter, resolution = np.std(p_array.tau())*smooth_param
+
+    """
     def __init__(self, step=1):
         PhysProc.__init__(self, step)
         self.smooth_param = 0.1

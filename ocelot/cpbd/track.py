@@ -461,6 +461,10 @@ def track(lattice, p_array, navi, print_progress=True, calc_tws=True):
             sys.stdout.write( "\r" + "z = " + str(navi.z0)+" / "+str(lattice.totalLen) + " : applied: " + ", ".join(poc_names)  )
             sys.stdout.flush()
 
+    # finalize PhysProcesses
+    for p in navi.get_phys_procs():
+        p.finalize()
+
     return tws_track, p_array
 
 

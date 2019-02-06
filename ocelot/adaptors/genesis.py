@@ -1402,7 +1402,7 @@ def create_exp_dir(exp_dir, run_ids):
             raise
 
 
-def generate_input(undulator, beam, E_photon = None, itdp=True):
+def generate_input(undulator, beam, E_photon = None, itdp=True, *args, **kwargs):
     '''
     Create Genesis inp object with default input parameters
     '''
@@ -1469,6 +1469,8 @@ def generate_input(undulator, beam, E_photon = None, itdp=True):
     rybeam = np.nanmax(np.sqrt(inp.beam.beta_y * inp.beam.emit_y))
     inp.dgrid = np.nanmax([rxbeam, rybeam]) * 8 #due to bug in Genesis2 that crashes when electrons leave the mesh
 
+    inp.hn=1 # should be flexible in the future
+    
     felParameters = calculateFelParameters(inp)
 
     if E_photon is None:

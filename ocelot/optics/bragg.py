@@ -27,6 +27,13 @@ c = 299792458.0
 
 r_el        = 2.8179403267e-15       #Electron classical radius in:  m
 
+def calc_angle(a,b):
+    '''
+    yields angle between vectors "a"=(ax,ay,az) and "b"=(bx,by,bz) in degrees
+    '''
+    a_ = np.array(a)
+    b_ = np.array(b)
+    return np.arccos(np.dot(a_,b_)/np.linalg.norm(a_)/np.linalg.norm(b_)) / np.pi * 180
 
 '''
 element database
@@ -146,7 +153,7 @@ def F_hkl(cryst, ref_idx, lamb, temp):
     
     _logger.debug('calculating Fhkl {} {} {}'.format(lamb, cryst.lattice.element_name, ref_idx))
     
-    file_name = cryst.lattice.element_name + str(ref_idx[0]) + str(ref_idx[1]) + str(ref_idx[2]) + '.dat'
+    file_name = cryst.lattice.element_name + str(ref_idx[2]) + str(ref_idx[1]) + str(ref_idx[0]) + '.dat'
     
     target_ev = 2*pi * hbar * c / lamb
     
@@ -392,14 +399,16 @@ def get_crystal_filter(cryst, ev_seed, nk=10000, k = None, n_width = 100):
     #n_width - number of Darwin widths
     lamb=h_eV_s*speed_of_light/ev_seed
     ref_idx=cryst.ref_idx
-    _logger.debug(ind_str + 'index = {}'.format(ref_idx))
-    kb     = 2*np.pi/lamb
+    n = cryst.cut
+    _logger.debug(ind_str + 'reflection index = {}'.format(ref_idx))
+    kb = 2*np.pi/lamb
     
     H, d, phi = find_bragg(lambd = lamb, lattice=cryst.lattice, ord_max = 15)
     
     polarization = 'sigma'
 
-    dhkl = d[ref_idx]
+    abs_ref_idx = tuple(abs(np.array(ref_idx)))
+    dhkl = d[abs_ref_idx]
     
     '''
     print 'lamb=', lamb
@@ -408,22 +417,88 @@ def get_crystal_filter(cryst, ev_seed, nk=10000, k = None, n_width = 100):
     print 'theta bragg', phi[ref_idx]
     '''
     
-    thetaB = phi[ref_idx]* np.pi / 180.0
+    thetaB = phi[abs_ref_idx]* np.pi / 180.0
+    _logger.debug(ind_str + 'Bragg angle {} [rad]'.format(thetaB))
+    _logger.debug(ind_str + 'Bragg angle {} [deg]'.format(thetaB/np.pi*180))
     
     if polarization == 'sigma':
         c_pol = 1
     else :
         c_pol = - np.cos(2.0 * thetaB)
-
-    psih   = cryst.psi_n - thetaB
-    psi0   = cryst.psi_n + thetaB
-    gamma0 = np.cos(psi0)
-    gammah = np.cos(psih)
-    gamma  = gammah/gamma0
-        
-    f0, fh, fmh =  F_hkl(cryst = cryst, ref_idx = ref_idx, lamb=lamb, temp = 300*K)
     
-    _logger.debug(ind_str + 'Bragg angle {} [rad]'.format(thetaB))
+    ref_idx_length = np.sqrt(np.sum(np.array(ref_idx)**2))
+    h_norm = tuple([i/ref_idx_length for i in ref_idx])
+    h = np.array([i*2*np.pi/dhkl for i in h_norm]) # normalized q-vector of crystalline plane
+
+    #quadratic equation coefficients to find incidence angle
+    a = - 0.5 * np.sin(thetaB)**2 + 0.5*h_norm[2]**2
+    b = 2/np.sqrt(2) * (h_norm[0] + h_norm[1]) * h_norm[2]
+    c = - 2 * np.sin(thetaB)**2 + (h_norm[0] + h_norm[1])**2
+
+    ctg2_tilt = np.polynomial.polynomial.polyroots((a,b,c))
+    tilt = np.arctan(ctg2_tilt*2)/np.pi*180
+    tilt_min = tilt[np.argmin(abs(tilt))]
+    _logger.debug(ind_str + 'normal angle = {} deg'.format(calc_angle((0,0,1), n)))
+    _logger.debug(ind_str + 'tilt solutions = {} deg'.format(tilt))
+
+    #s0_0 = np.array([-1*sqrt(2)*np.tan((tilt[0] - 90)/180*np.pi)/2, -1*sqrt(2)*np.tan((tilt[0] - 90)/180*np.pi)/2, -1])
+    s0_0 = np.array([-1*np.sqrt(2)*ctg2_tilt[0], -1*np.sqrt(2)*ctg2_tilt[0], -1])
+    s0_0 = s0_0 / np.linalg.norm(s0_0)
+
+    #s0_1 = np.array([-1*sqrt(2)*np.tan((tilt[1] - 90)/180*np.pi)/2, -1*sqrt(2)*np.tan((tilt[1] - 90)/180*np.pi)/2, -1])
+    s0_1 = np.array([-1*np.sqrt(2)*ctg2_tilt[1], -1*np.sqrt(2)*ctg2_tilt[1], -1])
+    s0_1 = s0_1 / np.linalg.norm(s0_1)
+
+    gamma0_0 = np.dot(n, s0_0)/np.linalg.norm(s0_0)/np.linalg.norm(n)
+    gamma0_1 = np.dot(n, s0_1)/np.linalg.norm(s0_1)/np.linalg.norm(n)
+
+    if gamma0_0 < gamma0_1:
+        s0 = s0_0 * 2 * np.pi / lamb
+        gamma0 = gamma0_0
+    else:
+        s0 = s0_1 * 2 * np.pi / lamb
+        gamma0 = gamma0_1
+
+    #h = np.array(cryst.ref_idx) / np.linalg.norm(cryst.ref_idx) * 2 * np.pi / dhkl
+    sh = s0 + h
+    _logger.debug(ind_str + 'n   = {}'.format(n))
+    _logger.debug(ind_str + 's0 = {}'.format(s0))
+    _logger.debug(ind_str + 'h  = {}'.format(h))
+    _logger.debug(ind_str + 'sh  = {}'.format(sh))
+    
+    
+    gammah = np.dot(n, sh)/np.linalg.norm(sh)/np.linalg.norm(n)
+    
+    gamma0, gammah = -gamma0, -gammah ####bugfix?
+    
+    gamma = gamma0 / gammah
+
+    _logger.debug(ind_str + '2 theta = {} deg'.format(calc_angle(s0,-sh)))
+    _logger.debug(ind_str + 'angle s0 to -n (0==best): {}'.format(np.arccos(gamma0)/np.pi*180))
+    _logger.debug(ind_str + 'angle sh to -n (90==worst?): {}'.format(180 - np.arccos(gammah)/np.pi*180))
+
+    #################
+    # cryst.psi_n=-np.pi/2
+    # psih   = cryst.psi_n - thetaB
+    # psi0   = cryst.psi_n + thetaB
+    # gamma0 = np.cos(psi0)
+    # gammah = np.cos(psih)
+    # gamma  = gammah/gamma0
+    ###################
+    
+    _logger.debug(ind_str + 'gamma0: {}'.format(gamma0))
+    _logger.debug(ind_str + 'gammah: {}'.format(gammah))
+    _logger.debug(ind_str + 'gamma: {}'.format(gamma))
+    if gamma<0:
+        _logger.debug(2*ind_str + 'BRAGG geometry')
+    else:
+        _logger.warning(2*ind_str + 'LAUE geometry')
+
+
+    
+    f0, fh, fmh =  F_hkl(cryst = cryst, ref_idx = abs_ref_idx, lamb=lamb, temp = 300*K)
+    
+    
 #    _logger.debug(ind_str + 'structure factors {} {} {}'.format(f0, fh, fmh))
     #plt.figure()
 
@@ -436,6 +511,8 @@ def get_crystal_filter(cryst, ev_seed, nk=10000, k = None, n_width = 100):
     mid_k  = kb / (- mid_TH * 1/np.tan(thetaB) + 1 )
     dk  =  ( -2*kb*np.sin(thetaB) + np.sqrt(16*mid_k**2 * np.real(delta)**2 * np.cos(thetaB)**2 + 4*kb**2 * np.sin(thetaB)**2) ) / ( 2 * np.real(delta) * np.cos(thetaB) )
     
+    print('vcell', vcell)
+    print('mid_k', mid_k)
     
     ki, kf = mid_k - n_width*dk, mid_k + n_width*dk    #final   k    
     
@@ -451,11 +528,11 @@ def get_crystal_filter(cryst, ev_seed, nk=10000, k = None, n_width = 100):
     cryst.gamma0 = gamma0
     cryst.gammah = gammah
     cryst.c_pol = c_pol
-    
     cryst.chi0  = - ( r_el * lamb**2 * f0  ) / ( np.pi * vcell )
     cryst.chih  = - ( r_el * lamb**2 * fh  ) / ( np.pi * vcell )
     cryst.chimh = - ( r_el * lamb**2 * fmh ) / ( np.pi * vcell )
     cryst.pl = np.pi * vcell * np.sqrt( gamma0 * np.abs(gammah) ) / ( r_el * lamb * np.abs(c_pol) * np.sqrt( fh*fmh ) )
+    
     
     from ocelot.optics.wave import TransferFunction #hotfix here
     f = TransferFunction()

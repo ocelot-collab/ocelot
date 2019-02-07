@@ -1363,6 +1363,8 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
     accepts arguments with the same names as BeamArray().parameters()
     I - current in Amps
     E - beam ebergy in GeV
+    
+    dE - rms energy spread in GeV
     emit_x, emit_n(both normalized), emit_xn, etc.
     shape - beam shape ('gaussian' of 'flattop')
     l_beam [m] - beam length in meters
@@ -1394,11 +1396,13 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
             beam.beta_y = value
         if key is 'nslice':
             nslice = value
+        if key is 'dE':
+            beam.dg = value / m_e_GeV
 
     if 'l_window' not in kwargs:
-        if beam.shape is 'gaussian':
+        if beam.shape is ['gaussian', 'gauss', 'g']:
             l_window = l_beam * 6
-        elif beam.shape is 'flattop':
+        elif beam.shape in ['flattop', 'ft']:
             l_window = l_beam * 2
         else:
             raise ValueError('Beam() shape can be either "gaussian" or "flattop"')

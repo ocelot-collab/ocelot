@@ -41,6 +41,9 @@ from ocelot.optics.utils import calc_ph_sp_dens
 from ocelot.optics.wave import *
 from copy import deepcopy
 
+from ocelot.common.logging import *
+_logger = logging.getLogger('ocelot.gen4') 
+
 # from pylab import rc, rcParams #tmp
 from matplotlib import rc, rcParams
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -778,10 +781,20 @@ def subfig_evo_el_size(ax_size_tsize, out, legend, which='both'):
 #    y = out.h5['Beam/ysize']
     z = out.h5['Lattice/zplot']
     
+    if np.sum(out.I) == 0:
+        weights = None
+        _logger.warning('charge=0, no weighting')
+    else:
+        weights = out.I
+    
+    
     if which == 'both' or which == 'averaged':
-        ax_size_tsize.plot(z, np.average(xrms, axis=1, weights=out.I) * 1e6, 'g-', z, np.average(yrms, axis=1, weights=out.I) * 1e6, 'b-')
+        ax_size_tsize.plot(z, np.average(xrms, axis=1, weights=weights) * 1e6, 'g-', z, np.average(yrms, axis=1, weights=weights) * 1e6, 'b-')
     if which == 'both' or which == 'peak_curr':
-        idx_pk = np.where(out.I == np.amax(out.I))[0][0]
+        if weights is None:
+            idx_pk = int(out.I.size/2)
+        else:
+            idx_pk = np.where(out.I == np.amax(out.I))[0][0]
         ax_size_tsize.plot(z, xrms[:, idx_pk] * 1e6, 'g--', z, yrms[:, idx_pk] * 1e6, 'b--')
     ax_size_tsize.set_ylabel(r'$\sigma_{x,y}$ [$\mu$m]')
 

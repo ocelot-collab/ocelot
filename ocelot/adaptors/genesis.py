@@ -1116,7 +1116,17 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', dfl_slipage_inc
     if inp.latticefile == None:
         if inp.lat != None:
             _logger.debug(ind_str + 'writing ' + inp_file + '.lat')
-            open(inp_path + '.lat', 'w').write(generate_lattice(inp.lat, unit=inp.xlamd/2, energy=inp.gamma0 * m_e_GeV, debug = debug, min_phsh = min_phsh))
+            if not hasattr(inp, 'lat_unit'):
+                lat_unit = inp.xlamd
+                _logger.debug(2*ind_str + 'lat_unit_size = xlamds = {} m'.format(lat_unit))
+            else:
+                if inp.lat_unit is None:
+                    lat_unit = inp.xlamd
+                    _logger.debug(2*ind_str + 'lat_unit_size = xlamds = {} m'.format(lat_unit))
+                else:
+                    lat_unit = inp.lat_unit
+                    _logger.debug(2*ind_str + 'lat_unit_size = {} m'.format(lat_unit))
+            open(inp_path + '.lat', 'w').write(generate_lattice(inp.lat, unit=lat_unit, energy=inp.gamma0 * m_e_GeV, debug = debug, min_phsh = min_phsh))
             inp.latticefile = inp_file + '.lat'
 
     if inp.beamfile == None:
@@ -1392,7 +1402,7 @@ def create_exp_dir(exp_dir, run_ids):
             raise
 
 
-def generate_input(undulator, beam, E_photon = None, itdp=True):
+def generate_input(undulator, beam, E_photon = None, itdp=True, *args, **kwargs):
     '''
     Create Genesis inp object with default input parameters
     '''
@@ -1459,6 +1469,8 @@ def generate_input(undulator, beam, E_photon = None, itdp=True):
     rybeam = np.nanmax(np.sqrt(inp.beam.beta_y * inp.beam.emit_y))
     inp.dgrid = np.nanmax([rxbeam, rybeam]) * 8 #due to bug in Genesis2 that crashes when electrons leave the mesh
 
+    inp.hn=1 # should be flexible in the future
+    
     felParameters = calculateFelParameters(inp)
 
     if E_photon is None:

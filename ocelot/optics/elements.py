@@ -2,7 +2,7 @@
 optics elements
 '''
 
-from numpy import sin, cos, pi, sqrt, log, array, random, sign
+# from numpy import sin, cos, pi, sqrt, log, array, random, sign
 #from numpy.linalg import norm
 import numpy as np
 
@@ -44,8 +44,8 @@ class OptElement:
         
         self.pitch_ang = pitch_ang
         M1 = np.matrix([[1., 0., 0.],
-                        [0., cos(pitch_ang), sin(pitch_ang)],
-                        [0., -sin(pitch_ang), cos(pitch_ang)]])
+                        [0., np.cos(pitch_ang), np.sin(pitch_ang)],
+                        [0., -np.sin(pitch_ang), np.cos(pitch_ang)]])
         #if pitch_ang 
         
         no = M1 * no
@@ -53,9 +53,9 @@ class OptElement:
 
 
         self.yaw_ang = yaw_ang
-        M2 = np.matrix([[cos(yaw_ang), 0.,  sin(yaw_ang)],
+        M2 = np.matrix([[np.cos(yaw_ang), 0.,  np.sin(yaw_ang)],
                         [0.,           1.,  0.],
-                        [-sin(yaw_ang),0.,  cos(yaw_ang)]])
+                        [-np.sin(yaw_ang),0.,  np.cos(yaw_ang)]])
         #if pitch_ang 
         
         no = M2 * no
@@ -65,8 +65,8 @@ class OptElement:
         
         self.roll_ang = roll_ang
 
-        c = cos(roll_ang)
-        s = sin(roll_ang)
+        c = np.cos(roll_ang)
+        s = np.sin(roll_ang)
         x, y, z = np.array(z_ax.T).reshape(-1) #no[0][0], no[0][1], no[0][2]
         #print x, y, z
         #print no

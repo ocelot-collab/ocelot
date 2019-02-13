@@ -1921,7 +1921,8 @@ def read_out_file_stat_u(file_tamplate, run_inp=[], param_inp=[], debug=1):
             if debug > 0:
                 print ('      reading run', irun)
             outlist[irun] = read_out_file(out_file, read_level=2, debug=1)
-            outlist[irun].calc_spec()
+            outlist[irun].calc_spec(npad=1)
+            # print(outlist[irun].freq_lamd[0])
             run_range_good.append(irun)
             # except:
     run_range = run_range_good
@@ -1944,6 +1945,7 @@ def read_out_file_stat_u(file_tamplate, run_inp=[], param_inp=[], debug=1):
     for param in param_range:
         param_matrix = []
         for irun in run_range:
+            _logger.debug(ind_str + 'run {}'.format(irun))
             if not hasattr(outlist[irun], param):
                 continue
             else:
@@ -1958,17 +1960,17 @@ def read_out_file_stat_u(file_tamplate, run_inp=[], param_inp=[], debug=1):
             pass
         setattr(out_stat, param, param_matrix)
 
-    out_stat.stage = stage
-    out_stat.dir = proj_dir
+    out_stat.stage = None
+    out_stat.dir = os.path.dirname(file_tamplate)
     out_stat.run = run_range
-    out_stat.z = outlist[irun].z
+    out_stat.z = outlist[irun].z #check if all the same!
     out_stat.s = outlist[irun].s
     out_stat.f = outlist[irun].freq_lamd
     out_stat.t = outlist[irun].t
     out_stat.dt = outlist[irun].dt
     
     out_stat.xlamds=outlist[irun]('xlamds')
-    out_stat.filePath=proj_dir
+    # out_stat.filePath=proj_dir
 
     _logger.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
     return out_stat

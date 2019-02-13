@@ -5,6 +5,7 @@ wave optics
 from numpy import random
 from numpy.linalg import norm
 import numpy as np
+from math import factorial
 from numpy import inf, complex128, complex64
 import numpy.fft as fft
 # import matplotlib.pyplot as plt
@@ -1131,14 +1132,17 @@ def generate_gaussian_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), po
     power_waistpos (x,y) [m] downstrean location of the waist of the beam
     wavelength [m] - central frequency of the radiation, if different from xlamds
     zsep (integer) - distance between slices in z as zsep*xlamds
-    freq_chirp [(1e9 nm)/(1e6 um)] = [m/m] - requency chirp of the beam around power_center[2]
+    freq_chirp [1/fs**2] - requency chirp of the beam around power_center[2]
     en_pulse, power = total energy or max power of the pulse, use only one
     '''
     
     start = time.time()
 
-    if shape[2] == None:
-        shape = (shape[0],shape[1],int(dgrid[2]/xlamds/zsep))
+    if dgrid[2] is not None and zsep is not None:
+        if shape[2] == None:
+            shape = (shape[0],shape[1],int(dgrid[2]/xlamds/zsep))
+        else:
+            _logger.error(ind_str + 'dgrid[2] or zsep should be None, since either determines longiduninal grid size')
     
     _logger.info('generating radiation field of shape (nz,ny,nx): ' + str(shape))
     if 'energy' in kwargs:
@@ -1154,8 +1158,7 @@ def generate_gaussian_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), po
     dfl.domain_xy = 's'
     dfl.dx = dgrid[0] / dfl.Nx()
     dfl.dy = dgrid[1] / dfl.Ny()
-    if dgrid[2] is not None and zsep is not None:
-        _logger.error(ind_str + 'dgrid[2] or zsep should be None, since either determines longiduninal grid size')
+    
     if dgrid[2] is not None:
         dz = dgrid[2] / dfl.Nz()
         zsep = int(dz/xlamds)
@@ -1187,10 +1190,15 @@ def generate_gaussian_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), po
     qz = 1j * np.pi * (2 * rms_z)**2 / xlamds
     
     if wavelength.__class__ in [list, tuple, np.ndarray] and len(wavelength) == 2:
-        freq_chirp = (wavelength[1] - wavelength[0]) / (z[-1,0,0] - z[0,0,0])
-        _logger.debug(ind_str + 'wavelengths ', wavelength)
-        _logger.debug(ind_str + 'z ', (z[-1,0,0], z[0,0,0]))
-        _logger.debug(ind_str + 'calculated chirp ', freq_chirp)
+        domega = 2 * np.pi * speed_of_light * (1 / wavelength[0] - 1 / wavelength[1])
+        dt = (z[-1,0,0] - z[0,0,0]) / speed_of_light
+        freq_chirp = domega / dt / 1e30 / zsep
+        # freq_chirp = (wavelength[1] - wavelength[0]) / (z[-1,0,0] - z[0,0,0])
+        _logger.debug(ind_str + 'difference wavelengths {} {}'.format(wavelength[0], wavelength[1]))
+        _logger.debug(ind_str + 'difference z {} {}'.format(z[-1,0,0], z[0,0,0]))
+        _logger.debug(ind_str + 'd omega {}'.format(domega))
+        _logger.debug(ind_str + 'd t     {}'.format(dt))
+        _logger.debug(ind_str + 'calculated chirp {}'.format(freq_chirp))
         wavelength = np.mean([wavelength[0], wavelength[1]])
         
       
@@ -1205,7 +1213,10 @@ def generate_gaussian_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), po
     if freq_chirp == 0:
         phase_chirp_quad = 0
     else:
-        phase_chirp_quad = freq_chirp *((z-z0)/dfl.dz*zsep)**2 * xlamds / 2# / pi**2
+        # print(dfl.scale_z() / speed_of_light * 1e15)
+        # phase_chirp_quad = freq_chirp *((z-z0)/dfl.dz*zsep)**2 * xlamds / 2# / pi**2
+        phase_chirp_quad = freq_chirp / (speed_of_light * 1e-15)**2 * (zl-z0)**2 * dfl.xlamds# / pi**2
+        # print(phase_chirp_quad.shape)
 
 
     # if qz == 0 or qz == None:
@@ -1229,7 +1240,7 @@ def generate_gaussian_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), po
     if np.size(phase_chirp_lin) > 1:
         arg -= phase_chirp_lin
     if np.size(phase_chirp_quad) > 1:
-        arg += phase_chirp_quad
+        arg += phase_chirp_quad[:, np.newaxis, np.newaxis]
     dfl.fld = np.exp(-1j * k * arg) #  - (grid[0]-z0)**2/qz 
     # dfl.fld = np.exp(-1j * k * ( (x-x0)**2/2/qx + (y-y0)**2/2/qy + (z-z0)**2/2/qz - phase_chirp_lin + phase_chirp_quad) ) #  - (grid[0]-z0)**2/qz 
 
@@ -1963,6 +1974,73 @@ def trf_mult(trf_list, embed_list=True):
         trf_out.trf_list = trf_list
     
     return trf_out
+    
+    
+def calc_phase_delay(coeff, w, w0):  
+    '''
+    expression for the phase -- coeff[0] + coeff[1]*(w - w0)/1! + coeff[2]*(w - w0)**2/2! + coeff[3]*(w - w0)**3/3!
+    coeff is a list with 
+    coeff[0] =: measured in [rad]      --- phase
+    coeff[1] =: measured in [fm s ^ 1] --- group delay
+    coeff[2] =: measured in [fm s ^ 2] --- group delay dispersion (GDD)
+    coeff[3] =: measured in [fm s ^ 3] --- third-order dispersion (TOD)
+    ...    
+    '''
+    delta_w = w - w0
+    _logger.debug('calculating phase delay')
+    _logger.debug(ind_str + 'coeffs for compression = {}'.format(coeff))
+    coeff_norm = [ci / (1e15)**i / factorial(i) for i, ci in enumerate(coeff)]
+    coeff_norm = list(coeff_norm)[::-1]
+    _logger.debug(ind_str + 'coeffs_norm = {}'.format(coeff_norm))
+    delta_phi = np.polyval(coeff_norm, delta_w) 
+    _logger.debug(ind_str + 'delta_phi[0] = {}'.format(delta_phi[0]))
+    _logger.debug(ind_str + 'delta_phi[-1] = {}'.format(delta_phi[-1]))
+    _logger.debug(ind_str + 'done')
+    
+    return delta_phi   
+
+def dfl_crip_freq(dfl, coeff, E_ph0 = None, return_result = False):
+    '''
+    The function adds a phase shift to a fld object. The expression for the phase see in the calc_phase_delay function
+    dfl   --- is a fld object 
+    coeff --- coefficients in phase (see in the calc_phase_delay function)
+    E_pho --- energy with respect to which the phase shift is calculated
+    return_result --- a flag that is responsible for returning the modified dfl object if it is True or
+                      change the dfl function parameter if it is False
+    '''
+    if return_result:
+        copydfl = deepcopy(dfl)
+        _, dfl = dfl, copydfl
+             
+    if dfl.domain_z == 't':    
+        dfl.to_domain('f')       
+    
+    if E_ph0 == None: 
+        w0 = 2*np.pi*speed_of_light/dfl.xlamds
+        
+    elif E_ph0 == 'center':
+        _, lamds = np.mean([dfl.int_z(), dfl.scale_z()], axis = (1) )
+        w0 = 2*np.pi*speed_of_light/lamds
+    
+    elif isinstance(E_ph0,str) is not True:
+        w0 = 2*np.pi*E_ph0/h_eV_s
+        
+    else:
+        raise ValueError("E_ph0 must be None or 'center' or some value")
+    
+    w = dfl.scale_kz() * speed_of_light
+    
+    delta_phi = calc_phase_delay(coeff, w, w0)
+    H = np.exp(-1j * delta_phi)
+    
+    dfl.fld = dfl.fld * H[:,np.newaxis,np.newaxis]
+    dfl.to_domain('t')
+    
+    if return_result:
+#        copydfl, dfl = dfl, copydfl
+        return dfl
+    
+    
     
 def trf_mult_mix(trf_list, mode_out='ref'):
     '''

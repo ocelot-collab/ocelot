@@ -2543,8 +2543,8 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cm
     _logger.info('plotting dpa bucket')
     start_time = time.time()
     
-    if dpa.__class__ != GenesisParticlesDump:
-        raise ValueError('wrong particle object: should be GenesisParticlesDump')
+    # if dpa.__class__ != GenesisParticlesDump:
+        # raise ValueError('wrong particle object: should be GenesisParticlesDump')
 
     if np.shape(dpa.ph)[0] == 1:
         slice_num = 0

@@ -17,6 +17,7 @@ from ocelot.common.globals import *
 from ocelot.adaptors.genesis import GenesisElectronDist #tmp
 from ocelot.common.logging import *
 from ocelot.utils.launcher import *
+import os
 
 _logger = logging.getLogger('ocelot.gen4') 
 
@@ -39,18 +40,20 @@ class Genesis4ParticlesDump:
     '''
 
     def __init__(self):
-        self.e = []
+        self.g = []
         self.ph = []
         self.x = []
         self.y = []
         self.px = []
         self.py = []
+        self.I = []
 
         # self.fileName = ''
         self.filePath = ''
 
     def fileName(self):
-        return filename_from_path(self.filePath)
+        return os.path.basename(self.filePath)
+        # return filename_from_path(self.filePath)
 
 
 class Genesis4Output:
@@ -153,8 +156,11 @@ class Genesis4Output:
                 spec *= (self.n_photons[zi] / tt)
         
         return scale_ev, spec
+    
+    def close(self):
+        _logger.warning('closing h5 file {}'.format(self.filePath))
+        self.h5.close()
 
-        
 
 def get_genesis4_launcher(launcher_program='genesis4', launcher_argument=''):
     '''
@@ -171,8 +177,16 @@ def get_genesis4_launcher(launcher_program='genesis4', launcher_argument=''):
     return launcher
 
 def read_gout4(filePath):
+    '''
+    Reads Genesis1.3 v4 output file with the link to the hdf5 file as out.h5
+    to close the file, use out.h5.close()
+    
+    :param filePath: string, absolute path to .out file
+    :returns: Genesis4Output
+    '''
     
     _logger.info('reading gen4 .out file')
+    _logger.warning(ind_str + 'in beta')
     _logger.debug(ind_str + 'reading from ' + filePath)
     
     out = Genesis4Output()
@@ -185,31 +199,40 @@ def read_gout4(filePath):
     out.z = out.h5['Lattice/zplot'][:]
     out.zlat = out.h5['Lattice/z'][:]
     
+    _logger.debug(ind_str + 'z[0]   , z[-1]   , len(z)    = {}  {}  {}'.format(out.z[0], out.z[-1], len(out.z)))
+    _logger.debug(ind_str + 'zlat[0], zlat[-1], len(zlat) = {}  {}  {}'.format(out.zlat[0], out.zlat[-1], len(out.zlat)))
+    
     
     if 'time' in out.h5['Global'] and out.h5['Global/time'][0] == 1:
         out.tdp = True
-        _logger.debug(ind_str + 'tdp=True')
+        _logger.debug(ind_str + 'tdp = True')
     else:
         out.tdp = False
-        _logger.debug(ind_str + 'tdp=False')
+        _logger.debug(ind_str + 'tdp = False')
     
     if out.tdp:
-        
         if 's0' in out.h5['Global']:
             s0 = out.h5['Global/s0']
+            _logger.debug(ind_str + 's0 = {}'.format(s0))
         else:
             s0 = 0
-        
         sn = out.h5['Beam/current'].size
         out.s = np.linspace(s0, out.h5['Global/slen'][()]+s0, sn)
+        _logger.debug(ind_str + 's[0], s[-1], len(s) = {}  {}  {}'.format(out.s[0], out.s[-1], sn))
     
     _logger.debug(ind_str + 'done')
     
     return out
 
 def read_dfl4(filePath):
+    '''
+    Reads Genesis1.3 v4 radiation output file
     
+    :param filePath: string, absolute path to .fld file
+    :returns: RadiationField
+    '''
     _logger.info('reading gen4 .dfl file')
+    _logger.warning(ind_str + 'in beta')
     _logger.debug(ind_str + 'reading from ' + filePath)
     
     with h5py.File(filePath, 'r') as h5:
@@ -218,15 +241,27 @@ def read_dfl4(filePath):
         lambdaref = h5.get('wavelength')[0]
         sepslice = h5.get('slicespacing')[0]
         gridsize = h5.get('gridsize')[0]
-        N = int(np.sqrt(h5.get('slice000001/field-real').size))
-        _logger.warn(ind_str + 'tbd')
+        ncar = int(np.sqrt(h5.get('slice000001/field-real').size)) # fix?
+        zsep = int(sepslice / lambdaref)
+        l_total = sepslice * nslice
+        
+        _logger.debug(ind_str + 'nslice = {}'.format(nslice))
+        _logger.debug(ind_str + 'sepslice (dz) = {}'.format(sepslice))
+        _logger.debug(ind_str + 'lambdaref (xlamds) = {}'.format(lambdaref))
+        _logger.debug(ind_str + 'gridsize (dx & dy) = {}'.format(gridsize))
+        _logger.debug(ind_str + '')
+        _logger.debug(ind_str + 'zsep = {}'.format(zsep))
+        _logger.debug(ind_str + 'Nx & Ny = {}'.format(ncar))
+        _logger.debug(ind_str + 'Lx & Ly = {}'.format(ncar*gridsize))
+        _logger.debug(ind_str + 'Ls_total = {}'.format(l_total))
         
         field_real = []
         field_imag = []
+        
         for dset in h5:
             if dset.startswith('slice0'):
-                field_real.append(h5[dset]['field-real'][:].reshape(N,N))
-                field_imag.append(h5[dset]['field-imag'][:].reshape(N,N))
+                field_real.append(h5[dset]['field-real'][:].reshape(ncar,ncar))
+                field_imag.append(h5[dset]['field-imag'][:].reshape(ncar,ncar))
         
         dfl = RadiationField()
         dfl.fld = np.array(field_real) + 1j * np.array(field_imag)
@@ -235,8 +270,7 @@ def read_dfl4(filePath):
         dfl.dz = sepslice
         dfl.xlamds = lambdaref
         dfl.domain_z = 't'  # longitudinal domain (t - time, f - frequency)
-        dfl.domain_xy = 's'  # transverse domain (s - space, k - inverse space)
-#        dfl.h5 = h5
+        dfl.domain_xy = 's'  # transverse domain (s - space, k - inverse space
         dfl.filePath = h5.filename
     
     _logger.debug(ind_str + 'done')
@@ -247,67 +281,62 @@ def read_dfl4(filePath):
 
 
 def read_dpa4(filePath):
-
+    '''
+    Reads Genesis1.3 v4 particle output file
+    
+    :param filePath: string, absolute path to .par file
+    :returns: Genesis4ParticlesDump
+    '''
     _logger.info('reading gen4 .dpa file')
+    _logger.warning(ind_str + 'in beta')
     _logger.debug(ind_str + 'reading from ' + filePath)
     
-    h5 = h5py.File(filePath, 'r')
+    with h5py.File(filePath, 'r') as h5:
     
-    nslice = int(h5.get('slicecount')[0])
-    lslice = h5.get('slicelength')[0]
-    sepslice = h5.get('slicespacing')[0]
-    npart = int(h5.get('slice000001/gamma').size)
-    nbins = int(h5.get('beamletsize')[0])
-    zsep = int(sepslice / lslice)
-    _logger.warn(ind_str + 'tbd')
-    
-    fill_gaps=0
-    
-    x = []
-    y = []
-    px=[]
-    py=[]
-    g=[]
-    ph = []
-    s0 = []
-    s = []
-    I = []
-    
-    for dset in h5:
-            if dset.startswith('slice0'):
-                I.append(h5[dset]['current'][:])
-    
-    #if fill_gaps:
-    #    for dset in h5:
-    #        if dset.startswith('slice0'):
-    #            ph0 = h5[dset]['theta'][:]
-    #            ph.append(ph0.repeat(zsep))
-    #            x.append(h5[dset]['x'][:].repeat(zsep))
-    #            px.append(h5[dset]['px'][:].repeat(zsep))
-    #            y.append(h5[dset]['y'][:].repeat(zsep))
-    #            py.append(h5[dset]['py'][:].repeat(zsep))
-    #            g.append(h5[dset]['gamma'][:].repeat(zsep))
-    #            for sl in range(zsep):
-    #                s.append(s0 + ph0 / 2 / np.pi * lslice)            
-    #                s0 =+ lslice
-    else:
+        npart = int(h5.get('slice000001/gamma').size) # fix?
+        nslice = int(h5.get('slicecount')[0])
+        nbins = int(h5.get('beamletsize')[0])
+        lslice = h5.get('slicelength')[0]
+        sepslice = h5.get('slicespacing')[0]
+        # filePath = h5.filename
+        
+        zsep = int(sepslice / lslice)
+        npartpb=int(npart/nbins)
+        l_total = lslice * zsep * nslice
+        
+        _logger.debug(ind_str + 'npart = {}'.format(npart))
+        _logger.debug(ind_str + 'nslice = {}'.format(nslice))
+        _logger.debug(ind_str + 'nbins = {}'.format(nbins))
+        _logger.debug(ind_str + '')
+        _logger.debug(ind_str + 'lslice (aka xlamds) = {} m'.format(lslice))
+        _logger.debug(ind_str + 'sepslice = {} m'.format(sepslice))
+        _logger.debug(ind_str + 'zsep = {}'.format(zsep))
+        _logger.debug(ind_str + 'Ls_total = {}'.format(l_total))
+        
+        x = []
+        y = []
+        px = []
+        py = []
+        g = []
+        ph = []
+        # s0 = []
+        # s = []
+        I = []
+        
         for dset in h5:
             if dset.startswith('slice0'):
+                I.append(h5[dset]['current'][:])
                 ph0 = h5[dset]['theta'][:]
-    #            s.append(s0 + ph0 / 2 / np.pi * lslice)
+                # s.append(s0 + ph0 / 2 / np.pi * lslice)
                 x.append(h5[dset]['x'][:])
                 px.append(h5[dset]['px'][:])
                 y.append(h5[dset]['y'][:])
                 py.append(h5[dset]['py'][:])
                 g.append(h5[dset]['gamma'][:])
                 ph.append(ph0)
-                s0 += sepslice
-            
-    
-    npartpb=int(npart/nbins)
+                # s0 += sepslice
     
     dpa = Genesis4ParticlesDump()
-    
     dpa.x = np.reshape(x, (nslice, nbins, npartpb), order='F')
     dpa.px = np.reshape(px, (nslice, nbins, npartpb), order='F')
     dpa.y = np.reshape(y, (nslice, nbins, npartpb), order='F')
@@ -321,9 +350,7 @@ def read_dpa4(filePath):
     dpa.npart = npart
     dpa.nbins = nbins
     dpa.zsep = zsep
-    dpa.filePath = h5.filename
-    
-    h5.close()
+    dpa.filePath = filePath
     
     _logger.debug(ind_str + 'done')
     
@@ -333,57 +360,66 @@ def read_dpa4(filePath):
 
 
 
-def dpa42edist(dpa, n_part=None, fill_gaps=1, debug=1):
-    fill_gaps = 0
+def dpa42edist(dpa, n_part=None, fill_gaps=False):
     '''
-    Convert dpa to edist objects
-    reads GenesisParticlesDump() object
-    returns GenesisElectronDist() object
-    num_part - desired approximate number of particles in edist
-    smear - whether to shuffle macroparticles smearing microbunching
-    '''
+    Convert Genesis1.3 v4 particle output file to ocelot edist object
     
-    _logger.info('converting gen4 .dpa to edist')
+    :param dpa: GenesisParticlesDump
+    :param n_part: desired approximate number of particles in edist
+    :param fill_gaps: dublicates buckets into gaps
+    :returns: GenesisElectronDist
+    '''
+    fill_gaps=False #unfinished
+    
+    _logger.info('converting dpa4 to edist')
+    _logger.warning(ind_str + 'in beta')
     
     import random
     start_time = time.time()
-    #if debug > 0:
-    #    print ('    transforming particle to distribution file')
-    
-    #assert out('itdp') == True, '! steadystate Genesis simulation, dpa2dist() not implemented yet!'
     
     npart = dpa.npart
-    # nslice=int(out('nslice'))
     nslice = dpa.nslice
     nbins = dpa.nbins
-    xlamds = dpa.lslice
+    lslice = dpa.lslice
     zsep = dpa.zsep
-    gen_I = dpa.I
     
-#    npart_bin = int(npart / nbins)
+    _logger.debug(ind_str + 'requested n_part = {}'.format(n_part))
+    _logger.debug(ind_str + 'dpa npart = {}'.format(npart))
+    _logger.debug(ind_str + 'dpa nslice = {}'.format(nslice))
+    _logger.debug(ind_str + 'dpa nbins = {}'.format(nbins))
+    _logger.debug(ind_str + 'dpa lslice (aka xlamds) = {} m'.format(lslice))
+    _logger.debug(ind_str + 'dpa zsep = {}'.format(zsep))
+    _logger.debug(ind_str + '')
         
-    
+    _logger.debug(ind_str + 'fill_gaps == {}'.format(fill_gaps))
     if fill_gaps:
-        s0 = np.linspace(0, nslice * zsep * xlamds, nslice)
-        s = np.linspace(0, nslice * zsep * xlamds, nslice * zsep)
+        
+        s0 = np.linspace(0, nslice * zsep * lslice, nslice)
+        s = np.linspace(0, nslice * zsep * lslice, nslice * zsep)
         I = np.interp(s, s0, dpa.I)
         dt = (s[1] - s[0]) / speed_of_light
     else:
-        s = np.linspace(0, nslice * zsep * xlamds, nslice)
+        s = np.linspace(0, nslice * zsep * lslice, nslice)
         I = dpa.I
         dt = (s[1] - s[0]) / speed_of_light
+    _logger.debug(ind_str + 'dt zsep = {} s'.format(dt))
         
     C = np.sum(I) * dt
-        
-    n_part_max = np.sum(I / I.max() * dpa.npart)
-#    print(n_part)
     
+    _logger.debug(ind_str + 'current max = {} A'.format(I.max()))
+    _logger.debug(ind_str + 'bunch charge = {} C'.format(C))
+        
+    n_part_max = int(np.floor(np.sum(I / I.max() * dpa.npart)))
+    _logger.debug(ind_str + 'maximum possible n_part = {}'.format(n_part_max))
     if n_part is not None:
+        _logger.debug(ind_str + 'requested n_part = {}'.format(n_part))
         if n_part > n_part_max:
+            _logger.info(ind_str + 'requested n_part > maximum, setting to maximum = {}'.format(n_part_max))
             n_part = n_part_max
     else:
-        n_part = int(np.floor(n_part_max))
-#    print(n_part)
+        _logger.info(ind_str + 'requested n_part = None, setting to maximum = {}'.format(n_part_max))
+        n_part = n_part_max
+
     
     
     #n_part_bin = (I / np.sum(I) * n_part / nbins).astype(int)
@@ -391,21 +427,35 @@ def dpa42edist(dpa, n_part=None, fill_gaps=1, debug=1):
     #print(n_part_bin.max())
     n_part_slice = (I / np.sum(I) * n_part).astype(int)
     n_part_slice[n_part_slice > npart] = npart
-#    print(n_part_slice.max())
+    
+    _logger.debug(ind_str + 'max particles/slice = {}'.format(n_part_slice.max()))
+
+    
+    # print(n_part_slice.max())
     
     
     #pick_i = random.sample(range(n_part), n_part_slice[i])
-
-    g = np.reshape(dpa.g, (nslice, npart))
-    x = np.reshape(dpa.x, (nslice, npart))
-    y = np.reshape(dpa.y, (nslice, npart))
-    px = np.reshape(dpa.px, (nslice, npart)) / g
-    py = np.reshape(dpa.py, (nslice, npart)) / g
-    ph = np.reshape(dpa.ph, (nslice, npart))
-    t1 = ph * xlamds / speed_of_light
-    t0 = np.arange(nslice)[:,np.newaxis] * xlamds * zsep / speed_of_light
-    t = t1+t0
+    # _logger.debug(ind_str + 'reshaping')
     
+    # g = np.reshape(dpa.g, (nslice, npart))
+    # x = np.reshape(dpa.x, (nslice, npart))
+    # y = np.reshape(dpa.y, (nslice, npart))
+    # px = np.reshape(dpa.px, (nslice, npart)) / g
+    # py = np.reshape(dpa.py, (nslice, npart)) / g
+    # ph = np.reshape(dpa.ph, (nslice, npart))
+    
+    
+    g = dpa.g.reshape(nslice, npart)
+    x = dpa.x.reshape(nslice, npart)
+    y = dpa.y.reshape(nslice, npart)
+    px = dpa.px.reshape(nslice, npart) / g
+    py = dpa.py.reshape(nslice, npart) / g
+    ph = dpa.ph.reshape(nslice, npart)
+    
+    t1 = ph * lslice / speed_of_light
+    t0 = np.arange(nslice)[:,np.newaxis] * lslice * zsep / speed_of_light
+    t = t1+t0
+    # _logger.debug(2*ind_str + 'complete')
     
     
     edist = GenesisElectronDist()
@@ -413,27 +463,51 @@ def dpa42edist(dpa, n_part=None, fill_gaps=1, debug=1):
     #x1 = np.array([])
     #y1 = np.array([])
     
+    gi = []
+    xpi = []
+    ypi = []
+    xi = []
+    yi = []
+    ti = []
     
-    for i in np.arange(I.size):
+    _logger.debug(ind_str + 'picking random particles')
+    for i in np.arange(nslice):
     #    for ii in np.arange(nbins):
     #    pick_i = random.sample(range(npart_bin), n_part_bin[i])
         pick_i = random.sample(range(npart), n_part_slice[i])
-    
-    #    t.append(dpa.t, t[i, pick_i])
-    #    g = np.append(g, dpa.e[i, ii, pick_i])
+
         
-        edist.g = np.append(edist.g, g[i, pick_i])
-        edist.xp = np.append(edist.xp, px[i, pick_i])
-        edist.yp = np.append(edist.yp, py[i, pick_i])
-        edist.x = np.append(edist.x, x[i, pick_i])  
-        edist.y = np.append(edist.y, y[i, pick_i])
-        edist.t = np.append(edist.t, t[i, pick_i])
+        # edist.g = np.append(edist.g, g[i, pick_i])
+        # edist.xp = np.append(edist.xp, px[i, pick_i])
+        # edist.yp = np.append(edist.yp, py[i, pick_i])
+        # edist.x = np.append(edist.x, x[i, pick_i])  
+        # edist.y = np.append(edist.y, y[i, pick_i])
+        # edist.t = np.append(edist.t, t[i, pick_i])
         
-    #    if fill_gaps and zsep>1:
-    #        for ii in range(zsep):
-                
+        gi.append(g[i, pick_i])
+        xpi.append(px[i, pick_i])
+        ypi.append(py[i, pick_i])
+        xi.append(x[i, pick_i])
+        yi.append(y[i, pick_i])
+        ti.append(t[i, pick_i])
+        
+    edist.g = np.array(gi).flatten()
+    edist.xp = np.array(xpi).flatten()
+    edist.yp = np.array(ypi).flatten()
+    edist.x = np.array(xi).flatten()
+    edist.y = np.array(yi).flatten()
+    edist.t = np.array(ti).flatten()
     
     edist.part_charge = C / n_part
+    _logger.debug('')
+    
+    _logger.debug(ind_str + 'edist particle charge = {} C'.format(C))
+    _logger.debug(ind_str + 'edist n_part = {}'.format(edist.len()))
+    
+    if hasattr(dpa,'filePath'):
+        edist.filePath = dpa.filePath + '.edist'
+    
+    _logger.debug(ind_str + 'done')
     
     return edist
 

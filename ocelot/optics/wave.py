@@ -2114,7 +2114,7 @@ def wigner_dfl(dfl, method='mp', pad=1, debug=1):
     '''
     returns on-axis WignerDistribution from dfl file
     '''
-    assert isinstance(dfl,RadiationField)
+#    assert isinstance(dfl,RadiationField)
     
     import numpy as np
     

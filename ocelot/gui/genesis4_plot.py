@@ -1014,11 +1014,15 @@ def subfig_rad_size(ax_size_t, out, legend):
             ax_size_t.plot(out.z, out.rad_t_size_weighted, 'b-', linewidth=1.5)
         else:
             if np.amax(out.rad_power) > 0:
+                # idx = out.rad_energy != 0
                 weight = out.rad_power + np.amin(out.rad_power[out.rad_power != 0]) / 1e6
+                weight[out.rad_energy == 0, :] = 1
+                r_size = np.average(r_size * 2 * 1e6, weights=weight, axis=1)
             else:
-                weight = np.ones_like(out.rad_power)
+                r_size = np.zeros_like(out.rad_power)
+                # weight = np.ones_like(out.rad_power)
 
-            ax_size_t.plot(out.z, np.average(r_size * 2 * 1e6, weights=weight, axis=1), 'b-', linewidth=1.5)
+            ax_size_t.plot(out.z, r_size, 'b-', linewidth=1.5)
 
     ax_size_t.set_ylim(ymin=0)
     # ax_size_t.set_ylabel(r'$\sim$size$_{transv}$ [$\mu$m]'+'\n'+r'($2\sigma$)')

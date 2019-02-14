@@ -47,6 +47,8 @@ class Genesis4ParticlesDump:
         self.px = []
         self.py = []
         self.I = []
+        
+        self.one4one = None
 
         # self.fileName = ''
         self.filePath = ''
@@ -280,31 +282,42 @@ def read_dfl4(filePath):
 
 
 
-def read_dpa4(filePath):
+def read_dpa4(filePath, start_slice=0, stop_slice=np.inf):
     '''
     Reads Genesis1.3 v4 particle output file
     
     :param filePath: string, absolute path to .par file
     :returns: Genesis4ParticlesDump
     '''
+    
     _logger.info('reading gen4 .dpa file')
     _logger.warning(ind_str + 'in beta')
     _logger.debug(ind_str + 'reading from ' + filePath)
     
-    with h5py.File(filePath, 'r') as h5:
+    start_time = time.time()
     
-        npart = int(h5.get('slice000001/gamma').size) # fix?
+    _logger.debug(ind_str + 'start_slice : stop_slice = {} : {}'.format(start_slice, stop_slice))
+    
+    with h5py.File(filePath, 'r') as h5:
+        
+        one4one = h5.get('one4one')[0]
+        _logger.debug(ind_str + 'one4one = {}'.format(bool(one4one)))
+        
         nslice = int(h5.get('slicecount')[0])
         nbins = int(h5.get('beamletsize')[0])
         lslice = h5.get('slicelength')[0]
         sepslice = h5.get('slicespacing')[0]
+        
+        if not one4one:
+            npart = int(h5.get('slice000001/gamma').size) # fix?
+            _logger.debug(ind_str + 'npart = {}'.format(npart))
+        
         # filePath = h5.filename
         
         zsep = int(sepslice / lslice)
-        npartpb=int(npart/nbins)
         l_total = lslice * zsep * nslice
         
-        _logger.debug(ind_str + 'npart = {}'.format(npart))
+        
         _logger.debug(ind_str + 'nslice = {}'.format(nslice))
         _logger.debug(ind_str + 'nbins = {}'.format(nbins))
         _logger.debug(ind_str + '')
@@ -322,37 +335,72 @@ def read_dpa4(filePath):
         # s0 = []
         # s = []
         I = []
+        npartpb = []
         
+        _logger.debug(ind_str + 'reading slices between {} and {}'.format(start_slice, stop_slice))
+        _logger.debug(2*ind_str + '({} out of {})'.format(stop_slice - start_slice, nslice))
         for dset in h5:
-            if dset.startswith('slice0'):
-                I.append(h5[dset]['current'][:])
-                ph0 = h5[dset]['theta'][:]
-                # s.append(s0 + ph0 / 2 / np.pi * lslice)
-                x.append(h5[dset]['x'][:])
-                px.append(h5[dset]['px'][:])
-                y.append(h5[dset]['y'][:])
-                py.append(h5[dset]['py'][:])
-                g.append(h5[dset]['gamma'][:])
-                ph.append(ph0)
-                # s0 += sepslice
+            _logger.log(5, ind_str + dset)
+            _logger.log(5, ind_str + str(type(h5[dset])))
+            if dset.startswith('slice') and type(h5[dset]) == h5py._hl.group.Group:
+                slice = int(dset.replace('slice',''))
+                _logger.log(5, 2*ind_str + 'slice number {}'.format(slice))                
+                if slice >= start_slice and slice <= stop_slice:
+                    _logger.log(5, 2*ind_str + 'processing')
+                    I.append(h5[dset]['current'][:])
+                    ph.append(h5[dset]['theta'][:])
+                    _logger.log(5, 2*ind_str + str(h5[dset]['x'][:].shape))
+                    # s.append(s0 + ph0 / 2 / np.pi * lslice)
+                    x.append(h5[dset]['x'][:])
+                    px.append(h5[dset]['px'][:])
+                    y.append(h5[dset]['y'][:])
+                    py.append(h5[dset]['py'][:])
+                    g.append(h5[dset]['gamma'][:])
+                    npartpb.append(h5[dset]['gamma'][:].size)
+                    # ph.append(ph0)
+                    # s0 += sepslice
+        _logger.debug(2*ind_str + 'done')
     
     dpa = Genesis4ParticlesDump()
-    dpa.x = np.reshape(x, (nslice, nbins, npartpb), order='F')
-    dpa.px = np.reshape(px, (nslice, nbins, npartpb), order='F')
-    dpa.y = np.reshape(y, (nslice, nbins, npartpb), order='F')
-    dpa.py = np.reshape(py, (nslice, nbins, npartpb), order='F')
-    dpa.ph = np.reshape(ph, (nslice, nbins, npartpb), order='F')
-    dpa.g = np.reshape(g, (nslice, nbins, npartpb), order='F')
-    dpa.I = np.array(I).flatten()
-    #dpa.s = np.array(s).flatten()
+    
+    if one4one:
+        _logger.debug(ind_str + 'one4one:')
+        _logger.log(5, ind_str + 'x[0].shape {}'.format(x[0].shape))
+        dpa.x = np.hstack(x)
+        dpa.px = np.hstack(px)
+        dpa.y = np.hstack(y)
+        dpa.py = np.hstack(py)
+        dpa.g = np.hstack(g)
+        dpa.I = np.hstack(I)
+        _logger.log(5, ind_str + 'dpa.x.shape {}'.format(dpa.x.shape))
+        
+        dpa.npartpb = np.array(npartpb).flatten()
+        
+        npart = dpa.x.size
+        _logger.debug(2*ind_str + 'npart = {}'.format(npart))
+    else:
+        npartpb = int(npart/nbins)
+        _logger.debug(ind_str + 'not one4one:')
+        _logger.debug(2*ind_str + 'shape of arrays (nslice, npart) {}'.format(np.array(x).shape))
+        _logger.debug(2*ind_str + 'reshaping to (nslice, nbins, npart/bin) ({}, {}, {})'.format(nslice, nbins, npartpb))
+        
+        dpa.x = np.array(x).reshape((nslice, nbins, npartpb), order='F')
+        dpa.px = np.array(px).reshape((nslice, nbins, npartpb), order='F')
+        dpa.y = np.array(y).reshape((nslice, nbins, npartpb), order='F')
+        dpa.py = np.array(py).reshape((nslice, nbins, npartpb), order='F')
+        dpa.ph = np.array(ph).reshape((nslice, nbins, npartpb), order='F')
+        dpa.g = np.array(g).reshape((nslice, nbins, npartpb), order='F')
+        dpa.I = np.array(I).flatten()
+    
     dpa.nslice = nslice
     dpa.lslice = lslice
     dpa.npart = npart
     dpa.nbins = nbins
     dpa.zsep = zsep
     dpa.filePath = filePath
+    dpa.one4one = one4one
     
-    _logger.debug(ind_str + 'done')
+    _logger.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
     
     return dpa
 
@@ -369,6 +417,14 @@ def dpa42edist(dpa, n_part=None, fill_gaps=False):
     :param fill_gaps: dublicates buckets into gaps
     :returns: GenesisElectronDist
     '''
+    
+    if dpa.one4one is True:
+        _logger.error(ind_str + 'not implemented for one4one yet')
+        return
+    if dpa.one4one is None:
+        _logger.error(ind_str + 'unknown one4one status')
+        return
+    
     fill_gaps=False #unfinished
     
     _logger.info('converting dpa4 to edist')

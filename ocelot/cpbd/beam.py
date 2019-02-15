@@ -467,6 +467,57 @@ class BeamArray(Beam):
             E_center = self.E[find_nearest_idx(self.s, s0)]
             self.E += (self.s - s0)**order * chirp * E_center * 1e6
     
+    def add_chirp_poly(self, coeff, s0=None):
+        '''
+        The method adds a polynomial energy chirp to the beam object. 
+        
+        coeff   --- coefficients for the chirp
+        s0      --- the point with respect to which the chirp will be introduced
+        
+        The expression for the chirp:
+            
+        E = E0((g0 + coeff[0])/g0 + 
+            
+            + coeff[1]*(s - s0))**1 / 1! / ((speed_of_light * 1e-15)**1  * g0) + 
+            
+            + coeff[2]*(s - s0))**2 / 2! / ((speed_of_light * 1e-15)**2  * g0) + 
+            
+            + coeff[3]*(s - s0))**3 / 3! / ((speed_of_light * 1e-15)**3  * g0) + ... 
+        
+        ... + coeff[n]*(s - s0))**n / n! / ((speed_of_light * 1e-15)**n  * g0))
+        
+        where coeff[n] is represented in [1/fs**n]
+        The convention for the coeff is introduced for convenient treatment this
+        with respect to a radiation chirp in order to easily satisfy the resonant
+        condition along the whole bunch in the case of linear electron bunch chirp. 
+        Here is the expresion:
+        
+            2*dw/dt = (w0/g0) * dg/dt
+        
+        @author: Andrei Trebushinin
+        
+        '''
+        _logger.debug('introducing a chirp to the ebeam')
+        s = self.s
+        
+        if s0 is None:
+            s0 = (np.amax(self.s) - np.amin(self.s)) / 2
+        elif isinstance(s0,str) is not True:
+            s0 = s0/1e6       
+        else:
+            raise ValueError("s0 must be None or some value")
+        
+        delta_s = s - s0
+        E0 = self.E[find_nearest_idx(self.s, s0)]
+        g0 = self.g[find_nearest_idx(self.s, s0)]
+    #    coeff[0] += g0
+        _logger.debug(ind_str + 'coeffs for chirp = {}'.format(coeff))
+        coeff_norm = [ci / ((speed_of_light * 1e-15)**i * factorial(i) * g0) for i, ci in enumerate(coeff)]
+        coeff_norm = list(np.flip(coeff_norm, axis=0))
+        _logger.debug(ind_str + 'coeffs_norm = {}'.format(coeff_norm))
+        coeff_norm = np.asarray(coeff_norm)*E0
+        self.E += np.polyval(coeff_norm, delta_s)
+    
     def add_wake(self, tube_radius=5e-3, tube_len=1, conductivity=3.66e+7, tau=7.1e-15, roughness=600e-9, d_oxid=5e-9):
         self.eloss = pipe_wake(self.s, self.I, tube_radius, tube_len, conductivity, tau, roughness, d_oxid)[1][1][::-1]
 

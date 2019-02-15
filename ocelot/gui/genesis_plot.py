@@ -2928,7 +2928,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
     y_units - (nm or eV) - units to display spectrum scale
     x_lim, y_lim - scaling limits in given units, (min,max) or [min,max], e.g: (None,6)
     abs_value - if True, absolute value of WD is displayed (usually, it has both positive and negative values)
-    cmap - colormar if abs_value==False (http://matplotlib.org/users/colormaps.html)
+    cmap - colormar if abs_value is False (http://matplotlib.org/users/colormaps.html)
     '''
     if showfig == False and savefig == False:
         return
@@ -3020,8 +3020,17 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
             axScatter.text(0.02, 0.98, r'$W_{{max}}$= {:.2e}'.format(np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes)#fontsize=12,
             
     if plot_moments:
-        axScatter.plot(power_scale[::downsample], inst_freq[::downsample], "-k")
-        axScatter.plot(group_delay[::downsample], spec_scale[::downsample], "-g")
+        weight_power = power/np.max(power)
+        weight_power[weight_power < np.nanmax(weight_power)/1e2] = 0
+        idx_power_fine = np.where(weight_power > np.nanmax(weight_power)/1e2)
+        weight_spec = spec/np.max(spec)
+        weight_spec[weight_spec < np.nanmax(weight_spec)/1e2] = 0
+        idx_spec_fine = np.where(weight_spec > np.nanmax(weight_spec)/1e2)
+        
+        plt.scatter(power_scale[idx_power_fine], inst_freq[idx_power_fine], s=weight_power[idx_power_fine], c = 'black', linewidths=2)
+        plt.scatter(group_delay[idx_spec_fine], spec_scale[idx_spec_fine],s=weight_spec[idx_spec_fine], c = 'green', linewidths=2)
+        # axScatter.plot(power_scale[::downsample], inst_freq[::downsample], "-k")
+        # axScatter.plot(group_delay[::downsample], spec_scale[::downsample], "-g")
 
         
     if autoscale == 1:

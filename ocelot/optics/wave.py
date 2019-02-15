@@ -1097,6 +1097,7 @@ class WignerDistribution():
         if np.all(p==0):
             return p
         else:
+            p[p==0] = np.nan
             return np.sum(self.wig * self.phen[:, np.newaxis], axis=0) / p
         
     def group_delay(self):
@@ -1104,6 +1105,7 @@ class WignerDistribution():
         if np.all(s==0):
             return s
         else:
+            s[s==0] = np.nan
             return np.sum(self.wig * self.s[np.newaxis, :], axis=1) / s
             
     def inst_bandwidth(self):
@@ -1132,7 +1134,7 @@ def generate_gaussian_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), po
     power_waistpos (x,y) [m] downstrean location of the waist of the beam
     wavelength [m] - central frequency of the radiation, if different from xlamds
     zsep (integer) - distance between slices in z as zsep*xlamds
-    freq_chirp [1/fs**2] - requency chirp of the beam around power_center[2]
+    freq_chirp dw/dt=[1/fs**2] - requency chirp of the beam around power_center[2]
     en_pulse, power = total energy or max power of the pulse, use only one
     '''
     
@@ -1282,7 +1284,7 @@ def imitate_sase_dfl(xlamds, rho=2e-4, **kwargs):
     dE = E0 * 2 * rho
     _logger.debug(ind_str + 'E0 = {}'.format(E0))
     _logger.debug(ind_str + 'dE = {}'.format(dE))
-    dfl = generate_dfl(xlamds, **kwargs)
+    dfl = generate_gaussian_dfl(xlamds, **kwargs)
     
     _logger.debug(ind_str + 'dfl.shape = {}'.format(dfl.shape()))
     td_scale = dfl.scale_z()
@@ -1300,6 +1302,143 @@ def imitate_sase_dfl(xlamds, rho=2e-4, **kwargs):
     
     return dfl
 
+
+def calc_phase_delay_poly(coeff, w, w0):  
+    
+    '''
+    Calculate the phase delay with given coefficients
+    coeff --- coefficients in phase delay expression:
+    w     --- photon frequencies
+    w0    --- photon frequency at which zero group delay is introduced
+    
+    The expression for the phase: 
+    delta_phi = coeff[0] + 
+                coeff[1]*(w - w0)**1/1!/(1e15)**1 + 
+                coeff[2]*(w - w0)**2/2!/(1e15)**2 + 
+                coeff[3]*(w - w0)**3/3!/(1e15)**3 + ...
+            ... coeff[n]*(w - w0)**n/n!/(1e15)**n
+    
+    coeff is an array-like object with
+    coeff[0] --- phase measured in [rad]
+    coeff[1] --- group delay measured in [fs ^ 1]
+    coeff[2] --- group delay dispersion (GDD) measured in [fs ^ 2]
+    coeff[3] --- third-order dispersion (TOD) measured in [fs ^ 3]
+    ...
+    coeff[n] --- nth-order dispersion measured in [fs ^ n]
+    
+    @author Andrei Trebushinin
+    '''
+    delta_w = w - w0
+    _logger.debug('calculating phase delay')
+    
+    for i , coeffi in enumerate(coeff):
+        _logger.debug(ind_str + 'phase delay coeff[{}] = {} [fs**{}]'.format(i, coeffi, i))
+    
+#    _logger.debug(ind_str + 'coeffs for compression = {}'.format(coeff))
+    coeff_norm = [ci / (1e15)**i / factorial(i) for i, ci in enumerate(coeff)]
+    coeff_norm = list(np.flip(coeff_norm, axis=0))
+#    _logger.debug(ind_str + 'coeffs_norm = {}'.format(coeff_norm))
+    
+    for i , coeffi in enumerate(coeff_norm):
+        ii = len(coeff_norm) - i - 1
+        _logger.debug(ind_str + 'phase delay coeff_norm[{}] = {} [s**{}]'.format(ii, coeffi, ii))
+    
+    delta_phi = np.polyval(coeff_norm, delta_w) 
+    _logger.debug(ind_str + 'delta_phi[0] = {}'.format(delta_phi[0]))
+    _logger.debug(ind_str + 'delta_phi[-1] = {}'.format(delta_phi[-1]))
+    _logger.debug(ind_str + 'done')
+    
+    return delta_phi
+
+def dfl_disperse(dfl, coeff, E_ph0 = None, return_result = False):
+    '''
+    The function adds a phase shift to the fld object.
+    
+    dfl   --- is a RadiationField object 
+    coeff --- coefficients in phase delay expression:
+    
+    The expression for the phase: 
+    delta_phi = coeff[0] + 
+                coeff[1]*(w - w0)**1/1!/(1e15)**1 + 
+                coeff[2]*(w - w0)**2/2!/(1e15)**2 + 
+                coeff[3]*(w - w0)**3/3!/(1e15)**3 + ...
+            ... coeff[n]*(w - w0)**n/n!/(1e15)**n
+            
+        coeff is an array-like object with
+        coeff[0] --- phase measured in [rad]
+        coeff[1] --- group delay measured in [fs ^ 1]
+        coeff[2] --- group delay dispersion (GDD) measured in [fs ^ 2]
+            e.g. coeff[2]: (dt[fs] / dw[1/fs]) = 1e-6 * 1e15**2 * hr_eV_s / speed_of_light * (ds [um] / dE [eV])
+        coeff[3] --- third-order dispersion (TOD) measured in [fs ^ 3]
+        ...
+        coeff[n] --- nth-order dispersion measured in [fs ^ n]
+    
+        can be 
+            - a list (coeff[0], coeff[1], ... coeff[n])
+            - or a number, then coeff[2] is expected
+    
+    E_ph0 --- photon energy at which zero group delay is introduced
+        can be: 
+            - None   - when the carrier freq will be extracted from dfl object
+            - center - when the carrier freq will be calculated as averaging over time
+            - from dfl.int_z() and dfl.scale_z()
+            - E_ph0  - a number in eV
+                
+    return_result --- a flag that is responsible for returning the dfl object 
+        if return_result is True:
+            create a copy and return the modified copy without affecting the original object
+        else:
+            change the original dfl object
+        
+    @author Andrei Trebushinin
+    '''
+    
+    _logger.debug('adding chip to the dfl object')
+    
+    if isinstance(coeff, (int, float, complex)):
+        coeff = (0, 0, coeff)
+        
+    for i , coeffi in enumerate(coeff):
+        _logger.debug(ind_str + 'chirp coeff[{}] = {} [fs**{}]'.format(i, coeffi, i))
+    
+    if return_result:
+        copydfl = deepcopy(dfl)
+        _, dfl = dfl, copydfl
+    
+    z_domain_orig = dfl.domain_z
+    if dfl.domain_z == 't':
+        dfl.to_domain('f')
+    
+    if E_ph0 == None: 
+        w0 = 2*np.pi*speed_of_light/dfl.xlamds
+        _logger.debug(ind_str + 'carrier frequency = {}'.format(w0))
+        
+    elif E_ph0 == 'center':
+        lamds = n_moment(dfl.scale_z(), dfl.int_z(), 0, 1)
+        # _, lamds = np.mean([dfl.int_z(), dfl.scale_z()], axis = (1) )
+        w0 = 2 * np.pi * speed_of_light / lamds
+        _logger.debug(ind_str + 'carrier frequency = {}'.format(w0))
+
+    elif isinstance(E_ph0, str) is not True:
+        w0 = 2 * np.pi * E_ph0 / h_eV_s
+        _logger.debug(ind_str + 'carrier frequency = {}'.format(w0))
+        
+    else:
+        raise ValueError("E_ph0 must be None or 'center' or some value")
+    
+    w = dfl.scale_kz() * speed_of_light
+    
+    delta_phi = calc_phase_delay_poly(coeff, w, w0)
+    H = np.exp(-1j * delta_phi)
+    
+    dfl.fld = dfl.fld * H[:,np.newaxis,np.newaxis]
+    
+    dfl.to_domain(z_domain_orig)
+    
+    _logger.debug(ind_str + 'done')
+    
+    if return_result:
+        return dfl
 
 def dfl_ap(dfl, ap_x=None, ap_y=None, debug=1):
     '''

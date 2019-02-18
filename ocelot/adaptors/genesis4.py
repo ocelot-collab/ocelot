@@ -300,8 +300,8 @@ def read_dpa4(filePath, start_slice=0, stop_slice=np.inf):
     
     with h5py.File(filePath, 'r') as h5:
         
-        one4one = h5.get('one4one')[0]
-        _logger.debug(ind_str + 'one4one = {}'.format(bool(one4one)))
+        one4one = bool(h5.get('one4one')[0])
+        _logger.info(ind_str + 'one4one = {}'.format(bool(one4one)))
         
         nslice = int(h5.get('slicecount')[0])
         nbins = int(h5.get('beamletsize')[0])
@@ -362,25 +362,27 @@ def read_dpa4(filePath, start_slice=0, stop_slice=np.inf):
         _logger.debug(2*ind_str + 'done')
     
     dpa = Genesis4ParticlesDump()
+        
+    _logger.info(ind_str + 'one4one = {}'.format(one4one))
     
     if one4one:
-        _logger.debug(ind_str + 'one4one:')
-        _logger.log(5, ind_str + 'x[0].shape {}'.format(x[0].shape))
+        _logger.log(5, 2*ind_str + 'x[0].shape {}'.format(x[0].shape))
         dpa.x = np.hstack(x)
         dpa.px = np.hstack(px)
         dpa.y = np.hstack(y)
         dpa.py = np.hstack(py)
         dpa.g = np.hstack(g)
         dpa.I = np.hstack(I)
-        _logger.log(5, ind_str + 'dpa.x.shape {}'.format(dpa.x.shape))
+        dpa.ph = np.hstack(ph)
+        _logger.log(5, 2*ind_str + 'dpa.x.shape {}'.format(dpa.x.shape))
         
         dpa.npartpb = np.array(npartpb).flatten()
         
         npart = dpa.x.size
-        _logger.debug(2*ind_str + 'npart = {}'.format(npart))
+        _logger.info(ind_str + 'npart = {}'.format(npart))
     else:
         npartpb = int(npart/nbins)
-        _logger.debug(ind_str + 'not one4one:')
+        # _logger.debug(ind_str + 'not one4one:')
         _logger.debug(2*ind_str + 'shape of arrays (nslice, npart) {}'.format(np.array(x).shape))
         _logger.debug(2*ind_str + 'reshaping to (nslice, nbins, npart/bin) ({}, {}, {})'.format(nslice, nbins, npartpb))
         
@@ -418,17 +420,18 @@ def dpa42edist(dpa, n_part=None, fill_gaps=False):
     :returns: GenesisElectronDist
     '''
     
-    if dpa.one4one is True:
-        _logger.error(ind_str + 'not implemented for one4one yet')
-        return
+    _logger.info('converting dpa4 to edist')
+    _logger.warning(ind_str + 'in beta')
+    
+    # if dpa.one4one is True:
+        # _logger.warning(ind_str + 'not tested for one4one yet')
+        # return
     if dpa.one4one is None:
         _logger.error(ind_str + 'unknown one4one status')
         return
     
     fill_gaps=False #unfinished
     
-    _logger.info('converting dpa4 to edist')
-    _logger.warning(ind_str + 'in beta')
     
     import random
     start_time = time.time()
@@ -447,117 +450,149 @@ def dpa42edist(dpa, n_part=None, fill_gaps=False):
     _logger.debug(ind_str + 'dpa zsep = {}'.format(zsep))
     _logger.debug(ind_str + '')
         
-    _logger.debug(ind_str + 'fill_gaps == {}'.format(fill_gaps))
-    if fill_gaps:
-        
-        s0 = np.linspace(0, nslice * zsep * lslice, nslice)
-        s = np.linspace(0, nslice * zsep * lslice, nslice * zsep)
-        I = np.interp(s, s0, dpa.I)
-        dt = (s[1] - s[0]) / speed_of_light
-    else:
-        s = np.linspace(0, nslice * zsep * lslice, nslice)
-        I = dpa.I
-        dt = (s[1] - s[0]) / speed_of_light
-    _logger.debug(ind_str + 'dt zsep = {} s'.format(dt))
-        
-    C = np.sum(I) * dt
+    _logger.debug(ind_str + 'fill_gaps = {}'.format(fill_gaps))
     
-    _logger.debug(ind_str + 'current max = {} A'.format(I.max()))
-    _logger.debug(ind_str + 'bunch charge = {} C'.format(C))
+    if dpa.one4one:
+        t0 = np.hstack([np.ones(n)*i for i, n in enumerate(dpa.npartpb)]) * dpa.lslice / speed_of_light
+        t0 += dpa.ph * (dpa.lslice / 2 / np.pi / speed_of_light)
         
-    n_part_max = int(np.floor(np.sum(I / I.max() * dpa.npart)))
-    _logger.debug(ind_str + 'maximum possible n_part = {}'.format(n_part_max))
-    if n_part is not None:
-        _logger.debug(ind_str + 'requested n_part = {}'.format(n_part))
-        if n_part > n_part_max:
-            _logger.info(ind_str + 'requested n_part > maximum, setting to maximum = {}'.format(n_part_max))
+        edist = GenesisElectronDist()
+        
+        C = npart * q_e
+        
+        if n_part is not None:
+            pick_i = random.sample(range(npart), n_part)
+            # particles_kept_ratio = n_part / npart
+            # C = n_part * q_e
+        else:
+            pick_i = range(npart)
+            n_part = npart
+            # particles_kept_ratio = 1
+        
+        
+        _logger.debug(ind_str + 'particles kept = {}%'.format(n_part / npart * 100))
+        
+        edist.g = dpa.g[pick_i]
+        edist.xp = dpa.px[pick_i] / edist.g
+        edist.yp = dpa.py[pick_i] / edist.g
+        edist.x = dpa.x[pick_i]
+        edist.y = dpa.y[pick_i]
+        edist.t = t0[pick_i]
+        
+    else:
+        if fill_gaps:
+            
+            s0 = np.linspace(0, nslice * zsep * lslice, nslice)
+            s = np.linspace(0, nslice * zsep * lslice, nslice * zsep)
+            I = np.interp(s, s0, dpa.I)
+            dt = (s[1] - s[0]) / speed_of_light
+        else:
+            s = np.linspace(0, nslice * zsep * lslice, nslice)
+            I = dpa.I
+            dt = (s[1] - s[0]) / speed_of_light
+        _logger.debug(ind_str + 'dt zsep = {} s'.format(dt))
+            
+        C = np.sum(I) * dt
+        
+        _logger.debug(ind_str + 'current max = {} A'.format(I.max()))
+        _logger.debug(ind_str + 'bunch charge = {} C'.format(C))
+            
+        n_part_max = int(np.floor(np.sum(I / I.max() * dpa.npart)))
+        _logger.debug(ind_str + 'maximum possible n_part = {}'.format(n_part_max))
+        if n_part is not None:
+            _logger.debug(ind_str + 'requested n_part = {}'.format(n_part))
+            if n_part > n_part_max:
+                _logger.info(ind_str + 'requested n_part > maximum, setting to maximum = {}'.format(n_part_max))
+                n_part = n_part_max
+        else:
+            _logger.info(ind_str + 'requested n_part = None, setting to maximum = {}'.format(n_part_max))
             n_part = n_part_max
-    else:
-        _logger.info(ind_str + 'requested n_part = None, setting to maximum = {}'.format(n_part_max))
-        n_part = n_part_max
-
-    
-    
-    #n_part_bin = (I / np.sum(I) * n_part / nbins).astype(int)
-    #n_part_bin[n_part_bin > npart_bin] = npart_bin
-    #print(n_part_bin.max())
-    n_part_slice = (I / np.sum(I) * n_part).astype(int)
-    n_part_slice[n_part_slice > npart] = npart
-    
-    _logger.debug(ind_str + 'max particles/slice = {}'.format(n_part_slice.max()))
-
-    
-    # print(n_part_slice.max())
-    
-    
-    #pick_i = random.sample(range(n_part), n_part_slice[i])
-    # _logger.debug(ind_str + 'reshaping')
-    
-    # g = np.reshape(dpa.g, (nslice, npart))
-    # x = np.reshape(dpa.x, (nslice, npart))
-    # y = np.reshape(dpa.y, (nslice, npart))
-    # px = np.reshape(dpa.px, (nslice, npart)) / g
-    # py = np.reshape(dpa.py, (nslice, npart)) / g
-    # ph = np.reshape(dpa.ph, (nslice, npart))
-    
-    
-    g = dpa.g.reshape(nslice, npart)
-    x = dpa.x.reshape(nslice, npart)
-    y = dpa.y.reshape(nslice, npart)
-    px = dpa.px.reshape(nslice, npart) / g
-    py = dpa.py.reshape(nslice, npart) / g
-    ph = dpa.ph.reshape(nslice, npart)
-    
-    t1 = ph * lslice / speed_of_light
-    t0 = np.arange(nslice)[:,np.newaxis] * lslice * zsep / speed_of_light
-    t = t1+t0
-    # _logger.debug(2*ind_str + 'complete')
-    
-    
-    edist = GenesisElectronDist()
-    #g1 = np.array([])
-    #x1 = np.array([])
-    #y1 = np.array([])
-    
-    gi = []
-    xpi = []
-    ypi = []
-    xi = []
-    yi = []
-    ti = []
-    
-    _logger.debug(ind_str + 'picking random particles')
-    for i in np.arange(nslice):
-    #    for ii in np.arange(nbins):
-    #    pick_i = random.sample(range(npart_bin), n_part_bin[i])
-        pick_i = random.sample(range(npart), n_part_slice[i])
 
         
-        # edist.g = np.append(edist.g, g[i, pick_i])
-        # edist.xp = np.append(edist.xp, px[i, pick_i])
-        # edist.yp = np.append(edist.yp, py[i, pick_i])
-        # edist.x = np.append(edist.x, x[i, pick_i])  
-        # edist.y = np.append(edist.y, y[i, pick_i])
-        # edist.t = np.append(edist.t, t[i, pick_i])
         
-        gi.append(g[i, pick_i])
-        xpi.append(px[i, pick_i])
-        ypi.append(py[i, pick_i])
-        xi.append(x[i, pick_i])
-        yi.append(y[i, pick_i])
-        ti.append(t[i, pick_i])
+        #n_part_bin = (I / np.sum(I) * n_part / nbins).astype(int)
+        #n_part_bin[n_part_bin > npart_bin] = npart_bin
+        #print(n_part_bin.max())
+        n_part_slice = (I / np.sum(I) * n_part).astype(int)
+        n_part_slice[n_part_slice > npart] = npart
         
-    edist.g = np.array(gi).flatten()
-    edist.xp = np.array(xpi).flatten()
-    edist.yp = np.array(ypi).flatten()
-    edist.x = np.array(xi).flatten()
-    edist.y = np.array(yi).flatten()
-    edist.t = np.array(ti).flatten()
+        _logger.debug(ind_str + 'max particles/slice = {}'.format(n_part_slice.max()))
+
+        
+        # print(n_part_slice.max())
+        
+        
+        #pick_i = random.sample(range(n_part), n_part_slice[i])
+        # _logger.debug(ind_str + 'reshaping')
+        
+        # g = np.reshape(dpa.g, (nslice, npart))
+        # x = np.reshape(dpa.x, (nslice, npart))
+        # y = np.reshape(dpa.y, (nslice, npart))
+        # px = np.reshape(dpa.px, (nslice, npart)) / g
+        # py = np.reshape(dpa.py, (nslice, npart)) / g
+        # ph = np.reshape(dpa.ph, (nslice, npart))
+        
+        
+        g = dpa.g.reshape(nslice, npart)
+        x = dpa.x.reshape(nslice, npart)
+        y = dpa.y.reshape(nslice, npart)
+        px = dpa.px.reshape(nslice, npart) / g
+        py = dpa.py.reshape(nslice, npart) / g
+        ph = dpa.ph.reshape(nslice, npart)
+        
+        t1 = ph * lslice / speed_of_light
+        t0 = np.arange(nslice)[:,np.newaxis] * lslice * zsep / speed_of_light
+        t = t1+t0
+        # _logger.debug(2*ind_str + 'complete')
+        
+        
+        edist = GenesisElectronDist()
+        #g1 = np.array([])
+        #x1 = np.array([])
+        #y1 = np.array([])
+        
+        gi = []
+        xpi = []
+        ypi = []
+        xi = []
+        yi = []
+        ti = []
+        
+        _logger.debug(ind_str + 'picking random particles')
+        for i in np.arange(nslice):
+        #    for ii in np.arange(nbins):
+        #    pick_i = random.sample(range(npart_bin), n_part_bin[i])
+            pick_i = random.sample(range(npart), n_part_slice[i])
+
+            
+            # edist.g = np.append(edist.g, g[i, pick_i])
+            # edist.xp = np.append(edist.xp, px[i, pick_i])
+            # edist.yp = np.append(edist.yp, py[i, pick_i])
+            # edist.x = np.append(edist.x, x[i, pick_i])  
+            # edist.y = np.append(edist.y, y[i, pick_i])
+            # edist.t = np.append(edist.t, t[i, pick_i])
+            
+            gi.append(g[i, pick_i])
+            xpi.append(px[i, pick_i])
+            ypi.append(py[i, pick_i])
+            xi.append(x[i, pick_i])
+            yi.append(y[i, pick_i])
+            ti.append(t[i, pick_i])
+        
+        edist.g = np.array(gi).flatten()
+        edist.xp = np.array(xpi).flatten()
+        edist.yp = np.array(ypi).flatten()
+        edist.x = np.array(xi).flatten()
+        edist.y = np.array(yi).flatten()
+        edist.t = np.array(ti).flatten()
+        
+        # particles_kept_ratio = 1
     
-    edist.part_charge = C / n_part
+    edist.part_charge = C / edist.len()
     _logger.debug('')
     
-    _logger.debug(ind_str + 'edist particle charge = {} C'.format(C))
+    _logger.debug(ind_str + 'edist bunch charge = {} C'.format(C))
+    _logger.debug(ind_str + 'edist particle charge = {} C'.format(edist.part_charge))
     _logger.debug(ind_str + 'edist n_part = {}'.format(edist.len()))
     
     if hasattr(dpa,'filePath'):

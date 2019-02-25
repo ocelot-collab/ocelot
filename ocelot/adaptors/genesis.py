@@ -29,7 +29,7 @@ from ocelot.common.logging import *
 
 _logger = logging.getLogger(__name__) 
 
-inputTemplate = "\
+_inputTemplate = "\
  $newrun \n\
  aw0   =  __AW0__ \n\
  xkx   =  __XKX__\n\
@@ -426,7 +426,7 @@ class GenesisInput:
         self.run_dir = None # directory to run simulation in
         self.exp_dir = None # if run_dir==None, it is created based on exp_dir
         
-        self.inp_txt = inputTemplate
+        self.inp_txt = _inputTemplate
         
         self.int_vals = ('npart', 'nbins','ncar', 'zsep', 'nslice', 'ntail') #continue
         
@@ -801,21 +801,37 @@ class GenesisElectronDist:
 
     def center(self, s='com'):
         _logger.info('centering edist for s = '+str(s))
-        if isinstance(s,str):
+        if isinstance(s, str):
             if s == 'com': #center of mass
-                self.x -= np.mean(self.x)
-                self.y -= np.mean(self.y)
-                self.xp -= np.mean(self.xp)
-                self.yp -= np.mean(self.yp)
+                
+                mean_x = np.mean(self.x)
+                mean_y = np.mean(self.y)
+                mean_xp = np.mean(self.xp)
+                mean_yp = np.mean(self.yp)
+                
             else:
                 _logger.error('unknown s string value')
+                return None
         else:
             beam = edist2beam(self, 1e-7)
             beam_s = beam.get_s(s)
-            self.x -= beam_s.x
-            self.y -= beam_s.y
-            self.xp -= beam_s.xp
-            self.yp -= beam_s.yp
+            
+            mean_x = beam_s.x
+            mean_y = beam_s.y
+            mean_xp = beam_s.xp
+            mean_yp = beam_s.yp
+            
+        self.x -= mean_x
+        self.y -= mean_y
+        self.xp -= mean_xp
+        self.yp -= mean_yp
+        
+        _logger.debug(ind_str + 'mean_x  {}'.format(mean_x))
+        _logger.debug(ind_str + 'mean_y  {}'.format(mean_y))
+        _logger.debug(ind_str + 'mean_xp {}'.format(mean_xp))
+        _logger.debug(ind_str + 'mean_yp {}'.format(mean_yp))
+            
+            
         
         # # edist_out = deepcopy(self)
         # edist_out.x -= np.mean(edist_out.x)
@@ -2431,22 +2447,34 @@ import inspect
 # import os
 
 def cut_edist_std(edist, all_std=None, x_std=4, y_std=4, xp_std=4, yp_std=4):
-    _logger.info('cutting edist by standard deviation')
+    _logger.info('cutting particle distribution by standard deviation')
     if all_std is not None:
         x_std = y_std = xp_std = yp_std = all_std
     
-    x_std = np.std(edist.x)
-    y_std = np.std(edist.y)
-    xp_std = np.std(edist.xp)
-    yp_std = np.std(edist.yp)
+    x_mean = np.mean(edist.x)
+    y_mean = np.mean(edist.y)
+    xp_mean = np.mean(edist.xp)
+    yp_mean = np.mean(edist.yp)
+    _logger.debug(ind_str + 'X  mean {}'.format(x_mean))
+    _logger.debug(ind_str + 'Y  mean {}'.format(y_mean))
+    _logger.debug(ind_str + 'XP mean {}'.format(xp_mean))
+    _logger.debug(ind_str + 'YP mean {}'.format(yp_mean))
     
-    x_lim = x_std * x_std
-    y_lim = y_std * y_std
+    x_1std = np.std(edist.x)
+    y_1std = np.std(edist.y)
+    xp_1std = np.std(edist.xp)
+    yp_1std = np.std(edist.yp)
+    _logger.debug(ind_str + 'X  std {} * {} sigmas'.format(x_1std, x_std))
+    _logger.debug(ind_str + 'Y  std {} * {} sigmas'.format(y_1std, y_std))
+    _logger.debug(ind_str + 'XP std {} * {} sigmas'.format(xp_1std, xp_std))
+    _logger.debug(ind_str + 'YP std {} * {} sigmas'.format(yp_1std, yp_std))
     
-    xp_lim = xp_std * xp_std
-    yp_lim = yp_std * yp_std
+    x_lim = x_std * x_1std
+    y_lim = y_std * y_1std
+    xp_lim = xp_std * xp_1std
+    yp_lim = yp_std * yp_1std
     
-    return cut_edist(edist, x_lim=(-x_lim, x_lim), y_lim=(-y_lim, y_lim), xp_lim=(-xp_lim, xp_lim), yp_lim=(-yp_lim, yp_lim))
+    return cut_edist(edist, x_lim=(x_mean-x_lim, x_mean+x_lim), y_lim=(y_mean-y_lim, y_mean+y_lim), xp_lim=(xp_mean-xp_lim, xp_mean+xp_lim), yp_lim=(yp_mean-yp_lim, yp_mean+yp_lim))
     
     
 
@@ -2465,6 +2493,13 @@ def cut_edist(edist,
 
     _logger.info('cutting particle distribution file')
     start_time = time.time()
+
+    _logger.debug(ind_str + 'T  lim {} : {} '.format(*t_lim))
+    _logger.debug(ind_str + 'G  lim {} : {} '.format(*g_lim))
+    _logger.debug(ind_str + 'X  lim {} : {} '.format(*x_lim))
+    _logger.debug(ind_str + 'Y  lim {} : {} '.format(*y_lim))
+    _logger.debug(ind_str + 'XP lim {} : {} '.format(*xp_lim))
+    _logger.debug(ind_str + 'YP lim {} : {} '.format(*yp_lim))
     
     if s_lim is not None:
         index_t = logical_or(edist.t < s_lim[0]/speed_of_light, edist.t > s_lim[1]/speed_of_light)
@@ -2485,8 +2520,8 @@ def cut_edist(edist,
         if hasattr(edist_f, parm):
             setattr(edist_f, parm, np.delete(getattr(edist_f, parm), index))
 
-    _logger.info(ind_str + '%.2f percent cut' % ((edist.charge() - edist_f.charge()) / edist.charge() * 100))
-    _logger.debug(ind_str + 'done in %.2f sec' % (time.time() - start_time))
+    _logger.info(ind_str + '{:.2f} % cut'.format((edist.charge() - edist_f.charge()) / edist.charge() * 100))
+    _logger.debug(ind_str + 'done in {:.2f} sec'.format(time.time() - start_time))
 
     return edist_f
 

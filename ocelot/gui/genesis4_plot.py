@@ -33,7 +33,8 @@ import matplotlib
 
 import matplotlib.pyplot as plt
 import numpy as np
-from ocelot.adaptors.genesis import *
+import logging              
+from ocelot.adaptors.genesis4 import *
 from ocelot.common.globals import *  # import of constants like "h_eV_s" and
 from ocelot.common.math_op import *  # import of mathematical functions
 from ocelot.utils.xfel_utils import *
@@ -41,12 +42,18 @@ from ocelot.optics.utils import calc_ph_sp_dens
 from ocelot.optics.wave import *
 from copy import deepcopy
 
+from ocelot.gui.genesis_plot import plot_dfl, plot_edist, plot_wigner
+
 from ocelot.common.logging import *
-_logger = logging.getLogger('ocelot.gen4') 
 
 # from pylab import rc, rcParams #tmp
 from matplotlib import rc, rcParams
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+#in order to run decorators properly
+import functools
+
+_logger = logging.getLogger('ocelot.genesis4_plot') 
 
 my_viridis = deepcopy(plt.get_cmap('viridis')) 
 my_viridis.set_under('w')
@@ -62,6 +69,46 @@ rcParams.update(params)
 # rcParams["savefig.directory"] = os.chdir(os.path.dirname(__file__)) but __file__ appears to be genesis_plot
 
 plt.ioff() #turn off interactive mode
+
+# check if Xserver is connected
+plotting_error=None
+try:
+    import _tkinter
+    _tkinter.create()
+except:
+    if not "DISPLAY" in os.environ:
+        plotting_error = 'Cannot plot figures: Xserver is not connected (Putty -> X11 forwarding)'
+        # _logger.error('Cannot plot figures: Xserver is not connected (Putty -> X11 forwarding)')
+    else:
+        plotting_error = 'Cannot plot figures: Unable to connect to forwarded X server (?)'
+        # _logger.error('Cannot plot figures: Unable to connect to forwarded X server (?)')
+
+if plotting_error is not None:
+    _logger.error(plotting_error)
+
+# # re-check
+# exitval = os.system('python -c "import matplotlib.pyplot as plt; plt.figure()"')
+# havedisplay = (exitval == 0)
+# if not havedisplay:
+# # force matplotlib not ot use Xwindows backend. plots may still be plotted into e.g. *.png
+# matplotlib.use('Agg')
+
+#decorator
+def if_plottable(plotting_func):
+    
+    def empty_func(*args, **kwargs):
+        return
+    
+    @functools.wraps(plotting_func)
+    def wrapper(*args, **kwargs):
+        if plotting_error is None:
+            fig = plotting_func(*args, **kwargs)
+            return fig
+        else:
+            _logger.warning(plotting_error)
+            return empty_func()
+
+    return wrapper
 
 # def plot_gen_out_all_paral(exp_dir, stage=1, savefig='png', debug=1):
     # print('start')
@@ -82,7 +129,9 @@ plt.ioff() #turn off interactive mode
     
     # return
 
-# def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1, 1, 6.05, 1, 0, 0, 0, 0, 0, 1, 1), vartype_dfl=complex128, debug=1):
+@if_plottable
+def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1, 1, 10, 1, 0, 0, 0, 0, 0, 1, 10), vartype_dfl=complex128, *args, **kwargs):
+    debug=1
     # '''
     # plots all possible output from the genesis output
     # handle is either:
@@ -113,108 +162,117 @@ plt.ioff() #turn off interactive mode
 
     # if debug > 0:
         # print('  plotting genesis output')
-    # plotting_time = time.time()
+    plotting_time = time.time()
 
     # # plt.ioff()
 
-    # if savefig == True:
-        # savefig = 'png'
+    if savefig == True:
+        savefig = 'png'
 
-    # if choice == 'all':
-        # choice = (1, 1, 1, 1, 6.05, 1, 1, 1, 1, 1, 1, 1, 1)
-    # elif choice == 'gen':
-        # choice = (1, 1, 1, 1, 6.05, 0, 0, 0, 0, 0, 0, 0, 0)
+    if choice == 'all':
+        choice = (1, 1, 1, 1, 10, 1, 1, 1, 1, 1, 1, 1, 10)
+    elif choice == 'gen':
+        choice = (1, 1, 1, 1, 6.05, 0, 0, 0, 0, 0, 0, 0, 10)
 
-    # if len(choice) > 13:
-        # choice = choice[:13]
-    # elif len(choice) < 13:
-        # choice += tuple((np.zeros(13 - len(choice)).astype(int)))
+    if len(choice) > 13:
+        choice = choice[:13]
+    elif len(choice) < 13:
+        choice += tuple((np.zeros(13 - len(choice)).astype(int)))
 
-    # if os.path.isdir(str(handle)):
-        # handles = []
-        # for root, dirs, files in os.walk(handle):
-            # for name in files:
-                # if name.endswith('.gout') or name.endswith('.out'):
-                    # handles.append(os.path.join(root, name))
-        # if debug > 0:
-            # print('\n  plotting all files in ' + str(handle))
-    # else:
-        # handles = [handle]
-
-    # for handle in handles:
-
-        # if os.path.isfile(str(handle)):
-            # print('')
-            # print('plotting ',handle)
-            # handle = read_out_file(handle, read_level=2, debug=debug)
-
-        # if isinstance(handle, GenesisOutput):
-            # if choice[0]:
-                # f0 = plot_gen_out_e(handle, showfig=showfig, savefig=savefig, debug=debug)
-            # if choice[1]:
-                # f1 = plot_gen_out_ph(handle, showfig=showfig, savefig=savefig, debug=debug)
-            # if choice[2]:
-                # f2 = plot_gen_out_z(handle, z=0, showfig=showfig, savefig=savefig, debug=debug)
-            # if choice[3]:
-                # f3 = plot_gen_out_z(handle, z=inf, showfig=showfig, savefig=savefig, debug=debug)
-            # if choice[11]:
-                # try:
-                    # W=wigner_out(handle, pad=2)
-                    # plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug, downsample=2)
-                # except:
-                    # pass
+    if os.path.isdir(str(handle)):
+        handles = []
+        for root, dirs, files in os.walk(handle):
+            for name in files:
+                if name.endswith('out.h5'):
+                    handles.append(os.path.join(root, name))
+        print('\n  plotting all files in ' + str(handle))
+    else:
+        handles = [handle]
+    
+    for handle in handles:
+        
+        if os.path.isfile(str(handle)):
+            print('')
+            print('plotting ',handle)
+            handle = read_gout4(handle)
+        
+        if isinstance(handle, Genesis4Output):
+            if choice[0]:
+                f0 = plot_gen4_out_e(handle, showfig=showfig, savefig=savefig, debug=debug)
+            if choice[1]:
+                f1 = plot_gen4_out_ph(handle, showfig=showfig, savefig=savefig, debug=debug)
+            if choice[2]:
+                f2 = plot_gen4_out_z(handle, z=0, showfig=showfig, savefig=savefig, debug=debug)
+            if choice[3]:
+                f3 = plot_gen4_out_z(handle, z=np.inf, showfig=showfig, savefig=savefig, debug=debug)
+            if choice[11] != 0:
+                if choice[11] == -1:
+                    # try:
+                    W = wigner_out(handle, pad=2)
+                    plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug, downsample=2)
+                    # except:
+                        # _logger.warning('could not plot wigner')
+                else:
+                    if choice[11] == 1:
+                        _logger.warning('choice[11] in plot_gen_out_all defines interval of Wigner plotting. To plot at the end set to "-1"')
+                    # try:
+                    for z in np.arange(0, np.amax(handle.z), choice[11]):
+                        W = wigner_out(handle, z=z, pad=2)
+                        plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug, downsample=2)
+                    # except:
+                        # _logger.warning('could not plot wigner')
             # if choice[4] != 0:
                 # for z in np.arange(choice[4], np.amax(handle.z), choice[4]):
-                    # plot_gen_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug)
-            # if choice[12]:
-                # try:
-                    # plot_dpa_bucket_out(handle,scatter=0,slice_pos='max_P',repeat=3, showfig=showfig, savefig=savefig, cmap=def_cmap)
-                # except IOError:
-                    # pass
-
-            
+                    # plot_gen4_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug)
+            if choice[4] != 0 and  choice[4] != []:
+                for z in np.arange(choice[4], np.amax(handle.z), choice[4]):
+                    plot_gen4_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug, *args, **kwargs)
+                    
+            if choice[12]:
+                try:
+                    plot_dpa_bucket_out(handle,scatter=0,slice_pos='max_P',repeat=3, showfig=showfig, savefig=savefig, cmap=def_cmap)
+                except IOError:
+                    pass
                 
-        # if os.path.isfile(handle.filePath + '.dfl') and any(choice[5:8]):
-            # dfl = read_dfl_file_out(handle, debug=debug)
-            # if dfl.Nz()==0:
-                # print('empty dfl, skipping')
-            # else:
-                # if choice[5]:
-                    # f5 = plot_dfl(dfl, showfig=showfig, savefig=savefig, debug=debug)
-                # if choice[6]:
-                    # f6 = plot_dfl(dfl, far_field=1, freq_domain=0, auto_zoom=0, showfig=showfig, savefig=savefig, debug=debug)
-                # if choice[7]:
-                    # f7 = plot_dfl(dfl, far_field=0, freq_domain=1, auto_zoom=0, showfig=showfig, savefig=savefig, debug=debug)
-                # if choice[8]:
-                    # f8 = plot_dfl(dfl, far_field=1, freq_domain=1, auto_zoom=0, showfig=showfig, savefig=savefig, debug=debug)
+        if os.path.isfile(handle.filePath.replace('.out.h5','.fld.h5')) and any(choice[5:8]):
+            dfl = read_dfl4(handle.filePath.replace('.out.h5','.fld.h5'))
+            if dfl.Nz()==0:
+                print('empty dfl, skipping')
+            else:
+                if choice[5]:
+                    f5 = plot_dfl(dfl, showfig=showfig, savefig=savefig, debug=debug)
+                if choice[6]:
+                    f6 = plot_dfl(dfl, domains='tk', auto_zoom=0, showfig=showfig, savefig=savefig, debug=debug)
+                if choice[7]:
+                    f7 = plot_dfl(dfl, domains='sf', auto_zoom=0, showfig=showfig, savefig=savefig, debug=debug)
+                if choice[8]:
+                    f8 = plot_dfl(dfl, domains='kf', auto_zoom=0, showfig=showfig, savefig=savefig, debug=debug)
         
-        # if os.path.isfile(handle.filePath + '.dpa') and (choice[9] or choice[10]) and handle('itdp') == True:
-            # dpa = read_dpa_file_out(handle, debug=debug)
-            # if np.size(dpa.ph)==0:
-                # print('empty dpa, skipping')
-            # else:
-                # if choice[9]:
-                    # edist = dpa2edist(handle, dpa, num_part=5e4, smear=1, debug=debug)
-                    # f9 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=100, debug=debug)
-                # if choice[10]:
-                    # edist = dpa2edist(handle, dpa, num_part=5e4, smear=0, debug=debug)
-                    # f10 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=(100, 100, 300, 200), debug=debug)
+        if os.path.isfile(handle.filePath.replace('.out.h5','.par.h5')) and (choice[9] or choice[10]):
+            print('111')
+            dpa = read_dpa4(handle.filePath.replace('.out.h5','.par.h5'))
+            if choice[9]:
+                edist = dpa42edist(dpa, n_part=5e4, fill_gaps=1)
+                f9 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=100, debug=debug)
+            if choice[10]:
+                edist = dpa42edist(dpa, n_part=5e4, fill_gaps=0)
+                f10 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=(50, 50, 300, 300), debug=debug)
         
-    # if savefig != False:
-        # if debug > 0:
-            # print('    plots recorded to *.' + str(savefig) + ' files')
+    if savefig != False:
+        if debug > 0:
+            print('    plots recorded to *.' + str(savefig) + ' files')
 
-    # if showfig:
-        # if debug > 0:
-            # print('    showing plots, close all to proceed')
-        # plt.show()
-    # # else:
-        # # plt.close('all')
+    if showfig:
+        if debug > 0:
+            print('    showing plots, close all to proceed')
+        plt.show()
+    # else:
+        # plt.close('all')
 
-    # print ('    total plotting time %.2f seconds' % (time.time() - plotting_time))
+    print ('    total plotting time %.2f seconds' % (time.time() - plotting_time))
 
-
-def plot_gen4_out_z(out, z=1e5, params=['rad_power+el_current', 'el_energy+el_espread+el_bunching', 'rad_phase', 'rad_spec'], figsize=3, x_units='um', y_units='ev', legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
+@if_plottable
+def plot_gen4_out_z(out, z=np.inf, params=['rad_power+el_current', 'el_energy+el_espread+el_bunching', 'rad_spec'], figsize=3, x_units='um', y_units='ev', legend=False, fig_name=None, savefig=False, showfig=True, debug=1, *args, **kwargs):
     '''
     radiation parameters at distance z
     out/out = GenesisOutput() object
@@ -247,9 +305,23 @@ def plot_gen4_out_z(out, z=1e5, params=['rad_power+el_current', 'el_energy+el_es
     #add sorting of f_domain to the end params += [params.pop(i)]
     params_str = str(params).replace("'", '').replace('[', '').replace(']', '').replace(' ', '').replace(',', '--')
     
-    
-    zi = np.abs(out.z-z).argmin()
+    if z == np.inf:
+        # print ('Showing profile parameters at the end of undulator')
+        z = np.amax(out.z)
+
+    elif z > np.amax(out.z):
+        # print ('Z parameter too large, setting to the undulator end')
+        z = np.amax(out.z)
+
+    elif z < np.amin(out.z):
+        # print ('Z parameter too small, setting to the undulator entrance')
+        z = np.amin(out.z)
+
+    zi = np.where(out.z >= z)[0][0]
     z = out.z[zi]
+    
+    # zi = np.abs(out.z-z).argmin()
+    # z = out.z[zi]
     
     
     if fig_name is None:
@@ -349,7 +421,7 @@ def plot_gen4_out_z(out, z=1e5, params=['rad_power+el_current', 'el_energy+el_es
     else:
         plt.close('all')
 
-
+@if_plottable
 def subfig_z_power_curr(ax_curr, out, zi=None, x_units='um', legend=False):
     ax_curr.clear()
     number_ticks = 6
@@ -396,7 +468,7 @@ def subfig_z_power_curr(ax_curr, out, zi=None, x_units='um', legend=False):
     
     ax_power.set_xlim([x[0],x[-1]])
 
-
+@if_plottable
 def subfig_z_energy_espread_bunching(ax_energy, out, zi=None, x_units='um', legend=False):
     ax_energy.clear()
     number_ticks = 6
@@ -438,7 +510,7 @@ def subfig_z_energy_espread_bunching(ax_energy, out, zi=None, x_units='um', lege
     
     ax_energy.set_xlim([x[0],x[-1]])
 
-
+@if_plottable
 def subfig_z_energy_espread(ax_energy, out, zi=None, x_units='um', legend=False):
     ax_energy.clear()
     number_ticks = 6
@@ -468,7 +540,7 @@ def subfig_z_energy_espread(ax_energy, out, zi=None, x_units='um', legend=False)
     
     ax_energy.set_xlim([x[0],x[-1]])
 
-
+@if_plottable
 def subfig_z_phase(ax_phase, out, zi=None, x_units='um', legend=False, rewrap=False):
     ax_phase.clear()
     number_ticks = 6
@@ -504,7 +576,7 @@ def subfig_z_phase(ax_phase, out, zi=None, x_units='um', legend=False, rewrap=Fa
     
     ax_phase.set_xlim([x[0],x[-1]])
 
-
+@if_plottable
 def subfig_z_spec(ax_spectrum, out, zi=None, loc='near', y_units='ev', estimate_ph_sp_dens=True, legend=False):
     
     number_ticks = 6
@@ -581,17 +653,18 @@ def subfig_z_spec(ax_spectrum, out, zi=None, loc='near', y_units='ev', estimate_
     
     
 
-
+@if_plottable
 def plot_gen4_out_e(out, legend=False, figsize=3, fig_name='Electrons', savefig=False, showfig=True, debug=1):
     fig = plot_gen4_out_evo(out, params=['und_quad', 'el_size', 'el_energy', 'el_bunching'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
 
-
+@if_plottable
 def plot_gen4_out_ph(out, legend=False, figsize=3, fig_name='Radiation', savefig=False, showfig=True, debug=1):
     if out.tdp:
         fig = plot_gen4_out_evo(out, params=['rad_pow_en_log', 'rad_pow_en_lin', 'rad_spec_log', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
     else:
         fig = plot_gen4_out_evo(out, params=['rad_pow_log', 'rad_size'], figsize=figsize, legend=legend, fig_name=fig_name, savefig=savefig, showfig=showfig, debug=debug)
 
+@if_plottable
 def plot_gen4_out_evo(out, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'el_bunching', 'rad_pow_en_log', 'rad_pow_en_lin', 'rad_spec_log', 'rad_size', 'rad_spec_evo_n', 'rad_pow_evo_n'], figsize=3, legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
     '''
     plots evolution of given parameters from genesis output with undulator length
@@ -714,7 +787,7 @@ def plot_gen4_out_evo(out, params=['und_quad', 'el_size', 'el_pos', 'el_energy',
     else:
         plt.close('all')
 
-
+@if_plottable
 def subfig_evo_und_quad(ax_und, out, legend):
     number_ticks = 6
     aw = out.h5['Lattice/aw']
@@ -747,7 +820,7 @@ def subfig_evo_und_quad(ax_und, out, legend):
     ax_quad.tick_params(axis='y', which='both', colors='r')
     ax_quad.yaxis.label.set_color('r')
 
-
+@if_plottable
 def subfig_evo_und(ax_und, out, legend):
     number_ticks = 6
     aw = out.h5['Lattice/aw']
@@ -770,7 +843,7 @@ def subfig_evo_und(ax_und, out, legend):
     ax_und.tick_params(axis='y', which='both', colors='b')
     ax_und.yaxis.label.set_color('b')
 
-
+@if_plottable
 def subfig_evo_el_size(ax_size_tsize, out, legend, which='both'):
     number_ticks = 6
     
@@ -801,7 +874,8 @@ def subfig_evo_el_size(ax_size_tsize, out, legend, which='both'):
     ax_size_tsize.set_ylim(ymin=0)
     ax_size_tsize.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_size_tsize.grid(True)
-    
+
+@if_plottable
 def subfig_evo_el_pos(ax_size_tpos, out, legend, which='both'):
     number_ticks = 6
     
@@ -817,11 +891,12 @@ def subfig_evo_el_pos(ax_size_tpos, out, legend, which='both'):
         ax_size_tpos.plot(z, x[:, idx_pk] * 1e6, 'g--', z, y[:, idx_pk] * 1e6, 'b--')
     ax_size_tpos.set_ylabel(r'$x,y$ [$\mu$m]')
 
+@if_plottable
 def subfig_evo_el_energy(ax_energy, out, legend):
     number_ticks = 6
     
     el_energy = out.h5['Beam/energy'][:] * m_e_MeV
-    el_energy_av = int(np.mean(el_energy))
+    el_energy_av = int(np.nanmean(el_energy))
     z = out.h5['Lattice/zplot']
     el_energy_spread = out.h5['Beam/energyspread'][:]
     
@@ -844,7 +919,7 @@ def subfig_evo_el_energy(ax_energy, out, legend):
     ax_spread.tick_params(axis='y', which='both', colors='r')
     ax_spread.yaxis.label.set_color('r')
 
-
+@if_plottable
 def subfig_evo_el_bunching(ax_bunching, out, legend):
     number_ticks = 6
     
@@ -859,7 +934,7 @@ def subfig_evo_el_bunching(ax_bunching, out, legend):
     ax_bunching.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_bunching.grid(True)
 
-
+@if_plottable
 def subfig_evo_rad_pow_en(ax_rad_pow, out, legend, log=1):
     
     if log:
@@ -910,7 +985,7 @@ def subfig_evo_rad_pow_en(ax_rad_pow, out, legend, log=1):
 
     ax_rad_pow.text(0.98, 0.02, r'$P_{end}$= %.2e W ' '\n' r'$E_{end}$= %.2e J' % (np.amax(out.rad_power[-1, :]), out.rad_energy[-1]), fontsize=12, horizontalalignment='right', verticalalignment='bottom', transform=ax_rad_pow.transAxes)
 
-
+@if_plottable
 def subfig_evo_rad_pow(ax_rad_pow, out, legend, log=1):
     
     ax_rad_pow.plot(out.z, np.amax(out.rad_power, axis=1), 'g-', linewidth=1.5)
@@ -927,7 +1002,7 @@ def subfig_evo_rad_pow(ax_rad_pow, out, legend, log=1):
     ax_rad_pow.yaxis.get_offset_text().set_color(ax_rad_pow.yaxis.label.get_color())
     ax_rad_pow.text(0.98, 0.02, r'$P_{end}$= %.2e W' % (np.amax(out.rad_power[-1, :])), fontsize=12, horizontalalignment='right', verticalalignment='bottom', transform=ax_rad_pow.transAxes)
 
-
+@if_plottable
 def subfig_evo_rad_spec(ax_spectrum, out, legend, log=1):
     
     scale_ev, spec = out.calc_spec()
@@ -996,9 +1071,8 @@ def subfig_evo_rad_spec(ax_spectrum, out, legend, log=1):
     # print (yticks[1].label.get_text())
     # yticks[1].label.set_text('')
     # print (yticks[1].label.get_text())
-    
 
-
+@if_plottable
 def subfig_rad_size(ax_size_t, out, legend):
     
     x_size = out.h5['Field/xsize'][:]
@@ -1075,14 +1149,14 @@ def subfig_rad_size(ax_size_t, out, legend):
             ax_size_s.legend()
 #        plt.legend('fwhm','std')
 
-
-def subfig_evo_rad_pow_sz(ax_power_evo, out, legend, norm=1):
+@if_plottable
+def subfig_evo_rad_pow_sz(ax_power_evo, out, legend, norm=1, **kwargs):
     if out.nSlices > 1:
         z = out.z
         s = out.s
         power = out.rad_power
         if norm == 1:
-            max_power = np.max(power, 0)[np.newaxis, :]
+            max_power = np.nanmax(power, 1)[:, np.newaxis]
             max_power[max_power == 0] = 1  # avoid division by zero
             power = power / max_power
             # power[isnan(power)]=0
@@ -1094,14 +1168,14 @@ def subfig_evo_rad_pow_sz(ax_power_evo, out, legend, norm=1):
     else:
         pass
 
-
+@if_plottable
 def subfig_evo_rad_spec_sz(ax_spectrum_evo, out, legend, norm=1):
     if out.nSlices > 1:
         z = out.z
         l, spectrum = out.calc_spec()
 #        spectrum = out.spec
         if norm == 1:
-            max_spectrum = np.max(spectrum, 0)[np.newaxis, :]
+            max_spectrum = np.nanmax(spectrum, 1)[:, np.newaxis]
             max_spectrum[max_spectrum == 0] = 1  # avoid division by zero
             spectrum = spectrum / max_spectrum
             # spectrum[isnan(spectrum)]=0
@@ -1232,6 +1306,7 @@ def subfig_evo_rad_spec_sz(ax_spectrum_evo, out, legend, norm=1):
 #
 #    return fig
 
+@if_plottable
 def plot_dfl4_all(dfl, **kwargs):
     
     plot_dfl4(dfl, **kwargs)
@@ -1243,6 +1318,7 @@ def plot_dfl4_all(dfl, **kwargs):
     plot_dfl4(dfl, **kwargs)
     dfl.fft_xy()
 
+@if_plottable
 def plot_dfl4(dfl, domains=None, z_lim=[], xy_lim=[], figsize=3, cmap=def_cmap, legend=True, phase=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy = True, log_scale=0, debug=1, vartype_dfl=complex64):
     '''
     Plots dfl radiation object in 3d.
@@ -1534,7 +1610,7 @@ def plot_dfl4(dfl, domains=None, z_lim=[], xy_lim=[], figsize=3, cmap=def_cmap, 
     if log_scale:
         ax_proj_y.semilogx(y_line, y, linewidth=2, color=x_y_color)
         ax_proj_y.semilogx(y_line_f, y, color='grey')
-        ax_proj_y.set_xlim(xmin=np.amin(y_line), xmax=1)
+        ax_proj_y.set_xlim(xmin=np.nanamin(y_line), xmax=1)
     else:
         ax_proj_y.plot(y_line, y, linewidth=2, color=x_y_color)
         ax_proj_y.plot(y_line_f, y, color='grey')
@@ -1558,13 +1634,13 @@ def plot_dfl4(dfl, domains=None, z_lim=[], xy_lim=[], figsize=3, cmap=def_cmap, 
         
         if log_scale:
             cut_off = 1e-6
-            yz_proj[yz_proj < yz_proj.max() * cut_off] = 0
-            xz_proj[xz_proj < xz_proj.max() * cut_off] = 0
+            yz_proj[yz_proj < np.nanmax(yz_proj) * cut_off] = 0
+            xz_proj[xz_proj < np.nanmax(xz_proj) * cut_off] = 0
             # cut-off = np.amin([yz_proj[yz_proj!=0].min(), xz_proj[xz_proj!=0].min()]) / 10
             # yz_proj += minmin
             # xz_proj += minmin
-            min_xz_proj=xz_proj[xz_proj!=0].min()
-            min_yz_proj=yz_proj[yz_proj!=0].min()
+            min_xz_proj=np.nanmin(xz_proj[xz_proj!=0])
+            min_yz_proj=np.nanmin(yz_proj[yz_proj!=0])
             
         
         # if np.amin(xz_proj) == 0:
@@ -1581,7 +1657,7 @@ def plot_dfl4(dfl, domains=None, z_lim=[], xy_lim=[], figsize=3, cmap=def_cmap, 
         else:
             ax_proj_xz = fig.add_subplot(2, 2 + column_3d, 6, sharex=ax_z)
         if log_scale:
-            ax_proj_xz.pcolormesh(z, x, np.swapaxes(xz_proj, 1, 0), norm=colors.LogNorm(vmin=min_xz_proj, vmax=xz_proj.max()), cmap=cmap)
+            ax_proj_xz.pcolormesh(z, x, np.swapaxes(xz_proj, 1, 0), norm=colors.LogNorm(vmin=min_xz_proj, vmax=np.nanmax(xz_proj)), cmap=cmap)
         else:
             ax_proj_xz.pcolormesh(z, x, np.swapaxes(xz_proj, 1, 0), cmap=cmap, vmin=0)
         ax_proj_xz.set_title('Top view', fontsize=15)
@@ -1591,7 +1667,7 @@ def plot_dfl4(dfl, domains=None, z_lim=[], xy_lim=[], figsize=3, cmap=def_cmap, 
 
         ax_proj_yz = fig.add_subplot(2, 2 + column_3d, 3, sharey=ax_int, sharex=ax_proj_xz)
         if log_scale:
-            ax_proj_yz.pcolormesh(z, y, np.swapaxes(yz_proj, 1, 0), norm=colors.LogNorm(vmin=min_yz_proj, vmax=yz_proj.max()), cmap=cmap)
+            ax_proj_yz.pcolormesh(z, y, np.swapaxes(yz_proj, 1, 0), norm=colors.LogNorm(vmin=min_yz_proj, vmax=np.nanmax(yz_proj)), cmap=cmap)
         else:
             ax_proj_yz.pcolormesh(z, y, np.swapaxes(yz_proj, 1, 0), cmap=cmap, vmin=0)
         ax_proj_yz.set_title('Side view', fontsize=15)
@@ -1665,7 +1741,7 @@ def plot_dfl4(dfl, domains=None, z_lim=[], xy_lim=[], figsize=3, cmap=def_cmap, 
     else:
         return
 
-
+@if_plottable
 def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int', 'rad_energy', 'r_size_weighted', 'spec', 'spec_phot_density', 'error'], z_param_inp=['p_int', 'phi_mid_disp', 'spec', 'spec_phot_density', 'bunching', 'wigner'], dfl_param_inp=['dfl_spec'], run_param_inp=['p_int', 'spec', 'spec_phot_density', 'rad_energy'], s_inp=['max'], z_inp=[0,'end'], run_s_inp=['max'], run_z_inp=['end'], spec_pad=1, savefig=1, saveval=1, showfig=0, debug=1):
     '''
     The routine for plotting the statistical info of many GENESIS runs

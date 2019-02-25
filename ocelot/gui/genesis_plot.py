@@ -263,7 +263,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice='all', va
     _logger.info(ind_str + 'total plotting time {:.2f} seconds'.format(time.time() - plotting_time))
 
 @if_plottable
-def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espread+el_bunching', 'rad_spec'], figsize=3.5, x_units='um', y_units='ev', legend=False, fig_name=None, savefig=False, showfig=True, debug=1, *args, **kwargs):
+def plot_gen_out_z(g, z=np.inf, params=['rad_power+el_current', 'el_energy+el_espread+el_bunching', 'rad_spec'], figsize=3.5, x_units='um', y_units='ev', legend=False, fig_name=None, savefig=False, showfig=True, debug=1, *args, **kwargs):
     '''
     radiation parameters at distance z
     g/out = GenesisOutput() object
@@ -302,7 +302,7 @@ def plot_gen_out_z(g, z=inf, params=['rad_power+el_current', 'el_energy+el_espre
     
     params_str = str(params).replace("'", '').replace('[', '').replace(']', '').replace(' ', '').replace(',', '--')
     
-    if z == inf:
+    if z == np.inf:
         # print ('Showing profile parameters at the end of undulator')
         z = np.amax(g.z)
 
@@ -3100,9 +3100,13 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
         if savefig == True:
             savefig = 'png'
         if W.z is None:
-            fig.savefig(W.filePath + '_wig.' + str(savefig), format=savefig)
+            save_path = W.filePath + '_wig.' + str(savefig)
+            # fig.savefig(W.filePath + '_wig.' + str(savefig), format=savefig)
         else:
-            fig.savefig(W.filePath + '_wig_' + str(W.z) + 'm.' + str(savefig), format=savefig)
+            save_path = W.filePath + '_wig_' + str(W.z) + 'm.' + str(savefig)
+            # fig.savefig(W.filePath + '_wig_' + str(W.z) + 'm.' + str(savefig), format=savefig)
+        _logger.debug(ind_str + 'saving to {}'.format(save_path))
+        fig.savefig(save_path, format=savefig)
 
     plt.draw()
     

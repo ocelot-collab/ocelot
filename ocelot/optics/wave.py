@@ -2312,10 +2312,17 @@ def wigner_out(out, z=inf, method='mp', pad=1, debug=1):
     zi = np.where(out.z >= z)[0][0]
 
     wig = WignerDistribution()
-    wig.field = np.sqrt(out.p_int[:,zi])*np.exp(1j*out.phi_mid[:,zi])
+    if hasattr(out, 'p_int'):#genesis2
+        wig.field = np.sqrt(out.p_int[:,zi])*np.exp(1j*out.phi_mid[:,zi])
+        wig.xlamds = out('xlamds')
+        wig.filePath = out.filePath
+    elif hasattr(out, 'h5'):#genesis4
+        wig.field = out.rad_field(zi=zi, loc='near')
+        wig.xlamds = out.lambdaref
+        wig.filePath = out.h5.filename
+    else:
+        _logger.error('out object has neither p_int nor h5 attribute')
     wig.s = out.s
-    wig.xlamds = out('xlamds')
-    wig.filePath = out.filePath
     wig.z = z
     
     if pad > 1:
@@ -2326,6 +2333,7 @@ def wigner_out(out, z=inf, method='mp', pad=1, debug=1):
     _logger.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
     
     return wig
+    
     
 def wigner_dfl(dfl, method='mp', pad=1, debug=1):
     '''

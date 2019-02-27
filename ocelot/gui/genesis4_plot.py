@@ -249,7 +249,6 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1
                     f8 = plot_dfl(dfl, domains='kf', auto_zoom=0, showfig=showfig, savefig=savefig, debug=debug)
         
         if os.path.isfile(handle.filePath.replace('.out.h5','.par.h5')) and (choice[9] or choice[10]):
-            print('111')
             dpa = read_dpa4(handle.filePath.replace('.out.h5','.par.h5'))
             if choice[9]:
                 edist = dpa42edist(dpa, n_part=5e4, fill_gaps=1)

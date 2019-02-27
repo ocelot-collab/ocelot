@@ -714,6 +714,14 @@ def read_dpa4(filePath, start_slice=0, stop_slice=np.inf):
         npartpb = int(npart/nbins)
         # _logger.debug(ind_str + 'not one4one:')
         _logger.debug(2*ind_str + 'shape of arrays (nslice, npart) {}'.format(np.array(x).shape))
+        
+        if np.array(x).shape[0] < nslice:
+            nslice = np.array(x).shape[0]
+        
+        if nslice == 0:
+            _logger.error(2*ind_str + 'nslice == 0')
+            return
+        
         _logger.debug(2*ind_str + 'reshaping to (nslice, nbins, npart/bin) ({}, {}, {})'.format(nslice, nbins, npartpb))
         
         dpa.x = np.array(x).reshape((nslice, nbins, npartpb), order='F')
@@ -784,7 +792,7 @@ def dpa42edist(dpa, n_part=None, fill_gaps=False):
     
     if dpa.one4one:
         t0 = np.hstack([np.ones(n)*i for i, n in enumerate(dpa.npartpb)]) * dpa.lslice / speed_of_light
-        t0 += dpa.ph * (dpa.lslice / 2 / np.pi / speed_of_light)
+        t0 += dpa.ph / 2 / np.pi * dpa.lslice / speed_of_light
         
         edist = GenesisElectronDist()
         
@@ -819,7 +827,8 @@ def dpa42edist(dpa, n_part=None, fill_gaps=False):
         # else:
         s = np.linspace(0, nslice * zsep * lslice, nslice)
         I = dpa.I
-        dt = (s[1] - s[0]) / speed_of_light
+        dt = zsep * lslice / speed_of_light
+        # dt = (s[1] - s[0]) / speed_of_light
         _logger.debug(ind_str + 'dt zsep = {} s'.format(dt))
             
         C = np.sum(I) * dt
@@ -870,7 +879,7 @@ def dpa42edist(dpa, n_part=None, fill_gaps=False):
         py = dpa.py.reshape(nslice, npart) / g
         ph = dpa.ph.reshape(nslice, npart)
         
-        t1 = ph * lslice / speed_of_light
+        t1 = ph / 2 / np.pi * lslice / speed_of_light
         t0 = np.arange(nslice)[:,np.newaxis] * lslice * zsep / speed_of_light
         
         t = t1+t0

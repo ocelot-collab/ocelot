@@ -50,7 +50,7 @@ class FelParameters:
             self.inaccurate = True 
             
         self.lambda0 = self.xlamd / (2.0 * self.gamma0**2) * (1.0 + self.aw0**2) # resonant wavelength
-        if self.lambda0 < 0:
+        if np.any(self.lambda0 < 0):
             _logger.error('wavelength is not reachable with und_period {} gamma {} and K {}'.format(self.xlamd,self.gamma0,self.aw0))
             self.inaccurate = True 
         self.lambdah = self.lambda0 / self.hn
@@ -83,7 +83,7 @@ class FelParameters:
         # h_eV_s * speed_of_light / self.lambda0
         self.emit_nn = 2 * np.pi * emit_n / self.lambdah / self.gamma0 ## emittance normalized as in Eq.6, 10.1103/PhysRevSTAB.15.080702
         
-        if self.emit_nn < 1 or self.emit_nn > 5:
+        if np.any(self.emit_nn < 1) or np.any(self.emit_nn) > 5:
             _logger.warning('1 <! emittance ({}) <! 5, SSY approx. might be incorrect'.format(self.emit_nn))
             self.inaccurate = True 
             #Eq.6, DOI:10.1103/PhysRevSTAB.15.080702
@@ -167,7 +167,7 @@ class FelParameters:
         self.delta_eff = (self.delta + self.delta_q) / (1 - self.delta_q)
         
         self.delta_criterion = 2.5 * (1 - np.exp(-0.5 * self.emit_nn**2))
-        if self.delta_eff > self.delta_criterion:
+        if np.any(self.delta_eff > self.delta_criterion):
             _logger.warning('delta_eff ({}) > {}; SSY approx. might be incorrect'.format(self.delta_eff, self.delta_criterion))
             self.inaccurate = True
                 #Eq.7, DOI:10.1103/PhysRevSTAB.15.080702

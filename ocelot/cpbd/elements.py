@@ -299,7 +299,7 @@ class Undulator(Element):
 class Cavity(Element):
     """
     Standing wave RF cavity
-    v - voltage [GV/m]
+    v - voltage [GV]
     freq - frequency [Hz]
     phi - phase in [deg]
     """
@@ -317,7 +317,7 @@ class Cavity(Element):
 class TWCavity(Element):
     """
     Traveling wave cavity
-    v - voltage [GV/m]
+    v - voltage [GV]
     freq - frequency [Hz]
     phi - phase in [deg]
     """

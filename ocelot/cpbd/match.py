@@ -45,6 +45,9 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
             if vars[i].__class__ == Quadrupole:
                 vars[i].k1 = x[i]
                 vars[i].transfer_map = lat.method.create_tm(vars[i])
+            if vars[i].__class__ == Solenoid:
+                vars[i].k = x[i]
+                vars[i].transfer_map = lat.method.create_tm(vars[i])
             if vars[i].__class__ in [RBend, SBend, Bend]:
                 if vary_bend_angle:
                     vars[i].angle = x[i]

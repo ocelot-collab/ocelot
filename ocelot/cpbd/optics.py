@@ -1182,7 +1182,8 @@ class Navigator:
         indx = np.argwhere(self.z0 < kick_pos)
 
         if 0 in kick_pos and self.z0 == 0 and self.n_elem == 0:
-            indx = np.append(0, indx)
+            indx0 = np.argwhere(self.z0 == kick_pos)
+            indx = np.append(indx0, indx)
 
         if len(indx) != 0:
             kick_process = np.array(kick_list[indx]).flatten()

@@ -352,8 +352,8 @@ class LSC(PhysProc):
         logger.debug(" LSC applied, dz =" + str(dz))
         mean_b = np.mean(p_array.tau())
         sigma_tau = np.std(p_array.tau())
-        slice_min = mean_b - sigma_tau / 10
-        slice_max = mean_b + sigma_tau / 10
+        slice_min = mean_b - sigma_tau / 2.5
+        slice_max = mean_b + sigma_tau / 2.5
         indx = np.where(np.logical_and(np.greater_equal(p_array.tau(), slice_min), np.less(p_array.tau(), slice_max)))
 
         if self.step_profile:
@@ -361,7 +361,8 @@ class LSC(PhysProc):
                      np.max(p_array.y()[indx]) - np.min(p_array.y()[indx]))/2
             sigma = rb
         else:
-            sigma = min(np.std(p_array.x()[indx]), np.std(p_array.y()[indx]))
+            sigma = (np.std(p_array.x()[indx]) + np.std(p_array.y()[indx]))/2.
+            # sigma = min(np.std(p_array.x()[indx]), np.std(p_array.y()[indx]))
         q = np.sum(p_array.q_array)
         gamma = p_array.E / m_e_GeV
         v = np.sqrt(1 - 1 / gamma ** 2) * speed_of_light

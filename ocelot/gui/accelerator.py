@@ -314,6 +314,7 @@ def new_plot_elems(fig, ax, lat, s_point=0, nturns=1, y_lim=None, y_scale=1, leg
     u = []
     rf = []
     m = []
+    sol = []
     for elem in lat.sequence:
         if elem.__class__ == Quadrupole:
             q.append(elem.k1)
@@ -323,6 +324,8 @@ def new_plot_elems(fig, ax, lat, s_point=0, nturns=1, y_lim=None, y_scale=1, leg
             c.append(elem.angle)
         elif elem.__class__ == Sextupole:
             s.append(elem.k2)
+        elif elem.__class__ == Solenoid:
+            sol.append(elem.k)
         elif elem.__class__ == Undulator:
             u.append(elem.Kx + elem.Ky)
         elif elem.__class__ in [Cavity, TWCavity, TDCavity]:
@@ -335,6 +338,7 @@ def new_plot_elems(fig, ax, lat, s_point=0, nturns=1, y_lim=None, y_scale=1, leg
     s_max = np.max(np.abs(s)) if len(s) != 0 else 0
     c_max = np.max(np.abs(c)) if len(c) != 0 else 0
     u_max = np.max(np.abs(u)) if len(u) != 0 else 0
+    sol_max = np.max(np.abs(sol)) if len(sol) != 0 else 0
     rf_max = np.max(np.abs(rf)) if len(rf) != 0 else 0
     m_max = np.max(m) if len(m) !=0 else 0
     ncols = np.sign(len(q)) + np.sign(len(b)) + np.sign(len(s)) + np.sign(len(c)) + np.sign(len(u)) + np.sign(len(rf))+ np.sign(len(m))
@@ -365,6 +369,12 @@ def new_plot_elems(fig, ax, lat, s_point=0, nturns=1, y_lim=None, y_scale=1, leg
 
         if elem.__class__ == Quadrupole:
             ampl = elem.k1/q_max if q_max != 0 else 1
+            point, = ax.fill(s_coord,  (rect + 1)*ampl*scale*y_scale, color, edgecolor=ecolor,
+                             alpha=alpha, label=dict_copy[elem.__class__]["label"])
+            dict_copy[elem.__class__]["label"] = ""
+
+        elif elem.__class__ == Solenoid:
+            ampl = elem.k/sol_max if sol_max != 0 else 1
             point, = ax.fill(s_coord,  (rect + 1)*ampl*scale*y_scale, color, edgecolor=ecolor,
                              alpha=alpha, label=dict_copy[elem.__class__]["label"])
             dict_copy[elem.__class__]["label"] = ""
@@ -505,7 +515,10 @@ def plot_disp(ax, tws, top_plot, font_size):
         #print (max(Ftop))
         Fmin.append(min(Ftop))
         Fmax.append(max(Ftop))
-        top_label = r"$"+elem+"$"
+        greek = ""
+        if "beta" in elem or "alpha" in elem or "mu" in elem:
+            greek = "\\"
+        top_label = r"$" + greek + elem+"$"
         ax.plot(S, Ftop, lw = 2, label=top_label)
         d_Ftop.append( max(Ftop) - min(Ftop))
     d_F = max(d_Ftop)
@@ -1062,7 +1075,7 @@ from ocelot.cpbd.beam import global_slice_analysis
 
 
 def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, nbins_y=200, interpolation="bilinear", inverse_tau=False,
-                show_moments=False, nfig=40, title=None, figsize=None, grid=True):
+                show_moments=False, nfig=40, title=None, figsize=None, grid=True, filename=None):
     """
     Shows e-beam slice parameters (current, emittances, energy spread)
     and beam distributions (dE/(p0 c), X, Y) against long. coordinate (S)
@@ -1081,6 +1094,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     :param title: None or string - title of the figure
     :param figsize: None or e.g. (8, 6)
     :param grid: True, show grid
+    :param filename: None or str,  filename to save picture in the file
     :return:
     """
     p_array_copy = deepcopy(p_array)
@@ -1143,6 +1157,9 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     show_density(p_array_copy.tau() * 1e3, p_array_copy.p() * 1e2, ax=ax_ps, nbins_x=nbins_x, nbins_y=nbins_y,
                  interpolation=interpolation, ylabel='$\delta_E$ [%]',
                  title="Longitudinal phase space", grid=grid, show_xtick_label=False)
+
+    if filename is not None:
+        plt.savefig(filename)
 
 
 def show_phase_space(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, nbins_y=200, interpolation="bilinear", inverse_tau=False,
@@ -1395,6 +1412,98 @@ def compare_beams_reduced(p_array_1, p_array_2, nparts_in_slice=5000, smoth_para
     #plt.legend()
     plt.setp(ax_c.get_xticklabels(), visible=False)
     plt.ylabel("I [A]")
+
+
+def show_e_beam_reduced(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, nbins_y=200, interpolation="bilinear", inverse_tau=False,
+                show_moments=False, nfig=40, title=None, figsize=None, grid=True, filename=None):
+    """
+    Shows e-beam slice parameters (current, emittances, energy spread)
+    and beam distributions (dE/(p0 c), X, Y) against long. coordinate (S)
+    Note: beam head is on the left side
+
+    :param p_array: ParticleArray
+    :param nparts_in_slice: number of particles per slice
+    :param smoth_param: 0.05, smoothing parameters to calculate the beam current: sigma = smoth_param * np.std(p_array.tau())
+    :param nbins_x: number of bins for 2D hist. in horz. plane
+    :param nbins_y: number of bins for 2D hist. in vertical plane
+    :param interpolation: "bilinear", and acceptable values are 'none’, ‘nearest’, ‘bilinear’, ‘bicubic’, ‘spline16’,
+                        ‘spline36’, ‘hanning’, ‘hamming’, ‘hermite’, ‘kaiser’, ‘quadric’, ‘catrom’, ‘gaussian’, ‘bessel’
+    :param inverse_tau: False, inverse tau - head will be on the right side of figure
+    :param show_moments: False, show moments (X_mean_slice and Y_mean_slice) in the density distribution
+    :param nfig: number of the figure
+    :param title: None or string - title of the figure
+    :param figsize: None or e.g. (8, 6)
+    :param grid: True, show grid
+    :param filename: None or str,  filename to save picture in the file
+    :return:
+    """
+    p_array_copy = deepcopy(p_array)
+    if inverse_tau:
+        p_array_copy.tau()[:] *= -1
+    slice_params = global_slice_analysis(p_array_copy, nparts_in_slice, smooth_param, 2, 2)
+
+    fig = plt.figure(nfig, figsize=figsize)
+    if title != None:
+        fig.suptitle(title)
+
+    #ax_sp = plt.subplot(225)
+    #plt.title("Energy spread")
+    #plt.plot(slice_params.s * 1e3, slice_params.se*1e-3, "b")
+    ##plt.legend()
+    #plt.xlabel("s [mm]")
+    #plt.ylabel("$\sigma_E$ [keV]")
+    #plt.grid(grid)
+
+    ax_sp = plt.subplot(223)
+    plt.title("Emittances")
+    emitxn_mm_mrad = np.round(slice_params.emitxn*1e6, 2)
+    emityn_mm_mrad = np.round(slice_params.emityn*1e6, 2)
+    plt.plot(slice_params.s * 1e3, slice_params.ex, "r", label=r"$\varepsilon_x^{proj} = $" + str(emitxn_mm_mrad))
+    plt.plot(slice_params.s * 1e3, slice_params.ey, "b", label=r"$\varepsilon_y^{proj} = $" + str(emityn_mm_mrad))
+    plt.legend()
+    #plt.setp(ax_sp.get_xticklabels(), visible=False)
+    plt.xlabel("s [mm]")
+    plt.ylabel(r"$\varepsilon_{x,y}$ [$\mu m$]")
+    plt.grid(grid)
+
+    ax_c = plt.subplot(221, sharex=ax_sp)
+    plt.title("Current")
+    plt.plot(slice_params.s * 1e3, slice_params.I, "b", label=r"$I_{max}=$" + str(np.round(np.max(slice_params.I), 1)))
+    #plt.legend()
+    plt.setp(ax_c.get_xticklabels(), visible=False)
+    plt.ylabel("I [A]")
+    plt.grid(grid)
+
+    ax_ys = plt.subplot(224, sharex=ax_sp)
+
+    show_density(p_array_copy.tau() * 1e3, p_array_copy.y() * 1e3, ax=ax_ys, nbins_x=nbins_x, nbins_y=nbins_y,
+                 interpolation=interpolation, xlabel='s [mm]', ylabel='y [mm]', nfig=50,
+                 title="Side view", figsize=None, grid=grid)
+    if show_moments:
+        plt.plot(slice_params.s * 1e3, slice_params.my * 1e3, "k", lw=2)
+        plt.plot(slice_params.s * 1e3, (slice_params.my + slice_params.sig_y) * 1e3, "w", lw=1)
+        plt.plot(slice_params.s * 1e3, (slice_params.my - slice_params.sig_y) * 1e3, "w", lw=1)
+
+    #ax_xs = plt.subplot(324, sharex=ax_sp)
+    #
+    #show_density(p_array_copy.tau() * 1e3, p_array_copy.x() * 1e3, ax=ax_xs, nbins_x=nbins_x, nbins_y=nbins_y,
+    #             interpolation=interpolation, ylabel='x [mm]',
+    #             title="Top view", grid=grid, show_xtick_label=False)
+    #if show_moments:
+    #    plt.plot(slice_params.s * 1e3, slice_params.mx * 1e3, "k", lw=2)
+    #    plt.plot(slice_params.s * 1e3, (slice_params.mx + slice_params.sig_x) * 1e3, "w", lw=1)
+    #    plt.plot(slice_params.s * 1e3, (slice_params.mx - slice_params.sig_x) * 1e3, "w", lw=1)
+    #
+    ax_ps = plt.subplot(222, sharex=ax_sp)
+
+    show_density(p_array_copy.tau() * 1e3, p_array_copy.p() * 1e2, ax=ax_ps, nbins_x=nbins_x, nbins_y=nbins_y,
+                 interpolation=interpolation, ylabel='$\delta_E$ [%]',
+                 title="Longitudinal phase space", grid=grid, show_xtick_label=False)
+
+    if filename is not None:
+        plt.savefig(filename)
+
+
 
 
 from scipy import stats

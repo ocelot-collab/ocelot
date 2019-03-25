@@ -1126,8 +1126,22 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
 
     ax_c = plt.subplot(321, sharex=ax_sp)
     plt.title("Current")
-    plt.plot(slice_params.s * 1e3, slice_params.I, "b", label=r"$I_{max}=$" + str(np.round(np.max(slice_params.I), 1)))
-    #plt.legend()
+
+    if inverse_tau:
+        arrow = r"$\Longrightarrow$"
+        label = "head " + arrow
+        location = "upper right"
+    else:
+        arrow = r"$\Longleftarrow$"
+        label = arrow + " head"
+        location = "upper left"
+
+    plt.plot(slice_params.s * 1e3, slice_params.I, "b")
+    # label = r"$I_{max}=$" + str(np.round(np.max(slice_params.I), 1))
+
+    leg = ax_c.legend([label], handlelength=0, handletextpad=0, fancybox=True, loc=location)
+    for item in leg.legendHandles:
+        item.set_visible(False)
     plt.setp(ax_c.get_xticklabels(), visible=False)
     plt.ylabel("I [A]")
     plt.grid(grid)

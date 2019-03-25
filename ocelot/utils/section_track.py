@@ -73,6 +73,7 @@ class SectionLattice:
         #sections = []
         new_sections = []
         for sec in sections:
+
             sec = self.dict_sections[sec]
             #sec = blank_sec()
             #sections.append(sec)
@@ -361,11 +362,24 @@ class SectionTrack:
                             emit_x=emit_x, emit_y=emit_y)
 
     def load_twiss_file(self):
-
-        #with np.load(self.tws_file) as data:
-        #    #for key in data.keys():
-        #    #    p_array.__dict__[key] = data[key]
         return np.load(self.tws_file)
+
+    def get_tws_list(self):
+        tws_dict = {}
+        n = 0
+        with np.load(self.tws_file) as data:
+            for key in data:
+                tws_dict[key] = data[key]
+                n = len(data[key])
+        tws_list = []
+        for i in range(n):
+            tws = Twiss()
+            for key in tws_dict:
+                tws.__dict__[key] = tws_dict[key][i]
+
+            tws_list.append(tws)
+
+        return tws_list
 
     def tracking(self, particles=None):
 

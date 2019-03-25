@@ -518,7 +518,7 @@ class ParticleArray:
     """
     def __init__(self, n=0):
         #self.particles = zeros(n*6)
-        self.rparticles = np.zeros((6, n))#np.transpose(np.zeros(int(n), 6))
+        self.rparticles = np.zeros((6, n))
         self.q_array = np.zeros(n)    # charge
         self.s = 0.0
         self.E = 0.0
@@ -931,7 +931,7 @@ def slice_analysis_py(z, x, xs, M, to_sort):
     mxxs = np.zeros(N)
     mxsxs = np.zeros(N)
     emittx = np.zeros(N)
-    m = np.max([np.round(M/2), 1])
+    m = np.max(np.array([np.round(M/2), 1]))
     xc = np.cumsum(x)
     xsc = np.cumsum(xs)
     for i in range(N):
@@ -1314,7 +1314,26 @@ def parray2beam(parray, step=1e-7):
 
 def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
                     sigma_tau=1e-3, sigma_p=1e-4, tau_p_cor=0.01, charge=5e-9, nparticles=200000, energy=0.13,
-                    tue_trunc=None):
+                    tau_trunc=None):
+    """
+    Method to generate ParticleArray with gaussian distribution.
+
+    Note: in ParticleArray, {x, px} and {y, py} are canonical coordinates. {tau, p} is not, to make it canonical
+            the sign of "tau" should be flipped.
+
+    :param sigma_x: std(x), x is horizontal cartesian coordinate.
+    :param sigma_px: std(px), 'px' is conjugate momentum canonical momentum px/p0.
+    :param sigma_y: std(y), y is vertical cartesian coordinate.
+    :param sigma_py: std(py), 'py' is canonical momentum py/p0.
+    :param sigma_tau: std(tau), "tau" = c*t
+    :param sigma_p: std(p), 'p' is canonical momentum E/(c*p0)
+    :param tau_p_cor: energy chirp [unitless], linear correlation - p_i += tau_p_cor * tau_i/sigma_tau
+    :param charge: beam charge in [C], 5e-9 by default
+    :param nparticles: namber of particles, 200k by default
+    :param energy: beam energy in [GeV], 0.13 [GeV]
+    :param tau_trunc: None, if not [float] - truncated gauss distribution in "tau" direction.
+    :return: ParticleArray
+    """
 
     if sigma_y is None:
         sigma_y = sigma_x
@@ -1325,10 +1344,10 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
     px = np.random.randn(nparticles) * sigma_px
     y = np.random.randn(nparticles) * sigma_y
     py = np.random.randn(nparticles) * sigma_py
-    if tue_trunc is None:
+    if tau_trunc is None:
         tau = np.random.randn(nparticles) * sigma_tau
     else:
-        tau = truncnorm.rvs(tue_trunc, -tue_trunc, loc=0, scale=sigma_tau, size=nparticles)
+        tau = truncnorm.rvs(tau_trunc, -tau_trunc, loc=0, scale=sigma_tau, size=nparticles)
     #
     dp = np.random.randn(nparticles) * sigma_p
     if sigma_tau != 0:

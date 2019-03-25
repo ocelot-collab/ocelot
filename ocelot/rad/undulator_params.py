@@ -32,12 +32,12 @@ def K2Lambda(K, lu = 0.04, E=14):
 def field2K(field, lu = 0.04):
     K = field*lu*speed_of_light/(m_e_eV*2.*pi)
     return K
-#print (field2K(0.65, lu = 0.007) )
-#print  0.66*0.007*1.6e-19/(9.1e-31*speed_of_light*2.*pi)
+
 def K2field(K, lu = 0.04):
     field = K*m_e_eV*2.*pi/(lu*speed_of_light)
     return field
-
+# print (K2field(27, lu = 0.25) )
+# print(K2Lambda(18.8, lu = 0.25, E=2.4))
 def field2Ephoton(field, lu = 0.04, E=14):
     gamma = E/m_e_GeV
     K = field2K(field, lu)

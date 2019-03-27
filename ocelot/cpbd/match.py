@@ -21,9 +21,30 @@ def weights_default(val):
 
 def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', weights=weights_default,
           vary_bend_angle=False, min_i5=False):
-    '''
-    matching stuff
-    '''
+    """
+    Function to match twiss paramters
+
+    :param lat: MagneticLattice
+    :param constr: dict in format {elem1:{'beta_x':15, 'beta_y':2}, 'periodic':True} try to find periodic solution or
+                constr = {elem1:{'alpha_x':5, 'beta_y':5}, elem2:{'Dx':0 'Dyp':0, 'alpha_x':5, 'beta_y':5} and so on.
+    :param vars: lsit of elements e.g. vars = [QF, QD]
+    :param tw: initial Twiss
+    :param verbose: allow print output of minimization procedure
+    :param max_iter:
+    :param method: string, available 'simplex', 'cg', 'bfgs'
+    :param weights: function returns weights, for example
+                    def weights_default(val):
+                        if val == 'periodic': return 10000001.0
+                        if val == 'total_len': return 10000001.0
+                        if val in ['Dx', 'Dy', 'Dxp', 'Dyp']: return 10000002.0
+                        if val in ['alpha_x', 'alpha_y']: return 100007.0
+                        if val in ['mux', 'muy']: return 10000006.0
+                        if val in ['beta_x', 'beta_y']: return 100007.0
+                        return 0.0001
+    :param vary_bend_angle: False, allow to vary "angle" of the dipoles instead of the focusing strength "k1"
+    :param min_i5: minimization of the radiation integral I5. Can be useful for storage rings.
+    :return: result
+    """
     # tw = deepcopy(tw0)
 
     def errf(x):

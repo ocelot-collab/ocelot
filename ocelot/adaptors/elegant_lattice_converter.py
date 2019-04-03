@@ -28,6 +28,7 @@ class ElegantLatticeConverter:
         self.elegant_matrix['SEXT'] = {'type':Sextupole, 'params':{'L':'l', 'K2':'k2'}}
         self.elegant_matrix['MONI'] = {'type':Monitor, 'params':{}}
         self.elegant_matrix['MARK'] = {'type':Marker, 'params':{}}
+        self.elegant_matrix['WATCH'] = {'type':Marker, 'params':{}}
         self.elegant_matrix['RFCA'] = {'type':Cavity, 'params':{'L':'l', 'VOLT':['v','1.0e-9'], 'FREQ':'freq', 'PHASE':'phi'}}
         self.elegant_matrix['HKICK'] = {'type':Hcor, 'params':{'L':'l'}}
         self.elegant_matrix['VKICK'] = {'type':Vcor, 'params':{'L':'l'}}        

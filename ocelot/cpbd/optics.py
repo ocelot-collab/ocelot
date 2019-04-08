@@ -1144,6 +1144,11 @@ class Navigator:
         self.proc_kick_elems = []
         self.kill_process = False # for case when calculations are needed to terminated e.g. from gui
 
+    def go_to_start(self):
+        self.z0 = 0.  # current position of navigator
+        self.n_elem = 0  # current index of the element in lattice
+        self.sum_lengths = 0.  # sum_lengths = Sum[lat.sequence[i].l, {i, 0, n_elem-1}]
+
     def get_phys_procs(self):
         """
         method return list of all physics processes which were added

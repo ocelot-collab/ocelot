@@ -156,38 +156,39 @@ class SpaceCharge(PhysProc):
 
     def el_field(self, X, Q, gamma, nxyz):
         N = X.shape[0]
-        X[:, 2] = X[:, 2]*gamma
-        X_min = np.amin(X, axis=0)
-        XX = np.amax(X, axis=0) - X_min
+        X[:, 2] = X[:, 2] * gamma
+        XX = np.max(X, axis=0) - np.min(X, axis=0)
         if self.random_mesh:
-            XX = XX*np.random.uniform(low=1, high=1.1)
+            XX = XX * np.random.uniform(low=1, high=1.1)
         logger.debug('mesh steps:' + str(XX))
         # here we use a fast 3D "near-point" interpolation
-        # we need a stand-alone module with 1D, 2D, 3D particles-to-grid functions
-        steps = XX/(nxyz-3)
-        X = X/steps
-        X_min = X_min/steps
-        X_mid = np.dot(Q, X)/np.sum(Q)
+        # we need a stand-alone module with 1D,2D,3D parricles-to-grid functions
+        steps = XX / (nxyz - 3)
+        X = X / steps
+        X_min = np.min(X, axis=0)
+        X_mid = np.dot(Q, X) / np.sum(Q)
         X_off = np.floor(X_min - X_mid) + X_mid
+        if self.random_mesh:
+            X_off = X_off + np.random.uniform(low=-0.5, high=0.5)
         X = X - X_off
         nx = nxyz[0]
         ny = nxyz[1]
         nz = nxyz[2]
-        nzny = nz*ny
-        Xi = np.int_(np.floor(X)+1)
-        inds = np.int_(Xi[:, 0]*nzny + Xi[:, 1]*nz + Xi[:, 2])  # 3d -> 1d
-        q = np.bincount(inds, Q, nzny*nx).reshape(nxyz)
+        nzny = nz * ny
+        Xi = np.int_(np.floor(X) + 1)
+        inds = np.int_(Xi[:, 0] * nzny + Xi[:, 1] * nz + Xi[:, 2])  # 3d -> 1d
+        q = np.bincount(inds, Q, nzny * nx).reshape(nxyz)
         p = self.potential(q, steps)
         Ex = np.zeros(p.shape)
         Ey = np.zeros(p.shape)
         Ez = np.zeros(p.shape)
-        Ex[:nx-1, :, :] = (p[:nx-1, :, :] - p[1:nx, :, :])/steps[0]
-        Ey[:, :ny-1, :] = (p[:, :ny-1, :] - p[:, 1:ny, :])/steps[1]
-        Ez[:, :, :nz-1] = (p[:, :, :nz-1] - p[:, :, 1:nz])/steps[2]
+        Ex[:nx - 1, :, :] = (p[:nx - 1, :, :] - p[1:nx, :, :]) / steps[0]
+        Ey[:, :ny - 1, :] = (p[:, :ny - 1, :] - p[:, 1:ny, :]) / steps[1]
+        Ez[:, :, :nz - 1] = (p[:, :, :nz - 1] - p[:, :, 1:nz]) / steps[2]
         Exyz = np.zeros((N, 3))
-        Exyz[:, 0] = ndimage.map_coordinates(Ex, np.c_[X[:, 0], X[:, 1]+0.5, X[:, 2]+0.5].T, order=1)*gamma
-        Exyz[:, 1] = ndimage.map_coordinates(Ey, np.c_[X[:, 0]+0.5, X[:, 1], X[:, 2]+0.5].T, order=1)*gamma
-        Exyz[:, 2] = ndimage.map_coordinates(Ez, np.c_[X[:, 0]+0.5, X[:, 1]+0.5, X[:, 2]].T, order=1)
+        Exyz[:, 0] = ndimage.map_coordinates(Ex, np.c_[X[:, 0], X[:, 1] + 0.5, X[:, 2] + 0.5].T, order=1) * gamma
+        Exyz[:, 1] = ndimage.map_coordinates(Ey, np.c_[X[:, 0] + 0.5, X[:, 1], X[:, 2] + 0.5].T, order=1) * gamma
+        Exyz[:, 2] = ndimage.map_coordinates(Ez, np.c_[X[:, 0] + 0.5, X[:, 1] + 0.5, X[:, 2]].T, order=1)
         return Exyz
 
 

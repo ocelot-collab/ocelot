@@ -580,7 +580,7 @@ def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=Tr
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
     left, width = 0.1, 0.85
 
-    rect1 = [left, 0.64, width, 0.3]
+    rect1 = [left, 0.65, width, 0.3]
     rect2 = [left, 0.19, width, 0.46]
     rect3 = [left, 0.07, width, 0.12]
 

@@ -55,7 +55,7 @@ def test_track_undulator_with_diff_chirp(lattice, p_array, parameter, update_ref
     p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) + '.json')
 
 
-    result = check_dict(p, p_array_ref['p_array'], tolerance=TOL, assert_info=' p - ')
+    result = check_dict(p, p_array_ref['p_array'], tolerance=1.0e-14, tolerance_type='absolute', assert_info=' p - ')
     assert check_result(result)
 
 

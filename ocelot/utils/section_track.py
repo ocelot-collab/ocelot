@@ -250,7 +250,6 @@ class SectionTrack:
         else:
             angle = np.arcsin(self.dipole_len / rho)
             ds = angle * rho
-            print("sdf", self.dipole_len, angle, rho)
 
         if self.bc_gap is None:
             self.bc_gap = self.bc_gap_left*np.cos(self.dipoles[0].angle)

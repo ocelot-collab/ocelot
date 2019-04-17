@@ -5,6 +5,7 @@ from ocelot.rad import *
 from ocelot import *
 from copy import deepcopy
 from time import time
+import scipy.stats as stats
 font = {'size': 20}
 matplotlib.rc('font', **font)
 
@@ -26,12 +27,12 @@ screen.num_energy = 500
 
 start = time()
 
-nund = 15               # Number of undulators
+nund = 1               # Number of undulators
 nperiods = 125          # Period numbers per undulator
 kp = 1                  # applying energy diffusion "kick" every N period
-npls = 100              # particles number
+npls = 150              # particles number
 
-U40_short = Undulator(nperiods = kp, lperiod=0.040, Kx=4, eid="und")
+U40_short = Undulator(nperiods=kp, lperiod=0.040, Kx=4, eid="und")
 
 seg = (U40_short,)*int(nperiods*nund/kp)
 
@@ -56,8 +57,8 @@ n, bins, patches = plt.hist((np.array(Uq) - beam.E)/beam.E, num_bins, normed=1, 
 
 print("sigma = ", sigma)
 print(sigma/sqrt(nund*nperiods))
-y = mlab.normpdf(bins, 0, sigma)
-plt.plot(bins, y, 'r--')
+y = stats.norm.pdf(bins, 0, sigma)
+plt.plot(bins, y, 'r--', lw=2)
 plt.xlabel(r'$\delta E/ E $')
 #plt.ylabel('particle number')
 #plt.title(r'Histogram of IQ: $\mu=100$, $\sigma=$')
@@ -74,9 +75,10 @@ max_I = max(t_no)
 print("time = ", time() - start)
 
 
-plot(E_no, t_no/max_I,"k",  screen.Eph, total/max_I, "r",  lw = 2)
-grid(True)
-legend(["ideal beam", "quantum fluct."], loc = 2)
+plt.plot(E_no, t_no/max_I, lw=2, label="no quantum fluct.")
+plt.plot(screen.Eph, total/max_I, lw=2, label="quantum fluct.")
+plt.grid(True)
+legend()
 xlabel(r"$E_{ph}$")
 #ylabel("Flux, ph/s/mm^2/(0.1%BW)")
 ylabel("Normalized intens")

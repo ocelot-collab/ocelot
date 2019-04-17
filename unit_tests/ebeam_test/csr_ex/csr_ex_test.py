@@ -237,7 +237,7 @@ def test_get_current(lattice, p_array, parameter, update_ref_values=False):
 def test_track_undulator_with_csr(lattice, p_array, parameter=None, update_ref_values=False):
     """track function test without CSR in vertical plane """
 
-    d1 = Drift(l=0.1)
+    d1 = Drift(l=0.2)
     d2 = Drift(l=1)
 
     und = Undulator(lperiod=0.4, nperiods=9, Kx=44.81)
@@ -251,6 +251,7 @@ def test_track_undulator_with_csr(lattice, p_array, parameter=None, update_ref_v
     navi.unit_step = 0.05
 
     csr = CSR()
+    #csr.pict_debug = True
     csr.energy = p_array.E
     navi.add_physics_proc(csr, lat.sequence[0], lat.sequence[-1])
 
@@ -279,6 +280,7 @@ def test_csr_arcline_rk_traj(lattice, p_array, parameter=None, update_ref_values
     navi.unit_step = 0.05
 
     csr = CSR()
+
     csr.energy = p_array_copy.E
     navi.add_physics_proc(csr, lattice_copy.sequence[0], lattice_copy.sequence[-1])
 
@@ -291,7 +293,8 @@ def test_csr_arcline_rk_traj(lattice, p_array, parameter=None, update_ref_values
     navi.unit_step = 0.05
 
     csr = CSR()
-    csr.energy = 40
+    #csr.pict_debug = True
+    csr.energy = 100
     csr.rk_traj = True
     navi.add_physics_proc(csr, lattice_copy.sequence[0], lattice_copy.sequence[-1])
 
@@ -302,8 +305,46 @@ def test_csr_arcline_rk_traj(lattice, p_array, parameter=None, update_ref_values
 
     p2 = obj2dict(p_array_rk)
 
-    result2 = check_dict(p1, p2, tolerance=1.0e-8,tolerance_type='absolute', assert_info=' p - ')
+    result2 = check_dict(p1, p2, tolerance=1.0e-8, tolerance_type='absolute', assert_info=' p - ')
     assert check_result(result2)
+
+
+def test_track_undulator_endings_with_csr(lattice, p_array, parameter=None, update_ref_values=False):
+    """track function test without CSR in vertical plane """
+
+    d1 = Drift(l=0.2)
+    d2 = Drift(l=1)
+
+    und = Undulator(lperiod=0.4, nperiods=9, Kx=44.81)
+
+    m = MethodTM()
+    m.global_method = SecondTM
+
+    lat = MagneticLattice((d1, und, d2), method=m)
+
+    navi = Navigator(lat)
+    navi.unit_step = 0.05
+
+    csr = CSR()
+    #csr.pict_debug = True
+    csr.end_poles = True
+    csr.energy = p_array.E
+    navi.add_physics_proc(csr, lat.sequence[0], lat.sequence[-1])
+
+    tws_track_wo, p_array_wo = track(lat, p_array, navi)
+
+
+    tws_track = obj2dict(tws_track_wo)
+    p = obj2dict(p_array_wo)
+
+    if update_ref_values:
+        return {'tws_track': tws_track, 'p_array': p}
+
+    tws_track_p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
+
+    result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
+    result2 = check_dict(p, tws_track_p_array_ref['p_array'], TOL, assert_info=' p - ')
+    assert check_result(result1 + result2)
 
 
 def setup_module(module):
@@ -350,7 +391,7 @@ def test_update_ref_values(lattice, p_array, cmdopt):
 
     update_functions.append('test_track_undulator_with_csr')
     update_functions.append("test_csr_arcline_rk_traj")
-
+    update_functions.append("test_track_undulator_endings_with_csr")
     parametr = update_function_parameters[cmdopt] if cmdopt in update_function_parameters.keys() else ['']
 
     if cmdopt in update_functions:

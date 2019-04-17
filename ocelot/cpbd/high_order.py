@@ -6,7 +6,17 @@ from scipy import optimize
 from ocelot.common.globals import m_e_GeV, m_e_eV, speed_of_light
 from copy import copy
 from numpy.linalg import norm
+from ocelot.common.logging import *
 
+_logger = logging.getLogger(__name__)
+
+try:
+    import numba as nb
+    nb_flag = True
+except:
+    _logger.info("high_order.py: module NUMBA is not installed. Install it to speed up calculation")
+    nb_flag = False
+    
 __MAD__ = True
 
 """
@@ -882,7 +892,7 @@ def sym_map(z, X, h, k1, k2, energy=0.):
 """
 
 
-def moments(bx, by, Bx, By, Bz, dzk):
+def moments_py(bx, by, Bx, By, Bz, dzk):
     """
     mx = v/(dz/dt)*e/p*(y'*Bz - By*(1.+x'^2) + x'*y'*Bx)*dz
     my = -v/(dz/dt)*e/p*(x'*Bz - Bx*(1.+y'^2) + x'*y'*By)*dz
@@ -902,6 +912,8 @@ def moments(bx, by, Bx, By, Bz, dzk):
     mx = k*(by*Bz - By*(1.+bx2) + bxy*Bx)
     my = -k*(bx*Bz - Bx*(1.+by2) + bxy*By)
     return mx, my
+
+moments = moments_py if not nb_flag else nb.jit(moments_py)
 
 
 def rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=0.):

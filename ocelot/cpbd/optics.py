@@ -486,7 +486,7 @@ class CavityTM(TransferMap):
                 T556 = beta0 * k * z * dgamma *g0 * (beta1**3*g1**3 + beta0 * (g0 - g1**3)) * np.sin(phi)/ (beta1**3 * g1**3 * (g0 - g1)**2)
                 T555 = beta0**2 * k**2 * z * dgamma/2.*(dgamma*(2*g0*g1**3*(beta0*beta1**3 - 1) + g0**2 + 3*g1**2 - 2)/(beta1**3*g1**3*(g0 - g1)**3)*np.sin(phi)**2 -
                                                     (g1*g0*(beta1*beta0 - 1) + 1)/(beta1*g1*(g0 - g1)**2)*np.cos(phi))
-        X[4] +=  T566 * X5*X5 + T556*X4*X5 + T555 * X4*X4
+        X[4] += T566 * X5*X5 + T556*X4*X5 + T555 * X4*X4
         return X
 
     def __call__(self, s):

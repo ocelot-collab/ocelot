@@ -242,7 +242,6 @@ def create_r_matrix(element):
             de = V * np.cos(phi)
             r = np.eye(6)
             r[1, 0] = -de / z / 2. / E
-            print(r[1, 0])
             r[3, 2] = r[1, 0]
             return r
 

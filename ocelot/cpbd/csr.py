@@ -14,6 +14,9 @@ import time
 from scipy.integrate import cumtrapz
 from ocelot.cpbd.physics_proc import PhysProc
 import copy
+from ocelot.rad.radiation_py import und_field
+import importlib
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -573,23 +576,21 @@ class CSR(PhysProc):
         self.z_csr_start = 0.       # z [m] position of the start_elem
         self.z0 = 0.                # self.z0 = navigator.z0 in track.track()
 
+        self.end_poles = False      # if True magnetic field configuration 1/4, -3/4, 1, ...
+        self.rk_traj = False        # calculate trajectory of the reference particle with RK method
+
         self.debug = False
         # another filter
         self.filter_order = 10
         self.n_mesh = 345
-        self.pict_debug = True
-        #self.print_log = False
+
+        self.pict_debug = False     # if True trajectory of the reference particle will be produced
+                                    # and CSR wakes will be saved in the working folder on each spep
 
         self.sub_bin = SubBinning(x_qbin=self.x_qbin, n_bin=self.n_bin, m_bin=self.m_bin)
         self.bin_smoth = Smoothing()
         self.k0_fin_anf = K0_fin_anf()
-        self.rk_traj = False
-        #self.napply = 0
-        #if self.pict_debug:
-        #    self.napply = 0
-        #    #self.f = plt.figure(figsize=(12, 9))
-        #    #plt.ion()
-        #    #plt.hold(False)
+
 
     def K0_inf_anf(self, i, traj, wmin):
         # function [ w,KS ] = K0_inf_anf( i,traj,wmin )
@@ -745,6 +746,14 @@ class CSR(PhysProc):
                                  traj[1,:], traj[2,:], traj[3,:] - rectangular coordinates, \
                                  traj[4,:], traj[5,:], traj[6,:] - tangential unit vectors
         """
+
+        # if pict_debug = True import matplotlib
+        if self.pict_debug:
+            self.plt = importlib.import_module("matplotlib.pyplot")
+            self.napply = 0
+            self.total_wake = 0
+
+
         self.z_csr_start = sum([p.l for p in lat.sequence[:self.indx0]])
         p = Particle()
         beta = 1. if self.energy == None else np.sqrt(1. - 1./(self.energy/m_e_GeV)**2)
@@ -788,12 +797,18 @@ class CSR(PhysProc):
                     gamma = self.energy/m_e_GeV
                     ku = 2 * np.pi / elem.lperiod
                     delta_z = elem.lperiod * elem.nperiods
+                    # delta_s += 0.5* delta_z / (gamma ) ** 2 * (1 + 0.5 * (elem.Kx ) ** 2)
 
-                    delta_s += delta_z / (gamma ) ** 2 * (1 + 0.5 * (elem.Kx ) ** 2)
+                    delta_s = delta_z * (1 + 0.25*(elem.Kx/gamma) ** 2)
 
                     By = elem.Kx * m_e_eV * 2. * pi / (elem.lperiod * speed_of_light)
                     Bx = elem.Ky * m_e_eV * 2. * pi / (elem.lperiod * speed_of_light)
-                    mag_field = lambda x, y, z: (0, By * np.cos(ku * z), 0)
+
+                    mag_field = lambda x, y, z: (0, -By * np.cos(ku * z), 0)
+
+                    # ending poles 1/4, -3/4, 1, -1, ... (or -1/4, 3/4, -1, 1)
+                    if self.end_poles:
+                        mag_field = lambda x, y, z: und_field(x, y, z, elem.lperiod, elem.Kx, nperiods=elem.nperiods)
 
                 else:
                     delta_z = delta_s * np.sin(elem.angle) / elem.angle if elem.angle != 0 else delta_s
@@ -817,14 +832,14 @@ class CSR(PhysProc):
                 xp = traj[1::9].flatten()
                 yp = traj[3::9].flatten()
                 z = traj[4::9].flatten()
-                print(xp[-1])
                 xp2 = xp * xp
                 yp2 = yp * yp
                 zp = np.sqrt(1./(1. + xp2 + yp2))
 
-                dS = float(delta_s) / N
-
                 s = cumtrapz(np.sqrt(1. + xp2 + yp2), z, initial=0)
+                if elem.__class__ == Undulator: delta_s = s[-1]
+
+                dS = float(delta_s) / N
 
                 s_unif = np.arange(0, N + 1) * dS
 
@@ -848,15 +863,25 @@ class CSR(PhysProc):
             else:
                 R_vect = [0, 0, 0.]
                 self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect )
-
-        # import matplotlib.pyplot as plt
-        # plt.figure(10)
-        # plt.plot(self.csr_traj[0, :], self.csr_traj[1+3, :], "r")
-        # plt.plot(self.csr_traj[0, :], self.csr_traj[2+3, :], "b")
-        # plt.legend(["X", "Y"])
-        # #plt.plot( self.csr_traj[3, :] - csr_traj_arc[3, :], "r.")
-        # #plt.plot(csr_traj_arc[0, :], csr_traj_arc[4, :]  - self.csr_traj[4, :], "b.")
-        # plt.show()
+        # plot trajectory of the refernece particle
+        if self.pict_debug:
+            fig = self.plt.figure(figsize=(10, 8))
+            ax1 = self.plt.subplot(211)
+            #ax1.plot(self.csr_traj[0, :], self.csr_traj[0, :] -self.csr_traj[3, :], "r", label="X")
+            ax1.plot(self.csr_traj[0, :], self.csr_traj[1, :]*1000, "r", label="X")
+            ax1.plot(self.csr_traj[0, :], self.csr_traj[2, :]*1000, "b", label="Y")
+            self.plt.legend()
+            self.plt.ylabel("X/Y [mm]")
+            self.plt.setp(ax1.get_xticklabels(), visible=False)
+            ax3 = self.plt.subplot(212, sharex=ax1)
+            ax3.plot(self.csr_traj[0, :], self.csr_traj[1 + 3, :]*1000, "r", label=r"$X'$")
+            ax3.plot(self.csr_traj[0, :], self.csr_traj[2 + 3, :]*1000, "b", label=r"$Y'$")
+            self.plt.legend()
+            self.plt.ylabel(r"$X'/Y'$ [mrad]")
+            self.plt.xlabel("s [m]")
+            self.plt.show()
+            # data = np.array([np.array(self.s), np.array(self.total_wake)])
+            # np.savetxt("trajectory_cos.txt", self.csr_traj)
         return self.csr_traj
 
     def apply(self, p_array, delta_s):
@@ -877,7 +902,7 @@ class CSR(PhysProc):
         Ndw = [Ns - 1, st]
 
         s_array = self.csr_traj[0, :]
-        indx = (np.abs(s_array-s_cur)).argmin()
+        indx = (np.abs(s_array - s_cur)).argmin()
         indx_prev = (np.abs(s_array - (s_cur - delta_s))).argmin()
         gamma = p_array.E/m_e_GeV
         h = max(1., self.apply_step/self.traj_step)
@@ -896,58 +921,75 @@ class CSR(PhysProc):
         lam_K1 = csr_convolution(lam_ds, K1[::-1]) / st * delta_s
 
         z_sort = z[ind_z_sort]
-        dE = np.interp(z_sort*(1./st)+(0.-sa/st), np.arange(len(lam_K1)), lam_K1)
+        dE = np.interp(z_sort*(1./st)+(0. - sa/st), np.arange(len(lam_K1)), lam_K1)
 
         pc_ref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV
         delta_p = dE * 1e-9 / pc_ref
         p_array.rparticles[5][ind_z_sort] += delta_p
 
-        # self.napply += 1
-        # if self.pict_debug:# and self.napply%2 == 0:
-        # from matplotlib import pyplot as plt
-        # #from ocelot.gui.accelerator import show_density
-        # fig = plt.figure(figsize=(10, 7))
-        # ax1 = plt.subplot(311)
-        # ax1.plot(self.csr_traj[3, :], self.csr_traj[1, :], "r",  self.csr_traj[3,itr_ra], self.csr_traj[1, itr_ra], "bo")
-        # ax2 = plt.subplot(312)
-        # # CSR wake
-        # # plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
-        # ax2.plot(np.linspace(s1, s1+st*len(lam_K1), len(lam_K1))*1000, lam_K1/delta_s/1000.)
-        # # #plt.ylim(-2500, 2500)
-        # # plt.ylabel("dE, keV/m")
-        # # Energy profil
-        # #plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
-        # #show_density(-p_array.tau() * 1e3, p_array.p() * 1e2, ax=ax2, nbins_x=400, nbins_y=400,
-        # #             interpolation="bilinear", ylabel='$\delta_E$ [%]',
-        # #             title="Longitudinal phase space", grid=False, show_xtick_label=False
-        # #self.f.add_subplot(313)
-        # ax3 = plt.subplot(313, sharex=ax2)
-        # ax3.set_title("Beam current")
-        # B = s_to_cur(p_array.tau(), sigma=np.std(p_array.tau())*0.05, q0=np.sum(p_array.q_array), v=speed_of_light)
-        # ax3.plot(-B[:, 0]*1000, B[:, 1], lw=2)
-        # ax3.set_ylabel("I, [A]")
-        # ax3.set_xlabel("s, [mm]")
-        # ax3.set_ylim(0, 8000)
-        # plt.subplots_adjust(hspace=0.3)
+        if self.pict_debug:
+            self.plot_wake(p_array, lam_K1, itr_ra, s1, st)
 
-        # dig = str(self.napply)
-        # name = "0" * (4 - len(dig)) + dig
-        # plt.show()
-        # plt.savefig( name + '.png')
-        # plt.draw()
-        # plt.pause(0.01)
-        #
-        # if self.debug:
-        #    fig, ax1 = plt.subplots()
-        #    #ax1.plot(-I[::-1, 0]*(1/st)+(1. - sa/st), I[:, 1], "r")
-        #    ax1.plot(lam_ds, "r")
-        #    #ax1.plot(K1, "r")
-        #    ax1.set_ylabel("I, A", color='r')
-        #    ax1.set_xlabel('s, mm')
-        #    ax2 = ax1.twinx()
-        #    ax2.plot(lam_K1, "b")
-        #    ax2.set_ylabel("kernel", color='b')
-        #    plt.show()
+    def finalize(self, *args, **kwargs):
+        """
+        the method is called at the end of tracking
+
+        :return:
+        """
+        # if self.pict_debug:
+        #     data = np.array([ np.array(self.total_wake)])
+        #     np.savetxt("total_wake_test.txt", data)
+
+
+    def plot_wake(self, p_array, lam_K1, itr_ra, s1, st):
+        """
+        Method to plot CSR wakes on each step and save pictures in the working folder. Might be time-consuming.
+
+        :param p_array:
+        :param lam_K1:
+        :param itr_ra:
+        :param s1:
+        :param st:
+        :return:
+        """
+        self.napply += 1
+        fig = self.plt.figure(figsize=(10, 8))
+
+        ax1 = self.plt.subplot(311)
+        ax1.plot(self.csr_traj[0, :], self.csr_traj[1, :]*1000, "r",  self.csr_traj[0, itr_ra], self.csr_traj[1, itr_ra]*1000, "bo")
+        self.plt.ylabel("X [mm]")
+
+        ax2 = self.plt.subplot(312)
+        # # CSR wake in keV/m - preferable and not depend on step
+        # ax2.plot(np.linspace(s1, s1+st*len(lam_K1), len(lam_K1))*1000, lam_K1/delta_s/1000.)
+        # plt.ylabel("dE, keV/m")
+
+        # CSR wake in keV - amplitude changes with step
+        ax2.plot(np.linspace(s1, s1 + st * len(lam_K1), len(lam_K1)) * 1000, lam_K1 *1e-3)
+        self.plt.setp(ax2.get_xticklabels(), visible=False)
+        self.plt.ylim((-50, 50))
+        self.plt.ylabel("Wake [keV]")
+
+        # ax3 = self.plt.subplot(413)
+        # n_points = len(lam_K1)
+        # #wake = np.interp(np.linspace(s1, s1+st*n_points, n_points), np.linspace(s1, s1+st*len(lam_K1), len(lam_K1)), lam_K1)
+        # self.total_wake += lam_K1
+        # #plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
+        # ax3.plot(np.linspace(s1, s1+st*n_points, n_points)*1000, self.total_wake*1e-6)
+        # self.plt.ylabel("Total Wake [MeV]")
+        # self.plt.setp(ax3.get_xticklabels(), visible=False)
+        # self.plt.ylim((-10, 10))
+
+        ax3 = self.plt.subplot(313, sharex=ax2)
+        self.B = s_to_cur(p_array.tau(), sigma=np.std(p_array.tau())*0.05, q0=np.sum(p_array.q_array), v=speed_of_light)
+        ax3.plot(-self.B[:, 0]*1000, self.B[:, 1], lw=2)
+        ax3.set_ylabel("I [A]")
+        ax3.set_xlabel("s [mm]")
+        self.plt.subplots_adjust(hspace=0.2)
+        dig = str(self.napply)
+        name = "0" * (4 - len(dig)) + dig
+        self.plt.savefig( name + '.png')
+
 
 
     def apply_i(self, p_array, delta_s):

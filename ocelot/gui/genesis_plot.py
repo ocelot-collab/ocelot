@@ -3585,14 +3585,14 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
     ax6 = fig.add_subplot(ny_plots, 3, 6, sharex=ax3, sharey=ax3)
     plot_stokes_sbfg_circ(ax6, stk_params, slice=y_plane, plane='y', cmap=cmap_circ, plot_title=None, x_label='z',
                           y_label='x', text_present=text_present, interpolation=interpolation, normalization=normalization, **kwargs)
-    cbax1_dir = 2
+    cbax1_dir = 1
     if cbars:
         cbax1 = fig.add_axes([0.91, 0.56, 0.04, 0.321])
         
         if cbax1_dir == 1:
             ph = np.ones((100,100))*np.linspace(1,-1,100)[:,np.newaxis]
             I = np.ones((100,100))*np.linspace(0,1,100)[np.newaxis,:]
-            imshow2d(np.array([ph,I]), ax=cbax1, cmap2d=cmap_lin, huevmin=-1, huevmax=1, lightvmin=0, lightvmax=1, extent = [-1,1,np.pi/2, -np.pi/2], aspect='auto')
+            imshow2d(np.array([ph,I]), ax=cbax1, cmap2d=cmap_lin, huevmin=-1, huevmax=1, lightvmin=0, lightvmax=1, extent = [0, 1, np.pi/2, -np.pi/2], aspect='auto')
             plt.yticks(np.linspace(-np.pi/2, np.pi/2, 3),['$-\pi/2$','0','$\pi/2$'])#['0','$\pi/2$','$\pi$','$3\pi/2$','$2\pi$']
             cbax1.yaxis.set_label_position("right")
             cbax1.yaxis.tick_right()
@@ -3747,8 +3747,9 @@ def plot_stokes_sbfg_lin(ax, stk_params, slice, plane, cmap2d='brightwheel', plo
     ax.set_xlabel(x_label + ' [$\mu$m]')
     ax.set_ylabel(y_label + ' [$\mu$m]')
     if text_present:
-        dic = {'proj': 'projection', 'max_slice': 'slice at {:.3f} $\mu$m (max int)'}
-        ax.text(0.97, 0.97, dic.get(slice, 'slice at {:.3f} $\mu$m').format(slice_pos*1e6), horizontalalignment='right',
+        print(plane, slice_pos*1e6)
+        dic = {'proj': 'projection', 'max_slice': 'slice at {:}={:.3f} $\mu$m'}
+        ax.text(0.97, 0.97, dic.get(slice, 'slice at {:}={:.3f} $\mu$m (max int)').format(plane, slice_pos*1e6), horizontalalignment='right',
                   verticalalignment='top', transform=ax.transAxes, fontsize=10)
     if result:
         return linear_plt
@@ -3847,8 +3848,8 @@ def plot_stokes_sbfg_circ(ax, stk_params, slice, plane, cmap='seismic', plot_tit
     ax.set_xlabel(x_label + ' [$\mu$m]')
     ax.set_ylabel(y_label + ' [$\mu$m]')
     if text_present:
-        dic = {'proj': 'projection', 'max_slice': 'slice at {:.3f} $\mu$m (max int)'}
-        ax.text(0.97, 0.97, dic.get(slice, 'slice at {:.3f} $\mu$m').format(slice_pos*1e6), horizontalalignment='right',
+        dic = {'proj': 'projection', 'max_slice': 'slice at {:}={:.3f} $\mu$m (max int)'}
+        ax.text(0.97, 0.97, dic.get(slice, 'slice at {:}={:.3f} $\mu$m').format(plane, slice_pos*1e6), horizontalalignment='right',
                   verticalalignment='top', transform=ax.transAxes, fontsize=10)
     if result:
         return circular_plt

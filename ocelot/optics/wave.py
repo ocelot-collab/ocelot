@@ -579,7 +579,7 @@ class RadiationField:
         return coh
     
 class WaistScanResults():
-
+    
     def __init__(self):
         self.filePath = ''
         self.xlamds = None
@@ -594,8 +594,7 @@ class WaistScanResults():
 
     def fileName(self):
         return filename_from_path(self.filePath)
-    
-    
+
 class TransferFunction:
     '''
     data container for Fourier Optics transfer functions
@@ -633,17 +632,41 @@ class StokesParameters:
         self.s1 = np.array([])
         self.s2 = np.array([])
         self.s3 = np.array([])
-
+    
     def __getitem__(self,i):
-        S = deepcopy(self)
-        if self.s0.ndim == 1:
-            S.sc = self.sc_z[i]
-        S.s0 = self.s0[i]
-        S.s1 = self.s1[i]
-        S.s2 = self.s2[i]
-        S.s3 = self.s3[i]
+        S = StokesParameters() # start from emply object to save space
+        
+        shape = self.s0.shape
+        
+        if isinstance(i, tuple):
+            if len(i) == 3:
+                S.sc_z, S.sc_y, S.sc_x = self.sc_z[i[0]], self.sc_y[i[1]], self.sc_x[i[2]]
+            elif len(i) == 2:
+                S.sc_z, S.sc_y = self.sc_z[i[0]], self.sc_y[i[1]]
+            elif len(i) == 1:
+                S.sc_z = self.sc_z[i[0]]
+            else:
+                raise ValueError
+        elif isinstance(i, slice) or isinstance(i, int):
+            S.sc_z = self.sc_z[i]
+        
+        # opy all possible attributes
+        for attr in dir(self):
+            if attr.startswith('__') or callable(getattr(self,attr)) or attr in ['sc_z', 'sc_x', 'sc_y']:
+                continue
+            value = getattr(self,attr)
+            if np.shape(value) == shape:
+                setattr(S, attr, value[i])
+            else:
+                setattr(S, attr, value)
+        # redundant
+        # S.s0 = self.s0[i]
+        # S.s1 = self.s1[i]
+        # S.s2 = self.s2[i]
+        # S.s3 = self.s3[i]
+        
         return S
-
+    
     def P_pol(self):
         #coherent part
         return np.sqrt(self.s1**2 + self.s2**2 + self.s3**2)
@@ -651,16 +674,20 @@ class StokesParameters:
         #linearly polarized part
         return np.sqrt(self.s1**2 + self.s2**2)
     def deg_pol(self):
-        return self.P_pol() / self.s0
+        with np.errstate(divide='ignore'):
+            return self.P_pol() / self.s0
     def deg_pol_l(self):
-        return self.P_pol_l() / self.s0
+        with np.errstate(divide='ignore'):
+            return self.P_pol_l() / self.s0
         #        self.s_coh = np.array([])
     def chi(self):
         # chi angle (p/4 = circular)
-        return np.arctan(self.s3 / np.sqrt(self.s1**2 + self.s2**2)) / 2
+        with np.errstate(divide='ignore'):
+            return np.arctan(self.s3 / np.sqrt(self.s1**2 + self.s2**2)) / 2
     def psi(self):
         # psi angle 0 - horizontal, pi/2 - vertical
-        psi = np.arctan(self.s2 / self.s1) / 2
+        with np.errstate(divide='ignore'):
+            psi = np.arctan(self.s2 / self.s1) / 2
 
         idx1 = np.where((self.s1<0) & (self.s2>0))
         idx2 = np.where((self.s1<0) & (self.s2<0))
@@ -673,8 +700,7 @@ class StokesParameters:
             psi[idx1] += np.pi/2
             psi[idx2] -= np.pi/2
         return psi
-
-
+    
     def slice_2d(self, loc, plane='z'):
         _logger.debug('slicing stokes matrix at location {} over {} plane'.format(loc, plane))
         if plane in ['x', 2]:
@@ -691,8 +717,7 @@ class StokesParameters:
             raise ValueError('argument "plane" should be in ["x","y","z",0,1,2]')
         idx = find_nearest_idx(scale, loc)
         return slice_2d_idx(self, idx, plane)
-
-
+    
     def slice_2d_idx(self, idx, plane='z'):
         _logger.debug('slicing stokes matrix at index {} over {} plane'.format(idx, plane))
         S = deepcopy(self)
@@ -727,7 +752,7 @@ class StokesParameters:
             _logger.error(ind_str + 'argument "axis" is not defined')
             raise ValueError('argument "axis" is not defined')
         return S
-
+    
     def proj(self, plane='x', mode='sum'):
         _logger.debug('calculating projection of stokes matrix over {} plane'.format(plane))
         S = deepcopy(self)

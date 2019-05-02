@@ -845,15 +845,24 @@ def calc_stokes_dfl(dfl1, dfl2, basis='xy', mode=(0,0)):
     '''
     mode: (average_longitudinally, sum_transversely)
     '''
+    
+    _logger.info('calculating Stokes parameters from dfl')
+    _logger.debug(ind_str + 'dfl1 {}:'.format(dfl1.fld.shape) + str(dfl1.filePath) + ' ' + str(dfl1))
+    _logger.debug(ind_str + 'dfl2 {}:'.format(dfl2.fld.shape) + str(dfl2.filePath) + ' ' + str(dfl2))
+
     # if basis != 'xy':
         # raise ValueError('Not implemented yet')
     
     if dfl1.Nz() != dfl2.Nz():
+        dfl1 = deepcopy(dfl1)
+        dfl2 = deepcopy(dfl2)
         l1 = dfl1.Nz()
         l2 = dfl2.Nz()
         if l1 > l2:
+            _logger.info(ind_str + 'dfl1.Nz() > dfl2.Nz(), cutting dfl1')
             dfl1.fld = dfl1.fld[:-(l1-l2), :, :]
         else:
+            _logger.info(ind_str + 'dfl1.Nz() < dfl2.Nz(), cutting dfl2')
             dfl2.fld = dfl2.fld[:-(l2-l1), :, :]
 
     # if np.equal(dfl1.scale_z(), dfl2.scale_z()).all():
@@ -869,6 +878,7 @@ def calc_stokes_dfl(dfl1, dfl2, basis='xy', mode=(0,0)):
     S.sc_z, S.sc_x, S.sc_y = dfl1.scale_z(), dfl1.scale_x(), dfl1.scale_y()
     
     if mode[1]:
+        _logger.info(ind_str + 'summing transversely')
         S = sum_stokes_tr(S)
         # S.s0 = np.sum(S.s0,axis=(1,2))
         # S.s1 = np.sum(S.s1,axis=(1,2))
@@ -876,8 +886,9 @@ def calc_stokes_dfl(dfl1, dfl2, basis='xy', mode=(0,0)):
         # S.s3 = np.sum(S.s3,axis=(1,2))
     
     if mode[0]:
+        _logger.info(ind_str + 'averageing longitudinally')
         S = average_stokes_l(S)
-
+    _logger.info(ind_str + 'done')
     return S
 
 
@@ -958,7 +969,8 @@ def calc_stokes_dfl(dfl1, dfl2, basis='xy', mode=(0,0)):
     # return S
     
 def calc_stokes(E1, E2, s=None, basis='xy'):
-    
+    _logger.info('calculating Stokes parameters')
+    _logger.info(ind_str + 'basis = "{}"'.format(basis))
     if E1.shape != E2.shape:
         raise ValueError('Ex and Ey dimentions do not match')
     
@@ -975,12 +987,23 @@ def calc_stokes(E1, E2, s=None, basis='xy'):
         Er_ = np.conj(Er)
         El_ = np.conj(El)
         
-        Jxx = Er*Er_ + El*El_ + Er*El_ + El*Er_ 
-        Jyy = Er*Er_ + El*El_ - Er*El_ - El*Er_
-        Jxy = (-1j)*(Er*Er_ - El*El_ - Er*El_ + El*Er_)
-        Jyx = np.conj(Jxy)
+        E1 = Er*Er_
+        E2 = El*El_
+        E3 = Er*El_
+        E4 = El*Er_
+        del (Er, El, Er_, El_)
         
-        del (Er_, El_, Er, El)
+        Jxx = E1 + E2 + E3 + E4
+        Jyy = E1 + E2 - E3 - E4
+        Jxy = (-1j) * (E1 - E2 - E3 + E4)
+        Jyx = np.conj(Jxy)
+        del (E1, E2, E3, E4)
+#        Jxx = Er*Er_ + El*El_ + Er*El_ + El*Er_ 
+#        Jyy = Er*Er_ + El*El_ - Er*El_ - El*Er_
+#        Jxy = (-1j)*(Er*Er_ - El*El_ - Er*El_ + El*Er_)
+#        Jyx = np.conj(Jxy)
+#        
+#        del (Er_, El_, Er, El)
     
     elif basis == 'yx' or basis == 'xy': 
         if basis == 'yx':

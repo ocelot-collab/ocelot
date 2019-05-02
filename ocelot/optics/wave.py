@@ -609,7 +609,7 @@ class TransferFunction:
         self.dk = None # width of feature in spectrum
     
     def ev(self):
-        return self.k* h_eV_s/2/pi * speed_of_light
+        return self.k * h_eV_s / 2 / pi * speed_of_light
     
     def __mul__(self, f):
         if f.__class__ == TransferFunction:

@@ -174,7 +174,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice='all', va
             for name in files:
                 if name.endswith('.gout') or name.endswith('.out'):
                     handles.append(os.path.join(root, name))
-        _logger.info('\n  plotting all files in ' + str(handle))
+        _logger.info('\n  plotting all files in {}'.format(str(handle)))
     else:
         handles = [handle]
 
@@ -182,7 +182,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice='all', va
 
         if os.path.isfile(str(handle)):
              # if os.path.getsize(str(handle)) > 0:
-            _logger.info('plotting '+str(handle))
+            _logger.info('plotting {}'.format(str(handle)))
             try:
                 handle = read_out_file(handle, read_level=2, debug=debug)
             except (IOError, ValueError):
@@ -281,6 +281,7 @@ def plot_gen_out_z(g, z=np.inf, params=['rad_power+el_current', 'el_energy+el_es
     fig_name - override figure name
     savefig - save figure
     showfig - show figure
+    print_text - print text with additional info
     '''
     
     import matplotlib.ticker as ticker
@@ -336,12 +337,12 @@ def plot_gen_out_z(g, z=np.inf, params=['rad_power+el_current', 'el_energy+el_es
             # print('    plotting ' + fig_name)
     if fig_name is None:
         if g.fileName() is '':
-            fig = plt.figure('Bunch profile at {:} [m]'.format(z))
+            fig = plt.figure('Bunch profile at z={:.3f} [m]'.format(z))
         else:
-            fig = plt.figure('Bunch profile at {:} [m]'.format(z) + g.fileName())
+            fig = plt.figure('Bunch profile at z={:.3f} [m]'.format(z) + g.fileName())
     else:
         fig = plt.figure(fig_name)
-    _logger.info('plotting bunch profile at {:} [m]'.format(z))
+    _logger.info('plotting bunch profile at z={:.3f} [m]'.format(z))
         
     if np.size(figsize) == 1:
         figsize = (3 * figsize, (len(params) + 0.5) * figsize)
@@ -399,7 +400,7 @@ def plot_gen_out_z(g, z=np.inf, params=['rad_power+el_current', 'el_energy+el_es
         if param == 'rad_spec':
             subfig_z_spec(ax[-1], g, zi=zi, y_units=y_units, estimate_ph_sp_dens=True, legend=legend, *args, **kwargs)
         else:
-            print('! wrong parameter ' + param)
+            _logger.warning(ind_str + 'wrong parameter ' + param)
     axf = len(ax) - axt
     # ax[0].set_xlim(g.z[0], g.z[-1])
     # ax[-1].set_xlabel('z [m]')
@@ -425,6 +426,9 @@ def plot_gen_out_z(g, z=np.inf, params=['rad_power+el_current', 'el_energy+el_es
         fig.savefig(g.filePath + '_z_' + str(z) + 'm.' + str(savefig), format=savefig)
 
     if showfig:
+        dir_lst = g.filePath.split(os.path.sep)
+        dir = os.path.sep.join(dir_lst[0:-1]) + os.path.sep
+        rcParams["savefig.directory"] = dir
         plt.show()
     else:
         # plt.close('all')
@@ -450,8 +454,9 @@ def subfig_z_power_curr(ax_curr, g, zi=None, x_units='um', legend=False, *args, 
     ax_curr.plot(x, g.I / 1e3, 'k--')
     ax_curr.set_ylabel(r'I [kA]')
     ax_curr.set_ylim(ymin=0)
-    ax_curr.text(0.02, 0.98, "Q= {:.2f} pC".format(g.beam_charge * 1e12), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_curr.transAxes, color='black')  # horizontalalignment='center', verticalalignment='center',
-    ax_curr.grid(True)
+    if kwargs.get('showtext', True):
+        ax_curr.text(0.02, 0.98, "Q= {:.2f} pC".format(g.beam_charge * 1e12), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_curr.transAxes, color='black')  # horizontalalignment='center', verticalalignment='center',
+    ax_curr.grid(kwargs.get('grid', True))
     
     ax_power = ax_curr.twinx()
     ax_power.grid(False)
@@ -463,10 +468,11 @@ def subfig_z_power_curr(ax_curr, g, zi=None, x_units='um', legend=False, *args, 
     ax_power.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_power.get_yaxis().get_major_formatter().set_scientific(True)
     ax_power.get_yaxis().get_major_formatter().set_powerlimits((-3, 4))  # [:,75,75]
-    if 'n_photons' in dir(g):
-        ax_curr.text(0.98, 0.98, "E= {:.2e} J\nN$_{{phot}}$= {:.2e}".format(g.pulse_energy[zi], g.n_photons[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
-    else:
-        ax_curr.text(0.98, 0.98, "E= {:.2e} J".format(g.pulse_energy[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
+    if kwargs.get('showtext', True):
+        if 'n_photons' in dir(g):
+            ax_curr.text(0.98, 0.98, "E= {:.2e} J\nN$_{{phot}}$= {:.2e}".format(g.pulse_energy[zi], g.n_photons[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
+        else:
+            ax_curr.text(0.98, 0.98, "E= {:.2e} J".format(g.pulse_energy[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
     
     ax_curr.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_power.yaxis.major.locator.set_params(nbins=number_ticks)
@@ -498,7 +504,7 @@ def subfig_z_energy_espread_bunching(ax_energy, g, zi=None, x_units='um', legend
     ax_energy.set_ylabel(r'$E\pm\sigma_E$ [GeV]')
     # ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
     ax_energy.ticklabel_format(useOffset=False, style='plain')
-    ax_energy.grid(True)
+    ax_energy.grid(kwargs.get('grid',True))
     # plt.yticks(plt.yticks()[0][0:-1])
 
     ax_bunching = ax_energy.twinx()
@@ -540,7 +546,7 @@ def subfig_z_energy_espread(ax_energy, g, zi=None, x_units='um', legend=False, *
     ax_energy.set_ylabel(r'$E\pm\sigma_E$ [GeV]')
     # ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
     ax_energy.ticklabel_format(useOffset=False, style='plain')
-    ax_energy.grid(True)
+    ax_energy.grid(kwargs.get('grid',True))
     # plt.yticks(plt.yticks()[0][0:-1])
     
     ax_energy.yaxis.major.locator.set_params(nbins=number_ticks)
@@ -590,14 +596,15 @@ def subfig_z_phase(ax_phase, g, zi=None, x_units='um', legend=False, *args, **kw
     # else:
         # phase_fixed = g.phi_mid[:, zi]
     ax_phase.plot(x, phase_disp, 'k-', linewidth=0.5)
-    if hasattr(g, 'phi_mid_disp'):
-        _txt = r'(on axis, rewrapped)'
-    else:
-        _txt = r'(on axis)'
-        ax_phase.text(0.98, 0.98, _txt, fontsize=10, horizontalalignment='right', verticalalignment='top', transform=ax_phase.transAxes)  # horizontalalignment='center', verticalalignment='center',
+    if kwargs.get('showtext', True):
+        if hasattr(g, 'phi_mid_disp'):
+            _txt = r'(on axis, rewrapped)'
+        else:
+            _txt = r'(on axis)'
+            ax_phase.text(0.98, 0.98, _txt, fontsize=10, horizontalalignment='right', verticalalignment='top', transform=ax_phase.transAxes)  # horizontalalignment='center', verticalalignment='center',
     ax_phase.set_ylabel(r'$\phi$ [rad]')
     ax_phase.set_ylim([-pi, pi])
-    ax_phase.grid(True)
+    ax_phase.grid(kwargs.get('grid',True))
     
     ax_phase.yaxis.major.locator.set_params(nbins=number_ticks)
     
@@ -641,16 +648,17 @@ def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=Tru
     # phase = np.pad(g.phi_mid, [(int(g.nSlices / 2) * n_pad, (g.nSlices - (int(g.nSlices / 2)))) * n_pad, (0, 0)], mode='constant')  # not supported by the numpy 1.6.2
     
     ax_spectrum.plot(x, spec, 'r-')
-    if mode == 'mid':
-        ax_spectrum.text(0.98, 0.98, r'(on axis)', fontsize=10, horizontalalignment='right', verticalalignment='top', transform=ax_spectrum.transAxes)  # horizontalalignment='center', verticalalignment='center',
-    else:
-        ax_spectrum.text(0.98, 0.98, r'(integrated assuming on-axis phases)', fontsize=10, horizontalalignment='right', verticalalignment='top', transform=ax_spectrum.transAxes)  # horizontalalignment='center', verticalalignment='center',
+    if kwargs.get('showtext', True):
+        if mode == 'mid':
+            ax_spectrum.text(0.98, 0.98, r'(on axis)', fontsize=10, horizontalalignment='right', verticalalignment='top', transform=ax_spectrum.transAxes)  # horizontalalignment='center', verticalalignment='center',
+        else:
+            ax_spectrum.text(0.98, 0.98, r'(integrated assuming on-axis phases)', fontsize=10, horizontalalignment='right', verticalalignment='top', transform=ax_spectrum.transAxes)  # horizontalalignment='center', verticalalignment='center',
     
     ax_spectrum.set_ylim(ymin=0)
     ax_spectrum.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_spectrum.get_yaxis().get_major_formatter().set_scientific(True)
     ax_spectrum.get_yaxis().get_major_formatter().set_powerlimits((-3, 4))  # [:,75,75]
-    ax_spectrum.grid(True)
+    ax_spectrum.grid(kwargs.get('grid',True))
     if np.amin(x) != np.amax(x):
         ax_spectrum.set_xlim([np.amin(x), np.amax(x)])
     
@@ -669,20 +677,22 @@ def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=Tru
             spec_width = dx * width / x[pos]  # the FWHM of spectral line (error when peakpos is at the edge of lamdscale)
 
     if spec_width is not None and maxspectrum_value is not None:
-            if y_units == 'nm':
+        if y_units == 'nm':
+            if kwargs.get('showtext', True):
                 ax_spectrum.text(0.02, 0.98, r"$\lambda^{max}$= %.4e m " "\n" "$(\Delta\lambda/\lambda)_{fwhm}$= %.2e" % (maxspectrum_value*1e-9, spec_width), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_spectrum.transAxes, color='red')  # horizontalalignment='center', verticalalignment='center',
-                if estimate_ph_sp_dens:
-                    ax_spectrum.set_ylabel(r'[$N_{phot}$/nm](estim)')
-                else:
-                    ax_spectrum.set_ylabel(r'P($\lambda$) [a.u.]')
-                ax_spectrum.set_xlabel(r'$\lambda$ [nm]')
-            elif y_units in ['ev', 'eV']:
+            if estimate_ph_sp_dens:
+                ax_spectrum.set_ylabel(r'[$N_{phot}$/nm](estim)')
+            else:
+                ax_spectrum.set_ylabel(r'P($\lambda$) [a.u.]')
+            ax_spectrum.set_xlabel(r'$\lambda$ [nm]')
+        elif y_units in ['ev', 'eV']:
+            if kwargs.get('showtext', True):
                 ax_spectrum.text(0.02, 0.98, r"$E_{ph}^{max}$= %.2f eV " "\n" "$(\Delta E/E)_{fwhm}$= %.2e" % (maxspectrum_value, spec_width), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_spectrum.transAxes, color='red')  # horizontalalignment='center', verticalalignment='center',
-                if estimate_ph_sp_dens:
-                    ax_spectrum.set_ylabel(r'[$N_{phot}$/eV] (estim)')
-                else:
-                    ax_spectrum.set_ylabel(r'P($E_{ph}$) [a.u.]')
-                ax_spectrum.set_xlabel(r'$E_{photon}$ [eV]')
+            if estimate_ph_sp_dens:
+                ax_spectrum.set_ylabel(r'[$N_{phot}$/eV] (estim)')
+            else:
+                ax_spectrum.set_ylabel(r'P($E_{ph}$) [a.u.]')
+            ax_spectrum.set_xlabel(r'$E_{photon}$ [eV]')
         # ax_spectrum.text(0.02, 0.98, r"$\lambda_{max}$= %.4e m " "\n" "$(\Delta\lambda/\lambda)_{fwhm}$= %.2e" % (maxspectrum_value, spec_width), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_spectrum.transAxes, color='red')  # horizontalalignment='center', verticalalignment='center',
     
     ax_spectrum.yaxis.major.locator.set_params(nbins=number_ticks)
@@ -692,7 +702,7 @@ def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=Tru
     
     
 @if_plottable
-def plot_gen_out_z_old(g, figsize=(10, 14), x_units='um', y_units='ev', legend=True, fig_name=None, z=inf, savefig=False, showfig=1, debug=1):
+def plot_gen_out_z_old(g, figsize=(10, 14), x_units='um', y_units='ev', legend=True, fig_name=None, z=inf, savefig=False, showfig=1, debug=1, **kwargs):
     print('soon this function will be replaced by plot_gen_out_z_new (currently being tested)')
     number_ticks = 6
 
@@ -762,7 +772,7 @@ def plot_gen_out_z_old(g, figsize=(10, 14), x_units='um', y_units='ev', legend=T
     ax_curr.set_ylim(ymin=0)
     ax_curr.text(0.02, 0.98, "Q= %.2f pC" % (g.beam_charge * 1e12), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_curr.transAxes)  # horizontalalignment='center', verticalalignment='center',
     ax_curr.text(0.98, 0.98, "E= %.2e J" % (g.pulse_energy[zi]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_curr.transAxes, color='green')  # horizontalalignment='center', verticalalignment='center',
-    ax_curr.grid(True)
+    ax_curr.grid(kwargs.get('grid',True))
 
     ax_power = ax_curr.twinx()
     ax_power.grid(False)
@@ -781,7 +791,7 @@ def plot_gen_out_z_old(g, figsize=(10, 14), x_units='um', y_units='ev', legend=T
     ax_energy.set_ylabel(r'$E\pm\sigma_E$ [GeV]')
     # ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
     ax_energy.ticklabel_format(useOffset=False, style='plain')
-    ax_energy.grid(True)
+    ax_energy.grid(kwargs.get('grid',True))
     # plt.yticks(plt.yticks()[0][0:-1])
 
     ax_bunching = ax_energy.twinx()
@@ -814,7 +824,7 @@ def plot_gen_out_z_old(g, figsize=(10, 14), x_units='um', y_units='ev', legend=T
     ax_spectrum.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_spectrum.get_yaxis().get_major_formatter().set_scientific(True)
     ax_spectrum.get_yaxis().get_major_formatter().set_powerlimits((-3, 4))  # [:,75,75]
-    ax_spectrum.grid(True)
+    ax_spectrum.grid(kwargs.get('grid',True))
     if np.amin(g.freq_lamd) != np.amax(g.freq_lamd):
         ax_spectrum.set_xlim([np.amin(g.freq_lamd), np.amax(g.freq_lamd)])
     ax_phase.set_xlabel(r's [$\mu$m]')
@@ -847,7 +857,7 @@ def plot_gen_out_z_old(g, figsize=(10, 14), x_units='um', y_units='ev', legend=T
     ax_phase.text(0.98, 0.98, r'(on axis)', fontsize=10, horizontalalignment='right', verticalalignment='top', transform=ax_phase.transAxes)  # horizontalalignment='center', verticalalignment='center',
     ax_phase.set_ylabel(r'$\phi$ [rad]')
     ax_phase.set_ylim([-pi, pi])
-    ax_phase.grid(True)
+    ax_phase.grid(kwargs.get('grid',True))
     # plt.yticks(plt.yticks()[0][0:-1])
 
     # ax_spectrum.yaxis.major.locator.set_params(nbins=number_ticks)
@@ -957,39 +967,39 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'e
             ax.append(fig.add_subplot(len(params), 1, index + 1, sharex=ax[0]))
         # ax[-1]
         if param == 'und_quad':
-            subfig_evo_und_quad(ax[-1], g, legend)
+            subfig_evo_und_quad(ax[-1], g, legend, **kwargs)
         elif param == 'und':
-            subfig_evo_und(ax[-1], g, legend)
+            subfig_evo_und(ax[-1], g, legend, **kwargs)
         elif param == 'el_size':
-            subfig_evo_el_size(ax[-1], g, legend)
+            subfig_evo_el_size(ax[-1], g, legend, **kwargs)
         elif param == 'el_pos':
-            subfig_evo_el_pos(ax[-1], g, legend)
+            subfig_evo_el_pos(ax[-1], g, legend, **kwargs)
         elif param == 'el_energy':
-            subfig_evo_el_energy(ax[-1], g, legend)
+            subfig_evo_el_energy(ax[-1], g, legend, **kwargs)
         elif param == 'el_bunching':
-            subfig_evo_el_bunching(ax[-1], g, legend)
+            subfig_evo_el_bunching(ax[-1], g, legend, **kwargs)
         elif param == 'rad_pow_en_log':
             if not is_tdp:
-                subfig_evo_rad_pow(ax[-1], g, legend)
+                subfig_evo_rad_pow(ax[-1], g, legend, **kwargs)
             else:
-                subfig_evo_rad_pow_en(ax[-1], g, legend)
+                subfig_evo_rad_pow_en(ax[-1], g, legend, **kwargs)
         elif param == 'rad_pow_en_lin':
             if not is_tdp:
-                subfig_evo_rad_pow(ax[-1], g, legend, log=0)
+                subfig_evo_rad_pow(ax[-1], g, legend, log=0, **kwargs)
             else:
-                subfig_evo_rad_pow_en(ax[-1], g, legend, log=0)
+                subfig_evo_rad_pow_en(ax[-1], g, legend, log=0, **kwargs)
         elif param == 'rad_pow_log':
-            subfig_evo_rad_pow(ax[-1], g, legend)
+            subfig_evo_rad_pow(ax[-1], g, legend, **kwargs)
         elif param == 'rad_pow_lin':
-            subfig_evo_rad_pow(ax[-1], g, legend, log=0)
+            subfig_evo_rad_pow(ax[-1], g, legend, log=0, **kwargs)
         elif param == 'rad_size':
-            subfig_rad_size(ax[-1], g, legend)
+            subfig_rad_size(ax[-1], g, legend, **kwargs)
         elif param == 'rad_spec_log':
             if is_tdp:
-                subfig_evo_rad_spec(ax[-1], g, legend)
+                subfig_evo_rad_spec(ax[-1], g, legend, **kwargs)
         elif param == 'rad_spec_nolog':
             if is_tdp:
-                subfig_evo_rad_spec(ax[-1], g, legend, log=0)
+                subfig_evo_rad_spec(ax[-1], g, legend, log=0, **kwargs)
         elif param == 'rad_spec_evo_n':
             if is_tdp:
                 subfig_evo_rad_spec_sz(ax[-1], g, legend, norm=1, **kwargs)
@@ -1003,7 +1013,7 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'e
             if is_tdp:
                 subfig_evo_rad_pow_sz(ax[-1], g, legend, norm=0, **kwargs)
         else:
-            print('! wrong parameter ' + param)
+            _logger.warning('wrong parameter ' + param)
 
     ax[0].set_xlim(g.z[0], g.z[-1])
     ax[-1].set_xlabel('z [m]')
@@ -1038,12 +1048,12 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'e
         plt.close(fig)
 
 @if_plottable
-def subfig_evo_und_quad(ax_und, g, legend):
+def subfig_evo_und_quad(ax_und, g, legend, **kwargs):
     number_ticks = 6
     
     ax_und.plot(g.z, g.aw, 'b-', linewidth=1.5)
     ax_und.set_ylabel('K (rms)')
-    ax_und.grid(True)
+    ax_und.grid(kwargs.get('grid',True))
     
     ax_quad = ax_und.twinx()
     ax_quad.plot(g.z, g.qfld, 'r-', linewidth=1.5)
@@ -1066,12 +1076,12 @@ def subfig_evo_und_quad(ax_und, g, legend):
     ax_quad.yaxis.label.set_color('r')
 
 @if_plottable
-def subfig_evo_und(ax_und, g, legend):
+def subfig_evo_und(ax_und, g, legend, **kwargs):
     number_ticks = 6
     
     ax_und.plot(g.z, g.aw, 'b-', linewidth=1.5)
     ax_und.set_ylabel('K (rms)')
-    ax_und.grid(True)
+    ax_und.grid(kwargs.get('grid',True))
 
     ax_und.yaxis.major.locator.set_params(nbins=number_ticks)
 
@@ -1086,7 +1096,7 @@ def subfig_evo_und(ax_und, g, legend):
     ax_und.yaxis.label.set_color('b')
 
 @if_plottable
-def subfig_evo_el_size(ax_size_tsize, g, legend, which='both'):
+def subfig_evo_el_size(ax_size_tsize, g, legend, which='both', **kwargs):
     number_ticks = 6
     
     if which == 'both' or which == 'averaged':
@@ -1098,10 +1108,10 @@ def subfig_evo_el_size(ax_size_tsize, g, legend, which='both'):
 
     ax_size_tsize.set_ylim(ymin=0)
     ax_size_tsize.yaxis.major.locator.set_params(nbins=number_ticks)
-    ax_size_tsize.grid(True)
+    ax_size_tsize.grid(kwargs.get('grid',True))
     
 @if_plottable
-def subfig_evo_el_pos(ax_size_tpos, g, legend, which='both'):
+def subfig_evo_el_pos(ax_size_tpos, g, legend, which='both', **kwargs):
     
     if hasattr(g,'x') and hasattr(g,'y'):
         if which == 'both' or which == 'averaged':
@@ -1110,10 +1120,10 @@ def subfig_evo_el_pos(ax_size_tpos, g, legend, which='both'):
             idx_pk = np.where(g.I == np.amax(g.I))[0][0]
             ax_size_tpos.plot(g.z, g.x[idx_pk, :] * 1e6, 'g--', g.z, g.y[idx_pk, :] * 1e6, 'b--')
         ax_size_tpos.set_ylabel(r'$x,y$ [$\mu$m]')
-        ax_size_tpos.grid(True)
+        ax_size_tpos.grid(kwargs.get('grid',True))
 
 @if_plottable
-def subfig_evo_el_energy(ax_energy, g, legend):
+def subfig_evo_el_energy(ax_energy, g, legend, **kwargs):
     number_ticks = 6
     
     el_energy = g.el_energy * m_e_MeV
@@ -1121,7 +1131,7 @@ def subfig_evo_el_energy(ax_energy, g, legend):
     ax_energy.plot(g.z, np.average(el_energy - el_energy_av, axis=0), 'b-', linewidth=1.5)
     ax_energy.set_ylabel('E + ' + str(el_energy_av) + '[MeV]')
     ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
-    ax_energy.grid(True)
+    ax_energy.grid(kwargs.get('grid',True))
 
     ax_spread = ax_energy.twinx()
     ax_spread.plot(g.z, np.average(g.el_e_spread * m_e_GeV * 1000, weights=g.I, axis=0), 'm--', g.z, np.amax(g.el_e_spread * m_e_GeV * 1000, axis=0), 'r--', linewidth=1.5)
@@ -1138,7 +1148,7 @@ def subfig_evo_el_energy(ax_energy, g, legend):
     ax_spread.yaxis.label.set_color('r')
 
 @if_plottable
-def subfig_evo_el_bunching(ax_bunching, g, legend):
+def subfig_evo_el_bunching(ax_bunching, g, legend, **kwargs):
     number_ticks = 6
     
     ax_bunching.plot(g.z, np.average(g.bunching, weights=g.I, axis=0), 'k-', g.z, np.amax(g.bunching, axis=0), 'grey', linewidth=1.5)
@@ -1147,10 +1157,10 @@ def subfig_evo_el_bunching(ax_bunching, g, legend):
     ax_bunching.set_ylim(ymin=0)
     # ax_bunching.set_ylim([0,0.8])
     ax_bunching.yaxis.major.locator.set_params(nbins=number_ticks)
-    ax_bunching.grid(True)
+    ax_bunching.grid(kwargs.get('grid',True))
 
 @if_plottable
-def subfig_evo_rad_pow_en(ax_rad_pow, g, legend, log=1):
+def subfig_evo_rad_pow_en(ax_rad_pow, g, legend, log=1, **kwargs):
     ax_rad_pow.plot(g.z, np.amax(g.p_int, axis=0), 'g-', linewidth=1.5)
     ax_rad_pow.set_ylabel(r'P [W]')
     ax_rad_pow.get_yaxis().get_major_formatter().set_useOffset(False)
@@ -1178,7 +1188,7 @@ def subfig_evo_rad_pow_en(ax_rad_pow, g, legend, log=1):
         ax_rad_en.set_ylim(ymin=0)
     plt.yticks(plt.yticks()[0][0:-1])
     
-    ax_rad_pow.grid(True)  # , which='minor')
+    ax_rad_pow.grid(kwargs.get('grid',True))  # , which='minor')
     # ax_rad_pow.grid(False, which="minor")
     ax_rad_pow.tick_params(axis='y', which='both', colors='g')
     ax_rad_pow.yaxis.label.set_color('g')
@@ -1188,11 +1198,12 @@ def subfig_evo_rad_pow_en(ax_rad_pow, g, legend, log=1):
     # ax_rad_en.grid(False, which='minor')
     ax_rad_pow.yaxis.get_offset_text().set_color(ax_rad_pow.yaxis.label.get_color())
     ax_rad_en.yaxis.get_offset_text().set_color(ax_rad_en.yaxis.label.get_color())
-
-    ax_rad_pow.text(0.98, 0.02, r'$P_{end}$= %.2e W ' '\n' r'$E_{end}$= %.2e J' % (np.amax(g.p_int[:, -1]), np.mean(g.p_int[:, -1], axis=0) * g('xlamds') * g('zsep') * g.nSlices / speed_of_light), fontsize=12, horizontalalignment='right', verticalalignment='bottom', transform=ax_rad_pow.transAxes)
+    
+    if kwargs.get('showtext', True):
+        ax_rad_pow.text(0.98, 0.02, r'$P_{end}$= %.2e W ' '\n' r'$E_{end}$= %.2e J' % (np.amax(g.p_int[:, -1]), np.mean(g.p_int[:, -1], axis=0) * g('xlamds') * g('zsep') * g.nSlices / speed_of_light), fontsize=12, horizontalalignment='right', verticalalignment='bottom', transform=ax_rad_pow.transAxes)
 
 @if_plottable
-def subfig_evo_rad_pow(ax_rad_pow, g, legend, log=1):
+def subfig_evo_rad_pow(ax_rad_pow, g, legend, log=1, **kwargs):
     ax_rad_pow.plot(g.z, np.amax(g.p_int, axis=0), 'g-', linewidth=1.5)
     ax_rad_pow.set_ylabel('P [W]')
     ax_rad_pow.get_yaxis().get_major_formatter().set_useOffset(False)
@@ -1205,10 +1216,11 @@ def subfig_evo_rad_pow(ax_rad_pow, g, legend, log=1):
     ax_rad_pow.tick_params(axis='y', which='both', colors='g')
     ax_rad_pow.yaxis.label.set_color('g')
     ax_rad_pow.yaxis.get_offset_text().set_color(ax_rad_pow.yaxis.label.get_color())
-    ax_rad_pow.text(0.98, 0.02, r'$P_{end}$= %.2e W' % (np.amax(g.p_int[:, -1])), fontsize=12, horizontalalignment='right', verticalalignment='bottom', transform=ax_rad_pow.transAxes)
+    if kwargs.get('showtext', True):
+        ax_rad_pow.text(0.98, 0.02, r'$P_{end}$= %.2e W' % (np.amax(g.p_int[:, -1])), fontsize=12, horizontalalignment='right', verticalalignment='bottom', transform=ax_rad_pow.transAxes)
 
 @if_plottable
-def subfig_evo_rad_spec(ax_spectrum, g, legend, log=1):
+def subfig_evo_rad_spec(ax_spectrum, g, legend, log=1, **kwargs):
     
     if not hasattr(g, 'spec'):
         g.calc_spec()
@@ -1220,7 +1232,7 @@ def subfig_evo_rad_spec(ax_spectrum, g, legend, log=1):
     
     if np.amax(np.amax(g.spec, axis=0)) > 0 and log:
         ax_spectrum.set_yscale('log')
-    ax_spectrum.grid(True)
+    ax_spectrum.grid(kwargs.get('grid',True))
     
     spectrum_lamdwidth_fwhm = np.zeros_like(g.z)
     spectrum_lamdwidth_std = np.zeros_like(g.z)
@@ -1261,7 +1273,7 @@ def subfig_evo_rad_spec(ax_spectrum, g, legend, log=1):
     if legend:
         ax_spec_bandw.legend()
     ax_spec_bandw.set_ylabel(r'$\Delta\lambda/\lambda, \%$'+'\n'+r'(-- fwhm, $\cdots2\sigma$)')
-    if spectrum_lamdwidth_fwhm[-1] != None:
+    if spectrum_lamdwidth_fwhm[-1] != None and kwargs.get('showtext', True):
         ax_spec_bandw.text(0.98, 0.98, r"$(\Delta\lambda/\lambda)_{end}^{fwhm}$= %.2e"%(spectrum_lamdwidth_fwhm[-1]), fontsize=12, horizontalalignment='right', verticalalignment='top', transform=ax_spec_bandw.transAxes)
 
     ax_spectrum.yaxis.label.set_color('r')
@@ -1280,7 +1292,7 @@ def subfig_evo_rad_spec(ax_spectrum, g, legend, log=1):
     
 
 @if_plottable
-def subfig_rad_size(ax_size_t, g, legend):
+def subfig_rad_size(ax_size_t, g, legend, **kwargs):
     if g.nSlices == 1:
         ax_size_t.plot(g.z, g.r_size.T * 2 * 1e6, 'b-', linewidth=1.5)
         ax_size_t.plot([np.amin(g.z), np.amax(g.z)], [g.leng * 1e6, g.leng * 1e6], 'b-', linewidth=1.0)
@@ -1299,7 +1311,7 @@ def subfig_rad_size(ax_size_t, g, legend):
     ax_size_t.set_ylim(ymin=0)
     # ax_size_t.set_ylabel(r'$\sim$size$_{transv}$ [$\mu$m]'+'\n'+r'($2\sigma$)')
     ax_size_t.set_ylabel(r'$\sim$size$_{transv}$ [$\mu$m]'+'\n'+u'(\u2014 $2\sigma$)')
-    ax_size_t.grid(True)
+    ax_size_t.grid(kwargs.get('grid',True))
     plt.yticks(plt.yticks()[0][0:-1])
     
     if g.nSlices > 1:
@@ -1538,7 +1550,7 @@ def plot_dfl_all(dfl, **kwargs):
     dfl.fft_xy()
 
 @if_plottable
-def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy = True, log_scale=0, debug=1, cmin=0, vartype_dfl=np.complex64):
+def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy = True, log_scale=0, debug=1, cmin=0, vartype_dfl=np.complex64, **kwargs):
     '''
     Plots dfl radiation object in 3d.
 
@@ -1658,7 +1670,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
             z_lim[0] = np.amin(z)
             # print('      set low lim to min')
         if debug > 1:
-            print('      setting z-axis limits to ' + str(np.amin(z)) + ':' + str(z_lim[0]) + '-' + str(z_lim[1]) + ':' + str(np.amax(z)))  # tmp
+            _logger.debug(ind_str + 'setting z-axis limits to ' + str(np.amin(z)) + ':' + str(z_lim[0]) + '-' + str(z_lim[1]) + ':' + str(np.amax(z)))  # tmp
         z_lim_1 = np.where(z <= z_lim[0])[0][-1]
         z_lim_2 = np.where(z >= z_lim[1])[0][0]
 
@@ -1763,7 +1775,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     ax_int.set_title(xy_title, fontsize=15)
     ax_int.set_xlabel(r'' + x_label)
     ax_int.set_ylabel(y_label)
-    if np.size(z) > 1 and text_present:
+    if np.size(z) > 1 and kwargs.get('showtext', True):
         ax_int.text(0.01, 0.01, r'$E_{p}$=%.2e J' % (E_pulse), horizontalalignment='left', verticalalignment='bottom', fontsize=12, color='white', transform=ax_int.transAxes)
 
     if phase == True:
@@ -1812,7 +1824,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         ax_proj_x.plot(x, x_line_f, color='grey')
         ax_proj_x.set_ylim(ymin=0, ymax=1)
     
-    if text_present:
+    if kwargs.get('showtext', True):
         try:
             ax_proj_x.text(0.95, 0.95, 'fwhm= \n' + str(round_sig(fwhm_x, 3)) + r' [' + unit_xy + ']\nrms= \n' + str(round_sig(rms_x, 3)) + r' [' + unit_xy + ']', horizontalalignment='right', verticalalignment='top', transform=ax_proj_x.transAxes, fontsize=12)
         except:
@@ -1847,7 +1859,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         ax_proj_y.plot(y_line_f, y, color='grey')
         ax_proj_y.set_xlim(xmin=0, xmax=1)
     
-    if text_present:
+    if kwargs.get('showtext', True):
         try:
             ax_proj_y.text(0.95, 0.95, 'fwhm= ' + str(round_sig(fwhm_y, 3)) + r' [' + unit_xy + ']\nrms= ' + str(round_sig(rms_y, 3)) + r' [' + unit_xy + ']', horizontalalignment='right', verticalalignment='top', transform=ax_proj_y.transAxes, fontsize=12)
         except:
@@ -1959,13 +1971,12 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     if savefig != False:
         if savefig == True:
             savefig = 'png'
-        _logger.debug(ind_str + 'saving *{:}.{:}'.format(suffix,savefig))
+        _logger.debug(ind_str + 'saving *{:}.{:}'.format(suffix, savefig))
         fig.savefig(filePath + suffix + '.' + str(savefig), format=savefig)
-
     _logger.info(ind_str + 'done in {:.2f} seconds'.format(time.time() - start_time))
 
     plt.draw()
-    if showfig == True:
+    if showfig is True:
         _logger.debug(ind_str + 'showing dfl')
         rcParams["savefig.directory"] = os.path.dirname(filePath)
         plt.show()
@@ -2005,8 +2016,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
     figsize = (14, 7)
     figsize = (8, 6)
 
-    if debug > 0:
-        print ('statistical postprocessing started')
+    _logger.info('statistical postprocessing started')
     start_time = time.time()
 
     if proj_dir[-1] != '/':
@@ -2052,9 +2062,9 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
         index = np.where(np.logical_and(nSlices==f_nSlices, nZ==f_nZ))[0]
         run_range_good = [run_range[i] for i in index]
         if len(list(set(run_range)-set(run_range_good))) > 0:
-            print('run_range', run_range)
-            print('run_range_good', run_range_good)
-            print('discarding runs',  list(set(run_range)-set(run_range_good)))
+            _logger.info('run_range {}'.format(run_range))
+            _logger.info('run_range_good {}'.format(run_range_good))
+            _logger.info('discarding runs {}'.format(list(set(run_range)-set(run_range_good))))
         
         run_range = run_range_good
         
@@ -2069,8 +2079,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
         if run_range == [] or len(run_range) == 1:
             continue
 
-        if debug > 0:
-            print('    processing runs ' + str(run_range) + ' of stage ' + str(stage))
+        _logger.info(ind_str + 'processing runs ' + str(run_range) + ' of stage ' + str(stage))
 
        # for irun in run_range:
            # out_file=proj_dir+'run_'+str(irun)+'/run.'+str(irun)+'.s'+str(stage)+'.gout'

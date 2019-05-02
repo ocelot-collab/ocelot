@@ -1109,13 +1109,13 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', dfl_slipage_inc
             raise
 
     if inp.stageid is None:
-        inp_path = inp.run_dir + 'run.' + str(inp.runid) + inp.suffix + '.inp'
-        out_path = inp.run_dir + 'run.' + str(inp.runid) + inp.suffix + '.gout'
+        inp_path = inp.run_dir + 'run.' + str(inp.runid) + str(inp.suffix) + '.inp'
+        out_path = inp.run_dir + 'run.' + str(inp.runid) + str(inp.suffix) + '.gout'
         inp.stageid = ''
         stage_string = ''
     else:
-        inp_path = inp.run_dir + 'run.' + str(inp.runid) + '.s' + str(inp.stageid) + inp.suffix + '.inp'
-        out_path = inp.run_dir + 'run.' + str(inp.runid) + '.s' + str(inp.stageid) + inp.suffix + '.gout'
+        inp_path = inp.run_dir + 'run.' + str(inp.runid) + '.s' + str(inp.stageid) + str(inp.suffix) + '.inp'
+        out_path = inp.run_dir + 'run.' + str(inp.runid) + '.s' + str(inp.stageid) + str(inp.suffix) + '.gout'
         stage_string = '.s' + str(inp.stageid)
 
     inp_file = filename_from_path(inp_path)
@@ -1123,7 +1123,7 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', dfl_slipage_inc
 
     # cleaning directory
     _logger.debug(ind_str + 'removing old files')
-    os.system('rm -rf ' + inp.run_dir + 'run.' + str(inp.runid) + stage_string + inp.suffix + '*')  # to make sure all stage files are cleaned
+    os.system('rm -rf ' + inp.run_dir + 'run.' + str(inp.runid) + stage_string + str(inp.suffix) + '*')  # to make sure all stage files are cleaned
     # os.system('rm -rf ' + out_path+'*') # to make sure out files are cleaned
     # os.system('rm -rf ' + inp_path+'*') # to make sure inp files are cleaned
     os.system('rm -rf ' + inp.run_dir + 'tmp.cmd')
@@ -2006,14 +2006,21 @@ def read_dfl_file_out(out, filePath=None, debug=1):
         if = None, then it is assumed to be *.out.dfl
     '''
     _logger.info('reading radiation field file (dfl) from .out.dfl')
+    _logger.debug(ind_str + 'opening handle ' + str(out))
     
     if os.path.isfile(str(out)):
         out = read_out_file(out, read_level=0, debug=0)
     if not isinstance(out, GenesisOutput):
+        _logger.error('out is neither GenesisOutput() nor a valid path')
         raise ValueError('out is neither GenesisOutput() nor a valid path')
 
-    if filePath == None:
+    if filePath is None:
+        _logger.debug(ind_str + 'from out.filePath')
         filePath = out.filePath + '.dfl'
+    else:
+        _logger.debug(ind_str + 'from filepath')
+    _logger.debug(2*ind_str + filePath)
+    
     dfl = read_dfl_file(filePath, Nxy=out.ncar, Lxy=out.leng, zsep=out('zsep'), xlamds=out('xlamds'), debug=debug)
     return dfl
 
@@ -2075,7 +2082,11 @@ def write_dfl_file(dfl, filePath=None, debug=1):
     _logger.info('writing radiation field file (dfl)')
     _logger.debug(ind_str + 'filePath = {}'.format(filePath))
     start_time = time.time()
-
+    
+    if dfl.domains() != ('t', 's'):
+        _logger.error("dfl.domains != ('t', 's'), but " + str(dfl.domains()))
+        raise ValueError("dfl.domains != ('t', 's')")
+    
     if filePath == None:
         filePath = dfl.filePath
         

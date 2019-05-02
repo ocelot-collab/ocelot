@@ -130,7 +130,7 @@ def if_plottable(plotting_func):
     # return
 
 @if_plottable
-def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1, 1, 10, 1, 0, 0, 0, 0, 0, 1, 10), vartype_dfl=complex128, *args, **kwargs):
+def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1, 1, 10, 1, 0, 0, 0, 0, 0, 10, 1), vartype_dfl=complex128, *args, **kwargs):
     debug=1
     # '''
     # plots all possible output from the genesis output
@@ -139,8 +139,8 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1
         # path to genesis output file
         # path to folders with genesis output files
 
-    # choice=(1,1,1,1,[],1,0,0,0,0,0)
-            # 0 1 2 3 4  5 6 7 8 9 10
+    # choice=(1,1,1,1,[],1,0,0,0,0,0, 0, 0)
+            # 0 1 2 3 4  5 6 7 8 9 10,11,12
         # 0 - electron evolution
         # 1 - radiation evolution
         # 2 - profile at z=0m
@@ -152,7 +152,7 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1
         # 8 -                 inv.space-frequency domain
         # 9 - dpa as edist at the end, smeared
         # 10 - dpa as edist at the end, not smeared
-        # 11 - wigner distribution at end,
+        # 11 - wigner distribution every m meters,
         # 12 - ebeam bucket at max power
 
     # #picks as an input "GenesisOutput" object, file path of directory as strings.
@@ -170,9 +170,9 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1
         savefig = 'png'
 
     if choice == 'all':
-        choice = (1, 1, 1, 1, 10, 1, 1, 1, 1, 1, 1, 1, 10)
+        choice = (1, 1, 1, 1, 10, 1, 1, 1, 1, 1, 0, 10, 0)
     elif choice == 'gen':
-        choice = (1, 1, 1, 1, 6.05, 0, 0, 0, 0, 0, 0, 0, 10)
+        choice = (1, 1, 1, 1, 10, 0, 0, 0, 0, 0, 0, 0, 0)
 
     if len(choice) > 13:
         choice = choice[:13]
@@ -185,16 +185,19 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1
             for name in files:
                 if name.endswith('out.h5'):
                     handles.append(os.path.join(root, name))
-        print('\n  plotting all files in ' + str(handle))
+        _logger.info('\n  plotting all files in {}'.format(str(handle)))
     else:
         handles = [handle]
     
     for handle in handles:
         
         if os.path.isfile(str(handle)):
-            print('')
-            print('plotting ',handle)
-            handle = read_gout4(handle)
+            _logger.info('plotting '+str(handle))
+            try:
+                handle = read_gout4(handle)
+            except (IOError, ValueError):
+                continue
+            
         
         if isinstance(handle, Genesis4Output):
             if choice[0]:
@@ -219,6 +222,8 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1
                     for z in np.arange(0, np.amax(handle.z), choice[11]):
                         W = wigner_out(handle, z=z, pad=2)
                         plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug, downsample=2)
+                    W = wigner_out(handle, z=np.inf, pad=2)
+                    plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug, downsample=2)
                     # except:
                         # _logger.warning('could not plot wigner')
             # if choice[4] != 0:
@@ -229,15 +234,16 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1
                     plot_gen4_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug, *args, **kwargs)
                     
             if choice[12]:
-                try:
-                    plot_dpa_bucket_out(handle,scatter=0,slice_pos='max_P',repeat=3, showfig=showfig, savefig=savefig, cmap=def_cmap)
-                except IOError:
-                    pass
+                pass
+                # try:
+                    # plot_dpa_bucket_out(handle,scatter=0,slice_pos='max_P',repeat=3, showfig=showfig, savefig=savefig, cmap=def_cmap)
+                # except IOError:
+                    # pass
                 
         if os.path.isfile(handle.filePath.replace('.out.h5','.fld.h5')) and any(choice[5:8]):
             dfl = read_dfl4(handle.filePath.replace('.out.h5','.fld.h5'))
             if dfl.Nz()==0:
-                print('empty dfl, skipping')
+                _logger.warning('empty dfl, skipping')
             else:
                 if choice[5]:
                     f5 = plot_dfl(dfl, showfig=showfig, savefig=savefig, debug=debug)
@@ -251,24 +257,30 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1
         if os.path.isfile(handle.filePath.replace('.out.h5','.par.h5')) and (choice[9] or choice[10]):
             dpa = read_dpa4(handle.filePath.replace('.out.h5','.par.h5'))
             if choice[9]:
-                edist = dpa42edist(dpa, n_part=5e4, fill_gaps=1)
-                f9 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=100, debug=debug)
+                try:
+                    edist = dpa42edist(dpa, n_part=5e4, fill_gaps=1)
+                    f9 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=100, debug=debug)
+                except:
+                    _logger.warning('could not plot smeared edist')
             if choice[10]:
-                edist = dpa42edist(dpa, n_part=5e4, fill_gaps=0)
-                f10 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=(50, 50, 300, 300), debug=debug)
+                try:
+                    edist = dpa42edist(dpa, n_part=5e4, fill_gaps=0)
+                    f10 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=(50, 50, 300, 300), debug=debug)
+                except:
+                    _logger.warning('could not plot unsmeared edist')
         
     if savefig != False:
         if debug > 0:
-            print('    plots recorded to *.' + str(savefig) + ' files')
+            _logger.info('{}plots recorded to *. {} files'.format(ind_str, savefig))
 
     if showfig:
         if debug > 0:
-            print('    showing plots, close all to proceed')
+            _logger.info(ind_str + 'showing plots, close all to proceed')
         plt.show()
     # else:
         # plt.close('all')
 
-    print ('    total plotting time %.2f seconds' % (time.time() - plotting_time))
+    _logger.info(ind_str + 'total plotting time {:.2f} seconds'.format(time.time() - plotting_time))
 
 @if_plottable
 def plot_gen4_out_z(out, z=np.inf, params=['rad_power+el_current', 'el_energy+el_espread+el_bunching', 'rad_spec'], figsize=3, x_units='um', y_units='ev', legend=False, fig_name=None, savefig=False, showfig=True, debug=1, *args, **kwargs):
@@ -330,8 +342,7 @@ def plot_gen4_out_z(out, z=np.inf, params=['rad_power+el_current', 'el_energy+el
             fig = plt.figure('Bunch profile at ' + str(z) + 'm ' + out.fileName())
     else:
         fig = plt.figure(fig_name)
-    if debug > 0:
-        print('    plotting bunch profile at ' + str(z) + ' [m]')
+    _logger.info('plotting bunch profile at z={:.3f} [m]'.format(z))
         
     if np.size(figsize) == 1:
         figsize = (3 * figsize, (len(params) + 0.5) * figsize)
@@ -344,16 +355,15 @@ def plot_gen4_out_z(out, z=np.inf, params=['rad_power+el_current', 'el_energy+el
     ax = []
     
     if not out.tdp:
-        print('!     not applicable for steady-state')
+        _logger.error('plotting bunch profile is not applicable for steady-state')
         return
     
     params_t = list(set(params).difference(f_domain))
     params_t = [v for v in params if v in params_t]
     params_f = list(set(params).difference(t_domain))
     params_f = [v for v in params if v in params_f]
-    if debug > 1:
-        print('params_t',params_t)
-        print('params_f',params_f)
+    _logger.debug(ind_str + 'params_t: {:}'.format(params_t))
+    _logger.debug(ind_str + 'params_f: {:}'.format(params_f))
     
     for index, param in enumerate(params_t):
         if len(ax) == 0:
@@ -390,7 +400,7 @@ def plot_gen4_out_z(out, z=np.inf, params=['rad_power+el_current', 'el_energy+el
         if param == 'rad_spec':
             subfig_z_spec(ax[-1], out, zi=zi, y_units=y_units, estimate_ph_sp_dens=True, legend=legend)
         else:
-            print('! wrong parameter ' + param)
+            _logger.warning(ind_str + 'wrong parameter ' + param)
     axf = len(ax) - axt
     # ax[0].set_xlim(out.z[0], out.z[-1])
     # ax[-1].set_xlabel('z [m]')
@@ -681,16 +691,14 @@ def plot_gen4_out_evo(out, params=['und_quad', 'el_size', 'el_pos', 'el_energy',
     if fig_name is None:
         if out.fileName() is '':
             fig = plt.figure(params_str)
-            if debug > 0:
-                print('    plotting ' + params_str)
+            _logger.info('plotting ' + params_str)
         else:
             fig = plt.figure(out.fileName() + '_' + params_str)
-            if debug > 0:
-                print('    plotting ' + out.fileName() + '_' + params_str)
+            _logger.info('plotting ' + out.fileName() + '_' + params_str)
     else:
         fig = plt.figure(fig_name)
         if debug > 0:
-            print('    plotting ' + fig_name)
+            _logger.info('plotting ' + fig_name)
     
     if np.size(figsize) == 1:
         figsize = (3 * figsize, (len(params) + 0.5) * figsize)
@@ -757,7 +765,7 @@ def plot_gen4_out_evo(out, params=['und_quad', 'el_size', 'el_pos', 'el_energy',
             if out.tdp:
                 subfig_evo_rad_pow_sz(ax[-1], out, legend, norm=0)
         else:
-            print('! wrong parameter ' + param)
+            _logger.warning('wrong parameter ' + param)
 
     ax[0].set_xlim(out.z[0], out.z[-1])
     ax[-1].set_xlabel('z [m]')
@@ -767,16 +775,20 @@ def plot_gen4_out_evo(out, params=['und_quad', 'el_size', 'el_pos', 'el_energy',
         for label in axi.get_xticklabels():
             label.set_visible(False)
     
+    
     if savefig != False:
         if savefig == True:
             savefig = 'png'
         if fig_name == 'Electrons':
-            fig.savefig(out.filePath + '_elec.' + str(savefig), format=savefig)
+            savepath = out.filePath + '_elec.' + str(savefig)
         elif fig_name == 'Radiation':
-            fig.savefig(out.filePath + '_rad.' + str(savefig), format=savefig)
+            savepath = out.filePath + '_rad.' + str(savefig)
+        elif fig_name == '':
+            savepath = out.filePath + '_' + params_str + '.' + str(savefig)
         else:
-            fig.savefig(out.filePath + '_' + params_str + '.' + str(savefig), format=savefig)
-
+            savepath = out.filePath + '_' + fig_name + '.' + str(savefig)
+        _logger.debug('saving figure to {}'.format(savepath))
+        fig.savefig(out.filePath + '_' + params_str + '.' + str(savefig), format=savefig)
     plt.draw()
     if showfig == True:
         dir_lst = out.filePath.split(os.path.sep)
@@ -1435,7 +1447,7 @@ def plot_dfl4(dfl, domains=None, z_lim=[], xy_lim=[], figsize=3, cmap=def_cmap, 
             z_lim[0] = np.amin(z)
             # print('      set low lim to min')
         if debug > 1:
-            print('      setting z-axis limits to ' + str(np.amin(z)) + ':' + str(z_lim[0]) + '-' + str(z_lim[1]) + ':' + str(np.amax(z)))  # tmp
+            _logger.debug(ind_str + 'setting z-axis limits to ' + str(np.amin(z)) + ':' + str(z_lim[0]) + '-' + str(z_lim[1]) + ':' + str(np.amax(z)))  # tmp
         z_lim_1 = np.where(z <= z_lim[0])[0][-1]
         z_lim_2 = np.where(z >= z_lim[1])[0][0]
 
@@ -1689,7 +1701,7 @@ def plot_dfl4(dfl, domains=None, z_lim=[], xy_lim=[], figsize=3, cmap=def_cmap, 
             ax_proj_xz.set_xlim(z[nonzero(z_proj > np.max(z_proj) * 0.005)][[0, -1]])
         elif phase == False and z_lim == []:
             ax_z.set_xlim(z[nonzero(z_proj > np.max(z_proj) * 0.005)][[0, -1]])
-            print ('      scaling xy to', size_xy)
+            _logger.info(ind_str + 'scaling xy to {}'.format(size_xy))
             ax_proj_xz.set_ylim([-size_xy, size_xy])
         elif column_3d == True:
             ax_proj_xz.set_ylim([-size_xy, size_xy])
@@ -1719,17 +1731,14 @@ def plot_dfl4(dfl, domains=None, z_lim=[], xy_lim=[], figsize=3, cmap=def_cmap, 
     if savefig != False:
         if savefig == True:
             savefig = 'png'
-        if debug > 0:
-            print('      saving *' + suffix + '.' + savefig)
+        _logger.debug(ind_str + 'saving *{:}.{:}'.format(suffix, savefig))
         fig.savefig(filePath + suffix + '.' + str(savefig), format=savefig)
-
-    if debug > 0:
-        print('      done in %.2f seconds' % (time.time() - start_time))
-
+    _logger.info(ind_str + 'done in {:.2f} seconds'.format(time.time() - start_time))
+    
     plt.draw()
-    if showfig == True:
-        if debug > 0:
-            print('      showing dfl')
+    if showfig is True:
+        _logger.debug(ind_str + 'showing dfl')
+        rcParams["savefig.directory"] = os.path.dirname(filePath)
         plt.show()
     else:
         plt.close('all')
@@ -1767,8 +1776,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
     figsize = (14, 7)
     figsize = (8, 6)
 
-    if debug > 0:
-        print ('statistical postprocessing started')
+    _logger.info('statistical postprocessing started')
     start_time = time.time()
 
     if proj_dir[-1] != '/':
@@ -1798,7 +1806,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
                     outlist[irun].calc_spec(npad = spec_pad)
                     run_range_good.append(irun)
                 except:
-                    print('     could not read '+out_file)
+                    _logger.warning('could not read {}'.format(out_file))
 
         run_range = run_range_good
         
@@ -1831,8 +1839,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
         if run_range == [] or len(run_range) == 1:
             continue
 
-        if debug > 0:
-            print('    processing runs ' + str(run_range) + ' of stage ' + str(stage))
+        _logger.info(ind_str + 'processing runs ' + str(run_range) + ' of stage ' + str(stage))
 
        # for irun in run_range:
            # out_file=proj_dir+'run_'+str(irun)+'/run.'+str(irun)+'.s'+str(stage)+'.gout'
@@ -1861,10 +1868,8 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
 
         
         s_param_range = s_param_inp
-        if debug > 0:
-            print('    processing S parameters ' + str(s_param_range))
-        if debug > 1:
-            print('      s_inp ' + str(s_inp))
+        _logger.info(ind_str + 'processing S parameters ' + str(s_param_range))
+        _logger.debug(ind_str + 's_inp ' + str(s_inp))
 
         for param in s_param_range:
             for s_ind in s_inp:

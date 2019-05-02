@@ -692,8 +692,6 @@ def read_dpa4(filePath, start_slice=0, stop_slice=np.inf):
         _logger.debug(2*ind_str + 'done')
     
     dpa = Genesis4ParticlesDump()
-        
-    _logger.info(ind_str + 'one4one = {}'.format(one4one))
     
     if one4one:
         _logger.log(5, 2*ind_str + 'x[0].shape {}'.format(x[0].shape))

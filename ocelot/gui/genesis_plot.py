@@ -3566,16 +3566,17 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
                                       plot_title=None, x_label='x', y_label='y', text_present=text_present,
                                       interpolation=interpolation, normalization=normalization, result=1, **kwargs)
     
-    ax2 = fig.add_subplot(ny_plots, 3, 2)
+    ax2 = fig.add_subplot(ny_plots, 3, 2, sharey=ax1)
     plot_stokes_sbfg_lin(ax2, stk_params, slice=x_plane, plane='x', cmap2d=cmap_lin, plot_title='Linear polarization',
                          x_label='z', y_label='y', text_present=text_present, interpolation=interpolation, normalization=normalization, **kwargs)
     
-    ax3 = fig.add_subplot(ny_plots, 3, 3)
+    ax3 = fig.add_subplot(ny_plots, 3, 3, sharex=ax2)
     plot_stokes_sbfg_lin(ax3, stk_params, slice=y_plane, plane='y', cmap2d=cmap_lin, plot_title=None,
                          x_label='z', y_label='x', text_present=text_present, interpolation=interpolation, normalization=normalization, **kwargs)
         
     ax4 = fig.add_subplot(ny_plots, 3, 4, sharex=ax1, sharey=ax1)
-    circular_plt = plot_stokes_sbfg_circ(ax4, stk_params, slice=z_plane, plane='z', cmap=cmap_circ, plot_title=None, x_label='x', y_label='y', text_present=text_present, result=1, interpolation=interpolation, normalization=normalization, **kwargs)
+    circular_plt = plot_stokes_sbfg_circ(ax4, stk_params, slice=z_plane, plane='z', cmap=cmap_circ, plot_title=None, 
+                                         x_label='x', y_label='y', text_present=text_present, result=1, interpolation=interpolation, normalization=normalization, **kwargs)
     
     ax5 = fig.add_subplot(ny_plots, 3, 5, sharex=ax2, sharey=ax2)
     plot_stokes_sbfg_circ(ax5, stk_params, slice=x_plane, plane='x', cmap=cmap_circ, plot_title='Circular polarization',

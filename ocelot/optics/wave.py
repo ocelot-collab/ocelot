@@ -720,6 +720,7 @@ class StokesParameters:
     
     def slice_2d_idx(self, idx, plane='z'):
         _logger.debug('slicing stokes matrix at index {} over {} plane'.format(idx, plane))
+        #speedup by aboiding deepcopy
         S = deepcopy(self)
         if plane in ['x', 2]:
             plane = 2
@@ -859,10 +860,10 @@ def calc_stokes_dfl(dfl1, dfl2, basis='xy', mode=(0,0)):
         l1 = dfl1.Nz()
         l2 = dfl2.Nz()
         if l1 > l2:
-            _logger.info(ind_str + 'dfl1.Nz() > dfl2.Nz(), cutting dfl1')
+            _logger.info(ind_str + 'dfl1.Nz()={:} > dfl2.Nz()={:}, cutting dfl1'.format(l1, l2))
             dfl1.fld = dfl1.fld[:-(l1-l2), :, :]
         else:
-            _logger.info(ind_str + 'dfl1.Nz() < dfl2.Nz(), cutting dfl2')
+            _logger.info(ind_str + 'dfl1.Nz()={:} < dfl2.Nz()={:}, cutting dfl2'.format(l1, l2))
             dfl2.fld = dfl2.fld[:-(l2-l1), :, :]
 
     # if np.equal(dfl1.scale_z(), dfl2.scale_z()).all():

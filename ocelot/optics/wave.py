@@ -639,12 +639,14 @@ class StokesParameters:
         shape = self.s0.shape
         
         if isinstance(i, tuple):
-            if len(i) == 3:
-                S.sc_z, S.sc_y, S.sc_x = self.sc_z[i[0]], self.sc_y[i[1]], self.sc_x[i[2]]
-            elif len(i) == 2:
-                S.sc_z, S.sc_y = self.sc_z[i[0]], self.sc_y[i[1]]
-            elif len(i) == 1:
-                S.sc_z = self.sc_z[i[0]]
+            i1 = tuple([ii for ii in i if ii is not None]) # account for np.newaxis
+            
+            if len(i1) == 3:
+                S.sc_z, S.sc_y, S.sc_x = self.sc_z[i1[0]], self.sc_y[i1[1]], self.sc_x[i1[2]]
+            elif len(i1) == 2:
+                S.sc_z, S.sc_y = self.sc_z[i1[0]], self.sc_y[i1[1]]
+            elif len(i1) == 1:
+                S.sc_z = self.sc_z[i1[0]]
             else:
                 raise ValueError
         elif isinstance(i, slice) or isinstance(i, int):
@@ -1515,7 +1517,12 @@ def dfl_ap(dfl, ap_x=None, ap_y=None, debug=1):
     dfl_energy_orig = dfl.E()
     dfl.fld[:, mask_idx[0], mask_idx[1]] = 0
     
-    _logger.info(ind_str + 'done, %.2f%% energy lost' %( (dfl_energy_orig - dfl.E()) / dfl_energy_orig * 100 ))
+    if dfl_energy_orig == 0:
+        _logger.warn(ind_str + 'dfl_energy_orig = 0')
+    elif dfl.E() == 0:
+        _logger.warn(ind_str + 'done, %.2f%% energy lost' %(100))
+    else:
+        _logger.info(ind_str + 'done, %.2f%% energy lost' %( (dfl_energy_orig - dfl.E()) / dfl_energy_orig * 100 ))
     # tmp_fld = dfl.fld[:,idx_x1:idx_x2,idx_y1:idx_y2]
     
     # dfl_out.fld[:] = np.zeros_like(dfl_out.fld)

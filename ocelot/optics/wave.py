@@ -637,18 +637,29 @@ class StokesParameters:
         S = StokesParameters() # start from emply object to save space
         
         shape = self.s0.shape
-        
+        _logger.log(5, ind_str + 'Stokes slicing index all' + str(i))
         if isinstance(i, tuple):
             i1 = tuple([ii for ii in i if ii is not None]) # account for np.newaxis
+            _logger.log(5, ind_str + 'Stokes slicing index scales' + str(i1))
+            for dim, i1i in enumerate(i1): #slice scales, avoiding slicing zero-length-arrays
+                if dim == 0:
+                    if np.size(self.sc_z)>1:
+                        S.sc_z = self.sc_z[i1i]
+                if dim == 1:
+                    if np.size(self.sc_y)>1:
+                        S.sc_y = self.sc_y[i1i]
+                if dim == 2:
+                    if np.size(self.sc_x)>1:
+                        S.sc_x = self.sc_x[i1i]
             
-            if len(i1) == 3:
-                S.sc_z, S.sc_y, S.sc_x = self.sc_z[i1[0]], self.sc_y[i1[1]], self.sc_x[i1[2]]
-            elif len(i1) == 2:
-                S.sc_z, S.sc_y = self.sc_z[i1[0]], self.sc_y[i1[1]]
-            elif len(i1) == 1:
-                S.sc_z = self.sc_z[i1[0]]
-            else:
-                raise ValueError
+            # if len(i1) == 3:
+                # S.sc_z, S.sc_y, S.sc_x = self.sc_z[i1[0]], self.sc_y[i1[1]], self.sc_x[i1[2]]
+            # elif len(i1) == 2:
+                # S.sc_z, S.sc_y = self.sc_z[i1[0]], self.sc_y[i1[1]]
+            # elif len(i1) == 1:
+                # S.sc_z = self.sc_z[i1[0]]
+            # else:
+                # raise ValueError
         elif isinstance(i, slice) or isinstance(i, int):
             S.sc_z = self.sc_z[i]
         
@@ -1387,7 +1398,7 @@ def calc_phase_delay_poly(coeff, w, w0):
     
 #    _logger.debug(ind_str + 'coeffs for compression = {}'.format(coeff))
     coeff_norm = [ci / (1e15)**i / factorial(i) for i, ci in enumerate(coeff)]
-    coeff_norm = list(np.flip(coeff_norm, axis=0))
+    coeff_norm = list(np.flipud(coeff_norm))
 #    _logger.debug(ind_str + 'coeffs_norm = {}'.format(coeff_norm))
     
     for i , coeffi in enumerate(coeff_norm):
@@ -2345,7 +2356,7 @@ def wigner_pad(wig, pad):
     _logger.debug(ind_str + 'done')
     return wig_out
 
-def wigner_out(out, z=inf, method='mp', pad=1, debug=1):
+def wigner_out(out, z=inf, method='mp', pad=1, debug=1, on_axis=1):
     '''
     returns WignerDistribution from GenesisOutput at z
     '''
@@ -2368,16 +2379,34 @@ def wigner_out(out, z=inf, method='mp', pad=1, debug=1):
     zi = np.where(out.z >= z)[0][0]
 
     wig = WignerDistribution()
-    if hasattr(out, 'p_int'):#genesis2
-        wig.field = np.sqrt(out.p_int[:,zi])*np.exp(1j*out.phi_mid[:,zi])
-        wig.xlamds = out('xlamds')
-        wig.filePath = out.filePath
-    elif hasattr(out, 'h5'):#genesis4
-        wig.field = out.rad_field(zi=zi, loc='near')
-        wig.xlamds = out.lambdaref
-        wig.filePath = out.h5.filename
+    
+    if on_axis:
+        if hasattr(out, 'p_mid'):#genesis2
+            wig.field = np.sqrt(out.p_mid[:,zi])*np.exp(1j*out.phi_mid[:,zi])
+            wig.xlamds = out('xlamds')
+            wig.filePath = out.filePath
+        elif hasattr(out, 'h5'):#genesis4
+            logger.warning('not implemented for on-axis, chaeck!')
+            wig.field = out.rad_field(zi=zi, loc='near')
+            wig.xlamds = out.lambdaref
+            wig.filePath = out.h5.filename
+        else:
+            _logger.error('out object has neither p_int nor h5 attribute')
+        wig.on_axis=True
     else:
-        _logger.error('out object has neither p_int nor h5 attribute')
+        if hasattr(out, 'p_int'):#genesis2
+            wig.field = np.sqrt(out.p_int[:,zi])*np.exp(1j*out.phi_mid[:,zi])
+            wig.xlamds = out('xlamds')
+            wig.filePath = out.filePath
+        elif hasattr(out, 'h5'):#genesis4
+            wig.field = out.rad_field(zi=zi, loc='near')
+            wig.xlamds = out.lambdaref
+            wig.filePath = out.h5.filename
+        else:
+            _logger.error('out object has neither p_int nor h5 attribute')
+        wig.on_axis=False
+
+            
     wig.s = out.s
     wig.z = z
     

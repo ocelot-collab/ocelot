@@ -266,8 +266,8 @@ class GenesisInput:
         self.xlamds = 1E-9  # The resonant radiation wavelength.
         self.prad0 = 0  # The input power of the radiation field.
         self.pradh0 = 0  # Radiation power for seeding with a harmonics, defined by NHARM.
-        self.zrayl = 0.5  # The Rayleigh length of the seeding radiation field.
-        self.zwaist = 2  # Position of the waist of the seeding radiation field with respect to the undulator entrance.
+        self.zrayl = 2.5  # The Rayleigh length of the seeding radiation field.
+        self.zwaist = 2.5  # Position of the waist of the seeding radiation field with respect to the undulator entrance.
 
         # mesh
         self.ncar = 151   # The number of grid points for the radiation field along a single axis. The total number for the mesh is NCAR^2

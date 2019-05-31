@@ -3021,12 +3021,23 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
         wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], abs(wigner[::downsample,::downsample]))
         if plot_text:
             axScatter.text(0.02, 0.98, r'$W_{{max}}$= {:.2e}'.format(np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes, color='w')
+            if hasattr(W, 'on_axis'):
+                if W.on_axis is True:
+                    axScatter.text(0.5, 0.98, r"(on axis)", fontsize=10, horizontalalignment='center', verticalalignment='top', transform=axScatter.transAxes, color='w')
+                else:
+                    axScatter.text(0.5, 0.98, r"(assuming full spatial coherence)", fontsize=10, horizontalalignment='center', verticalalignment='top', transform=axScatter.transAxes, color='w')
+
     else:
         # cmap='RdBu_r'
         # axScatter.imshow(wigner, cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
         wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], wigner[::downsample,::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
         if plot_text:
             axScatter.text(0.02, 0.98, r'$W_{{max}}$= {:.2e}'.format(np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes)#fontsize=12,
+            if hasattr(W, 'on_axis'):
+                if W.on_axis is True:
+                    axScatter.text(0.5, 0.98, r"(on axis)", fontsize=10, horizontalalignment='center', verticalalignment='top', transform=axScatter.transAxes)
+                else:
+                    axScatter.text(0.5, 0.98, r"(assuming full spatial coherence)", fontsize=10, horizontalalignment='center', verticalalignment='top', transform=axScatter.transAxes)
             
     if plot_moments:
         weight_power = power/np.max(power)

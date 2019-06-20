@@ -2829,7 +2829,7 @@ def beam_file_str(beam):
              'eloss': 'ELOSS'}
     
     l = beam.len()
-    attrs = beam.params() + beam.properties
+    attrs = beam.params() + list(beam.properties)
     
     f_str = "# \n? VERSION = 1.0\n? SIZE =" + str(l) + "\n? COLUMNS"
     

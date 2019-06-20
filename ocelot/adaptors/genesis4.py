@@ -612,7 +612,7 @@ def read_dfl4(filePath):
 
 
 
-def read_dpa4(filePath, start_slice=0, stop_slice=np.inf):
+def read_dpa4(filePath, start_slice=0, stop_slice=np.inf, estimate_npart=0):
     '''
     Reads Genesis1.3 v4 particle output file
     
@@ -641,6 +641,21 @@ def read_dpa4(filePath, start_slice=0, stop_slice=np.inf):
         if not one4one:
             npart = int(h5.get('slice000001/gamma').size) # fix?
             _logger.debug(ind_str + 'npart = {}'.format(npart))
+        else:
+            if estimate_npart:
+                I_tmp_full = []
+                I_tmp_wind = []
+                for dset in h5:
+                    if dset.startswith('slice') and type(h5[dset]) == h5py._hl.group.Group:
+                        slice = int(dset.replace('slice',''))    
+                        I_tmp_full.append(h5[dset]['current'][:])                    
+                        if slice >= start_slice and slice <= stop_slice:
+                            I_tmp_wind.append(h5[dset]['current'][:])
+                npart_full_tmp = np.sum(I_tmp_full) * lslice / speed_of_light / q_e
+                npart_wind_tmp = np.sum(I_tmp_wind) * lslice / speed_of_light / q_e
+                _logger.info(ind_str + 'estimated npart = {:}M'.format(npart_full_tmp/1e6))
+                _logger.info(ind_str + 'estimated npart to be downloaded = {:}.M'.format(npart_wind_tmp/1e6))
+        
         
         # filePath = h5.filename
         
@@ -669,9 +684,9 @@ def read_dpa4(filePath, start_slice=0, stop_slice=np.inf):
         
         _logger.debug(ind_str + 'reading slices between {} and {}'.format(start_slice, stop_slice))
         _logger.debug(2*ind_str + '({} out of {})'.format(stop_slice - start_slice, nslice))
-        for dset in h5:
-            _logger.log(5, ind_str + dset)
-            _logger.log(5, ind_str + str(type(h5[dset])))
+        for dset in sorted(h5):
+            # _logger.log(5, ind_str + dset)
+            # _logger.log(5, ind_str + str(type(h5[dset])))
             if dset.startswith('slice') and type(h5[dset]) == h5py._hl.group.Group:
                 slice = int(dset.replace('slice',''))
                 _logger.log(5, 2*ind_str + 'slice number {}'.format(slice))                
@@ -679,7 +694,7 @@ def read_dpa4(filePath, start_slice=0, stop_slice=np.inf):
                     _logger.log(5, 2*ind_str + 'processing')
                     I.append(h5[dset]['current'][:])
                     ph.append(h5[dset]['theta'][:])
-                    _logger.log(5, 2*ind_str + str(h5[dset]['x'][:].shape))
+                    _logger.log(5, 2*ind_str + '{} particles'.format(h5[dset]['x'].size))
                     # s.append(s0 + ph0 / 2 / np.pi * lslice)
                     x.append(h5[dset]['x'][:])
                     px.append(h5[dset]['px'][:])
@@ -694,7 +709,8 @@ def read_dpa4(filePath, start_slice=0, stop_slice=np.inf):
     dpa = Genesis4ParticlesDump()
     
     if one4one:
-        _logger.log(5, 2*ind_str + 'x[0].shape {}'.format(x[0].shape))
+        _logger.debug(ind_str + 'flattening arrays')
+        # _logger.log(5, 2*ind_str + 'x.shape {}'.format(np.shape(x)))
         dpa.x = np.hstack(x)
         dpa.px = np.hstack(px)
         dpa.y = np.hstack(y)
@@ -730,6 +746,7 @@ def read_dpa4(filePath, start_slice=0, stop_slice=np.inf):
         dpa.g = np.array(g).reshape((nslice, nbins, npartpb), order='F')
         dpa.I = np.array(I).flatten()
     
+    _logger.debug(ind_str + 'writing to dpa object')
     dpa.nslice = nslice
     dpa.lslice = lslice
     dpa.npart = npart
@@ -807,13 +824,24 @@ def dpa42edist(dpa, n_part=None, fill_gaps=False):
         
         
         _logger.debug(ind_str + 'particles kept = {}%'.format(n_part / npart * 100))
+        _logger.debug(ind_str + 'picking {} of {} particles'.format(len(pick_i), npart))
         
-        edist.g = dpa.g[pick_i]
-        edist.xp = dpa.px[pick_i] / edist.g
-        edist.yp = dpa.py[pick_i] / edist.g
-        edist.x = dpa.x[pick_i]
-        edist.y = dpa.y[pick_i]
-        edist.t = t0[pick_i]
+        if n_part == npart:
+            edist.g = dpa.g
+            edist.xp = dpa.px / edist.g
+            edist.yp = dpa.py / edist.g
+            edist.x = dpa.x
+            edist.y = dpa.y
+            edist.t = t0
+        else:
+            edist.g = dpa.g[pick_i]
+            edist.xp = dpa.px[pick_i] / edist.g
+            edist.yp = dpa.py[pick_i] / edist.g
+            edist.x = dpa.x[pick_i]
+            edist.y = dpa.y[pick_i]
+            edist.t = t0[pick_i]
+        
+        _logger.debug(2*ind_str + 'done')
         
     else:
         # if fill_gaps:
@@ -947,7 +975,9 @@ def dpa42edist(dpa, n_part=None, fill_gaps=False):
 def read_dpa42parray(filePath, N_part=None, fill_gaps=True):
     
     _logger.info('reading gen4 .dpa file into parray')
+    _logger.warning(ind_str + 'in beta')
     _logger.debug(ind_str + 'reading from ' + filePath)
+    
     
     import random
     N_part = None
@@ -964,6 +994,11 @@ def read_dpa42parray(filePath, N_part=None, fill_gaps=True):
     npart = int(h5.get('slice000001/gamma').size)
     nbins = int(h5.get('beamletsize')[0])
     zsep = int(sepslice / lslice)
+    
+    one4one = bool(h5.get('one4one')[0])
+    if one4one:
+        _logger.error('read_dpa42parray does not support one4one, yet')
+        raise ValueError 'read_dpa42parray does not support one4one, yet'
     
     _logger.debug('nslice = ' + str(nslice))
     _logger.debug('lslice = ' + str(lslice) + 'm')

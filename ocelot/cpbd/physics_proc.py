@@ -15,14 +15,18 @@ class PhysProc:
     :method prepare(self, lat): - the method is called at the moment of Physics Process addition to Navigator class.
     :method apply(self, p_array, dz): - the method is called on every step.
     :attribute step: - number of steps in [Navigator.unit_step] self.step*Navigator.unit_step = [m]
-    :attribute indx0: - number of start element in lattice.sequence
-    :attribute indx1: - number of stop element in lattice.sequence
+    :attribute indx0: - number of start element in lattice.sequence - assigned in navigator.add_physics_proc()
+    :attribute indx1: - number of stop element in lattice.sequence - assigned in navigator.add_physics_proc()
+    :attribute s_start: - position of start element in lattice - assigned in navigator.add_physics_proc()
+    :attribute s_stop: - position of stop element in lattice.sequence - assigned in navigator.add_physics_proc()
     """
     def __init__(self, step=1):
         self.step = step
         self.energy = None
         self.indx0 = None
         self.indx1 = None
+        self.s_start = None
+        self.s_stop = None
 
     def prepare(self, lat):
         """

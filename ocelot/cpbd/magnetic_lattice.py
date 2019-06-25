@@ -70,14 +70,15 @@ def matrix2Matrix(elem, R):
     elem.rm46, elem.rm56, elem.rm66 = R[3, 5], R[4, 5], R[5, 5]
 
 
-def shrinker(lat, remaining_types, remaining_elems=[], init_energy=0.):
+def shrinker(lat, remaining_types=[], remaining_elems=[], init_energy=0.):
     """
+    Function to compress the lattice (first order) excluding elements by type or by individual elements
 
     :param lat: MagneticLattice
-    :param remaining_types: list, the type of the elements which needed to be untoched
+    :param remaining_types: list, the type of the elements which needed to be untouched
                             others will be "compress" to Matrix element
                             e.g. [Monitor, Quadrupole, Bend, Hcor]
-    :param remaining_elems: list of elements
+    :param remaining_elems: list of elements (ids (str) or object)
     :param init_energy: initial energy
     :return: New MagneticLattice
     """
@@ -90,7 +91,7 @@ def shrinker(lat, remaining_types, remaining_elems=[], init_energy=0.):
     count = 0
     E = init_energy
     for elem in lat.sequence:
-        if elem.__class__ in remaining_types or elem.id in remaining_elems:
+        if elem.__class__ in remaining_types or elem.id in remaining_elems or elem in remaining_elems:
             if count != 0:
                 new_elem.l = length
                 matrix2Matrix(new_elem, _r)

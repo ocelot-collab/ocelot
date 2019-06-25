@@ -35,6 +35,10 @@ def load_particle_array(filename, print_params=False):
     """
     Universal function to load beam file, *.ast or *.npz format
 
+    Note that downloading ParticleArray from the astra file (.ast) and saving it back does not give the same distribution.
+    The difference arises because the array of particles does not have a reference particle, and in this case
+    the first particle is used as a reference.
+
     :param filename: path to file, filename.ast or filename.npz
     :return: ParticleArray
     """
@@ -42,7 +46,7 @@ def load_particle_array(filename, print_params=False):
     if file_extension == ".npz":
         return load_particle_array_from_npz(filename, print_params=print_params)
     elif file_extension in [".ast", ".001"]:
-        return astraBeam2particleArray(filename, s_ref=-1, Eref=-1, print_params=print_params)
+        return astraBeam2particleArray(filename, print_params=print_params)
     else:
         raise Exception("Unknown format of the beam file: " + file_extension + " but must be *.ast or *.npz ")
 
@@ -50,6 +54,10 @@ def load_particle_array(filename, print_params=False):
 def save_particle_array(filename, p_array, ref_index=0):
     """
     Universal function to save beam file, *.ast or *.npz format
+
+    Note that downloading ParticleArray from the astra file (.ast) and saving it back does not give the same distribution.
+    The difference arises because the array of particles does not have a reference particle, and in this case
+    the first particle is used as a reference.
 
     :param filename: path to file, filename.ast or filename.npz
     :param ref_index: index of ref particle

@@ -16,7 +16,7 @@ q_e = 1.6021766208e-19       # C - Elementary charge
 m_e_kg = 9.10938215e-31      # kg
 h_J_s = 6.626070040e-34      # Plancks constant [J*s]
 
-m_e_eV = m_e_kg * speed_of_light**2 / q_e  #  eV (510998.8671)
+m_e_eV = m_e_kg * speed_of_light**2 / q_e  # eV (510998.8671)
 m_e_MeV = m_e_eV / 1e+6                    # MeV (0.510998928)
 m_e_GeV = m_e_eV / 1e+9                    # GeV
 
@@ -83,19 +83,19 @@ def Ephoton2field(energy, lu = 0.04, Eeb = 14):
 
 
 
-Hz = 1.e-9
-KHz = 1.e-6
-MHz = 1.e-3
-GHz = 1.0
-THz = 1.e3
-
-V = 1.-9
-KV = 1.e-6
-MV = 1.e-3
-GV = 1.0
-
-eV = 1.e-9
-KeV = 1.e-6
-MeV = 1.e-3
-GeV = 1.0
-TeV = 1.e3
+# Hz = 1.e-9
+# KHz = 1.e-6
+# MHz = 1.e-3
+# GHz = 1.0
+# THz = 1.e3
+#
+# V = 1.-9
+# KV = 1.e-6
+# MV = 1.e-3
+# GV = 1.0
+#
+# eV = 1.e-9
+# KeV = 1.e-6
+# MeV = 1.e-3
+# GeV = 1.0
+# TeV = 1.e3

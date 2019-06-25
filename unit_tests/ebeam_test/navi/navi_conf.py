@@ -85,7 +85,7 @@ def p_array():
     sigma_py = 4.00994225888e-05
 
     p_array = generate_parray(sigma_x=sigma_x, sigma_px=sigma_px, sigma_y=sigma_y, sigma_py=sigma_py,
-                              sigma_tau=1.30190131e-04, sigma_p=3.09815718e-04, tau_p_cor=0.002, charge=0.5e-9,
+                              sigma_tau=1.30190131e-04, sigma_p=3.09815718e-04, chirp=0.002, charge=0.5e-9,
                               nparticles=10, energy=0.13)
 
     p_array.rparticles *= 0.

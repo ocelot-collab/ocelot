@@ -369,8 +369,7 @@ def calculate_radiation(lat, screen, beam, energy_loss=False, quantum_diff=False
 
     :param lat: MagneticLattice should include element Undulator
     :param screen: Screen class
-    :param beam: if Beam - the radiation is calculated from one electron,  if ParticleArray - the radiation
-                    is calculated for the each particles in the ParticleArray and field components is summing up afterwards.
+    :param beam: Beam class, the radiation is calculated from one electron
     :param energy_loss: False, if True includes energy loss after each period
     :param quantum_diff: False, if True introduces random energy kick
     :param accuracy: 1

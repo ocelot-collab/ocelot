@@ -2446,7 +2446,7 @@ def wigner_dfl(dfl, method='mp', pad=1, debug=1):
     
     return wig
     
-def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1):
+def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1, **kwargs):
     '''
     returns averaged WignerDistribution from GenStatOutput at stage at z
     '''
@@ -2497,10 +2497,10 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1):
         field = np.sqrt(out_stat.p_int[zi,:,i]) * np.exp(1j*out_stat.phi_mid[zi,:,i])
         if pad > 1:
             field = np.concatenate([np.zeros(n_add_l), field, np.zeros(n_add_r)])
-        WW[i,:,:] = calc_wigner(field, method=method, debug=debug)
+        WW[i,:,:] = calc_wigner(field, method=method, debug=debug, **kwargs)
     
     wig = WignerDistribution()
-    wig.wig = np.mean(WW,axis=0)
+    wig.wig = np.mean(WW, axis=0)
     wig.wig_stat = WW
     wig.s = s
     # wig.freq_lamd = out_stat.f

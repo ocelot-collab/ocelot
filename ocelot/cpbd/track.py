@@ -420,44 +420,46 @@ def tracking_step(lat, particle_list, dz, navi):
     for tm in t_maps:
         start = time()
         tm.apply(particle_list)
-        #print("tracking_step ", particle_list.rparticles[:,-1], "   TM = ", tm.length)
         _logger.debug(" tracking_step -> tm.class: " + tm.__class__.__name__  + "  l= "+  str(tm.length))
         _logger.debug(" tracking_step -> tm.apply: time exec = " + str(time() - start) + "  sec")
     return
 
 
-def track(lattice, p_array, navi, print_progress=True, calc_tws=True):
+def track(lattice, p_array, navi, print_progress=True, calc_tws=True, bounds=None):
     """
     tracking through the lattice
 
     :param lattice: Magnetic Lattice
     :param p_array: ParticleArray
     :param navi: Navigator
+    :param print_progress: True, print tracking progress
+    :param calc_tws: True, during the tracking twiss parameters are calculated from the beam distribution
     :return: twiss list, ParticleArray
     """
-    tw0 = get_envelope(p_array) if calc_tws else Twiss()# get_envelope(p_array)
-    #print(tw0)
+
+    tw0 = get_envelope(p_array, bounds=bounds) if calc_tws else Twiss()
     tws_track = [tw0]
     L = 0.
+
     while np.abs(navi.z0 - lattice.totalLen) > 1e-10:
         if navi.kill_process:
             _logger.info("Killing tracking ... ")
             return tws_track, p_array
-        dz, proc_list, phys_steps = navi.get_next()
 
+        dz, proc_list, phys_steps = navi.get_next()
         tracking_step(lat=lattice, particle_list=p_array, dz=dz, navi=navi)
+        #part = p_array[0]
         for p, z_step in zip(proc_list, phys_steps):
             p.z0 = navi.z0
             p.apply(p_array, z_step)
-        tw = get_envelope(p_array) if calc_tws else Twiss()
+        #p_array[0] = part
+        tw = get_envelope(p_array, bounds=bounds) if calc_tws else Twiss()
         L += dz
         tw.s += L
         tws_track.append(tw)
 
         if print_progress:
             poc_names = [p.__class__.__name__ for p in proc_list]
-            #sys.stdout.write("\033[K")
-            #print("z = " + str(navi.z0)+" / "+str(lattice.totalLen) + " : applied: " + ", ".join(poc_names) )
             sys.stdout.write( "\r" + "z = " + str(navi.z0)+" / "+str(lattice.totalLen) + " : applied: " + ", ".join(poc_names)  )
             sys.stdout.flush()
 

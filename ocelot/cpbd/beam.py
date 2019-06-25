@@ -333,6 +333,9 @@ class BeamArray(Beam):
 
     def len(self):
         return np.size(self.s)
+        
+    def charge(self):
+        return np.trapz(self.I, self.s / speed_of_light) #C
 
     def params(self):
         l = self.len()

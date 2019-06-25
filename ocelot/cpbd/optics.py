@@ -656,6 +656,7 @@ class SecondTM(TransferMap):
                                                   self.t_mat_z_e(self.length, energy), X, self.dx, self.dy, self.tilt)
 
         self.R_tilt = lambda energy: np.dot(np.dot(rot_mtx(-self.tilt), self.r_z_no_tilt(self.length, energy)), rot_mtx(self.tilt))
+
         self.T_tilt = lambda energy: transfer_map_rotation(self.r_z_no_tilt(self.length, energy),
                                                              self.t_mat_z_e(self.length, energy), self.tilt)[1]
 
@@ -1225,9 +1226,19 @@ class Navigator:
             dz = L - self.z0
         return dz
 
+    def check_proc_bounds(self, dz, proc_list, phys_steps, active_process):
+        for p in proc_list:
+            #print("check = ", dz, self.z0, p.s_stop, p not in active_process)
+            if dz + self.z0 >= p.s_stop and p not in active_process:
+                active_process.append(p)
+                phys_steps = np.append(phys_steps, dz)
+
+        return active_process, phys_steps
+
     def get_next(self):
 
         proc_list = self.get_proc_list()
+
         if len(proc_list) > 0:
 
             counters = np.array([p.counter for p in proc_list])
@@ -1235,18 +1246,21 @@ class Navigator:
             step = counters.min()
 
             inxs = np.where(counters == step)
-            #print(inxs)
+
             processes = [proc_list[i] for i in inxs[0]]
+
             phys_steps = np.array([p.step for p in processes])*self.unit_step
+
+
             #print("steps = ", dzs)
             for p in proc_list:
                 p.counter -= step
                 if p.counter == 0:
                     p.counter = p.step
-            dz = step * self.unit_step
+
+            dz = np.min(phys_steps)
             # check if dz overjumps the stop element
             # dz, processes = self.check_overjump(dz, processes)
-
         else:
 
             processes = proc_list
@@ -1256,11 +1270,14 @@ class Navigator:
             else:
                 L = self.lat.totalLen
             dz = L - self.z0
-            phys_steps = np.array([dz])
+            phys_steps = np.array([])
         # check if dz overjumps the stop element
         #dzs_red = dzs - dz
         dz, processes, phys_steps = self.check_overjump(dz, processes, phys_steps)
-        #dzs = dzs_red
+        processes, phys_steps = self.check_proc_bounds(dz, proc_list, phys_steps, processes)
+
+
+
         _logger_navi.debug(" Navigator.get_next: process: " + " ".join([proc.__class__.__name__ for proc in processes]))
 
         _logger_navi.debug(" Navigator.get_next: navi.z0=" + str(self.z0) + " navi.n_elem=" + str(self.n_elem) + " navi.sum_lengths="
@@ -1268,7 +1285,6 @@ class Navigator:
 
         _logger_navi.debug(" Navigator.get_next: element type=" + self.lat.sequence[self.n_elem].__class__.__name__ + " element name=" +
                      str(self.lat.sequence[self.n_elem].id))
-
         return dz, processes, phys_steps
 
 

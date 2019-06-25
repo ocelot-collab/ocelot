@@ -455,53 +455,6 @@ def new_plot_elems(fig, ax, lat, s_point=0, nturns=1, y_lim=None, y_scale=1, leg
         ax.legend(loc='upper center', ncol=ncols, shadow=False, prop=font_manager.FontProperties(size=legend_font_size))
 
 
-def plot_elems(ax, lat, s_point = 0, nturns = 1, y_lim = None,y_scale = 1, legend = True):
-    quad, bend, sext, corr, mons, cav, mat, und, multi, drft = elem_cord(lat)
-    #print len(quad), len(bend), len(sext), len(corr ),len( mons), len( cav)
-    #print cav
-    alpha = 1
-    ax.set_ylim((-1,1.5))
-    if y_lim != None:
-        ax.set_ylim(y_lim)
-    n = 0
-    for i in range(nturns):
-        n = 0
-        if len(quad)>1:
-            ax.fill(quad[:,0]+i*lat.totalLen + s_point, quad[:,1]*y_scale*0.8, "r", alpha = alpha, label = "quad")
-            n += 1
-        if len(bend)>1:
-            ax.fill(bend[:,0]+i*lat.totalLen + s_point, bend[:,1]*y_scale*0.7, "lightskyblue", alpha = alpha, label = "bend")
-            n += 1
-        if len(sext)>1:
-            ax.fill(sext[:,0]+i*lat.totalLen + s_point, sext[:,1]*y_scale*0.8, "green",  edgecolor = "green", alpha = alpha, label = "sext")
-            n += 1
-        if len(multi)>1:
-            ax.fill(multi[:,0]+i*lat.totalLen + s_point, multi[:,1]*y_scale*0.8, "green",  edgecolor = "green", alpha = alpha, label = "multi")
-            n += 1
-        if len(corr)>1:
-            ax.fill(corr[:,0]+i*lat.totalLen + s_point, corr[:,1]*y_scale*0.7, "b", edgecolor = "b", alpha = alpha, label = "corr")
-            n += 1
-        if len(mons)>1:
-            ax.fill(mons[:,0]+i*lat.totalLen + s_point, mons[:,1]*y_scale*0.7, "orange", edgecolor = "orange", alpha = alpha, label = "bpm")
-            n += 1
-        if len(cav)>1:
-            ax.fill(cav[:,0]+i*lat.totalLen + s_point, cav[:,1]*y_scale*0.7, "orange", edgecolor = "lightgreen", alpha = alpha, label = "cav")
-            #print cav[:,0]+i*lat.totalLen, cav[:,1]*y_scale*0.7, i*lat.totalLen
-            n += 1
-        if len(mat)>1:
-            ax.fill(mat[:,0]+i*lat.totalLen + s_point, mat[:,1]*y_scale*0.7, "pink", edgecolor = "lightgreen", alpha = alpha, label = "mat")
-            n += 1
-        if len(und)>1:
-            ax.fill(und[:,0]+i*lat.totalLen + s_point, und[:,1]*y_scale*0.7, "pink", edgecolor = "lightgreen", alpha = alpha, label = "und")
-            n += 1
-        if len(drft)>1:
-            ax.fill(drft[:,0]+i*lat.totalLen + s_point, drft[:,1]*y_scale*0.7, "k")
-            n += 1
-    #ax.broken_barh(s , (y0, yw*1.3), facecolors='green', edgecolor = "green", alpha = alpha, label = "Sext")
-    #ax.broken_barh(c , (y0, yw), facecolors='b',edgecolor = "b", alpha = alpha)
-    if legend:
-        ax.legend(loc='upper center', ncol=n, shadow=False, prop=font_manager.FontProperties(size=15))
-
 def plot_disp(ax, tws, top_plot, font_size):
     S = [p.s for p in tws]#map(lambda p:p.s, tws)
     d_Ftop = []
@@ -676,46 +629,7 @@ def plot_xy(ax, S, X, Y, font_size):
     leg.get_frame().set_alpha(0.5)
 
 
-def body_trajectory(fig, ax_xy, ax_el, lat, plist):
-    X = [p.x for p in plist]
-    Y = [p.y for p in plist]
-    S = [p.s for p in plist]
-
-    font_size = 16
-
-    for ax in ax_xy, ax_el:
-        if ax!=ax_el:
-            for label in ax.get_xticklabels():
-                label.set_visible(False)
-
-    ax_xy.grid(True)
-    ax_el.set_yticks([])
-    ax_el.grid(True)
-    #plt.xlim(S[0], S[-1])
-
-    fig.subplots_adjust(hspace=0)
-
-    plot_xy(ax_xy, S, X, Y, font_size)
-
-    plot_elems(ax_el, lat, nturns = 1, legend = False) # plot elements
-
-
-def plot_trajectory(lat, list_particles):
-    fig = plt.figure()
-    plt.rc('axes', grid=True)
-    plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
-    left, width = 0.1, 0.85
-    rect2 = [left, 0.2, width, 0.7]
-    rect3 = [left, 0.05, width, 0.15]
-
-    ax_xy = fig.add_axes(rect2)  #left, bottom, width, height
-    ax_el = fig.add_axes(rect3, sharex=ax_xy)
-
-    body_trajectory(fig, ax_xy, ax_el, lat, list_particles)
-    plt.show()
-
-
-def plot_API(lat, legend=True, fig_name=1, grid=True):
+def plot_API(lat, legend=True, fig_name=1, grid=True, font_size=12):
     """
     Function creates a picture with lattice on the bottom part of the picture and top part of the picture can be
     plot arbitrary lines.
@@ -728,8 +642,13 @@ def plot_API(lat, legend=True, fig_name=1, grid=True):
     plt.rc('axes', grid=grid)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
     left, width = 0.1, 0.85
-    rect2 = [left, 0.2, width, 0.7]
-    rect3 = [left, 0.05, width, 0.15]
+    rect2 = [left, 0.19, width, 0.69]
+    rect3 = [left, 0.07, width, 0.12]
+
+
+    #rect1 = [left, 0.65, width, 0.3]
+    #rect2 = [left, 0.19, width, 0.46]
+    #rect3 = [left, 0.07, width, 0.12]
 
     ax_xy = fig.add_axes(rect2)  #left, bottom, width, height
     ax_el = fig.add_axes(rect3, sharex=ax_xy)
@@ -740,10 +659,14 @@ def plot_API(lat, legend=True, fig_name=1, grid=True):
             for label in ax.get_xticklabels():
                 label.set_visible(False)
 
-    ax_xy.grid(True)
+    ax_xy.grid(grid)
     ax_el.set_yticks([])
-    ax_el.grid(True)
+    ax_el.grid(grid)
     #plt.xlim(S[0], S[-1])
+
+    ax_xy.tick_params(axis='both', labelsize=font_size)
+    # leg = ax_xy.legend(loc='upper left', shadow=False, fancybox=True, prop=font_manager.FontProperties(size=font_size))
+    # leg.get_frame().set_alpha(0.2)
 
     fig.subplots_adjust(hspace=0)
 
@@ -751,7 +674,7 @@ def plot_API(lat, legend=True, fig_name=1, grid=True):
 
     #plot_elems(ax_el, lat, nturns = 1, legend = True) # plot elements
     #new_plot_elems(fig, ax_el, lat, nturns = 1, legend = legend)
-    new_plot_elems(fig, ax_el, lat, legend = legend, y_scale=0.8)
+    new_plot_elems(fig, ax_el, lat, legend=legend, y_scale=0.8, font_size=font_size)
 
     return fig, ax_xy
 
@@ -820,42 +743,6 @@ def compare_betas(lat, tws1, tws2, prefix1="beam1", prefix2="beam2", legend=True
     leg.get_frame().set_alpha(0.2)
 
     new_plot_elems(fig, ax_el, lat, s_point=s1[0], legend=legend, y_scale=0.8)
-
-
-
-def plot_traj_pulse(lat, list_particles, list_particles2, U1, U2):
-    fig = plt.figure()
-    plt.rc('axes', grid=True)
-    plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
-    left, width = 0.1, 0.85
-    rect2 = [left, 0.2, width, 0.7]
-    rect3 = [left, 0.05, width, 0.15]
-
-    ax_xy = fig.add_axes(rect2)  #left, bottom, width, height
-    ax_el = fig.add_axes(rect3, sharex=ax_xy)
-    S = map(lambda p:p.s, list_particles)
-    ax_xy.plot(S, U1,'g', lw = 1, label=r"$U1$")
-    ax_xy.plot(S, U2,'b', lw = 1, label=r"$U2$")
-    #print map(lambda p:p.s, list_particles2)
-    ax_xy.plot(map(lambda p:p.s, list_particles2), map(lambda p:p.x, list_particles2),'b', lw = 2, label=r"$p2$")
-    body_trajectory(fig, ax_xy, ax_el, lat, list_particles)
-    #body_trajectory(fig, ax_xy, ax_el, lat, list_particles2)
-    plt.show()
-
-
-
-def plot_elem_disp(lat, tws):
-    Dx = map(lambda p:p.Dx, tws)
-    S = map(lambda p:p.s, tws)
-    fig, ax = plt.subplots(1,sharex=True)
-    ax.grid(False)
-    ax.set_yticks([])
-    plt.xlim(tws[0].s, tws[-1].s)
-    lim = max(Dx)*1.1
-    plot_disp(ax, S, Dx, font_size = 16)
-    plot_elems(ax, lat, y_lim = None, y_scale = lim*0.6, legend = False) # plot elements
-    ax.set_ylim((0,lim))
-    plt.show()
 
 
 def resonance(Qx, Qy, order = 5):
@@ -1075,7 +962,7 @@ from ocelot.cpbd.beam import global_slice_analysis
 
 
 def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, nbins_y=200, interpolation="bilinear", inverse_tau=False,
-                show_moments=False, nfig=40, title=None, figsize=None, grid=True, filename=None):
+                show_moments=False, nfig=40, title=None, figsize=None, grid=True, filename=None, headtail=True):
     """
     Shows e-beam slice parameters (current, emittances, energy spread)
     and beam distributions (dE/(p0 c), X, Y) against long. coordinate (S)
@@ -1138,8 +1025,8 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
 
     plt.plot(slice_params.s * 1e3, slice_params.I, "b")
     # label = r"$I_{max}=$" + str(np.round(np.max(slice_params.I), 1))
-
-    leg = ax_c.legend([label], handlelength=0, handletextpad=0, fancybox=True, loc=location)
+    if headtail:
+        leg = ax_c.legend([label], handlelength=0, handletextpad=0, fancybox=True, loc=location)
     for item in leg.legendHandles:
         item.set_visible(False)
     plt.setp(ax_c.get_xticklabels(), visible=False)
@@ -1517,8 +1404,92 @@ def show_e_beam_reduced(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_
     if filename is not None:
         plt.savefig(filename)
 
+def beam_jointplot(p_array, show_plane="x", nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, nbins_y=200,
+                   interpolation="bilinear", inverse_tau=True, show_head=True,
+                show_moments=False, nfig=40, title=None, figsize=None, grid=True, filename=None):
+    """
+    Shows e-beam slice parameters (current, emittances, energy spread)
+    and beam distributions (dE/(p0 c), X, Y) against long. coordinate (S)
+    Note: beam head is on the left side
+
+    :param p_array: ParticleArray
+    :param nparts_in_slice: number of particles per slice
+    :param smoth_param: 0.05, smoothing parameters to calculate the beam current: sigma = smoth_param * np.std(p_array.tau())
+    :param nbins_x: number of bins for 2D hist. in horz. plane
+    :param nbins_y: number of bins for 2D hist. in vertical plane
+    :param interpolation: "bilinear", and acceptable values are 'none’, ‘nearest’, ‘bilinear’, ‘bicubic’, ‘spline16’,
+                        ‘spline36’, ‘hanning’, ‘hamming’, ‘hermite’, ‘kaiser’, ‘quadric’, ‘catrom’, ‘gaussian’, ‘bessel’
+    :param inverse_tau: False, inverse tau - head will be on the right side of figure
+    :param show_moments: False, show moments (X_mean_slice and Y_mean_slice) in the density distribution
+    :param nfig: number of the figure
+    :param title: None or string - title of the figure
+    :param figsize: None or e.g. (8, 6)
+    :param grid: True, show grid
+    :param filename: None or str,  filename to save picture in the file
+    :return:
+    """
+    p_array_copy = deepcopy(p_array)
+    if inverse_tau:
+        p_array_copy.tau()[:] *= -1
+    slice_params = global_slice_analysis(p_array_copy, nparts_in_slice, smooth_param, 2, 2)
+
+    fig = plt.figure(nfig, figsize=figsize)
+    if title != None:
+        fig.suptitle(title)
 
 
+    ax_top = plt.subplot(211)
+    plt.title("Current")
+
+    if inverse_tau:
+        arrow = r"$\Longrightarrow$"
+        label = "head " + arrow
+        location = "upper right"
+    else:
+        arrow = r"$\Longleftarrow$"
+        label = arrow + " head"
+        location = "upper left"
+
+    plt.plot(slice_params.s * 1e3, slice_params.I, "b")
+    # label = r"$I_{max}=$" + str(np.round(np.max(slice_params.I), 1))
+    if show_head:
+        leg = ax_top.legend([label], handlelength=0, handletextpad=0, fancybox=True, loc=location)
+        for item in leg.legendHandles:
+            item.set_visible(False)
+    plt.setp(ax_top.get_xticklabels(), visible=False)
+    plt.ylabel("I [A]")
+    plt.grid(grid)
+    if show_plane == "y":
+        ax_down = plt.subplot(212, sharex=ax_top)
+
+        show_density(p_array_copy.tau() * 1e3, p_array_copy.y() * 1e3, ax=ax_down, nbins_x=nbins_x, nbins_y=nbins_y,
+                     interpolation=interpolation, xlabel='s [mm]', ylabel='y [mm]', nfig=50,
+                     title="Side view", figsize=None, grid=grid, show_xtick_label=True)
+        if show_moments:
+            plt.plot(slice_params.s * 1e3, slice_params.my * 1e3, "k", lw=2)
+            plt.plot(slice_params.s * 1e3, (slice_params.my + slice_params.sig_y) * 1e3, "w", lw=1)
+            plt.plot(slice_params.s * 1e3, (slice_params.my - slice_params.sig_y) * 1e3, "w", lw=1)
+    elif show_plane == "x":
+        ax_down = plt.subplot(212, sharex=ax_top)
+
+        show_density(p_array_copy.tau() * 1e3, p_array_copy.x() * 1e3, ax=ax_down, nbins_x=nbins_x, nbins_y=nbins_y,
+                     interpolation=interpolation, ylabel='x [mm]',xlabel='s [mm]',
+                     title="Top view", grid=grid, show_xtick_label=True)
+        if show_moments:
+            plt.plot(slice_params.s * 1e3, slice_params.mx * 1e3, "k", lw=2)
+            plt.plot(slice_params.s * 1e3, (slice_params.mx + slice_params.sig_x) * 1e3, "w", lw=1)
+            plt.plot(slice_params.s * 1e3, (slice_params.mx - slice_params.sig_x) * 1e3, "w", lw=1)
+    else:
+        ax_down = plt.subplot(212, sharex=ax_top)
+
+        show_density(p_array_copy.tau() * 1e3, p_array_copy.p() * 1e2, ax=ax_down, nbins_x=nbins_x, nbins_y=nbins_y,
+                     interpolation=interpolation, ylabel='$\delta_E$ [%]',xlabel='s [mm]',
+                     title="Longitudinal phase space", grid=grid, show_xtick_label=True)
+
+    if filename is not None:
+        plt.savefig(filename)
+
+    return ax_top, ax_down
 
 from scipy import stats
 from ocelot.cpbd.physics_proc import *

@@ -460,10 +460,10 @@ class BeamArray(Beam):
         return self[self.idx_max()]
 
     def add_chirp(self, chirp=0):
-        '''
+        """
         adds linear energy chirp to the beam
         chirp = dE/E/s[um] = dg/g/s[um]
-        '''
+        """
         if chirp not in [None, 0]:
             center = (np.amax(self.s) - np.amin(self.s)) / 2
             E_center = self.E[find_nearest_idx(self.s, center)]
@@ -580,7 +580,7 @@ class ParticleArray:
         return p_list
 
     def size(self):
-        return self.rparticles.size / 6
+        return int(self.rparticles.size / 6)
 
     def x(self):  return self.rparticles[0]
     def px(self): return self.rparticles[1] # xp
@@ -647,6 +647,15 @@ class ParticleArray:
         self.py()[:] = Rnn * self.py()[:]
         self.p()[:] = Rnn * self.p()[:]
 
+    def __str__(self):
+        val = ""
+        val += "ref energy  = " + str(np.round(self.E, 4)) + " GeV \n"
+        val += "beam energy  = " + str(np.around(self.E*(1 + np.mean(self.p())), 4)) + " GeV \n"
+        val += "charge  = " + str(np.around(np.sum(self.q_array)*1e9, 4)) + " nC \n"
+
+        val += "n particles  = " + str(self.n) + "\n"
+        return val
+
 
 def recalculate_ref_particle(p_array):
     pref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV
@@ -659,19 +668,47 @@ def recalculate_ref_particle(p_array):
     return p_array
 
 
-def get_envelope(p_array, tws_i=Twiss()):
+def get_envelope(p_array, tws_i=Twiss(), bounds=None):
+    """
+    Function to calculate twiss parameters form the ParticleArray
+
+    :param p_array: ParticleArray
+    :param tws_i: optional, design Twiss,
+    :param bounds: optional, [left_bound, right_bound] - bounds in units of std(p_array.tau())
+    :return: Twiss()
+    """
+
+    if bounds is not None:
+        tau = p_array.tau()
+        z0 = np.mean(tau)
+        sig0 = np.std(tau)
+        inds = np.argwhere((z0 + sig0 * bounds[0] <= tau) * (tau <= z0 + sig0 * bounds[1]))
+        p = p_array.p()[inds]
+        x = p_array.x()[inds]
+        px = p_array.px()[inds]
+        y = p_array.y()[inds]
+        py = p_array.py()[inds]
+        tau = p_array.tau()[inds]
+    else:
+        p = p_array.p()
+        x = p_array.x()
+        px = p_array.px()
+        y = p_array.y()
+        py = p_array.py()
+        tau = p_array.tau()
+
     tws = Twiss()
-    p = p_array.p()
     dx = tws_i.Dx*p
     dy = tws_i.Dy*p
     dpx = tws_i.Dxp*p
     dpy = tws_i.Dyp*p
-    x = p_array.x() - dx
-    px = p_array.px() - dpx
 
-    y = p_array.y() - dy
-    py = p_array.py() - dpy
-    tau = p_array.tau()
+    x = x - dx
+    px = px - dpx
+
+    y = y - dy
+    py = py - dpy
+
     if ne_flag:
         px = ne.evaluate('px * (1. - 0.5 * px * px - 0.5 * py * py)')
         py = ne.evaluate('py * (1. - 0.5 * px * px - 0.5 * py * py)')
@@ -707,7 +744,7 @@ def get_envelope(p_array, tws_i=Twiss()):
         tws.pypy = np.mean((py-tws.py)*(py-tws.py))
         tws.tautau = np.mean((tau - tws.tau)*(tau - tws.tau))
         tws.xy = np.mean((x - tws.x) * (y - tws.y))
-    tws.p = np.mean( p_array.p())
+    tws.p = np.mean(p)
     tws.E = np.copy(p_array.E)
     #tws.de = p_array.de
 
@@ -720,9 +757,10 @@ def get_envelope(p_array, tws_i=Twiss()):
     tws.alpha_y = -tws.ypy/tws.emit_y
     return tws
 
-def get_current(p_array, charge=None, num_bins = 200):
+def get_current(p_array, charge=None, num_bins=200):
     """
     Function calculates beam current from particleArray
+
     :param p_array: particleArray
     :param charge: - None, charge of the one macro-particle.
                     If None, charge of the first macro-particle is used
@@ -1313,7 +1351,7 @@ def parray2beam(parray, step=1e-7):
 
 
 def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
-                    sigma_tau=1e-3, sigma_p=1e-4, tau_p_cor=0.01, charge=5e-9, nparticles=200000, energy=0.13,
+                    sigma_tau=1e-3, sigma_p=1e-4, chirp=0.01, charge=5e-9, nparticles=200000, energy=0.13,
                     tau_trunc=None):
     """
     Method to generate ParticleArray with gaussian distribution.
@@ -1327,7 +1365,7 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
     :param sigma_py: std(py), 'py' is canonical momentum py/p0.
     :param sigma_tau: std(tau), "tau" = c*t
     :param sigma_p: std(p), 'p' is canonical momentum E/(c*p0)
-    :param tau_p_cor: energy chirp [unitless], linear correlation - p_i += tau_p_cor * tau_i/sigma_tau
+    :param chirp: energy chirp [unitless], linear correlation - p_i += chirp * tau_i/sigma_tau
     :param charge: beam charge in [C], 5e-9 by default
     :param nparticles: namber of particles, 200k by default
     :param energy: beam energy in [GeV], 0.13 [GeV]
@@ -1351,7 +1389,7 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
     #
     dp = np.random.randn(nparticles) * sigma_p
     if sigma_tau != 0:
-        dp += tau_p_cor*tau/sigma_tau
+        dp += chirp*tau/sigma_tau
     # covariance matrix for [tau, p] for beam compression in BC
     #cov_t_p = [[1.30190131e-06, 2.00819771e-05],
     #           [2.00819771e-05, 3.09815718e-04]]

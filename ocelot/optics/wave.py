@@ -637,18 +637,29 @@ class StokesParameters:
         S = StokesParameters() # start from emply object to save space
         
         shape = self.s0.shape
-        
+        _logger.log(5, ind_str + 'Stokes slicing index all' + str(i))
         if isinstance(i, tuple):
             i1 = tuple([ii for ii in i if ii is not None]) # account for np.newaxis
+            _logger.log(5, ind_str + 'Stokes slicing index scales' + str(i1))
+            for dim, i1i in enumerate(i1): #slice scales, avoiding slicing zero-length-arrays
+                if dim == 0:
+                    if np.size(self.sc_z)>1:
+                        S.sc_z = self.sc_z[i1i]
+                if dim == 1:
+                    if np.size(self.sc_y)>1:
+                        S.sc_y = self.sc_y[i1i]
+                if dim == 2:
+                    if np.size(self.sc_x)>1:
+                        S.sc_x = self.sc_x[i1i]
             
-            if len(i1) == 3:
-                S.sc_z, S.sc_y, S.sc_x = self.sc_z[i1[0]], self.sc_y[i1[1]], self.sc_x[i1[2]]
-            elif len(i1) == 2:
-                S.sc_z, S.sc_y = self.sc_z[i1[0]], self.sc_y[i1[1]]
-            elif len(i1) == 1:
-                S.sc_z = self.sc_z[i1[0]]
-            else:
-                raise ValueError
+            # if len(i1) == 3:
+                # S.sc_z, S.sc_y, S.sc_x = self.sc_z[i1[0]], self.sc_y[i1[1]], self.sc_x[i1[2]]
+            # elif len(i1) == 2:
+                # S.sc_z, S.sc_y = self.sc_z[i1[0]], self.sc_y[i1[1]]
+            # elif len(i1) == 1:
+                # S.sc_z = self.sc_z[i1[0]]
+            # else:
+                # raise ValueError
         elif isinstance(i, slice) or isinstance(i, int):
             S.sc_z = self.sc_z[i]
         
@@ -722,6 +733,7 @@ class StokesParameters:
     
     def slice_2d_idx(self, idx, plane='z'):
         _logger.debug('slicing stokes matrix at index {} over {} plane'.format(idx, plane))
+        #speedup by aboiding deepcopy
         S = deepcopy(self)
         if plane in ['x', 2]:
             plane = 2
@@ -861,10 +873,10 @@ def calc_stokes_dfl(dfl1, dfl2, basis='xy', mode=(0,0)):
         l1 = dfl1.Nz()
         l2 = dfl2.Nz()
         if l1 > l2:
-            _logger.info(ind_str + 'dfl1.Nz() > dfl2.Nz(), cutting dfl1')
+            _logger.info(ind_str + 'dfl1.Nz()={:} > dfl2.Nz()={:}, cutting dfl1'.format(l1, l2))
             dfl1.fld = dfl1.fld[:-(l1-l2), :, :]
         else:
-            _logger.info(ind_str + 'dfl1.Nz() < dfl2.Nz(), cutting dfl2')
+            _logger.info(ind_str + 'dfl1.Nz()={:} < dfl2.Nz()={:}, cutting dfl2'.format(l1, l2))
             dfl2.fld = dfl2.fld[:-(l2-l1), :, :]
 
     # if np.equal(dfl1.scale_z(), dfl2.scale_z()).all():
@@ -1386,7 +1398,7 @@ def calc_phase_delay_poly(coeff, w, w0):
     
 #    _logger.debug(ind_str + 'coeffs for compression = {}'.format(coeff))
     coeff_norm = [ci / (1e15)**i / factorial(i) for i, ci in enumerate(coeff)]
-    coeff_norm = list(np.flip(coeff_norm, axis=0))
+    coeff_norm = list(np.flipud(coeff_norm))
 #    _logger.debug(ind_str + 'coeffs_norm = {}'.format(coeff_norm))
     
     for i , coeffi in enumerate(coeff_norm):
@@ -2344,7 +2356,7 @@ def wigner_pad(wig, pad):
     _logger.debug(ind_str + 'done')
     return wig_out
 
-def wigner_out(out, z=inf, method='mp', pad=1, debug=1):
+def wigner_out(out, z=inf, method='mp', pad=1, debug=1, on_axis=1):
     '''
     returns WignerDistribution from GenesisOutput at z
     '''
@@ -2367,16 +2379,34 @@ def wigner_out(out, z=inf, method='mp', pad=1, debug=1):
     zi = np.where(out.z >= z)[0][0]
 
     wig = WignerDistribution()
-    if hasattr(out, 'p_int'):#genesis2
-        wig.field = np.sqrt(out.p_int[:,zi])*np.exp(1j*out.phi_mid[:,zi])
-        wig.xlamds = out('xlamds')
-        wig.filePath = out.filePath
-    elif hasattr(out, 'h5'):#genesis4
-        wig.field = out.rad_field(zi=zi, loc='near')
-        wig.xlamds = out.lambdaref
-        wig.filePath = out.h5.filename
+    
+    if on_axis:
+        if hasattr(out, 'p_mid'):#genesis2
+            wig.field = np.sqrt(out.p_mid[:,zi])*np.exp(1j*out.phi_mid[:,zi])
+            wig.xlamds = out('xlamds')
+            wig.filePath = out.filePath
+        elif hasattr(out, 'h5'):#genesis4
+            logger.warning('not implemented for on-axis, chaeck!')
+            wig.field = out.rad_field(zi=zi, loc='near')
+            wig.xlamds = out.lambdaref
+            wig.filePath = out.h5.filename
+        else:
+            _logger.error('out object has neither p_int nor h5 attribute')
+        wig.on_axis=True
     else:
-        _logger.error('out object has neither p_int nor h5 attribute')
+        if hasattr(out, 'p_int'):#genesis2
+            wig.field = np.sqrt(out.p_int[:,zi])*np.exp(1j*out.phi_mid[:,zi])
+            wig.xlamds = out('xlamds')
+            wig.filePath = out.filePath
+        elif hasattr(out, 'h5'):#genesis4
+            wig.field = out.rad_field(zi=zi, loc='near')
+            wig.xlamds = out.lambdaref
+            wig.filePath = out.h5.filename
+        else:
+            _logger.error('out object has neither p_int nor h5 attribute')
+        wig.on_axis=False
+
+            
     wig.s = out.s
     wig.z = z
     
@@ -2416,7 +2446,7 @@ def wigner_dfl(dfl, method='mp', pad=1, debug=1):
     
     return wig
     
-def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1):
+def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1, **kwargs):
     '''
     returns averaged WignerDistribution from GenStatOutput at stage at z
     '''
@@ -2467,10 +2497,10 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1):
         field = np.sqrt(out_stat.p_int[zi,:,i]) * np.exp(1j*out_stat.phi_mid[zi,:,i])
         if pad > 1:
             field = np.concatenate([np.zeros(n_add_l), field, np.zeros(n_add_r)])
-        WW[i,:,:] = calc_wigner(field, method=method, debug=debug)
+        WW[i,:,:] = calc_wigner(field, method=method, debug=debug, **kwargs)
     
     wig = WignerDistribution()
-    wig.wig = np.mean(WW,axis=0)
+    wig.wig = np.mean(WW, axis=0)
     wig.wig_stat = WW
     wig.s = s
     # wig.freq_lamd = out_stat.f

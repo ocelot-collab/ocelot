@@ -2835,6 +2835,7 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
     else:
         ax_I.legend([r'$I [A]$'], fontsize=fontsize, loc='best')
     
+    ax_I.text(0.02, 0.98, r'Q = {:.2f} pC'.format(beam.charge() * 1e12), horizontalalignment='left', verticalalignment='top', transform=ax_I.transAxes)
     # ax.set_xlim([np.amin(beam.s),np.amax(beam.x)])
     ax = fig.add_subplot(2 + plot_xy, 2, 2, sharex=ax_I)
     plt.grid(True)
@@ -3021,12 +3022,23 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
         wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], abs(wigner[::downsample,::downsample]))
         if plot_text:
             axScatter.text(0.02, 0.98, r'$W_{{max}}$= {:.2e}'.format(np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes, color='w')
+            if hasattr(W, 'on_axis'):
+                if W.on_axis is True:
+                    axScatter.text(0.5, 0.98, r"(on axis)", fontsize=10, horizontalalignment='center', verticalalignment='top', transform=axScatter.transAxes, color='w')
+                else:
+                    axScatter.text(0.5, 0.98, r"(assuming full spatial coherence)", fontsize=10, horizontalalignment='center', verticalalignment='top', transform=axScatter.transAxes, color='w')
+
     else:
         # cmap='RdBu_r'
         # axScatter.imshow(wigner, cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
         wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], wigner[::downsample,::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
         if plot_text:
             axScatter.text(0.02, 0.98, r'$W_{{max}}$= {:.2e}'.format(np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes)#fontsize=12,
+            if hasattr(W, 'on_axis'):
+                if W.on_axis is True:
+                    axScatter.text(0.5, 0.98, r"(on axis)", fontsize=10, horizontalalignment='center', verticalalignment='top', transform=axScatter.transAxes)
+                else:
+                    axScatter.text(0.5, 0.98, r"(assuming full spatial coherence)", fontsize=10, horizontalalignment='center', verticalalignment='top', transform=axScatter.transAxes)
             
     if plot_moments:
         weight_power = power/np.max(power)
@@ -3405,7 +3417,7 @@ def plot_trf(trf, mode='tr', autoscale=0, showfig=True, savefig=None, fig_name=N
         plt.close('all')
 
 @if_plottable
-def plot_stokes_values(S, fig=None, s_lin=0, norm=0, showfig=True, gw=1, direction='z'):
+def plot_stokes_values(S, fig=None, s_lin=0, norm=0, showfig=True, gw=1, direction='z', plot_func='step'):
     
     # if type(S) != StokesParameters:
         # raise ValueError('Not a StokesParameters object')
@@ -3438,14 +3450,25 @@ def plot_stokes_values(S, fig=None, s_lin=0, norm=0, showfig=True, gw=1, directi
             plt.ylabel('$S_0$ [W]')
         plt.xlabel('s [$\mu$m]')
         
+        kwargs = {'linewidth':2}
+        
+        if plot_func == 'step':
+            plot_function = plt.step
+            kwargs['where']='mid'
+        elif plot_func == 'line':
+            plot_function = plt.plot
+        else:
+            raise ValueError
+        
+        
         if s_lin:
             # plt.step(sc, np.sqrt(S.s1**2+S.s2**2), linewidth=2, where='mid',color=[0.5,0.5,0.5], linestyle='--')
-            plt.step(sc, Scp.P_pol_l()*mult, linewidth=2, where='mid',color='m', linestyle='--')
+            plot_function(sc, Scp.P_pol_l()*mult, linestyle='--', color='m', **kwargs)
  
-        plt.step(sc, Scp.s1*mult, linewidth=2, where='mid',color='g')
-        plt.step(sc, Scp.s2*mult, linewidth=2, where='mid',color='r')
-        plt.step(sc, Scp.s3*mult, linewidth=2, where='mid',color='c')
-        plt.step(sc, Scp.s0*mult, linewidth=2, where='mid',color='b')
+        plot_function(sc, Scp.s1*mult, color='g', **kwargs)
+        plot_function(sc, Scp.s2*mult, color='r', **kwargs)
+        plot_function(sc, Scp.s3*mult, color='c', **kwargs)
+        plot_function(sc, Scp.s0*mult, color='b', **kwargs)
         # plt.step(sc, S.s1, linewidth=2, where='mid',color='m')
         # plt.step(sc, S.s2, linewidth=2, where='mid',color='r')
         # plt.step(sc, S.s3, linewidth=2, where='mid',color='c')
@@ -3463,7 +3486,7 @@ def plot_stokes_values(S, fig=None, s_lin=0, norm=0, showfig=True, gw=1, directi
             plt.close('all')
         
 @if_plottable
-def plot_stokes_angles(S, fig=None, showfig=True, direction='z', scatter=True):
+def plot_stokes_angles(S, fig=None, showfig=True, direction='z', plot_func='scatter'):
     
    # if type(S) != StokesParameters:
        # raise ValueError('Not a StokesParameters object')
@@ -3485,16 +3508,34 @@ def plot_stokes_angles(S, fig=None, showfig=True, direction='z', scatter=True):
         else:
             plt.figure(fig.number)
         plt.clf()
-
-       # plt.step(sc, S.chi(), sc, S.psi(),linewidth=2)
-        if scatter:
+        
+        kwargs = {'linewidth':2}
+        if plot_func == 'scatter':
             psize = Scp.P_pol()
             psize /= np.amax(psize)
-            plt.scatter(sc, Scp.chi(),psize,linewidth=2,color='g')
-            plt.scatter(sc, Scp.psi(),psize,linewidth=2,color='b')
+            kwargs['s'] = psize
+            plot_function = plt.scatter
+        elif plot_func == 'step':
+            plot_function = plt.step
+            kwargs['where'] = 'mid'
+        elif plot_func == 'line':
+            plot_function = plt.plot
         else:
-            plt.step(sc, Scp.chi(), linewidth=2, where='mid', color='g')
-            plt.step(sc, Scp.psi(), linewidth=2, where='mid', color='b')
+            raise ValueError
+        
+        # plt.step(sc, S.chi(), sc, S.psi(),linewidth=2)
+        
+        plot_function(sc, Scp.chi(),color='g',**kwargs)
+        plot_function(sc, Scp.psi(),color='b',**kwargs)
+        
+        # if scatter:
+            # psize = Scp.P_pol()
+            # psize /= np.amax(psize)
+            # plt.scatter(sc, Scp.chi(),psize,linewidth=2,color='g')
+            # plt.scatter(sc, Scp.psi(),psize,linewidth=2,color='b')
+        # else:
+            # plt.step(sc, Scp.chi(), linewidth=2, where='mid', color='g')
+            # plt.step(sc, Scp.psi(), linewidth=2, where='mid', color='b')
         plt.legend(['$\chi$','$\psi$'])#,loc='best')
         plt.xlabel('s [$\mu$m]')
         plt.ylabel('[rad]')
@@ -3507,9 +3548,7 @@ def plot_stokes_angles(S, fig=None, showfig=True, direction='z', scatter=True):
             plt.close('all')
 
 @if_plottable
-def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane='max_slice', interpolation=None,
-                   cmap_lin='brightwheel', cmap_circ='seismic', figsize=4, fig_name='Visualization Stokes parameters', normalization='s0_max',
-                   cbars=True, savefig=False, showfig=True, text_present=True, debug=1, **kwargs):
+def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane='max_slice', interpolation=None, cmap_lin='brightwheel', cmap_circ='bwr', figsize=4, fig_name='Visualization Stokes parameters', normalization='s0_max', cbars=True, savefig=False, showfig=True, text_present=True, debug=1, **kwargs):
     '''
     Plot 6 images with normalized Stokes parameters on them
 
@@ -3547,45 +3586,40 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
     :param debug:
     :param kwargs:
     '''
-
+    
     if showfig == False and savefig == False:
         return
     _logger.info('plotting stokes parameters')
     start_time = time.time()
-
+    
+    cbax1_dir = kwargs.pop('cbax1_dir', 1)
     
     ny_plots = 2
     # Plotting data
     fig = plt.figure(fig_name)
     fig.clf()
     fig.set_size_inches((5 * figsize, 3 * figsize), forward=True)
-
+    
     z, y, x = stk_params.s0.shape
     ax1 = fig.add_subplot(ny_plots, 3, 1)
-    linear_plt = plot_stokes_sbfg_lin(ax1, stk_params, slice=z_plane, plane='z', cmap2d=cmap_lin,
-                                      plot_title=None, x_label='x', y_label='y', text_present=text_present,
-                                      interpolation=interpolation, normalization=normalization, result=1, **kwargs)
+    linear_plt = plot_stokes_sbfg_lin(ax1, stk_params, slice=z_plane, plane='z', cmap2d=cmap_lin, plot_title=None, x_label='x', y_label='y', text_present=text_present, interpolation=interpolation, normalization=normalization, result=1, **kwargs)
     
     ax2 = fig.add_subplot(ny_plots, 3, 2, sharey=ax1)
-    plot_stokes_sbfg_lin(ax2, stk_params, slice=x_plane, plane='x', cmap2d=cmap_lin, plot_title='Linear polarization',
-                         x_label='z', y_label='y', text_present=text_present, interpolation=interpolation, normalization=normalization, **kwargs)
+    plot_stokes_sbfg_lin(ax2, stk_params, slice=x_plane, plane='x', cmap2d=cmap_lin, plot_title='Linear polarization', x_label='z', y_label='y', text_present=text_present, interpolation=interpolation, normalization=normalization, **kwargs)
     
     ax3 = fig.add_subplot(ny_plots, 3, 3, sharex=ax2)
-    plot_stokes_sbfg_lin(ax3, stk_params, slice=y_plane, plane='y', cmap2d=cmap_lin, plot_title=None,
-                         x_label='z', y_label='x', text_present=text_present, interpolation=interpolation, normalization=normalization, **kwargs)
-        
+    plot_stokes_sbfg_lin(ax3, stk_params, slice=y_plane, plane='y', cmap2d=cmap_lin, plot_title=None, x_label='z', y_label='x', text_present=text_present, interpolation=interpolation, normalization=normalization, **kwargs)
+    
     ax4 = fig.add_subplot(ny_plots, 3, 4, sharex=ax1, sharey=ax1)
-    circular_plt = plot_stokes_sbfg_circ(ax4, stk_params, slice=z_plane, plane='z', cmap=cmap_circ, plot_title=None, 
-                                         x_label='x', y_label='y', text_present=text_present, result=1, interpolation=interpolation, normalization=normalization, **kwargs)
+    circular_plt = plot_stokes_sbfg_circ(ax4, stk_params, slice=z_plane, plane='z', cmap=cmap_circ, plot_title=None, x_label='x', y_label='y', text_present=text_present, result=1, interpolation=interpolation, normalization=normalization, **kwargs)
     
     ax5 = fig.add_subplot(ny_plots, 3, 5, sharex=ax2, sharey=ax2)
-    plot_stokes_sbfg_circ(ax5, stk_params, slice=x_plane, plane='x', cmap=cmap_circ, plot_title='Circular polarization',
-                          x_label='z', y_label='y', text_present=text_present, interpolation=interpolation, normalization=normalization, **kwargs)
+    plot_stokes_sbfg_circ(ax5, stk_params, slice=x_plane, plane='x', cmap=cmap_circ, plot_title='Circular polarization', x_label='z', y_label='y', text_present=text_present, interpolation=interpolation, normalization=normalization, **kwargs)
     
     ax6 = fig.add_subplot(ny_plots, 3, 6, sharex=ax3, sharey=ax3)
-    plot_stokes_sbfg_circ(ax6, stk_params, slice=y_plane, plane='y', cmap=cmap_circ, plot_title=None, x_label='z',
-                          y_label='x', text_present=text_present, interpolation=interpolation, normalization=normalization, **kwargs)
-    cbax1_dir = 1
+    plot_stokes_sbfg_circ(ax6, stk_params, slice=y_plane, plane='y', cmap=cmap_circ, plot_title=None, x_label='z', y_label='x', text_present=text_present, interpolation=interpolation, normalization=normalization, **kwargs)
+    
+    
     if cbars:
         cbax1 = fig.add_axes([0.91, 0.56, 0.04, 0.321])
         
@@ -3593,7 +3627,7 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
             ph = np.ones((100,100))*np.linspace(1,-1,100)[:,np.newaxis]
             I = np.ones((100,100))*np.linspace(0,1,100)[np.newaxis,:]
             imshow2d(np.array([ph,I]), ax=cbax1, cmap2d=cmap_lin, huevmin=-1, huevmax=1, lightvmin=0, lightvmax=1, extent = [0, 1, np.pi/2, -np.pi/2], aspect='auto')
-            plt.yticks(np.linspace(-np.pi/2, np.pi/2, 3),['$-\pi/2$','0','$\pi/2$'])#['0','$\pi/2$','$\pi$','$3\pi/2$','$2\pi$']
+            plt.yticks(np.linspace(np.pi/2, -np.pi/2, 3),['$-\pi/2$','0','$\pi/2$'])#['0','$\pi/2$','$\pi$','$3\pi/2$','$2\pi$']
             cbax1.yaxis.set_label_position("right")
             cbax1.yaxis.tick_right()
             cbax1.set_ylabel('$\psi$')
@@ -3638,8 +3672,8 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
         if savefig == True:
             savefig = 'png'
         _logger.debug(ind_str + 'saving figure')
-        fig.savefig()
-
+        fig.savefig(savefig)
+    
     if showfig:
         _logger.debug(ind_str + 'showing Stokes Parameters')
         plt.show()
@@ -3647,8 +3681,7 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
         plt.close('all')
 
 @if_plottable
-def plot_stokes_sbfg_lin(ax, stk_params, slice, plane, cmap2d='brightwheel', plot_title=None, x_label='', y_label='',
-                         result=0, text_present=True, interpolation=None, normalization='s0_max', **kwargs):
+def plot_stokes_sbfg_lin(ax, stk_params, slice, plane, cmap2d='brightwheel', plot_title=None, x_label='', y_label='', result=0, text_present=True, interpolation=None, normalization='s0_max', **kwargs):
     '''
     Plot normalized intensity and angle of the linear polarization of the light
 
@@ -3747,7 +3780,7 @@ def plot_stokes_sbfg_lin(ax, stk_params, slice, plane, cmap2d='brightwheel', plo
     ax.set_xlabel(x_label + ' [$\mu$m]')
     ax.set_ylabel(y_label + ' [$\mu$m]')
     if text_present:
-        print(plane, slice_pos*1e6)
+        # print(plane, slice_pos*1e6)
         dic = {'proj': 'projection', 'max_slice': 'slice at {:}={:.3f} $\mu$m'}
         ax.text(0.97, 0.97, dic.get(slice, 'slice at {:}={:.3f} $\mu$m (max int)').format(plane, slice_pos*1e6), horizontalalignment='right',
                   verticalalignment='top', transform=ax.transAxes, fontsize=10)
@@ -3778,10 +3811,10 @@ def plot_stokes_sbfg_circ(ax, stk_params, slice, plane, cmap='seismic', plot_tit
     :param kwargs:
     :return:
     '''
-
+    
     # Getting intersections of stk_params for ploting data
     z_max, y_max, x_max = np.unravel_index(stk_params.s0.argmax(), stk_params.s0.shape)  # getting max element position
-
+    
     if plane in ['x', 2]:
         swap_axes = True
         extent = [stk_params.sc_z[0]*1e6, stk_params.sc_z[-1]*1e6, stk_params.sc_y[0]*1e6, stk_params.sc_y[-1]*1e6]
@@ -3824,7 +3857,7 @@ def plot_stokes_sbfg_circ(ax, stk_params, slice, plane, cmap='seismic', plot_tit
     else:
         _logger.error(ind_str + 'argument "plane" should be in ["x","y","z",0,1,2]')
         raise ValueError('argument "plane" should be in ["x","y","z",0,1,2]')
-
+    
     # Normalization
     if normalization is None:
         norm = 1
@@ -3839,7 +3872,7 @@ def plot_stokes_sbfg_circ(ax, stk_params, slice, plane, cmap='seismic', plot_tit
         s3_plane = np.swapaxes((stk_params_plane.s3 / norm), 0, 1)
     else:
         s3_plane = stk_params_plane.s3 / norm
-
+    
     m, n = s3_plane.shape
     circular_plt = ax.imshow(s3_plane, cmap=cmap, vmin=-1, vmax=1, interpolation=interpolation, aspect='auto',
                              extent=extent, origin='lower', **kwargs)

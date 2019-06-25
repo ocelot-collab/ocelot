@@ -266,8 +266,8 @@ class GenesisInput:
         self.xlamds = 1E-9  # The resonant radiation wavelength.
         self.prad0 = 0  # The input power of the radiation field.
         self.pradh0 = 0  # Radiation power for seeding with a harmonics, defined by NHARM.
-        self.zrayl = 0.5  # The Rayleigh length of the seeding radiation field.
-        self.zwaist = 2  # Position of the waist of the seeding radiation field with respect to the undulator entrance.
+        self.zrayl = 2.5  # The Rayleigh length of the seeding radiation field.
+        self.zwaist = 2.5  # Position of the waist of the seeding radiation field with respect to the undulator entrance.
 
         # mesh
         self.ncar = 151   # The number of grid points for the radiation field along a single axis. The total number for the mesh is NCAR^2
@@ -716,8 +716,8 @@ class GenesisOutput:
             self.sliceKeys_used.append('rad_t_size_weighted')
         # print ('        done')
         
-    def wig(self,z=np.inf):
-        return wigner_out(self, z=z, method='mp', debug=1)
+    def wig(self,z=np.inf,*args,**kwargs):
+        return wigner_out(self, z=z, method='mp', *args, **kwargs)
         
     def re_read(self, read_level=2):
         return read_out_file(self.filePath, read_level=read_level)
@@ -1846,7 +1846,8 @@ def read_out_file_stat(proj_dir, stage, run_inp=[], param_inp=[], debug=1):
     for irun in run_range:
         out_file = proj_dir + 'run_' + str(irun) + '/run.' + str(irun) + '.s' + str(stage) + '.gout'
         if os.path.isfile(out_file):
-            _logger.debug(ind_str + 'reading run', irun)
+            # _logger.debug(ind_str + 'reading run {}'.format(irun))
+            _logger.debug(ind_str + 'reading run {}'.format(irun))
             outlist[irun] = read_out_file(out_file, read_level=2, debug=debug)
             outlist[irun].calc_spec()
             run_range_good.append(irun)
@@ -2829,7 +2830,7 @@ def beam_file_str(beam):
              'eloss': 'ELOSS'}
     
     l = beam.len()
-    attrs = beam.params() + beam.properties
+    attrs = beam.params() + list(beam.properties)
     
     f_str = "# \n? VERSION = 1.0\n? SIZE =" + str(l) + "\n? COLUMNS"
     

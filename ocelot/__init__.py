@@ -2,7 +2,7 @@
 general ocelot description
 """
 
-__version__ = '18.12.0'
+__version__ = '19.06.0'
 
 
 __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope",  # beam
@@ -26,9 +26,11 @@ __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope", 
            "CSR", "SpaceCharge", "Wake", "WakeTable", "WakeKick", "BeamTransform", "SmoothBeam",
            "EmptyProc", "PhysProc", "LaserHeater", "LaserModulator", "SpontanRadEffects", "LSC",
            "MagneticLattice",
-           "ocelog"
+           "ocelog",
+           "np", # numpy
+           "speed_of_light", "m_e_eV", "m_e_MeV", "m_e_GeV",
            ]
-
+import numpy as np
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.cpbd.beam import *
 from ocelot.cpbd.optics import *
@@ -44,6 +46,7 @@ from ocelot.cpbd.sc import *
 from ocelot.cpbd.csr import *
 from ocelot.cpbd.wake3D import *
 from ocelot.cpbd.physics_proc import *
+
 import logging
 # _logger = logging.getLogger('ocelot.init')
 # _logger.info('initializing ocelot...')

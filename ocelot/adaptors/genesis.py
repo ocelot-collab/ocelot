@@ -716,8 +716,8 @@ class GenesisOutput:
             self.sliceKeys_used.append('rad_t_size_weighted')
         # print ('        done')
         
-    def wig(self,z=np.inf):
-        return wigner_out(self, z=z, method='mp', debug=1)
+    def wig(self,z=np.inf,*args,**kwargs):
+        return wigner_out(self, z=z, method='mp', *args, **kwargs)
         
     def re_read(self, read_level=2):
         return read_out_file(self.filePath, read_level=read_level)
@@ -1846,7 +1846,8 @@ def read_out_file_stat(proj_dir, stage, run_inp=[], param_inp=[], debug=1):
     for irun in run_range:
         out_file = proj_dir + 'run_' + str(irun) + '/run.' + str(irun) + '.s' + str(stage) + '.gout'
         if os.path.isfile(out_file):
-            _logger.debug(ind_str + 'reading run', irun)
+            # _logger.debug(ind_str + 'reading run {}'.format(irun))
+            _logger.debug(ind_str + 'reading run {}'.format(irun))
             outlist[irun] = read_out_file(out_file, read_level=2, debug=debug)
             outlist[irun].calc_spec()
             run_range_good.append(irun)

@@ -2835,6 +2835,7 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
     else:
         ax_I.legend([r'$I [A]$'], fontsize=fontsize, loc='best')
     
+    ax_I.text(0.02, 0.98, r'Q = {:.2f} pC'.format(beam.charge() * 1e12), horizontalalignment='left', verticalalignment='top', transform=ax_I.transAxes)
     # ax.set_xlim([np.amin(beam.s),np.amax(beam.x)])
     ax = fig.add_subplot(2 + plot_xy, 2, 2, sharex=ax_I)
     plt.grid(True)

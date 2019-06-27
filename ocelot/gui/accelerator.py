@@ -1136,7 +1136,7 @@ def show_phase_space(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=2
     return slice_params.s, slice_params.myp
 
 
-def compare_beams(p_array_1, p_array_2, nparts_in_slice=5000, smoth_param=0.05,
+def compare_beams(p_array_1, p_array_2, nparts_in_slice1=5000, nparts_in_slice2=5000, smoth_param=0.05,
                   inverse_tau=False, nfig=40, title=None, figsize=None, legend_beam1=None, legend_beam2=None):
     """
     Shows e-beam slice parameters (current, emittances, energy spread)
@@ -1165,8 +1165,8 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice=5000, smoth_param=0.05,
         p_array_copy1.tau()[:] *= -1
         p_array_copy2.tau()[:] *= -1
 
-    slice_params1 = global_slice_analysis(p_array_copy1, nparts_in_slice, smoth_param, 2, 2)
-    slice_params2 = global_slice_analysis(p_array_copy2, nparts_in_slice, smoth_param, 2, 2)
+    slice_params1 = global_slice_analysis(p_array_copy1, nparts_in_slice1, smoth_param, 2, 2)
+    slice_params2 = global_slice_analysis(p_array_copy2, nparts_in_slice2, smoth_param, 2, 2)
 
     fig = plt.figure(nfig, figsize=figsize)
     if title != None:

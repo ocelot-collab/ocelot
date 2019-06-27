@@ -961,8 +961,9 @@ def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinea
 from ocelot.cpbd.beam import global_slice_analysis
 
 
-def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, nbins_y=200, interpolation="bilinear", inverse_tau=False,
-                show_moments=False, nfig=40, title=None, figsize=None, grid=True, filter_base=2, filter_iter=2):
+def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, nbins_y=200,
+                    interpolation="bilinear", inverse_tau=False,
+                    show_moments=False, nfig=40, title=None, figsize=None, grid=True, filename=None, headtail=True, filter_base=2, filter_iter=2):
     """
     Shows e-beam slice parameters (current, emittances, energy spread)
     and beam distributions (dE/(p0 c), X, Y) against long. coordinate (S)
@@ -987,7 +988,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     p_array_copy = deepcopy(p_array)
     if inverse_tau:
         p_array_copy.tau()[:] *= -1
-    slice_params = global_slice_analysis(p_array_copy, nparts_in_slice, smooth_param, 2, 2)
+    slice_params = global_slice_analysis(p_array_copy, nparts_in_slice, smooth_param, filter_base, filter_iter)
 
     fig = plt.figure(nfig, figsize=figsize)
     if title != None:

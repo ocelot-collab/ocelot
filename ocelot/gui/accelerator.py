@@ -962,7 +962,7 @@ from ocelot.cpbd.beam import global_slice_analysis
 
 
 def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, nbins_y=200, interpolation="bilinear", inverse_tau=False,
-                show_moments=False, nfig=40, title=None, figsize=None, grid=True, filename=None, headtail=True):
+                show_moments=False, nfig=40, title=None, figsize=None, grid=True, filter_base=2, filter_iter=2):
     """
     Shows e-beam slice parameters (current, emittances, energy spread)
     and beam distributions (dE/(p0 c), X, Y) against long. coordinate (S)

@@ -983,6 +983,8 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     :param figsize: None or e.g. (8, 6)
     :param grid: True, show grid
     :param filename: None or str,  filename to save picture in the file
+    :param filter_base: support of rectangle filter is 2*p+1
+    :param filter_iter: the number of the filter iterations
     :return:
     """
     p_array_copy = deepcopy(p_array)
@@ -1145,7 +1147,8 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice1=5000, nparts_in_slice2=
 
     :param p_array_1: ParticleArray
     :param p_array_2: ParticleArray
-    :param nparts_in_slice: number of particles per slice
+    :param nparts_in_slice1: number of particles per slice in p_array_1
+    :param nparts_in_slice2: number of particles per slice in p_array_2
     :param smoth_param: 0.05, smoothing parameters to calculate the beam current: sigma = smoth_param * np.std(p_array.tau())
     :param inverse_tau: False, inverse tau - head will be on the right side of figure
     :param nfig: number of the figure

@@ -961,8 +961,9 @@ def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinea
 from ocelot.cpbd.beam import global_slice_analysis
 
 
-def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, nbins_y=200, interpolation="bilinear", inverse_tau=False,
-                show_moments=False, nfig=40, title=None, figsize=None, grid=True, filename=None, headtail=True):
+def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, nbins_y=200,
+                    interpolation="bilinear", inverse_tau=False,
+                    show_moments=False, nfig=40, title=None, figsize=None, grid=True, filename=None, headtail=True, filter_base=2, filter_iter=2):
     """
     Shows e-beam slice parameters (current, emittances, energy spread)
     and beam distributions (dE/(p0 c), X, Y) against long. coordinate (S)
@@ -982,12 +983,14 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     :param figsize: None or e.g. (8, 6)
     :param grid: True, show grid
     :param filename: None or str,  filename to save picture in the file
+    :param filter_base: support of rectangle filter is 2*p+1
+    :param filter_iter: the number of the filter iterations
     :return:
     """
     p_array_copy = deepcopy(p_array)
     if inverse_tau:
         p_array_copy.tau()[:] *= -1
-    slice_params = global_slice_analysis(p_array_copy, nparts_in_slice, smooth_param, 2, 2)
+    slice_params = global_slice_analysis(p_array_copy, nparts_in_slice, smooth_param, filter_base, filter_iter)
 
     fig = plt.figure(nfig, figsize=figsize)
     if title != None:
@@ -1135,7 +1138,7 @@ def show_phase_space(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=2
     return slice_params.s, slice_params.myp
 
 
-def compare_beams(p_array_1, p_array_2, nparts_in_slice=5000, smoth_param=0.05,
+def compare_beams(p_array_1, p_array_2, nparts_in_slice1=5000, nparts_in_slice2=5000, smoth_param=0.05,
                   inverse_tau=False, nfig=40, title=None, figsize=None, legend_beam1=None, legend_beam2=None):
     """
     Shows e-beam slice parameters (current, emittances, energy spread)
@@ -1144,7 +1147,8 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice=5000, smoth_param=0.05,
 
     :param p_array_1: ParticleArray
     :param p_array_2: ParticleArray
-    :param nparts_in_slice: number of particles per slice
+    :param nparts_in_slice1: number of particles per slice in p_array_1
+    :param nparts_in_slice2: number of particles per slice in p_array_2
     :param smoth_param: 0.05, smoothing parameters to calculate the beam current: sigma = smoth_param * np.std(p_array.tau())
     :param inverse_tau: False, inverse tau - head will be on the right side of figure
     :param nfig: number of the figure
@@ -1164,8 +1168,8 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice=5000, smoth_param=0.05,
         p_array_copy1.tau()[:] *= -1
         p_array_copy2.tau()[:] *= -1
 
-    slice_params1 = global_slice_analysis(p_array_copy1, nparts_in_slice, smoth_param, 2, 2)
-    slice_params2 = global_slice_analysis(p_array_copy2, nparts_in_slice, smoth_param, 2, 2)
+    slice_params1 = global_slice_analysis(p_array_copy1, nparts_in_slice1, smoth_param, 2, 2)
+    slice_params2 = global_slice_analysis(p_array_copy2, nparts_in_slice2, smoth_param, 2, 2)
 
     fig = plt.figure(nfig, figsize=figsize)
     if title != None:

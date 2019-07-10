@@ -998,7 +998,7 @@ def read_dpa42parray(filePath, N_part=None, fill_gaps=True):
     one4one = bool(h5.get('one4one')[0])
     if one4one:
         _logger.error('read_dpa42parray does not support one4one, yet')
-        raise ValueError 'read_dpa42parray does not support one4one, yet'
+        raise ValueError('read_dpa42parray does not support one4one, yet')
     
     _logger.debug('nslice = ' + str(nslice))
     _logger.debug('lslice = ' + str(lslice) + 'm')

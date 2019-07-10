@@ -977,7 +977,10 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'e
         elif param == 'el_energy':
             subfig_evo_el_energy(ax[-1], g, legend, **kwargs)
         elif param == 'el_bunching':
-            subfig_evo_el_bunching(ax[-1], g, legend, **kwargs)
+            subfig_evo_el_bunching(ax[-1], g, legend, harm=1, **kwargs)
+        elif param.startswith('el_bunching_h'):
+            bunch_harm = int(param.replace('el_bunching_h',''))
+            subfig_evo_el_bunching(ax[-1], g, legend, harm=bunch_harm, **kwargs)
         elif param == 'rad_pow_en_log':
             if not is_tdp:
                 subfig_evo_rad_pow(ax[-1], g, legend, **kwargs)
@@ -1148,12 +1151,15 @@ def subfig_evo_el_energy(ax_energy, g, legend, **kwargs):
     ax_spread.yaxis.label.set_color('r')
 
 @if_plottable
-def subfig_evo_el_bunching(ax_bunching, g, legend, **kwargs):
+def subfig_evo_el_bunching(ax_bunching, g, legend, harm=1, **kwargs):
     number_ticks = 6
     
-    ax_bunching.plot(g.z, np.average(g.bunching, weights=g.I, axis=0), 'k-', g.z, np.amax(g.bunching, axis=0), 'grey', linewidth=1.5)
+    if harm == 1:
+        ax_bunching.plot(g.z, np.average(g.bunching, weights=g.I, axis=0), 'k-', g.z, np.amax(g.bunching, axis=0), 'grey', linewidth=1.5)
+    else:
+        ax_bunching.plot(g.z, np.average(getattr(g, 'h{}_bunching'.format(harm)), weights=g.I, axis=0), 'k-', g.z, np.amax(getattr(g, 'h{}_bunching'.format(harm)), axis=0), 'grey', linewidth=1.5)
     # ax_bunching.plot(g.z, np.amax(g.bunching, axis=0), 'grey',linewidth=1.5) #only max
-    ax_bunching.set_ylabel(r'Bunching')
+    ax_bunching.set_ylabel(r'Bunching h{}'.format(harm))
     ax_bunching.set_ylim(ymin=0)
     # ax_bunching.set_ylim([0,0.8])
     ax_bunching.yaxis.major.locator.set_params(nbins=number_ticks)

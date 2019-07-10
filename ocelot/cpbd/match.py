@@ -30,7 +30,7 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
     :param lat: MagneticLattice
     :param constr: dict in format {elem1:{'beta_x':15, 'beta_y':2}, 'periodic':True} try to find periodic solution or
                 constr = {elem1:{'alpha_x':5, 'beta_y':5}, elem2:{'Dx':0 'Dyp':0, 'alpha_x':5, 'beta_y':5} and so on.
-    :param vars: lsit of elements e.g. vars = [QF, QD]
+    :param vars: list of elements e.g. vars = [QF, QD]
     :param tw: initial Twiss
     :param verbose: allow print output of minimization procedure
     :param max_iter:

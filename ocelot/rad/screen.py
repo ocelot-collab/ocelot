@@ -1,5 +1,8 @@
 __author__ = 'Sergey Tomin'
-
+"""
+Screen class for SR module. The first version was written in 2011 - 2012. 
+S.Tomin
+"""
 
 from ctypes import c_double
 import numpy as np
@@ -13,6 +16,20 @@ def Py2C(array):
 
 
 class Screen:
+    """
+    Class to store radiation field and to provide information about screen parameters where radiation will be observed.
+
+    self.z: 100.0 [m], distance from the beginning of the lattice to the screen
+    self.size_x: 1 [m], half of screen size in horizontal plane
+    self.size_y: 1 [m], half of screen size in vertical
+    self.nx: 1, number of points in horizontal plane
+    self.ny: 1, number of points in vertical plane
+    self.start_energy: 100.0 [eV], starting photon energy
+    self.end_energy: 10000.0 [eV], ending photon energy
+    self.num_energy: 1000,   number of energy points
+
+
+    """
     def __init__(self):
         # position of screen center
         self.x = 0.0   # in [m]
@@ -33,6 +50,16 @@ class Screen:
         # half of angle aperture.  Angle relative to undulator axis for emittance influence on spectrum
         self.theta_x = 0  # rad
         self.theta_y = 0  # rad
+
+        self.arReEx = []     # array, Real part of horizontal component of the electric field
+        self.arImEx = []     # array, Imaginary part of horizontal component of the electric field
+        self.arReEy = []     # array, Real part of the vertical component of the electric field
+        self.arImEy = []     # array, Imaginary part of the vertical component of the electric field
+        self.arPhase = []    # array, phase between Re and Im components
+        self.Xph = []
+        self.Yph = []
+        self.Eph = []
+
         self.update()
 
     def update(self):

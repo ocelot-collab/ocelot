@@ -1195,6 +1195,8 @@ def global_slice_analysis(parray, Mslice=5000, Mcur=0.01, p=2, iter=2):
     _, _, _, _, _, emitt0 = moments(PD[0], PD[1])
     slc.emitxn = emitt0 * gamma0
 
+    _, mp, _, _, _, _ = slice_analysis(z, PD[4], PD[5], Mslice, True)
+
     z, ind = np.unique(z, return_index=True)
 
     emittx = emittx[ind]
@@ -1251,7 +1253,6 @@ def global_slice_analysis(parray, Mslice=5000, Mcur=0.01, p=2, iter=2):
     slc.sig_xp = simple_filter(sig_xp, p, iter)
     slc.sig_yp = simple_filter(sig_yp, p, iter)
 
-    _, mp, _, _, _, _ = slice_analysis(z, PD[4], PD[5], Mslice, True)
     mp = mp[ind]
     mp = interp1(z, mp, s)
     slc.mp = simple_filter(mp, p, iter)

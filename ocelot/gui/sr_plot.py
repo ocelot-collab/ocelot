@@ -6,7 +6,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib
 from matplotlib import cm
 
-def show_flux(screen, show = 'Total', xlim = (0,0), ylim = (0,0),  file_name = None, unit = "mm", title=None, nfig=1):
+def show_flux(screen, show='Total', xlim=(0,0), ylim =(0,0), file_name=None, unit="mm", title=None, nfig=1, grid=True):
     if show == 'Total':
         data = screen.Total
     elif show == 'Sigma':
@@ -33,7 +33,7 @@ def show_flux(screen, show = 'Total', xlim = (0,0), ylim = (0,0),  file_name = N
             status = "spatial"
 
         D1(data, X, distance=screen.Distance, xlabel=xlabel, xlim=xlim, ylim=ylim,  file_name=file_name,
-           unit=unit, status=status, title=title, nfig=nfig)
+           unit=unit, status=status, title=title, nfig=nfig, grid=grid)
     else:
         if screen.ne != 1:
             print (" ******** Can not display 4D plot. Change number of points Screen.num_energy = 1 ! *********** ")
@@ -41,7 +41,7 @@ def show_flux(screen, show = 'Total', xlim = (0,0), ylim = (0,0),  file_name = N
         D3(screen, data, distance=screen.Distance, file_name=file_name, unit=unit, title=title, nfig=nfig)
 
 
-def D1(data, X, distance, xlabel, xlim, ylim,  file_name, unit, status, title=None, nfig=1):
+def D1(data, X, distance, xlabel, xlim, ylim,  file_name, unit, status, title=None, nfig=1, grid=True):
     # distance in [mm]
     if unit == "mrad":
         data = data*distance*distance*1e-6
@@ -69,7 +69,7 @@ def D1(data, X, distance, xlabel, xlim, ylim,  file_name, unit, status, title=No
     ax.set_ylabel(r"$I$, $\frac{ph}{sec \cdot mm^2 10^{-3}BW}$")
     if unit == "mrad":
         ax.set_ylabel(r"$I$, $\frac{ph}{sec \cdot mrad^2 10^{-3}BW}$")
-    ax.grid(True)
+    ax.grid(grid)
 
     # ax.annotate('$\epsilon_1 = ' + str(int(energy*10)/10.) +'$', xy=(0.9, 0.85),
     #            xycoords='axes fraction',

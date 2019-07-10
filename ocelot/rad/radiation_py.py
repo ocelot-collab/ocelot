@@ -373,6 +373,7 @@ def calculate_radiation(lat, screen, beam, energy_loss=False, quantum_diff=False
     :param energy_loss: False, if True includes energy loss after each period
     :param quantum_diff: False, if True introduces random energy kick
     :param accuracy: 1
+    :param end_poles: False, if True includes end poles with 1/4, -3/4, 1, ...
     :return:
     """
 

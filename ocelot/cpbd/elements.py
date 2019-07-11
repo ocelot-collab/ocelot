@@ -259,7 +259,7 @@ class Undulator(Element):
     nperiod - number of periods;\n
     Kx - undulator paramenter for vertical field; \n
     Ky - undulator parameter for horizantal field;\n
-    field_file_path - absolute path to magnetic field data;\n
+    field_file - absolute path to magnetic field data;\n
     eid - id of undulator.
     """
     def __init__(self, lperiod=0., nperiods=0, Kx=0., Ky=0., field_file=None, eid=None):
@@ -269,26 +269,23 @@ class Undulator(Element):
         self.l = lperiod * nperiods
         self.Kx = Kx
         self.Ky = Ky
-        self.solver = "linear"  # can be "lin" is liear matrix,  "sym" - symplectic method and "rk" is Runge-Kutta
-        self.phase = 0.  # phase between Bx and By + pi/4 (spiral undulator)
+        self.solver = "linear"  # can be "lin" is linear matrix,  "sym" - symplectic method and "rk" is Runge-Kutta
+        self.phase = 0.         # phase between Bx and By + pi/4 (spiral undulator)
         
         self.ax = -1              # width of undulator, when ax is negative undulator width is infinite
-                                  # I need it for analytic description of undulator 
+                                  # I need this for analytic description of undulator
         
         self.field_file = field_file
         self.field_map = FieldMap(self.field_file)
         self.v_angle = 0.
         self.h_angle = 0.
-        #self.processing()  # here we can check all data and here we can load magnetic map from file
-                            # and if error will appear then it will be on stage of forming structure
-                            # more over I suggest to store all data (including field map) in this class
                             
     def validate(self):
         pass
                             
         # maybe we will do two functions
         # 1. load data and check magnetic map
-        # 2. check all input data (lperiod nperiod ...). domething like this we must do for all elements.
+        # 2. check all input data (lperiod nperiod ...). something like this we must do for all elements.
 
         # what do you think about ending poles? We can do several options
         # a) 1/2,-1,1,... -1,1/2

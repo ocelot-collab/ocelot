@@ -1,4 +1,8 @@
+"""
+simple functions to estimate radiation properties.
 
+Sergey Tomin.
+"""
 
 import scipy.special as sf
 from scipy.special import jn
@@ -13,7 +17,7 @@ def eV2lambda(Ephoton):
     Lambda = h_eV_s*speed_of_light/Ephoton
     return Lambda
 
-def Ephoton2K(Eph, lu = 0.04, Eeb = 14):
+def Ephoton2K(Eph, lu=0.04, Eeb=14):
     gamma = Eeb/m_e_GeV
     K = np.sqrt(4.*gamma*gamma/lu*h_eV_s*speed_of_light/Eph - 2)
     return K
@@ -29,7 +33,13 @@ def K2Lambda(K, lu = 0.04, E=14):
     Lambda = eV2lambda(Eph)
     return Lambda
 
-def field2K(field, lu = 0.04):
+def field2K(field, lu=0.04):
+    """
+    function to translate magnetic field in [T] to K parameter
+    :param field: in [T]
+    :param lu: undulator period in [m]
+    :return: K
+    """
     K = field*lu*speed_of_light/(m_e_eV*2.*pi)
     return K
 
@@ -120,7 +130,16 @@ class ID_radiation:
         return brightness
 
 def print_rad_props(beam, K, lu, L, distance):
-    #print("********* e beam ***********")
+    """
+    Simple function to estimate radiation properties and print them
+
+    :param beam: Beam
+    :param K: undulator deflection parameter
+    :param lu: undulator period in [m]
+    :param L: undulator length in [m]
+    :param distance: distance to the screen im [m]
+    :return:
+    """
     beam.sizes()
 
 
@@ -174,10 +193,10 @@ def print_rad_props(beam, K, lu, L, distance):
     print ("I            : ", beam.I, " A")
     print ("Nperiods     : ", L/lu)
     print ("distance     : ", distance, " m")
-    print ("flux tot     : ", "{0:.2E}".format(flux_tot), " ph/sec")
-    print ("flux density : ", "{0:.2E}".format(F), " ph/sec/mrad^2;   ", "{0:.2E}".format(F/distance/distance), " ph/sec/mm^2")
+    print ("flux tot     : ", "{0:.2E}".format(flux_tot), " ph/sec/0.1%BW")
+    print ("flux density : ", "{0:.2E}".format(F), " ph/sec/mrad^2/0.1%BW;   ", "{0:.2E}".format(F/distance/distance), " ph/sec/mm^2/0.1%BW")
     #print "flux density : ", F/distance/distance, " ph/sec/mm^2"
-    print ("brilliance   : ", "{0:.2E}".format(brightness), " ph/sec/mrad^2/mm^2")
+    print ("brilliance   : ", "{0:.2E}".format(brightness), " ph/sec/mrad^2/mm^2/0.1%BW")
 
 
 

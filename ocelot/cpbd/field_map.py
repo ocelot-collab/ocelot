@@ -71,13 +71,11 @@ def read_tabular_file(field_file):
     elif ncols == 3:
     # spiral undulator or 2D map
     # So, (z_array, Bx_array, By_array) or  (x_array, z_array, By_array)
+    # BUT we start with spiral undulator.
         z_array = field_data[0, :]
         Bx_array = field_data[1, :]
         By_array = field_data[2, :]
-        #or (It seems it is unlikely )
-        #x_array = field_data[0,:]
-        #z_array = field_data[1,:]
-        #By_array = field_data[2,:]
+
     elif ncols == 6:
         x_array = field_data[0, :]
         y_array = field_data[1, :]
@@ -94,15 +92,15 @@ def read_tabular_file(field_file):
             ny = len(y_array)
             z_array = z_array[:nz_t:ny*nx_t]
         else:
-            print("wrong coordinates order in the field file (magnetic_lattice.py)")
+            print("wrong coordinates order in the field file (field_map.py)")
     return x_array, y_array, z_array, Bx_array, By_array, Bz_array
 
 
 class FieldMap:
-    def __init__(self, field_file, format = "flat"):
+    def __init__(self, field_file, xyz_units="mm", format="flat"):
         self.field_file = field_file
         self.format = format
-        self.units = "mm"
+        self.units = xyz_units
         self.field_file_rep = 1
         self.Bx_arr = np.array([])
         self.By_arr = np.array([])

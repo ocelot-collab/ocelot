@@ -15,6 +15,7 @@ from ocelot.cpbd.physics_proc import PhysProc
 from ocelot.common.math_op import conj_sym
 from ocelot.cpbd.beam import s_to_cur
 import logging
+from scipy.misc import factorial
 
 logger = logging.getLogger(__name__)
 
@@ -242,7 +243,6 @@ class LSC(PhysProc):
     """
     Longitudinal Space Charge
     smooth_param - 0.1 smoothing parameter, resolution = np.std(p_array.tau())*smooth_param
-
     """
     def __init__(self, step=1):
         PhysProc.__init__(self, step)
@@ -256,15 +256,25 @@ class LSC(PhysProc):
         sigma - transverse RMS size of the beam
         w - omega = 2*pi*f
         """
-        indx = np.where(w < 1e-7)[0]
-        w[indx] = 1e-7
+        eps = 1e-16
+        ass = 40.0
+
         alpha = w * sigma / (gamma * speed_of_light)
         alpha2 = alpha * alpha
-        ksi = np.exp(alpha2 + np.log(exp1(alpha2)) - 2*np.log(gamma))
-        Z = 1j*Z0 / (4 * pi * speed_of_light) * w * ksi * dz
 
-        Z[indx] = 0
-        return Z * 1e-12  # --> V/pC
+        inda = np.where(alpha2 > ass)[0]
+        ind = np.where((alpha2 <= ass) & (alpha2 >= eps))[0]
+
+        T = np.zeros(w.shape)
+        T[ind] = np.exp(alpha2[ind]) *exp1(alpha2[ind])
+
+        x= alpha2[inda]
+        k = 0
+        for i in range(10):
+            k += (-1) ** i * factorial(i) / (x ** (i + 1))
+        T[inda] = k
+        Z = 1j * Z0 / (4 * pi * speed_of_light*gamma**2) * w * T * dz
+        return Z # --> Omm/m
 
     def imp_step_lsc(self, gamma, rb, w, dz):
         """
@@ -279,7 +289,7 @@ class LSC(PhysProc):
         x = w*rb/(speed_of_light*gamma)
         Z = 1j*Z0 * speed_of_light / (4 * w * rb*rb) * dz * (1 - x*k1(x))
         Z[indx] = 0
-        return Z * 1e-12  # --> V/pC
+        return Z # --> Omm/m
 
     def wake2impedance(self, s, w):
         """
@@ -371,7 +381,7 @@ class LSC(PhysProc):
         bunch = B[:, 1] / (q * speed_of_light)
         x = B[:, 0]
 
-        W = - self.wake_lsc(x, bunch, gamma, sigma, dz) * 1e12 * q
+        W = - self.wake_lsc(x, bunch, gamma, sigma, dz) * q
 
         indx = np.argsort(p_array.tau(), kind="quicksort")
         tau_sort = p_array.tau()[indx]

@@ -7,6 +7,20 @@ import matplotlib
 from matplotlib import cm
 
 def show_flux(screen, show='Total', xlim=(0,0), ylim =(0,0), file_name=None, unit="mm", title=None, nfig=1, grid=True):
+    """
+    Function to plot radiation flux density 1D and 3D
+
+    :param screen: Screen class
+    :param show: str, show polarization component, can be  "Total", "Sigma" or "Pi"
+    :param xlim: (0,0),  xlimits, ignored if (0,0)
+    :param ylim: (0,0),  ylimits, ignored if (0,0)
+    :param file_name: str, if None flux will be shown otherwise save to file
+    :param unit: str, units for spatial axis, can be "mm" or "mrad",
+    :param title: figure title
+    :param nfig: figure number
+    :param grid: True, if False not show the grid
+    :return:
+    """
     if show == 'Total':
         data = screen.Total
     elif show == 'Sigma':

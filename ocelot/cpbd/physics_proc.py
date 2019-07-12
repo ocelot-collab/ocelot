@@ -421,7 +421,7 @@ class SpontanRadEffects(PhysProc):
 
         :param Kx: Undulator deflection parameter
         :param lperiod: undulator period in [m]
-        :param type:
+        :param type: "planar"/"helical" undulator or "dipole"
         """
         PhysProc.__init__(self)
         self.K = K
@@ -435,6 +435,10 @@ class SpontanRadEffects(PhysProc):
         _logger.debug("SpontanRadEffects: apply")
         mean_p = np.mean(p_array.p())
         energy = p_array.E*(1 + mean_p)
+
+        if self.type == "dipole":
+            self.K = 100.0  # awake the asymptotic for K>>1
+            self.lperiod = 2.0 * np.pi * np.abs(self.radius) / gamma * self.K
 
         if self.quant_diff:
             sigma_Eq = self.sigma_gamma_quant(energy, dz)

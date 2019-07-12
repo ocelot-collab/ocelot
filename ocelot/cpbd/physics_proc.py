@@ -421,7 +421,7 @@ class SpontanRadEffects(PhysProc):
 
         :param Kx: Undulator deflection parameter
         :param lperiod: undulator period in [m]
-        :param type:
+        :param type: "planar"/"helical" undulator or "dipole"
         """
         PhysProc.__init__(self)
         self.K = K

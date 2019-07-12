@@ -436,6 +436,10 @@ class SpontanRadEffects(PhysProc):
         mean_p = np.mean(p_array.p())
         energy = p_array.E*(1 + mean_p)
 
+        if self.type == "dipole":
+            self.K = 100.0  # awake the asymptotic for K>>1
+            self.lperiod = 2.0 * np.pi * np.abs(self.radius) / gamma * self.K
+
         if self.quant_diff:
             sigma_Eq = self.sigma_gamma_quant(energy, dz)
             p_array.p()[:] += sigma_Eq * np.random.randn(p_array.n)*self.filling_coeff

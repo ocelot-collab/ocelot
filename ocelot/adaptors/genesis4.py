@@ -628,27 +628,27 @@ def write_dfl4(dfl: RadiationField, file_path='sample.dfl.h5'):
     :param file_path: path to .dfl file (file will be generate, or data will be rewritten)
     :return:
     """
-    _logger.info(f'writing gen4 file {file_path}')
+    _logger.info('writing gen4 file {}'.format(file_path))
     _logger.warning(ind_str + 'in beta')
 
     _logger.debug(ind_str + 'writing to ' + file_path)
-    _logger.debug(ind_str + f'nslice = {dfl.Nz()}')
-    _logger.debug(ind_str + f'sepslice (dz) = {dfl.xlamds}')
-    _logger.debug(ind_str + f'lambdaref (xlamds) = {dfl.dz}')
+    _logger.debug(ind_str + 'nslice = {}'.format(dfl.Nz()))
+    _logger.debug(ind_str + 'sepslice (dz) = {}'.format(dfl.xlamds))
+    _logger.debug(ind_str + 'lambdaref (xlamds) = {}'.format(dfl.dz))
     if dfl.dx != dfl.dy:
         _logger.error('dfl.dx is not equal dfl.dy')
         raise ValueError('dfl.dx is not equal dfl.dy')
     else:
-        _logger.debug(ind_str + f'gridsize (dx & dy) = {dfl.dx}')
+        _logger.debug(ind_str + 'gridsize (dx & dy) = {}'.format(dfl.dx))
     _logger.debug(ind_str + '')
-    _logger.debug(ind_str + f'zsep = {int(dfl.dz / dfl.xlamds)}')
+    _logger.debug(ind_str + 'zsep = {}'.format(int(dfl.dz / dfl.xlamds)))
     if dfl.Nx() != dfl.Ny():
         _logger.error('dfl.Nx() is not equal dfl.Ny()')
         raise ValueError('dfl.Nx() is not equal dfl.Ny()')
     else:
-        _logger.debug(ind_str + f'Nx & Ny = {dfl.Nx()}')
-    _logger.debug(ind_str + f'Lx & Ly = {dfl.Lx()}')
-    _logger.debug(ind_str + f'Ls_total = {dfl.Lz()}')
+        _logger.debug(ind_str + 'Nx & Ny = {}'.format(dfl.Nx()))
+    _logger.debug(ind_str + 'Lx & Ly = {}'.format(dfl.Lx()))
+    _logger.debug(ind_str + 'Ls_total = {}'.format(dfl.Lz()))
 
     with h5py.File(file_path, 'w') as h5:
 
@@ -664,9 +664,9 @@ def write_dfl4(dfl: RadiationField, file_path='sample.dfl.h5'):
 
 
         for i in range(dfl.Nz()):
-            _logger.log(5, f'slice{(i+1):06d}')
-            h5.create_dataset(f'slice{(i+1):06d}/field-real', data=np.real(dfl.fld[i]).flatten())
-            h5.create_dataset(f'slice{(i+1):06d}/field-imag', data=np.imag(dfl.fld[i]).flatten())
+            _logger.log(5, 'slice{:06d}'.format(i+1))
+            h5.create_dataset('slice{:06d}/field-real'.format(i+1), data=np.real(dfl.fld[i]).flatten())
+            h5.create_dataset('slice{:06d}/field-imag'.format(i+1), data=np.imag(dfl.fld[i]).flatten())
 
     _logger.debug(ind_str + 'done')
 

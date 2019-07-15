@@ -596,7 +596,7 @@ def read_dfl4(filePath):
 
         for dset in h5:
             if dset.startswith('slice0'):
-                _logger.log(5, f'{dset}')
+                _logger.log(5, '{}'.format(dset))
                 field_real.append(h5[dset]['field-real'][:].reshape(ncar, ncar))
                 field_imag.append(h5[dset]['field-imag'][:].reshape(ncar, ncar))
 

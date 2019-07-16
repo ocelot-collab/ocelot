@@ -31,7 +31,7 @@ def test_generate_gaussian_dfl(args_array_ref, parameter, update_ref_values=Fals
         dfl_ref = dfl_array_ref
 
     result = check_matrix(dfl, dfl_ref, TOL, tolerance_type='relative',
-                          assert_info=f'- generate_gaussian_dfl(){parameter}')
+                          assert_info='- generate_gaussian_dfl(){parameter}'.format(parameter))
     assert check_result(result)
 
 

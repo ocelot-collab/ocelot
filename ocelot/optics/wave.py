@@ -36,6 +36,9 @@ try:
 except ImportError:
     print("wave.py: module PYFFTW is not installed. Install it if you want speed up dfl wavefront calculations")
     fftw_avail = False
+    
+__author__ = "Svitozar Serkez, Andrei Trebushinin, Mykola Veremchuk"
+
 
 class RadiationField:
     '''
@@ -806,7 +809,44 @@ class StokesParameters:
         else:
             _logger.error(ind_str + 'argument "mode" should be in ["sum", "mean"]')
             raise ValueError('argument "mode" should be in ["sum", "mean"]')
-        
+
+class HeightProfile:
+    """
+    1d surface of mirror
+    """
+
+    def __init__(self):
+        self.points_number = None
+        self.length = None
+        self.h = None
+        self.s = None
+
+    def hrms(self):
+        return np.sqrt(np.mean(np.square(self.h)))
+
+    def set_hrms(self, rms):
+        self.h *= rms / self.hrms()
+
+    def psd(self):
+        psd = 1 / (self.length * np.pi) * np.square(np.abs(np.fft.fft(self.h) * self.length / self.points_number))
+        psd = psd[:len(psd) // 2]
+        k = np.pi / self.length * np.linspace(0, self.points_number, self.points_number // 2)
+        # k = k[len(k) // 2:]
+        return (k, psd)
+
+    def save(self, path):
+        tmp = np.array([self.s, self.h]).T
+        np.savetxt(path, tmp)
+
+    def load(self, path, return_obj=False):
+        tmp = np.loadtxt(path).T
+        self.s, self.h = tmp[0], tmp[1]
+        self.points_number = self.h.size
+        self.length = self.s[-1] - self.s[0]
+        if return_obj:
+            return self
+
+
 def bin_stokes(S, bin_size):
     '''
     needs fix for 3d!!!
@@ -2249,7 +2289,121 @@ def dfl_crip_freq(dfl, coeff, E_ph0 = None, return_result = False):
 #        copydfl, dfl = dfl, copydfl
         return dfl
     
-    
+def generate_1d_profile(hrms, length=0.1, points_number=1000, wavevector_cutoff=0, k=None, psd=None, seed=None):
+    """
+    Function for generating HeightProfile of highly polished mirror surface
+
+    :param hrms: [meters] height root mean square
+    :param length: [meters] length of surface
+    :param points_number: number of points (pixels) at the surface
+    :param wavevector_cutoff: [1/meters] point on k axis for cut off large wave lengths in the PSD
+                                    (with default value 0 effects on nothing)
+    :param k: [1/meters] 1d array of arguments for power spectral density function (if not specified,
+                        will be used default value)
+    :param psd: [meters^3] power spectral density of surface (if not specified, will be generated)
+                (if specified, must have shape = (points_number // 2 + 1, ), otherwise it will be cut to appropriate shape)
+    :param seed: seed for np.random.seed()
+    :return: HeightProfile object
+    """
+
+    _logger.info('generating 1d surface with rms: {} m; and shape: {}'.format(hrms, (points_number,)))
+    _logger.warning(ind_str + 'in beta')
+
+    # getting the heights map
+    if seed is not None:
+        np.random.seed(seed)
+
+    if psd is None:
+        k = np.pi / length * np.linspace(0, points_number, points_number // 2 + 1)
+        # defining linear function PSD(k) in loglog plane
+        a = -2  # free term of PSD(k) in loglog plane
+        b = -2  # slope of PSD(k) in loglog plane
+        psd = np.exp(a * np.log(10)) * np.exp(b * np.log(k[1:]))
+        psd = np.append(psd[0], psd)  # ??? It doesn*t important, but we need to add that for correct amount of points
+        if wavevector_cutoff != 0:
+            idx = find_nearest_idx(k, wavevector_cutoff)
+            psd = np.concatenate((np.full(idx, psd[idx]), psd[idx:]))
+    elif psd.shape[0] > points_number // 2 + 1:
+        psd = psd[:points_number // 2 + 1]
+
+    phases = np.random.rand(points_number // 2 + 1)
+    height_profile = HeightProfile()
+    height_profile.points_number = points_number
+    height_profile.length = length
+    height_profile.s = np.linspace(-length / 2, length / 2, points_number)
+    height_profile.h = (points_number / length) * np.fft.irfft(np.sqrt(length * psd) * np.exp(1j * phases * 2 * np.pi),
+                                                               n=points_number) / np.sqrt(np.pi)
+    # scaling height_map
+    height_profile.set_hrms(hrms)
+    return height_profile
+
+
+def dfl_reflect_surface(dfl, angle, hrms=None, height_profile=None, axis='x', seed=None, debug=0):
+    """
+    Function models the reflection of ocelot.optics.wave.RadiationField from the mirror surface considering effects
+    of mirror surface height errors. The method based on phase modulation.
+    The input RadiationField object is modified
+
+    :param dfl: RadiationField object from ocelot.optics.wave
+    :param angle: [radians] angle of incidence with respect to the surface
+    :param hrms: [meters] height root mean square of reflecting surface
+    :param height_profile: HeightProfile object of the reflecting surface (if not specified, will be generated using hrms)
+    :param axis: direction along which reflection takes place
+    :param seed: seed for np.random.seed() to allow reproducibility
+    """
+
+    _logger.info('dfl_reflect_surface is reflecting dfl of shape (nz, ny, nx): {}'.format(dfl.shape()))
+    _logger.warning(ind_str + 'in beta')
+    start = time.time()
+
+    dict_axes = {'z': 0, 'y': 1, 'x': 2}
+    dlength = {0: dfl.dz, 1: dfl.dy, 2: dfl.dx}
+    if isinstance(axis, str):
+        axis = dict_axes[axis]
+
+    points_number = dfl.fld.shape[axis]
+    footprint_len = points_number * dlength[axis] / np.sin(angle)
+
+    # generating power spectral density
+    if height_profile is None:
+        if hrms is None:
+            _logger.error('hrms and height_profile not specified')
+            raise ValueError('hrms and height_profile not specified')
+        height_profile = generate_1d_profile(hrms, length=footprint_len, points_number=points_number, seed=seed)
+
+    elif height_profile.length != footprint_len or height_profile.points_number != points_number:
+        if height_profile.length < footprint_len:
+            _logger.warning(
+                'provided height profile length {} is smaller than projected footprint {}'.format(height_profile.length,
+                                                                                                  footprint_len))  # warn and pad with zeroes
+
+        # interpolation of height_profile to appropriate sizes
+        _logger.info(ind_str + 'given height_profile was interpolated to length and '.format(dfl.shape()))
+        s = np.linspace(-footprint_len / 2, footprint_len / 2, points_number)
+        h = np.interp(s, height_profile.s, height_profile.h, right=height_profile.h[0], left=height_profile.h[-1])
+        height_profile = HeightProfile()
+        height_profile.points_number = dfl.fld.shape[axis]
+        height_profile.length = footprint_len
+        height_profile.s = s
+        height_profile.h = h
+
+    # getting 2d height_err_map
+    # raws_number = dfl.fld.shape[1]
+    # height_profiel_map = np.ones((raws_number, points_number)) * height_profile.h[np.newaxis, :]
+    phase_delay = 2 * 2 * np.pi * np.sin(angle) * height_profile.h / dfl.xlamds
+
+    # phase modulation
+
+    if (axis == 0) or (axis == 'z'):
+        dfl.fld *= np.exp(1j * phase_delay)[:, np.newaxis, np.newaxis]
+    elif (axis == 1) or (axis == 'y'):
+        dfl.fld *= np.exp(1j * phase_delay)[np.newaxis, :, np.newaxis]
+    elif (axis == 2) or (axis == 'x'):
+        dfl.fld *= np.exp(1j * phase_delay)[np.newaxis, np.newaxis, :]
+
+    t_func = time.time() - start
+    _logger.debug(ind_str + 'done in {}'.format(t_func))
+
     
 def trf_mult_mix(trf_list, mode_out='ref'):
     '''

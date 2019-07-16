@@ -3517,8 +3517,7 @@ def plot_stokes_angles(S, fig=None, showfig=True, direction='z', plot_func='scat
         
         kwargs = {'linewidth':2}
         if plot_func == 'scatter':
-            psize = Scp.P_pol()
-            psize /= np.amax(psize)
+            psize = Scp.deg_pol_l()
             kwargs['s'] = psize
             plot_function = plt.scatter
         elif plot_func == 'step':
@@ -3531,8 +3530,11 @@ def plot_stokes_angles(S, fig=None, showfig=True, direction='z', plot_func='scat
         
         # plt.step(sc, S.chi(), sc, S.psi(),linewidth=2)
         
-        plot_function(sc, Scp.chi(),color='g',**kwargs)
         plot_function(sc, Scp.psi(),color='b',**kwargs)
+        if plot_func == 'scatter':
+            kwargs['s'] = Scp.deg_pol_c()
+        plot_function(sc, Scp.chi(),color='g',**kwargs)
+        
         
         # if scatter:
             # psize = Scp.P_pol()

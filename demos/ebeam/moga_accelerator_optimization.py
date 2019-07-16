@@ -111,7 +111,7 @@ def fit_func(x0, iter_data, args):
         return (INF, INF)
 
     # beam emittance calculation (fitness function parameter 1)
-    eb = EbeamParams(lattice, beam, nsuperperiod=6)
+    eb = EbeamParams(lattice, Twiss(beam), nsuperperiod=6)
     
     # additional restriction for the beam emittance
     if eb.emittance < 0.0 or eb.emittance > 100.0e-9:

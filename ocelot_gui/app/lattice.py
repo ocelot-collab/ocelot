@@ -7,56 +7,55 @@ class GUILattice():
 
     def __init__(self):
 
-        self.tws = Twiss()
-        #self.tws.beta_x = 1.0
-        #self.tws.beta_y = 1.0
-        
+        self.tws0 = Twiss()
         self.beam = Beam()
-        #self.beam.E = 1.0
         
         self.elements = {}
-        self.cells = {}
-        self.cells_order = []
+        self.cell = ()
 
         self.nsuperperiods = 1
         
         self.method = MethodTM()
+        
+        # use for first order matrix tracking
         self.method.global_method = TransferMap
         self.method.params[Sextupole] = KickTM
+        
+        # use for second order matrix tracking
         #self.method.global_method = SecondTM
 
         self.lattice = None
-        self.lattice_ename_sequence = []
         self.periodic_solution = False
 
-        self.init_lattice()
+        self.tunable_elements = {'Bend':['angle', 'k1'],'SBend':['angle', 'k1'], 'RBend':['angle', 'k1'], 'Quadrupole':['k1'], 'Drift':['l']}
+        self.matchable_elements = {'Bend':'k1','SBend':'k1', 'RBend':'k1', 'Quadrupole':'k1', 'Drift':'l'}
 
 
     def init_lattice(self):
         """Create magnetic lattice from the last cell sequences"""
-
-        sequence = []
-
-        if self.cells_order != [] and self.cells_order[-1] in self.cells:
-            for cell_element in self.cells[self.cells_order[-1]]:
-                if cell_element in self.elements.keys():
-                    sequence.append(self.elements[cell_element])
-                    self.lattice_ename_sequence.append(cell_element)
-                        
-                if cell_element in self.cells.keys():
-                    sequence.extend(self._convert_cell(self.cells[cell_element]))
-
-        self.lattice = MagneticLattice(tuple(sequence),  method=self.method)
-
-
-    def _convert_cell(self, cell):
-
-        sequence = []
-        for elem in cell:
-            if elem in self.cells.keys():
-                sequence.extend(self._convert_cell(self.cells[elem]))
-            else:
-                sequence.append(self.elements[elem])
-                self.lattice_ename_sequence.append(elem)
         
-        return sequence
+        self.init_tuneablity()
+        self.init_matchablity()
+        self.lattice = MagneticLattice(self.cell,  method=self.method)
+
+
+    def init_tuneablity(self):
+        """Set possibility to tune element"""
+
+        for elem_id, elem in self.elements.items():
+            if elem.__class__.__name__ in self.tunable_elements:
+                elem.is_tuneable = True
+                elem.tune_params = self.tunable_elements[elem.__class__.__name__]
+            else:
+                elem.is_tuneable = False
+
+
+    def init_matchablity(self):
+        """Set possibility to match element"""
+
+        for elem_id, elem in self.elements.items():
+            if elem.__class__.__name__ in self.matchable_elements:
+                elem.is_matchable = True
+                elem.match_params = self.matchable_elements[elem.__class__.__name__]
+            else:
+                elem.is_matchable = False

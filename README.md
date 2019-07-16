@@ -133,3 +133,4 @@ You can download OCELOT jupyter tutorials (release v18.02) using GitHub link [zi
     - Theory of Laser Heater, implementation of new Physics Process, track particles w/o laser heater effect.  
 
 
+Disclaimer: The OCELOT code come with absolutely NO warranty. The authors of the OCELOT do not take any responsibility for any damage to equipments or personnel injury that may result from the use of the code.

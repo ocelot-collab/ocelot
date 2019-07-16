@@ -5,7 +5,7 @@ S.Tomin. 10.2018
 """
 
 import matplotlib
-matplotlib.use('TkAgg')
+#matplotlib.use('TkAgg')
 from ocelot import *
 from ocelot.gui.accelerator import *
 import dogleg_lattice as dl

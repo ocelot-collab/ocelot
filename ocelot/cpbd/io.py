@@ -5,9 +5,9 @@ module contains lat2input function which creates python input string
 author sergey.tomin
 """
 from ocelot.cpbd.elements import *
-import os
+import os, sys
 from ocelot.adaptors.astra2ocelot import astraBeam2particleArray, particleArray2astraBeam
-from ocelot.cpbd.beam import ParticleArray
+from ocelot.cpbd.beam import ParticleArray, Twiss, Beam
 
 
 def save_particle_array2npz(filename, p_array):
@@ -35,6 +35,10 @@ def load_particle_array(filename, print_params=False):
     """
     Universal function to load beam file, *.ast or *.npz format
 
+    Note that downloading ParticleArray from the astra file (.ast) and saving it back does not give the same distribution.
+    The difference arises because the array of particles does not have a reference particle, and in this case
+    the first particle is used as a reference.
+
     :param filename: path to file, filename.ast or filename.npz
     :return: ParticleArray
     """
@@ -42,7 +46,7 @@ def load_particle_array(filename, print_params=False):
     if file_extension == ".npz":
         return load_particle_array_from_npz(filename, print_params=print_params)
     elif file_extension in [".ast", ".001"]:
-        return astraBeam2particleArray(filename, s_ref=-1, Eref=-1, print_params=print_params)
+        return astraBeam2particleArray(filename, print_params=print_params)
     else:
         raise Exception("Unknown format of the beam file: " + file_extension + " but must be *.ast or *.npz ")
 
@@ -50,6 +54,10 @@ def load_particle_array(filename, print_params=False):
 def save_particle_array(filename, p_array, ref_index=0):
     """
     Universal function to save beam file, *.ast or *.npz format
+
+    Note that downloading ParticleArray from the astra file (.ast) and saving it back does not give the same distribution.
+    The difference arises because the array of particles does not have a reference particle, and in this case
+    the first particle is used as a reference.
 
     :param filename: path to file, filename.ast or filename.npz
     :param ref_index: index of ref particle
@@ -112,7 +120,7 @@ def create_var_name(objects):
             name = name.replace('.', '_')
             name = name.replace(':', '_')
             ids[j] = name
-        obj.name = ids[j]
+        obj.name = ids[j].lower()
 
     return objects
 
@@ -123,152 +131,220 @@ def find_obj_and_create_name(lat, types):
     return objects
 
 
-def lat2input(lat):
+def lat2input(lattice, tws0=None):
     """
     returns python input string for the lattice in the lat object
     """
-    drifts = find_obj_and_create_name(lat, types=[Drift])
-    quads = find_obj_and_create_name(lat, types=[Quadrupole])
-    sexts = find_obj_and_create_name(lat, types=[Sextupole])
-    octs = find_obj_and_create_name(lat, types=[Octupole])
-    cavs = find_obj_and_create_name(lat, types=[Cavity])
-    sols = find_obj_and_create_name(lat, types=[Solenoid])
-    matrices = find_obj_and_create_name(lat, types=[Matrix])
-    marks = find_obj_and_create_name(lat, types=[Marker])
-    mons = find_obj_and_create_name(lat, types=[Monitor])
-    unds = find_obj_and_create_name(lat, types=[Undulator])
-    cors = find_obj_and_create_name(lat, types=[Hcor, Vcor])
-    bends = find_obj_and_create_name(lat, types=[Bend, RBend, SBend])
-    unkns = find_obj_and_create_name(lat, types=[UnknownElement])
-    tcavs = find_obj_and_create_name(lat, types=[TDCavity])
-    # end find objects
 
-    lines = ["from ocelot import * \n"]
-    lines.append("\n# drifts \n")
-    for drift in drifts:
-        line = drift.name.lower() + " = Drift(l=" + str(drift.l) + ", eid='" + drift.id + "')\n"
-        lines.append(line)
+    lines = ['from ocelot import * \n']
 
-    lines.append("\n# quadrupoles \n")
-    for quad in quads:
-        line = quad.name.lower() + " = Quadrupole(l=" + str(quad.l) + ", k1=" + str(quad.k1) + ", tilt=" + str(
-            quad.tilt) + ", eid='" + quad.id + "')\n"
-        lines.append(line)
+    # prepare initial Twiss parameters
+    if tws0 is not None and isinstance(tws0, Twiss):
+        lines.append('\n#Initial Twiss parameters\n')
+        lines.extend(twiss2input(tws0))
 
-    lines.append("\n# bending magnets \n")
-    for bend in bends:
-        if bend.__class__ == RBend:
-            type = " = RBend(l="
-        elif bend.__class__ == SBend:
-            type = " = SBend(l="
+    # prepare elements list
+    lines.append('\n')
+    lines.extend(elements2input(lattice))
+
+    # prepare cell list
+    lines.append('\n# Lattice \n')
+    lines.extend(cell2input(lattice, True))
+
+    lines.append('\n')
+
+    return lines
+
+
+def get_elements(lattice):
+
+    elements = []
+        
+    for element in lattice.sequence:
+        element_type = element.__class__.__name__
+        
+        if element_type == 'Edge':
+            continue
+
+        if element not in elements:
+            elements.append(element)
+
+    elements = create_var_name(elements)
+
+    return elements
+
+
+def element_def_string(element):
+
+    params = []
+
+    element_type = element.__class__.__name__
+    element_ref = getattr(sys.modules[__name__], element_type)()
+    params_order = element_ref.__init__.__code__.co_varnames
+
+    for param in params_order:
+        if param == 'self':
+            continue
+        
+        # fix for parameter 'eid'
+        if param == 'eid':
+            params.append('eid=\'' + element.id + '\'')
+            continue
+
+        if isinstance(element.__dict__[param], np.ndarray):
+
+            if not np.array_equal(element.__dict__[param], element_ref.__dict__[param]):
+                params.append(param + '=' + np.array2string(element.__dict__[param], separator=', '))
+            continue
+
+        if isinstance(element.__dict__[param], (int, float)):
+
+            # fix for parameters 'e1' and 'e2' in RBend element
+            if element_type == 'RBend' and param in ('e1', 'e2'):
+                val = element.__dict__[param] - element.angle/2.0
+                if val != 0.0:
+                    params.append(param + '=' + str(val))
+                continue
+
+            if element.__dict__[param] != element_ref.__dict__[param]:
+                params.append(param + '=' + str(element.__dict__[param]))
+            continue
+
+        if isinstance(element.__dict__[param], str):
+
+            if element.__dict__[param] != element_ref.__dict__[param]:
+                params.append(param + '=\'' + element.__dict__[param] + '\'')
+            continue
+
+    # join all paramaters to element defenition
+    string = element.name + ' = ' + element_type + '(' + ', '.join(params) + ')\n'
+
+    return string
+
+
+def print_elements(elements_dict):
+    
+    elements_order = []
+    elements_order.append('Drift')
+    elements_order.append('Quadrupole')
+    elements_order.append('SBend')
+    elements_order.append('RBend')
+    elements_order.append('Bend')
+    elements_order.append('Sextupole')
+    elements_order.append('Octupole')
+    elements_order.append('Multipole')
+    elements_order.append('Hcor')
+    elements_order.append('Vcor')
+    elements_order.append('Undulator')
+    elements_order.append('Cavity')
+    elements_order.append('TDCavity')
+    elements_order.append('Solenoid')
+    elements_order.append('Monitor')
+    elements_order.append('Marker')
+    elements_order.append('Matrix')
+
+    lines = []
+    ordered_dict = {}
+    unordered_dict = {}
+
+    # sort on ordered and unordered elements dicts
+    for type in elements_dict:
+        if type in elements_order:
+            ordered_dict[type] = elements_dict[type]
         else:
-            type = " = Bend(l="
-        if bend.k1 == 0 or bend.k1 == None:
-            k = ''
-        else:
-            k = ", k1 = " + str(bend.k1)
+            unordered_dict[type] = elements_dict[type]
 
-        line = bend.name.lower() + type + str(bend.l) + k + ", angle=" + str(bend.angle) + \
-               ", e1=" + str(bend.e1) + ", e2=" + str(bend.e2) + ", gap=" + str(bend.gap) + \
-               ", tilt=" + str(bend.tilt) + ", fint=" + str(bend.fint) + ", fintx=" + str(
-            bend.fintx) + ", eid='" + bend.id + "')\n"
-        lines.append(line)
+    # print ordered elements
+    for type in elements_order:
 
-    lines.append("\n# correctors \n")
-    for cor in cors:
-        if cor.__class__ == Hcor:
-            type = " = Hcor(l="
-        else:
-            type = " = Vcor(l="
+        if type in ordered_dict:
 
-        line = cor.name.lower() + type + str(cor.l) + ", angle=" + str(cor.angle) + ", eid='" + cor.id + "')\n"
-        lines.append(line)
+            lines.append('\n# ' + type + 's\n')
 
-    lines.append("\n# markers \n")
-    for mark in marks:
-        line = mark.name.lower() + " = Marker(eid='" + mark.id + "')\n"
-        lines.append(line)
+            for element in ordered_dict[type]:
+                string = element_def_string(element)
+                lines.append(string)
 
-    lines.append("\n# monitor \n")
-    for mon in mons:
-        line = mon.name.lower() + " = Monitor(eid='" + mon.id + "')\n"
-        lines.append(line)
+    # print remaining unordered elements
+    for type in unordered_dict:
+        
+        lines.append('\n# ' + type + 's\n')
 
-    lines.append("\n# sextupoles \n")
-    for sext in sexts:
-        line = sext.name.lower() + " = Sextupole(l=" + str(sext.l) + ", k2=" + str(sext.k2) + ", tilt=" + str(
-            sext.tilt) + ", eid='" + sext.id + "')\n"
-        lines.append(line)
+        for element in unordered_dict[type]:
+            string = element_def_string(element)
+            lines.append(string)
 
-    lines.append("\n# octupole \n")
-    for oct in octs:
-        line = oct.name.lower() + " = Octupole(l=" + str(oct.l) + ", k3=" + str(oct.k3) + ", tilt=" + str(
-            oct.tilt) + ", eid='" + oct.id + "')\n"
-        lines.append(line)
+    # delete new line symbol from the first line
+    if lines != []:
+        lines[0] = lines[0][1:]
 
-    lines.append("\n# undulator \n")
-    for und in unds:
-        line = und.name.lower() + " = Undulator(lperiod=" + str(und.lperiod) + ", nperiods=" + str(
-            und.nperiods) + ", Kx=" + str(und.Kx) + ", Ky=" + str(und.Ky) + ", eid='" + und.id + "')\n"
-        lines.append(line)
+    return lines
 
-    lines.append("\n# cavity \n")
-    for cav in cavs:
-        line = cav.name.lower() + " = Cavity(l=" + str(cav.l) + ", v=" + str(cav.v) + \
-               ", freq=" + str(cav.f) + ", phi=" + str(cav.phi) + ", eid='" + cav.id + "')\n"
-        lines.append(line)
 
-    lines.append("\n# tdcavity \n")
-    for tcav in tcavs:
-        line = tcav.name.lower() + " = Cavity(l=" + str(tcav.l) + ", v=" + str(tcav.v) + \
-               ", freq=" + str(tcav.f) + ", phi=" + str(tcav.phi) + ", eid='" + tcav.id + "')\n"
-        lines.append(line)
+def sort_elements(elements):
 
-    lines.append("\n# UnknowElement \n")
-    for unkn in unkns:
-        line = unkn.name.lower() + " = UnknownElement(l=" + str(unkn.l) + ", eid='" + unkn.id + "')\n"
-        lines.append(line)
-    # lines.append("\n# rfcavity \n")
-    # for rfcav in rfcavs:
-    #    line = rfcav.id.replace('.','_') + " = RFcavity(l = " + str(rfcav.l) +", volt = "+ str(rfcav.volt) +", lag = "+ str(rfcav.lag)+\
-    #           ", harmon = "+ str(rfcav.harmon) +", eid = '"+ rfcav.id+ "')\n"
-    #    lines.append(line)
+    elements_dict = {}
+    for element in elements:
+        element_type = element.__class__.__name__
 
-    lines.append("\n# Matrices \n")
+        if element_type not in elements_dict:
+            elements_dict[element_type] = []
 
-    for mat in matrices:
-        line = mat.name.lower() + " = Matrix(l=" + str(mat.l) + \
-               ", rm11=" + str(mat.rm11) + ", rm12=" + str(mat.rm12) + ", rm13=" + str(mat.rm13) + ", rm14=" + str(
-            mat.rm14) + \
-               ", rm21=" + str(mat.rm21) + ", rm22=" + str(mat.rm22) + ", rm23=" + str(mat.rm23) + ", rm24=" + str(
-            mat.rm24) + \
-               ", rm31=" + str(mat.rm31) + ", rm32=" + str(mat.rm32) + ", rm33=" + str(mat.rm33) + ", rm34=" + str(
-            mat.rm34) + \
-               ", rm41=" + str(mat.rm41) + ", rm42=" + str(mat.rm42) + ", rm43=" + str(mat.rm43) + ", rm44=" + str(
-            mat.rm44) + \
-               ", eid = '" + mat.id + "')\n"
-        lines.append(line)
+        elements_dict[element_type].append(element)
 
-    lines.append("\n# Solenoids \n")
+    return elements_dict
 
-    for sol in sols:
-        line = sol.name.lower() + " = Solenoid(l=" + str(sol.l) + ", k=" + str(sol.k) + ", eid='" + sol.id + "')\n"
-        lines.append(line)
 
-    lines.append("\n# lattice \n")
+def elements2input(lattice):
+
+    elements = get_elements(lattice)
+    elements_dict = sort_elements(elements)
+    lines = print_elements(elements_dict)
+
+    return lines
+
+
+def cell2input(lattice, split=False):
+    
+    lines = []
     names = []
-    for elem in lat.sequence:
+    for elem in lattice.sequence:
         if elem.__class__ != Edge:
-            names.append(elem.name.lower())
-    # names = map(lambda p: p.id, lat.sequence)
+            names.append(elem.name)
+
     new_names = []
     for i, name in enumerate(names):
-        if i % 8 == 7:
-            new_names.append("\n" + name)
+        if split and i % 10 == 9:
+            new_names.append('\n' + name)
         else:
             new_names.append(name)
-    line = "cell = (" + ", ".join(new_names) + ")"
-    lines.append(line)
+
+    lines.append('cell = (' + ', '.join(new_names) + ')')
+    
+    return lines
+
+
+def twiss2input(tws):
+
+    lines = []
+    tws_ref = Twiss()
+    lines.append('tws0 = Twiss()\n')
+    for param in tws.__dict__:
+        if tws.__dict__[param] != tws_ref.__dict__[param]:
+            lines.append('tws0.' + str(param) + ' = ' + str(tws.__dict__[param]) + '\n')
+
+    return lines
+
+
+def beam2input(beam):
+    
+    lines = []
+    beam_ref = Beam()
+    lines.append('beam = Beam()\n')
+    for param in beam.__dict__:
+        if beam.__dict__[param] != beam_ref.__dict__[param]:
+            lines.append('beam.' + str(param) + ' = ' + str(beam.__dict__[param]) + '\n')
+
     return lines
 
 
@@ -279,7 +355,6 @@ def rem_drifts(lat):
             if not (elem.l in drifts.keys()):
                 drifts[elem.l] = elem
             else:
-                # print(cell[i],  drifts[elem.l])
                 lat.sequence[i] = drifts[elem.l]
 
     return lat
@@ -302,7 +377,7 @@ def write_power_supply_id(lattice, lines=[]):
     return lines
 
 
-def write_lattice(lattice, file_name="lattice.inp", remove_rep_drifts=True, power_supply=False):
+def write_lattice(lattice, tws0=None, file_name="lattice.py", remove_rep_drifts=True, power_supply=False):
     """
     saves lattice as python imput file
     lattice - MagneticLattice
@@ -312,7 +387,7 @@ def write_lattice(lattice, file_name="lattice.inp", remove_rep_drifts=True, powe
     if remove_rep_drifts:
         lattice = rem_drifts(lattice)
 
-    lines = lat2input(lattice)
+    lines = lat2input(lattice, tws0=tws0)
 
     if power_supply:
         lines = write_power_supply_id(lattice, lines=lines)

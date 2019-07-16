@@ -12,11 +12,12 @@ data_dir = "/Users/zagor"
 data_dir = "/Users/tomins/ownCloud/DESY/repository/forSergey"
 #data_dir = "/Volumes/Promise RAID/UserFolders/zagor_xxl"
 
+
 class SectionLattice:
     """
     High level class to work with SectionTrack()
     """
-    def __init__(self, sequence, tws0=None, data_dir="."):
+    def __init__(self, sequence, tws0=None, data_dir=".", *args, **kwargs):
         """
 
         :param sequence: list of SectionTrack()
@@ -25,14 +26,15 @@ class SectionLattice:
         self.elem_seq = None
         self.tws = None
         self.data_dir = data_dir
-        self.initialize(tws0=tws0)
+        self.initialize(tws0=tws0, *args, **kwargs)
 
-    def initialize(self, tws0=None):
-        self.init_sections()
+
+    def initialize(self, tws0=None, *args, **kwargs):
+        self.init_sections(*args, **kwargs)
         self.tws = self.calculate_twiss(tws0)
 
 
-    def init_sections(self):
+    def init_sections(self, *args, **kwargs):
         """
         Method initiates section and return dictionary with initialized sections
 
@@ -41,7 +43,7 @@ class SectionLattice:
         self.dict_sections = {}
         self.elem_seq = []
         for sec in self.sec_seq:
-            s = sec(self.data_dir)
+            s = sec(self.data_dir, *args, **kwargs)
             #s.data_dir = self.data_dir
             #s.update()
             self.dict_sections[sec] = s
@@ -71,6 +73,7 @@ class SectionLattice:
         #sections = []
         new_sections = []
         for sec in sections:
+
             sec = self.dict_sections[sec]
             #sec = blank_sec()
             #sections.append(sec)
@@ -123,7 +126,7 @@ class SectionLattice:
 
 
 class SectionTrack:
-    def __init__(self, data_dir):
+    def __init__(self, data_dir, *args, **kwargs):
 
         self.lattice_name = ""
         self.lattice = None
@@ -138,6 +141,7 @@ class SectionTrack:
         self.input_beam_file = None
         self.output_beam_file = None
         self.tws_file = None
+
         #self.data_dir = "."
         self.particle_dir = data_dir + "/particles/"
         self.tws_dir = data_dir + "/tws/"
@@ -166,7 +170,10 @@ class SectionTrack:
         if self.tws0 == None:
             print("TWISS is not defined")
             return
+        self.tws0.mux = 0
+        self.tws0.muy = 0
         bt = BeamTransform(tws=self.tws0)
+        bt.bounds = [-0.5, 0.5]
         self.add_physics_process(bt, self.lattice.sequence[0], self.lattice.sequence[0])
 
 
@@ -231,13 +238,22 @@ class SectionTrack:
         if self.dipoles is None:
             print(self.__class__.__name__ + " No BC")
             return
+
         self.bc_analysis()
-        if self.dipole_len == None:
+
+        if self.dipole_len is None:
             self.dipole_len = copy.copy(self.dipoles[0].l)
-        angle = np.arcsin(self.dipole_len / rho)
-        ds = angle * rho
-        if self.bc_gap == None:
+
+        if rho == 0:
+            angle = 0
+            ds = self.dipole_len
+        else:
+            angle = np.arcsin(self.dipole_len / rho)
+            ds = angle * rho
+
+        if self.bc_gap is None:
             self.bc_gap = self.bc_gap_left*np.cos(self.dipoles[0].angle)
+
         drift = self.bc_gap / np.cos(angle)
         self.change_bc_shoulders(drift)
         # d.l=drift
@@ -256,7 +272,7 @@ class SectionTrack:
     def update_cavity(self, phi, v):
         for elem in self.lattice.sequence:
             if elem.__class__ == Cavity:
-                if self.cav_name_pref == None:
+                if self.cav_name_pref is None:
                     elem.v = v
                     elem.phi = phi
                 else:
@@ -275,7 +291,7 @@ class SectionTrack:
 
         # init physics processes
         for physics_process in self.physics_processes_array:
-            if physics_process[0].__class__ == SpaceCharge and self.sc_flag:
+            if (physics_process[0].__class__ == SpaceCharge or physics_process[0].__class__ == LSC) and self.sc_flag:
                 self.navigator.add_physics_proc(physics_process[0], physics_process[1], physics_process[2])
 
             if physics_process[0].__class__ == CSR and self.csr_flag:
@@ -290,7 +306,7 @@ class SectionTrack:
             if physics_process[0].__class__ == SmoothBeam and self.smooth_flag:
                 self.navigator.add_physics_proc(physics_process[0], physics_process[1], physics_process[2])
 
-            if physics_process[0].__class__ not in [SpaceCharge, CSR, Wake, WakeKick, BeamTransform, SmoothBeam]:
+            if physics_process[0].__class__ not in [SpaceCharge, CSR, Wake, WakeKick, BeamTransform, SmoothBeam, LSC]:
                 #print(physics_process, " ADDED")
                 self.navigator.add_physics_proc(physics_process[0], physics_process[1], physics_process[2])
 
@@ -345,11 +361,24 @@ class SectionTrack:
                             emit_x=emit_x, emit_y=emit_y)
 
     def load_twiss_file(self):
-
-        #with np.load(self.tws_file) as data:
-        #    #for key in data.keys():
-        #    #    p_array.__dict__[key] = data[key]
         return np.load(self.tws_file)
+
+    def get_tws_list(self):
+        tws_dict = {}
+        n = 0
+        with np.load(self.tws_file) as data:
+            for key in data:
+                tws_dict[key] = data[key]
+                n = len(data[key])
+        tws_list = []
+        for i in range(n):
+            tws = Twiss()
+            for key in tws_dict:
+                tws.__dict__[key] = tws_dict[key][i]
+
+            tws_list.append(tws)
+
+        return tws_list
 
     def tracking(self, particles=None):
 

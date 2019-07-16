@@ -6,7 +6,17 @@ from scipy import optimize
 from ocelot.common.globals import m_e_GeV, m_e_eV, speed_of_light
 from copy import copy
 from numpy.linalg import norm
+from ocelot.common.logging import *
 
+_logger = logging.getLogger(__name__)
+
+try:
+    import numba as nb
+    nb_flag = True
+except:
+    _logger.info("high_order.py: module NUMBA is not installed. Install it to speed up calculation")
+    nb_flag = False
+    
 __MAD__ = True
 
 """
@@ -882,7 +892,7 @@ def sym_map(z, X, h, k1, k2, energy=0.):
 """
 
 
-def moments(bx, by, Bx, By, Bz, dzk):
+def moments_py(bx, by, Bx, By, Bz, dzk):
     """
     mx = v/(dz/dt)*e/p*(y'*Bz - By*(1.+x'^2) + x'*y'*Bx)*dz
     my = -v/(dz/dt)*e/p*(x'*Bz - Bx*(1.+y'^2) + x'*y'*By)*dz
@@ -903,6 +913,8 @@ def moments(bx, by, Bx, By, Bz, dzk):
     my = -k*(bx*Bz - Bx*(1.+by2) + bxy*By)
     return mx, my
 
+moments = moments_py if not nb_flag else nb.jit(moments_py)
+
 
 def rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=0.):
     """
@@ -917,20 +929,20 @@ def rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=0.):
         therefore z' can be arbitrary defined in the returning array. z' = dE/(ps*c)
 
     :param y0: array n*6; initial coordinates of n particles
-                [x0, x0'=dx/dz, y0, y0=dy/dz, 0, 0,
-                x1, x1', y1, y1', 0, 0, ...
-                xn, xn', yn, yn', 0, 0]
+                [x0, x0'=dx/dz, y0, y0=dy/dz, 0, dE0/pc,
+                x1, x1', y1, y1', 0, dE1/pc, ...
+                xn, xn', yn, yn', 0, dEn/pc]
     :param s_stop: longitudinal coordinate of stop
     :param N: number of steps
     :param energy: energy of particle in [GeV]
     :param mag_field: function. Bx, By, Bz = mag_field(X, Y, Z)
     :param s_start: starting longitudinal coordinate
     :return: array with length N*9- coordinates and magnetic fields on the trajectory
-            [x, x', y, y', z, z', Bx, By, Bz, ...
+            [x, x', y, y', z, dE/pc, Bx, By, Bz, ...
             xn, xn', yn, yn', zn, zn', Bxn, Byn, Bzn]
     """
 
-    #pc_ref = np.sqrt(energy**2 - m_e_GeV**2)
+    # pc_ref = np.sqrt(energy**2 - m_e_GeV**2)
     z = np.linspace(s_start, s_stop, num=N)
     h = z[1] - z[0]
     N = len(z)
@@ -1459,6 +1471,7 @@ def track_und_weave_openmp(u, l, N, kz, kx ,Kx, energy):
 def arcline( SREin, Delta_S, dS, R_vect ):
     """
     Martin Dohlus DESY, 2015
+
     :param SREin: trajectory. traj[0,:] - longitudinal coordinate (s),
                              traj[1,:],traj[2,:],traj[3,:] - rectangular coordinates, (x, y, z)\
                              traj[4,:],traj[5,:],traj[6,:] - tangential unit vectors, (x', y', z')
@@ -1467,31 +1480,26 @@ def arcline( SREin, Delta_S, dS, R_vect ):
     :param R_vect: radius
     :return:
     """
-    #%arcline( sre0,Delta_S,dS,R_vect )
 
     epsilon = 1e-8
 
-    sre0 = SREin[:,-1]
+    sre0 = SREin[:, -1]
     N = int(max(1, np.round(Delta_S/dS)))
-    #print N
     dS = float(Delta_S)/N
     SRE2 = np.zeros((7, N))
-    #print("SRE2", sre0[0], N, dS, Delta_S)
     SRE2[0,:] = sre0[0] + np.arange(1, N+1)*dS
 
     R_vect_valid = False
-    # if nargin==4 && isequal(size(R_vect),[3 1]):
 
     if True:
-        #print np.all(np.equal(R_vect, np.zeros((3,1))))
-        R_vect_valid = np.all(np.isfinite(R_vect)) and not np.all(np.equal(R_vect, np.zeros((3,1))))
+        R_vect_valid = np.all(np.isfinite(R_vect)) and not np.all(np.equal(R_vect, np.zeros((3, 1))))
         if R_vect_valid:
             R = norm(R_vect)
             n_vect = R_vect/R
-            e1=sre0[4:7]
+            e1 = sre0[4:7]
             if np.abs(np.dot(n_vect, e1)) > epsilon:
                 R_vect_valid = False
-                print('*** error in arcline: invalid R_vect --> using line')
+                print('*** error in arcline: invalid R_vect --> using Drift. Consider to use Runge-Kutta integrator')
 
     if not R_vect_valid:
         SRE2[2-1, :] = sre0[2-1] + sre0[5-1]*np.arange(1, N+1)*dS
@@ -1516,8 +1524,6 @@ def arcline( SREin, Delta_S, dS, R_vect ):
         SRE2[6-1, :] = e1[1]*co + e2[1]*si
         SRE2[7-1, :] = e1[2]*co + e2[2]*si
 
-    #print np.shape(np.transpose([SREin])), np.shape(SRE2)
-    #print("arcline: ", SREin[0,-1], SRE2[0, 0], SRE2[0, -1], )
     SRE = np.append(SREin, SRE2, axis=1)
 
     return SRE

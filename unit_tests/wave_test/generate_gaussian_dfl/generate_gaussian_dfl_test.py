@@ -12,11 +12,11 @@ FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 REF_RES_DIR = FILE_DIR + os.path.sep + 'ref_results' + os.path.sep
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(FILE_DIR))))
 
-from params import *
+from unit_tests.params import *
 import ocelot.optics.wave as wave
 
 
-@pytest.mark.parametrize('parameter', range(3))
+@pytest.mark.parametrize('parameter', [0, 1, 2])
 def test_generate_gaussian_dfl(args_array_ref, parameter, update_ref_values=False):
     """generate_gaussian_dfl() function testing"""
 

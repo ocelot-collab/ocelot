@@ -692,6 +692,9 @@ class StokesParameters:
     def deg_pol_l(self):
         with np.errstate(divide='ignore'):
             return self.P_pol_l() / self.s0
+    def deg_pol_c(self):
+        with np.errstate(divide='ignore'):
+            return np.abs(self.s3) / self.s0
         #        self.s_coh = np.array([])
     def chi(self):
         # chi angle (p/4 = circular)

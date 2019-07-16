@@ -6,7 +6,7 @@ Created on Mon Oct 8 2018
 import logging
 from ocelot.common.globals import *
 from ocelot.optics.wave import imitate_sase_dfl, wigner_dfl, dfl_waistscan, generate_gaussian_dfl
-from ocelot.gui.genesis_plot import plot_dfl, plot_wigner, plot_dfl_waistscan
+from ocelot.gui.dfl_plot import plot_dfl, plot_wigner, plot_dfl_waistscan
 from copy import deepcopy
 
 

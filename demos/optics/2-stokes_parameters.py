@@ -4,7 +4,7 @@ user interface for viewing Stokes parameters
 import matplotlib.pyplot as plt
 import numpy as np
 from ocelot.optics.wave import *
-from ocelot.gui.genesis_plot import plot_stokes_3d, plot_dfl, plot_stokes_angles, plot_stokes_values
+from ocelot.gui.dfl_plot import plot_stokes_3d, plot_dfl, plot_stokes_angles, plot_stokes_values
 ocelog.setLevel(logging.DEBUG)
 from copy import deepcopy
     

@@ -614,3 +614,18 @@ if numba_avail:
                                 J[i_y1, i_x1, i_y2, i_x2] = j / (AbsE1 * AbsE2 / n_z**2) / n_z
                             else:
                                 J[i_y1, i_x1, i_y2, i_x2] = j / n_z
+                                
+def gauss_fit(X, Y):
+    import numpy as np
+    import scipy.optimize as opt
+
+    def gauss(x, p):  # p[0]==mean, p[1]==stdev p[2]==peak
+        return p[2] / (p[1] * np.sqrt(2 * np.pi)) * np.exp(-(x - p[0])**2 / (2 * p[1]**2))
+
+    p0 = [0, np.max(X) / 2, np.max(Y)]
+    errfunc = lambda p, x, y: gauss(x, p) - y
+    p1, success = opt.leastsq(errfunc, p0[:], args=(X, Y))
+    fit_mu, fit_stdev, ampl = p1
+    Y1 = gauss(X, p1)
+    RMS = fit_stdev
+    return (Y1, RMS)

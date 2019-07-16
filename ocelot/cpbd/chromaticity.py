@@ -5,6 +5,7 @@ from scipy.integrate import simps
 from numpy.linalg import inv
 from ocelot.cpbd.beam import *
 from ocelot.cpbd.elements import *
+import numpy as np
 
 def edge_chromaticity_old(lattice, tws_0):
     #tested !
@@ -18,8 +19,8 @@ def edge_chromaticity_old(lattice, tws_0):
             tw_start = trace_z(lattice,tws_0,[(L - element.l)])
             tw_end = trace_z(lattice, tws_0,[L])
             #print "*************    ", tw_start, tw_end
-            ksi_x_edge += (tw_start.beta_x + tw_end.beta_x)*tan(element.angle/2)/r
-            ksi_y_edge += (tw_start.beta_y + tw_end.beta_y)*tan(-element.angle/2)/r
+            ksi_x_edge += (tw_start.beta_x + tw_end.beta_x)*np.tan(element.angle/2)/r
+            ksi_y_edge += (tw_start.beta_y + tw_end.beta_y)*np.tan(-element.angle/2)/r
     return (ksi_x_edge, ksi_y_edge)
 
 
@@ -38,8 +39,8 @@ def edge_chromaticity(lattice, tws_0):
             #print element.id
             #tw_end = trace_z(lattice,tws_0,[L])
             #print "*************    ", tw_start, tw_end
-            ksi_x_edge += tws_elem.beta_x*tan(element.edge)*element.h
-            ksi_y_edge += tws_elem.beta_y*tan(-element.edge)*element.h
+            ksi_x_edge += tws_elem.beta_x*np.tan(element.edge)*element.h
+            ksi_y_edge += tws_elem.beta_y*np.tan(-element.edge)*element.h
     return np.array([ksi_x_edge, ksi_y_edge])
 
 
@@ -131,7 +132,7 @@ def sextupole_id(lattice):
             if element.id == None:
                 print("Please add ID to sextupole")
             sex[element.id] = element.kn[2]
-    sex_name = sex.keys()
+    sex_name = sex
 
     if len(sex_name)<2:
         exit("Only " + str(len(sex_name))+" families of sextupole are found")
@@ -146,7 +147,7 @@ def calculate_sex_strength(lattice, tws_0, ksi, ksi_comp, nsuperperiod):
     ksi_x, ksi_y = ksi
     ksi_x_comp, ksi_y_comp = ksi_comp
     sex = sextupole_id(lattice)
-    sex_name = list(sex.keys())
+    sex_name = list(sex)
     print("Chromaticity compensation: Before: ", sex)
     m1x = 0.
     m1y = 0.
@@ -164,9 +165,9 @@ def calculate_sex_strength(lattice, tws_0, ksi, ksi_comp, nsuperperiod):
             m2x += tws_elem.Dx*tws_elem.beta_x/(4*pi)*nsuperperiod
             m2y -= tws_elem.Dx*tws_elem.beta_y/(4*pi)*nsuperperiod
         tws_elem = element.transfer_map*tws_elem
-    M = np.matrix([ [m1x, m2x], [m1y, m2y] ])
-    ksi = np.matrix([ [ksi_x_comp - ksi_x], [ksi_y_comp - ksi_y] ])
-    KSI = inv(M)*ksi
+    M = np.array([ [m1x, m2x], [m1y, m2y] ])
+    ksi = np.array([ [ksi_x_comp - ksi_x], [ksi_y_comp - ksi_y] ])
+    KSI = np.dot(inv(M), ksi)
     sex_dict_stg[sex_name[0]] = KSI[0,0]
     sex_dict_stg[sex_name[1]] = KSI[1,0]
     return sex_dict_stg
@@ -186,7 +187,7 @@ def compensate_chromaticity(lattice,  ksi_x_comp=0, ksi_y_comp=0,  nsuperperiod=
     sex_dict_stg = calculate_sex_strength(lattice, tws_0, ksi, ksi_comp, nsuperperiod)
     print("Chromaticity compensatation: After:  ", sex_dict_stg)
     #print sex_dict_stg
-    sex_name = list(sex_dict_stg.keys())
+    sex_name = list(sex_dict_stg)
     for element in lattice.sequence:
         if element.__class__ == Sextupole:
             if element.id == sex_name[0]:

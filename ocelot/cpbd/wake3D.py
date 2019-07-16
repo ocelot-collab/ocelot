@@ -6,9 +6,18 @@ Created on 17.05.2016
 from ocelot.adaptors import *
 from ocelot.adaptors.astra2ocelot import *
 from ocelot.cpbd.physics_proc import PhysProc
+
 import logging
 
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
+
+try:
+    import numba as nb
+    nb_flag = True
+except:
+    _logger.info("wake3D.py: module NUMBA is not installed. Install it to speed up calculation")
+    nb_flag = False
+
 
 def triang_filter(x, filter_order):
     Ns = x.shape[0]
@@ -43,7 +52,7 @@ def Int1h(h, y):
     return Y
 
 
-def s2current(s_array, q_array, n_points, filter_order, mean_vel):
+def s2current_py(s_array, q_array, n_points, filter_order, mean_vel):
     """
     I = s2current(P0,q,Ns,NF)
     :param s_array: s-vector, coordinates in longitudinal direction
@@ -80,6 +89,8 @@ def s2current(s_array, q_array, n_points, filter_order, mean_vel):
     I[:, 0] = s
     I[:, 1] = Ro * mean_vel / ds
     return I
+
+s2current = s2current_py if not nb_flag else nb.jit(s2current_py)
 
 
 class WakeTable:
@@ -121,7 +132,7 @@ class WakeTable:
                 W0 = 0
             if N1 > 0:
                 W1 = np.zeros([N1, 2])
-                W1[0:N1, :]=W[ind+1:ind+N1+1, :]
+                W1[0:N1, :] = W[ind+1:ind+N1+1, :]
                 ind = ind + N1
             else:
                 W1 = 0
@@ -168,7 +179,6 @@ class Wake(PhysProc):
         #convolution of unequally spaced functions
         #bunch defines the parameters
         nb = xb.shape[0]
-        xwi = np.zeros(nb)
         xwi = xb - xb[0]
         wake1 = np.interp(xwi, xw, wake, 0, 0)
         wake1[0] = wake1[0]*0.5
@@ -179,12 +189,9 @@ class Wake(PhysProc):
         """
         [x, W] = AddWake(I, T)
         :param I: wake table in V/C, W in V (R, L, Cinv, nm, W0, N0, W1, N1)
-        :param T:
+        :param T: wake table in V/C, W in V
         :return:
         """
-        """[x, W] =AddWake (I,T)
-            T - wake table in V/C, W in V
-            (R,L,Cinv,nm,W0,N0,W1,N1)"""
         R, L, Cinv, nm, W0, N0, W1, N1 = T
         c = speed_of_light
         x = I[:, 0]
@@ -211,10 +218,8 @@ class Wake(PhysProc):
         return x, W
 
     def add_total_wake(self, X, Y, Z, q, TH, Ns, NF):
-        #function [Px Py Pz I00]=AddTotalWake (P,q,wakeFile,Ns,NF)
         T, H = TH
         c = speed_of_light
-        #Z=-Z
         Np=X.shape[0]
         X2 = X**2
         Y2 = Y**2
@@ -310,15 +315,13 @@ class Wake(PhysProc):
         return Px, Py, Pz, I00
 
     def prepare(self, lat):
-        #pass
-        #self.TH = self.load_wake_table(self.wake_file)
-        if self.wake_table == None:
-            logger.info("Wake.wake_table is None! Please specify the WakeTable()")
+        if self.wake_table is None:
+            _logger.info("Wake.wake_table is None! Please specify the WakeTable()")
         else:
             self.TH = self.wake_table.TH
 
     def apply(self, p_array, dz):
-        logger.debug(" Wake: apply: dz = " + str(dz))
+        _logger.debug(" Wake: apply: dz = " + str(dz))
 
         ps = p_array.rparticles
         Px, Py, Pz, I00 = self.add_total_wake(ps[0], ps[2], ps[4], p_array.q_array, self.TH, self.w_sampling, self.filter_order)
@@ -342,7 +345,7 @@ class WakeKick(Wake):
         self.factor = factor
 
     def apply(self, p_array, dz):
-        logger.debug(" WakeKick: apply")
+        _logger.debug(" WakeKick: apply")
         ps = p_array.rparticles
         Px, Py, Pz, I00 = self.add_total_wake(ps[0], ps[2], ps[4], p_array.q_array, self.TH, self.w_sampling,
                                               self.filter_order)

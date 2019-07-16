@@ -363,7 +363,7 @@ if __name__ == "main":
 
     from test import*
 
-    method = MethodTM(params={Cavity: SlacCavityTM})
+    method = MethodTM(params={Cavity: TWCavityTM})
 
     lat = MagneticLattice(lsfel, method=method)
 

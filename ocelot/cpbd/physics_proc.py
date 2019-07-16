@@ -2,6 +2,8 @@ from ocelot.cpbd.io import save_particle_array
 from ocelot.common.globals import *
 import numpy as np
 from ocelot.cpbd.beam import Twiss
+from scipy import optimize
+from ocelot.utils.acc_utils import *
 from ocelot.common.logging import *
 _logger = logging.getLogger(__name__)
 
@@ -13,14 +15,18 @@ class PhysProc:
     :method prepare(self, lat): - the method is called at the moment of Physics Process addition to Navigator class.
     :method apply(self, p_array, dz): - the method is called on every step.
     :attribute step: - number of steps in [Navigator.unit_step] self.step*Navigator.unit_step = [m]
-    :attribute indx0: - number of start element in lattice.sequence
-    :attribute indx1: - number of stop element in lattice.sequence
+    :attribute indx0: - number of start element in lattice.sequence - assigned in navigator.add_physics_proc()
+    :attribute indx1: - number of stop element in lattice.sequence - assigned in navigator.add_physics_proc()
+    :attribute s_start: - position of start element in lattice - assigned in navigator.add_physics_proc()
+    :attribute s_stop: - position of stop element in lattice.sequence - assigned in navigator.add_physics_proc()
     """
     def __init__(self, step=1):
         self.step = step
         self.energy = None
         self.indx0 = None
         self.indx1 = None
+        self.s_start = None
+        self.s_stop = None
 
     def prepare(self, lat):
         """
@@ -41,6 +47,15 @@ class PhysProc:
         """
         pass
 
+    def finalize(self, *args, **kwargs):
+        """
+        the method is called at the end of tracking
+
+        :return:
+        """
+        pass
+
+
 
 class EmptyProc(PhysProc):
     def __init__(self, step=1):
@@ -57,7 +72,7 @@ class SaveBeam(PhysProc):
         self.filename = filename
 
     def apply(self, p_array, dz):
-        _logger.debug(" SaveBeam applied, dz =", dz)
+        _logger.debug(" SaveBeam applied, dz =" + str(dz))
         save_particle_array(filename=self.filename, p_array=p_array)
 
 
@@ -122,7 +137,7 @@ class SmoothBeam(PhysProc):
         p_array.tau()[inds] = Zout2
 
 
-class LaserHeater(PhysProc):
+class LaserModulator(PhysProc):
     def __init__(self, step=1):
         PhysProc.__init__(self, step)
         # amplitude of energy modulation on axis
@@ -135,38 +150,134 @@ class LaserHeater(PhysProc):
         self.sigma_y = self.sigma_l
         self.x_mean = 0
         self.y_mean = 0
+        self.z_waist = None  # center of the undulator
+        self.include_r56 = False
+        self.laser_peak_pos = 0  # relative to the beam center, if 0 laser_peak_pos == mean(p_array.tau()) - laser_peak_pos
+
+    def lambda_ph(self, energy):
+        """
+        Wavelength of the laser pulse
+
+        :param energy: in [GeV] - beam energy
+        :return: wavelength in [m]
+        """
+        gamma = energy / m_e_GeV
+        return self.lperiod / (2 * gamma ** 2) * (1 + self.Ku ** 2 / 2)
+
+    def r56(self, energy):
+        """
+        Method calculate R56 of the undulator
+
+        :param energy: in [GeV] - beam energy
+        :return: R56 in [m]
+        """
+        gamma = energy / m_e_GeV
+        beta = 1 / np.sqrt(1.0 - 1.0 / (gamma * gamma))
+        r56 = - self.Lu / (gamma * beta) ** 2 * (1 + 0.5 * (self.Ku * beta) ** 2)
+        return r56
 
     def apply(self, p_array, dz):
-        _logger.debug(" LH applied, dz =", dz)
-        gamma = p_array.E / m_e_GeV
-        lbda_ph = self.lperiod / (2 * gamma ** 2) * (1 + self.Ku ** 2 / 2)
+        _logger.debug(" LaserModulator applied, dz =" + str(dz))
+
+        L = self.s_stop - self.s_start
+        if L == 0:
+            _logger.warning(" LaserModulator is not applied, undulator length =" + str(L))
+            return
+        else:
+            if np.abs(self.Lu - L) > 1e-5:
+                _logger.warning(" LaserModulator: undulator length ({}) is not equal the distance between Markers ({})".format(self.Lu, L))
+
+        lbda_ph = self.lambda_ph(p_array.E)
         k_ph = 2 * np.pi / lbda_ph
         pc = np.sqrt(p_array.E ** 2 - m_e_GeV ** 2)
 
-        A = self.dE / (pc) * dz / self.Lu
+        A = self.dE / (pc) * dz / L
         dx = p_array.x()[:] - self.x_mean
         dy = p_array.y()[:] - self.y_mean
-        p_array.p()[:] += A * np.cos(k_ph * p_array.tau()[:]) * np.exp(
-            -0.25 * dx ** 2 / self.sigma_x ** 2
-            - 0.25 * dy ** 2 / self.sigma_y ** 2)
+
+        tau_mean = np.mean(p_array.tau()) + self.laser_peak_pos
+        dtau = p_array.tau()[:] - tau_mean
+
+        if self.z_waist is None:
+            p_array.p()[:] += A * np.exp(-dtau**2/(2*self.sigma_l**2))*np.cos(k_ph * p_array.tau()[:]) * np.exp(
+                -0.25 * dx ** 2 / self.sigma_x ** 2 - 0.25 * dy ** 2 / self.sigma_y ** 2)
+            if self.include_r56:
+                p_array.tau()[:] += self.r56(p_array.E)*p_array.p()[:]*dz/L
+
+        else:
+
+            z_waist_abs = self.s_start +L/2 + self.z_waist
+            z = self.z0 - p_array.tau()[:] - z_waist_abs
+            zRx = 2 * k_ph * self.sigma_x ** 2
+            zRy = 2 * k_ph * self.sigma_y ** 2
+            p = 2 * complex(0, 1) * z / k_ph
+            N = np.exp(-dx ** 2 / (4 * self.sigma_x ** 2 - p) - dy ** 2 / (4 * self.sigma_y ** 2 - p))
+            D = np.sqrt((1 - complex(0, 1) * z / zRx) * (1 - complex(0, 1) * z / zRy))
+            V = np.real(N / D * np.exp(- complex(0, 1) * k_ph * p_array.tau()[:]))
+            p_array.p()[:] += A * V * np.exp(-dtau ** 2 / (2 * self.sigma_l ** 2))
 
 
-class Apperture(PhysProc):
+
+class LaserHeater(LaserModulator):
+    def __init__(self, step=1):
+        LaserModulator.__init__(self, step)
+        _logger.info("LaserHeater physics process is obsolete. Use 'LaserModulator' instead.")
+
+
+class Aperture(PhysProc):
+    """
+    Method to cut beam in longitudinal (by default), horizontal or/and vertical direction
+    :param longitudinal: True, cutting in longitudinal direction
+    :param vertical: False, cutting in vertical direction
+    :param horizontal: False, cutting in horizontal direction
+
+    """
     def __init__(self, step=1):
         PhysProc.__init__(self, step)
-        self.zmin = -5
-        self.zmax = 5
+        self.longitudinal = True
+        self.vertical = False
+        self.horizontal = False
+
+        self.zmin = -5   # in simgas
+        self.zmax = 5    # in simgas
+
+        self.xmin = -5   # in simgas
+        self.xmax = 5    # in simgas
+
+        self.ymin = -5   # in simgas
+        self.ymax = 5    # in simgas
 
     def apply(self, p_array, dz):
         _logger.debug(" Apperture applied")
-        tau = p_array.tau()[:]
-        tau0 = np.mean(tau)
-        tau = tau - tau0
-        sig = np.std(tau)
-        inds = np.argwhere(np.logical_or(tau < sig * self.zmin, tau > sig * self.zmax))
-        inds = inds.reshape(inds.shape[0])
-        p_array.rparticles = np.delete(p_array.rparticles, inds, 1)
-        p_array.q_array = np.delete(p_array.q_array, inds, 0)
+        if self.longitudinal:
+            tau = p_array.tau()[:]
+            tau0 = np.mean(tau)
+            tau = tau - tau0
+            sig = np.std(tau)
+            inds = np.argwhere(np.logical_or(tau < sig * self.zmin, tau > sig * self.zmax))
+            inds = inds.reshape(inds.shape[0])
+            p_array.rparticles = np.delete(p_array.rparticles, inds, 1)
+            p_array.q_array = np.delete(p_array.q_array, inds, 0)
+
+        if self.horizontal:
+            x = p_array.x()
+            x0 = np.mean(x)
+            x = x - x0
+            sigx = np.std(x)
+            inds = np.argwhere(np.logical_or(x < sigx * self.xmin, x > sigx * self.xmax))
+            inds = inds.reshape(inds.shape[0])
+            p_array.rparticles = np.delete(p_array.rparticles, inds, 1)
+            p_array.q_array = np.delete(p_array.q_array, inds, 0)
+
+        if self.vertical:
+            y = p_array.y()
+            y0 = np.mean(y)
+            y = y - y0
+            sigy = np.std(y)
+            inds = np.argwhere(np.logical_or(y < sigy * self.ymin, y > sigy * self.ymax))
+            inds = inds.reshape(inds.shape[0])
+            p_array.rparticles = np.delete(p_array.rparticles, inds, 1)
+            p_array.q_array = np.delete(p_array.q_array, inds, 0)
 
 
 class BeamTransform(PhysProc):
@@ -298,3 +409,139 @@ class BeamTransform(PhysProc):
         M[1, 0] = ((a1-a2)*cosp-(1+a1*a2)*sinp)/np.sqrt(b2*b1)
         M[1, 1] = np.sqrt(b1/b2)*(cosp-a2*sinp)
         return M
+
+
+class SpontanRadEffects(PhysProc):
+    """
+    Effects of the spontaneous radiation:
+    energy loss and quantum diffusion
+    """
+    def __init__(self, K=0.0, lperiod=0.0, type="planar"):
+        """
+
+        :param Kx: Undulator deflection parameter
+        :param lperiod: undulator period in [m]
+        :param type: "planar"/"helical" undulator or "dipole"
+        """
+        PhysProc.__init__(self)
+        self.K = K
+        self.lperiod = lperiod
+        self.type = type
+        self.energy_loss = True
+        self.quant_diff = True
+        self.filling_coeff = 1.0
+
+    def apply(self, p_array, dz):
+        _logger.debug("SpontanRadEffects: apply")
+        mean_p = np.mean(p_array.p())
+        energy = p_array.E*(1 + mean_p)
+
+        if self.type == "dipole":
+            self.K = 100.0  # awake the asymptotic for K>>1
+            self.lperiod = 2.0 * np.pi * np.abs(self.radius) / gamma * self.K
+
+        if self.quant_diff:
+            sigma_Eq = self.sigma_gamma_quant(energy, dz)
+            p_array.p()[:] += sigma_Eq * np.random.randn(p_array.n)*self.filling_coeff
+
+        if self.energy_loss:
+            dE = self.energy_loss_und(energy, dz)
+            p_array.p()[:] -= dE/energy*self.filling_coeff
+
+    def energy_loss_und(self, energy, dz):
+        k = 4. * np.pi * np.pi / 3. * ro_e / m_e_GeV
+        U = k * energy ** 2 * self.K ** 2 * dz / self.lperiod ** 2
+        return U
+
+    def sigma_gamma_quant(self, energy, dz):
+        """
+        rate of energy diffusion
+
+        :param energy: electron beam energy
+        :param Kx: undulator parameter
+        :param lperiod: undulator period
+        :param dz: length of the
+        :return: sigma_gamma/gamma
+        """
+        gamma = energy / m_e_GeV
+        k = 2*np.pi/self.lperiod
+
+        lambda_compt = h_eV_s/m_e_eV*speed_of_light # m
+        lambda_compt_r = lambda_compt / 2. / pi
+        if self.type == "helical":
+            f = lambda K: 1.42*K + 1./(1 + 1.5*K + 0.95*K*K)
+        else:
+            f = lambda K: 0.6*K + 1. / (2 + 2.66 * K + 0.8 * K ** 2)
+
+        delta_Eq2 = 14/15.*lambda_compt_r*ro_e*gamma**4*k**3*self.K**2*f(self.K)*dz
+        sigma_Eq = np.sqrt(delta_Eq2 / (gamma * gamma))
+        return sigma_Eq
+
+
+class BeamAnalysis(PhysProc):
+    def __init__(self, filename):
+        PhysProc.__init__(self)
+        self.filename = filename
+        self.lambda_mod = 1e-6
+        self.nlambdas = 4 # +- nlambda for analysis
+        self.p = []
+        self.phi = []
+        self.s = []
+        self.energy = []
+        self.bunching = []
+        self.sigma_x = []
+        self.sigma_y = []
+        #self.sigma_px = []
+        #self.sigma_py = []
+
+    def apply(self, p_array, dz):
+        _logger.debug(" BeamAnalysis applied, dz =" + str(dz))
+
+        def test_func(x, a, phi, delta, g):
+            return a * np.sin(2*np.pi/self.lambda_mod * x + phi) + delta + g*x
+
+        bunch_c = np.mean(p_array.tau())
+
+        slice_min = bunch_c - self.lambda_mod*self.nlambdas
+        slice_max = bunch_c + self.lambda_mod*self.nlambdas
+
+        indx = np.where(np.logical_and(np.greater_equal(p_array.tau(), slice_min),
+                                       np.less(p_array.tau(), slice_max)))[0]
+        p = p_array.p()[indx]
+        tau = p_array.tau()[indx]
+
+        sigma_x, sigma_y = np.std(p_array.x()[indx]), np.std(p_array.y()[indx])
+        #sigma_px, sigma_py = np.std(p_array.px()[indx]), np.std(p_array.py()[indx])
+        params, params_covariance = optimize.curve_fit(test_func, tau, p, p0=[0.001, 0, 0, 0])
+
+        b = slice_bunching(tau, charge=np.sum(p_array.q_array[indx]), lambda_mod=self.lambda_mod,
+                           smooth_sigma=self.lambda_mod/5)
+
+        self.p.append(params[0])
+        self.phi.append(params[1])
+        self.s.append(np.copy(p_array.s))
+        self.energy.append(np.copy(p_array.E))
+        self.bunching.append(b)
+        self.sigma_x.append(sigma_x)
+        self.sigma_y.append(sigma_y)
+        #print("center = ", (slice_max + slice_min)/2.)
+        #self.sigma_px.append(sigma_px)
+        #self.sigma_py.append(sigma_py)
+
+    def finalize(self):
+        data = np.array([np.array(self.s), np.array(self.p), np.array(self.phi), np.array(self.energy),
+                        np.array(self.bunching), np.array(self.sigma_x),  np.array(self.sigma_y)])
+        np.savetxt(self.filename, data)
+
+
+class Chicane(PhysProc):
+    def __init__(self, r56, t566=0.):
+        PhysProc.__init__(self)
+        self.r56 = r56
+        self.t566 = t566
+
+    def apply(self, p_array, dz):
+        _logger.debug(" Chicane applied, r56 =" +str(self.r56))
+
+        p_array.rparticles[4] += (self.r56 * p_array.rparticles[5] + self.t566 * p_array.rparticles[5] * p_array.rparticles[5])
+

@@ -3,7 +3,38 @@ statistical analysis functions, fitting, optimization and the like
 """
 
 import numpy as np
+from scipy.special import gammaincc, gamma, exp1
 from scipy import fftpack, integrate, interpolate
+
+
+def complete_gamma(a, z):
+    """
+    return 'complete' gamma function
+    """
+    return exp1(z) if a == 0 else gamma(a)*gammaincc(a, z)
+
+
+def conj_sym(x):
+    """
+    function to make "nearly conjugate symmetric" vector in order to
+    compute matplab IFFT function with 'symmetric' option:
+    MATLAB
+    >> ifft(x, 'symmetric')
+    PYTHON
+    >> numpy.fft.ifft(conj_sym(x))
+
+    """
+    x = np.array(x, dtype=np.complex)
+    n = len(x)
+
+    c = 0 if n % 2 == 1 else 1
+
+    end = int(np.floor(n / 2) - c)
+    x_part_flipped = x[end:0:-1]
+
+    x[int(np.ceil(n / 2) + c):n] = x_part_flipped.real - np.sqrt(-1 + 0j) * x_part_flipped.imag
+
+    return x
 
 
 def invert_cdf(y, x):

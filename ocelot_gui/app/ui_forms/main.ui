@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1200</width>
+    <height>800</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>1150</width>
+    <height>0</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Ocelot GUI</string>
+  </property>
+  <widget class="QWidget" name="central_widget"/>
+  <widget class="QStatusBar" name="statusBar"/>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1200</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="action_new_lattice"/>
+    <addaction name="action_open_lattice"/>
+    <addaction name="action_save_lattice"/>
+    <addaction name="action_exit"/>
+   </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+    <addaction name="action_edit_lattice"/>
+   </widget>
+   <widget class="QMenu" name="menuSimulations">
+    <property name="title">
+     <string>Simulations</string>
+    </property>
+    <addaction name="action_calc_twiss"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
+   <addaction name="menuSimulations"/>
+  </widget>
+  <action name="action_new_lattice">
+   <property name="text">
+    <string>New</string>
+   </property>
+  </action>
+  <action name="action_open_lattice">
+   <property name="text">
+    <string>Open Lattice</string>
+   </property>
+  </action>
+  <action name="action_save_lattice">
+   <property name="text">
+    <string>Save Lattice</string>
+   </property>
+  </action>
+  <action name="action_exit">
+   <property name="text">
+    <string>Exit</string>
+   </property>
+  </action>
+  <action name="action_edit_lattice">
+   <property name="text">
+    <string>Edit Lattice</string>
+   </property>
+   <property name="toolTip">
+    <string>Edit Lattice and parameters</string>
+   </property>
+  </action>
+  <action name="action_calc_twiss">
+   <property name="text">
+    <string>Twiss Functions</string>
+   </property>
+   <property name="toolTip">
+    <string>Twiss Functions</string>
+   </property>
+  </action>
+ </widget>
+ <layoutdefault spacing="6" margin="11"/>
+ <resources/>
+ <connections/>
+</ui>

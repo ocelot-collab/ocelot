@@ -21,12 +21,18 @@ except:
     _logger.debug("beam.py: module NUMEXPR is not installed. Install it to speed up calculation")
     ne_flag = False
 
+try:
+    import numba as nb
+    nb_flag = True
+except:
+    _logger.info("beam.py: module NUMBA is not installed. Install it to speed up calculation")
+    nb_flag = False
 
-'''
+"""
 Note:
 (A) the reference frame (e.g. co-moving or not with the beam is not fixed) 
 (B) xp, yp are in [rad] but the meaning is not specified
-'''
+"""
 
 
 class Twiss:
@@ -573,7 +579,7 @@ class ParticleArray:
     """
     def __init__(self, n=0):
         #self.particles = zeros(n*6)
-        self.rparticles = np.zeros((6, n))#np.transpose(np.zeros(int(n), 6))
+        self.rparticles = np.zeros((6, n))
         self.q_array = np.zeros(n)    # charge
         self.s = 0.0
         self.E = 0.0
@@ -635,7 +641,7 @@ class ParticleArray:
         return p_list
 
     def size(self):
-        return self.rparticles.size / 6
+        return int(self.rparticles.size / 6)
 
     def x(self):  return self.rparticles[0]
     def px(self): return self.rparticles[1] # xp
@@ -712,6 +718,14 @@ class ParticleArray:
                 # p_array.__dict__[key] = data[key]
         # return p_array
 
+    def __str__(self):
+        val = ""
+        val += "ref energy  = " + str(np.round(self.E, 4)) + " GeV \n"
+        val += "beam energy  = " + str(np.around(self.E*(1 + np.mean(self.p())), 4)) + " GeV \n"
+        val += "charge  = " + str(np.around(np.sum(self.q_array)*1e9, 4)) + " nC \n"
+
+        val += "n particles  = " + str(self.n) + "\n"
+        return val
 
 
 def recalculate_ref_particle(p_array):
@@ -725,19 +739,47 @@ def recalculate_ref_particle(p_array):
     return p_array
 
 
-def get_envelope(p_array, tws_i=Twiss()):
+def get_envelope(p_array, tws_i=Twiss(), bounds=None):
+    """
+    Function to calculate twiss parameters form the ParticleArray
+
+    :param p_array: ParticleArray
+    :param tws_i: optional, design Twiss,
+    :param bounds: optional, [left_bound, right_bound] - bounds in units of std(p_array.tau())
+    :return: Twiss()
+    """
+
+    if bounds is not None:
+        tau = p_array.tau()
+        z0 = np.mean(tau)
+        sig0 = np.std(tau)
+        inds = np.argwhere((z0 + sig0 * bounds[0] <= tau) * (tau <= z0 + sig0 * bounds[1]))
+        p = p_array.p()[inds]
+        x = p_array.x()[inds]
+        px = p_array.px()[inds]
+        y = p_array.y()[inds]
+        py = p_array.py()[inds]
+        tau = p_array.tau()[inds]
+    else:
+        p = p_array.p()
+        x = p_array.x()
+        px = p_array.px()
+        y = p_array.y()
+        py = p_array.py()
+        tau = p_array.tau()
+
     tws = Twiss()
-    p = p_array.p()
     dx = tws_i.Dx*p
     dy = tws_i.Dy*p
     dpx = tws_i.Dxp*p
     dpy = tws_i.Dyp*p
-    x = p_array.x() - dx
-    px = p_array.px() - dpx
 
-    y = p_array.y() - dy
-    py = p_array.py() - dpy
-    tau = p_array.tau()
+    x = x - dx
+    px = px - dpx
+
+    y = y - dy
+    py = py - dpy
+
     if ne_flag:
         px = ne.evaluate('px * (1. - 0.5 * px * px - 0.5 * py * py)')
         py = ne.evaluate('py * (1. - 0.5 * px * px - 0.5 * py * py)')
@@ -773,7 +815,7 @@ def get_envelope(p_array, tws_i=Twiss()):
         tws.pypy = np.mean((py-tws.py)*(py-tws.py))
         tws.tautau = np.mean((tau - tws.tau)*(tau - tws.tau))
         tws.xy = np.mean((x - tws.x) * (y - tws.y))
-    tws.p = np.mean( p_array.p())
+    tws.p = np.mean(p)
     tws.E = np.copy(p_array.E)
     #tws.de = p_array.de
 
@@ -786,9 +828,10 @@ def get_envelope(p_array, tws_i=Twiss()):
     tws.alpha_y = -tws.ypy/tws.emit_y
     return tws
 
-def get_current(p_array, charge=None, num_bins = 200):
+def get_current(p_array, charge=None, num_bins=200):
     """
     Function calculates beam current from particleArray
+
     :param p_array: particleArray
     :param charge: - None, charge of the one macro-particle.
                     If None, charge of the first macro-particle is used
@@ -830,7 +873,6 @@ def ellipse_from_twiss(emit, beta, alpha):
     x = a * np.sqrt(beta) * np.cos(phi)
     xp = -a / np.sqrt(beta) * ( np.sin(phi) + alpha * np.cos(phi) )
     return (x, xp)
-
 
 def moments(x, y, cut=0):
     n = len(x)
@@ -922,47 +964,49 @@ def sortrows(x, col):
 
 
 def convmode(A, B, mode):
-    C=[]
+
     if mode == 2:
         C = np.convolve(A, B)
-    if mode == 1:
+    else: # if mode == 1:
         i = np.int_(np.floor(len(B)*0.5))
         n = len(A)
+        C = np.zeros(n)
         C1 = np.convolve(A, B)
         C[:n] = C1[i:n+i]
     return C
 
-def s_to_cur(A, sigma, q0, v):
-    #  A - s-coordinates of particles
-    #  sigma -smoothing parameter
-    #  q0 -bunch charge
-    #  v mean velocity
+
+def s_to_cur_py(A, sigma, q0, v):
+    """
+    Function to calculate beam current
+
+    :param A: s-coordinates of particles
+    :param sigma: smoothing parameter
+    :param q0: bunch charge
+    :param v: mean velocity
+    :return: [s, I]
+    """
+
     Nsigma = 3
     a = np.min(A) - Nsigma*sigma
     b = np.max(A) + Nsigma*sigma
     s = 0.25*sigma
-    #print("s = ", sigma, s)
     N = int(np.ceil((b-a)/s))
     s = (b-a)/N
-    #print(a, b, N)
     B = np.zeros((N+1, 2))
     C = np.zeros(N+1)
 
-    #print(len(np.arange(0, (N+0.5)*s, s)))
     B[:, 0] = np.arange(0, (N+0.5)*s, s) + a
-    N = np.shape(B)[0]
-    #print(N)
+    N = N+1 #np.shape(B)[0]
     cA = (A - a)/s
-    #print(cA[:10])
     I = np.int_(np.floor(cA))
-    #print(I)
     xiA = 1 + I - cA
     for k in range(len(A)):
         i = I[k]
         if i > N-1:
             i = N-1
-        C[i+0] = C[i+0]+xiA[k]
-        C[i+1] = C[i+1]+(1-xiA[k])
+        C[i] = C[i] + xiA[k]
+        C[i+1] = C[i+1] + (1 - xiA[k])
 
     K = np.floor(Nsigma*sigma/s + 0.5)
     G = np.exp(-0.5*(np.arange(-K, K+1)*s/sigma)**2)
@@ -972,8 +1016,9 @@ def s_to_cur(A, sigma, q0, v):
     B[:, 1] = koef*B[:, 1]
     return B
 
+s_to_cur = s_to_cur_py if not nb_flag else nb.jit(s_to_cur_py)
 
-def slice_analysis(z, x, xs, M, to_sort):
+def slice_analysis_py(z, x, xs, M, to_sort):
     """
     returns:
     <x>, <xs>, <x^2>, <x*xs>, <xs^2>, np.sqrt(<x^2> * <xs^2> - <x*xs>^2)
@@ -995,7 +1040,7 @@ def slice_analysis(z, x, xs, M, to_sort):
     mxxs = np.zeros(N)
     mxsxs = np.zeros(N)
     emittx = np.zeros(N)
-    m = np.max([np.round(M/2), 1])
+    m = np.max(np.array([np.round(M/2), 1]))
     xc = np.cumsum(x)
     xsc = np.cumsum(xs)
     for i in range(N):
@@ -1020,6 +1065,8 @@ def slice_analysis(z, x, xs, M, to_sort):
 
     emittx = np.sqrt(mxx*mxsxs - mxxs*mxxs)
     return [mx, mxs, mxx, mxxs, mxsxs, emittx]
+
+slice_analysis = slice_analysis_py if not nb_flag else nb.jit(slice_analysis_py)
 
 
 def simple_filter(x, p, iter):
@@ -1219,7 +1266,10 @@ def global_slice_analysis(parray, Mslice=5000, Mcur=0.01, p=2, iter=2):
     _, _, _, _, _, emitt0 = moments(PD[0], PD[1])
     slc.emitxn = emitt0 * gamma0
 
+    _, mp, _, _, _, _ = slice_analysis(z, PD[4], PD[5], Mslice, True)
+
     z, ind = np.unique(z, return_index=True)
+
     emittx = emittx[ind]
     emitty = emitty[ind]
     sE = sE[ind]
@@ -1247,6 +1297,11 @@ def global_slice_analysis(parray, Mslice=5000, Mcur=0.01, p=2, iter=2):
     slc.I = interp1(B[:, 0], B[:, 1], s)
 
     # additional moments <x>, <xp>, <y>, <yp>, <p>
+    mx = mx[ind]
+    mxs = mxs[ind]
+    my = my[ind]
+    mys = mys[ind]
+
     xm = interp1(z, mx, s)
     xpm = interp1(z, mxs, s)
     ym = interp1(z, my, s)
@@ -1269,7 +1324,7 @@ def global_slice_analysis(parray, Mslice=5000, Mcur=0.01, p=2, iter=2):
     slc.sig_xp = simple_filter(sig_xp, p, iter)
     slc.sig_yp = simple_filter(sig_yp, p, iter)
 
-    _, mp, _, _, _, _ = slice_analysis(z, PD[4], PD[5], Mslice, True)
+    mp = mp[ind]
     mp = interp1(z, mp, s)
     slc.mp = simple_filter(mp, p, iter)
 
@@ -1366,9 +1421,29 @@ def parray2beam(parray, step=1e-7):
         beam.filePath = parray.filePath + '.beam'
     return(beam)
 
+
 def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
-                    sigma_tau=1e-3, sigma_p=1e-4, tau_p_cor=0.01, charge=5e-9, nparticles=200000, energy=0.13,
-                    tue_trunc=None):
+                    sigma_tau=1e-3, sigma_p=1e-4, chirp=0.01, charge=5e-9, nparticles=200000, energy=0.13,
+                    tau_trunc=None):
+    """
+    Method to generate ParticleArray with gaussian distribution.
+
+    Note: in ParticleArray, {x, px} and {y, py} are canonical coordinates. {tau, p} is not, to make it canonical
+            the sign of "tau" should be flipped.
+
+    :param sigma_x: std(x), x is horizontal cartesian coordinate.
+    :param sigma_px: std(px), 'px' is conjugate momentum canonical momentum px/p0.
+    :param sigma_y: std(y), y is vertical cartesian coordinate.
+    :param sigma_py: std(py), 'py' is canonical momentum py/p0.
+    :param sigma_tau: std(tau), "tau" = c*t
+    :param sigma_p: std(p), 'p' is canonical momentum E/(c*p0)
+    :param chirp: energy chirp [unitless], linear correlation - p_i += chirp * tau_i/sigma_tau
+    :param charge: beam charge in [C], 5e-9 by default
+    :param nparticles: namber of particles, 200k by default
+    :param energy: beam energy in [GeV], 0.13 [GeV]
+    :param tau_trunc: None, if not [float] - truncated gauss distribution in "tau" direction.
+    :return: ParticleArray
+    """
 
     if sigma_y is None:
         sigma_y = sigma_x
@@ -1379,14 +1454,14 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
     px = np.random.randn(nparticles) * sigma_px
     y = np.random.randn(nparticles) * sigma_y
     py = np.random.randn(nparticles) * sigma_py
-    if tue_trunc is None:
+    if tau_trunc is None:
         tau = np.random.randn(nparticles) * sigma_tau
     else:
-        tau = truncnorm.rvs(tue_trunc, -tue_trunc, loc=0, scale=sigma_tau, size=nparticles)
+        tau = truncnorm.rvs(tau_trunc, -tau_trunc, loc=0, scale=sigma_tau, size=nparticles)
     #
     dp = np.random.randn(nparticles) * sigma_p
     if sigma_tau != 0:
-        dp += tau_p_cor*tau/sigma_tau
+        dp += chirp*tau/sigma_tau
     # covariance matrix for [tau, p] for beam compression in BC
     #cov_t_p = [[1.30190131e-06, 2.00819771e-05],
     #           [2.00819771e-05, 3.09815718e-04]]

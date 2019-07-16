@@ -147,38 +147,27 @@ def exact_xxstg_2_xp_de(xxstg, gamref):
     return xp
 
 
-def astraBeam2particleArray(filename, s_ref=-1, Eref=-1, print_params=True):
+def astraBeam2particleArray(filename, print_params=True):
     """
-    function convert Astra beam distribution to Ocelot format - ParticleArray
+    function convert Astra beam distribution to Ocelot format - ParticleArray.
+    Note that downloading ParticleArray from the astra file and saving it back does not give the same distribution.
+    The difference arises because the array of particles does not have a reference particle, and in this case
+    the first particle is used as a reference.
+
     :type filename: str
     :return: ParticleArray
     """
     P0 = np.loadtxt(filename)
     charge_array = -P0[:, 7] * 1e-9  # charge in nC -> in C
 
-
     xp = P0[:, :6]
 
-    if s_ref < 0:
-        s_ref = xp[0, 2]
-        xp[0, 2] = 0.
-    else:
-        s0 = xp[0, 2]
-        xp[0, 2] = 0.
-        xp[:, 2] = xp[:, 2] + s0 - s_ref
+    s_ref = xp[0, 2]
+    xp[0, 2] = 0.
 
-    if Eref<0:
-        Pref = xp[0, 5]
-        xp[0, 5] = 0.
-    else:
-        Pref = np.sqrt(Eref ** 2 / m_e_GeV ** 2 - 1) * m_e_eV
-        P0 = xp[0, 5]
-        xp[0, 5] = 0.
-        xp[:, 5] = xp[:, 5] + P0 - Pref
+    Pref = xp[0, 5]
+    xp[0, 5] = 0.
 
-    #    print(xp[1:, 2])
-    #    plot(xp[1:, 2], xp[1:, 5]/Pref, "b.")
-    #    show()
     gamref = np.sqrt((Pref / m_e_eV) ** 2 + 1)
     xxstg = exact_xp_2_xxstg_mad(xp, gamref)
 
@@ -205,6 +194,11 @@ def astraBeam2particleArray(filename, s_ref=-1, Eref=-1, print_params=True):
 def particleArray2astraBeam(p_array, filename="tytest.ast", ref_index=0):
     """
     function convert  Ocelot's ParticleArray to Astra beam distribution and save to "filename".
+
+    Note that downloading ParticleArray from the astra file and saving it back does not give the same distribution.
+    The difference arises because the array of particles does not have a reference particle, and in this case
+    the first particle is used as a reference.
+
     :param p_array:
     :param filename:
     :param ref_index: index of the reference particle
@@ -233,7 +227,6 @@ def particleArray2astraBeam(p_array, filename="tytest.ast", ref_index=0):
     astra = np.append(astra, charge_array, axis=1)
     astra = np.append(astra, flag, axis=1)  # 1 - electron, 2 - positron, 3 - protons and 4 - hydrogen ions.
     astra = np.append(astra, flag * 5, axis=1)  # 5 - standard particle
-    print("SAVE")
     np.savetxt(filename, astra, fmt='%.7e')
 
 

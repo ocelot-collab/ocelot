@@ -213,6 +213,58 @@ def create_r_matrix(element):
             r_z_e = lambda z, energy: cavity_R_z(z, V=element.v * z / element.l, E=energy, freq=element.freq,
                                                phi=element.phi)
 
+    elif element.__class__ == TWCavity:
+
+        def tw_cavity_R_z(z, V, E, freq, phi=0.):
+            """
+            :param z: length
+            :param de: delta E
+            :param f: frequency
+            :param E: initial energy
+            :return: matrix
+            """
+            phi = phi * np.pi / 180.
+            de = V * np.cos(phi)
+            r12 = z * E / de * np.log(1. + de / E) if de != 0 else z
+            r22 = E / (E + de)
+            r65 = V * np.sin(phi) / (E + de) * (2 * np.pi / (speed_of_light / freq)) if freq != 0 else 0
+            r66 = r22
+            cav_matrix = np.array([[1, r12, 0., 0., 0., 0.],
+                                   [0, r22, 0., 0., 0., 0.],
+                                   [0., 0., 1, r12, 0., 0.],
+                                   [0., 0., 0, r22, 0., 0.],
+                                   [0., 0., 0., 0., 1., 0],
+                                   [0., 0., 0., 0., r65, r66]]).real
+            return cav_matrix
+
+        def f_entrance(z, V, E, phi=0.):
+            phi = phi * np.pi / 180.
+            de = V * np.cos(phi)
+            r = np.eye(6)
+            r[1, 0] = -de / z / 2. / E
+            r[3, 2] = r[1, 0]
+            return r
+
+        def f_exit( z, V, E, phi=0.):
+            phi = phi * np.pi / 180.
+            de = V * np.cos(phi)
+            r = np.eye(6)
+            r[1, 0] = +de / z / 2. / (E + de)
+            r[3, 2] = r[1, 0]
+            return r
+
+        def cav(z, V, E, freq, phi):
+            R_z = np.dot(tw_cavity_R_z(z, V, E, freq, phi), f_entrance(z, V, E, phi))
+            R = np.dot(f_exit(z, V, E, phi), R_z)
+            return R
+
+        if element.v == 0.:
+            r_z_e = lambda z, energy: uni_matrix(z, 0., hx=0., sum_tilts=element.dtilt + element.tilt, energy=energy)
+        else:
+            r_z_e = lambda z, energy: cav(z, V=element.v * z / element.l, E=energy, freq=element.freq,
+                                               phi=element.phi)
+
+
     elif element.__class__ == Solenoid:
         def sol(l, k, energy):
             """
@@ -344,6 +396,62 @@ def create_r_matrix(element):
         r[3, 2] = element.kn[1]
         r[1, 5] = element.kn[0]
         r_z_e = lambda z, energy: r
+
+    elif element.__class__ == XYQuadrupole:
+        k1 = element.k1
+
+        if element.l == 0:
+            hx = 0.
+            hy = 0.
+        else:
+            hx = k1 * element.x_offs
+            hy = -k1 * element.y_offs
+
+
+        def r_mtx(z, k1, hx, hy, sum_tilts=0., energy=0.):
+            # r = element.l/element.angle
+            #  +K - focusing lens , -K - defoc
+            gamma = energy / m_e_GeV
+
+            kx2 = (k1 + hx * hx)
+            ky2 = hy*hy - k1
+            kx = np.sqrt(kx2 + 0.j)
+            ky = np.sqrt(ky2 + 0.j)
+            cx = np.cos(z * kx).real
+            cy = np.cos(z * ky).real
+            sy = (np.sin(ky * z) / ky).real if ky != 0 else z
+
+            igamma2 = 0.
+
+            if gamma != 0:
+                igamma2 = 1. / (gamma * gamma)
+
+            beta = np.sqrt(1. - igamma2)
+
+            if kx != 0:
+                sx = (np.sin(kx * z) / kx).real
+                dx = hx / kx2 * (1. - cx)
+                dy = hy / ky2 * (1. - cy)
+                r56 = hx * hx * (z - sx) / kx2 / beta ** 2 + hy * hy * (z - sy) / ky2 / beta ** 2
+            else:
+                sx = z
+                dx = z * z * hx / 2.
+                dy = z * z * hy / 2.
+                r56 = hx * hx * z ** 3 / 6. / beta ** 2 + hy * hy * z ** 3 / 6. / beta ** 2
+
+            r56 -= z / (beta * beta) * igamma2
+
+            u_matrix = np.array([[cx, sx, 0., 0., 0., dx / beta],
+                                 [-kx2 * sx, cx, 0., 0., 0., sx * hx / beta],
+                                 [0., 0., cy, sy, 0., dy / beta],
+                                 [0., 0., -ky2 * sy, cy, 0.,sy * hy / beta],
+                                 [hx * sx / beta, dx / beta, hy * sy / beta, dy / beta, 1., r56],
+                                 [0., 0., 0., 0., 0., 1.]])
+            if sum_tilts != 0:
+                u_matrix = np.dot(np.dot(rot_mtx(-sum_tilts), u_matrix), rot_mtx(sum_tilts))
+            return u_matrix
+
+        r_z_e = lambda z, energy: r_mtx(z, k1, hx=hx, hy=hy, sum_tilts=0, energy=energy)
 
     # else:
     #    print (element.__class__, " : unknown type of magnetic element. Cannot create transfer map ")

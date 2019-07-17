@@ -43,23 +43,34 @@ def plot_dfl_all(dfl, **kwargs):
     dfl.fft_xy()
 
 @if_plottable
-def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy = True, log_scale=0, debug=1, cmin=0, vartype_dfl=np.complex64, **kwargs):
+def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, fig_name=None,
+             auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy=True,
+             slice_xy=False, log_scale=0, debug=1, cmap_cutoff=0, vartype_dfl=np.complex64, **kwargs):
     '''
-    Plots dfl radiation object in 3d.
+    Plots dfl radiation object in 3d using matplotlib.
 
-    dfl is RadiationField() object
-    z_lim sets the boundaries to CUT the dfl object in z to ranges of e.g. [2,5] um or nm depending on freq_domain=False of True
-    xy_lim sets the boundaries to SCALE the dfl object in x and y to ranges of e.g. [2,5] um or urad depending on far_field=False of True
-    figsize rescales the size of the figure
-    legend not used yet
-    phase can replace Z projection or spectrum with phase front distribution
-    z dimentions correspondingly
-    fig_name is the desired name of the output figure, would be used as suffix to the image filename if savefig==True
-    auto_zoom automatically scales xyz the images to the (1%?) of the intensity limits
-    column_3d plots top and side views of the radiation distribution
-    savefig and showfig allow to save figure to image (savefig='png' (default) or savefig='eps', etc...) or to display it (slower)
-    return_proj returns [xy_proj,yz_proj,xz_proj,x,y,z] array.
-    vartype_dfl is the data type to store dfl in memory [either complex128 (two 64-bit floats) or complex64 (two 32-bit floats)], may save memory
+    :param dfl: RadiationField() object
+    :param domains: longitudinal domain + transverse domain ('t' or 'f' + 's' or 'k') (example: 'tk' - time/inversespace domain)
+    :param z_lim: sets the boundaries to CUT the dfl object in z to ranges of e.g. [2,5] um or nm depending on freq_domain=False of True
+    :param xy_lim: sets the boundaries to SCALE the dfl object in x and y to ranges of e.g. [2,5] um or urad depending on far_field=False of True
+    :param figsize: rescales the size of the figure
+    :param cmap: color map which will be used for ploting
+    :param legend: not used yet
+    :param phase: bool type variable, can replace Z projection or spectrum with phase front distribution z dimentions correspondingly
+    :param fig_name: the desired name of the output figure, would be used as suffix to the image filename if savefig==True
+    :param auto_zoom: auto_zoom automatically scales xyz the images to the (1%?) of the intensity limits
+    :param column_3d: column_3d plots top and side views of the radiation distribution
+    :param savefig: allow to save figure to image (savefig='png' (default) or savefig='eps', etc...)
+    :param showfig: allow to display it (slower)
+    :param return_proj: bool type variable, returns [xy_proj,yz_proj,xz_proj,x,y,z] array.
+    :param line_off_xy: bool type variable, if True, the transverse size of radiation are calculated at x=0 and y=0 position, otherwise marginal distribution are used
+    :param slice_xy: bool type variable, if True, slices will be ploted; if False, projections will be plotted
+    :param log_scale: bool type variable, if True, log scale will be used for potting
+    :param debug: bool type variable, legacy support
+    :param cmap_cutoff: 0 <= cmap_cutoff <= 1; all pixels that have intensity lower than cmap_cutoff will be seted to white color
+    :param vartype_dfl: the data type to store dfl in memory [either complex128 (two 64-bit floats) or complex64 (two 32-bit floats)], may save memory
+    :param kwargs: 
+    :return: 
     '''
     import matplotlib.colors as colors
     
@@ -71,7 +82,9 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     text_present = 1
     _logger.info('plotting radiation field (dfl)')
     start_time = time.time()
-    
+
+    if dfl.Nx() == 1 or dfl.Ny() == 1:
+        _logger.warning(ind_str + 'plot_dfl() works only with RadiationFieldes, which have Nx() and Ny() greter then 1')
     # print('dfl type is ',type(dfl))
     # if isinstance(dfl, RadiationField):
     # # if dfl.__class__ != RadiationField:
@@ -204,14 +217,25 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         y_title = 'Y projection'
         xy_title = 'Intensity'
         x_y_color = 'blue'
-    
-    
+
+
     dfl.fld = dfl.fld.astype(np.complex64)
     xy_proj = dfl.int_xy()
     xy_proj_ph = np.angle(np.sum(dfl.fld,axis=0))  # tmp  # tmp
-    yz_proj = dfl.int_zy()
-    xz_proj = dfl.int_zx()
-    z_proj = dfl.int_z()
+    if slice_xy:
+        yz_proj = dfl.intensity()[:, :, dfl.Nx() // 2]
+        xz_proj = dfl.intensity()[:, dfl.Ny() // 2, :]
+        xz_title = 'Top slice y=0'
+        yz_title = 'Side slice x=0'
+        z_proj = dfl.intensity()[:, dfl.Ny() // 2, dfl.Nx() // 2]
+        z_title += ' (on-axis)'
+    else:
+        yz_proj = dfl.int_zy()
+        xz_proj = dfl.int_zx()
+        xz_title = 'Top projection'
+        yz_title = 'Side projection'
+        z_proj = dfl.int_z()
+
     
     dx = abs(x[1] - x[0])
     dy = abs(y[1] - y[0])
@@ -247,12 +271,12 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         x_line, y_line = x_line / np.max(x_line), y_line / np.max(y_line)
         
         
-    if cmin not in [None, False, 0]:
+    if cmap_cutoff not in [None, False, 0]:
         cmap = matplotlib.cm.get_cmap(cmap)
         cmap.set_under("w")
-        xy_proj[xy_proj < xy_proj.max() * cmin] = -1e-10
-        yz_proj[yz_proj < yz_proj.max() * cmin] = -1e-10
-        xz_proj[xz_proj < xz_proj.max() * cmin] = -1e-10
+        xy_proj[xy_proj < xy_proj.max() * cmap_cutoff] = -1e-10
+        yz_proj[yz_proj < yz_proj.max() * cmap_cutoff] = -1e-10
+        xz_proj[xz_proj < xz_proj.max() * cmap_cutoff] = -1e-10
 
     if log_scale:
         xy_proj[xy_proj <= 0] = None
@@ -304,9 +328,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         x_line_f = np.zeros_like(x_line)
         rms_x = 0
         fwhm_x = 0
-    
-    
-    
+
     
     if log_scale:
         ax_proj_x.semilogy(x, x_line, linewidth=2, color=x_y_color)
@@ -396,7 +418,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
             ax_proj_xz.pcolormesh(z, x, np.swapaxes(xz_proj, 1, 0), norm=colors.LogNorm(vmin=min_xz_proj, vmax=np.nanmax(xz_proj)), cmap=cmap)
         else:
             ax_proj_xz.pcolormesh(z, x, np.swapaxes(xz_proj, 1, 0), cmap=cmap, vmin=0)
-        ax_proj_xz.set_title('Top view', fontsize=15)
+        ax_proj_xz.set_title(xz_title, fontsize=15)
         ax_proj_xz.set_xlabel(z_label)
         ax_proj_xz.set_ylabel(x_label)
         
@@ -406,7 +428,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
             ax_proj_yz.pcolormesh(z, y, np.swapaxes(yz_proj, 1, 0), norm=colors.LogNorm(vmin=min_yz_proj, vmax=np.nanmax(yz_proj)), cmap=cmap)
         else:
             ax_proj_yz.pcolormesh(z, y, np.swapaxes(yz_proj, 1, 0), cmap=cmap, vmin=0)
-        ax_proj_yz.set_title('Side view', fontsize=15)
+        ax_proj_yz.set_title(yz_title, fontsize=15)
         ax_proj_yz.set_xlabel(z_label)
         ax_proj_yz.set_ylabel(y_label)
 

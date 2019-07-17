@@ -2293,16 +2293,15 @@ def generate_1d_profile(hrms, length=0.1, points_number=1000, wavevector_cutoff=
     """
     Function for generating HeightProfile of highly polished mirror surface
 
-    :param hrms: [meters] height root mean square
-    :param length: [meters] length of surface
+    :param hrms: [meters] height errors root mean square
+    :param length: [meters] length of the surface
     :param points_number: number of points (pixels) at the surface
-    :param wavevector_cutoff: [1/meters] point on k axis for cut off large wave lengths in the PSD
+    :param wavevector_cutoff: [1/meters] point on k axis for cut off small wavevectors (large wave lengths) in the PSD
                                     (with default value 0 effects on nothing)
-    :param k: [1/meters] 1d array of arguments for power spectral density function (if not specified,
-                        will be used default value)
-    :param psd: [meters^3] power spectral density of surface (if not specified, will be generated)
-                (if specified, must have shape = (points_number // 2 + 1, ), otherwise it will be cut to appropriate shape)
-    :param seed: seed for np.random.seed()
+    :param k: [1/meters] 1d array of wavevectors (if specified, psd will be calculated using this values as arguments)
+    :param psd: [meters^3] 1d array; power spectral density of surface (if not specified, will be generated)
+            (if specified, must have shape = (points_number // 2 + 1, ), otherwise it will be cut to appropriate shape)
+    :param seed: seed for np.random.seed() to allow reproducibility
     :return: HeightProfile object
     """
 
@@ -2314,7 +2313,8 @@ def generate_1d_profile(hrms, length=0.1, points_number=1000, wavevector_cutoff=
         np.random.seed(seed)
 
     if psd is None:
-        k = np.pi / length * np.linspace(0, points_number, points_number // 2 + 1)
+        if k is None:
+            k = np.pi / length * np.linspace(0, points_number, points_number // 2 + 1)
         # defining linear function PSD(k) in loglog plane
         a = -2  # free term of PSD(k) in loglog plane
         b = -2  # slope of PSD(k) in loglog plane
@@ -2338,7 +2338,7 @@ def generate_1d_profile(hrms, length=0.1, points_number=1000, wavevector_cutoff=
     return height_profile
 
 
-def dfl_reflect_surface(dfl, angle, hrms=None, height_profile=None, axis='x', seed=None, debug=0):
+def dfl_reflect_surface(dfl, angle, hrms=None, height_profile=None, axis='x', seed=None, return_height_profile=False):
     """
     Function models the reflection of ocelot.optics.wave.RadiationField from the mirror surface considering effects
     of mirror surface height errors. The method based on phase modulation.
@@ -2350,6 +2350,7 @@ def dfl_reflect_surface(dfl, angle, hrms=None, height_profile=None, axis='x', se
     :param height_profile: HeightProfile object of the reflecting surface (if not specified, will be generated using hrms)
     :param axis: direction along which reflection takes place
     :param seed: seed for np.random.seed() to allow reproducibility
+    :param return_height_profile: boolean type variable; if it equals True the function will return height_profile
     """
 
     _logger.info('dfl_reflect_surface is reflecting dfl of shape (nz, ny, nx): {}'.format(dfl.shape()))
@@ -2401,6 +2402,8 @@ def dfl_reflect_surface(dfl, angle, hrms=None, height_profile=None, axis='x', se
     elif (axis == 2) or (axis == 'x'):
         dfl.fld *= np.exp(1j * phase_delay)[np.newaxis, np.newaxis, :]
 
+    if return_height_profile:
+        return height_profile
     t_func = time.time() - start
     _logger.debug(ind_str + 'done in {}'.format(t_func))
 

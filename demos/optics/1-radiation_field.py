@@ -61,24 +61,24 @@ dfl = generate_gaussian_dfl(**kwargs);  #Gaussian
 #dfl = imitate_sase_dfl(**kwargs); help(imitate_sase_dfl) #SASE-like (same as Gaussian, but modulated in time by amplitude and phase to model Gaussian random process)
 
 #help(plot_dfl)
-plot_dfl(dfl, 
-         domains=None, 
-         z_lim=[], 
-         xy_lim=[], 
-         figsize=4, 
-         cmap='viridis', 
-         legend=True, 
-         phase=False, 
-         fig_name='default_dfl_plot', 
-         auto_zoom=False, 
-         column_3d=True, 
-         savefig=False, 
-         showfig=True, 
-         return_proj=False, 
-         line_off_xy=True, 
-         log_scale=0, 
-         debug=1, 
-         cmin=0)
+plot_dfl(dfl,
+         domains=None,
+         z_lim=[],
+         xy_lim=[],
+         figsize=4,
+         cmap='viridis',
+         legend=True,
+         phase=False,
+         fig_name='default_dfl_plot',
+         auto_zoom=False,
+         column_3d=True,
+         savefig=False,
+         showfig=True,
+         return_proj=False,
+         line_off_xy=True,
+         log_scale=0,
+         debug=1,
+         cmap_cutoff=0)
 
 
 plot_dfl(dfl, fig_name='dfl_xy', column_3d=0, phase=1)

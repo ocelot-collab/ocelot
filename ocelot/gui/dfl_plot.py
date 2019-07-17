@@ -84,7 +84,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     start_time = time.time()
 
     if dfl.Nx() == 1 or dfl.Ny() == 1:
-        _logger.warning(ind_str + 'plot_dfl() works only with RadiationFieldes, which have Nx() and Ny() greter then 1')
+        _logger.warning(ind_str + 'plot_dfl() works only with RadiationFields, with dfl.Nx(), dfl.Ny() > 1')
     # print('dfl type is ',type(dfl))
     # if isinstance(dfl, RadiationField):
     # # if dfl.__class__ != RadiationField:

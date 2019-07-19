@@ -89,10 +89,17 @@ def plot_dfl(dfl: RadiationField, domains=None, z_lim=[], xy_lim=[], figsize=4, 
     # # if dfl.__class__ != RadiationField:
         # raise ValueError('wrong radiation object: should be RadiationField')
 
-    dfl = deepcopy(dfl)
+    if vartype_dfl is not None:
+        dfl_copy = RadiationField()
+        dfl_copy.copy_param_v2(dfl)
+        # print(dir(dfl_copy))
+        dfl_copy.fld = dfl.fld.astype(vartype_dfl)
+    else:
+        dfl_copy = deepcopy(dfl)
+
 
     if domains == None:
-        domains = dfl.domains()
+        domains = dfl_copy.domains()
     else:
         dfldomain_check(domains)
         
@@ -111,37 +118,37 @@ def plot_dfl(dfl: RadiationField, domains=None, z_lim=[], xy_lim=[], figsize=4, 
    # else:
        # suffix = '_'+fig_name
         
-    if dfl.Nz() != 1:
+    if dfl_copy.Nz() != 1:
         # Make sure it is time-dependent
-        ncar_z = dfl.Nz()
-        leng_z = dfl.Lz()
+        ncar_z = dfl_copy.Nz()
+        leng_z = dfl_copy.Lz()
         z = np.linspace(0, leng_z, ncar_z)
     else:
         column_3d = False
         phase = True
         freq_domain = False
         z_lim = []
-    xlamds = dfl.xlamds
+    xlamds = dfl_copy.xlamds
 
     # number of mesh points
-    ncar_x = dfl.Nx()
-    leng_x = dfl.Lx()  # transverse size of mesh [m]
-    ncar_y = dfl.Ny()
-    leng_y = dfl.Ly()
-    E_pulse = dfl.E()
+    ncar_x = dfl_copy.Nx()
+    leng_x = dfl_copy.Lx()  # transverse size of mesh [m]
+    ncar_y = dfl_copy.Ny()
+    leng_y = dfl_copy.Ly()
+    E_pulse = dfl_copy.E()
 
-    if dfl.Nz() != 1:
+    if dfl_copy.Nz() != 1:
         if freq_domain:
-            if dfl.domain_z == 't':
-                dfl.fft_z()
+            if dfl_copy.domain_z == 't':
+                dfl_copy.fft_z()
             
-           # z = dfl.scale_z() * 1e9
-           # dfl.fld = dfl.fld[::-1, :, :]
+           # z = dfl_copy.scale_z() * 1e9
+           # dfl_copy.fld = dfl_copy.fld[::-1, :, :]
            # z = z[::-1]
            # unit_z = r'nm'
            # z_label = r'$\lambda$ [' + unit_z + ']'
 
-            z = h_eV_s * speed_of_light / dfl.scale_z()
+            z = h_eV_s * speed_of_light / dfl_copy.scale_z()
             unit_z = r'eV'
             z_label = r'$E_{{ph}}$ [{}]'.format(unit_z)
             
@@ -150,9 +157,9 @@ def plot_dfl(dfl: RadiationField, domains=None, z_lim=[], xy_lim=[], figsize=4, 
             z_color = 'red'
             suffix += '_fd'
         else:
-            if dfl.domain_z == 'f':
-                dfl.fft_z()
-            z = dfl.scale_z() * 1e6
+            if dfl_copy.domain_z == 'f':
+                dfl_copy.fft_z()
+            z = dfl_copy.scale_z() * 1e6
 
             unit_z = r'$\mu$m'
             z_label = '$s$ [' + unit_z + ']'
@@ -182,16 +189,16 @@ def plot_dfl(dfl: RadiationField, domains=None, z_lim=[], xy_lim=[], figsize=4, 
             z_lim_2 = z_lim_1 + 1
         elif z_lim_1 == z_lim_2 and z_lim_1 != 0:
             z_lim_1 = z_lim_2 - 1
-        dfl.fld = dfl.fld[z_lim_1:z_lim_2, :, :]
+        dfl_copy.fld = dfl_copy.fld[z_lim_1:z_lim_2, :, :]
         z = z[z_lim_1:z_lim_2]
-        ncar_z = dfl.shape[0]
+        ncar_z = dfl_copy.shape[0]
         suffix += '_zoom_%.2f-%.2f' % (np.amin(z), np.amax(z))
 
     if far_field:
-        if dfl.domain_xy == 's':
-            dfl.fft_xy()
-        x = dfl.scale_x() * 1e6
-        y = dfl.scale_y() * 1e6
+        if dfl_copy.domain_xy == 's':
+            dfl_copy.fft_xy()
+        x = dfl_copy.scale_x() * 1e6
+        y = dfl_copy.scale_y() * 1e6
 
         unit_xy = r'$\mu$rad'
         x_label = r'$\theta_x$ [' + unit_xy + ']'
@@ -203,10 +210,10 @@ def plot_dfl(dfl: RadiationField, domains=None, z_lim=[], xy_lim=[], figsize=4, 
         x_y_color = 'green'
         # if debug>1: print('        done in %.2f seconds' %(time.time()-calc_time))
     else:
-        if dfl.domain_xy == 'k':
-            dfl.fft_xy()
-        x = dfl.scale_x() * 1e6
-        y = dfl.scale_y() * 1e6
+        if dfl_copy.domain_xy == 'k':
+            dfl_copy.fft_xy()
+        x = dfl_copy.scale_x() * 1e6
+        y = dfl_copy.scale_y() * 1e6
         
         unit_xy = r'$\mu$m'
         x_label = 'x [' + unit_xy + ']'
@@ -217,22 +224,22 @@ def plot_dfl(dfl: RadiationField, domains=None, z_lim=[], xy_lim=[], figsize=4, 
         x_y_color = 'blue'
 
 
-    dfl.fld = dfl.fld.astype(np.complex64)
-    xy_proj = dfl.int_xy()
-    xy_proj_ph = np.angle(np.sum(dfl.fld,axis=0))  # tmp  # tmp
+    dfl_copy.fld = dfl_copy.fld.astype(np.complex64)
+    xy_proj = dfl_copy.int_xy()
+    xy_proj_ph = np.angle(np.sum(dfl_copy.fld,axis=0))  # tmp  # tmp
     if slice_xy:
-        yz_proj = dfl.intensity()[:, :, dfl.Nx() // 2]
-        xz_proj = dfl.intensity()[:, dfl.Ny() // 2, :]
+        yz_proj = dfl_copy.intensity()[:, :, dfl_copy.Nx() // 2]
+        xz_proj = dfl_copy.intensity()[:, dfl_copy.Ny() // 2, :]
         xz_title = 'Top slice y=0'
         yz_title = 'Side slice x=0'
-        z_proj = dfl.intensity()[:, dfl.Ny() // 2, dfl.Nx() // 2]
+        z_proj = dfl_copy.intensity()[:, dfl_copy.Ny() // 2, dfl_copy.Nx() // 2]
         z_title += ' (on-axis)'
     else:
-        yz_proj = dfl.int_zy()
-        xz_proj = dfl.int_zx()
+        yz_proj = dfl_copy.int_zy()
+        xz_proj = dfl_copy.int_zx()
         xz_title = 'Top projection'
         yz_title = 'Side projection'
-        z_proj = dfl.int_z()
+        z_proj = dfl_copy.int_z()
 
     
     dx = abs(x[1] - x[0])
@@ -242,13 +249,13 @@ def plot_dfl(dfl: RadiationField, domains=None, z_lim=[], xy_lim=[], figsize=4, 
         suffix += '_log'
 
     if fig_name is None:
-        if dfl.fileName() is '':
+        if dfl_copy.fileName() is '':
             fig = plt.figure('Radiation distribution' + suffix)
         else:
-            fig = plt.figure('Radiation distribution' + suffix + ' ' + dfl.fileName())
+            fig = plt.figure('Radiation distribution' + suffix + ' ' + dfl_copy.fileName())
     else:
         fig = plt.figure(fig_name + suffix)
-    del dfl
+    del dfl_copy
 
     fig.clf()
     fig.set_size_inches(((3 + 2 * column_3d) * figsize, 3 * figsize), forward=True)

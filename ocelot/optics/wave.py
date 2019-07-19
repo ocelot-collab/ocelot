@@ -302,7 +302,7 @@ class RadiationField:
             if domain in ['s', 'k'] and domain is not domain_o_xy:
                 self.fft_xy(**kwargs)
     
-    def fft_z(self, method='mp', nthread=multiprocessing.cpu_count(), debug=1):  # move to another domain ( time<->frequency )
+    def fft_z(self, method='mp', nthread=multiprocessing.cpu_count(), **kwargs):  # move to another domain ( time<->frequency )
         _logger.debug('calculating dfl fft_z from ' + self.domain_z + ' domain with ' + method)
         start = time.time()
         orig_domain = self.domain_z
@@ -343,7 +343,7 @@ class RadiationField:
             _logger.debug(ind_str + 'done in %.2f min' % (t_func / 60))
     
     
-    def fft_xy(self, method='mp', nthread=multiprocessing.cpu_count(), debug=1):  # move to another domain ( spce<->inverse_space )
+    def fft_xy(self, method='mp', nthread=multiprocessing.cpu_count(), **kwargs):  # move to another domain ( spce<->inverse_space )
         _logger.debug('calculating fft_xy from ' + self.domain_xy + ' domain with ' + method)
         start = time.time()
         domain_orig = self.domain_xy

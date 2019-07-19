@@ -43,9 +43,9 @@ def plot_dfl_all(dfl, **kwargs):
     dfl.fft_xy()
 
 @if_plottable
-def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, fig_name=None,
+def plot_dfl(dfl: RadiationField, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, fig_name=None,
              auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy=True,
-             slice_xy=False, log_scale=0, debug=1, cmap_cutoff=0, vartype_dfl=np.complex64, **kwargs):
+             slice_xy=False, log_scale=0, cmap_cutoff=0, vartype_dfl=None, **kwargs):
     '''
     Plots dfl radiation object in 3d using matplotlib.
 
@@ -54,19 +54,18 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     :param z_lim: sets the boundaries to CUT the dfl object in z to ranges of e.g. [2,5] um or nm depending on freq_domain=False of True
     :param xy_lim: sets the boundaries to SCALE the dfl object in x and y to ranges of e.g. [2,5] um or urad depending on far_field=False of True
     :param figsize: rescales the size of the figure
-    :param cmap: color map which will be used for ploting
+    :param cmap: color map which will be used for ploting (http://matplotlib.org/users/colormaps.html)
     :param legend: not used yet
     :param phase: bool type variable, can replace Z projection or spectrum with phase front distribution z dimentions correspondingly
     :param fig_name: the desired name of the output figure, would be used as suffix to the image filename if savefig==True
-    :param auto_zoom: auto_zoom automatically scales xyz the images to the (1%?) of the intensity limits
-    :param column_3d: column_3d plots top and side views of the radiation distribution
-    :param savefig: allow to save figure to image (savefig='png' (default) or savefig='eps', etc...)
-    :param showfig: allow to display it (slower)
+    :param auto_zoom: bool type variable, automatically scales xyz the images to the (1%?) of the intensity limits
+    :param column_3d: bool type variable, plots top and side views of the radiation distribution
+    :param savefig: bool type variable, allow to save figure to image (savefig='png' (default) or savefig='eps', etc...)
+    :param showfig: bool type variable, allow to display figure (slower)
     :param return_proj: bool type variable, returns [xy_proj,yz_proj,xz_proj,x,y,z] array.
     :param line_off_xy: bool type variable, if True, the transverse size of radiation are calculated at x=0 and y=0 position, otherwise marginal distribution are used
     :param slice_xy: bool type variable, if True, slices will be ploted; if False, projections will be plotted
     :param log_scale: bool type variable, if True, log scale will be used for potting
-    :param debug: bool type variable, legacy support
     :param cmap_cutoff: 0 <= cmap_cutoff <= 1; all pixels that have intensity lower than cmap_cutoff will be seted to white color
     :param vartype_dfl: the data type to store dfl in memory [either complex128 (two 64-bit floats) or complex64 (two 32-bit floats)], may save memory
     :param kwargs: 
@@ -89,9 +88,9 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     # if isinstance(dfl, RadiationField):
     # # if dfl.__class__ != RadiationField:
         # raise ValueError('wrong radiation object: should be RadiationField')
-    
+
     dfl = deepcopy(dfl)
-    
+
     if domains == None:
         domains = dfl.domains()
     else:
@@ -134,7 +133,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     if dfl.Nz() != 1:
         if freq_domain:
             if dfl.domain_z == 't':
-                dfl.fft_z(debug=debug)
+                dfl.fft_z()
             
            # z = dfl.scale_z() * 1e9
            # dfl.fld = dfl.fld[::-1, :, :]
@@ -152,7 +151,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
             suffix += '_fd'
         else:
             if dfl.domain_z == 'f':
-                dfl.fft_z(debug=debug)
+                dfl.fft_z()
             z = dfl.scale_z() * 1e6
 
             unit_z = r'$\mu$m'
@@ -175,8 +174,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         if z_lim[0] > np.amax(z) or z_lim[0] < np.amin(z):
             z_lim[0] = np.amin(z)
             # print('      set low lim to min')
-        if debug > 1:
-            _logger.debug(ind_str + 'setting z-axis limits to ' + str(np.amin(z)) + ':' + str(z_lim[0]) + '-' + str(z_lim[1]) + ':' + str(np.amax(z)))  # tmp
+        _logger.debug(ind_str + 'setting z-axis limits to ' + str(np.amin(z)) + ':' + str(z_lim[0]) + '-' + str(z_lim[1]) + ':' + str(np.amax(z)))  # tmp
         z_lim_1 = np.where(z <= z_lim[0])[0][-1]
         z_lim_2 = np.where(z >= z_lim[1])[0][0]
 
@@ -191,7 +189,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
 
     if far_field:
         if dfl.domain_xy == 's':
-            dfl.fft_xy(debug=debug)
+            dfl.fft_xy()
         x = dfl.scale_x() * 1e6
         y = dfl.scale_y() * 1e6
 
@@ -206,7 +204,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         # if debug>1: print('        done in %.2f seconds' %(time.time()-calc_time))
     else:
         if dfl.domain_xy == 'k':
-            dfl.fft_xy(debug=debug)
+            dfl.fft_xy()
         x = dfl.scale_x() * 1e6
         y = dfl.scale_y() * 1e6
         
@@ -488,7 +486,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
             savefig = 'png'
         _logger.debug(ind_str + 'saving *{:}.{:}'.format(suffix, savefig))
         fig.savefig(filePath + suffix + '.' + str(savefig), format=savefig)
-    _logger.info(ind_str + 'done in {:.2f} seconds'.format(time.time() - start_time))
+    _logger.debug(ind_str + 'done in {:.2f} seconds'.format(time.time() - start_time))
 
     plt.draw()
     if showfig is True:
@@ -507,16 +505,30 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
 
 
 @if_plottable
-def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,None), y_lim=(None,None), downsample=1, autoscale=None, figsize=3, cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=True, plot_proj=1, plot_text=1, plot_moments=0, debug=1):
+def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, None), y_lim=(None, None), downsample=1,
+                autoscale=None, figsize=3, cmap='seismic', fig_name=None, savefig=False, showfig=True,
+                plot_proj=1, plot_text=1, plot_moments=0, **kwargs):
     '''
-    plots wigner distribution (WD) with marginals
-    wig_or_out -  may be WignerDistribution() or GenesisOutput() object
-    z - (if isinstance(wig_or_out, GenesisOutput)) location at which WD will be calculated
-    x_units - (um or fs) - units to display power scale
-    y_units - (nm or eV) - units to display spectrum scale
-    x_lim, y_lim - scaling limits in given units, (min,max) or [min,max], e.g: (None,6)
-    abs_value - if True, absolute value of WD is displayed (usually, it has both positive and negative values)
-    cmap - colormar if abs_value is False (http://matplotlib.org/users/colormaps.html)
+    Plots wigner distribution (WD) with marginals
+
+    :param wig_or_out: may be WignerDistribution() or GenesisOutput() object
+    :param z: (if isinstance(wig_or_out, GenesisOutput)) location at which WD will be calculated
+    :param x_units: [m or fs] units to display power scale
+    :param y_units: [nm or eV] units to display spectrum scale
+    :param x_lim: scaling limits for x in given units, (min,max) or [min,max], e.g: (None,6)
+    :param y_lim: scaling limits for y in given units, (min,max) or [min,max], e.g: (None,6)
+    :param downsample:
+    :param autoscale:
+    :param figsize: rescales the size of the figure
+    :param cmap: colormar (http://matplotlib.org/users/colormaps.html)
+    :param fig_name: the desired name of the output figure, would be used as suffix to the image filename if savefig==True
+    :param savefig: bool type variable, allow to save figure to image (savefig='png' (default) or savefig='eps', etc...)
+    :param showfig: bool type variable, allow to display figure (slower)
+    :param plot_proj:
+    :param plot_text:
+    :param plot_moments:
+    :param kwargs:
+    :return:
     '''
     if showfig == False and savefig == False:
         return
@@ -595,28 +607,22 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
         axScatter = plt.axes(rect_scatter, sharex=axHistx, sharey=axHisty)
     else:
         axScatter = plt.axes()
-    
-    if abs_value:
-        wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], abs(wigner[::downsample,::downsample]))
-        if plot_text:
-            axScatter.text(0.02, 0.98, r'$W_{{max}}$= {:.2e}'.format(np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes, color='w')
-            if hasattr(W, 'on_axis'):
-                if W.on_axis is True:
-                    axScatter.text(0.5, 0.98, r"(on axis)", fontsize=10, horizontalalignment='center', verticalalignment='top', transform=axScatter.transAxes, color='w')
-                else:
-                    axScatter.text(0.5, 0.98, r"(assuming full spatial coherence)", fontsize=10, horizontalalignment='center', verticalalignment='top', transform=axScatter.transAxes, color='w')
 
-    else:
-        # cmap='RdBu_r'
-        # axScatter.imshow(wigner, cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
-        wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], wigner[::downsample,::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
-        if plot_text:
-            axScatter.text(0.02, 0.98, r'$W_{{max}}$= {:.2e}'.format(np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes)#fontsize=12,
-            if hasattr(W, 'on_axis'):
-                if W.on_axis is True:
-                    axScatter.text(0.5, 0.98, r"(on axis)", fontsize=10, horizontalalignment='center', verticalalignment='top', transform=axScatter.transAxes)
-                else:
-                    axScatter.text(0.5, 0.98, r"(assuming full spatial coherence)", fontsize=10, horizontalalignment='center', verticalalignment='top', transform=axScatter.transAxes)
+    if hasattr(wig_or_out, 'is_spectrogram'):
+        if wig_or_out.is_spectrogram:
+            axScatter.text(0.98, 0.98, 'Spectrogram', horizontalalignment='right', verticalalignment='top',
+                           transform=axScatter.transAxes, color='red')
+
+    # cmap='RdBu_r'
+    # axScatter.imshow(wigner, cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
+    wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], wigner[::downsample,::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
+    if plot_text:
+        axScatter.text(0.02, 0.98, r'$W_{{max}}$= {:.2e}'.format(np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes)#fontsize=12,
+        if hasattr(W, 'on_axis'):
+            if W.on_axis is True:
+                axScatter.text(0.5, 0.98, r"(on axis)", fontsize=10, horizontalalignment='center', verticalalignment='top', transform=axScatter.transAxes)
+            else:
+                axScatter.text(0.5, 0.98, r"(assuming full spatial coherence)", fontsize=10, horizontalalignment='center', verticalalignment='top', transform=axScatter.transAxes)
             
     if plot_moments:
         weight_power = power/np.max(power)
@@ -708,7 +714,8 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
         fig.savefig(save_path, format=savefig)
 
     plt.draw()
-    
+
+
     if showfig == True:
         dir = os.path.dirname(W.filePath)
         rcParams["savefig.directory"] = dir
@@ -720,7 +727,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,No
         
 
 @if_plottable
-def plot_dfl_waistscan(sc_res, fig_name=None, showfig=True, savefig=False, debug=1):
+def plot_dfl_waistscan(sc_res, fig_name=None, showfig=True, savefig=False):
 
     if showfig == False and savefig == False:
         return
@@ -754,15 +761,12 @@ def plot_dfl_waistscan(sc_res, fig_name=None, showfig=True, savefig=False, debug
     if savefig != False:
         if savefig == True:
             savefig = 'png'
-        if debug > 0:
-            print('      saving *.' + savefig)
-        if debug > 1:
-            print('        to ' + sc_res.filePath + '_{:.2f}m-{:.2f}m-waistscan.'.format(sc_res.z_pos[0], sc_res.z_pos[-1]) + str(savefig))
+        _logger.debug(ind_str + 'saving *.' + savefig)
+        _logger.debug(ind_str + 'to ' + sc_res.filePath + '_{:.2f}m-{:.2f}m-waistscan.'.format(sc_res.z_pos[0], sc_res.z_pos[-1]) + str(savefig))
         fig.savefig(sc_res.filePath + '_{:.2f}m-{:.2f}m-waistscan.'.format(sc_res.z_pos[0], sc_res.z_pos[-1]) + str(savefig), format=savefig)
     # if debug>0: print('      done in %.2f seconds' % (time.time() - start_time))
     if showfig:
-        if debug > 0:
-            print('      showing fig')
+        _logger.debug(ind_str + 'showing fig')
         plt.show()
     else:
         plt.close('all')
@@ -1008,7 +1012,7 @@ def plot_stokes_angles(S, fig=None, showfig=True, direction='z', plot_func='scat
             plt.close('all')
 
 @if_plottable
-def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane='max_slice', interpolation=None, cmap_lin='brightwheel', cmap_circ='bwr', figsize=4, fig_name='Visualization Stokes parameters', normalization='s0_max', cbars=True, savefig=False, showfig=True, text_present=True, debug=1, **kwargs):
+def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane='max_slice', interpolation=None, cmap_lin='brightwheel', cmap_circ='bwr', figsize=4, fig_name='Visualization Stokes parameters', normalization='s0_max', cbars=True, savefig=False, showfig=True, text_present=True, **kwargs):
     '''
     Plot 6 images with normalized Stokes parameters on them
 
@@ -1043,7 +1047,6 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
     :param savefig: bool type variable which responds for saving of the figure
     :param showfig: bool type variable which responds for showing of the figure
     :param text_present: bool type variable which responds for showing text on subplots
-    :param debug:
     :param kwargs:
     '''
     

@@ -43,7 +43,7 @@ def plot_dfl_all(dfl, **kwargs):
     dfl.fft_xy()
 
 @if_plottable
-def plot_dfl(dfl: RadiationField, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, fig_name=None,
+def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, fig_name=None,
              auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy=True,
              slice_xy=False, log_scale=0, cmap_cutoff=0, vartype_dfl=None, **kwargs):
     '''

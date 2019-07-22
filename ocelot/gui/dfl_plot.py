@@ -91,14 +91,13 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
 
     if vartype_dfl is not None:
         dfl_copy = RadiationField()
-        dfl_copy.copy_param_v2(dfl)
-        # print(dir(dfl_copy))
+        dfl_copy.copy_param(dfl, version=2)
         dfl_copy.fld = dfl.fld.astype(vartype_dfl)
     else:
         dfl_copy = deepcopy(dfl)
 
 
-    if domains == None:
+    if domains is None:
         domains = dfl_copy.domains()
     else:
         dfldomain_check(domains)
@@ -615,15 +614,16 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
     else:
         axScatter = plt.axes()
 
-    if hasattr(wig_or_out, 'is_spectrogram'):
-        if wig_or_out.is_spectrogram:
-            axScatter.text(0.98, 0.98, 'Spectrogram', horizontalalignment='right', verticalalignment='top',
-                           transform=axScatter.transAxes, color='red')
+
 
     # cmap='RdBu_r'
     # axScatter.imshow(wigner, cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
     wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample], wigner[::downsample,::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
     if plot_text:
+        if hasattr(wig_or_out, 'is_spectrogram'):
+            if wig_or_out.is_spectrogram:
+                axScatter.text(0.98, 0.98, 'Spectrogram', horizontalalignment='right', verticalalignment='top',
+                               transform=axScatter.transAxes, color='red')
         axScatter.text(0.02, 0.98, r'$W_{{max}}$= {:.2e}'.format(np.amax(wigner)), horizontalalignment='left', verticalalignment='top', transform=axScatter.transAxes)#fontsize=12,
         if hasattr(W, 'on_axis'):
             if W.on_axis is True:
@@ -647,25 +647,29 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
         
     if autoscale == 1:
         autoscale = 1e-2
-    
+
     if autoscale != None:
         max_power = np.amax(power)
         max_spectrum = np.amax(spec)
-        idx_p = np.where(power > max_power*autoscale)[0]
+        idx_p = np.where(power > max_power * autoscale)[0]
         # print(max_spectrum*autoscale)
         # print(spectrum)
-        idx_s = np.where(spec > max_spectrum*autoscale)[0]
-        
-        x_lim = [ power_scale[idx_p[0]], power_scale[idx_p[-1]] ]
-        y_lim = [ spec_scale[idx_s[0]], spec_scale[idx_s[-1]] ]
-        
-        x_lim = np.array(x_lim)
-        y_lim = np.array(y_lim)
-        x_lim.sort()
-        y_lim.sort()
+        idx_s = np.where(spec > max_spectrum * autoscale)[0]
+
+        if x_lim[0] is None:
+            x_lim = [power_scale[idx_p[0]], power_scale[idx_p[-1]]]
+            x_lim = np.array(x_lim)
+            x_lim.sort()
+
+        if x_lim[1] is None:
+            y_lim = [spec_scale[idx_s[0]], spec_scale[idx_s[-1]]]
+            y_lim = np.array(y_lim)
+            y_lim.sort()
     else:
-        x_lim = (np.amin(power_scale), np.amax(power_scale))
-        y_lim = (np.amin(spec_scale), np.amax(spec_scale))
+        if x_lim[0] is None:
+            x_lim = (np.amin(power_scale), np.amax(power_scale))
+        if x_lim[1] is None:
+            y_lim = (np.amin(spec_scale), np.amax(spec_scale))
 
     if x_units == 'fs':
         x_lim = np.flip(x_lim)
@@ -738,8 +742,8 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
 
 @if_plottable
 def plot_dfl_waistscan(sc_res, fig_name=None, showfig=True, savefig=False):
-
-    if showfig == False and savefig == False:
+    _logger.info('plot dfl waist scan')
+    if showfig is False and savefig is False:
         return
 
     if fig_name is None:

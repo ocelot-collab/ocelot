@@ -652,27 +652,32 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
         max_power = np.amax(power)
         max_spectrum = np.amax(spec)
         idx_p = np.where(power > max_power * autoscale)[0]
-        # print(max_spectrum*autoscale)
-        # print(spectrum)
         idx_s = np.where(spec > max_spectrum * autoscale)[0]
 
-        if x_lim[0] is None:
-            x_lim = [power_scale[idx_p[0]], power_scale[idx_p[-1]]]
-            x_lim = np.array(x_lim)
-            x_lim.sort()
+        x_lim_appl = [power_scale[idx_p[0]], power_scale[idx_p[-1]]]
+        x_lim_appl = np.array(x_lim_appl)
+        x_lim_appl.sort()
 
-        if x_lim[1] is None:
-            y_lim = [spec_scale[idx_s[0]], spec_scale[idx_s[-1]]]
-            y_lim = np.array(y_lim)
-            y_lim.sort()
+        y_lim_appl = [spec_scale[idx_s[0]], spec_scale[idx_s[-1]]]
+        y_lim_appl = np.array(y_lim_appl)
+        y_lim_appl.sort()
+
     else:
-        if x_lim[0] is None:
-            x_lim = (np.amin(power_scale), np.amax(power_scale))
-        if x_lim[1] is None:
-            y_lim = (np.amin(spec_scale), np.amax(spec_scale))
+        x_lim_appl = (np.amin(power_scale), np.amax(power_scale))
+        y_lim_appl = (np.amin(spec_scale), np.amax(spec_scale))
 
     if x_units == 'fs':
-        x_lim = np.flip(x_lim)
+        x_lim_appl = np.flip(x_lim_appl)
+
+    if x_lim[0] is not None:
+        x_lim_appl[0] = x_lim[0]
+    if x_lim[1] is not None:
+        x_lim_appl[1] = x_lim[1]
+    if y_lim[0] is not None:
+        y_lim_appl[0] = y_lim[0]
+    if y_lim[1] is not None:
+        y_lim_appl[1] = y_lim[1]
+
 
     if plot_proj:
         axHistx.plot(power_scale,power)
@@ -702,8 +707,8 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
         axHistx.yaxis.major.locator.set_params(nbins=4)
         axHisty.xaxis.major.locator.set_params(nbins=2)
         
-        axHistx.set_xlim(x_lim[0], x_lim[1])
-        axHisty.set_ylim(y_lim[0], y_lim[1])
+        axHistx.set_xlim(x_lim_appl[0], x_lim_appl[1])
+        axHisty.set_ylim(y_lim_appl[0], y_lim_appl[1])
     else:
         axScatter.axis('tight')
         axScatter.set_xlabel(p_label_txt)

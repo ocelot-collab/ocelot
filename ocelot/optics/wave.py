@@ -7,10 +7,8 @@ from numpy.linalg import norm
 import numpy as np
 from math import factorial
 from numpy import inf, complex128, complex64
+import scipy
 import numpy.fft as fft
-# import matplotlib.pyplot as plt
-import scipy.integrate as integrate
-#import matplotlib.animation as animation
 from copy import deepcopy
 import time
 import os
@@ -1774,7 +1772,6 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
     when newN and newL are not None interpN and interpL values are ignored 
     coordinate convention is (x,y) 
     '''
-    from scipy.interpolate import interp2d
 
     _logger.info('interpolating radiation file')
     start_time = time.time()
@@ -1896,8 +1893,8 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
     fld2 = []
     for nslice, fslice in enumerate(dfl.fld):
         _logger.log(5, ind_str + 'slice %s' %(nslice))
-        re_func = interp2d(xscale1, yscale1, np.real(fslice), fill_value=0, bounds_error=False, kind=method)
-        im_func = interp2d(xscale1, yscale1, np.imag(fslice), fill_value=0, bounds_error=False, kind=method)
+        re_func = scipy.interpolate.interp2d(xscale1, yscale1, np.real(fslice), fill_value=0, bounds_error=False, kind=method)
+        im_func = scipy.interpolate.interp2d(xscale1, yscale1, np.imag(fslice), fill_value=0, bounds_error=False, kind=method)
         fslice2 = re_func(xscale2, yscale2) + 1j * im_func(xscale2, yscale2)
         P1 = sum(sum(abs(fslice[iy_min:iy_max, ix_min:ix_max])**2))
         P2 = sum(sum(abs(fslice2)**2))

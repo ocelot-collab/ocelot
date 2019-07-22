@@ -1455,6 +1455,49 @@ def calc_phase_delay_poly(coeff, w, w0):
     
     return delta_phi
 
+
+def screen2dfl(screen, polarization='x'):
+    '''
+    Generate new ocelot.optics.wave.RadiationField object using electrical field of the ocelot.rad.screen.Screen object.
+
+    :param screen: ocelot.rad.screen.Screen object
+    :param polarization: polarization for conversion to RadiationField ('x' or 'y')
+    :return: ocelot.optics.wave.RadiationField in domains = 'sf'
+    '''
+    shape_tuple = (screen.ne, screen.ny, screen.nx)
+    start = time.time()
+    _logger.info('Converting Screen of shape (nz, ny, nx) = {:} to dfl'.format(shape_tuple))
+    _logger.warning(ind_str + 'in beta, phases are wrong')  # TODO fix phases
+
+    dfl = RadiationField()
+    dfl.domain_z = 'f'  # longitudinal domain (t - time, f - frequency)
+    dfl.domain_xy = 's'  # transverse domain (s - space, k - inverse space)
+    if polarization == 'x':
+        dfl.fld = screen.arReEx.reshape(shape_tuple) + 1j * screen.arImEx.reshape(shape_tuple)
+    elif polarization == 'y':
+        dfl.fld = screen.arReEy.reshape(shape_tuple) + 1j * screen.arImEy.reshape(shape_tuple)
+    else:
+        _logger.error('polarization can be "x" or "y"', exc_info=True)
+        raise ValueError('polarization can be "x" or "y"')
+    dfl.dx = screen.x_step / 1000  # from mm to m
+    dfl.dy = screen.y_step / 1000  # from mm to m
+    if screen.ne != 1:
+        scale_kz = 2 * np.pi * screen.Eph / h_eV_s / speed_of_light
+        k = (scale_kz[-1] + scale_kz[0]) / 2
+        dk = (scale_kz[-1] - scale_kz[0]) / dfl.Nz()
+        dfl.dz = 2 * np.pi / dk / dfl.Nz()
+        dfl.xlamds = 2 * np.pi / k
+    else:
+        dfl.dz = 1
+        dfl.xlamds = h_eV_s * speed_of_light / screen.Eph[0]
+
+    _logger.debug(ind_str + 'dfl.xlamds = {:.3e} [m]'.format(dfl.xlamds))
+    _logger.warning(ind_str + 'dfl.fld normalized to dfl.E() = 1 [J]')
+    dfl.fld = dfl.fld / np.sqrt(dfl.E())  # TODO normalize dfl.fld
+    _logger.debug(ind_str + 'done in {:.3e} sec'.format(time.time() - start))
+    _logger.debug(ind_str + 'returning dfl in "sf" domains ')
+    return dfl
+
 def dfl_disperse(dfl, coeff, E_ph0 = None, return_result = False):
     '''
     The function adds a phase shift to the fld object.
@@ -2675,6 +2718,33 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1, **kwar
     _logger.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
     
     return wig
+
+
+def wigner_smear(wig, sigma_s):
+    '''
+    Convolves wigner distribution with gaussian window function to obtain spectrogram, see https://arxiv.org/pdf/1811.11446.pdf
+
+    :param wig: ocelot.optics.wave.WignerDistribution object which will be convolved with generated window func
+    :param sigma_s: [meters] rms size of the s=-ct the gaussian window func
+    :return: convolved ocelot.optics.wave.WignerDistribution object with gaussian window function
+    '''
+    start = time.time()
+    _logger.info('smearing wigner_dist with gaussian window func')
+    xlamds = wig.xlamds
+    ns = wig.s.size
+    ds = wig.s[-1] - wig.s[0]
+    zsep = np.round(ds / xlamds / ns).astype(int)  # TODO check slight inconsistency, since zsep is far from integer
+
+    dfl_gauss = generate_gaussian_dfl(xlamds, shape=(1, 1, ns), dgrid=(1, 1, None), power_rms=(1, 1, sigma_s),
+                                      zsep=zsep)
+    wig_gauss = wigner_dfl(dfl_gauss)
+    wig_gauss.wig /= wig_gauss.wig.sum()
+    # plot_wigner(wig_gauss, fig_name='wgauss')
+    wig_conv = deepcopy(wig)
+    wig_conv.wig = scipy.signal.fftconvolve(wig.wig, wig_gauss.wig, mode='same')
+    wig_conv.is_spectrogram = True
+    _logger.debug(ind_str + 'done in {:.2e} sec'.format(time.time() - start))
+    return wig_conv
 
 
 def calc_ph_sp_dens(spec, freq_ev, n_photons, spec_squared=1):

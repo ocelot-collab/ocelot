@@ -672,7 +672,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
             y_lim = (np.amin(spec_scale), np.amax(spec_scale))
 
     if x_units == 'fs':
-        x_lim = np.flip(x_lim)
+        x_lim = (np.amax(x_lim), np.amin(x_lim))
 
     if plot_proj:
         axHistx.plot(power_scale,power)

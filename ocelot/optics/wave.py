@@ -59,23 +59,23 @@ class RadiationField:
     def fileName(self):
         return filename_from_path(self.filePath)
 
-    def copy_param(self, dfl1):
-        self.dx = dfl1.dx
-        self.dy = dfl1.dy
-        self.dz = dfl1.dz
-        self.xlamds = dfl1.xlamds
-        self.domain_z = dfl1.domain_z
-        self.domain_xy = dfl1.domain_xy
-        self.filePath = dfl1.filePath
-
-    def copy_param_v2(self, dfl1, copy_fld=False):
-        attr_list = dir(dfl1)
-        for attr in attr_list:
-            if attr.startswith('__') or callable(getattr(self, attr)):
-                continue
-            if attr == 'fld' and copy_fld is False:
-                continue
-            setattr(self, attr, getattr(dfl1, attr))
+    def copy_param(self, dfl1, version=1):
+        if version == 1:
+            self.dx = dfl1.dx
+            self.dy = dfl1.dy
+            self.dz = dfl1.dz
+            self.xlamds = dfl1.xlamds
+            self.domain_z = dfl1.domain_z
+            self.domain_xy = dfl1.domain_xy
+            self.filePath = dfl1.filePath
+        elif version == 2:
+            attr_list = dir(dfl1)
+            for attr in attr_list:
+                if attr.startswith('__') or callable(getattr(self, attr)):
+                    continue
+                if attr == 'fld':
+                    continue
+                setattr(self, attr, getattr(dfl1, attr))
 
     def __getitem__(self, i):
         return self.fld[i]

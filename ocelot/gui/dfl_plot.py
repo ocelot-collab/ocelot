@@ -576,7 +576,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
         group_delay = W.group_delay()
     
     if x_units=='fs':
-        power_scale = W.s / speed_of_light * 1e15
+        power_scale = -W.s / speed_of_light * 1e15
         p_label_txt = 't [fs]'
         if plot_moments:
             group_delay = group_delay / speed_of_light * 1e15
@@ -666,7 +666,10 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
     else:
         x_lim = (np.amin(power_scale), np.amax(power_scale))
         y_lim = (np.amin(spec_scale), np.amax(spec_scale))
-        
+
+    if x_units == 'fs':
+        x_lim = np.flip(x_lim)
+
     if plot_proj:
         axHistx.plot(power_scale,power)
         if plot_text:

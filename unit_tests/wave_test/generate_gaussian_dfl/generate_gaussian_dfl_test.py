@@ -9,11 +9,10 @@ import numpy as np
 from generate_gaussian_dfl_conf import *
 
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
-REF_RES_DIR = FILE_DIR + os.path.sep + 'ref_results' + os.path.sep
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(FILE_DIR))))
+REF_RES_DIR = FILE_DIR + '/ref_results/'
 
 from unit_tests.params import *
-import ocelot.optics.wave as wave
+from ocelot.optics.wave import generate_gaussian_dfl
 
 
 @pytest.mark.parametrize('parameter', [0, 1, 2])
@@ -21,17 +20,15 @@ def test_generate_gaussian_dfl(args_array_ref, parameter, update_ref_values=Fals
     """generate_gaussian_dfl() function testing"""
 
     (args_ref, kwargs_ref) = args_array_ref[parameter]
-    dfl = wave.generate_gaussian_dfl(*args_ref, **kwargs_ref).fld
+    dfl_fld = generate_gaussian_dfl(*args_ref, **kwargs_ref).fld
 
     if update_ref_values:
-        return dfl
+        return dfl_fld
     else:
-        dfl_array_ref = np.load(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) + '.npy')
-        
-        dfl_ref = dfl_array_ref
+        dfl_fld_ref = np.load(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) + '.npy')
 
-    result = check_matrix(dfl, dfl_ref, TOL, tolerance_type='relative',
-                          assert_info='- generate_gaussian_dfl(){parameter}'.format(parameter))
+    result = check_matrix(dfl_fld, dfl_fld_ref, TOL, tolerance_type='relative',
+                          assert_info='- generate_gaussian_dfl(){}'.format(parameter))
     assert check_result(result)
 
 
@@ -57,7 +54,7 @@ def setup_function(function):
 
 def teardown_function(function):
     f = open(pytest.TEST_RESULTS_FILE, 'a')
-    f.write(' execution time is ' + '{:.3f}'.format(time.time() - pytest.t_start) + ' sec\n\n')
+    f.write(' execution time is ' + '{:.3e}'.format(time.time() - pytest.t_start) + ' sec\n\n')
     f.close()
 
 

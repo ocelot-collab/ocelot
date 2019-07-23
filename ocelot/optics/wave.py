@@ -7,10 +7,8 @@ from numpy.linalg import norm
 import numpy as np
 from math import factorial
 from numpy import inf, complex128, complex64
+import scipy
 import numpy.fft as fft
-# import matplotlib.pyplot as plt
-import scipy.integrate as integrate
-#import matplotlib.animation as animation
 from copy import deepcopy
 import time
 import os
@@ -59,14 +57,23 @@ class RadiationField:
     def fileName(self):
         return filename_from_path(self.filePath)
 
-    def copy_param(self, dfl1):
-        self.dx = dfl1.dx
-        self.dy = dfl1.dy
-        self.dz = dfl1.dz
-        self.xlamds = dfl1.xlamds
-        self.domain_z = dfl1.domain_z
-        self.domain_xy = dfl1.domain_xy
-        self.filePath = dfl1.filePath
+    def copy_param(self, dfl1, version=1):
+        if version == 1:
+            self.dx = dfl1.dx
+            self.dy = dfl1.dy
+            self.dz = dfl1.dz
+            self.xlamds = dfl1.xlamds
+            self.domain_z = dfl1.domain_z
+            self.domain_xy = dfl1.domain_xy
+            self.filePath = dfl1.filePath
+        elif version == 2:
+            attr_list = dir(dfl1)
+            for attr in attr_list:
+                if attr.startswith('__') or callable(getattr(self, attr)):
+                    continue
+                if attr == 'fld':
+                    continue
+                setattr(self, attr, getattr(dfl1, attr))
 
     def __getitem__(self, i):
         return self.fld[i]
@@ -302,7 +309,7 @@ class RadiationField:
             if domain in ['s', 'k'] and domain is not domain_o_xy:
                 self.fft_xy(**kwargs)
     
-    def fft_z(self, method='mp', nthread=multiprocessing.cpu_count(), debug=1):  # move to another domain ( time<->frequency )
+    def fft_z(self, method='mp', nthread=multiprocessing.cpu_count(), **kwargs):  # move to another domain ( time<->frequency )
         _logger.debug('calculating dfl fft_z from ' + self.domain_z + ' domain with ' + method)
         start = time.time()
         orig_domain = self.domain_z
@@ -343,7 +350,7 @@ class RadiationField:
             _logger.debug(ind_str + 'done in %.2f min' % (t_func / 60))
     
     
-    def fft_xy(self, method='mp', nthread=multiprocessing.cpu_count(), debug=1):  # move to another domain ( spce<->inverse_space )
+    def fft_xy(self, method='mp', nthread=multiprocessing.cpu_count(), **kwargs):  # move to another domain ( spce<->inverse_space )
         _logger.debug('calculating fft_xy from ' + self.domain_xy + ' domain with ' + method)
         start = time.time()
         domain_orig = self.domain_xy
@@ -1765,7 +1772,6 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
     when newN and newL are not None interpN and interpL values are ignored 
     coordinate convention is (x,y) 
     '''
-    from scipy.interpolate import interp2d
 
     _logger.info('interpolating radiation file')
     start_time = time.time()
@@ -1887,8 +1893,8 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
     fld2 = []
     for nslice, fslice in enumerate(dfl.fld):
         _logger.log(5, ind_str + 'slice %s' %(nslice))
-        re_func = interp2d(xscale1, yscale1, np.real(fslice), fill_value=0, bounds_error=False, kind=method)
-        im_func = interp2d(xscale1, yscale1, np.imag(fslice), fill_value=0, bounds_error=False, kind=method)
+        re_func = scipy.interpolate.interp2d(xscale1, yscale1, np.real(fslice), fill_value=0, bounds_error=False, kind=method)
+        im_func = scipy.interpolate.interp2d(xscale1, yscale1, np.imag(fslice), fill_value=0, bounds_error=False, kind=method)
         fslice2 = re_func(xscale2, yscale2) + 1j * im_func(xscale2, yscale2)
         P1 = sum(sum(abs(fslice[iy_min:iy_max, ix_min:ix_max])**2))
         P2 = sum(sum(abs(fslice2)**2))

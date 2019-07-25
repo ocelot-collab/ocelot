@@ -97,9 +97,9 @@ class Screen:
         self.arReEy = self.memory_screen[2*Nscr:3*Nscr]
         self.arImEy = self.memory_screen[3*Nscr:4*Nscr]
         self.arPhase = self.memory_screen[4*Nscr:5*Nscr]
-        self.Xph = np.linspace(self.x_start, self.x_start + self.x_step*(self.nx -1), self.nx)
-        self.Yph = np.linspace(self.y_start, self.y_start + self.y_step*(self.ny -1), self.ny)
-        self.Eph = np.linspace(self.e_start, self.e_start + self.e_step*(self.ne -1), self.ne)
+        self.Xph = np.linspace(self.x_start, self.x_start + self.x_step*(self.nx - 1), self.nx)
+        self.Yph = np.linspace(self.y_start, self.y_start + self.y_step*(self.ny - 1), self.ny)
+        self.Eph = np.linspace(self.e_start, self.e_start + self.e_step*(self.ne - 1), self.ne)
 
 
         #class EMScreen():
@@ -108,6 +108,29 @@ class Screen:
         #            self.screen_to_emscreen(screen)
         #        else:
         #            self.create_empty_emclass()
+
+
+    def add_fast_oscilating_term(self, x0=0, y0=0, z0=0):
+        """
+        method adds fast oscillating term to the phase which is subtracted during calculations.
+
+        :param x0: initial the electron coordinate
+        :param y0: initial the electron coordinate
+        :param z0: initial the electron coordinate
+        :return:
+        """
+        hc = 1.239841874330e-3  # h_eV_s*speed_of_light*1000  // mm
+        shape_array = [self.ne, self.ny, self.nx]
+
+        Xscr = np.linspace(self.x_start, self.x_start + self.x_step * (self.nx - 1), num=self.nx)
+        Yscr = np.linspace(self.y_start, self.y_start + self.y_step * (self.ny - 1), num=self.ny)
+        Yscr = Yscr.reshape((self.ny, 1))
+        Erad = np.linspace(self.e_start, self.e_start + self.e_step * (self.ne - 1), num=self.ne)
+        Erad = Erad.reshape((self.ne, 1, 1))
+        prXconst = Xscr - x0
+        prYconst = Yscr - y0
+        phaseConstIn = np.pi * Erad / hc * (prXconst * prXconst + prYconst * prYconst) / (self.Distance - z0)
+        self.arPhase += phaseConstIn.flatten()
 
 
     def screen_to_emscreen(self, screen):

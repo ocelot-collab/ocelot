@@ -1,8 +1,6 @@
 __author__ = 'Sergey Tomin'
 import sys
-
 import matplotlib
-matplotlib.use('TkAgg')
 from ocelot.rad import *
 
 from ocelot.gui import *

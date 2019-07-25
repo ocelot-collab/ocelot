@@ -1465,16 +1465,17 @@ def calc_phase_delay_poly(coeff, w, w0):
 
 def screen2dfl(screen, polarization='x'):
     '''
-    Generate new ocelot.optics.wave.RadiationField object using electrical field of the ocelot.rad.screen.Screen object.
+    Function converts synchrotron radiation from ocelot.rad.screen.Screen to ocelot.optics.wave.RadiationField.
+    New ocelot.optics.wave.RadiationField object will be generated without changing ocelot.rad.screen.Screen object.
 
-    :param screen: ocelot.rad.screen.Screen object
+    :param screen: ocelot.rad.screen.Screen object, electric field of which will be used to generate RadiationField
     :param polarization: polarization for conversion to RadiationField ('x' or 'y')
-    :return: ocelot.optics.wave.RadiationField in domains = 'sf'
+    :return: ocelot.optics.wave.RadiationField in domains = 'fs'
     '''
     shape_tuple = (screen.ne, screen.ny, screen.nx)
     start = time.time()
     _logger.info('Converting Screen of shape (nz, ny, nx) = {:} to dfl'.format(shape_tuple))
-    _logger.warning(ind_str + 'in beta, phases are wrong')  # TODO fix phases
+    _logger.warning(ind_str + 'in beta')
 
     dfl = RadiationField()
     dfl.domain_z = 'f'  # longitudinal domain (t - time, f - frequency)

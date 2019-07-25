@@ -1,7 +1,6 @@
 __author__ = 'Sergey Tomin'
 
 import matplotlib
-matplotlib.use('TkAgg')
 from ocelot import *
 from ocelot.rad import *
 from ocelot.gui import *
@@ -34,6 +33,7 @@ screen.end_energy = 15e-3  # eV
 screen.num_energy = 1
 
 
-screen_i = calculate_radiation(lat, screen, p_array, accuracy=1)
+screen_i = coherent_radiation(lat, screen, p_array, accuracy=1)
 
 show_flux(screen_i, unit="mm", title="R56 != 0")
+plt.show()

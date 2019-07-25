@@ -29,6 +29,8 @@ __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope", 
            "ocelog",
            "np", # numpy
            "speed_of_light", "m_e_eV", "m_e_MeV", "m_e_GeV",
+           "generate_parray",
+
            ]
 import numpy as np
 from ocelot.cpbd.magnetic_lattice import MagneticLattice

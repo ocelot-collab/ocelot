@@ -235,7 +235,7 @@ def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step):
     w = [0.5555555555555556*half_step, 0.8888888888888889*half_step, 0.5555555555555556*half_step]
     LenPntrConst = screen.Distance - motion.z[0]#; // I have to pay attention to this
     phaseConst = np.pi*Erad/(gamma2*hc)
-    for p in range(3):# // Gauss integration
+    for p in range(3): # // Gauss integration
         i = n*3 + p + 1
         #radConstAdd = w[p]*Q*k2q3*(screen.Distance - motion.z[0] - 0*screen.Zstart)
         XX = motion.x[i]
@@ -272,7 +272,7 @@ def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step):
         #// string below is for case direct accumulation
         #//double phase = screen->Phase[ypoint*xpoint*je + xpoint*jy + jx] + faseConst*(ZZ - motion->Z[0]  + gamma2*(IbetX2 + IbetY2 + phaseConstCur - phaseConstIn));
 
-        phase = phaseConst*(ZZ - motion.z[0] + gamma2*(IbetX2 + IbetY2 + phaseConstCur - phaseConstIn)) + screen.arPhase
+        phase = phaseConst*(ZZ - motion.z[0] + gamma2*(IbetX2 + IbetY2 + phaseConstCur - 0*phaseConstIn)) + screen.arPhase
 
         cosf = np.cos(phase)
         sinf = np.sin(phase)
@@ -291,10 +291,94 @@ def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step):
             prY = Yscr - motion.y[-1] # //for pointer ny(z)
             IbetX2 = motion.XbetaI2[-1]
             IbetY2 = motion.YbetaI2[-1]
-            phase = phaseConst*(motion.z[-1] - motion.z[0] + gamma2*(IbetX2 + IbetY2 + prX*prX/LenPntrZ + prY*prY/LenPntrZ - phaseConstIn))
+            phase = phaseConst*(motion.z[-1] - motion.z[0] + gamma2*(IbetX2 + IbetY2 + prX*prX/LenPntrZ + prY*prY/LenPntrZ - 0*phaseConstIn))
             screen.arPhase = screen.arPhase + phase
     return screen
 
+
+
+def gintegrator_over_traj_py(Nmotion, Xscr, Yscr, Erad, n_end, gamma, half_step, Distance, x, y, z, bx, by, XbetaI2, YbetaI2, Bx, By,
+                  arReEx, arImEx, arReEy, arImEy, arPhase):
+    Q = 0.5866740802042227  # speed_of_light/m_e_eV/1000  // e/mc = (mm*T)^-1
+    hc = 1.239841874330e-3  # h_eV_s*speed_of_light*1000  // mm
+    k2q3 = 1.1547005383792517  # ;//  = 2./sqrt(3)
+    gamma2 = gamma * gamma
+    w = [0.5555555555555556 * half_step, 0.8888888888888889 * half_step, 0.5555555555555556 * half_step]
+    LenPntrConst = Distance - z[0]  # ; // I have to pay attention to this
+    phaseConst = np.pi * Erad / (gamma2 * hc)
+
+    for n in range(Nmotion - 1):
+        for p in range(3):  # // Gauss integration
+            i = n * 3 + p + 1
+            # radConstAdd = w[p]*Q*k2q3*(screen.Distance - motion.z[0] - 0*screen.Zstart)
+
+            LenPntrZ = Distance - z[i]
+
+            prX = Xscr - x[i]  # //for pointer nx(z)
+            prY = Yscr - y[i]  # //for pointer ny(z)
+            nx = prX / LenPntrZ
+            ny = prY / LenPntrZ
+            tx = gamma * (nx - bx[i])
+            ty = gamma * (ny - by[i])
+            tx2 = tx * tx
+            ty2 = ty * ty
+            tyx = 2. * tx * ty
+
+            radConst = w[p] * Q * k2q3 * Distance / LenPntrZ / ((1. + tx2 + ty2) * (1. + tx2 + ty2))
+
+            radX = radConst * (By[i] * (1. - tx2 + ty2) + Bx[i] * tyx - 2. * tx / Q / LenPntrZ)  # /*sigma*/
+            radY = -radConst * (Bx[i] * (1. + tx2 - ty2) + By[i] * tyx + 2. * ty / Q / LenPntrZ)  # ;/*pi*/
+
+            prXconst = Xscr - x[0]
+            prYconst = Yscr - y[0]
+            phaseConstIn = (prXconst * prXconst + prYconst * prYconst) / LenPntrConst
+            phaseConstCur = (prX * prX + prY * prY) / LenPntrZ
+            # // string below is for case direct accumulation
+            # //double phase = screen->Phase[ypoint*xpoint*je + xpoint*jy + jx] + faseConst*(ZZ - motion->Z[0]  + gamma2*(IbetX2 + IbetY2 + phaseConstCur - phaseConstIn));
+
+            # here the constant phase shift was substract
+            phase = phaseConst * (
+                     z[i] - z[0] + gamma2 * (XbetaI2[i] + YbetaI2[i] + phaseConstCur - phaseConstIn)) + arPhase
+
+            #phase = phaseConst * (z[i] - z[0] + gamma2 * (XbetaI2[i] + YbetaI2[i] + phaseConstCur)) + arPhase # + (LenPntrConst *2*np.pi * Erad/hc)%(2*np.pi)
+            cosf = np.cos(phase)
+            sinf = np.sin(phase)
+            EreX = radX * cosf  # //(cosf *cos(fase0) - sinf*sin(fase0));
+            EimX = radX * sinf  # //(sinf *cos(fase0) + cosf*sin(fase0));
+            EreY = radY * cosf
+            EimY = radY * sinf
+
+            arReEx += EreX
+            arImEx += EimX
+            arReEy += EreY
+            arImEy += EimY
+            if i == n_end:  # //(n == 5000 && p == 2)
+                LenPntrZ = Distance - z[-1]
+                prX = Xscr - x[-1]  # //for pointer nx(z)
+                prY = Yscr - y[-1]  # //for pointer ny(z)
+                phase = phaseConst * (z[-1] - z[0] + gamma2 * (
+                        XbetaI2[-1] + YbetaI2[-1] + prX * prX / LenPntrZ + prY * prY / LenPntrZ - phaseConstIn))
+                #phase = phaseConst * (z[-1] - z[0] + gamma2 * (
+                #        XbetaI2[-1] + YbetaI2[-1] + prX * prX / LenPntrZ + prY * prY / LenPntrZ )) # + (LenPntrConst *2*np.pi * Erad/hc)%(2*np.pi)
+                arPhase += phase
+
+
+gintegrator_over_traj = gintegrator_over_traj_py if not nb_flag else nb.jit(gintegrator_over_traj_py)
+
+
+def wrap_gintegrator(Nmotion, Xscr, Yscr, Erad, motion, screen, n_end, gamma, half_step):
+
+    Distance = screen.Distance
+    x, y, z = motion.x, motion.y, motion.z
+    bx, by = motion.bx, motion.by
+    XbetaI2, YbetaI2 = motion.XbetaI2, motion.YbetaI2
+    Bx, By = motion.Bx, motion.By
+
+
+    gintegrator_over_traj(Nmotion, Xscr, Yscr, Erad, n_end, gamma, half_step, Distance, x, y, z, bx, by, XbetaI2, YbetaI2, Bx, By,
+                          screen.arReEx, screen.arImEx, screen.arReEy, screen.arImEy, screen.arPhase)
+
+    return screen
 
 def radiation_py(gamma, traj, screen):
     """
@@ -308,15 +392,15 @@ def radiation_py(gamma, traj, screen):
     half_step = (motion.z[-1]-motion.z[0])/2./(Nmotion-1)
 
     n_end = len(motion.z)-2
-    Xscr = np.linspace(screen.x_start, screen.x_start+screen.x_step*(screen.nx-1), num = screen.nx)
-    Yscr = np.linspace(screen.y_start, screen.y_start+screen.y_step*(screen.ny-1), num = screen.ny)
+    Xscr = np.linspace(screen.x_start, screen.x_start+screen.x_step*(screen.nx-1), num=screen.nx)
+    Yscr = np.linspace(screen.y_start, screen.y_start+screen.y_step*(screen.ny-1), num=screen.ny)
     Yscr = Yscr.reshape((screen.ny, 1))
-    Erad = np.linspace(screen.e_start, screen.e_start+screen.e_step*(screen.ne-1), num = screen.ne)
+    Erad = np.linspace(screen.e_start, screen.e_start+screen.e_step*(screen.ne-1), num=screen.ne)
     Erad = Erad.reshape((screen.ne, 1))
 
     shape_array = [screen.ne, screen.ny, screen.nx]
     if 1 in shape_array:
-        if screen.ny >1 and screen.ne>1:
+        if screen.ny > 1 and screen.ne > 1:
             Yscr = Yscr.reshape((1, screen.ny))
         shape_array.remove(1)
         screen.arReEx = screen.arReEx.reshape(shape_array)
@@ -325,15 +409,17 @@ def radiation_py(gamma, traj, screen):
         screen.arImEy = screen.arImEy.reshape(shape_array)
         screen.arPhase = screen.arPhase.reshape(shape_array)
 
-        for n in range(Nmotion-1):
-            screen = gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step)
+        wrap_gintegrator(Nmotion, Xscr, Yscr, Erad, motion, screen, n_end, gamma, half_step)
+        #print("phase", screen.arPhase )
+        # for n in range(Nmotion-1):
+        #     screen = gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step)
         screen.arReEx = screen.arReEx.flatten()
         screen.arImEx = screen.arImEx.flatten()
         screen.arReEy = screen.arReEy.flatten()
         screen.arImEy = screen.arImEy.flatten()
         screen.arPhase = screen.arPhase.flatten()
     else:
-        print( "SR 3D calculation")
+        print("SR 3D calculation")
         arReEx = np.array([])
         arImEx = np.array([])
         arReEy = np.array([])
@@ -347,8 +433,9 @@ def radiation_py(gamma, traj, screen):
             screen.arImEy = np.zeros((screen.ny, screen.nx))
             screen.arPhase =np.zeros((screen.ny, screen.nx))
 
-            for n in range(Nmotion-1):
-                screen = gintegrator(Xscr, Yscr, erad, motion, screen, n, n_end, gamma, half_step)
+            # for n in range(Nmotion-1):
+            #     screen = gintegrator(Xscr, Yscr, erad, motion, screen, n, n_end, gamma, half_step)
+            wrap_gintegrator(Nmotion, Xscr, Yscr, erad, motion, screen, n_end, gamma, half_step)
 
             arReEx = np.append(arReEx,screen.arReEx.flatten())
             arImEx = np.append(arImEx,screen.arImEx.flatten())
@@ -413,31 +500,36 @@ def calculate_radiation(lat, screen, beam, energy_loss=False, quantum_diff=False
         # screen_copy.arPhase[:] = tau0[i]/wlengthes*2*np.pi
         for u, e in zip(U, E):
             gamma = (1 + p_array.p()[i]) * e / m_e_GeV
-
             radiation_py(gamma, u[:, i], screen_copy)
-            #print(gamma, )
         screen.arReEx += screen_copy.arReEx
         screen.arImEx += screen_copy.arImEx
         screen.arReEy += screen_copy.arReEy
         screen.arImEy += screen_copy.arImEy
+        screen.arPhase += screen_copy.arPhase
     gamma_mean = (1 + np.mean(p_array.p())) * p_array.E / m_e_GeV
     screen.distPhoton(gamma_mean, current=beam.I)
     screen.Ef_electron = E[-1]
     screen.motion = U
+
+    # adding fast oscillating term to the phase
+    motion = traj2motion(U[0][:, 0])
+    screen.add_fast_oscilating_term(x0=motion.x[0], y0=motion.y[0], z0=motion.z[0])
+
     return screen
 
 
-def coherent_radiation(lat, screen, p_array, energy_loss=False, quantum_diff=False, accuracy=1, end_poles=False):
+def coherent_radiation(lat, screen, p_array, energy_loss=False, quantum_diff=False, accuracy=1, end_poles=False, verbose=True):
     """
-    Function to calculate radation from the electron beam.
+    Function to calculate radiation from the electron beam.
 
     :param lat: MagneticLattice should include element Undulator
     :param screen: Screen class
-    :param p_array: if Beam - the radiation is calculated from one electron,  if ParticleArray - the radiation
-                    is calculated for the each particles in the ParticleArray and field components is summing up afterwards.
+    :param p_array: ParticleArray - the radiation is calculated for the each particles in the ParticleArray
+                    and field components is summing up afterwards.
     :param energy_loss: False, if True includes energy loss after each period
     :param quantum_diff: False, if True introduces random energy kick
     :param accuracy: 1
+    :param verbose: True, print progress
     :return:
     """
 
@@ -454,7 +546,7 @@ def coherent_radiation(lat, screen, p_array, energy_loss=False, quantum_diff=Fal
     #plt.plot(U[0][4::9, :], U[0][::9, :])
     #plt.show()
     for i in range(p_array.n):
-        print("%i/%i" % (i, p_array.n))
+        #print("%i/%i" % (i, p_array.n))
         screen_copy = copy.deepcopy(screen)
         screen_copy.nullify()
 
@@ -471,6 +563,9 @@ def coherent_radiation(lat, screen, p_array, energy_loss=False, quantum_diff=Fal
             screen.arImEx += screen_copy.arImEx * n_e * gamma
             screen.arReEy += screen_copy.arReEy * n_e * gamma
             screen.arImEy += screen_copy.arImEy * n_e * gamma
+        if verbose:
+            sys.stdout.write( "\r" + "n: " + str(i)+" / "+str(p_array.n-1) )
+            sys.stdout.flush()
     screen.coherent_photon_dist()
     screen.Ef_electron = E[-1]
     screen.motion = U

@@ -6,7 +6,7 @@ from ocelot.cpbd.errors import *
 from ocelot.cpbd.elements import *
 from time import time
 from scipy.stats import truncnorm
-from copy import copy, deepcopy
+import copy
 import sys
 import logging
 
@@ -259,7 +259,7 @@ def track_nturns(lat, nturns, track_list, nsuperperiods=1, save_track=True, prin
     navi = Navigator(lat)
 
     t_maps = get_map(lat, lat.totalLen, navi)
-    track_list_const = copy(track_list)
+    track_list_const = copy.copy(track_list)
     p_array = ParticleArray()
     p_list = [p.particle for p in track_list]
     p_array.list2array(p_list)
@@ -278,41 +278,8 @@ def track_nturns(lat, nturns, track_list, nsuperperiods=1, save_track=True, prin
                 pxy.p_list.append(p_array.rparticles[:, n])
     return np.array(track_list_const)
 
-'''
-def tracking_second(lat, nturns, track_list, nsuperperiods, save_track = True):
-    xlim, ylim, px_lim, py_lim = aperture_limit(lat, xlim = 1, ylim = 1)
-    navi = Navigator()
-    #t_maps, delta_e = get_map(lat, lat.totalLen, navi)
 
-    track_list_const = copy(track_list)
-    #p_array = ParticleArray(n = len(track_list))
-    #for i, pxy in enumerate(track_list):
-    #    p_array[i] = pxy.p
-
-    for i in range(nturns):
-        print(i)
-        for n in range(nsuperperiods):
-
-            for elem in lat.sequence:
-                for pxy in track_list:
-                    pxy.p = elem.transfer_map*pxy.p
-            x = [pxy.p.x for pxy in track_list]
-            px = [pxy.p.px for pxy in track_list]
-            y = [pxy.p.y for pxy in track_list]
-            py = [pxy.p.py for pxy in track_list]
-            #p_indx = p_array.rm_tails(xlim, ylim, px_lim, py_lim)
-            ind_angles = append(argwhere(px > px_lim), argwhere(py > py_lim))
-            p_idxs = unique(append(argwhere(x > xlim), append(argwhere(y > ylim), append(argwhere(x != x), append(argwhere(y!= y), ind_angles)) )))
-            track_list = delete(track_list, p_idxs)
-        for n, pxy in enumerate(track_list):
-            pxy.turn = i
-            pxy.p_list = append(pxy.p_list,pxy.p)
-            #if  save_track:
-            #    pxy.p_list.append(p_array.particles[n*6:n*6+6])
-    return np.array(track_list_const)
-'''
-
-def track_nturns_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods = 1, save_track = True):
+def track_nturns_mpi(mpi_comm, lat, nturns, track_list, errors=None, nsuperperiods=1, save_track=True):
     size = mpi_comm.Get_size()
     rank = mpi_comm.Get_rank()
     lat_copy = create_copy(lat, nsuperperiods = nsuperperiods)
@@ -376,8 +343,8 @@ def fma(lat, nturns, x_array, y_array, nsuperperiods = 1):
     from mpi4py import MPI
     mpi_comm = MPI.COMM_WORLD
     rank = mpi_comm.Get_rank()
-    track_list = create_track_list(x_array, y_array)
-    track_list = track_nturns_mpi(mpi_comm, lat, nturns, track_list, errors = None, nsuperperiods = nsuperperiods)
+    track_list = create_track_list(x_array, y_array, p_array=[0])
+    track_list = track_nturns_mpi(mpi_comm, lat, nturns, track_list, nsuperperiods=nsuperperiods)
     if rank == 0:
         nx = len(x_array)
         ny = len(y_array)
@@ -389,13 +356,13 @@ def fma(lat, nturns, x_array, y_array, nsuperperiods = 1):
         return ctr_da.reshape(ny,nx), da_mux.reshape(ny,nx), da_muy.reshape(ny,nx)
 
 
-def da_mpi(lat, nturns, x_array, y_array, errors = None, nsuperperiods = 1):
+def da_mpi(lat, nturns, x_array, y_array, errors=None, nsuperperiods=1):
     from mpi4py import MPI
     mpi_comm = MPI.COMM_WORLD
     rank = mpi_comm.Get_rank()
 
-    track_list = create_track_list(x_array, y_array)
-    track_list = track_nturns_mpi(mpi_comm, lat, nturns, track_list, errors = errors, nsuperperiods = nsuperperiods, save_track=False)
+    track_list = create_track_list(x_array, y_array, p_array=[0])
+    track_list = track_nturns_mpi(mpi_comm, lat, nturns, track_list, errors=errors, nsuperperiods=nsuperperiods, save_track=False)
 
     if rank == 0:
         da = np.array(map(lambda track: track.turn, track_list))#.reshape((len(y_array), len(x_array)))
@@ -434,7 +401,8 @@ def track(lattice, p_array, navi, print_progress=True, calc_tws=True, bounds=Non
     :param navi: Navigator
     :param print_progress: True, print tracking progress
     :param calc_tws: True, during the tracking twiss parameters are calculated from the beam distribution
-    :return: twiss list, ParticleArray
+    :param bounds: None, optional, [left_bound, right_bound] - bounds in units of std(p_array.tau())
+    :return: twiss_list, ParticleArray. In case calc_tws=False, twiss_list is list of empty Twiss classes.
     """
 
     tw0 = get_envelope(p_array, bounds=bounds) if calc_tws else Twiss()
@@ -471,7 +439,7 @@ def track(lattice, p_array, navi, print_progress=True, calc_tws=True, bounds=Non
 
 
 def lattice_track(lat, p):
-    plist = [copy(p)]
+    plist = [copy.copy(p)]
 
     for elem in lat.sequence:
         elem.transfer_map.apply([p])
@@ -481,7 +449,7 @@ def lattice_track(lat, p):
                 #print elem.pos
                 if elem.pos == 1:
                     continue
-        plist.append(copy(p))
+        plist.append(copy.copy(p))
     return plist
 
 
@@ -526,87 +494,4 @@ def update_effective_beta(beam, lat):
     
     beam.beta_x_eff = np.array(beta_x_eff)
     beam.beta_y_eff = np.array(beta_y_eff)
-
-
-"""
-def show_da(out_da, x_array, y_array):
-    from matplotlib import pyplot as plt
-    from numpy import linspace, max, min
-    #print "time execution = ", time() - start , " s"
-    nx = len(x_array)
-    ny = len(y_array)
-    #print(nx, ny, len(out_da))
-    out_da = out_da.reshape(ny,nx)
-    xmin, xmax, ymin, ymax = min(x_array), max(x_array), min(y_array), max(y_array)
-    #plt.subplot(111, axisbg='darkslategray')
-    extent = xmin, xmax, ymin, ymax
-    #print extent
-    #plt.savetxt("da.txt", da)
-    plt.figure(figsize=(10, 7))
-    fig1 = plt.contour(out_da, linewidths=2,extent = extent)#, colors = 'r')
-    #fig1 = plt.contourf(out_da, 20,cmap=plt.cm.rainbow,extent = extent)#, colors = 'r')
-    #plt.axis_bgcolor("#bdb76b")
-    plt.grid(True)
-    plt.xlabel("X, m")
-    plt.ylabel("Y, m")
-    cb = plt.colorbar()
-    cb.set_label('Nturns')
-    #cb.ax.set_yticklabels(map(str, linspace(min(out_da), max(out_da), 5) ))
-
-    #plt.savefig('da_error_'+str(int(np.random.rand()*100))+'.png')
-    plt.show()
-
-def show_mu(contour_da, mux, muy, x_array, y_array, zones = None ):
-    from matplotlib import pyplot as plt
-
-    nx = len(x_array)
-    ny = len(y_array)
-    t= linspace(0,3.14, num = 100)
-    contour_da = contour_da.reshape(ny,nx)
-    mux = mux.reshape(ny,nx)
-    muy = muy.reshape(ny,nx)
-    xmin, xmax, ymin, ymax = min(x_array), max(x_array), min(y_array), max(y_array)
-    plt.figure(1,figsize=(10, 7)) #axisbg='darkslategray'
-    extent = xmin, xmax, ymin, ymax
-
-    my_cmap = plt.cm.Paired
-    #my_cmap.set_under('w')
-    #norm = mlb.colors.Normalize(vmin=-0.005, vmax=max(mux))
-    fig1 = plt.contour(contour_da, 1,extent = extent, linewidths=2,colors='k')#, colors = 'r')
-    fig1 = plt.contourf(mux,40, cmap=my_cmap, extent = extent)#, colors = 'r')
-    cb = plt.colorbar(cmap=my_cmap)
-    fig1 = plt.contourf(mux,10, levels=[-1,-.0001], colors='w',extent = extent)
-    if zones != None:
-        x_zone = zones[0]
-        y_zone = zones[1]
-        plt.plot(x_zone*cos(t), y_zone*sin(t), "g", lw = 2)
-        plt.plot(2*x_zone*cos(t), 2*y_zone*sin(t), "b", lw = 2)
-        plt.plot(3*x_zone*cos(t), 3*y_zone*sin(t), "r", lw = 2)
-        plt.plot(4*x_zone*cos(t), 4*y_zone*sin(t), "y", lw = 2)
-    plt.grid(True)
-    #plt.figure(figsize=(10, 7))
-    plt.xlabel("X, m")
-    plt.ylabel("Y, m")
-    cb.set_label('Qx')
-    plt.figure(2,figsize=(10, 7))
-
-    fig1 = plt.contour(contour_da, 1,extent = extent, linewidths=2,colors='k')#, colors = 'r')
-    fig1 = plt.contourf(muy,40, cmap=my_cmap, extent = extent)#, colors = 'r')
-    if zones != None:
-        x_zone = zones[0]
-        y_zone = zones[1]
-        plt.plot(x_zone*cos(t), y_zone*sin(t), "g", lw = 2)
-        plt.plot(2*x_zone*cos(t), 2*y_zone*sin(t), "b", lw = 2)
-        plt.plot(3*x_zone*cos(t), 3*y_zone*sin(t), "r", lw = 2)
-        plt.plot(4*x_zone*cos(t), 4*y_zone*sin(t), "y", lw = 2)
-    #x = np.linspace(-, 0.01, 0.0001)
-    #plt.plot()
-    cb = plt.colorbar(cmap=my_cmap)
-    fig1 = plt.contourf(muy,10, levels=[-1,-.0001], colors='w',extent = extent)
-    plt.xlabel("X, m")
-    plt.ylabel("Y, m")
-    plt.grid(True)
-    cb.set_label('Qy')
-    plt.show()
-"""
 

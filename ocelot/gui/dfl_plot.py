@@ -54,9 +54,9 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     :param z_lim: sets the boundaries to CUT the dfl object in z to ranges of e.g. [2,5] um or nm depending on freq_domain=False of True
     :param xy_lim: sets the boundaries to SCALE the dfl object in x and y to ranges of e.g. [2,5] um or urad depending on far_field=False of True
     :param figsize: rescales the size of the figure
-    :param cmap: color map which will be used for ploting (http://matplotlib.org/users/colormaps.html)
+    :param cmap: color map which will be used for plotting (http://matplotlib.org/users/colormaps.html)
     :param legend: not used yet
-    :param phase: bool type variable, can replace Z projection or spectrum with phase front distribution z dimentions correspondingly
+    :param phase: bool type variable, can replace Z projection or spectrum with phase front distribution z dimensions correspondingly
     :param fig_name: the desired name of the output figure, would be used as suffix to the image filename if savefig==True
     :param auto_zoom: bool type variable, automatically scales xyz the images to the (1%?) of the intensity limits
     :param column_3d: bool type variable, plots top and side views of the radiation distribution
@@ -64,12 +64,12 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     :param showfig: bool type variable, allow to display figure (slower)
     :param return_proj: bool type variable, returns [xy_proj,yz_proj,xz_proj,x,y,z] array.
     :param line_off_xy: bool type variable, if True, the transverse size of radiation are calculated at x=0 and y=0 position, otherwise marginal distribution are used
-    :param slice_xy: bool type variable, if True, slices will be ploted; if False, projections will be plotted
+    :param slice_xy: bool type variable, if True, slices will be plotted; if False, projections will be plotted
     :param log_scale: bool type variable, if True, log scale will be used for potting
     :param cmap_cutoff: 0 <= cmap_cutoff <= 1; all pixels that have intensity lower than cmap_cutoff will be seted to white color
     :param vartype_dfl: the data type to store dfl in memory [either complex128 (two 64-bit floats) or complex64 (two 32-bit floats)], may save memory
     :param kwargs: 
-    :return: 
+    :return:
     '''
     import matplotlib.colors as colors
     

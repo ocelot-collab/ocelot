@@ -15,7 +15,11 @@ from ocelot.cpbd.physics_proc import PhysProc
 from ocelot.common.math_op import conj_sym
 from ocelot.cpbd.beam import s_to_cur
 import logging
-from scipy.misc import factorial
+
+try:
+    from scipy.special import factorial
+except:
+    from scipy.misc import factorial    # legacy support
 
 logger = logging.getLogger(__name__)
 

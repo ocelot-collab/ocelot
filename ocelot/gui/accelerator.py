@@ -471,6 +471,10 @@ def plot_disp(ax, tws, top_plot, font_size):
         greek = ""
         if "beta" in elem or "alpha" in elem or "mu" in elem:
             greek = "\\"
+        if "mux" == elem:
+            elem = elem.replace("x", "_x")
+        if "muy" == elem:
+            elem = elem.replace("y", "_y")
         top_label = r"$" + greek + elem+"$"
         ax.plot(S, Ftop, lw = 2, label=top_label)
         d_Ftop.append( max(Ftop) - min(Ftop))

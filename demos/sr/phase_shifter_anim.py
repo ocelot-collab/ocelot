@@ -1,6 +1,5 @@
 __author__ = 'tomins'
 import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.animation
 from matplotlib import animation

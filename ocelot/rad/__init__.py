@@ -7,6 +7,7 @@ __all__ = ["Screen",
            "lambda2Ebeam",
            "Ephoton2field", "field2Ephoton",
            "K2Lambda",
+           "print_rad_props",
            ]
 
 from ocelot.rad.screen import *

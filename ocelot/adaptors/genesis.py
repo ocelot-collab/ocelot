@@ -3,24 +3,15 @@
 interface to genesis
 '''
 
-
-import struct
-from copy import copy, deepcopy
-import time
-import os
 import socket
 import errno
 import math
-import numpy as np
 
 from ocelot.rad.fel import *
 from ocelot.cpbd.beam import * # Twiss, Beam, gauss_from_twiss, ParticleArray
 from ocelot.cpbd.elements import *
-import ocelot.utils.reswake as w
 from ocelot.utils.launcher import *
 from ocelot.common.math_op import *
-from ocelot.common.py_func import background, copy_this_script, filename_from_path
-from ocelot.common.globals import *  # import of constants like "h_eV_s" and "speed_of_light"
 from ocelot.optics.wave import *
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.rad.undulator_params import UndulatorParameters
@@ -1314,7 +1305,6 @@ def assemble(fileName, remove=1, overwrite=0, ram=1, debug=1):
     ram - store the *.slice* files in ram simultaneously
     '''
     import glob
-    import sys
     # try:
         # if overwrite:
         # os.rename(fileName,fileName+'.slice999999')
@@ -2454,7 +2444,7 @@ def read_edist_file(filePath, **kwargs):
 
     return edist
 
-import inspect
+
 # from inspect import getouterframes, currentframe
 # import os
 

@@ -3,17 +3,16 @@ writen by I. Zagorodnov, DESY and S.Tomin XFEL, 2015.
 """
 from scipy.integrate import simps
 import numpy as np
-# from numpy import np.arange, np.sqrt, np.append, np.zeros, np.conj, np.dot, np.linspace
 from numpy.fft import fft, irfft, ifft
 from ocelot.common.globals import *
 
 def wake2impedance(s, w):
     """
-    %Fourier transform with exp(iwt)
-    %             s    - Meter
-    %             w -    V/C
-    %             f -    Hz
-    %             y -    Om
+    Fourier transform with exp(iwt)
+                 s    - Meter
+                 w -    V/C
+                 f -    Hz
+                 y -    Om
     """
     ds = s[1] - s[0]
     dt = ds/speed_of_light
@@ -25,11 +24,11 @@ def wake2impedance(s, w):
 
 def impedance2wake(f, y):
     """
-    % Fourier transform with exp(-iwt)
-    %             f -    Hz
-    %             y -    Om
-    %             s    - Meter
-    %             w -    V/C
+    Fourier transform with exp(-iwt)
+                f -    Hz
+                y -    Om
+                s    - Meter
+                w -    V/C
     """
     df = f[1] - f[0]
     n = len(f)
@@ -40,12 +39,12 @@ def impedance2wake(f, y):
 
 def imp_resistiveAC_SI(f, cond, a, tau, L):
     """
-    # resistive impedance of round pipe (in SI Units)
-    # dimensions: f - Hertz
-    #             cond - in 1/Second
-    #             a - pipe radius in m
-    #             tau - the relaxation time in s
-    #             L-inductive for dielectric layer
+    resistive impedance of round pipe (in SI Units)
+    dimensions: f - Hertz
+                cond - in 1/Second
+                a - pipe radius in m
+                tau - the relaxation time in s
+                L-inductive for dielectric layer
     """
     n = len(f)
     f2w = 2.*pi
@@ -89,10 +88,10 @@ def ResistiveZaZb(xb, bunch, a, conductivity, tau, Ind):
 
 def LossShape(bunch, wake):
     """
-    % loss, spread, peak
-    % dimensions:
-    %             wake - m , Volt/pC
-    %             out - V/pC;
+    loss, spread, peak
+    dimensions:
+                wake - m , Volt/pC
+                out - V/pC;
     """
     w = wake[1]
     bi2 = bunch[1]

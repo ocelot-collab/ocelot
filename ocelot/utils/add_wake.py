@@ -10,16 +10,14 @@ from script:
 from ocelot.utils.add_wake import add_wake_to_beamf
 add_wake_to_beamf(beamf, new_beamf)
 '''
-import sys
 #sys.path.append("../../")
 from ocelot.adaptors.genesis import *
-import ocelot.utils.reswake as w
+import cpbd.reswake as w
 from copy import deepcopy
 #try:
 #    import matplotlib.animation as anim
 #except:
 #    print 'animation not installed'
-import numpy as np
 #import matplotlib.pyplot as plt
 
 

@@ -1,16 +1,14 @@
 """
 definition of particles, beams and trajectories
 """
-import numpy as np
 from ocelot.common.globals import *
 from ocelot.common.math_op import *
-from ocelot.common.py_func import filename_from_path
 from copy import deepcopy
 from scipy import interpolate
 from scipy.signal import savgol_filter
 from scipy.stats import truncnorm
 from ocelot.common.logging import *
-from ocelot.utils.reswake import pipe_wake
+from ocelot.cpbd.reswake import pipe_wake
 
 _logger = logging.getLogger(__name__)
 

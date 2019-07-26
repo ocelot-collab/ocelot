@@ -10,6 +10,7 @@ from scipy import interpolate
 from scipy.signal import savgol_filter
 from scipy.stats import truncnorm
 from ocelot.common.logging import *
+from ocelot.utils.reswake import pipe_wake
 
 _logger = logging.getLogger(__name__)
 
@@ -177,7 +178,7 @@ class Beam:
         self.Dyp = 0.0
 
         self.shape = 'gaussian' # of 'flattop'
-
+        self.filePath = ''
     properties = ['g','dg','emit_xn','emit_yn','p','pz','px','py']
 
     @property
@@ -338,6 +339,9 @@ class BeamArray(Beam):
 
     def len(self):
         return np.size(self.s)
+        
+    def charge(self):
+        return np.trapz(self.I, self.s / speed_of_light) #C
 
     def params(self):
         l = self.len()
@@ -459,15 +463,72 @@ class BeamArray(Beam):
     def pk(self):
         return self[self.idx_max()]
 
-    def add_chirp(self, chirp=0):
-        """
-        adds linear energy chirp to the beam
-        chirp = dE/E/s[um] = dg/g/s[um]
-        """
+    def add_chirp(self, chirp=0, order=1, s0=None):
+        '''
+        adds energy chirp of given "order" to the beam around "center" position [m]
+        chirp = dE/E0/ds[um]**order = dg/g0/s[um]**order
+        so that
+        g_new = g0 + dg = g0 + g0 (s-s0)**order * chirp
+        '''
         if chirp not in [None, 0]:
-            center = (np.amax(self.s) - np.amin(self.s)) / 2
-            E_center = self.E[find_nearest_idx(self.s, center)]
-            self.E += (self.s - center) * chirp * E_center * 1e6
+            if s0 is None:
+                s0 = (np.amax(self.s) - np.amin(self.s)) / 2
+            E_center = self.E[find_nearest_idx(self.s, s0)]
+            self.E += (self.s - s0)**order * chirp * E_center * 1e6
+    
+    def add_chirp_poly(self, coeff, s0=None):
+        '''
+        The method adds a polynomial energy chirp to the beam object. 
+        
+        coeff   --- coefficients for the chirp
+        s0      --- the point with respect to which the chirp will be introduced
+        
+        The expression for the chirp:
+            
+        E = E0((g0 + coeff[0])/g0 + 
+            
+            + coeff[1]*(s - s0))**1 / 1! / ((speed_of_light * 1e-15)**1  * g0) + 
+            
+            + coeff[2]*(s - s0))**2 / 2! / ((speed_of_light * 1e-15)**2  * g0) + 
+            
+            + coeff[3]*(s - s0))**3 / 3! / ((speed_of_light * 1e-15)**3  * g0) + ... 
+        
+        ... + coeff[n]*(s - s0))**n / n! / ((speed_of_light * 1e-15)**n  * g0))
+        
+        where coeff[n] is represented in [1/fs**n]
+        The convention for the coeff is introduced for convenient treatment this
+        with respect to a radiation chirp in order to easily satisfy the resonant
+        condition along the whole bunch in the case of linear electron bunch chirp. 
+        Here is the expresion:
+        
+            2*dw/dt = (w0/g0) * dg/dt
+        
+        @author: Andrei Trebushinin
+        
+        '''
+        _logger.debug('introducing a chirp to the ebeam')
+        s = self.s
+        
+        if s0 is None:
+            s0 = (np.amax(self.s) - np.amin(self.s)) / 2
+        elif isinstance(s0,str) is not True:
+            s0 = s0/1e6       
+        else:
+            raise ValueError("s0 must be None or some value")
+        
+        delta_s = s - s0
+        E0 = self.E[find_nearest_idx(self.s, s0)]
+        g0 = self.g[find_nearest_idx(self.s, s0)]
+    #    coeff[0] += g0
+        _logger.debug(ind_str + 'coeffs for chirp = {}'.format(coeff))
+        coeff_norm = [ci / ((speed_of_light * 1e-15)**i * factorial(i) * g0) for i, ci in enumerate(coeff)]
+        coeff_norm = list(np.flip(coeff_norm, axis=0))
+        _logger.debug(ind_str + 'coeffs_norm = {}'.format(coeff_norm))
+        coeff_norm = np.asarray(coeff_norm)*E0
+        self.E += np.polyval(coeff_norm, delta_s)
+    
+    def add_wake(self, tube_radius=5e-3, tube_len=1, conductivity=3.66e+7, tau=7.1e-15, roughness=600e-9, d_oxid=5e-9):
+        self.eloss = pipe_wake(self.s, self.I, tube_radius, tube_len, conductivity, tau, roughness, d_oxid)[1][1][::-1]
 
     def to_array(self, *args, **kwargs):
         raise NotImplementedError('Method inherited from Beam() class, not applicable for BeamArray objects')
@@ -646,6 +707,16 @@ class ParticleArray:
         self.px()[:] = Rnn * self.px()[:]
         self.py()[:] = Rnn * self.py()[:]
         self.p()[:] = Rnn * self.p()[:]
+        
+    # def save_particle_array(filename, p_array):
+        # np.savez_compressed(filename, rparticles=p_array.rparticles, q_array=p_array.q_array, E=p_array.E, s=p_array.s)
+    
+    # def load_particle_array(filename):
+        # p_array = ParticleArray()
+        # with np.load(filename) as data:
+            # for key in data.keys():
+                # p_array.__dict__[key] = data[key]
+        # return p_array
 
     def __str__(self):
         val = ""
@@ -1421,6 +1492,8 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
     accepts arguments with the same names as BeamArray().parameters()
     I - current in Amps
     E - beam ebergy in GeV
+    
+    dE - rms energy spread in GeV
     emit_x, emit_n(both normalized), emit_xn, etc.
     shape - beam shape ('gaussian' of 'flattop')
     l_beam [m] - beam length in meters
@@ -1452,11 +1525,13 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
             beam.beta_y = value
         if key is 'nslice':
             nslice = value
+        if key is 'dE':
+            beam.dg = value / m_e_GeV
 
     if 'l_window' not in kwargs:
-        if beam.shape is 'gaussian':
+        if beam.shape is ['gaussian', 'gauss', 'g']:
             l_window = l_beam * 6
-        elif beam.shape is 'flattop':
+        elif beam.shape in ['flattop', 'ft']:
             l_window = l_beam * 2
         else:
             raise ValueError('Beam() shape can be either "gaussian" or "flattop"')

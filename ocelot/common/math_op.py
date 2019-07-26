@@ -255,7 +255,7 @@ def fit_gauss_1d(x,F):
     return mu1, np.sqrt(sig1)
 
 def fwhm(x,F):
-    ff = fwhm3(np.array(F))
+    ff = fwhm3(np.array(F), height=0.5, peakpos=-1, total=1)
     return x[ff[2][1]]- x[ff[2][0]]
 #    m = np.max(F) / 2.0
 #    ups = []
@@ -270,7 +270,7 @@ def fwhm(x,F):
 #    return x[downs[-1]] - x[ups[0]]
 
 def fwhm3(valuelist, height=0.5, peakpos=-1, total=1):
-    """calculates the full width at half maximum (fwhm) of some curve.
+    """calculates the full width at half maximum (fwhm) of the array.
     the function will return the fwhm with sub-pixel interpolation. 
     It will start at the maximum position and 'walk' left and right until it approaches the half values.
     if total==1, it will start at the edges and 'walk' towards peak until it approaches the half values.
@@ -281,7 +281,7 @@ def fwhm3(valuelist, height=0.5, peakpos=-1, total=1):
     the global maximum will be used if omitted.
     if total = 1 - 
     OUTPUT:
-    -fwhm (value)
+    - peakpos(index), interpolated_width(npoints), [index_l, index_r]
     """
     if peakpos == -1:  # no peakpos given -> take maximum
         peak = np.max(valuelist)
@@ -587,3 +587,45 @@ def correlation2d_center(n_corr, val, norm=0, use_numba=1):
         corr_c_np(corr, n_corr, val, norm)
 
     return corr
+
+if numba_avail:
+    @jit('void(complex128[:,:,:,:], complex128[:,:,:], int32)', nopython=True, nogil=True)
+    def mut_coh_func(J, fld, norm=1):
+        """
+        Mutual Coherence function
+        """
+        n_x = len(fld[0,0,:])
+        n_y = len(fld[0,:,0])
+        n_z = len(fld[:,0,0])
+        
+        for i_x1 in range(n_x):
+            for i_y1 in range(n_y):                      
+                    for i_x2 in range(n_x):
+                        for i_y2 in range(n_y):
+                            j = 0
+                            for k in range(n_z):
+                                j += (fld[k, i_y1, i_x1] * fld[k, i_y2, i_x2].conjugate())
+                            if norm:
+                                AbsE1 = 0
+                                AbsE2 = 0
+                                for k in range(n_z):
+                                    AbsE1 += abs(fld[k, i_y1, i_x1])
+                                    AbsE2 += abs(fld[k, i_y2, i_x2])
+                                J[i_y1, i_x1, i_y2, i_x2] = j / (AbsE1 * AbsE2 / n_z**2) / n_z
+                            else:
+                                J[i_y1, i_x1, i_y2, i_x2] = j / n_z
+                                
+def gauss_fit(X, Y):
+    import numpy as np
+    import scipy.optimize as opt
+
+    def gauss(x, p):  # p[0]==mean, p[1]==stdev p[2]==peak
+        return p[2] / (p[1] * np.sqrt(2 * np.pi)) * np.exp(-(x - p[0])**2 / (2 * p[1]**2))
+
+    p0 = [0, np.max(X) / 2, np.max(Y)]
+    errfunc = lambda p, x, y: gauss(x, p) - y
+    p1, success = opt.leastsq(errfunc, p0[:], args=(X, Y))
+    fit_mu, fit_stdev, ampl = p1
+    Y1 = gauss(X, p1)
+    RMS = fit_stdev
+    return (Y1, RMS)

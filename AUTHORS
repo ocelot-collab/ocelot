@@ -1,6 +1,7 @@
 Ilya Agapov ilya.agapov@desy.de
 architecture, releases
-optimizer, x-ray optics
+optimizer, x-ray optics,
+genesis2 adaptor
 
 Sergey Tomin sergey.tomin@xfel.eu
 cpbd modules, optics functions, CSR
@@ -15,7 +16,15 @@ Martin Dohlus
 space charge, CSR, wakefields, LH
 
 Gianluca Geloni
-genesis adaptor
+genesis2 adaptor
 
-Svitozar Serkez
-genesis adaptor
+Svitozar Serkez svitozar.serkez@xfel.eu
+genesis2 & genesis4 adaptors,
+coherent radiation class,
+SASE estimator & imitator,
+Stokes parameters class.
+
+Mykola Veremchuk, Andrei Trebushinin
+Stokes parameters calculation & visualization,
+coherent radiation class, unit tests, examples
+

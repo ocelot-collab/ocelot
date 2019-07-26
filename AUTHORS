@@ -18,11 +18,13 @@ space charge, CSR, wakefields, LH
 Gianluca Geloni
 genesis2 adaptor
 
-Svitozar Serkez svitozar.serkez@xfel.de
-genesis2&genesis4 adapttors,
-coherent radiation module,
-SASE estimator & imitator
+Svitozar Serkez svitozar.serkez@xfel.eu
+genesis2 & genesis4 adaptors,
+coherent radiation class,
+SASE estimator & imitator,
+Stokes parameters class.
 
 Mykola Veremchuk, Andrei Trebushinin
-Stokes parameters visualization
+Stokes parameters calculation & visualization,
+coherent radiation class, unit tests, examples
 

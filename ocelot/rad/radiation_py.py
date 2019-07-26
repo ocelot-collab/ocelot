@@ -14,7 +14,7 @@ from ocelot.common.globals import *
 import time
 from ocelot.common.logging import *
 import copy
-
+from scipy.integrate import cumtrapz
 _logger = logging.getLogger(__name__)
 
 try:
@@ -40,6 +40,98 @@ class Motion:
         self.Bz = []
         self.XbetaI2 = []
         self.YbetaI2 = []
+
+class BeamTraject:
+    """
+    A class for storing and retrieving the coordinates of the n-th particle from the table with all trajectories.
+    """
+    def __init__(self, beam_trajectories):
+        self.U = beam_trajectories
+
+
+    def n(self):
+        return np.shape(self.U)[2]
+
+    def check(self, n):
+        if n > self.n() - 1:
+            raise Exception('n > number of particles"')
+
+    def x(self, n=0):
+        self.check(n)
+        x_array = np.array([])
+        for u in self.U:
+            x_array = np.append(x_array, u[0::9, n])
+        return x_array
+
+    def y(self, n=0):
+        self.check(n)
+        y_array = np.array([])
+        for u in self.U:
+            y_array = np.append(y_array, u[2::9, n])
+        return y_array
+
+    def z(self, n=0):
+        self.check(n)
+        z_array = np.array([])
+        for u in self.U:
+            z_array = np.append(z_array, u[4::9, n])
+        return z_array
+
+    def xp(self, n=0):
+        self.check(n)
+        xp_array = np.array([])
+        for u in self.U:
+            xp_array = np.append(xp_array, u[1::9, n])
+        return xp_array
+
+    def yp(self, n=0):
+        self.check(n)
+        yp_array = np.array([])
+        for u in self.U:
+            yp_array = np.append(yp_array, u[3::9, n])
+        return yp_array
+
+    def p(self, n):
+        self.check(n)
+        p_array = np.array([])
+        for u in self.U:
+            p_array = np.append(p_array, u[5::9, n])
+        return p_array
+
+    def s(self, n=0):
+        self.check(n)
+
+        xp2 = self.xp(n)**2
+        yp2 = self.yp(n)**2
+        #zp = np.sqrt(1. / (1. + xp2 + yp2))
+        s = cumtrapz(np.sqrt(1. + xp2 + yp2), self.z(n), initial=0)
+        return s
+
+    def p_array_end(self, p_array):
+
+        s_fin = p_array.tau()
+
+        for u in self.U:
+            x1 = u[1::9, :]
+            y1 = u[3::9, :]
+            #dz = u[4 + 9::9, :] - u[4:-9:9, :]
+            z = u[4::9, :]
+            s_fin += np.trapz(np.sqrt(1 + x1 * x1 + y1 * y1), z, axis=0)
+            #s_fin += np.sum(dz * np.sqrt(1 + x1 * x1 + y1 * y1), axis=0)
+
+        N = int(np.shape(self.U)[1] / 9)
+
+        # ref_path is reference path of the particle with zero initial conditions
+        # in sake of speed and simplicity we assume that ref_path is equal to path of the beam in average
+
+        ref_path = np.mean(s_fin)
+
+        p_array.rparticles[0, :] = self.U[-1][(N - 1) * 9 + 0, :]
+        p_array.rparticles[1, :] = self.U[-1][(N - 1) * 9 + 1, :]
+        p_array.rparticles[2, :] = self.U[-1][(N - 1) * 9 + 2, :]
+        p_array.rparticles[3, :] = self.U[-1][(N - 1) * 9 + 3, :]
+        p_array.rparticles[4, :] = ref_path - s_fin
+        p_array.rparticles[5, :] = self.U[-1][(N - 1) * 9 + 5, :]
 
 
 def bspline(x, y, x_new):
@@ -569,6 +661,9 @@ def coherent_radiation(lat, screen, p_array, energy_loss=False, quantum_diff=Fal
     screen.coherent_photon_dist()
     screen.Ef_electron = E[-1]
     screen.motion = U
+    beam_traj = BeamTraject(beam_trajectories=U)
+    beam_traj.p_array_end(p_array)
+    screen.beam_traj = beam_traj
     return screen
 
 

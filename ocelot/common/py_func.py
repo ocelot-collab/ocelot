@@ -1,6 +1,8 @@
 import inspect
 import os
 
+python_v = "python3.4"
+
 class bcolors:
     HEADER = '\033[95m'
     BOLD = "\033[1m"
@@ -33,7 +35,7 @@ def background(command):
     '''
     import subprocess
     imports = 'from ocelot.adaptors.genesis import *; from ocelot.gui.genesis_plot import *; from ocelot.utils.xfel_utils import *; '
-    subprocess.Popen(["python3", "-c", imports + command])
+    subprocess.Popen([python_v, "-c", imports + command])
     
 def copy_this_script(file, folderPath):
     scriptName = os.path.basename(file)

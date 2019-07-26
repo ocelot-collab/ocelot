@@ -43,7 +43,6 @@ SELF-SEEDING - relevant
 
 def dfl_st_cpl(dfl, theta_b, inp_axis='y', s_start=None):
     _logger.info('introducing spatio-temporal coupling')
-    # print('    introducing spatio-temporal coupling')
     start = time.time()
     direction = 1
     if s_start == None:
@@ -51,7 +50,7 @@ def dfl_st_cpl(dfl, theta_b, inp_axis='y', s_start=None):
 
     # dfl = deepcopy(dfl)
     shift_z_scale = dfl.scale_z() - s_start
-    shift_m_scale = shift_z_scale / tan(theta_b)
+    shift_m_scale = shift_z_scale / np.tan(theta_b)
     shift_m_scale[np.where(shift_m_scale > 0)] = 0
     shift_pix_scale = np.floor(shift_m_scale / dfl.dx).astype(int)
 
@@ -72,7 +71,8 @@ def dfl_st_cpl(dfl, theta_b, inp_axis='y', s_start=None):
 
     dfl.fld = fld
     t_func = time.time() - start
-    print('      done in %.2f ' % t_func + 'sec')
+    _logger.debug(ind_str + 'done in {:.2f} sec'.format(t_func))
+    # print('      done in %.2f ' % t_func + 'sec')
     return dfl
 
 
@@ -83,7 +83,7 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
     nthread = multiprocessing.cpu_count()
     if nthread > 8:
         nthread = int(nthread * 0.9)  # not to occupy all CPUs on login server
-    print('  HXRSS dfl filtering')
+    # print('  HXRSS dfl filtering')
     _logger.info('HXRSS dfl filtering')
     start = time.time()
     # klpos, krpos, cwidth = FWHM(trf.k, 1.0-np.abs(trf.tr))
@@ -98,15 +98,17 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
         if trf.compound:
             cwidth = trf.dk
     
-    dfl.to_domain('t', 's')
+    dfl.to_domain('st')
     dk_old = 2 * pi / dfl.Lz()
     dk = cwidth / res_per_fwhm
     padn = np.ceil(dk_old / dk).astype(int)
     if np.mod(padn, 2) == 0 and padn != 0:  # check for odd
         padn = int(padn + 1)
     
+    _logger.debug(ind_str + 'calculated padn = {}'.format(padn))
     if enforce_padn!=None:
         padn=enforce_padn
+        _logger.debug(ind_str + 'enforced padn = {}'.format(padn))
         
     
     dfl_z = dfl.scale_z()
@@ -115,9 +117,9 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
         raise Exception('s_delay %.2e is larger that the padded dfl %.2e Consider using enforce_padn > %.2f' %(s_delay, dfl_z_mesh * padn, s_delay / dfl_z_mesh))
         
     if dump_proj:
-
+        _logger.debug(ind_str + 'shape_before '+str(dfl.shape()))
         dfl_pad_z(dfl, padn)
-
+        _logger.debug(ind_str + 'shape_after '+str(dfl.shape()))
         t1 = time.time()
         t_l_scale = dfl.scale_z()
         # t_l_int_b=dfl.int_z()
@@ -147,11 +149,13 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
             dfl_st_cpl(dfl, trf.thetaB)
 
         dfl_shift_z(dfl, s_delay, set_zeros=0)
+        _logger.debug(ind_str + 'shape_before '+str(dfl.shape()))
         dfl_pad_z(dfl, -padn)
+        _logger.debug(ind_str + 'shape_after '+str(dfl.shape()))
 
         t_func = time.time() - start
         t_proj = t2 + t4 + t6 + t8 - (t1 + t3 + t5 + t7)
-        print('    done in %.2f sec, (inkl. %.2f sec for proj calc)' % (t_func, t_proj))
+        _logger.debug(ind_str + 'done in {:.2f} sec, (inkl. {:.2f} sec for proj calc)'.format(t_func, t_proj))
         return ((t_l_scale, None, t_l_int_a, t_l_pha_a), (f_l_scale, f_l_filt, None, f_l_int_a))  # f_l_int_b,t_l_int_b,
 
     else:
@@ -166,7 +170,7 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
         dfl_pad_z(dfl, -padn)
 
         t_func = time.time() - start
-        print('    done in %.2f ' % t_func + 'sec')
+        _logger.debug(ind_str + 'done in {:.2f} sec'.format(t_func))
         return ()
 
 
@@ -228,37 +232,41 @@ def tap_pol(n, n0, a0, a1, a2):
 def create_fel_lattice(und_N = 35,
                     und_L = 5,
                     und_l = 0.04,
-                    und_K = 0.999,
+                    und_Kx = 0,
+                    und_Ky = 0,
                     inters_L = 1.08,
+                    inters_K = 'K_und',
+                    inters_phi=0,
                     quad_L = 0.4,
                     quad_K = 0,
-                    phs_L = 0.1,
-                    phs_K = 0,
+                    phs_L = 0.0,
                     quad_start = 'd',
-                        ):
-    
+                    **kwargs):
     if quad_L > inters_L:
-        raise ValueError('Quarrupole cannot be longer than intersection')
+        _logger.warning('Quarrupole cannot be longer than intersection')
 
-    und_n = np.floor(und_L/und_l).astype(int)
+    # und_n = np.floor(und_L/und_l).astype(int)
+    und_n = und_L/und_l
 
-    und= Undulator(nperiods=und_n, lperiod=und_l, Kx=und_K, eid = "und")
+    und= Undulator(nperiods=und_n, lperiod=und_l, Kx=und_Kx, Ky=und_Ky, eid = "und")
     qf = Quadrupole (l=quad_L, eid = "qf")
     qd = Quadrupole (l=quad_L, eid = "qd")
     qfh = Quadrupole (l=qf.l / 2.)
     qdh = Quadrupole (l=qd.l / 2.)
 
 
-    phs = UnknownElement(l=0) #phase shift
-    phs.phi = 0
+    phs = UnknownElement(l=0) #phase shifter (defines expected retardation of electrons in intersections between undulators)
+    phs.phi = inters_phi
+    phs.K = inters_K #overrides phi, would be K of free space, identical to rms K_und if "K_und"
 
-    d1 = Drift (l=(inters_L - quad_L) / 2, eid = "d1")
-    d2 = Drift (l=(inters_L - quad_L) / 2, eid = "d2")
+    d1 = Drift(l=(inters_L - quad_L) / 2, eid = "d1") #drift
+    d2 = Drift(l=(inters_L - quad_L) / 2, eid = "d2")
+    
     if und_N < 2:
         cell_N = 0
         cell_N_last = 0
     else:
-        cell_N = np.floor( (und_N - 1)/2 ).astype(int)
+        cell_N = np.floor((und_N - 1)/2).astype(int)
         cell_N_last = int((und_N - 1)/2%1)
 
     if quad_start == 'd':
@@ -273,35 +281,39 @@ def create_fel_lattice(und_N = 35,
     return (MagneticLattice(lat), extra_fodo, cell)
 
 
-def create_exfel_lattice(beamline = 'sase1'):
+def create_exfel_lattice(beamline = 'sase1', inters_phi=0, inters_K = "K_und"):
     if beamline in ['sase1', 1, 'sase2', 2]:
         return create_fel_lattice(und_N = 35,
-                        und_L = 5,
+                        und_L = 5-0.04,
                         und_l = 0.04,
-                        und_K = 0,
-                        inters_L = 1.08,
+                        und_Kx = 0,
+                        und_Ky = 0,
+                        inters_L = 1.08+0.04,
+                        inters_K = inters_K,
+                        inters_phi=inters_phi,
                         quad_L = 0.4,
                         quad_K = 0,
-                        phs_L = 0.1,
-                        phs_K = 0,
+                        phs_L = 0.0,
                         quad_start = 'd',
                             )
     elif beamline in ['sase3', 3]:
         return create_fel_lattice(und_N = 21,
-                        und_L = 5,
+                        und_L = 5.032,#5
                         und_l = 0.068,
-                        und_K = 0,
-                        inters_L = 1.08,
-                        quad_L = 0.4,
+                        und_Kx = 0,
+                        und_Ky = 0,
+                        inters_L = 1.088,#1.08,
+                        inters_K = inters_K,
+                        inters_phi=inters_phi,
+                        quad_L = 0.408,
                         quad_K = 0,
-                        phs_L = 0.1,
-                        phs_K = 0,
+                        phs_L = 0.0,
                         quad_start = 'd',
                             )
     else:
         raise ValueError('Unknown beamline')
 
-def prepare_el_optics(beam, lat_pkg, E_photon=None, beta_av=30, s=None):
+def prepare_el_optics(beam, lat_pkg, E_photon=None, beta_av=None, s=None):
     from ocelot.rad.undulator_params import Ephoton2K
     # if s is None:
         # jj = beam.I / (beam.beta_x * beam.beta_y * beam.emit_x * beam.emit_y)
@@ -312,23 +324,44 @@ def prepare_el_optics(beam, lat_pkg, E_photon=None, beta_av=30, s=None):
         beam_match = get_beam_peak(beam)
     else:
         beam_match = beam.get_s(s)
-        
-    # if beamline == 'SASE1':
-         # = create_exfel_sase1_lattice()
-    # elif beamline == 'SASE2':
-        # lat_pkg = create_exfel_sase2_lattice()
-    # elif beamline == 'SASE3':
-        # lat_pkg = create_exfel_sase3_lattice()
-    # else:
-        # raise ValueError('unknown beamline')
     
-    rematch_beam_lat(beam_match, lat_pkg, beta_av)
-    transform_beam_twiss(beam, Twiss(beam_match), s=s)
-    lat = lat_pkg[0]
+    
+    lat, extra_fodo, cell = lat_pkg
     indx_und = np.where([i.__class__ == Undulator for i in lat.sequence])[0]
     und = lat.sequence[indx_und[0]]
+    l_fodo= MagneticLattice(cell).totalLen / 2
+    
     if E_photon is not None:
         und.Kx = Ephoton2K(E_photon, und.lperiod, beam_match.E)
+        if np.isnan(und.Kx):
+            gamma = beam_match.E/m_e_GeV
+            Emax=2*gamma**2/und.lperiod*h_eV_s*speed_of_light
+            _logger.error('requested photon energy {}eV is beyond reach for given lperiod {}m and beam energy {}GeV\nmax energy for given parameters is {}'.format(E_photon, und.lperiod, beam_match.E, Emax))
+            raise ValueError('requested photon energy is beyond reach for given parameters')
+    
+    if beta_av is None:
+        l_period = und.lperiod
+        K_peak = np.max([und.Kx, und.Ky])
+        if und.Kx != und.Ky:
+            iwityp = 0 # planar undulator
+        elif und.Kx == und.Ky:
+            iwityp = 1 # helical undulator
+        else:
+            raise ValueError('unknown undulator: neither planar nor helical, estimation method not applicable')
+        fel = beam2fel(beam_match, l_period, K_peak, iwityp=iwityp)
+        beta_av = fel.beta_opt(apply=0, method=fel.method)
+        if beta_av <= l_fodo * 2:
+            beta_av = l_fodo * 2 * 1.001
+        raise_min_beta = True
+        _logger.info('optimal minimal average beta function was estimated and set to {:.3f}m'.format(beta_av))
+    else:
+        raise_min_beta = False
+        
+
+    rematch_beam_lat(beam_match, lat_pkg, beta_av, raise_min_beta=raise_min_beta)
+    transform_beam_twiss(beam, Twiss(beam_match), s=s)
+
+
 
 '''
 legacy
@@ -479,11 +512,19 @@ def rematch(beta_mean, l_fodo, qdh, lat, extra_fodo, beam, qf, qd):
     beam.beta_y, beam.alpha_y = tw0m.beta_y, tw0m.alpha_y
 
 
-def rematch_beam_lat(beam, lat_pkg, beta_mean):
+def rematch_beam_lat(beam, lat_pkg, beta_mean, raise_min_beta=False):
     
     lat, extra_fodo, cell = lat_pkg
     l_fodo= MagneticLattice(cell).totalLen / 2
     
+    if beta_mean <= 2 * l_fodo:
+        if raise_min_beta:
+            _logger.warning('Desired average beta function {}m was not larger that cell length and was set to that length {}m'.format(beta_mean, 2*l_fodo*1.001))
+            beta_mean = 2 * l_fodo * 1.001
+        else:
+            _logger.error('Desired average beta function {}m should be larger that cell length {}m'.format(beta_mean, 2*l_fodo))
+            raise ValueError('Desired average beta function {}m should be larger that cell length {}m'.format(beta_mean, 2*l_fodo))
+
     indx_q = np.where([i.__class__ == Quadrupole for i in lat.sequence])[0]
 
     qd = lat.sequence[indx_q[0]]

@@ -5,11 +5,10 @@ wave optics
 from numpy import random
 from numpy.linalg import norm
 import numpy as np
+from math import factorial
 from numpy import inf, complex128, complex64
+import scipy
 import numpy.fft as fft
-# import matplotlib.pyplot as plt
-import scipy.integrate as integrate
-#import matplotlib.animation as animation
 from copy import deepcopy
 import time
 import os
@@ -17,7 +16,7 @@ import os
 
 # from ocelot.optics.elements import *
 from ocelot.common.globals import *
-from ocelot.common.math_op import find_nearest_idx, fwhm, std_moment, bin_scale, bin_array
+from ocelot.common.math_op import find_nearest_idx, fwhm, std_moment, bin_scale, bin_array, mut_coh_func
 from ocelot.common.py_func import filename_from_path
 # from ocelot.optics.utils import calc_ph_sp_dens
 #from ocelot.adaptors.genesis import *   #commented
@@ -35,6 +34,9 @@ try:
 except ImportError:
     print("wave.py: module PYFFTW is not installed. Install it if you want speed up dfl wavefront calculations")
     fftw_avail = False
+    
+__author__ = "Svitozar Serkez, Andrei Trebushinin, Mykola Veremchuk"
+
 
 class RadiationField:
     '''
@@ -55,14 +57,23 @@ class RadiationField:
     def fileName(self):
         return filename_from_path(self.filePath)
 
-    def copy_param(self, dfl1):
-        self.dx = dfl1.dx
-        self.dy = dfl1.dy
-        self.dz = dfl1.dz
-        self.xlamds = dfl1.xlamds
-        self.domain_z = dfl1.domain_z
-        self.domain_xy = dfl1.domain_xy
-        self.filePath = dfl1.filePath
+    def copy_param(self, dfl1, version=1):
+        if version == 1:
+            self.dx = dfl1.dx
+            self.dy = dfl1.dy
+            self.dz = dfl1.dz
+            self.xlamds = dfl1.xlamds
+            self.domain_z = dfl1.domain_z
+            self.domain_xy = dfl1.domain_xy
+            self.filePath = dfl1.filePath
+        elif version == 2:
+            attr_list = dir(dfl1)
+            for attr in attr_list:
+                if attr.startswith('__') or callable(getattr(self, attr)):
+                    continue
+                if attr == 'fld':
+                    continue
+                setattr(self, attr, getattr(dfl1, attr))
 
     def __getitem__(self, i):
         return self.fld[i]
@@ -114,7 +125,8 @@ class RadiationField:
         return np.sum(self.intensity(), axis=(0, 1))
 
     def int_xy(self):
-        return np.swapaxes(np.sum(self.intensity(), axis=0), 1, 0)
+        # return np.swapaxes(np.sum(self.intensity(), axis=0), 1, 0)
+        return np.sum(self.intensity(), axis=0)
 
     def int_zx(self):
         return np.sum(self.intensity(), axis=1)
@@ -202,6 +214,17 @@ class RadiationField:
         
         r can be scalar or vector with self.Nz() points
         r>0 -> converging wavefront
+        
+        plane is the plane in which wavefront is curved:
+            'x' - horizontal focusing
+            'y' - vertical focusing
+            'xy' - focusing in both planes
+        
+        domain_z is the domain in which wavefront curvature is introduced
+            'f' - frequency
+            't' - time
+            None - original domain (default)
+            
         '''
         
         domains = domain_o_z, domain_o_xy = self.domain_z, self.domain_xy
@@ -210,7 +233,17 @@ class RadiationField:
             domain_z = domain_o_z
         
         _logger.debug('curving radiation wavefront by {}m in {} domain'.format(r, domain_z))
-
+        
+        if np.size(r) == 1:
+            if r == 0:
+                _logger.error(ind_str + 'radius of curvature should not be zero')
+                raise ValueError('radius of curvature should not be zero')
+            elif r == np.inf:
+                _logger.debug(ind_str + 'radius of curvature is infinite, skipping')
+                return
+            else:
+                pass
+        
         if domain_z == 'f':
             self.to_domain('fs')
             x, y = np.meshgrid(self.scale_x(), self.scale_y())
@@ -248,16 +281,12 @@ class RadiationField:
                 self.fld *= np.exp(-1j * k / 2 * arg2[np.newaxis,:,:] / r[:,np.newaxis,np.newaxis])
             else: 
                 raise ValueError('wrong dimensions of radius of curvature')
-        
         else:
             ValueError('domain_z should be in ["f", "t", None]')
             
         self.to_domain(domains)
     
     def to_domain(self, domains='ts', **kwargs):
-        
-        _logger.info('transforming radiation field to {} domain'.format(str(domains)))
-        
         '''
         tranfers radiation to specified domains
         *domains is a string with one or two letters: 
@@ -270,6 +299,7 @@ class RadiationField:
         
         **kwargs are passed down to self.fft_z and self.fft_xy
         '''
+        _logger.info('transforming radiation field to {} domain'.format(str(domains)))
         dfldomain_check(domains)
 
         for domain in domains:
@@ -279,7 +309,7 @@ class RadiationField:
             if domain in ['s', 'k'] and domain is not domain_o_xy:
                 self.fft_xy(**kwargs)
     
-    def fft_z(self, method='mp', nthread=multiprocessing.cpu_count(), debug=1):  # move to another domain ( time<->frequency )
+    def fft_z(self, method='mp', nthread=multiprocessing.cpu_count(), **kwargs):  # move to another domain ( time<->frequency )
         _logger.debug('calculating dfl fft_z from ' + self.domain_z + ' domain with ' + method)
         start = time.time()
         orig_domain = self.domain_z
@@ -320,7 +350,7 @@ class RadiationField:
             _logger.debug(ind_str + 'done in %.2f min' % (t_func / 60))
     
     
-    def fft_xy(self, method='mp', nthread=multiprocessing.cpu_count(), debug=1):  # move to another domain ( spce<->inverse_space )
+    def fft_xy(self, method='mp', nthread=multiprocessing.cpu_count(), **kwargs):  # move to another domain ( spce<->inverse_space )
         _logger.debug('calculating fft_xy from ' + self.domain_xy + ' domain with ' + method)
         start = time.time()
         domain_orig = self.domain_xy
@@ -364,12 +394,12 @@ class RadiationField:
     def prop(self, z, fine=0, return_result=0, return_orig_domains=1, debug=1):
         '''
         Angular-spectrum propagation for fieldfile
-    
+        
         can handle wide spectrum
           (every slice in freq.domain is propagated 
            according to its frequency)
         no kx**2+ky**2<<k0**2 limitation
-    
+        
         dfl is the RadiationField() object
         z is the propagation distance in [m] 
         fine=1 is a flag for ~2x faster propagation. 
@@ -466,8 +496,8 @@ class RadiationField:
                 return self
             else:
                 return
-#        elif z == 0 and m != 1:
-#            pass
+       # elif z == 0 and m != 1:
+           # pass
         
         start = time.time()
         domains = self.domains()
@@ -476,7 +506,7 @@ class RadiationField:
             copydfl = deepcopy(self)
             copydfl, self = self, copydfl
         
-#        domain_xy = self.domain_xy
+       # domain_xy = self.domain_xy
         domain_z = self.domain_z
         
         #q_multiply(dfl_out, (1-m) / z)
@@ -527,7 +557,7 @@ class RadiationField:
            # self.fft_xy(debug=debug)
        # if domain_z == 't' and fine:
            # self.fft_z(debug=debug)
-#        self.to_domain('s')
+       # self.to_domain('s')
         if return_orig_domains:
             self.to_domain(domains)
         
@@ -541,8 +571,25 @@ class RadiationField:
             copydfl, self = self, copydfl
             return copydfl
     
+    def mut_coh_func(self, norm=1, jit=1):
+        if jit:
+            J = np.zeros([self.Ny(), self.Nx(), self.Ny(), self.Nx()]).astype(np.complex128)
+            mut_coh_func(J, self.fld, norm=norm)
+        else:
+            I = self.int_xy() / self.Nz()
+            J = np.mean(self.fld[:,:,:,np.newaxis,np.newaxis].conjugate() * self.fld[:,np.newaxis,np.newaxis,:,:], axis=0)
+            if norm:
+                J /= (I[:,:,np.newaxis,np.newaxis] * I[np.newaxis,np.newaxis,:,:])
+        return J
+        
+    def coh(self, jit=0):
+        I = self.int_xy() / self.Nz()
+        J = self.mut_coh_func(norm=0, jit=jit)
+        coh = np.sum(abs(J)**2) / np.sum(I)**2
+        return coh
+    
 class WaistScanResults():
-
+    
     def __init__(self):
         self.filePath = ''
         self.xlamds = None
@@ -557,8 +604,7 @@ class WaistScanResults():
 
     def fileName(self):
         return filename_from_path(self.filePath)
-    
-    
+
 class TransferFunction:
     '''
     data container for Fourier Optics transfer functions
@@ -572,7 +618,7 @@ class TransferFunction:
         self.dk = None # width of feature in spectrum
     
     def ev(self):
-        return self.k* h_eV_s/2/pi * speed_of_light
+        return self.k * h_eV_s / 2 / pi * speed_of_light
     
     def __mul__(self, f):
         if f.__class__ == TransferFunction:
@@ -596,17 +642,54 @@ class StokesParameters:
         self.s1 = np.array([])
         self.s2 = np.array([])
         self.s3 = np.array([])
-        
+    
     def __getitem__(self,i):
-        S = deepcopy(self)
-        if self.s0.ndim == 1:
-            S.sc = self.sc_z[i]
-        S.s0 = self.s0[i]
-        S.s1 = self.s1[i]
-        S.s2 = self.s2[i]
-        S.s3 = self.s3[i]
-        return S
+        S = StokesParameters() # start from emply object to save space
         
+        shape = self.s0.shape
+        _logger.log(5, ind_str + 'Stokes slicing index all' + str(i))
+        if isinstance(i, tuple):
+            i1 = tuple([ii for ii in i if ii is not None]) # account for np.newaxis
+            _logger.log(5, ind_str + 'Stokes slicing index scales' + str(i1))
+            for dim, i1i in enumerate(i1): #slice scales, avoiding slicing zero-length-arrays
+                if dim == 0:
+                    if np.size(self.sc_z)>1:
+                        S.sc_z = self.sc_z[i1i]
+                if dim == 1:
+                    if np.size(self.sc_y)>1:
+                        S.sc_y = self.sc_y[i1i]
+                if dim == 2:
+                    if np.size(self.sc_x)>1:
+                        S.sc_x = self.sc_x[i1i]
+            
+            # if len(i1) == 3:
+                # S.sc_z, S.sc_y, S.sc_x = self.sc_z[i1[0]], self.sc_y[i1[1]], self.sc_x[i1[2]]
+            # elif len(i1) == 2:
+                # S.sc_z, S.sc_y = self.sc_z[i1[0]], self.sc_y[i1[1]]
+            # elif len(i1) == 1:
+                # S.sc_z = self.sc_z[i1[0]]
+            # else:
+                # raise ValueError
+        elif isinstance(i, slice) or isinstance(i, int):
+            S.sc_z = self.sc_z[i]
+        
+        # opy all possible attributes
+        for attr in dir(self):
+            if attr.startswith('__') or callable(getattr(self,attr)) or attr in ['sc_z', 'sc_x', 'sc_y']:
+                continue
+            value = getattr(self,attr)
+            if np.shape(value) == shape:
+                setattr(S, attr, value[i])
+            else:
+                setattr(S, attr, value)
+        # redundant
+        # S.s0 = self.s0[i]
+        # S.s1 = self.s1[i]
+        # S.s2 = self.s2[i]
+        # S.s3 = self.s3[i]
+        
+        return S
+    
     def P_pol(self):
         #coherent part
         return np.sqrt(self.s1**2 + self.s2**2 + self.s3**2)
@@ -614,16 +697,23 @@ class StokesParameters:
         #linearly polarized part
         return np.sqrt(self.s1**2 + self.s2**2)
     def deg_pol(self):
-        return self.P_pol() / self.s0
+        with np.errstate(divide='ignore'):
+            return self.P_pol() / self.s0
     def deg_pol_l(self):
-        return self.P_pol_l() / self.s0
+        with np.errstate(divide='ignore'):
+            return self.P_pol_l() / self.s0
+    def deg_pol_c(self):
+        with np.errstate(divide='ignore'):
+            return np.abs(self.s3) / self.s0
         #        self.s_coh = np.array([])
     def chi(self):
         # chi angle (p/4 = circular)
-        return np.arctan(self.s3 / np.sqrt(self.s1**2 + self.s2**2)) / 2
+        with np.errstate(divide='ignore'):
+            return np.arctan(self.s3 / np.sqrt(self.s1**2 + self.s2**2)) / 2
     def psi(self):
         # psi angle 0 - horizontal, pi/2 - vertical
-        psi = np.arctan(self.s2 / self.s1) / 2
+        with np.errstate(divide='ignore'):
+            psi = np.arctan(self.s2 / self.s1) / 2
 
         idx1 = np.where((self.s1<0) & (self.s2>0))
         idx2 = np.where((self.s1<0) & (self.s2<0))
@@ -636,7 +726,134 @@ class StokesParameters:
             psi[idx1] += np.pi/2
             psi[idx2] -= np.pi/2
         return psi
+    
+    def slice_2d(self, loc, plane='z'):
+        _logger.debug('slicing stokes matrix at location {} over {} plane'.format(loc, plane))
+        if plane in ['x', 2]:
+            plane = 2
+            scale = self.sc_x
+        elif plane in ['y', 1]:
+            plane = 1
+            scale = self.sc_y
+        elif plane in ['z', 0]:
+            plane = 0
+            scale = self.sc_z
+        else:
+            _logger.error(ind_str + 'argument "plane" should be in ["x","y","z",0,1,2]')
+            raise ValueError('argument "plane" should be in ["x","y","z",0,1,2]')
+        idx = find_nearest_idx(scale, loc)
+        return slice_2d_idx(self, idx, plane)
+    
+    def slice_2d_idx(self, idx, plane='z'):
+        _logger.debug('slicing stokes matrix at index {} over {} plane'.format(idx, plane))
+        #speedup by aboiding deepcopy
+        S = deepcopy(self)
+        if plane in ['x', 2]:
+            plane = 2
+        elif plane in ['y', 1]:
+            plane = 1
+        elif plane in ['z', 0]:
+            plane = 0
+        else:
+            _logger.error(ind_str + 'argument "plane" should be in ["x","y","z",0,1,2]')
+            raise ValueError('argument "plane" should be in ["x","y","z",0,1,2]')
+        if plane == 0:
+            S.s0 = S.s0[np.newaxis, idx, :, :]
+            S.s1 = S.s1[np.newaxis, idx, :, :]
+            S.s2 = S.s2[np.newaxis, idx, :, :]
+            S.s3 = S.s3[np.newaxis, idx, :, :]
+            S.sc_z = np.arange(1)
+        elif plane == 1:
+            S.s0 = S.s0[:, np.newaxis, idx, :]
+            S.s1 = S.s1[:, np.newaxis, idx, :]
+            S.s2 = S.s2[:, np.newaxis, idx, :]
+            S.s3 = S.s3[:, np.newaxis, idx, :]
+            S.sc_y = np.arange(1)
+        elif plane == 2:
+            S.s0 = S.s0[:, :, np.newaxis, idx]
+            S.s1 = S.s1[:, :, np.newaxis, idx]
+            S.s2 = S.s2[:, :, np.newaxis, idx]
+            S.s3 = S.s3[:, :, np.newaxis, idx]
+            S.sc_x = np.arange(1)
+        else:
+            _logger.error(ind_str + 'argument "axis" is not defined')
+            raise ValueError('argument "axis" is not defined')
+        return S
+    
+    def proj(self, plane='x', mode='sum'):
+        _logger.debug('calculating projection of stokes matrix over {} plane'.format(plane))
+        S = deepcopy(self)
+        nz, ny, nx = self.s0.shape
+        if plane in ['x', 2]:
+            plane = 2
+            n_points = nx
+            S.sc_x = np.arange(1)
+        elif plane in ['y', 1]:
+            plane = 1
+            n_points = ny
+            S.sc_y = np.arange(1)
+        elif plane in ['z', 0]:
+            plane = 0
+            n_points = nz
+            S.sc_z = np.arange(1)
+        else:
+            _logger.error(ind_str + 'argument "plane" should be in ["x","y","z",0,1,2]')
+            raise ValueError('argument "plane" should be in ["x","y","z",0,1,2]')
         
+        S.s0 = np.sum(self.s0, axis=plane, keepdims=1)
+        S.s1 = np.sum(self.s1, axis=plane, keepdims=1)
+        S.s2 = np.sum(self.s2, axis=plane, keepdims=1)
+        S.s3 = np.sum(self.s3, axis=plane, keepdims=1)
+        
+        if mode == 'sum':
+            return S
+        elif mode == 'mean':
+            S.s0 = S.s0 / n_points
+            S.s1 = S.s1 / n_points
+            S.s2 = S.s2 / n_points
+            S.s3 = S.s3 / n_points
+            return S
+        else:
+            _logger.error(ind_str + 'argument "mode" should be in ["sum", "mean"]')
+            raise ValueError('argument "mode" should be in ["sum", "mean"]')
+
+class HeightProfile:
+    """
+    1d surface of mirror
+    """
+
+    def __init__(self):
+        self.points_number = None
+        self.length = None
+        self.h = None
+        self.s = None
+
+    def hrms(self):
+        return np.sqrt(np.mean(np.square(self.h)))
+
+    def set_hrms(self, rms):
+        self.h *= rms / self.hrms()
+
+    def psd(self):
+        psd = 1 / (self.length * np.pi) * np.square(np.abs(np.fft.fft(self.h) * self.length / self.points_number))
+        psd = psd[:len(psd) // 2]
+        k = np.pi / self.length * np.linspace(0, self.points_number, self.points_number // 2)
+        # k = k[len(k) // 2:]
+        return (k, psd)
+
+    def save(self, path):
+        tmp = np.array([self.s, self.h]).T
+        np.savetxt(path, tmp)
+
+    def load(self, path, return_obj=False):
+        tmp = np.loadtxt(path).T
+        self.s, self.h = tmp[0], tmp[1]
+        self.points_number = self.h.size
+        self.length = self.s[-1] - self.s[0]
+        if return_obj:
+            return self
+
+
 def bin_stokes(S, bin_size):
     '''
     needs fix for 3d!!!
@@ -692,15 +909,24 @@ def calc_stokes_dfl(dfl1, dfl2, basis='xy', mode=(0,0)):
     '''
     mode: (average_longitudinally, sum_transversely)
     '''
+    
+    _logger.info('calculating Stokes parameters from dfl')
+    _logger.debug(ind_str + 'dfl1 {}:'.format(dfl1.fld.shape) + str(dfl1.filePath) + ' ' + str(dfl1))
+    _logger.debug(ind_str + 'dfl2 {}:'.format(dfl2.fld.shape) + str(dfl2.filePath) + ' ' + str(dfl2))
+
     # if basis != 'xy':
         # raise ValueError('Not implemented yet')
     
     if dfl1.Nz() != dfl2.Nz():
-        l1 = dfl1.fld.Nz()
-        l2 = dfl2.fld.Nz()
+        dfl1 = deepcopy(dfl1)
+        dfl2 = deepcopy(dfl2)
+        l1 = dfl1.Nz()
+        l2 = dfl2.Nz()
         if l1 > l2:
+            _logger.info(ind_str + 'dfl1.Nz()={:} > dfl2.Nz()={:}, cutting dfl1'.format(l1, l2))
             dfl1.fld = dfl1.fld[:-(l1-l2), :, :]
         else:
+            _logger.info(ind_str + 'dfl1.Nz()={:} < dfl2.Nz()={:}, cutting dfl2'.format(l1, l2))
             dfl2.fld = dfl2.fld[:-(l2-l1), :, :]
 
     # if np.equal(dfl1.scale_z(), dfl2.scale_z()).all():
@@ -716,6 +942,7 @@ def calc_stokes_dfl(dfl1, dfl2, basis='xy', mode=(0,0)):
     S.sc_z, S.sc_x, S.sc_y = dfl1.scale_z(), dfl1.scale_x(), dfl1.scale_y()
     
     if mode[1]:
+        _logger.info(ind_str + 'summing transversely')
         S = sum_stokes_tr(S)
         # S.s0 = np.sum(S.s0,axis=(1,2))
         # S.s1 = np.sum(S.s1,axis=(1,2))
@@ -723,8 +950,9 @@ def calc_stokes_dfl(dfl1, dfl2, basis='xy', mode=(0,0)):
         # S.s3 = np.sum(S.s3,axis=(1,2))
     
     if mode[0]:
+        _logger.info(ind_str + 'averageing longitudinally')
         S = average_stokes_l(S)
-
+    _logger.info(ind_str + 'done')
     return S
 
 
@@ -805,7 +1033,8 @@ def calc_stokes_dfl(dfl1, dfl2, basis='xy', mode=(0,0)):
     # return S
     
 def calc_stokes(E1, E2, s=None, basis='xy'):
-    
+    _logger.info('calculating Stokes parameters')
+    _logger.info(ind_str + 'basis = "{}"'.format(basis))
     if E1.shape != E2.shape:
         raise ValueError('Ex and Ey dimentions do not match')
     
@@ -822,12 +1051,23 @@ def calc_stokes(E1, E2, s=None, basis='xy'):
         Er_ = np.conj(Er)
         El_ = np.conj(El)
         
-        Jxx = Er*Er_ + El*El_ + Er*El_ + El*Er_ 
-        Jyy = Er*Er_ + El*El_ - Er*El_ - El*Er_
-        Jxy = (-1j)*(Er*Er_ - El*El_ - Er*El_ + El*Er_)
-        Jyx = np.conj(Jxy)
+        E1 = Er*Er_
+        E2 = El*El_
+        E3 = Er*El_
+        E4 = El*Er_
+        del (Er, El, Er_, El_)
         
-        del (Er_, El_, Er, El)
+        Jxx = E1 + E2 + E3 + E4
+        Jyy = E1 + E2 - E3 - E4
+        Jxy = (-1j) * (E1 - E2 - E3 + E4)
+        Jyx = np.conj(Jxy)
+        del (E1, E2, E3, E4)
+#        Jxx = Er*Er_ + El*El_ + Er*El_ + El*Er_ 
+#        Jyy = Er*Er_ + El*El_ - Er*El_ - El*Er_
+#        Jxy = (-1j)*(Er*Er_ - El*El_ - Er*El_ + El*Er_)
+#        Jyx = np.conj(Jxy)
+#        
+#        del (Er_, El_, Er, El)
     
     elif basis == 'yx' or basis == 'xy': 
         if basis == 'yx':
@@ -943,10 +1183,10 @@ class WignerDistribution():
         self.phen = h_eV_s * speed_of_light * 1e9 / value
     
     def power(self):
-        return np.sum(self.wig,axis=0)
+        return np.sum(self.wig, axis=0)
         
     def spectrum(self):
-        return np.sum(self.wig,axis=1)
+        return np.sum(self.wig, axis=1)
         
     def energy(self):
         return np.sum(self.wig)*abs(self.s[1]-self.s[0])/speed_of_light
@@ -954,7 +1194,7 @@ class WignerDistribution():
     def fileName(self):
         return filename_from_path(self.filePath)
         
-    def eval(self,method = 'mp'):
+    def eval(self, method = 'mp'):
         
         # from ocelot.utils.xfel_utils import calc_wigner
         
@@ -963,9 +1203,36 @@ class WignerDistribution():
         phen = h_eV_s * (np.fft.fftfreq(self.s.size, d = ds / speed_of_light) + speed_of_light / self.xlamds)
         self.phen = np.fft.fftshift(phen, axes=0)
         # self.freq_lamd = h_eV_s * speed_of_light * 1e9 / freq_ev
+    
+    def inst_freq(self):
+        p = self.power()
+        if np.all(p==0):
+            return p
+        else:
+            p[p==0] = np.nan
+            return np.sum(self.wig * self.phen[:, np.newaxis], axis=0) / p
+        
+    def group_delay(self):
+        s = self.spectrum()
+        if np.all(s==0):
+            return s
+        else:
+            s[s==0] = np.nan
+            return np.sum(self.wig * self.s[np.newaxis, :], axis=1) / s
+            
+    def inst_bandwidth(self):
+        # check, gives strange tilt. physics?
+        p = self.power()
+        if np.all(p==0):
+            return p
+        else:
+            return np.sum(self.wig * (self.phen[:, np.newaxis]-self.inst_freq()[np.newaxis,:])**2, axis=0) / p
 
+def generate_dfl(*args, **kwargs):
+    _logger.warning('"generate_dfl" will be deprecated, use "generate_gaussian_dfl" instead')
+    return generate_gaussian_dfl(*args, **kwargs)
 
-def generate_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), power_rms=(0.1e-3,0.1e-3,5e-6), power_center=(0,0,None), power_angle=(0,0), power_waistpos=(0,0), wavelength=None, zsep=None, freq_chirp=0, en_pulse=None, power=1e6, **kwargs):
+def generate_gaussian_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), power_rms=(0.1e-3,0.1e-3,5e-6), power_center=(0,0,None), power_angle=(0,0), power_waistpos=(0,0), wavelength=None, zsep=None, freq_chirp=0, en_pulse=None, power=1e6, **kwargs):
     '''
     generates RadiationField object 
     narrow-bandwidth, paraxial approximations
@@ -979,21 +1246,24 @@ def generate_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), power_rms=(
     power_waistpos (x,y) [m] downstrean location of the waist of the beam
     wavelength [m] - central frequency of the radiation, if different from xlamds
     zsep (integer) - distance between slices in z as zsep*xlamds
-    freq_chirp [(1e9 nm)/(1e6 um)] = [m/m] - requency chirp of the beam around power_center[2]
+    freq_chirp dw/dt=[1/fs**2] - requency chirp of the beam around power_center[2]
     en_pulse, power = total energy or max power of the pulse, use only one
     '''
     
     start = time.time()
 
-    if shape[2] == None:
-        shape = (shape[0],shape[1],int(dgrid[2]/xlamds/zsep))
+    if dgrid[2] is not None and zsep is not None:
+        if shape[2] == None:
+            shape = (shape[0],shape[1],int(dgrid[2]/xlamds/zsep))
+        else:
+            _logger.error(ind_str + 'dgrid[2] or zsep should be None, since either determines longiduninal grid size')
     
-    _logger.info('generating radiation field of shape' + str((shape[2], shape[0], shape[1])))
+    _logger.info('generating radiation field of shape (nz,ny,nx): ' + str(shape))
     if 'energy' in kwargs:
         _logger.warn(ind_str + 'rename energy to en_pulse, soon arg energy will be deprecated')
         en_pulse = kwargs.pop('energy', 1)
     
-    dfl = RadiationField((shape[2], shape[0], shape[1]))
+    dfl = RadiationField((shape[2], shape[1], shape[0]))
 
     k = 2 * np.pi / xlamds
 
@@ -1002,8 +1272,7 @@ def generate_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), power_rms=(
     dfl.domain_xy = 's'
     dfl.dx = dgrid[0] / dfl.Nx()
     dfl.dy = dgrid[1] / dfl.Ny()
-    if dgrid[2] is not None and zsep is not None:
-        _logger.error(ind_str + 'dgrid[2] or zsep should be None, since either determines longiduninal grid size')
+    
     if dgrid[2] is not None:
         dz = dgrid[2] / dfl.Nz()
         zsep = int(dz/xlamds)
@@ -1035,10 +1304,15 @@ def generate_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), power_rms=(
     qz = 1j * np.pi * (2 * rms_z)**2 / xlamds
     
     if wavelength.__class__ in [list, tuple, np.ndarray] and len(wavelength) == 2:
-        freq_chirp = (wavelength[1] - wavelength[0]) / (z[-1,0,0] - z[0,0,0])
-        _logger.debug(ind_str + 'wavelengths ', wavelength)
-        _logger.debug(ind_str + 'z ', (z[-1,0,0], z[0,0,0]))
-        _logger.debug(ind_str + 'calculated chirp ', freq_chirp)
+        domega = 2 * np.pi * speed_of_light * (1 / wavelength[0] - 1 / wavelength[1])
+        dt = (z[-1,0,0] - z[0,0,0]) / speed_of_light
+        freq_chirp = domega / dt / 1e30 / zsep
+        # freq_chirp = (wavelength[1] - wavelength[0]) / (z[-1,0,0] - z[0,0,0])
+        _logger.debug(ind_str + 'difference wavelengths {} {}'.format(wavelength[0], wavelength[1]))
+        _logger.debug(ind_str + 'difference z {} {}'.format(z[-1,0,0], z[0,0,0]))
+        _logger.debug(ind_str + 'd omega {}'.format(domega))
+        _logger.debug(ind_str + 'd t     {}'.format(dt))
+        _logger.debug(ind_str + 'calculated chirp {}'.format(freq_chirp))
         wavelength = np.mean([wavelength[0], wavelength[1]])
         
       
@@ -1053,7 +1327,10 @@ def generate_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), power_rms=(
     if freq_chirp == 0:
         phase_chirp_quad = 0
     else:
-        phase_chirp_quad = freq_chirp *((z-z0)/dfl.dz*zsep)**2 * xlamds / 2# / pi**2
+        # print(dfl.scale_z() / speed_of_light * 1e15)
+        # phase_chirp_quad = freq_chirp *((z-z0)/dfl.dz*zsep)**2 * xlamds / 2# / pi**2
+        phase_chirp_quad = freq_chirp / (speed_of_light * 1e-15)**2 * (zl-z0)**2 * dfl.xlamds# / pi**2
+        # print(phase_chirp_quad.shape)
 
 
     # if qz == 0 or qz == None:
@@ -1073,10 +1350,11 @@ def generate_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), power_rms=(
         arg += (z-z0)**2/2/qz
         # print(zz[:,25,25])
         
-    if phase_chirp_lin != 0:
+
+    if np.size(phase_chirp_lin) > 1:
         arg -= phase_chirp_lin
-    if phase_chirp_quad != 0:
-        arg += phase_chirp_quad
+    if np.size(phase_chirp_quad) > 1:
+        arg += phase_chirp_quad[:, np.newaxis, np.newaxis]
     dfl.fld = np.exp(-1j * k * arg) #  - (grid[0]-z0)**2/qz 
     # dfl.fld = np.exp(-1j * k * ( (x-x0)**2/2/qx + (y-y0)**2/2/qy + (z-z0)**2/2/qz - phase_chirp_lin + phase_chirp_quad) ) #  - (grid[0]-z0)**2/qz 
 
@@ -1086,6 +1364,7 @@ def generate_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), power_rms=(
     elif en_pulse == None and power != None:
         dfl.fld *= np.sqrt(power / np.amax(dfl.int_z()))
     else:
+        _logger.error('Either en_pulse or power should be defined')
         raise ValueError('Either en_pulse or power should be defined')
 
     dfl.filePath = ''
@@ -1117,7 +1396,7 @@ def imitate_sase_dfl(xlamds, rho=2e-4, **kwargs):
     dE = E0 * 2 * rho
     _logger.debug(ind_str + 'E0 = {}'.format(E0))
     _logger.debug(ind_str + 'dE = {}'.format(dE))
-    dfl = generate_dfl(xlamds, **kwargs)
+    dfl = generate_gaussian_dfl(xlamds, **kwargs)
     
     _logger.debug(ind_str + 'dfl.shape = {}'.format(dfl.shape()))
     td_scale = dfl.scale_z()
@@ -1135,6 +1414,187 @@ def imitate_sase_dfl(xlamds, rho=2e-4, **kwargs):
     
     return dfl
 
+
+def calc_phase_delay_poly(coeff, w, w0):  
+    
+    '''
+    Calculate the phase delay with given coefficients
+    coeff --- coefficients in phase delay expression:
+    w     --- photon frequencies
+    w0    --- photon frequency at which zero group delay is introduced
+    
+    The expression for the phase: 
+    delta_phi = coeff[0] + 
+                coeff[1]*(w - w0)**1/1!/(1e15)**1 + 
+                coeff[2]*(w - w0)**2/2!/(1e15)**2 + 
+                coeff[3]*(w - w0)**3/3!/(1e15)**3 + ...
+            ... coeff[n]*(w - w0)**n/n!/(1e15)**n
+    
+    coeff is an array-like object with
+    coeff[0] --- phase measured in [rad]
+    coeff[1] --- group delay measured in [fs ^ 1]
+    coeff[2] --- group delay dispersion (GDD) measured in [fs ^ 2]
+    coeff[3] --- third-order dispersion (TOD) measured in [fs ^ 3]
+    ...
+    coeff[n] --- nth-order dispersion measured in [fs ^ n]
+    
+    @author Andrei Trebushinin
+    '''
+    delta_w = w - w0
+    _logger.debug('calculating phase delay')
+    
+    for i , coeffi in enumerate(coeff):
+        _logger.debug(ind_str + 'phase delay coeff[{}] = {} [fs**{}]'.format(i, coeffi, i))
+    
+#    _logger.debug(ind_str + 'coeffs for compression = {}'.format(coeff))
+    coeff_norm = [ci / (1e15)**i / factorial(i) for i, ci in enumerate(coeff)]
+    coeff_norm = list(np.flipud(coeff_norm))
+#    _logger.debug(ind_str + 'coeffs_norm = {}'.format(coeff_norm))
+    
+    for i , coeffi in enumerate(coeff_norm):
+        ii = len(coeff_norm) - i - 1
+        _logger.debug(ind_str + 'phase delay coeff_norm[{}] = {} [s**{}]'.format(ii, coeffi, ii))
+    
+    delta_phi = np.polyval(coeff_norm, delta_w) 
+    _logger.debug(ind_str + 'delta_phi[0] = {}'.format(delta_phi[0]))
+    _logger.debug(ind_str + 'delta_phi[-1] = {}'.format(delta_phi[-1]))
+    _logger.debug(ind_str + 'done')
+    
+    return delta_phi
+
+
+def screen2dfl(screen, polarization='x'):
+    '''
+    Function converts synchrotron radiation from ocelot.rad.screen.Screen to ocelot.optics.wave.RadiationField.
+    New ocelot.optics.wave.RadiationField object will be generated without changing ocelot.rad.screen.Screen object.
+
+    :param screen: ocelot.rad.screen.Screen object, electric field of which will be used to generate RadiationField
+    :param polarization: polarization for conversion to RadiationField ('x' or 'y')
+    :return: ocelot.optics.wave.RadiationField in domains = 'fs'
+    '''
+    shape_tuple = (screen.ne, screen.ny, screen.nx)
+    start = time.time()
+    _logger.info('Converting Screen of shape (nz, ny, nx) = {:} to dfl'.format(shape_tuple))
+    _logger.warning(ind_str + 'in beta')
+
+    dfl = RadiationField()
+    dfl.domain_z = 'f'  # longitudinal domain (t - time, f - frequency)
+    dfl.domain_xy = 's'  # transverse domain (s - space, k - inverse space)
+    if polarization == 'x':
+        dfl.fld = screen.arReEx.reshape(shape_tuple) + 1j * screen.arImEx.reshape(shape_tuple)
+    elif polarization == 'y':
+        dfl.fld = screen.arReEy.reshape(shape_tuple) + 1j * screen.arImEy.reshape(shape_tuple)
+    else:
+        _logger.error('polarization can be "x" or "y"', exc_info=True)
+        raise ValueError('polarization can be "x" or "y"')
+    dfl.dx = screen.x_step / 1000  # from mm to m
+    dfl.dy = screen.y_step / 1000  # from mm to m
+    if screen.ne != 1:
+        scale_kz = 2 * np.pi * screen.Eph / h_eV_s / speed_of_light
+        k = (scale_kz[-1] + scale_kz[0]) / 2
+        dk = (scale_kz[-1] - scale_kz[0]) / dfl.Nz()
+        dfl.dz = 2 * np.pi / dk / dfl.Nz()
+        dfl.xlamds = 2 * np.pi / k
+    else:
+        dfl.dz = 1
+        dfl.xlamds = h_eV_s * speed_of_light / screen.Eph[0]
+
+    _logger.debug(ind_str + 'dfl.xlamds = {:.3e} [m]'.format(dfl.xlamds))
+    _logger.warning(ind_str + 'dfl.fld normalized to dfl.E() = 1 [J]')
+    dfl.fld = dfl.fld / np.sqrt(dfl.E())  # TODO normalize dfl.fld
+    _logger.debug(ind_str + 'done in {:.3e} sec'.format(time.time() - start))
+    _logger.debug(ind_str + 'returning dfl in "sf" domains ')
+    return dfl
+
+def dfl_disperse(dfl, coeff, E_ph0 = None, return_result = False):
+    '''
+    The function adds a phase shift to the fld object.
+    
+    dfl   --- is a RadiationField object 
+    coeff --- coefficients in phase delay expression:
+    
+    The expression for the phase: 
+    delta_phi = coeff[0] + 
+                coeff[1]*(w - w0)**1/1!/(1e15)**1 + 
+                coeff[2]*(w - w0)**2/2!/(1e15)**2 + 
+                coeff[3]*(w - w0)**3/3!/(1e15)**3 + ...
+            ... coeff[n]*(w - w0)**n/n!/(1e15)**n
+            
+        coeff is an array-like object with
+        coeff[0] --- phase measured in [rad]
+        coeff[1] --- group delay measured in [fs ^ 1]
+        coeff[2] --- group delay dispersion (GDD) measured in [fs ^ 2]
+            e.g. coeff[2]: (dt[fs] / dw[1/fs]) = 1e-6 * 1e15**2 * hr_eV_s / speed_of_light * (ds [um] / dE [eV])
+        coeff[3] --- third-order dispersion (TOD) measured in [fs ^ 3]
+        ...
+        coeff[n] --- nth-order dispersion measured in [fs ^ n]
+    
+        can be 
+            - a list (coeff[0], coeff[1], ... coeff[n])
+            - or a number, then coeff[2] is expected
+    
+    E_ph0 --- photon energy at which zero group delay is introduced
+        can be: 
+            - None   - when the carrier freq will be extracted from dfl object
+            - center - when the carrier freq will be calculated as averaging over time
+            - from dfl.int_z() and dfl.scale_z()
+            - E_ph0  - a number in eV
+                
+    return_result --- a flag that is responsible for returning the dfl object 
+        if return_result is True:
+            create a copy and return the modified copy without affecting the original object
+        else:
+            change the original dfl object
+        
+    @author Andrei Trebushinin
+    '''
+    
+    _logger.debug('adding chip to the dfl object')
+    
+    if isinstance(coeff, (int, float, complex)):
+        coeff = (0, 0, coeff)
+        
+    for i , coeffi in enumerate(coeff):
+        _logger.debug(ind_str + 'chirp coeff[{}] = {} [fs**{}]'.format(i, coeffi, i))
+    
+    if return_result:
+        copydfl = deepcopy(dfl)
+        _, dfl = dfl, copydfl
+    
+    z_domain_orig = dfl.domain_z
+    if dfl.domain_z == 't':
+        dfl.to_domain('f')
+    
+    if E_ph0 == None: 
+        w0 = 2*np.pi*speed_of_light/dfl.xlamds
+        _logger.debug(ind_str + 'carrier frequency = {}'.format(w0))
+        
+    elif E_ph0 == 'center':
+        lamds = n_moment(dfl.scale_z(), dfl.int_z(), 0, 1)
+        # _, lamds = np.mean([dfl.int_z(), dfl.scale_z()], axis = (1) )
+        w0 = 2 * np.pi * speed_of_light / lamds
+        _logger.debug(ind_str + 'carrier frequency = {}'.format(w0))
+
+    elif isinstance(E_ph0, str) is not True:
+        w0 = 2 * np.pi * E_ph0 / h_eV_s
+        _logger.debug(ind_str + 'carrier frequency = {}'.format(w0))
+        
+    else:
+        raise ValueError("E_ph0 must be None or 'center' or some value")
+    
+    w = dfl.scale_kz() * speed_of_light
+    
+    delta_phi = calc_phase_delay_poly(coeff, w, w0)
+    H = np.exp(-1j * delta_phi)
+    
+    dfl.fld = dfl.fld * H[:,np.newaxis,np.newaxis]
+    
+    dfl.to_domain(z_domain_orig)
+    
+    _logger.debug(ind_str + 'done')
+    
+    if return_result:
+        return dfl
 
 def dfl_ap(dfl, ap_x=None, ap_y=None, debug=1):
     '''
@@ -1163,7 +1623,12 @@ def dfl_ap(dfl, ap_x=None, ap_y=None, debug=1):
     dfl_energy_orig = dfl.E()
     dfl.fld[:, mask_idx[0], mask_idx[1]] = 0
     
-    _logger.info(ind_str + 'done, %.2f%% energy lost' %( (dfl_energy_orig - dfl.E()) / dfl_energy_orig * 100 ))
+    if dfl_energy_orig == 0:
+        _logger.warn(ind_str + 'dfl_energy_orig = 0')
+    elif dfl.E() == 0:
+        _logger.warn(ind_str + 'done, %.2f%% energy lost' %(100))
+    else:
+        _logger.info(ind_str + 'done, %.2f%% energy lost' %( (dfl_energy_orig - dfl.E()) / dfl_energy_orig * 100 ))
     # tmp_fld = dfl.fld[:,idx_x1:idx_x2,idx_y1:idx_y2]
     
     # dfl_out.fld[:] = np.zeros_like(dfl_out.fld)
@@ -1269,22 +1734,23 @@ def dfl_waistscan(dfl, z_pos, projection=0, debug=1):
 
         scale_x = dfl.scale_x()
         scale_y = dfl.scale_y()
-        center_x = np.int((I_xy.shape[0] + 1) / 2)
-        center_y = np.int((I_xy.shape[1] + 1) / 2)
+        center_x = np.int((I_xy.shape[1] - 1) / 2)
+        center_y = np.int((I_xy.shape[0] - 1) / 2)
+        _logger.debug(ind_str + 'center_pixels = {}, {}'.format(center_x, center_y))
 
         if projection:
-            I_x = np.sum(I_xy, axis=1)
-            I_y = np.sum(I_xy, axis=0)
+            I_x = np.sum(I_xy, axis=0)
+            I_y = np.sum(I_xy, axis=1)
         else:
-            I_x = I_xy[:, center_y]
-            I_y = I_xy[center_x, :]
+            I_y = I_xy[:, center_x]
+            I_x = I_xy[center_y, :]
 
         sc_res.z_pos = np.append(sc_res.z_pos, z)
         sc_res.phdens_max = np.append(sc_res.phdens_max, np.amax(I_xy))
         
         _logger.debug(ind_str + 'phdens_max = %.2e' % (np.amax(I_xy)))
         
-        sc_res.phdens_onaxis = np.append(sc_res.phdens_onaxis, I_xy[center_x, center_y])
+        sc_res.phdens_onaxis = np.append(sc_res.phdens_onaxis, I_xy[center_y, center_x])
         sc_res.fwhm_x = np.append(sc_res.fwhm_x, fwhm(scale_x, I_x))
         sc_res.fwhm_y = np.append(sc_res.fwhm_y, fwhm(scale_y, I_y))
         sc_res.std_x = np.append(sc_res.std_x, std_moment(scale_x, I_x))
@@ -1298,7 +1764,7 @@ def dfl_waistscan(dfl, z_pos, projection=0, debug=1):
     return sc_res
 
 
-def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(None, None), method='cubic', debug=1):
+def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(None, None), method='cubic', debug=1, return_result=1):
     ''' 
     2d interpolation of the coherent radiation distribution 
     interpN and interpL define the desired interpolation coefficients for  
@@ -1307,7 +1773,6 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
     when newN and newL are not None interpN and interpL values are ignored 
     coordinate convention is (x,y) 
     '''
-    from scipy.interpolate import interp2d
 
     _logger.info('interpolating radiation file')
     start_time = time.time()
@@ -1327,7 +1792,10 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
     if (interpN == (1, 1) and interpL == (1, 1) and newN == (None, None) and newL == (None, None)) or \
        (interpN == (1, 1) and interpL == (1, 1) and newN == (dfl.Nx(), dfl.Ny()) and newL == (dfl.Lx(), dfl.Ly())):
         _logger.info(ind_str + 'no interpolation required')
-        return
+        if return_result:
+            return dfl
+        else:
+            return
 
     # calculate new mesh parameters only if not defined explicvitly
     if newN == (None, None) and newL == (None, None):
@@ -1341,7 +1809,10 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
             # place exception
         elif interpNx == 1 and interpNy == 1 and interpLx == 1 and interpLy == 1:
             _logger.info(ind_str + 'no interpolation required, returning original')
-            return
+            if return_result:
+                return dfl
+            else:
+                return
             
         
         # elif interpNx == 1 and interpNy == 1 and interpLx <= 1 and interpLy <= 1:
@@ -1423,8 +1894,8 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
     fld2 = []
     for nslice, fslice in enumerate(dfl.fld):
         _logger.log(5, ind_str + 'slice %s' %(nslice))
-        re_func = interp2d(xscale1, yscale1, np.real(fslice), fill_value=0, bounds_error=False, kind=method)
-        im_func = interp2d(xscale1, yscale1, np.imag(fslice), fill_value=0, bounds_error=False, kind=method)
+        re_func = scipy.interpolate.interp2d(xscale1, yscale1, np.real(fslice), fill_value=0, bounds_error=False, kind=method)
+        im_func = scipy.interpolate.interp2d(xscale1, yscale1, np.imag(fslice), fill_value=0, bounds_error=False, kind=method)
         fslice2 = re_func(xscale2, yscale2) + 1j * im_func(xscale2, yscale2)
         P1 = sum(sum(abs(fslice[iy_min:iy_max, ix_min:ix_max])**2))
         P2 = sum(sum(abs(fslice2)**2))
@@ -1453,10 +1924,13 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
     _logger.debug(ind_str + 'energy after interpolation ' + str(E2))
     _logger.debug(ind_str + 'done in %.2f sec' % (time.time() - start_time))
 
-    # return dfl
+    if return_result:
+        return dfl
+    else:
+        return
 
 
-def dfl_shift_z(dfl, s, set_zeros=1):
+def dfl_shift_z(dfl, s, set_zeros=1, return_result=1):
     '''
     shift the radiation within the window in time domain
     dfl - initial RadiationField object
@@ -1468,18 +1942,21 @@ def dfl_shift_z(dfl, s, set_zeros=1):
     _logger.info('shifting dfl forward by %.2f um (%.0f slices)' % (s * 1e6, shift_n))
     if shift_n == 0:
         _logger.info(ind_str + 's=0, returning original')
-        return
+        # return
     else:
-        start = time.time()
+        t_start = time.time()
         dfl.fld = np.roll(dfl.fld, shift_n, axis=0)
         if set_zeros:
             if shift_n > 0:
                 dfl.fld[:shift_n, :, :] = 0
             if shift_n < 0:
                 dfl.fld[shift_n:, :, :] = 0
-        t_func = time.time() - start
-        # return dfl
-    _logger.debug(ind_str + 'done in %.2f ' % t_func + 'sec')
+        t_func = time.time() - t_start
+        _logger.debug(ind_str + 'done in %.2f ' % t_func + 'sec')
+    if return_result:
+        return dfl
+    else:
+        return
 
 # def dfl_pad_z_old(dfl, padn):
     # assert np.mod(padn, 1) == 0, 'pad should be integer'
@@ -1510,25 +1987,27 @@ def dfl_shift_z(dfl, s, set_zeros=1):
         # print('      done in %.2f ' % t_func / 60 + 'min')
     # return dfl_pad
 
-def dfl_pad_z(dfl, padn):
+def dfl_pad_z(dfl, padn, return_result=1):
     assert np.mod(padn, 1) == 0, 'pad should be integer'
     start = time.time()
 
     if padn > 1:
         padn_n = int(padn  * dfl.Nz())  # new number of slices
         _logger.info('padding dfl by {:} from {:} to {:}'.format(padn, dfl.Nz(), padn_n))
-        dfl_pad = RadiationField( (padn_n, dfl.Ny(), dfl.Nx()) )
-        dfl_pad.copy_param(dfl)
-        dfl_pad.fld[-dfl.Nz():, :, :] = dfl.fld
-        dfl = dfl_pad
+        fld = dfl.fld
+        dfl.fld = np.zeros((padn_n, dfl.Ny(), dfl.Nx()), dtype=fld.dtype)
+        # dfl_pad = RadiationField( (padn_n, dfl.Ny(), dfl.Nx()) )
+        # dfl_pad.copy_param(dfl)
+        dfl.fld[-fld.shape[0]:, :, :] = fld
+        # dfl, dfl_pad = dfl_pad, dfl
     elif padn < -1:
         padn = abs(padn)
         padn_n = int(dfl.Nz() / padn)  # new number of slices
         _logger.info('de-padding dfl by {:} from {:} to {:}'.format(padn, dfl.Nz(), padn_n))
-        dfl_pad = RadiationField()
-        dfl_pad.copy_param(dfl)
-        dfl_pad.fld = dfl.fld[-padn_n:, :, :]
-        dfl = dfl_pad
+        # dfl_pad = RadiationField()
+        # dfl_pad.copy_param(dfl)
+        dfl.fld = dfl.fld[-padn_n:, :, :]
+        # dfl, dfl_pad = dfl_pad, dfl
     else:
         _logger.info('padding dfl by {:}'.format(padn))
         _logger.info(ind_str + 'padn=1, passing')
@@ -1538,7 +2017,9 @@ def dfl_pad_z(dfl, padn):
         _logger.debug(ind_str + 'done in {:.2f} sec'.format(t_func))
     else:
         _logger.debug(ind_str + 'done in {:.2f} min'.format(t_func/60))
-    # return dfl_pad
+    
+    if return_result:
+        return dfl
 
 def dfl_cut_z(dfl,z=[-np.inf,np.inf],debug=1):
     
@@ -1793,6 +2274,190 @@ def trf_mult(trf_list, embed_list=True):
     
     return trf_out
     
+    
+def calc_phase_delay(coeff, w, w0):  
+    '''
+    expression for the phase -- coeff[0] + coeff[1]*(w - w0)/1! + coeff[2]*(w - w0)**2/2! + coeff[3]*(w - w0)**3/3!
+    coeff is a list with 
+    coeff[0] =: measured in [rad]      --- phase
+    coeff[1] =: measured in [fm s ^ 1] --- group delay
+    coeff[2] =: measured in [fm s ^ 2] --- group delay dispersion (GDD)
+    coeff[3] =: measured in [fm s ^ 3] --- third-order dispersion (TOD)
+    ...    
+    '''
+    delta_w = w - w0
+    _logger.debug('calculating phase delay')
+    _logger.debug(ind_str + 'coeffs for compression = {}'.format(coeff))
+    coeff_norm = [ci / (1e15)**i / factorial(i) for i, ci in enumerate(coeff)]
+    coeff_norm = list(coeff_norm)[::-1]
+    _logger.debug(ind_str + 'coeffs_norm = {}'.format(coeff_norm))
+    delta_phi = np.polyval(coeff_norm, delta_w) 
+    _logger.debug(ind_str + 'delta_phi[0] = {}'.format(delta_phi[0]))
+    _logger.debug(ind_str + 'delta_phi[-1] = {}'.format(delta_phi[-1]))
+    _logger.debug(ind_str + 'done')
+    
+    return delta_phi   
+
+def dfl_crip_freq(dfl, coeff, E_ph0 = None, return_result = False):
+    '''
+    The function adds a phase shift to a fld object. The expression for the phase see in the calc_phase_delay function
+    dfl   --- is a fld object 
+    coeff --- coefficients in phase (see in the calc_phase_delay function)
+    E_pho --- energy with respect to which the phase shift is calculated
+    return_result --- a flag that is responsible for returning the modified dfl object if it is True or
+                      change the dfl function parameter if it is False
+    '''
+    if return_result:
+        copydfl = deepcopy(dfl)
+        _, dfl = dfl, copydfl
+             
+    if dfl.domain_z == 't':    
+        dfl.to_domain('f')       
+    
+    if E_ph0 == None: 
+        w0 = 2*np.pi*speed_of_light/dfl.xlamds
+        
+    elif E_ph0 == 'center':
+        _, lamds = np.mean([dfl.int_z(), dfl.scale_z()], axis = (1) )
+        w0 = 2*np.pi*speed_of_light/lamds
+    
+    elif isinstance(E_ph0,str) is not True:
+        w0 = 2*np.pi*E_ph0/h_eV_s
+        
+    else:
+        raise ValueError("E_ph0 must be None or 'center' or some value")
+    
+    w = dfl.scale_kz() * speed_of_light
+    
+    delta_phi = calc_phase_delay(coeff, w, w0)
+    H = np.exp(-1j * delta_phi)
+    
+    dfl.fld = dfl.fld * H[:,np.newaxis,np.newaxis]
+    dfl.to_domain('t')
+    
+    if return_result:
+#        copydfl, dfl = dfl, copydfl
+        return dfl
+    
+def generate_1d_profile(hrms, length=0.1, points_number=1000, wavevector_cutoff=0, k=None, psd=None, seed=None):
+    """
+    Function for generating HeightProfile of highly polished mirror surface
+
+    :param hrms: [meters] height errors root mean square
+    :param length: [meters] length of the surface
+    :param points_number: number of points (pixels) at the surface
+    :param wavevector_cutoff: [1/meters] point on k axis for cut off small wavevectors (large wave lengths) in the PSD
+                                    (with default value 0 effects on nothing)
+    :param k: [1/meters] 1d array of wavevectors (if specified, psd will be calculated using this values as arguments)
+    :param psd: [meters^3] 1d array; power spectral density of surface (if not specified, will be generated)
+            (if specified, must have shape = (points_number // 2 + 1, ), otherwise it will be cut to appropriate shape)
+    :param seed: seed for np.random.seed() to allow reproducibility
+    :return: HeightProfile object
+    """
+
+    _logger.info('generating 1d surface with rms: {} m; and shape: {}'.format(hrms, (points_number,)))
+    _logger.warning(ind_str + 'in beta')
+
+    # getting the heights map
+    if seed is not None:
+        np.random.seed(seed)
+
+    if psd is None:
+        if k is None:
+            k = np.pi / length * np.linspace(0, points_number, points_number // 2 + 1)
+        # defining linear function PSD(k) in loglog plane
+        a = -2  # free term of PSD(k) in loglog plane
+        b = -2  # slope of PSD(k) in loglog plane
+        psd = np.exp(a * np.log(10)) * np.exp(b * np.log(k[1:]))
+        psd = np.append(psd[0], psd)  # ??? It doesn*t important, but we need to add that for correct amount of points
+        if wavevector_cutoff != 0:
+            idx = find_nearest_idx(k, wavevector_cutoff)
+            psd = np.concatenate((np.full(idx, psd[idx]), psd[idx:]))
+    elif psd.shape[0] > points_number // 2 + 1:
+        psd = psd[:points_number // 2 + 1]
+
+    phases = np.random.rand(points_number // 2 + 1)
+    height_profile = HeightProfile()
+    height_profile.points_number = points_number
+    height_profile.length = length
+    height_profile.s = np.linspace(-length / 2, length / 2, points_number)
+    height_profile.h = (points_number / length) * np.fft.irfft(np.sqrt(length * psd) * np.exp(1j * phases * 2 * np.pi),
+                                                               n=points_number) / np.sqrt(np.pi)
+    # scaling height_map
+    height_profile.set_hrms(hrms)
+    return height_profile
+
+
+def dfl_reflect_surface(dfl, angle, hrms=None, height_profile=None, axis='x', seed=None, return_height_profile=False):
+    """
+    Function models the reflection of ocelot.optics.wave.RadiationField from the mirror surface considering effects
+    of mirror surface height errors. The method based on phase modulation.
+    The input RadiationField object is modified
+
+    :param dfl: RadiationField object from ocelot.optics.wave
+    :param angle: [radians] angle of incidence with respect to the surface
+    :param hrms: [meters] height root mean square of reflecting surface
+    :param height_profile: HeightProfile object of the reflecting surface (if not specified, will be generated using hrms)
+    :param axis: direction along which reflection takes place
+    :param seed: seed for np.random.seed() to allow reproducibility
+    :param return_height_profile: boolean type variable; if it equals True the function will return height_profile
+    """
+
+    _logger.info('dfl_reflect_surface is reflecting dfl of shape (nz, ny, nx): {}'.format(dfl.shape()))
+    _logger.warning(ind_str + 'in beta')
+    start = time.time()
+
+    dict_axes = {'z': 0, 'y': 1, 'x': 2}
+    dlength = {0: dfl.dz, 1: dfl.dy, 2: dfl.dx}
+    if isinstance(axis, str):
+        axis = dict_axes[axis]
+
+    points_number = dfl.fld.shape[axis]
+    footprint_len = points_number * dlength[axis] / np.sin(angle)
+
+    # generating power spectral density
+    if height_profile is None:
+        if hrms is None:
+            _logger.error('hrms and height_profile not specified')
+            raise ValueError('hrms and height_profile not specified')
+        height_profile = generate_1d_profile(hrms, length=footprint_len, points_number=points_number, seed=seed)
+
+    elif height_profile.length != footprint_len or height_profile.points_number != points_number:
+        if height_profile.length < footprint_len:
+            _logger.warning(
+                'provided height profile length {} is smaller than projected footprint {}'.format(height_profile.length,
+                                                                                                  footprint_len))  # warn and pad with zeroes
+
+        # interpolation of height_profile to appropriate sizes
+        _logger.info(ind_str + 'given height_profile was interpolated to length and '.format(dfl.shape()))
+        s = np.linspace(-footprint_len / 2, footprint_len / 2, points_number)
+        h = np.interp(s, height_profile.s, height_profile.h, right=height_profile.h[0], left=height_profile.h[-1])
+        height_profile = HeightProfile()
+        height_profile.points_number = dfl.fld.shape[axis]
+        height_profile.length = footprint_len
+        height_profile.s = s
+        height_profile.h = h
+
+    # getting 2d height_err_map
+    # raws_number = dfl.fld.shape[1]
+    # height_profiel_map = np.ones((raws_number, points_number)) * height_profile.h[np.newaxis, :]
+    phase_delay = 2 * 2 * np.pi * np.sin(angle) * height_profile.h / dfl.xlamds
+
+    # phase modulation
+
+    if (axis == 0) or (axis == 'z'):
+        dfl.fld *= np.exp(1j * phase_delay)[:, np.newaxis, np.newaxis]
+    elif (axis == 1) or (axis == 'y'):
+        dfl.fld *= np.exp(1j * phase_delay)[np.newaxis, :, np.newaxis]
+    elif (axis == 2) or (axis == 'x'):
+        dfl.fld *= np.exp(1j * phase_delay)[np.newaxis, np.newaxis, :]
+
+    if return_height_profile:
+        return height_profile
+    t_func = time.time() - start
+    _logger.debug(ind_str + 'done in {}'.format(t_func))
+
+    
 def trf_mult_mix(trf_list, mode_out='ref'):
     '''
     multiply transfer functions in a mixed way:
@@ -1901,7 +2566,7 @@ def wigner_pad(wig, pad):
     _logger.debug(ind_str + 'done')
     return wig_out
 
-def wigner_out(out, z=inf, method='mp', pad=1, debug=1):
+def wigner_out(out, z=inf, method='mp', pad=1, debug=1, on_axis=1):
     '''
     returns WignerDistribution from GenesisOutput at z
     '''
@@ -1924,10 +2589,35 @@ def wigner_out(out, z=inf, method='mp', pad=1, debug=1):
     zi = np.where(out.z >= z)[0][0]
 
     wig = WignerDistribution()
-    wig.field = np.sqrt(out.p_int[:,zi])*np.exp(1j*out.phi_mid[:,zi])
+    
+    if on_axis:
+        if hasattr(out, 'p_mid'):#genesis2
+            wig.field = np.sqrt(out.p_mid[:,zi])*np.exp(1j*out.phi_mid[:,zi])
+            wig.xlamds = out('xlamds')
+            wig.filePath = out.filePath
+        elif hasattr(out, 'h5'):#genesis4
+            logger.warning('not implemented for on-axis, chaeck!')
+            wig.field = out.rad_field(zi=zi, loc='near')
+            wig.xlamds = out.lambdaref
+            wig.filePath = out.h5.filename
+        else:
+            _logger.error('out object has neither p_int nor h5 attribute')
+        wig.on_axis=True
+    else:
+        if hasattr(out, 'p_int'):#genesis2
+            wig.field = np.sqrt(out.p_int[:,zi])*np.exp(1j*out.phi_mid[:,zi])
+            wig.xlamds = out('xlamds')
+            wig.filePath = out.filePath
+        elif hasattr(out, 'h5'):#genesis4
+            wig.field = out.rad_field(zi=zi, loc='near')
+            wig.xlamds = out.lambdaref
+            wig.filePath = out.h5.filename
+        else:
+            _logger.error('out object has neither p_int nor h5 attribute')
+        wig.on_axis=False
+
+            
     wig.s = out.s
-    wig.xlamds = out('xlamds')
-    wig.filePath = out.filePath
     wig.z = z
     
     if pad > 1:
@@ -1939,15 +2629,16 @@ def wigner_out(out, z=inf, method='mp', pad=1, debug=1):
     
     return wig
     
+    
 def wigner_dfl(dfl, method='mp', pad=1, debug=1):
     '''
     returns on-axis WignerDistribution from dfl file
     '''
-    assert isinstance(dfl,RadiationField)
+#    assert isinstance(dfl,RadiationField)
     
     import numpy as np
     
-    _logger.info('calculating Wigner distribution from dfl')
+    _logger.info('calculating Wigner distribution from dfl (on-axis fillament)')
     start_time = time.time()
     
     wig = WignerDistribution()
@@ -1965,7 +2656,7 @@ def wigner_dfl(dfl, method='mp', pad=1, debug=1):
     
     return wig
     
-def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1):
+def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1, **kwargs):
     '''
     returns averaged WignerDistribution from GenStatOutput at stage at z
     '''
@@ -1990,7 +2681,7 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1):
         z = np.amin(out_stat.z)
     zi = np.where(out_stat.z >= z)[0][0]
     
-    WW = np.zeros((out_stat.p_int.shape[2], out_stat.p_int.shape[1], out_stat.p_int.shape[1]))
+    # WW = np.zeros((out_stat.p_int.shape[2], out_stat.p_int.shape[1], out_stat.p_int.shape[1]))
     
     if pad > 1:
         n_add = out_stat.s.size * (pad-1) / 2
@@ -1999,32 +2690,68 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1):
         ds = (out_stat.s[-1] - out_stat.s[0]) / (out_stat.s.size-1)
         pad_array_s_l = np.linspace(out_stat.s[0] - ds*(n_add_l), out_stat.s[0]-ds, n_add_l)
         pad_array_s_r = np.linspace(out_stat.s[-1]+ds, out_stat.s[-1] + ds*(n_add_r), n_add_r)
-        WW = np.zeros((out_stat.p_int.shape[2], out_stat.p_int.shape[1] + n_add, out_stat.p_int.shape[1] + n_add))
+        WW = np.zeros((out_stat.p_int.shape[2], out_stat.p_int.shape[1] + n_add*2, out_stat.p_int.shape[1] + n_add*2))
         s = np.concatenate([pad_array_s_l, out_stat.s, pad_array_s_r])
     else:
         WW = np.zeros((out_stat.p_int.shape[2], out_stat.p_int.shape[1], out_stat.p_int.shape[1]))
         s = out_stat.s
         
+    # _logger.debug('n_add {}'.format(n_add))
+    # _logger.debug('n_add_l {}'.format(n_add_l))
+    # _logger.debug('n_add_r {}'.format(n_add_r))
+    # _logger.debug('field {}'.format(field.shape))
+    # _logger.debug('wig {}'.format(WW.shape))
     
     for (i,n) in enumerate(out_stat.run):
         _logger.debug(ind_str + 'run {} of {}'.format(i, len(out_stat.run)))
         field = np.sqrt(out_stat.p_int[zi,:,i]) * np.exp(1j*out_stat.phi_mid[zi,:,i])
         if pad > 1:
             field = np.concatenate([np.zeros(n_add_l), field, np.zeros(n_add_r)])
-        WW[i,:,:] = calc_wigner(field, method=method, debug=debug)
+        WW[i,:,:] = calc_wigner(field, method=method, debug=debug, **kwargs)
     
     wig = WignerDistribution()
-    wig.wig = np.mean(WW,axis=0)
+    wig.wig = np.mean(WW, axis=0)
+    wig.wig_stat = WW
     wig.s = s
     # wig.freq_lamd = out_stat.f
     wig.xlamds = out_stat.xlamds
     wig.filePath = out_stat.filePath + 'results' + os.path.sep + 'stage_%s__WIG__' %(stage)
     wig.z = z
-#    wig.energy= np.mean(out.p_int[:, -1], axis=0) * out('xlamds') * out('zsep') * out.nSlices / speed_of_light
+   # wig.energy= np.mean(out.p_int[:, -1], axis=0) * out('xlamds') * out('zsep') * out.nSlices / speed_of_light
+    ds = wig.s[1] - wig.s[0]
+    phen = h_eV_s * (np.fft.fftfreq(wig.s.size, d = ds / speed_of_light) + speed_of_light / wig.xlamds)
+    wig.phen = np.fft.fftshift(phen, axes=0)
     
     _logger.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
     
     return wig
+
+
+def wigner_smear(wig, sigma_s):
+    '''
+    Convolves wigner distribution with gaussian window function to obtain spectrogram, see https://arxiv.org/pdf/1811.11446.pdf
+
+    :param wig: ocelot.optics.wave.WignerDistribution object which will be convolved with generated window func
+    :param sigma_s: [meters] rms size of the s=-ct the gaussian window func
+    :return: convolved ocelot.optics.wave.WignerDistribution object with gaussian window function
+    '''
+    start = time.time()
+    _logger.info('smearing wigner_dist with gaussian window func')
+    xlamds = wig.xlamds
+    ns = wig.s.size
+    ds = wig.s[-1] - wig.s[0]
+    zsep = np.round(ds / xlamds / ns).astype(int)  # TODO check slight inconsistency, since zsep is far from integer
+
+    dfl_gauss = generate_gaussian_dfl(xlamds, shape=(1, 1, ns), dgrid=(1, 1, None), power_rms=(1, 1, sigma_s),
+                                      zsep=zsep)
+    wig_gauss = wigner_dfl(dfl_gauss)
+    wig_gauss.wig /= wig_gauss.wig.sum()
+    # plot_wigner(wig_gauss, fig_name='wgauss')
+    wig_conv = deepcopy(wig)
+    wig_conv.wig = scipy.signal.fftconvolve(wig.wig, wig_gauss.wig, mode='same')
+    wig_conv.is_spectrogram = True
+    _logger.debug(ind_str + 'done in {:.2e} sec'.format(time.time() - start))
+    return wig_conv
 
 
 def calc_ph_sp_dens(spec, freq_ev, n_photons, spec_squared=1):
@@ -2044,6 +2771,7 @@ def calc_ph_sp_dens(spec, freq_ev, n_photons, spec_squared=1):
         # else:
             # raise ValueError('operands could not be broadcast together with shapes ', spec.shape, ' and ', freq_ev.shape)
     # _logger.debug('spec.shape = {}'.format(spec.shape))
+    
     if spec_squared:
         spec_sum = np.trapz(spec, x=freq_ev, axis=axis)
     else:
@@ -2074,7 +2802,8 @@ def imitate_1d_sase_like(td_scale, td_env, fd_scale, fd_env, td_phase = None, fd
     '''
     Models FEL pulse(s) based on Gaussian statistics
     td_scale - scale of the pulse on time domain [m]
-    td_env - expected pulse envelope in time domain [W] fd_scale - scale of the pulse in frequency domain [eV]
+    td_env - expected pulse envelope in time domain [W] 
+    fd_scale - scale of the pulse in frequency domain [eV]
     fd_env - expected pulse envelope in frequency domain [a.u.]
     td_phase - additional phase chirp to be added in time domain
     fd_phase - additional phase chirp to be added in frequency domain
@@ -2160,7 +2889,9 @@ def imitate_1d_sase_like(td_scale, td_env, fd_scale, fd_env, td_phase = None, fd
     
     #normalization for pulse energy
     if en_pulse == None:
-        en_pulse = np.trapz(td_env_i, td_scale_i / speed_of_light) # CALCULATE FOR fit_scale == 'td' !!!!!!!!!!
+        _logger.debug(ind_str + 'no en_pulse provided, calculating from integral of td_env')
+        en_pulse = np.trapz(td_env, td_scale / speed_of_light)
+
     pulse_energies = np.trapz(abs(td)**2, td_scale_i / speed_of_light, axis=0)
     scale_coeff = en_pulse / np.mean(pulse_energies)
     td *= np.sqrt(scale_coeff)

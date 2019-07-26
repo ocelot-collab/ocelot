@@ -2,7 +2,8 @@
 writen by I. Zagorodnov, DESY and S.Tomin XFEL, 2015.
 """
 from scipy.integrate import simps
-from numpy import arange, sqrt, append, zeros, conj, dot, linspace
+import numpy as np
+# from numpy import np.arange, np.sqrt, np.append, np.zeros, np.conj, np.dot, np.linspace
 from numpy.fft import fft, irfft, ifft
 from ocelot.common.globals import *
 
@@ -32,7 +33,7 @@ def impedance2wake(f, y):
     """
     df = f[1] - f[0]
     n = len(f)
-    s = 1./df*arange(n)/n*speed_of_light
+    s = 1./df*np.arange(n)/n*speed_of_light
     w = n*df*irfft(y, n)
     return s, w
 
@@ -49,11 +50,11 @@ def imp_resistiveAC_SI(f, cond, a, tau, L):
     n = len(f)
     f2w = 2.*pi
     koef = a*0.5*1j/(speed_of_light*Z0)
-    Z = zeros(n, dtype=complex)
+    Z = np.zeros(n, dtype=complex)
     for i in range(0, n):
         w = f[i]*f2w
         kw = cond/(1. + 1j*w*tau)
-        Zs = sqrt(1j*w*mu_0/kw) + 1j*w*L
+        Zs = np.sqrt(1j*w*mu_0/kw) + 1j*w*L
         Z[i] = Zs/(f2w*a*(1. + w*Zs*koef))
     return Z
 
@@ -64,15 +65,15 @@ def ResistiveZaZb(xb, bunch, a, conductivity, tau, Ind):
     n = 2*nb
 
     dt = ds/speed_of_light
-    f = 1./dt*arange(n)/n
+    f = 1./dt*np.arange(n)/n
     Za = 1e-12*imp_resistiveAC_SI(f[:nb], conductivity, a, tau, Ind) # -> v/pC/m
 
-    xb1 = linspace(xb[0], xb[0]+ds*(n-1), num=n)
+    xb1 = np.linspace(xb[0], xb[0]+ds*(n-1), num=n)
 
-    bunch1 = append(bunch, zeros(nb))
+    bunch1 = np.append(bunch, np.zeros(nb))
     Zb = wake2impedance(xb1, bunch1*speed_of_light)
 
-    Z = zeros(n, dtype=complex)
+    Z = np.zeros(n, dtype=complex)
 
     Z[:nb] = Za[:]*Zb[:nb]
     #print len(Z[nb-1::-1]), len(Z[nb:])
@@ -80,7 +81,7 @@ def ResistiveZaZb(xb, bunch, a, conductivity, tau, Ind):
     #plt.plot(Z.real)
     #plt.show()
     xa, wa = impedance2wake(f, Z)
-    res = zeros(nb, dtype=complex)
+    res = np.zeros(nb, dtype=complex)
     res[:] = -wa[:nb]
 
     return res
@@ -97,7 +98,7 @@ def LossShape(bunch, wake):
     bi2 = bunch[1]
     s = wake[0]
     loss = simps(-bi2*w, s)
-    spread = sqrt(simps(bi2*(w + loss)**2, s))
+    spread = np.sqrt(simps(bi2*(w + loss)**2, s))
     peak = max(abs(w))
     return loss, spread, peak
 
@@ -106,13 +107,14 @@ def pipe_wake(z, current, tube_radius, tube_len, conductivity, tau, roughness, d
 
     Q = simps(current, z)/speed_of_light
     print ("Charge = ", Q*1e12, "pC")
+    
     xb = -z[::-1]
     yb = current[::-1]/(speed_of_light*Q)
     Q = Q*1e12 #C->pC
 
     ds=xb[3]-xb[0]
-    xb = append(xb, arange(1, 100001)*ds + xb[-1])
-    yb = append(yb, arange(1, 100001)*0)
+    xb = np.append(xb, np.arange(1, 100001)*ds + xb[-1])
+    yb = np.append(yb, np.arange(1, 100001)*0)
 
     # roughness and axid layer are here
     eps_r = 2.

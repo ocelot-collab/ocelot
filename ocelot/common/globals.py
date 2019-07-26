@@ -25,7 +25,10 @@ epsilon_0 = 1 / mu_0 / speed_of_light**2 # permittivity of free space (8.8541878
 
 h_eV_s = h_J_s / q_e                     # [eV*s]
 hr_eV_s = h_eV_s/2./pi
-ro_e = q_e**2/(4*pi*epsilon_0*m_e_kg*speed_of_light**2)  # classical electron radius (2.8179403267e-15 m)
+ro_e = q_e**2/(4*pi*epsilon_0*m_e_kg*speed_of_light**2) # classical electron radius (2.8179403267e-15 m)
+lambda_C = h_J_s / m_e_kg / speed_of_light # Compton wavelength [m]
+lambda_C_r = lambda_C / 2 / np.pi # reduced Compton wavelength [m]
+I_Alfven = 4 * np.pi * epsilon_0 * m_e_eV * speed_of_light # Alfven (Budker) current [A], ~17kA
 
 Cgamma = 4.*pi/3.*ro_e/m_e_MeV**3
 Cq = 55./(32.*np.sqrt(3)*2*pi)*h_eV_s*speed_of_light/m_e_eV

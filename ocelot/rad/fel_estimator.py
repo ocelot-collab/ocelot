@@ -13,7 +13,7 @@ import logging
 
 _logger = logging.getLogger('ocelot.fel_estimator')
 
-def beamlat2fel(beam, lat, smear_m=1e-6):
+def beamlat2fel(beam, lat, smear_m=None):
     
     _logger.info('estimating fel from beam and lat')
     
@@ -22,14 +22,20 @@ def beamlat2fel(beam, lat, smear_m=1e-6):
     E_beam = beam_pk.E
     
     indx_u = np.where([i.__class__ == Undulator for i in lat.sequence])[0]
-    
+
     und = lat.sequence[indx_u[0]]
     l_period = und.lperiod
     # und.Kx = Ephoton2K(E_photon, und.lperiod, E_beam)
-    K_peak = und.Kx
+    K_peak = np.max([und.Kx, und.Ky])
+    if und.Kx != und.Ky:
+        iwityp = 0 # planar undulator
+    elif und.Kx == und.Ky:
+        iwityp = 1 # helical undulator
+    else:
+        raise ValueError('unknown undulator: neither planar nor helical, estimation method not applicable')
     
     if smear_m is None:
-        tcoh = beam2fel(beam_pk, l_period, K_peak).tcoh()
+        tcoh = beam2fel(beam_pk, l_period, K_peak, iwityp=iwityp).tcoh()
         smear_m = tcoh * speed_of_light * 2 #smear window
 
     beam_tmp = deepcopy(beam)

@@ -47,7 +47,7 @@ from ocelot.gui.dfl_plot import plot_dfl, plot_edist, plot_wigner
 #in order to run decorators properly
 import functools
 
-_logger = logging.getLogger('ocelot.genesis4_plot') 
+_logger = logging.getLogger(__name__)
 
 
 # def plot_gen_out_all_paral(exp_dir, stage=1, savefig='png', debug=1):

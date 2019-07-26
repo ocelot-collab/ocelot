@@ -25,14 +25,14 @@ from ocelot.gui.colormaps2d.colormap2d import *
 #in order to run decorators properly
 import functools
 
-_logger = logging.getLogger('ocelot.genesis_plot')
+_logger = logging.getLogger(__name__)
 __author__ = "Svitozar Serkez, Andrei Trebushinin, Mykola Veremchuk"
 
 @if_plottable
 def plot_dfl_all(dfl, **kwargs):
-    '''
+    """
     plots given RadiationField() object in 4 domain combinations
-    '''
+    """
     plot_dfl(dfl, **kwargs)
     dfl.fft_z()
     plot_dfl(dfl, **kwargs)

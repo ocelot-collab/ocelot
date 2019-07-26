@@ -12,7 +12,7 @@ import logging
 from scipy.optimize import fmin
 from copy import deepcopy
 
-_logger = logging.getLogger('ocelot.fel')
+_logger = logging.getLogger(__name__)
 #from matplotlib.figure import Figure
 #from mpl_toolkits.mplot3d import Axes3D
 

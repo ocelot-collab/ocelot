@@ -40,7 +40,7 @@ from ocelot.gui.dfl_plot import * #tmp
 #in order to run decorators properly
 import functools
 
-_logger = logging.getLogger('ocelot.genesis_plot')
+_logger = logging.getLogger(__name__)
 
 __author__ = "Svitozar Serkez"
 

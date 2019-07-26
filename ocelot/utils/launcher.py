@@ -7,7 +7,7 @@ import time
 import subprocess
 from ocelot.common.logging import *
 
-_logger = logging.getLogger('ocelot.launcher') 
+_logger = logging.getLogger(__name__)
 
 
 def createId(prefix):

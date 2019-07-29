@@ -500,7 +500,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     _logger.debug(ind_str + 'done in {:.2f} seconds'.format(time.time() - start_time))
 
     plt.draw()
-    if showfig is True:
+    if showfig == True:
         _logger.debug(ind_str + 'showing dfl')
         rcParams["savefig.directory"] = os.path.dirname(filePath)
         plt.show()
@@ -628,7 +628,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
         axScatter.text(0.02, 0.98, r'$W_{{max}}$= {:.2e}'.format(np.amax(wigner)), horizontalalignment='left',
                        verticalalignment='top', transform=axScatter.transAxes)  # fontsize=12,
         if hasattr(W, 'on_axis'):
-            if W.on_axis is True:
+            if W.on_axis == True:
                 axScatter.text(0.5, 0.98, r"(on axis)", fontsize=10, horizontalalignment='center',
                                verticalalignment='top', transform=axScatter.transAxes)
             else:
@@ -748,7 +748,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
 @if_plottable
 def plot_dfl_waistscan(sc_res, fig_name=None, showfig=True, savefig=False):
     _logger.info('plot dfl waist scan')
-    if showfig is False and savefig is False:
+    if showfig == False and savefig == False:
         return
 
     if fig_name is None:
@@ -1419,7 +1419,7 @@ def plot_1d_hprofile(height_profile, figsize=4, fig_name='Height profile', savef
     :param showfig: bool type flag, responding for showing figure
     :param kwargs:
     """
-    if (showfig is False) and (savefig is False):
+    if (showfig == False) and (savefig == False):
         return
 
     _logger.info('plotting height_profile')

@@ -73,34 +73,32 @@ _logger = logging.getLogger(__name__)
 def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1, 1, 10, 1, 0, 0, 0, 0, 0, 10, 1),
                       vartype_dfl=complex128, *args, **kwargs):
     debug = 1
-    # """
-    # plots all possible output from the genesis output
-    # handle is either:
-    #     genesis output object
-    #     path to genesis output file
-    #     path to folders with genesis output files
-    #
-    # choice=(1,1,1,1,[],1,0,0,0,0,0, 0, 0)
-    #         0 1 2 3 4  5 6 7 8 9 10,11,12
-    #     0 - electron evolution
-    #     1 - radiation evolution
-    #     2 - profile at z=0m
-    #     3 - profile at the end
-    #     4 - profile every m meters
-    #     5 - dfl at the end, space    -time      domain
-    #     6 -                 inv.space-time      domain
-    #     7 -                 space    -frequency domain
-    #     8 -                 inv.space-frequency domain
-    #     9 - dpa as edist at the end, smeared
-    #     10 - dpa as edist at the end, not smeared
-    #     11 - wigner distribution every m meters,
-    #     12 - ebeam bucket at max power
-    #
-    # #picks as an input "GenesisOutput" object, file path of directory as strings.
-    # #plots e-beam evolution, radiation evolution, initial and final simulation window
-    # #If folder path is provided, all *.gout and *.out files are plotted
-    # """
-    #
+    """
+    plots all possible output from the genesis output
+    handle is either:
+        genesis output object
+        path to genesis output file
+        path to folders with genesis output files
+    choice=(1,1,1,1,[],1,0,0,0,0,0, 0, 0)
+            0 1 2 3 4  5 6 7 8 9 10,11,12
+        0 - electron evolution
+        1 - radiation evolution
+        2 - profile at z=0m
+        3 - profile at the end
+        4 - profile every m meters
+        5 - dfl at the end, space    -time      domain
+        6 -                 inv.space-time      domain
+        7 -                 space    -frequency domain
+        8 -                 inv.space-frequency domain
+        9 - dpa as edist at the end, smeared
+        10 - dpa as edist at the end, not smeared
+        11 - wigner distribution every m meters,
+        12 - ebeam bucket at max power
+    picks as an input "GenesisOutput" object, file path of directory as strings.
+    plots e-beam evolution, radiation evolution, initial and final simulation window
+    If folder path is provided, all *.gout and *.out files are plotted
+    """
+    
     # if debug > 0:
     #     print('  plotting genesis output')
     plotting_time = time.time()

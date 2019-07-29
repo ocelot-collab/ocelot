@@ -11,7 +11,7 @@ from ocelot.common.globals import *
 from copy import deepcopy
 import logging
 
-_logger = logging.getLogger('ocelot.fel_estimator')
+_logger = logging.getLogger(__name__)
 
 def beamlat2fel(beam, lat, smear_m=None):
     

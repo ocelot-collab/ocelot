@@ -19,7 +19,7 @@ from ocelot.common.logging import *
 from ocelot.utils.launcher import *
 import os
 
-_logger = logging.getLogger('ocelot.gen4')
+_logger = logging.getLogger(__name__)
 
 _inputGen4Template = "\
  $newrun \n\

@@ -10,7 +10,7 @@ from ocelot.gui.dfl_plot import plot_dfl, plot_wigner, plot_dfl_waistscan
 from copy import deepcopy
 
 
-_logger = logging.getLogger('ocelot.optics') 
+_logger = logging.getLogger(__name__)
 _logger.setLevel(logging.INFO)
 #_logger.setLevel(logging.DEBUG)
 

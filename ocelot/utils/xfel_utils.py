@@ -31,7 +31,7 @@ from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.cpbd.elements import *
 from ocelot.cpbd.optics import *
 
-_logger = logging.getLogger('ocelot.xfel_utils') 
+_logger = logging.getLogger(__name__)
 
 '''
 SELF-SEEDING - relevant

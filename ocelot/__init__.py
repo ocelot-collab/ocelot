@@ -50,7 +50,7 @@ from ocelot.cpbd.wake3D import *
 from ocelot.cpbd.physics_proc import *
 
 import logging
-# _logger = logging.getLogger('ocelot.init')
+# _logger = logging.getLogger(__name__)
 # _logger.info('initializing ocelot...')
 print('initializing ocelot...')
 

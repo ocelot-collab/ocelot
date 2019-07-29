@@ -10,7 +10,7 @@ from copy import deepcopy
 #in order to run decorators properly
 import functools
 
-_logger = logging.getLogger('ocelot.settings_plot')
+_logger = logging.getLogger(__name__)
 
 my_viridis = deepcopy(matplotlib.pyplot.get_cmap('viridis')) 
 my_viridis.set_under('w')

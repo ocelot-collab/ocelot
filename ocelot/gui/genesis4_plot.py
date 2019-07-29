@@ -1,8 +1,8 @@
-'''
+"""
 user interface for viewing genesis simulation results
-'''
+"""
 
-'''
+"""
 MEMO
 
 plt.gcf() to get current figure
@@ -13,7 +13,7 @@ ax.get_xlim()
 ax.set_xlim([0, 1])
 ax.set_ylim(ymin=0)
 
-'''
+"""
 
 import sys
 import os
@@ -61,7 +61,7 @@ _logger = logging.getLogger(__name__)
         # file = dir + 'run.' + str(i) + '.s'+str(stage)+'.gout'
         # if(file): 
             # print('good',i)
-            # background('''plot_gen_out_all("'''+file+'''", choice=(1,1,1,1,0,0,0,0,0,0,0),debug='''+str(debug)+''')''')
+            # background("""plot_gen_out_all(""""+file+"""", choice=(1,1,1,1,0,0,0,0,0,0,0),debug="""+str(debug)+""")""")
         
         # i += 1
         # dir = exp_dir + 'run_' + str(i) + '/'
@@ -72,7 +72,7 @@ _logger = logging.getLogger(__name__)
 @if_plottable
 def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1, 1, 10, 1, 0, 0, 0, 0, 0, 10, 1), vartype_dfl=complex128, *args, **kwargs):
     debug=1
-    # '''
+    # """
     # plots all possible output from the genesis output
     # handle is either:
         # genesis output object
@@ -98,7 +98,7 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1
     # #picks as an input "GenesisOutput" object, file path of directory as strings.
     # #plots e-beam evolution, radiation evolution, initial and final simulation window
     # #If folder path is provided, all *.gout and *.out files are plotted
-    # '''
+    # """
 
     # if debug > 0:
         # print('  plotting genesis output')
@@ -224,7 +224,7 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1
 
 @if_plottable
 def plot_gen4_out_z(out, z=np.inf, params=['rad_power+el_current', 'el_energy+el_espread+el_bunching', 'rad_spec'], figsize=3, x_units='um', y_units='ev', legend=False, fig_name=None, savefig=False, showfig=True, debug=1, *args, **kwargs):
-    '''
+    """
     radiation parameters at distance z
     out/out = GenesisOutput() object
     z distance along undulator [m]
@@ -240,7 +240,7 @@ def plot_gen4_out_z(out, z=np.inf, params=['rad_power+el_current', 'el_energy+el
     fig_name - override figure name
     savefig - save figure
     showfig - show figure
-    '''
+    """
     import matplotlib.ticker as ticker
     
     
@@ -615,9 +615,9 @@ def plot_gen4_out_ph(out, legend=False, figsize=3, fig_name='Radiation', savefig
 
 @if_plottable
 def plot_gen4_out_evo(out, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'el_bunching', 'rad_pow_en_log', 'rad_pow_en_lin', 'rad_spec_log', 'rad_size', 'rad_spec_evo_n', 'rad_pow_evo_n'], figsize=3, legend=False, fig_name=None, savefig=False, showfig=True, debug=1):
-    '''
+    """
     plots evolution of given parameters from genesis output with undulator length
-    '''
+    """
     import matplotlib.ticker as ticker
     
     if showfig == False and savefig == False:
@@ -1271,7 +1271,7 @@ def subfig_evo_rad_spec_sz(ax_spectrum_evo, out, legend, norm=1):
 
 # @if_plottable
 # def plot_dfl4(dfl, domains=None, z_lim=[], xy_lim=[], figsize=3, cmap=def_cmap, legend=True, phase=False, fig_name=None, auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy = True, log_scale=0, debug=1, vartype_dfl=complex64):
-    # '''
+    # """
     # Plots dfl radiation object in 3d.
 
     # dfl is RadiationField() object
@@ -1287,7 +1287,7 @@ def subfig_evo_rad_spec_sz(ax_spectrum_evo, out, legend, norm=1):
     # savefig and showfig allow to save figure to image (savefig='png' (default) or savefig='eps', etc...) or to display it (slower)
     # return_proj returns [xy_proj,yz_proj,xz_proj,x,y,z] array.
     # vartype_dfl is the data type to store dfl in memory [either complex128 (two 64-bit floats) or complex64 (two 32-bit floats)], may save memory
-    # '''
+    # """
     # import matplotlib.colors as colors
     
     # if showfig == False and savefig == False:
@@ -1691,7 +1691,7 @@ def subfig_evo_rad_spec_sz(ax_spectrum_evo, out, legend, norm=1):
 
 # @if_plottable
 # def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int', 'rad_energy', 'r_size_weighted', 'spec', 'spec_phot_density', 'error'], z_param_inp=['p_int', 'phi_mid_disp', 'spec', 'spec_phot_density', 'bunching', 'wigner'], dfl_param_inp=['dfl_spec'], run_param_inp=['p_int', 'spec', 'spec_phot_density', 'rad_energy'], s_inp=['max'], z_inp=[0,'end'], run_s_inp=['max'], run_z_inp=['end'], spec_pad=1, savefig=1, saveval=1, showfig=0, debug=1):
-    # '''
+    # """
     # The routine for plotting the statistical info of many GENESIS runs
     # --- Will be rewritten and split in several separate modules ---
     
@@ -1707,7 +1707,7 @@ def subfig_evo_rad_spec_sz(ax_spectrum_evo, out, legend, norm=1):
     # showfig=1 envokes plt.show() to display figures interactively. May be time- and processor-consuming
 
     # dfl_power, dfl_spec, dfl_size, dfl_divergence
-    # '''
+    # """
     # import copy
     # rc('text', usetex=False)
     # dict_name = {'p_int': 'radiation power', 'rad_energy': 'radiation pulse energy', 'el_e_spread': 'el.beam energy spread', 'el_energy': 'el.beam energy average', 'bunching': 'el.beam bunching', 'spec': 'radiation on-axis spectral density', 'spec_phot_density': 'radiation spectral photon density', 'dfl_spec': 'total radiation photon spectral density (dfl)', 'r_size': 'radiation transv size', 'r_size_weighted': 'radiation transv size (weighted)', 'xrms': 'el.beam x size', 'yrms': 'el.beam y size', 'error': 'genesis simulation error', 'p_mid': 'radiation power on-axis', 'phi_mid': 'radiation phase on-axis', 'increment': 'radiation power increment'}
@@ -2622,7 +2622,7 @@ def subfig_evo_rad_spec_sz(ax_spectrum_evo, out, legend, norm=1):
         # # plt.close('all')
 
 # # def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,None), y_lim=(None,None), downsample=1, autoscale=None, cmap='seismic', abs_value=0, fig_name=None, savefig=False, showfig=True, debug=1):
-    # # '''
+    # # """
     # # plots wigner distribution (WD) with marginals
     # # wig_or_out -  may be WignerDistribution() or GenesisOutput() object
     # # z - (if isinstance(wig_or_out, GenesisOutput)) location at which WD will be calculated
@@ -2631,7 +2631,7 @@ def subfig_evo_rad_spec_sz(ax_spectrum_evo, out, legend, norm=1):
     # # x_lim, y_lim - scaling limits in given units, (min,max) or [min,max], e.g: (None,6)
     # # abs_value - if True, absolute value of WD is displayed (usually, it has both positive and negative values)
     # # cmap - colormar if abs_value==False (http://matplotlib.org/users/colormaps.html)
-    # # '''
+    # # """
     # # if showfig == False and savefig == False:
         # # return
     
@@ -2773,9 +2773,9 @@ def subfig_evo_rad_spec_sz(ax_spectrum_evo, out, legend, norm=1):
         # # plt.close('all')
         
 
-# # '''
+# # """
 # # tmp for HXRSS
-# # '''
+# # """
 # # def read_plot_dump_proj(exp_dir, stage, run_ids, plot_phase=1, showfig=True, savefig=0, debug=1):
 
     # # if showfig == 0 and savefig == 0:
@@ -2943,7 +2943,7 @@ def subfig_evo_rad_spec_sz(ax_spectrum_evo, out, legend, norm=1):
 
 
 # # def plot_trf(trf, mode='tr', autoscale=0, showfig=True, savefig=None, fig_name=None):
-    # # '''
+    # # """
     # # plots TransferFunction() object,
     # # mode: 
         # # 'tr' - transmission
@@ -2951,7 +2951,7 @@ def subfig_evo_rad_spec_sz(ax_spectrum_evo, out, legend, norm=1):
     # # autoscale = scale down to several FWHMma in frequency and several bumps in time
     # # showfig - display on screen or not
     # # savefig - path to save png (if any)
-    # # '''
+    # # """
     # # n_width = 8
     
     # # l = len(trf.k)
@@ -3125,9 +3125,9 @@ def subfig_evo_rad_spec_sz(ax_spectrum_evo, out, legend, norm=1):
         # # else:
             # # plt.close('all')
         
-# # '''
+# # """
     # # scheduled for removal
-# # '''
+# # """
 
 
 # # def show_output(out, show_field=False, show_slice=0):
@@ -3197,9 +3197,9 @@ def subfig_evo_rad_spec_sz(ax_spectrum_evo, out, legend, norm=1):
 
 
 # # def show_plots(displays, fig):
-    # # '''
+    # # """
     # # putting arbitrarily many plots on single figure
-    # # '''
+    # # """
     # # n1 = (len(displays) - 1) / 2 + 1
     # # n2 = (len(displays) - 1) / n1 + 1
     # # # print n1, n2

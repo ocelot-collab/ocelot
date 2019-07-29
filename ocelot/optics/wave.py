@@ -1,6 +1,6 @@
-'''
+"""
 wave optics
-'''
+"""
 
 from numpy import random
 from numpy.linalg import norm
@@ -39,9 +39,9 @@ __author__ = "Svitozar Serkez, Andrei Trebushinin, Mykola Veremchuk"
 
 
 class RadiationField:
-    '''
+    """
     3d or 2d coherent radiation distribution, *.fld variable is the same as Genesis dfl structure
-    '''
+    """
 
     def __init__(self, shape=(0, 0, 0)):
         # self.fld=np.array([]) #(z,y,x)
@@ -208,7 +208,7 @@ class RadiationField:
         return freq_ev, spec
         
     def curve_wavefront(self, r, plane='xy', domain_z=None):
-        '''
+        """
         introduction of the additional 
         wavefront curvature with radius r
         
@@ -225,7 +225,7 @@ class RadiationField:
             't' - time
             None - original domain (default)
             
-        '''
+        """
         
         domains = domain_o_z, domain_o_xy = self.domain_z, self.domain_xy
         
@@ -287,7 +287,7 @@ class RadiationField:
         self.to_domain(domains)
     
     def to_domain(self, domains='ts', **kwargs):
-        '''
+        """
         tranfers radiation to specified domains
         *domains is a string with one or two letters: 
             ("t" or "f") and ("s" or "k")
@@ -298,7 +298,7 @@ class RadiationField:
         order does not matter
         
         **kwargs are passed down to self.fft_z and self.fft_xy
-        '''
+        """
         _logger.info('transforming radiation field to {} domain'.format(str(domains)))
         dfldomain_check(domains)
 
@@ -392,7 +392,7 @@ class RadiationField:
     
     
     def prop(self, z, fine=0, return_result=0, return_orig_domains=1, debug=1):
-        '''
+        """
         Angular-spectrum propagation for fieldfile
         
         can handle wide spectrum
@@ -410,7 +410,7 @@ class RadiationField:
         return_result does not modify self, but returns result
         
         z>0 -> forward direction
-        '''
+        """
         _logger.info('propagating dfl file by %.2f meters' % (z))
         
         if z == 0:
@@ -470,7 +470,7 @@ class RadiationField:
             return copydfl
             
     def prop_m(self, z, m=1, fine=0, return_result=0, return_orig_domains=1, debug=1):
-        '''
+        """
         Angular-spectrum propagation for fieldfile
         
         can handle wide spectrum
@@ -487,7 +487,7 @@ class RadiationField:
             assumes narrow spectrum at center of xlamds (true for plain FEL radiation)
     
         z>0 -> forward direction
-        '''
+        """
         _logger.info('propagating dfl file by %.2f meters' % (z))
         
         if z == 0 and m == 1:
@@ -606,9 +606,9 @@ class WaistScanResults():
         return filename_from_path(self.filePath)
 
 class TransferFunction:
-    '''
+    """
     data container for Fourier Optics transfer functions
-    '''
+    """
     def __init__(self):
         self.k = None # wave vector - 2*pi/wavelength
         self.tr = None # complex value of transmission - modulus*exp(-i*phase)
@@ -855,9 +855,9 @@ class HeightProfile:
 
 
 def bin_stokes(S, bin_size):
-    '''
+    """
     needs fix for 3d!!!
-    '''
+    """
     if type(S) != StokesParameters:
         raise ValueError('Not a StokesParameters object')
     
@@ -906,9 +906,9 @@ def calc_stokes_out(out1, out2, pol='rl', on_axis=True):
     # return(calc_stokes_dfl_l(*args, **kwargs))
     
 def calc_stokes_dfl(dfl1, dfl2, basis='xy', mode=(0,0)):
-    '''
+    """
     mode: (average_longitudinally, sum_transversely)
-    '''
+    """
     
     _logger.info('calculating Stokes parameters from dfl')
     _logger.debug(ind_str + 'dfl1 {}:'.format(dfl1.fld.shape) + str(dfl1.filePath) + ' ' + str(dfl1))
@@ -1142,10 +1142,10 @@ def sum_stokes_tr(S):
     
     
 class Spectrogram():
-    '''
+    """
     spectrogram of the pulse
     (always positive!)
-    '''
+    """
     def __init(self):
         self.spec = []
         self.s = []
@@ -1159,10 +1159,10 @@ class Spectrogram():
     
     
 class WignerDistribution():
-    '''
+    """
     calculated Wigner distribution (spectrogram) of the pulse
     in time/frequency domain as space/wavelength
-    '''
+    """
     
     def __init__(self):
         # self.fld=np.array([]) #(z,y,x)
@@ -1233,7 +1233,7 @@ def generate_dfl(*args, **kwargs):
     return generate_gaussian_dfl(*args, **kwargs)
 
 def generate_gaussian_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), power_rms=(0.1e-3,0.1e-3,5e-6), power_center=(0,0,None), power_angle=(0,0), power_waistpos=(0,0), wavelength=None, zsep=None, freq_chirp=0, en_pulse=None, power=1e6, **kwargs):
-    '''
+    """
     generates RadiationField object 
     narrow-bandwidth, paraxial approximations
     
@@ -1248,7 +1248,7 @@ def generate_gaussian_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), po
     zsep (integer) - distance between slices in z as zsep*xlamds
     freq_chirp dw/dt=[1/fs**2] - requency chirp of the beam around power_center[2]
     en_pulse, power = total energy or max power of the pulse, use only one
-    '''
+    """
     
     start = time.time()
 
@@ -1376,7 +1376,7 @@ def generate_gaussian_dfl(xlamds, shape=(51,51,100), dgrid=(1e-3,1e-3,50e-6), po
 
 
 def imitate_sase_dfl(xlamds, rho=2e-4, **kwargs):
-    '''
+    """
     imitation of SASE radiation in 3D
     
     xlamds - wavelength of the substracted fast-varying component
@@ -1384,7 +1384,7 @@ def imitate_sase_dfl(xlamds, rho=2e-4, **kwargs):
     **kwargs identical to generate_dfl()
     
     returns RadiationField object
-    '''
+    """
     
     _logger.info('imitating SASE radiation')
     if kwargs.pop('wavelength', None) is not None:
@@ -1417,7 +1417,7 @@ def imitate_sase_dfl(xlamds, rho=2e-4, **kwargs):
 
 def calc_phase_delay_poly(coeff, w, w0):  
     
-    '''
+    """
     Calculate the phase delay with given coefficients
     coeff --- coefficients in phase delay expression:
     w     --- photon frequencies
@@ -1439,7 +1439,7 @@ def calc_phase_delay_poly(coeff, w, w0):
     coeff[n] --- nth-order dispersion measured in [fs ^ n]
     
     @author Andrei Trebushinin
-    '''
+    """
     delta_w = w - w0
     _logger.debug('calculating phase delay')
     
@@ -1464,14 +1464,14 @@ def calc_phase_delay_poly(coeff, w, w0):
 
 
 def screen2dfl(screen, polarization='x'):
-    '''
+    """
     Function converts synchrotron radiation from ocelot.rad.screen.Screen to ocelot.optics.wave.RadiationField.
     New ocelot.optics.wave.RadiationField object will be generated without changing ocelot.rad.screen.Screen object.
 
     :param screen: ocelot.rad.screen.Screen object, electric field of which will be used to generate RadiationField
     :param polarization: polarization for conversion to RadiationField ('x' or 'y')
     :return: ocelot.optics.wave.RadiationField in domains = 'fs'
-    '''
+    """
     shape_tuple = (screen.ne, screen.ny, screen.nx)
     start = time.time()
     _logger.info('Converting Screen of shape (nz, ny, nx) = {:} to dfl'.format(shape_tuple))
@@ -1507,7 +1507,7 @@ def screen2dfl(screen, polarization='x'):
     return dfl
 
 def dfl_disperse(dfl, coeff, E_ph0 = None, return_result = False):
-    '''
+    """
     The function adds a phase shift to the fld object.
     
     dfl   --- is a RadiationField object 
@@ -1547,7 +1547,7 @@ def dfl_disperse(dfl, coeff, E_ph0 = None, return_result = False):
             change the original dfl object
         
     @author Andrei Trebushinin
-    '''
+    """
     
     _logger.debug('adding chip to the dfl object')
     
@@ -1597,9 +1597,9 @@ def dfl_disperse(dfl, coeff, E_ph0 = None, return_result = False):
         return dfl
 
 def dfl_ap(dfl, ap_x=None, ap_y=None, debug=1):
-    '''
+    """
     aperture the radaition in either domain
-    '''
+    """
     _logger.info('applying aperture to dfl')
         
     if np.size(ap_x) == 1:
@@ -1638,7 +1638,7 @@ def dfl_ap(dfl, ap_x=None, ap_y=None, debug=1):
     
 
 def dfl_prop(dfl, z, fine=1, debug=1):
-    '''
+    """
     LEGACY, WILL BE DEPRECATED, SEE METHOD
     
     Fourier propagator for fieldfile
@@ -1658,7 +1658,7 @@ def dfl_prop(dfl, z, fine=1, debug=1):
     returns RadiationField() object
 
     z>0 ==> forward
-    '''
+    """
     
     
     
@@ -1709,7 +1709,7 @@ def dfl_prop(dfl, z, fine=1, debug=1):
 
 
 def dfl_waistscan(dfl, z_pos, projection=0, debug=1):
-    '''
+    """
     propagates the RadaitionField object dfl 
     through the sequence of positions z_pos
     and calculates transverse distribution parameters
@@ -1717,7 +1717,7 @@ def dfl_waistscan(dfl, z_pos, projection=0, debug=1):
 
     if projection==1, then size of projection is calculated
         otherwise - size across the central line passing through the mesh center
-    '''
+    """
     _logger.info('scanning dfl waist in range %s meters' % (str(z_pos)))
     start = time.time()
 
@@ -1765,14 +1765,14 @@ def dfl_waistscan(dfl, z_pos, projection=0, debug=1):
 
 
 def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(None, None), method='cubic', debug=1, return_result=1):
-    ''' 
+    """
     2d interpolation of the coherent radiation distribution 
     interpN and interpL define the desired interpolation coefficients for  
     transverse point __density__ and transverse mesh __size__ correspondingly 
     newN and newL define the final desire number of points and size of the mesh 
     when newN and newL are not None interpN and interpL values are ignored 
     coordinate convention is (x,y) 
-    '''
+    """
 
     _logger.info('interpolating radiation file')
     start_time = time.time()
@@ -1931,12 +1931,12 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
 
 
 def dfl_shift_z(dfl, s, set_zeros=1, return_result=1):
-    '''
+    """
     shift the radiation within the window in time domain
     dfl - initial RadiationField object
     s - longitudinal offset value in meters
     set_zeros - to set the values outside the time window to zeros
-    '''
+    """
     assert dfl.domain_z == 't', 'dfl_shift_z works only in time domain!'
     shift_n = int(s / dfl.dz)
     _logger.info('shifting dfl forward by %.2f um (%.0f slices)' % (s * 1e6, shift_n))
@@ -2040,9 +2040,9 @@ def dfl_cut_z(dfl,z=[-np.inf,np.inf],debug=1):
     _logger.debug(ind_str + 'done')
 
 def dfl_fft_z(dfl, method='mp', nthread=multiprocessing.cpu_count(), debug=1):  # move to another domain ( time<->frequency )
-    '''
+    """
     LEGACY, WILL BE DEPRECATED, SEE METHOD
-    '''
+    """
     if debug > 0:
         print('      calculating fft_z from ' + dfl.domain_z + ' domain with ' + method)
     
@@ -2091,9 +2091,9 @@ def dfl_fft_z(dfl, method='mp', nthread=multiprocessing.cpu_count(), debug=1):  
 
 
 def dfl_fft_xy(dfl, method='mp', nthread=multiprocessing.cpu_count(), debug=1):  # move to another domain ( spce<->inverse_space )
-    '''
+    """
     LEGACY, WILL BE DEPRECATED, SEE METHOD
-    '''
+    """
     if debug > 0:
         print('      calculating fft_xy from ' + dfl.domain_xy + ' domain with ' + method)
     
@@ -2142,13 +2142,13 @@ def dfl_fft_xy(dfl, method='mp', nthread=multiprocessing.cpu_count(), debug=1): 
 
 
 def dfl_trf(dfl, trf, mode, dump_proj=False):
-    '''
+    """
     Multiplication of radiation field by given transfer function (transmission or ferlection, given by mode)
     dfl is RadiationField() object (will be mutated)
     trf is TransferFunction() object
     mode is either 'tr' for transmission
                 or 'ref' for reflection
-    '''
+    """
     # assert dfl.domain_z == 'f', 'dfl_trf works only in frequency domain!'
     _logger.info('multiplying dfl by trf')
     start = time.time()
@@ -2182,13 +2182,13 @@ def dfl_trf(dfl, trf, mode, dump_proj=False):
 
 
 def trf_mult(trf_list, embed_list=True):
-    '''
+    """
     multiply transfer functions
     trf_list is a list of transfer functions
     embed_list == True will write the list of input transfer functions into the output transfer function as an trf.trf_list instance
     
     returns TransferFunction() object
-    '''
+    """
     _logger.debug('Multiplying transfer functions')
     _logger.debug(ind_str + str(trf_list))
     # trf_out = deepcopy(trf_list[0])
@@ -2276,7 +2276,7 @@ def trf_mult(trf_list, embed_list=True):
     
     
 def calc_phase_delay(coeff, w, w0):  
-    '''
+    """
     expression for the phase -- coeff[0] + coeff[1]*(w - w0)/1! + coeff[2]*(w - w0)**2/2! + coeff[3]*(w - w0)**3/3!
     coeff is a list with 
     coeff[0] =: measured in [rad]      --- phase
@@ -2284,7 +2284,7 @@ def calc_phase_delay(coeff, w, w0):
     coeff[2] =: measured in [fm s ^ 2] --- group delay dispersion (GDD)
     coeff[3] =: measured in [fm s ^ 3] --- third-order dispersion (TOD)
     ...    
-    '''
+    """
     delta_w = w - w0
     _logger.debug('calculating phase delay')
     _logger.debug(ind_str + 'coeffs for compression = {}'.format(coeff))
@@ -2299,14 +2299,14 @@ def calc_phase_delay(coeff, w, w0):
     return delta_phi   
 
 def dfl_crip_freq(dfl, coeff, E_ph0 = None, return_result = False):
-    '''
+    """
     The function adds a phase shift to a fld object. The expression for the phase see in the calc_phase_delay function
     dfl   --- is a fld object 
     coeff --- coefficients in phase (see in the calc_phase_delay function)
     E_pho --- energy with respect to which the phase shift is calculated
     return_result --- a flag that is responsible for returning the modified dfl object if it is True or
                       change the dfl function parameter if it is False
-    '''
+    """
     if return_result:
         copydfl = deepcopy(dfl)
         _, dfl = dfl, copydfl
@@ -2459,14 +2459,14 @@ def dfl_reflect_surface(dfl, angle, hrms=None, height_profile=None, axis='x', se
 
     
 def trf_mult_mix(trf_list, mode_out='ref'):
-    '''
+    """
     multiply transfer functions in a mixed way:
     trf_list is list of tulpes, like [(trf1,'ref'),(trf2,'tr')], here 'ref' and 'tr' mean that reflectivity trom transter function trf1 is multiplied by transmissivity of transfer function trf2
     mode_out is a string 'ref' or 'tr' that specifies into thich instance to write the multiplied output
     embed_list == True will write the list of input transfer functions into the output transfer function as an trf.trf_list instance
     
     returns TransferFunction() object
-    '''
+    """
     
     if mode_out is not 'ref' and mode_out is not 'tr':
         raise ValueError('mode_out should be string of either "ref" or "tr"')
@@ -2498,11 +2498,11 @@ def save_trf(trf, attr, flePath):
     f.close()
 
 def calc_wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1):
-    '''
+    """
     calculation of the Wigner distribution
     input should be an amplitude and phase of the radiation as list of complex numbers with length N
     output is a real value of wigner distribution
-    '''
+    """
     
     _logger.debug('calc_wigner start')
     
@@ -2547,9 +2547,9 @@ def calc_wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1
     return np.real(wig)
     
 def wigner_pad(wig, pad):
-    '''
+    """
     pads WignerDistribution with zeros in time domain 
-    '''
+    """
     
     _logger.debug('padding Wigner with zeros in time domain')
     
@@ -2567,9 +2567,9 @@ def wigner_pad(wig, pad):
     return wig_out
 
 def wigner_out(out, z=inf, method='mp', pad=1, debug=1, on_axis=1):
-    '''
+    """
     returns WignerDistribution from GenesisOutput at z
-    '''
+    """
     # assert isinstance(out,GenesisOutput) #hotfix
     assert len(out.s)>0
     
@@ -2631,9 +2631,9 @@ def wigner_out(out, z=inf, method='mp', pad=1, debug=1, on_axis=1):
     
     
 def wigner_dfl(dfl, method='mp', pad=1, debug=1):
-    '''
+    """
     returns on-axis WignerDistribution from dfl file
-    '''
+    """
 #    assert isinstance(dfl,RadiationField)
     
     import numpy as np
@@ -2657,9 +2657,9 @@ def wigner_dfl(dfl, method='mp', pad=1, debug=1):
     return wig
     
 def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1, **kwargs):
-    '''
+    """
     returns averaged WignerDistribution from GenStatOutput at stage at z
-    '''
+    """
     if isinstance(out_stat,str):
         if stage == None:
             raise ValueError('specify stage, since path to folder is provided')
@@ -2728,13 +2728,13 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1, **kwar
 
 
 def wigner_smear(wig, sigma_s):
-    '''
+    """
     Convolves wigner distribution with gaussian window function to obtain spectrogram, see https://arxiv.org/pdf/1811.11446.pdf
 
     :param wig: ocelot.optics.wave.WignerDistribution object which will be convolved with generated window func
     :param sigma_s: [meters] rms size of the s=-ct the gaussian window func
     :return: convolved ocelot.optics.wave.WignerDistribution object with gaussian window function
-    '''
+    """
     start = time.time()
     _logger.info('smearing wigner_dist with gaussian window func')
     xlamds = wig.xlamds
@@ -2755,9 +2755,9 @@ def wigner_smear(wig, sigma_s):
 
 
 def calc_ph_sp_dens(spec, freq_ev, n_photons, spec_squared=1):
-    '''
+    """
     calculates number of photons per electronvolt
-    '''
+    """
     # _logger.debug('spec.shape = {}'.format(spec.shape))
     if spec.ndim == 1:
         axis=0
@@ -2799,7 +2799,7 @@ def calc_ph_sp_dens(spec, freq_ev, n_photons, spec_squared=1):
     return spec
     
 def imitate_1d_sase_like(td_scale, td_env, fd_scale, fd_env, td_phase = None, fd_phase = None, phen0 = None, en_pulse = None, fit_scale = 'td', n_events = 1):
-    '''
+    """
     Models FEL pulse(s) based on Gaussian statistics
     td_scale - scale of the pulse on time domain [m]
     td_env - expected pulse envelope in time domain [W] 
@@ -2818,7 +2818,7 @@ def imitate_1d_sase_like(td_scale, td_env, fd_scale, fd_env, td_phase = None, fd
     fd_scale - colunm of photon energies in eV
     fd - matrix of radiation in frequency domain with shape, normalized such that np.sum(abs(fd)**2) is photon spectral density, i.e: np.sum(abs(fd)**2)*fd_scale = N_photons
     td - matrix of radiation in time domain, normalized such that abs(td)**2 = radiation_power in [w]
-    '''
+    """
     
     _logger.info('generating 1d radiation field imitating SASE')
     
@@ -2908,7 +2908,7 @@ def imitate_1d_sase_like(td_scale, td_env, fd_scale, fd_env, td_phase = None, fd
     
 
 def imitate_1d_sase(spec_center = 500, spec_res = 0.01, spec_width = 2.5, spec_range = (None,None), pulse_length = 6, en_pulse = 1e-3, flattop = 0, n_events = 1, spec_extend = 5):
-    '''
+    """
     Models FEL pulse(s) based on Gaussian statistics
     spec_center - central photon energy in eV
     spec_res - spectral resolution in eV
@@ -2924,7 +2924,7 @@ def imitate_1d_sase(spec_center = 500, spec_res = 0.01, spec_width = 2.5, spec_r
     fd - matrix of radiation in frequency domain with shape ((spec_range[2]-spec_range[1])/spec_res, n_events), normalized such that np.sum(abs(fd)**2) is photon spectral density, i.e: np.sum(abs(fd)**2)*spec_res = N_photons
     s - colunm of longitudinal positions along the pulse in yime domain in um
     td - matrix of radiation in time domain with shape ((spec_range[2]-spec_range[1])/spec_res, n_events), normalized such that abs(td)**2 = radiation_power
-    '''
+    """
     
     
     if spec_range == (None,None):
@@ -2978,7 +2978,7 @@ def dfldomain_check(domains, both_req=False):
                 raise err
     
 
-        '''
+        """
         tranfers radiation to specified domains
         *domains is a string with one or two letters: 
             ("t" or "f") and ("s" or "k")
@@ -2989,4 +2989,4 @@ def dfldomain_check(domains, both_req=False):
         order does not matter
         
         **kwargs are passed down to self.fft_z and self.fft_xy
-        '''
+        """

@@ -1,6 +1,6 @@
-'''
+"""
 user interface for viewing radiation field
-'''
+"""
 
 import sys
 import os
@@ -46,7 +46,7 @@ def plot_dfl_all(dfl, **kwargs):
 def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, fig_name=None,
              auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy=True,
              slice_xy=False, log_scale=0, cmap_cutoff=0, vartype_dfl=None, **kwargs):
-    '''
+    """
     Plots dfl radiation object in 3d using matplotlib.
 
     :param dfl: RadiationField() object
@@ -70,7 +70,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     :param vartype_dfl: the data type to store dfl in memory [either complex128 (two 64-bit floats) or complex64 (two 32-bit floats)], may save memory
     :param kwargs: 
     :return:
-    '''
+    """
     import matplotlib.colors as colors
     
     if showfig == False and savefig == False:
@@ -514,7 +514,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
 def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, None), y_lim=(None, None), downsample=1,
                 autoscale=None, figsize=3, cmap='seismic', fig_name=None, savefig=False, showfig=True,
                 plot_proj=1, plot_text=1, plot_moments=0, **kwargs):
-    '''
+    """
     Plots wigner distribution (WD) with marginals
 
     :param wig_or_out: may be WignerDistribution() or GenesisOutput() object
@@ -535,7 +535,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
     :param plot_moments:
     :param kwargs:
     :return:
-    '''
+    """
     if showfig == False and savefig == False:
         return
     
@@ -792,7 +792,7 @@ def plot_dfl_waistscan(sc_res, fig_name=None, showfig=True, savefig=False):
 
 @if_plottable
 def plot_trf(trf, mode='tr', autoscale=0, showfig=True, savefig=None, fig_name=None):
-    '''
+    """
     plots TransferFunction() object,
     mode: 
         'tr' - transmission
@@ -800,7 +800,7 @@ def plot_trf(trf, mode='tr', autoscale=0, showfig=True, savefig=None, fig_name=N
     autoscale = scale down to several FWHMma in frequency and several bumps in time
     showfig - display on screen or not
     savefig - path to save png (if any)
-    '''
+    """
     n_width = 8
     
     l = len(trf.k)
@@ -1032,7 +1032,7 @@ def plot_stokes_angles(S, fig=None, showfig=True, direction='z', plot_func='scat
 
 @if_plottable
 def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane='max_slice', interpolation=None, cmap_lin='brightwheel', cmap_circ='bwr', figsize=4, fig_name='Visualization Stokes parameters', normalization='s0_max', cbars=True, savefig=False, showfig=True, text_present=True, **kwargs):
-    '''
+    """
     Plot 6 images with normalized Stokes parameters on them
 
     :param stk_params: 3d ocelot.optics.wave.StokesParameters() type object
@@ -1067,7 +1067,7 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
     :param showfig: bool type variable which responds for showing of the figure
     :param text_present: bool type variable which responds for showing text on subplots
     :param kwargs:
-    '''
+    """
     
     if showfig == False and savefig == False:
         return
@@ -1164,7 +1164,7 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
 
 @if_plottable
 def plot_stokes_sbfg_lin(ax, stk_params, slice, plane, cmap2d='brightwheel', plot_title=None, x_label='', y_label='', result=0, text_present=True, interpolation=None, normalization='s0_max', **kwargs):
-    '''
+    """
     Plot normalized intensity and angle of the linear polarization of the light
 
     :param ax: matplotlib.pyplot.AxesSubplot on which the data will be plotted
@@ -1190,7 +1190,7 @@ def plot_stokes_sbfg_lin(ax, stk_params, slice, plane, cmap2d='brightwheel', plo
     :param interpolation: str type variable wich responds for interpolation before plotting linear polarized part
     :param kwargs:
     :return:
-    '''
+    """
     # Getting intersections of stk_params for ploting data
     z_max, y_max, x_max = np.unravel_index(stk_params.s0.argmax(), stk_params.s0.shape)  # getting max element position
 
@@ -1272,7 +1272,7 @@ def plot_stokes_sbfg_lin(ax, stk_params, slice, plane, cmap2d='brightwheel', plo
 @if_plottable
 def plot_stokes_sbfg_circ(ax, stk_params, slice, plane, cmap='seismic', plot_title=None, x_label='', y_label='',
                           result=0, text_present=True, interpolation=None, normalization='s0_max', **kwargs):
-    '''
+    """
     Plot normalized Stokes parameter S3
 
     :param ax: matplotlib.pyplot.AxesSubplot on which the data will be plotted
@@ -1292,7 +1292,7 @@ def plot_stokes_sbfg_circ(ax, stk_params, slice, plane, cmap='seismic', plot_tit
     :param interpolation: str type variable wich responds for interpolation before plotting linear polarized part
     :param kwargs:
     :return:
-    '''
+    """
     
     # Getting intersections of stk_params for ploting data
     z_max, y_max, x_max = np.unravel_index(stk_params.s0.argmax(), stk_params.s0.shape)  # getting max element position

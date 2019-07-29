@@ -1,8 +1,8 @@
-'''
+"""
 user interface for viewing genesis simulation results
-'''
+"""
 
-'''
+"""
 MEMO
 
 plt.gcf() to get current figure
@@ -13,7 +13,7 @@ ax.get_xlim()
 ax.set_xlim([0, 1])
 ax.set_ylim(ymin=0)
 
-'''
+"""
 
 import sys
 import os
@@ -56,7 +56,7 @@ def plot_gen_out_all_paral(exp_dir, stage=1, savefig='png', debug=1):
         file = dir + 'run.' + str(i) + '.s'+str(stage)+'.gout'
         if(file): 
             print('good',i)
-            background('''plot_gen_out_all("'''+file+'''", choice=(1,1,1,1,0,0,0,0,0,0,0),debug='''+str(debug)+''')''')
+            background("""plot_gen_out_all(""""+file+"""", choice=(1,1,1,1,0,0,0,0,0,0,0),debug="""+str(debug)+""")""")
         
         i += 1
         dir = exp_dir + 'run_' + str(i) + '/'
@@ -69,7 +69,7 @@ def plot_gen_out_all_paral(exp_dir, stage=1, savefig='png', debug=1):
 
 @if_plottable
 def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice='all', vartype_dfl=complex128, debug=1, *args, **kwargs):
-    '''
+    """
     plots all possible output from the genesis output
     handle is either:
         genesis output object
@@ -95,7 +95,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice='all', va
     #picks as an input "GenesisOutput" object, file path of directory as strings.
     #plots e-beam evolution, radiation evolution, initial and final simulation window
     #If folder path is provided, all *.gout and *.out files are plotted
-    '''
+    """
 
 
     _logger.info('plotting all genesis output')
@@ -213,7 +213,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice='all', va
 
 @if_plottable
 def plot_gen_out_z(g, z=np.inf, params=['rad_power+el_current', 'el_energy+el_espread+el_bunching', 'rad_spec'], figsize=3.5, x_units='um', y_units='ev', legend=False, fig_name=None, savefig=False, showfig=True, debug=1, *args, **kwargs):
-    '''
+    """
     radiation parameters at distance z
     g/out = GenesisOutput() object
     z distance along undulator [m]
@@ -231,7 +231,7 @@ def plot_gen_out_z(g, z=np.inf, params=['rad_power+el_current', 'el_energy+el_es
     savefig - save figure
     showfig - show figure
     print_text - print text with additional info
-    '''
+    """
     
     import matplotlib.ticker as ticker
     
@@ -873,9 +873,9 @@ def plot_gen_out_slip(g, legend=False, figsize=4, fig_name='Slippage', savefig=F
 
 @if_plottable
 def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'el_bunching', 'rad_pow_en_log', 'rad_pow_en_lin', 'rad_spec_log', 'rad_size', 'rad_spec_evo_n', 'rad_pow_evo_n'], figsize=4, legend=False, fig_name='', savefig=False, showfig=True, debug=1, *args, **kwargs):
-    '''
+    """
     plots evolution of given parameters from genesis output with undulator length
-    '''
+    """
     import matplotlib.ticker as ticker
     
     if showfig == False and savefig == False:
@@ -1495,7 +1495,7 @@ def plot_gen_out_scanned_z(g, figsize=(10, 14), legend=True, fig_name=None, z=in
 
 @if_plottable
 def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int', 'pulse_energy', 'r_size_weighted', 'spec', 'spec_phot_density', 'error'], z_param_inp=['p_int', 'phi_mid_disp', 'spec', 'spec_phot_density', 'bunching', 'wigner'], dfl_param_inp=['dfl_spec'], run_param_inp=['p_int', 'spec', 'spec_phot_density', 'pulse_energy'], s_inp=['max'], z_inp=[0,'end'], run_s_inp=['max'], run_z_inp=['end'], spec_pad=1, savefig=1, saveval=1, showfig=0, debug=1):
-    '''
+    """
     The routine for plotting the statistical info of many GENESIS runs
     --- Will be rewritten and split in several separate modules ---
     
@@ -1511,7 +1511,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=
     showfig=1 envokes plt.show() to display figures interactively. May be time- and processor-consuming
 
     dfl_power, dfl_spec, dfl_size, dfl_divergence
-    '''
+    """
     import copy
     rc('text', usetex=False)
     dict_name = {'p_int': 'radiation power', 'pulse_energy': 'radiation pulse energy', 'el_e_spread': 'el.beam energy spread', 'el_energy': 'el.beam energy average', 'bunching': 'el.beam bunching', 'spec': 'radiation on-axis spectral density', 'spec_phot_density': 'radiation spectral photon density', 'dfl_spec': 'total radiation photon spectral density (dfl)', 'r_size': 'radiation transv size', 'r_size_weighted': 'radiation transv size (weighted)', 'xrms': 'el.beam x size', 'yrms': 'el.beam y size', 'error': 'genesis simulation error', 'p_mid': 'radiation power on-axis', 'phi_mid': 'radiation phase on-axis', 'increment': 'radiation power increment'}
@@ -2435,9 +2435,9 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
 
         
 
-'''
+"""
 tmp for HXRSS
-'''
+"""
 @if_plottable
 def read_plot_dump_proj(exp_dir, stage, run_ids, plot_phase=1, showfig=True, savefig=0, debug=1):
 
@@ -2558,9 +2558,9 @@ def read_plot_dump_proj(exp_dir, stage, run_ids, plot_phase=1, showfig=True, sav
 
 
 
-'''
+"""
     scheduled for removal
-'''
+"""
 
 
 def show_output(g, show_field=False, show_slice=0):
@@ -2630,9 +2630,9 @@ def show_output(g, show_field=False, show_slice=0):
 
 
 def show_plots(displays, fig):
-    '''
+    """
     putting arbitrarily many plots on single figure
-    '''
+    """
     n1 = (len(displays) - 1) / 2 + 1
     n2 = (len(displays) - 1) / n1 + 1
     # print n1, n2

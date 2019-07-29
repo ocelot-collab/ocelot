@@ -130,7 +130,18 @@ class Screen:
         prXconst = Xscr - x0
         prYconst = Yscr - y0
         phaseConstIn = np.pi * Erad / hc * (prXconst * prXconst + prYconst * prYconst) / (self.Distance - z0)
-        self.arPhase += phaseConstIn.flatten()
+        phaseConstIn = phaseConstIn.flatten()
+        self.arPhase += phaseConstIn
+        cosf = np.cos(phaseConstIn)
+        sinf = np.sin(phaseConstIn)
+        arReEx = self.arReEx * cosf - self.arImEx * sinf    # sum of cos
+        arImEx = self.arImEx * cosf + self.arReEx * sinf    # sum of sin
+        arReEy = self.arReEy * cosf - self.arImEy * sinf    # sum of cos
+        arImEy = self.arImEy * cosf + self.arReEy * sinf    # sum of sin
+        self.arReEx = arReEx
+        self.arImEx = arImEx
+        self.arReEy = arReEy
+        self.arImEy = arImEy
 
 
     def screen_to_emscreen(self, screen):

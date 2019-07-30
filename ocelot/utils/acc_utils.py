@@ -84,3 +84,61 @@ def slice_bunching(tau, charge, lambda_mod, smooth_sigma=None):
 
     b = np.abs(simps(B[:, 1] / speed_of_light * np.exp(-1j * 2 * np.pi / lambda_mod * B[:, 0]), B[:, 0])) / charge
     return b
+
+
+def calculate_mismatch(tws_des, tws_err):
+    """
+    Function calculates mismatch and mismatch phase using two twiss lists.
+    Result is saved in tws_err list as M_x, M_y, psi_x, psi_y
+
+    :param tws_des: list, design twiss parameters
+    :param tws_err: list, error twiss parameters
+    :return: (Mx, My, phi_x, phi_y) mismatch at the end of lattice
+    """
+    if len(tws_des) != len(tws_err):
+        raise Exception("length of the twiss lists must be the same")
+
+
+    Sigma = lambda tws: np.array([[tws.beta_x, -tws.alpha_x, 0, 0],
+                                  [-tws.alpha_x, tws.gamma_x, 0, 0],
+                                  [0, 0, tws.beta_y, -tws.alpha_y],
+                                  [0, 0, -tws.alpha_y, tws.gamma_y]])
+
+    S = lambda tws: np.array([[1 / np.sqrt(tws.beta_x), 0, 0, 0],
+                              [tws.alpha_x / np.sqrt(tws.beta_x), np.sqrt(tws.beta_x), 0, 0],
+                              [0, 0, 1 / np.sqrt(tws.beta_y), 0],
+                              [0, 0, tws.alpha_y / np.sqrt(tws.beta_y), np.sqrt(tws.beta_y)]])
+
+    for i in range(len(tws_des)):
+        tws_e = tws_err[i]
+        tws_m = tws_des[i]
+
+        s = S(tws_m)
+        Sigma_b = np.dot(np.dot(s, Sigma(tws_e)), s.T)
+        bx, gx, ax = Sigma_b[0,0], Sigma_b[1,1], -Sigma_b[0,1]
+        by, gy, ay = Sigma_b[2, 2], Sigma_b[3, 3], -Sigma_b[2, 3]
+        if bx + gx < 2:
+            tws_err[i].M_x = 1
+        else:
+            tws_err[i].M_x = 0.5*(bx + gx + np.sqrt((bx + gx)**2 - 4))
+
+
+        if by + gy < 2:
+            tws_err[i].M_y = 1
+        else:
+            tws_err[i].M_y = 0.5*(by + gy + np.sqrt((by + gy)**2 - 4))
+
+        theta = np.arctan2(-2*ax, bx-gx)/2
+
+        if tws_err[i].M_x > 1.05:
+            tws_err[i].psi_x = (theta + tws_m.mux)%(np.pi)*180/np.pi - 90
+        else:
+            tws_err[i].psi_x = 0
+
+        thetay = np.arctan2(-2*ay, by-gy)/2
+        if tws_err[i].M_y > 1.05:
+            tws_err[i].psi_y = (thetay + tws_m.muy)%(np.pi)*180/np.pi - 90
+        else:
+            tws_err[i].psi_y = (0)
+
+    return tws_err[-1].M_x, tws_err[-1].M_y, tws_err[-1].psi_x, tws_err[-1].psi_y

@@ -2373,7 +2373,7 @@ def dfl_crip_freq(dfl, coeff, E_ph0=None, return_result=False):
         return dfl
 
 
-def generate_1d_profile(hrms, length=0.1, points_number=1000, wavevector_cutoff=0, k=None, psd=None, seed=None):
+def generate_1d_profile(hrms, length=0.1, points_number=1000, wavevector_cutoff=0, psd=None, seed=None):
     """
     Function for generating HeightProfile of highly polished mirror surface
 
@@ -2382,7 +2382,6 @@ def generate_1d_profile(hrms, length=0.1, points_number=1000, wavevector_cutoff=
     :param points_number: number of points (pixels) at the surface
     :param wavevector_cutoff: [1/meters] point on k axis for cut off small wavevectors (large wave lengths) in the PSD
                                     (with default value 0 effects on nothing)
-    :param k: [1/meters] 1d array of wavevectors (if specified, psd will be calculated using this values as arguments)
     :param psd: [meters^3] 1d array; power spectral density of surface (if not specified, will be generated)
             (if specified, must have shape = (points_number // 2 + 1, ), otherwise it will be cut to appropriate shape)
     :param seed: seed for np.random.seed() to allow reproducibility
@@ -2397,8 +2396,7 @@ def generate_1d_profile(hrms, length=0.1, points_number=1000, wavevector_cutoff=
         np.random.seed(seed)
 
     if psd is None:
-        if k is None:
-            k = np.pi / length * np.linspace(0, points_number, points_number // 2 + 1)
+        k = np.pi / length * np.linspace(0, points_number, points_number // 2 + 1)
         # defining linear function PSD(k) in loglog plane
         a = -2  # free term of PSD(k) in loglog plane
         b = -2  # slope of PSD(k) in loglog plane

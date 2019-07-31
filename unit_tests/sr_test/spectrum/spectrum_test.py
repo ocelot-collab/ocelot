@@ -30,6 +30,25 @@ def test_calculate_radiation(lattice, screen, beam, update_ref_values=False):
     assert check_result(result1+result2+result3+result4+result5+result6)
 
 
+def test_calculate_radiation_endpoles(lattice, screen, beam, update_ref_values=False):
+    """calculate_radiation fucntion test"""
+
+    screen = calculate_radiation(lattice, screen, beam, end_poles=True)
+
+    if update_ref_values:
+        return {'Eph': screen.Eph.tolist(), 'Yph': screen.Yph.tolist(), 'Xph': screen.Xph.tolist(),
+                'Total': screen.Total.tolist(), 'Sigma': screen.Sigma.tolist(), 'Pi': screen.Pi.tolist()}
+
+    screen_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
+
+    result1 = check_matrix(screen.Eph, screen_ref['Eph'], TOL, assert_info=' Eph - ')
+    result2 = check_matrix(screen.Yph, screen_ref['Yph'], TOL, assert_info=' Yph - ')
+    result3 = check_matrix(screen.Xph, screen_ref['Xph'], TOL, assert_info=' Xph - ')
+    result4 = check_matrix(screen.Total, screen_ref['Total'], TOL, assert_info=' Total - ')
+    result5 = check_matrix(screen.Sigma, screen_ref['Sigma'], TOL, assert_info=' Sigma - ')
+    result6 = check_matrix(screen.Pi, screen_ref['Pi'], TOL, assert_info=' Pi - ')
+    assert check_result(result1 + result2 + result3 + result4 + result5 + result6)
+
 def test_segments(lattice, screen, beam, update_ref_values=False):
     """calculate_radiation fucntion test"""
     beam = Beam()
@@ -108,6 +127,7 @@ def test_update_ref_values(lattice, screen, beam, cmdopt):
     
     update_functions = []
     update_functions.append('test_calculate_radiation')
+    update_functions.append("test_calculate_radiation_endpoles")
     update_functions.append('test_segments')
     
     if cmdopt in update_functions:

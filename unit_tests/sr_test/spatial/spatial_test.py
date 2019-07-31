@@ -12,13 +12,13 @@ from unit_tests.params import *
 from spatial_conf import *
 
 
-@pytest.mark.parametrize('parametr', [0, 1, 2])
-def test_calculate_radiation(lattice, screen, beam, parametr, update_ref_values=False):
+@pytest.mark.parametrize('parameter', [0, 1, 2, 3])
+def test_calculate_radiation(lattice, screen, beam, parameter, update_ref_values=False):
     """calculate_radiation fucntion test"""
 
     accuracy = 1
 
-    if parametr == 0:
+    if parameter == 0:
         accuracy = 2
         
         screen.size_x = 0.002
@@ -29,7 +29,7 @@ def test_calculate_radiation(lattice, screen, beam, parametr, update_ref_values=
         screen.end_energy = 7900
         screen.num_energy = 1
 
-    elif parametr == 1:
+    elif parameter == 1:
         screen.size_x = 0.002
         screen.size_y = 0.002
         screen.nx = 51
@@ -38,7 +38,7 @@ def test_calculate_radiation(lattice, screen, beam, parametr, update_ref_values=
         screen.end_energy = 7900
         screen.num_energy = 1
 
-    elif parametr == 2:
+    elif parameter == 2:
         screen.size_x = 0.002
         screen.size_y = 0.002
         screen.nx = 1
@@ -47,12 +47,21 @@ def test_calculate_radiation(lattice, screen, beam, parametr, update_ref_values=
         screen.end_energy = 7800
         screen.num_energy = 100
 
+    elif parameter == 3:
+        screen.size_x = 0.002
+        screen.size_y = 0.002
+        screen.nx = 5
+        screen.ny = 5
+        screen.start_energy = 7700
+        screen.end_energy = 7800
+        screen.num_energy = 5
+
     screen = calculate_radiation(lattice, screen, beam, accuracy=accuracy)
 
     if update_ref_values:
         return {'Eph':screen.Eph.tolist(), 'Yph':screen.Yph.tolist(), 'Xph':screen.Xph.tolist(), 'Total':screen.Total.tolist(), 'Sigma':screen.Sigma.tolist(), 'Pi':screen.Pi.tolist()}
     
-    screen_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parametr) + '.json')
+    screen_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) + '.json')
 
     result1 = check_matrix(screen.Eph, screen_ref['Eph'], TOL, assert_info=' Eph - ')
     result2 = check_matrix(screen.Yph, screen_ref['Yph'], TOL, assert_info=' Yph - ')
@@ -145,7 +154,7 @@ def test_update_ref_values(lattice, screen, beam, cmdopt):
     update_functions.append('test_calculate_radiation')
     update_functions.append('test_segments')
     update_function_parameters = {}
-    update_function_parameters['test_calculate_radiation'] = [0, 1, 2]
+    update_function_parameters['test_calculate_radiation'] = [0, 1, 2, 3]
     
     parametr = update_function_parameters[cmdopt] if cmdopt in update_function_parameters.keys() else ['']
 

@@ -110,9 +110,10 @@ class Screen:
         #            self.create_empty_emclass()
 
 
-    def add_fast_oscilating_term(self, x0=0, y0=0, z0=0):
+    def rebuild_efields(self, x0=0, y0=0, z0=0):
         """
-        method adds fast oscillating term to the phase which is subtracted during calculations.
+        the method recalculates the field phase and electrical fields to obtain the correct values that can be used
+        to propagate the wave front.
 
         :param x0: initial the electron coordinate
         :param y0: initial the electron coordinate

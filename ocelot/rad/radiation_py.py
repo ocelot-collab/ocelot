@@ -605,7 +605,7 @@ def calculate_radiation(lat, screen, beam, energy_loss=False, quantum_diff=False
 
     # adding fast oscillating term to the phase
     motion = traj2motion(U[0][:, 0])
-    screen.add_fast_oscilating_term(x0=motion.x[0], y0=motion.y[0], z0=motion.z[0])
+    screen.rebuild_efields(x0=motion.x[0], y0=motion.y[0], z0=motion.z[0])
 
     return screen
 
@@ -659,11 +659,16 @@ def coherent_radiation(lat, screen, p_array, energy_loss=False, quantum_diff=Fal
             sys.stdout.write( "\r" + "n: " + str(i)+" / "+str(p_array.n-1) )
             sys.stdout.flush()
     screen.coherent_photon_dist()
+    motion = traj2motion(U[0][:, 0])
+    screen.rebuild_efields(x0=motion.x[0], y0=motion.y[0], z0=motion.z[0])
+
     screen.Ef_electron = E[-1]
     screen.motion = U
     beam_traj = BeamTraject(beam_trajectories=U)
     beam_traj.p_array_end(p_array)
     screen.beam_traj = beam_traj
+
+
     return screen
 
 

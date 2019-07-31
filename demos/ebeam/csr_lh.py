@@ -1,6 +1,5 @@
 __author__ = 'Sergey Tomin'
 import matplotlib
-matplotlib.use('TkAgg')
 from ocelot import *
 from ocelot.gui import *
 from ocelot.cpbd.beam import generate_parray

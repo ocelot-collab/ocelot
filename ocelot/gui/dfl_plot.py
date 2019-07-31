@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import logging
 
+from ocelot.gui.settings_plot import *
+
 from ocelot.adaptors.genesis import *
 from ocelot.common.globals import *  # import of constants like "h_eV_s" and
 from ocelot.common.math_op import *  # import of mathematical functions like gauss_fit
@@ -18,7 +20,7 @@ from ocelot.utils.xfel_utils import *
 from ocelot.optics.utils import calc_ph_sp_dens
 from ocelot.optics.wave import *
 
-from ocelot.gui.settings_plot import *
+
 
 from ocelot.gui.colormaps2d.colormap2d import *
 

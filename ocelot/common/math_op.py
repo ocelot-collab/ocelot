@@ -6,6 +6,13 @@ import numpy as np
 from scipy.special import gammaincc, gamma, exp1
 from scipy import fftpack, integrate, interpolate
 
+try:
+    import numba as nb
+    from numba import jit
+    numba_avail = True
+except ImportError:
+    print("math_op.py: module Numba is not installed. Install it if you want speed up correlation calculations")
+    numba_avail = False
 
 def complete_gamma(a, z):
     """
@@ -131,15 +138,6 @@ def deconvolve(f, g):
     f_fft = fftpack.fftshift(fftpack.fftn(f))
     g_fft = fftpack.fftshift(fftpack.fftn(g))
     return fftpack.fftshift(fftpack.ifftn(fftpack.ifftshift(f_fft/g_fft)))
-
-
-try:
-    import numba as nb
-    from numba import jit
-    numba_avail = True
-except ImportError:
-    print("math_op.py: module Numba is not installed. Install it if you want speed up correlation calculations")
-    numba_avail = False
 
 
 def peaks(x, y, n=0):

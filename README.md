@@ -131,6 +131,15 @@ You can download OCELOT jupyter tutorials (release v18.02) using GitHub link [zi
     - Lattice design, twiss matching, twiss backtracking
 * [Tutorial N8. Physics process addition. Laser heater](8_laser_heater.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/8_laser_heater.ipynb).
     - Theory of Laser Heater, implementation of new Physics Process, track particles w/o laser heater effect.  
+* #### Synchrotron radiation module
+* [Tutorial N9. Synchrotron radiation module](9_synchrotron_radiation.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/9_synchrotron_radiation.ipynb).
+    - Simple examples how to calculate synchrotron radiation with OCELOT.
+* [Tutorial N10. Simple accelerator based THz source](10_thz_source.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/10_thz_source.ipynb).
+    - A simple accelerator with the electron beam formation system and an undulator to generate THz radiation. 
+    
 
+### Appendixes
+* [Undulator matching](undulator_matching.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/undulator_matching.ipynb).
+    - brief theory and example in OCE
 
 Disclaimer: The OCELOT code come with absolutely NO warranty. The authors of the OCELOT do not take any responsibility for any damage to equipments or personnel injury that may result from the use of the code.

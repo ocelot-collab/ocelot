@@ -6,12 +6,12 @@ from ocelot import *
 from ocelot.rad import *
 
 
-"""Lattice elements defenition"""
+"""Lattice elements definition"""
 
 und = Undulator(Kx=0.43, nperiods=500, lperiod=0.007, eid="und")
 
 
-"""pytest fixtures defenition"""
+"""pytest fixtures definition"""
     
 @pytest.fixture(scope='module')
 def lattice():

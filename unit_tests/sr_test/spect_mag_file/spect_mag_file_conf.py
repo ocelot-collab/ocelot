@@ -7,13 +7,13 @@ from ocelot import *
 from ocelot.rad import *
 
 
-"""Lattice elements defenition"""
+"""Lattice elements definition"""
 
 mag_file = os.path.dirname(os.path.abspath(__file__)) + '/mag_file.txt'
 und = Undulator(field_file=mag_file, eid="und")
 
 
-"""pytest fixtures defenition"""
+"""pytest fixtures definition"""
     
 @pytest.fixture(scope='module')
 def lattice():

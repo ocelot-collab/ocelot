@@ -140,6 +140,6 @@ You can download OCELOT jupyter tutorials (release v18.02) using GitHub link [zi
 
 ### Appendixes
 * [Undulator matching](undulator_matching.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/undulator_matching.ipynb).
-    - brief theory and example in OCE
+    - brief theory and example in OCELOT
 
 Disclaimer: The OCELOT code come with absolutely NO warranty. The authors of the OCELOT do not take any responsibility for any damage to equipments or personnel injury that may result from the use of the code.

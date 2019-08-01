@@ -29,6 +29,24 @@ def test_track_without_sp(lattice, p_array, parameter=None, update_ref_values=Fa
     result2 = check_dict(p, tws_track_p_array_ref['p_array'], TOL, assert_info=' p_array - ')
     assert check_result(result1+result2)
 
+def test_track_without_sp_bounds(lattice, p_array, parameter=None, update_ref_values=False):
+    """track function test without space charge"""
+    navi = Navigator(lattice)
+    navi.unit_step = 0.02
+
+    tws_track, p = track(lattice, p_array, navi, bounds=[-0.5, 0.5])
+
+    tws_track = obj2dict(tws_track)
+    p = obj2dict(p)
+
+    if update_ref_values:
+        return {'tws_track': tws_track, 'p_array': p}
+
+    tws_track_p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
+
+    result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, tolerance_type='relative', assert_info=' tws_track - ')
+    result2 = check_dict(p, tws_track_p_array_ref['p_array'], TOL, assert_info=' p_array - ')
+    assert check_result(result1+result2)
 
 def test_track_with_sp(lattice, p_array, parameter=None, update_ref_values=False):
     """track function test with space charge"""
@@ -47,6 +65,35 @@ def test_track_with_sp(lattice, p_array, parameter=None, update_ref_values=False
     result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=1e-12, tolerance_type='absolute', assert_info=' p_array - ')
     assert check_result(result1+result2)
 
+
+def test_track_with_sp_bounds(lattice, p_array, parameter=None, update_ref_values=False):
+    """track function test with space charge"""
+    sc1 = SpaceCharge()
+    sc1.nmesh_xyz = [63, 63, 63]
+    sc1.step = 1
+
+    sc5 = SpaceCharge()
+    sc5.nmesh_xyz = [63, 63, 63]
+    sc5.step = 5
+
+    navi = Navigator(lattice)
+    navi.add_physics_proc(sc1, lattice.sequence[0], C_A1_1_2_I1)
+    navi.add_physics_proc(sc5, C_A1_1_2_I1, lattice.sequence[-1])
+    navi.unit_step = 0.02
+    tws_track, p = track(lattice, p_array, navi, bounds=[-0.5, 0.5])
+
+    tws_track = obj2dict(tws_track)
+    p = obj2dict(p)
+
+    if update_ref_values:
+        return {'tws_track': tws_track, 'p_array': p}
+
+    tws_track_p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
+
+    result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
+    result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=1e-12, tolerance_type='absolute',
+                         assert_info=' p_array - ')
+    assert check_result(result1 + result2)
 
 @pytest.mark.parametrize('parameter', [0, 1])
 def test_get_current(lattice, p_array, parameter, update_ref_values=False):
@@ -69,7 +116,7 @@ def test_get_current(lattice, p_array, parameter, update_ref_values=False):
     assert check_result(result1+result2)
 
 
-def track_wrapper(lattice, p_array, param):
+def track_wrapper(lattice, p_array, param, bounds=None):
 
     if not hasattr(pytest, 'sp_track_list') or not hasattr(pytest, 'sp_p_array'):
         pytest.sp_track_list = [None, None]
@@ -94,7 +141,7 @@ def track_wrapper(lattice, p_array, param):
             navi.add_physics_proc(sc5, C_A1_1_2_I1, lattice.sequence[-1])
             navi.unit_step = 0.02
 
-        pytest.sp_track_list[param], pytest.sp_p_array[param] = track(lattice, p_array, navi)
+        pytest.sp_track_list[param], pytest.sp_p_array[param] = track(lattice, p_array, navi, bounds=bounds)
 
     return pytest.sp_track_list[param], pytest.sp_p_array[param]
 
@@ -139,7 +186,9 @@ def test_update_ref_values(lattice, p_array, cmdopt):
     
     update_functions = []
     update_functions.append('test_track_without_sp')
+    update_functions.append("test_track_without_sp_bounds")
     update_functions.append('test_track_with_sp')
+    update_functions.append('test_track_with_sp_bounds')
     update_functions.append('test_get_current')
     
     update_function_parameters = {}

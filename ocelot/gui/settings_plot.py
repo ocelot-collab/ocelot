@@ -28,19 +28,19 @@ matplotlib.pyplot.ioff() #turn off interactive mode
 
 # check if Xserver is connected
 plotting_error=None
-try:
-    import _tkinter
-    _tkinter.create()
-except:
-    if not "DISPLAY" in os.environ:
-        plotting_error = 'Cannot plot figures: Xserver is not connected (Putty -> X11 forwarding)'
-        # _logger.error('Cannot plot figures: Xserver is not connected (Putty -> X11 forwarding)')
-    else:
-        plotting_error = 'Cannot plot figures: Unable to connect to forwarded X server (?)'
-        # _logger.error('Cannot plot figures: Unable to connect to forwarded X server (?)')
+#try:
+#    import _tkinter
+#    _tkinter.create()
+#except:
+#    if not "DISPLAY" in os.environ:
+#        plotting_error = 'Cannot plot figures: Xserver is not connected (Putty -> X11 forwarding)'
+#        # _logger.error('Cannot plot figures: Xserver is not connected (Putty -> X11 forwarding)')
+#    else:
+#        plotting_error = 'Cannot plot figures: Unable to connect to forwarded X server (?)'
+#        # _logger.error('Cannot plot figures: Unable to connect to forwarded X server (?)')
 
-if plotting_error is not None:
-    _logger.error(plotting_error)
+#if plotting_error is not None:
+#    _logger.error(plotting_error)
 
 # # re-check
 # exitval = os.system('python -c "import matplotlib.pyplot as plt; plt.figure()"')

@@ -27,7 +27,7 @@ def test_calculate_radiation(lattice, screen, beam, update_ref_values=False):
     result4 = check_matrix(screen.Total, screen_ref['Total'], TOL, assert_info=' Total - ')
     result5 = check_matrix(screen.Sigma, screen_ref['Sigma'], TOL, assert_info=' Sigma - ')
     result6 = check_matrix(screen.Pi, screen_ref['Pi'], TOL, assert_info=' Pi - ')
-    assert check_result(result1+result2+result3+result4+result5+result6)    
+    assert check_result(result1+result2+result3+result4+result5+result6)
 
 
 def setup_module(module):

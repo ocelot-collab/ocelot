@@ -69,19 +69,19 @@ def p_array():
     sigma_px =0.000204206874319
     sigma_y = 0.000231583942392
     sigma_py =0.000204272734636
-
-    x = np.random.randn(200000) * sigma_x
-    px = np.random.randn(200000) * sigma_px
-    y = np.random.randn(200000) * sigma_y
-    py = np.random.randn(200000) * sigma_py
+    n = 20000
+    x = np.random.randn(n) * sigma_x
+    px = np.random.randn(n) * sigma_px
+    y = np.random.randn(n) * sigma_y
+    py = np.random.randn(n) * sigma_py
 
     cov_t_p =  [[  6.89508231e-07,  -2.98688604e-07], [ -2.98688604e-07,   1.87434257e-07]]
 
-    long_dist = np.random.multivariate_normal((0, 0), cov_t_p, 200000)
+    long_dist = np.random.multivariate_normal((0, 0), cov_t_p, n)
     tau = long_dist[:, 0]
     dp = long_dist[:, 1]
 
-    p_array = ParticleArray(n=200000)
+    p_array = ParticleArray(n=n)
     p_array.E = 0.0065 # GeV
     p_array.rparticles[0] = x
     p_array.rparticles[1] = px
@@ -92,7 +92,7 @@ def p_array():
 
     # creating charge array
     Q = 5e-10
-    p_array.q_array = np.ones(200000) * Q / 200000.0
+    p_array.q_array = np.ones(n) * Q / n
 
     # beam transformation
     tws = Twiss()

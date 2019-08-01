@@ -14,7 +14,7 @@ from rad_beam_conf import *
 
 @pytest.mark.parametrize('parameter', [0, 1, 2])
 def test_coherent_radiation(lattice, screen, beam, parameter, update_ref_values=False):
-    """calculate_radiation fucntion test"""
+    """calculate_radiation function test"""
     screen.nullify()
     accuracy = 1
     beam_c = copy.deepcopy(beam)
@@ -44,6 +44,92 @@ def test_coherent_radiation(lattice, screen, beam, parameter, update_ref_values=
     result5 = check_matrix(screen.Sigma, screen_ref['Sigma'], TOL, assert_info=' Sigma - ')
     result6 = check_matrix(screen.Pi, screen_ref['Pi'], TOL, assert_info=' Pi - ')
     assert check_result(result1 + result2 + result3 + result4 + result5 + result6)
+
+
+@pytest.mark.parametrize('parameter', [0, 1, 2])
+def test_coherent_radiation_fields(lattice, screen, beam, parameter, update_ref_values=False):
+    """calculate_radiation fucntion test"""
+    screen.nullify()
+    accuracy = 1
+    beam_c = copy.deepcopy(beam)
+    if parameter == 0:
+        s = Screen()
+        s.z = 1000.0
+        s.size_x = 15
+        s.size_y = 15
+        s.nx = 101
+        s.ny = 1
+        s.start_energy = 0.00850446  # eV
+        s.end_energy = 15e-3  # eV
+        s.num_energy = 1
+
+    elif parameter == 1:
+        s = Screen()
+        s.z = 1000.0
+        s.size_x = 15
+        s.size_y = 15
+        s.nx = 11
+        s.ny = 11
+        s.start_energy = 0.00850446  # eV
+        s.end_energy = 15e-3  # eV
+        s.num_energy = 1
+
+    elif parameter == 2:
+        s = Screen()
+        s.z = 1000.0
+        s.size_x = 15
+        s.size_y = 15
+        s.nx = 11
+        s.ny = 11
+        s.start_energy = 0.00850446  # eV
+        s.end_energy = 15e-3  # eV
+        s.num_energy = 5
+
+    p_array = beam_c
+
+    screen = coherent_radiation(lattice, screen, p_array, accuracy=accuracy)
+
+    if update_ref_values:
+        return {'arReEx': screen.arReEx.tolist(), 'arImEx': screen.arImEx.tolist(), 'arReEy': screen.arReEy.tolist(),
+                'arImEy': screen.arImEy.tolist(), 'arPhase': screen.arPhase.tolist()}
+
+    screen_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) + '.json')
+
+    result1 = check_matrix(screen.arReEx, screen_ref['arReEx'], TOL, assert_info=' arReEx - ')
+    result2 = check_matrix(screen.arImEx, screen_ref['arImEx'], TOL, assert_info=' arImEx - ')
+    result3 = check_matrix(screen.arReEy, screen_ref['arReEy'], TOL, assert_info=' arReEy - ')
+    result4 = check_matrix(screen.arImEy, screen_ref['arImEy'], TOL, assert_info=' arImEy - ')
+    result5 = check_matrix(screen.arPhase, screen_ref['arPhase'], TOL, assert_info=' arPhase - ')
+    assert check_result(result1 + result2 + result3 + result4 + result5 )
+
+
+@pytest.mark.parametrize('parameter', [0, 1, 2])
+def test_coherent_radiation_parray(lattice, screen, beam, parameter, update_ref_values=False):
+    """calculate_radiation function test"""
+    screen.nullify()
+    accuracy = 1
+    beam_c = copy.deepcopy(beam)
+    if parameter == 0:
+        p_array = beam_c
+
+    elif parameter == 1:
+        p_array = beam_c
+        p_array.tau()[:] *= -1
+
+    elif parameter == 2:
+        p_array = beam_c
+        p_array.tau()[:] = 0
+
+    screen = coherent_radiation(lattice, screen, p_array, accuracy=accuracy)
+
+    p = obj2dict(p_array)
+    if update_ref_values:
+        return {'p_array': p}
+
+    parray_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) + '.json')
+    result1 = check_dict(p, parray_ref['p_array'], tolerance=TOL, assert_info=' p - ')
+
+    assert check_result(result1)
 
 
 def test_energy_loss_spatial(lattice, screen, beam, parameter=None, update_ref_values=False):
@@ -161,11 +247,15 @@ def test_update_ref_values(lattice, screen, beam, cmdopt):
     
     update_functions = []
     update_functions.append('test_coherent_radiation')
+    update_functions.append('test_coherent_radiation_fields')
+    update_functions.append("test_coherent_radiation_parray")
     update_functions.append('test_energy_loss_spatial')
     update_functions.append('test_energy_loss_spectrum')
 
     update_function_parameters = {}
     update_function_parameters['test_coherent_radiation'] = [0, 1, 2]
+    update_function_parameters['test_coherent_radiation_fields'] = [0, 1, 2]
+    update_function_parameters['test_coherent_radiation_parray'] = [0, 1, 2]
     parameter = update_function_parameters[cmdopt] if cmdopt in update_function_parameters.keys() else ['']
 
     if cmdopt in update_functions:

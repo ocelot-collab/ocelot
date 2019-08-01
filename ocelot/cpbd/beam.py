@@ -815,11 +815,9 @@ def get_envelope(p_array, tws_i=Twiss(), bounds=None):
         tws.xy = np.mean((x - tws.x) * (y - tws.y))
     tws.p = np.mean(p)
     tws.E = np.copy(p_array.E)
-    #tws.de = p_array.de
 
     tws.emit_x = np.sqrt(tws.xx*tws.pxpx-tws.xpx**2)
     tws.emit_y = np.sqrt(tws.yy*tws.pypy-tws.ypy**2)
-    #print tws.emit_x, np.sqrt(tws.xx*tws.pxpx-tws.xpx**2), tws.emit_y, np.sqrt(tws.yy*tws.pypy-tws.ypy**2)
     tws.beta_x = tws.xx/tws.emit_x
     tws.beta_y = tws.yy/tws.emit_y
     tws.alpha_x = -tws.xpx/tws.emit_x

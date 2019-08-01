@@ -674,7 +674,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
         y_lim_appl = (np.amin(spec_scale), np.amax(spec_scale))
 
     if x_units == 'fs':
-        x_lim_appl = np.flip(x_lim_appl)
+        x_lim_appl = np.flipud(x_lim_appl)
 
     if x_lim[0] is not None:
         x_lim_appl[0] = x_lim[0]

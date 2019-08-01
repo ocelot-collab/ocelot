@@ -31,7 +31,7 @@ kwargs={'xlamds':(h_eV_s * speed_of_light / E_pohoton),
         'power_waistpos':(0,0), 
         'wavelength':None, 
         'zsep':None, 
-        'freq_chirp':0, 
+        'freq_chirp':0, #5e-3 
         'en_pulse':None, 
         'power':1e6,
         }
@@ -67,8 +67,7 @@ plot_dfl(dfl,
          z_lim=[],
          xy_lim=[],
          figsize=4,
-         cmap='viridis',
-         legend=True,
+         cmap='viridis', #jet
          phase=False,
          fig_name='default_dfl_plot',
          auto_zoom=False,
@@ -94,7 +93,7 @@ wig = wigner_dfl(dfl,
                  pad=1)
 
 plot_wigner(wig, 
-            x_units='um', #fs
+            x_units='fs', #fs
             y_units='ev', #nm
             x_lim=(None, None), 
             y_lim=(None, None), 
@@ -102,7 +101,6 @@ plot_wigner(wig,
             autoscale=None, 
             figsize=4, 
             cmap='seismic', 
-            abs_value=0, 
             fig_name=None, 
             savefig=False, 
             showfig=True, 

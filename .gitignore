@@ -6,3 +6,4 @@
 .pydevproject
 .vscode/
 *.log
+**.ipynb_checkpoints/

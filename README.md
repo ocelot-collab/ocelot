@@ -113,7 +113,7 @@ You can download OCELOT jupyter tutorials (release v18.02) using GitHub link [zi
 ## Tutorials
 * Preliminaries: Setup & introduction
 * Beam dynamics
-* [Tutorial N1. Linear optics.](#tutorial1). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/1_introduction.ipynb).
+* [Introduction. Tutorial N1. Linear optics.](#tutorial1). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/1_introduction.ipynb).
     - Linear optics. Double Bend Achromat (DBA). Simple example of usage OCELOT functions to get periodic solution for a storage ring cell.
 * [Tutorial N2. Tracking.](2_tracking.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/2_tracking.ipynb).
     - Linear optics of the European XFEL Injector.
@@ -131,14 +131,18 @@ You can download OCELOT jupyter tutorials (release v18.02) using GitHub link [zi
     - Lattice design, twiss matching, twiss backtracking
 * [Tutorial N8. Physics process addition. Laser heater](8_laser_heater.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/8_laser_heater.ipynb).
     - Theory of Laser Heater, implementation of new Physics Process, track particles w/o laser heater effect.  
-* #### Synchrotron radiation module
+#### Synchrotron radiation module
 * [Tutorial N9. Synchrotron radiation module](9_synchrotron_radiation.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/9_synchrotron_radiation.ipynb).
     - Simple examples how to calculate synchrotron radiation with OCELOT.
 * [Tutorial N10. Simple accelerator based THz source](10_thz_source.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/10_thz_source.ipynb).
     - A simple accelerator with the electron beam formation system and an undulator to generate THz radiation. 
-    
 
-### Appendixes
+#### Wavefront propagation
+
+* [Tutorial N12. Reflection from imperfect highly polished mirror](12_imperfect_mirror.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/12_imperfect_mirror.ipynb).
+* [Tutorial N13. Converting synchrotron radiation Screen object to RadiationField object for viewing and propagation](13_synchrotron_radiation_visualization.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/13_synchrotron_radiation_visualization.ipynb).
+
+#### Appendixes
 * [Undulator matching](undulator_matching.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/undulator_matching.ipynb).
     - brief theory and example in OCELOT
 

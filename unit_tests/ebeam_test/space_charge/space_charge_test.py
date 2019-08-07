@@ -90,7 +90,36 @@ def test_track_with_sp_bounds(lattice, p_array, parameter=None, update_ref_value
 
     tws_track_p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
 
-    result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
+    result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], tolerance=1e-8, tolerance_type='absolute', assert_info=' tws_track - ')
+    result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=1e-12, tolerance_type='absolute',
+                         assert_info=' p_array - ')
+    assert check_result(result1 + result2)
+
+
+def test_track_with_lsc(lattice, p_array, parameter=None, update_ref_values=False):
+    """track function test with space charge"""
+    sc1 = LSC()
+    sc1.step = 1
+
+    sc5 = LSC()
+    sc5.step = 5
+
+    navi = Navigator(lattice)
+    navi.add_physics_proc(sc1, lattice.sequence[0], C_A1_1_2_I1)
+    navi.add_physics_proc(sc5, C_A1_1_2_I1, lattice.sequence[-1])
+    navi.unit_step = 0.02
+    tws_track, p = track(lattice, p_array, navi)
+
+    tws_track = obj2dict(tws_track)
+    p = obj2dict(p)
+
+    if update_ref_values:
+        return {'tws_track': tws_track, 'p_array': p}
+
+    tws_track_p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
+
+    result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], tolerance=1e-11, tolerance_type='absolute',
+                         assert_info=' tws_track - ')
     result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=1e-12, tolerance_type='absolute',
                          assert_info=' p_array - ')
     assert check_result(result1 + result2)
@@ -189,6 +218,7 @@ def test_update_ref_values(lattice, p_array, cmdopt):
     update_functions.append("test_track_without_sp_bounds")
     update_functions.append('test_track_with_sp')
     update_functions.append('test_track_with_sp_bounds')
+    update_functions.append('test_track_with_lsc')
     update_functions.append('test_get_current')
     
     update_function_parameters = {}

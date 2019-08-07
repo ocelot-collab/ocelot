@@ -2,7 +2,7 @@
 @author: Igor Zagorodnov @ Martin Dohlus
 Created on 27.03.2015
 Revision on 01.06.2017: coordinate transform to the velocity direction
-2019: Added LSC S. Tomin and I. Zagorodnov
+2019: Added LSC: S. Tomin and I. Zagorodnov
 """
 
 import scipy.ndimage as ndimage

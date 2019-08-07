@@ -364,7 +364,7 @@ def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step):
         #// string below is for case direct accumulation
         #//double phase = screen->Phase[ypoint*xpoint*je + xpoint*jy + jx] + faseConst*(ZZ - motion->Z[0]  + gamma2*(IbetX2 + IbetY2 + phaseConstCur - phaseConstIn));
 
-        phase = phaseConst*(ZZ - motion.z[0] + gamma2*(IbetX2 + IbetY2 + phaseConstCur - 0*phaseConstIn)) + screen.arPhase
+        phase = phaseConst*(ZZ - motion.z[0] + gamma2*(IbetX2 + IbetY2 + phaseConstCur - phaseConstIn)) + screen.arPhase
 
         cosf = np.cos(phase)
         sinf = np.sin(phase)
@@ -383,7 +383,7 @@ def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step):
             prY = Yscr - motion.y[-1] # //for pointer ny(z)
             IbetX2 = motion.XbetaI2[-1]
             IbetY2 = motion.YbetaI2[-1]
-            phase = phaseConst*(motion.z[-1] - motion.z[0] + gamma2*(IbetX2 + IbetY2 + prX*prX/LenPntrZ + prY*prY/LenPntrZ - 0*phaseConstIn))
+            phase = phaseConst*(motion.z[-1] - motion.z[0] + gamma2*(IbetX2 + IbetY2 + prX*prX/LenPntrZ + prY*prY/LenPntrZ - phaseConstIn))
             screen.arPhase = screen.arPhase + phase
     return screen
 
@@ -516,29 +516,31 @@ def radiation_py(gamma, traj, screen):
         arImEx = np.array([])
         arReEy = np.array([])
         arImEy = np.array([])
-        arPhase = np.array([])
+        screen_segment = copy.deepcopy(screen)
 
-        for erad in Erad:
-            screen.arReEx = np.zeros((screen.ny, screen.nx))
-            screen.arImEx = np.zeros((screen.ny, screen.nx))
-            screen.arReEy = np.zeros((screen.ny, screen.nx))
-            screen.arImEy = np.zeros((screen.ny, screen.nx))
-            screen.arPhase =np.zeros((screen.ny, screen.nx))
+        n_pl = screen.ny * screen.nx
+        for i, erad in enumerate(Erad):
+            arPhase = screen.arPhase[i*n_pl:(i+1)*n_pl]
+            screen_segment.arReEx = np.zeros((screen.ny, screen.nx))
+            screen_segment.arImEx = np.zeros((screen.ny, screen.nx))
+            screen_segment.arReEy = np.zeros((screen.ny, screen.nx))
+            screen_segment.arImEy = np.zeros((screen.ny, screen.nx))
 
-            # for n in range(Nmotion-1):
-            #     screen = gintegrator(Xscr, Yscr, erad, motion, screen, n, n_end, gamma, half_step)
-            wrap_gintegrator(Nmotion, Xscr, Yscr, erad, motion, screen, n_end, gamma, half_step)
+            screen_segment.arPhase = arPhase.reshape((screen.ny, screen.nx))
 
-            arReEx = np.append(arReEx,screen.arReEx.flatten())
-            arImEx = np.append(arImEx,screen.arImEx.flatten())
-            arReEy = np.append(arReEy,screen.arReEy.flatten())
-            arImEy = np.append(arImEy,screen.arImEy.flatten())
-            arPhase= np.append(arPhase,screen.arPhase.flatten())
-        screen.arReEx = arReEx
-        screen.arImEx = arImEx
-        screen.arReEy = arReEy
-        screen.arImEy = arImEy
-        screen.arPhase = arPhase
+            #for n in range(Nmotion-1):
+            #    screen_segment = gintegrator(Xscr, Yscr, erad, motion, screen_segment, n, n_end, gamma, half_step)
+            wrap_gintegrator(Nmotion, Xscr, Yscr, erad, motion, screen_segment, n_end, gamma, half_step)
+
+            arReEx = np.append(arReEx, screen_segment.arReEx.flatten())
+            arImEx = np.append(arImEx, screen_segment.arImEx.flatten())
+            arReEy = np.append(arReEy, screen_segment.arReEy.flatten())
+            arImEy = np.append(arImEy, screen_segment.arImEy.flatten())
+            screen.arPhase[i*n_pl:(i+1)*n_pl] = screen_segment.arPhase.flatten()[:]
+        screen.arReEx[:] += arReEx[:]
+        screen.arImEx[:] += arImEx[:]
+        screen.arReEy[:] += arReEy[:]
+        screen.arImEy[:] += arImEy[:]
     return 1
 
 
@@ -602,6 +604,9 @@ def calculate_radiation(lat, screen, beam, energy_loss=False, quantum_diff=False
     screen.distPhoton(gamma_mean, current=beam.I)
     screen.Ef_electron = E[-1]
     screen.motion = U
+    beam_traj = BeamTraject(beam_trajectories=U)
+    beam_traj.p_array_end(p_array)
+    screen.beam_traj = beam_traj
 
     # adding fast oscillating term to the phase
     motion = traj2motion(U[0][:, 0])

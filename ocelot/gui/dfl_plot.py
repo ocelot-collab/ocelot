@@ -8,6 +8,7 @@ import csv
 import time
 import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors # for wigner log scale
 import numpy as np
 import logging
 
@@ -519,7 +520,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
 @if_plottable
 def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, None), y_lim=(None, None), downsample=1,
                 autoscale=None, figsize=3, cmap='seismic', fig_name=None, savefig=False, showfig=True,
-                plot_proj=1, plot_text=1, plot_moments=0, **kwargs):
+                plot_proj=1, plot_text=1, plot_moments=0, plot_colorbar=0, log_scale=0, **kwargs):
     """
     Plots wigner distribution (WD) with marginals
 
@@ -539,6 +540,8 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
     :param plot_proj:
     :param plot_text:
     :param plot_moments:
+    :param plot_colorbar: plots colorbar
+    :param log_scale: plots wignewr distribution in logarithmic scale
     :param kwargs:
     :return:
     """
@@ -620,8 +623,24 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
 
     # cmap='RdBu_r'
     # axScatter.imshow(wigner, cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
-    wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample],
+    
+    if log_scale != 0:
+        if log_scale==1: 
+            log_scale=0.01
+        wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample],
+                                   wigner[::downsample, ::downsample], cmap=cmap,  
+                                   norm=colors.SymLogNorm(linthresh=wigner_lim * log_scale, linscale=wigner_lim * log_scale,
+                                              vmin=-wigner_lim, vmax=wigner_lim),
+                                   vmax=wigner_lim, vmin=-wigner_lim)
+    else:
+        wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample],
                                    wigner[::downsample, ::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
+    
+    if plot_colorbar:
+        from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+        cbaxes = inset_axes(axScatter, width="30%", height="3%", loc=2) 
+        fig.colorbar(wigplot, cax = cbaxes, orientation='horizontal')
+        
     if plot_text:
         if hasattr(wig_or_out, 'is_spectrogram'):
             if wig_or_out.is_spectrogram:
@@ -696,6 +715,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
             axHisty.plot(spec, spec_scale)
         else:
             axHisty.plot(spec / spec.max(), spec_scale)
+
         axHisty.set_xlabel('Spectrum [a.u.]')
 
         axScatter.axis('tight')
@@ -716,6 +736,13 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
 
         axHistx.set_xlim(x_lim_appl[0], x_lim_appl[1])
         axHisty.set_ylim(y_lim_appl[0], y_lim_appl[1])
+        
+        if log_scale != 0:
+            axHistx.set_ylim(np.nanmin(power), np.nanmax(power))
+            axHisty.set_xlim(np.nanmin(spec), np.nanmax(spec))
+            axHisty.set_xscale('log')
+            axHistx.set_yscale('log')
+        
     else:
         axScatter.axis('tight')
         axScatter.set_xlabel(p_label_txt)
@@ -723,6 +750,9 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
 
     # axScatter.set_xlim(x_lim[0], x_lim[1])
     # axScatter.set_ylim(y_lim[0], y_lim[1])
+    
+    
+    
 
     if savefig != False:
         if savefig == True:

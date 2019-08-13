@@ -107,3 +107,8 @@ plt.xlabel("s, mm")
 plt.ylabel("I, A")
 plt.grid(True)
 plt.show()
+
+show_e_beam(p_array)
+plt.show()
+show_e_beam(p_array, inverse_tau=True, headtail=False)
+plt.show()

@@ -1626,9 +1626,9 @@ def dfl_disperse(dfl, coeff, E_ph0=None, return_result=False):
     if return_result:
         return dfl
 
-def dfl_ap(*args):
+def dfl_ap(*args, **kwargs):
     _logger.warning('"dfl_ap" will be deprecated, use "dfl_ap_square" instead for square aperture')
-    return dfl_ap_square(*args)
+    return dfl_ap_square(*args, **kwargs)
         
 def dfl_ap_square(dfl, ap_x=None, ap_y=None, debug=1):
     """

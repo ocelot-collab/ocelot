@@ -479,104 +479,109 @@ class RadiationField:
     def prop_m(self, z, m=1, fine=0, return_result=0, return_orig_domains=1, debug=1):
         """
         Angular-spectrum propagation for fieldfile
-
+    
         can handle wide spectrum
           (every slice in freq.domain is propagated
            according to its frequency)
         no kx**2+ky**2<<k0**2 limitation
-
+    
         dfl is the RadiationField() object
         z is the propagation distance in [m]
         m is the output mesh size in terms of input mesh size (m = L_out/L_inp)
+        which can be a number m or a pair of number m = [m_x, m_y]
         fine==0 is a flag for ~2x faster propagation.
             no Fourier transform to frequency domain is done
             assumes no angular dispersion (true for plain FEL radiation)
             assumes narrow spectrum at center of xlamds (true for plain FEL radiation)
-
+    
         z>0 -> forward direction
         """
         _logger.info('propagating dfl file by %.2f meters' % (z))
-
-        if z == 0 and m == 1:
-            _logger.debug(ind_str + 'z=0, returning original')
-            if return_result:
-                return self
-            else:
-                return
-        # elif z == 0 and m != 1:
-        # pass
-
+    
         start = time.time()
         domains = self.domains()
-
+    
         if return_result:
             copydfl = deepcopy(self)
             copydfl, self = self, copydfl
-
-        # domain_xy = self.domain_xy
+    
         domain_z = self.domain_z
-
-        # q_multiply(dfl_out, (1-m) / z)
-        if m != 1:
-            self.curve_wavefront(-z / (1 - m))
-
+        if np.size(m)==1:
+            m_x = m
+            m_y = m
+        elif np.size(m)==2:
+            m_x = m[0]
+            m_y = m[1]
+        else:
+            _logger.error(ind_str + 'm mast have shape = 1 or 2')
+            raise ValueError('m mast have shape = 1 or 2')
+             
+        if z==0:
+            _logger.debug(ind_str + 'z=0, returning original')
+            if m_x != 1 and m_y != 1:
+                _logger.debug(ind_str + 'mesh is not resized in the case z = 0')
+            if return_result:
+                return self
+            else:
+                return        
+    
+        if m_x != 1:
+            self.curve_wavefront(-z / (1 - m_x), plane='x') #rescaling the 
+        if m_y != 1:
+            self.curve_wavefront(-z / (1 - m_y), plane='y')
+    
         if fine == 1:
             self.to_domain('kf')
         elif fine == -1:
             self.to_domain('kt')
         else:
             self.to_domain('k')
-        # if domain_xy == 's':
-        #     self.fft_xy(debug=debug)
-        # if domain_z == 't' and fine:
-        #     self.fft_z(debug=debug)
-
+    
         if z != 0:
+            H = 1
             if self.domain_z == 'f':
                 k_x, k_y = np.meshgrid(self.scale_kx(), self.scale_ky())
                 k = self.scale_kz()
                 # H = np.exp(1j * z * (np.sqrt((k**2)[:,np.newaxis,np.newaxis] - (k_x**2)[np.newaxis,:,:] - (k_y**2)[np.newaxis,:,:]) - k[:,np.newaxis,np.newaxis]))
                 # self.fld *= H
-                for i in range(self.Nz()):
-                    H = np.exp(1j * z / m * (np.sqrt(k[i] ** 2 - k_x ** 2 - k_y ** 2) - k[i]))
-                    self.fld[i, :, :] *= H
+    #            for i in range(self.Nz()):
+    #                H = np.exp(1j * z / m * (np.sqrt(k[i] ** 2 - k_x ** 2 - k_y ** 2) - k[i]))
+    #                self.fld[i, :, :] *= H
+                if m_x != 0:
+                    for i in range(self.Nz()):
+                        H=np.exp(1j * z / m_x * (np.sqrt(k[i] ** 2 - k_x ** 2) - k[i]))
+                        self.fld[i, :, :] *= H
+                if m_y != 0:
+                    for i in range(self.Nz()):
+                        H=np.exp(1j * z / m_y * (np.sqrt(k[i] ** 2 - k_y ** 2) - k[i]))
+                        self.fld[i, :, :] *= H           
             else:
                 k_x, k_y = np.meshgrid(self.scale_kx(), self.scale_ky())
                 k = 2 * np.pi / self.xlamds
-                H = np.exp(1j * z / m * (np.sqrt(k ** 2 - k_x ** 2 - k_y ** 2) - k))
-                # self.fld *= H[np.newaxis,:,:]
-                for i in range(self.Nz()):  # more memory efficient
+                if m_x != 0:
+                    H*=np.exp(1j * z / m_x * (np.sqrt(k ** 2 - k_x ** 2) - k))                
+                if m_y != 0:
+                    H*=np.exp(1j * z / m_y * (np.sqrt(k ** 2 - k_y ** 2) - k))
+                for i in range(self.Nz()):
                     self.fld[i, :, :] *= H
-
-            # if self.domain_z == 'f':
-            #     k = 2 * np.pi / self.xlamds
-            #     self.curve_wavefront(m / z * (self.scale_kz() / k))#, domain_z='f')
-            # else:
-            #     self.curve_wavefront(m / z)#, domain_z='f')
-            #     print(m / z)
-
-        self.dx *= m
-        self.dy *= m
-
-        # switch to original domain
-        # if domain_xy == 's':
-        #     self.fft_xy(debug=debug)
-        # if domain_z == 't' and fine:
-        #     self.fft_z(debug=debug)
-        # self.to_domain('s')
+    
+        self.dx *= m_x
+        self.dy *= m_y
+    
         if return_orig_domains:
             self.to_domain(domains)
-
-        if m != 1:
-            self.curve_wavefront(-m * z / (m - 1))
-
+        if m_x != 1:
+            self.curve_wavefront(-m_x * z / (m_x - 1), plane='x')
+        if m_y != 1:
+            self.curve_wavefront(-m_y * z / (m_y - 1), plane='y')
+            
         t_func = time.time() - start
         _logger.debug(ind_str + 'done in %.2f sec' % (t_func))
-
+    
         if return_result:
             copydfl, self = self, copydfl
             return copydfl
-
+    
     def mut_coh_func(self, norm=1, jit=1):
         if jit:
             J = np.zeros([self.Ny(), self.Nx(), self.Ny(), self.Nx()]).astype(np.complex128)
@@ -1621,12 +1626,15 @@ def dfl_disperse(dfl, coeff, E_ph0=None, return_result=False):
     if return_result:
         return dfl
 
-
-def dfl_ap(dfl, ap_x=None, ap_y=None, debug=1):
+def dfl_ap(*args, **kwargs):
+    _logger.warning('"dfl_ap" will be deprecated, use "dfl_ap_square" instead for square aperture')
+    return dfl_ap_square(*args, **kwargs)
+        
+def dfl_ap_square(dfl, ap_x=None, ap_y=None, debug=1):
     """
-    aperture the radaition in either domain
+    square aperture the radaition in either domain
     """
-    _logger.info('applying aperture to dfl')
+    _logger.info('applying square aperture to dfl')
 
     if np.size(ap_x) == 1:
         ap_x = [-ap_x / 2, ap_x / 2]
@@ -1661,6 +1669,33 @@ def dfl_ap(dfl, ap_x=None, ap_y=None, debug=1):
     # dfl_out.fld[:,idx_x1:idx_x2,idx_y1:idx_y2] = tmp_fld
     return dfl
 
+def dfl_ap_circle(dfl, r=np.inf, center=None, debug=1):
+    """
+    circle aperture the radaition in either domain
+    """
+    _logger.info('applying circle aperture to dfl')
+
+    X = dfl.scale_x()[np.newaxis, :]
+    Y = dfl.scale_y()[:, np.newaxis]
+
+    if center is None: # use the middle of the image
+        center = [0,0]
+    dist_from_center = np.sqrt((X - center[0])**2 + (Y-center[1])**2)
+    mask = dist_from_center <= r
+    
+    mask_idx = np.where(mask == False)
+
+    dfl_energy_orig = dfl.E()
+    dfl.fld[:, mask_idx[0], mask_idx[1]] = 0
+    
+    if dfl_energy_orig == 0:
+        _logger.warn(ind_str + 'dfl_energy_orig = 0')
+    elif dfl.E() == 0:
+        _logger.warn(ind_str + 'done, %.2f%% energy lost' % (100))
+    else:
+        _logger.info(ind_str + 'done, %.2f%% energy lost' % ((dfl_energy_orig - dfl.E()) / dfl_energy_orig * 100))
+
+    return dfl
 
 def dfl_prop(dfl, z, fine=1, debug=1):
     """

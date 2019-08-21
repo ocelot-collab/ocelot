@@ -1621,12 +1621,15 @@ def dfl_disperse(dfl, coeff, E_ph0=None, return_result=False):
     if return_result:
         return dfl
 
-
-def dfl_ap(dfl, ap_x=None, ap_y=None, debug=1):
+def dfl_ap(*args):
+    _logger.warning('"dfl_ap" will be deprecated, use "dfl_ap_square" instead for square aperture')
+    return dfl_ap_square(*args)
+        
+def dfl_ap_square(dfl, ap_x=None, ap_y=None, debug=1):
     """
-    aperture the radaition in either domain
+    square aperture the radaition in either domain
     """
-    _logger.info('applying aperture to dfl')
+    _logger.info('applying square aperture to dfl')
 
     if np.size(ap_x) == 1:
         ap_x = [-ap_x / 2, ap_x / 2]
@@ -1661,6 +1664,33 @@ def dfl_ap(dfl, ap_x=None, ap_y=None, debug=1):
     # dfl_out.fld[:,idx_x1:idx_x2,idx_y1:idx_y2] = tmp_fld
     return dfl
 
+def dfl_ap_circle(dfl, r=np.inf, center=None, debug=1):
+    """
+    circle aperture the radaition in either domain
+    """
+    _logger.info('applying circle aperture to dfl')
+
+    X = dfl.scale_x()[np.newaxis, :]
+    Y = dfl.scale_y()[:, np.newaxis]
+
+    if center is None: # use the middle of the image
+        center = [0,0]
+    dist_from_center = np.sqrt((X - center[0])**2 + (Y-center[1])**2)
+    mask = dist_from_center <= r
+    
+    mask_idx = np.where(mask == False)
+
+    dfl_energy_orig = dfl.E()
+    dfl.fld[:, mask_idx[0], mask_idx[1]] = 0
+    
+    if dfl_energy_orig == 0:
+        _logger.warn(ind_str + 'dfl_energy_orig = 0')
+    elif dfl.E() == 0:
+        _logger.warn(ind_str + 'done, %.2f%% energy lost' % (100))
+    else:
+        _logger.info(ind_str + 'done, %.2f%% energy lost' % ((dfl_energy_orig - dfl.E()) / dfl_energy_orig * 100))
+
+    return dfl
 
 def dfl_prop(dfl, z, fine=1, debug=1):
     """

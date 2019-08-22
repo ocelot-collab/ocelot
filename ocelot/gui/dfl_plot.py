@@ -529,21 +529,21 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
     :param x_units: [m or fs] units to display power scale
     :param y_units: [nm or eV] units to display spectrum scale
     :param x_lim: scaling limits for x in given units, (min,max) or [min,max], e.g: (None,6)
-    :param y_lim: scaling limits for y in given units, (min,max) or [min,max], e.g: (None,6)
-    :param downsample:
-    :param autoscale:
+    :param x_lim: scaling limits for y in given units, (min,max) or [min,max], e.g: (None,6)
+    :param downsample: speeds up plotting by displaying only 1/downsample**2 points
+    :param autoscale: find x_lim and x_lim values automatically. Only (values > max_value * autoscale) will be displayed
     :param figsize: rescales the size of the figure
     :param cmap: colormar (http://matplotlib.org/users/colormaps.html)
     :param fig_name: the desired name of the output figure, would be used as suffix to the image filename if savefig==True
     :param savefig: bool type variable, allow to save figure to image (savefig='png' (default) or savefig='eps', etc...)
     :param showfig: bool type variable, allow to display figure (slower)
-    :param plot_proj:
-    :param plot_text:
-    :param plot_moments:
+    :param plot_proj: plot marginal distributions
+    :param plot_text: show text
+    :param plot_moments: plot moments as lines on top of Wigner distribution
     :param plot_cbar: plots colorbar
-    :param log_scale: plots wignewr distribution in logarithmic scale
+    :param log_scale: plots wigner distribution in logarithmic scale
     :param kwargs:
-    :return:
+    :return: None
     """
     if showfig == False and savefig == False:
         return
@@ -674,7 +674,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
     if autoscale == 1:
         autoscale = 1e-2
 
-    if autoscale != None:
+    if autoscale not in [0, None]:
         max_power = np.amax(power)
         max_spectrum = np.amax(spec)
         idx_p = np.where(power > max_power * autoscale)[0]

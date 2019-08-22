@@ -1414,7 +1414,7 @@ def imitate_sase_dfl(xlamds, rho=2e-4, **kwargs):
     """
 
     _logger.info('imitating SASE radiation')
-    if kwargs.pop('wavelength', None) is not None:
+    if kwargs.get('wavelength', None) is not None:
         E0 = h_eV_s * speed_of_light / kwargs.pop('wavelength')
         _logger.debug(ind_str + 'using wavelength')
     else:

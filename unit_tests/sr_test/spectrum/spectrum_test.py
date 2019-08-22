@@ -93,6 +93,34 @@ def test_segments(lattice, screen, beam, update_ref_values=False):
     result6 = check_matrix(screen_segm.Pi,    screen_whole.Pi    , TOL, assert_info=' Pi - ')
     assert check_result(result1 + result2 + result3 + result4 + result5 + result6)
 
+
+def test_calculate_rad_from_lattice(lattice, screen, beam, update_ref_values=False):
+    """calculate_radiation fucntion test"""
+    und = Undulator(Kx=4., nperiods=125, lperiod=0.04, eid="und")
+    D = Drift(l=0.5, eid="D")
+    b1 = Hcor(l=0.1, angle=10 * -0.00001, eid="b1")
+    b2 = Hcor(l=0.2, angle=10 * 0.00002, eid="b2")
+    b3 = Hcor(l=0.1, angle=10 * -0.00001, eid="b3")
+    phase_shift = (b1, b2, b3)
+    cell = (und, D, phase_shift, D, und)
+    lattice = MagneticLattice(cell)
+
+    screen = calculate_radiation(lattice, screen, beam)
+
+    if update_ref_values:
+        return {'Eph': screen.Eph.tolist(), 'Yph': screen.Yph.tolist(), 'Xph': screen.Xph.tolist(),
+                'Total': screen.Total.tolist(), 'Sigma': screen.Sigma.tolist(), 'Pi': screen.Pi.tolist()}
+
+    screen_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
+
+    result1 = check_matrix(screen.Eph, screen_ref['Eph'], TOL, assert_info=' Eph - ')
+    result2 = check_matrix(screen.Yph, screen_ref['Yph'], TOL, assert_info=' Yph - ')
+    result3 = check_matrix(screen.Xph, screen_ref['Xph'], TOL, assert_info=' Xph - ')
+    result4 = check_matrix(screen.Total, screen_ref['Total'], TOL, assert_info=' Total - ')
+    result5 = check_matrix(screen.Sigma, screen_ref['Sigma'], TOL, assert_info=' Sigma - ')
+    result6 = check_matrix(screen.Pi, screen_ref['Pi'], TOL, assert_info=' Pi - ')
+    assert check_result(result1 + result2 + result3 + result4 + result5 + result6)
+
 def setup_module(module):
 
     f = open(pytest.TEST_RESULTS_FILE, 'a')
@@ -129,6 +157,7 @@ def test_update_ref_values(lattice, screen, beam, cmdopt):
     update_functions.append('test_calculate_radiation')
     update_functions.append("test_calculate_radiation_endpoles")
     update_functions.append('test_segments')
+    update_functions.append("test_calculate_rad_from_lattice")
     
     if cmdopt in update_functions:
         result = eval(cmdopt)(lattice, screen, beam, True)

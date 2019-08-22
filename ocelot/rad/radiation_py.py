@@ -119,7 +119,7 @@ class BeamTraject:
             s_fin += np.trapz(np.sqrt(1 + x1 * x1 + y1 * y1), z, axis=0)
             #s_fin += np.sum(dz * np.sqrt(1 + x1 * x1 + y1 * y1), axis=0)
 
-        N = int(np.shape(self.U)[1] / 9)
+        N = int(np.shape(self.U[-1])[0] / 9)
 
         # ref_path is reference path of the particle with zero initial conditions
         # in sake of speed and simplicity we assume that ref_path is equal to path of the beam in average

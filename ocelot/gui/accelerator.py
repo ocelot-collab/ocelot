@@ -1032,8 +1032,8 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     # label = r"$I_{max}=$" + str(np.round(np.max(slice_params.I), 1))
     if headtail:
         leg = ax_c.legend([label], handlelength=0, handletextpad=0, fancybox=True, loc=location)
-    for item in leg.legendHandles:
-        item.set_visible(False)
+        for item in leg.legendHandles:
+            item.set_visible(False)
     plt.setp(ax_c.get_xticklabels(), visible=False)
     plt.ylabel("I [A]")
     plt.grid(grid)

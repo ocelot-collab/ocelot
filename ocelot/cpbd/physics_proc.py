@@ -435,6 +435,7 @@ class SpontanRadEffects(PhysProc):
         _logger.debug("SpontanRadEffects: apply")
         mean_p = np.mean(p_array.p())
         energy = p_array.E*(1 + mean_p)
+        gamma = energy / m_e_GeV
 
         if self.type == "dipole":
             self.K = 100.0  # awake the asymptotic for K>>1

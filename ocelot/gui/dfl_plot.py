@@ -778,11 +778,11 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
 
 
 @if_plottable
-def plot_dfl_waistscan(sc_res, fig_name=None, showfig=True, savefig=False):
+def plot_dfl_waistscan(sc_res, fig_name=None, figsize=4, showfig=True, savefig=False):
     _logger.info('plot dfl waist scan')
     if showfig == False and savefig == False:
         return
-
+    
     if fig_name is None:
         if sc_res.fileName() is '':
             fig = plt.figure('Waist scan')
@@ -790,8 +790,9 @@ def plot_dfl_waistscan(sc_res, fig_name=None, showfig=True, savefig=False):
             fig = plt.figure(sc_res.fileName() + ' waist scan')
     else:
         fig = plt.figure(fig_name)
-
+        
     plt.clf()
+    fig.set_size_inches((3 * figsize, 2 * figsize), forward=True)
     ax_int = fig.add_subplot(1, 1, 1)
     ax_int.plot(sc_res.z_pos, sc_res.phdens_max, 'k', label='max', linewidth=2)
     ax_int.plot(sc_res.z_pos, sc_res.phdens_onaxis, 'grey', label='on-axis')

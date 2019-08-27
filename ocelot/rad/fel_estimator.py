@@ -13,7 +13,7 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
-def beamlat2fel(beam, lat, smear_m=None):
+def beamlat2fel(beam, lat, smear_m=None, method='mxie'):
     
     _logger.info('estimating fel from beam and lat')
     
@@ -32,7 +32,7 @@ def beamlat2fel(beam, lat, smear_m=None):
     elif und.Kx == und.Ky:
         iwityp = 1 # helical undulator
     else:
-        raise ValueError('unknown undulator: neither planar nor helical, estimation method not applicable')
+        raise ValueError('unknown undulator: neither planar nor helical, estimation not applicable')
     
     if smear_m is None:
         tcoh = beam2fel(beam_pk, l_period, K_peak, iwityp=iwityp).tcoh()
@@ -42,7 +42,7 @@ def beamlat2fel(beam, lat, smear_m=None):
     beam_tmp.smear(smear_m)
     update_effective_beta(beam_tmp, lat)
     beam_tmp.I[beam_tmp.I==0] = np.nan
-    fel = beam2fel(beam_tmp, l_period, K_peak)
+    fel = beam2fel(beam_tmp, l_period, K_peak, method='mxie')
     
     return fel
 

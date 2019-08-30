@@ -239,34 +239,51 @@ def plot_fel_spectrum(fel, z=None, fig=None):
         plt.clf()
     ax = fig.gca()
     
-    # if z is None:
-        # z = fel.z_sat_min
-    # Psat = fel.P(z)
-    # Psat[np.isnan(Psat)]=0
-    # idx = fel.idx
-
-    # phen0 = fel.phen0
-    # dphen = phen0 * fel.rho3
-    # dp = dphen[idx] / 10
-    # s_arr = fel.s * 1e6
-    # phen_arr = np.arange(np.amin(phen0 - 3 * dphen), np.amax(phen0 + 3 * dphen), dp)
-    # spec = np.zeros((s_arr.size, phen_arr.size))
-    # for i in range(s_arr.size):
-        # if dphen[i] != 0:
-            # spec[i] = np.exp(-(phen_arr - phen0[i])**2 / 2 / dphen[i]**2) / np.sqrt(2 * np.pi * dphen[i]**2)
-    # spec = spec * Psat[:, np.newaxis]
-    
     phen_arr, spectrum = fel.spectrum(z = z)
-    ax.plot(phen_arr, spectrum)
+    ax.plot(phen_arr, spectrum/np.amax(spectrum))
     ax.set_xlabel('E [eV]')
     ax.set_ylabel('spec. density')
     ax.autoscale(tight=1)
     fig.show()
     
+def plot_fel_power_evo(fel, fig=None, und_duty_factor=1):
     
+    if fig.__class__ == int or fig is None:
+        fig = plt.figure(fig)
+    else:
+        plt.clf()
+    ax = fig.gca()
     
+    P=[]
+    E=[]
+    z = np.arange(fel.z_sat_min)
+    for zi in z:
+        P.append(np.amax(fel.P(zi)))
+        E.append(fel.E(zi))
     
+    plt.title('Energy@{:.2f}m = {:.2e} J'.format(fel.z_sat_min / und_duty_factor, E[-1]))
+    ax.semilogy(z / und_duty_factor, np.array(P))
+    ax.set_ylabel('P [W]')
+    ax.set_xlabel('z [m]')
+    fig.show()
     
+def plot_fel_energy_evo(fel, fig=None, und_duty_factor=1):
     
+    if fig.__class__ == int or fig is None:
+        fig = plt.figure(fig)
+    else:
+        plt.clf()
+    ax = fig.gca()
+    
+    E=[]
+    z = np.arange(fel.z_sat_min)
+    for zi in z:
+        E.append(fel.E(zi))
+        
+    plt.title('Energy@{:.2f}m = {:.2e} J'.format(fel.z_sat_min / und_duty_factor, E[-1]))
+    ax.semilogy(z / und_duty_factor, np.array(E))
+    ax.set_ylabel('E [J]')
+    ax.set_xlabel('z [m]')
+    fig.show()
     
     

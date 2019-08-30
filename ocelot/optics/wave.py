@@ -1579,7 +1579,7 @@ def screen2dfl(screen, polarization='x'):
 
 def dfl_disperse(dfl, coeff, E_ph0=None, return_result=False):
     """
-    The function adds a phase shift to the fld object.
+    The function adds a phase shift to the fld object in the frequency domain
 
     dfl   --- is a RadiationField object
     coeff --- coefficients in phase delay expression:

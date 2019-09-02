@@ -8,6 +8,7 @@ import csv
 import time
 import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors # for wigner log scale
 import numpy as np
 import logging
 
@@ -519,7 +520,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
 @if_plottable
 def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, None), y_lim=(None, None), downsample=1,
                 autoscale=None, figsize=3, cmap='seismic', fig_name=None, savefig=False, showfig=True,
-                plot_proj=1, plot_text=1, plot_moments=0, **kwargs):
+                plot_proj=1, plot_text=1, plot_moments=0, plot_cbar=0, log_scale=0, **kwargs):
     """
     Plots wigner distribution (WD) with marginals
 
@@ -528,19 +529,21 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
     :param x_units: [m or fs] units to display power scale
     :param y_units: [nm or eV] units to display spectrum scale
     :param x_lim: scaling limits for x in given units, (min,max) or [min,max], e.g: (None,6)
-    :param y_lim: scaling limits for y in given units, (min,max) or [min,max], e.g: (None,6)
-    :param downsample:
-    :param autoscale:
+    :param x_lim: scaling limits for y in given units, (min,max) or [min,max], e.g: (None,6)
+    :param downsample: speeds up plotting by displaying only 1/downsample**2 points
+    :param autoscale: find x_lim and x_lim values automatically. Only (values > max_value * autoscale) will be displayed
     :param figsize: rescales the size of the figure
     :param cmap: colormar (http://matplotlib.org/users/colormaps.html)
     :param fig_name: the desired name of the output figure, would be used as suffix to the image filename if savefig==True
     :param savefig: bool type variable, allow to save figure to image (savefig='png' (default) or savefig='eps', etc...)
     :param showfig: bool type variable, allow to display figure (slower)
-    :param plot_proj:
-    :param plot_text:
-    :param plot_moments:
+    :param plot_proj: plot marginal distributions
+    :param plot_text: show text
+    :param plot_moments: plot moments as lines on top of Wigner distribution
+    :param plot_cbar: plots colorbar
+    :param log_scale: plots wigner distribution in logarithmic scale
     :param kwargs:
-    :return:
+    :return: None
     """
     if showfig == False and savefig == False:
         return
@@ -620,8 +623,24 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
 
     # cmap='RdBu_r'
     # axScatter.imshow(wigner, cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
-    wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample],
+    
+    if log_scale != 0:
+        if log_scale==1: 
+            log_scale=0.01
+        wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample],
+                                   wigner[::downsample, ::downsample], cmap=cmap,  
+                                   norm=colors.SymLogNorm(linthresh=wigner_lim * log_scale, linscale=2,
+                                              vmin=-wigner_lim, vmax=wigner_lim),
+                                   vmax=wigner_lim, vmin=-wigner_lim)
+    else:
+        wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample],
                                    wigner[::downsample, ::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
+    
+    if plot_cbar:
+        from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+        cbaxes = inset_axes(axScatter, width="50%", height="3%", loc=1) 
+        fig.colorbar(wigplot, cax = cbaxes, orientation='horizontal')
+        
     if plot_text:
         if hasattr(wig_or_out, 'is_spectrogram'):
             if wig_or_out.is_spectrogram:
@@ -655,7 +674,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
     if autoscale == 1:
         autoscale = 1e-2
 
-    if autoscale != None:
+    if autoscale not in [0, None]:
         max_power = np.amax(power)
         max_spectrum = np.amax(spec)
         idx_p = np.where(power > max_power * autoscale)[0]
@@ -696,6 +715,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
             axHisty.plot(spec, spec_scale)
         else:
             axHisty.plot(spec / spec.max(), spec_scale)
+
         axHisty.set_xlabel('Spectrum [a.u.]')
 
         axScatter.axis('tight')
@@ -716,6 +736,13 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
 
         axHistx.set_xlim(x_lim_appl[0], x_lim_appl[1])
         axHisty.set_ylim(y_lim_appl[0], y_lim_appl[1])
+        
+        if log_scale != 0:
+            axHistx.set_ylim(np.nanmin(power), np.nanmax(power))
+            axHisty.set_xlim(np.nanmin(spec), np.nanmax(spec))
+            axHisty.set_xscale('log')
+            axHistx.set_yscale('log')
+        
     else:
         axScatter.axis('tight')
         axScatter.set_xlabel(p_label_txt)
@@ -723,6 +750,9 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
 
     # axScatter.set_xlim(x_lim[0], x_lim[1])
     # axScatter.set_ylim(y_lim[0], y_lim[1])
+    
+    
+    
 
     if savefig != False:
         if savefig == True:
@@ -748,11 +778,11 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
 
 
 @if_plottable
-def plot_dfl_waistscan(sc_res, fig_name=None, showfig=True, savefig=False):
+def plot_dfl_waistscan(sc_res, fig_name=None, figsize=4, showfig=True, savefig=False):
     _logger.info('plot dfl waist scan')
     if showfig == False and savefig == False:
         return
-
+    
     if fig_name is None:
         if sc_res.fileName() is '':
             fig = plt.figure('Waist scan')
@@ -760,8 +790,9 @@ def plot_dfl_waistscan(sc_res, fig_name=None, showfig=True, savefig=False):
             fig = plt.figure(sc_res.fileName() + ' waist scan')
     else:
         fig = plt.figure(fig_name)
-
+        
     plt.clf()
+    fig.set_size_inches((3 * figsize, 2 * figsize), forward=True)
     ax_int = fig.add_subplot(1, 1, 1)
     ax_int.plot(sc_res.z_pos, sc_res.phdens_max, 'k', label='max', linewidth=2)
     ax_int.plot(sc_res.z_pos, sc_res.phdens_onaxis, 'grey', label='on-axis')

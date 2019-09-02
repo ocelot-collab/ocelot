@@ -34,6 +34,7 @@ from ocelot.optics.wave import *
 from ocelot.gui.colormaps2d.colormap2d import *
 from ocelot.gui.settings_plot import *
 from ocelot.gui.dfl_plot import *  # tmp
+from ocelot.gui.beam_plot import plot_beam # tmp
 
 # from pylab import rc, rcParams #tmp
 
@@ -237,7 +238,7 @@ def plot_gen_out_z(g, z=np.inf, params=['rad_power+el_current', 'el_energy+el_es
     fig_name - override figure name
     savefig - save figure
     showfig - show figure
-    print_text - print text with additional info
+    showtext - print text with additional info
     """
 
     import matplotlib.ticker as ticker
@@ -2408,144 +2409,6 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
     # return fig
 
 
-@if_plottable
-def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=None, debug=0):
-    _logger.info('plotting beam')
-
-    if showfig == False and savefig == False:
-        return
-
-    # if beam.__class__ != GenesisBeam:
-    #     raise ValueError('wrong beam object: should be GenesisBeam')
-
-    fontsize = 15
-
-    if plot_xy == None:
-        if np.mean(beam.x) == 0 and np.mean(beam.y) == 0 and np.mean(beam.xp) == 0 and np.mean(beam.yp) == 0:
-            plot_xy = 0
-        else:
-            plot_xy = 1
-
-    if fig == None:
-        fig = plt.figure()
-    fig.clf()
-
-    idx = beam.idx_max()
-
-    g0 = np.mean(beam.g).astype(int)  # mean
-    g_dev = beam.g - g0  # deviation from mean
-
-    fig.set_size_inches((4 * figsize, (3 + plot_xy) * figsize), forward=True)
-    ax_I = fig.add_subplot(2 + plot_xy, 2, 1)
-    plt.grid(True)
-    ax_I.set_xlabel(r'$s [\mu m]$', fontsize=fontsize)
-    p1, = plt.plot(1.e6 * np.array(beam.s), beam.I, 'r', lw=3)
-    plt.plot(1.e6 * beam.s[idx], beam.I[idx], 'bs')
-    ax_I.set_ylim(ymin=0)
-
-    if hasattr(beam, 'eloss'):
-        if (beam.eloss != 0).any():
-            ax_loss = ax_I.twinx()
-            p2, = plt.plot(1.e6 * np.array(beam.s), 1.e-3 * np.array(beam.eloss), 'g', lw=3)
-            ax_loss.legend([p1, p2], [r'$I [A]$', r'Wake $[KV/m]$'], fontsize=fontsize, loc='best')
-            ax_loss.set_ylim(auto=True)
-        else:
-            ax_I.legend([r'$I [A]$'], fontsize=fontsize, loc='best')
-    else:
-        ax_I.legend([r'$I [A]$'], fontsize=fontsize, loc='best')
-
-    ax_I.text(0.02, 0.98, r'Q = {:.2f} pC'.format(beam.charge() * 1e12), horizontalalignment='left',
-              verticalalignment='top', transform=ax_I.transAxes)
-    # ax.set_xlim([np.amin(beam.s),np.amax(beam.x)])
-    ax = fig.add_subplot(2 + plot_xy, 2, 2, sharex=ax_I)
-    plt.grid(True)
-    ax.set_xlabel(r'$s [\mu m]$', fontsize=fontsize)
-    # p1,= plt.plot(1.e6 * np.array(beam.s),1.e-3 * np.array(beam.eloss),'r',lw=3)
-    p1, = plt.plot(1.e6 * np.array(beam.s), g_dev, 'r', lw=3)
-    plt.plot(1.e6 * beam.s[idx], g_dev[idx], 'bs')
-    ax = ax.twinx()
-    p2, = plt.plot(1.e6 * np.array(beam.s), beam.dg, 'g', lw=3)
-    plt.plot(1.e6 * beam.s[idx], beam.dg[idx], 'bs')
-    ax.legend([p1, p2], [r'$\gamma$ + ' + str(g0), r'$\delta \gamma$'], loc='best')
-
-    ax = fig.add_subplot(2 + plot_xy, 2, 3, sharex=ax)
-    plt.grid(True)
-    ax.set_xlabel(r'$s [\mu m]$', fontsize=fontsize)
-    p1, = plt.plot(1.e6 * np.array(beam.s), beam.emit_xn * 1e6, 'r', lw=3)
-    p2, = plt.plot(1.e6 * np.array(beam.s), beam.emit_yn * 1e6, 'g', lw=3)
-    plt.plot(1.e6 * beam.s[idx], beam.emit_xn[idx] * 1e6, 'bs')
-    ax.set_ylim(ymin=0)
-
-    ax.legend([p1, p2], [r'$\varepsilon_x [\mu m]$', r'$\varepsilon_y [\mu m]$'], fontsize=fontsize, loc='best')
-    # ax3.legend([p3,p4],[r'$\varepsilon_x$',r'$\varepsilon_y$'])
-
-    ax = fig.add_subplot(2 + plot_xy, 2, 4, sharex=ax)
-    plt.grid(True)
-    ax.set_xlabel(r'$s [\mu m]$', fontsize=fontsize)
-    p1, = plt.plot(1.e6 * np.array(beam.s), beam.beta_x, 'r', lw=3)
-    p2, = plt.plot(1.e6 * np.array(beam.s), beam.beta_y, 'g', lw=3)
-    plt.plot(1.e6 * beam.s[idx], beam.beta_x[idx], 'bs')
-    ax.set_ylim(ymin=0)
-    ax.legend([p1, p2], [r'$\beta_x [m]$', r'$\beta_y [m]$'], fontsize=fontsize, loc='best')
-
-    if plot_xy:
-        ax = fig.add_subplot(3, 2, 5, sharex=ax)
-        plt.grid(True)
-        ax.set_xlabel(r'$s [\mu m]$', fontsize=fontsize)
-        p1, = plt.plot(1.e6 * np.array(beam.s), 1.e6 * np.array(beam.x), 'r', lw=3)
-        p2, = plt.plot(1.e6 * np.array(beam.s), 1.e6 * np.array(beam.y), 'g', lw=3)
-
-        ax.legend([p1, p2], [r'$x [\mu m]$', r'$y [\mu m]$'], fontsize=fontsize, loc='best')
-
-        # beam_beta = sqrt(1 - (1 / beam.g0**2))
-        # beam_p = beam.g0 * beam_beta
-        # # p=beam.g0*m_e_eV/speed_of_light
-        # pz = sqrt(beam_p**2 - beam.px**2 - beam.py**2)
-        # xp = beam.px / pz
-        # yp = beam.py / pz
-
-        ax = fig.add_subplot(3, 2, 6, sharex=ax)
-        plt.grid(True)
-        ax.set_xlabel(r'$s [\mu m]$', fontsize=fontsize)
-        p1, = plt.plot(1.e6 * np.array(beam.s), 1.e6 * np.array(beam.xp), 'r', lw=3)
-        p2, = plt.plot(1.e6 * np.array(beam.s), 1.e6 * np.array(beam.yp), 'g', lw=3)
-
-        ax.legend([p1, p2], [r'$x_p [\mu rad]$', r'$y_p [\mu rad]$'], fontsize=fontsize, loc='best')
-
-    ax.set_xlim([1.e6 * np.amin(beam.s), 1e6 * np.amax(beam.s)])
-
-    fig.subplots_adjust(hspace=0.2, wspace=0.3)
-
-    # if savefig != False:
-    #     if hasattr(beam,'filePath'):
-    #         if savefig == True:
-    #             filetype = 'png'
-    #         else:
-    #
-    #         path = beam.filePath
-    #         name = beam.fileName()
-    #     else:
-    #         if if savefig == True:
-    #
-    #         if debug > 1:
-    #             print('      saving ' + beam.fileName() + '.' + savefig)
-    #         plt.savefig(beam.filePath + '.' + savefig, format=savefig)
-
-    plt.draw()
-    if savefig != False:
-        if savefig == True:
-            savefig = 'png'
-        _logger.debug(ind_str + 'saving ' + beam.filePath + '.' + savefig)
-        plt.savefig(beam.filePath + '.' + savefig, format=savefig)
-
-    if showfig:
-        rcParams["savefig.directory"] = os.path.dirname(beam.filePath)
-        plt.show()
-    else:
-        # plt.close('all')
-        plt.close(fig)
-
-    _logger.debug(ind_str + 'done')
 
 
 """

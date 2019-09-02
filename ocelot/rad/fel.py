@@ -233,6 +233,8 @@ class FelParameters:
             _log_func = _logger.info
         elif type is 'log':
             _log_func = _logger.log
+        elif type is 'print':
+            _log_func = print
         
         _log_func('undulator period = {}'.format(self.xlamd))
         _log_func('undulator K (rms) = {}'.format(self.aw0))
@@ -260,7 +262,7 @@ class FelParameters:
         _log_func('')
         _log_func('Estimation results')
         _log_func('Rho 1D = {}'.format(self.rho1))
-        _log_func('FEL_wavelength = {:.5e} m'.format(self.lambda0))
+        _log_func('FEL_wavelength = {} m'.format(self.lambda0))
         _log_func('FEL_E_photon   = {} eV'.format(h_eV_s * speed_of_light / self.lambda0))
         _log_func('Lg  1D = {} m'.format(self.lg1))
         _log_func('Z_Rayl = {} m'.format(self.zr))
@@ -273,7 +275,7 @@ class FelParameters:
         _log_func('P_shnoise = {}'.format(self.P_sn))
         _log_func('L_sat_magn = {}'.format(self.z_sat_magn))
         _log_func('L_sat_min = {}'.format(self.z_sat_min))
-        _log_func('Theta_critical = {:.5e} rad'.format(self.theta_c))
+        _log_func('Theta_critical = {} rad'.format(self.theta_c))
     
     def P(self, z=None):
         '''
@@ -335,6 +337,34 @@ class FelParameters:
     @property
     def phenh(self):
         return h_eV_s * speed_of_light / self.lambdah
+    
+    def spectrogram(self, z=None):
+        #fast spectrogram evaluation
+        if z is None:
+            z = self.z_sat_min
+        Psat = self.P(z)
+        Psat[np.isnan(Psat)]=0
+        idx = self.idx
+
+        phen0 = self.phen0
+        dphen = phen0 * self.rho3
+        dp = dphen[idx] / 10
+        s_arr = self.s
+        
+        phen_arr = np.arange(np.amin(phen0 - 3 * dphen), np.amax(phen0 + 3 * dphen), dp)
+        spec = np.zeros((s_arr.size, phen_arr.size))
+        for i in range(s_arr.size):
+            if dphen[i] != 0:
+                spec[i] = np.exp(-(phen_arr - phen0[i])**2 / 2 / dphen[i]**2) / np.sqrt(2 * np.pi * dphen[i]**2)
+        spec = spec * Psat[:, np.newaxis]
+        
+        return (s_arr, phen_arr, spec.T)
+        
+    def spectrum(self, z=None):
+        #fast total spectrum evaluation
+        s_arr, phen_arr, spectrogram = self.spectrogram(z = z)
+        spectrum = np.sum(spectrogram, axis=1)
+        return phen_arr, spectrum
 
 class FelParametersArray(FelParameters):
     def __init__(self):
@@ -407,7 +437,7 @@ def calculateFelParameters(input, array=False, method='mxie'):
     return p
 
 
-def beam2fel(beam, lu, K_peak, iwityp=0):
+def beam2fel(beam, lu, K_peak, iwityp=0, method='mxie'):
     '''
     tmp function to estimate fel parameters slice-wise
     '''
@@ -440,7 +470,7 @@ def beam2fel(beam, lu, K_peak, iwityp=0):
     
     tmp.curpeak = beam.I
     
-    fel=calculateFelParameters(tmp, array=True)
+    fel=calculateFelParameters(tmp, array=True, method=method)
     fel.s = beam.s
     return (fel)
 

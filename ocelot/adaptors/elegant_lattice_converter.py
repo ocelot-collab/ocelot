@@ -21,26 +21,31 @@ class ElegantLatticeConverter:
         '''Init Elegant -> Ocelot convertion matrix'''
 
         self.elegant_matrix = {}
-        self.elegant_matrix['DRIF'] = {'type':Drift, 'params':{'L':'l'}}
-        self.elegant_matrix['SBEN'] = {'type':SBend, 'params':{'L':'l', 'ANGLE':'angle', 'E1':'e1', 'E2':'e2', 'TILT':'tilt'}}
-        self.elegant_matrix['RBEN'] = {'type':RBend, 'params':{'L':'l', 'ANGLE':'angle', 'E1':'e1', 'E2':'e2', 'TILT':'tilt'}}
-        self.elegant_matrix['QUAD'] = {'type':Quadrupole, 'params':{'L':'l', 'K1':'k1', 'TILT':'tilt'}}
-        self.elegant_matrix['SEXT'] = {'type':Sextupole, 'params':{'L':'l', 'K2':'k2'}}
-        self.elegant_matrix['MONI'] = {'type':Monitor, 'params':{}}
-        self.elegant_matrix['MARK'] = {'type':Marker, 'params':{}}
-        self.elegant_matrix['WATCH'] = {'type':Marker, 'params':{}}
-        self.elegant_matrix['RFCA'] = {'type':Cavity, 'params':{'L':'l', 'VOLT':['v','1.0e-9'], 'FREQ':'freq', 'PHASE':'phi'}}
-        self.elegant_matrix['HKICK'] = {'type':Hcor, 'params':{'L':'l'}}
-        self.elegant_matrix['VKICK'] = {'type':Vcor, 'params':{'L':'l'}}        
-        self.elegant_matrix['EMATRIX'] = {'type':Matrix, 'params':{'L':'l', 
-                                                'R11':'rm11', 'R12':'rm12', 'R13':'rm13', 'R14':'rm14', 'R15':'rm15', 'R16':'rm16',
-                                                'R21':'rm21', 'R22':'rm22', 'R23':'rm23', 'R24':'rm24', 'R25':'rm25', 'R26':'rm26',
-                                                'R31':'rm31', 'R32':'rm32', 'R33':'rm33', 'R34':'rm34', 'R35':'rm35', 'R36':'rm36',
-                                                'R41':'rm41', 'R42':'rm42', 'R43':'rm43', 'R44':'rm44', 'R45':'rm45', 'R46':'rm46',
-                                                'R51':'rm51', 'R52':'rm52', 'R53':'rm53', 'R54':'rm54', 'R55':'rm55', 'R56':'rm56',
-                                                'R61':'rm61', 'R62':'rm62', 'R63':'rm63', 'R64':'rm64', 'R65':'rm65', 'R66':'rm66',}}
-        self.elegant_matrix['CSRCSBEND'] = {'type':SBend, 'params':{'L':'l', 'ANGLE':'angle', 'E1':'e1', 'E2':'e2', 'TILT':'tilt'}}
-        self.elegant_matrix['RFCW'] = {'type':Cavity, 'params':{'L':'l', 'VOLT':['v','1.0e-9'], 'FREQ':'freq', 'PHASE':'phi'}}
+        self.elegant_matrix['DRIF'] = {'type': Drift, 'params':{'L':'l'}}
+        self.elegant_matrix['LSCDRIFT'] = {'type': Drift, 'params': {'L': 'l'}}
+        self.elegant_matrix['CSRDRIFT'] = {'type': Drift, 'params': {'L': 'l'}}
+        self.elegant_matrix['SOLE'] = {'type': Solenoid, 'params': {'L': 'l'}}
+        self.elegant_matrix['SBEN'] = {'type': SBend, 'params':{'L':'l', 'ANGLE': 'angle', "K1": "k1", "K2": "k2", 'E1': 'e1', 'E2': 'e2', 'TILT':'tilt'}}
+        self.elegant_matrix['SBEND'] = {'type': SBend, 'params':{'L':'l', 'ANGLE': 'angle', "K1": "k1", "K2": "k2",  'E1': 'e1', 'E2': 'e2', 'TILT':'tilt'}}
+        self.elegant_matrix['RBEN'] = {'type': RBend, 'params':{'L':'l', 'ANGLE': 'angle', "K1": "k1", "K2": "k2", 'E1': 'e1', 'E2': 'e2', 'TILT':'tilt'}}
+        self.elegant_matrix['QUAD'] = {'type': Quadrupole, 'params':{'L':'l', 'K1':'k1', "K2": "k2", 'TILT': 'tilt'}}
+        self.elegant_matrix['SEXT'] = {'type': Sextupole, 'params':{'L':'l', 'K2':'k2'}}
+        self.elegant_matrix['MONI'] = {'type': Monitor, 'params':{}}
+        self.elegant_matrix['MARK'] = {'type': Marker, 'params':{}}
+        self.elegant_matrix['WATCH'] = {'type': Marker, 'params':{}}
+        self.elegant_matrix['RFCA'] = {'type': Cavity, 'params':{'L':'l', 'VOLT':['v','1.0e-9'], 'FREQ':'freq', 'PHASE':'phi'}}
+        self.elegant_matrix['HKICK'] = {'type': Hcor, 'params':{'L':'l'}}
+        self.elegant_matrix['VKICK'] = {'type': Vcor, 'params':{'L':'l'}}
+        self.elegant_matrix['WIGGLER'] = {'type': Undulator, 'params': {'L': 'l', 'K': 'Kx', "POLES": ["nperiods", "0.5"]}}
+        self.elegant_matrix['EMATRIX'] = {'type': Matrix, 'params':{'L':'l',
+                                                'R11': 'rm11', 'R12': 'rm12', 'R13': 'rm13', 'R14': 'rm14', 'R15': 'rm15', 'R16': 'rm16',
+                                                'R21': 'rm21', 'R22': 'rm22', 'R23': 'rm23', 'R24': 'rm24', 'R25': 'rm25', 'R26': 'rm26',
+                                                'R31': 'rm31', 'R32': 'rm32', 'R33': 'rm33', 'R34': 'rm34', 'R35': 'rm35', 'R36': 'rm36',
+                                                'R41': 'rm41', 'R42': 'rm42', 'R43': 'rm43', 'R44': 'rm44', 'R45': 'rm45', 'R46': 'rm46',
+                                                'R51': 'rm51', 'R52': 'rm52', 'R53': 'rm53', 'R54': 'rm54', 'R55': 'rm55', 'R56': 'rm56',
+                                                'R61': 'rm61', 'R62': 'rm62', 'R63': 'rm63', 'R64': 'rm64', 'R65': 'rm65', 'R66': 'rm66',}}
+        self.elegant_matrix['CSRCSBEND'] = {'type': SBend, 'params':{'L':'l', 'ANGLE':'angle', "K1": "k1", "K2": "k2", 'E1':'e1', 'E2':'e2', 'TILT':'tilt'}}
+        self.elegant_matrix['RFCW'] = {'type': Cavity, 'params':{'L':'l', 'VOLT':['v','1.0e-9'], 'FREQ':'freq', 'PHASE':'phi'}}
 
 
     def fix_convert_matrix(self):
@@ -112,7 +117,9 @@ class ElegantLatticeConverter:
 
         with open(file_name) as file_link:
             data = file_link.read()
-        
+
+        #  delete comment which is inside line
+        data = re.sub(r'.![^\n]*\n', '\n', data)
         # delete lines with comments
         data = re.sub(r'![^\n]*\n', '', data)
 
@@ -128,7 +135,6 @@ class ElegantLatticeConverter:
 
         #data = re.sub(r'"', '', data)
         data = re.sub(r'\'', '"', data)
-
         lines = data.split('\n')
 
         # parsing lines
@@ -138,6 +144,7 @@ class ElegantLatticeConverter:
         constants = {}
         
         for line in lines:
+            # print(line)
             string = line.upper().strip()
 
             # skip empty and comment lines
@@ -184,11 +191,9 @@ class ElegantLatticeConverter:
         else:
             print('********* ERROR! used unkown cell or element ' + used_cell_name + ' *********')
             sys.exit()
-
         # replace multiplications
         elegant_cell = self.replace_s_multiplications(elegant_cell)
         elegant_cell = self.replace_multiplications(elegant_cell)
-
         # replace cells by elements
         elegant_cell = self.replace_cells(elegant_cell, elegant_elements_dict)
 
@@ -201,10 +206,10 @@ class ElegantLatticeConverter:
             if elem not in elements_list.keys():
 
                 param = elegant_elements_dict[elem].split(',')
-
+                param = [elem.strip() for elem in param]
                 # convert element
                 if param[0] in self.elegant_matrix.keys():
-                    # creat element
+                    # create element
                     elements_list[elem] = self.elegant_matrix[param[0]]['type'](eid=elem)
 
                     # parse parameters
@@ -221,9 +226,10 @@ class ElegantLatticeConverter:
                                 # fix for phi cavity
                                 if elements_list[elem].__class__ == Cavity and tmp == 'phi':
                                     val = 90.0 - val
-                                
-                                elements_list[elem].__dict__[tmp] = val
 
+                                elements_list[elem].__dict__[tmp] = val
+                    if elements_list[elem].__class__ == Undulator:
+                        elements_list[elem].lperiod = elements_list[elem].l/elements_list[elem].nperiods
                 # replace element by Drift (if it has L) or skip
                 else:
                     elements_list[elem] = None
@@ -289,7 +295,7 @@ class ElegantLatticeConverter:
         cell = cell[6:-1]
 
         elements_list = cell.split(',')
-
+        elements_list = [elem.strip() for elem in elements_list]
         check_lines = True
         while check_lines:
             new_list = []
@@ -402,13 +408,13 @@ class ElegantLatticeConverter:
 if __name__ == '__main__':
     pass
     
-    '''
+
     # example of Elegant - Ocelot convertion
     SC = ElegantLatticeConverter()
     read_cell = SC.elegant2ocelot('elbe.lte')
     lattice = MagneticLattice(read_cell)
     write_lattice(lattice, remove_rep_drifts=False)
-    '''
+
     
     '''
     # example of Ocelot - Elegant convertion

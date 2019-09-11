@@ -9,6 +9,12 @@ from ocelot.cpbd.magnetic_lattice import *
 from ocelot.cpbd.elements import *
 from ocelot.cpbd.io import *
 
+def raw_string(s):
+    if isinstance(s, str):
+        s = s.encode('string-escape')
+    elif isinstance(s, unicode):
+        s = s.encode('unicode-escape')
+    return s
 
 class ElegantLatticeConverter:
     """Main Elegant <--> Ocelot lattice converter class"""
@@ -18,16 +24,23 @@ class ElegantLatticeConverter:
     
     
     def init_convert_matrix(self):
-        '''Init Elegant -> Ocelot convertion matrix'''
+        """Init Elegant -> Ocelot convertion matrix"""
 
         self.elegant_matrix = {}
         self.elegant_matrix['DRIF'] = {'type': Drift, 'params':{'L':'l'}}
+        self.elegant_matrix['DRIFT'] = {'type': Drift, 'params': {'L': 'l'}}
         self.elegant_matrix['LSCDRIFT'] = {'type': Drift, 'params': {'L': 'l'}}
         self.elegant_matrix['CSRDRIFT'] = {'type': Drift, 'params': {'L': 'l'}}
         self.elegant_matrix['SOLE'] = {'type': Solenoid, 'params': {'L': 'l'}}
-        self.elegant_matrix['SBEN'] = {'type': SBend, 'params':{'L':'l', 'ANGLE': 'angle', "K1": "k1", "K2": "k2", 'E1': 'e1', 'E2': 'e2', 'TILT':'tilt'}}
-        self.elegant_matrix['SBEND'] = {'type': SBend, 'params':{'L':'l', 'ANGLE': 'angle', "K1": "k1", "K2": "k2",  'E1': 'e1', 'E2': 'e2', 'TILT':'tilt'}}
-        self.elegant_matrix['RBEN'] = {'type': RBend, 'params':{'L':'l', 'ANGLE': 'angle', "K1": "k1", "K2": "k2", 'E1': 'e1', 'E2': 'e2', 'TILT':'tilt'}}
+        self.elegant_matrix['SBEN'] = {'type': SBend,
+                                       'params':{'L':'l', 'ANGLE': 'angle', "K1": "k1", "K2": "k2", "FINT": "fint",
+                                                 'E1': 'e1', 'E2': 'e2', "HGAP": "gap", 'TILT':'tilt'}}
+        self.elegant_matrix['SBEND'] = {'type': SBend,
+                                        'params':{'L':'l', 'ANGLE': 'angle', "K1": "k1", "K2": "k2", "FINT": "fint",
+                                                 'E1': 'e1', 'E2': 'e2', "HGAP": "gap", 'TILT':'tilt'}}
+        self.elegant_matrix['RBEN'] = {'type': RBend,
+                                       'params':{'L':'l', 'ANGLE': 'angle', "K1": "k1", "K2": "k2", "FINT": "fint",
+                                                 'E1': 'e1', 'E2': 'e2', "HGAP": "gap", 'TILT':'tilt'}}
         self.elegant_matrix['QUAD'] = {'type': Quadrupole, 'params':{'L':'l', 'K1':'k1', "K2": "k2", 'TILT': 'tilt'}}
         self.elegant_matrix['SEXT'] = {'type': Sextupole, 'params':{'L':'l', 'K2':'k2'}}
         self.elegant_matrix['MONI'] = {'type': Monitor, 'params':{}}
@@ -49,7 +62,7 @@ class ElegantLatticeConverter:
 
 
     def fix_convert_matrix(self):
-        '''Init and fix Ocelot -> Elegant convertion matrix'''
+        """Init and fix Ocelot -> Elegant convertion matrix"""
 
         self.init_convert_matrix()
 
@@ -59,9 +72,9 @@ class ElegantLatticeConverter:
 
 
     def calc_rpn(self, expression, constants={}, info=''):
-        '''
+        """
         Calculation of the expression written in reversed polish notation
-        '''
+        """
         
         operators = {'+': operator.add, '-': operator.sub, '*': operator.mul, '/': operator.truediv}
         functions = {'SIN': np.sin, 'COS': np.cos, 'TAN': np.tan, 'ASIN': np.arcsin, 'ACOS': np.arccos, 'ATAN': np.arctan, 'SQRT': np.sqrt}
@@ -91,9 +104,9 @@ class ElegantLatticeConverter:
     
     
     def convert_val(self, str, constants, info):
-        '''
+        """
         Convert string input value to float or change input string value by value from constants array
-        '''
+        """
         
         try:
             value = float(str)
@@ -118,17 +131,23 @@ class ElegantLatticeConverter:
         with open(file_name) as file_link:
             data = file_link.read()
 
-        #  delete comment which is inside line
-        data = re.sub(r'.![^\n]*\n', '\n', data)
-        # delete lines with comments
-        data = re.sub(r'![^\n]*\n', '', data)
-
+        # delete comments
+        data = re.sub(r'![^\n]*\n', '\n', data)
         # merge splitted lines
         data = re.sub(r'&\s*\n', '', data)
 
         # element names correction
-        bad_element_names = re.findall(r'"(.*)":', data)
+        # remove parentheses from the names
+        bad_element_names = re.findall(r'.\[.*\].*:', data)
+        for element in bad_element_names:
+            element = element.replace(":", "")
+            element = element.strip()
+            element_new = element.replace("[", "")
+            element_new = element_new.replace("]", "")
+            data = data.replace(element, element_new)
 
+        # element names correction
+        bad_element_names = re.findall(r'"(.*)":', data)
         for element in bad_element_names:
             element_new = re.sub(r'[\W]+', '_', element)
             data = re.sub(r''+str(element), str(element_new), data)
@@ -408,13 +427,13 @@ class ElegantLatticeConverter:
 if __name__ == '__main__':
     pass
     
-
+    """
     # example of Elegant - Ocelot convertion
     SC = ElegantLatticeConverter()
     read_cell = SC.elegant2ocelot('elbe.lte')
     lattice = MagneticLattice(read_cell)
     write_lattice(lattice, remove_rep_drifts=False)
-
+    """
     
     '''
     # example of Ocelot - Elegant convertion

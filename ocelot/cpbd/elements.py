@@ -118,13 +118,16 @@ class Bend(Element):
     k1 - strength of quadrupole lens in [1/m^2],
     k2 - strength of sextupole lens in [1/m^3],
     tilt - tilt of lens in [rad],
-    e1 - entrance angle with regards to a sector magnet in [rad],
-    e2 - exit angle with regards to a sector magnet [rad].
+    e1 - the angle of inclination of the entrance face [rad],
+    e2 - the angle of inclination of the exit face [rad].
     fint - fringe field integral
     fintx - allows (fintx > 0) to set fint at the element exit different from its entry value.
+    gap - the magnet gap [m], NOTE in MAD and ELEGANT: HGAP = gap/2
+    h_pole1 - the curvature (1/r) of the entrance face
+    h_pole1 - the curvature (1/r) of the exit face
     """
     def __init__(self, l=0., angle=0., k1=0., k2=0., e1=0., e2=0., tilt=0.0,
-                 gap=0., h_pole1=0., h_pole2=0., fint=0., fintx=0., eid=None):
+                 gap=0., h_pole1=0., h_pole2=0., fint=0., fintx=None, eid=None):
         Element.__init__(self, eid)
         self.l = l
         self.angle = angle
@@ -137,7 +140,7 @@ class Bend(Element):
         self.h_pole2 = h_pole2
         self.fint = fint
         self.fintx = fint
-        if fintx >= 0:
+        if fintx is not None:
             self.fintx = fintx
         self.tilt = tilt
 
@@ -172,11 +175,16 @@ class SBend(Bend):
     k1 - strength of quadrupole lens in [1/m^2],
     k2 - strength of sextupole lens in [1/m^3],
     tilt - tilt of lens in [rad],
-    e1 - entrance angle in [rad],
-    e2 - exit angle in magnet [rad].
+    e1 - the angle of inclination of the entrance face [rad],
+    e2 - the angle of inclination of the exit face [rad].
+    fint - fringe field integral
+    fintx - allows (fintx > 0) to set fint at the element exit different from its entry value.
+    gap - the magnet gap [m], NOTE in MAD and ELEGANT: HGAP = gap/2
+    h_pole1 - the curvature (1/r) of the entrance face
+    h_pole1 - the curvature (1/r) of the exit face
     """
     def __init__(self, l=0., angle=0.0, k1=0.0, k2=0., e1=0.0, e2=0.0, tilt=0.0,
-                 gap=0, h_pole1=0., h_pole2=0., fint=0., fintx=0., eid=None):
+                 gap=0, h_pole1=0., h_pole2=0., fint=0., fintx=None, eid=None):
 
         Bend.__init__(self, l=l, angle=angle, k1=k1, k2=k2, e1=e1, e2=e2, tilt=tilt,
                       gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, fintx=fintx, eid=eid)
@@ -190,11 +198,16 @@ class RBend(Bend):
     k1 - strength of quadrupole lens in [1/m^2],
     k2 - strength of sextupole lens in [1/m^3],
     tilt - tilt of lens in [rad],
-    e1 - entrance angle in [rad],
-    e2 - exit angle in [rad].
+    e1 - the angle of inclination of the entrance face [rad],
+    e2 - the angle of inclination of the exit face [rad].
+    fint - fringe field integral
+    fintx - allows (fintx > 0) to set fint at the element exit different from its entry value.
+    gap - the magnet gap [m], NOTE in MAD and ELEGANT: HGAP = gap/2
+    h_pole1 - the curvature (1/r) of the entrance face
+    h_pole1 - the curvature (1/r) of the exit face
     """
     def __init__(self, l=0., angle=0., k1=0., k2=0., e1=None, e2=None, tilt=0.,
-                 gap=0, h_pole1=0., h_pole2=0., fint=0., fintx=0., eid=None):
+                 gap=0, h_pole1=0., h_pole2=0., fint=0., fintx=None, eid=None):
         if e1 == None:
             e1 = angle/2.
         else:

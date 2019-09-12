@@ -63,7 +63,58 @@ def test_ocelot2elegant(tws0, method, update_ref_values=False):
     
     result = check_matrix(r_matrix, r_matrix_ref, TOL, assert_info=' r_matrix - ')
     assert check_result(result)
-  
+
+
+def test_elegant2ocelot_flash(tws0, method, update_ref_values=False):
+    """elegant2ocelot convertion function test"""
+
+    SC = ElegantLatticeConverter()
+    cell = SC.elegant2ocelot(REF_RES_DIR + 'FLASH1.lat')
+
+    lattice = MagneticLattice(cell, method=method)
+
+    r_matrix = lattice_transfer_map(lattice, tws0.E)
+
+    if update_ref_values:
+        return numpy2json(r_matrix)
+
+    r_matrix_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json'))
+
+    result = check_matrix(r_matrix, r_matrix_ref, TOL, assert_info=' r_matrix - ')
+    assert check_result(result)
+
+
+def test_ocelot2elegant_flash(tws0, method, update_ref_values=False):
+    """elegant2ocelot + ocelot2elegant + elegant2ocelot converters test"""
+
+    # convert Elegant -> Ocelot
+    SC = ElegantLatticeConverter()
+    cell = SC.elegant2ocelot(REF_RES_DIR + 'FLASH1.lat')
+
+    lattice = MagneticLattice(cell, method=method)
+
+    # convert Ocelot -> Elegant
+    tmp_file_name = REF_RES_DIR + 'tmp1.lte'
+    SC = ElegantLatticeConverter()
+    SC.ocelot2elegant(lattice, file_name=tmp_file_name)
+
+    # convert Elegant -> Ocelot
+    SC = ElegantLatticeConverter()
+    cell = SC.elegant2ocelot(tmp_file_name)
+    if os.path.isfile(tmp_file_name):
+        os.remove(tmp_file_name)
+
+    lattice = MagneticLattice(cell, method=method)
+
+    r_matrix = lattice_transfer_map(lattice, tws0.E)
+
+    if update_ref_values:
+        return numpy2json(r_matrix)
+
+    r_matrix_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json'))
+
+    result = check_matrix(r_matrix, r_matrix_ref, TOL, assert_info=' r_matrix - ')
+    assert check_result(result)
 
 def setup_module(module):
 
@@ -100,7 +151,9 @@ def test_update_ref_values(tws0, method, cmdopt):
     update_functions = []
     update_functions.append('test_elegant2ocelot')
     update_functions.append('test_ocelot2elegant')
-    
+    update_functions.append('test_elegant2ocelot_flash')
+    update_functions.append('test_ocelot2elegant_flash')
+
     if cmdopt in update_functions:
         result = eval(cmdopt)(tws0, method, True)
         if result is None:

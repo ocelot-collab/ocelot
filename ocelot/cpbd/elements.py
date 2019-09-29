@@ -273,6 +273,7 @@ class Undulator(Element):
     Kx - undulator paramenter for vertical field; \n
     Ky - undulator parameter for horizantal field;\n
     field_file - absolute path to magnetic field data;\n
+    mag_field - None by default, the magnetic field map function - (Bx, By, Bz) = f(x, y, z)
     eid - id of undulator.
     """
     def __init__(self, lperiod=0., nperiods=0, Kx=0., Ky=0., field_file=None, eid=None):
@@ -282,14 +283,15 @@ class Undulator(Element):
         self.l = lperiod * nperiods
         self.Kx = Kx
         self.Ky = Ky
-        self.solver = "linear"  # can be "lin" is linear matrix,  "sym" - symplectic method and "rk" is Runge-Kutta
-        self.phase = 0.         # phase between Bx and By + pi/4 (spiral undulator)
+        self.solver = "linear"    # can be "lin" is linear matrix,  "sym" - symplectic method and "rk" is Runge-Kutta
+        self.phase = 0.           # phase between Bx and By + pi/4 (spiral undulator)
         
         self.ax = -1              # width of undulator, when ax is negative undulator width is infinite
                                   # I need this for analytic description of undulator
         
         self.field_file = field_file
         self.field_map = FieldMap(self.field_file)
+        self.mag_field = None     # the magnetic field map function - (Bx, By, Bz) = f(x, y, z)
         self.v_angle = 0.
         self.h_angle = 0.
                             

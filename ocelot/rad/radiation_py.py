@@ -218,7 +218,7 @@ def und_field_py(x, y, z, lperiod, Kx, nperiods=None):
 
     kx = 0.
     kz = 2*pi/lperiod
-    ky = np.sqrt(kz*kz - kx*kx)
+    ky = np.sqrt(kz*kz + kx*kx)
     c = speed_of_light
     m0 = m_e_eV
     B0 = Kx*m0*kz/c
@@ -725,9 +725,9 @@ def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy
             U0 = U0 + Uq
 
             mag_length = elem.l
-            try:
+            if elem.mag_field is not None:
                 mag_field = elem.mag_field
-            except:
+            else:
                 if len(elem.field_map.z_arr) != 0:
                     #print("Field_map exist! Creating mag_field(x, y, z)")
                     unit_coef = 0.001 if elem.field_map.units == "mm" else 1

@@ -448,15 +448,19 @@ def calculateFelParameters(input, array=False, method='mxie'):
     return p
 
 
-def beam2fel(beam, lu, K_peak, iwityp=0, method='mxie'):
+def beam2fel(beam, lu, K_peak, iwityp=0, method='mxie', hn=1, qf=0):
     '''
     tmp function to estimate fel parameters slice-wise
+    hn = harmonic number
+    qf = account for quantum fluctuations
     '''
     if beam.len() == 0:
         raise ValueError('Beam length should not be zero')
     
     class tmp():
         pass
+    tmp.hn=hn
+    tmp.qf=qf
     tmp.gamma0 = beam.g
     tmp.delgam = beam.dg
     tmp.xlamd = lu # undulator period

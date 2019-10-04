@@ -332,7 +332,7 @@ def create_fel_lattice_tmp(und_N = 34,
     return (MagneticLattice(lat), None, cell)
 
 
-def create_exfel_lattice(beamline = 'sase1', inters_phi=0, inters_K = "K_und"):
+def create_fel_beamline(beamline = 'sase1', inters_phi=0, inters_K = "K_und"):
     if beamline in ['sase1', 1, 'sase2', 2, 'EuXFEL_SASE1', 'EuXFEL_SASE2']:
         return create_fel_lattice(und_N = 35,
                         und_L = 5-0.04,
@@ -363,6 +363,10 @@ def create_exfel_lattice(beamline = 'sase1', inters_phi=0, inters_K = "K_und"):
                             )
     else:
         raise ValueError('Unknown beamline')
+
+def create_exfel_lattice(*agrs, **kwargs):
+    _logger.warning('will be deprecated, use create_fel_beamline instead')
+    return create_fel_beamline(*agrs, **kwargs)
 
 def prepare_el_optics(beam, lat_pkg, E_photon=None, beta_av=None, s=None):
     from ocelot.rad.undulator_params import Ephoton2K

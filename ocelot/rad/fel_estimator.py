@@ -13,7 +13,7 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
-def beamlat2fel(beam, lat, smear_m=None, method='mxie'):
+def beamlat2fel(beam, lat, smear_m=None, method='mxie', qf=0):
     
     _logger.info('estimating fel from beam and lat')
     
@@ -42,7 +42,7 @@ def beamlat2fel(beam, lat, smear_m=None, method='mxie'):
     beam_tmp.smear(smear_m)
     update_effective_beta(beam_tmp, lat)
     beam_tmp.I[beam_tmp.I==0] = np.nan
-    fel = beam2fel(beam_tmp, l_period, K_peak, method='mxie')
+    fel = beam2fel(beam_tmp, l_period, K_peak, method='mxie', qf=qf)
     
     return fel
 

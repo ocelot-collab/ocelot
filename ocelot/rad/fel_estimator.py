@@ -36,7 +36,7 @@ def beamlat2fel(beam, lat, smear_m=None, method='mxie'):
     
     if smear_m is None:
         tcoh = beam2fel(beam_pk, l_period, K_peak, iwityp=iwityp).tcoh()
-        smear_m = tcoh * speed_of_light * 2 #smear window
+        smear_m = tcoh * speed_of_light * 4 #smear window
 
     beam_tmp = deepcopy(beam)
     beam_tmp.smear(smear_m)

@@ -170,15 +170,14 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
     _logger.debug(ind_str + 'done')
 
 
-def plot_fel_power_z(fel, z=None, fig=None, magn_coeff=1, fs=False):
+def plot_estimator_power_z(fel, z=None, fig=None, magn_coeff=1, fs=False):
     '''
     plots estimated FEL power at position z
     fel is FelParamterArray object
     '''
-    if fig.__class__ == int or fig is None:
-        fig = plt.figure(fig)
-    else:
-        plt.clf()
+    if fig == None:
+        fig = plt.figure()
+    fig.clf()
     ax = fig.gca()
     
     if z is None:
@@ -198,12 +197,12 @@ def plot_fel_power_z(fel, z=None, fig=None, magn_coeff=1, fs=False):
     #fig.savefig(exp_dir + 'power_sat.png', format = 'png')
     fig.show()
 
-def plot_fel_spectrogram(fel, z=None, fig=None, cmap='Reds'):
+def plot_estimator_spectrogram(fel, z=None, fig=None, cmap='Reds'):
     
-    if fig.__class__ == int or fig is None:
-        fig = plt.figure(fig)
-    else:
-        plt.clf()
+    if fig == None:
+        fig = plt.figure()
+    fig.clf()
+    
     ax = fig.gca()
     
     # if z is None:
@@ -231,12 +230,12 @@ def plot_fel_spectrogram(fel, z=None, fig=None, cmap='Reds'):
     fig.show()
     
     
-def plot_fel_spectrum(fel, z=None, fig=None):
+def plot_estimator_spectrum(fel, z=None, fig=None):
     
-    if fig.__class__ == int or fig is None:
-        fig = plt.figure(fig)
-    else:
-        plt.clf()
+    if fig == None:
+        fig = plt.figure()
+    fig.clf()
+    
     ax = fig.gca()
     
     phen_arr, spectrum = fel.spectrum(z = z)
@@ -246,12 +245,12 @@ def plot_fel_spectrum(fel, z=None, fig=None):
     ax.autoscale(tight=1)
     fig.show()
     
-def plot_fel_power_evo(fel, fig=None, und_duty_factor=1):
+def plot_estimator_power_evo(fel, fig=None, und_duty_factor=1):
     
-    if fig.__class__ == int or fig is None:
-        fig = plt.figure(fig)
-    else:
-        plt.clf()
+    if fig == None:
+        fig = plt.figure()
+    fig.clf()
+    
     ax = fig.gca()
     
     P=[]
@@ -267,12 +266,12 @@ def plot_fel_power_evo(fel, fig=None, und_duty_factor=1):
     ax.set_xlabel('z [m]')
     fig.show()
     
-def plot_fel_energy_evo(fel, fig=None, und_duty_factor=1):
+def plot_estimator_energy_evo(fel, fig=None, und_duty_factor=1):
     
-    if fig.__class__ == int or fig is None:
-        fig = plt.figure(fig)
-    else:
-        plt.clf()
+    if fig == None:
+        fig = plt.figure()
+    fig.clf()
+    
     ax = fig.gca()
     
     E=[]

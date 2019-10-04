@@ -970,6 +970,19 @@ class StokesParameters:
         else:
             _logger.error(ind_str + 'argument "mode" should be in ["sum", "mean"]')
             raise ValueError('argument "mode" should be in ["sum", "mean"]')
+            
+    # def bin_z(self, ds=1e-6)
+        # S = deepcopy(self)
+        # nz, ny, nx = self.s0.shape
+        # dz = S.sc_z[1]-S.sc_z[0]
+        # n_bin = int(ds/dz)
+        
+        # def binning(arr, nbin):
+            # b = np.zeros_like(arr[arr.shape[0]//nbin*nbin,::])
+            # for i in range(nbin):
+                # b+=arr[i:arr.shape[0]//nbin*nbin:nbin,::]
+            # b /= nbin
+            # return b
 
 
 class HeightProfile:

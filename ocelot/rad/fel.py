@@ -27,6 +27,11 @@ class FelParameters:
     def eval(self, method='mxie'):
         _logger.debug('Calculating FEL parameters')
         
+        if np.size(self.I) > 1:
+            tdp=True
+        else:
+            tdp=False
+        
         if not hasattr(self, 'hn'):
             self.hn=1 #harmonic number
         
@@ -83,9 +88,12 @@ class FelParameters:
         # h_eV_s * speed_of_light / self.lambda0
         self.emit_nn = 2 * np.pi * emit_n / self.lambdah / self.gamma0 ## emittance normalized as in Eq.6, 10.1103/PhysRevSTAB.15.080702
         
-        if np.any(self.emit_nn < 1) or np.any(self.emit_nn) > 5:
-            _logger.warning('1 <! emittance ({}) <! 5, SSY approx. might be incorrect'.format(self.emit_nn))
+        if (np.any(self.emit_nn < 1) or np.any(self.emit_nn) > 5):
             self.inaccurate = True 
+            if tdp:
+                _logger.warning('1 <! min(emittance) {} <! 5, SSY approx. might be incorrect'.format(np.nanmin(self.emit_nn)))
+            else:
+                _logger.warning('1 <! emittance {} <! 5, SSY approx. might be incorrect'.format(self.emit_nn))
             #Eq.6, DOI:10.1103/PhysRevSTAB.15.080702
         
         if self.qf == 1: #account for quantum fluctuations
@@ -157,7 +165,7 @@ class FelParameters:
         if self.qf == 1:
             self.delta_q = 5.5e4 * (I_Alfven / self.I)**(3/2) * lambda_C_r * ro_e * emit_n**2 / self.lambda0**(11/4) / self.xlamd**(5/4) * (1 + self.aw0**2)**(9/4) * F_aw / (self.aw0 * self.fch**3 * self.hn**(5/3))
             
-            if self.delta_q >= 1:
+            if np.any(self.delta_q >= 1):
                 _logger.warning('quantum fluctuation effect exceeds 1, estimation not applicable anymore')
                 self.delta_q = 0.999
                 self.inaccurate = True
@@ -168,7 +176,10 @@ class FelParameters:
         
         self.delta_criterion = 2.5 * (1 - np.exp(-0.5 * self.emit_nn**2))
         if np.any(self.delta_eff > self.delta_criterion):
-            _logger.warning('delta_eff ({}) > {}; SSY approx. might be incorrect'.format(self.delta_eff, self.delta_criterion))
+            if tdp:
+                _logger.warning('delta_eff > delta_criterion; SSY approx. might be incorrect')
+            else:
+                _logger.warning('delta_eff {} > {}; SSY approx. might be incorrect'.format(self.delta_eff, self.delta_criterion))
             self.inaccurate = True
                 #Eq.7, DOI:10.1103/PhysRevSTAB.15.080702
                 #Eq.14+text, DOI:10.1016/j.optcom.2004.02.071

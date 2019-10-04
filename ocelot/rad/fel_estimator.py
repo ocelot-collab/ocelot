@@ -47,11 +47,11 @@ def beamlat2fel(beam, lat, smear_m=None, method='mxie'):
     return fel
 
 
-def parraylat2fel(parray, lat, step=1e-7):
+def parraylat2fel(parray, lat, smear=1e-7):
     
     _logger.info('estimating fel from parray and lat')
     
-    beam = parray2beam(parray, step = 2 * step)
+    beam = parray2beam(parray, step = 2 * smear)
     
-    return beamlat2fel(beam, lat, smear_m = step)
+    return beamlat2fel(beam, lat, smear_m = smear)
     

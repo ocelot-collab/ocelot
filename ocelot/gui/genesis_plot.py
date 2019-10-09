@@ -238,7 +238,7 @@ def plot_gen_out_z(g, z=np.inf, params=['rad_power+el_current', 'el_energy+el_es
     fig_name - override figure name
     savefig - save figure
     showfig - show figure
-    print_text - print text with additional info
+    showtext - print text with additional info
     """
 
     import matplotlib.ticker as ticker

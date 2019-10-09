@@ -959,7 +959,7 @@ def sortrows(x, col):
     return x[:, x[col].argsort()]
 
 
-def convmode(A, B, mode):
+def convmode_py(A, B, mode):
 
     if mode == 2:
         C = np.convolve(A, B)
@@ -970,9 +970,19 @@ def convmode(A, B, mode):
         C1 = np.convolve(A, B)
         C[:n] = C1[i:n+i]
     return C
+convmode = convmode_py if not nb_flag else nb.jit(nopython=True)(convmode_py)
 
+def s2cur_auxil_py(A, xiA, C, N, I):
+    for k in range(len(A)):
+        i = I[k]
+        if i > N-1:
+            i = N-1
+        C[i] = C[i] + xiA[k]
+        C[i+1] = C[i+1] + (1 - xiA[k])
 
-def s_to_cur_py(A, sigma, q0, v):
+s2cur_auxil = s2cur_auxil_py if not nb_flag else nb.jit(nopython=True)(s2cur_auxil_py)
+
+def s_to_cur(A, sigma, q0, v):
     """
     Function to calculate beam current
 
@@ -993,26 +1003,21 @@ def s_to_cur_py(A, sigma, q0, v):
     C = np.zeros(N+1)
 
     B[:, 0] = np.arange(0, (N+0.5)*s, s) + a
-    N = N+1 #np.shape(B)[0]
+    N = N + 1 #np.shape(B)[0]
     cA = (A - a)/s
     I = np.int_(np.floor(cA))
     xiA = 1 + I - cA
-    for k in range(len(A)):
-        i = I[k]
-        if i > N-1:
-            i = N-1
-        C[i] = C[i] + xiA[k]
-        C[i+1] = C[i+1] + (1 - xiA[k])
+    s2cur_auxil(A, xiA, C, N, I)
 
     K = np.floor(Nsigma*sigma/s + 0.5)
     G = np.exp(-0.5*(np.arange(-K, K+1)*s/sigma)**2)
     G = G/np.sum(G)
     B[:, 1] = convmode(C, G, 1)
-    koef = q0*v/(s*np.sum(B[:, 1]))
-    B[:, 1] = koef*B[:, 1]
+    koef = q0 * v / (s*np.sum(B[:, 1]))
+    B[:, 1] = koef * B[:, 1]
     return B
 
-s_to_cur = s_to_cur_py if not nb_flag else nb.jit(s_to_cur_py)
+#s_to_cur = s_to_cur_py if not nb_flag else nb.jit(s_to_cur_py)
 
 def slice_analysis_py(z, x, xs, M, to_sort):
     """
@@ -1028,7 +1033,7 @@ def slice_analysis_py(z, x, xs, M, to_sort):
         z = z[indx]
         x = x[indx]
         xs = xs[indx]
-        P=[]
+
     N=len(x)
     mx = np.zeros(N)
     mxs= np.zeros(N)

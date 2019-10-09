@@ -118,13 +118,16 @@ class Bend(Element):
     k1 - strength of quadrupole lens in [1/m^2],
     k2 - strength of sextupole lens in [1/m^3],
     tilt - tilt of lens in [rad],
-    e1 - entrance angle with regards to a sector magnet in [rad],
-    e2 - exit angle with regards to a sector magnet [rad].
+    e1 - the angle of inclination of the entrance face [rad],
+    e2 - the angle of inclination of the exit face [rad].
     fint - fringe field integral
     fintx - allows (fintx > 0) to set fint at the element exit different from its entry value.
+    gap - the magnet gap [m], NOTE in MAD and ELEGANT: HGAP = gap/2
+    h_pole1 - the curvature (1/r) of the entrance face
+    h_pole1 - the curvature (1/r) of the exit face
     """
     def __init__(self, l=0., angle=0., k1=0., k2=0., e1=0., e2=0., tilt=0.0,
-                 gap=0., h_pole1=0., h_pole2=0., fint=0., fintx=0., eid=None):
+                 gap=0., h_pole1=0., h_pole2=0., fint=0., fintx=None, eid=None):
         Element.__init__(self, eid)
         self.l = l
         self.angle = angle
@@ -137,7 +140,7 @@ class Bend(Element):
         self.h_pole2 = h_pole2
         self.fint = fint
         self.fintx = fint
-        if fintx >= 0:
+        if fintx is not None:
             self.fintx = fintx
         self.tilt = tilt
 
@@ -172,11 +175,16 @@ class SBend(Bend):
     k1 - strength of quadrupole lens in [1/m^2],
     k2 - strength of sextupole lens in [1/m^3],
     tilt - tilt of lens in [rad],
-    e1 - entrance angle in [rad],
-    e2 - exit angle in magnet [rad].
+    e1 - the angle of inclination of the entrance face [rad],
+    e2 - the angle of inclination of the exit face [rad].
+    fint - fringe field integral
+    fintx - allows (fintx > 0) to set fint at the element exit different from its entry value.
+    gap - the magnet gap [m], NOTE in MAD and ELEGANT: HGAP = gap/2
+    h_pole1 - the curvature (1/r) of the entrance face
+    h_pole1 - the curvature (1/r) of the exit face
     """
     def __init__(self, l=0., angle=0.0, k1=0.0, k2=0., e1=0.0, e2=0.0, tilt=0.0,
-                 gap=0, h_pole1=0., h_pole2=0., fint=0., fintx=0., eid=None):
+                 gap=0, h_pole1=0., h_pole2=0., fint=0., fintx=None, eid=None):
 
         Bend.__init__(self, l=l, angle=angle, k1=k1, k2=k2, e1=e1, e2=e2, tilt=tilt,
                       gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, fintx=fintx, eid=eid)
@@ -190,11 +198,16 @@ class RBend(Bend):
     k1 - strength of quadrupole lens in [1/m^2],
     k2 - strength of sextupole lens in [1/m^3],
     tilt - tilt of lens in [rad],
-    e1 - entrance angle in [rad],
-    e2 - exit angle in [rad].
+    e1 - the angle of inclination of the entrance face [rad],
+    e2 - the angle of inclination of the exit face [rad].
+    fint - fringe field integral
+    fintx - allows (fintx > 0) to set fint at the element exit different from its entry value.
+    gap - the magnet gap [m], NOTE in MAD and ELEGANT: HGAP = gap/2
+    h_pole1 - the curvature (1/r) of the entrance face
+    h_pole1 - the curvature (1/r) of the exit face
     """
     def __init__(self, l=0., angle=0., k1=0., k2=0., e1=None, e2=None, tilt=0.,
-                 gap=0, h_pole1=0., h_pole2=0., fint=0., fintx=0., eid=None):
+                 gap=0, h_pole1=0., h_pole2=0., fint=0., fintx=None, eid=None):
         if e1 == None:
             e1 = angle/2.
         else:
@@ -260,6 +273,7 @@ class Undulator(Element):
     Kx - undulator paramenter for vertical field; \n
     Ky - undulator parameter for horizantal field;\n
     field_file - absolute path to magnetic field data;\n
+    mag_field - None by default, the magnetic field map function - (Bx, By, Bz) = f(x, y, z)
     eid - id of undulator.
     """
     def __init__(self, lperiod=0., nperiods=0, Kx=0., Ky=0., field_file=None, eid=None):
@@ -269,14 +283,15 @@ class Undulator(Element):
         self.l = lperiod * nperiods
         self.Kx = Kx
         self.Ky = Ky
-        self.solver = "linear"  # can be "lin" is linear matrix,  "sym" - symplectic method and "rk" is Runge-Kutta
-        self.phase = 0.         # phase between Bx and By + pi/4 (spiral undulator)
+        self.solver = "linear"    # can be "lin" is linear matrix,  "sym" - symplectic method and "rk" is Runge-Kutta
+        self.phase = 0.           # phase between Bx and By + pi/4 (spiral undulator)
         
         self.ax = -1              # width of undulator, when ax is negative undulator width is infinite
                                   # I need this for analytic description of undulator
         
         self.field_file = field_file
         self.field_map = FieldMap(self.field_file)
+        self.mag_field = None     # the magnetic field map function - (Bx, By, Bz) = f(x, y, z)
         self.v_angle = 0.
         self.h_angle = 0.
                             

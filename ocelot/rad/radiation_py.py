@@ -210,34 +210,15 @@ def traj2motion(traj):
     motion.Bx = bspline(motion.z, motion.Bx, Z)
     motion.By = bspline(motion.z, motion.By, Z)
     motion.z = Z*1000.
-    #plt.plot(motion.bx.flatten()**2)
-    #plt.show()
+
     return motion
 
 
 def und_field_py(x, y, z, lperiod, Kx, nperiods=None):
-    if nperiods is None:
-        ph_shift = 0
-        z_coef = 1
-    else:
-        ph_shift = np.pi / 2
-        if np.__version__ < "1.13":
-            heaviside = lambda x: np.piecewise(x, [x < 0, x >= 0], [0, 1])
-
-            z_coef = (0.25 * heaviside(z) + 0.5 * heaviside(z - lperiod / 2.) + 0.25 * heaviside(
-                z - lperiod)
-                      - 0.25 * heaviside(z - (nperiods - 1) * lperiod) - 0.5 * heaviside(
-                        z - (nperiods - 0.5) * lperiod)
-                      - 0.25 * heaviside(z - nperiods * lperiod))
-        else:
-            z_coef = (0.25 * np.heaviside(z, 0) + 0.5 * np.heaviside(z - lperiod / 2., 0) + 0.25 * np.heaviside(z - lperiod, 0)
-                  - 0.25 * np.heaviside(z - (nperiods - 1) * lperiod, 0) - 0.5 * np.heaviside(
-                    z - (nperiods - 0.5) * lperiod, 0)
-                  - 0.25 * np.heaviside(z - nperiods * lperiod, 0))
 
     kx = 0.
     kz = 2*pi/lperiod
-    ky = np.sqrt(kz*kz - kx*kx)
+    ky = np.sqrt(kz*kz + kx*kx)
     c = speed_of_light
     m0 = m_e_eV
     B0 = Kx*m0*kz/c
@@ -247,15 +228,28 @@ def und_field_py(x, y, z, lperiod, Kx, nperiods=None):
     kx_x = kx*x
     ky_y = ky*y
     kz_z = kz*z
+
+    cosz = np.cos(kz_z)
+
+    if nperiods is not None:
+
+        ph_shift = np.pi / 2.
+        heaviside = lambda x: 0.5 * (np.sign(x) + 1)
+        z_coef = (0.25 * heaviside(z) + 0.5 * heaviside(z - lperiod / 2.) + 0.25 * heaviside(z - lperiod)
+                      - 0.25 * heaviside(z - (nperiods - 1) * lperiod) - 0.5 * heaviside(
+                        z - (nperiods - 0.5) * lperiod)
+                      - 0.25 * heaviside(z - nperiods * lperiod))
+        cosz = np.cos(kz_z + ph_shift) * z_coef
+
     cosx = np.cos(kx_x)
     sinhy = np.sinh(ky_y)
-    cosz = np.cos(kz_z + ph_shift)*z_coef
+    #cosz = np.cos(kz_z + ph_shift)*z_coef
     Bx = k1*np.sin(kx_x)*sinhy*cosz #// here kx is only real
     By = B0*cosx*np.cosh(ky_y)*cosz
     Bz = k2*cosx*sinhy*np.sin(kz_z)
     return (Bx, By, Bz)
 
-und_field = und_field_py if not nb_flag else nb.jit(und_field_py)
+und_field = und_field_py if not nb_flag else nb.jit(forceobj=False)(und_field_py)
 
 
 def energy_loss_und(energy, Kx, lperiod, L, energy_loss=False):
@@ -731,9 +725,9 @@ def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy
             U0 = U0 + Uq
 
             mag_length = elem.l
-            try:
+            if elem.mag_field is not None:
                 mag_field = elem.mag_field
-            except:
+            else:
                 if len(elem.field_map.z_arr) != 0:
                     #print("Field_map exist! Creating mag_field(x, y, z)")
                     unit_coef = 0.001 if elem.field_map.units == "mm" else 1

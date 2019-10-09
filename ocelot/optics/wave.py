@@ -1773,7 +1773,7 @@ def dfl_disperse(dfl, coeff, E_ph0=None, return_result=False):
 
 def dfl_ap(*args, **kwargs):
     _logger.warning('"dfl_ap" is deprecated, use "dfl_ap_rect" instead for rectangular aperture')
-    return dfl_ap_square(*args, **kwargs)
+    return dfl_ap_rect(*args, **kwargs)
         
 def dfl_ap_rect(dfl, ap_x=np.inf, ap_y=np.inf):
     """

@@ -227,7 +227,7 @@ class MagneticLattice:
         edge.dy = bend.dy
         edge.h_pole = bend.h_pole1
         edge.gap = bend.gap
-        edge.fint = bend.fintx
+        edge.fint = bend.fint
         edge.pos = 1
 
     def update_edge_e2(self, edge, bend):

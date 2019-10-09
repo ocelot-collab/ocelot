@@ -26,6 +26,9 @@ rcParams.update(params)
 # rcParams["savefig.directory"] = os.chdir(os.path.dirname(__file__)) but __file__ appears to be genesis_plot
 matplotlib.pyplot.ioff() #turn off interactive mode
 
+#matplotlib.pyplot.style.use("dark_background") White axes on dark background
+# matplotlib.use('Agg')
+
 # check if Xserver is connected
 plotting_error=None
 #try:

@@ -169,6 +169,9 @@ def transfer_map_rotation(R, T, tilt):
 
 
 class TransferMap:
+    """
+    TransferMap is a basic linear transfer map for all elements.
+    """
     def __init__(self):
         self.dx = 0.
         self.dy = 0.
@@ -747,9 +750,26 @@ class TWCavityTM(TransferMap):
 
 
 class MethodTM:
-    def __init__(self, params=None):
+    """
+    The class creates a transfer map for elements that depend on user-defined parameters ("parameters").
+    By default, the parameters = {"global": TransferMap}, which means that all elements will have linear transfer maps.
+    You can also specify different transfer maps for any type of element.
 
-        if params == None:
+    Example:
+    --------
+    # use linear matrices for all elements except Sectupole which will have nonlinear kick map (KickTM)
+    method = MethodTM()
+    method.global_method = TransferMap
+    method.params[Sextupole] = KickTM
+
+    # All elements are assigned matrices of the second order.
+    # For elements for which there are no matrices of the second order are assigned default matrices, e.g. linear matrices.
+    method2 = MethodTM()
+    method2.global_method = SecondTM
+
+    """
+    def __init__(self, params=None):
+        if params is None:
             self.params = {'global': TransferMap}
         else:
             self.params = params
@@ -900,8 +920,17 @@ def unsym_matrix(T):
 
 def lattice_transfer_map(lattice, energy):
     """
-    transfer map for the whole lattice
+    Function calculates transfer maps, the first and second orders (R, T), for the whole lattice.
+    Second order matrices are attached to lattice object:
+    lattice.T_sym - symmetric second order matrix
+    lattice.T - second order matrix
+    lattice.R - linear R matrix
+
+    :param lattice: MagneticLattice
+    :param energy: the initial electron beam energy [GeV]
+    :return: R - matrix
     """
+
     Ra = np.eye(6)
     Ta = np.zeros((6, 6, 6))
     Ba = np.zeros((6, 1))
@@ -914,8 +943,7 @@ def lattice_transfer_map(lattice, energy):
             Tb = sym_matrix(Tb)
             Ra, Ta = transfer_maps_mult(Ra, Ta, Rb, Tb)
         else:
-
-            Ra, Ta = transfer_maps_mult(Ra, Ta, Rb, Tb=np.zeros((6,6,6)))
+            Ra, Ta = transfer_maps_mult(Ra, Ta, Rb, Tb=np.zeros((6, 6, 6)))
         Ba = np.dot(Rb, Ba) + Bb
         E += elem.transfer_map.delta_e
 
@@ -953,7 +981,7 @@ def trace_z(lattice, obj0, z_array):
 
 def trace_obj(lattice, obj, nPoints=None):
     """
-    track object though lattice
+    track object through the lattice
     obj must be Twiss or Particle
     """
 
@@ -1159,6 +1187,15 @@ class Navigator:
         return self.process_table.proc_list
 
     def add_physics_proc(self, physics_proc, elem1, elem2):
+        """
+        Method adds Physics Process.
+
+        :param physics_proc: PhysicsProc, e.g. SpaceCharge, CSR, Wake ...
+        :param elem1: the element in the lattice where to start applying the physical process.
+        :param elem2: the element in the lattice where to stop applying the physical process,
+                        can be the same as starting element.
+        :return:
+        """
         #logger_navi.debug(" add_physics_proc: phys proc: " + physics_proc.__class__.__name__)
         self.process_table.add_physics_proc(physics_proc, elem1, elem2)
 

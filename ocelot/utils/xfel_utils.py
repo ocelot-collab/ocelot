@@ -280,9 +280,60 @@ def create_fel_lattice(und_N = 35,
 
     return (MagneticLattice(lat), extra_fodo, cell)
 
+def create_fel_lattice_tmp(und_N = 34,
+                    und_L = 5,
+                    und_l = 0.04,
+                    und_Kx = 0,
+                    und_Ky = 0,
+                    inters_L = 1.08,
+                    inters_K = 'K_und',
+                    inters_phi=0,
+                    quad_L = 0.1,
+                    quad_K = 0,
+                    phs_L = 0.0,
+                    quad_start = 'd',
+                    **kwargs):
+    if quad_L > inters_L:
+        _logger.warning('Quadrupole cannot be longer than intersection')
 
-def create_exfel_lattice(beamline = 'sase1', inters_phi=0, inters_K = "K_und"):
-    if beamline in ['sase1', 1, 'sase2', 2]:
+    # und_n = np.floor(und_L/und_l).astype(int)
+    und_n = und_L/und_l
+
+    und= Undulator(nperiods=und_n, lperiod=und_l, Kx=und_Kx, Ky=und_Ky, eid = "und")
+    qf = Quadrupole (l=quad_L / 2, eid = "qf", k1=1)
+    qd = Quadrupole (l=quad_L / 2, eid = "qd", k1=-1)
+    qfh = Quadrupole (l=qf.l / 2., k1=1)
+    qdh = Quadrupole (l=qd.l / 2., k1=-1)
+
+
+    phs = UnknownElement(l=0) #phase shifter (defines expected retardation of electrons in intersections between undulators)
+    phs.phi = inters_phi
+    phs.K = inters_K #overrides phi, would be K of free space, identical to rms K_und if "K_und"
+
+    d1 = Drift(l=(inters_L - quad_L) / 2, eid = "d1") #drift
+    d2 = Drift(l=(inters_L - quad_L) / 2, eid = "d2")
+    
+    if und_N < 2:
+        cell_N = 0
+        cell_N_last = 0
+    else:
+        cell_N = np.floor((und_N)/2).astype(int)
+        cell_N_last = int((und_N)/2%1)
+
+    if quad_start == 'd':
+        cell = (qd, phs, d2, und, d1, qf, qf, phs, d2, und, d1, qd) 
+        # extra_fodo = (und, d2, qfh)
+        lat = cell_N * cell + cell_N_last * (und,)
+    elif quad_start == 'f':
+        cell = (qf, phs, d2, und, d1, qd, qd, phs, d2, und, d1, qf) 
+        # extra_fodo = (und, d2, qdh)
+        lat = cell_N * cell + cell_N_last * (und,)
+
+    return (MagneticLattice(lat), None, cell)
+
+
+def create_fel_beamline(beamline = 'sase1', inters_phi=0, inters_K = "K_und"):
+    if beamline in ['sase1', 1, 'sase2', 2, 'EuXFEL_SASE1', 'EuXFEL_SASE2']:
         return create_fel_lattice(und_N = 35,
                         und_L = 5-0.04,
                         und_l = 0.04,
@@ -296,7 +347,7 @@ def create_exfel_lattice(beamline = 'sase1', inters_phi=0, inters_K = "K_und"):
                         phs_L = 0.0,
                         quad_start = 'd',
                             )
-    elif beamline in ['sase3', 3]:
+    elif beamline in ['sase3', 3, 'EuXFEL_SASE3']:
         return create_fel_lattice(und_N = 21,
                         und_L = 5.032,#5
                         und_l = 0.068,
@@ -312,6 +363,10 @@ def create_exfel_lattice(beamline = 'sase1', inters_phi=0, inters_K = "K_und"):
                             )
     else:
         raise ValueError('Unknown beamline')
+
+def create_exfel_lattice(*agrs, **kwargs):
+    _logger.warning('will be deprecated, use create_fel_beamline instead')
+    return create_fel_beamline(*agrs, **kwargs)
 
 def prepare_el_optics(beam, lat_pkg, E_photon=None, beta_av=None, s=None):
     from ocelot.rad.undulator_params import Ephoton2K

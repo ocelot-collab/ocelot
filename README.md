@@ -138,7 +138,7 @@ You can download OCELOT jupyter tutorials (release v18.02) using GitHub link [zi
     - A simple accelerator with the electron beam formation system and an undulator to generate THz radiation. 
 
 #### Wavefront propagation
-
+* [Tutorial N11. Coherent radiation module and RadiationField object](11_radiation_field.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/11_radiation_field.ipynb).
 * [Tutorial N12. Reflection from imperfect highly polished mirror](12_imperfect_mirror.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/12_imperfect_mirror.ipynb).
 * [Tutorial N13. Converting synchrotron radiation Screen object to RadiationField object for viewing and propagation](13_synchrotron_radiation_visualization.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/13_synchrotron_radiation_visualization.ipynb).
 

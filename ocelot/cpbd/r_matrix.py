@@ -20,8 +20,19 @@ def rot_mtx(angle):
 
 
 def uni_matrix(z, k1, hx, sum_tilts=0., energy=0.):
-    # r = element.l/element.angle
-    #  +K - focusing lens , -K - defoc
+    """
+    universal matrix. The function creates R-matrix from given parameters.
+    r = element.l/element.angle
+    +K - focusing lens, -K - defoc
+
+    :param z: element length [m]
+    :param k1: quadrupole strength [1/m**2]
+    :param hx: the curvature (1/r) of the element [1/m]
+    :param sum_tilts: rotation relative to longitudinal axis [rad]
+    :param energy: the beam energy [GeV]
+    :return: R-matrix [6, 6]
+    """
+
     gamma = energy/m_e_GeV
 
     kx2 = (k1 + hx*hx)
@@ -453,8 +464,4 @@ def create_r_matrix(element):
 
         r_z_e = lambda z, energy: r_mtx(z, k1, hx=hx, hy=hy, sum_tilts=0, energy=energy)
 
-    # else:
-    #    print (element.__class__, " : unknown type of magnetic element. Cannot create transfer map ")
-
-    #b_z = lambda z, energy: dot((eye(6) - R_z(z, energy)), array([dx, 0., dy, 0., 0., 0.]))
     return r_z_e

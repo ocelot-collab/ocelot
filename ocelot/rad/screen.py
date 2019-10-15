@@ -18,6 +18,7 @@ def Py2C(array):
 class Screen:
     """
     Class to store radiation field and to provide information about screen parameters where radiation will be observed.
+    Format for electric fields in arrays (arReEx, arImEx, ...) is following: ReEx[ny*nx*je + nx*jy + jx]
 
     self.z: 100.0 [m], distance from the beginning of the lattice to the screen
     self.size_x: 1 [m], half of screen size in horizontal plane
@@ -27,8 +28,11 @@ class Screen:
     self.start_energy: 100.0 [eV], starting photon energy
     self.end_energy: 10000.0 [eV], ending photon energy
     self.num_energy: 1000,   number of energy points
-
-
+    self.arReEx = [],  Real part of horizontal component of the electric field
+    self.arImEx = [],  Imaginary part of horizontal component of the electric field
+    self.arReEy = [],  Real part of the vertical component of the electric field
+    self.arImEy = [],  Imaginary part of the vertical component of the electric field
+    self.arPhase = [], phase between Re and Im components
     """
     def __init__(self):
         # position of screen center

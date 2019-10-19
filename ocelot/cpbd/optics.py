@@ -448,7 +448,8 @@ class CavityTM(TransferMap):
         self.vy_up = 0.
         self.vx_down = 0.
         self.vy_down = 0.
-        self.delta_e_z = lambda z: self.v * np.cos(self.phi * np.pi / 180.) * z / self.length
+        phase_term = np.cos(self.phi * np.pi / 180.)
+        self.delta_e_z = lambda z: phase_term * self.v * z / self.length  if self.length != 0 else phase_term * self.v
         self.delta_e = self.v * np.cos(self.phi * np.pi / 180.)
         self.map = lambda X, energy: self.map4cav(X, energy, self.v, self.freq, self.phi, self.length)
 
@@ -498,7 +499,8 @@ class CavityTM(TransferMap):
         m.R = lambda energy: m.R_z(s, energy)
         m.B = lambda energy: m.B_z(s, energy)
         m.delta_e = m.delta_e_z(s)
-        m.map = lambda X, energy: m.map4cav(X, energy, m.v * s / self.length, m.freq, m.phi, s)
+        v = m.v * s / self.length if self.length != 0 else m.v
+        m.map = lambda X, energy: m.map4cav(X, energy, v, m.freq, m.phi, s)
         return m
 
 
@@ -883,6 +885,11 @@ class MethodTM:
             tm = CorrectorTM(angle_x=0, angle_y=element.angle)
             tm.multiplication = self.sec_order_mult.tmat_multip
             tm.t_mat_z_e = lambda z, energy: t_nnn(z, 0, 0, 0, energy)
+
+        # if element.__class__ == HVcor:
+        #     tm = CorrectorTM(angle_x=element.angle_x, angle_y=element.angle_y)
+        #     tm.multiplication = self.sec_order_mult.tmat_multip
+        #     tm.t_mat_z_e = lambda z, energy: t_nnn(z, 0, 0, 0, energy)
 
         tm.length = element.l
         tm.dx = dx

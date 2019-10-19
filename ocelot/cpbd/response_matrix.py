@@ -395,7 +395,7 @@ class LinacDisperseTmatrixRM(MeasureResponseMatrix):
                 Rb = elem.transfer_map.R(E)
                 Tb = deepcopy(elem.transfer_map.t_mat_z_e(elem.l, E))
                 #Ra = dot(Rb, Ra)
-                Ra, Ta = second_order_mult(Ra, Ta, Rb, Tb)
+                Ra, Ta = transfer_maps_mult(Ra, Ta, Rb, Tb)
                 E += elem.transfer_map.delta_e
                 if elem in self.bpms:
 
@@ -597,7 +597,7 @@ class ResponseMatrixJSON:
             print()
 
 class ResponseMatrix:
-    def __init__(self, method=None):
+    def  __init__(self, method=None):
         self.cor_names = []
         self.bpm_names = []
         self.matrix = []
@@ -625,6 +625,7 @@ class ResponseMatrix:
         else:
             print("ResponseMatrix.method = None, Add the method, e.g. MeasureResponseMatrix")
 
+
     def get_matrix(self):
         return self.matrix
 
@@ -647,6 +648,42 @@ class ResponseMatrix:
             print("BPMs are not in the RM")
             print(np.array(rows)[bpm_list_exist])
 
+    def retrieve_from_scan(self, df_scan):
+        from sklearn.linear_model import LinearRegression
+        bpm_x = [bpm + ".X" for bpm in self.bpm_names]
+        bpm_y = [bpm + ".Y" for bpm in self.bpm_names]
+        bpm_names_xy = bpm_x + bpm_y
+        x = df_scan.loc[:, self.cor_names].values
+        y = df_scan.loc[:, bpm_names_xy].values
+
+        reg = LinearRegression().fit(x, y)
+        x_test = np.eye(np.shape(x)[1])
+        rm = reg.predict(x_test)
+        #df_rm = pd.DataFrame(rm.T, columns=self.cor_names, index=bpm_x+bpm_y)
+        self.df = self.data2df(matrix=rm.T, bpm_names=self.bpm_names, cor_names=self.cor_names)
+        return self.df
+
+    def clean_rm(self, coupling=True):
+        if self.method != None:
+            hcors = self.method.hcors
+            vcors = self.method.vcors
+            bpms = self.method.bpms
+
+            for hcor in hcors:
+                for bpm in bpms:
+                    if bpm.s < hcor.s:
+                        self.df.loc[bpm.id+".X",hcor.id] = 0
+                    if not coupling:
+                        self.df.loc[bpm.id + ".Y", hcor.id] = 0
+            for vcor in vcors:
+                for bpm in bpms:
+                    if bpm.s < vcor.s:
+                        self.df.loc[bpm.id+".Y", vcor.id] = 0
+                    if not coupling:
+                        self.df.loc[bpm.id + ".X", vcor.id] = 0
+
+        else:
+            print("ResponseMatrix.method = None, Add the method, e.g. MeasureResponseMatrix")
 
     def inject(self, cor_list, bpm_list, inj_matrix):
         """

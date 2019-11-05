@@ -114,11 +114,13 @@ def create_var_name(objects):
                 name = ids[i]
                 name = name.replace('.', '_')
                 name = name.replace(':', '_')
+                name = name.replace('-', '_')
                 ids[i] = name + alphabet[n]
         else:
             name = ids[j]
             name = name.replace('.', '_')
             name = name.replace(':', '_')
+            name = name.replace('-', '_')
             ids[j] = name
         obj.name = ids[j].lower()
 

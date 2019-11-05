@@ -607,6 +607,33 @@ class ResponseMatrix:
         self.tw_init = None   # for self.run()
         self.filename = None  # for self.run()
 
+    def bpm2x_name(self, bpm_id):
+        """
+        Transform bpm id to a name how it use in a control system to get horizontal beam position
+        :param bpm_id:
+        :return: channel for X position
+        """
+        return bpm_id + ".X"
+
+    def bpm2y_name(self, bpm_id):
+        """
+        Transform bpm id to a name how it use in a control system to get vertical beam position
+
+        :param bpm_id:
+        :return: channel for Y position
+        """
+        return bpm_id + ".Y"
+
+    def xy_names2bpm_id(self, xy_names):
+        """
+        transform BPM channels to bpm ids
+
+        :param xy_names:
+        :return:
+        """
+        bpm_ids = [bpm.replace(".X", "") for bpm in xy_names if ".X" in bpm]
+        return bpm_ids
+
     def calculate(self, tw_init=None):
         """
         rewrites cor_name, bpm_name and matrix
@@ -630,8 +657,8 @@ class ResponseMatrix:
         return self.matrix
 
     def extract(self, cor_list, bpm_list):
-        bpm_x = [bpm + ".X" for bpm in bpm_list]
-        bpm_y = [bpm + ".Y" for bpm in bpm_list]
+        bpm_x = [self.bpm2x_name(bpm) for bpm in bpm_list]
+        bpm_y = [self.bpm2y_name(bpm) for bpm in bpm_list]
         rows = bpm_x + bpm_y
         cols = list(cor_list)
 
@@ -650,9 +677,11 @@ class ResponseMatrix:
 
     def retrieve_from_scan(self, df_scan):
         from sklearn.linear_model import LinearRegression
-        bpm_x = [bpm + ".X" for bpm in self.bpm_names]
-        bpm_y = [bpm + ".Y" for bpm in self.bpm_names]
+
+        bpm_x = [self.bpm2x_name(bpm) for bpm in self.bpm_names]
+        bpm_y = [self.bpm2y_name(bpm) for bpm in self.bpm_names]
         bpm_names_xy = bpm_x + bpm_y
+
         x = df_scan.loc[:, self.cor_names].values
         y = df_scan.loc[:, bpm_names_xy].values
 
@@ -668,19 +697,19 @@ class ResponseMatrix:
             hcors = self.method.hcors
             vcors = self.method.vcors
             bpms = self.method.bpms
-
             for hcor in hcors:
                 for bpm in bpms:
                     if bpm.s < hcor.s:
-                        self.df.loc[bpm.id+".X",hcor.id] = 0
+
+                        self.df.loc[self.bpm2x_name(bpm.id), hcor.id] = 0
                     if not coupling:
-                        self.df.loc[bpm.id + ".Y", hcor.id] = 0
+                        self.df.loc[self.bpm2y_name(bpm.id), hcor.id] = 0
             for vcor in vcors:
                 for bpm in bpms:
                     if bpm.s < vcor.s:
-                        self.df.loc[bpm.id+".Y", vcor.id] = 0
+                        self.df.loc[self.bpm2y_name(bpm.id), vcor.id] = 0
                     if not coupling:
-                        self.df.loc[bpm.id + ".X", vcor.id] = 0
+                        self.df.loc[self.bpm2x_name(bpm.id), vcor.id] = 0
 
         else:
             print("ResponseMatrix.method = None, Add the method, e.g. MeasureResponseMatrix")
@@ -700,15 +729,15 @@ class ResponseMatrix:
         return self.matrix
 
     def data2df(self, matrix, bpm_names, cor_names):
-        bpm_x = [bpm + ".X" for bpm in bpm_names]
-        bpm_y = [bpm + ".Y" for bpm in bpm_names]
+        bpm_x = [self.bpm2x_name(bpm) for bpm in bpm_names]
+        bpm_y = [self.bpm2y_name(bpm) for bpm in bpm_names]
         df = pd.DataFrame(matrix, columns=cor_names, index=bpm_x + bpm_y)
         return df
 
     def df2data(self):
         self.cor_names = list(self.df.columns.values)
         bpms_all = list(self.df.index.values)
-        self.bpm_names = [bpm.replace(".X", "") for bpm in bpms_all if ".X" in bpm]
+        self.bpm_names = self.xy_names2bpm_id(bpms_all)
         self.matrix = self.df.values
 
     def dump(self, filename):

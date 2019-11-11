@@ -105,15 +105,6 @@ class Screen:
         self.Yph = np.linspace(self.y_start, self.y_start + self.y_step*(self.ny - 1), self.ny)
         self.Eph = np.linspace(self.e_start, self.e_start + self.e_step*(self.ne - 1), self.ne)
 
-
-        #class EMScreen():
-        #    def __init__(self, screen=None):
-        #        if screen !=None:
-        #            self.screen_to_emscreen(screen)
-        #        else:
-        #            self.create_empty_emclass()
-
-
     def rebuild_efields(self, x0=0, y0=0, z0=0):
         """
         the method recalculates the field phase and electrical fields to obtain the correct values that can be used
@@ -147,7 +138,6 @@ class Screen:
         self.arImEx = arImEx
         self.arReEy = arReEy
         self.arImEy = arImEy
-
 
     def screen_to_emscreen(self, screen):
 

@@ -44,6 +44,12 @@ class Motion:
 class BeamTraject:
     """
     A class for storing and retrieving the coordinates of the n-th particle from the table with all trajectories.
+    method: x(n=0) - array, horizontal coordinates of the n-th particle
+    method: y(n=0) - array, vertical coordinates of the n-th particle
+    method: xp(n=0) - array, x' = dx/dz coordinates of the n-th particle
+    method: yp(n=0) - array, y' = dy/dz coordinates of the n-th particle
+    method: z(n=0) - array, longitudinal coordinates in Cartesian coordinate system of the n-th particle
+    method: s(n=0) - array,  longitudinal coordinates in moving coordinate system of the n-th particle
     """
     def __init__(self, beam_trajectories):
         self.U = beam_trajectories
@@ -91,7 +97,7 @@ class BeamTraject:
             yp_array = np.append(yp_array, u[3::9, n])
         return yp_array
 
-    def p(self, n):
+    def p(self, n=0):
         self.check(n)
         p_array = np.array([])
         for u in self.U:

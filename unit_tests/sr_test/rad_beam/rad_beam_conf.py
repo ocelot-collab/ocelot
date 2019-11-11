@@ -6,6 +6,7 @@ from ocelot import *
 from ocelot.rad import *
 import numpy as np
 
+
 """Lattice elements defenition"""
 
 und = Undulator(lperiod=0.4, nperiods=9, Kx=44.81)

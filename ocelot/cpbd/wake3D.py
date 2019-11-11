@@ -1,6 +1,8 @@
 """
 Created on 17.05.2016
 @author: Igor Zagorodnov
+Added wake table WakeTableDechirperOffAxis on 11.2019
+@authors: S. Tomin and I. Zagorodnov
 """
 
 from ocelot.adaptors import *
@@ -25,6 +27,7 @@ def triang_filter(x, filter_order):
         x[1:Ns] = (x[1:Ns] + x[0:Ns-1])*0.5
         x[0:Ns-1] = (x[1:Ns] + x[0:Ns-1])*0.5
     return x
+
 
 def Der(x, y):
     #numerical derivative
@@ -52,7 +55,29 @@ def Int1h(h, y):
     return Y
 
 
-def s2current_py(s_array, q_array, n_points, filter_order, mean_vel):
+def project_on_grid_py(Ro, I0, dI0, q_array):
+    """
+    Simple functio to project particles charge on grid
+
+    :param Ro: grid
+    :param I0: grid index for each particle
+    :param dI0: coefficient how particle close to Ro[i+1]. Example: particle i, dI0=0.7 -> Ro[i]---------dI0[i]--Ro[i+1]
+    :param q_array: charge array in [C]
+    :return: Ro
+    """
+    Np = len(q_array)
+    for i in range(Np):
+        i0 = int(I0[i])
+        di0 = dI0[i]
+        Ro[i0] = Ro[i0] + (1 - di0) * q_array[i]
+        Ro[i0 + 1] = Ro[i0 + 1] + di0 * q_array[i]
+    return Ro
+
+
+project_on_grid = project_on_grid_py if not nb_flag else nb.jit(project_on_grid_py)
+
+
+def s2current(s_array, q_array, n_points, filter_order, mean_vel):
     """
     I = s2current(P0,q,Ns,NF)
     :param s_array: s-vector, coordinates in longitudinal direction
@@ -66,7 +91,7 @@ def s2current_py(s_array, q_array, n_points, filter_order, mean_vel):
     s1 = np.max(s_array)
     NF2 = int(np.floor(filter_order / 2.))
     n_points = n_points + 2 * NF2
-    Np = s_array.shape[0]
+    #Np = s_array.shape[0]
     ds = (s1 - s0) / (n_points - 2 - 2 * NF2)
     s = s0 + np.arange(-NF2, n_points - NF2) * ds
     # here we need a fast 1D linear interpolation of charges on the grid
@@ -77,12 +102,9 @@ def s2current_py(s_array, q_array, n_points, filter_order, mean_vel):
     dI0 = Ip - I0
     I0 = I0 + NF2
     Ro = np.zeros(n_points)
-    # slow, switch to vector operations to be done
-    for i in range(Np):
-        i0 = int(I0[i])
-        di0 = dI0[i]
-        Ro[i0] = Ro[i0] + (1 - di0) * q_array[i]
-        Ro[i0 + 1] = Ro[i0 + 1] + di0 * q_array[i]
+    # with numba project charge on grid
+    Ro = project_on_grid(Ro, I0, dI0, q_array)
+
     if filter_order > 0:
         triang_filter(Ro, filter_order)
     I = np.zeros([n_points, 2])
@@ -90,23 +112,31 @@ def s2current_py(s_array, q_array, n_points, filter_order, mean_vel):
     I[:, 1] = Ro * mean_vel / ds
     return I
 
-s2current = s2current_py if not nb_flag else nb.jit(s2current_py)
-
 
 class WakeTable:
     """
     WakeTable(wake_file) - load and prepare wake table
     wake_file - path to the wake table
     """
-    def __init__(self, wake_file):
-        self.TH = self.load_wake_table(wake_file)
+    def __init__(self, wake_file=None):
+        if wake_file is not None:
+            self.TH = self.load_table(wake_file)
 
-    def load_wake_table(self, wake_file):
+    def load_table(self, wake_file):
+        wake_table = self.read_file(wake_file)
+        TH = self.process_wake_table(wake_table)
+        return TH
+
+    def read_file(self, wake_file):
+        W = np.loadtxt(wake_file)
+        return W
+
+    def process_wake_table(self, wake_table):
         """
         :param wake_file: file name
-        :return: (T, H): T- table of wakes coefs, H- matrix of the coefs place in T
+        :return: (T, H): T- table of wakes coefs, H - matrix of the coefs place in T
         """
-        W = np.loadtxt(wake_file)
+        W = wake_table
         # head format %Nt 0 %N0 N1 %R L %C nm
         H = np.zeros([5, 5])
         Nt = int(W[0, 0])
@@ -139,6 +169,163 @@ class WakeTable:
             T = T + [(R, L, Cinv, nm, W0, N0, W1, N1)]
         return (T, H)
 
+class WakeTableDechirperOffAxis(WakeTable):
+    """
+    WakeTableDechirperOffAxis() - creates two wake tables for horizontal and vertical corrugated plates.
+    Based on https://doi.org/10.1016/j.nima.2016.09.001 and SLAC-PUB-16881
+
+    :param b: distance from the plate in [m]
+    :param a: half gap between plates in [m]
+    :param width: width of the corrugated structure in [m]
+    :param t: longitudinal gap in [m]
+    :param p: period of corrugation in [m]
+    :param length: length of the corrugated structure in [m]
+    :param sigma: characteristic (rms) longitudinal beam size in [m]
+    :param orient: "horz" or "vert" plate orientation
+    :return: hor_wake_table, vert_wake_table
+    """
+    def __init__(self, b=500*1e-6, a=0.01, width=0.02, t=0.25*1e-3, p=0.5*1e-3, length=1, sigma=30e-6, orient="horz"):
+        WakeTable.__init__(self)
+        weke_horz, wake_vert = self.calculate_wake_tables(b=b, a=a, width=width, t=t, p=p, length=length, sigma=sigma)
+        if orient == "horz":
+            self.TH = self.process_wake_table(weke_horz)
+        else:
+            self.TH = self.process_wake_table(wake_vert)
+
+    def calculate_wake_tables(self, b, a, width, t, p, length, sigma):
+        """
+        Function creates two wake tables for horizontal and vertical corrugated plates
+
+        :param b: distance from the plate in [m]
+        :param a: half gap between plates in [m]
+        :param width: width of the corrugated structure in [m]
+        :param t: longitudinal gap in [m]
+        :param p: period of corrugation in [m]
+        :param length: length of the corrugated structure in [m]
+        :param sigma: characteristic longitudinal beam size in [m]]
+        :param filename: save to files if filename is not None
+        :return: hor_wake_table, vert_wake_table
+        """
+        p = p * 1e3  # m -> mm
+        t = t * 1e3  # m -> mm
+        L = length  # in m
+        D = width * 1e3  # m -> mm
+        a = a * 1e3  # m -> mm, in mm half gap
+        b = b * 1e3  # m -> mm, distance from the plate
+        sigma = sigma * 1e3  # m -> mm, characteristic beam size in mm
+        y0 = a - b  # in mm POSITION of the charge CHANGE ONLY THIS PARAMETER
+        # now distance from the plate 500um = a-y0
+        c = speed_of_light
+        Z0 = 3.767303134695850e+02
+        y = y0
+        x0 = D / 2.
+        x = x0
+        Nm = 300
+        s = np.arange(0, 50 + 0.01, 0.01) * sigma
+        ns = len(s)
+
+        t2p = t / p
+        alpha = 1 - 0.465 * np.sqrt(t2p) - 0.07 * t2p
+        # s0r_fit=0.41*a**1.8*0.25^1.6/0.5^2.4;
+        s0r_bane = a * a * t / (2 * np.pi * alpha ** 2 * p ** 2)
+        s0r_igor = s0r_bane * np.pi / 4
+        s0 = 4 * s0r_igor
+
+        W = np.zeros(ns)
+
+        dWdx0 = np.zeros(ns)
+        dWdy0 = np.zeros(ns)
+        dWdx = np.zeros(ns)
+        dWdy = np.zeros(ns)
+        ddWdx0dx0 = np.zeros(ns)  # h11
+        ddWdy0dx0 = np.zeros(ns)  # h12=0
+        ddWdxdx0 = np.zeros(ns)
+        ddWdxdy0 = np.zeros(ns)  # h13 h23=0
+        ddWdydx0 = np.zeros(ns)
+        ddWdydy0 = np.zeros(ns)
+        ddWdydx = np.zeros(ns)  # %h14=0 h24 h34=0
+
+        Fz = np.zeros((Nm, ns))
+        Fyd = np.zeros((Nm, ns))
+        A = Z0 * c / (2 * a) * L
+        for i in np.arange(Nm):
+            m = i + 1
+            M = np.pi / D * m
+            X = M * a
+            dx = np.sin(M * x0) * np.sin(M * x)
+            # to avoid overflow
+            coeff = X / (np.cosh(X) * np.sinh(X)) if X < 350. else 0.
+            Wcc = A * coeff * np.exp(-(s / s0) ** 0.5 * (X / np.tanh(X)))
+            Wss = A * coeff * np.exp(-(s / s0) ** 0.5 * (X * np.tanh(X)))
+
+            Fz[i, :] = Wcc * np.cosh(M * y) * np.cosh(M * y0) + Wss * np.sinh(M * y) * np.sinh(M * y0)
+
+            dW = Fz[i, :] * dx
+            W = W + dW
+            ddx0 = np.cos(M * x0) * np.sin(M * x)
+            dWdx0 = dWdx0 + M * Fz[i, :] * ddx0
+            ddy0 = Wcc * np.cosh(M * y) * np.sinh(M * y0) + Wss * np.sinh(M * y) * np.cosh(M * y0)
+            dWdy0 = dWdy0 + M * ddy0 * dx
+            ddx = np.sin(M * x0) * np.cos(M * x)
+            dWdx = dWdx + M * Fz[i, :] * ddx
+            ddy = Wcc * np.sinh(M * y) * np.cosh(M * y0) + Wss * np.cosh(M * y) * np.sinh(M * y0)
+            dWdy = dWdy + M * ddy * dx
+            Fyd[i, :] = M * ddy * dx
+            ddWdx0dx0 = ddWdx0dx0 - M ** 2 * dW
+            ddWdy0dx0 = ddWdy0dx0 + M ** 2 * (ddy0 * ddx0)
+            ddWdxdx0 = ddWdxdx0 + M ** 2 * Fz[i, :] * np.cos(M * x0) * np.cos(M * x)
+            ddWdxdy0 = ddWdxdy0 + M ** 2 * ddy0 * ddx
+            ddWdydx0 = ddWdydx0 + M ** 2 * ddy * ddx0
+            ddWdydy0 = ddWdydy0 + M ** 2 * (
+                    Wcc * np.sinh(M * y) * np.sinh(M * y0) + Wss * np.cosh(M * y) * np.cosh(M * y0)) * dx
+            ddWdydx = ddWdydx + M ** 2 * ddy * ddx
+
+        W = W * 2 / D * 1e6
+        h00 = W
+        dWdx0 = dWdx0 * 2 / D * 1e9
+        h01 = dWdx0
+        dWdy0 = dWdy0 * 2 / D * 1e9
+        h02 = dWdy0
+        dWdx = dWdx * 2 / D * 1e9
+        h03 = dWdx
+        dWdy = dWdy * 2 / D * 1e9
+        h04 = dWdy
+        ddWdx0dx0 = ddWdx0dx0 * 2 / D * 1e12
+        h11 = ddWdx0dx0 * 0.5
+        ddWdy0dx0 = ddWdy0dx0 * 2 / D * 1e12
+        h12 = ddWdy0dx0 * 0.5
+        ddWdxdx0 = ddWdxdx0 * 2 / D * 1e12
+        h13 = ddWdxdx0 * 0.5
+        ddWdydx0 = ddWdydx0 * 2 / D * 1e12
+        h14 = ddWdydx0 * 0.5
+        ddWdxdy0 = ddWdxdy0 * 2 / D * 1e12
+        h23 = ddWdxdy0 * 0.5
+        ddWdydy0 = ddWdydy0 * 2 / D * 1e12
+        h24 = ddWdydy0 * 0.5
+        ddWdydx = ddWdydx * 2 / D * 1e12
+        h34 = ddWdydx * 0.5
+        h33 = h11
+
+        s = s * 1e-3
+        N = len(s)
+        out00 = np.append([[N, 0], [0, 0], [0, 0]], np.vstack((s, h00)).T, axis=0)
+        out02 = np.append([[N, 0], [0, 0], [0, 2]], np.vstack((s, h02)).T, axis=0)
+        out04 = np.append([[N, 0], [0, 0], [0, 4]], np.vstack((s, h04)).T, axis=0)
+        out11 = np.append([[N, 0], [0, 0], [0, 11]], np.vstack((s, h11)).T, axis=0)
+        out13 = np.append([[N, 0], [0, 0], [0, 13]], np.vstack((s, h13)).T, axis=0)
+        out24 = np.append([[N, 0], [0, 0], [0, 24]], np.vstack((s, h24)).T, axis=0)
+        out33 = np.append([[N, 0], [0, 0], [0, 33]], np.vstack((s, h33)).T, axis=0)
+        wake_horz = np.vstack(([[7, 0]], out00, out02, out04, out11, out13, out24, out33))
+
+        out11 = np.append([[N, 0], [0, 0], [0, 11]], np.vstack((s, -h11)).T, axis=0)
+        out33 = np.append([[N, 0], [0, 0], [0, 33]], np.vstack((s, -h33)).T, axis=0)
+        out01 = np.append([[N, 0], [0, 0], [0, 1]], np.vstack((s, h02)).T, axis=0)
+        out03 = np.append([[N, 0], [0, 0], [0, 3]], np.vstack((s, h04)).T, axis=0)
+        out13 = np.append([[N, 0], [0, 0], [0, 13]], np.vstack((s, h24)).T, axis=0)
+        out24 = np.append([[N, 0], [0, 0], [0, 24]], np.vstack((s, h13)).T, axis=0)
+        wake_vert = np.vstack(([[7, 0]], out00, out01, out03, out11, out13, out24, out33))
+        return wake_horz, wake_vert
+
 
 class Wake(PhysProc):
     """
@@ -155,6 +342,7 @@ class Wake(PhysProc):
     filter_order = 20 - smoothing filter order
     wake_table = None - wake table [WakeTable()]
     factor = 1. - scaling coefficient
+    TH - list from WakeTable, (T, H): T- table of wakes coefs, H - matrix of the coefs place in T
     """
     def __init__(self, step=1):
         PhysProc.__init__(self)
@@ -164,6 +352,7 @@ class Wake(PhysProc):
         self.wake_table = None
         self.factor = 1.
         self.step = step
+        self.TH = None
 
     def convolution(self, xu, u, xw, w):
         #convolution of equally spaced functions
@@ -310,7 +499,7 @@ class Wake(PhysProc):
             p = np.interp(Z,x,Wx,0,0)
             Px = Px + p*X
             Py = Py - p*Y
-        I00[:,0]=-I00[:,0]
+        I00[:,0] =- I00[:,0]
         #Z=-Z
         return Px, Py, Pz, I00
 

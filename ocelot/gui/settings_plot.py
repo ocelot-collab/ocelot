@@ -52,6 +52,21 @@ plotting_error=None
 # # force matplotlib not ot use Xwindows backend. plots may still be plotted into e.g. *.png
 # matplotlib.use('Agg')
 
+
+#decorator
+def save_figure(plotting_func):
+    
+    @functools.wraps(plotting_func)
+    def wrapper(*args, **kwargs):
+        savepath = kwargs.pop(savepath, None)
+        fig = plotting_func(*args, **kwargs)
+        if savepath is not None:
+            fig.savefig(savepath, format=savepath.split('.')[-1])
+        return fig
+    
+    return wrapper
+
+
 #decorator
 def if_plottable(plotting_func):
     

@@ -1785,17 +1785,23 @@ def dfl_ap_rect(dfl, ap_x=np.inf, ap_y=np.inf):
         ap_x = [-ap_x / 2, ap_x / 2]
     if np.size(ap_y) == 1:
         ap_y = [-ap_y / 2, ap_y / 2]
-
+    _logger.debug(ind_str + 'ap_x = {}'.format(ap_x))
+    _logger.debug(ind_str + 'ap_y = {}'.format(ap_y))
+    
     idx_x = np.where((dfl.scale_x() >= ap_x[0]) & (dfl.scale_x() <= ap_x[1]))[0]
     idx_x1 = idx_x[0]
     idx_x2 = idx_x[-1]
-
+    
     idx_y = np.where((dfl.scale_y() >= ap_y[0]) & (dfl.scale_y() <= ap_y[1]))[0]
     idx_y1 = idx_y[0]
     idx_y2 = idx_y[-1]
-
+        
+    _logger.debug(ind_str + 'idx_x = {}-{}'.format(idx_x1,idx_x2))
+    _logger.debug(ind_str + 'idx_y = {}-{}'.format(idx_y1,idx_y2))
+    
+    
     mask = np.zeros_like(dfl.fld[0, :, :])
-    mask[idx_x1:idx_x2, idx_y1:idx_y2] = 1
+    mask[idx_y1:idx_y2, idx_x1:idx_x2] = 1
     mask_idx = np.where(mask == 0)
 
     # dfl_out = deepcopy(dfl)

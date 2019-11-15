@@ -15,6 +15,7 @@ from ocelot import ocelog
 from ocelot.common.globals import *  #import of constants like "h_eV_s" and "speed_of_light" 
 from ocelot.common.py_func import * 
 from ocelot.common.math_op import *
+from ocelot.rad.undulator_params import *
 
 from ocelot.gui import *
 

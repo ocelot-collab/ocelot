@@ -611,11 +611,19 @@ class GenesisOutput:
         
         if (npad%1 is not 0) or npad < 0:
             raise ValueError('npad should be positive integer')
-            
+        
+        if mode == 'ff':
+            try:
+                power = self.far_field
+            except AttributeError:
+                mode = 'mid'
+                
         if mode == 'mid':
             power = self.p_mid
         elif mode == 'int':
             power = self.p_int
+        elif mode == 'ff':
+            pass
         else:
             raise ValueError('mode should be either "mid" or "int"')
             

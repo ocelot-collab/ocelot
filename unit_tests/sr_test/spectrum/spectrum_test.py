@@ -121,6 +121,63 @@ def test_calculate_rad_from_lattice(lattice, screen, beam, update_ref_values=Fal
     result6 = check_matrix(screen.Pi, screen_ref['Pi'], TOL, assert_info=' Pi - ')
     assert check_result(result1 + result2 + result3 + result4 + result5 + result6)
 
+
+def test_spectrum_on_axis_3D(lattice, screen, beam, update_ref_values=False):
+    """calculate_radiation fucntion test"""
+
+    beam = Beam()
+    beam.E = 2.5
+
+    beam.I = 0.1
+
+    beam.beta_x = 12.84
+    beam.beta_y = 6.11
+    beam.Dx = 0.526
+
+    und = Undulator(Kx=0.43, nperiods=500, lperiod=0.007, eid="und")
+
+    lat = MagneticLattice((und))
+
+    ###
+    screen = Screen()
+    screen.z = 100.0
+    screen.size_x = 0.002  # m
+    screen.size_y = 0.002  # m
+    screen.nx = 3
+    screen.ny = 3
+
+    screen.start_energy = 7700  # eV
+    screen.end_energy = 7800  # eV
+    screen.num_energy = 100
+
+    screen = calculate_radiation(lat, screen, beam)
+
+    screen2 = Screen()
+    screen2.z = 100.0
+    screen2.size_x = 0.002  # m
+    screen2.size_y = 0.002  # m
+    screen2.nx = 1
+    screen2.ny = 1
+
+    screen2.start_energy = 7700  # eV
+    screen2.end_energy = 7800  # eV
+    screen2.num_energy = 100
+
+    screen2 = calculate_radiation(lat, screen2, beam)
+
+    n1 = screen.nx * screen.ny
+
+    total1 = screen.Total[np.floor(n1 / 2).astype(int):-np.floor(n1 / 2).astype(int):n1]
+    sigma1 = screen.Sigma[np.floor(n1 / 2).astype(int):-np.floor(n1 / 2).astype(int):n1]
+    pi1 = screen.Pi[np.floor(n1 / 2).astype(int):-np.floor(n1 / 2).astype(int):n1]
+
+    result1 = check_matrix(screen2.Eph, screen.Eph, TOL, assert_info=' Eph - ')
+    result4 = check_matrix(screen2.Total, total1, TOL, assert_info=' Total - ')
+    result5 = check_matrix(screen2.Sigma, sigma1, TOL, assert_info=' Sigma - ')
+    result6 = check_matrix(screen2.Pi, pi1, TOL, assert_info=' Pi - ')
+    assert check_result(result1 + result4 + result5 + result6)
+
+
 def setup_module(module):
 
     f = open(pytest.TEST_RESULTS_FILE, 'a')

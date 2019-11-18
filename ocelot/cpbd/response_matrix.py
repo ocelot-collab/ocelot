@@ -395,7 +395,7 @@ class LinacDisperseTmatrixRM(MeasureResponseMatrix):
                 Rb = elem.transfer_map.R(E)
                 Tb = deepcopy(elem.transfer_map.t_mat_z_e(elem.l, E))
                 #Ra = dot(Rb, Ra)
-                Ra, Ta = second_order_mult(Ra, Ta, Rb, Tb)
+                Ra, Ta = transfer_maps_mult(Ra, Ta, Rb, Tb)
                 E += elem.transfer_map.delta_e
                 if elem in self.bpms:
 
@@ -597,7 +597,7 @@ class ResponseMatrixJSON:
             print()
 
 class ResponseMatrix:
-    def __init__(self, method=None):
+    def  __init__(self, method=None):
         self.cor_names = []
         self.bpm_names = []
         self.matrix = []
@@ -606,6 +606,33 @@ class ResponseMatrix:
         self.df = None
         self.tw_init = None   # for self.run()
         self.filename = None  # for self.run()
+
+    def bpm2x_name(self, bpm_id):
+        """
+        Transform bpm id to a name how it use in a control system to get horizontal beam position
+        :param bpm_id:
+        :return: channel for X position
+        """
+        return bpm_id + ".X"
+
+    def bpm2y_name(self, bpm_id):
+        """
+        Transform bpm id to a name how it use in a control system to get vertical beam position
+
+        :param bpm_id:
+        :return: channel for Y position
+        """
+        return bpm_id + ".Y"
+
+    def xy_names2bpm_id(self, xy_names):
+        """
+        transform BPM channels to bpm ids
+
+        :param xy_names:
+        :return:
+        """
+        bpm_ids = [bpm.replace(".X", "") for bpm in xy_names if ".X" in bpm]
+        return bpm_ids
 
     def calculate(self, tw_init=None):
         """
@@ -625,12 +652,13 @@ class ResponseMatrix:
         else:
             print("ResponseMatrix.method = None, Add the method, e.g. MeasureResponseMatrix")
 
+
     def get_matrix(self):
         return self.matrix
 
     def extract(self, cor_list, bpm_list):
-        bpm_x = [bpm + ".X" for bpm in bpm_list]
-        bpm_y = [bpm + ".Y" for bpm in bpm_list]
+        bpm_x = [self.bpm2x_name(bpm) for bpm in bpm_list]
+        bpm_y = [self.bpm2y_name(bpm) for bpm in bpm_list]
         rows = bpm_x + bpm_y
         cols = list(cor_list)
 
@@ -647,6 +675,44 @@ class ResponseMatrix:
             print("BPMs are not in the RM")
             print(np.array(rows)[bpm_list_exist])
 
+    def retrieve_from_scan(self, df_scan):
+        from sklearn.linear_model import LinearRegression
+
+        bpm_x = [self.bpm2x_name(bpm) for bpm in self.bpm_names]
+        bpm_y = [self.bpm2y_name(bpm) for bpm in self.bpm_names]
+        bpm_names_xy = bpm_x + bpm_y
+
+        x = df_scan.loc[:, self.cor_names].values
+        y = df_scan.loc[:, bpm_names_xy].values
+
+        reg = LinearRegression().fit(x, y)
+        x_test = np.eye(np.shape(x)[1])
+        rm = reg.predict(x_test)
+        #df_rm = pd.DataFrame(rm.T, columns=self.cor_names, index=bpm_x+bpm_y)
+        self.df = self.data2df(matrix=rm.T, bpm_names=self.bpm_names, cor_names=self.cor_names)
+        return self.df
+
+    def clean_rm(self, coupling=True):
+        if self.method != None:
+            hcors = self.method.hcors
+            vcors = self.method.vcors
+            bpms = self.method.bpms
+            for hcor in hcors:
+                for bpm in bpms:
+                    if bpm.s < hcor.s:
+
+                        self.df.loc[self.bpm2x_name(bpm.id), hcor.id] = 0
+                    if not coupling:
+                        self.df.loc[self.bpm2y_name(bpm.id), hcor.id] = 0
+            for vcor in vcors:
+                for bpm in bpms:
+                    if bpm.s < vcor.s:
+                        self.df.loc[self.bpm2y_name(bpm.id), vcor.id] = 0
+                    if not coupling:
+                        self.df.loc[self.bpm2x_name(bpm.id), vcor.id] = 0
+
+        else:
+            print("ResponseMatrix.method = None, Add the method, e.g. MeasureResponseMatrix")
 
     def inject(self, cor_list, bpm_list, inj_matrix):
         """
@@ -663,15 +729,15 @@ class ResponseMatrix:
         return self.matrix
 
     def data2df(self, matrix, bpm_names, cor_names):
-        bpm_x = [bpm + ".X" for bpm in bpm_names]
-        bpm_y = [bpm + ".Y" for bpm in bpm_names]
+        bpm_x = [self.bpm2x_name(bpm) for bpm in bpm_names]
+        bpm_y = [self.bpm2y_name(bpm) for bpm in bpm_names]
         df = pd.DataFrame(matrix, columns=cor_names, index=bpm_x + bpm_y)
         return df
 
     def df2data(self):
         self.cor_names = list(self.df.columns.values)
         bpms_all = list(self.df.index.values)
-        self.bpm_names = [bpm.replace(".X", "") for bpm in bpms_all if ".X" in bpm]
+        self.bpm_names = self.xy_names2bpm_id(bpms_all)
         self.matrix = self.df.values
 
     def dump(self, filename):

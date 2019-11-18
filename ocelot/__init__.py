@@ -25,6 +25,7 @@ __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope", 
            "write_lattice",  # io
            "CSR", "SpaceCharge", "Wake", "WakeTable", "WakeKick", "BeamTransform", "SmoothBeam",
            "EmptyProc", "PhysProc", "LaserHeater", "LaserModulator", "SpontanRadEffects", "LSC",
+           "WakeTableDechirperOffAxis",
            "MagneticLattice",
            "ocelog",
            "np", # numpy

@@ -18,6 +18,7 @@ def Py2C(array):
 class Screen:
     """
     Class to store radiation field and to provide information about screen parameters where radiation will be observed.
+    Format for electric fields in arrays (arReEx, arImEx, ...) is following: ReEx[ny*nx*je + nx*jy + jx]
 
     self.z: 100.0 [m], distance from the beginning of the lattice to the screen
     self.size_x: 1 [m], half of screen size in horizontal plane
@@ -27,8 +28,11 @@ class Screen:
     self.start_energy: 100.0 [eV], starting photon energy
     self.end_energy: 10000.0 [eV], ending photon energy
     self.num_energy: 1000,   number of energy points
-
-
+    self.arReEx = [],  Real part of horizontal component of the electric field
+    self.arImEx = [],  Imaginary part of horizontal component of the electric field
+    self.arReEy = [],  Real part of the vertical component of the electric field
+    self.arImEy = [],  Imaginary part of the vertical component of the electric field
+    self.arPhase = [], phase between Re and Im components
     """
     def __init__(self):
         # position of screen center
@@ -101,15 +105,6 @@ class Screen:
         self.Yph = np.linspace(self.y_start, self.y_start + self.y_step*(self.ny - 1), self.ny)
         self.Eph = np.linspace(self.e_start, self.e_start + self.e_step*(self.ne - 1), self.ne)
 
-
-        #class EMScreen():
-        #    def __init__(self, screen=None):
-        #        if screen !=None:
-        #            self.screen_to_emscreen(screen)
-        #        else:
-        #            self.create_empty_emclass()
-
-
     def rebuild_efields(self, x0=0, y0=0, z0=0):
         """
         the method recalculates the field phase and electrical fields to obtain the correct values that can be used
@@ -143,7 +138,6 @@ class Screen:
         self.arImEx = arImEx
         self.arReEy = arReEy
         self.arImEy = arImEy
-
 
     def screen_to_emscreen(self, screen):
 

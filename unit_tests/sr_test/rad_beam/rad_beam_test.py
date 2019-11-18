@@ -45,6 +45,41 @@ def test_coherent_radiation(lattice, screen, beam, parameter, update_ref_values=
     result6 = check_matrix(screen.Pi, screen_ref['Pi'], TOL, assert_info=' Pi - ')
     assert check_result(result1 + result2 + result3 + result4 + result5 + result6)
 
+@pytest.mark.parametrize('parameter', [0, 1, 2])
+def test_coherent_radiation_traj(lattice, screen, beam, parameter, update_ref_values=False):
+    """calculate_radiation function test"""
+    screen.nullify()
+    accuracy = 1
+    beam_c = copy.deepcopy(beam)
+    if parameter == 0:
+        p_array = beam_c
+
+    elif parameter == 1:
+        p_array = beam_c
+        p_array.tau()[:] *= -1
+
+    elif parameter == 2:
+        p_array = beam_c
+        p_array.tau()[:] = 0
+
+    screen = coherent_radiation(lattice, screen, p_array, accuracy=accuracy)
+
+    if update_ref_values:
+        return {'x0': list(screen.beam_traj.x(0)[::10]), 'y0': list(screen.beam_traj.y(0)[::10]), 'xp0': list(screen.beam_traj.xp(0)[::10]),
+                'yp0': list(screen.beam_traj.yp(0)[::10]), 'z0': list(screen.beam_traj.z(0)[::10]), 's0': list(screen.beam_traj.s(0)[::10]),
+                'x1': list(screen.beam_traj.x(1)[::10]), 'x2': list(screen.beam_traj.x(2)[::10])}
+
+    screen_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) + '.json')
+
+    result1 = check_matrix(screen.beam_traj.x(0)[::10], screen_ref['x0'], TOL, assert_info=' x - ')
+    result2 = check_matrix(screen.beam_traj.y(0)[::10], screen_ref['y0'], TOL, assert_info=' y - ')
+    result3 = check_matrix(screen.beam_traj.xp(0)[::10], screen_ref['xp0'], TOL, assert_info=' xp - ')
+    result4 = check_matrix(screen.beam_traj.yp(0)[::10], screen_ref['yp0'], TOL, assert_info=' yp - ')
+    result5 = check_matrix(screen.beam_traj.z(0)[::10], screen_ref['z0'], TOL, assert_info=' z - ')
+    result6 = check_matrix(screen.beam_traj.s(0)[::10], screen_ref['s0'], TOL, assert_info=' s - ')
+    result7 = check_matrix(screen.beam_traj.x(1)[::10], screen_ref['x1'], TOL, assert_info=' x1 - ')
+    result8 = check_matrix(screen.beam_traj.x(2)[::10], screen_ref['x2'], TOL, assert_info=' x2 - ')
+    assert check_result(result1 + result2 + result3 + result4 + result5 + result6 + result7 + result8)
 
 @pytest.mark.parametrize('parameter', [0, 1, 2])
 def test_coherent_radiation_fields(lattice, screen, beam, parameter, update_ref_values=False):
@@ -247,6 +282,7 @@ def test_update_ref_values(lattice, screen, beam, cmdopt):
     
     update_functions = []
     update_functions.append('test_coherent_radiation')
+    update_functions.append('test_coherent_radiation_traj')
     update_functions.append('test_coherent_radiation_fields')
     update_functions.append("test_coherent_radiation_parray")
     update_functions.append('test_energy_loss_spatial')
@@ -254,6 +290,7 @@ def test_update_ref_values(lattice, screen, beam, cmdopt):
 
     update_function_parameters = {}
     update_function_parameters['test_coherent_radiation'] = [0, 1, 2]
+    update_function_parameters['test_coherent_radiation_traj'] = [0, 1, 2]
     update_function_parameters['test_coherent_radiation_fields'] = [0, 1, 2]
     update_function_parameters['test_coherent_radiation_parray'] = [0, 1, 2]
     parameter = update_function_parameters[cmdopt] if cmdopt in update_function_parameters.keys() else ['']

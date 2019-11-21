@@ -417,6 +417,9 @@ class GenesisInput:
         self.run_dir = None # directory to run simulation in
         self.exp_dir = None # if run_dir==None, it is created based on exp_dir
         
+        # self.inpfile_fullpath = None # full path to input file (if not None - overrides standard folder structure)
+        # self.outfile_fullpath = None # full path to input file (if not None - overrides standard folder structure)
+        
         self.inp_txt = _inputTemplate
         
         self.int_vals = ('npart', 'nbins','ncar', 'zsep', 'nslice', 'ntail') #continue
@@ -1116,6 +1119,12 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', dfl_slipage_inc
         inp_path = inp.run_dir + 'run.' + str(inp.runid) + '.s' + str(inp.stageid) + str(inp.suffix) + '.inp'
         out_path = inp.run_dir + 'run.' + str(inp.runid) + '.s' + str(inp.stageid) + str(inp.suffix) + '.gout'
         stage_string = '.s' + str(inp.stageid)
+    
+    # #overrules the filenames
+    # if inp.inpfile_fullpath is not None:
+        # inp_path = inp.inpfile_fullpath
+    # if inp.outfile_fullpath is not None:
+        # out_path = np.outfile_fullpath
 
     inp_file = filename_from_path(inp_path)
     out_file = filename_from_path(out_path)

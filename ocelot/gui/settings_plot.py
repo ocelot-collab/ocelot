@@ -1,11 +1,11 @@
 
-import matplotlib
-import logging
+import matplotlib, logging, os
 
 # from pylab import rc, rcParams #tmp
 from matplotlib import rc, rcParams
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from copy import deepcopy
+from ocelot.common.logging import ind_str
 
 #in order to run decorators properly
 import functools
@@ -51,6 +51,53 @@ plotting_error=None
 # if not havedisplay:
 # # force matplotlib not ot use Xwindows backend. plots may still be plotted into e.g. *.png
 # matplotlib.use('Agg')
+
+
+#decorator
+def save_figure(plotting_func):
+    
+    @functools.wraps(plotting_func)
+    def wrapper(*args, **kwargs):
+        savepath = kwargs.pop(savepath, None)
+        fig = plotting_func(*args, **kwargs)
+        if savepath is not None:
+            fig.savefig(savepath, format=savepath.split('.')[-1])
+        return fig
+    
+    return wrapper
+
+
+def save_show(plotting_func):
+    @functools.wraps(plotting_func)
+    def wrapper(*args, **kwargs):
+        savefig = kwargs.pop('savefig', False)
+        showfig = kwargs.pop('showfig', True)
+        closefig = kwargs.pop('closefig', True)
+        fig = plotting_func(*args, **kwargs)
+        
+        matplotlib.pyplot.draw()
+        if savefig != False:
+            if savefig == True:
+                savefig = 'png'
+            if savefig in ['png' , 'eps', 'pdf', 'jpeg']:
+                savepath = edist.filePath + '.' + savefig
+            else:
+                savepath = savefig
+            _logger.debug(ind_str + 'saving to {}'.format(savepath))
+            matplotlib.pyplot.savefig(savepath, format=savepath.split('.')[-1])
+        
+        if showfig:
+            # rcParams["savefig.directory"] = os.path.dirname(edist.filePath)
+            matplotlib.pyplot.show()
+        if closefig:
+            # # plt.close('all')
+            matplotlib.pyplot.close(fig)
+        
+        # if savepath is not None:
+            # fig.savefig(savepath, format=savepath.split('.')[-1])
+        return fig
+    return wrapper
+
 
 #decorator
 def if_plottable(plotting_func):

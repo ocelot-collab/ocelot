@@ -970,6 +970,19 @@ class StokesParameters:
         else:
             _logger.error(ind_str + 'argument "mode" should be in ["sum", "mean"]')
             raise ValueError('argument "mode" should be in ["sum", "mean"]')
+            
+    # def bin_z(self, ds=1e-6)
+        # S = deepcopy(self)
+        # nz, ny, nx = self.s0.shape
+        # dz = S.sc_z[1]-S.sc_z[0]
+        # n_bin = int(ds/dz)
+        
+        # def binning(arr, nbin):
+            # b = np.zeros_like(arr[arr.shape[0]//nbin*nbin,::])
+            # for i in range(nbin):
+                # b+=arr[i:arr.shape[0]//nbin*nbin:nbin,::]
+            # b /= nbin
+            # return b
 
 
 class HeightProfile:
@@ -1760,7 +1773,7 @@ def dfl_disperse(dfl, coeff, E_ph0=None, return_result=False):
 
 def dfl_ap(*args, **kwargs):
     _logger.warning('"dfl_ap" is deprecated, use "dfl_ap_rect" instead for rectangular aperture')
-    return dfl_ap_square(*args, **kwargs)
+    return dfl_ap_rect(*args, **kwargs)
         
 def dfl_ap_rect(dfl, ap_x=np.inf, ap_y=np.inf):
     """
@@ -1772,17 +1785,23 @@ def dfl_ap_rect(dfl, ap_x=np.inf, ap_y=np.inf):
         ap_x = [-ap_x / 2, ap_x / 2]
     if np.size(ap_y) == 1:
         ap_y = [-ap_y / 2, ap_y / 2]
-
+    _logger.debug(ind_str + 'ap_x = {}'.format(ap_x))
+    _logger.debug(ind_str + 'ap_y = {}'.format(ap_y))
+    
     idx_x = np.where((dfl.scale_x() >= ap_x[0]) & (dfl.scale_x() <= ap_x[1]))[0]
     idx_x1 = idx_x[0]
     idx_x2 = idx_x[-1]
-
+    
     idx_y = np.where((dfl.scale_y() >= ap_y[0]) & (dfl.scale_y() <= ap_y[1]))[0]
     idx_y1 = idx_y[0]
     idx_y2 = idx_y[-1]
-
+        
+    _logger.debug(ind_str + 'idx_x = {}-{}'.format(idx_x1,idx_x2))
+    _logger.debug(ind_str + 'idx_y = {}-{}'.format(idx_y1,idx_y2))
+    
+    
     mask = np.zeros_like(dfl.fld[0, :, :])
-    mask[idx_x1:idx_x2, idx_y1:idx_y2] = 1
+    mask[idx_y1:idx_y2, idx_x1:idx_x2] = 1
     mask_idx = np.where(mask == 0)
 
     # dfl_out = deepcopy(dfl)
@@ -1914,13 +1933,15 @@ def dfl_waistscan(dfl, z_pos, projection=0, **kwargs):
 
         _logger.info(ind_str + 'scanning at z = %.2f m' % (z))
 
-        I_xy = dfl.prop(z, fine=0, debug=0, return_result=1).int_xy()  # integrated xy intensity
+        dfl_prop = dfl.prop(z, fine=0, debug=0, return_result=1)
+        dfl_prop.to_domain('s')
+        I_xy = dfl_prop.int_xy()  # integrated xy intensity
 
         scale_x = dfl.scale_x()
         scale_y = dfl.scale_y()
         center_x = np.int((I_xy.shape[1] - 1) / 2)
         center_y = np.int((I_xy.shape[0] - 1) / 2)
-        _logger.debug(ind_str + 'center_pixels = {}, {}'.format(center_x, center_y))
+        _logger.debug(2 * ind_str + 'center_pixels = {}, {}'.format(center_x, center_y))
 
         if projection:
             I_x = np.sum(I_xy, axis=0)
@@ -1928,19 +1949,32 @@ def dfl_waistscan(dfl, z_pos, projection=0, **kwargs):
         else:
             I_y = I_xy[:, center_x]
             I_x = I_xy[center_y, :]
-
+        
         sc_res.z_pos = np.append(sc_res.z_pos, z)
-        sc_res.phdens_max = np.append(sc_res.phdens_max, np.amax(I_xy))
+        
+        phdens_max = np.amax(I_xy)
+        phdens_onaxis = I_xy[center_y, center_x]
+        fwhm_x = fwhm(scale_x, I_x)
+        fwhm_y = fwhm(scale_y, I_y)
+        std_x = std_moment(scale_x, I_x)
+        std_y = std_moment(scale_y, I_y)
+        
+        _logger.debug(2 * ind_str + 'phdens_max = %.2e' % (phdens_max))
+        _logger.debug(2 * ind_str + 'phdens_onaxis = %.2e' % (phdens_onaxis))
+        _logger.debug(2 * ind_str + 'fwhm_x = %.2e' % (fwhm_x))
+        _logger.debug(2 * ind_str + 'fwhm_y = %.2e' % (fwhm_y))
+        _logger.debug(2 * ind_str + 'std_x = %.2e' % (std_x))
+        _logger.debug(2 * ind_str + 'std_y = %.2e' % (std_y))
+        
+        sc_res.phdens_max = np.append(sc_res.phdens_max, phdens_max)
+        sc_res.phdens_onaxis = np.append(sc_res.phdens_onaxis, phdens_onaxis)
+        sc_res.fwhm_x = np.append(sc_res.fwhm_x, fwhm_x)
+        sc_res.fwhm_y = np.append(sc_res.fwhm_y, fwhm_y)
+        sc_res.std_x = np.append(sc_res.std_x, std_x)
+        sc_res.std_y = np.append(sc_res.std_y, std_y)
 
-        _logger.debug(ind_str + 'phdens_max = %.2e' % (np.amax(I_xy)))
-
-        sc_res.phdens_onaxis = np.append(sc_res.phdens_onaxis, I_xy[center_y, center_x])
-        sc_res.fwhm_x = np.append(sc_res.fwhm_x, fwhm(scale_x, I_x))
-        sc_res.fwhm_y = np.append(sc_res.fwhm_y, fwhm(scale_y, I_y))
-        sc_res.std_x = np.append(sc_res.std_x, std_moment(scale_x, I_x))
-        sc_res.std_y = np.append(sc_res.std_y, std_moment(scale_y, I_y))
-
-        sc_res.z_max_phdens = sc_res.z_pos[np.argmax(sc_res.phdens_max)]
+    sc_res.z_max_phdens = sc_res.z_pos[np.argmax(sc_res.phdens_max)]
+    _logger.debug(ind_str + 'z_max_phdens = %.2e' % (sc_res.z_max_phdens))
 
     t_func = time.time() - start
     _logger.debug(ind_str + 'done in %.2f sec' % t_func)
@@ -2798,7 +2832,7 @@ def wigner_out(out, z=inf, method='mp', pad=1, debug=1, on_axis=1):
             wig.xlamds = out('xlamds')
             wig.filePath = out.filePath
         elif hasattr(out, 'h5'):  # genesis4
-            logger.warning('not implemented for on-axis, chaeck!')
+            _logger.warning('not implemented for on-axis, check!')
             wig.field = out.rad_field(zi=zi, loc='near')
             wig.xlamds = out.lambdaref
             wig.filePath = out.h5.filename

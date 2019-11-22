@@ -1,7 +1,7 @@
 import inspect
 import os
 
-python_v = "python3.4"
+python_v = "python3"
 
 class bcolors:
     HEADER = '\033[95m'

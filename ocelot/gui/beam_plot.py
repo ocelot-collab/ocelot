@@ -195,6 +195,7 @@ def plot_estimator_power_z(fel, z=None, fig=None, und_duty_factor=1, fs=False):
     # plt.plot(out.s * 1e6, out.p_int[:,z_ind])
     ax.set_title('Pulse energy @ %.2fm = %.2e J' %(z / und_duty_factor, fel.E(z)))
     ax.set_ylabel('P [W]')
+    return fig
     
     #fig.savefig(exp_dir + 'power_sat.png', format = 'png')
     # fig.show()
@@ -231,6 +232,7 @@ def plot_estimator_spectrogram(fel, z=None, fig=None, cmap='Reds', **kwargs):
     ax.set_xlabel('s [um]')
     ax.set_ylabel('E [eV]')
     ax.autoscale(tight=1)
+    return fig
     # fig.show()
 
 @if_plottable
@@ -248,6 +250,7 @@ def plot_estimator_spectrum(fel, z=None, fig=None, **kwargs):
     ax.set_xlabel('E [eV]')
     ax.set_ylabel('spec. density')
     ax.autoscale(tight=1)
+    return fig
     # fig.show()
 
 @if_plottable
@@ -271,6 +274,7 @@ def plot_estimator_power_evo(fel, fig=None, und_duty_factor=1, **kwargs):
     ax.semilogy(z  / und_duty_factor, np.array(P))
     ax.set_ylabel('P [W]')
     ax.set_xlabel('z [m]')
+    return fig
     # fig.show()
 
 @if_plottable
@@ -292,6 +296,7 @@ def plot_estimator_energy_evo(fel, fig=None, und_duty_factor=1, **kwargs):
     ax.semilogy(z / und_duty_factor, np.array(E))
     ax.set_ylabel('E [J]')
     ax.set_xlabel('z [m]')
+    return fig
     # fig.show()
     
     

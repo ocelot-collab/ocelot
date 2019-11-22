@@ -169,16 +169,17 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
 
     _logger.debug(ind_str + 'done')
 
-
-def plot_fel_power_z(fel, z=None, fig=None, magn_coeff=1, fs=False):
+@if_plottable
+@save_show
+def plot_estimator_power_z(fel, z=None, fig=None, und_duty_factor=1, fs=False):
     '''
     plots estimated FEL power at position z
     fel is FelParamterArray object
+    und_duty_factor <= 1
     '''
-    if fig.__class__ == int or fig is None:
-        fig = plt.figure(fig)
-    else:
-        plt.clf()
+    if fig == None:
+        fig = plt.figure()
+    fig.clf()
     ax = fig.gca()
     
     if z is None:
@@ -192,18 +193,21 @@ def plot_fel_power_z(fel, z=None, fig=None, magn_coeff=1, fs=False):
         ax.set_xlabel('s [um]')
     # z_ind = find_nearest_idx(out.z, fel.z_sat_min * magn_coeff )
     # plt.plot(out.s * 1e6, out.p_int[:,z_ind])
-    ax.set_title('Pulse energy @ %.2fm = %.2e J' %(z * magn_coeff, fel.E(z)))
+    ax.set_title('Pulse energy @ %.2fm = %.2e J' %(z / und_duty_factor, fel.E(z)))
     ax.set_ylabel('P [W]')
+    return fig
     
     #fig.savefig(exp_dir + 'power_sat.png', format = 'png')
-    fig.show()
+    # fig.show()
 
-def plot_fel_spectrogram(fel, z=None, fig=None, cmap='Reds'):
+@if_plottable
+@save_show
+def plot_estimator_spectrogram(fel, z=None, fig=None, cmap='Reds', **kwargs):
     
-    if fig.__class__ == int or fig is None:
-        fig = plt.figure(fig)
-    else:
-        plt.clf()
+    if fig == None:
+        fig = plt.figure()
+    fig.clf()
+    
     ax = fig.gca()
     
     # if z is None:
@@ -228,15 +232,17 @@ def plot_fel_spectrogram(fel, z=None, fig=None, cmap='Reds'):
     ax.set_xlabel('s [um]')
     ax.set_ylabel('E [eV]')
     ax.autoscale(tight=1)
-    fig.show()
+    return fig
+    # fig.show()
+
+@if_plottable
+@save_show
+def plot_estimator_spectrum(fel, z=None, fig=None, **kwargs):
     
+    if fig == None:
+        fig = plt.figure()
+    fig.clf()
     
-def plot_fel_spectrum(fel, z=None, fig=None):
-    
-    if fig.__class__ == int or fig is None:
-        fig = plt.figure(fig)
-    else:
-        plt.clf()
     ax = fig.gca()
     
     phen_arr, spectrum = fel.spectrum(z = z)
@@ -244,39 +250,45 @@ def plot_fel_spectrum(fel, z=None, fig=None):
     ax.set_xlabel('E [eV]')
     ax.set_ylabel('spec. density')
     ax.autoscale(tight=1)
-    fig.show()
+    return fig
+    # fig.show()
+
+@if_plottable
+@save_show
+def plot_estimator_power_evo(fel, fig=None, und_duty_factor=1, **kwargs):
     
-def plot_fel_power_evo(fel, fig=None, und_duty_factor=1):
+    if fig == None:
+        fig = plt.figure()
+    fig.clf()
     
-    if fig.__class__ == int or fig is None:
-        fig = plt.figure(fig)
-    else:
-        plt.clf()
     ax = fig.gca()
     
     P=[]
     E=[]
-    z = np.arange(fel.z_sat_min)
+    z = np.linspace(0,fel.z_sat_min,20)
     for zi in z:
         P.append(np.amax(fel.P(zi)))
         E.append(fel.E(zi))
     
     plt.title('Energy@{:.2f}m = {:.2e} J'.format(fel.z_sat_min / und_duty_factor, E[-1]))
-    ax.semilogy(z / und_duty_factor, np.array(P))
+    ax.semilogy(z  / und_duty_factor, np.array(P))
     ax.set_ylabel('P [W]')
     ax.set_xlabel('z [m]')
-    fig.show()
+    return fig
+    # fig.show()
+
+@if_plottable
+@save_show
+def plot_estimator_energy_evo(fel, fig=None, und_duty_factor=1, **kwargs):
     
-def plot_fel_energy_evo(fel, fig=None, und_duty_factor=1):
+    if fig == None:
+        fig = plt.figure()
+    fig.clf()
     
-    if fig.__class__ == int or fig is None:
-        fig = plt.figure(fig)
-    else:
-        plt.clf()
     ax = fig.gca()
     
     E=[]
-    z = np.arange(fel.z_sat_min)
+    z = np.linspace(0,fel.z_sat_min,20)
     for zi in z:
         E.append(fel.E(zi))
         
@@ -284,6 +296,7 @@ def plot_fel_energy_evo(fel, fig=None, und_duty_factor=1):
     ax.semilogy(z / und_duty_factor, np.array(E))
     ax.set_ylabel('E [J]')
     ax.set_xlabel('z [m]')
-    fig.show()
+    return fig
+    # fig.show()
     
     

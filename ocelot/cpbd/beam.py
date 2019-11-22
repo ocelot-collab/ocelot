@@ -705,24 +705,14 @@ class ParticleArray:
         self.px()[:] = Rnn * self.px()[:]
         self.py()[:] = Rnn * self.py()[:]
         self.p()[:] = Rnn * self.p()[:]
-        
-    # def save_particle_array(filename, p_array):
-        # np.savez_compressed(filename, rparticles=p_array.rparticles, q_array=p_array.q_array, E=p_array.E, s=p_array.s)
-    
-    # def load_particle_array(filename):
-        # p_array = ParticleArray()
-        # with np.load(filename) as data:
-            # for key in data.keys():
-                # p_array.__dict__[key] = data[key]
-        # return p_array
 
     def __str__(self):
-        val = ""
-        val += "ref energy  = " + str(np.round(self.E, 4)) + " GeV \n"
-        val += "beam energy  = " + str(np.around(self.E*(1 + np.mean(self.p())), 4)) + " GeV \n"
-        val += "charge  = " + str(np.around(np.sum(self.q_array)*1e9, 4)) + " nC \n"
-
-        val += "n particles  = " + str(self.n) + "\n"
+        val = "ParticleArray: \n"
+        val += "Ref. energy : " + str(np.round(self.E, 4)) + " GeV \n"
+        val += "Ave. energy : " + str(np.around(self.E*(1 + np.mean(self.p())), 4)) + " GeV \n"
+        val += "Charge      : " + str(np.around(np.sum(self.q_array)*1e9, 4)) + " nC \n"
+        val += "s pos       : " + str(self.s) + " m \n"
+        val += "n particles : " + str(self.n) + "\n"
         return val
 
 

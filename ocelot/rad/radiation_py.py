@@ -56,11 +56,11 @@ class BeamTraject:
 
 
     def n(self):
-        return np.shape(self.U)[2]
+        return np.shape(self.U[0])[1]
 
     def check(self, n):
         if n > self.n() - 1:
-            raise Exception('n > number of particles"')
+            raise Exception('n > number of particles')
 
     def x(self, n=0):
         self.check(n)
@@ -553,7 +553,7 @@ def calculate_radiation(lat, screen, beam, energy_loss=False, quantum_diff=False
     :param beam: Beam class, the radiation is calculated from one electron
     :param energy_loss: False, if True includes energy loss after each period
     :param quantum_diff: False, if True introduces random energy kick
-    :param accuracy: 1
+    :param accuracy: 1, scale for trajectory points number
     :param end_poles: False, if True includes end poles with 1/4, -3/4, 1, ...
     :return:
     """
@@ -625,7 +625,7 @@ def coherent_radiation(lat, screen, p_array, energy_loss=False, quantum_diff=Fal
                     and field components is summing up afterwards.
     :param energy_loss: False, if True includes energy loss after each period
     :param quantum_diff: False, if True introduces random energy kick
-    :param accuracy: 1
+    :param accuracy: 1, scale for trajectory points number
     :param verbose: True, print progress
     :return:
     """
@@ -707,7 +707,7 @@ def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy
                 if lat_el.totalLen != 0:
                     navi = Navigator(lat)
 
-                    N = 500
+                    N = int((lat_el.totalLen * 2000 + 150) * accuracy)
                     u = np.zeros((N * 9, np.shape(p_array.rparticles)[1]))
                     for i, z in enumerate(np.linspace(L, lat_el.totalLen + L, num=N)):
                         h = (lat_el.totalLen)/(N)

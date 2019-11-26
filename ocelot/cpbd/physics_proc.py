@@ -300,7 +300,7 @@ class BeamTransform(PhysProc):
 
     @property
     def twiss(self):
-        if self.tws == None:
+        if self.tws is None:
             _logger.warning("BeamTransform: x_opt and y_opt are obsolete, use Twiss")
             tws = Twiss()
             tws.alpha_x, tws.beta_x, tws.mux = self.x_opt

@@ -7,30 +7,30 @@ __version__ = '19.06.2'
 
 __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope",  # beam
             "ellipse_from_twiss", "ParticleArray",    # beam
-           "global_slice_analysis",  # beam
-           "save_particle_array", "load_particle_array",            # io
-           'fodo_parameters', 'lattice_transfer_map', 'TransferMap', 'gauss_from_twiss',  # optics
-           "get_map", "MethodTM", "SecondTM", "KickTM", "CavityTM", "UndulatorTestTM",  # optics
-           'Element', 'Multipole', 'Quadrupole', 'RBend', "Matrix", "UnknownElement",  # elements
-           'SBend', 'Bend', 'Drift', 'Undulator', 'Hcor',  # elements
-           'Vcor', "Sextupole", "Monitor", "Marker", "Octupole", "Cavity", "Edge",  # elements
-           "Sequence", "Solenoid", "TDCavity", # elements
-           "match", "match_tunes",  # match
-           "Navigator", "tracking_step", "create_track_list", "track_nturns", "freq_analysis",  # track
+            "global_slice_analysis",  # beam
+            "save_particle_array", "load_particle_array",            # io
+            'fodo_parameters', 'lattice_transfer_map', 'TransferMap', 'gauss_from_twiss',  # optics
+            "get_map", "MethodTM", "SecondTM", "KickTM", "CavityTM", "UndulatorTestTM",  # optics
+            'Element', 'Multipole', 'Quadrupole', 'RBend', "Matrix", "UnknownElement",  # elements
+            'SBend', 'Bend', 'Drift', 'Undulator', 'Hcor',  # elements
+            'Vcor', "Sextupole", "Monitor", "Marker", "Octupole", "Cavity", "Edge",  # elements
+            "Sequence", "Solenoid", "TDCavity",  # elements
+            "match", "match_tunes",  # match
+            "Navigator", "tracking_step", "create_track_list", "track_nturns", "freq_analysis",  # track
             "contour_da", "track_nturns_mpi", "nearest_particle", "stable_particles",  # track
             "spectrum", "track",  # track
-           "pi", "m_e_eV", "m_e_MeV", "m_e_GeV",  # globals
-           "compensate_chromaticity",  # chromaticity
-           "EbeamParams",  # beam_params
-           "write_lattice",  # io
-           "CSR", "SpaceCharge", "Wake", "WakeTable", "WakeKick", "BeamTransform", "SmoothBeam",
-           "EmptyProc", "PhysProc", "LaserHeater", "LaserModulator", "SpontanRadEffects", "LSC",
-           "WakeTableDechirperOffAxis",
-           "MagneticLattice",
-           "ocelog",
-           "np", # numpy
-           "speed_of_light", "m_e_eV", "m_e_MeV", "m_e_GeV",
-           "generate_parray",
+            "pi", "m_e_eV", "m_e_MeV", "m_e_GeV",  # globals
+            "compensate_chromaticity",  # chromaticity
+            "EbeamParams",  # beam_params
+            "write_lattice",  # io
+            "CSR", "SpaceCharge", "Wake", "WakeTable", "WakeKick", "BeamTransform", "SmoothBeam",
+            "EmptyProc", "PhysProc", "LaserHeater", "LaserModulator", "SpontanRadEffects", "LSC",
+            "WakeTableDechirperOffAxis",
+            "MagneticLattice",
+            "ocelog",
+            "np", # numpy
+            "speed_of_light", "m_e_eV", "m_e_MeV", "m_e_GeV",
+            "generate_parray",
 
            ]
 import numpy as np
@@ -51,8 +51,7 @@ from ocelot.cpbd.wake3D import *
 from ocelot.cpbd.physics_proc import *
 
 import logging
-# _logger = logging.getLogger(__name__)
-# _logger.info('initializing ocelot...')
+
 print('initializing ocelot...')
 
 try:

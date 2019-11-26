@@ -814,24 +814,32 @@ def get_envelope(p_array, tws_i=Twiss(), bounds=None):
     tws.alpha_y = -tws.ypy/tws.emit_y
     return tws
 
-def get_current(p_array, charge=None, num_bins=200):
+
+def get_current(p_array, num_bins=200, **kwargs):
     """
-    Function calculates beam current from particleArray
+    Function calculates beam current from particleArray.
 
     :param p_array: particleArray
-    :param charge: - None, charge of the one macro-particle.
+    :param charge: - None, OBSOLETE, charge of the one macro-particle.
                     If None, charge of the first macro-particle is used
     :param num_bins: number of bins
     :return s, I -  (np.array, np.array) - beam positions [m] and currents in [A]
     """
-    if charge == None:
-        charge = p_array.q_array[0]
+    if "charge" in kwargs:
+        _logger.warning("argument 'charge' is obsolete use 'get_current(p_array, num_bins)' instead" )
+        charge = kwargs["charge"]
+    else:
+        charge = None
+    weights = None
+    if charge is None:
+        weights = p_array.q_array
+        charge = 1
+
     z = p_array.tau()
-    hist, bin_edges = np.histogram(z, bins=num_bins)
+    hist, bin_edges = np.histogram(z, bins=num_bins, weights=weights)
     delta_Z = max(z) - min(z)
     delta_z = delta_Z/num_bins
     t_bins = delta_z/speed_of_light
-    print( "Imax = ", max(hist)*charge/t_bins)
     hist = np.append(hist, hist[-1])
     return bin_edges, hist*charge/t_bins
 
@@ -987,12 +995,12 @@ def s_to_cur(A, sigma, q0, v):
     a = np.min(A) - Nsigma*sigma
     b = np.max(A) + Nsigma*sigma
     s = 0.25*sigma
-    N = int(np.ceil((b-a)/s))
-    s = (b-a)/N
-    B = np.zeros((N+1, 2))
-    C = np.zeros(N+1)
+    N = int(np.ceil((b - a)/s))
+    s = (b - a)/N
+    B = np.zeros((N + 1, 2))
+    C = np.zeros(N + 1)
 
-    B[:, 0] = np.arange(0, (N+0.5)*s, s) + a
+    B[:, 0] = np.arange(0, (N + 0.5) * s, s) + a
     N = N + 1 #np.shape(B)[0]
     cA = (A - a)/s
     I = np.int_(np.floor(cA))
@@ -1000,10 +1008,10 @@ def s_to_cur(A, sigma, q0, v):
     s2cur_auxil(A, xiA, C, N, I)
 
     K = np.floor(Nsigma*sigma/s + 0.5)
-    G = np.exp(-0.5*(np.arange(-K, K+1)*s/sigma)**2)
+    G = np.exp(-0.5 * (np.arange(-K, K+1) * s/sigma)**2)
     G = G/np.sum(G)
     B[:, 1] = convmode(C, G, 1)
-    koef = q0 * v / (s*np.sum(B[:, 1]))
+    koef = q0 * v / (s * np.sum(B[:, 1]))
     B[:, 1] = koef * B[:, 1]
     return B
 

@@ -4,7 +4,7 @@ import numpy as np
 from ocelot.cpbd.beam import Twiss
 from scipy import optimize
 from ocelot.utils.acc_utils import *
-from ocelot.common.logging import *
+from ocelot.common.ocelog import *
 _logger = logging.getLogger(__name__)
 
 

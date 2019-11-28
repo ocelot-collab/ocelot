@@ -7,7 +7,7 @@ from copy import deepcopy
 from scipy import interpolate
 from scipy.signal import savgol_filter
 from scipy.stats import truncnorm
-from ocelot.common.logging import *
+from ocelot.common.ocelog import *
 from ocelot.cpbd.reswake import pipe_wake
 
 _logger = logging.getLogger(__name__)

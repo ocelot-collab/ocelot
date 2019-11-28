@@ -6,7 +6,7 @@ from ocelot.cpbd.beam import Particle, Twiss, ParticleArray
 from ocelot.cpbd.high_order import *
 from ocelot.cpbd.r_matrix import *
 from copy import deepcopy
-import logging
+#import logging
 import numpy as np
 
 _logger = logging.getLogger(__name__)

@@ -27,7 +27,6 @@ __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope", 
             "EmptyProc", "PhysProc", "LaserHeater", "LaserModulator", "SpontanRadEffects", "LSC",
             "WakeTableDechirperOffAxis",
             "MagneticLattice",
-            "ocelog",
             "np", # numpy
             "speed_of_light", "m_e_eV", "m_e_MeV", "m_e_GeV",
             "generate_parray",
@@ -41,7 +40,7 @@ from ocelot.cpbd.elements import *
 from ocelot.cpbd.match import *
 from ocelot.cpbd.track import *
 from ocelot.common.globals import *
-from ocelot.common.logging import *
+from ocelot.common.ocelog import *
 from ocelot.cpbd.chromaticity import *
 from ocelot.cpbd.beam_params import *
 from ocelot.cpbd.io import *
@@ -50,7 +49,6 @@ from ocelot.cpbd.csr import *
 from ocelot.cpbd.wake3D import *
 from ocelot.cpbd.physics_proc import *
 
-import logging
 
 print('initializing ocelot...')
 

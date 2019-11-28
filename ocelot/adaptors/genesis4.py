@@ -15,7 +15,7 @@ from ocelot import ParticleArray
 from ocelot.optics.wave import calc_ph_sp_dens, RadiationField
 from ocelot.common.globals import *
 from ocelot.adaptors.genesis import GenesisElectronDist #tmp
-from ocelot.common.logging import *
+from ocelot.common.ocelog import *
 from ocelot.utils.launcher import *
 import os
 

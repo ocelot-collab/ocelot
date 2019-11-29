@@ -2,7 +2,7 @@
 general ocelot description
 """
 
-__version__ = '19.06.2'
+__version__ = '19.12.0'
 
 
 __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope",  # beam
@@ -26,14 +26,14 @@ __all__ = ['Twiss', 'twiss', "Beam", "Particle", "get_current", "get_envelope", 
             "CSR", "SpaceCharge", "Wake", "WakeTable", "WakeKick", "BeamTransform", "SmoothBeam",
             "EmptyProc", "PhysProc", "LaserHeater", "LaserModulator", "SpontanRadEffects", "LSC",
             "WakeTableDechirperOffAxis",
-            "MagneticLattice",
+            "MagneticLattice", "merger",
             "np", # numpy
             "speed_of_light", "m_e_eV", "m_e_MeV", "m_e_GeV",
             "generate_parray",
 
            ]
 import numpy as np
-from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.magnetic_lattice import MagneticLattice, merger
 from ocelot.cpbd.beam import *
 from ocelot.cpbd.optics import *
 from ocelot.cpbd.elements import *

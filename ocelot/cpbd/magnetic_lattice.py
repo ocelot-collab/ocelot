@@ -91,6 +91,7 @@ def merger(lat, remaining_types=[], remaining_elems=[], init_energy=0.):
             m = Matrix()
             m.r = lattice.R
             m.t = lattice.T
+            m.b = lattice.B
             m.l = lattice.totalLen
             m.delta_e = delta_e
             E += delta_e
@@ -255,7 +256,7 @@ class MagneticLattice:
 
 
     def __str__(self):
-        line = "LATTICE: \n"
+        line = "LATTICE: length = " + str(self.totalLen) + " m \n"
         for e in self.sequence:
             line += "{0:15} length: {1:5.2f}      id: {2:10}\n".format(e.__class__.__name__, e.l, e.id)
         return line

@@ -264,7 +264,7 @@ class TransferMap:
         if m.__class__ in [TransferMap]:
             m2 = TransferMap()
             m2.R = lambda energy: np.dot(self.R(energy), m.R(energy))
-            m2.B = lambda energy: np.dot(self.R(energy), m.B(energy)) + self.B(energy)  # +dB #check
+            m2.B = lambda energy: np.dot(self.R(energy), m.B(energy)) + self.B(energy)
             m2.length = m.length + self.length
 
             return m2
@@ -556,7 +556,6 @@ class KickTM(TransferMap):
             X = transform_vec_ext(X, dx, dy, tilt)
 
         return X
-
 
     def __call__(self, s):
         m = copy(self)
@@ -875,6 +874,8 @@ class MethodTM:
 
         if element.__class__ == Matrix:
             tm.delta_e = element.delta_e
+            tm.B_z = lambda z, energy: element.b
+            tm.B = lambda energy: element.b
 
         if element.__class__ == Multipole:
             tm = MultipoleTM(kn=element.kn)

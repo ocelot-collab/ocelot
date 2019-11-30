@@ -187,20 +187,27 @@ def get_elements(lattice):
 def matrix_def_string(element, params):
     for key in element.__dict__:
         if isinstance(element.__dict__[key], np.ndarray):
+            # r - elements
             if np.shape(element.__dict__[key]) == (6, 6):
                 for i in range(6):
                     for j in range(6):
                         val = element.__dict__[key][i, j]
-                        if np.abs(val) > 1e-7:
+                        if np.abs(val) > 1e-9:
                             params.append(key + str(i + 1) + str(j + 1) + '=' + str(val))
-
+            # t - elements
             elif np.shape(element.__dict__[key]) == (6, 6, 6):
                 for i in range(6):
                     for j in range(6):
                         for k in range(6):
                             val = element.__dict__[key][i, j, k]
-                            if np.abs(val) > 1e-7:
+                            if np.abs(val) > 1e-9:
                                 params.append(key + str(i + 1) + str(j + 1) + str(k + 1) + '=' + str(val))
+            # b - elements
+            if np.shape(element.__dict__[key]) == (6, 1):
+                for i in range(6):
+                    val = element.__dict__[key][i, 0]
+                    if np.abs(val) > 1e-9:
+                        params.append(key + str(i + 1) + '=' + str(val))
 
     return params
 

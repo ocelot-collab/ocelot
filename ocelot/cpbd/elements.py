@@ -404,6 +404,8 @@ class Matrix(Element):
 
         self.r = np.zeros((6, 6))
         self.t = np.zeros((6, 6, 6))
+        # zero order elements - test mode, not implemented yet
+        self.b = np.zeros((6, 1))
 
         for y in kwargs:
             # decode first order arguments in format RXX or rXX where X is number from 1 to 6
@@ -417,6 +419,9 @@ class Matrix(Element):
             if "t" in y[0].lower() and len(y) == 4 and y[1:].isdigit() and (111 <= int(y[1:]) <= 666):
                 self.t[int(y[1]) - 1, int(y[2]) - 1, int(y[3]) - 1] = float(kwargs[y])
 
+            # decode zero order arguments in format BX or bX where X is number from 1 to 6
+            if "b" in y[0].lower() and len(y) == 2 and y[1:].isdigit() and (1 <= int(y[1:]) <= 6):
+                self.b[int(y[1]) - 1, 0] = float(kwargs[y])
         self.delta_e = delta_e
 
 

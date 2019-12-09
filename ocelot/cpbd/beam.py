@@ -2,7 +2,8 @@
 definition of particles, beams and trajectories
 """
 from ocelot.common.globals import *
-from ocelot.common.math_op import *
+from ocelot.common.math_op import find_nearest_idx
+from scipy.special import factorial
 from copy import deepcopy
 from scipy import interpolate
 from scipy.signal import savgol_filter

@@ -9,14 +9,15 @@ Ocelot includes following main modules:
     - optics
     - tracking
     - matching
-    - collective effects (description can be found [here](http://vrws.de/ipac2017/papers/wepab031.pdf) )
+    - collective effects (description can be found [here](http://vrws.de/ipac2017/papers/wepab031.pdf) and [here](https://journals.aps.org/prab/abstract/10.1103/PhysRevAccelBeams.22.024401))
         - Space Charge (3D Laplace solver)
         - CSR (Coherent Synchrotron Radiation) (1D model with arbitrary number of dipoles).
         - Wakefields (Taylor expansion up to second order for arbitrary geometry).
-    - MOGA (Multi Objective Genetics Algorithm). ([ref1](http://accelconf.web.cern.ch/AccelConf/ipac2016/papers/thpmb034.pdf))
-* **Native module for spontaneous radiation calculation**
+    - MOGA (Multi Objective Genetics Algorithm) [ref](http://accelconf.web.cern.ch/AccelConf/ipac2016/papers/thpmb034.pdf).
+* **Native module for spontaneous radiation calculation** (some details can be found [here](http://accelconf.web.cern.ch/AccelConf/ipac2019/papers/wepts017.pdf) and [here](http://scripts.iucr.org/cgi-bin/paper?S1600577519002509))
 * **FEL calculations: interface to GENESIS and pre/post-processing**
-* **Modules for online beam control and online optimization of accelerator performances.** [ref1](http://accelconf.web.cern.ch/accelconf/IPAC2014/papers/mopro086.pdf), [ref2](https://jacowfs.jlab.org/conf/y15/ipac15/prepress/TUPWA037.PDF), [ref3](http://accelconf.web.cern.ch/AccelConf/ipac2016/papers/wepoy036.pdf), [ref4](https://arxiv.org/pdf/1704.02335.pdf).
+* **Modules for online beam control and online optimization of accelerator performances.**   [ref1](http://accelconf.web.cern.ch/accelconf/IPAC2014/papers/mopro086.pdf), [ref2](https://jacowfs.jlab.org/conf/y15/ipac15/prepress/TUPWA037.PDF), [ref3](http://accelconf.web.cern.ch/AccelConf/ipac2016/papers/wepoy036.pdf), [ref4](https://arxiv.org/pdf/1704.02335.pdf).
+    - This module is being developed in collaboration with other accelerator groups. The module has been migrated to a separate [repository](https://github.com/ocelot-collab/optimizer) (in [ocelot-collab](https://github.com/ocelot-collab) organization) for ease of collaborative development.
 
 Ocelot extensively  uses Python's [NumPy (Numerical Python)](http://numpy.org) and [SciPy (Scientific Python)](http://scipy.org) libraries, which enable efficient in-core numerical and scientific computation within Python and give you access to various mathematical and optimization techniques and algorithms. To produce high quality figures Python's [matplotlib](http://matplotlib.org/index.html) library is used.
 
@@ -38,7 +39,7 @@ The tutorial includes 7 simple examples dediacted to beam dynamics and optics. H
 
 ##### This tutorial requires the following packages:
 
-- Python 3.4-3.6 (python 2.7 can work as well but not guaranteed)
+- Python 3.5-3.7 (python 2.7 can work as well but not guaranteed)
 - `numpy` version 1.8 or later: http://www.numpy.org/
 - `scipy` version 0.15 or later: http://www.scipy.org/
 - `matplotlib` version 1.5 or later: http://matplotlib.org/
@@ -49,16 +50,19 @@ The tutorial includes 7 simple examples dediacted to beam dynamics and optics. H
 - pyfftw (version 0.10)
 - numba
 
+**Orbit Correction module**
+- pandas
+
 The easiest way to get these is to download and install the (large) [Anaconda software distribution](https://www.continuum.io/).
 
-Alternatively, you can download and install [miniconda](http://conda.pydata.org/miniconda.html).
+Alternatively, you can download and install [miniconda](https://docs.conda.io/en/latest/miniconda.html).
 The following command will install all required packages:
 ```
 $ conda install numpy scipy matplotlib jupyter
 ```
 
 ## Ocelot installation
-##### Anaconda Cloud
+##### Anaconda Cloud **recommended**
 The easiest way to install OCELOT is to use Anaconda cloud. In that case use command:
  ```
  $ conda install -c ocelot-collab ocelot
@@ -68,7 +72,7 @@ Clone OCELOT from GitHub:
 ```
 $ git clone https://github.com/ocelot-collab/ocelot.git
 ```
-or download last release [zip file](https://github.com/ocelot-collab/ocelot/archive/v18.02.0.zip) - recomended.
+or download last release [zip file](https://github.com/ocelot-collab/ocelot/archive/v18.02.0.zip).
 Now you can install OCELOT from the source:
 ```
 $ python setup.py install
@@ -130,19 +134,19 @@ You can download OCELOT jupyter tutorials (release v18.02) using GitHub link [zi
     - Coupler Kick. Example of RF coupler kick influence on trajjectory and optics.
 * [Tutorial N7. Lattice design](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/7_lattice_design.ipynb)
     - Lattice design, twiss matching, twiss backtracking
-* [Tutorial N8. Physics process addition. Laser heater](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/dev/demos/ipython_tutorials/8_laser_heater.ipynb)
+* [Tutorial N8. Physics process addition. Laser heater](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/8_laser_heater.ipynb)
     - Theory of Laser Heater, implementation of new Physics Process, track particles w/o laser heater effect.
-* [Tutorial N9. Simple accelerator based THz source](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/dev/demos/ipython_tutorials/9_thz_source.ipynb)
+* [Tutorial N9. Simple accelerator based THz source](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/9_thz_source.ipynb)
     - A simple accelerator with the electron beam formation system and an undulator to generate THz radiation.
 
 #### Photon field simulation
 
-* [PFS tutorial N1. Synchrotron radiation module](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/dev/demos/ipython_tutorials/pfs_1_synchrotron_radiation.ipynb).
+* [PFS tutorial N1. Synchrotron radiation module](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/pfs_1_synchrotron_radiation.ipynb).
     - Simple examples how to calculate synchrotron radiation with OCELOT Synchrotron Radiation Module.
-* [PFS tutorial N2. Coherent radiation module and RadiationField object](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/dev/demos/ipython_tutorials/pfs_2_radiation_field.ipynb).
-* [PFS tutorial N3. Reflection from imperfect highly polished mirror](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/dev/demos/ipython_tutorials/pfs_3_imperfect_mirror.ipynb).
-* [PFS tutorial N4. Converting synchrotron radiation Screen object to RadiationField object for viewing and propagation](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/dev/demos/ipython_tutorials/pfs_4_synchrotron_radiation_visualization.ipynb).
-* [PFS tutorial N5: SASE estimation and imitation](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/dev/demos/ipython_tutorials/pfs_5_SASE_Estimator_and_Imitator.ipynb).
+* [PFS tutorial N2. Coherent radiation module and RadiationField object](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/pfs_2_radiation_field.ipynb).
+* [PFS tutorial N3. Reflection from imperfect highly polished mirror](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/pfs_3_imperfect_mirror.ipynb).
+* [PFS tutorial N4. Converting synchrotron radiation Screen object to RadiationField object for viewing and propagation](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/pfs_4_synchrotron_radiation_visualization.ipynb).
+* [PFS tutorial N5: SASE estimation and imitation](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/pfs_5_SASE_Estimator_and_Imitator.ipynb).
 
 #### Appendixes
 * [Undulator matching](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/undulator_matching.ipynb).

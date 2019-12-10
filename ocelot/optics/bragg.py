@@ -5,7 +5,7 @@ crystal optics
 from ocelot.optics.elements import Crystal
 from ocelot.optics.wave import *
 from ocelot.optics.ray import Ray, trace as trace_ray
-from ocelot.common.logging import *
+from ocelot.common.ocelog import *
 import logging
 _logger = logging.getLogger(__name__) 
 # from ocelot.gui.optics import *

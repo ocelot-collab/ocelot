@@ -24,6 +24,19 @@ def test_generate_parray(lattice, p_array, parameter=None, update_ref_values=Fal
     result = check_dict(p, p_array_ref['p_array'], tolerance=TOL, assert_info=' p - ')
     assert check_result(result)
 
+def test_s2current(lattice, p_array, parameter=None, update_ref_values=False):
+    """ func generate_parray testing """
+
+    I = s2current(s_array=p_array.tau(), q_array=p_array.q_array, n_points=300, filter_order=5, mean_vel=speed_of_light)
+
+    if update_ref_values:
+        return {'s': list(I[:, 0]), 'I': list(I[:, 1])}
+
+    current_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
+    result1 = check_matrix(I[:, 0], current_ref['s'], TOL, assert_info=' s - ')
+    result2 = check_matrix(I[:, 1], current_ref['I'], TOL, assert_info=' I - ')
+    assert check_result(result1 + result2)
+
 
 @pytest.mark.parametrize('parameter', [0, 1])
 def test_track_smooth(lattice, p_array, parameter, update_ref_values=False):
@@ -286,6 +299,38 @@ def test_track_spontan_rad_effects(lattice, p_array, parameter=None, update_ref_
     result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=TOL, assert_info=' p - ')
     assert check_result(result1 + result2)
 
+def test_dechirper_offaxis(lattice, p_array, parameter=None, update_ref_values=False):
+    """
+    test PhysicsProc WakeTable
+
+    0 - tracking of the electron beam with positive energy chirp trough undulator
+    1 - tracking of the electron beam with negative energy chirp trough undulator
+    """
+    p_array_track = copy.deepcopy(p_array)
+
+    navi = Navigator(lattice)
+    navi.unit_step = 0.1
+
+    wake_table = WakeTableDechirperOffAxis(b=500 * 1e-6)
+    ws = Wake()
+    ws.wake_table = wake_table
+
+    navi.add_physics_proc(ws, m1, m1)
+
+    tws_track_wo, p_array_wo = track(lattice, p_array_track, navi)
+
+    tws_track = obj2dict(tws_track_wo)
+    p = obj2dict(p_array_wo)
+
+    if update_ref_values:
+        return {'tws_track': tws_track, 'p_array': p}
+
+    tws_track_p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
+
+    result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
+    result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=TOL, assert_info=' p - ')
+    assert check_result(result1 + result2)
+
 
 def setup_module(module):
 
@@ -321,6 +366,7 @@ def test_update_ref_values(lattice, p_array, cmdopt):
     
     update_functions = []
     update_functions.append('test_generate_parray')
+    update_functions.append("test_s2current")
     update_functions.append('test_track_smooth')
     update_functions.append('test_track_beam_transform')
     update_functions.append('test_track_smooth_csr')
@@ -328,6 +374,7 @@ def test_update_ref_values(lattice, p_array, cmdopt):
     update_functions.append('test_track_laser_modulator')
     update_functions.append('test_track_lsc')
     update_functions.append('test_track_spontan_rad_effects')
+    update_functions.append("test_dechirper_offaxis")
 
     update_function_parameters = {}
     update_function_parameters['test_track_smooth'] = [0, 1]

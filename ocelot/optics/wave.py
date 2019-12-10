@@ -21,7 +21,7 @@ from ocelot.common.py_func import filename_from_path
 # from ocelot.adaptors.genesis import *
 # import ocelot.adaptors.genesis as genesis_ad
 # GenesisOutput = genesis_ad.GenesisOutput
-from ocelot.common.logging import *
+from ocelot.common.ocelog import *
 _logger = logging.getLogger(__name__)
 
 import multiprocessing
@@ -643,6 +643,94 @@ class RadiationField:
         J = self.mut_coh_func(norm=0, jit=jit)
         coh = np.sum(abs(J) ** 2) / np.sum(I) ** 2
         return coh
+        
+    def tilt(self, angle=0, plane='x', return_orig_domains=True):
+        '''
+        deflects the radaition in given direction by given angle
+        by introducing transverse phase chirp
+        '''
+        _logger.info('tilting radiation by {:.4e} rad in {} plane'.format(angle, plane))
+        _logger.warn(ind_str + 'in beta')
+        angle_warn = ind_str + 'deflection angle exceeds inverse space mesh range'
+        
+        k = 2 * pi / self.xlamds
+        domains = self.domains()
+        
+        self.to_domain('s')
+        if plane == 'y':
+            if np.abs(angle) > self.xlamds / self.dy / 2:
+                _logger.warning(angle_warn)
+            dphi =  angle * k * self.scale_y()
+            self.fld = self.fld * np.exp(1j * dphi)[np.newaxis, :, np.newaxis]
+        elif plane == 'x':
+            if np.abs(angle) > self.xlamds / self.dx / 2:
+                _logger.warning(angle_warn)
+            dphi =  angle * k * self.scale_x()
+            self.fld = self.fld * np.exp(1j * dphi)[np.newaxis, np.newaxis, :]
+        else:
+            raise ValueError('plane should be "x" or "y"')
+            
+        if return_orig_domains:
+            self.to_domain(domains)
+        
+        # _logger.info('tilting radiation by {:.4e} rad in {} plane'.format(angle, plane))
+        # _logger.warn('in beta')
+        # angle_warn = 'deflection angle exceeds inverse space mesh range'
+        
+        # domains = self.domains()
+        
+        # dk = 2 * pi / self.Lz()
+        # k = 2 * pi / self.xlamds
+        # K = np.linspace(k - dk / 2 * self.Nz(), k + dk / 2 * self.Nz(), self.Nz())
+        
+        # self.to_domain('s')
+        # if plane == 'y':
+            # if np.abs(angle) > self.xlamds / self.dy / 2:
+                # _logger.warning(angle_warn)
+            # dphi =  angle * K[:,np.newaxis] * self.scale_y()[np.newaxis, :]
+            # self.fld = self.fld * np.exp(1j * dphi)[:, :, np.newaxis]
+        # elif plane == 'x':
+            # if np.abs(angle) > self.xlamds / self.dx / 2:
+                # _logger.warning(angle_warn)
+            # dphi =  angle * K[:,np.newaxis] * self.scale_x()[np.newaxis, :]
+            # self.fld = self.fld * np.exp(1j * dphi)[:, np.newaxis, :]
+        # else:
+            # raise ValueError('plane should be "x" or "y"')
+            
+        # if return_orig_domains:
+            # self.to_domain(domains)
+            
+    def disperse(self, disp=0, E_ph0=None, plane='x', return_orig_domains=True):
+        '''
+        introducing angular dispersion in given plane by deflecting the radaition by given angle depending on its frequency
+        disp is the dispertion coefficient [rad/eV]
+        E_ph0 is the photon energy in [eV] direction of which would not be changed (principal ray)
+        '''
+        _logger.info('introducing dispersion of {:.4e} [rad/eV] in {} plane'.format(disp, plane))
+        _logger.warn(ind_str + 'in beta')
+        angle_warn = ind_str + 'deflection angle exceeds inverse space mesh range'
+        if E_ph0 == None:
+            E_ph0 = 2 *np.pi / self.xlamds * speed_of_light * hr_eV_s
+        
+        dk = 2 * pi / self.Lz()
+        k = 2 * pi / self.xlamds        
+        phen = np.linspace(k - dk / 2 * self.Nz(), k + dk / 2 * self.Nz(), self.Nz()) * speed_of_light * hr_eV_s
+        angle = disp * (phen - E_ph0)
+        
+        if np.amax([np.abs(np.min(angle)), np.abs(np.max(angle))]) > self.xlamds / self.dy / 2:
+            _logger.warning(angle_warn)
+        
+        domains = self.domains()
+        self.to_domain('sf')
+        if plane =='y':
+            dphi =  angle[:,np.newaxis] * k * self.scale_y()[np.newaxis, :]
+            self.fld = self.fld * np.exp(1j *dphi)[:, :, np.newaxis]
+        elif plane == 'x':
+            dphi =  angle[:,np.newaxis] * k * self.scale_x()[np.newaxis, :]
+            self.fld = self.fld * np.exp(1j *dphi)[:, np.newaxis, :]
+        
+        if return_orig_domains:
+            self.to_domain(domains)
 
 
 class WaistScanResults():
@@ -882,6 +970,19 @@ class StokesParameters:
         else:
             _logger.error(ind_str + 'argument "mode" should be in ["sum", "mean"]')
             raise ValueError('argument "mode" should be in ["sum", "mean"]')
+            
+    # def bin_z(self, ds=1e-6)
+        # S = deepcopy(self)
+        # nz, ny, nx = self.s0.shape
+        # dz = S.sc_z[1]-S.sc_z[0]
+        # n_bin = int(ds/dz)
+        
+        # def binning(arr, nbin):
+            # b = np.zeros_like(arr[arr.shape[0]//nbin*nbin,::])
+            # for i in range(nbin):
+                # b+=arr[i:arr.shape[0]//nbin*nbin:nbin,::]
+            # b /= nbin
+            # return b
 
 
 class HeightProfile:
@@ -1300,7 +1401,7 @@ def generate_dfl(*args, **kwargs):
     return generate_gaussian_dfl(*args, **kwargs)
 
 
-def generate_gaussian_dfl(xlamds, shape=(51, 51, 100), dgrid=(1e-3, 1e-3, 50e-6), power_rms=(0.1e-3, 0.1e-3, 5e-6),
+def generate_gaussian_dfl(xlamds=1e-9, shape=(51, 51, 100), dgrid=(1e-3, 1e-3, 50e-6), power_rms=(0.1e-3, 0.1e-3, 5e-6),
                           power_center=(0, 0, None), power_angle=(0, 0), power_waistpos=(0, 0), wavelength=None,
                           zsep=None, freq_chirp=0, en_pulse=None, power=1e6, **kwargs):
     """
@@ -1443,7 +1544,7 @@ def generate_gaussian_dfl(xlamds, shape=(51, 51, 100), dgrid=(1e-3, 1e-3, 50e-6)
     return dfl
 
 
-def imitate_sase_dfl(xlamds, rho=2e-4, **kwargs):
+def imitate_sase_dfl(xlamds, rho=2e-4, seed=None, **kwargs):
     """
     imitation of SASE radiation in 3D
 
@@ -1476,10 +1577,13 @@ def imitate_sase_dfl(xlamds, rho=2e-4, **kwargs):
         np.linspace(k - dk / 2 * dfl.Nz(), k + dk / 2 * dfl.Nz(), dfl.Nz())) / 2 / np.pi
     fd_env = np.exp(-(fd_scale_ev - E0) ** 2 / 2 / (dE) ** 2)
     _logger.debug(ind_str + 'frequency domain range = [{},  {}]eV'.format(fd_scale_ev[0], fd_scale_ev[-1]))
-
+    
+    for key in imitate_1d_sase_like.__code__.co_varnames:
+        kwargs.pop(key, None)
+        
     _, td_envelope, _, _ = imitate_1d_sase_like(td_scale=td_scale, td_env=np.ones_like(td_scale), fd_scale=fd_scale_ev,
                                                 fd_env=fd_env, td_phase=None, fd_phase=None, phen0=None, en_pulse=1,
-                                                fit_scale='td', n_events=1)
+                                                fit_scale='td', n_events=1, seed=seed, **kwargs)
 
     dfl.fld *= td_envelope[:, :, np.newaxis]
 
@@ -1669,7 +1773,7 @@ def dfl_disperse(dfl, coeff, E_ph0=None, return_result=False):
 
 def dfl_ap(*args, **kwargs):
     _logger.warning('"dfl_ap" is deprecated, use "dfl_ap_rect" instead for rectangular aperture')
-    return dfl_ap_square(*args, **kwargs)
+    return dfl_ap_rect(*args, **kwargs)
         
 def dfl_ap_rect(dfl, ap_x=np.inf, ap_y=np.inf):
     """
@@ -1681,17 +1785,23 @@ def dfl_ap_rect(dfl, ap_x=np.inf, ap_y=np.inf):
         ap_x = [-ap_x / 2, ap_x / 2]
     if np.size(ap_y) == 1:
         ap_y = [-ap_y / 2, ap_y / 2]
-
+    _logger.debug(ind_str + 'ap_x = {}'.format(ap_x))
+    _logger.debug(ind_str + 'ap_y = {}'.format(ap_y))
+    
     idx_x = np.where((dfl.scale_x() >= ap_x[0]) & (dfl.scale_x() <= ap_x[1]))[0]
     idx_x1 = idx_x[0]
     idx_x2 = idx_x[-1]
-
+    
     idx_y = np.where((dfl.scale_y() >= ap_y[0]) & (dfl.scale_y() <= ap_y[1]))[0]
     idx_y1 = idx_y[0]
     idx_y2 = idx_y[-1]
-
+        
+    _logger.debug(ind_str + 'idx_x = {}-{}'.format(idx_x1,idx_x2))
+    _logger.debug(ind_str + 'idx_y = {}-{}'.format(idx_y1,idx_y2))
+    
+    
     mask = np.zeros_like(dfl.fld[0, :, :])
-    mask[idx_x1:idx_x2, idx_y1:idx_y2] = 1
+    mask[idx_y1:idx_y2, idx_x1:idx_x2] = 1
     mask_idx = np.where(mask == 0)
 
     # dfl_out = deepcopy(dfl)
@@ -1823,13 +1933,15 @@ def dfl_waistscan(dfl, z_pos, projection=0, **kwargs):
 
         _logger.info(ind_str + 'scanning at z = %.2f m' % (z))
 
-        I_xy = dfl.prop(z, fine=0, debug=0, return_result=1).int_xy()  # integrated xy intensity
+        dfl_prop = dfl.prop(z, fine=0, debug=0, return_result=1)
+        dfl_prop.to_domain('s')
+        I_xy = dfl_prop.int_xy()  # integrated xy intensity
 
         scale_x = dfl.scale_x()
         scale_y = dfl.scale_y()
         center_x = np.int((I_xy.shape[1] - 1) / 2)
         center_y = np.int((I_xy.shape[0] - 1) / 2)
-        _logger.debug(ind_str + 'center_pixels = {}, {}'.format(center_x, center_y))
+        _logger.debug(2 * ind_str + 'center_pixels = {}, {}'.format(center_x, center_y))
 
         if projection:
             I_x = np.sum(I_xy, axis=0)
@@ -1837,19 +1949,32 @@ def dfl_waistscan(dfl, z_pos, projection=0, **kwargs):
         else:
             I_y = I_xy[:, center_x]
             I_x = I_xy[center_y, :]
-
+        
         sc_res.z_pos = np.append(sc_res.z_pos, z)
-        sc_res.phdens_max = np.append(sc_res.phdens_max, np.amax(I_xy))
+        
+        phdens_max = np.amax(I_xy)
+        phdens_onaxis = I_xy[center_y, center_x]
+        fwhm_x = fwhm(scale_x, I_x)
+        fwhm_y = fwhm(scale_y, I_y)
+        std_x = std_moment(scale_x, I_x)
+        std_y = std_moment(scale_y, I_y)
+        
+        _logger.debug(2 * ind_str + 'phdens_max = %.2e' % (phdens_max))
+        _logger.debug(2 * ind_str + 'phdens_onaxis = %.2e' % (phdens_onaxis))
+        _logger.debug(2 * ind_str + 'fwhm_x = %.2e' % (fwhm_x))
+        _logger.debug(2 * ind_str + 'fwhm_y = %.2e' % (fwhm_y))
+        _logger.debug(2 * ind_str + 'std_x = %.2e' % (std_x))
+        _logger.debug(2 * ind_str + 'std_y = %.2e' % (std_y))
+        
+        sc_res.phdens_max = np.append(sc_res.phdens_max, phdens_max)
+        sc_res.phdens_onaxis = np.append(sc_res.phdens_onaxis, phdens_onaxis)
+        sc_res.fwhm_x = np.append(sc_res.fwhm_x, fwhm_x)
+        sc_res.fwhm_y = np.append(sc_res.fwhm_y, fwhm_y)
+        sc_res.std_x = np.append(sc_res.std_x, std_x)
+        sc_res.std_y = np.append(sc_res.std_y, std_y)
 
-        _logger.debug(ind_str + 'phdens_max = %.2e' % (np.amax(I_xy)))
-
-        sc_res.phdens_onaxis = np.append(sc_res.phdens_onaxis, I_xy[center_y, center_x])
-        sc_res.fwhm_x = np.append(sc_res.fwhm_x, fwhm(scale_x, I_x))
-        sc_res.fwhm_y = np.append(sc_res.fwhm_y, fwhm(scale_y, I_y))
-        sc_res.std_x = np.append(sc_res.std_x, std_moment(scale_x, I_x))
-        sc_res.std_y = np.append(sc_res.std_y, std_moment(scale_y, I_y))
-
-        sc_res.z_max_phdens = sc_res.z_pos[np.argmax(sc_res.phdens_max)]
+    sc_res.z_max_phdens = sc_res.z_pos[np.argmax(sc_res.phdens_max)]
+    _logger.debug(ind_str + 'z_max_phdens = %.2e' % (sc_res.z_max_phdens))
 
     t_func = time.time() - start
     _logger.debug(ind_str + 'done in %.2f sec' % t_func)
@@ -2487,6 +2612,9 @@ def generate_1d_profile(hrms, length=0.1, points_number=1000, wavevector_cutoff=
                                                                n=points_number) / np.sqrt(np.pi)
     # scaling height_map
     height_profile.set_hrms(hrms)
+    
+    np.random.seed()
+    
     return height_profile
 
 
@@ -2704,7 +2832,7 @@ def wigner_out(out, z=inf, method='mp', pad=1, debug=1, on_axis=1):
             wig.xlamds = out('xlamds')
             wig.filePath = out.filePath
         elif hasattr(out, 'h5'):  # genesis4
-            logger.warning('not implemented for on-axis, chaeck!')
+            _logger.warning('not implemented for on-axis, check!')
             wig.field = out.rad_field(zi=zi, loc='near')
             wig.xlamds = out.lambdaref
             wig.filePath = out.h5.filename
@@ -2908,7 +3036,7 @@ def calc_ph_sp_dens(spec, freq_ev, n_photons, spec_squared=1):
 
 
 def imitate_1d_sase_like(td_scale, td_env, fd_scale, fd_env, td_phase=None, fd_phase=None, phen0=None, en_pulse=None,
-                         fit_scale='td', n_events=1):
+                         fit_scale='td', n_events=1, **kwargs):
     """
     Models FEL pulse(s) based on Gaussian statistics
     td_scale - scale of the pulse on time domain [m]
@@ -2931,6 +3059,10 @@ def imitate_1d_sase_like(td_scale, td_env, fd_scale, fd_env, td_phase=None, fd_p
     """
 
     _logger.info('generating 1d radiation field imitating SASE')
+    
+    seed = kwargs.get('seed', None)
+    if seed is not None:
+        np.random.seed(seed)
 
     if fit_scale == 'td':
 
@@ -3015,11 +3147,13 @@ def imitate_1d_sase_like(td_scale, td_env, fd_scale, fd_env, td_phase=None, fd_p
     fd = calc_ph_sp_dens(fd, fd_scale_i, n_photons, spec_squared=0)
     td_scale, fd_scale = td_scale_i, fd_scale_i
 
+    np.random.seed()
+
     return (td_scale, td, fd_scale, fd)
 
 
 def imitate_1d_sase(spec_center=500, spec_res=0.01, spec_width=2.5, spec_range=(None, None), pulse_length=6,
-                    en_pulse=1e-3, flattop=0, n_events=1, spec_extend=5):
+                    en_pulse=1e-3, flattop=0, n_events=1, spec_extend=5, **kwargs):
     """
     Models FEL pulse(s) based on Gaussian statistics
     spec_center - central photon energy in eV
@@ -3063,7 +3197,7 @@ def imitate_1d_sase(spec_center=500, spec_res=0.01, spec_width=2.5, spec_range=(
         td_env = np.exp(-(td_scale - s0) ** 2 / 2 / (pulse_length_sigm * 1e-6) ** 2)
 
     result = imitate_1d_sase_like(td_scale, td_env, fd_scale, fd_env, phen0=spec_center, en_pulse=en_pulse,
-                                  fit_scale='fd', n_events=n_events)
+                                  fit_scale='fd', n_events=n_events, **kwargs)
 
     return result
 

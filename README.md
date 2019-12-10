@@ -112,38 +112,40 @@ You can download OCELOT jupyter tutorials (release v18.02) using GitHub link [zi
 
 ## Tutorials
 * Preliminaries: Setup & introduction
-* Beam dynamics
-* [Introduction. Tutorial N1. Linear optics.](#tutorial1). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/1_introduction.ipynb).
+#### Beam dynamics
+
+* [Introduction. Tutorial N1. Linear optics](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/1_introduction.ipynb)
     - Linear optics. Double Bend Achromat (DBA). Simple example of usage OCELOT functions to get periodic solution for a storage ring cell.
-* [Tutorial N2. Tracking.](2_tracking.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/2_tracking.ipynb).
+* [Tutorial N2. Tracking](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/2_tracking.ipynb)
     - Linear optics of the European XFEL Injector.
     - Tracking. First and second order.
     - Artificial beam matching - BeamTransform
-* [Tutorial N3. Space Charge.](3_space_charge.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/3_space_charge.ipynb).
+* [Tutorial N3. Space Charge](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/3_space_charge.ipynb)
     - Tracking through RF cavities with SC effects and RF focusing.
-* [Tutorial N4. Wakefields.](4_wake.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/4_wake.ipynb).
+* [Tutorial N4. Wakefields](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/4_wake.ipynb)
     - Tracking through corrugated structure (energy chirper) with Wakefields
-* [Tutorial N5. CSR.](5_CSR.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/5_CSR.ipynb).
+* [Tutorial N5. CSR](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/5_CSR.ipynb)
     - Tracking trough bunch compressor with CSR effect.
-* [Tutorial N6. RF Coupler Kick.](6_coupler_kick.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/6_coupler_kick.ipynb).
+* [Tutorial N6. RF Coupler Kick](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/6_coupler_kick.ipynb)
     - Coupler Kick. Example of RF coupler kick influence on trajjectory and optics.
-* [Tutorial N7. Lattice design.](7_lattice_design.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/7_lattice_design.ipynb).
+* [Tutorial N7. Lattice design](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/7_lattice_design.ipynb)
     - Lattice design, twiss matching, twiss backtracking
-* [Tutorial N8. Physics process addition. Laser heater](8_laser_heater.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/8_laser_heater.ipynb).
-    - Theory of Laser Heater, implementation of new Physics Process, track particles w/o laser heater effect.  
-#### Synchrotron radiation module
-* [Tutorial N9. Synchrotron radiation module](9_synchrotron_radiation.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/9_synchrotron_radiation.ipynb).
-    - Simple examples how to calculate synchrotron radiation with OCELOT.
-* [Tutorial N10. Simple accelerator based THz source](10_thz_source.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/10_thz_source.ipynb).
-    - A simple accelerator with the electron beam formation system and an undulator to generate THz radiation. 
+* [Tutorial N8. Physics process addition. Laser heater](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/dev/demos/ipython_tutorials/8_laser_heater.ipynb)
+    - Theory of Laser Heater, implementation of new Physics Process, track particles w/o laser heater effect.
+* [Tutorial N9. Simple accelerator based THz source](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/dev/demos/ipython_tutorials/9_thz_source.ipynb)
+    - A simple accelerator with the electron beam formation system and an undulator to generate THz radiation.
 
-#### Wavefront propagation
+#### Photon field simulation
 
-* [Tutorial N12. Reflection from imperfect highly polished mirror](12_imperfect_mirror.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/12_imperfect_mirror.ipynb).
-* [Tutorial N13. Converting synchrotron radiation Screen object to RadiationField object for viewing and propagation](13_synchrotron_radiation_visualization.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/13_synchrotron_radiation_visualization.ipynb).
+* [PFS tutorial N1. Synchrotron radiation module](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/dev/demos/ipython_tutorials/pfs_1_synchrotron_radiation.ipynb).
+    - Simple examples how to calculate synchrotron radiation with OCELOT Synchrotron Radiation Module.
+* [PFS tutorial N2. Coherent radiation module and RadiationField object](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/dev/demos/ipython_tutorials/pfs_2_radiation_field.ipynb).
+* [PFS tutorial N3. Reflection from imperfect highly polished mirror](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/dev/demos/ipython_tutorials/pfs_3_imperfect_mirror.ipynb).
+* [PFS tutorial N4. Converting synchrotron radiation Screen object to RadiationField object for viewing and propagation](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/dev/demos/ipython_tutorials/pfs_4_synchrotron_radiation_visualization.ipynb).
+* [PFS tutorial N5: SASE estimation and imitation](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/dev/demos/ipython_tutorials/pfs_5_SASE_Estimator_and_Imitator.ipynb).
 
 #### Appendixes
-* [Undulator matching](undulator_matching.ipynb). [Web version](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/undulator_matching.ipynb).
+* [Undulator matching](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/undulator_matching.ipynb).
     - brief theory and example in OCELOT
 
-Disclaimer: The OCELOT code come with absolutely NO warranty. The authors of the OCELOT do not take any responsibility for any damage to equipments or personnel injury that may result from the use of the code.
+Disclaimer: The OCELOT code comes with absolutely NO warranty. The authors of the OCELOT do not take any responsibility for any damage to equipments or personnel injury that may result from the use of the code.

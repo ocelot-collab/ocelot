@@ -8,6 +8,8 @@ from scipy.interpolate import splrep, splev
 import json
 import time
 from threading import Thread
+import pandas as pd
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -278,9 +280,15 @@ class LinacRmatrixRM(MeasureResponseMatrix):
         calculation of ideal response matrix
 
         :param lattice: class MagneticLattice
-        :param tw_init: if tw_init == None, function tries to find periodical solution
+        :param tw_init: if tw_init == None, initial beam energy is ZERO
         :return: orbit.resp
         """
+        if tw_init is None:
+            logger.warning("tw_init is None. Initial beam energy is assuemed ZERO")
+            Einit = 0
+        else:
+            Einit = tw_init.E
+
         m = len(self.bpms)
         nx = len(self.hcors)
         ny = len(self.vcors)
@@ -289,7 +297,7 @@ class LinacRmatrixRM(MeasureResponseMatrix):
         for j, cor in enumerate([item for sublist in [self.hcors, self.vcors] for item in sublist]):
             print(j, "/", nx + ny, cor.id)
             Ra = np.eye(6)
-            E = tw_init.E
+            E = Einit
             for i, elem in enumerate(self.lat.sequence):
                 if i < cor.lat_inx:
                     E += elem.transfer_map.delta_e
@@ -309,7 +317,6 @@ class LinacRmatrixRM(MeasureResponseMatrix):
                         self.resp[n + m, j] = Ra[2, 3]
         return self.resp
 
-#import matplotlib.pyplot as plt
 
 class LinacDisperseSimRM(MeasureResponseMatrix):
 
@@ -388,7 +395,7 @@ class LinacDisperseTmatrixRM(MeasureResponseMatrix):
                 Rb = elem.transfer_map.R(E)
                 Tb = deepcopy(elem.transfer_map.t_mat_z_e(elem.l, E))
                 #Ra = dot(Rb, Ra)
-                Ra, Ta = second_order_mult(Ra, Ta, Rb, Tb)
+                Ra, Ta = transfer_maps_mult(Ra, Ta, Rb, Tb)
                 E += elem.transfer_map.delta_e
                 if elem in self.bpms:
 
@@ -402,7 +409,7 @@ class LinacDisperseTmatrixRM(MeasureResponseMatrix):
         return self.resp
 
 
-class ResponseMatrix:
+class ResponseMatrixJSON:
     def __init__(self, method=None):
         self.cor_names = []
         self.bpm_names = []
@@ -569,6 +576,209 @@ class ResponseMatrix:
                     x1 = self.matrix[b_i1[j] + nb1*n, c_i1[i]]
                     x2 = rmatrix.matrix[b_i2[j] + nb2*n, c_i2[i]]
                     if abs(x1 - x2) <absolut:
+                        continue
+                    if abs(x1 - x2)/max(np.abs([x1, x2])) < relative:
+                        continue
+                    l_x1 = len(str(x1))
+                    print (plane[n], c, " "*(10 - len(c)), b, " "*(10 - len(b)), "r1: ", x1," "*(18 - l_x1),"r2: ", x2)
+                    counter += 1
+            print("shown", counter, "elements of", len(c_names)*len(b_names))
+
+    def show(self, list_cor=None, list_bpm=None):
+        print (" "*10,)
+        for bpm in self.bpm_names:
+            print (bpm,)
+        print()
+        for i in range(np.shape(self.matrix)[1]):
+            print (self.cor_names[i] + " "*(10 - len(self.cor_names[i])),)
+            #print np.array_str(self.matrix[:, i], precision=2, suppress_small=True)
+            for j in range(np.shape(self.matrix)[0]):
+                print ("%.2f" % self.matrix[j, i],)
+            print()
+
+class ResponseMatrix:
+    def  __init__(self, method=None):
+        self.cor_names = []
+        self.bpm_names = []
+        self.matrix = []
+        self.method = method
+        self.mode = "radian"  # or "ampere"
+        self.df = None
+        self.tw_init = None   # for self.run()
+        self.filename = None  # for self.run()
+
+    def bpm2x_name(self, bpm_id):
+        """
+        Transform bpm id to a name how it use in a control system to get horizontal beam position
+        :param bpm_id:
+        :return: channel for X position
+        """
+        return bpm_id + ".X"
+
+    def bpm2y_name(self, bpm_id):
+        """
+        Transform bpm id to a name how it use in a control system to get vertical beam position
+
+        :param bpm_id:
+        :return: channel for Y position
+        """
+        return bpm_id + ".Y"
+
+    def xy_names2bpm_id(self, xy_names):
+        """
+        transform BPM channels to bpm ids
+
+        :param xy_names:
+        :return:
+        """
+        bpm_ids = [bpm.replace(".X", "") for bpm in xy_names if ".X" in bpm]
+        return bpm_ids
+
+    def calculate(self, tw_init=None):
+        """
+        rewrites cor_name, bpm_name and matrix
+
+        :param method:
+        :return:
+        """
+        if self.method != None:
+            hcors = self.method.hcors
+            vcors = self.method.vcors
+            bpms = self.method.bpms
+            self.cor_names = np.append([cor.id for cor in hcors], [cor.id for cor in vcors])
+            self.bpm_names = [bpm.id for bpm in bpms]
+            self.matrix = self.method.calculate(tw_init=tw_init)
+            self.df = self.data2df(matrix=self.matrix, bpm_names=self.bpm_names , cor_names=self.cor_names)
+        else:
+            print("ResponseMatrix.method = None, Add the method, e.g. MeasureResponseMatrix")
+
+
+    def get_matrix(self):
+        return self.matrix
+
+    def extract(self, cor_list, bpm_list):
+        bpm_x = [self.bpm2x_name(bpm) for bpm in bpm_list]
+        bpm_y = [self.bpm2y_name(bpm) for bpm in bpm_list]
+        rows = bpm_x + bpm_y
+        cols = list(cor_list)
+
+        cor_list_exist = [item in self.df.columns for item in cor_list]
+        bpm_list_exist = [item in self.df.index for item in rows]
+
+        if all(cor_list_exist) and all(bpm_list_exist):
+            df_slice = self.df.loc[rows, cols]
+            return df_slice.values
+        else:
+            print("correctors are not in the RM")
+            print(np.array(cor_list)[cor_list_exist])
+            print()
+            print("BPMs are not in the RM")
+            print(np.array(rows)[bpm_list_exist])
+
+    def retrieve_from_scan(self, df_scan):
+        from sklearn.linear_model import LinearRegression
+
+        bpm_x = [self.bpm2x_name(bpm) for bpm in self.bpm_names]
+        bpm_y = [self.bpm2y_name(bpm) for bpm in self.bpm_names]
+        bpm_names_xy = bpm_x + bpm_y
+
+        x = df_scan.loc[:, self.cor_names].values
+        y = df_scan.loc[:, bpm_names_xy].values
+
+        reg = LinearRegression().fit(x, y)
+        x_test = np.eye(np.shape(x)[1])
+        rm = reg.predict(x_test)
+        #df_rm = pd.DataFrame(rm.T, columns=self.cor_names, index=bpm_x+bpm_y)
+        self.df = self.data2df(matrix=rm.T, bpm_names=self.bpm_names, cor_names=self.cor_names)
+        return self.df
+
+    def clean_rm(self, coupling=True):
+        if self.method != None:
+            hcors = self.method.hcors
+            vcors = self.method.vcors
+            bpms = self.method.bpms
+            for hcor in hcors:
+                for bpm in bpms:
+                    if bpm.s < hcor.s:
+
+                        self.df.loc[self.bpm2x_name(bpm.id), hcor.id] = 0
+                    if not coupling:
+                        self.df.loc[self.bpm2y_name(bpm.id), hcor.id] = 0
+            for vcor in vcors:
+                for bpm in bpms:
+                    if bpm.s < vcor.s:
+                        self.df.loc[self.bpm2y_name(bpm.id), vcor.id] = 0
+                    if not coupling:
+                        self.df.loc[self.bpm2x_name(bpm.id), vcor.id] = 0
+
+        else:
+            print("ResponseMatrix.method = None, Add the method, e.g. MeasureResponseMatrix")
+
+    def inject(self, cor_list, bpm_list, inj_matrix):
+        """
+        Update some elements of the response matrix
+
+        :param cor_list:
+        :param bpm_list:
+        :param inj_matrix:
+        :return:
+        """
+        df_slice = self.data2df(matrix=inj_matrix, bpm_names=bpm_list, cor_names=cor_list)
+        self.df.update(df_slice)
+        self.matrix = self.df.values
+        return self.matrix
+
+    def data2df(self, matrix, bpm_names, cor_names):
+        bpm_x = [self.bpm2x_name(bpm) for bpm in bpm_names]
+        bpm_y = [self.bpm2y_name(bpm) for bpm in bpm_names]
+        df = pd.DataFrame(matrix, columns=cor_names, index=bpm_x + bpm_y)
+        return df
+
+    def df2data(self):
+        self.cor_names = list(self.df.columns.values)
+        bpms_all = list(self.df.index.values)
+        self.bpm_names = self.xy_names2bpm_id(bpms_all)
+        self.matrix = self.df.values
+
+    def dump(self, filename):
+        df = self.data2df(matrix=self.matrix, bpm_names=self.bpm_names, cor_names=self.cor_names)
+        #directory = os.path.dirname(filename)
+        #if not os.path.exists(directory):
+        #    os.makedirs(directory)
+        df.to_pickle(filename)
+
+
+    def load(self, filename):
+        self.df = pd.read_pickle(filename)
+        self.df2data()
+        return 1
+
+
+    def compare(self, rmatrix, absolut=0.001, relative=0.1):
+        cors1 = np.array(self.cor_names)
+        cors2 = np.array(rmatrix.cor_names)
+        bpms1 = np.array(self.bpm_names)
+        bpms2 = np.array(rmatrix.bpm_names)
+        nb1 = len(bpms1)
+        nb2 = len(bpms2)
+        #c_names = np.intersect1d(cors1, cors2)
+        c_names = cors1[np.in1d(cors1, cors2)]
+        c_i1 = np.where(np.in1d(cors1, cors2))[0]
+        c_i2 = np.where(np.in1d(cors2, cors1))[0]
+        #b_names = np.intersect1d(bpms1, bpms2)
+        b_names = bpms1[np.in1d(bpms1, bpms2)]
+        b_i1 = np.where(np.in1d(bpms1, bpms2))[0]
+        b_i2 = np.where(np.in1d(bpms2, bpms1))[0]
+        plane = ["X", "Y"]
+        for n in range(2):
+            print ("****************   ", plane[n], "   ****************")
+            counter = 0
+            for i, c in enumerate(c_names):
+                for j, b in enumerate(b_names):
+                    #print b_i1[j],  nb1*n, c_i1[i]
+                    x1 = self.matrix[b_i1[j] + nb1*n, c_i1[i]]
+                    x2 = rmatrix.matrix[b_i2[j] + nb2*n, c_i2[i]]
+                    if abs(x1 - x2) < absolut:
                         continue
                     if abs(x1 - x2)/max(np.abs([x1, x2])) < relative:
                         continue

@@ -183,10 +183,10 @@ def astraBeam2particleArray(filename, print_params=True):
     p_array.q_array = charge_array
 
     if print_params:
-        print("Astra to Ocelot: charge = ", sum(charge_array))
+        print("Astra to Ocelot: charge = ", sum(charge_array), " C")
         print("Astra to Ocelot: particles number = ", len(charge_array))
-        print("Astra to Ocelot: energy = ", p_array.E)
-        print("Astra to Ocelot: s pos = ", p_array.s)
+        print("Astra to Ocelot: energy = ", p_array.E, " GeV")
+        print("Astra to Ocelot: s pos = ", p_array.s, " m")
 
     return p_array
 

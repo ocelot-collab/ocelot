@@ -579,14 +579,16 @@ def subfig_z_phase(ax_phase, g, zi=None, x_units='um', legend=False, *args, **kw
 
 
 @if_plottable
-def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=True, legend=False, mode='mid', *args,
-                  **kwargs):
+def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=True, legend=False, *args, **kwargs):
     number_ticks = 6
     # n_pad = 1
-
+    
+    mode = kwargs.get('mode', 'mid')
+    mode = kwargs.get('spec_mode', mode)
+    
     if zi == None:
         zi = -1
-
+    
     if hasattr(g, 'spec'):
         if g.spec_mode != mode:
             g.calc_spec(mode=mode)
@@ -597,22 +599,22 @@ def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=Tru
 
     if 'spec' not in dir(g):
         g.calc_spec()
-
+    
     if y_units == 'nm':
         x = g.freq_lamd
     elif y_units in ['ev', 'eV']:
         x = g.freq_ev
-
+    
     if estimate_ph_sp_dens:
         y_units = 'ev'
         spec = g.spec_phot_density[:, zi]
         # spec = calc_ph_sp_dens(g.spec[:, zi], g.freq_ev, g.n_photons[zi])
     else:
         spec = g.spec[:, zi]
-
+    
     # power = np.pad(g.p_mid, [(int(g.nSlices / 2) * n_pad, (g.nSlices - (int(g.nSlices / 2)))) * n_pad, (0, 0)], mode='constant')
     # phase = np.pad(g.phi_mid, [(int(g.nSlices / 2) * n_pad, (g.nSlices - (int(g.nSlices / 2)))) * n_pad, (0, 0)], mode='constant')  # not supported by the numpy 1.6.2
-
+    
     ax_spectrum.plot(x, spec, 'r-')
     if kwargs.get('showtext', True):
         if mode == 'mid':
@@ -623,7 +625,7 @@ def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=Tru
             ax_spectrum.text(0.98, 0.98, r'(integrated assuming on-axis phases)', fontsize=10,
                              horizontalalignment='right', verticalalignment='top',
                              transform=ax_spectrum.transAxes)  # horizontalalignment='center', verticalalignment='center',
-
+    
     ax_spectrum.set_ylim(ymin=0)
     ax_spectrum.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_spectrum.get_yaxis().get_major_formatter().set_scientific(True)
@@ -631,11 +633,11 @@ def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=Tru
     ax_spectrum.grid(kwargs.get('grid', True))
     if np.amin(x) != np.amax(x):
         ax_spectrum.set_xlim([np.amin(x), np.amax(x)])
-
+    
     maxspectrum_index = np.argmax(spec)
     # maxspower_index = np.argmax(power[:, zi])
     maxspectrum_value = x[maxspectrum_index]
-
+    
     spec_width = None
     if np.sum(spec) != 0:
         pos, width, arr = fwhm3(spec)
@@ -646,7 +648,7 @@ def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=Tru
                 dx = abs((x[arr[0]] - x[arr[-1]]) / (arr[0] - arr[-1]))
             spec_width = dx * width / x[
                 pos]  # the FWHM of spectral line (error when peakpos is at the edge of lamdscale)
-
+    
     if spec_width is not None and maxspectrum_value is not None:
         if y_units == 'nm':
             if kwargs.get('showtext', True):
@@ -672,7 +674,7 @@ def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=Tru
                 ax_spectrum.set_ylabel(r'P($E_{ph}$) [a.u.]')
             ax_spectrum.set_xlabel(r'$E_{photon}$ [eV]')
         # ax_spectrum.text(0.02, 0.98, r"$\lambda_{max}$= %.4e m " "\n" "$(\Delta\lambda/\lambda)_{fwhm}$= %.2e" % (maxspectrum_value, spec_width), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_spectrum.transAxes, color='red')  # horizontalalignment='center', verticalalignment='center',
-
+    
     ax_spectrum.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_spectrum.tick_params(axis='y', which='both', colors='r')
     ax_spectrum.yaxis.label.set_color('r')
@@ -2395,8 +2397,12 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
     if savefig != False:
         if savefig == True:
             savefig = 'png'
-        _logger.debug(ind_str + 'saving ' + edist.filePath + '.' + savefig)
-        plt.savefig(edist.filePath + '.' + savefig, format=savefig)
+        if savefig in ['png' , 'eps', 'pdf', 'jpeg']:
+            savepath = edist.filePath + '.' + savefig
+        else:
+            savepath = savefig
+        _logger.debug(ind_str + 'saving to {}'.format(savepath))
+        plt.savefig(savepath, format=savepath.split('.')[-1])
 
     if showfig:
         rcParams["savefig.directory"] = os.path.dirname(edist.filePath)

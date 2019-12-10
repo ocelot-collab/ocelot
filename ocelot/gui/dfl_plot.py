@@ -936,7 +936,7 @@ def plot_trf(trf, mode='tr', autoscale=0, showfig=True, savefig=None, fig_name=N
 
 
 @if_plottable
-def plot_stokes_values(S, fig=None, s_lin=0, norm=0, showfig=True, gw=1, direction='z', plot_func='step'):
+def plot_stokes_values(S, fig=None, d_pol=0, norm=0, showfig=True, gw=1, direction='z', plot_func='step', **kwargs):
     # if type(S) != StokesParameters:
     #     raise ValueError('Not a StokesParameters object')
     if direction == 'z':
@@ -949,59 +949,78 @@ def plot_stokes_values(S, fig=None, s_lin=0, norm=0, showfig=True, gw=1, directi
         sc = S.sc_y * 1e6
         Scp = S[0, :, 0]
 
-    if np.size(sc) > 1:
-        if fig == None:
-            plt.figure('Stokes S')
-            plt.clf()
-        elif type(fig) == matplotlib.figure.Figure:
-            plt.figure(fig.number)
-        else:
-            plt.figure(fig)
+    if np.size(sc) <= 1:
+        _logger.warning('plot_stokes_values needs more than a single point to plot (np.size(sc) <= 1)')
+        return
+    
+    if d_pol != 0:
+        gw=0
+        norm=1
+        
+    if fig == None:
+        plt.figure('Stokes S')
         plt.clf()
+    elif type(fig) == matplotlib.figure.Figure:
+        plt.figure(fig.number)
+    else:
+        plt.figure(fig)
+    plt.clf()
 
-        if gw:
-            mult = 1e-9
-            plt.ylabel('$S_0$ [GW]')
-        else:
-            mult = 1
-            plt.ylabel('$S_0$ [W]')
-        plt.xlabel('s [$\mu$m]')
+    if gw:
+        mult = 1e-9
+        plt.ylabel('$S_0$ [GW]')
+    elif norm:
+        mult = 1/np.amax(Scp.s0)
+    else:
+        mult = 1
+        plt.ylabel('$S_0$ [W]')
+    plt.xlabel('s [$\mu$m]')
 
-        kwargs = {'linewidth': 2}
+    kwargs = {'linewidth': 2}
 
-        if plot_func == 'step':
-            plot_function = plt.step
-            kwargs['where'] = 'mid'
-        elif plot_func == 'line':
-            plot_function = plt.plot
-        else:
-            raise ValueError
+    if plot_func == 'step':
+        plot_function = plt.step
+        kwargs['where'] = 'mid'
+    elif plot_func == 'line':
+        plot_function = plt.plot
+    else:
+        raise ValueError
 
-        if s_lin:
-            # plt.step(sc, np.sqrt(S.s1**2+S.s2**2), linewidth=2, where='mid',color=[0.5,0.5,0.5], linestyle='--')
-            plot_function(sc, Scp.P_pol_l() * mult, linestyle='--', color='m', **kwargs)
+    if d_pol=='lin':
+        # plt.step(sc, np.sqrt(S.s1**2+S.s2**2), linewidth=2, where='mid',color=[0.5,0.5,0.5], linestyle='--')
+        plot_function(sc, Scp.deg_pol_l(), linestyle='-', color='#1f77b4', **kwargs)
+    elif d_pol==1:
+        plot_function(sc, Scp.deg_pol(), linestyle='-', color='#1f77b4', **kwargs)
+    else:
+        pass
 
-        plot_function(sc, Scp.s1 * mult, color='g', **kwargs)
-        plot_function(sc, Scp.s2 * mult, color='r', **kwargs)
-        plot_function(sc, Scp.s3 * mult, color='c', **kwargs)
-        plot_function(sc, Scp.s0 * mult, color='b', **kwargs)
-        # plt.step(sc, S.s1, linewidth=2, where='mid',color='m')
-        # plt.step(sc, S.s2, linewidth=2, where='mid',color='r')
-        # plt.step(sc, S.s3, linewidth=2, where='mid',color='c')
-        # plt.step(sc, S.s0, linewidth=2, where='mid',color='k')
+    plot_function(sc, Scp.s1 * mult, color='g', **kwargs)
+    plot_function(sc, Scp.s2 * mult, color='r', **kwargs)
+    plot_function(sc, Scp.s3 * mult, color='c', **kwargs)
+    plot_function(sc, Scp.s0 * mult, color='b', **kwargs)
+    # plt.step(sc, S.s1, linewidth=2, where='mid',color='m')
+    # plt.step(sc, S.s2, linewidth=2, where='mid',color='r')
+    # plt.step(sc, S.s3, linewidth=2, where='mid',color='c')
+    # plt.step(sc, S.s0, linewidth=2, where='mid',color='k')
 
-        if s_lin:
-            plt.legend(['$\sqrt{S_1^2+S_2^2}$', '$S_1$', '$S_2$', '$S_3$', '$S_0$'], loc='lower center', ncol=5,
-                       mode="expand", borderaxespad=0.5, frameon=1).get_frame().set_alpha(0.4)
-        else:
-            plt.legend(['$S_1$', '$S_2$', '$S_3$', '$S_0$'], fontsize=13, ncol=4, loc='upper left',
-                       frameon=1).get_frame().set_alpha(0.4)
-            # plt.legend(['$S_1$','$S_2$','$S_3$','$S_0$'], loc='lower center', ncol=5, mode="expand", borderaxespad=0.5, frameon=1).get_frame().set_alpha(0.4)
-        plt.draw()
-        if showfig:
-            plt.show()
-        else:
-            plt.close('all')
+    if d_pol == 'lin':
+        plt.legend(['$D_{lin}$', '$S_1$', '$S_2$', '$S_3$', '$S_0$'], loc='lower center', ncol=5,
+                   mode="expand", borderaxespad=0.5, frameon=1).get_frame().set_alpha(0.4)
+    elif d_pol == 1:
+        plt.legend(['$D_{pol}$', '$S_1$', '$S_2$', '$S_3$', '$S_0$'], loc='lower center', ncol=5,
+                   mode="expand", borderaxespad=0.5, frameon=1).get_frame().set_alpha(0.4)
+    else:
+        plt.legend(['$S_1$', '$S_2$', '$S_3$', '$S_0$'], fontsize=13, ncol=4, loc='upper left',
+                   frameon=1).get_frame().set_alpha(0.4)
+        # plt.legend(['$S_1$','$S_2$','$S_3$','$S_0$'], loc='lower center', ncol=5, mode="expand", borderaxespad=0.5, frameon=1).get_frame().set_alpha(0.4)
+    plt.xlim([np.amin(sc), np.amax(sc)])
+    if norm:
+        plt.ylim([-1, 1])
+    plt.draw()
+    if showfig:
+        plt.show()
+    else:
+        plt.close('all')
 
 
 @if_plottable
@@ -1019,52 +1038,56 @@ def plot_stokes_angles(S, fig=None, showfig=True, direction='z', plot_func='scat
         Scp = S[0, :, 0]
     # sc = S.sc * 1e6
 
-    if np.size(sc) > 1:
-        if fig == None:
-            plt.figure('Stokes angles')
-            plt.clf()
-        else:
-            plt.figure(fig.number)
+    if np.size(sc) <= 1:
+        _logger.warning('plot_stokes_angles needs more than a single point to plot (np.size(sc) <= 1)')
+        return
+        
+        
+    if fig == None:
+        plt.figure('Stokes angles')
         plt.clf()
+    else:
+        plt.figure(fig.number)
+    plt.clf()
 
-        kwargs = {'linewidth': 2}
-        if plot_func == 'scatter':
-            psize = Scp.deg_pol_l()
-            kwargs['s'] = psize
-            plot_function = plt.scatter
-        elif plot_func == 'step':
-            plot_function = plt.step
-            kwargs['where'] = 'mid'
-        elif plot_func == 'line':
-            plot_function = plt.plot
-        else:
-            raise ValueError
+    kwargs = {'linewidth': 2}
+    if plot_func == 'scatter':
+        psize = Scp.deg_pol()
+        kwargs['s'] = psize
+        plot_function = plt.scatter
+    elif plot_func == 'step':
+        plot_function = plt.step
+        kwargs['where'] = 'mid'
+    elif plot_func == 'line':
+        plot_function = plt.plot
+    else:
+        raise ValueError
 
-        # plt.step(sc, S.chi(), sc, S.psi(),linewidth=2)
+    # plt.step(sc, S.chi(), sc, S.psi(),linewidth=2)
 
-        plot_function(sc, Scp.psi(), color='b', **kwargs)
-        if plot_func == 'scatter':
-            kwargs['s'] = Scp.deg_pol_c()
-        plot_function(sc, Scp.chi(), color='g', **kwargs)
+    plot_function(sc, Scp.psi(), color='b', **kwargs)
+    # if plot_func == 'scatter':
+        # kwargs['s'] = psize
+    plot_function(sc, Scp.chi(), color='g', **kwargs)
 
-        # if scatter:
-        #     psize = Scp.P_pol()
-        #     psize /= np.amax(psize)
-        #     plt.scatter(sc, Scp.chi(),psize,linewidth=2,color='g')
-        #     plt.scatter(sc, Scp.psi(),psize,linewidth=2,color='b')
-        # else:
-        #     plt.step(sc, Scp.chi(), linewidth=2, where='mid', color='g')
-        #     plt.step(sc, Scp.psi(), linewidth=2, where='mid', color='b')
-        plt.legend(['$\chi$', '$\psi$'])  # ,loc='best')
-        plt.xlabel('s [$\mu$m]')
-        plt.ylabel('[rad]')
-        plt.ylim([-np.pi / 2, np.pi / 2])
-        plt.xlim([np.amin(sc), np.amax(sc)])
-        plt.draw()
-        if showfig:
-            plt.show()
-        else:
-            plt.close('all')
+    # if scatter:
+    #     psize = Scp.P_pol()
+    #     psize /= np.amax(psize)
+    #     plt.scatter(sc, Scp.chi(),psize,linewidth=2,color='g')
+    #     plt.scatter(sc, Scp.psi(),psize,linewidth=2,color='b')
+    # else:
+    #     plt.step(sc, Scp.chi(), linewidth=2, where='mid', color='g')
+    #     plt.step(sc, Scp.psi(), linewidth=2, where='mid', color='b')
+    plt.legend(['$\chi$', '$\psi$'])  # ,loc='best')
+    plt.xlabel('s [$\mu$m]')
+    plt.ylabel('[rad]')
+    plt.ylim([-np.pi / 2, np.pi / 2])
+    plt.xlim([np.amin(sc), np.amax(sc)])
+    plt.draw()
+    if showfig:
+        plt.show()
+    else:
+        plt.close('all')
 
 
 @if_plottable

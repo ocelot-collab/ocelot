@@ -7,7 +7,7 @@ from ocelot.cpbd.optics import trace_z, twiss
 from ocelot.cpbd.beam import *
 from ocelot.cpbd.elements import *
 from ocelot.rad.undulator_params import *
-from ocelot.common.logging import *
+from ocelot.common.ocelog import *
 
 _logger = logging.getLogger(__name__)
 

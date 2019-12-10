@@ -1,9 +1,8 @@
-from ocelot.cpbd.optics import MethodTM
+from ocelot.cpbd.optics import MethodTM, lattice_transfer_map
 from ocelot.cpbd.elements import *
 import logging
 import numpy as np
-from copy import deepcopy
-# logger = Logger()
+
 _logger = logging.getLogger(__name__)
 
 
@@ -49,30 +48,9 @@ def lattice_format_converter(elements):
     return tuple(cell)
 
 
-def matrix2Matrix(elem, R):
+def merger(lat, remaining_types=[], remaining_elems=[], init_energy=0.):
     """
-    Creation from R-matrix element Matrix
-    :param elem: Matrix element
-    :param R: R-matrix
-    :return: Matrix Element with defined r-elements
-    """
-    elem.rm11, elem.rm21, elem.rm31 = R[0, 0], R[1, 0], R[2, 0]
-    elem.rm12, elem.rm22, elem.rm32 = R[0, 1], R[1, 1], R[2, 1]
-    elem.rm13, elem.rm23, elem.rm33 = R[0, 2], R[1, 2], R[2, 2]
-    elem.rm14, elem.rm24, elem.rm34 = R[0, 3], R[1, 3], R[2, 3]
-    elem.rm15, elem.rm25, elem.rm35 = R[0, 4], R[1, 4], R[2, 4]
-    elem.rm16, elem.rm26, elem.rm36 = R[0, 5], R[1, 5], R[2, 5]
-    elem.rm41, elem.rm51, elem.rm61 = R[3, 0], R[4, 0], R[5, 0]
-    elem.rm42, elem.rm52, elem.rm62 = R[3, 1], R[4, 1], R[5, 1]
-    elem.rm43, elem.rm53, elem.rm63 = R[3, 2], R[4, 2], R[5, 2]
-    elem.rm44, elem.rm54, elem.rm64 = R[3, 3], R[4, 3], R[5, 3]
-    elem.rm45, elem.rm55, elem.rm65 = R[3, 4], R[4, 4], R[5, 4]
-    elem.rm46, elem.rm56, elem.rm66 = R[3, 5], R[4, 5], R[5, 5]
-
-
-def shrinker(lat, remaining_types=[], remaining_elems=[], init_energy=0.):
-    """
-    Function to compress the lattice (first order) excluding elements by type or by individual elements
+    Function to compress the lattice excluding elements by type or by individual elements
 
     :param lat: MagneticLattice
     :param remaining_types: list, the type of the elements which needed to be untouched
@@ -82,44 +60,45 @@ def shrinker(lat, remaining_types=[], remaining_elems=[], init_energy=0.):
     :param init_energy: initial energy
     :return: New MagneticLattice
     """
-    print("element numbers before: ", len(lat.sequence))
-    R_seq = []
-    new_elem = Matrix()
-    _r = np.eye(6)
-    _b = np.zeros(6)
-    length = 0.
-    count = 0
-    E = init_energy
+    _logger.debug("element numbers before: " + str(len(lat.sequence)))
+    lattice_analysis = []
+    merged_elems = []
     for elem in lat.sequence:
         if elem.__class__ in remaining_types or elem.id in remaining_elems or elem in remaining_elems:
-            if count != 0:
-                new_elem.l = length
-                matrix2Matrix(new_elem, _r)
-                R_seq.append(new_elem)
-                new_elem = Matrix()
-                length = 0.
-                _r = np.eye(6)
-                _b = np.zeros(6)
-
-                count = 0
-            elem.transfer_map._r = elem.transfer_map.R(E)
-            elem.transfer_map._b = elem.transfer_map.B(E)
-            R_seq.append(elem)
+            lattice_analysis.append(merged_elems)
+            merged_elems = []
+            lattice_analysis.append([elem])
         elif elem.__class__ == Edge and ((Bend in remaining_types) or (SBend in remaining_types) or (RBend in remaining_types)):
             continue
         else:
-            _r = np.dot(elem.transfer_map.R(E), _r)
-            _b = np.dot(elem.transfer_map.R(E), _b) + elem.transfer_map.B(E)  # +dB #check
-            length = elem.l + length
-            new_elem.delta_e = elem.transfer_map.delta_e + new_elem.delta_e
-            count += 1
-        E += elem.transfer_map.delta_e
-    if count != 0:
-        matrix2Matrix(new_elem, _r)
-        new_elem.l = length
-        R_seq.append(new_elem)
-    new_lat = MagneticLattice(R_seq)
-    print("element numbers after: ", len(new_lat.sequence))
+            merged_elems.append(elem)
+    if len(merged_elems) != 0:
+        lattice_analysis.append(merged_elems)
+
+    seq = []
+    E = init_energy
+    for elem_list in lattice_analysis:
+        if len(elem_list) == 1:
+            E += elem_list[0].transfer_map.delta_e
+            seq.append(elem_list[0])
+        elif len(elem_list) == 0:
+            continue
+        else:
+            delta_e = np.sum([elem.transfer_map.delta_e for elem in elem_list])
+            lattice = MagneticLattice(elem_list, method=lat.method)
+            R = lattice_transfer_map(lattice, energy=E)
+            m = Matrix()
+            m.r = lattice.R
+            m.t = lattice.T
+            m.b = lattice.B
+            m.l = lattice.totalLen
+            m.delta_e = delta_e
+            E += delta_e
+            seq.append(m)
+
+
+    new_lat = MagneticLattice(seq, method=lat.method)
+    _logger.debug("element numbers after: " + str(len(new_lat.sequence)))
     return new_lat
 
 
@@ -135,15 +114,14 @@ class MagneticLattice:
     method = MethodTM() - method of the tracking.
     """
     def __init__(self, sequence, start=None, stop=None, method=MethodTM()):
-        #self.energy = energy
         self.sequence = list(flatten(sequence))
         self.method = method
         try:
-            if start != None:
+            if start is not None:
                 id1 = self.sequence.index(start)
             else:
                 id1 = 0
-            if stop != None:
+            if stop is not None:
                 id2 = self.sequence.index(stop) + 1
                 self.sequence = self.sequence[id1:id2]
             else:
@@ -152,7 +130,6 @@ class MagneticLattice:
             print('cannot construct sequence, element not found')
             raise
 
-        #self.transferMaps = {}
         # create transfer map and calculate lattice length
         self.totalLen = 0
         if not self.check_edges():
@@ -160,9 +137,7 @@ class MagneticLattice:
         self.update_transfer_maps()
 
         self.__hash__ = {}
-        #print 'creating hash'
         for e in self.sequence:
-            #print e
             self.__hash__[e] = e
 
     def __getitem__(self, el):
@@ -183,7 +158,6 @@ class MagneticLattice:
             prob_edge2 = self.sequence[i+2]
             if elem.__class__ in (SBend, RBend, Bend):  # , "hcor", "vcor"
                 if prob_edge1.__class__ != Edge and prob_edge2.__class__ != Edge:
-                    #print elem.type, prob_edge1.type, prob_edge2.type
                     return False
         return True
 
@@ -195,7 +169,7 @@ class MagneticLattice:
 
                 e_name = elem.id
 
-                if elem.id == None:
+                if elem.id is None:
                     e_name = "b_" + str(i)
 
                 e1 = Edge(l=elem.l, angle=elem.angle, k1=elem.k1, edge=elem.e1, tilt=elem.tilt, dtilt=elem.dtilt,
@@ -227,7 +201,7 @@ class MagneticLattice:
         edge.dy = bend.dy
         edge.h_pole = bend.h_pole1
         edge.gap = bend.gap
-        edge.fint = bend.fintx
+        edge.fint = bend.fint
         edge.pos = 1
 
     def update_edge_e2(self, edge, bend):
@@ -249,7 +223,6 @@ class MagneticLattice:
         edge.pos = 2
 
     def update_transfer_maps(self):
-        #E = self.energy
         self.totalLen = 0
         for i, element in enumerate(self.sequence):
             if element.__class__ == Undulator:
@@ -258,33 +231,35 @@ class MagneticLattice:
                     if element.field_map.units == "mm":
                         element.l = element.l*0.001
             self.totalLen += element.l
-            #print(element.k1)
+
             if element.__class__ == Edge:
 
                 if "_e1" in element.id:
                     bend = self.sequence[i+1]
                     if bend.__class__ not in (SBend, RBend, Bend):
                         bend = self.sequence[i - 1]
-                        print("Backtracking?")
+                        _logger.debug("Backtracking?")
                     self.update_edge_e1(element, bend)
                 elif "_e2" in element.id:
                     bend = self.sequence[i-1]
                     if bend.__class__ not in (SBend, RBend, Bend):
                         bend = self.sequence[i + 1]
-                        print("Backtracking?")
+                        _logger.debug("Backtracking?")
                     self.update_edge_e2(element, bend)
                 else:
-                    print("EDGE is not updated. Use standard function to create and update MagneticLattice")
+                    _logger.error("EDGE is not updated. Use standard function to create and update MagneticLattice")
             element.transfer_map = self.method.create_tm(element)
             _logger.debug("update: " + element.transfer_map.__class__.__name__)
             if 'pulse' in element.__dict__: element.transfer_map.pulse = element.pulse
         return self
 
-    def printElements(self):
-        print('\nLattice\n')
+
+    def __str__(self):
+        line = "LATTICE: length = " + str(self.totalLen) + " m \n"
         for e in self.sequence:
-            print('-->', e.id, '[', e.l, ']')
-    
+            line += "{0:15} length: {1:5.2f}      id: {2:10}\n".format(e.__class__.__name__, e.l, e.id)
+        return line
+
     def find_indices(self, element):
         indx_elem = np.where([i.__class__ == element for i in self.sequence])[0]
         return indx_elem

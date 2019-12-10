@@ -5,7 +5,7 @@ import pytest
 from ocelot import *
 
 
-"""pytest fixtures defenition"""
+"""pytest fixtures definition"""
     
 @pytest.fixture(scope='module')
 def method():

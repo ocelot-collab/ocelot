@@ -18,33 +18,49 @@ class ElegantLatticeConverter:
     
     
     def init_convert_matrix(self):
-        '''Init Elegant -> Ocelot convertion matrix'''
+        """
+        Init Elegant -> Ocelot convertion matrix
+        in case of dict has list, e.g. 'VOLT':['v','1.0e-9'] it uses for translation different units e.g. eV to GeV
+        in case, dict has list with len=3, e.g. 'R11': ['r', 0, 0] it uses as indices e.g. r[0, 0]
+        """
 
         self.elegant_matrix = {}
-        self.elegant_matrix['DRIF'] = {'type':Drift, 'params':{'L':'l'}}
-        self.elegant_matrix['SBEN'] = {'type':SBend, 'params':{'L':'l', 'ANGLE':'angle', 'E1':'e1', 'E2':'e2', 'TILT':'tilt'}}
-        self.elegant_matrix['RBEN'] = {'type':RBend, 'params':{'L':'l', 'ANGLE':'angle', 'E1':'e1', 'E2':'e2', 'TILT':'tilt'}}
-        self.elegant_matrix['QUAD'] = {'type':Quadrupole, 'params':{'L':'l', 'K1':'k1', 'TILT':'tilt'}}
-        self.elegant_matrix['SEXT'] = {'type':Sextupole, 'params':{'L':'l', 'K2':'k2'}}
-        self.elegant_matrix['MONI'] = {'type':Monitor, 'params':{}}
-        self.elegant_matrix['MARK'] = {'type':Marker, 'params':{}}
-        self.elegant_matrix['WATCH'] = {'type':Marker, 'params':{}}
-        self.elegant_matrix['RFCA'] = {'type':Cavity, 'params':{'L':'l', 'VOLT':['v','1.0e-9'], 'FREQ':'freq', 'PHASE':'phi'}}
-        self.elegant_matrix['HKICK'] = {'type':Hcor, 'params':{'L':'l'}}
-        self.elegant_matrix['VKICK'] = {'type':Vcor, 'params':{'L':'l'}}        
-        self.elegant_matrix['EMATRIX'] = {'type':Matrix, 'params':{'L':'l', 
-                                                'R11':'rm11', 'R12':'rm12', 'R13':'rm13', 'R14':'rm14', 'R15':'rm15', 'R16':'rm16',
-                                                'R21':'rm21', 'R22':'rm22', 'R23':'rm23', 'R24':'rm24', 'R25':'rm25', 'R26':'rm26',
-                                                'R31':'rm31', 'R32':'rm32', 'R33':'rm33', 'R34':'rm34', 'R35':'rm35', 'R36':'rm36',
-                                                'R41':'rm41', 'R42':'rm42', 'R43':'rm43', 'R44':'rm44', 'R45':'rm45', 'R46':'rm46',
-                                                'R51':'rm51', 'R52':'rm52', 'R53':'rm53', 'R54':'rm54', 'R55':'rm55', 'R56':'rm56',
-                                                'R61':'rm61', 'R62':'rm62', 'R63':'rm63', 'R64':'rm64', 'R65':'rm65', 'R66':'rm66',}}
-        self.elegant_matrix['CSRCSBEND'] = {'type':SBend, 'params':{'L':'l', 'ANGLE':'angle', 'E1':'e1', 'E2':'e2', 'TILT':'tilt'}}
-        self.elegant_matrix['RFCW'] = {'type':Cavity, 'params':{'L':'l', 'VOLT':['v','1.0e-9'], 'FREQ':'freq', 'PHASE':'phi'}}
+        self.elegant_matrix['DRIF'] = {'type': Drift, 'params':{'L':'l'}}
+        self.elegant_matrix['DRIFT'] = {'type': Drift, 'params': {'L': 'l'}}
+        self.elegant_matrix['LSCDRIFT'] = {'type': Drift, 'params': {'L': 'l'}}
+        self.elegant_matrix['CSRDRIFT'] = {'type': Drift, 'params': {'L': 'l'}}
+        self.elegant_matrix['SOLE'] = {'type': Solenoid, 'params': {'L': 'l'}}
+        self.elegant_matrix['SBEN'] = {'type': SBend,
+                                       'params':{'L': 'l', 'ANGLE': 'angle', "K1": "k1", "K2": "k2", "FINT": "fint",
+                                                 'E1': 'e1', 'E2': 'e2', "HGAP": ["gap", "2"], 'TILT': 'tilt'}}
+        self.elegant_matrix['SBEND'] = {'type': SBend,
+                                        'params':{'L': 'l', 'ANGLE': 'angle', "K1": "k1", "K2": "k2", "FINT": "fint",
+                                                 'E1': 'e1', 'E2': 'e2', "HGAP": ["gap", "2"], 'TILT': 'tilt'}}
+        self.elegant_matrix['RBEN'] = {'type': RBend,
+                                       'params':{'L': 'l', 'ANGLE': 'angle', "K1": "k1", "K2": "k2", "FINT": "fint",
+                                                 'E1': 'e1', 'E2': 'e2', "HGAP": ["gap", "2"], 'TILT': 'tilt'}}
+        self.elegant_matrix['QUAD'] = {'type': Quadrupole, 'params': {'L':'l', 'K1':'k1', "K2": "k2", 'TILT': 'tilt'}}
+        self.elegant_matrix['SEXT'] = {'type': Sextupole, 'params': {'L':'l', 'K2':'k2'}}
+        self.elegant_matrix['MONI'] = {'type': Monitor, 'params': {}}
+        self.elegant_matrix['MARK'] = {'type': Marker, 'params': {}}
+        self.elegant_matrix['WATCH'] = {'type': Marker, 'params': {}}
+        self.elegant_matrix['RFCA'] = {'type': Cavity, 'params': {'L':'l', 'VOLT':['v','1.0e-9'], 'FREQ': 'freq', 'PHASE': 'phi'}}
+        self.elegant_matrix['HKICK'] = {'type': Hcor, 'params': {'L':'l'}}
+        self.elegant_matrix['VKICK'] = {'type': Vcor, 'params': {'L':'l'}}
+        self.elegant_matrix['WIGGLER'] = {'type': Undulator, 'params': {'L': 'l', 'K': 'Kx', "POLES": ["nperiods", "0.5"]}}
+        self.elegant_matrix['EMATRIX'] = {'type': Matrix, 'params': {'L':'l',
+                                                'R11': ['r', 0, 0], 'R12': ['r', 0, 1], 'R13': ['r', 0, 2], 'R14': ['r', 0, 3], 'R15': ['r', 0, 4], 'R16': ['r', 0, 5],
+                                                'R21': ['r', 1, 0], 'R22': ['r', 1, 1], 'R23': ['r', 1, 2], 'R24': ['r', 1, 3], 'R25': ['r', 1, 4], 'R26': ['r', 1, 5],
+                                                'R31': ['r', 2, 0], 'R32': ['r', 2, 1], 'R33': ['r', 2, 2], 'R34': ['r', 2, 3], 'R35': ['r', 2, 4], 'R36': ['r', 2, 5],
+                                                'R41': ['r', 3, 0], 'R42': ['r', 3, 1], 'R43': ['r', 3, 2], 'R44': ['r', 3, 3], 'R45': ['r', 3, 4], 'R46': ['r', 3, 5],
+                                                'R51': ['r', 4, 0], 'R52': ['r', 4, 1], 'R53': ['r', 4, 2], 'R54': ['r', 4, 3], 'R55': ['r', 4, 4], 'R56': ['r', 4, 5],
+                                                'R61': ['r', 5, 0], 'R62': ['r', 5, 1], 'R63': ['r', 5, 2], 'R64': ['r', 5, 3], 'R65': ['r', 5, 4], 'R66': ['r', 5, 5],}}
+        self.elegant_matrix['CSRCSBEND'] = {'type': SBend, 'params': {'L':'l', 'ANGLE': 'angle', "K1": "k1", "K2": "k2", 'E1': 'e1', 'E2': 'e2', 'TILT': 'tilt'}}
+        self.elegant_matrix['RFCW'] = {'type': Cavity, 'params': {'L': 'l', 'VOLT': ['v','1.0e-9'], 'FREQ': 'freq', 'PHASE': 'phi'}}
 
 
     def fix_convert_matrix(self):
-        '''Init and fix Ocelot -> Elegant convertion matrix'''
+        """Init and fix Ocelot -> Elegant convertion matrix"""
 
         self.init_convert_matrix()
 
@@ -54,9 +70,9 @@ class ElegantLatticeConverter:
 
 
     def calc_rpn(self, expression, constants={}, info=''):
-        '''
+        """
         Calculation of the expression written in reversed polish notation
-        '''
+        """
         
         operators = {'+': operator.add, '-': operator.sub, '*': operator.mul, '/': operator.truediv}
         functions = {'SIN': np.sin, 'COS': np.cos, 'TAN': np.tan, 'ASIN': np.arcsin, 'ACOS': np.arccos, 'ATAN': np.arctan, 'SQRT': np.sqrt}
@@ -86,9 +102,9 @@ class ElegantLatticeConverter:
     
     
     def convert_val(self, str, constants, info):
-        '''
+        """
         Convert string input value to float or change input string value by value from constants array
-        '''
+        """
         
         try:
             value = float(str)
@@ -112,23 +128,30 @@ class ElegantLatticeConverter:
 
         with open(file_name) as file_link:
             data = file_link.read()
-        
-        # delete lines with comments
-        data = re.sub(r'![^\n]*\n', '', data)
 
+        # delete comments
+        data = re.sub(r'![^\n]*\n', '\n', data)
         # merge splitted lines
         data = re.sub(r'&\s*\n', '', data)
 
         # element names correction
-        bad_element_names = re.findall(r'"(.*)":', data)
+        # remove parentheses from the names
+        bad_element_names = re.findall(r'.\[.*\].*:', data)
+        for element in bad_element_names:
+            element = element.replace(":", "")
+            element = element.strip()
+            element_new = element.replace("[", "")
+            element_new = element_new.replace("]", "")
+            data = data.replace(element, element_new)
 
+        # element names correction
+        bad_element_names = re.findall(r'"(.*)":', data)
         for element in bad_element_names:
             element_new = re.sub(r'[\W]+', '_', element)
             data = re.sub(r''+str(element), str(element_new), data)
 
         #data = re.sub(r'"', '', data)
         data = re.sub(r'\'', '"', data)
-
         lines = data.split('\n')
 
         # parsing lines
@@ -138,6 +161,7 @@ class ElegantLatticeConverter:
         constants = {}
         
         for line in lines:
+            # print(line)
             string = line.upper().strip()
 
             # skip empty and comment lines
@@ -184,11 +208,9 @@ class ElegantLatticeConverter:
         else:
             print('********* ERROR! used unkown cell or element ' + used_cell_name + ' *********')
             sys.exit()
-
         # replace multiplications
         elegant_cell = self.replace_s_multiplications(elegant_cell)
         elegant_cell = self.replace_multiplications(elegant_cell)
-
         # replace cells by elements
         elegant_cell = self.replace_cells(elegant_cell, elegant_elements_dict)
 
@@ -201,10 +223,10 @@ class ElegantLatticeConverter:
             if elem not in elements_list.keys():
 
                 param = elegant_elements_dict[elem].split(',')
-
+                param = [elem.strip() for elem in param]
                 # convert element
                 if param[0] in self.elegant_matrix.keys():
-                    # creat element
+                    # create element
                     elements_list[elem] = self.elegant_matrix[param[0]]['type'](eid=elem)
 
                     # parse parameters
@@ -216,14 +238,18 @@ class ElegantLatticeConverter:
                             val = self.convert_val(result[1], constants, elem)
                             
                             if tmp.__class__ == list:
-                                elements_list[elem].__dict__[tmp[0]] = val * float(tmp[1])
+                                if len(tmp) == 2:
+                                    elements_list[elem].__dict__[tmp[0]] = val * float(tmp[1])
+                                elif len(tmp) == 3:
+                                    print(elements_list[elem], tmp)
+                                    elements_list[elem].__dict__[tmp[0]][tmp[1], tmp[2]] = val
                             else:
                                 # fix for phi cavity
                                 if elements_list[elem].__class__ == Cavity and tmp == 'phi':
                                     val = 90.0 - val
-                                
                                 elements_list[elem].__dict__[tmp] = val
-
+                    if elements_list[elem].__class__ == Undulator:
+                        elements_list[elem].lperiod = elements_list[elem].l/elements_list[elem].nperiods
                 # replace element by Drift (if it has L) or skip
                 else:
                     elements_list[elem] = None
@@ -289,7 +315,7 @@ class ElegantLatticeConverter:
         cell = cell[6:-1]
 
         elements_list = cell.split(',')
-
+        elements_list = [elem.strip() for elem in elements_list]
         check_lines = True
         while check_lines:
             new_list = []
@@ -376,12 +402,18 @@ class ElegantLatticeConverter:
                         continue
                     tmp = self.elegant_matrix[reverse_matrix[element_class]]['params'][param]
                     if tmp.__class__ == list:
-                        lines += ',' + param + '=' + str(elem.__dict__[tmp[0]]/float(tmp[1]))
+                        if len(tmp) == 2:
+                            lines += ',' + param + '=' + str(elem.__dict__[tmp[0]]/float(tmp[1]))
+                        elif len(tmp) == 3:
+                            lines += ',' + param + '=' + str(elem.__dict__[tmp[0]][tmp[1], tmp[2]])
                     else:
                         # fix for phi cavity
                         if elem.__class__ == Cavity and tmp == 'phi':
                             lines += ',' + param + '=' + str(90.0 - elem.__dict__[tmp])
                             lines += ',CHANGE_P0=1,END1_FOCUS=1,END2_FOCUS=1,BODY_FOCUS_MODEL="SRS"'
+                        elif elem.__class__ == Matrix and "rm" in tmp:
+                            i, j = int(int(param[-2]) - 1), int(int(param[-1]) - 1)
+                            lines += ',' + param + '=' + str(elem.__dict__["r"][i, j])
                         else:
                             lines += ',' + param + '=' + str(elem.__dict__[tmp])
                 lines += '\n'
@@ -402,18 +434,18 @@ class ElegantLatticeConverter:
 if __name__ == '__main__':
     pass
     
-    '''
+    """
     # example of Elegant - Ocelot convertion
     SC = ElegantLatticeConverter()
     read_cell = SC.elegant2ocelot('elbe.lte')
     lattice = MagneticLattice(read_cell)
     write_lattice(lattice, remove_rep_drifts=False)
-    '''
+    """
     
-    '''
+    """
     # example of Ocelot - Elegant convertion
     from lattice import *
     lattice = MagneticLattice(cell)
     SC = ElegantLatticeConverter()
     SC.ocelot2elegant(lattice)
-    '''
+    """

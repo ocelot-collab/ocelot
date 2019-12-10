@@ -15,7 +15,7 @@ from ocelot import ParticleArray
 from ocelot.optics.wave import calc_ph_sp_dens, RadiationField
 from ocelot.common.globals import *
 from ocelot.adaptors.genesis import GenesisElectronDist #tmp
-from ocelot.common.logging import *
+from ocelot.common.ocelog import *
 from ocelot.utils.launcher import *
 import os
 
@@ -549,7 +549,7 @@ def read_gout4(filePath):
         else:
             s0 = 0
         sn = out.h5['Beam/current'].size
-        out.s = np.linspace(s0, out.h5['Global/slen'][()]+s0, sn)
+        out.s = np.linspace(s0, out.h5['Global/slen'][:][0]+s0, sn)
         _logger.debug(ind_str + 's[0], s[-1], len(s) = {}  {}  {}'.format(out.s[0], out.s[-1], sn))
 
     _logger.debug(ind_str + 'done')

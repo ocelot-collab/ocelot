@@ -25,8 +25,6 @@ It is an open source project and it is being developed by physicists from  [The 
 
 We still have no documentation but you can find a lot of examples in /demos/ folder including this tutorial
 
-
-
 ## Ocelot user profile
 
 Ocelot is designed for researchers who want to have the flexibility that is given by high-level languages such as Matlab, Python (with Numpy and SciPy) or Mathematica.
@@ -152,4 +150,4 @@ You can download OCELOT jupyter tutorials (release v18.02) using GitHub link [zi
 * [Undulator matching](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/undulator_matching.ipynb).
     - brief theory and example in OCELOT
 
-Disclaimer: The OCELOT code comes with absolutely NO warranty. The authors of the OCELOT do not take any responsibility for any damage to equipments or personnel injury that may result from the use of the code.
+**Disclaimer:** The OCELOT code comes with absolutely NO warranty. The authors of the OCELOT do not take any responsibility for any damage to equipments or personnel injury that may result from the use of the code.

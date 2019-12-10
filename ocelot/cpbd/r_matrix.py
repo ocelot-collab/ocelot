@@ -142,7 +142,7 @@ def create_r_matrix(element):
             Ef = (E + de) / m_e_GeV
             Ep = (Ef - Ei) / z  # energy derivative
             if Ei == 0:
-                logger.warning("cavity: Warning! Initial energy is zero and cavity.v != 0!n\ Change Ei (ParticleArray.E or Twiss.E) or cavity.v must be 0")
+                logger.error("CAVITY: Initial energy is 0, check ParticleArray.E or Twiss.E OR cavity.v must be 0")
 
             cos_phi = np.cos(phi)
             alpha = np.sqrt(eta / 8.) / cos_phi * np.log(Ef / Ei)

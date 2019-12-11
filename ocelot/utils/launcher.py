@@ -5,7 +5,7 @@ Launches simulations on various remote configurations
 import os
 import time
 import subprocess
-from ocelot.common.logging import *
+from ocelot.common.ocelog import *
 
 _logger = logging.getLogger(__name__)
 

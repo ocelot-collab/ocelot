@@ -8,6 +8,7 @@ import csv
 import time
 import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors # for wigner log scale
 import numpy as np
 import logging
 
@@ -519,7 +520,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
 @if_plottable
 def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, None), y_lim=(None, None), downsample=1,
                 autoscale=None, figsize=3, cmap='seismic', fig_name=None, savefig=False, showfig=True,
-                plot_proj=1, plot_text=1, plot_moments=0, **kwargs):
+                plot_proj=1, plot_text=1, plot_moments=0, plot_cbar=0, log_scale=0, **kwargs):
     """
     Plots wigner distribution (WD) with marginals
 
@@ -528,19 +529,21 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
     :param x_units: [m or fs] units to display power scale
     :param y_units: [nm or eV] units to display spectrum scale
     :param x_lim: scaling limits for x in given units, (min,max) or [min,max], e.g: (None,6)
-    :param y_lim: scaling limits for y in given units, (min,max) or [min,max], e.g: (None,6)
-    :param downsample:
-    :param autoscale:
+    :param x_lim: scaling limits for y in given units, (min,max) or [min,max], e.g: (None,6)
+    :param downsample: speeds up plotting by displaying only 1/downsample**2 points
+    :param autoscale: find x_lim and x_lim values automatically. Only (values > max_value * autoscale) will be displayed
     :param figsize: rescales the size of the figure
     :param cmap: colormar (http://matplotlib.org/users/colormaps.html)
     :param fig_name: the desired name of the output figure, would be used as suffix to the image filename if savefig==True
     :param savefig: bool type variable, allow to save figure to image (savefig='png' (default) or savefig='eps', etc...)
     :param showfig: bool type variable, allow to display figure (slower)
-    :param plot_proj:
-    :param plot_text:
-    :param plot_moments:
+    :param plot_proj: plot marginal distributions
+    :param plot_text: show text
+    :param plot_moments: plot moments as lines on top of Wigner distribution
+    :param plot_cbar: plots colorbar
+    :param log_scale: plots wigner distribution in logarithmic scale
     :param kwargs:
-    :return:
+    :return: None
     """
     if showfig == False and savefig == False:
         return
@@ -620,8 +623,24 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
 
     # cmap='RdBu_r'
     # axScatter.imshow(wigner, cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
-    wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample],
+    
+    if log_scale != 0:
+        if log_scale==1: 
+            log_scale=0.01
+        wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample],
+                                   wigner[::downsample, ::downsample], cmap=cmap,  
+                                   norm=colors.SymLogNorm(linthresh=wigner_lim * log_scale, linscale=2,
+                                              vmin=-wigner_lim, vmax=wigner_lim),
+                                   vmax=wigner_lim, vmin=-wigner_lim)
+    else:
+        wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample],
                                    wigner[::downsample, ::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
+    
+    if plot_cbar:
+        from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+        cbaxes = inset_axes(axScatter, width="50%", height="3%", loc=1) 
+        fig.colorbar(wigplot, cax = cbaxes, orientation='horizontal')
+        
     if plot_text:
         if hasattr(wig_or_out, 'is_spectrogram'):
             if wig_or_out.is_spectrogram:
@@ -655,7 +674,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
     if autoscale == 1:
         autoscale = 1e-2
 
-    if autoscale != None:
+    if autoscale not in [0, None]:
         max_power = np.amax(power)
         max_spectrum = np.amax(spec)
         idx_p = np.where(power > max_power * autoscale)[0]
@@ -696,6 +715,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
             axHisty.plot(spec, spec_scale)
         else:
             axHisty.plot(spec / spec.max(), spec_scale)
+
         axHisty.set_xlabel('Spectrum [a.u.]')
 
         axScatter.axis('tight')
@@ -716,6 +736,13 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
 
         axHistx.set_xlim(x_lim_appl[0], x_lim_appl[1])
         axHisty.set_ylim(y_lim_appl[0], y_lim_appl[1])
+        
+        if log_scale != 0:
+            axHistx.set_ylim(np.nanmin(power), np.nanmax(power))
+            axHisty.set_xlim(np.nanmin(spec), np.nanmax(spec))
+            axHisty.set_xscale('log')
+            axHistx.set_yscale('log')
+        
     else:
         axScatter.axis('tight')
         axScatter.set_xlabel(p_label_txt)
@@ -723,6 +750,9 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
 
     # axScatter.set_xlim(x_lim[0], x_lim[1])
     # axScatter.set_ylim(y_lim[0], y_lim[1])
+    
+    
+    
 
     if savefig != False:
         if savefig == True:
@@ -748,11 +778,11 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
 
 
 @if_plottable
-def plot_dfl_waistscan(sc_res, fig_name=None, showfig=True, savefig=False):
+def plot_dfl_waistscan(sc_res, fig_name=None, figsize=4, showfig=True, savefig=False):
     _logger.info('plot dfl waist scan')
     if showfig == False and savefig == False:
         return
-
+    
     if fig_name is None:
         if sc_res.fileName() is '':
             fig = plt.figure('Waist scan')
@@ -760,8 +790,9 @@ def plot_dfl_waistscan(sc_res, fig_name=None, showfig=True, savefig=False):
             fig = plt.figure(sc_res.fileName() + ' waist scan')
     else:
         fig = plt.figure(fig_name)
-
+        
     plt.clf()
+    fig.set_size_inches((3 * figsize, 2 * figsize), forward=True)
     ax_int = fig.add_subplot(1, 1, 1)
     ax_int.plot(sc_res.z_pos, sc_res.phdens_max, 'k', label='max', linewidth=2)
     ax_int.plot(sc_res.z_pos, sc_res.phdens_onaxis, 'grey', label='on-axis')
@@ -905,7 +936,7 @@ def plot_trf(trf, mode='tr', autoscale=0, showfig=True, savefig=None, fig_name=N
 
 
 @if_plottable
-def plot_stokes_values(S, fig=None, s_lin=0, norm=0, showfig=True, gw=1, direction='z', plot_func='step'):
+def plot_stokes_values(S, fig=None, d_pol=0, norm=0, showfig=True, gw=1, direction='z', plot_func='step', **kwargs):
     # if type(S) != StokesParameters:
     #     raise ValueError('Not a StokesParameters object')
     if direction == 'z':
@@ -918,59 +949,78 @@ def plot_stokes_values(S, fig=None, s_lin=0, norm=0, showfig=True, gw=1, directi
         sc = S.sc_y * 1e6
         Scp = S[0, :, 0]
 
-    if np.size(sc) > 1:
-        if fig == None:
-            plt.figure('Stokes S')
-            plt.clf()
-        elif type(fig) == matplotlib.figure.Figure:
-            plt.figure(fig.number)
-        else:
-            plt.figure(fig)
+    if np.size(sc) <= 1:
+        _logger.warning('plot_stokes_values needs more than a single point to plot (np.size(sc) <= 1)')
+        return
+    
+    if d_pol != 0:
+        gw=0
+        norm=1
+        
+    if fig == None:
+        plt.figure('Stokes S')
         plt.clf()
+    elif type(fig) == matplotlib.figure.Figure:
+        plt.figure(fig.number)
+    else:
+        plt.figure(fig)
+    plt.clf()
 
-        if gw:
-            mult = 1e-9
-            plt.ylabel('$S_0$ [GW]')
-        else:
-            mult = 1
-            plt.ylabel('$S_0$ [W]')
-        plt.xlabel('s [$\mu$m]')
+    if gw:
+        mult = 1e-9
+        plt.ylabel('$S_0$ [GW]')
+    elif norm:
+        mult = 1/np.amax(Scp.s0)
+    else:
+        mult = 1
+        plt.ylabel('$S_0$ [W]')
+    plt.xlabel('s [$\mu$m]')
 
-        kwargs = {'linewidth': 2}
+    kwargs = {'linewidth': 2}
 
-        if plot_func == 'step':
-            plot_function = plt.step
-            kwargs['where'] = 'mid'
-        elif plot_func == 'line':
-            plot_function = plt.plot
-        else:
-            raise ValueError
+    if plot_func == 'step':
+        plot_function = plt.step
+        kwargs['where'] = 'mid'
+    elif plot_func == 'line':
+        plot_function = plt.plot
+    else:
+        raise ValueError
 
-        if s_lin:
-            # plt.step(sc, np.sqrt(S.s1**2+S.s2**2), linewidth=2, where='mid',color=[0.5,0.5,0.5], linestyle='--')
-            plot_function(sc, Scp.P_pol_l() * mult, linestyle='--', color='m', **kwargs)
+    if d_pol=='lin':
+        # plt.step(sc, np.sqrt(S.s1**2+S.s2**2), linewidth=2, where='mid',color=[0.5,0.5,0.5], linestyle='--')
+        plot_function(sc, Scp.deg_pol_l(), linestyle='-', color='#1f77b4', **kwargs)
+    elif d_pol==1:
+        plot_function(sc, Scp.deg_pol(), linestyle='-', color='#1f77b4', **kwargs)
+    else:
+        pass
 
-        plot_function(sc, Scp.s1 * mult, color='g', **kwargs)
-        plot_function(sc, Scp.s2 * mult, color='r', **kwargs)
-        plot_function(sc, Scp.s3 * mult, color='c', **kwargs)
-        plot_function(sc, Scp.s0 * mult, color='b', **kwargs)
-        # plt.step(sc, S.s1, linewidth=2, where='mid',color='m')
-        # plt.step(sc, S.s2, linewidth=2, where='mid',color='r')
-        # plt.step(sc, S.s3, linewidth=2, where='mid',color='c')
-        # plt.step(sc, S.s0, linewidth=2, where='mid',color='k')
+    plot_function(sc, Scp.s1 * mult, color='g', **kwargs)
+    plot_function(sc, Scp.s2 * mult, color='r', **kwargs)
+    plot_function(sc, Scp.s3 * mult, color='c', **kwargs)
+    plot_function(sc, Scp.s0 * mult, color='b', **kwargs)
+    # plt.step(sc, S.s1, linewidth=2, where='mid',color='m')
+    # plt.step(sc, S.s2, linewidth=2, where='mid',color='r')
+    # plt.step(sc, S.s3, linewidth=2, where='mid',color='c')
+    # plt.step(sc, S.s0, linewidth=2, where='mid',color='k')
 
-        if s_lin:
-            plt.legend(['$\sqrt{S_1^2+S_2^2}$', '$S_1$', '$S_2$', '$S_3$', '$S_0$'], loc='lower center', ncol=5,
-                       mode="expand", borderaxespad=0.5, frameon=1).get_frame().set_alpha(0.4)
-        else:
-            plt.legend(['$S_1$', '$S_2$', '$S_3$', '$S_0$'], fontsize=13, ncol=4, loc='upper left',
-                       frameon=1).get_frame().set_alpha(0.4)
-            # plt.legend(['$S_1$','$S_2$','$S_3$','$S_0$'], loc='lower center', ncol=5, mode="expand", borderaxespad=0.5, frameon=1).get_frame().set_alpha(0.4)
-        plt.draw()
-        if showfig:
-            plt.show()
-        else:
-            plt.close('all')
+    if d_pol == 'lin':
+        plt.legend(['$D_{lin}$', '$S_1$', '$S_2$', '$S_3$', '$S_0$'], loc='lower center', ncol=5,
+                   mode="expand", borderaxespad=0.5, frameon=1).get_frame().set_alpha(0.4)
+    elif d_pol == 1:
+        plt.legend(['$D_{pol}$', '$S_1$', '$S_2$', '$S_3$', '$S_0$'], loc='lower center', ncol=5,
+                   mode="expand", borderaxespad=0.5, frameon=1).get_frame().set_alpha(0.4)
+    else:
+        plt.legend(['$S_1$', '$S_2$', '$S_3$', '$S_0$'], fontsize=13, ncol=4, loc='upper left',
+                   frameon=1).get_frame().set_alpha(0.4)
+        # plt.legend(['$S_1$','$S_2$','$S_3$','$S_0$'], loc='lower center', ncol=5, mode="expand", borderaxespad=0.5, frameon=1).get_frame().set_alpha(0.4)
+    plt.xlim([np.amin(sc), np.amax(sc)])
+    if norm:
+        plt.ylim([-1, 1])
+    plt.draw()
+    if showfig:
+        plt.show()
+    else:
+        plt.close('all')
 
 
 @if_plottable
@@ -988,52 +1038,56 @@ def plot_stokes_angles(S, fig=None, showfig=True, direction='z', plot_func='scat
         Scp = S[0, :, 0]
     # sc = S.sc * 1e6
 
-    if np.size(sc) > 1:
-        if fig == None:
-            plt.figure('Stokes angles')
-            plt.clf()
-        else:
-            plt.figure(fig.number)
+    if np.size(sc) <= 1:
+        _logger.warning('plot_stokes_angles needs more than a single point to plot (np.size(sc) <= 1)')
+        return
+        
+        
+    if fig == None:
+        plt.figure('Stokes angles')
         plt.clf()
+    else:
+        plt.figure(fig.number)
+    plt.clf()
 
-        kwargs = {'linewidth': 2}
-        if plot_func == 'scatter':
-            psize = Scp.deg_pol_l()
-            kwargs['s'] = psize
-            plot_function = plt.scatter
-        elif plot_func == 'step':
-            plot_function = plt.step
-            kwargs['where'] = 'mid'
-        elif plot_func == 'line':
-            plot_function = plt.plot
-        else:
-            raise ValueError
+    kwargs = {'linewidth': 2}
+    if plot_func == 'scatter':
+        psize = Scp.deg_pol()
+        kwargs['s'] = psize
+        plot_function = plt.scatter
+    elif plot_func == 'step':
+        plot_function = plt.step
+        kwargs['where'] = 'mid'
+    elif plot_func == 'line':
+        plot_function = plt.plot
+    else:
+        raise ValueError
 
-        # plt.step(sc, S.chi(), sc, S.psi(),linewidth=2)
+    # plt.step(sc, S.chi(), sc, S.psi(),linewidth=2)
 
-        plot_function(sc, Scp.psi(), color='b', **kwargs)
-        if plot_func == 'scatter':
-            kwargs['s'] = Scp.deg_pol_c()
-        plot_function(sc, Scp.chi(), color='g', **kwargs)
+    plot_function(sc, Scp.psi(), color='b', **kwargs)
+    # if plot_func == 'scatter':
+        # kwargs['s'] = psize
+    plot_function(sc, Scp.chi(), color='g', **kwargs)
 
-        # if scatter:
-        #     psize = Scp.P_pol()
-        #     psize /= np.amax(psize)
-        #     plt.scatter(sc, Scp.chi(),psize,linewidth=2,color='g')
-        #     plt.scatter(sc, Scp.psi(),psize,linewidth=2,color='b')
-        # else:
-        #     plt.step(sc, Scp.chi(), linewidth=2, where='mid', color='g')
-        #     plt.step(sc, Scp.psi(), linewidth=2, where='mid', color='b')
-        plt.legend(['$\chi$', '$\psi$'])  # ,loc='best')
-        plt.xlabel('s [$\mu$m]')
-        plt.ylabel('[rad]')
-        plt.ylim([-np.pi / 2, np.pi / 2])
-        plt.xlim([np.amin(sc), np.amax(sc)])
-        plt.draw()
-        if showfig:
-            plt.show()
-        else:
-            plt.close('all')
+    # if scatter:
+    #     psize = Scp.P_pol()
+    #     psize /= np.amax(psize)
+    #     plt.scatter(sc, Scp.chi(),psize,linewidth=2,color='g')
+    #     plt.scatter(sc, Scp.psi(),psize,linewidth=2,color='b')
+    # else:
+    #     plt.step(sc, Scp.chi(), linewidth=2, where='mid', color='g')
+    #     plt.step(sc, Scp.psi(), linewidth=2, where='mid', color='b')
+    plt.legend(['$\chi$', '$\psi$'])  # ,loc='best')
+    plt.xlabel('s [$\mu$m]')
+    plt.ylabel('[rad]')
+    plt.ylim([-np.pi / 2, np.pi / 2])
+    plt.xlim([np.amin(sc), np.amax(sc)])
+    plt.draw()
+    if showfig:
+        plt.show()
+    else:
+        plt.close('all')
 
 
 @if_plottable

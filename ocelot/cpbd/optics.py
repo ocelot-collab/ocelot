@@ -12,20 +12,20 @@ import numpy as np
 _logger = logging.getLogger(__name__)
 _logger_navi = logging.getLogger(__name__ + ".navi")
 
+
 try:
     import numexpr as ne
     ne_flag = True
-except:
+except ImportError as error:
     _logger.debug(" optics.py: module NUMEXPR is not installed. Install it to speed up calculation")
     ne_flag = False
+
 try:
     import numba as nb
     nb_flag = True
-except:
+except ImportError as error:
     _logger.debug(" optics.py: module NUMBA is not installed. Install it to speed up calculation")
     nb_flag = False
-
-
 
 
 class SecondOrderMult:
@@ -169,6 +169,9 @@ def transfer_map_rotation(R, T, tilt):
 
 
 class TransferMap:
+    """
+    TransferMap is a basic linear transfer map for all elements.
+    """
     def __init__(self):
         self.dx = 0.
         self.dy = 0.
@@ -261,7 +264,7 @@ class TransferMap:
         if m.__class__ in [TransferMap]:
             m2 = TransferMap()
             m2.R = lambda energy: np.dot(self.R(energy), m.R(energy))
-            m2.B = lambda energy: np.dot(self.R(energy), m.B(energy)) + self.B(energy)  # +dB #check
+            m2.B = lambda energy: np.dot(self.R(energy), m.B(energy)) + self.B(energy)
             m2.length = m.length + self.length
 
             return m2
@@ -445,7 +448,8 @@ class CavityTM(TransferMap):
         self.vy_up = 0.
         self.vx_down = 0.
         self.vy_down = 0.
-        self.delta_e_z = lambda z: self.v * np.cos(self.phi * np.pi / 180.) * z / self.length
+        phase_term = np.cos(self.phi * np.pi / 180.)
+        self.delta_e_z = lambda z: phase_term * self.v * z / self.length  if self.length != 0 else phase_term * self.v
         self.delta_e = self.v * np.cos(self.phi * np.pi / 180.)
         self.map = lambda X, energy: self.map4cav(X, energy, self.v, self.freq, self.phi, self.length)
 
@@ -495,7 +499,8 @@ class CavityTM(TransferMap):
         m.R = lambda energy: m.R_z(s, energy)
         m.B = lambda energy: m.B_z(s, energy)
         m.delta_e = m.delta_e_z(s)
-        m.map = lambda X, energy: m.map4cav(X, energy, m.v * s / self.length, m.freq, m.phi, s)
+        v = m.v * s / self.length if self.length != 0 else m.v
+        m.map = lambda X, energy: m.map4cav(X, energy, v, m.freq, m.phi, s)
         return m
 
 
@@ -551,7 +556,6 @@ class KickTM(TransferMap):
             X = transform_vec_ext(X, dx, dy, tilt)
 
         return X
-
 
     def __call__(self, s):
         m = copy(self)
@@ -747,9 +751,26 @@ class TWCavityTM(TransferMap):
 
 
 class MethodTM:
-    def __init__(self, params=None):
+    """
+    The class creates a transfer map for elements that depend on user-defined parameters ("parameters").
+    By default, the parameters = {"global": TransferMap}, which means that all elements will have linear transfer maps.
+    You can also specify different transfer maps for any type of element.
 
-        if params == None:
+    Example:
+    --------
+    # use linear matrices for all elements except Sectupole which will have nonlinear kick map (KickTM)
+    method = MethodTM()
+    method.global_method = TransferMap
+    method.params[Sextupole] = KickTM
+
+    # All elements are assigned matrices of the second order.
+    # For elements for which there are no matrices of the second order are assigned default matrices, e.g. linear matrices.
+    method2 = MethodTM()
+    method2.global_method = SecondTM
+
+    """
+    def __init__(self, params=None):
+        if params is None:
             self.params = {'global': TransferMap}
         else:
             self.params = params
@@ -801,6 +822,9 @@ class MethodTM:
                 T_z_e = lambda z, energy: T
             if element.__class__ == XYQuadrupole:
                 T = np.zeros((6, 6, 6))
+            if element.__class__ == Matrix:
+                T_z_e = lambda z, energy: element.t
+
             tm = SecondTM(r_z_no_tilt=r_z_e, t_mat_z_e=T_z_e)
             tm.multiplication = self.sec_order_mult.tmat_multip
 
@@ -850,6 +874,8 @@ class MethodTM:
 
         if element.__class__ == Matrix:
             tm.delta_e = element.delta_e
+            tm.B_z = lambda z, energy: element.b
+            tm.B = lambda energy: element.b
 
         if element.__class__ == Multipole:
             tm = MultipoleTM(kn=element.kn)
@@ -863,6 +889,11 @@ class MethodTM:
             tm = CorrectorTM(angle_x=0, angle_y=element.angle)
             tm.multiplication = self.sec_order_mult.tmat_multip
             tm.t_mat_z_e = lambda z, energy: t_nnn(z, 0, 0, 0, energy)
+
+        # if element.__class__ == HVcor:
+        #     tm = CorrectorTM(angle_x=element.angle_x, angle_y=element.angle_y)
+        #     tm.multiplication = self.sec_order_mult.tmat_multip
+        #     tm.t_mat_z_e = lambda z, energy: t_nnn(z, 0, 0, 0, energy)
 
         tm.length = element.l
         tm.dx = dx
@@ -900,8 +931,17 @@ def unsym_matrix(T):
 
 def lattice_transfer_map(lattice, energy):
     """
-    transfer map for the whole lattice
+    Function calculates transfer maps, the first and second orders (R, T), for the whole lattice.
+    Second order matrices are attached to lattice object:
+    lattice.T_sym - symmetric second order matrix
+    lattice.T - second order matrix
+    lattice.R - linear R matrix
+
+    :param lattice: MagneticLattice
+    :param energy: the initial electron beam energy [GeV]
+    :return: R - matrix
     """
+
     Ra = np.eye(6)
     Ta = np.zeros((6, 6, 6))
     Ba = np.zeros((6, 1))
@@ -914,11 +954,10 @@ def lattice_transfer_map(lattice, energy):
             Tb = sym_matrix(Tb)
             Ra, Ta = transfer_maps_mult(Ra, Ta, Rb, Tb)
         else:
-
-            Ra, Ta = transfer_maps_mult(Ra, Ta, Rb, Tb=np.zeros((6,6,6)))
+            Ra, Ta = transfer_maps_mult(Ra, Ta, Rb, Tb=np.zeros((6, 6, 6)))
         Ba = np.dot(Rb, Ba) + Bb
         E += elem.transfer_map.delta_e
-
+    lattice.E = E
     lattice.T_sym = Ta
     lattice.T = unsym_matrix(deepcopy(Ta))
     lattice.R = Ra
@@ -953,7 +992,7 @@ def trace_z(lattice, obj0, z_array):
 
 def trace_obj(lattice, obj, nPoints=None):
     """
-    track object though lattice
+    track object through the lattice
     obj must be Twiss or Particle
     """
 
@@ -1159,6 +1198,15 @@ class Navigator:
         return self.process_table.proc_list
 
     def add_physics_proc(self, physics_proc, elem1, elem2):
+        """
+        Method adds Physics Process.
+
+        :param physics_proc: PhysicsProc, e.g. SpaceCharge, CSR, Wake ...
+        :param elem1: the element in the lattice where to start applying the physical process.
+        :param elem2: the element in the lattice where to stop applying the physical process,
+                        can be the same as starting element.
+        :return:
+        """
         #logger_navi.debug(" add_physics_proc: phys proc: " + physics_proc.__class__.__name__)
         self.process_table.add_physics_proc(physics_proc, elem1, elem2)
 

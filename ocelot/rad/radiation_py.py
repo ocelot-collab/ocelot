@@ -12,7 +12,7 @@ from ocelot.cpbd.track import *
 from ocelot.rad.spline_py import *
 from ocelot.common.globals import *
 import time
-from ocelot.common.logging import *
+from ocelot.common.ocelog import *
 import copy
 from scipy.integrate import cumtrapz
 _logger = logging.getLogger(__name__)
@@ -44,17 +44,23 @@ class Motion:
 class BeamTraject:
     """
     A class for storing and retrieving the coordinates of the n-th particle from the table with all trajectories.
+    method: x(n=0) - array, horizontal coordinates of the n-th particle
+    method: y(n=0) - array, vertical coordinates of the n-th particle
+    method: xp(n=0) - array, x' = dx/dz coordinates of the n-th particle
+    method: yp(n=0) - array, y' = dy/dz coordinates of the n-th particle
+    method: z(n=0) - array, longitudinal coordinates in Cartesian coordinate system of the n-th particle
+    method: s(n=0) - array,  longitudinal coordinates in moving coordinate system of the n-th particle
     """
     def __init__(self, beam_trajectories):
         self.U = beam_trajectories
 
 
     def n(self):
-        return np.shape(self.U)[2]
+        return np.shape(self.U[0])[1]
 
     def check(self, n):
         if n > self.n() - 1:
-            raise Exception('n > number of particles"')
+            raise Exception('n > number of particles')
 
     def x(self, n=0):
         self.check(n)
@@ -91,7 +97,7 @@ class BeamTraject:
             yp_array = np.append(yp_array, u[3::9, n])
         return yp_array
 
-    def p(self, n):
+    def p(self, n=0):
         self.check(n)
         p_array = np.array([])
         for u in self.U:
@@ -210,34 +216,15 @@ def traj2motion(traj):
     motion.Bx = bspline(motion.z, motion.Bx, Z)
     motion.By = bspline(motion.z, motion.By, Z)
     motion.z = Z*1000.
-    #plt.plot(motion.bx.flatten()**2)
-    #plt.show()
+
     return motion
 
 
 def und_field_py(x, y, z, lperiod, Kx, nperiods=None):
-    if nperiods is None:
-        ph_shift = 0
-        z_coef = 1
-    else:
-        ph_shift = np.pi / 2
-        if np.__version__ < "1.13":
-            heaviside = lambda x: np.piecewise(x, [x < 0, x >= 0], [0, 1])
-
-            z_coef = (0.25 * heaviside(z) + 0.5 * heaviside(z - lperiod / 2.) + 0.25 * heaviside(
-                z - lperiod)
-                      - 0.25 * heaviside(z - (nperiods - 1) * lperiod) - 0.5 * heaviside(
-                        z - (nperiods - 0.5) * lperiod)
-                      - 0.25 * heaviside(z - nperiods * lperiod))
-        else:
-            z_coef = (0.25 * np.heaviside(z, 0) + 0.5 * np.heaviside(z - lperiod / 2., 0) + 0.25 * np.heaviside(z - lperiod, 0)
-                  - 0.25 * np.heaviside(z - (nperiods - 1) * lperiod, 0) - 0.5 * np.heaviside(
-                    z - (nperiods - 0.5) * lperiod, 0)
-                  - 0.25 * np.heaviside(z - nperiods * lperiod, 0))
 
     kx = 0.
     kz = 2*pi/lperiod
-    ky = np.sqrt(kz*kz - kx*kx)
+    ky = np.sqrt(kz*kz + kx*kx)
     c = speed_of_light
     m0 = m_e_eV
     B0 = Kx*m0*kz/c
@@ -247,15 +234,28 @@ def und_field_py(x, y, z, lperiod, Kx, nperiods=None):
     kx_x = kx*x
     ky_y = ky*y
     kz_z = kz*z
+
+    cosz = np.cos(kz_z)
+
+    if nperiods is not None:
+
+        ph_shift = np.pi / 2.
+        heaviside = lambda x: 0.5 * (np.sign(x) + 1)
+        z_coef = (0.25 * heaviside(z) + 0.5 * heaviside(z - lperiod / 2.) + 0.25 * heaviside(z - lperiod)
+                      - 0.25 * heaviside(z - (nperiods - 1) * lperiod) - 0.5 * heaviside(
+                        z - (nperiods - 0.5) * lperiod)
+                      - 0.25 * heaviside(z - nperiods * lperiod))
+        cosz = np.cos(kz_z + ph_shift) * z_coef
+
     cosx = np.cos(kx_x)
     sinhy = np.sinh(ky_y)
-    cosz = np.cos(kz_z + ph_shift)*z_coef
+    #cosz = np.cos(kz_z + ph_shift)*z_coef
     Bx = k1*np.sin(kx_x)*sinhy*cosz #// here kx is only real
     By = B0*cosx*np.cosh(ky_y)*cosz
     Bz = k2*cosx*sinhy*np.sin(kz_z)
     return (Bx, By, Bz)
 
-und_field = und_field_py if not nb_flag else nb.jit(und_field_py)
+und_field = und_field_py if not nb_flag else nb.jit(forceobj=False)(und_field_py)
 
 
 def energy_loss_und(energy, Kx, lperiod, L, energy_loss=False):
@@ -553,7 +553,7 @@ def calculate_radiation(lat, screen, beam, energy_loss=False, quantum_diff=False
     :param beam: Beam class, the radiation is calculated from one electron
     :param energy_loss: False, if True includes energy loss after each period
     :param quantum_diff: False, if True introduces random energy kick
-    :param accuracy: 1
+    :param accuracy: 1, scale for trajectory points number
     :param end_poles: False, if True includes end poles with 1/4, -3/4, 1, ...
     :return:
     """
@@ -625,7 +625,7 @@ def coherent_radiation(lat, screen, p_array, energy_loss=False, quantum_diff=Fal
                     and field components is summing up afterwards.
     :param energy_loss: False, if True includes energy loss after each period
     :param quantum_diff: False, if True introduces random energy kick
-    :param accuracy: 1
+    :param accuracy: 1, scale for trajectory points number
     :param verbose: True, print progress
     :return:
     """
@@ -707,7 +707,7 @@ def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy
                 if lat_el.totalLen != 0:
                     navi = Navigator(lat)
 
-                    N = 500
+                    N = int((lat_el.totalLen * 2000 + 150) * accuracy)
                     u = np.zeros((N * 9, np.shape(p_array.rparticles)[1]))
                     for i, z in enumerate(np.linspace(L, lat_el.totalLen + L, num=N)):
                         h = (lat_el.totalLen)/(N)
@@ -731,9 +731,9 @@ def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy
             U0 = U0 + Uq
 
             mag_length = elem.l
-            try:
+            if elem.mag_field is not None:
                 mag_field = elem.mag_field
-            except:
+            else:
                 if len(elem.field_map.z_arr) != 0:
                     #print("Field_map exist! Creating mag_field(x, y, z)")
                     unit_coef = 0.001 if elem.field_map.units == "mm" else 1

@@ -38,7 +38,7 @@ Q = 5e-9
 
 p_array.q_array = np.ones(200000)*Q/200000
 
-sI1, I1 = get_current(p_array, charge=p_array.q_array[0], num_bins=200)
+sI1, I1 = get_current(p_array, num_bins=200)
 
 plt.figure(1)
 plt.title("energy distribution: start")
@@ -90,7 +90,7 @@ print("time execution = ",  time.time() - start)
 
 plot_opt_func(lat, tws_track, top_plot=["E"], fig_name=0, legend=False)
 
-sI1, I1 = get_current(p_array, charge=p_array.q_array[0], num_bins=200)
+sI1, I1 = get_current(p_array, num_bins=200)
 
 plt.figure(3)
 plt.title("energy distribution: end")
@@ -108,7 +108,9 @@ plt.ylabel("I, A")
 plt.grid(True)
 plt.show()
 
+start = time.time()
 show_e_beam(p_array)
+print(time.time() - start, " sec")
 plt.show()
 show_e_beam(p_array, inverse_tau=True, headtail=False)
 plt.show()

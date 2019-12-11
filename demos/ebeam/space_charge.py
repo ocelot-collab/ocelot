@@ -20,36 +20,36 @@ from ocelot.adaptors.astra2ocelot import *
 
 
 # *********************************** LATTICE: START ********************************
-D_14 = Drift(l = 0.2216 + 0.0996, eid = 'D_14')
-D_15 = Drift(l = 0.3459, eid = 'D_15')
-D_22 = Drift(l = 0.2043, eid = 'D_22')
-D_23 = Drift(l = 0.085+0.4579 + 0.2211 +0.085 , eid = 'D_23')
+D_14 = Drift(l=0.2216 + 0.0996, eid='D_14')
+D_15 = Drift(l=0.3459, eid='D_15')
+D_22 = Drift(l=0.2043, eid='D_22')
+D_23 = Drift(l=0.085+0.4579 + 0.2211 + 0.085, eid='D_23')
 
-phi1=18.7268
-V1=18.50662e-3/np.cos(phi1*pi/180)
+phi1 = 18.7268
+V1 = 18.50662e-3/np.cos(phi1*pi/180)
 
-C_A1_1_1_I1 = Cavity(l = 1.0377, v = V1, freq = 1.3e9, phi = phi1, eid = 'C.A1.1.1.I1')
-C_A1_1_2_I1 = Cavity(l = 1.0377, v = V1, freq = 1.3e9, phi = phi1, eid = 'C.A1.1.2.I1')
-C_A1_1_3_I1 = Cavity(l = 1.0377, v = V1, freq = 1.3e9, phi = phi1, eid = 'C.A1.1.3.I1')
-C_A1_1_4_I1 = Cavity(l = 1.0377, v = V1, freq = 1.3e9, phi = phi1, eid = 'C.A1.1.4.I1')
-C_A1_1_5_I1 = Cavity(l = 1.0377, v = V1, freq = 1.3e9, phi = phi1, eid = 'C.A1.1.5.I1')
-C_A1_1_6_I1 = Cavity(l = 1.0377, v = V1, freq = 1.3e9, phi = phi1, eid = 'C.A1.1.6.I1')
-C_A1_1_7_I1 = Cavity(l = 1.0377, v = V1, freq = 1.3e9, phi = phi1, eid = 'C.A1.1.7.I1')
-C_A1_1_8_I1 = Cavity(l = 1.0377, v = V1, freq = 1.3e9, phi = phi1, eid = 'C.A1.1.8.I1')
+C_A1_1_1_I1 = Cavity(l=1.0377, v=V1, freq=1.3e9, phi=phi1, eid='C.A1.1.1.I1')
+C_A1_1_2_I1 = Cavity(l=1.0377, v=V1, freq=1.3e9, phi=phi1, eid='C.A1.1.2.I1')
+C_A1_1_3_I1 = Cavity(l=1.0377, v=V1, freq=1.3e9, phi=phi1, eid='C.A1.1.3.I1')
+C_A1_1_4_I1 = Cavity(l=1.0377, v=V1, freq=1.3e9, phi=phi1, eid='C.A1.1.4.I1')
+C_A1_1_5_I1 = Cavity(l=1.0377, v=V1, freq=1.3e9, phi=phi1, eid='C.A1.1.5.I1')
+C_A1_1_6_I1 = Cavity(l=1.0377, v=V1, freq=1.3e9, phi=phi1, eid='C.A1.1.6.I1')
+C_A1_1_7_I1 = Cavity(l=1.0377, v=V1, freq=1.3e9, phi=phi1, eid='C.A1.1.7.I1')
+C_A1_1_8_I1 = Cavity(l=1.0377, v=V1, freq=1.3e9, phi=phi1, eid='C.A1.1.8.I1')
 
-phi13=180
-V13=-20.2E-3/8/np.cos(phi13*pi/180)
-C3_AH1_1_1_I1 = Cavity(l = 0.346, v = V13, freq = 3.9e9, phi = phi13, eid = 'C3.AH1.1.1.I1')
-C3_AH1_1_2_I1 = Cavity(l = 0.346, v = V13, freq = 3.9e9, phi = phi13, eid = 'C3.AH1.1.2.I1')
-C3_AH1_1_3_I1 = Cavity(l = 0.346, v = V13, freq = 3.9e9, phi = phi13, eid = 'C3.AH1.1.3.I1')
-C3_AH1_1_4_I1 = Cavity(l = 0.346, v = V13, freq = 3.9e9, phi = phi13, eid = 'C3.AH1.1.4.I1')
-C3_AH1_1_5_I1 = Cavity(l = 0.346, v = V13, freq = 3.9e9, phi = phi13, eid = 'C3.AH1.1.5.I1')
-C3_AH1_1_6_I1 = Cavity(l = 0.346, v = V13, freq = 3.9e9, phi = phi13, eid = 'C3.AH1.1.6.I1')
-C3_AH1_1_7_I1 = Cavity(l = 0.346, v = V13, freq = 3.9e9, phi = phi13, eid = 'C3.AH1.1.7.I1')
-C3_AH1_1_8_I1 = Cavity(l = 0.346, v = V13, freq = 3.9e9, phi = phi13, eid = 'C3.AH1.1.8.I1')
+phi13 = 180
+V13 = -20.2E-3/8/np.cos(phi13*pi/180)
+C3_AH1_1_1_I1 = Cavity(l=0.346, v=V13, freq=3.9e9, phi=phi13, eid='C3.AH1.1.1.I1')
+C3_AH1_1_2_I1 = Cavity(l=0.346, v=V13, freq=3.9e9, phi=phi13, eid='C3.AH1.1.2.I1')
+C3_AH1_1_3_I1 = Cavity(l=0.346, v=V13, freq=3.9e9, phi=phi13, eid='C3.AH1.1.3.I1')
+C3_AH1_1_4_I1 = Cavity(l=0.346, v=V13, freq=3.9e9, phi=phi13, eid='C3.AH1.1.4.I1')
+C3_AH1_1_5_I1 = Cavity(l=0.346, v=V13, freq=3.9e9, phi=phi13, eid='C3.AH1.1.5.I1')
+C3_AH1_1_6_I1 = Cavity(l=0.346, v=V13, freq=3.9e9, phi=phi13, eid='C3.AH1.1.6.I1')
+C3_AH1_1_7_I1 = Cavity(l=0.346, v=V13, freq=3.9e9, phi=phi13, eid='C3.AH1.1.7.I1')
+C3_AH1_1_8_I1 = Cavity(l=0.346, v=V13, freq=3.9e9, phi=phi13, eid='C3.AH1.1.8.I1')
 
-Q_37_I1 = Quadrupole(l = 0.3, k1 = -1.537886, tilt = 0.0, eid = 'Q.37.I1')
-Q_38_I1 = Quadrupole(l = 0.3, k1 = 1.435078, tilt = 0.0, eid = 'Q.38.I1')
+Q_37_I1 = Quadrupole(l=0.3, k1=-1.537886, tilt=0.0, eid='Q.37.I1')
+Q_38_I1 = Quadrupole(l=0.3, k1=1.435078, tilt=0.0, eid='Q.38.I1')
 
 start_sim = Marker()
 
@@ -76,7 +76,7 @@ sigma_x = 0.000231507245956
 sigma_px =0.000204206874319
 sigma_y = 0.000231583942392
 sigma_py =0.000204272734636
-
+np.random.seed(0)
 x = np.random.randn(200000)*sigma_x
 px = np.random.randn(200000)*sigma_px
 y = np.random.randn(200000)*sigma_y
@@ -110,17 +110,18 @@ Q = 5e-10
 p_array_init.q_array = np.ones(200000)*Q/200000
 
 # beam transformation
-tws = Twiss()
-tws.beta_x  = 1.59966676201
-tws.beta_y  = 1.60018325757
-tws.alpha_x = -0.995487979563
-tws.alpha_y = -0.996116091572
-tws.mux = 0
-tws.muy = 0
-bt = BeamTransform(tws=tws)
+tws0 = Twiss()
+tws0.beta_x  = 1.59966676201
+tws0.beta_y  = 1.60018325757
+tws0.alpha_x = -0.995487979563
+tws0.alpha_y = -0.996116091572
+tws0.mux = 0
+tws0.muy = 0
+tws0.E = 0.0065
+bt = BeamTransform(tws=tws0)
 bt.apply(p_array_init,dz=0)
 
-sI1, I1 = get_current(p_array_init, charge=p_array_init.q_array[0], num_bins=200)
+sI1, I1 = get_current(p_array_init, num_bins=200)
 
 #plt.figure(1)
 #plt.title("energy distribution: start")
@@ -154,6 +155,10 @@ method.global_method = SecondTM
 # C3_AH1_1_8_I1 is the last section of the 3.9 GHz cavity
 lat = MagneticLattice(cell, method=method)
 
+tws = twiss(lat, tws0)
+plot_opt_func(lat, tws, top_plot=["E"], fig_name=0, legend=False)
+plt.show()
+
 sc1 = SpaceCharge()
 sc1.nmesh_xyz = [63, 63, 63]
 #sc1.low_order_kick = False
@@ -184,7 +189,7 @@ print("time exec: ", time() - start, "sec")
 plot_opt_func(lat, tws_track, top_plot=["E"], fig_name=0, legend=False)
 
 
-sI1_e, I1_e = get_current(p_array, charge=p_array.q_array[0], num_bins=200)
+sI1_e, I1_e = get_current(p_array, num_bins=200)
 
 plt.figure(1)
 plt.title("energy distribution: Start-End")

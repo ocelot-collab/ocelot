@@ -4,7 +4,7 @@ import numpy as np
 from ocelot.cpbd.beam import Twiss
 from scipy import optimize
 from ocelot.utils.acc_utils import *
-from ocelot.common.logging import *
+from ocelot.common.ocelog import *
 _logger = logging.getLogger(__name__)
 
 
@@ -19,6 +19,7 @@ class PhysProc:
     :attribute indx1: - number of stop element in lattice.sequence - assigned in navigator.add_physics_proc()
     :attribute s_start: - position of start element in lattice - assigned in navigator.add_physics_proc()
     :attribute s_stop: - position of stop element in lattice.sequence - assigned in navigator.add_physics_proc()
+    :attribute z0: - current position of navigator - assigned in track.track() before p.apply()
     """
     def __init__(self, step=1):
         self.step = step
@@ -27,6 +28,7 @@ class PhysProc:
         self.indx1 = None
         self.s_start = None
         self.s_stop = None
+        self.z0 = None
 
     def prepare(self, lat):
         """
@@ -54,7 +56,6 @@ class PhysProc:
         :return:
         """
         pass
-
 
 
 class EmptyProc(PhysProc):
@@ -131,7 +132,6 @@ class SmoothBeam(PhysProc):
         for i in range(1, N - 1):
             m = min(i, N - i + 1)
             m = np.int(np.floor(myfunc(0.5 * m, 0.5 * self.mslice) + 0.500001))
-            #print(m)
             Zout2[i] = (S[i + m + 1] - S[i - m]) / (2 * m + 1)
         #Zout[inds] = Zout2
         p_array.tau()[inds] = Zout2
@@ -300,7 +300,7 @@ class BeamTransform(PhysProc):
 
     @property
     def twiss(self):
-        if self.tws == None:
+        if self.tws is None:
             _logger.warning("BeamTransform: x_opt and y_opt are obsolete, use Twiss")
             tws = Twiss()
             tws.alpha_x, tws.beta_x, tws.mux = self.x_opt
@@ -422,6 +422,7 @@ class SpontanRadEffects(PhysProc):
         :param Kx: Undulator deflection parameter
         :param lperiod: undulator period in [m]
         :param type: "planar"/"helical" undulator or "dipole"
+        :param radius: np.inf,  in case of type = "dipole", one must specify a dipole radius
         """
         PhysProc.__init__(self)
         self.K = K
@@ -430,11 +431,13 @@ class SpontanRadEffects(PhysProc):
         self.energy_loss = True
         self.quant_diff = True
         self.filling_coeff = 1.0
+        self.radius = np.inf
 
     def apply(self, p_array, dz):
         _logger.debug("SpontanRadEffects: apply")
         mean_p = np.mean(p_array.p())
         energy = p_array.E*(1 + mean_p)
+        gamma = energy / m_e_GeV
 
         if self.type == "dipole":
             self.K = 100.0  # awake the asymptotic for K>>1
@@ -535,6 +538,9 @@ class BeamAnalysis(PhysProc):
 
 
 class Chicane(PhysProc):
+    """
+    simple physics process to simulate longitudinal dynamics in chicane
+    """
     def __init__(self, r56, t566=0.):
         PhysProc.__init__(self)
         self.r56 = r56
@@ -545,3 +551,133 @@ class Chicane(PhysProc):
 
         p_array.rparticles[4] += (self.r56 * p_array.rparticles[5] + self.t566 * p_array.rparticles[5] * p_array.rparticles[5])
 
+
+class SPDKick(PhysProc):
+    """
+    Single Plate Dechirper Kick (SPDKick). Wakefields of a Beam near a Single Plate in a Flat Dechirper.
+    Based on SLAC-PUB-16881.
+    NOT FINISHED. Recommend to use method form Wake3D
+    S.Tomin 11.2019
+
+    :param b: distance to the dechirper wall [m]
+    :param t: longitudinal gap [m]
+    :param period: period of corrugation [m]
+    """
+    def __init__(self, b, t, period):
+        PhysProc.__init__(self)
+        self.b = b
+        self.t = t
+        self.period = period
+        self.alpha = 0.
+
+    def dipole_wake(self, s, b, t, period):
+        """
+        dipole wake
+        :param s: position along a bunch
+        :param b: distance to the dechirper wall
+        :param t: longitudinal gap
+        :param period: period
+        :return:
+        """
+        alpha = 1 - 0.465 * np.sqrt(t / period) - 0.07 * (t / period)
+        s0yd = 8 * b ** 2 * t / (9 * np.pi * alpha ** 2 * period ** 2)
+        w = 2/b**3 * s0yd * (1 - (1 + np.sqrt(s/s0yd))*np.exp(- np.sqrt(s/s0yd)))
+        return w
+
+    def long_wake(self, s, b, t, period):
+        """
+        longitudinal wake
+
+        :param s: position along a bunch
+        :param b: distance to the dechirper wall
+        :param t: longitudinal gap
+        :param period: period
+        :return:
+        """
+        alpha = 1 - 0.465 * np.sqrt(t / period) - 0.07 * (t / period)
+
+        s0l = 2 * b ** 2 * t / (np.pi * alpha ** 2 * period ** 2)
+        w = 1/b**2 * np.exp(- np.sqrt(s/s0l))
+        return w
+
+    def quad_wake(self, s, b, t, period):
+        """
+        quadrupole wake
+
+        :param s: position along a bunch
+        :param b: distance to the dechirper wall
+        :param t: longitudinal gap
+        :param period: period
+        :return:
+        """
+        alpha = 1 - 0.465 * np.sqrt(t / period) - 0.07 * (t / period)
+
+        s0yq = 8 * b ** 2 * t / (9 * np.pi * alpha ** 2 * period ** 2)
+        w = 3/b**4 * s0yq * (1 - (1 + np.sqrt(s/s0yq))*np.exp(- np.sqrt(s/s0yq)))
+        return w
+
+    def convolve_beam(self, current, wake):
+        """
+        convolve wake with beam current
+
+        :param current: current[:, 0] - s in [m], current[:, 1] - current in [A]
+        :param wake: wake function in form: wake(s, b, t, period)
+        :return:
+        """
+        s_shift = current[0, 0]
+        current[:, 0] -= s_shift
+        s = current[:, 0]
+
+        step = (s[-1] - s[0]) / (len(s) - 1)
+        q = current[:, 1] / speed_of_light
+
+        w = np.array(
+            [wake(si, b=self.b, t=self.t, period=self.period) for si in s]) * 377 * speed_of_light / (
+                           4 * np.pi)
+        wake = np.convolve(q, w) * step
+        s_new = np.cumsum(np.ones(len(wake))) * step
+        wake_kick = np.vstack((s_new, wake))
+        return wake_kick.T
+
+
+    def wake_kick(self, p_array,  dz):
+        """
+        Function to calculate transverse kick by corrugated structure [SLAC-PUB-16881]
+
+        :param p_array: ParticleArray
+        :return: (wake, current) - wake[:, 0] - s in [m],  wake[:, 1] - kick in [V]
+                                - current[:, 0] - s in [m], current[:, 1] - current in [A]
+        """
+        I = s_to_cur(p_array.tau(), sigma=0.03 * np.std(p_array.tau()), q0=np.sum(p_array.q_array), v=speed_of_light)
+        s_shift = I[0, 0]
+        dipole_kick = self.convolve_beam(current=I, wake=self.dipole_wake)
+        quad_kick = self.convolve_beam(current=I, wake=self.quad_wake)
+        long_kick = self.convolve_beam(current=I, wake=self.long_wake)
+
+        z = p_array.tau()
+        ind_z_sort = np.argsort(z)
+        z_sort = z[ind_z_sort]
+        wd = np.interp(z_sort - s_shift, dipole_kick[:, 0], dipole_kick[:, 1])
+        wq = np.interp(z_sort - s_shift, quad_kick[:, 0], quad_kick[:, 1])
+        wl = np.interp(z_sort - s_shift, long_kick[:, 0], long_kick[:, 1])
+        x = p_array.rparticles[0][ind_z_sort] - np.mean(p_array.rparticles[0])
+        y = p_array.rparticles[2][ind_z_sort] - np.mean(p_array.rparticles[2])
+        delta_E_x = -x * wq * 1e-9 * dz
+        delta_E_y = (y * wq + wd) * 1e-9 * dz
+        delta_E_l = wl * 1e-9 * dz
+
+        pc_ref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV
+
+        delta_px = delta_E_x / pc_ref
+        delta_py = delta_E_y / pc_ref
+        #print(np.max(delta_p), pc_ref)
+        p_array.rparticles[1][ind_z_sort] += delta_px * np.cos(self.alpha) + delta_py * np.sin(self.alpha)
+        p_array.rparticles[3][ind_z_sort] += - delta_px * np.sin(self.alpha) + delta_py * np.cos(self.alpha)
+        p_array.rparticles[5][ind_z_sort] += delta_E_l/pc_ref
+        return p_array
+
+
+
+    def apply(self, p_array, dz):
+        _logger.debug(" CSTKick applied")
+        p_array = self.wake_kick(p_array, dz)

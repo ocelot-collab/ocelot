@@ -93,7 +93,260 @@ def twiss_new_check(lattice, tws0):
     
     result = check_dict(tws, tws_ref, TOL, 'absotute', assert_info=' tws for new lattice - ')
     assert check_result(result)
-    
+
+
+def test_merger(lattice, tws0, method, parametr=None, update_ref_values=False):
+    """R maxtrix calculation test"""
+    d = Drift(l=0.5)
+    q = Quadrupole(l=0.3, k1=3, k2=3.3, eid="quad")
+    b = Bend(l=1.2, angle=0.02, k1=-1, k2=.9, eid="bend")
+    s = Sextupole(l=0.23, k2=22, eid="sext")
+    c = Cavity(l=2, v=0.02, freq=1.3e9, phi=10, eid="cav")
+    cor = Hcor(l=0.1, eid="cor")
+    sol = Solenoid(l=0.12, k=0.002)
+    tds = TDCavity(l=0.5, freq=1.2e6, phi=90, v=0.02, tilt=0.0, eid="tds")
+    m = Monitor(eid="mon")
+    mat = Matrix(l=0.5, r11=1.1, r22=1, r33=1, r44=1, r55=1, r66=1, r12=0.1, t111=0.8)
+    b2 = RBend(l=1.2, angle=0.01, k1=-1, k2=-.9, eid="bend")
+    b3 = SBend(l=1.2, angle=0.02, k1=1, k2=.5, eid="bend")
+
+    init_energy = 0.5
+
+    cell = (d, q, b, s, c, cor, sol, tds, m, mat, b2, b3)
+
+    lat = MagneticLattice(cell, method=MethodTM({'global': SecondTM}))
+
+    R = lattice_transfer_map(lat, energy=init_energy)
+    new_lat = merger(lat, remaining_types=[], remaining_elems=[], init_energy=init_energy)
+    R_new = lattice_transfer_map(new_lat, energy=init_energy)
+
+    result = check_matrix(R, R_new, TOL, assert_info=' r_matrix - ')
+    result2 = check_matrix(lat.T, new_lat.T, TOL, assert_info=' t_matrix - ')
+    assert check_result(result + result2)
+
+
+def test_merger_elem(lattice, tws0, method, parametr=None, update_ref_values=False):
+    """R maxtrix calculation test"""
+    d = Drift(l=0.5)
+    q = Quadrupole(l=0.3, k1=3, k2=3.3, eid="quad")
+    b = Bend(l=1.2, angle=0.02, k1=-1, k2=.9, eid="bend")
+    s = Sextupole(l=0.23, k2=22, eid="sext")
+    c = Cavity(l=2, v=0.02, freq=1.3e9, phi=10, eid="cav")
+    cor = Hcor(l=0.1, eid="cor")
+    sol = Solenoid(l=0.12, k=0.002)
+    tds = TDCavity(l=0.5, freq=1.2e6, phi=90, v=0.02, tilt=0.0, eid="tds")
+    m = Monitor(eid="mon")
+    mat = Matrix(l=0.5, r11=1.1, r22=1, r33=1, r44=1, r55=1, r66=1, r12=0.1, t111=0.8)
+    b2 = RBend(l=1.2, angle=0.01, k1=-1, k2=-.9, eid="bend")
+    b3 = SBend(l=1.2, angle=0.02, k1=1, k2=.5, eid="bend")
+
+    init_energy = 0.5
+
+    cell = (d, q, b, s, c, cor, sol, tds, m, mat, b2, b3)
+
+    lat = MagneticLattice(cell, method=MethodTM({'global': SecondTM}))
+
+    R = lattice_transfer_map(lat, energy=init_energy)
+    new_lat = merger(lat, remaining_types=[], remaining_elems=[sol], init_energy=init_energy)
+    R_new = lattice_transfer_map(new_lat, energy=init_energy)
+
+    result = check_matrix(R, R_new, TOL, assert_info=' r_matrix - ')
+    result2 = check_matrix(lat.T, new_lat.T, TOL, assert_info=' t_matrix - ')
+    assert check_result(result + result2)
+
+
+def test_merger_type(lattice, tws0, method, parametr=None, update_ref_values=False):
+    """R maxtrix calculation test"""
+    d = Drift(l=0.5)
+    q = Quadrupole(l=0.3, k1=3, k2=3.3, eid="quad")
+    b = Bend(l=1.2, angle=0.02, k1=-1, k2=.9, eid="bend")
+    s = Sextupole(l=0.23, k2=22, eid="sext")
+    c = Cavity(l=2, v=0.02, freq=1.3e9, phi=10, eid="cav")
+    cor = Hcor(l=0.1, eid="cor")
+    sol = Solenoid(l=0.12, k=0.002)
+    d2 = Drift(l=0.5)
+    tds = TDCavity(l=0.5, freq=1.2e6, phi=90, v=0.02, tilt=0.0, eid="tds")
+    m = Monitor(eid="mon")
+    mat = Matrix(l=0.5, r11=1.1, r22=1, r33=1, r44=1, r55=1, r66=1, r12=0.1, t111=0.8)
+    b2 = RBend(l=1.2, angle=0.01, k1=-1, k2=-.9, eid="bend")
+    b3 = SBend(l=1.2, angle=0.02, k1=1, k2=.5, eid="bend")
+
+    init_energy = 0.5
+
+    cell = (d, q, b, s, c, cor, sol,d2, tds, m, mat, b2, b3)
+
+    lat = MagneticLattice(cell, method=MethodTM({'global': SecondTM}))
+
+    R = lattice_transfer_map(lat, energy=init_energy)
+    new_lat = merger(lat, remaining_types=[Drift], remaining_elems=[sol], init_energy=init_energy)
+    R_new = lattice_transfer_map(new_lat, energy=init_energy)
+
+    result = check_matrix(R, R_new, TOL, assert_info=' r_matrix - ')
+    result2 = check_matrix(lat.T, new_lat.T, TOL, assert_info=' t_matrix - ')
+    assert check_result(result + result2)
+
+
+def test_merger_extensive(lattice, tws0, method, parametr=None, update_ref_values=False):
+    """R maxtrix calculation test"""
+
+
+    init_energy = 0.05
+
+
+    R = lattice_transfer_map(lattice, energy=init_energy)
+    new_lat = merger(lattice, remaining_types=[Hcor, Vcor, Monitor], remaining_elems=[MPBPMF_47_I1, START_96_I1], init_energy=init_energy)
+    R_new = lattice_transfer_map(new_lat, energy=init_energy)
+
+    result = check_matrix(R, R_new, TOL, assert_info=' r_matrix - ')
+    result2 = check_matrix(lattice.T, new_lat.T, TOL, assert_info=' t_matrix - ')
+    assert check_result(result + result2)
+
+
+def test_merger_tilt(lattice, tws0, method, parametr=None, update_ref_values=False):
+    """R maxtrix calculation test"""
+    d = Drift(l=0.5)
+    q = Quadrupole(l=0.3, k1=3, k2=3.3, eid="quad", tilt=1.)
+    b = Bend(l=1.2, angle=0.02, k1=-1, k2=.9,tilt=0.2, eid="bend")
+    s = Sextupole(l=0.23, k2=22, eid="sext", tilt=2.)
+    c = Cavity(l=2, v=0.02, freq=1.3e9, phi=10, eid="cav")
+    cor = Hcor(l=0.1, eid="cor")
+    sol = Solenoid(l=0.12, k=0.002)
+    d2 = Drift(l=0.5)
+    tds = TDCavity(l=0.5, freq=1.2e6, phi=90, v=0.02, tilt=0.0, eid="tds")
+    m = Monitor(eid="mon")
+    mat = Matrix(l=0.5, r11=1.1, r22=1, r33=1, r44=1, r55=1, r66=1, r12=0.1, t111=0.8, tilt=0.5)
+    b2 = RBend(l=1.2, angle=0.01, k1=-1, k2=-.9, eid="bend")
+    b3 = SBend(l=1.2, angle=0.02, k1=1, k2=.5, eid="bend")
+
+    init_energy = 0.5
+
+    cell = (d, q, b, s, c, cor, sol,d2, tds, m, mat, b2, b3)
+
+    lat = MagneticLattice(cell, method=MethodTM({'global': SecondTM}))
+
+    R = lattice_transfer_map(lat, energy=init_energy)
+    new_lat = merger(lat, remaining_types=[Drift], remaining_elems=[sol], init_energy=init_energy)
+    R_new = lattice_transfer_map(new_lat, energy=init_energy)
+
+    result = check_matrix(R, R_new, TOL, assert_info=' r_matrix - ')
+    result2 = check_matrix(lat.T, new_lat.T, TOL, assert_info=' t_matrix - ')
+    assert check_result(result + result2)
+
+
+def test_merger_write_read(lattice, tws0, method, parametr=None, update_ref_values=False):
+    """R maxtrix calculation test"""
+
+    R = lattice_transfer_map(lattice, energy=tws0.E)
+
+    new_lat = merger(lattice, remaining_types=[Hcor, Vcor, Monitor], remaining_elems=[MPBPMF_47_I1, START_96_I1], init_energy=tws0.E)
+
+    write_lattice(new_lat, file_name="tmp_merger_lat.py")
+    import tmp_merger_lat as ml
+    new_lat2 = MagneticLattice(ml.cell, method=lattice.method)
+    R_new = lattice_transfer_map(new_lat2, energy=tws0.E)
+
+
+    result = check_matrix(R, R_new, tolerance=1.0e-8, tolerance_type='absolute', assert_info=' r_matrix - ')
+    result2 = check_matrix(lattice.T, new_lat2.T, tolerance=1.0e-8, tolerance_type='absolute', assert_info=' t_matrix - ')
+    assert check_result(result + result2)
+
+def test_matrix_write_read(lattice, tws0, method, parametr=None, update_ref_values=False):
+    """R maxtrix calculation test"""
+    m = Matrix(l=0.3, delta_e=0.1)
+    m.r = np.random.random((6, 6))
+    m.t = np.random.random((6, 6, 6))
+    m2 = Matrix(l=0.4)
+    m2.r = np.random.random((6, 6))
+    m2.t = np.random.random((6, 6, 6))
+
+    lat = MagneticLattice((m, m2), method=method)
+    R = lattice_transfer_map(lat, energy=tws0.E)
+
+    write_lattice(lat, file_name="tmp_mat_lat.py")
+    import tmp_mat_lat as mat
+    lat2 = MagneticLattice(mat.cell, method=lat.method)
+    R2 = lattice_transfer_map(lat2, energy=tws0.E)
+
+
+    result = check_matrix(R, R2, TOL, assert_info='r_matrix - ')
+    result2 = check_matrix(lat.T, lat2.T, TOL, assert_info='t_matrix - ')
+    result3 = check_matrix(np.array([lat.E, lat.totalLen]), np.array([lat2.E,lat2.totalLen ]), TOL, assert_info='t_matrix - ')
+    assert check_result(result + result2 + result3)
+
+
+def test_matrix_b_vector(lattice, tws0, method, parametr=None, update_ref_values=False):
+    """R maxtrix calculation test"""
+    d = Drift(l=0.5)
+    q = Quadrupole(l=0.3, k1=3, k2=3.3, eid="quad")
+    q.dx = 0.0013
+    q.dy = -0.0056
+    b = Bend(l=1.2, angle=0.02, k1=-1, k2=.9, eid="bend")
+    s = Sextupole(l=0.23, k2=22, eid="sext")
+    c = Cavity(l=2, v=0.02, freq=1.3e9, phi=10, eid="cav")
+    cor = Hcor(l=0.1, eid="cor")
+    sol = Solenoid(l=0.12, k=0.002)
+    d2 = Drift(l=0.5)
+    tds = TDCavity(l=0.5, freq=1.2e6, phi=90, v=0.02, tilt=0.0, eid="tds")
+    m = Monitor(eid="mon")
+    mat = Matrix(l=0.5, r11=1.1, r22=1, r33=1, r44=1, r55=1, r66=1, r12=0.1, t111=0.8)
+    b2 = RBend(l=1.2, angle=0.01, k1=-1, k2=-.9, eid="bend")
+    b3 = SBend(l=1.2, angle=0.02, k1=1, k2=.5, eid="bend")
+    b3.dx = -0.0004
+    b3.dy = 0.0015
+
+    init_energy = 0.5
+
+    cell = (d, q, b, s, c, cor, sol,d2, tds, m, mat, b2, b3)
+
+    lat = MagneticLattice(cell, method=MethodTM({'global': SecondTM}))
+
+    R = lattice_transfer_map(lat, energy=init_energy)
+    new_lat = merger(lat, remaining_types=[Drift], remaining_elems=[sol], init_energy=init_energy)
+    R_new = lattice_transfer_map(new_lat, energy=init_energy)
+    result = check_matrix(R, R_new, TOL, assert_info=' r_matrix - ')
+    result2 = check_matrix(lat.T, new_lat.T, TOL, assert_info=' t_matrix - ')
+    result3 = check_matrix(lat.B, new_lat.B, TOL, assert_info=' b_vector - ')
+    assert check_result(result + result2 + result3)
+
+
+def test_matrix_b_vector_read_write(lattice, tws0, method, parametr=None, update_ref_values=False):
+    """R maxtrix calculation test"""
+    d = Drift(l=0.5)
+    q = Quadrupole(l=0.3, k1=3, k2=3.3, eid="quad")
+    q.dx = 0.0013
+    q.dy = -0.0056
+    b = Bend(l=1.2, angle=0.02, k1=-1, k2=.9, eid="bend")
+    s = Sextupole(l=0.23, k2=22, eid="sext")
+    c = Cavity(l=2, v=0.02, freq=1.3e9, phi=10, eid="cav")
+    cor = Hcor(l=0.1, eid="cor")
+    sol = Solenoid(l=0.12, k=0.002)
+    d2 = Drift(l=0.5)
+    tds = TDCavity(l=0.5, freq=1.2e6, phi=90, v=0.02, tilt=0.0, eid="tds")
+    m = Monitor(eid="mon")
+    mat = Matrix(l=0.5, r11=1.1, r22=1, r33=1, r44=1, r55=1, r66=1, r12=0.1, t111=0.8)
+    b2 = RBend(l=1.2, angle=0.01, k1=-1, k2=-.9, eid="bend")
+    b3 = SBend(l=1.2, angle=0.02, k1=1, k2=.5, eid="bend")
+    b3.dx = -0.0004
+    b3.dy = 0.0015
+
+    init_energy = 0.5
+
+    cell = (d, q, b, s, c, cor, sol,d2, tds, m, mat, b2, b3)
+
+    lat = MagneticLattice(cell, method=method)
+
+    R = lattice_transfer_map(lat, energy=init_energy)
+
+    new_lat = merger(lat, remaining_types=[Drift], remaining_elems=[sol], init_energy=init_energy)
+    write_lattice(new_lat, file_name="tmp_b_vec.py")
+    import tmp_b_vec as b_vec
+    lat_read = MagneticLattice(b_vec.cell, method=method)
+
+    R_read = lattice_transfer_map(lat_read, energy=init_energy)
+    result = check_matrix(R, R_read, tolerance=1.0e-8, tolerance_type='absolute', assert_info=' r_matrix - ')
+    result2 = check_matrix(lat.T, lat_read.T, tolerance=1.0e-8, tolerance_type='absolute', assert_info=' t_matrix - ')
+    result3 = check_matrix(lat.B, lat_read.B, tolerance=1.0e-8, tolerance_type='absolute', assert_info=' b_vector - ')
+    assert check_result(result + result2 + result3)
 
 def setup_module(module):
 

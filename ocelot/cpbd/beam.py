@@ -2,12 +2,13 @@
 definition of particles, beams and trajectories
 """
 from ocelot.common.globals import *
-from ocelot.common.math_op import *
+from ocelot.common.math_op import find_nearest_idx
+from scipy.special import factorial
 from copy import deepcopy
 from scipy import interpolate
 from scipy.signal import savgol_filter
 from scipy.stats import truncnorm
-from ocelot.common.logging import *
+from ocelot.common.ocelog import *
 from ocelot.cpbd.reswake import pipe_wake
 
 _logger = logging.getLogger(__name__)
@@ -705,24 +706,14 @@ class ParticleArray:
         self.px()[:] = Rnn * self.px()[:]
         self.py()[:] = Rnn * self.py()[:]
         self.p()[:] = Rnn * self.p()[:]
-        
-    # def save_particle_array(filename, p_array):
-        # np.savez_compressed(filename, rparticles=p_array.rparticles, q_array=p_array.q_array, E=p_array.E, s=p_array.s)
-    
-    # def load_particle_array(filename):
-        # p_array = ParticleArray()
-        # with np.load(filename) as data:
-            # for key in data.keys():
-                # p_array.__dict__[key] = data[key]
-        # return p_array
 
     def __str__(self):
-        val = ""
-        val += "ref energy  = " + str(np.round(self.E, 4)) + " GeV \n"
-        val += "beam energy  = " + str(np.around(self.E*(1 + np.mean(self.p())), 4)) + " GeV \n"
-        val += "charge  = " + str(np.around(np.sum(self.q_array)*1e9, 4)) + " nC \n"
-
-        val += "n particles  = " + str(self.n) + "\n"
+        val = "ParticleArray: \n"
+        val += "Ref. energy : " + str(np.round(self.E, 4)) + " GeV \n"
+        val += "Ave. energy : " + str(np.around(self.E*(1 + np.mean(self.p())), 4)) + " GeV \n"
+        val += "Charge      : " + str(np.around(np.sum(self.q_array)*1e9, 4)) + " nC \n"
+        val += "s pos       : " + str(self.s) + " m \n"
+        val += "n particles : " + str(self.n) + "\n"
         return val
 
 
@@ -824,24 +815,32 @@ def get_envelope(p_array, tws_i=Twiss(), bounds=None):
     tws.alpha_y = -tws.ypy/tws.emit_y
     return tws
 
-def get_current(p_array, charge=None, num_bins=200):
+
+def get_current(p_array, num_bins=200, **kwargs):
     """
-    Function calculates beam current from particleArray
+    Function calculates beam current from particleArray.
 
     :param p_array: particleArray
-    :param charge: - None, charge of the one macro-particle.
+    :param charge: - None, OBSOLETE, charge of the one macro-particle.
                     If None, charge of the first macro-particle is used
     :param num_bins: number of bins
     :return s, I -  (np.array, np.array) - beam positions [m] and currents in [A]
     """
-    if charge == None:
-        charge = p_array.q_array[0]
+    if "charge" in kwargs:
+        _logger.warning("argument 'charge' is obsolete use 'get_current(p_array, num_bins)' instead" )
+        charge = kwargs["charge"]
+    else:
+        charge = None
+    weights = None
+    if charge is None:
+        weights = p_array.q_array
+        charge = 1
+
     z = p_array.tau()
-    hist, bin_edges = np.histogram(z, bins=num_bins)
+    hist, bin_edges = np.histogram(z, bins=num_bins, weights=weights)
     delta_Z = max(z) - min(z)
     delta_z = delta_Z/num_bins
     t_bins = delta_z/speed_of_light
-    print( "Imax = ", max(hist)*charge/t_bins)
     hist = np.append(hist, hist[-1])
     return bin_edges, hist*charge/t_bins
 
@@ -959,7 +958,7 @@ def sortrows(x, col):
     return x[:, x[col].argsort()]
 
 
-def convmode(A, B, mode):
+def convmode_py(A, B, mode):
 
     if mode == 2:
         C = np.convolve(A, B)
@@ -970,9 +969,19 @@ def convmode(A, B, mode):
         C1 = np.convolve(A, B)
         C[:n] = C1[i:n+i]
     return C
+convmode = convmode_py if not nb_flag else nb.jit(nopython=True)(convmode_py)
 
+def s2cur_auxil_py(A, xiA, C, N, I):
+    for k in range(len(A)):
+        i = I[k]
+        if i > N-1:
+            i = N-1
+        C[i] = C[i] + xiA[k]
+        C[i+1] = C[i+1] + (1 - xiA[k])
 
-def s_to_cur_py(A, sigma, q0, v):
+s2cur_auxil = s2cur_auxil_py if not nb_flag else nb.jit(nopython=True)(s2cur_auxil_py)
+
+def s_to_cur(A, sigma, q0, v):
     """
     Function to calculate beam current
 
@@ -987,32 +996,27 @@ def s_to_cur_py(A, sigma, q0, v):
     a = np.min(A) - Nsigma*sigma
     b = np.max(A) + Nsigma*sigma
     s = 0.25*sigma
-    N = int(np.ceil((b-a)/s))
-    s = (b-a)/N
-    B = np.zeros((N+1, 2))
-    C = np.zeros(N+1)
+    N = int(np.ceil((b - a)/s))
+    s = (b - a)/N
+    B = np.zeros((N + 1, 2))
+    C = np.zeros(N + 1)
 
-    B[:, 0] = np.arange(0, (N+0.5)*s, s) + a
-    N = N+1 #np.shape(B)[0]
+    B[:, 0] = np.arange(0, (N + 0.5) * s, s) + a
+    N = N + 1 #np.shape(B)[0]
     cA = (A - a)/s
     I = np.int_(np.floor(cA))
     xiA = 1 + I - cA
-    for k in range(len(A)):
-        i = I[k]
-        if i > N-1:
-            i = N-1
-        C[i] = C[i] + xiA[k]
-        C[i+1] = C[i+1] + (1 - xiA[k])
+    s2cur_auxil(A, xiA, C, N, I)
 
     K = np.floor(Nsigma*sigma/s + 0.5)
-    G = np.exp(-0.5*(np.arange(-K, K+1)*s/sigma)**2)
+    G = np.exp(-0.5 * (np.arange(-K, K+1) * s/sigma)**2)
     G = G/np.sum(G)
     B[:, 1] = convmode(C, G, 1)
-    koef = q0*v/(s*np.sum(B[:, 1]))
-    B[:, 1] = koef*B[:, 1]
+    koef = q0 * v / (s * np.sum(B[:, 1]))
+    B[:, 1] = koef * B[:, 1]
     return B
 
-s_to_cur = s_to_cur_py if not nb_flag else nb.jit(s_to_cur_py)
+#s_to_cur = s_to_cur_py if not nb_flag else nb.jit(s_to_cur_py)
 
 def slice_analysis_py(z, x, xs, M, to_sort):
     """
@@ -1028,7 +1032,7 @@ def slice_analysis_py(z, x, xs, M, to_sort):
         z = z[indx]
         x = x[indx]
         xs = xs[indx]
-        P=[]
+
     N=len(x)
     mx = np.zeros(N)
     mxs= np.zeros(N)

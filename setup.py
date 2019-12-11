@@ -4,13 +4,13 @@ from os.path import join, dirname
 all_packages = []
 for pkg in find_packages():
     if "demos" in pkg:
-        pkg = "ocelot." +  pkg
+        pkg = "ocelot." + pkg
     all_packages.append(pkg)
 
 
 setup(
     name='ocelot',
-    version='19.06.1',
+    version='19.12.0',
     description='Accelerator, radiation and x-ray optics simulation framework',
     author='ocelot-collab',
     author_email='tomin.sergey@gmail.com',

@@ -1,4 +1,0 @@
-sphinx-apidoc -o c:\Users\tomins\Documents\Dropbox\DESY\repository\ocelot\optimizer\docs\sour
-ce c:\Users\tomins\Documents\Dropbox\DESY\repository\ocelot\optimizer\
-
-make.bat html

@@ -208,11 +208,11 @@ class RBend(Bend):
     """
     def __init__(self, l=0., angle=0., k1=0., k2=0., e1=None, e2=None, tilt=0.,
                  gap=0, h_pole1=0., h_pole2=0., fint=0., fintx=None, eid=None):
-        if e1 == None:
+        if e1 is None:
             e1 = angle/2.
         else:
             e1 += angle/2.
-        if e2 == None:
+        if e2 is None:
             e2 = angle/2.
         else:
             e2 += angle/2.
@@ -390,57 +390,38 @@ class Multipole(Element):
 
 
 class Matrix(Element):
-    def __init__(self, l=0.,
-                 rm11=0., rm12=0., rm13=0., rm14=0., rm15=0., rm16=0.,
-                 rm21=0., rm22=0., rm23=0., rm24=0., rm25=0., rm26=0.,
-                 rm31=0., rm32=0., rm33=0., rm34=0., rm35=0., rm36=0.,
-                 rm41=0., rm42=0., rm43=0., rm44=0., rm45=0., rm46=0.,
-                 rm51=0., rm52=0., rm53=0., rm54=0., rm55=0., rm56=0.,
-                 rm61=0., rm62=0., rm63=0., rm64=0., rm65=0., rm66=0.,
-                 delta_e=0, eid=None):
+    """
+    Matrix element
+
+    l = 0 - m, length of the matrix element
+    r = np.zeros((6, 6)) - R - elements, first order
+    t = np.zeros((6, 6, 6)) - T - elements, second order
+    delta_e = 0 - GeV, energy gain along the matrix element
+    """
+    def __init__(self, l=0., delta_e=0, eid=None, **kwargs):
         Element.__init__(self, eid)
         self.l = l
-        self.rm11 = rm11
-        self.rm12 = rm12
-        self.rm13 = rm13
-        self.rm14 = rm14
-        self.rm15 = rm15
-        self.rm16 = rm16
 
-        self.rm21 = rm21
-        self.rm22 = rm22
-        self.rm23 = rm23
-        self.rm24 = rm24
-        self.rm25 = rm25
-        self.rm26 = rm26
+        self.r = np.zeros((6, 6))
+        self.t = np.zeros((6, 6, 6))
+        # zero order elements - test mode, not implemented yet
+        self.b = np.zeros((6, 1))
 
-        self.rm31 = rm31
-        self.rm32 = rm32
-        self.rm33 = rm33
-        self.rm34 = rm34
-        self.rm35 = rm35
-        self.rm36 = rm36
+        for y in kwargs:
+            # decode first order arguments in format RXX or rXX where X is number from 1 to 6
+            if "r" in y[0].lower() and len(y) > 2:
+                if "m" in y[1].lower() and len(y) == 4 and y[2:].isdigit() and (11 <= int(y[2:]) <= 66):
+                    self.r[int(y[2]) - 1, int(y[3]) - 1] = float(kwargs[y])
+                if len(y) == 3 and y[1:].isdigit() and (11 <= int(y[1:]) <= 66):
+                    self.r[int(y[1]) - 1, int(y[2]) - 1] = float(kwargs[y])
 
-        self.rm41 = rm41
-        self.rm42 = rm42
-        self.rm43 = rm43
-        self.rm44 = rm44
-        self.rm45 = rm45
-        self.rm46 = rm46
+            # decode second order arguments in format TXXX or tXXX where X is number from 1 to 6
+            if "t" in y[0].lower() and len(y) == 4 and y[1:].isdigit() and (111 <= int(y[1:]) <= 666):
+                self.t[int(y[1]) - 1, int(y[2]) - 1, int(y[3]) - 1] = float(kwargs[y])
 
-        self.rm51 = rm51
-        self.rm52 = rm52
-        self.rm53 = rm53
-        self.rm54 = rm54
-        self.rm55 = rm55
-        self.rm56 = rm56
-
-        self.rm61 = rm61
-        self.rm62 = rm62
-        self.rm63 = rm63
-        self.rm64 = rm64
-        self.rm65 = rm65
-        self.rm66 = rm66
+            # decode zero order arguments in format BX or bX where X is number from 1 to 6
+            if "b" in y[0].lower() and len(y) == 2 and y[1:].isdigit() and (1 <= int(y[1:]) <= 6):
+                self.b[int(y[1]) - 1, 0] = float(kwargs[y])
         self.delta_e = delta_e
 
 

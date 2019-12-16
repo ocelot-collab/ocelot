@@ -12,7 +12,7 @@ from ocelot.cpbd.track import *
 from ocelot.rad.spline_py import *
 from ocelot.common.globals import *
 import time
-from ocelot.common.logging import *
+from ocelot.common.ocelog import *
 import copy
 from scipy.integrate import cumtrapz
 _logger = logging.getLogger(__name__)

@@ -21,7 +21,7 @@ from ocelot.common.py_func import filename_from_path
 # from ocelot.adaptors.genesis import *
 # import ocelot.adaptors.genesis as genesis_ad
 # GenesisOutput = genesis_ad.GenesisOutput
-from ocelot.common.logging import *
+from ocelot.common.ocelog import *
 _logger = logging.getLogger(__name__)
 
 import multiprocessing

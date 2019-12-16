@@ -57,7 +57,7 @@ def Int1h(h, y):
 
 def project_on_grid_py(Ro, I0, dI0, q_array):
     """
-    Simple functio to project particles charge on grid
+    Simple function to project particles charge on grid
 
     :param Ro: grid
     :param I0: grid index for each particle
@@ -91,7 +91,7 @@ def s2current(s_array, q_array, n_points, filter_order, mean_vel):
     s1 = np.max(s_array)
     NF2 = int(np.floor(filter_order / 2.))
     n_points = n_points + 2 * NF2
-    #Np = s_array.shape[0]
+
     ds = (s1 - s0) / (n_points - 2 - 2 * NF2)
     s = s0 + np.arange(-NF2, n_points - NF2) * ds
     # here we need a fast 1D linear interpolation of charges on the grid

@@ -15,8 +15,9 @@ from ocelot import ParticleArray
 from ocelot.optics.wave import calc_ph_sp_dens, RadiationField
 from ocelot.common.globals import *
 from ocelot.adaptors.genesis import GenesisElectronDist #tmp
-from ocelot.common.logging import *
+from ocelot.common.ocelog import *
 from ocelot.utils.launcher import *
+from ocelot.cpbd.beam import BeamArray
 import os
 
 _logger = logging.getLogger(__name__)
@@ -1122,7 +1123,7 @@ def read_dpa42parray(filePath, N_part=None, fill_gaps=True):
     g = np.concatenate(g).ravel()
     g0 = np.mean(g) # average gamma
     p_array.E = g0 * m_e_GeV # average energy in GeV
-    p0 = sqrt(g0**2-1) * m_e_eV / speed_of_light
+    p0 = np.sqrt(g0**2-1) * m_e_eV / speed_of_light
 
     p_array.rparticles[0] = np.concatenate(x).ravel() # position in x in meters
     p_array.rparticles[1] = np.concatenate(px).ravel() / g0  # divergence in x
@@ -1139,61 +1140,70 @@ def read_dpa42parray(filePath, N_part=None, fill_gaps=True):
     h5.close()
     return p_array
 
-
-def write_gen4_lat(lat, filePath, line_name='LINE', l=np.inf):
+def gen4_lat_str(lat, line_name='LINE', l=np.inf):
     from ocelot.cpbd.elements import Undulator, Drift, Quadrupole, UnknownElement
-    _logger.info('writing genesis4 lattice')
-    _logger.debug(ind_str + 'writing to ' + filePath)
-
+    #TODO add phase shifter object
     lat_str = []
     beamline = []
     ll=0
-
+    
     lat_str.append('# generated with Ocelot\n')
-
+    
     for element in lat.sequence:
-
+        
         if ll >= l:
             break
-
+        
         element_num = str(len(beamline) + 1).zfill(3)
-
+        
         if hasattr(element,'l'):
             ll += element.l
-
+        
         if isinstance(element, Undulator):
             element_name = element_num + 'UND'
-            s = '{:}: UNDULATOR = {{lambdau = {:}, nwig = {:}, aw = {:.6f}}};'.format(element_name, element.lperiod, element.nperiods, element.Kx/sqrt(2))
-#            print(s)
-
+            s = '{:}: UNDULATOR = {{lambdau = {:}, nwig = {:}, aw = {:.6f}}};'.format(element_name, element.lperiod, element.nperiods, element.Kx/np.sqrt(2))
+        
+        
         elif isinstance(element, Drift):
             element_name = element_num + 'DR'
             s = '{:}: DRIFT = {{l={:}}};'.format(element_name, element.l)
-
+        
         elif isinstance(element, Quadrupole):
             if element.k1>=0:
                 element_name = element_num + 'QF'
             else:
                 element_name =  element_num + 'QD'
             s = '{:}: QUADRUPOLE = {{l = {:}, k1 = {:.6f} }};'.format(element_name, element.l, element.k1)
-
+        
         else:
             _logger.debug('Unknown element with length '+ str(element.l))
             continue
-
+        
         beamline.append(element_name)
         lat_str.append(s)
-
+    
     lat_str.append('')
     lat_str.append('{:}: LINE = {{{:}}};'.format(line_name, ','.join(beamline)))
     lat_str.append('\n# end of file\n')
+    lat_str = "\n".join(lat_str)
+    _logger.debug(ind_str + lat_str)
+    return lat_str
 
-    with open(filePath, 'w') as f:
-        f.write("\n".join(lat_str))
+def write_gen4_lat(lat, filepath, line_name='LINE', l=np.inf):
+    #TODO make it accept list of lattices and print several "LINE"s to the same file
+    _logger.info('writing genesis4 lattice')
+    _logger.debug(ind_str + 'writing to ' + filepath)
+    
+    lat_str = gen4_lat_str(lat, line_name=line_name, l=l)
+    
+    with open(filepath, 'w') as f:
+        f.write(lat_str)
+    
+    _logger.debug(ind_str + 'done')
 
 def write_edist_hdf5(edist, filepath):
+    _logger.info('writing electron distribution to {}'.format(filepath))
     with h5py.File(filepath, 'w') as h5:
-        # h5 = h5py.File(filepath, 'w')
         h5.create_dataset('p', data=edist.g)
         h5.create_dataset('t', data=-edist.t)
         h5.create_dataset('x', data=edist.x)
@@ -1201,10 +1211,57 @@ def write_edist_hdf5(edist, filepath):
         h5.create_dataset('xp', data=edist.xp)
         h5.create_dataset('yp', data=edist.yp)
         h5.create_dataset('charge', data = edist.charge())
-        # h5.close()
+    _logger.debug(ind_str + 'done')
+    
+def write_beamtwiss_hdf5(beam, filepath):
+    _logger.info('writing electron beam (twiss) to {}'.format(filepath))
+    with h5py.File(filepath, 'w') as h5:
+        h5.create_dataset('s', data=beam.s)
+        h5.create_dataset('gamma', data=beam.g)
+        h5.create_dataset('delgam', data=beam.dg)
+        h5.create_dataset('current', data=beam.I)
+        h5.create_dataset('ex', data=beam.emit_xn)
+        h5.create_dataset('ey', data=beam.emit_yn)
+        h5.create_dataset('betax', data=beam.beta_x)
+        h5.create_dataset('betay', data=beam.beta_y)
+        h5.create_dataset('alphax', data=beam.alpha_x)
+        h5.create_dataset('alphay', data=beam.alpha_y)
+        h5.create_dataset('xcenter', data=beam.x)
+        h5.create_dataset('ycenter', data=beam.y)
+        h5.create_dataset('pxcenter', data=beam.px)
+        h5.create_dataset('pycenter', data=beam.py)
+        # h5.create_dataset('bunch', data=np.zeros_like(beam.I))
+        # h5.create_dataset('bunchphase', data=np.zeros_like(beam.I))
+        # h5.create_dataset('emod', data=np.zeros_like(beam.I))
+        # h5.create_dataset('emodphase', data=np.zeros_like(beam.I))
+    _logger.debug(ind_str + 'done')
+
+
+def read_beamtwiss_hdf5(beam, filepath):
+    _logger.info('reading electron beam (twiss) from {}'.format(filepath))
+    beam = BeamArray()
+    with h5py.File(filepath, 'r') as h5:
+        beam.s = h5.get('s')[:]
+        beam.g = h5.get('gamma')[:]
+        beam.dg = h5.get('delgam')[:]
+        beam.I = h5.get('current')[:]
+        beam.emit_xn = h5.get('ex')[:]
+        beam.emit_yn = h5.get('ey')[:]
+        beam.beta_x = h5.get('betax')[:]
+        beam.beta_y = h5.get('betay')[:]
+        beam.alpha_x = h5.get('alphax')[:]
+        beam.alpha_y = h5.get('alphay')[:]
+        beam.x = h5.get('xcenter')[:]
+        beam.y = h5.get('ycenter')[:]
+        beam.px = h5.get('pxcenter')[:]
+        beam.py = h5.get('pycenter')[:]
+    _logger.debug(ind_str + 'done')
+    return beam
+
+
 
 def read_edist_hdf5(filepath, charge=None):
-
+    _logger.info('reading electron distribution from {}'.format(filepath))
     edist = GenesisElectronDist()
     with h5py.File(filepath, 'r') as h5:
 
@@ -1217,6 +1274,12 @@ def read_edist_hdf5(filepath, charge=None):
 
         if charge is not None:
             charge = h5.get('charge')[:]
-
+            _logger.debug('particle charge is provided: {}'.format(charge))
+        else:
+            _logger.debug('particle charge is overridden: {}'.format(charge))
+         
     edist.part_charge = charge / edist.g.size
     return edist
+
+
+

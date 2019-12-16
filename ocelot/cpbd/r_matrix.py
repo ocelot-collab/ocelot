@@ -142,7 +142,7 @@ def create_r_matrix(element):
             Ef = (E + de) / m_e_GeV
             Ep = (Ef - Ei) / z  # energy derivative
             if Ei == 0:
-                logger.warning("cavity: Warning! Initial energy is zero and cavity.v != 0!n\ Change Ei (ParticleArray.E or Twiss.E) or cavity.v must be 0")
+                logger.error("CAVITY: Initial energy is 0, check ParticleArray.E or Twiss.E OR cavity.v must be 0")
 
             cos_phi = np.cos(phi)
             alpha = np.sqrt(eta / 8.) / cos_phi * np.log(Ef / Ei)
@@ -275,7 +275,6 @@ def create_r_matrix(element):
             r_z_e = lambda z, energy: cav(z, V=element.v * z / element.l, E=energy, freq=element.freq,
                                                phi=element.phi)
 
-
     elif element.__class__ == Solenoid:
         def sol(l, k, energy):
             """
@@ -350,47 +349,7 @@ def create_r_matrix(element):
 
     elif element.__class__ == Matrix:
         rm = np.eye(6)
-        rm[0, 0] = element.rm11
-        rm[0, 1] = element.rm12
-        rm[0, 2] = element.rm13
-        rm[0, 3] = element.rm14
-        rm[0, 4] = element.rm15
-        rm[0, 5] = element.rm16
-
-        rm[1, 0] = element.rm21
-        rm[1, 1] = element.rm22
-        rm[1, 2] = element.rm23
-        rm[1, 3] = element.rm24
-        rm[1, 4] = element.rm25
-        rm[1, 5] = element.rm26
-
-        rm[2, 0] = element.rm31
-        rm[2, 1] = element.rm32
-        rm[2, 2] = element.rm33
-        rm[2, 3] = element.rm34
-        rm[2, 4] = element.rm35
-        rm[2, 5] = element.rm36
-
-        rm[3, 0] = element.rm41
-        rm[3, 1] = element.rm42
-        rm[3, 2] = element.rm43
-        rm[3, 3] = element.rm44
-        rm[3, 4] = element.rm45
-        rm[3, 5] = element.rm46
-
-        rm[4, 0] = element.rm51
-        rm[4, 1] = element.rm52
-        rm[4, 2] = element.rm53
-        rm[4, 3] = element.rm54
-        rm[4, 4] = element.rm55
-        rm[4, 5] = element.rm56
-
-        rm[5, 0] = element.rm61
-        rm[5, 1] = element.rm62
-        rm[5, 2] = element.rm63
-        rm[5, 3] = element.rm64
-        rm[5, 4] = element.rm65
-        rm[5, 5] = element.rm66
+        rm = element.r
 
         def r_matrix(z, l, rm):
             if z < l:

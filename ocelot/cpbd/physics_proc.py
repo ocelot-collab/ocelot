@@ -4,7 +4,7 @@ import numpy as np
 from ocelot.cpbd.beam import Twiss
 from scipy import optimize
 from ocelot.utils.acc_utils import *
-from ocelot.common.logging import *
+from ocelot.common.ocelog import *
 _logger = logging.getLogger(__name__)
 
 
@@ -300,7 +300,7 @@ class BeamTransform(PhysProc):
 
     @property
     def twiss(self):
-        if self.tws == None:
+        if self.tws is None:
             _logger.warning("BeamTransform: x_opt and y_opt are obsolete, use Twiss")
             tws = Twiss()
             tws.alpha_x, tws.beta_x, tws.mux = self.x_opt

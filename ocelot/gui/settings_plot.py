@@ -5,7 +5,7 @@ import matplotlib, logging, os
 from matplotlib import rc, rcParams
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from copy import deepcopy
-from ocelot.common.logging import ind_str
+from ocelot.common.ocelog import ind_str
 
 #in order to run decorators properly
 import functools

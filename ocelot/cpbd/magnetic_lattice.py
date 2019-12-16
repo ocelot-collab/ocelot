@@ -2,8 +2,7 @@ from ocelot.cpbd.optics import MethodTM, lattice_transfer_map
 from ocelot.cpbd.elements import *
 import logging
 import numpy as np
-from copy import deepcopy
-# logger = Logger()
+
 _logger = logging.getLogger(__name__)
 
 
@@ -118,11 +117,11 @@ class MagneticLattice:
         self.sequence = list(flatten(sequence))
         self.method = method
         try:
-            if start != None:
+            if start is not None:
                 id1 = self.sequence.index(start)
             else:
                 id1 = 0
-            if stop != None:
+            if stop is not None:
                 id2 = self.sequence.index(stop) + 1
                 self.sequence = self.sequence[id1:id2]
             else:
@@ -170,7 +169,7 @@ class MagneticLattice:
 
                 e_name = elem.id
 
-                if elem.id == None:
+                if elem.id is None:
                     e_name = "b_" + str(i)
 
                 e1 = Edge(l=elem.l, angle=elem.angle, k1=elem.k1, edge=elem.e1, tilt=elem.tilt, dtilt=elem.dtilt,

@@ -19,7 +19,6 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #  SOFTWARE.
-import sys
 from copy import copy
 import logging
 from logging import Formatter
@@ -51,7 +50,7 @@ _SUFFIX = '\033[0m'
 
 # Create basic OCELOT logger. All loggers with name ocelot.something.something. ... inherit/affected from basic logger
 ocelog = logging.getLogger('ocelot')
-ocelog.propagate = 1    # do not affect root logger
+#ocelog.propagate = 1    # do not affect root logger
 ocelog.indent0 = len(inspect.stack())
 
 class OcelogFormatter(Formatter):
@@ -92,7 +91,6 @@ class OcelogFormatter(Formatter):
         return result
 
 def ocelog_indentate():
-    import inspect
     ocelog.indent0 = len(inspect.stack())
     print('ocelog.indent0.init', ocelog.indent0)
 

@@ -52,7 +52,6 @@ def test_ast_mad_transf(p_array, parameter=None, update_ref_values=False):
     assert check_result(result2 )
 
 
-
 def test_ast(p_array, parameter=None, update_ref_values=False):
     """
     testing applying one marker as start ans stop
@@ -69,10 +68,26 @@ def test_ast(p_array, parameter=None, update_ref_values=False):
 
     result2 = check_dict(p_rel, p_ref, tolerance=1.0e-7, tolerance_type='absolute', assert_info=' p - ')
 
-
     assert check_result(result2 )
 
+def test_fmt1(p_array, parameter=None, update_ref_values=False):
+    """
+    testing applying one marker as start ans stop
+    """
 
+    p_array_ref = copy.deepcopy(p_array)
+    p_array_ref.rparticles[4, 0] *= 0
+    p_array_ref.rparticles[5, 0] *= 0
+    save_particle_array("test.fmt1", p_array_ref)
+    p_array_reload = load_particle_array("test.fmt1")
+    print(np.array_equal(p_array_reload.rparticles, p_array_ref.rparticles))
+    print(p_array_reload.rparticles[5,:10], p_array_ref.rparticles[5,:10])
+    p_rel = obj2dict(p_array_reload)
+    p_ref = obj2dict(p_array_ref)
+
+    result2 = check_dict(p_rel, p_ref, tolerance=1.0e-7, tolerance_type='absolute', assert_info=' p - ')
+
+    assert check_result(result2 )
 
 def setup_module(module):
 

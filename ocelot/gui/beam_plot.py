@@ -195,6 +195,7 @@ def plot_estimator_power_z(fel, z=None, fig=None, und_duty_factor=1, fs=False):
     # plt.plot(out.s * 1e6, out.p_int[:,z_ind])
     ax.set_title('Pulse energy @ %.2fm = %.2e J' %(z / und_duty_factor, fel.E(z)))
     ax.set_ylabel('P [W]')
+    return fig
     
     #fig.savefig(exp_dir + 'power_sat.png', format = 'png')
     return fig
@@ -250,6 +251,7 @@ def plot_estimator_spectrum(fel, z=None, fig=None, **kwargs):
     ax.autoscale(tight=1)
     return fig
 
+
 @if_plottable
 @save_show
 def plot_estimator_power_evo(fel, fig=None, und_duty_factor=1, **kwargs):
@@ -272,6 +274,7 @@ def plot_estimator_power_evo(fel, fig=None, und_duty_factor=1, **kwargs):
     ax.set_ylabel('P [W]')
     ax.set_xlabel('z [m]')
     return fig
+
 
 @if_plottable
 @save_show

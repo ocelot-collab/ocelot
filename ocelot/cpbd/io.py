@@ -7,6 +7,7 @@ author sergey.tomin
 from ocelot.cpbd.elements import *
 import os, sys
 from ocelot.adaptors.astra2ocelot import astraBeam2particleArray, particleArray2astraBeam
+from ocelot.adaptors.csrtrack2ocelot import csrtrackBeam2particleArray, particleArray2csrtrackBeam
 from ocelot.cpbd.beam import ParticleArray, Twiss, Beam
 
 
@@ -30,10 +31,9 @@ def load_particle_array_from_npz(filename, print_params=False):
     return p_array
 
 
-
 def load_particle_array(filename, print_params=False):
     """
-    Universal function to load beam file, *.ast or *.npz format
+    Universal function to load beam file, *.ast (ASTRA), *.fmt1 (CSRTrack) or *.npz format
 
     Note that downloading ParticleArray from the astra file (.ast) and saving it back does not give the same distribution.
     The difference arises because the array of particles does not have a reference particle, and in this case
@@ -44,16 +44,23 @@ def load_particle_array(filename, print_params=False):
     """
     name, file_extension = os.path.splitext(filename)
     if file_extension == ".npz":
-        return load_particle_array_from_npz(filename, print_params=print_params)
+        parray = load_particle_array_from_npz(filename, print_params=False)
     elif file_extension in [".ast", ".001"]:
-        return astraBeam2particleArray(filename, print_params=print_params)
+        parray = astraBeam2particleArray(filename, print_params=False)
+    elif file_extension in [".fmt1"]:
+        parray = csrtrackBeam2particleArray(filename)
     else:
-        raise Exception("Unknown format of the beam file: " + file_extension + " but must be *.ast or *.npz ")
+        raise Exception("Unknown format of the beam file: " + file_extension + " but must be *.ast, *fmt1 or *.npz ")
+
+    if print_params:
+        print(parray)
+
+    return parray
 
 
 def save_particle_array(filename, p_array, ref_index=0):
     """
-    Universal function to save beam file, *.ast or *.npz format
+    Universal function to save beam file, *.ast (ASTRA), *.fmt1 (CSRTrack) or *.npz format
 
     Note that downloading ParticleArray from the astra file (.ast) and saving it back does not give the same distribution.
     The difference arises because the array of particles does not have a reference particle, and in this case
@@ -68,9 +75,10 @@ def save_particle_array(filename, p_array, ref_index=0):
         save_particle_array2npz(filename, p_array)
     elif file_extension == ".ast":
         particleArray2astraBeam(p_array, filename, ref_index)
+    elif file_extension == ".fmt1":
+        particleArray2csrtrackBeam(p_array, filename)
     else:
-        raise Exception("Unknown format of the beam file: " + file_extension + " but must be *.ast or *.npz")
-
+        raise Exception("Unknown format of the beam file: " + file_extension + " but must be *.ast, *.fmt1 or *.npz")
 
 
 def find_drifts(lat):

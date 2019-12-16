@@ -5,10 +5,11 @@ statistical analysis functions, fitting, optimization and the like
 import numpy as np
 from scipy.special import gammaincc, gamma, exp1
 from scipy import fftpack, integrate, interpolate
+from scipy import optimize
+import sys
 
 try:
     import numba as nb
-    from numba import jit
     numba_avail = True
 except ImportError:
     print("math_op.py: module Numba is not installed. Install it if you want speed up correlation calculations")
@@ -254,7 +255,7 @@ def fit_gauss_1d(x,F):
 
 def fwhm(x,F):
     ff = fwhm3(np.array(F), height=0.5, peakpos=-1, total=1)
-    return x[ff[2][1]]- x[ff[2][0]]
+    return x[ff[2][1]] - x[ff[2][0]]
 #    m = np.max(F) / 2.0
 #    ups = []
 #    downs = []
@@ -365,7 +366,6 @@ def stats(outputs):
                 
     std = np.sqrt(std / len(outputs)) 
          
-    #print 'median id=', imed
     return omean , std, outputs[imed], outputs[iworst], imed, iworst
 
 
@@ -381,12 +381,6 @@ def find_saturation(power, z, n_smooth=5):
         if u[i] < 0.0 * um and z[i] > 10: 
             ii = i
             break
-    
-    #plt.plot(g.z[1:], u, lw=3)
-    #plt.plot(g.z[ii+1], p[ii], 'rd')
-
-    #plt.plot(g.z, power, lw=3)
-    #plt.plot(z[ii+1], np.log10(power[ii]), 'rd')
 
     return z[ii+1], ii+1
     
@@ -452,34 +446,34 @@ def index_of(array,value):
     idx = (np.abs(array-value)).argmin()
     return idx
 
-if numba_avail:
-    @jit('void(double[:,:], double[:,:], int32, int32)', nopython=True, nogil=True)
-    def corr_f_nb(corr, val, n_skip=1, norm=1):
-        n_val = corr.shape[0]
-        n_event = val.shape[1]
-        for i in range(n_val):
-            for j in range(n_val):
-                means = 0
-                meanl = 0
-                meanr = 0
-                for k in range(n_event):
-                    means += val[i*n_skip,k] * val[j*n_skip,k]
-                    meanl += val[i*n_skip,k]
-                    meanr += val[j*n_skip,k]
-                means /= n_event
-                meanl /= n_event
-                meanr /= n_event
-                if meanl == 0 or meanr == 0:
-                    if norm:
-                        corr[i,j] = 1
-                    else:
-                        corr[i,j] = 0
-                else:
-                    if norm:
-                        corr[i,j] = means / meanl / meanr
-                    else:
-                        corr[i,j] = means - meanl * meanr
 
+# if numba_avail:
+    # @nb.jit('void(double[:,:], double[:,:], int32, int32)', nopython=True, nogil=True)
+def corr_f_py(corr, val, n_skip=1, norm=1):
+    n_val = corr.shape[0]
+    n_event = val.shape[1]
+    for i in range(n_val):
+        for j in range(n_val):
+            means = 0
+            meanl = 0
+            meanr = 0
+            for k in range(n_event):
+                means += val[i*n_skip,k] * val[j*n_skip,k]
+                meanl += val[i*n_skip,k]
+                meanr += val[j*n_skip,k]
+            means /= n_event
+            meanl /= n_event
+            meanr /= n_event
+            if meanl == 0 or meanr == 0:
+                if norm:
+                    corr[i,j] = 1
+                else:
+                    corr[i,j] = 0
+            else:
+                if norm:
+                    corr[i,j] = means / meanl / meanr
+                else:
+                    corr[i,j] = means - meanl * meanr
 
 
 def corr_f_np(corr, val, n_skip=1, norm=1, count=0):
@@ -503,50 +497,51 @@ def corr_f_np(corr, val, n_skip=1, norm=1, count=0):
     else:
         corr[np.isnan(corr)] = 0
 
+corr_f_nb = nb.jit('void(double[:,:], double[:,:], int32, int32)', nopython=True, nogil=True)(corr_f_py) if numba_avail else corr_f_np
+
              
 def correlation2d(val, norm=0, n_skip=1, use_numba=numba_avail):
     N = int(val.shape[0] / n_skip)
     corr = np.zeros([N,N])
     if use_numba:
-        corr_f_nb(corr, val, n_skip, norm)        
+        corr_f_nb(corr, val, n_skip, norm)
     else:        
         corr_f_np(corr, val, n_skip, norm)
     return corr
 
-if numba_avail:
-    @jit('void(double[:,:], int32, double[:,:], int32)', nopython=True, nogil=True)
-    def corr_c_nb(corr, n_corr, val, norm):
-        n_event = len(val[0])
-        n_val = len(val) - n_corr*2
-        for i in range(n_val):
-            for j in range(n_corr):
-                if not j%2:
-                    ind_l = int(i - j/2 + n_corr)
-                    ind_r = int(i + j/2 + n_corr)
-                else:
-                    ind_l = int(i - (j-1)/2 + n_corr)
-                    ind_r = int(i + (j-1)/2 + 1 + n_corr)                          
-                means = 0
-                meanl = 0
-                meanr = 0
-                for k in range(n_event):
-                    means += val[ind_l, k] * val[ind_r, k]
-                    meanl += val[ind_l, k]
-                    meanr += val[ind_r, k]
-                means /= n_event
-                meanl /= n_event
-                meanr /= n_event
 
-                if meanl == 0 or meanr == 0:
-                    if norm:
-                        corr[i,j] = 1
-                    else:
-                        corr[i,j] = 0
+def corr_c_py(corr, n_corr, val, norm):
+    n_event = len(val[0])
+    n_val = len(val) - n_corr*2
+    for i in range(n_val):
+        for j in range(n_corr):
+            if not j%2:
+                ind_l = int(i - j/2 + n_corr)
+                ind_r = int(i + j/2 + n_corr)
+            else:
+                ind_l = int(i - (j-1)/2 + n_corr)
+                ind_r = int(i + (j-1)/2 + 1 + n_corr)
+            means = 0
+            meanl = 0
+            meanr = 0
+            for k in range(n_event):
+                means += val[ind_l, k] * val[ind_r, k]
+                meanl += val[ind_l, k]
+                meanr += val[ind_r, k]
+            means /= n_event
+            meanl /= n_event
+            meanr /= n_event
+
+            if meanl == 0 or meanr == 0:
+                if norm:
+                    corr[i,j] = 1
                 else:
-                    if norm:
-                        corr[i,j] = means / meanl / meanr
-                    else:
-                        corr[i,j] = means - meanl * meanr
+                    corr[i,j] = 0
+            else:
+                if norm:
+                    corr[i,j] = means / meanl / meanr
+                else:
+                    corr[i,j] = means - meanl * meanr
 
 
 def corr_c_np(corr, n_corr, val, norm):
@@ -571,6 +566,8 @@ def corr_c_np(corr, n_corr, val, norm):
                 else:
                     corr[i,j] = means - meanl * meanr
 
+corr_c_nb = nb.jit('void(double[:,:], int32, double[:,:], int32)', nopython=True, nogil=True)(corr_c_py) if numba_avail else corr_f_np
+
 
 def correlation2d_center(n_corr, val, norm=0, use_numba=1):
     n_val, n_event = val.shape
@@ -586,43 +583,44 @@ def correlation2d_center(n_corr, val, norm=0, use_numba=1):
 
     return corr
 
-if numba_avail:
-    @jit('void(complex128[:,:,:,:], complex128[:,:,:], int32)', nopython=True, nogil=True)
-    def mut_coh_func(J, fld, norm=1):
-        """
-        Mutual Coherence function
-        """
-        n_x = len(fld[0,0,:])
-        n_y = len(fld[0,:,0])
-        n_z = len(fld[:,0,0])
-        
-        for i_x1 in range(n_x):
-            for i_y1 in range(n_y):                      
-                    for i_x2 in range(n_x):
-                        for i_y2 in range(n_y):
-                            j = 0
-                            for k in range(n_z):
-                                j += (fld[k, i_y1, i_x1] * fld[k, i_y2, i_x2].conjugate())
-                            if norm:
-                                AbsE1 = 0
-                                AbsE2 = 0
-                                for k in range(n_z):
-                                    AbsE1 += abs(fld[k, i_y1, i_x1])
-                                    AbsE2 += abs(fld[k, i_y2, i_x2])
-                                J[i_y1, i_x1, i_y2, i_x2] = j / (AbsE1 * AbsE2 / n_z**2) / n_z
-                            else:
-                                J[i_y1, i_x1, i_y2, i_x2] = j / n_z
-                                
-def gauss_fit(X, Y):
-    import numpy as np
-    import scipy.optimize as opt
 
+def mut_coh_func_py(J, fld, norm=1):
+    """
+    Mutual Coherence function
+    """
+    n_x = len(fld[0,0,:])
+    n_y = len(fld[0,:,0])
+    n_z = len(fld[:,0,0])
+
+    for i_x1 in range(n_x):
+        for i_y1 in range(n_y):
+                for i_x2 in range(n_x):
+                    for i_y2 in range(n_y):
+                        j = 0
+                        for k in range(n_z):
+                            j += (fld[k, i_y1, i_x1] * fld[k, i_y2, i_x2].conjugate())
+                        if norm:
+                            AbsE1 = 0
+                            AbsE2 = 0
+                            for k in range(n_z):
+                                AbsE1 += abs(fld[k, i_y1, i_x1])
+                                AbsE2 += abs(fld[k, i_y2, i_x2])
+                            J[i_y1, i_x1, i_y2, i_x2] = j / (AbsE1 * AbsE2 / n_z**2) / n_z
+                        else:
+                            J[i_y1, i_x1, i_y2, i_x2] = j / n_z
+
+
+mut_coh_func = nb.jit('void(complex128[:,:,:,:], complex128[:,:,:], int32)', nopython=True, nogil=True)(mut_coh_func_py) \
+                if numba_avail else mut_coh_func_py
+
+
+def gauss_fit(X, Y):
     def gauss(x, p):  # p[0]==mean, p[1]==stdev p[2]==peak
         return p[2] / (p[1] * np.sqrt(2 * np.pi)) * np.exp(-(x - p[0])**2 / (2 * p[1]**2))
 
     p0 = [0, np.max(X) / 2, np.max(Y)]
     errfunc = lambda p, x, y: gauss(x, p) - y
-    p1, success = opt.leastsq(errfunc, p0[:], args=(X, Y))
+    p1, success = optimize.leastsq(errfunc, p0[:], args=(X, Y))
     fit_mu, fit_stdev, ampl = p1
     Y1 = gauss(X, p1)
     RMS = fit_stdev

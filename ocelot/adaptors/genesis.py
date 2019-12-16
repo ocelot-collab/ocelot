@@ -16,7 +16,7 @@ from ocelot.optics.wave import *
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.rad.undulator_params import UndulatorParameters
 # from ocelot.optics.utils import calc_ph_sp_dens
-from ocelot.common.logging import *
+from ocelot.common.ocelog import *
 
 _logger = logging.getLogger(__name__) 
 

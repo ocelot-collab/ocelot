@@ -338,7 +338,6 @@ def track_nturns_mpi(mpi_comm, lat, nturns, track_list, errors=None, nsuperperio
         return track_list
 
 
-
 def fma(lat, nturns, x_array, y_array, nsuperperiods = 1):
     from mpi4py import MPI
     mpi_comm = MPI.COMM_WORLD

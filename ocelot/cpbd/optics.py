@@ -12,20 +12,20 @@ import numpy as np
 _logger = logging.getLogger(__name__)
 _logger_navi = logging.getLogger(__name__ + ".navi")
 
+
 try:
     import numexpr as ne
     ne_flag = True
-except:
+except ImportError as error:
     _logger.debug(" optics.py: module NUMEXPR is not installed. Install it to speed up calculation")
     ne_flag = False
+
 try:
     import numba as nb
     nb_flag = True
-except:
+except ImportError as error:
     _logger.debug(" optics.py: module NUMBA is not installed. Install it to speed up calculation")
     nb_flag = False
-
-
 
 
 class SecondOrderMult:
@@ -264,7 +264,7 @@ class TransferMap:
         if m.__class__ in [TransferMap]:
             m2 = TransferMap()
             m2.R = lambda energy: np.dot(self.R(energy), m.R(energy))
-            m2.B = lambda energy: np.dot(self.R(energy), m.B(energy)) + self.B(energy)  # +dB #check
+            m2.B = lambda energy: np.dot(self.R(energy), m.B(energy)) + self.B(energy)
             m2.length = m.length + self.length
 
             return m2
@@ -557,7 +557,6 @@ class KickTM(TransferMap):
 
         return X
 
-
     def __call__(self, s):
         m = copy(self)
         m.length = s
@@ -823,6 +822,9 @@ class MethodTM:
                 T_z_e = lambda z, energy: T
             if element.__class__ == XYQuadrupole:
                 T = np.zeros((6, 6, 6))
+            if element.__class__ == Matrix:
+                T_z_e = lambda z, energy: element.t
+
             tm = SecondTM(r_z_no_tilt=r_z_e, t_mat_z_e=T_z_e)
             tm.multiplication = self.sec_order_mult.tmat_multip
 
@@ -872,6 +874,8 @@ class MethodTM:
 
         if element.__class__ == Matrix:
             tm.delta_e = element.delta_e
+            tm.B_z = lambda z, energy: element.b
+            tm.B = lambda energy: element.b
 
         if element.__class__ == Multipole:
             tm = MultipoleTM(kn=element.kn)
@@ -953,7 +957,7 @@ def lattice_transfer_map(lattice, energy):
             Ra, Ta = transfer_maps_mult(Ra, Ta, Rb, Tb=np.zeros((6, 6, 6)))
         Ba = np.dot(Rb, Ba) + Bb
         E += elem.transfer_map.delta_e
-
+    lattice.E = E
     lattice.T_sym = Ta
     lattice.T = unsym_matrix(deepcopy(Ta))
     lattice.R = Ra

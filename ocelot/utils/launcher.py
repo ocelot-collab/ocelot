@@ -115,7 +115,10 @@ class MpiLauncher(Launcher):
     def launch(self):
         t1 = time.time()
         _logger.info('launching mpi job')
-        command = 'mkdir -p '+ self.dir + '; ' + 'cd '+ self.dir + '; '+ "`which mpirun` " + str(self.mpiParameters) + " " + self.program + self.argument
+        if hasattr(self, 'command'):
+            command = self.command #command override
+        else:
+            command = 'mkdir -p '+ self.dir + '; ' + 'cd '+ self.dir + '; '+ "`which mpirun` " + str(self.mpiParameters) + " " + self.program + self.argument
         _logger.debug(ind_str + 'launcher command "{}"'.format(command))
         # print (command)
         os.system(command)

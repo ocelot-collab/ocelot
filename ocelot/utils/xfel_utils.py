@@ -335,7 +335,7 @@ def create_fel_lattice_tmp(und_N = 34,
 
 def create_fel_beamline(beamline = 'sase1', inters_phi=0, inters_K = "K_und"):
     if beamline in ['sase1', 1, 'sase2', 2, 'EuXFEL_SASE1', 'EuXFEL_SASE2']:
-        return create_fel_lattice(und_N = 35,
+        return create_fel_lattice(und_N = 37,
                         und_L = 5-0.04,
                         und_l = 0.04,
                         und_Kx = 0,

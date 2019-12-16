@@ -6,26 +6,26 @@ from ocelot.cpbd.beam import Particle, Twiss, ParticleArray
 from ocelot.cpbd.high_order import *
 from ocelot.cpbd.r_matrix import *
 from copy import deepcopy
-#import logging
+import logging
 import numpy as np
 
 _logger = logging.getLogger(__name__)
 _logger_navi = logging.getLogger(__name__ + ".navi")
 
+
 try:
     import numexpr as ne
     ne_flag = True
-except:
+except ImportError as error:
     _logger.debug(" optics.py: module NUMEXPR is not installed. Install it to speed up calculation")
     ne_flag = False
+
 try:
     import numba as nb
     nb_flag = True
-except:
+except ImportError as error:
     _logger.debug(" optics.py: module NUMBA is not installed. Install it to speed up calculation")
     nb_flag = False
-
-
 
 
 class SecondOrderMult:

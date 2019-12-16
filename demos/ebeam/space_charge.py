@@ -110,14 +110,15 @@ Q = 5e-10
 p_array_init.q_array = np.ones(200000)*Q/200000
 
 # beam transformation
-tws = Twiss()
-tws.beta_x  = 1.59966676201
-tws.beta_y  = 1.60018325757
-tws.alpha_x = -0.995487979563
-tws.alpha_y = -0.996116091572
-tws.mux = 0
-tws.muy = 0
-bt = BeamTransform(tws=tws)
+tws0 = Twiss()
+tws0.beta_x  = 1.59966676201
+tws0.beta_y  = 1.60018325757
+tws0.alpha_x = -0.995487979563
+tws0.alpha_y = -0.996116091572
+tws0.mux = 0
+tws0.muy = 0
+tws0.E = 0.0065
+bt = BeamTransform(tws=tws0)
 bt.apply(p_array_init,dz=0)
 
 sI1, I1 = get_current(p_array_init, num_bins=200)
@@ -153,6 +154,10 @@ method.global_method = SecondTM
 # Q_38_I1 is quadrupole between RF cavities 1.3 GHz and 3.9 GHz
 # C3_AH1_1_8_I1 is the last section of the 3.9 GHz cavity
 lat = MagneticLattice(cell, method=method)
+
+tws = twiss(lat, tws0)
+plot_opt_func(lat, tws, top_plot=["E"], fig_name=0, legend=False)
+plt.show()
 
 sc1 = SpaceCharge()
 sc1.nmesh_xyz = [63, 63, 63]

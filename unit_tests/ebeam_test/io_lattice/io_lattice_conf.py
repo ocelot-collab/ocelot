@@ -436,6 +436,9 @@ OTRA_118_I1 = Monitor(eid='OTRA.118.I1')
 DCM_118_I1 = Monitor(eid='DCM.118.I1')
 BPMA_119_I1 = Monitor(eid='BPMA.119.I1')
 
+# aperture
+
+ap = Aperture(xmax=10e-3, ymax=0.002, type="rect", eid="ap")
 # sextupoles 
 SC_74I_I1 = Sextupole(l=0.1, k2=-9.817522762, tilt=1.570796327, eid='SC.74I.I1')
 SC_74II_I1 = Sextupole(l=0.1, k2=-5.948211334, tilt=1.570796327, eid='SC.74II.I1')
@@ -508,7 +511,7 @@ def cell():
     TORA_46_I1, D_38, QI_46_I1, D_39, BAM_47_I1, D_40, BPMF_47_I1, D_41, 
     MPBPMF_47_I1, D_42, DCM_47_I1, D_43, QI_47_I1, D_44, STLAT_47_I1, D_45, 
     BL_48I_I1, D_46, BL_48II_I1, D_47, MPBPMF_48_I1, D_48, BPMF_48_I1, D_49, 
-    OTRL_48_I1, D_50, und_start, UNDU_49_I1, und_stop, D_51, OTRL_50_I1, D_52, BL_50I_I1, D_53,
+    OTRL_48_I1, D_50, und_start, ap, UNDU_49_I1, und_stop, D_51, OTRL_50_I1, D_52, BL_50I_I1, D_53,
     BL_50II_I1, D_54, ENLAT_50_I1, D_55, QI_50_I1, D_56, EOD_51_I1, D_57, 
     CIY_51_I1, D_58, CIX_51_I1, D_59, BPMF_52_I1, D_60, MPBPMF_52_I1, D_61, 
     QI_52_I1, D_62, TDSA_52_I1, D_63, QI_53_I1, D_64, QI_54_I1, D_65, 

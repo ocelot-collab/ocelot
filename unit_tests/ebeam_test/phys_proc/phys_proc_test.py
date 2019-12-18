@@ -73,6 +73,40 @@ def test_track_smooth(lattice, p_array, parameter, update_ref_values=False):
     result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=TOL, assert_info=' p - ')
     assert check_result(result1 + result2)
 
+@pytest.mark.parametrize('parameter', [0, 1, 2])
+def test_track_aperture(lattice, p_array, parameter, update_ref_values=False):
+    """
+    test Runge_Kutta transfer map for undulator
+
+    0 - tracking of the electron beam with positive energy chirp trough undulator
+    1 - tracking of the electron beam with negative energy chirp trough undulator
+    """
+
+    p_array_track = copy.deepcopy(p_array)
+
+    navi = Navigator(lattice)
+
+    if parameter == 0:
+        navi.activate_apertures()
+    elif parameter == 1:
+        navi.activate_apertures(lattice.sequence[0], lattice.sequence[12])
+    else:
+        navi.activate_apertures(lattice.sequence[12])
+
+    tws_track_wo, p_array_wo = track(lattice, p_array_track, navi)
+
+    tws_track = obj2dict(tws_track_wo)
+    p = obj2dict(p_array_wo)
+
+    if update_ref_values:
+        return {'tws_track': tws_track, 'p_array': p}
+
+    tws_track_p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) + '.json')
+
+    result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
+    result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=TOL, assert_info=' p - ')
+    assert check_result(result1 + result2)
+
 
 def test_track_beam_transform(lattice, p_array, parameter=None, update_ref_values=False):
     """
@@ -109,6 +143,7 @@ def test_track_beam_transform(lattice, p_array, parameter=None, update_ref_value
 
 
     result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], tolerance=1.0e-12, tolerance_type='absolute', assert_info=' tws_track - ')
+    # result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
     result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=TOL, assert_info=' p - ')
     assert check_result(result1 + result2)
 
@@ -368,6 +403,7 @@ def test_update_ref_values(lattice, p_array, cmdopt):
     update_functions.append('test_generate_parray')
     update_functions.append("test_s2current")
     update_functions.append('test_track_smooth')
+    update_functions.append('test_track_aperture')
     update_functions.append('test_track_beam_transform')
     update_functions.append('test_track_smooth_csr')
     update_functions.append('test_track_smooth_csr_sc')
@@ -378,6 +414,7 @@ def test_update_ref_values(lattice, p_array, cmdopt):
 
     update_function_parameters = {}
     update_function_parameters['test_track_smooth'] = [0, 1]
+    update_function_parameters['test_track_aperture'] = [0, 1, 2]
 
     parametr = update_function_parameters[cmdopt] if cmdopt in update_function_parameters.keys() else ['']
 

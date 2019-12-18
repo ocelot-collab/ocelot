@@ -290,6 +290,7 @@ dict_plot = {Quadrupole: {"scale": 0.7, "color": "r",            "edgecolor": "r
              TDCavity:   {"scale": 0.7, "color": "magenta",      "edgecolor": "g",          "label": "tds"},
              UnknownElement:{"scale": 0.7, "color": "g",         "edgecolor": "g",          "label": "unk"},
              XYQuadrupole: {"scale": 0.7, "color": "r",          "edgecolor": "r",          "label": "xyquad"},
+             Aperture:   {"scale": 0.7, "color": "g",            "edgecolor": "g",          "label": "ap"},
              }
 
 
@@ -358,10 +359,16 @@ def new_plot_elems(fig, ax, lat, s_point=0, nturns=1, y_lim=None, y_scale=1, leg
         if l == 0:
             l = 0.03
         #type = elem.type
-        scale = dict_copy[elem.__class__]["scale"]
-        color = dict_copy[elem.__class__]["color"]
-        label = dict_copy[elem.__class__]["label"]
-        ecolor = dict_copy[elem.__class__]["edgecolor"]
+        if elem.__class__ in dict_copy:
+            scale = dict_copy[elem.__class__]["scale"]
+            color = dict_copy[elem.__class__]["color"]
+            label = dict_copy[elem.__class__]["label"]
+            ecolor = dict_copy[elem.__class__]["edgecolor"]
+        else:
+            scale = dict_copy[UnknownElement]["scale"]
+            color = dict_copy[UnknownElement]["color"]
+            label = dict_copy[UnknownElement]["label"]
+            ecolor = dict_copy[UnknownElement]["edgecolor"]
         ampl = 1
         s_coord = np.array([L + elem.l/2. - l/2., L + elem.l/2. - l/2., L + elem.l/2. +l/2., L + elem.l/2. +l/2., L + elem.l/2.- l/2.]) + s_point
 

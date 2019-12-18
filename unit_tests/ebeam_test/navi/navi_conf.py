@@ -44,7 +44,7 @@ m_kick = Marker()
 B = SBend(l=0.25, angle=-0.099484, e1=0.0, e2 = -0.099484, tilt=0.0, fint=0.0, eid='BL.48I.I1')
 
 D1 = Drift(l=0.4, eid='D1')
-
+ap = Aperture(xmax=0.01, ymax=0.01)
 m1 = Marker()
 D2 = Drift(l=0.5)
 m2 = Marker()
@@ -56,7 +56,7 @@ stop = Marker()
 
 @pytest.fixture(scope='module')
 def cell():
-    return (start,m_extra1,  D0, m_kick,  B, D1, m1, D2, m2, m_extra2, stop)
+    return (start, m_extra1, D0, m_kick, B, ap, D1, m1, D2, m2, m_extra2, stop)
 
 
 @pytest.fixture(scope='module')

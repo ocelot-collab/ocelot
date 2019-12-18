@@ -3,6 +3,7 @@ __author__ = 'Sergey'
 from numpy.linalg import inv
 from math import factorial
 from ocelot.cpbd.beam import Particle, Twiss, ParticleArray
+from ocelot.cpbd.physics_proc import RectAperture
 from ocelot.cpbd.high_order import *
 from ocelot.cpbd.r_matrix import *
 from copy import deepcopy
@@ -1184,10 +1185,13 @@ class Navigator:
         self.proc_kick_elems = []
         self.kill_process = False # for case when calculations are needed to terminated e.g. from gui
 
-    def go_to_start(self):
+    def reset_position(self):
         self.z0 = 0.  # current position of navigator
         self.n_elem = 0  # current index of the element in lattice
         self.sum_lengths = 0.  # sum_lengths = Sum[lat.sequence[i].l, {i, 0, n_elem-1}]
+
+    def go_to_start(self):
+        self.reset_position()
 
     def get_phys_procs(self):
         """
@@ -1209,6 +1213,23 @@ class Navigator:
         """
         #logger_navi.debug(" add_physics_proc: phys proc: " + physics_proc.__class__.__name__)
         self.process_table.add_physics_proc(physics_proc, elem1, elem2)
+
+    def activate_apertures(self, start=None, stop=None):
+        """
+        activate apertures if thea exist in the lattice from
+
+        :param start: element,  activate apertures starting form element 'start' element
+        :param stop: element, activate apertures up to 'stop' element
+        :return:
+        """
+        id1 = self.lat.sequence.index(start) if start is not None else None
+        id2 = self.lat.sequence.index(stop) if stop is not None else None
+        for elem in self.lat.sequence[id1:id2]:
+            if elem.__class__ is Aperture:
+                if elem.type is "rect":
+                    ap = RectAperture(xmin=-elem.xmax + elem.dx, xmax=elem.xmax + elem.dx,
+                                      ymin=-elem.ymax + elem.dy, ymax=elem.ymax + elem.dy)
+                    self.add_physics_proc(ap, elem, elem)
 
     def check_overjump(self, dz, processes, phys_steps):
         phys_steps_red = phys_steps - dz

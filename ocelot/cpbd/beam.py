@@ -39,7 +39,7 @@ class Twiss:
     class - container for twiss parameters
     """
     def __init__(self, beam=None):
-        if beam == None:
+        if beam is None:
             self.emit_x = 0.0
             self.emit_y = 0.0
             self.emit_xn = 0.0
@@ -65,6 +65,7 @@ class Twiss:
             self.p = 0.0
             self.tau = 0.0
             self.s = 0.0 # position along the reference trajectory
+            self.q = 0.0 # C
             self.id = ""
         else:
             self.emit_x = beam.emit_x
@@ -97,6 +98,7 @@ class Twiss:
             self.p = 0.0
             self.tau = 0.0
             self.s = 0.0 # position along the reference trajectory
+            self.q = 0.0 # C
             self.id = ""
 
     def __str__(self):
@@ -813,6 +815,8 @@ def get_envelope(p_array, tws_i=Twiss(), bounds=None):
     tws.beta_y = tws.yy/tws.emit_y
     tws.alpha_x = -tws.xpx/tws.emit_x
     tws.alpha_y = -tws.ypy/tws.emit_y
+
+    tws.q = np.sum(p_array.q_array)
     return tws
 
 

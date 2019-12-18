@@ -27,6 +27,25 @@ def test_original_lattice_transfer_map(lattice, tws0, method, parametr=None, upd
     assert check_result(result)
 
 
+def test_write_lattice(lattice, tws0, method, parametr=None, update_ref_values=False):
+    """R maxtrix calculation test"""
+
+    write_lattice(lattice, file_name="tmp_lattice.py")
+    import tmp_lattice as tmp
+    new_lat = MagneticLattice(tmp.cell, method=lattice.method)
+
+    res = []
+    for i, elem in enumerate(lattice.sequence):
+        if (elem.__class__.__name__ == new_lat.sequence[i].__class__.__name__  and elem.id== new_lat.sequence[i].id
+                and elem.l == new_lat.sequence[i].l):
+            res.append(None)
+        else:
+            res.append(-1)
+
+
+    assert check_result(res)
+
+
 def test_original_twiss(lattice, tws0, method, parametr=None, update_ref_values=False):
     """Twiss parameters calculation function test"""
 
@@ -163,6 +182,7 @@ def test_merger_type(lattice, tws0, method, parametr=None, update_ref_values=Fal
     s = Sextupole(l=0.23, k2=22, eid="sext")
     c = Cavity(l=2, v=0.02, freq=1.3e9, phi=10, eid="cav")
     cor = Hcor(l=0.1, eid="cor")
+    ap = Aperture()
     sol = Solenoid(l=0.12, k=0.002)
     d2 = Drift(l=0.5)
     tds = TDCavity(l=0.5, freq=1.2e6, phi=90, v=0.02, tilt=0.0, eid="tds")
@@ -173,7 +193,7 @@ def test_merger_type(lattice, tws0, method, parametr=None, update_ref_values=Fal
 
     init_energy = 0.5
 
-    cell = (d, q, b, s, c, cor, sol,d2, tds, m, mat, b2, b3)
+    cell = (d, q, b, s, c, cor, ap, sol,d2, tds, m, mat, b2, b3)
 
     lat = MagneticLattice(cell, method=MethodTM({'global': SecondTM}))
 

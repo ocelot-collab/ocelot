@@ -57,6 +57,23 @@ class Marker(Element):
         self.l = 0.
 
 
+class Aperture(Element):
+    """
+    Aperture
+    xmax - half size in horizontal plane in [m],
+    ymax - half size in vertical plane in [m],
+    type - "rect" or "elliptical".
+    """
+    def __init__(self, xmax=np.inf, ymax=np.inf, dx=0, dy=0, type="rect", eid=None):
+        Element.__init__(self, eid)
+        self.l = 0.
+        self.xmax = xmax
+        self.ymax = ymax
+        self.dx = dx
+        self.dy = dy
+        self.type = type
+
+
 class Quadrupole(Element):
     """
     quadrupole

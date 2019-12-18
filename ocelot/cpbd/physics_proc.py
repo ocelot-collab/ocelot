@@ -217,20 +217,29 @@ class LaserModulator(PhysProc):
             p_array.p()[:] += A * V * np.exp(-dtau ** 2 / (2 * self.sigma_l ** 2))
 
 
-
 class LaserHeater(LaserModulator):
     def __init__(self, step=1):
         LaserModulator.__init__(self, step)
         _logger.info("LaserHeater physics process is obsolete. Use 'LaserModulator' instead.")
 
 
-class Aperture(PhysProc):
+class GenericAperture(PhysProc):
     """
     Method to cut beam in longitudinal (by default), horizontal or/and vertical direction
     :param longitudinal: True, cutting in longitudinal direction
     :param vertical: False, cutting in vertical direction
     :param horizontal: False, cutting in horizontal direction
+    :param zmin: -5 longitudinal plane in [rms]
+    :param zmax: 5 longitudinal plane in [rms]
+    :param z0: None, if None z0 = mean(parray.tau()) center in longitudinal plane [m]
 
+    :param xmin: -5 horizontal plane in [rms]
+    :param xmax: 5 horizontal plane in [rms]
+    :param x0: None, if None x0 = mean(parray.x()) center in horizontal plane [m]
+
+    :param ymin: -5 vertical plane in [rms]
+    :param ymax: 5 vertical plane in [rms]
+    :param y0: None, if None y0 = mean(parray.y()) center in vertical plane [m]
     """
     def __init__(self, step=1):
         PhysProc.__init__(self, step)
@@ -240,18 +249,23 @@ class Aperture(PhysProc):
 
         self.zmin = -5   # in simgas
         self.zmax = 5    # in simgas
+        self.z0 = None   # center of the aperture
 
         self.xmin = -5   # in simgas
         self.xmax = 5    # in simgas
+        self.x0 = None  # center of the aperture
 
         self.ymin = -5   # in simgas
         self.ymax = 5    # in simgas
+        self.y0 = None  # center of the aperture
 
     def apply(self, p_array, dz):
-        _logger.debug(" Apperture applied")
+        _logger.debug(" Aperture applied")
         if self.longitudinal:
             tau = p_array.tau()[:]
-            tau0 = np.mean(tau)
+
+            tau0 = np.mean(tau) if self.z0 is None else self.z0
+
             tau = tau - tau0
             sig = np.std(tau)
             inds = np.argwhere(np.logical_or(tau < sig * self.zmin, tau > sig * self.zmax))
@@ -261,7 +275,7 @@ class Aperture(PhysProc):
 
         if self.horizontal:
             x = p_array.x()
-            x0 = np.mean(x)
+            x0 = np.mean(x) if self.x0 is None else self.x0
             x = x - x0
             sigx = np.std(x)
             inds = np.argwhere(np.logical_or(x < sigx * self.xmin, x > sigx * self.xmax))
@@ -271,13 +285,47 @@ class Aperture(PhysProc):
 
         if self.vertical:
             y = p_array.y()
-            y0 = np.mean(y)
+            y0 = np.mean(y) if self.y0 is None else self.y0
             y = y - y0
             sigy = np.std(y)
             inds = np.argwhere(np.logical_or(y < sigy * self.ymin, y > sigy * self.ymax))
             inds = inds.reshape(inds.shape[0])
             p_array.rparticles = np.delete(p_array.rparticles, inds, 1)
             p_array.q_array = np.delete(p_array.q_array, inds, 0)
+
+
+class RectAperture(PhysProc):
+    """
+    Method to cut beam in horizontal or/and vertical direction
+
+    :param xmin: -np.inf horizontal plane in [m]
+    :param xmax: np.inf horizontal plane in [m]
+
+    :param ymin: -np.inf vertical plane in [m]
+    :param ymax: np.inf vertical plane in [m]
+    """
+    def __init__(self, xmin=-np.inf, xmax=np.inf, ymin=-np.inf, ymax=np.inf, step=1):
+        PhysProc.__init__(self, step)
+        self.xmin = xmin   # in m
+        self.xmax = xmax    # in m
+
+        self.ymin = ymin   # in m
+        self.ymax = ymax    # in m
+
+    def apply(self, p_array, dz):
+        _logger.debug(" RectAperture applied")
+
+        x = p_array.x()
+        inds = np.argwhere(np.logical_or(x < self.xmin, x > self.xmax))
+        inds = inds.reshape(inds.shape[0])
+        p_array.rparticles = np.delete(p_array.rparticles, inds, 1)
+        p_array.q_array = np.delete(p_array.q_array, inds, 0)
+
+        y = p_array.y()
+        inds = np.argwhere(np.logical_or(y < self.ymin, y > self.ymax))
+        inds = inds.reshape(inds.shape[0])
+        p_array.rparticles = np.delete(p_array.rparticles, inds, 1)
+        p_array.q_array = np.delete(p_array.q_array, inds, 0)
 
 
 class BeamTransform(PhysProc):

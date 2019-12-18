@@ -304,6 +304,7 @@ def print_elements(elements_dict):
     elements_order.append('Monitor')
     elements_order.append('Marker')
     elements_order.append('Matrix')
+    elements_order.append('Aperture')
 
     lines = []
     ordered_dict = {}

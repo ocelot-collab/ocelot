@@ -96,6 +96,7 @@ class SectionLattice:
                     sec.smooth_flag = conf["smooth"]
                 if "wake" in conf.keys():
                     sec.wake_flag = conf["wake"]
+            sec.lattice.update_transfer_maps()
             new_sections.append(sec)
         return new_sections
 
@@ -397,7 +398,7 @@ class SectionTrack:
 
         # tracking
         print()
-        print(self.lattice_name + ' TRACKING')
+        print(self.lattice_name + ' TRACKING / method', self.lattice.method.global_method)
         print("std1 = ", np.std(particles.tau()))
         tws_track, particles = track(self.lattice, particles, self.navigator,
                                      print_progress=self.print_progress, calc_tws=self.calc_tws)

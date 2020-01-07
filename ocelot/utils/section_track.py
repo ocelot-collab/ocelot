@@ -398,7 +398,7 @@ class SectionTrack:
 
         # tracking
         print()
-        print(self.lattice_name + ' TRACKING / method', self.lattice.method.global_method)
+        print(self.lattice_name + ' TRACKING')
         print("std1 = ", np.std(particles.tau()))
         tws_track, particles = track(self.lattice, particles, self.navigator,
                                      print_progress=self.print_progress, calc_tws=self.calc_tws)

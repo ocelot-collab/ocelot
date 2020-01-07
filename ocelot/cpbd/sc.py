@@ -95,7 +95,7 @@ class SpaceCharge(PhysProc):
         self.start_elem = None
         self.end_elem = None
         self.debug = False
-        self.random_mesh = True  # random mesh if True
+        self.random_mesh = False  # random mesh if True
         self.random_seed = 10     # random seeding number. if None seeding is random
 
     def prepare(self, lat):

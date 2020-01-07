@@ -83,8 +83,11 @@ class SectionLattice:
                     sec.update_bunch_compressor(rho=conf["rho"])
                 if "phi" in conf.keys() and "v" in conf.keys():
                     sec.update_cavity(phi=conf["phi"], v=conf["v"])
-                if "match" in conf.keys() and conf["match"] == True:
-                    sec.apply_matching()
+                if "match" in conf.keys() and conf["match"] is True:
+                    if "bounds" in conf.keys():
+                        sec.apply_matching(bounds=conf["bounds"])
+                    else:
+                        sec.apply_matching(bounds=[-5, 5])
                 if "SC" in conf.keys():
                     sec.sc_flag = conf["SC"]
                 if "CSR" in conf.keys():
@@ -93,6 +96,7 @@ class SectionLattice:
                     sec.smooth_flag = conf["smooth"]
                 if "wake" in conf.keys():
                     sec.wake_flag = conf["wake"]
+            sec.lattice.update_transfer_maps()
             new_sections.append(sec)
         return new_sections
 
@@ -166,14 +170,14 @@ class SectionTrack:
     #    self.particle_dir = self.data_dir + "/particles/"
     #    self.tws_dir = self.data_dir + "/tws/"
 
-    def apply_matching(self):
+    def apply_matching(self, bounds=[-5, 5]):
         if self.tws0 == None:
             print("TWISS is not defined")
             return
         self.tws0.mux = 0
         self.tws0.muy = 0
         bt = BeamTransform(tws=self.tws0)
-        bt.bounds = [-0.5, 0.5]
+        bt.bounds = bounds
         self.add_physics_process(bt, self.lattice.sequence[0], self.lattice.sequence[0])
 
 

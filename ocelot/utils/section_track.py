@@ -83,11 +83,11 @@ class SectionLattice:
                     sec.update_bunch_compressor(rho=conf["rho"])
                 if "phi" in conf.keys() and "v" in conf.keys():
                     sec.update_cavity(phi=conf["phi"], v=conf["v"])
-                if "match" in conf.keys() and conf["match"] == True:
+                if "match" in conf.keys() and conf["match"] is True:
                     if "bounds" in conf.keys():
-                        sec.apply_matching(bounds =conf["bounds"])
+                        sec.apply_matching(bounds=conf["bounds"])
                     else:
-                        sec.apply_matching(bounds=[-5,5])
+                        sec.apply_matching(bounds=[-5, 5])
                 if "SC" in conf.keys():
                     sec.sc_flag = conf["SC"]
                 if "CSR" in conf.keys():

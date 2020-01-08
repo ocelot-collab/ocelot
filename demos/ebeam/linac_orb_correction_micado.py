@@ -11,7 +11,7 @@ from ocelot.cpbd.orbit_correction import *
 from ocelot.cpbd.response_matrix import *
 import seaborn as sns
 import logging
-logging.basicConfig(level=logging.INFO)
+#logging.basicConfig(level=logging.INFO)
 
 method = MethodTM()
 method.global_method = SecondTM
@@ -27,11 +27,13 @@ dl.qi_85_i1.dy = -100e-6
 lat = MagneticLattice(dl.cell,  method=method)
 
 tws = twiss(lat, tws0=dl.tws0)
-plot_opt_func(lat, tws, top_plot=["Dy"])
-plt.show()
+#plot_opt_func(lat, tws, top_plot=["Dy"])
+#plt.show()
 
 
 orb = Orbit(lat)
+orb.orbit_solver = MICADO(epsilon_x=0.001, epsilon_y=0.001, epsilon_ksi=1e-5)
+#orb.orbit_solver = OrbitSVD(epsilon_x=0.001, epsilon_y=0.001)
 
 method = LinacRmatrixRM(lattice=orb.lat, hcors=orb.hcors, vcors=orb.vcors, bpms=orb.bpms)
 #drm_method = LinacDisperseSimRM
@@ -54,7 +56,11 @@ ax.legend()
 plt.show()
 
 
-orb.correction(beta=500)
+orb.correction(beta=0)
+
+vcors_angle = [cor.angle for cor in orb.vcors]
+hcors_angle = [cor.angle for cor in orb.hcors]
+print(vcors_angle, hcors_angle)
 
 x_bpm, y_bpm = method.read_virtual_orbit(p_init=Particle())
 
@@ -62,7 +68,7 @@ p_list = lattice_track(lat, method.particle0)
 s = [p.s for p in p_list]
 x = [p.x*1000. for p in p_list]
 y = [p.y*1000. for p in p_list]
-
+print("result2 = ", np.sqrt(np.sum(x_bpm**2) + np.sum(y_bpm**2)))
 fig, ax = plot_API(lat)
 ax.plot(s_bpm_b, x_bpm*1000., "ro" , label="X [mm]")
 ax.plot(s, x, 'r')

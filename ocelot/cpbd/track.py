@@ -420,6 +420,9 @@ def track(lattice, p_array, navi, print_progress=True, calc_tws=True, bounds=Non
             p.z0 = navi.z0
             p.apply(p_array, z_step)
         #p_array[0] = part
+        if p_array.n == 0:
+            _logger.debug(" Tracking stop: p_array.n = 0")
+            return tws_track, p_array
         tw = get_envelope(p_array, bounds=bounds) if calc_tws else Twiss()
         L += dz
         tw.s += L

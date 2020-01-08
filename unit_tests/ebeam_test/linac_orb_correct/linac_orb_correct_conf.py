@@ -37,6 +37,8 @@ d_82 = Drift(l=0.091932, eid='D_82')
 
 # quadrupoles
 qi_74_i1 = Quadrupole(l=0.2377, k1=-4.99137522, tilt=0.0, eid='QI.74.I1')
+qi_74_i1.dx = 0.001
+qi_74_i1.dy = 0.001
 qi_75_i1 = Quadrupole(l=0.2377, k1=5.027338701, tilt=0.0, eid='QI.75.I1')
 qi_77_i1 = Quadrupole(l=0.2377, k1=-4.99137522, tilt=0.0, eid='QI.77.I1')
 qi_78_i1 = Quadrupole(l=0.2377, k1=4.632555992, tilt=0.0, eid='QI.78.I1')

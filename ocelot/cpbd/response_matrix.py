@@ -597,7 +597,7 @@ class ResponseMatrixJSON:
             print()
 
 class ResponseMatrix:
-    def  __init__(self, method=None):
+    def __init__(self, method=None):
         self.cor_names = []
         self.bpm_names = []
         self.matrix = []
@@ -747,12 +747,10 @@ class ResponseMatrix:
         #    os.makedirs(directory)
         df.to_pickle(filename)
 
-
     def load(self, filename):
         self.df = pd.read_pickle(filename)
         self.df2data()
         return 1
-
 
     def compare(self, rmatrix, absolut=0.001, relative=0.1):
         cors1 = np.array(self.cor_names)

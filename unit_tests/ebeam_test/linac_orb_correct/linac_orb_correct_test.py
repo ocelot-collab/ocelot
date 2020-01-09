@@ -73,7 +73,7 @@ def test_response_matrix(lattice, update_ref_values=False):
 def test_save_load_rm(lattice, update_ref_values=False):
     """Responce maxtrix calculation test"""
 
-    orb = NewOrbit(lattice)
+    orb = Orbit(lattice)
     linac_method = LinacRmatrixRM(lattice=orb.lat, hcors=orb.hcors, vcors=orb.vcors, bpms=orb.bpms)
 
     orb.response_matrix = ResponseMatrix(method=linac_method)
@@ -176,19 +176,31 @@ def test_correction_micado(lattice, update_ref_values=False):
     result6 = check_matrix(vcors_angle, bpm_ref[5], TOL, assert_info=' ver corrector - ')
     assert check_result(result1+result2+result3+result4 + result5 + result6)
 
+
 def test_lattice_track(lattice, update_ref_values=False):
     """Lattice track function test"""
+    #qi_74_i1.dx = 0.001
+    #qi_74_i1.dy = 0.001
+    for e in lattice.sequence:
+        if e.__class__ in [Hcor, Vcor]:
+            e.angle = 0.
+        if e.__class__ is Quadrupole:
+            #if e.id is 'QI.74.I1':
+            #    print("here")
+            #    e.dx = 0.001
+            #    e.dy = 0.001
+            print(e.id, e.dx, e.dy)
+    lattice.update_transfer_maps()
 
     orb = Orbit(lattice)
     linac_method = LinacRmatrixRM(lattice=orb.lat, hcors=orb.hcors, vcors=orb.vcors, bpms=orb.bpms)
 
     orb.response_matrix = ResponseMatrix(method=linac_method)
     orb.response_matrix.calculate()
-
-    #correction_wrapper(orb, linac_method)
     x_bpm_b, y_bpm_b = linac_method.read_virtual_orbit(p_init=Particle())
+    #correction_wrapper(orb, linac_method)
     orb.correction(beta=0)
-    p_list = lattice_track(lattice, linac_method.particle0)
+    p_list = lattice_track(lattice, Particle())
     p_list = obj2dict(p_list, unpack=['particle'])
 
     if update_ref_values:

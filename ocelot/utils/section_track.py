@@ -73,7 +73,7 @@ class SectionLattice:
         #sections = []
         new_sections = []
         for sec in sections:
-
+            #np.random.seed(10)
             sec = self.dict_sections[sec]
             #sec = blank_sec()
             #sections.append(sec)

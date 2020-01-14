@@ -29,7 +29,7 @@ __all__ = ['Twiss', "Beam", "Particle", "get_current", "get_envelope", "generate
             "SpaceCharge", "LSC",                                                               # sc
             "Wake", "WakeTable", "WakeKick", "WakeTableDechirperOffAxis",                       # wake
             "BeamTransform", "SmoothBeam", "EmptyProc", "PhysProc", "LaserHeater",
-            "LaserModulator", "SpontanRadEffects",
+            "LaserModulator", "SpontanRadEffects", "PhaseSpaceAperture",
             "MagneticLattice", "merger",            # magnetic_lattice
             "np", # numpy
 
@@ -58,7 +58,7 @@ from ocelot.cpbd.csr import CSR
 from ocelot.cpbd.wake3D import Wake, WakeTable, WakeKick, WakeTableDechirperOffAxis
 
 from ocelot.cpbd.physics_proc import BeamTransform, SmoothBeam, EmptyProc, PhysProc, LaserHeater, \
-    LaserModulator, SpontanRadEffects
+    LaserModulator, SpontanRadEffects, PhaseSpaceAperture
 
 
 print('initializing ocelot...')

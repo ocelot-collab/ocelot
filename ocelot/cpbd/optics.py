@@ -815,10 +815,12 @@ class MethodTM:
 
             if element.__class__ == Edge:
                 if element.pos == 1:
-                    R, T = fringe_ent(h=element.h, k1=element.k1, e=element.edge, h_pole=element.h_pole,
+
+                    _, T = fringe_ent(h=element.h, k1=element.k1, e=element.edge, h_pole=element.h_pole,
                                       gap=element.gap, fint=element.fint)
                 else:
-                    R, T = fringe_ext(h=element.h, k1=element.k1, e=element.edge, h_pole=element.h_pole,
+
+                    _, T = fringe_ext(h=element.h, k1=element.k1, e=element.edge, h_pole=element.h_pole,
                                       gap=element.gap, fint=element.fint)
                 T_z_e = lambda z, energy: T
             if element.__class__ == XYQuadrupole:

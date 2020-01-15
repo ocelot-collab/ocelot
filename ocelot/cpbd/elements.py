@@ -107,7 +107,7 @@ class Sextupole(Element):
 class Octupole(Element):
     """
     octupole
-    k3 - strength of sextupole lens in [1/m^4],
+    k3 - strength of octupole lens in [1/m^4],
     l - length of lens in [m].
     """
     def __init__(self, l=0., k3=0., tilt=0., eid=None):

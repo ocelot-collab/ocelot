@@ -34,7 +34,7 @@ def lattice_format_converter(elements):
                     print("************** WARNING! Element " + cell[-1].id + " was deleted")
                     cell.pop()
                 else:
-                    print("************** ERROR! Element " + element[0].id + " has bed position")
+                    print("************** ERROR! Element " + element[0].id + " has bad position (overlapping?)")
                     exit()
 
         if element_start > s_pos + 1.0e-12:                 # 1.0e-12 is used as crutch for precision of float

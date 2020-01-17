@@ -745,9 +745,9 @@ class ResponseMatrix:
 
     def dump(self, filename):
         df = self.data2df(matrix=self.matrix, bpm_names=self.bpm_names, cor_names=self.cor_names)
-        #directory = os.path.dirname(filename)
-        #if not os.path.exists(directory):
-        #    os.makedirs(directory)
+        directory = os.path.dirname(filename)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
         df.to_pickle(filename)
 
     def load(self, filename):

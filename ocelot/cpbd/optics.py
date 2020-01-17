@@ -464,16 +464,16 @@ class CavityTM(TransferMap):
             beta0 = np.sqrt(1. - igamma2)
 
         phi = phi * np.pi / 180.
-        if self.coupler_kick:
-            X[1] += (self.vx_up * V * np.exp(1j * phi)).real * 1e-6 / E
-            X[3] += (self.vy_up * V * np.exp(1j * phi)).real * 1e-6 / E
+        if self.vx_up != 0 or self.vy_up != 0:
+            X[1] += (self.vx_up * V * np.exp(1j * phi)).real / E
+            X[3] += (self.vy_up * V * np.exp(1j * phi)).real / E
         X4 = np.copy(X[4])
         X5 = np.copy(X[5])
         X = self.mul_p_array(X, energy=E)  # t_apply(R, T, X, dx, dy, tilt)
         delta_e = V * np.cos(phi)
-        if self.coupler_kick:
-            X[1] += (self.vx_down * V * np.exp(1j * phi)).real * 1e-6 / (E + delta_e)
-            X[3] += (self.vy_down * V * np.exp(1j * phi)).real * 1e-6 / (E + delta_e)
+        if self.vx_down != 0 or self.vy_down != 0:
+            X[1] += (self.vx_down * V * np.exp(1j * phi)).real / (E + delta_e)
+            X[3] += (self.vy_down * V * np.exp(1j * phi)).real / (E + delta_e)
         T566 = 1.5 * z*igamma2/(beta0**3)
         T556 = 0.
         T555 = 0.
@@ -859,18 +859,15 @@ class MethodTM:
 
         if element.__class__ == Cavity:
             tm = CavityTM(v=element.v, freq=element.freq, phi=element.phi)
-            if element.coupler_kick:
-                tm.coupler_kick = element.coupler_kick
-                tm.vx_up = element.vx_up
-                tm.vy_up = element.vy_up
-                tm.vxx_up = element.vxx_up
-                tm.vxy_up = element.vxy_up
-                tm.vx_down = element.vx_down
-                tm.vy_down = element.vy_down
-                tm.vxx_down = element.vxx_down
-                tm.vxy_down = element.vxy_down
-            else:
-                tm.coupler_kick = False
+            tm.vx_up = element.vx_up
+            tm.vy_up = element.vy_up
+            tm.vxx_up = element.vxx_up
+            tm.vxy_up = element.vxy_up
+            tm.vx_down = element.vx_down
+            tm.vy_down = element.vy_down
+            tm.vxx_down = element.vxx_down
+            tm.vxy_down = element.vxy_down
+
 
         if element.__class__ == TWCavity:
             tm = TWCavityTM(v=element.v, freq=element.freq, phi=element.phi)

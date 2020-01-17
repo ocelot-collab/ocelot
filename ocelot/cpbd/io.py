@@ -238,7 +238,7 @@ def element_def_string(element):
                 params.append(param + '=' + np.array2string(element.__dict__[param], separator=', '))
             continue
 
-        if isinstance(element.__dict__[param], (int, float)):
+        if isinstance(element.__dict__[param], (int, float, complex)):
 
             # fix for parameters 'e1' and 'e2' in RBend element
             if element_type == 'RBend' and param in ('e1', 'e2'):

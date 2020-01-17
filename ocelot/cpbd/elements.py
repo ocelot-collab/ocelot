@@ -240,7 +240,8 @@ class RBend(Bend):
 
 class XYQuadrupole(SBend):
     """
-    Quadrupole with offsets (linear element),
+    Quadrupole with offsets (linear element). The element is to test a transport feature and it is not tested.
+
     l - length of magnet in [m],
     k1 - strength of quadrupole lens in [1/m^2],
     x_offs - offset in horizontal direction in [m]
@@ -331,8 +332,11 @@ class Cavity(Element):
     v - voltage [GV]
     freq - frequency [Hz]
     phi - phase in [deg]
+    vx_{up/down}, vy_{up/down} - zero order kick of a {up/down}stream coupler
+    vxx_{up/down}, vxy_{up/down} - first order kick  a {up/down}stream coupler
     """
-    def __init__(self, l=0., v=0., phi=0., freq=0., volterr=0., eid=None):
+    def __init__(self, l=0., v=0., phi=0., freq=0., volterr=0., vx_up=0, vy_up=0, vxx_up=0, vxy_up=0,
+                 vx_down=0, vy_down=0, vxx_down=0, vxy_down=0, eid=None):
         Element.__init__(self, eid)
         self.l = l
         self.v = v   # in GV
@@ -340,7 +344,14 @@ class Cavity(Element):
         self.phi = phi  # in grad
         self.E = 0
         self.volterr = volterr
-        self.coupler_kick = False
+        self.vx_up = vx_up
+        self.vy_up = vy_up
+        self.vxx_up = vxx_up
+        self.vxy_up = vxy_up
+        self.vx_down = vx_down
+        self.vy_down = vy_down
+        self.vxx_down = vxx_down
+        self.vxy_down = vxy_down
 
 
 class TWCavity(Element):

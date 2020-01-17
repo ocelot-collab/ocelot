@@ -177,7 +177,6 @@ def create_r_matrix(element):
                 r55_cor = k * z * beta0 * V / m_e_GeV * np.sin(phi) * (g0 * g1 * (beta0 * beta1 - 1) + 1) / (
                             beta1 * g1 * (g0 - g1) ** 2)
 
-
             r66 = Ei/Ef*beta0/beta1
             r65 = k*np.sin(phi)*V/(Ef*beta1*m_e_GeV)
             cav_matrix = np.array([[r11, r12, 0., 0., 0., 0.],
@@ -186,36 +185,31 @@ def create_r_matrix(element):
                                 [0., 0., r21, r22, 0., 0.],
                                 [0., 0., 0., 0., 1. + r55_cor, r56],
                                 [0., 0., 0., 0., r65, r66]]).real
-            if element.coupler_kick:
-                #element.vxx_up = 1.0003 - 0.8132j
-                #element.vxy_up = (3.4075 - 0.41223j)
-                m21 = (element.vxx_up * V * np.exp(1j*phi)).real*1e-3 /E
+            coupler_coef = np.array([element.vxy_up, element.vxy_up, element.vxx_down, element.vxy_down])
+            if any(coupler_coef != 0):
+                m21 = (element.vxx_up * V * np.exp(1j*phi)).real / E
                 m43 = - m21
-                m23 = (element.vxy_up* V * np.exp(1j*phi)).real*1e-3 /E
+                m23 = (element.vxy_up * V * np.exp(1j*phi)).real / E
 
                 coupl_kick_up = np.array([[1, 0., 0., 0., 0., 0.],
-                                      [m21, 1, m23, 0., 0., 0.],
-                                      [0., 0., 1, 0., 0., 0.],
-                                      [m23, 0., m43, 1, 0., 0.],
-                                      [0., 0., 0., 0., 1., 0.],
-                                      [0., 0., 0., 0., 0., 1]]).real
+                                          [m21, 1, m23, 0., 0., 0.],
+                                          [0., 0., 1, 0., 0., 0.],
+                                          [m23, 0., m43, 1, 0., 0.],
+                                          [0., 0., 0., 0., 1., 0.],
+                                          [0., 0., 0., 0., 0., 1]]).real
 
-                #vxx = ((-4.9278 - 2.2112j) * V * np.exp(1j*phi)).real*1e-3 /(E + de)
-                #vyy = - vxx
-                #vxy = ((2.9224 - 0.027228j) * V * np.exp(1j*phi)).real *1e-3 /(E + de)
 
-                #element.vxx_down = (-4.9278 - 2.2112j)
-                #element.vxy_down = (2.9224 - 0.027228j)
-                m21 = (element.vxx_down * V * np.exp(1j*phi)).real*1e-3 /(E + de)
+                m21 = (element.vxx_down * V * np.exp(1j*phi)).real / (E + de)
                 m43 = - m21
-                m23 = (element.vxy_down* V * np.exp(1j*phi)).real*1e-3 /(E + de)
+                m23 = (element.vxy_down * V * np.exp(1j*phi)).real / (E + de)
                 coupl_kick_down = np.array([[1, 0., 0., 0., 0., 0.],
-                                      [m21, 1, m23, 0., 0., 0.],
-                                      [0., 0., 1, 0., 0., 0.],
-                                      [m23, 0., m43, 1, 0., 0.],
-                                      [0., 0., 0., 0., 1., 0.],
-                                      [0., 0., 0., 0., 0., 1]]).real
+                                            [m21, 1, m23, 0., 0., 0.],
+                                            [0., 0., 1, 0., 0., 0.],
+                                            [m23, 0., m43, 1, 0., 0.],
+                                            [0., 0., 0., 0., 1., 0.],
+                                            [0., 0., 0., 0., 0., 1]]).real
                 return np.dot(np.dot(coupl_kick_down, cav_matrix), coupl_kick_up)
+
             return cav_matrix
 
         if element.v == 0.:

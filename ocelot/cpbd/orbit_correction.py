@@ -7,7 +7,7 @@ from scipy.optimize import linprog
 from ocelot.cpbd.match import closed_orbit
 from ocelot.cpbd.track import *
 from ocelot.cpbd.response_matrix import *
-from scipy.linalg import block_diag
+from scipy.linalg import block_diag, lstsq
 import copy
 import json
 from time import sleep, time
@@ -88,31 +88,20 @@ class MICADO(OrbitSVD):
         return angles
 
     def solver_lstsq(self, resp_matrix, orbit, weights):
-        if weights is None:
-            weights = np.eye(len(orbit))
-        resp_matrix = np.dot(weights, resp_matrix)
-        misallign = np.dot(weights, orbit)
-
-        a, b, _, _ = np.linalg.lstsq(resp_matrix, misallign, rcond=self.epsilon_x)
-        return a
-
-    def solver_linag(self, resp_matrix, orbit, weights):
-        if weights is None:
-            weights = np.eye(len(orbit))
-        resp_matrix = np.dot(weights, resp_matrix)
-        misallign = np.dot(weights, orbit)
-        A = np.dot(resp_matrix.T, resp_matrix)
-        if np.linalg.det(A) == 0:
-            a, b, _, _ = np.linalg.lstsq(resp_matrix, misallign, rcond=self.epsilon_x)
-            return a
-
-        if np.shape(A) == (1, 1):
-
-            Ainv = 1./A
+        if weights is not None:
+            # weights = np.eye(len(orbit))
+            resp_matrix = np.dot(weights, resp_matrix)
+            orbit = np.copy(np.dot(weights, orbit))
+            
+        #misallign = np.dot(weights, orbit)
+        if np.shape(resp_matrix)[1] == 1:
+            A = np.dot(resp_matrix.T, resp_matrix)
+            Ainv = 1./A if A[0, 0] != 0 else A
+            a = np.dot(np.dot(Ainv, resp_matrix.T), orbit)
         else:
-            Ainv = np.linalg.inv(A)
-        b_res = np.dot(np.dot(Ainv, resp_matrix.T), misallign)
-        return b_res
+            a, _, _, _ = np.linalg.lstsq(resp_matrix, orbit, rcond=self.epsilon_x)
+            #a, _, _, _ = lstsq(resp_matrix, misallign, cond=self.epsilon_x, lapack_driver="gelsy")
+        return a
 
     def apply(self, resp_matrix, orbit, weights=None):
         weights = None

@@ -96,6 +96,24 @@ class MICADO(OrbitSVD):
         a, b, _, _ = np.linalg.lstsq(resp_matrix, misallign, rcond=self.epsilon_x)
         return a
 
+    def solver_linag(self, resp_matrix, orbit, weights):
+        if weights is None:
+            weights = np.eye(len(orbit))
+        resp_matrix = np.dot(weights, resp_matrix)
+        misallign = np.dot(weights, orbit)
+        A = np.dot(resp_matrix.T, resp_matrix)
+        if np.linalg.det(A) == 0:
+            a, b, _, _ = np.linalg.lstsq(resp_matrix, misallign, rcond=self.epsilon_x)
+            return a
+
+        if np.shape(A) == (1, 1):
+
+            Ainv = 1./A
+        else:
+            Ainv = np.linalg.inv(A)
+        b_res = np.dot(np.dot(Ainv, resp_matrix.T), misallign)
+        return b_res
+
     def apply(self, resp_matrix, orbit, weights=None):
         weights = None
         bpm_num = np.shape(resp_matrix)[0]

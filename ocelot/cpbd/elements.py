@@ -49,6 +49,7 @@ class Monitor(Element):
         self.y_ref = 0.
         self.x = 0.
         self.y = 0.
+
     def __str__(self):
         s = 'Monitor : '
         s+='id='+str(self.id)+'\n'
@@ -60,6 +61,7 @@ class Marker(Element):
     def __init__(self, eid=None):
         Element.__init__(self, eid)
         self.l = 0.
+
     def __str__(self):
         s = 'Marker : '
         s+='id='+str(self.id)+'\n'
@@ -99,13 +101,14 @@ class Quadrupole(Element):
         self.k1 = k1
         self.k2 = k2
         self.tilt = tilt
+
     def __str__(self):
         s = 'Quadrupole : '
-        s+='id='+str(self.id)+'\n'
-        s += 'l=%9.6f m\n' % self.l
-        s += 'k1=%7.2f 1/m^2\n' % self.k1
-        s += 'k2=%7.2f 1/m^3\n' % self.k2
-        s += 'tilt=%7.2f deg\n' % (self.tilt*180.0/np.pi)
+        s += 'id = '+str(self.id)+'\n'
+        s += 'l    =%8.5f m\n' % self.l
+        s += 'k1   =%8.3f 1/m^2\n' % self.k1
+        s += 'k2   =%8.3f 1/m^3\n' % self.k2
+        s += 'tilt =%8.3f deg\n' % (self.tilt*180.0/np.pi)
         return(s)
 
 
@@ -120,12 +123,13 @@ class Sextupole(Element):
         self.l = l
         self.k2 = k2
         self.tilt = tilt
+
     def __str__(self):
         s = 'Sextupole : '
-        s+='id='+str(self.id)+'\n'
-        s += 'l=%9.6f m\n' % self.l
-        s += 'k2=%7.2f 1/m^3\n' % self.k2
-        s += 'tilt=%7.2f deg\n' % (self.tilt*180.0/np.pi)
+        s += 'id = '+str(self.id)+'\n'
+        s += 'l    =%8.5f m\n' % self.l
+        s += 'k2   =%8.3f 1/m^3\n' % self.k2
+        s += 'tilt =%8.3f deg\n' % (self.tilt*180.0/np.pi)
         return(s)
 
 
@@ -140,12 +144,13 @@ class Octupole(Element):
         self.l = l
         self.k3 = k3
         self.tilt = tilt
+
     def __str__(self):
         s = 'Octupole : '
-        s+='id='+str(self.id)+'\n'
-        s += 'l=%9.6f m\n' % self.l
-        s += 'k3=%7.2f 1/m^4\n' % self.k3
-        s += 'tilt=%7.2f deg\n' % (self.tilt*180.0/np.pi)
+        s += 'id = '+str(self.id)+'\n'
+        s += 'l    =%8.5f m\n' % self.l
+        s += 'k3   =%8.3f 1/m^4\n' % self.k3
+        s += 'tilt =%8.3f deg\n' % (self.tilt*180.0/np.pi)
         return(s)
 
 
@@ -157,10 +162,11 @@ class Drift(Element):
     def __init__(self, l=0., eid=None):
         Element.__init__(self, eid)
         self.l = l
+
     def __str__(self):
         s = 'Drift : '
-        s+='id='+str(self.id)+'\n'
-        s += 'l=%9.6f m\n' % self.l
+        s +='id = '+str(self.id)+'\n'
+        s += 'l =%8.5f m\n' % self.l
         return(s)
 
 class Bend(Element):
@@ -196,19 +202,20 @@ class Bend(Element):
         if fintx is not None:
             self.fintx = fintx
         self.tilt = tilt
+
     def __str__(self):
-        s = 'SBEND : '
-        s+='id='+str(self.id)+'\n'
-        s += 'l=%9.6f m\n' % self.l
-        s += 'angle=%7.2f deg\n' % (self.angle*180.0/np.pi)
-        s += 'e1=%7.2f deg\n' % (self.e1*180.0/np.pi)
-        s += 'e2=%7.2f deg\n' % (self.e2*180.0/np.pi)
-        s += 'tilt=%7.2f deg\n' % (self.tilt*180.0/np.pi)
-        s += 'fint=%7.3f\n' % self.fint
-        s += 'fintx=%7.3f\n' % self.fintx
-        s += 'gap=%7.4f m\n' % self.gap
-        s += 'h_pole1=%7.4f 1/m\n' % self.h_pole1
-        s += 'h_pole2=%7.4f 1/m\n' % self.h_pole2
+        s = 'Bend : '
+        s += 'id = '+str(self.id)+'\n'
+        s += 'l       =%8.5f m\n' % self.l
+        s += 'angle   =%8.3f deg\n' % (self.angle*180.0/np.pi)
+        s += 'e1      =%8.3f deg\n' % (self.e1*180.0/np.pi)
+        s += 'e2      =%8.3f deg\n' % (self.e2*180.0/np.pi)
+        s += 'tilt    =%8.3f deg\n' % (self.tilt*180.0/np.pi)
+        s += 'fint    =%8.3f\n' % self.fint
+        s += 'fintx   =%8.3f\n' % self.fintx
+        s += 'gap     =%8.4f m\n' % self.gap
+        s += 'h_pole1 =%8.4f 1/m\n' % self.h_pole1
+        s += 'h_pole2 =%8.4f 1/m\n' % self.h_pole2
         return(s)
 
 class Edge(Bend):
@@ -231,14 +238,15 @@ class Edge(Bend):
         self.dtilt = dtilt
         self.tilt = tilt
         self.pos = pos
+
     def __str__(self):
         s = 'Edge : '
-        s+='id='+str(self.id)+'\n'
-        s += 'h=%9.6f 1/m\n' % self.h
-        s += 'fint=%7.3f\n' % self.fint
-        s += 'gap=%7.4f m\n' % self.gap
-        s += 'h_pole=%7.4f 1/m\n' % self.h_pole
-        s += 'tilt=%7.2f deg\n' % (self.tilt*180.0/np.pi)
+        s += 'id = '+str(self.id)+'\n'
+        s += 'h      =%8.5f 1/m\n' % self.h
+        s += 'fint   =%8.3f\n' % self.fint
+        s += 'gap    =%8.4f m\n' % self.gap
+        s += 'h_pole =%8.4f 1/m\n' % self.h_pole
+        s += 'tilt   =%8.3f deg\n' % (self.tilt*180.0/np.pi)
         return(s)
 
 
@@ -327,6 +335,14 @@ class Hcor(RBend):
         self.angle = angle
         self.tilt = 0.
 
+    def __str__(self):
+        s = 'Hcor : '
+        s += 'id = '+str(self.id)+'\n'
+        s += 'l     =%8.5f m\n' % self.l
+        s += 'angle =%8.5f deg\n' % (self.angle*180.0/np.pi)
+        s += 'tilt  =%8.3f deg\n' % (self.tilt*180.0/np.pi)
+        return(s)
+
 
 class Vcor(RBend):
     """
@@ -339,6 +355,14 @@ class Vcor(RBend):
         self.l = l
         self.angle = angle
         self.tilt = np.pi/2.
+
+    def __str__(self):
+        s = 'Vcor : '
+        s += 'id = '+str(self.id)+'\n'
+        s += 'l     =%8.5f m\n' % self.l
+        s += 'angle =%8.5f deg\n' % (self.angle*180.0/np.pi)
+        s += 'tilt  =%8.3f deg\n' % (self.tilt*180.0/np.pi)
+        return(s)
 
 
 class Undulator(Element):
@@ -383,6 +407,16 @@ class Undulator(Element):
         # b) 1/2,-1,1,... -1,1,-1/2
         # c) 1/4,-3/4,1,-1... -1,3/4,-1/4   I need to check it.
 
+    def __str__(self):
+        s = 'Undulator : '
+        s += 'id = '+str(self.id)+'\n'
+        s += 'l        =%8.5f m\n' % self.l
+        s += 'nperiods =%8.5f \n' % self.nperiods
+        s += 'lperiod  =%8.3f m\n' % self.lperiod
+        s += 'Kx       =%8.3f \n' % self.Kx
+        s += 'Ky       =%8.3f \n' % self.Ky
+        return(s)
+
 
 class Cavity(Element):
     """
@@ -410,6 +444,15 @@ class Cavity(Element):
         self.vy_down = vy_down
         self.vxx_down = vxx_down
         self.vxy_down = vxy_down
+
+    def __str__(self):
+        s = 'Cavity : '
+        s += 'id = '+str(self.id)+'\n'
+        s += 'l    =%8.5f m\n' % self.l
+        s += 'v    =%8.5f GV\n' % self.v
+        s += 'freq =%8.3f Hz\n' % self.freq
+        s += 'phi  =%8.3f deg\n' % self.phi
+        return(s)
 
 
 class TWCavity(Element):
@@ -447,6 +490,16 @@ class TDCavity(Element):
         self.phi = phi  # in deg
         self.tilt = tilt
 
+    def __str__(self):
+        s = 'TDCavity : '
+        s += 'id = '+str(self.id)+'\n'
+        s += 'l    =%8.5f m\n' % self.l
+        s += 'v    =%8.5f GV\n' % self.v
+        s += 'freq =%8.3f Hz\n' % self.freq
+        s += 'phi  =%8.3f deg\n' % self.phi
+        s += 'tilt =%8.3f deg\n' % (self.tilt*180.0/np.pi)
+        return(s)
+
 
 class Solenoid(Element):
     """
@@ -458,6 +511,13 @@ class Solenoid(Element):
         Element.__init__(self, eid)
         self.k = k  # B0/(2B*rho)
         self.l = l
+
+    def __str__(self):
+        s = 'Cavity : '
+        s += 'id = ' + str(self.id) + '\n'
+        s += 'l =%8.5f m\n' % self.l
+        s += 'k =%8.3f 1/m\n' % self.k
+        return (s)
 
 
 class Multipole(Element):
@@ -509,6 +569,16 @@ class Matrix(Element):
             if "b" in y[0].lower() and len(y) == 2 and y[1:].isdigit() and (1 <= int(y[1:]) <= 6):
                 self.b[int(y[1]) - 1, 0] = float(kwargs[y])
         self.delta_e = delta_e
+
+    def __str__(self):
+        s = 'Matrix : '
+        s += 'id = ' + str(self.id) + '\n'
+        s += 'R = \n'
+        for i in range(6):
+            for j in range(6):
+                s += '%10.6f' % (self.r[i, j])
+            s += "\n"
+        return (s)
 
 
 class Pulse:

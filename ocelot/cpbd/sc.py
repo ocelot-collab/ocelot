@@ -145,14 +145,18 @@ class SpaceCharge(PhysProc):
         K2[Nx:2*Nx-1, :, :] = K2[Nx-1:0:-1, :, :]             #x-mirror
         t0 = time.time()
         if pyfftw_flag:
-            nthread = multiprocessing.cpu_count()
+            nthreads = int(multiprocessing.cpu_count()/2)
+            if nthreads < 1:
+                nthreads = 1
+
             K2_fft = pyfftw.builders.fftn(K2, axes=None, overwrite_input=False, planner_effort='FFTW_ESTIMATE',
-                                       threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
+                                       threads=nthreads, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
             out_fft = pyfftw.builders.fftn(out, axes=None, overwrite_input=False, planner_effort='FFTW_ESTIMATE',
-                                          threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
+                                          threads=nthreads, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
             out_ifft = pyfftw.builders.ifftn(out_fft()*K2_fft(), axes=None, overwrite_input=False, planner_effort='FFTW_ESTIMATE',
-                                          threads=nthread, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
+                                          threads=nthreads, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
             out = np.real(out_ifft())
+
         else:
             out = np.real(ifftn(fftn(out)*fftn(K2)))
         t1 = time.time()

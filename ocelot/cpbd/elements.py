@@ -49,12 +49,22 @@ class Monitor(Element):
         self.y_ref = 0.
         self.x = 0.
         self.y = 0.
+    def __str__(self):
+        s = 'Monitor : '
+        s+='id='+str(self.id)+'\n'
+        s += 'l=%9.6f m\n' % self.l
+        return(s)
 
 
 class Marker(Element):
     def __init__(self, eid=None):
         Element.__init__(self, eid)
         self.l = 0.
+    def __str__(self):
+        s = 'Marker : '
+        s+='id='+str(self.id)+'\n'
+        s += 'l=%9.6f m\n' % self.l
+        return(s)
 
 
 class Aperture(Element):
@@ -89,6 +99,14 @@ class Quadrupole(Element):
         self.k1 = k1
         self.k2 = k2
         self.tilt = tilt
+    def __str__(self):
+        s = 'Quadrupole : '
+        s+='id='+str(self.id)+'\n'
+        s += 'l=%9.6f m\n' % self.l
+        s += 'k1=%7.2f 1/m^2\n' % self.k1
+        s += 'k2=%7.2f 1/m^3\n' % self.k2
+        s += 'tilt=%7.2f deg\n' % (self.tilt*180.0/np.pi)
+        return(s)
 
 
 class Sextupole(Element):
@@ -102,6 +120,13 @@ class Sextupole(Element):
         self.l = l
         self.k2 = k2
         self.tilt = tilt
+    def __str__(self):
+        s = 'Sextupole : '
+        s+='id='+str(self.id)+'\n'
+        s += 'l=%9.6f m\n' % self.l
+        s += 'k2=%7.2f 1/m^3\n' % self.k2
+        s += 'tilt=%7.2f deg\n' % (self.tilt*180.0/np.pi)
+        return(s)
 
 
 class Octupole(Element):
@@ -115,6 +140,13 @@ class Octupole(Element):
         self.l = l
         self.k3 = k3
         self.tilt = tilt
+    def __str__(self):
+        s = 'Octupole : '
+        s+='id='+str(self.id)+'\n'
+        s += 'l=%9.6f m\n' % self.l
+        s += 'k3=%7.2f 1/m^4\n' % self.k3
+        s += 'tilt=%7.2f deg\n' % (self.tilt*180.0/np.pi)
+        return(s)
 
 
 class Drift(Element):
@@ -125,7 +157,11 @@ class Drift(Element):
     def __init__(self, l=0., eid=None):
         Element.__init__(self, eid)
         self.l = l
-
+    def __str__(self):
+        s = 'Drift : '
+        s+='id='+str(self.id)+'\n'
+        s += 'l=%9.6f m\n' % self.l
+        return(s)
 
 class Bend(Element):
     """
@@ -160,7 +196,20 @@ class Bend(Element):
         if fintx is not None:
             self.fintx = fintx
         self.tilt = tilt
-
+    def __str__(self):
+        s = 'SBEND : '
+        s+='id='+str(self.id)+'\n'
+        s += 'l=%9.6f m\n' % self.l
+        s += 'angle=%7.2f deg\n' % (self.angle*180.0/np.pi)
+        s += 'e1=%7.2f deg\n' % (self.e1*180.0/np.pi)
+        s += 'e2=%7.2f deg\n' % (self.e2*180.0/np.pi)
+        s += 'tilt=%7.2f deg\n' % (self.tilt*180.0/np.pi)
+        s += 'fint=%7.3f\n' % self.fint
+        s += 'fintx=%7.3f\n' % self.fintx
+        s += 'gap=%7.4f m\n' % self.gap
+        s += 'h_pole1=%7.4f 1/m\n' % self.h_pole1
+        s += 'h_pole2=%7.4f 1/m\n' % self.h_pole2
+        return(s)
 
 class Edge(Bend):
     def __init__(self, l=0., angle=0.0, k1=0., edge=0.,
@@ -182,6 +231,15 @@ class Edge(Bend):
         self.dtilt = dtilt
         self.tilt = tilt
         self.pos = pos
+    def __str__(self):
+        s = 'Edge : '
+        s+='id='+str(self.id)+'\n'
+        s += 'h=%9.6f 1/m\n' % self.h
+        s += 'fint=%7.3f\n' % self.fint
+        s += 'gap=%7.4f m\n' % self.gap
+        s += 'h_pole=%7.4f 1/m\n' % self.h_pole
+        s += 'tilt=%7.2f deg\n' % (self.tilt*180.0/np.pi)
+        return(s)
 
 
 class SBend(Bend):
@@ -481,9 +539,14 @@ def survey(lat, ang=0.0, x0=0, z0=0):
         x.append(x0)
         z.append(z0)
         if e.__class__ in [Bend, SBend, RBend]:
-            ang += e.angle
-        x0 += e.l*np.cos(ang)
-        z0 += e.l*np.sin(ang)
+            ang += e.angle*0.5
+            s = 2*e.l*np.sin(e.angle*0.5)/e.angle
+            x0 += s*np.cos(ang)
+            z0 += s*np.sin(ang)
+            ang += e.angle*0.5
+        else:
+            x0 += e.l*np.cos(ang)
+            z0 += e.l*np.sin(ang)
     return x, z, ang
 
 if __name__ == "__main__":

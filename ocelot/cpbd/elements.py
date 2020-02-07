@@ -462,6 +462,15 @@ class Cavity(Element):
         s += 'v    =%8.5f GV\n' % self.v
         s += 'freq =%8.1e Hz\n' % self.freq
         s += 'phi  =%8.2f deg\n' % self.phi
+        s += "\nCoupler kick: \n"
+        s += "vx_up    = {num.real:+9.2e} {num.imag:+9.2e}j\n".format(num=self.vx_up)
+        s += "vy_up    = {num.real:+9.2e} {num.imag:+9.2e}j\n".format(num=self.vy_up)
+        s += "vxx_up   = {num.real:+9.2e} {num.imag:+9.2e}j\n".format(num=self.vxx_up)
+        s += "vxy_up   = {num.real:+9.2e} {num.imag:+9.2e}j\n".format(num=self.vxy_up)
+        s += "vx_down  = {num.real:+9.2e} {num.imag:+9.2e}j\n".format(num=self.vx_down)
+        s += "vy_down  = {num.real:+9.2e} {num.imag:+9.2e}j\n".format(num=self.vy_down)
+        s += "vxx_down = {num.real:+9.2e} {num.imag:+9.2e}j\n".format(num=self.vxx_down)
+        s += "vxy_down = {num.real:+9.2e} {num.imag:+9.2e}j\n".format(num=self.vxy_down)
         return(s)
 
 

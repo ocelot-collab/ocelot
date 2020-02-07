@@ -638,7 +638,7 @@ def plot_xy(ax, S, X, Y, font_size):
     leg.get_frame().set_alpha(0.5)
 
 
-def plot_API(lat, legend=True, fig_name=1, grid=True, font_size=12):
+def plot_API(lat, legend=True, fig_name=1, grid=True, font_size=12, excld_legend=None):
     """
     Function creates a picture with lattice on the bottom part of the picture and top part of the picture can be
     plot arbitrary lines.
@@ -683,7 +683,7 @@ def plot_API(lat, legend=True, fig_name=1, grid=True, font_size=12):
 
     #plot_elems(ax_el, lat, nturns = 1, legend = True) # plot elements
     #new_plot_elems(fig, ax_el, lat, nturns = 1, legend = legend)
-    new_plot_elems(fig, ax_el, lat, legend=legend, y_scale=0.8, font_size=font_size)
+    new_plot_elems(fig, ax_el, lat, legend=legend, y_scale=0.8, font_size=font_size, excld_legend=excld_legend)
 
     return fig, ax_xy
 

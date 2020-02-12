@@ -542,7 +542,10 @@ def read_gout4(filePath):
     else:
         out.tdp = False
         _logger.debug(ind_str + 'tdp = False')
-
+    
+    if not out.tdp and out.h5['Beam/current'].size > 1:# same as out.nSlices > 1:
+        _logger.error('time independent simulation with {} slices'.format(out.nSlices))
+    
     if out.tdp:
         if 's0' in out.h5['Global']:
             s0 = out.h5['Global/s0']

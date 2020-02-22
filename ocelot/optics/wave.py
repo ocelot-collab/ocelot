@@ -510,7 +510,7 @@ class RadiationField:
         if return_result:
             copydfl, self = self, copydfl
             return copydfl
-    
+        
     def prop_m(self, z, m=1, fine=1, return_result=0, return_orig_domains=1, **kwargs):
         """
         Angular-spectrum propagation for fieldfile
@@ -616,7 +616,7 @@ class RadiationField:
         if return_result:
             copydfl, self = self, copydfl
             return copydfl
-    
+   
     def mut_coh_func(self, norm=1, jit=1):
         '''
         calculates mutual coherence function
@@ -1637,7 +1637,7 @@ def calc_phase_delay_poly(coeff, w, w0):
     return delta_phi
 
 
-def screen2dfl(screen, polarization='x'):
+def screen2dfl(screen, polarization='x', current=None, gamma=None):
     """
     Function converts synchrotron radiation from ocelot.rad.screen.Screen to ocelot.optics.wave.RadiationField.
     New ocelot.optics.wave.RadiationField object will be generated without changing ocelot.rad.screen.Screen object.
@@ -1675,7 +1675,16 @@ def screen2dfl(screen, polarization='x'):
 
     _logger.debug(ind_str + 'dfl.xlamds = {:.3e} [m]'.format(dfl.xlamds))
     _logger.warning(ind_str + 'dfl.fld normalized to dfl.E() = 1 [J]')
-    dfl.fld = dfl.fld / np.sqrt(dfl.E())  # TODO normalize dfl.fld
+    
+    if None not in [current, gamma]: 
+        _logger.info('using noramlization on Brightness')
+        LenPntrConst = screen.Distance - screen.Zstart
+        constQuant = 3*alpha/q_e/(4*pi**2)*1e-3 * current * gamma * gamma / LenPntrConst / LenPntrConst
+        dfl.fld = dfl.fld * np.sqrt(constQuant)
+    else:
+        _logger.info('using noramlization on energy in the pulse')
+        dfl.fld = dfl.fld / np.sqrt(dfl.E())  
+
     _logger.debug(ind_str + 'done in {:.3e} sec'.format(time.time() - start))
     _logger.debug(ind_str + 'returning dfl in "sf" domains ')
     return dfl
@@ -2589,7 +2598,7 @@ def generate_1d_profile(hrms, length=0.1, points_number=1000, wavevector_cutoff=
     # getting the heights map
     if seed is not None:
         np.random.seed(seed)
-
+        
     if psd is None:
         k = np.pi / length * np.linspace(0, points_number, points_number // 2 + 1)
         # defining linear function PSD(k) in loglog plane

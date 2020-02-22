@@ -1,8 +1,4 @@
-"""
-
-"""
 import numpy as np
-
 
 class OpticsElement:
     def __init__(self, eid=None):
@@ -10,31 +6,17 @@ class OpticsElement:
         self.domain = "sf"
 
     def apply(self, dfl):
-        pass
-
-
-class OpticsMarker(OpticsElement):
-    """
-    Drift element
-    """
-    def __init__(self, eid=None):
-        OpticsElement.__init__(self, eid=eid)
-
-    def apply(self, dfl):
-        pass
-
-
-
-class FreeSpace(OpticsElement):
-    """
-    Drift element
-    """
-    def __init__(self, l=0., mx=1, my=1, eid=None):
-        OpticsElement.__init__(self, eid=eid)
-        self.l = l
-        self.mx = mx
-        self.my = my
-
+        pass 
+     
+#class FreeSpace(OpticsElement):
+#    """
+#    Drift element
+#    """
+#    def __init__(self, l=0., mx=1, my=1, eid=None):
+#        OpticsElement.__init__(self, eid=eid)
+#        self.l = l
+#        self.mx = mx
+#        self.my = my
 
 class ThinLens(OpticsElement):
     """
@@ -45,17 +27,7 @@ class ThinLens(OpticsElement):
         OpticsElement.__init__(self, eid=eid)
         self.fx = fx
         self.fy = fy
-
-
-class Mirror(OpticsElement):
-    def __init__(self, lx=np.inf, ly=np.inf, angle=0., height_error_profile=None, eid=None):
-        OpticsElement.__init__(self)
-        self.lx = lx
-        self.ly = ly
-        self.angle = angle
-        self.height_error_profile = height_error_profile
-
-
+        
 class Aperture(OpticsElement):
     """
     Aperture
@@ -63,11 +35,10 @@ class Aperture(OpticsElement):
 
     def __init__(self, eid=None):
         OpticsElement.__init__(self, eid=eid)
-
-
+        
 class ApertureRect(Aperture):
     """
-    Aperture
+    Rectangular aperture
 
     """
 
@@ -81,7 +52,7 @@ class ApertureRect(Aperture):
 
 class ApertureEllips(Aperture):
     """
-    Aperture
+    Elliptical Aperture
     """
 
     def __init__(self, ax=np.inf, ay=np.inf, cx=0., cy=0., eid=None):
@@ -91,6 +62,26 @@ class ApertureEllips(Aperture):
         self.cx = cx
         self.cy = cy
 
+class OpticsMarker(OpticsElement):
+    """
+    Drift element
+    """
+    def __init__(self, eid=None):
+        OpticsElement.__init__(self, eid=eid)
+
+    def apply(self, dfl):
+        pass
+
+
+#class ImperfectMirror(OpticsElement):
+#    def __init__(self, height_profile=None, hrms=0, lx=np.inf, ly=np.inf, angle=np.pi/2/180, plane='x', eid=None):
+#        self.eid = eid
+#        self.height_profile = height_profile
+#        self.hrms = hrms
+#        self.lx = lx
+#        self.ly = ly
+#        self.angle=angle
+#        self.plane=plane
 
 class HeightErrorProfile():
     """
@@ -105,5 +96,3 @@ class HeightErrorProfile():
         self.ny = ny
         self.k_cutoff = k_cutoff
         self.psd = psd
-
-

@@ -659,19 +659,18 @@ class ResponseMatrix:
         bpm_y = [self.bpm2y_name(bpm) for bpm in bpm_list]
         rows = bpm_x + bpm_y
         cols = list(cor_list)
-
-        cor_list_exist = [item in self.df.columns for item in cor_list]
-        bpm_list_exist = [item in self.df.index for item in rows]
+        cor_list_exist = np.array([item in self.df.columns for item in cor_list])
+        bpm_list_exist = np.array([item in self.df.index for item in rows])
 
         if all(cor_list_exist) and all(bpm_list_exist):
             df_slice = self.df.loc[rows, cols]
             return df_slice
         else:
             print("correctors are not in the RM")
-            print(np.array(cor_list)[cor_list_exist])
+            print(np.array(cor_list)[~cor_list_exist])
             print()
             print("BPMs are not in the RM")
-            print(np.array(rows)[bpm_list_exist])
+            print(np.array(rows)[~bpm_list_exist])
             return None
 
     def extract(self, cor_list, bpm_list):

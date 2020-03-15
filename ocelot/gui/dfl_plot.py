@@ -516,7 +516,178 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     else:
         return
 
+def plot_dfl_xz(dfl, whichis_derectrion='x', plot_proj=True, plot_slice=True, E_slice=None, log_scale=False,
+                x_units = 'mm', E_ph_units = 'eV', figsize = 3,
+                cmap='Greys', fig_name='dfl_plot_xz', showfig=True, savefig=False):
 
+    start_time = time.time()
+
+    _logger.info('plotting {} vs. energy distribution'.format(whichis_derectrion))
+
+    filePath = dfl.filePath
+    
+    if dfl.domain_z == 't':#make it universal for both domains
+        dfl.to_domain('f')
+    if dfl.domain_xy == 'k': #make it universal for both domains
+        dfl.to_domain('s')
+        
+    I = dfl.intensity()
+    
+    I_units_phsmmbw='$\gamma/s/mm^2/0.1\%bw$'
+    I_units_phsbw='$\gamma/s/0.1\%bw$'
+    
+    if whichis_derectrion == 'x':
+        x = dfl.scale_x()
+        I_xz = I[:,dfl.Ny() // 2,:].T
+        if x_units == 'mm':
+            x = x * 1e3
+            x_label_txt = 'x, [mm]' 
+        elif x_units == 'um':
+            x = x * 1e6
+            x_label_txt = '$x, [\mu m]$'
+        else:
+            raise ValueError('Incorrect units error')
+    elif whichis_derectrion == 'y':
+        x = dfl.scale_y()
+        I_xz = I[:,:,dfl.Ny() // 2].T
+        if x_units == 'mm':
+            x = x * 1e3
+            x_label_txt = 'y, [mm]' 
+        elif x_units == 'um':
+            x = x * 1e6
+            x_label_txt = '$y, [\mu m]$'
+        else:
+            raise ValueError('Incorrect units error')
+    else:
+        raise ValueError('"whichis_derectrion" must be "x" or "y"')
+
+    E_ph = h_eV_s * dfl.scale_kz() * speed_of_light/2/np.pi                 
+    if E_ph_units in ['eV', 'ev']:
+        E_label_txt = '$E_{\gamma}$ [eV]'    
+    elif y_units in ['keV', 'kev']:
+        E_ph = E_ph * 1e-3
+        E_label_txt = '$E_{photon}$ [keV]'    
+    else:
+        raise ValueError('Incorrect units')
+    
+    if E_slice is None:
+        E_slice_idx = dfl.Nz()//2
+    elif E_slice == 'max':
+        E_slice_idx = np.argmax(I[:,dfl.Ny()//2,dfl.Nx()//2], axis=0)
+    elif E_slice >= np.min(E_ph) and E_slice <= np.max(E_ph):
+        E_slice_idx = min(range(len(E_ph)), key=lambda i: abs(E_ph[i]-E_slice))
+    else:
+        raise ValueError('Incorrect "E_slice" value, it can be None or some photon energy in the [{},{}] range or "max"'.format(round(np.min(E_ph)),round(np.max(E_ph))))
+    if E_slice_idx is not None:
+        E_slice = E_ph[E_slice_idx]
+        print(E_slice)
+    
+    fig = plt.figure(fig_name)
+    plt.clf()
+    fig.set_size_inches((4.5 * figsize, 3.25 * figsize))#, forward=True)
+    
+    if plot_proj:
+        #definitions for the axes
+        left, width = 0.18, 0.57
+        bottom, height = 0.14, 0.55
+        left_h = left + width + 0.02 - 0.02
+        bottom_h = bottom + height + 0.02 - 0.02
+    
+        rect_scatter = [left, bottom, width, height]
+        rect_histx = [left, bottom_h, width, 0.2]
+        rect_histy = [left_h, bottom, 0.15, height]
+    
+        axHistx = plt.axes(rect_histx)
+        axHisty = plt.axes(rect_histy)
+        
+        axScatter = plt.axes(rect_scatter, sharex=axHistx, sharey=axHisty)
+    else:
+        axScatter = plt.axes()
+    
+    
+    if log_scale is True: 
+        log=0.01
+        I_lim = np.amax(I)
+        axScatter.pcolormesh(E_ph, x, I_xz, cmap=cmap, 
+                                             norm=colors.SymLogNorm(linthresh=I_lim * log, linscale=2,
+                                                  vmin=-I_lim, vmax=I_lim),
+                                                                    vmax=I_lim, vmin=-I_lim)
+    else:
+        axScatter.pcolormesh(E_ph, x, I_xz, cmap=cmap)
+    
+    axScatter.set_ylabel(x_label_txt, fontsize=18)
+    axScatter.set_xlabel(E_label_txt, fontsize=18)
+
+    if plot_slice:
+        
+        I_xy = I[:, dfl.Nx() // 2, dfl.Ny() // 2]
+        if whichis_derectrion == 'x':
+            I_x  = I[E_slice_idx, :, dfl.Ny() // 2]
+        elif whichis_derectrion == 'y':
+            I_x  = I[E_slice_idx, dfl.Ny() // 2, :]
+        else:
+            raise ValueError('"whichis_derectrion" must be "x" or "y"')
+
+        axHistx.plot(E_ph, I_xy, color='blue', label="on-axis")
+        axHisty.plot(I_x, x, color='blue')
+        axHistx.legend(bbox_to_anchor=(1.1, 1), loc='upper left', borderaxespad=0.)
+        axHisty.text(0.01*np.max(I_x), 0.9*np.max(x), r'slise $\;at = {}$eV'.format(round(E_slice)), 
+                     horizontalalignment='left', verticalalignment='top', fontsize=14)    
+        if log_scale is True:
+            axHistx.set_yscale('log')
+            axHisty.set_xscale('log')
+        else:
+            axHistx.ticklabel_format(style='sci', axis='y', useOffset=True, scilimits=(0,0))
+            axHisty.ticklabel_format(style='sci', axis='x', useOffset=True, scilimits=(0,0))
+      
+        axHisty.set_xlabel(I_units_phsmmbw, fontsize=18, color='blue')
+        axHistx.set_ylabel(I_units_phsmmbw, fontsize=18, color='blue')
+        axHisty.xaxis.labelpad = 20
+        axHistx.yaxis.labelpad = 20
+       
+        axScatter.axis('tight')
+        
+        xticks = axHistx.yaxis.get_major_ticks()
+        xticks[1].set_visible(False)
+        
+    if plot_proj:
+        I_xy = np.sum(dfl.intensity(), axis=(1, 2))*dfl.dx*dfl.dy * (1e3)**2
+        
+        ax1 = axHistx.twinx()
+        ax1.plot(E_ph, I_xy, '--',color='black', label="integrated")
+        ax1.legend(bbox_to_anchor=(1.1, 0.75), loc='upper left', borderaxespad=0.)
+        ax1.set_ylabel(I_units_phsbw, fontsize=18, color='black')
+ 
+        if log_scale is True:
+            ax1.set_yscale('log')
+        else:
+            ax1.ticklabel_format(style='sci', axis='y', useOffset=True, scilimits=(0,0))
+    
+        axScatter.axis('tight')
+        
+        for tl in axHistx.get_xticklabels():
+            tl.set_visible(False)
+        for tl in axHisty.get_yticklabels():
+            tl.set_visible(False)
+            
+    plt.draw()
+    if savefig != False:
+        if savefig == True:
+            savefig = 'png'
+            print('here')
+        _logger.debug(ind_str + 'saving *.{:}'.format(savefig))
+        fig.savefig(filePath + fig_name + '.' + str(savefig), format=savefig)
+    _logger.debug(ind_str + 'done in {:.2f} seconds'.format(time.time() - start_time))
+    
+    plt.draw()
+    if showfig == True:
+        _logger.debug(ind_str + 'showing dfl')
+        rcParams["savefig.directory"] = os.path.dirname(filePath)
+        plt.show()
+    else:        
+        plt.close(fig)
+
+    plt.show()
 @if_plottable
 def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, None), y_lim=(None, None), downsample=1,
                 autoscale=None, figsize=3, cmap='seismic', fig_name=None, savefig=False, showfig=True,

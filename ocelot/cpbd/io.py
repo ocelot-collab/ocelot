@@ -173,7 +173,7 @@ def get_elements(lattice):
     for element in lattice.sequence:
         element_type = element.__class__.__name__
         
-        if element_type == 'Edge':
+        if element_type in ('Edge', "CouplerKick"):
             continue
 
         if element not in elements:
@@ -371,7 +371,7 @@ def cell2input(lattice, split=False):
     lines = []
     names = []
     for elem in lattice.sequence:
-        if elem.__class__ != Edge:
+        if elem.__class__ not in (Edge, CouplerKick):
             names.append(elem.name)
 
     new_names = []

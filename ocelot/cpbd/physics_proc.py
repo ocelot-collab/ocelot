@@ -185,7 +185,8 @@ class LaserModulator(PhysProc):
             return
         else:
             if np.abs(self.Lu - L) > 1e-5:
-                _logger.warning(" LaserModulator: undulator length ({}) is not equal the distance between Markers ({})".format(self.Lu, L))
+                _logger.warning(" LaserModulator: undulator length ({}) is not equal the distance between Markers ({}). "
+                                "Distance between Markers is used".format(self.Lu, L))
 
         lbda_ph = self.lambda_ph(p_array.E)
         k_ph = 2 * np.pi / lbda_ph

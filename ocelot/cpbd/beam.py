@@ -713,6 +713,12 @@ class ParticleArray:
         val = "ParticleArray: \n"
         val += "Ref. energy : " + str(np.round(self.E, 4)) + " GeV \n"
         val += "Ave. energy : " + str(np.around(self.E*(1 + np.mean(self.p())), 4)) + " GeV \n"
+        val += "std(x)      : " + str(np.round(np.std(self.x())*1e3, 3)) + " mm\n"
+        val += "std(px)     : " + str(np.round(np.std(self.px())*1e3, 3)) + " mrad\n"
+        val += "std(y)      : " + str(np.round(np.std(self.y())*1e3, 3)) + " mm\n"
+        val += "std(py)     : " + str(np.round(np.std(self.py())*1e3, 3)) + " mrad\n"
+        val += "std(p)      : " + str(np.round(np.std(self.p()), 4)) + "\n"
+        val += "std(tau)    : " + str(np.round(np.std(self.tau()) * 1e3, 3)) + " mm\n"
         val += "Charge      : " + str(np.around(np.sum(self.q_array)*1e9, 4)) + " nC \n"
         val += "s pos       : " + str(self.s) + " m \n"
         val += "n particles : " + str(self.n) + "\n"
@@ -796,7 +802,12 @@ def get_envelope(p_array, tws_i=Twiss(), bounds=None):
         tws.ypy = np.mean(ne.evaluate('(y - tw_y) * (py - tw_py)'))
         tws.pypy =np.mean(ne.evaluate('(py - tw_py) * (py - tw_py)'))
         tws.tautau = np.mean(ne.evaluate('(tau - tw_tau) * (tau - tw_tau)'))
+
         tws.xy = np.mean(ne.evaluate('(x - tw_x) * (y - tw_y)'))
+        tws.pxpy = np.mean(ne.evaluate('(px - tw_px) * (py - tw_py)'))
+        tws.xpy = np.mean(ne.evaluate('(x - tw_x) * (py - tw_py)'))
+        tws.ypx = np.mean(ne.evaluate('(y - tw_y) * (px - tw_px)'))
+
     else:
         tws.xx = np.mean((x - tws.x)*(x - tws.x))
         tws.xpx = np.mean((x-tws.x)*(px-tws.px))
@@ -805,12 +816,31 @@ def get_envelope(p_array, tws_i=Twiss(), bounds=None):
         tws.ypy = np.mean((y-tws.y)*(py-tws.py))
         tws.pypy = np.mean((py-tws.py)*(py-tws.py))
         tws.tautau = np.mean((tau - tws.tau)*(tau - tws.tau))
+
         tws.xy = np.mean((x - tws.x) * (y - tws.y))
+        tws.pxpy = np.mean((px - tws.px) * (py - tws.py))
+        tws.xpy = np.mean((x - tws.x) * (py - tws.py))
+        tws.ypx = np.mean((y - tws.y) * (px - tws.px))
+
+    Sigma = np.array([[tws.xx,    tws.xy,    tws.xpx,    tws.xpy],
+                      [tws.xy,    tws.yy,    tws.ypx,    tws.ypy],
+                      [tws.xpx,   tws.ypx,   tws.pxpx,   tws.pxpy],
+                      [tws.xpy,   tws.ypy,   tws.pxpy,   tws.pypy]])
+
+    S = np.array([[0,  0,   1,   0],
+                  [0,  0,   0,   1],
+                  [-1, 0,   0,   0],
+                  [0, -1,   0,   0]])
+
     tws.p = np.mean(p)
     tws.E = np.copy(p_array.E)
 
     tws.emit_x = np.sqrt(tws.xx*tws.pxpx-tws.xpx**2)
     tws.emit_y = np.sqrt(tws.yy*tws.pypy-tws.ypy**2)
+    w, _ = np.linalg.eig(np.dot(Sigma, S))
+
+    tws.eigemit_x = w[0].imag
+    tws.eigemit_y = w[2].imag
     tws.beta_x = tws.xx/tws.emit_x
     tws.beta_y = tws.yy/tws.emit_y
     tws.alpha_x = -tws.xpx/tws.emit_x

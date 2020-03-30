@@ -103,7 +103,6 @@ def test_track_wo_coupler(lattice, p_array, parameter, update_ref_values=False):
     p_array0 = copy.deepcopy(p_array)
     tws_track, p_array0 = track(lattice, p_array0, navi)
 
-
     tws = obj2dict(tws_track)
     p = obj2dict(p_array0)
 

@@ -40,6 +40,22 @@ def slicing_p_array(p_array, SIZE):
     return p_array_list
 
 
+def chunks(lst, nthreads):
+    """
+    Divide list into chuncks
+
+    :param lst: list of something
+    :param nthreads: number of threads
+    :return: list of list
+    """
+
+    if nthreads == 0:
+        raise ValueError("Number of threads must be not zero")
+    if nthreads > len(lst):
+        raise ValueError("Number of threads must be less or equal list length")
+
+    n = int(len(lst)/nthreads)
+    return [lst[i:i + n] for i in range(0, len(lst), n)]
 
 
 if __name__ == "__main__":

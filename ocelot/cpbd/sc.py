@@ -15,6 +15,7 @@ from scipy.special import exp1, k1
 from ocelot.cpbd.physics_proc import PhysProc
 from ocelot.common.math_op import conj_sym
 from ocelot.cpbd.beam import s_to_cur
+from ocelot.common import conf
 import logging
 
 try:
@@ -99,7 +100,7 @@ class SpaceCharge(PhysProc):
         self.random_seed = 10     # random seeding number. if None seeding is random
 
     def prepare(self, lat):
-        if self.random_seed != None:
+        if self.random_seed is not None:
             np.random.seed(self.random_seed)
 
     def sym_kernel(self, ijk2, hxyz):
@@ -145,10 +146,9 @@ class SpaceCharge(PhysProc):
         K2[Nx:2*Nx-1, :, :] = K2[Nx-1:0:-1, :, :]             #x-mirror
         t0 = time.time()
         if pyfftw_flag:
-            nthreads = int(multiprocessing.cpu_count()/2)
+            nthreads = int(conf.OCELOT_NUM_THREADS)
             if nthreads < 1:
                 nthreads = 1
-
             K2_fft = pyfftw.builders.fftn(K2, axes=None, overwrite_input=False, planner_effort='FFTW_ESTIMATE',
                                        threads=nthreads, auto_align_input=False, auto_contiguous=False, avoid_copy=True)
             out_fft = pyfftw.builders.fftn(out, axes=None, overwrite_input=False, planner_effort='FFTW_ESTIMATE',

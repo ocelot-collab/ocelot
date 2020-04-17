@@ -173,7 +173,7 @@ def get_elements(lattice):
     for element in lattice.sequence:
         element_type = element.__class__.__name__
         
-        if element_type == 'Edge':
+        if element_type in ('Edge', "CouplerKick"):
             continue
 
         if element not in elements:
@@ -238,7 +238,7 @@ def element_def_string(element):
                 params.append(param + '=' + np.array2string(element.__dict__[param], separator=', '))
             continue
 
-        if isinstance(element.__dict__[param], (int, float)):
+        if isinstance(element.__dict__[param], (int, float, complex)):
 
             # fix for parameters 'e1' and 'e2' in RBend element
             if element_type == 'RBend' and param in ('e1', 'e2'):
@@ -304,6 +304,7 @@ def print_elements(elements_dict):
     elements_order.append('Monitor')
     elements_order.append('Marker')
     elements_order.append('Matrix')
+    elements_order.append('Aperture')
 
     lines = []
     ordered_dict = {}
@@ -370,7 +371,7 @@ def cell2input(lattice, split=False):
     lines = []
     names = []
     for elem in lattice.sequence:
-        if elem.__class__ != Edge:
+        if elem.__class__ not in (Edge, CouplerKick):
             names.append(elem.name)
 
     new_names = []

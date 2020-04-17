@@ -3,6 +3,7 @@ __author__ = 'Sergey'
 from numpy.linalg import inv
 from math import factorial
 from ocelot.cpbd.beam import Particle, Twiss, ParticleArray
+from ocelot.cpbd.physics_proc import RectAperture
 from ocelot.cpbd.high_order import *
 from ocelot.cpbd.r_matrix import *
 from copy import deepcopy
@@ -81,7 +82,6 @@ class SecondOrderMult:
         X[2] = ne.evaluate('R20 * x + R21 * px + R22 * y + R23 * py + R24 * tau + R25 * dp + T202 * x*y + T203 * x*py + T212 * y*px + T213 * px*py + T225 * y*dp + T235 * py*dp')
         X[3] = ne.evaluate('R30 * x + R31 * px + R32 * y + R33 * py + R34 * tau + R35 * dp + T302 * x*y + T303 * x*py + T312 * y*px + T313 * px*py + T325 * y*dp + T335 * py*dp')
         X[4] = ne.evaluate('R40 * x + R41 * px + R42 * y + R43 * py + R44 * tau + R45 * dp + T400 * x*x + T401 * x*px + T405 * x*dp + T411 * px*px + T415 * px*dp + T455 * dp*dp + T422 * y*y + T423 * y*py + T433 * py*py')  # + U5666*dp2*dp    # third order
-
 
     def numpy_apply(self, X, R, T):
         Xr = np.dot(R, X)
@@ -334,6 +334,85 @@ class TransferMap:
         return m
 
 
+class SecondTM(TransferMap):
+    def __init__(self, r_z_no_tilt, t_mat_z_e):
+        TransferMap.__init__(self)
+        self.r_z_no_tilt = r_z_no_tilt
+        self.t_mat_z_e = t_mat_z_e
+
+        self.multiplication = None
+        self.map = lambda X, energy: self.t_apply(self.r_z_no_tilt(self.length, energy),
+                                                  self.t_mat_z_e(self.length, energy), X, self.dx, self.dy, self.tilt)
+
+        self.R_tilt = lambda energy: np.dot(np.dot(rot_mtx(-self.tilt), self.r_z_no_tilt(self.length, energy)), rot_mtx(self.tilt))
+
+        self.T_tilt = lambda energy: transfer_map_rotation(self.r_z_no_tilt(self.length, energy),
+                                                             self.t_mat_z_e(self.length, energy), self.tilt)[1]
+
+    def t_apply(self, R, T, X, dx, dy, tilt, U5666=0.):
+        if dx != 0 or dy != 0 or tilt != 0:
+            X = transform_vec_ent(X, dx, dy, tilt)
+        self.multiplication(X, R, T)
+        if dx != 0 or dy != 0 or tilt != 0:
+            X = transform_vec_ext(X, dx, dy, tilt)
+
+        return X
+
+    def __call__(self, s):
+        m = copy(self)
+        m.length = s
+        m.R = lambda energy: m.R_z(s, energy)
+        m.B = lambda energy: m.B_z(s, energy)
+        m.T = lambda s, energy: m.t_mat_z_e(s, energy)
+        m.delta_e = m.delta_e_z(s)
+        m.map = lambda X, energy: m.t_apply(m.r_z_no_tilt(s, energy), m.t_mat_z_e(s, energy), X, m.dx, m.dy, m.tilt)
+        return m
+
+
+class CorrectorTM(SecondTM):
+    def __init__(self, angle_x=0., angle_y=0., r_z_no_tilt=None, t_mat_z_e=None):
+        SecondTM.__init__(self, r_z_no_tilt, t_mat_z_e)
+        self.angle_x = angle_x
+        self.angle_y = angle_y
+        self.map = lambda X, energy: self.kick(X, self.length, self.length, self.angle_x, self.angle_y, energy)
+        self.B_z = lambda z, energy: self.kick_b(z, self.length, angle_x, angle_y)
+
+    def kick_b(self, z, l, angle_x, angle_y):
+        if l == 0:
+            hx = 0.
+            hy = 0.
+        else:
+            hx = angle_x / l
+            hy = angle_y / l
+
+        dx = hx * z * z / 2.
+        dy = hy * z * z / 2.
+        dx1 = hx * z if l != 0 else angle_x
+        dy1 = hy * z if l != 0 else angle_y
+        b = np.array([[dx], [dx1], [dy], [dy1], [0.], [0.]])
+        return b
+
+    def kick(self, X, z, l, angle_x, angle_y, energy):
+        _logger.debug('invoking kick_b')
+        b = self.kick_b(z, l, angle_x, angle_y)
+        if self.multiplication is not None and self.t_mat_z_e is not None:
+            X1 = self.t_apply(R=self.R(energy), T=self.t_mat_z_e(z, energy), X=X, dx=0, dy=0, tilt=0, U5666=0.)
+        else:
+            X1 = np.dot(self.R(energy), X)
+        X1 = np.add(X1, b)
+        X[:] = X1[:]
+        return X
+
+    def __call__(self, s):
+        m = copy(self)
+        m.length = s
+        m.R = lambda energy: m.R_z(s, energy)
+        m.B = lambda energy: m.B_z(s, energy)
+        m.delta_e = m.delta_e_z(s)
+        m.map = lambda X, energy: m.kick(X, s, self.length, m.angle_x, m.angle_y, energy)
+        return m
+
+
 class PulseTM(TransferMap):
     def __init__(self, kn):
         TransferMap.__init__(self)
@@ -356,6 +435,7 @@ class PulseTM(TransferMap):
         _logger.debug('return trajectory, array ' + str(len(rparticles)))
         return rparticles
 
+
 class MultipoleTM(TransferMap):
     def __init__(self, kn):
         TransferMap.__init__(self)
@@ -369,7 +449,6 @@ class MultipoleTM(TransferMap):
         X[1] = X[1] - np.real(p)
         X[3] = X[3] + np.imag(p)
         X[4] = X[4] - kn[0] * X[0]
-        # print("multipole 2", X)
         return X
 
     def __call__(self, s):
@@ -382,74 +461,18 @@ class MultipoleTM(TransferMap):
         return m
 
 
-class CorrectorTM(TransferMap):
-    def __init__(self, angle_x=0., angle_y=0.):
-        TransferMap.__init__(self)
-        self.angle_x = angle_x
-        self.angle_y = angle_y
-        self.multiplication = None
-        self.t_mat_z_e = None
-        self.map = lambda X, energy: self.kick(X, self.length, self.length, self.angle_x, self.angle_y, energy)
-        self.B_z = lambda z, energy: self.kick_b(z, self.length, angle_x, angle_y)
-
-    def t_apply(self, R, T, X, dx=0, dy=0, tilt=0, U5666=0.):
-        if dx != 0 or dy != 0 or tilt != 0:
-            X = transform_vec_ent(X, dx, dy, tilt)
-        self.multiplication(X, R, T)
-        if dx != 0 or dy != 0 or tilt != 0:
-            X = transform_vec_ext(X, dx, dy, tilt)
-
-        return X
-
-    def kick_b(self, z, l, angle_x, angle_y):
-        if l == 0:
-            hx = 0.
-            hy = 0.
-        else:
-            hx = angle_x / l
-            hy = angle_y / l
-
-        dx = hx * z * z / 2.
-        dy = hy * z * z / 2.
-        dx1 = hx * z if l != 0 else angle_x
-        dy1 = hy * z if l != 0 else angle_y
-        b = np.array([[dx], [dx1], [dy], [dy1], [0.], [0.]])
-        return b
-
-    def kick(self, X, z, l, angle_x, angle_y, energy):
-        _logger.debug('invoking kick_b')
-        b = self.kick_b(z, l, angle_x, angle_y)
-        if self.multiplication is not None and self.t_mat_z_e is not None:
-            X1 = self.t_apply(R=self.R(energy), T=self.t_mat_z_e(z, energy), X=X)
-        else:
-            X1 = np.dot(self.R(energy), X)
-        X1 = np.add(X1, b)
-        X[:] = X1[:]
-        return X
-
-    def __call__(self, s):
-        m = copy(self)
-        m.length = s
-        m.R = lambda energy: m.R_z(s, energy)
-        m.B = lambda energy: m.B_z(s, energy)
-        m.delta_e = m.delta_e_z(s)
-        m.map = lambda X, energy: m.kick(X, s, self.length, m.angle_x, m.angle_y, energy)
-        return m
-
-
 class CavityTM(TransferMap):
     def __init__(self, v=0, freq=0., phi=0.):
         TransferMap.__init__(self)
         self.v = v
         self.freq = freq
         self.phi = phi
-        self.coupler_kick = False
         self.vx_up = 0.
         self.vy_up = 0.
         self.vx_down = 0.
         self.vy_down = 0.
         phase_term = np.cos(self.phi * np.pi / 180.)
-        self.delta_e_z = lambda z: phase_term * self.v * z / self.length  if self.length != 0 else phase_term * self.v
+        self.delta_e_z = lambda z: phase_term * self.v * z / self.length if self.length != 0 else phase_term * self.v
         self.delta_e = self.v * np.cos(self.phi * np.pi / 180.)
         self.map = lambda X, energy: self.map4cav(X, energy, self.v, self.freq, self.phi, self.length)
 
@@ -463,16 +486,12 @@ class CavityTM(TransferMap):
             beta0 = np.sqrt(1. - igamma2)
 
         phi = phi * np.pi / 180.
-        if self.coupler_kick:
-            X[1] += (self.vx_up * V * np.exp(1j * phi)).real * 1e-6 / E
-            X[3] += (self.vy_up * V * np.exp(1j * phi)).real * 1e-6 / E
+
         X4 = np.copy(X[4])
         X5 = np.copy(X[5])
         X = self.mul_p_array(X, energy=E)  # t_apply(R, T, X, dx, dy, tilt)
         delta_e = V * np.cos(phi)
-        if self.coupler_kick:
-            X[1] += (self.vx_down * V * np.exp(1j * phi)).real * 1e-6 / (E + delta_e)
-            X[3] += (self.vy_down * V * np.exp(1j * phi)).real * 1e-6 / (E + delta_e)
+
         T566 = 1.5 * z*igamma2/(beta0**3)
         T556 = 0.
         T555 = 0.
@@ -491,6 +510,7 @@ class CavityTM(TransferMap):
                 T555 = beta0**2 * k**2 * z * dgamma/2.*(dgamma*(2*g0*g1**3*(beta0*beta1**3 - 1) + g0**2 + 3*g1**2 - 2)/(beta1**3*g1**3*(g0 - g1)**3)*np.sin(phi)**2 -
                                                     (g1*g0*(beta1*beta0 - 1) + 1)/(beta1*g1*(g0 - g1)**2)*np.cos(phi))
         X[4] += T566 * X5*X5 + T556*X4*X5 + T555 * X4*X4
+
         return X
 
     def __call__(self, s):
@@ -501,6 +521,42 @@ class CavityTM(TransferMap):
         m.delta_e = m.delta_e_z(s)
         v = m.v * s / self.length if self.length != 0 else m.v
         m.map = lambda X, energy: m.map4cav(X, energy, v, m.freq, m.phi, s)
+        return m
+
+
+class CouplerKickTM(TransferMap):
+    def __init__(self, v=0, freq=0., phi=0., vx=0., vy=0.):
+        TransferMap.__init__(self)
+        self.v = v
+        self.freq = freq
+        self.phi = phi
+        self.vx = vx
+        self.vy = vy
+        self.map = lambda X, energy: self.kick(X, self.v, self.phi, energy)
+        self.B_z = lambda z, energy: self.kick_b(self.v, self.phi, energy)
+
+    def kick_b(self, v, phi, energy):
+        phi = phi * np.pi / 180.
+        dxp = (self.vx * v * np.exp(1j * phi)).real / energy
+        dyp = (self.vy * v * np.exp(1j * phi)).real / energy
+        b = np.array([[0.], [dxp], [0.], [dyp], [0.], [0.]])
+        return b
+
+    def kick(self, X, v, phi, energy):
+        _logger.debug('invoking coupler kick zero order')
+        b = self.kick_b(v, phi, energy)
+        X1 = np.dot(self.R(energy), X)
+        X1 = np.add(X1, b)
+        X[:] = X1[:]
+        return X
+
+    def __call__(self, s):
+        m = copy(self)
+        m.length = s
+        m.R = lambda energy: m.R_z(s, energy)
+        m.B = lambda energy: m.B_z(s, energy)
+        m.delta_e = m.delta_e_z(s)
+        m.map = lambda X, energy: m.kick(X, self.v, self.phi, energy)
         return m
 
 
@@ -649,41 +705,6 @@ class RungeKuttaTrTM(RungeKuttaTM):
         self.long_dynamics = False
 
 
-class SecondTM(TransferMap):
-    def __init__(self, r_z_no_tilt, t_mat_z_e):
-        TransferMap.__init__(self)
-        self.r_z_no_tilt = r_z_no_tilt
-        self.t_mat_z_e = t_mat_z_e
-
-        self.multiplication = None
-        self.map = lambda X, energy: self.t_apply(self.r_z_no_tilt(self.length, energy),
-                                                  self.t_mat_z_e(self.length, energy), X, self.dx, self.dy, self.tilt)
-
-        self.R_tilt = lambda energy: np.dot(np.dot(rot_mtx(-self.tilt), self.r_z_no_tilt(self.length, energy)), rot_mtx(self.tilt))
-
-        self.T_tilt = lambda energy: transfer_map_rotation(self.r_z_no_tilt(self.length, energy),
-                                                             self.t_mat_z_e(self.length, energy), self.tilt)[1]
-
-    def t_apply(self, R, T, X, dx, dy, tilt, U5666=0.):
-        if dx != 0 or dy != 0 or tilt != 0:
-            X = transform_vec_ent(X, dx, dy, tilt)
-        self.multiplication(X, R, T)
-        if dx != 0 or dy != 0 or tilt != 0:
-            X = transform_vec_ext(X, dx, dy, tilt)
-
-        return X
-
-    def __call__(self, s):
-        m = copy(self)
-        m.length = s
-        m.R = lambda energy: m.R_z(s, energy)
-        m.B = lambda energy: m.B_z(s, energy)
-        m.T = lambda s, energy: m.t_mat_z_e(s, energy)
-        m.delta_e = m.delta_e_z(s)
-        m.map = lambda X, energy: m.t_apply(m.r_z_no_tilt(s, energy), m.t_mat_z_e(s, energy), X, m.dx, m.dy, m.tilt)
-        return m
-
-
 class TWCavityTM(TransferMap):
     def __init__(self, l=0, v=0, phi=0, freq=0):
         TransferMap.__init__(self)
@@ -798,6 +819,7 @@ class MethodTM:
             hx = 0.
         else:
             hx = element.angle / element.l
+
         r_z_e = create_r_matrix(element)
 
         # global method
@@ -814,10 +836,12 @@ class MethodTM:
 
             if element.__class__ == Edge:
                 if element.pos == 1:
-                    R, T = fringe_ent(h=element.h, k1=element.k1, e=element.edge, h_pole=element.h_pole,
+
+                    _, T = fringe_ent(h=element.h, k1=element.k1, e=element.edge, h_pole=element.h_pole,
                                       gap=element.gap, fint=element.fint)
                 else:
-                    R, T = fringe_ext(h=element.h, k1=element.k1, e=element.edge, h_pole=element.h_pole,
+
+                    _, T = fringe_ext(h=element.h, k1=element.k1, e=element.edge, h_pole=element.h_pole,
                                       gap=element.gap, fint=element.fint)
                 T_z_e = lambda z, energy: T
             if element.__class__ == XYQuadrupole:
@@ -856,18 +880,9 @@ class MethodTM:
 
         if element.__class__ == Cavity:
             tm = CavityTM(v=element.v, freq=element.freq, phi=element.phi)
-            if element.coupler_kick:
-                tm.coupler_kick = element.coupler_kick
-                tm.vx_up = element.vx_up
-                tm.vy_up = element.vy_up
-                tm.vxx_up = element.vxx_up
-                tm.vxy_up = element.vxy_up
-                tm.vx_down = element.vx_down
-                tm.vy_down = element.vy_down
-                tm.vxx_down = element.vxx_down
-                tm.vxy_down = element.vxy_down
-            else:
-                tm.coupler_kick = False
+
+        if element.__class__ == CouplerKick:
+            tm = CouplerKickTM(v=element.v, freq=element.freq, phi=element.phi, vx=element.vx, vy=element.vy)
 
         if element.__class__ == TWCavity:
             tm = TWCavityTM(v=element.v, freq=element.freq, phi=element.phi)
@@ -881,19 +896,14 @@ class MethodTM:
             tm = MultipoleTM(kn=element.kn)
 
         if element.__class__ == Hcor:
-            tm = CorrectorTM(angle_x=element.angle, angle_y=0.)
+            t_mat_z_e = lambda z, energy: t_nnn(z, 0, 0, 0, energy)
+            tm = CorrectorTM(angle_x=element.angle, angle_y=0., r_z_no_tilt=r_z_e, t_mat_z_e=t_mat_z_e)
             tm.multiplication = self.sec_order_mult.tmat_multip
-            tm.t_mat_z_e = lambda z, energy: t_nnn(z, 0, 0, 0, energy)
 
         if element.__class__ == Vcor:
-            tm = CorrectorTM(angle_x=0, angle_y=element.angle)
+            t_mat_z_e = lambda z, energy: t_nnn(z, 0, 0, 0, energy)
+            tm = CorrectorTM(angle_x=0, angle_y=element.angle, r_z_no_tilt=r_z_e, t_mat_z_e=t_mat_z_e)
             tm.multiplication = self.sec_order_mult.tmat_multip
-            tm.t_mat_z_e = lambda z, energy: t_nnn(z, 0, 0, 0, energy)
-
-        # if element.__class__ == HVcor:
-        #     tm = CorrectorTM(angle_x=element.angle_x, angle_y=element.angle_y)
-        #     tm.multiplication = self.sec_order_mult.tmat_multip
-        #     tm.t_mat_z_e = lambda z, energy: t_nnn(z, 0, 0, 0, energy)
 
         tm.length = element.l
         tm.dx = dx
@@ -949,7 +959,8 @@ def lattice_transfer_map(lattice, energy):
     for i, elem in enumerate(lattice.sequence):
         Rb = elem.transfer_map.R(E)
         Bb = elem.transfer_map.B(E)
-        if elem.transfer_map.__class__ == SecondTM:
+
+        if isinstance(elem.transfer_map, SecondTM):  # elem.transfer_map.__class__ == SecondTM:
             Tb = np.copy(elem.transfer_map.T_tilt(E))
             Tb = sym_matrix(Tb)
             Ra, Ta = transfer_maps_mult(Ra, Ta, Rb, Tb)
@@ -978,7 +989,6 @@ def trace_z(lattice, obj0, z_array):
     obj_elem = obj0
     for z in z_array:
         while z > L:
-            # print(lattice.sequence[i].transfer_map, obj_elem)
             obj_elem = lattice.sequence[i].transfer_map * obj_elem
             i += 1
             elem = lattice.sequence[i]
@@ -996,7 +1006,7 @@ def trace_obj(lattice, obj, nPoints=None):
     obj must be Twiss or Particle
     """
 
-    if nPoints == None:
+    if nPoints is None:
         obj_list = [obj]
         for e in lattice.sequence:
             obj = e.transfer_map * obj
@@ -1055,14 +1065,14 @@ def twiss(lattice, tws0=None, nPoints=None):
     :param nPoints: number of points per cell. If None, then twiss parameters are calculated at the end of each element.
     :return: list of Twiss() objects
     """
-    if tws0 == None:
+    if tws0 is None:
         tws0 = periodic_twiss(tws0, lattice_transfer_map(lattice, energy=0.))
 
     if tws0.__class__ == Twiss:
         if tws0.beta_x == 0 or tws0.beta_y == 0:
             R = lattice_transfer_map(lattice, tws0.E)
             tws0 = periodic_twiss(tws0, R)
-            if tws0 == None:
+            if tws0 is None:
                 _logger.info(' twiss: Twiss: no periodic solution')
                 return None
         else:
@@ -1085,13 +1095,13 @@ def twiss_fast(lattice, tws0=None):
     :param nPoints: number of points per cell. If None, then twiss parameters are calculated at the end of each element.
     :return: list of Twiss() objects
     """
-    if tws0 == None:
+    if tws0 is None:
         tws0 = periodic_twiss(tws0, lattice_transfer_map(lattice, energy=0.))
     if tws0.__class__ == Twiss:
         if tws0.beta_x == 0 or tws0.beta_y == 0:
             R = lattice_transfer_map(lattice, tws0.E)
             tws0 = periodic_twiss(tws0, R)
-            if tws0 == None:
+            if tws0 is None:
                 _logger.warning(' twiss_fast: Twiss: no periodic solution')
                 return None
         else:
@@ -1129,7 +1139,6 @@ class ProcessTable:
 
             physics_proc.indx1 = physics_proc.indx0
             physics_proc.s_stop = physics_proc.s_start
-            #physics_proc.s = np.sum(np.array([elem.l for elem in self.lat.sequence[:physics_proc.indx0]]))
             self.kick_proc_list = np.append(self.kick_proc_list, physics_proc)
             if len(self.kick_proc_list) > 1:
                 pos = np.array([proc.s_start for proc in self.kick_proc_list])
@@ -1139,17 +1148,13 @@ class ProcessTable:
 
 
     def add_physics_proc(self, physics_proc, elem1, elem2):
-        #logger_navi.debug(" add_physics_proc: self.proc_list = " + str([p.__class__.__name__ for p in self.proc_list]) + " -> add -> " + physics_proc.__class__.__name__)
         physics_proc.start_elem = elem1
         physics_proc.end_elem = elem2
-        # print(elem1.id, elem2.id, elem1.__hash__(), elem2.__hash__(), self.lat.sequence.index(elem1), self.lat.sequence.index(elem2))
         physics_proc.indx0 = self.lat.sequence.index(elem1)
-        # print(self.lat.sequence.index(elem1))
         physics_proc.indx1 = self.lat.sequence.index(elem2)
         physics_proc.s_start = np.sum(np.array([elem.l for elem in self.lat.sequence[:physics_proc.indx0]]))
         physics_proc.s_stop = np.sum(np.array([elem.l for elem in self.lat.sequence[:physics_proc.indx1]]))
         self.searching_kick_proc(physics_proc, elem1)
-        # print(self.lat.sequence.index(elem2))
         physics_proc.counter = physics_proc.step
         physics_proc.prepare(self.lat)
 
@@ -1157,7 +1162,6 @@ class ProcessTable:
                           "; start: " + str(physics_proc.indx0 ) + " stop: " + str(physics_proc.indx1))
 
         self.proc_list.append(physics_proc)
-        # print(elem1.__hash__(), elem2.__hash__(), physics_proc.indx0, physics_proc.indx1, self.proc_list)
 
 
 class Navigator:
@@ -1184,10 +1188,13 @@ class Navigator:
         self.proc_kick_elems = []
         self.kill_process = False # for case when calculations are needed to terminated e.g. from gui
 
-    def go_to_start(self):
+    def reset_position(self):
         self.z0 = 0.  # current position of navigator
         self.n_elem = 0  # current index of the element in lattice
         self.sum_lengths = 0.  # sum_lengths = Sum[lat.sequence[i].l, {i, 0, n_elem-1}]
+
+    def go_to_start(self):
+        self.reset_position()
 
     def get_phys_procs(self):
         """
@@ -1209,6 +1216,23 @@ class Navigator:
         """
         #logger_navi.debug(" add_physics_proc: phys proc: " + physics_proc.__class__.__name__)
         self.process_table.add_physics_proc(physics_proc, elem1, elem2)
+
+    def activate_apertures(self, start=None, stop=None):
+        """
+        activate apertures if thea exist in the lattice from
+
+        :param start: element,  activate apertures starting form element 'start' element
+        :param stop: element, activate apertures up to 'stop' element
+        :return:
+        """
+        id1 = self.lat.sequence.index(start) if start is not None else None
+        id2 = self.lat.sequence.index(stop) if stop is not None else None
+        for elem in self.lat.sequence[id1:id2]:
+            if elem.__class__ is Aperture:
+                if elem.type is "rect":
+                    ap = RectAperture(xmin=-elem.xmax + elem.dx, xmax=elem.xmax + elem.dx,
+                                      ymin=-elem.ymax + elem.dy, ymax=elem.ymax + elem.dy)
+                    self.add_physics_proc(ap, elem, elem)
 
     def check_overjump(self, dz, processes, phys_steps):
         phys_steps_red = phys_steps - dz
@@ -1276,7 +1300,6 @@ class Navigator:
 
     def check_proc_bounds(self, dz, proc_list, phys_steps, active_process):
         for p in proc_list:
-            #print("check = ", dz, self.z0, p.s_stop, p not in active_process)
             if dz + self.z0 >= p.s_stop and p not in active_process:
                 active_process.append(p)
                 phys_steps = np.append(phys_steps, dz)
@@ -1290,7 +1313,6 @@ class Navigator:
         if len(proc_list) > 0:
 
             counters = np.array([p.counter for p in proc_list])
-            #print("counters = ", counters)
             step = counters.min()
 
             inxs = np.where(counters == step)
@@ -1299,8 +1321,6 @@ class Navigator:
 
             phys_steps = np.array([p.step for p in processes])*self.unit_step
 
-
-            #print("steps = ", dzs)
             for p in proc_list:
                 p.counter -= step
                 if p.counter == 0:

@@ -44,12 +44,13 @@ except:
 
 
 def nextpow2(p):
-    i = 0
-    pow2 = 2**i
-    while p > pow2:
-        i += 1
-        pow2 = 2**i
-    return i
+    """
+    Mimic matlab function nextpow2
+
+    :param p:
+    :return:
+    """
+    return int(np.ceil(np.log2(p)))
 
 
 def csr_convolution(a, b):

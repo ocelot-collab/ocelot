@@ -81,7 +81,7 @@ class SmoothBeam(PhysProc):
     """
     Physics Process for the beam smoothing. Can be applied when number of particles is not enough.
 
-    :atribuet mslice: number of particles in the slice
+    :attribute mslice: number of particles in the slice
 
     Examples
     --------

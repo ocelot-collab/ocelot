@@ -1331,12 +1331,12 @@ def global_slice_analysis(parray, nparts_in_slice=5000, smooth_param=0.01, filte
     :param filter_iter: 2, filter parameter in the func: simple_filter
     :return: SliceParameters,
     """
+    n = 1000  # number of points
 
     slc = SliceParameters()
 
     q1 = np.sum(parray.q_array)
-    # print("charge", q1)
-    n = np.int_(parray.rparticles.size / 6)
+
     PD = parray.rparticles
     PD = sortrows(PD, col=4)
 
@@ -1378,7 +1378,7 @@ def global_slice_analysis(parray, nparts_in_slice=5000, smooth_param=0.01, filte
 
     smin = min(z)
     smax = max(z)
-    n = 1000
+
     hs = (smax - smin) / (n - 1)
     s = np.arange(smin, smax + hs, hs)
     ex = interp1(z, emittx, s)

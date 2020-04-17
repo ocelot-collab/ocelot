@@ -2,6 +2,7 @@
 Section class for s2e tracking.
 S.Tomin. XFEL/DESY. 2017
 """
+import os
 from ocelot import *
 from ocelot.adaptors.astra2ocelot import *
 import numpy as np
@@ -62,16 +63,14 @@ class SectionLattice:
         return tws_whole
 
     def update_sections(self, sections, config=None, coupler_kick=False):
-        #blank_sections = sections.sections
-        #sections = []
+
         new_sections = []
         for sec in sections:
 
             sec = self.dict_sections[sec]
             if not coupler_kick:
                 sec.remove_coupler_kicks()
-            #sec = blank_sec()
-            #sections.append(sec)
+
             if config is not None and sec.__class__ in config.keys():
                 conf = config[sec.__class__]
                 if "rho" in conf.keys():
@@ -96,16 +95,15 @@ class SectionLattice:
             new_sections.append(sec)
         return new_sections
 
-    def track_sections(self, sections, p_array, config=None, force_ext_p_array=False, coupler_kick=False):
-        print("Coupler kick = ", coupler_kick)
+    def track_sections(self, sections, p_array, config=None, force_ext_p_array=False, coupler_kick=False, verbose=True):
+
         self.update_sections(sections, config=config, coupler_kick=coupler_kick)
-        #twis_track = []
         for i, sec in enumerate(sections):
             sec = self.dict_sections[sec]
             if i == 0 and sec.__class__ != self.sec_seq[0] and not force_ext_p_array:
                 p_array = None
+            sec.print_progress = verbose
             p_array = sec.tracking(particles=p_array)
-            #twis_track.append(sec.load_twiss_file())
         return p_array
 
     def load_twiss_track(self, sections):
@@ -113,7 +111,6 @@ class SectionLattice:
         bx = []
         by = []
         s0 = 0
-        #tws_list = []
         for i, sec in enumerate(sections):
             sec = self.dict_sections[sec]
             tws = sec.load_twiss_file()
@@ -175,7 +172,6 @@ class SectionTrack:
                 e.vxx_down = 0
                 e.vxy_down = 0
         self.lattice.update_transfer_maps()
-
 
     def apply_matching(self, bounds=None):
 
@@ -293,7 +289,6 @@ class SectionTrack:
                         elem.phi = phi
         self.lattice.update_transfer_maps()
 
-
     def init_navigator(self):
 
         # init navigator
@@ -318,7 +313,6 @@ class SectionTrack:
                 self.navigator.add_physics_proc(physics_process[0], physics_process[1], physics_process[2])
 
             if physics_process[0].__class__ not in [SpaceCharge, CSR, Wake, WakeKick, BeamTransform, SmoothBeam, LSC]:
-                #print(physics_process, " ADDED")
                 self.navigator.add_physics_proc(physics_process[0], physics_process[1], physics_process[2])
 
     def add_physics_process(self, physics_process, start, stop):
@@ -336,7 +330,7 @@ class SectionTrack:
             try:
                 particles = astraBeam2particleArray(filename=self.input_beam_file)
             except:
-                print(self.lattice_name + ' - #### ERROR #### - NO START PARTICLES FILE.')
+                print(self.lattice_name + ' - #### ERROR #### - NO START PARTICLES FILE: ' + self.input_beam_file)
         
         else:
             
@@ -344,12 +338,20 @@ class SectionTrack:
                 particles = load_particle_array(self.input_beam_file)
         
             except:
-                print(self.lattice_name + ' - #### ERROR #### - NO START PARTICLES FILE.')
+                print(self.lattice_name + ' - #### ERROR #### - NO START PARTICLES FILE: ' + self.input_beam_file)
 
         return particles
 
-    def save_beam_file(self, particles):
+    def folder_check_create(self, filename):
+        # path to directory
+        dir_path = os.path.dirname(os.path.abspath(filename))
+        # check if exist
+        if not os.path.exists(dir_path):
+            # create
+            os.makedirs(dir_path)
 
+    def save_beam_file(self, particles):
+        self.folder_check_create(self.output_beam_file)
         save_particle_array(self.output_beam_file, particles)
 
     def save_twiss_file(self, twiss_list):
@@ -357,6 +359,8 @@ class SectionTrack:
             tws_file_name = self.output_beam_file.replace("particles", "tws")
         else:
             tws_file_name = self.tws_file
+
+        self.folder_check_create(tws_file_name)
 
         bx = np.array([tw.beta_x for tw in twiss_list])
         by = np.array([tw.beta_y for tw in twiss_list])
@@ -405,7 +409,7 @@ class SectionTrack:
         # tracking
         print()
         print(self.lattice_name + ' TRACKING')
-        print("std1 = ", np.std(particles.tau()))
+        # print("std1 = ", np.std(particles.tau()))
         tws_track, particles = track(self.lattice, particles, self.navigator,
                                      print_progress=self.print_progress, calc_tws=self.calc_tws)
         self.tws_track = tws_track

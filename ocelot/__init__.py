@@ -2,7 +2,7 @@
 general ocelot description
 """
 
-__version__ = '19.12.0'
+__version__ = '20.04.0'
 
 
 __all__ = ['Twiss', "Beam", "Particle", "get_current", "get_envelope", "generate_parray",           # beam
@@ -15,7 +15,7 @@ __all__ = ['Twiss', "Beam", "Particle", "get_current", "get_envelope", "generate
 
             'Element', 'Multipole', 'Quadrupole', 'RBend', "Matrix", "UnknownElement",              # elements
             'SBend', 'Bend', 'Drift', 'Undulator', 'Hcor',  "Sequence", "Solenoid", "TDCavity",     # elements
-            'Vcor', "Sextupole", "Monitor", "Marker", "Octupole", "Cavity", "Edge",                 # elements
+            'Vcor', "Sextupole", "Monitor", "Marker", "Octupole", "Cavity", "Edge",  "Aperture",    # elements
 
             "match", "match_tunes",                                                          # match
 
@@ -29,7 +29,7 @@ __all__ = ['Twiss', "Beam", "Particle", "get_current", "get_envelope", "generate
             "SpaceCharge", "LSC",                                                               # sc
             "Wake", "WakeTable", "WakeKick", "WakeTableDechirperOffAxis",                       # wake
             "BeamTransform", "SmoothBeam", "EmptyProc", "PhysProc", "LaserHeater",
-            "LaserModulator", "SpontanRadEffects",
+            "LaserModulator", "SpontanRadEffects", "PhaseSpaceAperture",
             "MagneticLattice", "merger",            # magnetic_lattice
             "np", # numpy
 
@@ -58,7 +58,7 @@ from ocelot.cpbd.csr import CSR
 from ocelot.cpbd.wake3D import Wake, WakeTable, WakeKick, WakeTableDechirperOffAxis
 
 from ocelot.cpbd.physics_proc import BeamTransform, SmoothBeam, EmptyProc, PhysProc, LaserHeater, \
-    LaserModulator, SpontanRadEffects
+    LaserModulator, SpontanRadEffects, PhaseSpaceAperture
 
 
 print('initializing ocelot...')

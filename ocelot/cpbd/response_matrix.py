@@ -13,6 +13,7 @@ import pandas as pd
 import logging
 logger = logging.getLogger(__name__)
 
+
 class MeasureResponseMatrix:
     def __init__(self, lattice, hcors, vcors, bpms):
         self.lat = lattice
@@ -323,7 +324,6 @@ class LinacDisperseSimRM(MeasureResponseMatrix):
     def __init__(self, lattice, hcors, vcors, bpms):
         super(LinacDisperseSimRM, self).__init__(lattice, hcors, vcors, bpms)
 
-
     def calculate(self, tw_init=None):
         """
         calculation of ideal dispersive response matrix
@@ -365,7 +365,6 @@ class LinacDisperseTmatrixRM(MeasureResponseMatrix):
 
     def __init__(self, lattice, hcors, vcors, bpms):
         super(LinacDisperseTmatrixRM, self).__init__(lattice, hcors, vcors, bpms)
-
 
     def calculate(self, tw_init=None):
         """
@@ -550,7 +549,6 @@ class ResponseMatrixJSON:
         self.mode = dict_rmatrix["mode"]
         return 1
 
-
     def compare(self, rmatrix, absolut = 0.001, relative = 0.1):
         cors1 = np.array(self.cor_names)
         cors2 = np.array(rmatrix.cor_names)
@@ -596,8 +594,9 @@ class ResponseMatrixJSON:
                 print ("%.2f" % self.matrix[j, i],)
             print()
 
+
 class ResponseMatrix:
-    def  __init__(self, method=None):
+    def __init__(self, method=None):
         self.cor_names = []
         self.bpm_names = []
         self.matrix = []
@@ -652,28 +651,31 @@ class ResponseMatrix:
         else:
             print("ResponseMatrix.method = None, Add the method, e.g. MeasureResponseMatrix")
 
-
     def get_matrix(self):
         return self.matrix
 
-    def extract(self, cor_list, bpm_list):
+    def extract_df_slice(self, cor_list, bpm_list):
         bpm_x = [self.bpm2x_name(bpm) for bpm in bpm_list]
         bpm_y = [self.bpm2y_name(bpm) for bpm in bpm_list]
         rows = bpm_x + bpm_y
         cols = list(cor_list)
-
-        cor_list_exist = [item in self.df.columns for item in cor_list]
-        bpm_list_exist = [item in self.df.index for item in rows]
+        cor_list_exist = np.array([item in self.df.columns for item in cor_list])
+        bpm_list_exist = np.array([item in self.df.index for item in rows])
 
         if all(cor_list_exist) and all(bpm_list_exist):
             df_slice = self.df.loc[rows, cols]
-            return df_slice.values
+            return df_slice
         else:
             print("correctors are not in the RM")
-            print(np.array(cor_list)[cor_list_exist])
+            print(np.array(cor_list)[~cor_list_exist])
             print()
             print("BPMs are not in the RM")
-            print(np.array(rows)[bpm_list_exist])
+            print(np.array(rows)[~bpm_list_exist])
+            return None
+
+    def extract(self, cor_list, bpm_list):
+        df_slice = self.extract_df_slice(cor_list, bpm_list)
+        return df_slice.values
 
     def retrieve_from_scan(self, df_scan):
         from sklearn.linear_model import LinearRegression
@@ -686,10 +688,10 @@ class ResponseMatrix:
         y = df_scan.loc[:, bpm_names_xy].values
 
         reg = LinearRegression().fit(x, y)
-        x_test = np.eye(np.shape(x)[1])
-        rm = reg.predict(x_test)
+        #x_test = np.eye(np.shape(x)[1])
+        rm = reg.coef_
         #df_rm = pd.DataFrame(rm.T, columns=self.cor_names, index=bpm_x+bpm_y)
-        self.df = self.data2df(matrix=rm.T, bpm_names=self.bpm_names, cor_names=self.cor_names)
+        self.df = self.data2df(matrix=rm, bpm_names=self.bpm_names, cor_names=self.cor_names)
         return self.df
 
     def clean_rm(self, coupling=True):
@@ -742,17 +744,15 @@ class ResponseMatrix:
 
     def dump(self, filename):
         df = self.data2df(matrix=self.matrix, bpm_names=self.bpm_names, cor_names=self.cor_names)
-        #directory = os.path.dirname(filename)
-        #if not os.path.exists(directory):
-        #    os.makedirs(directory)
+        directory = os.path.dirname(filename)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
         df.to_pickle(filename)
-
 
     def load(self, filename):
         self.df = pd.read_pickle(filename)
         self.df2data()
         return 1
-
 
     def compare(self, rmatrix, absolut=0.001, relative=0.1):
         cors1 = np.array(self.cor_names)

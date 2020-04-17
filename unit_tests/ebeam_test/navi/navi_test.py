@@ -12,9 +12,6 @@ from unit_tests.params import *
 from navi_conf import *
 
 
-
-
-
 def test_generate_parray(lattice, p_array, parameter=None, update_ref_values=False):
     """ func generate_parray testing """
 

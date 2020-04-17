@@ -436,10 +436,11 @@ if __name__ == '__main__':
     
     """
     # example of Elegant - Ocelot convertion
+    from ocelot.adaptors.elegant_lattice_converter import *
     SC = ElegantLatticeConverter()
     read_cell = SC.elegant2ocelot('elbe.lte')
     lattice = MagneticLattice(read_cell)
-    write_lattice(lattice, remove_rep_drifts=False)
+    write_lattice(lattice, file_name="lattice.py", remove_rep_drifts=False)
     """
     
     """

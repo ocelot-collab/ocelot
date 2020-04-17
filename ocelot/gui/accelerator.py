@@ -158,8 +158,9 @@ def plot_lattice(lat, axis, alpha=1.0, params={'kmax':2.0, 'ang_max':0.5e-2}, s_
     #axis.set_xticks([])
     #axis.set_yticks([])
 
-# Tomin Sergey functions
-
+"""
+Tomin Sergey functions
+"""
 
 def elem_cord(lat):
     quad = np.array([[0,0]])
@@ -290,10 +291,11 @@ dict_plot = {Quadrupole: {"scale": 0.7, "color": "r",            "edgecolor": "r
              TDCavity:   {"scale": 0.7, "color": "magenta",      "edgecolor": "g",          "label": "tds"},
              UnknownElement:{"scale": 0.7, "color": "g",         "edgecolor": "g",          "label": "unk"},
              XYQuadrupole: {"scale": 0.7, "color": "r",          "edgecolor": "r",          "label": "xyquad"},
+             Aperture:   {"scale": 0.7, "color": "g",            "edgecolor": "g",          "label": "ap"},
              }
 
 
-def new_plot_elems(fig, ax, lat, s_point=0, nturns=1, y_lim=None, y_scale=1, legend=True, font_size=18, excld_legend=None):
+def plot_elems(fig, ax, lat, s_point=0, nturns=1, y_lim=None, y_scale=1, legend=True, font_size=18, excld_legend=None):
     legend_font_size = font_size
 
     if excld_legend is None:
@@ -358,10 +360,16 @@ def new_plot_elems(fig, ax, lat, s_point=0, nturns=1, y_lim=None, y_scale=1, leg
         if l == 0:
             l = 0.03
         #type = elem.type
-        scale = dict_copy[elem.__class__]["scale"]
-        color = dict_copy[elem.__class__]["color"]
-        label = dict_copy[elem.__class__]["label"]
-        ecolor = dict_copy[elem.__class__]["edgecolor"]
+        if elem.__class__ in dict_copy:
+            scale = dict_copy[elem.__class__]["scale"]
+            color = dict_copy[elem.__class__]["color"]
+            label = dict_copy[elem.__class__]["label"]
+            ecolor = dict_copy[elem.__class__]["edgecolor"]
+        else:
+            scale = dict_copy[UnknownElement]["scale"]
+            color = dict_copy[UnknownElement]["color"]
+            label = dict_copy[UnknownElement]["label"]
+            ecolor = dict_copy[UnknownElement]["edgecolor"]
         ampl = 1
         s_coord = np.array([L + elem.l/2. - l/2., L + elem.l/2. - l/2., L + elem.l/2. +l/2., L + elem.l/2. +l/2., L + elem.l/2.- l/2.]) + s_point
 
@@ -461,11 +469,8 @@ def plot_disp(ax, tws, top_plot, font_size):
     Fmin = []
     Fmax = []
     for elem in top_plot:
-        #print(elem, tws.__dict__[elem] )
         Ftop = [p.__dict__[elem] for p in tws]
-        #for f in Ftop:
-        #    print(f)
-        #print (max(Ftop))
+
         Fmin.append(min(Ftop))
         Fmax.append(max(Ftop))
         greek = ""
@@ -490,16 +495,12 @@ def plot_disp(ax, tws, top_plot, font_size):
     yticks = ax.get_yticks()
     yticks = yticks[2::2]
     ax.set_yticks(yticks)
-    #for i, label in enumerate(ax.get_yticklabels()):
-    #    if i == 0 or i == 1:
-    #        label.set_visible(False)
+
     ax.set_ylabel(top_ylabel, fontsize=font_size)
     ax.tick_params(axis='both', labelsize=font_size)
-    #ax.plot(S, Dx,'black', lw = 2, label=lable)
+
     leg2 = ax.legend(loc='upper right', shadow=False, fancybox=True, prop=font_manager.FontProperties(size=font_size))
     leg2.get_frame().set_alpha(0.2)
-
-
 
 
 def plot_betas(ax, S, beta_x, beta_y, font_size):
@@ -562,8 +563,7 @@ def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=Tr
     plot_disp(ax_top,tws, top_plot, font_size)
 
     plot_betas(ax_b, S, beta_x, beta_y, font_size)
-    #plot_elems(ax_el, lat, s_point = S[0], legend = legend, y_scale=0.8) # plot elements
-    new_plot_elems(fig, ax_el, lat, s_point=S[0], legend=legend, y_scale=0.8, font_size=font_size, excld_legend=excld_legend)
+    plot_elems(fig, ax_el, lat, s_point=S[0], legend=legend, y_scale=0.8, font_size=font_size, excld_legend=excld_legend)
 
 
 def plot_opt_func_reduced(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=False, font_size=18):
@@ -620,7 +620,7 @@ def plot_opt_func_reduced(lat, tws, top_plot=["Dx"], legend=True, fig_name=None,
     leg.get_frame().set_alpha(0.2)
 
     plot_betas(ax_b, S, beta_x, beta_y, font_size)
-    new_plot_elems(fig, ax_el, lat, s_point=S[0], legend=legend, y_scale=0.8)
+    plot_elems(fig, ax_el, lat, s_point=S[0], legend=legend, y_scale=0.8)
 
 
 def plot_xy(ax, S, X, Y, font_size):
@@ -631,7 +631,7 @@ def plot_xy(ax, S, X, Y, font_size):
     leg.get_frame().set_alpha(0.5)
 
 
-def plot_API(lat, legend=True, fig_name=1, grid=True, font_size=12):
+def plot_API(lat, legend=True, fig_name=1, grid=True, font_size=12, excld_legend=None):
     """
     Function creates a picture with lattice on the bottom part of the picture and top part of the picture can be
     plot arbitrary lines.
@@ -664,21 +664,15 @@ def plot_API(lat, legend=True, fig_name=1, grid=True, font_size=12):
     ax_xy.grid(grid)
     ax_el.set_yticks([])
     ax_el.grid(grid)
-    #plt.xlim(S[0], S[-1])
 
     ax_xy.tick_params(axis='both', labelsize=font_size)
-    # leg = ax_xy.legend(loc='upper left', shadow=False, fancybox=True, prop=font_manager.FontProperties(size=font_size))
-    # leg.get_frame().set_alpha(0.2)
 
     fig.subplots_adjust(hspace=0)
 
-    #plot_xy(ax_xy, S, X, Y, font_size)
-
-    #plot_elems(ax_el, lat, nturns = 1, legend = True) # plot elements
-    #new_plot_elems(fig, ax_el, lat, nturns = 1, legend = legend)
-    new_plot_elems(fig, ax_el, lat, legend=legend, y_scale=0.8, font_size=font_size)
+    plot_elems(fig, ax_el, lat, legend=legend, y_scale=0.8, font_size=font_size, excld_legend=excld_legend)
 
     return fig, ax_xy
+
 
 def compare_betas(lat, tws1, tws2, prefix1="beam1", prefix2="beam2", legend=True, fig_name=None, grid=True, font_size=18):
     """
@@ -744,7 +738,7 @@ def compare_betas(lat, tws1, tws2, prefix1="beam1", prefix2="beam2", legend=True
     leg = ax_b.legend(shadow=False, fancybox=True, prop=font_manager.FontProperties(size=font_size))
     leg.get_frame().set_alpha(0.2)
 
-    new_plot_elems(fig, ax_el, lat, s_point=s1[0], legend=legend, y_scale=0.8)
+    plot_elems(fig, ax_el, lat, s_point=s1[0], legend=legend, y_scale=0.8)
 
 
 def resonance(Qx, Qy, order = 5):
@@ -783,24 +777,13 @@ def resonance(Qx, Qy, order = 5):
                 Order.append(order)
     return X,Y,Order,params
 
+
 def plot_resonance_diag(ax, Qx, Qy, order):
     X,Y,Order,params = resonance(Qx, Qy, order)
     indsort = np.argsort(Order)
-    #print Order
-    #print len(indsort), len(X)
+
     X = np.array(X)
-    #print X[indsort]
-    #fig = plt.figure()
-    #ax1 = fig.add_subplot(111)
-    """
-        def onpick3(event):
-        ind = event.ind
-        print 'onpick3 scatter:', ind #, np.take(x, ind), np.take(y, ind)
-        
-        ax1.plot(X[:], Y[:], picker=True)
-        plt.xlim(0,1)
-        plt.ylim(0,1)
-        """
+
     for i, order in enumerate(Order):
         if order == 1:
             color = "k"
@@ -817,39 +800,31 @@ def plot_resonance_diag(ax, Qx, Qy, order):
         else:# order == 5:
             color = "c"
             lw = 0.3
-        #print array(X[i])+Qx
-        #print array([i])+Qy
+
         plt.plot(np.array(X[i])+Qx, np.array(Y[i])+Qy, color, lw = lw, picker=True)
         plt.xlim(Qx,Qx+1)
         plt.ylim(Qy,Qy+1)
-        #plt.xticks(x, labels, rotation='vertical')
 
 
 def show_da(out_da, x_array, y_array, title=""):
-    #print "time execution = ", time() - start , " s"
     nx = len(x_array)
     ny = len(y_array)
-    #print(nx, ny, len(out_da))
     out_da = out_da.reshape(ny,nx)
     xmin, xmax, ymin, ymax = np.min(x_array), np.max(x_array), np.min(y_array), np.max(y_array)
-    #plt.subplot(111, axisbg='darkslategray')
     extent = xmin, xmax, ymin, ymax
-    #print extent
-    #plt.savetxt("da.txt", da)
+
     plt.figure(figsize=(10, 7))
     fig1 = plt.contour(out_da, linewidths=2,extent = extent)#, colors = 'r')
-    #fig1 = plt.contourf(out_da, 20,cmap=plt.cm.rainbow,extent = extent)#, colors = 'r')
-    #plt.axis_bgcolor("#bdb76b")
+
     plt.grid(True)
     plt.title(title)
     plt.xlabel("X, m")
     plt.ylabel("Y, m")
     cb = plt.colorbar()
     cb.set_label('Nturns')
-    #cb.ax.set_yticklabels(map(str, linspace(min(out_da), max(out_da), 5) ))
 
-    #plt.savefig('da_error_'+str(int(np.random.rand()*100))+'.png')
     plt.show()
+
 
 def show_mu(contour_da, mux, muy, x_array, y_array, zones = None ):
     from matplotlib import pyplot as plt
@@ -865,8 +840,7 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones = None ):
     extent = xmin, xmax, ymin, ymax
 
     my_cmap = plt.cm.Paired
-    #my_cmap.set_under('w')
-    #norm = mlb.colors.Normalize(vmin=-0.005, vmax=max(mux))
+
     fig1 = plt.contour(contour_da, 1,extent = extent, linewidths=2,colors='k')#, colors = 'r')
     fig1 = plt.contourf(mux,40, cmap=my_cmap, extent = extent)#, colors = 'r')
     cb = plt.colorbar(cmap=my_cmap)
@@ -879,7 +853,6 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones = None ):
         plt.plot(3*x_zone*np.cos(t), 3*y_zone*np.sin(t), "r", lw = 2)
         plt.plot(4*x_zone*np.cos(t), 4*y_zone*np.sin(t), "y", lw = 2)
     plt.grid(True)
-    #plt.figure(figsize=(10, 7))
     plt.xlabel("X, m")
     plt.ylabel("Y, m")
     cb.set_label('Qx')
@@ -894,8 +867,7 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones = None ):
         plt.plot(2*x_zone*np.cos(t), 2*y_zone*np.sin(t), "b", lw = 2)
         plt.plot(3*x_zone*np.cos(t), 3*y_zone*np.sin(t), "r", lw = 2)
         plt.plot(4*x_zone*np.cos(t), 4*y_zone*np.sin(t), "y", lw = 2)
-    #x = np.linspace(-, 0.01, 0.0001)
-    #plt.plot()
+
     cb = plt.colorbar(cmap=my_cmap)
     fig1 = plt.contourf(muy,10, levels=[-1,-.0001], colors='w',extent = extent)
     plt.xlabel("X, m")
@@ -929,14 +901,15 @@ def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinea
     :return:
     """
 
-    if ax == None:
+    if ax is None:
         fig = plt.figure(nfig, figsize=figsize)
         ax = plt.subplot(111)
-    if title != None: plt.title(title)
+    if title is not None:
+        plt.title(title)
     my_rainbow = deepcopy(plt.get_cmap('rainbow'))
     my_rainbow.set_under('w')
 
-    x_min=np.min(x)
+    x_min = np.min(x)
     x_max = np.max(x)
     y_min = np.min(y)
     y_max = np.max(y)
@@ -953,8 +926,8 @@ def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinea
 
     ax.imshow(H, interpolation=interpolation, aspect='auto', origin='low',
                extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], vmin=vmin, cmap=my_rainbow)
-    if xlabel != None: ax.set_xlabel(xlabel)
-    if ylabel != None: ax.set_ylabel(ylabel)
+    if xlabel is not None: ax.set_xlabel(xlabel)
+    if ylabel is not None: ax.set_ylabel(ylabel)
     ax.grid(grid)
 
     plt.setp(ax.get_xticklabels(), visible=show_xtick_label)
@@ -964,8 +937,13 @@ from ocelot.cpbd.beam import global_slice_analysis
 
 
 def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, nbins_y=200,
-                    interpolation="bilinear", inverse_tau=False,
-                    show_moments=False, nfig=40, title=None, figsize=None, grid=True, filename=None, headtail=True, filter_base=2, filter_iter=2):
+                interpolation="bilinear", inverse_tau=False,
+                show_moments=False, nfig=40,
+                title=None, figsize=None, grid=True,
+                filename=None, headtail=True,
+                filter_base=2, filter_iter=2,
+                tau_units="mm"
+                ):
     """
     Shows e-beam slice parameters (current, emittances, energy spread)
     and beam distributions (dE/(p0 c), X, Y) against long. coordinate (S)
@@ -985,23 +963,35 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     :param figsize: None or e.g. (8, 6)
     :param grid: True, show grid
     :param filename: None or str,  filename to save picture in the file
+    :param headtail: True, shows where is the beam head is.
     :param filter_base: support of rectangle filter is 2*p+1
     :param filter_iter: the number of the filter iterations
     :return:
     """
+    if tau_units == "m":
+        tau_factor = 1  # m
+        tau_label = "s [mm]"
+    elif tau_units == "um":
+        tau_factor = 1e6  # um
+        tau_label = r"s [$\mu$m]"
+    else:
+        tau_factor = 1e3  # mm
+        tau_label = "s [mm]"
+
+
     p_array_copy = deepcopy(p_array)
     if inverse_tau:
         p_array_copy.tau()[:] *= -1
     slice_params = global_slice_analysis(p_array_copy, nparts_in_slice, smooth_param, filter_base, filter_iter)
 
     fig = plt.figure(nfig, figsize=figsize)
-    if title != None:
+    if title is not None:
         fig.suptitle(title)
     ax_sp = plt.subplot(325)
     plt.title("Energy spread")
-    plt.plot(slice_params.s * 1e3, slice_params.se*1e-3, "b")
+    plt.plot(slice_params.s * tau_factor, slice_params.se*1e-3, "b")
     #plt.legend()
-    plt.xlabel("s [mm]")
+    plt.xlabel(tau_label)
     plt.ylabel("$\sigma_E$ [keV]")
     plt.grid(grid)
 
@@ -1009,11 +999,11 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     plt.title("Emittances")
     emitxn_mm_mrad = np.round(slice_params.emitxn*1e6, 2)
     emityn_mm_mrad = np.round(slice_params.emityn*1e6, 2)
-    plt.plot(slice_params.s * 1e3, slice_params.ex, "r", label=r"$\varepsilon_x^{proj} = $" + str(emitxn_mm_mrad))
-    plt.plot(slice_params.s * 1e3, slice_params.ey, "b", label=r"$\varepsilon_y^{proj} = $" + str(emityn_mm_mrad))
+    plt.plot(slice_params.s * tau_factor, slice_params.ex, "r", label=r"$\varepsilon_x^{proj} = $" + str(emitxn_mm_mrad))
+    plt.plot(slice_params.s * tau_factor, slice_params.ey, "b", label=r"$\varepsilon_y^{proj} = $" + str(emityn_mm_mrad))
     plt.legend()
     plt.setp(ax_em.get_xticklabels(), visible=False)
-    plt.ylabel(r"$\varepsilon_{x,y}$ [$\mu m$]")
+    plt.ylabel(r"$\varepsilon_{x,y}$ [$\mu m \cdot rad$]")
     plt.grid(grid)
 
     ax_c = plt.subplot(321, sharex=ax_sp)
@@ -1028,7 +1018,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
         label = arrow + " head"
         location = "upper left"
 
-    plt.plot(slice_params.s * 1e3, slice_params.I, "b")
+    plt.plot(slice_params.s * tau_factor, slice_params.I, "b")
     # label = r"$I_{max}=$" + str(np.round(np.max(slice_params.I), 1))
     if headtail:
         leg = ax_c.legend([label], handlelength=0, handletextpad=0, fancybox=True, loc=location)
@@ -1040,27 +1030,27 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
 
     ax_ys = plt.subplot(326, sharex=ax_sp)
 
-    show_density(p_array_copy.tau() * 1e3, p_array_copy.y() * 1e3, ax=ax_ys, nbins_x=nbins_x, nbins_y=nbins_y,
-                 interpolation=interpolation, xlabel='s [mm]', ylabel='y [mm]', nfig=50,
+    show_density(p_array_copy.tau() * tau_factor, p_array_copy.y() * 1e3, ax=ax_ys, nbins_x=nbins_x, nbins_y=nbins_y,
+                 interpolation=interpolation, xlabel=tau_label, ylabel='y [mm]', nfig=50,
                  title="Side view", figsize=None, grid=grid)
     if show_moments:
-        plt.plot(slice_params.s * 1e3, slice_params.my * 1e3, "k", lw=2)
-        plt.plot(slice_params.s * 1e3, (slice_params.my + slice_params.sig_y) * 1e3, "w", lw=1)
-        plt.plot(slice_params.s * 1e3, (slice_params.my - slice_params.sig_y) * 1e3, "w", lw=1)
+        plt.plot(slice_params.s * tau_factor, slice_params.my * 1e3, "k", lw=2)
+        plt.plot(slice_params.s * tau_factor, (slice_params.my + slice_params.sig_y) * 1e3, "w", lw=1)
+        plt.plot(slice_params.s * tau_factor, (slice_params.my - slice_params.sig_y) * 1e3, "w", lw=1)
 
     ax_xs = plt.subplot(324, sharex=ax_sp)
 
-    show_density(p_array_copy.tau() * 1e3, p_array_copy.x() * 1e3, ax=ax_xs, nbins_x=nbins_x, nbins_y=nbins_y,
+    show_density(p_array_copy.tau() * tau_factor, p_array_copy.x() * 1e3, ax=ax_xs, nbins_x=nbins_x, nbins_y=nbins_y,
                  interpolation=interpolation, ylabel='x [mm]',
                  title="Top view", grid=grid, show_xtick_label=False)
     if show_moments:
-        plt.plot(slice_params.s * 1e3, slice_params.mx * 1e3, "k", lw=2)
-        plt.plot(slice_params.s * 1e3, (slice_params.mx + slice_params.sig_x) * 1e3, "w", lw=1)
-        plt.plot(slice_params.s * 1e3, (slice_params.mx - slice_params.sig_x) * 1e3, "w", lw=1)
+        plt.plot(slice_params.s * tau_factor, slice_params.mx * 1e3, "k", lw=2)
+        plt.plot(slice_params.s * tau_factor, (slice_params.mx + slice_params.sig_x) * 1e3, "w", lw=1)
+        plt.plot(slice_params.s * tau_factor, (slice_params.mx - slice_params.sig_x) * 1e3, "w", lw=1)
 
     ax_ps = plt.subplot(322, sharex=ax_sp)
 
-    show_density(p_array_copy.tau() * 1e3, p_array_copy.p() * 1e2, ax=ax_ps, nbins_x=nbins_x, nbins_y=nbins_y,
+    show_density(p_array_copy.tau() * tau_factor, p_array_copy.p() * 1e2, ax=ax_ps, nbins_x=nbins_x, nbins_y=nbins_y,
                  interpolation=interpolation, ylabel='$\delta_E$ [%]',
                  title="Longitudinal phase space", grid=grid, show_xtick_label=False)
 
@@ -1409,6 +1399,7 @@ def show_e_beam_reduced(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_
 
     if filename is not None:
         plt.savefig(filename)
+
 
 def beam_jointplot(p_array, show_plane="x", nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, nbins_y=200,
                    interpolation="bilinear", inverse_tau=True, show_head=True,

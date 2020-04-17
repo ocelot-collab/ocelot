@@ -145,6 +145,7 @@ def peaks(x, y, n=0):
     """
 
     """
+
     maxs = {}
 
     if len((np.where(y == y.max()))[0]) == 1:
@@ -156,17 +157,18 @@ def peaks(x, y, n=0):
             if bool((y[i-1] - y[i-2]) > 0 and (y[i] - y[i-1]) == 0 and (y[i+1] - y[i]) < 0):
                 maxs[y[i]] = x[i]
 
-    vals  = sorted(maxs.keys())
+    vals = sorted(maxs.keys())
     f1 = []
     f2 = []
     for v in reversed(vals):
         f1.append(maxs[v])
         f2.append(v)
             
-    if n>0:
+    if n > 0:
         return np.array(f1[0:n]), np.array(f2[0:n])
     else:
         return np.array(f1), np.array(f2)
+
 
 def gs_search(f, bracket, tol=1.e-6, nmax=50):
     '''

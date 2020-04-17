@@ -1075,7 +1075,8 @@ def subfig_rad_size(ax_size_t, out, legend):
     y_size = out.h5['Field/ysize'][:]
     r_size = np.sqrt(x_size ** 2 + y_size ** 2)
 
-    if out.nSlices == 1:
+    # if out.nSlices == 1:
+    if out.tdp == 0:
         ax_size_t.plot(out.z, r_size * 2 * 1e6, 'b-', linewidth=1.5)
         #        ax_size_t.plot([np.amin(out.z), np.amax(out.z)], [out.leng * 1e6, out.leng * 1e6], 'b-', linewidth=1.0)
         ax_size_t.set_ylabel('transverse $[\mu m]$')
@@ -1100,7 +1101,7 @@ def subfig_rad_size(ax_size_t, out, legend):
     ax_size_t.grid(True)
     plt.yticks(plt.yticks()[0][0:-1])
 
-    if out.nSlices > 1:
+    if out.tdp == 1:
         ax_size_s = ax_size_t.twinx()
         size_long_fwhm = np.zeros_like(out.z)
         size_long_std = np.zeros_like(out.z)

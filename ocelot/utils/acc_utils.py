@@ -148,12 +148,13 @@ def rf2beam(v1, phi1, vh, phih, n=3, freq=1.3e9, E0=0.00675, zeta1=0., zeta2=0.,
     """
     Function calculates beam parameters: the final beam energy, chirp, curvature, skewness,
     from the RF parameters: voltages and phases.
+    Note: in EuXFEL case, L1: E0 = 130 MeV, to get correct Sum Voltage for L1/L2, E1' = E1 - E0
 
     :param v1: voltage [GeV] of the first harmonic cavity
     :param phi1: phase [deg] of the first harmonic cavity
     :param vh: voltage [GeV] of the high harmonic cavity
     :param phih: phase [deg] of the high harmonic cavity
-    :param n: 3, number of harmonic of the high harmonic cavity
+    :param n: 3, number of harmonic of the high harmonic cavity. If n = 0 the high harmonic cavity does not exist
     :param freq: frequency [Hz] of the first harmonic cavity
     :param E0: initial beam energy [GeV] (from the gun)
     :param zeta1: initial beam chirp (from the gun)
@@ -162,21 +163,31 @@ def rf2beam(v1, phi1, vh, phih, n=3, freq=1.3e9, E0=0.00675, zeta1=0., zeta2=0.,
     :return: E1, chirp, curvature, skewness
     """
     k = 2 * np.pi * freq / speed_of_light
+    deg2rad = np.pi / 180
 
     M = np.array([[1, 0, 1, 0],
                   [0, -k, 0, -(n * k)],
                   [-k ** 2, 0, -(n * k) ** 2, 0],
                   [0, k ** 3, 0, (n * k) ** 3]])
 
-    deg2rad = np.pi/180
-
     V = np.array([v1 * np.cos(phi1 * deg2rad),
                   v1 * np.sin(phi1 * deg2rad),
                   vh * np.cos(phih * deg2rad),
                   vh * np.sin(phih * deg2rad)]).T
+
+    if n == 0:
+        M = np.array([[1, 0],
+                      [0, -k]])
+
+        V = np.array([v1 * np.cos(phi1 * deg2rad),
+                      v1 * np.sin(phi1 * deg2rad)]).T
     R = np.dot(M, V)
     E1 = E0 + R[0]
     chirp = (R[1] + E0 * zeta1) / E1
+
+    if n == 0:
+        return E1, chirp, 0, 0
+
     curvature = (R[2] + E0 * zeta2 / 2) / E1
     skewness = (R[3] + E0 * zeta3 / 6) / E1
 
@@ -192,7 +203,7 @@ def beam2rf(E1, chirp, curvature, skewness, n, freq, E0=0.00675, zeta1=0., zeta2
     :param chirp: the beam chirp
     :param curvature: the beam curvature
     :param skewness: the beam skewness
-    :param n: 3, number of harmonic of the high harmonic cavity
+    :param n: 3, number of harmonic of the high harmonic cavity.  If n = 0 the high harmonic cavity does not exist.
     :param freq: frequency [Hz] of the first harmonic cavity
     :param E0: initial beam energy [GeV] (from the gun)
     :param zeta1: initial beam chirp (from the gun)
@@ -208,14 +219,52 @@ def beam2rf(E1, chirp, curvature, skewness, n, freq, E0=0.00675, zeta1=0., zeta2
                   [0, k ** 3, 0, (n * k) ** 3]])
 
     r = np.array([E1 - E0, chirp * E1 - E0 * zeta1, curvature * E1 - E0 * zeta2 / 2, skewness * E1 - E0 * zeta3 / 6])
+
+    if n == 0:
+        M = np.array([[1, 0],
+                      [0, -k]])
+        r = np.array(
+            [E1 - E0, chirp * E1 - E0 * zeta1])
     rf = np.dot(np.linalg.inv(M), r)
     X1 = rf[0]
     Y1 = rf[1]
-    X13 = rf[2]
-    Y13 = rf[3]
     rad2deg = 180 / np.pi
     v1 = np.sqrt(X1 ** 2 + Y1 ** 2)
     phi1 = (np.arctan(Y1 / X1) + np.pi / 2 * (1 - np.sign(X1))) * rad2deg
+
+    if n == 0:
+        return v1, phi1, 0, 0
+
+    X13 = rf[2]
+    Y13 = rf[3]
     vh = np.sqrt(X13 ** 2 + Y13 ** 2)
     phih = (np.arctan(Y13 / X13) + np.pi / 2 * (1 - np.sign(X13)) - 2 * np.pi) * rad2deg
     return v1, phi1, vh, phih
+
+
+def beam2rf_xfel_linac(sum_voltage, chirp, init_energy=0.13):
+    """
+    wrapped up function for EuXFEL linacs
+
+    :param sum_voltage: in control system [GeV]
+    :param chirp: in control system [GeV]
+    :param init_energy: for L1 it is 0.13 GeV, L2 = 0.7 GeV
+    :return: v1, phi1
+    """
+    v1, phi1, _, _ = beam2rf(sum_voltage + init_energy, chirp, curvature=0, skewness=0, n=0, freq=1.3e9,
+                             E0=init_energy, zeta1=0., zeta2=0., zeta3=0.)
+    return v1, phi1
+
+
+def rf2beam_xfel_linac(v, phi, init_energy=0.13):
+    """
+    wrapped up function for EuXFEL linacs
+
+    :param v:
+    :param phi:
+    :param init_energy: for L1 it is 0.13 GeV, L2 = 0.7 GeV
+    :return:
+    """
+    E1, chirp, _, _ = rf2beam(v, phi, vh=0, phih=0, n=0, freq=1.3e9, E0=init_energy, zeta1=0., zeta2=0., zeta3=0.)
+    sum_voltage = E1 - init_energy
+    return sum_voltage, chirp

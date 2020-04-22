@@ -147,8 +147,6 @@ class SectionTrack:
         self.physics_processes_array = []  # list of physics process
         self.method = MethodTM()
         self.method.global_method = SecondTM
-        self.translator = {SpaceCharge: "sc_flag", CSR: "csr_flag",
-                           Wake: "wake_flag", BeamTransform: "bt_flag", SmoothBeam: "smooth_flag"}
         self.sc_flag = True
         self.csr_flag = True
         self.wake_flag = True

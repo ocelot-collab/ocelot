@@ -71,7 +71,7 @@ _logger = logging.getLogger(__name__)
 #     return
 
 @if_plottable
-def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1, 1, 10, 1, 0, 0, 0, 0, 0, 10, 1),
+def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 0, 0, 5, 1, 0, 0, 0, 0, 0, 5, 1),
                       vartype_dfl=complex128, *args, **kwargs):
     debug = 1
     """
@@ -110,7 +110,7 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1
         savefig = 'png'
 
     if choice == 'all':
-        choice = (1, 1, 1, 1, 10, 1, 1, 1, 1, 1, 0, 10, 0)
+        choice = (1, 1, 0, 0, 5, 1, 1, 1, 1, 1, 1, 5, 0)
     elif choice == 'gen':
         choice = (1, 1, 1, 1, 10, 0, 0, 0, 0, 0, 0, 0, 0)
 
@@ -123,55 +123,79 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1
         handles = []
         for root, dirs, files in os.walk(handle):
             for name in files:
-                if name.endswith('out.h5'):
+                if name.endswith('h5'):
                     handles.append(os.path.join(root, name))
         _logger.info('\n  plotting all files in {}'.format(str(handle)))
     else:
         handles = [handle]
+    
+    # for handle in handles:
+        # try_filename_fld = handle.replace('.out.h5', '.fld.h5')
+        # if os.path.isfile(try_filename_fld):
+            # handles.append(try_filename_fld)
+        # try_filename_par = handle.replace('.out.h5', '.par.h5')
+        # if os.path.isfile(try_filename_par):
+            # handles.append(try_filename_par)
+    #TODO: check if there are filed with stripped .out.h5 and added .fld.h5
+    
+    if len(handles) > 1:
+        handles = sorted(handles)
+        handles = [h for h in handles if ".out." in h] + [h for h in handles if ".out." not in h] #plotting .out first
 
     for handle in handles:
 
         if os.path.isfile(str(handle)):
             _logger.info('plotting ' + str(handle))
-            try:
-                handle = read_gout4(handle)
-            except (IOError, ValueError):
+            if handle.endswith('out.h5'):
+                try:
+                    handle = read_gout4(handle)
+                except (IOError, ValueError):
+                    pass
+                
+            elif handle.endswith('fld.h5'):
+                try: 
+                    handle = read_dfl4(handle)
+                except (IOError, ValueError):
+                    pass
+                
+            elif handle.endswith('par.h5'):
+                try:            
+                    handle = read_dpa4(handle)
+                except (IOError, ValueError):
+                    pass
+            
+            else:
                 continue
-
+            
         if isinstance(handle, Genesis4Output):
             if choice[0]:
-                f0 = plot_gen4_out_e(handle, showfig=showfig, savefig=savefig, debug=debug)
+                f0 = plot_gen4_out_e(handle, showfig=showfig, savefig=savefig)
             if choice[1]:
-                f1 = plot_gen4_out_ph(handle, showfig=showfig, savefig=savefig, debug=debug)
+                f1 = plot_gen4_out_ph(handle, showfig=showfig, savefig=savefig)
             if choice[2]:
-                f2 = plot_gen4_out_z(handle, z=0, showfig=showfig, savefig=savefig, debug=debug)
+                f2 = plot_gen4_out_z(handle, z=0, showfig=showfig, savefig=savefig)
             if choice[3]:
-                f3 = plot_gen4_out_z(handle, z=np.inf, showfig=showfig, savefig=savefig, debug=debug)
-            if choice[11] != 0:
-                if choice[11] == -1:
-                    # try:
-                    W = wigner_out(handle, pad=2)
-                    plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug, downsample=2)
-                    # except:
-                    # _logger.warning('could not plot wigner')
+                f3 = plot_gen4_out_z(handle, z=np.inf, showfig=showfig, savefig=savefig)
+            if choice[4] != 0:
+                if choice[4] != []:
+                    z_arr = np.linspace(0, np.amax(handle.z), choice[4])
                 else:
-                    if choice[11] == 1:
-                        _logger.warning(
-                            'choice[11] in plot_gen_out_all defines interval of Wigner plotting. To plot at the end set to "-1"')
-                    # try:
-                    for z in np.arange(0, np.amax(handle.z), choice[11]):
-                        W = wigner_out(handle, z=z, pad=2)
-                        plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug, downsample=2)
-                    W = wigner_out(handle, z=np.inf, pad=2)
+                    z_arr = choice[4]
+                for z in z_arr:
+                    plot_gen4_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug, *args, **kwargs)
+            if choice[11] != 0:
+                if choice[11] != []:
+                    z_arr = np.linspace(0, np.amax(handle.z), choice[11])
+                else:
+                    z_arr = choice[11]
+                for z in z_arr:
+                    W = wigner_out(handle, z=z, pad=2)
                     plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug, downsample=2)
                     # except:
                     # _logger.warning('could not plot wigner')
             # if choice[4] != 0:
             # for z in np.arange(choice[4], np.amax(handle.z), choice[4]):
             # plot_gen4_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug)
-            if choice[4] != 0 and choice[4] != []:
-                for z in np.arange(choice[4], np.amax(handle.z), choice[4]):
-                    plot_gen4_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug, *args, **kwargs)
 
             if choice[12]:
                 pass
@@ -181,8 +205,10 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1
                 # except IOError:
                 # pass
 
-        if os.path.isfile(handle.filePath.replace('.out.h5', '.fld.h5')) and any(choice[5:8]):
-            dfl = read_dfl4(handle.filePath.replace('.out.h5', '.fld.h5'))
+        if isinstance(handle, RadiationField) and any(choice[5:8]):
+        # if os.path.isfile(handle.filePath.replace('.out.h5', '.fld.h5')) and any(choice[5:8]):
+            # dfl = read_dfl4(handle.filePath.replace('.out.h5', '.fld.h5'))
+            dfl = handle
             if dfl.Nz() == 0:
                 _logger.warning('empty dfl, skipping')
             else:
@@ -195,8 +221,10 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1
                 if choice[8]:
                     f8 = plot_dfl(dfl, domains='kf', auto_zoom=0, showfig=showfig, savefig=savefig, debug=debug)
 
-        if os.path.isfile(handle.filePath.replace('.out.h5', '.par.h5')) and (choice[9] or choice[10]):
-            dpa = read_dpa4(handle.filePath.replace('.out.h5', '.par.h5'))
+        if isinstance(handle, Genesis4ParticlesDump) and any(choice[9:10]):
+        # if os.path.isfile(handle.filePath.replace('.out.h5', '.par.h5')) and (choice[9] or choice[10]):
+            # dpa = read_dpa4(handle.filePath.replace('.out.h5', '.par.h5'))
+            dpa = handle
             if choice[9]:
                 try:
                     edist = dpa42edist(dpa, n_part=5e4, fill_gaps=1)
@@ -367,7 +395,7 @@ def plot_gen4_out_z(out, z=np.inf, params=['rad_power+el_current', 'el_energy+el
     if savefig != False:
         if savefig == True:
             savefig = 'png'
-        fig.savefig(out.filePath + '_z_' + str(z) + 'm.' + str(savefig), format=savefig)
+        fig.savefig(out.filePath + '_z_{:.2f}m.{}'.format(z,savefig), format=savefig)
 
     if showfig:
         plt.show()
@@ -888,14 +916,25 @@ def subfig_evo_el_energy(ax_energy, out, legend):
     z = out.h5['Lattice/zplot']
     el_energy_spread = out.h5['Beam/energyspread'][:]
 
-    ax_energy.plot(z, np.average(el_energy - el_energy_av, axis=1), 'b-', linewidth=1.5)
+    mean_energy = np.nanmean(el_energy - el_energy_av, axis=1)
+    ax_energy.plot(z, mean_energy, 'b-', linewidth=1.5)
     ax_energy.set_ylabel('<E> + ' + str(el_energy_av) + '[MeV]')
     ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
     ax_energy.grid(True)
 
+    #notnan_idx = np.isnan(el_energy_spread) == False
+    
+    I_weight = out.I / np.sum(out.I)
+    
+    
+    #mean_spread = np.average(el_energy_spread[notnan_idx], weights=out.I, axis=1)
+    
+    mean_spread = np.nansum(el_energy_spread * I_weight[np.newaxis, :], axis=1) * m_e_MeV
+    max_spread = np.nanmax(el_energy_spread, axis=1)* m_e_MeV
+    
     ax_spread = ax_energy.twinx()
-    ax_spread.plot(z, np.average(el_energy_spread * m_e_MeV, weights=out.I, axis=1), 'm--', out.z,
-                   np.amax(el_energy_spread * m_e_GeV * 1000, axis=1), 'r--', linewidth=1.5)
+    ax_spread.plot(z, mean_spread, 'm--', 
+                z, max_spread, 'r--', linewidth=1.5)
     ax_spread.set_ylabel(r'$\sigma_E$ [MeV]')
     ax_spread.grid(False)
     ax_spread.set_ylim(ymin=0)
@@ -916,14 +955,17 @@ def subfig_evo_el_bunching(ax_bunching, out, legend):
     z = out.h5['Lattice/zplot']
     b = out.h5['Beam/bunching']
 
-    ax_bunching.plot(z, np.average(b, weights=out.I, axis=1), 'k-', out.z, np.amax(b, axis=1), 'grey', linewidth=1.5)
+    
+    I_weight = out.I / np.sum(out.I)
+    mean_bunching = np.nansum(b * I_weight[np.newaxis, :], axis=1)
+    
+    ax_bunching.plot(z, mean_bunching, 'k-', out.z, np.nanmax(b, axis=1), 'grey', linewidth=1.5)
     # ax_bunching.plot(out.z, np.amax(out.bunching, axis=0), 'grey',linewidth=1.5) #only max
     ax_bunching.set_ylabel(r'Bunching')
     ax_bunching.set_ylim(ymin=0)
     # ax_bunching.set_ylim([0,0.8])
     ax_bunching.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_bunching.grid(True)
-
 
 @if_plottable
 def subfig_evo_rad_pow_en(ax_rad_pow, out, legend, log=1):

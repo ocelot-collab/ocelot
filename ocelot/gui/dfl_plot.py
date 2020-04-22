@@ -105,6 +105,8 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         domains = dfl_copy.domains()
     else:
         dfldomain_check(domains)
+    
+    _logger.info(ind_str + "domains={}".format(str(domains)))
 
     if 'k' in domains:
         far_field = True
@@ -131,14 +133,21 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         phase = True
         freq_domain = False
         z_lim = []
+        ncar_z = 1
+        leng_z = 1
     xlamds = dfl_copy.xlamds
-
+    
     # number of mesh points
     ncar_x = dfl_copy.Nx()
     leng_x = dfl_copy.Lx()  # transverse size of mesh [m]
     ncar_y = dfl_copy.Ny()
     leng_y = dfl_copy.Ly()
     E_pulse = dfl_copy.E()
+    
+    _logger.debug(ind_str + "xlamds = {:.2e}".format(xlamds))
+    _logger.debug(ind_str + "Nx = {}, Ny = {}, Nz = {}".format(ncar_x, ncar_y, ncar_z))
+    _logger.debug(ind_str + "Lx = {:.2e}, Ly = {:.2e}, Lz = {:.2e}".format(leng_x, leng_y, leng_z))
+    _logger.debug(ind_str + "E_pulse = {:.2e} J".format(E_pulse))
 
     if dfl_copy.Nz() != 1:
         if freq_domain:
@@ -761,7 +770,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
             save_path = W.filePath + '_wig.' + str(savefig)
             # fig.savefig(W.filePath + '_wig.' + str(savefig), format=savefig)
         else:
-            save_path = W.filePath + '_wig_' + str(W.z) + 'm.' + str(savefig)
+            save_path = W.filePath + '_wig_{:.2f}m.{}'.format(W.z, savefig)
             # fig.savefig(W.filePath + '_wig_' + str(W.z) + 'm.' + str(savefig), format=savefig)
         _logger.debug(ind_str + 'saving to {}'.format(save_path))
         fig.savefig(save_path, format=savefig)

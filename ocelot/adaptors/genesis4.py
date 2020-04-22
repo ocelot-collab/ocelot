@@ -526,6 +526,10 @@ def read_gout4(filePath):
         _logger.error(ind_str + 'no such file ' + filePath)
         raise
 
+    if not ('Global' and 'Lattice' in out.h5):
+        _logger.warning('Not a valid .out file')
+        
+
     vvv = [int(out.h5['Meta/Version/'+name][0]) for name in ['Major', 'Minor', 'Revision']]
     _logger.debug(ind_str + 'Genesis v{}.{}.{}'.format(*vvv))
 
@@ -992,30 +996,38 @@ def dpa42edist(dpa, n_part=None, fill_gaps=False):
         #    for ii in np.arange(nbins):
         #    pick_i = random.sample(range(npart_bin), n_part_bin[i])
             pick_i = random.sample(range(npart), n_part_slice[i])
-
-
+            _logger.log(5, "slice {} pick {} from {}".format(i, n_part_slice[i], npart))
+            #_logger.log(1, "  {}".format(str(pick_i)))
             # edist.g = np.append(edist.g, g[i, pick_i])
             # edist.xp = np.append(edist.xp, px[i, pick_i])
             # edist.yp = np.append(edist.yp, py[i, pick_i])
             # edist.x = np.append(edist.x, x[i, pick_i])  
             # edist.y = np.append(edist.y, y[i, pick_i])
             # edist.t = np.append(edist.t, t[i, pick_i])
+            _logger.log(5, "  shape before: {}".format(str(g.shape)))
+            _logger.log(5, "  picking g[{}, len({})]".format(i, len(pick_i)))
+            _logger.log(5, "  shape after: {}".format(str(np.shape(g[i, pick_i]))))
+            
+            
+            gi.extend(g[i, pick_i])
+            xpi.extend(px[i, pick_i])
+            ypi.extend(py[i, pick_i])
+            xi.extend(x[i, pick_i])
+            yi.extend(y[i, pick_i])
+            ti.extend(t[i, pick_i])
+            
+            _logger.log(5, "  shape after append: {}".format(str(len(gi))))
 
-            gi.append(g[i, pick_i])
-            xpi.append(px[i, pick_i])
-            ypi.append(py[i, pick_i])
-            xi.append(x[i, pick_i])
-            yi.append(y[i, pick_i])
-            ti.append(t[i, pick_i])
-
-        edist.g = np.array(gi).flatten()
-        edist.xp = np.array(xpi).flatten()
-        edist.yp = np.array(ypi).flatten()
-        edist.x = np.array(xi).flatten()
-        edist.y = np.array(yi).flatten()
-        edist.t = np.array(ti).flatten()
+        edist.g = np.array(gi)#.flatten()
+        edist.xp = np.array(xpi)#.flatten()
+        edist.yp = np.array(ypi)#.flatten()
+        edist.x = np.array(xi)#.flatten()
+        edist.y = np.array(yi)#.flatten()
+        edist.t = np.array(ti)#.flatten()
+        _logger.log(5, "  shape after flattening: {}".format(str(edist.g.shape)))
 
         if fill_gaps:
+            _logger.info(ind_str + 'randomly distributing particles in time between buckets')
             edist.t += np.random.randint(0, dpa.zsep, edist.t.size) * lslice / speed_of_light
 
 

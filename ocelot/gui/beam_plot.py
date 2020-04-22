@@ -264,7 +264,7 @@ def plot_estimator_power_evo(fel, fig=None, und_duty_factor=1, **kwargs):
     
     P=[]
     E=[]
-    z = np.linspace(0,fel.z_sat_min,20)
+    z = np.linspace(0,fel.z_sat_min,50)
     for zi in z:
         P.append(np.amax(fel.P(zi)))
         E.append(fel.E(zi))
@@ -287,7 +287,7 @@ def plot_estimator_energy_evo(fel, fig=None, und_duty_factor=1, **kwargs):
     ax = fig.gca()
     
     E=[]
-    z = np.linspace(0,fel.z_sat_min,20)
+    z = np.linspace(0,fel.z_sat_min,50)
     for zi in z:
         E.append(fel.E(zi))
         

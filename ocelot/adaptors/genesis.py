@@ -2648,7 +2648,7 @@ def write_edist_file(edist, filePath=None, debug=1):
     _logger.debug(ind_str + 'done in %.2f sec' % (time.time() - start_time))
 
 
-def edist2beam(edist, step=2e-7): #check
+def edist2beam(edist, step=2e-7): #TODO: move to cpbd
     '''
     reads GenesisElectronDist()
     returns BeamArray()
@@ -2728,7 +2728,7 @@ def edist2beam(edist, step=2e-7): #check
     BEAM
 '''
 
-def beam2edist(beam, npart=10000):
+def beam2edist(beam, npart=10000): #TODO: move to cpbd
     """
     Creates electron beam particle distribution with random (not shot-noise-accounted-for) particle distribution
     baased on Twiss parameters from beam

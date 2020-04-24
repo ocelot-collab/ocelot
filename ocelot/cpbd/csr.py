@@ -899,15 +899,13 @@ class CSR(PhysProc):
         gamma = p_array.E/m_e_GeV
         h = max(1., self.apply_step/self.traj_step)
 
+
         itr_ra = np.unique(-np.round(np.arange(-indx, -indx_prev, h))).astype(np.int)
 
-        nit = 0
-        n_iter = len(itr_ra)
-        #start = time.time()
-        K1 = self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma)
-        for nit in range(1, n_iter):
-            K1 += self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma=gamma)
-        K1 = K1/n_iter
+        K1 = 0
+        for it in itr_ra:
+            K1 += self.CSR_K1(it, self.csr_traj, Ndw, gamma=gamma)
+        K1 /= len(itr_ra)
 
 
         lam_K1 = csr_convolution(lam_ds, K1[::-1]) / st * delta_s

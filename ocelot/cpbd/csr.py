@@ -443,12 +443,11 @@ class K0_fin_anf:
         g2i = 1. / gamma ** 2
         b2 = 1. - g2i
         beta = np.sqrt(b2)
-        i1 = i - 1  # ignore points i1+1:i on linear path to observer
-        ind1 = i1 + 1
-        s = traj[0, 0:ind1] - traj[0, i]
-        n = np.array([traj[1, i] - traj[1, 0:ind1],
-                      traj[2, i] - traj[2, 0:ind1],
-                      traj[3, i] - traj[3, 0:ind1]])
+        
+        s = traj[0, 0:i] - traj[0, i]
+        n = np.array([traj[1, i] - traj[1, 0:i],
+                      traj[2, i] - traj[2, 0:i],
+                      traj[3, i] - traj[3, 0:i]])
         R = np.sqrt(np.sum(n ** 2, axis=0))
 
         w = s + beta * R
@@ -456,19 +455,19 @@ class K0_fin_anf:
 
         if len(j) > 0:
             j = j[-1]
-            w = w[j:ind1]
-            s = s[j:ind1]
+            w = w[j:i]
+            s = s[j:i]
         else:
             j = 0
-        R = R[j:ind1]
-        n0 = n[0, j:ind1] / R
-        n1 = n[1, j:ind1] / R
-        n2 = n[2, j:ind1] / R
+        R = R[j:i]
+        n0 = n[0, j:i] / R
+        n1 = n[1, j:i] / R
+        n2 = n[2, j:i] / R
 
         # kernel
-        t4 = traj[4, j:i1 + 1]
-        t5 = traj[5, j:i1 + 1]
-        t6 = traj[6, j:i1 + 1]
+        t4 = traj[4, j:i]
+        t5 = traj[5, j:i]
+        t6 = traj[6, j:i]
 
         x = n0 * t4 + n1 * t5 + n2 * t6
         K = ((beta * (x - n0 * traj[4, i] - n1 * traj[5, i] - n2 * traj[6, i]) -

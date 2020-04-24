@@ -1,5 +1,6 @@
 import time
 import os
+import sys
 import socket
 import copy
 
@@ -11,119 +12,610 @@ except ImportError:
     h5py_avail = False
 
 import numpy as np
+
 from ocelot import ParticleArray
 from ocelot.optics.wave import calc_ph_sp_dens, RadiationField
 from ocelot.common.globals import *
 from ocelot.adaptors.genesis import GenesisElectronDist #tmp
 from ocelot.common.ocelog import *
 from ocelot.utils.launcher import *
-from ocelot.cpbd.beam import BeamArray
-import os
+from ocelot.cpbd.beam import beam, BeamArray
+from ocelot.cpbd.elements import Element,  Drift, Quadrupole, Undulator
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+
 
 _logger = logging.getLogger(__name__)
 
-_inputGen4Template = "\
- $newrun \n\
- aw0   =  __AW0__ \n\
- xkx   =  __XKX__\n\
- \n"
+
+# MISSING ELEMENTs, MOTE TO cpbd
+class Chicane(Element):
+    """
+    chicane (implemented for Genesis4, not used by cpbd)
+    l - length of chicane in [m],
+    lb - length of an individual dipole [m],
+    ld - drift between the outer and inner dipoles [m],
+    delay - path length difference between the straight path and the actual trajectory [rad].
+    """
+
+    def __init__(self, l=0., lb=0., ld=0., delay=0., eid=None):
+        # Element.__init__(self, eid)
+        super(Chicane, self).__init__(eid=eid)
+        self.l = l
+        self.lb = lb
+        self.ld = ld
+        self.delay = delay
+
+class Phaseshifter(Element):
+    '''
+    phase chifter element (implemented for Genesis4, not used by cpbd)
+    l - length of phase shifter in [m]
+    phi = introduced phase shift in [rad] 
+    '''
+    def __init__(self, l=0., phi=0., eid=None):
+        # Element.__init__(self, eid)
+        super(Phaseshifter, self).__init__(eid=eid)
+        self.l = l
+        self.phi = phi
 
 
-class Namespace:
-        def __init__(self):
-            pass
 
+class Genesis4Simulation:
+    '''
+    Class for storing Genesis4 simulation parameters such as 
+    input file, 
+    settings for returning, plotting or cleaning output
+    '''
+    def __init__(self, ginp=None, exp_dir='', **kwargs):
+        if ginp is not None:
+            self.ginp = ginp
+        else:
+            self.ginp = Genesis4Input()
+
+        self.exp_dir = exp_dir #directory in which simulation will take place, i.e. input and output files will be written
+
+        # self.del_files = ('gout', 'fld', 'par')
+        
+        self.plot_output = kwargs.get('plot_output', True)
+        self.return_out = kwargs.get('return_out', True)
+        self.cleanup_afterwards = kwargs.get('cleanup_afterwards', False)
+
+        self.zstop = np.inf
+
+        self.launcher = get_genesis4_launcher()
+
+    @property
+    def root_name(self):
+        return self.ginp.setup.rootname
+
+    @root_name.setter
+    def root_name(self, value):
+        self.ginp.setup.rootname = value
+
+    def filepath(self, filename):
+        return os.path.join(self.exp_dir, filename)
+
+    def input_filepath(self):
+        return self.filepath(self.ginp.filename)
+
+    def root_path(self):
+        return self.filepath(self.root_name)
+
+    def create_exp_dir(self):
+        if not os.path.isdir(self.exp_dir):
+            os.makedirs(self.exp_dir)
+
+    def write_inp_file(self):
+        with open(self.input_filepath(), 'w') as file:
+            inp_string = str(self.ginp)
+            file.write(inp_string)
+
+    def write_lat_file(self):
+        write_gen4_lat(self.ginp.attachments.lat, filepath=self.filepath(self.ginp.setup.lattice),
+                       l=self.zstop)
+
+    def write_dfl_files(self):
+        """
+        Writes down dfl files for &importfield Genesis1.3-version4 name lists
+        :return:
+        """
+        for element in self.ginp.sequence:
+            if element.startswith('importfield'):
+                impfld = self.ginp.sequence[element]
+                if impfld._name_list_id in self.ginp.attachments.dfl:
+                    if impfld.file is not None:
+                        filename = impfld.file
+                    else:
+                        filename = impfld._name_list_id + 'dfl.h5'
+                        impfld.file = filename
+                    write_dfl4(self.ginp.attachments.dfl[impfld._name_list_id], filename)
+
+        # for name_list_id, dfl in self.ginp.attachments.dfl: #TODO: iterate over namespaces, not attachments. If there is importing namespace without attachments 
+            # if not isinstance(dfl, str):
+                # write_dfl4(dfl, self.ginp.sequence[name_list_id].file)
+
+
+    def write_dpa_files(self):
+        """
+        NOT IMPLEMENTED YET
+        Writes down dpa files for &importbeam Genesis1.3-version4 name lists
+        :return:
+        """
+        for element in self.ginp.sequence:
+            if element.startswith('importbeam'):
+                imppar = self.ginp.sequence[element]
+                if imppar._name_list_id in self.attachments.dpa:
+                    if imppar.file is not None:
+                        filename = imppar.file
+                    else:
+                        filename = imppar._name_list_id + 'par.h5'
+                        imppar.file = filename
+                    #write_dpa4(self.attachments.dpa[imppar._name_list_id], filename)
+
+
+    def write_all_files(self):
+        self.create_exp_dir()
+        self.write_inp_file()
+        self.write_lat_file()
+        self.write_dfl_files()
+        # TODO: write all attachments
+        pass
+
+    def prepare_launcher(self):
+        self.launcher.program = 'genesis4'
+        self.launcher.dir = self.exp_dir
+        self.launcher.argument = ' ' + self.ginp.filename
+        self.mpiParameters = '-np 8' #TODO: calculate and request minimum reasonable number of cores (to not ovewblow the window) S.S.
+        self.mpiParameters = ''
+
+        # TODO: implement on Launcher level
+        if sys.platform not in ["linux", "linux2"]:
+            _logger.error('Only linux platform supported for now for given launcher')
+
+        pass
+
+    def run(self, launcher=None):
+
+        self.prepare_launcher()
+        if launcher is not None:
+            self.launcher = launcher
+        self.clean_output()
+        self.write_all_files()
+
+        self.launcher.launch()
+
+        if self.return_out:
+            out = read_gout4(self.root_path() + '.out.h5')
+        else:
+            out = None
+
+        if self.cleanup_afterwards:
+            self.clean_output()
+
+        return out
+
+    def clean_output(self):
+        os.system('rm -r {}*'.format(self.root_path()))
 
 
 class Genesis4Input:
     '''
-    Genesis input files storage object
+    Ocelot container class to store Genesis4 input parameters
     '''
     def __init__(self):
+        self.sequence = {} #sequence of namespaces; each value starts with a supported namespace name, e.g. "field" and if needed is followed by unique suffix after pound symbol, like "field#2"
+        self.attachments = Genesis4Attachments()
+        # self.add_prefix_attributes = ['setup.lattice', 'setup.rootname', 'filename', 'write.field', 'write.beam']
+        self.filename = 'input.in'
 
-        self.setup = Namespace()
-        self.setup.rootname = ''
-        self.setup.lattice = ''
-        self.beamline = ''
-        self.gamma0 = 11350.3
+    def __str__(self):
+        str_out = '# autogenerated with Ocelot\n\n'  # https://github.com/ocelot-collab/ocelot\n\n
+        for name_list in self.sequence.values():
+            str_out += '&' + name_list._name_list_label + '\n'
+            str_out += str(name_list)
+            str_out += '&end\n\n'
+        return str_out
 
-        self.alter_setup = Namespace()
-        self.lattice = Namespace()
+    def make_sequence(self, gen4_name_lists_ids=None):
+        '''
+        returns simple sequence based on default genesis 4 namespace order.
+        will not work with advanced beamlines
+        '''
+        self.sequence = {}
 
-        self.exp_dir = None
-        self.run_dir = None
+        name_list_subclasses = {}
+        for name_list_subclass in Genesis4NameList.__subclasses__():
+            name_list_subclasses[name_list_subclass()._name_list_label] = name_list_subclass
 
-        self.template = "\
-        rootname=try_genesis_s2_field     \n\
-        lattice=lattice.lat     \n\
-        beamline=SASE3     \n\
-        lambda0=1.77120e-9     \n\
-        gamma0=16634.08     \n\
-        delz=0.017     \n\
-        shotnoise=1     \n\
-        &end     \n\
-             \n\
-        &time     \n\
-        slen=2e-6     \n\
-        sample=12     \n\
-        &end     \n\
-             \n\
-        #&field     \n\
-        #power=0     \n\
-        #dgrid=3e-4     \n\
-        #ngrid=111     \n\
-        #waist_size=30e-6     \n\
-        #&end     \n\
-             \n\
-        &profile_gauss     \n\
-        label=prof2     \n\
-        c0=3000     \n\
-        s0=0.4e-6     \n\
-        sig=1e-6     \n\
-        &end     \n\
-             \n\
-        &profile_polynom     \n\
-        label=prof_lin     \n\
-        c0=0.3e-6     \n\
-        c1=0.01     \n\
-        &end     \n\
-             \n\
-        &beam     \n\
-        current=2000     \n\
-        delgam=3.5     \n\
-        ex=0.5e-6     \n\
-        ey=0.5e-6     \n\
-        alphax = 1.33377002518     \n\
-        alphay = -0.787227424221     \n\
-        betax = 25     \n\
-        betay = 15     \n\
-        &end     \n\
-             \n\
-        &importfield     \n\
-        file=try_genesis_s1.fld.h5     \n\
-        &end     \n\
-             \n\
-        #&importbeam     \n\
-        #file=try_genesis_s1.par.h5     \n\
-        #charge = 34e-12     \n\
-        #&end     \n\
-             \n\
-        #&lattice     \n\
-        #zmatch=5     \n\
-        #&end     \n\
-             \n\
-        &track     \n\
-        zstop=50     \n\
-        &end     \n\
-             \n\
-        &write     \n\
-        field=try_genesis_s2_field     \n\
-        beam=try_genesis_s2_field     \n\
-        &end     \n\
-        \n"
+        for name_list_id in gen4_name_lists_ids:
+            if '#' in name_list_id:
+                temp, _ = name_list_id.split('#')
+            else:
+                temp = name_list_id
+            self.sequence[name_list_id] = name_list_subclasses[temp](name_list_id)
+        self.check_consistency()
 
-    def input(self):
-        return self.template
+    # def make_sequence_simple(self):
+    #     attrs = ['setup', 'lattice', 'time', 'importdistribution', 'importbeam', 'beam', 'importfield', 'field',
+    #              'track', 'write']
+    #     self.make_sequence(attrs)
+
+    @property
+    def setup(self):
+        for name_list in self.sequence.values():
+            if isinstance(name_list, Genesis4SetupNL):
+                return name_list
+
+    def check_consistency(self):
+        '''
+        checks if beam of field are not declared few times before tracking
+        '''
+        beam_counter = 0
+        field_counter = 0
+        for id, name_list in self.sequence.items():
+            if isinstance(name_list, (Genesis4BeamNL, Genesis4ImportBeamNL, Genesis4ImportDistributionNL)):
+                beam_counter += 1
+            if isinstance(name_list, (Genesis4FieldNL, Genesis4ImportFieldNL)):
+                field_counter += 1
+            if isinstance(name_list, (Genesis4TrackNL,)):
+                if beam_counter != 1:
+                    _logger.error('Genesis4Input.sequence contains more or less than one declaration of beam') #TODO: specify, 0 or >1
+                if field_counter != 1:
+                    _logger.error('Genesis4Input.sequence contains more or less than one declaration of field')
+                field_counter = 0
+                beam_counter = 0
+        # TODO: decide whether error raising is needed if co-exist e.g. importbeam and beam or importfield and field
+
+    # def add_prefixes(self, prefix_str):
+    #     def rsetattr(obj, attr, val):
+    #         pre, _, post = attr.rpartition('.')
+    #         return setattr(rgetattr(obj, pre) if pre else obj, post, val)
+    #
+    #     def rgetattr(obj, attr, *args):
+    #         def _getattr(obj, attr):
+    #             return getattr(obj, attr, *args)
+    #
+    #         return functools.reduce(_getattr, [obj] + attr.split('.'))
+    #
+    #     for attr in self.add_prefix_attributes:
+    #         try:
+    #             oldvalue = rgetattr(self, attr)
+    #             if oldvalue not in [None, '']:
+    #                 # print(rgetattr(self, attr))
+    #                 rsetattr(self, attr, prefix_str + oldvalue)
+    #                 # print(rgetattr(self, attr))
+    #         except:
+    #             # _logger.debug...
+    #             pass
+
+
+class Genesis4Attachments:
+    # TODO: think about possibility to attach and write several dfls, lattices, etc.
+    def __init__(self):
+        self.dfl = {} # e.g. {key1: fld1, key2: fld2} where key is "_name_list_id" of Genesis4ImportFieldNL file should be written as <Genesis4ImportFieldNL.file>.fld
+        self.dpa = {}  # e.g. {key1: par1, key2: par2} where key is "_name_list_id" of Genesis4ImportBeamNL file should be written as <Genesis4ImportBeamNL.file>.par
+        # self.beam = None
+        self.lat = {} # e.g. {key1: lat1, key2: lat2}, where key is the value of setup.lattice
+
+# def genesis4_input(input_sequence=tuple()):
+#    str_out = ''
+#    for name_list in input_sequence:
+#        str_out += '&' + name_list._name_list_label + '\n'
+#        str_out += str(name_list)
+#        str_out += '&end\n\n'
+#    return str_out
+
+# %%
+class Genesis4NameList(object):
+    '''
+    Parent object for Genesis 4 namelists
+    str(Genesis4NameList) yields the list text
+    attributes not starting with underscore "_" are considered Genesis4NameList variables
+    '''
+    # def attr_list(self):
+    #     output_list = dir(self)
+    #     for attr in dir(self):
+    #         if attr.startswith('_') or callable(getattr(self, attr)):
+    #             output_list.remove(attr)
+    #     return output_list
+
+    # def all_attrs_is_none(self):
+    #    for attr in self.attr_list():
+    #        if getattr(self, attr) is not None:
+    #            return False
+    #    return True
+
+    # def attr_list(self):
+    #     output_list = dir(self)
+    #     for attr in dir(self):
+    #         if attr.startswith('_') or callable(getattr(self, attr)):
+    #             output_list.remove(attr)
+    #     return output_list
+
+    def name_list_id_set(self, name_list_id=None):
+        self._name_list_id = name_list_id if name_list_id is not None else self._name_list_label
+
+    def __str__(self):
+        str_out = ''
+        for attr, value in self.__dict__.items():
+            if attr.startswith('_'):
+                continue
+            if value is True:
+                value = 'true'
+            elif value is False:
+                value = 'false'
+            if value is not None:
+                str_out += attr + ' = ' + str(value) + '\n'
+        return str_out
+
+
+class Genesis4SetupNL(Genesis4NameList):
+
+    def __init__(self,
+                 name_list_id=None):
+        # super().__init__()
+        self._name_list_label = 'setup'
+        self.name_list_id_set(name_list_id)
+        self.rootname = 'output' #name of all files generated by simulation
+        self.lattice = None
+        self.beamline = None
+        self.gamma0 = None
+        self.lambda0 = None
+        self.delz = None
+        self.seed = None
+        self.npart = None
+        self.nbins = None
+        self.one4one = None
+        self.shotnoise = None
+
+
+class Genesis4AlterSetupNL(Genesis4NameList):
+    def __init__(self, name_list_id=None):
+        # super().__init__()
+        self._name_list_label = 'alter_setup'
+        self.name_list_id_set(name_list_id)
+        self.rootname = None
+        self.beamline = None
+        self.delz = None
+        self.harmonic = None
+        self.subharmonic = None
+        self.resample = None
+
+
+class Genesis4LatticeNL(Genesis4NameList):
+    def __init__(self, name_list_id=None):
+        # super().__init__()
+        self._name_list_label = 'lattice'
+        self.name_list_id_set(name_list_id)
+        self.zmatch = None
+        self.element = None
+        self.field = None
+        self.value = None
+        self.instance = None
+        self.add = None
+
+
+class Genesis4TimeNL(Genesis4NameList):
+    def __init__(self, name_list_id=None):
+        # super().__init__()
+        self._name_list_label = 'time'
+        self.name_list_id_set(name_list_id)
+        self.s0 = None
+        self.slen = None
+        self.sample = None
+        self.time = None
+
+
+class Genesis4ProfileConstNL(Genesis4NameList):
+    def __init__(self, name_list_id=None):
+        # super().__init__()
+        self._name_list_label = 'profile_const'
+        self.name_list_id_set(name_list_id)
+        self.label = None
+        self.c0 = None
+
+
+class Genesis4ProfileGaussNL(Genesis4NameList):
+    def __init__(self, name_list_id=None):
+        # super().__init__()
+        self._name_list_label = 'profile_gauss'
+        self.name_list_id_set(name_list_id)
+        self.label = None
+        self.c0 = None
+        self.s0 = None
+        self.sig = None
+
+
+class Genesis4ProfileStepNL(Genesis4NameList):
+    def __init__(self, name_list_id=None):
+        # super().__init__()
+        self._name_list_label = 'profile_step'
+        self.name_list_id_set(name_list_id)
+        self.label = None
+        self.c0 = None
+        self.s_start = None
+        self.s_end = None
+
+
+class Genesis4ProfilePolynomNL(Genesis4NameList):
+    def __init__(self, name_list_id=None):
+        # super().__init__()
+        self._name_list_label = 'profile_polynom'
+        self.name_list_id_set(name_list_id)
+        self.label = None
+        self.c0 = None
+        self.c1 = None
+        self.c2 = None
+        self.c3 = None
+        self.c4 = None
+
+
+class Genesis4ProfileFileNL(Genesis4NameList):
+    def __init__(self, name_list_id=None):
+        # super().__init__()
+        self._name_list_label = 'profile_file'
+        self.name_list_id_set(name_list_id)
+        self.label = None
+        self.xdata = None
+        self.ydata = None
+        self.isTime = None
+        self.reverse = None
+
+
+class Genesis4BeamNL(Genesis4NameList):
+    def __init__(self, name_list_id=None):
+        # super().__init__()
+        self._name_list_label = 'beam'
+        self.name_list_id_set(name_list_id)
+        self.gamma = None
+        self.delgam = None
+        self.current = None
+        self.ex = None
+        self.ey = None
+        self.betax = None
+        self.betay = None
+        self.alphax = None
+        self.alphay = None
+        self.xcenter = None
+        self.ycenter = None
+        self.pxcenter = None
+        self.pycenter = None
+        self.bunch = None
+        self.bunchphase = None
+        self.emod = None
+        self.emodphase = None
+
+class Genesis4FieldNL(Genesis4NameList):
+    def __init__(self, name_list_id=None):
+        # super().__init__()
+        self._name_list_label = 'field'
+        self.name_list_id_set(name_list_id)
+        # setattr(self, 'lambda', None)
+        self.lambda_ = None  # must be lambda, but it is taken by Python for lambda-expressions
+        self.power = None
+        self.phase = None
+        self.waist_pos = None
+        self.waist_size = None
+        self.xcenter = None
+        self.ycenter = None
+        self.xangle = None
+        self.yangle = None
+        self.dgrid = None
+        self.ngrid = None
+        self.harm = None
+        self.nx = None
+        self.ny = None
+        self.accumulate = None
+
+    def __str__(self):
+        return super(Genesis4FieldNL, self).__str__().replace('lambda_', 'lambda')
+
+
+class Genesis4ImportDistributionNL(Genesis4NameList):
+    def __init__(self, name_list_id=None):
+        # super().__init__()
+        self._name_list_label = 'importdistribution'
+        self.name_list_id_set(name_list_id)
+        self.file = None
+        self.sdds = None
+        self.charge = None
+        self.slicewidth = None
+        self.output = None
+        self.center = None
+        self.gamma0 = None
+        self.x0 = None
+        self.y0 = None
+        self.px0 = None
+        self.py0 = None
+        self.match = None
+        self.betax = None
+        self.betay = None
+        self.alphax = None
+        self.alphay = None
+
+
+class Genesis4ImportFieldNL(Genesis4NameList):
+    def __init__(self, name_list_id=None):
+        # super().__init__()
+        self._name_list_label = 'importfield'
+        self.name_list_id_set(name_list_id)
+        self.file = None
+
+
+
+class Genesis4ImportBeamNL(Genesis4NameList):
+    def __init__(self, name_list_id=None):
+        # super().__init__()
+        self._name_list_label = 'importbeam'
+        self.name_list_id_set(name_list_id)
+        self.file = None
+
+
+class Genesis4EfieldNL(Genesis4NameList):
+    def __init__(self, name_list_id=None):
+        # super().__init__()
+        self._name_list_label = 'efield'
+        self.name_list_id_set(name_list_id)
+        self.rmax = None
+        self.nz = None
+        self.nphi = None
+        self.ngrid = None
+
+
+class Genesis4SponradNL(Genesis4NameList):
+    def __init__(self, name_list_id=None):
+        # super().__init__()
+        self._name_list_label = 'sponrad'
+        self.name_list_id_set(name_list_id)
+        self.seed = None
+        self.doLoss = None
+        self.doSpread = None
+
+
+class Genesis4SortNL(Genesis4NameList):
+    def __init__(self, name_list_id=None):
+        # super().__init__()
+        self._name_list_label = 'sort'
+        self.name_list_id_set(name_list_id)
+
+
+class Genesis4WakeNL(Genesis4NameList):
+    def __init__(self, name_list_id=None):
+        # super().__init__()
+        self._name_list_label = 'wake'
+        self.name_list_id_set(name_list_id)
+        self.loss = None
+        self.radius = None
+        self.roundpipe = None
+        self.conductivity = None
+        self.relaxation = None
+        self.material = None
+        self.gap = None
+        self.lgap = None
+        self.hrough = None
+        self.lrough = None
+        self.transient = None
+        self.ztrans = None
+
+
+class Genesis4WriteNL(Genesis4NameList):
+    def __init__(self, name_list_id=None):
+        # super().__init__()
+        self._name_list_label = 'write'
+        self.name_list_id_set(name_list_id)
+        self.field = None
+        self.beam = None
+
+
+class Genesis4TrackNL(Genesis4NameList):
+    def __init__(self, name_list_id=None):
+        # super().__init__()
+        self._name_list_label = 'track'
+        self.name_list_id_set(name_list_id)
+        self.zstop = None
+        self.output_step = None
+        self.field_dump_step = None
+        self.beam_dump_step = None
+        self.sort_step = None
 
 class Genesis4ParticlesDump:
     '''
@@ -151,6 +643,115 @@ class Genesis4ParticlesDump:
     def fileName(self):
         return os.path.basename(self.filePath)
         # return filename_from_path(self.filePath)
+
+
+def gen4_lat_str(lat, line_name='LINE', l=np.inf):
+    '''
+    Generates a string of lattice 
+    in Genesis4 format
+    from an ocelot lattice object
+    '''
+    from ocelot.cpbd.elements import Undulator, Drift, Quadrupole, UnknownElement
+    lat_str = []
+    beamline = []
+    location = 0
+
+    for element in lat.sequence:
+
+        if location >= l:
+            break
+
+        element_num = line_name + '_' + str(len(beamline) + 1).zfill(3)
+
+        if hasattr(element, 'l'):
+            location += element.l
+        else:
+            _logging.warning('[beta] element had no length: {:}'.format(str(element)))
+
+        if isinstance(element, Undulator):
+            element_name = element_num + 'UND'
+            
+            if element.Kx == 0 or element.Ky == 0:
+                is_helical = 'false'
+            elif element.Kx == element.Ky:
+                is_helical = 'true'
+            else:
+                _logger.warning('undulator element with different non-zero Kx and Ky; not implemented; setting to helical')
+                is_helical = 'true'
+            aw = np.sqrt((element.Kx**2 + element.Ky**2)/2)
+            #TODO: implement ax,ay,kx,ky,gradx,grady
+            s = '{:}: UNDULATOR = {{lambdau = {:}, nwig = {:}, aw = {:.6f}, helical = {:}}};'.format(element_name, element.lperiod, element.nperiods, aw, is_helical)
+
+        elif isinstance(element, Drift):
+            element_name = element_num + 'DR'
+            s = '{:}: DRIFT = {{l={:}}};'.format(element_name, element.l)
+
+        elif isinstance(element, Quadrupole):
+            #TODO: add dx and dy
+            if element.k1 >= 0:
+                element_name = element_num + 'QF'
+            else:
+                element_name = element_num + 'QD'
+            s = '{:}: QUADRUPOLE = {{l = {:}, k1 = {:.6f} }};'.format(element_name, element.l, element.k1)
+
+        elif isinstance(element, Chicane):
+            element_name = element_num + 'CH'
+            s = '{:}: CHICANE = {{l = {:}, lb = {:}, ld = {}, delay = {:.5e} }};'.format(element_name, element.l,
+                                                                                         element.lb, element.ld,
+                                                                                         element.delay)
+
+        elif isinstance(element, Marker):
+            element_name = element_num + 'M'
+            m_dumpfield = getattr(element, 'dumpfield', 0)
+            m_dumpbeam = getattr(element, 'dumpbeam', 0)
+            m_sort = getattr(element, 'sort', 0)
+            m_stop = getattr(element, 'stop', 0)
+            s = '{:}: Marker = {{dumpfield = {:}, dumpbeam = {:}, sort = {:}, stop = {:} }};'.format(element_name, m_dumpfield, m_dumpbeam, m_sort, m_stop)
+
+        elif isinstance(element, Phaseshifter):
+            element_name = element_num + 'PH'
+            s = '{:}: PHASESHIFTER = {{l = {:}, phi = {:}}};'.format(element_name, element.l, element.phi)
+
+        else:
+            _logger.warning('Unknown element {} with length {}\n replacing with drift'.format(str(element), element.l))
+            element_name = element_num + 'UNKNOWN'
+            s = '{:}: DRIFT = {{l={:}}};'.format(element_name, element.l)
+            continue
+
+        beamline.append(element_name)
+        lat_str.append(s)
+
+    lat_str.append('')
+    lat_str.append('{:}: LINE = {{{:}}};'.format(line_name, ','.join(beamline)))
+    lat_str.append('\n\n')
+    lat_str = "\n".join(lat_str)
+    _logger.debug(ind_str + lat_str)
+    return lat_str
+
+
+def write_gen4_lat(lattices, filepath, l=None):
+    """
+    Writing lattice file for Genesis1.3-version4 simulations
+    :param lattices: dictionary: {'line_name': ocelot.cpbd.magnetic_lattice.MagneticLattice(), ...}
+    :param filepath: str: path to the file in which lattices information will be writen
+    :param l: list with active lengths for each lattice in lattices dictionary
+    :return:
+    """
+    _logger.info('writing genesis4 lattice')
+    _logger.debug(ind_str + 'writing to ' + filepath)
+    f = open(filepath, 'w')  # erasing file content
+    f.write('# generated with Ocelot\n\n')
+
+    if l in [None, np.inf]:
+        l = [np.inf for _ in lattices.keys()]
+
+    for line_name, lat, l_cur in zip(lattices.keys(), lattices.values(), l):
+        lat_str = gen4_lat_str(lat, line_name=line_name, l=l_cur)
+        f.write(lat_str)
+
+    f.write('\n# end of file\n')
+    f.close()
+    _logger.debug(ind_str + 'done')
 
 
 class Genesis4Output:
@@ -277,7 +878,7 @@ def get_genesis4_launcher(launcher_program='genesis4', launcher_argument=''):
 
     return launcher
 
-
+### USE FOR PILLAGE
 def run_genesis4(inp, launcher, *args, **kwargs):
     '''
     Main function for executing Genesis code
@@ -1155,67 +1756,8 @@ def read_dpa42parray(filePath, N_part=None, fill_gaps=True):
     h5.close()
     return p_array
 
-def gen4_lat_str(lat, line_name='LINE', l=np.inf):
-    from ocelot.cpbd.elements import Undulator, Drift, Quadrupole, UnknownElement
-    #TODO add phase shifter object
-    lat_str = []
-    beamline = []
-    ll=0
-    
-    lat_str.append('# generated with Ocelot\n')
-    
-    for element in lat.sequence:
-        
-        if ll >= l:
-            break
-        
-        element_num = str(len(beamline) + 1).zfill(3)
-        
-        if hasattr(element,'l'):
-            ll += element.l
-        
-        if isinstance(element, Undulator):
-            element_name = element_num + 'UND'
-            s = '{:}: UNDULATOR = {{lambdau = {:}, nwig = {:}, aw = {:.6f}}};'.format(element_name, element.lperiod, element.nperiods, element.Kx/np.sqrt(2))
-        
-        
-        elif isinstance(element, Drift):
-            element_name = element_num + 'DR'
-            s = '{:}: DRIFT = {{l={:}}};'.format(element_name, element.l)
-        
-        elif isinstance(element, Quadrupole):
-            if element.k1>=0:
-                element_name = element_num + 'QF'
-            else:
-                element_name =  element_num + 'QD'
-            s = '{:}: QUADRUPOLE = {{l = {:}, k1 = {:.6f} }};'.format(element_name, element.l, element.k1)
-        
-        else:
-            _logger.debug('Unknown element with length '+ str(element.l))
-            continue
-        
-        beamline.append(element_name)
-        lat_str.append(s)
-    
-    lat_str.append('')
-    lat_str.append('{:}: LINE = {{{:}}};'.format(line_name, ','.join(beamline)))
-    lat_str.append('\n# end of file\n')
-    lat_str = "\n".join(lat_str)
-    _logger.debug(ind_str + lat_str)
-    return lat_str
 
-def write_gen4_lat(lat, filepath, line_name='LINE', l=np.inf):
-    #TODO make it accept list of lattices and print several "LINE"s to the same file
-    _logger.info('writing genesis4 lattice')
-    _logger.debug(ind_str + 'writing to ' + filepath)
-    
-    lat_str = gen4_lat_str(lat, line_name=line_name, l=l)
-    
-    with open(filepath, 'w') as f:
-        f.write(lat_str)
-    
-    _logger.debug(ind_str + 'done')
-
+#MOVE TO BEAM
 def write_edist_hdf5(edist, filepath):
     _logger.info('writing electron distribution to {}'.format(filepath))
     with h5py.File(filepath, 'w') as h5:
@@ -1228,6 +1770,28 @@ def write_edist_hdf5(edist, filepath):
         h5.create_dataset('charge', data = edist.charge())
     _logger.debug(ind_str + 'done')
     
+def read_edist_hdf5(filepath, charge=None):
+    _logger.info('reading electron distribution from {}'.format(filepath))
+    edist = GenesisElectronDist()
+    with h5py.File(filepath, 'r') as h5:
+
+        edist.g =  h5.get('p')[:]
+        edist.t =  -h5.get('t')[:]
+        edist.x =  h5.get('x')[:]
+        edist.y =  h5.get('y')[:]
+        edist.xp =  h5.get('xp')[:]
+        edist.yp =  h5.get('yp')[:]
+
+        if charge is not None:
+            charge = h5.get('charge')[:]
+            _logger.debug('particle charge is provided: {}'.format(charge))
+        else:
+            _logger.debug('particle charge is overridden: {}'.format(charge))
+         
+    edist.part_charge = charge / edist.g.size
+    return edist
+
+
 def write_beamtwiss_hdf5(beam, filepath):
     _logger.info('writing electron beam (twiss) to {}'.format(filepath))
     with h5py.File(filepath, 'w') as h5:
@@ -1274,27 +1838,6 @@ def read_beamtwiss_hdf5(beam, filepath):
     return beam
 
 
-
-def read_edist_hdf5(filepath, charge=None):
-    _logger.info('reading electron distribution from {}'.format(filepath))
-    edist = GenesisElectronDist()
-    with h5py.File(filepath, 'r') as h5:
-
-        edist.g =  h5.get('p')[:]
-        edist.t =  -h5.get('t')[:]
-        edist.x =  h5.get('x')[:]
-        edist.y =  h5.get('y')[:]
-        edist.xp =  h5.get('xp')[:]
-        edist.yp =  h5.get('yp')[:]
-
-        if charge is not None:
-            charge = h5.get('charge')[:]
-            _logger.debug('particle charge is provided: {}'.format(charge))
-        else:
-            _logger.debug('particle charge is overridden: {}'.format(charge))
-         
-    edist.part_charge = charge / edist.g.size
-    return edist
 
 
 

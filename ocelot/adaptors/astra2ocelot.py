@@ -154,19 +154,22 @@ def astraBeam2particleArray(filename, print_params=True):
     The difference arises because the array of particles does not have a reference particle, and in this case
     the first particle is used as a reference.
 
+    :param print_params:
     :type filename: str
     :return: ParticleArray
     """
     P0 = np.loadtxt(filename)
-    charge_array = -P0[:, 7] * 1e-9  # charge in nC -> in C
+    s_ref = P0[0, 2]
+    Pref = P0[0, 5]
 
-    xp = P0[:, :6]
-
-    s_ref = xp[0, 2]
-    xp[0, 2] = 0.
-
-    Pref = xp[0, 5]
-    xp[0, 5] = 0.
+    if P0[0, 7] == 0:
+        xp = P0[1:, :6]
+        charge_array = -P0[1:, 7] * 1e-9  # charge in nC -> in C
+    else:
+        charge_array = -P0[:, 7] * 1e-9  # charge in nC -> in C
+        xp = P0[:, :6]
+        xp[0, 2] = 0.
+        xp[0, 5] = 0.
 
     gamref = np.sqrt((Pref / m_e_eV) ** 2 + 1)
     xxstg = exact_xp_2_xxstg_mad(xp, gamref)
@@ -191,7 +194,7 @@ def astraBeam2particleArray(filename, print_params=True):
     return p_array
 
 
-def particleArray2astraBeam(p_array, filename="tytest.ast", ref_index=0):
+def particleArray2astraBeam(p_array, filename="tytest.ast"):
     """
     function convert  Ocelot's ParticleArray to Astra beam distribution and save to "filename".
 
@@ -201,28 +204,22 @@ def particleArray2astraBeam(p_array, filename="tytest.ast", ref_index=0):
 
     :param p_array:
     :param filename:
-    :param ref_index: index of the reference particle
     :return:
     """
+
     gamref = p_array.E / m_e_GeV
     s0 = p_array.s
     P = p_array.rparticles.view()
     Np = int(P.size / 6)
     xp = exact_xxstg_2_xp_mad(P, gamref)
     Pref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_eV
-    xp[:, 5] = xp[:, 5] + Pref
-    xp[:, 2] = xp[:, 2] + s0
 
-    if ref_index > 0:
-        p0 = deepcopy(xp[ref_index, :])
-        xp[ref_index, :] = xp[0, :]
-        xp[0, :] = p0
-
-    xp[1:Np, 5] = xp[1:Np, 5] - xp[0, 5]
-    xp[1:Np, 2] = xp[1:Np, 2] - xp[0, 2]
+    ref_particle=np.array([0, 0, s0, 0, 0, Pref])
+    xp = np.vstack((ref_particle, xp))
 
     charge_array = -p_array.q_array.reshape(len(p_array.q_array), 1) * 1e+9  # charge in C -> in nC
-    flag = np.ones((len(charge_array), 1))
+    charge_array = np.vstack((0, charge_array))
+    flag = np.ones((len(charge_array+1), 1))
     astra = np.append(xp, flag * 0, axis=1)  # time in [ns]
     astra = np.append(astra, charge_array, axis=1)
     astra = np.append(astra, flag, axis=1)  # 1 - electron, 2 - positron, 3 - protons and 4 - hydrogen ions.

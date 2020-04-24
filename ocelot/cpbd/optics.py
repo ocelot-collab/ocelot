@@ -1337,10 +1337,7 @@ class Navigator:
                     p.counter = p.step
 
             dz = np.min(phys_steps)
-            # check if dz overjumps the stop element
-            # dz, processes = self.check_overjump(dz, processes)
         else:
-
             processes = proc_list
             n_elems = len(self.lat.sequence)
             if n_elems >= self.n_elem + 1:
@@ -1350,11 +1347,8 @@ class Navigator:
             dz = L - self.z0
             phys_steps = np.array([])
         # check if dz overjumps the stop element
-        #dzs_red = dzs - dz
         dz, processes, phys_steps = self.check_overjump(dz, processes, phys_steps)
         processes, phys_steps = self.check_proc_bounds(dz, proc_list, phys_steps, processes)
-
-
 
         _logger_navi.debug(" Navigator.get_next: process: " + " ".join([proc.__class__.__name__ for proc in processes]))
 
@@ -1363,7 +1357,9 @@ class Navigator:
 
         _logger_navi.debug(" Navigator.get_next: element type=" + self.lat.sequence[self.n_elem].__class__.__name__ + " element name=" +
                      str(self.lat.sequence[self.n_elem].id))
+
         self.remove_used_processes(processes)
+
         return dz, processes, phys_steps
 
 

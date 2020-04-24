@@ -19,7 +19,6 @@ class LogProc(PhysProc):
         self.s_stop_list = []
         self.s_start_list = []
 
-
     def prepare(self, lat):
         self.totalLen = lat.totalLen
 

@@ -476,12 +476,9 @@ class K0_fin_anf:
 
         # integrated kernel: KS=int_s^0{K(u)*du}=int_0^{-s}{K(-u)*du}
 
-        if len(K) > 1:
-            a = np.append(0.5 * (K[0:-1] + K[1:]) * np.diff(s), 0.5 * K[-1] * s[-1])
-            KS = np.cumsum(a[::-1])[::-1]
-            # KS = cumtrapz(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
-        else:
-            KS = 0.5 * K[-1] * s[-1]
+        K[:-1] += K[1:]
+        K *= 0.5 * np.diff(s, append=0)
+        KS = np.cumsum(K[::-1])[::-1]
 
         return w, KS
 

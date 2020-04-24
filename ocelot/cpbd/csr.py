@@ -725,7 +725,7 @@ class CSR(PhysProc):
         else:
             KS = interp1(w, KS, w_range)
         four_pi_eps0 = 1./(1e-7*speed_of_light**2)
-        K1 = np.diff(np.append(np.diff(np.append(KS, 0)), 0))/NdW[1]/four_pi_eps0
+        K1 = np.diff(np.diff(KS, append=0), append=0) / NdW[1] / four_pi_eps0
 
         return K1
 

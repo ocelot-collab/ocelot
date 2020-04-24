@@ -2677,7 +2677,10 @@ def edist2beam(edist, step=2e-7): #check
             dist_y = edist.y[indices]
             dist_xp = edist.xp[indices]
             dist_yp = edist.yp[indices]
-            dist_sigma_E = np.std(dist_g) * m_e_GeV
+            
+            a, b = np.polyfit(edist.t[indices], dist_g, deg=1) #correction here!
+            dist_sigma_E = np.std(dist_g - a*edist.t[indices]) * m_e_GeV #correction here!
+            # dist_sigma_E = np.std(dist_g) * m_e_GeV
             dist_p = np.sqrt(dist_g**2 - 1)
             dist_px = dist_xp * dist_p
             dist_py = dist_yp * dist_p
@@ -2724,6 +2727,82 @@ def edist2beam(edist, step=2e-7): #check
 '''
     BEAM
 '''
+
+def beam2edist(beam, npart=10000):
+    """
+    Creates electron beam particle distribution with random (not shot-noise-accounted-for) particle distribution
+    baased on Twiss parameters from beam
+    
+    reads BeamArray()
+    returns GenesisElectronDist()
+    beam: BeamArray() object
+    npart: number of particles
+    
+    """
+    # dist='gaussian'
+    # npart = 100000
+    
+    P = beam.I/np.sum(beam.I)
+    pack = np.round(P*npart)
+    
+    edist = GenesisElectronDist()
+    
+    t = np.empty(beam.len()-1, dtype=object)
+    g = np.empty(beam.len()-1, dtype=object)
+    dist_x = np.empty(beam.len()-1, dtype=object)
+    dist_xp = np.empty(beam.len()-1, dtype=object)
+    dist_y = np.empty(beam.len()-1, dtype=object)
+    dist_yp = np.empty(beam.len()-1, dtype=object)
+    
+    for i in range(beam.len()-1): 
+         
+        t1 = beam.s[i]/speed_of_light 
+        t2 = beam.s[i + 1]/speed_of_light 
+        
+        t[i] = np.random.uniform(t1, t2, size=int(pack[i])) #TODO:replace by linear splines
+    
+        g1 = beam.E[i]/m_e_GeV
+        g2 = beam.E[i+1]/m_e_GeV
+        
+        #use the inverse function method for generating g distribution on a small segment
+        g[i] = (t[i]-t1)*(g2 - g1)/(t2- t1) + np.random.normal(loc=g1, scale=np.mean(beam.dg), size=int(pack[i])) 
+    
+        x = beam.x[i]
+        xp = beam.xp[i]
+        
+        y = beam.y[i]
+        yp = beam.yp[i]
+        
+        emit_x = beam.emit_x[i]
+        emit_y = beam.emit_y[i]
+        
+        beta_x = beam.beta_x[i]
+        beta_y = beam.beta_y[i]
+        
+        alpha_x = beam.alpha_x[i]
+        alpha_y = beam.alpha_y[i]
+        
+        gamma_x = (1 + alpha_x**2)/beta_x 
+        gamma_y = (1 + alpha_y**2)/beta_y
+        
+        # if dist in ['gaussian', 'g']:
+        mean_x_xp = [x, xp]
+        cov_x_xp = [[emit_x*beta_x, -alpha_x*emit_x],[-alpha_x*emit_x, emit_x*gamma_x]]#TODO:not sure about cov matrix!
+        dist_x[i], dist_xp[i] = np.random.multivariate_normal(mean_x_xp, cov_x_xp, int(pack[i])).T
+        
+        mean_y_yp = [y, yp]
+        cov_y_yp = [[emit_y*beta_y, -alpha_y*emit_y],[-alpha_y*emit_y, emit_y*gamma_y]] #TODO:not sure about cov matrix!
+        dist_y[i], dist_yp[i] = np.random.multivariate_normal(mean_y_yp, cov_y_yp, int(pack[i])).T
+    
+    edist.t = np.concatenate(t)
+    edist.g = np.concatenate(g)
+    edist.x = np.concatenate(dist_x)
+    edist.xp = np.concatenate(dist_xp)
+    edist.y = np.concatenate(dist_y)
+    edist.yp = np.concatenate(dist_yp)     
+       
+    edist.part_charge = beam.charge()/edist.len()
+    return edist
 
 
 # def read_beam_file_out(out, debug=1):

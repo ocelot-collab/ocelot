@@ -19,7 +19,7 @@ from ocelot.common.globals import *
 from ocelot.adaptors.genesis import GenesisElectronDist #tmp
 from ocelot.common.ocelog import *
 from ocelot.utils.launcher import *
-from ocelot.cpbd.beam import beam, BeamArray
+from ocelot.cpbd.beam import Beam, BeamArray
 from ocelot.cpbd.elements import Element,  Drift, Quadrupole, Undulator
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 

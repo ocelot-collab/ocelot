@@ -65,18 +65,6 @@ def csr_convolution(a, b):
     return c
 
 
-def interp1(x, y, xnew, k=1):
-    if len(xnew) > 0:
-        if k == 1:
-            ynew = np.interp(xnew, x, y)
-        else:
-            tck = interpolate.splrep(x, y, k=k)
-            ynew = interpolate.splev(xnew, tck, der=0)
-    else:
-        ynew = []
-    return ynew
-
-
 def sample_0(i, a, b):
     y = max(0, min(i + 0.5, b) - max(i - 0.5, a))
     return y
@@ -334,7 +322,7 @@ class SubBinning:
             aa = 0.999 * aa + 0.001 * (np.arange(0, Ns)) / (Ns - 1)
 
         # vector with bin boundaries
-        SBINB = interp1(aa, s, np.arange(K_BIN + 1.) / K_BIN)
+        SBINB = np.interp(np.arange(K_BIN + 1.) / K_BIN, aa, s)
         SBINB[0] = s[0]
         SBINB[K_BIN] = s[Ns - 1]
         # particles per subbins
@@ -709,10 +697,10 @@ class CSR(PhysProc):
                 KS2 = self.K0_inf_inf(i, traj, np.append(w_range[0:m+1], w_min))
 
             KS2 = (KS2[-1] - KS2) + KS1
-            KS = np.append(KS2[0:-1], interp1(w, KS, w_range[m+1:]))
+            KS = np.append(KS2[0:-1], np.interp(w_range[m+1:], w, KS))
 
         else:
-            KS = interp1(w, KS, w_range)
+            KS = np.interp(w_range, w, KS)
         four_pi_eps0 = 1./(1e-7*speed_of_light**2)
         K1 = np.diff(np.diff(KS, append=0), append=0) / NdW[1] / four_pi_eps0
 

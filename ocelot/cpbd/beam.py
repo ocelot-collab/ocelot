@@ -364,11 +364,14 @@ class BeamArray(Beam):
             _logger.log(5, ind_str + 'size {:}'.format(values.size))
             setattr(self,attr,values[inds])
 
-    def equidist(self):
+    def equidist(self, ds=None):
         dsarr = (self.s - np.roll(self.s,1))[1:]
         dsm = np.mean(dsarr)
         if (np.abs(dsarr-dsm)/dsm > 1/1000).any():
-            s_new = np.linspace(np.amin(self.s), np.amax(self.s), self.len())
+            if ds is None:
+                s_new = np.linspace(np.amin(self.s), np.amax(self.s), self.len())
+            else:
+                s_new = np.arange(np.amin(self.s), np.amax(self.s), ds)
             for attr in self.params():
                 if attr is 's':
                     continue
@@ -531,6 +534,41 @@ class BeamArray(Beam):
 
     def to_array(self, *args, **kwargs):
         raise NotImplementedError('Method inherited from Beam() class, not applicable for BeamArray objects')
+
+
+class BeamFormFactor:
+    '''
+    contains and calculates electron beam form-factor (fourier transform of currenta profile)
+    from the electron beam "BeamArray" object
+    '''
+    def __init__(self, beam_array=None):
+        self.modulus = None #modulus of form-factor
+        self.frequency = None #frequency in Hz
+        self.beam_array = beam_array #original beam file
+        
+        if self.beam_array is not None:
+            self.beam_array.sort()
+            self.beam_array.equidist()
+            self.calc()
+
+    def __len__(self):
+        return np.size(self.modulus)
+
+    # def current_profile(self):
+    #     return self.beam_array.s, self.beam_array.I
+
+    def calc(self):
+        '''
+        calculates the form-factor and populates self.modulus and self.frequency
+        '''
+        I_norm = self.beam_array.I / self.beam_array.charge()
+        self.modulus = np.abs(np.fft.fft(I_norm))
+        ds = np.abs(self.beam_array.s[1] - self.beam_array.s[0])
+        self.frequency = np.fft.fftfreq(len(self), ds / speed_of_light)
+        idx = len(self) // 2
+        
+        self.modulus = self.modulus[:idx]
+        self.frequency = self.frequency[:idx]
 
 
 class Trajectory:

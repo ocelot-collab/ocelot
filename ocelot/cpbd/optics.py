@@ -84,38 +84,7 @@ class SecondOrderMult:
         X[4] = ne.evaluate('R40 * x + R41 * px + R42 * y + R43 * py + R44 * tau + R45 * dp + T400 * x*x + T401 * x*px + T405 * x*dp + T411 * px*px + T415 * px*dp + T455 * dp*dp + T422 * y*y + T423 * y*py + T433 * py*py')  # + U5666*dp2*dp    # third order
 
     def numpy_apply(self, X, R, T):
-        Xr = np.dot(R, X)
-        x, px, y, py, tau, dp = X[0], X[1], X[2], X[3], X[4], X[5]
-        x2 = x * x
-        xpx = x * px
-        px2 = px * px
-        py2 = py * py
-        ypy = y * py
-        y2 = y * y
-        dp2 = dp * dp
-        xdp = x * dp
-        pxdp = px * dp
-        xy = x * y
-        xpy = x * py
-        ypx = px * y
-        pxpy = px * py
-        ydp = y * dp
-        pydp = py * dp
-
-        X[0] = Xr[0] + T[0, 0, 0] * x2 + T[0, 0, 1] * xpx + T[0, 0, 5] * xdp + T[0, 1, 1] * px2 + T[0, 1, 5] * pxdp + \
-                  T[0, 5, 5] * dp2 + T[0, 2, 2] * y2 + T[0, 2, 3] * ypy + T[0, 3, 3] * py2
-
-        X[1] = Xr[1] + T[1, 0, 0] * x2 + T[1, 0, 1] * xpx + T[1, 0, 5] * xdp + T[1, 1, 1] * px2 + T[1, 1, 5] * pxdp + \
-                  T[1, 5, 5] * dp2 + T[1, 2, 2] * y2 + T[1, 2, 3] * ypy + T[1, 3, 3] * py2
-
-        X[2] = Xr[2] + T[2, 0, 2] * xy + T[2, 0, 3] * xpy + T[2, 1, 2] * ypx + T[2, 1, 3] * pxpy + T[ 2, 2, 5] * ydp + \
-                  T[2, 3, 5] * pydp
-
-        X[3] = Xr[3] + T[3, 0, 2] * xy + T[3, 0, 3] * xpy + T[3, 1, 2] * ypx + T[3, 1, 3] * pxpy + T[3, 2, 5] * ydp + \
-                  T[3, 3, 5] * pydp
-
-        X[4] = Xr[4] + T[4, 0, 0] * x2 + T[4, 0, 1] * xpx + T[4, 0, 5] * xdp + T[4, 1, 1] * px2 + T[4, 1, 5] * pxdp + \
-                  T[4, 5, 5] * dp2 + T[4, 2, 2] * y2 + T[4, 2, 3] * ypy + T[4, 3, 3] * py2  # + U5666*dp2*dp    # third order
+        X[:] = np.dot(R, X) + np.einsum('ijk,j...,k...', T, X, X).T
 
 
 def transform_vec_ent(X, dx, dy, tilt):

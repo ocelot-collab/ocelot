@@ -2564,9 +2564,9 @@ def disperse_edist(edist, R56, debug=1):
     Introduces dispersion (good for simulating weak chicanes)
     delays or advances time coordinate of the particles depending on ther energy with respect to the averaged energy
     '''
-    _logger.info('introducing dispersion to particle distribution file with R56 '+ str(R56) + ' m')
+    _logger.info('introducing dispersion to particle distribution file with R56 {:.3} m'.format(R56))
     if not isinstance(edist, GenesisElectronDist):
-        raise ValueError('out is neither GenesisOutput() nor a valid path')
+        raise ValueError('out is neither GenesisOutput() object nor a valid path')
     
     edist_out = deepcopy(edist)
     edist_out.t += R56 * (edist_out.g - np.mean(edist_out.g)) / edist_out.g / speed_of_light

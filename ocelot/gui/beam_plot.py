@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import logging
 
+
 from ocelot.adaptors.genesis import *
 from ocelot.common.globals import *  # import of constants like "h_eV_s" and
 from ocelot.common.math_op import *  # import of mathematical functions
@@ -16,6 +17,7 @@ from ocelot.utils.xfel_utils import *
 from ocelot.optics.utils import calc_ph_sp_dens
 from ocelot.optics.wave import *
 from ocelot.gui.settings_plot import *
+from ocelot.cpbd.beam import BeamFormFactor
 
 _logger = logging.getLogger(__name__)
 
@@ -168,6 +170,88 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
         plt.close(fig)
 
     _logger.debug(ind_str + 'done')
+
+
+def plot_beam_form_factor(form_factor: BeamFormFactor, x_axis_units='THz', x_axis_limits=(None, None), y_axis_limits=(None, None),
+                          figsize=(2 * 3, 3 * 3), normalize=True, fig_name='Beam Form Factor', log_scale=False, showtext=True,
+                          savefig=False, showfig=True, **kwargs):
+    '''
+    plots a BeamFormFactor object
+    '''
+    if not showfig and not savefig:
+        return
+
+    start_time = time.time()
+    _logger.info('plotting Beam Form Factor')
+    fig = plt.figure(fig_name)
+    fig.clf()
+    fig.set_size_inches(figsize, forward=True)
+
+    ax_current_profile = fig.add_subplot(2, 1, 1)
+    s, current = form_factor.beam_array.s, form_factor.beam_array.I
+    ax_current_profile.plot(s * 1e6, current * 1e-3, **kwargs)
+    ax_current_profile.set_title('Current profile', fontsize=15)
+    ax_current_profile.set_xlabel('s [$\mu$m]')
+    ax_current_profile.set_ylabel('peak current [kA]')
+    if showtext:
+        ax_current_profile.text(0.97, 0.97, 'Q={:.2f}pC'.format(form_factor.beam_array.charge()*1e12), 
+                                horizontalalignment='right', verticalalignment='top', transform=ax_current_profile.transAxes, fontsize=12, color='black')
+
+    form_factor.calc()
+    frequency, ffactor =  form_factor.frequency, form_factor.modulus
+    if normalize:
+        ffactor /= ffactor[0]
+        
+    xlable = '$\omega$ [Hz]'
+    if x_axis_units in ['MHz', 'mhz']:
+        frequency = frequency * 1e-6
+        xlable = '$\omega$ [MHz]'
+    elif x_axis_units in ['GHz', 'ghz']:
+        frequency = frequency * 1e-9
+        xlable = '$\omega$ [GHz]'
+    elif x_axis_units in ['THz', 'thz', 'f']:
+        frequency = frequency * 1e-12
+        xlable = '$\omega$ [THz]'
+    elif x_axis_units in ['keV', 'kev']:
+        frequency = frequency * 2 * np.pi * hr_eV_s * 1e-3
+        xlable = '$\epsilon$ [keV]'
+    elif x_axis_units in ['eV', 'ev']:
+        frequency = frequency * 2 * np.pi * hr_eV_s
+        xlable = '$\epsilon$ [eV]'
+    elif x_axis_units in ['meV', 'mev']:
+        frequency = frequency * 2 * np.pi * hr_eV_s * 1e3
+        xlable = '$\epsilon$ [meV]'
+    else:
+        _logger.warning(ind_str + 'x_axis_units must one of \'MHz\', \'GHz\', \'THz\', \'keV\', \'eV\', \'meV\'')
+
+    ax_form_factor = fig.add_subplot(2, 1, 2)
+    if log_scale:
+        ax_form_factor.semilogy(frequency, ffactor**2, **kwargs)
+    else:
+        ax_form_factor.plot(frequency, ffactor**2, **kwargs)
+    ax_form_factor.set_title('Form factor profile', fontsize=15)
+    ax_form_factor.set_ylabel('|form factor|^2 [a. u.]')
+    ax_form_factor.set_xlabel(xlable)
+    ax_form_factor.set_xlim(*x_axis_limits)
+    ax_form_factor.set_ylim(*y_axis_limits)
+    
+    fig.subplots_adjust(wspace=0.4, hspace=0.4)
+
+    plt.draw()
+    _logger.debug(ind_str + 'done in {:.2f} seconds'.format(time.time() - start_time))
+    if savefig:
+        _logger.debug(ind_str + 'saving figure ' + fig_name)
+        if not isinstance(savefig, str):
+            fig.savefig(fig_name + '.png')
+        else:
+            fig.savefig(fig_name + '.' + savefig)
+
+    if showfig:
+        _logger.debug('showing figure ' + fig_name)
+        plt.show()
+    else:
+        plt.close('all')
+
 
 @if_plottable
 @save_show

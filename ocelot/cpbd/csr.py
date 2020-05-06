@@ -400,23 +400,19 @@ class K0_fin_anf:
         R = np.zeros(i)
         w = np.zeros(i)
         self.K0_0(i, traj[0], traj[1], traj[2], traj[3], gamma, s, n, R, w)
-        j = np.where(w <= wmin)[0]
 
+        j = np.where(w <= wmin)[0]
         if len(j) > 0:
             j = j[-1]
             w = w[j:i]
             s = s[j:i]
         else:
             j = 0
-        K = self.K0_1(i, j, R, n, traj[4], traj[5], traj[6], w, gamma)
 
-        if len(K) > 1:
-            a = np.append(0.5 * (K[0:-1] + K[1:]) * np.diff(s), 0.5 * K[-1] * s[-1])
-            KS = np.cumsum(a[::-1])[::-1]
-            # KS = cumsum_inv_jit(a)
-            # KS = cumtrapz(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
-        else:
-            KS = 0.5 * K[-1] * s[-1]
+        K = self.K0_1(i, j, R, n, traj[4], traj[5], traj[6], w, gamma)
+        K[:-1] += K[1:]
+        K *= 0.5 * np.diff(s, append=0)
+        KS = np.cumsum(K[::-1])[::-1]
         return w, KS
 
     def K0_fin_anf_np(self, i, traj, wmin, gamma):
@@ -430,10 +426,9 @@ class K0_fin_anf:
         n = traj[1:4, [i]] - traj[1:4, :i]
         t = traj[4:, :i]
         R = np.sqrt(np.sum(n*n, axis=0))
-
         w = s + beta * R
-        j = np.where(w <= wmin)[0]
 
+        j = np.where(w <= wmin)[0]
         if len(j) > 0:
             j = j[-1]
             w = w[j:i]
@@ -441,23 +436,16 @@ class K0_fin_anf:
             n = n[:, j:]
             t = t[:, j:]
             R = R[j:]
-        n /= R
 
         # kernel
-
+        n /= R
         x = np.sum(n * t, axis=0)
         K = ((beta * (x - np.sum(n * traj[4:, [i]], axis=0)) -
               b2 * (1 - np.sum(t * traj[4:, [i]], axis=0)) -
               g2i) / R -
              (1. - beta * x) / w * g2i)
-        # K = ((beta*(n0*(t4 - traj[4, i]) +
-        #            n1*(t5 - traj[5, i]) +
-        #            n2*(t6 - traj[6, i])) -
-        #    b2*(1. - t4*traj[4, i] - t5*traj[5, i] - t6*traj[6, i]) - g2i)/R[ra] -
-        #    (1. - beta*(n0*t4 + n1*t5 + n2*t6))/w*g2i)
 
         # integrated kernel: KS=int_s^0{K(u)*du}=int_0^{-s}{K(-u)*du}
-
         K[:-1] += K[1:]
         K *= 0.5 * np.diff(s, append=0)
         KS = np.cumsum(K[::-1])[::-1]
@@ -506,12 +494,9 @@ class K0_fin_anf:
         K = ne.evaluate(
             '((beta*(x - n0*t4i- n1*t5i - n2*t6i) - b2*(1. - t4*t4i - t5*t5i - t6*t6i) - g2i)/R - (1. - beta*x)/w*g2i)')
 
-        if len(K) > 1:
-            a = np.append(0.5 * (K[0:-1] + K[1:]) * np.diff(s), 0.5 * K[-1] * s[-1])
-            KS = np.cumsum(a[::-1])[::-1]
-            # KS = cumtrapz(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
-        else:
-            KS = 0.5 * K[-1] * s[-1]
+        K[:-1] += K[1:]
+        K *= 0.5 * np.diff(s, append=0)
+        KS = np.cumsum(K[::-1])[::-1]
 
         return w, KS
 

@@ -7,12 +7,13 @@ import copy
 import importlib
 import logging
 
+import numpy as np
 from scipy import interpolate
 from scipy.integrate import cumtrapz
 from scipy.ndimage.filters import gaussian_filter
 from scipy.optimize import curve_fit
 
-from ocelot.common.globals import *
+from ocelot.common.globals import pi, speed_of_light, m_e_eV, m_e_GeV
 from ocelot.common import math_op
 from ocelot.cpbd.beam import Particle, s_to_cur
 from ocelot.cpbd.high_order import arcline, rk_track_in_field

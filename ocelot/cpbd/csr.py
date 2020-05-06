@@ -234,7 +234,8 @@ class Smoothing:
                     charge_per_step[k-1] += w * qps
 
         elif IP_method == 2:
-            charge_per_step = self.q_per_step_ip2(N_BIN, Q_BIN, BIN[0], BIN[1], NSIG, RMS, step, Nz, z1)
+            charge_per_step = self.q_per_step_ip2(
+                N_BIN, Q_BIN, BIN[0], BIN[1], NSIG, RMS, step, Nz, z1)
         else:
             for nb in range(N_BIN):
                 aa = BIN[0][nb] - z1
@@ -258,7 +259,9 @@ class SubBinning:
         self.print_log = False
         if nb_flag:
             logger.debug("SubBinning: NUMBA")
-            self.p_per_subbins = nb.jit(nb.double[:](nb.double[:], nb.double[:], nb.int64))(self.p_per_subbins_py)
+            self.p_per_subbins = nb.jit(
+                nb.double[:](nb.double[:], nb.double[:], nb.int64))(
+                    self.p_per_subbins_py)
         else:
             logger.debug("SubBinning: Python")
             self.p_per_subbins = self.p_per_subbins_py
@@ -318,7 +321,9 @@ class SubBinning:
             # bb=monoton "length" vector
             # bb = ne.evaluate('(s - s0) / (sNs - s0)')
             # aa=LK of "charge" and "length" vector; avoid zero stepwidth
-            aa = ne.evaluate('(aa - aa0) / (aaNs - aa0) * X_QBIN + (s - s0) / (sNs - s0) * (1 - X_QBIN)')
+            aa = ne.evaluate(
+                '(aa - aa0) / (aaNs - aa0) * X_QBIN +'
+                '(s - s0) / (sNs - s0) * (1 - X_QBIN)')
         else:
             aa = (aa - aa[0]) / (aa[Ns - 1] - aa[0])
             # bb=monoton "length" vector
@@ -368,9 +373,12 @@ class K0_fin_anf:
             t5 = traj5[i]
             t6 = traj6[i]
             x = n0i * t4 + n1i * t5 + n2i * t6
-            K[i - j] = ((beta * (x - n0i * traj4[indx] - n1i * traj5[indx] - n2i * traj6[indx]) -
-                         b2 * (1. - t4 * traj4[indx] - t5 * traj5[indx] - t6 * traj6[indx]) - g2i) / Ri - (
-                        1. - beta * x) / w[i - j] * g2i)
+            K[i - j] = ((beta * (x - n0i * traj4[indx] -
+                                 n1i * traj5[indx] - n2i * traj6[indx]) -
+                         b2 * (1. - t4 * traj4[indx] - t5 * traj5[indx] -
+                               t6 * traj6[indx]) -
+                         g2i) / Ri -
+                        (1. - beta * x) / w[i - j] * g2i)
         return K
 
     def K0_0_jit(self, i, traj0, traj1, traj2, traj3, gamma, s, n, R, w):
@@ -492,7 +500,9 @@ class K0_fin_anf:
         t5i = traj[5, i]
         t6i = traj[6, i]
         K = ne.evaluate(
-            '((beta*(x - n0*t4i- n1*t5i - n2*t6i) - b2*(1. - t4*t4i - t5*t5i - t6*t6i) - g2i)/R - (1. - beta*x)/w*g2i)')
+            '((beta*(x - n0*t4i- n1*t5i - n2*t6i) -'
+            '  b2*(1. - t4*t4i - t5*t5i - t6*t6i) - g2i)/R -'
+            ' (1. - beta*x)/w*g2i)')
 
         K[:-1] += K[1:]
         K *= 0.5 * np.diff(s, append=0)
@@ -576,7 +586,9 @@ class CSR(PhysProc):
         K = (n[0, ra]*(traj[4, ra] - traj[4, i]) +
              n[1, ra]*(traj[5, ra] - traj[5, i]) +
              n[2, ra]*(traj[6, ra] - traj[6, i]) -
-           (1. - traj[4, ra]*traj[4, i] - traj[5, ra]*traj[5, i] - traj[6, ra]*traj[6, i]))/R[ra]
+             (1. - traj[4, ra]*traj[4, i] -
+              traj[5, ra]*traj[5, i] -
+              traj[6, ra]*traj[6, i])) / R[ra]
 
         # integrated kernel: KS=int_s^0{K(u)*du}=int_0^{-s}{K(-u)*du}
         if np.shape(K)[0] > 1:

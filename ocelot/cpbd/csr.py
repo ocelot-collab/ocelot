@@ -77,19 +77,6 @@ def interp1(x, y, xnew, k=1):
     return ynew
 
 
-def convolution(xu, u, xw, w):
-    """
-    convolution of equally spaced functions
-    """
-    hx = xu[1] - xu[0]
-    wc = np.convolve(u, w)*hx
-    nw = w.shape[0]
-    nu = u.shape[0]
-    x0 = xu[0] + xw[0]
-    xc = x0 + np.arange(nw + nu)*hx
-    return xc, wc
-
-
 def sample_0(i, a, b):
     y = max(0, min(i + 0.5, b) - max(i - 0.5, a))
     return y
@@ -980,57 +967,4 @@ class CSR(PhysProc):
         name = "0" * (4 - len(dig)) + dig
         self.plt.savefig( name + '.png')
 
-
-
-    def apply_i(self, p_array, delta_s):
-
-        s_cur = self.z0 - self.z_csr_start
-        z = p_array.tau()
-        s1 = min(z)
-        s2 = max(z)
-        bunch_size = s2 - s1
-        st = bunch_size / (self.n_mesh + 1)
-        I = s2current(z, p_array.q_array, n_points=self.n_mesh, filter_order=self.filter_order, mean_vel=speed_of_light)
-        Ns = len(I[:, 0])
-        sa = s1 + st / 2.
-        Ndw = [self.n_mesh, st]
-        lam_ds = I[:, 1] / speed_of_light * st
-
-        s_array = self.csr_traj[0, :]
-        indx = (np.abs(s_array - s_cur)).argmin()
-        indx_prev = (np.abs(s_array - (s_cur - delta_s))).argmin()
-        gamma = p_array.E / m_e_GeV
-        h = max(1., self.apply_step / self.traj_step)
-        itr_ra = np.unique(-np.round(np.arange(-indx, -indx_prev, h))).astype(np.int)
-
-        nit = 0
-        n_iter = len(itr_ra)
-        K1 = self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma)
-        for nit in range(1, n_iter):
-            K1 += self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma=gamma)
-        K1 = K1 / n_iter
-
-
-        lam_K1 = csr_convolution(lam_ds, K1) / st * delta_s
-        Nend = len(lam_K1)
-        N = int(abs(self.n_mesh + 1 - Nend) + self.n_mesh + 1)
-        x = np.linspace(I[-1, 0], I[-1, 0] - N * Ndw[1], num=N, endpoint=False)[::-1]
-        tck = interpolate.splrep(x, lam_K1, k=1)
-        dE = interpolate.splev(z, tck, der=0)
-        pc_ref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV
-        delta_p = dE * 1e-9 / pc_ref
-        p_array.rparticles[5] += delta_p
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        

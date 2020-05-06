@@ -2,36 +2,42 @@
 @ authors Martin Dohlus DESY, 2015, Sergey Tomin XFEL, 2016
 """
 
+import time
+import copy
+import importlib
+import logging
+
 from scipy import interpolate
-from ocelot.common.globals import *
-from ocelot.common import math_op
+from scipy.integrate import cumtrapz
 from scipy.ndimage.filters import gaussian_filter
 from scipy.optimize import curve_fit
-from ocelot.cpbd.beam import *
-from ocelot.cpbd.high_order import *
-from ocelot.cpbd.magnetic_lattice import *
-import time
-from scipy.integrate import cumtrapz
-from ocelot.cpbd.physics_proc import PhysProc
-import copy
-from ocelot.rad.radiation_py import und_field
-import importlib
 
-import logging
+from ocelot.common.globals import *
+from ocelot.common import math_op
+from ocelot.cpbd.beam import Particle, s_to_cur
+from ocelot.cpbd.high_order import arcline, rk_track_in_field
+from ocelot.cpbd.magnetic_lattice import (Undulator, Bend, RBend, SBend,
+                                          XYQuadrupole)
+from ocelot.cpbd.physics_proc import PhysProc
+from ocelot.rad.radiation_py import und_field
+
+# Try to import numba, pyfftw and numexpr for improved performance
 logger = logging.getLogger(__name__)
 
 try:
     import numba as nb
     nb_flag = True
 except:
-    logger.info("csr.py: module NUMBA is not installed. Install it to speed up calculation")
+    logger.info("csr.py: module NUMBA is not installed."
+                " Install it to speed up calculation")
     nb_flag = False
 
 try:
     from pyfftw.interfaces.numpy_fft import fft
     from pyfftw.interfaces.numpy_fft import ifft
 except:
-    logger.info("csr.py: module PYFFTW is not installed. Install it to speed up calculation.")
+    logger.info("csr.py: module PYFFTW is not installed."
+                " Install it to speed up calculation.")
     from numpy.fft import ifft
     from numpy.fft import fft
 
@@ -39,7 +45,8 @@ try:
     import numexpr as ne
     ne_flag = True
 except:
-    logger.info("csr.py: module NUMEXPR is not installed. Install it to speed up calculation")
+    logger.info("csr.py: module NUMEXPR is not installed."
+                " Install it to speed up calculation")
     ne_flag = False
 
 

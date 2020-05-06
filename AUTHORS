@@ -1,12 +1,12 @@
-Ilya Agapov ilya.agapov@desy.de
-architecture, optimizer, x-ray optics,
-genesis2 adaptor
-
-Sergey Tomin sergey.tomin@xfel.eu
+Sergey Tomin sergey.tomin@desy.de
 architecture, releases,
 cpbd modules, optics functions, CSR,
 tracking module, orbit correction module,
 optimizer, SR module, LH, tutorials
+
+Ilya Agapov ilya.agapov@desy.de
+architecture, optimizer, x-ray optics,
+genesis2 adaptor
 
 Igor Zagorodnov 
 cpbd module, space charge, wakefields

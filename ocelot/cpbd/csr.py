@@ -695,16 +695,18 @@ class CSR(PhysProc):
 
         KS1 = KS[0]
 
-        w, idx = np.unique(w, return_index=True)
-        KS = KS[idx]
-
+        # w, idx = np.unique(w, return_index=True)
+        # KS = KS[idx]
         # sort and unique takes time, but is required to avoid numerical trouble
-        if w_range[0] < w[0]:
-            m = np.where(w_range < w[0])[0][-1]
+
+        # Use w_min instead of unique and w[0]
+        w_min = np.min(w)
+        if w_range[0] < w_min:
+            m = np.where(w_range < w_min)[0][-1]
             if L_fin:
-                KS2 = self.K0_fin_inf(i, traj, np.append(w_range[0:m+1], w[0]), gamma)
+                KS2 = self.K0_fin_inf(i, traj, np.append(w_range[0:m+1], w_min), gamma)
             else:
-                KS2 = self.K0_inf_inf(i, traj, np.append(w_range[0:m+1], w[0]))
+                KS2 = self.K0_inf_inf(i, traj, np.append(w_range[0:m+1], w_min))
 
             KS2 = (KS2[-1] - KS2) + KS1
             KS = np.append(KS2[0:-1], interp1(w, KS, w_range[m+1:]))

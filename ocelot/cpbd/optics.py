@@ -31,11 +31,20 @@ except ImportError as error:
 
 class SecondOrderMult:
     """
-    The class includes three different methods transforming the particles coordinates:
-    1. based on NUMEXPR module - gives the better performance
-    2. NUMBA module (switched off) - slowest method (around 2-3 times slower) but used full matrix for transformation
-                        (in the future can be more preferable for usage)
-    3. NUMPY module - gives a bit slower performance then NUMEXPR and identical to the first one on the algorithm level.
+    The class includes three different methods for transforming the particle
+    coordinates:
+
+    1. NUMEXPR module
+        Fastest methos, but does not use full matrix multiplication.
+
+    2. NUMBA module
+        Slightly faster than NUMPY for simulations with a large number of time
+        steps. Uses full matrix multiplication.
+
+    3. NUMPY module
+        Base method to be used if neither NUMBA not NUMEXPR are installed.
+        Uses full matrix multiplication.
+
     """
     def __init__(self):
         self.full_matrix = False

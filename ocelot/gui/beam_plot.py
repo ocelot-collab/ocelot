@@ -52,6 +52,10 @@ def plot_beam(beam, figsize=3, showfig=True, savefig=False, fig=None, plot_xy=No
 
     if fig == None:
         fig = plt.figure()
+    elif type(fig) is str:
+        fig = plt.figure(fig)
+    else:
+        pass
     fig.clf()
 
     idx = beam.idx_max()

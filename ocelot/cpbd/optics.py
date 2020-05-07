@@ -51,16 +51,14 @@ class SecondOrderMult:
 
     def numba_apply(self, X, R, T):
         Xcopy = np.copy(X)
-        N = X.shape[1]
-        for i in range(6):
-            for n in range(N):
-                tmp = 0.
-                r_tmp = 0.
+        for n in range(X.shape[1]):
+            for i in range(6):
+                x_new = 0
                 for j in range(6):
-                    r_tmp += R[i, j]*Xcopy[j, n]
+                    x_new += R[i, j]*Xcopy[j, n]
                     for k in range(6):
-                        tmp += T[i, j, k] * Xcopy[j, n] * Xcopy[k, n]
-                X[i, n] = r_tmp + tmp
+                        x_new += T[i, j, k] * Xcopy[j, n] * Xcopy[k, n]
+                X[i, n] = x_new
 
     def numexpr_apply(self, X, R, T):
         x, px, y, py, tau, dp = X

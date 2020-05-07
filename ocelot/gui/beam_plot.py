@@ -198,7 +198,7 @@ def plot_beam_form_factor(form_factor: BeamFormFactor, x_axis_units='THz', x_axi
                                 horizontalalignment='right', verticalalignment='top', transform=ax_current_profile.transAxes, fontsize=12, color='black')
 
     form_factor.calc()
-    frequency, ffactor =  form_factor.frequency, form_factor.modulus
+    frequency, ffactor =  form_factor.frequency, np.abs(form_factor.cfactor)
     if normalize:
         ffactor /= ffactor[0]
         

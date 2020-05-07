@@ -542,7 +542,7 @@ class BeamFormFactor:
     from the electron beam "BeamArray" object
     '''
     def __init__(self, beam_array=None):
-        self.modulus = None #modulus of form-factor
+        self.cfactor = None #modulus of form-factor
         self.frequency = None #frequency in Hz
         self.beam_array = beam_array #original beam file
         
@@ -552,7 +552,7 @@ class BeamFormFactor:
             self.calc()
 
     def __len__(self):
-        return np.size(self.modulus)
+        return np.size(self.cfactor)
 
     # def current_profile(self):
     #     return self.beam_array.s, self.beam_array.I
@@ -562,12 +562,12 @@ class BeamFormFactor:
         calculates the form-factor and populates self.modulus and self.frequency
         '''
         I_norm = self.beam_array.I / self.beam_array.charge()
-        self.modulus = np.abs(np.fft.fft(I_norm))
+        self.cfactor = np.fft.fft(I_norm)
         ds = np.abs(self.beam_array.s[1] - self.beam_array.s[0])
         self.frequency = np.fft.fftfreq(len(self), ds / speed_of_light)
         idx = len(self) // 2
         
-        self.modulus = self.modulus[:idx]
+        self.cfactor = self.cfactor[:idx]
         self.frequency = self.frequency[:idx]
 
 

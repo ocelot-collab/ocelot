@@ -39,10 +39,10 @@ class SecondOrderMult:
     """
     def __init__(self):
         self.full_matrix = False
-        if ne_flag:
+        if ne_flag and not self.full_matrix:
             # print("SecondTM: NumExpr")
             self.tmat_multip = self.numexpr_apply
-        elif nb_flag and self.full_matrix:
+        elif nb_flag:
             # print("SecondTM: NUMBA")
             self.tmat_multip = nb.jit(nopython=True, parallel=True)(self.numba_apply)
         else:

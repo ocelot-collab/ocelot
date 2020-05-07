@@ -44,7 +44,7 @@ class SecondOrderMult:
             self.tmat_multip = self.numexpr_apply
         elif nb_flag:
             # print("SecondTM: NUMBA")
-            self.tmat_multip = nb.jit(nopython=True, parallel=True)(self.numba_apply)
+            self.tmat_multip = nb.njit()(self.numba_apply)
         else:
             # print("SecondTM: Numpy")
             self.tmat_multip = self.numpy_apply

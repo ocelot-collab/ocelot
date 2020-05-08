@@ -98,7 +98,7 @@ class SecondOrderMult:
         X[4] = X_4
 
     def numpy_apply(self, X, R, T):
-        X[:] = np.matmul(R, X) + np.einsum('ijk,j...,k...', T, X, X).T
+        X[:] = np.matmul(R, X) + np.einsum('ijk,j...,k...->i...', T, X, X)
 
 
 def transform_vec_ent(X, dx, dy, tilt):

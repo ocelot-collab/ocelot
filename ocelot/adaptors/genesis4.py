@@ -121,7 +121,7 @@ class Genesis4Simulation:
 
     def write_lat_file(self):
         write_gen4_lat(self.ginp.attachments.lat, filepath=self.filepath(self.ginp.setup.lattice),
-                       l=self.zstop)
+                       zstop=self.zstop)
 
     def write_dfl_files(self):
         """
@@ -691,7 +691,7 @@ class Genesis4ParticlesDump:
         # return filename_from_path(self.filePath)
 
 
-def gen4_lat_str(lat, line_name='LINE', l=np.inf):
+def gen4_lat_str(lat, line_name='LINE', zstop=np.inf):
     '''
     Generates a string of lattice 
     in Genesis4 format
@@ -704,7 +704,7 @@ def gen4_lat_str(lat, line_name='LINE', l=np.inf):
 
     for element in lat.sequence:
 
-        if location >= l:
+        if location >= zstop:
             break
 
         element_num = line_name + '_' + str(len(beamline) + 1).zfill(3)
@@ -781,12 +781,12 @@ def gen4_lat_str(lat, line_name='LINE', l=np.inf):
     return lat_str
 
 
-def write_gen4_lat(lattices, filepath, l=None):
+def write_gen4_lat(lattices, filepath, zstop=np.inf):
     """
     Writing lattice file for Genesis1.3-version4 simulations
     :param lattices: dictionary: {'line_name': ocelot.cpbd.magnetic_lattice.MagneticLattice(), ...}
     :param filepath: str: path to the file in which lattices information will be writen
-    :param l: list with active lengths for each lattice in lattices dictionary
+    :param zstop: dict with active lengths for each lattice in lattices dictionary (can be a double if len(lattices)==1)
     :return:
     """
     _logger.info('writing genesis4 lattice')
@@ -794,11 +794,16 @@ def write_gen4_lat(lattices, filepath, l=None):
     f = open(filepath, 'w')  # erasing file content
     f.write('# generated with Ocelot\n')
 
-    if l in [None, np.inf]:
-        l = [np.inf for _ in lattices.keys()]
+    if not isinstance(zstop, dict):
+        if len(lattices) > 1:
+            raise TypeError("len(lattices) > 1: l should be a dictionary with keys the same as lattices")
+        else:
+            lat_name = [key for key in lattices.keys()][0]
+            zstop={lat_name:zstop}
 
-    for line_name, lat, l_cur in zip(lattices.keys(), lattices.values(), l):
-        lat_str = gen4_lat_str(lat, line_name=line_name, l=l_cur)
+
+    for line_name, lat in zip(lattices.keys(), lattices.values()):
+        lat_str = gen4_lat_str(lat, line_name=line_name, zstop=zstop.get(line_name, np.inf))
         f.write(lat_str)
 
     f.write('\n# end of file')
@@ -894,7 +899,7 @@ class Genesis4Output:
         spec = np.fft.fftshift(spec, axes=axis)
 
         scale_ev = h_eV_s * speed_of_light * (
-                    np.fft.fftfreq(self.nSlices, d=self.s[1] - self.s[0]) + 1 / self.lambdaref)
+                np.fft.fftfreq(self.nSlices, d=self.s[1] - self.s[0]) + 1 / self.lambdaref)
         scale_ev = np.fft.fftshift(scale_ev)
 
         if estimate_ph_sp_dens:

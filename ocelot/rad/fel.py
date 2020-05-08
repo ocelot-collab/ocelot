@@ -389,7 +389,13 @@ class FelParametersArray(FelParameters):
             idx = None
         return idx
     
-    
+# def calculate_fel_parameters_g4(input, array=False, method='mxie'):
+#     p = FelParameters()
+#     p.gamma0 = input.sequence['setup'].gamma0
+#     p.delgam = "n/a" # TODO: think, how to consistently get beam and undulator parameters and update meshes: e.g.
+#     # transverse mesh can be provided externally with field
+#     return
+
 
 def calculateFelParameters(input, array=False, method='mxie'):
     

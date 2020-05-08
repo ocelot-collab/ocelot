@@ -27,7 +27,7 @@ from ocelot.cpbd.magnetic_lattice import MagneticLattice
 _logger = logging.getLogger(__name__)
 
 
-# TODO: move to spbd (enentually?)
+# TODO: move to cpbd (enentually?)
 class Chicane(Element):
     """
     chicane (implemented for Genesis4, not used by cpbd)
@@ -89,7 +89,7 @@ class Genesis4Simulation:
         self.plot_output = kwargs.get('plot_output', True)
         self.return_out = kwargs.get('return_out', True)
         self.cleanup_afterwards = kwargs.get('cleanup_afterwards', False)
-        self.zstop = kwargs.get('return_out', np.inf)
+        self.zstop = kwargs.get('zstop', np.inf)
 
         self.launcher = get_genesis4_launcher()
 
@@ -177,27 +177,25 @@ class Genesis4Simulation:
         # TODO: implement on Launcher level
         if sys.platform not in ["linux", "linux2"]:
             _logger.error('Only linux platform supported for given launcher (at the moment)')
-
-        pass
+            pass
 
     def run(self, launcher=None):
-
         self.prepare_launcher()
         if launcher is not None:
             self.launcher = launcher
         self.clean_output()
         self.write_all_files()
-
+        
         self.launcher.launch()
-
+        
         if self.return_out:
             out = read_gout4(self.root_path() + '.out.h5')
         else:
             out = None
-
+        
         if self.cleanup_afterwards:
             self.clean_output()
-
+        
         return out
 
     def clean_output(self):
@@ -791,6 +789,7 @@ def write_gen4_lat(lattices, filepath, zstop=np.inf):
     """
     _logger.info('writing genesis4 lattice')
     _logger.debug(ind_str + 'writing to ' + filepath)
+    _logger.debug('lattices = {}'.format(str(lattices)))
     f = open(filepath, 'w')  # erasing file content
     f.write('# generated with Ocelot\n')
 
@@ -803,6 +802,7 @@ def write_gen4_lat(lattices, filepath, zstop=np.inf):
 
 
     for line_name, lat in zip(lattices.keys(), lattices.values()):
+        _logger.debug(ind_str + "line={}, lat={}, zstop={}".format(line_name, type(lat), zstop.get(line_name, np.inf)))
         lat_str = gen4_lat_str(lat, line_name=line_name, zstop=zstop.get(line_name, np.inf))
         f.write(lat_str)
 

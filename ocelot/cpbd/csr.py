@@ -430,11 +430,11 @@ class K0_fin_anf:
         g2i = 1. / gamma ** 2
         b2 = 1. - g2i
         beta = np.sqrt(b2)
-        
+
         s = traj[0, :i] - traj[0, i]
         n = traj[1:4, [i]] - traj[1:4, :i]
         t = traj[4:, :i]
-        R = np.sqrt(np.sum(n*n, axis=0))
+        R = np.sqrt((n*n).sum(axis=0))
         w = s + beta * R
 
         j = np.where(w <= wmin)[0]
@@ -447,16 +447,17 @@ class K0_fin_anf:
             R = R[j:]
 
         # kernel
-        n /= R
-        x = np.sum(n * t, axis=0)
-        K = ((beta * (x - np.sum(n * traj[4:, [i]], axis=0)) -
-              b2 * (1 - np.sum(t * traj[4:, [i]], axis=0)) -
+        n = n / R
+        x = (n * t).sum(axis=0)
+        y = traj[4:, [i]]
+        K = ((beta * (x - (n * y).sum(axis=0)) -
+              b2 * (1. - (t * y).sum(axis=0)) -
               g2i) / R -
              (1. - beta * x) / w * g2i)
 
         # integrated kernel: KS=int_s^0{K(u)*du}=int_0^{-s}{K(-u)*du}
         K[:-1] += K[1:]
-        K *= 0.5 * np.diff(s, append=0)
+        K = 0.5 * K * np.diff(s, append=0)
         KS = np.cumsum(K[::-1])[::-1]
 
         return w, KS

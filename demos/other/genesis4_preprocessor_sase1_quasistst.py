@@ -39,7 +39,7 @@ ginp.sequence['setup'].lattice = 'sase1.lat'
 ginp.sequence['setup'].beamline = 'SASE1'
 # ginp.sequence['setup'].gamma0 = 11357.82 # inserted using ginp.populate_sequence_beam()
 ginp.sequence['setup'].lambda0 = eV2lambda(E_photon) # reference wavelength
-ginp.sequence['setup'].delz = 0.04 # integration period [m]
+ginp.sequence['setup'].delz = 0.1 # integration period [m]
 ginp.sequence['setup'].seed = 123456789 # (ipseed in gen2)
 ginp.sequence['setup'].npart = 8192
 ginp.sequence['setup'].nbins = 4
@@ -52,7 +52,7 @@ ginp.sequence['time'].slen = 5e-7 # [m] length of time window
 ginp.sequence['time'].sample = 30 # sampling in wavelengths ("zsep" in gen2)
 ginp.sequence['time'].time = 1 #time-dependent
 
-ginp.sequence['field'].power = 1e6 #small value to see some seed
+ginp.sequence['field'].power = 10e3 #small value to see both seed and noise
 ginp.sequence['field'].dgrid = 1e-04
 ginp.sequence['field'].ngrid = 151 # ("ncar" in gen2)
 ginp.sequence['field'].waist_size = 30e-6
@@ -91,10 +91,9 @@ ginp.sequence['track'].sort_step = 0
 
 ginp.attachments.lat = {'SASE1': sase_lat}
 sase_sim = Genesis4Simulation(ginp,
-                              exp_dir=sim_directory + 'Example-SASE1_1',
+                              exp_dir=sim_directory + 'Example-SASE1',
                               return_out=1, # after the simulation reads and returns output file as Genesis4Output object
                               cleanup_afterwards=0, # deletes simulation files after the simulation (makes sence when return_out=1)
-                              #zstop={'SASE1': 50},
                               zstop=50)
 
 # Genesis4 simulation is usually started simply using
@@ -108,4 +107,4 @@ sase_gout = sase_sim.run()
 # plot_gen4_out_z(sase_gout, z=0, showfig=0, savefig=1)
 # plot_gen4_out_e(sase_gout, showfig=0, savefig=1)
 # plot_gen4_out_ph(sase_gout, showfig=0, savefig=1)
-plot_gen4_out_all(sase_gout, showfig=0, savefig=1)
+plot_gen4_out_all(sase_gout.filePath.replace('out.h5','*'), showfig=0, savefig=1) #plots reasonable ammount of output from .out, .fld and .par

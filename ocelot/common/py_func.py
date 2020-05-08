@@ -40,7 +40,7 @@ def background(command):
 def copy_this_script(file, folderPath):
     scriptName = os.path.basename(file)
     scriptPath = os.path.realpath(file)
-    cmd = 'cp ' + scriptPath + ' ' + folderPath + 'exec_' + scriptName + ' '
+    cmd = 'cp ' + scriptPath + ' ' + os.path.join(folderPath, 'exec_' + scriptName) + ' '
     os.system(cmd)
 
 def filename_from_path(path_string):

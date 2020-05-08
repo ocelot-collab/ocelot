@@ -17,6 +17,7 @@ ax.set_ylim(ymin=0)
 
 import sys
 import os
+import glob
 import csv
 import time
 import matplotlib
@@ -71,7 +72,7 @@ _logger = logging.getLogger(__name__)
 #     return
 
 @if_plottable
-def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 0, 0, 5, 1, 0, 0, 0, 0, 0, 5, 1),
+def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 0, 0, 5, 1, 0, 0, 0, 1, 0, 1, 1),
                       vartype_dfl=complex128, *args, **kwargs):
     debug = 1
     """
@@ -86,14 +87,14 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 0
         1 - radiation evolution
         2 - profile at z=0m
         3 - profile at the end
-        4 - profile every m meters
+        4 - profile at n equidistant z-points
         5 - dfl at the end, space    -time      domain
         6 -                 inv.space-time      domain
         7 -                 space    -frequency domain
         8 -                 inv.space-frequency domain
         9 - dpa as edist at the end, smeared
         10 - dpa as edist at the end, not smeared
-        11 - wigner distribution every m meters,
+        11 - wigner distribution at n equidistant z-points,
         12 - ebeam bucket at max power
     picks as an input "GenesisOutput" object, file path of directory as strings.
     plots e-beam evolution, radiation evolution, initial and final simulation window
@@ -126,6 +127,8 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 0
                 if name.endswith('h5'):
                     handles.append(os.path.join(root, name))
         _logger.info('\n  plotting all files in {}'.format(str(handle)))
+    elif str(handle).endswith('*') and os.path.isdir(os.path.split(handle)[0]):
+        handles = [result for result in glob.iglob(handle) if result.endswith('.h5')] # search with wildcharacter ending
     else:
         handles = [handle]
     
@@ -178,18 +181,24 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 0
                 f3 = plot_gen4_out_z(handle, z=np.inf, showfig=showfig, savefig=savefig)
             if choice[4] != 0:
                 if choice[4] != []:
-                    z_arr = np.linspace(0, np.amax(handle.z), choice[4])
+                    if choice[4] == 1:
+                        z_arr = [np.amax(handle.z)]
+                    else:
+                        z_arr = np.linspace(0, np.amax(handle.z), choice[4])
                 else:
                     z_arr = choice[4]
                 for z in z_arr:
                     plot_gen4_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug, *args, **kwargs)
             if choice[11] != 0:
                 if choice[11] != []:
-                    z_arr = np.linspace(0, np.amax(handle.z), choice[11])
+                    if choice[11] == 1:
+                        z_arr = [np.amax(handle.z)]
+                    else:
+                        z_arr = np.linspace(0, np.amax(handle.z), choice[11])
                 else:
                     z_arr = choice[11]
                 for z in z_arr:
-                    W = wigner_out(handle, z=z, pad=2)
+                    W = wigner_out(handle, z=z, pad=1)
                     plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug, downsample=2)
                     # except:
                     # _logger.warning('could not plot wigner')

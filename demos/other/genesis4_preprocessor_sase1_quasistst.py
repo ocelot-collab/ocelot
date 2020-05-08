@@ -94,6 +94,7 @@ sase_sim = Genesis4Simulation(ginp,
                               exp_dir=sim_directory + 'Example-SASE1_1',
                               return_out=1, # after the simulation reads and returns output file as Genesis4Output object
                               cleanup_afterwards=0, # deletes simulation files after the simulation (makes sence when return_out=1)
+                              #zstop={'SASE1': 50},
                               zstop=50)
 
 # Genesis4 simulation is usually started simply using

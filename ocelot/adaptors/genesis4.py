@@ -23,6 +23,7 @@ from ocelot.utils.launcher import *
 from ocelot.cpbd.beam import Beam, BeamArray
 from ocelot.cpbd.elements import Element, Drift, Quadrupole, Undulator, Marker
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.common.py_func import copy_this_script
 
 _logger = logging.getLogger(__name__)
 
@@ -90,6 +91,7 @@ class Genesis4Simulation:
         self.return_out = kwargs.get('return_out', True)
         self.cleanup_afterwards = kwargs.get('cleanup_afterwards', False)
         self.zstop = kwargs.get('zstop', np.inf)
+        self.exec_script_path = kwargs.get('exec_script_path', None)
 
         self.launcher = get_genesis4_launcher()
 
@@ -165,8 +167,9 @@ class Genesis4Simulation:
         self.write_inp_file()
         self.write_lat_file()
         self.write_dfl_files()
+        if self.exec_script_path is not None:
+            copy_this_script(self.exec_script_path, self.exp_dir)
         # TODO: write all attachments
-        pass
 
     def prepare_launcher(self, program_path='genesis4'):
         self.launcher.program = program_path

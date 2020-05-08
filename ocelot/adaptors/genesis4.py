@@ -19,8 +19,8 @@ from ocelot.common.globals import *
 from ocelot.adaptors.genesis import GenesisElectronDist #tmp
 from ocelot.common.ocelog import *
 from ocelot.utils.launcher import *
-from ocelot.cpbd.beam import beam, BeamArray
-from ocelot.cpbd.elements import Element,  Drift, Quadrupole, Undulator
+from ocelot.cpbd.beam import Beam, BeamArray
+from ocelot.cpbd.elements import Element,  Drift, Quadrupole, Undulator, Marker
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 
 
@@ -143,7 +143,7 @@ class Genesis4Simulation:
         for element in self.ginp.sequence:
             if element.startswith('importbeam'):
                 imppar = self.ginp.sequence[element]
-                if imppar._name_list_id in self.attachments.dpa:
+                if imppar._name_list_id in self.ginp.attachments.dpa:
                     if imppar.file is not None:
                         filename = imppar.file
                     else:
@@ -160,11 +160,11 @@ class Genesis4Simulation:
         # TODO: write all attachments
         pass
 
-    def prepare_launcher(self):
-        self.launcher.program = 'genesis4'
+    def prepare_launcher(self, program_path='genesis4'):
+        self.launcher.program = program_path
         self.launcher.dir = self.exp_dir
         self.launcher.argument = ' ' + self.ginp.filename
-        self.mpiParameters = '-np 8' #TODO: calculate and request minimum reasonable number of cores (to not ovewblow the window) S.S.
+        #self.mpiParameters = '-np 8' #TODO: calculate and request minimum reasonable number of cores (to not ovewblow the window) S.S.
         self.mpiParameters = ''
 
         # TODO: implement on Launcher level
@@ -264,6 +264,39 @@ class Genesis4Input:
                 field_counter = 0
                 beam_counter = 0
         # TODO: decide whether error raising is needed if co-exist e.g. importbeam and beam or importfield and field
+
+    def populate_sequence_beam(self, beam, name_list_label):
+        """
+        :param self: Genesis4Input
+        :param beam: BeamArray or Beam object
+        :param name_list_label:
+        :return: None
+        """
+        if isinstance(beam, BeamArray):
+            beam_pk = beam.pk()
+            _logger.warning('at the moment method beam_to_sequence_beam parses a single beam slice; peak current value is taken')
+        elif isinstance(beam, Beam):
+            beam_pk = beam
+        else:
+            raise TypeError('beam should be an instance of BeamArray or Beam')
+        self.sequence['setup'].gamma0 = beam_pk.g
+        self.sequence[name_list_label].gamma = beam_pk.g  # from [GeV] to [units of the electron rest mass]
+        self.sequence[name_list_label].delgam = beam_pk.dg
+        self.sequence[name_list_label].current = beam_pk.I
+        self.sequence[name_list_label].ex = beam_pk.emit_xn
+        self.sequence[name_list_label].ey = beam_pk.emit_yn
+        self.sequence[name_list_label].betax = beam_pk.beta_x
+        self.sequence[name_list_label].betay = beam_pk.beta_y
+        self.sequence[name_list_label].alphax = beam_pk.alpha_x
+        self.sequence[name_list_label].alphay = beam_pk.alpha_y
+        self.sequence[name_list_label].xcenter = beam_pk.x
+        self.sequence[name_list_label].ycenter = beam_pk.y
+        self.sequence[name_list_label].pxcenter = beam_pk.px
+        self.sequence[name_list_label].pycenter = beam_pk.py
+        self.sequence[name_list_label].bunch = None
+        self.sequence[name_list_label].bunchphase = None
+        self.sequence[name_list_label].emod = None
+        self.sequence[name_list_label].emodphase = None
 
     # def add_prefixes(self, prefix_str):
     #     def rsetattr(obj, attr, val):
@@ -723,7 +756,6 @@ def gen4_lat_str(lat, line_name='LINE', l=np.inf):
 
     lat_str.append('')
     lat_str.append('{:}: LINE = {{{:}}};'.format(line_name, ','.join(beamline)))
-    lat_str.append('\n\n')
     lat_str = "\n".join(lat_str)
     _logger.debug(ind_str + lat_str)
     return lat_str
@@ -740,7 +772,7 @@ def write_gen4_lat(lattices, filepath, l=None):
     _logger.info('writing genesis4 lattice')
     _logger.debug(ind_str + 'writing to ' + filepath)
     f = open(filepath, 'w')  # erasing file content
-    f.write('# generated with Ocelot\n\n')
+    f.write('# generated with Ocelot\n')
 
     if l in [None, np.inf]:
         l = [np.inf for _ in lattices.keys()]
@@ -749,7 +781,7 @@ def write_gen4_lat(lattices, filepath, l=None):
         lat_str = gen4_lat_str(lat, line_name=line_name, l=l_cur)
         f.write(lat_str)
 
-    f.write('\n# end of file\n')
+    f.write('\n# end of file')
     f.close()
     _logger.debug(ind_str + 'done')
 

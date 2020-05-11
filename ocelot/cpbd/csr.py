@@ -430,11 +430,12 @@ class K0_fin_anf:
         g2i = 1. / gamma ** 2
         b2 = 1. - g2i
         beta = np.sqrt(b2)
-
+        
         s = traj[0, :i] - traj[0, i]
-        n = traj[1:4, [i]] - traj[1:4, :i]
-        t = traj[4:, :i]
-        R = np.sqrt((n*n).sum(axis=0))
+        n0 = traj[1, i] - traj[1, :i]
+        n1 = traj[2, i] - traj[2, :i]
+        n2 = traj[3, i] - traj[3, :i]
+        R = np.sqrt(n0*n0 + n1*n1 + n2*n2)
         w = s + beta * R
 
         j = np.where(w <= wmin)[0]
@@ -442,16 +443,29 @@ class K0_fin_anf:
             j = j[-1]
             w = w[j:i]
             s = s[j:i]
-            n = n[:, j:]
-            t = t[:, j:]
-            R = R[j:]
+            n0 = n0[j:i]
+            n1 = n1[j:i]
+            n2 = n2[j:i]
+            R = R[j:i]
+        else:
+            j = 0
+
+        n0 /= R
+        n1 /= R
+        n2 /= R
 
         # kernel
-        n = n / R
-        x = (n * t).sum(axis=0)
-        y = traj[4:, [i]]
-        K = ((beta * (x - (n * y).sum(axis=0)) -
-              b2 * (1. - (t * y).sum(axis=0)) -
+        t4 = traj[4, j:i]
+        t5 = traj[5, j:i]
+        t6 = traj[6, j:i]
+
+        t4_i = traj[4, i]
+        t5_i = traj[5, i]
+        t6_i = traj[6, i]
+
+        x = n0 * t4 + n1 * t5 + n2 * t6
+        K = ((beta * (x - n0 * t4_i - n1 * t5_i - n2 * t6_i) -
+              b2 * (1. - t4 * t4_i - t5 * t5_i - t6 * t6_i) -
               g2i) / R -
              (1. - beta * x) / w * g2i)
 

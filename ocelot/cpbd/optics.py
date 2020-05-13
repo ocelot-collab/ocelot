@@ -1178,6 +1178,7 @@ class Navigator:
 
         self.lat = lattice
         self.process_table = ProcessTable(self.lat)
+        self.ref_process_table = None
 
         self.z0 = 0.  # current position of navigator
         self.n_elem = 0  # current index of the element in lattice
@@ -1187,10 +1188,15 @@ class Navigator:
         self.kill_process = False # for case when calculations are needed to terminated e.g. from gui
 
     def reset_position(self):
+        """
+        method to reset Navigator position.
+        :return:
+        """
         _logger_navi.debug(" reset position")
         self.z0 = 0.  # current position of navigator
         self.n_elem = 0  # current index of the element in lattice
         self.sum_lengths = 0.  # sum_lengths = Sum[lat.sequence[i].l, {i, 0, n_elem-1}]
+        self.process_table = deepcopy(self.ref_process_table)
 
     def go_to_start(self):
         self.reset_position()
@@ -1215,6 +1221,7 @@ class Navigator:
         """
         _logger_navi.debug(" add_physics_proc: phys proc: " + physics_proc.__class__.__name__)
         self.process_table.add_physics_proc(physics_proc, elem1, elem2)
+        self.ref_process_table = deepcopy(self.process_table)
 
     def activate_apertures(self, start=None, stop=None):
         """

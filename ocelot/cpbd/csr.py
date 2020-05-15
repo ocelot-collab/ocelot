@@ -364,59 +364,68 @@ class K0_fin_anf:
         b2 = 1. - g2i
         beta = np.sqrt(b2)
         K = np.zeros(indx - j)
-        for i in range(j, indx):
-            Ri = R[i]
-            n0i = n[i, 0] / Ri
-            n1i = n[i, 1] / Ri
-            n2i = n[i, 2] / Ri
+        t4i = traj4[indx]
+        t5i = traj5[indx]
+        t6i = traj6[indx]
+        for i in range(indx - j):
+            Ri_inv = 1/R[i]
+            n0i = n[i, 0] * Ri_inv
+            n1i = n[i, 1] * Ri_inv
+            n2i = n[i, 2] * Ri_inv
             # kernel
-            t4 = traj4[i]
-            t5 = traj5[i]
-            t6 = traj6[i]
+            t4 = traj4[i+j]
+            t5 = traj5[i+j]
+            t6 = traj6[i+j]
             x = n0i * t4 + n1i * t5 + n2i * t6
-            K[i - j] = ((beta * (x - n0i * traj4[indx] -
-                                 n1i * traj5[indx] - n2i * traj6[indx]) -
-                         b2 * (1. - t4 * traj4[indx] - t5 * traj5[indx] -
-                               t6 * traj6[indx]) -
-                         g2i) / Ri -
-                        (1. - beta * x) / w[i - j] * g2i)
+            K[i] = ((beta * (x - n0i * t4i - n1i * t5i - n2i * t6i) -
+                     b2 * (1. - t4 * t4i - t5 * t5i - t6 * t6i) -
+                     g2i) * Ri_inv - (1. - beta * x) / w[i] * g2i)
         return K
 
-    def K0_0_jit(self, i, traj0, traj1, traj2, traj3, gamma, s, n, R, w):
+    def K0_0_jit(self, i, traj0, traj1, traj2, traj3, gamma, s, n, R, w, wmin):
         g2i = 1. / gamma ** 2
         b2 = 1. - g2i
         beta = np.sqrt(b2)
-        # i1 = i - 1  # ignore points i1+1:i on linear path to observer
+
+        i_0 = 0
 
         traj0i = traj0[i]
         traj1i = traj1[i]
         traj2i = traj2[i]
         traj3i = traj3[i]
-        for j in range(i):
-            s[j] = traj0[j] - traj0i
+        for j_i in range(i):
+            # Start looping from last element
+            j = i - j_i - 1
+            s_j = traj0[j] - traj0i
             n1 = traj1i - traj1[j]
             n2 = traj2i - traj2[j]
             n3 = traj3i - traj3[j]
-            R[j] = np.sqrt(n1 * n1 + n2 * n2 + n3 * n3)
-            w[j] = s[j] + beta * R[j]
+            R_j = np.sqrt(n1 * n1 + n2 * n2 + n3 * n3)
+            w_j = s_j + beta * R_j
+            s[j] = s_j
+            R[j] = R_j
+            w[j] = w_j
             n[j, 0] = n1
             n[j, 1] = n2
             n[j, 2] = n3
+            if w_j <= wmin:
+                i_0 = j
+                break
+        # return last index where w <= wmin
+        return i_0
 
     def K0_fin_anf_opt(self, i, traj, wmin, gamma):
         s = np.zeros(i)
         n = np.zeros((i, 3))
         R = np.zeros(i)
         w = np.zeros(i)
-        self.K0_0(i, traj[0], traj[1], traj[2], traj[3], gamma, s, n, R, w)
-
-        j = np.where(w <= wmin)[0]
-        if len(j) > 0:
-            j = j[-1]
-            w = w[j:i]
-            s = s[j:i]
-        else:
-            j = 0
+        j = self.K0_0(
+            i, traj[0], traj[1], traj[2], traj[3], gamma, s, n, R, w, wmin)
+        
+        s = s[j:]
+        n = n[j:]
+        R = R[j:]
+        w = w[j:]
 
         K = self.K0_1(i, j, R, n, traj[4], traj[5], traj[6], w, gamma)
         K[:-1] += K[1:]

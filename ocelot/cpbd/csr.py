@@ -495,26 +495,32 @@ class K0_fin_anf:
         g2i = 1. / gamma ** 2
         b2 = 1. - g2i
         beta = np.sqrt(b2)
+
+        i_0 = self.estimate_start_index(i, traj, wmin, beta)
         
-        s = traj[0, :i] - traj[0, i]
-        n0 = traj[1, i] - traj[1, :i]
-        n1 = traj[2, i] - traj[2, :i]
-        n2 = traj[3, i] - traj[3, :i]
+        s = traj[0, i_0:i] - traj[0, i]
+        n0 = traj[1, i] - traj[1, i_0:i]
+        n1 = traj[2, i] - traj[2, i_0:i]
+        n2 = traj[3, i] - traj[3, i_0:i]
         R = ne.evaluate("sqrt(n0**2 + n1**2 + n2**2)")
 
         w = ne.evaluate('s + beta*R')
         j = np.where(w <= wmin)[0]
-
         if len(j) > 0:
             j = j[-1]
-            w = w[j:i]
-            s = s[j:i]
+            w = w[j:]
+            s = s[j:]
+            n0 = n0[j:]
+            n1 = n1[j:]
+            n2 = n2[j:]
+            R = R[j:]
+            j += i_0
         else:
-            j = 0
-        R = R[j:i]
-        n0 = n0[j:i] / R
-        n1 = n1[j:i] / R
-        n2 = n2[j:i] / R
+            j = i_0
+        R_inv = 1 / R
+        n0 *= R_inv
+        n1 *= R_inv
+        n2 *= R_inv
 
         # kernel
         t4 = traj[4, j:i]

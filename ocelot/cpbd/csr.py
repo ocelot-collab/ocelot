@@ -431,28 +431,32 @@ class K0_fin_anf:
         b2 = 1. - g2i
         beta = np.sqrt(b2)
         
-        s = traj[0, :i] - traj[0, i]
-        n0 = traj[1, i] - traj[1, :i]
-        n1 = traj[2, i] - traj[2, :i]
-        n2 = traj[3, i] - traj[3, :i]
+        i_0 = self.estimate_start_index(i, traj, wmin, beta)
+        
+        s = traj[0, i_0:i] - traj[0, i]
+        n0 = traj[1, i] - traj[1, i_0:i]
+        n1 = traj[2, i] - traj[2, i_0:i]
+        n2 = traj[3, i] - traj[3, i_0:i]
         R = np.sqrt(n0*n0 + n1*n1 + n2*n2)
         w = s + beta * R
 
         j = np.where(w <= wmin)[0]
         if len(j) > 0:
             j = j[-1]
-            w = w[j:i]
-            s = s[j:i]
-            n0 = n0[j:i]
-            n1 = n1[j:i]
-            n2 = n2[j:i]
-            R = R[j:i]
+            w = w[j:]
+            s = s[j:]
+            n0 = n0[j:]
+            n1 = n1[j:]
+            n2 = n2[j:]
+            R = R[j:]
+            j += i_0
         else:
-            j = 0
+            j = i_0
 
-        n0 /= R
-        n1 /= R
-        n2 /= R
+        R_inv = 1 / R
+        n0 *= R_inv
+        n1 *= R_inv
+        n2 *= R_inv
 
         # kernel
         t4 = traj[4, j:i]
@@ -466,7 +470,7 @@ class K0_fin_anf:
         x = n0 * t4 + n1 * t5 + n2 * t6
         K = ((beta * (x - n0 * t4_i - n1 * t5_i - n2 * t6_i) -
               b2 * (1. - t4 * t4_i - t5 * t5_i - t6 * t6_i) -
-              g2i) / R -
+              g2i) * R_inv -
              (1. - beta * x) / w * g2i)
 
         # integrated kernel: KS=int_s^0{K(u)*du}=int_0^{-s}{K(-u)*du}
@@ -526,6 +530,59 @@ class K0_fin_anf:
 
         return w, KS
 
+    def estimate_start_index(self, i, traj, w_min, beta, i_min=1000, n_test=10):
+        """
+        This method estimates the index of the first trajectory point from
+        which CSR effects should be computed.
+
+        This method can significantly reduce the computing time of CSR effects
+        by pre-discaring regions of the reference trajectory which do not
+        influence the CSR calculation (i.e. the points where w <= wmin). This
+        is performed by testing the w <= wmin condition for a subset of n_test
+        equally-spaced points along the reference trajectory. The index of the
+        last tested trajectory point in which w <= wmin is returned.
+
+        Parameters
+        ----------
+
+        i : int
+            Iteration index
+
+        traj : ndarray
+            Reference trajectory along which CSR forces are calculated
+
+        w_min : float
+            Leftmost edge of the longitudinal bunch binning.
+
+        beta : float
+            Relativistic factor.
+
+        i_min : int
+            Minimum iteration index. When i<i_min, no estimation of the starting
+            index is performed (0 is returned).
+
+        n_test : int
+            Number of points along the trajectory in which to test whether they
+            should be taken into account for the CSR calculation.
+
+        Returns
+        -------
+        The estimated start index, which is always <= than the real one.
+        
+        """
+        i_0 = 0
+        if i > i_min:
+            idx = np.linspace(0, i, n_test, dtype=np.int32)
+            s = traj[0, idx] - traj[0, i]
+            n0 = traj[1, i] - traj[1, idx]
+            n1 = traj[2, i] - traj[2, idx]
+            n2 = traj[3, i] - traj[3, idx]
+            R = np.sqrt(n0*n0 + n1*n1 + n2*n2)
+            w = s + beta * R
+            j = np.where(w <= w_min)[0]
+            if len(j) > 0:
+                i_0 = idx[j[-1]]
+        return i_0
 
 class CSR(PhysProc):
     """

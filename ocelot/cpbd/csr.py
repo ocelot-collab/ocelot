@@ -277,7 +277,6 @@ class SubBinning:
             NBIN[ib] = NBIN[ib] + 1
         return NBIN
 
-
     def subbin_bound(self, q, s, x_qbin, n_bin, m_bin):
         """
         input
@@ -597,6 +596,7 @@ class K0_fin_anf:
                 i_0 = idx[j[-1]]
         return i_0
 
+
 class CSR(PhysProc):
     """
     coherent synchrotron radiation
@@ -645,7 +645,6 @@ class CSR(PhysProc):
         self.sub_bin = SubBinning(x_qbin=self.x_qbin, n_bin=self.n_bin, m_bin=self.m_bin)
         self.bin_smoth = Smoothing()
         self.k0_fin_anf = K0_fin_anf()
-
 
     def K0_inf_anf(self, i, traj, wmin):
         # function [ w,KS ] = K0_inf_anf( i,traj,wmin )
@@ -744,7 +743,6 @@ class CSR(PhysProc):
         else:
             KS = np.zeros(len(w_range))
         return KS
-
 
     def CSR_K1(self, i, traj, NdW, gamma=None):
         """
@@ -996,7 +994,6 @@ class CSR(PhysProc):
         # if self.pict_debug:
         #     data = np.array([ np.array(self.total_wake)])
         #     np.savetxt("total_wake_test.txt", data)
-
 
     def plot_wake(self, p_array, lam_K1, itr_ra, s1, st):
         """

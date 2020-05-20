@@ -1112,23 +1112,21 @@ class ProcessTable:
     def searching_kick_proc(self, physics_proc, elem1):
         """
         function finds kick physics process. Kick physics process applies kick only once between two elements
-        with zero length (e.g. Marker) or at the begining of the element if it is the same element,
+        with zero length (e.g. Marker) or at the beginning of the element if it is the same element,
         others physics processes are applied during finite lengths.
         :return:
         """
 
         if (physics_proc.indx0 == physics_proc.indx1 or
             (physics_proc.indx0 + 1 == physics_proc.indx1 and elem1.l == 0)):
-
             physics_proc.indx1 = physics_proc.indx0
             physics_proc.s_stop = physics_proc.s_start
-            self.kick_proc_list = np.append(self.kick_proc_list, physics_proc)
+            self.kick_proc_list.append(physics_proc)
             if len(self.kick_proc_list) > 1:
                 pos = np.array([proc.s_start for proc in self.kick_proc_list])
                 indx = np.argsort(pos)
-                self.kick_proc_list = self.kick_proc_list[indx]
+                self.kick_proc_list = [self.kick_proc_list[i] for i in indx]
         _logger_navi.debug(" searching_kick_proc: self.kick_proc_list.append(): " + str([p.__class__.__name__ for p in self.kick_proc_list]))
-
 
     def add_physics_proc(self, physics_proc, elem1, elem2):
         physics_proc.start_elem = elem1
@@ -1163,6 +1161,7 @@ class Navigator:
 
         self.lat = lattice
         self.process_table = ProcessTable(self.lat)
+        self.ref_process_table = None
 
         self.z0 = 0.  # current position of navigator
         self.n_elem = 0  # current index of the element in lattice
@@ -1172,9 +1171,15 @@ class Navigator:
         self.kill_process = False # for case when calculations are needed to terminated e.g. from gui
 
     def reset_position(self):
+        """
+        method to reset Navigator position.
+        :return:
+        """
+        _logger_navi.debug(" reset position")
         self.z0 = 0.  # current position of navigator
         self.n_elem = 0  # current index of the element in lattice
         self.sum_lengths = 0.  # sum_lengths = Sum[lat.sequence[i].l, {i, 0, n_elem-1}]
+        self.process_table = deepcopy(self.ref_process_table)
 
     def go_to_start(self):
         self.reset_position()
@@ -1197,8 +1202,9 @@ class Navigator:
                         can be the same as starting element.
         :return:
         """
-        #logger_navi.debug(" add_physics_proc: phys proc: " + physics_proc.__class__.__name__)
+        _logger_navi.debug(" add_physics_proc: phys proc: " + physics_proc.__class__.__name__)
         self.process_table.add_physics_proc(physics_proc, elem1, elem2)
+        self.ref_process_table = deepcopy(self.process_table)
 
     def activate_apertures(self, start=None, stop=None):
         """
@@ -1245,9 +1251,8 @@ class Navigator:
         if 0 in kick_pos and self.z0 == 0 and self.n_elem == 0:
             indx0 = np.argwhere(self.z0 == kick_pos)
             indx = np.append(indx0, indx)
-
         if len(indx) != 0:
-            kick_process = np.array(kick_list[indx]).flatten()
+            kick_process = np.array([kick_list[i] for i in indx.flatten()])
             for i, proc in enumerate(kick_process):
                 L_kick_stop = proc.s_start
                 if self.z0 + dz > L_kick_stop:
@@ -1272,7 +1277,6 @@ class Navigator:
                 proc_list.append(p)
         return proc_list
 
-
     def hard_edge_step(self, dz):
         # self.sum_lengths
         elem1 = self.lat.sequence[self.n_elem]
@@ -1288,6 +1292,19 @@ class Navigator:
                 phys_steps = np.append(phys_steps, dz)
 
         return active_process, phys_steps
+
+    def remove_used_processes(self, processes):
+        """
+        in case physics processes are applied and do not more needed they are removed from table
+
+        :param processes: list of processes are about to apply
+        :return: None
+        """
+        for p in processes:
+            if p in self.process_table.kick_proc_list:
+                _logger_navi.debug(" Navigator.remove_used_processes: " + p.__class__.__name__)
+                self.process_table.kick_proc_list.remove(p)
+                self.process_table.proc_list.remove(p)
 
     def get_next(self):
 
@@ -1310,10 +1327,7 @@ class Navigator:
                     p.counter = p.step
 
             dz = np.min(phys_steps)
-            # check if dz overjumps the stop element
-            # dz, processes = self.check_overjump(dz, processes)
         else:
-
             processes = proc_list
             n_elems = len(self.lat.sequence)
             if n_elems >= self.n_elem + 1:
@@ -1323,11 +1337,8 @@ class Navigator:
             dz = L - self.z0
             phys_steps = np.array([])
         # check if dz overjumps the stop element
-        #dzs_red = dzs - dz
         dz, processes, phys_steps = self.check_overjump(dz, processes, phys_steps)
         processes, phys_steps = self.check_proc_bounds(dz, proc_list, phys_steps, processes)
-
-
 
         _logger_navi.debug(" Navigator.get_next: process: " + " ".join([proc.__class__.__name__ for proc in processes]))
 
@@ -1336,6 +1347,9 @@ class Navigator:
 
         _logger_navi.debug(" Navigator.get_next: element type=" + self.lat.sequence[self.n_elem].__class__.__name__ + " element name=" +
                      str(self.lat.sequence[self.n_elem].id))
+
+        self.remove_used_processes(processes)
+
         return dz, processes, phys_steps
 
 

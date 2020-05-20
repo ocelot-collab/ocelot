@@ -108,6 +108,41 @@ def test_track_aperture(lattice, p_array, parameter, update_ref_values=False):
     assert check_result(result1 + result2)
 
 
+def test_track_navi_reset_position(lattice, p_array, parameter=None, update_ref_values=False):
+    """
+    test Runge_Kutta transfer map for undulator
+
+    0 - tracking of the electron beam with positive energy chirp trough undulator
+    1 - tracking of the electron beam with negative energy chirp trough undulator
+    """
+
+    p_array_track = copy.deepcopy(p_array)
+
+    navi = Navigator(lattice)
+    sc = SpaceCharge()
+    sc.step = 5
+    navi.add_physics_proc(sc, lattice.sequence[0], lattice.sequence[-1])
+
+    navi.activate_apertures()
+
+
+    tws_track_1, p_array_1 = track(lattice, p_array_track, navi)
+
+    tws_track_obj_1 = obj2dict(tws_track_1)
+    p_obj_1 = obj2dict(p_array_1)
+
+    navi.reset_position()
+    p_array_track_2 = copy.deepcopy(p_array)
+    tws_track_2, p_array_2 = track(lattice, p_array_track_2, navi)
+
+    tws_track_obj_2 = obj2dict(tws_track_2)
+    p_obj_2 = obj2dict(p_array_2)
+
+    result1 = check_dict(tws_track_obj_1, tws_track_obj_2, TOL, assert_info=' tws_track - ')
+    result2 = check_dict(p_obj_2, p_obj_2, tolerance=TOL, assert_info=' p - ')
+    assert check_result(result1 + result2)
+
+
 def test_track_beam_transform(lattice, p_array, parameter=None, update_ref_values=False):
     """
     test Runge_Kutta transfer map for undulator

@@ -21,6 +21,7 @@ class SectionLattice:
         self.sec_seq = sequence
         self.elem_seq = None
         self.tws = None
+        self.tws_track = None
         self.data_dir = data_dir
         self.initialize(tws0=tws0, *args, **kwargs)
 
@@ -96,7 +97,8 @@ class SectionLattice:
         return new_sections
 
     def track_sections(self, sections, p_array, config=None, force_ext_p_array=False, coupler_kick=False, verbose=True):
-
+        self.tws_track = []
+        L = 0.
         self.update_sections(sections, config=config, coupler_kick=coupler_kick)
         for i, sec in enumerate(sections):
             sec = self.dict_sections[sec]
@@ -104,6 +106,11 @@ class SectionLattice:
                 p_array = None
             sec.print_progress = verbose
             p_array = sec.tracking(particles=p_array)
+            tws_track = copy.deepcopy(sec.tws_track)
+            for tws in tws_track:
+                tws.s += L
+            L = tws_track[-1].s
+            self.tws_track = np.append(self.tws_track, tws_track)
         return p_array
 
     def load_twiss_track(self, sections):

@@ -779,7 +779,7 @@ class MethodTM:
 
     Example:
     --------
-    # use linear matrices for all elements except Sectupole which will have nonlinear kick map (KickTM)
+    # use linear matrices for all elements except Sextupole which will have nonlinear kick map (KickTM)
     method = MethodTM()
     method.global_method = TransferMap
     method.params[Sextupole] = KickTM

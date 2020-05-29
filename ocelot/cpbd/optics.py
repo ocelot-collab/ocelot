@@ -1178,7 +1178,7 @@ class Navigator:
 
         self.lat = lattice
         self.process_table = ProcessTable(self.lat)
-        self.ref_process_table = None
+        self.ref_process_table = deepcopy(self.process_table)
 
         self.z0 = 0.  # current position of navigator
         self.n_elem = 0  # current index of the element in lattice

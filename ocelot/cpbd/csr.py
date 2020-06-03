@@ -28,7 +28,6 @@ logger = logging.getLogger(__name__)
 try:
     import numba as nb
     nb_flag = True
-    wer
 except:
     logger.info("csr.py: module NUMBA is not installed."
                 " Install it to speed up calculation")
@@ -45,7 +44,6 @@ except:
     from numpy.fft import fft
 
 try:
-    sdf
     import numexpr as ne
     ne_flag = True
 except:

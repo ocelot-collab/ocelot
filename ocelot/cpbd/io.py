@@ -58,7 +58,7 @@ def load_particle_array(filename, print_params=False):
     return parray
 
 
-def save_particle_array(filename, p_array, ref_index=0):
+def save_particle_array(filename, p_array):
     """
     Universal function to save beam file, *.ast (ASTRA), *.fmt1 (CSRTrack) or *.npz format
 
@@ -67,14 +67,13 @@ def save_particle_array(filename, p_array, ref_index=0):
     the first particle is used as a reference.
 
     :param filename: path to file, filename.ast or filename.npz
-    :param ref_index: index of ref particle
     :return: ParticleArray
     """
     name, file_extension = os.path.splitext(filename)
     if file_extension == ".npz":
         save_particle_array2npz(filename, p_array)
     elif file_extension == ".ast":
-        particleArray2astraBeam(p_array, filename, ref_index)
+        particleArray2astraBeam(p_array, filename)
     elif file_extension == ".fmt1":
         particleArray2csrtrackBeam(p_array, filename)
     else:

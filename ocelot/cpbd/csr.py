@@ -34,6 +34,7 @@ except:
     nb_flag = False
 
 try:
+
     from pyfftw.interfaces.numpy_fft import fft
     from pyfftw.interfaces.numpy_fft import ifft
 except:
@@ -420,16 +421,21 @@ class K0_fin_anf:
         w = np.zeros(i)
         j = self.K0_0(
             i, traj[0], traj[1], traj[2], traj[3], gamma, s, n, R, w, wmin)
-        
+
         s = s[j:]
         n = n[j:]
         R = R[j:]
         w = w[j:]
 
         K = self.K0_1(i, j, R, n, traj[4], traj[5], traj[6], w, gamma)
-        K[:-1] += K[1:]
-        K *= 0.5 * np.diff(s, append=0)
-        KS = np.cumsum(K[::-1])[::-1]
+
+        if len(K) > 1:
+            a = np.append(0.5 * (K[0:-1] + K[1:]) * np.diff(s), 0.5 * K[-1] * s[-1])
+            KS = np.cumsum(a[::-1])[::-1]
+            # KS = cumsum_inv_jit(a)
+            # KS = cumtrapz(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
+        else:
+            KS = 0.5 * K[-1] * s[-1]
         return w, KS
 
     def K0_fin_anf_np(self, i, traj, wmin, gamma):
@@ -438,9 +444,9 @@ class K0_fin_anf:
         g2i = 1. / gamma ** 2
         b2 = 1. - g2i
         beta = np.sqrt(b2)
-        
+
         i_0 = self.estimate_start_index(i, traj, wmin, beta)
-        
+
         s = traj[0, i_0:i] - traj[0, i]
         n0 = traj[1, i] - traj[1, i_0:i]
         n1 = traj[2, i] - traj[2, i_0:i]
@@ -482,9 +488,13 @@ class K0_fin_anf:
              (1. - beta * x) / w * g2i)
 
         # integrated kernel: KS=int_s^0{K(u)*du}=int_0^{-s}{K(-u)*du}
-        K[:-1] += K[1:]
-        K = 0.5 * K * np.diff(s, append=0)
-        KS = np.cumsum(K[::-1])[::-1]
+
+        if len(K) > 1:
+            a = np.append(0.5 * (K[0:-1] + K[1:]) * np.diff(s), 0.5 * K[-1] * s[-1])
+            KS = np.cumsum(a[::-1])[::-1]
+            # KS = cumtrapz(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
+        else:
+            KS = 0.5 * K[-1] * s[-1]
 
         return w, KS
 
@@ -536,9 +546,12 @@ class K0_fin_anf:
             '  b2*(1. - t4*t4i - t5*t5i - t6*t6i) - g2i)/R -'
             ' (1. - beta*x)/w*g2i)')
 
-        K[:-1] += K[1:]
-        K *= 0.5 * np.diff(s, append=0)
-        KS = np.cumsum(K[::-1])[::-1]
+        if len(K) > 1:
+            a = np.append(0.5 * (K[0:-1] + K[1:]) * np.diff(s), 0.5 * K[-1] * s[-1])
+            KS = np.cumsum(a[::-1])[::-1]
+            # KS = cumtrapz(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
+        else:
+            KS = 0.5 * K[-1] * s[-1]
 
         return w, KS
 

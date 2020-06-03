@@ -71,7 +71,7 @@ class SecondOrderMult:
 
     def numexpr_apply(self, X, R, T):
         x, px, y, py, tau, dp = X
-        
+
         R00, R01, R02, R03, R04, R05 = R[0]
         R10, R11, R12, R13, R14, R15 = R[1]
         R20, R21, R22, R23, R24, R25 = R[2]
@@ -90,7 +90,7 @@ class SecondOrderMult:
         X_2 = ne.evaluate('R20 * x + R21 * px + R22 * y + R23 * py + R24 * tau + R25 * dp + T202 * x*y + T203 * x*py + T212 * y*px + T213 * px*py + T225 * y*dp + T235 * py*dp')
         X_3 = ne.evaluate('R30 * x + R31 * px + R32 * y + R33 * py + R34 * tau + R35 * dp + T302 * x*y + T303 * x*py + T312 * y*px + T313 * px*py + T325 * y*dp + T335 * py*dp')
         X_4 = ne.evaluate('R40 * x + R41 * px + R42 * y + R43 * py + R44 * tau + R45 * dp + T400 * x*x + T401 * x*px + T405 * x*dp + T411 * px*px + T415 * px*dp + T455 * dp*dp + T422 * y*y + T423 * y*py + T433 * py*py')  # + U5666*dp2*dp    # third order
-        
+
         X[0] = X_0
         X[1] = X_1
         X[2] = X_2

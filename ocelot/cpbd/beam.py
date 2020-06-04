@@ -42,35 +42,54 @@ class Twiss:
     """
 
     def __init__(self, beam=None):
-        if beam is None:
-            self.emit_x = 0.0
-            self.emit_y = 0.0
-            self.emit_xn = 0.0
-            self.emit_yn = 0.0
-            self.beta_x = 0.0
-            self.beta_y = 0.0
-            self.alpha_x = 0.0
-            self.alpha_y = 0.0
-            self.gamma_x = 0.0
-            self.gamma_y = 0.0
-            self.mux = 0.0
-            self.muy = 0.0
-            # self.dQ = 0.
-            self.Dx = 0.0
-            self.Dy = 0.0
-            self.Dxp = 0.0
-            self.Dyp = 0.0
-            self.x = 0.0
-            self.y = 0.0
-            self.xp = 0.0
-            self.yp = 0.0
-            self.E = 0.0
-            self.p = 0.0
-            self.tau = 0.0
-            self.s = 0.0  # position along the reference trajectory
-            self.q = 0.0  # C
-            self.id = ""
-        else:
+
+        self.emit_x = 0.0
+        self.emit_y = 0.0
+        self.emit_xn = 0.0
+        self.emit_yn = 0.0
+        self.eigemit_1 = 0.
+        self.eigemit_2 = 0.
+        self.beta_x = 0.0
+        self.beta_y = 0.0
+        self.alpha_x = 0.0
+        self.alpha_y = 0.0
+        self.gamma_x = 0.0
+        self.gamma_y = 0.0
+        self.Dx = 0.0
+        self.Dy = 0.0
+        self.Dxp = 0.0
+        self.Dyp = 0.0
+        self.mux = 0.0  # phase advance
+        self.muy = 0.0  # phase advance
+
+        # parameters below in the most cases are calculated from the ParticleArray object
+        # during tracking (see func 'get_envelop()')
+
+        self.E = 0.0  # ref the beam energy in [GeV]
+        self.s = 0.0  # position along the reference trajectory [m]
+        self.q = 0.0  # charge of the whole beam [C]
+
+        # moments
+        self.x = 0.0
+        self.y = 0.0
+        self.p = 0.0
+        self.tau = 0.0
+        self.xp = 0.0
+        self.yp = 0.0
+        self.xx = 0.
+        self.xpx = 0.
+        self.pxpx = 0.
+        self.yy = 0.
+        self.ypy = 0.
+        self.pypy = 0.
+        self.tautau = 0.
+        self.xy = 0.
+        self.pxpy = 0.
+        self.xpy = 0.
+        self.ypx = 0.
+
+        self.id = ""
+        if beam is not None:
             self.emit_x = beam.emit_x
             self.emit_y = beam.emit_y
             self.emit_xn = beam.emit_xn
@@ -80,9 +99,6 @@ class Twiss:
             self.beta_y = beam.beta_y
             self.alpha_x = beam.alpha_x
             self.alpha_y = beam.alpha_y
-            self.mux = 0.
-            self.muy = 0.
-            # self.dQ = 0.
             self.Dx = beam.Dx
             self.Dy = beam.Dy
             self.Dxp = beam.Dxp
@@ -98,11 +114,7 @@ class Twiss:
                 self.gamma_x = (1 + beam.alpha_x * beam.alpha_x) / beam.beta_x
                 self.gamma_y = (1 + beam.alpha_y * beam.alpha_y) / beam.beta_y
             self.E = beam.E
-            self.p = 0.0
-            self.tau = 0.0
-            self.s = 0.0  # position along the reference trajectory
-            self.q = 0.0  # C
-            self.id = ""
+
 
     def __str__(self):
         val = ""
@@ -788,6 +800,13 @@ def get_envelope(p_array, tws_i=Twiss(), bounds=None):
         tau = p_array.tau()
 
     tws = Twiss()
+    tws.E = np.copy(p_array.E)
+    tws.q = np.sum(p_array.q_array)
+
+    # if less than 3 particles are left in the ParticleArray - return default (zero) Twiss()
+    if len(x) < 3:
+        return tws
+
     dx = tws_i.Dx * p
     dy = tws_i.Dy * p
     dpx = tws_i.Dxp * p
@@ -810,6 +829,7 @@ def get_envelope(p_array, tws_i=Twiss(), bounds=None):
     tws.px = np.mean(px)
     tws.py = np.mean(py)
     tws.tau = np.mean(tau)
+    tws.p = np.mean(p)
 
     if ne_flag:
         tw_x = tws.x
@@ -855,8 +875,7 @@ def get_envelope(p_array, tws_i=Twiss(), bounds=None):
                   [0, -1, 0, 0]])
     # w, v = np.linalg.eig(np.dot(Sigma, S))
 
-    tws.p = np.mean(p)
-    tws.E = np.copy(p_array.E)
+
 
     tws.emit_x = np.sqrt(tws.xx * tws.pxpx - tws.xpx ** 2)
     tws.emit_y = np.sqrt(tws.yy * tws.pypy - tws.ypy ** 2)
@@ -896,7 +915,7 @@ def get_envelope(p_array, tws_i=Twiss(), bounds=None):
     tws.alpha_x = -tws.xpx / tws.emit_x
     tws.alpha_y = -tws.ypy / tws.emit_y
 
-    tws.q = np.sum(p_array.q_array)
+
     return tws
 
 

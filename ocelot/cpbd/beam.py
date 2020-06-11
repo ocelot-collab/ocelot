@@ -1540,15 +1540,15 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
                     l_beam * 6 if gaussian,
     nslice - number of slices in the beam
     """
-
+    
     _logger.info('generating electron beam distribution')
-
+    
     beam = Beam()
     beam.E = E
     beam.tlen = l_beam / speed_of_light * 1e15
     beam.I = I
     nslice=100
-
+    
     for key, value in kwargs.items():
         if (key in beam.__dict__ or key in beam.properties) and (key not in ['s', 'E', 'tlen', 'I']):
             setattr(beam, key, value)
@@ -1565,7 +1565,7 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
             nslice = value
         if key is 'dE':
             beam.dg = value / m_e_GeV
-
+    
     if 'l_window' not in kwargs:
         if beam.shape is ['gaussian', 'gauss', 'g']:
             l_window = l_beam * 6
@@ -1575,10 +1575,10 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
             raise ValueError('Beam() shape can be either "gaussian" or "flattop"')
     else:
         l_window = kwargs['l_window']
-
+    
     beam_arr = beam.to_array(nslice, l_window)
-
+    
     if 'chirp' in kwargs:
         beam_arr.add_chirp(kwargs['chirp'])
-
+    
     return beam_arr

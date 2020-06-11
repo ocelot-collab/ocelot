@@ -91,9 +91,10 @@ ginp.sequence['track'].sort_step = 0
 
 ginp.attachments.lat = {'SASE1': sase_lat}
 sase_sim = Genesis4Simulation(ginp,
-                              exp_dir=sim_directory + 'Example-SASE1',
+                              exp_dir=os.path.join(sim_directory, 'Example-SASE1'),
                               return_out=1, # after the simulation reads and returns output file as Genesis4Output object
                               cleanup_afterwards=0, # deletes simulation files after the simulation (makes sence when return_out=1)
+                              exec_script_path = __file__,
                               zstop=50)
 
 # Genesis4 simulation is usually started simply using

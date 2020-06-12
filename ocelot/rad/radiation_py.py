@@ -15,6 +15,7 @@ import time
 from ocelot.common.ocelog import *
 import copy
 from scipy.integrate import cumtrapz
+import numbers
 
 _logger = logging.getLogger(__name__)
 
@@ -753,6 +754,8 @@ def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy
                         nperiods = None
                     mag_field = lambda x, y, z: und_field(x, y, z, elem.lperiod, elem.Kx, nperiods=nperiods)
             N = int((mag_length * 1500 + 100) * accuracy)
+            if hasattr(elem, "npoints") and isinstance(elem.npoints, numbers.Number):
+                N = int((elem.npoints + 100) * accuracy)
             u = rk_track_in_field(p_array.rparticles, mag_length, N, energy, mag_field)
 
             p_array.x()[:] = u[-9, :]

@@ -292,7 +292,9 @@ class Genesis4Input:
             if beam is None:
                 _logger.warning(ind_str + 'no beam_array to populate')
             else:
-                self.attachments.beam['beam_name_list_id'] = beam
+                self.attachments.beam[beam_name_list_id] = beam
+                self.sequence['setup'].gamma0 = np.mean(beam.g)
+                self.sequence['time'].slen = np.amax(beam.s) - np.amin(beam.s)
         new_sequence = {}
         for name_list_id, name_list in self.sequence.items():
             if name_list_id != beam_name_list_id:
@@ -331,6 +333,7 @@ class Genesis4Input:
         else:
             raise TypeError('beam should be an instance of BeamArray or Beam')
         self.sequence['setup'].gamma0 = beam_pk.g
+        self.sequence['time'].slen = np.amax(beam.s) - np.amin(beam.s)
         self.sequence[name_list_id].gamma = beam_pk.g  # from [GeV] to [units of the electron rest mass]
         self.sequence[name_list_id].delgam = beam_pk.dg
         self.sequence[name_list_id].current = beam_pk.I
@@ -1915,7 +1918,7 @@ def write_beamtwiss_hdf5(beam, filepath):
     _logger.debug(ind_str + 'done')
 
 
-def read_beamtwiss_hdf5(beam, filepath):
+def read_beamtwiss_hdf5(filepath):
     _logger.info('reading electron beam (twiss) from {}'.format(filepath))
     beam = BeamArray()
     with h5py.File(filepath, 'r') as h5:

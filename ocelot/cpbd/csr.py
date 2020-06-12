@@ -506,7 +506,7 @@ class K0_fin_anf:
         beta = np.sqrt(b2)
 
         i_0 = self.estimate_start_index(i, traj, wmin, beta)
-        
+
         s = traj[0, i_0:i] - traj[0, i]
         n0 = traj[1, i] - traj[1, i_0:i]
         n1 = traj[2, i] - traj[2, i_0:i]
@@ -660,7 +660,15 @@ class CSR(PhysProc):
         self.k0_fin_anf = K0_fin_anf()
 
     def K0_inf_anf(self, i, traj, wmin):
-        # function [ w,KS ] = K0_inf_anf( i,traj,wmin )
+        """
+
+        :param i: index of the trajectories points for the convolution kernel is calculated;
+        :param traj: trajectory. traj[0,:] - longitudinal coordinate,
+                                 traj[1,:], traj[2,:], traj[3,:] - rectangular coordinates, \
+                                 traj[4,:], traj[5,:], traj[6,:] - tangential unit vectors
+        :param wmin: the first coordinate of the mash
+        :return:
+        """
 
         i1 = i-1 # ignore points i1+1:i on linear path to observer
         ra = np.arange(0, i1+1)
@@ -699,7 +707,16 @@ class CSR(PhysProc):
         return w, KS
 
     def K0_fin_inf(self, i, traj, w_range, gamma):
-        # function [ KS ] = K0_inf_inf( i,traj,w_range,gamma )
+        """
+        Radiative interaction is coming from the infinite straight line
+        that is assumed before the specified CSR region and it is calculated analytically
+
+        :param i:
+        :param traj:
+        :param w_range:
+        :param gamma:
+        :return:
+        """
 
         g2 = gamma**2
         g2i = 1./g2
@@ -734,7 +751,15 @@ class CSR(PhysProc):
         return KS
 
     def K0_inf_inf(self, i, traj, w_range):
-        # winf
+        """
+        Radiative interaction is coming from the infinite straight line
+        that is assumed before the specified CSR region and it is calculated analytically
+
+        :param i:
+        :param traj:
+        :param w_range:
+        :return:
+        """
         Rv1 = traj[1:4, i] - traj[1:4, 0]
         s1 =  traj[0, 0] - traj[0, i]
         ev1 = traj[4:, 0]
@@ -763,14 +788,13 @@ class CSR(PhysProc):
         :param traj: trajectory. traj[0,:] - longitudinal coordinate,
                                  traj[1,:], traj[2,:], traj[3,:] - rectangular coordinates, \
                                  traj[4,:], traj[5,:], traj[6,:] - tangential unit vectors
-        :param NdW: list N[0] 0 number of mesh points, N[1] = dW> 0 - increment, Mesh = Mesh = (N: 0) * dW
+        :param NdW: list [N, dW], NdW[0] is number of mesh points, NdW[1] = dW > 0 is increment.
+                                  Mesh = Mesh = (-N:0) * dW
         :param gamma:
         :return:
         """
-        # function [ K1 ] = CSR_K1( i,traj,NdW,gamma )
 
-        # L_fin=nargin==4 && ~isempty(gamma) && gamma>1
-        if gamma != None:
+        if gamma is not None:
             L_fin = True
         else:
             L_fin = False
@@ -907,7 +931,8 @@ class CSR(PhysProc):
                 zp = np.sqrt(1./(1. + xp2 + yp2))
 
                 s = cumtrapz(np.sqrt(1. + xp2 + yp2), z, initial=0)
-                if elem.__class__ == Undulator: delta_s = s[-1]
+                if elem.__class__ == Undulator:
+                    delta_s = s[-1]
 
                 dS = float(delta_s) / N
 
@@ -1057,4 +1082,3 @@ class CSR(PhysProc):
         name = "0" * (4 - len(dig)) + dig
         self.plt.savefig( name + '.png')
 
-        

@@ -2806,14 +2806,21 @@ def wigner_out(out, z=inf, method='mp', pad=1, debug=1, on_axis=1):
     """
     returns WignerDistribution from GenesisOutput at z
     """
-    # assert isinstance(out,GenesisOutput) #hotfix
-    assert len(out.s) > 0
-
-    import numpy as np
-
+    
     _logger.info('calculating Wigner distribution from .out at z = {}'.format(str(z)))
+    
+    # assert isinstance(out,GenesisOutput) #hotfix
+    if not hasattr(out, 's'):
+        _logger.error('out file has no s coordinate')
+        return None
+    elif len(out.s) == 0:
+        _logger.error('out file has s coordinate with zero length')
+        return None
+    else:
+        pass
+    
     start_time = time.time()
-
+    
     if z == 'end':
         z = np.inf
     if z == np.inf:
@@ -2823,7 +2830,9 @@ def wigner_out(out, z=inf, method='mp', pad=1, debug=1, on_axis=1):
     elif z < np.amin(out.z):
         z = np.amin(out.z)
     zi = np.where(out.z >= z)[0][0]
-
+    
+    _logger.debug(ind_str + 'zi = {}, z[zi] = {}'.format(str(zi), str(out.z[zi])))
+    
     wig = WignerDistribution()
 
     if on_axis:

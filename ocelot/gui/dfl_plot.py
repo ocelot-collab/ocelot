@@ -614,25 +614,29 @@ def plot_dfl_xz(dfl, whichis_derectrion='x', plot_proj=True, plot_slice=True, E_
                                                                     vmax=I_lim, vmin=-I_lim)
     else:
         axScatter.pcolormesh(E_ph, x, I_xz, cmap=cmap)
+    yticks = axScatter.yaxis.get_major_ticks()
+    yticks[-2].set_visible(False)
+    xticks = axScatter.xaxis.get_major_ticks()
+    xticks[-1].set_visible(False)
     
     axScatter.set_ylabel(x_label_txt, fontsize=18)
     axScatter.set_xlabel(E_label_txt, fontsize=18)
-
+    
     if plot_slice:
         
         I_xy = I[:, dfl.Nx() // 2, dfl.Ny() // 2]
         if whichis_derectrion == 'x':
-            I_x  = I[E_slice_idx, :, dfl.Ny() // 2]
-        elif whichis_derectrion == 'y':
             I_x  = I[E_slice_idx, dfl.Ny() // 2, :]
+        elif whichis_derectrion == 'y':
+            I_x  = I[E_slice_idx, :, dfl.Nx() // 2]
         else:
             raise ValueError('"whichis_derectrion" must be "x" or "y"')
 
         axHistx.plot(E_ph, I_xy, color='blue', label="on-axis")
         axHisty.plot(I_x, x, color='blue')
         axHistx.legend(bbox_to_anchor=(1.1, 1), loc='upper left', borderaxespad=0.)
-        axHisty.text(0.01*np.max(I_x), 0.9*np.max(x), r'slise $\;at = {}$eV'.format(round(E_slice)), 
-                     horizontalalignment='left', verticalalignment='top', fontsize=14)    
+        axHisty.text(1.05*np.max(I_x), 0.99*np.max(x), 'slice $\;at = {} eV$'.format(round(E_slice)), 
+                     horizontalalignment='left', verticalalignment='top', rotation=270, fontsize=14)    
         if log_scale is True:
             axHistx.set_yscale('log')
             axHisty.set_xscale('log')
@@ -644,11 +648,12 @@ def plot_dfl_xz(dfl, whichis_derectrion='x', plot_proj=True, plot_slice=True, E_
         axHistx.set_ylabel(I_units_phsmmbw, fontsize=18, color='blue')
         axHisty.xaxis.labelpad = 20
         axHistx.yaxis.labelpad = 20
-       
+        axHistx.set_ylim(0)
+        axHisty.set_xlim(0)
         axScatter.axis('tight')
         
-        xticks = axHistx.yaxis.get_major_ticks()
-        xticks[1].set_visible(False)
+        yticks = axHistx.yaxis.get_major_ticks()
+        yticks[0].set_visible(False)
         
     if plot_proj:
         I_xy = np.sum(dfl.intensity(), axis=(1, 2))*dfl.dx*dfl.dy * (1e3)**2
@@ -669,7 +674,12 @@ def plot_dfl_xz(dfl, whichis_derectrion='x', plot_proj=True, plot_slice=True, E_
             tl.set_visible(False)
         for tl in axHisty.get_yticklabels():
             tl.set_visible(False)
-            
+        
+        ax1.set_ylim(0)
+        
+        yticks = ax1.yaxis.get_major_ticks()
+        yticks[0].set_visible(False)
+        
     plt.draw()
     if savefig != False:
         if savefig == True:

@@ -15,6 +15,7 @@ _logger = logging.getLogger(__name__)
 
 try:
     import numba as nb
+
     nb_flag = True
 except:
     _logger.info("wake3D.py: module NUMBA is not installed. Install it to speed up calculation")
@@ -24,34 +25,36 @@ except:
 def triang_filter(x, filter_order):
     Ns = x.shape[0]
     for i in range(filter_order):
-        x[1:Ns] = (x[1:Ns] + x[0:Ns-1])*0.5
-        x[0:Ns-1] = (x[1:Ns] + x[0:Ns-1])*0.5
+        x[1:Ns] = (x[1:Ns] + x[0:Ns - 1]) * 0.5
+        x[0:Ns - 1] = (x[1:Ns] + x[0:Ns - 1]) * 0.5
     return x
 
 
 def Der(x, y):
-    #numerical derivative
-    n=x.shape[0]
+    # numerical derivative
+    n = x.shape[0]
     dy = np.zeros(n)
-    dy[1:n-1] = (y[2:n]-y[0:n-2])/(x[2:n]-x[0:n-2])
-    dy[0] = (y[1]-y[0])/(x[1]-x[0])
-    dy[n-1] = (y[n-1]-y[n-2])/(x[n-1]-x[n-2])
+    dy[1:n - 1] = (y[2:n] - y[0:n - 2]) / (x[2:n] - x[0:n - 2])
+    dy[0] = (y[1] - y[0]) / (x[1] - x[0])
+    dy[n - 1] = (y[n - 1] - y[n - 2]) / (x[n - 1] - x[n - 2])
     return dy
+
 
 def Int1(x, y):
     n = x.shape[0]
     Y = np.zeros(n)
-    for i in range (1,n):
-        Y[i] = Y[i-1]+0.5*(y(i)+y(i-1))*(x(i)-x(i-1))
+    for i in range(1, n):
+        Y[i] = Y[i - 1] + 0.5 * (y(i) + y(i - 1)) * (x(i) - x(i - 1))
     return Y
+
 
 def Int1h(h, y):
     n = y.shape[0]
     Y = np.zeros(n)
     # slow, switch to vector operations to be done
-    for i in range(1,n):
-        Y[i] = Y[i-1] + 0.5*(y[i]+y[i-1])
-    Y = Y*h
+    for i in range(1, n):
+        Y[i] = Y[i - 1] + 0.5 * (y[i] + y[i - 1])
+    Y = Y * h
     return Y
 
 
@@ -118,6 +121,7 @@ class WakeTable:
     WakeTable(wake_file) - load and prepare wake table
     wake_file - path to the wake table
     """
+
     def __init__(self, wake_file=None):
         if wake_file is not None:
             self.TH = self.load_table(wake_file)
@@ -143,31 +147,32 @@ class WakeTable:
         T = []
         ind = 0
         for i in range(Nt):
-            ind = ind+1
+            ind = ind + 1
             N0 = int(W[ind, 0])
             N1 = int(W[ind, 1])
             R = W[ind + 1, 0]
             L = W[ind + 1, 1]
             Cinv = W[ind + 2, 0]
-            nm = int(W[ind+2, 1])
-            n = int(np.floor(nm/10))
-            m = int(nm - n*10)
+            nm = int(W[ind + 2, 1])
+            n = int(np.floor(nm / 10))
+            m = int(nm - n * 10)
             H[n, m] = i
             ind = ind + 2
             if N0 > 0:
                 W0 = np.zeros([N0, 2])
-                W0[0:N0, :] = W[ind+1:ind+N0+1, :]
+                W0[0:N0, :] = W[ind + 1:ind + N0 + 1, :]
                 ind = ind + N0
             else:
                 W0 = 0
             if N1 > 0:
                 W1 = np.zeros([N1, 2])
-                W1[0:N1, :] = W[ind+1:ind+N1+1, :]
+                W1[0:N1, :] = W[ind + 1:ind + N1 + 1, :]
                 ind = ind + N1
             else:
                 W1 = 0
             T = T + [(R, L, Cinv, nm, W0, N0, W1, N1)]
         return (T, H)
+
 
 class WakeTableDechirperOffAxis(WakeTable):
     """
@@ -184,7 +189,9 @@ class WakeTableDechirperOffAxis(WakeTable):
     :param orient: "horz" or "vert" plate orientation
     :return: hor_wake_table, vert_wake_table
     """
-    def __init__(self, b=500*1e-6, a=0.01, width=0.02, t=0.25*1e-3, p=0.5*1e-3, length=1, sigma=30e-6, orient="horz"):
+
+    def __init__(self, b=500 * 1e-6, a=0.01, width=0.02, t=0.25 * 1e-3, p=0.5 * 1e-3, length=1, sigma=30e-6,
+                 orient="horz"):
         WakeTable.__init__(self)
         weke_horz, wake_vert = self.calculate_wake_tables(b=b, a=a, width=width, t=t, p=p, length=length, sigma=sigma)
         if orient == "horz":
@@ -344,33 +351,34 @@ class Wake(PhysProc):
     factor = 1. - scaling coefficient
     TH - list from WakeTable, (T, H): T- table of wakes coefs, H - matrix of the coefs place in T
     """
+
     def __init__(self, step=1):
         PhysProc.__init__(self)
         self.w_sampling = 500  # wake sampling
-        self.filter_order = 20   # smoothing filter order
-        #self.wake_file = ""
+        self.filter_order = 20  # smoothing filter order
+        # self.wake_file = ""
         self.wake_table = None
         self.factor = 1.
         self.step = step
         self.TH = None
 
     def convolution(self, xu, u, xw, w):
-        #convolution of equally spaced functions
+        # convolution of equally spaced functions
         hx = xu[1] - xu[0]
-        wc = np.convolve(u, w)*hx
+        wc = np.convolve(u, w) * hx
         nw = w.shape[0]
         nu = u.shape[0]
         x0 = xu[0] + xw[0]
-        xc = x0 + np.arange(nw + nu)*hx
+        xc = x0 + np.arange(nw + nu) * hx
         return xc, wc
 
     def wake_convolution(self, xb, bunch, xw, wake):
-        #convolution of unequally spaced functions
-        #bunch defines the parameters
+        # convolution of unequally spaced functions
+        # bunch defines the parameters
         nb = xb.shape[0]
         xwi = xb - xb[0]
         wake1 = np.interp(xwi, xw, wake, 0, 0)
-        wake1[0] = wake1[0]*0.5
+        wake1[0] = wake1[0] * 0.5
         xW, Wake = self.convolution(xb, bunch, xwi, wake1)
         return xW[0:nb], Wake[0:nb]
 
@@ -386,121 +394,121 @@ class Wake(PhysProc):
         x = I[:, 0]
         bunch = I[:, 1]
         if L != 0 or N1 > 0:
-            d1_bunch=Der(x,bunch)
-        nb=x.shape[0]
-        W=np.zeros(nb)
+            d1_bunch = Der(x, bunch)
+        nb = x.shape[0]
+        W = np.zeros(nb)
         if N0 > 0:
             x, ww = self.wake_convolution(x, bunch, W0[:, 0], W0[:, 1])
-            W = W-ww[0:nb]/c
-        if N1>0:
+            W = W - ww[0:nb] / c
+        if N1 > 0:
             x, ww = self.wake_convolution(x, d1_bunch, W1[:, 0], W1[:, 1])
-            #W = W - ww[0:nb]
+            # W = W - ww[0:nb]
             W = W + ww[0:nb]
         if R != 0:
-            W = W-bunch*R
+            W = W - bunch * R
         if L != 0:
-            #W = W - d1_bunch*L*c
-            W = W + d1_bunch*L*c
+            # W = W - d1_bunch*L*c
+            W = W + d1_bunch * L * c
         if Cinv != 0:
-          int_bunch = Int1(x, bunch)
-          W = W - int_bunch*Cinv/c
+            int_bunch = Int1(x, bunch)
+            W = W - int_bunch * Cinv / c
         return x, W
 
     def add_total_wake(self, X, Y, Z, q, TH, Ns, NF):
         T, H = TH
         c = speed_of_light
-        Np=X.shape[0]
-        X2 = X**2
-        Y2 = Y**2
-        XY = X*Y
-        #generalized currents;
+        Np = X.shape[0]
+        X2 = X ** 2
+        Y2 = Y ** 2
+        XY = X * Y
+        # generalized currents;
         I00 = s2current(Z, q, Ns, NF, c)
-        Nw=I00.shape[0]
-        if (H[0,2]>0)or(H[2,3]>0)or(H[2,4]>0):
-            qn=q*Y
-            I01 = s2current(Z,qn,Ns,NF,c)
-        if (H[0, 1] > 0)or(H[1, 3] > 0) or (H[1, 4] > 0):
-            qn=q*X
-            I10 = s2current(Z,qn,Ns,NF,c)
-        if H[1,2]>0:
-            qn=q*XY
-            I11 = s2current(Z,qn,Ns,NF,c)
-        if H[1,1]>0:
-            qn=q*(X2-Y2)
+        Nw = I00.shape[0]
+        if (H[0, 2] > 0) or (H[2, 3] > 0) or (H[2, 4] > 0):
+            qn = q * Y
+            I01 = s2current(Z, qn, Ns, NF, c)
+        if (H[0, 1] > 0) or (H[1, 3] > 0) or (H[1, 4] > 0):
+            qn = q * X
+            I10 = s2current(Z, qn, Ns, NF, c)
+        if H[1, 2] > 0:
+            qn = q * XY
+            I11 = s2current(Z, qn, Ns, NF, c)
+        if H[1, 1] > 0:
+            qn = q * (X2 - Y2)
             I20_02 = s2current(Z, qn, Ns, NF, c)
-        #longitudinal wake
-        #mn=0
-        x, Wz = self.add_wake (I00, T[int(H[0, 0])])
+        # longitudinal wake
+        # mn=0
+        x, Wz = self.add_wake(I00, T[int(H[0, 0])])
         if H[0, 1] > 0:
             x, w = self.add_wake(I10, T[int(H[0, 1])])
-            Wz = Wz+w
-        if H[0,2]>0:
+            Wz = Wz + w
+        if H[0, 2] > 0:
             x, w = self.add_wake(I01, T[int(H[0, 2])])
-            Wz = Wz+w
-        if H[1,1]>0:
+            Wz = Wz + w
+        if H[1, 1] > 0:
             x, w = self.add_wake(I20_02, T[int(H[1, 1])])
-            Wz = Wz+w
-        if H[1,2]>0:
+            Wz = Wz + w
+        if H[1, 2] > 0:
             x, w = self.add_wake(I11, T[int(H[1, 2])])
-            Wz = Wz+2*w
+            Wz = Wz + 2 * w
         Pz = np.interp(Z, x, Wz, 0, 0)
         Py = np.zeros(Np)
         Px = np.zeros(Np)
-        #mn=01
+        # mn=01
         Wz[0:Nw] = 0
         Wy = np.zeros(Nw)
         if H[0, 4] > 0:
             x, w = self.add_wake(I00, T[int(H[0, 4])])
-            Wz=Wz+w
-            Wy=Wy+w
-        if H[1,4]>0:
+            Wz = Wz + w
+            Wy = Wy + w
+        if H[1, 4] > 0:
             x, w = self.add_wake(I10, T[int(H[1, 4])])
-            Wz = Wz + 2*w
-            Wy = Wy + 2*w
-        if H[2,4]>0:
+            Wz = Wz + 2 * w
+            Wy = Wy + 2 * w
+        if H[2, 4] > 0:
             x, w = self.add_wake(I01, T[int(H[2, 4])])
-            Wz = Wz + 2*w
-            Wy = Wy + 2*w
-        Pz = Pz + np.interp(Z, x, Wz, 0, 0)*Y
+            Wz = Wz + 2 * w
+            Wy = Wy + 2 * w
+        Pz = Pz + np.interp(Z, x, Wz, 0, 0) * Y
         h = x[1] - x[0]
         Wy = -Int1h(h, Wy)
         Py = Py + np.interp(Z, x, Wy, 0, 0)
-        #mn=10
+        # mn=10
         Wz[0:Nw] = 0
         Wx = np.zeros(Nw)
         if H[0, 3] > 0:
             x, w = self.add_wake(I00, T[int(H[0, 3])])
             Wz = Wz + w
             Wx = Wx + w
-        if H[1,3]>0:
+        if H[1, 3] > 0:
             x, w = self.add_wake(I10, T[int(H[1, 3])])
-            Wz = Wz + 2*w
-            Wx = Wx + 2*w
-        if H[2,3]>0:
+            Wz = Wz + 2 * w
+            Wx = Wx + 2 * w
+        if H[2, 3] > 0:
             x, w = self.add_wake(I01, T[int(H[2, 3])])
-            Wz = Wz + 2*w
-            Wx = Wx + 2*w
-        Wx=-Int1h(h,Wx)
-        Pz = Pz + np.interp(Z, x, Wz, 0, 0)*X
+            Wz = Wz + 2 * w
+            Wx = Wx + 2 * w
+        Wx = -Int1h(h, Wx)
+        Pz = Pz + np.interp(Z, x, Wz, 0, 0) * X
         Px = Px + np.interp(Z, x, Wx, 0, 0)
-        #mn=11
-        if H[3,4]>0:
+        # mn=11
+        if H[3, 4] > 0:
             x, w = self.add_wake(I00, T[int(H[3, 4])])
-            Wx=-2*Int1h(h,w)
-            p=np.interp(Z,x,Wx,0,0)
-            Px = Px + p*Y
-            Py = Py + p*X
-            Pz = Pz + 2*np.interp(Z, x, w, 0, 0)*XY
-        #mn=02,20
-        if H[3,3]>0:
+            Wx = -2 * Int1h(h, w)
+            p = np.interp(Z, x, Wx, 0, 0)
+            Px = Px + p * Y
+            Py = Py + p * X
+            Pz = Pz + 2 * np.interp(Z, x, w, 0, 0) * XY
+        # mn=02,20
+        if H[3, 3] > 0:
             x, w = self.add_wake(I00, T[int(H[3, 3])])
-            Pz = Pz+np.interp(Z,x,w,0,0)*(X2-Y2)
-            Wx = -2*Int1h(h,w)
-            p = np.interp(Z,x,Wx,0,0)
-            Px = Px + p*X
-            Py = Py - p*Y
-        I00[:,0] =- I00[:,0]
-        #Z=-Z
+            Pz = Pz + np.interp(Z, x, w, 0, 0) * (X2 - Y2)
+            Wx = -2 * Int1h(h, w)
+            p = np.interp(Z, x, Wx, 0, 0)
+            Px = Px + p * X
+            Py = Py - p * Y
+        I00[:, 0] = - I00[:, 0]
+        # Z=-Z
         return Px, Py, Pz, I00
 
     def prepare(self, lat):
@@ -509,22 +517,33 @@ class Wake(PhysProc):
         else:
             self.TH = self.wake_table.TH
 
+    def get_long_wake(self, current_profile):
+        """
+        method to extract a longitudinal wake from the Table for specific current profile
+
+        :param current_profile: 2D array with shape (n, 2) where first column is position and second is a beam current
+        :return: wake
+        """
+        T, H = self.TH
+        x, Wz = self.add_wake(current_profile, T[int(H[0, 0])])
+        return x, Wz * self.factor
+
     def apply(self, p_array, dz):
         _logger.debug(" Wake: apply: dz = " + str(dz))
 
         ps = p_array.rparticles
-        Px, Py, Pz, I00 = self.add_total_wake(ps[0], ps[2], ps[4], p_array.q_array, self.TH, self.w_sampling, self.filter_order)
+        Px, Py, Pz, I00 = self.add_total_wake(ps[0], ps[2], ps[4], p_array.q_array, self.TH,
+                                              self.w_sampling, self.filter_order)
 
         L = self.s_stop - self.s_start
         if L == 0:
             dz = 1.0
         else:
-            dz = dz/L
+            dz = dz / L
 
-        p_array.rparticles[5] = p_array.rparticles[5] + Pz * dz*self.factor / (p_array.E * 1e9)
-        p_array.rparticles[3] = p_array.rparticles[3] + Py * dz*self.factor / (p_array.E * 1e9)
-        p_array.rparticles[1] = p_array.rparticles[1] + Px * dz*self.factor / (p_array.E * 1e9)
-
+        p_array.rparticles[5] = p_array.rparticles[5] + Pz * dz * self.factor / (p_array.E * 1e9)
+        p_array.rparticles[3] = p_array.rparticles[3] + Py * dz * self.factor / (p_array.E * 1e9)
+        p_array.rparticles[1] = p_array.rparticles[1] + Px * dz * self.factor / (p_array.E * 1e9)
 
 
 class WakeKick(Wake):

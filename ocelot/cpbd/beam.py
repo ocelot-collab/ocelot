@@ -725,6 +725,15 @@ class ParticleArray:
         p.E = self.E
         return p
 
+    def rm_particle(self, index):
+        """
+        Method removes a "bad" particle with particular "index".
+        :param index:
+        :return:
+        """
+        self.rparticles = np.delete(self.rparticles, index, 1)
+        self.q_array = np.delete(self.q_array, index, 0)
+
     def rescale2energy(self, energy):
         """
         Method to rescale beam coordinates with new energy
@@ -1399,7 +1408,7 @@ def global_slice_analysis(parray, nparts_in_slice=5000, smooth_param=0.01, filte
     smax = max(z)
 
     hs = (smax - smin) / (n - 1)
-    s = np.arange(smin, smax + hs, hs)
+    s = np.linspace(smin, smax, num=n)
     ex = interp1(z, emittx, s)
     ey = interp1(z, emitty, s)
     se = interp1(z, sE, s)

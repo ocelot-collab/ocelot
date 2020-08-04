@@ -698,8 +698,8 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
         y_lim_appl.sort()
 
     else:
-        x_lim_appl = (np.amin(power_scale), np.amax(power_scale))
-        y_lim_appl = (np.amin(spec_scale), np.amax(spec_scale))
+        x_lim_appl = np.array((np.amin(power_scale), np.amax(power_scale)))
+        y_lim_appl = np.array((np.amin(spec_scale), np.amax(spec_scale)))
 
     if x_units == 'fs':
         x_lim_appl = np.flipud(x_lim_appl)
@@ -746,6 +746,9 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
         axHistx.set_xlim(x_lim_appl[0], x_lim_appl[1])
         axHisty.set_ylim(y_lim_appl[0], y_lim_appl[1])
         
+        _logger.debug(ind_str + 'x_lim = {} - {}'.format(x_lim_appl[0], x_lim_appl[1]))
+        _logger.debug(ind_str + 'y_lim = {} - {}'.format(y_lim_appl[0], y_lim_appl[1]))
+        
         if log_scale != 0:
             axHistx.set_ylim(np.nanmin(power), np.nanmax(power))
             axHisty.set_xlim(np.nanmin(spec), np.nanmax(spec))
@@ -756,6 +759,12 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
         axScatter.axis('tight')
         axScatter.set_xlabel(p_label_txt)
         axScatter.set_ylabel(f_label_txt)
+        
+        axScatter.set_xlim(x_lim_appl[0], x_lim_appl[1])
+        axScatter.set_ylim(y_lim_appl[0], y_lim_appl[1])
+        
+        _logger.debug(ind_str + 'x_lim = {} - {}'.format(x_lim_appl[0], x_lim_appl[1]))
+        _logger.debug(ind_str + 'y_lim = {} - {}'.format(y_lim_appl[0], y_lim_appl[1]))
 
     # axScatter.set_xlim(x_lim[0], x_lim[1])
     # axScatter.set_ylim(y_lim[0], y_lim[1])

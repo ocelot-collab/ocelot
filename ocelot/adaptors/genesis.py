@@ -1542,9 +1542,10 @@ def get_genesis_launcher(launcher_program=None, launcher_argument=''):
     launcher = MpiLauncher()
     if launcher_program != None:
         launcher.program = launcher_program
+        launcher.argument = launcher_argument
     else:
         if host.startswith('max'):
-            launcher.program = '/data/netapp/xfel/products/genesis/genesis'
+            launcher.program = 'genesis'
             launcher.argument = ' < tmp.cmd | tee log'
         launcher.mpiParameters = '-x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH'  # added -n
     #launcher.nproc = nproc
@@ -1909,19 +1910,22 @@ def read_out_file_stat(proj_dir, stage, run_inp=[], param_inp=[], debug=1):
     _logger.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
     return out_stat
 
-def read_out_file_stat_u(file_tamplate, run_inp=[], param_inp=[], debug=1):
+def read_out_file_stat_u(file_template, run_inp=[], param_inp=[], debug=1):
     '''
     reads statistical info of Genesis simulations,
     universal function for non-standard exp. folder structure
     returns GenStatOutput() object
 
-    file_tamplate = template of the .out file path with # denoting run number
+    file_template = template of the .out file path with # denoting run number or * (wildcart) denoting part of string to be arbitrary.
     run_inp - list of genesis runs to be looked for [0:1000] by default
     param_inp - list of genesis output parameters to be processed
     debug - see read_out_file()
     '''
+    
+    import glob
+    
     _logger.info('reading stat genesis output')
-    _logger.info(ind_str + 'file_tamplate = {}'.format(file_tamplate))
+    _logger.info(ind_str + 'file_template = {}'.format(file_template))
     _logger.debug(ind_str + 'run_inp = {}'.format(str(run_inp)))
     _logger.debug(ind_str + 'param_inp = {}'.format(str(param_inp)))
     start_time = time.time()
@@ -1938,17 +1942,36 @@ def read_out_file_stat_u(file_tamplate, run_inp=[], param_inp=[], debug=1):
         run_range = run_inp
 
     run_range_good = []
-
-    for irun in run_range:
-        out_file = file_tamplate.replace('#',str(irun))
-        if os.path.isfile(out_file):
-            if debug > 0:
-                print ('      reading run', irun)
-            outlist[irun] = read_out_file(out_file, read_level=2, debug=1)
-            outlist[irun].calc_spec(npad=1)
-            # print(outlist[irun].freq_lamd[0])
-            run_range_good.append(irun)
-            # except:
+    
+    if '*' in file_template:
+        # outlist = []
+        for irun, file in enumerate(glob.glob(file_template)):
+            _logger.info(ind_str + 'reading file {}'.format(file))
+            _logger.info(2*ind_str + 'irun = {}'.format(irun))
+            # out = read_out_file(out_file, read_level=2)
+            # out.calc_spec(npad=1)
+            # outlist.append(out)
+            try:
+                outlist[irun] = read_out_file(file, read_level=2, debug=1)
+                outlist[irun].calc_spec(npad=1)
+                run_range_good.append(irun)
+            except:
+                pass
+            
+            if len(run_range_good) > 50:
+                break
+    else:
+            
+        for irun in run_range:
+            out_file = file_template.replace('#',str(irun))
+            if os.path.isfile(out_file):
+                if debug > 0:
+                    print ('      reading run', irun)
+                outlist[irun] = read_out_file(out_file, read_level=2, debug=1)
+                outlist[irun].calc_spec(npad=1)
+                # print(outlist[irun].freq_lamd[0])
+                run_range_good.append(irun)
+                # except:
     run_range = run_range_good
     
     # check if all gout have the same number of slices nSlice and history records nZ
@@ -1985,7 +2008,7 @@ def read_out_file_stat_u(file_tamplate, run_inp=[], param_inp=[], debug=1):
         setattr(out_stat, param, param_matrix)
 
     out_stat.stage = None
-    out_stat.dir = os.path.dirname(file_tamplate)
+    out_stat.dir = os.path.dirname(file_template)
     out_stat.run = run_range
     out_stat.z = outlist[irun].z #check if all the same!
     out_stat.s = outlist[irun].s

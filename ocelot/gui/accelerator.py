@@ -544,7 +544,7 @@ def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=Tr
     ax_b = fig.add_axes(rect2, sharex=ax_top)  #left, bottom, width, height
     ax_el = fig.add_axes(rect3, sharex=ax_top)
     for ax in ax_b, ax_el, ax_top:
-        if ax!=ax_el:
+        if ax != ax_el:
             for label in ax.get_xticklabels():
                 label.set_visible(False)
 

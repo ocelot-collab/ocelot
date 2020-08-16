@@ -8,6 +8,7 @@ import numpy as np
 from math import factorial
 from numpy import inf, complex128, complex64
 import scipy
+
 import numpy.fft as fft
 from copy import deepcopy
 import time
@@ -401,23 +402,33 @@ class RadiationField:
         _logger.debug('calculating fft_xy from ' + self.domain_xy + ' domain with ' + method)
         start = time.time()
         domain_orig = self.domain_xy
-
+        
+        # alpha = 0.2
+        # tukey_x = scipy.signal.tukey(self.shape()[1], alpha)
+        # tukey_y = scipy.signal.tukey(self.shape()[2], alpha)
+        # tukey_2D = np.outer(tukey_x, tukey_y)
+        # tukey_2D_FT = np.fft.fft2(tukey_2D)
+        # tukey_2D_FT = np.fft.fftshift(tukey_2D_FT)
+        
         if nthread < 2:
             method = 'np'
         
         if domain_orig == 's':
+            # self.fld *= tukey_2D[np.newaxis, :]
             if method == 'mp' and fftw_avail:
                 fft_exec = pyfftw.builders.fft2(self.fld, axes=(1, 2), overwrite_input=False,
                                                 planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False,
                                                 auto_contiguous=False, avoid_copy=True)
                 self.fld = fft_exec()
             else:
+                # self.fld *= tukey_2D[np.newaxis, :]
                 self.fld = np.fft.fft2(self.fld, axes=(1, 2))
                 # else:
                 # raise ValueError("fft method should be 'np' or 'mp'")
             self.fld = np.fft.fftshift(self.fld, axes=(1, 2))
             self.fld /= np.sqrt(self.Nx() * self.Ny())
             self.domain_xy = 'k'
+
         elif domain_orig == 'k':
             self.fld = np.fft.ifftshift(self.fld, axes=(1, 2))
             if method == 'mp' and fftw_avail:
@@ -426,12 +437,14 @@ class RadiationField:
                                                  auto_align_input=False, auto_contiguous=False, avoid_copy=True)
                 self.fld = fft_exec()
             else:
+                # self.fld *= tukey_2D[np.newaxis, :]
                 self.fld = np.fft.ifft2(self.fld, axes=(1, 2))
             # else:
             #     raise ValueError("fft method should be 'np' or 'mp'")
             self.fld *= np.sqrt(self.Nx() * self.Ny())
             self.domain_xy = 's'
-        
+            # self.fld *= tukey_2D[np.newaxis, :]
+
         else:
             raise ValueError("domain_xy value should be 's' or 'k'")
         
@@ -533,6 +546,12 @@ class RadiationField:
         """
         _logger.info('propagating dfl file by %.2f meters' % (z))
         
+        alpha = 0.3
+        tukey_x = scipy.signal.tukey(self.shape()[1], alpha)
+        tukey_y = scipy.signal.tukey(self.shape()[2], alpha)
+        tukey_2D = np.outer(tukey_x, tukey_y)
+        # self.fld *= tukey_2D
+
         start = time.time()
         domains = self.domains()
         
@@ -564,7 +583,8 @@ class RadiationField:
             self.curve_wavefront(-z / (1 - m_x), plane='x')
         if m_y != 1:
             self.curve_wavefront(-z / (1 - m_y), plane='y')
-        
+        # self.fld *= tukey_2D
+
         if fine == 1:
             self.to_domain('kf')
         elif fine == -1:
@@ -599,12 +619,12 @@ class RadiationField:
                     H*=np.exp(1j * z / m_y * (np.sqrt(k ** 2 - k_y ** 2) - k))
                 for i in range(self.Nz()):
                     self.fld[i, :, :] *= H
-        
         self.dx *= m_x
         self.dy *= m_y
-        
-        if return_orig_domains:
-            self.to_domain(domains)
+
+        # if return_orig_domains:
+        self.to_domain('s')
+
         if m_x != 1:
             self.curve_wavefront(-m_x * z / (m_x - 1), plane='x')
         if m_y != 1:
@@ -612,7 +632,7 @@ class RadiationField:
         
         t_func = time.time() - start
         _logger.debug(ind_str + 'done in %.2f sec' % (t_func))
-        
+
         if return_result:
             copydfl, self = self, copydfl
             return copydfl
@@ -1775,7 +1795,7 @@ def dfl_ap(*args, **kwargs):
     _logger.warning('"dfl_ap" is deprecated, use "dfl_ap_rect" instead for rectangular aperture')
     return dfl_ap_rect(*args, **kwargs)
         
-def dfl_ap_rect(dfl, ap_x=np.inf, ap_y=np.inf):
+def dfl_ap_rect(dfl, ap_x=np.inf, ap_y=np.inf, eltype='aperture'):
     """
     model rectangular aperture to the radaition in either domain
     """
@@ -1802,9 +1822,14 @@ def dfl_ap_rect(dfl, ap_x=np.inf, ap_y=np.inf):
     
     mask = np.zeros_like(dfl.fld[0, :, :])
     mask[idx_y1:idx_y2, idx_x1:idx_x2] = 1
-    mask_idx = np.where(mask == 0)
+    if eltype is 'aperture':
+        mask_idx = np.where(mask == 0)
+    elif eltype is 'obstacle':
+        mask_idx = np.where(mask == 1)
+    else:
+        raise ValueError('argument "eltype" must be aperture or obstacle')
+        
 
-    # dfl_out = deepcopy(dfl)
     dfl_energy_orig = dfl.E()
     dfl.fld[:, mask_idx[0], mask_idx[1]] = 0
 

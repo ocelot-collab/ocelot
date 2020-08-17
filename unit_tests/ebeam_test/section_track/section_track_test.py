@@ -487,7 +487,7 @@ def test_twiss(section_lat, p_array, parameter=None, update_ref_values=False):
 
     tws_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
 
-    result2 = check_dict(tws, tws_ref['tws'], TOL, assert_info=' tws - ')
+    result2 = check_dict(tws, tws_ref['tws'], tolerance=1.0e-10, tolerance_type='absolute',  assert_info=' tws - ')
     assert check_result(result2)
 
 
@@ -539,7 +539,7 @@ def test_twiss_section_lat(section_lat, p_array, parameter=None, update_ref_valu
 
     tws_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
 
-    result2 = check_dict(tws, tws_ref['tws'], TOL, assert_info=' tws - ')
+    result2 = check_dict(tws, tws_ref['tws'], tolerance=1.0e-10, tolerance_type='absolute', assert_info=' tws - ')
     assert check_result(result2)
 
 

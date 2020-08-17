@@ -13,14 +13,6 @@ import numpy as np
 _logger = logging.getLogger(__name__)
 _logger_navi = logging.getLogger(__name__ + ".navi")
 
-
-try:
-    import numexpr as ne
-    ne_flag = True
-except ImportError as error:
-    _logger.debug(" optics.py: module NUMEXPR is not installed. Install it to speed up calculation")
-    ne_flag = False
-
 try:
     import numba as nb
     nb_flag = True
@@ -34,24 +26,19 @@ class SecondOrderMult:
     The class includes three different methods for transforming the particle
     coordinates:
 
-    1. NUMEXPR module
-        Fastest methos, but does not use full matrix multiplication.
-
-    2. NUMBA module
+    1. NUMBA module - DEACTIVATED, because new numpy implementation shows higher performance.
         Slightly faster than NUMPY for simulations with a large number of time
         steps. Uses full matrix multiplication.
 
-    3. NUMPY module
-        Base method to be used if neither NUMBA not NUMEXPR are installed.
+    2. NUMPY module
+        Base method to be used.
         Uses full matrix multiplication.
 
     """
     def __init__(self):
         self.full_matrix = False
-        if ne_flag and not self.full_matrix:
-            # print("SecondTM: NumExpr")
-            self.tmat_multip = self.numexpr_apply
-        elif nb_flag:
+
+        if nb_flag and False:
             # print("SecondTM: NUMBA")
             self.tmat_multip = nb.njit()(self.numba_apply)
         else:
@@ -68,34 +55,6 @@ class SecondOrderMult:
                     for k in range(6):
                         x_new += T[i, j, k] * Xcopy[j, n] * Xcopy[k, n]
                 X[i, n] = x_new
-
-    def numexpr_apply(self, X, R, T):
-        x, px, y, py, tau, dp = X
-
-        R00, R01, R02, R03, R04, R05 = R[0]
-        R10, R11, R12, R13, R14, R15 = R[1]
-        R20, R21, R22, R23, R24, R25 = R[2]
-        R30, R31, R32, R33, R34, R35 = R[3]
-        R40, R41, R42, R43, R44, R45 = R[4]
-        R50, R51, R52, R53, R54, R55 = R[5]
-
-        T000, T001, T005, T011, T015, T055, T022, T023, T033 = T[0, 0, 0], T[0, 0, 1], T[0, 0, 5], T[0, 1, 1], T[0, 1, 5], T[0, 5, 5], T[0, 2, 2],T[0, 2, 3], T[0, 3, 3]
-        T100, T101, T105, T111, T115, T155, T122, T123, T133 = T[1, 0, 0], T[1, 0, 1], T[1, 0, 5], T[1, 1, 1], T[1, 1, 5], T[1, 5, 5], T[1, 2, 2],T[1, 2, 3], T[1, 3, 3]
-        T202, T203, T212, T213, T225, T235 = T[2, 0, 2],  T[2, 0, 3],  T[2, 1, 2],  T[2, 1, 3], T[2, 2, 5], T[2, 3, 5]
-        T302, T303, T312, T313, T325, T335 = T[3, 0, 2],  T[3, 0, 3],  T[3, 1, 2],  T[3, 1, 3], T[3, 2, 5], T[3, 3, 5]
-        T400, T401, T405, T411, T415, T455, T422, T423, T433 = T[4, 0, 0], T[4, 0, 1], T[4, 0, 5], T[4, 1, 1], T[4, 1, 5], T[4, 5, 5], T[4, 2, 2], T[4, 2, 3], T[4, 3, 3]
-
-        X_0 = ne.evaluate('R00 * x + R01 * px + R02 * y + R03 * py + R04 * tau + R05 * dp + T000 * x*x + T001 * x*px + T005 * x*dp + T011 * px*px + T015 * px*dp + T055 * dp*dp + T022 * y*y + T023 * y*py + T033 * py*py')
-        X_1 = ne.evaluate('R10 * x + R11 * px + R12 * y + R13 * py + R14 * tau + R15 * dp + T100 * x*x + T101 * x*px + T105 * x*dp + T111 * px*px + T115 * px*dp + T155 * dp*dp + T122 * y*y + T123 * y*py + T133 * py*py')
-        X_2 = ne.evaluate('R20 * x + R21 * px + R22 * y + R23 * py + R24 * tau + R25 * dp + T202 * x*y + T203 * x*py + T212 * y*px + T213 * px*py + T225 * y*dp + T235 * py*dp')
-        X_3 = ne.evaluate('R30 * x + R31 * px + R32 * y + R33 * py + R34 * tau + R35 * dp + T302 * x*y + T303 * x*py + T312 * y*px + T313 * px*py + T325 * y*dp + T335 * py*dp')
-        X_4 = ne.evaluate('R40 * x + R41 * px + R42 * y + R43 * py + R44 * tau + R45 * dp + T400 * x*x + T401 * x*px + T405 * x*dp + T411 * px*px + T415 * px*dp + T455 * dp*dp + T422 * y*y + T423 * y*py + T433 * py*py')  # + U5666*dp2*dp    # third order
-
-        X[0] = X_0
-        X[1] = X_1
-        X[2] = X_2
-        X[3] = X_3
-        X[4] = X_4
 
     def numpy_apply(self, X, R, T):
         X[:] = np.matmul(R, X) + np.einsum('ijk,j...,k...->i...', T, X, X)

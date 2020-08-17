@@ -1,7 +1,7 @@
 from ocelot.cpbd.io import save_particle_array
 from ocelot.common.globals import *
 import numpy as np
-from ocelot.cpbd.beam import Twiss
+from ocelot.cpbd.beam import Twiss, beam_matching
 from scipy import optimize
 from ocelot.utils.acc_utils import *
 from ocelot.common.ocelog import *
@@ -364,100 +364,7 @@ class BeamTransform(PhysProc):
         _logger.debug("BeamTransform: apply")
         self.x_opt = [self.twiss.alpha_x, self.twiss.beta_x, self.twiss.mux]
         self.y_opt = [self.twiss.alpha_y, self.twiss.beta_y, self.twiss.muy]
-        self.beam_matching(p_array.rparticles, self.bounds, self.x_opt, self.y_opt)
-
-    def beam_matching(self, particles, bounds, x_opt, y_opt):
-        # the beam is centered in the phase space
-        pd = np.zeros((int(particles.size / 6), 6))
-        dx = 0
-        dxp = 0
-        dy = 0
-        dyp = 0
-        if self.remove_offsets:
-            dx = np.mean(particles[0])
-            dxp = np.mean(particles[1])
-            dy = np.mean(particles[2])
-            dyp = np.mean(particles[3])
-
-        pd[:, 0] = particles[0] - dx
-        pd[:, 1] = particles[1] - dxp
-        pd[:, 2] = particles[2] - dy
-        pd[:, 3] = particles[3] - dyp
-        pd[:, 4] = particles[4]
-        pd[:, 5] = particles[5]
-
-        z0 = np.mean(pd[:, 4])
-        sig0 = np.std(pd[:, 4])
-        inds = np.argwhere((z0 + sig0 * bounds[0] <= pd[:, 4]) * (pd[:, 4] <= z0 + sig0 * bounds[1]))
-
-        mx, mxs, mxx, mxxs, mxsxs, emitx0 = self.moments(pd[inds, 0], pd[inds, 1])
-        beta = mxx / emitx0
-        alpha = -mxxs / emitx0
-        M = self.m_from_twiss([alpha, beta, 0], x_opt)
-
-        particles[0] = M[0, 0] * pd[:, 0] + M[0, 1] * pd[:, 1]
-        particles[1] = M[1, 0] * pd[:, 0] + M[1, 1] * pd[:, 1]
-        [mx, mxs, mxx, mxxs, mxsxs, emitx0] = self.moments(pd[inds, 2], pd[inds, 3])
-        beta = mxx / emitx0
-        alpha = -mxxs / emitx0
-        M = self.m_from_twiss([alpha, beta, 0], y_opt)
-        particles[2] = M[0, 0] * pd[:, 2] + M[0, 1] * pd[:, 3]
-        particles[3] = M[1, 0] * pd[:, 2] + M[1, 1] * pd[:, 3]
-        return particles
-
-    def moments(self, x, y, cut=0):
-        n = len(x)
-        inds = np.arange(n)
-        mx = np.mean(x)
-        my = np.mean(y)
-        x = x - mx
-        y = y - my
-        x2 = x * x
-        mxx = np.sum(x2) / n
-        y2 = y * y
-        myy = np.sum(y2) / n
-        xy = x * y
-        mxy = np.sum(xy) / n
-
-        emitt = np.sqrt(mxx * myy - mxy * mxy)
-
-        if cut > 0:
-            inds = []
-            beta = mxx / emitt
-            gamma = myy / emitt
-            alpha = mxy / emitt
-            emittp = gamma * x2 + 2. * alpha * xy + beta * y2
-            inds0 = np.argsort(emittp)
-            n1 = np.round(n * (100 - cut) / 100)
-            inds = inds0[0:n1]
-            mx = np.mean(x[inds])
-            my = np.mean(y[inds])
-            x1 = x[inds] - mx
-            y1 = y[inds] - my
-            mxx = np.sum(x1 * x1) / n1
-            myy = np.sum(y1 * y1) / n1
-            mxy = np.sum(x1 * y1) / n1
-            emitt = np.sqrt(mxx * myy - mxy * mxy)
-        return mx, my, mxx, mxy, myy, emitt
-
-    def m_from_twiss(self, Tw1, Tw2):
-        # Transport matrix M for two sets of Twiss parameters (alpha,beta,psi)
-        b1 = Tw1[1]
-        a1 = Tw1[0]
-        psi1 = Tw1[2]
-        b2 = Tw2[1]
-        a2 = Tw2[0]
-        psi2 = Tw2[2]
-
-        psi = psi2 - psi1
-        cosp = np.cos(psi)
-        sinp = np.sin(psi)
-        M = np.zeros((2, 2))
-        M[0, 0] = np.sqrt(b2 / b1) * (cosp + a1 * sinp)
-        M[0, 1] = np.sqrt(b2 * b1) * sinp
-        M[1, 0] = ((a1 - a2) * cosp - (1 + a1 * a2) * sinp) / np.sqrt(b2 * b1)
-        M[1, 1] = np.sqrt(b1 / b2) * (cosp - a2 * sinp)
-        return M
+        beam_matching(p_array.rparticles, self.bounds, self.x_opt, self.y_opt, self.remove_offsets)
 
 
 class SpontanRadEffects(PhysProc):

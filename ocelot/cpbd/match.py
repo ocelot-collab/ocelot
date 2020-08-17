@@ -166,7 +166,6 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                             if np.abs(tw_loc.__dict__[k]) < v1:
                                 err = err + weights(k) * (tw_loc.__dict__[k] - v1) ** 2
 
-
                         if constr[e][k][0] == '->':
                             try:
                                 if len(constr[e][k]) > 2:

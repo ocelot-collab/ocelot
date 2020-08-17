@@ -1021,7 +1021,7 @@ def moments(x, y, cut=0):
 
 
 def m_from_twiss(Tw1, Tw2):
-    # % Transport matrix M for two sets of Twiss parameters (alpha,beta,psi)
+    # Transport matrix M for two sets of Twiss parameters (alpha,beta,psi)
     b1 = Tw1[1]
     a1 = Tw1[0]
     psi1 = Tw1[2]
@@ -1040,26 +1040,45 @@ def m_from_twiss(Tw1, Tw2):
     return M
 
 
-def beam_matching(particles, bounds, x_opt, y_opt):
-    pd = np.zeros((int(len(particles) / 6), 6))
-    pd[:, 0] = particles[0]
-    pd[:, 1] = particles[1]
-    pd[:, 2] = particles[2]
-    pd[:, 3] = particles[3]
+def beam_matching(particles, bounds, x_opt, y_opt, remove_offsets=True):
+    """
+    Beam matching function, the beam is centered in the phase space
+
+    :param particles: ParticleArray
+    :param bounds: [start, stop] in rms of sigmas in longitudinal direction
+    :param x_opt: [alpha, beta, mu (phase advance)]
+    :param y_opt: [alpha, beta, mu (phase advance)]
+    :param remove_offsets: True, remove offsets in transverse planes
+    :return: transform ParticleArray (the same object)
+    """
+
+    pd = np.zeros((int(particles.size / 6), 6))
+    dx = 0.
+    dxp = 0.
+    dy = 0.
+    dyp = 0.
+    if remove_offsets:
+        dx = np.mean(particles[0])
+        dxp = np.mean(particles[1])
+        dy = np.mean(particles[2])
+        dyp = np.mean(particles[3])
+
+    pd[:, 0] = particles[0] - dx
+    pd[:, 1] = particles[1] - dxp
+    pd[:, 2] = particles[2] - dy
+    pd[:, 3] = particles[3] - dyp
     pd[:, 4] = particles[4]
     pd[:, 5] = particles[5]
 
     z0 = np.mean(pd[:, 4])
     sig0 = np.std(pd[:, 4])
-    # print((z0 + sig0*bounds[0] <= pd[:, 4]) * (pd[:, 4] <= z0 + sig0*bounds[1]))
     inds = np.argwhere((z0 + sig0 * bounds[0] <= pd[:, 4]) * (pd[:, 4] <= z0 + sig0 * bounds[1]))
-    # print(moments(pd[inds, 0], pd[inds, 1]))
+
     mx, mxs, mxx, mxxs, mxsxs, emitx0 = moments(pd[inds, 0], pd[inds, 1])
     beta = mxx / emitx0
     alpha = -mxxs / emitx0
-    # print(beta, alpha)
     M = m_from_twiss([alpha, beta, 0], x_opt)
-    # print(M)
+
     particles[0] = M[0, 0] * pd[:, 0] + M[0, 1] * pd[:, 1]
     particles[1] = M[1, 0] * pd[:, 0] + M[1, 1] * pd[:, 1]
     [mx, mxs, mxx, mxxs, mxsxs, emitx0] = moments(pd[inds, 2], pd[inds, 3])
@@ -1549,7 +1568,7 @@ def parray2beam(parray, step=1e-7):
 
 def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
                     sigma_tau=1e-3, sigma_p=1e-4, chirp=0.01, charge=5e-9, nparticles=200000, energy=0.13,
-                    tau_trunc=None):
+                    tau_trunc=None, tws=None):
     """
     Method to generate ParticleArray with gaussian distribution.
 
@@ -1567,6 +1586,7 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
     :param nparticles: namber of particles, 200k by default
     :param energy: beam energy in [GeV], 0.13 [GeV]
     :param tau_trunc: None, if not [float] - truncated gauss distribution in "tau" direction.
+    :param tws: None, if Twiss obj - the beam is matched to twiss params.
     :return: ParticleArray
     """
 
@@ -1607,6 +1627,13 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
     p_array.rparticles[5] = dp
 
     p_array.q_array = np.ones(nparticles) * charge / nparticles
+
+    if isinstance(tws, Twiss):
+        x_opt = [tws.alpha_x, tws.beta_x, tws.mux]
+        y_opt = [tws.alpha_y, tws.beta_y, tws.muy]
+        bounds = [-5, 5]
+        beam_matching(p_array.rparticles, bounds, x_opt, y_opt, remove_offsets=True)
+
     return p_array
 
 

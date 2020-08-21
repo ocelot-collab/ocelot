@@ -1337,6 +1337,7 @@ class WignerDistribution():
         # self.fld=np.array([]) #(z,y,x)
         self.field = []
         self.wig = []  # (wav,space)
+        self.wig_stat = [] # same as wig.wig, but with another dimention hosting different events
         self.s = []  # space scale
         self.z = None  # position along undulator (if applicable)
         self.phen = []  # photon energy
@@ -2934,6 +2935,7 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1, **kwar
         ds = (out_stat.s[-1] - out_stat.s[0]) / (out_stat.s.size - 1)
         pad_array_s_l = np.linspace(out_stat.s[0] - ds * (n_add_l), out_stat.s[0] - ds, n_add_l)
         pad_array_s_r = np.linspace(out_stat.s[-1] + ds, out_stat.s[-1] + ds * (n_add_r), n_add_r)
+        
         WW = np.zeros(
             (out_stat.p_int.shape[2], out_stat.p_int.shape[1] + n_add * 2, out_stat.p_int.shape[1] + n_add * 2))
         s = np.concatenate([pad_array_s_l, out_stat.s, pad_array_s_r])
@@ -2997,8 +2999,27 @@ def wigner_smear(wig, sigma_s):
     wig_conv.is_spectrogram = True
     _logger.debug(ind_str + 'done in {:.2e} sec'.format(time.time() - start))
     return wig_conv
-
-
+    
+def write_wig_file(wig, filePath):
+    _logger.info('saving wigner distribution to {}'.format(filePath))
+    np.savez(filePath, xlamds=wig.xlamds, s=wig.s, phen=wig.phen, wig=wig.wig, wig_stat=wig.wig_stat, filePath = wig.filePath)
+    _logger.debug(ind_str + 'done')
+    
+def read_wig_file(filePath):
+    _logger.info('reading wigner distribution from {}'.format(filePath))
+    file = np.load(filePath)
+    wig = WignerDistribution()
+    wig.xlamds = file['xlamds'].item()
+    wig.filePath = file['filePath'].item()
+    wig.s = file['s']
+    wig.phen = file['phen']
+    wig.wig = file['wig']
+    _logger.debug(ind_str +'wig.wig.shape {}'.format(wig.wig.shape))
+    wig.wig_stat = file['wig_stat']
+    _logger.debug(ind_str +'wig.wig_stat.shape {}'.format(wig.wig_stat.shape))
+    _logger.debug(ind_str + 'done')
+    return wig
+    
 def calc_ph_sp_dens(spec, freq_ev, n_photons, spec_squared=1):
     """
     calculates number of photons per electronvolt

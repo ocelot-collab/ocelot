@@ -512,8 +512,11 @@ class KickTM(TransferMap):
         self.nkick = nkick
 
     def kick(self, X, l, angle, k1, k2, k3, energy, nkick=1):
+        """
+        does not work for dipole
+        """
         gamma = energy / m_e_GeV
-        coef = 0
+        coef = 0.
         if gamma != 0:
             gamma2 = gamma * gamma
             beta = 1. - 0.5 / gamma2
@@ -522,13 +525,13 @@ class KickTM(TransferMap):
         angle = angle / nkick
 
         dl = l / 2.
-        k1 = k1 * dl
-        k2 = k2 * dl
-        k3 = k3 * dl
+        k1 = k1 * l
+        k2 = k2 * l/2.
+        k3 = k3 * l/6.
 
         for i in range(nkick):
-            x = X[0] + X[1] * dl - self.dx
-            y = X[2] + X[3] * dl - self.dy
+            x = X[0] + X[1] * dl
+            y = X[2] + X[3] * dl
             tau = -X[5] * dl * coef
 
             p = -angle * X[5] + 0j
@@ -538,11 +541,10 @@ class KickTM(TransferMap):
             p += k1 * xy1 + k2 * xy2 + k3 * xy3
             X[1] = X[1] - np.real(p)
             X[3] = X[3] + np.imag(p)
-            # X[4::6] = X[4::6] - angle*X[0::6]
             X[4] = tau - angle * X[0]
 
-            X[0] = x + X[1] * dl + self.dx
-            X[2] = y + X[3] * dl + self.dy
+            X[0] = x + X[1] * dl
+            X[2] = y + X[3] * dl
             X[4] -= X[5] * dl * coef
         return X
 

@@ -8,6 +8,7 @@ from ocelot.cpbd.high_order import *
 from ocelot.cpbd.r_matrix import *
 from copy import deepcopy
 import logging
+import functools
 import numpy as np
 
 _logger = logging.getLogger(__name__)
@@ -503,6 +504,123 @@ class CouplerKickTM(TransferMap):
         return m
 
 
+@functools.lru_cache(maxsize=1024)
+def get_energy_parameters(energy: float):
+    """
+    Will likely only see a few unique energy parameters
+    Use cache to memoize it and share between all drift instances
+    """
+    gamma = energy / m_e_GeV
+    gamma2 = gamma * gamma
+    # KickTM has approximation beta = 1. - 0.5 / gamma2, using exact instead
+    beta = np.sqrt(1.0 - 1.0 / gamma2)
+    ibeta = 1.0 / beta
+    gammabeta = np.sqrt(gamma2 - 1.0)
+    igammabeta2 = 1.0 / (gammabeta * gammabeta)
+    return ibeta, igammabeta2
+
+
+class EDriftTM(TransferMap):
+    """
+    Exact drift map
+
+    OCELOT units are X = (x [m], x', y [m], y', cdt [m], deop),
+    also known as (x, px/p0, y, py/p0, cdt, pt/cp0)
+    Time is cdt (earlier is negative), opposite of MADX and Sixtrack, same as Synergia
+    deltaE/p same as MADX (NOT deltaP/p like in some refs, careful about delta definition)
+
+    For exact drift, full H is used
+    NB: even for px=py=0, off-energy particle dt is NOT same as matrix drift
+
+    For paraxial drift, H is approximated via (px, py << (1 + dpop))
+    This is/was used in SixTrack
+
+    For linearized drift, H is second order in all variables.
+    Should be same as matrix.
+
+    References:
+        CERN-THESIS-2013-248 (i.e. equations 2.36, 4.5)
+        http://pcwww.liv.ac.uk/~awolski/Teaching/Cockcroft/LinearDynamics/LinearDynamics-Lecture2.pdf
+        https://www.cockcroft.ac.uk/wp-content/uploads/2015/11/NonlinearDynamics-Part3.pdf
+        http://mad.web.cern.ch/mad/releases/madng/madng-git/src/help/madh_track.mad (comment on pz, dp and pt)
+
+    Nikita Kuklev, 2020
+
+    TODO: Check performance / constant folding
+    TODO: Add fused multiply-add (axpy) via scipy
+    """
+    def __init__(self, method: int = 1):
+        TransferMap.__init__(self)
+        self.method = method
+
+    def kick(self, X: np.ndarray, l: float, energy: float):
+        if energy != 0.0:
+            ibeta, igammabeta2 = get_energy_parameters(energy)
+            if self.method == 1:
+                self.map_drift_6d_exact(X, ibeta, igammabeta2, l)
+            elif self.method == 2:
+                self.map_drift_6d_paraxial(X, ibeta, igammabeta2, l)
+            else:
+                self.map_drift_6d_linear(X, ibeta, igammabeta2, l)
+        else:
+            # 4D - no energy, optimize map
+            self.map_drift_4d(X, l)
+
+    def map_drift_6d_exact(self, X: np.ndarray, ibeta: float, igammabeta2: float, l: float):
+        """ 6D exact map """
+        # With deop as last coordinate have
+        ibeta_deop = ibeta + X[5]
+        inv_npz = 1.0 / np.sqrt(ibeta_deop * ibeta_deop - X[1] * X[1] - X[3] * X[3] - igammabeta2)
+
+        # new x,y with added l*x',l*y' (px, py unchanged)
+        X[0] += X[1] * l * inv_npz
+        X[2] += X[3] * l * inv_npz
+
+        # new cdt assuming reference time = design time
+        X[4] -= l * (ibeta - ibeta_deop * inv_npz)
+
+    def map_drift_6d_paraxial(self, X: np.ndarray, ibeta: float, igammabeta2: float, l: float):
+        """ 6D paraxial approximation """
+        ibeta_deop = ibeta + X[5]
+        inv_npz = 1.0 / np.sqrt(ibeta_deop * ibeta_deop - igammabeta2)
+
+        # new x,y with added l*x',l*y' (px, py unchanged)
+        X[0] += X[1] * l * inv_npz
+        X[2] += X[3] * l * inv_npz
+
+        # inv_npz*(1/beta0 + deop) = 1/beta
+        X[4] -= l * (ibeta - (1.0 + 0.5 * (X[1] * X[1] + X[3] * X[3]) * inv_npz * inv_npz) * (inv_npz * ibeta_deop))
+
+    def map_drift_6d_linear(self, X: np.ndarray, ibeta: float, igammabeta2: float, l: float):
+        """ Linear 6D, same as in KickTM/Drift """
+        X[0] += X[1] * l
+        X[2] += X[3] * l
+        X[4] -= X[5] * (l * igammabeta2)
+
+    def map_drift_4d(self, X: np.ndarray, l: float):
+        """ Linear 4D case """
+        X[0] += X[1] * l
+        X[2] += X[3] * l
+
+    def kick_apply(self, X: np.ndarray, l: float, energy: float, dx: float, dy: float, tilt: float) -> np.ndarray:
+        """ Applies map and the entrance/exit coordinate transforms """
+        if dx != 0. or dy != 0. or tilt != 0.:
+            X = transform_vec_ent(X, dx, dy, tilt)
+        self.kick(X, l, energy)
+        if dx != 0. or dy != 0. or tilt != 0.:
+            X = transform_vec_ext(X, dx, dy, tilt)
+        return X
+
+    def __call__(self, s):
+        m = copy(self)
+        m.length = s
+        m.R = lambda energy: m.R_z(s, energy)
+        m.B = lambda energy: m.B_z(s, energy)
+        m.delta_e = m.delta_e_z(s)
+        m.map = lambda X, energy: m.kick_apply(X, s, energy, m.dx, m.dy, m.tilt)
+        return m
+
+
 class KickTM(TransferMap):
     def __init__(self, angle=0., k1=0., k2=0., k3=0., nkick=1):
         TransferMap.__init__(self)
@@ -747,6 +865,8 @@ class MethodTM:
             self.global_method = TransferMap
         self.sec_order_mult = SecondOrderMult()
         self.nkick = self.params['nkick'] if 'nkick' in self.params else 1
+        # If not specified, per-element choice/default will be used
+        self.edrift_method = self.params.get('edrift_method', None)
 
     def create_tm(self, element):
 
@@ -848,6 +968,12 @@ class MethodTM:
             t_mat_z_e = lambda z, energy: t_nnn(z, 0, 0, 0, energy)
             tm = CorrectorTM(angle_x=0, angle_y=element.angle, r_z_no_tilt=r_z_e, t_mat_z_e=t_mat_z_e)
             tm.multiplication = self.sec_order_mult.tmat_multip
+
+        if element.__class__ == EDrift:
+            if self.edrift_method:
+                tm = EDriftTM(method=self.edrift_method)
+            else:
+                tm = EDriftTM(method=element.method)
 
         tm.length = element.l
         tm.dx = dx

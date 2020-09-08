@@ -271,8 +271,7 @@ class PhaseSpaceAperture(PhysProc):
             sig = np.std(tau)
             inds = np.argwhere(np.logical_or(tau < sig * self.taumin, tau > sig * self.taumax))
             inds = inds.reshape(inds.shape[0])
-            p_array.rparticles = np.delete(p_array.rparticles, inds, 1)
-            p_array.q_array = np.delete(p_array.q_array, inds, 0)
+            p_array.delete_indices(inds)
 
         if self.horizontal:
             x = p_array.x()
@@ -281,8 +280,7 @@ class PhaseSpaceAperture(PhysProc):
             sigx = np.std(x)
             inds = np.argwhere(np.logical_or(x < sigx * self.xmin, x > sigx * self.xmax))
             inds = inds.reshape(inds.shape[0])
-            p_array.rparticles = np.delete(p_array.rparticles, inds, 1)
-            p_array.q_array = np.delete(p_array.q_array, inds, 0)
+            p_array.delete_indices(inds)
 
         if self.vertical:
             y = p_array.y()
@@ -291,8 +289,7 @@ class PhaseSpaceAperture(PhysProc):
             sigy = np.std(y)
             inds = np.argwhere(np.logical_or(y < sigy * self.ymin, y > sigy * self.ymax))
             inds = inds.reshape(inds.shape[0])
-            p_array.rparticles = np.delete(p_array.rparticles, inds, 1)
-            p_array.q_array = np.delete(p_array.q_array, inds, 0)
+            p_array.delete_indices(inds)
 
 
 class RectAperture(PhysProc):
@@ -320,14 +317,12 @@ class RectAperture(PhysProc):
         x = p_array.x()
         inds = np.argwhere(np.logical_or(x < self.xmin, x > self.xmax))
         inds = inds.reshape(inds.shape[0])
-        p_array.rparticles = np.delete(p_array.rparticles, inds, 1)
-        p_array.q_array = np.delete(p_array.q_array, inds, 0)
+        p_array.delete_indices(inds)
 
         y = p_array.y()
         inds = np.argwhere(np.logical_or(y < self.ymin, y > self.ymax))
         inds = inds.reshape(inds.shape[0])
-        p_array.rparticles = np.delete(p_array.rparticles, inds, 1)
-        p_array.q_array = np.delete(p_array.q_array, inds, 0)
+        p_array.delete_indices(inds)
 
 
 class BeamTransform(PhysProc):

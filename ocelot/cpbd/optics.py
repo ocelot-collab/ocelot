@@ -517,6 +517,7 @@ class KickTM(TransferMap):
         """
         gamma = energy / m_e_GeV
         coef = 0.
+        beta = 1.
         if gamma != 0:
             gamma2 = gamma * gamma
             beta = 1. - 0.5 / gamma2
@@ -532,7 +533,6 @@ class KickTM(TransferMap):
         for i in range(nkick):
             x = X[0] + X[1] * dl
             y = X[2] + X[3] * dl
-            tau = -X[5] * dl * coef
 
             p = -angle * X[5] + 0j
             xy1 = x + 1j * y
@@ -541,11 +541,11 @@ class KickTM(TransferMap):
             p += k1 * xy1 + k2 * xy2 + k3 * xy3
             X[1] = X[1] - np.real(p)
             X[3] = X[3] + np.imag(p)
-            X[4] = tau - angle * X[0]
+            X[4] = X[4] + np.real(angle * xy1)/beta - X[5] * dl * coef
 
             X[0] = x + X[1] * dl
             X[2] = y + X[3] * dl
-            X[4] -= X[5] * dl * coef
+            #X[4] -= X[5] * dl * coef
         return X
 
     def kick_apply(self, X, l, angle, k1, k2, k3, energy, nkick, dx, dy, tilt):

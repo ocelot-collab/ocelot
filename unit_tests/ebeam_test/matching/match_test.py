@@ -237,7 +237,6 @@ def test_beam_matching(lattice, lattice_inj, update_ref_values=False):
 
     navi = Navigator(lattice_inj)
     res = match_beam(lattice_inj, constr, vars, p_array, navi, verbose=True, max_iter=15, method='simplex')
-    print(res)
     navi.reset_position()
     for i, q in enumerate(vars):
         q.k1 = res[i]

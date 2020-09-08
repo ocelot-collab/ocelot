@@ -850,7 +850,7 @@ class CSR(PhysProc):
 
         self.z_csr_start = sum([p.l for p in lat.sequence[:self.indx0]])
         p = Particle()
-        beta = 1. if self.energy == None else np.sqrt(1. - 1./(self.energy/m_e_GeV)**2)
+        beta = 1. if self.energy is None else np.sqrt(1. - 1./(self.energy/m_e_GeV)**2)
         self.csr_traj = np.transpose([[0, p.x, p.y, p.s, p.px, p.py, 1.]])
         if Undulator in [elem.__class__ for elem in lat.sequence[self.indx0:self.indx1+1]]:
             self.rk_traj = True

@@ -598,11 +598,26 @@ class ParticleArray:
     p0 - momentum
     """
 
+    class LostParticleRecorder:
+        """
+        Stores all indices of particles that are getting lost.
+        Notes: The indices of the initial ParticleArray are used.
+        """
+        def __init__(self, n):
+            self.lost_particles = []
+            self._current_particle = np.arange(n)
+
+        def add(self, inds):
+            self.lost_particles += self._current_particle[inds].tolist()
+            self._current_particle = np.delete(self._current_particle, inds)
+
     def __init__(self, n=0):
         self.rparticles = np.zeros((6, n))
         self.q_array = np.zeros(n)  # charge
         self.s = 0.0
         self.E = 0.0
+        self.lost_particle_recorder = self.LostParticleRecorder(n)
+
 
     def rm_tails(self, xlim, ylim, px_lim, py_lim):
         """
@@ -767,6 +782,10 @@ class ParticleArray:
         val += "n particles : " + str(self.n) + "\n"
         return val
 
+    def delete_indices(self, inds):
+        self.lost_particle_recorder.add(inds)
+        self.rparticles = np.delete(self.rparticles, inds, 1)
+        self.q_array = np.delete(self.q_array, inds, 0)
 
 def recalculate_ref_particle(p_array):
     pref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV
@@ -1695,3 +1714,4 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
         beam_arr.add_chirp(kwargs['chirp'])
 
     return beam_arr
+

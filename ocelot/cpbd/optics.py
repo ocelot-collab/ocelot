@@ -1179,7 +1179,7 @@ class Navigator:
         id2 = self.lat.sequence.index(stop) if stop is not None else None
         for elem in self.lat.sequence[id1:id2]:
             if elem.__class__ is Aperture:
-                if elem.type is "rect":
+                if elem.type == "rect":
                     ap = RectAperture(xmin=-elem.xmax + elem.dx, xmax=elem.xmax + elem.dx,
                                       ymin=-elem.ymax + elem.dy, ymax=elem.ymax + elem.dy)
                     self.add_physics_proc(ap, elem, elem)

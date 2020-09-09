@@ -271,9 +271,9 @@ class Beam:
         if self.tlen in [None, 0] and window_len is None:
             raise ValueError('both self.tlen and window_len are not set')
         if window_len is None:
-            if self.shape is 'gaussian':
+            if self.shape == 'gaussian':
                 window_len = self.tlen * 1e-15 * speed_of_light * 6  # sigmas
-            elif self.shape is 'flattop':
+            elif self.shape == 'flattop':
                 window_len = self.tlen * 1e-15 * speed_of_light * 2  # fwhm
             else:
                 raise ValueError('Beam() shape can be either "gaussian" or "flattop"')
@@ -287,9 +287,9 @@ class Beam:
         if self.tlen not in [None, 0, np.inf]:
             beam_slen = self.tlen * 1e-15 * speed_of_light
             Ipeak_pos = (np.amax(beam_arr.s) - np.amin(beam_arr.s)) / 2
-            if self.shape is 'gaussian':
+            if self.shape == 'gaussian':
                 beam_arr.I = self.I * np.exp(-(beam_arr.s - Ipeak_pos) ** 2 / (2 * beam_slen ** 2))
-            elif self.shape is 'flattop':
+            elif self.shape == 'flattop':
                 beam_arr.I = np.ones_like(beam_arr.s) * self.I
                 beam_arr.I[abs(beam_arr.s - Ipeak_pos) > beam_slen / 2] = 0
         return beam_arr
@@ -391,7 +391,7 @@ class BeamArray(Beam):
         if (np.abs(dsarr - dsm) / dsm > 1 / 1000).any():
             s_new = np.linspace(np.amin(self.s), np.amax(self.s), self.len())
             for attr in self.params():
-                if attr is 's':
+                if attr == 's':
                     continue
                 # print(attr)
                 val = getattr(self, attr)
@@ -410,7 +410,7 @@ class BeamArray(Beam):
             sn += 1
 
         for attr in self.params():
-            if attr is 's':
+            if attr == 's':
                 continue
             val = getattr(self, attr)
             val = savgol_filter(val, sn, 2, mode='nearest')
@@ -1684,18 +1684,18 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
     for key, value in kwargs.items():
         if (key in beam.__dict__ or key in beam.properties) and (key not in ['s', 'E', 'tlen', 'I']):
             setattr(beam, key, value)
-        if key is 'emit':
+        if key == 'emit':
             beam.emit_x = value
             beam.emit_y = value
-        if key is 'emit_n':
+        if key == 'emit_n':
             beam.emit_xn = value
             beam.emit_yn = value
-        if key is 'beta':
+        if key == 'beta':
             beam.beta_x = value
             beam.beta_y = value
-        if key is 'nslice':
+        if key == 'nslice':
             nslice = value
-        if key is 'dE':
+        if key == 'dE':
             beam.dg = value / m_e_GeV
 
     if 'l_window' not in kwargs:

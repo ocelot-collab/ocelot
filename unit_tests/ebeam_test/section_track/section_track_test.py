@@ -33,7 +33,7 @@ def test_lattice_transfer_map(section_lat, p_array, parameter, update_ref_values
 
     r_matrix_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) + '.json'))
     
-    result = check_matrix(r_matrix, r_matrix_ref, TOL, assert_info=' r_matrix - ')
+    result = check_matrix(r_matrix, r_matrix_ref, tolerance=1.0e-12, tolerance_type='absolute', assert_info=' r_matrix - ')
     assert check_result(result)
 
 
@@ -383,7 +383,7 @@ def test_tracking_wake(section_lat, p_array, parameter=None, update_ref_values=F
     assert check_result(result2)
 
 
-def test_tracking_smoth(section_lat, p_array, parameter=None, update_ref_values=False):
+def test_tracking_smooth(section_lat, p_array, parameter=None, update_ref_values=False):
     sec_lat = copy.deepcopy(section_lat)
 
     parray = copy.deepcopy(p_array)
@@ -584,7 +584,7 @@ def test_update_ref_values(section_lat, p_array, cmdopt):
     update_functions.append('test_tracking_csr')
     update_functions.append('test_tracking_ck')
     update_functions.append('test_tracking_wake')
-    update_functions.append('test_tracking_smoth')
+    update_functions.append('test_tracking_smooth')
     update_functions.append('test_twiss')
     update_functions.append('test_twiss_section_lat')
 

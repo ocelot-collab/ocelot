@@ -37,12 +37,12 @@ def test_coherent_radiation(lattice, screen, beam, parameter, update_ref_values=
 
     screen_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) + '.json')
 
-    result1 = check_matrix(screen.Eph, screen_ref['Eph'], tolerance=1.0e-12, tolerance_type='absolute', assert_info=' Eph - ')
-    result2 = check_matrix(screen.Yph, screen_ref['Yph'], tolerance=1.0e-12, tolerance_type='absolute', assert_info=' Yph - ')
-    result3 = check_matrix(screen.Xph, screen_ref['Xph'], tolerance=1.0e-12, tolerance_type='absolute', assert_info=' Xph - ')
-    result4 = check_matrix(screen.Total, screen_ref['Total'], tolerance=1.0e-12, tolerance_type='absolute', assert_info=' Total - ')
-    result5 = check_matrix(screen.Sigma, screen_ref['Sigma'], tolerance=1.0e-12, tolerance_type='absolute', assert_info=' Sigma - ')
-    result6 = check_matrix(screen.Pi, screen_ref['Pi'], tolerance=1.0e-12, tolerance_type='absolute', assert_info=' Pi - ')
+    result1 = check_matrix(screen.Eph, screen_ref['Eph'], tolerance=1.0e-7, tolerance_type='relative', assert_info=' Eph - ')
+    result2 = check_matrix(screen.Yph, screen_ref['Yph'], tolerance=1.0e-7, tolerance_type='relative', assert_info=' Yph - ')
+    result3 = check_matrix(screen.Xph, screen_ref['Xph'], tolerance=1.0e-7, tolerance_type='relative', assert_info=' Xph - ')
+    result4 = check_matrix(screen.Total, screen_ref['Total'], tolerance=1.0e-7, tolerance_type='relative', assert_info=' Total - ')
+    result5 = check_matrix(screen.Sigma, screen_ref['Sigma'], tolerance=1.0e-7, tolerance_type='relative', assert_info=' Sigma - ')
+    result6 = check_matrix(screen.Pi, screen_ref['Pi'], tolerance=1.0e-7, tolerance_type='relative', assert_info=' Pi - ')
     assert check_result(result1 + result2 + result3 + result4 + result5 + result6)
 
 @pytest.mark.parametrize('parameter', [0, 1, 2])
@@ -162,7 +162,7 @@ def test_coherent_radiation_parray(lattice, screen, beam, parameter, update_ref_
         return {'p_array': p}
 
     parray_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) + '.json')
-    result1 = check_dict(p, parray_ref['p_array'], tolerance=TOL, assert_info=' p - ')
+    result1 = check_dict(p, parray_ref['p_array'], tolerance=1.0e-12, tolerance_type='absolute', assert_info=' p - ')
 
     assert check_result(result1)
 

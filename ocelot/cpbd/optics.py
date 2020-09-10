@@ -1,14 +1,16 @@
 __author__ = 'Sergey'
 
-from numpy.linalg import inv
+import logging
+from copy import deepcopy
 from math import factorial
+
+from numpy.linalg import inv
+import numpy as np
+
 from ocelot.cpbd.beam import Particle, Twiss, ParticleArray
 from ocelot.cpbd.physics_proc import RectAperture
 from ocelot.cpbd.high_order import *
 from ocelot.cpbd.r_matrix import *
-from copy import deepcopy
-import logging
-import numpy as np
 
 _logger = logging.getLogger(__name__)
 _logger_navi = logging.getLogger(__name__ + ".navi")
@@ -764,7 +766,7 @@ class MethodTM:
         else:
             hx = element.angle / element.l
 
-        r_z_e = create_r_matrix(element)
+        r_z_e = element.create_r_matrix()
 
         # global method
         if method == KickTM:
@@ -777,8 +779,8 @@ class MethodTM:
         elif method == SecondTM:
 
             T_z_e = lambda z, energy: t_nnn(z, hx, element.k1, element.k2, energy)
-
-            if element.__class__ == Edge:
+            # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
+            if element.__class__.__name__ == "Edge":
                 if element.pos == 1:
 
                     _, T = fringe_ent(h=element.h, k1=element.k1, e=element.edge, h_pole=element.h_pole,
@@ -788,9 +790,11 @@ class MethodTM:
                     _, T = fringe_ext(h=element.h, k1=element.k1, e=element.edge, h_pole=element.h_pole,
                                       gap=element.gap, fint=element.fint)
                 T_z_e = lambda z, energy: T
-            if element.__class__ == XYQuadrupole:
+            # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
+            if element.__class__.__name__ == "XYQuadrupole":
                 T = np.zeros((6, 6, 6))
-            if element.__class__ == Matrix:
+            # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
+            if element.__class__.__name__ == "Matrix":
                 T_z_e = lambda z, energy: element.t
 
             tm = SecondTM(r_z_no_tilt=r_z_e, t_mat_z_e=T_z_e)
@@ -802,8 +806,8 @@ class MethodTM:
 
         else:
             tm = TransferMap()
-
-        if element.__class__ == Undulator and method == UndulatorTestTM:
+        # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
+        if element.__class__.__name__ == "Undulator" and method == UndulatorTestTM:
             try:
                 ndiv = element.ndiv
             except:
@@ -821,30 +825,30 @@ class MethodTM:
                 npoints = 200
             tm = method(s_start=s_start, npoints=npoints)
             tm.mag_field = element.mag_field
-
-        if element.__class__ == Cavity:
+        # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
+        if element.__class__.__name__ == "Cavity":
             tm = CavityTM(v=element.v, freq=element.freq, phi=element.phi)
-
-        if element.__class__ == CouplerKick:
+        # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
+        if element.__class__.__name__ == "CouplerKick":
             tm = CouplerKickTM(v=element.v, freq=element.freq, phi=element.phi, vx=element.vx, vy=element.vy)
-
-        if element.__class__ == TWCavity:
+        # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
+        if element.__class__.__name__ == "TWCavity":
             tm = TWCavityTM(v=element.v, freq=element.freq, phi=element.phi)
-
-        if element.__class__ == Matrix:
+        # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
+        if element.__class__.__name__ == "Matrix":
             tm.delta_e = element.delta_e
             tm.B_z = lambda z, energy: element.b
             tm.B = lambda energy: element.b
-
-        if element.__class__ == Multipole:
+        # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
+        if element.__class__.__name__ == "Multipole":
             tm = MultipoleTM(kn=element.kn)
-
-        if element.__class__ == Hcor:
+        # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
+        if element.__class__.__name__ == "Hcor":
             t_mat_z_e = lambda z, energy: t_nnn(z, 0, 0, 0, energy)
             tm = CorrectorTM(angle_x=element.angle, angle_y=0., r_z_no_tilt=r_z_e, t_mat_z_e=t_mat_z_e)
             tm.multiplication = self.sec_order_mult.tmat_multip
-
-        if element.__class__ == Vcor:
+        # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
+        if element.__class__.__name__ == "Vcor":
             t_mat_z_e = lambda z, energy: t_nnn(z, 0, 0, 0, energy)
             tm = CorrectorTM(angle_x=0, angle_y=element.angle, r_z_no_tilt=r_z_e, t_mat_z_e=t_mat_z_e)
             tm.multiplication = self.sec_order_mult.tmat_multip
@@ -1178,7 +1182,8 @@ class Navigator:
         id1 = self.lat.sequence.index(start) if start is not None else None
         id2 = self.lat.sequence.index(stop) if stop is not None else None
         for elem in self.lat.sequence[id1:id2]:
-            if elem.__class__ is Aperture:
+            # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
+            if elem.__class__.__name__ == "Aperture":
                 if elem.type == "rect":
                     ap = RectAperture(xmin=-elem.xmax + elem.dx, xmax=elem.xmax + elem.dx,
                                       ymin=-elem.ymax + elem.dy, ymax=elem.ymax + elem.dy)

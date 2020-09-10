@@ -600,15 +600,20 @@ class ParticleArray:
 
     class LostParticleRecorder:
         """
-        Stores all indices of particles that are getting lost.
-        Notes: The indices of the initial ParticleArray are used.
+        Stores information about particles that are getting lost.
+
+        Attributes:
+            lost_particles: List of indices of deleted particle. Notes: The indices of the initial ParticleArray are used.
+            lp_to_pos_hist: Histogram of number of lost particles to position s. [(pos, num of lost particles), ...]
         """
         def __init__(self, n):
             self.lost_particles = []
+            self.lp_to_pos_hist = []
             self._current_particle = np.arange(n)
 
-        def add(self, inds):
+        def add(self, inds, position):
             self.lost_particles += self._current_particle[inds].tolist()
+            self.lp_to_pos_hist.append((position, len(inds)))
             self._current_particle = np.delete(self._current_particle, inds)
 
     def __init__(self, n=0):
@@ -746,6 +751,7 @@ class ParticleArray:
         :param index:
         :return:
         """
+        _logger.warning("rm_particle is deprecated and will be removed in the future. Use delete_particles instead.")
         self.rparticles = np.delete(self.rparticles, index, 1)
         self.q_array = np.delete(self.q_array, index, 0)
 
@@ -782,8 +788,15 @@ class ParticleArray:
         val += "n particles : " + str(self.n) + "\n"
         return val
 
-    def delete_indices(self, inds):
-        self.lost_particle_recorder.add(inds)
+    def delete_particles(self, inds, record=True):
+        """
+        Deletes particles from the particle array via index.
+        :param inds: Indices that will be removed from the particle array.
+        :param record: If record is true the deleted particles will be saved in self.lost_particle_recorder.
+        :return:
+        """
+        if record:
+            self.lost_particle_recorder.add(inds, self.s)
         self.rparticles = np.delete(self.rparticles, inds, 1)
         self.q_array = np.delete(self.q_array, inds, 0)
 

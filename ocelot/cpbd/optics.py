@@ -42,12 +42,13 @@ class SecondOrderMult:
 
         if nb_flag and False:
             # print("SecondTM: NUMBA")
-            self.tmat_multip = nb.njit()(self.numba_apply)
+            self.tmat_multip = nb.njit()(SecondOrderMult.numba_apply)
         else:
             # print("SecondTM: Numpy")
-            self.tmat_multip = self.numpy_apply
+            self.tmat_multip = SecondOrderMult.numpy_apply
 
-    def numba_apply(self, X, R, T):
+    @staticmethod
+    def numba_apply(X, R, T):
         Xcopy = np.copy(X)
         for n in range(X.shape[1]):
             for i in range(6):
@@ -58,7 +59,8 @@ class SecondOrderMult:
                         x_new += T[i, j, k] * Xcopy[j, n] * Xcopy[k, n]
                 X[i, n] = x_new
 
-    def numpy_apply(self, X, R, T):
+    @staticmethod
+    def numpy_apply(X, R, T):
         X[:] = np.matmul(R, X) + np.einsum('ijk,j...,k...->i...', T, X, X)
 
 
@@ -288,10 +290,18 @@ class SecondTM(TransferMap):
         self.map = lambda X, energy: self.t_apply(self.r_z_no_tilt(self.length, energy),
                                                   self.t_mat_z_e(self.length, energy), X, self.dx, self.dy, self.tilt)
 
-        self.R_tilt = lambda energy: np.dot(np.dot(rot_mtx(-self.tilt), self.r_z_no_tilt(self.length, energy)), rot_mtx(self.tilt))
+        self.R_tilt = lambda energy: np.dot(np.dot(rot_mtx(-self.tilt), self.r_z_no_tilt(self.length, energy)),
+                                            rot_mtx(self.tilt))
 
         self.T_tilt = lambda energy: transfer_map_rotation(self.r_z_no_tilt(self.length, energy),
-                                                             self.t_mat_z_e(self.length, energy), self.tilt)[1]
+                                                           self.t_mat_z_e(self.length, energy), self.tilt)[1]
+
+    @classmethod
+    def create_from_element(cls, element, params):
+        T_z_e = element.get_T_z_e_func()
+        tm = cls(r_z_no_tilt=element.create_r_matrix(), t_mat_z_e=T_z_e)
+        tm.multiplication = SecondOrderMult().tmat_multip
+        return tm
 
     def t_apply(self, R, T, X, dx, dy, tilt, U5666=0.):
         if dx != 0 or dy != 0 or tilt != 0:
@@ -512,6 +522,14 @@ class KickTM(TransferMap):
         self.k2 = k2
         self.k3 = k3
         self.nkick = nkick
+
+    @classmethod
+    def create_from_element(cls, element, params):
+        return cls(angle=element.angle, k1=element.k1, k2=element.k2,
+                   k3=element.k3 if hasattr(element, 'k3') else 0.,
+                   nkick=params['nkick'] if 'nkick' in params else 1)
+
+
 
     def kick(self, X, l, angle, k1, k2, k3, energy, nkick=1):
         """
@@ -770,35 +788,10 @@ class MethodTM:
 
         # global method
         if method == KickTM:
-            try:
-                k3 = element.k3
-            except:
-                k3 = 0.
-            tm = KickTM(angle=element.angle, k1=element.k1, k2=element.k2, k3=k3, nkick=self.nkick)
+            tm = method.create_from_element(element, self.params)
 
         elif method == SecondTM:
-
-            T_z_e = lambda z, energy: t_nnn(z, hx, element.k1, element.k2, energy)
-            # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
-            if element.__class__.__name__ == "Edge":
-                if element.pos == 1:
-
-                    _, T = fringe_ent(h=element.h, k1=element.k1, e=element.edge, h_pole=element.h_pole,
-                                      gap=element.gap, fint=element.fint)
-                else:
-
-                    _, T = fringe_ext(h=element.h, k1=element.k1, e=element.edge, h_pole=element.h_pole,
-                                      gap=element.gap, fint=element.fint)
-                T_z_e = lambda z, energy: T
-            # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
-            if element.__class__.__name__ == "XYQuadrupole":
-                T = np.zeros((6, 6, 6))
-            # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
-            if element.__class__.__name__ == "Matrix":
-                T_z_e = lambda z, energy: element.t
-
-            tm = SecondTM(r_z_no_tilt=r_z_e, t_mat_z_e=T_z_e)
-            tm.multiplication = self.sec_order_mult.tmat_multip
+            tm = method.create_from_element(element, self.params)
 
         elif method == TWCavityTM:
             tm = TWCavityTM(l=element.l, v=element.v, phi=element.phi, freq=element.freq)

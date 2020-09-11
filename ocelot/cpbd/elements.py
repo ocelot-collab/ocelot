@@ -5,9 +5,12 @@ linear dimensions in [m]
 from ocelot.cpbd.field_map import FieldMap
 from ocelot.cpbd.r_matrix import uni_matrix, rot_mtx
 from ocelot.common.globals import m_e_GeV, speed_of_light
+from ocelot.cpbd.high_order import *
 
 import numpy as np
+import logging
 
+_logger = logging.getLogger(__name__)
 
 class Element(object):
     """
@@ -50,6 +53,9 @@ class Element(object):
         r_z_e = lambda z, energy: uni_matrix(z, k1, hx=hx, sum_tilts=0, energy=energy)
         return r_z_e
 
+    def get_T_z_e_func(self):
+        return lambda z, energy: t_nnn(z, 0. if self.l == 0 else self.angle / self.l, self.k1, self.k2,
+                                       energy)
 
 # to mark locations of bpms and other diagnostics
 class Monitor(Element):
@@ -290,6 +296,15 @@ class Edge(Bend):
         r_z_e = lambda z, energy: r
         return r_z_e
 
+    def get_T_z_e_func(self):
+        if self.pos == 1:
+            _, T = fringe_ent(h=self.h, k1=self.k1, e=self.edge, h_pole=self.h_pole,
+                              gap=self.gap, fint=self.fint)
+        else:
+            _, T = fringe_ext(h=self.h, k1=self.k1, e=self.edge, h_pole=self.h_pole,
+                              gap=self.gap, fint=self.fint)
+        return lambda z, energy: T
+
 
 class SBend(Bend):
     """
@@ -425,6 +440,8 @@ class XYQuadrupole(SBend):
         r_z_e = lambda z, energy: r_mtx(z, k1, hx=hx, hy=hy, sum_tilts=0, energy=energy)
         return r_z_e
 
+    def get_T_z_e_func(self):
+        return lambda z, energy: np.zeros((6, 6, 6))
 
 class Hcor(RBend):
     """
@@ -1028,6 +1045,8 @@ class Matrix(Element):
         r_z_e = lambda z, energy: r_matrix(z, self.l, rm)
         return r_z_e
 
+    def get_T_z_e_func(self):
+        return lambda z, energy: self.t
 
 class Pulse:
     def __init__(self):

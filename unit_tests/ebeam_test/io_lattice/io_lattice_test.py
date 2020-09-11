@@ -3,7 +3,6 @@
 import os
 import sys
 import time
-import copy
 
 from ocelot.cpbd.io import *
 
@@ -12,6 +11,7 @@ REF_RES_DIR = FILE_DIR + '/ref_results/'
 
 from unit_tests.params import *
 from io_lattice_conf import *
+import copy
 
 
 def test_original_lattice_transfer_map(lattice, tws0, method, parametr=None, update_ref_values=False):

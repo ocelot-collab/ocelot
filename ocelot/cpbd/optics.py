@@ -830,46 +830,10 @@ class MethodTM:
         dy = element.dy
         tilt = element.dtilt + element.tilt
 
-        # global method
-        if method == KickTM:
-            tm = method.create_from_element(element, self.params)
-
-        elif method == SecondTM:
-            tm = method.create_from_element(element, self.params)
-
-        elif method == TWCavityTM:
-            tm = method.create_from_element(element, self.params)
-
+        if element.is_tm_supported(method):
+            tm = element.create_custom_tm(method, self.params)
         else:
-            tm = TransferMap()
-        # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
-        if element.__class__.__name__ == "Undulator" and method == UndulatorTestTM:
-            tm = UndulatorTestTM.create_from_element(element, self.params)
-        if method in [RungeKuttaTM, RungeKuttaTrTM]:
-            tm = method.create_from_element(element, self.params)
-        # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
-        if element.__class__.__name__ == "Cavity":
-            tm = CavityTM.create_from_element(element, self.params)
-        # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
-        if element.__class__.__name__ == "CouplerKick":
-            tm = CouplerKickTM.create_from_element(element, self.params)
-        # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
-        if element.__class__.__name__ == "TWCavity":
-            tm = TWCavityTM.create_from_element(element, self.params)
-        # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
-        if element.__class__.__name__ == "Matrix":
-                tm.delta_e = element.delta_e
-                tm.B_z = lambda z, energy: element.b
-                tm.B = lambda energy: element.b
-        # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
-        if element.__class__.__name__ == "Multipole":
-            tm = MultipoleTM.create_from_element(element, self.params)
-        # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
-        if element.__class__.__name__ == "Hcor":
-            tm = HCorrectorTM.create_from_element(element, self.params)
-        # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
-        if element.__class__.__name__ == "Vcor":
-            tm = VCorrectorTM.create_from_element(element, self.params)
+            tm = element.create_default_tm(self.params)
 
         tm.length = element.l
         tm.dx = dx

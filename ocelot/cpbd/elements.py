@@ -2,8 +2,10 @@
 definition of magnetic lattice
 linear dimensions in [m]
 """
-
 from ocelot.cpbd.field_map import FieldMap
+from ocelot.cpbd.r_matrix import uni_matrix, rot_mtx
+from ocelot.common.globals import m_e_GeV, speed_of_light
+
 import numpy as np
 
 
@@ -38,6 +40,15 @@ class Element(object):
             return id(self) == id(other)
         except:
             return False
+
+    def create_r_matrix(self):
+        k1 = self.k1
+        if self.l == 0:
+            hx = 0.
+        else:
+            hx = self.angle / self.l
+        r_z_e = lambda z, energy: uni_matrix(z, k1, hx=hx, sum_tilts=0, energy=energy)
+        return r_z_e
 
 
 # to mark locations of bpms and other diagnostics
@@ -269,6 +280,16 @@ class Edge(Bend):
         s += 'tilt   =%8.3f deg\n' % (self.tilt * 180.0 / np.pi)
         return s
 
+    def create_r_matrix(self):
+        sec_e = 1. / np.cos(self.edge)
+        phi = self.fint * self.h * self.gap * sec_e * (1. + np.sin(self.edge) ** 2)
+        # phi = self.fint * self.h * self.gap * sec_e * (1. + np.sin(2*self.edge) )
+        r = np.eye(6)
+        r[1, 0] = self.h * np.tan(self.edge)
+        r[3, 2] = -self.h * np.tan(self.edge - phi)
+        r_z_e = lambda z, energy: r
+        return r_z_e
+
 
 class SBend(Bend):
     """
@@ -324,6 +345,10 @@ class RBend(Bend):
         Bend.__init__(self, l=l, angle=angle, e1=e1, e2=e2, k1=k1, k2=k2, tilt=tilt,
                       gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, fintx=fintx, eid=eid)
 
+    def create_r_matrix(self):
+        r_z_e = lambda z, energy: uni_matrix(z, 0, hx=0, sum_tilts=0, energy=energy)
+        return r_z_e
+
 
 class XYQuadrupole(SBend):
     """
@@ -343,6 +368,62 @@ class XYQuadrupole(SBend):
         self.x_offs = x_offs
         self.y_offs = y_offs
         self.tilt = tilt
+
+    def create_r_matrix(self):
+        k1 = self.k1
+
+        if self.l == 0:
+            hx = 0.
+            hy = 0.
+        else:
+            hx = k1 * self.x_offs
+            hy = -k1 * self.y_offs
+
+        def r_mtx(z, k1, hx, hy, sum_tilts=0., energy=0.):
+            # r = self.l/self.angle
+            #  +K - focusing lens , -K - defoc
+            gamma = energy / m_e_GeV
+
+            kx2 = (k1 + hx * hx)
+            ky2 = hy * hy - k1
+            kx = np.sqrt(kx2 + 0.j)
+            ky = np.sqrt(ky2 + 0.j)
+            cx = np.cos(z * kx).real
+            cy = np.cos(z * ky).real
+            sy = (np.sin(ky * z) / ky).real if ky != 0 else z
+
+            igamma2 = 0.
+
+            if gamma != 0:
+                igamma2 = 1. / (gamma * gamma)
+
+            beta = np.sqrt(1. - igamma2)
+
+            if kx != 0:
+                sx = (np.sin(kx * z) / kx).real
+                dx = hx / kx2 * (1. - cx)
+                dy = hy / ky2 * (1. - cy)
+                r56 = hx * hx * (z - sx) / kx2 / beta ** 2 + hy * hy * (z - sy) / ky2 / beta ** 2
+            else:
+                sx = z
+                dx = z * z * hx / 2.
+                dy = z * z * hy / 2.
+                r56 = hx * hx * z ** 3 / 6. / beta ** 2 + hy * hy * z ** 3 / 6. / beta ** 2
+
+            r56 -= z / (beta * beta) * igamma2
+
+            u_matrix = np.array([[cx, sx, 0., 0., 0., dx / beta],
+                                 [-kx2 * sx, cx, 0., 0., 0., sx * hx / beta],
+                                 [0., 0., cy, sy, 0., dy / beta],
+                                 [0., 0., -ky2 * sy, cy, 0., sy * hy / beta],
+                                 [hx * sx / beta, dx / beta, hy * sy / beta, dy / beta, 1., r56],
+                                 [0., 0., 0., 0., 0., 1.]])
+            if sum_tilts != 0:
+                u_matrix = np.dot(np.dot(rot_mtx(-sum_tilts), u_matrix), rot_mtx(sum_tilts))
+            return u_matrix
+
+        r_z_e = lambda z, energy: r_mtx(z, k1, hx=hx, hy=hy, sum_tilts=0, energy=energy)
+        return r_z_e
 
 
 class Hcor(RBend):
@@ -442,6 +523,37 @@ class Undulator(Element):
         s += 'Ky       =%8.3f \n' % self.Ky
         return s
 
+    def create_r_matrix(self):
+        """
+        in OCELOT coordinates:
+        R56 = - Lu/(gamma**2 * beta**2) * (1 + 0.5 * K**2 * beta**2)
+        S.Tomin, Varenna, 2017.
+        """
+
+        def undulator_r_z(z, lperiod, Kx, Ky, energy):
+            gamma = energy / m_e_GeV
+            r = np.eye(6)
+            r[0, 1] = z
+            if gamma != 0 and lperiod != 0 and Kx != 0:
+                beta = 1 / np.sqrt(1.0 - 1.0 / (gamma * gamma))
+
+                omega_x = np.sqrt(2.0) * np.pi * Kx / (lperiod * gamma * beta)
+                omega_y = np.sqrt(2.0) * np.pi * Ky / (lperiod * gamma * beta)
+                r[2, 2] = np.cos(omega_x * z)
+                r[2, 3] = np.sin(omega_x * z) / omega_x
+                r[3, 2] = -np.sin(omega_x * z) * omega_x
+                r[3, 3] = np.cos(omega_x * z)
+
+                r[4, 5] = - z / (gamma * beta) ** 2 * (1 + 0.5 * (Kx * beta) ** 2)
+
+            else:
+                r[2, 3] = z
+            return r
+
+        r_z_e = lambda z, energy: undulator_r_z(z, lperiod=self.lperiod, Kx=self.Kx, Ky=self.Ky, energy=energy)
+        # b_z = lambda z, energy: dot((eye(6) - R_z(z, energy)), array([dx, 0., dy, 0., 0., 0.]))
+        return r_z_e
+
 
 class Cavity(Element):
     """
@@ -488,6 +600,81 @@ class Cavity(Element):
         s += "vxy_down = {num.real:+9.2e} {num.imag:+9.2e}j\n".format(num=self.vxy_down)
         return s
 
+    def create_r_matrix(self):
+
+        def cavity_R_z(z, V, E, freq, phi=0.):
+            """
+            :param z: length
+            :param de: delta E
+            :param freq: frequency
+            :param E: initial energy
+            :return: matrix
+            """
+
+            phi = phi * np.pi / 180.
+            de = V * np.cos(phi)
+            # pure pi-standing-wave case
+            eta = 1
+            # gamma = (E + 0.5 * de) / m_e_GeV
+            Ei = E / m_e_GeV
+            Ef = (E + de) / m_e_GeV
+            Ep = (Ef - Ei) / z  # energy derivative
+            if Ei == 0:
+                logger.error("CAVITY: Initial energy is 0, check ParticleArray.E or Twiss.E OR cavity.v must be 0")
+
+            cos_phi = np.cos(phi)
+            alpha = np.sqrt(eta / 8.) / cos_phi * np.log(Ef / Ei)
+            sin_alpha = np.sin(alpha)
+
+            cos_alpha = np.cos(alpha)
+            r11 = (cos_alpha - np.sqrt(2. / eta) * cos_phi * sin_alpha)
+
+            if abs(Ep) > 1e-10:
+                r12 = np.sqrt(8. / eta) * Ei / Ep * cos_phi * sin_alpha
+            else:
+                r12 = z
+            r21 = -Ep / Ef * (cos_phi / np.sqrt(2. * eta) + np.sqrt(eta / 8.) / cos_phi) * sin_alpha
+
+            r22 = Ei / Ef * (cos_alpha + np.sqrt(2. / eta) * cos_phi * sin_alpha)
+            # print(f"z = {z}, V = {V}, E = {E}, phi = {phi}, alpha = {alpha}, r11 = {r11}")
+
+            r56 = 0.
+            beta0 = 1
+            beta1 = 1
+
+            k = 2. * np.pi * freq / speed_of_light
+            r55_cor = 0.
+            if V != 0 and E != 0:
+                gamma2 = Ei * Ei
+                beta0 = np.sqrt(1. - 1 / gamma2)
+                gamma2 = Ef * Ef
+                beta1 = np.sqrt(1. - 1 / gamma2)
+
+                # r56 = (beta0 / beta1 - 1) * Ei / (Ef - Ei) * z
+                r56 = - z / (Ef * Ef * Ei * beta1) * (Ef + Ei) / (beta1 + beta0)
+                g0 = Ei
+                g1 = Ef
+                r55_cor = k * z * beta0 * V / m_e_GeV * np.sin(phi) * (g0 * g1 * (beta0 * beta1 - 1) + 1) / (
+                        beta1 * g1 * (g0 - g1) ** 2)
+
+            r66 = Ei / Ef * beta0 / beta1
+            r65 = k * np.sin(phi) * V / (Ef * beta1 * m_e_GeV)
+            cav_matrix = np.array([[r11, r12, 0., 0., 0., 0.],
+                                   [r21, r22, 0., 0., 0., 0.],
+                                   [0., 0., r11, r12, 0., 0.],
+                                   [0., 0., r21, r22, 0., 0.],
+                                   [0., 0., 0., 0., 1. + r55_cor, r56],
+                                   [0., 0., 0., 0., r65, r66]]).real
+
+            return cav_matrix
+
+        if self.v == 0.:
+            r_z_e = lambda z, energy: uni_matrix(z, 0., hx=0., sum_tilts=self.dtilt + self.tilt, energy=energy)
+        else:
+            r_z_e = lambda z, energy: cavity_R_z(z, V=self.v * z / self.l, E=energy, freq=self.freq,
+                                                 phi=self.phi)
+        return r_z_e
+
 
 class CouplerKick(Element):
     """
@@ -522,6 +709,37 @@ class CouplerKick(Element):
         s += "vxy  = {num.real:+9.2e} {num.imag:+9.2e}j\n".format(num=self.vxy)
         return s
 
+    def create_r_matrix(self):
+
+        def ck_matrix(v, phi, vxx, vxy, energy):
+            """
+            matrix for coupler kick
+
+            :param v: voltage of the cavity in GV
+            :param phi: phase [deg] of the cavity
+            :param vxx: first order coefficients of the coupler kicks
+            :param vxy: first order coefficients of the coupler kicks
+            :param energy: beam energy in GeV
+            :return:
+            """
+            phi = phi * np.pi / 180.
+            m21 = (vxx * v * np.exp(1j * phi)).real / energy
+            m43 = - m21
+            m23 = (vxy * v * np.exp(1j * phi)).real / energy
+
+            coupl_kick = np.array([[1, 0., 0., 0., 0., 0.],
+                                    [m21, 1, m23, 0., 0., 0.],
+                                    [0., 0., 1, 0., 0., 0.],
+                                    [m23, 0., m43, 1, 0., 0.],
+                                    [0., 0., 0., 0., 1., 0.],
+                                    [0., 0., 0., 0., 0., 1]])
+            return coupl_kick
+
+        r_z_e = lambda z, energy: ck_matrix(v=self.v, phi=self.phi,
+                                            vxx=self.vxx, vxy=self.vxy, energy=energy)
+        return r_z_e
+
+
 class TWCavity(Element):
     """
     Traveling wave cavity
@@ -537,6 +755,58 @@ class TWCavity(Element):
         self.freq = freq  # Hz
         self.phi = phi  # in grad
         self.E = 0
+
+    def create_r_matrix(self):
+
+        def tw_cavity_R_z(z, V, E, freq, phi=0.):
+            """
+            :param z: length
+            :param de: delta E
+            :param f: frequency
+            :param E: initial energy
+            :return: matrix
+            """
+            phi = phi * np.pi / 180.
+            de = V * np.cos(phi)
+            r12 = z * E / de * np.log(1. + de / E) if de != 0 else z
+            r22 = E / (E + de)
+            r65 = V * np.sin(phi) / (E + de) * (2 * np.pi / (speed_of_light / freq)) if freq != 0 else 0
+            r66 = r22
+            cav_matrix = np.array([[1, r12, 0., 0., 0., 0.],
+                                   [0, r22, 0., 0., 0., 0.],
+                                   [0., 0., 1, r12, 0., 0.],
+                                   [0., 0., 0, r22, 0., 0.],
+                                   [0., 0., 0., 0., 1., 0],
+                                   [0., 0., 0., 0., r65, r66]]).real
+            return cav_matrix
+
+        def f_entrance(z, V, E, phi=0.):
+            phi = phi * np.pi / 180.
+            de = V * np.cos(phi)
+            r = np.eye(6)
+            r[1, 0] = -de / z / 2. / E
+            r[3, 2] = r[1, 0]
+            return r
+
+        def f_exit(z, V, E, phi=0.):
+            phi = phi * np.pi / 180.
+            de = V * np.cos(phi)
+            r = np.eye(6)
+            r[1, 0] = +de / z / 2. / (E + de)
+            r[3, 2] = r[1, 0]
+            return r
+
+        def cav(z, V, E, freq, phi):
+            R_z = np.dot(tw_cavity_R_z(z, V, E, freq, phi), f_entrance(z, V, E, phi))
+            R = np.dot(f_exit(z, V, E, phi), R_z)
+            return R
+
+        if self.v == 0.:
+            r_z_e = lambda z, energy: uni_matrix(z, 0., hx=0., sum_tilts=self.dtilt + self.tilt, energy=energy)
+        else:
+            r_z_e = lambda z, energy: cav(z, V=self.v * z / self.l, E=energy, freq=self.freq,
+                                          phi=self.phi)
+        return r_z_e
 
 
 class TDCavity(Element):
@@ -568,6 +838,51 @@ class TDCavity(Element):
         s += 'tilt =%8.2f deg\n' % (self.tilt * 180.0 / np.pi)
         return s
 
+    def create_r_matrix(self):
+        """
+         R - matrix for TDS - NOT TESTED
+         """
+
+        def tds_R_z(z, energy, freq, v, phi):
+            """
+
+            :param z:  length [m]
+            :param freq: freq [Hz]
+            :param v: voltage in [GeV]
+            :param phi: phase [deg]
+            :param energy: Energy in [GeV]
+            :return:
+            """
+            phi = phi * np.pi / 180.
+
+            gamma = energy / m_e_GeV
+            igamma2 = 0.
+            k0 = 2 * np.pi * freq / speed_of_light
+            if gamma != 0:
+                igamma2 = 1. / (gamma * gamma)
+            if gamma > 1:
+                pref = m_e_GeV * np.sqrt(gamma ** 2 - 1)
+                K = v * k0 / pref
+            else:
+                K = 0.
+            cos_phi = np.cos(phi)
+            cos2_phi = np.cos(2 * phi)
+
+            rm = np.eye(6)
+
+            rm[0, 1] = z
+            rm[0, 4] = -z * K * cos_phi / 2.
+            rm[1, 4] = -K * cos_phi
+            rm[2, 3] = z
+            rm[4, 5] = - z * igamma2 / (1. - igamma2)
+            rm[5, 0] = rm[1, 4]
+            rm[5, 1] = rm[0, 4]
+            rm[5, 4] = -z * K ** 2 * cos2_phi / 6
+            return rm
+
+        r_z_e = lambda z, energy: tds_R_z(z, energy, freq=self.freq, v=self.v * z / self.l, phi=self.phi)
+        return r_z_e
+
 
 class Solenoid(Element):
     """
@@ -587,6 +902,38 @@ class Solenoid(Element):
         s += 'l =%8.4f m\n' % self.l
         s += 'k =%8.3f 1/m\n' % self.k
         return s
+
+    def create_r_matrix(self):
+
+        def sol(l, k, energy):
+            """
+            K.Brown, A.Chao.
+            :param l: efective length of solenoid
+            :param k: B0/(2*Brho), B0 is field inside the solenoid, Brho is momentum of central trajectory
+            :return: matrix
+            """
+            gamma = energy / m_e_GeV
+            c = np.cos(l * k)
+            s = np.sin(l * k)
+            if k == 0:
+                s_k = l
+            else:
+                s_k = s / k
+            r56 = 0.
+            if gamma != 0:
+                gamma2 = gamma * gamma
+                beta = np.sqrt(1. - 1. / gamma2)
+                r56 -= l / (beta * beta * gamma2)
+            sol_matrix = np.array([[c * c, c * s_k, s * c, s * s_k, 0., 0.],
+                                   [-k * s * c, c * c, -k * s * s, s * c, 0., 0.],
+                                   [-s * c, -s * s_k, c * c, c * s_k, 0., 0.],
+                                   [k * s * s, -s * c, -k * s * c, c * c, 0., 0.],
+                                   [0., 0., 0., 0., 1., r56],
+                                   [0., 0., 0., 0., 0., 1.]]).real
+            return sol_matrix
+
+        r_z_e = lambda z, energy: sol(z, k=self.k, energy=energy)
+        return r_z_e
 
 
 class Multipole(Element):
@@ -610,6 +957,14 @@ class Multipole(Element):
         for i, k in enumerate(self.kn):
             s += 'k%i =%8.4f m\n' % (i, k)
         return s
+
+    def create_r_matrix(self):
+        r = np.eye(6)
+        r[1, 0] = -self.kn[1]
+        r[3, 2] = self.kn[1]
+        r[1, 5] = self.kn[0]
+        r_z_e = lambda z, energy: r
+        return r_z_e
 
 
 class Matrix(Element):
@@ -658,6 +1013,20 @@ class Matrix(Element):
                 s += '%11.6f' % (self.r[i, j])
             s += "\n"
         return s
+
+    def create_r_matrix(self):
+        rm = np.eye(6)
+        rm = self.r
+
+        def r_matrix(z, l, rm):
+            if z < l:
+                r_z = uni_matrix(z, 0, hx=0)
+            else:
+                r_z = rm
+            return r_z
+
+        r_z_e = lambda z, energy: r_matrix(z, self.l, rm)
+        return r_z_e
 
 
 class Pulse:

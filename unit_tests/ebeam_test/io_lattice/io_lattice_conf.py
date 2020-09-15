@@ -3,7 +3,7 @@
 import pytest
 
 from ocelot import *
-from ocelot.cpbd.magnetic_lattice import merger
+
 """Lattice definition"""
 # drifts 
 D_1 = Drift(l=0.276, eid='D_1')

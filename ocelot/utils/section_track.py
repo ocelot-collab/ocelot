@@ -3,6 +3,9 @@ Section class for s2e tracking.
 S.Tomin. XFEL/DESY. 2017
 """
 import os
+import copy
+
+import numpy as np
 
 from ocelot.cpbd.optics import *
 from ocelot.cpbd.physics_proc import *
@@ -11,8 +14,6 @@ from ocelot.cpbd.csr import *
 from ocelot.cpbd.wake3D import *
 from ocelot.cpbd.track import *
 from ocelot.cpbd.io import *
-import numpy as np
-import copy
 
 
 class SectionLattice:

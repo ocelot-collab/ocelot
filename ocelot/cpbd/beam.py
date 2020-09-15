@@ -1,6 +1,8 @@
 """
 definition of particles, beams and trajectories
 """
+import os
+
 from ocelot.common.globals import *
 from ocelot.common.math_op import find_nearest_idx
 from scipy.special import factorial
@@ -137,6 +139,15 @@ class Twiss:
         val += "E       = " + str(self.E) + "\n"
         val += "s        = " + str(self.s) + "\n"
         return val
+
+    def twiss2input(self):
+        lines = []
+        tws_ref = Twiss()
+        lines.append('tws0 = Twiss()\n')
+        for param in self.__dict__:
+            if self.__dict__[param] != tws_ref.__dict__[param]:
+                lines.append('tws0.' + str(param) + ' = ' + str(self.__dict__[param]) + '\n')
+        return lines
 
 
 class Particle:
@@ -316,6 +327,16 @@ class Beam:
     # print("emit_x/emit_y     : ",  self.emit_x*1e9, "/",self.emit_y*1e9, " nm-rad")
     # print("sigma_x/y         : ", self.sigma_x*1e6, "/", self.sigma_y*1e6, " um")
     # print("sigma_xp/yp       : ", self.sigma_xp*1e6, "/", self.sigma_yp*1e6, " urad")
+
+    def beam2input(self):
+        lines = []
+        beam_ref = Beam()
+        lines.append('beam = Beam()\n')
+        for param in self.__dict__:
+            if self.__dict__[param] != beam_ref.__dict__[param]:
+                lines.append('beam.' + str(param) + ' = ' + str(self.__dict__[param]) + '\n')
+
+        return lines
 
 
 class BeamArray(Beam):
@@ -799,6 +820,7 @@ class ParticleArray:
             self.lost_particle_recorder.add(inds, self.s)
         self.rparticles = np.delete(self.rparticles, inds, 1)
         self.q_array = np.delete(self.q_array, inds, 0)
+
 
 def recalculate_ref_particle(p_array):
     pref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV

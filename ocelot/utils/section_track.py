@@ -4,7 +4,6 @@ S.Tomin. XFEL/DESY. 2017
 """
 
 from ocelot.cpbd.csr import *
-from ocelot.cpbd.io import *
 from ocelot.cpbd.physics_proc import *
 from ocelot.cpbd.sc import *
 from ocelot.cpbd.track import *

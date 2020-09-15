@@ -11,12 +11,16 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class Element(object):
     """
     Element is a basic beamline building element
     Accelerator optics elements are subclasses of Element
     Arbitrary set of additional parameters can be attached if necessary
     """
+
+    default_tm = TransferMap
+    additional_tms = [SecondTM, KickTM, RungeKuttaTrTM, RungeKuttaTM, TWCavityTM]
 
     def __init__(self, eid=None):
         self.id = eid
@@ -130,6 +134,20 @@ class Element(object):
                     string += param + ", "
         string += ")\n"
         return string
+
+    def create_default_tm(self, params):
+        return self.default_tm.create_from_element(self, params)
+
+    def is_tm_supported(self, tm):
+        #if tm == self.default_tm:
+        #    return True
+        for add_tm in self.additional_tms:
+            if tm == add_tm:
+                return True
+        return False
+
+    def create_custom_tm(self, tm, params):
+        return tm.create_from_element(self, params)
 
 
 # to mark locations of bpms and other diagnostics
@@ -518,12 +536,16 @@ class XYQuadrupole(SBend):
     def get_T_z_e_func(self):
         return lambda z, energy: np.zeros((6, 6, 6))
 
+
 class Hcor(RBend):
     """
     horizontal corrector,
     l - length of magnet in [m],
     angle - angle of bend in [rad],
     """
+
+    default_tm = HCorrectorTM
+    additional_tms = []
 
     def __init__(self, l=0., angle=0., eid=None):
         RBend.__init__(self, l=l, angle=angle, eid=eid)
@@ -546,6 +568,9 @@ class Vcor(RBend):
     l - length of magnet in [m],
     angle - angle of bend in [rad],
     """
+
+    default_tm = VCorrectorTM
+    additional_tms = []
 
     def __init__(self, l=0., angle=0., eid=None):
         RBend.__init__(self, l=l, angle=angle, eid=eid)
@@ -573,6 +598,8 @@ class Undulator(Element):
     mag_field - None by default, the magnetic field map function - (Bx, By, Bz) = f(x, y, z)
     eid - id of undulator.
     """
+
+    additional_tms = [SecondTM, KickTM, RungeKuttaTrTM, RungeKuttaTM, TWCavityTM, UndulatorTestTM]
 
     def __init__(self, lperiod=0., nperiods=0, Kx=0., Ky=0., field_file=None, eid=None):
         Element.__init__(self, eid)
@@ -656,6 +683,9 @@ class Cavity(Element):
     vx_{up/down}, vy_{up/down} - zero order kick of a {up/down}stream coupler
     vxx_{up/down}, vxy_{up/down} - first order kick  a {up/down}stream coupler
     """
+
+    default_tm = CavityTM
+    additional_tms = []
 
     def __init__(self, l=0., v=0., phi=0., freq=0., vx_up=0, vy_up=0, vxx_up=0, vxy_up=0,
                  vx_down=0, vy_down=0, vxx_down=0, vxy_down=0, eid=None):
@@ -778,6 +808,9 @@ class CouplerKick(Element):
     vxx, vxy - first order kick  a stream coupler
     """
 
+    default_tm = CouplerKickTM
+    additional_tms = []
+
     def __init__(self, v=0., phi=0., freq=0., vx=0., vy=0., vxx=0., vxy=0., eid=None):
         Element.__init__(self, eid)
         self.l = 0.
@@ -839,6 +872,9 @@ class TWCavity(Element):
     freq - frequency [Hz]
     phi - phase in [deg]
     """
+
+    default_tm = TWCavityTM
+    additional_tms = []
 
     def __init__(self, l=0., v=0., phi=0., freq=0., eid=None):
         Element.__init__(self, eid)
@@ -1033,6 +1069,9 @@ class Multipole(Element):
     kn - list of strengths
     """
 
+    default_tm = MultipoleTM
+    additional_tms = []
+
     def __init__(self, kn=0., eid=None):
         Element.__init__(self, eid)
         kn = np.array([kn]).flatten()
@@ -1148,6 +1187,22 @@ class Matrix(Element):
                         if np.abs(val) > 1e-9:
                             params.append(key + str(i + 1) + '=' + str(val))
         return params
+
+    def _set_tm_parameter(self, tm):
+        tm.delta_e = self.delta_e
+        tm.B_z = lambda z, energy: self.b
+        tm.B = lambda energy: self.b
+
+    def create_default_tm(self, params):
+        tm = self.default_tm.create_from_element(self, params)
+        self._set_tm_parameter(tm)
+        return tm
+
+    def create_custom_tm(self, tm, params):
+        tm = tm.create_from_element(self, params)
+        self._set_tm_parameter(tm)
+        return tm
+
 
 class Pulse:
     def __init__(self):

@@ -279,6 +279,10 @@ class TransferMap:
         m.map = lambda u, energy: m.mul_p_array(u, energy=energy)
         return m
 
+    @classmethod
+    def create_from_element(cls, element, params):
+        return TransferMap()
+
 
 class SecondTM(TransferMap):
     def __init__(self, r_z_no_tilt, t_mat_z_e):
@@ -367,6 +371,24 @@ class CorrectorTM(SecondTM):
         return m
 
 
+class VCorrectorTM(CorrectorTM):
+    @classmethod
+    def create_from_element(cls, element, params):
+        t_mat_z_e = lambda z, energy: t_nnn(z, 0, 0, 0, energy)
+        tm = cls(angle_x=0, angle_y=element.angle, r_z_no_tilt=element.create_r_matrix(), t_mat_z_e=t_mat_z_e)
+        tm.multiplication = SecondOrderMult().tmat_multip
+        return tm
+
+
+class HCorrectorTM(CorrectorTM):
+    @classmethod
+    def create_from_element(cls, element, params):
+        t_mat_z_e = lambda z, energy: t_nnn(z, 0, 0, 0, energy)
+        tm = cls(angle_x=element.angle, angle_y=0., r_z_no_tilt=element.create_r_matrix(), t_mat_z_e=t_mat_z_e)
+        tm.multiplication = SecondOrderMult().tmat_multip
+        return tm
+
+
 class PulseTM(TransferMap):
     def __init__(self, kn):
         TransferMap.__init__(self)
@@ -413,6 +435,10 @@ class MultipoleTM(TransferMap):
         m.delta_e = m.delta_e_z(s)
         m.map = lambda X, energy: m.kick(X, m.kn)
         return m
+
+    @classmethod
+    def create_from_element(cls, element, params):
+        return cls(kn=element.kn)
 
 
 class CavityTM(TransferMap):
@@ -477,6 +503,10 @@ class CavityTM(TransferMap):
         m.map = lambda X, energy: m.map4cav(X, energy, v, m.freq, m.phi, s)
         return m
 
+    @classmethod
+    def create_from_element(cls, element, params):
+        return cls(v=element.v, freq=element.freq, phi=element.phi)
+
 
 class CouplerKickTM(TransferMap):
     def __init__(self, v=0, freq=0., phi=0., vx=0., vy=0.):
@@ -512,6 +542,10 @@ class CouplerKickTM(TransferMap):
         m.delta_e = m.delta_e_z(s)
         m.map = lambda X, energy: m.kick(X, self.v, self.phi, energy)
         return m
+
+    @classmethod
+    def create_from_element(cls, element, params):
+        return cls(v=element.v, freq=element.freq, phi=element.phi, vx=element.vx, vy=element.vy)
 
 
 class KickTM(TransferMap):
@@ -639,6 +673,11 @@ class UndulatorTestTM(TransferMap):
         m.map = lambda X, energy: m.map4undulator(X, m.length, m.lperiod, m.Kx, m.ax, energy, m.ndiv)
         return m
 
+    @classmethod
+    def create_from_element(cls, element, params):
+        return cls(lperiod=element.lperiod, Kx=element.Kx, ax=element.ax,
+                   ndiv=element.ndiv if hasattr(element, 'ndiv') else 5)
+
 
 class RungeKuttaTM(TransferMap):
     def __init__(self, s_start=0, npoints=200):
@@ -658,6 +697,13 @@ class RungeKuttaTM(TransferMap):
         m.delta_e = m.delta_e_z(s)
         m.map = lambda X, energy: rk_field(X, m.s_start, s, m.npoints, energy, m.mag_field, m.long_dynamics)
         return m
+
+    @classmethod
+    def create_from_element(cls,element, params):
+        tm = cls(s_start=element.s_start if hasattr(element, 's_start') else 0.,
+            npoints=element.npoints if hasattr(element, 'npoints') else 200)
+        tm.mag_field = element.mag_field
+        return tm
 
 
 class RungeKuttaTrTM(RungeKuttaTM):
@@ -734,6 +780,10 @@ class TWCavityTM(TransferMap):
         m.map = lambda u, energy: m.mul_p_array(u, energy=energy)
         return m
 
+    @classmethod
+    def create_from_element(cls, element, params):
+        return cls(v=element.v, freq=element.freq, phi=element.phi)
+
 
 class MethodTM:
     """
@@ -779,12 +829,6 @@ class MethodTM:
         dx = element.dx
         dy = element.dy
         tilt = element.dtilt + element.tilt
-        if element.l == 0:
-            hx = 0.
-        else:
-            hx = element.angle / element.l
-
-        r_z_e = element.create_r_matrix()
 
         # global method
         if method == KickTM:
@@ -794,63 +838,44 @@ class MethodTM:
             tm = method.create_from_element(element, self.params)
 
         elif method == TWCavityTM:
-            tm = TWCavityTM(l=element.l, v=element.v, phi=element.phi, freq=element.freq)
-            return tm
+            tm = method.create_from_element(element, self.params)
 
         else:
             tm = TransferMap()
         # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
         if element.__class__.__name__ == "Undulator" and method == UndulatorTestTM:
-            try:
-                ndiv = element.ndiv
-            except:
-                ndiv = 5
-            tm = UndulatorTestTM(lperiod=element.lperiod, Kx=element.Kx, ax=element.ax, ndiv=ndiv)
-
+            tm = UndulatorTestTM.create_from_element(element, self.params)
         if method in [RungeKuttaTM, RungeKuttaTrTM]:
-            try:
-                s_start = element.s_start
-            except:
-                s_start = 0.
-            try:
-                npoints = element.npoints
-            except:
-                npoints = 200
-            tm = method(s_start=s_start, npoints=npoints)
-            tm.mag_field = element.mag_field
+            tm = method.create_from_element(element, self.params)
         # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
         if element.__class__.__name__ == "Cavity":
-            tm = CavityTM(v=element.v, freq=element.freq, phi=element.phi)
+            tm = CavityTM.create_from_element(element, self.params)
         # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
         if element.__class__.__name__ == "CouplerKick":
-            tm = CouplerKickTM(v=element.v, freq=element.freq, phi=element.phi, vx=element.vx, vy=element.vy)
+            tm = CouplerKickTM.create_from_element(element, self.params)
         # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
         if element.__class__.__name__ == "TWCavity":
-            tm = TWCavityTM(v=element.v, freq=element.freq, phi=element.phi)
+            tm = TWCavityTM.create_from_element(element, self.params)
         # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
         if element.__class__.__name__ == "Matrix":
-            tm.delta_e = element.delta_e
-            tm.B_z = lambda z, energy: element.b
-            tm.B = lambda energy: element.b
+                tm.delta_e = element.delta_e
+                tm.B_z = lambda z, energy: element.b
+                tm.B = lambda energy: element.b
         # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
         if element.__class__.__name__ == "Multipole":
-            tm = MultipoleTM(kn=element.kn)
+            tm = MultipoleTM.create_from_element(element, self.params)
         # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
         if element.__class__.__name__ == "Hcor":
-            t_mat_z_e = lambda z, energy: t_nnn(z, 0, 0, 0, energy)
-            tm = CorrectorTM(angle_x=element.angle, angle_y=0., r_z_no_tilt=r_z_e, t_mat_z_e=t_mat_z_e)
-            tm.multiplication = self.sec_order_mult.tmat_multip
+            tm = HCorrectorTM.create_from_element(element, self.params)
         # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
         if element.__class__.__name__ == "Vcor":
-            t_mat_z_e = lambda z, energy: t_nnn(z, 0, 0, 0, energy)
-            tm = CorrectorTM(angle_x=0, angle_y=element.angle, r_z_no_tilt=r_z_e, t_mat_z_e=t_mat_z_e)
-            tm.multiplication = self.sec_order_mult.tmat_multip
+            tm = VCorrectorTM.create_from_element(element, self.params)
 
         tm.length = element.l
         tm.dx = dx
         tm.dy = dy
         tm.tilt = tilt
-        tm.R_z = lambda z, energy: np.dot(np.dot(rot_mtx(-tilt), r_z_e(z, energy)), rot_mtx(tilt))
+        tm.R_z = lambda z, energy: np.dot(np.dot(rot_mtx(-tilt), element.create_r_matrix()(z, energy)), rot_mtx(tilt))
         tm.R = lambda energy: tm.R_z(element.l, energy)
         # tm.B_z = lambda z, energy: dot((eye(6) - tm.R_z(z, energy)), array([dx, 0., dy, 0., 0., 0.]))
         # tm.B = lambda energy: tm.B_z(element.l, energy)

@@ -8,7 +8,7 @@ __version__ = '20.05.1'
 __all__ = ['Twiss', "Beam", "Particle", "get_current", "get_envelope", "generate_parray",           # beam
             "ellipse_from_twiss", "ParticleArray",  "global_slice_analysis", 'gauss_from_twiss',    # beam
 
-            "save_particle_array", "load_particle_array", "write_lattice",                          # io
+            "save_particle_array", "load_particle_array",                          # io
 
             'fodo_parameters', 'lattice_transfer_map', 'TransferMap', "Navigator", 'twiss',    # optics
             "get_map", "MethodTM", "SecondTM", "KickTM", "CavityTM", "UndulatorTestTM",        # optics

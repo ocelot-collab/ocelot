@@ -178,4 +178,4 @@ if __name__ == '__main__':
     cell = SC.Longlist2Ocelot('component_list_8.5.1.xls', pos_stop=364, sbend_l_corr=True)
 
     lattice = MagneticLattice(cell)
-    write_lattice(lattice)
+    lattice.write_lattice()

@@ -139,8 +139,8 @@ class Element(object):
         return self.default_tm.create_from_element(self, params)
 
     def is_tm_supported(self, tm):
-        #if tm == self.default_tm:
-        #    return True
+        if tm == self.default_tm:
+            return True
         for add_tm in self.additional_tms:
             if tm == add_tm:
                 return True

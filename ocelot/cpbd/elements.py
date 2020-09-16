@@ -3,10 +3,13 @@ definition of magnetic lattice
 linear dimensions in [m]
 """
 from ocelot.cpbd.field_map import FieldMap
-from ocelot.cpbd.r_matrix import uni_matrix, rot_mtx
-from ocelot.common.globals import m_e_GeV, speed_of_light
+from ocelot.cpbd.optics import *
 
+import sys
 import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Element(object):
@@ -15,6 +18,9 @@ class Element(object):
     Accelerator optics elements are subclasses of Element
     Arbitrary set of additional parameters can be attached if necessary
     """
+
+    default_tm = TransferMap
+    additional_tms = [SecondTM, KickTM, RungeKuttaTrTM, RungeKuttaTM, TWCavityTM]
 
     def __init__(self, eid=None):
         self.id = eid
@@ -49,6 +55,99 @@ class Element(object):
             hx = self.angle / self.l
         r_z_e = lambda z, energy: uni_matrix(z, k1, hx=hx, sum_tilts=0, energy=energy)
         return r_z_e
+
+    def get_T_z_e_func(self):
+        return lambda z, energy: t_nnn(z, 0. if self.l == 0 else self.angle / self.l, self.k1, self.k2,
+                                       energy)
+
+    def _extend_element_def_string(self, params):
+        """
+        Overload this function to add element specific information to element_def_string.
+        Note: This function is a hook for element_def_string.
+        @param params:
+        @return:
+        """
+        return params
+
+    def element_def_string(self):
+        params = []
+
+        element_type = self.__class__.__name__
+        element_ref = getattr(sys.modules[__name__], element_type)()
+        params_order = element_ref.__init__.__code__.co_varnames
+        argcount = element_ref.__init__.__code__.co_argcount
+
+        for param in params_order[:argcount]:
+            if param == 'self':
+                continue
+
+            # fix for parameter 'eid'
+            if param == 'eid':
+                params.append('eid=\'' + self.id + '\'')
+                continue
+
+            if isinstance(self.__dict__[param], np.ndarray):
+
+                if not np.array_equal(self.__dict__[param], element_ref.__dict__[param]):
+                    params.append(param + '=' + np.array2string(self.__dict__[param], separator=', '))
+                continue
+
+            if isinstance(self.__dict__[param], (int, float, complex)):
+
+                # fix for parameters 'e1' and 'e2' in RBend element
+                if element_type == 'RBend' and param in ('e1', 'e2'):
+                    val = self.__dict__[param] - self.angle / 2.0
+                    if val != 0.0:
+                        params.append(param + '=' + str(val))
+                    continue
+
+                if self.__dict__[param] != element_ref.__dict__[param]:
+                    params.append(param + '=' + str(self.__dict__[param]))
+                continue
+
+            if isinstance(self.__dict__[param], str):
+
+                if self.__dict__[param] != element_ref.__dict__[param]:
+                    params.append(param + '=\'' + self.__dict__[param] + '\'')
+                continue
+
+        params = self._extend_element_def_string(params)
+
+        # join all parameters to element definition
+        string = self._pprinting(element_type, params)
+        return string
+
+    def _pprinting(self, element_type, params):
+        string = self.name + ' = ' + element_type + '('
+        n0 = len(string)
+        n = n0
+        for i, param in enumerate(params):
+            n += len(params)
+            if n > 250:
+                string += "\n"
+                string += " " * n0 + param + ", "
+                n = n0 + len(param) + 2
+            else:
+                if i == len(params) - 1:
+                    string += param
+                else:
+                    string += param + ", "
+        string += ")\n"
+        return string
+
+    def create_default_tm(self, params):
+        return self.default_tm.create_from_element(self, params)
+
+    def is_tm_supported(self, tm):
+        if tm == self.default_tm:
+            return True
+        for add_tm in self.additional_tms:
+            if tm == add_tm:
+                return True
+        return False
+
+    def create_custom_tm(self, tm, params):
+        return tm.create_from_element(self, params)
 
 
 # to mark locations of bpms and other diagnostics
@@ -290,6 +389,15 @@ class Edge(Bend):
         r_z_e = lambda z, energy: r
         return r_z_e
 
+    def get_T_z_e_func(self):
+        if self.pos == 1:
+            _, T = fringe_ent(h=self.h, k1=self.k1, e=self.edge, h_pole=self.h_pole,
+                              gap=self.gap, fint=self.fint)
+        else:
+            _, T = fringe_ext(h=self.h, k1=self.k1, e=self.edge, h_pole=self.h_pole,
+                              gap=self.gap, fint=self.fint)
+        return lambda z, energy: T
+
 
 class SBend(Bend):
     """
@@ -425,6 +533,9 @@ class XYQuadrupole(SBend):
         r_z_e = lambda z, energy: r_mtx(z, k1, hx=hx, hy=hy, sum_tilts=0, energy=energy)
         return r_z_e
 
+    def get_T_z_e_func(self):
+        return lambda z, energy: np.zeros((6, 6, 6))
+
 
 class Hcor(RBend):
     """
@@ -432,6 +543,9 @@ class Hcor(RBend):
     l - length of magnet in [m],
     angle - angle of bend in [rad],
     """
+
+    default_tm = HCorrectorTM
+    additional_tms = []
 
     def __init__(self, l=0., angle=0., eid=None):
         RBend.__init__(self, l=l, angle=angle, eid=eid)
@@ -454,6 +568,9 @@ class Vcor(RBend):
     l - length of magnet in [m],
     angle - angle of bend in [rad],
     """
+
+    default_tm = VCorrectorTM
+    additional_tms = []
 
     def __init__(self, l=0., angle=0., eid=None):
         RBend.__init__(self, l=l, angle=angle, eid=eid)
@@ -481,6 +598,8 @@ class Undulator(Element):
     mag_field - None by default, the magnetic field map function - (Bx, By, Bz) = f(x, y, z)
     eid - id of undulator.
     """
+
+    additional_tms = [SecondTM, KickTM, RungeKuttaTrTM, RungeKuttaTM, TWCavityTM, UndulatorTestTM]
 
     def __init__(self, lperiod=0., nperiods=0, Kx=0., Ky=0., field_file=None, eid=None):
         Element.__init__(self, eid)
@@ -564,6 +683,9 @@ class Cavity(Element):
     vx_{up/down}, vy_{up/down} - zero order kick of a {up/down}stream coupler
     vxx_{up/down}, vxy_{up/down} - first order kick  a {up/down}stream coupler
     """
+
+    default_tm = CavityTM
+    additional_tms = []
 
     def __init__(self, l=0., v=0., phi=0., freq=0., vx_up=0, vy_up=0, vxx_up=0, vxy_up=0,
                  vx_down=0, vy_down=0, vxx_down=0, vxy_down=0, eid=None):
@@ -686,6 +808,9 @@ class CouplerKick(Element):
     vxx, vxy - first order kick  a stream coupler
     """
 
+    default_tm = CouplerKickTM
+    additional_tms = []
+
     def __init__(self, v=0., phi=0., freq=0., vx=0., vy=0., vxx=0., vxy=0., eid=None):
         Element.__init__(self, eid)
         self.l = 0.
@@ -747,6 +872,9 @@ class TWCavity(Element):
     freq - frequency [Hz]
     phi - phase in [deg]
     """
+
+    default_tm = TWCavityTM
+    additional_tms = []
 
     def __init__(self, l=0., v=0., phi=0., freq=0., eid=None):
         Element.__init__(self, eid)
@@ -941,6 +1069,9 @@ class Multipole(Element):
     kn - list of strengths
     """
 
+    default_tm = MultipoleTM
+    additional_tms = []
+
     def __init__(self, kn=0., eid=None):
         Element.__init__(self, eid)
         kn = np.array([kn]).flatten()
@@ -1027,6 +1158,50 @@ class Matrix(Element):
 
         r_z_e = lambda z, energy: r_matrix(z, self.l, rm)
         return r_z_e
+
+    def get_T_z_e_func(self):
+        return lambda z, energy: self.t
+
+    def _extend_element_def_string(self, params):
+        for key in self.__dict__:
+            if isinstance(self.__dict__[key], np.ndarray):
+                # r - elements
+                if np.shape(self.__dict__[key]) == (6, 6):
+                    for i in range(6):
+                        for j in range(6):
+                            val = self.__dict__[key][i, j]
+                            if np.abs(val) > 1e-9:
+                                params.append(key + str(i + 1) + str(j + 1) + '=' + str(val))
+                # t - elements
+                elif np.shape(self.__dict__[key]) == (6, 6, 6):
+                    for i in range(6):
+                        for j in range(6):
+                            for k in range(6):
+                                val = self.__dict__[key][i, j, k]
+                                if np.abs(val) > 1e-9:
+                                    params.append(key + str(i + 1) + str(j + 1) + str(k + 1) + '=' + str(val))
+                # b - elements
+                if np.shape(self.__dict__[key]) == (6, 1):
+                    for i in range(6):
+                        val = self.__dict__[key][i, 0]
+                        if np.abs(val) > 1e-9:
+                            params.append(key + str(i + 1) + '=' + str(val))
+        return params
+
+    def _set_tm_parameter(self, tm):
+        tm.delta_e = self.delta_e
+        tm.B_z = lambda z, energy: self.b
+        tm.B = lambda energy: self.b
+
+    def create_default_tm(self, params):
+        tm = self.default_tm.create_from_element(self, params)
+        self._set_tm_parameter(tm)
+        return tm
+
+    def create_custom_tm(self, tm, params):
+        tm = tm.create_from_element(self, params)
+        self._set_tm_parameter(tm)
+        return tm
 
 
 class Pulse:

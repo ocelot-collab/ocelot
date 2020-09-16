@@ -37,22 +37,22 @@ class EditLattice(QtWidgets.QWidget):
         self.mw.lattice.init_lattice()
 
         # elements
-        lines = elements2input(self.mw.lattice.lattice)
+        lines = self.mw.lattice.lattice.elements2input()
         self.ui.edit_elements.setText(''.join(lines))
 
         # sequences
-        lines = cell2input(self.mw.lattice.lattice)
+        lines = self.mw.lattice.lattice.cell2input()
         self.ui.edit_cells.setText(''.join(lines))
 
         # number of superperiods
         self.ui.edit_nsuperperiods.setValue(self.mw.lattice.nsuperperiods)
 
         # beam
-        lines = beam2input(self.mw.lattice.beam)
+        lines = self.mw.lattice.beam.beam2input()
         self.ui.edit_beam.setText(''.join(lines))
 
         # tws
-        lines = twiss2input(self.mw.lattice.tws0)
+        lines = self.mw.lattice.tws0.twiss2input()
         self.ui.edit_twiss.setText(''.join(lines))
         
         # periodic solution

@@ -1,5 +1,5 @@
-from ocelot.cpbd.optics import MethodTM, lattice_transfer_map
 from ocelot.cpbd.elements import *
+from ocelot.cpbd.beam import Twiss
 import logging
 import numpy as np
 
@@ -198,6 +198,237 @@ class MagneticLattice:
     def find_indices(self, element):
         indx_elem = np.where([i.__class__ == element for i in self.sequence])[0]
         return indx_elem
+
+    def find_drifts(self):
+        drift_lengs = []
+        drifts = []
+        for elem in self.sequence:
+            if elem.__class__ == Drift:
+                elem_l = np.around(elem.l, decimals=6)
+                if elem_l not in drift_lengs:
+                    drifts.append(elem)
+                    drift_lengs.append(elem_l)
+        return drifts
+
+    def _create_var_name(self, objects):
+        alphabet = "abcdefgiklmn"
+        ids = [obj.id for obj in objects]
+        search_occur = lambda obj_list, name: [i for i, x in enumerate(obj_list) if x == name]
+        for j, obj in enumerate(objects):
+            inx = search_occur(ids, obj.id)
+            if len(inx) > 1:
+                for n, i in enumerate(inx):
+                    name = ids[i]
+                    name = name.replace('.', '_')
+                    name = name.replace(':', '_')
+                    name = name.replace('-', '_')
+                    ids[i] = name + alphabet[n]
+            else:
+                name = ids[j]
+                name = name.replace('.', '_')
+                name = name.replace(':', '_')
+                name = name.replace('-', '_')
+                ids[j] = name
+            obj.name = ids[j].lower()
+
+        return objects
+
+    def _get_elements(self):
+        elements = []
+        for element in self.sequence:
+            element_type = element.__class__.__name__
+            # TODO: Edge and CouplerKick are not elements.
+            if element_type in ('Edge', "CouplerKick"):
+                continue
+            if element not in elements:
+                elements.append(element)
+        elements = self._create_var_name(elements)
+        return elements
+
+    def _find_obj_and_create_name(self, types):
+        objects = self._find_objects(types=types)
+        objects = self._create_var_name(objects)
+        return objects
+
+    def _find_objects(self, types):
+        """
+        Function finds objects by types and adds it to list if object is unique.
+        :param types: types of the Elements
+        :return: list of elements
+        """
+        obj_id = []
+        objs = []
+        for elem in self.sequence:
+            if elem.__class__ in types:
+                if id(elem) not in obj_id:
+                    objs.append(elem)
+                    obj_id.append(id(elem))
+
+        return objs
+
+    def _write_power_supply_id(self, lines=[]):
+        quads = self._find_obj_and_create_name(types=[Quadrupole])
+        sexts = self._find_obj_and_create_name(types=[Sextupole])
+        octs = self._find_obj_and_create_name(types=[Octupole])
+        cavs = self._find_obj_and_create_name(types=[Cavity])
+        bends = self._find_obj_and_create_name(types=[Bend, RBend, SBend])
+
+        lines.append("\n# power supplies \n")
+        for elem_group in [quads, sexts, octs, cavs, bends]:
+            lines.append("\n#  \n")
+            for elem in elem_group:
+                if "ps_id" in dir(elem):
+                    line = elem.name.lower() + ".ps_id = '" + elem.ps_id + "'\n"
+                    lines.append(line)
+        return lines
+
+    @staticmethod
+    def _sort_elements(elements):
+
+        elements_dict = {}
+        for element in elements:
+            element_type = element.__class__.__name__
+
+            if element_type not in elements_dict:
+                elements_dict[element_type] = []
+
+            elements_dict[element_type].append(element)
+
+        return elements_dict
+
+    def _print_elements(self, elements_dict):
+
+        elements_order = []
+        elements_order.append('Drift')
+        elements_order.append('Quadrupole')
+        elements_order.append('SBend')
+        elements_order.append('RBend')
+        elements_order.append('Bend')
+        elements_order.append('Sextupole')
+        elements_order.append('Octupole')
+        elements_order.append('Multipole')
+        elements_order.append('Hcor')
+        elements_order.append('Vcor')
+        elements_order.append('Undulator')
+        elements_order.append('Cavity')
+        elements_order.append('TDCavity')
+        elements_order.append('Solenoid')
+        elements_order.append('Monitor')
+        elements_order.append('Marker')
+        elements_order.append('Matrix')
+        elements_order.append('Aperture')
+
+        lines = []
+        ordered_dict = {}
+        unordered_dict = {}
+
+        # sort on ordered and unordered elements dicts
+        for type in elements_dict:
+            if type in elements_order:
+                ordered_dict[type] = elements_dict[type]
+            else:
+                unordered_dict[type] = elements_dict[type]
+
+        # print ordered elements
+        for type in elements_order:
+
+            if type in ordered_dict:
+
+                lines.append('\n# ' + type + 's\n')
+
+                for element in ordered_dict[type]:
+                    string = element.element_def_string()
+                    lines.append(string)
+
+        # print remaining unordered elements
+        for type in unordered_dict:
+
+            lines.append('\n# ' + type + 's\n')
+
+            for element in unordered_dict[type]:
+                string = element.element_def_string()
+                lines.append(string)
+
+        # delete new line symbol from the first line
+        if lines != []:
+            lines[0] = lines[0][1:]
+        return lines
+
+    def elements2input(self):
+        elements = self._get_elements()
+        elements_dict = self._sort_elements(elements)
+        lines = self._print_elements(elements_dict)
+        return lines
+
+    def cell2input(self, split=False):
+
+        lines = []
+        names = []
+        for elem in self.sequence:
+            if elem.__class__ not in (Edge, CouplerKick):
+                names.append(elem.name)
+
+        new_names = []
+        for i, name in enumerate(names):
+            if split and i % 10 == 9:
+                new_names.append('\n' + name)
+            else:
+                new_names.append(name)
+
+        lines.append('cell = (' + ', '.join(new_names) + ')')
+
+        return lines
+
+    def lat2input(self, tws0=None):
+        """
+        returns python input string for the self in the lat object
+        """
+
+        lines = ['from ocelot import * \n']
+
+        # prepare initial Twiss parameters
+        if tws0 is not None and isinstance(tws0, Twiss):
+            lines.append('\n#Initial Twiss parameters\n')
+            lines.extend(tws0.twiss2input())
+
+        # prepare elements list
+        lines.append('\n')
+        lines.extend(self.elements2input())
+
+        # prepare cell list
+        lines.append('\n# Lattice \n')
+        lines.extend(self.cell2input(True))
+
+        lines.append('\n')
+
+        return lines
+
+    def rem_drifts(self):
+        drifts = {}
+        for i, elem in enumerate(self.sequence):
+            if elem.__class__ == Drift:
+                if not (elem.l in drifts.keys()):
+                    drifts[elem.l] = elem
+                else:
+                    self.sequence[i] = drifts[elem.l]
+
+    def write_lattice(self, tws0=None, file_name="lattice.py", remove_rep_drifts=True, power_supply=False):
+        """
+        saves lattice as python input file
+        file_name - name of the file
+        remove_rep_drifts - if True, remove the drifts with the same lengths from the lattice drifts definition
+        """
+        if remove_rep_drifts:
+            self.rem_drifts()
+
+        lines = self.lat2input(tws0=tws0)
+
+        if power_supply:
+            lines = self._write_power_supply_id(lines=lines)
+
+        f = open(file_name, 'w')
+        f.writelines(lines)
+        f.close()
 
 
 class EndElements:

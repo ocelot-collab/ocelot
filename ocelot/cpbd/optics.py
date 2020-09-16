@@ -42,12 +42,13 @@ class SecondOrderMult:
 
         if nb_flag and False:
             # print("SecondTM: NUMBA")
-            self.tmat_multip = nb.njit()(self.numba_apply)
+            self.tmat_multip = nb.njit()(SecondOrderMult.numba_apply)
         else:
             # print("SecondTM: Numpy")
-            self.tmat_multip = self.numpy_apply
+            self.tmat_multip = SecondOrderMult.numpy_apply
 
-    def numba_apply(self, X, R, T):
+    @staticmethod
+    def numba_apply(X, R, T):
         Xcopy = np.copy(X)
         for n in range(X.shape[1]):
             for i in range(6):
@@ -58,7 +59,8 @@ class SecondOrderMult:
                         x_new += T[i, j, k] * Xcopy[j, n] * Xcopy[k, n]
                 X[i, n] = x_new
 
-    def numpy_apply(self, X, R, T):
+    @staticmethod
+    def numpy_apply(X, R, T):
         X[:] = np.matmul(R, X) + np.einsum('ijk,j...,k...->i...', T, X, X)
 
 
@@ -277,6 +279,10 @@ class TransferMap:
         m.map = lambda u, energy: m.mul_p_array(u, energy=energy)
         return m
 
+    @classmethod
+    def create_from_element(cls, element, params):
+        return TransferMap()
+
 
 class SecondTM(TransferMap):
     def __init__(self, r_z_no_tilt, t_mat_z_e):
@@ -288,10 +294,18 @@ class SecondTM(TransferMap):
         self.map = lambda X, energy: self.t_apply(self.r_z_no_tilt(self.length, energy),
                                                   self.t_mat_z_e(self.length, energy), X, self.dx, self.dy, self.tilt)
 
-        self.R_tilt = lambda energy: np.dot(np.dot(rot_mtx(-self.tilt), self.r_z_no_tilt(self.length, energy)), rot_mtx(self.tilt))
+        self.R_tilt = lambda energy: np.dot(np.dot(rot_mtx(-self.tilt), self.r_z_no_tilt(self.length, energy)),
+                                            rot_mtx(self.tilt))
 
         self.T_tilt = lambda energy: transfer_map_rotation(self.r_z_no_tilt(self.length, energy),
-                                                             self.t_mat_z_e(self.length, energy), self.tilt)[1]
+                                                           self.t_mat_z_e(self.length, energy), self.tilt)[1]
+
+    @classmethod
+    def create_from_element(cls, element, params):
+        T_z_e = element.get_T_z_e_func()
+        tm = cls(r_z_no_tilt=element.create_r_matrix(), t_mat_z_e=T_z_e)
+        tm.multiplication = SecondOrderMult().tmat_multip
+        return tm
 
     def t_apply(self, R, T, X, dx, dy, tilt, U5666=0.):
         if dx != 0 or dy != 0 or tilt != 0:
@@ -357,6 +371,24 @@ class CorrectorTM(SecondTM):
         return m
 
 
+class VCorrectorTM(CorrectorTM):
+    @classmethod
+    def create_from_element(cls, element, params):
+        t_mat_z_e = lambda z, energy: t_nnn(z, 0, 0, 0, energy)
+        tm = cls(angle_x=0, angle_y=element.angle, r_z_no_tilt=element.create_r_matrix(), t_mat_z_e=t_mat_z_e)
+        tm.multiplication = SecondOrderMult().tmat_multip
+        return tm
+
+
+class HCorrectorTM(CorrectorTM):
+    @classmethod
+    def create_from_element(cls, element, params):
+        t_mat_z_e = lambda z, energy: t_nnn(z, 0, 0, 0, energy)
+        tm = cls(angle_x=element.angle, angle_y=0., r_z_no_tilt=element.create_r_matrix(), t_mat_z_e=t_mat_z_e)
+        tm.multiplication = SecondOrderMult().tmat_multip
+        return tm
+
+
 class PulseTM(TransferMap):
     def __init__(self, kn):
         TransferMap.__init__(self)
@@ -403,6 +435,10 @@ class MultipoleTM(TransferMap):
         m.delta_e = m.delta_e_z(s)
         m.map = lambda X, energy: m.kick(X, m.kn)
         return m
+
+    @classmethod
+    def create_from_element(cls, element, params):
+        return cls(kn=element.kn)
 
 
 class CavityTM(TransferMap):
@@ -467,6 +503,10 @@ class CavityTM(TransferMap):
         m.map = lambda X, energy: m.map4cav(X, energy, v, m.freq, m.phi, s)
         return m
 
+    @classmethod
+    def create_from_element(cls, element, params):
+        return cls(v=element.v, freq=element.freq, phi=element.phi)
+
 
 class CouplerKickTM(TransferMap):
     def __init__(self, v=0, freq=0., phi=0., vx=0., vy=0.):
@@ -503,6 +543,10 @@ class CouplerKickTM(TransferMap):
         m.map = lambda X, energy: m.kick(X, self.v, self.phi, energy)
         return m
 
+    @classmethod
+    def create_from_element(cls, element, params):
+        return cls(v=element.v, freq=element.freq, phi=element.phi, vx=element.vx, vy=element.vy)
+
 
 class KickTM(TransferMap):
     def __init__(self, angle=0., k1=0., k2=0., k3=0., nkick=1):
@@ -512,6 +556,14 @@ class KickTM(TransferMap):
         self.k2 = k2
         self.k3 = k3
         self.nkick = nkick
+
+    @classmethod
+    def create_from_element(cls, element, params):
+        return cls(angle=element.angle, k1=element.k1, k2=element.k2,
+                   k3=element.k3 if hasattr(element, 'k3') else 0.,
+                   nkick=params['nkick'] if 'nkick' in params else 1)
+
+
 
     def kick(self, X, l, angle, k1, k2, k3, energy, nkick=1):
         """
@@ -621,6 +673,11 @@ class UndulatorTestTM(TransferMap):
         m.map = lambda X, energy: m.map4undulator(X, m.length, m.lperiod, m.Kx, m.ax, energy, m.ndiv)
         return m
 
+    @classmethod
+    def create_from_element(cls, element, params):
+        return cls(lperiod=element.lperiod, Kx=element.Kx, ax=element.ax,
+                   ndiv=element.ndiv if hasattr(element, 'ndiv') else 5)
+
 
 class RungeKuttaTM(TransferMap):
     def __init__(self, s_start=0, npoints=200):
@@ -640,6 +697,13 @@ class RungeKuttaTM(TransferMap):
         m.delta_e = m.delta_e_z(s)
         m.map = lambda X, energy: rk_field(X, m.s_start, s, m.npoints, energy, m.mag_field, m.long_dynamics)
         return m
+
+    @classmethod
+    def create_from_element(cls,element, params):
+        tm = cls(s_start=element.s_start if hasattr(element, 's_start') else 0.,
+            npoints=element.npoints if hasattr(element, 'npoints') else 200)
+        tm.mag_field = element.mag_field
+        return tm
 
 
 class RungeKuttaTrTM(RungeKuttaTM):
@@ -716,6 +780,10 @@ class TWCavityTM(TransferMap):
         m.map = lambda u, energy: m.mul_p_array(u, energy=energy)
         return m
 
+    @classmethod
+    def create_from_element(cls, element, params):
+        return cls(v=element.v, freq=element.freq, phi=element.phi)
+
 
 class MethodTM:
     """
@@ -761,103 +829,17 @@ class MethodTM:
         dx = element.dx
         dy = element.dy
         tilt = element.dtilt + element.tilt
-        if element.l == 0:
-            hx = 0.
+
+        if element.is_tm_supported(method):
+            tm = element.create_custom_tm(method, self.params)
         else:
-            hx = element.angle / element.l
-
-        r_z_e = element.create_r_matrix()
-
-        # global method
-        if method == KickTM:
-            try:
-                k3 = element.k3
-            except:
-                k3 = 0.
-            tm = KickTM(angle=element.angle, k1=element.k1, k2=element.k2, k3=k3, nkick=self.nkick)
-
-        elif method == SecondTM:
-
-            T_z_e = lambda z, energy: t_nnn(z, hx, element.k1, element.k2, energy)
-            # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
-            if element.__class__.__name__ == "Edge":
-                if element.pos == 1:
-
-                    _, T = fringe_ent(h=element.h, k1=element.k1, e=element.edge, h_pole=element.h_pole,
-                                      gap=element.gap, fint=element.fint)
-                else:
-
-                    _, T = fringe_ext(h=element.h, k1=element.k1, e=element.edge, h_pole=element.h_pole,
-                                      gap=element.gap, fint=element.fint)
-                T_z_e = lambda z, energy: T
-            # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
-            if element.__class__.__name__ == "XYQuadrupole":
-                T = np.zeros((6, 6, 6))
-            # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
-            if element.__class__.__name__ == "Matrix":
-                T_z_e = lambda z, energy: element.t
-
-            tm = SecondTM(r_z_no_tilt=r_z_e, t_mat_z_e=T_z_e)
-            tm.multiplication = self.sec_order_mult.tmat_multip
-
-        elif method == TWCavityTM:
-            tm = TWCavityTM(l=element.l, v=element.v, phi=element.phi, freq=element.freq)
-            return tm
-
-        else:
-            tm = TransferMap()
-        # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
-        if element.__class__.__name__ == "Undulator" and method == UndulatorTestTM:
-            try:
-                ndiv = element.ndiv
-            except:
-                ndiv = 5
-            tm = UndulatorTestTM(lperiod=element.lperiod, Kx=element.Kx, ax=element.ax, ndiv=ndiv)
-
-        if method in [RungeKuttaTM, RungeKuttaTrTM]:
-            try:
-                s_start = element.s_start
-            except:
-                s_start = 0.
-            try:
-                npoints = element.npoints
-            except:
-                npoints = 200
-            tm = method(s_start=s_start, npoints=npoints)
-            tm.mag_field = element.mag_field
-        # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
-        if element.__class__.__name__ == "Cavity":
-            tm = CavityTM(v=element.v, freq=element.freq, phi=element.phi)
-        # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
-        if element.__class__.__name__ == "CouplerKick":
-            tm = CouplerKickTM(v=element.v, freq=element.freq, phi=element.phi, vx=element.vx, vy=element.vy)
-        # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
-        if element.__class__.__name__ == "TWCavity":
-            tm = TWCavityTM(v=element.v, freq=element.freq, phi=element.phi)
-        # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
-        if element.__class__.__name__ == "Matrix":
-            tm.delta_e = element.delta_e
-            tm.B_z = lambda z, energy: element.b
-            tm.B = lambda energy: element.b
-        # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
-        if element.__class__.__name__ == "Multipole":
-            tm = MultipoleTM(kn=element.kn)
-        # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
-        if element.__class__.__name__ == "Hcor":
-            t_mat_z_e = lambda z, energy: t_nnn(z, 0, 0, 0, energy)
-            tm = CorrectorTM(angle_x=element.angle, angle_y=0., r_z_no_tilt=r_z_e, t_mat_z_e=t_mat_z_e)
-            tm.multiplication = self.sec_order_mult.tmat_multip
-        # TODO: Move this logic to element class. __name__ is used temporary to break circular import.
-        if element.__class__.__name__ == "Vcor":
-            t_mat_z_e = lambda z, energy: t_nnn(z, 0, 0, 0, energy)
-            tm = CorrectorTM(angle_x=0, angle_y=element.angle, r_z_no_tilt=r_z_e, t_mat_z_e=t_mat_z_e)
-            tm.multiplication = self.sec_order_mult.tmat_multip
+            tm = element.create_default_tm(self.params)
 
         tm.length = element.l
         tm.dx = dx
         tm.dy = dy
         tm.tilt = tilt
-        tm.R_z = lambda z, energy: np.dot(np.dot(rot_mtx(-tilt), r_z_e(z, energy)), rot_mtx(tilt))
+        tm.R_z = lambda z, energy: np.dot(np.dot(rot_mtx(-tilt), element.create_r_matrix()(z, energy)), rot_mtx(tilt))
         tm.R = lambda energy: tm.R_z(element.l, energy)
         # tm.B_z = lambda z, energy: dot((eye(6) - tm.R_z(z, energy)), array([dx, 0., dy, 0., 0., 0.]))
         # tm.B = lambda energy: tm.B_z(element.l, energy)

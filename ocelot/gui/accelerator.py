@@ -14,7 +14,9 @@ import matplotlib.path as mpath
 import matplotlib.pyplot as plt
 from ocelot.cpbd.optics import *
 import numpy as np
+from ocelot.cpbd.elements import *
 from copy import deepcopy
+
 
 import matplotlib.font_manager as font_manager
 

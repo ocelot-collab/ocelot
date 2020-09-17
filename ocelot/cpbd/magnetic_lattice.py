@@ -167,7 +167,9 @@ class MagneticLattice:
             if element.__class__ == CouplerKick:
                 self.update_endings(lat_index=i, element=element, body_elements=(Cavity, ), element_util=CouplerKickUtil)
 
-            element.transfer_map = self.method.create_tm(element)
+            self.method.create_tm(element)
+            #TODO consider this logic
+            #element.create_tm(self.method)
             _logger.debug("update: " + element.transfer_map.__class__.__name__)
             if 'pulse' in element.__dict__: element.transfer_map.pulse = element.pulse
         return self

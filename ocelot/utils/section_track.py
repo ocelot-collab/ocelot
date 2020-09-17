@@ -8,6 +8,7 @@ from ocelot.cpbd.physics_proc import *
 from ocelot.cpbd.sc import *
 from ocelot.cpbd.track import *
 from ocelot.cpbd.wake3D import *
+from ocelot.cpbd.io import load_particle_array
 
 import copy
 
@@ -330,23 +331,12 @@ class SectionTrack:
     def read_beam_file(self):
 
         particles = None
-        #print(self.input_beam_file)
-        extension = self.input_beam_file.split(".")[-1]
-        #print(extension)
-        if extension == "ast":
+
+        try:
+            particles = load_particle_array(self.input_beam_file)
         
-            try:
-                particles = astraBeam2particleArray(filename=self.input_beam_file)
-            except:
-                print(self.lattice_name + ' - #### ERROR #### - NO START PARTICLES FILE: ' + self.input_beam_file)
-        
-        else:
-            
-            try:
-                particles = load_particle_array(self.input_beam_file)
-        
-            except:
-                print(self.lattice_name + ' - #### ERROR #### - NO START PARTICLES FILE: ' + self.input_beam_file)
+        except:
+            print(self.lattice_name + ' - #### ERROR #### - NO START PARTICLES FILE: ' + self.input_beam_file)
 
         return particles
 

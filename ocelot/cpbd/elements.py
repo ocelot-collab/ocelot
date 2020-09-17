@@ -20,7 +20,7 @@ class Element(object):
     """
 
     default_tm = TransferMap
-    additional_tms = [SecondTM, KickTM, RungeKuttaTrTM, RungeKuttaTM, TWCavityTM]
+    additional_tms = [SecondTM, KickTM, RungeKuttaTrTM, RungeKuttaTM]
 
     def __init__(self, eid=None):
         self.id = eid
@@ -33,8 +33,9 @@ class Element(object):
         self.k2 = 0.
         self.dx = 0.
         self.dy = 0.
-        self.dtilt = 0.
+        self.dtilt = 0. # TODO delete
         self.params = {}
+        #self.transfer_map = TransferMap()
 
     def __hash__(self):
         return hash(id(self))
@@ -135,8 +136,39 @@ class Element(object):
         string += ")\n"
         return string
 
+    def create_tm(self, method):
+        if isinstance(method, dict):
+            self.create_default_tm(self, method)
+        else:
+            logger.warning("obsolete, use dictionary instead: {'global': SecondTM}")
+            self.create_default_tm(self, method.params)
+
+        """
+            def create_tm(self, element):
+
+        if element.__class__ in self.params:
+            self.set_tm(element, self.params[element.__class__])
+        else:
+            self.set_tm(element, self.global_method)
+
+
+        def set_tm(self, element, method):
+
+            if element.is_tm_supported(method):
+                element.create_custom_tm(method, self.params)
+            else:
+                element.create_default_tm(self.params)
+        """
+
     def create_default_tm(self, params):
-        return self.default_tm.create_from_element(self, params)
+        self.transfer_map = self.default_tm.create_from_element(self, params)
+        self.transfer_map.length = self.l
+        self.transfer_map.dx = self.dx
+        self.transfer_map.dy = self.dy
+        tilt = self.dtilt + self.tilt
+        self.transfer_map.tilt = tilt
+        self.transfer_map.R_z = lambda z, energy: np.dot(np.dot(rot_mtx(-tilt), self.create_r_matrix()(z, energy)), rot_mtx(tilt))
+        self.transfer_map.R = lambda energy: self.transfer_map.R_z(self.l, energy)
 
     def is_tm_supported(self, tm):
         if tm == self.default_tm:
@@ -147,8 +179,14 @@ class Element(object):
         return False
 
     def create_custom_tm(self, tm, params):
-        return tm.create_from_element(self, params)
-
+        self.transfer_map = tm.create_from_element(self, params)
+        self.transfer_map.length = self.l
+        self.transfer_map.dx = self.dx
+        self.transfer_map.dy = self.dy
+        tilt = self.dtilt + self.tilt
+        self.transfer_map.tilt = tilt
+        self.transfer_map.R_z = lambda z, energy: np.dot(np.dot(rot_mtx(-tilt), self.create_r_matrix()(z, energy)), rot_mtx(tilt))
+        self.transfer_map.R = lambda energy: self.transfer_map.R_z(self.l, energy)
 
 # to mark locations of bpms and other diagnostics
 class Monitor(Element):
@@ -599,7 +637,7 @@ class Undulator(Element):
     eid - id of undulator.
     """
 
-    additional_tms = [SecondTM, KickTM, RungeKuttaTrTM, RungeKuttaTM, TWCavityTM, UndulatorTestTM]
+    additional_tms = [SecondTM, KickTM, RungeKuttaTrTM, RungeKuttaTM, UndulatorTestTM]
 
     def __init__(self, lperiod=0., nperiods=0, Kx=0., Ky=0., field_file=None, eid=None):
         Element.__init__(self, eid)
@@ -619,18 +657,6 @@ class Undulator(Element):
         self.mag_field = None  # the magnetic field map function - (Bx, By, Bz) = f(x, y, z)
         self.v_angle = 0.
         self.h_angle = 0.
-
-    def validate(self):
-        pass
-
-        # maybe we will do two functions
-        # 1. load data and check magnetic map
-        # 2. check all input data (lperiod nperiod ...). something like this we must do for all elements.
-
-        # what do you think about ending poles? We can do several options
-        # a) 1/2,-1,1,... -1,1/2
-        # b) 1/2,-1,1,... -1,1,-1/2
-        # c) 1/4,-3/4,1,-1... -1,3/4,-1/4   I need to check it.
 
     def __str__(self):
         s = 'Undulator : '
@@ -874,7 +900,7 @@ class TWCavity(Element):
     """
 
     default_tm = TWCavityTM
-    additional_tms = []
+    additional_tms = [SecondTM]
 
     def __init__(self, l=0., v=0., phi=0., freq=0., eid=None):
         Element.__init__(self, eid)
@@ -947,6 +973,8 @@ class TDCavity(Element):
     phi - phase in [deg]
     tilt - tilt of cavity in [rad]
     """
+    default_tm = TransferMap
+    additional_tms = [SecondTM]
 
     def __init__(self, l=0., freq=0.0, phi=0.0, v=0., tilt=0.0, eid=None):
         Element.__init__(self, eid)
@@ -1036,7 +1064,7 @@ class Solenoid(Element):
         def sol(l, k, energy):
             """
             K.Brown, A.Chao.
-            :param l: efective length of solenoid
+            :param l: effective length of solenoid
             :param k: B0/(2*Brho), B0 is field inside the solenoid, Brho is momentum of central trajectory
             :return: matrix
             """
@@ -1194,14 +1222,29 @@ class Matrix(Element):
         tm.B = lambda energy: self.b
 
     def create_default_tm(self, params):
-        tm = self.default_tm.create_from_element(self, params)
-        self._set_tm_parameter(tm)
-        return tm
+        self.transfer_map = self.default_tm.create_from_element(self, params)
+        self._set_tm_parameter(self.transfer_map)
+        self.transfer_map.length = self.l
+        self.transfer_map.dx = self.dx
+        self.transfer_map.dy = self.dy
+        tilt = self.dtilt + self.tilt
+        self.transfer_map.tilt = tilt
+        self.transfer_map.R_z = lambda z, energy: np.dot(np.dot(rot_mtx(-tilt), self.create_r_matrix()(z, energy)), rot_mtx(tilt))
+        self.transfer_map.R = lambda energy: self.transfer_map.R_z(self.l, energy)
+
 
     def create_custom_tm(self, tm, params):
-        tm = tm.create_from_element(self, params)
-        self._set_tm_parameter(tm)
-        return tm
+        self.transfer_map = tm.create_from_element(self, params)
+        self._set_tm_parameter(self.transfer_map)
+        self._set_tm_parameter(self.transfer_map)
+        self.transfer_map.length = self.l
+        self.transfer_map.dx = self.dx
+        self.transfer_map.dy = self.dy
+        tilt = self.dtilt + self.tilt
+        self.transfer_map.tilt = tilt
+        self.transfer_map.R_z = lambda z, energy: np.dot(np.dot(rot_mtx(-tilt), self.create_r_matrix()(z, energy)), rot_mtx(tilt))
+        self.transfer_map.R = lambda energy: self.transfer_map.R_z(self.l, energy)
+
 
 
 class Pulse:

@@ -281,7 +281,7 @@ class TransferMap:
 
     @classmethod
     def create_from_element(cls, element, params):
-        return TransferMap()
+        return cls()
 
 
 class SecondTM(TransferMap):
@@ -820,31 +820,19 @@ class MethodTM:
     def create_tm(self, element):
 
         if element.__class__ in self.params:
-            transfer_map = self.set_tm(element, self.params[element.__class__])
+            self.set_tm(element, self.params[element.__class__])
         else:
-            transfer_map = self.set_tm(element, self.global_method)
-        return transfer_map
+            self.set_tm(element, self.global_method)
+
 
     def set_tm(self, element, method):
-        dx = element.dx
-        dy = element.dy
-        tilt = element.dtilt + element.tilt
 
         if element.is_tm_supported(method):
-            tm = element.create_custom_tm(method, self.params)
+            element.create_custom_tm(method, self.params)
         else:
-            tm = element.create_default_tm(self.params)
+            element.create_default_tm(self.params)
 
-        tm.length = element.l
-        tm.dx = dx
-        tm.dy = dy
-        tm.tilt = tilt
-        tm.R_z = lambda z, energy: np.dot(np.dot(rot_mtx(-tilt), element.create_r_matrix()(z, energy)), rot_mtx(tilt))
-        tm.R = lambda energy: tm.R_z(element.l, energy)
-        # tm.B_z = lambda z, energy: dot((eye(6) - tm.R_z(z, energy)), array([dx, 0., dy, 0., 0., 0.]))
-        # tm.B = lambda energy: tm.B_z(element.l, energy)
 
-        return tm
 
 
 def sym_matrix(T):

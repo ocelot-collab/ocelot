@@ -1488,8 +1488,16 @@ def generate_input(undulator, beam, E_photon = None, itdp=True, *args, **kwargs)
     inp.emity = beam.emit_yn
     
     # idx_0 = inp.beam.I>0
-    rxbeam = np.nanmax(np.sqrt(inp.beam.beta_x * inp.beam.emit_x))
-    rybeam = np.nanmax(np.sqrt(inp.beam.beta_y * inp.beam.emit_y))
+    # if beam.len() !>1 the following will throw (cf line 1456 above):
+    try:
+        rxbeam = np.nanmax(np.sqrt(inp.beam.beta_x * inp.beam.emit_x))
+        rybeam = np.nanmax(np.sqrt(inp.beam.beta_y * inp.beam.emit_y))
+    except AttributeError:
+        rxbeam = np.nanmax(np.sqrt(beam.beta_x * beam.emit_xn))
+        rybeam = np.nanmax(np.sqrt(beam.beta_y * beam.emit_yn))
+    except:
+        raise
+      
     inp.dgrid = np.nanmax([rxbeam, rybeam]) * 8 #due to bug in Genesis2 that crashes when electrons leave the mesh
 
     inp.hn=1 # should be flexible in the future

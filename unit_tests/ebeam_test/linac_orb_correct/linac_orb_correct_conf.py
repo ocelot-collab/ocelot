@@ -149,7 +149,7 @@ def cell():
 
 @pytest.fixture(scope='module')
 def method():
-    return MethodTM()
+    return {'global': TransferMap}
 
 
 @pytest.fixture(scope='module')

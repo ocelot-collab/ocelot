@@ -35,7 +35,7 @@ class Element(object):
         self.dy = 0.
         self.dtilt = 0. # TODO delete
         self.params = {}
-        #self.transfer_map = TransferMap()
+        self.transfer_map = TransferMap()
 
     def __hash__(self):
         return hash(id(self))

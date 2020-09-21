@@ -926,7 +926,7 @@ def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinea
     H = H.T
     vmin = np.min(H) + (np.max(H) - np.min(H)) * 0.0001
 
-    ax.imshow(H, interpolation=interpolation, aspect='auto', origin='low',
+    ax.imshow(H, interpolation=interpolation, aspect='auto', origin='lower',
                extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], vmin=vmin, cmap=my_rainbow)
     if xlabel is not None: ax.set_xlabel(xlabel)
     if ylabel is not None: ax.set_ylabel(ylabel)

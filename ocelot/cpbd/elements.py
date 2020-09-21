@@ -136,32 +136,40 @@ class Element(object):
         string += ")\n"
         return string
 
-    def create_tm(self, method):
-        if isinstance(method, dict):
-            self.create_default_tm(self, method)
-        else:
-            logger.warning("obsolete, use dictionary instead: {'global': SecondTM}")
-            self.create_default_tm(self, method.params)
-
-        """
-            def create_tm(self, element):
-
-        if element.__class__ in self.params:
-            self.set_tm(element, self.params[element.__class__])
-        else:
-            self.set_tm(element, self.global_method)
-
-
-        def set_tm(self, element, method):
-
-            if element.is_tm_supported(method):
-                element.create_custom_tm(method, self.params)
+    def create_tm(self, method_params=None):
+        params = None
+        if method_params:
+            if isinstance(method_params, dict):
+                params = method_params
+                global_tm = params.get('global', None)
+                if global_tm is None:
+                    global_tm = TransferMap
+                if self.__class__.__name__ in params:
+                    tm = params[self.__class__.__name__]
+                else:
+                    tm = global_tm
             else:
-                element.create_default_tm(self.params)
-        """
+                #TODO: Remove this together with MethodTM
+                params = method_params.params
+                if hasattr(method_params, "global_method"):
+                    global_tm = method_params.global_method
+                else:
+                    global_tm = TransferMap
+                if self.__class__ in params:
+                    tm = params[self.__class__]
+                else:
+                    tm = global_tm
 
-    def create_default_tm(self, params):
-        self.transfer_map = self.default_tm.create_from_element(self, params)
+        else:
+            tm = TransferMap
+
+        if self._is_tm_supported(tm):
+            self.transfer_map = tm.create_from_element(self, params)
+        else:
+            self.transfer_map = self.default_tm.create_from_element(self, params)
+        self._set_general_tm_parameter()
+
+    def _set_general_tm_parameter(self):
         self.transfer_map.length = self.l
         self.transfer_map.dx = self.dx
         self.transfer_map.dy = self.dy
@@ -170,23 +178,13 @@ class Element(object):
         self.transfer_map.R_z = lambda z, energy: np.dot(np.dot(rot_mtx(-tilt), self.create_r_matrix()(z, energy)), rot_mtx(tilt))
         self.transfer_map.R = lambda energy: self.transfer_map.R_z(self.l, energy)
 
-    def is_tm_supported(self, tm):
+    def _is_tm_supported(self, tm):
         if tm == self.default_tm:
             return True
         for add_tm in self.additional_tms:
             if tm == add_tm:
                 return True
         return False
-
-    def create_custom_tm(self, tm, params):
-        self.transfer_map = tm.create_from_element(self, params)
-        self.transfer_map.length = self.l
-        self.transfer_map.dx = self.dx
-        self.transfer_map.dy = self.dy
-        tilt = self.dtilt + self.tilt
-        self.transfer_map.tilt = tilt
-        self.transfer_map.R_z = lambda z, energy: np.dot(np.dot(rot_mtx(-tilt), self.create_r_matrix()(z, energy)), rot_mtx(tilt))
-        self.transfer_map.R = lambda energy: self.transfer_map.R_z(self.l, energy)
 
 # to mark locations of bpms and other diagnostics
 class Monitor(Element):
@@ -1216,35 +1214,11 @@ class Matrix(Element):
                             params.append(key + str(i + 1) + '=' + str(val))
         return params
 
-    def _set_tm_parameter(self, tm):
-        tm.delta_e = self.delta_e
-        tm.B_z = lambda z, energy: self.b
-        tm.B = lambda energy: self.b
-
-    def create_default_tm(self, params):
-        self.transfer_map = self.default_tm.create_from_element(self, params)
-        self._set_tm_parameter(self.transfer_map)
-        self.transfer_map.length = self.l
-        self.transfer_map.dx = self.dx
-        self.transfer_map.dy = self.dy
-        tilt = self.dtilt + self.tilt
-        self.transfer_map.tilt = tilt
-        self.transfer_map.R_z = lambda z, energy: np.dot(np.dot(rot_mtx(-tilt), self.create_r_matrix()(z, energy)), rot_mtx(tilt))
-        self.transfer_map.R = lambda energy: self.transfer_map.R_z(self.l, energy)
-
-
-    def create_custom_tm(self, tm, params):
-        self.transfer_map = tm.create_from_element(self, params)
-        self._set_tm_parameter(self.transfer_map)
-        self._set_tm_parameter(self.transfer_map)
-        self.transfer_map.length = self.l
-        self.transfer_map.dx = self.dx
-        self.transfer_map.dy = self.dy
-        tilt = self.dtilt + self.tilt
-        self.transfer_map.tilt = tilt
-        self.transfer_map.R_z = lambda z, energy: np.dot(np.dot(rot_mtx(-tilt), self.create_r_matrix()(z, energy)), rot_mtx(tilt))
-        self.transfer_map.R = lambda energy: self.transfer_map.R_z(self.l, energy)
-
+    def _set_general_tm_parameter(self):
+        self.transfer_map.delta_e = self.delta_e
+        self.transfer_map.B_z = lambda z, energy: self.b
+        self.transfer_map.B = lambda energy: self.b
+        super()._set_general_tm_parameter()
 
 
 class Pulse:

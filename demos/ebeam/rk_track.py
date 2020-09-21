@@ -16,9 +16,7 @@ und.npoints = 2000
 
 
 cell = (d1, und, d2)
-method = MethodTM()
-method.params[Undulator] = RungeKuttaTM
-method.global_method = SecondTM
+method = {'global': SecondTM, 'Undulator': RungeKuttaTM}
 
 lat = MagneticLattice(cell, method=method)
 

@@ -44,11 +44,8 @@ cell = ( D1,SF, D2,Q1,D3, Q2,D2,SD,D4,B1,B2,D5,Q3,D5,B2,B1,D6,Q4,D7,Q5,D8,Q6,D9,
 
 ring = 3*cell + cell_u + 2*cell
 
-method = MethodTM()
-method.params[Sextupole] = KickTM
-#method.params[Undulator] = UndulatorTestTM
-method.params[Undulator] = RungeKuttaTrTM
-method.global_method = TransferMap
+method = {'global': TransferMap, 'Sextupole': KickTM, "Undulator": RungeKuttaTrTM}
+
 lat = MagneticLattice(ring, method=method)
 beam = Beam()
 beam.E = 0. #GeV

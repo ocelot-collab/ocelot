@@ -110,9 +110,15 @@ class MagneticLattice:
     sequence - list of the elements,
     start - first element of lattice. If None, then lattice starts from first element of sequence,
     stop - last element of lattice. If None, then lattice stops by last element of sequence,
-    method = MethodTM() - method of the tracking.
+    method - A dictionary that contains the method of the tracking. If nothing is set TransferMap will
+    be used as the global method for all elements. Setting TransferMaps for specific elements is also possible.
+    Notes: If the elements doesn't support the defined transfer map, the default transfer map will be used, which is
+    defined in the specific element class.
+    For example:
+        {"global": SecondTM, "Undulator": UndulatorTestTM }
+        Sets for all elements SecondTM as transfer map, expect for the Undulator elements.
     """
-    def __init__(self, sequence, start=None, stop=None, method=MethodTM()):
+    def __init__(self, sequence, start=None, stop=None, method={'global': TransferMap}):
         self.sequence = list(flatten(sequence))
         self.method = method
 
@@ -167,9 +173,8 @@ class MagneticLattice:
             if element.__class__ == CouplerKick:
                 self.update_endings(lat_index=i, element=element, body_elements=(Cavity, ), element_util=CouplerKickUtil)
 
-            self.method.create_tm(element)
-            #TODO consider this logic
-            #element.create_tm(self.method)
+            element.create_tm(self.method)
+
             _logger.debug("update: " + element.transfer_map.__class__.__name__)
             if 'pulse' in element.__dict__: element.transfer_map.pulse = element.pulse
         return self

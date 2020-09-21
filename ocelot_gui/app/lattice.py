@@ -14,15 +14,12 @@ class GUILattice():
         self.cell = ()
 
         self.nsuperperiods = 1
-        
-        self.method = MethodTM()
-        
+
         # use for first order matrix tracking
-        self.method.global_method = TransferMap
-        self.method.params[Sextupole] = KickTM
-        
+        self.method = {'global': TransferMap, 'Sextupole': KickTM}
+
         # use for second order matrix tracking
-        #self.method.global_method = SecondTM
+        # self.method = {'global': SecondTM, 'Sextupole': KickTM}
 
         self.lattice = None
         self.periodic_solution = False

@@ -23,10 +23,8 @@ ro = (1./np.sqrt(Q1.k1)*(Lc*np.sqrt(Q1.k1)*np.cos(phi) + 2.*np.sin(phi))/(Lc*np.
 B1 = SBend(l = ro*angle, angle=-angle)
 B2 = SBend(l = ro*angle, angle=angle)
 lattice = [B1, Db, Q1, Dc, Q2, Dc, Q1, Db, B2]
-method1 = MethodTM()
-#method1.global_method = TransferMap
-method2 = MethodTM()
-method2.global_method = SecondTM
+method1 = {'global': TransferMap}
+method2 = {'global': SecondTM}
 lat1 = MagneticLattice(cp.deepcopy(lattice), method=method1)
 lat2 = MagneticLattice(cp.deepcopy(lattice), method=method2)
 tw0 = Twiss()

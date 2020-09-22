@@ -1583,7 +1583,7 @@ def imitate_sase_dfl(xlamds, rho=2e-4, seed=None, **kwargs):
         kwargs.pop(key, None)
         
     _, td_envelope, _, _ = imitate_1d_sase_like(td_scale=td_scale, td_env=np.ones_like(td_scale), fd_scale=fd_scale_ev,
-                                                fd_env=fd_env, td_phase=None, fd_phase=None, phen0=None, en_pulse=1,
+                                                fd_env=fd_env, td_phase=None, fd_phase=None, phen0=None, en_pulse=1,#TODO: check 
                                                 fit_scale='td', n_events=1, seed=seed, **kwargs)
 
     dfl.fld *= td_envelope[:, :, np.newaxis]

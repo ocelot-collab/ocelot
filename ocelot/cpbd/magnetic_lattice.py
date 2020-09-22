@@ -502,13 +502,13 @@ class EdgeUtil(EndElements):
                 if elem.id is None:
                     e_name = "b_" + str(i)
 
-                e1 = Edge(l=elem.l, angle=elem.angle, k1=elem.k1, edge=elem.e1, tilt=elem.tilt, dtilt=elem.dtilt,
+                e1 = Edge(l=elem.l, angle=elem.angle, k1=elem.k1, edge=elem.e1, tilt=elem.tilt,
                           dx=elem.dx, dy=elem.dy, h_pole=elem.h_pole1, gap=elem.gap, fint=elem.fint, pos=1,
                           eid=e_name + EdgeUtil.suffix_1)
 
                 lattice.sequence.insert(n, e1)
 
-                e2 = Edge(l=elem.l, angle=elem.angle, k1=elem.k1, edge=elem.e2, tilt=elem.tilt, dtilt=elem.dtilt,
+                e2 = Edge(l=elem.l, angle=elem.angle, k1=elem.k1, edge=elem.e2, tilt=elem.tilt,
                           dx=elem.dx, dy=elem.dy, h_pole=elem.h_pole2, gap=elem.gap, fint=elem.fintx, pos=2,
                           eid=e_name + EdgeUtil.suffix_2)
 
@@ -527,7 +527,6 @@ class EdgeUtil(EndElements):
         edge.k1 = bend.k1
         edge.edge = bend.e1
         edge.tilt = bend.tilt
-        edge.dtilt = bend.dtilt
         edge.dx = bend.dx
         edge.dy = bend.dy
         edge.h_pole = bend.h_pole1
@@ -546,7 +545,6 @@ class EdgeUtil(EndElements):
         edge.k1 = bend.k1
         edge.edge = bend.e2
         edge.tilt = bend.tilt
-        edge.dtilt = bend.dtilt
         edge.dx = bend.dx
         edge.dy = bend.dy
         edge.h_pole = bend.h_pole2

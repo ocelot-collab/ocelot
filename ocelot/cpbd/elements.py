@@ -33,7 +33,6 @@ class Element(object):
         self.k2 = 0.
         self.dx = 0.
         self.dy = 0.
-        self.dtilt = 0. # TODO delete
         self.params = {}
         self.transfer_map = TransferMap()
 
@@ -71,6 +70,10 @@ class Element(object):
         return params
 
     def element_def_string(self):
+        """
+        utility function for LatticeIO (to save lattice in the file) ...
+        :return: str
+        """
         params = []
 
         element_type = self.__class__.__name__
@@ -137,6 +140,7 @@ class Element(object):
         return string
 
     def create_tm(self, method_params=None):
+        # TODO: describe method_params
         params = None
         if method_params:
             if isinstance(method_params, dict):
@@ -170,10 +174,14 @@ class Element(object):
         self._set_general_tm_parameter()
 
     def _set_general_tm_parameter(self):
+        """
+        Set general TransferMap parameters from element.
+        :return: None
+        """
         self.transfer_map.length = self.l
         self.transfer_map.dx = self.dx
         self.transfer_map.dy = self.dy
-        tilt = self.dtilt + self.tilt
+        tilt = self.tilt
         self.transfer_map.tilt = tilt
         self.transfer_map.R_z = lambda z, energy: np.dot(np.dot(rot_mtx(-tilt), self.create_r_matrix()(z, energy)), rot_mtx(tilt))
         self.transfer_map.R = lambda energy: self.transfer_map.R_z(self.l, energy)
@@ -386,7 +394,7 @@ class Bend(Element):
 
 class Edge(Bend):
     def __init__(self, l=0., angle=0.0, k1=0., edge=0.,
-                 tilt=0.0, dtilt=0.0, dx=0.0, dy=0.0,
+                 tilt=0.0, dx=0.0, dy=0.0,
                  h_pole=0., gap=0., fint=0., pos=1, eid=None):
         Element.__init__(self, eid)
         if l != 0.:
@@ -401,7 +409,6 @@ class Edge(Bend):
         self.edge = edge
         self.dx = dx
         self.dy = dy
-        self.dtilt = dtilt
         self.tilt = tilt
         self.pos = pos
 
@@ -815,7 +822,7 @@ class Cavity(Element):
             return cav_matrix
 
         if self.v == 0.:
-            r_z_e = lambda z, energy: uni_matrix(z, 0., hx=0., sum_tilts=self.dtilt + self.tilt, energy=energy)
+            r_z_e = lambda z, energy: uni_matrix(z, 0., hx=0., sum_tilts=self.tilt, energy=energy)
         else:
             r_z_e = lambda z, energy: cavity_R_z(z, V=self.v * z / self.l, E=energy, freq=self.freq,
                                                  phi=self.phi)
@@ -954,7 +961,7 @@ class TWCavity(Element):
             return R
 
         if self.v == 0.:
-            r_z_e = lambda z, energy: uni_matrix(z, 0., hx=0., sum_tilts=self.dtilt + self.tilt, energy=energy)
+            r_z_e = lambda z, energy: uni_matrix(z, 0., hx=0., sum_tilts=self.tilt, energy=energy)
         else:
             r_z_e = lambda z, energy: cav(z, V=self.v * z / self.l, E=energy, freq=self.freq,
                                           phi=self.phi)

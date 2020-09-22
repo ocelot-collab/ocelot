@@ -270,12 +270,12 @@ class TransferMap:
             _logger.error(" TransferMap.apply(): Unknown type of Particle_series: " + str(prcl_series.__class__.__name))
             raise Exception(" TransferMap.apply(): Unknown type of Particle_series: " + str(prcl_series.__class__.__name))
 
-    def __call__(self, s):
+    def __call__(self, delta_length):
         m = copy(self)
-        m.length = s
-        m.R = lambda energy: m.R_z(s, energy)
-        m.B = lambda energy: m.B_z(s, energy)
-        m.delta_e = m.delta_e_z(s)
+        m.length = delta_length
+        m.R = lambda energy: m.R_z(delta_length, energy)
+        m.B = lambda energy: m.B_z(delta_length, energy)
+        m.delta_e = m.delta_e_z(delta_length)
         m.map = lambda u, energy: m.mul_p_array(u, energy=energy)
         return m
 

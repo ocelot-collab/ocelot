@@ -92,8 +92,7 @@ class Genesis4Simulation:
         self.cleanup_afterwards = kwargs.get('cleanup_afterwards', False)
         self.zstop = kwargs.get('zstop', np.inf)
         self.exec_script_path = kwargs.get('exec_script_path', None)
-
-        self.launcher = get_genesis4_launcher()
+        self.launcher = kwargs.get('launcher', get_genesis4_launcher())
 
     @property
     def root_name(self):

@@ -3,6 +3,8 @@ from ocelot.adaptors.genesis import edist2beam, beam2edist
 from ocelot.gui.beam_plot import plot_beam
 from ocelot.gui.genesis_plot import plot_edist
 
+import numpy as np
+from ocelot.common.globals import *
 """
 Created on Mon Jan  6 20:29:09 2020
 
@@ -24,6 +26,9 @@ beam.emit_x = emit_x0*(1+0.2 + 0.05*(beam.s - s0)**2/2 / (speed_of_light * 1e-15
 beam.emit_y = emit_y0*(1 + 0.01*(beam.s - s0)**2/2 / (speed_of_light * 1e-15)**2 )
 
 beam.dg = dg0*(1 + 0.01*(beam.s - s0)**2/2 / (speed_of_light * 1e-15)**2 )
+
+beam.x = np.ones_like(beam.beta_x) * 1e-6
+beam.yp = np.ones_like(beam.beta_x) * 1e-6
 
 alpha_x = np.empty(np.shape(beam.s)[0])
 alpha_x.fill(1)

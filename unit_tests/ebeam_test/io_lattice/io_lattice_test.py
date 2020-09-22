@@ -173,7 +173,7 @@ def test_merger(lattice, tws0, method, parametr=None, update_ref_values=False):
 
     cell = (d, q, b, s, c, cor, sol, tds, m, mat, b2, b3)
 
-    lat = MagneticLattice(cell, method=MethodTM({'global': SecondTM}))
+    lat = MagneticLattice(cell, method={'global': SecondTM})
 
     R = lattice_transfer_map(lat, energy=init_energy)
     new_lat = merger(lat, remaining_types=[], remaining_elems=[], init_energy=init_energy)
@@ -203,7 +203,7 @@ def test_merger_elem(lattice, tws0, method, parametr=None, update_ref_values=Fal
 
     cell = (d, q, b, s, c, cor, sol, tds, m, mat, b2, b3)
 
-    lat = MagneticLattice(cell, method=MethodTM({'global': SecondTM}))
+    lat = MagneticLattice(cell, method={'global': SecondTM})
 
     R = lattice_transfer_map(lat, energy=init_energy)
     new_lat = merger(lat, remaining_types=[], remaining_elems=[sol], init_energy=init_energy)
@@ -212,6 +212,7 @@ def test_merger_elem(lattice, tws0, method, parametr=None, update_ref_values=Fal
     result = check_matrix(R, R_new, TOL, assert_info=' r_matrix - ')
     result2 = check_matrix(lat.T, new_lat.T, TOL, assert_info=' t_matrix - ')
     assert check_result(result + result2)
+
 
 def test_merger_elem_w_coupler(lattice, tws0, method, parametr=None, update_ref_values=False):
     """R maxtrix calculation test"""
@@ -240,7 +241,7 @@ def test_merger_elem_w_coupler(lattice, tws0, method, parametr=None, update_ref_
 
     cell = (d, q, b, s, c, cor, sol, tds, m, mat, b2, b3)
 
-    lat = MagneticLattice(cell, method=MethodTM({'global': SecondTM}))
+    lat = MagneticLattice(cell, method={'global': SecondTM})
 
     R = lattice_transfer_map(lat, energy=init_energy)
     new_lat = merger(lat, remaining_types=[], remaining_elems=[sol], init_energy=init_energy)
@@ -271,7 +272,7 @@ def test_merger_type(lattice, tws0, method, parametr=None, update_ref_values=Fal
 
     cell = (d, q, b, s, c, cor, ap, sol,d2, tds, m, mat, b2, b3)
 
-    lat = MagneticLattice(cell, method=MethodTM({'global': SecondTM}))
+    lat = MagneticLattice(cell, method={'global': SecondTM})
 
     R = lattice_transfer_map(lat, energy=init_energy)
     new_lat = merger(lat, remaining_types=[Drift], remaining_elems=[sol], init_energy=init_energy)
@@ -318,7 +319,7 @@ def test_merger_tilt(lattice, tws0, method, parametr=None, update_ref_values=Fal
 
     cell = (d, q, b, s, c, cor, sol,d2, tds, m, mat, b2, b3)
 
-    lat = MagneticLattice(cell, method=MethodTM({'global': SecondTM}))
+    lat = MagneticLattice(cell, method={'global': SecondTM})
 
     R = lattice_transfer_map(lat, energy=init_energy)
     new_lat = merger(lat, remaining_types=[Drift], remaining_elems=[sol], init_energy=init_energy)
@@ -394,7 +395,7 @@ def test_matrix_b_vector(lattice, tws0, method, parametr=None, update_ref_values
 
     cell = (d, q, b, s, c, cor, sol,d2, tds, m, mat, b2, b3)
 
-    lat = MagneticLattice(cell, method=MethodTM({'global': SecondTM}))
+    lat = MagneticLattice(cell, method={'global': SecondTM})
 
     R = lattice_transfer_map(lat, energy=init_energy)
     new_lat = merger(lat, remaining_types=[Drift], remaining_elems=[sol], init_energy=init_energy)

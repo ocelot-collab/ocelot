@@ -53,7 +53,7 @@ def cell():
 
 @pytest.fixture(scope='module')
 def lattice(cell):
-    return MagneticLattice(cell, method=MethodTM({'global': SecondTM}))
+    return MagneticLattice(cell, method={'global': SecondTM})
 
 
 @pytest.fixture(scope='function')

@@ -51,8 +51,8 @@ def test_twiss(lattice, parametr=None, update_ref_values=False):
 @pytest.mark.parametrize('parametr', [0, 1])
 def test_tracking_step_energy_offset(lattice, parametr, update_ref_values=False):
     """Tracking step function test
-    :parametr=0 - tracking with default MethodTM()
-    :parametr=1 - tracking without  MethodTM() - global_method = SecondTM
+    :parametr=0 - tracking with default  {'global': TransferMap}
+    :parametr=1 - tracking without  {'global': SecondTM}
     """
 
     p = Particle(x=0.0, p=0.02)
@@ -80,8 +80,8 @@ def test_tracking_step_energy_offset(lattice, parametr, update_ref_values=False)
 @pytest.mark.parametrize('parametr', [0, 1])
 def test_tracking_step_phase_space(lattice, parametr, update_ref_values=False):
     """Tracking step function test
-    :parametr=0 - tracking with default MethodTM()
-    :parametr=1 - tracking without  MethodTM() - global_method = SecondTM
+    :parametr=0 - tracking with default {'global': TransferMap}
+    :parametr=1 - tracking without  {'global': SecondTM}
     """
     
     t = np.linspace(0.0, 2.0*pi, num=100)

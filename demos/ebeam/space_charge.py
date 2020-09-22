@@ -140,14 +140,11 @@ sI1, I1 = get_current(p_array_init, num_bins=200)
 # ******************************* GENERATE BEAM DISTRIBUTION: END **************************
 
 
-# initialization of tracking method
-method = MethodTM()
-
 # for second order tracking we have to choose SecondTM
-method.global_method = SecondTM
+method = {'global': SecondTM}
 
 # for first order tracking uncomment next line
-# method.global_method = TransferMap
+# method = {'global': TransferMap}
 
 # we will start simulation from point 3.2 from the gun. For this purpose  marker was created (start_sim=Marker())
 # and placed in 3.2 m after gun

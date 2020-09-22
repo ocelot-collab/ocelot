@@ -48,9 +48,7 @@ superperiod = (M1,D1,SF,D2,Q1,D3,Q2,D2,SD,D4,B1,B2,D5,Q3,D5,B2,B1,D6,Q4,D7,Q5,D8
 
 
 # create lattice
-method = MethodTM()
-method.params[Sextupole] = KickTM
-method.global_method = TransferMap
+method = {'global': TransferMap, 'Sextupole': KickTM}
 
 lattice = MagneticLattice(superperiod,  method=method)
 
@@ -99,7 +97,7 @@ def fit_func(x0, iter_data, args):
     for i in range(len(args[0])):
         
         vars[i].k1 = x0[i]
-        vars[i].transfer_map = lattice.method.create_tm(vars[i])
+        vars[i].create_tm()
     
     beam = Beam()
     beam.E = 2.5

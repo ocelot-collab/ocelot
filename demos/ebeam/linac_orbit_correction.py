@@ -13,8 +13,7 @@ import seaborn as sns
 import logging
 logging.basicConfig(level=logging.INFO)
 
-method = MethodTM()
-method.global_method = SecondTM
+method = {'global': SecondTM}
 
 # introduce misalignment
 dl.qi_77_i1.dx = -100e-6

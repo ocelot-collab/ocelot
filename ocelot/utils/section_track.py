@@ -156,8 +156,7 @@ class SectionTrack:
         self.tws_dir = data_dir + "/tws/"
 
         self.physics_processes_array = []  # list of physics process
-        self.method = MethodTM()
-        self.method.global_method = SecondTM
+        self.method = {'global': SecondTM}
         self.sc_flag = True
         self.csr_flag = True
         self.wake_flag = True

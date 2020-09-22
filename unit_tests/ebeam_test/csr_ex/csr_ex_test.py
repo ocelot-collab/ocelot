@@ -242,8 +242,7 @@ def test_track_undulator_with_csr(lattice, p_array, parameter=None, update_ref_v
 
     und = Undulator(lperiod=0.4, nperiods=9, Kx=44.81)
 
-    m = MethodTM()
-    m.global_method = SecondTM
+    m = {'global': SecondTM}
 
     lat = MagneticLattice((d1, und, d2), method=m)
 
@@ -317,8 +316,7 @@ def test_track_undulator_endings_with_csr(lattice, p_array, parameter=None, upda
 
     und = Undulator(lperiod=0.4, nperiods=9, Kx=44.81)
 
-    m = MethodTM()
-    m.global_method = SecondTM
+    m = {'global': SecondTM}
 
     lat = MagneticLattice((d1, und, d2), method=m)
 

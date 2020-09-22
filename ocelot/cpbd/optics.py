@@ -280,7 +280,7 @@ class TransferMap:
         return m
 
     @classmethod
-    def create_from_element(cls, element, params):
+    def create_from_element(cls, element, params=None):
         return cls()
 
 
@@ -301,7 +301,7 @@ class SecondTM(TransferMap):
                                                            self.t_mat_z_e(self.length, energy), self.tilt)[1]
 
     @classmethod
-    def create_from_element(cls, element, params):
+    def create_from_element(cls, element, params=None):
         T_z_e = element.get_T_z_e_func()
         tm = cls(r_z_no_tilt=element.create_r_matrix(), t_mat_z_e=T_z_e)
         tm.multiplication = SecondOrderMult().tmat_multip
@@ -373,7 +373,7 @@ class CorrectorTM(SecondTM):
 
 class VCorrectorTM(CorrectorTM):
     @classmethod
-    def create_from_element(cls, element, params):
+    def create_from_element(cls, element, params=None):
         t_mat_z_e = lambda z, energy: t_nnn(z, 0, 0, 0, energy)
         tm = cls(angle_x=0, angle_y=element.angle, r_z_no_tilt=element.create_r_matrix(), t_mat_z_e=t_mat_z_e)
         tm.multiplication = SecondOrderMult().tmat_multip
@@ -382,7 +382,7 @@ class VCorrectorTM(CorrectorTM):
 
 class HCorrectorTM(CorrectorTM):
     @classmethod
-    def create_from_element(cls, element, params):
+    def create_from_element(cls, element, params=None):
         t_mat_z_e = lambda z, energy: t_nnn(z, 0, 0, 0, energy)
         tm = cls(angle_x=element.angle, angle_y=0., r_z_no_tilt=element.create_r_matrix(), t_mat_z_e=t_mat_z_e)
         tm.multiplication = SecondOrderMult().tmat_multip
@@ -437,7 +437,7 @@ class MultipoleTM(TransferMap):
         return m
 
     @classmethod
-    def create_from_element(cls, element, params):
+    def create_from_element(cls, element, params=None):
         return cls(kn=element.kn)
 
 
@@ -504,7 +504,7 @@ class CavityTM(TransferMap):
         return m
 
     @classmethod
-    def create_from_element(cls, element, params):
+    def create_from_element(cls, element, params=None):
         return cls(v=element.v, freq=element.freq, phi=element.phi)
 
 
@@ -544,7 +544,7 @@ class CouplerKickTM(TransferMap):
         return m
 
     @classmethod
-    def create_from_element(cls, element, params):
+    def create_from_element(cls, element, params=None):
         return cls(v=element.v, freq=element.freq, phi=element.phi, vx=element.vx, vy=element.vy)
 
 
@@ -558,7 +558,7 @@ class KickTM(TransferMap):
         self.nkick = nkick
 
     @classmethod
-    def create_from_element(cls, element, params):
+    def create_from_element(cls, element, params=None):
         return cls(angle=element.angle, k1=element.k1, k2=element.k2,
                    k3=element.k3 if hasattr(element, 'k3') else 0.,
                    nkick=params['nkick'] if 'nkick' in params else 1)
@@ -674,7 +674,7 @@ class UndulatorTestTM(TransferMap):
         return m
 
     @classmethod
-    def create_from_element(cls, element, params):
+    def create_from_element(cls, element, params=None):
         return cls(lperiod=element.lperiod, Kx=element.Kx, ax=element.ax,
                    ndiv=element.ndiv if hasattr(element, 'ndiv') else 5)
 
@@ -699,7 +699,7 @@ class RungeKuttaTM(TransferMap):
         return m
 
     @classmethod
-    def create_from_element(cls,element, params):
+    def create_from_element(cls,element, params=None):
         tm = cls(s_start=element.s_start if hasattr(element, 's_start') else 0.,
             npoints=element.npoints if hasattr(element, 'npoints') else 200)
         tm.mag_field = element.mag_field
@@ -781,7 +781,7 @@ class TWCavityTM(TransferMap):
         return m
 
     @classmethod
-    def create_from_element(cls, element, params):
+    def create_from_element(cls, element, params=None):
         return cls(v=element.v, freq=element.freq, phi=element.phi)
 
 
@@ -805,6 +805,7 @@ class MethodTM:
 
     """
     def __init__(self, params=None):
+        logger.warning("obsolete, use dictionary instead: {'global': SecondTM}")
         if params is None:
             self.params = {'global': TransferMap}
         else:
@@ -816,23 +817,6 @@ class MethodTM:
             self.global_method = TransferMap
         self.sec_order_mult = SecondOrderMult()
         self.nkick = self.params['nkick'] if 'nkick' in self.params else 1
-
-    def create_tm(self, element):
-
-        if element.__class__ in self.params:
-            self.set_tm(element, self.params[element.__class__])
-        else:
-            self.set_tm(element, self.global_method)
-
-
-    def set_tm(self, element, method):
-
-        if element.is_tm_supported(method):
-            element.create_custom_tm(method, self.params)
-        else:
-            element.create_default_tm(self.params)
-
-
 
 
 def sym_matrix(T):

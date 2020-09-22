@@ -29,9 +29,7 @@ def cell():
 
 @pytest.fixture(scope='module')
 def method():
-    m = MethodTM()
-    m.params[Undulator] = RungeKuttaTM
-    m.global_method = SecondTM
+    m = {'global': SecondTM, 'Undulator': RungeKuttaTM}
     return m
     
     

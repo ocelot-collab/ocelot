@@ -33,7 +33,7 @@ def cell():
 
 @pytest.fixture(scope='module')
 def method():
-    return MethodTM()
+    return {'global': TransferMap}
     
     
 @pytest.fixture(scope='module')
@@ -292,4 +292,4 @@ def lattice_inj(cell, method):
             d_52, cix_57_i1, d_53, bpma_57_i1, d_54, qi_57_i1, d_51, otrc_58_i1, d_60, ciy_58_i1,
             d_61, qi_59_i1, d_62, bpma_59_i1, d_63, otrc_59_i1, d_64, qi_60_i1, d_65, tora_60_i1,
             d_66, bpma_60_i1, d_53, bpmatest_61_i1, d_68, qi_61_i1, d_69, stsub_62_i1)
-    return MagneticLattice(cell2, start_sim, method=MethodTM({"global": SecondTM}))
+    return MagneticLattice(cell2, start_sim, method={'global': SecondTM})

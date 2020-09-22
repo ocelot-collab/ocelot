@@ -348,7 +348,7 @@ class LinacDisperseSimRM(MeasureResponseMatrix):
             print(j, "/", nx + ny, cor.id)
             cor.angle = 0.0005
             self.lat.update_transfer_maps()
-            cor.transfer_map = self.lat.method.create_tm(cor)
+            cor.transfer_map = cor.create_tm()
             start = time.time()
             Dx1, Dy1 = self.read_virtual_dispersion(E0=tw_init.E)
             #if np.max(Dx1)>1e+100 or np.max(Dy1) > 1e+100:
@@ -357,7 +357,7 @@ class LinacDisperseSimRM(MeasureResponseMatrix):
             D1 = np.append(Dx1, Dy1)
             self.resp[:, j] = (D1 - D0) / cor.angle
             cor.angle = 0.00
-            cor.transfer_map = self.lat.method.create_tm(cor)
+            cor.transfer_map = cor.create_tm()
         #self.lat.update_transfer_maps()
         return self.resp
 

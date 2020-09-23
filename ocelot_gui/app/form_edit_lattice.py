@@ -4,6 +4,7 @@ from copy import deepcopy
 
 from ocelot.cpbd.io import *
 from ocelot.cpbd.elements import *
+from ocelot.cpbd.latticeIO import LatticeIO
 
 from app.ui_forms.edit_lattice import *
 from app.parser import *
@@ -37,22 +38,22 @@ class EditLattice(QtWidgets.QWidget):
         self.mw.lattice.init_lattice()
 
         # elements
-        lines = self.mw.lattice.lattice.elements2input()
+        lines = LatticeIO.elements2input(self.mw.lattice.lattice)
         self.ui.edit_elements.setText(''.join(lines))
 
         # sequences
-        lines = self.mw.lattice.lattice.cell2input()
+        lines = LatticeIO.cell2input(self.mw.lattice.lattice)
         self.ui.edit_cells.setText(''.join(lines))
 
         # number of superperiods
         self.ui.edit_nsuperperiods.setValue(self.mw.lattice.nsuperperiods)
 
         # beam
-        lines = self.mw.lattice.beam.beam2input()
+        lines = LatticeIO.beam2input(self.mw.lattice.beam)
         self.ui.edit_beam.setText(''.join(lines))
 
         # tws
-        lines = self.mw.lattice.tws0.twiss2input()
+        lines = LatticeIO.twiss2input(self.mw.lattice.tws0)
         self.ui.edit_twiss.setText(''.join(lines))
         
         # periodic solution

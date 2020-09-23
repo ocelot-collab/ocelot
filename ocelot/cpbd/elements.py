@@ -60,87 +60,15 @@ class Element(object):
         return lambda z, energy: t_nnn(z, 0. if self.l == 0 else self.angle / self.l, self.k1, self.k2,
                                        energy)
 
-    def _extend_element_def_string(self, params):
-        """
-        Overload this function to add element specific information to element_def_string.
-        Note: This function is a hook for element_def_string.
-        @param params:
-        @return:
-        """
-        return params
-
-    def element_def_string(self):
-        """
-        utility function for LatticeIO (to save lattice in the file) ...
-        :return: str
-        """
-        params = []
-
-        element_type = self.__class__.__name__
-        element_ref = getattr(sys.modules[__name__], element_type)()
-        params_order = element_ref.__init__.__code__.co_varnames
-        argcount = element_ref.__init__.__code__.co_argcount
-
-        for param in params_order[:argcount]:
-            if param == 'self':
-                continue
-
-            # fix for parameter 'eid'
-            if param == 'eid':
-                params.append('eid=\'' + self.id + '\'')
-                continue
-
-            if isinstance(self.__dict__[param], np.ndarray):
-
-                if not np.array_equal(self.__dict__[param], element_ref.__dict__[param]):
-                    params.append(param + '=' + np.array2string(self.__dict__[param], separator=', '))
-                continue
-
-            if isinstance(self.__dict__[param], (int, float, complex)):
-
-                # fix for parameters 'e1' and 'e2' in RBend element
-                if element_type == 'RBend' and param in ('e1', 'e2'):
-                    val = self.__dict__[param] - self.angle / 2.0
-                    if val != 0.0:
-                        params.append(param + '=' + str(val))
-                    continue
-
-                if self.__dict__[param] != element_ref.__dict__[param]:
-                    params.append(param + '=' + str(self.__dict__[param]))
-                continue
-
-            if isinstance(self.__dict__[param], str):
-
-                if self.__dict__[param] != element_ref.__dict__[param]:
-                    params.append(param + '=\'' + self.__dict__[param] + '\'')
-                continue
-
-        params = self._extend_element_def_string(params)
-
-        # join all parameters to element definition
-        string = self._pprinting(element_type, params)
-        return string
-
-    def _pprinting(self, element_type, params):
-        string = self.name + ' = ' + element_type + '('
-        n0 = len(string)
-        n = n0
-        for i, param in enumerate(params):
-            n += len(params)
-            if n > 250:
-                string += "\n"
-                string += " " * n0 + param + ", "
-                n = n0 + len(param) + 2
-            else:
-                if i == len(params) - 1:
-                    string += param
-                else:
-                    string += param + ", "
-        string += ")\n"
-        return string
-
     def create_tm(self, method_params=None):
-        # TODO: describe method_params
+        """
+        Creates a transfer map for the element.
+        @param method_params: A dictionary with which the transfer map can be set for the element. The user can set a
+        global transfer map which will be applied for the element if the element supports this function otherwise the
+        default transfer map will be used. Which transfer map is supported can be seen by the attribute "additional_tms"
+        and "default_tm".
+        @return: None
+        """
         params = None
         if method_params:
             if isinstance(method_params, dict):
@@ -166,7 +94,7 @@ class Element(object):
 
         else:
             tm = TransferMap
-
+        # check if the set transfer map is supported otherwise fall back to the default transfer map
         if self._is_tm_supported(tm):
             self.transfer_map = tm.create_from_element(self, params)
         else:
@@ -193,6 +121,7 @@ class Element(object):
             if tm == add_tm:
                 return True
         return False
+
 
 # to mark locations of bpms and other diagnostics
 class Monitor(Element):
@@ -1194,32 +1123,6 @@ class Matrix(Element):
 
     def get_T_z_e_func(self):
         return lambda z, energy: self.t
-
-    def _extend_element_def_string(self, params):
-        for key in self.__dict__:
-            if isinstance(self.__dict__[key], np.ndarray):
-                # r - elements
-                if np.shape(self.__dict__[key]) == (6, 6):
-                    for i in range(6):
-                        for j in range(6):
-                            val = self.__dict__[key][i, j]
-                            if np.abs(val) > 1e-9:
-                                params.append(key + str(i + 1) + str(j + 1) + '=' + str(val))
-                # t - elements
-                elif np.shape(self.__dict__[key]) == (6, 6, 6):
-                    for i in range(6):
-                        for j in range(6):
-                            for k in range(6):
-                                val = self.__dict__[key][i, j, k]
-                                if np.abs(val) > 1e-9:
-                                    params.append(key + str(i + 1) + str(j + 1) + str(k + 1) + '=' + str(val))
-                # b - elements
-                if np.shape(self.__dict__[key]) == (6, 1):
-                    for i in range(6):
-                        val = self.__dict__[key][i, 0]
-                        if np.abs(val) > 1e-9:
-                            params.append(key + str(i + 1) + '=' + str(val))
-        return params
 
     def _set_general_tm_parameter(self):
         self.transfer_map.delta_e = self.delta_e

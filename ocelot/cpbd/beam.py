@@ -140,15 +140,6 @@ class Twiss:
         val += "s        = " + str(self.s) + "\n"
         return val
 
-    def twiss2input(self):
-        lines = []
-        tws_ref = Twiss()
-        lines.append('tws0 = Twiss()\n')
-        for param in self.__dict__:
-            if self.__dict__[param] != tws_ref.__dict__[param]:
-                lines.append('tws0.' + str(param) + ' = ' + str(self.__dict__[param]) + '\n')
-        return lines
-
 
 class Particle:
     """
@@ -327,16 +318,6 @@ class Beam:
     # print("emit_x/emit_y     : ",  self.emit_x*1e9, "/",self.emit_y*1e9, " nm-rad")
     # print("sigma_x/y         : ", self.sigma_x*1e6, "/", self.sigma_y*1e6, " um")
     # print("sigma_xp/yp       : ", self.sigma_xp*1e6, "/", self.sigma_yp*1e6, " urad")
-
-    def beam2input(self):
-        lines = []
-        beam_ref = Beam()
-        lines.append('beam = Beam()\n')
-        for param in self.__dict__:
-            if self.__dict__[param] != beam_ref.__dict__[param]:
-                lines.append('beam.' + str(param) + ' = ' + str(self.__dict__[param]) + '\n')
-
-        return lines
 
 
 class BeamArray(Beam):

@@ -390,7 +390,7 @@ if __name__ == "main":
     tws.beta_x = 1.557422201E+01
     tws.alpha_x = -3.081460532E+00
 
-    lat.write_lattice(file_name="lcls_lattice.py")
+    lat.save_as_py_file(file_name="lcls_lattice.py")
 
     tws = twiss(lat, tws)
     plot_opt_func(lat, tws)

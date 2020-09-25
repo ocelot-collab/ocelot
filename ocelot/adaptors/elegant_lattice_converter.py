@@ -440,7 +440,7 @@ if __name__ == '__main__':
     SC = ElegantLatticeConverter()
     read_cell = SC.elegant2ocelot('elbe.lte')
     lattice = MagneticLattice(read_cell)
-    lattice.write_lattice(file_name="lattice.py", remove_rep_drifts=False)
+    lattice.save_as_py_file(file_name="lattice.py", remove_rep_drifts=False)
     """
     
     """

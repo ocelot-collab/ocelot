@@ -164,7 +164,7 @@ if __name__ == '__main__':
     SC = AstraLatticeConverter()
     cell = SC.astra2ocelot('astra_test.in')
     lattice = MagneticLattice(cell)
-    lattice.write_lattice()
+    lattice.save_as_py_file()
     '''
     
     '''

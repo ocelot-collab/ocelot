@@ -60,7 +60,7 @@ def waket_beam_to_parray(waket_beam, gamma_ref=None, z_ref=None):
     # Calculate momentum deviation (dp) and kinetic momentum (p_kin).
     b_ref = np.sqrt(1 - gamma_ref**(-2))
     dp = (gamma-gamma_ref)/(gamma_ref*b_ref)
-    p_kin = np.sqrt(gamma**2 - 1)
+    p_kin = np.sqrt(gamma_ref**2 - 1)
 
     # Create particle array
     p_array = ParticleArray(len(q))
@@ -105,7 +105,7 @@ def parray_to_waket_beam(p_array):
     dp = beam_matrix[5]
     b_ref = np.sqrt(1 - gamma_ref**(-2))
     gamma = dp*gamma_ref*b_ref + gamma_ref
-    p_kin = np.sqrt(gamma**2 - 1)
+    p_kin = np.sqrt(gamma_ref**2 - 1)
 
     # Create coordinate arrays in Wake-T units.
     x = beam_matrix[0]
@@ -117,5 +117,5 @@ def parray_to_waket_beam(p_array):
     q = p_array.q_array
 
     # Create and return Wake-T distribution.
-    return ParticleBunch(q, x, y, z, px, py, pz)
+    return ParticleBunch(q, x, y, z, px, py, pz, prop_distance=z_ref)
     

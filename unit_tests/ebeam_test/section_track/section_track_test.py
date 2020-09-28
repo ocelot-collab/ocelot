@@ -33,7 +33,7 @@ def test_lattice_transfer_map(section_lat, p_array, parameter, update_ref_values
 
     r_matrix_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) + '.json'))
     
-    result = check_matrix(r_matrix, r_matrix_ref, TOL, assert_info=' r_matrix - ')
+    result = check_matrix(r_matrix, r_matrix_ref, tolerance=1.0e-12, tolerance_type='absolute', assert_info=' r_matrix - ')
     assert check_result(result)
 
 
@@ -383,7 +383,7 @@ def test_tracking_wake(section_lat, p_array, parameter=None, update_ref_values=F
     assert check_result(result2)
 
 
-def test_tracking_smoth(section_lat, p_array, parameter=None, update_ref_values=False):
+def test_tracking_smooth(section_lat, p_array, parameter=None, update_ref_values=False):
     sec_lat = copy.deepcopy(section_lat)
 
     parray = copy.deepcopy(p_array)
@@ -487,7 +487,59 @@ def test_twiss(section_lat, p_array, parameter=None, update_ref_values=False):
 
     tws_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
 
-    result2 = check_dict(tws, tws_ref['tws'], TOL, assert_info=' tws - ')
+    result2 = check_dict(tws, tws_ref['tws'], tolerance=1.0e-10, tolerance_type='absolute',  assert_info=' tws - ')
+    assert check_result(result2)
+
+
+def test_twiss_section_lat(section_lat, p_array, parameter=None, update_ref_values=False):
+    sec_lat = copy.deepcopy(section_lat)
+
+    parray = copy.deepcopy(p_array)
+    SC_exec = False
+    wake_exec = False
+    CSR_exec = False
+    match_exec = False
+    smooth_exec = False
+    v1 = 0.14747
+    phi1 = -11.10
+    v13 = 0.03079
+    phi13 = -227.1
+    V21 = 0.65919
+    phi21 = 30.17
+    r1 = 3.6587343247857467
+    r2 = 9.392750737348779
+    config = {
+        A1: {"phi": phi1, "v": v1 / 8.,
+             "SC": SC_exec, "smooth": smooth_exec, "wake": wake_exec},
+        AH1: {"phi": phi13, "v": v13 / 8,
+              "match": True, "bounds": [-5, 5], "SC": SC_exec, "wake": wake_exec},
+        LH: {"SC": SC_exec, "CSR": CSR_exec, "wake": wake_exec, "match": False},
+        DL: {"match": match_exec, "SC": SC_exec, "CSR": CSR_exec, "wake": wake_exec},
+        BC0: {"rho": r1,
+              "match": match_exec, "SC": SC_exec, "CSR": CSR_exec, "wake": wake_exec},
+        L1: {"phi": phi21, "v": V21 / 32, "match": False,
+             "SC": SC_exec, "wake": wake_exec, "smooth": smooth_exec},
+        BC1: {"rho": r2,
+              "match": match_exec, "SC": SC_exec, "CSR": CSR_exec, "wake": wake_exec},
+    }
+
+
+    sections = [A1, AH1, LH, DL, BC0, L1, BC1]
+    sec_lat.update_sections(sections, config=config, coupler_kick=False)
+
+    parray = sec_lat.track_sections(sections=sections, p_array=parray, config=config, force_ext_p_array=False,
+                                         coupler_kick=False)
+
+
+
+    tws = obj2dict(sec_lat.tws_track)
+
+    if update_ref_values:
+        return {'tws': tws}
+
+    tws_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
+
+    result2 = check_dict(tws, tws_ref['tws'], tolerance=1.0e-10, tolerance_type='absolute', assert_info=' tws - ')
     assert check_result(result2)
 
 
@@ -532,8 +584,9 @@ def test_update_ref_values(section_lat, p_array, cmdopt):
     update_functions.append('test_tracking_csr')
     update_functions.append('test_tracking_ck')
     update_functions.append('test_tracking_wake')
-    update_functions.append('test_tracking_smoth')
+    update_functions.append('test_tracking_smooth')
     update_functions.append('test_twiss')
+    update_functions.append('test_twiss_section_lat')
 
 
     update_function_parameters = {}

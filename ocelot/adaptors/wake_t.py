@@ -1,10 +1,15 @@
 """
 This module contains methods for coupling the plasma simulation code Wake-T
-with Ocelot
+with Ocelot.
 
 """
 
 import numpy as np
+try:
+    from wake_t.driver_witness import ParticleBunch
+    wake_t_installed = True
+except ImportError:
+    wake_t_installed = False
 
 from ocelot.cpbd.beam import ParticleArray
 from ocelot.common.globals import m_e_GeV
@@ -17,14 +22,21 @@ def waket_beam_to_parray(waket_beam, gamma_ref=None, z_ref=None):
     Parameters:
     -----------
     waket_beam : ParticleBunch (Wake-T class)
+        The original particle distribution from Wake-T.
 
-    gamma_ref : float
+    gamma_ref : float (Optional)
+        Reference energy of the particle beam used for tracking in Ocelot. If
+        not specified, the reference energy will be taken as the average
+        energy of the input distribution.
 
-    z_ref : float
-
+    z_ref : float (Optional)
+        Reference longitudinal position of the particle beam used for tracking
+        in Ocelot. If not specified, the reference value will be taken as the
+        average longitudinal position of the input distribution.
 
     Returns:
     --------
+    An Ocelot ParticleArray.
 
     """
     # Extract particle coordinates.
@@ -63,4 +75,38 @@ def waket_beam_to_parray(waket_beam, gamma_ref=None, z_ref=None):
     p_array.E = gamma_ref * m_e_GeV
 
     return p_array
+
+
+def parray_to_waket_beam(p_array):
+    """
+    Converts an Ocelot ParticleArray to a Wake-T ParticleBunch.
+    
+    Parameters:
+    -----------
+    p_array : ParticleArray
+
+    Returns:
+    --------
+    A Wake-T ParticleBunch.
+    
+    """
+    if not wake_t_installed:
+        raise ImportError('Wake-T is not installed. '
+                          'Cannot perform conversion to Wake-T ParticleBunch.')
+    beam_matrix = p_array.rparticles
+    gamma_ref = p_array.E / m_e_GeV
+    z_ref = p_array.s
+    dp = beam_matrix[5]
+    b_ref = np.sqrt(1 - gamma_ref**(-2))
+    gamma = dp*gamma_ref*b_ref + gamma_ref
+    p_kin = np.sqrt(gamma**2 - 1)
+    x = beam_matrix[0]
+    px = beam_matrix[1] * p_kin
+    y = beam_matrix[2]
+    py = beam_matrix[3] * p_kin
+    z = z_ref - beam_matrix[4]
+    pz = np.sqrt(gamma**2 - px**2 - py**2 - 1)
+    q = p_array.q_array
+
+    return ParticleBunch(q, x, y, z, px, py, pz)
     

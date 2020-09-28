@@ -84,22 +84,30 @@ def parray_to_waket_beam(p_array):
     Parameters:
     -----------
     p_array : ParticleArray
+        The Ocelot distribution to be converted.
 
     Returns:
     --------
     A Wake-T ParticleBunch.
     
     """
+    # Check if Wake-T is installed.
     if not wake_t_installed:
         raise ImportError('Wake-T is not installed. '
                           'Cannot perform conversion to Wake-T ParticleBunch.')
+
+    # Get beam matrix and reference values.
     beam_matrix = p_array.rparticles
     gamma_ref = p_array.E / m_e_GeV
     z_ref = p_array.s
+
+    # Calculate gamma and kinetic momentum (p_kin).
     dp = beam_matrix[5]
     b_ref = np.sqrt(1 - gamma_ref**(-2))
     gamma = dp*gamma_ref*b_ref + gamma_ref
     p_kin = np.sqrt(gamma**2 - 1)
+
+    # Create coordinate arrays in Wake-T units.
     x = beam_matrix[0]
     px = beam_matrix[1] * p_kin
     y = beam_matrix[2]
@@ -108,5 +116,6 @@ def parray_to_waket_beam(p_array):
     pz = np.sqrt(gamma**2 - px**2 - py**2 - 1)
     q = p_array.q_array
 
+    # Create and return Wake-T distribution.
     return ParticleBunch(q, x, y, z, px, py, pz)
     

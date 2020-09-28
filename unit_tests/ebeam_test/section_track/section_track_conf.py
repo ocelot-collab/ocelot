@@ -6,7 +6,7 @@ import numpy as np
 from ocelot import *
 from accelerator.s2e_sections.sections import *
 from ocelot.utils.section_track import *
-
+import time
 
 data_dir = "./unit_tests/ebeam_test/section_track/data"
 

@@ -268,3 +268,4 @@ def rf2beam_xfel_linac(v, phi, init_energy=0.13):
     E1, chirp, _, _ = rf2beam(v, phi, vh=0, phih=0, n=0, freq=1.3e9, E0=init_energy, zeta1=0., zeta2=0., zeta3=0.)
     sum_voltage = E1 - init_energy
     return sum_voltage, chirp
+

@@ -25,7 +25,7 @@ def weights_default(val):
 def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', weights=weights_default,
           vary_bend_angle=False, min_i5=False):
     """
-    Function to match twiss paramters
+    Function to match twiss parameters
 
     :param lat: MagneticLattice
     :param constr: dictionary, constrains. Example:
@@ -165,7 +165,6 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                         if constr[e][k][0] == 'a>':
                             if np.abs(tw_loc.__dict__[k]) < v1:
                                 err = err + weights(k) * (tw_loc.__dict__[k] - v1) ** 2
-
 
                         if constr[e][k][0] == '->':
                             try:
@@ -360,15 +359,17 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
 
 
         #tw_loc.s = 0
+        #print("start = ", get_envelope(p_array0))
         navi.go_to_start()
         tws_list, p_array0 = track(lat, p_array0, navi, print_progress=False)
-        for tw_loc in tws_list:
-            # print e.id,  e in constr.keys()
-            # print tw_loc
-            # print '--->'
-            #tw_loc = e.transfer_map * tw_loc
-            # print tw_loc
+        s = np.array([tw.s for tw in tws_list])
+        # print("stop = ", tws_list[-1])
+        L = 0.
+        for e in lat.sequence:
+            indx = (np.abs(s - L)).argmin()
 
+            L += e.l
+            tw_loc = tws_list[indx]
             if 'global' in constr.keys():
                 # print 'there is a global constraint', constr['global'].keys()
                 for c in constr['global'].keys():

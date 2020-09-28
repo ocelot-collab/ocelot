@@ -277,8 +277,8 @@ def test_merger_type(lattice, tws0, method, parametr=None, update_ref_values=Fal
     new_lat = merger(lat, remaining_types=[Drift], remaining_elems=[sol], init_energy=init_energy)
     R_new = lattice_transfer_map(new_lat, energy=init_energy)
 
-    result = check_matrix(R, R_new, TOL, assert_info=' r_matrix - ')
-    result2 = check_matrix(lat.T, new_lat.T, TOL, assert_info=' t_matrix - ')
+    result = check_matrix(R, R_new, tolerance=1.0e-12, tolerance_type='absolute', assert_info=' r_matrix - ')
+    result2 = check_matrix(lat.T, new_lat.T, tolerance=1.0e-12, tolerance_type='absolute', assert_info=' t_matrix - ')
     assert check_result(result + result2)
 
 
@@ -399,9 +399,9 @@ def test_matrix_b_vector(lattice, tws0, method, parametr=None, update_ref_values
     R = lattice_transfer_map(lat, energy=init_energy)
     new_lat = merger(lat, remaining_types=[Drift], remaining_elems=[sol], init_energy=init_energy)
     R_new = lattice_transfer_map(new_lat, energy=init_energy)
-    result = check_matrix(R, R_new, TOL, assert_info=' r_matrix - ')
-    result2 = check_matrix(lat.T, new_lat.T, TOL, assert_info=' t_matrix - ')
-    result3 = check_matrix(lat.B, new_lat.B, TOL, assert_info=' b_vector - ')
+    result = check_matrix(R, R_new, tolerance=1.0e-12, tolerance_type='absolute', assert_info=' r_matrix - ')
+    result2 = check_matrix(lat.T, new_lat.T, tolerance=1.0e-12, tolerance_type='absolute', assert_info=' t_matrix - ')
+    result3 = check_matrix(lat.B, new_lat.B, tolerance=1.0e-12, tolerance_type='absolute', assert_info=' b_vector - ')
     assert check_result(result + result2 + result3)
 
 

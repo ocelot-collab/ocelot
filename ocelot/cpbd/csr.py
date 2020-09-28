@@ -2,36 +2,44 @@
 @ authors Martin Dohlus DESY, 2015, Sergey Tomin XFEL, 2016
 """
 
+import time
+import copy
+import importlib
+import logging
+
+import numpy as np
 from scipy import interpolate
-from ocelot.common.globals import *
-from ocelot.common import math_op
+from scipy.integrate import cumtrapz
 from scipy.ndimage.filters import gaussian_filter
 from scipy.optimize import curve_fit
-from ocelot.cpbd.beam import *
-from ocelot.cpbd.high_order import *
-from ocelot.cpbd.magnetic_lattice import *
-import time
-from scipy.integrate import cumtrapz
-from ocelot.cpbd.physics_proc import PhysProc
-import copy
-from ocelot.rad.radiation_py import und_field
-import importlib
 
-import logging
+from ocelot.common.globals import pi, speed_of_light, m_e_eV, m_e_GeV
+from ocelot.common import math_op
+from ocelot.cpbd.beam import Particle, s_to_cur
+from ocelot.cpbd.high_order import arcline, rk_track_in_field
+from ocelot.cpbd.magnetic_lattice import (Undulator, Bend, RBend, SBend,
+                                          XYQuadrupole)
+from ocelot.cpbd.physics_proc import PhysProc
+from ocelot.rad.radiation_py import und_field
+
+# Try to import numba, pyfftw and numexpr for improved performance
 logger = logging.getLogger(__name__)
 
 try:
     import numba as nb
     nb_flag = True
 except:
-    logger.info("csr.py: module NUMBA is not installed. Install it to speed up calculation")
+    logger.info("csr.py: module NUMBA is not installed."
+                " Install it to speed up calculation")
     nb_flag = False
 
 try:
+
     from pyfftw.interfaces.numpy_fft import fft
     from pyfftw.interfaces.numpy_fft import ifft
 except:
-    logger.info("csr.py: module PYFFTW is not installed. Install it to speed up calculation.")
+    logger.info("csr.py: module PYFFTW is not installed."
+                " Install it to speed up calculation.")
     from numpy.fft import ifft
     from numpy.fft import fft
 
@@ -39,7 +47,8 @@ try:
     import numexpr as ne
     ne_flag = True
 except:
-    logger.info("csr.py: module NUMEXPR is not installed. Install it to speed up calculation")
+    logger.info("csr.py: module NUMEXPR is not installed."
+                " Install it to speed up calculation")
     ne_flag = False
 
 
@@ -63,31 +72,6 @@ def csr_convolution(a, b):
     c = ifft(fft(a_pad)*fft(b_pad))
     c = c[0:L-1].real
     return c
-
-
-def interp1(x, y, xnew, k=1):
-    if len(xnew) > 0:
-        if k == 1:
-            ynew = np.interp(xnew, x, y)
-        else:
-            tck = interpolate.splrep(x, y, k=k)
-            ynew = interpolate.splev(xnew, tck, der=0)
-    else:
-        ynew = []
-    return ynew
-
-
-def convolution(xu, u, xw, w):
-    """
-    convolution of equally spaced functions
-    """
-    hx = xu[1] - xu[0]
-    wc = np.convolve(u, w)*hx
-    nw = w.shape[0]
-    nu = u.shape[0]
-    x0 = xu[0] + xw[0]
-    xc = x0 + np.arange(nw + nu)*hx
-    return xc, wc
 
 
 def sample_0(i, a, b):
@@ -252,7 +236,8 @@ class Smoothing:
                     charge_per_step[k-1] += w * qps
 
         elif IP_method == 2:
-            charge_per_step = self.q_per_step_ip2(N_BIN, Q_BIN, BIN[0], BIN[1], NSIG, RMS, step, Nz, z1)
+            charge_per_step = self.q_per_step_ip2(
+                N_BIN, Q_BIN, BIN[0], BIN[1], NSIG, RMS, step, Nz, z1)
         else:
             for nb in range(N_BIN):
                 aa = BIN[0][nb] - z1
@@ -276,7 +261,9 @@ class SubBinning:
         self.print_log = False
         if nb_flag:
             logger.debug("SubBinning: NUMBA")
-            self.p_per_subbins = nb.jit(nb.double[:](nb.double[:], nb.double[:], nb.int64))(self.p_per_subbins_py)
+            self.p_per_subbins = nb.jit(
+                nb.double[:](nb.double[:], nb.double[:], nb.int64))(
+                    self.p_per_subbins_py)
         else:
             logger.debug("SubBinning: Python")
             self.p_per_subbins = self.p_per_subbins_py
@@ -290,7 +277,6 @@ class SubBinning:
                 ib = ib + 1
             NBIN[ib] = NBIN[ib] + 1
         return NBIN
-
 
     def subbin_bound(self, q, s, x_qbin, n_bin, m_bin):
         """
@@ -336,7 +322,9 @@ class SubBinning:
             # bb=monoton "length" vector
             # bb = ne.evaluate('(s - s0) / (sNs - s0)')
             # aa=LK of "charge" and "length" vector; avoid zero stepwidth
-            aa = ne.evaluate('(aa - aa0) / (aaNs - aa0) * X_QBIN + (s - s0) / (sNs - s0) * (1 - X_QBIN)')
+            aa = ne.evaluate(
+                '(aa - aa0) / (aaNs - aa0) * X_QBIN +'
+                '(s - s0) / (sNs - s0) * (1 - X_QBIN)')
         else:
             aa = (aa - aa[0]) / (aa[Ns - 1] - aa[0])
             # bb=monoton "length" vector
@@ -347,7 +335,7 @@ class SubBinning:
             aa = 0.999 * aa + 0.001 * (np.arange(0, Ns)) / (Ns - 1)
 
         # vector with bin boundaries
-        SBINB = interp1(aa, s, np.arange(K_BIN + 1.) / K_BIN)
+        SBINB = np.interp(np.arange(K_BIN + 1.) / K_BIN, aa, s)
         SBINB[0] = s[0]
         SBINB[K_BIN] = s[Ns - 1]
         # particles per subbins
@@ -376,56 +364,69 @@ class K0_fin_anf:
         b2 = 1. - g2i
         beta = np.sqrt(b2)
         K = np.zeros(indx - j)
-        for i in range(j, indx):
-            Ri = R[i]
-            n0i = n[i, 0] / Ri
-            n1i = n[i, 1] / Ri
-            n2i = n[i, 2] / Ri
+        t4i = traj4[indx]
+        t5i = traj5[indx]
+        t6i = traj6[indx]
+        for i in range(indx - j):
+            Ri_inv = 1/R[i]
+            n0i = n[i, 0] * Ri_inv
+            n1i = n[i, 1] * Ri_inv
+            n2i = n[i, 2] * Ri_inv
             # kernel
-            t4 = traj4[i]
-            t5 = traj5[i]
-            t6 = traj6[i]
+            t4 = traj4[i+j]
+            t5 = traj5[i+j]
+            t6 = traj6[i+j]
             x = n0i * t4 + n1i * t5 + n2i * t6
-            K[i - j] = ((beta * (x - n0i * traj4[indx] - n1i * traj5[indx] - n2i * traj6[indx]) -
-                         b2 * (1. - t4 * traj4[indx] - t5 * traj5[indx] - t6 * traj6[indx]) - g2i) / Ri - (
-                        1. - beta * x) / w[i - j] * g2i)
+            K[i] = ((beta * (x - n0i * t4i - n1i * t5i - n2i * t6i) -
+                     b2 * (1. - t4 * t4i - t5 * t5i - t6 * t6i) -
+                     g2i) * Ri_inv - (1. - beta * x) / w[i] * g2i)
         return K
 
-    def K0_0_jit(self, i, traj0, traj1, traj2, traj3, gamma, s, n, R, w):
+    def K0_0_jit(self, i, traj0, traj1, traj2, traj3, gamma, s, n, R, w, wmin):
         g2i = 1. / gamma ** 2
         b2 = 1. - g2i
         beta = np.sqrt(b2)
-        # i1 = i - 1  # ignore points i1+1:i on linear path to observer
+
+        i_0 = 0
 
         traj0i = traj0[i]
         traj1i = traj1[i]
         traj2i = traj2[i]
         traj3i = traj3[i]
-        for j in range(i):
-            s[j] = traj0[j] - traj0i
+        for j_i in range(i):
+            # Start looping from last element
+            j = i - j_i - 1
+            s_j = traj0[j] - traj0i
             n1 = traj1i - traj1[j]
             n2 = traj2i - traj2[j]
             n3 = traj3i - traj3[j]
-            R[j] = np.sqrt(n1 * n1 + n2 * n2 + n3 * n3)
-            w[j] = s[j] + beta * R[j]
+            R_j = np.sqrt(n1 * n1 + n2 * n2 + n3 * n3)
+            w_j = s_j + beta * R_j
+            s[j] = s_j
+            R[j] = R_j
+            w[j] = w_j
             n[j, 0] = n1
             n[j, 1] = n2
             n[j, 2] = n3
+            if w_j <= wmin:
+                i_0 = j
+                break
+        # return last index where w <= wmin
+        return i_0
 
     def K0_fin_anf_opt(self, i, traj, wmin, gamma):
         s = np.zeros(i)
         n = np.zeros((i, 3))
         R = np.zeros(i)
         w = np.zeros(i)
-        self.K0_0(i, traj[0], traj[1], traj[2], traj[3], gamma, s, n, R, w)
-        j = np.where(w <= wmin)[0]
+        j = self.K0_0(
+            i, traj[0], traj[1], traj[2], traj[3], gamma, s, n, R, w, wmin)
 
-        if len(j) > 0:
-            j = j[-1]
-            w = w[j:i]
-            s = s[j:i]
-        else:
-            j = 0
+        s = s[j:]
+        n = n[j:]
+        R = R[j:]
+        w = w[j:]
+
         K = self.K0_1(i, j, R, n, traj[4], traj[5], traj[6], w, gamma)
 
         if len(K) > 1:
@@ -443,42 +444,48 @@ class K0_fin_anf:
         g2i = 1. / gamma ** 2
         b2 = 1. - g2i
         beta = np.sqrt(b2)
-        i1 = i - 1  # ignore points i1+1:i on linear path to observer
-        ind1 = i1 + 1
-        s = traj[0, 0:ind1] - traj[0, i]
-        n = np.array([traj[1, i] - traj[1, 0:ind1],
-                      traj[2, i] - traj[2, 0:ind1],
-                      traj[3, i] - traj[3, 0:ind1]])
-        R = np.sqrt(np.sum(n ** 2, axis=0))
 
+        i_0 = self.estimate_start_index(i, traj, wmin, beta)
+
+        s = traj[0, i_0:i] - traj[0, i]
+        n0 = traj[1, i] - traj[1, i_0:i]
+        n1 = traj[2, i] - traj[2, i_0:i]
+        n2 = traj[3, i] - traj[3, i_0:i]
+        R = np.sqrt(n0*n0 + n1*n1 + n2*n2)
         w = s + beta * R
-        j = np.where(w <= wmin)[0]
 
+        j = np.where(w <= wmin)[0]
         if len(j) > 0:
             j = j[-1]
-            w = w[j:ind1]
-            s = s[j:ind1]
+            w = w[j:]
+            s = s[j:]
+            n0 = n0[j:]
+            n1 = n1[j:]
+            n2 = n2[j:]
+            R = R[j:]
+            j += i_0
         else:
-            j = 0
-        R = R[j:ind1]
-        n0 = n[0, j:ind1] / R
-        n1 = n[1, j:ind1] / R
-        n2 = n[2, j:ind1] / R
+            j = i_0
+
+        R_inv = 1 / R
+        n0 *= R_inv
+        n1 *= R_inv
+        n2 *= R_inv
 
         # kernel
-        t4 = traj[4, j:i1 + 1]
-        t5 = traj[5, j:i1 + 1]
-        t6 = traj[6, j:i1 + 1]
+        t4 = traj[4, j:i]
+        t5 = traj[5, j:i]
+        t6 = traj[6, j:i]
+
+        t4_i = traj[4, i]
+        t5_i = traj[5, i]
+        t6_i = traj[6, i]
 
         x = n0 * t4 + n1 * t5 + n2 * t6
-        K = ((beta * (x - n0 * traj[4, i] - n1 * traj[5, i] - n2 * traj[6, i]) -
-              b2 * (1. - t4 * traj[4, i] - t5 * traj[5, i] - t6 * traj[6, i]) - g2i) / R - (1. - beta * x) / w * g2i)
-
-        # K = ((beta*(n0*(t4 - traj[4, i]) +
-        #            n1*(t5 - traj[5, i]) +
-        #            n2*(t6 - traj[6, i])) -
-        #    b2*(1. - t4*traj[4, i] - t5*traj[5, i] - t6*traj[6, i]) - g2i)/R[ra] -
-        #    (1. - beta*(n0*t4 + n1*t5 + n2*t6))/w*g2i)
+        K = ((beta * (x - n0 * t4_i - n1 * t5_i - n2 * t6_i) -
+              b2 * (1. - t4 * t4_i - t5 * t5_i - t6 * t6_i) -
+              g2i) * R_inv -
+             (1. - beta * x) / w * g2i)
 
         # integrated kernel: KS=int_s^0{K(u)*du}=int_0^{-s}{K(-u)*du}
 
@@ -497,33 +504,37 @@ class K0_fin_anf:
         g2i = 1. / gamma ** 2
         b2 = 1. - g2i
         beta = np.sqrt(b2)
-        i1 = i - 1  # ignore points i1+1:i on linear path to observer
-        # ra = np.arange(0, i1+1)
-        ind1 = i1 + 1
-        s = traj[0, 0:ind1] - traj[0, i]
-        n0 = traj[1, i] - traj[1, 0:ind1]
-        n1 = traj[2, i] - traj[2, 0:ind1]
-        n2 = traj[3, i] - traj[3, 0:ind1]
+
+        i_0 = self.estimate_start_index(i, traj, wmin, beta)
+
+        s = traj[0, i_0:i] - traj[0, i]
+        n0 = traj[1, i] - traj[1, i_0:i]
+        n1 = traj[2, i] - traj[2, i_0:i]
+        n2 = traj[3, i] - traj[3, i_0:i]
         R = ne.evaluate("sqrt(n0**2 + n1**2 + n2**2)")
 
         w = ne.evaluate('s + beta*R')
         j = np.where(w <= wmin)[0]
-
         if len(j) > 0:
             j = j[-1]
-            w = w[j:ind1]
-            s = s[j:ind1]
+            w = w[j:]
+            s = s[j:]
+            n0 = n0[j:]
+            n1 = n1[j:]
+            n2 = n2[j:]
+            R = R[j:]
+            j += i_0
         else:
-            j = 0
-        R = R[j:ind1]
-        n0 = n0[j:ind1] / R
-        n1 = n1[j:ind1] / R
-        n2 = n2[j:ind1] / R
+            j = i_0
+        R_inv = 1 / R
+        n0 *= R_inv
+        n1 *= R_inv
+        n2 *= R_inv
 
         # kernel
-        t4 = traj[4, j:i1 + 1]
-        t5 = traj[5, j:i1 + 1]
-        t6 = traj[6, j:i1 + 1]
+        t4 = traj[4, j:i]
+        t5 = traj[5, j:i]
+        t6 = traj[6, j:i]
 
         x = ne.evaluate('n0*t4 + n1*t5 + n2*t6')
 
@@ -531,7 +542,9 @@ class K0_fin_anf:
         t5i = traj[5, i]
         t6i = traj[6, i]
         K = ne.evaluate(
-            '((beta*(x - n0*t4i- n1*t5i - n2*t6i) - b2*(1. - t4*t4i - t5*t5i - t6*t6i) - g2i)/R - (1. - beta*x)/w*g2i)')
+            '((beta*(x - n0*t4i- n1*t5i - n2*t6i) -'
+            '  b2*(1. - t4*t4i - t5*t5i - t6*t6i) - g2i)/R -'
+            ' (1. - beta*x)/w*g2i)')
 
         if len(K) > 1:
             a = np.append(0.5 * (K[0:-1] + K[1:]) * np.diff(s), 0.5 * K[-1] * s[-1])
@@ -541,6 +554,60 @@ class K0_fin_anf:
             KS = 0.5 * K[-1] * s[-1]
 
         return w, KS
+
+    def estimate_start_index(self, i, traj, w_min, beta, i_min=1000, n_test=10):
+        """
+        This method estimates the index of the first trajectory point from
+        which CSR effects should be computed.
+
+        This method can significantly reduce the computing time of CSR effects
+        by pre-discaring regions of the reference trajectory which do not
+        influence the CSR calculation (i.e. the points where w <= wmin). This
+        is performed by testing the w <= wmin condition for a subset of n_test
+        equally-spaced points along the reference trajectory. The index of the
+        last tested trajectory point in which w <= wmin is returned.
+
+        Parameters
+        ----------
+
+        i : int
+            Iteration index
+
+        traj : ndarray
+            Reference trajectory along which CSR forces are calculated
+
+        w_min : float
+            Leftmost edge of the longitudinal bunch binning.
+
+        beta : float
+            Relativistic factor.
+
+        i_min : int
+            Minimum iteration index. When i<i_min, no estimation of the starting
+            index is performed (0 is returned).
+
+        n_test : int
+            Number of points along the trajectory in which to test whether they
+            should be taken into account for the CSR calculation.
+
+        Returns
+        -------
+        The estimated start index, which is always <= than the real one.
+        
+        """
+        i_0 = 0
+        if i > i_min:
+            idx = np.linspace(0, i, n_test, dtype=np.int32)
+            s = traj[0, idx] - traj[0, i]
+            n0 = traj[1, i] - traj[1, idx]
+            n1 = traj[2, i] - traj[2, idx]
+            n2 = traj[3, i] - traj[3, idx]
+            R = np.sqrt(n0*n0 + n1*n1 + n2*n2)
+            w = s + beta * R
+            j = np.where(w <= w_min)[0]
+            if len(j) > 0:
+                i_0 = idx[j[-1]]
+        return i_0
 
 
 class CSR(PhysProc):
@@ -592,9 +659,16 @@ class CSR(PhysProc):
         self.bin_smoth = Smoothing()
         self.k0_fin_anf = K0_fin_anf()
 
-
     def K0_inf_anf(self, i, traj, wmin):
-        # function [ w,KS ] = K0_inf_anf( i,traj,wmin )
+        """
+
+        :param i: index of the trajectories points for the convolution kernel is calculated;
+        :param traj: trajectory. traj[0,:] - longitudinal coordinate,
+                                 traj[1,:], traj[2,:], traj[3,:] - rectangular coordinates, \
+                                 traj[4,:], traj[5,:], traj[6,:] - tangential unit vectors
+        :param wmin: the first coordinate of the mash
+        :return:
+        """
 
         i1 = i-1 # ignore points i1+1:i on linear path to observer
         ra = np.arange(0, i1+1)
@@ -618,7 +692,9 @@ class CSR(PhysProc):
         K = (n[0, ra]*(traj[4, ra] - traj[4, i]) +
              n[1, ra]*(traj[5, ra] - traj[5, i]) +
              n[2, ra]*(traj[6, ra] - traj[6, i]) -
-           (1. - traj[4, ra]*traj[4, i] - traj[5, ra]*traj[5, i] - traj[6, ra]*traj[6, i]))/R[ra]
+             (1. - traj[4, ra]*traj[4, i] -
+              traj[5, ra]*traj[5, i] -
+              traj[6, ra]*traj[6, i])) / R[ra]
 
         # integrated kernel: KS=int_s^0{K(u)*du}=int_0^{-s}{K(-u)*du}
         if np.shape(K)[0] > 1:
@@ -631,7 +707,16 @@ class CSR(PhysProc):
         return w, KS
 
     def K0_fin_inf(self, i, traj, w_range, gamma):
-        # function [ KS ] = K0_inf_inf( i,traj,w_range,gamma )
+        """
+        Radiative interaction is coming from the infinite straight line
+        that is assumed before the specified CSR region and it is calculated analytically
+
+        :param i:
+        :param traj:
+        :param w_range:
+        :param gamma:
+        :return:
+        """
 
         g2 = gamma**2
         g2i = 1./g2
@@ -666,7 +751,15 @@ class CSR(PhysProc):
         return KS
 
     def K0_inf_inf(self, i, traj, w_range):
-        # winf
+        """
+        Radiative interaction is coming from the infinite straight line
+        that is assumed before the specified CSR region and it is calculated analytically
+
+        :param i:
+        :param traj:
+        :param w_range:
+        :return:
+        """
         Rv1 = traj[1:4, i] - traj[1:4, 0]
         s1 =  traj[0, 0] - traj[0, i]
         ev1 = traj[4:, 0]
@@ -689,21 +782,19 @@ class CSR(PhysProc):
             KS = np.zeros(len(w_range))
         return KS
 
-
     def CSR_K1(self, i, traj, NdW, gamma=None):
         """
         :param i: index of the trajectories points for the convolution kernel is calculated;
         :param traj: trajectory. traj[0,:] - longitudinal coordinate,
                                  traj[1,:], traj[2,:], traj[3,:] - rectangular coordinates, \
                                  traj[4,:], traj[5,:], traj[6,:] - tangential unit vectors
-        :param NdW: list N[0] 0 number of mesh points, N[1] = dW> 0 - increment, Mesh = Mesh = (N: 0) * dW
+        :param NdW: list [N, dW], NdW[0] is number of mesh points, NdW[1] = dW > 0 is increment.
+                                  Mesh = Mesh = (-N:0) * dW
         :param gamma:
         :return:
         """
-        # function [ K1 ] = CSR_K1( i,traj,NdW,gamma )
 
-        # L_fin=nargin==4 && ~isempty(gamma) && gamma>1
-        if gamma != None:
+        if gamma is not None:
             L_fin = True
         else:
             L_fin = False
@@ -717,24 +808,26 @@ class CSR(PhysProc):
 
         KS1 = KS[0]
 
-        w, idx = np.unique(w, return_index=True)
-        KS = KS[idx]
-
+        # w, idx = np.unique(w, return_index=True)
+        # KS = KS[idx]
         # sort and unique takes time, but is required to avoid numerical trouble
-        if w_range[0] < w[0]:
-            m = np.where(w_range < w[0])[0][-1]
+
+        # Use w_min instead of unique and w[0]
+        w_min = np.min(w)
+        if w_range[0] < w_min:
+            m = np.where(w_range < w_min)[0][-1]
             if L_fin:
-                KS2 = self.K0_fin_inf(i, traj, np.append(w_range[0:m+1], w[0]), gamma)
+                KS2 = self.K0_fin_inf(i, traj, np.append(w_range[0:m+1], w_min), gamma)
             else:
-                KS2 = self.K0_inf_inf(i, traj, np.append(w_range[0:m+1], w[0]))
+                KS2 = self.K0_inf_inf(i, traj, np.append(w_range[0:m+1], w_min))
 
             KS2 = (KS2[-1] - KS2) + KS1
-            KS = np.append(KS2[0:-1], interp1(w, KS, w_range[m+1:]))
+            KS = np.append(KS2[0:-1], np.interp(w_range[m+1:], w, KS))
 
         else:
-            KS = interp1(w, KS, w_range)
+            KS = np.interp(w_range, w, KS)
         four_pi_eps0 = 1./(1e-7*speed_of_light**2)
-        K1 = np.diff(np.append(np.diff(np.append(KS, 0)), 0))/NdW[1]/four_pi_eps0
+        K1 = np.diff(np.diff(KS, append=0), append=0) / NdW[1] / four_pi_eps0
 
         return K1
 
@@ -757,7 +850,7 @@ class CSR(PhysProc):
 
         self.z_csr_start = sum([p.l for p in lat.sequence[:self.indx0]])
         p = Particle()
-        beta = 1. if self.energy == None else np.sqrt(1. - 1./(self.energy/m_e_GeV)**2)
+        beta = 1. if self.energy is None else np.sqrt(1. - 1./(self.energy/m_e_GeV)**2)
         self.csr_traj = np.transpose([[0, p.x, p.y, p.s, p.px, p.py, 1.]])
         if Undulator in [elem.__class__ for elem in lat.sequence[self.indx0:self.indx1+1]]:
             self.rk_traj = True
@@ -838,7 +931,8 @@ class CSR(PhysProc):
                 zp = np.sqrt(1./(1. + xp2 + yp2))
 
                 s = cumtrapz(np.sqrt(1. + xp2 + yp2), z, initial=0)
-                if elem.__class__ == Undulator: delta_s = s[-1]
+                if elem.__class__ == Undulator:
+                    delta_s = s[-1]
 
                 dS = float(delta_s) / N
 
@@ -908,15 +1002,13 @@ class CSR(PhysProc):
         gamma = p_array.E/m_e_GeV
         h = max(1., self.apply_step/self.traj_step)
 
+
         itr_ra = np.unique(-np.round(np.arange(-indx, -indx_prev, h))).astype(np.int)
 
-        nit = 0
-        n_iter = len(itr_ra)
-        #start = time.time()
-        K1 = self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma)
-        for nit in range(1, n_iter):
-            K1 += self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma=gamma)
-        K1 = K1/n_iter
+        K1 = 0
+        for it in itr_ra:
+            K1 += self.CSR_K1(it, self.csr_traj, Ndw, gamma=gamma)
+        K1 /= len(itr_ra)
 
 
         lam_K1 = csr_convolution(lam_ds, K1[::-1]) / st * delta_s
@@ -940,7 +1032,6 @@ class CSR(PhysProc):
         # if self.pict_debug:
         #     data = np.array([ np.array(self.total_wake)])
         #     np.savetxt("total_wake_test.txt", data)
-
 
     def plot_wake(self, p_array, lam_K1, itr_ra, s1, st):
         """
@@ -990,58 +1081,4 @@ class CSR(PhysProc):
         dig = str(self.napply)
         name = "0" * (4 - len(dig)) + dig
         self.plt.savefig( name + '.png')
-
-
-
-    def apply_i(self, p_array, delta_s):
-
-        s_cur = self.z0 - self.z_csr_start
-        z = p_array.tau()
-        s1 = min(z)
-        s2 = max(z)
-        bunch_size = s2 - s1
-        st = bunch_size / (self.n_mesh + 1)
-        I = s2current(z, p_array.q_array, n_points=self.n_mesh, filter_order=self.filter_order, mean_vel=speed_of_light)
-        Ns = len(I[:, 0])
-        sa = s1 + st / 2.
-        Ndw = [self.n_mesh, st]
-        lam_ds = I[:, 1] / speed_of_light * st
-
-        s_array = self.csr_traj[0, :]
-        indx = (np.abs(s_array - s_cur)).argmin()
-        indx_prev = (np.abs(s_array - (s_cur - delta_s))).argmin()
-        gamma = p_array.E / m_e_GeV
-        h = max(1., self.apply_step / self.traj_step)
-        itr_ra = np.unique(-np.round(np.arange(-indx, -indx_prev, h))).astype(np.int)
-
-        nit = 0
-        n_iter = len(itr_ra)
-        K1 = self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma)
-        for nit in range(1, n_iter):
-            K1 += self.CSR_K1(itr_ra[nit], self.csr_traj, Ndw, gamma=gamma)
-        K1 = K1 / n_iter
-
-
-        lam_K1 = csr_convolution(lam_ds, K1) / st * delta_s
-        Nend = len(lam_K1)
-        N = int(abs(self.n_mesh + 1 - Nend) + self.n_mesh + 1)
-        x = np.linspace(I[-1, 0], I[-1, 0] - N * Ndw[1], num=N, endpoint=False)[::-1]
-        tck = interpolate.splrep(x, lam_K1, k=1)
-        dE = interpolate.splev(z, tck, der=0)
-        pc_ref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV
-        delta_p = dE * 1e-9 / pc_ref
-        p_array.rparticles[5] += delta_p
-
-
-
-
-
-
-
-
-
-
-
-
-
 

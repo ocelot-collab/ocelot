@@ -42,35 +42,54 @@ class Twiss:
     """
 
     def __init__(self, beam=None):
-        if beam is None:
-            self.emit_x = 0.0
-            self.emit_y = 0.0
-            self.emit_xn = 0.0
-            self.emit_yn = 0.0
-            self.beta_x = 0.0
-            self.beta_y = 0.0
-            self.alpha_x = 0.0
-            self.alpha_y = 0.0
-            self.gamma_x = 0.0
-            self.gamma_y = 0.0
-            self.mux = 0.0
-            self.muy = 0.0
-            # self.dQ = 0.
-            self.Dx = 0.0
-            self.Dy = 0.0
-            self.Dxp = 0.0
-            self.Dyp = 0.0
-            self.x = 0.0
-            self.y = 0.0
-            self.xp = 0.0
-            self.yp = 0.0
-            self.E = 0.0
-            self.p = 0.0
-            self.tau = 0.0
-            self.s = 0.0  # position along the reference trajectory
-            self.q = 0.0  # C
-            self.id = ""
-        else:
+
+        self.emit_x = 0.0
+        self.emit_y = 0.0
+        self.emit_xn = 0.0
+        self.emit_yn = 0.0
+        self.eigemit_1 = 0.
+        self.eigemit_2 = 0.
+        self.beta_x = 0.0
+        self.beta_y = 0.0
+        self.alpha_x = 0.0
+        self.alpha_y = 0.0
+        self.gamma_x = 0.0
+        self.gamma_y = 0.0
+        self.Dx = 0.0
+        self.Dy = 0.0
+        self.Dxp = 0.0
+        self.Dyp = 0.0
+        self.mux = 0.0  # phase advance
+        self.muy = 0.0  # phase advance
+
+        # parameters below in the most cases are calculated from the ParticleArray object
+        # during tracking (see func 'get_envelop()')
+
+        self.E = 0.0  # ref the beam energy in [GeV]
+        self.s = 0.0  # position along the reference trajectory [m]
+        self.q = 0.0  # charge of the whole beam [C]
+
+        # moments
+        self.x = 0.0
+        self.y = 0.0
+        self.p = 0.0
+        self.tau = 0.0
+        self.xp = 0.0
+        self.yp = 0.0
+        self.xx = 0.
+        self.xpx = 0.
+        self.pxpx = 0.
+        self.yy = 0.
+        self.ypy = 0.
+        self.pypy = 0.
+        self.tautau = 0.
+        self.xy = 0.
+        self.pxpy = 0.
+        self.xpy = 0.
+        self.ypx = 0.
+
+        self.id = ""
+        if beam is not None:
             self.emit_x = beam.emit_x
             self.emit_y = beam.emit_y
             self.emit_xn = beam.emit_xn
@@ -80,9 +99,6 @@ class Twiss:
             self.beta_y = beam.beta_y
             self.alpha_x = beam.alpha_x
             self.alpha_y = beam.alpha_y
-            self.mux = 0.
-            self.muy = 0.
-            # self.dQ = 0.
             self.Dx = beam.Dx
             self.Dy = beam.Dy
             self.Dxp = beam.Dxp
@@ -98,11 +114,7 @@ class Twiss:
                 self.gamma_x = (1 + beam.alpha_x * beam.alpha_x) / beam.beta_x
                 self.gamma_y = (1 + beam.alpha_y * beam.alpha_y) / beam.beta_y
             self.E = beam.E
-            self.p = 0.0
-            self.tau = 0.0
-            self.s = 0.0  # position along the reference trajectory
-            self.q = 0.0  # C
-            self.id = ""
+
 
     def __str__(self):
         val = ""
@@ -259,9 +271,9 @@ class Beam:
         if self.tlen in [None, 0] and window_len is None:
             raise ValueError('both self.tlen and window_len are not set')
         if window_len is None:
-            if self.shape is 'gaussian':
+            if self.shape == 'gaussian':
                 window_len = self.tlen * 1e-15 * speed_of_light * 6  # sigmas
-            elif self.shape is 'flattop':
+            elif self.shape == 'flattop':
                 window_len = self.tlen * 1e-15 * speed_of_light * 2  # fwhm
             else:
                 raise ValueError('Beam() shape can be either "gaussian" or "flattop"')
@@ -275,9 +287,9 @@ class Beam:
         if self.tlen not in [None, 0, np.inf]:
             beam_slen = self.tlen * 1e-15 * speed_of_light
             Ipeak_pos = (np.amax(beam_arr.s) - np.amin(beam_arr.s)) / 2
-            if self.shape is 'gaussian':
+            if self.shape == 'gaussian':
                 beam_arr.I = self.I * np.exp(-(beam_arr.s - Ipeak_pos) ** 2 / (2 * beam_slen ** 2))
-            elif self.shape is 'flattop':
+            elif self.shape == 'flattop':
                 beam_arr.I = np.ones_like(beam_arr.s) * self.I
                 beam_arr.I[abs(beam_arr.s - Ipeak_pos) > beam_slen / 2] = 0
         return beam_arr
@@ -379,7 +391,7 @@ class BeamArray(Beam):
         if (np.abs(dsarr - dsm) / dsm > 1 / 1000).any():
             s_new = np.linspace(np.amin(self.s), np.amax(self.s), self.len())
             for attr in self.params():
-                if attr is 's':
+                if attr == 's':
                     continue
                 # print(attr)
                 val = getattr(self, attr)
@@ -398,7 +410,7 @@ class BeamArray(Beam):
             sn += 1
 
         for attr in self.params():
-            if attr is 's':
+            if attr == 's':
                 continue
             val = getattr(self, attr)
             val = savgol_filter(val, sn, 2, mode='nearest')
@@ -586,11 +598,31 @@ class ParticleArray:
     p0 - momentum
     """
 
+    class LostParticleRecorder:
+        """
+        Stores information about particles that are getting lost.
+
+        Attributes:
+            lost_particles: List of indices of deleted particle. Notes: The indices of the initial ParticleArray are used.
+            lp_to_pos_hist: Histogram of number of lost particles to position s. [(pos, num of lost particles), ...]
+        """
+        def __init__(self, n):
+            self.lost_particles = []
+            self.lp_to_pos_hist = []
+            self._current_particle = np.arange(n)
+
+        def add(self, inds, position):
+            self.lost_particles += self._current_particle[inds].tolist()
+            self.lp_to_pos_hist.append((position, len(inds)))
+            self._current_particle = np.delete(self._current_particle, inds)
+
     def __init__(self, n=0):
         self.rparticles = np.zeros((6, n))
         self.q_array = np.zeros(n)  # charge
         self.s = 0.0
         self.E = 0.0
+        self.lost_particle_recorder = self.LostParticleRecorder(n)
+
 
     def rm_tails(self, xlim, ylim, px_lim, py_lim):
         """
@@ -713,6 +745,16 @@ class ParticleArray:
         p.E = self.E
         return p
 
+    def rm_particle(self, index):
+        """
+        Method removes a "bad" particle with particular "index".
+        :param index:
+        :return:
+        """
+        _logger.warning("rm_particle is deprecated and will be removed in the future. Use delete_particles instead.")
+        self.rparticles = np.delete(self.rparticles, index, 1)
+        self.q_array = np.delete(self.q_array, index, 0)
+
     def rescale2energy(self, energy):
         """
         Method to rescale beam coordinates with new energy
@@ -746,6 +788,17 @@ class ParticleArray:
         val += "n particles : " + str(self.n) + "\n"
         return val
 
+    def delete_particles(self, inds, record=True):
+        """
+        Deletes particles from the particle array via index.
+        :param inds: Indices that will be removed from the particle array.
+        :param record: If record is true the deleted particles will be saved in self.lost_particle_recorder.
+        :return:
+        """
+        if record:
+            self.lost_particle_recorder.add(inds, self.s)
+        self.rparticles = np.delete(self.rparticles, inds, 1)
+        self.q_array = np.delete(self.q_array, inds, 0)
 
 def recalculate_ref_particle(p_array):
     pref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV
@@ -788,6 +841,13 @@ def get_envelope(p_array, tws_i=Twiss(), bounds=None):
         tau = p_array.tau()
 
     tws = Twiss()
+    tws.E = np.copy(p_array.E)
+    tws.q = np.sum(p_array.q_array)
+
+    # if less than 3 particles are left in the ParticleArray - return default (zero) Twiss()
+    if len(x) < 3:
+        return tws
+
     dx = tws_i.Dx * p
     dy = tws_i.Dy * p
     dpx = tws_i.Dxp * p
@@ -810,6 +870,7 @@ def get_envelope(p_array, tws_i=Twiss(), bounds=None):
     tws.px = np.mean(px)
     tws.py = np.mean(py)
     tws.tau = np.mean(tau)
+    tws.p = np.mean(p)
 
     if ne_flag:
         tw_x = tws.x
@@ -855,8 +916,7 @@ def get_envelope(p_array, tws_i=Twiss(), bounds=None):
                   [0, -1, 0, 0]])
     # w, v = np.linalg.eig(np.dot(Sigma, S))
 
-    tws.p = np.mean(p)
-    tws.E = np.copy(p_array.E)
+
 
     tws.emit_x = np.sqrt(tws.xx * tws.pxpx - tws.xpx ** 2)
     tws.emit_y = np.sqrt(tws.yy * tws.pypy - tws.ypy ** 2)
@@ -896,7 +956,7 @@ def get_envelope(p_array, tws_i=Twiss(), bounds=None):
     tws.alpha_x = -tws.xpx / tws.emit_x
     tws.alpha_y = -tws.ypy / tws.emit_y
 
-    tws.q = np.sum(p_array.q_array)
+
     return tws
 
 
@@ -993,7 +1053,7 @@ def moments(x, y, cut=0):
 
 
 def m_from_twiss(Tw1, Tw2):
-    # % Transport matrix M for two sets of Twiss parameters (alpha,beta,psi)
+    # Transport matrix M for two sets of Twiss parameters (alpha,beta,psi)
     b1 = Tw1[1]
     a1 = Tw1[0]
     psi1 = Tw1[2]
@@ -1012,26 +1072,45 @@ def m_from_twiss(Tw1, Tw2):
     return M
 
 
-def beam_matching(particles, bounds, x_opt, y_opt):
-    pd = np.zeros((int(len(particles) / 6), 6))
-    pd[:, 0] = particles[0]
-    pd[:, 1] = particles[1]
-    pd[:, 2] = particles[2]
-    pd[:, 3] = particles[3]
+def beam_matching(particles, bounds, x_opt, y_opt, remove_offsets=True):
+    """
+    Beam matching function, the beam is centered in the phase space
+
+    :param particles: ParticleArray
+    :param bounds: [start, stop] in rms of sigmas in longitudinal direction
+    :param x_opt: [alpha, beta, mu (phase advance)]
+    :param y_opt: [alpha, beta, mu (phase advance)]
+    :param remove_offsets: True, remove offsets in transverse planes
+    :return: transform ParticleArray (the same object)
+    """
+
+    pd = np.zeros((int(particles.size / 6), 6))
+    dx = 0.
+    dxp = 0.
+    dy = 0.
+    dyp = 0.
+    if remove_offsets:
+        dx = np.mean(particles[0])
+        dxp = np.mean(particles[1])
+        dy = np.mean(particles[2])
+        dyp = np.mean(particles[3])
+
+    pd[:, 0] = particles[0] - dx
+    pd[:, 1] = particles[1] - dxp
+    pd[:, 2] = particles[2] - dy
+    pd[:, 3] = particles[3] - dyp
     pd[:, 4] = particles[4]
     pd[:, 5] = particles[5]
 
     z0 = np.mean(pd[:, 4])
     sig0 = np.std(pd[:, 4])
-    # print((z0 + sig0*bounds[0] <= pd[:, 4]) * (pd[:, 4] <= z0 + sig0*bounds[1]))
     inds = np.argwhere((z0 + sig0 * bounds[0] <= pd[:, 4]) * (pd[:, 4] <= z0 + sig0 * bounds[1]))
-    # print(moments(pd[inds, 0], pd[inds, 1]))
+
     mx, mxs, mxx, mxxs, mxsxs, emitx0 = moments(pd[inds, 0], pd[inds, 1])
     beta = mxx / emitx0
     alpha = -mxxs / emitx0
-    # print(beta, alpha)
     M = m_from_twiss([alpha, beta, 0], x_opt)
-    # print(M)
+
     particles[0] = M[0, 0] * pd[:, 0] + M[0, 1] * pd[:, 1]
     particles[1] = M[1, 0] * pd[:, 0] + M[1, 1] * pd[:, 1]
     [mx, mxs, mxx, mxxs, mxsxs, emitx0] = moments(pd[inds, 2], pd[inds, 3])
@@ -1380,7 +1459,7 @@ def global_slice_analysis(parray, nparts_in_slice=5000, smooth_param=0.01, filte
     smax = max(z)
 
     hs = (smax - smin) / (n - 1)
-    s = np.arange(smin, smax + hs, hs)
+    s = np.linspace(smin, smax, num=n)
     ex = interp1(z, emittx, s)
     ey = interp1(z, emitty, s)
     se = interp1(z, sE, s)
@@ -1521,7 +1600,7 @@ def parray2beam(parray, step=1e-7):
 
 def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
                     sigma_tau=1e-3, sigma_p=1e-4, chirp=0.01, charge=5e-9, nparticles=200000, energy=0.13,
-                    tau_trunc=None):
+                    tau_trunc=None, tws=None):
     """
     Method to generate ParticleArray with gaussian distribution.
 
@@ -1539,6 +1618,7 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
     :param nparticles: namber of particles, 200k by default
     :param energy: beam energy in [GeV], 0.13 [GeV]
     :param tau_trunc: None, if not [float] - truncated gauss distribution in "tau" direction.
+    :param tws: None, if Twiss obj - the beam is matched to twiss params.
     :return: ParticleArray
     """
 
@@ -1579,6 +1659,13 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
     p_array.rparticles[5] = dp
 
     p_array.q_array = np.ones(nparticles) * charge / nparticles
+
+    if isinstance(tws, Twiss):
+        x_opt = [tws.alpha_x, tws.beta_x, tws.mux]
+        y_opt = [tws.alpha_y, tws.beta_y, tws.muy]
+        bounds = [-5, 5]
+        beam_matching(p_array.rparticles, bounds, x_opt, y_opt, remove_offsets=True)
+
     return p_array
 
 
@@ -1610,18 +1697,18 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
     for key, value in kwargs.items():
         if (key in beam.__dict__ or key in beam.properties) and (key not in ['s', 'E', 'tlen', 'I']):
             setattr(beam, key, value)
-        if key is 'emit':
+        if key == 'emit':
             beam.emit_x = value
             beam.emit_y = value
-        if key is 'emit_n':
+        if key == 'emit_n':
             beam.emit_xn = value
             beam.emit_yn = value
-        if key is 'beta':
+        if key == 'beta':
             beam.beta_x = value
             beam.beta_y = value
-        if key is 'nslice':
+        if key == 'nslice':
             nslice = value
-        if key is 'dE':
+        if key == 'dE':
             beam.dg = value / m_e_GeV
 
     if 'l_window' not in kwargs:
@@ -1640,3 +1727,4 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
         beam_arr.add_chirp(kwargs['chirp'])
 
     return beam_arr
+

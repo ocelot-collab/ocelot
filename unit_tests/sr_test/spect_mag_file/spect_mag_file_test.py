@@ -94,6 +94,61 @@ def test_radiation_file_and_function(lattice, screen, beam, update_ref_values=Fa
     assert check_result(result1 + result2 + result3 + result4 + result5 + result6)
 
 
+def test_radiation_from_bm(lattice, screen, beam, update_ref_values=False):
+    """calculate_radiation function test"""
+    phi = 0.15046332005984778
+    x_off = 0.018870166315482287
+
+    beam.E = 2  # beam energy in [GeV]
+    beam.I = 0.1  # beam current in [A]
+
+    # set new initial coordinates for the beam
+    beam.xp = phi / 2  # initial angle x'
+    beam.x = -x_off  # initial offset
+
+    By = 1.  # T - amplitude of vertical magnetic field.
+
+    b = Undulator(lperiod=0.10, nperiods=10, eid="und")
+    b.mag_field = lambda x, y, z: (0, By, 0)
+
+    # in the Undulator element parameters lperiod and nperiods are needed
+    # just for definition of the length of the element
+    lattice = MagneticLattice((b,))
+
+    screen = Screen()
+    screen.z = 1000.0  # distance from the begining of lattice to the screen
+
+    screen.start_energy = 100  # [eV], starting photon energy
+    screen.end_energy = 10000  # [eV], ending photon energy
+    screen.num_energy = 100  # number of energy points[eV]
+
+
+    screen = calculate_radiation(lattice, screen, beam, accuracy=6)
+
+    x = screen.beam_traj.x(0)[::50]
+    z = screen.beam_traj.z(0)[::50]
+
+    if update_ref_values:
+        return {'Eph': screen.Eph.tolist(), 'Yph': screen.Yph.tolist(), 'Xph': screen.Xph.tolist(),
+                'Total': screen.Total.tolist(), 'Sigma': screen.Sigma.tolist(), 'Pi': screen.Pi.tolist(),
+                "x": x.tolist(), "z": z.tolist()}
+
+    screen_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
+
+    result1 = check_matrix(screen.Eph, screen_ref['Eph'], TOL, assert_info=' Eph - ')
+    result2 = check_matrix(screen.Yph, screen_ref['Yph'], TOL, assert_info=' Yph - ')
+    result3 = check_matrix(screen.Xph, screen_ref['Xph'], TOL, assert_info=' Xph - ')
+    result4 = check_matrix(screen.Total, screen_ref['Total'], TOL, assert_info=' Total - ')
+    result5 = check_matrix(screen.Sigma, screen_ref['Sigma'], TOL, assert_info=' Sigma - ')
+    result6 = check_matrix(screen.Pi, screen_ref['Pi'], TOL, assert_info=' Pi - ')
+
+    result7 = check_matrix(x, screen_ref['x'], TOL, assert_info=' traj X - ')
+    result8 = check_matrix(z, screen_ref['z'], TOL, assert_info=' traj Z - ')
+
+
+    assert check_result(result1 + result2 + result3 + result4 + result5 + result6 + result7 + result8)
+
+
 def setup_module(module):
 
     f = open(pytest.TEST_RESULTS_FILE, 'a')
@@ -129,6 +184,7 @@ def test_update_ref_values(lattice, screen, beam, cmdopt):
     update_functions = []
     update_functions.append('test_calculate_radiation')
     update_functions.append('test_radiation_file_and_function')
+    update_functions.append("test_radiation_from_bm")
 
     
     if cmdopt in update_functions:

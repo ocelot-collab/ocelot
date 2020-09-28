@@ -1,7 +1,7 @@
 from ocelot.cpbd.io import save_particle_array
 from ocelot.common.globals import *
 import numpy as np
-from ocelot.cpbd.beam import Twiss
+from ocelot.cpbd.beam import Twiss, beam_matching
 from scipy import optimize
 from ocelot.utils.acc_utils import *
 from ocelot.common.ocelog import *
@@ -271,8 +271,7 @@ class PhaseSpaceAperture(PhysProc):
             sig = np.std(tau)
             inds = np.argwhere(np.logical_or(tau < sig * self.taumin, tau > sig * self.taumax))
             inds = inds.reshape(inds.shape[0])
-            p_array.rparticles = np.delete(p_array.rparticles, inds, 1)
-            p_array.q_array = np.delete(p_array.q_array, inds, 0)
+            p_array.delete_particles(inds)
 
         if self.horizontal:
             x = p_array.x()
@@ -281,8 +280,7 @@ class PhaseSpaceAperture(PhysProc):
             sigx = np.std(x)
             inds = np.argwhere(np.logical_or(x < sigx * self.xmin, x > sigx * self.xmax))
             inds = inds.reshape(inds.shape[0])
-            p_array.rparticles = np.delete(p_array.rparticles, inds, 1)
-            p_array.q_array = np.delete(p_array.q_array, inds, 0)
+            p_array.delete_particles(inds)
 
         if self.vertical:
             y = p_array.y()
@@ -291,8 +289,7 @@ class PhaseSpaceAperture(PhysProc):
             sigy = np.std(y)
             inds = np.argwhere(np.logical_or(y < sigy * self.ymin, y > sigy * self.ymax))
             inds = inds.reshape(inds.shape[0])
-            p_array.rparticles = np.delete(p_array.rparticles, inds, 1)
-            p_array.q_array = np.delete(p_array.q_array, inds, 0)
+            p_array.delete_particles(inds)
 
 
 class RectAperture(PhysProc):
@@ -320,14 +317,12 @@ class RectAperture(PhysProc):
         x = p_array.x()
         inds = np.argwhere(np.logical_or(x < self.xmin, x > self.xmax))
         inds = inds.reshape(inds.shape[0])
-        p_array.rparticles = np.delete(p_array.rparticles, inds, 1)
-        p_array.q_array = np.delete(p_array.q_array, inds, 0)
+        p_array.delete_particles(inds)
 
         y = p_array.y()
         inds = np.argwhere(np.logical_or(y < self.ymin, y > self.ymax))
         inds = inds.reshape(inds.shape[0])
-        p_array.rparticles = np.delete(p_array.rparticles, inds, 1)
-        p_array.q_array = np.delete(p_array.q_array, inds, 0)
+        p_array.delete_particles(inds)
 
 
 class BeamTransform(PhysProc):
@@ -364,100 +359,7 @@ class BeamTransform(PhysProc):
         _logger.debug("BeamTransform: apply")
         self.x_opt = [self.twiss.alpha_x, self.twiss.beta_x, self.twiss.mux]
         self.y_opt = [self.twiss.alpha_y, self.twiss.beta_y, self.twiss.muy]
-        self.beam_matching(p_array.rparticles, self.bounds, self.x_opt, self.y_opt)
-
-    def beam_matching(self, particles, bounds, x_opt, y_opt):
-        # the beam is centered in the phase space
-        pd = np.zeros((int(particles.size / 6), 6))
-        dx = 0
-        dxp = 0
-        dy = 0
-        dyp = 0
-        if self.remove_offsets:
-            dx = np.mean(particles[0])
-            dxp = np.mean(particles[1])
-            dy = np.mean(particles[2])
-            dyp = np.mean(particles[3])
-
-        pd[:, 0] = particles[0] - dx
-        pd[:, 1] = particles[1] - dxp
-        pd[:, 2] = particles[2] - dy
-        pd[:, 3] = particles[3] - dyp
-        pd[:, 4] = particles[4]
-        pd[:, 5] = particles[5]
-
-        z0 = np.mean(pd[:, 4])
-        sig0 = np.std(pd[:, 4])
-        inds = np.argwhere((z0 + sig0 * bounds[0] <= pd[:, 4]) * (pd[:, 4] <= z0 + sig0 * bounds[1]))
-
-        mx, mxs, mxx, mxxs, mxsxs, emitx0 = self.moments(pd[inds, 0], pd[inds, 1])
-        beta = mxx / emitx0
-        alpha = -mxxs / emitx0
-        M = self.m_from_twiss([alpha, beta, 0], x_opt)
-
-        particles[0] = M[0, 0] * pd[:, 0] + M[0, 1] * pd[:, 1]
-        particles[1] = M[1, 0] * pd[:, 0] + M[1, 1] * pd[:, 1]
-        [mx, mxs, mxx, mxxs, mxsxs, emitx0] = self.moments(pd[inds, 2], pd[inds, 3])
-        beta = mxx / emitx0
-        alpha = -mxxs / emitx0
-        M = self.m_from_twiss([alpha, beta, 0], y_opt)
-        particles[2] = M[0, 0] * pd[:, 2] + M[0, 1] * pd[:, 3]
-        particles[3] = M[1, 0] * pd[:, 2] + M[1, 1] * pd[:, 3]
-        return particles
-
-    def moments(self, x, y, cut=0):
-        n = len(x)
-        inds = np.arange(n)
-        mx = np.mean(x)
-        my = np.mean(y)
-        x = x - mx
-        y = y - my
-        x2 = x * x
-        mxx = np.sum(x2) / n
-        y2 = y * y
-        myy = np.sum(y2) / n
-        xy = x * y
-        mxy = np.sum(xy) / n
-
-        emitt = np.sqrt(mxx * myy - mxy * mxy)
-
-        if cut > 0:
-            inds = []
-            beta = mxx / emitt
-            gamma = myy / emitt
-            alpha = mxy / emitt
-            emittp = gamma * x2 + 2. * alpha * xy + beta * y2
-            inds0 = np.argsort(emittp)
-            n1 = np.round(n * (100 - cut) / 100)
-            inds = inds0[0:n1]
-            mx = np.mean(x[inds])
-            my = np.mean(y[inds])
-            x1 = x[inds] - mx
-            y1 = y[inds] - my
-            mxx = np.sum(x1 * x1) / n1
-            myy = np.sum(y1 * y1) / n1
-            mxy = np.sum(x1 * y1) / n1
-            emitt = np.sqrt(mxx * myy - mxy * mxy)
-        return mx, my, mxx, mxy, myy, emitt
-
-    def m_from_twiss(self, Tw1, Tw2):
-        # Transport matrix M for two sets of Twiss parameters (alpha,beta,psi)
-        b1 = Tw1[1]
-        a1 = Tw1[0]
-        psi1 = Tw1[2]
-        b2 = Tw2[1]
-        a2 = Tw2[0]
-        psi2 = Tw2[2]
-
-        psi = psi2 - psi1
-        cosp = np.cos(psi)
-        sinp = np.sin(psi)
-        M = np.zeros((2, 2))
-        M[0, 0] = np.sqrt(b2 / b1) * (cosp + a1 * sinp)
-        M[0, 1] = np.sqrt(b2 * b1) * sinp
-        M[1, 0] = ((a1 - a2) * cosp - (1 + a1 * a2) * sinp) / np.sqrt(b2 * b1)
-        M[1, 1] = np.sqrt(b1 / b2) * (cosp - a2 * sinp)
-        return M
+        beam_matching(p_array.rparticles, self.bounds, self.x_opt, self.y_opt, self.remove_offsets)
 
 
 class SpontanRadEffects(PhysProc):
@@ -602,132 +504,3 @@ class Chicane(PhysProc):
 
         p_array.rparticles[4] += (
                     self.r56 * p_array.rparticles[5] + self.t566 * p_array.rparticles[5] * p_array.rparticles[5])
-
-
-class SPDKick(PhysProc):
-    """
-    Single Plate Dechirper Kick (SPDKick). Wakefields of a Beam near a Single Plate in a Flat Dechirper.
-    Based on SLAC-PUB-16881.
-    NOT FINISHED. Recommend to use method form Wake3D
-    S.Tomin 11.2019
-
-    :param b: distance to the dechirper wall [m]
-    :param t: longitudinal gap [m]
-    :param period: period of corrugation [m]
-    """
-
-    def __init__(self, b, t, period):
-        PhysProc.__init__(self)
-        self.b = b
-        self.t = t
-        self.period = period
-        self.alpha = 0.
-
-    def dipole_wake(self, s, b, t, period):
-        """
-        dipole wake
-        :param s: position along a bunch
-        :param b: distance to the dechirper wall
-        :param t: longitudinal gap
-        :param period: period
-        :return:
-        """
-        alpha = 1 - 0.465 * np.sqrt(t / period) - 0.07 * (t / period)
-        s0yd = 8 * b ** 2 * t / (9 * np.pi * alpha ** 2 * period ** 2)
-        w = 2 / b ** 3 * s0yd * (1 - (1 + np.sqrt(s / s0yd)) * np.exp(- np.sqrt(s / s0yd)))
-        return w
-
-    def long_wake(self, s, b, t, period):
-        """
-        longitudinal wake
-
-        :param s: position along a bunch
-        :param b: distance to the dechirper wall
-        :param t: longitudinal gap
-        :param period: period
-        :return:
-        """
-        alpha = 1 - 0.465 * np.sqrt(t / period) - 0.07 * (t / period)
-
-        s0l = 2 * b ** 2 * t / (np.pi * alpha ** 2 * period ** 2)
-        w = 1 / b ** 2 * np.exp(- np.sqrt(s / s0l))
-        return w
-
-    def quad_wake(self, s, b, t, period):
-        """
-        quadrupole wake
-
-        :param s: position along a bunch
-        :param b: distance to the dechirper wall
-        :param t: longitudinal gap
-        :param period: period
-        :return:
-        """
-        alpha = 1 - 0.465 * np.sqrt(t / period) - 0.07 * (t / period)
-
-        s0yq = 8 * b ** 2 * t / (9 * np.pi * alpha ** 2 * period ** 2)
-        w = 3 / b ** 4 * s0yq * (1 - (1 + np.sqrt(s / s0yq)) * np.exp(- np.sqrt(s / s0yq)))
-        return w
-
-    def convolve_beam(self, current, wake):
-        """
-        convolve wake with beam current
-
-        :param current: current[:, 0] - s in [m], current[:, 1] - current in [A]
-        :param wake: wake function in form: wake(s, b, t, period)
-        :return:
-        """
-        s_shift = current[0, 0]
-        current[:, 0] -= s_shift
-        s = current[:, 0]
-
-        step = (s[-1] - s[0]) / (len(s) - 1)
-        q = current[:, 1] / speed_of_light
-
-        w = np.array(
-            [wake(si, b=self.b, t=self.t, period=self.period) for si in s]) * 377 * speed_of_light / (
-                    4 * np.pi)
-        wake = np.convolve(q, w) * step
-        s_new = np.cumsum(np.ones(len(wake))) * step
-        wake_kick = np.vstack((s_new, wake))
-        return wake_kick.T
-
-    def wake_kick(self, p_array, dz):
-        """
-        Function to calculate transverse kick by corrugated structure [SLAC-PUB-16881]
-
-        :param p_array: ParticleArray
-        :return: (wake, current) - wake[:, 0] - s in [m],  wake[:, 1] - kick in [V]
-                                - current[:, 0] - s in [m], current[:, 1] - current in [A]
-        """
-        I = s_to_cur(p_array.tau(), sigma=0.03 * np.std(p_array.tau()), q0=np.sum(p_array.q_array), v=speed_of_light)
-        s_shift = I[0, 0]
-        dipole_kick = self.convolve_beam(current=I, wake=self.dipole_wake)
-        quad_kick = self.convolve_beam(current=I, wake=self.quad_wake)
-        long_kick = self.convolve_beam(current=I, wake=self.long_wake)
-
-        z = p_array.tau()
-        ind_z_sort = np.argsort(z)
-        z_sort = z[ind_z_sort]
-        wd = np.interp(z_sort - s_shift, dipole_kick[:, 0], dipole_kick[:, 1])
-        wq = np.interp(z_sort - s_shift, quad_kick[:, 0], quad_kick[:, 1])
-        wl = np.interp(z_sort - s_shift, long_kick[:, 0], long_kick[:, 1])
-        x = p_array.rparticles[0][ind_z_sort] - np.mean(p_array.rparticles[0])
-        y = p_array.rparticles[2][ind_z_sort] - np.mean(p_array.rparticles[2])
-        delta_E_x = -x * wq * 1e-9 * dz
-        delta_E_y = (y * wq + wd) * 1e-9 * dz
-        delta_E_l = wl * 1e-9 * dz
-
-        pc_ref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV
-
-        delta_px = delta_E_x / pc_ref
-        delta_py = delta_E_y / pc_ref
-        # print(np.max(delta_p), pc_ref)
-        p_array.rparticles[1][ind_z_sort] += delta_px * np.cos(self.alpha) + delta_py * np.sin(self.alpha)
-        p_array.rparticles[3][ind_z_sort] += - delta_px * np.sin(self.alpha) + delta_py * np.cos(self.alpha)
-        p_array.rparticles[5][ind_z_sort] += delta_E_l / pc_ref
-        return p_array
-
-    def apply(self, p_array, dz):
-        _logger.debug(" CSTKick applied")
-        p_array = self.wake_kick(p_array, dz)

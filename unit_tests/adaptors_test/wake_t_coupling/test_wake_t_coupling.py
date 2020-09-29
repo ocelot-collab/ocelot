@@ -14,7 +14,7 @@ except ImportError:
 
 from ocelot import *
 from ocelot.gui.accelerator import *
-from ocelot.adaptors.wake_t import waket_beam_to_parray, parray_to_waket_beam
+from ocelot.adaptors.wake_t import wake_t_beam_to_parray, parray_to_wake_t_beam
 
 
 # Define decorator to skip tests if Wake-T is not installed.
@@ -35,10 +35,10 @@ def test_conversion():
         ene_sp=0.1, s_t=3, xi_c=20e-6, q_tot=20, n_part=1e4)
 
     # Convert to Ocelot ParticleArray.
-    p_array = waket_beam_to_parray(bunch)
+    p_array = wake_t_beam_to_parray(bunch)
 
     # Convert back to Wake-T.
-    bunch_2 = parray_to_waket_beam(p_array)
+    bunch_2 = parray_to_wake_t_beam(p_array)
 
     # Check that the final beam is unchanged by the two-way conversion.
     assert_equal_beams(bunch, bunch_2)
@@ -110,7 +110,7 @@ def track_beamline_wake_t_and_ocelot(bunch):
     # ---------------------------
 
     # Convert beam to particle array.
-    p_array_i = waket_beam_to_parray(bunch)
+    p_array_i = wake_t_beam_to_parray(bunch)
 
     # Define beamline elements.
     d1 = Drift(l=0.1)
@@ -134,7 +134,7 @@ def track_beamline_wake_t_and_ocelot(bunch):
     # 3. Wake-T (simulate plasma lens).
     # ---------------------------------
     # Convert back to Wake-T.
-    bunch = parray_to_waket_beam(p_array_f)
+    bunch = parray_to_wake_t_beam(p_array_f)
 
     # Define plasma lens.
     p_lens = PlasmaLens(1e-2, 1000, n_out=5)

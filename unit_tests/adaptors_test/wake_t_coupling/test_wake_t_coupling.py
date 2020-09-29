@@ -1,17 +1,28 @@
 from time import time
 from copy import deepcopy
 
+import pytest
 import numpy as np
-from wake_t.driver_witness import LaserPulse
-from wake_t.beamline_elements import (Beamline, PlasmaStage, PlasmaLens,
-                                      Drift as WtDrift)
-from wake_t.utilities.bunch_generation import get_gaussian_bunch_from_twiss
+try:
+    from wake_t.driver_witness import LaserPulse
+    from wake_t.beamline_elements import (Beamline, PlasmaStage, PlasmaLens,
+                                          Drift as WtDrift)
+    from wake_t.utilities.bunch_generation import get_gaussian_bunch_from_twiss
+    wake_t_installed = True
+except:
+    wake_t_installed = False
 
 from ocelot import *
 from ocelot.gui.accelerator import *
 from ocelot.adaptors.wake_t import waket_beam_to_parray, parray_to_waket_beam
 
 
+# Define decorator to skip tests if Wake-T is not installed.
+only_if_wake_t_installed = pytest.mark.skipif(
+    not wake_t_installed, reason='Wake-T required to run tests')
+
+
+@only_if_wake_t_installed
 def test_conversion():
     """
     Converts a Wake-T beam to Ocelot and back to Wake-T and checks that the
@@ -33,6 +44,7 @@ def test_conversion():
     assert_equal_beams(bunch, bunch_2)
 
 
+@only_if_wake_t_installed
 def test_conversion_with_beamline():
     """
     Tests that the results of a beamline simulation combining Wake-T and

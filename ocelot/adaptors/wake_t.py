@@ -15,13 +15,13 @@ from ocelot.cpbd.beam import ParticleArray
 from ocelot.common.globals import m_e_GeV
 
 
-def waket_beam_to_parray(waket_beam, gamma_ref=None, z_ref=None):
+def wake_t_beam_to_parray(wake_t_beam, gamma_ref=None, z_ref=None):
     """
     Converts a Wake-T particle beam to an Ocelot ParticleArray.
 
     Parameters:
     -----------
-    waket_beam : ParticleBunch (Wake-T class)
+    wake_t_beam : ParticleBunch (Wake-T class)
         The original particle distribution from Wake-T.
 
     gamma_ref : float (Optional)
@@ -40,13 +40,13 @@ def waket_beam_to_parray(waket_beam, gamma_ref=None, z_ref=None):
 
     """
     # Extract particle coordinates.
-    x = waket_beam.x  # [m]
-    y = waket_beam.y  # [m]
-    z = waket_beam.xi + waket_beam.prop_distance  # [m]
-    px = waket_beam.px  # [m_e * c]
-    py = waket_beam.py  # [m_e * c]
-    pz = waket_beam.pz  # [m_e * c]
-    q = waket_beam.q  # [C]
+    x = wake_t_beam.x  # [m]
+    y = wake_t_beam.y  # [m]
+    z = wake_t_beam.xi + wake_t_beam.prop_distance  # [m]
+    px = wake_t_beam.px  # [m_e * c]
+    py = wake_t_beam.py  # [m_e * c]
+    pz = wake_t_beam.pz  # [m_e * c]
+    q = wake_t_beam.q  # [C]
 
     # Calculate gamma.
     gamma = np.sqrt(1 + px**2 + py**2 + pz**2)
@@ -55,7 +55,7 @@ def waket_beam_to_parray(waket_beam, gamma_ref=None, z_ref=None):
     if gamma_ref is None:
         gamma_ref = np.average(gamma, weights=q)
     if z_ref is None:
-        z_ref = waket_beam.prop_distance
+        z_ref = wake_t_beam.prop_distance
 
     # Calculate momentum deviation (dp) and kinetic momentum (p_kin).
     b_ref = np.sqrt(1 - gamma_ref**(-2))
@@ -77,7 +77,7 @@ def waket_beam_to_parray(waket_beam, gamma_ref=None, z_ref=None):
     return p_array
 
 
-def parray_to_waket_beam(p_array):
+def parray_to_wake_t_beam(p_array):
     """
     Converts an Ocelot ParticleArray to a Wake-T ParticleBunch.
 

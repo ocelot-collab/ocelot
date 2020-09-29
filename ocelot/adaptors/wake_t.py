@@ -40,13 +40,13 @@ def waket_beam_to_parray(waket_beam, gamma_ref=None, z_ref=None):
 
     """
     # Extract particle coordinates.
-    x = waket_beam.x   # [m]
-    y = waket_beam.y   # [m]
-    z = waket_beam.xi  # [m]
+    x = waket_beam.x # [m]
+    y = waket_beam.y # [m]
+    z = waket_beam.xi + waket_beam.prop_distance  # [m]
     px = waket_beam.px # [m_e * c]
     py = waket_beam.py # [m_e * c]
     pz = waket_beam.pz # [m_e * c]
-    q = waket_beam.q   # [C]
+    q = waket_beam.q # [C]
 
     # Calculate gamma.
     gamma = np.sqrt(1 + px**2 + py**2 + pz**2)
@@ -55,7 +55,7 @@ def waket_beam_to_parray(waket_beam, gamma_ref=None, z_ref=None):
     if gamma_ref is None:
         gamma_ref = np.average(gamma, weights=q)
     if z_ref is None:
-        z_ref = np.average(z)
+        z_ref = waket_beam.prop_distance
 
     # Calculate momentum deviation (dp) and kinetic momentum (p_kin).
     b_ref = np.sqrt(1 - gamma_ref**(-2))
@@ -112,7 +112,7 @@ def parray_to_waket_beam(p_array):
     px = beam_matrix[1] * p_kin
     y = beam_matrix[2]
     py = beam_matrix[3] * p_kin
-    z = z_ref - beam_matrix[4]
+    z = - beam_matrix[4]
     pz = np.sqrt(gamma**2 - px**2 - py**2 - 1)
     q = p_array.q_array
 

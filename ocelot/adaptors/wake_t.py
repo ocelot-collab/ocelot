@@ -40,13 +40,13 @@ def waket_beam_to_parray(waket_beam, gamma_ref=None, z_ref=None):
 
     """
     # Extract particle coordinates.
-    x = waket_beam.x # [m]
-    y = waket_beam.y # [m]
+    x = waket_beam.x  # [m]
+    y = waket_beam.y  # [m]
     z = waket_beam.xi + waket_beam.prop_distance  # [m]
-    px = waket_beam.px # [m_e * c]
-    py = waket_beam.py # [m_e * c]
-    pz = waket_beam.pz # [m_e * c]
-    q = waket_beam.q # [C]
+    px = waket_beam.px  # [m_e * c]
+    py = waket_beam.py  # [m_e * c]
+    pz = waket_beam.pz  # [m_e * c]
+    q = waket_beam.q  # [C]
 
     # Calculate gamma.
     gamma = np.sqrt(1 + px**2 + py**2 + pz**2)
@@ -80,7 +80,7 @@ def waket_beam_to_parray(waket_beam, gamma_ref=None, z_ref=None):
 def parray_to_waket_beam(p_array):
     """
     Converts an Ocelot ParticleArray to a Wake-T ParticleBunch.
-    
+
     Parameters:
     -----------
     p_array : ParticleArray
@@ -89,7 +89,7 @@ def parray_to_waket_beam(p_array):
     Returns:
     --------
     A Wake-T ParticleBunch.
-    
+
     """
     # Check if Wake-T is installed.
     if not wake_t_installed:
@@ -118,4 +118,3 @@ def parray_to_waket_beam(p_array):
 
     # Create and return Wake-T distribution.
     return ParticleBunch(q, x, y, z, px, py, pz, prop_distance=z_ref)
-    

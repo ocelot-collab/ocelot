@@ -69,9 +69,7 @@ def track_beamline_only_wake_t(bunch):
 
     # Create beamline elements.
     plasma = PlasmaStage(
-        1e-2, 1e23, laser=laser, wakefield_model='quasistatic_2d', n_out=100,
-        laser_evolution=True, laser_z_foc=0, r_max=80e-6, xi_min=0e-6,
-        xi_max=140e-6, n_r=80, n_xi=150, ppc=10, dz_fields=0.1e-3)
+        1e-2, 1e23, laser=laser, wakefield_model='simple_blowout', n_out=10)
     dr = WtDrift(0.1, n_out=10)
     p_lens = PlasmaLens(1e-2, 1000, n_out=5)
     bl = Beamline([plasma, dr, p_lens])
@@ -91,9 +89,7 @@ def track_beamline_wake_t_and_ocelot(bunch):
 
     # Define plasma stage.
     plasma = PlasmaStage(
-        1e-2, 1e23, laser=laser, wakefield_model='quasistatic_2d', n_out=100,
-        laser_evolution=True, laser_z_foc=0, r_max=80e-6, xi_min=0e-6,
-        xi_max=140e-6, n_r=80, n_xi=150, ppc=10, dz_fields=0.1e-3)
+        1e-2, 1e23, laser=laser, wakefield_model='simple_blowout', n_out=10)
 
     # Track through plasma stage.
     bunch_list = plasma.track(bunch)

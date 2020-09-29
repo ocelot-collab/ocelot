@@ -9,7 +9,7 @@ try:
                                           Drift as WtDrift)
     from wake_t.utilities.bunch_generation import get_gaussian_bunch_from_twiss
     wake_t_installed = True
-except:
+except ImportError:
     wake_t_installed = False
 
 from ocelot import *
@@ -27,13 +27,13 @@ def test_conversion():
     """
     Converts a Wake-T beam to Ocelot and back to Wake-T and checks that the
     initial and final beams are the same.
-    
+
     """
     # Generate Wake-T bunch.
     bunch = get_gaussian_bunch_from_twiss(
         en_x=1e-6, en_y=1e-6, a_x=0, a_y=0, b_x=0.3e-3, b_y=0.3e-3, ene=600,
         ene_sp=0.1, s_t=3, xi_c=20e-6, q_tot=20, n_part=1e4)
-    
+
     # Convert to Ocelot ParticleArray.
     p_array = waket_beam_to_parray(bunch)
 
@@ -55,7 +55,7 @@ def test_conversion_with_beamline():
     This therefore checks that the information regarding the propagation
     distance along the beamline and longitudinal position of the particles
     are not affected by the conversion between codes.
-    
+
     """
     # Generate Wake-T bunch.
     orig_bunch = get_gaussian_bunch_from_twiss(
@@ -104,7 +104,7 @@ def track_beamline_wake_t_and_ocelot(bunch):
         1e-2, 1e23, laser=laser, wakefield_model='simple_blowout', n_out=10)
 
     # Track through plasma stage.
-    bunch_list = plasma.track(bunch)
+    plasma.track(bunch)
 
     # 2. Ocelot (simulate drift).
     # ---------------------------
@@ -122,7 +122,7 @@ def track_beamline_wake_t_and_ocelot(bunch):
     lat = MagneticLattice([d1], method=method)
 
     navi = Navigator(lat)
-    navi.unit_step = 0.01 # m
+    navi.unit_step = 0.01  # m
 
     # Track lattice.
     p_array_f = deepcopy(p_array_i)
@@ -131,7 +131,7 @@ def track_beamline_wake_t_and_ocelot(bunch):
     tws, p_array_f = track(lat, p_array_f, navi)
     print("\n time exec:", time() - start, "sec")
 
-    # 1. Wake-T (simulate plasma lens).
+    # 3. Wake-T (simulate plasma lens).
     # ---------------------------------
     # Convert back to Wake-T.
     bunch = parray_to_waket_beam(p_array_f)
@@ -140,7 +140,7 @@ def track_beamline_wake_t_and_ocelot(bunch):
     p_lens = PlasmaLens(1e-2, 1000, n_out=5)
 
     # Track through plasma lens.
-    bunch_list_2 = p_lens.track(bunch)
+    p_lens.track(bunch)
 
     return bunch
 
@@ -155,4 +155,3 @@ def assert_equal_beams(bunch_1, bunch_2):
             np.allclose(bunch_1.pz, bunch_2.pz) and
             np.allclose(bunch_1.q, bunch_2.q) and
             np.allclose(bunch_1.prop_distance, bunch_2.prop_distance))
-

@@ -988,6 +988,29 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'e
         elif param.startswith('el_bunching_h'):
             bunch_harm = int(param.replace('el_bunching_h', ''))
             subfig_evo_el_bunching(ax[-1], g, legend, harm=bunch_harm, **kwargs)
+        
+        elif param.startswith('rad_pow'):
+            if 'log' in param:
+                plot_log=1
+            else:
+                plot_log=0
+            
+            if '_h' in param:
+                import re
+                regex = re.compile('_h([0-9]*)')
+                harm = int(regex.findall(param)[-1])
+            else:
+                harm=1
+            
+            if 'en' in param:
+                if not is_tdp:
+                    subfig_evo_rad_pow(ax[-1], g, legend, log=plot_log, harm=harm, **kwargs)
+                else:
+                    subfig_evo_rad_pow_en(ax[-1], g, legend, log=plot_log, harm=harm, **kwargs)
+            else:
+                subfig_evo_rad_pow(ax[-1], g, legend, log=plot_log, harm=harm, **kwargs)
+                
+        
         elif param == 'rad_pow_en_log':
             if not is_tdp:
                 subfig_evo_rad_pow(ax[-1], g, legend, **kwargs)
@@ -998,6 +1021,7 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'e
                 subfig_evo_rad_pow(ax[-1], g, legend, log=0, **kwargs)
             else:
                 subfig_evo_rad_pow_en(ax[-1], g, legend, log=0, **kwargs)
+        
         elif param == 'rad_pow_log':
             subfig_evo_rad_pow(ax[-1], g, legend, **kwargs)
         elif param == 'rad_pow_lin':
@@ -1184,12 +1208,26 @@ def subfig_evo_el_bunching(ax_bunching, g, legend, harm=1, **kwargs):
 
 
 @if_plottable
-def subfig_evo_rad_pow_en(ax_rad_pow, g, legend, log=1, **kwargs):
-    ax_rad_pow.plot(g.z, np.amax(g.p_int, axis=0), 'g-', linewidth=1.5)
-    ax_rad_pow.set_ylabel(r'P [W]')
+def subfig_evo_rad_pow_en(ax_rad_pow, g, legend, log=1, harm=1, **kwargs):
+    if harm == 1:
+        power = g.p_int
+        energy = g.pulse_energy
+        suff = ''
+    else:
+        try:
+            power = getattr(g, 'h{}_power'.format(harm))
+            energy = np.sum(power * g.dt, axis=0)
+            suff = '  (harm {})'.format(harm)
+        except:
+            power = np.zeros_like(g.p_int)
+            energy = np.zeros_like(g.pulse_energy)
+            suff = ''
+    
+    ax_rad_pow.plot(g.z, np.amax(power, axis=0), 'g-', linewidth=1.5)
+    ax_rad_pow.set_ylabel(r'P [W]' + suff)
     ax_rad_pow.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_rad_pow.get_yaxis().get_major_formatter().set_scientific(True)
-    if np.amax(g.p_int) > 0 and log:
+    if np.amax(power) > 0 and log:
         ax_rad_pow.set_yscale('log')
     if not log:
         ax_rad_pow.set_ylim(ymin=0)
@@ -1198,17 +1236,17 @@ def subfig_evo_rad_pow_en(ax_rad_pow, g, legend, log=1, **kwargs):
     ax_rad_en = ax_rad_pow.twinx()
     ax_rad_en.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_rad_en.get_yaxis().get_major_formatter().set_scientific(True)
-    if np.amax(g.p_int) > 0 and log:
-        ax_rad_en.plot(g.z, g.pulse_energy, 'k--', linewidth=1.5)
-        ax_rad_en.set_ylabel(r'E [J]')
+    if np.amax(power) > 0 and log:
+        ax_rad_en.plot(g.z, energy, 'k--', linewidth=1.5)
+        ax_rad_en.set_ylabel(r'E [J]' + suff)
         ax_rad_en.set_yscale('log')
     if not log:
-        if np.amax(g.pulse_energy) < 1e-4:
-            ax_rad_en.plot(g.z, g.pulse_energy * 1e6, 'k--', linewidth=1.5)
-            ax_rad_en.set_ylabel(r'E [$\mu$J]')
+        if np.amax(energy) < 1e-4:
+            ax_rad_en.plot(g.z, energy * 1e6, 'k--', linewidth=1.5)
+            ax_rad_en.set_ylabel(r'E [$\mu$J]' + suff)
         else:
-            ax_rad_en.plot(g.z, g.pulse_energy * 1e3, 'k--', linewidth=1.5)
-            ax_rad_en.set_ylabel(r'E [mJ]')
+            ax_rad_en.plot(g.z, energy * 1e3, 'k--', linewidth=1.5)
+            ax_rad_en.set_ylabel(r'E [mJ]' + suff)
         ax_rad_en.set_ylim(ymin=0)
     plt.yticks(plt.yticks()[0][0:-1])
 
@@ -1224,8 +1262,8 @@ def subfig_evo_rad_pow_en(ax_rad_pow, g, legend, log=1, **kwargs):
     ax_rad_en.yaxis.get_offset_text().set_color(ax_rad_en.yaxis.label.get_color())
 
     if kwargs.get('showtext', True):
-        ax_rad_pow.text(0.98, 0.02, r'$P_{end}$= %.2e W ' '\n' r'$E_{end}$= %.2e J' % (np.amax(g.p_int[:, -1]),
-                                                                                       np.mean(g.p_int[:, -1],
+        ax_rad_pow.text(0.98, 0.02, r'$P_{end}$= %.2e W ' '\n' r'$E_{end}$= %.2e J' % (np.amax(power[:, -1]),
+                                                                                       np.mean(power[:, -1],
                                                                                                axis=0) * g(
                                                                                            'xlamds') * g(
                                                                                            'zsep') * g.nSlices / speed_of_light),
@@ -1234,12 +1272,22 @@ def subfig_evo_rad_pow_en(ax_rad_pow, g, legend, log=1, **kwargs):
 
 
 @if_plottable
-def subfig_evo_rad_pow(ax_rad_pow, g, legend, log=1, **kwargs):
-    ax_rad_pow.plot(g.z, np.amax(g.p_int, axis=0), 'g-', linewidth=1.5)
-    ax_rad_pow.set_ylabel('P [W]')
+def subfig_evo_rad_pow(ax_rad_pow, g, legend, log=1, harm=1, **kwargs):
+    if harm == 1:
+        power = g.p_int
+        suff = ''
+    else:
+        try:
+            power = getattr(g, 'h{}_power'.format(harm))
+            suff = '  (harm {})'.format(harm)
+        except:
+            power = np.zeros_like(g.p_int)
+            suff = ''
+    ax_rad_pow.plot(g.z, np.amax(power, axis=0), 'g-', linewidth=1.5)
+    ax_rad_pow.set_ylabel('P [W]' + suff)
     ax_rad_pow.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_rad_pow.get_yaxis().get_major_formatter().set_scientific(True)
-    if np.amax(g.p_int) > 0 and log:
+    if np.amax(power) > 0 and log:
         ax_rad_pow.set_yscale('log')
     plt.yticks(plt.yticks()[0][0:-1])
 
@@ -1248,7 +1296,7 @@ def subfig_evo_rad_pow(ax_rad_pow, g, legend, log=1, **kwargs):
     ax_rad_pow.yaxis.label.set_color('g')
     ax_rad_pow.yaxis.get_offset_text().set_color(ax_rad_pow.yaxis.label.get_color())
     if kwargs.get('showtext', True):
-        ax_rad_pow.text(0.98, 0.02, r'$P_{end}$= %.2e W' % (np.amax(g.p_int[:, -1])), fontsize=12,
+        ax_rad_pow.text(0.98, 0.02, r'$P_{end}$= %.2e W' % (np.amax(power[:, -1])), fontsize=12,
                         horizontalalignment='right', verticalalignment='bottom', transform=ax_rad_pow.transAxes)
 
 

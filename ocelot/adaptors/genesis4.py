@@ -51,7 +51,7 @@ class Phaseshifter(Element):
     """
     phase shifter element (implemented for Genesis4, not used by cpbd)
     l - length of phase shifter in [m]
-    phi = introduced phase shift in [rad]
+    phi = introduced phase shift in [rad] 
     """
 
     def __init__(self, l=0., phi=0., eid=None):
@@ -61,11 +61,11 @@ class Phaseshifter(Element):
         self.phi = phi
 
 
-# class Corrector(Element):
-#     def __init__(self, l=0., cx=0, cy=0., eid=None):
-#         # TODO: calculate with rband and tilt using getters and setters
-#         # calculate back in gen4_lat_str
-#         pass
+                           
+                                                      
+                                                                                                 
+                                          
+              
 
 
 class Genesis4Simulation:
@@ -92,8 +92,7 @@ class Genesis4Simulation:
         self.cleanup_afterwards = kwargs.get('cleanup_afterwards', False)
         self.zstop = kwargs.get('zstop', np.inf)
         self.exec_script_path = kwargs.get('exec_script_path', None)
-
-        self.launcher = get_genesis4_launcher()
+        self.launcher = kwargs.get('launcher', get_genesis4_launcher())
 
     @property
     def root_name(self):
@@ -130,14 +129,14 @@ class Genesis4Simulation:
         Writes down dfl files for &importfield Genesis1.3-version4 name lists
         :return:
         """
-        for element in self.ginp.sequence:
-            if element.startswith('importfield'):
-                impfld = self.ginp.sequence[element]
-                if impfld._name_list_id in self.ginp.attachments.dfl:
+        for element_id in self.ginp.sequence.keys():
+            if element_id.startswith('importfield'):
+                impfld = self.ginp.sequence[element_id]
+                if impfld._name_list_id in self.ginp.attachments.dfl.keys():
                     if impfld.file is not None:
-                        filename = impfld.file
+                        filename = self.filepath(impfld.file)
                     else:
-                        filename = impfld._name_list_id + 'dfl.h5'
+                        filename = self.filepath(impfld._name_list_id + 'dfl.h5')
                         impfld.file = filename
                     write_dfl4(self.ginp.attachments.dfl[impfld._name_list_id], filename)
 
@@ -162,11 +161,22 @@ class Genesis4Simulation:
                         imppar.file = filename
                     # write_dpa4(self.attachments.dpa[imppar._name_list_id], filename)
 
+    def write_beam_files(self):
+        for element_id in self.ginp.sequence.keys():
+            if element_id.startswith('beam'):
+                impbeam = self.ginp.sequence[element_id]
+                if impbeam._name_list_id in self.ginp.attachments.beam.keys():
+                    file_path = self.filepath(impbeam._name_list_id + '.beam.h5')
+                    write_beamtwiss_hdf5(self.ginp.attachments.beam[impbeam._name_list_id], file_path)
+
     def write_all_files(self):
         self.create_exp_dir()
         self.write_inp_file()
-        self.write_lat_file()
+                             
         self.write_dfl_files()
+        self.write_beam_files()
+        self.write_lat_file()
+        
         if self.exec_script_path is not None:
             copy_this_script(self.exec_script_path, self.exp_dir)
         # TODO: write all attachments
@@ -175,7 +185,7 @@ class Genesis4Simulation:
         self.launcher.program = program_path
         self.launcher.dir = self.exp_dir
         self.launcher.argument = ' ' + self.ginp.filename
-        # self.mpiParameters = '-np 8' #TODO: calculate and request minimum reasonable number of cores (to not ovewblow the window) S.S.
+        self.mpiParameters = '-np 8'  # TODO: calculate and request minimum reasonable number of cores (to not ovewblow the window) S.S.
 
         # TODO: implement on Launcher level
         if sys.platform not in ["linux", "linux2"]:
@@ -188,17 +198,17 @@ class Genesis4Simulation:
             self.launcher = launcher
         self.clean_output()
         self.write_all_files()
-        
+
         self.launcher.launch()
-        
+
         if self.return_out:
             out = read_gout4(self.root_path() + '.out.h5')
         else:
             out = None
-        
+
         if self.cleanup_afterwards:
             self.clean_output()
-        
+
         return out
 
     def clean_output(self):
@@ -275,11 +285,42 @@ class Genesis4Input:
                 beam_counter = 0
         # TODO: decide whether error raising is needed if co-exist e.g. importbeam and beam or importfield and field
 
-    def populate_sequence_beam(self, beam, name_list_label):
+    def populate_sequence_beam_array(self, beam_name_list_id, beam=None):
+        _logger.info('Populating beam_array to Genesis4Input.sequence')
+        if beam_name_list_id not in self.attachments.beam.keys():
+            if beam is None:
+                _logger.warning(ind_str + 'no beam_array to populate')
+            else:
+                self.attachments.beam[beam_name_list_id] = beam
+                self.sequence['setup'].gamma0 = np.mean(beam.g)
+                self.sequence['time'].slen = np.amax(beam.s) - np.amin(beam.s)
+        new_sequence = {}
+        for name_list_id, name_list in self.sequence.items():
+            if name_list_id != beam_name_list_id:
+                new_sequence[name_list_id] = name_list
+            else:
+                for attr in self.sequence[beam_name_list_id].__dict__.keys():
+                    if attr.startswith('_'):
+                        continue
+                    profile_name_list_id = 'profile_file#' + attr + '_' + beam_name_list_id
+                    new_sequence[profile_name_list_id] = Genesis4ProfileFileNL()
+                    new_sequence[profile_name_list_id].label = attr + '_' + beam_name_list_id.replace('#', '')
+                    new_sequence[profile_name_list_id].xdata = beam_name_list_id + '.beam.h5/s'
+                    new_sequence[profile_name_list_id].ydata = beam_name_list_id + '.beam.h5/' + attr
+                new_sequence[name_list_id] = name_list
+                for attr in self.sequence[beam_name_list_id].__dict__.keys():
+                    if attr.startswith('_'):
+                        continue
+                    profile_file_label = '@' + attr + '_' + beam_name_list_id.replace('#', '')
+                    setattr(new_sequence[name_list_id], attr, profile_file_label)
+        self.sequence = new_sequence
+
+
+    def populate_sequence_beam(self, beam, name_list_id):
         """
         :param self: Genesis4Input
         :param beam: BeamArray or Beam object
-        :param name_list_label:
+        :param name_list_id:
         :return: None
         """
         if isinstance(beam, BeamArray):
@@ -291,23 +332,24 @@ class Genesis4Input:
         else:
             raise TypeError('beam should be an instance of BeamArray or Beam')
         self.sequence['setup'].gamma0 = beam_pk.g
-        self.sequence[name_list_label].gamma = beam_pk.g  # from [GeV] to [units of the electron rest mass]
-        self.sequence[name_list_label].delgam = beam_pk.dg
-        self.sequence[name_list_label].current = beam_pk.I
-        self.sequence[name_list_label].ex = beam_pk.emit_xn
-        self.sequence[name_list_label].ey = beam_pk.emit_yn
-        self.sequence[name_list_label].betax = beam_pk.beta_x
-        self.sequence[name_list_label].betay = beam_pk.beta_y
-        self.sequence[name_list_label].alphax = beam_pk.alpha_x
-        self.sequence[name_list_label].alphay = beam_pk.alpha_y
-        self.sequence[name_list_label].xcenter = beam_pk.x
-        self.sequence[name_list_label].ycenter = beam_pk.y
-        self.sequence[name_list_label].pxcenter = beam_pk.px
-        self.sequence[name_list_label].pycenter = beam_pk.py
-        self.sequence[name_list_label].bunch = 0
-        self.sequence[name_list_label].bunchphase = 0
-        self.sequence[name_list_label].emod = 0
-        self.sequence[name_list_label].emodphase = 0
+        self.sequence['time'].slen = np.amax(beam.s) - np.amin(beam.s)
+        self.sequence[name_list_id].gamma = beam_pk.g  # from [GeV] to [units of the electron rest mass]
+        self.sequence[name_list_id].delgam = beam_pk.dg
+        self.sequence[name_list_id].current = beam_pk.I
+        self.sequence[name_list_id].ex = beam_pk.emit_xn
+        self.sequence[name_list_id].ey = beam_pk.emit_yn
+        self.sequence[name_list_id].betax = beam_pk.beta_x
+        self.sequence[name_list_id].betay = beam_pk.beta_y
+        self.sequence[name_list_id].alphax = beam_pk.alpha_x
+        self.sequence[name_list_id].alphay = beam_pk.alpha_y
+        self.sequence[name_list_id].xcenter = beam_pk.x
+        self.sequence[name_list_id].ycenter = beam_pk.y
+        self.sequence[name_list_id].pxcenter = beam_pk.px
+        self.sequence[name_list_id].pycenter = beam_pk.py
+        self.sequence[name_list_id].bunch = 0
+        self.sequence[name_list_id].bunchphase = 0
+        self.sequence[name_list_id].emod = 0
+        self.sequence[name_list_id].emodphase = 0
 
     # def add_prefixes(self, prefix_str):
     #     def rsetattr(obj, attr, val):
@@ -337,7 +379,7 @@ class Genesis4Attachments:
     def __init__(self):
         self.dfl = {}  # e.g. {key1: fld1, key2: fld2} where key is "_name_list_id" of Genesis4ImportFieldNL file should be written as <Genesis4ImportFieldNL.file>.fld
         self.dpa = {}  # e.g. {key1: par1, key2: par2} where key is "_name_list_id" of Genesis4ImportBeamNL file should be written as <Genesis4ImportBeamNL.file>.par
-        # self.beam = None
+        self.beam = {}
         self.lat = {}  # e.g. {key1: lat1, key2: lat2}, where key is the value of setup.lattice
 
 
@@ -351,11 +393,11 @@ class Genesis4Attachments:
 
 # %%
 class Genesis4NameList(object):
-    '''
+    """
     Parent object for Genesis 4 namelists
     str(Genesis4NameList) yields the list text
     attributes not starting with underscore "_" are considered Genesis4NameList variables
-    '''
+    """
 
     # def attr_list(self):
     #     output_list = dir(self)
@@ -665,13 +707,13 @@ class Genesis4TrackNL(Genesis4NameList):
 
 
 class Genesis4ParticlesDump:
-    '''
+    """
     Genesis particle *.dpa files storage object
     Each particle record in z starts with the energy of all particles 
     followed by the output of the particle phases, 
     positions in x and y and the momenta in x and y. 
     The momenta are normalized to mc
-    '''
+    """
 
     def __init__(self):
         self.g = []
@@ -693,11 +735,11 @@ class Genesis4ParticlesDump:
 
 
 def gen4_lat_str(lat, line_name='LINE', zstop=np.inf):
-    '''
+    """
     Generates a string of lattice 
     in Genesis4 format
     from an ocelot lattice object
-    '''
+    """
     from ocelot.cpbd.elements import Undulator, Drift, Quadrupole, UnknownElement
     lat_str = []
     beamline = []
@@ -801,7 +843,7 @@ def write_gen4_lat(lattices, filepath, zstop=np.inf):
             raise TypeError("len(lattices) > 1: l should be a dictionary with keys the same as lattices")
         else:
             lat_name = [key for key in lattices.keys()][0]
-            zstop={lat_name:zstop}
+            zstop = {lat_name: zstop}
 
 
     for line_name, lat in zip(lattices.keys(), lattices.values()):
@@ -815,9 +857,9 @@ def write_gen4_lat(lattices, filepath, zstop=np.inf):
 
 
 class Genesis4Output:
-    '''
+    """
     Genesis input files storage object
-    '''
+    """
 
     def __init__(self):
         self.h5 = None  # hdf5 pointer
@@ -926,9 +968,9 @@ class Genesis4Output:
 
 
 def get_genesis4_launcher(launcher_program='genesis4', launcher_argument=''):
-    '''
+    """
     Returns MpiLauncher() object for given program
-    '''
+    """
     host = socket.gethostname()
 
     launcher = MpiLauncher()
@@ -943,11 +985,11 @@ def get_genesis4_launcher(launcher_program='genesis4', launcher_argument=''):
 
 ### USE FOR PILLAGE
 def run_genesis4(inp, launcher, *args, **kwargs):
-    '''
+    """
     Main function for executing Genesis code
     inp               - GenesisInput() object with genesis input parameters
     launcher          - MpiLauncher() object obtained via get_genesis_launcher() function
-    '''
+    """
     # import traceback
     _logger.info('Starting genesis v4 preparation')
     # _logger.warning(len(traceback.extract_stack()))
@@ -1168,13 +1210,13 @@ def run_genesis4(inp, launcher, *args, **kwargs):
 
 
 def read_gout4(filePath):
-    '''
+    """
     Reads Genesis1.3 v4 output file with the link to the hdf5 file as out.h5
     to close the file, use out.h5.close()
     
     :param filePath: string, absolute path to .out file
     :returns: Genesis4Output
-    '''
+    """
 
     _logger.info('reading gen4 .out file')
     _logger.warning(ind_str + 'in beta')
@@ -1226,12 +1268,12 @@ def read_gout4(filePath):
 
 
 def read_dfl4(filePath):
-    '''
+    """
     Reads Genesis1.3 v4 radiation output file
     
     :param filePath: string, absolute path to .fld file
     :returns: RadiationField
-    '''
+    """
     _logger.info('reading gen4 .dfl file')
     _logger.warning(ind_str + 'in beta')
     _logger.debug(ind_str + 'reading from ' + filePath)
@@ -1340,12 +1382,12 @@ def write_dfl4(dfl: RadiationField, file_path='sample.dfl.h5'):
 
 
 def read_dpa4(filePath, start_slice=0, stop_slice=np.inf, estimate_npart=0):
-    '''
+    """
     Reads Genesis1.3 v4 particle output file
     
     :param filePath: string, absolute path to .par file
     :returns: Genesis4ParticlesDump
-    '''
+    """
 
     _logger.info('reading gen4 .dpa file')
     _logger.warning(ind_str + 'in beta')
@@ -1487,14 +1529,14 @@ def read_dpa4(filePath, start_slice=0, stop_slice=np.inf, estimate_npart=0):
 
 
 def dpa42edist(dpa, n_part=None, fill_gaps=False):
-    '''
+    """
     Convert Genesis1.3 v4 particle output file to ocelot edist object
     
     :param dpa: GenesisParticlesDump
     :param n_part: desired approximate number of particles in edist
     :param fill_gaps: dublicates buckets into gaps
     :returns: GenesisElectronDist
-    '''
+    """
 
     _logger.info('converting dpa4 to edist')
     _logger.warning(ind_str + 'in beta')
@@ -1856,14 +1898,26 @@ def write_beamtwiss_hdf5(beam, filepath):
         h5.create_dataset('ycenter', data=beam.y)
         h5.create_dataset('pxcenter', data=beam.px)
         h5.create_dataset('pycenter', data=beam.py)
-        # h5.create_dataset('bunch', data=np.zeros_like(beam.I))
-        # h5.create_dataset('bunchphase', data=np.zeros_like(beam.I))
-        # h5.create_dataset('emod', data=np.zeros_like(beam.I))
-        # h5.create_dataset('emodphase', data=np.zeros_like(beam.I))
+        if hasattr(beam, 'bunch'):
+            h5.create_dataset('bunch', data=beam.bunch)
+        else:
+            h5.create_dataset('bunch', data=np.zeros_like(beam.s))
+        if hasattr(beam, 'bunchphase'):
+            h5.create_dataset('bunchphase', data=beam.bunchphase)
+        else:
+            h5.create_dataset('bunchphase', data=np.zeros_like(beam.s))
+        if hasattr(beam, 'emod'):
+            h5.create_dataset('emod', data=beam.emod)
+        else:
+            h5.create_dataset('emod', data=np.zeros_like(beam.s))
+        if hasattr(beam, 'emodphase'):
+            h5.create_dataset('emodphase', data=beam.emodphase)
+        else:
+            h5.create_dataset('emodphase', data=np.zeros_like(beam.s))
     _logger.debug(ind_str + 'done')
 
 
-def read_beamtwiss_hdf5(beam, filepath):
+def read_beamtwiss_hdf5(filepath):
     _logger.info('reading electron beam (twiss) from {}'.format(filepath))
     beam = BeamArray()
     with h5py.File(filepath, 'r') as h5:

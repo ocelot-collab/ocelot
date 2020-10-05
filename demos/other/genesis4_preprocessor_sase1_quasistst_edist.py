@@ -31,7 +31,7 @@ sase_lat, _, _ = sase_lat_pkg
 # Create input container object
 ginp = Genesis4Input()
 ginp.filename = 'sase1.in'
-ginp.make_sequence(['setup', 'time', 'lattice', 'field', 'beam#imported', 'sponrad', 'track', 'write']) # defines an order of the the namelists
+ginp.make_sequence(['setup', 'time', 'lattice', 'field', 'importdistribution', 'sponrad', 'track', 'write']) # defines an order of the the namelists
 
 # Edit name lists
 ginp.sequence['setup'].rootname = 'sase1'
@@ -74,7 +74,10 @@ ginp.sequence['field'].waist_size = 30e-6
 # ginp.sequence['beam'].bunchphase = 0
 # ginp.sequence['beam'].emod = 0
 # ginp.sequence['beam'].emodphase = 0
-ginp.populate_sequence_beam(beam, 'beam#imported') # fills in all values from the Beam object
+# ginp.populate_sequence_beam(beam, 'beam#imported') # fills in all values from the Beam object
+
+ginp.sequence['importdistribution'].file = 'edist.h5'
+
 
 ginp.sequence['sponrad'].seed = 123123 # for quantum fluctuation
 ginp.sequence['sponrad'].doLoss = 1 # (isravg in gen2)

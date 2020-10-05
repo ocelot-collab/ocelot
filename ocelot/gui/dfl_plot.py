@@ -313,7 +313,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
 
     if phase == True:
         ax_ph = fig.add_subplot(2, 2 + column_3d, 4 + column_3d, sharex=ax_int, sharey=ax_int)
-        ax_ph.pcolormesh(x, y, xy_proj_ph, cmap=cmap_ph)
+        ax_ph.pcolormesh(x, y, xy_proj_ph, cmap=cmap_ph, vmin=-np.pi, vmax=np.pi)
         ax_ph.axis([np.min(x), np.max(x), np.min(y), np.max(y)])
         ax_ph.set_title('Phase', fontsize=15)
     else:
@@ -376,7 +376,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
             rms_y = 0
         try:
             fwhm_y = fwhm3(y_line)[1] * dy  # measure FWHM
-        except ValueError:
+        except:# ValueError:
             fwhm_y = 0
     else:
         y_line_f = np.zeros_like(y_line)
@@ -527,7 +527,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
 
 
 @if_plottable
-def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, None), y_lim=(None, None), downsample=1,
+def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, None), y_lim=(None, None), v_lim=(None, None), downsample=1,
                 autoscale=None, figsize=3, cmap='seismic', fig_name=None, savefig=False, showfig=True,
                 plot_proj=1, plot_text=1, plot_moments=0, plot_cbar=0, log_scale=0, **kwargs):
     """
@@ -587,6 +587,19 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
     spec = W.spectrum()
     wigner = W.wig
     wigner_lim = np.amax(abs(W.wig))
+    
+    if v_lim[0] is None:
+        v_min = -wigner_lim
+    else:
+        v_min = v_lim[0]
+    
+    if v_lim[1] is None:
+        v_max = wigner_lim
+    else:
+        v_max = v_lim[1]
+        
+    v_maxabs = np.amax([np.abs(v_min), np.abs(v_max)])
+    
     if plot_moments:
         inst_freq = W.inst_freq()
         group_delay = W.group_delay()
@@ -638,12 +651,14 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
             log_scale=0.01
         wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample],
                                    wigner[::downsample, ::downsample], cmap=cmap,  
-                                   norm=colors.SymLogNorm(linthresh=wigner_lim * log_scale, linscale=2,
-                                              vmin=-wigner_lim, vmax=wigner_lim),
-                                   vmax=wigner_lim, vmin=-wigner_lim)
+                                   norm=colors.SymLogNorm(linthresh=v_maxabs * log_scale, linscale=2,
+                                              vmin=v_min, vmax=v_max),
+                                   vmax=v_max, vmin=v_min)
     else:
+        #wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample],
+        #                          wigner[::downsample, ::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
         wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample],
-                                   wigner[::downsample, ::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
+                                   wigner[::downsample, ::downsample], cmap=cmap, vmax=v_max, vmin=v_min)
     
     if plot_cbar:
         from mpl_toolkits.axes_grid1.inset_locator import inset_axes
@@ -698,8 +713,8 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
         y_lim_appl.sort()
 
     else:
-        x_lim_appl = (np.amin(power_scale), np.amax(power_scale))
-        y_lim_appl = (np.amin(spec_scale), np.amax(spec_scale))
+        x_lim_appl = np.array((np.amin(power_scale), np.amax(power_scale)))
+        y_lim_appl = np.array((np.amin(spec_scale), np.amax(spec_scale)))
 
     if x_units == 'fs':
         x_lim_appl = np.flipud(x_lim_appl)
@@ -718,14 +733,15 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
         if plot_text:
             axHistx.text(0.02, 0.95, r'E= {:.2e} J'.format(W.energy()), horizontalalignment='left',
                          verticalalignment='top', transform=axHistx.transAxes)  # fontsize=12,
-        axHistx.set_ylabel('Power [W]')
+        # axHistx.set_ylabel('Power [W]')
+        axHistx.set_ylabel('Power\n[arb. units]')
 
         if spec.max() <= 0:
             axHisty.plot(spec, spec_scale)
         else:
             axHisty.plot(spec / spec.max(), spec_scale)
 
-        axHisty.set_xlabel('Spectrum [a.u.]')
+        axHisty.set_xlabel('Spectrum\n[arb. units]')
 
         axScatter.axis('tight')
         axScatter.set_xlabel(p_label_txt)
@@ -746,6 +762,9 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
         axHistx.set_xlim(x_lim_appl[0], x_lim_appl[1])
         axHisty.set_ylim(y_lim_appl[0], y_lim_appl[1])
         
+        _logger.debug(ind_str + 'x_lim = {} - {}'.format(x_lim_appl[0], x_lim_appl[1]))
+        _logger.debug(ind_str + 'y_lim = {} - {}'.format(y_lim_appl[0], y_lim_appl[1]))
+        
         if log_scale != 0:
             axHistx.set_ylim(np.nanmin(power), np.nanmax(power))
             axHisty.set_xlim(np.nanmin(spec), np.nanmax(spec))
@@ -756,6 +775,12 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
         axScatter.axis('tight')
         axScatter.set_xlabel(p_label_txt)
         axScatter.set_ylabel(f_label_txt)
+        
+        axScatter.set_xlim(x_lim_appl[0], x_lim_appl[1])
+        axScatter.set_ylim(y_lim_appl[0], y_lim_appl[1])
+        
+        _logger.debug(ind_str + 'x_lim = {} - {}'.format(x_lim_appl[0], x_lim_appl[1]))
+        _logger.debug(ind_str + 'y_lim = {} - {}'.format(y_lim_appl[0], y_lim_appl[1]))
 
     # axScatter.set_xlim(x_lim[0], x_lim[1])
     # axScatter.set_ylim(y_lim[0], y_lim[1])

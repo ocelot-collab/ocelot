@@ -116,19 +116,8 @@ class MagneticLattice:
         self.sequence = list(flatten(sequence))
         self.method = method
 
-        try:
-            if start is not None:
-                id1 = self.sequence.index(start)
-            else:
-                id1 = 0
-            if stop is not None:
-                id2 = self.sequence.index(stop) + 1
-                self.sequence = self.sequence[id1:id2]
-            else:
-                self.sequence = self.sequence[id1:]
-        except:
-            print('cannot construct sequence, element not found')
-            raise
+
+        self.sequence = self.get_sequence_part(start, stop)
 
         # create transfer map and calculate lattice length
         self.totalLen = 0
@@ -143,6 +132,22 @@ class MagneticLattice:
         self.__hash__ = {}
         for e in self.sequence:
             self.__hash__[e] = e
+
+    def get_sequence_part(self, start, stop):
+        try:
+            if start is not None:
+                id1 = self.sequence.index(start)
+            else:
+                id1 = 0
+            if stop is not None:
+                id2 = self.sequence.index(stop) + 1
+                sequence = self.sequence[id1:id2]
+            else:
+                sequence = self.sequence[id1:]
+        except:
+            print('cannot construct sequence, element not found')
+            raise
+        return sequence
 
     def __getitem__(self, el):
         try:

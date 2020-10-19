@@ -8,6 +8,7 @@ from ocelot.cpbd.magnetic_lattice import *
 from ocelot.cpbd.elements import *
 from ocelot.cpbd.io import *
 from numpy import sin
+import re
 
 class StructureConverter:
     
@@ -22,6 +23,7 @@ class StructureConverter:
         self.longlist_matrix['MAGNET'] = {}
         self.longlist_matrix['MAGNET']['SBEN'] = {'type': SBend, 'strength': 'angle', 'e1_lag': 'e1', 'e2_freq': 'e2'}
         self.longlist_matrix['MAGNET']['RBEN'] = {'type': RBend, 'strength': 'angle'}
+
         self.longlist_matrix['MAGNET']['QUAD'] = {'type': Quadrupole, 'strength': ['k1', '1./length']}
         self.longlist_matrix['MAGNET']['SEXT'] = {'type': Sextupole, 'strength': ['k2', '1./length']}
         self.longlist_matrix['MAGNET']['OCTU'] = {'type': Octupole, 'strength': ['k3', '1./length']}
@@ -30,11 +32,10 @@ class StructureConverter:
         if "VKIC" in self.types:
             self.longlist_matrix['MAGNET']['VKIC'] = {'type': Vcor, 'strength': 'angle'}
         self.longlist_matrix['MAGNET']['SOLE'] = {'type': Solenoid, 'strength': 'k'}
-
-        #self.longlist_matrix['FASTKICK'] = {}
+        self.longlist_matrix['FASTKICK'] = {}
         #self.longlist_matrix['FASTKICK']['HKIC'] = {'type': Hcor, 'strength': 'angle'}
         #self.longlist_matrix['FASTKICK']['VKIC'] = {'type': Vcor, 'strength': 'angle'}
-        #self.longlist_matrix['FASTKICK']['RBEN'] = {'type': RBend, 'strength': 'angle'}
+        self.longlist_matrix['FASTKICK']['RBEN'] = {'type': RBend, 'strength': 'angle'}
         
         #self.longlist_matrix['PMAGNET'] = {}
         #self.longlist_matrix['PMAGNET']['RBEN'] = {'type': RBend, 'strength': 'angle'}
@@ -44,7 +45,7 @@ class StructureConverter:
         #self.longlist_matrix['MOVER']['VKIC'] = {'type': Vcor, 'strength': 'angle'}
 
         self.longlist_matrix['CAVITY'] = {}
-        self.longlist_matrix['CAVITY']['LCAV'] = {'type': Cavity, 'strength': ['v', '1.e-3'], 'e1_lag': ['phi', '360.0'], 'e2_freq': ['f', '1000000']}
+        self.longlist_matrix['CAVITY']['LCAV'] = {'type': Cavity, 'strength': ['v', '1.e-3'], 'e1_lag': ['phi', '360.0'], 'e2_freq': ['freq', '1000000']}
 
         self.longlist_matrix['DIAG'] = {}
         if "MONI" in self.types:
@@ -67,6 +68,7 @@ class StructureConverter:
         ps_id_pos =    1+3
         group_pos =    1+4
         class_pos =    1+5
+        type_pos =     1+6 # for undulator
         length_pos =   1+7
         strength_pos = 1+8
         e1_lag_pos =   1+9
@@ -86,11 +88,31 @@ class StructureConverter:
             element.ps_id = row[ps_id_pos]
 
             length = row[length_pos]
+            if element.__class__ is Undulator:
+                if length != 0:
+
+                    type_str  = row[type_pos]
+                    # extract from string only numbers
+                    numbers = re.findall(r'\d+',type_str)
+                    lperiod = float(numbers[0]) * 1e-3 # mm in m
+                    nperiods = length / lperiod
+                    element.nperiods = nperiods
+                    element.lperiod = lperiod
+                    print(element, lperiod, nperiods)
+            if element.__class__ in [Hcor, Vcor]:
+                if row[type_pos] in ["CAX", "CAY", "CBX", "CBY"]:
+                    # vertical and horizontal aircoils have the same position and non zero length
+                    length = 0
+                elif row[type_pos] == "CUX":
+                    # ignore compensation coil
+                    return None, 0.0
             if row[length_pos] != 0.0:
                 element.l = length
             
             for key in class_elem.keys():
+
                 if key != 'type':
+                    #print(key, class_elem[key])
                     pos = eval(key + '_pos')
                     if class_elem[key].__class__ == list:
                         element.__dict__[class_elem[key][0]] = row[pos] * eval(class_elem[key][1])

@@ -481,7 +481,7 @@ C3_AH1_1_7_I1 = Cavity(l=0.346, v=0.0024999884, freq=3.9e9, phi=180.0, eid='C3.A
 C3_AH1_1_8_I1 = Cavity(l=0.346, v=0.0024999884, freq=3.9e9, phi=180.0, eid='C3.AH1.1.8.I1')
 
 
-TDSA_52_I1 = Cavity(l=0.7, v=0.0, freq=0.0, phi=0.0, eid='TDSA.52.I1')
+TDSA_52_I1 = TDCavity(l=0.7, v=0.0, freq=0.0, phi=0.0, eid='TDSA.52.I1')
 
 # Matrices 
 

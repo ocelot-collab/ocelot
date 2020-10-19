@@ -4,7 +4,6 @@ import logging
 from ocelot.common.globals import m_e_GeV, speed_of_light
 from ocelot.cpbd.elements import *
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -12,11 +11,11 @@ def rot_mtx(angle):
     cs = np.cos(angle)
     sn = np.sin(angle)
     return np.array([[cs, 0., sn, 0., 0., 0.],
-                    [0.,  cs, 0., sn, 0., 0.],
-                    [-sn, 0., cs, 0., 0., 0.],
-                    [0., -sn, 0., cs, 0., 0.],
-                    [0.,  0., 0., 0., 1., 0.],
-                    [0.,  0., 0., 0., 0., 1.]])
+                     [0., cs, 0., sn, 0., 0.],
+                     [-sn, 0., cs, 0., 0., 0.],
+                     [0., -sn, 0., cs, 0., 0.],
+                     [0., 0., 0., 0., 1., 0.],
+                     [0., 0., 0., 0., 0., 1.]])
 
 
 def uni_matrix(z, k1, hx, sum_tilts=0., energy=0.):
@@ -33,47 +32,46 @@ def uni_matrix(z, k1, hx, sum_tilts=0., energy=0.):
     :return: R-matrix [6, 6]
     """
 
-    gamma = energy/m_e_GeV
+    gamma = energy / m_e_GeV
 
-    kx2 = (k1 + hx*hx)
+    kx2 = (k1 + hx * hx)
     ky2 = -k1
     kx = np.sqrt(kx2 + 0.j)
     ky = np.sqrt(ky2 + 0.j)
-    cx = np.cos(z*kx).real
-    cy = np.cos(z*ky).real
-    sy = (np.sin(ky*z)/ky).real if ky != 0 else z
+    cx = np.cos(z * kx).real
+    cy = np.cos(z * ky).real
+    sy = (np.sin(ky * z) / ky).real if ky != 0 else z
 
     igamma2 = 0.
 
     if gamma != 0:
-        igamma2 = 1./(gamma*gamma)
+        igamma2 = 1. / (gamma * gamma)
 
     beta = np.sqrt(1. - igamma2)
 
     if kx != 0:
-        sx = (np.sin(kx*z)/kx).real
-        dx = hx/kx2*(1. - cx)
-        r56 = hx*hx*(z - sx)/kx2/beta**2
+        sx = (np.sin(kx * z) / kx).real
+        dx = hx / kx2 * (1. - cx)
+        r56 = hx * hx * (z - sx) / kx2 / beta ** 2
     else:
         sx = z
-        dx = z*z*hx/2.
-        r56 = hx*hx*z**3/6./beta**2
+        dx = z * z * hx / 2.
+        r56 = hx * hx * z ** 3 / 6. / beta ** 2
 
-    r56 -= z/(beta*beta)*igamma2
+    r56 -= z / (beta * beta) * igamma2
 
-    u_matrix = np.array([[cx, sx, 0., 0., 0., dx/beta],
-                        [-kx2*sx, cx, 0., 0., 0., sx*hx/beta],
-                        [0., 0., cy, sy, 0., 0.],
-                        [0., 0., -ky2*sy, cy, 0., 0.],
-                        [hx*sx/beta, dx/beta, 0., 0., 1., r56],
-                        [0., 0., 0., 0., 0., 1.]])
+    u_matrix = np.array([[cx, sx, 0., 0., 0., dx / beta],
+                         [-kx2 * sx, cx, 0., 0., 0., sx * hx / beta],
+                         [0., 0., cy, sy, 0., 0.],
+                         [0., 0., -ky2 * sy, cy, 0., 0.],
+                         [hx * sx / beta, dx / beta, 0., 0., 1., r56],
+                         [0., 0., 0., 0., 0., 1.]])
     if sum_tilts != 0:
         u_matrix = np.dot(np.dot(rot_mtx(-sum_tilts), u_matrix), rot_mtx(sum_tilts))
     return u_matrix
 
 
 def create_r_matrix(element):
-
     k1 = element.k1
     if element.l == 0:
         hx = 0.
@@ -85,7 +83,7 @@ def create_r_matrix(element):
     if element.__class__ == Edge:
         sec_e = 1. / np.cos(element.edge)
         phi = element.fint * element.h * element.gap * sec_e * (1. + np.sin(element.edge) ** 2)
-        #phi = element.fint * element.h * element.gap * sec_e * (1. + np.sin(2*element.edge) )
+        # phi = element.fint * element.h * element.gap * sec_e * (1. + np.sin(2*element.edge) )
         r = np.eye(6)
         r[1, 0] = element.h * np.tan(element.edge)
         r[3, 2] = -element.h * np.tan(element.edge - phi)
@@ -100,6 +98,7 @@ def create_r_matrix(element):
         R56 = - Lu/(gamma**2 * beta**2) * (1 + 0.5 * K**2 * beta**2)
         S.Tomin, Varenna, 2017.
         """
+
         def undulator_r_z(z, lperiod, Kx, Ky, energy):
             gamma = energy / m_e_GeV
             r = np.eye(6)
@@ -129,10 +128,11 @@ def create_r_matrix(element):
             """
             :param z: length
             :param de: delta E
-            :param f: frequency
+            :param freq: frequency
             :param E: initial energy
             :return: matrix
             """
+
             phi = phi * np.pi / 180.
             de = V * np.cos(phi)
             # pure pi-standing-wave case
@@ -147,6 +147,7 @@ def create_r_matrix(element):
             cos_phi = np.cos(phi)
             alpha = np.sqrt(eta / 8.) / cos_phi * np.log(Ef / Ei)
             sin_alpha = np.sin(alpha)
+
             cos_alpha = np.cos(alpha)
             r11 = (cos_alpha - np.sqrt(2. / eta) * cos_phi * sin_alpha)
 
@@ -157,6 +158,7 @@ def create_r_matrix(element):
             r21 = -Ep / Ef * (cos_phi / np.sqrt(2. * eta) + np.sqrt(eta / 8.) / cos_phi) * sin_alpha
 
             r22 = Ei / Ef * (cos_alpha + np.sqrt(2. / eta) * cos_phi * sin_alpha)
+            # print(f"z = {z}, V = {V}, E = {E}, phi = {phi}, alpha = {alpha}, r11 = {r11}")
 
             r56 = 0.
             beta0 = 1
@@ -170,59 +172,58 @@ def create_r_matrix(element):
                 gamma2 = Ef * Ef
                 beta1 = np.sqrt(1. - 1 / gamma2)
 
-                #r56 = (beta0 / beta1 - 1) * Ei / (Ef - Ei) * z
-                r56 = - z/(Ef * Ef * Ei * beta1) * (Ef + Ei)/(beta1 + beta0)
+                # r56 = (beta0 / beta1 - 1) * Ei / (Ef - Ei) * z
+                r56 = - z / (Ef * Ef * Ei * beta1) * (Ef + Ei) / (beta1 + beta0)
                 g0 = Ei
                 g1 = Ef
                 r55_cor = k * z * beta0 * V / m_e_GeV * np.sin(phi) * (g0 * g1 * (beta0 * beta1 - 1) + 1) / (
-                            beta1 * g1 * (g0 - g1) ** 2)
+                        beta1 * g1 * (g0 - g1) ** 2)
 
-
-            r66 = Ei/Ef*beta0/beta1
-            r65 = k*np.sin(phi)*V/(Ef*beta1*m_e_GeV)
+            r66 = Ei / Ef * beta0 / beta1
+            r65 = k * np.sin(phi) * V / (Ef * beta1 * m_e_GeV)
             cav_matrix = np.array([[r11, r12, 0., 0., 0., 0.],
-                                [r21, r22, 0., 0., 0., 0.],
-                                [0., 0., r11, r12, 0., 0.],
-                                [0., 0., r21, r22, 0., 0.],
-                                [0., 0., 0., 0., 1. + r55_cor, r56],
-                                [0., 0., 0., 0., r65, r66]]).real
-            if element.coupler_kick:
-                #element.vxx_up = 1.0003 - 0.8132j
-                #element.vxy_up = (3.4075 - 0.41223j)
-                m21 = (element.vxx_up * V * np.exp(1j*phi)).real*1e-3 /E
-                m43 = - m21
-                m23 = (element.vxy_up* V * np.exp(1j*phi)).real*1e-3 /E
+                                   [r21, r22, 0., 0., 0., 0.],
+                                   [0., 0., r11, r12, 0., 0.],
+                                   [0., 0., r21, r22, 0., 0.],
+                                   [0., 0., 0., 0., 1. + r55_cor, r56],
+                                   [0., 0., 0., 0., r65, r66]]).real
 
-                coupl_kick_up = np.array([[1, 0., 0., 0., 0., 0.],
-                                      [m21, 1, m23, 0., 0., 0.],
-                                      [0., 0., 1, 0., 0., 0.],
-                                      [m23, 0., m43, 1, 0., 0.],
-                                      [0., 0., 0., 0., 1., 0.],
-                                      [0., 0., 0., 0., 0., 1]]).real
-
-                #vxx = ((-4.9278 - 2.2112j) * V * np.exp(1j*phi)).real*1e-3 /(E + de)
-                #vyy = - vxx
-                #vxy = ((2.9224 - 0.027228j) * V * np.exp(1j*phi)).real *1e-3 /(E + de)
-
-                #element.vxx_down = (-4.9278 - 2.2112j)
-                #element.vxy_down = (2.9224 - 0.027228j)
-                m21 = (element.vxx_down * V * np.exp(1j*phi)).real*1e-3 /(E + de)
-                m43 = - m21
-                m23 = (element.vxy_down* V * np.exp(1j*phi)).real*1e-3 /(E + de)
-                coupl_kick_down = np.array([[1, 0., 0., 0., 0., 0.],
-                                      [m21, 1, m23, 0., 0., 0.],
-                                      [0., 0., 1, 0., 0., 0.],
-                                      [m23, 0., m43, 1, 0., 0.],
-                                      [0., 0., 0., 0., 1., 0.],
-                                      [0., 0., 0., 0., 0., 1]]).real
-                return np.dot(np.dot(coupl_kick_down, cav_matrix), coupl_kick_up)
             return cav_matrix
 
         if element.v == 0.:
             r_z_e = lambda z, energy: uni_matrix(z, 0., hx=0., sum_tilts=element.dtilt + element.tilt, energy=energy)
         else:
             r_z_e = lambda z, energy: cavity_R_z(z, V=element.v * z / element.l, E=energy, freq=element.freq,
-                                               phi=element.phi)
+                                                 phi=element.phi)
+
+    elif element.__class__ == CouplerKick:
+
+        def ck_matrix(v, phi, vxx, vxy, energy):
+            """
+            matrix for coupler kick
+
+            :param v: voltage of the cavity in GV
+            :param phi: phase [deg] of the cavity
+            :param vxx: first order coefficients of the coupler kicks
+            :param vxy: first order coefficients of the coupler kicks
+            :param energy: beam energy in GeV
+            :return:
+            """
+            phi = phi * np.pi / 180.
+            m21 = (vxx * v * np.exp(1j * phi)).real / energy
+            m43 = - m21
+            m23 = (vxy * v * np.exp(1j * phi)).real / energy
+
+            coupl_kick = np.array([[1, 0., 0., 0., 0., 0.],
+                                    [m21, 1, m23, 0., 0., 0.],
+                                    [0., 0., 1, 0., 0., 0.],
+                                    [m23, 0., m43, 1, 0., 0.],
+                                    [0., 0., 0., 0., 1., 0.],
+                                    [0., 0., 0., 0., 0., 1]])
+            return coupl_kick
+
+        r_z_e = lambda z, energy: ck_matrix(v=element.v, phi=element.phi,
+                                            vxx=element.vxx, vxy=element.vxy, energy=energy)
 
     elif element.__class__ == TWCavity:
 
@@ -256,7 +257,7 @@ def create_r_matrix(element):
             r[3, 2] = r[1, 0]
             return r
 
-        def f_exit( z, V, E, phi=0.):
+        def f_exit(z, V, E, phi=0.):
             phi = phi * np.pi / 180.
             de = V * np.cos(phi)
             r = np.eye(6)
@@ -273,7 +274,7 @@ def create_r_matrix(element):
             r_z_e = lambda z, energy: uni_matrix(z, 0., hx=0., sum_tilts=element.dtilt + element.tilt, energy=energy)
         else:
             r_z_e = lambda z, energy: cav(z, V=element.v * z / element.l, E=energy, freq=element.freq,
-                                               phi=element.phi)
+                                          phi=element.phi)
 
     elif element.__class__ == Solenoid:
         def sol(l, k, energy):
@@ -292,15 +293,15 @@ def create_r_matrix(element):
                 s_k = s / k
             r56 = 0.
             if gamma != 0:
-                gamma2 = gamma*gamma
-                beta = np.sqrt(1. - 1./gamma2)
-                r56 -= l/(beta*beta*gamma2)
+                gamma2 = gamma * gamma
+                beta = np.sqrt(1. - 1. / gamma2)
+                r56 -= l / (beta * beta * gamma2)
             sol_matrix = np.array([[c * c, c * s_k, s * c, s * s_k, 0., 0.],
-                                [-k * s * c, c * c, -k * s * s, s * c, 0., 0.],
-                                [-s * c, -s * s_k, c * c, c * s_k, 0., 0.],
-                                [k * s * s, -s * c, -k * s * c, c * c, 0., 0.],
-                                [0., 0., 0., 0., 1., r56],
-                                [0., 0., 0., 0., 0., 1.]]).real
+                                   [-k * s * c, c * c, -k * s * s, s * c, 0., 0.],
+                                   [-s * c, -s * s_k, c * c, c * s_k, 0., 0.],
+                                   [k * s * s, -s * c, -k * s * c, c * c, 0., 0.],
+                                   [0., 0., 0., 0., 1., r56],
+                                   [0., 0., 0., 0., 0., 1.]]).real
             return sol_matrix
 
         r_z_e = lambda z, energy: sol(z, k=element.k, energy=energy)
@@ -309,6 +310,7 @@ def create_r_matrix(element):
         """
         R - matrix for TDS - NOT TESTED
         """
+
         def tds_R_z(z, energy, freq, v, phi):
             """
 
@@ -323,16 +325,16 @@ def create_r_matrix(element):
 
             gamma = energy / m_e_GeV
             igamma2 = 0.
-            k0 = 2*np.pi*freq/speed_of_light
+            k0 = 2 * np.pi * freq / speed_of_light
             if gamma != 0:
                 igamma2 = 1. / (gamma * gamma)
             if gamma > 1:
-                pref = m_e_GeV * np.sqrt(gamma**2 - 1)
+                pref = m_e_GeV * np.sqrt(gamma ** 2 - 1)
                 K = v * k0 / pref
             else:
                 K = 0.
             cos_phi = np.cos(phi)
-            cos2_phi = np.cos(2*phi)
+            cos2_phi = np.cos(2 * phi)
 
             rm = np.eye(6)
 
@@ -343,8 +345,9 @@ def create_r_matrix(element):
             rm[4, 5] = - z * igamma2 / (1. - igamma2)
             rm[5, 0] = rm[1, 4]
             rm[5, 1] = rm[0, 4]
-            rm[5, 4] = -z* K ** 2 * cos2_phi / 6
+            rm[5, 4] = -z * K ** 2 * cos2_phi / 6
             return rm
+
         r_z_e = lambda z, energy: tds_R_z(z, energy, freq=element.freq, v=element.v * z / element.l, phi=element.phi)
 
     elif element.__class__ == Matrix:
@@ -377,14 +380,13 @@ def create_r_matrix(element):
             hx = k1 * element.x_offs
             hy = -k1 * element.y_offs
 
-
         def r_mtx(z, k1, hx, hy, sum_tilts=0., energy=0.):
             # r = element.l/element.angle
             #  +K - focusing lens , -K - defoc
             gamma = energy / m_e_GeV
 
             kx2 = (k1 + hx * hx)
-            ky2 = hy*hy - k1
+            ky2 = hy * hy - k1
             kx = np.sqrt(kx2 + 0.j)
             ky = np.sqrt(ky2 + 0.j)
             cx = np.cos(z * kx).real
@@ -414,7 +416,7 @@ def create_r_matrix(element):
             u_matrix = np.array([[cx, sx, 0., 0., 0., dx / beta],
                                  [-kx2 * sx, cx, 0., 0., 0., sx * hx / beta],
                                  [0., 0., cy, sy, 0., dy / beta],
-                                 [0., 0., -ky2 * sy, cy, 0.,sy * hy / beta],
+                                 [0., 0., -ky2 * sy, cy, 0., sy * hy / beta],
                                  [hx * sx / beta, dx / beta, hy * sy / beta, dy / beta, 1., r56],
                                  [0., 0., 0., 0., 0., 1.]])
             if sum_tilts != 0:

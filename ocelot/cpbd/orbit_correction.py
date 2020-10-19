@@ -7,7 +7,7 @@ from scipy.optimize import linprog
 from ocelot.cpbd.match import closed_orbit
 from ocelot.cpbd.track import *
 from ocelot.cpbd.response_matrix import *
-from scipy.linalg import block_diag
+from scipy.linalg import block_diag, lstsq
 import copy
 import json
 from time import sleep, time
@@ -45,6 +45,9 @@ class OrbitSVD:
         Sinv = np.transpose(Sinv)
         A = np.dot(np.transpose(V), np.dot(Sinv, np.transpose(U)))
         angle = np.dot(A, misallign)
+        #a, b, _, _ = np.linalg.lstsq(resp_matrix, misallign, rcond=self.epsilon_x)
+        #print(np.shape(a), np.shape(angle))
+        #print(f"angle = {angle}, a = {a}")
         logger.debug("max(abs(angle)) = " + str(np.max(np.abs(angle))) + " min(abs(angle)) = " + str(np.min(np.abs(angle))))
         return angle
 
@@ -79,6 +82,27 @@ class MICADO(OrbitSVD):
         m[:, col1] = c2[:]
         m[:, col2] = c1[:]
 
+    def solver_svd(self, resp_matrix, orbit, weights):
+        svd_method = OrbitSVD(self.epsilon_x, self.epsilon_y)
+        angles = svd_method.apply(resp_matrix, orbit, weights)
+        return angles
+
+    def solver_lstsq(self, resp_matrix, orbit, weights):
+        if weights is not None:
+            # weights = np.eye(len(orbit))
+            resp_matrix = np.dot(weights, resp_matrix)
+            orbit = np.copy(np.dot(weights, orbit))
+            
+        #misallign = np.dot(weights, orbit)
+        if np.shape(resp_matrix)[1] == 1:
+            A = np.dot(resp_matrix.T, resp_matrix)
+            Ainv = 1./A if A[0, 0] != 0 else A
+            a = np.dot(np.dot(Ainv, resp_matrix.T), orbit)
+        else:
+            a, _, _, _ = np.linalg.lstsq(resp_matrix, orbit, rcond=self.epsilon_x)
+            #a, _, _, _ = lstsq(resp_matrix, misallign, cond=self.epsilon_x, lapack_driver="gelsy")
+        return a
+
     def apply(self, resp_matrix, orbit, weights=None):
         weights = None
         bpm_num = np.shape(resp_matrix)[0]
@@ -88,17 +112,22 @@ class MICADO(OrbitSVD):
         angles_part = []
         resp_matrix_part = np.empty((bpm_num, 0))
         resp_vector = np.empty((bpm_num, 0))
+        start = time()
         for n in range(np.shape(resp_matrix)[1]):
+
             resp_matrix_part = np.hstack((resp_matrix_part, resp_vector))
             residual = []
             for i in range(n, np.shape(resp_matrix)[1]):
                 resp_vector = resp_matrix[:, i].reshape(bpm_num, -1)
                 resp_matrix_tmp = np.hstack((resp_matrix_part, resp_vector))
-                svd_method = OrbitSVD(self.epsilon_x, self.epsilon_y)
-                angles_part = svd_method.apply(resp_matrix_tmp, orbit, weights,)
+
+                #angles_part = self.solver_svd(resp_matrix_tmp, orbit, weights)
+                angles_part = self.solver_lstsq(resp_matrix_tmp, orbit, weights)
+
                 new_orbit = np.dot(resp_matrix_tmp, angles_part)
                 res = np.sqrt(np.sum((new_orbit - orbit)**2))
                 residual.append(res)
+
             index = np.argmin(residual) + n
             self.orb_residual.append(min(residual))
 
@@ -110,7 +139,7 @@ class MICADO(OrbitSVD):
                 logger.info(" MICADO: number of correctors " + str(n))
                 angle[:len(angles_part)] = angles_part[:]
                 break
-
+        print( time() - start, " sec")
         return angle[np.argsort(mask)]
 
 

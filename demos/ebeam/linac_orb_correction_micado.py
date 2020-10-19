@@ -33,7 +33,7 @@ tws = twiss(lat, tws0=dl.tws0)
 
 orb = Orbit(lat)
 orb.orbit_solver = MICADO(epsilon_x=0.001, epsilon_y=0.001, epsilon_ksi=1e-5)
-#orb.orbit_solver = OrbitSVD(epsilon_x=0.001, epsilon_y=0.001)
+# orb.orbit_solver = OrbitSVD(epsilon_x=0.001, epsilon_y=0.001)
 
 method = LinacRmatrixRM(lattice=orb.lat, hcors=orb.hcors, vcors=orb.vcors, bpms=orb.bpms)
 #drm_method = LinacDisperseSimRM
@@ -58,11 +58,16 @@ plt.show()
 
 orb.correction(beta=0)
 
-vcors_angle = [cor.angle for cor in orb.vcors]
-hcors_angle = [cor.angle for cor in orb.hcors]
-print(vcors_angle, hcors_angle)
+vcors_angle = np.array([cor.angle for cor in orb.vcors])
+hcors_angle = np.array([cor.angle for cor in orb.hcors])
 
 x_bpm, y_bpm = method.read_virtual_orbit(p_init=Particle())
+print(f"{orb.orbit_solver.__class__.__name__} method: ||HVcor|| = {np.sqrt(np.sum(hcors_angle * hcors_angle) + np.sum(vcors_angle * vcors_angle))}")
+print(f"{orb.orbit_solver.__class__.__name__} method: ||XY_bpm|| = {np.sqrt(np.sum(x_bpm * x_bpm) + np.sum(y_bpm * y_bpm))}")
+
+print(f"OrbitSVD method: ||HVcor|| = {0.000206}")
+print(f"OrbitSVD method: ||XY_bpm|| = {0.0004769}")
+
 
 p_list = lattice_track(lat, method.particle0)
 s = [p.s for p in p_list]

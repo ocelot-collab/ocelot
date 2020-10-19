@@ -58,7 +58,7 @@ def load_particle_array(filename, print_params=False):
     return parray
 
 
-def save_particle_array(filename, p_array, ref_index=0):
+def save_particle_array(filename, p_array):
     """
     Universal function to save beam file, *.ast (ASTRA), *.fmt1 (CSRTrack) or *.npz format
 
@@ -67,14 +67,13 @@ def save_particle_array(filename, p_array, ref_index=0):
     the first particle is used as a reference.
 
     :param filename: path to file, filename.ast or filename.npz
-    :param ref_index: index of ref particle
     :return: ParticleArray
     """
     name, file_extension = os.path.splitext(filename)
     if file_extension == ".npz":
         save_particle_array2npz(filename, p_array)
     elif file_extension == ".ast":
-        particleArray2astraBeam(p_array, filename, ref_index)
+        particleArray2astraBeam(p_array, filename)
     elif file_extension == ".fmt1":
         particleArray2csrtrackBeam(p_array, filename)
     else:
@@ -173,7 +172,7 @@ def get_elements(lattice):
     for element in lattice.sequence:
         element_type = element.__class__.__name__
         
-        if element_type == 'Edge':
+        if element_type in ('Edge', "CouplerKick"):
             continue
 
         if element not in elements:
@@ -238,7 +237,7 @@ def element_def_string(element):
                 params.append(param + '=' + np.array2string(element.__dict__[param], separator=', '))
             continue
 
-        if isinstance(element.__dict__[param], (int, float)):
+        if isinstance(element.__dict__[param], (int, float, complex)):
 
             # fix for parameters 'e1' and 'e2' in RBend element
             if element_type == 'RBend' and param in ('e1', 'e2'):
@@ -371,7 +370,7 @@ def cell2input(lattice, split=False):
     lines = []
     names = []
     for elem in lattice.sequence:
-        if elem.__class__ != Edge:
+        if elem.__class__ not in (Edge, CouplerKick):
             names.append(elem.name)
 
     new_names = []

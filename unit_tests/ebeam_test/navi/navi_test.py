@@ -19,6 +19,60 @@ def test_generate_parray(lattice, p_array, parameter=None, update_ref_values=Fal
     assert check_result(result)
 
 
+def test_navi_wo_procs(lattice, p_array, parameter=None, update_ref_values=False):
+    """
+    test kick physProc with the same thick element
+    """
+
+    p_array_track = copy.deepcopy(p_array)
+    lat = MagneticLattice(lattice.sequence)
+
+    navi = Navigator(lat)
+
+    tws_track_wo, p_array_wo = track(lat, p_array_track, navi, calc_tws=False)
+    tws_track = obj2dict(tws_track_wo)
+    p = obj2dict(p_array_wo)
+
+    if update_ref_values:
+        return {'tws_track': tws_track, 'p_array': p}
+
+    tws_track_p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
+
+    result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
+    result2 = check_dict(p, tws_track_p_array_ref['p_array'], TOL, assert_info=' p - ')
+
+    assert check_result(result1 + result2)
+
+
+def test_navi_wo_procs_reset_pos(lattice, p_array, parameter=None, update_ref_values=False):
+    """
+    test kick physProc with the same thick element
+    """
+
+    p_array_track = copy.deepcopy(p_array)
+    lat = MagneticLattice(lattice.sequence)
+
+    navi = Navigator(lat)
+
+    tws_1, p_array_1 = track(lat, p_array_track, navi, calc_tws=False)
+
+    tws_o_1 = obj2dict(tws_1)
+    p_o_1 = obj2dict(p_array_1)
+
+    navi.reset_position()
+    p_array_track_2 = copy.deepcopy(p_array)
+
+    tws_2, p_array_2 = track(lat, p_array_track_2, navi, calc_tws=False)
+
+    tws_o_2 = obj2dict(tws_2)
+    p_o_2 = obj2dict(p_array_2)
+
+    result1 = check_dict(tws_o_1, tws_o_2, TOL, assert_info=' tws_track - ')
+    result2 = check_dict(p_o_1, p_o_2, TOL, assert_info=' p - ')
+
+    assert check_result(result1 + result2)
+
+
 def test_kick_marker(lattice, p_array, parameter=None, update_ref_values=False):
     """
     testing applying one marker as start ans stop
@@ -401,6 +455,39 @@ def test_kick_with_one_elem(lattice, p_array, parameter=None, update_ref_values=
     assert check_result([result0] + result1 + result2 + result3 + result4 + result5)
 
 
+def test_kick_with_thick_elem(lattice, p_array, parameter=None, update_ref_values=False):
+    """
+    test kick physProc with the same thick element
+    """
+
+    p_array_track = copy.deepcopy(p_array)
+    lat = MagneticLattice(lattice.sequence, start=B)
+
+    navi = Navigator(lat)
+    navi.unit_step = 0.2
+
+    t = LogProc()
+    t2 = LogProc()
+    navi.add_physics_proc(t, B, B)
+    navi.add_physics_proc(t2, B, B)
+
+    tws_track_wo, p_array_wo = track(lat, p_array_track, navi, calc_tws=False)
+
+    dz_list = np.array([0.0])
+    result0 = check_value(t.totalLen, 1.15, tolerance=TOL, assert_info=' totalLen - ')
+    result1 = check_matrix(np.array(t.dz_list), dz_list, tolerance=TOL, assert_info=' dz t1 - ')
+    result2 = check_matrix(np.array(t2.dz_list), dz_list, tolerance=TOL, assert_info=' dz t2 - ')
+    #result2 = check_matrix(np.array(t.L_list), np.ones(len(dz_list))*0., tolerance=TOL, assert_info=' L - ')
+    result3 = check_matrix(np.array(t.s_list),  np.cumsum(dz_list) , tolerance=TOL, assert_info=' p.s t1- ')
+    result4 = check_matrix(np.array(t2.s_list),  np.cumsum(dz_list) , tolerance=TOL, assert_info=' p.s t2- ')
+
+    #result4 = check_matrix(np.array(t.s_stop_list), np.ones(len(dz_list))*0.3, tolerance=TOL, assert_info=' s_stop - ')
+    #result5 = check_matrix(np.array(t.s_start_list), np.ones(len(dz_list))*0.3, tolerance=TOL, assert_info=' s_start - ')
+    assert check_result([result0] + result1 + result2 + result3 + result4)
+
+
+
+
 def setup_module(module):
 
     f = open(pytest.TEST_RESULTS_FILE, 'a')
@@ -434,7 +521,7 @@ def teardown_function(function):
 def test_update_ref_values(lattice, p_array, cmdopt):
     
     update_functions = []
-    #update_functions.append('test_generate_parray')
+    update_functions.append('test_navi_wo_procs')
     #update_functions.append('test_kick_marker')
 
     update_function_parameters = {}

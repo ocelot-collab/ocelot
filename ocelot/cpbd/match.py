@@ -25,12 +25,23 @@ def weights_default(val):
 def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', weights=weights_default,
           vary_bend_angle=False, min_i5=False):
     """
-    Function to match twiss paramters
+    Function to match twiss parameters
 
     :param lat: MagneticLattice
-    :param constr: dict in format {elem1:{'beta_x':15, 'beta_y':2}, 'periodic':True} try to find periodic solution or
-                constr = {elem1:{'alpha_x':5, 'beta_y':5}, elem2:{'Dx':0 'Dyp':0, 'alpha_x':5, 'beta_y':5} and so on.
-    :param vars: list of elements e.g. vars = [QF, QD]
+    :param constr: dictionary, constrains. Example:
+            'periodic':True - means the "match" function tries to find periodic solution at the ends of lattice:
+                constr = {elem1:{'beta_x':15, 'beta_y':2}, 'periodic':True}
+
+            "hard" constrains on the end of elements (elem1, elem2):
+                constr = {elem1:{'alpha_x':5, 'beta_y':5}, elem2:{'Dx':0 'Dyp':0, 'alpha_x':5, 'beta_y':5}}
+
+            or mixture of "soft" and hard constrains:
+                constr = {elem1:{'alpha_x':[">", 5], 'beta_y':5}, elem2:{'Dx':0 'Dyp':0, 'alpha_x':5, 'beta_y':[">", 5]}}
+
+            in case one needs global control on beta function, the constrains can be written following way.
+                constr = {elem1:{'alpha_x':5, 'beta_y':5}, 'global': {'beta_x': ['>', 10]}}
+    :param vars: list of elements e.g. vars = [QF, QD] or it can be initial twiss parameters:
+                vars = [[tws0, 'beta_x'], [tws0, 'beta_y'], [tws0, 'alpha_x'], [tws0, 'alpha_y']]
     :param tw: initial Twiss
     :param verbose: allow print output of minimization procedure
     :param max_iter:
@@ -82,7 +93,7 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                 if vars[i][0].__class__ == Twiss and vars[i][1].__class__ == str:
                     k = vars[i][1]
                     tw_loc.__dict__[k] = x[i]
-            if vars[i].__class__ == tuple: # all quads strength in tuple varied simultaneously 
+            if vars[i].__class__ == tuple: # all quads strength in tuple varied simultaneously
                 for v in vars[i]:
                     v.k1 = x[i]
                     v.transfer_map = lat.method.create_tm(v)
@@ -119,35 +130,27 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
         tw_loc.s = 0
                         
         for e in lat.sequence:
-            #print e.id,  e in constr.keys()
-            # print tw_loc
-            #print '--->'
+
             tw_loc = e.transfer_map * tw_loc
-            # print tw_loc
 
             if 'global' in constr.keys():
-                # print 'there is a global constraint', constr['global'].keys()
                 for c in constr['global'].keys():
                     if constr['global'][c].__class__ == list:
-                        # print 'list'
                         v1 = constr['global'][c][1]
                         if constr['global'][c][0] == '<':
                             if tw_loc.__dict__[c] > v1:
                                 err = err + weights(k) * (tw_loc.__dict__[c] - v1) ** 2
                         if constr['global'][c][0] == '>':
-                            # print '> constr'
                             if tw_loc.__dict__[c] < v1:
                                 err = err + weights(k) * (tw_loc.__dict__[c] - v1) ** 2
 
             if e in ref_hsh.keys():
-                # print 'saving twiss for', e.id
                 ref_hsh[e] = deepcopy(tw_loc)
 
             if e in constr.keys():
 
                 for k in constr[e].keys():
-                    # print(k)
-                    if constr[e][k].__class__ == list:                    
+                    if constr[e][k].__class__ == list:
                         v1 = constr[e][k][1]
 
                         if constr[e][k][0] == '<':
@@ -163,16 +166,12 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                             if np.abs(tw_loc.__dict__[k]) < v1:
                                 err = err + weights(k) * (tw_loc.__dict__[k] - v1) ** 2
 
-
                         if constr[e][k][0] == '->':
                             try:
-                                #print 'huh', k, e.id, float(constr[e][k][2])
-                                
                                 if len(constr[e][k]) > 2:
                                     dv1 = float(constr[e][k][2])
                                 else:
                                     dv1 = 0.0
-                                #print 'weiter'
                                 err += (tw_loc.__dict__[k] - (ref_hsh[v1].__dict__[k]  + dv1 ) ) ** 2
 
                                 if tw_loc.__dict__[k] < v1:
@@ -181,14 +180,10 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                                 print('constraint error: rval should precede lval in lattice')
 
                         if tw_loc.__dict__[k] < 0:
-                            # print 'negative constr (???)'
                             err += (tw_loc.__dict__[k] - v1) ** 2
 
                     else:
-                        # print "safaf", constr[e][k] , tw_loc.__dict__[k], k, e.id, x
                         err = err + weights(k) * (constr[e][k] - tw_loc.__dict__[k]) ** 2
-                        # print err
-        
         if "total_len" in constr.keys():
             total_len = constr["periodic"]
             err = err + weights('total_len')*(tw_loc.s - total_len)**2
@@ -221,10 +216,11 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
         if vars[i].__class__ == list:
             if vars[i][0].__class__ == Twiss and vars[i][1].__class__ == str:
                 k = vars[i][1]
-                if k in ['beta_x', 'beta_y']:
-                    x[i] = 10.0
-                else:
-                    x[i] = 0.0
+                x[i] = tw.__dict__[k]
+                # if k in ['beta_x', 'beta_y']:
+                #     x[i] = 10
+                # else:
+                #     x[i] = 0.0
         if vars[i].__class__ == tuple:
             x[i] = vars[i][0].k1
         if vars[i].__class__ == Quadrupole:
@@ -337,10 +333,10 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
 
         err = 0.0
         if "periodic" in constr.keys():
-            if constr["periodic"] == True:
-                tw_loc = periodic_twiss(tw_loc, lattice_transfer_map(lat, tw.E))
+            if constr["periodic"] is True:
+                tw_loc = periodic_twiss(tw_loc, lattice_transfer_map(lat, tw_loc.E))
                 tw0 = deepcopy(tw_loc)
-                if tw_loc == None:
+                if tw_loc is None:
                     print("########")
                     return weights('periodic')
 
@@ -363,15 +359,17 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
 
 
         #tw_loc.s = 0
+        #print("start = ", get_envelope(p_array0))
         navi.go_to_start()
         tws_list, p_array0 = track(lat, p_array0, navi, print_progress=False)
-        for tw_loc in tws_list:
-            # print e.id,  e in constr.keys()
-            # print tw_loc
-            # print '--->'
-            #tw_loc = e.transfer_map * tw_loc
-            # print tw_loc
+        s = np.array([tw.s for tw in tws_list])
+        # print("stop = ", tws_list[-1])
+        L = 0.
+        for e in lat.sequence:
+            indx = (np.abs(s - L)).argmin()
 
+            L += e.l
+            tw_loc = tws_list[indx]
             if 'global' in constr.keys():
                 # print 'there is a global constraint', constr['global'].keys()
                 for c in constr['global'].keys():

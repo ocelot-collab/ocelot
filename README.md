@@ -152,4 +152,20 @@ You can download OCELOT jupyter tutorials (release v18.02) using GitHub link [zi
 * [Small features](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/dev/demos/ipython_tutorials/small_useful_features.ipynb).
     - collection of some small OCELOT features
 
+## Documentation
+The API documentation can be build using [sphinx](https://sphinx.org).
+To do so, you have to clone the repository or download the zip file, as explained in the [ocelot installation section](#ocelot-installation).
+Then you can install all dependencies by running
+``` bash
+python -m pip install -r docs/requirements.txt
+python setup.py install
+```
+Now you can build the documentation by running
+```
+python setup.py build_sphinx
+```
+If these steps succeeded (yes, there are still very many errors and warnings during building the documentation),
+you can browse the HTML documentation by opening `build/sphinx/html/index.html` in your browser.
+
+
 **Disclaimer:** The OCELOT code comes with absolutely NO warranty. The authors of the OCELOT do not take any responsibility for any damage to equipments or personnel injury that may result from the use of the code.

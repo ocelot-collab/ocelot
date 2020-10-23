@@ -543,6 +543,53 @@ def test_twiss_section_lat(section_lat, p_array, parameter=None, update_ref_valu
     assert check_result(result2)
 
 
+def test_tracking_tds(section_lat, p_array, parameter=None, update_ref_values=False):
+    sec_lat = copy.deepcopy(section_lat)
+
+    parray = copy.deepcopy(p_array)
+    SC_exec = False
+    wake_exec = False
+    CSR_exec = False
+    match_exec = False
+    smooth_exec = False
+    v1 = 0.14747
+    phi1 = -11.10
+    v13 = 0.03079
+    phi13 = -227.1
+    V21 = 0.65919
+    phi21 = 30.17
+    r1 = 3.6587343247857467
+    r2 = 9.392750737348779
+    config = {
+        A1: {"phi": phi1, "v": v1 / 8.,
+             "SC": SC_exec, "smooth": True, "wake": wake_exec},
+        AH1: {"phi": phi13, "v": v13 / 8,
+              "match": True, "bounds": [-5, 5], "SC": SC_exec, "wake": wake_exec},
+        LH: {"SC": SC_exec, "CSR": CSR_exec, "wake": wake_exec, "match": False, "tds.v": 0.001, "tds.phi":0},
+        DL: {"match": False, "SC": SC_exec, "CSR": CSR_exec, "wake": wake_exec},
+        BC0: {"rho": r1,
+              "match": match_exec, "SC": SC_exec, "CSR": CSR_exec, "wake": wake_exec},
+        L1: {"phi": phi21, "v": V21 / 32, "match": False,
+             "SC": SC_exec, "wake": wake_exec, "smooth": smooth_exec},
+        BC1: {"rho": r2,
+              "match": match_exec, "SC": SC_exec, "CSR": CSR_exec, "wake": wake_exec},
+    }
+
+    sections = [A1, AH1, LH]
+    sec_lat.update_sections(sections, config=config, coupler_kick=False)
+
+    parray = sec_lat.track_sections(sections=sections, p_array=parray, config=config, force_ext_p_array=False,
+                                         coupler_kick=False)
+    p = obj2dict(parray)
+
+    if update_ref_values:
+        return {'p_array': p}
+
+    p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
+
+    result2 = check_dict(p, p_array_ref['p_array'], TOL, assert_info=' p - ')
+    assert check_result(result2)
+
 def setup_module(module):
 
     f = open(pytest.TEST_RESULTS_FILE, 'a')
@@ -587,6 +634,7 @@ def test_update_ref_values(section_lat, p_array, cmdopt):
     update_functions.append('test_tracking_smooth')
     update_functions.append('test_twiss')
     update_functions.append('test_twiss_section_lat')
+    update_functions.append('test_tracking_tds')
 
 
     update_function_parameters = {}

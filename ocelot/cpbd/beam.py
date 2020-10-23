@@ -1615,7 +1615,7 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
     :param sigma_p: std(p), 'p' is canonical momentum E/(c*p0)
     :param chirp: energy chirp [unitless], linear correlation - p_i += chirp * tau_i/sigma_tau
     :param charge: beam charge in [C], 5e-9 by default
-    :param nparticles: namber of particles, 200k by default
+    :param nparticles: number of particles, 200k by default
     :param energy: beam energy in [GeV], 0.13 [GeV]
     :param tau_trunc: None, if not [float] - truncated gauss distribution in "tau" direction.
     :param tws: None, if Twiss obj - the beam is matched to twiss params.

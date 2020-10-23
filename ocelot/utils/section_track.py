@@ -73,7 +73,7 @@ class SectionLattice:
 
         new_sections = []
         for sec in sections:
-
+            #np.random.seed(10)
             sec = self.dict_sections[sec]
             if not coupler_kick:
                 sec.remove_coupler_kicks()

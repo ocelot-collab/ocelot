@@ -98,6 +98,9 @@ class SectionLattice:
                 if "wake" in conf.keys():
                     sec.wake_flag = conf["wake"]
 
+                if "tds.phi" in conf.keys() and "tds.v" in conf.keys():
+                    sec.update_tds(phi=conf["tds.phi"], v=conf["tds.v"])
+
             sec.lattice.update_transfer_maps()
             new_sections.append(sec)
         return new_sections
@@ -291,6 +294,19 @@ class SectionTrack:
         for elem in self.lattice.sequence:
 
             if elem.__class__ == Cavity:
+                if self.cav_name_pref is None:
+                    elem.v = v
+                    elem.phi = phi
+                else:
+                    if self.cav_name_pref in elem.id:
+                        elem.v = v
+                        elem.phi = phi
+        self.lattice.update_transfer_maps()
+
+    def update_tds(self, phi, v):
+        for elem in self.lattice.sequence:
+
+            if elem.__class__ == TDCavity:
                 if self.cav_name_pref is None:
                     elem.v = v
                     elem.phi = phi

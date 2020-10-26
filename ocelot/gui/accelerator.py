@@ -492,9 +492,11 @@ def plot_disp(ax, tws, top_plot, font_size):
     else:
         top_ylabel = r"$"+"/".join(top_plot) +"$"+ ", [m]"
 
-    yticks = ax.get_yticks()
-    yticks = yticks[2::2]
-    ax.set_yticks(yticks)
+    #yticks = ax.get_yticks()
+    #yticks = yticks[2::1]
+    #ax.set_yticks(yticks)
+
+    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
 
     ax.set_ylabel(top_ylabel, fontsize=font_size)
     ax.tick_params(axis='both', labelsize=font_size)
@@ -512,7 +514,8 @@ def plot_betas(ax, S, beta_x, beta_y, font_size):
     leg.get_frame().set_alpha(0.2)
 
 
-def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=True, font_size=12, excld_legend=None):
+def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=True, font_size=12, excld_legend=None,
+                  figsize=None):
     """
     function for plotting: lattice (bottom section), vertical and horizontal beta-functions (middle section),
     other parameters (top section) such as "Dx", "Dy", "E", "mux", "muy", "alpha_x", "alpha_y", "gamma_x", "gamma_y"
@@ -525,12 +528,13 @@ def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=Tr
     :param grid: True - grid
     :param font_size: 16 - font size for any element of plot
     :param excld_legend: None, exclude type of element from the legend, e.g. excld_legend=[Hcor, Vcor]
+    :param figsize: None or e.g. (8, 6)
     :return:
     """
     if fig_name is None:
-        fig = plt.figure()
+        fig = plt.figure(figsize=figsize)
     else:
-        fig = plt.figure(fig_name)
+        fig = plt.figure(fig_name, figsize=figsize)
 
     plt.rc('axes', grid=grid)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
@@ -578,7 +582,7 @@ def plot_opt_func_reduced(lat, tws, top_plot=["Dx"], legend=True, fig_name=None,
     grid=True - grid
     font_size=18 - font size.
     """
-    if fig_name == None:
+    if fig_name is None:
         fig = plt.figure()
     else:
         fig = plt.figure(fig_name)
@@ -631,30 +635,30 @@ def plot_xy(ax, S, X, Y, font_size):
     leg.get_frame().set_alpha(0.5)
 
 
-def plot_API(lat, legend=True, fig_name=1, grid=True, font_size=12, excld_legend=None):
+def plot_API(lat, legend=True, fig_name=1, grid=True, font_size=12, excld_legend=None, figsize=None):
     """
     Function creates a picture with lattice on the bottom part of the picture and top part of the picture can be
     plot arbitrary lines.
 
     :param lat: MagneticLattice
-    :param legend: True, description of the elements, if False it is switched legend off
+    :param legend: True - displaying legend of element types in bottom section,
+    :param fig_name: None - name of figure,
+    :param grid: True - grid
+    :param font_size: 16 - font size for any element of plot
+    :param excld_legend: None, exclude type of element from the legend, e.g. excld_legend=[Hcor, Vcor]
+    :param figsize: None or e.g. (8, 6)
     :return: fig, ax
     """
-    fig = plt.figure(fig_name)
+
+    fig = plt.figure(fig_name, figsize=figsize)
     plt.rc('axes', grid=grid)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
     left, width = 0.1, 0.85
     rect2 = [left, 0.19, width, 0.69]
     rect3 = [left, 0.07, width, 0.12]
 
-
-    #rect1 = [left, 0.65, width, 0.3]
-    #rect2 = [left, 0.19, width, 0.46]
-    #rect3 = [left, 0.07, width, 0.12]
-
     ax_xy = fig.add_axes(rect2)  #left, bottom, width, height
     ax_el = fig.add_axes(rect3, sharex=ax_xy)
-
 
     for ax in ax_xy, ax_el:
         if ax!=ax_el:
@@ -687,7 +691,7 @@ def compare_betas(lat, tws1, tws2, prefix1="beam1", prefix2="beam2", legend=True
     font_size=18 - font size.
     """
     #fig, ax_xy = plot_API(lat, legend=legend, fig_name=fig_name, grid=grid)
-    if fig_name == None:
+    if fig_name is None:
         fig = plt.figure()
     else:
         fig = plt.figure(fig_name)

@@ -325,6 +325,31 @@ class RectAperture(PhysProc):
         p_array.delete_particles(inds)
 
 
+class EllipticalAperture(PhysProc):
+    """
+    Method to delete particles outside an ellipse with semi-axes xmax, ymax centered at dx, dy.
+
+    :param xmax: horizontal semi-axis in [m]. Default np.inf
+    :param ymax: vertical semi-axis in [m]. Default None, then ymax equals xmax (i.e. circular aperture).
+    :param dx: offset in the horizontal axis in [m]. Default 0.0.
+    :param dy: offset in the vertical axis in [m]. Default 0.0.
+    """
+
+    def __init__(self, xmax=np.inf, ymax=None, dx=0.0, dy=0.0, step=1):
+        PhysProc.__init__(self, step)
+        self.xmax = xmax
+        self.ymax = (ymax if not ymax is None else xmax)
+        self.dx = dx
+        self.dy = dy
+
+    def apply(self, p_array, dz):
+        x = p_array.x()
+        y = p_array.y()
+        inds = np.argwhere((x - self.dx) ** 2 / self.xmax ** 2 + (y - self.dy) ** 2 / self.ymax ** 2 > 1.0)
+        inds = inds.reshape(inds.shape[0])
+        p_array.delete_particles(inds)
+
+        
 class BeamTransform(PhysProc):
     """
     Beam matching

@@ -343,8 +343,8 @@ def create_r_matrix(element):
             rm[1, 4] = -K * cos_phi
             rm[2, 3] = z
             rm[4, 5] = - z * igamma2 / (1. - igamma2)
-            rm[5, 0] = rm[1, 4]
-            rm[5, 1] = rm[0, 4]
+            rm[5, 0] = -rm[1, 4]
+            rm[5, 1] = -rm[0, 4]
             rm[5, 4] = -z * K ** 2 * cos2_phi / 6
             return rm
 

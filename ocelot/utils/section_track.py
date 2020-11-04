@@ -3,6 +3,8 @@ Section class for s2e tracking.
 S.Tomin. XFEL/DESY. 2017
 """
 import os
+import copy
+import numpy as np
 
 from ocelot.cpbd.optics import *
 from ocelot.cpbd.physics_proc import *
@@ -11,8 +13,7 @@ from ocelot.cpbd.csr import *
 from ocelot.cpbd.wake3D import *
 from ocelot.cpbd.track import *
 from ocelot.cpbd.io import *
-import numpy as np
-import copy
+
 
 
 class SectionLattice:
@@ -27,13 +28,14 @@ class SectionLattice:
         self.sec_seq = sequence
         self.elem_seq = None
         self.tws = None
+        self.tws0 = tws0
         self.tws_track = None
         self.data_dir = data_dir
-        self.initialize(tws0=tws0, *args, **kwargs)
+        self.initialize(*args, **kwargs)
 
-    def initialize(self, tws0=None, *args, **kwargs):
+    def initialize(self, *args, **kwargs):
         self.init_sections(*args, **kwargs)
-        self.tws = self.calculate_twiss(tws0)
+        self.tws = self.calculate_twiss(self.tws0)
 
     def init_sections(self, *args, **kwargs):
         """
@@ -45,8 +47,9 @@ class SectionLattice:
         self.elem_seq = []
         for sec in self.sec_seq:
             s = sec(self.data_dir, *args, **kwargs)
-            #s.data_dir = self.data_dir
-            #s.update()
+            if "coupler_kick" in kwargs and kwargs["coupler_kick"] is False:
+                s.remove_coupler_kicks()
+
             self.dict_sections[sec] = s
             self.elem_seq.append(s.lattice.sequence)
         return self.dict_sections
@@ -72,6 +75,8 @@ class SectionLattice:
     def update_sections(self, sections, config=None, coupler_kick=False):
 
         new_sections = []
+        tws0 = self.dict_sections[sections[0]].tws0
+        tws_whole = []
         for sec in sections:
             #np.random.seed(10)
             sec = self.dict_sections[sec]
@@ -103,6 +108,11 @@ class SectionLattice:
 
             sec.lattice.update_transfer_maps()
             new_sections.append(sec)
+            if tws0 is not None:
+                tws = twiss(sec.lattice, tws0)
+                tws0 = tws[-1]
+                tws_whole = np.append(tws_whole, tws)
+        self.tws = tws_whole
         return new_sections
 
     def track_sections(self, sections, p_array, config=None, force_ext_p_array=False, coupler_kick=False, verbose=True):

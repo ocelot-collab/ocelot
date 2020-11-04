@@ -47,8 +47,8 @@ class SectionLattice:
         self.elem_seq = []
         for sec in self.sec_seq:
             s = sec(self.data_dir, *args, **kwargs)
-            #if "coupler_kick" in kwargs and kwargs["coupler_kick"] is False:
-            #    s.remove_coupler_kicks()
+            if "coupler_kick" in kwargs and kwargs["coupler_kick"] is False:
+                s.remove_coupler_kicks()
 
             self.dict_sections[sec] = s
             self.elem_seq.append(s.lattice.sequence)

@@ -47,10 +47,9 @@ class SectionLattice:
         self.elem_seq = []
         for sec in self.sec_seq:
             s = sec(self.data_dir, *args, **kwargs)
-            if "coupler_kick" in kwargs and kwargs["coupler_kick"] is False:
-                s.remove_coupler_kicks()
-            #s.data_dir = self.data_dir
-            #s.update()
+            #if "coupler_kick" in kwargs and kwargs["coupler_kick"] is False:
+            #    s.remove_coupler_kicks()
+
             self.dict_sections[sec] = s
             self.elem_seq.append(s.lattice.sequence)
         return self.dict_sections
@@ -76,6 +75,8 @@ class SectionLattice:
     def update_sections(self, sections, config=None, coupler_kick=False):
 
         new_sections = []
+        tws0 = self.dict_sections[sections[0]].tws0
+        tws_whole = []
         for sec in sections:
             #np.random.seed(10)
             sec = self.dict_sections[sec]
@@ -107,6 +108,11 @@ class SectionLattice:
 
             sec.lattice.update_transfer_maps()
             new_sections.append(sec)
+            if tws0 is not None:
+                tws = twiss(sec.lattice, tws0)
+                tws0 = tws[-1]
+                tws_whole = np.append(tws_whole, tws)
+        self.tws = tws_whole
         return new_sections
 
     def track_sections(self, sections, p_array, config=None, force_ext_p_array=False, coupler_kick=False, verbose=True):

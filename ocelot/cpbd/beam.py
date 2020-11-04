@@ -1122,8 +1122,16 @@ def beam_matching(particles, bounds, x_opt, y_opt, remove_offsets=True):
     return particles
 
 
-def sortrows(x, col):
-    return x[:, x[col].argsort()]
+def sortcols(array2d, row):
+    """
+    function sorts an 2D array columns based on specific row
+    Example: ParticleArray.rparticles is [6, N] array where 5th row is tau coordinate. In case one needs to sort
+             particles with respect to tau coordinate the code is sortcols(ParticleArray.rparticles, row=4)
+    :param array:
+    :param row:
+    :return:
+    """
+    return array2d[:, array2d[row].argsort()]
 
 
 def convmode_py(A, B, mode):
@@ -1191,20 +1199,17 @@ def s_to_cur(A, sigma, q0, v):
 
 # s_to_cur = s_to_cur_py if not nb_flag else nb.jit(s_to_cur_py)
 
-def slice_analysis_py(z, x, xs, M, to_sort):
+def slice_analysis_py(x, xp, m_slice):
     """
-    returns:
-    <x>, <xs>, <x^2>, <x*xs>, <xs^2>, np.sqrt(<x^2> * <xs^2> - <x*xs>^2)
-    based on M particles in moving window
-    Sergey, check please
+    Function calculates moments and emittance - <x>, <xs>, <x^2>, <x*xs>, <xs^2>, np.sqrt(<x^2> * <xs^2> - <x*xs>^2)
+    based on m_slice particles in moving window.
+    NOTE: the coordinate must be sorted with respect to longitudinal coordinate.
+
+    :param x: ndarray, 1st coordinate
+    :param xp: ndarray, 2nd coordinate
+    :param m_slice: M particles in moving window
+    :return: list, [<x>, <xs>, <x^2>, <x*xs>, <xs^2>, np.sqrt(<x^2> * <xs^2> - <x*xs>^2)]
     """
-    z = np.copy(z)
-    if to_sort:
-        # P=sortrows([z, x, xs])
-        indx = z.argsort()
-        z = z[indx]
-        x = x[indx]
-        xs = xs[indx]
 
     N = len(x)
     mx = np.zeros(N)
@@ -1212,10 +1217,10 @@ def slice_analysis_py(z, x, xs, M, to_sort):
     mxx = np.zeros(N)
     mxxs = np.zeros(N)
     mxsxs = np.zeros(N)
-    emittx = np.zeros(N)
-    m = np.max(np.array([np.round(M / 2), 1]))
+
+    m = np.max(np.array([np.round(m_slice / 2), 1]))
     xc = np.cumsum(x)
-    xsc = np.cumsum(xs)
+    xsc = np.cumsum(xp)
     for i in range(N):
         n1 = int(max(0, i - m))
         n2 = int(min(N - 1, i + m))
@@ -1224,10 +1229,10 @@ def slice_analysis_py(z, x, xs, M, to_sort):
         mxs[i] = (xsc[n2] - xsc[n1]) / dq
 
     x = x - mx
-    xs = xs - mxs
+    xp = xp - mxs
     x2c = np.cumsum(x * x)
-    xs2c = np.cumsum(xs * xs)
-    xxsc = np.cumsum(x * xs)
+    xs2c = np.cumsum(xp * xp)
+    xxsc = np.cumsum(x * xp)
     for i in range(N):
         n1 = int(max(0, i - m))
         n2 = int(min(N - 1, i + m))
@@ -1281,12 +1286,12 @@ def slice_analysis_transverse(parray, Mslice, Mcur, p, iter):
     _logger.debug("slice_analysis_transverse: charge = " + str(q1))
     n = np.int_(parray.rparticles.size / 6)
     PD = parray.rparticles
-    PD = sortrows(PD, col=4)
+    PD = sortcols(PD, row=4)
 
     z = np.copy(PD[4])
-    mx, mxs, mxx, mxxs, mxsxs, emittx = slice_analysis(z, PD[0], PD[1], Mslice, True)
+    mx, mxs, mxx, mxxs, mxsxs, emittx = slice_analysis(PD[0], PD[1], Mslice)
 
-    my, mys, myy, myys, mysys, emitty = slice_analysis(z, PD[2], PD[3], Mslice, True)
+    my, mys, myy, myys, mysys, emitty = slice_analysis(PD[2], PD[3], Mslice)
 
     mm, mm, mm, mm, mm, emitty0 = moments(PD[2], PD[3])
     gamma0 = parray.E / m_e_GeV
@@ -1351,18 +1356,18 @@ def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
     # print("charge", q1)
     n = np.int_(parray.rparticles.size / 6)
     PD = parray.rparticles
-    PD = sortrows(PD, col=4)
+    PD = sortcols(PD, row=4)
 
     z = np.copy(PD[4])
-    mx, mxs, mxx, mxxs, mxsxs, emittx = slice_analysis(z, PD[0], PD[1], Mslice, True)
+    mx, mxs, mxx, mxxs, mxsxs, emittx = slice_analysis(PD[0], PD[1], Mslice)
 
-    my, mys, myy, myys, mysys, emitty = slice_analysis(z, PD[2], PD[3], Mslice, True)
+    my, mys, myy, myys, mysys, emitty = slice_analysis(PD[2], PD[3], Mslice)
 
     pc_0 = np.sqrt(parray.E ** 2 - m_e_GeV ** 2)
     E1 = PD[5] * pc_0 + parray.E
     pc_1 = np.sqrt(E1 ** 2 - m_e_GeV ** 2)
     # print(pc_1[:10])
-    mE, mEs, mEE, mEEs, mEsEs, emittE = slice_analysis(z, PD[4], pc_1 * 1e9, Mslice, True)
+    mE, mEs, mEE, mEEs, mEsEs, emittE = slice_analysis(PD[4], pc_1 * 1e9, Mslice)
 
     # print(mE, mEs, mEE, mEEs, mEsEs, emittE)
     mE = mEs  # mean energy
@@ -1404,7 +1409,7 @@ def global_slice_analysis(parray, nparts_in_slice=5000, smooth_param=0.01, filte
     Function to calculate slice parameters
 
     :param parray: ParticleArray
-    :param nparts_in_slice: 5000, nparticles in the slice
+    :param nparts_in_slice: 5000, nparticles in the slice (in moving window)
     :param smooth_param: 0.01, smoothing parameters to calculate the beam current: smooth_param = m_std * np.std(p_array.tau())
     :param filter_base: 2, filter parameter in the func: simple_filter
     :param filter_iter: 2, filter parameter in the func: simple_filter
@@ -1417,20 +1422,19 @@ def global_slice_analysis(parray, nparts_in_slice=5000, smooth_param=0.01, filte
     q1 = np.sum(parray.q_array)
 
     PD = parray.rparticles
-    PD = sortrows(PD, col=4)
+    PD = sortcols(PD, row=4)
 
     z = np.copy(PD[4])
-    mx, mxs, mxx, mxxs, mxsxs, emittx = slice_analysis(z, PD[0], PD[1], nparts_in_slice, True)
+    mx, mxs, mxx, mxxs, mxsxs, emittx = slice_analysis(PD[0], PD[1], nparts_in_slice)
 
-    my, mys, myy, myys, mysys, emitty = slice_analysis(z, PD[2], PD[3], nparts_in_slice, True)
+    my, mys, myy, myys, mysys, emitty = slice_analysis(PD[2], PD[3], nparts_in_slice)
 
     pc_0 = np.sqrt(parray.E ** 2 - m_e_GeV ** 2)
     E1 = PD[5] * pc_0 + parray.E
     pc_1 = np.sqrt(E1 ** 2 - m_e_GeV ** 2)
-    # print(pc_1[:10])
-    mE, mEs, mEE, mEEs, mEsEs, emittE = slice_analysis(z, PD[4], pc_1 * 1e9, nparts_in_slice, True)
 
-    # print(mE, mEs, mEE, mEEs, mEsEs, emittE)
+    mE, mEs, mEE, mEEs, mEsEs, emittE = slice_analysis(PD[4], pc_1 * 1e9, nparts_in_slice)
+
     mE = mEs  # mean energy
     sE = np.sqrt(mEsEs)  # energy spread
     sig0 = np.std(parray.tau())  # std pulse duration
@@ -1441,7 +1445,7 @@ def global_slice_analysis(parray, nparts_in_slice=5000, smooth_param=0.01, filte
     _, _, _, _, _, emitt0 = moments(PD[0], PD[1])
     slc.emitxn = emitt0 * gamma0
 
-    _, mp, _, _, _, _ = slice_analysis(z, PD[4], PD[5], nparts_in_slice, True)
+    _, mp, _, _, _, _ = slice_analysis(PD[4], PD[5], nparts_in_slice)
 
     z, ind = np.unique(z, return_index=True)
 

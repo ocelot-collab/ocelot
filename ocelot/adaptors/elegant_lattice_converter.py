@@ -169,7 +169,7 @@ class ElegantLatticeConverter:
                 continue
             
             # parsing constants
-            if string[0] == '%' and string.find('STO') is not -1:
+            if string[0] == '%' and string.find('STO') != -1:
                 expr = string[1:].split('STO')
                 constants[expr[1].strip()] = self.calc_rpn(expr[0].strip(), constants, 'In string '+string)
                 continue

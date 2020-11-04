@@ -30,6 +30,7 @@ __all__ = ['Twiss', "Beam", "Particle", "get_current", "get_envelope", "generate
             "Wake", "WakeTable", "WakeKick", "WakeTableDechirperOffAxis",                       # wake
             "BeamTransform", "SmoothBeam", "EmptyProc", "PhysProc", "LaserHeater",
             "LaserModulator", "SpontanRadEffects", "PhaseSpaceAperture",
+            "RectAperture", "EllipticalAperture",
             "MagneticLattice", "merger",            # magnetic_lattice
             "np", # numpy
 

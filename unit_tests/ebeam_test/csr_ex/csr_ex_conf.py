@@ -42,7 +42,7 @@ def lattice(cell, method):
 def p_array():
 
     np.random.seed(11)
-    n = 20000
+    n = 5000
     # generate beam file
     sigma_x = 0.000121407185261
     sigma_px = 1.80989470506e-05

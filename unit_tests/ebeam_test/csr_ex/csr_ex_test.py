@@ -222,7 +222,7 @@ def test_get_current(lattice, p_array, parameter, update_ref_values=False):
         
         p = pytest.p_array_w
     
-    sI1, I1 = get_current(p, charge=p.q_array[0], num_bins=200)
+    sI1, I1 = get_current(p, num_bins=200)
 
     if update_ref_values:
         return numpy2json([sI1, I1])

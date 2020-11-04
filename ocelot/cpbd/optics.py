@@ -45,7 +45,8 @@ class SecondOrderMult:
             # print("SecondTM: Numpy")
             self.tmat_multip = self.numpy_apply
 
-    def numba_apply(self, X, R, T):
+    @staticmethod
+    def numba_apply(X, R, T):
         Xcopy = np.copy(X)
         for n in range(X.shape[1]):
             for i in range(6):

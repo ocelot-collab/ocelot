@@ -151,7 +151,8 @@ You can download OCELOT jupyter tutorials (release v18.02) using GitHub link [zi
     - brief theory and example in OCELOT
 * [Some useful OCELOT functions](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/small_useful_features.ipynb)
     - Aperture, RK tracking 
-
+* [Example of an accelerator section optimization](https://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/accelerator_optim.ipynb)
+    - A simple demo of accelerator section optimization with a standard scipy numerical optimization method. 
 ## Documentation
 The API documentation can be build using [sphinx](https://sphinx.org).
 To do so, you have to clone the repository or download the zip file, as explained in the [ocelot installation section](#ocelot-installation).

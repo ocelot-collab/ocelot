@@ -15,7 +15,6 @@ from ocelot.cpbd.track import *
 from ocelot.cpbd.io import *
 
 
-
 class SectionLattice:
     """
     High level class to work with SectionTrack()
@@ -30,6 +29,7 @@ class SectionLattice:
         self.tws = None
         self.tws0 = tws0
         self.tws_track = None
+        self.tws_current = None
         self.data_dir = data_dir
         self.initialize(*args, **kwargs)
 
@@ -112,7 +112,7 @@ class SectionLattice:
                 tws = twiss(sec.lattice, tws0)
                 tws0 = tws[-1]
                 tws_whole = np.append(tws_whole, tws)
-        self.tws = tws_whole
+        self.tws_current = tws_whole
         return new_sections
 
     def track_sections(self, sections, p_array, config=None, force_ext_p_array=False, coupler_kick=False, verbose=True):

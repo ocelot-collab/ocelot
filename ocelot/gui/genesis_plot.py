@@ -34,7 +34,7 @@ from ocelot.optics.wave import *
 from ocelot.gui.colormaps2d.colormap2d import *
 from ocelot.gui.settings_plot import *
 from ocelot.gui.dfl_plot import *  # tmp
-from ocelot.gui.beam_plot import plot_beam # tmp
+from ocelot.gui.beam_plot import plot_beam  # tmp
 
 # from pylab import rc, rcParams #tmp
 
@@ -107,7 +107,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice='all', va
 
     # plt.ioff()
 
-    if savefig == True:
+    if savefig is True:
         savefig = 'png'
 
     if choice == 'all':
@@ -205,7 +205,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice='all', va
                     f10 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig,
                                      bins=(100, 100, 100, 100), debug=debug)
 
-    if savefig != False:
+    if savefig is not False:
         _logger.info(ind_str + 'plots recorded to *.' + str(savefig) + ' files')
 
     if showfig:
@@ -243,7 +243,7 @@ def plot_gen_out_z(g, z=np.inf, params=['rad_power+el_current', 'el_energy+el_es
 
     import matplotlib.ticker as ticker
 
-    if showfig == False and savefig == False:
+    if showfig is False and savefig is False:
         return
 
     t_domain = ['rad_power+el_current', 'el_energy+el_espread+el_bunching', 'el_energy+el_espread', 'rad_phase']
@@ -279,7 +279,7 @@ def plot_gen_out_z(g, z=np.inf, params=['rad_power+el_current', 'el_energy+el_es
     # add check for output object
 
     # if fig_name is None:
-    #     if g.fileName() is '':
+    #     if g.fileName() == '':
     #         fig = plt.figure(params_str)
     #         if debug > 0:
     #             print('    plotting ' + params_str)
@@ -292,7 +292,7 @@ def plot_gen_out_z(g, z=np.inf, params=['rad_power+el_current', 'el_energy+el_es
     #     if debug > 0:
     #         print('    plotting ' + fig_name)
     if fig_name is None:
-        if g.fileName() is '':
+        if g.fileName() == '':
             fig = plt.figure('Bunch profile at z={:.3f} [m]'.format(z))
         else:
             fig = plt.figure('Bunch profile at z={:.3f} [m]'.format(z) + g.fileName())
@@ -360,13 +360,13 @@ def plot_gen_out_z(g, z=np.inf, params=['rad_power+el_current', 'el_energy+el_es
     axf = len(ax) - axt
     # ax[0].set_xlim(g.z[0], g.z[-1])
     # ax[-1].set_xlabel('z [m]')
-    if axt is not 0 and axf is not 0:
+    if axt != 0 and axf != 0:
         fig.subplots_adjust(top=0.95, bottom=0.2, right=0.8, left=0.15)
     else:
         fig.subplots_adjust(top=0.95, bottom=0.1, right=0.8, left=0.15)
 
     for axi in ax[axt:]:
-        if axt is not 0:
+        if axt != 0:
             pos1 = axi.get_position()  # get the original position
             pos2 = [pos1.x0 + 0, pos1.y0 - 0.1, pos1.width / 1.0, pos1.height / 1.0]
             axi.set_position(pos2)
@@ -376,8 +376,8 @@ def plot_gen_out_z(g, z=np.inf, params=['rad_power+el_current', 'el_energy+el_es
                     label.set_visible(False)
 
     plt.draw()
-    if savefig != False:
-        if savefig == True:
+    if savefig is not False:
+        if savefig is True:
             savefig = 'png'
         fig.savefig(g.filePath + '_z_' + str(z) + 'm.' + str(savefig), format=savefig)
 
@@ -405,7 +405,7 @@ def subfig_z_power_curr(ax_curr, g, zi=None, x_units='um', legend=False, *args, 
     else:
         raise ValueError('Unknown parameter x_units (should be um or fs)')
 
-    if zi == None:
+    if zi is None:
         zi = -1
 
     ax_curr.plot(x, g.I / 1e3, 'k--')
@@ -536,7 +536,7 @@ def subfig_z_phase(ax_phase, g, zi=None, x_units='um', legend=False, *args, **kw
     else:
         raise ValueError('Unknown parameter x_units (should be um or fs)')
 
-    if zi == None:
+    if zi is None:
         zi = -1
 
     if "rewrap" in kwargs:
@@ -582,13 +582,13 @@ def subfig_z_phase(ax_phase, g, zi=None, x_units='um', legend=False, *args, **kw
 def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=True, legend=False, *args, **kwargs):
     number_ticks = 6
     # n_pad = 1
-    
+
     mode = kwargs.get('mode', 'mid')
     mode = kwargs.get('spec_mode', mode)
-    
-    if zi == None:
+
+    if zi is None:
         zi = -1
-    
+
     if hasattr(g, 'spec'):
         if g.spec_mode != mode:
             g.calc_spec(mode=mode)
@@ -599,22 +599,22 @@ def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=Tru
 
     if 'spec' not in dir(g):
         g.calc_spec()
-    
+
     if y_units == 'nm':
         x = g.freq_lamd
     elif y_units in ['ev', 'eV']:
         x = g.freq_ev
-    
+
     if estimate_ph_sp_dens:
         y_units = 'ev'
         spec = g.spec_phot_density[:, zi]
         # spec = calc_ph_sp_dens(g.spec[:, zi], g.freq_ev, g.n_photons[zi])
     else:
         spec = g.spec[:, zi]
-    
+
     # power = np.pad(g.p_mid, [(int(g.nSlices / 2) * n_pad, (g.nSlices - (int(g.nSlices / 2)))) * n_pad, (0, 0)], mode='constant')
     # phase = np.pad(g.phi_mid, [(int(g.nSlices / 2) * n_pad, (g.nSlices - (int(g.nSlices / 2)))) * n_pad, (0, 0)], mode='constant')  # not supported by the numpy 1.6.2
-    
+
     ax_spectrum.plot(x, spec, 'r-')
     if kwargs.get('showtext', True):
         if mode == 'mid':
@@ -625,7 +625,7 @@ def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=Tru
             ax_spectrum.text(0.98, 0.98, r'(integrated assuming on-axis phases)', fontsize=10,
                              horizontalalignment='right', verticalalignment='top',
                              transform=ax_spectrum.transAxes)  # horizontalalignment='center', verticalalignment='center',
-    
+
     ax_spectrum.set_ylim(ymin=0)
     ax_spectrum.get_yaxis().get_major_formatter().set_useOffset(False)
     ax_spectrum.get_yaxis().get_major_formatter().set_scientific(True)
@@ -633,28 +633,28 @@ def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=Tru
     ax_spectrum.grid(kwargs.get('grid', True))
     if np.amin(x) != np.amax(x):
         ax_spectrum.set_xlim([np.amin(x), np.amax(x)])
-    
+
     maxspectrum_index = np.argmax(spec)
     # maxspower_index = np.argmax(power[:, zi])
     maxspectrum_value = x[maxspectrum_index]
-    
+
     spec_width = None
     if np.sum(spec) != 0:
         pos, width, arr = fwhm3(spec)
-        if width != None:
+        if width is not None:
             if arr[0] == arr[-1]:
                 dx = abs(x[pos] - x[pos - 1])
             else:
                 dx = abs((x[arr[0]] - x[arr[-1]]) / (arr[0] - arr[-1]))
             spec_width = dx * width / x[
                 pos]  # the FWHM of spectral line (error when peakpos is at the edge of lamdscale)
-    
+
     if spec_width is not None and maxspectrum_value is not None:
         if y_units == 'nm':
             if kwargs.get('showtext', True):
                 ax_spectrum.text(0.02, 0.98,
                                  r"$\lambda^{max}$= %.4e m " "\n" "$(\Delta\lambda/\lambda)_{fwhm}$= %.2e" % (
-                                 maxspectrum_value * 1e-9, spec_width), fontsize=12, horizontalalignment='left',
+                                     maxspectrum_value * 1e-9, spec_width), fontsize=12, horizontalalignment='left',
                                  verticalalignment='top', transform=ax_spectrum.transAxes,
                                  color='red')  # horizontalalignment='center', verticalalignment='center',
             if estimate_ph_sp_dens:
@@ -665,7 +665,7 @@ def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=Tru
         elif y_units in ['ev', 'eV']:
             if kwargs.get('showtext', True):
                 ax_spectrum.text(0.02, 0.98, r"$E_{ph}^{max}$= %.2f eV " "\n" "$(\Delta E/E)_{fwhm}$= %.2e" % (
-                maxspectrum_value, spec_width), fontsize=12, horizontalalignment='left', verticalalignment='top',
+                    maxspectrum_value, spec_width), fontsize=12, horizontalalignment='left', verticalalignment='top',
                                  transform=ax_spectrum.transAxes,
                                  color='red')  # horizontalalignment='center', verticalalignment='center',
             if estimate_ph_sp_dens:
@@ -674,7 +674,7 @@ def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=Tru
                 ax_spectrum.set_ylabel(r'P($E_{ph}$) [a.u.]')
             ax_spectrum.set_xlabel(r'$E_{photon}$ [eV]')
         # ax_spectrum.text(0.02, 0.98, r"$\lambda_{max}$= %.4e m " "\n" "$(\Delta\lambda/\lambda)_{fwhm}$= %.2e" % (maxspectrum_value, spec_width), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_spectrum.transAxes, color='red')  # horizontalalignment='center', verticalalignment='center',
-    
+
     ax_spectrum.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_spectrum.tick_params(axis='y', which='both', colors='r')
     ax_spectrum.yaxis.label.set_color('r')
@@ -687,10 +687,10 @@ def plot_gen_out_z_old(g, figsize=(10, 14), x_units='um', y_units='ev', legend=T
     print('soon this function will be replaced by plot_gen_out_z_new (currently being tested)')
     number_ticks = 6
 
-    if showfig == False and savefig == False:
+    if showfig is False and savefig is False:
         return
 
-    if g('itdp') == False:
+    if g('itdp') is False:
         print('    plotting bunch profile at ' + str(z) + ' [m]')
         print('!     not applicable for steady-state')
         return
@@ -717,7 +717,7 @@ def plot_gen_out_z_old(g, figsize=(10, 14), x_units='um', y_units='ev', legend=T
 
     font_size = 1
     if fig_name is None:
-        if g.fileName() is '':
+        if g.fileName() == '':
             fig = plt.figure('Bunch profile at ' + str(z) + 'm')
         else:
             fig = plt.figure('Bunch profile at ' + str(z) + 'm ' + g.fileName())
@@ -835,7 +835,7 @@ def plot_gen_out_z_old(g, figsize=(10, 14), x_units='um', y_units='ev', legend=T
 
     if spectrum_lamdwidth_fwhm is not None and maxspectrum_wavelength is not None:
         ax_spectrum.text(0.02, 0.98, r"$\lambda_{max}$= %.4e m " "\n" "$(\Delta\lambda/\lambda)_{fwhm}$= %.2e" % (
-        maxspectrum_wavelength, spectrum_lamdwidth_fwhm), fontsize=12, horizontalalignment='left',
+            maxspectrum_wavelength, spectrum_lamdwidth_fwhm), fontsize=12, horizontalalignment='left',
                          verticalalignment='top', transform=ax_spectrum.transAxes,
                          color='red')  # horizontalalignment='center', verticalalignment='center',
 
@@ -889,8 +889,8 @@ def plot_gen_out_z_old(g, figsize=(10, 14), x_units='um', y_units='ev', legend=T
     ax_spectrum.yaxis.get_offset_text().set_color(ax_spectrum.yaxis.label.get_color())
 
     plt.draw()
-    if savefig != False:
-        if savefig == True:
+    if savefig is not False:
+        if savefig is True:
             savefig = 'png'
         fig.savefig(g.filePath + '_z_' + str(z) + 'm.' + str(savefig), format=savefig)
 
@@ -936,7 +936,7 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'e
     """
     import matplotlib.ticker as ticker
 
-    if showfig == False and savefig == False:
+    if showfig is False and savefig is False:
         return
 
     params_str = str(params).replace("'", '').replace('[', '').replace(']', '').replace(' ', '').replace(',', '--')
@@ -945,7 +945,7 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'e
         g = read_out_file(g, read_level=2)
     # add check for output object
     if fig_name is '':
-        if g.fileName() is '':
+        if g.fileName() == '':
             fig = plt.figure(params_str)
             _logger.info('plotting ' + params_str)
         else:
@@ -1033,8 +1033,8 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'e
         for label in axi.get_xticklabels():
             label.set_visible(False)
 
-    if savefig != False:
-        if savefig == True:
+    if savefig is not False:
+        if savefig is True:
             savefig = 'png'
         if fig_name == 'Electrons':
             savepath = g.filePath + '_elec.' + str(savefig)
@@ -1048,7 +1048,7 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'e
         fig.savefig(savepath, format=savefig)
 
     plt.draw()
-    if showfig == True:
+    if showfig is True:
         dir_lst = g.filePath.split(os.path.sep)
         dir = os.path.sep.join(dir_lst[0:-1]) + os.path.sep
         rcParams["savefig.directory"] = dir
@@ -1458,7 +1458,7 @@ def subfig_evo_rad_spec_sz(ax_spectrum_evo, g, legend, norm=1, **kwargs):
 
 @if_plottable
 def plot_gen_out_scanned_z(g, figsize=(10, 14), legend=True, fig_name=None, z=inf, savefig=False):
-    if g('itdp') == True:
+    if g('itdp') is True:
         print('    plotting scan at ' + str(z) + ' [m]')
         print('!     Not implemented yet for time dependent, skipping')
         return
@@ -1489,7 +1489,7 @@ def plot_gen_out_scanned_z(g, figsize=(10, 14), legend=True, fig_name=None, z=in
 
     font_size = 1
     if fig_name is None:
-        if g.fileName() is '':
+        if g.fileName() == '':
             fig = plt.figure('Genesis scan at ' + str(z) + 'm')
         else:
             fig = plt.figure('Genesis scan at ' + str(z) + 'm ' + g.fileName())
@@ -1941,7 +1941,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[],
 
                         plt.ylabel(dict_name.get(param, param) + '  ' + dict_unit.get(param, '') + ' (' + str(
                             s_ind) + ' um, ' + str(z_ind) + ' m)')
-                        if savefig != False:
+                        if savefig is not False:
                             if debug > 1:
                                 print('      saving ' + run_fig_name + '.' + savefig)
                             plt.draw()
@@ -2113,10 +2113,10 @@ def plot_gen_corr(proj_dir, run_inp=[], p1=(), p2=(), savefig=False, showfig=Tru
     saving_path = proj_dir + 'results/'
 
     plt.draw()
-    if savefig != False:
+    if savefig is not False:
         print('      saving ' + corr_fig_name + '.' + savefig)
         plt.savefig(saving_path + corr_fig_name + '.' + savefig, format=savefig)
-    if saveval != False:
+    if saveval is not False:
         print('      saving ' + corr_fig_name + '.txt')
         np.savetxt(saving_path + corr_fig_name + '.txt', np.vstack([var_1, var_2]).T, fmt="%E", newline='\n',
                    comments=param_1 + '_s' + str(stage_1) + '_at' + str(z_1) + '_' + str(
@@ -2133,7 +2133,7 @@ def plot_gen_corr(proj_dir, run_inp=[], p1=(), p2=(), savefig=False, showfig=Tru
 def plot_dpa_bucket_out(out, dpa=None, slice_pos='max_I', repeat=1, GeV=1, figsize=4, cmap=def_cmap, scatter=True,
                         energy_mean=None, legend=True, fig_name=None, savefig=False, showfig=True, bins=[50, 50],
                         debug=1):
-    if dpa == None:
+    if dpa is None:
         dpa = read_dpa_file_out(out)
 
     if out.nSlices > 1:
@@ -2189,7 +2189,7 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cm
     else:
         assert (slice_num <= np.shape(dpa.ph)[0]), 'slice_num larger than the dpa shape'
 
-    if fig_name == None:
+    if fig_name is None:
         fig_name = 'Electron phase space ' + dpa.fileName()
     fig = plt.figure(fig_name)
     fig.clf()
@@ -2220,10 +2220,10 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cm
 
     if GeV:
         energy *= m_e_MeV
-        if energy_mean == None:
+        if energy_mean is None:
             energy_mean = round(np.mean(energy), 0)
     else:
-        if energy_mean == None:
+        if energy_mean is None:
             energy_mean = round(np.mean(energy), 1)
     energy -= energy_mean
 
@@ -2254,7 +2254,7 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cm
     for label in ax_y_hist.get_yticklabels():
         label.set_visible(False)
 
-    if scatter == True:
+    if scatter is True:
         for irep in range(repeat):
             for ibin in range(nbins):
                 ax_main.scatter(phase[ibin, :] + 2 * np.pi * (irep), energy[ibin, :], color=part_colors[ibin],
@@ -2262,7 +2262,7 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cm
 
         # ax_z_hist.set_xlim([edges[0], edges[-1]])
 
-    elif scatter == False:
+    elif scatter is False:
         ax_main.hist2d(phase_flat, energy_flat, bins=[z_bins * repeat, y_bins], cmin=0, cmap=cmap)
 
     ax_main.set_xlabel('$\phi$ [rad]')
@@ -2272,8 +2272,8 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cm
         ax_main.set_ylabel('$\gamma$ + ' + str(energy_mean))
 
     plt.draw()
-    if savefig != False:
-        if savefig == True:
+    if savefig is not False:
+        if savefig is True:
             savefig = 'png'
         _logger.debug(ind_str + 'saving to {}'.format(dpa.fileName() + suffix + '.' + savefig))
         plt.savefig(dpa.filePath + suffix + '.' + savefig, format=savefig)
@@ -2290,7 +2290,7 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cm
 def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, scatter=False, plot_x_y=True,
                plot_xy_s=True, bins=(50, 50, 50, 50), flip_t=False, x_units='um', y_units='ev', cmin=0, y_offset=None,
                cmap=def_cmap, debug=1):
-    if showfig == False and savefig == False:
+    if showfig is False and savefig is False:
         return
     _logger.info('plotting edist file')
     start_time = time.time()
@@ -2301,7 +2301,7 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
     if np.size(bins) == 1:
         bins = (bins, bins, bins, bins)  # x,y,t,e
 
-    if fig_name == None:
+    if fig_name is None:
         fig_name = 'Electron distribution ' + edist.fileName()
     fig = plt.figure(fig_name)
     fig.clf()
@@ -2336,7 +2336,7 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
     else:  # elif beam_E_plot=='gamma':
         energy = edist.g
 
-    if y_offset == None:
+    if y_offset is None:
         y_offset = int(np.mean(energy))
     if scatter:
         ax_se.scatter(s, energy - y_offset, marker='.')
@@ -2394,10 +2394,10 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
     fig.subplots_adjust(wspace=0.4, hspace=0.4)
 
     plt.draw()
-    if savefig != False:
-        if savefig == True:
+    if savefig is not False:
+        if savefig is True:
             savefig = 'png'
-        if savefig in ['png' , 'eps', 'pdf', 'jpeg']:
+        if savefig in ['png', 'eps', 'pdf', 'jpeg']:
             savepath = edist.filePath + '.' + savefig
         else:
             savepath = savefig
@@ -2413,8 +2413,6 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
 
     _logger.info(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
     # return fig
-
-
 
 
 """
@@ -2490,8 +2488,8 @@ def read_plot_dump_proj(exp_dir, stage, run_ids, plot_phase=1, showfig=True, sav
 
     plt.draw()
 
-    if savefig != False:
-        if savefig == True:
+    if savefig is not False:
+        if savefig is True:
             savefig = 'png'
         if debug > 1:
             print('      saving ' + fig_name + '.' + savefig)
@@ -2527,8 +2525,8 @@ def read_plot_dump_proj(exp_dir, stage, run_ids, plot_phase=1, showfig=True, sav
 
     plt.draw()
 
-    if savefig != False:
-        if savefig == True:
+    if savefig is not False:
+        if savefig is True:
             savefig = 'png'
         if debug > 1:
             print('      saving ' + fig_name + '.' + savefig)

@@ -2709,9 +2709,9 @@ def trf_mult_mix(trf_list, mode_out='ref'):
         trf_list_int.append(trf_tmp)
     trf_out = trf_mult(trf_list_int, embed_list=False)
 
-    if mode_out is 'ref':
+    if mode_out == 'ref':
         del trf_out.tr
-    if mode_out is 'tr':
+    if mode_out == 'tr':
         del trf_out.ref
 
     return trf_out

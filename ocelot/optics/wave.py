@@ -2698,7 +2698,7 @@ def trf_mult_mix(trf_list, mode_out='ref'):
     returns TransferFunction() object
     """
 
-    if mode_out is not 'ref' and mode_out is not 'tr':
+    if mode_out != 'ref' and mode_out != 'tr':
         raise ValueError('mode_out should be string of either "ref" or "tr"')
 
     trf_list_int = []

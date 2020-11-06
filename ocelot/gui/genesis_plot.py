@@ -944,7 +944,7 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'e
     if os.path.isfile(str(g)):
         g = read_out_file(g, read_level=2)
     # add check for output object
-    if fig_name is '':
+    if fig_name == '':
         if g.fileName() == '':
             fig = plt.figure(params_str)
             _logger.info('plotting ' + params_str)

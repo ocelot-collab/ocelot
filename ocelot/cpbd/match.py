@@ -4,7 +4,7 @@ from scipy.optimize import *
 
 from ocelot.cpbd.beam_params import radiation_integrals
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
-from ocelot.cpbd.optics import *
+from ocelot.cpbd.transformations.optics import *
 from ocelot.cpbd.elements import *
 from ocelot.cpbd.beam import get_envelope
 from ocelot.cpbd.track import track

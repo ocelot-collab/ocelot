@@ -1,5 +1,4 @@
 from ocelot.cpbd.elements import *
-from ocelot.cpbd.beam import Twiss
 from ocelot.cpbd.latticeIO import LatticeIO
 import logging
 import numpy as np

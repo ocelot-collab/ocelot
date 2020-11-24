@@ -3,11 +3,22 @@ definition of magnetic lattice
 linear dimensions in [m]
 """
 from ocelot.cpbd.field_map import FieldMap
-from ocelot.cpbd.optics import *
+from ocelot.cpbd.transformations.cavity import CavityTM
+from ocelot.cpbd.transformations.coupler_kick import CouplerKickTM
+from ocelot.cpbd.transformations.h_corrector import HCorrectorTM
+from ocelot.cpbd.transformations.kick import KickTM
+from ocelot.cpbd.transformations.multipole import MultipoleTM
+from ocelot.cpbd.transformations.optics import *
 
-import sys
 import numpy as np
 import logging
+
+from ocelot.cpbd.transformations.runge_kutta import RungeKuttaTM
+from ocelot.cpbd.transformations.runge_kutta_tr import RungeKuttaTrTM
+from ocelot.cpbd.transformations.second_order import SecondTM
+from ocelot.cpbd.transformations.tw_cavity import TWCavityTM
+from ocelot.cpbd.transformations.undulator_test import UndulatorTestTM
+from ocelot.cpbd.transformations.v_corrector import VCorrectorTM
 
 logger = logging.getLogger(__name__)
 

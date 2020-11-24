@@ -2,8 +2,9 @@
 
 import pytest
 
-from ocelot import *
 from ocelot.cpbd.track import *
+from ocelot.cpbd.transformations.first_order import TransferMap
+from ocelot.cpbd.transformations.kick import KickTM
 from ocelot.rad.radiation_py import und_field
 
 """lattice elements description"""

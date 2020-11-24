@@ -5,7 +5,7 @@ from ocelot.adaptors.genesis import *
 from ocelot.cpbd.elements import Element, Quadrupole, RBend, Drift, Undulator
 from ocelot import MagneticLattice
 from ocelot.cpbd.beam import Beam
-from ocelot.cpbd.optics import *
+from ocelot.cpbd.transformations.optics import *
 
 import numpy.fft as fft
 from sim_info import SimInfo, RunInfo

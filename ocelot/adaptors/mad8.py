@@ -1,6 +1,6 @@
 __author__ = 'Sergey Tomin'
 
-import numpy as np
+
 def translate(lines):
     lines2 = []
     for line in lines:
@@ -360,8 +360,6 @@ if __name__ == "main":
     filename = "LCLS.saveline"
 
     mad8saveline2ocelot(fname_saveline=filename, fname_ocelot="test.py")
-
-    from test import*
 
     method = {"Cavity": TWCavityTM}
 

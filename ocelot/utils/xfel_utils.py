@@ -5,19 +5,6 @@ functions common to fel decks
 # import scipy.special as sf
 # import scipy.integrate as integrate
 # from numpy.polynomial.chebyshev import *
-import os
-import time
-import numpy as np
-from numpy import inf, complex128, complex64
-from copy import copy, deepcopy
-import ocelot
-from ocelot import ocelog 
-from ocelot.common.globals import *  #import of constants like "h_eV_s" and "speed_of_light" 
-from ocelot.common.py_func import * 
-from ocelot.common.math_op import *
-from ocelot.rad.undulator_params import *
-
-from ocelot.gui import *
 
 # from ocelot.optics.utils import *
 # from ocelot.rad.undulator_params import *
@@ -30,7 +17,7 @@ nthread = multiprocessing.cpu_count()
 
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.cpbd.elements import *
-from ocelot.cpbd.optics import *
+from ocelot.cpbd.transformations.optics import *
 
 _logger = logging.getLogger(__name__)
 

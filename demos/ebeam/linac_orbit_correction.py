@@ -4,7 +4,6 @@ Linac Orbit Correction.
 S.Tomin. 09.2019
 """
 
-from ocelot import *
 from ocelot.gui.accelerator import *
 import dogleg_lattice as dl
 from ocelot.cpbd.orbit_correction import *

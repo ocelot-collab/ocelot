@@ -1,12 +1,9 @@
 __author__ = 'Sergey Tomin'
 
 from ocelot.gui import *
-from ocelot import *
-import numpy as np
-from time import time
 from ocelot.cpbd.track import *
 from ocelot.rad.radiation_py import und_field
-from ocelot.cpbd.optics import *
+from ocelot.cpbd.transformations.optics import *
 D0 = Drift(l=0., eid= "D0")
 D1 = Drift(l=1.49, eid= "D1")
 D2 = Drift(l=0.1035, eid= "D2")

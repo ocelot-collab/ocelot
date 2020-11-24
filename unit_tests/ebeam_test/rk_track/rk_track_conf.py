@@ -6,7 +6,7 @@ import numpy as np
 from ocelot import *
 from ocelot.rad.radiation_py import und_field
 from ocelot.cpbd.beam import generate_parray
-from ocelot.cpbd.optics import RungeKuttaTM
+from ocelot import RungeKuttaTM
 
 """Lattice elements definition"""
 

@@ -2,7 +2,6 @@ __author__ = 'Sergey Tomin'
 
 from ocelot import *
 from ocelot.gui.accelerator import *
-from ocelot.adaptors import *
 import time
 
 

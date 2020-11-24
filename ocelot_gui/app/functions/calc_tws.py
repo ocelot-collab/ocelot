@@ -1,6 +1,6 @@
 """Calculation twiss parameters description"""
 
-from ocelot.cpbd.optics import *
+from ocelot.cpbd.transformations.optics import *
 
 
 class TwissParameters():

@@ -1,6 +1,6 @@
 __author__ = 'Sergey Tomin'
 
-from ocelot.cpbd.optics import trace_z, twiss
+from ocelot.cpbd.transformations.optics import trace_z, twiss
 from scipy.integrate import simps
 from numpy.linalg import inv
 from ocelot.cpbd.beam import *
@@ -204,7 +204,7 @@ def compensate_chromaticity(lattice,  ksi_x_comp=0, ksi_y_comp=0,  nsuperperiod=
 
     lattice.update_transfer_maps()
 
-from ocelot.cpbd.optics import *
+from ocelot.cpbd.transformations.optics import *
 from numpy.linalg import eig
 
 # TODO: finish DR, DZ guys and cromaticity from T matrices

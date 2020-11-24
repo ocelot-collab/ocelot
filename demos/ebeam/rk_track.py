@@ -1,7 +1,6 @@
 __author__ = 'Sergey Tomin'
 
 from ocelot import *
-from ocelot.rad.undulator_params import *
 from ocelot.cpbd.beam import generate_parray
 from ocelot.gui.accelerator import *
 from ocelot.rad.radiation_py import und_field

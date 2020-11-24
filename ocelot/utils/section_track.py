@@ -7,6 +7,7 @@ from ocelot.cpbd.csr import *
 from ocelot.cpbd.physics_proc import *
 from ocelot.cpbd.sc import *
 from ocelot.cpbd.track import *
+from ocelot.cpbd.transformations.second_order import SecondTM
 from ocelot.cpbd.wake3D import *
 from ocelot.cpbd.io import load_particle_array
 

@@ -2,7 +2,7 @@ from copy import copy
 
 import numpy as np
 
-from ocelot import speed_of_light
+from ocelot.common.globals import speed_of_light
 from ocelot.cpbd.transformations.first_order import TransferMap
 
 

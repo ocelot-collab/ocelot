@@ -5,7 +5,6 @@ from copy import deepcopy
 from numpy.linalg import inv
 
 from ocelot.cpbd.transformations.first_order import TransferMap
-from ocelot.cpbd.transformations.second_order import SecondTM
 from ocelot.cpbd.beam import Twiss
 from ocelot.cpbd.physics_proc import RectAperture
 from ocelot.cpbd.high_order import *
@@ -189,13 +188,8 @@ def lattice_transfer_map(lattice, energy):
     for i, elem in enumerate(lattice.sequence):
         Rb = elem.transfer_map.R(E)
         Bb = elem.transfer_map.B(E)
-
-        if isinstance(elem.transfer_map, SecondTM):  # elem.transfer_map.__class__ == SecondTM:
-            Tb = np.copy(elem.transfer_map.T_tilt(E))
-            Tb = sym_matrix(Tb)
-            Ra, Ta = transfer_maps_mult(Ra, Ta, Rb, Tb)
-        else:
-            Ra, Ta = transfer_maps_mult(Ra, Ta, Rb, Tb=np.zeros((6, 6, 6)))
+        Tb = elem.transfer_map.calculate_Tb(E)
+        Ra, Ta = transfer_maps_mult(Ra, Ta, Rb, Tb)
         Ba = np.dot(Rb, Ba) + Bb
         E += elem.transfer_map.delta_e
     lattice.E = E

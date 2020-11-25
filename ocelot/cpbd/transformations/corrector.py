@@ -1,6 +1,6 @@
 from copy import copy
 
-import numpy
+import numpy as np
 
 from ocelot.cpbd.transformations.second_order import SecondTM
 from ocelot.cpbd.transformations.optics import _logger

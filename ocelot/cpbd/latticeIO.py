@@ -1,3 +1,5 @@
+import sys
+
 from ocelot.cpbd.elements import *
 from ocelot.cpbd.beam import Beam, Twiss
 

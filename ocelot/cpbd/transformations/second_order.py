@@ -3,7 +3,7 @@ from copy import copy
 import numpy as np
 
 from ocelot.cpbd.transformations.first_order import TransferMap
-from ocelot.cpbd.transformations.optics import SecondOrderMult, transform_vec_ext, transform_vec_ent, \
+from ocelot.cpbd.transformations.tm_utils import SecondOrderMult, transform_vec_ent, transform_vec_ext, \
     transfer_map_rotation, sym_matrix
 from ocelot.cpbd.r_matrix import rot_mtx
 

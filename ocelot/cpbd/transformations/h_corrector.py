@@ -1,4 +1,5 @@
-from ocelot.cpbd.transformations.optics import t_nnn, SecondOrderMult
+from ocelot.cpbd.high_order import t_nnn
+from ocelot.cpbd.transformations.tm_utils import SecondOrderMult
 from ocelot.cpbd.transformations.corrector import CorrectorTM
 
 

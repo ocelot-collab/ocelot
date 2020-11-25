@@ -1,9 +1,11 @@
 from copy import copy
+import logging
 
 import numpy as np
 
 from ocelot.cpbd.transformations.second_order import SecondTM
-from ocelot.cpbd.transformations.optics import _logger
+
+_logger = logging.getLogger(__name__)
 
 
 class CorrectorTM(SecondTM):

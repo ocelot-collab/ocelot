@@ -1,7 +1,9 @@
 import sys
 
-from ocelot.cpbd.elements import *
+import numpy as np
+
 from ocelot.cpbd.beam import Beam, Twiss
+from ocelot.cpbd.elements import *
 
 
 class LatticeIO:

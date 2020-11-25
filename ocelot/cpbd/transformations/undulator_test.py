@@ -2,7 +2,7 @@ from copy import copy
 
 import numpy as np
 
-from ocelot.cpbd.transformations.optics import m_e_GeV
+from ocelot.cpbd.high_order import m_e_GeV
 from ocelot.cpbd.transformations.first_order import TransferMap
 
 

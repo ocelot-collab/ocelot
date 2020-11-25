@@ -8,7 +8,6 @@ import numpy as np
 from scipy.interpolate import splrep, splev
 import json
 import time
-from threading import Thread
 import pandas as pd
 
 import logging

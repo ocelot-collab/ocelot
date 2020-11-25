@@ -6,8 +6,7 @@ In order to overcome this limitation, someone have to change function radiation_
 Sergey Tomin 04.11.2016.
 """
 
-from scipy import interpolate
-from ocelot.cpbd.elements import *
+from ocelot.cpbd.high_order import rk_track_in_field
 from ocelot.cpbd.track import *
 from ocelot.rad.spline_py import *
 from ocelot.common.globals import *

@@ -29,6 +29,16 @@ class TransferMap:
         self.B = lambda energy: self.B_z(self.length, energy)
         self.map = lambda u, energy: self.mul_p_array(u, energy=energy)
 
+    def calculate_Tb(self, energy) -> np.ndarray:
+        """
+        Calculates the Tb matrix which is needed to calculate the transformation matrix.
+        Note: The calculation of the Tb matrix is different between first order TM and second order TM.
+        @param energy: the initial electron beam energy [GeV]
+        @return: Tb matrix
+        """
+        return np.zeros((6, 6, 6))
+
+
     def map_x_twiss(self, tws0):
         E = tws0.E
         M = self.R(E)

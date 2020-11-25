@@ -4,7 +4,7 @@ import numpy as np
 
 from ocelot.cpbd.transformations.first_order import TransferMap
 from ocelot.cpbd.transformations.optics import SecondOrderMult, transform_vec_ext, transform_vec_ent, \
-    transfer_map_rotation
+    transfer_map_rotation, sym_matrix
 from ocelot.cpbd.r_matrix import rot_mtx
 
 
@@ -30,6 +30,16 @@ class SecondTM(TransferMap):
         tm = cls(r_z_no_tilt=element.create_r_matrix(), t_mat_z_e=T_z_e)
         tm.multiplication = SecondOrderMult().tmat_multip
         return tm
+
+    def calculate_Tb(self, energy) -> np.ndarray:
+        """
+        Calculates the Tb matrix which is needed to claculate the transfromation matrix.
+        Note: The calculation of the Tb matrix is different between first order TM and second order TM.
+        @return: Tb matrix
+        """
+        Tb = np.copy(self.T_tilt(energy))
+        Tb = sym_matrix(Tb)
+        return Tb
 
     def t_apply(self, R, T, X, dx, dy, tilt, U5666=0.):
         if dx != 0 or dy != 0 or tilt != 0:

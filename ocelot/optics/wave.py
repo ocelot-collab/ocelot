@@ -37,7 +37,6 @@ except ImportError:
 
 __author__ = "Svitozar Serkez, Andrei Trebushinin, Mykola Veremchuk"
 
-
 class RadiationField:
     """
     3d or 2d coherent radiation distribution, *.fld variable is the same as Genesis dfl structure
@@ -403,13 +402,6 @@ class RadiationField:
         start = time.time()
         domain_orig = self.domain_xy
         
-        # alpha = 0.2
-        # tukey_x = scipy.signal.tukey(self.shape()[1], alpha)
-        # tukey_y = scipy.signal.tukey(self.shape()[2], alpha)
-        # tukey_2D = np.outer(tukey_x, tukey_y)
-        # tukey_2D_FT = np.fft.fft2(tukey_2D)
-        # tukey_2D_FT = np.fft.fftshift(tukey_2D_FT)
-        
         if nthread < 2:
             method = 'np'
         
@@ -421,7 +413,6 @@ class RadiationField:
                                                 auto_contiguous=False, avoid_copy=True)
                 self.fld = fft_exec()
             else:
-                # self.fld *= tukey_2D[np.newaxis, :]
                 self.fld = np.fft.fft2(self.fld, axes=(1, 2))
                 # else:
                 # raise ValueError("fft method should be 'np' or 'mp'")
@@ -437,13 +428,12 @@ class RadiationField:
                                                  auto_align_input=False, auto_contiguous=False, avoid_copy=True)
                 self.fld = fft_exec()
             else:
-                # self.fld *= tukey_2D[np.newaxis, :]
+                pass
                 self.fld = np.fft.ifft2(self.fld, axes=(1, 2))
             # else:
             #     raise ValueError("fft method should be 'np' or 'mp'")
             self.fld *= np.sqrt(self.Nx() * self.Ny())
             self.domain_xy = 's'
-            # self.fld *= tukey_2D[np.newaxis, :]
 
         else:
             raise ValueError("domain_xy value should be 's' or 'k'")
@@ -752,7 +742,6 @@ class RadiationField:
         if return_orig_domains:
             self.to_domain(domains)
 
-
 class WaistScanResults():
 
     def __init__(self):
@@ -1018,6 +1007,23 @@ class HeightProfile:
 
     def hrms(self):
         return np.sqrt(np.mean(np.square(self.h)))
+    
+    def slope_rms(self, lamds_range=None):
+        k = np.pi / self.length * np.linspace(0, self.points_number, self.points_number // 2)
+
+        # if lamds_range != None:
+        #     indx_low = (np.abs(k - 2*np.pi/lamds_range[0])).argmin() #find_nearest(self.s, 2*np.pi/lamds_range[0])
+        #     indx_high = (np.abs(k - 2*np.pi/lamds_range[1])).argmin() #find_nearest(self.s, 2*np.pi/lamds_range[1])
+        #     z = self.h[indx_low:indx_high]
+        #     s = self.s[indx_low:indx_high]
+        #     _logger.info(ind_str + 'low and high indexes ({}, {})'.format(indx_low, indx_high))
+        
+        z = self.h
+        s = self.s
+        alpha_i = np.arctan((np.roll(z, 1)[1:] - z[1:])/(np.roll(s, 1)[1:] - s[1:]))
+        alpha_mean = np.mean(alpha_i)
+
+        return np.sqrt(np.mean((alpha_i - alpha_mean)**2))
 
     def set_hrms(self, rms):
         self.h *= rms / self.hrms()
@@ -1609,6 +1615,118 @@ def imitate_sase_dfl(xlamds, rho=2e-4, seed=None, **kwargs):
     dfl.fld *= td_envelope[:, :, np.newaxis]
 
     return dfl
+
+
+def generate_undulator_radiation_Far_field_approx(theta_x, theta_y, l_x, l_y, eta_x, eta_y, z=0, phi=False): 
+    '''
+    Field generator for the far field approximation
+    Parameters
+    ----------
+    theta_x : float
+        grid along x having shape [Nx Ny]
+    theta_y : float
+        grid along y having shape [Nx Ny]
+    l_x : float
+        random x offset of an electron
+    l_y : float
+        random y offset of the electron
+    eta_x : float
+        random x deflection angle of the electron
+    eta_y : float
+        random y deflection angle of the electron
+    phi : bool type 
+        longitudinal phase of the electron. If True -- long beam approximation: fields sum up with the random phase; if False -- short beam approximation: fields sum up in phase
+
+    Returns
+    -------
+    array with a shape (Nx, Ny)
+        the field emitted by the electron
+    '''
+    if z != 0: 
+        z_0 = z
+    else: 
+        raise AttributeError('"phi" is bool type ')
+        _logger.error('"z" must not be zero')
+
+    _logger.debug('calculating undulator field in the far field approximation')
+    start_time = time.time()
+    E = -np.sinc(L_w * w * ((theta_x - (l_x/z_0) - eta_x)**2 + (
+                            theta_y - (l_y/z_0) - eta_y)**2) / 4 /speed_of_light / np.pi) * np.exp(
+                            -1j * w  * z_0 * ((theta_x - (l_x/z_0))**2 + (theta_y - (l_y/z_0))**2) / 2 / speed_of_light)
+    if phi == True:
+        _logger.debug(ind_str + 'adding random phase to the field')
+        _logger.debug(ind_str + 'done in {:.2f} seconds'.format(time.time() - start_time))
+        return E * np.exp(1j * phi)
+    elif phi == False:
+        _logger.debug(ind_str + 'done in {:.2f} seconds'.format(time.time() - start_time))
+        return E        
+    else:
+        raise AttributeError('"phi" is bool type ')
+
+def generate_undulator_radiation_Near_field_approx(x, y, l_x, l_y, eta_x, eta_y, z=0, phi=None):
+    '''
+    Field generator for near field approximation
+
+    Parameters
+    ----------
+    theta_x : float
+        grid along x
+    theta_y : float
+        grid along y
+    l_x : float
+        x offset of an electron
+    l_y : float
+        y offset of the electron
+    eta_x : float
+        x deflection angle of the electron
+    eta_y : float
+        y deflection angle of the electron
+    phi : float, None
+        longitudinal phase of the electron. The default is None -- short beam approximation.
+
+    Returns
+    -------
+    array with a shape (Nx, Ny)
+        the field emitted by the electron
+    '''
+    if z != 0: 
+        z_0 = z
+    else: 
+        raise AttributeError('"phi" is bool type ')
+        _logger.error('"z" must not be zero')
+   
+    _logger.debug('calculating undulator field in the near field approximation')
+    start_time = time.time()    
+    E = (sc.expi(1j * w * ((x - l_x - z_0*eta_x)**2 + (y - l_y - z_0*eta_y)**2) / (2 * z_0 * speed_of_light - L_w*speed_of_light)) - sc.expi(
+        1j * w * ((x - l_x - z_0*eta_x)**2 + (y - l_y - z_0*eta_y)**2) / (2 * z_0 * speed_of_light + L_w*speed_of_light))) * np.exp(
+            1j * w * (((x - l_x)**2 + (y - l_y)**2) - (x - l_x - z_0*eta_x)**2 - (y  - l_y - z_0*eta_y)**2) / 2 / speed_of_light / z_0)  
+    
+    ### the field has a singularity at x, y = 0
+    ### for excluding nan value
+    _logger.debug(ind_str + 'looking for None value because of features at r = 0 and z_0 = L_w, may appear for filament beams')
+    none_indx = np.where(np.isnan(E))
+    if not none_indx:    
+        _logger.WARNING(ind_str + "none_indx = {}".format(none_indx))
+        avr = E[(none_indx[0] - 1)[0]:(none_indx[0] + 2)[0],(none_indx[1] - 1)[0]:(none_indx[1] + 2)[0]]
+        avr = np.average(avr[~np.isnan(avr)])
+        E[none_indx] = avr
+        _logger.debug(ind_str + 'nan value found')
+    else:
+        _logger.debug(ind_str + 'no nan value found')
+    ###
+    
+    if phi == True:
+        _logger.debug(ind_str + 'adding random phase to the field')
+        _logger.debug(ind_str + 'done in {:.2f} seconds'.format(time.time() - start_time))
+        
+        return E * np.exp(1j * phi)
+    elif phi == False:
+        _logger.debug(ind_str + 'done in {:.2f} seconds'.format(time.time() - start_time))
+        
+        return E
+    else:
+        _logger.error(ind_str + '"phi" is bool type ')
+        raise AttributeError('"phi" is bool type ')
 
 
 def calc_phase_delay_poly(coeff, w, w0):
@@ -2594,7 +2712,7 @@ def dfl_chirp_freq(dfl, coeff, E_ph0=None, return_result=False):
         return dfl
 
 
-def generate_1d_profile(hrms, length=0.1, points_number=1000, wavevector_cutoff=0, psd=None, seed=None):
+def generate_1d_profile(hrms, length=0.1, points_number=1000, wavevector_cutoff=0, psd=(2, 2), seed=None):
     """
     Function for generating HeightProfile of highly polished mirror surface
 
@@ -2616,11 +2734,15 @@ def generate_1d_profile(hrms, length=0.1, points_number=1000, wavevector_cutoff=
     if seed is not None:
         np.random.seed(seed)
 
-    if psd is None:
+    if np.shape(psd)[0] == 2:
         k = np.pi / length * np.linspace(0, points_number, points_number // 2 + 1)
         # defining linear function PSD(k) in loglog plane
-        a = -2  # free term of PSD(k) in loglog plane
-        b = -2  # slope of PSD(k) in loglog plane
+        
+        # a = -2  # free term of PSD(k) in loglog plane
+        # b = -2  # slope of PSD(k) in loglog plane
+        a = -psd[0]
+        b = -psd[1]
+        
         psd = np.exp(a * np.log(10)) * np.exp(b * np.log(k[1:]))
         psd = np.append(psd[0], psd)  # ??? It doesn*t important, but we need to add that for correct amount of points
         if wavevector_cutoff != 0:
@@ -3293,3 +3415,4 @@ def dfldomain_check(domains, both_req=False):
         
         **kwargs are passed down to self.fft_z and self.fft_xy
         """
+        

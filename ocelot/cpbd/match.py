@@ -10,7 +10,7 @@ from ocelot.cpbd.beam import Particle
 from ocelot.cpbd.elements import *
 from ocelot.cpbd.beam import get_envelope
 from ocelot.cpbd.track import track
-from ocelot.cpbd.transformations.optics import lattice_transfer_map, twiss, periodic_twiss, Twiss
+from ocelot.cpbd.optics import lattice_transfer_map, twiss, periodic_twiss, Twiss
 from ocelot.cpbd.transformations.tm_utils import SecondOrderMult
 
 

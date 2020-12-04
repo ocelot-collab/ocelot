@@ -12,7 +12,7 @@ from matplotlib.collections import PatchCollection
 import matplotlib.patches as mpatches
 import matplotlib.path as mpath
 import matplotlib.pyplot as plt
-from ocelot.cpbd.transformations.optics import *
+from ocelot.cpbd.optics import *
 import numpy as np
 from ocelot.cpbd.elements import *
 from copy import deepcopy

@@ -3,7 +3,7 @@ from ocelot import MagneticLattice
 __author__ = 'Sergey Tomin'
 from ocelot.lib.genera.src.python.trajectory.undulator import und_trace
 from numpy import append
-from ocelot.cpbd.transformations.optics import *
+from ocelot.cpbd.optics import *
 from ocelot.cpbd.elements import *
 from ocelot.lib.genera.src.python.trajectory.motion import Motion
 from scipy.interpolate import splrep, splev

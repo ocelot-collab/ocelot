@@ -3,7 +3,7 @@ __author__ = 'Sergey Tomin'
 
 from pylab import *
 from ocelot import *
-from ocelot.cpbd.transformations.optics import *
+from ocelot.cpbd.optics import *
 from ocelot.cpbd.transformations.second_order import SecondTM
 
 Q1 = Quadrupole(l= 0.4, k1=-1.3, eid= "Q1")

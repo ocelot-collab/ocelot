@@ -1,4 +1,4 @@
-from ocelot.cpbd.transformations.optics import *
+from ocelot.cpbd.optics import *
 from ocelot.cpbd.match import closed_orbit
 from ocelot.cpbd.track import tracking_step
 from ocelot.cpbd.elements import *

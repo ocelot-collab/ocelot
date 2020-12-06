@@ -533,8 +533,8 @@ def plot_dfl_xz(dfl, whichis_derectrion='x', plot_proj=True, plot_slice=True, E_
         
     I = dfl.intensity()
     
-    I_units_phsmmbw='$\gamma/s/mm^2/0.1\%bw$'
-    I_units_phsbw='$\gamma/s/0.1\%bw$'
+    I_units_phsmmbw='$ph/s/mm^2/0.1\%bw$'
+    I_units_phsbw='$ph/s/0.1\%bw$'
     
     if whichis_derectrion == 'x':
         x = dfl.scale_x()

@@ -13,7 +13,6 @@ class CorrectorTM(SecondTM):
         SecondTM.__init__(self, r_z_no_tilt, t_mat_z_e)
         self.angle_x = angle_x
         self.angle_y = angle_y
-        self.map = lambda X, energy: self.kick(X, self.length, self.length, self.angle_x, self.angle_y, energy)
         self.B_z = lambda z, energy: self.kick_b(z, self.length, angle_x, angle_y)
 
     def kick_b(self, z, l, angle_x, angle_y):
@@ -42,11 +41,5 @@ class CorrectorTM(SecondTM):
         X[:] = X1[:]
         return X
 
-    def __call__(self, s):
-        m = copy(self)
-        m.length = s
-        m.R = lambda energy: m.R_z(s, energy)
-        m.B = lambda energy: m.B_z(s, energy)
-        m.delta_e = m.delta_e_z(s)
-        m.map = lambda X, energy: m.kick(X, s, self.length, m.angle_x, m.angle_y, energy)
-        return m
+    def map_function(self, delta_length=None, length=None):
+        return lambda X, energy: self.kick(X, delta_length if delta_length else self.length, length if length else self.length, self.angle_x, self.angle_y, energy)

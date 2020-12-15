@@ -62,15 +62,6 @@ class TWCavityTM(TransferMap):
         r[3, 2] = r[1, 0]
         return r
 
-    def __call__(self, s):
-        m = copy(self)
-        m.length = s
-        m.R = lambda energy: m.R_z(s, energy)
-        m.B = lambda energy: m.B_z(s, energy)
-        m.delta_e = m.delta_e_z(s)
-        m.map = lambda u, energy: m.mul_p_array(u, energy=energy)
-        return m
-
     @classmethod
     def create_from_element(cls, element, params=None):
         return cls(v=element.v, freq=element.freq, phi=element.phi)

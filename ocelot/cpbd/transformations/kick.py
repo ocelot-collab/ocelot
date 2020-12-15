@@ -68,11 +68,6 @@ class KickTM(TransferMap):
 
         return X
 
-    def __call__(self, s):
-        m = copy(self)
-        m.length = s
-        m.R = lambda energy: m.R_z(s, energy)
-        m.B = lambda energy: m.B_z(s, energy)
-        m.delta_e = m.delta_e_z(s)
-        m.map = lambda X, energy: m.kick_apply(X, s, m.angle, m.k1, m.k2, m.k3, energy, m.nkick, m.dx, m.dy, m.tilt)
-        return m
+    def map_function(self, delta_length=None, length=None):
+        return lambda X, energy: self.kick_apply(X, delta_length if delta_length else self.length, self.angle, self.k1, self.k2, self.k3, energy, self.nkick, self.dx, self.dy, self.tilt)
+

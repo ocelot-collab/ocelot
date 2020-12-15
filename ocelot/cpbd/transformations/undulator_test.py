@@ -13,8 +13,6 @@ class UndulatorTestTM(TransferMap):
         self.Kx = Kx
         self.ax = ax
         self.ndiv = ndiv
-        self.map = lambda X, energy: self.map4undulator(X, self.length, self.lperiod, self.Kx, self.ax, energy,
-                                                        self.ndiv)
 
     def map4undulator(self, u, z, lperiod, Kx, ax, energy, ndiv):
         kz = 2. * np.pi / lperiod
@@ -44,19 +42,13 @@ class UndulatorTestTM(TransferMap):
             u[1] -= h / 2. * chx * shx * (kx * ky2 * chy * chy + kx2 * kx * shy * shy) / (ky2 * kz2) * h02
             u[3] -= h / 2. * chy * shy * (ky2 * chx * chx + kx2 * shx * shx) / (ky * kz2) * h02
             u[4] -= h / 2. / (1. + u[5]) * ((u[1] * u[1] + u[3] * u[3]) + chx * chx * chy * chy / (
-                    2. * kz2) * h02 + shx * shx * shy * shy * kx2 / (2. * ky2 * kz2) * h02)
+                2. * kz2) * h02 + shx * shx * shy * shy * kx2 / (2. * ky2 * kz2) * h02)
             u[0] = x + h * u[1]
             u[2] = y + h * u[3]
         return u
 
-    def __call__(self, s):
-        m = copy(self)
-        m.length = s
-        m.R = lambda energy: m.R_z(s, energy)
-        m.B = lambda energy: m.B_z(s, energy)
-        m.delta_e = m.delta_e_z(s)
-        m.map = lambda X, energy: m.map4undulator(X, m.length, m.lperiod, m.Kx, m.ax, energy, m.ndiv)
-        return m
+    def map_function(self, delta_length=None, length=None):
+        return lambda X, energy: self.map4undulator(X, self.length, self.lperiod, self.Kx, self.ax, energy, self.ndiv)
 
     @classmethod
     def create_from_element(cls, element, params=None):

@@ -16,7 +16,6 @@ class CouplerKickTM(TransferMap):
         self.phi = phi
         self.vx = vx
         self.vy = vy
-        self.map = lambda X, energy: self.kick(X, self.v, self.phi, energy)
         self.B_z = lambda z, energy: self.kick_b(self.v, self.phi, energy)
 
     def kick_b(self, v, phi, energy):
@@ -34,14 +33,8 @@ class CouplerKickTM(TransferMap):
         X[:] = X1[:]
         return X
 
-    def __call__(self, s):
-        m = copy(self)
-        m.length = s
-        m.R = lambda energy: m.R_z(s, energy)
-        m.B = lambda energy: m.B_z(s, energy)
-        m.delta_e = m.delta_e_z(s)
-        m.map = lambda X, energy: m.kick(X, self.v, self.phi, energy)
-        return m
+    def map_function(self, delta_length=None, length=None):
+        return lambda X, energy: self.kick(X, self.v, self.phi, energy)
 
     @classmethod
     def create_from_element(cls, element, params=None):

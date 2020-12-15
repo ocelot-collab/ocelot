@@ -15,8 +15,6 @@ class SecondTM(TransferMap):
         self.t_mat_z_e = t_mat_z_e
 
         self.multiplication = None
-        self.map = lambda X, energy: self.t_apply(self.r_z_no_tilt(self.length, energy),
-                                                  self.t_mat_z_e(self.length, energy), X, self.dx, self.dy, self.tilt)
 
         self.R_tilt = lambda energy: np.dot(np.dot(rot_mtx(-self.tilt), self.r_z_no_tilt(self.length, energy)),
                                             rot_mtx(self.tilt))
@@ -50,12 +48,15 @@ class SecondTM(TransferMap):
 
         return X
 
+    def map_function(self, delta_length=None, length=None):
+        return lambda X, energy: self.t_apply(self.r_z_no_tilt(delta_length if delta_length else self.length, energy), self.t_mat_z_e(delta_length if delta_length else self.length, energy), X, self.dx, self.dy, self.tilt)
+
     def __call__(self, s):
         m = copy(self)
-        m.length = s
         m.R = lambda energy: m.R_z(s, energy)
         m.B = lambda energy: m.B_z(s, energy)
         m.T = lambda s, energy: m.t_mat_z_e(s, energy)
         m.delta_e = m.delta_e_z(s)
-        m.map = lambda X, energy: m.t_apply(m.r_z_no_tilt(s, energy), m.t_mat_z_e(s, energy), X, m.dx, m.dy, m.tilt)
+        m.map = m.map_function(delta_length=s, length=self.length)
+        m.length = s
         return m

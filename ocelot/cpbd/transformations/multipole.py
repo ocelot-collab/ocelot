@@ -10,7 +10,6 @@ class MultipoleTM(TransferMap):
     def __init__(self, kn):
         TransferMap.__init__(self)
         self.kn = kn
-        self.map = lambda X, energy: self.kick(X, self.kn)
 
     def kick(self, X, kn):
         p = -kn[0] * X[5] + 0j
@@ -21,14 +20,8 @@ class MultipoleTM(TransferMap):
         X[4] = X[4] - kn[0] * X[0]
         return X
 
-    def __call__(self, s):
-        m = copy(self)
-        m.length = s
-        m.R = lambda energy: m.R_z(s, energy)
-        m.B = lambda energy: m.B_z(s, energy)
-        m.delta_e = m.delta_e_z(s)
-        m.map = lambda X, energy: m.kick(X, m.kn)
-        return m
+    def map_function(self, delta_length=None, length=None):
+        return lambda X, energy: self.kick(X, self.kn)
 
     @classmethod
     def create_from_element(cls, element, params=None):

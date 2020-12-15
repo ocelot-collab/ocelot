@@ -27,7 +27,25 @@ class TransferMap:
         self.B_z = lambda z, energy: np.dot((np.eye(6) - self.R_z(z, energy)),
                                             np.array([[self.dx], [0.], [self.dy], [0.], [0.], [0.]]))
         self.B = lambda energy: self.B_z(self.length, energy)
-        self.map = lambda u, energy: self.mul_p_array(u, energy=energy)
+        self._map = None
+
+    @property
+    def map(self):
+        if not self._map:
+            self._map = self.map_function()
+        return self._map
+
+    @map.setter
+    def map(self, func):
+        self._map = func
+
+    def map_function(self, delta_length=None, length=None):
+        """
+        This function calculate the map function which can be overload if the map function is different to the first order mapping  
+        @param delta_length: delta length of the element
+        @param length: total length of the element
+        """
+        return lambda u, energy: self.mul_p_array(u, energy=energy)
 
     def calculate_Tb(self, energy) -> np.ndarray:
         """
@@ -37,7 +55,6 @@ class TransferMap:
         @return: Tb matrix
         """
         return np.zeros((6, 6, 6))
-
 
     def map_x_twiss(self, tws0):
         E = tws0.E
@@ -153,7 +170,7 @@ class TransferMap:
         elif prcl_series.__class__ == Particle:
             p = prcl_series
             p.x, p.px, p.y, p.py, p.tau, p.p = self.map(np.array([[p.x], [p.px], [p.y], [p.py], [p.tau], [p.p]]), p.E)[
-                                               :, 0]
+                :, 0]
             p.s += self.length
             p.E += self.delta_e
 
@@ -182,11 +199,11 @@ class TransferMap:
 
     def __call__(self, delta_length):
         m = copy(self)
-        m.length = delta_length
         m.R = lambda energy: m.R_z(delta_length, energy)
         m.B = lambda energy: m.B_z(delta_length, energy)
         m.delta_e = m.delta_e_z(delta_length)
-        m.map = lambda u, energy: m.mul_p_array(u, energy=energy)
+        m.map = m.map_function(delta_length=delta_length, length=self.length)
+        m.length = delta_length
         return m
 
     @classmethod

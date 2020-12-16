@@ -371,7 +371,7 @@ def change_corrector(corrector, lattice):
         if elem.id == corrector.id:
             elem.angle += corrector.dI
             #print "change ", elem.angle
-            elem.transfer_map = create_transfer_map(elem)
+            elem.transfer_map = elem.create_tm(lattice.method)
             #print elem.transfer_map.b(1)
     return lattice#.update_transfer_maps()
 
@@ -379,7 +379,7 @@ def restore_corrector(corrector, lattice):
     for elem in lattice.sequence:
         if elem.id == corrector.id:
             elem.angle -= corrector.dI
-            elem.transfer_map = create_transfer_map(elem)
+            elem.transfer_map = elem.create_tm(lattice.method)
     return lattice#.update_transfer_maps()
 
 def change_quad_position(quad, lattice, dx=0., dy=0.):
@@ -387,7 +387,7 @@ def change_quad_position(quad, lattice, dx=0., dy=0.):
         if elem.id == quad.id:
             elem.dx += dx
             elem.dy += dy
-            elem.transfer_map = create_transfer_map(elem)
+            elem.transfer_map = elem.create_tm(lattice.method)
     return lattice.update_transfer_maps()
 
 

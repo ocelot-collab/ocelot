@@ -158,119 +158,6 @@ def plot_lattice(lat, axis, alpha=1.0, params={'kmax': 2.0, 'ang_max': 0.5e-2}, 
     # axis.set_yticks([])
 
 
-"""
-Tomin Sergey functions
-"""
-
-
-def elem_cord(lat):
-    quad = np.array([[0, 0]])
-    bend = np.array([[0, 0]])
-    sext = np.array([[0, 0]])
-    multi = np.array([[0, 0]])
-    c = []
-    corr = np.array([[0, 0]])
-    mons = np.array([[0, 0]])
-    cav = np.array([[0, 0]])
-    mat = np.array([[0, 0]])
-    und = np.array([[0, 0]])
-    drft = np.array([[0, 0]])
-    L = 0
-    # for elem in lat.sequence:
-    # if elem.type == "drift" and elem.l == 0:
-    # lat.sequence.remove(elem)
-
-    for elem in lat.sequence:
-        dL = 0.
-        if elem.l == 0:
-            dL = 0.03
-        temp = np.array([[L - dL, 0]])
-        temp = np.append(temp, [[L - dL, 1]], axis=0)
-        temp = np.append(temp, [[L + elem.l + dL, 1]], axis=0)
-        temp = np.append(temp, [[L + elem.l + dL, 0]], axis=0)
-        # temp = temp.reshape((4,2))
-
-        if elem.__class__ == Quadrupole:
-            k1 = elem.k1
-            quad = np.append(quad, [[L, 0]], axis=0)
-            quad = np.append(quad, [[L, k1]], axis=0)
-            # quad = np.append(quad, [[L+elem.l/2, k1*(1 + 0.2 * np.sign(elem.k1)) ]], axis=0)
-            quad = np.append(quad, [[L + elem.l, k1]], axis=0)
-            quad = np.append(quad, [[L + elem.l, 0]], axis=0)
-
-        elif elem.__class__ == Cavity:
-            k1 = 1.
-            cav = np.append(cav, [[L, 0]], axis=0)
-            cav = np.append(cav, [[L, k1]], axis=0)
-            cav = np.append(cav, [[L + elem.l, k1]], axis=0)
-            cav = np.append(cav, [[L + elem.l, 0]], axis=0)
-
-        elif elem.__class__ == Drift:
-            k1 = 1.
-            drft = np.append(drft, [[L, 0]], axis=0)
-            drft = np.append(drft, [[L, 0]], axis=0)
-            drft = np.append(drft, [[L + elem.l, 0]], axis=0)
-            drft = np.append(drft, [[L + elem.l, 0]], axis=0)
-
-        elif elem.__class__ == Matrix:
-            # k1 = 1.
-            mat = np.append(mat, [[L, 0]], axis=0)
-            # mat = np.append(mat, [[L, k1]], axis=0)
-            # mat = np.append(mat, [[L+elem.l, k1]],axis=0)
-            mat = np.append(mat, [[L + elem.l, 0]], axis=0)
-
-        elif elem.__class__ == Undulator:
-            k1 = 1.
-            und = np.append(und, [[L, 0]], axis=0)
-            und = np.append(und, [[L, k1]], axis=0)
-            und = np.append(und, [[L + elem.l, k1]], axis=0)
-            und = np.append(und, [[L + elem.l, 0]], axis=0)
-
-        elif elem.__class__ in [SBend, RBend, Bend]:
-            if elem.l == 0:
-                h = 0
-            else:
-                h = elem.angle / elem.l
-            temp[:, 1] = temp[:, 1] * h
-            bend = np.append(bend, temp, axis=0)
-
-        elif elem.__class__ == Sextupole:
-
-            temp[:, 1] = temp[:, 1] * elem.k2
-            sext = np.append(sext, temp, axis=0)
-
-        elif elem.__class__ == Multipole:
-            if sum(abs(elem.kn)) != 0:
-                temp[:, 1] = temp[:, 1] * sum(elem.kn) / sum(abs(elem.kn))
-            else:
-                temp[:, 1] = temp[:, 1] * 0.
-            multi = np.append(multi, temp, axis=0)
-
-        elif elem.__class__ in [Hcor, Vcor]:
-            temp[:, 1] = temp[:, 1]  # *abs(elem.angle)
-            corr = np.append(corr, temp, axis=0)
-
-        elif elem.__class__ in [Monitor]:
-            temp[:, 1] = temp[:, 1]  # *abs(elem.angle)
-            mons = np.append(mons, temp, axis=0)
-        # c.append((L,  elem.l+0.03))
-        L += elem.l
-    if len(quad) != 1:
-        quad[:, 1] = quad[:, 1] / max(quad[:, 1])
-    if len(bend) != 1:
-        if max(bend[:, 1]) == 0:
-            bend[:, 1] = 0
-        else:
-            bend[:, 1] = bend[:, 1] / max(bend[:, 1])
-    if len(sext) != 1 and max(sext[:, 1] != 0):
-        sext[:, 1] = sext[:, 1] / max(np.abs(sext[:, 1]))
-    if len(corr) != 1 and max(corr[:, 1] != 0):
-        corr[:, 1] = corr[:, 1] / max(corr[:, 1])
-    # if len(corr) != 1 and max(mons[:,1] != 0):
-    # mons[:,1] = mons[:,1]/max(mons[:,1])
-    return quad, bend, sext, corr, mons, cav, mat, und, multi, drft
-
-
 dict_plot = {Quadrupole: {"scale": 0.7, "color": "r", "edgecolor": "r", "label": "quad"},
              Sextupole: {"scale": 0.5, "color": "g", "edgecolor": "g", "label": "sext"},
              Octupole: {"scale": 0.5, "color": "g", "edgecolor": "g", "label": "oct"},
@@ -296,7 +183,7 @@ dict_plot = {Quadrupole: {"scale": 0.7, "color": "r", "edgecolor": "r", "label":
              }
 
 
-def plot_elems(fig, ax, lat, s_point=0, nturns=1, y_lim=None, y_scale=1, legend=True, font_size=18, excld_legend=None):
+def plot_elems(fig, ax, lat, s_point=0, y_lim=None, y_scale=1, legend=True, font_size=18, excld_legend=None):
     legend_font_size = font_size
 
     if excld_legend is None:
@@ -306,7 +193,7 @@ def plot_elems(fig, ax, lat, s_point=0, nturns=1, y_lim=None, y_scale=1, legend=
     alpha = 1
     ax.set_ylim((-1, 1.5))
     ax.tick_params(axis='both', labelsize=font_size)
-    if y_lim != None:
+    if y_lim is not None:
         ax.set_ylim(y_lim)
     points_with_annotation = []
     L = 0.
@@ -438,7 +325,7 @@ def plot_elems(fig, ax, lat, s_point=0, nturns=1, y_lim=None, y_scale=1, legend=
                              alpha=alpha)
 
         annotation = ax.annotate(elem.__class__.__name__ + ": " + elem.id,
-                                 xy=(L + l / 2., 0),  # xycoords='data',
+                                 xy=(L + l / 2. + s_point, 0),  # xycoords='data',
                                  # xytext=(i + 1, i), textcoords='data',
                                  horizontalalignment="left",
                                  arrowprops=dict(arrowstyle="simple", connectionstyle="arc3,rad=+0.2"),
@@ -454,7 +341,7 @@ def plot_elems(fig, ax, lat, s_point=0, nturns=1, y_lim=None, y_scale=1, legend=
     def on_move(event):
         visibility_changed = False
         for point, annotation in points_with_annotation:
-            should_be_visible = (point.contains(event)[0] == True)
+            should_be_visible = (point.contains(event)[0] is True)
             if should_be_visible != annotation.get_visible():
                 visibility_changed = True
                 annotation.set_visible(should_be_visible)

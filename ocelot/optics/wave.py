@@ -2131,18 +2131,19 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
 
     _logger.debug(ind_str + 'new shape = (%i %i %i)' % (len(fld2), fslice2.shape[0], fslice2.shape[1]))
 
-    dfl.fld = np.array(fld2)
-    dfl.dx = Lx2 / dfl.Nx()
-    dfl.dy = Ly2 / dfl.Ny()
+    dfl2 = deepcopy(dfl)
+    dfl2.fld = np.array(fld2)
+    dfl2.dx = Lx2 / dfl2.Nx()
+    dfl2.dy = Ly2 / dfl2.Ny()
     # dfl2.fileName=dfl.fileName+'i'
     # dfl2.filePath=dfl.filePath+'i'
-    E2 = dfl.E()
+    E2 = dfl2.E()
     _logger.info(ind_str + '%.2f%% energy cut' % ((E1 - E2) / E1 * 100))
     _logger.debug(ind_str + 'energy after interpolation ' + str(E2))
     _logger.debug(ind_str + 'done in %.2f sec' % (time.time() - start_time))
 
     if return_result:
-        return dfl
+        return dfl2
     else:
         return
 

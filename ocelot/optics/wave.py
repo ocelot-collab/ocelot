@@ -1337,6 +1337,7 @@ class WignerDistribution():
         # self.fld=np.array([]) #(z,y,x)
         self.field = []
         self.wig = []  # (wav,space)
+        self.wig_stat = [] # same as wig.wig, but with another dimention hosting different events
         self.s = []  # space scale
         self.z = None  # position along undulator (if applicable)
         self.phen = []  # photon energy
@@ -1582,7 +1583,7 @@ def imitate_sase_dfl(xlamds, rho=2e-4, seed=None, **kwargs):
         kwargs.pop(key, None)
         
     _, td_envelope, _, _ = imitate_1d_sase_like(td_scale=td_scale, td_env=np.ones_like(td_scale), fd_scale=fd_scale_ev,
-                                                fd_env=fd_env, td_phase=None, fd_phase=None, phen0=None, en_pulse=1,
+                                                fd_env=fd_env, td_phase=None, fd_phase=None, phen0=None, en_pulse=1,#TODO: check 
                                                 fit_scale='td', n_events=1, seed=seed, **kwargs)
 
     dfl.fld *= td_envelope[:, :, np.newaxis]
@@ -2940,6 +2941,7 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1, on_axi
         ds = (out_stat.s[-1] - out_stat.s[0]) / (out_stat.s.size - 1)
         pad_array_s_l = np.linspace(out_stat.s[0] - ds * (n_add_l), out_stat.s[0] - ds, n_add_l)
         pad_array_s_r = np.linspace(out_stat.s[-1] + ds, out_stat.s[-1] + ds * (n_add_r), n_add_r)
+        
         WW = np.zeros(
             (power.shape[2], power.shape[1] + n_add, power.shape[1] + n_add))
         s = np.concatenate([pad_array_s_l, out_stat.s, pad_array_s_r])

@@ -1008,23 +1008,43 @@ class HeightProfile:
     def hrms(self):
         return np.sqrt(np.mean(np.square(self.h)))
     
-    def slope_rms(self, lamds_range=None):
+    def slope_rms_from_h(self, lamds_range=None):
         k = np.pi / self.length * np.linspace(0, self.points_number, self.points_number // 2)
-
-        # if lamds_range != None:
-        #     indx_low = (np.abs(k - 2*np.pi/lamds_range[0])).argmin() #find_nearest(self.s, 2*np.pi/lamds_range[0])
-        #     indx_high = (np.abs(k - 2*np.pi/lamds_range[1])).argmin() #find_nearest(self.s, 2*np.pi/lamds_range[1])
-        #     z = self.h[indx_low:indx_high]
-        #     s = self.s[indx_low:indx_high]
-        #     _logger.info(ind_str + 'low and high indexes ({}, {})'.format(indx_low, indx_high))
+        print("k-shape", np.shape(k))
+        if lamds_range != None:
+            indx_low = (np.abs(k - 2*np.pi/lamds_range[0])).argmin() #find_nearest(self.s, 2*np.pi/lamds_range[0])
+            indx_high = (np.abs(k - 2*np.pi/lamds_range[1])).argmin() #find_nearest(self.s, 2*np.pi/lamds_range[1])
+            z = self.h[indx_low:indx_high]
+            s = self.s[indx_low:indx_high]
+            _logger.info(ind_str + 'low and high indexes ({}, {})'.format(indx_low, indx_high))
         
         z = self.h
         s = self.s
+        print("s-shape", np.shape(s))
+        
         alpha_i = np.arctan((np.roll(z, 1)[1:] - z[1:])/(np.roll(s, 1)[1:] - s[1:]))
         alpha_mean = np.mean(alpha_i)
 
         return np.sqrt(np.mean((alpha_i - alpha_mean)**2))
-
+    
+    def hrms_from_psd(self):
+        k, psd = self.psd()
+        dk = (np.max(k) - np.min(k))/np.shape(k)[0]
+        rms = np.sqrt(np.sum(psd)*dk)
+        return rms
+    
+    def slope_rms_from_psd(self, lamds_range=None):
+        k, psd = self.psd()
+        indx_low = (np.abs(k - 1/lamds_range[0])).argmin() #find_nearest(self.s, 2*np.pi/lamds_range[0])
+        indx_high = (np.abs(k - 1/lamds_range[1])).argmin()
+        dk = (np.max(k) - np.min(k))/np.shape(k)[0]
+        
+        
+        slope_rms = np.sqrt(np.sum(psd[indx_low:indx_high]*k[indx_low:indx_high]**2)*dk)
+        
+        return slope_rms
+    
+    
     def set_hrms(self, rms):
         self.h *= rms / self.hrms()
 

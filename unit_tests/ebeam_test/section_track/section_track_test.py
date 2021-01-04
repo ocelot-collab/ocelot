@@ -174,7 +174,7 @@ def test_tracking_sc(section_lat, p_array, parameter=None, update_ref_values=Fal
     }
 
     sections = [A1, AH1, LH, DL, BC0, L1, BC1]
-    sec_lat.update_sections(sections, config=config, coupler_kick=False)
+    #sec_lat.update_sections(sections, config=config, coupler_kick=False)
 
     parray = sec_lat.track_sections(sections=sections, p_array=parray, config=config, force_ext_p_array=False,
                                          coupler_kick=False)

@@ -623,7 +623,6 @@ class ParticleArray:
         self.E = 0.0
         self.lost_particle_recorder = self.LostParticleRecorder(n)
 
-
     def rm_tails(self, xlim, ylim, px_lim, py_lim):
         """
         Method removes particles outside range [-xlim, +xlim], [-px_lim, +px_lim] ...
@@ -955,7 +954,8 @@ def get_envelope(p_array, tws_i=Twiss(), bounds=None):
     tws.beta_y = tws.yy / tws.emit_y
     tws.alpha_x = -tws.xpx / tws.emit_x
     tws.alpha_y = -tws.ypy / tws.emit_y
-
+    tws.gamma_x = (1 + tws.alpha_x ** 2) / tws.beta_x
+    tws.gamma_y = (1 + tws.alpha_y ** 2) / tws.beta_y
 
     return tws
 

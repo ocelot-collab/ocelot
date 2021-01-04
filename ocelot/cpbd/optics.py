@@ -799,7 +799,6 @@ class MethodTM:
 
         elif method == TWCavityTM:
             tm = TWCavityTM(l=element.l, v=element.v, phi=element.phi, freq=element.freq)
-            return tm
 
         else:
             tm = TransferMap()

@@ -77,6 +77,7 @@ class SectionLattice:
         new_sections = []
         tws0 = self.dict_sections[sections[0]].tws0
         tws_whole = []
+        seq_current = []
         for sec in sections:
             #np.random.seed(10)
             sec = self.dict_sections[sec]
@@ -108,11 +109,13 @@ class SectionLattice:
 
             sec.lattice.update_transfer_maps()
             new_sections.append(sec)
+            seq_current.append(sec.lattice.sequence)
             if tws0 is not None:
                 tws = twiss(sec.lattice, tws0)
                 tws0 = tws[-1]
                 tws_whole = np.append(tws_whole, tws)
         self.tws_current = tws_whole
+        self.lat_current = MagneticLattice(copy.deepcopy(seq_current), method=MethodTM({'global': SecondTM}))
         return new_sections
 
     def track_sections(self, sections, p_array, config=None, force_ext_p_array=False, coupler_kick=False, verbose=True):

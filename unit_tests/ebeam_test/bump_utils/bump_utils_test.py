@@ -42,7 +42,7 @@ def test_bump(lattice, parameter=None, update_ref_values=False):
 
     plist_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
 
-    result = check_dict(plist, plist_ref, TOL, assert_info=' plist - ')
+    result = check_dict(plist, plist_ref, tolerance=1.0e-10, tolerance_type='absolute', assert_info=' plist - ')
 
     assert check_result(result)
 

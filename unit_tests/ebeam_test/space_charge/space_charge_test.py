@@ -61,7 +61,7 @@ def test_track_with_sp(lattice, p_array, parameter=None, update_ref_values=False
 
     tws_track_p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
     
-    result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
+    result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], 1e-6, assert_info=' tws_track - ')
     result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=1e-12, tolerance_type='absolute', assert_info=' p_array - ')
     assert check_result(result1+result2)
 

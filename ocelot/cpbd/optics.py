@@ -8,7 +8,7 @@ from numpy.linalg import inv
 import numpy as np
 
 from ocelot.cpbd.beam import Particle, Twiss, ParticleArray
-from ocelot.cpbd.physics_proc import RectAperture
+from ocelot.cpbd.physics_proc import RectAperture, EllipticalAperture
 from ocelot.cpbd.high_order import *
 from ocelot.cpbd.r_matrix import *
 
@@ -1141,6 +1141,10 @@ class Navigator:
                 if elem.type == "rect":
                     ap = RectAperture(xmin=-elem.xmax + elem.dx, xmax=elem.xmax + elem.dx,
                                       ymin=-elem.ymax + elem.dy, ymax=elem.ymax + elem.dy)
+                    self.add_physics_proc(ap, elem, elem)
+                elif elem.type == "ellipt":
+                    ap = EllipticalAperture(xmax=elem.xmax, ymax=elem.ymax,
+                                      dx=elem.dx, dy=elem.dy)
                     self.add_physics_proc(ap, elem, elem)
 
     def check_overjump(self, dz, processes, phys_steps):

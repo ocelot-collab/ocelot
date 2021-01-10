@@ -22,7 +22,7 @@ def test_lattice_transfer_map(lattice, p_array, parameter=None, update_ref_value
 
     r_matrix_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json'))
     
-    result = check_matrix(r_matrix, r_matrix_ref, TOL, assert_info=' r_matrix - ')
+    result = check_matrix(r_matrix, r_matrix_ref, tolerance=1.0e-10, tolerance_type='absolute', assert_info=' r_matrix - ')
     assert check_result(result)
 
 @pytest.mark.parametrize('parameter', [0, 1])

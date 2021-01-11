@@ -39,7 +39,7 @@ def check_result(data):
     return result
 
 
-def check_value(value, value_ref, tolerance=1.0e-15, tolerance_type='relative', assert_info=''):
+def check_value(value, value_ref, tolerance=1.0e-15, tolerance_type='relative', assert_info='', zero_tol=1e-15):
     """Value with reference value check function
 
     if relative_tolerance='relative' then tolerance is relative (this is default value)
@@ -52,6 +52,10 @@ def check_value(value, value_ref, tolerance=1.0e-15, tolerance_type='relative', 
             return [None]
         else:
             return [assert_info + ' value is "' + value + '"\n reference value is "' + value_ref + '"\n\n']
+
+    if tolerance_type == 'relative':
+        if np.abs(value) < zero_tol and np.abs(value_ref) < zero_tol:
+            return None
 
     if tolerance_type == 'relative':
         abs_value_ref = np.abs(value_ref)

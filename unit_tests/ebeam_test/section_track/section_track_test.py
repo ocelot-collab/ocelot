@@ -33,7 +33,7 @@ def test_lattice_transfer_map(section_lat, p_array, parameter, update_ref_values
 
     r_matrix_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) + '.json'))
     
-    result = check_matrix(r_matrix, r_matrix_ref, tolerance=1.0e-10, tolerance_type='absolute', assert_info=' r_matrix - ')
+    result = check_matrix(r_matrix, r_matrix_ref, tolerance=1.0e-7, tolerance_type='relative', assert_info=' r_matrix - ')
     assert check_result(result)
 
 

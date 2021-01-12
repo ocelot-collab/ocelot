@@ -103,7 +103,8 @@ class Smoothing:
             logger.debug("Smoothing: Python")
             self.q_per_step_ip2 = self.q_per_step_ip2_py
 
-    def q_per_step_ip2_py(self, N_BIN, Q_BIN, BIN0, BIN1, NSIG, RMS, step, Nz, z1):
+    @staticmethod
+    def q_per_step_ip2_py(N_BIN, Q_BIN, BIN0, BIN1, NSIG, RMS, step, Nz, z1):
         Nz = int(Nz)
         charge_per_step = np.zeros(Nz)
 
@@ -268,7 +269,8 @@ class SubBinning:
             logger.debug("SubBinning: Python")
             self.p_per_subbins = self.p_per_subbins_py
 
-    def p_per_subbins_py(self, s, SBINB, K_BIN):
+    @staticmethod
+    def p_per_subbins_py(s, SBINB, K_BIN):
         NBIN = np.zeros(K_BIN)
         ib = 0
         Ns = len(s)
@@ -359,7 +361,8 @@ class K0_fin_anf:
             logger.debug("K0_fin_anf: Python")
             self.eval = self.K0_fin_anf_np
 
-    def K0_1_jit(self, indx, j, R, n, traj4, traj5, traj6, w, gamma):
+    @staticmethod
+    def K0_1_jit(indx, j, R, n, traj4, traj5, traj6, w, gamma):
         g2i = 1. / gamma ** 2
         b2 = 1. - g2i
         beta = np.sqrt(b2)
@@ -382,7 +385,8 @@ class K0_fin_anf:
                      g2i) * Ri_inv - (1. - beta * x) / w[i] * g2i)
         return K
 
-    def K0_0_jit(self, i, traj0, traj1, traj2, traj3, gamma, s, n, R, w, wmin):
+    @staticmethod
+    def K0_0_jit(i, traj0, traj1, traj2, traj3, gamma, s, n, R, w, wmin):
         g2i = 1. / gamma ** 2
         b2 = 1. - g2i
         beta = np.sqrt(b2)
@@ -413,6 +417,7 @@ class K0_fin_anf:
                 break
         # return last index where w <= wmin
         return i_0
+
 
     def K0_fin_anf_opt(self, i, traj, wmin, gamma):
         s = np.zeros(i)

@@ -33,11 +33,11 @@ However if someone needs a GUI  it can be developed using Python's libraries lik
 
  ## Preliminaries
 
-The tutorial includes 7 simple examples dediacted to beam dynamics and optics. However, you should have a basic understanding of Computer Programming terminologies. A basic understanding of Python language is a plus.
+The tutorial includes 9 examples dedicated to the beam dynamics and optics and 5 to Photon Field Simulation. However, you should have a basic understanding of Computer Programming terminologies. A basic understanding of Python language is a plus.
 
 ##### This tutorial requires the following packages:
 
-- Python 3.5-3.7 (python 2.7 can work as well but not guaranteed)
+- Python 3.6 - 3.8
 - `numpy` version 1.8 or later: http://www.numpy.org/
 - `scipy` version 0.15 or later: http://www.scipy.org/
 - `matplotlib` version 1.5 or later: http://matplotlib.org/
@@ -149,7 +149,24 @@ You can download OCELOT jupyter tutorials (release v18.02) using GitHub link [zi
 #### Appendixes
 * [Undulator matching](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/undulator_matching.ipynb).
     - brief theory and example in OCELOT
-* [Small features](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/dev/demos/ipython_tutorials/small_useful_features.ipynb).
-    - collection of some small OCELOT features
+* [Some useful OCELOT functions](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/small_useful_features.ipynb)
+    - Aperture, RK tracking 
+* [Example of an accelerator section optimization](https://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/accelerator_optim.ipynb)
+    - A simple demo of accelerator section optimization with a standard scipy numerical optimization method. 
+## Documentation
+The API documentation can be build using [sphinx](https://sphinx.org).
+To do so, you have to clone the repository or download the zip file, as explained in the [ocelot installation section](#ocelot-installation).
+Then you can install all dependencies by running
+``` bash
+python -m pip install -r docs/requirements.txt
+python setup.py install
+```
+Now you can build the documentation by running
+```
+python setup.py build_sphinx
+```
+If these steps succeeded (yes, there are still very many errors and warnings during building the documentation),
+you can browse the HTML documentation by opening `build/sphinx/html/index.html` in your browser.
+
 
 **Disclaimer:** The OCELOT code comes with absolutely NO warranty. The authors of the OCELOT do not take any responsibility for any damage to equipments or personnel injury that may result from the use of the code.

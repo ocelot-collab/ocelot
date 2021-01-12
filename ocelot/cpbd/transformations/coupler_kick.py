@@ -3,7 +3,7 @@ import logging
 
 import numpy as np
 
-from ocelot.cpbd.transformations.first_order import TransferMap
+from ocelot.cpbd.transformations.transfer_map import TransferMap
 
 _logger = logging.getLogger(__name__)
 

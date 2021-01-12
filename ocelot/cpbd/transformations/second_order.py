@@ -2,7 +2,7 @@ from copy import copy
 
 import numpy as np
 
-from ocelot.cpbd.transformations.first_order import TransferMap
+from ocelot.cpbd.transformations.transfer_map import TransferMap
 from ocelot.cpbd.transformations.tm_utils import SecondOrderMult, transform_vec_ent, transform_vec_ext, \
     transfer_map_rotation, sym_matrix
 from ocelot.cpbd.r_matrix import rot_mtx
@@ -32,7 +32,6 @@ class SecondTM(TransferMap):
     def calculate_Tb(self, energy) -> np.ndarray:
         """
         Calculates the Tb matrix which is needed to claculate the transfromation matrix.
-        Note: The calculation of the Tb matrix is different between first order TM and second order TM.
         @return: Tb matrix
         """
         Tb = np.copy(self.T_tilt(energy))

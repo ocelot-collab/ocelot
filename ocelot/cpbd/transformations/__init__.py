@@ -4,7 +4,7 @@ __all__ = ['CavityTM', 'CorrectorTM', 'CouplerKickTM', 'TransferMap', 'HCorrecto
 from ocelot.cpbd.transformations.cavity import CavityTM
 from ocelot.cpbd.transformations.corrector import CorrectorTM
 from ocelot.cpbd.transformations.coupler_kick import CouplerKickTM
-from ocelot.cpbd.transformations.first_order import TransferMap
+from ocelot.cpbd.transformations.transfer_map import TransferMap
 from ocelot.cpbd.transformations.h_corrector import HCorrectorTM
 from ocelot.cpbd.transformations.kick import KickTM
 from ocelot.cpbd.transformations.multipole import MultipoleTM

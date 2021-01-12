@@ -1,6 +1,6 @@
 import numpy as np
 
-from ocelot.cpbd.transformations.first_order import TransferMap
+from ocelot.cpbd.transformations.transfer_map import TransferMap
 from ocelot.cpbd.transformations.second_order import SecondTM
 from ocelot.cpbd.transformations.kick import KickTM
 from ocelot.cpbd.transformations.runge_kutta import RungeKuttaTM

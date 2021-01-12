@@ -1,6 +1,6 @@
 from ocelot.cpbd.elements import *
 from ocelot.cpbd.latticeIO import LatticeIO
-from ocelot.cpbd.transformations.first_order import TransferMap
+from ocelot.cpbd.transformations.transfer_map import TransferMap
 from ocelot.cpbd.optics import lattice_transfer_map
 import logging
 import numpy as np

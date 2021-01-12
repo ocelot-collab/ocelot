@@ -3,7 +3,7 @@ from math import factorial
 
 import numpy as np
 
-from ocelot.cpbd.transformations.first_order import TransferMap
+from ocelot.cpbd.transformations.transfer_map import TransferMap
 
 
 class MultipoleTM(TransferMap):

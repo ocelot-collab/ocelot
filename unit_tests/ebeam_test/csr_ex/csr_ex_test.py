@@ -22,7 +22,7 @@ def test_lattice_transfer_map(lattice, p_array, parameter=None, update_ref_value
 
     r_matrix_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json'))
     
-    result = check_matrix(r_matrix, r_matrix_ref, TOL, assert_info=' r_matrix - ')
+    result = check_matrix(r_matrix, r_matrix_ref, tolerance=1.0e-10, tolerance_type='absolute', assert_info=' r_matrix - ')
     assert check_result(result)
 
 @pytest.mark.parametrize('parameter', [0, 1])
@@ -222,7 +222,7 @@ def test_get_current(lattice, p_array, parameter, update_ref_values=False):
         
         p = pytest.p_array_w
     
-    sI1, I1 = get_current(p, charge=p.q_array[0], num_bins=200)
+    sI1, I1 = get_current(p, num_bins=200)
 
     if update_ref_values:
         return numpy2json([sI1, I1])

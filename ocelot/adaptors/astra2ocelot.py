@@ -159,6 +159,13 @@ def astraBeam2particleArray(filename, print_params=True):
     :return: ParticleArray
     """
     P0 = np.loadtxt(filename)
+
+    # remove particles lost or not injected
+    inds = np.argwhere(P0[:, 9] > 0)
+    inds = inds.reshape(inds.shape[0])
+
+    P0 = P0[inds,:]
+
     s_ref = P0[0, 2]
     Pref = P0[0, 5]
 

@@ -8,7 +8,7 @@ import csv
 import time
 import matplotlib
 import matplotlib.pyplot as plt
-import matplotlib.colors as colors # for wigner log scale
+import matplotlib.colors as colors  # for wigner log scale
 import numpy as np
 import logging
 
@@ -20,8 +20,6 @@ from ocelot.common.math_op import *  # import of mathematical functions like gau
 from ocelot.utils.xfel_utils import *
 from ocelot.optics.utils import calc_ph_sp_dens
 from ocelot.optics.wave import *
-
-
 
 from ocelot.gui.colormaps2d.colormap2d import *
 
@@ -250,7 +248,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         suffix += '_log'
 
     if fig_name is None:
-        if dfl_copy.fileName() is '':
+        if dfl_copy.fileName() == '':
             fig = plt.figure('Radiation distribution' + suffix)
         else:
             fig = plt.figure('Radiation distribution' + suffix + ' ' + dfl_copy.fileName())
@@ -558,7 +556,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
         raise ValueError('Unknown object for Wigner plot')
 
     if fig_name is None:
-        if W.fileName() is '':
+        if W.fileName() == '':
             fig_text = 'Wigner distribution'
         else:
             fig_text = 'Wigner distribution ' + W.fileName()
@@ -623,24 +621,24 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
 
     # cmap='RdBu_r'
     # axScatter.imshow(wigner, cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
-    
+
     if log_scale != 0:
-        if log_scale==1: 
-            log_scale=0.01
+        if log_scale == 1:
+            log_scale = 0.01
         wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample],
-                                   wigner[::downsample, ::downsample], cmap=cmap,  
-                                   norm=colors.SymLogNorm(linthresh=wigner_lim * log_scale, linscale=2,
-                                              vmin=-wigner_lim, vmax=wigner_lim),
-                                   vmax=wigner_lim, vmin=-wigner_lim)
+                                       wigner[::downsample, ::downsample], cmap=cmap,
+                                       norm=colors.SymLogNorm(linthresh=wigner_lim * log_scale, linscale=2,
+                                                              vmin=-wigner_lim, vmax=wigner_lim),
+                                       vmax=wigner_lim, vmin=-wigner_lim)
     else:
         wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample],
-                                   wigner[::downsample, ::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
-    
+                                       wigner[::downsample, ::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
+
     if plot_cbar:
         from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-        cbaxes = inset_axes(axScatter, width="50%", height="3%", loc=1) 
-        fig.colorbar(wigplot, cax = cbaxes, orientation='horizontal')
-        
+        cbaxes = inset_axes(axScatter, width="50%", height="3%", loc=1)
+        fig.colorbar(wigplot, cax=cbaxes, orientation='horizontal')
+
     if plot_text:
         if hasattr(wig_or_out, 'is_spectrogram'):
             if wig_or_out.is_spectrogram:
@@ -736,13 +734,13 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
 
         axHistx.set_xlim(x_lim_appl[0], x_lim_appl[1])
         axHisty.set_ylim(y_lim_appl[0], y_lim_appl[1])
-        
+
         if log_scale != 0:
             axHistx.set_ylim(np.nanmin(power), np.nanmax(power))
             axHisty.set_xlim(np.nanmin(spec), np.nanmax(spec))
             axHisty.set_xscale('log')
             axHistx.set_yscale('log')
-        
+
     else:
         axScatter.axis('tight')
         axScatter.set_xlabel(p_label_txt)
@@ -750,9 +748,6 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
 
     # axScatter.set_xlim(x_lim[0], x_lim[1])
     # axScatter.set_ylim(y_lim[0], y_lim[1])
-    
-    
-    
 
     if savefig != False:
         if savefig == True:
@@ -782,15 +777,15 @@ def plot_dfl_waistscan(sc_res, fig_name=None, figsize=4, showfig=True, savefig=F
     _logger.info('plot dfl waist scan')
     if showfig == False and savefig == False:
         return
-    
+
     if fig_name is None:
-        if sc_res.fileName() is '':
+        if sc_res.fileName() == '':
             fig = plt.figure('Waist scan')
         else:
             fig = plt.figure(sc_res.fileName() + ' waist scan')
     else:
         fig = plt.figure(fig_name)
-        
+
     plt.clf()
     fig.set_size_inches((3 * figsize, 2 * figsize), forward=True)
     ax_int = fig.add_subplot(1, 1, 1)
@@ -952,11 +947,11 @@ def plot_stokes_values(S, fig=None, d_pol=0, norm=0, showfig=True, gw=1, directi
     if np.size(sc) <= 1:
         _logger.warning('plot_stokes_values needs more than a single point to plot (np.size(sc) <= 1)')
         return
-    
+
     if d_pol != 0:
-        gw=0
-        norm=1
-        
+        gw = 0
+        norm = 1
+
     if fig == None:
         plt.figure('Stokes S')
         plt.clf()
@@ -970,7 +965,7 @@ def plot_stokes_values(S, fig=None, d_pol=0, norm=0, showfig=True, gw=1, directi
         mult = 1e-9
         plt.ylabel('$S_0$ [GW]')
     elif norm:
-        mult = 1/np.amax(Scp.s0)
+        mult = 1 / np.amax(Scp.s0)
     else:
         mult = 1
         plt.ylabel('$S_0$ [W]')
@@ -986,10 +981,10 @@ def plot_stokes_values(S, fig=None, d_pol=0, norm=0, showfig=True, gw=1, directi
     else:
         raise ValueError
 
-    if d_pol=='lin':
+    if d_pol == 'lin':
         # plt.step(sc, np.sqrt(S.s1**2+S.s2**2), linewidth=2, where='mid',color=[0.5,0.5,0.5], linestyle='--')
         plot_function(sc, Scp.deg_pol_l(), linestyle='-', color='#1f77b4', **kwargs)
-    elif d_pol==1:
+    elif d_pol == 1:
         plot_function(sc, Scp.deg_pol(), linestyle='-', color='#1f77b4', **kwargs)
     else:
         pass
@@ -1041,8 +1036,7 @@ def plot_stokes_angles(S, fig=None, showfig=True, direction='z', plot_func='scat
     if np.size(sc) <= 1:
         _logger.warning('plot_stokes_angles needs more than a single point to plot (np.size(sc) <= 1)')
         return
-        
-        
+
     if fig == None:
         plt.figure('Stokes angles')
         plt.clf()
@@ -1067,7 +1061,7 @@ def plot_stokes_angles(S, fig=None, showfig=True, direction='z', plot_func='scat
 
     plot_function(sc, Scp.psi(), color='b', **kwargs)
     # if plot_func == 'scatter':
-        # kwargs['s'] = psize
+    # kwargs['s'] = psize
     plot_function(sc, Scp.chi(), color='g', **kwargs)
 
     # if scatter:

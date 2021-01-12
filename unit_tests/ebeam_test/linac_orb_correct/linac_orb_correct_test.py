@@ -208,7 +208,7 @@ def test_lattice_track(lattice, update_ref_values=False):
 
     p_list_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
     
-    result = check_dict(p_list, p_list_ref, TOL, assert_info=' p_list - ')
+    result = check_dict(p_list, p_list_ref, tolerance=1.0e-10, tolerance_type='absolute', assert_info=' p_list - ')
     assert check_result(result)
 
 

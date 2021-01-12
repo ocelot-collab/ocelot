@@ -158,7 +158,7 @@ class Aperture(Element):
     Aperture
     xmax - half size in horizontal plane in [m],
     ymax - half size in vertical plane in [m],
-    type - "rect" or "elliptical".
+    type - "rect" (by default) or "ellipt". 
     """
 
     def __init__(self, xmax=np.inf, ymax=np.inf, dx=0, dy=0, type="rect", eid=None):
@@ -965,8 +965,8 @@ class TDCavity(Element):
             rm[1, 4] = -K * cos_phi
             rm[2, 3] = z
             rm[4, 5] = - z * igamma2 / (1. - igamma2)
-            rm[5, 0] = rm[1, 4]
-            rm[5, 1] = rm[0, 4]
+            rm[5, 0] = -rm[1, 4]
+            rm[5, 1] = -rm[0, 4]
             rm[5, 4] = -z * K ** 2 * cos2_phi / 6
             return rm
 

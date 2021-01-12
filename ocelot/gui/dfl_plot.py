@@ -656,7 +656,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
         #wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample],
         #                          wigner[::downsample, ::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
         wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample],
-                                       wigner[::downsample, ::downsample], cmap=cmap, vmax=v_max, vmin=v_min)
+                                       wigner[::downsample, ::downsample], cmap=cmap, vmax=v_max, vmin=v_min, shading='auto')
     
     if plot_cbar:
         from mpl_toolkits.axes_grid1.inset_locator import inset_axes

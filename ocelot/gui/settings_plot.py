@@ -4,7 +4,7 @@ import matplotlib, logging, os
 # from pylab import rc, rcParams #tmp
 from matplotlib import rc, rcParams
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from copy import deepcopy
+from copy import copy, deepcopy
 from ocelot.common.ocelog import ind_str
 
 #in order to run decorators properly
@@ -12,7 +12,8 @@ import functools
 
 _logger = logging.getLogger(__name__)
 
-my_viridis = deepcopy(matplotlib.pyplot.get_cmap('viridis')) 
+# my_viridis = deepcopy(matplotlib.pyplot.get_cmap('viridis')) 
+my_viridis = copy(matplotlib.cm.get_cmap("viridis"))
 my_viridis.set_under('w')
 def_cmap = my_viridis
 

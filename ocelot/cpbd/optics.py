@@ -4,11 +4,12 @@ from copy import deepcopy
 
 from numpy.linalg import inv
 
-from ocelot.cpbd.transformations.first_order import TransferMap
+from ocelot.cpbd.transformations.transfer_map import TransferMap
 from ocelot.cpbd.beam import Twiss
 from ocelot.cpbd.physics_proc import RectAperture
 from ocelot.cpbd.r_matrix import *
 from ocelot.cpbd.transformations.tm_utils import SecondOrderMult, transfer_maps_mult, unsym_matrix
+from ocelot.cpbd.transformations.second_order import SecondTM
 
 _logger = logging.getLogger(__name__)
 _logger_navi = logging.getLogger(__name__ + ".navi")
@@ -33,6 +34,7 @@ class MethodTM:
     method2.global_method = SecondTM
 
     """
+
     def __init__(self, params=None):
         logger.warning("obsolete, use dictionary instead: {'global': SecondTM}")
         if params is None:
@@ -68,8 +70,14 @@ def lattice_transfer_map(lattice, energy):
     for i, elem in enumerate(lattice.sequence):
         Rb = elem.transfer_map.R(E)
         Bb = elem.transfer_map.B(E)
-        Tb = elem.transfer_map.calculate_Tb(E)
-        Ra, Ta = transfer_maps_mult(Ra, Ta, Rb, Tb)
+        # if TM has calculate_Tb its a Second
+#        if hasattr(elem.transfer_map, 'calculate_Tb'):
+        if isinstance(elem.transfer_map, SecondTM):
+            Tb = elem.transfer_map.calculate_Tb(E)
+            Ra, Ta = transfer_maps_mult(Ra, Ta, Rb, Tb)
+        else:
+            Ra, Ta = transfer_maps_mult(Ra, Ta, Rb, Tb=np.zeros((6, 6, 6)))
+
         Ba = np.dot(Rb, Ba) + Bb
         E += elem.transfer_map.delta_e
     lattice.E = E
@@ -239,7 +247,7 @@ class ProcessTable:
         """
 
         if (physics_proc.indx0 == physics_proc.indx1 or
-            (physics_proc.indx0 + 1 == physics_proc.indx1 and elem1.l == 0)):
+                (physics_proc.indx0 + 1 == physics_proc.indx1 and elem1.l == 0)):
             physics_proc.indx1 = physics_proc.indx0
             physics_proc.s_stop = physics_proc.s_start
             self.kick_proc_list.append(physics_proc)
@@ -261,7 +269,7 @@ class ProcessTable:
         physics_proc.prepare(self.lat)
 
         _logger_navi.debug(" add_physics_proc: self.proc_list = " + str([p.__class__.__name__ for p in self.proc_list]) + ".append(" + physics_proc.__class__.__name__ + ")" +
-                          "; start: " + str(physics_proc.indx0 ) + " stop: " + str(physics_proc.indx1))
+                           "; start: " + str(physics_proc.indx0) + " stop: " + str(physics_proc.indx1))
 
         self.proc_list.append(physics_proc)
 
@@ -289,7 +297,7 @@ class Navigator:
         self.sum_lengths = 0.  # sum_lengths = Sum[lat.sequence[i].l, {i, 0, n_elem-1}]
         self.unit_step = 1  # unit step for physics processes
         self.proc_kick_elems = []
-        self.kill_process = False # for case when calculations are needed to terminated e.g. from gui
+        self.kill_process = False  # for case when calculations are needed to terminated e.g. from gui
 
     def reset_position(self):
         """
@@ -351,7 +359,7 @@ class Navigator:
             nearest_stop_elem = min([proc.indx1 for proc in processes])
             L_stop = np.sum(np.array([elem.l for elem in self.lat.sequence[:nearest_stop_elem]]))
             if self.z0 + dz > L_stop:
-               dz = L_stop - self.z0
+                dz = L_stop - self.z0
 
             # check if inside step dz there is another phys process
 
@@ -465,10 +473,10 @@ class Navigator:
         _logger_navi.debug(" Navigator.get_next: process: " + " ".join([proc.__class__.__name__ for proc in processes]))
 
         _logger_navi.debug(" Navigator.get_next: navi.z0=" + str(self.z0) + " navi.n_elem=" + str(self.n_elem) + " navi.sum_lengths="
-                     + str(self.sum_lengths) + " dz=" + str(dz))
+                           + str(self.sum_lengths) + " dz=" + str(dz))
 
         _logger_navi.debug(" Navigator.get_next: element type=" + self.lat.sequence[self.n_elem].__class__.__name__ + " element name=" +
-                     str(self.lat.sequence[self.n_elem].id))
+                           str(self.lat.sequence[self.n_elem].id))
 
         self.remove_used_processes(processes)
 
@@ -496,7 +504,7 @@ def get_map(lattice, dz, navi):
         i += 1
         elem = lattice.sequence[i]
         L += elem.l
-        #if i in navi.proc_kick_elems:
+        # if i in navi.proc_kick_elems:
         #    break
     if abs(dz) > 1e-10:
         TM.append(elem.transfer_map(dz))
@@ -530,9 +538,9 @@ def fodo_parameters(betaXmean=36.0, L=10.0, verbose=False):
     lquad = 0.001
 
     kap1 = np.sqrt(1.0 / 2.0 * (
-    (betaXmean / L) * (betaXmean / L) + (betaXmean / L) * np.sqrt(-4.0 + (betaXmean / L) * (betaXmean / L))))
+        (betaXmean / L) * (betaXmean / L) + (betaXmean / L) * np.sqrt(-4.0 + (betaXmean / L) * (betaXmean / L))))
     kap2 = np.sqrt(1.0 / 2.0 * (
-    (betaXmean / L) * (betaXmean / L) - (betaXmean / L) * np.sqrt(-4.0 + (betaXmean / L) * (betaXmean / L))))
+        (betaXmean / L) * (betaXmean / L) - (betaXmean / L) * np.sqrt(-4.0 + (betaXmean / L) * (betaXmean / L))))
 
     k = 1.0 / (lquad * L * kap2)
 

@@ -1,7 +1,7 @@
 from copy import copy
 
 from ocelot.cpbd.high_order import rk_field
-from ocelot.cpbd.transformations.first_order import TransferMap
+from ocelot.cpbd.transformations.transfer_map import TransferMap
 
 
 class RungeKuttaTM(TransferMap):

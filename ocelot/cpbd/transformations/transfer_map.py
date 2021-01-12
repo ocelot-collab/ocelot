@@ -47,15 +47,6 @@ class TransferMap:
         """
         return lambda u, energy: self.mul_p_array(u, energy=energy)
 
-    def calculate_Tb(self, energy) -> np.ndarray:
-        """
-        Calculates the Tb matrix which is needed to calculate the transformation matrix.
-        Note: The calculation of the Tb matrix is different between first order TM and second order TM.
-        @param energy: the initial electron beam energy [GeV]
-        @return: Tb matrix
-        """
-        return np.zeros((6, 6, 6))
-
     def map_x_twiss(self, tws0):
         E = tws0.E
         M = self.R(E)
@@ -116,6 +107,12 @@ class TransferMap:
         return tws
 
     def mul_p_array(self, rparticles, energy=0.):
+        """
+        Calculates new rpaticles with the first order transformation, overrides the old rpaticles and returns the new rparticles. 
+        :param rparticles: Can be a ParticleArray, Particle or a list of Particle object. 
+        :param engery:
+        :return: Returns the modified rparticles 
+        """
         a = np.add(np.dot(self.R(energy), rparticles), self.B(energy))
         rparticles[:] = a[:]
         return rparticles
@@ -180,7 +177,9 @@ class TransferMap:
             list_e = np.array([p.E for p in prcl_series])
             if False in (list_e[:] == list_e[0]):
                 for p in prcl_series:
+                    # TODO: Remove this line of code because its doing nothing. What was the idea?
                     self.map(np.array([[p.x], [p.px], [p.y], [p.py], [p.tau], [p.p]]), energy=p.E)
+
                     p.E += self.delta_e
                     p.s += self.length
             else:
@@ -205,6 +204,16 @@ class TransferMap:
         m.map = m.map_function(delta_length=delta_length, length=self.length)
         m.length = delta_length
         return m
+
+    def create_r_matrix(self):
+        k1 = self.k1
+        if self.l == 0:
+            hx = 0.
+        else:
+            hx = self.angle / self.l
+
+        def r_z_e(z, energy): return uni_matrix(z, k1, hx=hx, sum_tilts=0, energy=energy)
+        return r_z_e
 
     @classmethod
     def create_from_element(cls, element, params=None):

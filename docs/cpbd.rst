@@ -130,3 +130,11 @@ API documentation
 .. autofunction:: ocelot.cpbd.match.match
    
 
+Automatically generated API index
+---------------------------------
+
+.. toctree::
+   :maxdepth: 1
+
+   Module Reference <_sources/ocelot.cpbd.rst>
+

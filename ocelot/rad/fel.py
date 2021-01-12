@@ -238,13 +238,13 @@ class FelParameters:
     
     def log(self, type='debug'):
     
-        if type is 'debug':
+        if type == 'debug':
             _log_func = _logger.debug
-        elif type is 'info':
+        elif type == 'info':
             _log_func = _logger.info
-        elif type is 'log':
+        elif type == 'log':
             _log_func = _logger.log
-        elif type is 'print':
+        elif type == 'print':
             _log_func = print
         
         _log_func('undulator period = {}'.format(self.xlamd))

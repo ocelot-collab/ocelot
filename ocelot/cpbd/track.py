@@ -454,10 +454,8 @@ def lattice_track(lat, p):
 
     for elem in lat.sequence:
         elem.transfer_map.apply([p])
-        #print(p)
         if not (elem.__class__ in [Bend, RBend, SBend] and elem.l != 0.): #, "hcor", "vcor"
             if elem.__class__ == Edge:
-                #print elem.pos
                 if elem.pos == 1:
                     continue
         plist.append(copy.copy(p))

@@ -6,7 +6,9 @@ from numpy.linalg import inv
 
 from ocelot.cpbd.transformations.transfer_map import TransferMap
 from ocelot.cpbd.beam import Twiss
-from ocelot.cpbd.physics_proc import RectAperture
+from ocelot.cpbd.physics_proc import RectAperture, EllipticalAperture
+from ocelot.cpbd.high_order import *
+
 from ocelot.cpbd.r_matrix import *
 from ocelot.cpbd.transformations.tm_utils import SecondOrderMult, transfer_maps_mult, unsym_matrix
 from ocelot.cpbd.transformations.second_order import SecondTM
@@ -70,8 +72,6 @@ def lattice_transfer_map(lattice, energy):
     for i, elem in enumerate(lattice.sequence):
         Rb = elem.transfer_map.R(E)
         Bb = elem.transfer_map.B(E)
-        # if TM has calculate_Tb its a Second
-#        if hasattr(elem.transfer_map, 'calculate_Tb'):
         if isinstance(elem.transfer_map, SecondTM):
             Tb = elem.transfer_map.calculate_Tb(E)
             Ra, Ta = transfer_maps_mult(Ra, Ta, Rb, Tb)
@@ -351,6 +351,10 @@ class Navigator:
                 if elem.type == "rect":
                     ap = RectAperture(xmin=-elem.xmax + elem.dx, xmax=elem.xmax + elem.dx,
                                       ymin=-elem.ymax + elem.dy, ymax=elem.ymax + elem.dy)
+                    self.add_physics_proc(ap, elem, elem)
+                elif elem.type == "ellipt":
+                    ap = EllipticalAperture(xmax=elem.xmax, ymax=elem.ymax,
+                                      dx=elem.dx, dy=elem.dy)
                     self.add_physics_proc(ap, elem, elem)
 
     def check_overjump(self, dz, processes, phys_steps):

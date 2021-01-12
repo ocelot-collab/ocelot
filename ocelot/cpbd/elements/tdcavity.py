@@ -75,10 +75,10 @@ class TDCavity(Element):
             rm[1, 4] = -K * cos_phi
             rm[2, 3] = z
             rm[4, 5] = - z * igamma2 / (1. - igamma2)
-            rm[5, 0] = rm[1, 4]
-            rm[5, 1] = rm[0, 4]
+            rm[5, 0] = -rm[1, 4]
+            rm[5, 1] = -rm[0, 4]
             rm[5, 4] = -z * K ** 2 * cos2_phi / 6
             return rm
 
-        r_z_e = lambda z, energy: tds_R_z(z, energy, freq=self.freq, v=self.v * z / self.l, phi=self.phi)
+        def r_z_e(z, energy): return tds_R_z(z, energy, freq=self.freq, v=self.v * z / self.l, phi=self.phi)
         return r_z_e

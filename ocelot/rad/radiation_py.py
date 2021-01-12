@@ -573,7 +573,7 @@ def calculate_radiation(lat, screen, beam, energy_loss=False, quantum_diff=False
     #    p_array = beam
 
     else:
-        raise TypeError("'beam' object must be Beam or ParticleArray class")
+        raise TypeError("'beam' object must be Beam class")
 
     if beam.I == 0:
         print("Beam charge or beam current is 0. Default current I=0.1 A is used")

@@ -10,7 +10,7 @@ for pkg in find_packages():
 
 setup(
     name='ocelot',
-    version='20.05.1',
+    version='20.11.2',
     description='Accelerator, radiation and x-ray optics simulation framework',
     author='ocelot-collab',
     author_email='tomin.sergey@gmail.com',
@@ -20,6 +20,7 @@ setup(
     install_requires=[
         'numpy', 'scipy', 'matplotlib', 'pandas'
     ],
+    extras_require={'docs': ['Sphinx', 'alabaster', 'sphinxcontrib-jsmath']},
     package_data={'ocelot.optics': ['data/*.dat']},
-    # long_description=open(join(dirname(__file__), 'README.txt')).read(),
+    license="GNU General Public License v3.0",
 )

@@ -398,7 +398,7 @@ def find_nearest(array, value):
 
 def n_moment(x, counts, c, n):
     x = np.squeeze(x)
-    if x.ndim is not 1:
+    if x.ndim != 1:
         raise ValueError("scale of x should be 1-dimensional")
     if x.size not in counts.shape:
         raise ValueError("operands could not be broadcast together with shapes %s %s" %(str(x.shape), str(counts.shape)))

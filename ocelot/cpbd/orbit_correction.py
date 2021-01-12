@@ -64,6 +64,7 @@ class MICADO(OrbitSVD):
     The iteration is stopped when the peak-to-peak amplitude of the residual vector is smaller than a fixed value given
     in advance.
     """
+
     def __init__(self, epsilon_x=0.001, epsilon_y=0.001, epsilon_ksi=1e-5):
         super(MICADO, self).__init__(epsilon_x=epsilon_x, epsilon_y=epsilon_y)
         self.epsilon_ksi = epsilon_ksi
@@ -92,7 +93,7 @@ class MICADO(OrbitSVD):
             # weights = np.eye(len(orbit))
             resp_matrix = np.dot(weights, resp_matrix)
             orbit = np.copy(np.dot(weights, orbit))
-            
+
         #misallign = np.dot(weights, orbit)
         if np.shape(resp_matrix)[1] == 1:
             A = np.dot(resp_matrix.T, resp_matrix)
@@ -139,7 +140,7 @@ class MICADO(OrbitSVD):
                 logger.info(" MICADO: number of correctors " + str(n))
                 angle[:len(angles_part)] = angles_part[:]
                 break
-        print( time() - start, " sec")
+        print(time() - start, " sec")
         return angle[np.argsort(mask)]
 
 
@@ -170,7 +171,7 @@ class Orbit(object):
         self.disp_rm_method = disp_rm_method
         self.response_matrix = None
         self.disp_response_matrix = None
-        self.mode = "radian" # or "ampere"
+        self.mode = "radian"  # or "ampere"
         self.orbit_solver = OrbitSVD()
 
         if not empty:
@@ -253,7 +254,7 @@ class Orbit(object):
 
     def get_orbit(self):
 
-        #self.get_ref_orbit()
+        # self.get_ref_orbit()
 
         m = len(self.bpms)
         orbit = np.zeros(2 * m)
@@ -262,7 +263,6 @@ class Orbit(object):
             orbit[i] = bpm.x - bpm.x_ref
             orbit[i+m] = bpm.y - bpm.y_ref
         return orbit
-
 
     def get_dispersion(self):
         m = len(self.bpms)
@@ -299,7 +299,7 @@ class Orbit(object):
         :param print_log:
         :return:
         """
-        #TODO: initial condition for particle was removed. Add it again
+        # TODO: initial condition for particle was removed. Add it again
         cor_list = [cor.id for cor in np.append(self.hcors, self.vcors)]
         bpm_list = [bpm.id for bpm in self.bpms]
         orbit = (1 - alpha) * self.get_orbit()
@@ -327,34 +327,33 @@ class Orbit(object):
         logger.debug(" Combine: shape(RM + DRM + beta) = " + str(np.shape(rmatrix)) +
                      " shape(orbit) = " + str(np.shape(orbit)))
 
-
         # add bpm weights
         bpm_weights = np.array([bpm.weight for bpm in self.bpms])
         bpm_weights_diag = np.diag(np.append(bpm_weights, [bpm_weights, bpm_weights, bpm_weights]))
         logger.debug(" shape(bpm weight) = " + str(np.shape(bpm_weights_diag)))
 
-        #if beta > 0:
+        # if beta > 0:
         bpm_weights_diag = self.combine_matrices(bpm_weights_diag, np.diag(np.append(bpm_weights, [bpm_weights])))
         logger.debug(" beta > 0: shape(bpm weight) = " + str(np.shape(bpm_weights_diag)))
 
-        #self.orbit_correction_method = self.get_correction_solver(resp_matrix=rmatrix, orbit=orbit,
+        # self.orbit_correction_method = self.get_correction_solver(resp_matrix=rmatrix, orbit=orbit,
         #                                                      weights=bpm_weights_diag, epsilon_x=epsilon_x,
         #                                                      epsilon_y=epsilon_y)
 
-        #self.orbit_svd = LInfinityNorm(resp_matrix=rmatrix, orbit=orbit, weights=bpm_weights_diag, epsilon_x=epsilon_x,
+        # self.orbit_svd = LInfinityNorm(resp_matrix=rmatrix, orbit=orbit, weights=bpm_weights_diag, epsilon_x=epsilon_x,
         #                          epsilon_y=epsilon_x)
         angle = self.orbit_solver.apply(resp_matrix=rmatrix, orbit=orbit, weights=bpm_weights_diag)
         ncor = len(cor_list)
         for i, cor in enumerate(np.append(self.hcors, self.vcors)):
             if print_log:
-                print("correction:", cor.id," angle before: ", cor.angle*1000, "  after:", angle[i]*1000,angle[ncor+i]*1000)
+                print("correction:", cor.id, " angle before: ", cor.angle*1000, "  after:", angle[i]*1000, angle[ncor+i]*1000)
             cor.angle -= ((1 - alpha) * angle[i] + alpha * angle[ncor + i])
 
         self.lat.update_transfer_maps()
         if p_init is not None:
             p_init.x = -angle[-4]
             p_init.px = -angle[-3]
-            p_init.y  = -angle[-2]
+            p_init.y = -angle[-2]
             p_init.py = -angle[-1]
         return 0
 
@@ -362,154 +361,3 @@ class Orbit(object):
 class NewOrbit(Orbit):
     def __init__(self, lattice, rm_method=None, disp_rm_method=None, empty=False):
         super(NewOrbit, self).__init__(lattice, rm_method=rm_method, disp_rm_method=disp_rm_method, empty=empty)
-
-
-
-
-def change_corrector(corrector, lattice):
-    for elem in lattice.sequence:
-        if elem.id == corrector.id:
-            elem.angle += corrector.dI
-            #print "change ", elem.angle
-            elem.transfer_map = elem.create_tm(lattice.method)
-            #print elem.transfer_map.b(1)
-    return lattice#.update_transfer_maps()
-
-def restore_corrector(corrector, lattice):
-    for elem in lattice.sequence:
-        if elem.id == corrector.id:
-            elem.angle -= corrector.dI
-            elem.transfer_map = elem.create_tm(lattice.method)
-    return lattice#.update_transfer_maps()
-
-def change_quad_position(quad, lattice, dx=0., dy=0.):
-    for elem in lattice.sequence:
-        if elem.id == quad.id:
-            elem.dx += dx
-            elem.dy += dy
-            elem.transfer_map = elem.create_tm(lattice.method)
-    return lattice.update_transfer_maps()
-
-
-def measure_response_matrix(orbit, lattice):
-
-    m = len(orbit.bpms)
-    real_resp = np.zeros((m*2, len(orbit.hcors)+len(orbit.vcors)))
-    orbit.read_virtual_orbit( lattice)
-    bpms = copy.deepcopy(orbit.bpms)
-    for ix, hcor in enumerate(orbit.hcors):
-        print("measure X - ", ix,"/",len(orbit.hcors))
-        lattice = change_corrector(hcor, lattice)
-
-        orbit.read_virtual_orbit(lattice)
-
-        for j, bpm in enumerate(orbit.bpms):
-
-            real_resp[j, ix] = (bpm.x - bpms[j].x)/hcor.dI
-            real_resp[j+m, ix] = (bpm.y - bpms[j].y)/hcor.dI
-        lattice = restore_corrector(hcor, lattice)
-
-    for iy, vcor in enumerate(orbit.vcors):
-
-        lattice = change_corrector(vcor, lattice)
-
-        orbit.read_virtual_orbit(lattice)
-
-        for j, bpm in enumerate(orbit.bpms):
-            real_resp[j, iy+len(orbit.hcors)] = (bpm.x - bpms[j].x)/vcor.dI
-            real_resp[j+m, iy+len(orbit.hcors)] = (bpm.y - bpms[j].y)/vcor.dI
-        lattice = restore_corrector(vcor, lattice)
-    return real_resp
-
-def quad_response_matrix(orbit, lattice):
-
-    m = len(orbit.bpms)
-    nx = len(orbit.hquads)
-    ny = len(orbit.vquads)
-    print(nx, ny, m)
-    real_resp = np.zeros((m*2, nx + ny))
-    orbit.read_virtual_orbit(lattice)
-    bpms = copy.deepcopy(orbit.bpms)
-    for ix, hquad in enumerate(orbit.hquads):
-        print("measure X - ", ix,"/",nx)
-        lattice = change_quad_position(hquad, lattice, dx = 0.001, dy = 0)
-        orbit.read_virtual_orbit(lattice)
-
-        for j, bpm in enumerate(orbit.bpms):
-            real_resp[j, ix] = (bpm.x - bpms[j].x)/0.001
-            real_resp[j+m, ix] = (bpm.y - bpms[j].y)/0.001
-
-            #if real_resp[j, ix] == 0 or real_resp[j+m, ix] == 0:
-
-                #print bpm.x ,bpm.y, j, j+m, ix
-        lattice = change_quad_position(hquad, lattice, dx = -0.001, dy = 0)
-
-    for iy, vquad in enumerate(orbit.vquads):
-        lattice = change_quad_position(vquad, lattice, dx = 0., dy = 0.001)
-        orbit.read_virtual_orbit(lattice)
-
-        for j, bpm in enumerate(orbit.bpms):
-            real_resp[j, iy+nx] = (bpm.x - bpms[j].x)/0.001
-            real_resp[j+m, iy+nx] = (bpm.y - bpms[j].y)/0.001
-
-            #if real_resp[j, iy+nx] == 0 or real_resp[j+m, iy+nx] == 0:
-            #print bpm.x ,bpm.y, j, j+m, iy+nx
-        lattice = change_quad_position(vquad, lattice, dx = 0., dy = -0.001)
-    return real_resp
-
-def elem_response_matrix(orbit, lattice, p_init, elem_types, remove_elem):
-    shift = 0.001
-    m = len(orbit.bpms)
-    orbit.create_types(lattice, elem_types, remove_elem)
-    nx = len(orbit.htypes)
-    ny = len(orbit.vtypes)
-    print(nx, ny, m)
-    real_resp = np.zeros((m*2, nx + ny +4))
-    orbit.read_virtual_orbit(lattice, p_init=copy.deepcopy(p_init))
-    bpms = copy.deepcopy(orbit.bpms)
-    for ix, hquad in enumerate(orbit.htypes):
-        print("measure X - ", ix, "/", nx)
-        hquad.dx += shift
-        lattice.update_transfer_maps()
-        orbit.read_virtual_orbit(lattice, p_init=copy.deepcopy(p_init))
-
-        for j, bpm in enumerate(orbit.bpms):
-            real_resp[j, ix] = (bpm.x - bpms[j].x)/shift
-            real_resp[j+m, ix] = (bpm.y - bpms[j].y)/shift
-
-        hquad.dx -= shift
-        lattice.update_transfer_maps()
-
-    for iy, vquad in enumerate(orbit.vtypes):
-        print("measure Y - ", iy,"/",ny)
-        vquad.dy += shift
-        lattice.update_transfer_maps()
-        orbit.read_virtual_orbit(lattice, p_init=copy.deepcopy(p_init))
-        #plt.plot([bpm.s for bpm in orbit.bpms], [bpm.x for bpm in orbit.bpms], "r")
-        #plt.plot([bpm.s for bpm in orbit.bpms], [bpm.y for bpm in orbit.bpms], "b")
-        #plt.show()
-        for j, bpm in enumerate(orbit.bpms):
-            real_resp[j, iy+nx] = (bpm.x - bpms[j].x)/shift
-            real_resp[j+m, iy+nx] = (bpm.y - bpms[j].y)/shift
-        vquad.dy -= shift
-        lattice.update_transfer_maps()
-
-    for i, par in enumerate(["x", "px", "y", "py"]):
-        print(i)
-        p_i = Particle(E = p_init.E)
-        p_i.__dict__[par] = 0.0001
-        #print p_i.x, p_i.px, p_i.y, p_i.py, p_i.E
-        p2 = copy.deepcopy(p_i)
-        orbit.read_virtual_orbit(lattice, p_init=p2)
-        #print ("energy = ", p2.E)
-        #plt.plot([bpm.s for bpm in orbit.bpms], [bpm.x for bpm in orbit.bpms], "r")
-        #plt.plot([bpm.s for bpm in orbit.bpms], [bpm.y for bpm in orbit.bpms], "b")
-        #plt.show()
-        for j, bpm in enumerate(orbit.bpms):
-            real_resp[j, nx + ny + i] = (bpm.x - bpms[j].x)/0.0001
-            real_resp[j+m, nx + ny + i] = (bpm.y - bpms[j].y)/0.0001
-            #print j+m, nx + ny + i, (bpm.x - bpms[j].x)/0.00001
-    #print real_resp[:,-5:]
-    return real_resp
-
-

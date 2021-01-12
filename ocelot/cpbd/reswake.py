@@ -59,6 +59,16 @@ def imp_resistiveAC_SI(f, cond, a, tau, L):
 
 
 def ResistiveZaZb(xb, bunch, a, conductivity, tau, Ind):
+    """
+
+    :param xb:
+    :param bunch:
+    :param a: tube radius
+    :param conductivity:
+    :param tau:
+    :param Ind:
+    :return:
+    """
     nb = len(xb)
     ds = xb[1] - xb[0]
     n = 2*nb
@@ -103,6 +113,18 @@ def LossShape(bunch, wake):
 
 
 def pipe_wake(z, current, tube_radius, tube_len, conductivity, tau, roughness, d_oxid):
+    """
+
+    :param z:
+    :param current:
+    :param tube_radius:
+    :param tube_len:
+    :param conductivity:
+    :param tau:
+    :param roughness:
+    :param d_oxid:
+    :return:
+    """
 
     Q = simps(current, z)/speed_of_light
     print ("Charge = ", Q*1e12, "pC")

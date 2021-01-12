@@ -15,7 +15,7 @@ def lattice_format_converter(elements):
     drift_num = 0
     s_pos = 0.0
     for element in elements:
-        if element[0].__class__ == Edge:
+        if element[0].__class__ in (Edge, CouplerKick):
             continue
         element_start = element[1] - element[0].l / 2.0
         if element_start < s_pos - 1.0e-14:                 # 1.0e-14 is used as crutch for precision of float
@@ -34,7 +34,7 @@ def lattice_format_converter(elements):
                     print("************** WARNING! Element " + cell[-1].id + " was deleted")
                     cell.pop()
                 else:
-                    print("************** ERROR! Element " + element[0].id + " has bed position")
+                    print("************** ERROR! Element " + element[0].id + " has bad position (overlapping?)")
                     exit()
 
         if element_start > s_pos + 1.0e-12:                 # 1.0e-12 is used as crutch for precision of float
@@ -96,7 +96,6 @@ def merger(lat, remaining_types=[], remaining_elems=[], init_energy=0.):
             E += delta_e
             seq.append(m)
 
-
     new_lat = MagneticLattice(seq, method=lat.method)
     _logger.debug("element numbers after: " + str(len(new_lat.sequence)))
     return new_lat
@@ -116,6 +115,25 @@ class MagneticLattice:
     def __init__(self, sequence, start=None, stop=None, method=MethodTM()):
         self.sequence = list(flatten(sequence))
         self.method = method
+
+
+        self.sequence = self.get_sequence_part(start, stop)
+
+        # create transfer map and calculate lattice length
+        self.totalLen = 0
+        if not EdgeUtil.check(self):
+            EdgeUtil.add(self)
+
+        if not CouplerKickUtil.check(self):
+            CouplerKickUtil.add(self)
+
+        self.update_transfer_maps()
+
+        self.__hash__ = {}
+        for e in self.sequence:
+            self.__hash__[e] = e
+
+    def get_sequence_part(self, start, stop):
         try:
             if start is not None:
                 id1 = self.sequence.index(start)
@@ -123,22 +141,13 @@ class MagneticLattice:
                 id1 = 0
             if stop is not None:
                 id2 = self.sequence.index(stop) + 1
-                self.sequence = self.sequence[id1:id2]
+                sequence = self.sequence[id1:id2]
             else:
-                self.sequence = self.sequence[id1:]
+                sequence = self.sequence[id1:]
         except:
             print('cannot construct sequence, element not found')
             raise
-
-        # create transfer map and calculate lattice length
-        self.totalLen = 0
-        if not self.check_edges():
-            self.add_edges()
-        self.update_transfer_maps()
-
-        self.__hash__ = {}
-        for e in self.sequence:
-            self.__hash__[e] = e
+        return sequence
 
     def __getitem__(self, el):
         try:
@@ -146,25 +155,113 @@ class MagneticLattice:
         except:
             return None
 
-    def check_edges(self):
+    def update_transfer_maps(self):
+        self.totalLen = 0
+        for i, element in enumerate(self.sequence):
+            if element.__class__ == Undulator:
+                if element.field_file is not None:
+                    element.l = element.field_map.l * element.field_map.field_file_rep
+                    if element.field_map.units == "mm":
+                        element.l = element.l*0.001
+            self.totalLen += element.l
+
+            if element.__class__ == Edge:
+
+                self.update_endings(lat_index=i, element=element, body_elements=(Bend, RBend, SBend), element_util=EdgeUtil)
+
+            if element.__class__ == CouplerKick:
+                self.update_endings(lat_index=i, element=element, body_elements=(Cavity, ), element_util=CouplerKickUtil)
+
+            element.transfer_map = self.method.create_tm(element)
+            _logger.debug("update: " + element.transfer_map.__class__.__name__)
+            if 'pulse' in element.__dict__: element.transfer_map.pulse = element.pulse
+        return self
+
+    def update_endings(self, lat_index, element, body_elements, element_util):
+
+        if element_util.suffix_1 in element.id:
+            body = self.sequence[lat_index + 1]
+            if body.__class__ not in body_elements:
+                body = self.sequence[lat_index - 1]
+                _logger.debug("Backtracking?")
+            element_util.update_first(element, body)
+        elif element_util.suffix_2 in element.id:
+            body = self.sequence[lat_index - 1]
+            if body.__class__ not in body_elements:
+                body = self.sequence[lat_index + 1]
+                _logger.debug("Backtracking?")
+            element_util.update_last(element, body)
+        else:
+            _logger.error(element.__class__.__name__ + " is not updated. Use standard function to create and update MagneticLattice")
+
+    def __str__(self):
+        line = "LATTICE: length = " + str(self.totalLen) + " m \n"
+        for e in self.sequence:
+            line += "{0:15} length: {1:5.2f}      id: {2:10}\n".format(e.__class__.__name__, e.l, e.id)
+        return line
+
+    def find_indices(self, element):
+        indx_elem = np.where([i.__class__ == element for i in self.sequence])[0]
+        return indx_elem
+
+
+class EndElements:
+    suffix_1 = "_1"
+    suffix_2 = "_2"
+
+    @staticmethod
+    def check(lattice):
+        pass
+
+    @staticmethod
+    def add(lattice):
+        pass
+
+    @staticmethod
+    def update_first(end_element, body):
+        pass
+
+    @staticmethod
+    def update_last(end_element, body):
+        pass
+
+
+class EdgeUtil(EndElements):
+    suffix_1 = "_e1"
+    suffix_2 = "_e2"
+
+    def __init__(self):
+        super(EdgeUtil).__init__(self)
+
+    @staticmethod
+    def name_suffix_1():
+        return "_1"
+
+    @staticmethod
+    def name_suffix_2():
+        return "_2"
+
+    @staticmethod
+    def check(lattice):
         """
         if there are edges on the ends of dipoles return True, else False
         """
-        if len(self.sequence) < 3:
+        if len(lattice.sequence) < 3:
             return False
-        for i in range(len(self.sequence)-2):
-            prob_edge1 = self.sequence[i]
-            elem = self.sequence[i+1]
-            prob_edge2 = self.sequence[i+2]
+        for i in range(len(lattice.sequence)-2):
+            prob_edge1 = lattice.sequence[i]
+            elem = lattice.sequence[i+1]
+            prob_edge2 = lattice.sequence[i+2]
             if elem.__class__ in (SBend, RBend, Bend):  # , "hcor", "vcor"
                 if prob_edge1.__class__ != Edge and prob_edge2.__class__ != Edge:
                     return False
         return True
 
-    def add_edges(self):
+    @staticmethod
+    def add(lattice):
         n = 0
-        for i in range(len(self.sequence)):
-            elem = self.sequence[n]
+        for i in range(len(lattice.sequence)):
+            elem = lattice.sequence[n]
             if elem.__class__ in (SBend, RBend, Bend) and elem.l != 0.:  # , "hcor", "vcor"
 
                 e_name = elem.id
@@ -174,19 +271,20 @@ class MagneticLattice:
 
                 e1 = Edge(l=elem.l, angle=elem.angle, k1=elem.k1, edge=elem.e1, tilt=elem.tilt, dtilt=elem.dtilt,
                           dx=elem.dx, dy=elem.dy, h_pole=elem.h_pole1, gap=elem.gap, fint=elem.fint, pos=1,
-                          eid=e_name + "_e1")
+                          eid=e_name + EdgeUtil.suffix_1)
 
-                self.sequence.insert(n, e1)
+                lattice.sequence.insert(n, e1)
 
                 e2 = Edge(l=elem.l, angle=elem.angle, k1=elem.k1, edge=elem.e2, tilt=elem.tilt, dtilt=elem.dtilt,
                           dx=elem.dx, dy=elem.dy, h_pole=elem.h_pole2, gap=elem.gap, fint=elem.fintx, pos=2,
-                          eid=e_name + "_e2")
+                          eid=e_name + EdgeUtil.suffix_2)
 
-                self.sequence.insert(n+2, e2)
+                lattice.sequence.insert(n+2, e2)
                 n += 2
             n += 1
 
-    def update_edge_e1(self, edge, bend):
+    @staticmethod
+    def update_first(edge, bend):
         if bend.l != 0.:
             edge.h = bend.angle/bend.l
         else:
@@ -204,7 +302,8 @@ class MagneticLattice:
         edge.fint = bend.fint
         edge.pos = 1
 
-    def update_edge_e2(self, edge, bend):
+    @staticmethod
+    def update_last(edge, bend):
         if bend.l != 0.:
             edge.h = bend.angle/bend.l
         else:
@@ -222,47 +321,73 @@ class MagneticLattice:
         edge.fint = bend.fintx
         edge.pos = 2
 
-    def update_transfer_maps(self):
-        self.totalLen = 0
-        for i, element in enumerate(self.sequence):
-            if element.__class__ == Undulator:
-                if element.field_file != None:
-                    element.l = element.field_map.l * element.field_map.field_file_rep
-                    if element.field_map.units == "mm":
-                        element.l = element.l*0.001
-            self.totalLen += element.l
 
-            if element.__class__ == Edge:
+class CouplerKickUtil(EndElements):
+    suffix_1 = "_ck1"
+    suffix_2 = "_ck2"
 
-                if "_e1" in element.id:
-                    bend = self.sequence[i+1]
-                    if bend.__class__ not in (SBend, RBend, Bend):
-                        bend = self.sequence[i - 1]
-                        _logger.debug("Backtracking?")
-                    self.update_edge_e1(element, bend)
-                elif "_e2" in element.id:
-                    bend = self.sequence[i-1]
-                    if bend.__class__ not in (SBend, RBend, Bend):
-                        bend = self.sequence[i + 1]
-                        _logger.debug("Backtracking?")
-                    self.update_edge_e2(element, bend)
-                else:
-                    _logger.error("EDGE is not updated. Use standard function to create and update MagneticLattice")
-            element.transfer_map = self.method.create_tm(element)
-            _logger.debug("update: " + element.transfer_map.__class__.__name__)
-            if 'pulse' in element.__dict__: element.transfer_map.pulse = element.pulse
-        return self
+    def __init__(self):
+        super(CouplerKickUtil).__init__(self)
 
+    @staticmethod
+    def check(lattice):
+        """
+        if there are CouplerKicks on the ends of Cavities return True, else False
+        """
+        if len(lattice.sequence) < 3:
+            return False
+        for i in range(len(lattice.sequence)-2):
+            prob_ck1 = lattice.sequence[i]
+            elem = lattice.sequence[i+1]
+            prob_ck2 = lattice.sequence[i+2]
+            if elem.__class__ in (Cavity,):
+                if prob_ck1.__class__ != CouplerKick and prob_ck2.__class__ != CouplerKick:
+                    return False
+        return True
 
-    def __str__(self):
-        line = "LATTICE: length = " + str(self.totalLen) + " m \n"
-        for e in self.sequence:
-            line += "{0:15} length: {1:5.2f}      id: {2:10}\n".format(e.__class__.__name__, e.l, e.id)
-        return line
+    @staticmethod
+    def add(lattice):
+        n = 0
+        for i in range(len(lattice.sequence)):
+            elem = lattice.sequence[n]
+            if elem.__class__ in (Cavity,) and elem.l != 0.:
 
-    def find_indices(self, element):
-        indx_elem = np.where([i.__class__ == element for i in self.sequence])[0]
-        return indx_elem
+                e_name = elem.id
+
+                if elem.id is None:
+                    e_name = "cav_" + str(i)
+
+                e1 = CouplerKick(v=elem.v, phi=elem.phi, freq=elem.freq, vx=elem.vx_up, vy=elem.vy_up,
+                                 vxx=elem.vxx_up, vxy=elem.vxy_up, eid=e_name + CouplerKickUtil.suffix_1)
+
+                lattice.sequence.insert(n, e1)
+
+                e2 = CouplerKick(v=elem.v, phi=elem.phi, freq=elem.freq, vx=elem.vx_down, vy=elem.vy_down,
+                                 vxx=elem.vxx_down, vxy=elem.vxy_down, eid=e_name + CouplerKickUtil.suffix_2)
+
+                lattice.sequence.insert(n+2, e2)
+                n += 2
+            n += 1
+
+    @staticmethod
+    def update_first(ckick, cavity):
+        ckick.v = cavity.v
+        ckick.phi = cavity.phi
+        ckick.freq = cavity.freq
+        ckick.vx = cavity.vx_up
+        ckick.vy = cavity.vy_up
+        ckick.vxx = cavity.vxx_up
+        ckick.vxy = cavity.vxy_up
+
+    @staticmethod
+    def update_last(ckick, cavity):
+        ckick.v = cavity.v
+        ckick.phi = cavity.phi
+        ckick.freq = cavity.freq
+        ckick.vx = cavity.vx_down
+        ckick.vy = cavity.vy_down
+        ckick.vxx = cavity.vxx_down
+        ckick.vxy = cavity.vxy_down
 
 
 def merge_drifts(cell):

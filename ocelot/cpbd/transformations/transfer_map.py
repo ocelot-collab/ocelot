@@ -205,16 +205,6 @@ class TransferMap:
         m.length = delta_length
         return m
 
-    def create_r_matrix(self):
-        k1 = self.k1
-        if self.l == 0:
-            hx = 0.
-        else:
-            hx = self.angle / self.l
-
-        def r_z_e(z, energy): return uni_matrix(z, k1, hx=hx, sum_tilts=0, energy=energy)
-        return r_z_e
-
     @classmethod
     def create_from_element(cls, element, params=None):
         return cls()

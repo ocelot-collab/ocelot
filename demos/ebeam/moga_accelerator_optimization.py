@@ -10,7 +10,6 @@ mpiexec -n 10 python3 moga_accelerator_optimization.py       - for MOGA MPI with
 """
 
 from ocelot import *
-from ocelot.cpbd.optics import *
 from ocelot.cpbd.moga import *
 from ocelot.cpbd.chromaticity import *
 

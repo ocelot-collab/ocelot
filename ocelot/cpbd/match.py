@@ -1,13 +1,17 @@
 import multiprocessing
+from copy import deepcopy
+
+import numpy as np
 from scipy.optimize import *
 
 from ocelot.cpbd.beam_params import radiation_integrals
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
-from ocelot.cpbd.optics import *
+from ocelot.cpbd.beam import Particle
 from ocelot.cpbd.elements import *
 from ocelot.cpbd.beam import get_envelope
 from ocelot.cpbd.track import track
-
+from ocelot.cpbd.optics import lattice_transfer_map, twiss, periodic_twiss, Twiss
+from ocelot.cpbd.transformations.tm_utils import SecondOrderMult
 
 
 def weights_default(val):
@@ -595,7 +599,7 @@ def closed_orbit(lattice, eps_xy=1.e-7, eps_angle=1.e-7, energy=0):
     smult = SecondOrderMult()
 
     ME = np.eye(4) - R[:4, :4]
-    P = np.dot(inv(ME), lattice.B[:4])
+    P = np.dot(np.linalg.inv(ME), lattice.B[:4])
 
     def errf(x):
         X = np.array([[x[0]], [x[1]], [x[2]], [x[3]], [0], [0]])

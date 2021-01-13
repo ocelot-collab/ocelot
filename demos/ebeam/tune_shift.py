@@ -1,9 +1,6 @@
 __author__ = 'Sergey Tomin'
 
 from ocelot.gui import *
-from ocelot import *
-import numpy as np
-from time import time
 from ocelot.cpbd.track import *
 from ocelot.rad.radiation_py import und_field
 from ocelot.cpbd.optics import *

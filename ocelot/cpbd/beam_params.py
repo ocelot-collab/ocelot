@@ -2,7 +2,6 @@ __author__ = 'Sergey'
 
 from scipy.integrate import simps
 
-from ocelot.common.globals import *
 from ocelot.cpbd.optics import trace_z, twiss
 from ocelot.cpbd.beam import *
 from ocelot.cpbd.elements import *

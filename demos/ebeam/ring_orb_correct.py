@@ -1,6 +1,5 @@
 __author__ = 'Sergey Tomin'
 
-from ocelot import *
 from ocelot.gui.accelerator import *
 from ocelot.cpbd.orbit_correction import *
 from ocelot.cpbd.response_matrix import *

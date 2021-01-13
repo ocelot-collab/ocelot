@@ -1,11 +1,9 @@
 __author__ = 'Sergey Tomin'
 
-from ocelot.cpbd.optics import trace_z, twiss
 from scipy.integrate import simps
-from numpy.linalg import inv
 from ocelot.cpbd.beam import *
 from ocelot.cpbd.elements import *
-import numpy as np
+
 
 def edge_chromaticity_old(lattice, tws_0):
     #tested !

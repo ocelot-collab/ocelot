@@ -449,6 +449,7 @@ def track(lattice, p_array, navi, print_progress=True, calc_tws=True, bounds=Non
     return tws_track, p_array
 
 
+# TODO: Special treadment Edge and Bends
 def lattice_track(lat, p):
     plist = [copy.copy(p)]
 

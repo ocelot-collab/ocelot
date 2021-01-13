@@ -8,7 +8,6 @@ S.Tomin
 from time import time
 
 # this python library provides generic shallow (copy) and deep copy (deepcopy) operations
-from copy import deepcopy
 
 # import from Ocelot main modules and functions
 from ocelot import *

@@ -823,8 +823,9 @@ def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinea
     H = H.T
     vmin = np.min(H) + (np.max(H) - np.min(H)) * 0.0001
 
-    ax.imshow(H, interpolation=interpolation, aspect='auto', origin='lower', extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], vmin=vmin, cmap=my_rainbow)
-    
+    ax.imshow(H, interpolation=interpolation, aspect='auto', origin='lower',
+              extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], vmin=vmin, cmap=my_rainbow)
+
     if xlabel is not None: ax.set_xlabel(xlabel)
     if ylabel is not None: ax.set_ylabel(ylabel)
     ax.grid(grid)
@@ -890,7 +891,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     plt.plot(slice_params.s * tau_factor, slice_params.se * 1e-3, "b")
     # plt.legend()
     plt.xlabel(tau_label)
-    plt.ylabel("$\sigma_E$ [keV]")
+    plt.ylabel(r"$\sigma_E$ [keV]")
     plt.grid(grid)
 
     ax_em = plt.subplot(323, sharex=ax_sp)
@@ -951,7 +952,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     ax_ps = plt.subplot(322, sharex=ax_sp)
 
     show_density(p_array_copy.tau() * tau_factor, p_array_copy.p() * 1e2, ax=ax_ps, nbins_x=nbins_x, nbins_y=nbins_y,
-                 interpolation=interpolation, ylabel='$\delta_E$ [%]',
+                 interpolation=interpolation, ylabel=r'$\delta_E$ [%]',
                  title="Longitudinal phase space", grid=grid, show_xtick_label=False)
 
     if filename is not None:
@@ -1296,7 +1297,7 @@ def show_e_beam_reduced(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_
     ax_ps = plt.subplot(222, sharex=ax_sp)
 
     show_density(p_array_copy.tau() * 1e3, p_array_copy.p() * 1e2, ax=ax_ps, nbins_x=nbins_x, nbins_y=nbins_y,
-                 interpolation=interpolation, ylabel='$\delta_E$ [%]',
+                 interpolation=interpolation, ylabel=r'$\delta_E$ [%]',
                  title="Longitudinal phase space", grid=grid, show_xtick_label=False)
 
     if filename is not None:
@@ -1381,7 +1382,7 @@ def beam_jointplot(p_array, show_plane="x", nparts_in_slice=5000, smooth_param=0
         ax_down = plt.subplot(212, sharex=ax_top)
 
         show_density(p_array_copy.tau() * 1e3, p_array_copy.p() * 1e2, ax=ax_down, nbins_x=nbins_x, nbins_y=nbins_y,
-                     interpolation=interpolation, ylabel='$\delta_E$ [%]', xlabel='s [mm]',
+                     interpolation=interpolation, ylabel=r'$\delta_E$ [%]', xlabel='s [mm]',
                      title="Longitudinal phase space", grid=grid, show_xtick_label=True)
 
     if filename is not None:

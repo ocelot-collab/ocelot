@@ -1199,17 +1199,16 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', dfl_slipage_inc
     launcher.launch()
     _logger.info(ind_str + 'genesis simulation time %.2f seconds' % (time.time() - genesis_time))
     # RUNNING GENESIS ###
-
+    
+    assembly_time = time.time()
+    
     if assembly_ver is not None:
         # genesis output slices assembly
         _logger.info(ind_str + 'assembling slices')
         _logger.debug(2 * ind_str + 'assembly_ver = {}'.format(assembly_ver))
         
-        assembly_time = time.time()
-
-        
         if assembly_ver == 'sys':
-
+            
             _logger.info(2 * ind_str + 'assembling *.out file')
             start_time = time.time()
             os.system('cat ' + out_path + '.slice* >> ' + out_path)

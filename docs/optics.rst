@@ -1,8 +1,11 @@
 Photon optics (optics) module
 ================================
 
-Overview
--------------------------------
+Automatically generated API index
+---------------------------------
 
-photon optics
 
+.. toctree::
+   :maxdepth: 1
+
+   Module Reference <_sources/ocelot.optics.rst>

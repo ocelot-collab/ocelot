@@ -612,7 +612,7 @@ class GenesisOutput:
         if self.nSlices == 1:
             raise AssertionError('Cannot calculate spectrum from steady-state simulation')
         
-        if (npad%1 is not 0) or npad < 0:
+        if (npad%1 != 0) or npad < 0:
             raise ValueError('npad should be positive integer')
         
         if mode == 'ff':

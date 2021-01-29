@@ -31,7 +31,7 @@ plot_opt_func(lat, tws, top_plot=["Dy"])
 plt.show()
 
 
-orb = NewOrbit(lat)
+orb = Orbit(lat)
 
 method = LinacRmatrixRM(lattice=orb.lat, hcors=orb.hcors, vcors=orb.vcors, bpms=orb.bpms)
 #drm_method = LinacDisperseSimRM

@@ -317,7 +317,7 @@ def plot_gen4_out_z(out, z=np.inf, params=['rad_power+el_current', 'el_energy+el
     # z = out.z[zi]
 
     if fig_name is None:
-        if out.fileName() is '':
+        if out.fileName() == '':
             fig = plt.figure('Bunch profile at ' + str(z) + 'm')
         else:
             fig = plt.figure('Bunch profile at ' + str(z) + 'm ' + out.fileName())
@@ -385,13 +385,13 @@ def plot_gen4_out_z(out, z=np.inf, params=['rad_power+el_current', 'el_energy+el
     axf = len(ax) - axt
     # ax[0].set_xlim(out.z[0], out.z[-1])
     # ax[-1].set_xlabel('z [m]')
-    if axt is not 0 and axf is not 0:
+    if axt != 0 and axf != 0:
         fig.subplots_adjust(top=0.95, bottom=0.2, right=0.8, left=0.15)
     else:
         fig.subplots_adjust(top=0.95, bottom=0.1, right=0.8, left=0.15)
 
     for axi in ax[axt:]:
-        if axt is not 0:
+        if axt != 0:
             pos1 = axi.get_position()  # get the original position
             pos2 = [pos1.x0 + 0, pos1.y0 - 0.1, pos1.width / 1.0, pos1.height / 1.0]
             axi.set_position(pos2)
@@ -698,7 +698,7 @@ def plot_gen4_out_evo(out, params=['und_quad', 'el_size', 'el_pos', 'el_energy',
         out = read_out_file(out, read_level=2)
     # add check for output object
     if fig_name is None:
-        if out.fileName() is '':
+        if out.fileName() == '':
             fig = plt.figure(params_str)
             _logger.info('plotting ' + params_str)
         else:

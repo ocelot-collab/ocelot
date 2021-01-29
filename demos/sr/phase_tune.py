@@ -21,7 +21,7 @@ D = Drift(l=0.5, eid="D")
 b1 = Hcor(l=0.1, angle = 5*-0.00001, eid="b1")
 b2 = Hcor(l=0.2, angle = 5*0.00002, eid="b2")
 b3 = Hcor(l=0.1, angle = 5*-0.00001, eid="b3")
-phase_shift =  (b1, b2, b3)
+phase_shift = (b1, b2, b3)
 cell = (und, D, phase_shift, D, und)
 lat = MagneticLattice(cell)
 

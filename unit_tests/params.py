@@ -39,10 +39,11 @@ def check_result(data):
     return result
 
 
-def check_value(value, value_ref, tolerance=1.0e-15, tolerance_type='relative', assert_info=''):
+def check_value(value, value_ref, tolerance=1.0e-15, tolerance_type='relative', assert_info='', numerical_zero=1e-15):
     """Value with reference value check function
 
     if relative_tolerance='relative' then tolerance is relative (this is default value)
+                                     if both numbers less than numerical zero then return None
     if relative_tolerance='absolute' then tolerance is absolute
     there is no tolerance for string values
     """
@@ -52,6 +53,10 @@ def check_value(value, value_ref, tolerance=1.0e-15, tolerance_type='relative', 
             return [None]
         else:
             return [assert_info + ' value is "' + value + '"\n reference value is "' + value_ref + '"\n\n']
+
+    if tolerance_type == 'relative':
+        if np.abs(value) < numerical_zero and np.abs(value_ref) < numerical_zero:
+            return None
 
     if tolerance_type == 'relative':
         abs_value_ref = np.abs(value_ref)
@@ -64,7 +69,7 @@ def check_value(value, value_ref, tolerance=1.0e-15, tolerance_type='relative', 
         return assert_info + ' value is "' + str(value) + '"\n reference value is "' + str(value_ref) + '"\n tolerance is "' + str(tolerance) + '"\n tolerance type is "' + tolerance_type + '"\n\n'
 
 
-def check_matrix(matrix, matrix_ref, tolerance=1.0e-15, tolerance_type='relative', assert_info=''):
+def check_matrix(matrix, matrix_ref, tolerance=1.0e-15, tolerance_type='relative', assert_info='', numerical_zero=1e-15):
     """Matrix with reference matrix check function"""
 
     delta_matrix = np.abs(matrix - matrix_ref)
@@ -75,7 +80,9 @@ def check_matrix(matrix, matrix_ref, tolerance=1.0e-15, tolerance_type='relative
 
     result = []
     for (index, x), (index_ref, x_ref) in zip(np.ndenumerate(matrix), np.ndenumerate(matrix_ref)):
-        result.append(check_value(x, x_ref, tolerance, tolerance_type, assert_info=assert_info+' matrix element '+str(index)+'\n'))
+        result.append(check_value(x, x_ref, tolerance, tolerance_type,
+                                  assert_info=assert_info+' matrix element '+str(index)+'\n',
+                                  numerical_zero=numerical_zero))
     
     return result
 

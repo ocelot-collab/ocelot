@@ -2034,7 +2034,7 @@ def read_out_file_stat_u(file_template, run_inp=[], param_inp=[], debug=1):
 '''
 
 
-def read_dfl_file_out(out, filePath=None, debug=1):
+def read_dfl_file_out(out, filePath=None, harmonic=1, *args, **kwargs):
     '''
     More compact function than read_dfl_file() to read the file generated with known .out file
     Returns RadiationField object
@@ -2047,7 +2047,7 @@ def read_dfl_file_out(out, filePath=None, debug=1):
     _logger.debug(ind_str + 'opening handle ' + str(out))
     
     if os.path.isfile(str(out)):
-        out = read_out_file(out, read_level=0, debug=0)
+        out = read_out_file(out, read_level=0)
     if not isinstance(out, GenesisOutput):
         _logger.error('out is neither GenesisOutput() nor a valid path')
         raise ValueError('out is neither GenesisOutput() nor a valid path')
@@ -2059,7 +2059,7 @@ def read_dfl_file_out(out, filePath=None, debug=1):
         _logger.debug(ind_str + 'from filepath')
     _logger.debug(2*ind_str + filePath)
     
-    dfl = read_dfl_file(filePath, Nxy=out.ncar, Lxy=out.leng, zsep=out('zsep'), xlamds=out('xlamds'), debug=debug)
+    dfl = read_dfl_file(filePath, Nxy=out.ncar, Lxy=out.leng, zsep=out('zsep')*harmonic, xlamds=out('xlamds')/harmonic)
     return dfl
 
 

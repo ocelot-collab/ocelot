@@ -2285,7 +2285,7 @@ def dpa2edist(out, dpa, num_part=1e5, smear=1, debug=1):
     reads GenesisParticlesDump() object
     returns GenesisElectronDist() object
     num_part - desired approximate number of particles in edist
-    smear - whether to shuffle macroparticles smearing microbunching
+    smear - whether to shuffle macroparticles smearing microbunching and populating delz-1 slices
     '''
     import random
     start_time = time.time()
@@ -2364,6 +2364,7 @@ def dpa2edist(out, dpa, num_part=1e5, smear=1, debug=1):
     edist.g = np.flipud(edist.g)
 
     edist.part_charge = out.beam_charge / edist.len()
+    _logger.debug(ind_str + 'edist.part_charge / q_e = ' + str(edist.part_charge / q_e))
     _logger.debug(ind_str + 'edist.len() = ' + str(edist.len()))
     # edist.charge=out.beam_charge
     if hasattr(dpa, 'filePath'):

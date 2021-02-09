@@ -147,9 +147,12 @@ class MpiQueueLauncher(Launcher):
         self.id = ''
         self.program = "" # old
         self.argument = "" # old
-        self.dir = ""
+        self.dir = None # force user to assign it (done for instance in run_genesis of genesis2 adaptor)
         self.nproc = 0
         self.mpiParameters = "" # old
+
+        self.jobscript_template='T_run_g2.sh' # as of now, the templates reside in the same directory as MpiQueueLauncher() source code
+        self.jobscript_setup=True
 
         self.jobpartition='maxwell'
         self.jobnodes=2
@@ -168,15 +171,27 @@ class MpiQueueLauncher(Launcher):
 
 
     def submit(self):
+        # Check that working directory is assigned before proceeding
+        # OCELOT GENESIS v2 adaptor assignes .dir variable, before running
+        # job, so this is mainly issue when used by other callers...
+        if self.dir is None:
+            _logger.error('*** No directory for job execution specified, aborting ***')
+            return
+
         _logger.info('preparing job')
 
         # deploy SLURM job script
         # generate output dir for stdout and stderr
         # delete any flag files that might still be there for an earlier run (for example, the previous stage in a series of stages)
-        jobscript=os.path.dirname(__file__)+'/T_run_g2.sh'
-        setupcmd='cp "'+jobscript+'" "'+self.dir +'/run_g2.sh"; mkdir -p '+self.dir+'/jobout; rm -f '+self.dir+'/flag.start '+self.dir+'/flag.finish'
-        _logger.debug(ind_str + 'setup command "{}"'.format(setupcmd))
-        os.system(setupcmd)
+        jobscript='./run.sh' # default job script name in job working directory (can be overwritten, if needed)
+        if self.jobscript_setup:
+            jobscript_t=os.path.dirname(__file__)+'/'+self.jobscript_template
+            setupcmd='cp "'+jobscript_t+'" "'+self.dir +'/'+jobscript+'"; mkdir -p '+self.dir+'/jobout; rm -f '+self.dir+'/flag.start '+self.dir+'/flag.finish'
+            _logger.debug(ind_str + 'setup command "{}"'.format(setupcmd))
+            os.system(setupcmd)
+        else:
+            _logger.debug(ind_str + 'setup command disabled by user')
+            jobscript=self.jobscript_template
         #
         # assemble cmd line
         # !no quotes around strings, the submission of the args as list elements ensures that for instance strings with spaces in them are treated as single arguments!
@@ -187,9 +202,9 @@ class MpiQueueLauncher(Launcher):
         args.append('--partition={0:s}'.format(self.jobpartition))
         args.append('--nodes={0:d}'.format(self.jobnodes))
         args.append('--ntasks-per-node={0:d}'.format(self.jobntaskspernode))
-        args.append('./run_g2.sh')
+        args.append(jobscript)
         _logger.info('submitting job to MAXWELL cluster queue 2/2 (submitting)')
-        _logger.debug('running command: {0:s}'.format(" ".join(args)))
+        _logger.debug('running command: {0:s} (remark/TODO: this does not print quotes around the arguments)'.format(" ".join(args)))
         p=subprocess.Popen(args, cwd=self.dir, stdout=subprocess.PIPE)
         (out,err)=p.communicate()
         rc=p.returncode # get exit code of 'sbatch' call (but not used as of now)

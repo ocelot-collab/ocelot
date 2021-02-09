@@ -2266,6 +2266,12 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cm
     energy = deepcopy(dpa.e[slice_num, :, :])
     _logger.debug(ind_str + 'nbins =  {}'.format(nbins))
     
+    # checking for lost particles
+    if np.any(energy<0):
+        particle_present_idx = energy>0
+        energy = energy[particle_present_idx]
+        phase = phase[particle_present_idx]
+    
     if GeV:
         energy *= m_e_MeV
         if energy_mean == None:

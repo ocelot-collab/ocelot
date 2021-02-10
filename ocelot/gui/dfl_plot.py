@@ -523,6 +523,173 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     else:
         return
 
+@if_plottable
+def plot_two_dfls(dfl_first, dfl_second, domains='s', label_first=None, label_second=None, title=None,
+            x_lim=None, y_lim=None, slice_xy=False, phase=False, savefig=False, showfig=True, filePath=None, fig_name=None):
+    """ 
+    Parameters
+    ----------
+    dfl_first : RadiationField object
+        3d or 2d coherent radiation distribution, *.fld variable is the same as Genesis dfl structure
+    dfl_second : RadiationField object
+        3d or 2d coherent radiation distribution, *.fld variable is the same as Genesis dfl structure
+    domains : str, optional
+        A transverse domain in which the fields will be represented. The default is 's'.
+    label_first : str, optional
+        Label of the first field to be plotted in the legend. When the default is None no label will be displayed.
+    label_second : str, optional
+        Label of the second field to be plotted in the legend. When the default is None no label will be displayed.
+    x_lim : float, optional
+        Limit of the x scale whether in um or urad. When the default is None minimum scale of two field will be plotted.
+    y_lim : float, optional
+        Limit of the y scale whether in um or urad. When the default is None minimum scale of two field will be plotted.
+    slice_xy : bool type, optional
+        if True, slices will be plotted; if False, projections will be plotted.
+    phase : bool type, optional
+        can replace XY projection with the phasefront distribution. The default is False.
+    figname : str, optional
+        The name of the figure to be plotted and saved. The default is 'figname'.
+
+    Returns
+    -------
+    None.
+
+    """
+    
+    _logger.info('Plotting two dfls in process...')
+    start_time = time.time()
+
+    cmap_ph = plt.get_cmap('hsv')
+    
+    dfl1 = deepcopy(dfl_first)
+    dfl2 = deepcopy(dfl_second)
+    
+    if filePath is None:
+        filePath = dfl1.filePath
+    
+    if fig_name is None:
+        if dfl_copy.fileName() == '':
+            fig = plt.figure('Radiation comparison' + domains)
+        else:
+            fig = plt.figure('Radiation comparison ' + domains + ' ' + dfl1.fileName() + ' ' + dfl2.fileName())
+    else:
+        fig = plt.figure(fig_name + domains)
+    
+    figsize = 6
+    # fig = plt.figure(fig_name)
+    plt.clf()
+     
+    fig.set_size_inches(4*figsize, figsize, forward=True)
+    if title is not None: 
+        fig.suptitle(title, fontsize=18, ha='right')
+        
+    ax_x = fig.add_subplot(1, 4, 1)
+    ax_y = fig.add_subplot(1, 4, 2)
+    ax_x2 = ax_x.twinx()  # instantiate a second axes that shares the same x-axis
+    ax_y2 = ax_y.twinx()
+
+    _logger.info(ind_str + "domains={}".format(str(domains)))
+
+    if domains == 'k':
+        label_x = r'$\theta_y, \mu rad$'
+        label_y = r'$\theta_x, \mu rad$'
+    elif domains == 's':
+        label_x = r'$x, \mu m$'
+        label_y = r'$y, \mu m$'
+    dfl1.to_domain(domains)
+    dfl2.to_domain(domains)
+    
+    if None in [x_lim, y_lim]:
+        x_lim = min(np.max(dfl1.scale_x())*1e6, np.max(dfl2.scale_x())*1e6)
+        y_lim = min(np.max(dfl1.scale_y())*1e6, np.max(dfl2.scale_y())*1e6)
+
+    _logger.debug(ind_str + "x_lim = {}, y_lim = {}".format(x_lim, y_lim))
+    ax_y.set_xlim(-y_lim, y_lim)
+    ax_y2.set_xlim(-y_lim, y_lim)
+    ax_x.set_xlim(-x_lim, x_lim)
+    ax_x2.set_xlim(-x_lim, x_lim)        
+    
+    ax_y.grid()
+    ax_x.grid()
+    
+    if slice_xy is True:   
+        fig.text(0.01, 0.01, 'x- y- slice', fontsize=18)
+        I_1x = np.sum(dfl1.intensity(), axis=0)[dfl1.Ny()//2+1, :]
+        I_2x = np.sum(dfl2.intensity(), axis=0)[dfl2.Ny()//2+1, :]
+        I_1y = np.sum(dfl1.intensity(), axis=0)[:, dfl1.Nx()//2+1]
+        I_2y = np.sum(dfl2.intensity(), axis=0)[:, dfl2.Nx()//2+1]
+    elif slice_xy is False:
+        fig.text(0.01, 0.01, 'x- y- integrated', fontsize=18)
+        I_1x = np.sum(dfl1.intensity(), axis=(0,1))
+        I_2x = np.sum(dfl2.intensity(), axis=(0,1))
+        I_1y = np.sum(dfl1.intensity(), axis=(0,2))
+        I_2y = np.sum(dfl2.intensity(), axis=(0,2))
+    else: 
+        raise AttributeError('slice_xy is a boolean type')
+        _logger.error(ind_str + 'slice_xy is a boolean type')
+       
+    ax_x.plot(dfl1.scale_x()*1e6, I_1x, c='b', label=label_first)
+    ax_x2.plot(dfl2.scale_x()*1e6, I_2x, c='green', label=label_second)
+    
+    ax_y.plot(dfl1.scale_y()*1e6, I_1y, c='b', label=label_first)
+    ax_y2.plot(dfl2.scale_y()*1e6, I_2y, c='green', label=label_second)    
+    
+    if None not in [label_first, label_second]:
+        ax_y2.legend(fontsize=12, bbox_to_anchor=(0, 0.92), loc='upper left')#, loc=1)
+        ax_y.legend(fontsize=12, bbox_to_anchor=(0, 0.995), loc='upper left')#, loc=2)
+        ax_x2.legend(fontsize=12, bbox_to_anchor=(0, 0.92), loc='upper left')#, loc=1)
+        ax_x.legend(fontsize=12, bbox_to_anchor=(0, 0.995), loc='upper left')#, loc=2)
+        
+    ax_xy1 = fig.add_subplot(1, 4, 3)
+    ax_xy2 = fig.add_subplot(1, 4, 4)
+
+    if phase == True:
+        xy_proj_ph1 = np.angle(np.sum(dfl1.fld, axis=0))
+        xy_proj_ph2 = np.angle(np.sum(dfl2.fld, axis=0))
+        ax_xy1.pcolormesh(dfl1.scale_x()*1e6, dfl1.scale_y()*1e6, xy_proj_ph1, cmap=cmap_ph, vmin=-np.pi, vmax=np.pi)        
+        ax_xy2.pcolormesh(dfl2.scale_x()*1e6, dfl2.scale_y()*1e6, xy_proj_ph2, cmap=cmap_ph, vmin=-np.pi, vmax=np.pi)
+    else:
+        ax_xy1.pcolormesh(dfl1.scale_x()*1e6, dfl1.scale_y()*1e6, np.sum(dfl1.intensity(), axis=0))         
+        ax_xy2.pcolormesh(dfl2.scale_x()*1e6, dfl2.scale_y()*1e6, np.sum(dfl2.intensity(), axis=0))
+
+    ax_xy2.set_xlim(-x_lim, x_lim)
+    ax_xy2.set_ylim(-y_lim, y_lim)
+    ax_xy1.set_xlim(-x_lim, x_lim)
+    ax_xy1.set_ylim(-y_lim, y_lim)
+
+    ax_xy1.set_title(label_first, fontsize=14, color='b')      
+    ax_xy2.set_title(label_second, fontsize=14, color='green')
+          
+    ax_xy1.set_ylabel(label_y, fontsize=16)
+    ax_xy1.set_xlabel(label_x, fontsize=16)
+    ax_xy2.set_ylabel(label_y, fontsize=16)
+    ax_xy2.set_xlabel(label_x, fontsize=16)
+    ax_x.set_xlabel(label_x, fontsize=16)
+    ax_y.set_xlabel(label_y, fontsize=16)
+    ax_x.set_ylabel('arb.units', fontsize=16)
+    ax_y.set_ylabel('arb.units', fontsize=16)
+    ax_x.set_ylim(0)
+    ax_y.set_ylim(0)
+    ax_x2.set_ylim(0)
+    ax_y2.set_ylim(0)
+    plt.tight_layout()
+    
+    if savefig != False:
+        if savefig == True:
+            savefig = 'png'
+        _logger.debug(ind_str + 'saving *{:}.{:}'.format(figname, savefig))
+        fig.savefig(filePath + figname + '.' + str(savefig), format=savefig)
+    _logger.debug(ind_str + 'done in {:.2f} seconds'.format(time.time() - start_time))
+
+    plt.draw()
+
+    if showfig == True:
+        _logger.debug(ind_str + 'showing two dfls')
+        rcParams["savefig.directory"] = os.path.dirname(filePath)
+        plt.show()
+    else:
+        plt.close(fig)   
+    _logger.info(ind_str + 'plotting two dfls done in {:.2f} seconds'.format(time.time() - start_time))
 
 @if_plottable
 def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, None), y_lim=(None, None), v_lim=(None, None), downsample=1,

@@ -2154,6 +2154,14 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
 
 def dfl_shift_z(dfl, s, set_zeros=1, return_result=1):
     """
+    legacy, see dfl_shift_s
+    """
+    _logger.warn('function dfl_shift_z will be deprecated, rename to dfl_shift_s instead')
+    dfl = dfl_shift_s(dfl=dfl, s=s, set_zeros=set_zeros, return_result=return_result)
+    return dfl
+
+def dfl_shift_s(dfl, s, set_zeros=1, return_result=1):
+    """
     shift the radiation within the window in time domain
     dfl - initial RadiationField object
     s - longitudinal offset value in meters

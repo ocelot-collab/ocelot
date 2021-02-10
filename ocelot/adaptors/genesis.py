@@ -2034,7 +2034,7 @@ def read_out_file_stat_u(file_template, run_inp=[], param_inp=[], debug=1):
 '''
 
 
-def read_dfl_file_out(out, filePath=None, debug=1):
+def read_dfl_file_out(out, filePath=None, harmonic=1, *args, **kwargs):
     '''
     More compact function than read_dfl_file() to read the file generated with known .out file
     Returns RadiationField object
@@ -2047,7 +2047,7 @@ def read_dfl_file_out(out, filePath=None, debug=1):
     _logger.debug(ind_str + 'opening handle ' + str(out))
     
     if os.path.isfile(str(out)):
-        out = read_out_file(out, read_level=0, debug=0)
+        out = read_out_file(out, read_level=0)
     if not isinstance(out, GenesisOutput):
         _logger.error('out is neither GenesisOutput() nor a valid path')
         raise ValueError('out is neither GenesisOutput() nor a valid path')
@@ -2059,7 +2059,7 @@ def read_dfl_file_out(out, filePath=None, debug=1):
         _logger.debug(ind_str + 'from filepath')
     _logger.debug(2*ind_str + filePath)
     
-    dfl = read_dfl_file(filePath, Nxy=out.ncar, Lxy=out.leng, zsep=out('zsep'), xlamds=out('xlamds'), debug=debug)
+    dfl = read_dfl_file(filePath, Nxy=out.ncar, Lxy=out.leng, zsep=out('zsep')*harmonic, xlamds=out('xlamds')/harmonic)
     return dfl
 
 
@@ -2285,7 +2285,7 @@ def dpa2edist(out, dpa, num_part=1e5, smear=1, debug=1):
     reads GenesisParticlesDump() object
     returns GenesisElectronDist() object
     num_part - desired approximate number of particles in edist
-    smear - whether to shuffle macroparticles smearing microbunching
+    smear - whether to shuffle macroparticles smearing microbunching and populating delz-1 slices
     '''
     import random
     start_time = time.time()
@@ -2364,6 +2364,7 @@ def dpa2edist(out, dpa, num_part=1e5, smear=1, debug=1):
     edist.g = np.flipud(edist.g)
 
     edist.part_charge = out.beam_charge / edist.len()
+    _logger.debug(ind_str + 'edist.part_charge / q_e = ' + str(edist.part_charge / q_e))
     _logger.debug(ind_str + 'edist.len() = ' + str(edist.len()))
     # edist.charge=out.beam_charge
     if hasattr(dpa, 'filePath'):

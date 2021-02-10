@@ -406,6 +406,7 @@ class RadiationField:
             method = 'np'
         
         if domain_orig == 's':
+            self.fld = np.fft.ifftshift(self.fld, axes=(1, 2))
             if method == 'mp' and fftw_avail:
                 fft_exec = pyfftw.builders.fft2(self.fld, axes=(1, 2), overwrite_input=False,
                                                 planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False,
@@ -427,6 +428,7 @@ class RadiationField:
                 self.fld = fft_exec()
             else:
                 self.fld = np.fft.ifft2(self.fld, axes=(1, 2))
+            self.fld = np.fft.fftshift(self.fld, axes=(1, 2))
             # else:
             #     raise ValueError("fft method should be 'np' or 'mp'")
             self.fld *= np.sqrt(self.Nx() * self.Ny())
@@ -620,6 +622,7 @@ class RadiationField:
     def mut_coh_func(self, norm=1, jit=1):
         '''
         calculates mutual coherence function
+        returns matrix [y,x,y',x']
         consider downsampling the field first
         '''
         if jit:
@@ -2132,7 +2135,7 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
 
     _logger.debug(ind_str + 'new shape = (%i %i %i)' % (len(fld2), fslice2.shape[0], fslice2.shape[1]))
 
-    dfl2 = deepcopy(dfl)
+    dfl2 = deepcopy(dfl) #TODO:replace with copy except fld
     dfl2.fld = np.array(fld2)
     dfl2.dx = Lx2 / dfl2.Nx()
     dfl2.dy = Ly2 / dfl2.Ny()

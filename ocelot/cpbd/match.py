@@ -290,7 +290,7 @@ def weights_default(val):
 
 
 def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, method='simplex', weights=weights_default,
-               vary_bend_angle=False, min_i5=False):
+               vary_bend_angle=False, min_i5=False, bounds=None):
     """
     Function to match twiss paramters
 
@@ -321,7 +321,7 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
 
     def errf(x):
         p_array0 = deepcopy(p_array)
-        tws = get_envelope(p_array0)
+        tws = get_envelope(p_array0, bounds=bounds)
         tw_loc = deepcopy(tws)
         tw0 = deepcopy(tws)
 
@@ -386,7 +386,7 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
         # tw_loc.s = 0
         # print("start = ", get_envelope(p_array0))
         navi.go_to_start()
-        tws_list, p_array0 = track(lat, p_array0, navi, print_progress=False)
+        tws_list, p_array0 = track(lat, p_array0, navi, print_progress=False, bounds=bounds)
         s = np.array([tw.s for tw in tws_list])
         # print("stop = ", tws_list[-1])
         L = 0.

@@ -23,6 +23,13 @@ def_cmap = 'viridis'
 fntsz = 4
 params = {'image.cmap': def_cmap, 'backend': 'ps', 'axes.labelsize': 3 * fntsz, 'font.size': 3 * fntsz, 'legend.fontsize': 4 * fntsz, 'xtick.labelsize': 4 * fntsz,  'ytick.labelsize': 4 * fntsz, 'text.usetex': False, 'pcolor.shading':'nearest'}
 rcParams.update(params)
+
+try:
+    rcParams.update({'pcolor.shading':'nearest'})
+except KeyError:
+    _logger.debug('matplotlib too old for "pcolor.shading":"nearest" setting')
+
+
 # plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
 # rcParams["savefig.directory"] = os.chdir(os.path.dirname(__file__)) but __file__ appears to be genesis_plot
 matplotlib.pyplot.ioff() #turn off interactive mode

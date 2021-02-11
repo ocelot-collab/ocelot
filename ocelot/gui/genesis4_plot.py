@@ -1237,3 +1237,136 @@ def subfig_evo_rad_spec_sz(ax_spectrum_evo, out, legend, norm=1):
         ax_spectrum_evo.grid(True)
     else:
         pass
+
+def plot_dpa4_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cmap, scatter=False, energy_mean=None,
+                    legend=True, fig_name=None, savefig=False, showfig=True, suffix='', bins=(50, 50), debug=1,
+                    return_mode_gamma=0):
+    part_colors = ['darkred', 'orange', 'g', 'b', 'm', 'c', 'y', 'olive']
+    # cmap='BuPu'
+    y_bins = bins[0]
+    z_bins = bins[1]
+    
+    if not dpa.one4one:
+        return
+    
+    if showfig == False and savefig == False:
+        return
+    
+    _logger.info('plotting dpa bucket')
+    start_time = time.time()
+    
+    # if dpa.__class__ != GenesisParticlesDump:
+    #     raise ValueError('wrong particle object: should be GenesisParticlesDump')
+    
+    if dpa.slicelist.shape == 1:
+        slice_num = 0
+    if slice_num is None:
+        slice_num = dpa.slicelist[int(dpa.slicelist.size/2)]
+        _logger.debug(
+            ind_str + 'no slice number provided, using middle of the distribution - slice number {}'.format(slice_num))
+    else:
+        assert (slice_num <= np.shape(dpa.ph)[0]), 'slice_num larger than the dpa shape'
+    
+    if fig_name == None:
+        fig_name = 'Electron phase space ' + dpa.fileName()
+    fig = plt.figure(fig_name)
+    fig.clf()
+    fig.set_size_inches((5 * figsize, 3 * figsize), forward=True)
+    
+    left, width = 0.18, 0.57
+    bottom, height = 0.14, 0.55
+    left_h = left + width + 0.02 - 0.02
+    bottom_h = bottom + height + 0.02 - 0.02
+    
+    rect_scatter = [left, bottom, width, height]
+    rect_histx = [left, bottom_h, width, 0.2]
+    rect_histy = [left_h, bottom, 0.15, height]
+    
+    ax_main = plt.axes(rect_scatter)
+    ax_z_hist = plt.axes(rect_histx, sharex=ax_main)
+    ax_y_hist = plt.axes(rect_histy, sharey=ax_main)
+    
+    # ax_z_hist = plt.subplot2grid((4, 1), (0, 0), rowspan=1)
+    # ax_y_hist = plt.subplot2grid((4, 1), (0, 0), rowspan=1)
+    
+    # ax_main = plt.subplot2grid((4, 1), (1, 0), rowspan=3, sharex=ax_z_hist)
+    
+    nbins = np.shape(dpa.ph)[1]
+    phase = deepcopy(dpa.ph[slice_num, :, :])
+    energy = deepcopy(dpa.e[slice_num, :, :])
+    _logger.debug(ind_str + 'nbins =  {}'.format(nbins))
+    
+    # checking for lost particles
+    if np.any(energy<0):
+        particle_present_idx = energy>0
+        energy = energy[particle_present_idx]
+        phase = phase[particle_present_idx]
+    
+    if GeV:
+        energy *= m_e_MeV
+        if energy_mean == None:
+            energy_mean = round(np.mean(energy), 0)
+    else:
+        if energy_mean == None:
+            energy_mean = round(np.mean(energy), 1)
+    energy -= energy_mean
+    
+    phase_flat = phase.flatten()
+    energy_flat = energy.flatten()
+    for irep in range(repeat - 1):
+        phase_flat = np.append(phase_flat, phase.flatten() + 2 * np.pi * (irep + 1))
+        energy_flat = np.append(energy_flat, energy.flatten())
+    
+    # phase_hist = np.ravel(phase)
+    # for irep in range(repeat-1):
+    #     phase_hist = np.concatenate((phase_hist, np.ravel(phase) + 2 * np.pi * (irep+1)))
+    
+    # hist, edges = np.histogram(phase_hist, bins=50 * repeat)  # calculate current histogram
+    hist_z, edges_z = np.histogram(phase_flat, bins=z_bins * repeat)  # calculate current histogram
+    edges_z = edges_z[0:-1]  # remove the last bin edge to save equal number of points
+    ax_z_hist.bar(edges_z, hist_z, width=edges_z[1] - edges_z[0], color='silver')
+    ax_z_hist.set_ylabel('counts')
+    
+    hist_y, edges_y = np.histogram(energy_flat, bins=y_bins)  # calculate energy histogram
+    edges_y = edges_y[0:-1]  # remove the last bin edge to save equal number of points
+    ax_y_hist.barh(edges_y, hist_y, height=edges_y[1] - edges_y[0], color='silver')
+    ax_y_hist.set_xlabel('counts')
+    
+    for label in ax_z_hist.get_xticklabels():
+        label.set_visible(False)
+    
+    for label in ax_y_hist.get_yticklabels():
+        label.set_visible(False)
+    
+    if scatter == True:
+        _logger.debug(ind_str + 'plotting scatter')
+        for irep in range(repeat):
+            for ibin in range(nbins):
+                ax_main.scatter(phase[ibin, :] + 2 * np.pi * (irep), energy[ibin, :], color=part_colors[ibin],
+                                marker='.')
+    
+        # ax_z_hist.set_xlim([edges[0], edges[-1]])
+    
+    elif scatter == False:
+        _logger.debug(ind_str + 'plotting colormesh')
+        ax_main.hist2d(phase_flat, energy_flat, bins=[z_bins * repeat, y_bins], cmin=0, cmap=cmap)
+    
+    ax_main.set_xlabel('$\phi$ [rad]')
+    if GeV:
+        ax_main.set_ylabel('E [MeV] + ' + str(energy_mean / 1000) + ' [GeV]')
+    else:
+        ax_main.set_ylabel('$\gamma$ + ' + str(energy_mean))
+    
+    plt.draw()
+    if savefig != False:
+        if savefig == True:
+            savefig = 'png'
+        _logger.debug(ind_str + 'saving to {}'.format(dpa.fileName() + suffix + '.' + savefig))
+        plt.savefig(dpa.filePath + suffix + '.' + savefig, format=savefig)
+    
+    if showfig:
+        rcParams["savefig.directory"] = os.path.dirname(dpa.filePath)
+        plt.show()
+    else:
+        # plt.close('all')
+        plt.close(fig)

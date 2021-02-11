@@ -839,8 +839,8 @@ def write_gen4_lat(lattices, filepath, zstop=np.inf):
     f.write('# generated with Ocelot\n')
 
     if not isinstance(zstop, dict):
-        if len(lattices) > 1:
-            raise TypeError("len(lattices) > 1: l should be a dictionary with keys the same as lattices")
+        if type(lattices) != dict:
+            raise TypeError("type(lattices) != dict: lattices should be a dictionary with keys the same as lattices")
         else:
             lat_name = [key for key in lattices.keys()][0]
             zstop = {lat_name: zstop}
@@ -1448,6 +1448,8 @@ def read_dpa4(filePath, start_slice=0, stop_slice=np.inf, estimate_npart=0):
         # s = []
         I = []
         npartpb = []
+        slicenum = [] #slice where the particle belongs
+        slicelist = []
 
         _logger.debug(ind_str + 'reading slices between {} and {}'.format(start_slice, stop_slice))
         _logger.debug(2 * ind_str + '({} out of {})'.format(stop_slice - start_slice, nslice))
@@ -1468,7 +1470,10 @@ def read_dpa4(filePath, start_slice=0, stop_slice=np.inf, estimate_npart=0):
                     y.append(h5[dset]['y'][:])
                     py.append(h5[dset]['py'][:])
                     g.append(h5[dset]['gamma'][:])
-                    npartpb.append(h5[dset]['gamma'][:].size)
+                    npartpbi = h5[dset]['gamma'][:].size
+                    npartpb.append(npartpbi)
+                    slicenum.extend(list(np.ones(npartpbi, dtype=int)*slice))
+                    slicelist.append(slice)
                     # ph.append(ph0)
                     # s0 += sepslice
         _logger.debug(2 * ind_str + 'done')
@@ -1485,6 +1490,8 @@ def read_dpa4(filePath, start_slice=0, stop_slice=np.inf, estimate_npart=0):
         dpa.g = np.hstack(g)
         dpa.I = np.hstack(I)
         dpa.ph = np.hstack(ph)
+        dpa.slicenum = np.array(slicenum)
+        
         _logger.log(5, 2 * ind_str + 'dpa.x.shape {}'.format(dpa.x.shape))
 
         dpa.npartpb = np.array(npartpb).flatten()
@@ -1513,16 +1520,20 @@ def read_dpa4(filePath, start_slice=0, stop_slice=np.inf, estimate_npart=0):
         dpa.ph = np.array(ph).reshape((nslice, nbins, npartpb), order='F')
         dpa.g = np.array(g).reshape((nslice, nbins, npartpb), order='F')
         dpa.I = np.array(I).flatten()
-
+    
     _logger.debug(ind_str + 'writing to dpa object')
     dpa.nslice = nslice
     dpa.lslice = lslice
+    
+    dpa.slicelist = np.array(slicelist)
+    
     dpa.npart = npart
     dpa.nbins = nbins
     dpa.zsep = zsep
     dpa.filePath = filePath
     dpa.one4one = one4one
-
+    
+    
     _logger.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
 
     return dpa

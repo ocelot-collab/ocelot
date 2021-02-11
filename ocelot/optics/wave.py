@@ -406,6 +406,7 @@ class RadiationField:
             method = 'np'
         
         if domain_orig == 's':
+            self.fld = np.fft.ifftshift(self.fld, axes=(1, 2))
             if method == 'mp' and fftw_avail:
                 fft_exec = pyfftw.builders.fft2(self.fld, axes=(1, 2), overwrite_input=False,
                                                 planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False,
@@ -427,6 +428,7 @@ class RadiationField:
                 self.fld = fft_exec()
             else:
                 self.fld = np.fft.ifft2(self.fld, axes=(1, 2))
+            self.fld = np.fft.fftshift(self.fld, axes=(1, 2))
             # else:
             #     raise ValueError("fft method should be 'np' or 'mp'")
             self.fld *= np.sqrt(self.Nx() * self.Ny())
@@ -620,6 +622,8 @@ class RadiationField:
     def mut_coh_func(self, norm=1, jit=1):
         '''
         calculates mutual coherence function
+        see Goodman Statistical optics EQs 5.2-7, 5.2-11
+        returns matrix [y,x,y',x']
         consider downsampling the field first
         '''
         if jit:
@@ -632,6 +636,42 @@ class RadiationField:
                 axis=0)
             if norm:
                 J /= (I[:, :, np.newaxis, np.newaxis] * I[np.newaxis, np.newaxis, :, :])
+        return J
+    
+    def mut_coh_func_c(self, center=(0,0), norm=1):
+        '''
+        Function to calculate mutual coherence function cenetered at xy position
+    
+        Parameters
+        ----------
+        center_xy : tuple, optional
+            DESCRIPTION. 
+            point with respect to which correlation is calculated
+            The default is (0,0) (center)
+            accepts values either in [m] if domain=='s'
+                               or in [rad] if domain=='k'
+        norm : TYPE, optional
+            DESCRIPTION. 
+            The default is 1.
+            flag of normalization by intensity
+        Returns
+        -------
+        J : TYPE
+            mutual coherence function matrix [ny, nx]
+        '''
+    
+        scalex = self.scale_x()
+        scaley = self.scale_y()
+        
+        ix = find_nearest_idx(scalex, center[0])
+        iy = find_nearest_idx(scaley, center[1])
+        
+        dfl1 = self.fld[:, iy, ix, np.newaxis, np.newaxis].conjugate()
+        dfl2 = self.fld[:, :, :]
+        J = np.mean(dfl1 * dfl2, axis=0)
+        if norm:
+            I = self.int_xy() / self.Nz()
+            J = J / (I[Nyh, np.newaxis :] * I[:, Nxh, np.newaxis])
         return J
     
     def coh(self, jit=0):
@@ -2132,7 +2172,7 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
 
     _logger.debug(ind_str + 'new shape = (%i %i %i)' % (len(fld2), fslice2.shape[0], fslice2.shape[1]))
 
-    dfl2 = deepcopy(dfl)
+    dfl2 = deepcopy(dfl) #TODO:replace with copy except fld
     dfl2.fld = np.array(fld2)
     dfl2.dx = Lx2 / dfl2.Nx()
     dfl2.dy = Ly2 / dfl2.Ny()
@@ -2577,6 +2617,13 @@ def dfl_chirp_freq(dfl, coeff, E_ph0=None, return_result=False):
         # copydfl, dfl = dfl, copydfl
         return dfl
 
+def dfl_xy_corr(dfl, center=(0,0), norm=0):
+    
+    dfl_corr = RadiationField()
+    dfl_corr.copy_param(dfl, version=2)
+    J = dfl.mut_coh_func_c(center=center, norm=norm)
+    dfl_corr.fld = J[np.newaxis,:,:]             
+    return dfl_corr
 
 def generate_1d_profile(hrms, length=0.1, points_number=1000, wavevector_cutoff=0, psd=None, seed=None):
     """
@@ -3029,6 +3076,60 @@ def read_wig_file(filePath):
     _logger.debug(ind_str + 'done')
     return wig
 
+def write_field_file(dfl, filePath, version=1.0):
+    """
+    Parameters
+    ----------
+    dfl : RadiationField object
+        3d or 2d coherent radiation distribution, *.fld variable is the same as Genesis dfl structure
+    filePath : str
+        file path where to write the dfl file
+    version : float, optional
+        DESCRIPTION. The default is 1
+    Returns
+    -------
+    None.
+
+    """
+    _logger.info('saving RadiationField object')
+    _logger.debug(ind_str + 'saving to ' + filePath)
+    np.savez(filePath, dx=dfl.dx, dy=dfl.dy, dz=dfl.dz, Nz=dfl.Nz(), Ny=dfl.Ny(), Nx=dfl.Nx(), 
+          xlamds=dfl.xlamds, domain_z=dfl.domain_z, domain_xy=dfl.domain_xy, filePath=filePath, fld=dfl.fld, version=version) # maybe automatically iterate through attributes so we don't miss anything. if so, version should be defined by ocelot version -> RadiationField version -> dfl.npz
+    
+    _logger.info(ind_str + 'done')
+
+def read_field_file(filePath):
+    """
+    Parameters
+    ----------
+    filePath : str
+        file path where to write the dfl file.
+
+    Returns
+    -------
+    dfl : RadiationField object
+        3d or 2d coherent radiation distribution, *.fld variable is the same as Genesis dfl structure
+
+    """
+    _logger.info('reading RadiationField object from {}'.format(filePath))
+   
+    file = np.load(filePath + '.npz', allow_pickle=True)
+    
+    ### the .npz file attributes
+    dfl = RadiationField((file['Nz'].item(), file['Ny'].item(), file['Nx'].item()))
+    dfl.dz, dfl.dy, dfl.dx = file['dz'].item(), file['dy'].item(), file['dx'].item()
+    dfl.domain_xy = file['domain_xy'].item()
+    dfl.domain = file['domain_z'].item()
+    dfl.xlamds = file['xlamds'].item()
+    dfl.fld = file['fld']
+    dfl.filePath = file['filePath'].item()    
+
+    _logger.debug(ind_str + 'loaded file version is {} ...'.format(file['version'].item()))
+      ###
+    
+    _logger.debug(ind_str +'dfl.fld.shape {}'.format(dfl.fld.shape))
+    _logger.info(ind_str + 'done')
+    return dfl
 
 def calc_ph_sp_dens(spec, freq_ev, n_photons, spec_squared=1):
     """

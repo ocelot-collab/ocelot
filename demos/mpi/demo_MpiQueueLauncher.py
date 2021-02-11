@@ -57,7 +57,7 @@ print('Job is complete')
 # tidy up file that is used by GENESIS v2 job script to signal simulation complete
 os.system('rm -f flag.finish')
 ##############
-### DEMO 2 ###
+### DEMO 3 ###
 ##############
 yet_another_launcher = deepcopy(launcher0)
 # This time, we won't wait for job completion (using "submit" instead of "launch").

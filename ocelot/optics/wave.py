@@ -622,6 +622,7 @@ class RadiationField:
     def mut_coh_func(self, norm=1, jit=1):
         '''
         calculates mutual coherence function
+        see Goodman Statistical optics EQs 5.2-7, 5.2-11
         returns matrix [y,x,y',x']
         consider downsampling the field first
         '''
@@ -665,7 +666,7 @@ class RadiationField:
         ix = find_nearest_idx(scalex, center[0])
         iy = find_nearest_idx(scaley, center[1])
         
-        dfl1 = self.fld[:, ix, iy, np.newaxis, np.newaxis].conjugate()
+        dfl1 = self.fld[:, iy, ix, np.newaxis, np.newaxis].conjugate()
         dfl2 = self.fld[:, :, :]
         J = np.mean(dfl1 * dfl2, axis=0)
         if norm:

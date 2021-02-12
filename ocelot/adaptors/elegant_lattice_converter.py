@@ -169,7 +169,7 @@ class ElegantLatticeConverter:
                 continue
             
             # parsing constants
-            if string[0] == '%' and string.find('STO') is not -1:
+            if string[0] == '%' and string.find('STO') != -1:
                 expr = string[1:].split('STO')
                 constants[expr[1].strip()] = self.calc_rpn(expr[0].strip(), constants, 'In string '+string)
                 continue
@@ -436,10 +436,11 @@ if __name__ == '__main__':
     
     """
     # example of Elegant - Ocelot convertion
+    from ocelot.adaptors.elegant_lattice_converter import *
     SC = ElegantLatticeConverter()
     read_cell = SC.elegant2ocelot('elbe.lte')
     lattice = MagneticLattice(read_cell)
-    write_lattice(lattice, remove_rep_drifts=False)
+    write_lattice(lattice, file_name="lattice.py", remove_rep_drifts=False)
     """
     
     """

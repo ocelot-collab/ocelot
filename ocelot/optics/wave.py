@@ -406,6 +406,7 @@ class RadiationField:
             method = 'np'
         
         if domain_orig == 's':
+            self.fld = np.fft.ifftshift(self.fld, axes=(1, 2))
             if method == 'mp' and fftw_avail:
                 fft_exec = pyfftw.builders.fft2(self.fld, axes=(1, 2), overwrite_input=False,
                                                 planner_effort='FFTW_ESTIMATE', threads=nthread, auto_align_input=False,
@@ -427,6 +428,7 @@ class RadiationField:
                 self.fld = fft_exec()
             else:
                 self.fld = np.fft.ifft2(self.fld, axes=(1, 2))
+            self.fld = np.fft.fftshift(self.fld, axes=(1, 2))
             # else:
             #     raise ValueError("fft method should be 'np' or 'mp'")
             self.fld *= np.sqrt(self.Nx() * self.Ny())
@@ -620,6 +622,8 @@ class RadiationField:
     def mut_coh_func(self, norm=1, jit=1):
         '''
         calculates mutual coherence function
+        see Goodman Statistical optics EQs 5.2-7, 5.2-11
+        returns matrix [y,x,y',x']
         consider downsampling the field first
         '''
         if jit:
@@ -632,6 +636,42 @@ class RadiationField:
                 axis=0)
             if norm:
                 J /= (I[:, :, np.newaxis, np.newaxis] * I[np.newaxis, np.newaxis, :, :])
+        return J
+    
+    def mut_coh_func_c(self, center=(0,0), norm=1):
+        '''
+        Function to calculate mutual coherence function cenetered at xy position
+    
+        Parameters
+        ----------
+        center_xy : tuple, optional
+            DESCRIPTION. 
+            point with respect to which correlation is calculated
+            The default is (0,0) (center)
+            accepts values either in [m] if domain=='s'
+                               or in [rad] if domain=='k'
+        norm : TYPE, optional
+            DESCRIPTION. 
+            The default is 1.
+            flag of normalization by intensity
+        Returns
+        -------
+        J : TYPE
+            mutual coherence function matrix [ny, nx]
+        '''
+    
+        scalex = self.scale_x()
+        scaley = self.scale_y()
+        
+        ix = find_nearest_idx(scalex, center[0])
+        iy = find_nearest_idx(scaley, center[1])
+        
+        dfl1 = self.fld[:, iy, ix, np.newaxis, np.newaxis].conjugate()
+        dfl2 = self.fld[:, :, :]
+        J = np.mean(dfl1 * dfl2, axis=0)
+        if norm:
+            I = self.int_xy() / self.Nz()
+            J = J / (I[Nyh, np.newaxis :] * I[:, Nxh, np.newaxis])
         return J
     
     def coh(self, jit=0):
@@ -1337,6 +1377,7 @@ class WignerDistribution():
         # self.fld=np.array([]) #(z,y,x)
         self.field = []
         self.wig = []  # (wav,space)
+        self.wig_stat = [] # same as wig.wig, but with another dimention hosting different events
         self.s = []  # space scale
         self.z = None  # position along undulator (if applicable)
         self.phen = []  # photon energy
@@ -1582,7 +1623,7 @@ def imitate_sase_dfl(xlamds, rho=2e-4, seed=None, **kwargs):
         kwargs.pop(key, None)
         
     _, td_envelope, _, _ = imitate_1d_sase_like(td_scale=td_scale, td_env=np.ones_like(td_scale), fd_scale=fd_scale_ev,
-                                                fd_env=fd_env, td_phase=None, fd_phase=None, phen0=None, en_pulse=1,
+                                                fd_env=fd_env, td_phase=None, fd_phase=None, phen0=None, en_pulse=1,#TODO: check 
                                                 fit_scale='td', n_events=1, seed=seed, **kwargs)
 
     dfl.fld *= td_envelope[:, :, np.newaxis]
@@ -2140,23 +2181,32 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
 
     _logger.debug(ind_str + 'new shape = (%i %i %i)' % (len(fld2), fslice2.shape[0], fslice2.shape[1]))
 
-    dfl.fld = np.array(fld2)
-    dfl.dx = Lx2 / dfl.Nx()
-    dfl.dy = Ly2 / dfl.Ny()
+    dfl2 = deepcopy(dfl) #TODO:replace with copy except fld
+    dfl2.fld = np.array(fld2)
+    dfl2.dx = Lx2 / dfl2.Nx()
+    dfl2.dy = Ly2 / dfl2.Ny()
     # dfl2.fileName=dfl.fileName+'i'
     # dfl2.filePath=dfl.filePath+'i'
-    E2 = dfl.E()
+    E2 = dfl2.E()
     _logger.info(ind_str + '%.2f%% energy cut' % ((E1 - E2) / E1 * 100))
     _logger.debug(ind_str + 'energy after interpolation ' + str(E2))
     _logger.debug(ind_str + 'done in %.2f sec' % (time.time() - start_time))
 
     if return_result:
-        return dfl
+        return dfl2
     else:
         return
 
 
 def dfl_shift_z(dfl, s, set_zeros=1, return_result=1):
+    """
+    legacy, see dfl_shift_s
+    """
+    _logger.warn('function dfl_shift_z will be deprecated, rename to dfl_shift_s instead')
+    dfl = dfl_shift_s(dfl=dfl, s=s, set_zeros=set_zeros, return_result=return_result)
+    return dfl
+
+def dfl_shift_s(dfl, s, set_zeros=1, return_result=1):
     """
     shift the radiation within the window in time domain
     dfl - initial RadiationField object
@@ -2576,6 +2626,13 @@ def dfl_chirp_freq(dfl, coeff, E_ph0=None, return_result=False):
         # copydfl, dfl = dfl, copydfl
         return dfl
 
+def dfl_xy_corr(dfl, center=(0,0), norm=0):
+    
+    dfl_corr = RadiationField()
+    dfl_corr.copy_param(dfl, version=2)
+    J = dfl.mut_coh_func_c(center=center, norm=norm)
+    dfl_corr.fld = J[np.newaxis,:,:]             
+    return dfl_corr
 
 def generate_1d_profile(hrms, length=0.1, points_number=1000, wavevector_cutoff=0, psd=None, seed=None):
     """
@@ -2707,7 +2764,7 @@ def trf_mult_mix(trf_list, mode_out='ref'):
     returns TransferFunction() object
     """
 
-    if mode_out is not 'ref' and mode_out is not 'tr':
+    if mode_out != 'ref' and mode_out != 'tr':
         raise ValueError('mode_out should be string of either "ref" or "tr"')
 
     trf_list_int = []
@@ -2718,9 +2775,9 @@ def trf_mult_mix(trf_list, mode_out='ref'):
         trf_list_int.append(trf_tmp)
     trf_out = trf_mult(trf_list_int, embed_list=False)
 
-    if mode_out is 'ref':
+    if mode_out == 'ref':
         del trf_out.tr
-    if mode_out is 'tr':
+    if mode_out == 'tr':
         del trf_out.ref
 
     return trf_out
@@ -2815,14 +2872,21 @@ def wigner_out(out, z=inf, method='mp', pad=1, debug=1, on_axis=1):
     """
     returns WignerDistribution from GenesisOutput at z
     """
-    # assert isinstance(out,GenesisOutput) #hotfix
-    assert len(out.s) > 0
-
-    import numpy as np
-
+    
     _logger.info('calculating Wigner distribution from .out at z = {}'.format(str(z)))
+    
+    # assert isinstance(out,GenesisOutput) #hotfix
+    if not hasattr(out, 's'):
+        _logger.error('out file has no s coordinate')
+        return None
+    elif len(out.s) == 0:
+        _logger.error('out file has s coordinate with zero length')
+        return None
+    else:
+        pass
+    
     start_time = time.time()
-
+    
     if z == 'end':
         z = np.inf
     if z == np.inf:
@@ -2832,7 +2896,9 @@ def wigner_out(out, z=inf, method='mp', pad=1, debug=1, on_axis=1):
     elif z < np.amin(out.z):
         z = np.amin(out.z)
     zi = np.where(out.z >= z)[0][0]
-
+    
+    _logger.debug(ind_str + 'zi = {}, z[zi] = {}'.format(str(zi), str(out.z[zi])))
+    
     wig = WignerDistribution()
 
     if on_axis:
@@ -2901,7 +2967,7 @@ def wigner_dfl(dfl, method='mp', pad=1, **kwargs):
     return wig
 
 
-def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1, **kwargs):
+def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1, on_axis=1, **kwargs):
     """
     returns averaged WignerDistribution from GenStatOutput at stage at z
     """
@@ -2913,10 +2979,10 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1, **kwar
     #     pass
     # else:
     #     raise ValueError('unknown object used as input')
-
+    
     _logger.info('calculating Wigner distribution from out_stat at z = {}'.format(str(z)))
     start_time = time.time()
-
+    
     if z == inf:
         z = np.amax(out_stat.z)
     elif z > np.amax(out_stat.z):
@@ -2924,36 +2990,39 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1, **kwar
     elif z < np.amin(out_stat.z):
         z = np.amin(out_stat.z)
     zi = np.where(out_stat.z >= z)[0][0]
-
-    # WW = np.zeros((out_stat.p_int.shape[2], out_stat.p_int.shape[1], out_stat.p_int.shape[1]))
-
+    
+    if on_axis:
+        power = out_stat.p_mid
+    else:
+        power = out_stat.p_int
+    
+    # WW = np.zeros((power.shape[2], power.shape[1], power.shape[1]))
     if pad > 1:
         n_add = out_stat.s.size * (pad - 1) / 2
         n_add_l = int(n_add - n_add % 2)
         n_add_r = int(n_add + n_add % 2)
+        n_add = n_add_l + n_add_r
         ds = (out_stat.s[-1] - out_stat.s[0]) / (out_stat.s.size - 1)
         pad_array_s_l = np.linspace(out_stat.s[0] - ds * (n_add_l), out_stat.s[0] - ds, n_add_l)
         pad_array_s_r = np.linspace(out_stat.s[-1] + ds, out_stat.s[-1] + ds * (n_add_r), n_add_r)
+        
         WW = np.zeros(
-            (out_stat.p_int.shape[2], out_stat.p_int.shape[1] + n_add * 2, out_stat.p_int.shape[1] + n_add * 2))
+            (power.shape[2], power.shape[1] + n_add, power.shape[1] + n_add))
         s = np.concatenate([pad_array_s_l, out_stat.s, pad_array_s_r])
     else:
-        WW = np.zeros((out_stat.p_int.shape[2], out_stat.p_int.shape[1], out_stat.p_int.shape[1]))
+        WW = np.zeros((power.shape[2], power.shape[1], power.shape[1]))
         s = out_stat.s
-
     # _logger.debug('n_add {}'.format(n_add))
     # _logger.debug('n_add_l {}'.format(n_add_l))
     # _logger.debug('n_add_r {}'.format(n_add_r))
     # _logger.debug('field {}'.format(field.shape))
     # _logger.debug('wig {}'.format(WW.shape))
-
     for (i, n) in enumerate(out_stat.run):
         _logger.debug(ind_str + 'run {} of {}'.format(i, len(out_stat.run)))
-        field = np.sqrt(out_stat.p_int[zi, :, i]) * np.exp(1j * out_stat.phi_mid[zi, :, i])
+        field = np.sqrt(power[zi, :, i]) * np.exp(1j * out_stat.phi_mid[zi, :, i])
         if pad > 1:
             field = np.concatenate([np.zeros(n_add_l), field, np.zeros(n_add_r)])
         WW[i, :, :] = calc_wigner(field, method=method, debug=debug, **kwargs)
-
     wig = WignerDistribution()
     wig.wig = np.mean(WW, axis=0)
     wig.wig_stat = WW
@@ -2966,9 +3035,7 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1, **kwar
     ds = wig.s[1] - wig.s[0]
     phen = h_eV_s * (np.fft.fftfreq(wig.s.size, d=ds / speed_of_light) + speed_of_light / wig.xlamds)
     wig.phen = np.fft.fftshift(phen, axes=0)
-
     _logger.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
-
     return wig
 
 
@@ -2998,6 +3065,80 @@ def wigner_smear(wig, sigma_s):
     _logger.debug(ind_str + 'done in {:.2e} sec'.format(time.time() - start))
     return wig_conv
 
+def write_wig_file(wig, filePath):
+    _logger.info('saving wigner distribution to {}'.format(filePath))
+    np.savez(filePath, xlamds=wig.xlamds, s=wig.s, phen=wig.phen, wig=wig.wig, wig_stat=wig.wig_stat, filePath = wig.filePath)
+    _logger.debug(ind_str + 'done')
+    
+def read_wig_file(filePath):
+    _logger.info('reading wigner distribution from {}'.format(filePath))
+    file = np.load(filePath)
+    wig = WignerDistribution()
+    wig.xlamds = file['xlamds'].item()
+    wig.filePath = file['filePath'].item()
+    wig.s = file['s']
+    wig.phen = file['phen']
+    wig.wig = file['wig']
+    _logger.debug(ind_str +'wig.wig.shape {}'.format(wig.wig.shape))
+    wig.wig_stat = file['wig_stat']
+    _logger.debug(ind_str +'wig.wig_stat.shape {}'.format(wig.wig_stat.shape))
+    _logger.debug(ind_str + 'done')
+    return wig
+
+def write_field_file(dfl, filePath, version=1.0):
+    """
+    Parameters
+    ----------
+    dfl : RadiationField object
+        3d or 2d coherent radiation distribution, *.fld variable is the same as Genesis dfl structure
+    filePath : str
+        file path where to write the dfl file
+    version : float, optional
+        DESCRIPTION. The default is 1
+    Returns
+    -------
+    None.
+
+    """
+    _logger.info('saving RadiationField object')
+    _logger.debug(ind_str + 'saving to ' + filePath)
+    np.savez(filePath, dx=dfl.dx, dy=dfl.dy, dz=dfl.dz, Nz=dfl.Nz(), Ny=dfl.Ny(), Nx=dfl.Nx(), 
+          xlamds=dfl.xlamds, domain_z=dfl.domain_z, domain_xy=dfl.domain_xy, filePath=filePath, fld=dfl.fld, version=version) # maybe automatically iterate through attributes so we don't miss anything. if so, version should be defined by ocelot version -> RadiationField version -> dfl.npz
+    
+    _logger.info(ind_str + 'done')
+
+def read_field_file(filePath):
+    """
+    Parameters
+    ----------
+    filePath : str
+        file path where to write the dfl file.
+
+    Returns
+    -------
+    dfl : RadiationField object
+        3d or 2d coherent radiation distribution, *.fld variable is the same as Genesis dfl structure
+
+    """
+    _logger.info('reading RadiationField object from {}'.format(filePath))
+   
+    file = np.load(filePath + '.npz', allow_pickle=True)
+    
+    ### the .npz file attributes
+    dfl = RadiationField((file['Nz'].item(), file['Ny'].item(), file['Nx'].item()))
+    dfl.dz, dfl.dy, dfl.dx = file['dz'].item(), file['dy'].item(), file['dx'].item()
+    dfl.domain_xy = file['domain_xy'].item()
+    dfl.domain = file['domain_z'].item()
+    dfl.xlamds = file['xlamds'].item()
+    dfl.fld = file['fld']
+    dfl.filePath = file['filePath'].item()    
+
+    _logger.debug(ind_str + 'loaded file version is {} ...'.format(file['version'].item()))
+      ###
+    
+    _logger.debug(ind_str +'dfl.fld.shape {}'.format(dfl.fld.shape))
+    _logger.info(ind_str + 'done')
+    return dfl
 
 def calc_ph_sp_dens(spec, freq_ev, n_photons, spec_squared=1):
     """

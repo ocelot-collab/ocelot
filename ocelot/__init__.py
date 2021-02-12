@@ -2,7 +2,7 @@
 general ocelot description
 """
 
-__version__ = '19.12.0'
+__version__ = '20.11.2'
 
 
 __all__ = ['Twiss', "Beam", "Particle", "get_current", "get_envelope", "generate_parray",           # beam
@@ -15,7 +15,7 @@ __all__ = ['Twiss', "Beam", "Particle", "get_current", "get_envelope", "generate
 
             'Element', 'Multipole', 'Quadrupole', 'RBend', "Matrix", "UnknownElement",              # elements
             'SBend', 'Bend', 'Drift', 'Undulator', 'Hcor',  "Sequence", "Solenoid", "TDCavity",     # elements
-            'Vcor', "Sextupole", "Monitor", "Marker", "Octupole", "Cavity", "Edge",                 # elements
+            'Vcor', "Sextupole", "Monitor", "Marker", "Octupole", "Cavity", "Edge",  "Aperture",    # elements
 
             "match", "match_tunes",                                                          # match
 
@@ -29,7 +29,8 @@ __all__ = ['Twiss', "Beam", "Particle", "get_current", "get_envelope", "generate
             "SpaceCharge", "LSC",                                                               # sc
             "Wake", "WakeTable", "WakeKick", "WakeTableDechirperOffAxis",                       # wake
             "BeamTransform", "SmoothBeam", "EmptyProc", "PhysProc", "LaserHeater",
-            "LaserModulator", "SpontanRadEffects",
+            "LaserModulator", "SpontanRadEffects", "PhaseSpaceAperture",
+            "RectAperture", "EllipticalAperture",
             "MagneticLattice", "merger",            # magnetic_lattice
             "np", # numpy
 
@@ -39,26 +40,20 @@ __all__ = ['Twiss', "Beam", "Particle", "get_current", "get_envelope", "generate
 import numpy as np
 from ocelot.cpbd.magnetic_lattice import MagneticLattice, merger
 
-from ocelot.cpbd.beam import ParticleArray, global_slice_analysis,Particle, Beam, Twiss, get_current, \
-    get_envelope, generate_parray, ellipse_from_twiss
-
-from ocelot.cpbd.optics import lattice_transfer_map, TransferMap, Navigator, twiss, get_map, MethodTM, \
-    SecondTM, KickTM, CavityTM, UndulatorTestTM
-
+from ocelot.cpbd.beam import *
+from ocelot.cpbd.optics import *
 from ocelot.cpbd.elements import *
-from ocelot.cpbd.match import match, match_tunes
+from ocelot.cpbd.match import *
 from ocelot.cpbd.track import *
-from ocelot.common.globals import pi, m_e_eV, m_e_MeV, m_e_GeV, speed_of_light
+from ocelot.common.globals import *
 from ocelot.common.ocelog import *
-from ocelot.cpbd.chromaticity import compensate_chromaticity
-from ocelot.cpbd.beam_params import EbeamParams
-from ocelot.cpbd.io import save_particle_array, load_particle_array, write_lattice
-from ocelot.cpbd.sc import SpaceCharge, LSC
-from ocelot.cpbd.csr import CSR
-from ocelot.cpbd.wake3D import Wake, WakeTable, WakeKick, WakeTableDechirperOffAxis
-
-from ocelot.cpbd.physics_proc import BeamTransform, SmoothBeam, EmptyProc, PhysProc, LaserHeater, \
-    LaserModulator, SpontanRadEffects
+from ocelot.cpbd.chromaticity import *
+from ocelot.cpbd.beam_params import *
+from ocelot.cpbd.io import *
+from ocelot.cpbd.sc import *
+from ocelot.cpbd.csr import *
+from ocelot.cpbd.wake3D import *
+from ocelot.cpbd.physics_proc import *
 
 
 print('initializing ocelot...')

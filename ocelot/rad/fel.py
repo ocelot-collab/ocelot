@@ -238,13 +238,13 @@ class FelParameters:
     
     def log(self, type='debug'):
     
-        if type is 'debug':
+        if type == 'debug':
             _log_func = _logger.debug
-        elif type is 'info':
+        elif type == 'info':
             _log_func = _logger.info
-        elif type is 'log':
+        elif type == 'log':
             _log_func = _logger.log
-        elif type is 'print':
+        elif type == 'print':
             _log_func = print
         
         _log_func('undulator period = {}'.format(self.xlamd))
@@ -389,7 +389,13 @@ class FelParametersArray(FelParameters):
             idx = None
         return idx
     
-    
+# def calculate_fel_parameters_g4(input, array=False, method='mxie'):
+#     p = FelParameters()
+#     p.gamma0 = input.sequence['setup'].gamma0
+#     p.delgam = "n/a" # TODO: think, how to consistently get beam and undulator parameters and update meshes: e.g.
+#     # transverse mesh can be provided externally with field
+#     return
+
 
 def calculateFelParameters(input, array=False, method='mxie'):
     

@@ -278,8 +278,10 @@ def create_fel_lattice(und_N = 35,
         cell = (und, d1, qd, phs, d2, und, d1, qf, phs, d2) 
         extra_fodo = (und, d2, qfh)
         lat = (und, d1, qf, phs, d2) + cell_N * cell + cell_N_last * (und,)
-
-    return (MagneticLattice(lat), extra_fodo, cell)
+    
+    lat = MagneticLattice(lat)
+    
+    return (lat, extra_fodo, cell)
 
 def create_fel_lattice_tmp(und_N = 34,
                     und_L = 5,
@@ -335,7 +337,7 @@ def create_fel_lattice_tmp(und_N = 34,
 
 def create_fel_beamline(beamline = 'sase1', inters_phi=0, inters_K = "K_und"):
     if beamline in ['sase1', 1, 'sase2', 2, 'EuXFEL_SASE1', 'EuXFEL_SASE2']:
-        return create_fel_lattice(und_N = 35,
+        return create_fel_lattice(und_N = 37,
                         und_L = 5-0.04,
                         und_l = 0.04,
                         und_Kx = 0,
@@ -347,6 +349,7 @@ def create_fel_beamline(beamline = 'sase1', inters_phi=0, inters_K = "K_und"):
                         quad_K = 0,
                         phs_L = 0.0,
                         quad_start = 'd',
+                        beamline_name = beamline
                             )
     elif beamline in ['sase3', 3, 'EuXFEL_SASE3']:
         return create_fel_lattice(und_N = 21,
@@ -361,6 +364,7 @@ def create_fel_beamline(beamline = 'sase1', inters_phi=0, inters_K = "K_und"):
                         quad_K = 0,
                         phs_L = 0.0,
                         quad_start = 'd',
+                        beamline_name = beamline
                             )
     else:
         raise ValueError('Unknown beamline')

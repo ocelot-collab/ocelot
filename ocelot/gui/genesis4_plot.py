@@ -17,6 +17,7 @@ ax.set_ylim(ymin=0)
 
 import sys
 import os
+import glob
 import csv
 import time
 import matplotlib
@@ -71,7 +72,7 @@ _logger = logging.getLogger(__name__)
 #     return
 
 @if_plottable
-def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1, 1, 10, 1, 0, 0, 0, 0, 0, 10, 1),
+def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 0, 0, 5, 1, 0, 0, 0, 1, 0, 1, 1),
                       vartype_dfl=complex128, *args, **kwargs):
     debug = 1
     """
@@ -86,14 +87,14 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1
         1 - radiation evolution
         2 - profile at z=0m
         3 - profile at the end
-        4 - profile every m meters
+        4 - profile at n equidistant z-points
         5 - dfl at the end, space    -time      domain
         6 -                 inv.space-time      domain
         7 -                 space    -frequency domain
         8 -                 inv.space-frequency domain
         9 - dpa as edist at the end, smeared
         10 - dpa as edist at the end, not smeared
-        11 - wigner distribution every m meters,
+        11 - wigner distribution at n equidistant z-points,
         12 - ebeam bucket at max power
     picks as an input "GenesisOutput" object, file path of directory as strings.
     plots e-beam evolution, radiation evolution, initial and final simulation window
@@ -110,7 +111,7 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1
         savefig = 'png'
 
     if choice == 'all':
-        choice = (1, 1, 1, 1, 10, 1, 1, 1, 1, 1, 0, 10, 0)
+        choice = (1, 1, 0, 0, 5, 1, 1, 1, 1, 1, 1, 5, 0)
     elif choice == 'gen':
         choice = (1, 1, 1, 1, 10, 0, 0, 0, 0, 0, 0, 0, 0)
 
@@ -123,55 +124,87 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1
         handles = []
         for root, dirs, files in os.walk(handle):
             for name in files:
-                if name.endswith('out.h5'):
+                if name.endswith('h5'):
                     handles.append(os.path.join(root, name))
         _logger.info('\n  plotting all files in {}'.format(str(handle)))
+    elif str(handle).endswith('*') and os.path.isdir(os.path.split(handle)[0]):
+        handles = [result for result in glob.iglob(handle) if result.endswith('.h5')] # search with wildcharacter ending
     else:
         handles = [handle]
+    
+    # for handle in handles:
+        # try_filename_fld = handle.replace('.out.h5', '.fld.h5')
+        # if os.path.isfile(try_filename_fld):
+            # handles.append(try_filename_fld)
+        # try_filename_par = handle.replace('.out.h5', '.par.h5')
+        # if os.path.isfile(try_filename_par):
+            # handles.append(try_filename_par)
+    #TODO: check if there are filed with stripped .out.h5 and added .fld.h5
+    
+    if len(handles) > 1:
+        handles = sorted(handles)
+        handles = [h for h in handles if ".out." in h] + [h for h in handles if ".out." not in h] #plotting .out first
 
     for handle in handles:
 
         if os.path.isfile(str(handle)):
             _logger.info('plotting ' + str(handle))
-            try:
-                handle = read_gout4(handle)
-            except (IOError, ValueError):
+            if handle.endswith('out.h5'):
+                try:
+                    handle = read_gout4(handle)
+                except (IOError, ValueError):
+                    pass
+                
+            elif handle.endswith('fld.h5'):
+                try: 
+                    handle = read_dfl4(handle)
+                except (IOError, ValueError):
+                    pass
+                
+            elif handle.endswith('par.h5'):
+                try:            
+                    handle = read_dpa4(handle)
+                except (IOError, ValueError):
+                    pass
+            
+            else:
                 continue
-
+            
         if isinstance(handle, Genesis4Output):
             if choice[0]:
-                f0 = plot_gen4_out_e(handle, showfig=showfig, savefig=savefig, debug=debug)
+                f0 = plot_gen4_out_e(handle, showfig=showfig, savefig=savefig)
             if choice[1]:
-                f1 = plot_gen4_out_ph(handle, showfig=showfig, savefig=savefig, debug=debug)
+                f1 = plot_gen4_out_ph(handle, showfig=showfig, savefig=savefig)
             if choice[2]:
-                f2 = plot_gen4_out_z(handle, z=0, showfig=showfig, savefig=savefig, debug=debug)
+                f2 = plot_gen4_out_z(handle, z=0, showfig=showfig, savefig=savefig)
             if choice[3]:
-                f3 = plot_gen4_out_z(handle, z=np.inf, showfig=showfig, savefig=savefig, debug=debug)
-            if choice[11] != 0:
-                if choice[11] == -1:
-                    # try:
-                    W = wigner_out(handle, pad=2)
-                    plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug, downsample=2)
-                    # except:
-                    # _logger.warning('could not plot wigner')
+                f3 = plot_gen4_out_z(handle, z=np.inf, showfig=showfig, savefig=savefig)
+            if choice[4] != 0:
+                if choice[4] != []:
+                    if choice[4] == 1:
+                        z_arr = [np.amax(handle.z)]
+                    else:
+                        z_arr = np.linspace(0, np.amax(handle.z), choice[4])
                 else:
+                    z_arr = choice[4]
+                for z in z_arr:
+                    plot_gen4_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug, *args, **kwargs)
+            if choice[11] != 0:
+                if choice[11] != []:
                     if choice[11] == 1:
-                        _logger.warning(
-                            'choice[11] in plot_gen_out_all defines interval of Wigner plotting. To plot at the end set to "-1"')
-                    # try:
-                    for z in np.arange(0, np.amax(handle.z), choice[11]):
-                        W = wigner_out(handle, z=z, pad=2)
-                        plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug, downsample=2)
-                    W = wigner_out(handle, z=np.inf, pad=2)
+                        z_arr = [np.amax(handle.z)]
+                    else:
+                        z_arr = np.linspace(0, np.amax(handle.z), choice[11])
+                else:
+                    z_arr = choice[11]
+                for z in z_arr:
+                    W = wigner_out(handle, z=z, pad=1)
                     plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug, downsample=2)
                     # except:
                     # _logger.warning('could not plot wigner')
             # if choice[4] != 0:
             # for z in np.arange(choice[4], np.amax(handle.z), choice[4]):
             # plot_gen4_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug)
-            if choice[4] != 0 and choice[4] != []:
-                for z in np.arange(choice[4], np.amax(handle.z), choice[4]):
-                    plot_gen4_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug, *args, **kwargs)
 
             if choice[12]:
                 pass
@@ -181,8 +214,10 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1
                 # except IOError:
                 # pass
 
-        if os.path.isfile(handle.filePath.replace('.out.h5', '.fld.h5')) and any(choice[5:8]):
-            dfl = read_dfl4(handle.filePath.replace('.out.h5', '.fld.h5'))
+        if isinstance(handle, RadiationField) and any(choice[5:8]):
+        # if os.path.isfile(handle.filePath.replace('.out.h5', '.fld.h5')) and any(choice[5:8]):
+            # dfl = read_dfl4(handle.filePath.replace('.out.h5', '.fld.h5'))
+            dfl = handle
             if dfl.Nz() == 0:
                 _logger.warning('empty dfl, skipping')
             else:
@@ -195,8 +230,10 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1
                 if choice[8]:
                     f8 = plot_dfl(dfl, domains='kf', auto_zoom=0, showfig=showfig, savefig=savefig, debug=debug)
 
-        if os.path.isfile(handle.filePath.replace('.out.h5', '.par.h5')) and (choice[9] or choice[10]):
-            dpa = read_dpa4(handle.filePath.replace('.out.h5', '.par.h5'))
+        if isinstance(handle, Genesis4ParticlesDump) and any(choice[9:10]):
+        # if os.path.isfile(handle.filePath.replace('.out.h5', '.par.h5')) and (choice[9] or choice[10]):
+            # dpa = read_dpa4(handle.filePath.replace('.out.h5', '.par.h5'))
+            dpa = handle
             if choice[9]:
                 try:
                     edist = dpa42edist(dpa, n_part=5e4, fill_gaps=1)
@@ -280,7 +317,7 @@ def plot_gen4_out_z(out, z=np.inf, params=['rad_power+el_current', 'el_energy+el
     # z = out.z[zi]
 
     if fig_name is None:
-        if out.fileName() is '':
+        if out.fileName() == '':
             fig = plt.figure('Bunch profile at ' + str(z) + 'm')
         else:
             fig = plt.figure('Bunch profile at ' + str(z) + 'm ' + out.fileName())
@@ -348,13 +385,13 @@ def plot_gen4_out_z(out, z=np.inf, params=['rad_power+el_current', 'el_energy+el
     axf = len(ax) - axt
     # ax[0].set_xlim(out.z[0], out.z[-1])
     # ax[-1].set_xlabel('z [m]')
-    if axt is not 0 and axf is not 0:
+    if axt != 0 and axf != 0:
         fig.subplots_adjust(top=0.95, bottom=0.2, right=0.8, left=0.15)
     else:
         fig.subplots_adjust(top=0.95, bottom=0.1, right=0.8, left=0.15)
 
     for axi in ax[axt:]:
-        if axt is not 0:
+        if axt != 0:
             pos1 = axi.get_position()  # get the original position
             pos2 = [pos1.x0 + 0, pos1.y0 - 0.1, pos1.width / 1.0, pos1.height / 1.0]
             axi.set_position(pos2)
@@ -367,7 +404,7 @@ def plot_gen4_out_z(out, z=np.inf, params=['rad_power+el_current', 'el_energy+el
     if savefig != False:
         if savefig == True:
             savefig = 'png'
-        fig.savefig(out.filePath + '_z_' + str(z) + 'm.' + str(savefig), format=savefig)
+        fig.savefig(out.filePath + '_z_{:.2f}m.{}'.format(z,savefig), format=savefig)
 
     if showfig:
         plt.show()
@@ -661,7 +698,7 @@ def plot_gen4_out_evo(out, params=['und_quad', 'el_size', 'el_pos', 'el_energy',
         out = read_out_file(out, read_level=2)
     # add check for output object
     if fig_name is None:
-        if out.fileName() is '':
+        if out.fileName() == '':
             fig = plt.figure(params_str)
             _logger.info('plotting ' + params_str)
         else:
@@ -888,14 +925,25 @@ def subfig_evo_el_energy(ax_energy, out, legend):
     z = out.h5['Lattice/zplot']
     el_energy_spread = out.h5['Beam/energyspread'][:]
 
-    ax_energy.plot(z, np.average(el_energy - el_energy_av, axis=1), 'b-', linewidth=1.5)
+    mean_energy = np.nanmean(el_energy - el_energy_av, axis=1)
+    ax_energy.plot(z, mean_energy, 'b-', linewidth=1.5)
     ax_energy.set_ylabel('<E> + ' + str(el_energy_av) + '[MeV]')
     ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
     ax_energy.grid(True)
 
+    #notnan_idx = np.isnan(el_energy_spread) == False
+    
+    I_weight = out.I / np.sum(out.I)
+    
+    
+    #mean_spread = np.average(el_energy_spread[notnan_idx], weights=out.I, axis=1)
+    
+    mean_spread = np.nansum(el_energy_spread * I_weight[np.newaxis, :], axis=1) * m_e_MeV
+    max_spread = np.nanmax(el_energy_spread, axis=1)* m_e_MeV
+    
     ax_spread = ax_energy.twinx()
-    ax_spread.plot(z, np.average(el_energy_spread * m_e_MeV, weights=out.I, axis=1), 'm--', out.z,
-                   np.amax(el_energy_spread * m_e_GeV * 1000, axis=1), 'r--', linewidth=1.5)
+    ax_spread.plot(z, mean_spread, 'm--', 
+                z, max_spread, 'r--', linewidth=1.5)
     ax_spread.set_ylabel(r'$\sigma_E$ [MeV]')
     ax_spread.grid(False)
     ax_spread.set_ylim(ymin=0)
@@ -916,14 +964,17 @@ def subfig_evo_el_bunching(ax_bunching, out, legend):
     z = out.h5['Lattice/zplot']
     b = out.h5['Beam/bunching']
 
-    ax_bunching.plot(z, np.average(b, weights=out.I, axis=1), 'k-', out.z, np.amax(b, axis=1), 'grey', linewidth=1.5)
+    
+    I_weight = out.I / np.sum(out.I)
+    mean_bunching = np.nansum(b * I_weight[np.newaxis, :], axis=1)
+    
+    ax_bunching.plot(z, mean_bunching, 'k-', out.z, np.nanmax(b, axis=1), 'grey', linewidth=1.5)
     # ax_bunching.plot(out.z, np.amax(out.bunching, axis=0), 'grey',linewidth=1.5) #only max
     ax_bunching.set_ylabel(r'Bunching')
     ax_bunching.set_ylim(ymin=0)
     # ax_bunching.set_ylim([0,0.8])
     ax_bunching.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_bunching.grid(True)
-
 
 @if_plottable
 def subfig_evo_rad_pow_en(ax_rad_pow, out, legend, log=1):
@@ -1075,7 +1126,8 @@ def subfig_rad_size(ax_size_t, out, legend):
     y_size = out.h5['Field/ysize'][:]
     r_size = np.sqrt(x_size ** 2 + y_size ** 2)
 
-    if out.nSlices == 1:
+    # if out.nSlices == 1:
+    if out.tdp == 0:
         ax_size_t.plot(out.z, r_size * 2 * 1e6, 'b-', linewidth=1.5)
         #        ax_size_t.plot([np.amin(out.z), np.amax(out.z)], [out.leng * 1e6, out.leng * 1e6], 'b-', linewidth=1.0)
         ax_size_t.set_ylabel('transverse $[\mu m]$')
@@ -1100,7 +1152,7 @@ def subfig_rad_size(ax_size_t, out, legend):
     ax_size_t.grid(True)
     plt.yticks(plt.yticks()[0][0:-1])
 
-    if out.nSlices > 1:
+    if out.tdp == 1:
         ax_size_s = ax_size_t.twinx()
         size_long_fwhm = np.zeros_like(out.z)
         size_long_std = np.zeros_like(out.z)

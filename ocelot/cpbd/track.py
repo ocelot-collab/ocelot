@@ -18,6 +18,7 @@ try:
 except:
     extrema_chk = 0
 
+
 def aperture_limit(lat, xlim = 1, ylim = 1):
     tws=twiss(lat, Twiss(), nPoints=1000)
     bxmax = max([tw.beta_x for tw in tws])
@@ -30,6 +31,7 @@ def aperture_limit(lat, xlim = 1, ylim = 1):
     ylim = float(ylim)*np.sqrt(by0/bymax)
 
     return xlim, ylim, px_lim, py_lim
+
 
 def arg_peaks(data, extrema_chk = extrema_chk):
     """
@@ -44,6 +46,7 @@ def arg_peaks(data, extrema_chk = extrema_chk):
         extrm_y = np.diff(np.sign(diff_y))
         return np.where(extrm_y<0)[0]+1
 
+
 def spectrum(data1D):
     """
     input: 1D sample data
@@ -55,6 +58,7 @@ def spectrum(data1D):
     freq = np.fft.fftshift(np.fft.fftfreq(len_data1D))
     return freq, ft_shift
 
+
 def find_nearest(positions, value):
     """
     input: 1D array and value
@@ -62,6 +66,7 @@ def find_nearest(positions, value):
     """
     idx = (np.abs(positions-value)).argmin()
     return positions[idx]
+
 
 def find_highest(sorted_posns, value, diap):
     """
@@ -76,6 +81,7 @@ def find_highest(sorted_posns, value, diap):
     return poss[-1]
     #idx = (np.abs(sorted_posns-value)).argmin()
     #return sorted_posns[idx]
+
 
 def nearest_particle(track_list, xi,yi):
     #x_array = np.unique(np.sort(map(lambda pxy: pxy.x, pxy_list)))
@@ -92,6 +98,7 @@ def nearest_particle(track_list, xi,yi):
         #print "inside nearest_particle: ", pxy.x, pxy.y
         if pxy.x == xi and pxy.y == yi:
             return pxy
+
 
 def harmonic_position(data1D, nu = None, diap = 0.1, nearest = False):
     """
@@ -196,6 +203,7 @@ def contour_da(track_list, nturns, lvl = 0.9):
             ctr_da.append(0)
     return np.array(ctr_da)
 
+
 def stable_particles(track_list, nturns):
     pxy_list_sbl = []
     for pxy in track_list:
@@ -203,6 +211,7 @@ def stable_particles(track_list, nturns):
             pxy_list_sbl.append(pxy)
 
     return np.array(pxy_list_sbl)
+
 
 def phase_space_transform(x,y, tws):
     """
@@ -231,6 +240,7 @@ def create_track_list(x_array, y_array, p_array, energy=0.):
 
     return track_list
 
+
 def ellipse_track_list(beam, n_t_sigma = 3, num = 1000, type = "contour"):
     beam.sizes()
     #sigma_x = sqrt((sigma_e*tws0.Dx)**2 + emit*tws0.beta_x)
@@ -251,7 +261,6 @@ def ellipse_track_list(beam, n_t_sigma = 3, num = 1000, type = "contour"):
         track_list.append(pxy)
 
     return track_list
-
 
 
 def track_nturns(lat, nturns, track_list, nsuperperiods=1, save_track=True, print_progress=True):
@@ -386,7 +395,7 @@ def tracking_step(lat, particle_list, dz, navi):
     for tm in t_maps:
         start = time()
         tm.apply(particle_list)
-        _logger.debug(" tracking_step -> tm.class: " + tm.__class__.__name__  + "  l= "+  str(tm.length))
+        _logger.debug(" tracking_step -> tm.class: " + tm.__class__.__name__  + "  l= "+ str(tm.length))
         _logger.debug(" tracking_step -> tm.apply: time exec = " + str(time() - start) + "  sec")
     return
 
@@ -420,6 +429,9 @@ def track(lattice, p_array, navi, print_progress=True, calc_tws=True, bounds=Non
             p.z0 = navi.z0
             p.apply(p_array, z_step)
         #p_array[0] = part
+        if p_array.n == 0:
+            _logger.debug(" Tracking stop: p_array.n = 0")
+            return tws_track, p_array
         tw = get_envelope(p_array, bounds=bounds) if calc_tws else Twiss()
         L += dz
         tw.s += L

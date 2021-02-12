@@ -8,7 +8,7 @@ import csv
 import time
 import matplotlib
 import matplotlib.pyplot as plt
-import matplotlib.colors as colors # for wigner log scale
+import matplotlib.colors as colors  # for wigner log scale
 import numpy as np
 import logging
 
@@ -20,8 +20,6 @@ from ocelot.common.math_op import *  # import of mathematical functions like gau
 from ocelot.utils.xfel_utils import *
 from ocelot.optics.utils import calc_ph_sp_dens
 from ocelot.optics.wave import *
-
-
 
 from ocelot.gui.colormaps2d.colormap2d import *
 
@@ -105,6 +103,8 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         domains = dfl_copy.domains()
     else:
         dfldomain_check(domains)
+    
+    _logger.info(ind_str + "domains={}".format(str(domains)))
 
     if 'k' in domains:
         far_field = True
@@ -131,14 +131,21 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         phase = True
         freq_domain = False
         z_lim = []
+        ncar_z = 1
+        leng_z = 1
     xlamds = dfl_copy.xlamds
-
+    
     # number of mesh points
     ncar_x = dfl_copy.Nx()
     leng_x = dfl_copy.Lx()  # transverse size of mesh [m]
     ncar_y = dfl_copy.Ny()
     leng_y = dfl_copy.Ly()
     E_pulse = dfl_copy.E()
+    
+    _logger.debug(ind_str + "xlamds = {:.2e}".format(xlamds))
+    _logger.debug(ind_str + "Nx = {}, Ny = {}, Nz = {}".format(ncar_x, ncar_y, ncar_z))
+    _logger.debug(ind_str + "Lx = {:.2e}, Ly = {:.2e}, Lz = {:.2e}".format(leng_x, leng_y, leng_z))
+    _logger.debug(ind_str + "E_pulse = {:.2e} J".format(E_pulse))
 
     if dfl_copy.Nz() != 1:
         if freq_domain:
@@ -250,7 +257,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         suffix += '_log'
 
     if fig_name is None:
-        if dfl_copy.fileName() is '':
+        if dfl_copy.fileName() == '':
             fig = plt.figure('Radiation distribution' + suffix)
         else:
             fig = plt.figure('Radiation distribution' + suffix + ' ' + dfl_copy.fileName())
@@ -304,7 +311,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
 
     if phase == True:
         ax_ph = fig.add_subplot(2, 2 + column_3d, 4 + column_3d, sharex=ax_int, sharey=ax_int)
-        ax_ph.pcolormesh(x, y, xy_proj_ph, cmap=cmap_ph)
+        ax_ph.pcolormesh(x, y, xy_proj_ph, cmap=cmap_ph, vmin=-np.pi, vmax=np.pi)
         ax_ph.axis([np.min(x), np.max(x), np.min(y), np.max(y)])
         ax_ph.set_title('Phase', fontsize=15)
     else:
@@ -367,7 +374,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
             rms_y = 0
         try:
             fwhm_y = fwhm3(y_line)[1] * dy  # measure FWHM
-        except ValueError:
+        except:# ValueError:
             fwhm_y = 0
     else:
         y_line_f = np.zeros_like(y_line)
@@ -516,190 +523,176 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     else:
         return
 
-def plot_dfl_xz(dfl, whichis_derectrion='x', plot_proj=True, plot_slice=True, E_slice=None, log_scale=False,
-                x_units = 'mm', E_ph_units = 'eV', figsize = 3,
-                cmap='Greys', fig_name='dfl_plot_xz', showfig=True, savefig=False):
+@if_plottable
+def plot_two_dfls(dfl_first, dfl_second, domains='s', label_first=None, label_second=None, title=None,
+            x_lim=None, y_lim=None, slice_xy=False, phase=False, savefig=False, showfig=True, filePath=None, fig_name=None):
+    """ 
+    Parameters
+    ----------
+    dfl_first : RadiationField object
+        3d or 2d coherent radiation distribution, *.fld variable is the same as Genesis dfl structure
+    dfl_second : RadiationField object
+        3d or 2d coherent radiation distribution, *.fld variable is the same as Genesis dfl structure
+    domains : str, optional
+        A transverse domain in which the fields will be represented. The default is 's'.
+    label_first : str, optional
+        Label of the first field to be plotted in the legend. When the default is None no label will be displayed.
+    label_second : str, optional
+        Label of the second field to be plotted in the legend. When the default is None no label will be displayed.
+    x_lim : float, optional
+        Limit of the x scale whether in um or urad. When the default is None minimum scale of two field will be plotted.
+    y_lim : float, optional
+        Limit of the y scale whether in um or urad. When the default is None minimum scale of two field will be plotted.
+    slice_xy : bool type, optional
+        if True, slices will be plotted; if False, projections will be plotted.
+    phase : bool type, optional
+        can replace XY projection with the phasefront distribution. The default is False.
+    figname : str, optional
+        The name of the figure to be plotted and saved. The default is 'figname'.
 
+    Returns
+    -------
+    None.
+
+    """
+    
+    _logger.info('Plotting two dfls in process...')
     start_time = time.time()
 
-    _logger.info('plotting {} vs. energy distribution'.format(whichis_derectrion))
-
-    filePath = dfl.filePath
+    cmap_ph = plt.get_cmap('hsv')
     
-    if dfl.domain_z == 't':#make it universal for both domains
-        dfl.to_domain('f')
-    if dfl.domain_xy == 'k': #make it universal for both domains
-        dfl.to_domain('s')
-        
-    I = dfl.intensity()
+    dfl1 = deepcopy(dfl_first)
+    dfl2 = deepcopy(dfl_second)
     
-    I_units_phsmmbw='$ph/s/mm^2/0.1\%bw$'
-    I_units_phsbw='$ph/s/0.1\%bw$'
+    if filePath is None:
+        filePath = dfl1.filePath
     
-    if whichis_derectrion == 'x':
-        x = dfl.scale_x()
-        I_xz = I[:,dfl.Ny() // 2,:].T
-        if x_units == 'mm':
-            x = x * 1e3
-            x_label_txt = 'x, [mm]' 
-        elif x_units == 'um':
-            x = x * 1e6
-            x_label_txt = '$x, [\mu m]$'
+    if fig_name is None:
+        if dfl_copy.fileName() == '':
+            fig = plt.figure('Radiation comparison' + domains)
         else:
-            raise ValueError('Incorrect units error')
-    elif whichis_derectrion == 'y':
-        x = dfl.scale_y()
-        I_xz = I[:,:,dfl.Ny() // 2].T
-        if x_units == 'mm':
-            x = x * 1e3
-            x_label_txt = 'y, [mm]' 
-        elif x_units == 'um':
-            x = x * 1e6
-            x_label_txt = '$y, [\mu m]$'
-        else:
-            raise ValueError('Incorrect units error')
+            fig = plt.figure('Radiation comparison ' + domains + ' ' + dfl1.fileName() + ' ' + dfl2.fileName())
     else:
-        raise ValueError('"whichis_derectrion" must be "x" or "y"')
-
-    E_ph = h_eV_s * dfl.scale_kz() * speed_of_light/2/np.pi                 
-    if E_ph_units in ['eV', 'ev']:
-        E_label_txt = '$E_{\gamma}$ [eV]'    
-    elif y_units in ['keV', 'kev']:
-        E_ph = E_ph * 1e-3
-        E_label_txt = '$E_{photon}$ [keV]'    
-    else:
-        raise ValueError('Incorrect units')
+        fig = plt.figure(fig_name + domains)
     
-    if E_slice is None:
-        E_slice_idx = dfl.Nz()//2
-    elif E_slice == 'max':
-        E_slice_idx = np.argmax(I[:,dfl.Ny()//2,dfl.Nx()//2], axis=0)
-    elif E_slice >= np.min(E_ph) and E_slice <= np.max(E_ph):
-        E_slice_idx = min(range(len(E_ph)), key=lambda i: abs(E_ph[i]-E_slice))
-    else:
-        raise ValueError('Incorrect "E_slice" value, it can be None or some photon energy in the [{},{}] range or "max"'.format(round(np.min(E_ph)),round(np.max(E_ph))))
-    if E_slice_idx is not None:
-        E_slice = E_ph[E_slice_idx]
-        print(E_slice)
-    
-    fig = plt.figure(fig_name)
+    figsize = 6
+    # fig = plt.figure(fig_name)
     plt.clf()
-    fig.set_size_inches((4.5 * figsize, 3.25 * figsize))#, forward=True)
-    
-    if plot_proj:
-        #definitions for the axes
-        left, width = 0.18, 0.57
-        bottom, height = 0.14, 0.55
-        left_h = left + width + 0.02 - 0.02
-        bottom_h = bottom + height + 0.02 - 0.02
-    
-        rect_scatter = [left, bottom, width, height]
-        rect_histx = [left, bottom_h, width, 0.2]
-        rect_histy = [left_h, bottom, 0.15, height]
-    
-        axHistx = plt.axes(rect_histx)
-        axHisty = plt.axes(rect_histy)
+     
+    fig.set_size_inches(4*figsize, figsize, forward=True)
+    if title is not None: 
+        fig.suptitle(title, fontsize=18, ha='right')
         
-        axScatter = plt.axes(rect_scatter, sharex=axHistx, sharey=axHisty)
-    else:
-        axScatter = plt.axes()
-    
-    
-    if log_scale is True: 
-        log=0.01
-        I_lim = np.amax(I)
-        axScatter.pcolormesh(E_ph, x, I_xz, cmap=cmap, 
-                                             norm=colors.SymLogNorm(linthresh=I_lim * log, linscale=2,
-                                                  vmin=-I_lim, vmax=I_lim),
-                                                                    vmax=I_lim, vmin=-I_lim)
-    else:
-        axScatter.pcolormesh(E_ph, x, I_xz, cmap=cmap)
-    yticks = axScatter.yaxis.get_major_ticks()
-    yticks[-2].set_visible(False)
-    xticks = axScatter.xaxis.get_major_ticks()
-    xticks[-1].set_visible(False)
-    
-    axScatter.set_ylabel(x_label_txt, fontsize=18)
-    axScatter.set_xlabel(E_label_txt, fontsize=18)
-    
-    if plot_slice:
-        
-        I_xy = I[:, dfl.Nx() // 2, dfl.Ny() // 2]
-        if whichis_derectrion == 'x':
-            I_x  = I[E_slice_idx, dfl.Ny() // 2, :]
-        elif whichis_derectrion == 'y':
-            I_x  = I[E_slice_idx, :, dfl.Nx() // 2]
-        else:
-            raise ValueError('"whichis_derectrion" must be "x" or "y"')
+    ax_x = fig.add_subplot(1, 4, 1)
+    ax_y = fig.add_subplot(1, 4, 2)
+    ax_x2 = ax_x.twinx()  # instantiate a second axes that shares the same x-axis
+    ax_y2 = ax_y.twinx()
 
-        axHistx.plot(E_ph, I_xy, color='blue', label="on-axis")
-        axHisty.plot(I_x, x, color='blue')
-        axHistx.legend(bbox_to_anchor=(1.1, 1), loc='upper left', borderaxespad=0.)
-        axHisty.text(1.05*np.max(I_x), 0.99*np.max(x), 'slice $\;at = {} eV$'.format(round(E_slice)), 
-                     horizontalalignment='left', verticalalignment='top', rotation=270, fontsize=14)    
-        if log_scale is True:
-            axHistx.set_yscale('log')
-            axHisty.set_xscale('log')
-        else:
-            axHistx.ticklabel_format(style='sci', axis='y', useOffset=True, scilimits=(0,0))
-            axHisty.ticklabel_format(style='sci', axis='x', useOffset=True, scilimits=(0,0))
-      
-        axHisty.set_xlabel(I_units_phsmmbw, fontsize=18, color='blue')
-        axHistx.set_ylabel(I_units_phsmmbw, fontsize=18, color='blue')
-        axHisty.xaxis.labelpad = 20
-        axHistx.yaxis.labelpad = 20
-        axHistx.set_ylim(0)
-        axHisty.set_xlim(0)
-        axScatter.axis('tight')
-        
-        yticks = axHistx.yaxis.get_major_ticks()
-        yticks[0].set_visible(False)
-        
-    if plot_proj:
-        I_xy = np.sum(dfl.intensity(), axis=(1, 2))*dfl.dx*dfl.dy * (1e3)**2
-        
-        ax1 = axHistx.twinx()
-        ax1.plot(E_ph, I_xy, '--',color='black', label="integrated")
-        ax1.legend(bbox_to_anchor=(1.1, 0.75), loc='upper left', borderaxespad=0.)
-        ax1.set_ylabel(I_units_phsbw, fontsize=18, color='black')
- 
-        if log_scale is True:
-            ax1.set_yscale('log')
-        else:
-            ax1.ticklabel_format(style='sci', axis='y', useOffset=True, scilimits=(0,0))
+    _logger.info(ind_str + "domains={}".format(str(domains)))
+
+    if domains == 'k':
+        label_x = r'$\theta_y, \mu rad$'
+        label_y = r'$\theta_x, \mu rad$'
+    elif domains == 's':
+        label_x = r'$x, \mu m$'
+        label_y = r'$y, \mu m$'
+    dfl1.to_domain(domains)
+    dfl2.to_domain(domains)
     
-        axScatter.axis('tight')
+    if None in [x_lim, y_lim]:
+        x_lim = min(np.max(dfl1.scale_x())*1e6, np.max(dfl2.scale_x())*1e6)
+        y_lim = min(np.max(dfl1.scale_y())*1e6, np.max(dfl2.scale_y())*1e6)
+
+    _logger.debug(ind_str + "x_lim = {}, y_lim = {}".format(x_lim, y_lim))
+    ax_y.set_xlim(-y_lim, y_lim)
+    ax_y2.set_xlim(-y_lim, y_lim)
+    ax_x.set_xlim(-x_lim, x_lim)
+    ax_x2.set_xlim(-x_lim, x_lim)        
+    
+    ax_y.grid()
+    ax_x.grid()
+    
+    if slice_xy is True:   
+        fig.text(0.01, 0.01, 'x- y- slice', fontsize=18)
+        I_1x = np.sum(dfl1.intensity(), axis=0)[dfl1.Ny()//2+1, :]
+        I_2x = np.sum(dfl2.intensity(), axis=0)[dfl2.Ny()//2+1, :]
+        I_1y = np.sum(dfl1.intensity(), axis=0)[:, dfl1.Nx()//2+1]
+        I_2y = np.sum(dfl2.intensity(), axis=0)[:, dfl2.Nx()//2+1]
+    elif slice_xy is False:
+        fig.text(0.01, 0.01, 'x- y- integrated', fontsize=18)
+        I_1x = np.sum(dfl1.intensity(), axis=(0,1))
+        I_2x = np.sum(dfl2.intensity(), axis=(0,1))
+        I_1y = np.sum(dfl1.intensity(), axis=(0,2))
+        I_2y = np.sum(dfl2.intensity(), axis=(0,2))
+    else: 
+        raise AttributeError('slice_xy is a boolean type')
+        _logger.error(ind_str + 'slice_xy is a boolean type')
+       
+    ax_x.plot(dfl1.scale_x()*1e6, I_1x, c='b', label=label_first)
+    ax_x2.plot(dfl2.scale_x()*1e6, I_2x, c='green', label=label_second)
+    
+    ax_y.plot(dfl1.scale_y()*1e6, I_1y, c='b', label=label_first)
+    ax_y2.plot(dfl2.scale_y()*1e6, I_2y, c='green', label=label_second)    
+    
+    if None not in [label_first, label_second]:
+        ax_y2.legend(fontsize=12, bbox_to_anchor=(0, 0.92), loc='upper left')#, loc=1)
+        ax_y.legend(fontsize=12, bbox_to_anchor=(0, 0.995), loc='upper left')#, loc=2)
+        ax_x2.legend(fontsize=12, bbox_to_anchor=(0, 0.92), loc='upper left')#, loc=1)
+        ax_x.legend(fontsize=12, bbox_to_anchor=(0, 0.995), loc='upper left')#, loc=2)
         
-        for tl in axHistx.get_xticklabels():
-            tl.set_visible(False)
-        for tl in axHisty.get_yticklabels():
-            tl.set_visible(False)
-        
-        ax1.set_ylim(0)
-        
-        yticks = ax1.yaxis.get_major_ticks()
-        yticks[0].set_visible(False)
-        
-    plt.draw()
+    ax_xy1 = fig.add_subplot(1, 4, 3)
+    ax_xy2 = fig.add_subplot(1, 4, 4)
+
+    if phase == True:
+        xy_proj_ph1 = np.angle(np.sum(dfl1.fld, axis=0))
+        xy_proj_ph2 = np.angle(np.sum(dfl2.fld, axis=0))
+        ax_xy1.pcolormesh(dfl1.scale_x()*1e6, dfl1.scale_y()*1e6, xy_proj_ph1, cmap=cmap_ph, vmin=-np.pi, vmax=np.pi)        
+        ax_xy2.pcolormesh(dfl2.scale_x()*1e6, dfl2.scale_y()*1e6, xy_proj_ph2, cmap=cmap_ph, vmin=-np.pi, vmax=np.pi)
+    else:
+        ax_xy1.pcolormesh(dfl1.scale_x()*1e6, dfl1.scale_y()*1e6, np.sum(dfl1.intensity(), axis=0))         
+        ax_xy2.pcolormesh(dfl2.scale_x()*1e6, dfl2.scale_y()*1e6, np.sum(dfl2.intensity(), axis=0))
+
+    ax_xy2.set_xlim(-x_lim, x_lim)
+    ax_xy2.set_ylim(-y_lim, y_lim)
+    ax_xy1.set_xlim(-x_lim, x_lim)
+    ax_xy1.set_ylim(-y_lim, y_lim)
+
+    ax_xy1.set_title(label_first, fontsize=14, color='b')      
+    ax_xy2.set_title(label_second, fontsize=14, color='green')
+          
+    ax_xy1.set_ylabel(label_y, fontsize=16)
+    ax_xy1.set_xlabel(label_x, fontsize=16)
+    ax_xy2.set_ylabel(label_y, fontsize=16)
+    ax_xy2.set_xlabel(label_x, fontsize=16)
+    ax_x.set_xlabel(label_x, fontsize=16)
+    ax_y.set_xlabel(label_y, fontsize=16)
+    ax_x.set_ylabel('arb.units', fontsize=16)
+    ax_y.set_ylabel('arb.units', fontsize=16)
+    ax_x.set_ylim(0)
+    ax_y.set_ylim(0)
+    ax_x2.set_ylim(0)
+    ax_y2.set_ylim(0)
+    plt.tight_layout()
+    
     if savefig != False:
         if savefig == True:
             savefig = 'png'
-            print('here')
-        _logger.debug(ind_str + 'saving *.{:}'.format(savefig))
-        fig.savefig(filePath + fig_name + '.' + str(savefig), format=savefig)
+        _logger.debug(ind_str + 'saving *{:}.{:}'.format(figname, savefig))
+        fig.savefig(filePath + figname + '.' + str(savefig), format=savefig)
     _logger.debug(ind_str + 'done in {:.2f} seconds'.format(time.time() - start_time))
-    
+
     plt.draw()
+
     if showfig == True:
-        _logger.debug(ind_str + 'showing dfl')
+        _logger.debug(ind_str + 'showing two dfls')
         rcParams["savefig.directory"] = os.path.dirname(filePath)
         plt.show()
-    else:        
-        plt.close(fig)
+    else:
+        plt.close(fig)   
+    _logger.info(ind_str + 'plotting two dfls done in {:.2f} seconds'.format(time.time() - start_time))
 
-    plt.show()
 @if_plottable
-def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, None), y_lim=(None, None), downsample=1,
+def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, None), y_lim=(None, None), v_lim=(None, None), downsample=1,
                 autoscale=None, figsize=3, cmap='seismic', fig_name=None, savefig=False, showfig=True,
                 plot_proj=1, plot_text=1, plot_moments=0, plot_cbar=0, log_scale=0, **kwargs):
     """
@@ -739,7 +732,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
         raise ValueError('Unknown object for Wigner plot')
 
     if fig_name is None:
-        if W.fileName() is '':
+        if W.fileName() == '':
             fig_text = 'Wigner distribution'
         else:
             fig_text = 'Wigner distribution ' + W.fileName()
@@ -759,6 +752,19 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
     spec = W.spectrum()
     wigner = W.wig
     wigner_lim = np.amax(abs(W.wig))
+    
+    if v_lim[0] is None:
+        v_min = -wigner_lim
+    else:
+        v_min = v_lim[0]
+    
+    if v_lim[1] is None:
+        v_max = wigner_lim
+    else:
+        v_max = v_lim[1]
+        
+    v_maxabs = np.amax([np.abs(v_min), np.abs(v_max)])
+    
     if plot_moments:
         inst_freq = W.inst_freq()
         group_delay = W.group_delay()
@@ -804,24 +810,26 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
 
     # cmap='RdBu_r'
     # axScatter.imshow(wigner, cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
-    
+
     if log_scale != 0:
-        if log_scale==1: 
-            log_scale=0.01
+        if log_scale == 1:
+            log_scale = 0.01
         wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample],
                                    wigner[::downsample, ::downsample], cmap=cmap,  
-                                   norm=colors.SymLogNorm(linthresh=wigner_lim * log_scale, linscale=2,
-                                              vmin=-wigner_lim, vmax=wigner_lim),
-                                   vmax=wigner_lim, vmin=-wigner_lim)
+                                   norm=colors.SymLogNorm(linthresh=v_maxabs * log_scale, linscale=2,
+                                                          vmin=v_min, vmax=v_max),
+                                   vmax=v_max, vmin=v_min)
     else:
+        #wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample],
+        #                          wigner[::downsample, ::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
         wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample],
-                                   wigner[::downsample, ::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
+                                       wigner[::downsample, ::downsample], cmap=cmap, vmax=v_max, vmin=v_min, shading='auto')
     
     if plot_cbar:
         from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-        cbaxes = inset_axes(axScatter, width="50%", height="3%", loc=1) 
-        fig.colorbar(wigplot, cax = cbaxes, orientation='horizontal')
-        
+        cbaxes = inset_axes(axScatter, width="50%", height="3%", loc=1)
+        fig.colorbar(wigplot, cax=cbaxes, orientation='horizontal')
+
     if plot_text:
         if hasattr(wig_or_out, 'is_spectrogram'):
             if wig_or_out.is_spectrogram:
@@ -870,8 +878,8 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
         y_lim_appl.sort()
 
     else:
-        x_lim_appl = (np.amin(power_scale), np.amax(power_scale))
-        y_lim_appl = (np.amin(spec_scale), np.amax(spec_scale))
+        x_lim_appl = np.array((np.amin(power_scale), np.amax(power_scale)))
+        y_lim_appl = np.array((np.amin(spec_scale), np.amax(spec_scale)))
 
     if x_units == 'fs':
         x_lim_appl = np.flipud(x_lim_appl)
@@ -890,14 +898,15 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
         if plot_text:
             axHistx.text(0.02, 0.95, r'E= {:.2e} J'.format(W.energy()), horizontalalignment='left',
                          verticalalignment='top', transform=axHistx.transAxes)  # fontsize=12,
-        axHistx.set_ylabel('Power [W]')
+        # axHistx.set_ylabel('Power [W]')
+        axHistx.set_ylabel('Power\n[arb. units]')
 
         if spec.max() <= 0:
             axHisty.plot(spec, spec_scale)
         else:
             axHisty.plot(spec / spec.max(), spec_scale)
 
-        axHisty.set_xlabel('Spectrum [a.u.]')
+        axHisty.set_xlabel('Spectrum\n[arb. units]')
 
         axScatter.axis('tight')
         axScatter.set_xlabel(p_label_txt)
@@ -918,22 +927,28 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
         axHistx.set_xlim(x_lim_appl[0], x_lim_appl[1])
         axHisty.set_ylim(y_lim_appl[0], y_lim_appl[1])
         
+        _logger.debug(ind_str + 'x_lim = {} - {}'.format(x_lim_appl[0], x_lim_appl[1]))
+        _logger.debug(ind_str + 'y_lim = {} - {}'.format(y_lim_appl[0], y_lim_appl[1]))
+        
         if log_scale != 0:
             axHistx.set_ylim(np.nanmin(power), np.nanmax(power))
             axHisty.set_xlim(np.nanmin(spec), np.nanmax(spec))
             axHisty.set_xscale('log')
             axHistx.set_yscale('log')
-        
+
     else:
         axScatter.axis('tight')
         axScatter.set_xlabel(p_label_txt)
         axScatter.set_ylabel(f_label_txt)
+        
+        axScatter.set_xlim(x_lim_appl[0], x_lim_appl[1])
+        axScatter.set_ylim(y_lim_appl[0], y_lim_appl[1])
+        
+        _logger.debug(ind_str + 'x_lim = {} - {}'.format(x_lim_appl[0], x_lim_appl[1]))
+        _logger.debug(ind_str + 'y_lim = {} - {}'.format(y_lim_appl[0], y_lim_appl[1]))
 
     # axScatter.set_xlim(x_lim[0], x_lim[1])
     # axScatter.set_ylim(y_lim[0], y_lim[1])
-    
-    
-    
 
     if savefig != False:
         if savefig == True:
@@ -942,7 +957,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
             save_path = W.filePath + '_wig.' + str(savefig)
             # fig.savefig(W.filePath + '_wig.' + str(savefig), format=savefig)
         else:
-            save_path = W.filePath + '_wig_' + str(W.z) + 'm.' + str(savefig)
+            save_path = W.filePath + '_wig_{:.2f}m.{}'.format(W.z, savefig)
             # fig.savefig(W.filePath + '_wig_' + str(W.z) + 'm.' + str(savefig), format=savefig)
         _logger.debug(ind_str + 'saving to {}'.format(save_path))
         fig.savefig(save_path, format=savefig)
@@ -963,15 +978,15 @@ def plot_dfl_waistscan(sc_res, fig_name=None, figsize=4, showfig=True, savefig=F
     _logger.info('plot dfl waist scan')
     if showfig == False and savefig == False:
         return
-    
+
     if fig_name is None:
-        if sc_res.fileName() is '':
+        if sc_res.fileName() == '':
             fig = plt.figure('Waist scan')
         else:
             fig = plt.figure(sc_res.fileName() + ' waist scan')
     else:
         fig = plt.figure(fig_name)
-        
+
     plt.clf()
     fig.set_size_inches((3 * figsize, 2 * figsize), forward=True)
     ax_int = fig.add_subplot(1, 1, 1)
@@ -1133,11 +1148,11 @@ def plot_stokes_values(S, fig=None, d_pol=0, norm=0, showfig=True, gw=1, directi
     if np.size(sc) <= 1:
         _logger.warning('plot_stokes_values needs more than a single point to plot (np.size(sc) <= 1)')
         return
-    
+
     if d_pol != 0:
-        gw=0
-        norm=1
-        
+        gw = 0
+        norm = 1
+
     if fig == None:
         plt.figure('Stokes S')
         plt.clf()
@@ -1151,7 +1166,7 @@ def plot_stokes_values(S, fig=None, d_pol=0, norm=0, showfig=True, gw=1, directi
         mult = 1e-9
         plt.ylabel('$S_0$ [GW]')
     elif norm:
-        mult = 1/np.amax(Scp.s0)
+        mult = 1 / np.amax(Scp.s0)
     else:
         mult = 1
         plt.ylabel('$S_0$ [W]')
@@ -1167,10 +1182,10 @@ def plot_stokes_values(S, fig=None, d_pol=0, norm=0, showfig=True, gw=1, directi
     else:
         raise ValueError
 
-    if d_pol=='lin':
+    if d_pol == 'lin':
         # plt.step(sc, np.sqrt(S.s1**2+S.s2**2), linewidth=2, where='mid',color=[0.5,0.5,0.5], linestyle='--')
         plot_function(sc, Scp.deg_pol_l(), linestyle='-', color='#1f77b4', **kwargs)
-    elif d_pol==1:
+    elif d_pol == 1:
         plot_function(sc, Scp.deg_pol(), linestyle='-', color='#1f77b4', **kwargs)
     else:
         pass
@@ -1222,8 +1237,7 @@ def plot_stokes_angles(S, fig=None, showfig=True, direction='z', plot_func='scat
     if np.size(sc) <= 1:
         _logger.warning('plot_stokes_angles needs more than a single point to plot (np.size(sc) <= 1)')
         return
-        
-        
+
     if fig == None:
         plt.figure('Stokes angles')
         plt.clf()
@@ -1248,7 +1262,7 @@ def plot_stokes_angles(S, fig=None, showfig=True, direction='z', plot_func='scat
 
     plot_function(sc, Scp.psi(), color='b', **kwargs)
     # if plot_func == 'scatter':
-        # kwargs['s'] = psize
+    # kwargs['s'] = psize
     plot_function(sc, Scp.chi(), color='g', **kwargs)
 
     # if scatter:

@@ -1,5 +1,8 @@
 """
-wave optics
+wave optics 
+an alternative .py file to wave.py
+includes basic classes of RadiationField 
+modified for new ocelot beamline architecture
 """
 
 from numpy import random
@@ -180,19 +183,28 @@ def generate_gaussian_dfl(xlamds=1e-9, shape=(51, 51, 100), dgrid=(1e-3, 1e-3, 5
 
     return dfl
 
-
 class Grid:
+    """
+    Grid object defines spatial-frequency 3D mesh for Radiation Field class and Mask class    
+    :params (dx, dy, dz): spatial step of the mesh 
+    :param shape: number of point in each direction of 3D data mesh
+    :param xlamds: carrier wavelength of the wavepacket
+    :param used_aprox: the approximation used in solving the wave equation. 
+    OCELOT works in Slowly Varying Amplitude Approximation (SVAA)
+    """
     def __init__(self, shape=(0,0,0)):
         self.dx = []
         self.dy = []
         self.dz = []
         self.shapes = shape
-        
         self.xlamds = None
-        self.used_aprox = 'SVEA'
-    
+        self.used_aprox = 'SVAA'
+
     def copy_grid(self, other, version=2):
-    
+        """
+        TODO
+        write documentation
+        """
         if version == 1:
             self.dx = other.dx
             self.dy = other.dy
@@ -202,18 +214,19 @@ class Grid:
             self.xlamds = other.xlamds
             self.used_aprox = other.used_aprox
             
-        elif version == 2: #copy the same attributes of Mask and RadiationField objects
+        elif version == 2: #I(Andrei) had an idea of setting attributes with the same memory
+# address for Mask and RadiationField objects, to synchronize these object attributes "automatically"
             attr_list = np.intersect1d(dir(self),dir(other))
             for attr in attr_list:
                 if attr.startswith('__') or callable(getattr(self, attr)):
                     continue
                 setattr(self, attr, getattr(other, attr))
         else:
-            raise ValueError        
+            raise ValueError
     
     def shape(self):
         return self.shapes
-    
+
     def Lz(self):  
         '''
         full longitudinal mesh size
@@ -263,36 +276,29 @@ class Grid:
     def grid_ky(self):
         k = 2 * np.pi / self.dy
         return np.linspace(-k / 2, k / 2, self.Ny())
-
-    def grid_t(self):
-        return np.linspace(0, self.Lz()/speed_of_light, self.Nz())
-    
-    def grid_w(self):
-        dw = 2 * np.pi * speed_of_light / self.Lz() # self.Lz() must be replaced with self.Tz()
-        
-        if self.xlamds is None:        
-            return np.linspace(-dw / 2 * self.Nz(), dw / 2 * self.Nz(), self.Nz())
-        
-        elif self.used_aprox == 'SVEA' and self.xlamds is not None:
-            w0 = 2 * np.pi * speed_of_light / self.xlamds
-            return np.linspace(w0 - dw / 2 * self.Nz(), w0 + dw / 2 * self.Nz(), self.Nz())
-        
-        else:
-            raise ValueError
-
+          
     def grid_z(self):
-        return self.grid_t() * speed_of_light
-
+        return np.linspace(0, self.Lz(), self.Nz())
+    
     def grid_kz(self):
-        return self.grid_w() / speed_of_light
-            
+        dk = 2 * pi / self.Lz()
+        k = 2 * pi / self.xlamds       
+        return np.linspace(k - dk / 2 * self.Nz(), k + dk / 2 * self.Nz(), self.Nz())    
+    
+#    def grid_t(self):
+#        return grid_z()/speed_of_light
+#    
+#    def grid_f(self):
+#        return grid_kz/speed_of_light
+#           
+
 class RadiationField(Grid):
     """
     3d or 2d coherent radiation distribution, *.fld variable is the same as Genesis dfl structure
     """
 
     def __init__(self, shape=(0,0,0)):
-        super().__init__(shape=shape)
+        Grid.__init__(self, shape=shape)
         self.fld = np.zeros(shape, dtype=complex128)  # (z,y,x)
         self.xlamds = None    # carrier wavelength [m]
         self.domain_z = 't'   # longitudinal domain (t - time, f - frequency)
@@ -396,26 +402,31 @@ class RadiationField(Grid):
         else:
             return np.sum(self.intensity())
 
-#   old scales for versions compatibility
-#   propper scales in meters or 2 pi / meters
     def scale_kx(self):  # scale in meters or meters**-1
         _logger.warning('"scale_kx" will be deprecated, use "grid_x and grid_kx" instead')
-        if 's' in [self.domain_xy, self.domain_x]:    # space domain
-            return self.grid_x()
-        elif 'k' in [self.domain_xy, self.domain_x]:  # inverse space domain
+
+#        if 's' in [self.domain_xy, self.domain_x]:    # space domain
+        if self.domain_xy == 's':    # space domain
+            return self.grid_x()        
+
+#        elif 'k' in [self.domain_xy, self.domain_x]:  # inverse space domain
+        elif self.domain_xy == 'k':  # inverse space domain
             return self.grid_kx()
+       
         else:
             raise AttributeError('Wrong domain_xy attribute')
 
     def scale_ky(self):  # scale in meters or meters**-1
         _logger.warning('"scale_ky" will be deprecated, use "grid_y and grid_ky" instead')
-        if 's' in [self.domain_xy, self.domain_y]:    # space domain
+#        if 's' in [self.domain_xy, self.domain_y]:    # space domain
+        if self.domain_xy == 's':    # space domain
             return self.grid_y()
-        elif 'k' in [self.domain_xy, self.domain_y]:  # inverse space domain
+#        elif 'k' in [self.domain_xy, self.domain_y]:  # inverse space domain
+        if self.domain_xy == 'k':    # space domain
             return self.grid_ky()
         else:
             raise AttributeError('Wrong domain_xy attribute')
-            
+    
     def scale_kz(self):  # scale in meters or meters**-1
         _logger.warning('"scale_kz" will be deprecated, use "grid_z and grid_kz" instead')        
         if self.domain_z == 't':  # time domain
@@ -426,7 +437,7 @@ class RadiationField(Grid):
             raise AttributeError('Wrong domain_z attribute')
 
     def scale_x(self):  # scale in meters or radians
-        _logger.warning('"scale_x" will be deprecated, use "grid_x and grid_kx" instead')        
+#        _logger.warning('"scale_x" will be deprecated, use "grid_x and grid_kx" instead')        
         if self.domain_xy == 's':  # space domain
             return self.scale_kx()
         elif self.domain_xy == 'k':  # inverse space domain
@@ -667,6 +678,335 @@ class RadiationField(Grid):
         if return_orig_domains:
             self.to_domain(domains)
             
+    def curve_wavefront(self, r=np.inf, plane='xy', domain_z=None):
+        """
+        introduction of the additional
+        wavefront curvature with radius r
+
+        r can be scalar or vector with self.Nz() points
+        r>0 -> converging wavefront
+
+        plane is the plane in which wavefront is curved:
+            'x' - horizontal focusing
+            'y' - vertical focusing
+            'xy' - focusing in both planes
+
+        domain_z is the domain in which wavefront curvature is introduced
+            'f' - frequency
+            't' - time
+            None - original domain (default)
+
+        """
+
+        domains = domain_o_z, domain_o_xy = self.domain_z, self.domain_xy
+
+        if domain_z == None:
+            domain_z = domain_o_z
+
+        _logger.debug('curving radiation wavefront by {}m in {} domain'.format(r, domain_z))
+
+        if np.size(r) == 1:
+            if r == 0:
+                _logger.error(ind_str + 'radius of curvature should not be zero')
+                raise ValueError('radius of curvature should not be zero')
+            elif r == np.inf:
+                _logger.debug(ind_str + 'radius of curvature is infinite, skipping')
+                return
+            else:
+                pass
+
+        if domain_z == 'f':
+            self.to_domain('fs')
+            x, y = np.meshgrid(self.scale_x(), self.scale_y())
+            if plane == 'xy' or plane == 'yx':
+                arg2 = x ** 2 + y ** 2
+            elif plane == 'x':
+                arg2 = x ** 2
+            elif plane == 'y':
+                arg2 = y ** 2
+            else:
+                _logger.error('"plane" should be in ["x", "y", "xy"]')
+                raise ValueError()
+            k = 2 * np.pi / self.scale_z()
+            if np.size(r) == 1:
+                self.fld *= np.exp(-1j * k[:, np.newaxis, np.newaxis] / 2 * arg2[np.newaxis, :, :] / r)
+            elif np.size(r) == self.Nz():
+                self.fld *= np.exp(
+                    -1j * k[:, np.newaxis, np.newaxis] / 2 * arg2[np.newaxis, :, :] / r[:, np.newaxis, np.newaxis])
+
+        elif domain_z == 't':
+            self.to_domain('ts')
+            x, y = np.meshgrid(self.scale_x(), self.scale_y())
+            if plane == 'xy' or plane == 'yx':
+                arg2 = x ** 2 + y ** 2
+            elif plane == 'x':
+                arg2 = x ** 2
+            elif plane == 'y':
+                arg2 = y ** 2
+            else:
+                _logger.error('"plane" should be in ["x", "y", "xy"]')
+                raise ValueError()
+            k = 2 * np.pi / self.xlamds
+            if np.size(r) == 1:
+                self.fld *= np.exp(-1j * k / 2 * arg2 / r)[np.newaxis, :, :]
+            elif np.size(r) == self.Nz():
+                self.fld *= np.exp(-1j * k / 2 * arg2[np.newaxis, :, :] / r[:, np.newaxis, np.newaxis])
+            else:
+                raise ValueError('wrong dimensions of radius of curvature')
+        else:
+            ValueError('domain_z should be in ["f", "t", None]')
+
+        self.to_domain(domains)
+
+    def prop(self, z, fine=1, return_result=0, return_orig_domains=1, **kwargs):
+        """
+        Angular-spectrum propagation for fieldfile
+        
+        can handle wide spectrum
+          (every slice in freq.domain is propagated
+           according to its frequency)
+        no kx**2+ky**2<<k0**2 limitation
+        
+        dfl is the RadiationField() object
+        z is the propagation distance in [m]
+        fine=1 is a flag for ~2x faster propagation.
+            no Fourier transform to frequency domain is done
+            assumes no angular dispersion (true for plain FEL radiation)
+            assumes narrow spectrum at center of xlamds (true for plain FEL radiation)
+        
+        return_result does not modify self, but returns result
+        
+        z>0 -> forward direction
+        """
+        _logger.info('propagating dfl file by %.2f meters' % (z))
+        
+        if z == 0:
+            _logger.debug(ind_str + 'z=0, returning original')
+            if return_result:
+                return self
+            else:
+                return
+        
+        start = time.time()
+        
+        domains = self.domains()
+        
+        if return_result:
+            copydfl = deepcopy(self)
+            copydfl, self = self, copydfl
+        
+        if fine == 1:
+            self.to_domain('kf')
+        elif fine == -1:
+            self.to_domain('kt')
+        else:
+            self.to_domain('k')
+        
+        if self.domain_z == 'f':
+            k_x, k_y = np.meshgrid(self.scale_kx(), self.scale_ky())
+            k = self.scale_kz()
+            # H = np.exp(1j * z * (np.sqrt((k**2)[:,np.newaxis,np.newaxis] - (k_x**2)[np.newaxis,:,:] - (k_y**2)[np.newaxis,:,:]) - k[:,np.newaxis,np.newaxis]))
+            # self.fld *= H
+            for i in range(self.Nz()):  # more memory efficient
+                H = np.exp(1j * z * (np.sqrt(k[i] ** 2 - k_x ** 2 - k_y ** 2) - k[i]))
+                self.fld[i, :, :] *= H
+        else:
+            k_x, k_y = np.meshgrid(self.scale_kx(), self.scale_ky())
+            k = 2 * np.pi / self.xlamds
+            H = np.exp(1j * z * (np.sqrt(k ** 2 - k_x ** 2 - k_y ** 2) - k))
+            # self.fld *= H[np.newaxis,:,:]
+            for i in range(self.Nz()):  # more memory efficient
+                self.fld[i, :, :] *= H
+        
+        if return_orig_domains:
+            self.to_domain(domains)
+        
+        t_func = time.time() - start
+        _logger.debug(ind_str + 'done in %.2f sec' % t_func)
+        
+        if return_result:
+            copydfl, self = self, copydfl
+            return copydfl
+        
+    def prop_m(self, z, m=1, fine=1, return_result=0, return_orig_domains=1, **kwargs):
+        """
+        Angular-spectrum propagation for fieldfile
+        
+        can handle wide spectrum
+          (every slice in freq.domain is propagated
+           according to its frequency)
+        no kx**2+ky**2<<k0**2 limitation
+        
+        dfl is the RadiationField() object
+        z is the propagation distance in [m]
+        m is the output mesh size in terms of input mesh size (m = L_out/L_inp)
+        which can be a number m or a pair of number m = [m_x, m_y]
+        fine==0 is a flag for ~2x faster propagation.
+            no Fourier transform to frequency domain is done
+            assumes no angular dispersion (true for plain FEL radiation)
+            assumes narrow spectrum at center of xlamds (true for plain FEL radiation)
+        
+        z>0 -> forward direction
+        """
+        _logger.info('propagating dfl file by %.2f meters' % (z))
+        
+        start = time.time()
+        domains = self.domains()
+        
+        if return_result:
+            copydfl = deepcopy(self)
+            copydfl, self = self, copydfl
+        
+        domain_z = self.domain_z
+        if np.size(m)==1:
+            m_x = m
+            m_y = m
+        elif np.size(m)==2:
+            m_x = m[0]
+            m_y = m[1]
+        else:
+            _logger.error(ind_str + 'm mast have shape = 1 or 2')
+            raise ValueError('m mast have shape = 1 or 2')
+             
+        if z==0:
+            _logger.debug(ind_str + 'z=0, returning original')
+            if m_x != 1 and m_y != 1:
+                _logger.debug(ind_str + 'mesh is not resized in the case z = 0')
+            if return_result:
+                return self
+            else:
+                return
+        
+        if m_x != 1:
+            self.curve_wavefront(-z / (1 - m_x), plane='x')
+        if m_y != 1:
+            self.curve_wavefront(-z / (1 - m_y), plane='y')
+        
+        if fine == 1:
+            self.to_domain('kf')
+        elif fine == -1:
+            self.to_domain('kt')
+        else:
+            self.to_domain('k')
+        
+        if z != 0:
+            H = 1
+            if self.domain_z == 'f':
+                k_x, k_y = np.meshgrid(self.scale_kx(), self.scale_ky())
+                k = self.scale_kz()
+                # H = np.exp(1j * z * (np.sqrt((k**2)[:,np.newaxis,np.newaxis] - (k_x**2)[np.newaxis,:,:] - (k_y**2)[np.newaxis,:,:]) - k[:,np.newaxis,np.newaxis]))
+                # self.fld *= H
+                #for i in range(self.Nz()):
+                #    H = np.exp(1j * z / m * (np.sqrt(k[i] ** 2 - k_x ** 2 - k_y ** 2) - k[i]))
+                #    self.fld[i, :, :] *= H
+                if m_x != 0:
+                    for i in range(self.Nz()):
+                        H=np.exp(1j * z / m_x * (np.sqrt(k[i] ** 2 - k_x ** 2) - k[i]))
+                        self.fld[i, :, :] *= H
+                if m_y != 0:
+                    for i in range(self.Nz()):
+                        H=np.exp(1j * z / m_y * (np.sqrt(k[i] ** 2 - k_y ** 2) - k[i]))
+                        self.fld[i, :, :] *= H           
+            else:
+                k_x, k_y = np.meshgrid(self.scale_kx(), self.scale_ky())
+                k = 2 * np.pi / self.xlamds
+                if m_x != 0:
+                    H*=np.exp(1j * z / m_x * (np.sqrt(k ** 2 - k_x ** 2) - k))                
+                if m_y != 0:
+                    H*=np.exp(1j * z / m_y * (np.sqrt(k ** 2 - k_y ** 2) - k))
+                for i in range(self.Nz()):
+                    self.fld[i, :, :] *= H
+        
+        self.dx *= m_x
+        self.dy *= m_y
+        
+        if return_orig_domains:
+            self.to_domain(domains)
+        if m_x != 1:
+            self.curve_wavefront(-m_x * z / (m_x - 1), plane='x')
+        if m_y != 1:
+            self.curve_wavefront(-m_y * z / (m_y - 1), plane='y')
+        
+        t_func = time.time() - start
+        _logger.debug(ind_str + 'done in %.2f sec' % (t_func))
+        
+        if return_result:
+            copydfl, self = self, copydfl
+            return copydfl
+        
+class HeightProfile: # this one is here because generate_1d_profile is a method
+    """
+    1d surface of mirror
+    """
+
+    def __init__(self):
+        self.N = None #points number
+        self.L = None #length of the surface
+        self.h = None #height profile
+        self.s = None #np.linspace(-L / 2, L / 2, N)
+
+    def hrms(self):
+        return np.sqrt(np.mean(np.square(self.h)))
+
+    def set_hrms(self, rms):
+        self.h *= rms / self.hrms()
+
+    def psd(self):
+        psd = 1 / (self.L * np.pi) * np.square(np.abs(np.fft.fft(self.h) * self.L / self.N))
+        psd = psd[:len(psd) // 2]
+        k = np.pi / self.L * np.linspace(0, self.N, self.N // 2)
+        # k = k[len(k) // 2:]
+        return (k, psd)
+    
+    def generate_1d_profile(self, hrms, L=0.1, N=1000, k_cut=0, psd=None, seed=None):
+        """
+        Method for generating HeightProfile of highly polished mirror surface
+    
+        :param hrms: [meters] height errors root mean square
+        :param L: [meters] length of the surface
+        :param N: number of points (pixels) at the surface
+        :param k_cut: [1/meters] point on k axis for cut off small wavevectors (large wave lengths) in the PSD
+                                        (with default value 0 effects on nothing)
+        :param psd: [meters^3] 1d array; power spectral density of surface (if not specified, will be generated)
+                (if specified, must have shape = (points_number // 2 + 1, ), otherwise it will be cut to appropriate shape)
+        :param seed: seed for np.random.seed() to allow reproducibility
+        :return: HeightProfile object
+        """
+    
+        _logger.info('generating 1d surface with rms: {} m; and shape: {}'.format(hrms, (N,)))
+        _logger.warning(ind_str + 'in beta')
+    
+        # getting the heights map
+        if seed is not None:
+            np.random.seed(seed)
+            
+        if psd is None:
+            k = np.pi / L * np.linspace(0, N, N // 2 + 1)
+            # defining linear function PSD(k) in loglog plane
+            a = -2  # free term of PSD(k) in loglog plane
+            b = -2  # slope of PSD(k) in loglog plane
+            psd = np.exp(a * np.log(10)) * np.exp(b * np.log(k[1:]))
+            psd = np.append(psd[0], psd)  # ??? It doesn*t important, but we need to add that for correct amount of points
+            if k_cut != 0:
+                idx = find_nearest_idx(k, wavevector_cutoff)
+                psd = np.concatenate((np.full(idx, psd[idx]), psd[idx:]))
+        elif psd.shape[0] > N // 2 + 1:
+            psd = psd[:N // 2 + 1]
+    
+        phases = np.random.rand(N // 2 + 1)
+        height_profile = HeightProfile()
+        height_profile.N = N
+        height_profile.L = L
+        height_profile.s = np.linspace(-L / 2, L / 2, N)
+        height_profile.h = (N / L) * np.fft.irfft(np.sqrt(L * psd) * np.exp(1j * phases * 2 * np.pi),
+                                                                   n=N) / np.sqrt(np.pi)
+        # scaling height_map
+        height_profile.set_hrms(hrms)
+        
+        np.random.seed()
+        
+        return height_profile
+
 def imitate_sase_dfl(xlamds, rho=2e-4, seed=None, **kwargs):
     """
     imitation of SASE radiation in 3D
@@ -921,8 +1261,7 @@ def imitate_1d_sase(spec_center=500, spec_res=0.01, spec_width=2.5, spec_range=(
                                   fit_scale='fd', n_events=n_events, **kwargs)
 
     return result
-
-            
+    
 def dfldomain_check(domains, both_req=False):
     err = ValueError(
         'domains should be a string with one or two letters from ("t" or "f") and ("s" or "k"), not {}'.format(
@@ -957,35 +1296,7 @@ def dfldomain_check(domains, both_req=False):
         order does not matter
         
         **kwargs are passed down to self.fft_z and self.fft_xy
-        """            
-#%%    
-### script itself ###
-
-#optics elements check
-#dfl = RadiationField()
-#E_pohoton = 1239.8#200 #central photon energy [eV]
-#kwargs={'xlamds':(h_eV_s * speed_of_light / E_pohoton), #[m] - central wavelength
-#        'rho':1.0e-4, 
-#        'shape':(101,101,11),             #(x,y,z) shape of field matrix (reversed) to dfl.fld
-#        'dgrid':(400e-5,400e-5,35e-6), #(x,y,z) [m] - size of field matrix
-#        'power_rms':(25e-5,25e-5,4e-6),#(x,y,z) [m] - rms size of the radiation distribution (gaussian)
-#        'power_center':(0,0,None),     #(x,y,z) [m] - position of the radiation distribution
-#        'power_angle':(0,0),           #(x,y) [rad] - angle of further radiation propagation
-#        'power_waistpos':(0,0),        #(Z_x,Z_y) [m] downstrean location of the waist of the beam
-#        'wavelength':None,             #central frequency of the radiation, if different from xlamds
-#        'zsep':None,                   #distance between slices in z as zsep*xlamds
-#        'freq_chirp':0,                #dw/dt=[1/fs**2] - requency chirp of the beam around power_center[2]
-#        'en_pulse':None,                #total energy or max power of the pulse, use only one
-#        'power':1e6,
-#        }
-
-#dfl = generate_gaussian_dfl(**kwargs);  #Gaussian beam defenition
-
-
-
-
-
-
+        """                
 
 
 

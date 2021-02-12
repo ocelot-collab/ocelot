@@ -1,4 +1,3 @@
-
 def propagate(optics_line, dfl, optimize=False, dump=False):
     
     if optimize: #not implemented

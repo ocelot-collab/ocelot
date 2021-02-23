@@ -500,32 +500,32 @@ class BeamArray(Beam):
     def add_chirp_poly(self, coeff, s0=None):
         '''
         The method adds a polynomial energy chirp to the beam object. 
-        
+
         coeff   --- coefficients for the chirp
         s0      --- the point with respect to which the chirp will be introduced
-        
+
         The expression for the chirp:
-            
+
         E = E0((g0 + coeff[0])/g0 + 
-            
+
             + coeff[1]*(s - s0))**1 / 1! / ((speed_of_light * 1e-15)**1  * g0) + 
-            
+
             + coeff[2]*(s - s0))**2 / 2! / ((speed_of_light * 1e-15)**2  * g0) + 
-            
+
             + coeff[3]*(s - s0))**3 / 3! / ((speed_of_light * 1e-15)**3  * g0) + ... 
-        
+
         ... + coeff[n]*(s - s0))**n / n! / ((speed_of_light * 1e-15)**n  * g0))
-        
+
         where coeff[n] is represented in [1/fs**n]
         The convention for the coeff is introduced for convenient treatment this
         with respect to a radiation chirp in order to easily satisfy the resonant
         condition along the whole bunch in the case of linear electron bunch chirp. 
         Here is the expresion:
-        
+
             2*dw/dt = (w0/g0) * dg/dt
-        
+
         @author: Andrei Trebushinin
-        
+
         '''
         _logger.debug('introducing a chirp to the ebeam')
         s = self.s
@@ -943,12 +943,12 @@ def get_envelope(p_array, tws_i=Twiss(), bounds=None):
 
     eigemit2 = (1 / np.sqrt(2)) * (np.sqrt(xpx ** 2 - pxpx * xx - 2 * pxpy * xy + 2 * xpy * ypx + ypy ** 2 - pypy * yy
                                            + np.sqrt(
-        (xpx ** 2 - pxpx * xx - 2 * pxpy * xy + 2 * xpy * ypx + ypy ** 2 - pypy * yy) ** 2
-        + 4 * (-2 * pypy * xpx * xy * ypx - xpy ** 2 * ypx ** 2 + pypy * xx * ypx ** 2 + 2 * xpx * xpy * ypx * ypy
-               - xpx ** 2 * ypy ** 2 + pypy * xpx ** 2 * yy
-               + 2 * pxpy * (xpy * xy * ypx + xpx * xy * ypy - xx * ypx * ypy - xpx * xpy * yy)
-               + pxpy ** 2 * (-xy ** 2 + xx * yy)
-               + pxpx * (pypy * xy ** 2 - 2 * xpy * xy * ypy + xx * ypy ** 2 + xpy ** 2 * yy - pypy * xx * yy + 0j)))))
+                                               (xpx ** 2 - pxpx * xx - 2 * pxpy * xy + 2 * xpy * ypx + ypy ** 2 - pypy * yy) ** 2
+                                               + 4 * (-2 * pypy * xpx * xy * ypx - xpy ** 2 * ypx ** 2 + pypy * xx * ypx ** 2 + 2 * xpx * xpy * ypx * ypy
+                                                      - xpx ** 2 * ypy ** 2 + pypy * xpx ** 2 * yy
+                                                      + 2 * pxpy * (xpy * xy * ypx + xpx * xy * ypy - xx * ypx * ypy - xpx * xpy * yy)
+                                                      + pxpy ** 2 * (-xy ** 2 + xx * yy)
+                                                      + pxpx * (pypy * xy ** 2 - 2 * xpy * xy * ypy + xx * ypy ** 2 + xpy ** 2 * yy - pypy * xx * yy + 0j)))))
 
     tws.eigemit_1 = eigemit1.imag  # w[0].imag
     tws.eigemit_2 = eigemit2.imag  # w[2].imag
@@ -1119,7 +1119,7 @@ def beam_matching(parray, bounds, x_opt, y_opt, remove_offsets=True, slice=None)
 
     if slice is not None:
         slice_params = global_slice_analysis(parray, nparts_in_slice=5000, smooth_param=0.05,
-                                                 filter_base=2, filter_iter=2)
+                                             filter_base=2, filter_iter=2)
         if slice == "Imax":
             ind0 = np.argmax(slice_params.I)
         elif slice == "Emax":
@@ -1708,7 +1708,7 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
         x_opt = [tws.alpha_x, tws.beta_x, tws.mux]
         y_opt = [tws.alpha_y, tws.beta_y, tws.muy]
         bounds = [-5, 5]
-        beam_matching(p_array.rparticles, bounds, x_opt, y_opt, remove_offsets=True)
+        beam_matching(p_array, bounds, x_opt, y_opt, remove_offsets=True)
 
     return p_array
 
@@ -1719,7 +1719,7 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
     accepts arguments with the same names as BeamArray().parameters()
     I - current in Amps
     E - beam ebergy in GeV
-    
+
     dE - rms energy spread in GeV
     emit_x, emit_n(both normalized), emit_xn, etc.
     shape - beam shape ('gaussian' of 'flattop')

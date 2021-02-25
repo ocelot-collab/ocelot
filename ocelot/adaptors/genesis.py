@@ -397,9 +397,10 @@ class GenesisInput:
         
         self.shotnoise = 1
 
-        # Free-format text block that is copied to the end of the infile
-        # This might break it, so it is for experts, for instance if you
-        # run a patched version of genesis supporting additional options
+        # Free-format text block that is copied to the end of the infile.
+        # This might break your simulation, so it is for experts.
+        # One possible use-case is with patched versions of genesis that
+        # accept additional options.
         self.infile_expert = None
         
         # paths to files to import
@@ -482,8 +483,8 @@ class GenesisInput:
         # else:
             # inp_txt = inp_txt.replace("__TRAMA__\n", "")
 
-        if self.infile_expert != None:
-            _logger.warning(ind_str + 'using infile_expert mode: incorrect usage might break the simulation')
+        if self.infile_expert is not None:
+            _logger.warning(ind_str + 'using infile_expert mode: incorrect usage of this expert function might break the simulation')
             inp_txt = inp_txt.replace("__EXPERT__", self.infile_expert)   # NOT replacing "\n" in template string: If the user is only using single-line expert string (i.e. specifying one custom option), they don't have to provide trailing \n
         else:
             inp_txt = inp_txt.replace("__EXPERT__\n", "")

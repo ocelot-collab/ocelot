@@ -18,31 +18,37 @@ class OpticsLine():
         self.start = start
         
         _logger.info(ind_str + 'beamline sequence {}'.format(self.sequence))
-
-        try:
-            if start is not None:
-                id1 = self.sequence.index(self.start)
-
-            else:
-                id1 = 0 
-            if stop is not None:
-                id2 = self.sequence.index(self.stop) + 1
-                self.sequence = self.sequence[id1:id2]
-            else: 
-                self.sequence = self.sequence[id1:]
-            _logger.info(ind_str + 'sequence the first element {} and its index {}'.format(self.start, id1))
-            _logger.info(ind_str + 'sequence the last element {} and its index {}'.format(self.start, id2))
-            _logger.info(ind_str + 'beamline sequence {}'.format(self.sequence))
-        except:
-            raise ValueError(ind_str + 'cannot construct sequence, element not found')
-            _logger.error(ind_str + 'cannot construct sequence, element not found')
-
+        
+        self.sequence = self.get_sequence_part(start, stop)
+        
         self.update_optics_masks()
         
+    def get_sequence_part(self, start, stop):
+        try:
+            if start is not None:
+                id1 = self.sequence.index(start)
+            else:
+                id1 = 0 
 
+            _logger.info(ind_str + 'sequence the first element {} and its index {}'.format(self.start, id1))
+
+            if stop is not None:
+                id2 = self.sequence.index(stop) + 1
+                sequence = self.sequence[id1:id2]
+                _logger.info(ind_str + 'sequence the last element {} and its index {}'.format(self.start, id2))
+            else: 
+                sequence = self.sequence[id1:]
+                
+            _logger.info(ind_str + 'beamline sequence {}'.format(self.sequence))
+            
+        except:
+            _logger.error(ind_str + 'cannot construct sequence, element not found')
+            raise
+            
+        return sequence
+        
     def update_optics_masks(self):
         for element in self.sequence:
-            print(element)
 
             get_transfer_function(element)
 

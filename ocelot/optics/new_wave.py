@@ -39,149 +39,7 @@ except ImportError:
 
 __author__ = "Svitozar Serkez, Andrei Trebushinin, Mykola Veremchuk"
 
-### just must to be here for generating dfl :_)
 
-def generate_gaussian_dfl(xlamds=1e-9, shape=(51, 51, 100), dgrid=(1e-3, 1e-3, 50e-6), power_rms=(0.1e-3, 0.1e-3, 5e-6),
-                          power_center=(0, 0, None), power_angle=(0, 0), power_waistpos=(0, 0), wavelength=None,
-                          zsep=None, freq_chirp=0, en_pulse=None, power=1e6, **kwargs):
-    """
-    generates RadiationField object
-    narrow-bandwidth, paraxial approximations
-
-    xlamds [m] - central wavelength
-    shape (x,y,z) - shape of field matrix (reversed) to dfl.fld
-    dgrid (x,y,z) [m] - size of field matrix
-    power_rms (x,y,z) [m] - rms size of the radiation distribution (gaussian)
-    power_center (x,y,z) [m] - position of the radiation distribution
-    power_angle (x,y) [rad] - angle of further radiation propagation
-    power_waistpos (x,y) [m] downstrean location of the waist of the beam
-    wavelength [m] - central frequency of the radiation, if different from xlamds
-    zsep (integer) - distance between slices in z as zsep*xlamds
-    freq_chirp dw/dt=[1/fs**2] - requency chirp of the beam around power_center[2]
-    en_pulse, power = total energy or max power of the pulse, use only one
-    """
-
-    start = time.time()
-
-    if dgrid[2] is not None and zsep is not None:
-        if shape[2] == None:
-            shape = (shape[0], shape[1], int(dgrid[2] / xlamds / zsep))
-        else:
-            _logger.error(ind_str + 'dgrid[2] or zsep should be None, since either determines longiduninal grid size')
-
-    _logger.info('generating radiation field of shape (nz,ny,nx): ' + str(shape))
-    if 'energy' in kwargs:
-        _logger.warn(ind_str + 'rename energy to en_pulse, soon arg energy will be deprecated')
-        en_pulse = kwargs.pop('energy', 1)
-
-    dfl = RadiationField((shape[2], shape[1], shape[0]))
-
-    k = 2 * np.pi / xlamds
-
-    dfl.xlamds = xlamds
-    dfl.domain_z = 't'
-    dfl.domain_xy = 's'
-    dfl.dx = dgrid[0] / dfl.Nx()
-    dfl.dy = dgrid[1] / dfl.Ny()
-
-    if dgrid[2] is not None:
-        dz = dgrid[2] / dfl.Nz()
-        zsep = int(dz / xlamds)
-        if zsep == 0:
-            _logger.warning(
-                ind_str + 'dgrid[2]/dfl.Nz() = dz = {}, which is smaller than xlamds = {}. zsep set to 1'.format(dz,
-                                                                                                                 xlamds))
-            zsep = 1
-        dfl.dz = xlamds * zsep
-    elif zsep is not None:
-        dfl.dz = xlamds * zsep
-    else:
-        _logger.error('dgrid[2] or zsep should be not None, since they determine longiduninal grid size')
-
-    rms_x, rms_y, rms_z = power_rms  # intensity rms [m]
-    _logger.debug(ind_str + 'rms sizes = [{}, {}, {}]m (x,y,z)'.format(rms_x, rms_y, rms_z))
-    xp, yp = power_angle
-    x0, y0, z0 = power_center
-    zx, zy = power_waistpos
-
-    if z0 == None:
-        z0 = dfl.Lz() / 2
-
-    xl = np.linspace(-dfl.Lx() / 2, dfl.Lx() / 2, dfl.Nx())
-    yl = np.linspace(-dfl.Ly() / 2, dfl.Ly() / 2, dfl.Ny())
-    zl = np.linspace(0, dfl.Lz(), dfl.Nz())
-    z, y, x = np.meshgrid(zl, yl, xl, indexing='ij')
-
-    qx = 1j * np.pi * (2 * rms_x) ** 2 / xlamds + zx
-    qy = 1j * np.pi * (2 * rms_y) ** 2 / xlamds + zy
-    qz = 1j * np.pi * (2 * rms_z) ** 2 / xlamds
-
-    if wavelength.__class__ in [list, tuple, np.ndarray] and len(wavelength) == 2:
-        domega = 2 * np.pi * speed_of_light * (1 / wavelength[0] - 1 / wavelength[1])
-        dt = (z[-1, 0, 0] - z[0, 0, 0]) / speed_of_light
-        freq_chirp = domega / dt / 1e30 / zsep
-        # freq_chirp = (wavelength[1] - wavelength[0]) / (z[-1,0,0] - z[0,0,0])
-        _logger.debug(ind_str + 'difference wavelengths {} {}'.format(wavelength[0], wavelength[1]))
-        _logger.debug(ind_str + 'difference z {} {}'.format(z[-1, 0, 0], z[0, 0, 0]))
-        _logger.debug(ind_str + 'd omega {}'.format(domega))
-        _logger.debug(ind_str + 'd t     {}'.format(dt))
-        _logger.debug(ind_str + 'calculated chirp {}'.format(freq_chirp))
-        wavelength = np.mean([wavelength[0], wavelength[1]])
-
-    if wavelength == None and xp == 0 and yp == 0:
-        phase_chirp_lin = 0
-    elif wavelength == None:
-        phase_chirp_lin = x * np.sin(xp) + y * np.sin(yp)
-    else:
-        phase_chirp_lin = (z - z0) / dfl.dz * (dfl.xlamds - wavelength) / wavelength * xlamds * zsep + x * np.sin(
-            xp) + y * np.sin(yp)
-
-    if freq_chirp == 0:
-        phase_chirp_quad = 0
-    else:
-        # print(dfl.scale_z() / speed_of_light * 1e15)
-        # phase_chirp_quad = freq_chirp *((z-z0)/dfl.dz*zsep)**2 * xlamds / 2# / pi**2
-        phase_chirp_quad = freq_chirp / (speed_of_light * 1e-15) ** 2 * (zl - z0) ** 2 * dfl.xlamds  # / pi**2
-        # print(phase_chirp_quad.shape)
-
-    # if qz == 0 or qz == None:
-    #     dfl.fld = np.exp(-1j * k * ( (x-x0)**2/2/qx + (y-y0)**2/2/qy - phase_chirp_lin + phase_chirp_quad ) )
-    # else:
-    arg = np.zeros_like(z).astype('complex128')
-    if qx != 0:
-        arg += (x - x0) ** 2 / 2 / qx
-    if qy != 0:
-        arg += (y - y0) ** 2 / 2 / qy
-    if abs(qz) == 0:
-        idx = abs(zl - z0).argmin()
-        zz = -1j * np.ones_like(arg)
-        zz[idx, :, :] = 0
-        arg += zz
-    else:
-        arg += (z - z0) ** 2 / 2 / qz
-        # print(zz[:,25,25])
-
-    if np.size(phase_chirp_lin) > 1:
-        arg -= phase_chirp_lin
-    if np.size(phase_chirp_quad) > 1:
-        arg += phase_chirp_quad[:, np.newaxis, np.newaxis]
-    dfl.fld = np.exp(-1j * k * arg)  # - (grid[0]-z0)**2/qz
-    # dfl.fld = np.exp(-1j * k * ( (x-x0)**2/2/qx + (y-y0)**2/2/qy + (z-z0)**2/2/qz - phase_chirp_lin + phase_chirp_quad) ) #  - (grid[0]-z0)**2/qz
-
-    if en_pulse != None and power == None:
-        dfl.fld *= np.sqrt(en_pulse / dfl.E())
-    elif en_pulse == None and power != None:
-        dfl.fld *= np.sqrt(power / np.amax(dfl.int_z()))
-    else:
-        _logger.error('Either en_pulse or power should be defined')
-        raise ValueError('Either en_pulse or power should be defined')
-
-    dfl.filePath = ''
-
-    t_func = time.time() - start
-    _logger.debug(ind_str + 'done in %.2f sec' % (t_func))
-
-    return dfl
 
 class Grid:
     """
@@ -190,15 +48,18 @@ class Grid:
     :param shape: number of point in each direction of 3D data mesh
     :param xlamds: carrier wavelength of the wavepacket
     :param used_aprox: the approximation used in solving the wave equation. 
-    OCELOT works in Slowly Varying Amplitude Approximation (SVAA)
+    OCELOT works in Slowly-Varyinig Envelope Approximation (SVEA)
     """
     def __init__(self, shape=(0,0,0)):
         self.dx = []
         self.dy = []
         self.dz = []
-        self.shapes = shape
         self.xlamds = None
-        self.used_aprox = 'SVAA'
+        self.domain_z = 't'   # longitudinal domain (t - time, f - frequency)
+        self.domain_x = 's'   # transverse domain (s - space, k - inverse space)
+        self.domain_y = 's'   # transverse domain (s - space, k - inverse space)
+        self.domain_xy = 's'  # transverse domain (s - space, k - inverse space)
+        self.used_aprox = 'SVEA'
 
     def copy_grid(self, other, version=2):
         """
@@ -214,8 +75,8 @@ class Grid:
             self.xlamds = other.xlamds
             self.used_aprox = other.used_aprox
             
-        elif version == 2: #I(Andrei) had an idea of setting attributes with the same memory
-# address for Mask and RadiationField objects, to synchronize these object attributes "automatically"
+        elif version == 2: #Setting attributes with the same memory may also be a good idea
+        # address for Mask and RadiationField objects, to synchronize these object attributes "automatically"
             attr_list = np.intersect1d(dir(self),dir(other))
             for attr in attr_list:
                 if attr.startswith('__') or callable(getattr(self, attr)):
@@ -225,8 +86,18 @@ class Grid:
             raise ValueError
     
     def shape(self):
-        return self.shapes
-
+        
+        if 'fld' in self.__dict__:
+        
+            return self.fld.shape
+        
+        elif 'msk' in self.__dict__:
+            
+            return self.msk.shape
+        
+        else:        
+            raise KeyError('in the __dict__ must be either "fld" or "msk"')
+            
     def Lz(self):  
         '''
         full longitudinal mesh size
@@ -249,48 +120,91 @@ class Grid:
         '''
         number of points in z
         '''
-        return self.shapes[0]
+        return self.shape()[0]
 
     def Ny(self):
         '''
         number of points in y
         '''
-        return self.shapes[1]
+        return self.shape()[1]
 
     def Nx(self):
         '''
         number of points in x
         '''
-        return self.shapes[2]
+        return self.shape()[2]
     
     def grid_x(self):
+        '''
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
         return np.linspace(-self.Lx() / 2, self.Lx() / 2, self.Nx())
     
     def grid_kx(self):
+        '''
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        
         k = 2 * np.pi / self.dx
         return np.linspace(-k / 2, k / 2, self.Nx())
     
     def grid_y(self):
+        '''
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        
         return np.linspace(-self.Ly() / 2, self.Ly() / 2, self.Ny())
     
     def grid_ky(self):
+        '''
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
         k = 2 * np.pi / self.dy
         return np.linspace(-k / 2, k / 2, self.Ny())
           
     def grid_z(self):
+        '''
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
         return np.linspace(0, self.Lz(), self.Nz())
     
     def grid_kz(self):
+        '''
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
         dk = 2 * pi / self.Lz()
         k = 2 * pi / self.xlamds       
         return np.linspace(k - dk / 2 * self.Nz(), k + dk / 2 * self.Nz(), self.Nz())    
-    
-#    def grid_t(self):
-#        return grid_z()/speed_of_light
-#    
-#    def grid_f(self):
-#        return grid_kz/speed_of_light
-#           
 
 class RadiationField(Grid):
     """
@@ -301,10 +215,10 @@ class RadiationField(Grid):
         Grid.__init__(self, shape=shape)
         self.fld = np.zeros(shape, dtype=complex128)  # (z,y,x)
         self.xlamds = None    # carrier wavelength [m]
-        self.domain_z = 't'   # longitudinal domain (t - time, f - frequency)
-        self.domain_x = 's'   # transverse domain (s - space, k - inverse space)
-        self.domain_y = 's'   # transverse domain (s - space, k - inverse space)
-        self.domain_xy = 's'  # transverse domain (s - space, k - inverse space)
+        # self.domain_z = 't'   # longitudinal domain (t - time, f - frequency)
+        # self.domain_x = 's'   # transverse domain (s - space, k - inverse space)
+        # self.domain_y = 's'   # transverse domain (s - space, k - inverse space)
+        # self.domain_xy = 's'  # transverse domain (s - space, k - inverse space)
         self.filePath = ''
                       
     def fileName(self):
@@ -337,11 +251,11 @@ class RadiationField(Grid):
     def __setitem__(self, i, fld):
         self.fld[i] = fld
 
-    def shape(self):
-        '''
-        returns the shape of fld attribute
-        '''
-        return self.fld.shape
+    # def shape(self):
+    #     '''
+    #     returns the shape of fld attribute
+    #     '''
+    #     return self.fld.shape
 
     def domains(self):
         '''
@@ -1006,6 +920,152 @@ class HeightProfile: # this one is here because generate_1d_profile is a method
         np.random.seed()
         
         return height_profile
+
+
+### just must to be here for generating dfl :_)
+
+def generate_gaussian_dfl(xlamds=1e-9, shape=(51, 51, 100), dgrid=(1e-3, 1e-3, 50e-6), power_rms=(0.1e-3, 0.1e-3, 5e-6),
+                          power_center=(0, 0, None), power_angle=(0, 0), power_waistpos=(0, 0), wavelength=None,
+                          zsep=None, freq_chirp=0, en_pulse=None, power=1e6, **kwargs):
+    """
+    generates RadiationField object
+    narrow-bandwidth, paraxial approximations
+
+    xlamds [m] - central wavelength
+    shape (x,y,z) - shape of field matrix (reversed) to dfl.fld
+    dgrid (x,y,z) [m] - size of field matrix
+    power_rms (x,y,z) [m] - rms size of the radiation distribution (gaussian)
+    power_center (x,y,z) [m] - position of the radiation distribution
+    power_angle (x,y) [rad] - angle of further radiation propagation
+    power_waistpos (x,y) [m] downstrean location of the waist of the beam
+    wavelength [m] - central frequency of the radiation, if different from xlamds
+    zsep (integer) - distance between slices in z as zsep*xlamds
+    freq_chirp dw/dt=[1/fs**2] - requency chirp of the beam around power_center[2]
+    en_pulse, power = total energy or max power of the pulse, use only one
+    """
+
+    start = time.time()
+
+    if dgrid[2] is not None and zsep is not None:
+        if shape[2] == None:
+            shape = (shape[0], shape[1], int(dgrid[2] / xlamds / zsep))
+        else:
+            _logger.error(ind_str + 'dgrid[2] or zsep should be None, since either determines longiduninal grid size')
+
+    _logger.info('generating radiation field of shape (nz,ny,nx): ' + str(shape))
+    if 'energy' in kwargs:
+        _logger.warn(ind_str + 'rename energy to en_pulse, soon arg energy will be deprecated')
+        en_pulse = kwargs.pop('energy', 1)
+
+    dfl = RadiationField((shape[2], shape[1], shape[0]))
+
+    k = 2 * np.pi / xlamds
+
+    dfl.xlamds = xlamds
+    dfl.domain_z = 't'
+    dfl.domain_xy = 's'
+    dfl.dx = dgrid[0] / dfl.Nx()
+    dfl.dy = dgrid[1] / dfl.Ny()
+
+    if dgrid[2] is not None:
+        dz = dgrid[2] / dfl.Nz()
+        zsep = int(dz / xlamds)
+        if zsep == 0:
+            _logger.warning(
+                ind_str + 'dgrid[2]/dfl.Nz() = dz = {}, which is smaller than xlamds = {}. zsep set to 1'.format(dz,
+                                                                                                                 xlamds))
+            zsep = 1
+        dfl.dz = xlamds * zsep
+    elif zsep is not None:
+        dfl.dz = xlamds * zsep
+    else:
+        _logger.error('dgrid[2] or zsep should be not None, since they determine longiduninal grid size')
+
+    rms_x, rms_y, rms_z = power_rms  # intensity rms [m]
+    _logger.debug(ind_str + 'rms sizes = [{}, {}, {}]m (x,y,z)'.format(rms_x, rms_y, rms_z))
+    xp, yp = power_angle
+    x0, y0, z0 = power_center
+    zx, zy = power_waistpos
+
+    if z0 == None:
+        z0 = dfl.Lz() / 2
+
+    xl = np.linspace(-dfl.Lx() / 2, dfl.Lx() / 2, dfl.Nx())
+    yl = np.linspace(-dfl.Ly() / 2, dfl.Ly() / 2, dfl.Ny())
+    zl = np.linspace(0, dfl.Lz(), dfl.Nz())
+    z, y, x = np.meshgrid(zl, yl, xl, indexing='ij')
+
+    qx = 1j * np.pi * (2 * rms_x) ** 2 / xlamds + zx
+    qy = 1j * np.pi * (2 * rms_y) ** 2 / xlamds + zy
+    qz = 1j * np.pi * (2 * rms_z) ** 2 / xlamds
+
+    if wavelength.__class__ in [list, tuple, np.ndarray] and len(wavelength) == 2:
+        domega = 2 * np.pi * speed_of_light * (1 / wavelength[0] - 1 / wavelength[1])
+        dt = (z[-1, 0, 0] - z[0, 0, 0]) / speed_of_light
+        freq_chirp = domega / dt / 1e30 / zsep
+        # freq_chirp = (wavelength[1] - wavelength[0]) / (z[-1,0,0] - z[0,0,0])
+        _logger.debug(ind_str + 'difference wavelengths {} {}'.format(wavelength[0], wavelength[1]))
+        _logger.debug(ind_str + 'difference z {} {}'.format(z[-1, 0, 0], z[0, 0, 0]))
+        _logger.debug(ind_str + 'd omega {}'.format(domega))
+        _logger.debug(ind_str + 'd t     {}'.format(dt))
+        _logger.debug(ind_str + 'calculated chirp {}'.format(freq_chirp))
+        wavelength = np.mean([wavelength[0], wavelength[1]])
+
+    if wavelength == None and xp == 0 and yp == 0:
+        phase_chirp_lin = 0
+    elif wavelength == None:
+        phase_chirp_lin = x * np.sin(xp) + y * np.sin(yp)
+    else:
+        phase_chirp_lin = (z - z0) / dfl.dz * (dfl.xlamds - wavelength) / wavelength * xlamds * zsep + x * np.sin(
+            xp) + y * np.sin(yp)
+
+    if freq_chirp == 0:
+        phase_chirp_quad = 0
+    else:
+        # print(dfl.scale_z() / speed_of_light * 1e15)
+        # phase_chirp_quad = freq_chirp *((z-z0)/dfl.dz*zsep)**2 * xlamds / 2# / pi**2
+        phase_chirp_quad = freq_chirp / (speed_of_light * 1e-15) ** 2 * (zl - z0) ** 2 * dfl.xlamds  # / pi**2
+        # print(phase_chirp_quad.shape)
+
+    # if qz == 0 or qz == None:
+    #     dfl.fld = np.exp(-1j * k * ( (x-x0)**2/2/qx + (y-y0)**2/2/qy - phase_chirp_lin + phase_chirp_quad ) )
+    # else:
+    arg = np.zeros_like(z).astype('complex128')
+    if qx != 0:
+        arg += (x - x0) ** 2 / 2 / qx
+    if qy != 0:
+        arg += (y - y0) ** 2 / 2 / qy
+    if abs(qz) == 0:
+        idx = abs(zl - z0).argmin()
+        zz = -1j * np.ones_like(arg)
+        zz[idx, :, :] = 0
+        arg += zz
+    else:
+        arg += (z - z0) ** 2 / 2 / qz
+        # print(zz[:,25,25])
+
+    if np.size(phase_chirp_lin) > 1:
+        arg -= phase_chirp_lin
+    if np.size(phase_chirp_quad) > 1:
+        arg += phase_chirp_quad[:, np.newaxis, np.newaxis]
+    dfl.fld = np.exp(-1j * k * arg)  # - (grid[0]-z0)**2/qz
+    # dfl.fld = np.exp(-1j * k * ( (x-x0)**2/2/qx + (y-y0)**2/2/qy + (z-z0)**2/2/qz - phase_chirp_lin + phase_chirp_quad) ) #  - (grid[0]-z0)**2/qz
+
+    if en_pulse != None and power == None:
+        dfl.fld *= np.sqrt(en_pulse / dfl.E())
+    elif en_pulse == None and power != None:
+        dfl.fld *= np.sqrt(power / np.amax(dfl.int_z()))
+    else:
+        _logger.error('Either en_pulse or power should be defined')
+        raise ValueError('Either en_pulse or power should be defined')
+
+    dfl.filePath = ''
+
+    t_func = time.time() - start
+    _logger.debug(ind_str + 'done in %.2f sec' % (t_func))
+
+    return dfl
+
 
 def imitate_sase_dfl(xlamds, rho=2e-4, seed=None, **kwargs):
     """

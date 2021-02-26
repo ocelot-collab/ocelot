@@ -29,7 +29,7 @@ class FreeSpace(OpticsElement):
     :param mx: is the output x mesh size in terms of input mesh size (mx = Lx_out/Lx_inp)
     :param my: is the output y mesh size in terms of input mesh size (my = Ly_out/Ly_inp)
     """
-    def __init__(self, l=0., mx=1, my=1, method='PropMask_kf', eid=None):
+    def __init__(self, l=0., mx=1, my=1, method='PropMask', eid=None):
         OpticsElement.__init__(self, eid=eid)
         self.l = l
         self.mx = mx

@@ -26,9 +26,10 @@ class Mask(Grid):
     """
     def __init__(self, shape=(0, 0, 0)):
         Grid.__init__(self, shape=shape)
-        self.domain_z = 't'   # longitudinal domain (t - time, f - frequency)
-        self.domain_x = 's'   # transverse domain (s - space, k - inverse space)
-        self.domain_y = 's'   # transverse domain (s - space, k - inverse space)
+        self.msk = None#np.zeros(shape, dtype=complex128)  # (z,y,x)
+        # self.domain_z = 't'   # longitudinal domain (t - time, f - frequency)
+        # self.domain_x = 's'   # transverse domain (s - space, k - inverse space)
+        # self.domain_y = 's'   # transverse domain (s - space, k - inverse space)
         
     def __mul__(self, other):#check this stuff when it will been needed
         """
@@ -39,7 +40,13 @@ class Mask(Grid):
             m.mask = self.mask * other.mask
             return m
         else: ValueError("'other' must belong to Mask class") 
-
+    
+    # def _shape(self):
+    #     '''
+    #     returns the shape of fld attribute
+    #     '''
+    #     return self.mask.shape
+    
 class PropMask(Mask):
     """
     Angular-spectrum propagation for fieldfile
@@ -66,7 +73,7 @@ class PropMask(Mask):
         Mask.__init__(self)
         self.z0 = z0 
         self.method = method
-        self.mask = None
+        # self.mask = None
 
     def apply(self, dfl):
         """
@@ -98,10 +105,10 @@ class PropMask(Mask):
         else:
             raise ValueError("propagation method should be 'PropMask', 'PropMask_kf' or 'PropMask_kt'")
                          
-        if self.mask is None:
+        if self.msk is None:
             self.get_mask(dfl) # get H transfer function 
 
-        dfl.fld *= self.mask # E = E_0 * H convolution in inverse space domain
+        dfl.fld *= self.msk # E = E_0 * H convolution in inverse space domain
         
         dfl.to_domain(domains) # back to original domain  
 
@@ -118,18 +125,27 @@ class PropMask(Mask):
         """
         self.copy_grid(dfl)
        
-        k_x, k_y = np.meshgrid(self.grid_kx(), self.grid_ky())
+        k_x, k_y = np.meshgrid(dfl.grid_kx(), dfl.grid_ky())
+        
+        _logger.debug(ind_str + 'calculating mask in "{}" domain'.format(dfl.domain_z))                 
         
         if dfl.domain_z == 'f':
-            k = self.grid_kz()
-            self.mask = [np.exp(1j * self.z0 * (np.sqrt(k[i] ** 2 - k_x ** 2 - k_y ** 2) - k[i])) for i in range(dfl.Nz())] 
+            k = dfl.grid_kz()
+            self.msk = np.ones(dfl.shape(), dtype=complex128)
+            # self.msk = [np.exp(1j * self.z0 * (np.sqrt(k[i] ** 2 - k_x ** 2 - k_y ** 2) - k[i])) for i in range(dfl.Nz())] 
+            for i in range(dfl.Nz()):
+                self.msk[i,:,:] *= np.exp(1j * self.z0 * (np.sqrt(k[i] ** 2 - k_x ** 2 - k_y ** 2) - k[i]))
+
         elif dfl.domain_z == 't':
             k = 2 * np.pi / self.xlamds
-            self.mask = [np.exp(1j * self.z0 * (np.sqrt(k ** 2 - k_x ** 2 - k_y ** 2) - k)) for i in range(dfl.Nz())]
+            self.msk = np.ones(dfl.shape()[1:3], dtype=complex128)
+            self.msk = np.exp(1j * self.z0 * (np.sqrt(k ** 2 - k_x ** 2 - k_y ** 2) - k))
+        
         else: 
             raise ValueError('wrong field domain, domain must be ks or kf ')    
-            
-        return self.mask
+ 
+        _logger.debug(ind_str + 'transfer function mask shape {}'.format(self.msk.shape))         
+        return self.msk
 
 class Prop_mMask(Mask):
     """
@@ -154,15 +170,54 @@ class Prop_mMask(Mask):
     z<0 -> backward direction
     z=0 return original
     """   
+    
     def __init__(self, z0, mx, my, method):
         Mask.__init__(self)
         self.z0 = z0
         self.mx = mx
         self.my = my
         self.method = method
-        self.mask = None
 
+    def get_mask(self, dfl):
+        """
+        'get_mask' method for Prop_mMask class
+        find the transfer function for propagation in 'kf' of 'ks' domains
+        H = exp(iz0(k^2 - kx^2 - ky^2)^(1/2) - k) 
+        """
+        self.copy_grid(dfl)
+        
+        k_x, k_y = np.meshgrid(dfl.grid_kx(), dfl.grid_ky())
+
+        _logger.debug(ind_str + 'calculating mask in "{}" domain'.format(dfl.domain_z))                 
+        if dfl.domain_z == 'f':
+            # self.msk = np.array([])#np.zeros(dfl.shape(), dtype=complex128)#np.ones(dfl.shape(), dtype=complex128)
+            self.msk = np.ones(dfl.shape(), dtype=complex128)
+            k = dfl.grid_kz()
+            if self.mx != 0:
+#                self.mask[i,:,:] *= [np.exp(1j * self.z0/self.mx * (np.sqrt(k[i] ** 2 - k_x ** 2) - k[i])) for i in range(dfl.Nz())] #Hx = exp(iz0/mx(k^2 - kx^2)^(1/2) - k)
+                for i in range(dfl.Nz()):
+                    self.msk[i,:,:] *= np.exp(1j * self.z0 / self.mx * (np.sqrt(k[i] ** 2 - k_x ** 2) - k[i]))
+            if self.my != 0:
+#                self.mask[i,:,:] *= [np.exp(1j * self.z0/self.my * (np.sqrt(k[i] ** 2 - k_y ** 2) - k[i])) for i in range(dfl.Nz())] #Hy = exp(iz0/my(k^2 - ky^2)^(1/2) - k)                   
+                for i in range(dfl.Nz()):
+                    self.msk[i,:,:] *= np.exp(1j * self.z0 / self.my * (np.sqrt(k[i] ** 2 - k_y ** 2) - k[i]))
+        
+        elif dfl.domain_z == 't':
+            self.msk = np.ones(dfl.shape()[1:3], dtype=complex128)
+            k = 2 * np.pi / self.xlamds
+            
+            if self.mx != 0:
+                self.msk*= np.exp(1j * self.z0/self.mx * (np.sqrt(k ** 2 - k_x ** 2) - k))# for i in range(dfl.Nz())] 
+            if self.my != 0:
+                self.msk*= np.exp(1j * self.z0/self.my * (np.sqrt(k ** 2 - k_y ** 2) - k))# for i in range(dfl.Nz())]          
+        else: 
+            raise ValueError("wrong field domain, domain must be 'ks' or 'kf'")    
+
+        _logger.debug(ind_str + 'transfer function mask shape {}'.format(self.msk.shape))         
+        return self.msk    
+    
     def apply(self, dfl):
+        
         """
         'apply' method for Prop_mMask class 
         
@@ -201,10 +256,10 @@ class Prop_mMask(Mask):
         else:
             raise ValueError("propagation method should be 'PropMask', 'PropMask_kf' or 'PropMask_kt'")
         
-        if self.mask is None:
-            self.get_mask(dfl) # get H transfer function 
+        if self.msk is None:
+            self.msk = self.get_mask(dfl) # get H transfer function 
             
-        dfl.fld *= self.mask #E = E_0 * H convolution in inverse space domain
+        dfl.fld *= self.msk #E = E_0 * H convolution in inverse space domain
                
         dfl.dx *= self.mx #transform grid to output mesh size
         dfl.dy *= self.my        
@@ -225,35 +280,6 @@ class Prop_mMask(Mask):
         
         return dfl
     
-    def get_mask(self, dfl):
-        """
-        'get_mask' method for Prop_mMask class
-        find the transfer function for propagation in 'kf' of 'ks' domains
-        H = exp(iz0(k^2 - kx^2 - ky^2)^(1/2) - k) 
-        """
-        self.copy_grid(dfl)
-        
-        k_x, k_y = np.meshgrid(self.grid_kx(), self.grid_ky())
-        if dfl.domain_z == 'f':
-            self.mask = np.ones(dfl.shape(), dtype=complex128)
-            k = self.grid_kz()
-            if self.mx != 0:
-#                self.mask[i,:,:] *= [np.exp(1j * self.z0/self.mx * (np.sqrt(k[i] ** 2 - k_x ** 2) - k[i])) for i in range(dfl.Nz())] #Hx = exp(iz0/mx(k^2 - kx^2)^(1/2) - k)
-                for i in range(self.Nz()):
-                    self.mask[i,:,:] *= np.exp(1j * self.z0 / self.mx * (np.sqrt(k[i] ** 2 - k_x ** 2) - k[i]))
-            if self.my != 0:
-#                self.mask[i,:,:] *= [np.exp(1j * self.z0/self.my * (np.sqrt(k[i] ** 2 - k_y ** 2) - k[i])) for i in range(dfl.Nz())] #Hy = exp(iz0/my(k^2 - ky^2)^(1/2) - k)                   
-                for i in range(self.Nz()):
-                    self.mask[i,:,:] *= np.exp(1j * self.z0 / self.my * (np.sqrt(k[i] ** 2 - k_y ** 2) - k[i]))
-        elif dfl.domain_z == 't':
-            k = 2 * np.pi / self.xlamds
-            Hx = [np.exp(1j * self.z0/self.mx * (np.sqrt(k ** 2 - k_x ** 2) - k)) for i in range(dfl.Nz())] 
-            Hy = [np.exp(1j * self.z0/self.my * (np.sqrt(k ** 2 - k_y ** 2) - k)) for i in range(dfl.Nz())]          
-            self.mask = Hx*Hy
-        else: 
-            raise ValueError("wrong field domain, domain must be 'ks' or 'kf'")    
-            
-        return self.mask    
     
 class QuadCurvMask(Mask):
     """
@@ -268,8 +294,54 @@ class QuadCurvMask(Mask):
         Mask.__init__(self)
         self.r = r 
         self.plane = plane 
-        self.mask = None 
+        # self.mask = None 
+    
+    def get_mask(self, dfl):
+        """
+        'get_mask' method for QuadCurvMask class      
+        
+        TODO write a description 
+        """        
+        self.copy_grid(dfl)
+       
+        x, y = np.meshgrid(dfl.grid_x(), dfl.grid_y())
+        if self.plane == 'xy' or self.plane == 'yx':
+            arg2 = x ** 2 + y ** 2
+        elif self.plane == 'x':
+            arg2 = x ** 2
+        elif self.plane == 'y':
+            arg2 = y ** 2
+        else:
+            raise ValueError("'plane' should be in 'x', 'y'")
 
+        _logger.debug(ind_str + 'calculating mask in "{}" domain'.format(dfl.domain_z))     
+            
+        if self.domain_z == 'f':
+            k = 2 * np.pi /dfl.grid_kz() 
+            self.msk = np.ones(dfl.shape(), dtype=complex128)
+    
+            if np.size(self.r) == 1:
+                self.msk *= np.exp(-1j * k[:, np.newaxis, np.newaxis] / 2 * arg2[np.newaxis, :, :] / self.r) #H = exp(-i * k / 2 * (x^2 + y^2))
+            elif np.size(self.r) == dfl.Nz():
+                self.msk *= np.exp(-1j * k[:, np.newaxis, np.newaxis] / 2 * arg2[np.newaxis, :, :] / self.r[:, np.newaxis, np.newaxis])
+            else:
+                raise ValueError('wrong dimensions of radius of curvature')    
+
+        elif self.domain_z == 't':
+            k = 2 * np.pi / dfl.xlamds
+            self.msk = np.ones(dfl.shape()[1:3], dtype=complex128)
+            if np.size(self.r) == 1:
+                self.msk = np.exp(-1j * k / 2 * arg2 / self.r)
+            elif np.size(self.r) == dfl.Nz():
+                self.msk = np.exp(-1j * k / 2 * arg2[np.newaxis, :, :] / self.r[:, np.newaxis, np.newaxis])
+            else:
+                raise ValueError('wrong dimensions of radius of curvature')
+        else:
+            raise ValueError("domain_z should be in 'f', 't'")
+        _logger.debug(ind_str + 'transfer function mask shape {}'.format(self.msk.shape))         
+    
+        return self.msk
+    
     def apply(self, dfl):
         """
         'apply' method for QuadCurvMask class      
@@ -297,56 +369,14 @@ class QuadCurvMask(Mask):
             else:
                 pass
             
-        if self.mask is None:
+        if self.msk is None:
             self.get_mask(dfl) 
     
         dfl.to_domain(self.domain_z + 's')
-        dfl.fld *= self.mask 
+        dfl.fld *= self.msk 
         dfl.to_domain(domains) 
 
         return dfl
-    
-    def get_mask(self, dfl):
-        """
-        'get_mask' method for QuadCurvMask class      
-        
-        TODO write a description 
-        """        
-        self.copy_grid(dfl)
-       
-        x, y = np.meshgrid(self.grid_x(), self.grid_y())
-        if self.plane == 'xy' or self.plane == 'yx':
-            arg2 = x ** 2 + y ** 2
-        elif self.plane == 'x':
-            arg2 = x ** 2
-        elif self.plane == 'y':
-            arg2 = y ** 2
-        else:
-            raise ValueError("'plane' should be in 'x', 'y'")
-
-        if self.domain_z == 'f':
-            k = 2 * np.pi /dfl.grid_z() 
-
-            if np.size(self.r) == 1:
-                self.mask = np.exp(-1j * k[:, np.newaxis, np.newaxis] / 2 * arg2[np.newaxis, :, :] / self.r) #H = exp(-i * k / 2 * (x^2 + y^2))
-            elif np.size(self.r) == dfl.Nz():
-                self.mask = np.exp(-1j * k[:, np.newaxis, np.newaxis] / 2 * arg2[np.newaxis, :, :] / self.r[:, np.newaxis, np.newaxis])
-            else:
-                raise ValueError('wrong dimensions of radius of curvature')    
-
-        elif self.domain_z == 't':
-            k = 2 * np.pi / dfl.xlamds
-
-            if np.size(self.r) == 1:
-                self.mask = np.exp(-1j * k / 2 * arg2 / self.r)
-            elif np.size(self.r) == dfl.Nz():
-                self.mask = np.exp(-1j * k / 2 * arg2[np.newaxis, :, :] / self.r[:, np.newaxis, np.newaxis])
-            else:
-                raise ValueError('wrong dimensions of radius of curvature')
-        else:
-            raise ValueError("domain_z should be in 'f', 't'")
-            
-        return self.mask
 
 class LensMask(Mask):
     """
@@ -359,17 +389,16 @@ class LensMask(Mask):
         Mask.__init__(self)
         self.fx = fx
         self.fy = fy
-        self.mask = None
               
     def apply(self, dfl):
         _logger.info('apply the lens mask')
         domains = dfl.domains()
 
-        if self.mask is None:
+        if self.msk is None:
             self.get_mask(dfl)
                 
         dfl.to_domain('fs')
-        dfl.fld *= self.mask
+        dfl.fld *= self.msk
         dfl.to_domain(domains)
         
         return dfl
@@ -379,9 +408,9 @@ class LensMask(Mask):
         _logger.info('get the lens mask')        
         H_fx = QuadCurvMask(r=self.fx, plane='x').get_mask(dfl)        
         H_fy = QuadCurvMask(r=self.fy, plane='y').get_mask(dfl)
-        self.mask = H_fx * H_fy
+        self.msk = H_fx * H_fy
       
-        return self.mask
+        return self.msk
     
 class ApertureRectMask(Mask):
     """
@@ -399,36 +428,7 @@ class ApertureRectMask(Mask):
         self.ly = ly
         self.cx = cx
         self.cy = cy
-        self.mask = None
-
-    def apply(self, dfl):
-        
-        domains = dfl.domain_z, dfl.domain_xy
-        self.domain_x = 's'
-        self.domain_y = 's'
-        if self.domain_z is None:
-            self.domain_z = dfl.domain_z
-        
-        dfl.to_domain(self.domain_z + 's')
-
-        if self.mask is None:
-            self.get_mask(dfl)
-                
-        mask_idx = np.where(self.mask == 0)
-
-        dfl_energy_orig = dfl.E()
-        dfl.fld[:, mask_idx[0], mask_idx[1]] = 0
-
-        if dfl_energy_orig == 0:
-            _logger.warn(ind_str + 'dfl_energy_orig = 0')
-        elif dfl.E() == 0:
-            _logger.warn(ind_str + 'done, %.2f%% energy lost' % (100))
-        else:
-            _logger.info(ind_str + 'done, %.2f%% energy lost' % ((dfl_energy_orig - dfl.E()) / dfl_energy_orig * 100))
-        
-        dfl.to_domain(domains) 
-        return dfl
-
+        # self.mask = None
     def get_mask(self, dfl):
         """
         model a rectangular aperture to the radaition in 's' domain
@@ -443,23 +443,51 @@ class ApertureRectMask(Mask):
             self.ly = [-self.ly / 2, self.ly / 2]
         _logger.debug(ind_str + 'ap_x = {}'.format(self.lx))
         _logger.debug(ind_str + 'ap_y = {}'.format(self.ly ))
-        print(self.lx, self.ly)
         
-        idx_x = np.where((self.grid_x() >= self.lx[0]) & (self.grid_x() <= self.lx[1]))[0]
+        idx_x = np.where((dfl.grid_x() >= self.lx[0]) & (dfl.grid_x() <= self.lx[1]))[0]
         idx_x1 = idx_x[0]# + 1 #magic number
         idx_x2 = idx_x[-1]  
 
-        idx_y = np.where((self.grid_y() >= self.ly[0]) & (self.grid_y() <= self.ly[1]))[0]
+        idx_y = np.where((dfl.grid_y() >= self.ly[0]) & (dfl.grid_y() <= self.ly[1]))[0]
         idx_y1 = idx_y[0]# + 1 #magic number
         idx_y2 = idx_y[-1]# + 1 #magic number
 
         _logger.debug(ind_str + 'idx_x = {}-{}'.format(idx_x1, idx_x2))
         _logger.debug(ind_str + 'idx_y = {}-{}'.format(idx_y1, idx_y2))
 
-        self.mask = np.zeros_like(dfl.fld[0, :, :])
-        self.mask[idx_y1:idx_y2, idx_x1:idx_x2] = 1
+        self.msk = np.zeros_like(dfl.fld[0, :, :])
+        self.msk[idx_y1:idx_y2, idx_x1:idx_x2] = 1
+        _logger.debug(ind_str + 'transfer function mask shape {}'.format(self.msk.shape))         
+
+        return self.msk
+    
+    def apply(self, dfl):
         
-        return self.mask
+        domains = dfl.domain_z, dfl.domain_xy
+        self.domain_x = 's'
+        self.domain_y = 's'
+        if self.domain_z is None:
+            self.domain_z = dfl.domain_z
+        
+        dfl.to_domain(self.domain_z + 's')
+
+        if self.msk is None:
+            self.get_mask(dfl)
+                
+        mask_idx = np.where(self.msk == 0)
+
+        dfl_energy_orig = dfl.E()
+        dfl.fld[:, mask_idx[0], mask_idx[1]] = 0
+
+        if dfl_energy_orig == 0:
+            _logger.warn(ind_str + 'dfl_energy_orig = 0')
+        elif dfl.E() == 0:
+            _logger.warn(ind_str + 'done, %.2f%% energy lost' % (100))
+        else:
+            _logger.info(ind_str + 'done, %.2f%% energy lost' % ((dfl_energy_orig - dfl.E()) / dfl_energy_orig * 100))
+        
+        dfl.to_domain(domains) 
+        return dfl
 
 class ApertureEllipsMask(Mask):
     """
@@ -477,10 +505,10 @@ class ApertureEllipsMask(Mask):
         self.ay = ay
         self.cx = cx
         self.cy = cy
-        self.mask = None 
+        # self.mask = None 
     
     def ellipse(self, dfl):    
-        x, y = np.meshgrid(self.grid_x(), self.grid_y())
+        x, y = np.meshgrid(dfl.grid_x(), dfl.grid_y())
         xp =  (x - self.cx)*np.cos(pi) + (y - self.cy)*np.sin(pi)
         yp = -(x - self.cx)*np.sin(pi) + (y - self.cy)*np.cos(pi)
         return (2*xp/self.ax)**2 + (2*yp/self.ay)**2
@@ -501,10 +529,10 @@ class ApertureEllipsMask(Mask):
             self.domain_z = dfl.domain_z
         
         dfl.to_domain(self.domain_z + 's')
-        if self.mask is None:
+        if self.msk is None:
             self.get_mask(dfl)
         
-        mask_idx = np.where(self.mask == 0)
+        mask_idx = np.where(self.msk == 0)
 
         dfl_energy_orig = dfl.E()
         dfl.fld[:, mask_idx[0], mask_idx[1]] = 0
@@ -523,10 +551,10 @@ class ApertureEllipsMask(Mask):
         
         self.copy_grid(dfl)
         
-        self.mask = np.zeros_like(dfl.fld[0, :, :])
-        self.mask[self.ellipse(dfl) <= 1] = 1
+        self.msk = np.zeros_like(dfl.fld[0, :, :])
+        self.msk[self.ellipse(dfl) <= 1] = 1
         
-        return self.mask
+        return self.msk
 
 class PhaseDelayMask(Mask):
     """
@@ -546,18 +574,18 @@ class PhaseDelayMask(Mask):
         Mask.__init__(self)
         self.coeff = coeff
         self.E_ph0 = E_ph0
-        self.mask = None
+        # self.mask = None
         
     def apply(self, dfl):
         
         _logger.info('apply the frequency chirp')
         domains = dfl.domains()
         
-        if self.mask is None: 
+        if self.msk is None: 
             self.get_mask(dfl)
         
         dfl.to_domain('f')
-        dfl.fld *= self.mask
+        dfl.fld *= self.msk
         dfl.to_domain(domains)
         
         _logger.info('done')
@@ -582,7 +610,7 @@ class PhaseDelayMask(Mask):
         else:
             raise ValueError("E_ph0 must be None or 'center' or some number")
 
-        w = self.grid_kz() * speed_of_light
+        w = dfl.grid_kz() * speed_of_light
         delta_w = w - w0
 
         _logger.debug('calculating phase delay')
@@ -596,67 +624,13 @@ class PhaseDelayMask(Mask):
         _logger.debug(ind_str + 'delta_phi[0] = {}'.format(delta_phi[0]))
         _logger.debug(ind_str + 'delta_phi[-1] = {}'.format(delta_phi[-1]))
 
-        self.mask = np.exp(-1j * delta_phi)[:, np.newaxis, np.newaxis]
+        self.msk = np.exp(-1j * delta_phi)[:, np.newaxis, np.newaxis]
 
         _logger.debug(ind_str + 'done')
         
-        return self.mask
+        return self.msk
         
-class MirrorMask(Mask):
-    """
-    Class for simulating HeightProfile of highly polished mirror surface
-    
-    TODO
-    write documentation
-    add logging
-    """
-    def __init__(self, height_profile=None, hrms=0, angle=2*np.pi/180, plane='x', lx=np.inf, ly=np.inf, eid=None, shape=(0, 0, 0)):
-        Mask.__init__(self, shape=shape)
-        self.height_profile = height_profile 
-        self.hrms = hrms #must have a size equals 2 
-        self.angle = angle
-        self.mask = None
-        self.eid = eid
-        
-        if plane is 'x':
-            self.lx = lx/np.sin(self.angle)
-            self.ly = ly
-        elif plane is 'y':
-            self.lx = lx
-            self.ly = ly/np.sin(self.angle)
-        else:
-            raise ValueError(" 'plane' must be 'x' or 'y' ")
-
-    def apply(self, dfl):
-        
-        _logger.info('apply HeightProfile errors')
-        start = time.time()
-
-        if self.mask is None: 
-            self.get_mask(dfl)
-
-        dfl.fld *= self.mask
-        
-        t_func = time.time() - start
-        _logger.debug(ind_str + 'done in {}'.format(t_func))
-
-
-    def get_mask(self, dfl):
-        _logger.info('getting HeightProfile errors')
-        
-        if self.mask is None:
-            heightErr_x = HeightErrorMask_1D(height_profile=self.height_profile, hrms=self.hrms, axis='x', angle=self.angle)
-            heightErr_x.get_mask(dfl) 
-            heightErr_y = HeightErrorMask_1D(height_profile=self.height_profile, hrms=self.hrms, axis='y', angle=self.angle)
-            heightErr_y.get_mask(dfl) 
-            RectApp = ApertureRectMask()
-            RectApp.lx = self.lx
-            RectApp.ly = self.ly           
-            RectApp.get_mask(dfl)
-            self.mask = heightErr_x.mask * heightErr_y.mask * RectApp.mask
-        return self.mask
-        
-        
+     
 class HeightErrorMask_1D(Mask):
     """
     Mask for simulating HeightProfile of highly polished mirror surface
@@ -674,7 +648,7 @@ class HeightErrorMask_1D(Mask):
 
     def __init__(self, height_profile=None, hrms=0, axis='x', angle=np.pi * 2 / 180, seed=None):
         Mask.__init__(self)
-        self.mask = None
+        # self.mask = None
         self.height_profile = height_profile 
         self.hrms = hrms
         self.axis = axis
@@ -686,10 +660,10 @@ class HeightErrorMask_1D(Mask):
         _logger.info('apply HeightProfile errors')
         start = time.time()
 
-        if self.mask is None: 
+        if self.msk is None: 
             self.get_mask(dfl)
 
-        dfl.fld *= self.mask
+        dfl.fld *= self.msk
         
         t_func = time.time() - start
         _logger.debug(ind_str + 'done in {}'.format(t_func))
@@ -734,12 +708,67 @@ class HeightErrorMask_1D(Mask):
         phase_delay = 2 * 2 * np.pi * np.sin(self.angle) * self.height_profile.h / dfl.xlamds
         
         if self.axis == 'x':
-            self.mask = np.exp(1j * phase_delay)[np.newaxis, np.newaxis, :]
+            self.msk = np.exp(1j * phase_delay)[np.newaxis, np.newaxis, :]
         elif self.axis == 'y':
-            self.mask = np.exp(1j * phase_delay)[np.newaxis, :, np.newaxis]
+            self.msk = np.exp(1j * phase_delay)[np.newaxis, :, np.newaxis]
         elif self.axis == 'z':
-            self.mask = np.exp(1j * phase_delay)[:, np.newaxis, np.newaxis]             
-        return self.mask
+            self.msk = np.exp(1j * phase_delay)[:, np.newaxis, np.newaxis]             
+        return self.msk
+   
+    
+class MirrorMask(Mask):
+    """
+    Class for simulating HeightProfile of highly polished mirror surface
+    
+    TODO
+    write documentation
+    add logging
+    """
+    def __init__(self, height_profile=None, hrms=0, angle=2*np.pi/180, plane='x', lx=np.inf, ly=np.inf, shape=(0, 0, 0)):
+        Mask.__init__(self, shape=shape)
+        self.height_profile = height_profile 
+        self.hrms = hrms #must have a size equals 2 
+        self.angle = angle
+        # self.mask = None
+        
+        if plane == 'x':
+            self.lx = lx/np.sin(self.angle)
+            self.ly = ly
+        elif plane == 'y':
+            self.lx = lx
+            self.ly = ly/np.sin(self.angle)
+        else:
+            raise ValueError(" 'plane' must be 'x' or 'y' ")
+
+    def get_mask(self, dfl):
+        _logger.info('getting HeightProfile errors')
+        
+        if self.msk is None:
+            heightErr_x = HeightErrorMask_1D(height_profile=self.height_profile, hrms=self.hrms, axis='x', angle=self.angle)
+            heightErr_x.get_mask(dfl) 
+            heightErr_y = HeightErrorMask_1D(height_profile=self.height_profile, hrms=self.hrms, axis='y', angle=self.angle)
+            heightErr_y.get_mask(dfl) 
+            RectApp = ApertureRectMask()
+            RectApp.lx = self.lx
+            RectApp.ly = self.ly           
+            RectApp.get_mask(dfl)
+            self.msk = heightErr_x.msk * heightErr_y.msk * RectApp.msk
+        return self.msk
+    
+    def apply(self, dfl):
+        
+        _logger.info('apply HeightProfile errors')
+        start = time.time()
+
+        if self.msk is None: 
+            self.get_mask(dfl)
+
+        dfl.fld *= self.msk
+        
+        t_func = time.time() - start
+        _logger.debug(ind_str + 'done in {}'.format(t_func))
+
+        
     
     
     

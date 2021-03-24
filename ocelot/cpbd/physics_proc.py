@@ -355,20 +355,23 @@ class BeamTransform(PhysProc):
     Beam matching
     """
 
-    def __init__(self, tws=None, x_opt=None, y_opt=None):
+    def __init__(self, tws=None, x_opt=None, y_opt=None, **kw):
         """
         :param tws : Twiss object
         :param x_opt (obsolete): [alpha, beta, mu (phase advance)]
         :param y_opt (obsolete): [alpha, beta, mu (phase advance)]
+        :param remove_offsets: True, before apply matching remove offsets from the beam in all planes
+        :param bounds: [-5, 5] in tau-sigmas. Twiss parameters will be calculated for that part of the beam
+        :param slice: None, if "Imax" or "Emax" beam matched to that slice and 'bound' param is ignored
         """
         PhysProc.__init__(self)
-        self.bounds = [-5, 5]  # [start, stop] in sigmas
-        self.tws = tws  # Twiss
-        self.x_opt = x_opt  # [alpha, beta, mu (phase advance)]
-        self.y_opt = y_opt  # [alpha, beta, mu (phase advance)]
+        self.tws = tws      # Twiss
+        self.x_opt = x_opt  # [alpha, beta, mu (phase advance)] - obsolete
+        self.y_opt = y_opt  # [alpha, beta, mu (phase advance)] - obsolete
         self.step = 1
-        self.remove_offsets = True
-        self.slice = None   # None, if "Imax" or "Emax" beam matched to that slice and bound param is ignored
+        self.remove_offsets = kw.get("remove_offsets", True)
+        self.bounds = kw.get("remove_offsets", [-5, 5])  # [start, stop] in sigmas
+        self.slice = kw.get("slice", None)
 
     @property
     def twiss(self):

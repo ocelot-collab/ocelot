@@ -1729,7 +1729,7 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
         x_opt = [tws.alpha_x, tws.beta_x, tws.mux]
         y_opt = [tws.alpha_y, tws.beta_y, tws.muy]
         bounds = [-5, 5]
-        beam_matching(p_array.rparticles, bounds, x_opt, y_opt, remove_offsets=True)
+        beam_matching(p_array, bounds, x_opt, y_opt, remove_offsets=True)
 
     return p_array
 

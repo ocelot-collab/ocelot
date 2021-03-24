@@ -368,6 +368,7 @@ class BeamTransform(PhysProc):
         self.y_opt = y_opt  # [alpha, beta, mu (phase advance)]
         self.step = 1
         self.remove_offsets = True
+        self.slice = None   # None, if "Imax" or "Emax" beam matched to that slice and bound param is ignored
 
     @property
     def twiss(self):
@@ -384,7 +385,7 @@ class BeamTransform(PhysProc):
         _logger.debug("BeamTransform: apply")
         self.x_opt = [self.twiss.alpha_x, self.twiss.beta_x, self.twiss.mux]
         self.y_opt = [self.twiss.alpha_y, self.twiss.beta_y, self.twiss.muy]
-        beam_matching(p_array.rparticles, self.bounds, self.x_opt, self.y_opt, self.remove_offsets)
+        beam_matching(p_array, self.bounds, self.x_opt, self.y_opt, self.remove_offsets, self.slice)
 
 
 class SpontanRadEffects(PhysProc):

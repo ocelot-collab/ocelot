@@ -1,6 +1,8 @@
 """
 definition of particles, beams and trajectories
 """
+import os
+
 from ocelot.common.globals import *
 from ocelot.common.math_op import find_nearest_idx
 from scipy.special import factorial
@@ -799,6 +801,7 @@ class ParticleArray:
         self.rparticles = np.delete(self.rparticles, inds, 1)
         self.q_array = np.delete(self.q_array, inds, 0)
 
+
 def recalculate_ref_particle(p_array):
     pref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV
     Enew = p_array.p()[0] * pref + p_array.E
@@ -915,11 +918,8 @@ def get_envelope(p_array, tws_i=Twiss(), bounds=None):
                   [0, -1, 0, 0]])
     # w, v = np.linalg.eig(np.dot(Sigma, S))
 
-
-
     tws.emit_x = np.sqrt(tws.xx * tws.pxpx - tws.xpx ** 2)
     tws.emit_y = np.sqrt(tws.yy * tws.pypy - tws.ypy ** 2)
-
 
     xx = tws.xx
     xpx = tws.xpx
@@ -1072,18 +1072,49 @@ def m_from_twiss(Tw1, Tw2):
     return M
 
 
-def beam_matching(particles, bounds, x_opt, y_opt, remove_offsets=True):
+def twiss_parray_slice(parray, slice="Imax", nparts_in_slice=5000, smooth_param=0.05, filter_base=2, filter_iter=2):
+    """
+    Function calculates twiss parameters in a beam slice
+
+    :param parray: ParticleArray
+    :param slice: "Imax" or "Emax" or center of bunch
+    :param nparts_in_slice: 5000, nparticles in the slice (in moving window)
+    :param smooth_param: 0.01, smoothing parameters to calculate the beam current: smooth_param = m_std * np.std(p_array.tau())
+    :param filter_base: 2, filter parameter in the func: simple_filter
+    :param filter_iter: 2, filter parameter in the func: simple_filter
+    :return: Twiss
+    """
+    tws = Twiss()
+    slice_params = global_slice_analysis(parray, nparts_in_slice=nparts_in_slice, smooth_param=smooth_param,
+                                         filter_base=filter_base, filter_iter=filter_iter)
+    if slice == "Imax":
+        ind0 = np.argmax(slice_params.I)
+    elif slice == "Emax":
+        ind0 = np.argmax(slice_params.me)
+    else:
+        ind0 = np.argsort(np.abs(slice_params.s))[0]
+    tws.beta_x = slice_params.beta_x[ind0]
+    tws.alpha_x = slice_params.alpha_x[ind0]
+    tws.beta_y = slice_params.beta_y[ind0]
+    tws.alpha_y = slice_params.alpha_y[ind0]
+    tws.gamma_y = slice_params.gamma_y[ind0]
+    tws.gamma_x = slice_params.gamma_x[ind0]
+    return tws
+
+
+def beam_matching(parray, bounds, x_opt, y_opt, remove_offsets=True, slice=None):
     """
     Beam matching function, the beam is centered in the phase space
 
-    :param particles: ParticleArray
+    :param parray: ParticleArray
     :param bounds: [start, stop] in rms of sigmas in longitudinal direction
     :param x_opt: [alpha, beta, mu (phase advance)]
     :param y_opt: [alpha, beta, mu (phase advance)]
     :param remove_offsets: True, remove offsets in transverse planes
+    :param slice: None, if "Imax" or "Emax" beam matched to that slice and bound param is ignored
     :return: transform ParticleArray (the same object)
     """
-
+    particles = parray.rparticles
     pd = np.zeros((int(particles.size / 6), 6))
     dx = 0.
     dxp = 0.
@@ -1107,18 +1138,27 @@ def beam_matching(particles, bounds, x_opt, y_opt, remove_offsets=True):
     inds = np.argwhere((z0 + sig0 * bounds[0] <= pd[:, 4]) * (pd[:, 4] <= z0 + sig0 * bounds[1]))
 
     mx, mxs, mxx, mxxs, mxsxs, emitx0 = moments(pd[inds, 0], pd[inds, 1])
-    beta = mxx / emitx0
-    alpha = -mxxs / emitx0
-    M = m_from_twiss([alpha, beta, 0], x_opt)
+    beta_x = mxx / emitx0
+    alpha_x = -mxxs / emitx0
 
-    particles[0] = M[0, 0] * pd[:, 0] + M[0, 1] * pd[:, 1]
-    particles[1] = M[1, 0] * pd[:, 0] + M[1, 1] * pd[:, 1]
-    [mx, mxs, mxx, mxxs, mxsxs, emitx0] = moments(pd[inds, 2], pd[inds, 3])
-    beta = mxx / emitx0
-    alpha = -mxxs / emitx0
-    M = m_from_twiss([alpha, beta, 0], y_opt)
-    particles[2] = M[0, 0] * pd[:, 2] + M[0, 1] * pd[:, 3]
-    particles[3] = M[1, 0] * pd[:, 2] + M[1, 1] * pd[:, 3]
+    [my, mys, myy, myys, mysys, emity0] = moments(pd[inds, 2], pd[inds, 3])
+    beta_y = myy / emity0
+    alpha_y = -myys / emity0
+
+    if slice is not None:
+        tw = twiss_parray_slice(parray, slice=slice, nparts_in_slice=5000, smooth_param=0.05, filter_base=2, filter_iter=2)
+        beta_x = tw.beta_x
+        alpha_x = tw.alpha_x
+        beta_y = tw.beta_y
+        alpha_y = tw.alpha_y
+    Mx = m_from_twiss([alpha_x, beta_x, 0], x_opt)
+
+    particles[0] = Mx[0, 0] * pd[:, 0] + Mx[0, 1] * pd[:, 1]
+    particles[1] = Mx[1, 0] * pd[:, 0] + Mx[1, 1] * pd[:, 1]
+
+    My = m_from_twiss([alpha_y, beta_y, 0], y_opt)
+    particles[2] = My[0, 0] * pd[:, 2] + My[0, 1] * pd[:, 3]
+    particles[3] = My[1, 0] * pd[:, 2] + My[1, 1] * pd[:, 3]
     return particles
 
 
@@ -1338,6 +1378,13 @@ class SliceParameters:
         self.my = None
         self.myp = None
         self.mp = None
+        # twiss
+        self.beta_x = None
+        self.beta_y = None
+        self.alpha_x = None
+        self.alpha_y = None
+        self.gamma_x = None
+        self.gamma_y = None
 
 
 def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
@@ -1475,6 +1522,12 @@ def global_slice_analysis(parray, nparts_in_slice=5000, smooth_param=0.01, filte
 
     slc.I = interp1(B[:, 0], B[:, 1], s)
 
+    mxpx = mxxs[ind]
+    mypy = myys[ind]
+    xpx_m = interp1(z, mxpx, s)
+    ypy_m = interp1(z, mypy, s)
+    x_px = simple_filter(xpx_m, filter_base, filter_iter)
+    y_py = simple_filter(ypy_m, filter_base, filter_iter)
     # additional moments <x>, <xp>, <y>, <yp>, <p>
     mx = mx[ind]
     mxs = mxs[ind]
@@ -1503,6 +1556,14 @@ def global_slice_analysis(parray, nparts_in_slice=5000, smooth_param=0.01, filte
     slc.sig_xp = simple_filter(sig_xp, filter_base, filter_iter)
     slc.sig_yp = simple_filter(sig_yp, filter_base, filter_iter)
 
+    # twiss
+    # np.full(n, np.nan)
+    slc.beta_x = (gamma0 * 1e6) * np.divide(slc.sig_x ** 2, slc.ex, out=np.zeros_like(slc.sig_x), where=slc.ex != 0)
+    slc.beta_y = (gamma0 * 1e6) * np.divide(slc.sig_y ** 2, slc.ey, out=np.zeros_like(slc.sig_y), where=slc.ey != 0)
+    slc.alpha_x = -x_px / slc.ex * (gamma0 * 1e6)
+    slc.alpha_y = -y_py / slc.ey * (gamma0 * 1e6)
+    slc.gamma_x = np.divide(1 + slc.alpha_x ** 2, slc.beta_x, out=np.zeros_like(slc.alpha_x), where=slc.beta_x != 0)
+    slc.gamma_y = np.divide(1 + slc.alpha_y ** 2, slc.beta_y, out=np.zeros_like(slc.alpha_y), where=slc.beta_y != 0)
     mp = mp[ind]
     mp = interp1(z, mp, s)
     slc.mp = simple_filter(mp, filter_base, filter_iter)

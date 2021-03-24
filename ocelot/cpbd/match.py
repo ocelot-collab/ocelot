@@ -1,11 +1,14 @@
 import multiprocessing
+from copy import deepcopy
+import numpy as np
 from scipy.optimize import *
 from ocelot.cpbd.beam_params import radiation_integrals
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
-from ocelot.cpbd.optics import *
-from ocelot.cpbd.beam import get_envelope
+from ocelot.cpbd.beam import Particle
+from ocelot.cpbd.elements import *
+from ocelot.cpbd.beam import get_envelope, twiss_parray_slice
 from ocelot.cpbd.track import track
-
+from ocelot.cpbd.optics import lattice_transfer_map, twiss, periodic_twiss, Twiss, SecondOrderMult
 
 
 def weights_default(val):
@@ -281,7 +284,7 @@ def weights_default(val):
 
 
 def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, method='simplex', weights=weights_default,
-               vary_bend_angle=False, min_i5=False):
+               vary_bend_angle=False, min_i5=False, bounds=None):
     """
     Function to match twiss paramters
 
@@ -312,7 +315,7 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
 
     def errf(x):
         p_array0 = deepcopy(p_array)
-        tws = get_envelope(p_array0)
+        tws = get_envelope(p_array0, bounds=bounds)
         tw_loc = deepcopy(tws)
         tw0 = deepcopy(tws)
 
@@ -377,7 +380,7 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
         # tw_loc.s = 0
         # print("start = ", get_envelope(p_array0))
         navi.go_to_start()
-        tws_list, p_array0 = track(lat, p_array0, navi, print_progress=False)
+        tws_list, p_array0 = track(lat, p_array0, navi, print_progress=False, bounds=bounds)
         s = np.array([tw.s for tw in tws_list])
         # print("stop = ", tws_list[-1])
         L = 0.
@@ -590,7 +593,7 @@ def closed_orbit(lattice, eps_xy=1.e-7, eps_angle=1.e-7, energy=0):
     smult = SecondOrderMult()
 
     ME = np.eye(4) - R[:4, :4]
-    P = np.dot(inv(ME), lattice.B[:4])
+    P = np.dot(np.linalg.inv(ME), lattice.B[:4])
 
     def errf(x):
         X = np.array([[x[0]], [x[1]], [x[2]], [x[3]], [0], [0]])

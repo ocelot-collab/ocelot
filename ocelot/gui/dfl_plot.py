@@ -568,7 +568,7 @@ def plot_two_dfls(dfl_first, dfl_second, domains='s', label_first=None, label_se
         filePath = dfl1.filePath
     
     if fig_name is None:
-        if dfl_copy.fileName() == '':
+        if dfl1.fileName() == '':
             fig = plt.figure('Radiation comparison' + domains)
         else:
             fig = plt.figure('Radiation comparison ' + domains + ' ' + dfl1.fileName() + ' ' + dfl2.fileName())

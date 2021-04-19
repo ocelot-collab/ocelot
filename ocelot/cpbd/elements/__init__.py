@@ -1,13 +1,11 @@
-__all__ = ['UnknownElement', 'Aperture', 'Bend', 'Cavity', 'CouplerKick', 'Drift', 'Edge', 'Element', 'Hcor', 'Marker',
+__all__ = ['UnknownElement', 'Aperture', 'Bend', 'Cavity', 'Drift', 'Element', 'Hcor', 'Marker',
            'Matrix', 'Monitor', 'Multipole', 'Octupole', 'Pulse', 'Quadrupole', 'RBend', 'SBend', 'Sextupole',
            'Solenoid', 'TDCavity', 'TWCavity', 'Undulator', 'Vcor', 'XYQuadrupole', 'Sequence']
 
 from ocelot.cpbd.elements.aperture import Aperture
 from ocelot.cpbd.elements.bend import Bend
 from ocelot.cpbd.elements.cavity import Cavity
-from ocelot.cpbd.elements.couplerkick import CouplerKick
 from ocelot.cpbd.elements.drift import Drift
-from ocelot.cpbd.elements.edge import Edge
 from ocelot.cpbd.elements.element import Element
 from ocelot.cpbd.elements.hcor import Hcor
 from ocelot.cpbd.elements.marker import Marker

@@ -234,32 +234,32 @@ class ElegantLatticeConverter:
                         result = data.split('=')
                         if result[0] in self.elegant_matrix[param[0]]['params']:
                             tmp = self.elegant_matrix[param[0]]['params'][result[0]]
-                            
+
                             val = self.convert_val(result[1], constants, elem)
-                            
+
                             if tmp.__class__ == list:
                                 if len(tmp) == 2:
-                                    elements_list[elem].__dict__[tmp[0]] = val * float(tmp[1])
+                                    elements_list[elem].element.__dict__[tmp[0]] = val * float(tmp[1])
                                 elif len(tmp) == 3:
-                                    print(elements_list[elem], tmp)
-                                    elements_list[elem].__dict__[tmp[0]][tmp[1], tmp[2]] = val
+                                    print(elements_list[elem].element, tmp)
+                                    elements_list[elem].element.__dict__[tmp[0]][tmp[1], tmp[2]] = val
                             else:
                                 # fix for phi cavity
                                 if elements_list[elem].__class__ == Cavity and tmp == 'phi':
                                     val = 90.0 - val
-                                elements_list[elem].__dict__[tmp] = val
+                                elements_list[elem].element.__dict__[tmp] = val
                     if elements_list[elem].__class__ == Undulator:
-                        elements_list[elem].lperiod = elements_list[elem].l/elements_list[elem].nperiods
+                        elements_list[elem].element.lperiod = elements_list[elem].element.l/elements_list[elem].element.nperiods
                 # replace element by Drift (if it has L) or skip
                 else:
                     elements_list[elem] = None
                     print_skiped = True
-                    
+
                     for data in param:
                         if data[:2] == 'L=':
-                            
+
                             val = self.convert_val(data[2:], constants, elem)
-        
+
                             elements_list[elem] = Drift(eid=elem, l=val)
                             print_skiped = False
                             break
@@ -394,7 +394,7 @@ class ElegantLatticeConverter:
                 # check parameter 'L' and print it first
                 if 'L' in self.elegant_matrix[reverse_matrix[element_class]]['params']:
                     tmp = self.elegant_matrix[reverse_matrix[element_class]]['params']['L']
-                    lines += ',L=' + str(elem.__dict__[tmp])
+                    lines += ',L=' + str(elem.element.__dict__[tmp])
 
                 # print other parameters
                 for param in self.elegant_matrix[reverse_matrix[element_class]]['params']:
@@ -403,19 +403,19 @@ class ElegantLatticeConverter:
                     tmp = self.elegant_matrix[reverse_matrix[element_class]]['params'][param]
                     if tmp.__class__ == list:
                         if len(tmp) == 2:
-                            lines += ',' + param + '=' + str(elem.__dict__[tmp[0]]/float(tmp[1]))
+                            lines += ',' + param + '=' + str(elem.element.__dict__[tmp[0]]/float(tmp[1]))
                         elif len(tmp) == 3:
-                            lines += ',' + param + '=' + str(elem.__dict__[tmp[0]][tmp[1], tmp[2]])
+                            lines += ',' + param + '=' + str(elem.element.__dict__[tmp[0]][tmp[1], tmp[2]])
                     else:
                         # fix for phi cavity
                         if elem.__class__ == Cavity and tmp == 'phi':
-                            lines += ',' + param + '=' + str(90.0 - elem.__dict__[tmp])
+                            lines += ',' + param + '=' + str(90.0 - elem.element.__dict__[tmp])
                             lines += ',CHANGE_P0=1,END1_FOCUS=1,END2_FOCUS=1,BODY_FOCUS_MODEL="SRS"'
                         elif elem.__class__ == Matrix and "rm" in tmp:
                             i, j = int(int(param[-2]) - 1), int(int(param[-1]) - 1)
-                            lines += ',' + param + '=' + str(elem.__dict__["r"][i, j])
+                            lines += ',' + param + '=' + str(elem.element.__dict__["r"][i, j])
                         else:
-                            lines += ',' + param + '=' + str(elem.__dict__[tmp])
+                            lines += ',' + param + '=' + str(elem.element.__dict__[tmp])
                 lines += '\n'
 
         # save cell

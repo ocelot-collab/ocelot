@@ -1,13 +1,7 @@
-from ocelot.cpbd.elements.element import Element
+from ocelot.cpbd.elements.optic_element import OpticElement
+from ocelot.cpbd.elements.marker_atom import MarkerAtom
+from ocelot.cpbd.transformations.transfer_map import TransferMap
 
-
-class Marker(Element):
-    def __init__(self, eid=None):
-        Element.__init__(self, eid)
-        self.l = 0.
-
-    def __str__(self):
-        s = 'Marker : '
-        s += 'id = ' + str(self.id) + '\n'
-        s += 'l =%8.4f m\n' % self.l
-        return s
+class Marker(OpticElement):
+    def __init__(self, eid=None, tm=TransferMap):
+        super().__init__(MarkerAtom(eid), tm=tm, default_tm=TransferMap)

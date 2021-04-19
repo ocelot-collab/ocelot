@@ -1,6 +1,8 @@
 __author__ = 'Sergey'
 
 from copy import deepcopy
+from ocelot.cpbd.transformations.multipole import MultipoleTM
+from ocelot.cpbd.tm_params.second_order_params import SecondOrderParams
 
 from numpy.linalg import inv
 
@@ -10,7 +12,7 @@ from ocelot.cpbd.physics_proc import RectAperture, EllipticalAperture
 from ocelot.cpbd.high_order import *
 
 from ocelot.cpbd.r_matrix import *
-from ocelot.cpbd.transformations.tm_utils import SecondOrderMult, transfer_maps_mult, unsym_matrix
+from ocelot.cpbd.tm_utils import SecondOrderMult, transfer_maps_mult, unsym_matrix
 from ocelot.cpbd.transformations.second_order import SecondTM
 
 _logger = logging.getLogger(__name__)
@@ -51,6 +53,23 @@ class MethodTM:
         self.sec_order_mult = SecondOrderMult()
         self.nkick = self.params['nkick'] if 'nkick' in self.params else 1
 
+    def to_dict(self):
+        res = self.params
+        if self.params.get('global') != self.global_method:
+            res['global'] = self.global_method
+        if not self.params.get('nKick') != self.nkick:
+            res['nkick'] = self.nkick
+
+        # OLD BEHAVIOR: old CorrectorTM has been splitted in First Order and Second Order to keep
+        # the old behavior VCor's and Hcor's tm is set to SecondTM which is equal to
+        # the old CorrectorTM.
+        if not res.get('Vcor'):
+            res['Vcor'] = SecondTM
+
+        if not res.get('Hcor'):
+            res['Hcor'] = SecondTM
+        return res
+
 
 def lattice_transfer_map(lattice, energy):
     """
@@ -69,17 +88,13 @@ def lattice_transfer_map(lattice, energy):
     Ta = np.zeros((6, 6, 6))
     Ba = np.zeros((6, 1))
     E = energy
-    for i, elem in enumerate(lattice.sequence):
-        Rb = elem.transfer_map.R(E)
-        Bb = elem.transfer_map.B(E)
-        if isinstance(elem.transfer_map, SecondTM):
-            Tb = elem.transfer_map.calculate_Tb(E)
+    for elem in lattice.sequence:
+        for Rb, Bb, Tb, tm in zip(elem.R(E), elem.B(E), elem.T(E), elem.tms):
             Ra, Ta = transfer_maps_mult(Ra, Ta, Rb, Tb)
-        else:
-            Ra, Ta = transfer_maps_mult(Ra, Ta, Rb, Tb=np.zeros((6, 6, 6)))
+            Ba = np.dot(Rb, Ba) + Bb
+            E += tm.get_delta_e()
 
-        Ba = np.dot(Rb, Ba) + Bb
-        E += elem.transfer_map.delta_e
+    # TODO: Adding Attributes at runtime should be avoided
     lattice.E = E
     lattice.T_sym = Ta
     lattice.T = unsym_matrix(deepcopy(Ta))
@@ -101,12 +116,18 @@ def trace_z(lattice, obj0, z_array):
     obj_elem = obj0
     for z in z_array:
         while z > L:
-            obj_elem = lattice.sequence[i].transfer_map * obj_elem
+            for tm in lattice.sequence[i].first_order_tms:
+                obj_elem = tm * obj_elem
             i += 1
             elem = lattice.sequence[i]
             L += elem.l
 
-        obj_z = elem.transfer_map(z - (L - elem.l)) * obj_elem
+        delta_l = z - (L - elem.l)
+        first_order_tms = elem.get_section_tms(start_l=0.0, delta_l=delta_l, first_order_only=True)
+
+        obj_z = obj_elem
+        for tm in first_order_tms:
+            obj_z = tm * obj_z
 
         obj_list.append(obj_z)
     return obj_list
@@ -121,9 +142,10 @@ def trace_obj(lattice, obj, nPoints=None):
     if nPoints is None:
         obj_list = [obj]
         for e in lattice.sequence:
-            obj = e.transfer_map * obj
-            obj.id = e.id
-            obj_list.append(obj)
+            for tm in e.first_order_tms:
+                obj = tm * obj
+                obj.id = e.id
+                obj_list.append(obj)
     else:
         z_array = np.linspace(0, lattice.totalLen, nPoints, endpoint=True)
         obj_list = trace_z(lattice, obj, z_array)
@@ -299,6 +321,10 @@ class Navigator:
         self.proc_kick_elems = []
         self.kill_process = False  # for case when calculations are needed to terminated e.g. from gui
 
+    def get_current_element(self):
+        if self.n_elem < len(self.lat.sequence):
+            return self.lat.sequence[self.n_elem]
+
     def reset_position(self):
         """
         method to reset Navigator position.
@@ -354,7 +380,7 @@ class Navigator:
                     self.add_physics_proc(ap, elem, elem)
                 elif elem.type == "ellipt":
                     ap = EllipticalAperture(xmax=elem.xmax, ymax=elem.ymax,
-                                      dx=elem.dx, dy=elem.dy)
+                                            dx=elem.dx, dy=elem.dy)
                     self.add_physics_proc(ap, elem, elem)
 
     def check_overjump(self, dz, processes, phys_steps):
@@ -440,6 +466,17 @@ class Navigator:
                 self.process_table.kick_proc_list.remove(p)
                 self.process_table.proc_list.remove(p)
 
+    def get_next_step(self):
+        while np.abs(self.z0 - self.lat.totalLen) > 1e-10:
+            if self.kill_process:
+                _logger.info("Killing tracking ... ")
+                return
+            dz, proc_list, phys_steps = self.get_next()
+            if self.z0 + dz > self.lat.totalLen:
+                dz = self.lat.totalLen - self.z0
+
+            yield get_map(self.lat, dz, self), dz, proc_list, phys_steps
+
     def get_next(self):
 
         proc_list = self.get_proc_list()
@@ -498,7 +535,7 @@ def get_map(lattice, dz, navi):
     while z1 + 1e-10 > L:
 
         dl = L - navi.z0
-        TM.append(elem.transfer_map(dl))
+        TM += elem.get_section_tms(start_l=navi.z0 + elem.l - L, delta_l=dl)
 
         navi.z0 = L
         dz -= dl
@@ -508,10 +545,10 @@ def get_map(lattice, dz, navi):
         i += 1
         elem = lattice.sequence[i]
         L += elem.l
-        # if i in navi.proc_kick_elems:
-        #    break
+        
     if abs(dz) > 1e-10:
-        TM.append(elem.transfer_map(dz))
+        TM += elem.get_section_tms(start_l=navi.z0 + elem.l - L, delta_l=dz)
+
     navi.z0 += dz
     navi.sum_lengths = L - elem.l
     navi.n_elem = i

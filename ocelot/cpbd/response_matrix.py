@@ -301,21 +301,23 @@ class LinacRmatrixRM(MeasureResponseMatrix):
             E = Einit
             for i, elem in enumerate(self.lat.sequence):
                 if i < cor.lat_inx:
-                    E += elem.transfer_map.delta_e
+                    for tm in elem.tms:
+                        E += tm.get_delta_e()
                     continue
+                
+                for tm in elem.tms:
+                    Rb = tm.get_params(E).get_rotated_R()
+                    Ra = np.dot(Rb, Ra)
+                    E += tm.get_delta_e()
+                    if elem in self.bpms:
 
-                Rb = elem.transfer_map.R(E)
-                Ra = np.dot(Rb, Ra)
-                E += elem.transfer_map.delta_e
-                if elem in self.bpms:
+                        n = self.bpms.index(elem)
 
-                    n = self.bpms.index(elem)
+                        if cor.__class__ == Hcor:
+                            self.resp[n, j] = Ra[0, 1]
 
-                    if cor.__class__ == Hcor:
-                        self.resp[n, j] = Ra[0, 1]
-
-                    else:
-                        self.resp[n + m, j] = Ra[2, 3]
+                        else:
+                            self.resp[n + m, j] = Ra[2, 3]
         return self.resp
 
 

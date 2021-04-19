@@ -2,7 +2,7 @@ __author__ = 'Sergey Tomin'
 
 from ocelot.gui import *
 from ocelot.cpbd.track import *
-from ocelot.rad.radiation_py import und_field
+from ocelot.cpbd.elements.undulator_atom import und_field
 from ocelot.cpbd.optics import *
 from ocelot.cpbd.transformations import *
 
@@ -32,9 +32,8 @@ B1 = SBend(l = 0.23, angle = 0.23/19.626248, eid= "B1")
 B2 = SBend(l = 1.227, angle = 1.227/4.906312, eid= "B2")
 
 
-u = Undulator(lperiod=0.02, nperiods=50, Kx=2)
+u = Undulator(lperiod=0.02, nperiods=50, Kx=2, npoints = 500)
 u.mag_field = lambda x, y, z: und_field(x, y, z, u.lperiod, u.Kx)
-u.npoints = 500
 cell_u = ( D1,SF, D2,Q1,D3, Q2,D2,SD,D4,B1,B2,D5,Q3,D5,B2,B1,D6,Q4,D7,Q5,D8,Q6,
            Drift(l=1.0045), u, Drift(l=1.0045),
            Q6,D8,Q5,D7,Q4,D6,B1,B2,D5,Q3,D5,B2,B1,D4,SD,D2,Q2,D3,Q1,D2,SF,D1)

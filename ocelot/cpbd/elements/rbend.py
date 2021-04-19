@@ -1,8 +1,10 @@
 from ocelot.cpbd.r_matrix import uni_matrix
-from ocelot.cpbd.elements.bend import Bend
+from ocelot.cpbd.elements.optic_element import OpticElement
+from ocelot.cpbd.elements.rbend_atom import RBendAtom
+from ocelot.cpbd.transformations.transfer_map import TransferMap
 
 
-class RBend(Bend):
+class RBend(OpticElement):
     """
     rectangular bending magnet,
     l - length of magnet in [m],
@@ -20,19 +22,6 @@ class RBend(Bend):
     """
 
     def __init__(self, l=0., angle=0., k1=0., k2=0., e1=None, e2=None, tilt=0.,
-                 gap=0, h_pole1=0., h_pole2=0., fint=0., fintx=None, eid=None):
-        if e1 is None:
-            e1 = angle / 2.
-        else:
-            e1 += angle / 2.
-        if e2 is None:
-            e2 = angle / 2.
-        else:
-            e2 += angle / 2.
-
-        Bend.__init__(self, l=l, angle=angle, e1=e1, e2=e2, k1=k1, k2=k2, tilt=tilt,
-                      gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, fintx=fintx, eid=eid)
-
-    def create_r_matrix(self):
-        r_z_e = lambda z, energy: uni_matrix(z, 0, hx=0, sum_tilts=0, energy=energy)
-        return r_z_e
+                 gap=0, h_pole1=0., h_pole2=0., fint=0., fintx=None, eid=None, tm=TransferMap):
+        super().__init__(RBendAtom(l=l, angle=angle, e1=e1, e2=e2, k1=k1, k2=k2, tilt=tilt,
+                                   gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, fintx=fintx, eid=eid), tm=tm, default_tm=TransferMap)

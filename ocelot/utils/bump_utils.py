@@ -5,7 +5,7 @@ S.Tomin, DESY, 11.2020
 from typing import Union, List
 import numpy as np
 import copy
-from ocelot.cpbd.elements import Element, Monitor, Marker, Hcor, Vcor, Bend, Edge
+from ocelot.cpbd.elements import Element, Monitor, Marker, Hcor, Vcor, Bend
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.cpbd.optics import lattice_transfer_map
 from ocelot.cpbd.beam import Particle
@@ -119,8 +119,6 @@ def convert_cors2dipoles(lat: MagneticLattice, cor_list: List[Element], energy: 
                 if elem.id == d.id:
                     seq.append(d)
         else:
-            if elem.__class__ is Edge:
-                continue
             seq.append(elem)
     lat_new = MagneticLattice(seq)
 

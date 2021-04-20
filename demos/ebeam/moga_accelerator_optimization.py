@@ -96,7 +96,6 @@ def fit_func(x0, iter_data, args):
     for i in range(len(args[0])):
         
         vars[i].k1 = x0[i]
-        vars[i].create_tm()
     
     beam = Beam()
     beam.E = 2.5

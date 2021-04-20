@@ -26,6 +26,12 @@ class TWCavity(Element):
         self.phi = phi  # in grad
         self.E = 0
 
+    def create_delta_e(self, total_length, delta_length=None) -> float:
+        if delta_length != None:
+            return self.v * np.cos(self.phi * np.pi / 180.) * delta_length / total_length
+        else:
+            return self.v * np.cos(self.phi * np.pi / 180.)
+
     def create_r_matrix(self):
 
         def tw_cavity_R_z(z, V, E, freq, phi=0.):

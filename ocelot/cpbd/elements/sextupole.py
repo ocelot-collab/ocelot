@@ -1,25 +1,14 @@
-import numpy as np
+from ocelot.cpbd.elements.optic_element import OpticElement
+from ocelot.cpbd.elements.sextupole_atom import SextupoleAtom
+from ocelot.cpbd.transformations.transfer_map import TransferMap
 
-from ocelot.cpbd.elements.element import Element
 
-
-class Sextupole(Element):
+class Sextupole(OpticElement):
     """
     sextupole
     l - length of lens in [m],
     k2 - strength of sextupole lens in [1/m^3].
     """
 
-    def __init__(self, l=0., k2=0., tilt=0., eid=None):
-        Element.__init__(self, eid)
-        self.l = l
-        self.k2 = k2
-        self.tilt = tilt
-
-    def __str__(self):
-        s = 'Sextupole : '
-        s += 'id = ' + str(self.id) + '\n'
-        s += 'l    =%8.4f m\n' % self.l
-        s += 'k2   =%8.3f 1/m^3\n' % self.k2
-        s += 'tilt =%8.2f deg\n' % (self.tilt * 180.0 / np.pi)
-        return s
+    def __init__(self, l=0., k2=0., tilt=0., eid=None, tm=TransferMap):
+        super().__init__(SextupoleAtom(l=l, k2=k2, tilt=tilt, eid=eid), tm=tm, default_tm=TransferMap)

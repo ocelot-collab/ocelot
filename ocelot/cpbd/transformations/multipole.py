@@ -1,15 +1,32 @@
-from copy import copy
 from math import factorial
 
 import numpy as np
 
-from ocelot.cpbd.transformations.transfer_map import TransferMap
+from ocelot.cpbd.transformations.transfer_map import TransferMap, TMTypes
+from ocelot.cpbd.elements.element import Element
 
 
 class MultipoleTM(TransferMap):
-    def __init__(self, kn):
-        TransferMap.__init__(self)
-        self.kn = kn
+    """[summary]
+    Implementation of the Multipole Transforamtion.
+    The concrete element atom have to implement: 
+    create_multipole_tm_main_params(self) -> MultipoleParams
+    """
+        
+    def __init__(self, create_tm_param_func, delta_e_func, tm_type: TMTypes, length: float, delta_length: float = None, **params) -> None:
+        super().__init__(create_tm_param_func, delta_e_func, tm_type, length, delta_length)
+
+    @classmethod
+    def from_element(cls, element: Element, tm_type: TMTypes = TMTypes.MAIN, delta_l=None, **params):
+        return cls.create(entrance_tm_params_func=None,
+                          delta_e_func=element.create_delta_e,
+                          main_tm_params_func=element.create_multipole_tm_main_params,
+                          exit_tm_params_func=None,
+                          has_params=False,
+                          tm_type=tm_type, length=element.l, delta_length=delta_l, params=params)
+
+    def get_params(self):
+        return self.create_tm_param_func()
 
     def kick(self, X, kn):
         p = -kn[0] * X[5] + 0j
@@ -20,9 +37,5 @@ class MultipoleTM(TransferMap):
         X[4] = X[4] - kn[0] * X[0]
         return X
 
-    def map_function(self, delta_length=None, length=None):
-        return lambda X, energy: self.kick(X, self.kn)
-
-    @classmethod
-    def create_from_element(cls, element, params=None):
-        return cls(kn=element.kn)
+    def map_function(self, X, energy: float):
+        return self.kick(X, self.get_params().kn)

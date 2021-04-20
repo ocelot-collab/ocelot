@@ -1,38 +1,26 @@
+import logging
+from ocelot.cpbd.transformations.transformation import Transformation
+
 import numpy as np
 
+from ocelot.cpbd.elements.optic_element import OpticElement
+from ocelot.cpbd.elements.multipole_atom import MultipoleAtom
 from ocelot.cpbd.transformations.multipole import MultipoleTM
-from ocelot.cpbd.elements.element import Element
+from ocelot.cpbd.transformations.transfer_map import TransferMap
+
+logger = logging.getLogger(__name__)
 
 
-class Multipole(Element):
+class Multipole(OpticElement):
     """
     kn - list of strengths
     """
 
-    default_tm = MultipoleTM
-    additional_tms = []
+    def __init__(self, kn=0., eid=None, tm=MultipoleTM):
+        if tm != MultipoleTM:
+            logger.debug("Multipole Element only support Multipole as its transformation. Set tm to MultipoleTM.")
+            tm = MultipoleTM
+        super().__init__(MultipoleAtom(kn=kn, eid=eid), tm=tm, default_tm=MultipoleTM)
 
-    def __init__(self, kn=0., eid=None):
-        Element.__init__(self, eid)
-        kn = np.array([kn]).flatten()
-        if len(kn) < 2:
-            self.kn = np.append(kn, [0.])
-        else:
-            self.kn = kn
-        self.n = len(self.kn)
-        self.l = 0.
-
-    def __str__(self):
-        s = 'Multipole : '
-        s += 'id = ' + str(self.id) + '\n'
-        for i, k in enumerate(self.kn):
-            s += 'k%i =%8.4f m\n' % (i, k)
-        return s
-
-    def create_r_matrix(self):
-        r = np.eye(6)
-        r[1, 0] = -self.kn[1]
-        r[3, 2] = self.kn[1]
-        r[1, 5] = self.kn[0]
-        r_z_e = lambda z, energy: r
-        return r_z_e
+    def set_tm(self, tm: Transformation):
+        logger.debug("Multipole Element only support Multipole as its transformation. Set tm to MultipoleTM.")

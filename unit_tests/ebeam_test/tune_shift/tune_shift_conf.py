@@ -6,7 +6,7 @@ from ocelot.cpbd.track import *
 from ocelot.cpbd.transformations.transfer_map import TransferMap
 from ocelot.cpbd.transformations.kick import KickTM
 from ocelot.cpbd.transformations.runge_kutta_tr import RungeKuttaTrTM
-from ocelot.rad.radiation_py import und_field
+from ocelot.cpbd.elements.undulator_atom import und_field
 
 """lattice elements description"""
 

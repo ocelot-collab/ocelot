@@ -1,26 +1,46 @@
-from copy import copy
-
 import numpy as np
 
 from ocelot.cpbd.high_order import m_e_GeV
-from ocelot.cpbd.transformations.tm_utils import transform_vec_ent, transform_vec_ext
+from ocelot.cpbd.tm_utils import transform_vec_ent, transform_vec_ext
 from ocelot.cpbd.transformations.transfer_map import TransferMap
+from ocelot.cpbd.transformations.transformation import Transformation, TMTypes
+from ocelot.cpbd.elements.element import Element
 
 
-class KickTM(TransferMap):
-    def __init__(self, angle=0., k1=0., k2=0., k3=0., nkick=1):
-        TransferMap.__init__(self)
-        self.angle = angle
-        self.k1 = k1
-        self.k2 = k2
-        self.k3 = k3
-        self.nkick = nkick
+class KickTM(Transformation):
+    """[summary]
+    Implementation of the Kick Transforamtion.
+    The concrete element atom have to implement at least 'create_kick_main_params(self) -> KickParams'. If the element has edges 
+        'create_kick_entrance_params(self) -> KickParams' and 'create_kick_exit_params(self) -> KickParams' have to be implemented as well.
+    """
+
+    def __init__(self, create_tm_param_func, delta_e_func, tm_type: TMTypes, length: float, delta_length: float = 0.0, **params) -> None:    
+        super().__init__(create_tm_param_func, delta_e_func, tm_type, length, delta_length)
+        nkick = params.get('nkick')
+        self.nkick = nkick if nkick else 1
+
 
     @classmethod
-    def create_from_element(cls, element, params=None):
-        return cls(angle=element.angle, k1=element.k1, k2=element.k2,
-                   k3=element.k3 if hasattr(element, 'k3') else 0.,
-                   nkick=params['nkick'] if 'nkick' in params else 1)
+    def from_element(cls, element: Element, tm_type: TMTypes = TMTypes.MAIN, delta_l=None, **params):
+        """[summary]
+        :param element: An Element which implements at least 'create_kick_main_params(self) -> KickParams'. If the element has edges 
+        'create_kick_entrance_params(self) -> KickParams' and 'create_kick_exit_params(self) -> KickParams' have to be implemented as well.
+        :type element: Element
+        :param tm_type: Type of Transformation can be TMTypes.ENTRANCE, TMTypes.MAIN or TMTypes.EXIT, defaults to TMTypes.MAIN
+        :type tm_type: TMTypes, optional
+        :param delta_l: If the parameter is set, just a section of the element is taken into account for the tm calculation, defaults to None
+        :type delta_l: [type], optional
+        :return: [description]
+        :rtype: [type]
+        """
+        return cls.create(entrance_tm_params_func=element.create_kick_entrance_params if element.has_edge else None,
+                          delta_e_func=element.create_delta_e,
+                          main_tm_params_func=element.create_kick_main_params,
+                          exit_tm_params_func=element.create_kick_exit_params if element.has_edge else None,
+                          tm_type=tm_type, length=element.l, delta_length=delta_l, **params)
+
+    def get_params(self):
+        return self.create_tm_param_func()
 
     def kick(self, X, l, angle, k1, k2, k3, energy, nkick=1):
         """
@@ -59,7 +79,20 @@ class KickTM(TransferMap):
             # X[4] -= X[5] * dl * coef
         return X
 
-    def kick_apply(self, X, l, angle, k1, k2, k3, energy, nkick, dx, dy, tilt):
+    def kick_apply(self, X, energy):
+        params = self.get_params()
+        angle = params.angle
+        k1 = params.k1
+        k2 = params.k2
+        k3 = params.k3
+        tilt = params.tilt
+        
+        dx = params.dx
+        dy = params.dy
+
+        nkick = self.nkick
+        l = self.delta_length if self.delta_length != None else self.length
+
         if dx != 0 or dy != 0 or tilt != 0:
             X = transform_vec_ent(X, dx, dy, tilt)
         self.kick(X, l, angle, k1, k2, k3, energy, nkick=nkick)
@@ -68,6 +101,5 @@ class KickTM(TransferMap):
 
         return X
 
-    def map_function(self, delta_length=None, length=None):
-        return lambda X, energy: self.kick_apply(X, delta_length if delta_length else self.length, self.angle, self.k1, self.k2, self.k3, energy, self.nkick, self.dx, self.dy, self.tilt)
-
+    def map_function(self, X, energy: float):
+        return self.kick_apply(X, energy)

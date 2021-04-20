@@ -1,18 +1,12 @@
-from ocelot.cpbd.elements.element import Element
+from ocelot.cpbd.elements.optic_element import OpticElement
+from ocelot.cpbd.elements.drift_atom import DriftAtom
+from ocelot.cpbd.transformations.transfer_map import TransferMap
 
 
-class Drift(Element):
+class Drift(OpticElement):
     """
     drift - free space
     l - length of drift in [m]
     """
-
-    def __init__(self, l=0., eid=None):
-        Element.__init__(self, eid)
-        self.l = l
-
-    def __str__(self):
-        s = 'Drift : '
-        s += 'id = ' + str(self.id) + '\n'
-        s += 'l =%8.4f m\n' % self.l
-        return s
+    def __init__(self, l=0., eid=None, tm=TransferMap):
+        super().__init__(DriftAtom(l=l, eid=eid), tm=tm, default_tm=TransferMap)

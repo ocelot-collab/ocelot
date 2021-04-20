@@ -1,61 +1,53 @@
-from copy import copy
-
 import numpy as np
 
-from ocelot.cpbd.transformations.transfer_map import TransferMap
-from ocelot.cpbd.transformations.tm_utils import SecondOrderMult, transform_vec_ent, transform_vec_ext, \
+from ocelot.cpbd.tm_utils import SecondOrderMult, transform_vec_ent, transform_vec_ext, \
     transfer_map_rotation, sym_matrix
-from ocelot.cpbd.r_matrix import rot_mtx
+from ocelot.cpbd.transformations.transformation import Transformation, TMTypes
+from ocelot.cpbd.elements.element import Element
 
 
-class SecondTM(TransferMap):
-    def __init__(self, r_z_no_tilt, t_mat_z_e):
-        TransferMap.__init__(self)
-        self.r_z_no_tilt = r_z_no_tilt
-        self.t_mat_z_e = t_mat_z_e
+class SecondTM(Transformation):
+    """[summary]
+    Implementation of the second order transformation.
+    The concrete element atom have to implement: 
+    create_second_order_main_params(self, energy: float, delta_length: float) -> FirstOrderPrams
+    If the element has edges is also have to implement:
+    create_second_order_entrance_params(self, energy: float, delta_length: float) -> FirstOrderPrams
+    create_second_order_exit_params(self, energy: float, delta_length: float) -> FirstOrderPrams
+    """
 
-        self.multiplication = None
-
-        self.R_tilt = lambda energy: np.dot(np.dot(rot_mtx(-self.tilt), self.r_z_no_tilt(self.length, energy)),
-                                            rot_mtx(self.tilt))
-
-        self.T_tilt = lambda energy: transfer_map_rotation(self.r_z_no_tilt(self.length, energy),
-                                                           self.t_mat_z_e(self.length, energy), self.tilt)[1]
+    def __init__(self, create_tm_param_func, delta_e_func, tm_type: TMTypes, length: float, delta_length: float = 0.0) -> None:
+        self.multiplication = SecondOrderMult().tmat_multip
+        super().__init__(create_tm_param_func, delta_e_func, tm_type, length, delta_length)
 
     @classmethod
-    def create_from_element(cls, element, params=None):
-        T_z_e = element.get_T_z_e_func()
-        tm = cls(r_z_no_tilt=element.create_r_matrix(), t_mat_z_e=T_z_e)
-        tm.multiplication = SecondOrderMult().tmat_multip
-        return tm
+    def from_element(cls, element: Element, tm_type: TMTypes = TMTypes.MAIN, delta_l=None):
+        return cls.create(entrance_tm_params_func=element.create_second_order_entrance_params if element.has_edge else None,
+                          delta_e_func=element.create_delta_e,
+                          main_tm_params_func=element.create_second_order_main_params,
+                          exit_tm_params_func=element.create_second_order_exit_params if element.has_edge else None,
+                          tm_type=tm_type, length=element.l, delta_length=delta_l)
+
+    def t_apply(self, energy, X, U5666=0.):
+        params = self.get_params(energy)
+        if params.dx != 0 or params.dy != 0 or params.tilt != 0:
+            X = transform_vec_ent(X, params.dx, params.dy, params.tilt)
+        self.multiplication(X, params.R, params.T)
+        if params.dx != 0 or params.dy != 0 or params.tilt != 0:
+            X = transform_vec_ext(X, params.dx, params.dy, params.tilt)
+        # TODO: Add zero order tm to remove CorrectorTM. Could this be a performance problem?
+        X[:] = np.add(X, params.B)
+        return X
+
+    def map_function(self, X, energy: float):
+        return self.t_apply(energy, X)
 
     def calculate_Tb(self, energy) -> np.ndarray:
         """
-        Calculates the Tb matrix which is needed to claculate the transfromation matrix.
+        Calculates the Tb matrix which is needed to calculate the transfromation matrix.
         @return: Tb matrix
         """
-        Tb = np.copy(self.T_tilt(energy))
-        Tb = sym_matrix(Tb)
-        return Tb
-
-    def t_apply(self, R, T, X, dx, dy, tilt, U5666=0.):
-        if dx != 0 or dy != 0 or tilt != 0:
-            X = transform_vec_ent(X, dx, dy, tilt)
-        self.multiplication(X, R, T)
-        if dx != 0 or dy != 0 or tilt != 0:
-            X = transform_vec_ext(X, dx, dy, tilt)
-
-        return X
-
-    def map_function(self, delta_length=None, length=None):
-        return lambda X, energy: self.t_apply(self.r_z_no_tilt(delta_length if delta_length else self.length, energy), self.t_mat_z_e(delta_length if delta_length else self.length, energy), X, self.dx, self.dy, self.tilt)
-
-    def __call__(self, s):
-        m = copy(self)
-        m.R = lambda energy: m.R_z(s, energy)
-        m.B = lambda energy: m.B_z(s, energy)
-        m.T = lambda s, energy: m.t_mat_z_e(s, energy)
-        m.delta_e = m.delta_e_z(s)
-        m.map = m.map_function(delta_length=s, length=self.length)
-        m.length = s
-        return m
+        raise NotImplementedError("Not implemented yet")
+        T_tilt = transfer_map_rotation(self.r_z_no_tilt(self.length, energy),
+                                       self.t_mat_z_e(self.length, energy), self.tilt)[1]
+        return sym_matrix(T_tilt)

@@ -117,6 +117,69 @@ class Twiss:
                 self.gamma_y = (1 + beam.alpha_y * beam.alpha_y) / beam.beta_y
             self.E = beam.E
 
+    def multiply_with_tm(self, tm: 'TransferMap', length):
+        tws = self.map_x_twiss(tm)
+        tws.s = self.s + length
+        return tws
+
+    def map_x_twiss(self, tm):
+        E = self.E
+        M = tm.get_params(energy=E).get_rotated_R()
+        zero_tol = 1.e-10
+        if abs(tm.get_delta_e()) > zero_tol:
+            Ei = self.E
+            Ef = self.E + tm.get_delta_e()
+            k = np.sqrt(Ef / Ei)
+            M[0, 0] = M[0, 0] * k
+            M[0, 1] = M[0, 1] * k
+            M[1, 0] = M[1, 0] * k
+            M[1, 1] = M[1, 1] * k
+            M[2, 2] = M[2, 2] * k
+            M[2, 3] = M[2, 3] * k
+            M[3, 2] = M[3, 2] * k
+            M[3, 3] = M[3, 3] * k
+            E = Ef
+
+        tws = Twiss(self)
+        tws.E = E
+        tws.p = self.p
+        tws.beta_x = M[0, 0] * M[0, 0] * self.beta_x - 2 * M[0, 1] * M[0, 0] * self.alpha_x + M[0, 1] * M[0, 1] * self.gamma_x
+        # tws.beta_x = ((M[0,0]*tws.beta_x - M[0,1]*self.alpha_x)**2 + M[0,1]*M[0,1])/self.beta_x
+        tws.beta_y = M[2, 2] * M[2, 2] * self.beta_y - 2 * M[2, 3] * M[2, 2] * self.alpha_y + M[2, 3] * M[2, 3] * self.gamma_y
+        # tws.beta_y = ((M[2,2]*tws.beta_y - M[2,3]*self.alpha_y)**2 + M[2,3]*M[2,3])/self.beta_y
+        tws.alpha_x = -M[0, 0] * M[1, 0] * self.beta_x + (M[0, 1] * M[1, 0] + M[1, 1] * M[0, 0]) * self.alpha_x - M[0, 1] * M[
+            1, 1] * self.gamma_x
+        tws.alpha_y = -M[2, 2] * M[3, 2] * self.beta_y + (M[2, 3] * M[3, 2] + M[3, 3] * M[2, 2]) * self.alpha_y - M[2, 3] * M[
+            3, 3] * self.gamma_y
+
+        tws.gamma_x = (1. + tws.alpha_x * tws.alpha_x) / tws.beta_x
+        tws.gamma_y = (1. + tws.alpha_y * tws.alpha_y) / tws.beta_y
+
+        tws.Dx = M[0, 0] * self.Dx + M[0, 1] * self.Dxp + M[0, 5]
+        tws.Dy = M[2, 2] * self.Dy + M[2, 3] * self.Dyp + M[2, 5]
+
+        tws.Dxp = M[1, 0] * self.Dx + M[1, 1] * self.Dxp + M[1, 5]
+        tws.Dyp = M[3, 2] * self.Dy + M[3, 3] * self.Dyp + M[3, 5]
+        denom_x = M[0, 0] * self.beta_x - M[0, 1] * self.alpha_x
+        if denom_x == 0.:
+            d_mux = np.pi / 2. * M[0, 1] / np.abs(M[0, 1])
+        else:
+            d_mux = np.arctan(M[0, 1] / denom_x)
+
+        if d_mux < 0:
+            d_mux += np.pi
+        tws.mux = self.mux + d_mux
+        denom_y = M[2, 2] * self.beta_y - M[2, 3] * self.alpha_y
+        if denom_y == 0.:
+            d_muy = np.pi / 2. * M[2, 3] / np.abs(M[2, 3])
+        else:
+            d_muy = np.arctan(M[2, 3] / denom_y)
+        if d_muy < 0:
+            d_muy += np.pi
+        tws.muy = self.muy + d_muy
+
+        return tws
+
     def __str__(self):
         val = ""
         val += "emit_x  = " + str(self.emit_x) + "\n"
@@ -168,6 +231,10 @@ class Particle:
         val = val + "E = " + str(self.E) + "\n"
         val = val + "s = " + str(self.s)
         return val
+
+    def multiply_with_tm(self, tm: 'TransferMap', length):
+        tm.apply(self)
+        return deepcopy(self)
 
 
 class Beam:
@@ -500,32 +567,32 @@ class BeamArray(Beam):
     def add_chirp_poly(self, coeff, s0=None):
         '''
         The method adds a polynomial energy chirp to the beam object. 
-        
+
         coeff   --- coefficients for the chirp
         s0      --- the point with respect to which the chirp will be introduced
-        
+
         The expression for the chirp:
-            
+
         E = E0((g0 + coeff[0])/g0 + 
-            
+
             + coeff[1]*(s - s0))**1 / 1! / ((speed_of_light * 1e-15)**1  * g0) + 
-            
+
             + coeff[2]*(s - s0))**2 / 2! / ((speed_of_light * 1e-15)**2  * g0) + 
-            
+
             + coeff[3]*(s - s0))**3 / 3! / ((speed_of_light * 1e-15)**3  * g0) + ... 
-        
+
         ... + coeff[n]*(s - s0))**n / n! / ((speed_of_light * 1e-15)**n  * g0))
-        
+
         where coeff[n] is represented in [1/fs**n]
         The convention for the coeff is introduced for convenient treatment this
         with respect to a radiation chirp in order to easily satisfy the resonant
         condition along the whole bunch in the case of linear electron bunch chirp. 
         Here is the expresion:
-        
+
             2*dw/dt = (w0/g0) * dg/dt
-        
+
         @author: Andrei Trebushinin
-        
+
         '''
         _logger.debug('introducing a chirp to the ebeam')
         s = self.s
@@ -618,6 +685,41 @@ class ParticleArray:
             self.lp_to_pos_hist.append((position, len(inds)))
             self._current_particle = np.delete(self._current_particle, inds)
 
+        def initial_idx_2_p_idx(self, idx):
+            found_idx = np.where(self._current_particle == idx)[0]
+            if found_idx.size > 0:
+                return found_idx[0]
+            return None
+
+    @classmethod
+    def random(cls, n, sigma_x=0.000121407185261, sigma_px=1.80989470506e-05, sigma_y=0.000165584800564, sigma_py=4.00994225888e-05):
+        # generate beam file
+        x = np.random.randn(n)*sigma_x
+        px = np.random.randn(n)*sigma_px
+        y = np.random.randn(n)*sigma_y
+        py = np.random.randn(n)*sigma_py
+
+        # covariance matrix for [tau, p] for beam compression in BC
+        cov_t_p = [[1.30190131e-06, 2.00819771e-05],
+                   [2.00819771e-05, 3.09815718e-04]]
+        long_dist = np.random.multivariate_normal((0, 0), cov_t_p, n)
+        tau = long_dist[:, 0]
+        dp = long_dist[:, 1]
+
+        p_array = cls(n=n)
+        p_array.E = 0.130  # GeV
+        p_array.rparticles[0] = x
+        p_array.rparticles[1] = px
+        p_array.rparticles[2] = y
+        p_array.rparticles[3] = py
+        p_array.rparticles[4] = tau
+        p_array.rparticles[5] = dp
+
+        Q = 5e-9
+
+        p_array.q_array = np.ones(n)*Q/n
+        return p_array
+
     def __init__(self, n=0):
         self.rparticles = np.zeros((6, n))
         self.q_array = np.zeros(n)  # charge
@@ -640,7 +742,7 @@ class ParticleArray:
                                                                                 np.append(np.argwhere(y != y),
                                                                                           ind_angles)))))
         # e_idxs = [append([], x) for x in array([6*p_idxs, 6*p_idxs+1, 6*p_idxs+2, 6*p_idxs+3, 6*p_idxs+4, 6*p_idxs+5])]
-        self.rparticles = np.delete(self.rparticles, p_idxs, axis=1)
+        self.delete_particles(p_idxs)
         return p_idxs
 
     def __getitem__(self, idx):
@@ -665,6 +767,7 @@ class ParticleArray:
             self[i] = p
         self.s = p_list[0].s
         self.E = p_list[0].E
+        self.lost_particle_recorder = self.LostParticleRecorder(len(p_list))
 
     def array2list(self):
         p_list = []
@@ -943,12 +1046,12 @@ def get_envelope(p_array, tws_i=Twiss(), bounds=None):
 
     eigemit2 = (1 / np.sqrt(2)) * (np.sqrt(xpx ** 2 - pxpx * xx - 2 * pxpy * xy + 2 * xpy * ypx + ypy ** 2 - pypy * yy
                                            + np.sqrt(
-        (xpx ** 2 - pxpx * xx - 2 * pxpy * xy + 2 * xpy * ypx + ypy ** 2 - pypy * yy) ** 2
-        + 4 * (-2 * pypy * xpx * xy * ypx - xpy ** 2 * ypx ** 2 + pypy * xx * ypx ** 2 + 2 * xpx * xpy * ypx * ypy
-               - xpx ** 2 * ypy ** 2 + pypy * xpx ** 2 * yy
-               + 2 * pxpy * (xpy * xy * ypx + xpx * xy * ypy - xx * ypx * ypy - xpx * xpy * yy)
-               + pxpy ** 2 * (-xy ** 2 + xx * yy)
-               + pxpx * (pypy * xy ** 2 - 2 * xpy * xy * ypy + xx * ypy ** 2 + xpy ** 2 * yy - pypy * xx * yy + 0j)))))
+                                               (xpx ** 2 - pxpx * xx - 2 * pxpy * xy + 2 * xpy * ypx + ypy ** 2 - pypy * yy) ** 2
+                                               + 4 * (-2 * pypy * xpx * xy * ypx - xpy ** 2 * ypx ** 2 + pypy * xx * ypx ** 2 + 2 * xpx * xpy * ypx * ypy
+                                                      - xpx ** 2 * ypy ** 2 + pypy * xpx ** 2 * yy
+                                                      + 2 * pxpy * (xpy * xy * ypx + xpx * xy * ypy - xx * ypx * ypy - xpx * xpy * yy)
+                                                      + pxpy ** 2 * (-xy ** 2 + xx * yy)
+                                                      + pxpx * (pypy * xy ** 2 - 2 * xpy * xy * ypy + xx * ypy ** 2 + xpy ** 2 * yy - pypy * xx * yy + 0j)))))
 
     tws.eigemit_1 = eigemit1.imag  # w[0].imag
     tws.eigemit_2 = eigemit2.imag  # w[2].imag
@@ -1119,7 +1222,7 @@ def beam_matching(parray, bounds, x_opt, y_opt, remove_offsets=True, slice=None)
 
     if slice is not None:
         slice_params = global_slice_analysis(parray, nparts_in_slice=5000, smooth_param=0.05,
-                                                 filter_base=2, filter_iter=2)
+                                             filter_base=2, filter_iter=2)
         if slice == "Imax":
             ind0 = np.argmax(slice_params.I)
         elif slice == "Emax":
@@ -1708,7 +1811,7 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
         x_opt = [tws.alpha_x, tws.beta_x, tws.mux]
         y_opt = [tws.alpha_y, tws.beta_y, tws.muy]
         bounds = [-5, 5]
-        beam_matching(p_array.rparticles, bounds, x_opt, y_opt, remove_offsets=True)
+        beam_matching(p_array, bounds, x_opt, y_opt, remove_offsets=True)
 
     return p_array
 
@@ -1719,7 +1822,7 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
     accepts arguments with the same names as BeamArray().parameters()
     I - current in Amps
     E - beam ebergy in GeV
-    
+
     dE - rms energy spread in GeV
     emit_x, emit_n(both normalized), emit_xn, etc.
     shape - beam shape ('gaussian' of 'flattop')

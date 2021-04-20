@@ -250,10 +250,10 @@ class SectionTrack:
             elif elem == self.dipoles[3]:
                 right_flag = False
 
-            if left_flag and elem != self.dipoles[0] and (elem.__class__ not in [Edge]):
+            if left_flag and elem != self.dipoles[0]:
                 self.lattice.sequence[i] = copy.deepcopy(elem)
                 self.left_shoulder.append(self.lattice.sequence[i])
-            if right_flag and elem != self.dipoles[2] and (elem.__class__ not in [Edge]):
+            if right_flag and elem != self.dipoles[2]:
                 self.lattice.sequence[i] = copy.deepcopy(elem)
                 self.right_shoulder.append(self.lattice.sequence[i])
 

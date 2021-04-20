@@ -15,7 +15,7 @@ __all__ = ['Twiss', "Beam", "Particle", "get_current", "get_envelope", "generate
 
             'Element', 'Multipole', 'Quadrupole', 'RBend', "Matrix", "UnknownElement",              # elements
             'SBend', 'Bend', 'Drift', 'Undulator', 'Hcor',  "Sequence", "Solenoid", "TDCavity",     # elements
-            'Vcor', "Sextupole", "Monitor", "Marker", "Octupole", "Cavity", "Edge",  "Aperture",    # elements
+            'Vcor', "Sextupole", "Monitor", "Marker", "Octupole", "Cavity",  "Aperture",    # elements
 
             "match", "match_tunes",                                                          # match
 
@@ -34,9 +34,12 @@ __all__ = ['Twiss', "Beam", "Particle", "get_current", "get_envelope", "generate
             "MagneticLattice", "merger",            # magnetic_lattice
             "np", # numpy
 
-           "CavityTM", "CorrectorTM", "CouplerKickTM", "TransferMap", "HCorrectorTM",  # transformations
+           "CavityTM", "TransferMap",  # transformations
            "KickTM", "MultipoleTM", "PulseTM", "RungeKuttaTM", "RungeKuttaTrTM",  # transformations
-           "SecondTM", "TWCavityTM", "UndulatorTestTM", "VCorrectorTM"  # transformations
+           "SecondTM", "TWCavityTM", "UndulatorTestTM", "TMTypes",  # transformations
+
+            "CavityParams", "FirstOrderParams" ,"KickParams", "MultipoleParams", # tm parameters
+            "RungeKuttaParams", "SecondOrderParams", "UndulatorTestParams" # tm parameters
 
            ]
 
@@ -44,6 +47,7 @@ import numpy as np
 from ocelot.cpbd.magnetic_lattice import MagneticLattice, merger
 
 from ocelot.cpbd.beam import *
+from ocelot.cpbd.tm_params import *
 from ocelot.cpbd.transformations import *
 from ocelot.cpbd.elements import *
 from ocelot.cpbd.match import *

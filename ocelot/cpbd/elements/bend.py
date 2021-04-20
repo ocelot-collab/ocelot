@@ -1,9 +1,11 @@
 import numpy as np
 
-from ocelot.cpbd.elements.element import Element
+from ocelot.cpbd.elements.optic_element import OpticElement
+from ocelot.cpbd.elements.bend_atom import BendAtom
+from ocelot.cpbd.transformations.transfer_map import TransferMap
 
 
-class Bend(Element):
+class Bend(OpticElement):
     """
     bending magnet
     l - length of magnet in [m],
@@ -21,34 +23,6 @@ class Bend(Element):
     """
 
     def __init__(self, l=0., angle=0., k1=0., k2=0., e1=0., e2=0., tilt=0.0,
-                 gap=0., h_pole1=0., h_pole2=0., fint=0., fintx=None, eid=None):
-        Element.__init__(self, eid)
-        self.l = l
-        self.angle = angle
-        self.k1 = k1
-        self.k2 = k2
-        self.e1 = e1
-        self.e2 = e2
-        self.gap = gap
-        self.h_pole1 = h_pole1
-        self.h_pole2 = h_pole2
-        self.fint = fint
-        self.fintx = fint
-        if fintx is not None:
-            self.fintx = fintx
-        self.tilt = tilt
-
-    def __str__(self):
-        s = 'Bend : '
-        s += 'id = ' + str(self.id) + '\n'
-        s += 'l       =%8.4f m\n' % self.l
-        s += 'angle   =%8.3f deg\n' % (self.angle * 180.0 / np.pi)
-        s += 'e1      =%8.3f deg\n' % (self.e1 * 180.0 / np.pi)
-        s += 'e2      =%8.3f deg\n' % (self.e2 * 180.0 / np.pi)
-        s += 'tilt    =%8.3f deg\n' % (self.tilt * 180.0 / np.pi)
-        s += 'fint    =%8.3f\n' % self.fint
-        s += 'fintx   =%8.3f\n' % self.fintx
-        s += 'gap     =%8.4f m\n' % self.gap
-        s += 'h_pole1 =%8.4f 1/m\n' % self.h_pole1
-        s += 'h_pole2 =%8.4f 1/m\n' % self.h_pole2
-        return s
+                 gap=0., h_pole1=0., h_pole2=0., fint=0., fintx=None, eid=None, tm=TransferMap):
+        super().__init__(BendAtom(l=l, angle=angle, k1=k1, k2=k2, e1=e1, e2=e2, tilt=tilt,
+                                  gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, fintx=fintx, eid=eid), tm=tm, default_tm=TransferMap)

@@ -1,18 +1,34 @@
-from copy import copy
-
 import numpy as np
 
+from ocelot.cpbd.transformations.transformation import TMTypes
 from ocelot.cpbd.high_order import m_e_GeV
-from ocelot.cpbd.transformations.transfer_map import TransferMap
+from ocelot.cpbd.elements.element import Element
+from ocelot.cpbd.transformations.transfer_map import TransferMap, TMTypes
 
 
 class UndulatorTestTM(TransferMap):
-    def __init__(self, lperiod, Kx, ax=0, ndiv=10):
-        TransferMap.__init__(self)
-        self.lperiod = lperiod
-        self.Kx = Kx
-        self.ax = ax
-        self.ndiv = ndiv
+    """[summary]
+    Implementation of a Undulator Test Transforamtion.
+    The concrete element atom have to implement: 
+    create_undulator_test_tm_main_params(self) -> UndulatorTestParams
+    """
+
+    def __init__(self, create_tm_param_func, delta_e_func, tm_type: TMTypes, length: float, delta_length: float, **params) -> None:
+        ndiv = params.get('ndiv')
+        self.ndiv = ndiv if ndiv else 5
+        super().__init__(create_tm_param_func, delta_e_func, tm_type, length, delta_length=delta_length)
+
+    @classmethod
+    def from_element(cls, element: Element, tm_type: TMTypes = TMTypes.MAIN, delta_l=None, **params):
+        return cls.create(entrance_tm_params_func=None,
+                          delta_e_func=element.create_delta_e,
+                          main_tm_params_func=element.create_undulator_test_tm_main_params,
+                          exit_tm_params_func=None,
+                          has_params=False,
+                          tm_type=tm_type, length=element.l, delta_length=delta_l, **params)
+
+    def get_params(self):
+        return self.create_tm_param_func()
 
     def map4undulator(self, u, z, lperiod, Kx, ax, energy, ndiv):
         kz = 2. * np.pi / lperiod
@@ -47,10 +63,6 @@ class UndulatorTestTM(TransferMap):
             u[2] = y + h * u[3]
         return u
 
-    def map_function(self, delta_length=None, length=None):
-        return lambda X, energy: self.map4undulator(X, self.length, self.lperiod, self.Kx, self.ax, energy, self.ndiv)
-
-    @classmethod
-    def create_from_element(cls, element, params=None):
-        return cls(lperiod=element.lperiod, Kx=element.Kx, ax=element.ax,
-                   ndiv=element.ndiv if hasattr(element, 'ndiv') else 5)
+    def map_function(self, X, energy: float):
+        params = self.get_params()
+        return self.map4undulator(X, self.delta_length if self.delta_length != None else self.length, params.lperiod, params.Kx, params.ax, energy, self.ndiv)

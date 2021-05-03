@@ -222,8 +222,12 @@ def create_r_matrix(element):
                                     [0., 0., 0., 0., 0., 1]])
             return coupl_kick
 
-        r_z_e = lambda z, energy: ck_matrix(v=element.v, phi=element.phi,
-                                            vxx=element.vxx, vxy=element.vxy, energy=energy)
+        if element.v == 0.:
+            r = np.eye(6)
+            r_z_e = lambda z, energy: r
+        else:
+            r_z_e = lambda z, energy: ck_matrix(v=element.v, phi=element.phi,
+                                                vxx=element.vxx, vxy=element.vxy, energy=energy)
 
     elif element.__class__ == TWCavity:
 

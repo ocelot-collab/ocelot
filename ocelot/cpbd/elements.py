@@ -187,6 +187,30 @@ class Drift(Element):
         return s
 
 
+class EDrift(Element):
+    """
+    exact drift map
+    l - length of drift in [m]
+    method - optional control of map type. If E=0, ideal one will be used regardless.
+        '1' - exact map (default)
+        '2' - paraxial approximation, second order in px, py
+        '3' - linearized, same as Drift, useful for debugging
+
+    See EDriftTM for map details
+    """
+
+    def __init__(self, l: float = 0., eid: str = None, method: int = 1):
+        Element.__init__(self, eid)
+        self.l = l
+        self.method = method
+
+    def __str__(self):
+        s = 'EDrift : '
+        s += 'id = ' + str(self.id) + '\n'
+        s += 'l =%8.4f m\n' % self.l
+        s += 'method =%d m\n' % self.method
+        return s
+
 class Bend(Element):
     """
     bending magnet

@@ -16,6 +16,7 @@ __all__ = ['Twiss', "Beam", "Particle", "get_current", "get_envelope", "generate
             'Element', 'Multipole', 'Quadrupole', 'RBend', "Matrix", "UnknownElement",              # elements
             'SBend', 'Bend', 'Drift', 'Undulator', 'Hcor',  "Sequence", "Solenoid", "TDCavity",     # elements
             'Vcor', "Sextupole", "Monitor", "Marker", "Octupole", "Cavity", "Edge",  "Aperture",    # elements
+            'EDrift',
 
             "match", "match_tunes",                                                          # match
 

@@ -773,7 +773,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
         power_scale = -W.s / speed_of_light * 1e15
         p_label_txt = 't [fs]'
         if plot_moments:
-            group_delay = group_delay / speed_of_light * 1e15
+            group_delay = -group_delay / speed_of_light * 1e15
     else:
         power_scale = W.s * 1e6
         p_label_txt = 's [$\mu$m]'

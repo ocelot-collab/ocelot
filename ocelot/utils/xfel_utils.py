@@ -149,7 +149,7 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
         if st_cpl:
             dfl_st_cpl(dfl, trf.thetaB)
 
-        dfl_shift_z(dfl, s_delay, set_zeros=0)
+        dfl_shift_s(dfl, s_delay, set_zeros=0)
         _logger.debug(ind_str + 'shape_before '+str(dfl.shape()))
         dfl_pad_z(dfl, -padn)
         _logger.debug(ind_str + 'shape_after '+str(dfl.shape()))
@@ -167,7 +167,7 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
         dfl.fft_z(method=fft_method, nthread=multiprocessing.cpu_count())
         if st_cpl:
             dfl_st_cpl(dfl, trf.thetaB)
-        dfl_shift_z(dfl, s_delay, set_zeros=0)
+        dfl_shift_s(dfl, s_delay, set_zeros=0)
         dfl_pad_z(dfl, -padn)
 
         t_func = time.time() - start

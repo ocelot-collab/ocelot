@@ -2054,7 +2054,10 @@ def read_dfl_file_out(out, filePath=None, harmonic=1, *args, **kwargs):
 
     if filePath is None:
         _logger.debug(ind_str + 'from out.filePath')
-        filePath = out.filePath + '.dfl'
+        if harmonic is not 1:
+            filePath = out.filePath + '.dfl' + str(harmonic)
+        else:
+            filePath = out.filePath + '.dfl'
     else:
         _logger.debug(ind_str + 'from filepath')
     _logger.debug(2*ind_str + filePath)

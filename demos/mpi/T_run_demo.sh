@@ -42,7 +42,7 @@ fi
 rm flag.finish
 
 NODE=`uname -n`
-sleep 60  # some wait time to demonstrate transitions of job state...
+sleep 10  # some wait time to demonstrate transitions of job state...
 echo "Hallo from compute node $NODE" > T_run_demo_out.txt
 
 touch flag.finish

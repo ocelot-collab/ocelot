@@ -989,7 +989,7 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'e
             bunch_harm = int(param.replace('el_bunching_h', ''))
             subfig_evo_el_bunching(ax[-1], g, legend, harm=bunch_harm, **kwargs)
         
-        elif param.startswith('rad_pow'):
+        elif param.startswith('rad_pow') and not 'evo' in param:
             if 'log' in param:
                 plot_log=1
             else:
@@ -1446,7 +1446,7 @@ def subfig_rad_size(ax_size_t, g, legend, **kwargs):
 @if_plottable
 def subfig_evo_rad_pow_sz(ax_power_evo, g, legend, norm=1, **kwargs):
     if g.nSlices > 1:
-
+        
         y_units = kwargs.get('subfig_evo_rad_pow_sz_yunits', 'um')
         dgrid = kwargs.get('subfig_evo_rad_pow_sz_dgrid', True)
         z = g.z
@@ -1466,7 +1466,6 @@ def subfig_evo_rad_pow_sz(ax_power_evo, g, legend, norm=1, **kwargs):
         ax_power_evo.set_xlabel('z [m]')
         ax_power_evo.set_ylabel(y_label)
         ax_power_evo.axis('tight')
-
         ax_power_evo.grid(dgrid)
     else:
         pass
@@ -1476,13 +1475,12 @@ def subfig_evo_rad_pow_sz(ax_power_evo, g, legend, norm=1, **kwargs):
 def subfig_evo_rad_spec_sz(ax_spectrum_evo, g, legend, norm=1, **kwargs):
     if not hasattr(g, 'spec'):
         g.calc_spec()
-
+        
     if g.nSlices > 1:
         z = g.z
-
+        
         y_units = kwargs.get('subfig_evo_rad_spec_sz_yunits', 'ev')
         dgrid = kwargs.get('subfig_evo_rad_spec_sz_dgrid', True)
-
         if y_units in ['ev', 'eV', 'phen']:
             l = g.freq_ev
             y_label = '$E_{photon}$ [eV]'

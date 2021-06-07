@@ -18,7 +18,8 @@ setup(
     packages=all_packages,
     package_dir={'ocelot.demos': 'demos'},  ## install examples along with the rest of the source
     install_requires=[
-        'numpy', 'scipy', 'matplotlib', 'pandas'
+        'numpy', 'scipy', 'matplotlib', 'pandas',
+        "openpmd_beamphysics @ https://github.com/ChristopherMayes/openPMD-beamphysics/archive/refs/tags/v0.5.2.zip"
     ],
     extras_require={'docs': ['Sphinx', 'alabaster', 'sphinxcontrib-jsmath']},
     package_data={'ocelot.optics': ['data/*.dat']},

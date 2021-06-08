@@ -40,9 +40,9 @@ def load_pmd(filename: str) -> ParticleArray:
 
 
 def particle_array_to_particle_group(parray: ParticleArray) -> pmd.ParticleGroup:
-    px = parray.px() * parray.p0 * 1e9  # to eV
-    py = parray.py() * parray.p0 * 1e9  # to eV
-    pz = parray.pz * parray.p0 * 1e9  # to eV
+    px = parray.px() * parray.p0c * 1e9  # to eV
+    py = parray.py() * parray.p0c * 1e9  # to eV
+    pz = parray.pz * parray.p0c * 1e9  # to eV
 
     data = {
         "x": parray.x(),

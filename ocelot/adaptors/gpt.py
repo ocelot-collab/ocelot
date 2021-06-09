@@ -37,11 +37,10 @@ def tout_to_particle_array(tout: ScreenToutType) -> ParticleArray:
 
     """
     # This is an assumption, that z in the tout/screen coordinate system is the same as
-    # z in the familiar accelerator physics coordinate system.
-    dz = tout["z"] - np.mean(tout["z"])
-    # particles in front of the reference (positive z) corresponds to a negative time
-    # and therefore a negative tau = ct
-    tau = -dz
+    # z in the familiar accelerator physics coordinate system. Negative in front of the
+    # reference because tau = c dt, and dt is negative for particles in front of the
+    # reference particle.
+    tau = np.mean(tout["z"]) - tout["z"]
     return _common_implementation(tout, tau)
 
 
@@ -51,7 +50,7 @@ def screen_to_particle_array(screen: ScreenToutType) -> ParticleArray:
     :param screen: The Mapping of screen variable names to values.
 
     """
-    dt = np.mean(screen["t"]) - screen["t"]  # Negative if in front of the reference
+    dt = screen["t"] - np.mean(screen["t"]) # Negative if in front of the reference
     tau = speed_of_light * dt
     return _common_implementation(screen, tau)
 
@@ -67,9 +66,9 @@ def _common_implementation(screen_or_tout: ScreenToutType, tau: float) -> Partic
 
     parray = ParticleArray(len(energy))
     rpart = parray.rparticles
-    rpart[0] = np.mean(sot["x"]) - sot["x"]
+    rpart[0] = sot["x"] - np.mean(sot["x"])
     rpart[1] = sot["Bx"] * momentum / reference_momentum
-    rpart[2] = np.mean(sot["y"]) - sot["y"]
+    rpart[2] = sot["y"] - np.mean(sot["y"])
     rpart[3] = sot["By"] * momentum / reference_momentum
     rpart[4] = tau
     rpart[5] = (energy - reference_energy) / reference_momentum

@@ -37,17 +37,16 @@ def compare_gdf_dict_with_parray(gdfmap, parray):
     reference_energy = np.mean(energy)
     p0 = np.mean(momentum)
 
-    if "time" in gdfmap:  # tout
-        dz = gdfmap["z"] - np.mean(gdfmap["z"])
-        tau = -dz
-    else:  # screen
-        dt = np.mean(gdfmap["t"]) - gdfmap["t"]
+    if "time" in gdfmap: # tout
+        tau = np.mean(gdfmap["z"]) - gdfmap["z"]
+    else: # screen
+        dt = gdfmap["t"] - np.mean(gdfmap["t"])
         tau = speed_of_light * dt
 
     assert parray.E == reference_energy
-    np.testing.assert_allclose(parray.x(), np.mean(gdfmap["x"]) - gdfmap["x"])
+    np.testing.assert_allclose(parray.x(), gdfmap["x"] - np.mean(gdfmap["x"]))
     np.testing.assert_allclose(parray.px(), gdfmap["Bx"] * momentum / p0)
-    np.testing.assert_allclose(parray.y(), np.mean(gdfmap["y"]) - gdfmap["y"])
+    np.testing.assert_allclose(parray.y(), gdfmap["y"] - np.mean(gdfmap["y"]))
     np.testing.assert_allclose(parray.py(), gdfmap["By"] * momentum / p0)
     np.testing.assert_allclose(parray.p(), (energy - reference_energy) / p0)
 

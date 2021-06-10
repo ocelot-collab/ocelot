@@ -821,6 +821,27 @@ class ParticleArray:
     def n(self):
         return np.shape(self.rparticles)[1]
 
+    @property
+    def pz(self) -> float:
+        """pz/p0 - the z-components of the particle momenta normalised with respect to
+        the reference momentum p0."""
+        return np.sqrt((self.momenta/self.p0c)**2 - self.px()**2 - self.py()**2)
+
+    @property
+    def p0c(self) -> float:
+        """Get reference momentum * speed of light in GeV."""
+        return np.sqrt(self.E**2 - m_e_GeV**2)
+
+    @property
+    def energies(self) -> float:
+        """Get all particle energies in GeV."""
+        return self.p() * self.p0c + self.E
+
+    @property
+    def momenta(self) -> float:
+        """Get all macroparticle momenta in GeV/c."""
+        return np.sqrt(self.energies**2 - m_e_GeV**2)
+
     def thin_out(self, nth=10, n0=0):
         """
         Method to thin out the particle array in n-th times. Means every n-th particle will be saved in new Particle array

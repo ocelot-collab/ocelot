@@ -9,6 +9,12 @@ import numpy as np
 
 from ocelot.adaptors.astra2ocelot import astraBeam2particleArray, particleArray2astraBeam
 from ocelot.adaptors.csrtrack2ocelot import csrtrackBeam2particleArray, particleArray2csrtrackBeam
+
+try:
+    from ocelot.adaptors.pmd import load_pmd, particle_array_to_particle_group
+except ImportError:
+    pass
+
 from ocelot.cpbd.beam import ParticleArray, Twiss, Beam
 
 
@@ -50,6 +56,8 @@ def load_particle_array(filename, print_params=False):
         parray = astraBeam2particleArray(filename, print_params=False)
     elif file_extension in [".fmt1"]:
         parray = csrtrackBeam2particleArray(filename)
+    elif file_extension == ".h5":
+        parray = load_pmd(filename)
     else:
         raise Exception("Unknown format of the beam file: " + file_extension + " but must be *.ast, *fmt1 or *.npz ")
 
@@ -77,6 +85,9 @@ def save_particle_array(filename, p_array):
         particleArray2astraBeam(p_array, filename)
     elif file_extension == ".fmt1":
         particleArray2csrtrackBeam(p_array, filename)
+    elif file_extension == ".h5":
+        particle_array_to_particle_group(p_array).write(filename)
     else:
+        particle_array_to_particle_group(p_array).write(filename)
         raise Exception("Unknown format of the beam file: " + file_extension + " but must be *.ast, *.fmt1 or *.npz")
 

@@ -370,7 +370,7 @@ class BeamTransform(PhysProc):
         self.y_opt = y_opt  # [alpha, beta, mu (phase advance)] - obsolete
         self.step = 1
         self.remove_offsets = kw.get("remove_offsets", True)
-        self.bounds = kw.get("remove_offsets", [-5, 5])  # [start, stop] in sigmas
+        self.bounds = kw.get("bounds", [-5, 5])  # [start, stop] in sigmas
         self.slice = kw.get("slice", None)
 
     @property

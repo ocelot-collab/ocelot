@@ -3,9 +3,8 @@ import sys
 
 sys.path.append(ocelot_dir)
 
-from accelerator.s2e_sections.sections import *
-from ocelot.utils.section_track import *
 from ocelot.gui.accelerator import *
+from ocelot import *
 import time
 from ocelot.common.globals import *
 import injector_lattice as i1

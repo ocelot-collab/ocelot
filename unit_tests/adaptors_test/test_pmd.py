@@ -1,10 +1,19 @@
+from ocelot.cpbd.beam import ParticleArray
+from ocelot.common.globals import m_e_eV
 import numpy as np
-import pmd_beamphysics as pmd
 import pytest
 
-from ocelot.adaptors import pmd as pmd_adaptor
-from ocelot.common.globals import m_e_eV
-from ocelot.cpbd.beam import ParticleArray
+try:
+    import pmd_beamphysics as pmd
+    from ocelot.adaptors import pmd as pmd_adaptor
+    IS_PMD_INSTALLED = True
+except:
+    IS_PMD_INSTALLED = False
+
+
+# Define decorator to skip tests if Wake-T is not installed.
+only_if_pmd_installed = pytest.mark.skipif(
+    not IS_PMD_INSTALLED, reason='PMD required to run tests')
 
 
 # Toy data for instantiating a ParticleGroup
@@ -22,6 +31,7 @@ PARTICLE_GROUP_DATA = {
 }
 
 
+@only_if_pmd_installed
 @pytest.fixture
 def tmp_pmdh5(tmp_path):
     """tmp path to written pmd h5 file defined from above PARTICLE_GROUP_DATA"""
@@ -31,6 +41,7 @@ def tmp_pmdh5(tmp_path):
     yield pmd_path
 
 
+@only_if_pmd_installed
 @pytest.fixture
 def pmd_parray(tmp_pmdh5):
     """Ocelot ParticleArray fixture from the above PARTICLE_GROUP_DATA."""
@@ -38,6 +49,7 @@ def pmd_parray(tmp_pmdh5):
     yield pmd_adaptor.particle_group_to_parray(pgroup)
 
 
+@only_if_pmd_installed
 def compare_particle_group_with_array(pgroup, parray):
     # Use the values from the pgroup for consistency as these are what
     # particle_group_to_parray uses internally.
@@ -56,6 +68,7 @@ def compare_particle_group_with_array(pgroup, parray):
     np.testing.assert_allclose(pgroup.weight, parray.q_array)
 
 
+@only_if_pmd_installed
 def test_particle_group_to_parray():
     """Convertiong of ParticleGroup to ParticleArray"""
     # instantiate a ParticleGroup and make corresponding ParticleArray
@@ -64,6 +77,7 @@ def test_particle_group_to_parray():
     compare_particle_group_with_array(pgroup, parray)
 
 
+@only_if_pmd_installed
 def test_load_pmd(tmp_pmdh5):
     """Loading of PMD files"""
     parray = pmd_adaptor.load_pmd(str(tmp_pmdh5))
@@ -71,6 +85,7 @@ def test_load_pmd(tmp_pmdh5):
     compare_particle_group_with_array(pgroup, parray)
 
 
+@only_if_pmd_installed
 def test_parray_to_particle_group(pmd_parray):
     """Conversion of ParticleArray to ParticleGroup"""
     pgroup = pmd_adaptor.particle_array_to_particle_group(pmd_parray)

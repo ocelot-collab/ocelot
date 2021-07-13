@@ -1943,7 +1943,7 @@ def undulator_field_dfl_MP(dfl, z, L_w, E_ph, N_b=1, N_e=1, sig_x=0, sig_y=0, si
         phi = np.random.uniform(low=0, high=2*np.pi, size=N_e)
         
         E = np.zeros((dfl.shape()[1], dfl.shape()[2]))
-        i=1
+        i=0
         for l_xi, l_yi, eta_xi, eta_yi, phi_i in zip(l_x, l_y, eta_x, eta_y, phi):
             if approximation == 'far_field':
                 if mode == 'incoh':
@@ -1974,9 +1974,9 @@ def undulator_field_dfl_MP(dfl, z, L_w, E_ph, N_b=1, N_e=1, sig_x=0, sig_y=0, si
 
     return dfl
 
-def undulator_field_dfl_SERVAL(dfl, L_w, sig_x=0, sig_y=0, sig_xp=0, sig_yp=0, k_support = 'intensity', s_support='conv', showfig=False, seed=None):
+def undulator_field_dfl_SERVAL(dfl, L_w, sig_x=0, sig_y=0, sig_xp=0, sig_yp=0, k_support = 'intensity', s_support='intensity', showfig=False, seed=None):
     
-    _logger.info('Generating undulator field with Serval algorithm')
+    _logger.info('Generating undulator field with SERVAL algorithm')
     w_0 = 2*np.pi * speed_of_light / dfl.xlamds
     
     if showfig:
@@ -1987,22 +1987,22 @@ def undulator_field_dfl_SERVAL(dfl, L_w, sig_x=0, sig_y=0, sig_xp=0, sig_yp=0, k
     x, y = np.meshgrid(dfl.scale_x(), dfl.scale_y())#, indexing='ij')
     
     mask_xy_ebeam = np.exp(- x**2 / 4 / sig_x**2 - y**2 / 4 / sig_y**2) # 4 because amplitude, not intensity
-    # mask_xy_ebeam = np.exp(- x**2 / 2 / sig_x**2 - y**2 / 2 / sig_y**2) # 4 because amplitude, not intensity
-
     mask_xy_ebeam /= np.sum(mask_xy_ebeam)
-    
-    # mask_xy_radiation = np.sqrt((1j*(np.pi - 2*special.sici(w_0*(x**2 + y**2)/speed_of_light/L_w)[0]))**2)
-    # mask_xy_radiation = 1j*(np.pi - 2*special.sici(w_0*(x**2 + y**2)/speed_of_light/L_w)[0])
+    mask_xy_radiation = 1j*(np.pi - 2*scipy.special.sici(w_0*(x**2 + y**2)/speed_of_light/L_w)[0])
 
-    # mask_xy_radiation = (1j*(np.pi - 2*special.sici(w_0*(x**2 + y**2)/speed_of_light/L_w)[0]))**2
-    if s_support == 'conv':
-        _logger.info(ind_str +'s_support == "conv"')
-        mask_xy_radiation = 1j*(np.pi - 2*special.sici(w_0*(x**2 + y**2)/speed_of_light/L_w)[0])
-        mask_xy = signal.fftconvolve(mask_xy_radiation, mask_xy_ebeam, mode='same')
-    else:
+    if s_support == 'intensity':
+        _logger.info(ind_str +'s_support == "intensity"')
+        mask_xy = scipy.signal.fftconvolve(mask_xy_radiation**2, mask_xy_ebeam**2, mode='same')
+        mask_xy = np.sqrt(mask_xy)
+    elif s_support == 'amplitude':
+        _logger.info(ind_str +'s_support == "amplitude"')
+        mask_xy = scipy.signal.fftconvolve(mask_xy_radiation, mask_xy_ebeam, mode='same')
+    elif s_support == '"beam':
         _logger.info(ind_str +'s_support == "beam"')
         mask_xy = mask_xy_ebeam
-    
+    else:
+        raise ValueError('k_support should be either "intensity", "amplitude" or "beam"')
+
     _logger.info(ind_str +'Multiplying by real space mask')
     dfl.fld *= mask_xy
     # dfl.fld *= np.sqrt(mask_xy)
@@ -2016,23 +2016,21 @@ def undulator_field_dfl_SERVAL(dfl, L_w, sig_x=0, sig_y=0, sig_xp=0, sig_yp=0, k
 
     k_x, k_y = np.meshgrid(dfl.scale_x(), dfl.scale_y())
     mask_kxky_ebeam = np.exp(-k_y**2 / 4 / sig_yp**2 - k_x**2 / 4 / sig_xp**2 ) # 4 because amplitude, not intensity
-    # mask_kxky_ebeam = np.exp(-k_y**2 / 2 / sig_yp**2 - k_x**2 / 2 / sig_xp**2 ) # 2 because intensity
     mask_kxky_ebeam /= np.sum(mask_kxky_ebeam)
-    
-    # mask_kxky_radiation = np.sqrt((np.sinc(w_0 * L_w * (k_x**2 + k_y**2) / 4 / speed_of_light / np.pi))**2)# Geloni2018 Eq.3, domega/omega = 2dgamma/gamma, divided by pi due to np.sinc definition
-    # mask_kxky_radiation = (np.sinc(w_0 * L_w * (k_x**2 + k_y**2) / 4 / speed_of_light / np.pi))# Geloni2018 Eq.3, domega/omega = 2dgamma/gamma, divided by pi due to np.sinc definition
-        
     mask_kxky_radiation = np.sinc(w_0 * L_w * (k_x**2 + k_y**2) / 4 / speed_of_light / np.pi)# Geloni2018 Eq.3, domega/omega = 2dgamma/gamma, divided by pi due to np.sinc definition
 
     if k_support == 'intensity':
         _logger.info(ind_str +'k_support == "intensity"')
-        mask_kxky = signal.fftconvolve(mask_kxky_ebeam**2, mask_kxky_radiation**2, mode='same')
+        mask_kxky = scipy.signal.fftconvolve(mask_kxky_ebeam**2, mask_kxky_radiation**2, mode='same')
         mask_kxky = np.sqrt(mask_kxky[np.newaxis, :, :])
         mask_kxky /= np.sum(mask_kxky)
     elif k_support == 'amplitude':
         _logger.info(ind_str +'k_support == "amplitude"')
-        mask_kxky = signal.fftconvolve(mask_kxky_ebeam, mask_kxky_radiation, mode='same')
+        mask_kxky = scipy.signal.fftconvolve(mask_kxky_ebeam, mask_kxky_radiation, mode='same')
         mask_kxky /= np.sum(mask_kxky)
+    elif k_support == 'amplitude':
+        _logger.info(ind_str +'k_support == "beam"')
+        mask_kxky = mask_kxky_ebeam
     else:
         raise ValueError('k_support should be either "intensity" or "amplitude"')
     
@@ -2044,10 +2042,8 @@ def undulator_field_dfl_SERVAL(dfl, L_w, sig_x=0, sig_y=0, sig_xp=0, sig_yp=0, k
     if showfig:
         plot_dfl(dfl, domains='s', fig_name = '3-X_radaition_size')
         plot_dfl(dfl, domains='k', fig_name = '3-X_radiation_divergence')
-
-    return dfl 
-
-
+    
+    return dfl     
 
 def calc_phase_delay_poly(coeff, w, w0):
     """

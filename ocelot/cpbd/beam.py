@@ -1765,6 +1765,163 @@ def parray2beam(parray, step=1e-7):
         beam.filePath = parray.filePath + '.beam'
     return (beam)
 
+def cov_matrix_from_twiss(ex, ey, sigma_tau, sigma_p, **twiss):
+    """Generate a covariance matrix from Twiss parameters, dispersions and
+    emittances (horizontal) and standard deviations (longitudinal).  No
+    correlations between tau and the other coordinates are present in this
+    parametrisation.
+
+    :param ex: Geometric emittance in x-plane
+    :param ey: Geometric emittance in y-plane
+    :param sigma_tau: Standard deviation of tau (c*t)
+    :param sigma_p: Standard deviation of cannonical coordinate p=dE/(c*p0).
+    :param twiss: Horizontal Twiss parameters.  Required: alpha_x, beta_x,
+        alpha_y, beta_y.  Optional (set to 0 if missing): dispersions dx,
+        dpx, dy, dpy.
+    :return: 6x6 correlation matrix.
+
+
+    """
+    alpha_x = twiss["alpha_x"]
+    beta_x = twiss["beta_x"]
+    alpha_y = twiss["alpha_y"]
+    beta_y = twiss["beta_y"]
+    dx = twiss.get("dx", 0)
+    dpx = twiss.get("dpx", 0)
+    dy = twiss.get("dy", 0)
+    dpy = twiss.get("dpy", 0)
+    # X block, y block, xy upper block, xy lower block
+    xb = _horizontal_2x2_elements(ex, alpha_x, beta_x, dx, dpx, sigma_p)
+    yb = _horizontal_2x2_elements(ey, alpha_y, beta_y, dy, dpy, sigma_p)
+    xyu = _horizontal_coupling_elements(dx, dy, dpx, dpy, sigma_p)
+    xyl = np.array(
+        _horizontal_coupling_elements(dx, dy, dpx, dpy, sigma_p)
+    ).T
+    sp2 = sigma_p**2
+    return np.array([[xb[0,0],  xb[0,1], xyu[0,0], xyu[0,1], 0., dx*sp2],
+                     [xb[1,0],  xb[1,1], xyu[1,0], xyu[1,1], 0., dpx*sp2],
+                     [xyl[0,0], xyl[0,1], yb[0,0],  yb[0,1], 0., dy*sp2],
+                     [xyl[1,0], xyl[1,1], yb[1,0],  yb[1,1], 0., dpy*sp2],
+                     [0.,            0,         0,  0, sigma_tau**2, 0.0],
+                     [dx*sp2, dpx*sp2, dy*sp2, dpy*sp2, 0, sp2]])
+
+def cov_matrix_to_parray(mean, cov, energy, charge, nparticles):
+    """Generate a ParticleArray instance using a covariance matrix.
+
+    :param mean: 1-D list of 6 means of the particle distributions.
+    :param cov: 6x6 covariance matrix.
+    :param energy: Beam energy in GeV.
+    :param charge: Total beam charge in Coulombs.
+    :param nparticles: Number of particles to populate the ParticleArray
+        instance with.
+    :return: ParticleArray with given charge and energy populated with
+        nparticles and the particle distribution having the correct means
+        and covariances.
+    :rtype: ParticleArray
+
+    """
+
+    p_array = ParticleArray()
+    p_array.E = energy
+    p_array.rparticles = np.random.multivariate_normal(mean, cov, nparticles).T
+    p_array.q_array = np.ones(nparticles) * charge / nparticles
+    return p_array
+
+def _horizontal_2x2_elements(emit, alpha, beta, disp, disp_p, sigma_p):
+    """2x2 correlation matrix between x/py  and y/py"""
+    gamma = (1 + alpha**2) / beta
+    offdiag = -emit * alpha + disp * disp_p * sigma_p**2
+    return np.array([[emit * beta + (disp*sigma_p)**2, offdiag],
+                     [offdiag, emit * gamma + (disp_p*sigma_p)**2]])
+
+def _horizontal_coupling_elements(disp_x, disp_y, disp_px, disp_py, sigma_p):
+    """generate cov matrix elements for correlations between horz. and
+    vertical."""
+    sigp2 = sigma_p**2
+    return np.array([[disp_x * disp_y * sigp2, disp_x * disp_py * sigp2],
+                     [disp_px * disp_y * sigp2, disp_px * disp_py * sigp2]])
+
+
+def optics_from_moments(mean, cov_matrix, energy=None):
+    """Calculate the beam optics from the mean and covariance matrix.
+
+    :param mean: 1x6 array of means
+    :param cov_matrix: 6x6 matrix of covariances between the particle vectors.
+    :param energy: Energy to additionally calculate the normalised
+        emittances from the geometric emittances, optional.
+
+    """
+    r = Twiss()
+    r.x, r.xp, r.y, r.yp, r.tau, r.p = mean
+    r.Dx, r.Dxp, r.Dy, r.Dyp = _dispersions_from_cov_matrix(cov_matrix)
+    sigp2 = cov_matrix[5, 5]
+    r.emit_x, r.alpha_x, r.beta_x, r.gamma_x = _dispersionless_twiss_parameters(
+        cov_matrix[0:2, 0:2],
+        r.Dx,
+        r.Dxp,
+        sigp2
+    )
+    r.emit_y, r.alpha_y, r.beta_y, r.gamma_y = _dispersionless_twiss_parameters(
+        cov_matrix[2:4, 2:4],
+        r.Dy,
+        r.Dyp,
+        sigp2
+    )
+
+    if energy is not None:
+        r.E = energy
+        r.emit_xn = r.emit_x * energy / m_e_GeV
+        r.emit_yn = r.emit_y * energy / m_e_GeV
+
+    return r
+
+def _dispersionless_twiss_parameters(submatrix, dx, dpx, sigp2):
+    """Calculate the emittance and twiss parameters from the 2x2 covariance
+    matrix accounting for the increase in the spot size due to the
+    dispersion.
+
+    """
+    x = submatrix[0, 0] - dx**2 * sigp2
+    px = submatrix[1, 1] - dpx**2 * sigp2
+    xpx = submatrix[0, 1] - dx*dpx * sigp2
+    emittance = np.sqrt(x * px - xpx * xpx)
+    beta = x / emittance
+    alpha = -xpx / emittance
+    gamma = px / emittance
+
+
+    return emittance, alpha, beta, gamma
+
+def _dispersions_from_cov_matrix(cov_matrix):
+    """Calculate the dispersions from the provided 6x6 covariance matrix."""
+    sigp2 = cov_matrix[5, 5]
+    if sigp2 == 0:
+        return 0, 0, 0, 0
+    dx = cov_matrix[0, 5] / sigp2
+    dpx = cov_matrix[1, 5] / sigp2
+    dy = cov_matrix[2, 5] / sigp2
+    dpy = cov_matrix[3, 5] / sigp2
+    return dx, dpx, dy, dpy
+
+def moments_from_parray(parray, dispersions=None):
+    """Calculate the central moments and covariances from the given
+    ParticleArray.  Correct for dispersion by providing either a Twiss
+    instance, a list of four dispersion [dx, dxp, dy, dyp].
+    """
+    rpart = parray.rparticles
+    try:
+        dx = dispersions.Dx
+        dxp = dispersions.Dxp
+        dy = dispersions.Dy
+        dyp = dispersions.Dyp
+    except AttributeError:
+        try:
+            dx, dxp, dy, dyp = dispersions
+        except TypeError:
+            dx, dxp, dy, dyp = 0, 0, 0, 0
+    # TODO: ACTUALLY CORRECT FOR DISPERSION AND DO IT CLEANLY SOMEWHERE.
+
+    return np.mean(rpart, axis=1, dtype=np.float64), np.cov(rpart)
 
 def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
                     sigma_tau=1e-3, sigma_p=1e-4, chirp=0.01, charge=5e-9, nparticles=200000, energy=0.13,

@@ -873,13 +873,13 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     """
     if tau_units == "m":
         tau_factor = 1  # m
-        tau_label = r"$s\,/\,\mathrm{m}$"
+        tau_label = r"$s\,[\mathrm{m}]$"
     elif tau_units == "um":
         tau_factor = 1e6  # um
-        tau_label = r"$s\,/\,\mathrm{\mu{}m}$"
+        tau_label = r"$s\,[\mathrm{\mu{}m}]$"
     else:
         tau_factor = 1e3  # mm
-        tau_label = r"$s\,/\,\mathrm{mm}$"
+        tau_label = r"$s\,[\mathrm{mm}]$"
 
     p_array_copy = deepcopy(p_array)
     if inverse_tau:
@@ -894,7 +894,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     plt.plot(slice_params.s * tau_factor, slice_params.se * 1e-3, "b")
     # plt.legend()
     plt.xlabel(tau_label)
-    plt.ylabel(r"$\sigma_E\,/\,\mathrm{keV}$")
+    plt.ylabel(r"$\sigma_E\,[\mathrm{keV}]$")
     plt.grid(grid)
 
     ax_em = plt.subplot(323, sharex=ax_sp)
@@ -907,7 +907,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
              label=rf"$\varepsilon_y^{{\mathrm{{proj}}}} = {emityn_mm_mrad}\,\mathrm{{mm\cdot{{}}mrad}}$")
     plt.legend()
     plt.setp(ax_em.get_xticklabels(), visible=False)
-    plt.ylabel(r"$\varepsilon_{x,y}\,/\,\mathrm{mm\cdot{}mrad}$")
+    plt.ylabel(r"$\varepsilon_{x,y}\,[\mathrm{mm\cdot{}mrad}]$")
     plt.grid(grid)
 
     ax_c = plt.subplot(321, sharex=ax_sp)
@@ -922,13 +922,13 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
 
 
     plt.setp(ax_c.get_xticklabels(), visible=False)
-    plt.ylabel("$I\,/\,\mathrm{A}$")
+    plt.ylabel("$I\,[\mathrm{A}]$")
     plt.grid(grid)
 
     ax_ys = plt.subplot(326, sharex=ax_sp)
 
     show_density(p_array_copy.tau() * tau_factor, p_array_copy.y() * 1e3, ax=ax_ys, nbins_x=nbins_x, nbins_y=nbins_y,
-                 interpolation=interpolation, xlabel=tau_label, ylabel='$y\,/\,\mathrm{mm}$', nfig=50,
+                 interpolation=interpolation, xlabel=tau_label, ylabel='$y\,[\mathrm{mm}]$', nfig=50,
                  title="Side view", figsize=None, grid=grid)
     if show_moments:
         plt.plot(slice_params.s * tau_factor, slice_params.my * 1e3, "k", lw=2)
@@ -938,7 +938,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     ax_xs = plt.subplot(324, sharex=ax_sp)
 
     show_density(p_array_copy.tau() * tau_factor, p_array_copy.x() * 1e3, ax=ax_xs, nbins_x=nbins_x, nbins_y=nbins_y,
-                 interpolation=interpolation, ylabel=r'$x\,/\,\mathrm{mm}$',
+                 interpolation=interpolation, ylabel=r'$x\,[\mathrm{mm}]$',
                  title="Top view", grid=grid, show_xtick_label=False)
     if show_moments:
         plt.plot(slice_params.s * tau_factor, slice_params.mx * 1e3, "k", lw=2)
@@ -948,7 +948,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     ax_ps = plt.subplot(322, sharex=ax_sp)
 
     show_density(p_array_copy.tau() * tau_factor, p_array_copy.p() * 1e2, ax=ax_ps, nbins_x=nbins_x, nbins_y=nbins_y,
-                 interpolation=interpolation, ylabel=r'$\delta_E\,/\,\%$',
+                 interpolation=interpolation, ylabel=r'$\delta_E\,[\%]$',
                  title="Longitudinal phase space", grid=grid, show_xtick_label=False)
 
     if inverse_tau:
@@ -1070,7 +1070,7 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice1=5000, nparts_in_slice2=
     :param legend_beam2: None, legend for beam N1
     :return:
     """
-    tau_label = r"$s\,/\,\mathrm{mm}$"
+    tau_label = r"$s\,[\mathrm{mm}]$"
     if legend_beam1 == None:
         legend_beam1 = "beam 1"
     if legend_beam2 == None:
@@ -1096,7 +1096,7 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice1=5000, nparts_in_slice2=
     plt.legend()
     plt.xlabel(tau_label)
 
-    plt.ylabel(r"$\Delta{} E\,/\,\mathrm{keV}$")
+    plt.ylabel(r"$\Delta{} E\,[\mathrm{keV}]$")
     plt.grid(True)
 
     ax_em = plt.subplot(323, sharex=ax_sp)
@@ -1110,7 +1110,7 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice1=5000, nparts_in_slice2=
 
     plt.legend()
     plt.setp(ax_em.get_xticklabels(), visible=False)
-    plt.ylabel(r"$\varepsilon_x\,/\,\mathrm{mm\cdot{}mrad}$")
+    plt.ylabel(r"$\varepsilon_x\,[\mathrm{mm\cdot{}mrad}]$")
     plt.grid(True)
 
     ax_c = plt.subplot(321, sharex=ax_sp)
@@ -1123,7 +1123,7 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice1=5000, nparts_in_slice2=
              label=fr"$I_{{\mathrm{{max}}}}={i2max:.0f}\,\mathrm{{A}}$ {legend_beam2}")
     plt.legend()
     plt.setp(ax_c.get_xticklabels(), visible=False)
-    plt.ylabel("$I\,/\,\mathrm{A}$")
+    plt.ylabel("$I\,[\mathrm{A}]$")
     plt.grid(True)
 
     # my_rainbow = deepcopy(plt.get_cmap('rainbow'))
@@ -1136,7 +1136,7 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice1=5000, nparts_in_slice2=
     plt.plot(slice_params2.s * 1e6, slice_params2.mp * 1e2, "b", label=r"$\Delta{} E/E$: " + legend_beam2)
     plt.legend()
     plt.xlabel(tau_label)
-    plt.ylabel(r'$\delta{}_E\,/\,\%$')
+    plt.ylabel(r'$\delta{}_E\,[\%]$')
     plt.grid(True)
 
     ax_em = plt.subplot(324, sharex=ax_mp)
@@ -1149,7 +1149,7 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice1=5000, nparts_in_slice2=
              label=r"$\varepsilon_y = $" + str(emityn2_mm_mrad) + r" $\mathrm{mm\cdot{}mrad}$: " + legend_beam2)
     plt.legend()
     plt.setp(ax_em.get_xticklabels(), visible=False)
-    plt.ylabel(r"$\varepsilon_y\,/\,\mathrm{mm\cdot{}mrad}$")
+    plt.ylabel(r"$\varepsilon_y\,[\mathrm{mm\cdot{}mrad}]$")
     plt.grid(True)
 
     ax_e = plt.subplot(322, sharex=ax_mp)
@@ -1160,7 +1160,7 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice1=5000, nparts_in_slice2=
     plt.plot(slice_params2.s * 1e6, slice_params2.my * 1e6, "b--", label=r"$y_\mathrm{slice}$: " + legend_beam2)
     plt.legend()
     plt.setp(ax_e.get_xticklabels(), visible=False)
-    plt.ylabel(r"$x_{\mathrm{slice}},\,y_{\mathrm{slice}}\,/\,\mathrm{\mu{}m}$")
+    plt.ylabel(r"$x_{\mathrm{slice}},\,y_{\mathrm{slice}}\,[\mathrm{\mu{}m}]$")
     plt.grid(True)
 
 

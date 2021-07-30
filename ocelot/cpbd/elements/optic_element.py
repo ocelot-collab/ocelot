@@ -220,6 +220,9 @@ class OpticElement:
             if tm.tm_type == tm_type:
                 return tm
 
+    def update(self):
+        self._tms = self._create_tms(self.element, self._tm_class_type)
+
     @staticmethod
     def _create_tms(element: Element, tm: Type[Transformation], **params) -> Dict[TMTypes, Type[Transformation]]:
         tms = []

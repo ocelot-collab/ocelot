@@ -1049,8 +1049,8 @@ def get_envelope(p_array, tws_i=None, bounds=None):
     tws.emit_y = np.sqrt(tws.yy * tws.pypy - tws.ypy ** 2)
     relgamma = p_array.E / m_e_GeV
     relbeta = np.sqrt(1 - relgamma**-2)
-    tws.emit_xn = tws.emit_x * relgamma * relbeta
-    tws.emit_yn = tws.emit_y * relgamma * relbeta
+    #tws.emit_xn = tws.emit_x * relgamma * relbeta
+    #tws.emit_yn = tws.emit_y * relgamma * relbeta
 
     xx = tws.xx
     xpx = tws.xpx
@@ -1205,6 +1205,36 @@ def m_from_twiss(Tw1, Tw2):
     return M
 
 
+def twiss_parray_slice(parray, slice="Imax", nparts_in_slice=5000, smooth_param=0.05, filter_base=2, filter_iter=2):
+    """
+    Function calculates twiss parameters in a beam slice
+
+    :param parray: ParticleArray
+    :param slice: "Imax" or "Emax" or center of bunch
+    :param nparts_in_slice: 5000, nparticles in the slice (in moving window)
+    :param smooth_param: 0.01, smoothing parameters to calculate the beam current: smooth_param = m_std * np.std(p_array.tau())
+    :param filter_base: 2, filter parameter in the func: simple_filter
+    :param filter_iter: 2, filter parameter in the func: simple_filter
+    :return: Twiss
+    """
+    tws = Twiss()
+    slice_params = global_slice_analysis(parray, nparts_in_slice=nparts_in_slice, smooth_param=smooth_param,
+                                         filter_base=filter_base, filter_iter=filter_iter)
+    if slice == "Imax":
+        ind0 = np.argmax(slice_params.I)
+    elif slice == "Emax":
+        ind0 = np.argmax(slice_params.me)
+    else:
+        ind0 = np.argsort(np.abs(slice_params.s))[0]
+    tws.beta_x = slice_params.beta_x[ind0]
+    tws.alpha_x = slice_params.alpha_x[ind0]
+    tws.beta_y = slice_params.beta_y[ind0]
+    tws.alpha_y = slice_params.alpha_y[ind0]
+    tws.gamma_y = slice_params.gamma_y[ind0]
+    tws.gamma_x = slice_params.gamma_x[ind0]
+    return tws
+
+
 def beam_matching(parray, bounds, x_opt, y_opt, remove_offsets=True, slice=None):
     """
     Beam matching function, the beam is centered in the phase space
@@ -1249,18 +1279,11 @@ def beam_matching(parray, bounds, x_opt, y_opt, remove_offsets=True, slice=None)
     alpha_y = -myys / emity0
 
     if slice is not None:
-        slice_params = global_slice_analysis(parray, nparts_in_slice=5000, smooth_param=0.05,
-                                             filter_base=2, filter_iter=2)
-        if slice == "Imax":
-            ind0 = np.argmax(slice_params.I)
-        elif slice == "Emax":
-            ind0 = np.argmax(slice_params.me)
-        else:
-            ind0 = np.argsort(np.abs(slice_params.s))[0]
-        beta_x = slice_params.beta_x[ind0]
-        alpha_x = slice_params.alpha_x[ind0]
-        beta_y = slice_params.beta_y[ind0]
-        alpha_y = slice_params.alpha_y[ind0]
+        tw = twiss_parray_slice(parray, slice=slice, nparts_in_slice=5000, smooth_param=0.05, filter_base=2, filter_iter=2)
+        beta_x = tw.beta_x
+        alpha_x = tw.alpha_x
+        beta_y = tw.beta_y
+        alpha_y = tw.alpha_y
     Mx = m_from_twiss([alpha_x, beta_x, 0], x_opt)
 
     particles[0] = Mx[0, 0] * pd[:, 0] + Mx[0, 1] * pd[:, 1]

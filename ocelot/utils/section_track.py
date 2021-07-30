@@ -93,10 +93,13 @@ class SectionLattice:
                 if "phi" in conf.keys() and "v" in conf.keys():
                     sec.update_cavity(phi=conf["phi"], v=conf["v"])
                 if "match" in conf.keys() and conf["match"] is True:
+                    bounds = [-5, 5]
+                    remove_offsets = True
                     if "bounds" in conf.keys():
-                        sec.apply_matching(bounds=conf["bounds"])
-                    else:
-                        sec.apply_matching(bounds=[-5, 5])
+                        bounds = conf["bounds"]
+                    if "remove_offsets" in conf.keys():
+                        remove_offsets = conf["remove_offsets"]
+                    sec.apply_matching(bounds=bounds, remove_offsets=remove_offsets)
                 if "SC" in conf.keys():
                     sec.sc_flag = conf["SC"]
                 if "CSR" in conf.keys():
@@ -201,7 +204,7 @@ class SectionTrack:
                 e.vxy_down = 0
         self.lattice.update_transfer_maps()
 
-    def apply_matching(self, bounds=None):
+    def apply_matching(self, bounds=None, remove_offsets=True):
 
         if bounds is None:
             bounds = [-5, 5]
@@ -212,8 +215,7 @@ class SectionTrack:
 
         self.tws0.mux = 0
         self.tws0.muy = 0
-        bt = BeamTransform(tws=self.tws0)
-        bt.bounds = bounds
+        bt = BeamTransform(tws=self.tws0, remove_offsets=remove_offsets, bounds=bounds)
         self.add_physics_process(bt, self.lattice.sequence[0], self.lattice.sequence[0])
 
     def bc_analysis(self):

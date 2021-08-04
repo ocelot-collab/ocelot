@@ -568,7 +568,7 @@ def plot_two_dfls(dfl_first, dfl_second, domains='s', label_first=None, label_se
         filePath = dfl1.filePath
     
     if fig_name is None:
-        if dfl_copy.fileName() == '':
+        if dfl1.fileName() == '':
             fig = plt.figure('Radiation comparison' + domains)
         else:
             fig = plt.figure('Radiation comparison ' + domains + ' ' + dfl1.fileName() + ' ' + dfl2.fileName())
@@ -677,8 +677,8 @@ def plot_two_dfls(dfl_first, dfl_second, domains='s', label_first=None, label_se
     if savefig != False:
         if savefig == True:
             savefig = 'png'
-        _logger.debug(ind_str + 'saving *{:}.{:}'.format(figname, savefig))
-        fig.savefig(filePath + figname + '.' + str(savefig), format=savefig)
+        _logger.debug(ind_str + 'saving *{:}.{:}'.format(fig_name, savefig))
+        fig.savefig(filePath + fig_name + '.' + str(savefig), format=savefig)
     _logger.debug(ind_str + 'done in {:.2f} seconds'.format(time.time() - start_time))
 
     plt.draw()

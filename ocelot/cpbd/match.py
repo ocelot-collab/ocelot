@@ -20,9 +20,9 @@ def weights_default(val):
         return 10000001.0
     if val == 'total_len':
         return 10000001.0
-    if val == 'Dx':
+    if val in ['Dx', 'Dy']:
         return 10000002.0
-    if val == 'Dxp':
+    if val in ['Dxp', 'Dyp']:
         return 10000003.0
     if val == 'tau':
         return 10000004.0

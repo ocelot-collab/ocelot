@@ -178,6 +178,7 @@ __RADFILE__\n\
 __DISTFILE__\n\
 __MAGFILE__\n\
  filetype ='ORIGINAL'\n\
+__EXPERT__\n\
  $end\n"
 
 # outputfile ='run.__RUNID__.gout'\n\
@@ -395,6 +396,12 @@ class GenesisInput:
         self.ffspec = 0  # amplitude/phase values for spectrum calculation: 0 - on-axis power/phase along the pulse, -1 - the same in far field, 1 - near field total power
         
         self.shotnoise = 1
+
+        # Free-format text block that is copied to the end of the infile.
+        # This might break your simulation, so it is for experts.
+        # One possible use-case is with patched versions of genesis that
+        # accept additional options.
+        self.infile_expert = None
         
         # paths to files to import
         self.beamfile = None
@@ -475,6 +482,13 @@ class GenesisInput:
             # inp_txt = inp_txt.replace("__TRAMA__\n", "")
         # else:
             # inp_txt = inp_txt.replace("__TRAMA__\n", "")
+
+        if self.infile_expert is not None:
+            _logger.warning(ind_str + 'using infile_expert mode: incorrect usage of this expert function might break the simulation')
+            inp_txt = inp_txt.replace("__EXPERT__", self.infile_expert)   # NOT replacing "\n" in template string: If the user is only using single-line expert string (i.e. specifying one custom option), they don't have to provide trailing \n
+        else:
+            inp_txt = inp_txt.replace("__EXPERT__\n", "")
+
 
         for p in self.__dict__.keys():
             if p in self.int_vals:

@@ -1070,7 +1070,7 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice1=5000, nparts_in_slice2=
     :param legend_beam2: None, legend for beam N1
     :return:
     """
-    tau_label = r"$s\,[\mathrm{mm}]$"
+    tau_label = r"$s\,[\mathrm{\mu{}m}]$"
     if legend_beam1 == None:
         legend_beam1 = "beam 1"
     if legend_beam2 == None:

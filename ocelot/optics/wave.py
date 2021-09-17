@@ -672,7 +672,8 @@ class RadiationField:
         J = np.mean(dfl1 * dfl2, axis=0)
         if norm:
             I = self.int_xy() / self.Nz()
-            J = J / (I[Nyh, np.newaxis :] * I[:, Nxh, np.newaxis])
+            J = J / np.sqrt(I[iy , ix] * I[:, :])
+
         return J
     
     def coh(self, jit=0):
@@ -2230,16 +2231,16 @@ def dfl_ap(*args, **kwargs):
     _logger.warning('"dfl_ap" is deprecated, use "dfl_ap_rect" instead for rectangular aperture')
     return dfl_ap_rect(*args, **kwargs)
         
-def dfl_ap_rect(dfl, ap_x=np.inf, ap_y=np.inf):
+def dfl_ap_rect(dfl, ap_x=np.inf, ap_y=np.inf, center=(0,0)):
     """
     model rectangular aperture to the radaition in either domain
     """
     _logger.info('applying square aperture to dfl')
 
     if np.size(ap_x) == 1:
-        ap_x = [-ap_x / 2, ap_x / 2]
+        ap_x = [-ap_x / 2 - center[0], ap_x / 2 - center[0]]
     if np.size(ap_y) == 1:
-        ap_y = [-ap_y / 2, ap_y / 2]
+        ap_y = [-ap_y / 2 - center[1], ap_y / 2 - center[1]]
     _logger.debug(ind_str + 'ap_x = {}'.format(ap_x))
     _logger.debug(ind_str + 'ap_y = {}'.format(ap_y))
     
@@ -3034,7 +3035,7 @@ def dfl_chirp_freq(dfl, coeff, E_ph0=None, return_result=False):
 def dfl_xy_corr(dfl, center=(0,0), norm=0):
     
     dfl_corr = RadiationField()
-    dfl_corr.copy_param(dfl, version=2)
+    dfl_corr.copy_param(dfl, version=1)
     J = dfl.mut_coh_func_c(center=center, norm=norm)
     dfl_corr.fld = J[np.newaxis,:,:]             
     return dfl_corr

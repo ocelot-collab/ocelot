@@ -852,7 +852,7 @@ class ParticleArray:
         """Get all macroparticle relativistic betas (v/c)."""
         return np.sqrt(1 - self.gamma**-2)
 
-    def sort(self, variable) -> None:
+    def sort(self, variable, in_place=True) -> np.ndarray:
         """Sort ParticleArray in place according to the chosen key.
 
         :param variable: One of "x", "px", "y", "py", "tau", "p" or one of the other
@@ -873,8 +873,11 @@ class ParticleArray:
                 indices = member.argsort()
             except TypeError:
                 raise ValueError(f"Unknown variable name for ParticleArray: {variable}")
-        else:
+
+        if in_place:
             self.rparticles = self.rparticles[..., indices]
+
+        return indices
 
     def thin_out(self, nth=10, n0=0):
         """

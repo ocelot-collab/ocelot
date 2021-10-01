@@ -22,8 +22,8 @@ dfl=field_at_waist
 stuff=deepcopy(dfl)
 dfl_ap_rect(stuff, ap_x=2*cutoffs[2], ap_y=2*cutoffs[2]) # function modifies field!
 print('Comparing relative energy reduction by cut (values should be in agreement):')
-print('OCELOT function: {}'.format(stuff.E()/dfl.E()))
-print('      this code: {}'.format(en[2]/dfl.E()))
+print('       OCELOT function dfl_ap_rect: {}'.format(stuff.E()/dfl.E()))
+print('OCELOT function dfl_ap_rect_apscan: {}'.format(en[2]/dfl.E()))
 
 
 ### plot the result

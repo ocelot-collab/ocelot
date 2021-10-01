@@ -401,7 +401,7 @@ class Undulator(Element):
     eid - id of undulator.
     """
 
-    def __init__(self, lperiod=0., nperiods=0, Kx=0., Ky=0., field_file=None, eid=None):
+    def __init__(self, lperiod=0., nperiods=0, Kx=0., Ky=0., phase=0, end_poles=False, field_file=None, eid=None):
         Element.__init__(self, eid)
         self.lperiod = lperiod
         self.nperiods = nperiods
@@ -409,8 +409,8 @@ class Undulator(Element):
         self.Kx = Kx
         self.Ky = Ky
         self.solver = "linear"  # can be "lin" is linear matrix,  "sym" - symplectic method and "rk" is Runge-Kutta
-        self.phase = 0.  # phase between Bx and By + pi/4 (spiral undulator)
-
+        self.phase = phase  # phase between Bx and By + pi/4 (spiral undulator)
+        self.end_poles = end_poles
         self.ax = -1  # width of undulator, when ax is negative undulator width is infinite
         # I need this for analytic description of undulator
 

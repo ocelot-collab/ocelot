@@ -223,7 +223,7 @@ def traj2motion(traj):
     return motion
 
 
-def und_field_py(x, y, z, lperiod, Kx, nperiods=None):
+def und_field_py(x, y, z, lperiod, nperiods, Kx, phase, end_poles=False):
     kx = 0.
     kz = 2 * pi / lperiod
     ky = np.sqrt(kz * kz + kx * kx)
@@ -235,11 +235,11 @@ def und_field_py(x, y, z, lperiod, Kx, nperiods=None):
 
     kx_x = kx * x
     ky_y = ky * y
-    kz_z = kz * z
+    kz_z = kz * z + phase
 
     cosz = np.cos(kz_z)
-
-    if nperiods is not None:
+    sinz = np.sin(kz_z)
+    if end_poles:
         ph_shift = np.pi / 2.
         heaviside = lambda x: 0.5 * (np.sign(x) + 1)
         z_coef = (0.25 * heaviside(z) + 0.5 * heaviside(z - lperiod / 2.) + 0.25 * heaviside(z - lperiod)
@@ -254,6 +254,7 @@ def und_field_py(x, y, z, lperiod, Kx, nperiods=None):
     Bx = k1 * np.sin(kx_x) * sinhy * cosz  # // here kx is only real
     By = B0 * cosx * np.cosh(ky_y) * cosz
     Bz = k2 * cosx * sinhy * np.sin(kz_z)
+    
     return (Bx, By, Bz)
 
 
@@ -548,7 +549,7 @@ def radiation_py(gamma, traj, screen):
     return 1
 
 
-def calculate_radiation(lat, screen, beam, energy_loss=False, quantum_diff=False, accuracy=1, end_poles=False):
+def calculate_radiation(lat, screen, beam, energy_loss=False, quantum_diff=False, accuracy=1):#, end_poles=False):
     """
     Function to calculate radation from the electron beam.
 
@@ -585,8 +586,8 @@ def calculate_radiation(lat, screen, beam, energy_loss=False, quantum_diff=False
 
     screen.nullify()
     start = time.time()
-    U, E = track4rad_beam(p_array, lat, energy_loss=energy_loss, quantum_diff=quantum_diff, accuracy=accuracy,
-                          end_poles=end_poles)
+    U, E = track4rad_beam(p_array, lat, energy_loss=energy_loss, quantum_diff=quantum_diff, accuracy=accuracy)
+                          # end_poles=end_poles)
     # print("traj time exec:", time.time() - start)
     # plt.plot(U[0][4::9, :], U[0][::9, :])
     # plt.show()
@@ -683,7 +684,7 @@ def coherent_radiation(lat, screen, p_array, energy_loss=False, quantum_diff=Fal
     return screen
 
 
-def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy=1, end_poles=False):
+def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy=1):#, end_poles=False):
     """
     Function calculates the electron trajectory
 
@@ -731,10 +732,13 @@ def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy
                     E.append(energy)
                 L += lat_el.totalLen
             non_u = []
-
-            U0 = energy_loss_und(energy, elem.Kx, elem.lperiod, elem.l, energy_loss)
-            Uq = quantum_diffusion(energy, elem.Kx, elem.lperiod, elem.l, quantum_diff)
-            U0 = U0 + Uq
+            
+            if elem.Kx and elem.Ky != 0:
+                U0 = energy_loss_und(energy, elem.Kx, elem.lperiod, elem.l, energy_loss)
+                Uq = quantum_diffusion(energy, elem.Kx, elem.lperiod, elem.l, quantum_diff)
+                U0 = U0 + Uq
+            else: 
+                U0 = 0
 
             mag_length = elem.l
             if elem.mag_field is not None:
@@ -747,12 +751,7 @@ def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy
                     z_array = (elem.field_map.z_arr - elem.field_map.z_arr[0]) * unit_coef
                     mag_field = field_map2field_func(z=z_array, By=elem.field_map.By_arr)
                 else:
-                    # print("Standard undulator field")
-                    if end_poles:
-                        nperiods = elem.nperiods
-                    else:
-                        nperiods = None
-                    mag_field = lambda x, y, z: und_field(x, y, z, elem.lperiod, elem.Kx, nperiods=nperiods)
+                    mag_field = lambda x, y, z: und_field(x, y, z, elem.lperiod, elem.nperiods, elem.Kx, elem.phase, end_poles=elem.end_poles)
             N = int((mag_length * 1500 + 100) * accuracy)
             if hasattr(elem, "npoints") and isinstance(elem.npoints, numbers.Number):
                 N = int((elem.npoints + 100) * accuracy)

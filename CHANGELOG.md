@@ -15,7 +15,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 
-- None yet.
+- New properties on `ParticleArrray`, `beta` and `gamma`, providing the relativistic
+  properties of each particle.
+- New method `sort` on `ParticleArray` for possibly sorting in place with respect to one
+  of the properties or functions (e.g. `beta`, `x`, `p0c`, etc.) returning the indices
+  that sort the `ParticleArray`.
+- Implementation of `__len__` for `ParticleArray` which simply returns the number of
+  particles it contains.  Identical in function to `size`.
+- `get_envelope` now also calculates the normalised emittances `emit_xn` and `emit_yn`,
+  not just the geometric ones, as was previously the case.
 
 ### Fixed
 

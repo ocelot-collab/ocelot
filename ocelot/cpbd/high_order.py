@@ -1524,7 +1524,12 @@ def arcline( SREin, Delta_S, dS, R_vect ):
             e1 = sre0[4:7]
             if np.abs(np.dot(n_vect, e1)) > epsilon:
                 R_vect_valid = False
-                print('*** error in arcline: invalid R_vect --> using Drift. Consider to use Runge-Kutta integrator')
+                msg = ("In arcline: invalid R_vect --> using Drift."
+                       " You may have attached the same CSR process to both horizontal"
+                       " and vertical bends.  Otherwise, consider using the Runge-Kutta"
+                       " integrator.")
+                _logger.error(msg)
+                print()
 
     if not R_vect_valid:
         SRE2[2-1, :] = sre0[2-1] + sre0[5-1]*np.arange(1, N+1)*dS

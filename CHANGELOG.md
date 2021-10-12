@@ -8,7 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## [Unreleased]
 
 ### Changed
-- None yet.
+
+- The `CSR` class now gives an explicit `logging` `error` when failing in `arcline` and
+  a more useful explanation.  This error often occurs because the user has mixed CSR for
+  vertical bends with horizontal bends.
 
 ### Added
 

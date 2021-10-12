@@ -823,24 +823,61 @@ class ParticleArray:
 
     @property
     def pz(self) -> float:
-        """pz/p0 - the z-components of the particle momenta normalised with respect to
-        the reference momentum p0."""
-        return np.sqrt((self.momenta/self.p0c)**2 - self.px()**2 - self.py()**2)
+        """pz/p0 - the z-components of the macroparticle momenta normalised with
+        respect to the reference momentum p0."""
+        return np.sqrt((self.momenta/self.p0c )**2 - self.px()**2 - self.py()**2)
 
     @property
     def p0c(self) -> float:
-        """Get reference momentum * speed of light in GeV."""
+        """Get macroparticle reference momentum * speed of light in GeV."""
         return np.sqrt(self.E**2 - m_e_GeV**2)
 
     @property
     def energies(self) -> float:
-        """Get all particle energies in GeV."""
+        """Get all macroparticle energies in GeV."""
         return self.p() * self.p0c + self.E
 
     @property
     def momenta(self) -> float:
         """Get all macroparticle momenta in GeV/c."""
         return np.sqrt(self.energies**2 - m_e_GeV**2)
+
+    @property
+    def gamma(self) -> float:
+        """Get all macroparticle relativistic gamma factors."""
+        return self.energies / m_e_GeV
+
+    @property
+    def beta(self) -> float:
+        """Get all macroparticle relativistic betas (v/c)."""
+        return np.sqrt(1 - self.gamma**-2)
+
+    def sort(self, variable, in_place=True) -> np.ndarray:
+        """Sort ParticleArray in place according to the chosen key.
+
+        :param variable: One of "x", "px", "y", "py", "tau", "p" or one of the other
+        macroparticle properties (e.g. pz, momenta, etc.)  with which to sort the
+        macroparticle array by.
+
+        """
+
+        try:
+            member = getattr(self, variable)
+        except AttributeError:
+            pass
+
+        try:
+            indices = member().argsort()
+        except TypeError:
+            try:
+                indices = member.argsort()
+            except TypeError:
+                raise ValueError(f"Unknown variable name for ParticleArray: {variable}")
+
+        if in_place:
+            self.rparticles = self.rparticles[..., indices]
+
+        return indices
 
     def thin_out(self, nth=10, n0=0):
         """
@@ -912,6 +949,9 @@ class ParticleArray:
         val += "s pos       : " + str(self.s) + " m \n"
         val += "n particles : " + str(self.n) + "\n"
         return val
+
+    def __len__(self):
+        return self.size()
 
     def delete_particles(self, inds, record=True):
         """
@@ -1049,8 +1089,8 @@ def get_envelope(p_array, tws_i=None, bounds=None):
     tws.emit_y = np.sqrt(tws.yy * tws.pypy - tws.ypy ** 2)
     relgamma = p_array.E / m_e_GeV
     relbeta = np.sqrt(1 - relgamma**-2)
-    #tws.emit_xn = tws.emit_x * relgamma * relbeta
-    #tws.emit_yn = tws.emit_y * relgamma * relbeta
+    tws.emit_xn = tws.emit_x * relgamma * relbeta
+    tws.emit_yn = tws.emit_y * relgamma * relbeta
 
     xx = tws.xx
     xpx = tws.xpx

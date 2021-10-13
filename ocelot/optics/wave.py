@@ -1998,7 +1998,7 @@ def undulator_field_dfl_SERVAL(dfl, L_w, sig_x=0, sig_y=0, sig_xp=0, sig_yp=0, k
     elif s_support == 'amplitude':
         _logger.info(ind_str +'s_support == "amplitude"')
         mask_xy = scipy.signal.fftconvolve(mask_xy_radiation, mask_xy_ebeam, mode='same')
-    elif s_support == '"beam':
+    elif s_support == 'beam':
         _logger.info(ind_str +'s_support == "beam"')
         mask_xy = mask_xy_ebeam
     else:
@@ -2029,7 +2029,7 @@ def undulator_field_dfl_SERVAL(dfl, L_w, sig_x=0, sig_y=0, sig_xp=0, sig_yp=0, k
         _logger.info(ind_str +'k_support == "amplitude"')
         mask_kxky = scipy.signal.fftconvolve(mask_kxky_ebeam, mask_kxky_radiation, mode='same')
         mask_kxky /= np.sum(mask_kxky)
-    elif k_support == 'amplitude':
+    elif k_support == 'beam':
         _logger.info(ind_str +'k_support == "beam"')
         mask_kxky = mask_kxky_ebeam
     else:
@@ -3534,7 +3534,7 @@ def read_field_file(filePath):
     dfl = RadiationField((file['Nz'].item(), file['Ny'].item(), file['Nx'].item()))
     dfl.dz, dfl.dy, dfl.dx = file['dz'].item(), file['dy'].item(), file['dx'].item()
     dfl.domain_xy = file['domain_xy'].item()
-    dfl.domain = file['domain_z'].item()
+    dfl.domain_z = file['domain_z'].item()
     dfl.xlamds = file['xlamds'].item()
     dfl.fld = file['fld']
     dfl.filePath = file['filePath'].item()    

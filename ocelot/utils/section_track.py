@@ -93,10 +93,13 @@ class SectionLattice:
                 if "phi" in conf.keys() and "v" in conf.keys():
                     sec.update_cavity(phi=conf["phi"], v=conf["v"])
                 if "match" in conf.keys() and conf["match"] is True:
+                    bounds = [-5, 5]
+                    remove_offsets = True
                     if "bounds" in conf.keys():
-                        sec.apply_matching(bounds=conf["bounds"])
-                    else:
-                        sec.apply_matching(bounds=[-5, 5])
+                        bounds = conf["bounds"]
+                    if "remove_offsets" in conf.keys():
+                        remove_offsets = conf["remove_offsets"]
+                    sec.apply_matching(bounds=bounds, remove_offsets=remove_offsets)
                 if "SC" in conf.keys():
                     sec.sc_flag = conf["SC"]
                 if "CSR" in conf.keys():
@@ -199,9 +202,9 @@ class SectionTrack:
                 e.vy_down = 0
                 e.vxx_down = 0
                 e.vxy_down = 0
-        self.lattice.update_transfer_maps()
+                e.update()
 
-    def apply_matching(self, bounds=None):
+    def apply_matching(self, bounds=None, remove_offsets=True):
 
         if bounds is None:
             bounds = [-5, 5]
@@ -212,8 +215,7 @@ class SectionTrack:
 
         self.tws0.mux = 0
         self.tws0.muy = 0
-        bt = BeamTransform(tws=self.tws0)
-        bt.bounds = bounds
+        bt = BeamTransform(tws=self.tws0, remove_offsets=remove_offsets, bounds=bounds)
         self.add_physics_process(bt, self.lattice.sequence[0], self.lattice.sequence[0])
 
     def bc_analysis(self):
@@ -268,9 +270,11 @@ class SectionTrack:
     def change_bc_shoulders(self, drift):
         for d in self.left_shoulder:
             d.l = drift * d.len_coef
+            d.update()
 
         for d in self.right_shoulder:
             d.l = drift * d.len_coef
+            d.update()
 
     def update_bunch_compressor(self, rho):
         if self.dipoles is None:
@@ -302,7 +306,7 @@ class SectionTrack:
                 dip.e2 = angle * np.sign(dip.angle)
             else:
                 dip.e1 = angle * np.sign(dip.angle)
-        self.lattice.update_transfer_maps()
+            dip.update()
 
     def update_cavity(self, phi, v):
         for elem in self.lattice.sequence:
@@ -315,7 +319,7 @@ class SectionTrack:
                     if self.cav_name_pref in elem.id:
                         elem.v = v
                         elem.phi = phi
-        self.lattice.update_transfer_maps()
+                elem.update()
 
     def update_tds(self, phi, v):
         for elem in self.lattice.sequence:
@@ -328,7 +332,7 @@ class SectionTrack:
                     if self.cav_name_pref in elem.id:
                         elem.v = v
                         elem.phi = phi
-        self.lattice.update_transfer_maps()
+                elem.update()
 
     def init_navigator(self):
 

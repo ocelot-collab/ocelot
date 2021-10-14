@@ -11,6 +11,7 @@ from ocelot.cpbd.elements import *
 from ocelot.cpbd.beam import get_envelope
 from ocelot.cpbd.track import track
 from ocelot.cpbd.optics import lattice_transfer_map, twiss, periodic_twiss, Twiss
+from ocelot.cpbd.elements.optic_element import OpticElement
 from ocelot.cpbd.tm_utils import SecondOrderMult
 
 
@@ -19,9 +20,9 @@ def weights_default(val):
         return 10000001.0
     if val == 'total_len':
         return 10000001.0
-    if val == 'Dx':
+    if val in ['Dx', 'Dy']:
         return 10000002.0
-    if val == 'Dxp':
+    if val in ['Dxp', 'Dyp']:
         return 10000003.0
     if val == 'tau':
         return 10000004.0
@@ -216,7 +217,7 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
             delta_dict = constr['delta']
             elems = []
             for e in delta_dict.keys():
-                if isinstance(e, Element):
+                if isinstance(e, OpticElement):
                     elems.append(e)
             delta_err = delta_dict["weight"] * (delta_dict[elems[0]][1] - delta_dict[elems[1]][1] - delta_dict["val"])**2
             err = err + delta_err

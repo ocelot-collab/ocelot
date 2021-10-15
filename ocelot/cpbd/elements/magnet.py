@@ -5,6 +5,7 @@ from ocelot.cpbd.tm_params.second_order_params import SecondOrderParams
 from ocelot.cpbd.high_order import t_nnn
 from ocelot.cpbd.r_matrix import uni_matrix
 
+
 class Magnet(Element):
     def __init__(self, eid=None, has_edge=False):
         super().__init__(eid=eid, has_edge=has_edge)

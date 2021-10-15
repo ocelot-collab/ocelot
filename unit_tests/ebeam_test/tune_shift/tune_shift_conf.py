@@ -34,9 +34,9 @@ Q6 = Quadrupole(l=0.291, k1=-3.534859, eid= "D6")
 B1 = SBend(l = 0.23, angle = 0.23/19.626248, eid= "B1")
 B2 = SBend(l = 1.227, angle = 1.227/4.906312, eid= "B2")
 
-U = Undulator(lperiod=0.02, nperiods=50, Kx=2)
+U = Undulator(lperiod=0.02, nperiods=50, Kx=2, npoints = 500)
 U.mag_field = lambda x, y, z: und_field(x, y, z, U.lperiod, U.Kx)
-U.npoints = 500
+#U.npoints = 500
 
 
 """pytest fixtures description"""

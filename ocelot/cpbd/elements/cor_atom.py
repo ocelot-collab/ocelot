@@ -31,6 +31,6 @@ class CorAtom(Element):
 
     def create_second_order_main_params(self, energy: float, delta_length: float) -> SecondOrderParams:
         params = self.create_first_order_main_params(energy, delta_length)
-        T = t_nnn(delta_length if delta_length != None else self.l, 0, 0, 0, energy)
-        # TODO: Question: Why we have to set tilt = 0 ? Vcor is set to pi/4 in __init__.
+        T = t_nnn(delta_length if delta_length is not None else self.l, 0, 0, 0, energy)
+        # TODO: Question: Why we have to set tilt = 0 ? Vcor is set to pi/2 in __init__.
         return SecondOrderParams(params.R, params.B, T, 0., self.dx, self.dy)

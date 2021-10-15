@@ -4,6 +4,7 @@ from ocelot.cpbd.elements.optic_element import OpticElement
 from ocelot.cpbd.elements.hcor_atom import HcorAtom
 from ocelot.cpbd.transformations.transfer_map import TransferMap
 
+
 class Hcor(OpticElement):
     """
     horizontal corrector,

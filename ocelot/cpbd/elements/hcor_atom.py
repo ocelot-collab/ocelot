@@ -28,7 +28,7 @@ class HcorAtom(CorAtom):
         return s
 
     def create_first_order_main_params(self, energy: float, delta_length: float = None) -> FirstOrderParams:
-        z =  delta_length if delta_length != None else self.l
+        z = delta_length if delta_length is not None else self.l
         R = uni_matrix(z, 0, hx=0, sum_tilts=0, energy=energy)
         B = self.kick_b(z=z, l=self.l, angle_x=self.angle, angle_y=0.)
         return FirstOrderParams(R, B, self.tilt)

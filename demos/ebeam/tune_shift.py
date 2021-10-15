@@ -75,10 +75,10 @@ print("low resolution: mu_y = ", pxy_list[0].muy)
 def dft(sample, freqs):
     n = len(sample)
     x_freq = freqs*n
-    transf = np.zeros(len(freqs), dtype=np.complex)
+    transf = np.zeros(len(freqs), dtype=complex)
     
     for i, ai in enumerate(sample):
-        transf += ai*np.exp(-2*np.pi*i/n*1j*x_freq)
+        transf += ai*np.exp(-2.0*np.pi*i/n*1j*x_freq)
     return transf
 
 qx = np.linspace(0.22, 0.23, 2048+1)

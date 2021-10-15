@@ -99,23 +99,13 @@ def test_track_nturns(lattice, update_ref_values=False):
     track_list_stable = stable_particles(track_list, nturns)
 
     track_list_stable = obj2dict(track_list_stable, unpack=['particle'])
-    
-    p_list = []
-    for p in track_list_stable:
-        tmp = []
-        for i in p['p_list']:
-            if isinstance(i, np.ndarray):
-                tmp.append(i.tolist())
-            else:
-                tmp.append(i)
-        p_list.append(tmp)
 
     if update_ref_values:
-        return numpy2json(p_list)
+        return track_list_stable
 
-    p_list_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json'))
+    track_list_stable_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
     
-    result = check_matrix(p_list, p_list_ref, TOL, assert_info=' p_list - ')
+    result = check_dict(track_list_stable, track_list_stable_ref, TOL, assert_info=' p_list - ')
     assert check_result(result)
 
 

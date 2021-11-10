@@ -63,7 +63,7 @@ class TransferMap(Transformation):
         B = (E - R)*dX
         """
         try:
-            return m.multiply_with_tm(self, self.delta_length if self.delta_length != None else self.length)
+            return m.multiply_with_tm(self, self.delta_length if self.delta_length is not None else self.length)
         except AttributeError as e:
             _logger.error(
                 " TransferMap.__mul__: unknown object in transfer map multiplication: " + str(m.__class__.__name__))

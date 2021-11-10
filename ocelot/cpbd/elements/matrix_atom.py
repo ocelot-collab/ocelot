@@ -58,7 +58,7 @@ class MatrixAtom(Element):
 
     def create_first_order_main_params(self, energy: float, delta_length: float) -> FirstOrderParams:
         rm = self.r
-        if delta_length != None and delta_length < self.l:
+        if delta_length is not None and delta_length < self.l:
             R = uni_matrix(delta_length, 0, hx=0)
         else:
             R = rm

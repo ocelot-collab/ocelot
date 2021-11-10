@@ -13,7 +13,6 @@ class FirstOrderParams(TMParams):
     def get_rotated_R(self):
         return np.dot(np.dot(rot_mtx(-self.tilt), self.R), rot_mtx(self.tilt))
 
-
     def multiply(self, tm_params: 'FirstOrderParams'):
         R = np.dot(self.R, tm_params.R)
         B = np.dot(self.R, tm_params.B) + self.B

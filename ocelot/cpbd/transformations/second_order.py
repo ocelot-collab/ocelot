@@ -21,7 +21,7 @@ class SecondTM(Transformation):
         super().__init__(create_tm_param_func, delta_e_func, tm_type, length, delta_length)
 
     @classmethod
-    def from_element(cls, element: Element, tm_type: TMTypes = TMTypes.MAIN, delta_l=None):
+    def from_element(cls, element: Element, tm_type: TMTypes = TMTypes.MAIN, delta_l=None,  **params):
         return cls.create(entrance_tm_params_func=element.create_second_order_entrance_params if element.has_edge else None,
                           delta_e_func=element.create_delta_e,
                           main_tm_params_func=element.create_second_order_main_params,
@@ -30,13 +30,14 @@ class SecondTM(Transformation):
 
     def t_apply(self, energy, X, U5666=0.):
         params = self.get_params(energy)
+        R, T = params.R, params.T
         if params.dx != 0 or params.dy != 0 or params.tilt != 0:
-            X = transform_vec_ent(X, params.dx, params.dy, params.tilt)
-        self.multiplication(X, params.R, params.T)
-        if params.dx != 0 or params.dy != 0 or params.tilt != 0:
-            X = transform_vec_ext(X, params.dx, params.dy, params.tilt)
-        # TODO: Add zero order tm to remove CorrectorTM. Could this be a performance problem?
-        X[:] = np.add(X, params.B)
+            X[:] = np.add(X, np.array([[-params.dx], [0.], [-params.dy], [0.], [0.], [0.]]))[:]
+            R = params.get_rotated_R()
+            T = params.get_rotated_T()
+        self.multiplication(X, R, T)
+        if params.dx != 0 or params.dy != 0:
+            X[:] = np.add(X, np.array([[params.dx], [0.], [params.dy], [0.], [0.], [0.]]))[:]
         return X
 
     def map_function(self, X, energy: float):

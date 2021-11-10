@@ -21,11 +21,11 @@ class OpticElement:
 
     def __init__(self, element: Element, tm: Type[Transformation], default_tm: Type[Transformation], **params) -> None:
         """[summary]
-        Creates a optic element which holds element atom and its transfromation. Each concret optic element have to implement its own __init__ 
+        Creates a optic element which holds element atom and its transfromation. Each concrete optic element have to implement its own __init__
         it the concret element parameters.
-        :param element: Concret element atom.
+        :param element: Concrete element atom.
         :type element: Element
-        :param tm: Transforamtion that is used by the element.
+        :param tm: Transformation that is used by the element.
         :type tm: Type[Transformation]
         :param default_tm: If tm is not supported by the specific element the default_tm is used.
         :type default_tm: Type[Transformation]
@@ -121,7 +121,7 @@ class OpticElement:
         res = []
         E = energy
         for tm in self._tms:
-            res.append(tm.get_params(E).get_roteted_T())
+            res.append(tm.get_params(E).get_rotated_T())
             E += tm.get_delta_e()
         return res
 
@@ -224,16 +224,14 @@ class OpticElement:
         self._tms = self._create_tms(self.element, self._tm_class_type)
 
     @staticmethod
-    def _create_tms(element: Element, tm: Type[Transformation], **params) -> Dict[TMTypes, Type[Transformation]]:
+    def _create_tms(element: Element, tm: Type[Transformation], **params) -> List[Transformation]:
         tms = []
-        #tms = [tm.create(element, TMTypes.ROT_ENTRANCE)]
         if element.has_edge:
             tms.append(tm.from_element(element, TMTypes.ENTRANCE, **params))
             tms.append(tm.from_element(element, TMTypes.MAIN, **params))
             tms.append(tm.from_element(element, TMTypes.EXIT, **params))
         else:
             tms.append(tm.from_element(element, TMTypes.MAIN, **params))
-        #tms = [tm.create(element, TMTypes.ROT_EXIT)]
         return tms
 
     def __str__(self):

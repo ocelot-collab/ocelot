@@ -26,5 +26,5 @@ class Cavity(OpticElement):
         super().__init__(CavityAtom(l=l, v=v, phi=phi, freq=freq, vx_up=vx_up, vy_up=vy_up, vxx_up=vxx_up, vxy_up=vxy_up,
                                     vx_down=vx_down, vy_down=vy_down, vxx_down=vxx_down, vxy_down=vxy_down, eid=eid), tm=tm, default_tm=CavityTM)
 
-    def set_tm(self, tm: Transformation):
+    def set_tm(self, tm: Transformation, **params):
         logger.debug("Cavity Element only support CavityTM. Set tm to CavityTM.")

@@ -203,7 +203,6 @@ def test_lattice_track(lattice, update_ref_values=False):
     #correction_wrapper(orb, linac_method)
     orb.correction(beta=0)
     p_list = lattice_track(lattice, Particle())
-    print(p_list[0])
     p_list = obj2dict(p_list, unpack=['particle'])
 
     if update_ref_values:

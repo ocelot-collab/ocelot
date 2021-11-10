@@ -44,7 +44,7 @@ class Element:
             hx = 0.
         else:
             hx = self.angle / self.l
-        if delta_length != None:
+        if delta_length is not None:
             R = uni_matrix(delta_length, 0., hx=hx, sum_tilts=0, energy=energy)
         else:
             R = uni_matrix(self.l, 0., hx=hx, sum_tilts=0, energy=energy)
@@ -53,7 +53,7 @@ class Element:
         return FirstOrderParams(R, B, self.tilt)
 
     def create_second_order_main_params(self, energy: float, delta_length: float = 0.0) -> SecondOrderParams:
-        T = t_nnn(delta_length if delta_length != None else self.l, 0., 0., 0.,
+        T = t_nnn(delta_length if delta_length is not None else self.l, 0., 0., 0.,
                   energy)
         first_order_params = self.create_first_order_main_params(energy, delta_length)
         return SecondOrderParams(first_order_params.R, first_order_params.B, T, self.tilt, self.dx, self.dy)

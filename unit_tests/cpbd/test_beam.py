@@ -40,7 +40,7 @@ def test_cov_matrix_to_parray():
     # Hand verified for big N that this results in beam array with correct
     # moments.  Here just generate one
     np.random.seed(0)
-    parray = cov_matrix_to_parray(mean, cov, 16.5, 0.2e-9, 1000)
+    parray = cov_matrix_to_parray(mean, cov, 16.5, 0.2e-9, 1)
 
     twiss = optics_from_moments(mean, cov)
 

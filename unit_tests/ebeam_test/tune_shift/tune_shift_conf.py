@@ -59,7 +59,7 @@ def ring(cell_u, cell):
 @pytest.fixture(scope='module')
 def method():
 
-    mmm = {"global": TransferMap, "Undulator": RungeKuttaTrTM, "Sextupole": KickTM}
+    mmm = {"global": TransferMap, Undulator: RungeKuttaTrTM, Sextupole: KickTM}
 
     return mmm
 

@@ -28,7 +28,7 @@ def cell():
 
 @pytest.fixture(scope='module')
 def method():
-    m = {'global': SecondTM, 'Undulator': RungeKuttaTM}
+    m = {'global': SecondTM, Undulator: RungeKuttaTM}
     return m
 
 

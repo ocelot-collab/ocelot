@@ -532,10 +532,10 @@ def test_update_ref_values(lattice, p_array, cmdopt):
     update_function_parameters['test_track_ellipt_aperture'] = [0, 1, 2]
     update_function_parameters['test_phase_space_aperture'] = [0, 1, 2]
 
-    parametr = update_function_parameters[cmdopt] if cmdopt in update_function_parameters.keys() else ['']
+    parameter = update_function_parameters[cmdopt] if cmdopt in update_function_parameters.keys() else ['']
 
     if cmdopt in update_functions:
-        for p in parametr:
+        for p in parameter:
             p_arr = copy.deepcopy(p_array)
             result = eval(cmdopt)(lattice, p_arr, p, True)
 

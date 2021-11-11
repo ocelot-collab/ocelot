@@ -66,8 +66,8 @@ def test_tracking_step(lattice, update_ref_values=False):
 
     P_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
 
-    result1 = check_dict(P1, P_ref[0], TOL, 'absotute', assert_info=' P1 - ')
-    result2 = check_dict(P2, P_ref[1], TOL, 'absotute', assert_info=' P2 - ')
+    result1 = check_dict(P1, P_ref[0], TOL, 'absolute', assert_info=' P1 - ')
+    result2 = check_dict(P2, P_ref[1], TOL, 'absolute', assert_info=' P2 - ')
     assert check_result(result1+result2)
 
 
@@ -83,7 +83,7 @@ def test_create_track_list(lattice, update_ref_values=False):
     
     track_list_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
 
-    result = check_dict(track_list, track_list_ref, TOL, 'absotute', assert_info=' track_list - ')
+    result = check_dict(track_list, track_list_ref, TOL, 'absolute', assert_info=' track_list - ')
     assert check_result(result)
 
 

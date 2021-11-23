@@ -2,7 +2,7 @@
 general ocelot description
 """
 
-__version__ = '20.11.2'
+__version__ = '21.12.0'
 
 
 __all__ = ['Twiss', "Beam", "Particle", "get_current", "get_envelope", "generate_parray",           # beam
@@ -15,7 +15,7 @@ __all__ = ['Twiss', "Beam", "Particle", "get_current", "get_envelope", "generate
 
             'Element', 'Multipole', 'Quadrupole', 'RBend', "Matrix", "UnknownElement",              # elements
             'SBend', 'Bend', 'Drift', 'Undulator', 'Hcor',  "Sequence", "Solenoid", "TDCavity",     # elements
-            'Vcor', "Sextupole", "Monitor", "Marker", "Octupole", "Cavity",  "Aperture",    # elements
+            'Vcor', "Sextupole", "Monitor", "Marker", "Octupole", "Cavity",  "Aperture",   # elements
 
             "match", "match_tunes",                                                          # match
 

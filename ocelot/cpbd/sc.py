@@ -350,7 +350,7 @@ class LSC(PhysProc):
 
         f, Zb = self.wake2impedance(sb1, bunch1 * speed_of_light)
 
-        Z = np.zeros(n, dtype=np.complex)
+        Z = np.zeros(n, dtype=complex)
         Z[0:nb] = Za * Zb[0:nb]
         Z[nb:n] = np.flipud(np.conj(Z[0:nb]))
 

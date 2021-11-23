@@ -19,7 +19,6 @@ class KickTM(Transformation):
         nkick = params.get('nkick')
         self.nkick = nkick if nkick else 1
 
-
     @classmethod
     def from_element(cls, element: Element, tm_type: TMTypes = TMTypes.MAIN, delta_l=None, **params):
         """[summary]
@@ -39,7 +38,7 @@ class KickTM(Transformation):
                           exit_tm_params_func=element.create_kick_exit_params if element.has_edge else None,
                           tm_type=tm_type, length=element.l, delta_length=delta_l, **params)
 
-    def get_params(self):
+    def get_params(self, energy: float = 0.):
         return self.create_tm_param_func()
 
     def kick(self, X, l, angle, k1, k2, k3, energy, nkick=1):
@@ -91,7 +90,7 @@ class KickTM(Transformation):
         dy = params.dy
 
         nkick = self.nkick
-        l = self.delta_length if self.delta_length != None else self.length
+        l = self.delta_length if self.delta_length is not None else self.length
 
         if dx != 0 or dy != 0 or tilt != 0:
             X = transform_vec_ent(X, dx, dy, tilt)

@@ -143,7 +143,7 @@ def json2numpy(json_array):
             tmp.append(line[str(i)])
         array.append(tmp)
 
-    return np.array(array)
+    return np.array(array, dtype=object)
 
 
 def obj2dict(object, unpack=None):

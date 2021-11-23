@@ -1012,6 +1012,7 @@ def get_envelope(p_array, tws_i=None, bounds=None):
 
     # if less than 3 particles are left in the ParticleArray - return default (zero) Twiss()
     if len(x) < 3:
+        _logger.warning("ParticleArray contains less than 3 particles. Moments are not calculated")
         return tws
 
     if tws_i is None:
@@ -1088,7 +1089,7 @@ def get_envelope(p_array, tws_i=None, bounds=None):
     tws.emit_x = np.sqrt(tws.xx * tws.pxpx - tws.xpx ** 2)
     tws.emit_y = np.sqrt(tws.yy * tws.pypy - tws.ypy ** 2)
     relgamma = p_array.E / m_e_GeV
-    relbeta = np.sqrt(1 - relgamma**-2)
+    relbeta = np.sqrt(1 - relgamma**-2) if relgamma != 0 else 1.
     tws.emit_xn = tws.emit_x * relgamma * relbeta
     tws.emit_yn = tws.emit_y * relgamma * relbeta
 

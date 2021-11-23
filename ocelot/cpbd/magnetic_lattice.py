@@ -175,7 +175,7 @@ class MagneticLattice:
                         element.l = element.l*0.001
             self.totalLen += element.l
 
-            tm_class_type = self.method.get(element.__class__.__name__)
+            tm_class_type = self.method.get(element.__class__)
             if tm_class_type:
                 element.set_tm(tm_class_type)
             else:

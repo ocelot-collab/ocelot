@@ -3,6 +3,7 @@ from ocelot.cpbd.elements.optic_element import OpticElement
 from ocelot.cpbd.elements.tdcavity_atom import TDCavityAtom
 from ocelot.cpbd.transformations.transfer_map import TransferMap
 
+
 class TDCavity(OpticElement):
     """
     Transverse deflecting cavity - by default kick in horizontal plane

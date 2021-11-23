@@ -42,18 +42,19 @@ def optics_from_tfs(tfs_table):
 
     return twiss
 
+def convert_tfs_lattice(tfsfilename, converter=None):
+    if converter is None:
+        converter = MADXLatticeConverter()
+
+    for row in self.tfs.itertuples():
+        yield self._dispatch(row)
+
+
 
 class UnsupportedMADXElementType(RuntimeError): pass
 
 
 class MADXLatticeConverter:
-    def __init__(self, tfsfilename):
-        self.tfs = tfs.read(tfsfilename)
-
-    def convert(self):
-        for row in self.tfs.itertuples():
-            yield self._dispatch(row)
-
     def _dispatch(self, row):
         etype = row.KEYWORD
         etypelow = etype.lower()
@@ -68,7 +69,7 @@ class MADXLatticeConverter:
         return elements.Marker(eid=row.NAME)
 
     def make_monitor(self, row):
-        return elements.Monitor(eid=row.NAME)
+        return elements.Monitor(eid=row.NAME, l = row.L)
 
     def make_drift(self, row):
         return elements.Drift(eid=row.NAME, l=row.L)
@@ -82,37 +83,39 @@ class MADXLatticeConverter:
                               e2=row.E2)
 
     def make_rbend(self, row):
-        if not row.fintx:
-            fintx = None
-        if not row.e1:
-            e1 = None
-        if not row.e2:
-            e2 = None
         return elements.RBend(eid=row.NAME,
                               l=row.L,
                               angle=row.ANGLE,
                               k1=row.K1L/row.L,
                               k2=row.K2L/row.L,
                               tilt=row.TILT,
-                              e1=e1,
-                              e2=e2,
+                              e1=row.E1,
+                              e2=row.E2,
                               fint=row.FINT,
-                              fintx=fintx)
+                              fintx=row.FINTX)
 
     def make_quadrupole(self, row):
-        return elements.Quadrupole(eid=row.NAME, l=row.L, k1=row.K1L/row.L)
+        return elements.Quadrupole(eid=row.NAME,
+                                   l=row.L,
+                                   k1=row.K1L/row.L,
+                                   tilt=row.TILT)
 
     def make_sextupole(self, row):
-        return elements.Sextupole(eid=row.NAME, l=row.L, k2=row.K2L/row.L)
+        return elements.Sextupole(eid=row.NAME,
+                                  l=row.L,
+                                  k2=row.K2L/row.L,
+                                  tilt=row.TILT)
 
     def make_octupole(self, row):
-        return elements.Octupole(eid=row.NAME, l=row.L, k3=row.K3L/row.L)
+        return elements.Octupole(eid=row.NAME,
+                                 l=row.L,
+                                 k3=row.K3L/row.L,
+                                 tilt=row.TILT)
 
     def make_vkicker(self, row):
         return elements.Vcor(eid=row.NAME,
                              l=row.L,
                              angle=row.VKICK)
-
     def make_hkicker(self, row):
         return elements.Hcor(eid=row.NAME,
                              l=row.L,

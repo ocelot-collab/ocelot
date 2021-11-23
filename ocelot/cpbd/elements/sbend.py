@@ -2,6 +2,7 @@ from ocelot.cpbd.elements.optic_element import OpticElement
 from ocelot.cpbd.elements.sbend_atom import SBendAtom
 from ocelot.cpbd.transformations.transfer_map import TransferMap
 
+
 class SBend(OpticElement):
     """
     sector bending magnet,

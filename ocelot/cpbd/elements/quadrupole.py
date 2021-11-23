@@ -4,6 +4,7 @@ from ocelot.cpbd.elements.optic_element import OpticElement
 from ocelot.cpbd.elements.quadrupole_atom import QuadrupoleAtom
 from ocelot.cpbd.transformations.transfer_map import TransferMap 
 
+
 class Quadrupole(OpticElement):
     """
     quadrupole

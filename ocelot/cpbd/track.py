@@ -144,7 +144,7 @@ def freq_analysis(track_list, lat, nturns, harm=True, diap=0.10, nearest=False, 
         return nux, nuy
 
     nux, nuy = None, None
-    if harm == True:
+    if harm is True:
         nux, nuy = beta_freq(lat)
     #fma(pxy_list, nux = nux, nuy = nuy)
     for n, pxy in enumerate(track_list):
@@ -285,7 +285,7 @@ def track_nturns(lat, nturns, track_list, nsuperperiods=1, save_track=True, prin
         for n, pxy in enumerate(track_list):
             pxy.turn = i
             if save_track:
-                pxy.p_list.append(p_array.rparticles[:, n])
+                pxy.p_list.append(p_array.rparticles[:, n].tolist())
     return np.array(track_list_const)
 
 

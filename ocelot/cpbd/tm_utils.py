@@ -35,10 +35,8 @@ class SecondOrderMult:
         self.full_matrix = False
 
         if nb_flag and False:
-            # print("SecondTM: NUMBA")
             self.tmat_multip = nb.njit()(SecondOrderMult.numba_apply)
         else:
-            # print("SecondTM: Numpy")
             self.tmat_multip = SecondOrderMult.numpy_apply
 
     @staticmethod
@@ -113,7 +111,7 @@ def sym_matrix(T):
         for j in range(6):
             for k in range(j, 6):
                 if j != k:
-                    a = T[i, j, k] / 2.
+                    a = (T[i, j, k] + T[i, k, j]) / 2.
                     T[i, k, j] = a
                     T[i, j, k] = a
     return T

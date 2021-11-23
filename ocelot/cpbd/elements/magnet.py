@@ -5,6 +5,7 @@ from ocelot.cpbd.tm_params.second_order_params import SecondOrderParams
 from ocelot.cpbd.high_order import t_nnn
 from ocelot.cpbd.r_matrix import uni_matrix
 
+
 class Magnet(Element):
     def __init__(self, eid=None, has_edge=False):
         super().__init__(eid=eid, has_edge=has_edge)
@@ -18,7 +19,7 @@ class Magnet(Element):
             hx = 0.
         else:
             hx = self.angle / self.l
-        if delta_length != None:
+        if delta_length is not None:
             R = uni_matrix(delta_length, k1, hx=hx, sum_tilts=0, energy=energy)
         else:
             R = uni_matrix(self.l, k1, hx=hx, sum_tilts=0, energy=energy)
@@ -26,8 +27,8 @@ class Magnet(Element):
         return FirstOrderParams(R, B, self.tilt)
 
     def create_second_order_main_params(self, energy: float, delta_length: float = 0.0) -> SecondOrderParams:
-        T = t_nnn(delta_length if delta_length != None else self.l, 0. if self.l == 0 else self.angle / self.l, self.k1, self.k2,
-                  energy)
+        T = t_nnn(delta_length if delta_length is not None else self.l, 0. if self.l == 0 else self.angle / self.l,
+                  self.k1, self.k2, energy)
         first_order_params = self.create_first_order_main_params(energy, delta_length)
         return SecondOrderParams(first_order_params.R, first_order_params.B, T, self.tilt, self.dx, self.dy)
 

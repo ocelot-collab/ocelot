@@ -9,5 +9,5 @@ class SecondOrderParams(FirstOrderParams):
         self.dx = dx
         self.dy = dy
 
-    def get_roteted_T(self):
+    def get_rotated_T(self):
         return sym_matrix(transfer_map_rotation(self.R, self.T, self.tilt)[1])

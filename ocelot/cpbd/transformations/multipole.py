@@ -25,7 +25,7 @@ class MultipoleTM(TransferMap):
                           has_params=False,
                           tm_type=tm_type, length=element.l, delta_length=delta_l, params=params)
 
-    def get_params(self):
+    def get_params(self, energy: float = 0.):
         return self.create_tm_param_func()
 
     def kick(self, X, kn):

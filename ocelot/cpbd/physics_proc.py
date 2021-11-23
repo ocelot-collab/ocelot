@@ -135,7 +135,7 @@ class SmoothBeam(PhysProc):
         Zout2[0] = Zout[0]
         for i in range(1, N - 1):
             m = min(i, N - i + 1)
-            m = np.int(np.floor(myfunc(0.5 * m, 0.5 * self.mslice) + 0.500001))
+            m = int(np.floor(myfunc(0.5 * m, 0.5 * self.mslice) + 0.500001))
             Zout2[i] = (S[i + m + 1] - S[i - m]) / (2 * m + 1)
         # Zout[inds] = Zout2
         p_array.tau()[inds] = Zout2

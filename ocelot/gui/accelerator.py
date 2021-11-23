@@ -746,9 +746,9 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones=None):
 
     fig1 = plt.contour(contour_da, 1, extent=extent, linewidths=2, colors='k')  # , colors = 'r')
     fig1 = plt.contourf(mux, 40, cmap=my_cmap, extent=extent)  # , colors = 'r')
-    cb = plt.colorbar(cmap=my_cmap)
+    cb = plt.colorbar()
     fig1 = plt.contourf(mux, 10, levels=[-1, -.0001], colors='w', extent=extent)
-    if zones != None:
+    if zones is not None:
         x_zone = zones[0]
         y_zone = zones[1]
         plt.plot(x_zone * np.cos(t), y_zone * np.sin(t), "g", lw=2)
@@ -763,7 +763,7 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones=None):
 
     fig1 = plt.contour(contour_da, 1, extent=extent, linewidths=2, colors='k')  # , colors = 'r')
     fig1 = plt.contourf(muy, 40, cmap=my_cmap, extent=extent)  # , colors = 'r')
-    if zones != None:
+    if zones is not None:
         x_zone = zones[0]
         y_zone = zones[1]
         plt.plot(x_zone * np.cos(t), y_zone * np.sin(t), "g", lw=2)
@@ -771,7 +771,7 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones=None):
         plt.plot(3 * x_zone * np.cos(t), 3 * y_zone * np.sin(t), "r", lw=2)
         plt.plot(4 * x_zone * np.cos(t), 4 * y_zone * np.sin(t), "y", lw=2)
 
-    cb = plt.colorbar(cmap=my_cmap)
+    cb = plt.colorbar()
     fig1 = plt.contourf(muy, 10, levels=[-1, -.0001], colors='w', extent=extent)
     plt.xlabel("X, m")
     plt.ylabel("Y, m")

@@ -27,7 +27,7 @@ def cell():
 
 @pytest.fixture(scope='module')
 def method():
-    mmm1 = {"global": TransferMap, "Undulator": UndulatorTestTM}
+    mmm1 = {"global": TransferMap, Undulator: UndulatorTestTM}
 
     mmm2 = {"global": TransferMap}
 

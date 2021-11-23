@@ -34,7 +34,7 @@ def cell():
 @pytest.fixture(scope='module')
 def method():
 
-    mmm = {'global': TransferMap, 'Sextupole': KickTM}
+    mmm = {'global': TransferMap, Sextupole: KickTM}
 
     return mmm
 

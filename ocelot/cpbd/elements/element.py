@@ -60,3 +60,6 @@ class Element:
 
     def create_delta_e(self, total_length, delta_length=0.0):
         return 0.0
+
+    def __repr__(self):
+        return f"<{type(self).__name__}: name={self.id} at {hex(id(self))}>"

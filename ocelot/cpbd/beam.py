@@ -876,6 +876,7 @@ class ParticleArray:
 
         if in_place:
             self.rparticles = self.rparticles[..., indices]
+            self.q_array = self.q_array[indices]
 
         return indices
 

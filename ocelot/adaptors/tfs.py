@@ -25,7 +25,7 @@ def optics_from_tfs(tfs_table):
         header = tfs_table.headers
     except AttributeError:
         tfs_table = tfs.read(tfs_table)
-        header = table.headers
+        header = tfs_table.headers
 
     twiss.E = header["ENERGY"]
     twiss.emit_x = header["EX"]

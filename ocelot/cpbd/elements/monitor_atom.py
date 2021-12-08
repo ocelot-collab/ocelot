@@ -13,7 +13,7 @@ class MonitorAtom(Element):
         self.y = 0.
 
     def __str__(self):
-        s = 'Monitor : '
-        s += 'id = ' + str(self.id) + '\n'
-        s += 'l =%8.4f m\n' % self.l
+        s = 'Monitor('
+        s += 'l=%7.5f, ' % self.l if self.l != 0. else ""
+        s += 'eid="' + str(self.id) + '")' if self.id is not None else ")"
         return s

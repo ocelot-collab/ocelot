@@ -72,14 +72,14 @@ class Transformation(ABC):
     def create(cls, main_tm_params_func, delta_e_func, length, delta_length=None, entrance_tm_params_func=None,
                exit_tm_params_func=None, tm_type: TMTypes = TMTypes.MAIN, **params):
         """[summary]
-        Factory method the concrete transforamtion. 
+        Factory method the concrete transformation.
         :param main_tm_params_func: Function that is called on the element to calculate the transformation parameter for the main transforamtion.
         :type main_tm_params_func: [type]
         :param delta_e_func: Function that is called on the element to calculate the delta energy.
         :type delta_e_func: [type]
         :param length: Length of the element.
         :type length: [type]
-        :param delta_length: define the delta length for which the transforamtion of the element will be calculated if delta_length is None length will be used, default is None.
+        :param delta_length: define the delta length for which the transformation of the element will be calculated if delta_length is None length will be used, default is None.
         :type delta_length: [type], optional
         :param entrance_tm_params_func: : Function that is called on the element to calculate the transformation parameter for the entrance transforamtion, defaults to None
         :type entrance_tm_params_func: [type], optional
@@ -127,16 +127,14 @@ class Transformation(ABC):
         """
         if prcl_series.__class__ == ParticleArray:
             self.map_function(prcl_series.rparticles, energy=prcl_series.E)
-            #self.map(prcl_series.rparticles, energy=prcl_series.E)
             prcl_series.E += self.get_delta_e()
-            #prcl_series.E += self.delta_e
-            prcl_series.s += self.delta_length if self.delta_length != None else self.length
+            prcl_series.s += self.delta_length if self.delta_length is not None else self.length
 
         elif prcl_series.__class__ == Particle:
             p = prcl_series
             p.x, p.px, p.y, p.py, p.tau, p.p = self.map_function(np.array([[p.x], [p.px], [p.y], [p.py], [p.tau], [p.p]]), p.E)[
                 :, 0]
-            p.s += self.delta_length if self.delta_length != None else self.length
+            p.s += self.delta_length if self.delta_length is not None else self.length
             p.E += self.get_delta_e()
 
         elif prcl_series.__class__ == list and prcl_series[0].__class__ == Particle:
@@ -148,7 +146,7 @@ class Transformation(ABC):
                     self.map(np.array([[p.x], [p.px], [p.y], [p.py], [p.tau], [p.p]]), energy=p.E)
 
                     p.E += self.get_delta_e()
-                    p.s += self.delta_length if self.delta_length != None else self.length
+                    p.s += self.delta_length if self.delta_length is not None else self.length
             else:
                 pa = ParticleArray()
                 pa.list2array(prcl_series)
@@ -156,7 +154,7 @@ class Transformation(ABC):
                 #self.map(pa.rparticles, energy=pa.E)
                 self.map_function(pa.rparticles, energy=pa.E)
                 pa.E += self.get_delta_e()
-                pa.s += self.delta_length if self.delta_length != None else self.length
+                pa.s += self.delta_length if self.delta_length is not None else self.length
                 pa.array2ex_list(prcl_series)
 
         else:

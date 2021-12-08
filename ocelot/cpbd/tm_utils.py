@@ -126,3 +126,25 @@ def unsym_matrix(T):
                     T[i, k, j] = 0
                     T[i, j, k] = a
     return T
+
+
+def map_transform_with_offsets(M, R, T):
+    """
+    Calculate new R matrix and B vector for an element with misalignment. Second order matrix is unchanged.
+
+    :param M: array(6, 1), element offset, e.g. for dx and dy offsets - [[-dx], [0], [-dy], [0], [0], [0]]
+    :param R: array(6, 6), First order matrix
+    :param T: array(6, 6, 6), Second Order Matrix
+    :return: B, R - zero and first order matrices. T matrix does not change.
+    """
+    # first order matrix transformation
+    R_off = np.copy(R)
+    for i in range(6):
+        for j in range(6):
+            for l in range(6):
+                R_off[i, j] += M[l, 0] * (T[i, j, l] + T[i, l, j])
+
+    # zero order matrix transformation
+    B_off = np.dot(R, M) - M + np.dot(np.dot(M.T, T), M)[0]
+
+    return B_off, R_off

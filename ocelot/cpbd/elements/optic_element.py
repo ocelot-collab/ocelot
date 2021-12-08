@@ -21,8 +21,10 @@ class OpticElement:
 
     def __init__(self, element: Element, tm: Type[Transformation], default_tm: Type[Transformation], **params) -> None:
         """[summary]
-        Creates a optic element which holds element atom and its transfromation. Each concrete optic element have to implement its own __init__
-        it the concret element parameters.
+        Creates a optic element which holds element atom and its transformation.
+        Each concrete optic element have to implement its own __init__
+        it the concrete element parameters.
+
         :param element: Concrete element atom.
         :type element: Element
         :param tm: Transformation that is used by the element.
@@ -32,7 +34,8 @@ class OpticElement:
         """
         self.element = element
         self.default_tm = default_tm
-        self._first_order_tms = self._create_tms(self.element, TransferMap)  # every optics element has a first_order tm to calculate e.g Twiss Paramters
+        # every optics element has a first_order tm to calculate e.g Twiss Parameters
+        self._first_order_tms = self._create_tms(self.element, TransferMap)
         self._kwargs = params  # Storing transforamtion sp
         if tm == TransferMap:
             self._tms = self._first_order_tms
@@ -51,40 +54,56 @@ class OpticElement:
     # To access all setter attributes of element to fulfill old iface
     def __setattr__(self, name, value):
         if self.__is_init and name in self.element.__dict__:
-            for tm in self._tms:
-                tm._clean_cashed_values()
-            for tm in self._first_order_tms:
-                tm._clean_cashed_values()
+
+            if self._tms is not None:
+                for tm in self._tms:
+                    tm._clean_cashed_values()
+            if self._first_order_tms is not None:
+                for tm in self._first_order_tms:
+                    tm._clean_cashed_values()
+            self._first_order_tms = None
+            self._tms = None
             return setattr(self.element, name, value)
         return object.__setattr__(self, name, value)
 
     @property
-    def tms(self) -> List[Callable[[np.ndarray, float], np.ndarray]]:
+    def tms(self) -> List[Transformation]:
         """[summary]
-        Returns a list of transformaton function [f(X, energy),...].
+        Returns a list of transformation function [f(X, energy),...].
         :return: List of first order transformations
         :rtype: List[Callable[[np.ndarray, float], np.ndarray]]
         """
+        if self._tms is None:
+            if self._tm_class_type == TransferMap:
+                if self._first_order_tms is None:
+                    self._first_order_tms = self._create_tms(self.element, TransferMap)
+                self._tms = self._first_order_tms
+            else:
+                self._tms = self._create_tms(self.element, self._tm_class_type)
         return self._tms
 
     @property
-    def first_order_tms(self) -> List[Callable[[np.ndarray, float], np.ndarray]]:
+    def first_order_tms(self) -> List[Transformation]:
         """[summary]
-        Returns a list of first order transformaton function [f(X, energy),...].
+        Returns a list of first order transformation function [f(X, energy),...].
         :return: List of first order transformations
         :rtype: List[Callable[[np.ndarray, float], np.ndarray]]
         """
+        if self._first_order_tms is None:
+            self._first_order_tms = self._create_tms(self.element, TransferMap)
         return self._first_order_tms
 
     def B(self, energy: float) -> List[np.ndarray]:
         """[summary]
-        Calculates B matrices for second order transformation if second order transformation is set otherwise B matrices are calculated for first order transformation.
+        Calculates B matrices for second order transformation if second order transformation is set otherwise
+        B matrices are calculated for first order transformation.
+
         :param energy: [description]
         :type energy: float
         :return: List of B matrices
         :rtype: List[np.ndarray]
         """
-        tms = self._tms if self._tm_class_type == SecondTM else self._first_order_tms
+        tms = self._tms if self._tm_class_type == SecondTM else self.first_order_tms
         res = []
         E = energy
         for tm in tms:
@@ -94,13 +113,15 @@ class OpticElement:
 
     def R(self, energy: float) -> List[np.ndarray]:
         """[summary]
-        Calculates R matrices for second order transformation if second order transformation is set otherwise the B matrices are calculated for first order transformation.
+        Calculates R matrices for second order transformation if second order transformation is set otherwise
+        the B matrices are calculated for first order transformation.
+
         :param energy: [description]
         :type energy: float
         :return: [description]
         :rtype: List[np.ndarray]
         """
-        tms = self._tms if self._tm_class_type == SecondTM else self._first_order_tms
+        tms = self.tms if self._tm_class_type == SecondTM else self.first_order_tms
         res = []
         E = energy
         for tm in tms:
@@ -110,25 +131,28 @@ class OpticElement:
 
     def T(self, energy: float) -> List[np.ndarray]:
         """[summary]
-        Calculates the T matrices for second order transformation if second order transformation is set otherwise a zero matrices will be returned.
+        Calculates the T matrices for second order transformation if second order transformation is set
+        otherwise a zero matrices will be returned.
+
         :param energy: [description]
         :type energy: float
         :return: List of B matrices
         :rtype: List[np.ndarray]
         """
         if self._tm_class_type != SecondTM:
-            return [np.zeros((6, 6, 6)) for _ in self._first_order_tms]
+            return [np.zeros((6, 6, 6)) for _ in self.first_order_tms]
         res = []
         E = energy
-        for tm in self._tms:
+        for tm in self.tms:
             res.append(tm.get_params(E).get_rotated_T())
             E += tm.get_delta_e()
         return res
 
     def __init_tms(self, tm: Transformation, **params):
         """[summary]
-        Initialize the transforamtions. If the transforamtion is not supported default_tm will be used.
-        :param tm: Transforamtion to be set.
+        Initialize the transformations. If the transformation is not supported default_tm will be used.
+
+        :param tm: Transformation to be set.
         :type tm: Transformation
         """
         try:
@@ -142,18 +166,21 @@ class OpticElement:
     def apply(self, X: np.ndarray, energy: float):
         """[summary]
         Apply all transformations on particle array.
+
         :param X: Array of particles
         :type X: np.ndarray
         :param energy: Given energy
         :type energy: float
         """
-        for tm in self._tms:
+        for tm in self.tms:
             tm.map_function(X, energy)
 
     def set_tm(self, tm: Transformation, **params):
         """[summary]
-        Sets a new transforamtion for the element. Transformation specific parameter can be added via **params e.g elem.set_tm(tm=RungaKuttraTM, npoints=2000),
+        Sets a new transformation for the element. Transformation specific parameter can be added via **params
+        e.g elem.set_tm(tm=RungaKuttraTM, npoints=2000),
         Note: Transformation specific parameters can be also set via __init__.
+
         :param tm: 
         :type tm: Transformation
         """
@@ -169,12 +196,13 @@ class OpticElement:
                     self.__init_tms(tm, **self._kwargs)
 
             self._tm_class_type = tm
-            for tm in self._tms:
+            for tm in self.tms:
                 tm._clean_cashed_values()
 
     def get_section_tms(self, delta_l: float, start_l: float = 0.0, ignore_edges=False, first_order_only=False) -> List[Transformation]:
         """[summary]
         Calculates transformations for a section of the Element. The section is defined by start_l and delta_l.
+
         :param delta_l: The length of the section.
         :type delta_l: float
         :param start_l: Start position in the element, defaults to 0.0
@@ -215,13 +243,10 @@ class OpticElement:
         return tm_list
 
     def get_tm(self, tm_type: TMTypes, first_order_only=False):
-        tms = self._first_order_tms if first_order_only else self._tms
+        tms = self.first_order_tms if first_order_only else self.tms
         for tm in tms:
             if tm.tm_type == tm_type:
                 return tm
-
-    def update(self):
-        self._tms = self._create_tms(self.element, self._tm_class_type)
 
     @staticmethod
     def _create_tms(element: Element, tm: Type[Transformation], **params) -> List[Transformation]:

@@ -1,7 +1,6 @@
 import numpy as np
 from ocelot.cpbd.elements.element import Element
 from ocelot.cpbd.tm_params.second_order_params import SecondOrderParams
-from ocelot.cpbd.tm_params.corrector_params import CorrectorSecondOrderParams
 from ocelot.cpbd.tm_params.first_order_params import FirstOrderParams
 from ocelot.cpbd.high_order import t_nnn
 from ocelot.cpbd.r_matrix import uni_matrix
@@ -36,8 +35,7 @@ class CorAtom(Element):
         B = self.kick_b(z=z, l=self.l, angle=self.angle, tilt=self.tilt)
         return FirstOrderParams(R, B, self.tilt)
 
-    def create_cor_second_order_main_params(self, energy: float, delta_length: float = 0) -> SecondOrderParams:
+    def create_second_order_main_params(self, energy: float, delta_length: float = 0) -> SecondOrderParams:
         params = self.create_first_order_main_params(energy, delta_length)
         T = t_nnn(delta_length if delta_length is not None else self.l, 0, 0, 0, energy)
-        return CorrectorSecondOrderParams(R=params.R, B=params.B, T=T, tilt=self.tilt, dx=self.dx, dy=self.dy,
-                                          angle=self.angle)
+        return SecondOrderParams(params.R, params.B, T, self.tilt, self.dx, self.dy)

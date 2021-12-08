@@ -1,256 +1,308 @@
-from pylab import *
-import numpy.fft as fft
+__author__ = 'Sergey Tomin'
+
+from ocelot import *
+
+def RFcavity(l, volt, lag, harmon):
+    rf = Cavity(l = l, volt=volt, id = id)
+    rf.lag = lag
+    rf.harmon = harmon
+    return rf
+
+class MadObj:
+
+    name = ""
+    type = ""
+    params = ""
+
+    def parse_params(self):
+        self.dic_p = {}
+        for param in self.params:
+            param = param.replace('=', ' ')
+            param = param.split()
+            self.dic_p[param[0]] = param[1]
 
 
-class TrackingInfo:
-    def __init__(self):
-        pass
+def line_transform(file):
+    """
+    replace ":=" by "="
+    replace '!' by '#'
+    if there is not ";" at the end line, collect the multiline
+    all letters in lowercase
+    """
+    lines = []
+    multiline = ''
+    for line in file:
+        #print line
+        #print line
+        line  = line.lstrip()
+        if len(line) == 0:
+            continue
+        #print line
+        line = line.replace(':=', '=')
+        line = line.replace('!', '#')
+        #print line
+        multiline += line
+        #print  len(multiline), multiline[0]
+        if multiline.find(";")<0 and multiline[0] != "#":
+            ind = line.find("#")
+            multiline = multiline[:ind]
+            continue
+        else:
+            line = multiline
+            multiline = ''
+        line = line.replace(';', '')
+        line = line.lower()
+        #print line
+        lines.append(line)
+    return lines
+
+def find_objects(lines):
+    """
+    searching mad's objects. if there ara name and ":" it is object
+    """
+    mad_objs = []
+    for line in lines:
+        if ":" in line and line[0] != "#":
+            madObj = MadObj()
+            i = line.find("#")
+            line2 = line[:i]
+            words = line2.split(",")
+            temp = words[0].split()
+            madObj.type = temp[-1]
+            madObj.name = temp[0].replace(":", "")
+            madObj.params = words[1:]
+            mad_objs.append(madObj)
+    return mad_objs
 
 
-class TFS:
-    def __init__(self, fname):
-        self.params = {}
-        self.column_names = []
-        self.column_values = {}
-        self.read(fname)
+def subs_objects(mad_objs):
+    for i, mo in enumerate(mad_objs):
+        for mo2 in mad_objs[i:]:
+            if mo.name == mo2.type:
+                mo2.type = mo.type
+                params = mo.params + mo2.params
+                mo2.params = params
+    return mad_objs
 
-    def read(self, fname):
-        seen_none = False
-        lines = open(fname).read().split('\n')
-        for l in lines:
-            if seen_none: break
-            tk = l.split()
-            if len(tk) > 3 and tk[0] == '@':
-                # print tk
-                self.params[tk[1]] = tk[3]
-            elif len(tk) > 3 and tk[0] == '@':
-                self.params[tk[1]] = tk[3]
-            elif len(tk) > 1 and tk[0] == '$':
+
+def parse_obj(mad_objs):
+    for mo in mad_objs:
+        #print mo.name, mo.type, mo.params
+        mo.parse_params()
+        #print  mo.name, mo.type, mo.dic_p
+    return mad_objs
+
+
+def replace_objects(lines, mad_objs):
+    new_lines = []
+    multy_line = ''
+    for line in lines:
+
+        if ":" in line and line[0] != "#":
+            i = line.find("#")
+            line2 = line[:i]
+            words = line2.split(",")
+            temp = words[0].split()
+            name = temp[0].replace(":", "")
+
+            for mo in mad_objs:
+                if name == mo.name:
+                    line = ""
+                    line = mo.name + " = " + mo.type + "("
+                    for p in mo.dic_p:
+                        line += p + " = " + mo.dic_p[p] +", "
+                    line += ")"
+        line = line.replace(', )', ')')
+        new_lines.append(line)
+    return new_lines
+
+def translate(lines):
+    lines2 = []
+    for line in lines:
+        line = line.replace('quadrupole', "Quadrupole")
+        line = line.replace('sbend', "Bend")
+        #line = line.replace('rbend', "RBend")
+        #line = line.replace('bend', "Bend")
+        line = line.replace('monitor', "Monitor")
+        line = line.replace('matrix', "Matrix")
+        line = line.replace('rfcavity', "RFcavity")
+        line = line.replace('sextupole', "Sextupole")
+        line = line.replace('marker', "Marker")
+        line = line.replace('instrument', "UnknownElement")
+        line = line.replace('rcollimator', "UnknownElement")
+        line = line.replace('ecollimator', "UnknownElement")
+        line = line.replace('vkicker', "UnknownElement")
+        line = line.replace('hkicker', "UnknownElement")
+        line = line.replace('sequence', "Sequence")
+        line = line.replace('return', "#return")
+        line = line.replace('->', ".")
+        line = line.replace('//', "#")
+        line = line.replace('centre', "'centre'")
+        line = line.replace('at =', "at=")
+        lines2.append(line)
+        #print line
+    return lines2
+
+def c2py(lines):
+    lines2 = []
+    c_block = False
+    for line in lines:
+        #remove spases
+        #print line
+        #line  = line.lstrip()
+        #if len(line) == 0:
+        #    continue
+        #print line
+        #for i in range(8,2,-1):
+        #    line = line.replace(' '*i, "\t")
+        if line[0] != "#" and "{" in line :
+            c_block = True
+            line = line.replace('{', ": # start operator")
+            lines2.append(line)
+            continue
+        if c_block:
+            #line = line.replace('\t', " "*4)
+            line = "    " + line
+        if line[0] != "#" and "}" in line :
+            c_block = False
+            line = line.replace('}', "#end operator")
+            lines2.append(line)
+            continue
+        # make operator body of "for" or "if" li
+        #line = line.replace('{', ": # start operator")
+        #line = line.replace('}', "#end operator")
+        #line = line.replace('print, text=', "print ")
+        #line = line.replace('print, text =', "print ")
+        lines2.append(line)
+    return lines2
+
+
+def collect_sequence(lines):
+    seq = []
+    first = 1
+    lines2 = []
+    for line in lines:
+        if line.find("at=")>0:
+            if line[0] == "#":
                 continue
-            elif len(tk) > 1 and tk[0] == '*':
-                for t in tk[1:]:
-                    self.column_names.append(t)
-                    self.column_values[t] = []
+            parts = line.split("at=")
+            name = parts[0].replace(",", "")
+            name = name.split()[0]
+            #print name
+            pos = parts[1].replace("\n", "")
+
+            id = " '" + name + "' "
+            line = ",".join([name,id, pos])
+
+            ind = line.find("#")
+            if ind>0:
+                line = line[:ind]
+                #print "ind = ", ind == True
+            #print line
+            if first:
+                line = "lattice = [[" + line +"],"
+                first = 0
             else:
-                if 'nan' in tk or '-nan' in tk:
-                    seen_none = True
-                    break
-
-                for i in range(len(tk)):
-                    try:
-                        self.column_values[self.column_names[i]].append(float(tk[i]))
-                    except:
-                        self.column_values[self.column_names[i]].append(tk[i])
+                line = "[" + line + "],"
+            #print line
+            seq.append(line)
+        line = line.replace("endSequence", "]")
+        lines2.append(line)
+    return lines2
 
 
-def get_tunes(tr_x, tr_y):
-    v = np.zeros(len(tr_x))
-    for i in range(len(v)): v[i] = float(tr_x[i])
+def lattice_str_from_madx(filename_seq):
+    f = open(filename_seq,"r")
+    lines = line_transform(f)
+    mad_objs = find_objects(lines)
 
-    u = np.zeros(len(tr_y))
-    for i in range(len(u)): u[i] = float(tr_y[i])
-
-    sv = fft.fft(v)
-    su = fft.fft(u)
-
-    sv = np.abs(sv * np.conj(sv))
-    su = np.abs(su * np.conj(su))
-
-    freq = np.fft.fftfreq(len(sv))
-
-    return (freq[np.argmax(sv[1:len(sv) / 2 - 1], axis=0)], freq[np.argmax(su[1:len(su) / 2 - 1], axis=0)])
+    mad_objs = subs_objects(mad_objs)
+    mo = parse_obj(mad_objs)
+    new_lines = replace_objects(lines, mo)
+    lines = translate(new_lines)
+    lines = c2py(lines)
+    lines = collect_sequence(lines)
+    f.close()
+    return lines
 
 
-def rename_type(etype):
-    type_replacement = {
-        'quadrupole': 'Quadrupole',
-        'sextupole': 'Sextupole',
-        'marker': 'Marker',
-        'hkicker': 'Hcor',
-        'vkicker': 'Vcor',
-        'kicker': 'Hcor',
-        'instrument': 'Drift',
-        'sbend': 'SBend',
-        'rbend': 'RBend',
-        'bend': 'Bend',
-        'rcollimator': 'Marker',
-        'ecollimator': 'Marker',
-        'matrix': 'Matrix',
-        'monitor': 'Monitor',
-        'sequence': 'Marker'
-    }
-
-    if etype in type_replacement: return type_replacement[etype]
-    return etype
+def save_lattice_str(lines, filename):
+    f_new = open(filename, "w")
+    for line in lines: f_new.write(line+"\n")
+    f_new.close()
 
 
-def rename_par(par_name):
-    name_replacement = {
-        'kick': 'angle'
-    }
+def madx_seq2ocelot_seq(list_elem_pos, tot_length, exclude_elems = []):
+    seq = []
+    azimuth = 0.
+    for i, term in enumerate(list_elem_pos):
+        if term[1] in exclude_elems:
+            continue
+        element = term[0]
+        #print element
+        element.id = term[1]
+        pos = term[2]
+        drift = Drift(l = pos - element.l/2. - azimuth, eid = "drift_" + str(i))
+        azimuth = pos + element.l/2.
+        seq.append(drift)
+        seq.append(element)
+        #print elem[0].l, elem[1], elem[2]
+    len_last_drift = tot_length - list_elem_pos[-1][-1] - list_elem_pos[-1][0].l/2.
+    drift = Drift(l = len_last_drift, eid = "drift_last")
+    seq.append(drift)
+    return seq
 
-    if par_name in name_replacement: return name_replacement[par_name]
-    return par_name
-
-
-def get_par(par_list, par_name):
-    for p in par_list:
-        n, v = p.split('=')
-        n = n.strip()
-        v = v.strip()
-        if n == par_name:
-            return v
-    return '0'
-
-
-def expand_element(element_list, etype, params):
-    exists_def = True
-    while exists_def:
-        try:
-            new_def = element_list[etype]
-            etype = new_def[0]
-            # child parameters precede parent and are returned first from get_par
-            params = params + new_def[1]
-        except:
-            exists_def = False
-
-        return etype, params
+def madx2ocelot(file_seq, exclude_elems):
+    lines = lattice_str_from_madx(filename_seq=file_seq)
+    #print lines
+    file = "\n"
+    exec(file.join(lines))
+    seq = madx_seq2ocelot_seq(lattice, tot_length = ring.l, exclude_elems=exclude_elems)
+    return seq
 
 
-def parameter_str(etype, par_list):
-    if etype in ['marker', 'rcollimator', 'ecollimator', 'sequence']: return ''
-
-    txt = ''
-    par_names = []
-    for p in par_list:
-        n, v = p.split('=')
-        n = n.strip()
-        v = v.strip()
-        if n not in par_names: txt = txt + rename_par(n) + '=' + v + ','
-        par_names.append(n)
-
-    return txt[:-1]
-
-
-import time
-
-
-def convert_madx_seq(fname, manual_defs=''):
-    txt = ''
-    # first strip comments to simplify multiline parsing
-    lines = open(fname).read().lower().split('\n')
-    for l in lines:
-        l = l.strip()
-        if l.find('!') >= 0: l = l[:l.find('!')]
-        if l.find('//') >= 0: l = l[:l.find('//')]
-        if len(l) > 0: txt = txt + l + '\n'
-
-    lines = txt.split(';')
-
-    txt = '#autogenerated on {} \nfrom ocelot import *\n'.format(time.strftime('%Y/%m/%d %H:%M:%S'))
-    txt = txt + manual_defs
-
-    pos = []
-    element_list = {}
-
-    for l in lines:
-        l = l.strip().replace('\n', '')
-        l = l.replace(':=', '=')
-        if ':' in l:  # element def
-            # print '!element def', l
-            name, defn, = l.split(':')
-            defn = defn.split(',')
-            etype, params, = defn[0], defn[1:]
-            name = name.strip()
-            etype = etype.strip()
-            if etype not in element_list:
-                # print etype, 'not in element list'
-                # print '!Defn: {} Basic class: {}'.format(name, etype)
-                element_list[name] = (etype, params)
-            else:
-                etype, params = expand_element(element_list, etype, params)
-                # print '!Child Defn: {} Basic class: {}'.format(name, etype)
-                element_list[name] = (etype, params)
-
-        elif 'at' in l:  # placement
-            l = l.replace(',', '')
-            l = l.replace('at =', 'at=')
-            toks = l.split('at=')
-            # print toks
-            ename = toks[0].strip()
-            par_val = get_par(element_list[ename][1], 'l')
-            # print 'par_val = <{}>'.format(par_val)
-            l = eval(par_val)
-            pos.append((ename, str(eval(toks[1])), l))
-        elif '=' in l:  # variables
-            txt = txt + l + '\n'
-            try:
-                exec(l)
-            except:
-                print ('WARNING: unable to parse', l)
-
-    for name in element_list.keys():
-        etype, params = element_list[name]
-        txt = txt + name + ' = ' + rename_type(etype) + '(' + parameter_str(etype, params) + ')\n'
-
-    txt = txt + 'ring=('
-
-    last_right_edge_s = 0.0
-    for p in pos:
-        l = p[2]
-        s = eval(p[1])
-        gap = s - l / 2.0 - last_right_edge_s
-        last_right_edge_s = s + l / 2.0
-        # txt = txt + p[0] + ' at ' + str(s) + ' l=' + str(l) + ' gap=' + str(gap) + '\n'
-        if abs(gap) > 1.e-9:
-            txt = txt + 'Drift(l=' + str(gap) + '),'
-        txt = txt + p[0]
-        txt = txt + ',\n'
-
-    txt = txt + 'Marker() )'
-
-    return txt
+if __name__ == "__main__":
+    #name_file = "quadsex_20wig.dat"
+    name_file = 'petra3.txt'
+    f = open(name_file,"r")
+    lines = line_transform(f)
+    mad_objs = find_objects(lines)
+    mad_objs = subs_objects(mad_objs)
+    mo = parse_obj(mad_objs)
+    new_lines = replace_objects(lines, mo)
+    lines = translate(new_lines)
+    lines = c2py(lines)
+    lines = collect_sequence(lines)
+    for line in lines:
+        print (line)
+    f.close()
+    part_name = name_file.split(".")
+    part_name[0] += ".py"
+    f_new = open(part_name[0], "w")
+    for line in lines:
+        f_new.write(line+"\n")
+    f_new.close()
 
 
-import re
-def madx_input(s1):
-    '''
-    s1 os the ocelot inpu file as text string
-    returns madx input as string    
-    this is a template incorporating rules which work for PetraIV lattice
-    
-    '''
-    s1 = re.sub(r"#", "!", s1)
-    s1 = re.sub(r"(from.*import.*)", r"!\1 removed", s1)
-    s1 = re.sub(r"=\s*(Quadrupole|Drift|SBend|Bend|RBend|Sextupole|Octupole)(\()(.*)(\))", r": \1, \3", s1)
-    s1 = re.sub(r"=\s*(Cavity)(\()(l=[^,]*)(.*)(\))", r": Drift, \3", s1)
-    s1 = re.sub(r"=\s*(Marker|Hcor|Monitor)(\()(.*)(\))", r": \1", s1)
 
-    s1 = re.sub(r"(=)\s*(\((.|\n)*\))", r": line = \2", s1)
-    s1 = re.sub(r"(=)\s*(\(.*\))", r": line = \2", s1)
-    
-    s1 = re.sub(r",\s*el_id\s*=\s*\".*\"", "", s1)
-    s1 = re.sub(r",\s*el_id\s*=\s*\'.*\'", "", s1)
-    s1 = re.sub(r"(\S+)\s*\n", r"\1;\n", s1)
-    s1 = re.sub(r",\s*;", r";", s1)
-    s1 = re.sub(r"\\;", "", s1) # multiline statements should have \ as line break
-        
-    s1 = re.sub(r"\.l", r"->l", s1)
-    s1 = re.sub(r"\.k1", r"->k1", s1)
 
-    s1 = re.sub(r"([\s,])(\S+)\*(\d+)([\s,])", r"\1\3*\2\4", s1) # number of repetitions first in madx 
-    s1 = re.sub(r"(\(.+\))\*(\d+)", r"\2*\1", s1) # number of repetitions first in madx
-    
-    
-    s1 = re.sub(r"(\w+)\[::-1\]", r"-\1", s1) # reflection
-    
-    s1 = re.sub(r"(qs_.*)(k1)(.*);", r"\1k1s\3;", s1) # change to skew quads based on naming convention 
-    
-    
-    txt = '!autogenerated on {} \n'.format(time.strftime('%Y/%m/%d %H:%M:%S')) 
-    txt += 'option, echo, info, warn;\n'
-    txt += 'Hcor: HKicker;\n'
-    txt += s1
-    return txt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

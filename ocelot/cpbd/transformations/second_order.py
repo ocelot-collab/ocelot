@@ -31,13 +31,11 @@ class SecondTM(Transformation):
     def t_apply(self, energy, X, U5666=0.):
         params = self.get_params(energy)
         R, T = params.R, params.T
-        if params.dx != 0 or params.dy != 0 or params.tilt != 0:
-            X[:] = np.add(X, np.array([[-params.dx], [0.], [-params.dy], [0.], [0.], [0.]]))[:]
+        if params.tilt != 0:
             R = params.get_rotated_R()
             T = params.get_rotated_T()
         self.multiplication(X, R, T)
-        if params.dx != 0 or params.dy != 0:
-            X[:] = np.add(X, np.array([[params.dx], [0.], [params.dy], [0.], [0.], [0.]]))[:]
+        X[:] = np.add(X, params.B)
         return X
 
     def map_function(self, X, energy: float):
@@ -45,7 +43,7 @@ class SecondTM(Transformation):
 
     def calculate_Tb(self, energy) -> np.ndarray:
         """
-        Calculates the Tb matrix which is needed to calculate the transfromation matrix.
+        Calculates the Tb matrix which is needed to calculate the transformation matrix.
         @return: Tb matrix
         """
         raise NotImplementedError("Not implemented yet")

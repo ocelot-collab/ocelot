@@ -18,9 +18,9 @@ class HcorAtom(CorAtom):
         self.tilt = 0.
 
     def __str__(self):
-        s = 'Hcor : '
-        s += 'id = ' + str(self.id) + '\n'
-        s += 'l     =%8.4f m\n' % self.l
-        s += 'angle =%8.3f deg\n' % (self.angle * 180.0 / np.pi)
-        s += 'tilt  =%8.2f deg\n' % (self.tilt * 180.0 / np.pi)
+        s = 'Hcor('
+        s += 'l=%7.5f, ' % self.l if self.l != 0. else ""
+        s += 'angle=%8.6e, ' % self.angle if np.abs(self.angle) > 1e-15 else ""
+        s += 'tilt=%8.6e, ' % self.tilt if np.abs(self.tilt) > 1e-15 else ""
+        s += 'eid="' + str(self.id) + '")' if self.id is not None else ")"
         return s

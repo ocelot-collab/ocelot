@@ -26,13 +26,13 @@ class XYQuadrupoleAtom(Magnet):
         self.tilt = tilt
 
     def __str__(self):
-        s = 'XYQuadrupole : '
-        s += 'id = ' + str(self.id) + '\n'
-        s += 'l    =%8.4f m\n' % self.l
-        s += 'k1   =%8.3f 1/m^2\n' % self.k1
-        s += 'x_offs   =%8.3f m\n' % self.x_offs
-        s += 'y_offs   =%8.3f m\n' % self.y_offs
-        s += 'tilt =%8.2f deg\n' % (self.tilt * 180.0 / np.pi)
+        s = 'XYQuadrupole('
+        s += 'l=%7.5f, ' % self.l if self.l != 0. else ""
+        s += 'k1=%8.6e, ' % self.k1 if np.abs(self.k1) > 1e-15 else ""
+        s += 'x_offs=%8.6e, ' % self.x_offs if np.abs(self.x_offs) > 1e-15 else ""
+        s += 'y_offs=%8.6e, ' % self.y_offs if np.abs(self.y_offs) > 1e-15 else ""
+        s += 'tilt=%8.6e, ' % self.tilt if np.abs(self.tilt) > 1e-15 else ""
+        s += 'eid="' + str(self.id) + '")' if self.id is not None else ")"
         return s
 
     def create_r_matrix(self):

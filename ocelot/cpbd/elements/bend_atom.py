@@ -55,7 +55,7 @@ class BendAtom(Magnet):
         s += 'gap=%8.6e, ' % self.gap if self.gap != 0. else ""
         s += 'h_pole1=%8.6e, ' % self.h_pole1 if self.h_pole1 != 0. else ""
         s += 'h_pole2=%8.6e, ' % self.h_pole2 if self.h_pole2 != 0. else ""
-        s += 'id=' + str(self.id) + ')'
+        s += 'eid="' + str(self.id) + '")' if self.id is not None else ")"
         return s
 
     def _R_edge(self, fint, edge):

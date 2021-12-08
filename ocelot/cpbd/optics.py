@@ -195,7 +195,7 @@ def twiss(lattice, tws0=None, nPoints=None):
     twiss parameters calculation
 
     :param lattice: lattice, MagneticLattice() object
-    :param tws0: initial twiss parameters, Twiss() object. If None, try to find periodic solution.
+    :param tws0: initial twiss parameters, Twiss() object. If None, function tries to find periodic solution.
     :param nPoints: number of points per cell. If None, then twiss parameters are calculated at the end of each element.
     :return: list of Twiss() objects
     """
@@ -522,6 +522,12 @@ class Navigator:
         self.remove_used_processes(processes)
 
         return dz, processes, phys_steps
+
+    def __str__(self):
+        s = "Navigator: added physics processes: \n"
+        for physproc in self.ref_process_table.proc_list:
+            s += physproc.__class__.__name__ + " start: " + str(physproc.s_start) + "/ stop: " + str(physproc.s_stop) + "\n"
+        return s
 
 
 def get_map(lattice, dz, navi):

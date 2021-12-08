@@ -39,7 +39,7 @@ class TransferMap(Transformation):
 
     def mul_p_array(self, rparticles, energy=0.):
         """
-        Calculates new rpaticles with the first order transformation, overrides the old rpaticles and returns the new rparticles. 
+        Calculates new rparticles with the first order transformation, overrides the old rpaticles and returns the new rparticles.
         :param rparticles: Can be a ParticleArray, Particle or a list of Particle object. 
         :param engery:
         :return: Returns the modified rparticles 

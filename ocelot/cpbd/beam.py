@@ -7,11 +7,15 @@ from ocelot.common.globals import *
 from ocelot.common.math_op import find_nearest_idx
 from scipy.special import factorial
 from copy import deepcopy
+from typing import Iterable
 from scipy import interpolate
 from scipy.signal import savgol_filter
 from scipy.stats import truncnorm
 from ocelot.common.ocelog import *
 from ocelot.cpbd.reswake import pipe_wake
+
+import pandas as pd
+
 
 _logger = logging.getLogger(__name__)
 
@@ -202,6 +206,9 @@ class Twiss:
         val += "s        = " + str(self.s) + "\n"
         return val
 
+    def to_series(self) -> pd.Series:
+        """Return this Twiss instance as an equivalent Pandas Series instance."""
+        return pd.Series(vars(self))
 
 class Particle:
     """
@@ -2123,3 +2130,11 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
         beam_arr.add_chirp(kwargs['chirp'])
 
     return beam_arr
+
+def twiss_iterable_to_df(twisses: Iterable[Twiss]) -> pd.DataFrame:
+    """Convert an iterable of Twiss instances to a single DataFrame with the columns as
+    keys
+
+    :param twisses: iterable of twisses to be converted to a pandas DataFrame.
+    """
+    return pd.DataFrame(data=(t.to_series() for t in twisses))

@@ -852,6 +852,11 @@ class ParticleArray:
         """Get all macroparticle relativistic betas (v/c)."""
         return np.sqrt(1 - self.gamma**-2)
 
+    @property
+    def total_charge(self) -> float:
+        """Get total charge of the ParticleArray"""
+        return sum(self.q_array)
+
     def sort(self, variable, in_place=True) -> np.ndarray:
         """Sort ParticleArray in place according to the chosen key.
 

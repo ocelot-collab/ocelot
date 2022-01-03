@@ -2,7 +2,8 @@ import numpy as np
 
 from ocelot.cpbd.beam import (cov_matrix_from_twiss,
                               cov_matrix_to_parray,
-                              optics_from_moments
+                              optics_from_moments,
+                              ParticleArray
                               )
 
 # ex=1.858178000891106e-11,
@@ -55,3 +56,12 @@ def test_cov_matrix_to_parray():
 
 def test_optics_from_moments():
     pass
+
+def test_particle_array_total_charge():
+    parray = ParticleArray(2)
+    charge0 = 1e-14
+    charge1 = 5e-14
+    parray.q_array[0] = charge0
+    parray.q_array[1] = charge1
+
+    assert parray.total_charge == charge0 + charge1

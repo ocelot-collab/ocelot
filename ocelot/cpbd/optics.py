@@ -3,11 +3,12 @@ __author__ = 'Sergey'
 from copy import deepcopy
 from ocelot.cpbd.transformations.multipole import MultipoleTM
 from ocelot.cpbd.tm_params.second_order_params import SecondOrderParams
+import pandas as pd
 
 from numpy.linalg import inv
 
 from ocelot.cpbd.transformations.transfer_map import TransferMap
-from ocelot.cpbd.beam import Twiss
+from ocelot.cpbd.beam import Twiss, twiss_iterable_to_df
 from ocelot.cpbd.physics_proc import RectAperture, EllipticalAperture
 from ocelot.cpbd.high_order import *
 
@@ -190,7 +191,7 @@ def periodic_twiss(tws, R):
     return tws
 
 
-def twiss(lattice, tws0=None, nPoints=None):
+def twiss(lattice, tws0=None, nPoints=None, return_df=False):
     """
     twiss parameters calculation
 
@@ -214,6 +215,10 @@ def twiss(lattice, tws0=None, nPoints=None):
             tws0.gamma_y = (1. + tws0.alpha_y ** 2) / tws0.beta_y
 
         twiss_list = trace_obj(lattice, tws0, nPoints)
+
+        if return_df:
+            twiss_list = twiss_iterable_to_df(twiss_list)
+
         return twiss_list
     else:
         _logger.warning(' Twiss: no periodic solution. return None')

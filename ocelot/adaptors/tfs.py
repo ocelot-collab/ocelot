@@ -1,6 +1,14 @@
 import ocelot.cpbd.elements as elements
 from ocelot.cpbd.beam import Twiss
-import tfs
+import logging
+
+try:
+    import tfs
+except ImportError:
+    logging.getLogger(__file__).warning(
+        f"Optional package: TFS-Pandas missing.  {__name__} will lack functionality."
+    )
+
 
 
 
@@ -17,7 +25,7 @@ def optics_from_tfs(tfs_table):
         header = tfs_table.headers
     except AttributeError:
         tfs_table = tfs.read(tfs_table)
-        header = table.headers
+        header = tfs_table.headers
 
     twiss.E = header["ENERGY"]
     twiss.emit_x = header["EX"]
@@ -41,14 +49,6 @@ def optics_from_tfs(tfs_table):
     twiss.yp = first["PY"]
 
     return twiss
-
-def convert_tfs_lattice(tfsfilename, converter=None):
-    if converter is None:
-        converter = MADXLatticeConverter()
-
-    for row in self.tfs.itertuples():
-        yield self._dispatch(row)
-
 
 
 class UnsupportedMADXElementType(RuntimeError): pass

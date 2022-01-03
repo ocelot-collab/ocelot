@@ -1,13 +1,23 @@
+import warnings
+
 import pandas as pd
 import pytest
 
-from ocelot.adaptors import tfs
+from ocelot.adaptors.tfs import optics_from_tfs, MADXLatticeConverter
 from ocelot.common.globals import m_e_GeV
+
+MISSING_TFS_DEPENDENCY = False
+REASON = "Missing optional dependency TFS-Pandas"
+try:
+    import tfs
+except ImportError:
+    MISSING_TFS_DEPENDENCY = True
 
 
 @pytest.fixture
 def optics_df():
     # The set of initial optics keys needed for the conversion
+
     initial = {"ALFX": 0.6,
                "ALFY": 0.7,
                "BETX": 0.8,
@@ -21,20 +31,23 @@ def optics_df():
                "PX": 1.6,
                "PY": 1.7}
 
-    out = pd.DataFrame([initial])
+    out = tfs.TfsDataFrame([initial])
 
     # Initial energy, emittances and rel gamma stored in .headers attribute.
     energy =  14
     relgamma = energy / m_e_GeV
+    # Technically shouldn't set the attr here but it's ok for testing
     out.headers = {"ENERGY": energy,
                    "EX": 1e-10,
                    "EY": 1e-10,
                    "GAMMA": relgamma}
 
+
     return out
 
+@pytest.mark.skipif(MISSING_TFS_DEPENDENCY, reason=REASON)
 def test_optics_from_tfs(optics_df):
-    twiss0 = tfs.optics_from_tfs(optics_df)
+    twiss0 = optics_from_tfs(optics_df)
 
     # Check all the DataFrame keys are equal in the resulting Twiss instance
     twiss_df_keys_to_twiss_instance_keys = {"ALFX": "alpha_x",
@@ -74,7 +87,7 @@ def test_optics_from_tfs(optics_df):
 
 @pytest.fixture
 def converter():
-    return tfs.MADXLatticeConverter()
+    return MADXLatticeConverter()
 
 @pytest.fixture
 def ns():
@@ -85,22 +98,26 @@ def ns():
     namespace.L = 3.0
     return namespace
 
+@pytest.mark.skipif(MISSING_TFS_DEPENDENCY, reason=REASON)
 def test_MADXLatticeConverter_make_marker(converter, ns):
     ns.NAME = "Hello"
     marker = converter.make_marker(ns)
 
     assert marker.id == ns.NAME
 
+@pytest.mark.skipif(MISSING_TFS_DEPENDENCY, reason=REASON)
 def test_MADXLatticeConverter_make_monitor(converter, ns):
     monitor = converter.make_monitor(ns)
     assert monitor.id == ns.NAME
     assert monitor.l == ns.L
 
+@pytest.mark.skipif(MISSING_TFS_DEPENDENCY, reason=REASON)
 def test_MADXLatticeConverter_make_drift(converter, ns):
     drift = converter.make_drift(ns)
     assert drift.id == ns.NAME
     assert drift.l == ns.L
 
+@pytest.mark.skipif(MISSING_TFS_DEPENDENCY, reason=REASON)
 def test_MADXLatticeConverter_make_sbend(converter, ns):
     ns.ANGLE = 0.5
     ns.TILT = 0.25
@@ -114,6 +131,7 @@ def test_MADXLatticeConverter_make_sbend(converter, ns):
     assert sbend.e1 == ns.E1
     assert sbend.e2 == ns.E2
 
+@pytest.mark.skipif(MISSING_TFS_DEPENDENCY, reason=REASON)
 def test_MADXLatticeConverter_make_rbend(converter, ns):
     ns.ANGLE = 0.5
     ns.TILT = 0.25
@@ -137,6 +155,7 @@ def test_MADXLatticeConverter_make_rbend(converter, ns):
     assert rbend.fint == ns.FINT
     assert rbend.fintx == ns.FINTX
 
+@pytest.mark.skipif(MISSING_TFS_DEPENDENCY, reason=REASON)
 def test_MADXLatticeConverter_make_quadrupole(converter, ns):
     ns.TILT = 0.25
     ns.K1L = 1.3
@@ -147,6 +166,7 @@ def test_MADXLatticeConverter_make_quadrupole(converter, ns):
     assert quadrupole.k1 == ns.K1L / ns.L
     assert quadrupole.tilt == ns.TILT
 
+@pytest.mark.skipif(MISSING_TFS_DEPENDENCY, reason=REASON)
 def test_MADXLatticeConverter_make_sextupole(converter, ns):
     ns.TILT = 0.25
     ns.K2L = 1.3
@@ -156,7 +176,8 @@ def test_MADXLatticeConverter_make_sextupole(converter, ns):
     assert sextupole.l == ns.L
     assert sextupole.k2 == ns.K2L / ns.L
     assert sextupole.tilt == ns.TILT
-    
+
+@pytest.mark.skipif(MISSING_TFS_DEPENDENCY, reason=REASON)
 def test_MADXLatticeConverter_make_octupole(converter, ns):
     ns.TILT = 0.25
     ns.K3L = 1.3
@@ -166,7 +187,8 @@ def test_MADXLatticeConverter_make_octupole(converter, ns):
     assert octupole.l == ns.L
     assert octupole.k3 == ns.K3L / ns.L
     assert octupole.tilt == ns.TILT
-    
+
+@pytest.mark.skipif(MISSING_TFS_DEPENDENCY, reason=REASON)
 def test_MADXLatticeConverter_make_vkicker(converter, ns):
     ns.TILT = 0.25
     ns.VKICK = 1.3
@@ -175,7 +197,8 @@ def test_MADXLatticeConverter_make_vkicker(converter, ns):
     assert vcor.id == ns.NAME
     assert vcor.l == ns.L
     assert vcor.angle == ns.VKICK
-    
+
+@pytest.mark.skipif(MISSING_TFS_DEPENDENCY, reason=REASON)
 def test_MADXLatticeConverter_make_hkicker(converter, ns):
     ns.TILT = 0.25
     ns.HKICK = 1.3

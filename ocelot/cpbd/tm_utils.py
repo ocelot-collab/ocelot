@@ -1,6 +1,5 @@
 import logging
 
-import numba as nb
 import numpy as np
 
 from ocelot.cpbd.r_matrix import rot_mtx

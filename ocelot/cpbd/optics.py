@@ -91,14 +91,14 @@ def lattice_transfer_map(lattice, energy):
     E = energy
     for elem in lattice.sequence:
         for Rb, Bb, Tb, tm in zip(elem.R(E), elem.B(E), elem.T(E), elem.tms):
-            Ra, Ta = transfer_maps_mult(Ra, Ta, Rb, Tb)
-            Ba = np.dot(Rb, Ba) + Bb
+            Ba, Ra, Ta = transfer_maps_mult(Ba, Ra, Ta, Bb, Rb, Tb)
+            #Ba = np.dot(Rb, Ba) + Bb
             E += tm.get_delta_e()
 
     # TODO: Adding Attributes at runtime should be avoided
     lattice.E = E
     lattice.T_sym = Ta
-    lattice.T = unsym_matrix(deepcopy(Ta))
+    lattice.T = Ta #unsym_matrix(deepcopy(Ta))
     lattice.R = Ra
     lattice.B = Ba
     return Ra

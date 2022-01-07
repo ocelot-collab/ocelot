@@ -407,7 +407,7 @@ def tracking_step(lat, particle_list, dz, navi):
 def track(
     lattice,
     p_array,
-    navi,
+    navi=None,
     print_progress=True,
     calc_tws=True,
     bounds=None,
@@ -419,13 +419,14 @@ def track(
 
     :param lattice: Magnetic Lattice
     :param p_array: ParticleArray
-    :param navi: Navigator
+    :param navi: Navigator, if None default Navigator wo any PhysProc
     :param print_progress: True, print tracking progress
     :param calc_tws: True, during the tracking twiss parameters are calculated from the beam distribution
     :param bounds: None, optional, [left_bound, right_bound] - bounds in units of std(p_array.tau())
     :return: twiss_list, ParticleArray. In case calc_tws=False, twiss_list is list of empty Twiss classes.
     """
-
+    if navi is None:
+        navi = Navigator(lattice)
     tw0 = get_envelope(p_array, bounds=bounds) if calc_tws else Twiss()
     tws_track = [tw0]
     L = 0.

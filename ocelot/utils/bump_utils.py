@@ -70,7 +70,6 @@ def bump_4cors(lat: MagneticLattice, cor_list: List[Element], marker: Union[Mark
     a = np.array([angle_1, angle_2, angle_3, angle_4])
     for i, cor in enumerate(cor_list):
         cor.angle = a[i]
-    lat.update_transfer_maps()
     return a
 
 

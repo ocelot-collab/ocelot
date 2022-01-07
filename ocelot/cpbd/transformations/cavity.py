@@ -7,7 +7,7 @@ from ocelot.common.globals import speed_of_light, m_e_GeV
 
 class CavityTM(TransferMap):
     """[summary]
-    Implementation of the Cavity Transforamtion.
+    Implementation of the Cavity Transformation.
     The concrete element atom have to implement: 
     create_cavity_tm_main_params(self, energy: float, delta_length: float) -> CavityParams
     create_cavity_tm_entrance_params(self, energy: float, delta_length: float) -> CavityParams
@@ -19,7 +19,7 @@ class CavityTM(TransferMap):
         super().__init__(create_tm_param_func, delta_e_func, tm_type, length, delta_length=delta_length)
 
     @classmethod
-    def from_element(cls, element: Element, tm_type: TMTypes = TMTypes.MAIN, delta_l=None):
+    def from_element(cls, element: Element, tm_type: TMTypes = TMTypes.MAIN, delta_l=None, **params):
         return cls.create(entrance_tm_params_func=element.create_cavity_tm_entrance_params,
                           delta_e_func=element.create_delta_e,
                           main_tm_params_func=element.create_cavity_tm_main_params,

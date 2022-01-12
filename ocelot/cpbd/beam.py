@@ -712,7 +712,6 @@ class ParticleArray:
                                                                       np.append(np.argwhere(x != x),
                                                                                 np.append(np.argwhere(y != y),
                                                                                           ind_angles)))))
-        # e_idxs = [append([], x) for x in array([6*p_idxs, 6*p_idxs+1, 6*p_idxs+2, 6*p_idxs+3, 6*p_idxs+4, 6*p_idxs+5])]
         self.delete_particles(p_idxs)
         return p_idxs
 

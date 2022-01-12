@@ -79,12 +79,9 @@ def find_highest(sorted_posns, value, diap):
     """
     poss = []
     for pos in sorted_posns:
-        if value-diap<=pos<=value+diap:
+        if value-diap <= pos <= value+diap:
             poss.append(pos)
-    #print poss
     return poss[-1]
-    #idx = (np.abs(sorted_posns-value)).argmin()
-    #return sorted_posns[idx]
 
 
 def nearest_particle(track_list, xi,yi):
@@ -117,14 +114,13 @@ def harmonic_position(data1D, nu = None, diap = 0.1, nearest = False):
     freq_peaks = freq[ft_maxi][int(len(ft_maxi)/2):]
     peaks = ft_shift[ft_maxi][int(len(ft_maxi)/2):]
 
-    main_3 =  freq_peaks[np.argsort(peaks)]
-
+    main_3 = freq_peaks[np.argsort(peaks)]
     if nearest:
         return find_nearest(main_3, nu)
 
-    if nu == None:
+    if nu is None:
         return main_3[-1]
-    if diap == None:
+    if diap is None:
         main_3 = main_3[-5:]
         nearest_nu = find_nearest(main_3, nu)
     else:

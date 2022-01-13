@@ -1087,3 +1087,108 @@ class CSR(PhysProc):
         dig = str(self.napply)
         name = "0" * (4 - len(dig)) + dig
         self.plt.savefig(name + '.png')
+
+
+class SaferCSR(CSR):
+    """Run the CSR model but with checks on the sigma_min and the Derbenev criterion
+    at every step.  All options applicable to CSR are also applicable to SaferCSR
+    instances.
+
+    The Derbenev criterion coefficient is given by
+
+    .. math:: \kappa = \sigma_x \left( \frac{1}{R \sigma_z^2} \right) ^ \frac{1}{3}
+                                \ll 1,
+
+    where the symbols have their usual meanings.
+
+    :param derbenev_criterion: The Derbenev criterion coefficient above which a
+    warning should be raised for a ParticleArray instance.  By default 0.5.
+    :param sigma_min_factor: The ratio of the bunch length relative to the
+    sigma_min below which a warning should be raised.  By default 9.9.
+    :apply_kick: Whether or not calculate and apply the CSR kick, or just do the
+    checking without any physics process applied.  By default True.
+
+    """
+
+    def __init__(self,
+                 derbenev_criterion=0.5,
+                 sigma_min_factor=9.9,
+                 apply_kick=True
+                 ):
+        super().__init__()
+        self.derbenev_criterion = derbenev_criterion
+        # If bunch become shorter than sigma_min_factor*sigma_min, raise a warning.
+        self.sigma_min_factor = sigma_min_factor
+        self.apply_kick = apply_kick
+
+
+    def query_bunch_length(self, bunch_length):
+        minimum_permissable_bunch_length = self.sigma_min_factor * self.sigma_min
+        if bunch_length < minimum_permissable_bunch_length:
+            bunch_length = round(bunch_length*1e6, 6)
+            sigma_min = round(self.sigma_min*1e6, 6)
+            ratio = bunch_length / sigma_min
+            logger.warning(
+                f"Bunch is too small relative to sigma_min at s={self.z0}m: "
+                f" bunch_length = {bunch_length}um;"
+                f" sigma_min = {sigma_min}um;"
+                f" ratio: {ratio};"
+                f" minimum allowed ratio: {self.sigma_min_factor}"
+            )
+
+    @staticmethod
+    def _derbenev_criterion(sigma_transverse, sigma_z, bending_radius):
+        return sigma_transverse * (bending_radius * sigma_z**2) ** (-1/3)
+
+    def query_derbenev_criterion(self, bunch_x, bunch_y, bunch_length):
+        s = self.csr_traj[0]
+        csr_traj_index = np.searchsorted(s, self.z0)
+
+        # The points and tangents before and after the step takes place
+        # pre_step = self.csr_traj[..., csr_traj_index-1][1:4]
+        # post_step = self.csr_traj[..., csr_traj_index][1:4]
+        tangent_pre_step = self.csr_traj[..., csr_traj_index-1][4:]
+        tangent_post_step = self.csr_traj[..., csr_traj_index][4:]
+
+        if np.isclose(tangent_pre_step, tangent_post_step).all():
+            # In a non-bending element I guess (e.g. a drift)
+            return
+
+        angle = np.arccos(np.dot(tangent_post_step, tangent_pre_step))
+        bending_radius = self.traj_step / angle
+
+        # Get index of coordinate that changes the most and basically just assume
+        # we're bending in that plane.
+        bending_plane_index = np.argmax(abs(tangent_post_step[:2]
+                                            - tangent_pre_step[:2]))
+
+        size = bunch_x
+        if bending_plane_index == 1:
+            size = bunch_y
+
+
+        crit = self._derbenev_criterion(size, bunch_length, bending_radius)
+        print(f"Position = {self.z0}"
+              f" Derebenv Criterion = {crit}")
+        # Criterion should be must less than 1 for 1D to be valid.  As it's "much
+        # less than", we say <0.5 by default...
+        if crit > self.derbenev_criterion:
+            s = self.z0
+            logger.warning(
+                f" Derbenev criterion may be violated at s={s}. "
+                f" bunch length = {bunch_length*1e6}um;"
+                f" tranverse size = {size*1e6}um;"
+                f" bending radius = {bending_radius}m"
+                f"  Derbenev coeff. = {crit}"
+            )
+
+    def apply(self, parray, ds):
+        bunch_length = parray.tau().std()
+        bunch_x = parray.x().std()
+        bunch_y = parray.y().std()
+
+        self.query_bunch_length(bunch_length)
+        self.query_derbenev_criterion(bunch_x, bunch_y, bunch_length)
+
+        if self.apply_kick:
+            return super().apply(parray, ds)

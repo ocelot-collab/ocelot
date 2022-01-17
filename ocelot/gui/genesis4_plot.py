@@ -1137,7 +1137,7 @@ def subfig_rad_size(ax_size_t, out, legend):
         else:
             if np.amax(out.rad_power) > 0:
                 # idx = out.rad_energy != 0
-                weight = out.rad_power + np.amin(out.rad_power[out.rad_power != 0]) / 1e6
+                weight = out.rad_power + np.amin(np.greater(out.rad_power,[0])) / 1e6
                 weight[out.rad_energy == 0, :] = 1
                 r_size = np.average(r_size * 2 * 1e6, weights=weight, axis=1)
             else:

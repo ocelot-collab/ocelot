@@ -2298,6 +2298,79 @@ def dfl_ap_circ(dfl, r=np.inf, center=(0,0)):
 
     return dfl
 
+def dfl_ap_rect_apscan(dfl):
+    """
+    Scans all possible aperture settings and determine resulting energies.
+    """
+    _logger.info('scanning square aperture')
+
+    # obtain possible cut-off levels (still need to filter away "close neighbors", see below)
+    sx = dfl.scale_x();
+    sy = dfl.scale_y();
+
+    '''
+    Filter against "close neighbors", keeping the larger one
+    This is needed because there rounding errors, such as
+      >>> sx[2]
+      yields -0.00192
+      >>> sx[-3]
+      yields 0.0019200000000000007,
+    that would result in some transverse cuts being asymmetric.
+    Remark: Clean solution would be to implement scale_x function 
+    using (i) integer arithmetic to generate array and
+    (ii) then scaling all values by identical multiplication factor.
+    But this would very likely break some other code.
+    '''
+
+    '''
+    NOTE: need to filter x and y vectors separately, then combine them and apply unique operation.
+    Not filtering combined data set, because if there are close neighbors, one is from x and one from y => legit.
+    '''
+    def drop_close_neighbors(q, releps=1.0e-12, dbg=False):
+        q = np.sort(q)
+        qout = []
+        qlc = q[-1] # always remember last element from input vector transferred to output vector
+        qout.append(qlc)
+        if dbg: print('{:.15f} => keep it'.format(qlc))
+        for k in reversed(range(0, len(q)-1)):
+            if (releps*q[k]<qlc-q[k]): # this also works if 'q[k]' is zero...
+                qlc=q[k]
+                qout.append(qlc)
+                if dbg: print('{:.15f} => keep it'.format(qlc))
+            else:
+                if dbg: print('{:.15f} => drop it'.format(q[k]))
+        #
+        qout.reverse() # get it into ascending order again
+        return(np.array(qout))
+
+    sx_filt = drop_close_neighbors(np.sort(np.abs(sx)))
+    sy_filt = drop_close_neighbors(np.sort(np.abs(sy)))
+    cutoffs = np.hstack((sx_filt[:],sy_filt[:]))
+    cutoffs = np.unique(cutoffs) # np.unique returns data in ascending order
+
+    Etot = dfl.E()
+    energies = []
+    for cc in np.nditer(cutoffs):
+        # determine index range meeting cutoff criterion
+        idx_x  = np.where(np.abs(sx)<=cc)[0]
+        idx_y  = np.where(np.abs(sy)<=cc)[0]
+        idx_x1 = idx_x[0]
+        idx_x2 = idx_x[-1]
+        idx_y1 = idx_y[0]
+        idx_y2 = idx_y[-1]
+        # obtain sub-matrix (note: second index is 'y' direction. See for instance member function Ny() of class RadiationField, implemented in wave.py) ...
+        F = dfl.fld[:, idx_y1:idx_y2, idx_x1:idx_x2]
+
+        # ... and compute energy, using code fragments from functions 'intensity(self)' and 'E(self)' in wave.py (commit ID 1f1b2b3, date Jul 13, 2021)
+        u = F.real**2 + F.imag**2
+        E = np.sum(u)
+        if dfl.Nz()>1:
+            E *= dfl.Lz()/dfl.Nz() / speed_of_light
+        energies.append(E)
+    #
+    return energies,cutoffs
+
+
 def dfl_prop(dfl, z, fine=1, debug=1):
     """
     LEGACY, WILL BE DEPRECATED, SEE METHOD

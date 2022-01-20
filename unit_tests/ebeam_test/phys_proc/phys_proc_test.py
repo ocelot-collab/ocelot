@@ -290,7 +290,7 @@ def test_track_smooth_csr_sc(lattice, p_array, parameter=None, update_ref_values
     tws_track_p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
 
     result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
-    result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=1.0e-14, tolerance_type='absolute', assert_info=' p - ')
+    result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=1.0e-13, tolerance_type='absolute', assert_info=' p - ')
     assert check_result(result1 + result2)
 
 

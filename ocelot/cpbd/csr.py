@@ -27,6 +27,12 @@ from ocelot.cpbd.elements.xyquadruple import XYQuadrupole
 
 from ocelot.cpbd.physics_proc import PhysProc
 
+# matplotlib may or may not be on the HPC nodes at DESY.  
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    pass
+
 # Try to import numba, pyfftw and numexpr for improved performance
 logger = logging.getLogger(__name__)
 
@@ -852,7 +858,6 @@ class CSR(PhysProc):
 
         # if pict_debug = True import matplotlib
         if self.pict_debug:
-            self.plt = importlib.import_module("matplotlib.pyplot")
             self.napply = 0
             self.total_wake = 0
 
@@ -968,21 +973,21 @@ class CSR(PhysProc):
                 self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect)
         # plot trajectory of the refernece particle
         if self.pict_debug:
-            fig = self.plt.figure(figsize=(10, 8))
-            ax1 = self.plt.subplot(211)
+            fig = plt.figure(figsize=(10, 8))
+            ax1 = plt.subplot(211)
             #ax1.plot(self.csr_traj[0, :], self.csr_traj[0, :] -self.csr_traj[3, :], "r", label="X")
             ax1.plot(self.csr_traj[0, :], self.csr_traj[1, :]*1000, "r", label="X")
             ax1.plot(self.csr_traj[0, :], self.csr_traj[2, :]*1000, "b", label="Y")
-            self.plt.legend()
-            self.plt.ylabel("X/Y [mm]")
-            self.plt.setp(ax1.get_xticklabels(), visible=False)
-            ax3 = self.plt.subplot(212, sharex=ax1)
+            plt.legend()
+            plt.ylabel("X/Y [mm]")
+            plt.setp(ax1.get_xticklabels(), visible=False)
+            ax3 = plt.subplot(212, sharex=ax1)
             ax3.plot(self.csr_traj[0, :], self.csr_traj[1 + 3, :]*1000, "r", label=r"$X'$")
             ax3.plot(self.csr_traj[0, :], self.csr_traj[2 + 3, :]*1000, "b", label=r"$Y'$")
-            self.plt.legend()
-            self.plt.ylabel(r"$X'/Y'$ [mrad]")
-            self.plt.xlabel("s [m]")
-            self.plt.show()
+            plt.legend()
+            plt.ylabel(r"$X'/Y'$ [mrad]")
+            plt.xlabel("s [m]")
+            plt.show()
             # data = np.array([np.array(self.s), np.array(self.total_wake)])
             # np.savetxt("trajectory_cos.txt", self.csr_traj)
         return self.csr_traj
@@ -1051,42 +1056,43 @@ class CSR(PhysProc):
         :return:
         """
         self.napply += 1
-        fig = self.plt.figure(figsize=(10, 8))
+        fig = plt.figure(figsize=(10, 8))
 
-        ax1 = self.plt.subplot(311)
+        ax1 = plt.subplot(311)
         ax1.plot(self.csr_traj[0, :], self.csr_traj[1, :]*1000, "r",  self.csr_traj[0, itr_ra], self.csr_traj[1, itr_ra]*1000, "bo")
-        self.plt.ylabel("X [mm]")
+        plt.ylabel("X [mm]")
 
-        ax2 = self.plt.subplot(312)
+        ax2 = plt.subplot(312)
         # # CSR wake in keV/m - preferable and not depend on step
         # ax2.plot(np.linspace(s1, s1+st*len(lam_K1), len(lam_K1))*1000, lam_K1/delta_s/1000.)
         # plt.ylabel("dE, keV/m")
 
         # CSR wake in keV - amplitude changes with step
         ax2.plot(np.linspace(s1, s1 + st * len(lam_K1), len(lam_K1)) * 1000, lam_K1 * 1e-3)
-        self.plt.setp(ax2.get_xticklabels(), visible=False)
-        self.plt.ylim((-50, 50))
-        self.plt.ylabel("Wake [keV]")
+        plt.setp(ax2.get_xticklabels(), visible=False)
+        plt.ylim((-50, 50))
+        plt.ylabel("Wake [keV]")
 
-        # ax3 = self.plt.subplot(413)
+        # ax3 = plt.subplot(413)
         # n_points = len(lam_K1)
         # #wake = np.interp(np.linspace(s1, s1+st*n_points, n_points), np.linspace(s1, s1+st*len(lam_K1), len(lam_K1)), lam_K1)
         # self.total_wake += lam_K1
         # #plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
         # ax3.plot(np.linspace(s1, s1+st*n_points, n_points)*1000, self.total_wake*1e-6)
-        # self.plt.ylabel("Total Wake [MeV]")
-        # self.plt.setp(ax3.get_xticklabels(), visible=False)
-        # self.plt.ylim((-10, 10))
+        # plt.ylabel("Total Wake [MeV]")
+        # plt.setp(ax3.get_xticklabels(), visible=False)
+        # plt.ylim((-10, 10))
 
-        ax3 = self.plt.subplot(313, sharex=ax2)
+        ax3 = plt.subplot(313, sharex=ax2)
         self.B = s_to_cur(p_array.tau(), sigma=np.std(p_array.tau())*0.05, q0=np.sum(p_array.q_array), v=speed_of_light)
         ax3.plot(-self.B[:, 0]*1000, self.B[:, 1], lw=2)
         ax3.set_ylabel("I [A]")
         ax3.set_xlabel("s [mm]")
-        self.plt.subplots_adjust(hspace=0.2)
+        plt.subplots_adjust(hspace=0.2)
         dig = str(self.napply)
         name = "0" * (4 - len(dig)) + dig
-        self.plt.savefig(name + '.png')
+        plt.savefig(name + '.png')
+        plt.close(fig)
 
 
 class SaferCSR(CSR):

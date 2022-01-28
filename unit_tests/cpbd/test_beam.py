@@ -4,6 +4,7 @@ import numpy as np
 from ocelot.cpbd.beam import (cov_matrix_from_twiss,
                               cov_matrix_to_parray,
                               optics_from_moments,
+                              ParticleArray,
                               Twiss,
                               twiss_iterable_to_df
                               )
@@ -58,7 +59,6 @@ def test_cov_matrix_to_parray():
 
 def test_optics_from_moments():
     pass
-
 
 @pytest.fixture
 def a_twiss_dictionary():
@@ -124,3 +124,13 @@ def test_twiss_iterable_to_df(a_twiss_instance):
     twiss_df = twiss_iterable_to_df(twisses)
     assert dict(twiss_df.iloc[0]) == dict(twisses[0].to_series())
     assert dict(twiss_df.iloc[1]) == dict(twisses[1].to_series())
+
+
+def test_particle_array_total_charge():
+    parray = ParticleArray(2)
+    charge0 = 1e-14
+    charge1 = 5e-14
+    parray.q_array[0] = charge0
+    parray.q_array[1] = charge1
+
+    assert parray.total_charge == charge0 + charge1

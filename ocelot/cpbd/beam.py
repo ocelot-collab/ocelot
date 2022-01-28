@@ -210,6 +210,7 @@ class Twiss:
         """Return this Twiss instance as an equivalent Pandas Series instance."""
         return pd.Series(vars(self))
 
+
 class Particle:
     """
     particle
@@ -629,43 +630,6 @@ class BeamArray(Beam):
         raise NotImplementedError('Method inherited from Beam() class, not applicable for BeamArray objects')
 
 
-class Trajectory:
-    def __init__(self):
-        self.ct = []
-        self.E = []
-        self.x = []
-        self.y = []
-        self.xp = []
-        self.yp = []
-        self.z = []
-        self.s = []
-
-    def add(self, ct, x, y, xp, yp, z, s):
-        self.ct.append(ct)
-        self.x.append(x)
-        self.y.append(y)
-        self.xp.append(xp)
-        self.yp.append(yp)
-        self.z.append(z)
-        self.s.append(s)
-
-    def last(self):
-        p = Particle()
-
-        p.ct = self.ct[len(self.ct) - 1]
-        p.x = self.x[len(self.x) - 1]
-        p.y = self.y[len(self.y) - 1]
-        p.xp = self.xp[len(self.xp) - 1]
-        p.yp = self.yp[len(self.yp) - 1]
-        try:
-            p.E = self.E[len(self.E) - 1]
-        except IndexError:
-            return 0
-        p.s = self.s[len(self.s) - 1]
-
-        return p
-
-
 class ParticleArray:
     """
     array of particles of fixed size; for optimized performance
@@ -748,7 +712,6 @@ class ParticleArray:
                                                                       np.append(np.argwhere(x != x),
                                                                                 np.append(np.argwhere(y != y),
                                                                                           ind_angles)))))
-        # e_idxs = [append([], x) for x in array([6*p_idxs, 6*p_idxs+1, 6*p_idxs+2, 6*p_idxs+3, 6*p_idxs+4, 6*p_idxs+5])]
         self.delete_particles(p_idxs)
         return p_idxs
 
@@ -858,6 +821,11 @@ class ParticleArray:
     def beta(self) -> float:
         """Get all macroparticle relativistic betas (v/c)."""
         return np.sqrt(1 - self.gamma**-2)
+
+    @property
+    def total_charge(self) -> float:
+        """Get total charge of the ParticleArray"""
+        return sum(self.q_array)
 
     def sort(self, variable, in_place=True) -> np.ndarray:
         """Sort ParticleArray in place according to the chosen key.
@@ -1559,7 +1527,13 @@ class SliceParameters:
         self.my = None
         self.myp = None
         self.mp = None
-        # twiss
+
+        self.sig_x = None
+        self.sig_y = None
+        self.sig_yp = None
+        self.sig_xp = None
+
+        # twiss slice parameters
         self.beta_x = None
         self.beta_y = None
         self.alpha_x = None

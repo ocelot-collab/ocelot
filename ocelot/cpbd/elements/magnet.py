@@ -12,8 +12,8 @@ class Magnet(Element):
     def __init__(self, eid=None, has_edge=False):
         super().__init__(eid=eid, has_edge=has_edge)
         self.angle = 0.  # Magnets Drift, Bend, Correctors (just angle)
-        self.k1 = 0.  # Magnets quatropole
-        self.k2 = 0.  # Magnets Sixtropole
+        self.k1 = 0.  # Magnets quadropole
+        self.k2 = 0.  # Magnets Sextupole
 
     def create_first_order_main_params(self, energy: float, delta_length: float = None) -> FirstOrderParams:
         k1 = self.k1

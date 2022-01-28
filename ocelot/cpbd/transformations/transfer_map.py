@@ -22,7 +22,7 @@ class TransferMap(Transformation):
         super().__init__(create_tm_param_func, delta_e_func, tm_type, length, delta_length)
 
     @classmethod
-    def from_element(cls, element: Element, tm_type: TMTypes = TMTypes.MAIN, delta_l=None):
+    def from_element(cls, element: Element, tm_type: TMTypes = TMTypes.MAIN, delta_l=None, **params):
         return cls.create(entrance_tm_params_func=element.create_first_order_entrance_params if element.has_edge else None,
                           delta_e_func=element.create_delta_e,
                           main_tm_params_func=element.create_first_order_main_params,
@@ -50,8 +50,10 @@ class TransferMap(Transformation):
         return rparticles
 
     def multiply_with_tm(self, tm: 'TransferMap', length) -> 'TransferMap':
-        return TransferMap(create_tm_param_func=lambda energy: self.get_params(energy) * tm.get_params(energy),
-                           length=length + tm.length)
+        # TODO: check
+        return TransferMap(create_tm_param_func=lambda energy: self.get_params(energy).multiply(tm.get_params(energy)),
+                           length=length + tm.length, delta_e_func=self.get_delta_e() + tm.get_delta_e(),
+                           tm_type=TMTypes.MAIN)
 
     def __mul__(self, m):
         """

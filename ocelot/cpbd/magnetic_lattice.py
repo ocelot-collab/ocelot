@@ -52,7 +52,7 @@ def lattice_format_converter(elements):
     return tuple(cell)
 
 
-def merger(lat, remaining_types=[], remaining_elems=[], init_energy=0.):
+def merger(lat, remaining_types=None, remaining_elems=None, init_energy=0.):
     """
     Function to compress the lattice excluding elements by type or by individual elements
 
@@ -64,6 +64,10 @@ def merger(lat, remaining_types=[], remaining_elems=[], init_energy=0.):
     :param init_energy: initial energy
     :return: New MagneticLattice
     """
+    if remaining_elems is None:
+        remaining_elems = []
+    if remaining_types is None:
+        remaining_types = []
     _logger.debug("element numbers before: " + str(len(lat.sequence)))
     lattice_analysis = []
     merged_elems = []

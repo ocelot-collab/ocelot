@@ -43,13 +43,14 @@ def particle_array_to_particle_group(parray: ParticleArray) -> pmd.ParticleGroup
     px = parray.px() * parray.p0c * 1e9  # to eV
     py = parray.py() * parray.p0c * 1e9  # to eV
     pz = parray.pz * parray.p0c * 1e9  # to eV
+    z = -parray.tau()
 
     data = {
         "x": parray.x(),
         "px": px,
         "y": parray.y(),
         "py": py,
-        "z": parray.tau(),
+        "z": z,
         "pz": pz,
         "t": np.zeros_like(px),
         "weight": parray.q_array,

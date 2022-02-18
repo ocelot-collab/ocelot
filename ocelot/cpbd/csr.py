@@ -1174,8 +1174,6 @@ class SaferCSR(CSR):
 
 
         crit = self._derbenev_criterion(size, bunch_length, bending_radius)
-        print(f"Position = {self.z0}"
-              f" Derebenv Criterion = {crit}")
         # Criterion should be must less than 1 for 1D to be valid.  As it's "much
         # less than", we say <0.5 by default...
         if crit > self.derbenev_criterion:

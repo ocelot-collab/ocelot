@@ -261,3 +261,6 @@ class OpticElement:
 
     def __str__(self):
         return self.element.__str__()
+
+    def __repr__(self):
+        return f"<{type(self).__name__}: name={self.id} at {hex(id(self))}>"

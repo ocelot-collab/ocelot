@@ -45,7 +45,7 @@ class MatrixAtom(Element):
     def create_delta_e(self, total_length, delta_length=0.0):
         return self.delta_e
 
-    def __str__(self):
+    def __str__old(self):
         s = 'Matrix : '
         s += 'id = ' + str(self.id) + '\n'
         s += 'l =%8.5f m\n' % self.l
@@ -54,6 +54,38 @@ class MatrixAtom(Element):
             for j in range(6):
                 s += '%11.6f' % (self.r[i, j])
             s += "\n"
+        return s
+
+    def __str__(self):
+        """
+        Creates a string, in a python readable format, for a matrix element to store it in a python file.
+        This function is be used by element_def_string.
+        @param element: input Element
+        @return: A String that contains an matrix element in a python readable format
+        """
+        # r - elements
+        s = 'Matrix('
+        s += 'l=%8.5f, ' % self.l
+        for i in range(6):
+            for j in range(6):
+                val = self.r[i, j]
+                if np.abs(val) > 1e-9:
+                    s += "R" + str(i + 1) + str(j + 1) + '=%9.7e, ' % (val)
+            s += "\n"
+        # t - elements
+        for i in range(6):
+            for j in range(6):
+                for k in range(6):
+                    val = self.t[i, j, k]
+                    if np.abs(val) > 1e-9:
+                        s += "T" + str(i + 1) + str(j + 1) + str(k + 1) + '=%9.7e, ' % (val)
+            s += "\n"
+        # b - elements
+        for i in range(6):
+            val = self.b[i, 0]
+            if np.abs(val) > 1e-9:
+                s += "B" + str(i + 1) + '=%9.7e, ' % (val)
+        s += 'eid="' + str(self.id) + '")' if self.id is not None else ")"
         return s
 
     def create_first_order_main_params(self, energy: float, delta_length: float) -> FirstOrderParams:

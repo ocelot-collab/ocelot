@@ -41,21 +41,20 @@ class CavityAtom(Element):
         self.vxy_down = vxy_down
 
     def __str__(self):
-        s = 'Cavity : '
-        s += 'id = ' + str(self.id) + '\n'
-        s += 'l    =%8.4f m\n' % self.l
-        s += 'v    =%8.5f GV\n' % self.v
-        s += 'freq =%8.1e Hz\n' % self.freq
-        s += 'phi  =%8.2f deg\n' % self.phi
-        s += "\nCoupler kick: \n"
-        s += "vx_up    = {num.real:+9.2e} {num.imag:+9.2e}j\n".format(num=self.vx_up)
-        s += "vy_up    = {num.real:+9.2e} {num.imag:+9.2e}j\n".format(num=self.vy_up)
-        s += "vxx_up   = {num.real:+9.2e} {num.imag:+9.2e}j\n".format(num=self.vxx_up)
-        s += "vxy_up   = {num.real:+9.2e} {num.imag:+9.2e}j\n".format(num=self.vxy_up)
-        s += "vx_down  = {num.real:+9.2e} {num.imag:+9.2e}j\n".format(num=self.vx_down)
-        s += "vy_down  = {num.real:+9.2e} {num.imag:+9.2e}j\n".format(num=self.vy_down)
-        s += "vxx_down = {num.real:+9.2e} {num.imag:+9.2e}j\n".format(num=self.vxx_down)
-        s += "vxy_down = {num.real:+9.2e} {num.imag:+9.2e}j\n".format(num=self.vxy_down)
+        s = 'Cavity('
+        s += 'l=%7.5f, ' % self.l if self.l != 0. else ""
+        s += 'v=%8.6e, ' % self.v if self.v != 0. else ""
+        s += 'freq=%8.6e, ' % self.freq if np.abs(self.freq) > 1e-15 else ""
+        s += 'phi=%8.6e, ' % self.phi if np.abs(self.phi) > 1e-15 else ""
+        s += "vx_up=({num.real:8.6e} + {num.imag:8.6e}j), ".format(num=self.vx_up) if self.vx_up != 0. else ""
+        s += "vy_up=({num.real:8.6e} + {num.imag:8.6e}j), ".format(num=self.vy_up) if self.vy_up != 0. else ""
+        s += "vxx_up=({num.real:8.6e} + {num.imag:8.6e}j), ".format(num=self.vxx_up) if self.vxx_up != 0. else ""
+        s += "vxy_up=({num.real:8.6e} + {num.imag:8.6e}j), ".format(num=self.vxy_up) if self.vxy_up != 0. else ""
+        s += "vx_down=({num.real:8.6e} + {num.imag:8.6e}j), ".format(num=self.vx_down) if self.vx_down != 0. else ""
+        s += "vy_down=({num.real:8.6e} + {num.imag:8.6e}j), ".format(num=self.vy_down) if self.vy_down != 0. else ""
+        s += "vxx_down=({num.real:8.6e} + {num.imag:8.6e}j), ".format(num=self.vxx_down) if self.vxx_down != 0. else ""
+        s += "vxy_down=({num.real:8.6e} + {num.imag:8.6e}j), ".format(num=self.vxy_down) if self.vxy_down != 0. else ""
+        s += 'eid="' + str(self.id) + '")' if self.id is not None else ")"
         return s
 
     def _R_edge_matrix(self, energy: float, vxx: float, vxy: float):

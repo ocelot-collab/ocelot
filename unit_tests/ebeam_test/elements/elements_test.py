@@ -159,6 +159,43 @@ def test_self_xyquad(lattice, p_array, parameter=None, update_ref_values=False):
     result2 = check_dict(p1, p2, tolerance=TOL, assert_info=' p - ')
     assert check_result( result2)
 
+def test_quad_vs_matrix(lattice, p_array, parameter=None, update_ref_values=False):
+    """
+    test quadrupole with offsets vs Matrix
+    """
+
+    qd = Quadrupole(l=0.2, k1=-1, k2=-20, tm=SecondTM)
+    qd.dx, qd.dy = -1e-3, 1e-3
+
+    m = Matrix(tm=SecondTM)
+    m.r = qd.R(1)[0]
+    m.t = qd.T(1)[0]
+    m.b = qd.B(1)[0]
+    m.l = qd.l
+
+    parray = ParticleArray(n=2)
+    parray.E = 1
+    parray.rparticles[0, :] = 0.001
+    parray.rparticles[1, :] = -0.0002
+    parray.rparticles[2, :] = -0.0005
+    parray.rparticles[3, :] = 0.0003
+    parray.rparticles[4, :] = [-0.0005, 0.0005]
+    parray.rparticles[5, :] = [0.0005, -0.0005]
+
+    parray_1 = copy.deepcopy(parray)
+    for t in qd.tms:
+        t.apply(parray_1)
+
+    p1 = obj2dict(parray_1)
+
+    parray_2 = copy.deepcopy(parray)
+    for t in m.tms:
+        t.apply(parray_2)
+
+    p2 = obj2dict(parray_2)
+
+    result2 = check_dict(p1, p2, tolerance=TOL, assert_info=' p - ')
+    assert check_result( result2)
 
 def setup_module(module):
 

@@ -44,18 +44,18 @@ class BendAtom(Magnet):
         self.tilt = tilt
 
     def __str__(self):
-        s = 'Bend : '
-        s += 'id = ' + str(self.id) + '\n'
-        s += 'l       =%8.4f m\n' % self.l
-        s += 'angle   =%8.3f deg\n' % (self.angle * 180.0 / np.pi)
-        s += 'e1      =%8.3f deg\n' % (self.e1 * 180.0 / np.pi)
-        s += 'e2      =%8.3f deg\n' % (self.e2 * 180.0 / np.pi)
-        s += 'tilt    =%8.3f deg\n' % (self.tilt * 180.0 / np.pi)
-        s += 'fint    =%8.3f\n' % self.fint
-        s += 'fintx   =%8.3f\n' % self.fintx
-        s += 'gap     =%8.4f m\n' % self.gap
-        s += 'h_pole1 =%8.4f 1/m\n' % self.h_pole1
-        s += 'h_pole2 =%8.4f 1/m\n' % self.h_pole2
+        s = 'Bend('
+        s += 'l=%7.5f, ' % self.l if self.l != 0. else ""
+        s += 'angle=%8.6e, ' % self.angle if self.angle != 0. else ""
+        s += 'e1=%8.6e, ' % self.e1 if np.abs(self.e1) > 1e-15 else ""
+        s += 'e2=%8.6e, ' % self.e2 if np.abs(self.e2) > 1e-15 else ""
+        s += 'tilt=%8.6e, ' % self.tilt if self.tilt != 0. else ""
+        s += 'fint=%8.6e, ' % self.fint if self.fint != 0. else ""
+        s += 'fintx=%8.6e, ' % self.fintx if self.fint != 0. else ""
+        s += 'gap=%8.6e, ' % self.gap if self.gap != 0. else ""
+        s += 'h_pole1=%8.6e, ' % self.h_pole1 if self.h_pole1 != 0. else ""
+        s += 'h_pole2=%8.6e, ' % self.h_pole2 if self.h_pole2 != 0. else ""
+        s += 'eid="' + str(self.id) + '")' if self.id is not None else ")"
         return s
 
     def _R_edge(self, fint, edge):

@@ -30,13 +30,13 @@ class TDCavityAtom(Element):
         self.tilt = tilt
 
     def __str__(self):
-        s = 'TDCavity : '
-        s += 'id = ' + str(self.id) + '\n'
-        s += 'l    =%8.4f m\n' % self.l
-        s += 'v    =%8.5f GV\n' % self.v
-        s += 'freq =%8.1e Hz\n' % self.freq
-        s += 'phi  =%8.2f deg\n' % self.phi
-        s += 'tilt =%8.2f deg\n' % (self.tilt * 180.0 / np.pi)
+        s = 'TDCavity('
+        s += 'l=%7.5f, ' % self.l if self.l != 0. else ""
+        s += 'v=%8.6e, ' % self.v if np.abs(self.v) > 1e-15 else ""
+        s += 'freq=%8.6e, ' % self.freq if np.abs(self.freq) > 1e-15 else ""
+        s += 'phi=%8.6e, ' % self.phi if np.abs(self.phi) > 1e-15 else ""
+        s += 'tilt=%8.6e, ' % self.tilt if np.abs(self.tilt) > 1e-15 else ""
+        s += 'id="' + str(self.id) + '")' if self.id is not None else ")"
         return s
 
     def create_first_order_main_params(self, energy: float, delta_length: float) -> FirstOrderParams:

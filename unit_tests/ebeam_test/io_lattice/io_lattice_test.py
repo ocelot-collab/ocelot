@@ -245,7 +245,7 @@ def test_merger_elem_w_coupler(lattice, tws0, method, parametr=None, update_ref_
     lat = MagneticLattice(cell, method={'global': SecondTM})
 
     R = lattice_transfer_map(lat, energy=init_energy)
-    new_lat = merger(lat, remaining_types=[], remaining_elems=[sol], init_energy=init_energy)
+    new_lat = merger(lat, remaining_types=[], remaining_elems=[cor], init_energy=init_energy)
     R_new = lattice_transfer_map(new_lat, energy=init_energy)
 
     result = check_matrix(R, R_new, TOL, assert_info=' r_matrix - ')

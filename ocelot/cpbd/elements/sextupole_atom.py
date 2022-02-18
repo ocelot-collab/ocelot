@@ -17,9 +17,9 @@ class SextupoleAtom(Magnet):
         self.tilt = tilt
 
     def __str__(self):
-        s = 'Sextupole : '
-        s += 'id = ' + str(self.id) + '\n'
-        s += 'l    =%8.4f m\n' % self.l
-        s += 'k2   =%8.3f 1/m^3\n' % self.k2
-        s += 'tilt =%8.2f deg\n' % (self.tilt * 180.0 / np.pi)
+        s = 'Sextupole('
+        s += 'l=%7.5f, ' % self.l if self.l != 0. else ""
+        s += 'k2=%8.6e, ' % self.k2 if np.abs(self.k2) > 1e-15 else ""
+        s += 'tilt=%8.6e, ' % self.tilt if np.abs(self.tilt) > 1e-15 else ""
+        s += 'eid="' + str(self.id) + '")' if self.id is not None else ")"
         return s

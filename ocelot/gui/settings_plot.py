@@ -24,10 +24,15 @@ fntsz = 4
 params = {'image.cmap': def_cmap, 'backend': 'ps', 'axes.labelsize': 3 * fntsz, 'font.size': 3 * fntsz, 'legend.fontsize': 4 * fntsz, 'xtick.labelsize': 4 * fntsz,  'ytick.labelsize': 4 * fntsz, 'text.usetex': False}
 rcParams.update(params)
 
-try:
-    rcParams.update({'pcolor.shading':'nearest'})
-except KeyError:
-    _logger.debug('matplotlib too old for "pcolor.shading":"nearest" setting')
+
+# import packaging
+# matplotlib_version = packaging.version.parse(matplotlib.__version__).major
+
+if int(matplotlib.__version__.split('.')[0]) < 3:
+    try:    
+        rcParams.update({'pcolor.shading':'nearest'})
+    except KeyError:
+        _logger.debug('matplotlib too old for "pcolor.shading":"nearest" setting')
 
 
 # plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)

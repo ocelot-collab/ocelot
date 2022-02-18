@@ -41,12 +41,16 @@ def bump_4cors(lat: MagneticLattice, cor_list: List[Element], marker: Union[Mark
     Rs = []
     sorted_list = [cor_list[0], cor_list[1], marker, cor_list[2], cor_list[3]]
     for i in range(4):
-        sequence = copy.deepcopy(lat.get_sequence_part(start=sorted_list[i], stop=sorted_list[i + 1]))
+        sequence = lat.get_sequence_part(start=sorted_list[i], stop=sorted_list[i + 1])
+        len_a = sequence[0].l
+        len_b = sequence[-1].l
         sequence[0].l /= 2.
         sequence[-1].l /= 2.
-        lat1 = MagneticLattice(sequence)
+        lat1 = MagneticLattice(sequence, method=lat.method)
         R1 = lattice_transfer_map(lat1, energy)
         Rs.append(R1)
+        sequence[0].l = len_a
+        sequence[-1].l = len_b
 
     R21 = np.dot(Rs[1], Rs[0])
 
@@ -70,7 +74,6 @@ def bump_4cors(lat: MagneticLattice, cor_list: List[Element], marker: Union[Mark
     a = np.array([angle_1, angle_2, angle_3, angle_4])
     for i, cor in enumerate(cor_list):
         cor.angle = a[i]
-    lat.update_transfer_maps()
     return a
 
 

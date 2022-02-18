@@ -10,6 +10,9 @@ from scipy.stats import truncnorm
 import copy
 import sys
 import logging
+import pandas as pd
+
+from typing import Union, List, Tuple
 
 _logger = logging.getLogger(__name__)
 
@@ -76,12 +79,9 @@ def find_highest(sorted_posns, value, diap):
     """
     poss = []
     for pos in sorted_posns:
-        if value-diap<=pos<=value+diap:
+        if value-diap <= pos <= value+diap:
             poss.append(pos)
-    #print poss
     return poss[-1]
-    #idx = (np.abs(sorted_posns-value)).argmin()
-    #return sorted_posns[idx]
 
 
 def nearest_particle(track_list, xi,yi):
@@ -114,14 +114,13 @@ def harmonic_position(data1D, nu = None, diap = 0.1, nearest = False):
     freq_peaks = freq[ft_maxi][int(len(ft_maxi)/2):]
     peaks = ft_shift[ft_maxi][int(len(ft_maxi)/2):]
 
-    main_3 =  freq_peaks[np.argsort(peaks)]
-
+    main_3 = freq_peaks[np.argsort(peaks)]
     if nearest:
         return find_nearest(main_3, nu)
 
-    if nu == None:
+    if nu is None:
         return main_3[-1]
-    if diap == None:
+    if diap is None:
         main_3 = main_3[-5:]
         nearest_nu = find_nearest(main_3, nu)
     else:
@@ -401,19 +400,29 @@ def tracking_step(lat, particle_list, dz, navi):
     return
 
 
-def track(lattice, p_array, navi, print_progress=True, calc_tws=True, bounds=None):
+def track(
+    lattice,
+    p_array,
+    navi=None,
+    print_progress=True,
+    calc_tws=True,
+    bounds=None,
+    return_df=False,
+) -> Tuple[Union[List[Twiss], pd.DataFrame], ParticleArray]:
+
     """
     tracking through the lattice
 
     :param lattice: Magnetic Lattice
     :param p_array: ParticleArray
-    :param navi: Navigator
+    :param navi: Navigator, if None default Navigator wo any PhysProc
     :param print_progress: True, print tracking progress
     :param calc_tws: True, during the tracking twiss parameters are calculated from the beam distribution
     :param bounds: None, optional, [left_bound, right_bound] - bounds in units of std(p_array.tau())
     :return: twiss_list, ParticleArray. In case calc_tws=False, twiss_list is list of empty Twiss classes.
     """
-
+    if navi is None:
+        navi = Navigator(lattice)
     tw0 = get_envelope(p_array, bounds=bounds) if calc_tws else Twiss()
     tws_track = [tw0]
     L = 0.
@@ -424,7 +433,7 @@ def track(lattice, p_array, navi, print_progress=True, calc_tws=True, bounds=Non
             tm.apply(p_array)
             _logger.debug(" tracking_step -> tm.class: " + tm.__class__.__name__  + "  l= "+ str(tm.length))
             _logger.debug(" tracking_step -> tm.apply: time exec = " + str(time() - start) + "  sec")
-            
+
         #part = p_array[0]
         for p, z_step in zip(proc_list, phys_steps):
             p.z0 = navi.z0
@@ -446,6 +455,8 @@ def track(lattice, p_array, navi, print_progress=True, calc_tws=True, bounds=Non
     # finalize PhysProcesses
     for p in navi.get_phys_procs():
         p.finalize()
+    if return_df:
+        return twiss_iterable_to_df(tws_track), p_array
 
     return tws_track, p_array
 
@@ -494,14 +505,13 @@ def update_effective_beta(beam, lat):
         tws0.beta_y = beam_sl.beta_y
         tws0.alpha_x = beam_sl.alpha_x
         tws0.alpha_y = beam_sl.alpha_y
-    
+
         tws = twiss(lat, tws0)
         bx = [tw.beta_x for tw in tws]
         by = [tw.beta_y for tw in tws]
-        
+
         beta_x_eff.append(np.mean(bx))
         beta_y_eff.append(np.mean(by))
-    
+
     beam.beta_x_eff = np.array(beta_x_eff)
     beam.beta_y_eff = np.array(beta_y_eff)
-

@@ -90,13 +90,13 @@ class UndulatorAtom(Element):
         self.h_angle = 0.
 
     def __str__(self):
-        s = 'Undulator : '
-        s += 'id = ' + str(self.id) + '\n'
-        s += 'l        =%8.4f m\n' % self.l
-        s += 'nperiods =%8.1f \n' % self.nperiods
-        s += 'lperiod  =%8.4f m\n' % self.lperiod
-        s += 'Kx       =%8.3f \n' % self.Kx
-        s += 'Ky       =%8.3f \n' % self.Ky
+        s = 'Undulator('
+        s += 'l=%7.5f, ' % self.l if self.l != 0. else ""
+        s += 'nperiods=%7.2f, ' % self.nperiods if np.abs(self.nperiods) > 1e-15 else ""
+        s += 'lperiod=%7.4f, ' % self.lperiod if np.abs(self.lperiod) > 1e-15 else ""
+        s += 'Kx=%7.3f, ' % self.Kx if np.abs(self.Kx) > 1e-15 else ""
+        s += 'Ky=%7.3f, ' % self.Ky if np.abs(self.Ky) > 1e-15 else ""
+        s += 'eid="' + str(self.id) + '")' if self.id is not None else ")"
         return s
 
     def R_main_matrix(self, energy, length):

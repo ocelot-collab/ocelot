@@ -12,7 +12,7 @@ class DriftAtom(Magnet):
         self.l = l
 
     def __str__(self):
-        s = 'Drift : '
-        s += 'id = ' + str(self.id) + '\n'
-        s += 'l =%8.4f m\n' % self.l
+        s = 'Drift('
+        s += 'l=%7.5f, ' % self.l if self.l != 0. else ""
+        s += 'eid="' + str(self.id) + '")' if self.id is not None else ")"
         return s

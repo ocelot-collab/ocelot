@@ -184,13 +184,11 @@ def test_lattice_track(lattice, update_ref_values=False):
     for e in lattice.sequence:
         if e.__class__ in [Hcor, Vcor]:
             e.angle = 0.
-            e.update()
         if e.__class__ is Quadrupole:
             if e.id == 'QI.74.I1':
             #    print("here")
                 e.dx = 0.001
                 e.dy = 0.001
-                e.update()
             #print(e.id, e.dx, e.dy)
     #lattice.update_transfer_maps()
 

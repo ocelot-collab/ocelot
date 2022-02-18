@@ -202,7 +202,6 @@ class SectionTrack:
                 e.vy_down = 0
                 e.vxx_down = 0
                 e.vxy_down = 0
-                e.update()
 
     def apply_matching(self, bounds=None, remove_offsets=True):
 
@@ -270,11 +269,9 @@ class SectionTrack:
     def change_bc_shoulders(self, drift):
         for d in self.left_shoulder:
             d.l = drift * d.len_coef
-            d.update()
 
         for d in self.right_shoulder:
             d.l = drift * d.len_coef
-            d.update()
 
     def update_bunch_compressor(self, rho):
         if self.dipoles is None:
@@ -306,7 +303,6 @@ class SectionTrack:
                 dip.e2 = angle * np.sign(dip.angle)
             else:
                 dip.e1 = angle * np.sign(dip.angle)
-            dip.update()
 
     def update_cavity(self, phi, v):
         for elem in self.lattice.sequence:
@@ -319,7 +315,6 @@ class SectionTrack:
                     if self.cav_name_pref in elem.id:
                         elem.v = v
                         elem.phi = phi
-                elem.update()
 
     def update_tds(self, phi, v):
         for elem in self.lattice.sequence:
@@ -332,7 +327,6 @@ class SectionTrack:
                     if self.cav_name_pref in elem.id:
                         elem.v = v
                         elem.phi = phi
-                elem.update()
 
     def init_navigator(self):
 

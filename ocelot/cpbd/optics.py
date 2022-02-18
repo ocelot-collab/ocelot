@@ -3,11 +3,12 @@ __author__ = 'Sergey'
 from copy import deepcopy
 from ocelot.cpbd.transformations.multipole import MultipoleTM
 from ocelot.cpbd.tm_params.second_order_params import SecondOrderParams
+import pandas as pd
 
 from numpy.linalg import inv
 
 from ocelot.cpbd.transformations.transfer_map import TransferMap
-from ocelot.cpbd.beam import Twiss
+from ocelot.cpbd.beam import Twiss, twiss_iterable_to_df
 from ocelot.cpbd.physics_proc import RectAperture, EllipticalAperture
 from ocelot.cpbd.high_order import *
 
@@ -90,14 +91,14 @@ def lattice_transfer_map(lattice, energy):
     E = energy
     for elem in lattice.sequence:
         for Rb, Bb, Tb, tm in zip(elem.R(E), elem.B(E), elem.T(E), elem.tms):
-            Ra, Ta = transfer_maps_mult(Ra, Ta, Rb, Tb)
-            Ba = np.dot(Rb, Ba) + Bb
+            Ba, Ra, Ta = transfer_maps_mult(Ba, Ra, Ta, Bb, Rb, Tb)
+            #Ba = np.dot(Rb, Ba) + Bb
             E += tm.get_delta_e()
 
     # TODO: Adding Attributes at runtime should be avoided
     lattice.E = E
     lattice.T_sym = Ta
-    lattice.T = unsym_matrix(deepcopy(Ta))
+    lattice.T = Ta #unsym_matrix(deepcopy(Ta))
     lattice.R = Ra
     lattice.B = Ba
     return Ra
@@ -190,12 +191,12 @@ def periodic_twiss(tws, R):
     return tws
 
 
-def twiss(lattice, tws0=None, nPoints=None):
+def twiss(lattice, tws0=None, nPoints=None, return_df=False):
     """
     twiss parameters calculation
 
     :param lattice: lattice, MagneticLattice() object
-    :param tws0: initial twiss parameters, Twiss() object. If None, try to find periodic solution.
+    :param tws0: initial twiss parameters, Twiss() object. If None, function tries to find periodic solution.
     :param nPoints: number of points per cell. If None, then twiss parameters are calculated at the end of each element.
     :return: list of Twiss() objects
     """
@@ -214,6 +215,10 @@ def twiss(lattice, tws0=None, nPoints=None):
             tws0.gamma_y = (1. + tws0.alpha_y ** 2) / tws0.beta_y
 
         twiss_list = trace_obj(lattice, tws0, nPoints)
+
+        if return_df:
+            twiss_list = twiss_iterable_to_df(twiss_list)
+
         return twiss_list
     else:
         _logger.warning(' Twiss: no periodic solution. return None')
@@ -522,6 +527,12 @@ class Navigator:
         self.remove_used_processes(processes)
 
         return dz, processes, phys_steps
+
+    def __str__(self):
+        s = "Navigator: added physics processes: \n"
+        for physproc in self.ref_process_table.proc_list:
+            s += physproc.__class__.__name__ + " start: " + str(physproc.s_start) + "/ stop: " + str(physproc.s_stop) + "\n"
+        return s
 
 
 def get_map(lattice, dz, navi):

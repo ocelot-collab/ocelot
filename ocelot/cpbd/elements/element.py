@@ -5,6 +5,7 @@ from ocelot.cpbd.tm_params.first_order_params import FirstOrderParams
 from ocelot.cpbd.tm_params.kick_params import KickParams
 from ocelot.cpbd.high_order import t_nnn
 from ocelot.cpbd.r_matrix import uni_matrix
+from ocelot.cpbd.tm_utils import map_transform_with_offsets
 
 
 class Element:
@@ -56,7 +57,12 @@ class Element:
         T = t_nnn(delta_length if delta_length is not None else self.l, 0., 0., 0.,
                   energy)
         first_order_params = self.create_first_order_main_params(energy, delta_length)
-        return SecondOrderParams(first_order_params.R, first_order_params.B, T, self.tilt, self.dx, self.dy)
+
+        m_off = np.array([[-self.dx], [0], [-self.dy], [0], [0], [0]])
+        # alternative way
+        # B = first_order_params.B + np.dot(np.dot(m_off.T, T), m_off)[0]
+        B, R = map_transform_with_offsets(m_off, first_order_params.R, T)
+        return SecondOrderParams(R, B, T, self.tilt, self.dx, self.dy)
 
     def create_delta_e(self, total_length, delta_length=0.0):
         return 0.0

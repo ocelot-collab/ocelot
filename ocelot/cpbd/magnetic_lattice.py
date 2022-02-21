@@ -1,3 +1,4 @@
+from ocelot.cpbd.elements.element import Element
 from ocelot.cpbd.elements.marker import Marker
 from ocelot.cpbd.elements.drift import Drift
 from ocelot.cpbd.elements.undulator import Undulator
@@ -6,10 +7,20 @@ from ocelot.cpbd.elements.matrix import Matrix
 from ocelot.cpbd.latticeIO import LatticeIO
 from ocelot.cpbd.transformations.transfer_map import TransferMap
 from ocelot.cpbd.optics import lattice_transfer_map
+
 import logging
+import re
+from collections import defaultdict
+from typing import Mapping, Sequence, Tuple, Callable
+
 import numpy as np
 
 _logger = logging.getLogger(__name__)
+
+# Returned by insert_marker_by_type, insert_markers_by_name,
+# insert_markers_by_predicate
+MarkersInsertionReturnType = Mapping[Element, Sequence[Tuple[Marker, Marker]]]
+
 
 
 def lattice_format_converter(elements):
@@ -311,3 +322,81 @@ def exclude_zero_length_element(cell, elem_type=[UnknownElement, Marker], except
         new_cell.append(elem)
     print("Exclude elements -> Element numbers: before -> after: ", len(cell), "->", len(new_cell))
     return new_cell
+
+def insert_markers_by_name(sequence, string: str, regex=False,
+                           before=True, after=True) -> MarkersInsertionReturnType:
+    """Insert markers either side of elements in the magnetic lattice, selected
+    based on the element name (either equality or with a regular expression).
+    By default markers are placed either side of the matched elements.
+
+    :param string: Element string or regex string (with regex=True) to select
+    elements to wrap with markers.
+    :param regex: Whether to interpret argument `string` as a regex or not.  If
+    not, then `string` is checked for equality against the element name.
+    :param: Place a marker before each matched element.
+    :param: Place a marker after each matched element.
+    :return: Dictionary of element instances to list of (marker_start,
+    marker_end pairs, like
+    {element_instance: [(start1, start2), ... (startn, endn)]}.
+
+    """
+    if regex:
+        def fre(ele):
+            return bool(re.match(string, ele.id))
+        return insert_markers_by_predicate(sequence, fre)
+
+    def f(ele):
+        return ele.id == string
+    return insert_markers_by_predicate(sequence, f, before=before, after=after)
+
+def insert_markers_by_type(sequence, magnet_type: Element, before=True, after=True
+                           ) -> MarkersInsertionReturnType:
+    """Insert markers either side of elements in the magnetic lattice, selected
+    based on the element
+    By default markers are placed either side of the matched elements.
+
+    :param string: Element string or regex string (with regex=True) to select
+    elements to wrap with markers.
+    :param: Place a marker before each matched element.
+    :param: Place a marker after each matched element.
+    :return: Dictionary of element instances to list of \
+    (marker_start, marker_end pairs)
+    """
+
+    def f(ele):
+        return isinstance(ele, magnet_type)
+
+    return insert_markers_by_predicate(sequence, f, before=before, after=after)
+
+def insert_markers_by_predicate(sequence, predicate: Callable[[Element], bool],
+                                before=True, after=True
+                                ) -> MarkersInsertionReturnType:
+    """Insert markers either side of elements in the magnetic lattice, selected
+    based on the the provided predicate function.
+
+    :param predicate: Function on each element to select elements to wrap with
+    markers.
+    :param: Place a marker before each matched element.
+    :param: Place a marker after each matched element.
+    :return: Dictionary of element instances to list of \
+    (marker_start, marker_end pairs)
+    """
+
+    indices = [i for (i, ele) in enumerate(sequence) if predicate(ele)]
+    out_dict = defaultdict(list)
+    for i in reversed(indices):
+        ele = sequence[i]
+        marker_before = None
+        marker_after = None
+        if after:
+            marker_id_after = f"{ele.id}_after"
+            marker_after = Marker(marker_id_after)
+            sequence.insert(i + 1, marker_after)
+        if before:
+            marker_id_before = f"{ele.id}_before"
+            marker_before = Marker(marker_id_before)
+            sequence.insert(i, marker_before)
+
+        out_dict[ele].append((marker_before, marker_after))
+
+    return dict(out_dict)

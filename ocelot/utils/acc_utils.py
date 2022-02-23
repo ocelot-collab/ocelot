@@ -86,6 +86,24 @@ def slice_bunching(tau, charge, lambda_mod, smooth_sigma=None):
     b = np.abs(simps(B[:, 1] / speed_of_light * np.exp(-1j * 2 * np.pi / lambda_mod * B[:, 0]), B[:, 0])) / charge
     return b
 
+def calculate_BMAG(tws_des, tws_err):
+    """
+    Function calculates mismatch and mismatch phase using two twiss lists.
+    Result is saved in tws_err list as M_x, M_y, psi_x, psi_y
+
+    :param tws_des: list, design twiss parameters
+    :param tws_err: list, error twiss parameters
+    :return: (Mx, My, phi_x, phi_y) mismatch at the end of lattice
+    """
+    gamma_x_des = (1 + tws_des.alpha_x * tws_des.alpha_x) / tws_des.beta_x
+    gamma_y_des = (1 + tws_des.alpha_y * tws_des.alpha_y) / tws_des.beta_y
+    gamma_x_err = (1 + tws_err.alpha_x * tws_err.alpha_x) / tws_err.beta_x
+    gamma_y_err = (1 + tws_err.alpha_y * tws_err.alpha_y) / tws_err.beta_y
+    mp_x = 0.5 * (tws_err.beta_x * gamma_x_des - 2 * tws_err.alpha_x * tws_des.alpha_x + tws_des.beta_x * gamma_x_err)
+    mp_y = 0.5 * (tws_err.beta_y * gamma_y_des - 2 * tws_err.alpha_y * tws_des.alpha_y + tws_des.beta_y * gamma_y_err)
+    lam_x = mp_x + np.sqrt(mp_x * mp_x - 1)
+    lam_y = mp_y + np.sqrt(mp_y * mp_y - 1)
+    return lam_x, lam_y
 
 def calculate_mismatch(tws_des, tws_err):
     """

@@ -1,6 +1,7 @@
-__all__ = ['UnknownElement', 'Aperture', 'Bend', 'Cavity', 'Drift', 'Element', 'Hcor', 'Marker',
-           'Matrix', 'Monitor', 'Multipole', 'Octupole', 'Pulse', 'Quadrupole', 'RBend', 'SBend', 'Sextupole',
-           'Solenoid', 'TDCavity', 'TWCavity', 'Undulator', 'Vcor', 'XYQuadrupole', 'Sequence']
+__all__ = ['UnknownElement', 'Aperture', 'Bend', 'Cavity', 'Drift', 'Element',
+           'Hcor', 'Marker', 'Matrix', 'Monitor', 'Multipole', 'Octupole', 'Pulse',
+           'Quadrupole', 'RBend', 'SBend', 'Sextupole', 'Solenoid', 'TDCavity',
+           'TWCavity', 'Undulator', 'Vcor', 'XYQuadrupole']
 
 from ocelot.cpbd.elements.aperture import Aperture
 from ocelot.cpbd.elements.bend import Bend
@@ -17,7 +18,6 @@ from ocelot.cpbd.elements.pulse import Pulse
 from ocelot.cpbd.elements.quadrupole import Quadrupole
 from ocelot.cpbd.elements.rbend import RBend
 from ocelot.cpbd.elements.sbend import SBend
-from ocelot.cpbd.elements.sequence import Sequence
 from ocelot.cpbd.elements.sextupole import Sextupole
 from ocelot.cpbd.elements.solenoid import Solenoid
 from ocelot.cpbd.elements.tdcavity import TDCavity

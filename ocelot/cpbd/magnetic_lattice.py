@@ -112,21 +112,24 @@ def merger(lat, remaining_types=None, remaining_elems=None, init_energy=0.):
 
 def flatten(iterable: Iterator[Any]) -> Generator[Any, None, None]:
     """Flatten arbitrarily nested iterable.
-    Special case for strings that avoids infinite recursion.
+    Special case for strings that avoids infinite recursion.  Non iterables passed
+    as arguments are yielded.
 
     :param iterable: Any iterable to be flattened.
     :raises: RecursionError
 
     """
     def _flatten(iterable):
-        for item in iterable:
-            try:
-                iter(item)
-            except TypeError:
-                yield item
-            else:
-                yield from _flatten(item)
-
+        try:
+            for item in iterable:
+                try:
+                    iter(item)
+                except TypeError:
+                    yield item
+                else:
+                    yield from _flatten(item)
+        except TypeError: # If iterable isn't actually iterable, then yield it.
+            yield iterable
     try:
         yield from _flatten(iterable)
     except RecursionError:

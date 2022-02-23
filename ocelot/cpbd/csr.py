@@ -27,6 +27,12 @@ from ocelot.cpbd.elements.xyquadruple import XYQuadrupole
 
 from ocelot.cpbd.physics_proc import PhysProc
 
+# matplotlib may or may not be on the HPC nodes at DESY.  
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    pass
+
 # Try to import numba, pyfftw and numexpr for improved performance
 logger = logging.getLogger(__name__)
 
@@ -852,7 +858,6 @@ class CSR(PhysProc):
 
         # if pict_debug = True import matplotlib
         if self.pict_debug:
-            self.plt = importlib.import_module("matplotlib.pyplot")
             self.napply = 0
             self.total_wake = 0
 
@@ -968,21 +973,21 @@ class CSR(PhysProc):
                 self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect)
         # plot trajectory of the refernece particle
         if self.pict_debug:
-            fig = self.plt.figure(figsize=(10, 8))
-            ax1 = self.plt.subplot(211)
+            fig = plt.figure(figsize=(10, 8))
+            ax1 = plt.subplot(211)
             #ax1.plot(self.csr_traj[0, :], self.csr_traj[0, :] -self.csr_traj[3, :], "r", label="X")
             ax1.plot(self.csr_traj[0, :], self.csr_traj[1, :]*1000, "r", label="X")
             ax1.plot(self.csr_traj[0, :], self.csr_traj[2, :]*1000, "b", label="Y")
-            self.plt.legend()
-            self.plt.ylabel("X/Y [mm]")
-            self.plt.setp(ax1.get_xticklabels(), visible=False)
-            ax3 = self.plt.subplot(212, sharex=ax1)
+            plt.legend()
+            plt.ylabel("X/Y [mm]")
+            plt.setp(ax1.get_xticklabels(), visible=False)
+            ax3 = plt.subplot(212, sharex=ax1)
             ax3.plot(self.csr_traj[0, :], self.csr_traj[1 + 3, :]*1000, "r", label=r"$X'$")
             ax3.plot(self.csr_traj[0, :], self.csr_traj[2 + 3, :]*1000, "b", label=r"$Y'$")
-            self.plt.legend()
-            self.plt.ylabel(r"$X'/Y'$ [mrad]")
-            self.plt.xlabel("s [m]")
-            self.plt.show()
+            plt.legend()
+            plt.ylabel(r"$X'/Y'$ [mrad]")
+            plt.xlabel("s [m]")
+            plt.show()
             # data = np.array([np.array(self.s), np.array(self.total_wake)])
             # np.savetxt("trajectory_cos.txt", self.csr_traj)
         return self.csr_traj
@@ -1051,39 +1056,143 @@ class CSR(PhysProc):
         :return:
         """
         self.napply += 1
-        fig = self.plt.figure(figsize=(10, 8))
+        fig = plt.figure(figsize=(10, 8))
 
-        ax1 = self.plt.subplot(311)
+        ax1 = plt.subplot(311)
         ax1.plot(self.csr_traj[0, :], self.csr_traj[1, :]*1000, "r",  self.csr_traj[0, itr_ra], self.csr_traj[1, itr_ra]*1000, "bo")
-        self.plt.ylabel("X [mm]")
+        plt.ylabel("X [mm]")
 
-        ax2 = self.plt.subplot(312)
+        ax2 = plt.subplot(312)
         # # CSR wake in keV/m - preferable and not depend on step
         # ax2.plot(np.linspace(s1, s1+st*len(lam_K1), len(lam_K1))*1000, lam_K1/delta_s/1000.)
         # plt.ylabel("dE, keV/m")
 
         # CSR wake in keV - amplitude changes with step
         ax2.plot(np.linspace(s1, s1 + st * len(lam_K1), len(lam_K1)) * 1000, lam_K1 * 1e-3)
-        self.plt.setp(ax2.get_xticklabels(), visible=False)
-        self.plt.ylim((-50, 50))
-        self.plt.ylabel("Wake [keV]")
+        plt.setp(ax2.get_xticklabels(), visible=False)
+        plt.ylim((-50, 50))
+        plt.ylabel("Wake [keV]")
 
-        # ax3 = self.plt.subplot(413)
+        # ax3 = plt.subplot(413)
         # n_points = len(lam_K1)
         # #wake = np.interp(np.linspace(s1, s1+st*n_points, n_points), np.linspace(s1, s1+st*len(lam_K1), len(lam_K1)), lam_K1)
         # self.total_wake += lam_K1
         # #plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
         # ax3.plot(np.linspace(s1, s1+st*n_points, n_points)*1000, self.total_wake*1e-6)
-        # self.plt.ylabel("Total Wake [MeV]")
-        # self.plt.setp(ax3.get_xticklabels(), visible=False)
-        # self.plt.ylim((-10, 10))
+        # plt.ylabel("Total Wake [MeV]")
+        # plt.setp(ax3.get_xticklabels(), visible=False)
+        # plt.ylim((-10, 10))
 
-        ax3 = self.plt.subplot(313, sharex=ax2)
+        ax3 = plt.subplot(313, sharex=ax2)
         self.B = s_to_cur(p_array.tau(), sigma=np.std(p_array.tau())*0.05, q0=np.sum(p_array.q_array), v=speed_of_light)
         ax3.plot(-self.B[:, 0]*1000, self.B[:, 1], lw=2)
         ax3.set_ylabel("I [A]")
         ax3.set_xlabel("s [mm]")
-        self.plt.subplots_adjust(hspace=0.2)
+        plt.subplots_adjust(hspace=0.2)
         dig = str(self.napply)
         name = "0" * (4 - len(dig)) + dig
-        self.plt.savefig(name + '.png')
+        plt.savefig(name + '.png')
+        plt.close(fig)
+
+
+class SaferCSR(CSR):
+    """Run the CSR model but with checks on the sigma_min and the Derbenev criterion
+    at every step.  All options applicable to CSR are also applicable to SaferCSR
+    instances.
+
+    The Derbenev criterion coefficient is given by
+
+    .. math:: \kappa = \sigma_x \left( \frac{1}{R \sigma_z^2} \right) ^ \frac{1}{3}
+                                \ll 1,
+
+    where the symbols have their usual meanings.
+
+    :param derbenev_criterion: The Derbenev criterion coefficient above which a
+    warning should be raised for a ParticleArray instance.  By default 0.5.
+    :param sigma_min_factor: The ratio of the bunch length relative to the
+    sigma_min below which a warning should be raised.  By default 9.9.
+    :apply_kick: Whether or not calculate and apply the CSR kick, or just do the
+    checking without any physics process applied.  By default True.
+
+    """
+
+    def __init__(self,
+                 derbenev_criterion=0.5,
+                 sigma_min_factor=9.9,
+                 apply_kick=True
+                 ):
+        super().__init__()
+        self.derbenev_criterion = derbenev_criterion
+        # If bunch become shorter than sigma_min_factor*sigma_min, raise a warning.
+        self.sigma_min_factor = sigma_min_factor
+        self.apply_kick = apply_kick
+
+
+    def query_bunch_length(self, bunch_length):
+        minimum_permissable_bunch_length = self.sigma_min_factor * self.sigma_min
+        if bunch_length < minimum_permissable_bunch_length:
+            bunch_length = round(bunch_length*1e6, 6)
+            sigma_min = round(self.sigma_min*1e6, 6)
+            ratio = bunch_length / sigma_min
+            logger.warning(
+                f"Bunch is too small relative to sigma_min at s={self.z0}m: "
+                f" bunch_length = {bunch_length}um;"
+                f" sigma_min = {sigma_min}um;"
+                f" ratio: {ratio};"
+                f" minimum allowed ratio: {self.sigma_min_factor}"
+            )
+
+    @staticmethod
+    def _derbenev_criterion(sigma_transverse, sigma_z, bending_radius):
+        return sigma_transverse * (bending_radius * sigma_z**2) ** (-1/3)
+
+    def query_derbenev_criterion(self, bunch_x, bunch_y, bunch_length):
+        s = self.csr_traj[0]
+        csr_traj_index = np.searchsorted(s, self.z0)
+
+        # The points and tangents before and after the step takes place
+        # pre_step = self.csr_traj[..., csr_traj_index-1][1:4]
+        # post_step = self.csr_traj[..., csr_traj_index][1:4]
+        tangent_pre_step = self.csr_traj[..., csr_traj_index-1][4:]
+        tangent_post_step = self.csr_traj[..., csr_traj_index][4:]
+
+        if np.isclose(tangent_pre_step, tangent_post_step).all():
+            # In a non-bending element I guess (e.g. a drift)
+            return
+
+        angle = np.arccos(np.dot(tangent_post_step, tangent_pre_step))
+        bending_radius = self.traj_step / angle
+
+        # Get index of coordinate that changes the most and basically just assume
+        # we're bending in that plane.
+        bending_plane_index = np.argmax(abs(tangent_post_step[:2]
+                                            - tangent_pre_step[:2]))
+
+        size = bunch_x
+        if bending_plane_index == 1:
+            size = bunch_y
+
+
+        crit = self._derbenev_criterion(size, bunch_length, bending_radius)
+        # Criterion should be must less than 1 for 1D to be valid.  As it's "much
+        # less than", we say <0.5 by default...
+        if crit > self.derbenev_criterion:
+            s = self.z0
+            logger.warning(
+                f" Derbenev criterion may be violated at s={s}. "
+                f" bunch length = {bunch_length*1e6}um;"
+                f" tranverse size = {size*1e6}um;"
+                f" bending radius = {bending_radius}m"
+                f"  Derbenev coeff. = {crit}"
+            )
+
+    def apply(self, parray, ds):
+        bunch_length = parray.tau().std()
+        bunch_x = parray.x().std()
+        bunch_y = parray.y().std()
+
+        self.query_bunch_length(bunch_length)
+        self.query_derbenev_criterion(bunch_x, bunch_y, bunch_length)
+
+        if self.apply_kick:
+            return super().apply(parray, ds)

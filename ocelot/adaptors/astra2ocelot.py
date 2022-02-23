@@ -171,9 +171,9 @@ def astraBeam2particleArray(filename, print_params=True):
 
     if P0[0, 7] == 0:
         xp = P0[1:, :6]
-        charge_array = -P0[1:, 7] * 1e-9  # charge in nC -> in C
+        charge_array = abs(P0[1:, 7]) * 1e-9  # charge in nC -> in C
     else:
-        charge_array = -P0[:, 7] * 1e-9  # charge in nC -> in C
+        charge_array = abs(P0[:, 7]) * 1e-9  # charge in nC -> in C
         xp = P0[:, :6]
         xp[0, 2] = 0.
         xp[0, 5] = 0.

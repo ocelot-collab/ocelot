@@ -86,6 +86,7 @@ def slice_bunching(tau, charge, lambda_mod, smooth_sigma=None):
     b = np.abs(simps(B[:, 1] / speed_of_light * np.exp(-1j * 2 * np.pi / lambda_mod * B[:, 0]), B[:, 0])) / charge
     return b
 
+
 def calculate_BMAG(tws_des, tws_err):
     """
     Function calculates mismatch and mismatch phase using two twiss lists.

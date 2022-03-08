@@ -104,6 +104,10 @@ def sample_1(i, a, b, c):
     return y
 
 
+class CSRConfigurationError(RuntimeError):
+    pass
+
+
 class Smoothing:
     def __init__(self):
         self.print_log = False
@@ -860,6 +864,11 @@ class CSR(PhysProc):
         if self.pict_debug:
             self.napply = 0
             self.total_wake = 0
+
+        if self.energy is None and self.rk_traj:
+            raise CSRConfigurationError(
+                "RK trajectory calc set but CSR.energy left unset."
+            )
 
         self.z_csr_start = sum([p.l for p in lat.sequence[:self.indx0]])
         p = Particle()

@@ -1010,7 +1010,7 @@ class CSR(PhysProc):
         h = max(1., self.apply_step/self.traj_step)
 
 
-        itr_ra = np.unique(-np.round(np.arange(-indx, -indx_prev, h))).astype(np.int)
+        itr_ra = np.unique(-np.round(np.arange(-indx, -indx_prev, h))).astype(int)
 
         K1 = 0
         for it in itr_ra:

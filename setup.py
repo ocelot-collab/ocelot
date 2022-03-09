@@ -10,7 +10,7 @@ for pkg in find_packages():
 
 setup(
     name='ocelot',
-    version='20.11.2',
+    version='21.12.1',
     description='Accelerator, radiation and x-ray optics simulation framework',
     author='ocelot-collab',
     author_email='tomin.sergey@gmail.com',

@@ -1,9 +1,11 @@
 __author__ = 'Sergey Tomin'
 
+from typing import List, Dict, Type, Callable, Tuple, Union, Any
 import numpy as np
 from scipy.integrate import simps
 from ocelot.common.globals import speed_of_light
 from ocelot.cpbd.beam import s_to_cur
+from ocelot.cpbd.beam import Twiss
 
 
 def RTU_56(LB, LD, r, m):
@@ -87,13 +89,13 @@ def slice_bunching(tau, charge, lambda_mod, smooth_sigma=None):
     return b
 
 
-def calculate_BMAG(tws_des, tws_err):
+def calculate_BMAG(tws_des: Twiss, tws_err: Twiss) -> tuple[Union[float, Any], Union[float, Any]]:
     """
     Function calculates mismatch and mismatch phase using two twiss lists.
     Result is saved in tws_err list as M_x, M_y, psi_x, psi_y
 
-    :param tws_des: list, design twiss parameters
-    :param tws_err: list, error twiss parameters
+    :param tws_des: Twiss, design twiss parameters
+    :param tws_err: Twiss, error twiss parameters
     :return: (Mx, My, phi_x, phi_y) mismatch at the end of lattice
     """
     gamma_x_des = (1 + tws_des.alpha_x * tws_des.alpha_x) / tws_des.beta_x
@@ -105,6 +107,7 @@ def calculate_BMAG(tws_des, tws_err):
     lam_x = mp_x + np.sqrt(mp_x * mp_x - 1)
     lam_y = mp_y + np.sqrt(mp_y * mp_y - 1)
     return lam_x, lam_y
+
 
 def calculate_mismatch(tws_des, tws_err):
     """

@@ -106,7 +106,7 @@ def dft(sample, freqs):
 
     n = len(sample)
     x_freq = freqs * n
-    transf = np.zeros(len(freqs), dtype=np.complex)
+    transf = np.zeros(len(freqs), dtype=complex)
 
     for i, ai in enumerate(sample):
         transf += ai * np.exp(-2.0 * np.pi * i / n * 1.0j * x_freq)

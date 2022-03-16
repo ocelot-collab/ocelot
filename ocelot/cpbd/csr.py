@@ -1019,13 +1019,17 @@ class CSR(PhysProc):
         sa = s1 + st / 2.
         Ndw = [Ns - 1, st]
 
+        # Get the current and previous points on the trajectory.
         s_array = self.csr_traj[0, :]
         indx = (np.abs(s_array - s_cur)).argmin()
         indx_prev = (np.abs(s_array - (s_cur - delta_s))).argmin()
         gamma = p_array.E/m_e_GeV
         h = max(1., self.apply_step/self.traj_step)
 
-        itr_ra = np.unique(-np.round(np.arange(-indx, -indx_prev, h))).astype(int)
+        itr_ra = np.round(np.arange(indx_prev, indx, h)).astype(int)
+
+        if itr_ra[0] == 0:
+            itr_ra[0] = 1
 
         K1 = 0
         for it in itr_ra:

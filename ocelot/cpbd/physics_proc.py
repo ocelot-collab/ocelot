@@ -80,15 +80,18 @@ class SaveBeam(PhysProc):
 
 
 class CopyBeam(PhysProc):
-    def __init__(self, name=""):
+    """Physics process that copies the ParticleArray instance when applied.  Makes
+    most sense to be attached to zero-length elements (e.g. Marker instances)."""
+    def __init__(self, name: str=""):
         super().__init__()
         self.name = name
         self.parray = None
 
-    def apply(self, parray, dz):
+    def apply(self, parray: ParticleArray, dz: float):
+        """Copy the given particle array to self"""
         self.parray = parray.copy()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<CopyBeam: {self.name}, at={hex(id(self))}>"
 
 

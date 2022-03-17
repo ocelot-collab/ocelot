@@ -16,6 +16,9 @@ from ocelot.cpbd.reswake import pipe_wake
 
 import pandas as pd
 
+from typing import TypeVar
+
+TypeParticleArray = TypeVar("TypeParticleArray", bound="ParticleArray")
 
 _logger = logging.getLogger(__name__)
 
@@ -941,6 +944,9 @@ class ParticleArray:
         self.rparticles = np.delete(self.rparticles, inds, 1)
         self.q_array = np.delete(self.q_array, inds, 0)
 
+    def copy(self) -> TypeParticleArray:
+        """Return a copy of this ParticleArray instance."""
+        return deepcopy(self)
 
 def recalculate_ref_particle(p_array):
     pref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV

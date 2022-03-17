@@ -4,8 +4,7 @@ import re
 import sys
 
 from ocelot import *
-from ocelot.cpbd.io import *
-
+from ocelot.cpbd.latticeIO import LatticeIO
 
 flatten = lambda *n: (e for a in n for e in (flatten(*a) if isinstance(a, (tuple, list)) else (a,)))
 
@@ -46,19 +45,19 @@ class Parser():
         
         if gui_lattice.tws0 and isinstance(gui_lattice.tws0, Twiss):
             lines.append('\n#Initial Twiss parameters\n')
-            lines.extend(twiss2input(gui_lattice.tws0))
+            lines.extend(LatticeIO.twiss2input(gui_lattice.tws0))
         
         if gui_lattice.beam and isinstance(gui_lattice.beam, Beam):
             lines.append('\n#Beam parameters\n')
-            lines.extend(beam2input(gui_lattice.beam))
+            lines.extend(LatticeIO.beam2input(gui_lattice.beam))
 
         if gui_lattice.elements and isinstance(gui_lattice.elements, dict):
             lines.append('\n')
-            lines.extend(elements2input(gui_lattice.lattice))
+            lines.extend(LatticeIO.elements2input(gui_lattice.lattice))
 
         if gui_lattice.cell and isinstance(gui_lattice.cell, (list, tuple, dict)):
             lines.append('\n# Lattice \n')
-            lines.extend(cell2input(gui_lattice.lattice, True))
+            lines.extend(LatticeIO.cell2input(gui_lattice.lattice, True))
 
         lines.append('\n')
 

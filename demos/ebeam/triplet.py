@@ -12,12 +12,10 @@ D = Drift(l = 0.5)
 De = Drift(l = 0.5)
 lattice = [D, Q1, D, Q2, D, Q1, De]
 
-method1 = MethodTM()
-method1.global_method = TransferMap
+method1 = {'global': TransferMap}
 lat1 = MagneticLattice(copy.deepcopy(lattice), method=method1)
 
-method2 = MethodTM()
-method2.global_method = SecondTM
+method2 = {'global': SecondTM}
 lat2 = MagneticLattice(copy.deepcopy(lattice), method=method2)
 
 tw0 = Twiss()

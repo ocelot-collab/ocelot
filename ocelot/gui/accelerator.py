@@ -2,18 +2,26 @@
 user interface for viewing/editing electron optics layouts
 """
 
-import sys, os, csv
+from ocelot.cpbd.physics_proc import *
+from scipy import stats
+from ocelot.cpbd.beam import global_slice_analysis
+import sys
+import os
+import csv
 import numbers
 import matplotlib
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.collections import PatchCollection
+from matplotlib.offsetbox import AnchoredText
 import matplotlib.patches as mpatches
 import matplotlib.path as mpath
 import matplotlib.pyplot as plt
 from ocelot.cpbd.optics import *
 import numpy as np
+from ocelot.cpbd.elements import *
 from copy import deepcopy
+
 
 import matplotlib.font_manager as font_manager
 
@@ -53,14 +61,14 @@ def plot_lattice(lat, axis, alpha=1.0, params={'kmax': 2.0, 'ang_max': 0.5e-2}, 
         if e.__class__ in [Bend, SBend, RBend, Hcor, Vcor]:
             axis.add_patch(mpatches.Rectangle(offs + np.array([pos, 0.0]), dx,
                                               np.sign(-e.angle) * min_dipole_height - e.angle / ang_max * (
-                                                      1 - min_dipole_height),
-                                              color='#0099FF', alpha=alpha))
+                1 - min_dipole_height),
+                color='#0099FF', alpha=alpha))
 
         if e.__class__ in [Solenoid]:
             axis.add_patch(mpatches.Rectangle(offs + np.array([pos, 0.0]), dx,
                                               np.sign(-e.k) * min_solenoid_height - e.k / sol_max * (
-                                                      1 - min_solenoid_height),
-                                              color='#FF99FF', alpha=alpha))
+                1 - min_solenoid_height),
+                color='#FF99FF', alpha=alpha))
 
         if e.__class__ in [Quadrupole]:
 
@@ -174,7 +182,6 @@ dict_plot = {Quadrupole: {"scale": 0.7, "color": "r", "edgecolor": "r", "label":
              Vcor: {"scale": 0.7, "color": "c", "edgecolor": "c", "label": "cor"},
              Drift: {"scale": 0., "color": "k", "edgecolor": "k", "label": ""},
              Marker: {"scale": 0., "color": "k", "edgecolor": "k", "label": "mark"},
-             Edge: {"scale": 0., "color": "k", "edgecolor": "k", "label": ""},
              Solenoid: {"scale": 0.7, "color": "g", "edgecolor": "g", "label": "sol"},
              TDCavity: {"scale": 0.7, "color": "magenta", "edgecolor": "g", "label": "tds"},
              UnknownElement: {"scale": 0.7, "color": "g", "edgecolor": "g", "label": "unk"},
@@ -241,7 +248,7 @@ def plot_elems(fig, ax, lat, s_point=0, y_lim=None, y_scale=1, legend=True, font
         if elem.__class__ in excld_legend:
             elem = Drift(l=elem.l)
 
-        if elem.__class__ in [Marker, Edge, CouplerKick]:
+        if elem.__class__ == Marker:
             L += elem.l
             continue
         l = elem.l
@@ -405,7 +412,7 @@ def plot_betas(ax, S, beta_x, beta_y, font_size):
 
 
 def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=True, font_size=12, excld_legend=None,
-                  figsize=None):
+                  figsize=None, plt_figure=None):
     """
     function for plotting: lattice (bottom section), vertical and horizontal beta-functions (middle section),
     other parameters (top section) such as "Dx", "Dy", "E", "mux", "muy", "alpha_x", "alpha_y", "gamma_x", "gamma_y"
@@ -419,12 +426,16 @@ def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=Tr
     :param font_size: 16 - font size for any element of plot
     :param excld_legend: None, exclude type of element from the legend, e.g. excld_legend=[Hcor, Vcor]
     :param figsize: None or e.g. (8, 6)
+    :param plt_figure: None, exported plt.figure()
     :return:
     """
-    if fig_name is None:
-        fig = plt.figure(figsize=figsize)
+    if plt_figure is None:
+        if fig_name is None:
+            fig = plt.figure(figsize=figsize)
+        else:
+            fig = plt.figure(fig_name, figsize=figsize)
     else:
-        fig = plt.figure(fig_name, figsize=figsize)
+        fig = plt_figure
 
     plt.rc('axes', grid=grid)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
@@ -526,7 +537,7 @@ def plot_xy(ax, S, X, Y, font_size):
     leg.get_frame().set_alpha(0.5)
 
 
-def plot_API(lat, legend=True, fig_name=1, grid=True, font_size=12, excld_legend=None, figsize=None, s_shift=0):
+def plot_API(lat, legend=True, fig_name=1, grid=True, font_size=12, excld_legend=None, figsize=None):
     """
     Function creates a picture with lattice on the bottom part of the picture and top part of the picture can be
     plot arbitrary lines.
@@ -538,7 +549,6 @@ def plot_API(lat, legend=True, fig_name=1, grid=True, font_size=12, excld_legend
     :param font_size: 16 - font size for any element of plot
     :param excld_legend: None, exclude type of element from the legend, e.g. excld_legend=[Hcor, Vcor]
     :param figsize: None or e.g. (8, 6)
-
     :return: fig, ax
     """
 
@@ -565,7 +575,7 @@ def plot_API(lat, legend=True, fig_name=1, grid=True, font_size=12, excld_legend
 
     fig.subplots_adjust(hspace=0)
 
-    plot_elems(fig, ax_el, lat, legend=legend, y_scale=0.8, font_size=font_size, excld_legend=excld_legend, s_point=s_shift)
+    plot_elems(fig, ax_el, lat, legend=legend, y_scale=0.8, font_size=font_size, excld_legend=excld_legend)
 
     return fig, ax_xy
 
@@ -740,9 +750,9 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones=None):
 
     fig1 = plt.contour(contour_da, 1, extent=extent, linewidths=2, colors='k')  # , colors = 'r')
     fig1 = plt.contourf(mux, 40, cmap=my_cmap, extent=extent)  # , colors = 'r')
-    cb = plt.colorbar(cmap=my_cmap)
+    cb = plt.colorbar()
     fig1 = plt.contourf(mux, 10, levels=[-1, -.0001], colors='w', extent=extent)
-    if zones != None:
+    if zones is not None:
         x_zone = zones[0]
         y_zone = zones[1]
         plt.plot(x_zone * np.cos(t), y_zone * np.sin(t), "g", lw=2)
@@ -757,7 +767,7 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones=None):
 
     fig1 = plt.contour(contour_da, 1, extent=extent, linewidths=2, colors='k')  # , colors = 'r')
     fig1 = plt.contourf(muy, 40, cmap=my_cmap, extent=extent)  # , colors = 'r')
-    if zones != None:
+    if zones is not None:
         x_zone = zones[0]
         y_zone = zones[1]
         plt.plot(x_zone * np.cos(t), y_zone * np.sin(t), "g", lw=2)
@@ -765,7 +775,7 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones=None):
         plt.plot(3 * x_zone * np.cos(t), 3 * y_zone * np.sin(t), "r", lw=2)
         plt.plot(4 * x_zone * np.cos(t), 4 * y_zone * np.sin(t), "y", lw=2)
 
-    cb = plt.colorbar(cmap=my_cmap)
+    cb = plt.colorbar()
     fig1 = plt.contourf(muy, 10, levels=[-1, -.0001], colors='w', extent=extent)
     plt.xlabel("X, m")
     plt.ylabel("Y, m")
@@ -824,14 +834,13 @@ def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinea
     ax.imshow(H, interpolation=interpolation, aspect='auto', origin='lower',
               extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], vmin=vmin, cmap=my_rainbow)
 
-    if xlabel is not None: ax.set_xlabel(xlabel)
-    if ylabel is not None: ax.set_ylabel(ylabel)
+    if xlabel is not None:
+        ax.set_xlabel(xlabel)
+    if ylabel is not None:
+        ax.set_ylabel(ylabel)
     ax.grid(grid)
 
     plt.setp(ax.get_xticklabels(), visible=show_xtick_label)
-
-
-from ocelot.cpbd.beam import global_slice_analysis
 
 
 def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, nbins_y=200,
@@ -868,13 +877,13 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     """
     if tau_units == "m":
         tau_factor = 1  # m
-        tau_label = "s [mm]"
+        tau_label = r"$s\,[\mathrm{m}]$"
     elif tau_units == "um":
         tau_factor = 1e6  # um
-        tau_label = r"s [$\mu$m]"
+        tau_label = r"$s\,[\mathrm{\mu{}m}]$"
     else:
         tau_factor = 1e3  # mm
-        tau_label = "s [mm]"
+        tau_label = r"$s\,[\mathrm{mm}]$"
 
     p_array_copy = deepcopy(p_array)
     if inverse_tau:
@@ -889,7 +898,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     plt.plot(slice_params.s * tau_factor, slice_params.se * 1e-3, "b")
     # plt.legend()
     plt.xlabel(tau_label)
-    plt.ylabel(r"$\sigma_E$ [keV]")
+    plt.ylabel(r"$\sigma_E\,[\mathrm{keV}]$")
     plt.grid(grid)
 
     ax_em = plt.subplot(323, sharex=ax_sp)
@@ -897,40 +906,33 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     emitxn_mm_mrad = np.round(slice_params.emitxn * 1e6, 2)
     emityn_mm_mrad = np.round(slice_params.emityn * 1e6, 2)
     plt.plot(slice_params.s * tau_factor, slice_params.ex, "r",
-             label=r"$\varepsilon_x^{proj} = $" + str(emitxn_mm_mrad))
+             label=fr"$\varepsilon_x^{{\mathrm{{proj}}}} = {emitxn_mm_mrad}\,\mathrm{{mm\cdot{{}}mrad}}$")
     plt.plot(slice_params.s * tau_factor, slice_params.ey, "b",
-             label=r"$\varepsilon_y^{proj} = $" + str(emityn_mm_mrad))
+             label=rf"$\varepsilon_y^{{\mathrm{{proj}}}} = {emityn_mm_mrad}\,\mathrm{{mm\cdot{{}}mrad}}$")
     plt.legend()
     plt.setp(ax_em.get_xticklabels(), visible=False)
-    plt.ylabel(r"$\varepsilon_{x,y}$ [$\mu m \cdot rad$]")
+    plt.ylabel(r"$\varepsilon_{x,y}\,[\mathrm{mm\cdot{}mrad}]$")
     plt.grid(grid)
 
     ax_c = plt.subplot(321, sharex=ax_sp)
     plt.title("Current")
 
-    if inverse_tau:
-        arrow = r"$\Longrightarrow$"
-        label = "head " + arrow
-        location = "upper right"
-    else:
-        arrow = r"$\Longleftarrow$"
-        label = arrow + " head"
-        location = "upper left"
-
     plt.plot(slice_params.s * tau_factor, slice_params.I, "b")
-    # label = r"$I_{max}=$" + str(np.round(np.max(slice_params.I), 1))
-    if headtail:
-        leg = ax_c.legend([label], handlelength=0, handletextpad=0, fancybox=True, loc=location)
-        for item in leg.legendHandles:
-            item.set_visible(False)
+    imax = np.max(slice_params.I)
+    imax_label = rf"$I_{{\mathrm{{max}}}}= {imax:.0f}\,\mathrm{{A}}$"
+    leg = ax_c.legend([imax_label], handlelength=0, handletextpad=0, fancybox=True, loc="best")
+    for item in leg.legendHandles:
+        item.set_visible(False)
+
+
     plt.setp(ax_c.get_xticklabels(), visible=False)
-    plt.ylabel("I [A]")
+    plt.ylabel("$I\,[\mathrm{A}]$")
     plt.grid(grid)
 
     ax_ys = plt.subplot(326, sharex=ax_sp)
 
     show_density(p_array_copy.tau() * tau_factor, p_array_copy.y() * 1e3, ax=ax_ys, nbins_x=nbins_x, nbins_y=nbins_y,
-                 interpolation=interpolation, xlabel=tau_label, ylabel='y [mm]', nfig=50,
+                 interpolation=interpolation, xlabel=tau_label, ylabel='$y\,[\mathrm{mm}]$', nfig=50,
                  title="Side view", figsize=None, grid=grid)
     if show_moments:
         plt.plot(slice_params.s * tau_factor, slice_params.my * 1e3, "k", lw=2)
@@ -940,7 +942,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     ax_xs = plt.subplot(324, sharex=ax_sp)
 
     show_density(p_array_copy.tau() * tau_factor, p_array_copy.x() * 1e3, ax=ax_xs, nbins_x=nbins_x, nbins_y=nbins_y,
-                 interpolation=interpolation, ylabel='x [mm]',
+                 interpolation=interpolation, ylabel=r'$x\,[\mathrm{mm}]$',
                  title="Top view", grid=grid, show_xtick_label=False)
     if show_moments:
         plt.plot(slice_params.s * tau_factor, slice_params.mx * 1e3, "k", lw=2)
@@ -950,8 +952,30 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     ax_ps = plt.subplot(322, sharex=ax_sp)
 
     show_density(p_array_copy.tau() * tau_factor, p_array_copy.p() * 1e2, ax=ax_ps, nbins_x=nbins_x, nbins_y=nbins_y,
-                 interpolation=interpolation, ylabel=r'$\delta_E$ [%]',
+                 interpolation=interpolation, ylabel=r'$\delta_E\,[\%]$',
                  title="Longitudinal phase space", grid=grid, show_xtick_label=False)
+
+    if inverse_tau:
+        arrow = r"$\Longrightarrow$"
+        label = "Head " + arrow
+        location = "upper right"
+    else:
+        arrow = r"$\Longleftarrow$"
+        label = arrow + " Head"
+        location = "upper left"
+
+    if headtail:
+        # Use previous legend's properties to set this AnchoredText instance to look
+        # just like a legend (to match the style).
+        frame = leg.get_frame()
+        anchored_text = AnchoredText(
+            label,
+            loc=location,
+            prop=dict(fontsize=leg.get_texts()[0].get_fontsize()))
+        anchored_text.patch.set_boxstyle(frame.get_boxstyle())
+        anchored_text.patch.set_alpha(frame.get_alpha())
+        anchored_text.patch.set_edgecolor(leg.get_frame().get_edgecolor())
+        ax_ps.add_artist(anchored_text)
 
     if filename is not None:
         plt.savefig(filename)
@@ -1050,10 +1074,11 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice1=5000, nparts_in_slice2=
     :param legend_beam2: None, legend for beam N1
     :return:
     """
+    tau_label = r"$s\,[\mathrm{\mu{}m}]$"
     if legend_beam1 == None:
-        legend_beam1 = "beam1"
+        legend_beam1 = "beam 1"
     if legend_beam2 == None:
-        legend_beam2 = "beam2"
+        legend_beam2 = "beam 2"
     p_array_copy1 = deepcopy(p_array_1)
     p_array_copy2 = deepcopy(p_array_2)
     if inverse_tau:
@@ -1068,35 +1093,41 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice1=5000, nparts_in_slice2=
         fig.suptitle(title)
     ax_sp = plt.subplot(325)
     plt.title("Energy Spread")
-    plt.plot(slice_params1.s * 1e6, slice_params1.se * 1e-3, "r", label=r"$\sigma_E$: " + legend_beam1)
-    plt.plot(slice_params2.s * 1e6, slice_params2.se * 1e-3, "b", label=r"$\sigma_E$: " + legend_beam2)
+    plt.plot(slice_params1.s * 1e6, slice_params1.se * 1e-3, "r",
+             label=rf"$\sigma_E$: {legend_beam1}")
+    plt.plot(slice_params2.s * 1e6, slice_params2.se * 1e-3, "b",
+             label=rf"$\sigma_E$: {legend_beam2}")
     plt.legend()
-    plt.xlabel(r"s, $\mu m$")
-    plt.ylabel("dE, keV")
+    plt.xlabel(tau_label)
+
+    plt.ylabel(r"$\Delta{} E\,[\mathrm{keV}]$")
     plt.grid(True)
 
     ax_em = plt.subplot(323, sharex=ax_sp)
-    plt.title("Hor. Emittances")
+    plt.title("Horizontal Emittances")
     emitxn1_mm_mrad = np.round(slice_params1.emitxn * 1e6, 2)
     emitxn2_mm_mrad = np.round(slice_params2.emitxn * 1e6, 2)
     plt.plot(slice_params1.s * 1e6, slice_params1.ex, "r",
-             label=r"$\varepsilon_x = $" + str(emitxn1_mm_mrad) + r" $mm\cdot mrad$: " + legend_beam1)
+             label=rf"$\varepsilon_x = {emitxn1_mm_mrad}\,\mathrm{{mm\cdot{{}}mrad}}$: {legend_beam1}")
     plt.plot(slice_params2.s * 1e6, slice_params2.ex, "b",
-             label=r"$\varepsilon_x = $" + str(emitxn2_mm_mrad) + r" $mm\cdot mrad$: " + legend_beam2)
+             label=rf"$\varepsilon_x = {emitxn2_mm_mrad}\,\mathrm{{mm\cdot{{}}mrad}}$: {legend_beam2}")
+
     plt.legend()
     plt.setp(ax_em.get_xticklabels(), visible=False)
-    plt.ylabel(r"$\varepsilon_x$, $mm\cdot mrad$")
+    plt.ylabel(r"$\varepsilon_x\,[\mathrm{mm\cdot{}mrad}]$")
     plt.grid(True)
 
     ax_c = plt.subplot(321, sharex=ax_sp)
     plt.title("Current")
-    I1max = np.round(np.max(slice_params1.I), 0)
-    I2max = np.round(np.max(slice_params2.I), 0)
-    plt.plot(slice_params1.s * 1e6, slice_params1.I, "r", label=r"$I_{max}=$" + str(I1max) + " A " + legend_beam1)
-    plt.plot(slice_params2.s * 1e6, slice_params2.I, "b", label=r"$I_{max}=$" + str(I2max) + " A " + legend_beam2)
+    i1max = np.max(slice_params1.I)
+    i2max = np.max(slice_params2.I)
+    plt.plot(slice_params1.s * 1e6, slice_params1.I, "r",
+             label=fr"$I_{{\mathrm{{max}}}}={i1max:.0f}\,\mathrm{{A}}$ {legend_beam1}")
+    plt.plot(slice_params2.s * 1e6, slice_params2.I, "b",
+             label=fr"$I_{{\mathrm{{max}}}}={i2max:.0f}\,\mathrm{{A}}$ {legend_beam2}")
     plt.legend()
     plt.setp(ax_c.get_xticklabels(), visible=False)
-    plt.ylabel("I, A")
+    plt.ylabel("$I\,[\mathrm{A}]$")
     plt.grid(True)
 
     # my_rainbow = deepcopy(plt.get_cmap('rainbow'))
@@ -1105,35 +1136,35 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice1=5000, nparts_in_slice2=
     ax_mp = plt.subplot(326)
     plt.title("Energy Distribution")
 
-    plt.plot(slice_params1.s * 1e6, slice_params1.mp * 1e2, "r", label=r"$\Delta E/E$: " + legend_beam1)
-    plt.plot(slice_params2.s * 1e6, slice_params2.mp * 1e2, "b", label=r"$\Delta E/E$: " + legend_beam2)
+    plt.plot(slice_params1.s * 1e6, slice_params1.mp * 1e2, "r", label=r"$\Delta{} E/E$: " + legend_beam1)
+    plt.plot(slice_params2.s * 1e6, slice_params2.mp * 1e2, "b", label=r"$\Delta{} E/E$: " + legend_beam2)
     plt.legend()
-    plt.xlabel(r"s, $\mu m$")
-    plt.ylabel("dE/E, %")
+    plt.xlabel(tau_label)
+    plt.ylabel(r'$\delta{}_E\,[\%]$')
     plt.grid(True)
 
     ax_em = plt.subplot(324, sharex=ax_mp)
-    plt.title("Ver. Emittances")
+    plt.title("Vertical Emittances")
     emityn1_mm_mrad = np.round(slice_params1.emityn * 1e6, 2)
     emityn2_mm_mrad = np.round(slice_params2.emityn * 1e6, 2)
     plt.plot(slice_params1.s * 1e6, slice_params1.ey, "r",
-             label=r"$\varepsilon_y = $" + str(emityn1_mm_mrad) + r" $mm\cdot mrad$: " + legend_beam1)
+             label=r"$\varepsilon_y = $" + str(emityn1_mm_mrad) + r" $\mathrm{mm\cdot{}mrad}$: " + legend_beam1)
     plt.plot(slice_params2.s * 1e6, slice_params2.ey, "b",
-             label=r"$\varepsilon_y = $" + str(emityn2_mm_mrad) + r" $mm\cdot mrad$: " + legend_beam2)
+             label=r"$\varepsilon_y = $" + str(emityn2_mm_mrad) + r" $\mathrm{mm\cdot{}mrad}$: " + legend_beam2)
     plt.legend()
     plt.setp(ax_em.get_xticklabels(), visible=False)
-    plt.ylabel(r"$\varepsilon_y$, $mm\cdot mrad$")
+    plt.ylabel(r"$\varepsilon_y\,[\mathrm{mm\cdot{}mrad}]$")
     plt.grid(True)
 
     ax_e = plt.subplot(322, sharex=ax_mp)
-    plt.title("Slice Position")
-    plt.plot(slice_params1.s * 1e6, slice_params1.mx * 1e6, "r", label=r"$x_{slice}$: " + legend_beam1)
-    plt.plot(slice_params2.s * 1e6, slice_params2.mx * 1e6, "b", label=r"$x_{slice}$: " + legend_beam2)
-    plt.plot(slice_params1.s * 1e6, slice_params1.my * 1e6, "r--", label=r"$y_{slice}$: " + legend_beam1)
-    plt.plot(slice_params2.s * 1e6, slice_params2.my * 1e6, "b--", label=r"$y_{slice}$: " + legend_beam2)
+    plt.title("Slice Positions")
+    plt.plot(slice_params1.s * 1e6, slice_params1.mx * 1e6, "r", label=r"$x_\mathrm{slice}$: " + legend_beam1)
+    plt.plot(slice_params2.s * 1e6, slice_params2.mx * 1e6, "b", label=r"$x_\mathrm{slice}$: " + legend_beam2)
+    plt.plot(slice_params1.s * 1e6, slice_params1.my * 1e6, "r--", label=r"$y_\mathrm{slice}$: " + legend_beam1)
+    plt.plot(slice_params2.s * 1e6, slice_params2.my * 1e6, "b--", label=r"$y_\mathrm{slice}$: " + legend_beam2)
     plt.legend()
     plt.setp(ax_e.get_xticklabels(), visible=False)
-    plt.ylabel(r"$X/Y_{slice}$, $\mu m$")
+    plt.ylabel(r"$x_{\mathrm{slice}},\,y_{\mathrm{slice}}\,[\mathrm{\mu{}m}]$")
     plt.grid(True)
 
 
@@ -1247,7 +1278,7 @@ def show_e_beam_reduced(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_
     # ax_sp = plt.subplot(225)
     # plt.title("Energy spread")
     # plt.plot(slice_params.s * 1e3, slice_params.se*1e-3, "b")
-    ##plt.legend()
+    # plt.legend()
     # plt.xlabel("s [mm]")
     # plt.ylabel("$\sigma_E$ [keV]")
     # plt.grid(grid)
@@ -1303,9 +1334,9 @@ def show_e_beam_reduced(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_
 
 
 def show_e_beam_slices(p_array, nparts_in_slice=5000, smooth_param=0.05, inverse_tau=False, figname=50,
-                     title=None, figsize=None, grid=True,
-                     filename=None, headtail=True,
-                     filter_base=2, filter_iter=2, tau_units="mm", slice=0):
+                       title=None, figsize=None, grid=True,
+                       filename=None, headtail=True,
+                       filter_base=2, filter_iter=2, tau_units="mm", slice=0):
     """
     Shows e-beam slice parameters (current, emittances, energy spread)
     and beam distributions (dE/(p0 c), X, Y) against long. coordinate (S)
@@ -1537,10 +1568,6 @@ def beam_jointplot(p_array, show_plane="x", nparts_in_slice=5000, smooth_param=0
         plt.savefig(filename)
 
     return ax_top, ax_down
-
-
-from scipy import stats
-from ocelot.cpbd.physics_proc import *
 
 
 class Save3DBeamDensity(PhysProc):

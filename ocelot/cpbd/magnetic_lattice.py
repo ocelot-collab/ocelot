@@ -1,6 +1,15 @@
-from ocelot.cpbd.optics import MethodTM, lattice_transfer_map
-from ocelot.cpbd.elements import *
+from ocelot.cpbd.elements.marker import Marker
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.undulator import Undulator
+from ocelot.cpbd.elements.unknown_element import UnknownElement
+from ocelot.cpbd.elements.matrix import Matrix
+from ocelot.cpbd.latticeIO import LatticeIO
+from ocelot.cpbd.transformations.transfer_map import TransferMap
+from ocelot.cpbd.optics import lattice_transfer_map
+
 import logging
+from typing import Any, Generator, Iterator
+
 import numpy as np
 
 _logger = logging.getLogger(__name__)
@@ -15,8 +24,6 @@ def lattice_format_converter(elements):
     drift_num = 0
     s_pos = 0.0
     for element in elements:
-        if element[0].__class__ in (Edge, CouplerKick):
-            continue
         element_start = element[1] - element[0].l / 2.0
         if element_start < s_pos - 1.0e-14:                 # 1.0e-14 is used as crutch for precision of float
             if element[0].l == 0.0:
@@ -28,7 +35,7 @@ def lattice_format_converter(elements):
                 print("************** WARNING! Element " + element[0].id + " was moved from " + str(element_start) +
                       " to " + str(s_pos))
             else:
-                dl = element[0].l / 2.0  - element[1] + s_pos
+                dl = element[0].l / 2.0 - element[1] + s_pos
                 if cell[-1].__class__ == Marker and cell[-2].__class__ == Drift and cell[-2].l > dl:
                     cell[-2].l -= dl
                     print("************** WARNING! Element " + cell[-1].id + " was deleted")
@@ -48,7 +55,7 @@ def lattice_format_converter(elements):
     return tuple(cell)
 
 
-def merger(lat, remaining_types=[], remaining_elems=[], init_energy=0.):
+def merger(lat, remaining_types=None, remaining_elems=None, init_energy=0.):
     """
     Function to compress the lattice excluding elements by type or by individual elements
 
@@ -60,6 +67,10 @@ def merger(lat, remaining_types=[], remaining_elems=[], init_energy=0.):
     :param init_energy: initial energy
     :return: New MagneticLattice
     """
+    if remaining_elems is None:
+        remaining_elems = []
+    if remaining_types is None:
+        remaining_types = []
     _logger.debug("element numbers before: " + str(len(lat.sequence)))
     lattice_analysis = []
     merged_elems = []
@@ -68,8 +79,6 @@ def merger(lat, remaining_types=[], remaining_elems=[], init_energy=0.):
             lattice_analysis.append(merged_elems)
             merged_elems = []
             lattice_analysis.append([elem])
-        elif elem.__class__ == Edge and ((Bend in remaining_types) or (SBend in remaining_types) or (RBend in remaining_types)):
-            continue
         else:
             merged_elems.append(elem)
     if len(merged_elems) != 0:
@@ -79,12 +88,13 @@ def merger(lat, remaining_types=[], remaining_elems=[], init_energy=0.):
     E = init_energy
     for elem_list in lattice_analysis:
         if len(elem_list) == 1:
-            E += elem_list[0].transfer_map.delta_e
+            for tm in elem_list[0].tms:
+                E += tm.get_delta_e()
             seq.append(elem_list[0])
         elif len(elem_list) == 0:
             continue
         else:
-            delta_e = np.sum([elem.transfer_map.delta_e for elem in elem_list])
+            delta_e = np.sum([tm.get_delta_e() for elem in elem_list for tm in elem.tms])
             lattice = MagneticLattice(elem_list, method=lat.method)
             R = lattice_transfer_map(lattice, energy=E)
             m = Matrix()
@@ -100,9 +110,31 @@ def merger(lat, remaining_types=[], remaining_elems=[], init_energy=0.):
     _logger.debug("element numbers after: " + str(len(new_lat.sequence)))
     return new_lat
 
+def flatten(iterable: Iterator[Any]) -> Generator[Any, None, None]:
+    """Flatten arbitrarily nested iterable.
+    Special case for strings that avoids infinite recursion.  Non iterables passed
+    as arguments are yielded.
 
-flatten = lambda *n: (e for a in n
-                      for e in (flatten(*a) if isinstance(a, (tuple, list)) else (a,)))
+    :param iterable: Any iterable to be flattened.
+    :raises: RecursionError
+
+    """
+    def _flatten(iterable):
+        try:
+            for item in iterable:
+                try:
+                    iter(item)
+                except TypeError:
+                    yield item
+                else:
+                    yield from _flatten(item)
+        except TypeError: # If iterable isn't actually iterable, then yield it.
+            yield iterable
+    try:
+        yield from _flatten(iterable)
+    except RecursionError:
+        raise RecursionError("Maximum recusion reached.  Possibly trying"
+                             " to flatten an infinitely nested iterable.")
 
 
 class MagneticLattice:
@@ -110,22 +142,28 @@ class MagneticLattice:
     sequence - list of the elements,
     start - first element of lattice. If None, then lattice starts from first element of sequence,
     stop - last element of lattice. If None, then lattice stops by last element of sequence,
-    method = MethodTM() - method of the tracking.
+    method - A dictionary that contains the method of the tracking. If nothing is set TransferMap will
+    be used as the global method for all elements. Setting TransferMaps for specific elements is also possible.
+    Notes: If the elements doesn't support the defined transfer map, the default transfer map will be used, which is
+    defined in the specific element class.
+    For example:
+        {"global": SecondTM, "Undulator": UndulatorTestTM }
+        Sets for all elements SecondTM as transfer map, expect for the Undulator elements.
     """
-    def __init__(self, sequence, start=None, stop=None, method=MethodTM()):
+
+    def __init__(self, sequence, start=None, stop=None, method=None):
+        if method is None:
+            method = {'global': TransferMap}
+        if isinstance(method, dict):
+            self.method = method
+        else:
+            self.method = method.to_dict()
+
         self.sequence = list(flatten(sequence))
-        self.method = method
-
-
         self.sequence = self.get_sequence_part(start, stop)
 
         # create transfer map and calculate lattice length
         self.totalLen = 0
-        if not EdgeUtil.check(self):
-            EdgeUtil.add(self)
-
-        if not CouplerKickUtil.check(self):
-            CouplerKickUtil.add(self)
 
         self.update_transfer_maps()
 
@@ -158,6 +196,7 @@ class MagneticLattice:
     def update_transfer_maps(self):
         self.totalLen = 0
         for i, element in enumerate(self.sequence):
+            # TODO: This belongs to the Element Undulator
             if element.__class__ == Undulator:
                 if element.field_file is not None:
                     element.l = element.field_map.l * element.field_map.field_file_rep
@@ -165,16 +204,15 @@ class MagneticLattice:
                         element.l = element.l*0.001
             self.totalLen += element.l
 
-            if element.__class__ == Edge:
+            tm_class_type = self.method.get(element.__class__)
+            if tm_class_type:
+                element.set_tm(tm_class_type)
+            else:
+                tm_class_type = self.method.get('global')
+                if tm_class_type:
+                    element.set_tm(tm_class_type)
 
-                self.update_endings(lat_index=i, element=element, body_elements=(Bend, RBend, SBend), element_util=EdgeUtil)
-
-            if element.__class__ == CouplerKick:
-                self.update_endings(lat_index=i, element=element, body_elements=(Cavity, ), element_util=CouplerKickUtil)
-
-            element.transfer_map = self.method.create_tm(element)
-            _logger.debug("update: " + element.transfer_map.__class__.__name__)
-            if 'pulse' in element.__dict__: element.transfer_map.pulse = element.pulse
+            _logger.debug(f"update: {','.join([tm.__class__.__name__ for tm in element.tms])}")
         return self
 
     def update_endings(self, lat_index, element, body_elements, element_util):
@@ -204,6 +242,37 @@ class MagneticLattice:
         indx_elem = np.where([i.__class__ == element for i in self.sequence])[0]
         return indx_elem
 
+    def find_drifts(self):
+        drift_lengs = []
+        drifts = []
+        for elem in self.sequence:
+            if elem.__class__ == Drift:
+                elem_l = np.around(elem.l, decimals=6)
+                if elem_l not in drift_lengs:
+                    drifts.append(elem)
+                    drift_lengs.append(elem_l)
+        return drifts
+
+    def rem_drifts(self):
+        drifts = {}
+        for i, elem in enumerate(self.sequence):
+            if elem.__class__ == Drift:
+                if not (elem.l in drifts.keys()):
+                    drifts[elem.l] = elem
+                else:
+                    self.sequence[i] = drifts[elem.l]
+
+    def save_as_py_file(self, file_name: str, remove_rep_drifts=True, power_supply=False):
+        """
+        Saves the lattice in a python file.
+        @param file_name: path and python file name where the lattice will be stored
+        @param remove_rep_drifts: removes the drift elements
+        @param power_supply: Writes the power supply ids in the file
+        @return: None
+        """
+        LatticeIO.save_lattice(self, tws0=None, file_name=file_name, remove_rep_drifts=remove_rep_drifts,
+                               power_supply=power_supply)
+
 
 class EndElements:
     suffix_1 = "_1"
@@ -226,170 +295,6 @@ class EndElements:
         pass
 
 
-class EdgeUtil(EndElements):
-    suffix_1 = "_e1"
-    suffix_2 = "_e2"
-
-    def __init__(self):
-        super(EdgeUtil).__init__(self)
-
-    @staticmethod
-    def name_suffix_1():
-        return "_1"
-
-    @staticmethod
-    def name_suffix_2():
-        return "_2"
-
-    @staticmethod
-    def check(lattice):
-        """
-        if there are edges on the ends of dipoles return True, else False
-        """
-        if len(lattice.sequence) < 3:
-            return False
-        for i in range(len(lattice.sequence)-2):
-            prob_edge1 = lattice.sequence[i]
-            elem = lattice.sequence[i+1]
-            prob_edge2 = lattice.sequence[i+2]
-            if elem.__class__ in (SBend, RBend, Bend):  # , "hcor", "vcor"
-                if prob_edge1.__class__ != Edge and prob_edge2.__class__ != Edge:
-                    return False
-        return True
-
-    @staticmethod
-    def add(lattice):
-        n = 0
-        for i in range(len(lattice.sequence)):
-            elem = lattice.sequence[n]
-            if elem.__class__ in (SBend, RBend, Bend) and elem.l != 0.:  # , "hcor", "vcor"
-
-                e_name = elem.id
-
-                if elem.id is None:
-                    e_name = "b_" + str(i)
-
-                e1 = Edge(l=elem.l, angle=elem.angle, k1=elem.k1, edge=elem.e1, tilt=elem.tilt, dtilt=elem.dtilt,
-                          dx=elem.dx, dy=elem.dy, h_pole=elem.h_pole1, gap=elem.gap, fint=elem.fint, pos=1,
-                          eid=e_name + EdgeUtil.suffix_1)
-
-                lattice.sequence.insert(n, e1)
-
-                e2 = Edge(l=elem.l, angle=elem.angle, k1=elem.k1, edge=elem.e2, tilt=elem.tilt, dtilt=elem.dtilt,
-                          dx=elem.dx, dy=elem.dy, h_pole=elem.h_pole2, gap=elem.gap, fint=elem.fintx, pos=2,
-                          eid=e_name + EdgeUtil.suffix_2)
-
-                lattice.sequence.insert(n+2, e2)
-                n += 2
-            n += 1
-
-    @staticmethod
-    def update_first(edge, bend):
-        if bend.l != 0.:
-            edge.h = bend.angle/bend.l
-        else:
-            edge.h = 0
-        edge.l = 0.
-        edge.angle = bend.angle
-        edge.k1 = bend.k1
-        edge.edge = bend.e1
-        edge.tilt = bend.tilt
-        edge.dtilt = bend.dtilt
-        edge.dx = bend.dx
-        edge.dy = bend.dy
-        edge.h_pole = bend.h_pole1
-        edge.gap = bend.gap
-        edge.fint = bend.fint
-        edge.pos = 1
-
-    @staticmethod
-    def update_last(edge, bend):
-        if bend.l != 0.:
-            edge.h = bend.angle/bend.l
-        else:
-            edge.h = 0
-        edge.l = 0.
-        edge.angle = bend.angle
-        edge.k1 = bend.k1
-        edge.edge = bend.e2
-        edge.tilt = bend.tilt
-        edge.dtilt = bend.dtilt
-        edge.dx = bend.dx
-        edge.dy = bend.dy
-        edge.h_pole = bend.h_pole2
-        edge.gap = bend.gap
-        edge.fint = bend.fintx
-        edge.pos = 2
-
-
-class CouplerKickUtil(EndElements):
-    suffix_1 = "_ck1"
-    suffix_2 = "_ck2"
-
-    def __init__(self):
-        super(CouplerKickUtil).__init__(self)
-
-    @staticmethod
-    def check(lattice):
-        """
-        if there are CouplerKicks on the ends of Cavities return True, else False
-        """
-        if len(lattice.sequence) < 3:
-            return False
-        for i in range(len(lattice.sequence)-2):
-            prob_ck1 = lattice.sequence[i]
-            elem = lattice.sequence[i+1]
-            prob_ck2 = lattice.sequence[i+2]
-            if elem.__class__ in (Cavity,):
-                if prob_ck1.__class__ != CouplerKick and prob_ck2.__class__ != CouplerKick:
-                    return False
-        return True
-
-    @staticmethod
-    def add(lattice):
-        n = 0
-        for i in range(len(lattice.sequence)):
-            elem = lattice.sequence[n]
-            if elem.__class__ in (Cavity,) and elem.l != 0.:
-
-                e_name = elem.id
-
-                if elem.id is None:
-                    e_name = "cav_" + str(i)
-
-                e1 = CouplerKick(v=elem.v, phi=elem.phi, freq=elem.freq, vx=elem.vx_up, vy=elem.vy_up,
-                                 vxx=elem.vxx_up, vxy=elem.vxy_up, eid=e_name + CouplerKickUtil.suffix_1)
-
-                lattice.sequence.insert(n, e1)
-
-                e2 = CouplerKick(v=elem.v, phi=elem.phi, freq=elem.freq, vx=elem.vx_down, vy=elem.vy_down,
-                                 vxx=elem.vxx_down, vxy=elem.vxy_down, eid=e_name + CouplerKickUtil.suffix_2)
-
-                lattice.sequence.insert(n+2, e2)
-                n += 2
-            n += 1
-
-    @staticmethod
-    def update_first(ckick, cavity):
-        ckick.v = cavity.v
-        ckick.phi = cavity.phi
-        ckick.freq = cavity.freq
-        ckick.vx = cavity.vx_up
-        ckick.vy = cavity.vy_up
-        ckick.vxx = cavity.vxx_up
-        ckick.vxy = cavity.vxy_up
-
-    @staticmethod
-    def update_last(ckick, cavity):
-        ckick.v = cavity.v
-        ckick.phi = cavity.phi
-        ckick.freq = cavity.freq
-        ckick.vx = cavity.vx_down
-        ckick.vy = cavity.vy_down
-        ckick.vxx = cavity.vxx_down
-        ckick.vxy = cavity.vxy_down
-
-
 def merge_drifts(cell):
     """
     Merge neighboring Drifts in one Drift
@@ -409,7 +314,8 @@ def merge_drifts(cell):
                 new_cell.append(new_elem)
             new_cell.append(elem)
             L = 0.
-    if L != 0: new_cell.append(Drift(l=L))
+    if L != 0:
+        new_cell.append(Drift(l=L))
     print("Merge drift -> Element numbers: before -> after: ", len(cell), "->", len(new_cell))
     return new_cell
 

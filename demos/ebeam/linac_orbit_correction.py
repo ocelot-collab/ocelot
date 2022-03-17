@@ -4,7 +4,6 @@ Linac Orbit Correction.
 S.Tomin. 09.2019
 """
 
-from ocelot import *
 from ocelot.gui.accelerator import *
 import dogleg_lattice as dl
 from ocelot.cpbd.orbit_correction import *
@@ -13,8 +12,7 @@ import seaborn as sns
 import logging
 logging.basicConfig(level=logging.INFO)
 
-method = MethodTM()
-method.global_method = SecondTM
+method = {'global': SecondTM}
 
 # introduce misalignment
 dl.qi_77_i1.dx = -100e-6

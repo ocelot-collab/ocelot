@@ -441,10 +441,10 @@ class SpontanRadEffects(PhysProc):
         """
         rate of energy diffusion
 
-        :param energy: electron beam energy
+        :param energy: electron beam energy [GeV]
         :param Kx: undulator parameter
-        :param lperiod: undulator period
-        :param dz: length of the
+        :param lperiod: undulator period [m]
+        :param dz: length of the [m]
         :return: sigma_gamma/gamma
         """
         gamma = energy / m_e_GeV

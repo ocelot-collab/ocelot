@@ -75,7 +75,6 @@ def test_track_with_energy_shift(lattice, parameter, update_ref_values=False):
     result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=TOL, assert_info=' p - ')
     assert check_result(result1+result2)
 
-
 @pytest.mark.parametrize('parameter', [0, 1, 2])
 def test_track_with_energy_shift_tilted(lattice, parameter, update_ref_values=False):
     """
@@ -125,7 +124,7 @@ def test_track_with_energy_shift_tilted(lattice, parameter, update_ref_values=Fa
         result1 = [None]
     result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=TOL, assert_info=' p - ')
     assert check_result(result1 + result2)
-
+    
 
 def setup_module(module):
 

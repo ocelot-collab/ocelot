@@ -1,5 +1,7 @@
 """Test of the demo file demos/ebeam/csr_ex.py"""
 
+from phys_proc_conf import *
+from unit_tests.params import *
 import os
 import sys
 import copy
@@ -7,9 +9,6 @@ import time
 
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 REF_RES_DIR = FILE_DIR + '/ref_results/'
-
-from unit_tests.params import *
-from phys_proc_conf import *
 
 
 def test_generate_parray(lattice, p_array, parameter=None, update_ref_values=False):
@@ -23,6 +22,7 @@ def test_generate_parray(lattice, p_array, parameter=None, update_ref_values=Fal
     p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
     result = check_dict(p, p_array_ref['p_array'], tolerance=TOL, assert_info=' p - ')
     assert check_result(result)
+
 
 def test_s2current(lattice, p_array, parameter=None, update_ref_values=False):
     """ func generate_parray testing """
@@ -49,7 +49,6 @@ def test_track_smooth(lattice, p_array, parameter, update_ref_values=False):
 
     p_array_track = copy.deepcopy(p_array)
 
-
     navi = Navigator(lattice)
     navi.unit_step = 0.05
 
@@ -65,13 +64,12 @@ def test_track_smooth(lattice, p_array, parameter, update_ref_values=False):
     if update_ref_values:
         return {'tws_track': tws_track, 'p_array': p}
 
-
     tws_track_p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) + '.json')
-
 
     result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
     result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=TOL, assert_info=' p - ')
     assert check_result(result1 + result2)
+
 
 @pytest.mark.parametrize('parameter', [0, 1, 2])
 def test_track_aperture(lattice, p_array, parameter, update_ref_values=False):
@@ -90,9 +88,9 @@ def test_track_aperture(lattice, p_array, parameter, update_ref_values=False):
     if parameter == 0:
         navi.activate_apertures()
     elif parameter == 1:
-        navi.activate_apertures(lattice.sequence[0], lattice.sequence[12])
+        navi.activate_apertures(lattice.sequence[0], lattice.sequence[8])
     else:
-        navi.activate_apertures(lattice.sequence[12])
+        navi.activate_apertures(lattice.sequence[8])
 
     tws_track_wo, p_array_wo = track(lattice, p_array_track, navi)
 
@@ -130,9 +128,9 @@ def test_track_ellipt_aperture(lattice, p_array, parameter, update_ref_values=Fa
     if parameter == 0:
         navi.activate_apertures()
     elif parameter == 1:
-        navi.activate_apertures(lattice.sequence[0], lattice.sequence[12])
+        navi.activate_apertures(lattice.sequence[0], lattice.sequence[8])
     else:
-        navi.activate_apertures(lattice.sequence[12])
+        navi.activate_apertures(lattice.sequence[8])
 
     tws_track_wo, p_array_wo = track(lattice, p_array_track, navi)
 
@@ -147,6 +145,7 @@ def test_track_ellipt_aperture(lattice, p_array, parameter, update_ref_values=Fa
     result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
     result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=TOL, assert_info=' p - ')
     assert check_result(result1 + result2)
+
 
 def test_track_navi_reset_position(lattice, p_array, parameter=None, update_ref_values=False):
     """
@@ -164,7 +163,6 @@ def test_track_navi_reset_position(lattice, p_array, parameter=None, update_ref_
     navi.add_physics_proc(sc, lattice.sequence[0], lattice.sequence[-1])
 
     navi.activate_apertures()
-
 
     tws_track_1, p_array_1 = track(lattice, p_array_track, navi)
 
@@ -193,7 +191,6 @@ def test_track_beam_transform(lattice, p_array, parameter=None, update_ref_value
 
     p_array_track = copy.deepcopy(p_array)
 
-
     navi = Navigator(lattice)
     navi.unit_step = 0.05
 
@@ -213,9 +210,7 @@ def test_track_beam_transform(lattice, p_array, parameter=None, update_ref_value
     if update_ref_values:
         return {'tws_track': tws_track, 'p_array': p}
 
-
     tws_track_p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
-
 
     result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], tolerance=1.0e-12, tolerance_type='absolute', assert_info=' tws_track - ')
     # result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
@@ -232,7 +227,6 @@ def test_track_smooth_csr(lattice, p_array, parameter=None, update_ref_values=Fa
     """
 
     p_array_track = copy.deepcopy(p_array)
-
 
     navi = Navigator(lattice)
     navi.unit_step = 0.05
@@ -253,13 +247,12 @@ def test_track_smooth_csr(lattice, p_array, parameter=None, update_ref_values=Fa
     if update_ref_values:
         return {'tws_track': tws_track, 'p_array': p}
 
-
     tws_track_p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
-
 
     result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
     result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=TOL, assert_info=' p - ')
     assert check_result(result1 + result2)
+
 
 def test_track_smooth_csr_sc(lattice, p_array, parameter=None, update_ref_values=False):
     """
@@ -270,7 +263,6 @@ def test_track_smooth_csr_sc(lattice, p_array, parameter=None, update_ref_values
     """
 
     p_array_track = copy.deepcopy(p_array)
-
 
     navi = Navigator(lattice)
     navi.unit_step = 0.05
@@ -295,12 +287,10 @@ def test_track_smooth_csr_sc(lattice, p_array, parameter=None, update_ref_values
     if update_ref_values:
         return {'tws_track': tws_track, 'p_array': p}
 
-
     tws_track_p_array_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
 
-
     result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
-    result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=1.0e-14, tolerance_type='absolute', assert_info=' p - ')
+    result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=1.0e-13, tolerance_type='absolute', assert_info=' p - ')
     assert check_result(result1 + result2)
 
 
@@ -344,6 +334,7 @@ def test_track_laser_modulator(lattice, p_array, parameter=None, update_ref_valu
     result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=TOL, assert_info=' p - ')
     assert check_result(result1 + result2)
 
+
 def test_track_lsc(lattice, p_array, parameter=None, update_ref_values=False):
     """
     test PhysicsProc LaserModulator
@@ -375,6 +366,7 @@ def test_track_lsc(lattice, p_array, parameter=None, update_ref_values=False):
     result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
     result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=TOL, assert_info=' p - ')
     assert check_result(result1 + result2)
+
 
 def test_track_spontan_rad_effects(lattice, p_array, parameter=None, update_ref_values=False):
     """
@@ -409,6 +401,7 @@ def test_track_spontan_rad_effects(lattice, p_array, parameter=None, update_ref_
     result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=TOL, assert_info=' p - ')
     assert check_result(result1 + result2)
 
+
 def test_dechirper_offaxis(lattice, p_array, parameter=None, update_ref_values=False):
     """
     test PhysicsProc WakeTable
@@ -440,6 +433,7 @@ def test_dechirper_offaxis(lattice, p_array, parameter=None, update_ref_values=F
     result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
     result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=TOL, assert_info=' p - ')
     assert check_result(result1 + result2)
+
 
 @pytest.mark.parametrize('parameter', [0, 1, 2])
 def test_phase_space_aperture(lattice, p_array, parameter, update_ref_values=False):
@@ -500,7 +494,7 @@ def teardown_module(module):
 
 
 def setup_function(function):
-    
+
     f = open(pytest.TEST_RESULTS_FILE, 'a')
     f.write(function.__name__)
     f.close()
@@ -512,11 +506,11 @@ def teardown_function(function):
     f = open(pytest.TEST_RESULTS_FILE, 'a')
     f.write(' execution time is ' + '{:.3f}'.format(time.time() - pytest.t_start) + ' sec\n\n')
     f.close()
-    
+
 
 @pytest.mark.update
 def test_update_ref_values(lattice, p_array, cmdopt):
-    
+
     update_functions = []
     update_functions.append('test_generate_parray')
     update_functions.append("test_s2current")
@@ -538,14 +532,14 @@ def test_update_ref_values(lattice, p_array, cmdopt):
     update_function_parameters['test_track_ellipt_aperture'] = [0, 1, 2]
     update_function_parameters['test_phase_space_aperture'] = [0, 1, 2]
 
-    parametr = update_function_parameters[cmdopt] if cmdopt in update_function_parameters.keys() else ['']
+    parameter = update_function_parameters[cmdopt] if cmdopt in update_function_parameters.keys() else ['']
 
     if cmdopt in update_functions:
-        for p in parametr:
+        for p in parameter:
             p_arr = copy.deepcopy(p_array)
             result = eval(cmdopt)(lattice, p_arr, p, True)
-        
+
             if os.path.isfile(REF_RES_DIR + cmdopt + str(p) + '.json'):
                 os.rename(REF_RES_DIR + cmdopt + str(p) + '.json', REF_RES_DIR + cmdopt + str(p) + '.old')
-            
+
             json_save(result, REF_RES_DIR + cmdopt + str(p) + '.json')

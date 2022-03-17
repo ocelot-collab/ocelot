@@ -6,11 +6,11 @@ In order to overcome this limitation, someone have to change function radiation_
 Sergey Tomin 04.11.2016.
 """
 
-from scipy import interpolate
-from ocelot.cpbd.elements import *
+from ocelot.cpbd.high_order import rk_track_in_field
 from ocelot.cpbd.track import *
 from ocelot.rad.spline_py import *
 from ocelot.common.globals import *
+from ocelot.cpbd.elements.undulator_atom import und_field
 import time
 from ocelot.common.ocelog import *
 import copy
@@ -160,7 +160,7 @@ def integ_beta2(x, y):
         d = D[i]
         # print h, a,b,c,d
         b2 += h * (d * d + h * (c * d + h * (1. / 3. * (c * c + 2 * b * d) + h * (0.5 * (b * c + a * d) + h * (
-                    0.2 * (b * b + 2 * a * c) + h * (1. / 3. * a * b + (a * a * h) / 7.))))))
+            0.2 * (b * b + 2 * a * c) + h * (1. / 3. * a * b + (a * a * h) / 7.))))))
         beta2.append(b2)
         # print beta2
     return np.array(beta2)
@@ -223,43 +223,6 @@ def traj2motion(traj):
     return motion
 
 
-def und_field_py(x, y, z, lperiod, Kx, nperiods=None):
-    kx = 0.
-    kz = 2 * pi / lperiod
-    ky = np.sqrt(kz * kz + kx * kx)
-    c = speed_of_light
-    m0 = m_e_eV
-    B0 = Kx * m0 * kz / c
-    k1 = -B0 * kx / ky
-    k2 = -B0 * kz / ky
-
-    kx_x = kx * x
-    ky_y = ky * y
-    kz_z = kz * z
-
-    cosz = np.cos(kz_z)
-
-    if nperiods is not None:
-        ph_shift = np.pi / 2.
-        heaviside = lambda x: 0.5 * (np.sign(x) + 1)
-        z_coef = (0.25 * heaviside(z) + 0.5 * heaviside(z - lperiod / 2.) + 0.25 * heaviside(z - lperiod)
-                  - 0.25 * heaviside(z - (nperiods - 1) * lperiod) - 0.5 * heaviside(
-                    z - (nperiods - 0.5) * lperiod)
-                  - 0.25 * heaviside(z - nperiods * lperiod))
-        cosz = np.cos(kz_z + ph_shift) * z_coef
-
-    cosx = np.cos(kx_x)
-    sinhy = np.sinh(ky_y)
-    # cosz = np.cos(kz_z + ph_shift)*z_coef
-    Bx = k1 * np.sin(kx_x) * sinhy * cosz  # // here kx is only real
-    By = B0 * cosx * np.cosh(ky_y) * cosz
-    Bz = k2 * cosx * sinhy * np.sin(kz_z)
-    return (Bx, By, Bz)
-
-
-und_field = und_field_py if not nb_flag else nb.jit(forceobj=False)(und_field_py)
-
-
 def energy_loss_und(energy, Kx, lperiod, L, energy_loss=False):
     if energy_loss:
         k = 4. * pi * pi / 3. * ro_e / m_e_GeV
@@ -282,7 +245,7 @@ def sigma_gamma_quat(energy, Kx, lperiod, L):
     gamma = energy / m_e_GeV
     lambda_compt = 2.4263102389e-12  # m
     lambda_compt_r = lambda_compt / 2. / pi
-    f = lambda K: 1.2 + 1. / (K + 1.33 * K * K + 0.4 * K ** 3)
+    def f(K): return 1.2 + 1. / (K + 1.33 * K * K + 0.4 * K ** 3)
     delta_Eq2 = 56. * pi ** 3 / 15. * lambda_compt_r * ro_e * gamma ** 4 / lperiod ** 3 * Kx ** 3 * f(Kx) * L
     sigma_Eq = np.sqrt(delta_Eq2 / (gamma * gamma))
     return sigma_Eq
@@ -304,7 +267,7 @@ def quantum_diffusion(energy, Kx, lperiod, L, quantum_diff=False):
 
 def field_map2field_func(z, By):
     tck = interpolate.splrep(z, By, k=3)
-    func = lambda x, y, z: (0, interpolate.splev(z, tck, der=0), 0)
+    def func(x, y, z): return (0, interpolate.splev(z, tck, der=0), 0)
     return func
 
 
@@ -366,7 +329,7 @@ def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step):
         # //double phase = screen->Phase[ypoint*xpoint*je + xpoint*jy + jx] + faseConst*(ZZ - motion->Z[0]  + gamma2*(IbetX2 + IbetY2 + phaseConstCur - phaseConstIn));
 
         phase = phaseConst * (
-                    ZZ - motion.z[0] + gamma2 * (IbetX2 + IbetY2 + phaseConstCur - phaseConstIn)) + screen.arPhase
+            ZZ - motion.z[0] + gamma2 * (IbetX2 + IbetY2 + phaseConstCur - phaseConstIn)) + screen.arPhase
 
         cosf = np.cos(phase)
         sinf = np.sin(phase)
@@ -386,7 +349,7 @@ def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step):
             IbetX2 = motion.XbetaI2[-1]
             IbetY2 = motion.YbetaI2[-1]
             phase = phaseConst * (motion.z[-1] - motion.z[0] + gamma2 * (
-                        IbetX2 + IbetY2 + prX * prX / LenPntrZ + prY * prY / LenPntrZ - phaseConstIn))
+                IbetX2 + IbetY2 + prX * prX / LenPntrZ + prY * prY / LenPntrZ - phaseConstIn))
             screen.arPhase = screen.arPhase + phase
     return screen
 
@@ -433,7 +396,7 @@ def gintegrator_over_traj_py(Nmotion, Xscr, Yscr, Erad, n_end, gamma, half_step,
 
             # here the constant phase shift was subtracted
             phase = phaseConst * (
-                    z[i] - z[0] + gamma2 * (XbetaI2[i] + YbetaI2[i] + phaseConstCur - phaseConstIn)) + arPhase
+                z[i] - z[0] + gamma2 * (XbetaI2[i] + YbetaI2[i] + phaseConstCur - phaseConstIn)) + arPhase
 
             # phase = phaseConst * (z[i] - z[0] + gamma2 * (XbetaI2[i] + YbetaI2[i] + phaseConstCur)) + arPhase # + (LenPntrConst *2*np.pi * Erad/hc)%(2*np.pi)
             cosf = np.cos(phase)
@@ -452,7 +415,7 @@ def gintegrator_over_traj_py(Nmotion, Xscr, Yscr, Erad, n_end, gamma, half_step,
                 prX = Xscr - x[-1]  # //for pointer nx(z)
                 prY = Yscr - y[-1]  # //for pointer ny(z)
                 phase = phaseConst * (z[-1] - z[0] + gamma2 * (
-                        XbetaI2[-1] + YbetaI2[-1] + prX * prX / LenPntrZ + prY * prY / LenPntrZ - phaseConstIn))
+                    XbetaI2[-1] + YbetaI2[-1] + prX * prX / LenPntrZ + prY * prY / LenPntrZ - phaseConstIn))
                 # phase = phaseConst * (z[-1] - z[0] + gamma2 * (
                 #        XbetaI2[-1] + YbetaI2[-1] + prX * prX / LenPntrZ + prY * prY / LenPntrZ )) # + (LenPntrConst *2*np.pi * Erad/hc)%(2*np.pi)
                 arPhase += phase
@@ -752,7 +715,8 @@ def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy
                         nperiods = elem.nperiods
                     else:
                         nperiods = None
-                    mag_field = lambda x, y, z: und_field(x, y, z, elem.lperiod, elem.Kx, nperiods=nperiods)
+
+                    def mag_field(x, y, z): return und_field(x, y, z, elem.lperiod, elem.Kx, nperiods=nperiods)
             N = int((mag_length * 1500 + 100) * accuracy)
             if hasattr(elem, "npoints") and isinstance(elem.npoints, numbers.Number):
                 N = int((elem.npoints + 100) * accuracy)

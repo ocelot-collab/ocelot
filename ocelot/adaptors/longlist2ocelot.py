@@ -112,16 +112,14 @@ class StructureConverter:
             for key in class_elem.keys():
 
                 if key != 'type':
-                    #print(key, class_elem[key])
                     pos = eval(key + '_pos')
                     if class_elem[key].__class__ == list:
-                        element.__dict__[class_elem[key][0]] = row[pos] * eval(class_elem[key][1])
+                        setattr(element, class_elem[key][0], row[pos] * eval(class_elem[key][1]))
                     else:
-                        element.__dict__[class_elem[key]] = row[pos]
+                        setattr(element, class_elem[key], row[pos])
 
             if row[tilt_pos] != 0:
-                element.__dict__['tilt'] = row[tilt_pos]
-                
+                setattr(element, 'tilt', row[tilt_pos])
         return element, row[s_pos]
 
     def sbend_l_correction(self, element):
@@ -178,4 +176,4 @@ if __name__ == '__main__':
     cell = SC.Longlist2Ocelot('component_list_8.5.1.xls', pos_stop=364, sbend_l_corr=True)
 
     lattice = MagneticLattice(cell)
-    write_lattice(lattice)
+    lattice.save_as_py_file()

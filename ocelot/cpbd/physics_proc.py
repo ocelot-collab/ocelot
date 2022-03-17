@@ -79,6 +79,19 @@ class SaveBeam(PhysProc):
         save_particle_array(filename=self.filename, p_array=p_array)
 
 
+class CopyBeam(PhysProc):
+    def __init__(self, name=""):
+        super().__init__()
+        self.name = name
+        self.parray = None
+
+    def apply(self, parray, dz):
+        self.parray = parray.copy()
+
+    def __repr__(self):
+        return f"<CopyBeam: {self.name}, at={hex(id(self))}>"
+
+
 class SmoothBeam(PhysProc):
     """
     Physics Process for the beam smoothing. Can be applied when number of particles is not enough.
@@ -349,7 +362,7 @@ class EllipticalAperture(PhysProc):
         inds = inds.reshape(inds.shape[0])
         p_array.delete_particles(inds)
 
-        
+
 class BeamTransform(PhysProc):
     """
     Beam matching

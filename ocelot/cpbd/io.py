@@ -5,10 +5,13 @@ module contains lat2input function which creates python input string
 author sergey.tomin
 """
 import os
+import logging
 import numpy as np
 
-from ocelot.adaptors.astra2ocelot import astraBeam2particleArray, particleArray2astraBeam
-from ocelot.adaptors.csrtrack2ocelot import csrtrackBeam2particleArray, particleArray2csrtrackBeam
+from ocelot.adaptors.astra2ocelot import (astraBeam2particleArray,
+                                          particleArray2astraBeam)
+from ocelot.adaptors.csrtrack2ocelot import (csrtrackBeam2particleArray,
+                                             particleArray2csrtrackBeam)
 
 try:
     from ocelot.adaptors.pmd import load_pmd, particle_array_to_particle_group
@@ -16,6 +19,41 @@ except ImportError:
     pass
 
 from ocelot.cpbd.beam import ParticleArray, Twiss, Beam
+
+try:
+    from mpi4py import MPI
+except ImportError:
+    pass
+
+try:
+    import h5py
+except ImportError:
+    pass
+
+_logger = logging.getLogger(__name__)
+
+def is_an_mpi_process():
+    return "OMPI_COMM_WORLD_SIZE" in os.environ
+
+
+class HDF5FileWithMaybeMPI:
+    def __init__ (self, *args, **kwargs):
+        if is_an_mpi_process():
+            _logger.debug("Opening h5py with mpi enabled")
+            kwargs.update({"driver": "mpio", "comm": MPI.COMM_WORLD})
+        self.f = h5py.File(*args, **kwargs)
+
+    def __enter__ (self):
+        return self.f
+
+    def __exit__ (self, exc_type, exc_value, traceback):
+        self.f.close()
+
+def h5py_group_to_parray(group):
+    p_array = ParticleArray()
+    for key in 'E', 'q_array', 'rparticles', 's':
+        p_array.__dict__[key] = np.array(group[key])
+    return p_array
 
 
 def save_particle_array2npz(filename, p_array):

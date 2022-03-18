@@ -5,6 +5,7 @@ from ocelot.cpbd.beam import Twiss, beam_matching
 from scipy import optimize
 from ocelot.utils.acc_utils import slice_bunching
 from ocelot.common.ocelog import *
+from ocelot.cpbd.beam import ParticleArray
 
 _logger = logging.getLogger(__name__)
 
@@ -77,6 +78,22 @@ class SaveBeam(PhysProc):
     def apply(self, p_array, dz):
         _logger.debug(" SaveBeam applied, dz =" + str(dz))
         save_particle_array(filename=self.filename, p_array=p_array)
+
+
+class CopyBeam(PhysProc):
+    """Physics process that copies the ParticleArray instance when applied.  Makes
+    most sense to be attached to zero-length elements (e.g. Marker instances)."""
+    def __init__(self, name: str = ""):
+        super().__init__()
+        self.name = name
+        self.parray = None
+
+    def apply(self, parray: ParticleArray, dz: float) -> None:
+        """Copy the given particle array to self"""
+        self.parray = parray.copy()
+
+    def __repr__(self) -> str:
+        return f"<CopyBeam: {self.name}, at={hex(id(self))}>"
 
 
 class SmoothBeam(PhysProc):

@@ -325,6 +325,7 @@ class Navigator:
         self.unit_step = 1  # unit step for physics processes
         self.proc_kick_elems = []
         self.kill_process = False  # for case when calculations are needed to terminated e.g. from gui
+        self.inactive_processes = [] # processes are sometimes deactivated during tracking
 
     def get_current_element(self):
         if self.n_elem < len(self.lat.sequence):
@@ -340,6 +341,7 @@ class Navigator:
         self.n_elem = 0  # current index of the element in lattice
         self.sum_lengths = 0.  # sum_lengths = Sum[lat.sequence[i].l, {i, 0, n_elem-1}]
         self.process_table = deepcopy(self.ref_process_table)
+        self.inactive_processes = []
 
     def go_to_start(self):
         self.reset_position()
@@ -460,7 +462,8 @@ class Navigator:
 
     def remove_used_processes(self, processes):
         """
-        in case physics processes are applied and do not more needed they are removed from table
+        in case physics processes are applied and do not more needed they are
+        removed from table.  They are moved to self.inactive_processes
 
         :param processes: list of processes are about to apply
         :return: None
@@ -470,6 +473,7 @@ class Navigator:
                 _logger_navi.debug(" Navigator.remove_used_processes: " + p.__class__.__name__)
                 self.process_table.kick_proc_list.remove(p)
                 self.process_table.proc_list.remove(p)
+                self.inactive_processes.append(p)
 
     def get_next_step(self):
         while np.abs(self.z0 - self.lat.totalLen) > 1e-10:

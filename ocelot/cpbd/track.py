@@ -401,13 +401,14 @@ def tracking_step(lat, particle_list, dz, navi):
 
 
 def track(
-    lattice,
-    p_array,
-    navi=None,
-    print_progress=True,
-    calc_tws=True,
-    bounds=None,
-    return_df=False,
+        lattice,
+        p_array,
+        navi=None,
+        print_progress=True,
+        calc_tws=True,
+        bounds=None,
+        return_df=False,
+        overwrite_progress=True,
 ) -> Tuple[Union[List[Twiss], pd.DataFrame], ParticleArray]:
 
     """
@@ -448,13 +449,18 @@ def track(
         tws_track.append(tw)
 
         if print_progress:
-            poc_names = [p.__class__.__name__ for p in proc_list]
-            sys.stdout.write( "\r" + "z = " + str(navi.z0)+" / "+str(lattice.totalLen) + " : applied: " + ", ".join(poc_names)  )
-            sys.stdout.flush()
+            names = [type(p).__name__ for p in proc_list] # applied process names
+            msg = f"z = {navi.z0} / {lattice.totalLen}. Applied: {', '.join(names)}"
+            end = "\n"
+            if overwrite_progress:
+                msg = f"\r{msg}"
+                end = ""
+            print(msg, end=end)
 
     # finalize PhysProcesses
     for p in navi.get_phys_procs():
         p.finalize()
+
     if return_df:
         return twiss_iterable_to_df(tws_track), p_array
 

@@ -425,7 +425,7 @@ class SpontanRadEffects(PhysProc):
             self.lperiod = 2.0 * np.pi * np.abs(self.radius) / gamma * self.K
 
         if self.quant_diff:
-            sigma_Eq = self.sigma_gamma_quant(energy, dz)
+            sigma_Eq = self.sigma_gamma_quant(energy, dz, self.K, self.lperiod, self.type)
             p_array.p()[:] += sigma_Eq * np.random.randn(p_array.n) * self.filling_coeff
 
         if self.energy_loss:
@@ -437,27 +437,29 @@ class SpontanRadEffects(PhysProc):
         U = k * energy ** 2 * self.K ** 2 * dz / self.lperiod ** 2
         return U
 
-    def sigma_gamma_quant(self, energy, dz):
+    @staticmethod
+    def sigma_gamma_quant(energy, dz, K, lperiod, type="planar"):
         """
         rate of energy diffusion
 
         :param energy: electron beam energy [GeV]
+        :param dz: length of the undulator [m]
         :param Kx: undulator parameter
         :param lperiod: undulator period [m]
-        :param dz: length of the [m]
+        :param type: str, undulator type "planar" or "helical"
         :return: sigma_gamma/gamma
         """
         gamma = energy / m_e_GeV
-        k = 2 * np.pi / self.lperiod
+        k = 2 * np.pi / lperiod
 
         lambda_compt = h_eV_s / m_e_eV * speed_of_light  # m
         lambda_compt_r = lambda_compt / 2. / pi
-        if self.type == "helical":
+        if type == "helical":
             f = lambda K: 1.42 * K + 1. / (1 + 1.5 * K + 0.95 * K * K)
         else:
             f = lambda K: 0.6 * K + 1. / (2 + 2.66 * K + 0.8 * K ** 2)
 
-        delta_Eq2 = 14 / 15. * lambda_compt_r * ro_e * gamma ** 4 * k ** 3 * self.K ** 2 * f(self.K) * dz
+        delta_Eq2 = 14 / 15. * lambda_compt_r * ro_e * gamma ** 4 * k ** 3 * K ** 2 * f(K) * dz
         sigma_Eq = np.sqrt(delta_Eq2 / (gamma * gamma))
         return sigma_Eq
 

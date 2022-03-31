@@ -35,6 +35,7 @@ def load_particle_array_from_npz(filename, print_params=False):
     with np.load(filename) as data:
         for key in data.keys():
             p_array.__dict__[key] = data[key]
+    p_array.lost_particle_recorder = p_array.LostParticleRecorder(p_array.n)
     return p_array
 
 

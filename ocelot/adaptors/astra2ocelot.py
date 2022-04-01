@@ -231,7 +231,7 @@ def particleArray2astraBeam(p_array, filename="tytest.ast"):
     astra = np.append(astra, charge_array, axis=1)
     astra = np.append(astra, flag, axis=1)  # 1 - electron, 2 - positron, 3 - protons and 4 - hydrogen ions.
     astra = np.append(astra, flag * 5, axis=1)  # 5 - standard particle
-    np.savetxt(filename, astra, fmt='%.7e')
+    np.savetxt(filename, astra, fmt='%20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %d %d')
 
 
 def emittance_analysis(fileprefix="Exfel", trace_space=True, s_offset=None):

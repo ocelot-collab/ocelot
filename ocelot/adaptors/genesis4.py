@@ -799,7 +799,7 @@ def gen4_lat_str(lat, line_name='LINE', zstop=np.inf):
             m_dumpbeam = getattr(element, 'dumpbeam', 0)
             m_sort = getattr(element, 'sort', 0)
             m_stop = getattr(element, 'stop', 0)
-            s = '{:}: Marker = {{dumpfield = {:}, dumpbeam = {:}, sort = {:}, stop = {:} }};'.format(element_name,
+            s = '{:}: MARKER = {{dumpfield = {:}, dumpbeam = {:}, sort = {:}, stop = {:} }};'.format(element_name,
                                                                                                      m_dumpfield,
                                                                                                      m_dumpbeam, m_sort,
                                                                                                      m_stop)
@@ -1857,8 +1857,9 @@ def read_dpa42parray(filePath, N_part=None, fill_gaps=True):
 
 
 # MOVE TO BEAM
-def write_edist_hdf5(edist, filepath):
+def write_edist_hdf5(edist, filepath, exist_ok=True):
     _logger.info('writing electron distribution to {}'.format(filepath))
+    os.makedirs(filepath[:filepath.rindex(os.path.sep)], exist_ok=True)
     with h5py.File(filepath, 'w') as h5:
         h5.create_dataset('p', data=edist.g)
         h5.create_dataset('t', data=-edist.t)
@@ -1866,7 +1867,8 @@ def write_edist_hdf5(edist, filepath):
         h5.create_dataset('y', data=edist.y)
         h5.create_dataset('xp', data=edist.xp)
         h5.create_dataset('yp', data=edist.yp)
-        h5.create_dataset('charge', data=edist.charge())
+        # h5.create_dataset('charge', data=[edist.charge()])
+        # h5.create_dataset('part_charge', data=[edist.part_charge])
     _logger.debug(ind_str + 'done')
 
 
@@ -1881,14 +1883,22 @@ def read_edist_hdf5(filepath, charge=None):
         edist.y = h5.get('y')[:]
         edist.xp = h5.get('xp')[:]
         edist.yp = h5.get('yp')[:]
-
-        if charge is not None:
-            charge = h5.get('charge')[:]
-            _logger.debug('particle charge is provided: {}'.format(charge))
+        npart = len(edist.g)
+        
+        try:
+            edist.part_charge = h5.get('part_charge')
+            _logger.debug('retrieved edist charge per particle = {}'.format(edist.part_charge))
+        except TyprError:
+            edist.part_charge = None
+            _logger.warn('no part_charge in edist')
+        
+        if charge != None:
+            edist.part_charge = charge / npart
+            _logger.debug('particle charge is overriden to {}'.format(edist.part_charge))
         else:
-            _logger.debug('particle charge is overridden: {}'.format(charge))
-
-    edist.part_charge = charge / edist.g.size
+            if edist.part_charge == None:
+                _logger.warn('particle charge was not provided neither in the file nor as an argument')
+        
     return edist
 
 

@@ -6,16 +6,20 @@ In order to overcome this limitation, someone have to change function radiation_
 Sergey Tomin 04.11.2016.
 """
 
+import copy
+import numbers
+import sys
+import time
+
+
+from scipy.integrate import cumtrapz
+
 from ocelot.cpbd.high_order import rk_track_in_field
 from ocelot.cpbd.track import *
 from ocelot.rad.spline_py import *
 from ocelot.common.globals import *
 from ocelot.cpbd.elements.undulator_atom import und_field
-import time
 from ocelot.common.ocelog import *
-import copy
-from scipy.integrate import cumtrapz
-import numbers
 
 _logger = logging.getLogger(__name__)
 

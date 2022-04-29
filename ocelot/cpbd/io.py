@@ -50,11 +50,10 @@ class HDF5FileWithMaybeMPI:
         self.f.close()
 
 def h5py_group_to_parray(group):
-    p_array = ParticleArray()
+    parray = ParticleArray()
     for key in 'E', 'q_array', 'rparticles', 's':
-        p_array.__dict__[key] = np.array(group[key])
-    return p_array
-
+        setattr(parray, key, np.array(group[key]))
+    return parray
 
 def save_particle_array2npz(filename, p_array):
     np.savez_compressed(filename, rparticles=p_array.rparticles,

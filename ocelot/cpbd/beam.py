@@ -1978,7 +1978,7 @@ def moments_from_parray(parray, dispersions=None):
 
 def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
                     sigma_tau=1e-3, sigma_p=1e-4, chirp=0.01, charge=5e-9, nparticles=200000, energy=0.13,
-                    tau_trunc=None, tws=None):
+                    tau_trunc=None, tws=None, shape="gauss"):
     """
     Method to generate ParticleArray with gaussian distribution.
 
@@ -1997,6 +1997,7 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
     :param energy: beam energy in [GeV], 0.13 [GeV]
     :param tau_trunc: None, if not [float] - truncated gauss distribution in "tau" direction.
     :param tws: None, if Twiss obj - the beam is matched to twiss params.
+    :param shape: "gauss", shape of the beam current profile. Gaussian distribution by default. If not "gauss" - rectangular
     :return: ParticleArray
     """
 
@@ -2012,8 +2013,10 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
     if tau_trunc is None:
         tau = np.random.randn(nparticles) * sigma_tau
     else:
-        tau = truncnorm.rvs(tau_trunc, -tau_trunc, loc=0, scale=sigma_tau, size=nparticles)
+        tau = truncnorm.rvs(-tau_trunc, tau_trunc, loc=0, scale=sigma_tau, size=nparticles)
     #
+    if shape != "gauss":
+        tau = (np.random.rand(nparticles) - 0.5)*2 * sigma_tau
     dp = np.random.randn(nparticles) * sigma_p
     if sigma_tau != 0:
         dp += chirp * tau / sigma_tau

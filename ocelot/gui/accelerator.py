@@ -845,11 +845,11 @@ def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinea
 
 def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, nbins_y=200,
                 interpolation="bilinear", inverse_tau=False,
-                show_moments=False, nfig=40,
+                show_moments=False, figname=40,
                 title=None, figsize=None, grid=True,
                 filename=None, headtail=True,
                 filter_base=2, filter_iter=2,
-                tau_units="mm"
+                tau_units="mm", **kwargs
                 ):
     """
     Shows e-beam slice parameters (current, emittances, energy spread)
@@ -865,7 +865,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
                         ‘spline36’, ‘hanning’, ‘hamming’, ‘hermite’, ‘kaiser’, ‘quadric’, ‘catrom’, ‘gaussian’, ‘bessel’
     :param inverse_tau: False, inverse tau - head will be on the right side of figure
     :param show_moments: False, show moments (X_mean_slice and Y_mean_slice) in the density distribution
-    :param nfig: number of the figure
+    :param figname: number of the figure or name
     :param title: None or string - title of the figure
     :param figsize: None or e.g. (8, 6)
     :param grid: True, show grid
@@ -889,8 +889,10 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     if inverse_tau:
         p_array_copy.tau()[:] *= -1
     slice_params = global_slice_analysis(p_array_copy, nparts_in_slice, smooth_param, filter_base, filter_iter)
-
-    fig = plt.figure(nfig, figsize=figsize)
+    nfig = kwargs.get('nfig', 40)
+    if nfig != 40:
+        figname = nfig
+    fig = plt.figure(figname, figsize=figsize)
     if title is not None:
         fig.suptitle(title)
     ax_sp = plt.subplot(325)
@@ -1353,7 +1355,9 @@ def show_e_beam_slices(p_array, nparts_in_slice=5000, smooth_param=0.05, inverse
     :param grid: True, show grid
     :param headtail: True, show direction of the bunch
     :param tau_units: [m], [mm] or [um]
-    :param slice: str or float: float - s position of the slice
+    :param slice: None, str or float:
+                                None - ignore
+                                float - s position of the slice
                                 "center" - center of mass of the bunch
                                 "Imax" - current maximum
                                 "Emax" - maximum energy
@@ -1376,7 +1380,6 @@ def show_e_beam_slices(p_array, nparts_in_slice=5000, smooth_param=0.05, inverse
     slice_params = global_slice_analysis(p_array_copy, nparts_in_slice, smooth_param, filter_base, filter_iter)
 
     s = slice_params.s * tau_factor
-
     if isinstance(slice, numbers.Number):
         ind0 = np.argsort(np.abs(s - slice))[0]
     elif isinstance(slice, str):
@@ -1395,11 +1398,17 @@ def show_e_beam_slices(p_array, nparts_in_slice=5000, smooth_param=0.05, inverse
     ax_sp = plt.subplot(325)
     plt.title("Energy spread")
     plt.plot(s, slice_params.se * 1e-3, "b")
-    plt.plot(s[ind0], slice_params.se[ind0] * 1e-3, "bo",
-             label=r"$\sigma_E=$" + str(np.round(slice_params.se[ind0] * 1e-3, 2)) + " keV")
-    plt.legend()
+    fm = "bo"
+    label = r"$\sigma_E=$" + str(np.round(slice_params.se[ind0] * 1e-3, 2)) + " keV"
+    if slice is None:
+        fm = "b"
+        label = None
+    plt.plot(s[ind0], slice_params.se[ind0] * 1e-3, fm, label=label)
+    if slice is not None:
+        plt.legend()
     plt.xlabel(tau_label)
     plt.ylabel(r"$\sigma_E$ [keV]")
+    #plt.ylim([200, 300])
     plt.grid(grid)
 
     ax_em = plt.subplot(323, sharex=ax_sp)
@@ -1407,11 +1416,18 @@ def show_e_beam_slices(p_array, nparts_in_slice=5000, smooth_param=0.05, inverse
     plt.title("Emittances")
 
     plt.plot(s, slice_params.ex, "r")
-    plt.plot(s[ind0], slice_params.ex[ind0], "ro",
-             label=r"$\varepsilon_x^{0} = $" + str(np.round(slice_params.ex[ind0], 2)) + r" $\mu m \cdot rad$")
+    fmx = "ro"
+    fmy = "bo"
+    labelx = r"$\varepsilon_x^{0} = $" + str(np.round(slice_params.ex[ind0], 2)) + r" $\mu m \cdot rad$"
+    labely = r"$\varepsilon_y^{0} = $" + str(np.round(slice_params.ey[ind0], 2)) + r" $\mu m \cdot rad$"
+    if slice is None:
+        fmx = "r"
+        fmy = "b"
+        labelx = r"$\varepsilon_x$"
+        labely = r"$\varepsilon_y$"
+    plt.plot(s[ind0], slice_params.ex[ind0], fmx, label=labelx)
     plt.plot(s, slice_params.ey, "b")
-    plt.plot(s[ind0], slice_params.ey[ind0], "bo",
-             label=r"$\varepsilon_y^{proj} = $" + str(np.round(slice_params.ey[ind0], 2)) + r" $\mu m \cdot rad$")
+    plt.plot(s[ind0], slice_params.ey[ind0], fmy, label=labely)
     plt.legend()
     plt.setp(ax_em.get_xticklabels(), visible=False)
     plt.ylabel(r"$\varepsilon_{x,y}$ [$\mu m \cdot rad$]")
@@ -1422,20 +1438,25 @@ def show_e_beam_slices(p_array, nparts_in_slice=5000, smooth_param=0.05, inverse
 
     if inverse_tau:
         arrow = r"$\Longrightarrow$"
-        label = "head " + arrow
+        label_arr = "head " + arrow
         location = "upper right"
     else:
         arrow = r"$\Longleftarrow$"
-        label = arrow + " head"
+        label_arr = arrow + " head"
         location = "upper left"
 
     plt.plot(s, slice_params.I, "b")
-    plt.plot(s[ind0], slice_params.I[ind0], "bo",
-             label="$I_0=$" + str(np.round(slice_params.I[ind0], 1)) + " A")
+    fm = "bo"
+    label = "$I_0=$" + str(np.round(slice_params.I[ind0], 1)) + " A"
+    if slice is None:
+        fm = "b"
+        label = None
+    plt.plot(s[ind0], slice_params.I[ind0], fm, label=label)
     # label = r"$I_{max}=$" + str(np.round(np.max(slice_params.I), 1))
-    plt.legend()
+    if slice is not None:
+        plt.legend()
     if headtail:
-        leg = ax_c.legend([label], handlelength=0, handletextpad=0, fancybox=True, loc=location)
+        leg = ax_c.legend([label_arr], handlelength=0, handletextpad=0, fancybox=True, loc=location)
         for item in leg.legendHandles:
             item.set_visible(False)
     plt.setp(ax_c.get_xticklabels(), visible=False)
@@ -1445,11 +1466,18 @@ def show_e_beam_slices(p_array, nparts_in_slice=5000, smooth_param=0.05, inverse
     ax_alpha = plt.subplot(326, sharex=ax_sp)
     plt.title(r"$\alpha_{x,y}$")
     plt.plot(s, slice_params.alpha_x, "r")
-    plt.plot(s[ind0], slice_params.alpha_x[ind0], "ro",
-             label=r"$\alpha_x=$" + str(np.round(slice_params.alpha_x[ind0], 2)))
+    fmx = "ro"
+    fmy = "bo"
+    labelx = r"$\alpha_x=$" + str(np.round(slice_params.alpha_x[ind0], 2))
+    labely = r"$\alpha_y=$" + str(np.round(slice_params.alpha_y[ind0], 2))
+    if slice is None:
+        fmx = "r"
+        fmy = "b"
+        labelx = r"$\alpha_x$"
+        labely = r"$\alpha_y$"
+    plt.plot(s[ind0], slice_params.alpha_x[ind0], fmx, label=labelx)
     plt.plot(s, slice_params.alpha_y, "b")
-    plt.plot(s[ind0], slice_params.alpha_y[ind0], "bo",
-             label=r"$\alpha_y=$" + str(np.round(slice_params.alpha_y[ind0], 2)))
+    plt.plot(s[ind0], slice_params.alpha_y[ind0], fmy, label=labely)
     plt.legend()
     plt.xlabel(tau_label)
     plt.ylabel(r"$\alpha_{x,y}$")
@@ -1458,11 +1486,18 @@ def show_e_beam_slices(p_array, nparts_in_slice=5000, smooth_param=0.05, inverse
     ax_b = plt.subplot(324, sharex=ax_sp)
     plt.title(r"$\beta_{x,y}$")
     plt.plot(s, slice_params.beta_x, "r")
-    plt.plot(s[ind0], slice_params.beta_x[ind0], "ro",
-             label=r"$\beta_x=$" + str(np.round(slice_params.beta_x[ind0], 2)) + " m")
+    fmx = "ro"
+    fmy = "bo"
+    labelx = r"$\beta_x=$" + str(np.round(slice_params.beta_x[ind0], 2)) + " m"
+    labely = r"$\beta_y=$" + str(np.round(slice_params.beta_y[ind0], 2)) + " m"
+    if slice is None:
+        fmx = "r"
+        fmy = "b"
+        labelx = r"$\beta_x$"
+        labely = r"$\beta_y$"
+    plt.plot(s[ind0], slice_params.beta_x[ind0], fmx, label=labelx)
     plt.plot(s, slice_params.beta_y, "b")
-    plt.plot(s[ind0], slice_params.beta_y[ind0], "bo",
-             label=r"$\beta_y=$" + str(np.round(slice_params.beta_y[ind0], 2)) + " m")
+    plt.plot(s[ind0], slice_params.beta_y[ind0], fmy, label=labely)
     plt.setp(ax_b.get_xticklabels(), visible=False)
     plt.ylabel(r"$\beta_{x,y}$")
     plt.grid(grid)
@@ -1472,13 +1507,19 @@ def show_e_beam_slices(p_array, nparts_in_slice=5000, smooth_param=0.05, inverse
     plt.title(r"Longitudinal phase space")
     MeV = 1e-6
     plt.plot(s, slice_params.me * MeV, "r")
-    plt.plot(s[ind0], slice_params.me[ind0] * MeV, "ro",
-             label=r"$E_0=$" + str(np.round(slice_params.me[ind0] * MeV, 1)) + " MeV")
+    fm = "ro"
+    label = r"$E_0=$" + str(np.round(slice_params.me[ind0] * MeV, 1)) + " MeV"
+    if slice is None:
+        fm = "r"
+        label = None
+    plt.plot(s[ind0], slice_params.me[ind0] * MeV, fm, label=label)
     # plt.plot(slice_params.s[ind0] * tau_factor, bx, "ro", label=r"$\beta_x=$"+str(np.round(bx, 2)))
     plt.setp(ax_me.get_xticklabels(), visible=False)
     plt.ylabel(r"$E$ [MeV]")
+    plt.ylim([17100, 17300])
     plt.grid(grid)
-    plt.legend()
+    if slice is not None:
+        plt.legend()
     if filename is not None:
         plt.savefig(filename)
 
@@ -1513,7 +1554,7 @@ def beam_jointplot(p_array, show_plane="x", nparts_in_slice=5000, smooth_param=0
     slice_params = global_slice_analysis(p_array_copy, nparts_in_slice, smooth_param, 2, 2)
 
     fig = plt.figure(nfig, figsize=figsize)
-    if title != None:
+    if title is not None:
         fig.suptitle(title)
 
     ax_top = plt.subplot(211)

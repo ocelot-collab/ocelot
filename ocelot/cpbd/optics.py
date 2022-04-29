@@ -58,7 +58,7 @@ class MethodTM:
         res = self.params
         if self.params.get('global') != self.global_method:
             res['global'] = self.global_method
-        if not self.params.get('nKick') != self.nkick:
+        if not self.params.get('nkick') != self.nkick:
             res['nkick'] = self.nkick
 
         # OLD BEHAVIOR: old CorrectorTM has been splitted in First Order and Second Order to keep

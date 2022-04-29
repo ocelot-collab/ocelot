@@ -11,8 +11,7 @@ from ocelot.cpbd.optics import lattice_transfer_map
 import logging
 import re
 from collections import defaultdict
-from typing import Mapping, Sequence, Tuple, Callable
-
+from typing import Mapping, Sequence, Tuple, Callable, Any, Generator, Iterator
 import numpy as np
 
 _logger = logging.getLogger(__name__)
@@ -118,9 +117,31 @@ def merger(lat, remaining_types=None, remaining_elems=None, init_energy=0.):
     _logger.debug("element numbers after: " + str(len(new_lat.sequence)))
     return new_lat
 
+def flatten(iterable: Iterator[Any]) -> Generator[Any, None, None]:
+    """Flatten arbitrarily nested iterable.
+    Special case for strings that avoids infinite recursion.  Non iterables passed
+    as arguments are yielded.
 
-flatten = lambda *n: (e for a in n
-                      for e in (flatten(*a) if isinstance(a, (tuple, list)) else (a,)))
+    :param iterable: Any iterable to be flattened.
+    :raises: RecursionError
+
+    """
+    def _flatten(iterable):
+        try:
+            for item in iterable:
+                try:
+                    iter(item)
+                except TypeError:
+                    yield item
+                else:
+                    yield from _flatten(item)
+        except TypeError: # If iterable isn't actually iterable, then yield it.
+            yield iterable
+    try:
+        yield from _flatten(iterable)
+    except RecursionError:
+        raise RecursionError("Maximum recusion reached.  Possibly trying"
+                             " to flatten an infinitely nested iterable.")
 
 
 class MagneticLattice:

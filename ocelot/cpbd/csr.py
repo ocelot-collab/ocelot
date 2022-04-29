@@ -104,6 +104,10 @@ def sample_1(i, a, b, c):
     return y
 
 
+class CSRConfigurationError(RuntimeError):
+    pass
+
+
 class Smoothing:
     def __init__(self):
         self.print_log = False
@@ -861,12 +865,18 @@ class CSR(PhysProc):
             self.napply = 0
             self.total_wake = 0
 
+        if self.energy is None and self.rk_traj:
+            raise CSRConfigurationError(
+                "RK trajectory calc set but CSR.energy left unset."
+            )
+
         self.z_csr_start = sum([p.l for p in lat.sequence[:self.indx0]])
         p = Particle()
         beta = 1. if self.energy is None else np.sqrt(1. - 1./(self.energy/m_e_GeV)**2)
         self.csr_traj = np.transpose([[0, p.x, p.y, p.s, p.px, p.py, 1.]])
-        if Undulator in [elem.__class__ for elem in lat.sequence[self.indx0:self.indx1+1]]:
+        if Undulator in [elem.__class__ for elem in lat.sequence[self.indx0:self.indx1+1]] and not self.rk_traj:
             self.rk_traj = True
+            logger.warning("CSR: Undulator element is in CSR section --> rk_traj = True")
         for elem in lat.sequence[self.indx0:self.indx1+1]:
 
             if elem.l == 0:

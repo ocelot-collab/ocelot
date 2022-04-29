@@ -120,7 +120,7 @@ class SectionLattice:
                 tws0 = tws[-1]
                 tws_whole = np.append(tws_whole, tws)
         self.tws_current = tws_whole
-        self.lat_current = MagneticLattice(copy.deepcopy(seq_current), method=MethodTM({'global': SecondTM}))
+        self.lat_current = MagneticLattice(copy.deepcopy(seq_current), method={'global': SecondTM})
         return new_sections
 
     def track_sections(self, sections, p_array, config=None, force_ext_p_array=False, coupler_kick=False, verbose=True):

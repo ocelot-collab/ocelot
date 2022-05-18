@@ -20,7 +20,7 @@ from ocelot.cpbd.beam import *
 from ocelot.cpbd.errors import *
 from ocelot.cpbd.elements import *
 from ocelot.cpbd.physics_proc import PhysProc
-from ocelot.cpbd.io import is_an_mpi_process, HDF5FileWithMaybeMPI
+from ocelot.cpbd.io import is_an_mpi_process, ParameterScanFile
 from ocelot.cpbd.physics_proc import CopyBeam
 
 _logger = logging.getLogger(__name__)
@@ -570,7 +570,6 @@ class ParameterScanner:
     :param markers: List of Marker instances.
 
     """
-    N_CORES = mp.cpu_count()
     # For now user should ensure nprocesses is not great than number of jobs in mpi
     # case.  otherwise empty output groups are made.
     def __init__(self,
@@ -595,16 +594,13 @@ class ParameterScanner:
                 "parameter_values length doesn't match number of parrays"
             )
 
-    def scan(self, filename: str, nproc: int = 1):
-        """Run the parameter scan, possibly across multiple cores.  MPI is
-        automatically detected if used, where nproc will then have no effect.
+    def prepare_navigator(self,
+                          _value: Any = None,
+                          _parray0: Optional[ParticleArray] = None,
+                          _job_index: Optional[int] = None) -> Navigator:
+        return copy.deepcopy(self.navigator)
 
-        :param nproc: Number of processes to spawn.  If set to -1, then spawn a
-        number of cores equal to the number of CPUs on this computer.
-
-        """
-
-        filename = os.fspath(filename)
+    def generate_unique_navigators_with_parray0s(self):
         # Instantiate a navigator for each parameter.
         parray0s = self._prepare_parray0s()
         navigators = []
@@ -612,30 +608,10 @@ class ParameterScanner:
             parray0 = parray0s[job_index]
             navi = self.prepare_navigator(v, parray0, job_index)
             navigators.append(navi)
+        self._attach_dump_processes_to_markers(navigators)
+        return navigators, parray0s
 
-        # Map of scanned parameter values to corresponding track arg pack to be
-        # run.
-        args = []
-        for i in range(self.njobs):
-            navigator = navigators[i]
-            parray0 = parray0s[i]
-            # Prepare arguments for the processes.  Each one gets a differently
-            # prepared navigator and a copy of the parray.
-            track_args = _TrackArgs(navigator.lat, parray0.copy(), navigator,
-                                    job_index=i)
-
-            args.append(track_args)
-
-        with HDF5FileWithMaybeMPI(filename, "w") as h5f:
-            self._prepare_h5_output(h5f, parray0s)
-            self._attach_dump_processes_to_markers(navigators, h5f)
-
-            if IS_MPI:
-                self._run_mpi(args, h5f)
-            else:
-                self._run_pool(args, h5f, nproc)
-
-    def _attach_dump_processes_to_markers(self, navigators: Iterable[Navigator], f):
+    def _attach_dump_processes_to_markers(self, navigators: Iterable[Navigator]):
         sequence = self.navigator.lat.sequence
         marker_locations = [sequence.index(m) for m in self.markers]
         for navi in navigators:
@@ -645,11 +621,22 @@ class ParameterScanner:
                 process = CopyBeam(marker.id)
                 navi.add_physics_proc(process, marker, marker)
 
-    def prepare_navigator(self,
-                          _value: Any,
-                          _parray0: ParticleArray,
-                          _job_index: int) -> Navigator:
-        return copy.deepcopy(self.navigator)
+    def prepare_track_payloads(self, navigators, parray0s):
+        payloads = []
+        for i in range(self.njobs):
+            navigator = navigators[i]
+            parray0 = parray0s[i]
+            # Prepare arguments for the processes.  Each one gets a differently
+            # prepared navigator and a copy of the parray.
+            payload = TrackPayload(navigator.lat, parray0.copy(), navigator,
+                                      job_index=i)
+
+            payloads.append(payload)
+        return payloads
+
+    @property
+    def njobs(self) -> int:
+        return len(self.parameter_values)
 
     def _prepare_parray0s(self) -> ParticleArray:
         # Either given a list of ParticleArray instances or a single one.  If a
@@ -660,66 +647,81 @@ class ParameterScanner:
             raise ValueError(f"Parameter values len != [parray0]")
         return self.parray0 # Then it is an iterable of ParticleArray instances
 
-    @property
-    def njobs(self) -> int:
-        return len(self.parameter_values)
+    def scan(self, filename: str, nproc: int = 1):
+        """Run the parameter scan, possibly across multiple cores.  MPI is
+        automatically detected if used, where nproc will then have no effect.
 
-    def _run_pool(self, track_payloads: Iterable[_TrackArgs], h5f, nproc: int) -> None:
+
+        :param nproc: Number of processes to spawn.  If set to -1, then spawn a
+        number of cores equal to the number of CPUs on this computer.
+
+        """
+
+        # Map of scanned parameter values to corresponding track arg pack to be
+        # run.
+        navigators, parray0s = self.generate_unique_navigators_with_parray0s()
+        args = self.prepare_track_payloads(navigators, parray0s)
+        with ParameterScanFile(filename, "w") as psf:
+            psf.init_from_parameter_scanner(self)
+            if is_an_mpi_process():
+                self._run_mpi(args, psf)
+            else:
+                self._run_pool(args, psf, nproc)
+
+    def _run_pool(self, track_payloads: Iterable[TrackPayload], psf, nproc: int) -> None:
         # TODO Better:
         # https://stackoverflow.com/questions/15704010/write-data-to-hdf-file-using-multiprocessing
         if nproc == -1: # Spawn as many jobs as possibly or necessary.
-            nproc = min(self.njobs, self.N_CORES)
-        # Convert each set of _TrackArg instances in track_payloads to tuples
-        # for the sake of starmap.
-        track_tuples = [astuple(t) for t  in track_payloads]
+            nproc = min(self.njobs, mp.cpu_count())
+
+        # outqueue = mp.Queue()
+        # inqueue = mp.Queue()
+        # # Process dedicated to writing output
+        # output_proc = mp.Process(target=_handle_process_output, args=(outqueue, ))
+
         with mp.Pool(nproc) as p:
-            results = p.starmap(_track_and_get_dumps, track_tuples)
+            results = p.map(TrackPayload.as_function, track_payloads)
 
         parray0s = [a.parray0 for a in track_payloads]
         parray1s = [x[0] for x in results]
-        dumps = [x[1] for x in results]
+        all_jobs_dumps = [x[1] for x in results]
 
         # Write input and output arrays, maybe also output array for no physics.
         for job_index, parray0 in enumerate(parray0s):
-            parray1 = parray1s[job_index]
-            job_name = self._job_index_to_name(job_index)
-            self._write_output(h5f, job_name, parray0, parray1)
+            psf.write_parray0(job_index, parray0)
+            psf.write_parray1(job_index, parray1s[job_index])
 
         # Write marker parrays.
-        for j, job_dumps in enumerate(dumps):
-            for dump in job_dumps:
-                job_name = self._job_index_to_name(j)
-                group = h5f[f"{job_name}/markers/{dump.name}"]
-                self._write_beam_to_group(group, dump.parray)
+        for job_index, one_jobs_dumps in enumerate(all_jobs_dumps):
+            for dump in one_jobs_dumps:
+                psf.write_parray_marker(job_index, dump.name, dump.parray)
 
-    def _run_mpi(self, all_track_args: Iterable[_TrackArg], h5f) -> None:
-        job_indices = self._get_job_indices_for_this_core()
-        this_cores_track_args = [all_track_args[i] for i in job_indices]
+    def _run_mpi(self, payloads: Iterable[TrackPayload], psf) -> None:
+        job_indices = self._get_job_indices_for_this_mpi_core()
+        this_cores_track_args = [payloads[i] for i in job_indices]
         if not job_indices: # If given no jobs to run on this core, do nothing
             return
 
-        for job_index, track_args in zip(job_indices, this_cores_track_args):
-            parray0 = track_args.parray0.copy()
-            parray1, dumps = _track_and_get_dumps(track_args.lattice,
-                                                  track_args.parray0,
-                                                  navi=track_args.navigator,
-                                                  job_index=track_args.job_index)
-            job_name = self._job_index_to_name(job_index)
-            self._write_output(h5f, job_name, parray0, parray1)
+        for payload in payloads:
+            job_index = payload.job_index
+            parray0 = payload.parray0.copy()
+            parray1, dumps = payload.run_and_get_dumps()
+
+            psf.write_parray0(job_index, parray0)
+            psf.write_parray1(job_index, parray1)
+
             for dump in dumps:
-                job_name = self._job_index_to_name(job_index)
-                group = h5f[f"{job_name}/markers/{dump.name}"]
-                self._write_beam_to_group(group, dump.parray)
+                psf.write_parray_marker(job_index, dump.name, dump.parray)
 
             _logger.info(
                 f"Written marker distributions for %s at %s",
-                job_name, RANK
+                job_index, RANK
             )
 
         _logger.info("Finished all parameters to be scanned"
-                     f" at {RANK=} and results written to {h5f.filename}")
+                     f" at {RANK=} and results written to {psf.filename}")
 
-    def _get_job_indices_for_this_core(self) -> List[int]:
+    def _get_job_indices_for_this_mpi_core(self) -> List[int]:
         all_job_indices = range(self.njobs)
         this_cores_job_indices = np.array_split(all_job_indices, N_CORES)[RANK]
         # Converting to a list actually matters because bool(np.array([0])) is
@@ -727,106 +729,9 @@ class ParameterScanner:
         this_cores_job_indices = list(this_cores_job_indices)
         return this_cores_job_indices
 
-    def _prepare_h5_output(self, h5f, parray0s: Iterable[ParticleArray]) -> None:
-        # You need to make EVERY group and EVERY dataset in EVERY core when using
-        # MPI-enabled h5py.  This is documented but also if you don't do it, it
-        # won't fail loudly, you'll just get weird behaviour (e.g. all datasets the
-        # same, blank, etc..)
-
-        # Storing a bit of metadata so the file is self-descripting.
-        # Have to convert unicode strings to ascii here before saving.
-        marker_names = np.array([e.id.encode("ascii", "ignore") for e in self.markers])
-        h5f.create_dataset("marker_names", data=marker_names)
-        job_names = [self._job_index_to_name(ji) for ji in range(self.njobs)]
-        job_names = np.array([jname.encode("ascii") for jname in job_names])
-        h5f.create_dataset("job_names", data=job_names)
-
-        # For each job make a group and intialise its contents
-        for job_index, _ in enumerate(self.parameter_values):
-            this_parray0 = parray0s[job_index]
-            job_name = self._job_index_to_name(job_index)
-            parameter = self.parameter_values[job_index]
-            self._initialise_one_root_level_group(h5f, job_name, this_parray0,
-                                                  parameter)
-
-    def _initialise_one_root_level_group(self, h5f, job_name: str,
-                                         parray0: ParticleArray,
-                                         parameter: Any) -> None:
-        """Initialises a group of the kind found at the root level of the file and
-        everything within it."""
-        group = h5f.create_group(f"{job_name}")
-        g0 = group.create_group("parray0")
-         # init with specific parray0 in case they each have different lengths.
-        self._init_h5_parray_group(g0, parray0)
-        g1 = group.create_group("parray1")
-        self._init_h5_parray_group(g1, parray0)
-        group["parameter"] = parameter
-        group["parameter-name"] = np.string_(self.parameter_name)
-
-        # Initialise marker parray output.
-        gm = group.create_group("markers")
-        for marker in self.markers:
-            self._init_h5_parray_group(gm.create_group(marker.id), parray0)
-
-    def _write_output(self, h5f, job_name: str, parray0: ParticleArray, parray1:
-                      ParticleArray) -> None:
-        # job_index provides where the particle array will be written.
-        self._write_beam_to_group(h5f[f"{job_name}/parray0"], parray0)
-        self._write_beam_to_group(h5f[f"{job_name}/parray1"], parray1)
-
-    @staticmethod
-    def _job_index_to_name(job_index: int) -> str:
-        return f"run-{job_index}"
-
-    @staticmethod
-    def _init_h5_parray_group(group, parray0: ParticleArray) -> None:
-        """if empty ignore parray0 and initialise to empty shape"""
-        group.create_dataset("rparticles", shape=parray0.rparticles.shape)
-        group.create_dataset("q_array", shape=parray0.q_array.shape)
-        group.create_dataset("E", shape=())
-        group.create_dataset("s", shape=())
-
-    @staticmethod
-    def _write_beam_to_group(group, parray: ParticleArray) -> None:
-        group["rparticles"][:] = parray.rparticles
-        group["q_array"][:] = parray.q_array
-        group["E"][()] = parray.E
-        group["s"][()] = parray.s
-
-
-def _track_and_get_dumps(
-        lattice: MagneticLattice,
-        p_array: ParticleArray,
-        navi: Optional[Navigator] = None,
-        print_progress: bool = True,
-        calc_tws: bool =True,
-        bounds: Optional[Tuple[float, float]] = None,
-        return_df: bool = False,
-        overwrite_progress: bool = False,
-        job_index: Optional[int] = None) -> Tuple[ParticleArray, List[CopyBeam]]:
-
-    _logger.info("Starting tracking for job number %s.", job_index)
-
-    _, parray1 = track(lattice=lattice,
-                       p_array=p_array,
-                       navi=navi,
-                       print_progress=print_progress,
-                       calc_tws=calc_tws,
-                       bounds=bounds,
-                       return_df=return_df,
-                       overwrite_progress=overwrite_progress)
-
-    marker_dump_processes = []
-    for process in navi.inactive_processes:
-        if isinstance(process, CopyBeam):
-            marker_dump_processes.append(process)
-
-    _logger.info("Finished tracking for job number %s.", job_index)
-
-    return parray1, marker_dump_processes
 
 @dataclass
-class _TrackArgs:
+class TrackPayload:
     lattice: MagneticLattice
     parray0: ParticleArray
     navigator: Navigator
@@ -836,8 +741,33 @@ class _TrackArgs:
     print_progress: bool = True
     overwrite_progress: bool = False
     job_index: int = 0
+    kwargs: Optional[Mapping[str, Any]] = None
 
+    def run_and_get_dumps(self):
+        _logger.info("Starting tracking for job number %s.", self.job_index)
 
+        _, parray1 = track(lattice=self.lattice,
+                           p_array=self.parray0,
+                           navi=self.navigator,
+                           print_progress=self.print_progress,
+                           calc_tws=self.calc_tws,
+                           bounds=self.bounds,
+                           return_df=self.return_df,
+                           overwrite_progress=self.overwrite_progress)
+
+        marker_dump_processes = []
+        for process in self.navigator.inactive_processes:
+            if isinstance(process, CopyBeam):
+                marker_dump_processes.append(process)
+
+        _logger.info("Finished tracking for job number %s.", self.job_index)
+
+        return parray1, marker_dump_processes
+
+    @staticmethod
+    def as_function(payload):
+        """For use with pool.map"""
+        return payload.run_and_get_dumps()
 
 
 class UnitStepScanner(ParameterScanner):

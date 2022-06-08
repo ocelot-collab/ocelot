@@ -2,20 +2,22 @@
 definition of particles, beams and trajectories
 """
 import os
-
-from ocelot.common.globals import *
-from ocelot.common.math_op import find_nearest_idx
-from scipy.special import factorial
+from typing import TypeVar, Any, Union, Iterable
 from copy import deepcopy
-from typing import Iterable
+
+import pandas as pd
+from scipy.special import factorial
 from scipy import interpolate
 from scipy.signal import savgol_filter
 from scipy.stats import truncnorm
+
+from ocelot.common.globals import *
+from ocelot.common.math_op import find_nearest_idx
 from ocelot.common.ocelog import *
 from ocelot.cpbd.reswake import pipe_wake
 
-import pandas as pd
 
+TypeParticleArray = TypeVar("TypeParticleArray", bound="ParticleArray")
 
 _logger = logging.getLogger(__name__)
 
@@ -941,6 +943,9 @@ class ParticleArray:
         self.rparticles = np.delete(self.rparticles, inds, 1)
         self.q_array = np.delete(self.q_array, inds, 0)
 
+    def copy(self) -> TypeParticleArray:
+        """Return a copy of this ParticleArray instance."""
+        return deepcopy(self)
 
 def recalculate_ref_particle(p_array):
     pref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV

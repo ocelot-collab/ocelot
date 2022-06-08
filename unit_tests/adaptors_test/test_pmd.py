@@ -5,13 +5,13 @@ import pytest
 
 try:
     import pmd_beamphysics as pmd
-    from ocelot.adaptors import pmd as pmd_adaptor
-    IS_PMD_INSTALLED = True
-except:
+except ImportError:
     IS_PMD_INSTALLED = False
+else:
+    IS_PMD_INSTALLED = True
+    from ocelot.adaptors import pmd as pmd_adaptor
 
-
-# Define decorator to skip tests if Wake-T is not installed.
+# Define decorator to skip tests if pmd_beamphysics is not installed.
 only_if_pmd_installed = pytest.mark.skipif(
     not IS_PMD_INSTALLED, reason='PMD required to run tests')
 

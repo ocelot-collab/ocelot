@@ -1,22 +1,32 @@
-__author__ = 'Sergey Tomin'
-"""
-can read different types of files. By default, mag_file is in [mm] .
-for python version, only vertical component of magnetic field (By) is taken into account.
-In order to overcome this limitation, someone have to change function radiation_py.field_map2field_func(z, By).
-Sergey Tomin 04.11.2016.
+"""can read different types of files. By default, mag_file is in [mm] . for
+python version, only vertical component of magnetic field (By) is taken into
+account. In order to overcome this limitation, someone have to change function
+radiation_py.field_map2field_func(z, By). Sergey Tomin 04.11.2016.
+
 """
 
-from ocelot.cpbd.high_order import rk_track_in_field
-from ocelot.cpbd.track import *
-from ocelot.rad.spline_py import *
-from ocelot.common.globals import *
-from ocelot.cpbd.elements.undulator_atom import und_field
-import time
-from ocelot.common.ocelog import *
 import copy
-from scipy.integrate import cumtrapz
+import logging
 import numbers
+import sys
+import time
+from math import pi
 
+import numpy as np
+from scipy.integrate import cumtrapz
+from scipy.interpolate import splrep, splev
+
+from ocelot.rad.spline_py import cspline_coef
+from ocelot.common.globals import m_e_GeV, h_eV_s, q_e, speed_of_light, ro_e
+from ocelot.cpbd.elements.undulator_atom import und_field
+from ocelot.cpbd.elements import Undulator
+from ocelot.cpbd.high_order import rk_track_in_field
+from ocelot.cpbd import track
+from ocelot.cpbd import optics
+from ocelot.cpbd import beam
+import ocelot.cpbd.magnetic_lattice as mlattice
+
+__author__ = 'Sergey Tomin'
 _logger = logging.getLogger(__name__)
 
 try:
@@ -143,8 +153,8 @@ class BeamTraject:
 
 
 def bspline(x, y, x_new):
-    tck = interpolate.splrep(x, y, s=0)
-    ynew = interpolate.splev(x_new, tck, der=0)
+    tck = splrep(x, y, s=0)
+    ynew =splev(x_new, tck, der=0)
     return ynew
 
 
@@ -266,8 +276,8 @@ def quantum_diffusion(energy, Kx, lperiod, L, quantum_diff=False):
 
 
 def field_map2field_func(z, By):
-    tck = interpolate.splrep(z, By, k=3)
-    def func(x, y, z): return (0, interpolate.splev(z, tck, der=0), 0)
+    tck = splrep(z, By, k=3)
+    def func(x, y, z): return (0, splev(z, tck, der=0), 0)
     return func
 
 
@@ -511,13 +521,13 @@ def radiation_py(gamma, traj, screen):
     return 1
 
 
-def calculate_radiation(lat, screen, beam, energy_loss=False, quantum_diff=False, accuracy=1, end_poles=False):
+def calculate_radiation(lat, screen, ebeam, energy_loss=False, quantum_diff=False, accuracy=1, end_poles=False):
     """
     Function to calculate radation from the electron beam.
 
     :param lat: MagneticLattice should include element Undulator
     :param screen: Screen class
-    :param beam: Beam class, the radiation is calculated from one electron
+    :param ebeam: Beam class, the radiation is calculated from one electron
     :param energy_loss: False, if True includes energy loss after each period
     :param quantum_diff: False, if True introduces random energy kick
     :param accuracy: 1, scale for trajectory points number
@@ -527,21 +537,21 @@ def calculate_radiation(lat, screen, beam, energy_loss=False, quantum_diff=False
 
     screen.update()
 
-    if beam.__class__ is Beam:
-        p = Particle(x=beam.x, y=beam.y, px=beam.xp, py=beam.yp, E=beam.E)
-        p_array = ParticleArray()
+    if isinstance(ebeam, beam.Beam):
+        p = beam.Particle(x=ebeam.x, y=ebeam.y, px=ebeam.xp, py=ebeam.yp, E=ebeam.E)
+        p_array = beam.ParticleArray()
         p_array.list2array([p])
 
-    # elif beam.__class__ is ParticleArray:
+    # elif beam.__class__ is beam.ParticleArray:
     #    b_current = beam.q_array[0] * 1000.
     #    p_array = beam
 
     else:
         raise TypeError("'beam' object must be Beam class")
 
-    if beam.I == 0:
+    if ebeam.I == 0:
         print("Beam charge or beam current is 0. Default current I=0.1 A is used")
-        beam.I = 0.1  # A
+        ebeam.I = 0.1  # A
 
     tau0 = np.copy(p_array.tau())
     p_array.tau()[:] = 0
@@ -569,7 +579,7 @@ def calculate_radiation(lat, screen, beam, energy_loss=False, quantum_diff=False
         screen.arImEy += screen_copy.arImEy
         screen.arPhase += screen_copy.arPhase
     gamma_mean = (1 + np.mean(p_array.p())) * p_array.E / m_e_GeV
-    screen.distPhoton(gamma_mean, current=beam.I)
+    screen.distPhoton(gamma_mean, current=ebeam.I)
     screen.Ef_electron = E[-1]
     screen.motion = U
     beam_traj = BeamTraject(beam_trajectories=U)
@@ -590,7 +600,7 @@ def coherent_radiation(lat, screen, p_array, energy_loss=False, quantum_diff=Fal
 
     :param lat: MagneticLattice should include element Undulator
     :param screen: Screen class
-    :param p_array: ParticleArray - the radiation is calculated for the each particles in the ParticleArray
+    :param p_array: beam.ParticleArray - the radiation is calculated for the each particles in the beam.ParticleArray
                     and field components is summing up afterwards.
     :param energy_loss: False, if True includes energy loss after each period
     :param quantum_diff: False, if True introduces random energy kick
@@ -601,7 +611,7 @@ def coherent_radiation(lat, screen, p_array, energy_loss=False, quantum_diff=Fal
 
     screen.update()
 
-    if p_array.__class__ is not ParticleArray:
+    if p_array.__class__ is not beam.ParticleArray:
         raise TypeError("'beam' object must be Beam or ParticleArray class")
 
     tau0 = np.copy(p_array.tau())
@@ -672,15 +682,15 @@ def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy
             U0 = 0.
         else:
             if len(non_u) != 0:
-                lat_el = MagneticLattice(non_u)
+                lat_el = mlattice.MagneticLattice(non_u)
                 if lat_el.totalLen != 0:
-                    navi = Navigator(lat)
+                    navi = optics.Navigator(lat)
 
                     N = int((lat_el.totalLen * 2000 + 150) * accuracy)
                     u = np.zeros((N * 9, np.shape(p_array.rparticles)[1]))
                     for i, z in enumerate(np.linspace(L, lat_el.totalLen + L, num=N)):
                         h = (lat_el.totalLen) / (N)
-                        tracking_step(lat_el, p_array, h, navi)
+                        track.tracking_step(lat_el, p_array, h, navi)
                         u[i * 9 + 0, :] = p_array.rparticles[0]
                         u[i * 9 + 1, :] = p_array.rparticles[1]
                         u[i * 9 + 2, :] = p_array.rparticles[2]

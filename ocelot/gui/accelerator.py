@@ -239,7 +239,7 @@ def plot_elems(fig, ax, lat, s_point=0, y_lim=None, y_scale=1, legend=True, font
     rf_max = np.max(np.abs(rf)) if len(rf) != 0 else 0
     m_max = np.max(m) if len(m) != 0 else 0
     ncols = np.sign(len(q)) + np.sign(len(b)) + np.sign(len(s)) + np.sign(len(c)) + np.sign(len(u)) + np.sign(
-        len(rf)) + np.sign(len(m))
+        len(rf)) + np.sign(len(m)) + np.sign(len(sol))
 
     labels_dict = {}
     for elem in dict_copy.keys():
@@ -275,55 +275,58 @@ def plot_elems(fig, ax, lat, s_point=0, y_lim=None, y_scale=1, legend=True, font
         if elem.__class__ == Quadrupole:
             ampl = elem.k1 / q_max if q_max != 0 else 1
             point, = ax.fill(s_coord, (rect + 1) * ampl * scale * y_scale, color, edgecolor=ecolor,
-                             alpha=alpha, label=dict_copy[elem.__class__]["label"])
+                             alpha=alpha, label=label)
             dict_copy[elem.__class__]["label"] = ""
 
         elif elem.__class__ == Solenoid:
             ampl = elem.k / sol_max if sol_max != 0 else 1
             point, = ax.fill(s_coord, (rect + 1) * ampl * scale * y_scale, color, edgecolor=ecolor,
-                             alpha=alpha, label=dict_copy[elem.__class__]["label"])
+                             alpha=alpha, label=label)
             dict_copy[elem.__class__]["label"] = ""
 
         elif elem.__class__ in [Bend, RBend, SBend]:
             ampl = elem.angle / b_max if b_max != 0 else 1
-            point, = ax.fill(s_coord, (rect + 1) * ampl * scale * y_scale, color,
-                             alpha=alpha, label=dict_copy[elem.__class__]["label"])
-            dict_copy[elem.__class__]["label"] = ""
+            point, = ax.fill(s_coord, (rect + 1) * ampl * scale * y_scale, color, edgecolor=ecolor,
+                             alpha=alpha, label=label)
+            dict_copy[Bend]["label"] = ""
+            dict_copy[RBend]["label"] = ""
+            dict_copy[SBend]["label"] = ""
 
         elif elem.__class__ in [Hcor, Vcor]:
             ampl = elem.angle / c_max if c_max != 0 else 0.5
             if elem.angle == 0:
                 ampl = 0.5
                 point, = ax.fill(s_coord, rect * ampl * scale * y_scale, "lightcyan", edgecolor="k",
-                                 alpha=0.5, label=dict_copy[elem.__class__]["label"])
+                                 alpha=0.5, label=label)
             else:
                 point, = ax.fill(s_coord, (rect + 1) * ampl * scale * y_scale, color, edgecolor=ecolor,
-                                 alpha=alpha, label=dict_copy[elem.__class__]["label"])
+                                 alpha=alpha, label=label)
             dict_copy[Hcor]["label"] = ""
             dict_copy[Vcor]["label"] = ""
 
         elif elem.__class__ == Sextupole:
             ampl = elem.k2 / s_max if s_max != 0 else 1
-            point, = ax.fill(s_coord, (rect + 1) * ampl * scale * y_scale, color,
-                             alpha=alpha, label=dict_copy[elem.__class__]["label"])
+            point, = ax.fill(s_coord, (rect + 1) * ampl * scale * y_scale, color, edgecolor=ecolor,
+                             alpha=alpha, label=label)
             dict_copy[elem.__class__]["label"] = ""
 
         elif elem.__class__ in [Cavity, TWCavity, TDCavity]:
             ampl = 1
             point, = ax.fill(s_coord, rect * ampl * scale * y_scale, color,
-                             alpha=alpha, edgecolor="lightgreen", label=dict_copy[elem.__class__]["label"])
+                             alpha=alpha, edgecolor=ecolor,
+                             label=label)
             dict_copy[elem.__class__]["label"] = ""
 
         elif elem.__class__ == Undulator:
             ampl = elem.Kx / u_max if u_max != 0 else 0.5
-            point, = ax.fill(s_coord, rect * ampl * scale * y_scale, color,
-                             alpha=alpha, label=dict_copy[elem.__class__]["label"])
+            point, = ax.fill(s_coord, rect * ampl * scale * y_scale, color, edgecolor=ecolor,
+                             alpha=alpha, label=label)
             dict_copy[elem.__class__]["label"] = ""
 
         elif elem.__class__ == Multipole:
             ampl = sum(elem.kn) / m_max if u_max != 0 else 0.5
-            point, = ax.fill(s_coord, rect * ampl * scale * y_scale, color,
-                             alpha=alpha, label=dict_copy[elem.__class__]["label"])
+            point, = ax.fill(s_coord, rect * ampl * scale * y_scale, color, edgecolor=ecolor,
+                             alpha=alpha, label=label)
             dict_copy[elem.__class__]["label"] = ""
 
         else:

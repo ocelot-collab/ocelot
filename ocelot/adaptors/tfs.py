@@ -13,9 +13,10 @@ except ImportError:
 
 
 def tfs_to_cell_and_optics(tfs_path):
-    converter = MADXLatticeConverter(tfs_path)
-    cell = converter.convert()
-    optics = optics_from_tfs(converter.tfs)
+    tfs_table = tfs.read(tfs_path)
+
+    cell = convert_tfs_lattice(tfs_table)
+    optics = optics_from_tfs(tfs_table)
     return cell, optics
 
 def optics_from_tfs(tfs_table):
@@ -53,9 +54,16 @@ def optics_from_tfs(tfs_table):
 
 class UnsupportedMADXElementType(RuntimeError): pass
 
+def convert_tfs_lattice(tfs_table, converter=None):
+    if converter is None:
+        converter = MADXLatticeConverter()
+
+    for row in tfs_table.itertuples():
+        yield converter.dispatch(row)
+
 
 class MADXLatticeConverter:
-    def _dispatch(self, row):
+    def dispatch(self, row):
         etype = row.KEYWORD
         etypelow = etype.lower()
         try:

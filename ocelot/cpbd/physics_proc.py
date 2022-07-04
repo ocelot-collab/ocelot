@@ -408,6 +408,69 @@ class BeamTransform(PhysProc):
         beam_matching(p_array, self.bounds, self.x_opt, self.y_opt, self.remove_offsets, self.slice)
 
 
+class SlottedFoil(PhysProc):
+    """
+    Class to simulate a slotted foil
+
+    :param dx: thickness of foil [um]
+    :param X0: radiation length of the foil material in [cm]
+
+    :param xmin: -np.inf left position of the foil slot [m]
+    :param xmax: np.inf right position of the foil slot [m]
+
+    :param ymin: -np.inf lower position of the foil slot [m]
+    :param ymax: np.inf upper position of the foil slot [m]
+    """
+    def __init__(self, dx, X0, xmin=-np.inf, xmax=np.inf, ymin=-np.inf, ymax=np.inf, step=1):
+        PhysProc.__init__(self, step)
+        self.xmin = xmin  # in m
+        self.xmax = xmax  # in m
+
+        self.ymin = ymin  # in m
+        self.ymax = ymax  # in m
+        self.z = 1        # charge number of the incident particle
+        self.dx = dx      # thickness of the foil in [um]
+        self.X0 = X0      # radiation length in [cm]
+
+    def scattered_particles(self, p_array):
+        x = p_array.x()
+        inds = np.argwhere(np.logical_or(x < self.xmin, x > self.xmax))
+        inds_x = inds.reshape(inds.shape[0])
+
+        y = p_array.y()
+        inds = np.argwhere(np.logical_or(y < self.ymin, y > self.ymax))
+        inds_y = inds.reshape(inds.shape[0])
+        indeces = np.append(inds_x, inds_y)
+        return indeces
+
+    def get_scattering_angle(self, p_array):
+        """
+        formula from The Review of Particle Physics https://pdg.lbl.gov
+
+        :param p_array: ParticleArray
+        :return: theta - rms scattering angle
+        """
+        p = np.sqrt(p_array.E**2 - m_e_GeV**2) * 1000  # MeV/c momentum of the particles
+        gamma = p_array.E / m_e_GeV
+        igamma2 = 0.
+        if gamma != 0:
+            igamma2 = 1. / (gamma * gamma)
+        beta = np.sqrt(1. - igamma2)
+        theta_rms = 13.6 / (beta * p) * self.z * np.sqrt(self.dx * 1e-4 / self.X0) * (1 + 0.038 * np.log(self.dx*1e-4 / self.X0))
+        return theta_rms
+
+    def apply(self, p_array, dz):
+        _logger.debug(" SlottedFoil applied")
+
+        theta_rms = self.get_scattering_angle(p_array)
+        indeces = self.scattered_particles(p_array)
+        n = len(indeces)
+        thetas = np.random.normal(0, theta_rms, n)
+        alphas = np.random.uniform(0, 2*np.pi, n)
+        p_array.px()[indeces] += np.cos(alphas) * thetas
+        p_array.py()[indeces] += np.sin(alphas) * thetas
+
+
 class SpontanRadEffects(PhysProc):
     """
     Effects of the spontaneous radiation:

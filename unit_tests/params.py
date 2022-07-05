@@ -136,13 +136,31 @@ def numpy2json(np_array):
 def json2numpy(json_array):
 
     array = []
-    
+
     for line in json_array:
         tmp = []
         for i in range(len(line)):
             tmp.append(line[str(i)])
         array.append(tmp)
 
+    return np.array(array, dtype=object)
+
+
+def numpyBRT2json(np_array):
+    return dict(enumerate(np_array.flatten()))
+
+
+def json2numpyBRT(json_array):
+    if len(json_array) <= 36:
+        array = np.zeros((len(json_array)//6, 6))
+        for i in json_array:
+            array[int(i)//6, int(i)%6] = json_array[i]
+    else:
+        array = np.zeros((6, 6, 6))
+        for i in json_array:
+            x = json_array[i]
+            i = int(i)
+            array[i//36, (i - i//36 * 36)//6, (i - i//36 * 36)%6] = x
     return np.array(array, dtype=object)
 
 

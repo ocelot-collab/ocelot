@@ -7,6 +7,7 @@ from ocelot.cpbd.elements.matrix import Matrix
 from ocelot.cpbd.latticeIO import LatticeIO
 from ocelot.cpbd.transformations.transfer_map import TransferMap
 from ocelot.cpbd.optics import lattice_transfer_map
+from ocelot.cpbd.tm_utils import transfer_maps_mult
 
 import logging
 import re
@@ -103,11 +104,8 @@ def merger(lat, remaining_types=None, remaining_elems=None, init_energy=0.):
         else:
             delta_e = np.sum([tm.get_delta_e() for elem in elem_list for tm in elem.tms])
             lattice = MagneticLattice(elem_list, method=lat.method)
-            R = lattice_transfer_map(lattice, energy=E)
             m = Matrix()
-            m.r = lattice.R
-            m.t = lattice.T
-            m.b = lattice.B
+            m.b, m.r, m.t = lattice.transfer_maps(energy=E)
             m.l = lattice.totalLen
             m.delta_e = delta_e
             E += delta_e
@@ -116,6 +114,7 @@ def merger(lat, remaining_types=None, remaining_elems=None, init_energy=0.):
     new_lat = MagneticLattice(seq, method=lat.method)
     _logger.debug("element numbers after: " + str(len(new_lat.sequence)))
     return new_lat
+
 
 def flatten(iterable: Iterator[Any]) -> Generator[Any, None, None]:
     """Flatten arbitrarily nested iterable.
@@ -279,6 +278,23 @@ class MagneticLattice:
         """
         LatticeIO.save_lattice(self, tws0=None, file_name=file_name, remove_rep_drifts=remove_rep_drifts,
                                power_supply=power_supply)
+
+    def transfer_maps(self, energy):
+        """
+        Function calculates transfer maps, the first and second orders (R, T), for the whole lattice.
+
+        :param energy: the initial electron beam energy [GeV]
+        :return: B, R, T - matrices
+        """
+        Ra = np.eye(6)
+        Ta = np.zeros((6, 6, 6))
+        Ba = np.zeros((6, 1))
+        E = energy
+        for elem in self.sequence:
+            for Rb, Bb, Tb, tm in zip(elem.R(E), elem.B(E), elem.T(E), elem.tms):
+                Ba, Ra, Ta = transfer_maps_mult(Ba, Ra, Ta, Bb, Rb, Tb)
+                E += tm.get_delta_e()
+        return Ba, Ra, Ta
 
 
 class EndElements:

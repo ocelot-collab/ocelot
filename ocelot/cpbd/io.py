@@ -37,8 +37,10 @@ except ImportError:
 
 _logger = logging.getLogger(__name__)
 
+
 def is_an_mpi_process():
     return "OMPI_COMM_WORLD_SIZE" in os.environ
+
 
 class HDF5FileWithMaybeMPI(h5py.File):
     def __init__ (self, *args, **kwargs):

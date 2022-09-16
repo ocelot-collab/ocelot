@@ -1,3 +1,4 @@
+from __future__ import annotations
 __author__ = 'Sergey Tomin'
 
 from typing import List, Dict, Type, Callable, Tuple, Union, Any

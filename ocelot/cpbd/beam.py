@@ -1127,7 +1127,7 @@ def get_current(p_array, num_bins=200, **kwargs):
     """
     if "charge" in kwargs:
         _logger.warning("argument 'charge' is obsolete use 'get_current(p_array, num_bins)' instead")
-        charge = kwargs["charge"]
+        charge = kwargs["charge"]/p_array.n
     else:
         charge = None
     weights = None
@@ -1137,10 +1137,10 @@ def get_current(p_array, num_bins=200, **kwargs):
 
     z = p_array.tau()
     hist, bin_edges = np.histogram(z, bins=num_bins, weights=weights)
+    bin_edges = (bin_edges[:-1] + bin_edges[1:])/2.
     delta_Z = max(z) - min(z)
     delta_z = delta_Z / num_bins
     t_bins = delta_z / speed_of_light
-    hist = np.append(hist, hist[-1])
     return bin_edges, hist * charge / t_bins
 
 

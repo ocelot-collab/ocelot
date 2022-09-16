@@ -430,7 +430,7 @@ def track(
         bounds=None,
         return_df=False,
         overwrite_progress=True,
-) -> Tuple[Union[List[Twiss], pd.DataFrame], ParticleArray]:
+        ) -> Tuple[Union[List[Twiss], pd.DataFrame], ParticleArray]:
 
     """
     tracking through the lattice
@@ -719,7 +719,7 @@ class ParameterScanner:
             )
 
         _logger.info("Finished all parameters to be scanned"
-                     f" at {RANK=} and results written to {psf.filename}")
+                     f" at RANK={RANK} and results written to {psf.filename}")
 
     def _get_job_indices_for_this_mpi_core(self) -> List[int]:
         all_job_indices = range(self.njobs)

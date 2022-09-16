@@ -66,7 +66,7 @@ def test_lattice_r_t_maps_wo_coupler(lattice, p_array, parameter, update_ref_val
     matrices_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) + '.json')
 
     result = check_matrix(r_matrix, matrices_ref["r"], TOL, assert_info=' r_matrix - ')
-    result2 = check_matrix(lattice.T, matrices_ref["t"], TOL, assert_info=' t_matrix - ', numerical_zero=1e-13)
+    result2 = check_matrix(lattice.T, matrices_ref["t"], TOL, assert_info=' t_matrix - ', numerical_zero=1e-12)
     assert check_result(result + result2)
 
 

@@ -10,8 +10,6 @@ import logging
 import numpy as np
 from scipy import interpolate
 from scipy.integrate import cumtrapz
-from scipy.ndimage.filters import gaussian_filter
-from scipy.optimize import curve_fit
 
 from ocelot.common.globals import pi, speed_of_light, m_e_eV, m_e_GeV
 from ocelot.common import math_op

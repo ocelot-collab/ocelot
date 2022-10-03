@@ -6,8 +6,10 @@ from ocelot.cpbd.beam import (cov_matrix_from_twiss,
                               optics_from_moments,
                               ParticleArray,
                               Twiss,
-                              twiss_iterable_to_df
+                              twiss_iterable_to_df,
+                              generate_parray,
                               )
+from ocelot.common.globals import m_e_GeV
 
 # ex=1.858178000891106e-11,
 # ey=1.858178000891106e-11,
@@ -100,6 +102,7 @@ def a_twiss_dictionary():
                    'pxpy': 0.790476675553196,
                    'xpy': 0.2717175021299518,
                    'ypx': 0.6684978344712186,
+                   'pp': 0.0,
                    "id": "Hello my friends!"
                    }
     return optics_dict
@@ -134,3 +137,25 @@ def test_particle_array_total_charge():
     parray.q_array[1] = charge1
 
     assert parray.total_charge == charge0 + charge1
+
+
+def test_get_twiss_from_slice():
+    tws0 = Twiss()
+    tws0.E = 0.5
+    gamma = tws0.E / m_e_GeV
+    tws0.beta_x = 10
+    tws0.beta_y = 15
+    tws0.alpha_x = 5
+    tws0.alpha_y = 2
+    tws0.gamma_x = (1 + tws0.alpha_x ** 2) / tws0.beta_x
+    tws0.gamma_y = (1 + tws0.alpha_y ** 2) / tws0.beta_y
+    tws0.emit_x = 1e-6 / gamma
+    tws0.emit_y = 0.7e-6 / gamma
+
+    parray_init = generate_parray(sigma_tau=0.001, sigma_p=1e-3, charge=250e-12,
+                                  chirp=0, tws=tws0, nparticles=1000000)
+    tws1 = parray_init.get_twiss_from_slice(slice='Imax')
+
+    assert np.isclose([tws0.beta_x, tws0.beta_y, tws0.alpha_x, tws0.alpha_y, tws0.gamma_x, tws0.gamma_y, tws0.emit_x, tws0.emit_y, tws0.E],
+                      [tws1.beta_x, tws1.beta_y, tws1.alpha_x, tws1.alpha_y, tws1.gamma_x, tws1.gamma_y, tws1.emit_x, tws1.emit_y, tws1.E],
+                      rtol=1e-02, atol=1e-06).all()

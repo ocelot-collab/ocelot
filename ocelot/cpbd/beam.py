@@ -95,6 +95,7 @@ class Twiss:
         self.pxpy = 0.
         self.xpy = 0.
         self.ypx = 0.
+        self.pp = 0
 
         self.id = ""
         if beam is not None:
@@ -448,7 +449,6 @@ class BeamArray(Beam):
             if attr.startswith('__') or attr in self.properties:
                 continue
             # if callable(getattr(self,attr)):
-            # print('check')
             # continue
             if np.size(getattr(self, attr)) == l:
                 attrs.append(attr)
@@ -471,7 +471,6 @@ class BeamArray(Beam):
             for attr in self.params():
                 if attr == 's':
                     continue
-                # print(attr)
                 val = getattr(self, attr)
                 val = np.interp(s_new, self.s, val)
                 setattr(self, attr, val)
@@ -494,7 +493,6 @@ class BeamArray(Beam):
             val = savgol_filter(val, sn, 2, mode='nearest')
 
             if attr in ['E', 'I', 'beta_x', 'beta_y', 'emit_x', 'emit_y', 'sigma_E']:
-                # print('attribute {:s} < 0, setting to 0'.format(attr))
                 val[val < 0] = 0
             #    val = convolve(val,spike,mode='same')
             setattr(self, attr, val)
@@ -636,7 +634,7 @@ class ParticleArray:
     """
     array of particles of fixed size; for optimized performance
     (x, x' = px/p0),(y, y' = py/p0),(ds = c*tau, p = dE/(p0*c))
-    p0 - momentum
+    p0 - ntum
     """
 
     class LostParticleRecorder:
@@ -947,6 +945,50 @@ class ParticleArray:
         """Return a copy of this ParticleArray instance."""
         return deepcopy(self)
 
+    def get_twiss_from_slice(self, slice="Imax", nparts_in_slice=5000, smooth_param=0.05, filter_base=2, filter_iter=2):
+        """
+        Function calculates twiss parameters in a beam slice
+
+        :param parray: ParticleArray
+        :param slice: "Imax" or "Emax" or center of bunch
+        :param nparts_in_slice: 5000, number of particles in the slice (in moving window)
+        :param smooth_param: 0.01, smoothing parameters to calculate the beam current: smooth_param = m_std * np.std(p_array.tau())
+        :param filter_base: 2, filter parameter in the func: simple_filter
+        :param filter_iter: 2, filter parameter in the func: simple_filter
+        :return: Twiss
+        """
+        tws = Twiss()
+        slice_params = global_slice_analysis(self, nparts_in_slice=nparts_in_slice, smooth_param=smooth_param,
+                                             filter_base=filter_base, filter_iter=filter_iter)
+
+        if slice == "Imax":
+            ind0 = np.argmax(slice_params.I)
+        elif slice == "Emax":
+            ind0 = np.argmax(slice_params.me)
+        else:
+            ind0 = np.argsort(np.abs(slice_params.s))[0]
+
+        tws.beta_x = slice_params.beta_x[ind0]
+        tws.alpha_x = slice_params.alpha_x[ind0]
+        tws.beta_y = slice_params.beta_y[ind0]
+        tws.alpha_y = slice_params.alpha_y[ind0]
+        tws.gamma_y = slice_params.gamma_y[ind0]
+        tws.gamma_x = slice_params.gamma_x[ind0]
+        tws.emit_x = slice_params.ex[ind0]
+        tws.emit_y = slice_params.ey[ind0]
+
+        relgamma = self.E / m_e_GeV
+        relbeta = np.sqrt(1 - relgamma ** -2) if relgamma != 0 else 1.
+
+        tws.emit_xn = tws.emit_x * relgamma * relbeta
+        tws.emit_yn = tws.emit_y * relgamma * relbeta
+        tws.pp = (slice_params.se[ind0]*1e-9/self.E)**2
+        tws.E = self.E
+        tws.s = self.s
+
+        return tws
+
+
 def recalculate_ref_particle(p_array):
     pref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV
     Enew = p_array.p()[0] * pref + p_array.E
@@ -1029,32 +1071,35 @@ def get_envelope(p_array, tws_i=None, bounds=None):
         tw_px = tws.px
         tw_py = tws.py
         tw_tau = tws.tau
-        tws.xx = np.mean(ne.evaluate('(x - tw_x) * (x - tw_x)'))
+        tw_p = tws.p
+        tws.xx = np.mean(ne.evaluate('(x - tw_x)**2'))
         tws.xpx = np.mean(ne.evaluate('(x - tw_x) * (px - tw_px)'))
         tws.pxpx = np.mean(ne.evaluate('(px - tw_px) * (px - tw_px)'))
-        tws.yy = np.mean(ne.evaluate('(y - tw_y) * (y - tw_y)'))
+        tws.yy = np.mean(ne.evaluate('(y - tw_y)**2'))
         tws.ypy = np.mean(ne.evaluate('(y - tw_y) * (py - tw_py)'))
-        tws.pypy = np.mean(ne.evaluate('(py - tw_py) * (py - tw_py)'))
-        tws.tautau = np.mean(ne.evaluate('(tau - tw_tau) * (tau - tw_tau)'))
+        tws.pypy = np.mean(ne.evaluate('(py - tw_py)**2'))
+        tws.tautau = np.mean(ne.evaluate('(tau - tw_tau)**2'))
 
         tws.xy = np.mean(ne.evaluate('(x - tw_x) * (y - tw_y)'))
         tws.pxpy = np.mean(ne.evaluate('(px - tw_px) * (py - tw_py)'))
         tws.xpy = np.mean(ne.evaluate('(x - tw_x) * (py - tw_py)'))
         tws.ypx = np.mean(ne.evaluate('(y - tw_y) * (px - tw_px)'))
+        tws.pp = np.mean(ne.evaluate('(p - tw_p)**2'))
 
     else:
-        tws.xx = np.mean((x - tws.x) * (x - tws.x))
+        tws.xx = np.mean((x - tws.x)**2)
         tws.xpx = np.mean((x - tws.x) * (px - tws.px))
-        tws.pxpx = np.mean((px - tws.px) * (px - tws.px))
-        tws.yy = np.mean((y - tws.y) * (y - tws.y))
+        tws.pxpx = np.mean((px - tws.px)**2)
+        tws.yy = np.mean((y - tws.y)**2)
         tws.ypy = np.mean((y - tws.y) * (py - tws.py))
-        tws.pypy = np.mean((py - tws.py) * (py - tws.py))
+        tws.pypy = np.mean((py - tws.py)**2)
         tws.tautau = np.mean((tau - tws.tau) * (tau - tws.tau))
 
         tws.xy = np.mean((x - tws.x) * (y - tws.y))
         tws.pxpy = np.mean((px - tws.px) * (py - tws.py))
         tws.xpy = np.mean((x - tws.x) * (py - tws.py))
         tws.ypx = np.mean((y - tws.y) * (px - tws.px))
+        tws.pp = np.mean((p - tws.p)**2)
 
     Sigma = np.array([[tws.xx, tws.xy, tws.xpx, tws.xpy],
                       [tws.xy, tws.yy, tws.ypx, tws.ypy],
@@ -1127,7 +1172,7 @@ def get_current(p_array, num_bins=200, **kwargs):
     """
     if "charge" in kwargs:
         _logger.warning("argument 'charge' is obsolete use 'get_current(p_array, num_bins)' instead")
-        charge = kwargs["charge"]/p_array.n
+        charge = kwargs["charge"]
     else:
         charge = None
     weights = None
@@ -1561,7 +1606,6 @@ def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
     """
 
     q1 = np.sum(parray.q_array)
-    # print("charge", q1)
     n = np.int_(parray.rparticles.size / 6)
     PD = parray.rparticles
     PD = sortcols(PD, row=4)
@@ -1574,10 +1618,8 @@ def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
     pc_0 = np.sqrt(parray.E ** 2 - m_e_GeV ** 2)
     E1 = PD[5] * pc_0 + parray.E
     pc_1 = np.sqrt(E1 ** 2 - m_e_GeV ** 2)
-    # print(pc_1[:10])
     mE, mEs, mEE, mEEs, mEsEs, emittE = slice_analysis(PD[4], pc_1 * 1e9, Mslice)
 
-    # print(mE, mEs, mEE, mEEs, mEsEs, emittE)
     mE = mEs  # mean energy
     sE = np.sqrt(mEsEs)  # energy spread
     sig0 = np.std(parray.tau())  # std pulse duration
@@ -1636,7 +1678,6 @@ def global_slice_analysis(parray, nparts_in_slice=5000, smooth_param=0.01, filte
     mx, mxs, mxx, mxxs, mxsxs, emittx = slice_analysis(PD[0], PD[1], nparts_in_slice)
 
     my, mys, myy, myys, mysys, emitty = slice_analysis(PD[2], PD[3], nparts_in_slice)
-
     pc_0 = np.sqrt(parray.E ** 2 - m_e_GeV ** 2)
     E1 = PD[5] * pc_0 + parray.E
     pc_1 = np.sqrt(E1 ** 2 - m_e_GeV ** 2)
@@ -1676,8 +1717,10 @@ def global_slice_analysis(parray, nparts_in_slice=5000, smooth_param=0.01, filte
     ey = interp1(z, emitty, s)
     se = interp1(z, sE, s)
     me = interp1(z, mE, s)
-    slc.ex = simple_filter(ex, filter_base, filter_iter) * gamma0 * 1e6
-    slc.ey = simple_filter(ey, filter_base, filter_iter) * gamma0 * 1e6
+    slc.ex = simple_filter(ex, filter_base, filter_iter)
+    slc.ey = simple_filter(ey, filter_base, filter_iter)
+    slc.exn = slc.ex * gamma0
+    slc.eyn = slc.ey * gamma0
     slc.se = simple_filter(se, filter_base, filter_iter)
     slc.me = simple_filter(me, filter_base, filter_iter)
 
@@ -1719,10 +1762,10 @@ def global_slice_analysis(parray, nparts_in_slice=5000, smooth_param=0.01, filte
 
     # twiss
     # np.full(n, np.nan)
-    slc.beta_x = (gamma0 * 1e6) * np.divide(slc.sig_x ** 2, slc.ex, out=np.zeros_like(slc.sig_x), where=slc.ex != 0)
-    slc.beta_y = (gamma0 * 1e6) * np.divide(slc.sig_y ** 2, slc.ey, out=np.zeros_like(slc.sig_y), where=slc.ey != 0)
-    slc.alpha_x = -x_px / slc.ex * (gamma0 * 1e6)
-    slc.alpha_y = -y_py / slc.ey * (gamma0 * 1e6)
+    slc.beta_x = np.divide(slc.sig_x ** 2, slc.ex, out=np.zeros_like(slc.sig_x), where=slc.ex != 0)
+    slc.beta_y = np.divide(slc.sig_y ** 2, slc.ey, out=np.zeros_like(slc.sig_y), where=slc.ey != 0)
+    slc.alpha_x = -x_px / slc.ex
+    slc.alpha_y = -y_py / slc.ey
     slc.gamma_x = np.divide(1 + slc.alpha_x ** 2, slc.beta_x, out=np.zeros_like(slc.alpha_x), where=slc.beta_x != 0)
     slc.gamma_y = np.divide(1 + slc.alpha_y ** 2, slc.beta_y, out=np.zeros_like(slc.alpha_y), where=slc.beta_y != 0)
     mp = mp[ind]
@@ -1823,6 +1866,7 @@ def parray2beam(parray, step=1e-7):
         beam.filePath = parray.filePath + '.beam'
     return (beam)
 
+
 def cov_matrix_from_twiss(ex, ey, sigma_tau, sigma_p, **twiss):
     """Generate a covariance matrix from Twiss parameters, dispersions and
     emittances (horizontal) and standard deviations (longitudinal).  No
@@ -1863,6 +1907,7 @@ def cov_matrix_from_twiss(ex, ey, sigma_tau, sigma_p, **twiss):
                      [0.,            0,         0,  0, sigma_tau**2, 0.0],
                      [dx*sp2, dpx*sp2, dy*sp2, dpy*sp2, 0, sp2]])
 
+
 def cov_matrix_to_parray(mean, cov, energy, charge, nparticles):
     """Generate a ParticleArray instance using a covariance matrix.
 
@@ -1885,12 +1930,14 @@ def cov_matrix_to_parray(mean, cov, energy, charge, nparticles):
     p_array.q_array = np.ones(nparticles) * charge / nparticles
     return p_array
 
+
 def _horizontal_2x2_elements(emit, alpha, beta, disp, disp_p, sigma_p):
     """2x2 correlation matrix between x/py  and y/py"""
     gamma = (1 + alpha**2) / beta
     offdiag = -emit * alpha + disp * disp_p * sigma_p**2
     return np.array([[emit * beta + (disp*sigma_p)**2, offdiag],
                      [offdiag, emit * gamma + (disp_p*sigma_p)**2]])
+
 
 def _horizontal_coupling_elements(disp_x, disp_y, disp_px, disp_py, sigma_p):
     """generate cov matrix elements for correlations between horz. and
@@ -1933,6 +1980,7 @@ def optics_from_moments(mean, cov_matrix, energy=None):
 
     return r
 
+
 def _dispersionless_twiss_parameters(submatrix, dx, dpx, sigp2):
     """Calculate the emittance and twiss parameters from the 2x2 covariance
     matrix accounting for the increase in the spot size due to the
@@ -1947,8 +1995,8 @@ def _dispersionless_twiss_parameters(submatrix, dx, dpx, sigp2):
     alpha = -xpx / emittance
     gamma = px / emittance
 
-
     return emittance, alpha, beta, gamma
+
 
 def _dispersions_from_cov_matrix(cov_matrix):
     """Calculate the dispersions from the provided 6x6 covariance matrix."""
@@ -1960,6 +2008,7 @@ def _dispersions_from_cov_matrix(cov_matrix):
     dy = cov_matrix[2, 5] / sigp2
     dpy = cov_matrix[3, 5] / sigp2
     return dx, dpx, dy, dpy
+
 
 def moments_from_parray(parray, dispersions=None):
     """Calculate the central moments and covariances from the given
@@ -1980,6 +2029,7 @@ def moments_from_parray(parray, dispersions=None):
     # TODO: ACTUALLY CORRECT FOR DISPERSION AND DO IT CLEANLY SOMEWHERE.
 
     return np.mean(rpart, axis=1, dtype=np.float64), np.cov(rpart)
+
 
 def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
                     sigma_tau=1e-3, sigma_p=1e-4, chirp=0.01, charge=5e-9, nparticles=200000, energy=0.13,
@@ -2005,16 +2055,36 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
     :param shape: "gauss", shape of the beam current profile. Gaussian distribution by default. If not "gauss" - rectangular
     :return: ParticleArray
     """
+    if isinstance(tws, Twiss) and np.all(np.array([tws.emit_x, tws.emit_y, tws.beta_x, tws.beta_y, tws.gamma_x, tws.gamma_y]) != 0):
+        _logger.info("Twiss parameters have priority. sigma_{x, px, y, py} will be redefined")
 
-    if sigma_y is None:
-        sigma_y = sigma_x
-    if sigma_py is None:
-        sigma_py = sigma_px
+        cov_x_px = tws.emit_x * np.array([[tws.beta_x, -tws.alpha_x],
+                   [-tws.alpha_x , tws.gamma_x]])
+        hor_dist = np.random.multivariate_normal((0, 0), cov_x_px, nparticles)
+        x = hor_dist[:, 0]
+        px = hor_dist[:, 1]
 
-    x = np.random.randn(nparticles) * sigma_x
-    px = np.random.randn(nparticles) * sigma_px
-    y = np.random.randn(nparticles) * sigma_y
-    py = np.random.randn(nparticles) * sigma_py
+        cov_y_py = tws.emit_y * np.array([[tws.beta_y, -tws.alpha_y],
+                   [-tws.alpha_y, tws.gamma_y]])
+        vert_dist = np.random.multivariate_normal((0, 0), cov_y_py, nparticles)
+        y = vert_dist[:, 0]
+        py = vert_dist[:, 1]
+
+        if tws.pp != 0:
+            sigma_p = np.sqrt(tws.pp)
+        if tws.E != 0:
+            energy = tws.E
+    else:
+        if sigma_y is None:
+            sigma_y = sigma_x
+        if sigma_py is None:
+            sigma_py = sigma_px
+
+        x = np.random.randn(nparticles) * sigma_x
+        px = np.random.randn(nparticles) * sigma_px
+        y = np.random.randn(nparticles) * sigma_y
+        py = np.random.randn(nparticles) * sigma_py
+
     if tau_trunc is None:
         tau = np.random.randn(nparticles) * sigma_tau
     else:
@@ -2037,16 +2107,17 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
 
     p_array = ParticleArray(n=nparticles)
     p_array.E = energy  # GeV
-    p_array.rparticles[0] = x
-    p_array.rparticles[1] = px
-    p_array.rparticles[2] = y
-    p_array.rparticles[3] = py
-    p_array.rparticles[4] = tau
-    p_array.rparticles[5] = dp
+    p_array.rparticles[0][:] = x[:]
+    p_array.rparticles[1][:] = px[:]
+    p_array.rparticles[2][:] = y[:]
+    p_array.rparticles[3][:] = py[:]
+    p_array.rparticles[4][:] = tau[:]
+    p_array.rparticles[5][:] = dp[:]
 
     p_array.q_array = np.ones(nparticles) * charge / nparticles
 
     if isinstance(tws, Twiss):
+
         x_opt = [tws.alpha_x, tws.beta_x, tws.mux]
         y_opt = [tws.alpha_y, tws.beta_y, tws.muy]
         bounds = [-5, 5]
@@ -2113,6 +2184,7 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
         beam_arr.add_chirp(kwargs['chirp'])
 
     return beam_arr
+
 
 def twiss_iterable_to_df(twisses: Iterable[Twiss]) -> pd.DataFrame:
     """Convert an iterable of Twiss instances to a single DataFrame with the columns as

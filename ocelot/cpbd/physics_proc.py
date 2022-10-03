@@ -615,3 +615,21 @@ class Chicane(PhysProc):
 
         p_array.rparticles[4] += (
                     self.r56 * p_array.rparticles[5] + self.t566 * p_array.rparticles[5] * p_array.rparticles[5])
+
+
+class LatticeEnergyProfile(PhysProc):
+    """
+    The PhysProcess shifts the canonical momentum according to new reference energy Eref
+    """
+    def __init__(self, Eref):
+        PhysProc.__init__(self)
+        self.Eref = Eref
+
+    def apply(self, p_array, dz=0):
+        Eref_old = p_array.E
+        p0c_old = np.sqrt(Eref_old ** 2 - m_e_GeV ** 2)
+        p0c_new = np.sqrt(self.Eref ** 2 - m_e_GeV ** 2)
+        p_old = p_array.p()[:]
+        p_new = (p_old * p0c_old + Eref_old - self.Eref) / p0c_new
+        p_array.E = self.Eref
+        p_array.p()[:] = p_new[:]

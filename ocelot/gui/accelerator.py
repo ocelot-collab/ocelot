@@ -910,9 +910,9 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     plt.title("Emittances")
     emitxn_mm_mrad = np.round(slice_params.emitxn * 1e6, 2)
     emityn_mm_mrad = np.round(slice_params.emityn * 1e6, 2)
-    plt.plot(slice_params.s * tau_factor, slice_params.ex, "r",
+    plt.plot(slice_params.s * tau_factor, slice_params.exn*1e6, "r",
              label=fr"$\varepsilon_x^{{\mathrm{{proj}}}} = {emitxn_mm_mrad}\,\mathrm{{mm\cdot{{}}mrad}}$")
-    plt.plot(slice_params.s * tau_factor, slice_params.ey, "b",
+    plt.plot(slice_params.s * tau_factor, slice_params.eyn*1e6, "b",
              label=rf"$\varepsilon_y^{{\mathrm{{proj}}}} = {emityn_mm_mrad}\,\mathrm{{mm\cdot{{}}mrad}}$")
     plt.legend()
     plt.setp(ax_em.get_xticklabels(), visible=False)
@@ -1519,7 +1519,7 @@ def show_e_beam_slices(p_array, nparts_in_slice=5000, smooth_param=0.05, inverse
     # plt.plot(slice_params.s[ind0] * tau_factor, bx, "ro", label=r"$\beta_x=$"+str(np.round(bx, 2)))
     plt.setp(ax_me.get_xticklabels(), visible=False)
     plt.ylabel(r"$E$ [MeV]")
-    plt.ylim([17100, 17300])
+    #plt.ylim([17100, 17300])
     plt.grid(grid)
     if slice is not None:
         plt.legend()

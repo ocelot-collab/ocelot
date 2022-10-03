@@ -31,6 +31,7 @@ __all__ = ['Twiss', "Beam", "Particle", "get_current", "get_envelope", "generate
             "BeamTransform", "SmoothBeam", "EmptyProc", "PhysProc", "LaserHeater",
             "LaserModulator", "SpontanRadEffects", "PhaseSpaceAperture",
             "RectAperture", "EllipticalAperture",
+            "CopyBeam", "SaveBeam", "LatticeEnergyProfile",
             "MagneticLattice", "merger",            # magnetic_lattice
             "np", # numpy
 

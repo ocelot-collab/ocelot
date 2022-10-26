@@ -1757,10 +1757,10 @@ def undulator_field_near(x, y, l_x, l_y, eta_x, eta_y, z, L_w, E_ph, phi=None):
         _logger.debug(ind_str + 'done in {:.2f} seconds'.format(time.time() - start_time))
         return E
 
-def undulator_field_dfl_SP(dfl, z, L_w, E_ph, N_e=1, sig_x=0, sig_y=0, sig_xp=0, sig_yp=0, C=0, approximation='far_field', mode='incoh', seed=None):
+def dfl_gen_undulator_sp(dfl, z, L_w, E_ph, N_e=1, sig_x=0, sig_y=0, sig_xp=0, sig_yp=0, C=0, approximation='far_field', mode='incoh', seed=None):
     
     """  
-    SRW-like Undulator radaition generator - single particle radiation is propagated through the optical system
+    SRW-like Undulator radiation generator - single particle radiation is propagated through the optical system
     
     Parameters
     ----------
@@ -1860,10 +1860,10 @@ def undulator_field_dfl_SP(dfl, z, L_w, E_ph, N_e=1, sig_x=0, sig_y=0, sig_xp=0,
 
     return dfl
 
-def undulator_field_dfl_MP(dfl, z, L_w, E_ph, N_b=1, N_e=1, sig_x=0, sig_y=0, sig_xp=0, sig_yp=0, C=0, approximation='far_field', mode='incoh', seed=None):
+def dfl_gen_undulator_mp(dfl, z, L_w, E_ph, N_b=1, N_e=1, sig_x=0, sig_y=0, sig_xp=0, sig_yp=0, C=0, approximation='far_field', mode='incoh', seed=None):
     
     """  
-    Multiple particle Undulator radaition generator - fields from numerous macroparticles is added and propagated as one
+    Multiple particle Undulator radiation generator - fields from numerous macroparticles is added and propagated as one
     
     Parameters
     ----------
@@ -1974,7 +1974,7 @@ def undulator_field_dfl_MP(dfl, z, L_w, E_ph, N_b=1, N_e=1, sig_x=0, sig_y=0, si
 
     return dfl
 
-def undulator_field_dfl_SERVAL(dfl, L_w, sig_x=0, sig_y=0, sig_xp=0, sig_yp=0, k_support = 'intensity', s_support='intensity', showfig=False, seed=None):
+def dfl_gen_undulator_serval(dfl, L_w, sig_x=0, sig_y=0, sig_xp=0, sig_yp=0, k_support ='intensity', s_support='intensity', showfig=False, seed=None):
     
     _logger.info('Generating undulator field with SERVAL algorithm')
     w_0 = 2*np.pi * speed_of_light / dfl.xlamds

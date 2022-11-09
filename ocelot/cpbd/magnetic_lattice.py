@@ -22,7 +22,6 @@ _logger = logging.getLogger(__name__)
 MarkersInsertionReturnType = Mapping[Element, Sequence[Tuple[Marker, Marker]]]
 
 
-
 def lattice_format_converter(elements):
     """
     :param elements: lattice in the format: [[elem1, center_pos1], [elem2, center_pos2], [elem3, center_pos3], ... ]
@@ -33,7 +32,7 @@ def lattice_format_converter(elements):
     s_pos = 0.0
     for element in elements:
         element_start = element[1] - element[0].l / 2.0
-        if element_start < s_pos - 1.0e-14:                 # 1.0e-14 is used as crutch for precision of float
+        if element_start < s_pos - 1.0e-14:  # 1.0e-14 is used as crutch for precision of float
             if element[0].l == 0.0:
 
                 if s_pos - element_start > 1.0e-2:
@@ -52,9 +51,9 @@ def lattice_format_converter(elements):
                     print("************** ERROR! Element " + element[0].id + " has bad position (overlapping?)")
                     exit()
 
-        if element_start > s_pos + 1.0e-12:                 # 1.0e-12 is used as crutch for precision of float
+        if element_start > s_pos + 1.0e-12:  # 1.0e-12 is used as crutch for precision of float
             drift_num += 1
-            drift_l = round(element_start - s_pos, 10)      # round() is used as crutch for precision of float
+            drift_l = round(element_start - s_pos, 10)  # round() is used as crutch for precision of float
             drift_eid = 'D_' + str(drift_num)
             cell.append(Drift(l=drift_l, eid=drift_eid))
 
@@ -125,6 +124,7 @@ def flatten(iterable: Iterator[Any]) -> Generator[Any, None, None]:
     :raises: RecursionError
 
     """
+
     def _flatten(iterable):
         try:
             for item in iterable:
@@ -134,8 +134,9 @@ def flatten(iterable: Iterator[Any]) -> Generator[Any, None, None]:
                     yield item
                 else:
                     yield from _flatten(item)
-        except TypeError: # If iterable isn't actually iterable, then yield it.
+        except TypeError:  # If iterable isn't actually iterable, then yield it.
             yield iterable
+
     try:
         yield from _flatten(iterable)
     except RecursionError:
@@ -207,7 +208,7 @@ class MagneticLattice:
                 if element.field_file is not None:
                     element.l = element.field_map.l * element.field_map.field_file_rep
                     if element.field_map.units == "mm":
-                        element.l = element.l*0.001
+                        element.l = element.l * 0.001
             self.totalLen += element.l
 
             tm_class_type = self.method.get(element.__class__)
@@ -236,7 +237,8 @@ class MagneticLattice:
                 _logger.debug("Backtracking?")
             element_util.update_last(element, body)
         else:
-            _logger.error(element.__class__.__name__ + " is not updated. Use standard function to create and update MagneticLattice")
+            _logger.error(
+                element.__class__.__name__ + " is not updated. Use standard function to create and update MagneticLattice")
 
     def __str__(self):
         line = "LATTICE: length = " + str(self.totalLen) + " m \n"
@@ -279,21 +281,28 @@ class MagneticLattice:
         LatticeIO.save_lattice(self, tws0=None, file_name=file_name, remove_rep_drifts=remove_rep_drifts,
                                power_supply=power_supply)
 
-    def transfer_maps(self, energy):
+    def transfer_maps(self, energy, output_at_each_step: bool = False):
         """
         Function calculates transfer maps, the first and second orders (R, T), for the whole lattice.
 
         :param energy: the initial electron beam energy [GeV]
+        :param output_at_each_step: return three list of matrices [Bs], [Rs], [Ts] after each element in the line
         :return: B, R, T - matrices
         """
         Ra = np.eye(6)
         Ta = np.zeros((6, 6, 6))
         Ba = np.zeros((6, 1))
+        Bs, Rs, Ts = [], [], []
         E = energy
         for elem in self.sequence:
             for Rb, Bb, Tb, tm in zip(elem.R(E), elem.B(E), elem.T(E), elem.tms):
                 Ba, Ra, Ta = transfer_maps_mult(Ba, Ra, Ta, Bb, Rb, Tb)
                 E += tm.get_delta_e()
+                Bs.append(Ba)
+                Rs.append(Ra)
+                Ts.append(Ta)
+        if output_at_each_step:
+            return Bs, Rs, Ts
         return Ba, Ra, Ta
 
 
@@ -360,6 +369,7 @@ def exclude_zero_length_element(cell, elem_type=[UnknownElement, Marker], except
     print("Exclude elements -> Element numbers: before -> after: ", len(cell), "->", len(new_cell))
     return new_cell
 
+
 def insert_markers_by_name(sequence, string: str, regex=False,
                            before=True, after=True) -> MarkersInsertionReturnType:
     """Insert markers either side of elements in the magnetic lattice, selected
@@ -380,11 +390,14 @@ def insert_markers_by_name(sequence, string: str, regex=False,
     if regex:
         def fre(ele):
             return bool(re.match(string, ele.id))
+
         return insert_markers_by_predicate(sequence, fre)
 
     def f(ele):
         return ele.id == string
+
     return insert_markers_by_predicate(sequence, f, before=before, after=after)
+
 
 def insert_markers_by_type(sequence, magnet_type: Element, before=True, after=True
                            ) -> MarkersInsertionReturnType:
@@ -404,6 +417,7 @@ def insert_markers_by_type(sequence, magnet_type: Element, before=True, after=Tr
         return isinstance(ele, magnet_type)
 
     return insert_markers_by_predicate(sequence, f, before=before, after=after)
+
 
 def insert_markers_by_predicate(sequence, predicate: Callable[[Element], bool],
                                 before=True, after=True

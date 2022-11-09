@@ -6,7 +6,7 @@ with Ocelot.
 
 import numpy as np
 try:
-    from wake_t.driver_witness import ParticleBunch
+    from wake_t import ParticleBunch
     wake_t_installed = True
 except ImportError:
     wake_t_installed = False

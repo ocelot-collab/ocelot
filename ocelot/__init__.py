@@ -8,20 +8,19 @@ __version__ = '22.10.0'
 __all__ = ['Twiss', "Beam", "Particle", "get_current", "get_envelope", "generate_parray",           # beam
             "ellipse_from_twiss", "ParticleArray",  "global_slice_analysis", 'gauss_from_twiss',    # beam
 
-            "save_particle_array", "load_particle_array",                          # io
+            "save_particle_array", "load_particle_array",                                           # io
 
-            'fodo_parameters', 'lattice_transfer_map', 'TransferMap', "Navigator", 'twiss',    # optics
-            "get_map", "MethodTM", "SecondTM", "KickTM", "CavityTM", "UndulatorTestTM",        # optics
+            'fodo_parameters', 'lattice_transfer_map', "Navigator", 'twiss', "get_map", "MethodTM", # optics
 
             'Element', 'Multipole', 'Quadrupole', 'RBend', "Matrix", "UnknownElement",              # elements
-            'SBend', 'Bend', 'Drift', 'Undulator', 'Hcor', "Solenoid", "TDCavity",     # elements
-            'Vcor', "Sextupole", "Monitor", "Marker", "Octupole", "Cavity",  "Aperture",   # elements
+            'SBend', 'Bend', 'Drift', 'Undulator', 'Hcor', "Solenoid", "TDCavity",                  # elements
+            'Vcor', "Sextupole", "Monitor", "Marker", "Octupole", "Cavity",  "Aperture",            # elements
 
-            "match", "match_tunes",                                                          # match
+            "match", "match_tunes",                                                                 # match
 
-            "tracking_step", "create_track_list", "track_nturns", "freq_analysis",           # track
-            "contour_da", "track_nturns_mpi", "nearest_particle", "stable_particles",        # track
-            "spectrum", "track",                                                             # track
+            "tracking_step", "create_track_list", "track_nturns", "freq_analysis",                  # track
+            "contour_da", "track_nturns_mpi", "nearest_particle", "stable_particles",               # track
+            "spectrum", "track",                                                                    # track
             "pi", "m_e_eV", "m_e_MeV", "m_e_GeV", "speed_of_light",                             # globals
             "compensate_chromaticity",                                                          # chromaticity
             "EbeamParams",                                                                      # beam_params
@@ -32,15 +31,15 @@ __all__ = ['Twiss', "Beam", "Particle", "get_current", "get_envelope", "generate
             "LaserModulator", "SpontanRadEffects", "PhaseSpaceAperture",
             "RectAperture", "EllipticalAperture",
             "CopyBeam", "SaveBeam", "LatticeEnergyProfile",
-            "MagneticLattice", "merger",            # magnetic_lattice
-            "np", # numpy
+            "MagneticLattice", "merger",                                                        # magnetic_lattice
+            "np",                                                                               # numpy
 
-           "CavityTM", "TransferMap",  # transformations
-           "KickTM", "MultipoleTM", "PulseTM", "RungeKuttaTM", "RungeKuttaTrTM",  # transformations
-           "SecondTM", "TWCavityTM", "UndulatorTestTM", "TMTypes",  # transformations
+           "CavityTM", "TransferMap",                                                   # transformations
+           "KickTM", "MultipoleTM", "PulseTM", "RungeKuttaTM", "RungeKuttaTrTM",        # transformations
+           "SecondTM", "TWCavityTM", "UndulatorTestTM", "TMTypes",                      # transformations
 
-            "CavityParams", "FirstOrderParams" ,"KickParams", "MultipoleParams", # tm parameters
-            "RungeKuttaParams", "SecondOrderParams", "UndulatorTestParams" # tm parameters
+            "CavityParams", "FirstOrderParams" ,"KickParams", "MultipoleParams",        # tm parameters
+            "RungeKuttaParams", "SecondOrderParams", "UndulatorTestParams"              # tm parameters
 
            ]
 

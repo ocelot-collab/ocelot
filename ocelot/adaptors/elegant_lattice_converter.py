@@ -55,7 +55,9 @@ class ElegantLatticeConverter:
                                                 'R41': ['r', 3, 0], 'R42': ['r', 3, 1], 'R43': ['r', 3, 2], 'R44': ['r', 3, 3], 'R45': ['r', 3, 4], 'R46': ['r', 3, 5],
                                                 'R51': ['r', 4, 0], 'R52': ['r', 4, 1], 'R53': ['r', 4, 2], 'R54': ['r', 4, 3], 'R55': ['r', 4, 4], 'R56': ['r', 4, 5],
                                                 'R61': ['r', 5, 0], 'R62': ['r', 5, 1], 'R63': ['r', 5, 2], 'R64': ['r', 5, 3], 'R65': ['r', 5, 4], 'R66': ['r', 5, 5],}}
-        self.elegant_matrix['CSRCSBEND'] = {'type': SBend, 'params': {'L':'l', 'ANGLE': 'angle', "K1": "k1", "K2": "k2", 'E1': 'e1', 'E2': 'e2', 'TILT': 'tilt'}}
+        self.elegant_matrix['CSRCSBEND'] = {'type': SBend,
+                                            'params': {'L':'l', 'ANGLE': 'angle', "K1": "k1", "K2": "k2", "FINT": "fint",
+                                                       'E1': 'e1', 'E2': 'e2', "HGAP": ["gap", "2"], 'TILT': 'tilt'}}
         self.elegant_matrix['RFCW'] = {'type': Cavity, 'params': {'L': 'l', 'VOLT': ['v','1.0e-9'], 'FREQ': 'freq', 'PHASE': 'phi'}}
 
 

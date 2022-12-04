@@ -57,10 +57,10 @@ filePath = 'SERVAL_field'
 dfl_SERVAL.filePath = filePath+'.dfl'
 
 fieldname_SERVAL = '0-at_source_SERVAL'
-dfl_SERVAL = undulator_field_dfl_SERVAL(dfl_SERVAL, L_w=L_w, 
-                                        sig_x=ebeam_sigma_x, sig_y=ebeam_sigma_y, 
-                                        sig_xp=ebeam_sigma_xp, sig_yp=ebeam_sigma_yp,
-                                        k_support = 'intensity', s_support='intensity', showfig=False)
+dfl_SERVAL = dfl_gen_undulator_serval(dfl_SERVAL, L_w=L_w,
+                                      sig_x=ebeam_sigma_x, sig_y=ebeam_sigma_y,
+                                      sig_xp=ebeam_sigma_xp, sig_yp=ebeam_sigma_yp,
+                                      k_support = 'intensity', s_support='intensity', showfig=False)
 
 plot_dfl(dfl_SERVAL, domains='sf', phase=True, fig_name = fieldname_SERVAL)
 plot_dfl(dfl_SERVAL, domains='kf', phase=True, fig_name = fieldname_SERVAL)

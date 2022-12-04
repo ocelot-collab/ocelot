@@ -1554,7 +1554,7 @@ def generate_input(undulator, beam, E_photon = None, itdp=True, *args, **kwargs)
     return inp
 
 
-def get_genesis_launcher(launcher_program=None, launcher_argument='',launcher_mpiParameters='-x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH'):
+def get_genesis_launcher(launcher_program=None, launcher_argument=' < tmp.cmd | tee log',launcher_mpiParameters='-x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH'):
     '''
     Returns MpiLauncher() object for given program
     '''
@@ -1564,6 +1564,7 @@ def get_genesis_launcher(launcher_program=None, launcher_argument='',launcher_mp
     if launcher_program != None:
         launcher.program = launcher_program
         launcher.argument = launcher_argument
+        launcher.mpiParameters = launcher_mpiParameters
     else:
         if host.startswith('max'):
             launcher.program = 'genesis'

@@ -95,7 +95,7 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 0
         9 - dpa as edist at the end, smeared
         10 - dpa as edist at the end, not smeared
         11 - wigner distribution at n equidistant z-points,
-        12 - ebeam bucket at max power
+        12 - ebeam bucket at max power (not implemented)
     picks as an input "GenesisOutput" object, file path of directory as strings.
     plots e-beam evolution, radiation evolution, initial and final simulation window
     If folder path is provided, all *.gout and *.out files are plotted
@@ -111,9 +111,13 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 0
         savefig = 'png'
 
     if choice == 'all':
-        choice = (1, 1, 0, 0, 5, 1, 1, 1, 1, 1, 1, 5, 0)
+        choice = (1, 1, 0, 0, 6, 1, 1, 1, 1, 1, 1, 6, 0)
     elif choice == 'gen':
         choice = (1, 1, 1, 1, 10, 0, 0, 0, 0, 0, 0, 0, 0)
+    elif choice == 'dfl':
+        choice = (0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0)
+    elif choice == 'dpa':
+        choice = (0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0)
 
     if len(choice) > 13:
         choice = choice[:13]
@@ -146,25 +150,28 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 0
         handles = [h for h in handles if ".out." in h] + [h for h in handles if ".out." not in h] #plotting .out first
 
     for handle in handles:
-
+        _logger.debug('checking ' + str(handle))
         if os.path.isfile(str(handle)):
             _logger.info('plotting ' + str(handle))
             if handle.endswith('out.h5'):
                 try:
                     handle = read_gout4(handle)
                 except (IOError, ValueError):
+                    _logger.debug('could not read ' + str(handle))
                     pass
                 
             elif handle.endswith('fld.h5'):
                 try: 
                     handle = read_dfl4(handle)
                 except (IOError, ValueError):
+                    _logger.debug('could not read ' + str(handle))
                     pass
                 
             elif handle.endswith('par.h5'):
                 try:            
-                    handle = read_dpa4(handle)
+                    handle = read_dpa4(handle, partskip=100)
                 except (IOError, ValueError):
+                    _logger.debug('could not read ' + str(handle))
                     pass
             
             else:
@@ -206,8 +213,8 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 0
             # for z in np.arange(choice[4], np.amax(handle.z), choice[4]):
             # plot_gen4_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug)
 
-            if choice[12]:
-                pass
+            # if choice[12]:
+                # pass
                 # try:
                 # plot_dpa_bucket_out(handle,scatter=0,slice_pos='max_P',repeat=3, showfig=showfig,
                 # savefig=savefig, cmap=def_cmap)
@@ -215,6 +222,7 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 0
                 # pass
 
         if isinstance(handle, RadiationField) and any(choice[5:8]):
+            _logger.info('processing RadiationField')
         # if os.path.isfile(handle.filePath.replace('.out.h5', '.fld.h5')) and any(choice[5:8]):
             # dfl = read_dfl4(handle.filePath.replace('.out.h5', '.fld.h5'))
             dfl = handle
@@ -231,19 +239,27 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 0
                     f8 = plot_dfl(dfl, domains='kf', auto_zoom=0, showfig=showfig, savefig=savefig, debug=debug)
 
         if isinstance(handle, Genesis4ParticlesDump) and any(choice[9:10]):
-        # if os.path.isfile(handle.filePath.replace('.out.h5', '.par.h5')) and (choice[9] or choice[10]):
-            # dpa = read_dpa4(handle.filePath.replace('.out.h5', '.par.h5'))
-            dpa = handle
+            _logger.info('processing Genesis4ParticlesDump')
+            #if os.path.isfile(handle.filePath.replace('.out.h5', '.par.h5')) and (choice[9] or choice[10]):
+                #dpa = read_dpa4(handle.filePath.replace('.out.h5', '.par.h5'),  estimate_npart=1, partskip=100)
             if choice[9]:
                 try:
-                    edist = dpa42edist(dpa, n_part=5e4, fill_gaps=1)
+                    if handle.one4one:
+                        edist = dpa42edist(handle)
+                    else:
+                        edist = dpa42edist(handle, n_part=5e4, fill_gaps=1)
+                        
                     f9 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=100,
                                     debug=debug)
                 except:
                     _logger.warning('could not plot smeared edist')
             if choice[10]:
                 try:
-                    edist = dpa42edist(dpa, n_part=5e4, fill_gaps=0)
+                    if handle.one4one:
+                        edist = dpa42edist(handle)
+                    else:
+                        edist = dpa42edist(handle, n_part=5e4, fill_gaps=1)
+                        
                     f10 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig,
                                      bins=(50, 50, 300, 300), debug=debug)
                 except:

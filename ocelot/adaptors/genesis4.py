@@ -27,7 +27,6 @@ from ocelot.common.py_func import copy_this_script
 
 _logger = logging.getLogger(__name__)
 
-
 # TODO: move to cpbd (enentually?)
 class Chicane(Element):
     """
@@ -1381,11 +1380,13 @@ def write_dfl4(dfl: RadiationField, file_path='sample.dfl.h5'):
     _logger.debug(ind_str + 'done')
 
 
-def read_dpa4(filePath, start_slice=0, stop_slice=np.inf, estimate_npart=0):
+def read_dpa4(filePath, start_slice=0, stop_slice=np.inf, estimate_npart=0, partskip=1):
     """
     Reads Genesis1.3 v4 particle output file
     
     :param filePath: string, absolute path to .par file
+    :partskip: int, allows to read every nth particle only to save space. (default=1)
+    :estimate_npart: reads the header and estimates number of particles and type of simulation. 0 - no estimation. 1 - normal estimation with console output. 2 - estimation only, omitting the actual parsing of particles
     :returns: Genesis4ParticlesDump
     """
 
@@ -1396,7 +1397,12 @@ def read_dpa4(filePath, start_slice=0, stop_slice=np.inf, estimate_npart=0):
     start_time = time.time()
 
     _logger.debug(ind_str + 'start_slice : stop_slice = {} : {}'.format(start_slice, stop_slice))
-
+    
+    sl = slice(None, None, partskip)
+    
+    if partskip > 1:
+        _logger.debug(ind_str + 'reading every {}st/th particle'.format(partskip))
+    
     with h5py.File(filePath, 'r') as h5:
 
         one4one = bool(h5.get('one4one')[0])
@@ -1411,25 +1417,30 @@ def read_dpa4(filePath, start_slice=0, stop_slice=np.inf, estimate_npart=0):
             npart = int(h5.get('slice000001/gamma').size)  # fix?
             _logger.debug(ind_str + 'npart = {}'.format(npart))
         else:
-            if estimate_npart:
+            if estimate_npart > 0:
                 I_tmp_full = []
                 I_tmp_wind = []
                 for dset in h5:
                     if dset.startswith('slice') and type(h5[dset]) == h5py._hl.group.Group:
-                        slice = int(dset.replace('slice', ''))
+                        slicen = int(dset.replace('slice', ''))
                         I_tmp_full.append(h5[dset]['current'][:])
-                        if slice >= start_slice and slice <= stop_slice:
+                        if slicen >= start_slice and slicen <= stop_slice:
                             I_tmp_wind.append(h5[dset]['current'][:])
                 npart_full_tmp = np.sum(I_tmp_full) * lslice / speed_of_light / q_e
                 npart_wind_tmp = np.sum(I_tmp_wind) * lslice / speed_of_light / q_e
                 _logger.info(ind_str + 'estimated npart = {:}M'.format(npart_full_tmp / 1e6))
-                _logger.info(ind_str + 'estimated npart to be downloaded = {:}.M'.format(npart_wind_tmp / 1e6))
+                _logger.info(ind_str + 'estimated npart to be downloaded = {:}.M'.format(npart_wind_tmp / partskip / 1e6))
 
         # filePath = h5.filename
 
         zsep = int(sepslice / lslice)
-        l_total = lslice * zsep * nslice
-
+        # if one4one:
+            # l_total = lslice * nslice
+        # else:
+            # l_total = lslice * zsep * nslice
+        l_total = sepslice * nslice
+        
+        
         _logger.debug(ind_str + 'nslice = {}'.format(nslice))
         _logger.debug(ind_str + 'nbins = {}'.format(nbins))
         _logger.debug(ind_str + '')
@@ -1437,7 +1448,28 @@ def read_dpa4(filePath, start_slice=0, stop_slice=np.inf, estimate_npart=0):
         _logger.debug(ind_str + 'sepslice = {} m'.format(sepslice))
         _logger.debug(ind_str + 'zsep = {}'.format(zsep))
         _logger.debug(ind_str + 'Ls_total = {}'.format(l_total))
-
+        
+        dpa = Genesis4ParticlesDump()
+        dpa.nslice = nslice
+        dpa.lslice = lslice
+        dpa.sepslice = sepslice
+        dpa.nbins = nbins
+        dpa.zsep = zsep
+        dpa.filePath = filePath
+        dpa.one4one = one4one
+        
+        _logger.debug(ind_str + 'nslice = {}'.format(nslice))
+        _logger.debug(ind_str + 'nbins = {}'.format(nbins))
+        _logger.debug(ind_str + 'lslice (aka xlamds) = {} m'.format(lslice))
+        _logger.debug(ind_str + 'sepslice = {} m'.format(sepslice))
+        _logger.debug(ind_str + 'zsep = {}'.format(zsep))
+        _logger.debug(ind_str + 'Ls_total = {}'.format(l_total))
+        
+        if estimate_npart == 2:
+            _logger.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
+            return dpa
+            
+        
         x = []
         y = []
         px = []
@@ -1457,31 +1489,30 @@ def read_dpa4(filePath, start_slice=0, stop_slice=np.inf, estimate_npart=0):
             # _logger.log(5, ind_str + dset)
             # _logger.log(5, ind_str + str(type(h5[dset])))
             if dset.startswith('slice') and type(h5[dset]) == h5py._hl.group.Group:
-                slice = int(dset.replace('slice', ''))
-                _logger.log(5, 2 * ind_str + 'slice number {}'.format(slice))
-                if slice >= start_slice and slice <= stop_slice:
+                slicen = int(dset.replace('slice', ''))
+                _logger.log(5, 2 * ind_str + 'slice number {}'.format(slicen))
+                if slicen >= start_slice and slicen <= stop_slice:
                     _logger.log(5, 2 * ind_str + 'processing')
                     I.append(h5[dset]['current'][:])
-                    ph.append(h5[dset]['theta'][:])
+                    ph.append(h5[dset]['theta'][sl])
                     _logger.log(5, 2 * ind_str + '{} particles'.format(h5[dset]['x'].size))
                     # s.append(s0 + ph0 / 2 / np.pi * lslice)
-                    x.append(h5[dset]['x'][:])
-                    px.append(h5[dset]['px'][:])
-                    y.append(h5[dset]['y'][:])
-                    py.append(h5[dset]['py'][:])
-                    g.append(h5[dset]['gamma'][:])
-                    npartpbi = h5[dset]['gamma'][:].size
+                    x.append(h5[dset]['x'][sl])
+                    px.append(h5[dset]['px'][sl])
+                    y.append(h5[dset]['y'][sl])
+                    py.append(h5[dset]['py'][sl])
+                    g.append(h5[dset]['gamma'][sl])
+                    npartpbi = h5[dset]['gamma'][sl].size
                     npartpb.append(npartpbi)
-                    slicenum.extend(list(np.ones(npartpbi, dtype=int)*slice))
-                    slicelist.append(slice)
+                    slicenum.extend(list(np.ones(npartpbi, dtype=int)*slicen))
+                    slicelist.append(slicen)
                     # ph.append(ph0)
                     # s0 += sepslice
         _logger.debug(2 * ind_str + 'done')
-
-    dpa = Genesis4ParticlesDump()
-
+    
     if one4one:
         _logger.debug(ind_str + 'flattening arrays')
+        _logger.debug(ind_str + 'writing to dpa object')
         # _logger.log(5, 2*ind_str + 'x.shape {}'.format(np.shape(x)))
         dpa.x = np.hstack(x)
         dpa.px = np.hstack(px)
@@ -1498,6 +1529,8 @@ def read_dpa4(filePath, start_slice=0, stop_slice=np.inf, estimate_npart=0):
 
         npart = dpa.x.size
         _logger.info(ind_str + 'npart = {}'.format(npart))
+        
+        dpa.one4one_qp = q_e * partskip #particle charge, assuming that npart(original) >> partskip
     else:
         npartpb = int(npart / nbins)
         # _logger.debug(ind_str + 'not one4one:')
@@ -1512,7 +1545,7 @@ def read_dpa4(filePath, start_slice=0, stop_slice=np.inf, estimate_npart=0):
 
         _logger.debug(
             2 * ind_str + 'reshaping to (nslice, nbins, npart/bin) ({}, {}, {})'.format(nslice, nbins, npartpb))
-
+        _logger.debug(ind_str + 'writing to dpa object')
         dpa.x = np.array(x).reshape((nslice, nbins, npartpb), order='F')
         dpa.px = np.array(px).reshape((nslice, nbins, npartpb), order='F')
         dpa.y = np.array(y).reshape((nslice, nbins, npartpb), order='F')
@@ -1521,21 +1554,12 @@ def read_dpa4(filePath, start_slice=0, stop_slice=np.inf, estimate_npart=0):
         dpa.g = np.array(g).reshape((nslice, nbins, npartpb), order='F')
         dpa.I = np.array(I).flatten()
     
-    _logger.debug(ind_str + 'writing to dpa object')
-    dpa.nslice = nslice
-    dpa.lslice = lslice
-    
-    dpa.slicelist = np.array(slicelist)
     
     dpa.npart = npart
-    dpa.nbins = nbins
-    dpa.zsep = zsep
-    dpa.filePath = filePath
-    dpa.one4one = one4one
-    
-    
-    _logger.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
+    dpa.slicelist = np.array(slicelist)
 
+    _logger.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
+    
     return dpa
 
 
@@ -1581,12 +1605,13 @@ def dpa42edist(dpa, n_part=None, fill_gaps=False):
     _logger.debug(ind_str + 'fill_gaps = {}'.format(fill_gaps))
 
     if dpa.one4one:
-        t0 = np.hstack([np.ones(n) * i for i, n in enumerate(dpa.npartpb)]) * dpa.lslice / speed_of_light
-        t0 += dpa.ph / 2 / np.pi * dpa.lslice / speed_of_light
+        t0 = np.hstack([np.ones(n) * i for i, n in enumerate(dpa.npartpb)]) * dpa.sepslice / speed_of_light
+        t0 += dpa.ph / 2 / np.pi * dpa.sepslice / speed_of_light
 
         edist = GenesisElectronDist()
 
-        C = npart * q_e
+        #C = npart * q_e
+        C = npart * dpa.one4one_qp
 
         if n_part is not None:
             pick_i = random.sample(range(npart), n_part)
@@ -1750,7 +1775,7 @@ def dpa42edist(dpa, n_part=None, fill_gaps=False):
 
 def read_dpa42parray(filePath, N_part=None, fill_gaps=True):
     _logger.info('reading gen4 .dpa file into parray')
-    _logger.warning(ind_str + 'in beta')
+    _logger.warning(ind_str + 'in beta, fix situation with harmonic jump resulting in sepslice > lslice')
     _logger.debug(ind_str + 'reading from ' + filePath)
 
     import random

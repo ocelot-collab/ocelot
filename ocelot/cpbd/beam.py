@@ -535,7 +535,7 @@ class BeamArray(Beam):
         if s0 is None:
             s0 = (np.amax(self.s) - np.amin(self.s)) / 2
         elif isinstance(s0, str) is not True:
-            s0 = s0 / 1e6
+            s0 = s0# / 1e6
         else:
             raise ValueError("s0 must be None or some value")
 

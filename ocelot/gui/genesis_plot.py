@@ -589,11 +589,13 @@ def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=Tru
     if zi == None:
         zi = -1
     
+    npad = kwargs.get('spec_npad', 0)
+    
     if hasattr(g, 'spec'):
         if g.spec_mode != mode:
-            g.calc_spec(mode=mode)
+            g.calc_spec(mode=mode, npad=npad)
     else:
-        g.calc_spec(mode=mode)
+        g.calc_spec(mode=mode, npad=npad)
     # TMP
     # g.calc_spec(mode='int')
 

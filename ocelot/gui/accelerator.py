@@ -48,7 +48,7 @@ def plot_lattice(lat, axis, alpha=1.0, params={'kmax': 2.0, 'ang_max': 0.5e-2}, 
     for e in lat.sequence:
 
         # if e.type in ['bend','sbend', 'rbend', 'quadrupole', 'undulator', 'drift', 'monitor','hcor','vcor', 'cavity','edge', 'solenoid']:
-        if e.__class__ in [Bend, SBend, RBend, Quadrupole, Undulator, Drift, Monitor, Hcor, Vcor, Cavity, Edge,
+        if e.__class__ in [Bend, SBend, RBend, Quadrupole, Undulator, Drift, Monitor, Hcor, Vcor, Cavity,
                            Solenoid]:
             e.s = total_len
             rendered_seq.append(e)

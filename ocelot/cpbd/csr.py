@@ -636,41 +636,42 @@ class CSR(PhysProc):
         self.apply_step = 0.0005 [m] - step of the calculation CSR kick, to calculate average CSR kick
     """
 
-    def __init__(self):
+    def __init__(self, **kw):
         PhysProc.__init__(self)
         # binning parameters
-        self.x_qbin = 0             # length or charge binning; 0... 1 = length...charge
-        self.n_bin = 100            # number of bins
-        self.m_bin = 5              # multiple binning(with shifted bins)
+        self.x_qbin = kw.get("x_qbin", 0) # length or charge binning; 0... 1 = length...charge
+        self.n_bin = kw.get("n_bin", 100) # number of bins
+        self.m_bin = kw.get("m_bin", 5)   # multiple binning(with shifted bins)
 
         # smoothing
-        self.ip_method = 2          # = 0 / 1 / 2 for rectangular / triangular / gauss
-        self.sp = 0.5               # ? parameter for gauss
-        self.sigma_min = 1.e-4      # minimal sigma, if ip_method == 2
-        self.step_unit = 0          # if positive --> step=integer * step_unit
+        self.ip_method = kw.get("ip_method", 2)     # = 0 / 1 / 2 for rectangular / triangular / gauss
+        self.sp = kw.get("sp", 0.5)                 # ? parameter for gauss
+        self.sigma_min = kw.get("sigma_min", 1.e-4) # minimal sigma, if ip_method == 2
+        self.step_unit = kw.get("step_unit", 0)     # if positive --> step=integer * step_unit
 
         # trajectory
-        self.traj_step = 0.0002     # [m] step of the trajectory
-        self.energy = None          # [GeV], if None, beta = 1 and calculation of the trajectory with RK is not possible
+        self.traj_step = kw.get("traj_step", 0.0002)  # [m] step of the trajectory
+        self.energy = kw.get("energy", None)          # [GeV], if None, beta = 1 and calculation of the trajectory with RK is not possible
 
         # CSR kick
-        self.apply_step = 0.0005    # [m] step of the calculation CSR kick: csr_kick += csr(apply_step)
-        self.step = 1               # step in the unit steps, step_in_[m] = self.step * navigator.unit_step [m].
-        # The CSR kick is applied at the end of the each step
+        self.apply_step = kw.get("apply_step", 0.0005) # [m] step of the calculation CSR kick: csr_kick += csr(apply_step)
+        self.step = kw.get("step", 1)                  # step in the unit steps, step_in_[m] = self.step * navigator.unit_step [m].
+                                                       # The CSR kick is applied at the end of the each step
 
-        self.z_csr_start = 0.       # z [m] position of the start_elem
-        self.z0 = 0.                # self.z0 = navigator.z0 in track.track()
+        self.z_csr_start = kw.get("z_csr_start", 0.) # z [m] position of the start_elem
+        self.z0 = kw.get("z0", 0.)                   # self.z0 = navigator.z0 in track.track()
 
-        self.end_poles = False      # if True magnetic field configuration 1/4, -3/4, 1, ...
-        self.rk_traj = False        # calculate trajectory of the reference particle with RK method
+        self.end_poles = kw.get("end_poles", False) # if True magnetic field configuration 1/4, -3/4, 1, ...
+        self.rk_traj = kw.get("rk_traj", False)     # calculate trajectory of the reference particle with RK method
 
-        self.debug = False
+        self.debug = kw.get("debug", False)
         # another filter
-        self.filter_order = 10
-        self.n_mesh = 345
+        self.filter_order = kw.get("filter_order", 10)
+        self.n_mesh = kw.get("n_mesh", 345)
 
-        self.pict_debug = False     # if True trajectory of the reference particle will be produced
-        # and CSR wakes will be saved in the working folder on each spep
+        # if True trajectory of the reference particle will be produced
+        # and CSR wakes will be saved in the working folder on each step
+        self.pict_debug = kw.get("pict_debug", False)
 
         self.sub_bin = SubBinning(x_qbin=self.x_qbin, n_bin=self.n_bin, m_bin=self.m_bin)
         self.bin_smoth = Smoothing()
@@ -860,6 +861,7 @@ class CSR(PhysProc):
 
         # if pict_debug = True import matplotlib
         if self.pict_debug:
+            self.plt = importlib.import_module("matplotlib.pyplot")
             self.napply = 0
             self.total_wake = 0
 
@@ -981,21 +983,21 @@ class CSR(PhysProc):
                 self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect)
         # plot trajectory of the refernece particle
         if self.pict_debug:
-            fig = plt.figure(figsize=(10, 8))
-            ax1 = plt.subplot(211)
+            fig = self.plt.figure(figsize=(10, 8))
+            ax1 = self.plt.subplot(211)
             #ax1.plot(self.csr_traj[0, :], self.csr_traj[0, :] -self.csr_traj[3, :], "r", label="X")
             ax1.plot(self.csr_traj[0, :], self.csr_traj[1, :]*1000, "r", label="X")
             ax1.plot(self.csr_traj[0, :], self.csr_traj[2, :]*1000, "b", label="Y")
-            plt.legend()
-            plt.ylabel("X/Y [mm]")
-            plt.setp(ax1.get_xticklabels(), visible=False)
-            ax3 = plt.subplot(212, sharex=ax1)
+            self.plt.legend()
+            self.plt.ylabel("X/Y [mm]")
+            self.plt.setp(ax1.get_xticklabels(), visible=False)
+            ax3 = self.plt.subplot(212, sharex=ax1)
             ax3.plot(self.csr_traj[0, :], self.csr_traj[1 + 3, :]*1000, "r", label=r"$X'$")
             ax3.plot(self.csr_traj[0, :], self.csr_traj[2 + 3, :]*1000, "b", label=r"$Y'$")
-            plt.legend()
-            plt.ylabel(r"$X'/Y'$ [mrad]")
-            plt.xlabel("s [m]")
-            plt.show()
+            self.plt.legend()
+            self.plt.ylabel(r"$X'/Y'$ [mrad]")
+            self.plt.xlabel("s [m]")
+            self.plt.show()
             # data = np.array([np.array(self.s), np.array(self.total_wake)])
             # np.savetxt("trajectory_cos.txt", self.csr_traj)
         return self.csr_traj
@@ -1064,22 +1066,22 @@ class CSR(PhysProc):
         :return:
         """
         self.napply += 1
-        fig = plt.figure(figsize=(10, 8))
+        fig = self.plt.figure(figsize=(10, 8))
 
-        ax1 = plt.subplot(311)
+        ax1 = self.plt.subplot(311)
         ax1.plot(self.csr_traj[0, :], self.csr_traj[1, :]*1000, "r",  self.csr_traj[0, itr_ra], self.csr_traj[1, itr_ra]*1000, "bo")
-        plt.ylabel("X [mm]")
+        self.plt.ylabel("X [mm]")
 
-        ax2 = plt.subplot(312)
+        ax2 = self.plt.subplot(312)
         # # CSR wake in keV/m - preferable and not depend on step
         # ax2.plot(np.linspace(s1, s1+st*len(lam_K1), len(lam_K1))*1000, lam_K1/delta_s/1000.)
         # plt.ylabel("dE, keV/m")
 
         # CSR wake in keV - amplitude changes with step
-        ax2.plot(np.linspace(s1, s1 + st * len(lam_K1), len(lam_K1)) * 1000, lam_K1 * 1e-3)
-        plt.setp(ax2.get_xticklabels(), visible=False)
-        plt.ylim((-50, 50))
-        plt.ylabel("Wake [keV]")
+        ax2.plot(np.linspace(s1, s1 + st * len(lam_K1), len(lam_K1)) * 1000, lam_K1 *1e-3)
+        self.plt.setp(ax2.get_xticklabels(), visible=False)
+        self.plt.ylim((-50, 50))
+        self.plt.ylabel("Wake [keV]")
 
         # ax3 = plt.subplot(413)
         # n_points = len(lam_K1)
@@ -1091,16 +1093,16 @@ class CSR(PhysProc):
         # plt.setp(ax3.get_xticklabels(), visible=False)
         # plt.ylim((-10, 10))
 
-        ax3 = plt.subplot(313, sharex=ax2)
+        ax3 = self.plt.subplot(313, sharex=ax2)
         self.B = s_to_cur(p_array.tau(), sigma=np.std(p_array.tau())*0.05, q0=np.sum(p_array.q_array), v=speed_of_light)
         ax3.plot(-self.B[:, 0]*1000, self.B[:, 1], lw=2)
         ax3.set_ylabel("I [A]")
         ax3.set_xlabel("s [mm]")
-        plt.subplots_adjust(hspace=0.2)
+        self.plt.subplots_adjust(hspace=0.2)
         dig = str(self.napply)
         name = "0" * (4 - len(dig)) + dig
-        plt.savefig(name + '.png')
-        plt.close(fig)
+        self.plt.savefig( name + '.png')
+
 
 
 class SaferCSR(CSR):

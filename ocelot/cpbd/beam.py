@@ -129,6 +129,46 @@ class Twiss:
         tws.s = self.s + length
         return tws
 
+    @staticmethod
+    def track(R, tws0):
+        tws = Twiss(tws0)
+        tws.p = tws0.p
+        tws.beta_x = R[0, 0] * R[0, 0] * tws0.beta_x - 2 * R[0, 1] * R[0, 0] * tws0.alpha_x + R[0, 1] * R[0, 1] * tws0.gamma_x
+        # tws.beta_x = ((M[0,0]*tws.beta_x - M[0,1]*self.alpha_x)**2 + M[0,1]*M[0,1])/self.beta_x
+        tws.beta_y = R[2, 2] * R[2, 2] * tws0.beta_y - 2 * R[2, 3] * R[2, 2] * tws0.alpha_y + R[2, 3] * R[2, 3] * tws0.gamma_y
+        # tws.beta_y = ((M[2,2]*tws.beta_y - M[2,3]*self.alpha_y)**2 + M[2,3]*M[2,3])/self.beta_y
+        tws.alpha_x = -R[0, 0] * R[1, 0] * tws0.beta_x + (R[0, 1] * R[1, 0] + R[1, 1] * R[0, 0]) * tws0.alpha_x - R[0, 1] * R[
+            1, 1] * tws0.gamma_x
+        tws.alpha_y = -R[2, 2] * R[3, 2] * tws0.beta_y + (R[2, 3] * R[3, 2] + R[3, 3] * R[2, 2]) * tws0.alpha_y - R[2, 3] * R[
+            3, 3] * tws0.gamma_y
+
+        tws.gamma_x = (1. + tws.alpha_x * tws.alpha_x) / tws.beta_x
+        tws.gamma_y = (1. + tws.alpha_y * tws.alpha_y) / tws.beta_y
+
+        tws.Dx = R[0, 0] * tws0.Dx + R[0, 1] * tws0.Dxp + R[0, 5]
+        tws.Dy = R[2, 2] * tws0.Dy + R[2, 3] * tws0.Dyp + R[2, 5]
+
+        tws.Dxp = R[1, 0] * tws0.Dx + R[1, 1] * tws0.Dxp + R[1, 5]
+        tws.Dyp = R[3, 2] * tws0.Dy + R[3, 3] * tws0.Dyp + R[3, 5]
+        denom_x = R[0, 0] * tws0.beta_x - R[0, 1] * tws0.alpha_x
+        if denom_x == 0.:
+            d_mux = np.pi / 2. * R[0, 1] / np.abs(R[0, 1])
+        else:
+            d_mux = np.arctan(R[0, 1] / denom_x)
+
+        if d_mux < 0:
+            d_mux += np.pi
+        tws.mux = tws0.mux + d_mux
+        denom_y = R[2, 2] * tws0.beta_y - R[2, 3] * tws0.alpha_y
+        if denom_y == 0.:
+            d_muy = np.pi / 2. * R[2, 3] / np.abs(R[2, 3])
+        else:
+            d_muy = np.arctan(R[2, 3] / denom_y)
+        if d_muy < 0:
+            d_muy += np.pi
+        tws.muy = tws0.muy + d_muy
+        return tws
+
     def map_x_twiss(self, tm):
         E = self.E
         M = tm.get_params(energy=E).get_rotated_R()
@@ -147,44 +187,8 @@ class Twiss:
             M[3, 3] = M[3, 3] * k
             E = Ef
 
-        tws = Twiss(self)
+        tws = self.track(M, self)
         tws.E = E
-        tws.p = self.p
-        tws.beta_x = M[0, 0] * M[0, 0] * self.beta_x - 2 * M[0, 1] * M[0, 0] * self.alpha_x + M[0, 1] * M[0, 1] * self.gamma_x
-        # tws.beta_x = ((M[0,0]*tws.beta_x - M[0,1]*self.alpha_x)**2 + M[0,1]*M[0,1])/self.beta_x
-        tws.beta_y = M[2, 2] * M[2, 2] * self.beta_y - 2 * M[2, 3] * M[2, 2] * self.alpha_y + M[2, 3] * M[2, 3] * self.gamma_y
-        # tws.beta_y = ((M[2,2]*tws.beta_y - M[2,3]*self.alpha_y)**2 + M[2,3]*M[2,3])/self.beta_y
-        tws.alpha_x = -M[0, 0] * M[1, 0] * self.beta_x + (M[0, 1] * M[1, 0] + M[1, 1] * M[0, 0]) * self.alpha_x - M[0, 1] * M[
-            1, 1] * self.gamma_x
-        tws.alpha_y = -M[2, 2] * M[3, 2] * self.beta_y + (M[2, 3] * M[3, 2] + M[3, 3] * M[2, 2]) * self.alpha_y - M[2, 3] * M[
-            3, 3] * self.gamma_y
-
-        tws.gamma_x = (1. + tws.alpha_x * tws.alpha_x) / tws.beta_x
-        tws.gamma_y = (1. + tws.alpha_y * tws.alpha_y) / tws.beta_y
-
-        tws.Dx = M[0, 0] * self.Dx + M[0, 1] * self.Dxp + M[0, 5]
-        tws.Dy = M[2, 2] * self.Dy + M[2, 3] * self.Dyp + M[2, 5]
-
-        tws.Dxp = M[1, 0] * self.Dx + M[1, 1] * self.Dxp + M[1, 5]
-        tws.Dyp = M[3, 2] * self.Dy + M[3, 3] * self.Dyp + M[3, 5]
-        denom_x = M[0, 0] * self.beta_x - M[0, 1] * self.alpha_x
-        if denom_x == 0.:
-            d_mux = np.pi / 2. * M[0, 1] / np.abs(M[0, 1])
-        else:
-            d_mux = np.arctan(M[0, 1] / denom_x)
-
-        if d_mux < 0:
-            d_mux += np.pi
-        tws.mux = self.mux + d_mux
-        denom_y = M[2, 2] * self.beta_y - M[2, 3] * self.alpha_y
-        if denom_y == 0.:
-            d_muy = np.pi / 2. * M[2, 3] / np.abs(M[2, 3])
-        else:
-            d_muy = np.arctan(M[2, 3] / denom_y)
-        if d_muy < 0:
-            d_muy += np.pi
-        tws.muy = self.muy + d_muy
-
         return tws
 
     def __str__(self):

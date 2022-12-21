@@ -612,11 +612,10 @@ def rematch_beam_lat(beam, lat_pkg, beta_mean, raise_min_beta=False):
     R1 = lattice_transfer_map(extra, beam.E)
     Rinv = np.linalg.inv(R1)
 
-    m1 = TransferMap()
-
-    m1.R = lambda e: Rinv
-
-    tw0m = m1.map_x_twiss(tw2m)
+    #m1 = TransferMap()
+    #m1.R = lambda e: Rinv
+    #tw0m = m1.map_x_twiss(tw2m)
+    tw0m = Twiss.track(Rinv, tw2m)
     _logger.debug('after rematching k=%f %f   beta=%f %f alpha=%f %f' % (qf.k1, qd.k1, tw0m.beta_x, tw0m.beta_y, tw0m.alpha_x, tw0m.alpha_y))
     # print ('after rematching k=%f %f   beta=%f %f alpha=%f %f' % (qf.k1, qd.k1, tw0m.beta_x, tw0m.beta_y, tw0m.alpha_x, tw0m.alpha_y))
 

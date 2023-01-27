@@ -35,7 +35,7 @@ def cell():
 
 @pytest.fixture(scope='module')
 def method():
-    return MethodTM(params={'global':SecondTM})
+    return {'global': SecondTM}
 
 
 @pytest.fixture(scope='module')

@@ -2,18 +2,26 @@
 user interface for viewing/editing electron optics layouts
 """
 
-import sys, os, csv
-
+from ocelot.cpbd.physics_proc import *
+from scipy import stats
+from ocelot.cpbd.beam import global_slice_analysis
+import sys
+import os
+import csv
+import numbers
 import matplotlib
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.collections import PatchCollection
+from matplotlib.offsetbox import AnchoredText
 import matplotlib.patches as mpatches
 import matplotlib.path as mpath
 import matplotlib.pyplot as plt
 from ocelot.cpbd.optics import *
 import numpy as np
+from ocelot.cpbd.elements import *
 from copy import deepcopy
+
 
 import matplotlib.font_manager as font_manager
 
@@ -40,7 +48,7 @@ def plot_lattice(lat, axis, alpha=1.0, params={'kmax': 2.0, 'ang_max': 0.5e-2}, 
     for e in lat.sequence:
 
         # if e.type in ['bend','sbend', 'rbend', 'quadrupole', 'undulator', 'drift', 'monitor','hcor','vcor', 'cavity','edge', 'solenoid']:
-        if e.__class__ in [Bend, SBend, RBend, Quadrupole, Undulator, Drift, Monitor, Hcor, Vcor, Cavity, Edge,
+        if e.__class__ in [Bend, SBend, RBend, Quadrupole, Undulator, Drift, Monitor, Hcor, Vcor, Cavity,
                            Solenoid]:
             e.s = total_len
             rendered_seq.append(e)
@@ -53,14 +61,14 @@ def plot_lattice(lat, axis, alpha=1.0, params={'kmax': 2.0, 'ang_max': 0.5e-2}, 
         if e.__class__ in [Bend, SBend, RBend, Hcor, Vcor]:
             axis.add_patch(mpatches.Rectangle(offs + np.array([pos, 0.0]), dx,
                                               np.sign(-e.angle) * min_dipole_height - e.angle / ang_max * (
-                                                      1 - min_dipole_height),
-                                              color='#0099FF', alpha=alpha))
+                1 - min_dipole_height),
+                color='#0099FF', alpha=alpha))
 
         if e.__class__ in [Solenoid]:
             axis.add_patch(mpatches.Rectangle(offs + np.array([pos, 0.0]), dx,
                                               np.sign(-e.k) * min_solenoid_height - e.k / sol_max * (
-                                                      1 - min_solenoid_height),
-                                              color='#FF99FF', alpha=alpha))
+                1 - min_solenoid_height),
+                color='#FF99FF', alpha=alpha))
 
         if e.__class__ in [Quadrupole]:
 
@@ -174,7 +182,6 @@ dict_plot = {Quadrupole: {"scale": 0.7, "color": "r", "edgecolor": "r", "label":
              Vcor: {"scale": 0.7, "color": "c", "edgecolor": "c", "label": "cor"},
              Drift: {"scale": 0., "color": "k", "edgecolor": "k", "label": ""},
              Marker: {"scale": 0., "color": "k", "edgecolor": "k", "label": "mark"},
-             Edge: {"scale": 0., "color": "k", "edgecolor": "k", "label": ""},
              Solenoid: {"scale": 0.7, "color": "g", "edgecolor": "g", "label": "sol"},
              TDCavity: {"scale": 0.7, "color": "magenta", "edgecolor": "g", "label": "tds"},
              UnknownElement: {"scale": 0.7, "color": "g", "edgecolor": "g", "label": "unk"},
@@ -232,17 +239,16 @@ def plot_elems(fig, ax, lat, s_point=0, y_lim=None, y_scale=1, legend=True, font
     rf_max = np.max(np.abs(rf)) if len(rf) != 0 else 0
     m_max = np.max(m) if len(m) != 0 else 0
     ncols = np.sign(len(q)) + np.sign(len(b)) + np.sign(len(s)) + np.sign(len(c)) + np.sign(len(u)) + np.sign(
-        len(rf)) + np.sign(len(m))
+        len(rf)) + np.sign(len(m)) + np.sign(len(sol))
 
     labels_dict = {}
     for elem in dict_copy.keys():
         labels_dict[elem] = dict_copy[elem]["label"]
     for elem in lat.sequence:
         if elem.__class__ in excld_legend:
-            L += elem.l
-            continue
+            elem = Drift(l=elem.l)
 
-        if elem.__class__ in [Marker, Edge]:
+        if elem.__class__ == Marker:
             L += elem.l
             continue
         l = elem.l
@@ -269,55 +275,58 @@ def plot_elems(fig, ax, lat, s_point=0, y_lim=None, y_scale=1, legend=True, font
         if elem.__class__ == Quadrupole:
             ampl = elem.k1 / q_max if q_max != 0 else 1
             point, = ax.fill(s_coord, (rect + 1) * ampl * scale * y_scale, color, edgecolor=ecolor,
-                             alpha=alpha, label=dict_copy[elem.__class__]["label"])
+                             alpha=alpha, label=label)
             dict_copy[elem.__class__]["label"] = ""
 
         elif elem.__class__ == Solenoid:
             ampl = elem.k / sol_max if sol_max != 0 else 1
             point, = ax.fill(s_coord, (rect + 1) * ampl * scale * y_scale, color, edgecolor=ecolor,
-                             alpha=alpha, label=dict_copy[elem.__class__]["label"])
+                             alpha=alpha, label=label)
             dict_copy[elem.__class__]["label"] = ""
 
         elif elem.__class__ in [Bend, RBend, SBend]:
             ampl = elem.angle / b_max if b_max != 0 else 1
-            point, = ax.fill(s_coord, (rect + 1) * ampl * scale * y_scale, color,
-                             alpha=alpha, label=dict_copy[elem.__class__]["label"])
-            dict_copy[elem.__class__]["label"] = ""
+            point, = ax.fill(s_coord, (rect + 1) * ampl * scale * y_scale, color, edgecolor=ecolor,
+                             alpha=alpha, label=label)
+            dict_copy[Bend]["label"] = ""
+            dict_copy[RBend]["label"] = ""
+            dict_copy[SBend]["label"] = ""
 
         elif elem.__class__ in [Hcor, Vcor]:
             ampl = elem.angle / c_max if c_max != 0 else 0.5
             if elem.angle == 0:
                 ampl = 0.5
                 point, = ax.fill(s_coord, rect * ampl * scale * y_scale, "lightcyan", edgecolor="k",
-                                 alpha=0.5, label=dict_copy[elem.__class__]["label"])
+                                 alpha=0.5, label=label)
             else:
                 point, = ax.fill(s_coord, (rect + 1) * ampl * scale * y_scale, color, edgecolor=ecolor,
-                                 alpha=alpha, label=dict_copy[elem.__class__]["label"])
+                                 alpha=alpha, label=label)
             dict_copy[Hcor]["label"] = ""
             dict_copy[Vcor]["label"] = ""
 
         elif elem.__class__ == Sextupole:
             ampl = elem.k2 / s_max if s_max != 0 else 1
-            point, = ax.fill(s_coord, (rect + 1) * ampl * scale * y_scale, color,
-                             alpha=alpha, label=dict_copy[elem.__class__]["label"])
+            point, = ax.fill(s_coord, (rect + 1) * ampl * scale * y_scale, color, edgecolor=ecolor,
+                             alpha=alpha, label=label)
             dict_copy[elem.__class__]["label"] = ""
 
         elif elem.__class__ in [Cavity, TWCavity, TDCavity]:
             ampl = 1
             point, = ax.fill(s_coord, rect * ampl * scale * y_scale, color,
-                             alpha=alpha, edgecolor="lightgreen", label=dict_copy[elem.__class__]["label"])
+                             alpha=alpha, edgecolor=ecolor,
+                             label=label)
             dict_copy[elem.__class__]["label"] = ""
 
         elif elem.__class__ == Undulator:
             ampl = elem.Kx / u_max if u_max != 0 else 0.5
-            point, = ax.fill(s_coord, rect * ampl * scale * y_scale, color,
-                             alpha=alpha, label=dict_copy[elem.__class__]["label"])
+            point, = ax.fill(s_coord, rect * ampl * scale * y_scale, color, edgecolor=ecolor,
+                             alpha=alpha, label=label)
             dict_copy[elem.__class__]["label"] = ""
 
         elif elem.__class__ == Multipole:
             ampl = sum(elem.kn) / m_max if u_max != 0 else 0.5
-            point, = ax.fill(s_coord, rect * ampl * scale * y_scale, color,
-                             alpha=alpha, label=dict_copy[elem.__class__]["label"])
+            point, = ax.fill(s_coord, rect * ampl * scale * y_scale, color, edgecolor=ecolor,
+                             alpha=alpha, label=label)
             dict_copy[elem.__class__]["label"] = ""
 
         else:
@@ -406,7 +415,7 @@ def plot_betas(ax, S, beta_x, beta_y, font_size):
 
 
 def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=True, font_size=12, excld_legend=None,
-                  figsize=None):
+                  figsize=None, plt_figure=None):
     """
     function for plotting: lattice (bottom section), vertical and horizontal beta-functions (middle section),
     other parameters (top section) such as "Dx", "Dy", "E", "mux", "muy", "alpha_x", "alpha_y", "gamma_x", "gamma_y"
@@ -420,12 +429,16 @@ def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=Tr
     :param font_size: 16 - font size for any element of plot
     :param excld_legend: None, exclude type of element from the legend, e.g. excld_legend=[Hcor, Vcor]
     :param figsize: None or e.g. (8, 6)
+    :param plt_figure: None, exported plt.figure()
     :return:
     """
-    if fig_name is None:
-        fig = plt.figure(figsize=figsize)
+    if plt_figure is None:
+        if fig_name is None:
+            fig = plt.figure(figsize=figsize)
+        else:
+            fig = plt.figure(fig_name, figsize=figsize)
     else:
-        fig = plt.figure(fig_name, figsize=figsize)
+        fig = plt_figure
 
     plt.rc('axes', grid=grid)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
@@ -740,9 +753,9 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones=None):
 
     fig1 = plt.contour(contour_da, 1, extent=extent, linewidths=2, colors='k')  # , colors = 'r')
     fig1 = plt.contourf(mux, 40, cmap=my_cmap, extent=extent)  # , colors = 'r')
-    cb = plt.colorbar(cmap=my_cmap)
+    cb = plt.colorbar()
     fig1 = plt.contourf(mux, 10, levels=[-1, -.0001], colors='w', extent=extent)
-    if zones != None:
+    if zones is not None:
         x_zone = zones[0]
         y_zone = zones[1]
         plt.plot(x_zone * np.cos(t), y_zone * np.sin(t), "g", lw=2)
@@ -757,7 +770,7 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones=None):
 
     fig1 = plt.contour(contour_da, 1, extent=extent, linewidths=2, colors='k')  # , colors = 'r')
     fig1 = plt.contourf(muy, 40, cmap=my_cmap, extent=extent)  # , colors = 'r')
-    if zones != None:
+    if zones is not None:
         x_zone = zones[0]
         y_zone = zones[1]
         plt.plot(x_zone * np.cos(t), y_zone * np.sin(t), "g", lw=2)
@@ -765,7 +778,7 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones=None):
         plt.plot(3 * x_zone * np.cos(t), 3 * y_zone * np.sin(t), "r", lw=2)
         plt.plot(4 * x_zone * np.cos(t), 4 * y_zone * np.sin(t), "y", lw=2)
 
-    cb = plt.colorbar(cmap=my_cmap)
+    cb = plt.colorbar()
     fig1 = plt.contourf(muy, 10, levels=[-1, -.0001], colors='w', extent=extent)
     plt.xlabel("X, m")
     plt.ylabel("Y, m")
@@ -823,23 +836,23 @@ def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinea
 
     ax.imshow(H, interpolation=interpolation, aspect='auto', origin='lower',
               extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], vmin=vmin, cmap=my_rainbow)
-    if xlabel is not None: ax.set_xlabel(xlabel)
-    if ylabel is not None: ax.set_ylabel(ylabel)
+
+    if xlabel is not None:
+        ax.set_xlabel(xlabel)
+    if ylabel is not None:
+        ax.set_ylabel(ylabel)
     ax.grid(grid)
 
     plt.setp(ax.get_xticklabels(), visible=show_xtick_label)
 
 
-from ocelot.cpbd.beam import global_slice_analysis
-
-
 def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, nbins_y=200,
                 interpolation="bilinear", inverse_tau=False,
-                show_moments=False, nfig=40,
+                show_moments=False, figname=40,
                 title=None, figsize=None, grid=True,
                 filename=None, headtail=True,
                 filter_base=2, filter_iter=2,
-                tau_units="mm"
+                tau_units="mm", **kwargs
                 ):
     """
     Shows e-beam slice parameters (current, emittances, energy spread)
@@ -855,7 +868,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
                         ‘spline36’, ‘hanning’, ‘hamming’, ‘hermite’, ‘kaiser’, ‘quadric’, ‘catrom’, ‘gaussian’, ‘bessel’
     :param inverse_tau: False, inverse tau - head will be on the right side of figure
     :param show_moments: False, show moments (X_mean_slice and Y_mean_slice) in the density distribution
-    :param nfig: number of the figure
+    :param figname: number of the figure or name
     :param title: None or string - title of the figure
     :param figsize: None or e.g. (8, 6)
     :param grid: True, show grid
@@ -867,20 +880,22 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     """
     if tau_units == "m":
         tau_factor = 1  # m
-        tau_label = "s [mm]"
+        tau_label = r"$s\,[\mathrm{m}]$"
     elif tau_units == "um":
         tau_factor = 1e6  # um
-        tau_label = r"s [$\mu$m]"
+        tau_label = r"$s\,[\mathrm{\mu{}m}]$"
     else:
         tau_factor = 1e3  # mm
-        tau_label = "s [mm]"
+        tau_label = r"$s\,[\mathrm{mm}]$"
 
     p_array_copy = deepcopy(p_array)
     if inverse_tau:
         p_array_copy.tau()[:] *= -1
     slice_params = global_slice_analysis(p_array_copy, nparts_in_slice, smooth_param, filter_base, filter_iter)
-
-    fig = plt.figure(nfig, figsize=figsize)
+    nfig = kwargs.get('nfig', 40)
+    if nfig != 40:
+        figname = nfig
+    fig = plt.figure(figname, figsize=figsize)
     if title is not None:
         fig.suptitle(title)
     ax_sp = plt.subplot(325)
@@ -888,48 +903,41 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     plt.plot(slice_params.s * tau_factor, slice_params.se * 1e-3, "b")
     # plt.legend()
     plt.xlabel(tau_label)
-    plt.ylabel("$\sigma_E$ [keV]")
+    plt.ylabel(r"$\sigma_E\,[\mathrm{keV}]$")
     plt.grid(grid)
 
     ax_em = plt.subplot(323, sharex=ax_sp)
     plt.title("Emittances")
     emitxn_mm_mrad = np.round(slice_params.emitxn * 1e6, 2)
     emityn_mm_mrad = np.round(slice_params.emityn * 1e6, 2)
-    plt.plot(slice_params.s * tau_factor, slice_params.ex, "r",
-             label=r"$\varepsilon_x^{proj} = $" + str(emitxn_mm_mrad))
-    plt.plot(slice_params.s * tau_factor, slice_params.ey, "b",
-             label=r"$\varepsilon_y^{proj} = $" + str(emityn_mm_mrad))
+    plt.plot(slice_params.s * tau_factor, slice_params.exn*1e6, "r",
+             label=fr"$\varepsilon_x^{{\mathrm{{proj}}}} = {emitxn_mm_mrad}\,\mathrm{{mm\cdot{{}}mrad}}$")
+    plt.plot(slice_params.s * tau_factor, slice_params.eyn*1e6, "b",
+             label=rf"$\varepsilon_y^{{\mathrm{{proj}}}} = {emityn_mm_mrad}\,\mathrm{{mm\cdot{{}}mrad}}$")
     plt.legend()
     plt.setp(ax_em.get_xticklabels(), visible=False)
-    plt.ylabel(r"$\varepsilon_{x,y}$ [$\mu m \cdot rad$]")
+    plt.ylabel(r"$\varepsilon_{x,y}\,[\mathrm{mm\cdot{}mrad}]$")
     plt.grid(grid)
 
     ax_c = plt.subplot(321, sharex=ax_sp)
     plt.title("Current")
 
-    if inverse_tau:
-        arrow = r"$\Longrightarrow$"
-        label = "head " + arrow
-        location = "upper right"
-    else:
-        arrow = r"$\Longleftarrow$"
-        label = arrow + " head"
-        location = "upper left"
-
     plt.plot(slice_params.s * tau_factor, slice_params.I, "b")
-    # label = r"$I_{max}=$" + str(np.round(np.max(slice_params.I), 1))
-    if headtail:
-        leg = ax_c.legend([label], handlelength=0, handletextpad=0, fancybox=True, loc=location)
-        for item in leg.legendHandles:
-            item.set_visible(False)
+    imax = np.max(slice_params.I)
+    imax_label = rf"$I_{{\mathrm{{max}}}}= {imax:.0f}\,\mathrm{{A}}$"
+    leg = ax_c.legend([imax_label], handlelength=0, handletextpad=0, fancybox=True, loc="best")
+    for item in leg.legendHandles:
+        item.set_visible(False)
+
+
     plt.setp(ax_c.get_xticklabels(), visible=False)
-    plt.ylabel("I [A]")
+    plt.ylabel("$I\,[\mathrm{A}]$")
     plt.grid(grid)
 
     ax_ys = plt.subplot(326, sharex=ax_sp)
 
     show_density(p_array_copy.tau() * tau_factor, p_array_copy.y() * 1e3, ax=ax_ys, nbins_x=nbins_x, nbins_y=nbins_y,
-                 interpolation=interpolation, xlabel=tau_label, ylabel='y [mm]', nfig=50,
+                 interpolation=interpolation, xlabel=tau_label, ylabel='$y\,[\mathrm{mm}]$', nfig=50,
                  title="Side view", figsize=None, grid=grid)
     if show_moments:
         plt.plot(slice_params.s * tau_factor, slice_params.my * 1e3, "k", lw=2)
@@ -939,7 +947,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     ax_xs = plt.subplot(324, sharex=ax_sp)
 
     show_density(p_array_copy.tau() * tau_factor, p_array_copy.x() * 1e3, ax=ax_xs, nbins_x=nbins_x, nbins_y=nbins_y,
-                 interpolation=interpolation, ylabel='x [mm]',
+                 interpolation=interpolation, ylabel=r'$x\,[\mathrm{mm}]$',
                  title="Top view", grid=grid, show_xtick_label=False)
     if show_moments:
         plt.plot(slice_params.s * tau_factor, slice_params.mx * 1e3, "k", lw=2)
@@ -949,8 +957,30 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     ax_ps = plt.subplot(322, sharex=ax_sp)
 
     show_density(p_array_copy.tau() * tau_factor, p_array_copy.p() * 1e2, ax=ax_ps, nbins_x=nbins_x, nbins_y=nbins_y,
-                 interpolation=interpolation, ylabel='$\delta_E$ [%]',
+                 interpolation=interpolation, ylabel=r'$\delta_E\,[\%]$',
                  title="Longitudinal phase space", grid=grid, show_xtick_label=False)
+
+    if inverse_tau:
+        arrow = r"$\Longrightarrow$"
+        label = "Head " + arrow
+        location = "upper right"
+    else:
+        arrow = r"$\Longleftarrow$"
+        label = arrow + " Head"
+        location = "upper left"
+
+    if headtail:
+        # Use previous legend's properties to set this AnchoredText instance to look
+        # just like a legend (to match the style).
+        frame = leg.get_frame()
+        anchored_text = AnchoredText(
+            label,
+            loc=location,
+            prop=dict(fontsize=leg.get_texts()[0].get_fontsize()))
+        anchored_text.patch.set_boxstyle(frame.get_boxstyle())
+        anchored_text.patch.set_alpha(frame.get_alpha())
+        anchored_text.patch.set_edgecolor(leg.get_frame().get_edgecolor())
+        ax_ps.add_artist(anchored_text)
 
     if filename is not None:
         plt.savefig(filename)
@@ -1049,10 +1079,11 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice1=5000, nparts_in_slice2=
     :param legend_beam2: None, legend for beam N1
     :return:
     """
+    tau_label = r"$s\,[\mathrm{\mu{}m}]$"
     if legend_beam1 == None:
-        legend_beam1 = "beam1"
+        legend_beam1 = "beam 1"
     if legend_beam2 == None:
-        legend_beam2 = "beam2"
+        legend_beam2 = "beam 2"
     p_array_copy1 = deepcopy(p_array_1)
     p_array_copy2 = deepcopy(p_array_2)
     if inverse_tau:
@@ -1067,35 +1098,41 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice1=5000, nparts_in_slice2=
         fig.suptitle(title)
     ax_sp = plt.subplot(325)
     plt.title("Energy Spread")
-    plt.plot(slice_params1.s * 1e6, slice_params1.se * 1e-3, "r", label=r"$\sigma_E$: " + legend_beam1)
-    plt.plot(slice_params2.s * 1e6, slice_params2.se * 1e-3, "b", label=r"$\sigma_E$: " + legend_beam2)
+    plt.plot(slice_params1.s * 1e6, slice_params1.se * 1e-3, "r",
+             label=rf"$\sigma_E$: {legend_beam1}")
+    plt.plot(slice_params2.s * 1e6, slice_params2.se * 1e-3, "b",
+             label=rf"$\sigma_E$: {legend_beam2}")
     plt.legend()
-    plt.xlabel(r"s, $\mu m$")
-    plt.ylabel("dE, keV")
+    plt.xlabel(tau_label)
+
+    plt.ylabel(r"$\Delta{} E\,[\mathrm{keV}]$")
     plt.grid(True)
 
     ax_em = plt.subplot(323, sharex=ax_sp)
-    plt.title("Hor. Emittances")
+    plt.title("Horizontal Emittances")
     emitxn1_mm_mrad = np.round(slice_params1.emitxn * 1e6, 2)
     emitxn2_mm_mrad = np.round(slice_params2.emitxn * 1e6, 2)
     plt.plot(slice_params1.s * 1e6, slice_params1.ex, "r",
-             label=r"$\varepsilon_x = $" + str(emitxn1_mm_mrad) + r" $mm\cdot mrad$: " + legend_beam1)
+             label=rf"$\varepsilon_x = {emitxn1_mm_mrad}\,\mathrm{{mm\cdot{{}}mrad}}$: {legend_beam1}")
     plt.plot(slice_params2.s * 1e6, slice_params2.ex, "b",
-             label=r"$\varepsilon_x = $" + str(emitxn2_mm_mrad) + r" $mm\cdot mrad$: " + legend_beam2)
+             label=rf"$\varepsilon_x = {emitxn2_mm_mrad}\,\mathrm{{mm\cdot{{}}mrad}}$: {legend_beam2}")
+
     plt.legend()
     plt.setp(ax_em.get_xticklabels(), visible=False)
-    plt.ylabel(r"$\varepsilon_x$, $mm\cdot mrad$")
+    plt.ylabel(r"$\varepsilon_x\,[\mathrm{mm\cdot{}mrad}]$")
     plt.grid(True)
 
     ax_c = plt.subplot(321, sharex=ax_sp)
     plt.title("Current")
-    I1max = np.round(np.max(slice_params1.I), 0)
-    I2max = np.round(np.max(slice_params2.I), 0)
-    plt.plot(slice_params1.s * 1e6, slice_params1.I, "r", label=r"$I_{max}=$" + str(I1max) + " A " + legend_beam1)
-    plt.plot(slice_params2.s * 1e6, slice_params2.I, "b", label=r"$I_{max}=$" + str(I2max) + " A " + legend_beam2)
+    i1max = np.max(slice_params1.I)
+    i2max = np.max(slice_params2.I)
+    plt.plot(slice_params1.s * 1e6, slice_params1.I, "r",
+             label=fr"$I_{{\mathrm{{max}}}}={i1max:.0f}\,\mathrm{{A}}$ {legend_beam1}")
+    plt.plot(slice_params2.s * 1e6, slice_params2.I, "b",
+             label=fr"$I_{{\mathrm{{max}}}}={i2max:.0f}\,\mathrm{{A}}$ {legend_beam2}")
     plt.legend()
     plt.setp(ax_c.get_xticklabels(), visible=False)
-    plt.ylabel("I, A")
+    plt.ylabel("$I\,[\mathrm{A}]$")
     plt.grid(True)
 
     # my_rainbow = deepcopy(plt.get_cmap('rainbow'))
@@ -1104,35 +1141,35 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice1=5000, nparts_in_slice2=
     ax_mp = plt.subplot(326)
     plt.title("Energy Distribution")
 
-    plt.plot(slice_params1.s * 1e6, slice_params1.mp * 1e2, "r", label=r"$\Delta E/E$: " + legend_beam1)
-    plt.plot(slice_params2.s * 1e6, slice_params2.mp * 1e2, "b", label=r"$\Delta E/E$: " + legend_beam2)
+    plt.plot(slice_params1.s * 1e6, slice_params1.mp * 1e2, "r", label=r"$\Delta{} E/E$: " + legend_beam1)
+    plt.plot(slice_params2.s * 1e6, slice_params2.mp * 1e2, "b", label=r"$\Delta{} E/E$: " + legend_beam2)
     plt.legend()
-    plt.xlabel(r"s, $\mu m$")
-    plt.ylabel("dE/E, %")
+    plt.xlabel(tau_label)
+    plt.ylabel(r'$\delta{}_E\,[\%]$')
     plt.grid(True)
 
     ax_em = plt.subplot(324, sharex=ax_mp)
-    plt.title("Ver. Emittances")
+    plt.title("Vertical Emittances")
     emityn1_mm_mrad = np.round(slice_params1.emityn * 1e6, 2)
     emityn2_mm_mrad = np.round(slice_params2.emityn * 1e6, 2)
     plt.plot(slice_params1.s * 1e6, slice_params1.ey, "r",
-             label=r"$\varepsilon_y = $" + str(emityn1_mm_mrad) + r" $mm\cdot mrad$: " + legend_beam1)
+             label=r"$\varepsilon_y = $" + str(emityn1_mm_mrad) + r" $\mathrm{mm\cdot{}mrad}$: " + legend_beam1)
     plt.plot(slice_params2.s * 1e6, slice_params2.ey, "b",
-             label=r"$\varepsilon_y = $" + str(emityn2_mm_mrad) + r" $mm\cdot mrad$: " + legend_beam2)
+             label=r"$\varepsilon_y = $" + str(emityn2_mm_mrad) + r" $\mathrm{mm\cdot{}mrad}$: " + legend_beam2)
     plt.legend()
     plt.setp(ax_em.get_xticklabels(), visible=False)
-    plt.ylabel(r"$\varepsilon_y$, $mm\cdot mrad$")
+    plt.ylabel(r"$\varepsilon_y\,[\mathrm{mm\cdot{}mrad}]$")
     plt.grid(True)
 
     ax_e = plt.subplot(322, sharex=ax_mp)
-    plt.title("Slice Position")
-    plt.plot(slice_params1.s * 1e6, slice_params1.mx * 1e6, "r", label=r"$x_{slice}$: " + legend_beam1)
-    plt.plot(slice_params2.s * 1e6, slice_params2.mx * 1e6, "b", label=r"$x_{slice}$: " + legend_beam2)
-    plt.plot(slice_params1.s * 1e6, slice_params1.my * 1e6, "r--", label=r"$y_{slice}$: " + legend_beam1)
-    plt.plot(slice_params2.s * 1e6, slice_params2.my * 1e6, "b--", label=r"$y_{slice}$: " + legend_beam2)
+    plt.title("Slice Positions")
+    plt.plot(slice_params1.s * 1e6, slice_params1.mx * 1e6, "r", label=r"$x_\mathrm{slice}$: " + legend_beam1)
+    plt.plot(slice_params2.s * 1e6, slice_params2.mx * 1e6, "b", label=r"$x_\mathrm{slice}$: " + legend_beam2)
+    plt.plot(slice_params1.s * 1e6, slice_params1.my * 1e6, "r--", label=r"$y_\mathrm{slice}$: " + legend_beam1)
+    plt.plot(slice_params2.s * 1e6, slice_params2.my * 1e6, "b--", label=r"$y_\mathrm{slice}$: " + legend_beam2)
     plt.legend()
     plt.setp(ax_e.get_xticklabels(), visible=False)
-    plt.ylabel(r"$X/Y_{slice}$, $\mu m$")
+    plt.ylabel(r"$x_{\mathrm{slice}},\,y_{\mathrm{slice}}\,[\mathrm{\mu{}m}]$")
     plt.grid(True)
 
 
@@ -1246,7 +1283,7 @@ def show_e_beam_reduced(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_
     # ax_sp = plt.subplot(225)
     # plt.title("Energy spread")
     # plt.plot(slice_params.s * 1e3, slice_params.se*1e-3, "b")
-    ##plt.legend()
+    # plt.legend()
     # plt.xlabel("s [mm]")
     # plt.ylabel("$\sigma_E$ [keV]")
     # plt.grid(grid)
@@ -1294,9 +1331,198 @@ def show_e_beam_reduced(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_
     ax_ps = plt.subplot(222, sharex=ax_sp)
 
     show_density(p_array_copy.tau() * 1e3, p_array_copy.p() * 1e2, ax=ax_ps, nbins_x=nbins_x, nbins_y=nbins_y,
-                 interpolation=interpolation, ylabel='$\delta_E$ [%]',
+                 interpolation=interpolation, ylabel=r'$\delta_E$ [%]',
                  title="Longitudinal phase space", grid=grid, show_xtick_label=False)
 
+    if filename is not None:
+        plt.savefig(filename)
+
+
+def show_e_beam_slices(p_array, nparts_in_slice=5000, smooth_param=0.05, inverse_tau=False, figname=50,
+                       title=None, figsize=None, grid=True,
+                       filename=None, headtail=True,
+                       filter_base=2, filter_iter=2, tau_units="mm", slice=0):
+    """
+    Shows e-beam slice parameters (current, emittances, energy spread)
+    and beam distributions (dE/(p0 c), X, Y) against long. coordinate (S)
+    Note: beam head is on the left side
+
+    :param p_array: ParticleArray
+    :param nparts_in_slice: number of particles per slice
+    :param smoth_param: 0.05, smoothing parameters to calculate the beam current: sigma = smoth_param * np.std(p_array.tau())
+    :param inverse_tau: False, inverse tau - head will be on the right side of figure
+    :param show_moments: False, show moments (X_mean_slice and Y_mean_slice) in the density distribution
+    :param figname: number of the figure or name
+    :param title: None or string - title of the figure
+    :param figsize: None or e.g. (8, 6)
+    :param grid: True, show grid
+    :param headtail: True, show direction of the bunch
+    :param tau_units: [m], [mm] or [um]
+    :param slice: None, str or float:
+                                None - ignore
+                                float - s position of the slice
+                                "center" - center of mass of the bunch
+                                "Imax" - current maximum
+                                "Emax" - maximum energy
+    :return:
+    """
+
+    if tau_units == "m":
+        tau_factor = 1  # m
+        tau_label = "s [mm]"
+    elif tau_units == "um":
+        tau_factor = 1e6  # um
+        tau_label = r"s [$\mu$m]"
+    else:
+        tau_factor = 1e3  # mm
+        tau_label = "s [mm]"
+
+    p_array_copy = deepcopy(p_array)
+    if inverse_tau:
+        p_array_copy.tau()[:] *= -1
+    slice_params = global_slice_analysis(p_array_copy, nparts_in_slice, smooth_param, filter_base, filter_iter)
+
+    s = slice_params.s * tau_factor
+    if isinstance(slice, numbers.Number):
+        ind0 = np.argsort(np.abs(s - slice))[0]
+    elif isinstance(slice, str):
+        if slice == "center":
+            ind0 = np.argsort(np.abs(s - np.mean(s)))[0]
+        elif slice == "Imax":
+            ind0 = np.argmax(slice_params.I)
+        elif slice == "Emax":
+            ind0 = np.argmax(slice_params.me)
+    else:
+        ind0 = np.argsort(np.abs(slice_params.s))[0]
+
+    fig = plt.figure(figname, figsize=figsize)
+    if title is not None:
+        fig.suptitle(title)
+    ax_sp = plt.subplot(325)
+    plt.title("Energy spread")
+    plt.plot(s, slice_params.se * 1e-3, "b")
+    fm = "bo"
+    label = r"$\sigma_E=$" + str(np.round(slice_params.se[ind0] * 1e-3, 2)) + " keV"
+    if slice is None:
+        fm = "b"
+        label = None
+    plt.plot(s[ind0], slice_params.se[ind0] * 1e-3, fm, label=label)
+    if slice is not None:
+        plt.legend()
+    plt.xlabel(tau_label)
+    plt.ylabel(r"$\sigma_E$ [keV]")
+    #plt.ylim([200, 300])
+    plt.grid(grid)
+
+    ax_em = plt.subplot(323, sharex=ax_sp)
+
+    plt.title("Emittances")
+
+    plt.plot(s, slice_params.ex, "r")
+    fmx = "ro"
+    fmy = "bo"
+    labelx = r"$\varepsilon_x^{0} = $" + str(np.round(slice_params.ex[ind0], 2)) + r" $\mu m \cdot rad$"
+    labely = r"$\varepsilon_y^{0} = $" + str(np.round(slice_params.ey[ind0], 2)) + r" $\mu m \cdot rad$"
+    if slice is None:
+        fmx = "r"
+        fmy = "b"
+        labelx = r"$\varepsilon_x$"
+        labely = r"$\varepsilon_y$"
+    plt.plot(s[ind0], slice_params.ex[ind0], fmx, label=labelx)
+    plt.plot(s, slice_params.ey, "b")
+    plt.plot(s[ind0], slice_params.ey[ind0], fmy, label=labely)
+    plt.legend()
+    plt.setp(ax_em.get_xticklabels(), visible=False)
+    plt.ylabel(r"$\varepsilon_{x,y}$ [$\mu m \cdot rad$]")
+    plt.grid(grid)
+
+    ax_c = plt.subplot(321, sharex=ax_sp)
+    plt.title("Current")
+
+    if inverse_tau:
+        arrow = r"$\Longrightarrow$"
+        label_arr = "head " + arrow
+        location = "upper right"
+    else:
+        arrow = r"$\Longleftarrow$"
+        label_arr = arrow + " head"
+        location = "upper left"
+
+    plt.plot(s, slice_params.I, "b")
+    fm = "bo"
+    label = "$I_0=$" + str(np.round(slice_params.I[ind0], 1)) + " A"
+    if slice is None:
+        fm = "b"
+        label = None
+    plt.plot(s[ind0], slice_params.I[ind0], fm, label=label)
+    # label = r"$I_{max}=$" + str(np.round(np.max(slice_params.I), 1))
+    if slice is not None:
+        plt.legend()
+    if headtail:
+        leg = ax_c.legend([label_arr], handlelength=0, handletextpad=0, fancybox=True, loc=location)
+        for item in leg.legendHandles:
+            item.set_visible(False)
+    plt.setp(ax_c.get_xticklabels(), visible=False)
+    plt.ylabel("I [A]")
+    plt.grid(grid)
+
+    ax_alpha = plt.subplot(326, sharex=ax_sp)
+    plt.title(r"$\alpha_{x,y}$")
+    plt.plot(s, slice_params.alpha_x, "r")
+    fmx = "ro"
+    fmy = "bo"
+    labelx = r"$\alpha_x=$" + str(np.round(slice_params.alpha_x[ind0], 2))
+    labely = r"$\alpha_y=$" + str(np.round(slice_params.alpha_y[ind0], 2))
+    if slice is None:
+        fmx = "r"
+        fmy = "b"
+        labelx = r"$\alpha_x$"
+        labely = r"$\alpha_y$"
+    plt.plot(s[ind0], slice_params.alpha_x[ind0], fmx, label=labelx)
+    plt.plot(s, slice_params.alpha_y, "b")
+    plt.plot(s[ind0], slice_params.alpha_y[ind0], fmy, label=labely)
+    plt.legend()
+    plt.xlabel(tau_label)
+    plt.ylabel(r"$\alpha_{x,y}$")
+    plt.grid(grid)
+
+    ax_b = plt.subplot(324, sharex=ax_sp)
+    plt.title(r"$\beta_{x,y}$")
+    plt.plot(s, slice_params.beta_x, "r")
+    fmx = "ro"
+    fmy = "bo"
+    labelx = r"$\beta_x=$" + str(np.round(slice_params.beta_x[ind0], 2)) + " m"
+    labely = r"$\beta_y=$" + str(np.round(slice_params.beta_y[ind0], 2)) + " m"
+    if slice is None:
+        fmx = "r"
+        fmy = "b"
+        labelx = r"$\beta_x$"
+        labely = r"$\beta_y$"
+    plt.plot(s[ind0], slice_params.beta_x[ind0], fmx, label=labelx)
+    plt.plot(s, slice_params.beta_y, "b")
+    plt.plot(s[ind0], slice_params.beta_y[ind0], fmy, label=labely)
+    plt.setp(ax_b.get_xticklabels(), visible=False)
+    plt.ylabel(r"$\beta_{x,y}$")
+    plt.grid(grid)
+    plt.legend()
+
+    ax_me = plt.subplot(322, sharex=ax_sp)
+    plt.title(r"Longitudinal phase space")
+    MeV = 1e-6
+    plt.plot(s, slice_params.me * MeV, "r")
+    fm = "ro"
+    label = r"$E_0=$" + str(np.round(slice_params.me[ind0] * MeV, 1)) + " MeV"
+    if slice is None:
+        fm = "r"
+        label = None
+    plt.plot(s[ind0], slice_params.me[ind0] * MeV, fm, label=label)
+    # plt.plot(slice_params.s[ind0] * tau_factor, bx, "ro", label=r"$\beta_x=$"+str(np.round(bx, 2)))
+    plt.setp(ax_me.get_xticklabels(), visible=False)
+    plt.ylabel(r"$E$ [MeV]")
+    #plt.ylim([17100, 17300])
+    plt.grid(grid)
+    if slice is not None:
+        plt.legend()
     if filename is not None:
         plt.savefig(filename)
 
@@ -1331,7 +1557,7 @@ def beam_jointplot(p_array, show_plane="x", nparts_in_slice=5000, smooth_param=0
     slice_params = global_slice_analysis(p_array_copy, nparts_in_slice, smooth_param, 2, 2)
 
     fig = plt.figure(nfig, figsize=figsize)
-    if title != None:
+    if title is not None:
         fig.suptitle(title)
 
     ax_top = plt.subplot(211)
@@ -1379,17 +1605,13 @@ def beam_jointplot(p_array, show_plane="x", nparts_in_slice=5000, smooth_param=0
         ax_down = plt.subplot(212, sharex=ax_top)
 
         show_density(p_array_copy.tau() * 1e3, p_array_copy.p() * 1e2, ax=ax_down, nbins_x=nbins_x, nbins_y=nbins_y,
-                     interpolation=interpolation, ylabel='$\delta_E$ [%]', xlabel='s [mm]',
+                     interpolation=interpolation, ylabel=r'$\delta_E$ [%]', xlabel='s [mm]',
                      title="Longitudinal phase space", grid=grid, show_xtick_label=True)
 
     if filename is not None:
         plt.savefig(filename)
 
     return ax_top, ax_down
-
-
-from scipy import stats
-from ocelot.cpbd.physics_proc import *
 
 
 class Save3DBeamDensity(PhysProc):

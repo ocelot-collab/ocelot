@@ -1,22 +1,32 @@
-__author__ = 'Sergey Tomin'
-"""
-can read different types of files. By default, mag_file is in [mm] .
-for python version, only vertical component of magnetic field (By) is taken into account.
-In order to overcome this limitation, someone have to change function radiation_py.field_map2field_func(z, By).
-Sergey Tomin 04.11.2016.
+"""can read different types of files. By default, mag_file is in [mm] . for
+python version, only vertical component of magnetic field (By) is taken into
+account. In order to overcome this limitation, someone have to change function
+radiation_py.field_map2field_func(z, By). Sergey Tomin 04.11.2016.
+
 """
 
-from scipy import interpolate
-from ocelot.cpbd.elements import *
-from ocelot.cpbd.track import *
-from ocelot.rad.spline_py import *
-from ocelot.common.globals import *
-import time
-from ocelot.common.ocelog import *
 import copy
-from scipy.integrate import cumtrapz
+import logging
 import numbers
+import sys
+import time
+from math import pi
 
+import numpy as np
+from scipy.integrate import cumtrapz
+from scipy.interpolate import splrep, splev
+
+from ocelot.rad.spline_py import cspline_coef
+from ocelot.common.globals import m_e_GeV, h_eV_s, q_e, speed_of_light, ro_e
+from ocelot.cpbd.elements.undulator_atom import und_field
+from ocelot.cpbd.elements import Undulator
+from ocelot.cpbd.high_order import rk_track_in_field
+from ocelot.cpbd import track
+from ocelot.cpbd import optics
+from ocelot.cpbd import beam
+import ocelot.cpbd.magnetic_lattice as mlattice
+
+__author__ = 'Sergey Tomin'
 _logger = logging.getLogger(__name__)
 
 try:
@@ -143,8 +153,8 @@ class BeamTraject:
 
 
 def bspline(x, y, x_new):
-    tck = interpolate.splrep(x, y, s=0)
-    ynew = interpolate.splev(x_new, tck, der=0)
+    tck = splrep(x, y, s=0)
+    ynew =splev(x_new, tck, der=0)
     return ynew
 
 
@@ -160,7 +170,7 @@ def integ_beta2(x, y):
         d = D[i]
         # print h, a,b,c,d
         b2 += h * (d * d + h * (c * d + h * (1. / 3. * (c * c + 2 * b * d) + h * (0.5 * (b * c + a * d) + h * (
-                    0.2 * (b * b + 2 * a * c) + h * (1. / 3. * a * b + (a * a * h) / 7.))))))
+            0.2 * (b * b + 2 * a * c) + h * (1. / 3. * a * b + (a * a * h) / 7.))))))
         beta2.append(b2)
         # print beta2
     return np.array(beta2)
@@ -223,43 +233,6 @@ def traj2motion(traj):
     return motion
 
 
-def und_field_py(x, y, z, lperiod, Kx, nperiods=None):
-    kx = 0.
-    kz = 2 * pi / lperiod
-    ky = np.sqrt(kz * kz + kx * kx)
-    c = speed_of_light
-    m0 = m_e_eV
-    B0 = Kx * m0 * kz / c
-    k1 = -B0 * kx / ky
-    k2 = -B0 * kz / ky
-
-    kx_x = kx * x
-    ky_y = ky * y
-    kz_z = kz * z
-
-    cosz = np.cos(kz_z)
-
-    if nperiods is not None:
-        ph_shift = np.pi / 2.
-        heaviside = lambda x: 0.5 * (np.sign(x) + 1)
-        z_coef = (0.25 * heaviside(z) + 0.5 * heaviside(z - lperiod / 2.) + 0.25 * heaviside(z - lperiod)
-                  - 0.25 * heaviside(z - (nperiods - 1) * lperiod) - 0.5 * heaviside(
-                    z - (nperiods - 0.5) * lperiod)
-                  - 0.25 * heaviside(z - nperiods * lperiod))
-        cosz = np.cos(kz_z + ph_shift) * z_coef
-
-    cosx = np.cos(kx_x)
-    sinhy = np.sinh(ky_y)
-    # cosz = np.cos(kz_z + ph_shift)*z_coef
-    Bx = k1 * np.sin(kx_x) * sinhy * cosz  # // here kx is only real
-    By = B0 * cosx * np.cosh(ky_y) * cosz
-    Bz = k2 * cosx * sinhy * np.sin(kz_z)
-    return (Bx, By, Bz)
-
-
-und_field = und_field_py if not nb_flag else nb.jit(forceobj=False)(und_field_py)
-
-
 def energy_loss_und(energy, Kx, lperiod, L, energy_loss=False):
     if energy_loss:
         k = 4. * pi * pi / 3. * ro_e / m_e_GeV
@@ -282,7 +255,7 @@ def sigma_gamma_quat(energy, Kx, lperiod, L):
     gamma = energy / m_e_GeV
     lambda_compt = 2.4263102389e-12  # m
     lambda_compt_r = lambda_compt / 2. / pi
-    f = lambda K: 1.2 + 1. / (K + 1.33 * K * K + 0.4 * K ** 3)
+    def f(K): return 1.2 + 1. / (K + 1.33 * K * K + 0.4 * K ** 3)
     delta_Eq2 = 56. * pi ** 3 / 15. * lambda_compt_r * ro_e * gamma ** 4 / lperiod ** 3 * Kx ** 3 * f(Kx) * L
     sigma_Eq = np.sqrt(delta_Eq2 / (gamma * gamma))
     return sigma_Eq
@@ -303,8 +276,8 @@ def quantum_diffusion(energy, Kx, lperiod, L, quantum_diff=False):
 
 
 def field_map2field_func(z, By):
-    tck = interpolate.splrep(z, By, k=3)
-    func = lambda x, y, z: (0, interpolate.splev(z, tck, der=0), 0)
+    tck = splrep(z, By, k=3)
+    def func(x, y, z): return (0, splev(z, tck, der=0), 0)
     return func
 
 
@@ -366,7 +339,7 @@ def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step):
         # //double phase = screen->Phase[ypoint*xpoint*je + xpoint*jy + jx] + faseConst*(ZZ - motion->Z[0]  + gamma2*(IbetX2 + IbetY2 + phaseConstCur - phaseConstIn));
 
         phase = phaseConst * (
-                    ZZ - motion.z[0] + gamma2 * (IbetX2 + IbetY2 + phaseConstCur - phaseConstIn)) + screen.arPhase
+            ZZ - motion.z[0] + gamma2 * (IbetX2 + IbetY2 + phaseConstCur - phaseConstIn)) + screen.arPhase
 
         cosf = np.cos(phase)
         sinf = np.sin(phase)
@@ -386,7 +359,7 @@ def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step):
             IbetX2 = motion.XbetaI2[-1]
             IbetY2 = motion.YbetaI2[-1]
             phase = phaseConst * (motion.z[-1] - motion.z[0] + gamma2 * (
-                        IbetX2 + IbetY2 + prX * prX / LenPntrZ + prY * prY / LenPntrZ - phaseConstIn))
+                IbetX2 + IbetY2 + prX * prX / LenPntrZ + prY * prY / LenPntrZ - phaseConstIn))
             screen.arPhase = screen.arPhase + phase
     return screen
 
@@ -433,7 +406,7 @@ def gintegrator_over_traj_py(Nmotion, Xscr, Yscr, Erad, n_end, gamma, half_step,
 
             # here the constant phase shift was subtracted
             phase = phaseConst * (
-                    z[i] - z[0] + gamma2 * (XbetaI2[i] + YbetaI2[i] + phaseConstCur - phaseConstIn)) + arPhase
+                z[i] - z[0] + gamma2 * (XbetaI2[i] + YbetaI2[i] + phaseConstCur - phaseConstIn)) + arPhase
 
             # phase = phaseConst * (z[i] - z[0] + gamma2 * (XbetaI2[i] + YbetaI2[i] + phaseConstCur)) + arPhase # + (LenPntrConst *2*np.pi * Erad/hc)%(2*np.pi)
             cosf = np.cos(phase)
@@ -452,7 +425,7 @@ def gintegrator_over_traj_py(Nmotion, Xscr, Yscr, Erad, n_end, gamma, half_step,
                 prX = Xscr - x[-1]  # //for pointer nx(z)
                 prY = Yscr - y[-1]  # //for pointer ny(z)
                 phase = phaseConst * (z[-1] - z[0] + gamma2 * (
-                        XbetaI2[-1] + YbetaI2[-1] + prX * prX / LenPntrZ + prY * prY / LenPntrZ - phaseConstIn))
+                    XbetaI2[-1] + YbetaI2[-1] + prX * prX / LenPntrZ + prY * prY / LenPntrZ - phaseConstIn))
                 # phase = phaseConst * (z[-1] - z[0] + gamma2 * (
                 #        XbetaI2[-1] + YbetaI2[-1] + prX * prX / LenPntrZ + prY * prY / LenPntrZ )) # + (LenPntrConst *2*np.pi * Erad/hc)%(2*np.pi)
                 arPhase += phase
@@ -548,13 +521,13 @@ def radiation_py(gamma, traj, screen):
     return 1
 
 
-def calculate_radiation(lat, screen, beam, energy_loss=False, quantum_diff=False, accuracy=1, end_poles=False):
+def calculate_radiation(lat, screen, ebeam, energy_loss=False, quantum_diff=False, accuracy=1, end_poles=False):
     """
     Function to calculate radation from the electron beam.
 
     :param lat: MagneticLattice should include element Undulator
     :param screen: Screen class
-    :param beam: Beam class, the radiation is calculated from one electron
+    :param ebeam: Beam class, the radiation is calculated from one electron
     :param energy_loss: False, if True includes energy loss after each period
     :param quantum_diff: False, if True introduces random energy kick
     :param accuracy: 1, scale for trajectory points number
@@ -564,21 +537,21 @@ def calculate_radiation(lat, screen, beam, energy_loss=False, quantum_diff=False
 
     screen.update()
 
-    if beam.__class__ is Beam:
-        p = Particle(x=beam.x, y=beam.y, px=beam.xp, py=beam.yp, E=beam.E)
-        p_array = ParticleArray()
+    if isinstance(ebeam, beam.Beam):
+        p = beam.Particle(x=ebeam.x, y=ebeam.y, px=ebeam.xp, py=ebeam.yp, E=ebeam.E)
+        p_array = beam.ParticleArray()
         p_array.list2array([p])
 
-    # elif beam.__class__ is ParticleArray:
+    # elif beam.__class__ is beam.ParticleArray:
     #    b_current = beam.q_array[0] * 1000.
     #    p_array = beam
 
     else:
         raise TypeError("'beam' object must be Beam class")
 
-    if beam.I == 0:
+    if ebeam.I == 0:
         print("Beam charge or beam current is 0. Default current I=0.1 A is used")
-        beam.I = 0.1  # A
+        ebeam.I = 0.1  # A
 
     tau0 = np.copy(p_array.tau())
     p_array.tau()[:] = 0
@@ -606,7 +579,7 @@ def calculate_radiation(lat, screen, beam, energy_loss=False, quantum_diff=False
         screen.arImEy += screen_copy.arImEy
         screen.arPhase += screen_copy.arPhase
     gamma_mean = (1 + np.mean(p_array.p())) * p_array.E / m_e_GeV
-    screen.distPhoton(gamma_mean, current=beam.I)
+    screen.distPhoton(gamma_mean, current=ebeam.I)
     screen.Ef_electron = E[-1]
     screen.motion = U
     beam_traj = BeamTraject(beam_trajectories=U)
@@ -627,7 +600,7 @@ def coherent_radiation(lat, screen, p_array, energy_loss=False, quantum_diff=Fal
 
     :param lat: MagneticLattice should include element Undulator
     :param screen: Screen class
-    :param p_array: ParticleArray - the radiation is calculated for the each particles in the ParticleArray
+    :param p_array: beam.ParticleArray - the radiation is calculated for the each particles in the beam.ParticleArray
                     and field components is summing up afterwards.
     :param energy_loss: False, if True includes energy loss after each period
     :param quantum_diff: False, if True introduces random energy kick
@@ -638,7 +611,7 @@ def coherent_radiation(lat, screen, p_array, energy_loss=False, quantum_diff=Fal
 
     screen.update()
 
-    if p_array.__class__ is not ParticleArray:
+    if p_array.__class__ is not beam.ParticleArray:
         raise TypeError("'beam' object must be Beam or ParticleArray class")
 
     tau0 = np.copy(p_array.tau())
@@ -709,15 +682,15 @@ def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy
             U0 = 0.
         else:
             if len(non_u) != 0:
-                lat_el = MagneticLattice(non_u)
+                lat_el = mlattice.MagneticLattice(non_u)
                 if lat_el.totalLen != 0:
-                    navi = Navigator(lat)
+                    navi = optics.Navigator(lat)
 
                     N = int((lat_el.totalLen * 2000 + 150) * accuracy)
                     u = np.zeros((N * 9, np.shape(p_array.rparticles)[1]))
                     for i, z in enumerate(np.linspace(L, lat_el.totalLen + L, num=N)):
                         h = (lat_el.totalLen) / (N)
-                        tracking_step(lat_el, p_array, h, navi)
+                        track.tracking_step(lat_el, p_array, h, navi)
                         u[i * 9 + 0, :] = p_array.rparticles[0]
                         u[i * 9 + 1, :] = p_array.rparticles[1]
                         u[i * 9 + 2, :] = p_array.rparticles[2]
@@ -752,7 +725,8 @@ def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy
                         nperiods = elem.nperiods
                     else:
                         nperiods = None
-                    mag_field = lambda x, y, z: und_field(x, y, z, elem.lperiod, elem.Kx, nperiods=nperiods)
+
+                    def mag_field(x, y, z): return und_field(x, y, z, elem.lperiod, elem.Kx, nperiods=nperiods)
             N = int((mag_length * 1500 + 100) * accuracy)
             if hasattr(elem, "npoints") and isinstance(elem.npoints, numbers.Number):
                 N = int((elem.npoints + 100) * accuracy)

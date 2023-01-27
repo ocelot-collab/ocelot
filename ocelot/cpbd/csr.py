@@ -10,17 +10,26 @@ import logging
 import numpy as np
 from scipy import interpolate
 from scipy.integrate import cumtrapz
-from scipy.ndimage.filters import gaussian_filter
-from scipy.optimize import curve_fit
 
 from ocelot.common.globals import pi, speed_of_light, m_e_eV, m_e_GeV
 from ocelot.common import math_op
 from ocelot.cpbd.beam import Particle, s_to_cur
 from ocelot.cpbd.high_order import arcline, rk_track_in_field
-from ocelot.cpbd.magnetic_lattice import (Undulator, Bend, RBend, SBend,
-                                          XYQuadrupole)
+
+from ocelot.cpbd.elements.undulator import Undulator
+from ocelot.cpbd.elements.undulator_atom import und_field
+from ocelot.cpbd.elements.bend import Bend
+from ocelot.cpbd.elements.rbend import RBend
+from ocelot.cpbd.elements.sbend import SBend
+from ocelot.cpbd.elements.xyquadruple import XYQuadrupole
+
 from ocelot.cpbd.physics_proc import PhysProc
-from ocelot.rad.radiation_py import und_field
+
+# matplotlib may or may not be on the HPC nodes at DESY.  
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    pass
 
 # Try to import numba, pyfftw and numexpr for improved performance
 logger = logging.getLogger(__name__)
@@ -93,6 +102,10 @@ def sample_1(i, a, b, c):
     return y
 
 
+class CSRConfigurationError(RuntimeError):
+    pass
+
+
 class Smoothing:
     def __init__(self):
         self.print_log = False
@@ -151,8 +164,8 @@ class Smoothing:
 
         N_BIN = BS_params[1]
         M_BIN = BS_params[2]
-        K_BIN = N_BIN * M_BIN # number of sub - bins
-        I_BIN = K_BIN - (M_BIN - 1) # number of bin intervalls
+        K_BIN = N_BIN * M_BIN  # number of sub - bins
+        I_BIN = K_BIN - (M_BIN - 1)  # number of bin intervalls
         # put charges to sub - bins
         Q_BIN = np.zeros(K_BIN)
         n2 = 0
@@ -187,7 +200,6 @@ class Smoothing:
             step_unit = 0
         else:
             step_unit = max(0, BS_params[6])
-
 
         # define mesh
         N_BIN = len(BIN[0])
@@ -418,7 +430,6 @@ class K0_fin_anf:
         # return last index where w <= wmin
         return i_0
 
-
     def K0_fin_anf_opt(self, i, traj, wmin, gamma):
         s = np.zeros(i)
         n = np.zeros((i, 3))
@@ -598,7 +609,7 @@ class K0_fin_anf:
         Returns
         -------
         The estimated start index, which is always <= than the real one.
-        
+
         """
         i_0 = 0
         if i > i_min:
@@ -624,41 +635,43 @@ class CSR(PhysProc):
         self.traj_step = 0.0002 [m] - trajectory step or, other words, integration step for calculation of the CSR-wake
         self.apply_step = 0.0005 [m] - step of the calculation CSR kick, to calculate average CSR kick
     """
-    def __init__(self):
+
+    def __init__(self, **kw):
         PhysProc.__init__(self)
         # binning parameters
-        self.x_qbin = 0             # length or charge binning; 0... 1 = length...charge
-        self.n_bin = 100            # number of bins
-        self.m_bin = 5              # multiple binning(with shifted bins)
+        self.x_qbin = kw.get("x_qbin", 0) # length or charge binning; 0... 1 = length...charge
+        self.n_bin = kw.get("n_bin", 100) # number of bins
+        self.m_bin = kw.get("m_bin", 5)   # multiple binning(with shifted bins)
 
         # smoothing
-        self.ip_method = 2          # = 0 / 1 / 2 for rectangular / triangular / gauss
-        self.sp = 0.5               # ? parameter for gauss
-        self.sigma_min = 1.e-4      # minimal sigma, if ip_method == 2
-        self.step_unit = 0          # if positive --> step=integer * step_unit
+        self.ip_method = kw.get("ip_method", 2)     # = 0 / 1 / 2 for rectangular / triangular / gauss
+        self.sp = kw.get("sp", 0.5)                 # ? parameter for gauss
+        self.sigma_min = kw.get("sigma_min", 1.e-4) # minimal sigma, if ip_method == 2
+        self.step_unit = kw.get("step_unit", 0)     # if positive --> step=integer * step_unit
 
         # trajectory
-        self.traj_step = 0.0002     # [m] step of the trajectory
-        self.energy = None          # [GeV], if None, beta = 1 and calculation of the trajectory with RK is not possible
+        self.traj_step = kw.get("traj_step", 0.0002)  # [m] step of the trajectory
+        self.energy = kw.get("energy", None)          # [GeV], if None, beta = 1 and calculation of the trajectory with RK is not possible
 
         # CSR kick
-        self.apply_step = 0.0005    # [m] step of the calculation CSR kick: csr_kick += csr(apply_step)
-        self.step = 1               # step in the unit steps, step_in_[m] = self.step * navigator.unit_step [m].
-                                    # The CSR kick is applied at the end of the each step
+        self.apply_step = kw.get("apply_step", 0.0005) # [m] step of the calculation CSR kick: csr_kick += csr(apply_step)
+        self.step = kw.get("step", 1)                  # step in the unit steps, step_in_[m] = self.step * navigator.unit_step [m].
+                                                       # The CSR kick is applied at the end of the each step
 
-        self.z_csr_start = 0.       # z [m] position of the start_elem
-        self.z0 = 0.                # self.z0 = navigator.z0 in track.track()
+        self.z_csr_start = kw.get("z_csr_start", 0.) # z [m] position of the start_elem
+        self.z0 = kw.get("z0", 0.)                   # self.z0 = navigator.z0 in track.track()
 
-        self.end_poles = False      # if True magnetic field configuration 1/4, -3/4, 1, ...
-        self.rk_traj = False        # calculate trajectory of the reference particle with RK method
+        self.end_poles = kw.get("end_poles", False) # if True magnetic field configuration 1/4, -3/4, 1, ...
+        self.rk_traj = kw.get("rk_traj", False)     # calculate trajectory of the reference particle with RK method
 
-        self.debug = False
+        self.debug = kw.get("debug", False)
         # another filter
-        self.filter_order = 10
-        self.n_mesh = 345
+        self.filter_order = kw.get("filter_order", 10)
+        self.n_mesh = kw.get("n_mesh", 345)
 
-        self.pict_debug = False     # if True trajectory of the reference particle will be produced
-                                    # and CSR wakes will be saved in the working folder on each spep
+        # if True trajectory of the reference particle will be produced
+        # and CSR wakes will be saved in the working folder on each step
+        self.pict_debug = kw.get("pict_debug", False)
 
         self.sub_bin = SubBinning(x_qbin=self.x_qbin, n_bin=self.n_bin, m_bin=self.m_bin)
         self.bin_smoth = Smoothing()
@@ -675,7 +688,7 @@ class CSR(PhysProc):
         :return:
         """
 
-        i1 = i-1 # ignore points i1+1:i on linear path to observer
+        i1 = i-1  # ignore points i1+1:i on linear path to observer
         ra = np.arange(0, i1+1)
         s = traj[0, ra] - traj[0, i]
         n = np.array([traj[1, i] - traj[1, ra],
@@ -729,7 +742,7 @@ class CSR(PhysProc):
         beta = np.sqrt(b2)
         # winf
         Rv1 = traj[1:4, i] - traj[1:4, 0]
-        s1 =  traj[0, 0] - traj[0, i]
+        s1 = traj[0, 0] - traj[0, i]
         ev1 = traj[4:, 0]
         evo = traj[4:, i]
         winfms1 = np.dot(Rv1, ev1)
@@ -746,13 +759,13 @@ class CSR(PhysProc):
 
         if a2/R[1]**2 > 1e-7:
             KS = (beta*(1. - np.dot(ev1, evo))*np.log(R[0]/R) - beta*np.dot(uup, evo)*(np.arctan((s[0] - winf)/a) - np.arctan((s-winf)/a))
-               - (b2*np.dot(ev1, evo) - 1)*np.log((winf - s + R)/(winf-s[0] + R[0]))
-               + g2i*np.log(w_range[0]/w_range))
+                  - (b2*np.dot(ev1, evo) - 1)*np.log((winf - s + R)/(winf-s[0] + R[0]))
+                  + g2i*np.log(w_range[0]/w_range))
 
         else:
             KS = (beta*(1. - np.dot(ev1, evo))*np.log(R[0]/R)
-               - (b2*np.dot(ev1, evo) - 1.)*np.log((winf - s + R)/(winf - s[0] + R[0]))
-               + g2i*np.log(w_range[0]/w_range))
+                  - (b2*np.dot(ev1, evo) - 1.)*np.log((winf - s + R)/(winf - s[0] + R[0]))
+                  + g2i*np.log(w_range[0]/w_range))
         return KS
 
     def K0_inf_inf(self, i, traj, w_range):
@@ -766,7 +779,7 @@ class CSR(PhysProc):
         :return:
         """
         Rv1 = traj[1:4, i] - traj[1:4, 0]
-        s1 =  traj[0, 0] - traj[0, i]
+        s1 = traj[0, 0] - traj[0, i]
         ev1 = traj[4:, 0]
         evo = traj[4:, i]
         winfms1 = np.dot(Rv1, ev1)
@@ -776,8 +789,8 @@ class CSR(PhysProc):
         uup = aup/a
         winf = s1 + winfms1
 
-        Nvalid = np.where(winf<w_range)[0]
-        if len(Nvalid) >0:
+        Nvalid = np.where(winf < w_range)[0]
+        if len(Nvalid) > 0:
             Nvalid = Nvalid[0]
             w = w_range[Nvalid:]
             s = (winf+w)/2. + a2/2./(winf-w)
@@ -852,13 +865,18 @@ class CSR(PhysProc):
             self.napply = 0
             self.total_wake = 0
 
+        if self.energy is None and self.rk_traj:
+            raise CSRConfigurationError(
+                "RK trajectory calc set but CSR.energy left unset."
+            )
 
         self.z_csr_start = sum([p.l for p in lat.sequence[:self.indx0]])
         p = Particle()
         beta = 1. if self.energy is None else np.sqrt(1. - 1./(self.energy/m_e_GeV)**2)
         self.csr_traj = np.transpose([[0, p.x, p.y, p.s, p.px, p.py, 1.]])
-        if Undulator in [elem.__class__ for elem in lat.sequence[self.indx0:self.indx1+1]]:
+        if Undulator in [elem.__class__ for elem in lat.sequence[self.indx0:self.indx1+1]] and not self.rk_traj:
             self.rk_traj = True
+            logger.warning("CSR: Undulator element is in CSR section --> rk_traj = True")
         for elem in lat.sequence[self.indx0:self.indx1+1]:
 
             if elem.l == 0:
@@ -890,7 +908,7 @@ class CSR(PhysProc):
                     hy = -elem.k1 * elem.y_offs
                     By = self.energy * 1e9 * beta * hx / speed_of_light
                     Bx = -self.energy * 1e9 * beta * hy / speed_of_light
-                    mag_field = lambda x, y, z: (Bx, By, 0)
+                    def mag_field(x, y, z): return (Bx, By, 0)
 
                 elif elem.__class__ == Undulator:
                     gamma = self.energy/m_e_GeV
@@ -903,11 +921,11 @@ class CSR(PhysProc):
                     By = elem.Kx * m_e_eV * 2. * pi / (elem.lperiod * speed_of_light)
                     Bx = elem.Ky * m_e_eV * 2. * pi / (elem.lperiod * speed_of_light)
 
-                    mag_field = lambda x, y, z: (0, -By * np.cos(ku * z), 0)
+                    def mag_field(x, y, z): return (0, -By * np.cos(ku * z), 0)
 
                     # ending poles 1/4, -3/4, 1, -1, ... (or -1/4, 3/4, -1, 1)
                     if self.end_poles:
-                        mag_field = lambda x, y, z: und_field(x, y, z, elem.lperiod, elem.Kx, nperiods=elem.nperiods)
+                        def mag_field(x, y, z): return und_field(x, y, z, elem.lperiod, elem.Kx, nperiods=elem.nperiods)
 
                 else:
                     delta_z = delta_s * np.sin(elem.angle) / elem.angle if elem.angle != 0 else delta_s
@@ -915,7 +933,7 @@ class CSR(PhysProc):
                     hy = elem.angle / elem.l * np.sin(elem.tilt)
                     By = self.energy * 1e9 * beta * hx / speed_of_light
                     Bx = -self.energy * 1e9 * beta * hy / speed_of_light
-                    mag_field = lambda x, y, z: (Bx, By , 0)
+                    def mag_field(x, y, z): return (Bx, By, 0)
 
                 sre0 = self.csr_traj[:, -1]
                 N = int(max(1, np.round(delta_s / step)))
@@ -962,7 +980,7 @@ class CSR(PhysProc):
                 self.csr_traj = np.append(self.csr_traj, SRE2, axis=1)
             else:
                 R_vect = [0, 0, 0.]
-                self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect )
+                self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect)
         # plot trajectory of the refernece particle
         if self.pict_debug:
             fig = self.plt.figure(figsize=(10, 8))
@@ -1007,14 +1025,12 @@ class CSR(PhysProc):
         gamma = p_array.E/m_e_GeV
         h = max(1., self.apply_step/self.traj_step)
 
-
-        itr_ra = np.unique(-np.round(np.arange(-indx, -indx_prev, h))).astype(np.int)
+        itr_ra = np.unique(-np.round(np.arange(-indx, -indx_prev, h))).astype(int)
 
         K1 = 0
         for it in itr_ra:
             K1 += self.CSR_K1(it, self.csr_traj, Ndw, gamma=gamma)
         K1 /= len(itr_ra)
-
 
         lam_K1 = csr_convolution(lam_ds, K1[::-1]) / st * delta_s
 
@@ -1067,15 +1083,15 @@ class CSR(PhysProc):
         self.plt.ylim((-50, 50))
         self.plt.ylabel("Wake [keV]")
 
-        # ax3 = self.plt.subplot(413)
+        # ax3 = plt.subplot(413)
         # n_points = len(lam_K1)
         # #wake = np.interp(np.linspace(s1, s1+st*n_points, n_points), np.linspace(s1, s1+st*len(lam_K1), len(lam_K1)), lam_K1)
         # self.total_wake += lam_K1
         # #plt.xlim(s1 * 1000, (s1 + st * len(lam_K1)) * 1000)
         # ax3.plot(np.linspace(s1, s1+st*n_points, n_points)*1000, self.total_wake*1e-6)
-        # self.plt.ylabel("Total Wake [MeV]")
-        # self.plt.setp(ax3.get_xticklabels(), visible=False)
-        # self.plt.ylim((-10, 10))
+        # plt.ylabel("Total Wake [MeV]")
+        # plt.setp(ax3.get_xticklabels(), visible=False)
+        # plt.ylim((-10, 10))
 
         ax3 = self.plt.subplot(313, sharex=ax2)
         self.B = s_to_cur(p_array.tau(), sigma=np.std(p_array.tau())*0.05, q0=np.sum(p_array.q_array), v=speed_of_light)
@@ -1087,3 +1103,106 @@ class CSR(PhysProc):
         name = "0" * (4 - len(dig)) + dig
         self.plt.savefig( name + '.png')
 
+
+
+class SaferCSR(CSR):
+    """Run the CSR model but with checks on the sigma_min and the Derbenev criterion
+    at every step.  All options applicable to CSR are also applicable to SaferCSR
+    instances.
+
+    The Derbenev criterion coefficient is given by
+
+    .. math:: \kappa = \sigma_x \left( \frac{1}{R \sigma_z^2} \right) ^ \frac{1}{3}
+                                \ll 1,
+
+    where the symbols have their usual meanings.
+
+    :param derbenev_criterion: The Derbenev criterion coefficient above which a
+    warning should be raised for a ParticleArray instance.  By default 0.5.
+    :param sigma_min_factor: The ratio of the bunch length relative to the
+    sigma_min below which a warning should be raised.  By default 9.9.
+    :apply_kick: Whether or not calculate and apply the CSR kick, or just do the
+    checking without any physics process applied.  By default True.
+
+    """
+
+    def __init__(self,
+                 derbenev_criterion=0.5,
+                 sigma_min_factor=9.9,
+                 apply_kick=True
+                 ):
+        super().__init__()
+        self.derbenev_criterion = derbenev_criterion
+        # If bunch become shorter than sigma_min_factor*sigma_min, raise a warning.
+        self.sigma_min_factor = sigma_min_factor
+        self.apply_kick = apply_kick
+
+
+    def query_bunch_length(self, bunch_length):
+        minimum_permissable_bunch_length = self.sigma_min_factor * self.sigma_min
+        if bunch_length < minimum_permissable_bunch_length:
+            bunch_length = round(bunch_length*1e6, 6)
+            sigma_min = round(self.sigma_min*1e6, 6)
+            ratio = bunch_length / sigma_min
+            logger.warning(
+                f"Bunch is too small relative to sigma_min at s={self.z0}m: "
+                f" bunch_length = {bunch_length}um;"
+                f" sigma_min = {sigma_min}um;"
+                f" ratio: {ratio};"
+                f" minimum allowed ratio: {self.sigma_min_factor}"
+            )
+
+    @staticmethod
+    def _derbenev_criterion(sigma_transverse, sigma_z, bending_radius):
+        return sigma_transverse * (bending_radius * sigma_z**2) ** (-1/3)
+
+    def query_derbenev_criterion(self, bunch_x, bunch_y, bunch_length):
+        s = self.csr_traj[0]
+        csr_traj_index = np.searchsorted(s, self.z0)
+
+        # The points and tangents before and after the step takes place
+        # pre_step = self.csr_traj[..., csr_traj_index-1][1:4]
+        # post_step = self.csr_traj[..., csr_traj_index][1:4]
+        tangent_pre_step = self.csr_traj[..., csr_traj_index-1][4:]
+        tangent_post_step = self.csr_traj[..., csr_traj_index][4:]
+
+        if np.isclose(tangent_pre_step, tangent_post_step).all():
+            # In a non-bending element I guess (e.g. a drift)
+            return
+
+        angle = np.arccos(np.dot(tangent_post_step, tangent_pre_step))
+        bending_radius = self.traj_step / angle
+
+        # Get index of coordinate that changes the most and basically just assume
+        # we're bending in that plane.
+        bending_plane_index = np.argmax(abs(tangent_post_step[:2]
+                                            - tangent_pre_step[:2]))
+
+        size = bunch_x
+        if bending_plane_index == 1:
+            size = bunch_y
+
+
+        crit = self._derbenev_criterion(size, bunch_length, bending_radius)
+        # Criterion should be must less than 1 for 1D to be valid.  As it's "much
+        # less than", we say <0.5 by default...
+        if crit > self.derbenev_criterion:
+            s = self.z0
+            logger.warning(
+                f" Derbenev criterion may be violated at s={s}. "
+                f" bunch length = {bunch_length*1e6}um;"
+                f" tranverse size = {size*1e6}um;"
+                f" bending radius = {bending_radius}m"
+                f"  Derbenev coeff. = {crit}"
+            )
+
+    def apply(self, parray, ds):
+        bunch_length = parray.tau().std()
+        bunch_x = parray.x().std()
+        bunch_y = parray.y().std()
+
+        self.query_bunch_length(bunch_length)
+        self.query_derbenev_criterion(bunch_x, bunch_y, bunch_length)
+
+        if self.apply_kick:
+            return super().apply(parray, ds)

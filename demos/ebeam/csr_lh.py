@@ -32,8 +32,7 @@ p_array = generate_parray(sigma_x=sigma_x, sigma_px=sigma_px, sigma_y=None, sigm
                           nparticles=200000, energy=0.13)
 
 
-m = MethodTM()
-m.global_method = SecondTM
+m = {"global": SecondTM}
 
 lat = MagneticLattice(cell, method=m)
 

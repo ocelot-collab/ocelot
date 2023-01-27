@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 from ocelot.gui import *
 from ocelot import *
 from pylab import *
@@ -54,7 +56,7 @@ vars = [q1,q2,q3, [tw0, 'beta_x'], [tw0, 'beta_y'], [tw0, 'alpha_x'], [tw0, 'alp
 #vars = [q1,q2,q3]
 
 
-match(lat, constr, vars, tw0)
+match(lat, constr, vars, tw0, max_iter=5000)
 
 
 tws=twiss(lat, tw0, nPoints = 1000)
@@ -64,7 +66,7 @@ f=plt.figure()
 ax = f.add_subplot(211)
 ax.set_xlim(0, lat.totalLen)
 
-f.canvas.set_window_title('Betas [m]') 
+plt.title('Betas [m]')
 p1, = plt.plot(s, [p.beta_x for p in tws], lw=2.0)
 p2, = plt.plot(s, [p.beta_y for p in tws], lw=2.0)
 plt.grid(True)

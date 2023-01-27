@@ -1,4 +1,8 @@
-from ocelot import * 
+"""
+Unofficial EuXFEL injector lattice
+"""
+
+from ocelot import *
 tws = Twiss()
 tws.E = 0.005
 tws.beta_x  = 53.35971898

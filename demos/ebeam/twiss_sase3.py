@@ -1,3 +1,5 @@
+from ocelot.cpbd.transformations.transformation import TMTypes
+from ocelot.cpbd.tm_params.first_order_params import FirstOrderParams
 import sys
 from ocelot import *
 from ocelot.gui import *
@@ -43,10 +45,14 @@ def rematch(beta_mean, l_fodo, qdh, lat, extra_fodo, beam, qf, qd):
     R1 = lattice_transfer_map( extra, beam.E)
     #print "dsf = ", np.linalg.inv(m1.R(beam.E))
     Rinv = np.linalg.inv(R1)
-    m1 = TransferMap()
-    m1.R = lambda energy: Rinv
-    #print "dsfasf", m1.R(0)
-    tw0m = m1.map_x_twiss(tw2m)
+    
+    def create_params(energy, delta_length):
+        return FirstOrderParams(R=Rinv, B=np.zeros((6, 1)), tilt=0.0)
+    def delta_e(delta_length, total_length):
+        return 0.0
+    m1 = TransferMap(create_tm_param_func=create_params, delta_e_func=delta_e, tm_type=TMTypes.MAIN, length=0.0)
+    tw0m = tw2m.map_x_twiss(m1)
+
     print('after rematching k=%f %f   beta=%f %f alpha=%f %f' % (qf.k1, qd.k1, tw0m.beta_x, tw0m.beta_y, tw0m.alpha_x, tw0m.alpha_y))
 
     beam.beta_x, beam.alpha_x = tw0m.beta_x, tw0m.alpha_x
@@ -73,7 +79,7 @@ f=plt.figure()
 ax = f.add_subplot(211)
 ax.set_xlim(0, lat.totalLen)
 
-f.canvas.set_window_title('Betas [m]')
+plt.title('Betas [m]')
 s = [p.s for p in tws]
 p1, = plt.plot(s, [p.beta_x for p in tws], lw=2.0)
 p2, = plt.plot(s, [p.beta_y for p in tws], lw=2.0)

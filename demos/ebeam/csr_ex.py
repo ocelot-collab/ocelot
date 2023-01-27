@@ -2,7 +2,6 @@ __author__ = 'Sergey Tomin'
 
 from ocelot import *
 from ocelot.gui.accelerator import *
-from ocelot.adaptors import *
 import time
 
 
@@ -66,8 +65,7 @@ d2 = Drift(l=1.5)
 
 cell = [Marker(eid="m1"), Drift(l=0.1), b1, d1, b2, d2, b3, d1, b4, d1, Marker(eid="m2")]
 
-method = MethodTM()
-method.global_method = SecondTM
+method = {'global': SecondTM}
 
 lat = MagneticLattice(cell, method=method)
 

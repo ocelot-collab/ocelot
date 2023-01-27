@@ -3,16 +3,18 @@ Section class for s2e tracking.
 S.Tomin. XFEL/DESY. 2017
 """
 import os
-import copy
 import numpy as np
 
-from ocelot.cpbd.optics import *
+from ocelot.cpbd.csr import *
 from ocelot.cpbd.physics_proc import *
 from ocelot.cpbd.sc import *
-from ocelot.cpbd.csr import *
-from ocelot.cpbd.wake3D import *
 from ocelot.cpbd.track import *
+from ocelot.cpbd.transformations.second_order import SecondTM
+from ocelot.cpbd.wake3D import *
 from ocelot.cpbd.io import *
+
+import copy
+
 
 
 class SectionLattice:
@@ -91,10 +93,13 @@ class SectionLattice:
                 if "phi" in conf.keys() and "v" in conf.keys():
                     sec.update_cavity(phi=conf["phi"], v=conf["v"])
                 if "match" in conf.keys() and conf["match"] is True:
+                    bounds = [-5, 5]
+                    remove_offsets = True
                     if "bounds" in conf.keys():
-                        sec.apply_matching(bounds=conf["bounds"])
-                    else:
-                        sec.apply_matching(bounds=[-5, 5])
+                        bounds = conf["bounds"]
+                    if "remove_offsets" in conf.keys():
+                        remove_offsets = conf["remove_offsets"]
+                    sec.apply_matching(bounds=bounds, remove_offsets=remove_offsets)
                 if "SC" in conf.keys():
                     sec.sc_flag = conf["SC"]
                 if "CSR" in conf.keys():
@@ -115,7 +120,7 @@ class SectionLattice:
                 tws0 = tws[-1]
                 tws_whole = np.append(tws_whole, tws)
         self.tws_current = tws_whole
-        self.lat_current = MagneticLattice(copy.deepcopy(seq_current), method=MethodTM({'global': SecondTM}))
+        self.lat_current = MagneticLattice(copy.deepcopy(seq_current), method={'global': SecondTM})
         return new_sections
 
     def track_sections(self, sections, p_array, config=None, force_ext_p_array=False, coupler_kick=False, verbose=True):
@@ -174,8 +179,7 @@ class SectionTrack:
         self.tws_dir = data_dir + "/tws/"
 
         self.physics_processes_array = []  # list of physics process
-        self.method = MethodTM()
-        self.method.global_method = SecondTM
+        self.method = {'global': SecondTM}
         self.sc_flag = True
         self.csr_flag = True
         self.wake_flag = True
@@ -198,9 +202,8 @@ class SectionTrack:
                 e.vy_down = 0
                 e.vxx_down = 0
                 e.vxy_down = 0
-        self.lattice.update_transfer_maps()
 
-    def apply_matching(self, bounds=None):
+    def apply_matching(self, bounds=None, remove_offsets=True):
 
         if bounds is None:
             bounds = [-5, 5]
@@ -211,8 +214,7 @@ class SectionTrack:
 
         self.tws0.mux = 0
         self.tws0.muy = 0
-        bt = BeamTransform(tws=self.tws0)
-        bt.bounds = bounds
+        bt = BeamTransform(tws=self.tws0, remove_offsets=remove_offsets, bounds=bounds)
         self.add_physics_process(bt, self.lattice.sequence[0], self.lattice.sequence[0])
 
     def bc_analysis(self):
@@ -249,10 +251,10 @@ class SectionTrack:
             elif elem == self.dipoles[3]:
                 right_flag = False
 
-            if left_flag and elem != self.dipoles[0] and (elem.__class__ not in [Edge]):
+            if left_flag and elem != self.dipoles[0]:
                 self.lattice.sequence[i] = copy.deepcopy(elem)
                 self.left_shoulder.append(self.lattice.sequence[i])
-            if right_flag and elem != self.dipoles[2] and (elem.__class__ not in [Edge]):
+            if right_flag and elem != self.dipoles[2]:
                 self.lattice.sequence[i] = copy.deepcopy(elem)
                 self.right_shoulder.append(self.lattice.sequence[i])
 
@@ -301,7 +303,6 @@ class SectionTrack:
                 dip.e2 = angle * np.sign(dip.angle)
             else:
                 dip.e1 = angle * np.sign(dip.angle)
-        self.lattice.update_transfer_maps()
 
     def update_cavity(self, phi, v):
         for elem in self.lattice.sequence:
@@ -314,7 +315,6 @@ class SectionTrack:
                     if self.cav_name_pref in elem.id:
                         elem.v = v
                         elem.phi = phi
-        self.lattice.update_transfer_maps()
 
     def update_tds(self, phi, v):
         for elem in self.lattice.sequence:
@@ -327,7 +327,6 @@ class SectionTrack:
                     if self.cav_name_pref in elem.id:
                         elem.v = v
                         elem.phi = phi
-        self.lattice.update_transfer_maps()
 
     def init_navigator(self):
 
@@ -362,23 +361,12 @@ class SectionTrack:
     def read_beam_file(self):
 
         particles = None
-        #print(self.input_beam_file)
-        extension = self.input_beam_file.split(".")[-1]
-        #print(extension)
-        if extension == "ast":
+
+        try:
+            particles = load_particle_array(self.input_beam_file)
         
-            try:
-                particles = astraBeam2particleArray(filename=self.input_beam_file)
-            except:
-                print(self.lattice_name + ' - #### ERROR #### - NO START PARTICLES FILE: ' + self.input_beam_file)
-        
-        else:
-            
-            try:
-                particles = load_particle_array(self.input_beam_file)
-        
-            except:
-                print(self.lattice_name + ' - #### ERROR #### - NO START PARTICLES FILE: ' + self.input_beam_file)
+        except:
+            print(self.lattice_name + ' - #### ERROR #### - NO START PARTICLES FILE: ' + self.input_beam_file)
 
         return particles
 

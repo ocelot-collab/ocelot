@@ -34,9 +34,7 @@ def cell():
 @pytest.fixture(scope='module')
 def method():
 
-    mmm = MethodTM()
-    mmm.params[Sextupole] = KickTM
-    mmm.global_method = TransferMap
+    mmm = {'global': TransferMap, Sextupole: KickTM}
 
     return mmm
 

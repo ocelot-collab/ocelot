@@ -1,6 +1,5 @@
 __author__ = 'Sergey Tomin'
 
-from ocelot import *
 from ocelot.gui.accelerator import *
 from ocelot.cpbd.orbit_correction import *
 from ocelot.cpbd.response_matrix import *
@@ -105,8 +104,8 @@ beam.E = 2.5
 beam.sigma_E = 0.001
 beam.I = 0.1
 
-method = MethodTM()
-#method.params[Sextupole] = "kick"
+method = {'global': TransferMap}
+
 lat = MagneticLattice(cell, method=method)
 
 tw0 = Twiss(beam)

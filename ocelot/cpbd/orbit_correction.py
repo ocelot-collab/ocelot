@@ -64,6 +64,7 @@ class MICADO(OrbitSVD):
     The iteration is stopped when the peak-to-peak amplitude of the residual vector is smaller than a fixed value given
     in advance.
     """
+
     def __init__(self, epsilon_x=0.001, epsilon_y=0.001, epsilon_ksi=1e-5):
         super(MICADO, self).__init__(epsilon_x=epsilon_x, epsilon_y=epsilon_y)
         self.epsilon_ksi = epsilon_ksi
@@ -92,7 +93,7 @@ class MICADO(OrbitSVD):
             # weights = np.eye(len(orbit))
             resp_matrix = np.dot(weights, resp_matrix)
             orbit = np.copy(np.dot(weights, orbit))
-            
+
         #misallign = np.dot(weights, orbit)
         if np.shape(resp_matrix)[1] == 1:
             A = np.dot(resp_matrix.T, resp_matrix)
@@ -139,7 +140,7 @@ class MICADO(OrbitSVD):
                 logger.info(" MICADO: number of correctors " + str(n))
                 angle[:len(angles_part)] = angles_part[:]
                 break
-        print( time() - start, " sec")
+        print(time() - start, " sec")
         return angle[np.argsort(mask)]
 
 
@@ -170,7 +171,7 @@ class Orbit(object):
         self.disp_rm_method = disp_rm_method
         self.response_matrix = None
         self.disp_response_matrix = None
-        self.mode = "radian" # or "ampere"
+        self.mode = "radian"  # or "ampere"
         self.orbit_solver = OrbitSVD()
 
         if not empty:
@@ -253,7 +254,7 @@ class Orbit(object):
 
     def get_orbit(self):
 
-        #self.get_ref_orbit()
+        # self.get_ref_orbit()
 
         m = len(self.bpms)
         orbit = np.zeros(2 * m)
@@ -262,7 +263,6 @@ class Orbit(object):
             orbit[i] = bpm.x - bpm.x_ref
             orbit[i+m] = bpm.y - bpm.y_ref
         return orbit
-
 
     def get_dispersion(self):
         m = len(self.bpms)
@@ -299,7 +299,7 @@ class Orbit(object):
         :param print_log:
         :return:
         """
-        #TODO: initial condition for particle was removed. Add it again
+        # TODO: initial condition for particle was removed. Add it again
         cor_list = [cor.id for cor in np.append(self.hcors, self.vcors)]
         bpm_list = [bpm.id for bpm in self.bpms]
         orbit = (1 - alpha) * self.get_orbit()
@@ -327,34 +327,33 @@ class Orbit(object):
         logger.debug(" Combine: shape(RM + DRM + beta) = " + str(np.shape(rmatrix)) +
                      " shape(orbit) = " + str(np.shape(orbit)))
 
-
         # add bpm weights
         bpm_weights = np.array([bpm.weight for bpm in self.bpms])
         bpm_weights_diag = np.diag(np.append(bpm_weights, [bpm_weights, bpm_weights, bpm_weights]))
         logger.debug(" shape(bpm weight) = " + str(np.shape(bpm_weights_diag)))
 
-        #if beta > 0:
+        # if beta > 0:
         bpm_weights_diag = self.combine_matrices(bpm_weights_diag, np.diag(np.append(bpm_weights, [bpm_weights])))
         logger.debug(" beta > 0: shape(bpm weight) = " + str(np.shape(bpm_weights_diag)))
 
-        #self.orbit_correction_method = self.get_correction_solver(resp_matrix=rmatrix, orbit=orbit,
+        # self.orbit_correction_method = self.get_correction_solver(resp_matrix=rmatrix, orbit=orbit,
         #                                                      weights=bpm_weights_diag, epsilon_x=epsilon_x,
         #                                                      epsilon_y=epsilon_y)
 
-        #self.orbit_svd = LInfinityNorm(resp_matrix=rmatrix, orbit=orbit, weights=bpm_weights_diag, epsilon_x=epsilon_x,
+        # self.orbit_svd = LInfinityNorm(resp_matrix=rmatrix, orbit=orbit, weights=bpm_weights_diag, epsilon_x=epsilon_x,
         #                          epsilon_y=epsilon_x)
         angle = self.orbit_solver.apply(resp_matrix=rmatrix, orbit=orbit, weights=bpm_weights_diag)
         ncor = len(cor_list)
         for i, cor in enumerate(np.append(self.hcors, self.vcors)):
             if print_log:
-                print("correction:", cor.id," angle before: ", cor.angle*1000, "  after:", angle[i]*1000,angle[ncor+i]*1000)
+                print("correction:", cor.id, " angle before: ", cor.angle*1000, "  after:", angle[i]*1000, angle[ncor+i]*1000)
             cor.angle -= ((1 - alpha) * angle[i] + alpha * angle[ncor + i])
 
         self.lat.update_transfer_maps()
         if p_init is not None:
             p_init.x = -angle[-4]
             p_init.px = -angle[-3]
-            p_init.y  = -angle[-2]
+            p_init.y = -angle[-2]
             p_init.py = -angle[-1]
         return 0
 

@@ -3,18 +3,19 @@
 import os
 import sys
 import time
-import copy
 
 from ocelot.cpbd.io import *
+from ocelot.cpbd.latticeIO import LatticeIO
 
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 REF_RES_DIR = FILE_DIR + '/ref_results/'
 
 from unit_tests.params import *
 from io_lattice_conf import *
+import copy
 
 
-def test_original_lattice_transfer_map(lattice, tws0, method, parametr=None, update_ref_values=False):
+def test_original_lattice_transfer_map(lattice, tws0, method, parameter=None, update_ref_values=False):
     """R maxtrix calculation test"""
 
     r_matrix = lattice_transfer_map(lattice, tws0.E)
@@ -28,10 +29,10 @@ def test_original_lattice_transfer_map(lattice, tws0, method, parametr=None, upd
     assert check_result(result)
 
 
-def test_write_lattice(lattice, tws0, method, parametr=None, update_ref_values=False):
+def test_lattice_save_as_py_file(lattice, tws0, method, parameter=None, update_ref_values=False):
     """R maxtrix calculation test"""
 
-    write_lattice(lattice, file_name="tmp_lattice.py")
+    lattice.save_as_py_file(file_name="tmp_lattice.py")
     import tmp_lattice as tmp
     new_lat = MagneticLattice(tmp.cell, method=lattice.method)
 
@@ -47,7 +48,7 @@ def test_write_lattice(lattice, tws0, method, parametr=None, update_ref_values=F
     assert check_result(res)
 
 
-def test_write_lattice_w_coupler(lattice, tws0, method, parametr=None, update_ref_values=False):
+def test_lattice_save_as_py_file_w_coupler(lattice, tws0, method, parameter=None, update_ref_values=False):
     """R maxtrix calculation test"""
     lattice0 = copy.deepcopy(lattice)
     for elem in lattice0.sequence:
@@ -61,7 +62,7 @@ def test_write_lattice_w_coupler(lattice, tws0, method, parametr=None, update_re
             elem.vxx_down = -0.004057 - 0.0001369j
             elem.vxy_down = 0.0029243 - 1.2891e-5j
     lattice0.update_transfer_maps()
-    write_lattice(lattice0, file_name="tmp_lattice.py")
+    lattice0.save_as_py_file(file_name="tmp_lattice.py")
     import tmp_lattice as tmp
     new_lat = MagneticLattice(tmp.cell, method=lattice0.method)
 
@@ -86,7 +87,7 @@ def test_write_lattice_w_coupler(lattice, tws0, method, parametr=None, update_re
 
     assert check_result(res)
 
-def test_original_twiss(lattice, tws0, method, parametr=None, update_ref_values=False):
+def test_original_twiss(lattice, tws0, method, parameter=None, update_ref_values=False):
     """Twiss parameters calculation function test"""
 
     tws = twiss(lattice, tws0, nPoints=None)
@@ -102,24 +103,24 @@ def test_original_twiss(lattice, tws0, method, parametr=None, update_ref_values=
     assert check_result(result)
 
 
-@pytest.mark.parametrize('parametr', [False, True])
-def test_lat2input(lattice, tws0, method, parametr, update_ref_values=False):
+@pytest.mark.parametrize('parameter', [False, True])
+def test_lat2input(lattice, tws0, method, parameter, update_ref_values=False):
     """lat2input with tws0 saving function test"""
 
-    lines_arr = lat2input(lattice, tws0=tws0)
+    lines_arr = LatticeIO.lat2input(lattice, tws0=tws0)
     lines = ''.join(lines_arr)
     
     loc_dict = {}
     try:
         exec(lines, globals(), loc_dict)
     except Exception as err:
-        assert check_result(['Exception error during the lattice file execution, parametr is ' + str(parametr)])
+        assert check_result(['Exception error during the lattice file execution, parameter is ' + str(parameter)])
 
-    if parametr:
+    if parameter:
         if "tws0" in loc_dict:
             tws0_new = loc_dict['tws0']
         else:
-            assert check_result(['No tws0 in the lattice file, parametr is ' + str(parametr)])
+            assert check_result(['No tws0 in the lattice file, parameter is ' + str(parameter)])
     else:
         tws0_new = tws0
 
@@ -129,7 +130,7 @@ def test_lat2input(lattice, tws0, method, parametr, update_ref_values=False):
         lattice_new_transfer_map_check(lattice_new, tws0_new)
         twiss_new_check(lattice_new, tws0_new)
     else:
-        assert check_result(['No cell variable in the lattice file, parametr is ' + str(parametr)])
+        assert check_result(['No cell variable in the lattice file, parameter is ' + str(parameter)])
     
         
 def lattice_new_transfer_map_check(lattice, tws0):
@@ -141,6 +142,21 @@ def lattice_new_transfer_map_check(lattice, tws0):
     result = check_matrix(r_matrix, r_matrix_ref, TOL, assert_info=' r_matrix for new lattice - ')
     assert check_result(result)
 
+@pytest.mark.parametrize('parameter', [0, 1, 2])
+def test_lattice_transfer_maps_check(lattice, tws0, method, parameter, update_ref_values=False):
+    matrices = lattice.transfer_maps(tws0.E)
+
+
+    #r_matrix_ref = json2numpy(json_read(REF_RES_DIR + 'test_original_lattice_transfer_map.json'))
+    m = matrices[parameter]
+    if update_ref_values:
+        return numpyBRT2json(m)
+
+    m_ref = json2numpyBRT(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) + '.json'))
+
+    result = check_matrix(m, m_ref, TOL, assert_info=' B_matrix for the lattice - ')
+
+    assert check_result(result)
 
 def twiss_new_check(lattice, tws0):
 
@@ -154,7 +170,7 @@ def twiss_new_check(lattice, tws0):
     assert check_result(result)
 
 
-def test_merger(lattice, tws0, method, parametr=None, update_ref_values=False):
+def test_merger(lattice, tws0, method, parameter=None, update_ref_values=False):
     """R maxtrix calculation test"""
     d = Drift(l=0.5)
     q = Quadrupole(l=0.3, k1=3, k2=3.3, eid="quad")
@@ -173,7 +189,7 @@ def test_merger(lattice, tws0, method, parametr=None, update_ref_values=False):
 
     cell = (d, q, b, s, c, cor, sol, tds, m, mat, b2, b3)
 
-    lat = MagneticLattice(cell, method=MethodTM({'global': SecondTM}))
+    lat = MagneticLattice(cell, method={'global': SecondTM})
 
     R = lattice_transfer_map(lat, energy=init_energy)
     new_lat = merger(lat, remaining_types=[], remaining_elems=[], init_energy=init_energy)
@@ -184,7 +200,7 @@ def test_merger(lattice, tws0, method, parametr=None, update_ref_values=False):
     assert check_result(result + result2)
 
 
-def test_merger_elem(lattice, tws0, method, parametr=None, update_ref_values=False):
+def test_merger_elem(lattice, tws0, method, parameter=None, update_ref_values=False):
     """R maxtrix calculation test"""
     d = Drift(l=0.5)
     q = Quadrupole(l=0.3, k1=3, k2=3.3, eid="quad")
@@ -203,7 +219,7 @@ def test_merger_elem(lattice, tws0, method, parametr=None, update_ref_values=Fal
 
     cell = (d, q, b, s, c, cor, sol, tds, m, mat, b2, b3)
 
-    lat = MagneticLattice(cell, method=MethodTM({'global': SecondTM}))
+    lat = MagneticLattice(cell, method={'global': SecondTM})
 
     R = lattice_transfer_map(lat, energy=init_energy)
     new_lat = merger(lat, remaining_types=[], remaining_elems=[sol], init_energy=init_energy)
@@ -213,7 +229,8 @@ def test_merger_elem(lattice, tws0, method, parametr=None, update_ref_values=Fal
     result2 = check_matrix(lat.T, new_lat.T, TOL, assert_info=' t_matrix - ')
     assert check_result(result + result2)
 
-def test_merger_elem_w_coupler(lattice, tws0, method, parametr=None, update_ref_values=False):
+
+def test_merger_elem_w_coupler(lattice, tws0, method, parameter=None, update_ref_values=False):
     """R maxtrix calculation test"""
     d = Drift(l=0.5)
     q = Quadrupole(l=0.3, k1=3, k2=3.3, eid="quad")
@@ -240,17 +257,17 @@ def test_merger_elem_w_coupler(lattice, tws0, method, parametr=None, update_ref_
 
     cell = (d, q, b, s, c, cor, sol, tds, m, mat, b2, b3)
 
-    lat = MagneticLattice(cell, method=MethodTM({'global': SecondTM}))
+    lat = MagneticLattice(cell, method={'global': SecondTM})
 
     R = lattice_transfer_map(lat, energy=init_energy)
-    new_lat = merger(lat, remaining_types=[], remaining_elems=[sol], init_energy=init_energy)
+    new_lat = merger(lat, remaining_types=[], remaining_elems=[cor], init_energy=init_energy)
     R_new = lattice_transfer_map(new_lat, energy=init_energy)
 
     result = check_matrix(R, R_new, TOL, assert_info=' r_matrix - ')
     result2 = check_matrix(lat.T, new_lat.T, TOL, assert_info=' t_matrix - ')
     assert check_result(result + result2)
 
-def test_merger_type(lattice, tws0, method, parametr=None, update_ref_values=False):
+def test_merger_type(lattice, tws0, method, parameter=None, update_ref_values=False):
     """R maxtrix calculation test"""
     d = Drift(l=0.5)
     q = Quadrupole(l=0.3, k1=3, k2=3.3, eid="quad")
@@ -271,7 +288,7 @@ def test_merger_type(lattice, tws0, method, parametr=None, update_ref_values=Fal
 
     cell = (d, q, b, s, c, cor, ap, sol,d2, tds, m, mat, b2, b3)
 
-    lat = MagneticLattice(cell, method=MethodTM({'global': SecondTM}))
+    lat = MagneticLattice(cell, method={'global': SecondTM})
 
     R = lattice_transfer_map(lat, energy=init_energy)
     new_lat = merger(lat, remaining_types=[Drift], remaining_elems=[sol], init_energy=init_energy)
@@ -282,7 +299,7 @@ def test_merger_type(lattice, tws0, method, parametr=None, update_ref_values=Fal
     assert check_result(result + result2)
 
 
-def test_merger_extensive(lattice, tws0, method, parametr=None, update_ref_values=False):
+def test_merger_extensive(lattice, tws0, method, parameter=None, update_ref_values=False):
     """R maxtrix calculation test"""
 
 
@@ -298,7 +315,7 @@ def test_merger_extensive(lattice, tws0, method, parametr=None, update_ref_value
     assert check_result(result + result2)
 
 
-def test_merger_tilt(lattice, tws0, method, parametr=None, update_ref_values=False):
+def test_merger_tilt(lattice, tws0, method, parameter=None, update_ref_values=False):
     """R maxtrix calculation test"""
     d = Drift(l=0.5)
     q = Quadrupole(l=0.3, k1=3, k2=3.3, eid="quad", tilt=1.)
@@ -318,7 +335,7 @@ def test_merger_tilt(lattice, tws0, method, parametr=None, update_ref_values=Fal
 
     cell = (d, q, b, s, c, cor, sol,d2, tds, m, mat, b2, b3)
 
-    lat = MagneticLattice(cell, method=MethodTM({'global': SecondTM}))
+    lat = MagneticLattice(cell, method={'global': SecondTM})
 
     R = lattice_transfer_map(lat, energy=init_energy)
     new_lat = merger(lat, remaining_types=[Drift], remaining_elems=[sol], init_energy=init_energy)
@@ -329,14 +346,14 @@ def test_merger_tilt(lattice, tws0, method, parametr=None, update_ref_values=Fal
     assert check_result(result + result2)
 
 
-def test_merger_write_read(lattice, tws0, method, parametr=None, update_ref_values=False):
+def test_merger_write_read(lattice, tws0, method, parameter=None, update_ref_values=False):
     """R maxtrix calculation test"""
 
     R = lattice_transfer_map(lattice, energy=tws0.E)
 
     new_lat = merger(lattice, remaining_types=[Hcor, Vcor, Monitor], remaining_elems=[MPBPMF_47_I1, START_96_I1], init_energy=tws0.E)
 
-    write_lattice(new_lat, file_name="tmp_merger_lat.py")
+    new_lat.save_as_py_file(file_name="tmp_merger_lat.py")
     import tmp_merger_lat as ml
     new_lat2 = MagneticLattice(ml.cell, method=lattice.method)
     R_new = lattice_transfer_map(new_lat2, energy=tws0.E)
@@ -346,7 +363,7 @@ def test_merger_write_read(lattice, tws0, method, parametr=None, update_ref_valu
     result2 = check_matrix(lattice.T, new_lat2.T, tolerance=1.0e-8, tolerance_type='absolute', assert_info=' t_matrix - ')
     assert check_result(result + result2)
 
-def test_matrix_write_read(lattice, tws0, method, parametr=None, update_ref_values=False):
+def test_matrix_write_read(lattice, tws0, method, parameter=None, update_ref_values=False):
     """R maxtrix calculation test"""
     m = Matrix(l=0.3, delta_e=0.1)
     m.r = np.random.random((6, 6))
@@ -358,7 +375,7 @@ def test_matrix_write_read(lattice, tws0, method, parametr=None, update_ref_valu
     lat = MagneticLattice((m, m2), method=method)
     R = lattice_transfer_map(lat, energy=tws0.E)
 
-    write_lattice(lat, file_name="tmp_mat_lat.py")
+    lat.save_as_py_file(file_name="tmp_mat_lat.py")
     import tmp_mat_lat as mat
     lat2 = MagneticLattice(mat.cell, method=lat.method)
     R2 = lattice_transfer_map(lat2, energy=tws0.E)
@@ -366,11 +383,11 @@ def test_matrix_write_read(lattice, tws0, method, parametr=None, update_ref_valu
 
     result = check_matrix(R, R2, TOL, assert_info='r_matrix - ')
     result2 = check_matrix(lat.T, lat2.T, TOL, assert_info='t_matrix - ')
-    result3 = check_matrix(np.array([lat.E, lat.totalLen]), np.array([lat2.E,lat2.totalLen ]), TOL, assert_info='t_matrix - ')
+    result3 = check_matrix(np.array([ lat.totalLen]), np.array([lat2.totalLen ]), TOL, assert_info='t_matrix - ')
     assert check_result(result + result2 + result3)
 
 
-def test_matrix_b_vector(lattice, tws0, method, parametr=None, update_ref_values=False):
+def test_matrix_b_vector(lattice, tws0, method, parameter=None, update_ref_values=False):
     """R maxtrix calculation test"""
     d = Drift(l=0.5)
     q = Quadrupole(l=0.3, k1=3, k2=3.3, eid="quad")
@@ -394,7 +411,7 @@ def test_matrix_b_vector(lattice, tws0, method, parametr=None, update_ref_values
 
     cell = (d, q, b, s, c, cor, sol,d2, tds, m, mat, b2, b3)
 
-    lat = MagneticLattice(cell, method=MethodTM({'global': SecondTM}))
+    lat = MagneticLattice(cell, method={'global': SecondTM})
 
     R = lattice_transfer_map(lat, energy=init_energy)
     new_lat = merger(lat, remaining_types=[Drift], remaining_elems=[sol], init_energy=init_energy)
@@ -405,7 +422,7 @@ def test_matrix_b_vector(lattice, tws0, method, parametr=None, update_ref_values
     assert check_result(result + result2 + result3)
 
 
-def test_matrix_b_vector_read_write(lattice, tws0, method, parametr=None, update_ref_values=False):
+def test_matrix_b_vector_read_write(lattice, tws0, method, parameter=None, update_ref_values=False):
     """R maxtrix calculation test"""
     d = Drift(l=0.5)
     q = Quadrupole(l=0.3, k1=3, k2=3.3, eid="quad")
@@ -434,7 +451,7 @@ def test_matrix_b_vector_read_write(lattice, tws0, method, parametr=None, update
     R = lattice_transfer_map(lat, energy=init_energy)
 
     new_lat = merger(lat, remaining_types=[Drift], remaining_elems=[sol], init_energy=init_energy)
-    write_lattice(new_lat, file_name="tmp_b_vec.py")
+    new_lat.save_as_py_file(file_name="tmp_b_vec.py")
     import tmp_b_vec as b_vec
     lat_read = MagneticLattice(b_vec.cell, method=method)
 
@@ -479,16 +496,22 @@ def test_update_ref_values(lattice, tws0, method, cmdopt):
     update_functions = []
     update_functions.append('test_original_lattice_transfer_map')
     update_functions.append('test_original_twiss')
+    update_functions.append("test_lattice_transfer_maps_check")
     
     # function test_lat2input function need not be added here.
     # It is used reference results from test_original_lattice_transfer_map and test_original_twiss functions
+    update_function_parameters = {}
+    update_function_parameters['test_lattice_transfer_maps_check'] = [0, 1, 2]
+
+    parameter = update_function_parameters[cmdopt] if cmdopt in update_function_parameters.keys() else ['']
 
     if cmdopt in update_functions:
-        result = eval(cmdopt)(lattice, tws0, method, None, True)
-        if result is None:
-            return
+        for p in parameter:
+            result = eval(cmdopt)(lattice, tws0, method, p, True)
+            if result is None:
+                return
         
-        if os.path.isfile(REF_RES_DIR + cmdopt + '.json'):
-            os.rename(REF_RES_DIR + cmdopt + '.json', REF_RES_DIR + cmdopt + '.old')
+            if os.path.isfile(REF_RES_DIR + cmdopt + '.json'):
+                os.rename(REF_RES_DIR + cmdopt + '.json', REF_RES_DIR + cmdopt + str(p) + '.old')
         
-        json_save(result, REF_RES_DIR + cmdopt + '.json')
+            json_save(result, REF_RES_DIR + cmdopt + str(p) + '.json')

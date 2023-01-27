@@ -34,10 +34,9 @@ def cell():
 @pytest.fixture(scope='module')
 def method():
 
-    mmm1 = MethodTM()
+    mmm1 = {'global': TransferMap}
 
-    mmm2 = MethodTM()
-    mmm2.global_method = SecondTM
+    mmm2 = {'global': SecondTM}
 
     return [mmm1, mmm2]
 

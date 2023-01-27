@@ -13,20 +13,34 @@ from dogleg_conf import *
 
 np.random.seed(1)
 
-def test_lattice_transfer_map(lattice, parameter=None, update_ref_values=False):
+@pytest.mark.parametrize('parameter', [0, 1, 2])
+def test_lattice_transfer_map(lattice, parameter, update_ref_values=False):
     """R matrix calculation test"""
 
-    r_matrix = lattice_transfer_map(lattice, 0.0)
+    matrices = lattice.transfer_maps(0.0)
     
     if update_ref_values:
-        return numpy2json(r_matrix)
+        return numpyBRT2json(matrices[parameter])
 
-    r_matrix_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json'))
+    matrix_ref = json2numpyBRT(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) + '.json'))
     
-    result = check_matrix(r_matrix, r_matrix_ref, TOL, assert_info=' r_matrix - ')
+    result = check_matrix(matrices[parameter], matrix_ref, TOL, assert_info=' r_matrix - ')
     assert check_result(result)
 
 
+@pytest.mark.parametrize('parameter', [0, 1, 2])
+def test_lattice_transfer_map_at_each_step(lattice, parameter, update_ref_values=False):
+    """R matrix calculation test"""
+
+    matrices = lattice.transfer_maps(0.0, output_at_each_step=True)
+
+    if update_ref_values:
+        return numpyBRT2json(matrices[parameter][111])
+
+    matrix_ref = json2numpyBRT(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) + '.json'))
+
+    result = check_matrix(matrices[parameter][111], matrix_ref, TOL, assert_info=' r_matrix - ')
+    assert check_result(result)
 
 
 @pytest.mark.parametrize('parameter', [0, 1, 2])
@@ -74,7 +88,6 @@ def test_track_with_energy_shift(lattice, parameter, update_ref_values=False):
         result1 = [None]
     result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=TOL, assert_info=' p - ')
     assert check_result(result1+result2)
-
 
 @pytest.mark.parametrize('parameter', [0, 1, 2])
 def test_track_with_energy_shift_tilted(lattice, parameter, update_ref_values=False):
@@ -125,7 +138,7 @@ def test_track_with_energy_shift_tilted(lattice, parameter, update_ref_values=Fa
         result1 = [None]
     result2 = check_dict(p, tws_track_p_array_ref['p_array'], tolerance=TOL, assert_info=' p - ')
     assert check_result(result1 + result2)
-
+    
 
 def setup_module(module):
 
@@ -161,10 +174,13 @@ def test_update_ref_values(lattice, cmdopt):
     
     update_functions = []
     update_functions.append('test_lattice_transfer_map')
+    update_functions.append('test_lattice_transfer_map_at_each_step')
     update_functions.append('test_track_with_energy_shift')
     update_functions.append('test_track_with_energy_shift_tilted')
 
     update_function_parameters = {}
+    update_function_parameters['test_lattice_transfer_map'] = [0, 1, 2]
+    update_function_parameters['test_lattice_transfer_map_at_each_step'] = [0, 1, 2]
     update_function_parameters['test_track_with_energy_shift'] = [0, 1, 2]
     update_function_parameters['test_track_with_energy_shift_tilted'] = [0, 1, 2]
     #update_functions.append('test_track_undulator_with_csr')

@@ -12,8 +12,7 @@ from ocelot.cpbd.beam import *
 
 # create and plot dogleg lattice
 
-method = MethodTM()
-method.global_method = SecondTM
+method = {'global': SecondTM}
 
 lat = MagneticLattice(dl.cell,  method=method)
 

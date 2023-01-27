@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 from ocelot import *
 from ocelot.gui import *
 import numpy as np
@@ -67,7 +69,7 @@ f=plt.figure()
 ax = f.add_subplot(211)
 ax.set_xlim(0, lat.totalLen)
 
-f.canvas.set_window_title('Betas [m]')
+plt.title('Betas [m]')
 s = [p.s for p in tws]
 p1, = plt.plot(s, [p.beta_x for p in tws], lw=2.0)
 p2, = plt.plot(s, [p.beta_y for p in tws], lw=2.0)

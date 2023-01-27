@@ -47,6 +47,26 @@ def test_bump(lattice, parameter=None, update_ref_values=False):
     assert check_result(result)
 
 
+def test_bump_2nd_order(lattice, parameter=None, update_ref_values=False):
+    """test bump with 2nd order matrices """
+    lattice = MagneticLattice(lattice.sequence, method={"global": SecondTM})
+    cor_list = [c1, c2, c3, c4]
+    a = bump_4cors(lattice, cor_list, marker=m, x=0.001, xp=-0.00, energy=1)
+    print("corrector, strength: ", a * 1000, " mrad")
+
+    plist = lattice_track(lattice, Particle(E=1))
+
+    plist = obj2dict(plist)
+
+    if update_ref_values:
+        return plist
+
+    plist_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
+
+    result = check_dict(plist, plist_ref, tolerance=1.0e-10, tolerance_type='absolute', assert_info=' plist - ')
+
+    assert check_result(result)
+
 def test_bump_disp(lattice, parameter=None, update_ref_values=False):
 
     cor_list = [c1, c2, c3, c4]
@@ -107,6 +127,7 @@ def test_update_ref_values(lattice, cmdopt):
     update_functions = []
     update_functions.append('test_lattice_transfer_map')
     update_functions.append('test_bump')
+    update_functions.append("test_bump_2nd_order")
     update_functions.append('test_bump_disp')
     update_function_parameters = {}
 

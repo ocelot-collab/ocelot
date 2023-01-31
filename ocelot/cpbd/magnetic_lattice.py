@@ -1,6 +1,7 @@
 from ocelot.cpbd.elements.element import Element
 from ocelot.cpbd.elements.marker import Marker
 from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.monitor import Monitor
 from ocelot.cpbd.elements.undulator import Undulator
 from ocelot.cpbd.elements.unknown_element import UnknownElement
 from ocelot.cpbd.elements.matrix import Matrix
@@ -101,14 +102,20 @@ def merger(lat, remaining_types=None, remaining_elems=None, init_energy=0.):
         elif len(elem_list) == 0:
             continue
         else:
-            delta_e = np.sum([tm.get_delta_e() for elem in elem_list for tm in elem.tms])
-            lattice = MagneticLattice(elem_list, method=lat.method)
-            m = Matrix()
-            m.b, m.r, m.t = lattice.transfer_maps(energy=E)
-            m.l = lattice.totalLen
-            m.delta_e = delta_e
-            E += delta_e
-            seq.append(m)
+            magnetic_elems = np.unique([elem for elem in elem_list if elem.__class__ not in [Marker, Drift, Monitor]])
+            if len(magnetic_elems) == 0:
+                total_len = np.sum([elem.l for elem in elem_list])
+                d = Drift(l=total_len)
+                seq.append(d)
+            else:
+                delta_e = np.sum([tm.get_delta_e() for elem in elem_list for tm in elem.tms])
+                lattice = MagneticLattice(elem_list, method=lat.method)
+                m = Matrix()
+                m.b, m.r, m.t = lattice.transfer_maps(energy=E)
+                m.l = lattice.totalLen
+                m.delta_e = delta_e
+                E += delta_e
+                seq.append(m)
 
     new_lat = MagneticLattice(seq, method=lat.method)
     _logger.debug("element numbers after: " + str(len(new_lat.sequence)))
@@ -270,15 +277,17 @@ class MagneticLattice:
                 else:
                     self.sequence[i] = drifts[elem.l]
 
-    def save_as_py_file(self, file_name: str, remove_rep_drifts=True, power_supply=False):
+    def save_as_py_file(self, file_name: str, tws0=None, remove_rep_drifts=True, power_supply=False):
         """
         Saves the lattice in a python file.
-        @param file_name: path and python file name where the lattice will be stored
-        @param remove_rep_drifts: removes the drift elements
-        @param power_supply: Writes the power supply ids in the file
-        @return: None
+        :param file_name: path and python file name where the lattice will be stored
+        :param tws0: None or Twiss object. If Twiss object then twiss parameters will be printed in the beginning of
+                    lattice file
+        :param remove_rep_drifts: removes the drift elements
+        :param power_supply: Writes the power supply ids in the file
+        :return: None
         """
-        LatticeIO.save_lattice(self, tws0=None, file_name=file_name, remove_rep_drifts=remove_rep_drifts,
+        LatticeIO.save_lattice(self, tws0=tws0, file_name=file_name, remove_rep_drifts=remove_rep_drifts,
                                power_supply=power_supply)
 
     def transfer_maps(self, energy, output_at_each_step: bool = False):

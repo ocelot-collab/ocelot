@@ -10,14 +10,19 @@ from ocelot.cpbd.io import *
 from numpy import sin
 import re
 
+
 class StructureConverter:
-    
-    def __init__(self):
-        self.types = []
-        #self.screens = ["OTRC", "OTRA", "OTRB"]
+    """
+    in case you want to have in lattice correctors, monitors, markers, screens and other instruments
+    use following types:
+    types = ["HKIC", "VKIC", "MONI", "MARK", "INSTR"]
+    """
+    def __init__(self, types=None):
+        if types is None:
+            types = []
+        self.types = types
 
     def longlist_matrix_init(self):
-        
         self.longlist_matrix = {}
 
         self.longlist_matrix['MAGNET'] = {}
@@ -86,7 +91,6 @@ class StructureConverter:
             
             element = class_elem['type'](eid=row[name_pos])
             element.ps_id = row[ps_id_pos]
-
             length = row[length_pos]
             if element.__class__ is Undulator:
                 if length != 0:
@@ -98,7 +102,7 @@ class StructureConverter:
                     nperiods = length / lperiod
                     element.nperiods = nperiods
                     element.lperiod = lperiod
-                    print(element, lperiod, nperiods)
+                    #print(element, lperiod, nperiods)
             if element.__class__ in [Hcor, Vcor]:
                 if row[type_pos] in ["CAX", "CAY", "CBX", "CBY"]:
                     # vertical and horizontal aircoils have the same position and non zero length

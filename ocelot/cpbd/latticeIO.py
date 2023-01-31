@@ -71,8 +71,8 @@ class LatticeIO:
     def lat2input(lattice, tws0=None):
         """
         Generates a string, in a python readable format, that contains the lattice to store it in a python file.
-        @param lattice: Input lattice
-        @return: A string that contains the lattice in a python readable format
+        :param lattice: Input lattice
+        :return: A string that contains the lattice in a python readable format
         """
         lines = ['from ocelot import * \n']
 
@@ -97,8 +97,8 @@ class LatticeIO:
     def twiss2input(twiss):
         """
         Generates a string, in a python readable format, that contains the Twiss parameter to store it in a python file.
-        @param twiss: Input twiss
-        @return: A string that contains Twiss parameter in a python readable format
+        :param twiss: Input twiss
+        :return: A string that contains Twiss parameter in a python readable format
         """
         lines = []
         tws_ref = Twiss()
@@ -147,8 +147,8 @@ class LatticeIO:
     def _get_elements(lattice):
         """
         Filters the elements in lattice and remove the fake elements (Edge, CouplerKick).
-        @param lattice: input lattice
-        @return: A list of elements
+        :param lattice: input lattice
+        :return: A list of elements
         """
         elements = []
         for element in lattice.sequence:
@@ -186,11 +186,11 @@ class LatticeIO:
 
     @staticmethod
     def _write_power_supply_id(lattice, lines=[]):
-        quads = LatticeIO._find_obj_and_create_name(lattice, types=["Quadrupole"])
-        sexts = LatticeIO._find_obj_and_create_name(lattice, types=["Sextupole"])
-        octs = LatticeIO._find_obj_and_create_name(lattice, types=["Octupole"])
-        cavs = LatticeIO._find_obj_and_create_name(lattice, types=["Cavity"])
-        bends = LatticeIO._find_obj_and_create_name(lattice, types=["Bend", "RBend", "SBend"])
+        quads = LatticeIO._find_obj_and_create_name(lattice, types=[Quadrupole])
+        sexts = LatticeIO._find_obj_and_create_name(lattice, types=[Sextupole])
+        octs = LatticeIO._find_obj_and_create_name(lattice, types=[Octupole])
+        cavs = LatticeIO._find_obj_and_create_name(lattice, types=[Cavity])
+        bends = LatticeIO._find_obj_and_create_name(lattice, types=[Bend, RBend, SBend])
 
         lines.append("\n# power supplies \n")
         for elem_group in [quads, sexts, octs, cavs, bends]:
@@ -205,8 +205,8 @@ class LatticeIO:
     def _sort_elements(elements):
         """
         Sort the elements by the element type.
-        @param elements: A list of elements
-        @return: A dict with the elements sorted by element type
+        :param elements: A list of elements
+        :return: A dict with the elements sorted by element type
         """
         elements_dict = {}
         for element in elements:
@@ -223,8 +223,8 @@ class LatticeIO:
     def _print_elements(elements_dict):
         """
         Creates a string, in a python readable format, of all elements in a Lattice sorted by the element types
-        @param elements_dict: 
-        @return: 
+        :param elements_dict:
+        :return:
         """
         elements_order = []
         elements_order.append('Drift')
@@ -287,8 +287,8 @@ class LatticeIO:
         """
         Creates a string, in a python readable format, for a matrix element to store it in a python file.
         This function is be used by element_def_string.
-        @param element: input Element
-        @return: A String that contains an matrix element in a python readable format
+        :param element: input Element
+        :return: A String that contains an matrix element in a python readable format
         """
         for key in element.element.__dict__:
             if isinstance(element.element.__dict__[key], np.ndarray):
@@ -319,8 +319,8 @@ class LatticeIO:
     def element_def_string(element) -> str:
         """
         Creates a string, in a python readable format, for an element to store it in a python file.
-        @param element: input Element
-        @return: A String that contains an element in a python readable format
+        :param element: input Element
+        :return: A String that contains an element in a python readable format
         """
         params = []
 

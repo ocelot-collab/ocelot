@@ -2256,7 +2256,10 @@ def dfl_ap_rect(dfl, ap_x=np.inf, ap_y=np.inf):
     
     
     mask = np.zeros_like(dfl.fld[0, :, :])
-    mask[idx_y1:idx_y2, idx_x1:idx_x2] = 1
+    mask[idx_y1:(idx_y2+1), idx_x1:(idx_x2+1)] = 1
+    #                   ^                  ^
+    # also set to 1 elements indexed by idx_x2/idx_y2 (symmetric aperture)
+    #
     mask_idx = np.where(mask == 0)
 
     # dfl_out = deepcopy(dfl)

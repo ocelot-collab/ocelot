@@ -824,7 +824,11 @@ class CSR(PhysProc):
         else:
             w, KS = self.K0_inf_anf(i, traj, w_range[0])
 
-        KS1 = KS[0]
+        try:
+            KS1 = KS[0]
+        except IndexError:
+            KS = [KS]
+            KS1 = KS[0]
 
         # w, idx = np.unique(w, return_index=True)
         # KS = KS[idx]

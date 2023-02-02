@@ -5,6 +5,9 @@ from ocelot.cpbd.elements.monitor import Monitor
 from ocelot.cpbd.elements.undulator import Undulator
 from ocelot.cpbd.elements.unknown_element import UnknownElement
 from ocelot.cpbd.elements.matrix import Matrix
+from ocelot.cpbd.elements.bend import Bend
+from ocelot.cpbd.elements.sbend import SBend
+from ocelot.cpbd.elements.rbend import RBend
 from ocelot.cpbd.latticeIO import LatticeIO
 from ocelot.cpbd.transformations.transfer_map import TransferMap
 from ocelot.cpbd.optics import lattice_transfer_map
@@ -102,7 +105,7 @@ def merger(lat, remaining_types=None, remaining_elems=None, init_energy=0.):
         elif len(elem_list) == 0:
             continue
         else:
-            magnetic_elems = np.unique([elem for elem in elem_list if elem.__class__ not in [Marker, Drift, Monitor]])
+            magnetic_elems = [elem for elem in elem_list if elem.__class__ not in [Marker, Drift, Monitor]]
             if len(magnetic_elems) == 0:
                 total_len = np.sum([elem.l for elem in elem_list])
                 d = Drift(l=total_len)

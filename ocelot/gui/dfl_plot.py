@@ -18,7 +18,7 @@ from ocelot.adaptors.genesis import *
 from ocelot.common.globals import *  # import of constants like "h_eV_s" and
 from ocelot.common.math_op import *  # import of mathematical functions like gauss_fit
 from ocelot.utils.xfel_utils import *
-from ocelot.optics.utils import calc_ph_sp_dens
+#from ocelot.optics.utils import calc_ph_sp_dens
 from ocelot.optics.wave import *
 
 from ocelot.gui.colormaps2d.colormap2d import *
@@ -48,7 +48,7 @@ def plot_dfl_all(dfl, **kwargs):
 @if_plottable
 def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, fig_name=None,
              auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy=True,
-             slice_xy=False, log_scale=0, cmap_cutoff=0, vartype_dfl=None, **kwargs):
+             slice_xy=False, log_scale=0, cmap_cutoff=0, vartype_dfl=None, plot_sp_dens=True, **kwargs):
     """
     Plots dfl radiation object in 3d using matplotlib.
 
@@ -71,6 +71,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     :param log_scale: bool type variable, if True, log scale will be used for potting
     :param cmap_cutoff: 0 <= cmap_cutoff <= 1; all pixels that have intensity lower than cmap_cutoff will be seted to white color
     :param vartype_dfl: the data type to store dfl in memory [either complex128 (two 64-bit floats) or complex64 (two 32-bit floats)], may save memory
+    :param plot_sp_dens: whether to recalculate spectral density in units of mJ/eV
     :param kwargs: 
     :return:
     """
@@ -252,6 +253,14 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
 
     dx = abs(x[1] - x[0])
     dy = abs(y[1] - y[0])
+    dz = abs(z[1] - z[0]) #TODO: would not work in case of non-uniform x step
+    
+    
+    if freq_domain:
+        if plot_sp_dens:
+            z_proj = calc_ph_sp_dens(z_proj, z, E_pulse*1e0, spec_squared=1)
+            z_labelv = r'[J/eV]'
+            ######################################################
 
     if log_scale:
         suffix += '_log'
@@ -324,7 +333,13 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         ax_z.set_xlabel(z_label)
         ax_z.set_ylabel(z_labelv)
         ax_z.set_ylim(ymin=0)
-
+        ff = fwhm3(np.array(z_proj), height=0.5, peakpos=-1, total=1)
+        pzc, pzw = ff[0], ff[1]
+        center_z = z[0] + dz*pzc #central position
+        fwhm_z = dz * pzw
+        #ax_z.text(0.05, 0.95, r"$(\Delta E/E)_{fwhm}$= %.2e" % (zw/zc), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_z.transAxes, color='red')
+        ax_z.text(0.05, 0.95, 'fwhm={:.3g} '.format(fwhm_z) + r' [{:}]'.format(unit_z), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_z.transAxes, color='black')
+        
     ax_proj_x = fig.add_subplot(2, 2 + column_3d, 3 + column_3d, sharex=ax_int)
     ax_proj_x.set_title(x_title, fontsize=15)
 

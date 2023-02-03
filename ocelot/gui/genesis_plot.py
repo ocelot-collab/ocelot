@@ -291,8 +291,8 @@ def plot_gen_out_z(g, z=np.inf, params=['rad_power+el_current', 'el_energy+el_es
     #     fig = plt.figure(fig_name)
     #     if debug > 0:
     #         print('    plotting ' + fig_name)
-    if fig_name is None:
-        if g.fileName() is '':
+    if fig_name == None:
+        if g.fileName() == '':
             fig = plt.figure('Bunch profile at z={:.3f} [m]'.format(z))
         else:
             fig = plt.figure('Bunch profile at z={:.3f} [m]'.format(z) + g.fileName())
@@ -342,7 +342,7 @@ def plot_gen_out_z(g, z=np.inf, params=['rad_power+el_current', 'el_energy+el_es
             # print('! wrong parameter ' + param)
 
     for axi in ax:
-        if axi is not ax[-1]:
+        if axi != ax[-1]:
             axi.set_xlabel('')
             for label in axi.get_xticklabels():
                 label.set_visible(False)
@@ -360,17 +360,17 @@ def plot_gen_out_z(g, z=np.inf, params=['rad_power+el_current', 'el_energy+el_es
     axf = len(ax) - axt
     # ax[0].set_xlim(g.z[0], g.z[-1])
     # ax[-1].set_xlabel('z [m]')
-    if axt is not 0 and axf is not 0:
+    if axt != 0 and axf != 0:
         fig.subplots_adjust(top=0.95, bottom=0.2, right=0.8, left=0.15)
     else:
         fig.subplots_adjust(top=0.95, bottom=0.1, right=0.8, left=0.15)
 
     for axi in ax[axt:]:
-        if axt is not 0:
+        if axt != 0:
             pos1 = axi.get_position()  # get the original position
             pos2 = [pos1.x0 + 0, pos1.y0 - 0.1, pos1.width / 1.0, pos1.height / 1.0]
             axi.set_position(pos2)
-            if axi is not ax[-1]:
+            if axi != ax[-1]:
                 axi.set_xlabel('')
                 for label in axi.get_xticklabels():
                     label.set_visible(False)
@@ -651,7 +651,7 @@ def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=Tru
             spec_width = dx * width / x[
                 pos]  # the FWHM of spectral line (error when peakpos is at the edge of lamdscale)
     
-    if spec_width is not None and maxspectrum_value is not None:
+    if spec_width != None and maxspectrum_value != None:
         if y_units == 'nm':
             if kwargs.get('showtext', True):
                 ax_spectrum.text(0.02, 0.98,
@@ -718,8 +718,8 @@ def plot_gen_out_z_old(g, figsize=(10, 14), x_units='um', y_units='ev', legend=T
         print('    plotting bunch profile at ' + str(z) + ' [m]')
 
     font_size = 1
-    if fig_name is None:
-        if g.fileName() is '':
+    if fig_name == None:
+        if g.fileName() == '':
             fig = plt.figure('Bunch profile at ' + str(z) + 'm')
         else:
             fig = plt.figure('Bunch profile at ' + str(z) + 'm ' + g.fileName())
@@ -835,7 +835,7 @@ def plot_gen_out_z_old(g, figsize=(10, 14), x_units='um', y_units='ev', legend=T
             spectrum_lamdwidth_fwhm = dlambda * width / g.freq_lamd[
                 pos]  # the FWHM of spectral line (error when peakpos is at the edge of lamdscale)
 
-    if spectrum_lamdwidth_fwhm is not None and maxspectrum_wavelength is not None:
+    if spectrum_lamdwidth_fwhm != None and maxspectrum_wavelength != None:
         ax_spectrum.text(0.02, 0.98, r"$\lambda_{max}$= %.4e m " "\n" "$(\Delta\lambda/\lambda)_{fwhm}$= %.2e" % (
         maxspectrum_wavelength, spectrum_lamdwidth_fwhm), fontsize=12, horizontalalignment='left',
                          verticalalignment='top', transform=ax_spectrum.transAxes,
@@ -946,8 +946,8 @@ def plot_gen_out_evo(g, params=['und_quad', 'el_size', 'el_pos', 'el_energy', 'e
     if os.path.isfile(str(g)):
         g = read_out_file(g, read_level=2)
     # add check for output object
-    if fig_name is '':
-        if g.fileName() is '':
+    if fig_name == '':
+        if g.fileName() == '':
             fig = plt.figure(params_str)
             _logger.info('plotting ' + params_str)
         else:
@@ -1537,7 +1537,7 @@ def plot_gen_out_scanned_z(g, figsize=(10, 14), legend=True, fig_name=None, z=in
 
     font_size = 1
     if fig_name is None:
-        if g.fileName() is '':
+        if g.fileName() == '':
             fig = plt.figure('Genesis scan at ' + str(z) + 'm')
         else:
             fig = plt.figure('Genesis scan at ' + str(z) + 'm ' + g.fileName())
@@ -2230,7 +2230,7 @@ def plot_dpa_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cm
     
     if np.shape(dpa.ph)[0] == 1:
         slice_num = 0
-    if slice_num is None:
+    if slice_num == None:
         slice_num = int(np.shape(dpa.ph)[0] / 2)
         _logger.debug(
             ind_str + 'no slice number provided, using middle of the distribution - slice number {}'.format(slice_num))

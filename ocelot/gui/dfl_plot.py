@@ -251,9 +251,13 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         yz_title = 'Side projection'
         z_proj = dfl_copy.int_z()
 
-    dx = abs(x[1] - x[0])
-    dy = abs(y[1] - y[0])
-    dz = abs(z[1] - z[0]) #TODO: would not work in case of non-uniform x step
+    dx, dy, dz = 0, 0, 0
+    if ncar_x > 1:
+        dx = abs(x[1] - x[0])
+    if ncar_y > 1:
+        dy = abs(y[1] - y[0])
+    if ncar_z > 1:
+        dz = abs(z[1] - z[0]) #TODO: would not work in case of non-uniform steps
     
     
     if freq_domain:

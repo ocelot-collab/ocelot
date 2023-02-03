@@ -21,7 +21,7 @@ def_cmap = 'viridis'
 # def_cmap = 'Greys'
 
 fntsz = 4
-params = {'image.cmap': def_cmap, 'backend': 'ps', 'axes.labelsize': 3 * fntsz, 'font.size': 3 * fntsz, 'legend.fontsize': 4 * fntsz, 'xtick.labelsize': 4 * fntsz,  'ytick.labelsize': 4 * fntsz, 'text.usetex': False}
+params = {'image.cmap': def_cmap, 'axes.labelsize': 3 * fntsz, 'font.size': 3 * fntsz, 'legend.fontsize': 4 * fntsz, 'xtick.labelsize': 4 * fntsz,  'ytick.labelsize': 4 * fntsz, 'text.usetex': False}
 rcParams.update(params)
 
 
@@ -37,7 +37,7 @@ if int(matplotlib.__version__.split('.')[0]) < 3:
 
 # plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
 # rcParams["savefig.directory"] = os.chdir(os.path.dirname(__file__)) but __file__ appears to be genesis_plot
-matplotlib.pyplot.ioff() #turn off interactive mode
+# matplotlib.pyplot.ioff() #turn off interactive mode
 
 #matplotlib.pyplot.style.use("dark_background") White axes on dark background
 # matplotlib.use('Agg')
@@ -59,11 +59,11 @@ plotting_error=None
 #    _logger.error(plotting_error)
 
 # # re-check
-# exitval = os.system('python -c "import matplotlib.pyplot as plt; plt.figure()"')
+# exitval = os.system('python -c "import matplotlib.pyplot as plt; plt.figure()"')exit
 # havedisplay = (exitval == 0)
 # if not havedisplay:
 # # force matplotlib not ot use Xwindows backend. plots may still be plotted into e.g. *.png
-# matplotlib.use('Agg')
+# matplotlib.use('TkAgg') #fix for matplotlib version 
 
 
 #decorator

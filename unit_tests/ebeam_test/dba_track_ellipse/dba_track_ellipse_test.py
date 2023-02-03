@@ -11,7 +11,7 @@ from unit_tests.params import *
 from dba_track_ellipse_conf import *
 
 
-def test_lattice_transfer_map(lattice, parametr=None, update_ref_values=False):
+def test_lattice_transfer_map(lattice, parameter=None, update_ref_values=False):
     """R maxtrix test"""
 
     r_matrix = lattice_transfer_map(lattice, 0.0)
@@ -25,11 +25,11 @@ def test_lattice_transfer_map(lattice, parametr=None, update_ref_values=False):
     assert check_result(result)
 
 
-@pytest.mark.parametrize('parametr', [0, 1])
-def test_tracking_step(lattice, parametr, update_ref_values=False):
+@pytest.mark.parametrize('parameter', [0, 1])
+def test_tracking_step(lattice, parameter, update_ref_values=False):
     """Tracking step function test
-    :parametr=0 - tracking with sextupoles
-    :parametr=1 - tracking without sextupoles
+    :parameter=0 - tracking with sextupoles
+    :parameter=1 - tracking without sextupoles
     """
 
     t = np.linspace(0.0, 2.0*np.pi, num=100)
@@ -39,7 +39,7 @@ def test_tracking_step(lattice, parametr, update_ref_values=False):
     for xi, xpi in zip(x, xp):
         plist.append(Particle(x=xi, px=xpi))
 
-    if parametr == 1:
+    if parameter == 1:
         for element in lattice.sequence:
             if element.__class__ == Sextupole:
                 element.k2 = 0.0
@@ -55,7 +55,7 @@ def test_tracking_step(lattice, parametr, update_ref_values=False):
     if update_ref_values:
         return plist
 
-    plist_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parametr) +'.json')
+    plist_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) +'.json')
 
     result = check_dict(plist, plist_ref, TOL, assert_info=' plist - ')
     assert check_result(result)
@@ -100,10 +100,10 @@ def test_update_ref_values(lattice, cmdopt):
     update_function_parameters = {}
     update_function_parameters['test_tracking_step'] = [0, 1]
     
-    parametr = update_function_parameters[cmdopt] if cmdopt in update_function_parameters.keys() else ['']
+    parameter = update_function_parameters[cmdopt] if cmdopt in update_function_parameters.keys() else ['']
 
     if cmdopt in update_functions:
-        for p in parametr:
+        for p in parameter:
             result = eval(cmdopt)(lattice, p, True)
         
             if os.path.isfile(REF_RES_DIR + cmdopt + str(p) + '.json'):

@@ -10,14 +10,19 @@ from ocelot.cpbd.io import *
 from numpy import sin
 import re
 
+
 class StructureConverter:
-    
-    def __init__(self):
-        self.types = []
-        #self.screens = ["OTRC", "OTRA", "OTRB"]
+    """
+    in case you want to have in lattice correctors, monitors, markers, screens and other instruments
+    use following types:
+    types = ["HKIC", "VKIC", "MONI", "MARK", "INSTR"]
+    """
+    def __init__(self, types=None):
+        if types is None:
+            types = []
+        self.types = types
 
     def longlist_matrix_init(self):
-        
         self.longlist_matrix = {}
 
         self.longlist_matrix['MAGNET'] = {}
@@ -86,7 +91,6 @@ class StructureConverter:
             
             element = class_elem['type'](eid=row[name_pos])
             element.ps_id = row[ps_id_pos]
-
             length = row[length_pos]
             if element.__class__ is Undulator:
                 if length != 0:
@@ -98,7 +102,7 @@ class StructureConverter:
                     nperiods = length / lperiod
                     element.nperiods = nperiods
                     element.lperiod = lperiod
-                    print(element, lperiod, nperiods)
+                    #print(element, lperiod, nperiods)
             if element.__class__ in [Hcor, Vcor]:
                 if row[type_pos] in ["CAX", "CAY", "CBX", "CBY"]:
                     # vertical and horizontal aircoils have the same position and non zero length
@@ -112,16 +116,14 @@ class StructureConverter:
             for key in class_elem.keys():
 
                 if key != 'type':
-                    #print(key, class_elem[key])
                     pos = eval(key + '_pos')
                     if class_elem[key].__class__ == list:
-                        element.__dict__[class_elem[key][0]] = row[pos] * eval(class_elem[key][1])
+                        setattr(element, class_elem[key][0], row[pos] * eval(class_elem[key][1]))
                     else:
-                        element.__dict__[class_elem[key]] = row[pos]
+                        setattr(element, class_elem[key], row[pos])
 
             if row[tilt_pos] != 0:
-                element.__dict__['tilt'] = row[tilt_pos]
-                
+                setattr(element, 'tilt', row[tilt_pos])
         return element, row[s_pos]
 
     def sbend_l_correction(self, element):
@@ -178,4 +180,4 @@ if __name__ == '__main__':
     cell = SC.Longlist2Ocelot('component_list_8.5.1.xls', pos_stop=364, sbend_l_corr=True)
 
     lattice = MagneticLattice(cell)
-    write_lattice(lattice)
+    lattice.save_as_py_file()

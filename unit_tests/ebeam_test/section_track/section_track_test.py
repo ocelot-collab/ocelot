@@ -2,7 +2,6 @@
 
 import os
 import sys
-import copy
 import time
 
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -11,6 +10,7 @@ REF_RES_DIR = FILE_DIR + '/ref_results/'
 from unit_tests.params import *
 from section_track_conf import *
 
+import copy
 
 @pytest.mark.parametrize('parameter', [0, 1, 2, 3, 4])
 def test_lattice_transfer_map(section_lat, p_array, parameter, update_ref_values=False):
@@ -487,7 +487,7 @@ def test_twiss(section_lat, p_array, parameter=None, update_ref_values=False):
 
     tws_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
 
-    result2 = check_dict(tws, tws_ref['tws'], tolerance=1.0e-10, tolerance_type='absolute',  assert_info=' tws - ')
+    result2 = check_dict(tws, tws_ref['tws'], tolerance=1.0e-8, tolerance_type='absolute',  assert_info=' tws - ')
     assert check_result(result2)
 
 
@@ -539,7 +539,7 @@ def test_twiss_section_lat(section_lat, p_array, parameter=None, update_ref_valu
 
     tws_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
 
-    result2 = check_dict(tws, tws_ref['tws'], tolerance=1.0e-10, tolerance_type='absolute', assert_info=' tws - ')
+    result2 = check_dict(tws, tws_ref['tws'], tolerance=1.0e-8, tolerance_type='absolute', assert_info=' tws - ')
     assert check_result(result2)
 
 

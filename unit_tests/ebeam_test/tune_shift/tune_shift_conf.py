@@ -2,9 +2,11 @@
 
 import pytest
 
-from ocelot import *
 from ocelot.cpbd.track import *
-from ocelot.rad.radiation_py import und_field
+from ocelot.cpbd.transformations.transfer_map import TransferMap
+from ocelot.cpbd.transformations.kick import KickTM
+from ocelot.cpbd.transformations.runge_kutta_tr import RungeKuttaTrTM
+from ocelot.cpbd.elements.undulator_atom import und_field
 
 """lattice elements description"""
 
@@ -32,9 +34,9 @@ Q6 = Quadrupole(l=0.291, k1=-3.534859, eid= "D6")
 B1 = SBend(l = 0.23, angle = 0.23/19.626248, eid= "B1")
 B2 = SBend(l = 1.227, angle = 1.227/4.906312, eid= "B2")
 
-U = Undulator(lperiod=0.02, nperiods=50, Kx=2)
+U = Undulator(lperiod=0.02, nperiods=50, Kx=2, npoints = 500)
 U.mag_field = lambda x, y, z: und_field(x, y, z, U.lperiod, U.Kx)
-U.npoints = 500
+#U.npoints = 500
 
 
 """pytest fixtures description"""
@@ -57,10 +59,7 @@ def ring(cell_u, cell):
 @pytest.fixture(scope='module')
 def method():
 
-    mmm = MethodTM()
-    mmm.params[Sextupole] = KickTM
-    mmm.params[Undulator] = RungeKuttaTrTM
-    mmm.global_method = TransferMap
+    mmm = {"global": TransferMap, Undulator: RungeKuttaTrTM, Sextupole: KickTM}
 
     return mmm
 

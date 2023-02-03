@@ -1,14 +1,27 @@
+from __future__ import annotations
+
 __author__ = 'Sergey Tomin'
 
+import os
+from dataclasses import dataclass, astuple
+import copy
+import logging
+from time import time
+import multiprocessing as mp
+from typing import Union, List, Tuple, Optional, Any, Iterable
+
+from scipy.stats import truncnorm
+import pandas as pd
+import numpy as np
+
+from ocelot.cpbd.transformations.transformation import TMTypes
 from ocelot.cpbd.optics import *
 from ocelot.cpbd.beam import *
 from ocelot.cpbd.errors import *
 from ocelot.cpbd.elements import *
-from time import time
-from scipy.stats import truncnorm
-import copy
-import sys
-import logging
+from ocelot.cpbd.physics_proc import PhysProc
+from ocelot.cpbd.io import is_an_mpi_process, ParameterScanFile
+from ocelot.cpbd.physics_proc import CopyBeam
 
 _logger = logging.getLogger(__name__)
 
@@ -18,6 +31,18 @@ try:
 except:
     extrema_chk = 0
 
+try:
+    from mpi4py import MPI
+except ImportError:
+    IS_MPI = False
+else:
+    if is_an_mpi_process():
+        IS_MPI = True
+        COMM = MPI.COMM_WORLD
+        N_CORES = COMM.Get_size()
+        RANK = COMM.Get_rank()
+    else:
+        IS_MPI = False
 
 def aperture_limit(lat, xlim = 1, ylim = 1):
     tws=twiss(lat, Twiss(), nPoints=1000)
@@ -75,12 +100,9 @@ def find_highest(sorted_posns, value, diap):
     """
     poss = []
     for pos in sorted_posns:
-        if value-diap<=pos<=value+diap:
+        if value-diap <= pos <= value+diap:
             poss.append(pos)
-    #print poss
     return poss[-1]
-    #idx = (np.abs(sorted_posns-value)).argmin()
-    #return sorted_posns[idx]
 
 
 def nearest_particle(track_list, xi,yi):
@@ -113,14 +135,13 @@ def harmonic_position(data1D, nu = None, diap = 0.1, nearest = False):
     freq_peaks = freq[ft_maxi][int(len(ft_maxi)/2):]
     peaks = ft_shift[ft_maxi][int(len(ft_maxi)/2):]
 
-    main_3 =  freq_peaks[np.argsort(peaks)]
-
+    main_3 = freq_peaks[np.argsort(peaks)]
     if nearest:
         return find_nearest(main_3, nu)
 
-    if nu == None:
+    if nu is None:
         return main_3[-1]
-    if diap == None:
+    if diap is None:
         main_3 = main_3[-5:]
         nearest_nu = find_nearest(main_3, nu)
     else:
@@ -143,7 +164,7 @@ def freq_analysis(track_list, lat, nturns, harm=True, diap=0.10, nearest=False, 
         return nux, nuy
 
     nux, nuy = None, None
-    if harm == True:
+    if harm is True:
         nux, nuy = beta_freq(lat)
     #fma(pxy_list, nux = nux, nuy = nuy)
     for n, pxy in enumerate(track_list):
@@ -284,7 +305,7 @@ def track_nturns(lat, nturns, track_list, nsuperperiods=1, save_track=True, prin
         for n, pxy in enumerate(track_list):
             pxy.turn = i
             if save_track:
-                pxy.p_list.append(p_array.rparticles[:, n])
+                pxy.p_list.append(p_array.rparticles[:, n].tolist())
     return np.array(track_list_const)
 
 
@@ -400,30 +421,48 @@ def tracking_step(lat, particle_list, dz, navi):
     return
 
 
-def track(lattice, p_array, navi, print_progress=True, calc_tws=True, bounds=None):
+def track(
+        lattice,
+        p_array,
+        navi=None,
+        print_progress=True,
+        calc_tws=True,
+        bounds=None,
+        return_df=False,
+        overwrite_progress=True,
+        ) -> Tuple[Union[List[Twiss], pd.DataFrame], ParticleArray]:
+
     """
     tracking through the lattice
 
     :param lattice: Magnetic Lattice
     :param p_array: ParticleArray
-    :param navi: Navigator
+    :param navi: Navigator, if None default Navigator wo any PhysProc
     :param print_progress: True, print tracking progress
     :param calc_tws: True, during the tracking twiss parameters are calculated from the beam distribution
     :param bounds: None, optional, [left_bound, right_bound] - bounds in units of std(p_array.tau())
     :return: twiss_list, ParticleArray. In case calc_tws=False, twiss_list is list of empty Twiss classes.
     """
-
+    if navi is None:
+        navi = Navigator(lattice)
     tw0 = get_envelope(p_array, bounds=bounds) if calc_tws else Twiss()
     tws_track = [tw0]
     L = 0.
 
-    while np.abs(navi.z0 - lattice.totalLen) > 1e-10:
-        if navi.kill_process:
-            _logger.info("Killing tracking ... ")
-            return tws_track, p_array
+    for t_maps, dz, proc_list, phys_steps in navi.get_next_step():
+        for tm in t_maps:
+            start = time()
+            tm.apply(p_array)
+            time_delta = time() - start
+            _logger.debug("tracking_step -> tm.class: %s  l = %s",
+                          tm.__class__.__name__,
+                          tm.length
+            )
+            _logger.debug(
+                "tracking_step -> tm.apply: time exec = %s sec",
+                time_delta
+            )
 
-        dz, proc_list, phys_steps = navi.get_next()
-        tracking_step(lat=lattice, particle_list=p_array, dz=dz, navi=navi)
         #part = p_array[0]
         for p, z_step in zip(proc_list, phys_steps):
             p.z0 = navi.z0
@@ -438,28 +477,34 @@ def track(lattice, p_array, navi, print_progress=True, calc_tws=True, bounds=Non
         tws_track.append(tw)
 
         if print_progress:
-            poc_names = [p.__class__.__name__ for p in proc_list]
-            sys.stdout.write( "\r" + "z = " + str(navi.z0)+" / "+str(lattice.totalLen) + " : applied: " + ", ".join(poc_names)  )
-            sys.stdout.flush()
+            names = [type(p).__name__ for p in proc_list] # process names
+            names = ', '.join(names)
+            msg = f"z = {navi.z0} / {lattice.totalLen}. Applied: {names}"
+            end = "\n"
+            if overwrite_progress:
+                msg = f"\r{msg}"
+                end = ""
+            print(msg, end=end)
 
     # finalize PhysProcesses
     for p in navi.get_phys_procs():
         p.finalize()
 
+    if return_df:
+        return twiss_iterable_to_df(tws_track), p_array
+
     return tws_track, p_array
+
 
 
 def lattice_track(lat, p):
     plist = [copy.copy(p)]
-
     for elem in lat.sequence:
-        elem.transfer_map.apply([p])
-        #print(p)
-        if not (elem.__class__ in [Bend, RBend, SBend] and elem.l != 0.): #, "hcor", "vcor"
-            if elem.__class__ == Edge:
-                #print elem.pos
-                if elem.pos == 1:
-                    continue
+        for tm in elem.tms:
+            # TODO: Question: Why we have to split it like this?
+            if tm.tm_type == TMTypes.EXIT:
+                plist.append(copy.copy(p))
+            tm.apply([p])
         plist.append(copy.copy(p))
     return plist
 
@@ -495,14 +540,239 @@ def update_effective_beta(beam, lat):
         tws0.beta_y = beam_sl.beta_y
         tws0.alpha_x = beam_sl.alpha_x
         tws0.alpha_y = beam_sl.alpha_y
-    
+
         tws = twiss(lat, tws0)
         bx = [tw.beta_x for tw in tws]
         by = [tw.beta_y for tw in tws]
-        
+
         beta_x_eff.append(np.mean(bx))
         beta_y_eff.append(np.mean(by))
-    
+
     beam.beta_x_eff = np.array(beta_x_eff)
     beam.beta_y_eff = np.array(beta_y_eff)
 
+
+class ParameterScanner:
+    """A class for performing parameter scans (multiple calls to track with some
+    different input ParticleArray or other variation (e.g. a dipole angle, a
+    PhysProc hyperparameter---anything modifiable from a Navigator instance).
+
+    :param navigator: The base Navigator instance to be used for the tracking.  Any
+    modifications can be done in prepare_navigator.
+    :type Navigator:
+    :param parameter_values: The list of values to be passed to prepare_navigator
+    and also written to the output file.
+    :param parray0: ParticleArray or list of ParticleArray instances to be used as
+    input for the tracking.  If an iterable of insstances is provided, it must be
+    equal in length to parameter_values.
+    :param parameter_name: Optional metadata to be written to the outputfile
+    providing the name of the written parameter_values.
+    :param markers: List of Marker instances.
+
+    """
+    # For now user should ensure nprocesses is not great than number of jobs in mpi
+    # case.  otherwise empty output groups are made.
+    def __init__(self,
+                 navigator: Navigator,
+                 parameter_values: Iterable[Any],
+                 parray0: Union[ParticleArray, Iterable[ParticleArray]],
+                 parameter_name: str = "parameter",
+                 markers: Optional[Iterable[Marker]] = None,
+                 ):
+        self.navigator = navigator
+        self.parameter_values = parameter_values
+        self.parray0 = parray0
+        self.parameter_name = parameter_name
+        self.markers = markers
+        if self.markers is None:
+            self.markers = []
+
+        # If an iterable of input is provided.
+        if (not isinstance(self.parray0, ParticleArray)
+                and len(self.parray0) != len(self.parameter_values)):
+            raise ValueError(
+                "parameter_values length doesn't match number of parrays"
+            )
+
+    def prepare_navigator(self,
+                          _value: Any = None,
+                          _parray0: Optional[ParticleArray] = None,
+                          _job_index: Optional[int] = None) -> Navigator:
+        return copy.deepcopy(self.navigator)
+
+    def generate_unique_navigators_with_parray0s(self):
+        # Instantiate a navigator for each parameter.
+        parray0s = self._prepare_parray0s()
+        navigators = []
+        for job_index, v in enumerate(self.parameter_values):
+            parray0 = parray0s[job_index]
+            navi = self.prepare_navigator(v, parray0, job_index)
+            navigators.append(navi)
+        self._attach_dump_processes_to_markers(navigators)
+        return navigators, parray0s
+
+    def _attach_dump_processes_to_markers(self, navigators: Iterable[Navigator]):
+        sequence = self.navigator.lat.sequence
+        marker_locations = [sequence.index(m) for m in self.markers]
+        for navi in navigators:
+            sequence = navi.lat.sequence
+            for i in marker_locations:
+                marker = sequence[i]
+                process = CopyBeam(marker.id)
+                navi.add_physics_proc(process, marker, marker)
+
+    def prepare_track_payloads(self, navigators, parray0s):
+        payloads = []
+        for i in range(self.njobs):
+            navigator = navigators[i]
+            parray0 = parray0s[i]
+            # Prepare arguments for the processes.  Each one gets a differently
+            # prepared navigator and a copy of the parray.
+            payload = TrackPayload(navigator.lat, parray0.copy(), navigator,
+                                      job_index=i)
+
+            payloads.append(payload)
+        return payloads
+
+    @property
+    def njobs(self) -> int:
+        return len(self.parameter_values)
+
+    def _prepare_parray0s(self) -> ParticleArray:
+        # Either given a list of ParticleArray instances or a single one.  If a
+        # list it has to have the same length as parameter_values.
+        if isinstance(self.parray0, ParticleArray):
+            return len(self.parameter_values) * [self.parray0]
+        if len(self.parameter_values) != len(self.parray0):
+            raise ValueError(f"Parameter values len != [parray0]")
+        return self.parray0 # Then it is an iterable of ParticleArray instances
+
+    def scan(self, filename: str, nproc: int = 1):
+        """Run the parameter scan, possibly across multiple cores.  MPI is
+        automatically detected if used, where nproc will then have no effect.
+
+
+        :param nproc: Number of processes to spawn.  If set to -1, then spawn a
+        number of cores equal to the number of CPUs on this computer.
+
+        """
+
+        # Map of scanned parameter values to corresponding track arg pack to be
+        # run.
+        navigators, parray0s = self.generate_unique_navigators_with_parray0s()
+        args = self.prepare_track_payloads(navigators, parray0s)
+        with ParameterScanFile(filename, "w") as psf:
+            psf.init_from_parameter_scanner(self)
+            if is_an_mpi_process():
+                self._run_mpi(args, psf)
+            else:
+                self._run_pool(args, psf, nproc)
+
+    def _run_pool(self, track_payloads: Iterable[TrackPayload], psf, nproc: int) -> None:
+        # TODO Better:
+        # https://stackoverflow.com/questions/15704010/write-data-to-hdf-file-using-multiprocessing
+        if nproc == -1: # Spawn as many jobs as possibly or necessary.
+            nproc = min(self.njobs, mp.cpu_count())
+
+        # outqueue = mp.Queue()
+        # inqueue = mp.Queue()
+        # # Process dedicated to writing output
+        # output_proc = mp.Process(target=_handle_process_output, args=(outqueue, ))
+
+        with mp.Pool(nproc) as p:
+            results = p.map(TrackPayload.as_function, track_payloads)
+
+        parray0s = [a.parray0 for a in track_payloads]
+        parray1s = [x[0] for x in results]
+        all_jobs_dumps = [x[1] for x in results]
+
+        # Write input and output arrays, maybe also output array for no physics.
+        for job_index, parray0 in enumerate(parray0s):
+            psf.write_parray0(job_index, parray0)
+            psf.write_parray1(job_index, parray1s[job_index])
+
+        # Write marker parrays.
+        for job_index, one_jobs_dumps in enumerate(all_jobs_dumps):
+            for dump in one_jobs_dumps:
+                psf.write_parray_marker(job_index, dump.name, dump.parray)
+
+    def _run_mpi(self, payloads: Iterable[TrackPayload], psf) -> None:
+        job_indices = self._get_job_indices_for_this_mpi_core()
+        this_cores_track_args = [payloads[i] for i in job_indices]
+        if not job_indices: # If given no jobs to run on this core, do nothing
+            return
+
+        for payload in payloads:
+            job_index = payload.job_index
+            parray0 = payload.parray0.copy()
+            parray1, dumps = payload.run_and_get_dumps()
+
+            psf.write_parray0(job_index, parray0)
+            psf.write_parray1(job_index, parray1)
+
+            for dump in dumps:
+                psf.write_parray_marker(job_index, dump.name, dump.parray)
+
+            _logger.info(
+                f"Written marker distributions for %s at %s",
+                job_index, RANK
+            )
+
+        _logger.info("Finished all parameters to be scanned"
+                     f" at RANK={RANK} and results written to {psf.filename}")
+
+    def _get_job_indices_for_this_mpi_core(self) -> List[int]:
+        all_job_indices = range(self.njobs)
+        this_cores_job_indices = np.array_split(all_job_indices, N_CORES)[RANK]
+        # Converting to a list actually matters because bool(np.array([0])) is
+        # False whereas bool([0]) is True...!
+        this_cores_job_indices = list(this_cores_job_indices)
+        return this_cores_job_indices
+
+
+@dataclass
+class TrackPayload:
+    lattice: MagneticLattice
+    parray0: ParticleArray
+    navigator: Navigator
+    calc_tws: bool = False
+    bounds: Optional[Tuple[float, float]] = None
+    return_df: bool = True
+    print_progress: bool = True
+    overwrite_progress: bool = False
+    job_index: int = 0
+    kwargs: Optional[Mapping[str, Any]] = None
+
+    def run_and_get_dumps(self):
+        _logger.info("Starting tracking for job number %s.", self.job_index)
+
+        _, parray1 = track(lattice=self.lattice,
+                           p_array=self.parray0,
+                           navi=self.navigator,
+                           print_progress=self.print_progress,
+                           calc_tws=self.calc_tws,
+                           bounds=self.bounds,
+                           return_df=self.return_df,
+                           overwrite_progress=self.overwrite_progress)
+
+        marker_dump_processes = []
+        for process in self.navigator.inactive_processes:
+            if isinstance(process, CopyBeam):
+                marker_dump_processes.append(process)
+
+        _logger.info("Finished tracking for job number %s.", self.job_index)
+
+        return parray1, marker_dump_processes
+
+    @staticmethod
+    def as_function(payload):
+        """For use with pool.map"""
+        return payload.run_and_get_dumps()
+
+
+class UnitStepScanner(ParameterScanner):
+    """Simple ParameterScanner subclass for scanning the Navigator unit step."""
+    def prepare_navigator(self, unit_step: float, _parray0, _job_index) -> Navigator:
+        navi = super().prepare_navigator(unit_step, _parray0, _job_index)
+        navi.unit_step = unit_step
+        return navi

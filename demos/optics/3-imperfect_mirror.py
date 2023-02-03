@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from ocelot.optics.wave import *
 from ocelot.gui.dfl_plot import plot_dfl, plot_1d_hprofile
+import matplotlib
+matplotlib.use('qtagg')
 ocelog.setLevel(logging.DEBUG)
 # from copy import deepcopy
 
@@ -20,7 +22,7 @@ hprofile = generate_1d_profile(hrms=1e-9,               # [m] height errors root
                                length=0.03,             # [m] length of the mirror surface
                                points_number=1111,      # number of points (pixels) at the mirror surface
                                wavevector_cutoff=0,     # [1/m] point on k axis for cut off large wave lengths in the PSD (with default value 0 effects on nothing)
-                               k=None,                  # [1/m] one dimension numpy.ndarray of wave vectors; if specified, psd will be calculated using this values as arguments
+                               #k=None,                  # [1/m] one dimension numpy.ndarray of wave vectors; if specified, psd will be calculated using this values as arguments
                                psd=None,                # [m^3] 1d array; power spectral density of surface (if not specified, will be generated)
                                seed=666)                # seed for np.random.seed() to allow reproducibility
 
@@ -57,7 +59,7 @@ hprofile2 = generate_1d_profile(hrms=1e-9,                  # [m] height errors 
                                length=0.005,                # [m] length of the mirror surface
                                points_number=150,           # number of points (pixels) at the mirror surface
                                wavevector_cutoff=2000,      # [1/m] point on k axis for cut off large wave lengths in the PSD (with default value 0 effects on nothing)
-                               k=None,                      # [1/m] one dimension numpy.ndarray of wave vectors; if specified, psd will be calculated using this values as arguments
+                               #k=None,                      # [1/m] one dimension numpy.ndarray of wave vectors; if specified, psd will be calculated using this values as arguments
                                psd=None,                    # [m^3] 1d array; power spectral density of surface (if not specified, will be generated)
                                seed=123)                    # seed for np.random.seed() to allow reproducibility
 

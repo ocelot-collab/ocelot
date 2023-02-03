@@ -50,8 +50,8 @@ def test_twiss(lattice, parametr=None, update_ref_values=False):
 @pytest.mark.parametrize('parametr', [0, 1])
 def test_tracking_step(lattice, parametr, update_ref_values=False):
     """Tracking step function test
-    :parametr=0 - tracking with MethodTM() - params[Undulator] = UndulatorTestTM
-    :parametr=1 - tracking with default MethodTM()
+    :parametr=0 - tracking with {'global': TransferMap, 'Undulator': UndulatorTestTM}
+    :parametr=1 - tracking with default {'global': TransferMap}
     """
     
     p = Particle(x=0.001, y=0.002)

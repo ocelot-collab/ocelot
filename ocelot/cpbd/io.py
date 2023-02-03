@@ -4,12 +4,213 @@ module contains lat2input function which creates python input string
 (ocelot lattice) for a lattice object
 author sergey.tomin
 """
-from ocelot.cpbd.elements import *
-import os, sys
-from ocelot.adaptors.astra2ocelot import astraBeam2particleArray, particleArray2astraBeam
-from ocelot.adaptors.csrtrack2ocelot import csrtrackBeam2particleArray, particleArray2csrtrackBeam
+import os
+import logging
+from typing import Union, List, Tuple, Optional, Any, Iterable, Type
+from types import TracebackType
+from pathlib import Path
+
+import numpy as np
+
+
+from ocelot.adaptors.astra2ocelot import (astraBeam2particleArray,
+                                          particleArray2astraBeam)
+from ocelot.adaptors.csrtrack2ocelot import (csrtrackBeam2particleArray,
+                                             particleArray2csrtrackBeam)
+
+try:
+    from ocelot.adaptors.pmd import load_pmd, particle_array_to_particle_group
+except ImportError:
+    pass
+
 from ocelot.cpbd.beam import ParticleArray, Twiss, Beam
 
+try:
+    from mpi4py import MPI
+except ImportError:
+    pass
+
+try:
+    import h5py
+except ImportError:
+    pass
+
+_logger = logging.getLogger(__name__)
+
+
+def is_an_mpi_process():
+    return "OMPI_COMM_WORLD_SIZE" in os.environ
+
+
+class HDF5FileWithMaybeMPI(h5py.File):
+    def __init__ (self, *args, **kwargs):
+        if is_an_mpi_process():
+            _logger.debug("Opening h5py with mpi enabled")
+            kwargs.update({"driver": "mpio", "comm": MPI.COMM_WORLD})
+        # self.f = h5py.File(*args, **kwargs)
+        super().__init__(*args, **kwargs)
+
+
+class ParameterScanFile:
+    def __init__(self, *args, **kwargs):
+        self._hdf = HDF5FileWithMaybeMPI(*args, **kwargs)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exctype: Optional[Type[BaseException]],
+                 excinst: Optional[BaseException],
+                 exctb: Optional[TracebackType]) -> bool:
+        self.close()
+
+    def close(self):
+        self._hdf.close()
+
+    @property
+    def filename(self):
+        return self._hdf.filename
+
+    def new_run_output(self, pval, parray0, marker_names):
+        next_run_name = self.next_run_name()
+        self._initialise_one_root_level_group(next_run_name, pval, parray0, marker_names)
+        return next_run_name
+
+    def _write_parray(self, scan_index, parray_group_name, parray):
+        run_name = self.run_names[scan_index]
+        group = self._hdf[run_name][parray_group_name]
+        self._write_beam_to_group(group, parray)
+
+    def write_parray0(self, scan_index, parray0):
+        self._write_parray(scan_index, "parray0", parray0)
+
+    def write_parray1(self, scan_index, parray1):
+        self._write_parray(scan_index, "parray1", parray1)
+
+    def write_parray_marker(self, scan_index, marker_name, parray):
+        self._write_parray(scan_index, f"markers/{marker_name}", parray)
+
+    def _yield_parrays_from_run_group(self, from_run_address):
+        # from_run address is the address relative to the groups named run-0,
+        # run-1, etc.  so "parray0" for example not "run-1/parray0"!
+        for run_name in self.run_names:
+            yield h5py_group_to_parray(self._hdf[f"{run_name}/{from_run_address}"])
+
+    def parray0s(self):
+        yield from self._yield_parrays_from_run_group("parray0")
+
+    def parray1s(self):
+        yield from self._yield_parrays_from_run_group("parray1")
+
+    def parray_markers(self, marker_name):
+        if marker_name not in self.marker_names:
+            raise ValueError(f"Marker name not found in file: {marker_name}")
+        yield from self._yield_parrays_from_run_group(f"markers/{marker_name}")
+
+    @property
+    def run_names(self):
+        keys = self._hdf.keys()
+        return [key for key in keys if key.startswith("run-")]
+
+    @property
+    def marker_names(self):
+        result = set()
+        for run_name in self.run_names:
+            result.update(list(self._hdf[run_name]["markers"]))
+        return result
+
+    @property
+    def parameter_name(self):
+        return self._hdf["parameter-name"][()].decode("utf-8")
+
+    @parameter_name.setter
+    def parameter_name(self, value):
+        self._hdf["parameter-name"] = np.string_(value)
+
+    @property
+    def parameter_values(self):
+        result = []
+        for run_name in self.run_names:
+            result.append(self._hdf[f"{run_name}/parameter-value"][()])
+        return result
+
+    def next_run_name(self):
+        run_numbers = [int(n.split("-")[1]) for n in self.run_names]
+        if not run_numbers:
+            return "run-0"
+        return self._run_index_to_name(max(run_numbers) + 1)
+
+    def init_from_parameter_scanner(self, parameter_scanner) -> None:
+        parameter_values = parameter_scanner.parameter_values
+        parray0s = parameter_scanner.parray0
+        if isinstance(parray0s, ParticleArray):
+            parray0s = len(parameter_values) * [parray0s]
+        marker_names = [marker.id for marker in parameter_scanner.markers]
+        # parameter_values = pscanner.parameter_values
+        # You need to make EVERY group and EVERY dataset in EVERY core when using
+        # MPI-enabled h5py.  This is documented but also if you don't do it, it
+        # won't fail loudly, you'll just get weird behaviour (e.g. all datasets the
+        # same, blank, etc..)
+
+        self.parameter_name = parameter_scanner.parameter_name
+
+        assert not isinstance(parray0s, ParticleArray)
+
+        for parameter, parray0 in zip(parameter_values, parray0s):
+            self.new_run_output(parameter, parray0, marker_names)
+
+    def _initialise_one_root_level_group(self, run_name: str,
+                                         parameter: Any,
+                                         parray0: ParticleArray,
+                                         marker_names) -> None:
+        """Initialises a group of the kind found at the root level of the file and
+        everything within it."""
+        group = self._hdf.create_group(run_name)
+        g0 = group.create_group("parray0")
+         # init with specific parray0 in case they each have different lengths.
+        self._init_h5_parray_group(g0, parray0)
+        g1 = group.create_group("parray1")
+        self._init_h5_parray_group(g1, parray0)
+        group["parameter-value"] = parameter
+
+        # Initialise marker parray output.
+        gm = group.create_group("markers")
+        for marker_name in marker_names:
+            self._init_h5_parray_group(gm.create_group(marker_name), parray0)
+
+    @staticmethod
+    def _run_index_to_name(run_index: int) -> str:
+        return f"run-{run_index}"
+
+    def _write_output(self, hdf, run_name: str, parray0: ParticleArray, parray1:
+                      ParticleArray) -> None:
+        # run_index provides where the particle array will be written.
+        self._write_beam_to_group(hdf[f"{run_name}/parray0"], parray0)
+        self._write_beam_to_group(hdf[f"{run_name}/parray1"], parray1)
+
+    @staticmethod
+    def _init_h5_parray_group(group, parray0: ParticleArray) -> None:
+        # Have to explicitly set the dtypes.
+        group.create_dataset("rparticles",
+                             shape=parray0.rparticles.shape,
+                             dtype=parray0.rparticles.dtype)
+        group.create_dataset("q_array", shape=parray0.q_array.shape,
+                             dtype=parray0.q_array.dtype)
+        group.create_dataset("E", shape=(), dtype=type(parray0.E))
+        group.create_dataset("s", shape=(), dtype=type(parray0.s))
+
+    @staticmethod
+    def _write_beam_to_group(group, parray: ParticleArray) -> None:
+        group["rparticles"][:] = parray.rparticles
+        group["q_array"][:] = parray.q_array
+        group["E"][()] = parray.E
+        group["s"][()] = parray.s
+
+
+def h5py_group_to_parray(group):
+    parray = ParticleArray()
+    for key in 'E', 'q_array', 'rparticles', 's':
+        setattr(parray, key, group[key][()])
+    return parray
 
 def save_particle_array2npz(filename, p_array):
     np.savez_compressed(filename, rparticles=p_array.rparticles,
@@ -28,6 +229,7 @@ def load_particle_array_from_npz(filename, print_params=False):
     with np.load(filename) as data:
         for key in data.keys():
             p_array.__dict__[key] = data[key]
+    p_array.lost_particle_recorder = p_array.LostParticleRecorder(p_array.n)
     return p_array
 
 
@@ -49,6 +251,8 @@ def load_particle_array(filename, print_params=False):
         parray = astraBeam2particleArray(filename, print_params=False)
     elif file_extension in [".fmt1"]:
         parray = csrtrackBeam2particleArray(filename)
+    elif file_extension == ".h5":
+        parray = load_pmd(filename)
     else:
         raise Exception("Unknown format of the beam file: " + file_extension + " but must be *.ast, *fmt1 or *.npz ")
 
@@ -76,383 +280,8 @@ def save_particle_array(filename, p_array):
         particleArray2astraBeam(p_array, filename)
     elif file_extension == ".fmt1":
         particleArray2csrtrackBeam(p_array, filename)
+    elif file_extension == ".h5":
+        particle_array_to_particle_group(p_array).write(filename)
     else:
+        particle_array_to_particle_group(p_array).write(filename)
         raise Exception("Unknown format of the beam file: " + file_extension + " but must be *.ast, *.fmt1 or *.npz")
-
-
-def find_drifts(lat):
-    drift_lengs = []
-    drifts = []
-    for elem in lat.sequence:
-        if elem.__class__ == Drift:
-            elem_l = np.around(elem.l, decimals=6)
-            if elem_l not in drift_lengs:
-                drifts.append(elem)
-                drift_lengs.append(elem_l)
-    return drifts
-
-
-def find_objects(lat, types):
-    """
-    Function finds objects by types and adds it to list if object is unique.
-    :param lat: MagneticLattice
-    :param types: types of the Elements
-    :return: list of elements
-    """
-    obj_id = []
-    objs = []
-    for elem in lat.sequence:
-        if elem.__class__ in types:
-            if id(elem) not in obj_id:
-                objs.append(elem)
-                obj_id.append(id(elem))
-
-    return objs
-
-
-def create_var_name(objects):
-    alphabet = "abcdefgiklmn"
-    ids = [obj.id for obj in objects]
-    search_occur = lambda obj_list, name: [i for i, x in enumerate(obj_list) if x == name]
-    for j, obj in enumerate(objects):
-        inx = search_occur(ids, obj.id)
-        if len(inx) > 1:
-            for n, i in enumerate(inx):
-                name = ids[i]
-                name = name.replace('.', '_')
-                name = name.replace(':', '_')
-                name = name.replace('-', '_')
-                ids[i] = name + alphabet[n]
-        else:
-            name = ids[j]
-            name = name.replace('.', '_')
-            name = name.replace(':', '_')
-            name = name.replace('-', '_')
-            ids[j] = name
-        obj.name = ids[j].lower()
-
-    return objects
-
-
-def find_obj_and_create_name(lat, types):
-    objects = find_objects(lat, types=types)
-    objects = create_var_name(objects)
-    return objects
-
-
-def lat2input(lattice, tws0=None):
-    """
-    returns python input string for the lattice in the lat object
-    """
-
-    lines = ['from ocelot import * \n']
-
-    # prepare initial Twiss parameters
-    if tws0 is not None and isinstance(tws0, Twiss):
-        lines.append('\n#Initial Twiss parameters\n')
-        lines.extend(twiss2input(tws0))
-
-    # prepare elements list
-    lines.append('\n')
-    lines.extend(elements2input(lattice))
-
-    # prepare cell list
-    lines.append('\n# Lattice \n')
-    lines.extend(cell2input(lattice, True))
-
-    lines.append('\n')
-
-    return lines
-
-
-def get_elements(lattice):
-
-    elements = []
-        
-    for element in lattice.sequence:
-        element_type = element.__class__.__name__
-        
-        if element_type in ('Edge', "CouplerKick"):
-            continue
-
-        if element not in elements:
-            elements.append(element)
-
-    elements = create_var_name(elements)
-
-    return elements
-
-
-def matrix_def_string(element, params):
-    for key in element.__dict__:
-        if isinstance(element.__dict__[key], np.ndarray):
-            # r - elements
-            if np.shape(element.__dict__[key]) == (6, 6):
-                for i in range(6):
-                    for j in range(6):
-                        val = element.__dict__[key][i, j]
-                        if np.abs(val) > 1e-9:
-                            params.append(key + str(i + 1) + str(j + 1) + '=' + str(val))
-            # t - elements
-            elif np.shape(element.__dict__[key]) == (6, 6, 6):
-                for i in range(6):
-                    for j in range(6):
-                        for k in range(6):
-                            val = element.__dict__[key][i, j, k]
-                            if np.abs(val) > 1e-9:
-                                params.append(key + str(i + 1) + str(j + 1) + str(k + 1) + '=' + str(val))
-            # b - elements
-            if np.shape(element.__dict__[key]) == (6, 1):
-                for i in range(6):
-                    val = element.__dict__[key][i, 0]
-                    if np.abs(val) > 1e-9:
-                        params.append(key + str(i + 1) + '=' + str(val))
-
-    return params
-
-def element_def_string(element):
-
-    #if element.__class__ == Matrix:
-    #    return matrix_def_string(element)
-
-    params = []
-
-    element_type = element.__class__.__name__
-    element_ref = getattr(sys.modules[__name__], element_type)()
-    params_order = element_ref.__init__.__code__.co_varnames
-    argcount = element_ref.__init__.__code__.co_argcount
-
-    for param in params_order[:argcount]:
-        if param == 'self':
-            continue
-        
-        # fix for parameter 'eid'
-        if param == 'eid':
-            params.append('eid=\'' + element.id + '\'')
-            continue
-
-        if isinstance(element.__dict__[param], np.ndarray):
-
-            if not np.array_equal(element.__dict__[param], element_ref.__dict__[param]):
-                params.append(param + '=' + np.array2string(element.__dict__[param], separator=', '))
-            continue
-
-        if isinstance(element.__dict__[param], (int, float, complex)):
-
-            # fix for parameters 'e1' and 'e2' in RBend element
-            if element_type == 'RBend' and param in ('e1', 'e2'):
-                val = element.__dict__[param] - element.angle/2.0
-                if val != 0.0:
-                    params.append(param + '=' + str(val))
-                continue
-
-            if element.__dict__[param] != element_ref.__dict__[param]:
-                params.append(param + '=' + str(element.__dict__[param]))
-            continue
-
-        if isinstance(element.__dict__[param], str):
-
-            if element.__dict__[param] != element_ref.__dict__[param]:
-                params.append(param + '=\'' + element.__dict__[param] + '\'')
-            continue
-
-    if element.__class__ is Matrix:
-        params = matrix_def_string(element, params)
-
-    # join all parameters to element definition
-    string = pprinting(element, element_type, params)
-    return string
-
-
-def pprinting(element, element_type, params):
-    string = element.name + ' = ' + element_type + '('
-    n0 = len(string)
-    n = n0
-    for i, param in enumerate(params):
-        n += len(params)
-        if n > 250:
-            string += "\n"
-            string += " " * n0 + param + ", "
-            n = n0 + len(param) + 2
-        else:
-            if i == len(params) - 1:
-                string += param
-            else:
-                string += param + ", "
-    string += ")\n"
-    return string
-
-
-def print_elements(elements_dict):
-    
-    elements_order = []
-    elements_order.append('Drift')
-    elements_order.append('Quadrupole')
-    elements_order.append('SBend')
-    elements_order.append('RBend')
-    elements_order.append('Bend')
-    elements_order.append('Sextupole')
-    elements_order.append('Octupole')
-    elements_order.append('Multipole')
-    elements_order.append('Hcor')
-    elements_order.append('Vcor')
-    elements_order.append('Undulator')
-    elements_order.append('Cavity')
-    elements_order.append('TDCavity')
-    elements_order.append('Solenoid')
-    elements_order.append('Monitor')
-    elements_order.append('Marker')
-    elements_order.append('Matrix')
-    elements_order.append('Aperture')
-
-    lines = []
-    ordered_dict = {}
-    unordered_dict = {}
-
-    # sort on ordered and unordered elements dicts
-    for type in elements_dict:
-        if type in elements_order:
-            ordered_dict[type] = elements_dict[type]
-        else:
-            unordered_dict[type] = elements_dict[type]
-
-    # print ordered elements
-    for type in elements_order:
-
-        if type in ordered_dict:
-
-            lines.append('\n# ' + type + 's\n')
-
-            for element in ordered_dict[type]:
-                string = element_def_string(element)
-                lines.append(string)
-
-    # print remaining unordered elements
-    for type in unordered_dict:
-        
-        lines.append('\n# ' + type + 's\n')
-
-        for element in unordered_dict[type]:
-            string = element_def_string(element)
-            lines.append(string)
-
-    # delete new line symbol from the first line
-    if lines != []:
-        lines[0] = lines[0][1:]
-    return lines
-
-
-def sort_elements(elements):
-
-    elements_dict = {}
-    for element in elements:
-        element_type = element.__class__.__name__
-
-        if element_type not in elements_dict:
-            elements_dict[element_type] = []
-
-        elements_dict[element_type].append(element)
-
-    return elements_dict
-
-
-def elements2input(lattice):
-
-    elements = get_elements(lattice)
-    elements_dict = sort_elements(elements)
-    lines = print_elements(elements_dict)
-
-    return lines
-
-
-def cell2input(lattice, split=False):
-    
-    lines = []
-    names = []
-    for elem in lattice.sequence:
-        if elem.__class__ not in (Edge, CouplerKick):
-            names.append(elem.name)
-
-    new_names = []
-    for i, name in enumerate(names):
-        if split and i % 10 == 9:
-            new_names.append('\n' + name)
-        else:
-            new_names.append(name)
-
-    lines.append('cell = (' + ', '.join(new_names) + ')')
-    
-    return lines
-
-
-def twiss2input(tws):
-
-    lines = []
-    tws_ref = Twiss()
-    lines.append('tws0 = Twiss()\n')
-    for param in tws.__dict__:
-        if tws.__dict__[param] != tws_ref.__dict__[param]:
-            lines.append('tws0.' + str(param) + ' = ' + str(tws.__dict__[param]) + '\n')
-
-    return lines
-
-
-def beam2input(beam):
-    
-    lines = []
-    beam_ref = Beam()
-    lines.append('beam = Beam()\n')
-    for param in beam.__dict__:
-        if beam.__dict__[param] != beam_ref.__dict__[param]:
-            lines.append('beam.' + str(param) + ' = ' + str(beam.__dict__[param]) + '\n')
-
-    return lines
-
-
-def rem_drifts(lat):
-    drifts = {}
-    for i, elem in enumerate(lat.sequence):
-        if elem.__class__ == Drift:
-            if not (elem.l in drifts.keys()):
-                drifts[elem.l] = elem
-            else:
-                lat.sequence[i] = drifts[elem.l]
-
-    return lat
-
-
-def write_power_supply_id(lattice, lines=[]):
-    quads = find_obj_and_create_name(lattice, types=[Quadrupole])
-    sexts = find_obj_and_create_name(lattice, types=[Sextupole])
-    octs = find_obj_and_create_name(lattice, types=[Octupole])
-    cavs = find_obj_and_create_name(lattice, types=[Cavity])
-    bends = find_obj_and_create_name(lattice, types=[Bend, RBend, SBend])
-
-    lines.append("\n# power supplies \n")
-    for elem_group in [quads, sexts, octs, cavs, bends]:
-        lines.append("\n#  \n")
-        for elem in elem_group:
-            if "ps_id" in dir(elem):
-                line = elem.name.lower() + ".ps_id = '" + elem.ps_id + "'\n"
-                lines.append(line)
-    return lines
-
-
-def write_lattice(lattice, tws0=None, file_name="lattice.py", remove_rep_drifts=True, power_supply=False):
-    """
-    saves lattice as python imput file
-    lattice - MagneticLattice
-    file_name - name of the file
-    remove_rep_drifts - if True, remove the drifts with the same lengths from the lattice drifts definition
-    """
-    if remove_rep_drifts:
-        lattice = rem_drifts(lattice)
-
-    lines = lat2input(lattice, tws0=tws0)
-
-    if power_supply:
-        lines = write_power_supply_id(lattice, lines=lines)
-
-    f = open(file_name, 'w')
-    f.writelines(lines)
-    f.close()

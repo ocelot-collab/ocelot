@@ -85,10 +85,14 @@ def rematch(beta_mean, l_fodo, qdh, lat, extra_fodo, beam, qf, qd):
 
     R1 = lattice_transfer_map(extra, beam.E)
     Rinv = np.linalg.inv(R1)
-    m1 = TransferMap()
-    m1.R = lambda energy: Rinv
-    tw0m = m1.map_x_twiss(tw2m)
-    
+
+    def create_params(energy, delta_length):
+        return FirstOrderParams(R=Rinv, B=np.zeros((6, 1)), tilt=0.0)
+    def delta_e(delta_length, total_length):
+        return 0.0
+    m1 = TransferMap(create_tm_param_func=create_params, delta_e_func=delta_e, tm_type=TMTypes.MAIN, length=0.0)
+    tw0m = tw2m.map_x_twiss(m1)
+
     beam.beta_x, beam.alpha_x = tw0m.beta_x, tw0m.alpha_x
     beam.beta_y, beam.alpha_y = tw0m.beta_y, tw0m.alpha_y
 

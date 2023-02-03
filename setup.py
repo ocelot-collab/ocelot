@@ -10,7 +10,7 @@ for pkg in find_packages():
 
 setup(
     name='ocelot',
-    version='20.11.2',
+    version='22.12.0',
     description='Accelerator, radiation and x-ray optics simulation framework',
     author='ocelot-collab',
     author_email='tomin.sergey@gmail.com',
@@ -18,7 +18,7 @@ setup(
     packages=all_packages,
     package_dir={'ocelot.demos': 'demos'},  ## install examples along with the rest of the source
     install_requires=[
-        'numpy', 'scipy', 'matplotlib', 'pandas'
+        'numpy', 'scipy', 'matplotlib', 'pandas', 'h5py'
     ],
     extras_require={'docs': ['Sphinx', 'alabaster', 'sphinxcontrib-jsmath']},
     package_data={'ocelot.optics': ['data/*.dat']},

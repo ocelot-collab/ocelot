@@ -5,6 +5,7 @@ from ocelot.cpbd.beam import Twiss, beam_matching
 from scipy import optimize
 from ocelot.utils.acc_utils import slice_bunching
 from ocelot.common.ocelog import *
+from ocelot.cpbd.beam import ParticleArray
 
 _logger = logging.getLogger(__name__)
 
@@ -79,6 +80,22 @@ class SaveBeam(PhysProc):
         save_particle_array(filename=self.filename, p_array=p_array)
 
 
+class CopyBeam(PhysProc):
+    """Physics process that copies the ParticleArray instance when applied.  Makes
+    most sense to be attached to zero-length elements (e.g. Marker instances)."""
+    def __init__(self, name: str = ""):
+        super().__init__()
+        self.name = name
+        self.parray = None
+
+    def apply(self, parray: ParticleArray, dz: float) -> None:
+        """Copy the given particle array to self"""
+        self.parray = parray.copy()
+
+    def __repr__(self) -> str:
+        return f"<CopyBeam: {self.name}, at={hex(id(self))}>"
+
+
 class SmoothBeam(PhysProc):
     """
     Physics Process for the beam smoothing. Can be applied when number of particles is not enough.
@@ -135,7 +152,7 @@ class SmoothBeam(PhysProc):
         Zout2[0] = Zout[0]
         for i in range(1, N - 1):
             m = min(i, N - i + 1)
-            m = np.int(np.floor(myfunc(0.5 * m, 0.5 * self.mslice) + 0.500001))
+            m = int(np.floor(myfunc(0.5 * m, 0.5 * self.mslice) + 0.500001))
             Zout2[i] = (S[i + m + 1] - S[i - m]) / (2 * m + 1)
         # Zout[inds] = Zout2
         p_array.tau()[inds] = Zout2
@@ -355,19 +372,23 @@ class BeamTransform(PhysProc):
     Beam matching
     """
 
-    def __init__(self, tws=None, x_opt=None, y_opt=None):
+    def __init__(self, tws=None, x_opt=None, y_opt=None, **kw):
         """
         :param tws : Twiss object
         :param x_opt (obsolete): [alpha, beta, mu (phase advance)]
         :param y_opt (obsolete): [alpha, beta, mu (phase advance)]
+        :param remove_offsets: True, before apply matching remove offsets from the beam in all planes
+        :param bounds: [-5, 5] in tau-sigmas. Twiss parameters will be calculated for that part of the beam
+        :param slice: None, if "Imax" or "Emax" beam matched to that slice and 'bound' param is ignored
         """
         PhysProc.__init__(self)
-        self.bounds = [-5, 5]  # [start, stop] in sigmas
-        self.tws = tws  # Twiss
-        self.x_opt = x_opt  # [alpha, beta, mu (phase advance)]
-        self.y_opt = y_opt  # [alpha, beta, mu (phase advance)]
+        self.tws = tws      # Twiss
+        self.x_opt = x_opt  # [alpha, beta, mu (phase advance)] - obsolete
+        self.y_opt = y_opt  # [alpha, beta, mu (phase advance)] - obsolete
         self.step = 1
-        self.remove_offsets = True
+        self.remove_offsets = kw.get("remove_offsets", True)
+        self.bounds = kw.get("bounds", [-5, 5])  # [start, stop] in sigmas
+        self.slice = kw.get("slice", None)
 
     @property
     def twiss(self):
@@ -384,7 +405,70 @@ class BeamTransform(PhysProc):
         _logger.debug("BeamTransform: apply")
         self.x_opt = [self.twiss.alpha_x, self.twiss.beta_x, self.twiss.mux]
         self.y_opt = [self.twiss.alpha_y, self.twiss.beta_y, self.twiss.muy]
-        beam_matching(p_array.rparticles, self.bounds, self.x_opt, self.y_opt, self.remove_offsets)
+        beam_matching(p_array, self.bounds, self.x_opt, self.y_opt, self.remove_offsets, self.slice)
+
+
+class SlottedFoil(PhysProc):
+    """
+    Class to simulate a slotted foil
+
+    :param dx: thickness of foil [um]
+    :param X0: radiation length of the foil material in [cm]
+
+    :param xmin: -np.inf left position of the foil slot [m]
+    :param xmax: np.inf right position of the foil slot [m]
+
+    :param ymin: -np.inf lower position of the foil slot [m]
+    :param ymax: np.inf upper position of the foil slot [m]
+    """
+    def __init__(self, dx, X0, xmin=-np.inf, xmax=np.inf, ymin=-np.inf, ymax=np.inf, step=1):
+        PhysProc.__init__(self, step)
+        self.xmin = xmin  # in m
+        self.xmax = xmax  # in m
+
+        self.ymin = ymin  # in m
+        self.ymax = ymax  # in m
+        self.z = 1        # charge number of the incident particle
+        self.dx = dx      # thickness of the foil in [um]
+        self.X0 = X0      # radiation length in [cm]
+
+    def scattered_particles(self, p_array):
+        x = p_array.x()
+        inds = np.argwhere(np.logical_or(x < self.xmin, x > self.xmax))
+        inds_x = inds.reshape(inds.shape[0])
+
+        y = p_array.y()
+        inds = np.argwhere(np.logical_or(y < self.ymin, y > self.ymax))
+        inds_y = inds.reshape(inds.shape[0])
+        indeces = np.append(inds_x, inds_y)
+        return indeces
+
+    def get_scattering_angle(self, p_array):
+        """
+        formula from The Review of Particle Physics https://pdg.lbl.gov
+
+        :param p_array: ParticleArray
+        :return: theta - rms scattering angle
+        """
+        p = np.sqrt(p_array.E**2 - m_e_GeV**2) * 1000  # MeV/c momentum of the particles
+        gamma = p_array.E / m_e_GeV
+        igamma2 = 0.
+        if gamma != 0:
+            igamma2 = 1. / (gamma * gamma)
+        beta = np.sqrt(1. - igamma2)
+        theta_rms = 13.6 / (beta * p) * self.z * np.sqrt(self.dx * 1e-4 / self.X0) * (1 + 0.038 * np.log(self.dx*1e-4 / self.X0))
+        return theta_rms
+
+    def apply(self, p_array, dz):
+        _logger.debug(" SlottedFoil applied")
+
+        theta_rms = self.get_scattering_angle(p_array)
+        indeces = self.scattered_particles(p_array)
+        n = len(indeces)
+        thetas = np.random.normal(0, theta_rms, n)
+        alphas = np.random.uniform(0, 2*np.pi, n)
+        p_array.px()[indeces] += np.cos(alphas) * thetas
+        p_array.py()[indeces] += np.sin(alphas) * thetas
 
 
 class SpontanRadEffects(PhysProc):
@@ -421,7 +505,7 @@ class SpontanRadEffects(PhysProc):
             self.lperiod = 2.0 * np.pi * np.abs(self.radius) / gamma * self.K
 
         if self.quant_diff:
-            sigma_Eq = self.sigma_gamma_quant(energy, dz)
+            sigma_Eq = self.sigma_gamma_quant(energy, dz, self.K, self.lperiod, self.type)
             p_array.p()[:] += sigma_Eq * np.random.randn(p_array.n) * self.filling_coeff
 
         if self.energy_loss:
@@ -433,27 +517,29 @@ class SpontanRadEffects(PhysProc):
         U = k * energy ** 2 * self.K ** 2 * dz / self.lperiod ** 2
         return U
 
-    def sigma_gamma_quant(self, energy, dz):
+    @staticmethod
+    def sigma_gamma_quant(energy, dz, K, lperiod, type="planar"):
         """
         rate of energy diffusion
 
-        :param energy: electron beam energy
+        :param energy: electron beam energy [GeV]
+        :param dz: length of the undulator [m]
         :param Kx: undulator parameter
-        :param lperiod: undulator period
-        :param dz: length of the
+        :param lperiod: undulator period [m]
+        :param type: str, undulator type "planar" or "helical"
         :return: sigma_gamma/gamma
         """
         gamma = energy / m_e_GeV
-        k = 2 * np.pi / self.lperiod
+        k = 2 * np.pi / lperiod
 
         lambda_compt = h_eV_s / m_e_eV * speed_of_light  # m
         lambda_compt_r = lambda_compt / 2. / pi
-        if self.type == "helical":
+        if type == "helical":
             f = lambda K: 1.42 * K + 1. / (1 + 1.5 * K + 0.95 * K * K)
         else:
             f = lambda K: 0.6 * K + 1. / (2 + 2.66 * K + 0.8 * K ** 2)
 
-        delta_Eq2 = 14 / 15. * lambda_compt_r * ro_e * gamma ** 4 * k ** 3 * self.K ** 2 * f(self.K) * dz
+        delta_Eq2 = 14 / 15. * lambda_compt_r * ro_e * gamma ** 4 * k ** 3 * K ** 2 * f(K) * dz
         sigma_Eq = np.sqrt(delta_Eq2 / (gamma * gamma))
         return sigma_Eq
 
@@ -529,3 +615,21 @@ class Chicane(PhysProc):
 
         p_array.rparticles[4] += (
                     self.r56 * p_array.rparticles[5] + self.t566 * p_array.rparticles[5] * p_array.rparticles[5])
+
+
+class LatticeEnergyProfile(PhysProc):
+    """
+    The PhysProcess shifts the canonical momentum according to new reference energy Eref
+    """
+    def __init__(self, Eref):
+        PhysProc.__init__(self)
+        self.Eref = Eref
+
+    def apply(self, p_array, dz=0):
+        Eref_old = p_array.E
+        p0c_old = np.sqrt(Eref_old ** 2 - m_e_GeV ** 2)
+        p0c_new = np.sqrt(self.Eref ** 2 - m_e_GeV ** 2)
+        p_old = p_array.p()[:]
+        p_new = (p_old * p0c_old + Eref_old - self.Eref) / p0c_new
+        p_array.E = self.Eref
+        p_array.p()[:] = p_new[:]

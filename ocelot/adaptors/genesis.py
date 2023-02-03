@@ -2998,7 +2998,7 @@ def beam_file_str(beam):
     for i in range(beam.len()):
         for attr in attrs:
             if attr in dict:
-                buf = str(getattr(beam,attr)[i])
+                buf = '%.8f' % getattr(beam,attr)[i]
                 f_str = f_str + buf + ' '
         f_str = f_str.rstrip() + '\n'
 

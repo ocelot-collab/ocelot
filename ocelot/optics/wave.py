@@ -363,6 +363,7 @@ class RadiationField:
             method = 'np'
         
         if orig_domain == 't':
+            self.fld = np.fft.ifftshift(self.fld, 0)
             if method == 'mp' and fftw_avail:
                 fft_exec = pyfftw.builders.fft(self.fld, axis=0, overwrite_input=True, planner_effort='FFTW_ESTIMATE',
                                                threads=nthread, auto_align_input=False, auto_contiguous=False,
@@ -372,11 +373,11 @@ class RadiationField:
                 self.fld = np.fft.fft(self.fld, axis=0)
             # else:
             #     raise ValueError('fft method should be "np" or "mp"')
-            self.fld = np.fft.ifftshift(self.fld, 0)
+            self.fld = np.fft.fftshift(self.fld, 0)
             self.fld /= np.sqrt(self.Nz())
             self.domain_z = 'f'
         elif orig_domain == 'f':
-            self.fld = np.fft.fftshift(self.fld, 0)
+            self.fld = np.fft.ifftshift(self.fld, 0)
             if method == 'mp' and fftw_avail:
                 fft_exec = pyfftw.builders.ifft(self.fld, axis=0, overwrite_input=True, planner_effort='FFTW_ESTIMATE',
                                                 threads=nthread, auto_align_input=False, auto_contiguous=False,
@@ -387,6 +388,7 @@ class RadiationField:
                 
                 # else:
                 # raise ValueError("fft method should be 'np' or 'mp'")
+            self.fld = np.fft.fftshift(self.fld, 0)
             self.fld *= np.sqrt(self.Nz())
             self.domain_z = 't'
         else:

@@ -710,8 +710,12 @@ def plot_two_dfls(dfl_first, dfl_second, domains='s', label_first=None, label_se
         plt.close(fig)   
     _logger.info(ind_str + 'plotting two dfls done in {:.2f} seconds'.format(time.time() - start_time))
 
+def plot_wigner(*args,**kwargs):
+    _logger.warning('plotting wigner for time-frequency domain migrated to plot_wigner_z')
+    return plot_wigner_z(*args,**kwargs)
+
 @if_plottable
-def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, None), y_lim=(None, None), v_lim=(None, None), downsample=1,
+def plot_wigner_z(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, None), y_lim=(None, None), v_lim=(None, None), downsample=1,
                 autoscale=None, figsize=3, cmap='seismic', fig_name=None, savefig=False, showfig=True,
                 plot_proj=1, plot_text=1, plot_moments=0, plot_cbar=0, log_scale=0, **kwargs):
     """
@@ -787,28 +791,35 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
     if plot_moments:
         inst_freq = W.inst_freq()
         group_delay = W.group_delay()
+    
+    if W.domain in ['x','y','s']:
+        power_scale = W.s
+        p_label_txt = 's [m]'
+        spec_scale = W.theta()
+        f_label_txt = '$\theta$ [rad]'
+    
+    elif W.domain in ['t','z']:
+        if x_units == 'fs':
+            power_scale = -W.s / speed_of_light * 1e15
+            p_label_txt = 't [fs]'
+            if plot_moments:
+                group_delay = -group_delay / speed_of_light * 1e15
+        else:
+            power_scale = W.s * 1e6
+            p_label_txt = 's [$\mu$m]'
+            if plot_moments:
+                group_delay = group_delay * 1e6
 
-    if x_units == 'fs':
-        power_scale = -W.s / speed_of_light * 1e15
-        p_label_txt = 't [fs]'
-        if plot_moments:
-            group_delay = -group_delay / speed_of_light * 1e15
-    else:
-        power_scale = W.s * 1e6
-        p_label_txt = 's [$\mu$m]'
-        if plot_moments:
-            group_delay = group_delay * 1e6
-
-    if y_units in ['ev', 'eV']:
-        spec_scale = W.phen
-        f_label_txt = '$E_{photon}$ [eV]'
-        if plot_moments:
-            inst_freq = inst_freq
-    else:
-        spec_scale = W.freq_lamd
-        f_label_txt = '$\lambda$ [nm]'
-        if plot_moments:
-            inst_freq = h_eV_s * speed_of_light * 1e9 / inst_freq
+        if y_units in ['ev', 'eV']:
+            spec_scale = W.phen
+            f_label_txt = '$E_{photon}$ [eV]'
+            if plot_moments:
+                inst_freq = inst_freq
+        else:
+            spec_scale = W.freq_lamd
+            f_label_txt = '$\lambda$ [nm]'
+            if plot_moments:
+                inst_freq = h_eV_s * speed_of_light * 1e9 / inst_freq
 
     if plot_proj:
         # definitions for the axes

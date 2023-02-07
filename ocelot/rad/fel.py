@@ -34,6 +34,8 @@ class FelParameters:
         
         if not hasattr(self, 'hn'):
             self.hn=1 #harmonic number
+        if (self.hn<1) or (self.hn%1):
+            _logger.warning('parameter hn must be positive integer')
         
         if np.any(self.betax <= 0) or np.any(self.betay <= 0):
             _logger.warning('betax or betay <= 0, returning lg3=np.nan')
@@ -83,11 +85,11 @@ class FelParameters:
         
         # self.N = self.I * self.lambda0 / 1.4399644850445153e-10
         # self.sigb = 0.5 * (self.rxbeam + self.rybeam) # average beam size
+                # h_eV_s * speed_of_light / self.lambda0
         
+        ### Check criterion given in Eq.6, 10.1103/PhysRevSTAB.15.080702
         emit_n = np.sqrt(self.emitx * self.emity)
-        # h_eV_s * speed_of_light / self.lambda0
         self.emit_nn = 2 * np.pi * emit_n / self.lambdah / self.gamma0 ## emittance normalized as in Eq.6, 10.1103/PhysRevSTAB.15.080702
-        
         if (np.any(self.emit_nn < 1) or np.any(self.emit_nn) > 5):
             self.inaccurate = True 
             if tdp:
@@ -106,7 +108,8 @@ class FelParameters:
         
         if method == 'mxie':
             '''
-            M. Xie, “Exact and variational solutions of 3D eigenmodes in high gain FELs,” Nucl. Instruments Methods Phys. Res. Sect. A Accel. Spectrometers, Detect. Assoc. Equip., vol. 445, no. 1–3, pp. 59–66, 2000.
+            M. Xie, "Exact and variational solutions of 3D eigenmodes in high gain FELs", Nucl. Instruments Methods Phys. Res. Sect. A Accel. Spectrometers, Detect. Assoc. Equip., vol. 445, no. 1--3, pp. 59--66, 2000.
+            DOI https://doi.org/10.1016/S0168-9002(00)00114-5
             '''
             
             # if self.hn != 1:
@@ -149,7 +152,8 @@ class FelParameters:
             #eq.4, DOI:10.1103/PhysRevSTAB.15.080702
             # it is power gain length = 0.5 * field gain length
             
-            self.delta = 131 * (I_Alfven / self.I) * emit_n**(5/4) / (self.lambdah * self.xlamd**9)**(1/8) * self.hn**(9/8) * self.delgam**2 / (self.aw0 * self.fch)**2 / (1 + self.aw0**2)**(1/8) #eq.5, DOI:10.1103/PhysRevSTAB.15.080702
+            self.delta = 131 * (I_Alfven / self.I) * emit_n**(5/4) / (self.lambdah * self.xlamd**9)**(1/8) * self.hn**(9/8) * self.delgam**2 / (self.aw0 * self.fch)**2 / (1 + self.aw0**2)**(1/8) 
+            #eq.5, DOI:10.1103/PhysRevSTAB.15.080702
             
                 
             
@@ -389,7 +393,13 @@ class FelParametersArray(FelParameters):
             idx = None
         return idx
     
-    
+# def calculate_fel_parameters_g4(input, array=False, method='mxie'):
+#     p = FelParameters()
+#     p.gamma0 = input.sequence['setup'].gamma0
+#     p.delgam = "n/a" # TODO: think, how to consistently get beam and undulator parameters and update meshes: e.g.
+#     # transverse mesh can be provided externally with field
+#     return
+
 
 def calculateFelParameters(input, array=False, method='mxie'):
     

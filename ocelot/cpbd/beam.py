@@ -467,11 +467,14 @@ class BeamArray(Beam):
             _logger.log(5, ind_str + 'size {:}'.format(values.size))
             setattr(self, attr, values[inds])
 
-    def equidist(self):
-        dsarr = (self.s - np.roll(self.s, 1))[1:]
+    def equidist(self, ds=None):
+        dsarr = (self.s - np.roll(self.s,1))[1:]
         dsm = np.mean(dsarr)
-        if (np.abs(dsarr - dsm) / dsm > 1 / 1000).any():
-            s_new = np.linspace(np.amin(self.s), np.amax(self.s), self.len())
+        if (np.abs(dsarr-dsm)/dsm > 1/1000).any():
+            if ds is None:
+                s_new = np.linspace(np.amin(self.s), np.amax(self.s), self.len())
+            else:
+                s_new = np.arange(np.amin(self.s), np.amax(self.s), ds)
             for attr in self.params():
                 if attr == 's':
                     continue
@@ -612,7 +615,7 @@ class BeamArray(Beam):
         if s0 is None:
             s0 = (np.amax(self.s) - np.amin(self.s)) / 2
         elif isinstance(s0, str) is not True:
-            s0 = s0 / 1e6
+            s0 = s0# / 1e6
         else:
             raise ValueError("s0 must be None or some value")
 
@@ -632,6 +635,78 @@ class BeamArray(Beam):
 
     def to_array(self, *args, **kwargs):
         raise NotImplementedError('Method inherited from Beam() class, not applicable for BeamArray objects')
+
+
+class BeamFormFactor:
+    '''
+    contains and calculates electron beam form-factor (fourier transform of currenta profile)
+    from the electron beam "BeamArray" object
+    '''
+    def __init__(self, beam_array=None):
+        self.cfactor = None #modulus of form-factor
+        self.frequency = None #frequency in Hz
+        self.beam_array = beam_array #original beam file
+        
+        if self.beam_array is not None:
+            self.beam_array.sort()
+            self.beam_array.equidist()
+            self.calc()
+
+    def __len__(self):
+        return np.size(self.cfactor)
+
+    # def current_profile(self):
+    #     return self.beam_array.s, self.beam_array.I
+
+    def calc(self):
+        '''
+        calculates the form-factor and populates self.modulus and self.frequency
+        '''
+        I_norm = self.beam_array.I / self.beam_array.charge()
+        self.cfactor = np.fft.fft(I_norm)
+        ds = np.abs(self.beam_array.s[1] - self.beam_array.s[0])
+        self.frequency = np.fft.fftfreq(len(self), ds / speed_of_light)
+        idx = len(self) // 2
+        
+        self.cfactor = self.cfactor[:idx]
+        self.frequency = self.frequency[:idx]
+
+
+class Trajectory:
+    def __init__(self):
+        self.ct = []
+        self.E = []
+        self.x = []
+        self.y = []
+        self.xp = []
+        self.yp = []
+        self.z = []
+        self.s = []
+
+    def add(self, ct, x, y, xp, yp, z, s):
+        self.ct.append(ct)
+        self.x.append(x)
+        self.y.append(y)
+        self.xp.append(xp)
+        self.yp.append(yp)
+        self.z.append(z)
+        self.s.append(s)
+
+    def last(self):
+        p = Particle()
+
+        p.ct = self.ct[len(self.ct) - 1]
+        p.x = self.x[len(self.x) - 1]
+        p.y = self.y[len(self.y) - 1]
+        p.xp = self.xp[len(self.xp) - 1]
+        p.yp = self.yp[len(self.yp) - 1]
+        try:
+            p.E = self.E[len(self.E) - 1]
+        except IndexError:
+            return 0
+        p.s = self.s[len(self.s) - 1]
+
+        return p
 
 
 class ParticleArray:
@@ -2146,9 +2221,9 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
                     l_beam * 6 if gaussian,
     nslice - number of slices in the beam
     """
-
+    
     _logger.info('generating electron beam distribution')
-
+    
     beam = Beam()
     beam.E = E
     beam.tlen = l_beam / speed_of_light * 1e15
@@ -2171,7 +2246,7 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
             nslice = value
         if key == 'dE':
             beam.dg = value / m_e_GeV
-
+    
     if 'l_window' not in kwargs:
         if beam.shape is ['gaussian', 'gauss', 'g']:
             l_window = l_beam * 6
@@ -2181,12 +2256,12 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
             raise ValueError('Beam() shape can be either "gaussian" or "flattop"')
     else:
         l_window = kwargs['l_window']
-
+    
     beam_arr = beam.to_array(nslice, l_window)
-
+    
     if 'chirp' in kwargs:
         beam_arr.add_chirp(kwargs['chirp'])
-
+    
     return beam_arr
 
 

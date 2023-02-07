@@ -27,8 +27,6 @@ c = 299792458.0
 
 r_el        = 2.8179403267e-15       #Electron classical radius in:  m
 
-_indexing_reversed = True
-
 def calc_angle(a,b):
     '''
     yields angle between vectors "a"=(ax,ay,az) and "b"=(bx,by,bz) in degrees
@@ -155,10 +153,7 @@ def F_hkl(cryst, ref_idx, lamb, temp):
     
     _logger.debug('calculating Fhkl {} {} {}'.format(lamb, cryst.lattice.element_name, ref_idx))
     
-    if _indexing_reversed:
-        file_name = cryst.lattice.element_name + str(ref_idx[0]) + str(ref_idx[1]) + str(ref_idx[2]) + '.dat'
-    else:
-        file_name = cryst.lattice.element_name + str(ref_idx[2]) + str(ref_idx[1]) + str(ref_idx[0]) + '.dat'
+    file_name = cryst.lattice.element_name + str(ref_idx[2]) + str(ref_idx[1]) + str(ref_idx[0]) + '.dat'
     
     target_ev = 2*pi * hbar * c / lamb
     
@@ -200,7 +195,7 @@ def find_bragg(lambd, lattice, ord_max):
     H = {}
     d = {}
     phi = {}
-   
+    
     for h in range(0, ord_max+1):
         for k in range(0, ord_max+1):
             for l in range(0, ord_max+1):
@@ -209,7 +204,6 @@ def find_bragg(lambd, lattice, ord_max):
                     continue
                             
                 hkl = (h,k,l)
-                
     
                 H_hkl = h*lattice.b1 + k*lattice.b2 + l*lattice.b3
                 d_hkl = 1. / np.linalg.norm(H_hkl)
@@ -219,7 +213,8 @@ def find_bragg(lambd, lattice, ord_max):
                 if np.abs(sin_phi) <= 1.0:
                     H[hkl] = H_hkl
                     d[hkl] = d_hkl
-                    phi[hkl] = np.arcsin(sin_phi) * 180.0 / np.pi                
+                    phi[hkl] = np.arcsin(sin_phi) * 180.0 / np.pi
+
     return H, d, phi
    
 
@@ -397,213 +392,6 @@ def transmissivity_reflectivity(klist, cryst):
     return t, r
 
 
-##########################################################
-    
-def rotm(th,ux,uy,uz):
-    r = np.array((
-            ( ux*ux*(1-np.cos(th))+np.cos(th),     ux*uy*(1-np.cos(th))-uz*np.sin(th),     ux*uz*(1-np.cos(th))+uy*np.sin(th) ),
-            ( ux*uy*(1-np.cos(th))+uz*np.sin(th),  uy*uy*(1-np.cos(th))+np.cos(th),        uy*uz*(1-np.cos(th))-ux*np.sin(th) ),
-            ( ux*uz*(1-np.cos(th))-uy*np.sin(th),  uy*uz*(1-np.cos(th))+ux*np.sin(th),     uz*uz*(1-np.cos(th))+np.cos(th)    )
-            ))
-    return r
-
-
-#(1) Pitch of thp around PitchAx, and rotation of Yaw and Roll axis:
-def rotm1(thp,pitchax,rollax,yawax):       
-    r1 = rotm(np.pi/2-thp,pitchax[0],pitchax[1],pitchax[2])
-    #print('==========================')
-    #print('matrix',r1)
-    #print('rollax',rollax)
-    #print('==========================')
-    rollax2 = r1.dot(rollax)
-    yawax2  = r1.dot(yawax)
-    return r1, rollax2, yawax2
-
-#(2) Yaw of thy around yawax2, and rotation of Roll axis:
-def rotm2(thy,rollax2,yawax2):    
-    r2 = rotm(thy,yawax2[0],yawax2[1],yawax2[2])
-    rollax3 = r2.dot(rollax2)    
-    return r2, rollax3
-
-#(3) Roll of thr around Rollax3:
-def rotm3(thr,rollax3):    
-    r3 = rotm(thr,rollax3[0],rollax3[1],rollax3[2])
-    return r3
-
-
-
-def my_get_crystal_filter(cryst, ev_seed, nk=10000, k = None, n_width = 100):
-    from scipy.optimize import fsolve 
-    from scipy import optimize
-    _logger.debug('==============================================')
-    _logger.debug('======== BEGIN getting crystal filter ========')
-    _logger.debug('==============================================')    
-    #import crystal as cry    
-    #n_width - number of Darwin widths
-    lamb=h_eV_s*speed_of_light/ev_seed
-    kb = 2*np.pi/lamb
-    
-    ref_idx=cryst.ref_idx
-    no = cryst.no/np.linalg.norm(cryst.no)
-    yawax = no
-    rollax = cryst.cut/np.linalg.norm(cryst.cut)
-    
-    
-    
-    #finds pitch from roll and yaw 
-    pitchax = -np.cross(yawax,rollax)/np.linalg.norm(np.cross(yawax,rollax))
-    _logger.debug(ind_str + 'reflection index = {}'.format(ref_idx))            
-    _logger.debug(ind_str + 'x = pitch axis = {}'.format(pitchax))
-    _logger.debug(ind_str + 'z = yaw axis   = {}'.format(yawax))
-    _logger.debug(ind_str + 'y = roll axis  = {}'.format(rollax))
-    H, d, phi = find_bragg(lambd = lamb, lattice=cryst.lattice, ord_max = 15)    
-    polarization = 'sigma'
-    abs_ref_idx = tuple(abs(np.array(ref_idx)))
-    dhkl = d[abs_ref_idx]
-        
-    #solves for bragg angle
-    thetaB = phi[abs_ref_idx]* np.pi / 180.0
-    _logger.debug(ind_str + 'Bragg angle {} [rad]'.format(thetaB))
-    _logger.debug(ind_str + 'Bragg angle {} [deg]'.format(thetaB/np.pi*180))
-    
-
-    #Finding the incident vector wrt crystal system coordinates
-    
-    
-    
-    if polarization == 'sigma':
-        c_pol = 1
-    else :
-        c_pol = - np.cos(2.0 * thetaB)
-    
-    ref_idx_length = np.sqrt(np.sum(np.array(ref_idx)**2))
-    h_norm = tuple([i/ref_idx_length for i in ref_idx])
-  
-    #1) Perform pitch rotation of initial incient axis (0,0,1), and finds theta_pitch 
-    #   In principle one could yaw and roll as well. But for our applications this is not interesting
-    #   Yaw and roll angles are set to zero
-    #print('thetaB',thetaB*180/np.pi)
-    def func(thetap):
-        #print('thetap',thetap*180/np.pi)
-        thp=float(thetap)        
-        return np.sin(thetaB)-np.dot(h_norm,np.dot(rotm1(thp,pitchax,rollax,yawax)[0],np.array([0,0,1])))
-    #print('funzione',func(np.pi/4))
-    
-    thetap=float(fsolve(func,thetaB))
-    if thetap>np.pi:
-        thetap=thetap-np.pi
-    _logger.debug(ind_str + 'Pitch angle {} [rad]'.format(thetap))
-    _logger.debug(ind_str + 'Pitch angle {} [deg]'.format(thetap*180/np.pi))
-    
-    s0 = np.dot(rotm1(thetap,pitchax,rollax,yawax)[0],np.array([0,0,1]))
-    #print('s0',s0,'|s0|',np.linalg.norm(s0))
-    #print(s0,2*np.dot(s0,h_norm),np.array(h_norm))
-    #print('sh=',s0-2*np.dot(s0,h_norm)*np.array(h_norm),np.linalg.norm(s0-2*np.dot(s0,h_norm)*np.array(h_norm)))
-    
-    #def eqs(sh):
-    #    return np.dot(s0,h_norm)-np.dot(sh,h_norm), np.dot(s0,np.cross(sh,h_norm)), np.linalg.norm(sh)-1
-       
-    #sh = fsolve(eqs,(0,0,0))
-    
-    #print(sh)
-    #print(np.dot(s0,h_norm)-np.dot(sh,h_norm), np.dot(s0,np.cross(sh,h_norm)), np.linalg.norm(sh)-1)
-    sh = (s0-2*np.dot(s0,h_norm)*np.array(h_norm))/np.linalg.norm(s0-2*np.dot(s0,h_norm)*np.array(h_norm))
-    
-    print(s0,sh,no)
-   
-    gamma0 = np.dot(no, s0)
-    gammah = np.dot(no, sh)
-    
-    psi0 = np.arccos(gamma0)
-    psih = np.arccos(gammah)
-    psin = psih - thetaB 
-    
-    _logger.debug(ind_str + 'no   = {}'.format(no))
-    _logger.debug(ind_str + 's0 = {}'.format(s0))
-    _logger.debug(ind_str + 'h_norm  = {}'.format(h_norm))
-    _logger.debug(ind_str + 'sh  = {}'.format(sh))
-    _logger.debug(ind_str + 'psi0 [deg]= {}'.format(psi0*180/np.pi))
-    _logger.debug(ind_str + 'psih [deg]= {}'.format(psih*180/np.pi))
-    _logger.debug(ind_str + 'psin [deg] = {}'.format(psin*180/np.pi))
-    
-    
-   
-    
-    
-    gamma = gammah / gamma0
-
-    _logger.debug(ind_str + '2 theta = {} deg'.format(calc_angle(s0,-sh)))
-    _logger.debug(ind_str + 'gamma0: {}'.format(gamma0))
-    _logger.debug(ind_str + 'gammah: {}'.format(gammah))
-    _logger.debug(ind_str + 'gamma: {}'.format(gamma))
-    if gamma<0:
-        _logger.debug(2*ind_str + 'BRAGG geometry')
-    else:
-        _logger.warning(2*ind_str + 'LAUE geometry')
-
-
-    #cahnged by GG: abs_ref_idx to ref_idx
-    f0, fh, fmh =  F_hkl(cryst = cryst, ref_idx = ref_idx, lamb=lamb, temp = 300*K)
-    
-    
-#    _logger.debug(ind_str + 'structure factors {} {} {}'.format(f0, fh, fmh))
-    #plt.figure()
-
-     
-        
-    vcell = ( dhkl * np.sqrt( np.dot(ref_idx,ref_idx) ) ) **3
-        
-    delta    = r_el * np.abs(c_pol) * lamb**2 * np.sqrt( np.abs(gamma)*fh*fmh ) / ( np.pi * vcell * np.sin(2*thetaB) )
-    mid_TH = np.real( r_el * lamb**2 * f0 * (1-gamma) / (2*np.pi * vcell * np.sin(2*thetaB)) )
-    mid_k  = kb / (- mid_TH * 1/np.tan(thetaB) + 1 )
-    dk  =  ( -2*kb*np.sin(thetaB) + np.sqrt(16*mid_k**2 * np.real(delta)**2 * np.cos(thetaB)**2 + 4*kb**2 * np.sin(thetaB)**2) ) / ( 2 * np.real(delta) * np.cos(thetaB) )
-    
-    print('vcell', vcell)
-    print('mid_k', mid_k)
-    
-    ki, kf = mid_k - n_width*dk, mid_k + n_width*dk    #final   k    
-    
-    if k == None:    
-        k = np.linspace(ki, kf, nk)    
-        
-    
-    cryst.lamb = lamb
-    cryst.kb = kb
-    cryst.kb = 2 * kb - mid_k # bugfix
-    cryst.thetaB = thetaB
-    cryst.gamma = gamma
-    cryst.gamma0 = gamma0
-    cryst.gammah = gammah
-    cryst.c_pol = c_pol
-    cryst.chi0  = - ( r_el * lamb**2 * f0  ) / ( np.pi * vcell )
-    cryst.chih  = - ( r_el * lamb**2 * fh  ) / ( np.pi * vcell )
-    cryst.chimh = - ( r_el * lamb**2 * fmh ) / ( np.pi * vcell )
-    cryst.pl = np.pi * vcell * np.sqrt( gamma0 * np.abs(gammah) ) / ( r_el * lamb * np.abs(c_pol) * np.sqrt( fh*fmh ) )
-    
-    
-    from ocelot.optics.wave import TransferFunction #hotfix here
-    f = TransferFunction()
-    
-    f.tr, f.ref = transmissivity_reflectivity(k, cryst)   
-    
-    f.k = k
-    f.thetaB = thetaB
-    f.mid_k = mid_k
-    f.dk = dk
-    f.xlamds = lamb
-    f.cryst = cryst
-    
-    f.actual = f.tr - np.exp(-1j* cryst.chi0 * (cryst.kb*cryst.size[2]/(2*cryst.gamma0)))
-    f.const = np.exp(-1j* cryst.chi0 * (cryst.kb*cryst.size[2]/(2*cryst.gamma0)))
-    _logger.debug('=============================')
-    _logger.debug('======== END END END ========')
-    _logger.debug('=============================')
-    return f
-
-
-#########################################################
-
-
 def get_crystal_filter(cryst, ev_seed, nk=10000, k = None, n_width = 100):
     _logger.debug('getting crystal filter')
     #import crystal as cry
@@ -620,10 +408,6 @@ def get_crystal_filter(cryst, ev_seed, nk=10000, k = None, n_width = 100):
     polarization = 'sigma'
 
     abs_ref_idx = tuple(abs(np.array(ref_idx)))
-    #print(np.array(ref_idx))
-    #print(abs(np.array(ref_idx)))
-    #print(abs_ref_idx)
-    #print(d)
     dhkl = d[abs_ref_idx]
     
     '''
@@ -645,7 +429,6 @@ def get_crystal_filter(cryst, ev_seed, nk=10000, k = None, n_width = 100):
     ref_idx_length = np.sqrt(np.sum(np.array(ref_idx)**2))
     h_norm = tuple([i/ref_idx_length for i in ref_idx])
     h = np.array([i*2*np.pi/dhkl for i in h_norm]) # normalized q-vector of crystalline plane
-   
 
     #quadratic equation coefficients to find incidence angle
     a = - 0.5 * np.sin(thetaB)**2 + 0.5*h_norm[2]**2
@@ -712,8 +495,8 @@ def get_crystal_filter(cryst, ev_seed, nk=10000, k = None, n_width = 100):
         _logger.warning(2*ind_str + 'LAUE geometry')
 
 
-    #cahnged by GG: abs_ref_idx to ref_idx
-    f0, fh, fmh =  F_hkl(cryst = cryst, ref_idx = ref_idx, lamb=lamb, temp = 300*K)
+    
+    f0, fh, fmh =  F_hkl(cryst = cryst, ref_idx = abs_ref_idx, lamb=lamb, temp = 300*K)
     
     
 #    _logger.debug(ind_str + 'structure factors {} {} {}'.format(f0, fh, fmh))

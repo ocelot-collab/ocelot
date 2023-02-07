@@ -629,7 +629,7 @@ def gauss_fit(X, Y):
     return (Y1, RMS)
 
 
-def mprefix(value, order_bias=1/3, apply=1):
+def mprefix(value, order_bias=0.05, apply=1):
     '''
     estimate metric prefix for a scalar or np.array
     accepts floating point number

@@ -6,6 +6,7 @@ from matplotlib import rc, rcParams
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from copy import copy, deepcopy
 from ocelot.common.ocelog import ind_str
+from matplotlib.colors import LinearSegmentedColormap
 
 #in order to run decorators properly
 import functools
@@ -16,6 +17,17 @@ _logger = logging.getLogger(__name__)
 my_viridis = copy(matplotlib.cm.get_cmap("viridis"))
 my_viridis.set_under('w')
 def_cmap = my_viridis
+
+#serval colormap (diverging
+colors = [(181/256, 101/256, 29/256), (250/256, 228/256, 170/256), (7/256, 0/256, 14/256)]  # R -> G -> B
+cmap_name = 'serval'
+cmap_serval = matplotlib.colors.LinearSegmentedColormap.from_list(cmap_name, colors, N=256)
+
+#ocelot colormap
+colors = [(255/256, 213/256, 199/256),  (181/256, 101/256, 29/256), (7/256, 0/256, 14/256)]  # R -> G -> B
+cmap_name = 'ocelot'
+cmap_ocelot = matplotlib.colors.LinearSegmentedColormap.from_list(cmap_name, colors, N=256)
+
 
 def_cmap = 'viridis'
 # def_cmap = 'Greys'

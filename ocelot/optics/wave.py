@@ -16,7 +16,7 @@ import os
 
 # from ocelot.optics.elements import *
 from ocelot.common.globals import *
-from ocelot.common.math_op import find_nearest_idx, fwhm, std_moment, bin_scale, bin_array, mut_coh_func
+from ocelot.common.math_op import find_nearest_idx, fwhm, std_moment, bin_scale, bin_array, mut_coh_func, mprefix
 from ocelot.rad.undulator_params import lambda2eV, eV2lambda, k2lambda, lambda2k, k2angle, angle2k
 from ocelot.common.py_func import filename_from_path
 # from ocelot.optics.utils import calc_ph_sp_dens
@@ -1379,88 +1379,147 @@ class WignerDistribution():
 
     def __init__(self):
         # self.fld=np.array([]) #(z,y,x)
-        self.field = [] # 1d array to save space
-        self.field_stat = [] # list of self.field-like arrays
-        self.wig = []  # (wav,space)
-        self.wig_stat = [] # same as wig.wig, but with another dimention hosting different events
+        #self.field = [] # 1d array to save space
+        self.field_stat = [0] # list of self.field-like arrays
+        #self.wig = []  # (wav,space)
+        self.wig_stat = [0] # same as wig.wig, but with another dimention hosting different events
         self.s = []  # space scale
-        self.z = None  # position along undulator (if applicable)
-        self.k = [] # inverse space
+        self.k = [] # inverse space scale
         # self.phen = []  # photon energy
         self.xlamds = 0  # carrier SVEA wavelength, [nm]
+        self.z = None  # position along undulator (reserved)
         self.domain = 't'
         self.filePath = ''
     
     @property
-    def phen(self):
-        if self.domain not in ['t','z']:
-            _logger.error('wigner calculated photon energy not in time domain')
-        return lambda2eV(k2lambda(self.k))
-
-    @phen.setter
-    def phen(self, value):
-        if self.domain not in ['t','z']:
-            _logger.error('wigner calculated k from photon energy not in time domain')
-        self.k = lambda2k(eV2lambda(value))
-
-    @property
-    def freq_lamd(self):
-        if self.domain not in ['t','z']:
-            _logger.error('wigner calculated wavelength not in time domain')
-        return k2lambda(self.k)
-
-    @freq_lamd.setter
-    def freq_lamd(self, value):
-        if self.domain not in ['t','z']:
-            _logger.error('wigner calculated k from wavelength not in time domain')
-        self.k = lambda2k(value)
+    def field(self):
+        return self.field_stat[0]
     
-    def theta(self):
-        if self.domain not in ['x','y','s']:
-            _logger.error('wigner calculated k from wavelength not in time domain')
-        return k2angle(self.k, self.xlamds)
-
-    # @property
-    # def freq_lamd(self):
-        # return h_eV_s * speed_of_light * 1e9 / self.phen
-
-    # @freq_lamd.setter
-    # def freq_lamd(self, value):
-        # self.phen = h_eV_s * speed_of_light * 1e9 / value
-
-    def power(self):
+    @field.setter
+    def field(self,value):
+        if len(self.field_stat) == 0:
+            self.field_stat[0] = [value]
+        else:
+            self.field_stat[0] = value
+        
+    @property
+    def wig(self):
+        return self.wig_stat[0]
+    
+    @wig.setter
+    def wig(self,value):
+        if len(self.wig_stat) == 0:
+            self.wig_stat[0] = [value]
+        else:
+            self.wig_stat[0] = value
+    
+    def __getitem__(self, i):
+        return self.wig_stat[i]
+    
+    def proj_s(self):
+        # real space projection
         return np.sum(self.wig, axis=0)
-
-    def spectrum(self):
+        
+    def proj_k(self):
+        # inverse space projection
         return np.sum(self.wig, axis=1)
+    
+    def moment1_k(self):
+        # prevailing tilt (frequency) for every coordinate (time)
+        proj_s = self.proj_s()
+        if np.all(proj_s == 0):
+            return proj_s
+        else:
+            proj_s[proj_s == 0] = np.nan
+            return np.sum(self.wig * self.k[:, np.newaxis], axis=0) / proj_s
 
-    def energy(self):
-        return np.sum(self.wig) * abs(self.s[1] - self.s[0]) / speed_of_light
-
+    def moment1_s(self):
+        # prevailing coordinate (time) for every tilt (frequency)
+        proj_k = self.proj_k()
+        if np.all(proj_k == 0):
+            return proj_k
+        else:
+            proj_k[proj_k == 0] = np.nan
+            return np.sum(self.wig * self.s[np.newaxis, :], axis=1) / proj_k
+    
+    def moment2_k(self):
+        # instantaneous bandwitdh / ?
+        proj_s = self.power()
+        if np.all(proj_s == 0):
+            return proj_s
+        else:
+            return np.sum(self.wig * (self.k[:, np.newaxis] - self.moment1_k()[np.newaxis, :]) ** 2, axis=0) / proj_s
+    
+    def moment2_s(self):
+        # group duration / ?
+        proj_k = self.proj_k()
+        if np.all(proj_k == 0):
+            return proj_k
+        else:
+            return np.sum(self.wig * (self.s[np.newaxis, :] - self.moment1_s()[:, np.newaxis]) ** 2, axis=1) / proj_k
+    
     def fileName(self):
         return filename_from_path(self.filePath)
-
+    
     def eval(self, method='mp'):
+        n_events = len(self.field_stat)
+        _logger.info('evaluating wigner distribution from {:} event(s)'.format(n_events))
         # from ocelot.utils.xfel_utils import calc_wigner
         ds = self.s[1] - self.s[0]
-        self.wig = calc_wigner(self.field, method=method, debug=1)
-        if self.field_stat != []:
-            self.wig_stat = [calc_wigner(field, method=method, debug=1) for field in self.field_stat]
+        # self.wig = calc_wigner(self.field, method=method, debug=1)
+        # if self.field_stat != []:
+        self.wig_stat = [calc_wigner(field, method=method, debug=1) for field in self.field_stat]
         if self.domain in ['s', 'x', 'y']:
             self.k = np.linspace(-np.pi / ds, np.pi / ds, len(self.s))
         elif self.domain in ['t', 'z']:
             self.k = 2 * pi / self.xlamds + np.linspace(-np.pi / ds, np.pi / ds, len(self.s))# * len(self.s)
-            phen = lambda2eV(k2lambda(self.k))
-            self.phen = phen
+            #phen = lambda2eV(k2lambda(self.k))
+            #self.phen = phen
             #phen = h_eV_s * (np.fft.fftfreq(self.s.size, d=ds / speed_of_light) + speed_of_light / self.xlamds)
             # self.phen = np.fft.fftshift(phen, axes=0)
         else:
             raise ValueError()
+            
+    def sum(self):
+        return(np.sum(self.wig))
         
+    def sum_stat(self):
+        return([np.sum(wig) for wig in self.wig_stat])
         # self.freq_lamd = h_eV_s * speed_of_light * 1e9 / freq_ev
+    
+    def normalize(self):
+        self.wig = self.wig / self.sum()
+        
+    def ensemble_average(self):
+        if np.shape(self.wig_stat)[0]>1:
+            self.wig_stat = [np.sum(self.wig_stat, axis=0)]
 
 
 class WignerDistributionLongitudinal(WignerDistribution):
+    
+    @property
+    def phen(self):
+        # if self.domain not in ['t','z']:
+            # _logger.error('wigner calculated photon energy not in time domain')
+        return lambda2eV(k2lambda(self.k))
+
+    @phen.setter
+    def phen(self, value):
+        # if self.domain not in ['t','z']:
+            # _logger.error('wigner calculated k from photon energy not in time domain')
+        self.k = lambda2k(eV2lambda(value))
+
+    @property
+    def freq_lamd(self):
+        # if self.domain not in ['t','z']:
+            # _logger.error('wigner calculated wavelength not in time domain')
+        return k2lambda(self.k)
+
+    @freq_lamd.setter
+    def freq_lamd(self, value):
+        # if self.domain not in ['t','z']:
+            # _logger.error('wigner calculated k from wavelength not in time domain')
+        self.k = lambda2k(value)
     
     def inst_freq(self):
         p = self.power()
@@ -1477,7 +1536,7 @@ class WignerDistributionLongitudinal(WignerDistribution):
         else:
             s[s == 0] = np.nan
             return np.sum(self.wig * self.s[np.newaxis, :], axis=1) / s
-
+    
     def inst_bandwidth(self):
         # check, gives strange tilt. physics?
         p = self.power()
@@ -1485,9 +1544,23 @@ class WignerDistributionLongitudinal(WignerDistribution):
             return p
         else:
             return np.sum(self.wig * (self.phen[:, np.newaxis] - self.inst_freq()[np.newaxis, :]) ** 2, axis=0) / p
+    
+    def power(self):
+        return self.proj_s()
+    
+    def spectrum(self):
+        return self.proj_k()
+        
+    def energy(self):
+        return np.sum(self.wig) * abs(self.s[1] - self.s[0]) / speed_of_light
 
     
+class WignerDistributionTransverse(WignerDistribution):
     
+    def theta(self):
+        # if self.domain not in ['x','y','s']:
+            # _logger.error('wigner calculated k from wavelength not in time domain')
+        return k2angle(self.k, self.xlamds)
 
 
 def generate_dfl(*args, **kwargs):
@@ -3481,8 +3554,6 @@ def wigner_dfl(dfl, method='mp', pad=1, **kwargs):
     _logger.info('calculating Wigner distribution from dfl (on-axis fillament)')
     start_time = time.time()
     domain = kwargs.get('domain', 't')
-
-    wig = WignerDistribution()
     
     #TODO: change dfl slice according to domain
     if domain == 't':
@@ -3490,9 +3561,11 @@ def wigner_dfl(dfl, method='mp', pad=1, **kwargs):
         wig.field = dfl[:, int(dfl.Ny() / 2), int(dfl.Nx() / 2)]
         wig.s = dfl.scale_z()
     elif domain == 'x':
+        wig = WignerDistributionTransverse()
         wig.field = dfl[int(dfl.Nz() / 2), int(dfl.Ny() / 2), :]
         wig.s = dfl.scale_x()
     elif domain == 'y':
+        wig = WignerDistributionTransverse()
         wig.field = dfl[int(dfl.Nz() / 2), :, int(dfl.Nx() / 2)]
         wig.s = dfl.scale_y()
     
@@ -3501,7 +3574,7 @@ def wigner_dfl(dfl, method='mp', pad=1, **kwargs):
 
     if pad > 1:
         wig = wigner_pad(wig, pad)
-    wig.domain = domain
+    #wig.domain = domain
     wig.eval(method)  # calculate wigner parameters based on its attributes
 
     _logger.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
@@ -3589,6 +3662,7 @@ def wigner_smear(wig, sigma_s):
     :param sigma_s: [meters] rms size of the s=-ct the gaussian window func
     :return: convolved ocelot.optics.wave.WignerDistribution object with gaussian window function
     """
+    #TODO: extend to transverse direction, move to class?
     start = time.time()
     _logger.info('smearing wigner_dist with gaussian window func')
     xlamds = wig.xlamds
@@ -3609,10 +3683,10 @@ def wigner_smear(wig, sigma_s):
 
 def write_wig_file(wig, filePath):
     _logger.info('saving wigner distribution to {}'.format(filePath))
-    np.savez(filePath, xlamds=wig.xlamds, s=wig.s, phen=wig.phen, wig=wig.wig, wig_stat=wig.wig_stat, filePath = wig.filePath)
+    np.savez(filePath, xlamds=wig.xlamds, s=wig.s, k=wig.k, wig=wig.wig, wig_stat=wig.wig_stat, domain=wig.domain, filePath = wig.filePath)
     _logger.debug(ind_str + 'done')
     
-def read_wig_file(filePath):
+def read_wig_file_legacy(filePath):
     _logger.info('reading wigner distribution from {}'.format(filePath))
     file = np.load(filePath)
     wig = WignerDistribution()
@@ -3626,6 +3700,23 @@ def read_wig_file(filePath):
     _logger.debug(ind_str +'wig.wig_stat.shape {}'.format(wig.wig_stat.shape))
     _logger.debug(ind_str + 'done')
     return wig
+
+def read_wig_file_legacy(filePath):
+    _logger.info('reading wigner distribution from {}'.format(filePath))
+    file = np.load(filePath)
+    wig = WignerDistribution()
+    wig.xlamds = file['xlamds'].item()
+    wig.filePath = file['filePath'].item()
+    wig.s = file['s']
+    wig.k = file['k']
+    wig.domain = file['doimain']
+    wig.wig = file['wig']
+    _logger.debug(ind_str +'wig.wig.shape {}'.format(wig.wig.shape))
+    wig.wig_stat = file['wig_stat']
+    _logger.debug(ind_str +'wig.wig_stat.shape {}'.format(wig.wig_stat.shape))
+    _logger.debug(ind_str + 'done')
+    return wig
+
 
 def write_field_file(dfl, filePath, version=1.0):
     """

@@ -136,7 +136,7 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
         if st_cpl:
             dfl_st_cpl(dfl, trf.thetaB)
 
-        dfl_shift_z(dfl, s_delay, set_zeros=0)
+        dfl_shift_s(dfl, s_delay, set_zeros=0)
         _logger.debug(ind_str + 'shape_before '+str(dfl.shape()))
         dfl_pad_z(dfl, -padn)
         _logger.debug(ind_str + 'shape_after '+str(dfl.shape()))
@@ -154,7 +154,7 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
         dfl.fft_z(method=fft_method, nthread=multiprocessing.cpu_count())
         if st_cpl:
             dfl_st_cpl(dfl, trf.thetaB)
-        dfl_shift_z(dfl, s_delay, set_zeros=0)
+        dfl_shift_s(dfl, s_delay, set_zeros=0)
         dfl_pad_z(dfl, -padn)
 
         t_func = time.time() - start
@@ -265,8 +265,10 @@ def create_fel_lattice(und_N = 35,
         cell = (und, d1, qd, phs, d2, und, d1, qf, phs, d2) 
         extra_fodo = (und, d2, qfh)
         lat = (und, d1, qf, phs, d2) + cell_N * cell + cell_N_last * (und,)
-
-    return (MagneticLattice(lat), extra_fodo, cell)
+    
+    lat = MagneticLattice(lat)
+    
+    return (lat, extra_fodo, cell)
 
 def create_fel_lattice_tmp(und_N = 34,
                     und_L = 5,
@@ -322,7 +324,7 @@ def create_fel_lattice_tmp(und_N = 34,
 
 def create_fel_beamline(beamline = 'sase1', inters_phi=0, inters_K = "K_und"):
     if beamline in ['sase1', 1, 'sase2', 2, 'EuXFEL_SASE1', 'EuXFEL_SASE2']:
-        return create_fel_lattice(und_N = 35,
+        return create_fel_lattice(und_N = 37,
                         und_L = 5-0.04,
                         und_l = 0.04,
                         und_Kx = 0,
@@ -334,6 +336,7 @@ def create_fel_beamline(beamline = 'sase1', inters_phi=0, inters_K = "K_und"):
                         quad_K = 0,
                         phs_L = 0.0,
                         quad_start = 'd',
+                        beamline_name = beamline
                             )
     elif beamline in ['sase3', 3, 'EuXFEL_SASE3']:
         return create_fel_lattice(und_N = 21,
@@ -348,6 +351,7 @@ def create_fel_beamline(beamline = 'sase1', inters_phi=0, inters_K = "K_und"):
                         quad_K = 0,
                         phs_L = 0.0,
                         quad_start = 'd',
+                        beamline_name = beamline
                             )
     else:
         raise ValueError('Unknown beamline')
@@ -698,3 +702,68 @@ class FelSimulator(object):
             s3d.mesh_size = (int(g('ncar')), int(g('ncar')))
             s3d.g = g
             return s3d, None
+
+def calc_ebeam_modulation_in_undulator(z=None, #scale along undulator
+                                       s=None, #scale along pulse
+                                       laser_E=0.003, #laser pulse energy [J]
+                                       laser_t_fwhm=5e-15, #laser pulse duration fwhm [s]
+                                       laser_wavelength=8e-7, #laser wavelength [m]
+                                       laser_Zr=0.7, #laser rayleigh length [m]
+                                       und_Nperiods=2, #number of unudlaor periods
+                                       und_period=0.7, #undulator period length [m]
+                                       beam_gamma=22505, #electron beam Lorentz factor
+                                       detuning=-0.3, #undulator detuning
+                                       laser_phase_shift=0, #shift of laser phase [rad]
+                                       laser_pulse_shift=0, #shift of laser pulse [rad]
+                                       ):
+    '''
+    calculations of electron beam molulation in an undulator
+    based on A. A. Zholents and M. S. Zolotorev, New Journal of Physics 10, 025005 (2008).
+    
+    z=None, #scale along undulator
+    s=None, #scale along pulse
+    laser_E=0.003, #laser pulse energy [J]
+    laser_t_fwhm=5e-15, #laser pulse duration fwhm [s]
+    laser_wavelength=8e-7, #laser wavelength [m]
+    laser_Zr=0.7, #laser rayleigh length [m]
+    und_Nperiods=2, #number of unudlaor periods
+    und_period=0.7, #undulator period length [m]
+    beam_gamma=22505, #electron beam Lorentz factor
+    detuning=-0.3, #undulator detuning
+    laser_phase_shift=0, #shift of laser phase [rad]
+    laser_pulse_shift=0, #shift of laser pulse [rad]
+    
+    '''
+
+    if z == None:
+        z = np.linspace(-0.5,0.5,50)[:,None]
+    if s == None:
+        s = np.linspace(-2, 2, 300)[None,:]
+    s = s - laser_pulse_shift / und_Nperiods / 2 / np.pi
+    
+    
+    P0 = I_Alfven * m_e_kg * speed_of_light**2 / q_e
+    und_K = (2 * (2 * beam_gamma**2 * laser_wavelength / und_period - 1))**0.5
+    
+    ksi = und_K**2 / (2 + und_K**2)
+    q = und_Nperiods * und_period / laser_Zr
+    
+    sig_s = 2**0.5 * speed_of_light * laser_t_fwhm / (2.35 * und_Nperiods * laser_wavelength)
+    
+    w0 = (laser_Zr * laser_wavelength / np.pi)**0.5
+    #print(w0)
+    x0 = und_K * und_period / (2 * np.pi * beam_gamma * w0)
+    #print(x0)
+    JJ = scipy.special.j0(ksi/2) - scipy.special.j1(ksi/2)
+    
+    dgam_dz = (16*np.pi * laser_E * und_Nperiods * ksi / laser_t_fwhm / P0)**0.5 * JJ \
+        * (q / (1 + q**2 * z**2))**0.5 \
+        * np.cos(laser_phase_shift + .123 + 2 * np.pi * detuning * z + np.arctan(q * z) - 2 * np.pi * und_Nperiods * s - x0**2 * np.sin(2 * np.pi * z)**2 / (1 + q**2 * z**2)) \
+        * np.exp(-x0**2 * np.sin(2 * np.pi * z)**2/(1 + q**2 * z**2)) * np.exp(-(z - s)**2 / (2 * sig_s**2))
+    
+    dgam = np.sum(dgam_dz, axis=0) * (z[1] - z[0])
+    s_um = s[0,:] * und_Nperiods * laser_wavelength * 1e6
+    z_m = z[:,0]
+    
+    #dgam_gam_ds = np.diff(dgam)/np.diff(s_um)
+    return(s_um, z_m, dgam_dz, dgam)

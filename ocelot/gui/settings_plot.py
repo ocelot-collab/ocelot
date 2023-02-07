@@ -4,27 +4,52 @@ import matplotlib, logging, os
 # from pylab import rc, rcParams #tmp
 from matplotlib import rc, rcParams
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from copy import deepcopy
+from copy import copy, deepcopy
 from ocelot.common.ocelog import ind_str
+from matplotlib.colors import LinearSegmentedColormap
 
 #in order to run decorators properly
 import functools
 
 _logger = logging.getLogger(__name__)
 
-my_viridis = deepcopy(matplotlib.pyplot.get_cmap('viridis')) 
+# my_viridis = deepcopy(matplotlib.pyplot.get_cmap('viridis')) 
+my_viridis = copy(matplotlib.cm.get_cmap("viridis"))
 my_viridis.set_under('w')
 def_cmap = my_viridis
+
+#serval colormap (diverging
+colors = [(181/256, 101/256, 29/256), (250/256, 228/256, 170/256), (7/256, 0/256, 14/256)]  # R -> G -> B
+cmap_name = 'serval'
+cmap_serval = matplotlib.colors.LinearSegmentedColormap.from_list(cmap_name, colors, N=256)
+
+#ocelot colormap
+colors = [(255/256, 213/256, 199/256),  (181/256, 101/256, 29/256), (7/256, 0/256, 14/256)]  # R -> G -> B
+cmap_name = 'ocelot'
+cmap_ocelot = matplotlib.colors.LinearSegmentedColormap.from_list(cmap_name, colors, N=256)
+
 
 def_cmap = 'viridis'
 # def_cmap = 'Greys'
 
 fntsz = 4
-params = {'image.cmap': def_cmap, 'backend': 'ps', 'axes.labelsize': 3 * fntsz, 'font.size': 3 * fntsz, 'legend.fontsize': 4 * fntsz, 'xtick.labelsize': 4 * fntsz,  'ytick.labelsize': 4 * fntsz, 'text.usetex': False}
+params = {'image.cmap': def_cmap, 'axes.labelsize': 3 * fntsz, 'font.size': 3 * fntsz, 'legend.fontsize': 4 * fntsz, 'xtick.labelsize': 4 * fntsz,  'ytick.labelsize': 4 * fntsz, 'text.usetex': False}
 rcParams.update(params)
+
+
+# import packaging
+# matplotlib_version = packaging.version.parse(matplotlib.__version__).major
+
+if int(matplotlib.__version__.split('.')[0]) < 3:
+    try:    
+        rcParams.update({'pcolor.shading':'nearest'})
+    except KeyError:
+        _logger.debug('matplotlib too old for "pcolor.shading":"nearest" setting')
+
+
 # plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
 # rcParams["savefig.directory"] = os.chdir(os.path.dirname(__file__)) but __file__ appears to be genesis_plot
-matplotlib.pyplot.ioff() #turn off interactive mode
+# matplotlib.pyplot.ioff() #turn off interactive mode
 
 #matplotlib.pyplot.style.use("dark_background") White axes on dark background
 # matplotlib.use('Agg')
@@ -46,11 +71,11 @@ plotting_error=None
 #    _logger.error(plotting_error)
 
 # # re-check
-# exitval = os.system('python -c "import matplotlib.pyplot as plt; plt.figure()"')
+# exitval = os.system('python -c "import matplotlib.pyplot as plt; plt.figure()"')exit
 # havedisplay = (exitval == 0)
 # if not havedisplay:
 # # force matplotlib not ot use Xwindows backend. plots may still be plotted into e.g. *.png
-# matplotlib.use('Agg')
+# matplotlib.use('TkAgg') #fix for matplotlib version 
 
 
 #decorator

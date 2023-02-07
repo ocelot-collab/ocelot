@@ -627,3 +627,32 @@ def gauss_fit(X, Y):
     Y1 = gauss(X, p1)
     RMS = fit_stdev
     return (Y1, RMS)
+
+
+def mprefix(value, order_bias=0.05, apply=1):
+    '''
+    estimate metric prefix for a scalar or np.array
+    accepts floating point number
+    order_bias is an ammount of order of magnitudes to round up to. Allows to avoid values like 995 instead of 0.995k. 1/3 corresponds to ...980,990,0.10,0.11...
+    returns scaled values (float or numpy arrayof floats), its prefix (string), and applied order of magnitude (should it need to be reused)
+        '''
+    prefix_range = (-30, 30)
+    prefixes = {-30:'q', -27:'r', -24:'y', -21:'z', -18:'a', -15:'f', -12:'p', -9:'n', -6:r'$\mu$', -3:'m', 0:'', 3:'k', 6:'M', 9:"G", 12:'T', 15:'P', 18:'E', 21:'Z', 24:'Y', 27:'R', 30:'Q'}
+        
+    if not apply:
+        return (value, '', 0)
+    
+    else:
+        if not np.isscalar(value):
+            order = np.floor(np.log10(np.nanmax(value)) / 3 + order_bias) * 3
+        else:
+            order = np.floor(np.log10(value) / 3 + order_bias) * 3
+        if order < prefix_range[0]:
+            order = prefix_range[0]
+        if order > prefix_range[1]:
+            order = prefix_range[1]
+        scaling = 10**order
+        value_out = value / scaling
+        prefix_out = prefixes.get(order)
+        
+        return(value_out, prefix_out, order)

@@ -1587,9 +1587,8 @@ def generate_gaussian_dfl(xlamds=1e-9, shape=(51, 51, 100), dgrid=(1e-3, 1e-3, 5
     freq_chirp dw/dt=[1/fs**2] - requency chirp of the beam around power_center[2]
     en_pulse, power = total energy or max power of the pulse, use only one
     """
-
     start = time.time()
-
+    
     if dgrid[2] is not None and zsep is not None:
         if shape[2] == None:
             shape = (shape[0], shape[1], int(dgrid[2] / xlamds / zsep))

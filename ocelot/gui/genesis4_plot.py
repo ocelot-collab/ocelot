@@ -17,6 +17,7 @@ ax.set_ylim(ymin=0)
 
 import sys
 import os
+import glob
 import csv
 import time
 import matplotlib
@@ -71,7 +72,7 @@ _logger = logging.getLogger(__name__)
 #     return
 
 @if_plottable
-def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1, 1, 10, 1, 0, 0, 0, 0, 0, 10, 1),
+def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 0, 0, 5, 1, 0, 0, 0, 1, 0, 1, 1),
                       vartype_dfl=complex128, *args, **kwargs):
     debug = 1
     """
@@ -86,15 +87,15 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1
         1 - radiation evolution
         2 - profile at z=0m
         3 - profile at the end
-        4 - profile every m meters
+        4 - profile at n equidistant z-points
         5 - dfl at the end, space    -time      domain
         6 -                 inv.space-time      domain
         7 -                 space    -frequency domain
         8 -                 inv.space-frequency domain
         9 - dpa as edist at the end, smeared
         10 - dpa as edist at the end, not smeared
-        11 - wigner distribution every m meters,
-        12 - ebeam bucket at max power
+        11 - wigner distribution at n equidistant z-points,
+        12 - ebeam bucket at max power (not implemented)
     picks as an input "GenesisOutput" object, file path of directory as strings.
     plots e-beam evolution, radiation evolution, initial and final simulation window
     If folder path is provided, all *.gout and *.out files are plotted
@@ -110,9 +111,13 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1
         savefig = 'png'
 
     if choice == 'all':
-        choice = (1, 1, 1, 1, 10, 1, 1, 1, 1, 1, 0, 10, 0)
+        choice = (1, 1, 0, 0, 6, 1, 1, 1, 1, 1, 1, 6, 0)
     elif choice == 'gen':
         choice = (1, 1, 1, 1, 10, 0, 0, 0, 0, 0, 0, 0, 0)
+    elif choice == 'dfl':
+        choice = (0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0)
+    elif choice == 'dpa':
+        choice = (0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0)
 
     if len(choice) > 13:
         choice = choice[:13]
@@ -123,66 +128,104 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1
         handles = []
         for root, dirs, files in os.walk(handle):
             for name in files:
-                if name.endswith('out.h5'):
+                if name.endswith('h5'):
                     handles.append(os.path.join(root, name))
         _logger.info('\n  plotting all files in {}'.format(str(handle)))
+    elif str(handle).endswith('*') and os.path.isdir(os.path.split(handle)[0]):
+        handles = [result for result in glob.iglob(handle) if result.endswith('.h5')] # search with wildcharacter ending
     else:
         handles = [handle]
+    
+    # for handle in handles:
+        # try_filename_fld = handle.replace('.out.h5', '.fld.h5')
+        # if os.path.isfile(try_filename_fld):
+            # handles.append(try_filename_fld)
+        # try_filename_par = handle.replace('.out.h5', '.par.h5')
+        # if os.path.isfile(try_filename_par):
+            # handles.append(try_filename_par)
+    #TODO: check if there are filed with stripped .out.h5 and added .fld.h5
+    
+    if len(handles) > 1:
+        handles = sorted(handles)
+        handles = [h for h in handles if ".out." in h] + [h for h in handles if ".out." not in h] #plotting .out first
 
     for handle in handles:
-
+        _logger.debug('checking ' + str(handle))
         if os.path.isfile(str(handle)):
             _logger.info('plotting ' + str(handle))
-            try:
-                handle = read_gout4(handle)
-            except (IOError, ValueError):
+            if handle.endswith('out.h5'):
+                try:
+                    handle = read_gout4(handle)
+                except (IOError, ValueError):
+                    _logger.debug('could not read ' + str(handle))
+                    pass
+                
+            elif handle.endswith('fld.h5'):
+                try: 
+                    handle = read_dfl4(handle)
+                except (IOError, ValueError):
+                    _logger.debug('could not read ' + str(handle))
+                    pass
+                
+            elif handle.endswith('par.h5'):
+                try:            
+                    handle = read_dpa4(handle, partskip=100)
+                except (IOError, ValueError):
+                    _logger.debug('could not read ' + str(handle))
+                    pass
+            
+            else:
                 continue
-
+            
         if isinstance(handle, Genesis4Output):
             if choice[0]:
-                f0 = plot_gen4_out_e(handle, showfig=showfig, savefig=savefig, debug=debug)
+                f0 = plot_gen4_out_e(handle, showfig=showfig, savefig=savefig)
             if choice[1]:
-                f1 = plot_gen4_out_ph(handle, showfig=showfig, savefig=savefig, debug=debug)
+                f1 = plot_gen4_out_ph(handle, showfig=showfig, savefig=savefig)
             if choice[2]:
-                f2 = plot_gen4_out_z(handle, z=0, showfig=showfig, savefig=savefig, debug=debug)
+                f2 = plot_gen4_out_z(handle, z=0, showfig=showfig, savefig=savefig)
             if choice[3]:
-                f3 = plot_gen4_out_z(handle, z=np.inf, showfig=showfig, savefig=savefig, debug=debug)
-            if choice[11] != 0:
-                if choice[11] == -1:
-                    # try:
-                    W = wigner_out(handle, pad=2)
-                    plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug, downsample=2)
-                    # except:
-                    # _logger.warning('could not plot wigner')
+                f3 = plot_gen4_out_z(handle, z=np.inf, showfig=showfig, savefig=savefig)
+            if choice[4] != 0:
+                if choice[4] != []:
+                    if choice[4] == 1:
+                        z_arr = [np.amax(handle.z)]
+                    else:
+                        z_arr = np.linspace(0, np.amax(handle.z), choice[4])
                 else:
+                    z_arr = choice[4]
+                for z in z_arr:
+                    plot_gen4_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug, *args, **kwargs)
+            if choice[11] != 0:
+                if choice[11] != []:
                     if choice[11] == 1:
-                        _logger.warning(
-                            'choice[11] in plot_gen_out_all defines interval of Wigner plotting. To plot at the end set to "-1"')
-                    # try:
-                    for z in np.arange(0, np.amax(handle.z), choice[11]):
-                        W = wigner_out(handle, z=z, pad=2)
-                        plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug, downsample=2)
-                    W = wigner_out(handle, z=np.inf, pad=2)
+                        z_arr = [np.amax(handle.z)]
+                    else:
+                        z_arr = np.linspace(0, np.amax(handle.z), choice[11])
+                else:
+                    z_arr = choice[11]
+                for z in z_arr:
+                    W = wigner_out(handle, z=z, pad=1)
                     plot_wigner(W, showfig=showfig, savefig=savefig, debug=debug, downsample=2)
                     # except:
                     # _logger.warning('could not plot wigner')
             # if choice[4] != 0:
             # for z in np.arange(choice[4], np.amax(handle.z), choice[4]):
             # plot_gen4_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug)
-            if choice[4] != 0 and choice[4] != []:
-                for z in np.arange(choice[4], np.amax(handle.z), choice[4]):
-                    plot_gen4_out_z(handle, z=z, showfig=showfig, savefig=savefig, debug=debug, *args, **kwargs)
 
-            if choice[12]:
-                pass
+            # if choice[12]:
+                # pass
                 # try:
                 # plot_dpa_bucket_out(handle,scatter=0,slice_pos='max_P',repeat=3, showfig=showfig,
                 # savefig=savefig, cmap=def_cmap)
                 # except IOError:
                 # pass
 
-        if os.path.isfile(handle.filePath.replace('.out.h5', '.fld.h5')) and any(choice[5:8]):
-            dfl = read_dfl4(handle.filePath.replace('.out.h5', '.fld.h5'))
+        if isinstance(handle, RadiationField) and any(choice[5:8]):
+            _logger.info('processing RadiationField')
+        # if os.path.isfile(handle.filePath.replace('.out.h5', '.fld.h5')) and any(choice[5:8]):
+            # dfl = read_dfl4(handle.filePath.replace('.out.h5', '.fld.h5'))
+            dfl = handle
             if dfl.Nz() == 0:
                 _logger.warning('empty dfl, skipping')
             else:
@@ -195,18 +238,28 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 1
                 if choice[8]:
                     f8 = plot_dfl(dfl, domains='kf', auto_zoom=0, showfig=showfig, savefig=savefig, debug=debug)
 
-        if os.path.isfile(handle.filePath.replace('.out.h5', '.par.h5')) and (choice[9] or choice[10]):
-            dpa = read_dpa4(handle.filePath.replace('.out.h5', '.par.h5'))
+        if isinstance(handle, Genesis4ParticlesDump) and any(choice[9:10]):
+            _logger.info('processing Genesis4ParticlesDump')
+            #if os.path.isfile(handle.filePath.replace('.out.h5', '.par.h5')) and (choice[9] or choice[10]):
+                #dpa = read_dpa4(handle.filePath.replace('.out.h5', '.par.h5'),  estimate_npart=1, partskip=100)
             if choice[9]:
                 try:
-                    edist = dpa42edist(dpa, n_part=5e4, fill_gaps=1)
+                    if handle.one4one:
+                        edist = dpa42edist(handle)
+                    else:
+                        edist = dpa42edist(handle, n_part=5e4, fill_gaps=1)
+                        
                     f9 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=100,
                                     debug=debug)
                 except:
                     _logger.warning('could not plot smeared edist')
             if choice[10]:
                 try:
-                    edist = dpa42edist(dpa, n_part=5e4, fill_gaps=0)
+                    if handle.one4one:
+                        edist = dpa42edist(handle)
+                    else:
+                        edist = dpa42edist(handle, n_part=5e4, fill_gaps=1)
+                        
                     f10 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig,
                                      bins=(50, 50, 300, 300), debug=debug)
                 except:
@@ -367,7 +420,7 @@ def plot_gen4_out_z(out, z=np.inf, params=['rad_power+el_current', 'el_energy+el
     if savefig != False:
         if savefig == True:
             savefig = 'png'
-        fig.savefig(out.filePath + '_z_' + str(z) + 'm.' + str(savefig), format=savefig)
+        fig.savefig(out.filePath + '_z_{:.2f}m.{}'.format(z,savefig), format=savefig)
 
     if showfig:
         plt.show()
@@ -888,14 +941,25 @@ def subfig_evo_el_energy(ax_energy, out, legend):
     z = out.h5['Lattice/zplot']
     el_energy_spread = out.h5['Beam/energyspread'][:]
 
-    ax_energy.plot(z, np.average(el_energy - el_energy_av, axis=1), 'b-', linewidth=1.5)
+    mean_energy = np.nanmean(el_energy - el_energy_av, axis=1)
+    ax_energy.plot(z, mean_energy, 'b-', linewidth=1.5)
     ax_energy.set_ylabel('<E> + ' + str(el_energy_av) + '[MeV]')
     ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
     ax_energy.grid(True)
 
+    #notnan_idx = np.isnan(el_energy_spread) == False
+    
+    I_weight = out.I / np.sum(out.I)
+    
+    
+    #mean_spread = np.average(el_energy_spread[notnan_idx], weights=out.I, axis=1)
+    
+    mean_spread = np.nansum(el_energy_spread * I_weight[np.newaxis, :], axis=1) * m_e_MeV
+    max_spread = np.nanmax(el_energy_spread, axis=1)* m_e_MeV
+    
     ax_spread = ax_energy.twinx()
-    ax_spread.plot(z, np.average(el_energy_spread * m_e_MeV, weights=out.I, axis=1), 'm--', out.z,
-                   np.amax(el_energy_spread * m_e_GeV * 1000, axis=1), 'r--', linewidth=1.5)
+    ax_spread.plot(z, mean_spread, 'm--', 
+                z, max_spread, 'r--', linewidth=1.5)
     ax_spread.set_ylabel(r'$\sigma_E$ [MeV]')
     ax_spread.grid(False)
     ax_spread.set_ylim(ymin=0)
@@ -916,14 +980,17 @@ def subfig_evo_el_bunching(ax_bunching, out, legend):
     z = out.h5['Lattice/zplot']
     b = out.h5['Beam/bunching']
 
-    ax_bunching.plot(z, np.average(b, weights=out.I, axis=1), 'k-', out.z, np.amax(b, axis=1), 'grey', linewidth=1.5)
+    
+    I_weight = out.I / np.sum(out.I)
+    mean_bunching = np.nansum(b * I_weight[np.newaxis, :], axis=1)
+    
+    ax_bunching.plot(z, mean_bunching, 'k-', out.z, np.nanmax(b, axis=1), 'grey', linewidth=1.5)
     # ax_bunching.plot(out.z, np.amax(out.bunching, axis=0), 'grey',linewidth=1.5) #only max
     ax_bunching.set_ylabel(r'Bunching')
     ax_bunching.set_ylim(ymin=0)
     # ax_bunching.set_ylim([0,0.8])
     ax_bunching.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_bunching.grid(True)
-
 
 @if_plottable
 def subfig_evo_rad_pow_en(ax_rad_pow, out, legend, log=1):
@@ -1075,7 +1142,8 @@ def subfig_rad_size(ax_size_t, out, legend):
     y_size = out.h5['Field/ysize'][:]
     r_size = np.sqrt(x_size ** 2 + y_size ** 2)
 
-    if out.nSlices == 1:
+    # if out.nSlices == 1:
+    if out.tdp == 0:
         ax_size_t.plot(out.z, r_size * 2 * 1e6, 'b-', linewidth=1.5)
         #        ax_size_t.plot([np.amin(out.z), np.amax(out.z)], [out.leng * 1e6, out.leng * 1e6], 'b-', linewidth=1.0)
         ax_size_t.set_ylabel('transverse $[\mu m]$')
@@ -1085,7 +1153,7 @@ def subfig_rad_size(ax_size_t, out, legend):
         else:
             if np.amax(out.rad_power) > 0:
                 # idx = out.rad_energy != 0
-                weight = out.rad_power + np.amin(out.rad_power[out.rad_power != 0]) / 1e6
+                weight = out.rad_power + np.amin(np.greater(out.rad_power,[0])) / 1e6
                 weight[out.rad_energy == 0, :] = 1
                 r_size = np.average(r_size * 2 * 1e6, weights=weight, axis=1)
             else:
@@ -1100,7 +1168,7 @@ def subfig_rad_size(ax_size_t, out, legend):
     ax_size_t.grid(True)
     plt.yticks(plt.yticks()[0][0:-1])
 
-    if out.nSlices > 1:
+    if out.tdp == 1:
         ax_size_s = ax_size_t.twinx()
         size_long_fwhm = np.zeros_like(out.z)
         size_long_std = np.zeros_like(out.z)
@@ -1185,3 +1253,136 @@ def subfig_evo_rad_spec_sz(ax_spectrum_evo, out, legend, norm=1):
         ax_spectrum_evo.grid(True)
     else:
         pass
+
+def plot_dpa4_bucket(dpa, slice_num=None, repeat=1, GeV=1, figsize=4, cmap=def_cmap, scatter=False, energy_mean=None,
+                    legend=True, fig_name=None, savefig=False, showfig=True, suffix='', bins=(50, 50), debug=1,
+                    return_mode_gamma=0):
+    part_colors = ['darkred', 'orange', 'g', 'b', 'm', 'c', 'y', 'olive']
+    # cmap='BuPu'
+    y_bins = bins[0]
+    z_bins = bins[1]
+    
+    if not dpa.one4one:
+        return
+    
+    if showfig == False and savefig == False:
+        return
+    
+    _logger.info('plotting dpa bucket')
+    start_time = time.time()
+    
+    # if dpa.__class__ != GenesisParticlesDump:
+    #     raise ValueError('wrong particle object: should be GenesisParticlesDump')
+    
+    if dpa.slicelist.shape == 1:
+        slice_num = 0
+    if slice_num is None:
+        slice_num = dpa.slicelist[int(dpa.slicelist.size/2)]
+        _logger.debug(
+            ind_str + 'no slice number provided, using middle of the distribution - slice number {}'.format(slice_num))
+    else:
+        assert (slice_num <= np.shape(dpa.ph)[0]), 'slice_num larger than the dpa shape'
+    
+    if fig_name == None:
+        fig_name = 'Electron phase space ' + dpa.fileName()
+    fig = plt.figure(fig_name)
+    fig.clf()
+    fig.set_size_inches((5 * figsize, 3 * figsize), forward=True)
+    
+    left, width = 0.18, 0.57
+    bottom, height = 0.14, 0.55
+    left_h = left + width + 0.02 - 0.02
+    bottom_h = bottom + height + 0.02 - 0.02
+    
+    rect_scatter = [left, bottom, width, height]
+    rect_histx = [left, bottom_h, width, 0.2]
+    rect_histy = [left_h, bottom, 0.15, height]
+    
+    ax_main = plt.axes(rect_scatter)
+    ax_z_hist = plt.axes(rect_histx, sharex=ax_main)
+    ax_y_hist = plt.axes(rect_histy, sharey=ax_main)
+    
+    # ax_z_hist = plt.subplot2grid((4, 1), (0, 0), rowspan=1)
+    # ax_y_hist = plt.subplot2grid((4, 1), (0, 0), rowspan=1)
+    
+    # ax_main = plt.subplot2grid((4, 1), (1, 0), rowspan=3, sharex=ax_z_hist)
+    
+    nbins = np.shape(dpa.ph)[1]
+    phase = deepcopy(dpa.ph[slice_num, :, :])
+    energy = deepcopy(dpa.e[slice_num, :, :])
+    _logger.debug(ind_str + 'nbins =  {}'.format(nbins))
+    
+    # checking for lost particles
+    if np.any(energy<0):
+        particle_present_idx = energy>0
+        energy = energy[particle_present_idx]
+        phase = phase[particle_present_idx]
+    
+    if GeV:
+        energy *= m_e_MeV
+        if energy_mean == None:
+            energy_mean = round(np.mean(energy), 0)
+    else:
+        if energy_mean == None:
+            energy_mean = round(np.mean(energy), 1)
+    energy -= energy_mean
+    
+    phase_flat = phase.flatten()
+    energy_flat = energy.flatten()
+    for irep in range(repeat - 1):
+        phase_flat = np.append(phase_flat, phase.flatten() + 2 * np.pi * (irep + 1))
+        energy_flat = np.append(energy_flat, energy.flatten())
+    
+    # phase_hist = np.ravel(phase)
+    # for irep in range(repeat-1):
+    #     phase_hist = np.concatenate((phase_hist, np.ravel(phase) + 2 * np.pi * (irep+1)))
+    
+    # hist, edges = np.histogram(phase_hist, bins=50 * repeat)  # calculate current histogram
+    hist_z, edges_z = np.histogram(phase_flat, bins=z_bins * repeat)  # calculate current histogram
+    edges_z = edges_z[0:-1]  # remove the last bin edge to save equal number of points
+    ax_z_hist.bar(edges_z, hist_z, width=edges_z[1] - edges_z[0], color='silver')
+    ax_z_hist.set_ylabel('counts')
+    
+    hist_y, edges_y = np.histogram(energy_flat, bins=y_bins)  # calculate energy histogram
+    edges_y = edges_y[0:-1]  # remove the last bin edge to save equal number of points
+    ax_y_hist.barh(edges_y, hist_y, height=edges_y[1] - edges_y[0], color='silver')
+    ax_y_hist.set_xlabel('counts')
+    
+    for label in ax_z_hist.get_xticklabels():
+        label.set_visible(False)
+    
+    for label in ax_y_hist.get_yticklabels():
+        label.set_visible(False)
+    
+    if scatter == True:
+        _logger.debug(ind_str + 'plotting scatter')
+        for irep in range(repeat):
+            for ibin in range(nbins):
+                ax_main.scatter(phase[ibin, :] + 2 * np.pi * (irep), energy[ibin, :], color=part_colors[ibin],
+                                marker='.')
+    
+        # ax_z_hist.set_xlim([edges[0], edges[-1]])
+    
+    elif scatter == False:
+        _logger.debug(ind_str + 'plotting colormesh')
+        ax_main.hist2d(phase_flat, energy_flat, bins=[z_bins * repeat, y_bins], cmin=0, cmap=cmap)
+    
+    ax_main.set_xlabel('$\phi$ [rad]')
+    if GeV:
+        ax_main.set_ylabel('E [MeV] + ' + str(energy_mean / 1000) + ' [GeV]')
+    else:
+        ax_main.set_ylabel('$\gamma$ + ' + str(energy_mean))
+    
+    plt.draw()
+    if savefig != False:
+        if savefig == True:
+            savefig = 'png'
+        _logger.debug(ind_str + 'saving to {}'.format(dpa.fileName() + suffix + '.' + savefig))
+        plt.savefig(dpa.filePath + suffix + '.' + savefig, format=savefig)
+    
+    if showfig:
+        rcParams["savefig.directory"] = os.path.dirname(dpa.filePath)
+        plt.show()
+    else:
+        # plt.close('all')
+        plt.close(fig)

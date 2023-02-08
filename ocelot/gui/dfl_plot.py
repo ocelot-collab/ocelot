@@ -18,7 +18,7 @@ from ocelot.adaptors.genesis import *
 from ocelot.common.globals import *  # import of constants like "h_eV_s" and
 from ocelot.common.math_op import *  # import of mathematical functions like gauss_fit
 from ocelot.utils.xfel_utils import *
-from ocelot.optics.utils import calc_ph_sp_dens
+#from ocelot.optics.utils import calc_ph_sp_dens
 from ocelot.optics.wave import *
 
 from ocelot.gui.colormaps2d.colormap2d import *
@@ -48,7 +48,7 @@ def plot_dfl_all(dfl, **kwargs):
 @if_plottable
 def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, fig_name=None,
              auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy=True,
-             slice_xy=False, log_scale=0, cmap_cutoff=0, vartype_dfl=None, **kwargs):
+             slice_xy=False, log_scale=0, cmap_cutoff=0, vartype_dfl=None, plot_sp_dens=True, **kwargs):
     """
     Plots dfl radiation object in 3d using matplotlib.
 
@@ -71,6 +71,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     :param log_scale: bool type variable, if True, log scale will be used for potting
     :param cmap_cutoff: 0 <= cmap_cutoff <= 1; all pixels that have intensity lower than cmap_cutoff will be seted to white color
     :param vartype_dfl: the data type to store dfl in memory [either complex128 (two 64-bit floats) or complex64 (two 32-bit floats)], may save memory
+    :param plot_sp_dens: whether to recalculate spectral density in units of mJ/eV
     :param kwargs: 
     :return:
     """
@@ -103,6 +104,8 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         domains = dfl_copy.domains()
     else:
         dfldomain_check(domains)
+    
+    _logger.info(ind_str + "domains={}".format(str(domains)))
 
     if 'k' in domains:
         far_field = True
@@ -129,14 +132,21 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         phase = True
         freq_domain = False
         z_lim = []
+        ncar_z = 1
+        leng_z = 1
     xlamds = dfl_copy.xlamds
-
+    
     # number of mesh points
     ncar_x = dfl_copy.Nx()
     leng_x = dfl_copy.Lx()  # transverse size of mesh [m]
     ncar_y = dfl_copy.Ny()
     leng_y = dfl_copy.Ly()
     E_pulse = dfl_copy.E()
+    
+    _logger.debug(ind_str + "xlamds = {:.2e}".format(xlamds))
+    _logger.debug(ind_str + "Nx = {}, Ny = {}, Nz = {}".format(ncar_x, ncar_y, ncar_z))
+    _logger.debug(ind_str + "Lx = {:.2e}, Ly = {:.2e}, Lz = {:.2e}".format(leng_x, leng_y, leng_z))
+    _logger.debug(ind_str + "E_pulse = {:.2e} J".format(E_pulse))
 
     if dfl_copy.Nz() != 1:
         if freq_domain:
@@ -241,8 +251,20 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         yz_title = 'Side projection'
         z_proj = dfl_copy.int_z()
 
-    dx = abs(x[1] - x[0])
-    dy = abs(y[1] - y[0])
+    dx, dy, dz = 0, 0, 0
+    if ncar_x > 1:
+        dx = abs(x[1] - x[0])
+    if ncar_y > 1:
+        dy = abs(y[1] - y[0])
+    if ncar_z > 1:
+        dz = abs(z[1] - z[0]) #TODO: would not work in case of non-uniform steps
+    
+    
+    if freq_domain:
+        if plot_sp_dens:
+            z_proj = calc_ph_sp_dens(z_proj, z, E_pulse*1e0, spec_squared=1)
+            z_labelv = r'[J/eV]'
+            ######################################################
 
     if log_scale:
         suffix += '_log'
@@ -302,7 +324,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
 
     if phase == True:
         ax_ph = fig.add_subplot(2, 2 + column_3d, 4 + column_3d, sharex=ax_int, sharey=ax_int)
-        ax_ph.pcolormesh(x, y, xy_proj_ph, cmap=cmap_ph)
+        ax_ph.pcolormesh(x, y, xy_proj_ph, cmap=cmap_ph, vmin=-np.pi, vmax=np.pi)
         ax_ph.axis([np.min(x), np.max(x), np.min(y), np.max(y)])
         ax_ph.set_title('Phase', fontsize=15)
     else:
@@ -315,19 +337,27 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         ax_z.set_xlabel(z_label)
         ax_z.set_ylabel(z_labelv)
         ax_z.set_ylim(ymin=0)
-
+        ff = fwhm3(np.array(z_proj), height=0.5, peakpos=-1, total=1)
+        pzc, pzw = ff[0], ff[1]
+        center_z = z[0] + dz*pzc #central position
+        fwhm_z = dz * pzw
+        #ax_z.text(0.05, 0.95, r"$(\Delta E/E)_{fwhm}$= %.2e" % (zw/zc), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_z.transAxes, color='red')
+        ax_z.text(0.05, 0.95, 'fwhm={:.3g} '.format(fwhm_z) + r' [{:}]'.format(unit_z), fontsize=12, horizontalalignment='left', verticalalignment='top', transform=ax_z.transAxes, color='black')
+        
     ax_proj_x = fig.add_subplot(2, 2 + column_3d, 3 + column_3d, sharex=ax_int)
     ax_proj_x.set_title(x_title, fontsize=15)
 
     if sum(x_line) != 0:
         try:
             x_line_f, rms_x = gauss_fit(x, x_line)  # fit with Gaussian, and return fitted function and rms
-        except RuntimeWarning:
+        except (TypeError, RuntimeWarning) as error:
+            _logger.warning(ind_str + str(error))
             x_line_f = np.zeros_like(x_line)
             rms_x = 0
         try:
             fwhm_x = fwhm3(x_line)[1] * dx  # measure FWHM
-        except ValueError:
+        except (TypeError, IndexError, ValueError) as error:
+            _logger.warning(ind_str + str(error))
             fwhm_x = 0
     else:
         x_line_f = np.zeros_like(x_line)
@@ -360,12 +390,14 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     if sum(y_line) != 0:
         try:
             y_line_f, rms_y = gauss_fit(y, y_line)  # fit with Gaussian, and return fitted function and rms
-        except RuntimeWarning:
+        except (TypeError, RuntimeWarning) as error:
+            _logger.warning(ind_str + str(error))
             y_line_f = np.zeros_like(y_line)
             rms_y = 0
         try:
             fwhm_y = fwhm3(y_line)[1] * dy  # measure FWHM
-        except ValueError:
+        except (TypeError, IndexError, ValueError) as error:
+            _logger.warning(ind_str + str(error))
             fwhm_y = 0
     else:
         y_line_f = np.zeros_like(y_line)
@@ -514,9 +546,180 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     else:
         return
 
+@if_plottable
+def plot_two_dfls(dfl_first, dfl_second, domains='s', label_first=None, label_second=None, title=None,
+            x_lim=None, y_lim=None, slice_xy=False, phase=False, savefig=False, showfig=True, filePath=None, fig_name=None):
+    """ 
+    Parameters
+    ----------
+    dfl_first : RadiationField object
+        3d or 2d coherent radiation distribution, *.fld variable is the same as Genesis dfl structure
+    dfl_second : RadiationField object
+        3d or 2d coherent radiation distribution, *.fld variable is the same as Genesis dfl structure
+    domains : str, optional
+        A transverse domain in which the fields will be represented. The default is 's'.
+    label_first : str, optional
+        Label of the first field to be plotted in the legend. When the default is None no label will be displayed.
+    label_second : str, optional
+        Label of the second field to be plotted in the legend. When the default is None no label will be displayed.
+    x_lim : float, optional
+        Limit of the x scale whether in um or urad. When the default is None minimum scale of two field will be plotted.
+    y_lim : float, optional
+        Limit of the y scale whether in um or urad. When the default is None minimum scale of two field will be plotted.
+    slice_xy : bool type, optional
+        if True, slices will be plotted; if False, projections will be plotted.
+    phase : bool type, optional
+        can replace XY projection with the phasefront distribution. The default is False.
+    figname : str, optional
+        The name of the figure to be plotted and saved. The default is 'figname'.
+
+    Returns
+    -------
+    None.
+
+    """
+    
+    _logger.info('Plotting two dfls in process...')
+    start_time = time.time()
+
+    cmap_ph = plt.get_cmap('hsv')
+    
+    dfl1 = deepcopy(dfl_first)
+    dfl2 = deepcopy(dfl_second)
+    
+    if filePath is None:
+        filePath = dfl1.filePath
+    
+    if fig_name is None:
+        if dfl1.fileName() == '':
+            fig = plt.figure('Radiation comparison' + domains)
+        else:
+            fig = plt.figure('Radiation comparison ' + domains + ' ' + dfl1.fileName() + ' ' + dfl2.fileName())
+    else:
+        fig = plt.figure(fig_name + domains)
+    
+    figsize = 6
+    # fig = plt.figure(fig_name)
+    plt.clf()
+     
+    fig.set_size_inches(4*figsize, figsize, forward=True)
+    if title is not None: 
+        fig.suptitle(title, fontsize=18, ha='right')
+        
+    ax_x = fig.add_subplot(1, 4, 1)
+    ax_y = fig.add_subplot(1, 4, 2)
+    ax_x2 = ax_x.twinx()  # instantiate a second axes that shares the same x-axis
+    ax_y2 = ax_y.twinx()
+
+    _logger.info(ind_str + "domains={}".format(str(domains)))
+
+    if domains == 'k':
+        label_x = r'$\theta_y, \mu rad$'
+        label_y = r'$\theta_x, \mu rad$'
+    elif domains == 's':
+        label_x = r'$x, \mu m$'
+        label_y = r'$y, \mu m$'
+    dfl1.to_domain(domains)
+    dfl2.to_domain(domains)
+    
+    if None in [x_lim, y_lim]:
+        x_lim = min(np.max(dfl1.scale_x())*1e6, np.max(dfl2.scale_x())*1e6)
+        y_lim = min(np.max(dfl1.scale_y())*1e6, np.max(dfl2.scale_y())*1e6)
+
+    _logger.debug(ind_str + "x_lim = {}, y_lim = {}".format(x_lim, y_lim))
+    ax_y.set_xlim(-y_lim, y_lim)
+    ax_y2.set_xlim(-y_lim, y_lim)
+    ax_x.set_xlim(-x_lim, x_lim)
+    ax_x2.set_xlim(-x_lim, x_lim)        
+    
+    ax_y.grid()
+    ax_x.grid()
+    
+    if slice_xy is True:   
+        fig.text(0.01, 0.01, 'x- y- slice', fontsize=18)
+        I_1x = np.sum(dfl1.intensity(), axis=0)[dfl1.Ny()//2+1, :]
+        I_2x = np.sum(dfl2.intensity(), axis=0)[dfl2.Ny()//2+1, :]
+        I_1y = np.sum(dfl1.intensity(), axis=0)[:, dfl1.Nx()//2+1]
+        I_2y = np.sum(dfl2.intensity(), axis=0)[:, dfl2.Nx()//2+1]
+    elif slice_xy is False:
+        fig.text(0.01, 0.01, 'x- y- integrated', fontsize=18)
+        I_1x = np.sum(dfl1.intensity(), axis=(0,1))
+        I_2x = np.sum(dfl2.intensity(), axis=(0,1))
+        I_1y = np.sum(dfl1.intensity(), axis=(0,2))
+        I_2y = np.sum(dfl2.intensity(), axis=(0,2))
+    else: 
+        raise AttributeError('slice_xy is a boolean type')
+        _logger.error(ind_str + 'slice_xy is a boolean type')
+       
+    ax_x.plot(dfl1.scale_x()*1e6, I_1x, c='b', label=label_first)
+    ax_x2.plot(dfl2.scale_x()*1e6, I_2x, c='green', label=label_second)
+    
+    ax_y.plot(dfl1.scale_y()*1e6, I_1y, c='b', label=label_first)
+    ax_y2.plot(dfl2.scale_y()*1e6, I_2y, c='green', label=label_second)    
+    
+    if None not in [label_first, label_second]:
+        ax_y2.legend(fontsize=12, bbox_to_anchor=(0, 0.92), loc='upper left')#, loc=1)
+        ax_y.legend(fontsize=12, bbox_to_anchor=(0, 0.995), loc='upper left')#, loc=2)
+        ax_x2.legend(fontsize=12, bbox_to_anchor=(0, 0.92), loc='upper left')#, loc=1)
+        ax_x.legend(fontsize=12, bbox_to_anchor=(0, 0.995), loc='upper left')#, loc=2)
+        
+    ax_xy1 = fig.add_subplot(1, 4, 3)
+    ax_xy2 = fig.add_subplot(1, 4, 4)
+
+    if phase == True:
+        xy_proj_ph1 = np.angle(np.sum(dfl1.fld, axis=0))
+        xy_proj_ph2 = np.angle(np.sum(dfl2.fld, axis=0))
+        ax_xy1.pcolormesh(dfl1.scale_x()*1e6, dfl1.scale_y()*1e6, xy_proj_ph1, cmap=cmap_ph, vmin=-np.pi, vmax=np.pi)        
+        ax_xy2.pcolormesh(dfl2.scale_x()*1e6, dfl2.scale_y()*1e6, xy_proj_ph2, cmap=cmap_ph, vmin=-np.pi, vmax=np.pi)
+    else:
+        ax_xy1.pcolormesh(dfl1.scale_x()*1e6, dfl1.scale_y()*1e6, np.sum(dfl1.intensity(), axis=0))         
+        ax_xy2.pcolormesh(dfl2.scale_x()*1e6, dfl2.scale_y()*1e6, np.sum(dfl2.intensity(), axis=0))
+
+    ax_xy2.set_xlim(-x_lim, x_lim)
+    ax_xy2.set_ylim(-y_lim, y_lim)
+    ax_xy1.set_xlim(-x_lim, x_lim)
+    ax_xy1.set_ylim(-y_lim, y_lim)
+
+    ax_xy1.set_title(label_first, fontsize=14, color='b')      
+    ax_xy2.set_title(label_second, fontsize=14, color='green')
+          
+    ax_xy1.set_ylabel(label_y, fontsize=16)
+    ax_xy1.set_xlabel(label_x, fontsize=16)
+    ax_xy2.set_ylabel(label_y, fontsize=16)
+    ax_xy2.set_xlabel(label_x, fontsize=16)
+    ax_x.set_xlabel(label_x, fontsize=16)
+    ax_y.set_xlabel(label_y, fontsize=16)
+    ax_x.set_ylabel('arb.units', fontsize=16)
+    ax_y.set_ylabel('arb.units', fontsize=16)
+    ax_x.set_ylim(0)
+    ax_y.set_ylim(0)
+    ax_x2.set_ylim(0)
+    ax_y2.set_ylim(0)
+    plt.tight_layout()
+    
+    if savefig != False:
+        if savefig == True:
+            savefig = 'png'
+        _logger.debug(ind_str + 'saving *{:}.{:}'.format(fig_name, savefig))
+        fig.savefig(filePath + fig_name + '.' + str(savefig), format=savefig)
+    _logger.debug(ind_str + 'done in {:.2f} seconds'.format(time.time() - start_time))
+
+    plt.draw()
+
+    if showfig == True:
+        _logger.debug(ind_str + 'showing two dfls')
+        rcParams["savefig.directory"] = os.path.dirname(filePath)
+        plt.show()
+    else:
+        plt.close(fig)   
+    _logger.info(ind_str + 'plotting two dfls done in {:.2f} seconds'.format(time.time() - start_time))
+
+def plot_wigner(*args,**kwargs):
+    _logger.warning('plotting wigner for time-frequency domain migrated to plot_wigner_z')
+    return plot_wigner_z(*args,**kwargs)
 
 @if_plottable
-def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, None), y_lim=(None, None), downsample=1,
+def plot_wigner_z(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, None), y_lim=(None, None), v_lim=(None, None), downsample=1,
                 autoscale=None, figsize=3, cmap='seismic', fig_name=None, savefig=False, showfig=True,
                 plot_proj=1, plot_text=1, plot_moments=0, plot_cbar=0, log_scale=0, **kwargs):
     """
@@ -572,35 +775,56 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
     plt.clf()
     fig.set_size_inches((4.5 * figsize, 3.25 * figsize), forward=True)
 
-    power = W.power()
-    spec = W.spectrum()
+    power = W.proj_s()
+    spec = W.proj_k()
     wigner = W.wig
     wigner_lim = np.amax(abs(W.wig))
+    
+    if v_lim[0] is None:
+        v_min = -wigner_lim
+    else:
+        v_min = v_lim[0]
+    
+    if v_lim[1] is None:
+        v_max = wigner_lim
+    else:
+        v_max = v_lim[1]
+        
+    v_maxabs = np.amax([np.abs(v_min), np.abs(v_max)])
+    
     if plot_moments:
         inst_freq = W.inst_freq()
         group_delay = W.group_delay()
+    
+    # if W.domain in ['x','y','s']:
+    if isinstance(W, WignerDistributionTransverse):
+        power_scale = W.s
+        p_label_txt = 's [m]'
+        spec_scale = W.theta()
+        f_label_txt = '$\{theta}$ [rad]'
+    
+    elif isinstance(W, WignerDistributionLongitudinal):
+        if x_units == 'fs':
+            power_scale = -W.s / speed_of_light * 1e15
+            p_label_txt = 't [fs]'
+            if plot_moments:
+                group_delay = -group_delay / speed_of_light * 1e15
+        else:
+            power_scale = W.s * 1e6
+            p_label_txt = 's [$\mu$m]'
+            if plot_moments:
+                group_delay = group_delay * 1e6
 
-    if x_units == 'fs':
-        power_scale = -W.s / speed_of_light * 1e15
-        p_label_txt = 't [fs]'
-        if plot_moments:
-            group_delay = group_delay / speed_of_light * 1e15
-    else:
-        power_scale = W.s * 1e6
-        p_label_txt = 's [$\mu$m]'
-        if plot_moments:
-            group_delay = group_delay * 1e6
-
-    if y_units in ['ev', 'eV']:
-        spec_scale = W.phen
-        f_label_txt = '$E_{photon}$ [eV]'
-        if plot_moments:
-            inst_freq = inst_freq
-    else:
-        spec_scale = W.freq_lamd
-        f_label_txt = '$\lambda$ [nm]'
-        if plot_moments:
-            inst_freq = h_eV_s * speed_of_light * 1e9 / inst_freq
+        if y_units in ['ev', 'eV']:
+            spec_scale = W.phen
+            f_label_txt = '$E_{photon}$ [eV]'
+            if plot_moments:
+                inst_freq = inst_freq
+        else:
+            spec_scale = W.freq_lamd
+            f_label_txt = '$\lambda$ [nm]'
+            if plot_moments:
+                inst_freq = h_eV_s * speed_of_light * 1e9 / inst_freq
 
     if plot_proj:
         # definitions for the axes
@@ -626,14 +850,16 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
         if log_scale == 1:
             log_scale = 0.01
         wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample],
-                                       wigner[::downsample, ::downsample], cmap=cmap,
-                                       norm=colors.SymLogNorm(linthresh=wigner_lim * log_scale, linscale=2,
-                                                              vmin=-wigner_lim, vmax=wigner_lim),
-                                       vmax=wigner_lim, vmin=-wigner_lim)
+                                   wigner[::downsample, ::downsample], cmap=cmap,  
+                                   norm=colors.SymLogNorm(linthresh=v_maxabs * log_scale, linscale=2,
+                                                          vmin=v_min, vmax=v_max),
+                                   vmax=v_max, vmin=v_min)
     else:
+        #wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample],
+        #                          wigner[::downsample, ::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
         wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample],
-                                       wigner[::downsample, ::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
-
+                                       wigner[::downsample, ::downsample], cmap=cmap, vmax=v_max, vmin=v_min, shading='auto')
+    
     if plot_cbar:
         from mpl_toolkits.axes_grid1.inset_locator import inset_axes
         cbaxes = inset_axes(axScatter, width="50%", height="3%", loc=1)
@@ -687,8 +913,8 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
         y_lim_appl.sort()
 
     else:
-        x_lim_appl = (np.amin(power_scale), np.amax(power_scale))
-        y_lim_appl = (np.amin(spec_scale), np.amax(spec_scale))
+        x_lim_appl = np.array((np.amin(power_scale), np.amax(power_scale)))
+        y_lim_appl = np.array((np.amin(spec_scale), np.amax(spec_scale)))
 
     if x_units == 'fs':
         x_lim_appl = np.flipud(x_lim_appl)
@@ -707,14 +933,15 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
         if plot_text:
             axHistx.text(0.02, 0.95, r'E= {:.2e} J'.format(W.energy()), horizontalalignment='left',
                          verticalalignment='top', transform=axHistx.transAxes)  # fontsize=12,
-        axHistx.set_ylabel('Power [W]')
+        # axHistx.set_ylabel('Power [W]')
+        axHistx.set_ylabel('Power\n[arb. units]')
 
         if spec.max() <= 0:
             axHisty.plot(spec, spec_scale)
         else:
             axHisty.plot(spec / spec.max(), spec_scale)
 
-        axHisty.set_xlabel('Spectrum [a.u.]')
+        axHisty.set_xlabel('Spectrum\n[arb. units]')
 
         axScatter.axis('tight')
         axScatter.set_xlabel(p_label_txt)
@@ -734,7 +961,10 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
 
         axHistx.set_xlim(x_lim_appl[0], x_lim_appl[1])
         axHisty.set_ylim(y_lim_appl[0], y_lim_appl[1])
-
+        
+        _logger.debug(ind_str + 'x_lim = {} - {}'.format(x_lim_appl[0], x_lim_appl[1]))
+        _logger.debug(ind_str + 'y_lim = {} - {}'.format(y_lim_appl[0], y_lim_appl[1]))
+        
         if log_scale != 0:
             axHistx.set_ylim(np.nanmin(power), np.nanmax(power))
             axHisty.set_xlim(np.nanmin(spec), np.nanmax(spec))
@@ -745,6 +975,12 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
         axScatter.axis('tight')
         axScatter.set_xlabel(p_label_txt)
         axScatter.set_ylabel(f_label_txt)
+        
+        axScatter.set_xlim(x_lim_appl[0], x_lim_appl[1])
+        axScatter.set_ylim(y_lim_appl[0], y_lim_appl[1])
+        
+        _logger.debug(ind_str + 'x_lim = {} - {}'.format(x_lim_appl[0], x_lim_appl[1]))
+        _logger.debug(ind_str + 'y_lim = {} - {}'.format(y_lim_appl[0], y_lim_appl[1]))
 
     # axScatter.set_xlim(x_lim[0], x_lim[1])
     # axScatter.set_ylim(y_lim[0], y_lim[1])
@@ -756,7 +992,7 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
             save_path = W.filePath + '_wig.' + str(savefig)
             # fig.savefig(W.filePath + '_wig.' + str(savefig), format=savefig)
         else:
-            save_path = W.filePath + '_wig_' + str(W.z) + 'm.' + str(savefig)
+            save_path = W.filePath + '_wig_{:.2f}m.{}'.format(W.z, savefig)
             # fig.savefig(W.filePath + '_wig_' + str(W.z) + 'm.' + str(savefig), format=savefig)
         _logger.debug(ind_str + 'saving to {}'.format(save_path))
         fig.savefig(save_path, format=savefig)
@@ -771,6 +1007,302 @@ def plot_wigner(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, N
         # plt.close('all')
         plt.close(fig)
 
+
+@if_plottable
+def plot_wigner_u(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, None), y_lim=(None, None), v_lim=(None, None), downsample=1,
+                autoscale=None, figsize=3, cmap='seismic', fig_name=None, savefig=False, showfig=True,
+                plot_proj=1, plot_text=1, plot_moments=0, plot_cbar=0, log_scale=0, **kwargs):
+    """
+    Plots wigner distribution (WD) with marginals
+
+    :param wig_or_out: may be WignerDistribution() or GenesisOutput() object
+    :param z: (if isinstance(wig_or_out, GenesisOutput)) location at which WD will be calculated
+    :param x_units: [m or fs] units to display power scale
+    :param y_units: [nm or eV] units to display spectrum scale
+    :param x_lim: scaling limits for x in given units, (min,max) or [min,max], e.g: (None,6)
+    :param x_lim: scaling limits for y in given units, (min,max) or [min,max], e.g: (None,6)
+    :param downsample: speeds up plotting by displaying only 1/downsample**2 points
+    :param autoscale: find x_lim and x_lim values automatically. Only (values > max_value * autoscale) will be displayed
+    :param figsize: rescales the size of the figure
+    :param cmap: colormar (http://matplotlib.org/users/colormaps.html)
+    :param fig_name: the desired name of the output figure, would be used as suffix to the image filename if savefig==True
+    :param savefig: bool type variable, allow to save figure to image (savefig='png' (default) or savefig='eps', etc...)
+    :param showfig: bool type variable, allow to display figure (slower)
+    :param plot_proj: plot marginal distributions
+    :param plot_text: show text
+    :param plot_moments: plot moments as lines on top of Wigner distribution
+    :param plot_cbar: plots colorbar
+    :param log_scale: plots wigner distribution in logarithmic scale
+    :param kwargs:
+    :return: None
+    """
+    if showfig == False and savefig == False:
+        return
+    add_prefix = True
+    
+    _logger.info('plotting Wigner distribution')
+    _logger.debug(ind_str + str(type(wig_or_out)))
+    
+    if not hasattr(wig_or_out, 'wig') and hasattr(wig_or_out, 'calc_radsize'):
+        W = wigner_out(wig_or_out, z)
+    elif hasattr(wig_or_out, 'wig'):
+        W = wig_or_out
+    else:
+        raise ValueError('Unknown object for Wigner plot')
+    
+    if fig_name is None:
+        if W.fileName() == '':
+            fig_text = 'Wigner distribution'
+        else:
+            fig_text = 'Wigner distribution ' + W.fileName()
+    else:
+        fig_text = fig_name
+    if W.z != None:
+        fig_text += ' ' + str(W.z) + 'm'
+    
+    if autoscale:
+        fig_text += ' autsc'
+    
+    fig = plt.figure(fig_text)
+    plt.clf()
+    fig.set_size_inches((4.5 * figsize, 3.25 * figsize), forward=True)
+    
+    power = W.proj_s()
+    spec = W.proj_k()
+    wigner = W.wig
+    wigner_lim = np.amax(abs(W.wig))
+    
+    if v_lim[0] is None:
+        v_min = -wigner_lim
+    else:
+        v_min = v_lim[0]
+    
+    if v_lim[1] is None:
+        v_max = wigner_lim
+    else:
+        v_max = v_lim[1]
+        
+    v_maxabs = np.amax([np.abs(v_min), np.abs(v_max)])
+    
+    if plot_moments:
+        inst_freq = W.moment1_k() #TODO:rename
+        group_delay = W.moment1_s()
+    
+    # if W.domain in ['x','y','s']:
+    if isinstance(W, WignerDistributionTransverse):
+        power_scale, power_prefix, power_order = mprefix(W.s, order_bias=0.05, apply=add_prefix)
+        spec_scale, spec_prefix, spec_order = mprefix(W.theta(), order_bias=0.05, apply=add_prefix)
+        p_label_txt = 's [{:}m]'.format(power_prefix)
+        f_label_txt = r'$\theta$ [{:}rad]'.format(spec_prefix)
+        if plot_moments:
+            group_delay = group_delay / 10**power_order
+            inst_freq = k2angle(inst_freq, W.xlamds) / 10**spec_order
+    
+    elif isinstance(W, WignerDistributionLongitudinal):
+        if x_units in ['s','fs']:
+            power_scale, power_prefix, power_order = mprefix(-W.s / speed_of_light, order_bias=0.05, apply=add_prefix)
+            # power_scale = -W.s / speed_of_light * 1e15
+            p_label_txt = 't [{:}s]'.format(power_prefix)
+            if plot_moments:
+                group_delay = -group_dmelay / 10**power_order
+        else:
+            power_scale, power_prefix, power_order = mprefix(W.s, order_bias=0.05, apply=add_prefix)
+            # power_scale = W.s * 1e6
+            p_label_txt = 's [{:}m]'.format(power_prefix)
+            if plot_moments:
+                group_delay = group_delay / 10**power_order
+        if y_units in ['ev', 'eV']:
+            spec_scale, spec_prefix, spec_order = mprefix(W.phen, order_bias=0.05, apply=add_prefix)
+            # spec_scale = W.phen
+            f_label_txt = r'$E_{photon}$'+' [{:}eV]'.format(spec_prefix)
+            if plot_moments:
+                inst_freq = lambda2eV(k2lambda(inst_freq)) / 10**spec_order
+        else:
+            spec_scale, spec_prefix, spec_order = mprefix(W.freq_lamd, order_bias=0.05, apply=add_prefix)
+            # spec_scale = W.freq_lamd
+            f_label_txt = r'$\lambda$ [{:}m]'.format(spec_prefix)
+            if plot_moments:
+                inst_freq = k2lambda(inst_freq) / 10**spec_order
+    
+    if plot_proj:
+        # definitions for the axes
+        left, width = 0.18, 0.57
+        bottom, height = 0.14, 0.55
+        left_h = left + width + 0.02 - 0.02
+        bottom_h = bottom + height + 0.02 - 0.02
+
+        rect_scatter = [left, bottom, width, height]
+        rect_histx = [left, bottom_h, width, 0.2]
+        rect_histy = [left_h, bottom, 0.15, height]
+
+        axHistx = plt.axes(rect_histx)
+        axHisty = plt.axes(rect_histy)
+        axScatter = plt.axes(rect_scatter, sharex=axHistx, sharey=axHisty)
+    else:
+        axScatter = plt.axes()
+    
+    # cmap='RdBu_r'
+    # axScatter.imshow(wigner, cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
+    
+    if log_scale != 0:
+        if log_scale == 1:
+            log_scale = 0.01
+        wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample],
+                                   wigner[::downsample, ::downsample], cmap=cmap,  
+                                   norm=colors.SymLogNorm(linthresh=v_maxabs * log_scale, linscale=2,
+                                                          vmin=v_min, vmax=v_max),
+                                   vmax=v_max, vmin=v_min)
+    else:
+        #wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample],
+        #                          wigner[::downsample, ::downsample], cmap=cmap, vmax=wigner_lim, vmin=-wigner_lim)
+        wigplot = axScatter.pcolormesh(power_scale[::downsample], spec_scale[::downsample],
+                                       wigner[::downsample, ::downsample], cmap=cmap, vmax=v_max, vmin=v_min, shading='auto')
+    
+    if plot_cbar:
+        from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+        cbaxes = inset_axes(axScatter, width="50%", height="3%", loc=1)
+        fig.colorbar(wigplot, cax=cbaxes, orientation='horizontal')
+    
+    if plot_text:
+        # if hasattr(wig_or_out, 'is_spectrogram'):
+            # if wig_or_out.is_spectrogram:
+                # axScatter.text(0.98, 0.98, 'Spectrogram', horizontalalignment='right', verticalalignment='top',
+                               # transform=axScatter.transAxes, color='red')
+        axScatter.text(0.02, 0.98, r'$W_{{max}}$= {:.2e}'.format(np.amax(wigner)), horizontalalignment='left',
+                       verticalalignment='top', transform=axScatter.transAxes)  # fontsize=12,
+        # if hasattr(W, 'on_axis'):
+            # if W.on_axis == True:
+                # axScatter.text(0.5, 0.98, r"(on axis)", fontsize=10, horizontalalignment='center',
+                               # verticalalignment='top', transform=axScatter.transAxes)
+            # else:
+                # axScatter.text(0.5, 0.98, r"(assuming full spatial coherence)", fontsize=10,
+                               # horizontalalignment='center', verticalalignment='top', transform=axScatter.transAxes)
+    
+    if plot_moments:
+        weight_power = power / np.max(power)
+        weight_power[weight_power < np.nanmax(weight_power) / 1e2] = 0
+        idx_power_fine = np.where(weight_power > np.nanmax(weight_power) / 1e2)
+        weight_spec = spec / np.max(spec)
+        weight_spec[weight_spec < np.nanmax(weight_spec) / 1e2] = 0
+        idx_spec_fine = np.where(weight_spec > np.nanmax(weight_spec) / 1e2)
+
+        plt.scatter(power_scale[idx_power_fine], inst_freq[idx_power_fine], s=weight_power[idx_power_fine], c='black',
+                    linewidths=2)
+        plt.scatter(group_delay[idx_spec_fine], spec_scale[idx_spec_fine], s=weight_spec[idx_spec_fine], c='green',
+                    linewidths=2)
+        # axScatter.plot(power_scale[::downsample], inst_freq[::downsample], "-k")
+        # axScatter.plot(group_delay[::downsample], spec_scale[::downsample], "-g")
+    
+    if autoscale == 1:
+        autoscale = 1e-2
+    
+    if autoscale not in [0, None]:
+        max_power = np.amax(power)
+        max_spectrum = np.amax(spec)
+        idx_p = np.where(power > max_power * autoscale)[0]
+        idx_s = np.where(spec > max_spectrum * autoscale)[0]
+        x_lim_appl = [power_scale[idx_p[0]], power_scale[idx_p[-1]]]
+        x_lim_appl = np.array(x_lim_appl)
+        x_lim_appl.sort()
+        y_lim_appl = [spec_scale[idx_s[0]], spec_scale[idx_s[-1]]]
+        y_lim_appl = np.array(y_lim_appl)
+        y_lim_appl.sort()
+    else:
+        x_lim_appl = np.array((np.amin(power_scale), np.amax(power_scale)))
+        y_lim_appl = np.array((np.amin(spec_scale), np.amax(spec_scale)))
+    
+    
+    if x_units == 'fs':
+        x_lim_appl = np.flipud(x_lim_appl)
+    
+    if x_lim[0] is not None:
+        x_lim_appl[0] = x_lim[0]
+    if x_lim[1] is not None:
+        x_lim_appl[1] = x_lim[1]
+    if y_lim[0] is not None:
+        y_lim_appl[0] = y_lim[0]
+    if y_lim[1] is not None:
+        y_lim_appl[1] = y_lim[1]
+    
+    if plot_proj:
+        axHistx.plot(power_scale, power)
+        # if plot_text:
+            # axHistx.text(0.02, 0.95, r'E= {:.2e} J'.format(W.energy()), horizontalalignment='left',
+                         # verticalalignment='top', transform=axHistx.transAxes)  # fontsize=12,
+        # axHistx.set_ylabel('Power\n[arb. units]')
+        axHistx.set_ylabel('[arb. units]')
+        
+        if spec.max() <= 0:
+            axHisty.plot(spec, spec_scale)
+        else:
+            axHisty.plot(spec / spec.max(), spec_scale)
+
+        # axHisty.set_xlabel('Spectrum\n[arb. units]')
+        axHisty.set_xlabel('[arb. units]')
+
+        axScatter.axis('tight')
+        axScatter.set_xlabel(p_label_txt)
+        axScatter.set_ylabel(f_label_txt)
+
+        axHistx.set_ylim(ymin=0)
+        axHisty.set_xlim(xmin=0)
+
+        for tl in axHistx.get_xticklabels():
+            tl.set_visible(False)
+
+        for tl in axHisty.get_yticklabels():
+            tl.set_visible(False)
+
+        axHistx.yaxis.major.locator.set_params(nbins=4)
+        axHisty.xaxis.major.locator.set_params(nbins=2)
+
+        axHistx.set_xlim(x_lim_appl[0], x_lim_appl[1])
+        axHisty.set_ylim(y_lim_appl[0], y_lim_appl[1])
+        
+        _logger.debug(ind_str + 'x_lim = {} - {}'.format(x_lim_appl[0], x_lim_appl[1]))
+        _logger.debug(ind_str + 'y_lim = {} - {}'.format(y_lim_appl[0], y_lim_appl[1]))
+        
+        if log_scale != 0:
+            axHistx.set_ylim(np.nanmin(power), np.nanmax(power))
+            axHisty.set_xlim(np.nanmin(spec), np.nanmax(spec))
+            axHisty.set_xscale('log')
+            axHistx.set_yscale('log')
+
+    else:
+        axScatter.axis('tight')
+        axScatter.set_xlabel(p_label_txt)
+        axScatter.set_ylabel(f_label_txt)
+        
+        axScatter.set_xlim(x_lim_appl[0], x_lim_appl[1])
+        axScatter.set_ylim(y_lim_appl[0], y_lim_appl[1])
+        
+        _logger.debug(ind_str + 'x_lim = {} - {}'.format(x_lim_appl[0], x_lim_appl[1]))
+        _logger.debug(ind_str + 'y_lim = {} - {}'.format(y_lim_appl[0], y_lim_appl[1]))
+
+    # axScatter.set_xlim(x_lim[0], x_lim[1])
+    # axScatter.set_ylim(y_lim[0], y_lim[1])
+
+    if savefig != False:
+        if savefig == True:
+            savefig = 'png'
+        if W.z is None:
+            save_path = W.filePath + '_wig.' + str(savefig)
+            # fig.savefig(W.filePath + '_wig.' + str(savefig), format=savefig)
+        else:
+            save_path = W.filePath + '_wig_{:.2f}m.{}'.format(W.z, savefig)
+            # fig.savefig(W.filePath + '_wig_' + str(W.z) + 'm.' + str(savefig), format=savefig)
+        _logger.debug(ind_str + 'saving to {}'.format(save_path))
+        fig.savefig(save_path, format=savefig)
+
+    plt.draw()
+
+    if showfig == True:
+        dir = os.path.dirname(W.filePath)
+        rcParams["savefig.directory"] = dir
+        plt.show()
+    else:
+        # plt.close('all')
+        plt.close(fig)
 
 @if_plottable
 def plot_dfl_waistscan(sc_res, fig_name=None, figsize=4, showfig=True, savefig=False):

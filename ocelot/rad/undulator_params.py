@@ -16,6 +16,22 @@ def lambda2eV(Lambda):
 def eV2lambda(Ephoton):
     Lambda = h_eV_s*speed_of_light/Ephoton
     return Lambda
+    
+def k2lambda(k):
+    Lambda = 2 * np.pi / k
+    return Lambda
+    
+def lambda2k(Lambda):
+    k = 2 * np.pi / Lambda
+    return k
+
+def k2angle(k, Lambda):
+    angle = k * Lambda / 2 / np.pi
+    return angle
+
+def angle2k(angle, Lambda):
+    k =  2 * np.pi * angle / Lambda
+    return k
 
 def Ephoton2K(Eph, lu=0.04, Eeb=14):
     gamma = Eeb/m_e_GeV

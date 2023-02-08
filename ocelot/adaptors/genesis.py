@@ -178,6 +178,7 @@ __RADFILE__\n\
 __DISTFILE__\n\
 __MAGFILE__\n\
  filetype ='ORIGINAL'\n\
+__EXPERT__\n\
  $end\n"
 
 # outputfile ='run.__RUNID__.gout'\n\
@@ -395,6 +396,12 @@ class GenesisInput:
         self.ffspec = 0  # amplitude/phase values for spectrum calculation: 0 - on-axis power/phase along the pulse, -1 - the same in far field, 1 - near field total power
         
         self.shotnoise = 1
+
+        # Free-format text block that is copied to the end of the infile.
+        # This might break your simulation, so it is for experts.
+        # One possible use-case is with patched versions of genesis that
+        # accept additional options.
+        self.infile_expert = None
         
         # paths to files to import
         self.beamfile = None
@@ -416,6 +423,9 @@ class GenesisInput:
 
         self.run_dir = None # directory to run simulation in
         self.exp_dir = None # if run_dir==None, it is created based on exp_dir
+        
+        # self.inpfile_fullpath = None # full path to input file (if not None - overrides standard folder structure)
+        # self.outfile_fullpath = None # full path to input file (if not None - overrides standard folder structure)
         
         self.inp_txt = _inputTemplate
         
@@ -472,6 +482,13 @@ class GenesisInput:
             # inp_txt = inp_txt.replace("__TRAMA__\n", "")
         # else:
             # inp_txt = inp_txt.replace("__TRAMA__\n", "")
+
+        if self.infile_expert is not None:
+            _logger.warning(ind_str + 'using infile_expert mode: incorrect usage of this expert function might break the simulation')
+            inp_txt = inp_txt.replace("__EXPERT__", self.infile_expert)   # NOT replacing "\n" in template string: If the user is only using single-line expert string (i.e. specifying one custom option), they don't have to provide trailing \n
+        else:
+            inp_txt = inp_txt.replace("__EXPERT__\n", "")
+
 
         for p in self.__dict__.keys():
             if p in self.int_vals:
@@ -1116,6 +1133,12 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', dfl_slipage_inc
         inp_path = inp.run_dir + 'run.' + str(inp.runid) + '.s' + str(inp.stageid) + str(inp.suffix) + '.inp'
         out_path = inp.run_dir + 'run.' + str(inp.runid) + '.s' + str(inp.stageid) + str(inp.suffix) + '.gout'
         stage_string = '.s' + str(inp.stageid)
+    
+    # #overrules the filenames
+    # if inp.inpfile_fullpath is not None:
+        # inp_path = inp.inpfile_fullpath
+    # if inp.outfile_fullpath is not None:
+        # out_path = np.outfile_fullpath
 
     inp_file = filename_from_path(inp_path)
     out_file = filename_from_path(out_path)
@@ -1190,17 +1213,16 @@ def run_genesis(inp, launcher, read_level=2, assembly_ver='pyt', dfl_slipage_inc
     launcher.launch()
     _logger.info(ind_str + 'genesis simulation time %.2f seconds' % (time.time() - genesis_time))
     # RUNNING GENESIS ###
-
+    
+    assembly_time = time.time()
+    
     if assembly_ver is not None:
         # genesis output slices assembly
         _logger.info(ind_str + 'assembling slices')
         _logger.debug(2 * ind_str + 'assembly_ver = {}'.format(assembly_ver))
         
-        assembly_time = time.time()
-
-        
         if assembly_ver == 'sys':
-
+            
             _logger.info(2 * ind_str + 'assembling *.out file')
             start_time = time.time()
             os.system('cat ' + out_path + '.slice* >> ' + out_path)
@@ -1479,8 +1501,16 @@ def generate_input(undulator, beam, E_photon = None, itdp=True, *args, **kwargs)
     inp.emity = beam.emit_yn
     
     # idx_0 = inp.beam.I>0
-    rxbeam = np.nanmax(np.sqrt(inp.beam.beta_x * inp.beam.emit_x))
-    rybeam = np.nanmax(np.sqrt(inp.beam.beta_y * inp.beam.emit_y))
+    # if beam.len() !>1 the following will throw (cf line 1456 above):
+    try:
+        rxbeam = np.nanmax(np.sqrt(inp.beam.beta_x * inp.beam.emit_x))
+        rybeam = np.nanmax(np.sqrt(inp.beam.beta_y * inp.beam.emit_y))
+    except AttributeError:
+        rxbeam = np.nanmax(np.sqrt(beam.beta_x * beam.emit_xn))
+        rybeam = np.nanmax(np.sqrt(beam.beta_y * beam.emit_yn))
+    except:
+        raise
+      
     inp.dgrid = np.nanmax([rxbeam, rybeam]) * 8 #due to bug in Genesis2 that crashes when electrons leave the mesh
 
     inp.hn=1 # should be flexible in the future
@@ -1524,7 +1554,7 @@ def generate_input(undulator, beam, E_photon = None, itdp=True, *args, **kwargs)
     return inp
 
 
-def get_genesis_launcher(launcher_program=None, launcher_argument=''):
+def get_genesis_launcher(launcher_program=None, launcher_argument=' < tmp.cmd | tee log',launcher_mpiParameters='-x PATH -x PYTHONPATH'):
     '''
     Returns MpiLauncher() object for given program
     '''
@@ -1533,11 +1563,13 @@ def get_genesis_launcher(launcher_program=None, launcher_argument=''):
     launcher = MpiLauncher()
     if launcher_program != None:
         launcher.program = launcher_program
+        launcher.argument = launcher_argument
+        launcher.mpiParameters = launcher_mpiParameters
     else:
         if host.startswith('max'):
-            launcher.program = '/data/netapp/xfel/products/genesis/genesis'
+            launcher.program = 'genesis'
             launcher.argument = ' < tmp.cmd | tee log'
-        launcher.mpiParameters = '-x PATH -x MPI_PYTHON_SITEARCH -x PYTHONPATH'  # added -n
+        launcher.mpiParameters = launcher_mpiParameters # added -n
     #launcher.nproc = nproc
     return launcher
 
@@ -1900,19 +1932,22 @@ def read_out_file_stat(proj_dir, stage, run_inp=[], param_inp=[], debug=1):
     _logger.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
     return out_stat
 
-def read_out_file_stat_u(file_tamplate, run_inp=[], param_inp=[], debug=1):
+def read_out_file_stat_u(file_template, run_inp=[], param_inp=[], debug=1):
     '''
     reads statistical info of Genesis simulations,
     universal function for non-standard exp. folder structure
     returns GenStatOutput() object
 
-    file_tamplate = template of the .out file path with # denoting run number
+    file_template = template of the .out file path with # denoting run number or * (wildcart) denoting part of string to be arbitrary.
     run_inp - list of genesis runs to be looked for [0:1000] by default
     param_inp - list of genesis output parameters to be processed
     debug - see read_out_file()
     '''
+    
+    import glob
+    
     _logger.info('reading stat genesis output')
-    _logger.info(ind_str + 'file_tamplate = {}'.format(file_tamplate))
+    _logger.info(ind_str + 'file_template = {}'.format(file_template))
     _logger.debug(ind_str + 'run_inp = {}'.format(str(run_inp)))
     _logger.debug(ind_str + 'param_inp = {}'.format(str(param_inp)))
     start_time = time.time()
@@ -1929,17 +1964,36 @@ def read_out_file_stat_u(file_tamplate, run_inp=[], param_inp=[], debug=1):
         run_range = run_inp
 
     run_range_good = []
-
-    for irun in run_range:
-        out_file = file_tamplate.replace('#',str(irun))
-        if os.path.isfile(out_file):
-            if debug > 0:
-                print ('      reading run', irun)
-            outlist[irun] = read_out_file(out_file, read_level=2, debug=1)
-            outlist[irun].calc_spec(npad=1)
-            # print(outlist[irun].freq_lamd[0])
-            run_range_good.append(irun)
-            # except:
+    
+    if '*' in file_template:
+        # outlist = []
+        for irun, file in enumerate(glob.glob(file_template)):
+            _logger.info(ind_str + 'reading file {}'.format(file))
+            _logger.info(2*ind_str + 'irun = {}'.format(irun))
+            # out = read_out_file(out_file, read_level=2)
+            # out.calc_spec(npad=1)
+            # outlist.append(out)
+            try:
+                outlist[irun] = read_out_file(file, read_level=2, debug=1)
+                outlist[irun].calc_spec(npad=1)
+                run_range_good.append(irun)
+            except:
+                pass
+            
+            if len(run_range_good) > 50:
+                break
+    else:
+            
+        for irun in run_range:
+            out_file = file_template.replace('#',str(irun))
+            if os.path.isfile(out_file):
+                if debug > 0:
+                    print ('      reading run', irun)
+                outlist[irun] = read_out_file(out_file, read_level=2, debug=1)
+                outlist[irun].calc_spec(npad=1)
+                # print(outlist[irun].freq_lamd[0])
+                run_range_good.append(irun)
+                # except:
     run_range = run_range_good
     
     # check if all gout have the same number of slices nSlice and history records nZ
@@ -1976,7 +2030,7 @@ def read_out_file_stat_u(file_tamplate, run_inp=[], param_inp=[], debug=1):
         setattr(out_stat, param, param_matrix)
 
     out_stat.stage = None
-    out_stat.dir = os.path.dirname(file_tamplate)
+    out_stat.dir = os.path.dirname(file_template)
     out_stat.run = run_range
     out_stat.z = outlist[irun].z #check if all the same!
     out_stat.s = outlist[irun].s
@@ -1995,7 +2049,7 @@ def read_out_file_stat_u(file_tamplate, run_inp=[], param_inp=[], debug=1):
 '''
 
 
-def read_dfl_file_out(out, filePath=None, debug=1):
+def read_dfl_file_out(out, filePath=None, harmonic=1, *args, **kwargs):
     '''
     More compact function than read_dfl_file() to read the file generated with known .out file
     Returns RadiationField object
@@ -2008,19 +2062,22 @@ def read_dfl_file_out(out, filePath=None, debug=1):
     _logger.debug(ind_str + 'opening handle ' + str(out))
     
     if os.path.isfile(str(out)):
-        out = read_out_file(out, read_level=0, debug=0)
+        out = read_out_file(out, read_level=0)
     if not isinstance(out, GenesisOutput):
         _logger.error('out is neither GenesisOutput() nor a valid path')
         raise ValueError('out is neither GenesisOutput() nor a valid path')
 
     if filePath is None:
         _logger.debug(ind_str + 'from out.filePath')
-        filePath = out.filePath + '.dfl'
+        if harmonic is not 1:
+            filePath = out.filePath + '.dfl' + str(harmonic)
+        else:
+            filePath = out.filePath + '.dfl'
     else:
         _logger.debug(ind_str + 'from filepath')
     _logger.debug(2*ind_str + filePath)
     
-    dfl = read_dfl_file(filePath, Nxy=out.ncar, Lxy=out.leng, zsep=out('zsep'), xlamds=out('xlamds'), debug=debug)
+    dfl = read_dfl_file(filePath, Nxy=out.ncar, Lxy=out.leng, zsep=out('zsep')*harmonic, xlamds=out('xlamds')/harmonic)
     return dfl
 
 
@@ -2246,7 +2303,7 @@ def dpa2edist(out, dpa, num_part=1e5, smear=1, debug=1):
     reads GenesisParticlesDump() object
     returns GenesisElectronDist() object
     num_part - desired approximate number of particles in edist
-    smear - whether to shuffle macroparticles smearing microbunching
+    smear - whether to shuffle macroparticles smearing microbunching and populating delz-1 slices
     '''
     import random
     start_time = time.time()
@@ -2325,6 +2382,7 @@ def dpa2edist(out, dpa, num_part=1e5, smear=1, debug=1):
     edist.g = np.flipud(edist.g)
 
     edist.part_charge = out.beam_charge / edist.len()
+    _logger.debug(ind_str + 'edist.part_charge / q_e = ' + str(edist.part_charge / q_e))
     _logger.debug(ind_str + 'edist.len() = ' + str(edist.len()))
     # edist.charge=out.beam_charge
     if hasattr(dpa, 'filePath'):
@@ -2555,9 +2613,9 @@ def disperse_edist(edist, R56, debug=1):
     Introduces dispersion (good for simulating weak chicanes)
     delays or advances time coordinate of the particles depending on ther energy with respect to the averaged energy
     '''
-    _logger.info('introducing dispersion to particle distribution file with R56 '+ str(R56) + ' m')
+    _logger.info('introducing dispersion to particle distribution file with R56 {:.3e} m'.format(R56))
     if not isinstance(edist, GenesisElectronDist):
-        raise ValueError('out is neither GenesisOutput() nor a valid path')
+        raise ValueError('out is neither GenesisOutput() object nor a valid path')
     
     edist_out = deepcopy(edist)
     edist_out.t += R56 * (edist_out.g - np.mean(edist_out.g)) / edist_out.g / speed_of_light
@@ -2639,7 +2697,7 @@ def write_edist_file(edist, filePath=None, debug=1):
     _logger.debug(ind_str + 'done in %.2f sec' % (time.time() - start_time))
 
 
-def edist2beam(edist, step=2e-7): #check
+def edist2beam(edist, step=2e-7): #TODO: move to cpbd
     '''
     reads GenesisElectronDist()
     returns BeamArray()
@@ -2668,7 +2726,10 @@ def edist2beam(edist, step=2e-7): #check
             dist_y = edist.y[indices]
             dist_xp = edist.xp[indices]
             dist_yp = edist.yp[indices]
-            dist_sigma_E = np.std(dist_g) * m_e_GeV
+            
+            a, b = np.polyfit(edist.t[indices], dist_g, deg=1) #correction here!
+            dist_sigma_E = np.std(dist_g - a*edist.t[indices]) * m_e_GeV #correction here!
+            # dist_sigma_E = np.std(dist_g) * m_e_GeV
             dist_p = np.sqrt(dist_g**2 - 1)
             dist_px = dist_xp * dist_p
             dist_py = dist_yp * dist_p
@@ -2715,6 +2776,82 @@ def edist2beam(edist, step=2e-7): #check
 '''
     BEAM
 '''
+
+def beam2edist(beam, npart=10000): #TODO: move to cpbd
+    """
+    Creates electron beam particle distribution with random (not shot-noise-accounted-for) particle distribution
+    baased on Twiss parameters from beam
+    
+    reads BeamArray()
+    returns GenesisElectronDist()
+    beam: BeamArray() object
+    npart: number of particles
+    
+    """
+    # dist='gaussian'
+    # npart = 100000
+    
+    P = beam.I/np.sum(beam.I)
+    pack = np.round(P*npart)
+    
+    edist = GenesisElectronDist()
+    
+    t = np.empty(beam.len()-1, dtype=object)
+    g = np.empty(beam.len()-1, dtype=object)
+    dist_x = np.empty(beam.len()-1, dtype=object)
+    dist_xp = np.empty(beam.len()-1, dtype=object)
+    dist_y = np.empty(beam.len()-1, dtype=object)
+    dist_yp = np.empty(beam.len()-1, dtype=object)
+    
+    for i in range(beam.len()-1): 
+         
+        t1 = beam.s[i]/speed_of_light 
+        t2 = beam.s[i + 1]/speed_of_light 
+        
+        t[i] = np.random.uniform(t1, t2, size=int(pack[i])) #TODO:replace by linear splines
+    
+        g1 = beam.E[i]/m_e_GeV
+        g2 = beam.E[i+1]/m_e_GeV
+        
+        #use the inverse function method for generating g distribution on a small segment
+        g[i] = (t[i]-t1)*(g2 - g1)/(t2- t1) + np.random.normal(loc=g1, scale=beam.dg[i], size=int(pack[i])) 
+    
+        x = beam.x[i]
+        xp = beam.xp[i]
+        
+        y = beam.y[i]
+        yp = beam.yp[i]
+        
+        emit_x = beam.emit_x[i]
+        emit_y = beam.emit_y[i]
+        
+        beta_x = beam.beta_x[i]
+        beta_y = beam.beta_y[i]
+        
+        alpha_x = beam.alpha_x[i]
+        alpha_y = beam.alpha_y[i]
+        
+        gamma_x = (1 + alpha_x**2)/beta_x 
+        gamma_y = (1 + alpha_y**2)/beta_y
+        
+        # if dist in ['gaussian', 'g']:
+        mean_x_xp = [x, xp]
+        cov_x_xp = [[emit_x*beta_x, -alpha_x*emit_x],[-alpha_x*emit_x, emit_x*gamma_x]]
+        dist_x[i], dist_xp[i] = np.random.multivariate_normal(mean_x_xp, cov_x_xp, int(pack[i])).T
+        
+        mean_y_yp = [y, yp]
+        cov_y_yp = [[emit_y*beta_y, -alpha_y*emit_y],[-alpha_y*emit_y, emit_y*gamma_y]]
+        dist_y[i], dist_yp[i] = np.random.multivariate_normal(mean_y_yp, cov_y_yp, int(pack[i])).T
+    
+    edist.t = np.concatenate(t)
+    edist.g = np.concatenate(g)
+    edist.x = np.concatenate(dist_x)
+    edist.xp = np.concatenate(dist_xp)
+    edist.y = np.concatenate(dist_y)
+    edist.yp = np.concatenate(dist_yp)     
+       
+    edist.part_charge = beam.charge()/edist.len()
+    return edist
 
 
 # def read_beam_file_out(out, debug=1):

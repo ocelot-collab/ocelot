@@ -255,9 +255,13 @@ def fit_gauss_1d(x,F):
     
     return mu1, np.sqrt(sig1)
 
-def fwhm(x,F):
+def fwhm(x, F, interpolated=1):
     ff = fwhm3(np.array(F), height=0.5, peakpos=-1, total=1)
-    return x[ff[2][1]] - x[ff[2][0]]
+    if interpolated: #TODO:fix and debug
+        dx = (x[ff[2][1]] - x[ff[2][0]]) / (ff[2][1] - ff[2][0])
+        return ff[1] * dx
+    else:
+        return x[ff[2][1]] - x[ff[2][0]]
 #    m = np.max(F) / 2.0
 #    ups = []
 #    downs = []

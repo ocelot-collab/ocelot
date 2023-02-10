@@ -1470,11 +1470,11 @@ class WignerDistribution():
     def eval(self, method='mp'):
         n_events = len(self.field_stat)
         _logger.info('evaluating wigner distribution from {:} event(s)'.format(n_events))
-        # from ocelot.utils.xfel_utils import calc_wigner
+        # from ocelot.utils.xfel_utils import field2wigner
         ds = self.s[1] - self.s[0]
-        # self.wig = calc_wigner(self.field, method=method, debug=1)
+        # self.wig = field2wigner(self.field, method=method, debug=1)
         # if self.field_stat != []:
-        self.wig_stat = [calc_wigner(field, method=method, debug=1) for field in self.field_stat]
+        self.wig_stat = [field2wigner(field, method=method, debug=1) for field in self.field_stat]
         if self.domain in ['s', 'x', 'y']:
             self.k = np.linspace(-np.pi / ds, np.pi / ds, len(self.s))
         elif self.domain in ['t', 'z']:
@@ -3404,14 +3404,14 @@ def save_trf(trf, attr, flePath):
     f.close()
 
 
-def calc_wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1):
+def field2wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1):
     """
     calculation of the Wigner distribution
     input should be an amplitude and phase of the radiation as list of complex numbers with length N
     output is a real value of wigner distribution
     """
 
-    _logger.debug('calc_wigner start')
+    _logger.debug('field2wigner start')
 
     N0 = len(field)
 
@@ -3644,7 +3644,7 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1, on_axi
         field = np.sqrt(power[zi, :, i]) * np.exp(1j * out_stat.phi_mid[zi, :, i])
         if pad > 1:
             field = np.concatenate([np.zeros(n_add_l), field, np.zeros(n_add_r)])
-        WW[i, :, :] = calc_wigner(field, method=method, debug=debug, **kwargs)
+        WW[i, :, :] = field2wigner(field, method=method, debug=debug, **kwargs)
     wig = WignerDistribution()
     wig.wig = np.mean(WW, axis=0)
     wig.wig_stat = WW

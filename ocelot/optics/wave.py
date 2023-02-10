@@ -1415,6 +1415,12 @@ class WignerDistribution():
     
     def __getitem__(self, i):
         return self.wig_stat[i]
+        
+    def append_wig(self, wig):
+        self.wig_stat.append(wig.wig)
+        
+    def append_field(self, field):
+        self.field_stat.append(field)
     
     def proj_s(self):
         # real space projection
@@ -3541,8 +3547,10 @@ def wigner_out(out, z=inf, method='mp', pad=1, debug=1, on_axis=1):
 
     return wig
 
+def wigner_dfl(*args,**kwargs):
+    return dfl2wig(*args,**kwargs)
 
-def wigner_dfl(dfl, method='mp', pad=1, **kwargs):
+def dfl2wig(dfl, method='mp', pad=1, domain='t', **kwargs):
     """
     returns on-axis WignerDistribution from dfl file
     """
@@ -3552,7 +3560,7 @@ def wigner_dfl(dfl, method='mp', pad=1, **kwargs):
 
     _logger.info('calculating Wigner distribution from dfl (on-axis fillament)')
     start_time = time.time()
-    domain = kwargs.get('domain', 't')
+    # domain = kwargs.get('domain', 't')
     
     #TODO: change dfl slice according to domain
     if domain == 't':
@@ -3573,7 +3581,7 @@ def wigner_dfl(dfl, method='mp', pad=1, **kwargs):
 
     if pad > 1:
         wig = wigner_pad(wig, pad)
-    #wig.domain = domain
+    wig.domain = domain
     wig.eval(method)  # calculate wigner parameters based on its attributes
 
     _logger.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))

@@ -714,9 +714,22 @@ def plot_two_dfls(dfl_first, dfl_second, domains='s', label_first=None, label_se
         plt.close(fig)   
     _logger.info(ind_str + 'plotting two dfls done in {:.2f} seconds'.format(time.time() - start_time))
 
-def plot_wigner(*args,**kwargs):
-    _logger.warning('plotting wigner for time-frequency domain migrated to plot_wigner_z')
-    return plot_wigner_z(*args,**kwargs)
+def plot_wigner(wig_or_out, *args,**kwargs):
+    '''
+    calls plot_wigner_z or plot_wigner_u depending on domain in the wigner
+    '''
+    if not hasattr(wig_or_out, 'wig'):
+        if hasattr(wig_or_out, 'calc_radsize'):
+            return plot_wigner_z(wig_or_out, *args,**kwargs)
+        else:
+            raise ValueError('Unknown object for Wigner plot')
+    else: #temp. maybe will merge the two functions
+        if wig_or_out.domain in ['t', 'z']:
+            return plot_wigner_z(wig_or_out, *args,**kwargs)
+        elif wig_or_out.domain in ['s', 'x', 'y']:
+            return plot_wigner_u(wig_or_out, *args,**kwargs)
+        else: 
+            raise ValueError('Unknown domain for Wigner plot')
 
 @if_plottable
 def plot_wigner_z(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, None), y_lim=(None, None), v_lim=(None, None), downsample=1,
@@ -1049,6 +1062,9 @@ def plot_wigner_u(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,
         W = wig_or_out
     else:
         raise ValueError('Unknown object for Wigner plot')
+    
+    #enforce real value:
+    # W.wig = np.abs(W.wig)
     
     if fig_name is None:
         if W.fileName() == '':

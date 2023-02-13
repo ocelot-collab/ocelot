@@ -648,9 +648,9 @@ def mprefix(value, order_bias=0.05, apply=1):
     
     else:
         if not np.isscalar(value):
-            order = np.floor(np.log10(np.nanmax(value)) / 3 + order_bias) * 3
+            order = np.floor(np.log10(np.nanmax(np.abs(value))) / 3 + order_bias) * 3
         else:
-            order = np.floor(np.log10(value) / 3 + order_bias) * 3
+            order = np.floor(np.log10(np.abs(value)) / 3 + order_bias) * 3
         if order < prefix_range[0]:
             order = prefix_range[0]
         if order > prefix_range[1]:

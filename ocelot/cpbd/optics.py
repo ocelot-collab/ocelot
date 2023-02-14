@@ -97,7 +97,7 @@ def lattice_transfer_map(lattice, energy):
 def trace_z(lattice, obj0, z_array):
     """
     Z-dependent tracer (twiss(z) and particle(z))
-    usage: twiss = trace_z(lattice,twiss_0, [1.23, 2.56, ...]) ,
+    usage: twiss = trace_z(lattice, twiss_0, [1.23, 2.56, ...]) ,
     to calculate Twiss params at 1.23m, 2.56m etc.
     """
     obj_list = []
@@ -124,7 +124,7 @@ def trace_z(lattice, obj0, z_array):
     return obj_list
 
 
-def trace_obj(lattice, obj, nPoints=None):
+def trace_obj(lattice, obj, nPoints=None, attach2elem=False):
     """
     track object through the lattice
     obj must be Twiss or Particle
@@ -137,6 +137,8 @@ def trace_obj(lattice, obj, nPoints=None):
                 obj = tm * obj
                 obj.id = e.id
                 obj_list.append(obj)
+            if attach2elem:
+                e.tws = obj
     else:
         z_array = np.linspace(0, lattice.totalLen, nPoints, endpoint=True)
         obj_list = trace_z(lattice, obj, z_array)
@@ -181,10 +183,13 @@ def periodic_twiss(tws, R):
     return tws
 
 
-def twiss(lattice, tws0=None, nPoints=None, return_df=False):
+def twiss(lattice, tws0=None, nPoints=None, return_df=False, attach2elem=False):
     """
     twiss parameters calculation
 
+    :param attach2elem: if True and nPoints=None Twiss will be attached to elem.tws, Twiss corresponds to the end of the element,
+                        not recommended for standard use, but may be handy for small scripts
+    :param return_df:
     :param lattice: lattice, MagneticLattice() object
     :param tws0: initial twiss parameters, Twiss() object. If None, function tries to find periodic solution.
     :param nPoints: number of points per cell. If None, then twiss parameters are calculated at the end of each element.
@@ -204,7 +209,7 @@ def twiss(lattice, tws0=None, nPoints=None, return_df=False):
             tws0.gamma_x = (1. + tws0.alpha_x ** 2) / tws0.beta_x
             tws0.gamma_y = (1. + tws0.alpha_y ** 2) / tws0.beta_y
 
-        twiss_list = trace_obj(lattice, tws0, nPoints)
+        twiss_list = trace_obj(lattice, tws0, nPoints, attach2elem)
 
         if return_df:
             twiss_list = twiss_iterable_to_df(twiss_list)

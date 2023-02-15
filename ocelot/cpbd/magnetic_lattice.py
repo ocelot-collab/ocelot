@@ -351,11 +351,11 @@ class MagneticLattice:
                 x0 += e.l * np.sin(ang_x)
                 y0 += e.l * np.sin(ang_y)
                 z0 += e.l * np.cos(np.sqrt(ang_x ** 2 + ang_y ** 2))
-        x.append(x0)
-        y.append(y0)
-        z.append(z0)
-        a_x.append(ang_x)
-        a_y.append(ang_y)
+            x.append(x0)
+            y.append(y0)
+            z.append(z0)
+            a_x.append(ang_x)
+            a_y.append(ang_y)
         return x, y, z, a_x, a_y
 
 

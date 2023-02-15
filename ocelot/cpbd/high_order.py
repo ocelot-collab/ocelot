@@ -957,7 +957,7 @@ def rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=0.):
                 [x0, x0'=dx/dz, y0, y0=dy/dz, 0, dE0/pc,
                 x1, x1', y1, y1', 0, dE1/pc, ...
                 xn, xn', yn, yn', 0, dEn/pc]
-    :param s_stop: longitudinal coordinate of stop
+    :param s_stop: z - longitudinal coordinate of end of RK tracking
     :param N: number of steps
     :param energy: energy of particle in [GeV]
     :param mag_field: function. Bx, By, Bz = mag_field(X, Y, Z)

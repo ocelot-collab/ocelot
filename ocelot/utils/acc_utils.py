@@ -4,7 +4,7 @@ __author__ = 'Sergey Tomin'
 from typing import List, Dict, Type, Callable, Tuple, Union, Any
 import numpy as np
 from scipy.integrate import simps
-from ocelot.common.globals import speed_of_light
+from ocelot.common.globals import speed_of_light, Z0, m_e_GeV
 from ocelot.cpbd.beam import s_to_cur
 from ocelot.cpbd.beam import Twiss
 
@@ -292,3 +292,203 @@ def rf2beam_xfel_linac(v, phi, init_energy=0.13):
     sum_voltage = E1 - init_energy
     return sum_voltage, chirp
 
+
+def single_plane_dipole_wake(p=0.5e-3, t=0.25e-3, b=500e-6, l=5):
+    """
+    Function calculates dipole (monopole) wake for single plane corrugated structure. Default parameters are taken
+    for EuXFEL diagnostic streaker https://www.slac.stanford.edu/pubs/slacpubs/16750/slac-pub-16881.pdf
+    Coefficient for s0yd is corrected by I.Zagorodnov 8/9 -> 1/2
+
+    :param l: 5, corrugated plane length in m
+    :param p: 0.5e-3  # period in m
+    :param t: 0.25e-3  # Longitudinal gap im m
+    :param b: 250e-6  # Distance from the plate im m
+    :return: wake in V/Q
+    """
+
+    alpha = 1 - 0.465 * np.sqrt(t / p) - 0.070 * (t / p)
+    s0yd = b ** 2 * t / (2 * np.pi * alpha ** 2 * p ** 2)
+    wyd = lambda s: l * 2. / b ** 3 * s0yd * (
+                1 - (1 + np.sqrt(s / s0yd)) * np.exp(-np.sqrt(s / s0yd))) * Z0 * speed_of_light / (4 * np.pi)
+
+    return wyd
+
+
+def single_plate_quadrupole_wake(p=0.5e-3, t=0.25e-3, b=500e-6, l=5):
+    """
+    Function calculates quadrupole wake for single plane corrugated structure. Default parameters are taken for EuXFEL
+    diagnostic streaker https://www.slac.stanford.edu/pubs/slacpubs/16750/slac-pub-16881.pdf
+    Coefficient for s0yq is corrected by I.Zagorodnov 8/9 -> 1/2
+
+    :param l: corrugated plane length in m
+    :param p: 0.5e-3  # period
+    :param t: 0.25e-3  # Longitudinal gap
+    :param b: 250e-6  # Distance from the plate
+    :return: wake in V/Q
+    """
+
+    alpha = 1 - 0.465 * np.sqrt(t / p) - 0.070 * (t / p)
+    s0yq = b ** 2 * t / (2 * np.pi * alpha ** 2 * p ** 2)
+    wyq = lambda s: l * 3. / b ** 4 * s0yq * (
+                1 - (1 + np.sqrt(s / s0yq)) * np.exp(-np.sqrt(s / s0yq))) * Z0 * speed_of_light / (4 * np.pi)
+
+    return wyq
+
+
+def convolve_beam(current, wake):
+    """
+    Function to convolve wake with beam current
+
+    :param current: current[:, 0] - s in [m], current[:, 1] - current in [A]. The beam head is on the left
+    :param wake: wake function in form: wake(s)
+    :return: wake_kick[:, 0] - s in [m], wake_kick[:, 1] - V
+    """
+    s_shift = current[0, 0]
+    current[:, 0] -= s_shift
+    s = current[:, 0]
+    step = (s[-1] - s[0]) / (len(s) - 1)
+
+    q = current[:, 1] / speed_of_light
+
+    w = np.array([wake(si) for si in s]).flatten()
+
+    wake = np.convolve(q, w) * step
+    s_new = (np.cumsum(np.ones(len(wake))) - 1.) * step
+    wake_kick = np.vstack((s_new, wake))
+    return wake_kick.T
+
+
+def passive_streaker_resolutions(dipole_kick, quad_kick, R, tw, kick="vert", emittn_x=1e-6, emittn_y=1e-6, energy=14, sigma_R=30e-6):
+    """
+    Function to calculate time and energy resolution
+    Example to use:
+    I = self.get_current(num=50)
+    R = self.R_matrix
+    distance = 500e-6  # m
+    wyd = recon.chirper_dipole_wake(p=0.5e-3, t=0.25e-3, b=distance, l=6)
+    wyq = recon.chirper_quadrupole_wake(p=0.5e-3, t=0.25e-3, b=distance)
+
+    quad_kick = recon.convolve_beam(I, wyq)
+    dipole_kick = recon.convolve_beam(I, wyd)
+    tw = self.tws_chirper
+    r_temp, r_energy, sigma_x2, sigma_y2 = recon.calculate_resolutions(dipole_kick, quad_kick, R, tw, sigma_R, chirper_len,
+                                                                   energy, emitt_x, emitt_y)
+
+    :param kick:
+    :param dipole_kick: dipole wake kick, example dipole_kick = convolve_beam(current, single_plane_dipole_wake(...))
+    :param quad_kick: quad wake kick, example quad_kick = convolve_beam(current, single_plane_quad_wake(...))
+    :param R: R-Matrix lattice between a passive streaker and a screen
+    :param tw: Twiss parameters at a passive streaker position
+    :param emittn_x: normalized emittance in horizontal plane
+    :param emittn_y: normalized emittance in vertical plane
+    :param energy: beam energy in GeV
+    :param sigma_R: Resolution of the screen
+    :return:
+
+    Examples
+    --------
+    from ocelot import *
+    from ocelot.gui import *
+    from ocelot.utils.acc_utils import *
+    from lattice import sase2
+    from lattice import t3_bump_fin as t3
+
+
+    lat = MagneticLattice(sase2.cell + t3.cell, stop=t3.otrb_2560_t3)
+    B, R, T = lat.transfer_maps(energy=14, start=t3.ws_center, stop=t3.otrb_2560_t3)
+
+    tws = twiss(lat, sase2.tws, attach2elem=True)
+
+    distance = 500e-6
+
+    tw = t3.ws_center.tws
+    parray = generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_tau=1e-3/200, sigma_p=1e-4, chirp=0.00, charge=250e-12,
+                    nparticles=200000, energy=14, tws=tw, shape="gauss")
+
+    I = parray.I()
+
+    wyd = single_plane_dipole_wake(p=0.5e-3, t=0.25e-3, b=distance, l=5)
+    wyq = single_plate_quadrupole_wake(p=0.5e-3, t=0.25e-3, b=distance, l=5)
+
+    quad_kick = convolve_beam(I, wyq)
+    dipole_kick = convolve_beam(I, wyd)
+
+    r_temp, r_energy, sigma_x2, sigma_y2 = calculate_resolutions(dipole_kick, quad_kick, R, tw, kick="vert", emittn_x=0.6e-6,
+                                                                 emittn_y=0.6e-6, energy=14, sigma_R=30e-6)
+
+    fig1, ax1 = plt.subplots()
+    fig1.suptitle("time resolution")
+    color = 'tab:red'
+    ax1.set_xlabel('s [mm]')
+    ax1.set_ylabel('R(s) [fs]', color=color)
+    ax1.plot(r_temp[:, 0]* 1000, r_temp[:, 1]/speed_of_light*1e15, "r-")
+    ax1.set_ylim([0, 50])
+    ax1.set_xlim([I[0, 0] * 1000, I[-1, 0] * 1000])
+
+    ax2 = ax1.twinx()
+    color = 'tab:blue'
+    ax2.set_ylabel('I [kA]', color=color)  # we already handled the x-label with ax1
+    ax2.plot(I[:, 0] * 1000, I[:, 1] / 1000, color=color)
+    ax2.tick_params(axis='y', labelcolor=color)
+    ax1.set_xlim([I[0, 0] * 1000, I[-1, 0] * 1000])
+
+
+    fig2, ax1 = plt.subplots()
+    fig2.suptitle("energy resolution")
+    color = 'tab:red'
+    ax1.set_xlabel('s [mm]')
+    ax1.set_ylabel('R(s) [MV]', color=color)
+    ax1.plot(r_energy[:, 0]* 1000, r_energy[:, 1]*1e-6, "r-")
+    ax1.tick_params(axis='y', labelcolor=color)
+    ax1.set_ylim([0, 5])
+    ax1.set_xlim([I[0, 0] * 1000, I[-1, 0] * 1000])
+
+    ax2 = ax1.twinx()
+    color = 'tab:blue'
+    ax2.set_ylabel('I [kA]', color=color)  # we already handled the x-label with ax1
+    ax2.plot(I[:, 0] * 1000, I[:, 1] / 1000, color=color)
+    ax2.tick_params(axis='y', labelcolor=color)
+    ax1.set_xlim([I[0, 0] * 1000, I[-1, 0] * 1000])
+
+    plt.show()
+
+    """
+    gamma = energy / m_e_GeV
+    emitt_x = emittn_x/gamma
+    emitt_y = emittn_y/gamma
+    energy_eV = energy * 1e9
+    wq = quad_kick[:, 1] / energy_eV
+    wd = dipole_kick[:, 1] / energy_eV
+    ds = dipole_kick[1, 0] - dipole_kick[0, 0]
+    wdp = np.gradient(wd, ds)
+
+    if kick == "vert":
+        sigma_y2 = emitt_y * (
+                R[2, 3] ** 2 * wq ** 2 * tw.beta_y + 2 * R[2, 3] * wq * (R[2, 2] * tw.beta_y - R[2, 3] * tw.alpha_y) +
+                (R[2, 2] * tw.beta_y - R[2, 3] * tw.alpha_y) ** 2 / tw.beta_y + R[2, 3] ** 2 / tw.beta_y)
+
+        dy_ds = R[2, 3] * wdp
+        r_temp = np.sqrt(sigma_R ** 2 + sigma_y2) / np.abs(dy_ds)
+
+        # ENERGY RESOLUTION
+        sigma_x2 = emitt_x * ((R[0, 0] - R[0, 1] * wq) ** 2 * tw.beta_x -
+                          2 * R[0, 1] * (R[0, 0] - R[0, 1] * wq) * tw.alpha_y + R[0, 1] ** 2 * tw.gamma_x)
+
+        r_energy = energy_eV / R[0, 5] * np.sqrt(sigma_R ** 2 + np.abs(sigma_x2))
+    else:
+        sigma_x2 = emitt_x * (R[0, 1] ** 2 * wq ** 2 * tw.beta_x + 2 * R[0, 1] * wq * (
+                    R[0, 0] * tw.beta_x - R[0, 1] * tw.alpha_x) +
+                              (R[0, 0] * tw.beta_x - R[0, 1] * tw.alpha_x) ** 2 / tw.beta_x + R[0, 1] ** 2 / tw.beta_x)
+
+        dy_ds = R[0, 1] * wdp
+        r_temp = np.sqrt(sigma_R ** 2 + sigma_x2) / np.abs(dy_ds)
+
+        # ENERGY RESOLUTION
+        sigma_y2 = emitt_y * ((R[2, 2] - R[2, 3] * wq) ** 2 * tw.beta_x -
+                          2 * R[2, 3] * (R[2, 2] - R[2, 3] * wq) * tw.alpha_y + R[2, 3] ** 2 * tw.gamma_x)
+
+        r_energy = energy_eV / R[0, 5] * np.sqrt(sigma_R ** 2 + np.abs(sigma_y2))
+
+    r_temp = np.vstack([quad_kick[:, 0], r_temp]).T
+    r_energy = np.vstack([quad_kick[:, 0], r_energy]).T
+    return r_temp, r_energy, sigma_x2, sigma_y2

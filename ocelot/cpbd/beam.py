@@ -1068,6 +1068,10 @@ class ParticleArray:
         return tws
 
     def I(self):
+        """
+        simple function to calculate current profile form the beam distribution.
+        :return: np.array(Nx2), where s = B[:, 0], I = B[:, 1]
+        """
         sigma = np.std(self.tau())/10.
         q0 = np.sum(self.q_array)
         relgamma = self.E / m_e_GeV

@@ -8,8 +8,9 @@ from ocelot.cpbd.beam import (cov_matrix_from_twiss,
                               Twiss,
                               twiss_iterable_to_df,
                               generate_parray,
+                              s_to_cur,
                               )
-from ocelot.common.globals import m_e_GeV
+from ocelot.common.globals import m_e_GeV, speed_of_light
 
 # ex=1.858178000891106e-11,
 # ey=1.858178000891106e-11,
@@ -159,3 +160,29 @@ def test_get_twiss_from_slice():
     assert np.isclose([tws0.beta_x, tws0.beta_y, tws0.alpha_x, tws0.alpha_y, tws0.gamma_x, tws0.gamma_y, tws0.emit_x, tws0.emit_y, tws0.E],
                       [tws1.beta_x, tws1.beta_y, tws1.alpha_x, tws1.alpha_y, tws1.gamma_x, tws1.gamma_y, tws1.emit_x, tws1.emit_y, tws1.E],
                       rtol=1e-02, atol=1e-06).all()
+
+def test_parray_I():
+    tws0 = Twiss()
+    tws0.E = 0.5
+    gamma = tws0.E / m_e_GeV
+    tws0.beta_x = 10
+    tws0.beta_y = 15
+    tws0.alpha_x = 5
+    tws0.alpha_y = 2
+    tws0.gamma_x = (1 + tws0.alpha_x ** 2) / tws0.beta_x
+    tws0.gamma_y = (1 + tws0.alpha_y ** 2) / tws0.beta_y
+    tws0.emit_x = 1e-6 / gamma
+    tws0.emit_y = 0.7e-6 / gamma
+
+    parray_init = generate_parray(sigma_tau=0.001, sigma_p=1e-3, charge=250e-12,
+                                  chirp=0, tws=tws0, nparticles=100000)
+    I_p = parray_init.I()
+
+    sigma = np.std(parray_init.tau()) / 10.
+    q0 = np.sum(parray_init.q_array)
+    relgamma = parray_init.E / m_e_GeV
+    relbeta = np.sqrt(1 - relgamma ** -2) if relgamma != 0 else 1.
+    v = relbeta * speed_of_light
+    I = s_to_cur(parray_init.tau(), sigma, q0, v)
+
+    assert np.isclose(I_p, I, rtol=1e-07, atol=1e-10).all()

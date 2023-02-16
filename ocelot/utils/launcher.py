@@ -119,11 +119,11 @@ class MpiLauncher(Launcher):
             command = self.command #command override
         else:
             command = 'mkdir -p '+ self.dir + '; ' + 'cd '+ self.dir + '; '+ "`which mpirun` " + str(self.mpiParameters) + " " + self.program + " " + self.argument
-        _logger.debug(ind_str + 'launcher command "{}"'.format(command))
+        _logger.info(ind_str + 'launcher command "{}"'.format(command))
         # print (command)
         os.system(command)
         t2 = time.time()
-        _logger.debug(ind_str + 'execution time {:} sec'.format(t2 - t1))
+        _logger.info(ind_str + 'execution time {:} sec'.format(t2 - t1))
             
     # collect data to directory
     def collect(self, inputDir, outputDir, pattern = "*"):

@@ -338,7 +338,7 @@ class MagneticLattice:
         a_x = [ang_x]
         a_y = [ang_y]
         for e in self.sequence:
-            if e.__class__ in [Bend, SBend, RBend]:
+            if e.__class__ in [Bend, SBend, RBend] and e.angle != 0.:
                 ang_x += e.angle * 0.5 * np.cos(e.tilt)
                 ang_y += e.angle * 0.5 * np.sin(e.tilt)
                 s = 2 * e.l * np.sin(e.angle * 0.5) / e.angle

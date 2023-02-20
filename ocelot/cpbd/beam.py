@@ -1067,6 +1067,19 @@ class ParticleArray:
 
         return tws
 
+    def I(self):
+        """
+        simple function to calculate current profile form the beam distribution.
+        :return: np.array(Nx2), where s = B[:, 0], I = B[:, 1]
+        """
+        sigma = np.std(self.tau())/10.
+        q0 = np.sum(self.q_array)
+        relgamma = self.E / m_e_GeV
+        relbeta = np.sqrt(1 - relgamma ** -2) if relgamma != 0 else 1.
+        v = relbeta*speed_of_light
+        B = s_to_cur(self.tau(), sigma, q0, v)
+        return B
+
 
 def recalculate_ref_particle(p_array):
     pref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV

@@ -1,3 +1,4 @@
+from ocelot.cpbd.elements.optic_element import OpticElement
 from ocelot.cpbd.elements.element import Element
 from ocelot.cpbd.elements.marker import Marker
 from ocelot.cpbd.elements.drift import Drift
@@ -16,7 +17,7 @@ from ocelot.cpbd.tm_utils import transfer_maps_mult
 import logging
 import re
 from collections import defaultdict
-from typing import Mapping, Sequence, Tuple, Callable, Any, Generator, Iterator
+from typing import Mapping, Sequence, Tuple, Callable, Any, Generator, Iterator, Type
 import numpy as np
 
 _logger = logging.getLogger(__name__)
@@ -168,7 +169,7 @@ class MagneticLattice:
         Sets for all elements SecondTM as transfer map, expect for the Undulator elements.
     """
 
-    def __init__(self, sequence, start=None, stop=None, method=None):
+    def __init__(self, sequence, start: Type[OpticElement] = None, stop: Type[OpticElement] = None, method=None):
         if method is None:
             method = {'global': TransferMap}
         if isinstance(method, dict):
@@ -188,7 +189,7 @@ class MagneticLattice:
         for e in self.sequence:
             self.__hash__[e] = e
 
-    def get_sequence_part(self, start, stop):
+    def get_sequence_part(self, start: Type[OpticElement], stop: Type[OpticElement]):
         try:
             if start is not None:
                 id1 = self.sequence.index(start)
@@ -293,20 +294,24 @@ class MagneticLattice:
         LatticeIO.save_lattice(self, tws0=tws0, file_name=file_name, remove_rep_drifts=remove_rep_drifts,
                                power_supply=power_supply)
 
-    def transfer_maps(self, energy, output_at_each_step: bool = False):
+    def transfer_maps(self, energy, output_at_each_step: bool = False, start: Type[OpticElement] = None,
+                      stop: Type[OpticElement] = None):
         """
         Function calculates transfer maps, the first and second orders (R, T), for the whole lattice.
 
+        :param start:
+        :param stop:
         :param energy: the initial electron beam energy [GeV]
         :param output_at_each_step: return three list of matrices [Bs], [Rs], [Ts] after each element in the line
         :return: B, R, T - matrices
         """
+        sequence = self.get_sequence_part(start, stop)
         Ra = np.eye(6)
         Ta = np.zeros((6, 6, 6))
         Ba = np.zeros((6, 1))
         Bs, Rs, Ts = [], [], []
         E = energy
-        for elem in self.sequence:
+        for elem in sequence:
             for Rb, Bb, Tb, tm in zip(elem.R(E), elem.B(E), elem.T(E), elem.tms):
                 Ba, Ra, Ta = transfer_maps_mult(Ba, Ra, Ta, Bb, Rb, Tb)
                 E += tm.get_delta_e()
@@ -316,6 +321,42 @@ class MagneticLattice:
         if output_at_each_step:
             return Bs, Rs, Ts
         return Ba, Ra, Ta
+
+    def survey(self, x0=0, y0=0, z0=0, ang_x=0.0, ang_y=0.0):
+        """
+        Function calculates coordinates in rectangular coordinates system at the beginning of each element in lattice
+        :param x0: 0, initial offset in x direction
+        :param y0: 0, initial offset in y direction
+        :param z0: 0, initial offset in z direction
+        :param ang_x: 0, initial angel in horizontal plane
+        :param ang_y: 0, initial angel in vertical plane
+        :return: x, y, z, a_x, a_y - lists of coordinates
+        """
+        x = [x0]
+        y = [y0]
+        z = [z0]
+        a_x = [ang_x]
+        a_y = [ang_y]
+        for e in self.sequence:
+            if e.__class__ in [Bend, SBend, RBend] and e.angle != 0.:
+                ang_x += e.angle * 0.5 * np.cos(e.tilt)
+                ang_y += e.angle * 0.5 * np.sin(e.tilt)
+                s = 2 * e.l * np.sin(e.angle * 0.5) / e.angle
+                x0 += s * np.sin(ang_x)
+                y0 += s * np.sin(ang_y)
+                z0 += s * np.cos(np.sqrt(ang_x ** 2 + ang_y ** 2))
+                ang_x += e.angle * 0.5 * np.cos(e.tilt)
+                ang_y += e.angle * 0.5 * np.sin(e.tilt)
+            else:
+                x0 += e.l * np.sin(ang_x)
+                y0 += e.l * np.sin(ang_y)
+                z0 += e.l * np.cos(np.sqrt(ang_x ** 2 + ang_y ** 2))
+            x.append(x0)
+            y.append(y0)
+            z.append(z0)
+            a_x.append(ang_x)
+            a_y.append(ang_y)
+        return x, y, z, a_x, a_y
 
 
 class EndElements:

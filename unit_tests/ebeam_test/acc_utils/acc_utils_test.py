@@ -71,6 +71,77 @@ def test_rf2beam(lattice, p_array, parameter=None, update_ref_values=False):
     assert check_result([r1, r2, r3, r4])
 
 
+def test_single_plane_dipole_wake(lattice, p_array, parameter=None, update_ref_values=False):
+
+    wq = single_plane_dipole_wake(p=0.5e-3, t=0.25e-3, b=500e-6, l=5)
+
+    s = np.linspace(0, 50e-6, num=20)
+    W = np.array([[wq(si) for si in s]])
+    if update_ref_values:
+        return numpy2json(W)
+
+    W_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json'))
+
+    result = check_matrix(W, W_ref, tolerance=1.0e-10, tolerance_type='absolute',
+                          assert_info=' dipole wake - ')
+    assert check_result(result)
+
+def test_single_plane_quad_wake(lattice, p_array, parameter=None, update_ref_values=False):
+
+    wq = single_plate_quadrupole_wake(p=0.5e-3, t=0.25e-3, b=500e-6, l=5)
+
+    s = np.linspace(0, 50e-6, num=20)
+    W = np.array([[wq(si) for si in s]])
+    if update_ref_values:
+        return numpy2json(W)
+
+    W_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json'))
+
+    result = check_matrix(W, W_ref, tolerance=1.0e-10, tolerance_type='absolute',
+                          assert_info=' quad wake - ')
+    assert check_result(result)
+
+def test_resolution(lattice, p_array, parameter=None, update_ref_values=False):
+    R = np.array([[0.236135, -6.412734, 0.000000, 0.000000, 0.000000, 0.380000],
+                  [0.133821, 0.600669, 0.000000, 0.000000, 0.000000, 0.080015],
+                  [0.000000, 0.000000, 0.938983, -35.735219, 0.000000, 0.000000],
+                  [0.000000, 0.000000, -0.031794, 2.274971, 0.000000, 0.000000],
+                  [0.031958, 0.741370, 0.000000, 0.000000, 1.000000, -0.000199],
+                  [0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 1.000000]])
+
+    distance = 500e-6
+
+    tw1 = Twiss()
+    tw1.beta_x = 26.384
+    tw1.alpha_x = 0.495
+    tw1.beta_y = 42.413
+    tw1.alpha_y = -1.195
+    parray = generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_tau=1e-3 / 170, sigma_p=1e-4, chirp=0.00,
+                             charge=250e-12,
+                             nparticles=20000, energy=14, tws=tw1, shape="gauss")
+
+    I = parray.I()
+    print(np.shape(I))
+
+    wyd = single_plane_dipole_wake(p=0.5e-3, t=0.25e-3, b=distance, l=5)
+    wyq = single_plate_quadrupole_wake(p=0.5e-3, t=0.25e-3, b=distance, l=5)
+
+    quad_kick = convolve_beam(I, wyq)
+    dipole_kick = convolve_beam(I, wyd)
+
+    r_temp, r_energy, sigma_x2, sigma_y2 = passive_streaker_resolutions(dipole_kick, quad_kick, R, tw1, kick="vert",
+                                                                 emittn_x=0.6e-6,
+                                                                 emittn_y=0.6e-6, energy=14, sigma_R=30e-6)
+    R = r_temp[::10,:]
+    if update_ref_values:
+        return numpy2json(R)
+
+    R_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json'))
+
+    result = check_matrix(R, R_ref, tolerance=1.0e-10, tolerance_type='absolute',
+                          assert_info=' temp res - ')
+    assert check_result(result)
+
 
 def setup_module(module):
 
@@ -106,6 +177,9 @@ def test_update_ref_values(lattice, p_array, cmdopt):
     
     update_functions = []
     update_functions.append('test_lattice_transfer_map')
+    update_functions.append('test_single_plane_dipole_wake')
+    update_functions.append('test_single_plane_quad_wake')
+    update_functions.append("test_resolution")
 
     update_function_parameters = {}
 

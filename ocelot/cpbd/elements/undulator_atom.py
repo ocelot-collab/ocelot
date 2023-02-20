@@ -39,11 +39,13 @@ def und_field_py(x, y, z, lperiod, Kx, nperiods=None):
 
     if nperiods is not None:
         ph_shift = np.pi / 2.
+
         def heaviside(x): return 0.5 * (np.sign(x) + 1)
+
         z_coef = (0.25 * heaviside(z) + 0.5 * heaviside(z - lperiod / 2.) + 0.25 * heaviside(z - lperiod)
                   - 0.25 * heaviside(z - (nperiods - 1) * lperiod) - 0.5 * heaviside(
-            z - (nperiods - 0.5) * lperiod)
-            - 0.25 * heaviside(z - nperiods * lperiod))
+                    z - (nperiods - 0.5) * lperiod)
+                  - 0.25 * heaviside(z - nperiods * lperiod))
         cosz = np.cos(kz_z + ph_shift) * z_coef
 
     cosx = np.cos(kx_x)
@@ -134,7 +136,7 @@ class UndulatorAtom(Element):
         B = self._default_B(R)
         return FirstOrderParams(R, B, self.tilt)
 
-    def create_runge_kutta_main_params(self):
+    def create_runge_kutta_main_params(self, energy):
         return RungeKuttaParams(mag_field=lambda x, y, z: und_field(x, y, z, self.lperiod, self.Kx))
 
     def und_field(self):

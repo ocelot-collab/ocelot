@@ -29,6 +29,32 @@ def test_original_lattice_transfer_map(lattice, tws0, method, parameter=None, up
     assert check_result(result)
 
 
+def test_lattice_transfer_map_part(lattice, tws0, method, parameter=None, update_ref_values=False):
+    """R maxtrix calculation test"""
+
+    _, r_matrix, _ = lattice.transfer_maps(energy=0.13, start=CIY_51_I1, stop=CIX_83_I1)
+
+    if update_ref_values:
+        return numpy2json(r_matrix)
+
+    r_matrix_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json'))
+
+    result = check_matrix(r_matrix, r_matrix_ref, TOL, assert_info=' r_matrix - ')
+    assert check_result(result)
+
+def test_lattice_survey(lattice, tws0, method, parameter=None, update_ref_values=False):
+    """R maxtrix calculation test"""
+
+    x, y, z, _, _ = lattice.survey()
+    xyz = np.vstack([x,y,z])
+    if update_ref_values:
+        return numpy2json(xyz)
+
+    xyz_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json'))
+
+    result = check_matrix(xyz, xyz_ref, TOL, assert_info=' r_matrix - ')
+    assert check_result(result)
+
 def test_lattice_save_as_py_file(lattice, tws0, method, parameter=None, update_ref_values=False):
     """R maxtrix calculation test"""
 
@@ -495,6 +521,8 @@ def test_update_ref_values(lattice, tws0, method, cmdopt):
     
     update_functions = []
     update_functions.append('test_original_lattice_transfer_map')
+    update_functions.append('test_lattice_transfer_map_part')
+    update_functions.append("test_lattice_survey")
     update_functions.append('test_original_twiss')
     update_functions.append("test_lattice_transfer_maps_check")
     

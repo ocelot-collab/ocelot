@@ -2,9 +2,10 @@
 Utils for creating closed bumps in both planes and convert the correctors to dipoles
 S.Tomin, DESY, 11.2020
 """
-from typing import Union, List
+from typing import Union, List, Type
 import numpy as np
 import copy
+from ocelot.cpbd.elements.optic_element import OpticElement
 from ocelot.cpbd.elements import Element, Monitor, Marker, Hcor, Vcor, Bend
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.cpbd.optics import lattice_transfer_map
@@ -12,7 +13,7 @@ from ocelot.cpbd.beam import Particle
 from ocelot.cpbd.track import lattice_track
 
 
-def bump_4cors(lat: MagneticLattice, cor_list: List[Element], marker: Union[Marker, Monitor],
+def bump_4cors(lat: MagneticLattice, cor_list: List[Union[Hcor, Vcor]], marker: Union[Marker, Monitor],
                     x: float = 0.0001, xp: float = 0., energy: float = 14.) -> np.array:
     """
     Bump with 4 correctors.
@@ -77,9 +78,9 @@ def bump_4cors(lat: MagneticLattice, cor_list: List[Element], marker: Union[Mark
     return a
 
 
-def convert_cors2dipoles(lat: MagneticLattice, cor_list: List[Element], energy: float = 10.) -> MagneticLattice:
+def convert_cors2dipoles(lat: MagneticLattice, cor_list: List[Union[Hcor, Vcor]], energy: float = 10.) -> MagneticLattice:
     """
-    Function converts correctors with non zero angles to dipoles
+    Function converts correctors with nonzero angles to dipoles
 
     :param lat: MagneticLattice
     :param cor_list: list of correctors

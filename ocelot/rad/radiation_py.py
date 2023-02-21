@@ -22,7 +22,7 @@ from ocelot.cpbd.elements.undulator_atom import und_field
 from ocelot.cpbd.elements import Undulator
 from ocelot.cpbd.high_order import rk_track_in_field
 from ocelot.cpbd import track
-from ocelot.cpbd import optics
+from ocelot.cpbd.navi import Navigator
 from ocelot.cpbd import beam
 import ocelot.cpbd.magnetic_lattice as mlattice
 
@@ -684,7 +684,7 @@ def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy
             if len(non_u) != 0:
                 lat_el = mlattice.MagneticLattice(non_u)
                 if lat_el.totalLen != 0:
-                    navi = optics.Navigator(lat)
+                    navi = Navigator(lat)
 
                     N = int((lat_el.totalLen * 2000 + 150) * accuracy)
                     u = np.zeros((N * 9, np.shape(p_array.rparticles)[1]))

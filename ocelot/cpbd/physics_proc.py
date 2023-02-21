@@ -1,11 +1,12 @@
 from ocelot.cpbd.io import save_particle_array
-from ocelot.common.globals import *
-import numpy as np
+from ocelot.common.globals import h_eV_s, m_e_eV, m_e_GeV, ro_e, speed_of_light
 from ocelot.cpbd.beam import Twiss, beam_matching
-from scipy import optimize
 from ocelot.utils.acc_utils import slice_bunching
 from ocelot.common.ocelog import *
 from ocelot.cpbd.beam import ParticleArray
+
+import numpy as np
+from scipy import optimize
 
 _logger = logging.getLogger(__name__)
 
@@ -533,7 +534,7 @@ class SpontanRadEffects(PhysProc):
         k = 2 * np.pi / lperiod
 
         lambda_compt = h_eV_s / m_e_eV * speed_of_light  # m
-        lambda_compt_r = lambda_compt / 2. / pi
+        lambda_compt_r = lambda_compt / 2. / np.pi
         if type == "helical":
             f = lambda K: 1.42 * K + 1. / (1 + 1.5 * K + 0.95 * K * K)
         else:
@@ -633,3 +634,4 @@ class LatticeEnergyProfile(PhysProc):
         p_new = (p_old * p0c_old + Eref_old - self.Eref) / p0c_new
         p_array.E = self.Eref
         p_array.p()[:] = p_new[:]
+

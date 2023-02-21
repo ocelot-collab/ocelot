@@ -5,8 +5,8 @@ import pytest
 
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.cpbd.transformations import SecondTM
-from ocelot.cpbd.optics import Navigator
 from ocelot.cpbd.track import ParameterScanner
+from ocelot.cpbd.navi import Navigator
 from ocelot.cpbd.io import ParameterScanFile
 from ocelot.cpbd.beam import ParticleArray
 from ocelot.cpbd.elements import Marker, SBend

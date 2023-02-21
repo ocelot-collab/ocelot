@@ -10,7 +10,7 @@ __all__ = ['Twiss', "Beam", "Particle", "get_current", "get_envelope", "generate
 
             "save_particle_array", "load_particle_array",                                           # io
 
-            'fodo_parameters', 'lattice_transfer_map', "Navigator", 'twiss', "get_map", "MethodTM", # optics
+            'fodo_parameters', 'lattice_transfer_map', "Navigator", 'twiss', "MethodTM",            # optics
 
             'Element', 'Multipole', 'Quadrupole', 'RBend', "Matrix", "UnknownElement",              # elements
             'SBend', 'Bend', 'Drift', 'Undulator', 'Hcor', "Solenoid", "TDCavity",                  # elements
@@ -61,6 +61,7 @@ from ocelot.cpbd.sc import *
 from ocelot.cpbd.csr import *
 from ocelot.cpbd.wake3D import *
 from ocelot.cpbd.physics_proc import *
+from ocelot.cpbd.navi import Navigator
 
 
 print('initializing ocelot...')

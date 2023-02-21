@@ -17,7 +17,7 @@ from ocelot.cpbd.tm_utils import transfer_maps_mult
 import logging
 import re
 from collections import defaultdict
-from typing import Mapping, Sequence, Tuple, Callable, Any, Generator, Iterator, Type
+from typing import Mapping, Sequence, Tuple, Callable, Any, Generator, Iterator, Type, TypeVar
 import numpy as np
 
 _logger = logging.getLogger(__name__)
@@ -25,6 +25,9 @@ _logger = logging.getLogger(__name__)
 # Returned by insert_marker_by_type, insert_markers_by_name,
 # insert_markers_by_predicate
 MarkersInsertionReturnType = Mapping[Element, Sequence[Tuple[Marker, Marker]]]
+
+# to solve typing issue in PyCharm
+E = TypeVar('E', bound=OpticElement)
 
 
 def lattice_format_converter(elements):
@@ -169,7 +172,7 @@ class MagneticLattice:
         Sets for all elements SecondTM as transfer map, expect for the Undulator elements.
     """
 
-    def __init__(self, sequence, start: Type[OpticElement] = None, stop: Type[OpticElement] = None, method=None):
+    def __init__(self, sequence, start: E = None, stop: E = None, method=None):
         if method is None:
             method = {'global': TransferMap}
         if isinstance(method, dict):
@@ -189,7 +192,7 @@ class MagneticLattice:
         for e in self.sequence:
             self.__hash__[e] = e
 
-    def get_sequence_part(self, start: Type[OpticElement], stop: Type[OpticElement]):
+    def get_sequence_part(self, start: E, stop: E):
         try:
             if start is not None:
                 id1 = self.sequence.index(start)
@@ -294,8 +297,8 @@ class MagneticLattice:
         LatticeIO.save_lattice(self, tws0=tws0, file_name=file_name, remove_rep_drifts=remove_rep_drifts,
                                power_supply=power_supply)
 
-    def transfer_maps(self, energy, output_at_each_step: bool = False, start: Type[OpticElement] = None,
-                      stop: Type[OpticElement] = None):
+    def transfer_maps(self, energy, output_at_each_step: bool = False, start: E = None,
+                      stop: E = None):
         """
         Function calculates transfer maps, the first and second orders (R, T), for the whole lattice.
 

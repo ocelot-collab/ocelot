@@ -5,7 +5,7 @@ import numpy as np
 
 from ocelot.cpbd.io import ParameterScanFile
 from ocelot.cpbd.track import ParameterScanner
-from ocelot.cpbd.optics import Navigator
+from ocelot.cpbd.navi import Navigator
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.cpbd.elements import SBend, Marker
 from ocelot.cpbd.transformations import SecondTM

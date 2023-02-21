@@ -26,10 +26,10 @@ from ocelot.cpbd.elements.xyquadruple import XYQuadrupole
 from ocelot.cpbd.physics_proc import PhysProc
 
 # matplotlib may or may not be on the HPC nodes at DESY.  
-try:
-    import matplotlib.pyplot as plt
-except ImportError:
-    pass
+#try:
+#    import matplotlib.pyplot as plt
+#except ImportError:
+#    pass
 
 # Try to import numba, pyfftw and numexpr for improved performance
 logger = logging.getLogger(__name__)

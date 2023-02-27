@@ -6,7 +6,7 @@ import numpy as np
 from scipy.integrate import simps
 from ocelot.common.globals import speed_of_light, Z0, m_e_GeV
 from ocelot.cpbd.beam import s_to_cur
-from ocelot.cpbd.beam import Twiss
+from ocelot.cpbd.beam import Twiss, SliceParameters
 
 
 def RTU_56(LB, LD, r, m):
@@ -105,6 +105,25 @@ def calculate_BMAG(tws_des: Twiss, tws_err: Twiss) -> tuple[Union[float, Any], U
     gamma_y_err = (1 + tws_err.alpha_y * tws_err.alpha_y) / tws_err.beta_y
     mp_x = 0.5 * (tws_err.beta_x * gamma_x_des - 2 * tws_err.alpha_x * tws_des.alpha_x + tws_des.beta_x * gamma_x_err)
     mp_y = 0.5 * (tws_err.beta_y * gamma_y_des - 2 * tws_err.alpha_y * tws_des.alpha_y + tws_des.beta_y * gamma_y_err)
+    lam_x = mp_x + np.sqrt(mp_x * mp_x - 1)
+    lam_y = mp_y + np.sqrt(mp_y * mp_y - 1)
+    return lam_x, lam_y
+
+
+def calculate_slice_BMAG(slice_params: SliceParameters, tws_des: Twiss) -> tuple[Union[float, Any], Union[float, Any]]:
+    """
+    Function calculates mismatch and mismatch phase using two twiss lists.
+    Result is saved in tws_err list as M_x, M_y, psi_x, psi_y
+
+    :param tws_des: Twiss, design twiss parameters
+    :param tws_err: Twiss, error twiss parameters
+    :return: (Mx, My, phi_x, phi_y) mismatch at the end of lattice
+    """
+    gamma_x_des = (1 + tws_des.alpha_x * tws_des.alpha_x) / tws_des.beta_x
+    gamma_y_des = (1 + tws_des.alpha_y * tws_des.alpha_y) / tws_des.beta_y
+
+    mp_x = 0.5 * (slice_params.beta_x * gamma_x_des - 2 * slice_params.alpha_x * tws_des.alpha_x + tws_des.beta_x * slice_params.gamma_x)
+    mp_y = 0.5 * (slice_params.beta_y * gamma_y_des - 2 * slice_params.alpha_y * tws_des.alpha_y + tws_des.beta_y * slice_params.gamma_y)
     lam_x = mp_x + np.sqrt(mp_x * mp_x - 1)
     lam_y = mp_y + np.sqrt(mp_y * mp_y - 1)
     return lam_x, lam_y

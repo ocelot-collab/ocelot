@@ -684,7 +684,7 @@ def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy
             if len(non_u) != 0:
                 lat_el = mlattice.MagneticLattice(non_u)
                 if lat_el.totalLen != 0:
-                    navi = Navigator(lat)
+                    navi = Navigator(lat_el)
 
                     N = int((lat_el.totalLen * 2000 + 150) * accuracy)
                     u = np.zeros((N * 9, np.shape(p_array.rparticles)[1]))

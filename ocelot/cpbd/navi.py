@@ -231,7 +231,7 @@ class Navigator:
             if self.z0 + dz > self.lat.totalLen:
                 dz = self.lat.totalLen - self.z0
 
-            yield self.get_map(self.lat, dz), dz, proc_list, phys_steps
+            yield self.get_map(dz), dz, proc_list, phys_steps
 
     def get_next(self):
 
@@ -285,12 +285,12 @@ class Navigator:
             s += physproc.__class__.__name__ + " start: " + str(physproc.s_start) + "/ stop: " + str(physproc.s_stop) + "\n"
         return s
 
-    def get_map(self, lattice, dz):
-        nelems = len(lattice.sequence)
+    def get_map(self, dz):
+        nelems = len(self.lat.sequence)
         TM = []
         i = self.n_elem
         z1 = self.z0 + dz
-        elem = lattice.sequence[i]
+        elem = self.lat.sequence[i]
         # navi.sum_lengths = np.sum([elem.l for elem in lattice.sequence[:i]])
         L = self.sum_lengths + elem.l
         while z1 + 1e-10 > L:
@@ -304,7 +304,7 @@ class Navigator:
                 break
 
             i += 1
-            elem = lattice.sequence[i]
+            elem = self.lat.sequence[i]
             L += elem.l
 
         if abs(dz) > 1e-10:

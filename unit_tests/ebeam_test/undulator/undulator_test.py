@@ -57,7 +57,7 @@ def test_tracking_step(lattice, parametr, update_ref_values=False):
     p = Particle(x=0.001, y=0.002)
     p.E = 2.5
 
-    navi = Navigator(lattice)
+    navi = Navigator(lattice[parametr])
     dz = 0.01
 
     P1 = []

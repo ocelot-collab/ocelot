@@ -45,8 +45,8 @@ class RadiationField:
     """
 
     def __init__(self, shape=(0, 0, 0)):
-        # self.fld=np.array([]) #(z,y,x)
-        self.fld = np.zeros(shape, dtype=complex128)  # (z,y,x)
+        self.fld = np.zeros(shape, dtype=complex128) # (z,y,x)
+        self.fld_stat = []
         self.dx = []
         self.dy = []
         self.dz = []
@@ -54,10 +54,48 @@ class RadiationField:
         self.domain_z = 't'  # longitudinal domain (t - time, f - frequency)
         self.domain_xy = 's'  # transverse domain (s - space, k - inverse space)
         self.filePath = ''
-
+        
     def fileName(self):
         return filename_from_path(self.filePath)
-
+    
+    # @property
+    # def fld(self):
+        # return self.fld_stat[0]
+    
+    # @fld.setter
+    # def fld(self,value):
+        # if len(self.fld_stat) == 0:
+            # self.fld_stat = [value]
+        # else:
+            # self.fld_stat[0] = value
+    
+    def slices2stat(self):
+        #temporary functions
+        if self.Nz() == 1:
+            _logger.warning('Number of slices is one, fld_stat of size {} has been replaced'.format(self.Nstat()))
+        self.fld_stat = [dfl[np.newaxis,:,:] for dfl in self.fld]
+        self.fld = np.zeros_like(self.fld_stat[0])
+        
+        
+    def stat2slices(self):
+        #temporary functions
+        if self.Nz() > 1:
+            raise ValueError('Number of Nz slices should be zero, but is {}'.format(self.Nz()))
+        if self.Nstat() == 0:
+            _logger.warning('statistics is empty')
+        fld = np.array(self.fld_stat)
+        self.fld = np.squeeze(fld)
+        self.fld_stat = []
+        
+    def event(self, eventn=0):
+        if eventn+1 > self.Nstat():
+            raise ValueError('Event number {} larger than number of events, len(self.fld_stat)={}'.format(eventn, self.Nstat()))
+        else:
+            dfl_event = RadiationField()
+            dfl_event.copy_param(self, version=2)
+            dfl_event.fld = self.fld_stat[eventn]
+            return dfl_event
+    
     def copy_param(self, dfl1, version=1):
         if version == 1:
             self.dx = dfl1.dx
@@ -72,7 +110,7 @@ class RadiationField:
             for attr in attr_list:
                 if attr.startswith('__') or callable(getattr(self, attr)):
                     continue
-                if attr == 'fld':
+                if attr in ['fld_stat']:
                     continue
                 setattr(self, attr, getattr(dfl1, attr))
 
@@ -129,6 +167,12 @@ class RadiationField:
         number of points in x
         '''
         return self.fld.shape[2]
+    
+    def Nstat(self):
+        '''
+        number of stat points
+        '''
+        return len(self.fld_stat)
 
     def intensity(self):
         '''
@@ -1398,7 +1442,7 @@ class WignerDistribution():
     @field.setter
     def field(self,value):
         if len(self.field_stat) == 0:
-            self.field_stat[0] = [value]
+            self.field_stat = [value]
         else:
             self.field_stat[0] = value
         
@@ -1409,7 +1453,7 @@ class WignerDistribution():
     @wig.setter
     def wig(self,value):
         if len(self.wig_stat) == 0:
-            self.wig_stat[0] = [value]
+            self.wig_stat = [value]
         else:
             self.wig_stat[0] = value
     

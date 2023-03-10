@@ -20,8 +20,8 @@ def wake_t_beam_to_parray(wake_t_beam, gamma_ref=None, z_ref=None):
     """
     Converts a Wake-T particle beam to an Ocelot ParticleArray.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     wake_t_beam : ParticleBunch (Wake-T class)
         The original particle distribution from Wake-T.
 
@@ -35,8 +35,8 @@ def wake_t_beam_to_parray(wake_t_beam, gamma_ref=None, z_ref=None):
         in Ocelot. If not specified, the reference value will be taken as the
         average longitudinal position of the input distribution.
 
-    Returns:
-    --------
+    Returns
+    -------
     An Ocelot ParticleArray.
 
     """
@@ -88,13 +88,13 @@ def parray_to_wake_t_beam(p_array):
     """
     Converts an Ocelot ParticleArray to a Wake-T ParticleBunch.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     p_array : ParticleArray
         The Ocelot distribution to be converted.
 
-    Returns:
-    --------
+    Returns
+    -------
     A Wake-T ParticleBunch.
 
     """

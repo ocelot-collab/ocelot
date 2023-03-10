@@ -3,6 +3,7 @@ This module contains methods for coupling the plasma simulation code Wake-T
 with Ocelot.
 
 """
+from typing import Optional
 
 import numpy as np
 import scipy.constants as ct
@@ -16,21 +17,25 @@ from ocelot.cpbd.beam import ParticleArray
 from ocelot.common.globals import m_e_GeV
 
 
-def wake_t_beam_to_parray(wake_t_beam, gamma_ref=None, z_ref=None):
+def wake_t_beam_to_parray(
+    wake_t_beam: ParticleBunch,
+    gamma_ref: Optional[float] = None,
+    z_ref: Optional[float] = None,
+) -> ParticleArray:
     """
     Converts a Wake-T particle beam to an Ocelot ParticleArray.
 
     Parameters
     ----------
-    wake_t_beam : ParticleBunch (Wake-T class)
+    wake_t_beam : ParticleBunch
         The original particle distribution from Wake-T.
 
-    gamma_ref : float (Optional)
+    gamma_ref : float, optional
         Reference energy of the particle beam used for tracking in Ocelot. If
         not specified, the reference energy will be taken as the average
         energy of the input distribution.
 
-    z_ref : float (Optional)
+    z_ref : float, optional
         Reference longitudinal position of the particle beam used for tracking
         in Ocelot. If not specified, the reference value will be taken as the
         average longitudinal position of the input distribution.
@@ -84,7 +89,9 @@ def wake_t_beam_to_parray(wake_t_beam, gamma_ref=None, z_ref=None):
     return p_array
 
 
-def parray_to_wake_t_beam(p_array):
+def parray_to_wake_t_beam(
+    p_array : ParticleArray
+) -> ParticleBunch:
     """
     Converts an Ocelot ParticleArray to a Wake-T ParticleBunch.
 

@@ -3,8 +3,10 @@ This module contains methods for coupling the plasma simulation code Wake-T
 with Ocelot.
 
 """
+from typing import Optional
 
 import numpy as np
+import scipy.constants as ct
 try:
     from wake_t import ParticleBunch
     wake_t_installed = True
@@ -15,30 +17,40 @@ from ocelot.cpbd.beam import ParticleArray
 from ocelot.common.globals import m_e_GeV
 
 
-def wake_t_beam_to_parray(wake_t_beam, gamma_ref=None, z_ref=None):
+def wake_t_beam_to_parray(
+    wake_t_beam: ParticleBunch,
+    gamma_ref: Optional[float] = None,
+    z_ref: Optional[float] = None,
+) -> ParticleArray:
     """
     Converts a Wake-T particle beam to an Ocelot ParticleArray.
 
-    Parameters:
-    -----------
-    wake_t_beam : ParticleBunch (Wake-T class)
+    Parameters
+    ----------
+    wake_t_beam : ParticleBunch
         The original particle distribution from Wake-T.
 
-    gamma_ref : float (Optional)
+    gamma_ref : float, optional
         Reference energy of the particle beam used for tracking in Ocelot. If
         not specified, the reference energy will be taken as the average
         energy of the input distribution.
 
-    z_ref : float (Optional)
+    z_ref : float, optional
         Reference longitudinal position of the particle beam used for tracking
         in Ocelot. If not specified, the reference value will be taken as the
         average longitudinal position of the input distribution.
 
-    Returns:
-    --------
+    Returns
+    -------
     An Ocelot ParticleArray.
 
     """
+    # Make sure that the Wake-T beam is an electron beam.
+    is_electron_beam = (
+        wake_t_beam.q_species == -ct.e and wake_t_beam.m_species == ct.m_e
+    )
+    assert is_electron_beam, 'Only electron beams are supported in Ocelot.'
+
     # Extract particle coordinates.
     x = wake_t_beam.x  # [m]
     y = wake_t_beam.y  # [m]
@@ -46,7 +58,7 @@ def wake_t_beam_to_parray(wake_t_beam, gamma_ref=None, z_ref=None):
     px = wake_t_beam.px  # [m_e * c]
     py = wake_t_beam.py  # [m_e * c]
     pz = wake_t_beam.pz  # [m_e * c]
-    q = wake_t_beam.q  # [C]
+    q = np.abs(wake_t_beam.q)  # [C]
 
     # Calculate gamma.
     gamma = np.sqrt(1 + px**2 + py**2 + pz**2)
@@ -77,17 +89,19 @@ def wake_t_beam_to_parray(wake_t_beam, gamma_ref=None, z_ref=None):
     return p_array
 
 
-def parray_to_wake_t_beam(p_array):
+def parray_to_wake_t_beam(
+    p_array : ParticleArray
+) -> ParticleBunch:
     """
     Converts an Ocelot ParticleArray to a Wake-T ParticleBunch.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     p_array : ParticleArray
         The Ocelot distribution to be converted.
 
-    Returns:
-    --------
+    Returns
+    -------
     A Wake-T ParticleBunch.
 
     """
@@ -114,7 +128,7 @@ def parray_to_wake_t_beam(p_array):
     py = beam_matrix[3] * p_kin
     z = - beam_matrix[4]
     pz = np.sqrt(gamma**2 - px**2 - py**2 - 1)
-    q = p_array.q_array
+    w = p_array.q_array / ct.e
 
     # Create and return Wake-T distribution.
-    return ParticleBunch(q, x, y, z, px, py, pz, prop_distance=z_ref)
+    return ParticleBunch(w, x, y, z, px, py, pz, prop_distance=z_ref)

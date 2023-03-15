@@ -1974,6 +1974,10 @@ def write_beamtwiss_hdf5(beam, filepath):
             h5.create_dataset('emodphase', data=beam.emodphase)
         else:
             h5.create_dataset('emodphase', data=np.zeros_like(beam.s))
+        if hasattr(beam, 'eloss'):
+            h5.create_dataset('eloss', data=beam.eloss)
+        else:
+            h5.create_dataset('eloss', data=np.zeros_like(beam.s))
     _logger.debug(ind_str + 'done')
 
 
@@ -1995,5 +1999,6 @@ def read_beamtwiss_hdf5(filepath):
         beam.y = h5.get('ycenter')[:]
         beam.px = h5.get('pxcenter')[:]
         beam.py = h5.get('pycenter')[:]
+        #try reading eloss,emodphase,emod etc.
     _logger.debug(ind_str + 'done')
     return beam

@@ -279,6 +279,12 @@ class RadiationField:
             return 2 * pi / self.scale_kz()
         else:
             raise AttributeError('Wrong domain_z attribute')
+    
+    def phen(self):
+        if self.domain_z == 'f':
+            return lambda2eV(self.scale_z())
+        else:
+            return None
 
     def ph_sp_dens(self):
         if self.domain_z == 't':

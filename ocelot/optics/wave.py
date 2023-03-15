@@ -671,11 +671,14 @@ class RadiationField:
         '''
         calculates mutual coherence function
         see Goodman Statistical optics EQs 5.2-7, 5.2-11
+        (for instance 1985 edition, in 2nd ed. from 2005 equation numbers are different)
         returns matrix [y,x,y',x']
         consider downsampling the field first
         '''
+        # use just-in-time compiler (numba)?
         if jit:
             J = np.zeros([self.Ny(), self.Nx(), self.Ny(), self.Nx()]).astype(np.complex128)
+            # function mut_coh_func is in ocelot/common/math_op.py
             mut_coh_func(J, self.fld, norm=norm)
         else:
             I = self.int_xy() / self.Nz()

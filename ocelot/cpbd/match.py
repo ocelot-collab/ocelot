@@ -340,13 +340,13 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
     """
 
     # tw = deepcopy(tw0)
-
+    run_number = 1
     def errf(x):
         p_array0 = deepcopy(p_array)
         tws = get_envelope(p_array0, bounds=bounds)
         tw_loc = deepcopy(tws)
         tw0 = deepcopy(tws)
-
+        nonlocal run_number
         '''
         parameter to be varied is determined by variable class
         '''
@@ -499,8 +499,8 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
         # err += ( c1**2 + c2**2) * 1.e-6
 
         if verbose:
-            print('iteration error:', err)
-        return err
+            print(f"Run Number: {run_number}/{max_iter}, iteration error: {err}" )
+        run_number +=1
 
     '''
     list of arguments determined based on the variable class

@@ -521,7 +521,7 @@ def radiation_py(gamma, traj, screen):
     return 1
 
 
-def calculate_radiation(lat, screen, ebeam, energy_loss=False, quantum_diff=False, accuracy=1, end_poles=False):
+def calculate_radiation(lat, screen, ebeam, energy_loss=False, quantum_diff=False, accuracy=1, end_poles=None):
     """
     Function to calculate radation from the electron beam.
 
@@ -557,9 +557,9 @@ def calculate_radiation(lat, screen, ebeam, energy_loss=False, quantum_diff=Fals
     p_array.tau()[:] = 0
 
     screen.nullify()
-    start = time.time()
-    U, E = track4rad_beam(p_array, lat, energy_loss=energy_loss, quantum_diff=quantum_diff, accuracy=accuracy,
-                          end_poles=end_poles)
+    start = time.time()             
+    
+    U, E = track4rad_beam(p_array, lat, energy_loss=energy_loss, quantum_diff=quantum_diff, accuracy=accuracy, end_poles=end_poles)
     # print("traj time exec:", time.time() - start)
     # plt.plot(U[0][4::9, :], U[0][::9, :])
     # plt.show()
@@ -567,7 +567,6 @@ def calculate_radiation(lat, screen, ebeam, energy_loss=False, quantum_diff=Fals
         # print("%i/%i" % (i, p_array.n))
         screen_copy = copy.deepcopy(screen)
         screen_copy.nullify()
-
         # wlengthes = h_eV_s*speed_of_light/screen_copy.Eph
         # screen_copy.arPhase[:] = tau0[i]/wlengthes*2*np.pi
         for u, e in zip(U, E):
@@ -656,7 +655,7 @@ def coherent_radiation(lat, screen, p_array, energy_loss=False, quantum_diff=Fal
     return screen
 
 
-def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy=1, end_poles=False):
+def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy=1, end_poles=None):
     """
     Function calculates the electron trajectory
 
@@ -721,12 +720,21 @@ def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy
                     mag_field = field_map2field_func(z=z_array, By=elem.field_map.By_arr)
                 else:
                     # print("Standard undulator field")
-                    if end_poles:
-                        nperiods = elem.nperiods
-                    else:
-                        nperiods = None
-
-                    def mag_field(x, y, z): return und_field(x, y, z, elem.lperiod, elem.Kx, nperiods=nperiods)
+                    # if end_poles:
+                    #     nperiods = elem.nperiods
+                    # else:
+                    #     nperiods = None
+                    if end_poles is not None:
+                        _logger.warning('"end_poles" will be deprecated in funcitons "track4rad_beam" and "calculate_radiation",' +
+                                        ' use it in definition of the Undulator object, e.g. Undulator(Kx=Kx, nperiods=nperiods, lperiod=lperiod, eid=eid, end_poles="3/4")')                        
+                        if end_poles == True:
+                            end_poles = '3/4'
+                        else:
+                            end_poles = '1'
+                        def mag_field(x, y, z): return und_field(x, y, z, elem.lperiod, elem.Kx, nperiods=elem.nperiods, phase=elem.phase, end_poles=end_poles)
+                    else:   
+                        def mag_field(x, y, z): return und_field(x, y, z, elem.lperiod, elem.Kx, nperiods=elem.nperiods, phase=elem.phase, end_poles=elem.end_poles)
+                    
             N = int((mag_length * 1500 + 100) * accuracy)
             if hasattr(elem, "npoints") and isinstance(elem.npoints, numbers.Number):
                 N = int((elem.npoints + 100) * accuracy)

@@ -22,6 +22,51 @@ except:
 
 
 def und_field_py(x, y, z, lperiod, Kx, nperiods=None, phase=0, end_poles='1'):
+    """
+    Parameters
+    ----------
+    x : 
+        particle coordinate in x.
+    y : 
+        particle coordinate in y.
+    z : 
+        particle coordinate in z.
+    lperiod : 
+        undulator period length.
+    Kx : 
+        undulator K parameter in x direction.
+    nperiods : 
+        Number of undulator periods. The default is None.
+    phase : optional
+        Phase from which the magnetic field is stated. The default is 0, which is cos().
+    end_poles : optional
+        Correction poles to close magnetic field integrals. 
+        Might be: 
+            '0' - magnetic field starts from 0 value or sin()-like
+            '1' - magnetic field starts from maximum value or cos()-like
+            '3/4' - magnetic field starts with 0, 1/4, -3/4, +1, -1  (or 0, -1/4, +3/4, -1, +1) poles sequence and finishes with it (fraction is from maximum value of the field)
+            '1/2' - magnetic field starts with 1/2 and finishes with -1/2 poles
+        The default is '1'.
+
+    Raises
+    ------
+    ValueError
+        'end_poles' must be either '1', '0', '3/4' or '1/2'. 
+        if '0' the field starts from 0, 
+        if '1' the field starts from its maximum value,
+        if 3/4' the following end poles sequence is added 0, 1/4, -3/4, +1, -1,
+        if 1/2 the following end poles sequence is added 0, 1/2, -1, +1".
+
+    Returns
+    -------
+    Bx : 
+        Magnetic field in x direction.
+    By : 
+        Magnetic field in y direction.
+    Bz : 
+        Magnetic field in z direction.
+
+    """
     kx = 0.
     kz = 2 * pi / lperiod
     ky = np.sqrt(kz * kz + kx * kx)
@@ -65,8 +110,11 @@ def und_field_py(x, y, z, lperiod, Kx, nperiods=None, phase=0, end_poles='1'):
             cosz = np.cos(kz_z + ph_shift) * z_coef   
 
         else:
-            # print("'end_poles' must be either '1', '0', '3/4' or '1/2'. if '1' the field starts from max value, if '0' the field starts from 0, if 3/4' the following end poles sequence is added 0, 1/4, -3/4, +1, -1. 1/2 the following end poles sequence is added 0, 1/2, -1, +1")
-            raise ValueError("'end_poles' must be either '1', '0', '3/4' or '1/2'. if '1' the field starts from max value, if '0' the field starts from 0, if 3/4' the following end poles sequence is added 0, 1/4, -3/4, +1, -1. 1/2 the following end poles sequence is added 0, 1/2, -1, +1")
+            raise ValueError("'end_poles' must be either '1', '0', '3/4' or '1/2';" +
+                             "if '1' the field starts from max value;" +  
+                             "if '0' the field starts from 0;" +
+                             "if 3/4' the following end poles sequence is added 1/4, -3/4, +1, -1 instead of existing +1, -1, +1, -1" +
+                             "if 1/2 the following end poles sequence is added 1/2, -1, +1 instead of existing +1, -1, +1.")
 
     cosx = np.cos(kx_x)
     sinhy = np.sinh(ky_y)

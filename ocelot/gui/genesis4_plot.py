@@ -169,7 +169,7 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 0
                 
             elif handle.endswith('par.h5'):
                 try:            
-                    handle = read_dpa4(handle, partskip=100)
+                    handle = read_dpa4(handle, partskip=1)#TODO: fix partskip reading, then may switch back to 100
                 except (IOError, ValueError):
                     _logger.debug('could not read ' + str(handle))
                     pass
@@ -248,9 +248,7 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 0
                         edist = dpa42edist(handle)
                     else:
                         edist = dpa42edist(handle, n_part=5e4, fill_gaps=1)
-                        
-                    f9 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=100,
-                                    debug=debug)
+                    f9 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=100, debug=debug)
                 except:
                     _logger.warning('could not plot smeared edist')
             if choice[10]:
@@ -826,9 +824,9 @@ def plot_gen4_out_evo(out, params=['und_quad', 'el_size', 'el_pos', 'el_energy',
 @if_plottable
 def subfig_evo_und_quad(ax_und, out, legend):
     number_ticks = 6
-    aw = out.h5['Lattice/aw']
-    qf = out.h5['Lattice/qf']
-    z = out.h5['Lattice/z']
+    aw = out.h5['Lattice/aw'][:]
+    qf = out.h5['Lattice/qf'][:]
+    z = out.h5['Lattice/z'][:]
 
     ax_und.step(z, aw, 'b-', where='post', linewidth=1.5)
     # ax_und.scatter(z, aw)
@@ -860,9 +858,8 @@ def subfig_evo_und_quad(ax_und, out, legend):
 @if_plottable
 def subfig_evo_und(ax_und, out, legend):
     number_ticks = 6
-    aw = out.h5['Lattice/aw']
-    qf = out.h5['Lattice/qf']
-    z = out.h5['Lattice/z']
+    aw = out.h5['Lattice/aw'][:]
+    z = out.h5['Lattice/z'][:]
 
     ax_und.step(z, aw, 'b-', where='post', linewidth=1.5)
     ax_und.set_ylabel('K (rms)')
@@ -885,12 +882,12 @@ def subfig_evo_und(ax_und, out, legend):
 def subfig_evo_el_size(ax_size_tsize, out, legend, which='both'):
     number_ticks = 6
 
-    xrms = out.h5['Beam/xsize']
-    yrms = out.h5['Beam/ysize']
+    xrms = out.h5['Beam/xsize'][:]
+    yrms = out.h5['Beam/ysize'][:]
 
     # x = out.h5['Beam/xsize']
     # y = out.h5['Beam/ysize']
-    z = out.h5['Lattice/zplot']
+    z = out.h5['Lattice/zplot'][:]
 
     if np.sum(out.I) == 0:
         weights = None
@@ -918,9 +915,9 @@ def subfig_evo_el_size(ax_size_tsize, out, legend, which='both'):
 def subfig_evo_el_pos(ax_size_tpos, out, legend, which='both'):
     number_ticks = 6
 
-    x = out.h5['Beam/xposition']
-    y = out.h5['Beam/yposition']
-    z = out.h5['Lattice/zplot']
+    x = out.h5['Beam/xposition'][:]
+    y = out.h5['Beam/yposition'][:]
+    z = out.h5['Lattice/zplot'][:]
 
     # if hasattr(out,'x') and hasattr(out,'y'):
     if which == 'both' or which == 'averaged':
@@ -938,7 +935,7 @@ def subfig_evo_el_energy(ax_energy, out, legend):
 
     el_energy = out.h5['Beam/energy'][:] * m_e_MeV
     el_energy_av = int(np.nanmean(el_energy))
-    z = out.h5['Lattice/zplot']
+    z = out.h5['Lattice/zplot'][:]
     el_energy_spread = out.h5['Beam/energyspread'][:]
 
     mean_energy = np.nanmean(el_energy - el_energy_av, axis=1)
@@ -977,8 +974,8 @@ def subfig_evo_el_energy(ax_energy, out, legend):
 def subfig_evo_el_bunching(ax_bunching, out, legend):
     number_ticks = 6
 
-    z = out.h5['Lattice/zplot']
-    b = out.h5['Beam/bunching']
+    z = out.h5['Lattice/zplot'][:]
+    b = out.h5['Beam/bunching'][:]
 
     
     I_weight = out.I / np.sum(out.I)

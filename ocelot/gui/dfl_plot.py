@@ -48,7 +48,7 @@ def plot_dfl_all(dfl, **kwargs):
 @if_plottable
 def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, legend=True, phase=False, fig_name=None,
              auto_zoom=False, column_3d=True, savefig=False, showfig=True, return_proj=False, line_off_xy=True,
-             slice_xy=False, log_scale=0, cmap_cutoff=0, vartype_dfl=None, plot_sp_dens=True, **kwargs):
+             slice_xy=False, log_scale=0, cmap_cutoff=0, vartype_dfl=None, plot_sp_dens=True, event=None, **kwargs):
     """
     Plots dfl radiation object in 3d using matplotlib.
 
@@ -70,8 +70,9 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     :param slice_xy: bool type variable, if True, slices will be plotted; if False, projections will be plotted
     :param log_scale: bool type variable, if True, log scale will be used for potting
     :param cmap_cutoff: 0 <= cmap_cutoff <= 1; all pixels that have intensity lower than cmap_cutoff will be seted to white color
-    :param vartype_dfl: the data type to store dfl in memory [either complex128 (two 64-bit floats) or complex64 (two 32-bit floats)], may save memory
+    :param vartype_dfl: the data type to store dfl in memory [either complex128 (two 64-bit floats) or complex64 (two 32-bit floats)], may save memory (deprecated)
     :param plot_sp_dens: whether to recalculate spectral density in units of mJ/eV
+    :param event: allows to choolse which statistical realization (element of dfl.fld_stat=[]) we wish to plot
     :param kwargs: 
     :return:
     """
@@ -93,12 +94,19 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
     # # if dfl.__class__ != RadiationField:
     #     raise ValueError('wrong radiation object: should be RadiationField')
 
-    if vartype_dfl is not None:
-        dfl_copy = RadiationField()
-        dfl_copy.copy_param(dfl, version=2)
-        dfl_copy.fld = dfl.fld.astype(vartype_dfl)
+    if event != None:
+        dfl_copy = dfl.event(event)
     else:
         dfl_copy = deepcopy(dfl)
+
+    # if vartype_dfl is not None:
+        # # dfl_copy = dfl.event(event)
+        # dfl_copy = RadiationField()
+        # dfl_copy.copy_param(dfl, version=2)
+        # dfl_copy.fld = dfl_copy.fld.astype(vartype_dfl)
+    # else:
+        # # dfl_copy = dfl.event(event)
+        # dfl_copy = deepcopy(dfl)
 
     if domains is None:
         domains = dfl_copy.domains()
@@ -714,9 +722,22 @@ def plot_two_dfls(dfl_first, dfl_second, domains='s', label_first=None, label_se
         plt.close(fig)   
     _logger.info(ind_str + 'plotting two dfls done in {:.2f} seconds'.format(time.time() - start_time))
 
-def plot_wigner(*args,**kwargs):
-    _logger.warning('plotting wigner for time-frequency domain migrated to plot_wigner_z')
-    return plot_wigner_z(*args,**kwargs)
+def plot_wigner(wig_or_out, *args,**kwargs):
+    '''
+    calls plot_wigner_z or plot_wigner_u depending on domain in the wigner
+    '''
+    if not hasattr(wig_or_out, 'wig'):
+        if hasattr(wig_or_out, 'calc_radsize'):
+            return plot_wigner_z(wig_or_out, *args,**kwargs)
+        else:
+            raise ValueError('Unknown object for Wigner plot')
+    else: #temp. maybe will merge the two functions
+        if wig_or_out.domain in ['t', 'z']:
+            return plot_wigner_z(wig_or_out, *args,**kwargs)
+        elif wig_or_out.domain in ['s', 'x', 'y']:
+            return plot_wigner_u(wig_or_out, *args,**kwargs)
+        else: 
+            raise ValueError('Unknown domain for Wigner plot')
 
 @if_plottable
 def plot_wigner_z(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None, None), y_lim=(None, None), v_lim=(None, None), downsample=1,
@@ -1049,6 +1070,9 @@ def plot_wigner_u(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,
         W = wig_or_out
     else:
         raise ValueError('Unknown object for Wigner plot')
+    
+    #enforce real value:
+    # W.wig = np.abs(W.wig)
     
     if fig_name is None:
         if W.fileName() == '':

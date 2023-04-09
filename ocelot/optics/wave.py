@@ -2311,7 +2311,7 @@ def SR_norm_on_ebeam_I(I_ebeam=0, norm='e_beam'):
         
     return A
 
-def screen2dfl(screen, polarization='x', norm=True, beam=None):
+def screen2dfl(screen, polarization='x', norm='ebeam', beam=None):
     """
     Function converts synchrotron radiation from ocelot.rad.screen.Screen to ocelot.optics.wave.RadiationField.
     New ocelot.optics.wave.RadiationField object will be generated without changing ocelot.rad.screen.Screen object.
@@ -2323,7 +2323,7 @@ def screen2dfl(screen, polarization='x', norm=True, beam=None):
     shape_tuple = (screen.ne, screen.ny, screen.nx)
     start = time.time()
     _logger.info('Converting Screen of shape (nz, ny, nx) = {:} to dfl'.format(shape_tuple))
-    _logger.warning(ind_str + 'in beta')
+    # _logger.warning(ind_str + 'in beta')
 
     dfl = RadiationField()
     dfl.domain_z = 'f'  # longitudinal domain (t - time, f - frequency)
@@ -2349,13 +2349,28 @@ def screen2dfl(screen, polarization='x', norm=True, beam=None):
 
 
     _logger.debug(ind_str + 'dfl.xlamds = {:.3e} [m]'.format(dfl.xlamds))
-    _logger.warning(ind_str + 'dfl.fld normalized to dfl.E() = 1 [J]')
     
-    if norm==True:
-        A = SR_norm_on_ebeam_I(I_ebeam=beam.I)
-        dfl.fld = dfl.fld# * np.sqrt(A) / screen.z**2
-        # dfl.fld = dfl.fld #/ np.sqrt(dfl.E())  # TODO normalize dfl.fld
-        
+    if norm=='ebeam': 
+        _logger.info(ind_str + 'normalization')
+        try: 
+            gamma = beam.E/0.51099890221e-03
+            I = beam.I 
+            LenPntrConst = screen.Distance - screen.Zstart
+            constQuant = 3*alpha/q_e/(4*pi**2)*1e-3 * beam.I * gamma * gamma / LenPntrConst / LenPntrConst
+            dfl.fld = dfl.fld * np.sqrt(constQuant)
+            _logger.info(ind_str + 'dfl.fld normalized on the electron beam current')
+        except AttributeError:
+            _logger.error('dfl.fld was not normalized, \n please, provide a Beam object (electron beam) \n the original dfl was returned')
+            dfl.fld = dfl.fld 
+            
+    elif norm=='Epulse':
+        _logger.info(ind_str + 'normalization')
+        dfl.fld = dfl.fld / np.sqrt(dfl.E())  
+        _logger.warning(ind_str + 'dfl.fld normalized to dfl.E() = 1 [J]')
+    else:
+        _logger.warning(ind_str + 'No normalization was chosen, the original dfl was returned')
+
+
     _logger.debug(ind_str + 'done in {:.3e} sec'.format(time.time() - start))
     _logger.debug(ind_str + 'returning dfl in "sf" domains ')
     return dfl

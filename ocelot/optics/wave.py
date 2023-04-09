@@ -2275,7 +2275,43 @@ def calc_phase_delay_poly(coeff, w, w0):
     return delta_phi
 
 
-def screen2dfl(screen, polarization='x'):
+def SR_norm_on_ebeam_I(I_ebeam=0, norm='e_beam'):
+    '''
+    Parameters
+    ----------
+    Ex : array
+        Ex component of the field.
+    Ey : array
+        Ey component of the field.
+    out : str, optional
+        Which intensity to return, of the given component or full component. The default is "Components".
+    norm : str, optional
+        DESCRIPTION. The default is 'e_beam'. Normalisation on electron beam current.
+        
+    Returns
+    -------
+    Intensity.
+
+    '''
+    print('\n Normalizing radiation field...')
+
+    h_erg_s = 1.054571817 * 1e-27 
+    h_J_s = 1.054571817 * 1e-34 
+    
+    if norm=='e_beam':
+        speed_of_light_SGS = speed_of_light * 1e2
+        A = I_ebeam * speed_of_light / (q_e * h_erg_s * 4 * np.pi**2) / (1e7/speed_of_light**2) * 1e-2#* SI unit 1e-4 is due to cm^2 -> mm^2, (1e7/speed_of_light**2) is the factor due to transformation of (I/eh_bar) * c * E**2, I -> I * 1e-1 c, e -> e * 1e-1 c, h_bar -> h_bar * 1e7, c -> c * 1e2, E -> E * 1e6 / c 
+ 
+        # LenPntrConst = self.Distance - self.Zstart
+
+        # old constant with current in [mA]
+        # constQuant = 3.461090202456155e+9*current*gamma*gamma/LenPntrConst/LenPntrConst
+
+        # constQuant = 3*alpha/q_e/(4*pi**2)*1e-3 * current * gamma * gamma / LenPntrConst / LenPntrConst
+        
+    return A
+
+def screen2dfl(screen, polarization='x', norm=True, beam=None):
     """
     Function converts synchrotron radiation from ocelot.rad.screen.Screen to ocelot.optics.wave.RadiationField.
     New ocelot.optics.wave.RadiationField object will be generated without changing ocelot.rad.screen.Screen object.
@@ -2311,9 +2347,15 @@ def screen2dfl(screen, polarization='x'):
         dfl.dz = 1
         dfl.xlamds = h_eV_s * speed_of_light / screen.Eph[0]
 
+
     _logger.debug(ind_str + 'dfl.xlamds = {:.3e} [m]'.format(dfl.xlamds))
     _logger.warning(ind_str + 'dfl.fld normalized to dfl.E() = 1 [J]')
-    dfl.fld = dfl.fld / np.sqrt(dfl.E())  # TODO normalize dfl.fld
+    
+    if norm==True:
+        A = SR_norm_on_ebeam_I(I_ebeam=beam.I)
+        dfl.fld = dfl.fld# * np.sqrt(A) / screen.z**2
+        # dfl.fld = dfl.fld #/ np.sqrt(dfl.E())  # TODO normalize dfl.fld
+        
     _logger.debug(ind_str + 'done in {:.3e} sec'.format(time.time() - start))
     _logger.debug(ind_str + 'returning dfl in "sf" domains ')
     return dfl

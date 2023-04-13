@@ -255,9 +255,13 @@ def fit_gauss_1d(x,F):
     
     return mu1, np.sqrt(sig1)
 
-def fwhm(x,F):
+def fwhm(x, F, interpolated=1):
     ff = fwhm3(np.array(F), height=0.5, peakpos=-1, total=1)
-    return x[ff[2][1]] - x[ff[2][0]]
+    if interpolated: #TODO:fix and debug
+        dx = (x[ff[2][1]] - x[ff[2][0]]) / (ff[2][1] - ff[2][0])
+        return ff[1] * dx
+    else:
+        return x[ff[2][1]] - x[ff[2][0]]
 #    m = np.max(F) / 2.0
 #    ups = []
 #    downs = []
@@ -270,7 +274,7 @@ def fwhm(x,F):
 #    #print ups, downs
 #    return x[downs[-1]] - x[ups[0]]
 
-def fwhm3(valuelist, height=0.5, peakpos=-1, total=1):
+def fwhm3(valuelist, height=0.5, peakpos=-1, total=1, exactpos=0, rescalezero=0):
     """calculates the full width at half maximum (fwhm) of the array.
     the function will return the fwhm with sub-pixel interpolation. 
     It will start at the maximum position and 'walk' left and right until it approaches the half values.
@@ -278,31 +282,50 @@ def fwhm3(valuelist, height=0.5, peakpos=-1, total=1):
     INPUT:
     - valuelist: e.g. the list containing the temporal shape of a pulse
     OPTIONAL INPUT:
-    -peakpos: position of the peak to examine (list index)
-    the global maximum will be used if omitted.
-    if total = 1 - 
+    -peakpos: deprecated
     OUTPUT:
     - peakpos(index), interpolated_width(npoints), [index_l, index_r]
     """
-    if peakpos == -1:  # no peakpos given -> take maximum
-        peak = np.max(valuelist)
-        peakpos = np.min(np.nonzero(valuelist == peak))
+    
+    #if peakpos == -1:  # no peakpos given -> take maximum
+    peakpos = np.min(np.nonzero(valuelist == np.max(valuelist)))
+        
+    if peakpos in [0, len(valuelist)-1] or len(valuelist) < 3: #peak on the edge
+        return (peakpos, 0, np.array([peakpos, peakpos]))
 
+    if rescalezero:
+        valuelist = valuelist - np.nanmin(valuelist)
+    
     peakvalue = valuelist[peakpos]
     phalf = peakvalue * height
-
+    # print(valuelist)
+    # print('peakvalue, peakpos:', peakvalue, peakpos)
+    
     if total == 0:
         # go left and right, starting from peakpos
         ind1 = peakpos
         ind2 = peakpos
-        while ind1 > 2 and valuelist[ind1] > phalf:
+        while ind1 > 0 and valuelist[ind1] > phalf:
             ind1 = ind1 - 1
-        while ind2 < len(valuelist) - 1 and valuelist[ind2] > phalf:
+        while ind2 < len(valuelist)-1 and valuelist[ind2] > phalf:
             ind2 = ind2 + 1
-        grad1 = valuelist[ind1 + 1] - valuelist[ind1]
-        grad2 = valuelist[ind2] - valuelist[ind2 - 1]
+        
+        if ind1 <= 0 and valuelist[ind1] > phalf: #avoiding extrapolation
+            grad1 = np.inf
+            ind1 = 0
+        else:
+            grad1 = valuelist[ind1 + 1] - valuelist[ind1]
+        
+        # print('here', valuelist[ind1] > phalf)
+        if ind2 >= len(valuelist)-1 and valuelist[ind2] > phalf: #avoiding extrapolation
+            grad2 = np.inf
+            ind2 = len(valuelist)-1
+        else:
+            grad2 = valuelist[ind2] - valuelist[ind2 - 1]
+        
+        
         if grad1 == 0 or grad2 == 0:
-            width = None
+            width = 0
         else:
             # calculate the linear interpolations
             # print(ind1,ind2)
@@ -312,29 +335,48 @@ def fwhm3(valuelist, height=0.5, peakpos=-1, total=1):
             width = p2interp - p1interp
     else:
         # go to center from edges
-        ind1 = 1
-        ind2 = valuelist.size-2
-        # print(peakvalue,phalf)
+        ind1 = 0
+        ind2 = len(valuelist)-1
+        #, peakvalue,phalf)
         # print(ind1,ind2,valuelist[ind1],valuelist[ind2])
         while ind1 < peakpos and valuelist[ind1] < phalf:
             ind1 = ind1 + 1
         while ind2 > peakpos and valuelist[ind2] < phalf:
             ind2 = ind2 - 1
-        # print(ind1,ind2)
+        #print(ind1,ind2)
         # ind1 and 2 are now just above phalf
-        grad1 = valuelist[ind1] - valuelist[ind1 - 1]
-        grad2 = valuelist[ind2 + 1] - valuelist[ind2]
+        
+        if ind1 <= 0 and valuelist[ind1] > phalf: #avoiding extrapolation
+            grad1 = np.inf
+            ind1 = 0
+        else:
+            grad1 = valuelist[ind1] - valuelist[ind1 - 1]
+        
+        if ind2 >= len(valuelist)-1 and valuelist[ind1] > phalf: #avoiding extrapolation
+            grad2 = np.inf
+            ind2 = len(valuelist)-1
+        else:
+            grad2 = valuelist[ind2+1] - valuelist[ind2]
+        
+        # grad1 = valuelist[ind1] - valuelist[ind1 - 1]
+        # #grad1 = valuelist[ind1+1] - valuelist[ind1]
+        # grad2 = valuelist[ind2 + 1] - valuelist[ind2]
+        #grad2 = valuelist[ind2] - valuelist[ind2-1]
+        #print(grad1, grad2)
         if grad1 == 0 or grad2 == 0:
-            width = None
+            width = 0
         else:
             # calculate the linear interpolations
             p1interp = ind1 + (phalf - valuelist[ind1]) / grad1
             p2interp = ind2 + (phalf - valuelist[ind2]) / grad2
             # calculate the width
             width = p2interp - p1interp
-        # print(p1interp, p2interp)
-            
-    return (peakpos, width, np.array([ind1, ind2]))
+    # print('p1interp, p2interp:',p1interp, p2interp)
+    # print('grad1, grad2:',grad1, grad2)
+    if exactpos:
+        return (peakpos, width, np.array([p1interp, p2interp]))
+    else:
+        return (peakpos, width, np.array([ind1, ind2]))
 
 def stats(outputs):
     
@@ -644,9 +686,9 @@ def mprefix(value, order_bias=0.05, apply=1):
     
     else:
         if not np.isscalar(value):
-            order = np.floor(np.log10(np.nanmax(value)) / 3 + order_bias) * 3
+            order = np.floor(np.log10(np.nanmax(np.abs(value))) / 3 + order_bias) * 3
         else:
-            order = np.floor(np.log10(value) / 3 + order_bias) * 3
+            order = np.floor(np.log10(np.abs(value)) / 3 + order_bias) * 3
         if order < prefix_range[0]:
             order = prefix_range[0]
         if order > prefix_range[1]:

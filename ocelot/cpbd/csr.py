@@ -934,7 +934,7 @@ class CSR(PhysProc):
 
                     # ending poles 1/4, -3/4, 1, -1, ... (or -1/4, 3/4, -1, 1)
                     if self.end_poles:
-                        def mag_field(x, y, z): return und_field(x, y, z, elem.lperiod, elem.Kx, nperiods=elem.nperiods)
+                        def mag_field(x, y, z): return und_field(x, y, z, elem.lperiod, elem.Kx, nperiods=elem.nperiods, end_poles='3/4')
 
                 else:
                     delta_z = delta_s * np.sin(elem.angle) / elem.angle if elem.angle != 0 else delta_s

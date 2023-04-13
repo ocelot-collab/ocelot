@@ -4,6 +4,7 @@ Created on 17.05.2016
 Added wake table WakeTableDechirperOffAxis on 11.2019
 @authors: S. Tomin and I. Zagorodnov
 """
+import numpy as np
 
 from ocelot.adaptors import *
 from ocelot.adaptors.astra2ocelot import *
@@ -40,15 +41,22 @@ def Der(x, y):
     return dy
 
 
-def Int1(x, y):
+def Int1_py(x, y):
     n = x.shape[0]
     Y = np.zeros(n)
     for i in range(1, n):
         Y[i] = Y[i - 1] + 0.5 * (y(i) + y(i - 1)) * (x(i) - x(i - 1))
     return Y
 
+def Int1(x, y):
+    n = x.shape[0]
+    Y = np.zeros(n)
+    dx = np.diff(x)
+    avg_y = 0.5 * (y[1:] + y[:-1])
+    Y[1:] = np.cumsum(avg_y * dx)
+    return Y
 
-def Int1h(h, y):
+def Int1h_py(h, y):
     n = y.shape[0]
     Y = np.zeros(n)
     # slow, switch to vector operations to be done
@@ -56,6 +64,57 @@ def Int1h(h, y):
         Y[i] = Y[i - 1] + 0.5 * (y[i] + y[i - 1])
     Y = Y * h
     return Y
+
+
+def Int1h(h, y):
+    n = y.shape[0]
+    Y = np.zeros(n)
+    Y[1:] = np.cumsum(0.5 * (y[1:] + y[:-1])) * h
+    return Y
+
+
+def convolution(xu, u, xw, w):
+    # convolution of equally spaced functions
+    hx = xu[1] - xu[0]
+    wc = np.convolve(u, w) * hx
+    nw = w.shape[0]
+    nu = u.shape[0]
+    x0 = xu[0] + xw[0]
+    xc = x0 + np.arange(nw + nu - 1) * hx
+    return xc, wc
+
+
+def loss_factor(current_profile, wake):
+    """
+    Function calculates the wakefield energy loss from the bunch with arbitrary current profile
+
+    :param current_profile: current profile [s, I]
+    :param wake: wake function [s, W]
+    :return: energy loss
+    """
+    h = wake[1, 0] - wake[0, 0]
+    current_profile[:, 1] = current_profile[:, 1] / (np.sum(current_profile[:, 1]) * h)
+    nw = np.max(np.abs(wake[:, 1]))
+    w = wake[:, 1]
+    n = len(w)
+    bi2 = np.zeros((n, 1))
+    nb = len(current_profile[:, 1])
+    bi2[0:nb] = np.reshape(current_profile[:, 1], (nb, 1))
+    loss = -bi2.T @ w * h
+    spread = np.sqrt(bi2.T @ (w + loss)**2 * h)
+    peak = np.max(np.abs(w))
+    return loss
+
+
+def wake_convolution(xb, bunch, xw, wake):
+    # convolution of unequally spaced functions
+    # bunch defines the parameters
+    nb = xb.shape[0]
+    xwi = xb - xb[0]
+    wake1 = np.interp(xwi, xw, wake, 0, 0)
+    wake1[0] = wake1[0] * 0.5
+    xW, Wake = convolution(xb, bunch, xwi, wake1)
+    return xW[0:nb], Wake[0:nb]
 
 
 def project_on_grid_py(Ro, I0, dI0, q_array):
@@ -362,26 +421,6 @@ class Wake(PhysProc):
         self.step = step
         self.TH = None
 
-    def convolution(self, xu, u, xw, w):
-        # convolution of equally spaced functions
-        hx = xu[1] - xu[0]
-        wc = np.convolve(u, w) * hx
-        nw = w.shape[0]
-        nu = u.shape[0]
-        x0 = xu[0] + xw[0]
-        xc = x0 + np.arange(nw + nu) * hx
-        return xc, wc
-
-    def wake_convolution(self, xb, bunch, xw, wake):
-        # convolution of unequally spaced functions
-        # bunch defines the parameters
-        nb = xb.shape[0]
-        xwi = xb - xb[0]
-        wake1 = np.interp(xwi, xw, wake, 0, 0)
-        wake1[0] = wake1[0] * 0.5
-        xW, Wake = self.convolution(xb, bunch, xwi, wake1)
-        return xW[0:nb], Wake[0:nb]
-
     def add_wake(self, I, T):
         """
         [x, W] = AddWake(I, T)
@@ -398,10 +437,10 @@ class Wake(PhysProc):
         nb = x.shape[0]
         W = np.zeros(nb)
         if N0 > 0:
-            x, ww = self.wake_convolution(x, bunch, W0[:, 0], W0[:, 1])
+            x, ww = wake_convolution(x, bunch, W0[:, 0], W0[:, 1])
             W = W - ww[0:nb] / c
         if N1 > 0:
-            x, ww = self.wake_convolution(x, d1_bunch, W1[:, 0], W1[:, 1])
+            x, ww = wake_convolution(x, d1_bunch, W1[:, 0], W1[:, 1])
             # W = W - ww[0:nb]
             W = W + ww[0:nb]
         if R != 0:
@@ -561,3 +600,52 @@ class WakeKick(Wake):
         p_array.rparticles[5] = p_array.rparticles[5] + self.factor * Pz / (p_array.E * 1e9)
         p_array.rparticles[3] = p_array.rparticles[3] + self.factor * Py / (p_array.E * 1e9)
         p_array.rparticles[1] = p_array.rparticles[1] + self.factor * Px / (p_array.E * 1e9)
+
+
+def undulator_wake_euxfel(x, I, q):
+    """
+    Function to calculate wakes for the EuXFEL standard undulator section.
+    The analytical function is based on ref https://www.sciencedirect.com/science/article/abs/pii/S0168900222007823?via%3Dihub
+    I.Zagorodnov
+
+    :param x: evenly spaced the argument coordinate of the current profile in meters
+    :param I: current profile in arbitrary units
+    :param q: bunch charge in Coulombs
+    :return: wake in V
+    """
+
+    Lsec = 6.1  # length of one undulator section
+
+    # bunch
+    hx = x[1] - x[0]
+    bunch = I / (np.sum(I) * hx)
+    In = bunch * q * speed_of_light
+    I0 = np.max(In)
+    i0 = np.argmax(In)
+
+    nb = len(x)
+    xwi = np.zeros(nb)
+    xwi[:] = x - x[0]
+    d1_bunch = Der(x, bunch)
+
+    R = 30.5 / Lsec
+    # corrected on 25.11.2022
+    # A = 1.03; a = 5e-3; s0 = 34e-6; s1 = 9.7e-6; alpha = 1.3; % old
+    A = 0.937
+    a = 5e-3
+    s0 = 33.8e-6
+    s1 = 9.86e-6
+    alpha = 1.29  # % corrected
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    w0 = A * Z0 * speed_of_light / (np.pi * a ** 2) * np.exp(-(xwi / s0) ** alpha)*np.cos(xwi/s1)
+    g0 = 123e-3
+    w1 = speed_of_light * Z0 / (Lsec * np.pi ** 2 * a) * np.sqrt(2 * g0 * xwi)
+
+    w0[0] = w0[0] * 0.5
+    xc, wc = convolution(x, bunch, xwi, w0)
+    W0 = -wc[0:nb]
+    xc1, wc1 = convolution(x, d1_bunch, xwi, w1)
+    W1 = -wc1[0:nb]
+    WR = -bunch * R * speed_of_light
+    W = (W0 + W1 + WR) * q
+    return x, W

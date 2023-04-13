@@ -8,7 +8,6 @@ import importlib
 import logging
 
 import numpy as np
-from scipy import interpolate
 from scipy.integrate import cumtrapz
 
 from ocelot.common.globals import pi, speed_of_light, m_e_eV, m_e_GeV
@@ -279,7 +278,7 @@ class SubBinning:
                     self.p_per_subbins_py)
         else:
             logger.debug("SubBinning: Python")
-            self.p_per_subbins = self.p_per_subbins_py
+            self.p_per_subbins = self.p_per_subbins_np
 
     @staticmethod
     def p_per_subbins_py(s, SBINB, K_BIN):
@@ -290,6 +289,12 @@ class SubBinning:
             while s[n] >= SBINB[ib + 1] and ib < K_BIN - 1:
                 ib = ib + 1
             NBIN[ib] = NBIN[ib] + 1
+        return NBIN
+
+    @staticmethod
+    def p_per_subbins_np(s, SBINB, K_BIN):
+        ib = np.searchsorted(SBINB, s, side='right') - 1
+        NBIN, _ = np.histogram(ib, bins=np.arange(K_BIN + 1))
         return NBIN
 
     def subbin_bound(self, q, s, x_qbin, n_bin, m_bin):

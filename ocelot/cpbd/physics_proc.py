@@ -132,30 +132,23 @@ class SmoothBeam(PhysProc):
         _logger.debug(" SmoothBeam applied, dz =" + str(dz))
 
         def myfunc(x, A):
-            if x < 2 * A:
-                y = x - x * x / (4 * A)
-            else:
-                y = A
+            y = np.where(x < 2 * A, x - x * x / (4 * A), A)
             return y
-
-        # Zin = np.copy(p_array.tau())
         Zin = p_array.tau()
         inds = np.argsort(Zin, axis=0)
-        Zout = np.copy(Zin[inds])
+        Zout = np.sort(Zin, axis=0)
         N = Zin.shape[0]
         S = np.zeros(N + 1)
-        S[N] = 0
-        S[0] = 0
-        for i in range(N):
-            S[i + 1] = S[i] + Zout[i]
+        S[1:] = np.cumsum(Zout)
         Zout2 = np.zeros(N)
         Zout2[N - 1] = Zout[N - 1]
         Zout2[0] = Zout[0]
-        for i in range(1, N - 1):
-            m = min(i, N - i + 1)
-            m = int(np.floor(myfunc(0.5 * m, 0.5 * self.mslice) + 0.500001))
-            Zout2[i] = (S[i + m + 1] - S[i - m]) / (2 * m + 1)
-        # Zout[inds] = Zout2
+
+        i = np.arange(1, N - 1)
+        m = np.minimum(i, N - i + 1)
+        m = np.floor(myfunc(0.5 * m, 0.5 * self.mslice) + 0.500001).astype(int)
+        Zout2[i] = (S[i + m + 1] - S[i - m]) / (2 * m + 1)
+        #Zout[inds] = Zout2
         p_array.tau()[inds] = Zout2
 
 

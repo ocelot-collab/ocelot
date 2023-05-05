@@ -327,7 +327,84 @@ class FelParameters:
                 Pz *= self.P_mult
         return Pz
         
+    def Ptap(self, z=None, tap=False):
+        '''
+        returns sase power at distance z
+        unfinished
+        '''
+        # Nc = self.Ip / (q_e * rho * self.k0 * speed_of_light)
+        # z_sat = 3 + 1/np.sqrt(3) * np.log(Nc)
+        # Psn = (3 * rho * self.Pb) / (Nc * np.sqrt(np.pi * np.log(Nc)))
         
+        if z is None:
+            zn = self.z_sat_min / (np.sqrt(3) * self.lg3)
+        elif z == 0:
+            return np.array(np.size(self.P_sn)*(np.NaN,))
+        else:
+            # if np.size(z) > 1:
+            #     z = z[:,np.newaxis]
+            #     if (z > self.z_sat_min).any():
+            #         if tap == False:
+            #             _logger.warning('Estimation applicable up to z_sat_min=%.2fm, limiting power to saturation level' %(self.z_sat_min))
+            #             idx = z > self.z_sat_min[:,np.newaxis]
+            #             z[idx] = self.z_sat_min[:,np.newaxis][idx]
+            # else: 
+            if (z > self.z_sat_min):
+                if tap == False:
+                    _logger.warning('Estimation applicable up to z_sat_min=%.2fm, while z=%.2fm requested, returning saturation power' %(self.z_sat_min, z))
+                    z = self.z_sat_min
+                        
+            zn = z / (np.sqrt(3) * self.lg3)
+            
+        # idx = z > self.z_sat_min[:,np.newaxis] #check where the requested Z is beyond saturation
+        Pz = self.P_sn * (1 + 1/9 * np.exp(np.sqrt(3) * zn) / np.sqrt(np.pi * zn))
+        zn_insat = zn-self.z_sat_norm
+        if np.size(zn_insat)>1:
+            zn_insat[zn_insat<0]=0
+        else:
+            if zn_insat<0:
+                zn_insat = 0
+        if tap == True:
+            dPz_sat = self.P_sn*(np.exp(np.sqrt(3)*zn_insat) * (2*np.sqrt(3) * zn_insat - 1) - 9) / (18 * np.sqrt(np.pi) * zn_insat**(3/2)) #derivative of p over z, calculated as an additional power obtained in post-saturation tapering
+            Pz = Pz + dPz_sat
+        # Pz = self.P_sn * (1 + 1/9 * np.exp(np.sqrt(3) * zn))
+        #Pz = p.P_sn * (1 + 1/9 * np.exp(np.sqrt(3) * zn))
+        if hasattr(self,'P_mult'):
+            if self.P_mult is not None:
+                Pz *= self.P_mult
+        return Pz
+        
+    def bandwidth(self, z=None):
+        '''
+        relative FWHM bandwidth of SASE as a function of z
+
+        Parameters
+        ----------
+        z : TYPE, optional
+            DESCRIPTION. The default is None.
+
+        Returns
+        -------
+        None.
+
+        '''
+        
+        if np.size(z) > 1:
+            z = z[:,np.newaxis]
+            if (z > self.z_sat_min).any():
+                _logger.warning('Estimation applicable up to z_sat_min=%.2fm, limiting power to saturation level' %(self.z_sat_min))
+                idx = z > self.z_sat_min[:,np.newaxis]
+                z[idx] = self.z_sat_min[:,np.newaxis][idx]
+        else: 
+            if (z > self.z_sat_min):
+                _logger.warning('Estimation applicable up to z_sat_min=%.2fm, while z=%.2fm requested, returning saturation power' %(self.z_sat_min, z))
+                z = self.z_sat_min
+        
+        dw_w = 2*np.sqrt(2*np.log(2)) * 3 * self.rho3 * np.sqrt(2 * self.lg3 / z)
+        
+        return dw_w
+    
+    
     def E(self, z=None):
         P = self.P(z)
         P[np.isnan(P)] = 0

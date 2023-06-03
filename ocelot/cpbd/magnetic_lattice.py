@@ -17,7 +17,7 @@ from ocelot.cpbd.tm_utils import transfer_maps_mult
 import logging
 import re
 from collections import defaultdict
-from typing import Mapping, Sequence, Tuple, Callable, Any, Generator, Iterator, Type, TypeVar
+from typing import Mapping, Sequence, Tuple, Callable, Any, Generator, Iterator, Type, TypeVar, List
 import numpy as np
 
 _logger = logging.getLogger(__name__)
@@ -261,8 +261,16 @@ class MagneticLattice:
         return line
 
     def find_indices(self, element):
-        indx_elem = np.where([i.__class__ == element for i in self.sequence])[0]
-        return indx_elem
+        """Find index by class type: argument should be a class"""
+
+        return self.find_indices_by_predicate(lambda elem: isinstance(elem, element))
+
+    def find_indices_by_predicate(self, predicate: Callable[Element, bool]) -> List[int]:
+        """Get indices using some callable function.  Function should
+        take one argument, an element of the sequence, and return
+        either True or False.
+        """
+        return [index for (index, element) in enumerate(self.sequence) if predicate(element)]
 
     def find_drifts(self):
         drift_lengs = []

@@ -17,7 +17,7 @@ from ocelot.cpbd.tm_utils import transfer_maps_mult
 import logging
 import re
 from collections import defaultdict
-from typing import Mapping, Sequence, Tuple, Callable, Any, Generator, Iterator, Type, TypeVar
+from typing import Mapping, Sequence, Tuple, Callable, Any, Generator, Iterator, Type, TypeVar, List
 import numpy as np
 
 _logger = logging.getLogger(__name__)

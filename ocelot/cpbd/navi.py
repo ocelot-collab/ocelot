@@ -60,7 +60,7 @@ class Navigator:
             elem1 and elem2 - first and last elements between which the physics process will be applied.
     """
 
-    def __init__(self, lattice):
+    def __init__(self, lattice, unit_step=1):
 
         self.lat = lattice
         self.process_table = ProcessTable(self.lat)
@@ -69,7 +69,7 @@ class Navigator:
         self.z0 = 0.  # current position of navigator
         self.n_elem = 0  # current index of the element in lattice
         self.sum_lengths = 0.  # sum_lengths = Sum[lat.sequence[i].l, {i, 0, n_elem-1}]
-        self.unit_step = 1  # unit step for physics processes
+        self.unit_step = unit_step  # unit step for physics processes
         self.proc_kick_elems = []
         self.kill_process = False  # for case when calculations are needed to terminated e.g. from gui
         self.inactive_processes = [] # processes are sometimes deactivated during tracking

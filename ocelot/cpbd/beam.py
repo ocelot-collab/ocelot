@@ -802,6 +802,12 @@ class ParticleArray:
         return p_idxs
 
     def __getitem__(self, idx):
+        if isinstance(idx, slice):
+            result = ParticleArray()
+            result.rparticles = self.rparticles[..., idx]
+            result.q_array = self.q_array[idx]
+            return result
+
         return Particle(x=self.rparticles[0, idx], px=self.rparticles[1, idx],
                         y=self.rparticles[2, idx], py=self.rparticles[3, idx],
                         tau=self.rparticles[4, idx], p=self.rparticles[5, idx],

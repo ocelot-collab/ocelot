@@ -93,15 +93,15 @@ def loss_factor(current_profile, wake):
     :return: energy loss
     """
     h = wake[1, 0] - wake[0, 0]
-    current_profile[:, 1] = current_profile[:, 1] / (np.sum(current_profile[:, 1]) * h)
+    I = current_profile[:, 1] / (np.sum(current_profile[:, 1]) * h)
     nw = np.max(np.abs(wake[:, 1]))
     w = wake[:, 1]
     n = len(w)
     bi2 = np.zeros((n, 1))
-    nb = len(current_profile[:, 1])
-    bi2[0:nb] = np.reshape(current_profile[:, 1], (nb, 1))
-    loss = -bi2.T @ w * h
-    spread = np.sqrt(bi2.T @ (w + loss)**2 * h)
+    nb = len(I)
+    bi2[0:nb] = np.reshape(I, (nb, 1))
+    loss = -np.dot(bi2.T, w * h)
+    spread = np.sqrt(np.dot(bi2.T, (w + loss)**2 * h))
     peak = np.max(np.abs(w))
     return loss
 
@@ -642,6 +642,7 @@ def undulator_wake_euxfel(x, I, q):
     w1 = speed_of_light * Z0 / (Lsec * np.pi ** 2 * a) * np.sqrt(2 * g0 * xwi)
 
     w0[0] = w0[0] * 0.5
+
     xc, wc = convolution(x, bunch, xwi, w0)
     W0 = -wc[0:nb]
     xc1, wc1 = convolution(x, d1_bunch, xwi, w1)

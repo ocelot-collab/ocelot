@@ -1,6 +1,6 @@
 
 """
-athors: Ye. Fomin (NRC KI); S. Tomin (XFEL, NRC KI), 2016. 
+authors: Ye. Fomin (NRC KI); S. Tomin (XFEL, NRC KI), 2016.
 """
 
 import xlrd
@@ -16,10 +16,12 @@ class StructureConverter:
     in case you want to have in lattice correctors, monitors, markers, screens and other instruments
     use following types:
     types = ["HKIC", "VKIC", "MONI", "MARK", "INSTR"]
+    Known bug: if your stop position corresponds to an element type that is skipped, then the last element will be \
+    the last non-skipped element, without the trailing drift.
     """
     def __init__(self, types=None):
         if types is None:
-            types = []
+            types = ["HKIC", "VKIC", "MONI", "MARK", "INSTR"]
         self.types = types
 
     def longlist_matrix_init(self):

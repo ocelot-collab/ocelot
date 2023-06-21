@@ -154,7 +154,7 @@ def flatten(iterable: Iterator[Any]) -> Generator[Any, None, None]:
     try:
         yield from _flatten(iterable)
     except RecursionError:
-        raise RecursionError("Maximum recusion reached.  Possibly trying"
+        raise RecursionError("Maximum recursion reached.  Possibly trying"
                              " to flatten an infinitely nested iterable.")
 
 

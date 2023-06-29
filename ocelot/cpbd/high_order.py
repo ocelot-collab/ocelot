@@ -938,7 +938,7 @@ def moments_py(bx, by, Bx, By, Bz, dzk):
     my = -k*(bx*Bz - Bx*(1.+by2) + bxy*By)
     return mx, my
 
-moments = moments_py if not nb_flag else nb.jit(moments_py)
+moments = moments_py if not nb_flag else nb.jit(moments_py, nopython=True)
 
 
 def rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=0.):

@@ -136,7 +136,7 @@ def project_on_grid_py(Ro, I0, dI0, q_array):
     return Ro
 
 
-project_on_grid = project_on_grid_py if not nb_flag else nb.jit(project_on_grid_py)
+project_on_grid = project_on_grid_py if not nb_flag else nb.jit(project_on_grid_py, nopython=True)
 
 
 def s2current(s_array, q_array, n_points, filter_order, mean_vel):

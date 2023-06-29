@@ -150,7 +150,7 @@ def transfer_maps_mult_full_py(Ba, Ra, Ta, Bb, Rb, Tb):
     return Bc, Rc, Tc
 
 
-transfer_maps_mult = transfer_maps_mult_py if nb_flag is not True else nb.jit(transfer_maps_mult_py)
+transfer_maps_mult = transfer_maps_mult_py if nb_flag is not True else nb.jit(transfer_maps_mult_py, nopython=True)
 
 
 def transfer_map_rotation(R, T, tilt):

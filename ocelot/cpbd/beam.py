@@ -1577,7 +1577,7 @@ def slice_analysis_py(x, xp, m_slice):
     return [mx, mxs, mxx, mxxs, mxsxs, emittx]
 
 
-slice_analysis = slice_analysis_py if not nb_flag else nb.jit(slice_analysis_py)
+slice_analysis = slice_analysis_py if not nb_flag else nb.jit(slice_analysis_py, nopython=True)
 
 
 def simple_filter(x, p, iter):

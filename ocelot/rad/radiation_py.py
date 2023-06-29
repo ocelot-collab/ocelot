@@ -431,7 +431,7 @@ def gintegrator_over_traj_py(Nmotion, Xscr, Yscr, Erad, n_end, gamma, half_step,
                 arPhase += phase
 
 
-gintegrator_over_traj = gintegrator_over_traj_py if not nb_flag else nb.jit(gintegrator_over_traj_py)
+gintegrator_over_traj = gintegrator_over_traj_py if not nb_flag else nb.jit(gintegrator_over_traj_py, nopython=True)
 
 
 def wrap_gintegrator(Nmotion, Xscr, Yscr, Erad, motion, screen, n_end, gamma, half_step):

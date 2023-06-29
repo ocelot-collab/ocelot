@@ -40,7 +40,7 @@ def weights_default(val):
 
 
 def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', weights=weights_default,
-          vary_bend_angle=False, min_i5=False):
+          vary_bend_angle=False, min_i5=False, tol=1e-5):
     """
     Function to match twiss parameters
 
@@ -84,6 +84,7 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                         return 0.0001
     :param vary_bend_angle: False, allow to vary "angle" of the dipoles instead of the focusing strength "k1"
     :param min_i5: minimization of the radiation integral I5. Can be useful for storage rings.
+    :param tol: tolerance default 1e-5
     :return: result
     """
 
@@ -270,11 +271,11 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
 
     print("initial value: x = ", x)
     if method == 'simplex':
-        res = fmin(errf, x, xtol=1e-5, maxiter=max_iter, maxfun=max_iter)
+        res = fmin(errf, x, xtol=tol, maxiter=max_iter, maxfun=max_iter)
     if method == 'cg':
-        res = fmin_cg(errf, x, gtol=1.e-5, epsilon=1.e-5, maxiter=max_iter)
+        res = fmin_cg(errf, x, gtol=tol, epsilon=1.e-5, maxiter=max_iter)
     if method == 'bfgs':
-        res = fmin_bfgs(errf, x, gtol=1.e-5, epsilon=1.e-5, maxiter=max_iter)
+        res = fmin_bfgs(errf, x, gtol=tol, epsilon=1.e-5, maxiter=max_iter)
 
     '''
     if initial twiss was varied set the twiss argument object to resulting value
@@ -585,7 +586,7 @@ def match_matrix(lat, beam, varz, target_matrix):
     fmin(error_func, x, xtol=1e-8, maxiter=20000, maxfun=20000)
 
 
-def match_tunes(lat, tw0, quads, nu_x, nu_y, ncells=1, print_proc=0):
+def match_tunes(lat, tw0, quads, nu_x, nu_y, ncells=1, max_iter=1000, tol=1e-5, print_proc=0):
     print("matching start .... ")
     end = Monitor(eid="end")
     lat = MagneticLattice(lat.sequence + [end])
@@ -601,7 +602,7 @@ def match_tunes(lat, tw0, quads, nu_x, nu_y, ncells=1, print_proc=0):
     # print constr
     vars = quads
 
-    match(lat, constr, vars, tws[0])
+    match(lat, constr, vars, tws[0], max_iter=max_iter, tol=tol)
     for i, q in enumerate(quads):
         print(q.id, ".k1: before: ", strengths1[i], "  after: ", q.k1)
     lat = MagneticLattice(lat.sequence[:-1])

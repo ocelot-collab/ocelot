@@ -125,7 +125,7 @@ def und_field_py(x, y, z, lperiod, Kx, nperiods=None, phase=0, end_poles='1'):
     return (Bx, By, Bz)
 
 
-und_field = und_field_py if not nb_flag else nb.jit(forceobj=False)(und_field_py)
+und_field = und_field_py if not nb_flag else nb.jit(forceobj=False, nopython=True)(und_field_py)
 
 
 class UndulatorAtom(Element):

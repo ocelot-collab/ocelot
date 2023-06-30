@@ -21,7 +21,10 @@ class StructureConverter:
     """
     def __init__(self, types=None):
         if types is None:
-            types = ["HKIC", "VKIC", "MONI", "MARK", "INSTR"]
+            types = ["HKIC", "VKIC", "MONI", "MARK", "INSTR", "CM"]
+            # MONI - BPM
+            # INSTR - screen
+            # CM - toroid
         self.types = types
 
     def longlist_matrix_init(self):
@@ -60,6 +63,9 @@ class StructureConverter:
 
         if "INSTR" in self.types:
             self.longlist_matrix['DIAG']['INSTR'] = {'type': Marker}
+
+        if "CM" in self.types:
+            self.longlist_matrix['DIAG']['CM'] = {'type': Marker}
 
         if "MARK" in self.types:
             self.longlist_matrix['MARK'] = {}
@@ -183,3 +189,12 @@ if __name__ == '__main__':
 
     lattice = MagneticLattice(cell)
     lattice.save_as_py_file()
+
+    #SC = StructureConverter()
+    #SC.types = ["HKIC", "VKIC", "MONI", "MARK", "INSTR"]
+    #i1_cell = SC.Longlist2Ocelot('component_list_2023.01.02.xls', pos_start=3, pos_stop=140, sbend_l_corr=False)
+    #lattice = MagneticLattice(i1_cell)
+    #lattice = merger(lattice, remaining_types=[SBend, RBend, Bend, Monitor, Quadrupole, Undulator, Solenoid, Hcor, Vcor,
+    #                                           Sextupole, Cavity, TDCavity],
+    #                 remaining_elems=['STSEC.23.I1', 'MATCH.37.I1', 'OTRC.55.I1', 'OTRC.56.I1', 'OTRC.58.I1',
+    #                                  'OTRC.59.I1', 'STSUB.62.I1'], init_energy=0.005)

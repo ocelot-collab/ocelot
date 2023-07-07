@@ -484,7 +484,10 @@ def insert_markers_by_type(sequence, magnet_type: Element, before=True, after=Tr
 
 
 def insert_markers_by_predicate(sequence, predicate: Callable[[Element], bool],
-                                before=True, after=True
+                                before=True, after=True,
+                                before_suffix="_before",
+                                after_suffix="_after",
+                                matched_slice=None
                                 ) -> MarkersInsertionReturnType:
     """Insert markers either side of elements in the magnetic lattice, selected
     based on the the provided predicate function.
@@ -504,11 +507,11 @@ def insert_markers_by_predicate(sequence, predicate: Callable[[Element], bool],
         marker_before = None
         marker_after = None
         if after:
-            marker_id_after = f"{ele.id}_after"
+            marker_id_after = f"{ele.id}{after_suffix}"
             marker_after = Marker(marker_id_after)
             sequence.insert(i + 1, marker_after)
         if before:
-            marker_id_before = f"{ele.id}_before"
+            marker_id_before = f"{ele.id}{before_suffix}"
             marker_before = Marker(marker_id_before)
             sequence.insert(i, marker_before)
 

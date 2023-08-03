@@ -388,15 +388,17 @@ class FelParameters:
         None.
 
         '''
+        if z==None:
+            z=self.z_sat_min
         
         if np.size(z) > 1:
             z = z[:,np.newaxis]
-            if (z > self.z_sat_min).any():
+            if (z >= self.z_sat_min).any():
                 _logger.warning('Estimation applicable up to z_sat_min=%.2fm, limiting power to saturation level' %(self.z_sat_min))
                 idx = z > self.z_sat_min[:,np.newaxis]
                 z[idx] = self.z_sat_min[:,np.newaxis][idx]
         else: 
-            if (z > self.z_sat_min):
+            if (z >= self.z_sat_min):
                 _logger.warning('Estimation applicable up to z_sat_min=%.2fm, while z=%.2fm requested, returning saturation power' %(self.z_sat_min, z))
                 z = self.z_sat_min
         

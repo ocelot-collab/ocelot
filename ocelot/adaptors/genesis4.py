@@ -1362,7 +1362,7 @@ def read_gout4(filePath):
             _logger.debug(ind_str + 's0 = {}'.format(s0))
         else:
             s0 = 0
-        sn = out.h5['Beam/current'].size
+        sn = out.h5['Global/s'].size
         out.s = np.linspace(s0, out.h5['Global/slen'][:][0] + s0, sn)
         _logger.debug(ind_str + 's[0], s[-1], len(s) = {}  {}  {}'.format(out.s[0], out.s[-1], sn))
 

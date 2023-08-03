@@ -175,7 +175,7 @@ class Genesis4Simulation:
         # TODO: write all attachments
 
     def prepare_launcher(self, program_path='genesis4'):
-        self.launcher.program = program_path
+        #self.launcher.program = program_path
         self.launcher.dir = self.exp_dir
         self.launcher.argument = ' ' + self.ginp.filename
         #self.mpiParameters = '-np 8'  # TODO: calculate and request minimum reasonable number of cores (to not ovewblow the window) S.S.
@@ -205,7 +205,7 @@ class Genesis4Simulation:
         return out
 
     def clean_output(self):
-        os.system('rm -r {}*'.format(self.root_path()))
+        os.system('rm -rf {}*'.format(self.root_path()))
 
 
 class Genesis4Input:

@@ -22,6 +22,11 @@ MARKER_NAMES = ["pytest-marker-name-1", "pytest-marker-name-2"]
 PARAMETER_VALUES = [0.1, 0.3]
 FILENAME = "test.hdf5"
 
+try:
+    import h5py
+except ImportError:
+    pytest.skip(reason="No h5py installed", allow_module_level=True)
+
 @pytest.fixture
 def navigator():
     b1 = SBend(l=0.5, angle=-0.5)

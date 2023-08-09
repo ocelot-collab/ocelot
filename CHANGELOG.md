@@ -35,6 +35,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - New `ParameterScanner` class in `cpbd.track` for scanning arbitrary parameters
   in parallel (either using multiprocessing mpi4py). For example one might scan
   different compression schemes. Results are compiled into a single hdf5 file.
+- insert_markers_by_predicate now has optional arbitrary name suffixes for the markers
+- Twiss.from_series allows for Twiss instances to be made from pd.Series (or a dictionary for example).
+- ParticleArray slicing: `parray[10:100]` returns a ParticleArray instance with slices rparticles and q_array.
+- `remove_coupler_kick` convenience method for Cavity class
+- Integrated quad strengths for `k1` and `k2` convenience getters/setters (`k1l` and `k2l).
 
 ### Fixed
 

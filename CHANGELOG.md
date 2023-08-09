@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - The `CSR` class now gives an explicit `logging` `error` when failing in `arcline` and
   a more useful explanation.  This error often occurs because the user has mixed CSR for
   vertical bends with horizontal bends.
+- `Navigator.add_physics_process` should now be a lot faster by doing fewer unnecessary deepcopies.
 
 ### Added
 
@@ -35,6 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - New `ParameterScanner` class in `cpbd.track` for scanning arbitrary parameters
   in parallel (either using multiprocessing mpi4py). For example one might scan
   different compression schemes. Results are compiled into a single hdf5 file.
+- Added new method `Navigator.add_physics_processes` for adding multiple physics processes at the same time.  This will be a lot fastwe when lots of physics processes are to be added.
 
 ### Fixed
 

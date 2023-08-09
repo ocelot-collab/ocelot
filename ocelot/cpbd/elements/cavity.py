@@ -28,3 +28,13 @@ class Cavity(OpticElement):
 
     def set_tm(self, tm: Transformation, **params):
         logger.debug("Cavity Element only support CavityTM. Set tm to CavityTM.")
+
+    def remove_coupler_kick(self):
+        self.vx_up = 0
+        self.vy_up = 0
+        self.vxx_up = 0
+        self.vxy_up = 0
+        self.vx_down = 0
+        self.vy_down = 0
+        self.vxx_down = 0
+        self.vxy_down = 0

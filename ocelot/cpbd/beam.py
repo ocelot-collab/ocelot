@@ -217,6 +217,13 @@ class Twiss:
         """Return this Twiss instance as an equivalent Pandas Series instance."""
         return pd.Series(vars(self))
 
+    @classmethod
+    def from_series(cls, series: pd.Series):
+        result = cls()
+        for key, value in series.items():
+            if hasattr(result, key):
+                setattr(result, key, np.squeeze(value).item())
+        return result
 
 class Particle:
     """

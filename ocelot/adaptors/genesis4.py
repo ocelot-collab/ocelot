@@ -402,6 +402,7 @@ class Genesis4Input:
         else:
             raise TypeError('beam should be an instance of BeamArray or Beam')
         self.sequence['setup'].gamma0 = beam_pk.g
+        # FIXME: bugfix needed for steady-state simulations (these don't have a time element). See populate_sequence_beam_array.
         self.sequence['time'].slen = np.amax(beam.s) - np.amin(beam.s)
         self.sequence[name_list_id].gamma = beam_pk.g  # from [GeV] to [units of the electron rest mass]
         self.sequence[name_list_id].delgam = beam_pk.dg

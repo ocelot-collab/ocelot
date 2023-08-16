@@ -325,8 +325,16 @@ class Genesis4Input:
                 _logger.warning(ind_str + 'no beam_array to populate')
             else:
                 self.attachments.beam[beam_name_list_id] = beam
+                # Update simulation parameters: gamma0 in '&setup' and slen in '&time'
                 self.sequence['setup'].gamma0 = np.mean(beam.g)
-                self.sequence['time'].slen = np.amax(beam.s) - np.amin(beam.s)
+                # Special handling required since steady-state simulations typically do not use '&time' block
+                got_time_block = 'time' in self.sequence
+                if got_time_block:
+                    self.sequence['time'].slen = np.amax(beam.s) - np.amin(beam.s)
+                else:
+                    _logger.warning('Sequence does not contain \'time\' element. This is not an issue for steady-state simulations.')
+        ###
+        ###
         new_sequence = {}
         for name_list_id, name_list in self.sequence.items():
             # If it is not the 'beam' we are looking for, just propagate to the new sequence

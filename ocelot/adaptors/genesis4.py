@@ -311,7 +311,10 @@ class Genesis4Input:
         # TODO: decide whether error raising is needed if co-exist e.g. importbeam and beam or importfield and field
     def check_consistency_round2(self):
         _logger.info('CL 2023-Aug-02: May need to re-implement this later')
-		
+
+
+
+
     def populate_sequence_beam_array(self, beam_name_list_id, beam=None):
         # Info: profile_file_multi feature was implemented into
         # "GENESIS 1.3" v4 developer version by C. Lechner in Sept-2021.
@@ -396,14 +399,19 @@ class Genesis4Input:
         if isinstance(beam, BeamArray):
             beam_pk = beam.pk()
             _logger.warning(
-                'at the moment method beam_to_sequence_beam parses a single beam slice; peak current value is taken')
+                'at the moment method populate_sequence_beam parses a single beam slice; peak current value is taken')
         elif isinstance(beam, Beam):
             beam_pk = beam
         else:
             raise TypeError('beam should be an instance of BeamArray or Beam')
+        # Special handling required since steady-state simulations typically do not use '&time' block
+        got_time_block = 'time' in self.sequence
+        if got_time_block:
+            self.sequence['time'].slen = np.amax(beam.s) - np.amin(beam.s)
+        else:
+            _logger.warning('Sequence does not contain \'time\' element. This is not an issue for steady-state simulations.')
+
         self.sequence['setup'].gamma0 = beam_pk.g
-        # FIXME: bugfix needed for steady-state simulations (these don't have a time element). See populate_sequence_beam_array.
-        self.sequence['time'].slen = np.amax(beam.s) - np.amin(beam.s)
         self.sequence[name_list_id].gamma = beam_pk.g  # from [GeV] to [units of the electron rest mass]
         self.sequence[name_list_id].delgam = beam_pk.dg
         self.sequence[name_list_id].current = beam_pk.I
@@ -443,6 +451,9 @@ class Genesis4Input:
     #         except:
     #             # _logger.debug...
     #             pass
+
+
+
 
 
 class Genesis4Attachments:

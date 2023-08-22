@@ -50,25 +50,26 @@ class Twiss:
     """
 
     def __init__(self, beam=None, **kwargs):
+      
+        self.emit_x = kwargs.get("emit_x", 0.)
+        self.emit_y = kwargs.get("emit_y", 0.)
+        self.emit_xn = kwargs.get("emit_xn", 0.)
+        self.emit_yn = kwargs.get("emit_yn", 0.)
+        self.eigemit_1 = 0.
+        self.eigemit_2 = 0.
+        self.beta_x = kwargs.get("beta_x", 0.)
+        self.beta_y = kwargs.get("beta_y", 0.)
+        self.alpha_x = kwargs.get("alpha_x", 0.)
+        self.alpha_y = kwargs.get("alpha_y", 0.)
+        self.gamma_x = kwargs.get("gamma_x", 0.)
+        self.gamma_y = kwargs.get("gamma_y", 0.)
+        self.Dx = kwargs.get("Dx", 0.)
+        self.Dy = kwargs.get("Dy", 0.)
+        self.Dxp = kwargs.get("Dxp", 0.)
+        self.Dyp = kwargs.get("Dyp", 0.)
+        self.mux = kwargs.get("mux", 0.)   # phase advance
+        self.muy = kwargs.get("muy", 0.)   # phase advance
 
-        self.emit_x = kwargs.get("emit_x", 0.0)
-        self.emit_y = kwargs.get("emit_y", 0.0)
-        self.emit_xn = kwargs.get("emit_xn", 0.0)
-        self.emit_yn = kwargs.get("emit_yn", 0.0)
-        self.eigemit_1 = kwargs.get("eigemit_1", 0.)
-        self.eigemit_2 = kwargs.get("eigemit_2", 0.)
-        self.beta_x = kwargs.get("beta_x", 0.0)
-        self.beta_y = kwargs.get("beta_y", 0.0)
-        self.alpha_x = kwargs.get("alpha_x", 0.0)
-        self.alpha_y = kwargs.get("alpha_y", 0.0)
-        self.gamma_x = kwargs.get("gamma_x", 0.0)
-        self.gamma_y = kwargs.get("gamma_y", 0.0)
-        self.Dx = kwargs.get("Dx", 0.0)
-        self.Dy = kwargs.get("Dy", 0.0)
-        self.Dxp = kwargs.get("Dxp", 0.0)
-        self.Dyp = kwargs.get("Dyp", 0.0)
-        self.mux = kwargs.get("mux", 0.0)  # phase advance
-        self.muy = kwargs.get("muy", 0.0)  # phase advance
 
         # parameters below in the most cases are calculated from the ParticleArray object
         # during tracking (see func 'get_envelop()')
@@ -98,7 +99,9 @@ class Twiss:
         self.pp = kwargs.get("pp", 0)
 
         self.id = kwargs.get("id", "")
-        if beam is not None:
+
+        if isinstance(beam, (Twiss, Beam)):
+
             self.emit_x = beam.emit_x
             self.emit_y = beam.emit_y
             self.emit_xn = beam.emit_xn

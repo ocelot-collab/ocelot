@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from ocelot.utils.section_track import *
 import accelerator.lattice.i1 as i1
 import accelerator.lattice.l1 as l1
@@ -9,6 +11,8 @@ Sig_Z = (0.0012761713706630296, 0.00043356707510439394, 6.229583056423405e-05, 5
 
 SmoothPar=1000
 LHE=1.4*10000e-9 # GeV
+
+WAKES_PATH = Path(__file__).parent.parent / "wakes"
 
 
 class A1(SectionTrack):
@@ -43,7 +47,7 @@ class A1(SectionTrack):
         sc2.step = 1
         sc2.nmesh_xyz = [63, 63, 63]
         wake = Wake()
-        wake.wake_table = WakeTable('./unit_tests/ebeam_test/section_track/accelerator/wakes/RF/mod_TESLA_MODULE_WAKE_TAYLOR.dat')
+        wake.wake_table = WakeTable(WAKES_PATH / 'RF/mod_TESLA_MODULE_WAKE_TAYLOR.dat')
         wake.factor = 1
         wake.step = 50
         smooth = SmoothBeam()
@@ -76,7 +80,7 @@ class AH1(SectionTrack):
         sc.step = 5
         sc.nmesh_xyz = [63, 63, 63]
         wake = Wake()
-        wake.wake_table = WakeTable('./unit_tests/ebeam_test/section_track/accelerator/wakes/RF/mod_THIRD_HARMONIC_SECTION_WAKE_TAYLOR.dat')
+        wake.wake_table = WakeTable(WAKES_PATH / 'RF/mod_THIRD_HARMONIC_SECTION_WAKE_TAYLOR.dat')
         wake.factor = 2
         wake.step = 50
 
@@ -262,7 +266,7 @@ class L1(SectionTrack):
         sc.step = 50
         sc.nmesh_xyz = [31, 31, 31]
         wake = Wake()
-        wake.wake_table = WakeTable('./unit_tests/ebeam_test/section_track/accelerator/wakes/RF/mod_TESLA_MODULE_WAKE_TAYLOR.dat')
+        wake.wake_table = WakeTable(WAKES_PATH / 'RF/mod_TESLA_MODULE_WAKE_TAYLOR.dat')
         wake.factor = 4
         wake.step = 100
 

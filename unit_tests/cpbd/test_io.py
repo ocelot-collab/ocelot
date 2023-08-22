@@ -17,6 +17,11 @@ PARRAY0S = [ParticleArray(10), ParticleArray(20)]
 MARKER_NAMES = ["pytest-marker-name-1", "pytest-marker-name-2"]
 FILENAME = "test.hdf5"
 
+try:
+    import h5py
+except ImportError:
+    pytest.skip(reason="No h5py installed", allow_module_level=True)
+
 def assert_parray_equality(first, second):
     np.testing.assert_equal(first.E, second.E)
     np.testing.assert_equal(first.s, second.s)

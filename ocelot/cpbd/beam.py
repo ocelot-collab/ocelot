@@ -50,7 +50,7 @@ class Twiss:
     """
 
     def __init__(self, beam=None, **kwargs):
-
+      
         self.emit_x = kwargs.get("emit_x", 0.)
         self.emit_y = kwargs.get("emit_y", 0.)
         self.emit_xn = kwargs.get("emit_xn", 0.)
@@ -70,35 +70,38 @@ class Twiss:
         self.mux = kwargs.get("mux", 0.)   # phase advance
         self.muy = kwargs.get("muy", 0.)   # phase advance
 
+
         # parameters below in the most cases are calculated from the ParticleArray object
         # during tracking (see func 'get_envelop()')
 
-        self.E = kwargs.get("E", 0.)   # ref the beam energy in [GeV]
-        self.s = kwargs.get("s", 0.)   # position along the reference trajectory [m]
-        self.q = 0.0  # charge of the whole beam [C]
+        self.E = kwargs.get("E", 0.0)  # ref the beam energy in [GeV]
+        self.s = kwargs.get("s", 0.0)  # position along the reference trajectory [m]
+        self.q = kwargs.get("q", 0.0)  # charge of the whole beam [C]
 
         # moments
-        self.x = 0.0
-        self.y = 0.0
-        self.p = 0.0
-        self.tau = 0.0
-        self.xp = 0.0
-        self.yp = 0.0
-        self.xx = 0.
-        self.xpx = 0.
-        self.pxpx = 0.
-        self.yy = 0.
-        self.ypy = 0.
-        self.pypy = 0.
-        self.tautau = 0.
-        self.xy = 0.
-        self.pxpy = 0.
-        self.xpy = 0.
-        self.ypx = 0.
-        self.pp = 0
+        self.x = kwargs.get("x", 0.0)
+        self.y = kwargs.get("y", 0.0)
+        self.p = kwargs.get("p", 0.0)
+        self.tau = kwargs.get("tau", 0.0)
+        self.xp = kwargs.get("xp", 0.0)
+        self.yp = kwargs.get("yp", 0.0)
+        self.xx = kwargs.get("xx", 0.)
+        self.xpx = kwargs.get("xpx", 0.)
+        self.pxpx = kwargs.get("pxpx", 0.)
+        self.yy = kwargs.get("yy", 0.)
+        self.ypy = kwargs.get("ypy", 0.)
+        self.pypy = kwargs.get("pypy", 0.)
+        self.tautau = kwargs.get("tautau", 0.)
+        self.xy = kwargs.get("xy", 0.)
+        self.pxpy = kwargs.get("pxpy", 0.)
+        self.xpy = kwargs.get("xpy", 0.)
+        self.ypx = kwargs.get("ypx", 0.)
+        self.pp = kwargs.get("pp", 0)
 
-        self.id = ""
+        self.id = kwargs.get("id", "")
+
         if isinstance(beam, (Twiss, Beam)):
+
             self.emit_x = beam.emit_x
             self.emit_y = beam.emit_y
             self.emit_xn = beam.emit_xn
@@ -581,27 +584,27 @@ class BeamArray(Beam):
 
     def add_chirp_poly(self, coeff, s0=None):
         '''
-        The method adds a polynomial energy chirp to the beam object. 
+        The method adds a polynomial energy chirp to the beam object.
 
         coeff   --- coefficients for the chirp
         s0      --- the point with respect to which the chirp will be introduced
 
         The expression for the chirp:
 
-        E = E0((g0 + coeff[0])/g0 + 
+        E = E0((g0 + coeff[0])/g0 +
 
-            + coeff[1]*(s - s0))**1 / 1! / ((speed_of_light * 1e-15)**1  * g0) + 
+            + coeff[1]*(s - s0))**1 / 1! / ((speed_of_light * 1e-15)**1  * g0) +
 
-            + coeff[2]*(s - s0))**2 / 2! / ((speed_of_light * 1e-15)**2  * g0) + 
+            + coeff[2]*(s - s0))**2 / 2! / ((speed_of_light * 1e-15)**2  * g0) +
 
-            + coeff[3]*(s - s0))**3 / 3! / ((speed_of_light * 1e-15)**3  * g0) + ... 
+            + coeff[3]*(s - s0))**3 / 3! / ((speed_of_light * 1e-15)**3  * g0) + ...
 
         ... + coeff[n]*(s - s0))**n / n! / ((speed_of_light * 1e-15)**n  * g0))
 
         where coeff[n] is represented in [1/fs**n]
         The convention for the coeff is introduced for convenient treatment this
         with respect to a radiation chirp in order to easily satisfy the resonant
-        condition along the whole bunch in the case of linear electron bunch chirp. 
+        condition along the whole bunch in the case of linear electron bunch chirp.
         Here is the expresion:
 
             2*dw/dt = (w0/g0) * dg/dt
@@ -646,7 +649,7 @@ class BeamFormFactor:
         self.cfactor = None #modulus of form-factor
         self.frequency = None #frequency in Hz
         self.beam_array = beam_array #original beam file
-        
+
         if self.beam_array is not None:
             self.beam_array.sort()
             self.beam_array.equidist()
@@ -667,7 +670,7 @@ class BeamFormFactor:
         ds = np.abs(self.beam_array.s[1] - self.beam_array.s[0])
         self.frequency = np.fft.fftfreq(len(self), ds / speed_of_light)
         idx = len(self) // 2
-        
+
         self.cfactor = self.cfactor[:idx]
         self.frequency = self.frequency[:idx]
 
@@ -1652,12 +1655,35 @@ def slice_analysis_transverse(parray, Mslice, Mcur, p, iter):
 
 
 class SliceParameters:
+    SP_TO_TWISS_NAMES: dict[str, str] = {"ex": "emit_x",
+                                         "ey": "emit_y",
+                                         "exn": "emit_xn",
+                                         "eyn": "emit_yn",
+                                         "mx": "x",
+                                         "mxp": "xp",
+                                         "my": "y",
+                                         "myp": "yp",
+                                         "me": "E",
+                                         "beta_x": "beta_x",
+                                         "beta_y": "beta_y",
+                                         "alpha_x": "alpha_x",
+                                         "alpha_y": "alpha_y",
+                                         "gamma_x": "gamma_x",
+                                         "gamma_y": "gamma_y"}
+
+    VARIANCE_SP_NAMES: dict[str, str] = {"se": "pp",
+                                         "sig_x": "xx",
+                                         "sig_y": "yy",
+                                         "sig_xp": "pxpx",
+                                         "sig_yp": "pypy"}
 
     def __init__(self):
         self.s = None
         self.I = None
         self.ex = None
         self.ey = None
+        self.exn = None
+        self.eyn = None
         self.me = None
         self.se = None
         self.gamma0 = None
@@ -1683,6 +1709,22 @@ class SliceParameters:
         self.alpha_y = None
         self.gamma_x = None
         self.gamma_y = None
+
+    def extract_slice(self, index: int) -> Twiss:
+        # Not all are added if there is no appropriate and unambiguous
+        # analogue in the Twiss class
+        rtwiss = Twiss()
+
+        for slice_parameters_name, twiss_name in self.SP_TO_TWISS_NAMES.items():
+            chosen_slice_value = getattr(self, slice_parameters_name)[index]
+            setattr(rtwiss, twiss_name, chosen_slice_value)
+
+        for slice_parameters_name, twiss_name in self.VARIANCE_SP_NAMES.items():
+            chosen_slice_value = getattr(self, slice_parameters_name)[index] ** 2
+            setattr(rtwiss, twiss_name, chosen_slice_value)
+
+        return rtwiss
+            
 
 
 def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
@@ -2234,9 +2276,9 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
                     l_beam * 6 if gaussian,
     nslice - number of slices in the beam
     """
-    
+
     _logger.info('generating electron beam distribution')
-    
+
     beam = Beam()
     beam.E = E
     beam.tlen = l_beam / speed_of_light * 1e15
@@ -2259,7 +2301,7 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
             nslice = value
         if key == 'dE':
             beam.dg = value / m_e_GeV
-    
+
     if 'l_window' not in kwargs:
         if beam.shape is ['gaussian', 'gauss', 'g']:
             l_window = l_beam * 6
@@ -2269,12 +2311,12 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
             raise ValueError('Beam() shape can be either "gaussian" or "flattop"')
     else:
         l_window = kwargs['l_window']
-    
+
     beam_arr = beam.to_array(nslice, l_window)
-    
+
     if 'chirp' in kwargs:
         beam_arr.add_chirp(kwargs['chirp'])
-    
+
     return beam_arr
 
 

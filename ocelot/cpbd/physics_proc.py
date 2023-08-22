@@ -151,6 +151,11 @@ class SmoothBeam(PhysProc):
         #Zout[inds] = Zout2
         p_array.tau()[inds] = Zout2
 
+    def __repr__(self) -> str:
+        cname = type(self).__name__
+        mslice = self.mslice
+        return f"<{cname}: {mslice=}>"
+
 
 class LaserModulator(PhysProc):
     def __init__(self, step=1):

@@ -144,6 +144,22 @@ def periodic_twiss(tws, R):
     """
     tws = Twiss(tws)
 
+    if R[5, 5] != 1:
+        if tws.E == 0:
+            raise TypeError("Lattice is contained Cavity. Argument 'tws' must be Twiss class with non zero energy 'tws.E'")
+
+        g0 = tws.E / m_e_GeV
+        g1 = np.sqrt(g0 ** 2 - 1 + R[5, 5] ** 2) / R[5, 5]
+        k = np.sqrt(g1 / g0)
+        R[0, 0] = R[0, 0] * k
+        R[0, 1] = R[0, 1] * k
+        R[1, 0] = R[1, 0] * k
+        R[1, 1] = R[1, 1] * k
+        R[2, 2] = R[2, 2] * k
+        R[2, 3] = R[2, 3] * k
+        R[3, 2] = R[3, 2] * k
+        R[3, 3] = R[3, 3] * k
+
     cosmx = (R[0, 0] + R[1, 1]) / 2.
     cosmy = (R[2, 2] + R[3, 3]) / 2.
 
@@ -189,12 +205,11 @@ def twiss(lattice, tws0=None, nPoints=None, return_df=False, attach2elem=False):
     :return: list of Twiss() objects
     """
     if tws0 is None:
-        tws0 = periodic_twiss(tws0, lattice_transfer_map(lattice, energy=0.))
+        tws0 = lattice.periodic_twiss(tws0)
 
     if tws0.__class__ == Twiss:
         if tws0.beta_x == 0 or tws0.beta_y == 0:
-            R = lattice_transfer_map(lattice, tws0.E)
-            tws0 = periodic_twiss(tws0, R)
+            tws0 = lattice.periodic_twiss(tws0)
             if tws0 is None:
                 _logger.info(' twiss: Twiss: no periodic solution')
                 return None
@@ -223,11 +238,10 @@ def twiss_fast(lattice, tws0=None):
     :return: list of Twiss() objects
     """
     if tws0 is None:
-        tws0 = periodic_twiss(tws0, lattice_transfer_map(lattice, energy=0.))
+        tws0 = lattice.periodic_twiss(tws0)
     if tws0.__class__ == Twiss:
         if tws0.beta_x == 0 or tws0.beta_y == 0:
-            R = lattice_transfer_map(lattice, tws0.E)
-            tws0 = periodic_twiss(tws0, R)
+            tws0 = lattice.periodic_twiss(tws0)
             if tws0 is None:
                 _logger.warning(' twiss_fast: Twiss: no periodic solution')
                 return None

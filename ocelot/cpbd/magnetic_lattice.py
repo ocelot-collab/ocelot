@@ -11,8 +11,10 @@ from ocelot.cpbd.elements.sbend import SBend
 from ocelot.cpbd.elements.rbend import RBend
 from ocelot.cpbd.latticeIO import LatticeIO
 from ocelot.cpbd.transformations.transfer_map import TransferMap
-from ocelot.cpbd.optics import lattice_transfer_map
+from ocelot.cpbd.optics import lattice_transfer_map, periodic_twiss
 from ocelot.cpbd.tm_utils import transfer_maps_mult
+from ocelot.common.globals import m_e_GeV
+from ocelot.cpbd.beam import Twiss
 
 import logging
 import re
@@ -368,6 +370,22 @@ class MagneticLattice:
             a_x.append(ang_x)
             a_y.append(ang_y)
         return x, y, z, a_x, a_y
+
+    def print_sequence(self, start: E = None, stop: E = None):
+        sequence = self.get_sequence_part(start, stop)
+        lines = ["{:<17} {:<15} {:<10} {:<10}".format('id', 'length', 'start', 'end') ]
+        s = 0.
+        for elem in sequence:
+            line = "{:<17} {:<15} {:<10} {:<10}".format(elem.id, np.round(elem.l, 4), np.round(s, 4), np.round(s + elem.l, 4))
+            s += elem.l
+            lines.append(line)
+        return lines
+
+    def periodic_twiss(self, tws=None):
+        tws = Twiss(tws)
+        R = self.transfer_maps(energy=tws.E)[1]
+        tw_periodic = periodic_twiss(tws, R)
+        return tw_periodic
 
 
 class EndElements:

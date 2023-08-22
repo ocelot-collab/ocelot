@@ -88,6 +88,7 @@ class Navigator:
         self.n_elem = 0  # current index of the element in lattice
         self.sum_lengths = 0.  # sum_lengths = Sum[lat.sequence[i].l, {i, 0, n_elem-1}]
         self.process_table = deepcopy(self.ref_process_table)
+        self.process_table.lat = self.lat
         self.inactive_processes = []
 
     def go_to_start(self):
@@ -222,6 +223,45 @@ class Navigator:
                 self.process_table.proc_list.remove(p)
                 self.inactive_processes.append(p)
 
+    def jump_to(self, z: float) -> None:
+        """
+        Set the current position of the Navigator to some new z value.
+        :param z: Position to jump to in the beamline.
+        :return: None
+        """
+        self.go_to_start()
+        if not z: # If jumping to 0.0 then we don't need to do anything.
+            return
+        if z < 0.0 or z >= self.lat.totalLen:
+            raise ValueError(f"Invalid z value: {z}")
+
+
+        self.z0 = z
+
+        running_z = 0.0
+        # update sum_lengths and n_elem for this new z point
+        for i, element in enumerate(self.lat.sequence):
+            running_z += element.l
+            if running_z > self.z0:
+                self.n_elem = i
+                break
+            self.sum_lengths += element.l
+
+        # Remove any kick processes so we are consistent if we start
+        # inside an element with a kick.
+        for process in self.process_table.kick_proc_list:
+            if process.s_stop < self.z0:
+                self.process_table.kick_proc_list.remove(process)
+                self.process_table.proc_list.remove(process)
+                self.inactive_processes.append(process)
+
+        # Update all process z0.
+        for process in self.process_table.proc_list:
+            process.z0 = z
+        # update process table references to match those of the parent
+        # Navigator class
+        self._update_references()
+
     def get_next_step(self):
         while np.abs(self.z0 - self.lat.totalLen) > 1e-10:
             if self.kill_process:
@@ -314,3 +354,16 @@ class Navigator:
         self.sum_lengths = L - elem.l
         self.n_elem = i
         return TM
+
+    def _update_references(self):
+        # At initialisation the ProcessTable and Navi instances both
+        # share the same lat instance.  However, ProcessTable is reset
+        # (deepcopied) at various times and so we end up with the lats
+        # having different addresses.  so we set some things here to
+        # keep everything consistent.
+        self.process_table.lat = self.lat
+        for process in self.process_table.proc_list:
+            indx0 = process.indx0
+            indx1 = process.indx1
+            process.start_elem = self.lat.sequence[indx0]
+            process.end_elem = self.lat.sequence[indx1]

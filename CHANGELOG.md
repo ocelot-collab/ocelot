@@ -35,6 +35,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - New `ParameterScanner` class in `cpbd.track` for scanning arbitrary parameters
   in parallel (either using multiprocessing mpi4py). For example one might scan
   different compression schemes. Results are compiled into a single hdf5 file.
+- new `__repr__` methods for some common physics processes: `CSR`, `SmoothBeam`, `SpaceCharge` and `WakeTable`.
+  
 
 ### Fixed
 

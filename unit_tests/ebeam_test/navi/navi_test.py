@@ -11,6 +11,54 @@ REF_RES_DIR = FILE_DIR + '/ref_results/'
 from unit_tests.params import *
 from navi_conf import *
 
+def test_navi_jump_to_z_jumps_to_valid_z(lattice):
+    navi = Navigator(lattice)
+
+    # Proc for individual marker
+    t = LogProc()
+    navi.add_physics_proc(t, m_kick, m_kick)
+
+    # Proc for whole sequence
+    tthick = LogProc()
+    navi.add_physics_proc(tthick, start, stop)
+
+
+    # We have a physics process
+    assert t in navi.process_table.proc_list
+    assert t in navi.process_table.kick_proc_list
+    assert len(navi.inactive_processes) == 0
+
+    new_z = 1.0
+    navi.jump_to(new_z)
+    assert navi.z0 == new_z
+    # Now there is one less because we jumped over it.
+    assert len(navi.process_table.proc_list) == 1
+    assert len(navi.process_table.kick_proc_list) == 0
+    assert len(navi.inactive_processes) == 1
+
+    # but it is still in the reference process table.
+    assert len(navi.ref_process_table.proc_list) == 2
+    assert len(navi.ref_process_table.kick_proc_list) == 1
+
+    # We jumped to 1.0, and sum lengths is generally less than z0, in this case it is 0.95.
+    # (sum of D0 + B + D1 lengths = 0.3 + 0.25 + 0.4)
+    assert np.isclose(navi.sum_lengths, 0.95)
+    assert navi.process_table.proc_list[0].z0 == new_z
+
+
+
+def test_navi_jump_to_jumps_crashes_on_bad_args(lattice):
+    navi = Navigator(lattice)
+
+    # Don't let caller jump to negative z0
+    with pytest.raises(ValueError):
+        navi.jump_to(-1.0)
+
+    # Don't let caller jump beyond the length of the sequence
+    with pytest.raises(ValueError):
+        navi.jump_to(navi.lat.totalLen * 100)
+
+
 
 def test_generate_parray(lattice, p_array, parameter=None, update_ref_values=False):
     """ func generate_parray testing """
@@ -503,7 +551,7 @@ def teardown_module(module):
 
 
 def setup_function(function):
-    
+
     f = open(pytest.TEST_RESULTS_FILE, 'a')
     f.write(function.__name__)
     f.close()
@@ -515,11 +563,11 @@ def teardown_function(function):
     f = open(pytest.TEST_RESULTS_FILE, 'a')
     f.write(' execution time is ' + '{:.3f}'.format(time.time() - pytest.t_start) + ' sec\n\n')
     f.close()
-    
+
 
 @pytest.mark.update
 def test_update_ref_values(lattice, p_array, cmdopt):
-    
+
     update_functions = []
     update_functions.append('test_navi_wo_procs')
     #update_functions.append('test_kick_marker')
@@ -533,8 +581,8 @@ def test_update_ref_values(lattice, p_array, cmdopt):
         for p in parameter:
             p_arr = copy.deepcopy(p_array)
             result = eval(cmdopt)(lattice, p_arr, p, True)
-        
+
             if os.path.isfile(REF_RES_DIR + cmdopt + str(p) + '.json'):
                 os.rename(REF_RES_DIR + cmdopt + str(p) + '.json', REF_RES_DIR + cmdopt + str(p) + '.old')
-            
+
             json_save(result, REF_RES_DIR + cmdopt + str(p) + '.json')

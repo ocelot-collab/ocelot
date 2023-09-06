@@ -1210,6 +1210,14 @@ class CSR(PhysProc):
         name = "0" * (4 - len(dig)) + dig
         self.plt.savefig( name + '.png')
 
+    def __repr__(self) -> str:
+        cname = type(self).__name__
+        sigma_min = self.sigma_min
+        traj_step = self.traj_step
+        apply_step = self.apply_step
+        n_bin = self.n_bin
+        step = self.step
+        return f"<{cname}: {sigma_min=}, {traj_step=}, {apply_step=}, {n_bin=}, {step=}>"
 
 
 class SaferCSR(CSR):

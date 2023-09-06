@@ -10,7 +10,7 @@ from ocelot.cpbd.beam import Particle
 from ocelot.cpbd.elements import *
 from ocelot.cpbd.beam import get_envelope
 from ocelot.cpbd.track import track
-from ocelot.cpbd.optics import lattice_transfer_map, twiss, periodic_twiss, Twiss
+from ocelot.cpbd.optics import lattice_transfer_map, twiss, Twiss
 from ocelot.cpbd.elements.optic_element import OpticElement
 from ocelot.cpbd.tm_utils import SecondOrderMult
 
@@ -42,7 +42,7 @@ def weights_default(val):
 def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', weights=weights_default,
           vary_bend_angle=False, min_i5=False, tol=1e-5):
     """
-    Function to match twiss parameters
+    Function to match twiss parameters. To find periodic solution for a lattice use MagneticLattice.periodic_twiss(tws)
 
     :param lat: MagneticLattice
     :param constr: dictionary, constrains. Example:
@@ -62,7 +62,7 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
             in case one needs global control on beta function, the constrains can be written following way.
                 constr = {elem1:{'alpha_x':5, 'beta_y':5}, 'global': {'beta_x': ['>', 10]}}
 
-            experimental constrain (CAN BE DISABLED or CHANGED AT ANY MOMENT)
+            Experimental constrain (CAN BE DISABLED or CHANGED AT ANY MOMENT)
                 constr = {"delta": {ELEM1: ["muy", 0],  ELEM2: ["muy", 0], "val":  3*np.pi/2, "weight": 100007}}
                         - try to satisfy: tws.muy at ELEM2 - tws.muy at ELEM1 == 'val'
                         - difference between ELEM1 and ELEM2 of twiss parameter "muy" (can be any) == "val"
@@ -128,7 +128,7 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
         err = 0.0
         if "periodic" in constr.keys():
             if constr["periodic"]:
-                tw_loc = periodic_twiss(tw_loc, lattice_transfer_map(lat, tw.E))
+                tw_loc = lat.periodic_twiss(tw_loc)
                 tw0 = deepcopy(tw_loc)
                 if tw_loc is None:
                     print("########")
@@ -315,12 +315,12 @@ def weights_default(val):
 def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, method='simplex', weights=weights_default,
                vary_bend_angle=False, min_i5=False, bounds=None):
     """
-    Function to match twiss paramters
+    Function to match twiss parameters
 
     :param lat: MagneticLattice
     :param constr: dict in format {elem1:{'beta_x':15, 'beta_y':2}, 'periodic':True} try to find periodic solution or
                 constr = {elem1:{'alpha_x':5, 'beta_y':5}, elem2:{'Dx':0 'Dyp':0, 'alpha_x':5, 'beta_y':5} and so on.
-    :param vars: lsit of elements e.g. vars = [QF, QD]
+    :param vars: list of elements e.g. vars = [QF, QD]
     :param p_array: initial ParticleArray
     :param navi: Navigator with added PhysProcess if needed
     :param verbose: allow print output of minimization procedure
@@ -380,7 +380,7 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
         err = 0.0
         if "periodic" in constr.keys():
             if constr["periodic"] is True:
-                tw_loc = periodic_twiss(tw_loc, lattice_transfer_map(lat, tw_loc.E))
+                tw_loc = lat.periodic_twiss(tw_loc)
                 tw0 = deepcopy(tw_loc)
                 if tw_loc is None:
                     print("########")

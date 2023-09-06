@@ -12,7 +12,7 @@ from unit_tests.params import *
 from undulator_conf import *
 
 
-def test_lattice_transfer_map(lattice, parametr=None, update_ref_values=False):
+def test_lattice_transfer_map(lattice, parameter=None, update_ref_values=False):
     """R maxtrix test"""
 
     r_matrix = lattice_transfer_map(lattice[0], 0.0)
@@ -26,7 +26,7 @@ def test_lattice_transfer_map(lattice, parametr=None, update_ref_values=False):
     assert check_result(result)
 
 
-def test_twiss(lattice, parametr=None, update_ref_values=False):
+def test_twiss(lattice, parameter=None, update_ref_values=False):
     """Twiss parameters calculation function test"""
 
     beam = Beam()
@@ -43,36 +43,36 @@ def test_twiss(lattice, parametr=None, update_ref_values=False):
 
     tws_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
     
-    result = check_dict(tws, tws_ref, TOL, 'absotute', assert_info=' tws - ')
+    result = check_dict(tws, tws_ref, TOL, 'absolute', assert_info=' tws - ')
     assert check_result(result)
 
 
-@pytest.mark.parametrize('parametr', [0, 1])
-def test_tracking_step(lattice, parametr, update_ref_values=False):
+@pytest.mark.parametrize('parameter', [0, 1])
+def test_tracking_step(lattice, parameter, update_ref_values=False):
     """Tracking step function test
-    :parametr=0 - tracking with {'global': TransferMap, 'Undulator': UndulatorTestTM}
-    :parametr=1 - tracking with default {'global': TransferMap}
+    :parameter=0 - tracking with {'global': TransferMap, 'Undulator': UndulatorTestTM}
+    :parameter=1 - tracking with default {'global': TransferMap}
     """
     
     p = Particle(x=0.001, y=0.002)
     p.E = 2.5
 
-    navi = Navigator(lattice[parametr])
+    navi = Navigator(lattice[parameter])
     dz = 0.01
 
     P1 = []
-    for iii in range(int(lattice[parametr].totalLen/dz)):
-        tracking_step(lattice[parametr], [p], dz=dz, navi=navi)
+    for iii in range(int(lattice[parameter].totalLen/dz)):
+        tracking_step(lattice[parameter], [p], dz=dz, navi=navi)
         P1.append(copy.copy(p))
 
-    tracking_step(lattice[parametr], p, dz=dz, navi=navi)
+    tracking_step(lattice[parameter], p, dz=dz, navi=navi)
     
     P1 = obj2dict(P1)
     
     if update_ref_values:
         return P1
 
-    p_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parametr) +'.json')
+    p_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) +'.json')
 
     #assert check_dict(P1, p_ref, TOL)
     result = check_dict(P1, p_ref, TOL, assert_info=' P1 - ')
@@ -119,10 +119,10 @@ def test_update_ref_values(lattice, cmdopt):
     update_function_parameters = {}
     update_function_parameters['test_tracking_step'] = [0, 1]
     
-    parametr = update_function_parameters[cmdopt] if cmdopt in update_function_parameters.keys() else ['']
+    parameter = update_function_parameters[cmdopt] if cmdopt in update_function_parameters.keys() else ['']
 
     if cmdopt in update_functions:
-        for p in parametr:
+        for p in parameter:
             result = eval(cmdopt)(lattice, p, True)
         
             if os.path.isfile(REF_RES_DIR + cmdopt + str(p) + '.json'):

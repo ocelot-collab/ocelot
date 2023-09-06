@@ -134,9 +134,18 @@ class UndulatorAtom(Element):
     lperiod - undulator period in [m];\n
     nperiod - number of periods;\n
     Kx - undulator paramenter for vertical field; \n
-    Ky - undulator parameter for horizantal field;\n
+    Ky - undulator parameter for horizontal field;\n
     field_file - absolute path to magnetic field data;\n
     mag_field - None by default, the magnetic field map function - (Bx, By, Bz) = f(x, y, z)
+    end_poles = "1"
+                '0' - magnetic field starts from 0 value or sin()-like
+                '1' - magnetic field starts from maximum value or cos()-like
+                '3/4' - magnetic field starts with 0, 1/4, -3/4, +1, -1  (or 0, -1/4, +3/4, -1, +1) poles sequence
+                        and finishes with it (fraction is from maximum value of the field)
+                '1/2' - magnetic field starts with 1/2 and finishes with -1/2 poles
+                The default is '1'
+    phase : optional
+            Phase from which the magnetic field is stated. The default is 0, which is cos().
     eid - id of undulator.
     """
 
@@ -181,20 +190,45 @@ class UndulatorAtom(Element):
             gamma = energy / m_e_GeV
             r = np.eye(6)
             r[0, 1] = z
-            if gamma != 0 and lperiod != 0 and Kx != 0:
-                beta = 1 / np.sqrt(1.0 - 1.0 / (gamma * gamma))
+            r[2, 3] = z
+            if gamma != 0 and lperiod != 0:
+                beta = np.sqrt(1.0 - 1.0 / (gamma * gamma))
+                if Kx > 0:
+                    omega_x = np.sqrt(2.0) * np.pi * Kx / (lperiod * gamma * beta)
+                    omega_y = np.sqrt(2.0) * np.pi * Ky / (lperiod * gamma * beta)
+                    r[2, 2] = np.cos(omega_x * z)
+                    r[2, 3] = np.sin(omega_x * z) / omega_x
+                    r[3, 2] = -np.sin(omega_x * z) * omega_x
+                    r[3, 3] = np.cos(omega_x * z)
 
-                omega_x = np.sqrt(2.0) * np.pi * Kx / (lperiod * gamma * beta)
-                omega_y = np.sqrt(2.0) * np.pi * Ky / (lperiod * gamma * beta)
-                r[2, 2] = np.cos(omega_x * z)
-                r[2, 3] = np.sin(omega_x * z) / omega_x
-                r[3, 2] = -np.sin(omega_x * z) * omega_x
-                r[3, 3] = np.cos(omega_x * z)
+                    r[4, 5] = - z / (gamma * beta) ** 2 * (1 + 0.5 * (Kx * beta) ** 2)
 
-                r[4, 5] = - z / (gamma * beta) ** 2 * (1 + 0.5 * (Kx * beta) ** 2)
+                elif Kx < 0:
+                    omega_x = 1j * np.sqrt(2.0) * np.pi * Kx / (lperiod * gamma * beta)
+                    r[2, 2] = np.cosh(omega_x * z)
+                    r[2, 3] = np.sinh(omega_x * z) / omega_x
+                    r[3, 2] = -np.sinh(omega_x * z) * omega_x
+                    r[3, 3] = np.cosh(omega_x * z)
+                else:
+                    r[2, 3] = z
 
-            else:
-                r[2, 3] = z
+                if Ky > 0:
+                    omega_y = np.sqrt(2.0) * np.pi * Ky / (lperiod * gamma * beta)
+                    r[0, 0] = np.cos(omega_y * z)
+                    r[0, 1] = np.sin(omega_y * z) / omega_y
+                    r[1, 0] = -np.sin(omega_y * z) * omega_y
+                    r[1, 1] = np.cos(omega_y * z)
+
+                    r[4, 5] = - z / (gamma * beta) ** 2 * (1 + 0.5 * (Ky * beta) ** 2)
+                elif Ky < 0:
+                    omega_y = 1j * np.sqrt(2.0) * np.pi * Ky / (lperiod * gamma * beta)
+                    r[0, 0] = np.cosh(omega_y * z)
+                    r[0, 1] = np.sinh(omega_y * z) / omega_y
+                    r[1, 0] = -np.sinh(omega_y * z) * omega_y
+                    r[1, 1] = np.cosh(omega_y * z)
+                else:
+                    r[0, 1] = z
+
             return r
 
         R = undulator_r_z(length, lperiod=self.lperiod, Kx=self.Kx, Ky=self.Ky, energy=energy)

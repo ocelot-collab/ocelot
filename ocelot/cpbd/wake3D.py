@@ -182,6 +182,7 @@ class WakeTable:
     """
 
     def __init__(self, wake_file=None):
+        self.wake_file = wake_file
         if wake_file is not None:
             self.TH = self.load_table(wake_file)
 
@@ -583,6 +584,15 @@ class Wake(PhysProc):
         p_array.rparticles[5] = p_array.rparticles[5] + Pz * dz * self.factor / (p_array.E * 1e9)
         p_array.rparticles[3] = p_array.rparticles[3] + Py * dz * self.factor / (p_array.E * 1e9)
         p_array.rparticles[1] = p_array.rparticles[1] + Px * dz * self.factor / (p_array.E * 1e9)
+
+    def __repr__(self) -> str:
+        cname = type(self).__name__
+        w_sampling = self.w_sampling
+        filter_order = self.filter_order
+        factor = self.factor
+        step = self.step
+        wakefile = self.wake_table.wake_file
+        return f"<{cname}: {w_sampling=}, {filter_order=}, {factor=}, {step=}, {wakefile=}>"
 
 
 class WakeKick(Wake):

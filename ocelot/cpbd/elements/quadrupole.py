@@ -28,6 +28,6 @@ class Quadrupole(OpticElement):
     def k2l(self):
         return self.k2 * self.l
 
-    @k1l.setter
+    @k2l.setter
     def k2l(self, value):
         self.k2 = value / self.l

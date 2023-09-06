@@ -1,5 +1,7 @@
 import pytest
+import pandas as pd
 import numpy as np
+from random import random
 
 from ocelot.cpbd.beam import (cov_matrix_from_twiss,
                               cov_matrix_to_parray,
@@ -203,3 +205,9 @@ def test_ParticleArray_slicing():
 
     assert (sliced_parray.rparticles == rparts[..., start:stop]).all()
     assert (sliced_parray.q_array == charges[..., start:stop]).all()
+
+def test_Twiss_from_series(a_twiss_dictionary):
+    series = pd.Series(data=a_twiss_dictionary)
+    twiss = Twiss.from_series(series)
+    for key, value in a_twiss_dictionary.items():
+        assert getattr(twiss, key) == value

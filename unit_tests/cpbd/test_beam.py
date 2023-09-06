@@ -186,3 +186,20 @@ def test_parray_I():
     I = s_to_cur(parray_init.tau(), sigma, q0, v)
 
     assert np.isclose(I_p, I, rtol=1e-07, atol=1e-10).all()
+
+def test_ParticleArray_slicing():
+    parray = ParticleArray(n=5)
+
+    rparts = np.random.rand(*parray.rparticles.shape)
+    charges = np.random.rand(*parray.q_array.shape)
+
+    parray.rparticles = rparts
+    parray.q_array = charges
+
+    start = 1
+    stop = 4
+
+    sliced_parray = parray[start:stop]
+
+    assert (sliced_parray.rparticles == rparts[..., start:stop]).all()
+    assert (sliced_parray.q_array == charges[..., start:stop]).all()

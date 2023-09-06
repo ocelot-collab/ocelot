@@ -486,6 +486,28 @@ def test_kick_with_thick_elem(lattice, p_array, parameter=None, update_ref_value
     assert check_result([result0] + result1 + result2 + result3 + result4)
 
 
+def test_navigator_add_physics_processes(lattice):
+    navi = Navigator(lattice)
+
+    eproc1 = EmptyProc()
+    eproc2 = EmptyProc()
+    eproc3 = EmptyProc()
+
+    procs = [eproc1, eproc2, eproc3]
+    starts = [lattice.sequence[0], lattice.sequence[1], lattice.sequence[2]]
+    stops = [lattice.sequence[-1], lattice.sequence[-2], lattice.sequence[-3]]
+
+    navi.add_physics_processes(procs, starts, stops)
+
+    assert navi.process_table.proc_list == procs
+    assert navi.process_table.proc_list[0].indx0 == 0
+    assert navi.process_table.proc_list[0].indx1 == 11
+
+    assert navi.process_table.proc_list[1].indx0 == 1
+    assert navi.process_table.proc_list[1].indx1 == 10
+
+    assert navi.process_table.proc_list[2].indx0 == 2
+    assert navi.process_table.proc_list[2].indx1 == 9
 
 
 def setup_module(module):
@@ -503,7 +525,7 @@ def teardown_module(module):
 
 
 def setup_function(function):
-    
+
     f = open(pytest.TEST_RESULTS_FILE, 'a')
     f.write(function.__name__)
     f.close()
@@ -515,11 +537,11 @@ def teardown_function(function):
     f = open(pytest.TEST_RESULTS_FILE, 'a')
     f.write(' execution time is ' + '{:.3f}'.format(time.time() - pytest.t_start) + ' sec\n\n')
     f.close()
-    
+
 
 @pytest.mark.update
 def test_update_ref_values(lattice, p_array, cmdopt):
-    
+
     update_functions = []
     update_functions.append('test_navi_wo_procs')
     #update_functions.append('test_kick_marker')
@@ -533,8 +555,8 @@ def test_update_ref_values(lattice, p_array, cmdopt):
         for p in parameter:
             p_arr = copy.deepcopy(p_array)
             result = eval(cmdopt)(lattice, p_arr, p, True)
-        
+
             if os.path.isfile(REF_RES_DIR + cmdopt + str(p) + '.json'):
                 os.rename(REF_RES_DIR + cmdopt + str(p) + '.json', REF_RES_DIR + cmdopt + str(p) + '.old')
-            
+
             json_save(result, REF_RES_DIR + cmdopt + str(p) + '.json')

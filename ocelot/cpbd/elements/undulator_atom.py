@@ -83,9 +83,11 @@ def und_field_py(x, y, z, lperiod, Kx, nperiods=None, phase=0, end_poles='1'):
     cosz = np.cos(kz_z)
 
     if nperiods is not None:
-        
+
         ph_shift = np.pi / 2.
-        def heaviside(x): return 0.5 * (np.sign(x) + 1)
+
+        def heaviside(x):
+            return 0.5 * (np.sign(x) + 1)
 
         if end_poles == '0':
             z_coef = 1
@@ -97,21 +99,21 @@ def und_field_py(x, y, z, lperiod, Kx, nperiods=None, phase=0, end_poles='1'):
 
         elif end_poles == '3/4':
             z_coef = (0.25 * heaviside(z) + 0.5 * heaviside(z - lperiod / 2.) + 0.25 * heaviside(z - lperiod)
-                     - 0.25 * heaviside(z - (nperiods - 1) * lperiod) - 0.5 * heaviside(z - (nperiods - 0.5) * lperiod)
-                     - 0.25 * heaviside(z - nperiods * lperiod))
+                      - 0.25 * heaviside(z - (nperiods - 1) * lperiod) - 0.5 * heaviside(z - (nperiods - 0.5) * lperiod)
+                      - 0.25 * heaviside(z - nperiods * lperiod))
 
             cosz = np.cos(kz_z + ph_shift) * z_coef
 
         elif end_poles == '1/2':
             z_coef = (-0.5 * heaviside(z - lperiod * 0.5) - 0.5 * heaviside(z + lperiod)
-                     + 0.5 * heaviside(z - (nperiods - 0.5) * lperiod) 
-                     + 0.5 * heaviside(z - nperiods * lperiod))
-            
-            cosz = np.cos(kz_z + ph_shift) * z_coef   
+                      + 0.5 * heaviside(z - (nperiods - 0.5) * lperiod)
+                      + 0.5 * heaviside(z - nperiods * lperiod))
+
+            cosz = np.cos(kz_z + ph_shift) * z_coef
 
         else:
             raise ValueError("'end_poles' must be either '1', '0', '3/4' or '1/2';" +
-                             "if '1' the field starts from max value;" +  
+                             "if '1' the field starts from max value;" +
                              "if '0' the field starts from 0;" +
                              "if 3/4' the following end poles sequence is added 1/4, -3/4, +1, -1 instead of existing +1, -1, +1, -1" +
                              "if 1/2 the following end poles sequence is added 1/2, -1, +1 instead of existing +1, -1, +1.")
@@ -159,7 +161,7 @@ class UndulatorAtom(Element):
         self.solver = "linear"  # can be "lin" is linear matrix,  "sym" - symplectic method and "rk" is Runge-Kutta
         self.phase = phase  # phase between Bx and By + pi/4 (spiral undulator)
         self.end_poles = end_poles
-    
+
         self.ax = -1  # width of undulator, when ax is negative undulator width is infinite
         # I need this for analytic description of undulator
 
@@ -191,41 +193,40 @@ class UndulatorAtom(Element):
             r = np.eye(6)
             r[0, 1] = z
             r[2, 3] = z
+
             if gamma != 0 and lperiod != 0:
                 beta = np.sqrt(1.0 - 1.0 / (gamma * gamma))
-                if Kx > 0:
+                r[4, 5] = - z / (gamma * beta) ** 2 * (1 + 0.5 * (np.sqrt(Kx * Kx + Ky * Ky).real * beta) ** 2)
+
+                if Kx.real > 0 and Kx.imag == 0:
                     omega_x = np.sqrt(2.0) * np.pi * Kx / (lperiod * gamma * beta)
-                    omega_y = np.sqrt(2.0) * np.pi * Ky / (lperiod * gamma * beta)
                     r[2, 2] = np.cos(omega_x * z)
                     r[2, 3] = np.sin(omega_x * z) / omega_x
                     r[3, 2] = -np.sin(omega_x * z) * omega_x
                     r[3, 3] = np.cos(omega_x * z)
 
-                    r[4, 5] = - z / (gamma * beta) ** 2 * (1 + 0.5 * (Kx * beta) ** 2)
-
-                elif Kx < 0:
-                    omega_x = 1j * np.sqrt(2.0) * np.pi * Kx / (lperiod * gamma * beta)
-                    r[2, 2] = np.cosh(omega_x * z)
-                    r[2, 3] = np.sinh(omega_x * z) / omega_x
-                    r[3, 2] = -np.sinh(omega_x * z) * omega_x
-                    r[3, 3] = np.cosh(omega_x * z)
+                elif Kx.real == 0 and Kx.imag != 0:
+                    omega_x = np.sqrt(2.0) * np.pi * Kx / (lperiod * gamma * beta)
+                    r[2, 2] = np.real(np.cosh(omega_x * z))
+                    r[2, 3] = np.real(np.sinh(omega_x * z) / omega_x)
+                    r[3, 2] = np.real(-np.sinh(omega_x * z) * omega_x)
+                    r[3, 3] = np.real(np.cosh(omega_x * z))
                 else:
                     r[2, 3] = z
 
-                if Ky > 0:
+                if Ky.real > 0 and Ky.imag == 0:
                     omega_y = np.sqrt(2.0) * np.pi * Ky / (lperiod * gamma * beta)
                     r[0, 0] = np.cos(omega_y * z)
                     r[0, 1] = np.sin(omega_y * z) / omega_y
                     r[1, 0] = -np.sin(omega_y * z) * omega_y
                     r[1, 1] = np.cos(omega_y * z)
 
-                    r[4, 5] = - z / (gamma * beta) ** 2 * (1 + 0.5 * (Ky * beta) ** 2)
-                elif Ky < 0:
-                    omega_y = 1j * np.sqrt(2.0) * np.pi * Ky / (lperiod * gamma * beta)
-                    r[0, 0] = np.cosh(omega_y * z)
-                    r[0, 1] = np.sinh(omega_y * z) / omega_y
-                    r[1, 0] = -np.sinh(omega_y * z) * omega_y
-                    r[1, 1] = np.cosh(omega_y * z)
+                elif Ky.real == 0 and Ky.imag != 0:
+                    omega_y = np.sqrt(2.0) * np.pi * Ky / (lperiod * gamma * beta)
+                    r[0, 0] = np.real(np.cosh(omega_y * z))
+                    r[0, 1] = np.real(np.sinh(omega_y * z) / omega_y)
+                    r[1, 0] = np.real(-np.sinh(omega_y * z) * omega_y)
+                    r[1, 1] = np.real(np.cosh(omega_y * z))
                 else:
                     r[0, 1] = z
 

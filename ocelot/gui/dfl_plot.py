@@ -332,9 +332,12 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
 
     if phase == True:
         ax_ph = fig.add_subplot(2, 2 + column_3d, 4 + column_3d, sharex=ax_int, sharey=ax_int)
-        ax_ph.pcolormesh(x, y, xy_proj_ph, cmap=cmap_ph, vmin=-np.pi, vmax=np.pi)
+        himg=ax_ph.pcolormesh(x, y, xy_proj_ph, cmap=cmap_ph, vmin=-np.pi, vmax=np.pi)
         ax_ph.axis([np.min(x), np.max(x), np.min(y), np.max(y)])
         ax_ph.set_title('Phase', fontsize=15)
+        if kwargs.get('show_phase_cbar', False):
+            cb=fig.colorbar(himg, ax=ax_ph)
+            cb.set_label('Phase [rad]')
     else:
         ax_z = fig.add_subplot(2, 2 + column_3d, 4 + column_3d)
         if log_scale:

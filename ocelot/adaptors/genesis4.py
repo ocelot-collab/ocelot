@@ -335,7 +335,7 @@ class Genesis4Input:
                 if got_time_block:
                     self.sequence['time'].slen = np.amax(beam.s) - np.amin(beam.s)
                 else:
-                    _logger.warning('Sequence does not contain \'time\' element. This is not an issue for steady-state simulations.')
+                    _logger.info('Sequence does not contain \'time\' element. This is not an issue for steady-state simulations.')
         ###
         ###
         new_sequence = {}
@@ -409,7 +409,7 @@ class Genesis4Input:
         if got_time_block:
             self.sequence['time'].slen = np.amax(beam.s) - np.amin(beam.s)
         else:
-            _logger.warning('Sequence does not contain \'time\' element. This is not an issue for steady-state simulations.')
+            _logger.info('Sequence does not contain \'time\' element. This is not an issue for steady-state simulations.')
 
         self.sequence['setup'].gamma0 = beam_pk.g
         self.sequence[name_list_id].gamma = beam_pk.g  # from [GeV] to [units of the electron rest mass]

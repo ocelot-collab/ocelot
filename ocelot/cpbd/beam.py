@@ -2273,8 +2273,10 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
     beam_arr = beam.to_array(nslice, l_window)
     
     if 'chirp' in kwargs:
-        beam_arr.add_chirp(kwargs['chirp'])
-    
+        if type(kwargs['chirp']) == list:
+            beam_arr.add_chirp_poly(kwargs['chirp'])
+        else: 
+            beam_arr.add_chirp(kwargs['chirp'])
     return beam_arr
 
 

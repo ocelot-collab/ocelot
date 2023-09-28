@@ -430,7 +430,7 @@ def plot_gen4_out_z(out, z=np.inf, params=['rad_power+el_current', 'el_energy+el
 def subfig_z_power_curr(ax_curr, out, zi=None, x_units='um', legend=False):
     ax_curr.clear()
     number_ticks = 6
-
+    
     if x_units == 'um':
         ax_curr.set_xlabel(r's [$\mu$m]')
         x = out.t * speed_of_light * 1e6
@@ -439,18 +439,23 @@ def subfig_z_power_curr(ax_curr, out, zi=None, x_units='um', legend=False):
         x = out.t
     else:
         raise ValueError('Unknown parameter x_units (should be um or fs)')
-
+    
     if zi == None:
         zi = -1
-
-    ax_curr.plot(x, out.I / 1e3, 'k--')
+    
+    try:
+        Iz = out.Iz(zi)
+    except Error as err:
+        Iz = out.I
+    
+    ax_curr.plot(x, Iz / 1e3, 'k--')
     ax_curr.set_ylabel(r'I [kA]')
     ax_curr.set_ylim(ymin=0)
     ax_curr.text(0.02, 0.98, "Q= %.2f pC" % (out.beam_charge * 1e12), fontsize=12, horizontalalignment='left',
                  verticalalignment='top', transform=ax_curr.transAxes,
                  color='black')  # horizontalalignment='center', verticalalignment='center',
     ax_curr.grid(True)
-
+    
     ax_power = ax_curr.twinx()
     ax_power.grid(False)
     ax_power.plot(x, out.rad_power[zi, :], 'g-', linewidth=1.5)
@@ -469,14 +474,11 @@ def subfig_z_power_curr(ax_curr, out, zi=None, x_units='um', legend=False):
         ax_curr.text(0.98, 0.98, "E= %.2e J" % (out.rad_energy[zi]), fontsize=12, horizontalalignment='right',
                      verticalalignment='top', transform=ax_curr.transAxes,
                      color='green')  # horizontalalignment='center', verticalalignment='center',
-
     ax_curr.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_power.yaxis.major.locator.set_params(nbins=number_ticks)
-
     ax_power.tick_params(axis='y', which='both', colors='g')
     ax_power.yaxis.label.set_color('g')
     ax_power.yaxis.get_offset_text().set_color(ax_power.yaxis.label.get_color())
-
     ax_power.set_xlim([x[0], x[-1]])
 
 
@@ -484,7 +486,7 @@ def subfig_z_power_curr(ax_curr, out, zi=None, x_units='um', legend=False):
 def subfig_z_energy_espread_bunching(ax_energy, out, zi=None, x_units='um', legend=False):
     ax_energy.clear()
     number_ticks = 6
-
+    
     if x_units == 'um':
         ax_energy.set_xlabel(r's [$\mu$m]')
         x = out.t * speed_of_light * 1e6
@@ -493,10 +495,10 @@ def subfig_z_energy_espread_bunching(ax_energy, out, zi=None, x_units='um', lege
         x = out.t
     else:
         raise ValueError('Unknown parameter x_units (should be um or fs)')
-
+    
     if zi == None:
         zi = -1
-
+    
     ax_energy.plot(x, out.h5['Beam/energy'][zi, :] * m_e_GeV, 'b-', x,
                    (out.h5['Beam/energy'][zi, :] + out.h5['Beam/energyspread'][zi, :]) * m_e_GeV, 'r--', x,
                    (out.h5['Beam/energy'][zi, :] - out.h5['Beam/energyspread'][zi, :]) * m_e_GeV, 'r--')
@@ -505,22 +507,18 @@ def subfig_z_energy_espread_bunching(ax_energy, out, zi=None, x_units='um', lege
     ax_energy.ticklabel_format(useOffset=False, style='plain')
     ax_energy.grid(True)
     # plt.yticks(plt.yticks()[0][0:-1])
-
+    
     ax_bunching = ax_energy.twinx()
     ax_bunching.plot(x, out.h5['Beam/bunching'][zi, :], 'grey', linewidth=0.5)
     ax_bunching.set_ylabel('Bunching')
     ax_bunching.set_ylim(ymin=0)
     ax_bunching.grid(False)
-
     ax_energy.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_bunching.yaxis.major.locator.set_params(nbins=number_ticks)
-
     ax_energy.tick_params(axis='y', which='both', colors='b')
     ax_energy.yaxis.label.set_color('b')
-
     ax_bunching.tick_params(axis='y', which='both', colors='grey')
     ax_bunching.yaxis.label.set_color('grey')
-
     ax_energy.set_xlim([x[0], x[-1]])
 
 

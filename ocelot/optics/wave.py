@@ -1482,6 +1482,14 @@ class WignerDistribution():
     def proj_k(self):
         # inverse space projection
         return np.sum(self.wig, axis=1)
+
+    def proj_s_stat(self):
+        # real space projection
+        return np.sum(self.wig_stat, axis=1)
+        
+    def proj_k_stat(self):
+        # inverse space projection
+        return np.sum(self.wig_stat, axis=2)
     
     def moment1_k(self):
         # prevailing tilt (frequency) for every coordinate (time)
@@ -1608,6 +1616,9 @@ class WignerDistributionLongitudinal(WignerDistribution):
         return self.proj_s()
     
     def spectrum(self):
+        return self.proj_k()
+    
+    def spectrum_stat(self):
         return self.proj_k()
         
     def energy(self):

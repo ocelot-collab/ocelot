@@ -994,6 +994,9 @@ class Genesis4Output:
     @property
     def I(self):
         return self.h5['Beam/current'][0]
+        
+    def Iz(self,idx=0):
+        return self.h5['Beam/current'][idx]
 
     @property
     def beam_charge(self):

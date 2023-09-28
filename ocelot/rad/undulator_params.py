@@ -7,7 +7,8 @@ Sergey Tomin.
 import scipy.special as sf
 from scipy.special import jn
 from ocelot.common.globals import *
-
+from ocelot.common.ocelog import logging
+_logger = logging.getLogger(__name__)
 
 def lambda2eV(Lambda):
     Eph = h_eV_s*speed_of_light/Lambda
@@ -79,6 +80,19 @@ def Ephoton2field(energy, lu = 0.04, Eeb = 14):
 def lambda2Ebeam(Lambda = 10.4e-9, lu=0.0272, K=1.2392):
     gamma = np.sqrt(lu/(2.*Lambda)*(1. + K*K/2.))
     return gamma*m_e_GeV
+
+def Br2B0(Br=1.1, gap=0.011, lu=0.04):
+    '''
+    On-axis field from remanent field calculation
+    Based on eq 1 of https://accelconf.web.cern.ch/ipac2016/papers/tupmb011.pdf
+    '''
+    a = 0.55 * Br + 2.835
+    b=-1.95 * Br + 7.225
+    c=-1.3 * Br + 2.978
+    B0 = a * np.exp(-b*gap/lu + c*(gap/lu)**2)
+    if (gap/lu) > 0.7 or (gap/lu) < 0.07:
+        _logger.warning('gap/period {:.4f} ourside of fit applicability [0.7 : 0.07]'.format(gap/lu))
+    return B0
 
 class ID_radiation:
     def __init__(self, beam, undulator):

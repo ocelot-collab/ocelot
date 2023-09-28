@@ -378,19 +378,6 @@ def fwhm3(valuelist, height=0.5, peakpos=-1, total=1, exactpos=0, rescalezero=0)
     else:
         return (peakpos, width, np.array([ind1, ind2]))
 
-def interp_idx_linear(indices, values):
-    '''
-    returns expected value at given indices as a result of linear interpolation
-    '''
-    return np.interp(indices, np.arange(len(values)), values)
-
-def interp_idx(indices, values, kind='quadratic'):
-    '''
-    returns expected values at given indices as a result of interpolation
-    '''
-    function = interpolate.interp1d(np.arange(len(values)), values, kind=kind)
-    return function(indices)
-
 def stats(outputs):
     
     ''' return mean, std, median and extreme (farthest from mean) of a time series '''

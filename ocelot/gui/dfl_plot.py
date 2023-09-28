@@ -824,7 +824,7 @@ def plot_wigner_z(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,
         spec_scale = W.theta()
         f_label_txt = '$\{theta}$ [rad]'
     
-    elif isinstance(W, WignerDistributionLongitudinal): #legacy support
+    elif isinstance(W, WignerDistributionLongitudinal):
         if x_units == 'fs':
             power_scale = -W.s / speed_of_light * 1e15
             p_label_txt = 't [fs]'

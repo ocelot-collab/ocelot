@@ -728,7 +728,7 @@ class RadiationField:
         J = np.mean(dfl1 * dfl2, axis=0)
         if norm:
             I = self.int_xy() / self.Nz()
-            J = J / (I[Nyh, np.newaxis :] * I[:, Nxh, np.newaxis])
+            J = J / (I[ix, np.newaxis :] * I[:, iy, np.newaxis])
         return J
     
     def coh(self, jit=0):
@@ -2168,16 +2168,36 @@ def dfl_gen_undulator_mp(dfl, z, L_w, E_ph, N_b=1, N_e=1, sig_x=0, sig_y=0, sig_
 
     return dfl
 
-def dfl_gen_undulator_serval(dfl, L_w, sig_x=0, sig_y=0, sig_xp=0, sig_yp=0, k_support ='intensity', s_support='intensity', showfig=False, seed=None):
+def dfl_gen_undulator_serval(E_ph=1042, L_w=1, shape=(51, 51, 100), dgrid=(1e-3, 1e-3, 50e-6), 
+                             sig_x=0, sig_y=0, sig_xp=0, sig_yp=0, jit_k_x=0, jit_k_y=0,
+                             k_support ='intensity', s_support='intensity', showfig=False, seed=None):
     
     _logger.info('Generating undulator field with SERVAL algorithm')
-    w_0 = 2*np.pi * speed_of_light / dfl.xlamds
     
+    w_0 = E_ph / hr_eV_s 
+    xlamds = 2 * np.pi * speed_of_light / w_0
+
+    dfl = RadiationField((shape[2], shape[1], shape[0]))
+    dfl.dx = dgrid[0] / dfl.Nx()
+    dfl.dy = dgrid[1] / dfl.Ny()
+    dfl.dz = dgrid[2] / dfl.Nz()
+    dfl.xlamds = xlamds
+    dfl.filePath = 'filePath'
+    dfl.to_domain('sf')
+    
+    
+    if seed is not None: 
+        np.random.seed(seed)
+
+    dfl.fld = np.random.randn(dfl.Nz(), dfl.Ny(), dfl.Nx()) + 1j * np.random.randn(dfl.Nz(), dfl.Ny(), dfl.Nx()) # Gaussian noise
+    
+    np.random.seed(None)
+
     if showfig:
         plot_dfl(dfl, line_off_xy = False, fig_name = '1-X_noise')
     
-    dfl.to_domain('sf')
-    
+    dfl.to_domain('sf')    
+
     x, y = np.meshgrid(dfl.scale_x(), dfl.scale_y())#, indexing='ij')
     
     mask_xy_ebeam = np.exp(- x**2 / 4 / sig_x**2 - y**2 / 4 / sig_y**2) # 4 because amplitude, not intensity
@@ -2209,18 +2229,40 @@ def dfl_gen_undulator_serval(dfl, L_w, sig_x=0, sig_y=0, sig_xp=0, sig_yp=0, k_s
     dfl.to_domain('kf')
 
     k_x, k_y = np.meshgrid(dfl.scale_x(), dfl.scale_y())
-    mask_kxky_ebeam = np.exp(-k_y**2 / 4 / sig_yp**2 - k_x**2 / 4 / sig_xp**2 ) # 4 because amplitude, not intensity
+    
+    jit_k_x_type = isinstance(jit_k_x, (np.ndarray, list, tuple))
+    jit_k_y_type = isinstance(jit_k_y, (np.ndarray, list, tuple))
+
+
+    if jit_k_x_type or jit_k_y_type:
+        if jit_k_x_type and not jit_k_y_type:
+            jit_k_y = np.full_like(jit_k_x, jit_k_y)
+        elif not jit_k_x_type and jit_k_y_type:
+            jit_k_x = np.full_like(jit_k_y, jit_k_x)
+            
+        mask_kxky_ebeam = np.exp(-(k_y[np.newaxis, :, :] - jit_k_y[:, np.newaxis])**2 / 4 / sig_yp**2 - (k_x[np.newaxis, :, :] - jit_k_x[:, np.newaxis])**2 / 4 / sig_xp**2 ) # 4 because amplitude, not intensity
+        mask_kxky_radiation = np.sinc(w_0 * L_w * ((k_x[np.newaxis, :, :] - jit_k_x[:, np.newaxis])**2 + (k_y[np.newaxis, :, :] - jit_k_y[:, np.newaxis])**2) / 4 / speed_of_light / np.pi)# Geloni2018 Eq.3, domega/omega = 2dgamma/gamma, divided by pi due to np.sinc definition
+        axes=(1,2)
+    else:
+        mask_kxky_ebeam = np.exp(-(k_y - jit_k_y)**2 / 4 / sig_yp**2 - (k_x - jit_k_x)**2 / 4 / sig_xp**2 ) # 4 because amplitude, not intensity
+        mask_kxky_radiation = np.sinc(w_0 * L_w * ((k_x - jit_k_x)**2 + (k_y - jit_k_y)**2) / 4 / speed_of_light / np.pi)# Geloni2018 Eq.3, domega/omega = 2dgamma/gamma, divided by pi due to np.sinc definition
+        axes=None
+
     mask_kxky_ebeam /= np.sum(mask_kxky_ebeam)
-    mask_kxky_radiation = np.sinc(w_0 * L_w * (k_x**2 + k_y**2) / 4 / speed_of_light / np.pi)# Geloni2018 Eq.3, domega/omega = 2dgamma/gamma, divided by pi due to np.sinc definition
 
     if k_support == 'intensity':
         _logger.info(ind_str +'k_support == "intensity"')
-        mask_kxky = scipy.signal.fftconvolve(mask_kxky_ebeam**2, mask_kxky_radiation**2, mode='same')
-        mask_kxky = np.sqrt(mask_kxky[np.newaxis, :, :])
+        mask_kxky = scipy.signal.fftconvolve(mask_kxky_ebeam**2, mask_kxky_radiation**2, mode='same', axes=axes)
+
+        if jit_k_x is None:
+            mask_kxky = np.sqrt(mask_kxky[np.newaxis, :, :])
+        else:
+            mask_kxky = np.sqrt(mask_kxky)
+
         mask_kxky /= np.sum(mask_kxky)
     elif k_support == 'amplitude':
         _logger.info(ind_str +'k_support == "amplitude"')
-        mask_kxky = scipy.signal.fftconvolve(mask_kxky_ebeam, mask_kxky_radiation, mode='same')
+        mask_kxky = scipy.signal.fftconvolve(mask_kxky_ebeam, mask_kxky_radiation, mode='same', axes=axes)
         mask_kxky /= np.sum(mask_kxky)
     elif k_support == 'amplitude':
         _logger.info(ind_str +'k_support == "beam"')
@@ -2230,6 +2272,7 @@ def dfl_gen_undulator_serval(dfl, L_w, sig_x=0, sig_y=0, sig_xp=0, sig_yp=0, k_s
     
     # dfl.fld *= mask_kxky[np.newaxis, :, :]
     _logger.info(ind_str +'Multiplying by inverse space mask')
+
     dfl.fld *= mask_kxky
     _logger.info(2*ind_str +'done')
 
@@ -2237,7 +2280,7 @@ def dfl_gen_undulator_serval(dfl, L_w, sig_x=0, sig_y=0, sig_xp=0, sig_yp=0, k_s
         plot_dfl(dfl, domains='s', fig_name = '3-X_radaition_size')
         plot_dfl(dfl, domains='k', fig_name = '3-X_radiation_divergence')
     
-    return dfl     
+    return dfl    
 
 def calc_phase_delay_poly(coeff, w, w0):
     """
@@ -2286,7 +2329,43 @@ def calc_phase_delay_poly(coeff, w, w0):
     return delta_phi
 
 
-def screen2dfl(screen, polarization='x'):
+def SR_norm_on_ebeam_I(I_ebeam=0, norm='e_beam'):
+    '''
+    Parameters
+    ----------
+    Ex : array
+        Ex component of the field.
+    Ey : array
+        Ey component of the field.
+    out : str, optional
+        Which intensity to return, of the given component or full component. The default is "Components".
+    norm : str, optional
+        DESCRIPTION. The default is 'e_beam'. Normalisation on electron beam current.
+        
+    Returns
+    -------
+    Intensity.
+
+    '''
+    print('\n Normalizing radiation field...')
+
+    h_erg_s = 1.054571817 * 1e-27 
+    h_J_s = 1.054571817 * 1e-34 
+    
+    if norm=='e_beam':
+        speed_of_light_SGS = speed_of_light * 1e2
+        A = I_ebeam * speed_of_light / (q_e * h_erg_s * 4 * np.pi**2) / (1e7/speed_of_light**2) * 1e-2#* SI unit 1e-4 is due to cm^2 -> mm^2, (1e7/speed_of_light**2) is the factor due to transformation of (I/eh_bar) * c * E**2, I -> I * 1e-1 c, e -> e * 1e-1 c, h_bar -> h_bar * 1e7, c -> c * 1e2, E -> E * 1e6 / c 
+ 
+        # LenPntrConst = self.Distance - self.Zstart
+
+        # old constant with current in [mA]
+        # constQuant = 3.461090202456155e+9*current*gamma*gamma/LenPntrConst/LenPntrConst
+
+        # constQuant = 3*alpha/q_e/(4*pi**2)*1e-3 * current * gamma * gamma / LenPntrConst / LenPntrConst
+        
+    return A
+
+def screen2dfl(screen, polarization='x', norm='ebeam', beam=None):
     """
     Function converts synchrotron radiation from ocelot.rad.screen.Screen to ocelot.optics.wave.RadiationField.
     New ocelot.optics.wave.RadiationField object will be generated without changing ocelot.rad.screen.Screen object.
@@ -2298,7 +2377,7 @@ def screen2dfl(screen, polarization='x'):
     shape_tuple = (screen.ne, screen.ny, screen.nx)
     start = time.time()
     _logger.info('Converting Screen of shape (nz, ny, nx) = {:} to dfl'.format(shape_tuple))
-    _logger.warning(ind_str + 'in beta')
+    # _logger.warning(ind_str + 'in beta')
 
     dfl = RadiationField()
     dfl.domain_z = 'f'  # longitudinal domain (t - time, f - frequency)
@@ -2322,11 +2401,33 @@ def screen2dfl(screen, polarization='x'):
         dfl.dz = 1
         dfl.xlamds = h_eV_s * speed_of_light / screen.Eph[0]
 
+
     _logger.debug(ind_str + 'dfl.xlamds = {:.3e} [m]'.format(dfl.xlamds))
-    _logger.warning(ind_str + 'dfl.fld normalized to dfl.E() = 1 [J]')
-    dfl.fld = dfl.fld / np.sqrt(dfl.E())  # TODO normalize dfl.fld
+    
+    if norm=='ebeam': 
+        _logger.info(ind_str + 'normalization')
+        try: 
+            gamma = beam.E/0.51099890221e-03
+            I = beam.I 
+            LenPntrConst = screen.Distance - screen.Zstart
+            constQuant = 3*alpha/q_e/(4*pi**2)*1e-3 * beam.I * gamma * gamma / LenPntrConst / LenPntrConst
+            dfl.fld = dfl.fld * np.sqrt(constQuant)
+            _logger.info(ind_str + 'dfl.fld normalized on the electron beam current')
+        except AttributeError:
+            _logger.error('dfl.fld was not normalized, \n please, provide a Beam object (electron beam) \n the original dfl was returned')
+            dfl.fld = dfl.fld 
+            
+    elif norm=='Epulse':
+        _logger.info(ind_str + 'normalization')
+        dfl.fld = dfl.fld / np.sqrt(dfl.E())  
+        _logger.warning(ind_str + 'dfl.fld normalized to dfl.E() = 1 [J]')
+    else:
+        _logger.warning(ind_str + 'No normalization was chosen, the original dfl was returned')
+
+
     _logger.debug(ind_str + 'done in {:.3e} sec'.format(time.time() - start))
     _logger.debug(ind_str + 'returning dfl in "sf" domains ')
+    
     return dfl
 
 

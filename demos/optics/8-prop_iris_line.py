@@ -196,7 +196,7 @@ def plot_iris_line_prop_result(E_x, E_y, dfl_iris_exit, a, b, N, n_iter, rad_lef
     # _logger.debug(ind_str + 'done in {:.2f} seconds'.format(time.time() - start_time))
 
     plt.show()
-#%%
+#%% I. Radiation propagation through two cells 
 # create RadiationField object with Gaussian beam 
 # can be adjusted to be plane wave, just increase Gaussian beam waist
 
@@ -206,7 +206,7 @@ xlamds = speed_of_light/THz/1e12
 b = 0.3
 a = 0.055
 
-sigma_g = 333.5
+sigma_g = 666 # the most plane one
 dfl = generate_gaussian_dfl(xlamds=xlamds, shape=(351, 351, 1), dgrid=(4*a, 4*a,  10e-6), power_rms=(sigma_g * 1e-2/2, sigma_g*1e-2/2,  10e-6),
                           power_center=(0, 0, None), power_angle=(0, 0), power_waistpos=(0, 0), wavelength=None,
                           zsep=None, freq_chirp=0, en_pulse=None, power=1e6)
@@ -216,7 +216,7 @@ dfl.fld = dfl.fld/np.sqrt(dfl.E())
     
 plot_dfl(dfl, fig_name='dfl at source domain', domains = "fs")
 # plot_dfl(dfl, fig_name='dfl at source k domain', domains = "fk")
-#%%
+#%% I.a Propagation
 # propagate through two cells of an iris line
 dfl_iris_exit = deepcopy(dfl)
 
@@ -229,7 +229,7 @@ dfl_iris_exit, E_x, E_y, rad_left_array, loss_per_cell_array = dfl_prop_iris(dfl
                                                                      b=b, n_iter=n_iter, absorption_outer_pipe=0,
                                                                      acount_first_cell_loss=0)
 
-#%%
+#%% I.c Plot results
 # plot propagation results through these two cells
 I_x_array = np.real(E_x)**2 + np.imag(E_x)**2
 r = dfl_iris_exit.scale_y()*1e3
@@ -268,7 +268,7 @@ ax2.set_ylim(np.min(r), np.max(r))
 plt.tight_layout()
 plt.show()
 
-#%%
+#%% II.1 Plane wave propagation
 ## study of plane wave propagation through an iris line
 THz = 3
 xlamds = speed_of_light/THz/1e12
@@ -278,7 +278,9 @@ n_iter = N
 b = 0.3
 a = 0.055
 
-dfl = generate_gaussian_dfl(xlamds=xlamds, shape=(201, 201, 1), dgrid=(3*a, 3*a, 10), power_rms=(205.5e-2, 205.5e-2, 1),
+
+sigma_g = 666
+dfl = generate_gaussian_dfl(xlamds=xlamds, shape=(351, 351, 1), dgrid=(4*a, 4*a,  10e-6), power_rms=(sigma_g * 1e-2/2, sigma_g*1e-2/2,  10e-6),
                           power_center=(0, 0, None), power_angle=(0, 0), power_waistpos=(0, 0), wavelength=None,
                           zsep=None, freq_chirp=0, en_pulse=None, power=1e6)
 Nf = a**2/dfl.xlamds/b
@@ -289,16 +291,15 @@ print('Nf =', Nf)
 
 dfl_iris_exit = deepcopy(dfl)
 
-#%%
-#propagation
+#%% II.1a Propagation through 3k cells
+
 dfl_iris_exit, E_x1, E_y1, rad_left_array1, loss_per_cell_array1 = dfl_prop_iris(dfl, N=N, a=a, b=b, 
                                                                                  n_iter=n_iter, acount_first_cell_loss=1)
-#%%
-#plot results
+#%% II.1b Plot results
 plot_iris_line_prop_result(E_x1, E_y1, dfl_iris_exit, a, b, N, n_iter, rad_left_array1, loss_per_cell_array1, 
                                direction = 'x')
 
-#%%
+#%% II.2 Fundamental mode propagation 
 # now study of the survived more propagation over 300m of propagation
 N = 1000
 n_iter = N
@@ -310,14 +311,15 @@ dfl_waveguide2 = deepcopy(dfl_iris_exit)
 rad_left_array2 = 0 
 loss_per_cell_array2 = 0
 
+#%% II.2a Propagation through 300 cells
 dfl_waveguide2, E_x2, E_y2, rad_left_array2, loss_per_cell_array2 = dfl_prop_iris(dfl_iris_exit, N=N, a=a, b=b, 
                                                                               n_iter=n_iter, acount_first_cell_loss=1)
 
-#%%
+#%% II.2b Plot results
 plot_iris_line_prop_result(E_x2, E_y2, dfl_waveguide2, a, b, N, n_iter, rad_left_array2, loss_per_cell_array2, 
                                direction = 'x')
 
-#%%
+#%% II.2c Comparison with analytics
 # here we compare the numerical result with analytics (fundamental mode is zero-order Bessel function) and Gaussian distribution
 
 dfl_waveguide2.to_domain('sf')
@@ -348,7 +350,7 @@ plt.tight_layout()
 plt.legend()
 plt.show()
 
-#%%
+#%% III Propagation through a misaligned iris line
 # now we study propagation of the fundamental mode imitated by a Gaussian distribution through not perfectly alight iris line 
 
 THz = 3
@@ -372,7 +374,7 @@ plot_dfl(dfl,fig_name='dfl at source domain', domains="fs")
 
 dfl_iris_exit = deepcopy(dfl)
 
-#%%
+#%% III.a Creating coordinates of irises misalignment
 # Usage example:
 center_x, center_y = generate_center(N)
 
@@ -386,14 +388,13 @@ plt.ylabel('iris displacement, mm', fontsize=fontsize)
 plt.xlim(0, len(center_x))
 plt.tight_layout()
 plt.show()
-#%%
+#%% III.b Propagation
 dfl_iris_exit, E_x1, E_y1, rad_left_array1, loss_per_cell_array1 = dfl_prop_iris(dfl, N=N, a=a, b=b, center=(center_x, center_y),
                                                                                  n_iter=n_iter, acount_first_cell_loss=1)
-#%%
+#%% III.b Plot results
 plot_iris_line_prop_result(E_x1, E_y1, dfl_iris_exit, a, b, N, n_iter, rad_left_array1, loss_per_cell_array1, 
                                direction = 'x', loss_per_cell_max=0.5)
 
-#%%
 
 
 

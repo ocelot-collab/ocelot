@@ -2730,7 +2730,7 @@ def dfl_prop(dfl, z, fine=1, debug=1):
 
     return dfl_out
 
-def dfl_prop_iris(dfl, N=10, a=0.055, center=(0,0), b=0.3, n_iter=100, 
+def dfl_prop_iris(dfl, N=10, a=0.055, center=(0,0), b=0.3, n_iter_per_iris=1, 
               absorption_outer_pipe=False, acount_first_cell_loss=False):
     '''
     Propagates radiation through an iris line.
@@ -2752,7 +2752,7 @@ def dfl_prop_iris(dfl, N=10, a=0.055, center=(0,0), b=0.3, n_iter=100,
     b : float, optional
         Spacing between irises. Default is 0.3.
     
-    n_iter : int, optional
+    n_iter_per_iris: int, optional
         Number of propagation iterations. Must be divisible by N. Default is 100.
     
     absorption_outer_pipe : bool, optional
@@ -2766,12 +2766,12 @@ def dfl_prop_iris(dfl, N=10, a=0.055, center=(0,0), b=0.3, n_iter=100,
     dfl_waveguide : RadiationField
         Output RadiationField object.
     
-    E_x_array : array-like of floats
-        x-component of the output field.
+    E_x_lineout : array-like of floats
+        line-out of the radiation distribution along the iris line in the (x,z) plane, y=0
     
-    E_y_array : array-like of floats
-        y-component of the output field.
-    
+    E_y_lineout : array-like of floats
+        line-out of the radiation distribution along the iris line in the (y,z) plane, y=0
+
     rad_left_array : array-like of floats
         Radiation remaining after each iris.
     
@@ -2781,13 +2781,13 @@ def dfl_prop_iris(dfl, N=10, a=0.055, center=(0,0), b=0.3, n_iter=100,
     '''
 
     L = N*b
-    dl = L/n_iter #define propagation distance at each iteration
+    dl = b/n_iter_per_iris #define propagation distance at each iteration
     
     dfl_waveguide = deepcopy(dfl)
     dfl_waveguide.to_domain('sf')
     
-    E_x_array = np.zeros((dfl_waveguide.Nx(), n_iter), dtype='cfloat')
-    E_y_array = np.zeros((dfl_waveguide.Ny(), n_iter), dtype='cfloat')
+    E_x_lineout = np.zeros((dfl_waveguide.Nx(), n_iter_per_iris*N), dtype='cfloat')
+    E_y_lineout = np.zeros((dfl_waveguide.Ny(), n_iter_per_iris*N), dtype='cfloat')
 
     rad_left_array = np.array([])
     loss_per_cell_array = np.array([])
@@ -2796,7 +2796,7 @@ def dfl_prop_iris(dfl, N=10, a=0.055, center=(0,0), b=0.3, n_iter=100,
     j = 0 #a count for the number of irises passed
     P_entrance = dfl_waveguide.E()
     
-    for i in range(n_iter):
+    for i in range(n_iter_per_iris*N):
 
         if acount_first_cell_loss and i==0: # check if we need to account for losses at the first iris, 
                                             # relevant if propagate a plane wave
@@ -2823,15 +2823,15 @@ def dfl_prop_iris(dfl, N=10, a=0.055, center=(0,0), b=0.3, n_iter=100,
             loss_per_cell_array = np.append(loss_per_cell_array, (1-P_after/P_before)*100)
             j = j+1
             
-        E_x_array[:, i] = dfl_waveguide.fld[dfl_waveguide.Nz()//2, dfl_waveguide.Ny()//2, :]
-        E_y_array[:, i] = dfl_waveguide.fld[dfl_waveguide.Nz()//2, :, dfl_waveguide.Nx()//2]
+        E_x_lineout[:, i] = dfl_waveguide.fld[dfl_waveguide.Nz()//2, dfl_waveguide.Ny()//2, :]
+        E_y_lineout[:, i] = dfl_waveguide.fld[dfl_waveguide.Nz()//2, :, dfl_waveguide.Nx()//2]
 
         dfl_waveguide.prop_m(z=dl, m=1)
 
         if absorption_outer_pipe:
             dfl_waveguide = dfl_ap_circ(dfl_waveguide, r=np.max(dfl_waveguide.scale_x())*0.98)
         
-    return dfl_waveguide, E_x_array, E_y_array, rad_left_array, loss_per_cell_array
+    return dfl_waveguide, E_x_lineout, E_y_lineout, rad_left_array, loss_per_cell_array
 
 
 def dfl_waistscan(dfl, z_pos, projection=0, **kwargs):

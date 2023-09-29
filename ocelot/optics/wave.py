@@ -2733,7 +2733,7 @@ def dfl_prop(dfl, z, fine=1, debug=1):
 def dfl_prop_iris(dfl, N=10, a=0.055, center=(0,0), b=0.3, n_iter=100, 
               absorption_outer_pipe=False, acount_first_cell_loss=False):
     '''
-    Propagate radiation through an iris line.
+    Propagates radiation through an iris line.
     
     Parameters
     ----------

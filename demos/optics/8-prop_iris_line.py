@@ -19,12 +19,16 @@ from scipy import special
 
 from copy import deepcopy
 
+## a demo with an iris line simulations, http://arxiv.org/abs/1108.1085
+## by Andrei Trebushinin, andrei.trebushinin@xfel.eu
+
 def generate_center(N, 
                     sigma_x=2e-3, sigma_y=2e-3, 
                     harmonics_coeffs=[(1.5, 5e-3, 0), (50, 0, 23)], 
                     harmonics_coeffs_y=[(1.5, -5e-3, 77), (50, -5e-3, 55)]):
     """
-    Generate center_x and center_y based on parameters.
+    Generate center_x and center_y based on parameters, the center coordinates for each iris line aperture  
+    Each iris has random shift (with sigma) and all irises follows harmonic misalignment
     
     :param N: Size of the output arrays.
     :param sigma_x: Sigma for the random contribution in x.
@@ -194,7 +198,7 @@ def plot_iris_line_prop_result(E_x, E_y, dfl_iris_exit, a, b, N, n_iter, rad_lef
     plt.show()
 #%%
 # create RadiationField object with Gaussian beam 
-# can be adjusted to be plane wave just increase Gaussian beam waist
+# can be adjusted to be plane wave, just increase Gaussian beam waist
 
 THz = 3
 xlamds = speed_of_light/THz/1e12
@@ -220,15 +224,14 @@ Nf = a**2/dfl.xlamds/b
 print('Nf =', Nf)
 
 N = 2
-n_iter = 100
-dfl_iris_exit, E_x, E_y, rad_left_array, loss_per_cell_array = dfl_prop_iris(dfl, N=N, a=a, center=([25e-3, 0e-3], [-20e-3, 0e-3]), 
+n_iter = 300
+dfl_iris_exit, E_x, E_y, rad_left_array, loss_per_cell_array = dfl_prop_iris(dfl, N=N, a=a, center=([0e-3, 0e-3], [0e-3, 0e-3]), 
                                                                      b=b, n_iter=n_iter, absorption_outer_pipe=0,
-                                                                     acount_first_cell_loss=1)
-
-I_x_array = np.real(E_x)**2 + np.imag(E_x)**2
+                                                                     acount_first_cell_loss=0)
 
 #%%
-# plot
+# plot propagation results through these two cells
+I_x_array = np.real(E_x)**2 + np.imag(E_x)**2
 r = dfl_iris_exit.scale_y()*1e3
 Z = np.linspace(0, N*b, n_iter)
 
@@ -266,11 +269,11 @@ plt.tight_layout()
 plt.show()
 
 #%%
-
+## study of plane wave propagation through an iris line
 THz = 3
 xlamds = speed_of_light/THz/1e12
 
-N = 3000
+N = 3000 ## we would like to study which mode tends to survive, this is 900m propagation of THz radiation
 n_iter = N
 b = 0.3
 a = 0.055
@@ -287,14 +290,16 @@ print('Nf =', Nf)
 dfl_iris_exit = deepcopy(dfl)
 
 #%%
+#propagation
 dfl_iris_exit, E_x1, E_y1, rad_left_array1, loss_per_cell_array1 = dfl_prop_iris(dfl, N=N, a=a, b=b, 
                                                                                  n_iter=n_iter, acount_first_cell_loss=1)
 #%%
+#plot results
 plot_iris_line_prop_result(E_x1, E_y1, dfl_iris_exit, a, b, N, n_iter, rad_left_array1, loss_per_cell_array1, 
                                direction = 'x')
 
 #%%
-
+# now study of the survived more propagation over 300m of propagation
 N = 1000
 n_iter = N
 b = 0.3
@@ -313,6 +318,7 @@ plot_iris_line_prop_result(E_x2, E_y2, dfl_waveguide2, a, b, N, n_iter, rad_left
                                direction = 'x')
 
 #%%
+# here we compare the numerical result with analytics (fundamental mode is zero-order Bessel function) and Gaussian distribution
 
 dfl_waveguide2.to_domain('sf')
 x = dfl_waveguide2.scale_x()
@@ -342,8 +348,8 @@ plt.tight_layout()
 plt.legend()
 plt.show()
 
-
 #%%
+# now we study propagation of the fundamental mode imitated by a Gaussian distribution through not perfectly alight iris line 
 
 THz = 3
 xlamds = speed_of_light/THz/1e12
@@ -353,13 +359,15 @@ n_iter = N
 b = 0.3
 a = 0.055
 
-dfl = generate_gaussian_dfl(xlamds=xlamds, shape=(201, 201, 1), dgrid=(3*a, 3*a, 10), power_rms=(205.5e-2, 205.5e-2, 1),
+sigma_g = 4
+dfl = generate_gaussian_dfl(xlamds=xlamds, shape=(201, 201, 1), dgrid=(3*a, 3*a, 10), power_rms=(sigma_g * 1e-2/2, sigma_g*1e-2/2,  1),
                           power_center=(0, 0, None), power_angle=(0, 0), power_waistpos=(0, 0), wavelength=None,
                           zsep=None, freq_chirp=0, en_pulse=None, power=1e6)
+
 Nf = a**2/dfl.xlamds/b
 print('Nf =', Nf)
     
-# plot_dfl(dfl,fig_name='dfl at source domain', domains = "fs")
+plot_dfl(dfl,fig_name='dfl at source domain', domains="fs")
 # plot_dfl(dfl, fig_name='dfl at source k domain', domains = "fk")
 
 dfl_iris_exit = deepcopy(dfl)

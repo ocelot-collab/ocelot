@@ -114,15 +114,7 @@ class Navigator:
         """
         _logger_navi.debug(" add_physics_proc: phys proc: " + physics_proc.__class__.__name__)
         self.process_table.add_physics_proc(physics_proc, elem1, elem2)
-        # Avoid copying the whole table, just copies the new physics
-        # process being added.  This is at least an order of magnitude
-        # faster if there are many processes.
-        index0 = physics_proc.indx0
-        index1 = physics_proc.indx1
-        ref_proc_lat = self.ref_process_table.lat
-        self.ref_process_table.add_physics_proc(deepcopy(physics_proc),
-                                                ref_proc_lat.sequence[index0],
-                                                ref_proc_lat.sequence[index1])
+        self.ref_process_table = deepcopy(self.process_table)
 
     def add_physics_processes(self, processes, elem1s, elem2s) -> None:
         # Same as add physics_proc but much faster if you wanto add lots of processes.

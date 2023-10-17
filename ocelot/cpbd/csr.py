@@ -944,10 +944,6 @@ class CSR(PhysProc):
             self.napply = 0
             self.total_wake = 0
 
-        if self.energy is None and self.rk_traj:
-            raise CSRConfigurationError(
-                "RK trajectory calc set but CSR.energy left unset."
-            )
 
         self.z_csr_start = sum([p.l for p in lat.sequence[:self.indx0]])
         p = Particle()
@@ -956,6 +952,12 @@ class CSR(PhysProc):
         if Undulator in [elem.__class__ for elem in lat.sequence[self.indx0:self.indx1+1]] and not self.rk_traj:
             self.rk_traj = True
             logger.warning("CSR: Undulator element is in CSR section --> rk_traj = True")
+
+        if self.energy is None and self.rk_traj:
+            raise CSRConfigurationError(
+                "RK trajectory calc set but CSR.energy left unset."
+            )
+
         for elem in lat.sequence[self.indx0:self.indx1+1]:
 
             if elem.l == 0:
@@ -990,6 +992,7 @@ class CSR(PhysProc):
                     def mag_field(x, y, z): return (Bx, By, 0)
 
                 elif elem.__class__ == Undulator:
+                    print("ENERGY = ",self.energy)
                     gamma = self.energy/m_e_GeV
                     ku = 2 * np.pi / elem.lperiod
                     delta_z = elem.lperiod * elem.nperiods

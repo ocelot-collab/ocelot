@@ -120,6 +120,8 @@ class LH(SectionTrack):
         csr.sigma_min = sigma * 0.1
         csr.traj_step = 0.0005
         csr.apply_step = 0.005
+        csr.energy = 0.130
+        #csr.pict_debug = True
         sc = SpaceCharge()
         sc.step = 50
         sc.nmesh_xyz = [63, 63, 63]

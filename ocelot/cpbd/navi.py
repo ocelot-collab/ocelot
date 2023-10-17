@@ -102,7 +102,7 @@ class Navigator:
         """
         return self.process_table.proc_list
 
-    def add_physics_proc(self, physics_proc, elem1, elem2):
+    def add_physics_proc(self, physics_proc, elem1, elem2) -> None:
         """
         Method adds Physics Process.
 
@@ -114,6 +114,12 @@ class Navigator:
         """
         _logger_navi.debug(" add_physics_proc: phys proc: " + physics_proc.__class__.__name__)
         self.process_table.add_physics_proc(physics_proc, elem1, elem2)
+        self.ref_process_table = deepcopy(self.process_table)
+
+    def add_physics_processes(self, processes, elem1s, elem2s) -> None:
+        # Same as add physics_proc but much faster if you wanto add lots of processes.
+        for process, e1, e2 in zip(processes, elem1s, elem2s):
+            self.process_table.add_physics_proc(process, e1, e2)
         self.ref_process_table = deepcopy(self.process_table)
 
     def activate_apertures(self, start=None, stop=None):

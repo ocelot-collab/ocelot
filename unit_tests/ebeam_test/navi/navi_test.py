@@ -534,6 +534,28 @@ def test_kick_with_thick_elem(lattice, p_array, parameter=None, update_ref_value
     assert check_result([result0] + result1 + result2 + result3 + result4)
 
 
+def test_navigator_add_physics_processes(lattice):
+    navi = Navigator(lattice)
+
+    eproc1 = EmptyProc()
+    eproc2 = EmptyProc()
+    eproc3 = EmptyProc()
+
+    procs = [eproc1, eproc2, eproc3]
+    starts = [lattice.sequence[0], lattice.sequence[1], lattice.sequence[2]]
+    stops = [lattice.sequence[-1], lattice.sequence[-2], lattice.sequence[-3]]
+
+    navi.add_physics_processes(procs, starts, stops)
+
+    assert navi.process_table.proc_list == procs
+    assert navi.process_table.proc_list[0].indx0 == 0
+    assert navi.process_table.proc_list[0].indx1 == 11
+
+    assert navi.process_table.proc_list[1].indx0 == 1
+    assert navi.process_table.proc_list[1].indx1 == 10
+
+    assert navi.process_table.proc_list[2].indx0 == 2
+    assert navi.process_table.proc_list[2].indx1 == 9
 
 
 def setup_module(module):

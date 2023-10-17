@@ -170,8 +170,14 @@ class MagneticLattice:
     Notes: If the elements doesn't support the defined transfer map, the default transfer map will be used, which is
     defined in the specific element class.
     For example:
-        {"global": SecondTM, "Undulator": UndulatorTestTM }
-        Sets for all elements SecondTM as transfer map, expect for the Undulator elements.
+        '''
+        from ocelot import *
+
+        method = {"global": SecondTM, Octupole: KickTM, Undulator:RungeKuttaTM }
+        lat  = MagneticLattice(cell, method=method)
+        '''
+    Sets for all elements SecondTM as transfer map, expect for the Octupole and Undulator elements.
+    see more at Section 7 https://nbviewer.org/github/ocelot-collab/ocelot/blob/dev/demos/ipython_tutorials/small_useful_features.ipynb
     """
 
     def __init__(self, sequence, start: E = None, stop: E = None, method=None):

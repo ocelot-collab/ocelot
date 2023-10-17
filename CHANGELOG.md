@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - The `CSR` class now gives an explicit `logging` `error` when failing in `arcline` and
   a more useful explanation.  This error often occurs because the user has mixed CSR for
   vertical bends with horizontal bends.
+- `Navigator.add_physics_process` should now be a lot faster by doing fewer unnecessary deepcopies.
 
 ### Added
 
@@ -40,6 +41,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - ParticleArray slicing: `parray[10:100]` returns a ParticleArray instance with slices rparticles and q_array.
 - `remove_coupler_kick` convenience method for Cavity class
 - Integrated quad strengths for `k1` and `k2` convenience getters/setters (`k1l` and `k2l).
+- Added new method `Navigator.add_physics_processes` for adding multiple physics processes at the same time.  This will be a lot fastwe when lots of physics processes are to be added.
+
 
 - `Navigator.jump_to` method allowing a `Navigator` instance to jump
   to arbitrary points in z along the magnetic lattice.  Useful as it

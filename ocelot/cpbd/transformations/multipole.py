@@ -8,7 +8,7 @@ from ocelot.cpbd.elements.element import Element
 
 class MultipoleTM(TransferMap):
     """[summary]
-    Implementation of the Multipole Transforamtion.
+    Implementation of the Multipole Transformation.
     The concrete element atom have to implement: 
     create_multipole_tm_main_params(self) -> MultipoleParams
     """

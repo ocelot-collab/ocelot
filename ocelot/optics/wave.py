@@ -17,7 +17,7 @@ import os
 # from ocelot.optics.elements import *
 from ocelot.common.globals import *
 from ocelot.common.math_op import find_nearest_idx, fwhm, std_moment, bin_scale, bin_array, mut_coh_func, mprefix
-from ocelot.rad.undulator_params import lambda2eV, eV2lambda, k2lambda, lambda2k, k2angle, angle2k
+from ocelot.rad.undulator_params import lambda2eV, eV2lambda, eV2THz, THz2eV, k2lambda, lambda2k, k2angle, angle2k
 from ocelot.common.py_func import filename_from_path
 # from ocelot.optics.utils import calc_ph_sp_dens
 # from ocelot.adaptors.genesis import *
@@ -76,7 +76,6 @@ class RadiationField:
         self.fld_stat = [dfl[np.newaxis,:,:] for dfl in self.fld]
         self.fld = np.zeros_like(self.fld_stat[0])
         
-        
     def stat2slices(self):
         #temporary functions
         if self.Nz() > 1:
@@ -96,6 +95,21 @@ class RadiationField:
             dfl_event.fld = self.fld_stat[eventn]
             return dfl_event
     
+    def convert_real2complex_field_dfl(self):
+        '''
+        Convert real-valued field to analytic field representation. 
+        For math underlying see https://en.wikipedia.org/wiki/Analytic_signal
+        '''
+        
+        orig_domain = self.domains()
+        self.to_domain('sf')
+
+        self.dz = self.dz*2 
+        self.xlamds = self.dz * 2
+        self.fld = self.fld[self.Nz()//2:, :, :] 
+
+        self.to_domain(orig_domain)
+            
     def copy_param(self, dfl1, version=1):
         if version == 1:
             self.dx = dfl1.dx
@@ -829,7 +843,17 @@ class RadiationField:
         if return_orig_domains:
             self.to_domain(domains)
 
-
+    def cut_spec(self, cut_range=(None, None), units='eV'):
+        '''
+        Parameters
+        ----------
+        cut_range : tuple of size 2 of floats, if default initial interval will be returned
+            DESCRIPTION. The default is (None, None).
+        units : String, optional
+            DESCRIPTION. The default is 'eV'. Can be 'wavelength' (in m) and 'THz' for cut_range preseted in this units
+        '''
+        cut_spec_dfl(self, cut_range=cut_range, units=units)
+        
 class WaistScanResults():
 
     def __init__(self):
@@ -2194,9 +2218,6 @@ def dfl_gen_undulator_serval(E_ph=1042, L_w=1, shape=(51, 51, 100), dgrid=(1e-3,
     dfl.fld = np.random.randn(dfl.Nz(), dfl.Ny(), dfl.Nx()) + 1j * np.random.randn(dfl.Nz(), dfl.Ny(), dfl.Nx()) # Gaussian noise
     
     np.random.seed(None)
-
-    if showfig:
-        plot_dfl(dfl, line_off_xy = False, fig_name = '1-X_noise')
     
     dfl.to_domain('sf')    
 
@@ -2223,7 +2244,6 @@ def dfl_gen_undulator_serval(E_ph=1042, L_w=1, shape=(51, 51, 100), dgrid=(1e-3,
     dfl.fld *= mask_xy
     # dfl.fld *= np.sqrt(mask_xy)
     _logger.info(2*ind_str +'done')
-
                 
     dfl.to_domain('kf')
 
@@ -2730,7 +2750,27 @@ def dfl_prop(dfl, z, fine=1, debug=1):
 
     return dfl_out
 
-def dfl_prop_iris(dfl, N=10, a=0.055, center=(0,0), b=0.3, n_iter_per_iris=1, 
+def split(b, n_iter_per_iris=1):
+    """
+    Split each value in the list 'b' into 'parts' equal intervals and accumulate them.
+    
+    Args:
+    - b (list): List of values to be split and accumulated.
+    - parts (int): Number of intervals to split each value in 'b'. Default is 4.
+    
+    Returns:
+    - list: List of accumulated values.
+    """
+    result = []
+    accumulator = 0
+
+    for value in b:
+        for _ in range(1, n_iter_per_iris + 1):  # Splitting into 'parts' parts
+            accumulator = value / n_iter_per_iris
+            result.append(accumulator)
+
+    return np.array(result)
+def dfl_prop_iris(dfl, N=10, a=0.055, center=(0, 0), b=0.3, n_iter_per_iris=1, i_z='integrated spectrum',
               absorption_outer_pipe=False, acount_first_cell_loss=False):
     '''
     Propagates radiation through an iris line.
@@ -2743,17 +2783,17 @@ def dfl_prop_iris(dfl, N=10, a=0.055, center=(0,0), b=0.3, n_iter_per_iris=1,
     N : int, optional
         Number of irises. Default is 10.
     
-    a : float, optional
+    a : float or array-like of floats, optional
         Iris radius. Default is 0.055.
     
-    center : array-like of floats, optional
+    center: tuples with size 2 with array-like of floats inside, optional
         Center of each individual iris. Default for a single iris is (0,0), but for a set of irises, it should be (np.array(N), np.array(N)).
     
-    b : float, optional
+    b : float or array-like of floats, optional
         Spacing between irises. Default is 0.3.
     
     n_iter_per_iris: int, optional
-        Number of propagation iterations. Must be divisible by N. Default is 100.
+        Number of propagation iterations per iris cell  
     
     absorption_outer_pipe : bool, optional
         If the outer pipe absorbs radiation. Note: This may not represent accurate boundary conditions. Default is False.
@@ -2779,10 +2819,23 @@ def dfl_prop_iris(dfl, N=10, a=0.055, center=(0,0), b=0.3, n_iter_per_iris=1,
         Radiation loss after each iris.
 
     '''
-
-    L = N*b
-    dl = b/n_iter_per_iris #define propagation distance at each iteration
     
+    if np.size(b) > 1 and len(b) != N:
+        raise Warning('If b is an array len of b must be equal N')
+    
+    elif np.size(b) == 1:
+        b = [b] * N
+
+    if np.size(a) == 1:
+        a = [a] * N * n_iter_per_iris
+    
+    if np.size(center) <= 2:
+        center = [center] * N * n_iter_per_iris
+        
+    b_split = split(b=b, n_iter_per_iris=n_iter_per_iris)
+    b_coordinates = np.cumsum(b)    
+    b_coordinates_split = np.cumsum(b_split)
+
     dfl_waveguide = deepcopy(dfl)
     dfl_waveguide.to_domain('sf')
     
@@ -2794,39 +2847,38 @@ def dfl_prop_iris(dfl, N=10, a=0.055, center=(0,0), b=0.3, n_iter_per_iris=1,
 
     P_entrance = 0
     j = 0 #a count for the number of irises passed
-    P_entrance = dfl_waveguide.E()
     
-    for i in range(n_iter_per_iris*N):
-
-        if acount_first_cell_loss and i==0: # check if we need to account for losses at the first iris, 
-                                            # relevant if propagate a plane wave
-            dfl_waveguide = dfl_ap_circ(dfl_waveguide, r=a)
-            P_entrance = dfl_waveguide.E()
-            
-        if (dl*i > j*b): #check if the next j-th iris is reached or not, if yes - cut
+    if acount_first_cell_loss: # check if we need to account for losses at the first iris, 
+                                        # relevant if propagate a plane wave
+        dfl_waveguide = dfl_ap_circ(dfl_waveguide, r=a[0])
+        P_entrance = dfl_waveguide.E()
+        
+    for b_i, b_i_coordinates, a_i, center_i, i in zip(b_split, b_coordinates_split, a, center, range(len(b_coordinates_split))):
+        
+        if np.any(np.abs(b_coordinates - b_i_coordinates) < 1e-6):
             dfl_waveguide.to_domain('sf')
 
             P_before=dfl_waveguide.E()
-            
-            if np.size(center) > 2:
-                x = center[0][j]
-                y = center[1][j]
-            else:
-                x = center[0]
-                y = center[1]  
-                
-            dfl_waveguide = dfl_ap_circ(dfl_waveguide, r=a, center=(x, y))
-            
+
+            dfl_waveguide = dfl_ap_circ(dfl_waveguide, r=a_i, center=(center_i[0], center_i[1]))
+
             P_after=dfl_waveguide.E()
             
             rad_left_array = np.append(rad_left_array, P_after/P_entrance*100)
             loss_per_cell_array = np.append(loss_per_cell_array, (1-P_after/P_before)*100)
             j = j+1
+        
+        if acount_first_cell_loss==0 and (b_i_coordinates == b_coordinates[0]):
+            P_entrance = dfl_waveguide.E()
             
-        E_x_lineout[:, i] = dfl_waveguide.fld[dfl_waveguide.Nz()//2, dfl_waveguide.Ny()//2, :]
-        E_y_lineout[:, i] = dfl_waveguide.fld[dfl_waveguide.Nz()//2, :, dfl_waveguide.Nx()//2]
+        if i_z == 'integrated spectrum':
+            E_x_lineout[:, i] = np.sum(dfl_waveguide.fld[:, dfl_waveguide.Ny()//2, :], axis=0)
+            E_y_lineout[:, i] = np.sum(dfl_waveguide.fld[:, :, dfl_waveguide.Nx()//2], axis=0)
+        else:
+            E_x_lineout[:, i] = dfl_waveguide.fld[i_z, dfl_waveguide.Ny()//2, :]
+            E_y_lineout[:, i] = dfl_waveguide.fld[i_z, :, dfl_waveguide.Nx()//2]
 
-        dfl_waveguide.prop_m(z=dl, m=1)
+        dfl_waveguide.prop_m(z=b_i, m=1)
 
         if absorption_outer_pipe:
             dfl_waveguide = dfl_ap_circ(dfl_waveguide, r=np.max(dfl_waveguide.scale_x())*0.98)
@@ -3188,6 +3240,37 @@ def dfl_cut_z(dfl, z=[-np.inf, np.inf], debug=1):
 
     _logger.debug(ind_str + 'done')
 
+def cut_spec_dfl(dfl, cut_range=(None, None), units='eV'):
+    
+    if cut_range == (None, None):
+        return dfl
+
+    orig_domain = dfl.domains()
+    dfl.to_domain('sf')
+    
+    if units=='eV':
+        pL = cut_range[0]
+        pR = cut_range[1]
+    elif units=='wavelength':
+        pL = lambda2eV(cut_range[0])
+        pR = lambda2eV(cut_range[1])
+    elif units=='THz':
+        pL = THz2eV(cut_range[0])
+        pR = THz2eV(cut_range[1])
+    else:
+        raise ValueError("units must be 'eV' for photon energy in [eV], 'wavelength' in [meters] or 'THz' for freq in [THz]")
+        
+    indx1 = find_nearest_idx(dfl.phen(), pL)
+    indx2 = find_nearest_idx(dfl.phen(), pR)
+    
+    M = dfl.Nz()/(indx2 - indx1)
+    dfl.dz = dfl.dz * M 
+ 
+    dfl.xlamds = eV2lambda((pL + pR)/2)
+    dfl.fld = dfl.fld[indx1:indx2, :, :] / np.sqrt(M)
+    dfl.to_domain(orig_domain)
+    
+    return dfl 
 
 def dfl_fft_z(dfl, method='mp', nthread=multiprocessing.cpu_count(),
               debug=1):  # move to another domain ( time<->frequency )

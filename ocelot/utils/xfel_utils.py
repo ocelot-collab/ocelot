@@ -233,6 +233,7 @@ def create_fel_lattice(und_N = 35,
     if quad_L > inters_L:
         _logger.warning('Quarrupole cannot be longer than intersection')
 
+    hcor_l = und_l
     # und_n = np.floor(und_L/und_l).astype(int)
     und_n = und_L/und_l
 
@@ -247,9 +248,14 @@ def create_fel_lattice(und_N = 35,
     phs.phi = inters_phi
     phs.K = inters_K #overrides phi, would be K of free space, identical to rms K_und if "K_und"
 
-    d1 = Drift(l=(inters_L - quad_L) / 2, eid = "d1") #drift
-    d2 = Drift(l=(inters_L - quad_L) / 2, eid = "d2")
+    d1 = Drift(l=(inters_L - hcor_l*2 - quad_L) / 2, eid = "d1") #drift
+    d2 = Drift(l=(inters_L - hcor_l*2 - quad_L) / 2, eid = "d2")
     
+    cx = Hcor(l=hcor_l, angle=0, eid='cx1')
+    # cx2 = Hcor(l=hcor_l, angle=0, eid='cx1')
+    cy = Vcor(l=hcor_l, angle=0, eid='cx1')
+    # cy2 = Hcor(l=hcor_l, angle=0, eid='cx1')
+
     if und_N < 2:
         cell_N = 0
         cell_N_last = 0
@@ -258,13 +264,13 @@ def create_fel_lattice(und_N = 35,
         cell_N_last = int((und_N - 1)/2%1)
 
     if quad_start == 'd':
-        cell = (und, d1, qf, phs, d2, und, d1, qd, phs, d2) 
-        extra_fodo = (und, d2, qdh)
-        lat = (und, d1, qd, phs, d2) + cell_N * cell + cell_N_last * (und,)
+        cell = (und, cx, cy, d1, qf, phs, d2, und, cx, cy, d1, qd, phs, d2) 
+        extra_fodo = (und, cx, cy, d2, qdh)
+        lat = (und, cx, cy, d1, qd, phs, d2) + cell_N * cell + cell_N_last * (und,)
     elif quad_start == 'f':
-        cell = (und, d1, qd, phs, d2, und, d1, qf, phs, d2) 
-        extra_fodo = (und, d2, qfh)
-        lat = (und, d1, qf, phs, d2) + cell_N * cell + cell_N_last * (und,)
+        cell = (und, cx, cy, d1, qd, phs, d2, und, cx, cy, d1, qf, phs, d2) 
+        extra_fodo = (und, cx, cy, d2, qfh)
+        lat = (und, cx, cy, d1, qf, phs, d2) + cell_N * cell + cell_N_last * (und,)
     
     lat = MagneticLattice(lat)
     

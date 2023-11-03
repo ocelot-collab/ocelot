@@ -3321,6 +3321,10 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=1, min_phsh = False):
     prevLenQ = 0
     prevPosD = 0
     prevLenD = 0
+    prevPosCX = 0
+    prevPosCY = 0
+    prevLenCX = 0
+    prevLenCY = 0
     
     L_inters = 0
     K_rms = 0
@@ -3419,6 +3423,15 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=1, min_phsh = False):
                 K_inters = e.K
                 if K_inters == 'K_und':
                     K_inters = K_rms
+        
+        elif e.__class__ == Hcor:
+            undLat += 'CX' + '    ' + str(e.angle) + '   ' + str(1 * e.l / unit) + '  ' + str(round((pos - prevPosCX - prevLenCX)/unit, 2)) + '\n'
+            prevPosCX = pos
+            prevLenCX = float(e.l)
+        elif e.__class__ == Vcor:
+            undLat += 'CY' + '    ' + str(e.angle) + '   ' + str(1 * e.l / unit) + '  ' + str(round((pos - prevPosCY - prevLenCY)/unit, 2)) + '\n'
+            prevPosCY = pos
+            prevLenCY = float(e.l)
             
         elif e.__class__ == Quadrupole:
             #k = energy/0.2998 * float(e.k1) *  ( e.l / unit - int(e.l / unit) )

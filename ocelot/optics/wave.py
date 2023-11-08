@@ -95,7 +95,7 @@ class RadiationField:
             dfl_event.fld = self.fld_stat[eventn]
             return dfl_event
     
-    def convert_real2complex_field_dfl(self):
+    def convert_real2complex_field(self):
         '''
         Convert real-valued field to analytic field representation. 
         For math underlying see https://en.wikipedia.org/wiki/Analytic_signal

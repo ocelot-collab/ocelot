@@ -76,7 +76,7 @@ def read_openpmd_to_parray(openpmd_data_path, iteration=None, species=None,
 
 
 def write_parray_to_openpmd(p_array, folder_path, file_name=None,
-                            species_name='bunch', iteration=0):
+                            species='bunch', iteration=0):
     """
     Writes p_array to an HDF5 file following the openPMD standard.
 
@@ -91,7 +91,7 @@ def write_parray_to_openpmd(p_array, folder_path, file_name=None,
     file_name : str
         Name of the file to save without extension
 
-    species_name : str
+    species : str
         Optional. Name under which the particle species should be stored.
 
     iteration : int
@@ -102,7 +102,7 @@ def write_parray_to_openpmd(p_array, folder_path, file_name=None,
     # Get beam data
     beam_data = parray_to_beam_data(p_array)
     write_beam_data_to_openpmd(beam_data, folder_path, file_name=file_name,
-                               species_name=species_name, iteration=iteration)
+                               species=species, iteration=iteration)
 
 
 def read_openpmd_to_beam_data(openpmd_data_path, iteration=None, species=None,
@@ -117,6 +117,13 @@ def read_openpmd_to_beam_data(openpmd_data_path, iteration=None, species=None,
     iteration : int
         Iteration number from where the beam data will be read.
         If not specified, it takes the last iteration present in the data.
+
+    species : str
+        Optional. Name under which the particle species is stored.
+
+    select : dict
+        A dictionary of rules to filter the dataframe, e.g.
+        'pz' : [1000, None] (get particles with pz higher than 1000)
 
     kw: optional arguments to pass to `OpenPMDTimeSeries.get_particle`
         e.g. species, select, ...
@@ -163,7 +170,7 @@ def read_openpmd_to_beam_data(openpmd_data_path, iteration=None, species=None,
             else:
                 raise ValueError(
                     'More than one particle species is available. '
-                    'Please specify a `species_name`. '
+                    'Please specify a `species`. '
                     'Available species are: ' + str(available_species))
         # get species
         beam_species = file_content[
@@ -211,12 +218,20 @@ def beam_data_to_parray(beam_data, gamma_ref=None, z_ref=None):
         have units of meters, momentun is in non-dimensional units (beta*gamma)
         and q is in Coulomb.
 
-    p_array : ParticleArray
-        The Ocelot distribution to be converted.
+    gamma_ref : float (Optional)
+        Reference energy of the particle beam used for tracking in Ocelot. If
+        not specified, the reference energy will be taken as the average
+        energy of the input distribution.
+
+    z_ref : float (Optional)
+        Reference longitudinal position of the particle beam used for tracking
+        in Ocelot. If not specified, the reference value will be taken as the
+        average longitudinal position of the input distribution.
 
     Returns:
     --------
     An Ocelot ParticleArray.
+
     """
     x, y, z, px, py, pz, q = beam_data
 
@@ -289,7 +304,7 @@ def parray_to_beam_data(p_array):
 
 
 def write_beam_data_to_openpmd(beam_data, folder_path, file_name=None,
-                               species_name='bunch', iteration=0):
+                               species='bunch', iteration=0):
     """
     Writes p_array to an HDF5 file following the openPMD standard.
 
@@ -306,7 +321,7 @@ def write_beam_data_to_openpmd(beam_data, folder_path, file_name=None,
     file_name : str
         Name of the file to save without extension
 
-    species_name : str
+    species : str
         Optional. Name under which the particle species should be stored.
 
     iteration : int
@@ -348,7 +363,7 @@ def write_beam_data_to_openpmd(beam_data, folder_path, file_name=None,
     it.time = np.average(z, weights=q) / ct.c
 
     # Create particles species.
-    particles = it.particles[species_name]
+    particles = it.particles[species]
 
     # Create additional necessary arrays and constants.
     w = np.abs(q) / ct.e
@@ -445,6 +460,7 @@ def select_particles(beam_data, select=None):
     ----------
     beam_data : list
         Contains the beam data as [x, y, z, px, py, pz, w].
+
     select : dict
         A dictionary of rules to filter the dataframe, e.g.
         'pz' : [1000, None] (get particles with pz higher than 1000)
@@ -484,13 +500,13 @@ def select_particles(beam_data, select=None):
 
 class SaveBeamOPMD(PhysProc):
     def __init__(self, folder_path, file_name=None,
-                 species_name='bunch',
+                 species='bunch',
                  iteration=0, **kw):
         # PhysProc.__init__(self)
         super(SaveBeamOPMD, self).__init__(**kw)
         self.folder_path = folder_path
         self.file_name = file_name
-        self.species_name = species_name
+        self.species = species
         self.iteration = iteration
 
     def apply(self, p_array, dz):
@@ -499,7 +515,7 @@ class SaveBeamOPMD(PhysProc):
         write_parray_to_openpmd(p_array=p_array,
                                 folder_path=self.folder_path,
                                 file_name=self.file_name,
-                                species_name=self.species_name,
+                                species=self.species,
                                 iteration=self.iteration)
 
         self.iteration = self.iteration + 1

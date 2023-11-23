@@ -76,7 +76,7 @@ def read_openpmd_to_parray(openpmd_data_path, iteration=None, species=None,
 
 
 def write_parray_to_openpmd(p_array, folder_path, file_name=None,
-                            species='bunch', iteration=0):
+                            species='beam', iteration=0):
     """
     Writes p_array to an HDF5 file following the openPMD standard.
 
@@ -143,6 +143,7 @@ def read_openpmd_to_beam_data(openpmd_data_path, iteration=None, species=None,
 
         diag = OpenPMDTimeSeries(openpmd_data_path,
                                  check_all_files=False, backend='h5py')
+
         varlist = ['x', 'y', 'z', 'ux', 'uy', 'uz', 'w', 'charge']
         if iteration is None:
             iteration = diag.iterations[-1]
@@ -291,7 +292,7 @@ def parray_to_beam_data(p_array):
     gamma = dp * gamma_ref * b_ref + gamma_ref
     p_kin = np.sqrt(gamma_ref**2 - 1)
 
-    # Create coordinate arrays in Wake-T units.
+    # Create coordinate arrays
     x = beam_matrix[0]
     px = beam_matrix[1] * p_kin
     y = beam_matrix[2]
@@ -304,7 +305,7 @@ def parray_to_beam_data(p_array):
 
 
 def write_beam_data_to_openpmd(beam_data, folder_path, file_name=None,
-                               species='bunch', iteration=0):
+                               species='beam', iteration=0):
     """
     Writes p_array to an HDF5 file following the openPMD standard.
 
@@ -500,7 +501,7 @@ def select_particles(beam_data, select=None):
 
 class SaveBeamOPMD(PhysProc):
     def __init__(self, folder_path, file_name=None,
-                 species='bunch',
+                 species='beam',
                  iteration=0, **kw):
         # PhysProc.__init__(self)
         super(SaveBeamOPMD, self).__init__(**kw)

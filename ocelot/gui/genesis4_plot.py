@@ -498,10 +498,26 @@ def subfig_z_energy_espread_bunching(ax_energy, out, zi=None, x_units='um', lege
     
     if zi == None:
         zi = -1
+
+    # obtain current profile (from function 'subfig_z_power_curr')
+    try:
+        Iz = out.Iz(zi)
+    except Error as err:
+        Iz = out.I
+
+    # first steps with hard-coded cutoff
+    Icutoff=100 # None
+    if Icutoff is not None:
+        idx_slices_to_plot = np.where(Iz>=Icutoff)
+    else:
+        idx_slices_to_plot = np.where(Iz>=-1) # selects *all* slices
+    idx_slices_to_plot = idx_slices_to_plot[0] # make it 1-D array
     
-    ax_energy.plot(x, out.h5['Beam/energy'][zi, :] * m_e_GeV, 'b-', x,
-                   (out.h5['Beam/energy'][zi, :] + out.h5['Beam/energyspread'][zi, :]) * m_e_GeV, 'r--', x,
-                   (out.h5['Beam/energy'][zi, :] - out.h5['Beam/energyspread'][zi, :]) * m_e_GeV, 'r--')
+    ax_energy.plot(
+      x[idx_slices_to_plot], out.h5['Beam/energy'][zi, idx_slices_to_plot] * m_e_GeV, 'b-',
+      x[idx_slices_to_plot], (out.h5['Beam/energy'][zi, idx_slices_to_plot] + out.h5['Beam/energyspread'][zi, idx_slices_to_plot]) * m_e_GeV, 'r--',
+      x[idx_slices_to_plot], (out.h5['Beam/energy'][zi, idx_slices_to_plot] - out.h5['Beam/energyspread'][zi, idx_slices_to_plot]) * m_e_GeV, 'r--'
+    )
     ax_energy.set_ylabel(r'$E\pm\sigma_E$ [GeV]')
     # ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
     ax_energy.ticklabel_format(useOffset=False, style='plain')
@@ -509,7 +525,7 @@ def subfig_z_energy_espread_bunching(ax_energy, out, zi=None, x_units='um', lege
     # plt.yticks(plt.yticks()[0][0:-1])
     
     ax_bunching = ax_energy.twinx()
-    ax_bunching.plot(x, out.h5['Beam/bunching'][zi, :], 'grey', linewidth=0.5)
+    ax_bunching.plot(x[idx_slices_to_plot], out.h5['Beam/bunching'][zi, idx_slices_to_plot], 'grey', linewidth=0.5)
     ax_bunching.set_ylabel('Bunching')
     ax_bunching.set_ylim(ymin=0)
     ax_bunching.grid(False)
@@ -520,6 +536,11 @@ def subfig_z_energy_espread_bunching(ax_energy, out, zi=None, x_units='um', lege
     ax_bunching.tick_params(axis='y', which='both', colors='grey')
     ax_bunching.yaxis.label.set_color('grey')
     ax_energy.set_xlim([x[0], x[-1]])
+    if Icutoff is not None:
+        # info about current cutoff
+        ax_bunching.text(0.02, 0.98, 'I$_{cutoff}$ = '+f'{(Icutoff/1e3):.2f} kA',
+            fontsize=12, horizontalalignment='left',
+            verticalalignment='top', transform=ax_bunching.transAxes, color='black')
 
 
 @if_plottable

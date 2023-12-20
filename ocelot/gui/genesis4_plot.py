@@ -505,8 +505,14 @@ def subfig_z_energy_espread_bunching(ax_energy, out, zi=None, x_units='um', lege
     except Error as err:
         Iz = out.I
 
-    # first steps with hard-coded cutoff
-    Icutoff=100 # None
+    # If 'plot_gen4_out_z' is called with Genesis4Output class instances
+    # as argument (as returned by 'read_gout4', for instance), obtain
+    # cutoff specification from there
+    Icutoff=None
+    if isinstance(out,Genesis4Output):
+        if 'x_Icutoff' in dir(out):
+            Icutoff=out.x_Icutoff
+
     if Icutoff is not None:
         idx_slices_to_plot = np.where(Iz>=Icutoff)
     else:

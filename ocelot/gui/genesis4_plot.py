@@ -930,7 +930,7 @@ def subfig_evo_el_pos(ax_size_tpos, out, legend, which='both'):
 @if_plottable
 def subfig_evo_el_energy(ax_energy, out, legend):
     # Plot debugging data? May require specific GENESIS input file parameters to generate needed data.
-    do_plot_dbg=True
+    do_plot_dbg=False
     number_ticks = 6
 
     ### Prepare weight matrix/vector ###

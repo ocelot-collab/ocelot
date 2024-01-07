@@ -979,7 +979,7 @@ def subfig_evo_el_energy(ax_energy, out, legend):
     # is identical to the values prepared from /Beam/energyspread
     # (these are computed on a per-slice basis)
     if do_plot_dbg:
-        ax_energy.plot(z, m_e_MeV*(out.h5['Beam/Global/energy'][()]-out.h5['Beam/Global/energy'][0]),'r+',label='/Beam/Global/energy - /Beam/Global/energy(s=0)')
+        ax_energy.plot(z, m_e_MeV*(out.h5['Beam/Global/energy'][()])-y_energy_offset,'r+',label='/Beam/Global/energy')
         ax_spread.plot(z, m_e_MeV*(out.h5['Beam/Global/energyspread'][()]),'k--',label='Beam/Global/energyspread')
 
 

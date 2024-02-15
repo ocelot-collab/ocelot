@@ -924,7 +924,7 @@ def gen4_lat_str(lat, line_name='LINE', zstop=np.inf, cb_latline=None):
         if location >= zstop:
             break
 
-        element_num = line_name + '_' + str(len(beamline) + 1).zfill(3)
+        element_prefix = line_name + '_' + str(len(beamline) + 1).zfill(3)
 
         if hasattr(element, 'l'):
             location += element.l
@@ -933,14 +933,14 @@ def gen4_lat_str(lat, line_name='LINE', zstop=np.inf, cb_latline=None):
 
         got_info = False
         if (cb_latline is not None) and callable(cb_latline):
-            qqq = cb_latline(lat, element, len(beamline))
+            qqq = cb_latline(lat, element, len(beamline), element_prefix)
             if qqq!=(None,None):
                 (element_name,s) = qqq
                 got_info = True
 
         if not got_info:
 			# either callback function not defined, or callback function does not override default behavior
-            (element_name,s) = gen4_lat_elem2str(element, element_num)
+            (element_name,s) = gen4_lat_elem2str(element, element_prefix)
             got_info = True
 
         beamline.append(element_name)

@@ -105,8 +105,6 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                     return weights('negative_length')
 
                 vars[i].l = x[i]
-
-                vars[i].create_tm()
             if isinstance(vars[i], Quadrupole):
                 vars[i].k1 = x[i]
             if isinstance(vars[i], Solenoid):

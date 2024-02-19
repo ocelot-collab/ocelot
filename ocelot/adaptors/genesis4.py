@@ -924,7 +924,7 @@ def gen4_lat_str(lat, line_name='LINE', zstop=np.inf):
             # Unknown element type, replace by drift to get cell length right (while ignoring l=0 elements)
             if element.l==0:
                 _logger.warning('Unknown element {} with length {}'.format(str(element), element.l))
-                continue
+                continue # not writing a line to the lattice file
             #
             _logger.warning('Unknown element {} with length {}\n replacing with drift'.format(str(element), element.l))
             element_name = element_num + 'UNKNOWN'

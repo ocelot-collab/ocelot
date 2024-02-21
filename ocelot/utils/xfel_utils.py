@@ -230,10 +230,10 @@ def create_fel_lattice(und_N = 35,
                     phs_L = 0.0,
                     quad_start = 'd',
                     **kwargs):
-    if quad_L > inters_L:
-        _logger.warning('Quarrupole cannot be longer than intersection')
-
     hcor_l = und_l
+    if (quad_L+2*hcor_l) > inters_L:
+        _logger.warning('Quadrupole and correctors have to fit into intersection')
+
     # und_n = np.floor(und_L/und_l).astype(int)
     und_n = und_L/und_l
 
@@ -261,7 +261,7 @@ def create_fel_lattice(und_N = 35,
         cell_N_last = 0
     else:
         cell_N = np.floor((und_N - 1)/2).astype(int)
-        cell_N_last = int((und_N - 1)/2%1)
+        cell_N_last = int((und_N - 1)/2%2)
 
     if quad_start == 'd':
         cell = (und, cx, cy, d1, qf, phs, d2, und, cx, cy, d1, qd, phs, d2) 

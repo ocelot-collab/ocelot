@@ -53,7 +53,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Fixed
 
-- None yet.
+- fixed bugs in matching function if Drift length is in list of variables. 
 
 ### Removed
 

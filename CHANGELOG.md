@@ -49,6 +49,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - new `__repr__` methods for some common physics processes: `CSR`, `SmoothBeam`, `SpaceCharge` and `WakeTable`.
 - modified the 'MagneticLattice.transfer_maps()' method. When using the 'output_at_each_step=True' flag,
   the method returns (Bs, Rs, Ts, S), where 'S' is a list of coordinates after each transfer map.
+- New `WakeTable3` and `Wake3` class for third order Taylor expansion of wakefield tracking.
+- New wake table for the wakefields of parallel plate structure based on analytical results, `WakeTableParallelPlate_origin`, `WakeTableParallelPlate`, 
+  `WakeTableParallelPlate3_origin`, `WakeTableParallelPlate3`. The waketables with `origin` use point charge wake at the vicinity of the drive particle, which is the upper limit for wake. 
+  The other two waketables contain exponential decay term. The waketables with `3` provide third order Taylor expansion and should be used with `Wake3`.
+  
   
 
 ### Fixed

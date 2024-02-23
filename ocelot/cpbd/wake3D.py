@@ -236,7 +236,7 @@ class WakeTable:
 
 class WakeTable3(WakeTable):
     """
-    WakeTable3(wake_file) - load and prepare wake table with 3rd order coefficents
+    WakeTable3(wake_file) - load and prepare wake table with 3rd order coefficents, to be used by Wake3()
     wake_file - path to the wake table
     """
 
@@ -448,7 +448,8 @@ class WakeTableDechirperOffAxis(WakeTable):
 class WakeTableParallelPlate_origin(WakeTable):
     """
     WakeTableParallelPlate_origin() - create wake tables for parallel plate corrugated 
-    strcutres based on 0th order analytical results.
+    strcutres based on 0th order analytical results. Here 0th order assumes contant longitudinal 
+    wake and constant slope for transverse wakes.
     """
     def __init__(self, b=500e-6, a=500e-6, t=250e-6, p=500e-6, length=1, sigma=30e-6, orient="horz"):
         WakeTable.__init__(self)
@@ -558,7 +559,8 @@ class WakeTableParallelPlate_origin(WakeTable):
 class WakeTableParallelPlate(WakeTable):
     """
     WakeTableParallelPlate() - create wake tables for parallel plate corrugated 
-    strcutres based on 1st order analytical results.
+    strcutres based on 1st order analytical results. Here 1st order adds an exponential decay term
+    to the 0th order results.
     """
     def __init__(self, b=500e-6, a=500e-6, t=250e-6, p=500e-6, length=1, sigma=30e-6, orient="horz"):
         WakeTable.__init__(self)
@@ -669,7 +671,8 @@ class WakeTableParallelPlate(WakeTable):
 class WakeTableParallelPlate3_origin(WakeTable3):
     """
     WakeTableParallelPlate() - create 3rd order wake tables for parallel plate corrugated 
-    strcutres based on 0th order analytical results.
+    strcutres based on 0th order analytical results. Here 0th order assumes contant longitudinal 
+    wake and constant slope for transverse wakes. This class should be used with Wake3().
     """
     def __init__(self, b=500e-6, a=500e-6, t=250e-6, p=500e-6, length=1, sigma=30e-6, orient="horz"):
         WakeTable3.__init__(self)
@@ -848,7 +851,8 @@ class WakeTableParallelPlate3_origin(WakeTable3):
 class WakeTableParallelPlate3(WakeTable3):
     """
     WakeTableParallelPlate() - create 3rd order wake tables for parallel plate corrugated 
-    strcutres based on 1st order analytical results.
+    strcutres based on 1st order analytical results. Here 1st order adds an exponential decay term
+    to the 0th order results. This calss should be used with Wake3().
     """
     def __init__(self, b=500e-6, a=500e-6, t=250e-6, p=500e-6, length=1, sigma=30e-6, orient="horz"):
         WakeTable3.__init__(self)
